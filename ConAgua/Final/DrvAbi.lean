@@ -138,7 +138,7 @@ theorem abiLayout_out {tab : Tab} (hok : abiTabOk tab = true) {base blen inp n p
       ¬ (abiLayout tab base inp n pins np).InTab x := by
   obtain ⟨hnb, htab, -⟩ := abiTabOk_spec hok
   have hneed' := hneed
-  simp only [abiNeed, hnb, abiSlot] at hneed'
+  have := abiNeed_ge hok
   refine ⟨?_, ?_, ?_⟩
   · intro ⟨h3, h4⟩
     simp only [abiLayout_lo, abiLayout_hi, abiSlot, abiStack] at h3 h4; omega
@@ -150,7 +150,7 @@ theorem abiLayout_out {tab : Tab} (hok : abiTabOk tab = true) {base blen inp n p
       · simp only [abiLayout_b8_1, abiLayout_s8_1] at h3 h4; exact hpins ⟨h3, h4⟩
     · simp only [abiLayout_tab] at ha
       have := abiLayout_in64_bounds hok ha ⟨h3, h4⟩
-      simp only [abiNeed, hnb, abiSlot] at this; omega
+      have := abiNeed_ge hok; omega
   · intro ⟨h3, h4⟩
     simp only [Layout.tabEnd, abiLayout_T, abiLayout_tab, abiLayout_nargs] at h3 h4
     omega
@@ -173,7 +173,7 @@ attribute [local simp] Reg64s.set64_rax Reg64s.set64_rcx Reg64s.set64_rdx Reg64s
 /-- **The sequential driver**: from `ca_start`, the machine returns to the caller with the
 callee-saved registers restored, and if it reports `rdx = 0` with `rax = ACCEPT`, the driver's
 two L runs accepted (`DrvAccepts`). -/
-theorem drv_outcome [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = true)
+theorem drv_outcome [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = true) (hio : abiIO tab = true)
     (hwf : Prog.wf tab p = true) (hnres : 1 ≤ tab.nres) (mode plo phi : GVar) (out hdrf ctlf : ArrId)
     (hw : Nat) (fz own : List TieredArray) (hngm : mode.id < tab.ng) (hngl : plo.id < tab.ng)
     (hngh : phi.id < tab.ng) (hp : seqParamsOk tab out hdrf ctlf hw = true) (k0 : Nat)
@@ -312,7 +312,7 @@ theorem drv_outcome [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = true)
       hra0]; rfl
   rsimp
   rw [e1, hsa0, Int.toNat_zero, Nat.add_zero, show Int.toNat 8 = 8 from rfl]
-  refine ev_seq (abiA0_outcome p tab hok hwf mode plo phi out hdrf ctlf hw fz own hngm k0 hcode fd hentry hnp
+  refine ev_seq (abiA0_outcome p tab hok hio hwf mode plo phi out hdrf ctlf hw fz own hngm k0 hcode fd hentry hnp
     b pb _ (UInt64.ofBitVec (at_ (K + 18 + 1)).toBitVec) ?_) ?_
   · have hneedN : ((abiNeed tab).toUInt64).toNat = abiNeed tab :=
       UInt64.toNat_ofNat_of_lt' (by simp only [UInt64.size]; omega)

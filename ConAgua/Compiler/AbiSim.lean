@@ -447,6 +447,10 @@ theorem two_le_nslot {tab : Tab} (hok : abiTabOk tab = true) : 2 ≤ tab.nslot :
     have := tab.pos64_lt hd
     simp; omega
 
+/-- The region has at least two slots. -/
+theorem abiNeed_ge {tab : Tab} (hok : abiTabOk tab = true) : 2 ^ 36 ≤ abiNeed tab := by
+  have := Nat.mul_le_mul_left abiSlot (two_le_nslot hok); simp only [abiNeed, abiSlot] at *; omega
+
 /-- The region holds the slots `[0, nslot)`. -/
 theorem abiNeed_eq (tab : Tab) : abiNeed tab = abiSlot * tab.nslot := rfl
 

@@ -67,7 +67,7 @@ theorem MemFrame.of_only_tab {G : L.Compiler.Layout} {sp : Nat} {d d' : DataMem}
 theorem abiVals_tabEnd {tab : Tab} (hok : abiTabOk tab = true) (base inp n pins np : Nat) :
     base + 8 * (abiVals tab).length ≤ (abiLayout tab base inp n pins np).tabEnd := by
   obtain ⟨hnb, -, -⟩ := abiTabOk_spec hok
-  rw [abiVals_length tab hnb]
+  rw [abiVals_length tab]
   simp only [Layout.tabEnd, abiLayout_T, abiLayout_tab, abiLayout_nargs, hnb]; omega
 
 /-- **From the stub `ca_setup` to the run of `check`**: the stub's state `s` agrees with the
@@ -91,7 +91,7 @@ theorem abi_start_outcome [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = tr
         dm ra (L.run p abiFuel "check" [] m0) st ∧ SizesPost b pb st)
       s (label abiSetupL) := by
   obtain ⟨hnb, htab, hneed64⟩ := abiTabOk_spec hok
-  have hL := abiVals_length tab hnb
+  have hL := abiVals_length tab
   have hfits := hc.hfits
   have hTE := abiVals_tabEnd hok dm.regs.r8.toNat dm.regs.rdi.toNat b.size dm.regs.rdx.toNat pb.size
   have hTE2 : (abiLayout tab dm.regs.r8.toNat dm.regs.rdi.toNat b.size dm.regs.rdx.toNat pb.size).tabEnd ≤
@@ -118,12 +118,12 @@ theorem abi_start_outcome [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = tr
   refine sim_abiStub tab hok k0 hcode.left _ s ra ?_ ?_ ?_ ?_ ?_
   · intro hneed j hj
     rw [e9] at hneed
-    simp only [abiNeed, hnb, abiSlot] at hneed
+    have := abiNeed_ge hok
     rw [e8]
     exact hd.grows _ (by rw [hc.hzero _ (by omega) (by rw [hL] at hj; omega)]; rfl)
   · intro hneed
     rw [e9] at hneed
-    simp only [abiNeed, hnb, abiSlot] at hneed
+    have := abiNeed_ge hok
     rw [e8, hL]; omega
   · rw [esp, toBitVec_eq_A, ← hc.hra]
     refine rdW_congr fun j hj => ?_
@@ -150,7 +150,7 @@ theorem abi_start_outcome [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = tr
     rw [← hc.hn, ← hc.hnp, ← esi, ← ecx]; exact ⟨hsi, hcx⟩
   rw [e9] at hneed
   have hneed' := hneed
-  simp only [abiNeed, hnb, abiSlot] at hneed'
+  have := abiNeed_ge hok
   have hs1' : s1.dmem = stores dm.regs dm.regs.r8.toNat s.dmem 0 (abiVals tab) := by
     rw [hs1, e8, stores_regs hregs _ _ _ _ (abiVals_noRax tab)]
   have hregs' : ∀ r, r ≠ .rax → r ≠ .rdi → r ≠ .rsi → s1.regs.get64 r = dm.regs.get64 r :=
@@ -181,7 +181,7 @@ theorem abi_start_outcome [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = tr
 `w` is written, then the stub; the run of `check` from the loaded memory with the mode word `w`
 (or `rdx = 1`). The seven instructions at `k`: the label, the size check, the mode store, the jump
 to `ca_setup`. -/
-theorem abiMode_outcome [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = true)
+theorem abiMode_outcome [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = true) (hio : abiIO tab = true)
     (hwf : Prog.wf tab p = true) (mode : GVar) (hng : mode.id < tab.ng) (w : Word) (lab : Label)
     (k k0 : Nat) (hl : label lab = at_ k)
     (h0 : Host.prog[k + 0]? = some (.label lab))
@@ -220,7 +220,7 @@ theorem abiMode_outcome [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = true
     have hneed : abiNeed tab ≤ dm.regs.r9.toNat := by
       simpa [Nat.toUInt64, UInt64.toNat_ofNat, Nat.mod_eq_of_lt hneed64] using hge
     have hneed' := hneed
-    simp only [abiNeed, hnb, abiSlot] at hneed'
+    have := abiNeed_ge hok
     have hoff : SmallOff (tab.globOff mode) := by
       simp only [Tab.globOff, Tab.globBase]; constructor <;> omega
     have hgo : (tab.globOff mode).toNat + 8 ≤ 2 ^ 35 := by
@@ -247,8 +247,8 @@ theorem abiMode_outcome [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = true
     · exact (Only.wrW (x := dm.regs.r8.toNat + (tab.globOff mode).toNat) (by omega)).mono
         (by omega) (by omega)
     · have hG := abiLayout_ok hok (abiCall_geom hc hneed)
-      have hL := abiVals_length tab hnb
-      have h0 := abi_memRel tab hok b pb dm ra hc hneed
+      have hL := abiVals_length tab
+      have h0 := abi_memRel tab hok hio b pb dm ra hc hneed
       have h1 := h0.storeG hG (g := mode) (by simpa [abiLayout_tab] using hng) w
       rw [← Layout.globAddr_toNat, abiLayout_T, abiLayout_tab] at h1
       refine h1.onlyD hG (a := 0) (b := 0) ⟨fun y hy => ?_, fun x hx _ => ?_⟩
@@ -264,7 +264,7 @@ theorem abiMode_outcome [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = true
           x hx
 
 /-- **From `ca_start_a`** (entry 1, mode word `1`). -/
-theorem abiA_outcome [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = true)
+theorem abiA_outcome [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = true) (hio : abiIO tab = true)
     (hwf : Prog.wf tab p = true) (mode plo phi : GVar) (out hdrf ctlf : ArrId) (hw : Nat)
     (fz own : List TieredArray) (hng : mode.id < tab.ng) (k0 : Nat)
     (hcode : Code (parStub tab mode plo phi out hdrf ctlf hw fz own ++ (abiStub tab ++ compileProg tab p "check")) k0)
@@ -278,13 +278,13 @@ theorem abiA_outcome [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = true)
   simp only [parStub] at hcP
   replace hcP := hcP.left
   simp only [parStub0] at hcP
-  exact abiMode_outcome p tab hok hwf mode hng 1 abiStartAL k0 _ (Code.label (i := 0) hcP rfl)
+  exact abiMode_outcome p tab hok hio hwf mode hng 1 abiStartAL k0 _ (Code.label (i := 0) hcP rfl)
     (Code.get (i := 0) hcP rfl) (Code.get (i := 1) hcP rfl) (Code.get (i := 2) hcP rfl)
     (Code.get (i := 3) hcP rfl) (Code.get (i := 4) hcP rfl) (Code.get (i := 5) hcP rfl)
     (Code.get (i := 6) hcP rfl) hcode.right fd hentry hnp b pb dm ra hc
 
 /-- **From `ca_start_a0`** (the sequential driver's entry 1, mode word `3`). -/
-theorem abiA0_outcome [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = true)
+theorem abiA0_outcome [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = true) (hio : abiIO tab = true)
     (hwf : Prog.wf tab p = true) (mode plo phi : GVar) (out hdrf ctlf : ArrId) (hw : Nat)
     (fz own : List TieredArray) (hng : mode.id < tab.ng) (k0 : Nat)
     (hcode : Code (parStub tab mode plo phi out hdrf ctlf hw fz own ++ (abiStub tab ++ compileProg tab p "check")) k0)
@@ -298,7 +298,7 @@ theorem abiA0_outcome [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = true)
   simp only [parStub] at hcP
   replace hcP := hcP.left
   simp only [parStub0] at hcP
-  exact abiMode_outcome p tab hok hwf mode hng 3 abiStartA0L (k0 + 7) _ (Code.label (i := 7) hcP rfl)
+  exact abiMode_outcome p tab hok hio hwf mode hng 3 abiStartA0L (k0 + 7) _ (Code.label (i := 7) hcP rfl)
     (Code.get (i := 7) hcP rfl) (Code.get (i := 8) hcP rfl) (Code.get (i := 9) hcP rfl)
     (Code.get (i := 10) hcP rfl) (Code.get (i := 11) hcP rfl) (Code.get (i := 12) hcP rfl)
     (Code.get (i := 13) hcP rfl) hcode.right fd hentry hnp b pb dm ra hc

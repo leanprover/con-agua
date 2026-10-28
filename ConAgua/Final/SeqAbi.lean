@@ -62,7 +62,7 @@ theorem abiS_outcome [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = true)
   have hS := hcQ.right.left
   have hL3 := hcQ.right.right
   have hLen := seqVals_length hnb out hdrf ctlf hw
-  rw [abiVals_length tab hnb] at hLen
+  rw [abiVals_length tab] at hLen
   have hend : base + 8 * (seqVals tab out hdrf ctlf hw).length ≤ 2 ^ 64 := by rw [hLen]; omega
   have hTE : (seqLayout tab base out hdrf ctlf hw).tabEnd ≤ base + 2 ^ 31 := by
     simp only [Layout.tabEnd, seqLayout_T, seqLayout_tab, seqLayout_nargs]; omega
