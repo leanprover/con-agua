@@ -1,6 +1,4 @@
-import ConAgua.Arena.Verdict
-import ConAgua.Arena.WhnfDelta
-import ConAgua.Arena.WhnfCore
+import ConAgua.Verdict.WhnfModels2E
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
@@ -19,13 +17,21 @@ set_option experimental.vcgen true
 
 namespace L.Arena
 
-l_model whnfCore_specE (p : Prog) (hf : p.lookup "whnf_core" = some whnfCoreL)
-  fns [hf ↦ whnfCoreE] grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] errors
+l_model whnfCoreE_spec (p : Prog) (hf : p.lookup "whnf_core" = some whnfCoreL)
+  fns [hf ↦ whnfCoreE list]
+  specs [callW_spec p n "wk_find", callW_spec p n "wk_put", callW_spec p n "wc_find",
+    callW_spec p n "wc_put"]
+  grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] unified
+  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
-l_model whnfCoreStep_specE (p : Prog) (hf : p.lookup "whnf_core_step" = some whnfCoreStepL)
-  fns [hf ↦ whnfCoreStepE list] grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] errors
+l_model whnfCoreStepE_spec (p : Prog) (hp : WhnfCoreProg p)
+  fns [hp.step ↦ whnfCoreStepE list]
+  specs [coreAppE_spec p hp.capp hp.capp2 hp.app n, coreStepProjE_spec p hp.sproj hp.rproj hp.plit n,
+    callW_spec p n "inst1"]
+  grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] unified
+  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 l_model whnf_specE (p : Prog) (hf : p.lookup "whnf" = some whnfL)
   fns [hf ↦ whnfE] grind [arena_grind] fold [tierW, idxW]

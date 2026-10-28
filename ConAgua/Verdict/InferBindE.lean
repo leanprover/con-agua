@@ -1,6 +1,4 @@
 import ConAgua.Verdict.InferSpineE
-import ConAgua.Arena.IndSumSpec.DecCVpGrow
-import ConAgua.Arena.InferBodyBind
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
@@ -443,7 +441,7 @@ theorem lamsFullE_ref (p : Prog) (_hp : InferLeafProg p) (hq : BindProg p) (hb :
         have hc' := CoreSpecE.of_callE (s₀ := ⟨m, Locals.init []⟩) (inferLamsLeaf_anyE p hq hil hnv N hk
           hkE F hFN hN ⟨m, Locals.init []⟩ a dn vis fe M eb mode d t k fo lo fvs ws ⟨hS, hmode, heb⟩ ht
           hf hftop hB (by omega)) hL
-        refine ErrClaim.of_run_eq' (fun ce h => ?_) hc'
+        refine ErrClaim.of_run_err (fun ce h => ?_) hc'
         by_cases hp0 : peel = 0
         · subst hp0; exact h
         · have ht5 : ¬ t >>> 28 = 5 := fun h => hc ⟨hp0, h⟩
@@ -696,7 +694,7 @@ theorem pisFullE_ref (p : Prog) (hp : InferLeafProg p) (hq : BindProg p) (hb : I
         have hc' := CoreSpecE.of_callE (s₀ := ⟨m, Locals.init []⟩) (inferPisLeaf_anyE p hp hq hil hnv N
           hk hkE F hFN hN ⟨m, Locals.init []⟩ a dn vis fe M eb mode d t k fo lo fvs ws ⟨hS, hmode, heb⟩
           ht hf hftop hB (by omega)) hL
-        refine ErrClaim.of_run_eq' (fun ce h => ?_) hc'
+        refine ErrClaim.of_run_err (fun ce h => ?_) hc'
         by_cases hp0 : peel = 0
         · subst hp0; exact h
         · have ht6 : ¬ t >>> 28 = 6 := fun h => hc ⟨hp0, h⟩
