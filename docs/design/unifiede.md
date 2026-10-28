@@ -907,6 +907,15 @@ load fix) are `unified` (`PosE1M`, `PosE2M`, `PosE3Cm`, `PosE3Fm`, `IndE`; 20 mo
   (the run's memory is unchanged only by the ok fact). The hand models `unsafeW`, `npGoW`,
   `recIdxW`, `ctorW` and `IndApplyRefine4` are gone. 15 modules 68.4 → 69.5 s.
 
+**`lvl_eq_fueled`** (`Verdict/LefRef`, after batch 1b): `lefE` (unified, `lvl_eq_c` through
+`callE`), `lef_ref` against `lefT u v := lvlEq? u v >>= liftFueled "level comparison"` (with
+`lefT_bind` for the callers' continuations), `G := NVAt p "lvl_eq_c"` (weaker than `closedNV`;
+`check_thm_val`'s claim has only that). `LefPost` has the `StageT` package, the frame (`mfr`: the
+function is not in `stageCoreFns`, so callers cannot frame the call themselves) and the `StageC`
+package as a conditional field. The two identical hand models `lfW` and `lveC` (and `lveW`) are
+gone; the callers' models `tvK3`, `agK3`, `nitK4` read the function through the run. Pair lines
+≈ 147 (five ok lemmas and the claim) → ≈ 55 (−63 %); 20 modules at parity (44.0 → 43.5 s).
+
 **Not migrated**:
 
 * `install_header` and `class_const_ok_header` (§3.5, §3.8) are not one body: their abort codes
