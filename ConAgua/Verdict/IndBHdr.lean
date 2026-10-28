@@ -67,19 +67,7 @@ theorem cchT_bind (mode : ConLeche.CheckMode) (fe : IFEnv) (cv : IConstantVal) :
     ConRon.Arena.classConstOk mode fe cv = cchT fe cv >>= fun _ => (do
       let stype ← inferTypeCore mode fe checkFuel 0 cv.type
       let _u ← ensureSortCore mode fe checkFuel 0 stype) := by
-  unfold ConRon.Arena.classConstOk cchT
-  by_cases h1 : (fe.find? cv.name).isSome = true <;> simp only [h1, ite_true, ite_false, Bool.false_eq_true, fail_bindAM, bind_assoc]
-  congr 1; funext b2
-  by_cases h2 : b2.contains cv.name = true <;> simp only [h2, ite_true, ite_false, Bool.false_eq_true, fail_bindAM]
-  by_cases h3 : nameNodup cv.levelParams = true <;> simp only [h3, ite_true, ite_false, Bool.false_eq_true, fail_bindAM, bind_assoc]
-  congr 1; funext b4
-  by_cases h4 : b4 = true <;> simp only [h4, ite_true, ite_false, Bool.false_eq_true, fail_bindAM, bind_assoc]
-  congr 1; funext b5
-  by_cases h5 : b5 = true <;> simp only [h5, ite_true, ite_false, Bool.false_eq_true, fail_bindAM, bind_assoc]
-  congr 1; funext b6
-  by_cases h6 : b6 = true <;> simp only [h6, ite_true, ite_false, Bool.false_eq_true, fail_bindAM, bind_assoc]
-  congr 1; funext b7
-  by_cases h7 : b7 = true <;> simp only [h7, ite_true, ite_false, Bool.false_eq_true, fail_bindAM, bind_assoc, pure_bind]
+  simp only [ConRon.Arena.classConstOk, cchT, bind_assoc, ite_bindAM, fail_bindAM, pure_bind]
 
 /-- A hit of `reserved_from`: one of the reserved words is `x`. -/
 theorem ibResFromW_hit (n : Nat) : ∀ (m : Mem) (x j c : Word), j.toNat ≤ 16 → c ≠ 0 →

@@ -41,12 +41,6 @@ structure ValProg (p : Prog) : Prop where
 
 /-! ## Twin equations -/
 
-theorem ite_bindAM {α β : Type} (c : Prop) [Decidable c] (x y : AM α) (f : α → AM β) :
-    ((if c then x else y) >>= f) = if c then x >>= f else y >>= f := by
-  split <;> rfl
-
-theorem fail_bindAM {α β : Type} (e : CheckError) (f : α → AM β) : (fail e >>= f) = fail e := rfl
-
 /-- `checkConstantVal` is `installHeader`, then the type's sort. -/
 theorem checkConstantVal_eq (mode : ConLeche.CheckMode) (fe : IFEnv) (cv : IConstantVal) :
     checkConstantVal mode fe cv = (do installHeader fe cv

@@ -242,8 +242,6 @@ def rgT (G : ClassGen) (RS : RecShape) (k c : Nat) : AM TargetMajor := do
       not the generated one")
   pure ci
 
-theorem rgFail_bind {α β : Type} (e : CheckError) (f : α → AM β) : (fail e >>= f) = fail e := rfl
-
 /-- `classRecTyOk` is its guards, then the rest. -/
 theorem rgT_bind {γ : Type} (G : ClassGen) (RS : RecShape) (k c : Nat) (rest : AM γ) :
     (do
@@ -254,11 +252,7 @@ theorem rgT_bind {γ : Type} (G : ClassGen) (RS : RecShape) (k c : Nat) (rest : 
         fail (.invalid "generated recursor: the recursor record's rule prefix or major index is \
           not the generated one")
       rest) = rgT G RS k c >>= fun _ => rest := by
-  simp only [rgT, bind_assoc]
-  congr 1; funext ci
-  by_cases h1 : (RS.tgt == ci.member.getD k) = true <;>
-    by_cases h2 : (RS.rP == G.nP + G.slots.length && RS.mI == RS.rP + ci.nIdx) = true <;>
-    simp [h1, h2, rgFail_bind]
+  simp only [rgT, bind_assoc, ite_bindAM, fail_bindAM, pure_bind]
 
 theorem memGuard_iff (tgt k8 : Nat) (k : Word) (ht : tgt < 2 ^ 64) (hk8 : k8 < 2 ^ 64) :
     (UInt64.ofNat tgt = (if (UInt64.ofNat k8 : Word) ≠ 0 then (UInt64.ofNat k8 : Word) - 1 else k)) ↔
