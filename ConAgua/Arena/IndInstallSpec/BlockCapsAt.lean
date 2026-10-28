@@ -155,14 +155,14 @@ theorem ctorNamesW_dec {n : Nat} {m m' : Mem} {o l : Word} {r : List Word}
     rw [hIW, hv']
     simp only [iwTop, hqq] at hvb
     rw [UInt64.toNat_ofNat_of_lt' (by rw [UInt64_size_eq]; omega)]; exact hvb
-  obtain ⟨hA, hS, hW, hG⟩ := nameCopyW_get (n - 1) _ _ _ _ _ hcp
+  obtain ⟨hA, hS, hG⟩ := nameCopyW_get (n - 1) _ _ _ _ _ hcp
     (by simp only [iwTop, hqq] at hsrc; omega)
     (by rw [hIW]; exact hroom) (by rw [hIW]; exact hsz)
     hptr'
   rw [hIW] at hS hG
   rw [hEE] at hG
   have hfr : MemFrame [IW] [200] m m2 :=
-    (allocMem_frame m _).trans (copy_frame hA (by rw [hS, hIW]) hW)
+    (allocMem_frame m _).trans (copy_frame hA (by rw [hS, hIW]))
   have htop : rdW (m2.arr64 CTL) 200 = q + l := by
     rw [hA CTL (by decide), allocMem_top m _ hc, hqq]
   have hsum : (q + l).toNat = q.toNat + l.toNat := by
@@ -307,7 +307,6 @@ theorem erCopy_get {src : ArrId} (hsrc : src ≠ EREC) {F : Nat → Mem → Word
     s.toNat + l.toNat < 2 ^ 64 →
     d.toNat + l.toNat ≤ (m.arr64 EREC).size → (m.arr64 EREC).size < 2 ^ 64 →
     (∀ b : TieredArray, b ≠ ↑EREC → m'.arr64 b = m.arr64 b) ∧ (m'.arr64 EREC).size = (m.arr64 EREC).size ∧
-    m.SameShape m' ∧
     ∀ i, (m'.arr64 EREC)[i]? =
       if d.toNat ≤ i ∧ i < d.toNat + l.toNat then some ((m.arr64 src)[s.toNat + (i - d.toNat)]?.getD 0)
       else (m.arr64 EREC)[i]? := by
@@ -319,7 +318,7 @@ theorem erCopy_get {src : ArrId} (hsrc : src ≠ EREC) {F : Nat → Mem → Word
     · rw [hF, ite_eq_left hl] at h
       cases h
       subst hl
-      refine ⟨fun _ _ => rfl, rfl, .refl _, fun i => ?_⟩
+      refine ⟨fun _ _ => rfl, rfl, fun i => ?_⟩
       have : ¬ (d.toNat ≤ i ∧ i < d.toNat + (0 : Word).toNat) := by
         simp only [UInt64.toNat_zero]; omega
       simp only [this, ite_false]
@@ -345,13 +344,12 @@ theorem erCopy_get {src : ArrId} (hsrc : src ≠ EREC) {F : Nat → Mem → Word
           simp only [hdlt, ite_true]
           simp [rdW]
         · simp [hi, Ne.symm hi]
-      obtain ⟨hA, hS, hW, hG⟩ := ih m1 m' (d + 1) (s + 1) (l - 1) h
+      obtain ⟨hA, hS, hG⟩ := ih m1 m' (d + 1) (s + 1) (l - 1) h
         (by rw [hs1, hl1]; omega)
         (by rw [hd1, hl1, hsz1]; omega) (by rw [hsz1]; exact hsz)
       rw [hE1] at hG
-      refine ⟨fun b hb => (hA b hb).trans ?_, hS.trans hsz1, Mem.SameShape.trans ?_ hW, fun i => ?_⟩
+      refine ⟨fun b hb => (hA b hb).trans ?_, hS.trans hsz1, fun i => ?_⟩
       · rw [hm1, Mem.arr64_set64_ne _ _ _ _ _ hb]
-      · rw [hm1]; exact Mem.sameShape_set64 _ _ _ _
       · rw [hG i, hd1, hl1, hs1]
         by_cases hi : d.toNat ≤ i ∧ i < d.toNat + l.toNat
         · rw [ite_eq_left hi]
@@ -367,9 +365,9 @@ theorem erCopy_get {src : ArrId} (hsrc : src ≠ EREC) {F : Nat → Mem → Word
 three facts) is a `MemFrame [EREC] [129]`. -/
 theorem erAllocCopy_frame {m m2 : Mem} {l : Word}
     (hA : ∀ b : TieredArray, b ≠ ↑EREC → m2.arr64 b = (erAllocMem m l).arr64 b)
-    (hS : (m2.arr64 EREC).size = (m.arr64 EREC).size) (hW : (erAllocMem m l).SameShape m2) :
+    (hS : (m2.arr64 EREC).size = (m.arr64 EREC).size) :
     MemFrame [EREC] [129] m m2 := by
-  refine ⟨fun b hb hcb => ?_, fun x hx => ?_, fun b => ?_, ?_⟩
+  refine ⟨fun b hb hcb => ?_, fun x hx => ?_, fun b => ?_⟩
   · rw [hA b (by simpa using hb), erAllocMem, Mem.arr64_set64_ne _ _ _ _ _ hcb]
   · rw [hA CTL (by decide)]; simp only [erAllocMem, rdW_set64]
     have hx' : ¬ (x = 129) := by simpa using hx
@@ -380,7 +378,6 @@ theorem erAllocCopy_frame {m m2 : Mem} {l : Word}
       by_cases hbc : b = CTL
       · subst hbc; exact size_set64 _ _ _ _ _
       · rw [Mem.arr64_set64_ne _ _ _ _ _ hbc]
-  · exact Mem.SameShape.trans (by simp [erAllocMem]) hW
 
 /-- **`block_caps_at_er_copy` is its model `capsErCopyW`** (generated). -/
 l_model blockCapsAtErCopy_spec (p : Prog) (ha : p.lookup "erec_alloc" = some erecAlloc)
@@ -434,12 +431,12 @@ theorem capsErCopyW_post {n : Nat} {m m' : Mem} {o l : Word} {r : List Word}
     simp only [erAllocMem]; rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
   have hI : (erAllocMem m l).arr64 IW = m.arr64 IW := by
     simp only [erAllocMem]; rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
-  obtain ⟨hA, hS, hW, hG⟩ := erCopy_get (src := IW) (by decide) (fun _ _ _ _ => rfl) (fun _ _ _ _ _ => rfl)
+  obtain ⟨hA, hS, hG⟩ := erCopy_get (src := IW) (by decide) (fun _ _ _ _ => rfl) (fun _ _ _ _ _ => rfl)
     n _ _ _ _ _ hcp (by omega) (by rw [hE]; exact hroom) (by rw [hE]; exact hEs)
   rw [hE] at hS hG
   rw [hI] at hG
   have hCTL : m2.arr64 CTL = (erAllocMem m l).arr64 CTL := hA CTL (by decide)
-  have hf := erAllocCopy_frame hA hS hW
+  have hf := erAllocCopy_frame hA hS
   have hqe : erTop m = q.toNat := by simp only [erTop, hqq]
   have h129 : (129 : Word).toNat < (m.arr64 CTL).size := by simp; omega
   refine ⟨rfl, hqe.symm, fun j hj => ?_, hf, fun i hi => ?_, ?_, ?_, ?_⟩

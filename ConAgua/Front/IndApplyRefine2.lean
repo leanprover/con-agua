@@ -73,7 +73,7 @@ theorem IExt.ifr {m m' : Mem} (h : IExt m m') : m'.arr64 IFR = m.arr64 IFR :=
   h.frame.1 IFR (by decide) (by decide)
 
 theorem IExt.size {m m' : Mem} (h : IExt m m') (A : ArrId) : (m'.arr64 A).size = (m.arr64 A).size :=
-  h.frame.2.2.1 A
+  h.frame.size A
 
 theorem IExt.other {m m' : Mem} (h : IExt m m') (A : ArrId) (h1 : A ≠ IFL) (h2 : A ≠ LH) (h3 : A ≠ CTL) :
     m'.arr64 A = m.arr64 A :=
@@ -119,7 +119,7 @@ theorem pushLW_factsA {m m' : Mem} {x o : Word} (hs : (m.arr64 IFL).size < 2 ^ 6
   rcases ha : allocW m IFL 1 with _ | ⟨o', m₁⟩ <;> simp only [ha, pushK, reduceCtorEq] at h
   cases h
   obtain ⟨a1, a2, a3, a4, a5⟩ := allocW_factsA (by decide) hs ht ha
-  have hs1 : (m₁.arr64 IFL).size = (m.arr64 IFL).size := a5.2.2.1 IFL
+  have hs1 : (m₁.arr64 IFL).size = (m.arr64 IFL).size := a5.size IFL
   simp only [show (1 : Word).toNat = 1 from rfl] at a2 a3
   refine ⟨a1, ?_, by omega, ?_, fun i h1 h2 => ?_, a5.trans (MemFrame.set64 _ _ (by decide) _ _)⟩
   · simp only [topN, wd_setA]

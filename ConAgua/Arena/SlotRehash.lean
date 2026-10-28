@@ -254,7 +254,7 @@ theorem place_inv (mi : Mem) (i : Word) (hi : i < n) (hI : ReinsInv sa ob N n bt
   obtain ⟨hfr, h0, h1, hslot, hnode⟩ := hI
   have hiN : i < N := UInt64.lt_iff_toNat_lt.mpr (by
     have := UInt64.lt_iff_toNat_lt.mp hi; have := UInt64.le_iff_toNat_le.mp hnN; omega)
-  have hsz : (mi.arr64 sa).size = (m0.arr64 sa).size := hfr.2.1 sa
+  have hsz : (mi.arr64 sa).size = (m0.arr64 sa).size := hfr.size sa
   generalize hX : VW sa ob mi i - MARK = X at *
   generalize hq : KW sa ob mi i = q at *
   obtain ⟨hbX, hXc, hK, -, -⟩ := liveU_of_marked_slot sa ob n bt c KPm mi i i (hslot i hiN) hv (by omega)
@@ -327,21 +327,21 @@ theorem place_inv (mi : Mem) (i : Word) (hi : i < n) (hI : ReinsInv sa ob N n bt
       have f3 : GFr sa m0 (((mi.set64 sa (ob + j * 2) X).set64 sa (ob + j * 2 + 1) q).set64 sa (ob + i * 2) Y) := f2.trans (GFr.set64 _ _ _ _)
       have hV : ∀ j', j' < N → VW sa ob ((((mi.set64 sa (ob + j * 2) X).set64 sa (ob + j * 2 + 1) q).set64 sa (ob + i * 2) Y).set64 sa (ob + i * 2 + 1) Yk) j' =
           if i = j' then Y else if j = j' then X else VW sa ob mi j' := fun j' hj' => by
-        rw [VW_setK sa ob N m0 hob hNL hL (((mi.set64 sa (ob + j * 2) X).set64 sa (ob + j * 2 + 1) q).set64 sa (ob + i * 2) Y) (f3.2.1 sa) i j' hiN hj',
-          VW_setV sa ob N m0 hob hNL hL ((mi.set64 sa (ob + j * 2) X).set64 sa (ob + j * 2 + 1) q) (f2.2.1 sa) i j' hiN hj',
-          VW_setK sa ob N m0 hob hNL hL (mi.set64 sa (ob + j * 2) X) (f1.2.1 sa) j j' hjN hj',
+        rw [VW_setK sa ob N m0 hob hNL hL (((mi.set64 sa (ob + j * 2) X).set64 sa (ob + j * 2 + 1) q).set64 sa (ob + i * 2) Y) (f3.size sa) i j' hiN hj',
+          VW_setV sa ob N m0 hob hNL hL ((mi.set64 sa (ob + j * 2) X).set64 sa (ob + j * 2 + 1) q) (f2.size sa) i j' hiN hj',
+          VW_setK sa ob N m0 hob hNL hL (mi.set64 sa (ob + j * 2) X) (f1.size sa) j j' hjN hj',
           VW_setV sa ob N m0 hob hNL hL mi hsz j j' hjN hj']
       have hKf : ∀ j', j' < N → KW sa ob ((((mi.set64 sa (ob + j * 2) X).set64 sa (ob + j * 2 + 1) q).set64 sa (ob + i * 2) Y).set64 sa (ob + i * 2 + 1) Yk) j' =
           if i = j' then Yk else if j = j' then q else KW sa ob mi j' := fun j' hj' => by
-        rw [KW_setK sa ob N m0 hob hNL hL (((mi.set64 sa (ob + j * 2) X).set64 sa (ob + j * 2 + 1) q).set64 sa (ob + i * 2) Y) (f3.2.1 sa) i j' hiN hj',
-          KW_setV sa ob N m0 hob hNL hL ((mi.set64 sa (ob + j * 2) X).set64 sa (ob + j * 2 + 1) q) (f2.2.1 sa) i j' hiN hj',
-          KW_setK sa ob N m0 hob hNL hL (mi.set64 sa (ob + j * 2) X) (f1.2.1 sa) j j' hjN hj',
+        rw [KW_setK sa ob N m0 hob hNL hL (((mi.set64 sa (ob + j * 2) X).set64 sa (ob + j * 2 + 1) q).set64 sa (ob + i * 2) Y) (f3.size sa) i j' hiN hj',
+          KW_setV sa ob N m0 hob hNL hL ((mi.set64 sa (ob + j * 2) X).set64 sa (ob + j * 2 + 1) q) (f2.size sa) i j' hiN hj',
+          KW_setK sa ob N m0 hob hNL hL (mi.set64 sa (ob + j * 2) X) (f1.size sa) j j' hjN hj',
           KW_setV sa ob N m0 hob hNL hL mi hsz j j' hjN hj']
       have hr01 : ∀ y : Word, y.toNat < 2 →
           rdW (((((mi.set64 sa (ob + j * 2) X).set64 sa (ob + j * 2 + 1) q).set64 sa (ob + i * 2) Y).set64 sa (ob + i * 2 + 1) Yk).arr64 sa) y = rdW (mi.arr64 sa) y := fun y hy => by
-        rw [rd01_setK sa ob N m0 hob hNL hL (((mi.set64 sa (ob + j * 2) X).set64 sa (ob + j * 2 + 1) q).set64 sa (ob + i * 2) Y) (f3.2.1 sa) i hiN Yk y hy,
-          rd01_setV sa ob N m0 hob hNL hL ((mi.set64 sa (ob + j * 2) X).set64 sa (ob + j * 2 + 1) q) (f2.2.1 sa) i hiN Y y hy,
-          rd01_setK sa ob N m0 hob hNL hL (mi.set64 sa (ob + j * 2) X) (f1.2.1 sa) j hjN q y hy,
+        rw [rd01_setK sa ob N m0 hob hNL hL (((mi.set64 sa (ob + j * 2) X).set64 sa (ob + j * 2 + 1) q).set64 sa (ob + i * 2) Y) (f3.size sa) i hiN Yk y hy,
+          rd01_setV sa ob N m0 hob hNL hL ((mi.set64 sa (ob + j * 2) X).set64 sa (ob + j * 2 + 1) q) (f2.size sa) i hiN Y y hy,
+          rd01_setK sa ob N m0 hob hNL hL (mi.set64 sa (ob + j * 2) X) (f1.size sa) j hjN q y hy,
           rd01_setV sa ob N m0 hob hNL hL mi hsz j hjN X y hy]
       refine ⟨⟨f3.trans (GFr.set64 _ _ _ _), by rw [hr01 0 (by simp), h0], by rw [hr01 1 (by simp), h1],
         fun j' hj' => ?_, fun x hx => ?_⟩, fun _ => by rw [hV _ hiN]; simp, fun h => (h (by first | exact hm | trivial)).elim⟩
@@ -376,18 +376,18 @@ theorem place_inv (mi : Mem) (i : Word) (hi : i < n) (hI : ReinsInv sa ob N n bt
       have f2 : GFr sa m0 ((mi.set64 sa (ob + j * 2) X).set64 sa (ob + j * 2 + 1) q) := f1.trans (GFr.set64 _ _ _ _)
       have hV : ∀ j', j' < N → VW sa ob (((mi.set64 sa (ob + j * 2) X).set64 sa (ob + j * 2 + 1) q).set64 sa (ob + i * 2) 0) j' =
           if i = j' then 0 else if j = j' then X else VW sa ob mi j' := fun j' hj' => by
-        rw [VW_setV sa ob N m0 hob hNL hL ((mi.set64 sa (ob + j * 2) X).set64 sa (ob + j * 2 + 1) q) (f2.2.1 sa) i j' hiN hj',
-          VW_setK sa ob N m0 hob hNL hL (mi.set64 sa (ob + j * 2) X) (f1.2.1 sa) j j' hjN hj',
+        rw [VW_setV sa ob N m0 hob hNL hL ((mi.set64 sa (ob + j * 2) X).set64 sa (ob + j * 2 + 1) q) (f2.size sa) i j' hiN hj',
+          VW_setK sa ob N m0 hob hNL hL (mi.set64 sa (ob + j * 2) X) (f1.size sa) j j' hjN hj',
           VW_setV sa ob N m0 hob hNL hL mi hsz j j' hjN hj']
       have hKf : ∀ j', j' < N → KW sa ob (((mi.set64 sa (ob + j * 2) X).set64 sa (ob + j * 2 + 1) q).set64 sa (ob + i * 2) 0) j' =
           if j = j' then q else KW sa ob mi j' := fun j' hj' => by
-        rw [KW_setV sa ob N m0 hob hNL hL ((mi.set64 sa (ob + j * 2) X).set64 sa (ob + j * 2 + 1) q) (f2.2.1 sa) i j' hiN hj',
-          KW_setK sa ob N m0 hob hNL hL (mi.set64 sa (ob + j * 2) X) (f1.2.1 sa) j j' hjN hj',
+        rw [KW_setV sa ob N m0 hob hNL hL ((mi.set64 sa (ob + j * 2) X).set64 sa (ob + j * 2 + 1) q) (f2.size sa) i j' hiN hj',
+          KW_setK sa ob N m0 hob hNL hL (mi.set64 sa (ob + j * 2) X) (f1.size sa) j j' hjN hj',
           KW_setV sa ob N m0 hob hNL hL mi hsz j j' hjN hj']
       have hr01 : ∀ y : Word, y.toNat < 2 →
           rdW ((((mi.set64 sa (ob + j * 2) X).set64 sa (ob + j * 2 + 1) q).set64 sa (ob + i * 2) 0).arr64 sa) y = rdW (mi.arr64 sa) y := fun y hy => by
-        rw [rd01_setV sa ob N m0 hob hNL hL ((mi.set64 sa (ob + j * 2) X).set64 sa (ob + j * 2 + 1) q) (f2.2.1 sa) i hiN 0 y hy,
-          rd01_setK sa ob N m0 hob hNL hL (mi.set64 sa (ob + j * 2) X) (f1.2.1 sa) j hjN q y hy,
+        rw [rd01_setV sa ob N m0 hob hNL hL ((mi.set64 sa (ob + j * 2) X).set64 sa (ob + j * 2 + 1) q) (f2.size sa) i hiN 0 y hy,
+          rd01_setK sa ob N m0 hob hNL hL (mi.set64 sa (ob + j * 2) X) (f1.size sa) j hjN q y hy,
           rd01_setV sa ob N m0 hob hNL hL mi hsz j hjN X y hy]
       refine ⟨⟨f2.trans (GFr.set64 _ _ _ _), by rw [hr01 0 (by simp), h0], by rw [hr01 1 (by simp), h1],
         fun j' hj' => ?_, fun x hx => ?_⟩, fun h => absurd ((mark_le_iff _).mp h) (by simp), fun _ => ?_⟩

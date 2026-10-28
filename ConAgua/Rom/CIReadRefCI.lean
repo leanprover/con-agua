@@ -91,7 +91,7 @@ theorem ciPre {m₀ : Mem} {a₀ : AState} {T : Nat} (seen : List ConLeche.Expr)
     split at this; · cases this
     simp only [Option.some.injEq, Prod.mk.injEq] at this; rw [← this.2]; exact MemFrame.setCtl _ _ _
   have hM1 := hM.frameG hf1 (by simp) (by decide)
-  have hs1 : stkTop m1 = stkTop m := hf1.2.1 131 (by decide)
+  have hs1 : stkTop m1 = stkTop m := hf1.ctl 131 (by decide)
   have hlt1 := hI1.er_lt
   obtain ⟨hI2, hM2, hs2, ht2, hIW2⟩ := setER_facts hI1 hM1 (r1.headD 0) (UInt64.ofNat kn) (by omega)
   cases k with
@@ -356,7 +356,7 @@ theorem ci_rec {m₀ : Mem} {a₀ : AState} {T : Nat} (dn : NIdx → Option ConL
     split at this; · cases this
     simp only [Option.some.injEq, Prod.mk.injEq] at this; rw [← this.2]; exact MemFrame.setCtl _ _ _
   have hM5 := hM4.frameG hf5 (by simp) (by decide)
-  have hs5 : stkTop m5 = stkTop m4 := hf5.2.1 131 (by decide)
+  have hs5 : stkTop m5 = stkTop m4 := hf5.ctl 131 (by decide)
   obtain ⟨hI6, hM6, hs6, ht6, hIW6⟩ := setER_facts hI5 hM5 (pp + 7) (r4.headD 0) (by omega)
   obtain ⟨hI7, hM7, hs7, ht7, hIW7⟩ := setER_facts hI6 hM6 (pp + 8) (UInt64.ofNat rs.length) (by omega)
   generalize hm7 : (m5.set64 EREC (pp + 7) (r4.headD 0)).set64 EREC (pp + 8) (UInt64.ofNat rs.length) = m7

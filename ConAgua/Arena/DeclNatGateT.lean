@@ -44,11 +44,11 @@ theorem StageC.of_run {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IF
     (hok : ConRon.Bridge.StateOK a') (hx : Ext a.store a'.store) (hc : a'.caches = a.caches)
     (hp : a'.pins = a.pins) : StageC dn vis fe env m' a' :=
   ⟨hS, h.check.mono hok hx hc hp,
-    ⟨by rw [hf.2.2.1]; exact h.mem.erec, by rw [hf.2.2.1]; exact h.mem.spn,
-      by rw [hf.2.2.1]; exact h.mem.bstk,
+    ⟨by rw [hf.size]; exact h.mem.erec, by rw [hf.size]; exact h.mem.spn,
+      by rw [hf.size]; exact h.mem.bstk,
       h.mem.memos.frame hf leafA_memo leafC_memo leafA_walk leafC_walk leafA_lp leafC_lp,
       fun k x e => hx.lss.ls.ns k x (h.mem.dnN k x e)⟩,
-    by simp only [pinW, hf.1 PINS leafA_pins (by decide)]; exact h.flag⟩
+    by simp only [pinW, hf.arr PINS leafA_pins (by decide)]; exact h.flag⟩
 
 /-- The stage relation at the pushed view `w`, back from the pre-insertion view. -/
 theorem stageR_of_restrict {dn : NIdx → Option ConLeche.Name} {vis w : Word} {fe2 : IFEnv}

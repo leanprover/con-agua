@@ -168,8 +168,8 @@ theorem CoreS.set_wc {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : ASta
     fun S K mp hS' h1 h2 hR =>
       memoRV_frame S hS' K _ [(WCM : TieredArray)] [97] (by simpa using h1) (by simpa using h2) m m' hf
         (vh_const m m') mp hR
-  have hspn : m'.arr64 SPN = m.arr64 SPN := hf.1 SPN (by decide) (by decide)
-  have h136 : rdW (m'.arr64 CTL) 136 = rdW (m.arr64 CTL) 136 := hf.2.1 136 (by simp)
+  have hspn : m'.arr64 SPN = m.arr64 SPN := hf.arr SPN (by decide) (by decide)
+  have h136 : rdW (m'.arr64 CTL) 136 = rdW (m.arr64 CTL) 136 := hf.ctl 136 (by simp)
   refine ⟨⟨⟨ArenaR.caches_irrel _ (ArenaR.frame_ext [(WCM : TieredArray)] [97] (by decide) (by simp) m m' hf a
         hS.arena.1), DerR.of_store _ _ _ (DerR.frameM [(WCM : TieredArray)] [97] m m' hf (by decide) a hS.arena.2) rfl⟩,
       ⟨hq,
@@ -184,12 +184,12 @@ theorem CoreS.set_wc {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : ASta
         frv _ _ _ (coreSch_wf _ _ (by decide) (by decide)) (by decide) (by decide) hS.core.rr,
         fr _ _ _ _ (coreSch_wf _ _ (by decide) (by decide)) (by decide) (by decide) hS.core.lq,
         fr _ _ _ _ (coreSch_wf _ _ (by decide) (by decide)) (by decide) (by decide) hS.core.lsq⟩,
-      hS.pins.congr (hf.1 PINS (by decide) (by decide)),
+      hS.pins.congr (hf.arr PINS (by decide) (by decide)),
       hS.env.frame (fun b hb => by simp at hb; subst hb; decide)
         (fun x hx => by simp at hx; subst hx; decide) hf,
       fun h l e => hS.readL h l e, fun h l e => hS.readLs h l e, hS.nwf,
-      hf.2.2.1 EREC ▸ hS.erec, hf.2.2.1 SPN ▸ hS.spn, hS.memos.frame hf (by decide) (by decide), hf.2.2.1 BSTK ▸ hS.bstk,
-      (hS.den.frameE (hf.1 EREC (by decide) (by decide))).caches rfl rfl rfl,
+      hf.size EREC ▸ hS.erec, hf.size SPN ▸ hS.spn, hS.memos.frame hf (by decide) (by decide), hf.size BSTK ▸ hS.bstk,
+      (hS.den.frameE (hf.arr EREC (by decide) (by decide))).caches rfl rfl rfl,
       hS.mode.frame hf (by simp) (by simp)⟩,
     StackKept.of_frame hf⟩
 
@@ -219,8 +219,8 @@ theorem CoreS.set_wk {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : ASta
     fun S K mp hS' h1 h2 hR =>
       memoRV_frame S hS' K _ [(WKM : TieredArray)] [99] (by simpa using h1) (by simpa using h2) m m' hf
         (vh_const m m') mp hR
-  have hspn : m'.arr64 SPN = m.arr64 SPN := hf.1 SPN (by decide) (by decide)
-  have h136 : rdW (m'.arr64 CTL) 136 = rdW (m.arr64 CTL) 136 := hf.2.1 136 (by simp)
+  have hspn : m'.arr64 SPN = m.arr64 SPN := hf.arr SPN (by decide) (by decide)
+  have h136 : rdW (m'.arr64 CTL) 136 = rdW (m.arr64 CTL) 136 := hf.ctl 136 (by simp)
   refine ⟨⟨⟨ArenaR.caches_irrel _ (ArenaR.frame_ext [(WKM : TieredArray)] [99] (by decide) (by simp) m m' hf a
         hS.arena.1), DerR.of_store _ _ _ (DerR.frameM [(WKM : TieredArray)] [99] m m' hf (by decide) a hS.arena.2) rfl⟩,
       ⟨mr (coreSch_wf _ _ (by decide) (by decide)) vh_const (by decide) (by decide) hS.core.wc,
@@ -235,12 +235,12 @@ theorem CoreS.set_wk {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : ASta
         frv _ _ _ (coreSch_wf _ _ (by decide) (by decide)) (by decide) (by decide) hS.core.rr,
         fr _ _ _ _ (coreSch_wf _ _ (by decide) (by decide)) (by decide) (by decide) hS.core.lq,
         fr _ _ _ _ (coreSch_wf _ _ (by decide) (by decide)) (by decide) (by decide) hS.core.lsq⟩,
-      hS.pins.congr (hf.1 PINS (by decide) (by decide)),
+      hS.pins.congr (hf.arr PINS (by decide) (by decide)),
       hS.env.frame (fun b hb => by simp at hb; subst hb; decide)
         (fun x hx => by simp at hx; subst hx; decide) hf,
       fun h l e => hS.readL h l e, fun h l e => hS.readLs h l e, hS.nwf,
-      hf.2.2.1 EREC ▸ hS.erec, hf.2.2.1 SPN ▸ hS.spn, hS.memos.frame hf (by decide) (by decide), hf.2.2.1 BSTK ▸ hS.bstk,
-      (hS.den.frameE (hf.1 EREC (by decide) (by decide))).caches rfl rfl rfl,
+      hf.size EREC ▸ hS.erec, hf.size SPN ▸ hS.spn, hS.memos.frame hf (by decide) (by decide), hf.size BSTK ▸ hS.bstk,
+      (hS.den.frameE (hf.arr EREC (by decide) (by decide))).caches rfl rfl rfl,
       hS.mode.frame hf (by simp) (by simp)⟩,
     StackKept.of_frame hf⟩
 

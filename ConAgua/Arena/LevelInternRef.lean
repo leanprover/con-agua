@@ -158,8 +158,8 @@ theorem viewsKept_of {m m' : Mem} {a a' : AState} (hR : ArenaR m a) (hR' : Arena
       have := q.toNat_lt; omega
     obtain ⟨v, hv⟩ := lvNodeW_view hR hh hq
     rw [lvNodeW_store hR hh hv, lvNodeW_store hR' hh (hk.1 _ _ hv)]
-  · have hLH : m'.arr64 LH = m.arr64 LH := hf.1 LH (by simp [tier1, lvArrs, ZREC, ZSLOT, SREC, SSLOT, SHP, MREC, MSLOT, MHP, IREC, ISLOT, IHP, PREC, PSLOT, LH]) (by decide)
-    have h192 : rdW (m'.arr64 CTL) 192 = rdW (m.arr64 CTL) 192 := hf.2.1 192 (by simp [lvCtl])
+  · have hLH : m'.arr64 LH = m.arr64 LH := hf.arr LH (by simp [tier1, lvArrs, ZREC, ZSLOT, SREC, SSLOT, SHP, MREC, MSLOT, MHP, IREC, ISLOT, IHP, PREC, PSLOT, LH]) (by decide)
+    have h192 : rdW (m'.arr64 CTL) 192 = rdW (m.arr64 CTL) 192 := hf.ctl 192 (by simp [lvCtl])
     rw [lvNodeW_heap m' q hb, lvNodeW_heap m q hb, hLH, h192]
 
 /-! ## The refinement -/
@@ -587,9 +587,9 @@ theorem capsNeverZeroW_ok (n : Nat) (m m' : Mem) (a : AState) (po pc us swd so s
   have hA₂ : ArenaD m₂ a := arenaD_frame_hi hA hf₂ (by simp [SPN]) (by simp)
   have hspn₂ : m₂.arr64 SPN = m₁.arr64 SPN := by
     rw [← hm₂, Mem.arr64_set64_ne _ _ _ _ _ (by decide), Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
-  have herec₂ : m₂.arr64 EREC = m.arr64 EREC := hf₂.1 EREC (by simp [SPN, EREC]) (by decide)
-  have hpool₂ : m₂.arr64 POOL = m.arr64 POOL := hf₂.1 POOL (by simp [SPN, POOL]) (by decide)
-  have hpool₂' : m₂.arr64 POOL1 = m.arr64 POOL1 := hf₂.1 POOL1 (by simp [SPN, POOL1]) (by decide)
+  have herec₂ : m₂.arr64 EREC = m.arr64 EREC := hf₂.arr EREC (by simp [SPN, EREC]) (by decide)
+  have hpool₂ : m₂.arr64 POOL = m.arr64 POOL := hf₂.arr POOL (by simp [SPN, POOL]) (by decide)
+  have hpool₂' : m₂.arr64 POOL1 = m.arr64 POOL1 := hf₂.arr POOL1 (by simp [SPN, POOL1]) (by decide)
   have hpool₂v := vpool_congr hpool₂ hpool₂'
   have hpool₂c := pcap_congr' hpool₂ hpool₂'
   have htop := m.top.toNat_lt
@@ -619,7 +619,7 @@ theorem capsNeverZeroW_ok (n : Nat) (m m' : Mem) (a : AState) (po pc us swd so s
     by_cases hs : (136 : Word).toNat < (m₃.arr64 CTL).size
     · simp; intro h; simp at hs; omega
     · have hsz₃ : (m₃.arr64 CTL).size = (m.arr64 CTL).size := by
-        have := hf₃.2.2.1 CTL; rw [Mem.size_arr64_set64] at this; exact this
+        have := hf₃.size CTL; rw [Mem.size_arr64_set64] at this; exact this
       simp only [hs, and_false, ↓reduceIte, rdW]
       rw [Array.getElem?_eq_none (by omega), Array.getElem?_eq_none (by omega)]
   · intro i hi

@@ -86,7 +86,7 @@ theorem cdaW_okT {p : Prog} (hX : AxProg p) (hq : KnotStageProg p) (hcl : LeafCl
         ⟨hS1, hS.twin.frame hf ⟨by decide, by decide⟩ ⟨by decide, by decide⟩
           ⟨by decide, by decide, by decide⟩ ⟨by decide, by decide, by decide⟩
           ⟨by decide, by decide, by decide⟩ ⟨by decide, by decide, by decide⟩,
-          by simp only [pinW, hf.1 PINS (by decide) (by decide)]; exact hS.flag⟩
+          by simp only [pinW, hf.arr PINS (by decide) (by decide)]; exact hS.flag⟩
       obtain ⟨s3, hs3, -, hok3, hS3, hg3, -⟩ := triple_of_callW (s₀ := ⟨m1, Locals.init []⟩)
         (checkConstantVal_refinesT p hX.val hq hap hkp k (by omega) ⟨m1, Locals.init []⟩ a dn fe vis
           (r1.headD 0 + 1) cv hT1 hcv1 (by

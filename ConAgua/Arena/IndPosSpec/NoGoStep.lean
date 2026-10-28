@@ -394,7 +394,7 @@ theorem noFrame_arena {m m' : Mem} {a : AState} (hf : MemFrame [NOM] [205] m m')
     (fun x hx => by simp at hx; subst hx; exact not_mem_arenaCtl _ (by decide)) hf hR
 
 theorem noFrame_iw {m m' : Mem} (hf : MemFrame [NOM] [205] m m') : m'.arr64 IW = m.arr64 IW :=
-  hf.1 IW (by decide) (by decide)
+  hf.arr IW (by decide) (by decide)
 
 abbrev noMR (m : Mem) (mp : Std.HashMap EIdx Bool) : Prop :=
   MemoRG noSch bmKey (fun w : Word => w != 0) m mp

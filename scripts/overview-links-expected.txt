@@ -1417,13 +1417,13 @@
    278        vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, st64, lvEquiv_spec p hp hpe n] <;>
    279        finish (gen := 20) [lvlEqW]
 
-== ConAgua/Arena/LevelArena.lean#L261-L266
-   261  theorem lvlEq_refines {m m' : Mem} {a : AState} (hR : ArenaR m a)
-   262      (hwf : NStoreWF a.store.lss.ls.ns) (u v : LIdx) (lu lv : Level)
-   263      (hu : denoteL a.store.ls u = some lu) (hv : denoteL a.store.ls v = some lv)
-   264      (hc : ReadLCOK a) (he : LvlEqCOK a u v lu lv) (n : Nat) (z : Word)
-   265      (h : lvlEqW n m u.word.toUInt64 v.word.toUInt64 = some (z, m')) :
-   266      ∃ o a', (lvlEq? u v).run a = .ok (o, a') ∧ z = encO o ∧ ArenaR m' a' := by
+== ConAgua/Arena/LevelArena.lean#L259-L264
+   259  theorem lvlEq_refines {m m' : Mem} {a : AState} (hR : ArenaR m a)
+   260      (hwf : NStoreWF a.store.lss.ls.ns) (u v : LIdx) (lu lv : Level)
+   261      (hu : denoteL a.store.ls u = some lu) (hv : denoteL a.store.ls v = some lv)
+   262      (hc : ReadLCOK a) (he : LvlEqCOK a u v lu lv) (n : Nat) (z : Word)
+   263      (h : lvlEqW n m u.word.toUInt64 v.word.toUInt64 = some (z, m')) :
+   264      ∃ o a', (lvlEq? u v).run a = .ok (o, a') ∧ z = encO o ∧ ArenaR m' a' := by
 
 == vendor/con-ron/ConRon/Arena/Core.lean#L132-L149
    132  /-- con-leche: ConLeche/Kernel/Level.lean:164-169 isEquiv — `Level.isEquiv`

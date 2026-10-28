@@ -606,7 +606,7 @@ theorem stkPoolW_facts (m : Mem) (b k : Word) (hpool : PoolOK m) (hok : stkPoolO
   have hsz := hsm.tier (m.top >>> 40)
   have hsplit := tag_split m.top
   have htier := tag_tier_le m.top h41
-  have hctl0 : 0 < (m.arr64 CTL).size := hpool.2.1
+  have hctl0 : 0 < (m.arr64 CTL).size := hpool.ctl
   have hroom := stkPoolOK_room m k hok (by omega)
   obtain ⟨hf, hx⟩ := sputW_facts (m.top >>> 40) (m.top &&& 1099511627775) b k (by omega) htier
     _ m 0 rfl (UInt64.le_iff_toNat_le.mpr (by simp)) (by omega) (by omega)
@@ -681,8 +681,8 @@ theorem romLvlsW_ok (us : List ConLeche.Level) (hus : us.all levelFits = true) :
     rename_i hdlt
     have hR2 : ArenaD (pushMem m₁ h₁) (AM.st (internLevel x) a) :=
       ArenaD.frameHi (pushMem_frame1 m₁ h₁) (by simp [RSTK]) (by simp) hR1
-    have ht1 : stkTop m₁ = stkTop m := hf1.2.1 131 (not_mem_storeC _ (by decide))
-    have hc1 : 131 < (m₁.arr64 CTL).size := by rw [hf1.2.2.1]; exact hc
+    have ht1 : stkTop m₁ = stkTop m := hf1.ctl 131 (not_mem_storeC _ (by decide))
+    have hc1 : 131 < (m₁.arr64 CTL).size := by rw [hf1.size]; exact hc
     have hS1 : m₁.arr64 RSTK = m.arr64 RSTK := hf1.1 RSTK (by decide) (by decide)
     have hdq : rom.drop q₁.toNat = encLevelList xs ++ rest :=
       drop_shift rom q (encLevel x) (encLevelList xs) rest (by rw [hd', List.append_assoc]) q₁ hq1
@@ -695,7 +695,7 @@ theorem romLvlsW_ok (us : List ConLeche.Level) (hus : us.all levelFits = true) :
       rw [UInt64.toNat_add]; simp at ht ⊢; omega
     obtain ⟨ok2, hR3, hr2, hf3, htop2, hws2, hkeep2⟩ := ih hus.2 n _ _ q₁ rest (k - 1) r m' hR2
       (((romLevelW_topK hN).trans (pushMem_topK m₁ h₁)).mode hA.1.lit.1 hmo) hdq hk1
-      (by rw [htp, htN]; simp at ht; omega) (by rw [(pushMem_frame1 m₁ h₁).2.2.1]; exact hc1) hW
+      (by rw [htp, htN]; simp at ht; omega) (by rw [(pushMem_frame1 m₁ h₁).size]; exact hc1) hW
     rw [htp] at htop2 hws2 hkeep2
     have hX : internLevelList (x :: xs) =
         internLevel x >>= fun h => internLevelList xs >>= fun hs => pure (h :: hs) := rfl
@@ -808,10 +808,10 @@ theorem romLevelsW_ok (us : List ConLeche.Level) (hus : us.all levelFits = true)
   · rw [hq1, hp8]; simp [encLevels, u64B]; omega
   · refine hf1.trans (((frame_romA (frame_grows hg)).trans ?_).trans (frame_romA hf4'))
     exact hf3.mono (by simp) (by simp [RomC])
-  · have : stkTop m₄ = stkTop (m₂.set64 CTL 131 (stkTop m)) := hf4'.2.1 131 (not_mem_storeC _ (by decide))
+  · have : stkTop m₄ = stkTop (m₂.set64 CTL 131 (stkTop m)) := hf4'.ctl 131 (not_mem_storeC _ (by decide))
     rw [this]; simp only [stkTop, Mem.arr64_set64_same, rdW_set!]
     have hc2 : 131 < (m₂.arr64 CTL).size := by
-      rw [(frame_grows hg).2.2.1, hf1.2.2.1]; exact hc
+      rw [(frame_grows hg).size, hf1.size]; exact hc
     simp [hc2]
 
 end ref
@@ -834,7 +834,7 @@ theorem romLvlsGo_refines (rom : List UInt8) (p : Prog) (hL : LevelsProg rom p) 
   apply M.triple_of_run
   intro s r s' hs hrun
   obtain ⟨hloc, hW⟩ := M.of_run (P := fun s => s = s₀) hs hrun
-    (romLvlsGo_specW rom p hL n s₀ q k ⟨hA.1.lit.1.2.2.1, hA.1.lit.1.top41⟩)
+    (romLvlsGo_specW rom p hL n s₀ q k ⟨hA.1.lit.1.cap, hA.1.lit.1.top41⟩)
   subst hs
   obtain ⟨a1, a2, a3, a4, a5, a6, -⟩ := romLvlsW_ok rom hr us hus n _ a₀ q rest k _ _ hA hmo hd hk ht hc hW
   exact ⟨hloc, a1, a2, a3, a4, a5, a6⟩
@@ -855,7 +855,7 @@ theorem romLevels_refines (rom : List UInt8) (p : Prog) (hL : LevelsProg rom p) 
   apply M.triple_of_run
   intro s r s' hs hrun
   obtain ⟨hloc, hW⟩ := M.of_run (P := fun s => s = s₀) hs hrun
-    (romLevels_specW rom p hL n s₀ pos ⟨hA.1.lit.1.2.2.1, hA.1.lit.1.top41⟩)
+    (romLevels_specW rom p hL n s₀ pos ⟨hA.1.lit.1.cap, hA.1.lit.1.top41⟩)
   subst hs
   exact ⟨hloc, romLevelsW_ok rom hr us hus n _ a₀ pos rest _ _ _ hA hmo hd ht hc hW⟩
 

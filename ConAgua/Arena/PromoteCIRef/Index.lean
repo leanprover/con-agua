@@ -86,9 +86,9 @@ theorem index_rel (dn : NIdx → Option ConLeche.Name) : ∀ (n : Nat) (m : Mem)
           simp [e, this]
       · simp [hc0]
       · intro _; simp [hdec]
-    have hEE : (rowSet m w c ptr).arr64 EREC = m.arr64 EREC := hfr.1 EREC (by decide) (by decide)
-    have hEC : (rowSet m w c ptr).arr64 ECON = m.arr64 ECON := hfr.1 ECON (by decide) (by decide)
-    have hP1 : erecP (rowSet m w c ptr) = erecP m := erecP_congr hEE (hfr.2.1 129 (by simp))
+    have hEE : (rowSet m w c ptr).arr64 EREC = m.arr64 EREC := hfr.arr EREC (by decide) (by decide)
+    have hEC : (rowSet m w c ptr).arr64 ECON = m.arr64 ECON := hfr.arr ECON (by decide) (by decide)
+    have hP1 : erecP (rowSet m w c ptr) = erecP m := erecP_congr hEE (hfr.ctl 129 (by simp))
     have hszz : ((rowSet m w c ptr).arr64 EREC).size < 2 ^ 64 := by rw [hEE]; exact hsz
     have hlenk : (k - 1).toNat = cs.length := by
       rw [toNat_sub1 k hk0]; simp at hk; omega

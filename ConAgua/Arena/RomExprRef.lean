@@ -106,13 +106,13 @@ structure MemoR (mem : Mem) (seen : List ConLeche.Expr) (m : EMemo) : Prop where
 
 theorem MemoR.frame {mem mem' : Mem} {seen : List ConLeche.Expr} {m : EMemo} (h : MemoR mem seen m)
     (hf : MemFrame RomA RomC mem mem') : MemoR mem' seen m := by
-  have hR : mem'.arr64 RMEMO = mem.arr64 RMEMO := hf.1 RMEMO (by decide) (by decide)
+  have hR : mem'.arr64 RMEMO = mem.arr64 RMEMO := hf.arr RMEMO (by decide) (by decide)
   have hc : memoCnt mem' = memoCnt mem :=
-    hf.2.1 132 (by simp only [RomC, List.mem_cons]; intro h'; rcases h' with h' | h'
+    hf.ctl 132 (by simp only [RomC, List.mem_cons]; intro h'; rcases h' with h' | h'
                    · exact absurd h' (by decide)
                    · exact not_mem_storeC _ (by decide) h')
   exact ⟨by rw [hc]; exact h.cnt, fun k hk => by rw [hR]; exact h.ent k hk, h.keys, h.room,
-    by rw [hf.2.2.1]; exact h.csz⟩
+    by rw [hf.size]; exact h.csz⟩
 
 theorem MemoR.miss {mem : Mem} {seen : List ConLeche.Expr} {m : EMemo} (h : MemoR mem seen m)
     {e : ConLeche.Expr} (he : e ∉ seen) : m[e]? = none := by
@@ -199,7 +199,7 @@ theorem MemoR.push {mem : Mem} {seen : List ConLeche.Expr} {m : EMemo} (h : Memo
     MemoR (mpushMem mem x) (seen ++ [e]) (m.insert e (decI x)) := by
   have hf := mpushPut_frame mem x
   obtain ⟨hc, hl, hR⟩ := mpushPut_memo mem x
-  have h1 := h.of_eq hR hc (hf.2.2.1 CTL)
+  have h1 := h.of_eq hR hc (hf.size CTL)
   have := h1.push0 he x hx (by rw [hc, hl]; exact hsz')
   simpa only [mpushOld, mpushMem] using this
 
@@ -218,8 +218,8 @@ theorem RsetR.frame {A : List TieredArray} {C : List Word} {mem mem' : Mem} (h :
     (hC2 : (132 : Word) ∉ C) : RsetR mem' := by
   obtain ⟨mp, hR, hc⟩ := h
   have hR' := memoRG_frame rsetSch rsetSch_wf bmKey (fun _ => ()) A C hA1 hC1 mem mem' hf mp hR
-  have hM : mem'.arr64 RMEMO = mem.arr64 RMEMO := hf.1 RMEMO hA2 (by decide)
-  have hK : memoCnt mem' = memoCnt mem := hf.2.1 132 hC2
+  have hM : mem'.arr64 RMEMO = mem.arr64 RMEMO := hf.arr RMEMO hA2 (by decide)
+  have hK : memoCnt mem' = memoCnt mem := hf.ctl 132 hC2
   exact ⟨mp, hR', fun k hk => by rw [hM]; rw [hK] at hk; exact hc k hk⟩
 
 theorem RsetR.frameS {mem mem' : Mem} (h : RsetR mem) (hf : MemFrame StoreA StoreC mem mem') :
@@ -274,8 +274,8 @@ theorem RsetR.push {mem mem' : Mem} {h : Word} (hR : RsetR mem) (hh : h.toNat < 
     rw [this]; exact hput
   have hG1 := memoRG_set rsetSch rsetSch_wf bmKey (fun _ => ()) mem mp hG h 0 1 ⟨hh, rfl⟩ m₁ hset
   have hf1 := mputG_frame rsetSch rsetSch_wf mem m₁ _ _ _ _ _ hput
-  have hc1 : memoCnt m₁ = memoCnt mem := hf1.2.1 132 (by simp [rsetSch])
-  have hR1 : m₁.arr64 RMEMO = mem.arr64 RMEMO := hf1.1 RMEMO (by simp [rsetSch, RSET, RMEMO]) (by decide)
+  have hc1 : memoCnt m₁ = memoCnt mem := hf1.ctl 132 (by simp [rsetSch])
+  have hR1 : m₁.arr64 RMEMO = mem.arr64 RMEMO := hf1.arr RMEMO (by simp [rsetSch, RSET, RMEMO]) (by decide)
   have hf2 : MemFrame [RMEMO] [132] m₁ ((m₁.set64 RMEMO (memoCnt m₁) h).set64 CTL 132 (memoCnt m₁ + 1)) :=
     ((MemFrame.set64 _ RMEMO (by decide) _ _).mono (by simp) (by simp)).trans
       ((MemFrame.setCtl _ 132 _).mono (by simp) (by simp))
@@ -289,7 +289,7 @@ theorem RsetR.push {mem mem' : Mem} {h : Word} (hR : RsetR mem) (hh : h.toNat < 
     have := Nat.mod_lt (m₁.arr64 RMEMO).size (show 2 ^ 64 > 0 by decide); omega
   have hcs : 132 < ((m₁.set64 RMEMO (memoCnt m₁) h).arr64 CTL).size := by
     rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
-    rw [hf1.2.2.1 CTL]
+    rw [hf1.size CTL]
     have := hG.1
     simp [rsetSch] at this; omega
   have hcnt : memoCnt ((m₁.set64 RMEMO (memoCnt m₁) h).set64 CTL 132 (memoCnt m₁ + 1)) = memoCnt m₁ + 1 := by
@@ -462,10 +462,10 @@ theorem mpushMem_frame (m : Mem) (h : Word) : MemFrame ExprA ExprC m (mpushMem m
   (mpushMem_frame1 m h).mono (by simp [ExprA]) (by simp [ExprC])
 
 theorem mpushMem_stk (m : Mem) (h : Word) : stkTop (mpushMem m h) = stkTop m :=
-  (mpushMem_frame1 m h).2.1 131 (by simp)
+  (mpushMem_frame1 m h).ctl 131 (by simp)
 
 theorem frame_exprA_stk {m m' : Mem} (hf : MemFrame StoreA StoreC m m') : stkTop m' = stkTop m :=
-  hf.2.1 131 (not_mem_storeC _ (by decide))
+  hf.ctl 131 (not_mem_storeC _ (by decide))
 
 /-- The encoder adds to `seen` only subterms of the expression it encodes. -/
 theorem encExprM_seen (e : ConLeche.Expr) :
@@ -667,7 +667,7 @@ theorem two_case (C : ConLeche.Expr → ConLeche.Expr → ConLeche.Expr) (CI : E
   rw [hX, htwo] at hW
   obtain ⟨mx, a₂, r2, hR2, hM2, hlt2, hq2, hf2, hs2, hz2⟩ := ihx he.2 n m₁ a₁ q₁ rest _ mf hx q₂ m₂ hR1
     (((romExprW_topK rom n).1 _ _ _ _ _ hF).mode hA.1.lit.1 hmo) hM1 hd2
-    (by rw [hs1]; exact hst) (by rw [hf1.2.2.1]; exact hcs) hX
+    (by rw [hs1]; exact hst) (by rw [hf1.size]; exact hcs) hX
   obtain ⟨m₃, hI, hlt, rfl, hsz, hpw, rfl⟩ := exNodeK_inv hW
   obtain ⟨ok3, hR3, res3⟩ := hok m₂ a₂ hR2 hf hx h m₃ hI
   have hf3 := hsto hI
@@ -790,7 +790,7 @@ theorem romExprW_ok (e : ConLeche.Expr) (he : exprFits e = true) :
     rw [hL, exConst2K_some] at hW
     obtain ⟨ok2, hR2, res2, hlt2, hq2, hf2, hst2⟩ := romLevelsW_ok rom hr us hus n m₁ _ q₁ rest hl q₂ m₂ hR1
       ((romNameW_topK hN).mode hA.1.lit.1 hmo) hd2
-      (by rw [hst1]; omega) (by rw [hf1.2.2.1]; exact hc) hL
+      (by rw [hst1]; omega) (by rw [hf1.size]; exact hc) hL
     obtain ⟨hI, hlt, rfl⟩ := exLeafK_inv hW
     obtain ⟨ok3, hR3, res3, hf3⟩ := L.Front.internConst_D m₂ _ hR2 h mem' hnm hl hlt1 hlt2 hI
     rw [← res1, ← res2] at ok3 hR3 res3
@@ -913,7 +913,7 @@ theorem romExprW_ok (e : ConLeche.Expr) (he : exprFits e = true) :
     rw [hV, exLet2K_some] at hW
     obtain ⟨mv, a₂, r2, hR2, hM2, hlt2, hq2, hf2, hs2, hz2⟩ := ihv he.1.2 n m₁ a₁ q₁ _ _ mt hv q₂ m₂ hR1
       (((romExprW_topK rom n).1 _ _ _ _ _ hT).mode hA.1.lit.1 hmo) hM1 hd2
-      (by rw [hs1]; exact hst) (by rw [hf1.2.2.1]; exact hc) hV
+      (by rw [hs1]; exact hst) (by rw [hf1.size]; exact hc) hV
     have hd3 : rom.drop q₂.toNat = (encExprM (encExprM (encExprM seen t).2 v).2 x).1 ++ rest :=
       drop_shift rom q₁ _ _ rest (by rw [hd2, List.append_assoc]) q₂ hq2
     cases hX : romExprW rom n m₂ q₂ with
@@ -924,7 +924,7 @@ theorem romExprW_ok (e : ConLeche.Expr) (he : exprFits e = true) :
     obtain ⟨mx, a₃, r3, hR3, hM3, hlt3, hq3, hf3, hs3, hz3⟩ := ihx he.2 n m₂ a₂ q₂ rest _ mv hx q₃ m₃ hR2
       ((((romExprW_topK rom n).1 _ _ _ _ _ hT).trans ((romExprW_topK rom n).1 _ _ _ _ _ hV)).mode hA.1.lit.1 hmo)
       hM2 hd3
-      (by rw [hs2, hs1]; exact hst) (by rw [hf2.2.2.1, hf1.2.2.1]; exact hc) hX
+      (by rw [hs2, hs1]; exact hst) (by rw [hf2.size, hf1.size]; exact hc) hX
     obtain ⟨m₄, hI, hlt, rfl, hsz, hpw, rfl⟩ := exNodeK_inv hW
     obtain ⟨ok4, hR4, res4⟩ := mkLet_ok m₃ a₃ hR3 ht hv hx h m₄ hI
     have hf4 := mkLetW_store hI
@@ -1038,7 +1038,7 @@ theorem romExprW_ok (e : ConLeche.Expr) (he : exprFits e = true) :
     obtain ⟨hs, q₂, m₂⟩ := r
     rw [hS, exProj2K_some] at hW
     obtain ⟨ms, a₂, r2, hR2, hM2, hlt2, hq2, hf2, hs2, hz2⟩ := ih he.2 n m₁ _ (q₁ + 8) rest seen m hs q₂ m₂ hR1
-      ((romNameW_topK hN).mode hA.1.lit.1 hmo) (hM.frame (frame_romA hf1)) hd8 (by rw [frame_exprA_stk hf1]; exact hst) (by rw [hf1.2.2.1]; exact hc) hS
+      ((romNameW_topK hN).mode hA.1.lit.1 hmo) (hM.frame (frame_romA hf1)) hd8 (by rw [frame_exprA_stk hf1]; exact hst) (by rw [hf1.size]; exact hc) hS
     obtain ⟨m₃, hI, hlt, rfl, hsz, hpw, rfl⟩ := exNodeK_inv hW
     obtain ⟨ok3, hR3, res3⟩ := mkProj_ok m₂ a₂ hR2 hn _ hs h m₃ hI
     have hiN : (UInt64.ofNat i).toNat = i := by rw [UInt64.toNat_ofNat']; exact Nat.mod_eq_of_lt he.1.2
@@ -1075,7 +1075,7 @@ theorem romExpr_refines (rom : List UInt8) (p : Prog) (hL : ExprProg rom p) (hr 
   apply M.triple_of_run
   intro s r s' hs hrun
   obtain ⟨hloc, hW⟩ := M.of_run (P := fun s => s = s₀) hs hrun
-    ((romExpr_specsW rom p hL n).1 s₀ pos ⟨hA.1.lit.1.2.2.1, hA.1.lit.1.top41⟩)
+    ((romExpr_specsW rom p hL n).1 s₀ pos ⟨hA.1.lit.1.cap, hA.1.lit.1.top41⟩)
   subst hs
   exact ⟨hloc, romExprW_ok rom hr e he n _ a₀ pos rest seen m _ _ _ hA hmo hM hd hst hc hW⟩
 

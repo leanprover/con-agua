@@ -71,11 +71,11 @@ structure LoopR (pins : List INatOpPinSet) (dn : NIdx → Option ConLeche.Name) 
 theorem IWOK.frame {m m' : Mem} {A : List TieredArray} {C : List Word} (hf : MemFrame A C m m')
     (hA : (L.Ind.IW : TieredArray) ∉ A) (hE : (EREC : TieredArray) ∉ A) (h129 : (129 : Word) ∉ C) (h200 : (200 : Word) ∉ C)
     (h : L.Ind.IWOK m) : L.Ind.IWOK m' := by
-  have hI : m'.arr64 L.Ind.IW = m.arr64 L.Ind.IW := hf.1 _ hA (by decide)
-  have hR : m'.arr64 EREC = m.arr64 EREC := hf.1 _ hE (by decide)
-  have hc : (m'.arr64 CTL).size = (m.arr64 CTL).size := hf.2.2.1 CTL
+  have hI : m'.arr64 L.Ind.IW = m.arr64 L.Ind.IW := hf.arr _ hA (by decide)
+  have hR : m'.arr64 EREC = m.arr64 EREC := hf.arr _ hE (by decide)
+  have hc : (m'.arr64 CTL).size = (m.arr64 CTL).size := hf.size CTL
   obtain ⟨h1, h2, h3, h4, h5⟩ := h
-  simp only [L.Ind.IWOK, L.Ind.iwTop, L.Ind.erTop, hI, hR, hc, hf.2.1 _ h129, hf.2.1 _ h200]
+  simp only [L.Ind.IWOK, L.Ind.iwTop, L.Ind.erTop, hI, hR, hc, hf.ctl _ h129, hf.ctl _ h200]
   exact ⟨h1, h2, h3, h4, h5⟩
 
 /-- Declaration record `i` (a plain function, so that congruence sees through it). -/

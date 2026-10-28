@@ -101,8 +101,8 @@ theorem WkOK.frame {A : List TieredArray} {C : List Word} {m m' : Mem} (h : WkOK
     (hL : (LPMEMO : TieredArray) ∉ A ∧ (LPLMEMO : TieredArray) ∉ A ∧ (LPLSMEMO : TieredArray) ∉ A)
     (hWC : (152 : Word) ∉ C ∧ (154 : Word) ∉ C ∧ (156 : Word) ∉ C)
     (hLC : (54 : Word) ∉ C ∧ (56 : Word) ∉ C ∧ (58 : Word) ∉ C) : WkOK m' :=
-  ⟨h.1.frame hf hW hWC hL hLC, by rw [hf.2.2.1]; exact h.2.1, by rw [hf.2.2.1]; exact h.2.2.1,
-    by rw [hf.2.2.1]; exact h.2.2.2.1, by simp only [pinW, hf.1 PINS hP (by decide)]; exact h.2.2.2.2⟩
+  ⟨h.1.frame hf hW hWC hL hLC, by rw [hf.size]; exact h.2.1, by rw [hf.size]; exact h.2.2.1,
+    by rw [hf.size]; exact h.2.2.2.1, by simp only [pinW, hf.arr PINS hP (by decide)]; exact h.2.2.2.2⟩
 
 /-- **`AbsOK` across a writer apart from the walk memos' arrays and epoch words.** -/
 theorem AbsOK.frameD {A : List TieredArray} {C : List Word} {m m' : Mem} (h : AbsOK m)

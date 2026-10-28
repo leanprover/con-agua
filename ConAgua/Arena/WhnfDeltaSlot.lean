@@ -134,16 +134,16 @@ theorem CoreS.set_core {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AS
   refine ⟨⟨⟨ArenaR.caches_irrel _ (ArenaR.frame_ext [A] [C] gA gC m m' hf a hS.arena.1),
       DerR.of_store _ _ _ (DerR.frameM [A] [C] m m' hf
         (fun b hb => by have := gA b hb; simp only [InHigh] at this; omega) a hS.arena.2) rfl⟩,
-      hcore, hS.pins.congr (hf.1 PINS (nA _ (by decide)) (by decide)),
+      hcore, hS.pins.congr (hf.arr PINS (nA _ (by decide)) (by decide)),
       hS.env.frame eA eC hf,
       fun h l e => hS.readL h l (h1 ▸ e), fun h l e => hS.readLs h l (h2 ▸ e), hS.nwf,
-      hf.2.2.1 EREC ▸ hS.erec, hf.2.2.1 SPN ▸ hS.spn,
+      hf.size EREC ▸ hS.erec, hf.size SPN ▸ hS.spn,
       hS.memos.frame hf ⟨nA _ (by decide), nA _ (by decide)⟩ ⟨nC _ (by decide), nC _ (by decide)⟩
         ⟨nA _ (by decide), nA _ (by decide), nA _ (by decide)⟩
         ⟨nC _ (by decide), nC _ (by decide), nC _ (by decide)⟩
         ⟨nA _ (by decide), nA _ (by decide), nA _ (by decide)⟩
-        ⟨nC _ (by decide), nC _ (by decide), nC _ (by decide)⟩, hf.2.2.1 BSTK ▸ hS.bstk,
-      (hS.den.frameE (hf.1 EREC (nA _ (by decide)) (by decide))).caches rfl rfl h3,
+        ⟨nC _ (by decide), nC _ (by decide), nC _ (by decide)⟩, hf.size BSTK ▸ hS.bstk,
+      (hS.den.frameE (hf.arr EREC (nA _ (by decide)) (by decide))).caches rfl rfl h3,
       hS.mode.frame hf (nC _ (by decide)) (nC _ (by decide))⟩,
     StackKept.of_frame hf ⟨nA _ (by decide), nA _ (by decide), nA _ (by decide)⟩
       ⟨nC _ (by decide), nC _ (by decide), nC _ (by decide)⟩ lf (nA _ (by decide)) (nA _ (by decide))⟩

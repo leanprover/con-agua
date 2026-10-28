@@ -301,9 +301,6 @@ theorem bufMem_ctl (B : Array Word) (r : Mem) (j : Word) :
     (bufMem B r j).arr64 CTL = r.arr64 CTL :=
   bufMem_owned B r j (by decide)
 
-theorem bufMem_words (B : Array Word) (r : Mem) (j : Word) :
-    r.SameShape (bufMem B r j) := trivial
-
 /-- `freshCtl` word by word. -/
 theorem getD_freshCtl (c : Array Word) (k : Nat) :
     (freshCtl c).getD k 0 = if k < 256 then c.getD k 0 else 0 := by

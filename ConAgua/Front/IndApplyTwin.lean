@@ -55,8 +55,8 @@ theorem applyIndW_twin {b : ByteArray} (h64 : System.Platform.numBits = 64) (hsi
     ⟨ArenaR.frame_ext _ _ (by simp [IFR, IFL]) (by simp) _ _ hfr1 _ hA.1,
       DerR.frameT hfr1 (by simp [IFR, IFL]) hA.2⟩
   have hD1 : StateDR m₁ st := hD.frame hfr1 (by decide) (by decide) (by decide) (by decide) (by decide)
-  have hs1 : (m₁.arr64 IFR).size = (m.arr64 IFR).size := hfr1.2.2.1 IFR
-  have hs1' : (m₁.arr64 IFL).size = (m.arr64 IFL).size := hfr1.2.2.1 IFL
+  have hs1 : (m₁.arr64 IFR).size = (m.arr64 IFR).size := hfr1.size IFR
+  have hs1' : (m₁.arr64 IFL).size = (m.arr64 IFL).size := hfr1.size IFL
   have hT1 : TopOK m₁ := ⟨by have := hRoom.2.1; exact this, Nat.le_of_lt hRoom.2.2.2⟩
   have hIFR1 : topN m₁ IFR < 2 ^ 62 := by have := hRoom.2.2.1; omega
   obtain ⟨ordered, V1, V2, V3, V4, V5, V6, V7, V8⟩ := validateW_twin hA1.1 hD1 hok hT1 hF hIFR1 h2
@@ -66,7 +66,7 @@ theorem applyIndW_twin {b : ByteArray} (h64 : System.Platform.numBits = 64) (hsi
       DerR.frameT hfr2 (by simp [IFL, LH]) hA1.2⟩
   have hD2 : StateDR m₂ st := hD1.frame hfr2 (by decide) (by decide) (by decide) (by decide) (by decide)
   have hifr2 : m₂.arr64 IFR = m₁.arr64 IFR := V2.ifr
-  have hs2' : (m₂.arr64 IFL).size = (m.arr64 IFL).size := by rw [hfr2.2.2.1 IFL, hs1']
+  have hs2' : (m₂.arr64 IFL).size = (m.arr64 IFL).size := by rw [hfr2.size IFL, hs1']
   have hIFR2 : topN m₂ IFR < 2 ^ 62 := by unfold topN wd; rw [hifr2]; exact hIFR1
   have hIFL2 : topN m₂ IFL < 2 ^ 62 := by have := V3.2; omega
   obtain ⟨st', I1, I2, I3, I4⟩ := installW_twin hA2 hD2 (hF.ext V2) hIFR2 hIFL2 V4 (by omega) V7 h

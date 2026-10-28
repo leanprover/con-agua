@@ -201,7 +201,7 @@ theorem natPow_spec (n : Nat) (s₀ : St) (oa la e : Word) (hok : PoolOK s₀.me
   have hsm := hok.small
   have h41 := hok.top41
   have hsz := hsm.tier (s₀.mem.top >>> 40)
-  have hin := hok.2.2.2.2.2
+  have hin := hok.inTier
   rw [invoke_eq _ hpn]
   simp only [callFn, natPow]
   cases n with

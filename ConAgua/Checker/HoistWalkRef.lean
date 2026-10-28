@@ -24,19 +24,17 @@ namespace L.Checker
 
 theorem _root_.L.Arena.MemFrame.symmH {A : List TieredArray} {C : List Word} {m m' : Mem} (h : MemFrame A C m m') :
     MemFrame A C m' m :=
-  ⟨fun b hb hc => (h.1 b hb hc).symm, fun x hx => (h.2.1 x hx).symm, fun b => (h.2.2.1 b).symm,
-    h.2.2.2.symm⟩
+  ⟨fun b hb hc => (h.arr b hb hc).symm, fun x hx => (h.ctl x hx).symm, fun b => (h.size b).symm⟩
 
 theorem _root_.L.Arena.MemFrame.set64_bothH {A : List TieredArray} {C : List Word} {m₁ m₂ : Mem} (h : MemFrame A C m₁ m₂)
     (b : TieredArray) (hb : b ≠ CTL) (k v : Word) : MemFrame A C (m₁.set64 b k v) (m₂.set64 b k v) := by
-  refine ⟨fun b' hb' hc => ?_, fun x hx => ?_, fun b' => ?_, ?_⟩
+  refine ⟨fun b' hb' hc => ?_, fun x hx => ?_, fun b' => ?_⟩
   · by_cases e : b' = b
-    · subst e; rw [Mem.arr64_set64_same, Mem.arr64_set64_same, h.1 b' hb' hc]
-    · rw [Mem.arr64_set64_ne _ _ _ _ _ e, Mem.arr64_set64_ne _ _ _ _ _ e, h.1 b' hb' hc]
+    · subst e; rw [Mem.arr64_set64_same, Mem.arr64_set64_same, h.arr b' hb' hc]
+    · rw [Mem.arr64_set64_ne _ _ _ _ _ e, Mem.arr64_set64_ne _ _ _ _ _ e, h.arr b' hb' hc]
   · rw [Mem.arr64_set64_ne _ _ _ _ _ (Ne.symm hb), Mem.arr64_set64_ne _ _ _ _ _ (Ne.symm hb)]
-    exact h.2.1 x hx
-  · rw [size_set64, size_set64]; exact h.2.2.1 b'
-  · simp
+    exact h.ctl x hx
+  · rw [size_set64, size_set64]; exact h.size b'
 
 theorem mfindG_congr (S : MemoSch) {m₁ m₂ : Mem} (ha : m₂.arr64 S.arr = m₁.arr64 S.arr)
     (hc : rdW (m₂.arr64 CTL) S.cs = rdW (m₁.arr64 CTL) S.cs) (k1 k2 : Word) :
@@ -76,9 +74,9 @@ theorem hNoteW_frame {m₁ m₂ x₁ : Mem} {w i k tg ws sp sp' : Word}
     (hf : MemFrame [HSEEN] [73, 74] m₁ m₂) (h : hNoteW m₁ w i k tg ws sp = some (sp', x₁)) :
     ∃ x₂, hNoteW m₂ w i k tg ws sp = some (sp', x₂) ∧ MemFrame [HSEEN] [73, 74] x₁ x₂ := by
   have hfd : mfindG hnSch m₂ w 0 = mfindG hnSch m₁ w 0 :=
-    mfindG_congr _ (hf.1 _ (by decide) (by decide)) (hf.2.1 _ (by decide)) _ _
-  have hnix : m₂.arr64 HNIX = m₁.arr64 HNIX := hf.1 _ (by decide) (by decide)
-  have hiw : m₂.arr64 IW = m₁.arr64 IW := hf.1 _ (by decide) (by decide)
+    mfindG_congr _ (hf.arr _ (by decide) (by decide)) (hf.ctl _ (by decide)) _ _
+  have hnix : m₂.arr64 HNIX = m₁.arr64 HNIX := hf.arr _ (by decide) (by decide)
+  have hiw : m₂.arr64 IW = m₁.arr64 IW := hf.arr _ (by decide) (by decide)
   simp only [hNoteW, hIxW, hfd, hnix] at h ⊢
   by_cases h0 : mfindG hnSch m₁ w 0 = []
   · simp [h0, hNoteW.k_hoist_ix] at h

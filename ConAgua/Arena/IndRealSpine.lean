@@ -333,7 +333,7 @@ theorem mknF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
   obtain ⟨hS1, hg1⟩ := stageR_hi hS hfrA (by simp [SPN]) (by simp) (by decide) (by decide)
   have hspn1 : ∀ w, spW (m1.set64 CTL 136 (top + l)) w = spW m1 w := fun w => by
     simp only [spW]; rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
-  have hsz1 : ((m1.set64 CTL 136 (top + l)).arr64 SPN).size = (m.arr64 SPN).size := hfrA.2.2.1 SPN
+  have hsz1 : ((m1.set64 CTL 136 (top + l)).arr64 SPN).size = (m.arr64 SPN).size := hfrA.size SPN
   have hl : xs.length = l.toNat := decHL_length m hxs
   have hiwsz : (m.arr64 IW).size < 2 ^ 64 := hS.2.2.2.1
   have hsp : SpineR (m1.set64 CTL 136 (top + l)) top l xs.toArray := by

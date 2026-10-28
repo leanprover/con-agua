@@ -31,9 +31,9 @@ theorem PinFacts.frame {A : List TieredArray} {C : List Word} {m m' : Mem} {p : 
     (hR2 : (RMEMO : TieredArray) ∉ A)
     (h131 : (131 : Word) ∉ C) (h132 : (132 : Word) ∉ C) (h148 : (148 : Word) ∉ C) :
     PinFacts m' p := by
-  have he : m'.arr64 PINS = m.arr64 PINS := hf.1 _ hP (by decide)
+  have he : m'.arr64 PINS = m.arr64 PINS := hf.arr _ hP (by decide)
   refine ⟨h.rset.frame hf hR1 hR2 h148 h132, ?_, h.full.congr he, ?_⟩
-  · simp only [stkTop] at h ⊢; rw [hf.2.1 131 h131]; exact h.stk
+  · simp only [stkTop] at h ⊢; rw [hf.ctl 131 h131]; exact h.stk
   · simp only [pinW, he]; exact h.pin0
 
 /-- **After `builtin_prelude`**: the prelude's records are `DECL[0‥P)`, `P` in `CTL[240]`, the id
@@ -59,7 +59,7 @@ theorem preludeStage_checker (h64 : System.Platform.numBits = 64) (b pb : ByteAr
     (stageFrame_builtin_prelude n s₀)) fun _ s' ⟨⟨⟨hl, hbp⟩, _, hk, hpf⟩, hsf⟩ => ⟨hl, ?_⟩
   have hc := CapsOK.keep h3.since.keep h3.since.caps
   obtain ⟨st, a', hb, hA, hD, ht, h240, hrk, hmo⟩ := hbp ⟨h3.arena, h3.sdr, h3.twin, by have := hc.pool; omega,
-    trivial, h3.mode⟩
+    h3.mode⟩
   obtain ⟨hstep, -, -, -⟩ := ConRon.Bridge.Frontend.builtinPreludeE_run h3.twin.ok h3.twin.off
     h3.twin.pins hb
   have hpf0 : PinFacts s₀.mem a.pins := ⟨h3.rset, h3.stk, h3.pinsFull, h3.pin0⟩
@@ -112,7 +112,7 @@ theorem frontStage_checker (h64 : System.Platform.numBits = 64) (b pb : ByteArra
     rw [this]; exact hp
   obtain ⟨hstep, -, -⟩ := ConRon.Bridge.Frontend.parseChunks_run h4.twin.ok h4.twin.off h4.twin.pins hcp
   refine ⟨_, a', hcp, ⟨h4.since.step hk hpf, hA, hD.decls, ?_, ?_, ?_, ?_, ?_, hM⟩⟩
-  · rw [hsf.2.1 240 (stageC_front_run_off _ (by decide))]; exact h4.np
+  · rw [hsf.ctl 240 (stageC_front_run_off _ (by decide))]; exact h4.np
   · rw [hstep.pins]
     exact h4.pf.frame hsf stageA_front_run_pins (by decide +kernel) (by decide +kernel)
       (stageC_front_run_off _ (by decide)) (stageC_front_run_off _ (by decide))
@@ -247,7 +247,7 @@ theorem pinsStage_checker (b pb : ByteArray) (sz : TieredArray → Nat) (hpb : p
   have hpins' : a'.pins = a.pins := TwinCaches.internAllPins_pins hok hpins hoff hrun
   have hPINS : s'.mem.arr64 PINS = s₀.mem.arr64 PINS := hsf.1 PINS (by decide +kernel) (by decide)
   have h200 : rdW (s'.mem.arr64 CTL) 200 = rdW (s₀.mem.arr64 CTL) 200 :=
-    hsf.2.1 200 (not_mem_of_toNat (Z := [200]) (by decide +kernel) _ (by decide))
+    hsf.ctl 200 (not_mem_of_toNat (Z := [200]) (by decide +kernel) _ (by decide))
   have hIW : s'.mem.arr64 L.Ind.IW = s₀.mem.arr64 L.Ind.IW := hsf.1 _ (by decide +kernel) (by decide)
   have hc' := CapsOK.keep (h6.since.step hk hpf).keep h6.since.caps
   refine ⟨pins, ips, a', hrun, h6.since.step hk hpf, hA, ?_, hPS, hR, ?_,

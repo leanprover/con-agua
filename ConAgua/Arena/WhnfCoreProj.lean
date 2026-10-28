@@ -431,8 +431,8 @@ theorem CoreS.of_bvar {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : 
 theorem StackKept.of_bvar_frame {m m' : Mem} (hf : MemFrame [BREC, BSLOT, tier1 BREC, tier1 BSLOT] [22, 23] m m') :
     StackKept m m' := by
   have hspn : m'.arr64 SPN = m.arr64 SPN :=
-    hf.1 SPN (by simp [tier1, BREC, BSLOT, SPN]) (by decide)
-  have h136 : rdW (m'.arr64 CTL) 136 = rdW (m.arr64 CTL) 136 := hf.2.1 136 (by simp)
+    hf.arr SPN (by simp [tier1, BREC, BSLOT, SPN]) (by decide)
+  have h136 : rdW (m'.arr64 CTL) 136 = rdW (m.arr64 CTL) 136 := hf.ctl 136 (by simp)
   exact StackKept.of_frame hf
 
 /-- A slice survives a change that leaves the stack array alone. -/

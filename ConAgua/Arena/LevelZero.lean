@@ -176,8 +176,7 @@ theorem lhPushW_ext {m m' : Mem} {w o : Word} (h : lhPushW m w = some (o, m')) :
     have htop' : htop ((m.set64 LH (htop m) w).set64 CTL 192 (htop m + 1)) = htop m + 1 := by
       simp only [htop, rdW_set64L, size_set64L]; simp [hctl]
     refine ⟨HeapFrame.ext ⟨fun A h1 h2 => ?_, fun k hk => ?_, by rw [htop', e1]; omega,
-      fun k hk => ?_, fun b => by simp only [size_set64L],
-      (Mem.sameShape_set64 _ _ _ _).set64 _ _ _⟩, rfl, by rw [htop', e1], ?_⟩
+      fun k hk => ?_, fun b => by simp only [size_set64L]⟩, rfl, by rw [htop', e1], ?_⟩
     · rw [Mem.arr64_set64_ne _ _ _ _ _ h1, Mem.arr64_set64_ne _ _ _ _ _ h2]
     · simp only [rdW_set64L, size_set64L]; simp [Ne.symm hk, Ne.symm hLC]
     · rw [Mem.arr64_set64_ne _ _ _ _ _ hLC]

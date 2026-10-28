@@ -60,37 +60,31 @@ def Agree (p q : Array Word) (t : Nat) : Prop := ∀ j, j < t → p[j]? = q[j]?
 
 /-- `m'` is `m` with at most word array `a` changed: the frame of a function that writes only
 `a`. A named predicate with its own `grind` lemmas, rather than an equation
-`m' = m.setArr64 a (m'.arr64 a)`, whose read-back needs `m.HasW a` at every use. -/
-def Frame (a : TieredArray) (m m' : Mem) : Prop :=
-  m'.bytes = m.bytes ∧ m.SameShape m' ∧ ∀ b, b ≠ a → m'.arr64 b = m.arr64 b
+`m' = m.setArr64 a (m'.arr64 a)`. -/
+structure Frame (a : TieredArray) (m m' : Mem) : Prop where
+  arr : ∀ b, b ≠ a → m'.arr64 b = m.arr64 b
+  bytes : m'.bytes = m.bytes
 
-theorem Frame.refl (a : TieredArray) (m : Mem) : Frame a m m := ⟨rfl, .refl m, fun _ _ => rfl⟩
+grind_pattern [arena_grind] Frame.bytes => Frame a m m', m'.bytes
+
+theorem Frame.refl (a : TieredArray) (m : Mem) : Frame a m m := ⟨fun _ _ => rfl, rfl⟩
 grind_pattern [arena_grind] Frame.refl => Frame a m m
 
 theorem Frame.set64 (a : TieredArray) (m m' : Mem) (i v : Word) (h : Frame a m m') :
     Frame a m (m'.set64 a i v) := by
-  obtain ⟨h1, h2, h3⟩ := h
-  refine ⟨h1, h2.set64 a i v, fun b hb => ?_⟩
-  rw [← h3 b hb]
+  refine ⟨fun b hb => ?_, h.bytes⟩
+  rw [← h.arr b hb]
   simp only [Mem.set64, Mem.arr64, hb, ite_false]
 grind_pattern [arena_grind] Frame.set64 => Frame a m (m'.set64 a i v)
 
 theorem Frame.trans (a : TieredArray) (m m' m'' : Mem) (h : Frame a m m') (h' : Frame a m' m'') :
-    Frame a m m'' := by
-  obtain ⟨h1, h2, h3⟩ := h; obtain ⟨h1', h2', h3'⟩ := h'
-  exact ⟨h1'.trans h1, h2.trans h2', fun b hb => (h3' b hb).trans (h3 b hb)⟩
+    Frame a m m'' :=
+  ⟨fun b hb => (h'.arr b hb).trans (h.arr b hb), h'.bytes.trans h.bytes⟩
 grind_pattern [arena_grind] Frame.trans => Frame a m m'', Frame a m' m''
 
 theorem Frame.arr64 (a b : TieredArray) (m m' : Mem) (h : Frame a m m') (hb : b ≠ a) :
-    m'.arr64 b = m.arr64 b := h.2.2 b hb
+    m'.arr64 b = m.arr64 b := h.arr b hb
 grind_pattern [arena_grind] Frame.arr64 => Frame a m m', m'.arr64 b
-
-theorem Frame.size (a : TieredArray) (m m' : Mem) (h : Frame a m m') : m.SameShape m' :=
-  h.2.1
-grind_pattern [arena_grind] Frame.size => Frame a m m'
-
-theorem Frame.bytes (a : TieredArray) (m m' : Mem) (h : Frame a m m') : m'.bytes = m.bytes := h.1
-grind_pattern [arena_grind] Frame.bytes => Frame a m m', m'.bytes
 
 @[arena_grind =] theorem Mem.arr64_set64_same (m : Mem) (a : TieredArray) (i v : Word) :
     (m.set64 a i v).arr64 a = (m.arr64 a).set! i.toNat v := by
@@ -104,20 +98,15 @@ grind_pattern [arena_grind] Frame.bytes => Frame a m m', m'.bytes
     ((m.set64 a i v).arr64 a).size = (m.arr64 a).size := by
   rw [Mem.arr64_set64_same]; simp
 
-attribute [arena_grind =] Mem.hasW_set64 Mem.hasW_setG
-grind_pattern [arena_grind] Mem.HasW.of_sameShape => m.SameShape m', m'.HasW a
-grind_pattern [arena_grind] Mem.SameShape.trans => m₁.SameShape m₂, m₂.SameShape m₃
-
 @[arena_grind =] theorem Mem.bytes_set64 (m : Mem) (a : TieredArray) (i v : Word) :
     (m.set64 a i v).bytes = m.bytes := rfl
 
 theorem Frame.set64_both (a b : TieredArray) (m m' : Mem) (i v : Word) (h : Frame a m m') (hb : b ≠ a) :
     Frame a (m.set64 b i v) (m'.set64 b i v) := by
-  obtain ⟨h1, h2, h3⟩ := h
-  refine ⟨h1, h2.set64_both b i v, fun c hc => ?_⟩
+  refine ⟨fun c hc => ?_, h.bytes⟩
   by_cases hcb : c = b
-  · subst hcb; rw [Mem.arr64_set64_same, Mem.arr64_set64_same, h3 c hc]
-  · rw [Mem.arr64_set64_ne _ _ _ _ _ hcb, Mem.arr64_set64_ne _ _ _ _ _ hcb, h3 c hc]
+  · subst hcb; rw [Mem.arr64_set64_same, Mem.arr64_set64_same, h.arr c hc]
+  · rw [Mem.arr64_set64_ne _ _ _ _ _ hcb, Mem.arr64_set64_ne _ _ _ _ _ hcb, h.arr c hc]
 grind_pattern [arena_grind] Frame.set64_both => Frame a (m.set64 b i v) (m'.set64 b i v)
 
 /-! ## The virtual pool: the pool as proofs see it (lane tierpool)
@@ -635,29 +624,27 @@ theorem pcap_congr' {m m' : Mem} (h0 : m'.arr64 POOL = m.arr64 POOL)
 the globals unchanged: the frame of a pool writer. -/
 structure PFrame (m m' : Mem) : Prop where
   bytes : m'.bytes = m.bytes
-  size : m.SameShape m'
   arr : ∀ b : TieredArray, b ≠ POOL → b ≠ POOL1 → m'.arr64 b = m.arr64 b
   size0 : (m'.arr64 POOL).size = (m.arr64 POOL).size
   size1 : (m'.arr64 POOL1).size = (m.arr64 POOL1).size
   glob : m'.glob = m.glob
 
-grind_pattern [arena_grind] PFrame.size => PFrame m m'
 grind_pattern [arena_grind] PFrame.bytes => PFrame m m', m'.bytes
 grind_pattern [arena_grind] PFrame.glob => PFrame m m', m'.glob
 grind_pattern [arena_grind] PFrame.size0 => PFrame m m', (m'.arr64 POOL).size
 grind_pattern [arena_grind] PFrame.size1 => PFrame m m', (m'.arr64 POOL1).size
 
-theorem PFrame.refl (m : Mem) : PFrame m m := ⟨rfl, .refl m, fun _ _ _ => rfl, rfl, rfl, rfl⟩
+theorem PFrame.refl (m : Mem) : PFrame m m := ⟨rfl, fun _ _ _ => rfl, rfl, rfl, rfl⟩
 grind_pattern [arena_grind] PFrame.refl => PFrame m m
 
 theorem PFrame.trans {m m' m'' : Mem} (h : PFrame m m') (h' : PFrame m' m'') : PFrame m m'' :=
-  ⟨h'.bytes.trans h.bytes, h.size.trans h'.size, fun b h0 h1 => (h'.arr b h0 h1).trans (h.arr b h0 h1),
+  ⟨h'.bytes.trans h.bytes, fun b h0 h1 => (h'.arr b h0 h1).trans (h.arr b h0 h1),
     h'.size0.trans h.size0, h'.size1.trans h.size1, h'.glob.trans h.glob⟩
 grind_pattern [arena_grind] PFrame.trans => PFrame m m'', PFrame m' m''
 
 theorem PFrame.set64 {m m' : Mem} (t i v : Word) (h : PFrame m m') :
     PFrame m (m'.set64 (tierA POOL t) i v) := by
-  refine ⟨h.bytes, h.size.set64 _ _ _, fun b h0 h1 => ?_, ?_, ?_, h.glob⟩
+  refine ⟨h.bytes, fun b h0 h1 => ?_, ?_, ?_, h.glob⟩
   · rw [Mem.arr64_set64_ne _ _ _ _ _ (tierA_pool_ne t b h0 h1), h.arr b h0 h1]
   · rcases tierA_pool t with e | e <;> rw [e]
     · rw [Mem.size_arr64_set64, h.size0]
@@ -669,7 +656,7 @@ grind_pattern [arena_grind] PFrame.set64 => PFrame m (m'.set64 (tierA POOL t) i 
 
 theorem PFrame.set64_both {m m' : Mem} (b : TieredArray) (i v : Word) (h : PFrame m m')
     (h0 : b ≠ POOL) (h1 : b ≠ POOL1) : PFrame (m.set64 b i v) (m'.set64 b i v) := by
-  refine ⟨h.bytes, h.size.set64_both b i v, fun c c0 c1 => ?_, ?_, ?_, h.glob⟩
+  refine ⟨h.bytes, fun c c0 c1 => ?_, ?_, ?_, h.glob⟩
   · by_cases hcb : c = b
     · subst hcb; rw [Mem.arr64_set64_same, Mem.arr64_set64_same, h.arr c c0 c1]
     · rw [Mem.arr64_set64_ne _ _ _ _ _ hcb, Mem.arr64_set64_ne _ _ _ _ _ hcb, h.arr c c0 c1]
@@ -729,12 +716,12 @@ grind_pattern [arena_grind] Mem.top_set64 => (m.set64 CTL 0 v).top
 @[arena_grind =] theorem Mem.top_setG (m : Mem) (g : GVar) (v : Word) : (m.setG g v).top = m.top := rfl
 
 theorem Frame.top (m m' : Mem) (h : Frame POOL m m') : m'.top = m.top := by
-  simp only [Mem.top, h.2.2 CTL (by decide)]
+  simp only [Mem.top, h.arr CTL (by decide)]
 grind_pattern [arena_grind] Frame.top => Frame POOL m m', m'.top
 
 theorem Frame.size_ctl (m m' : Mem) (h : Frame POOL m m') :
     (m'.arr64 CTL).size = (m.arr64 CTL).size := by
-  rw [h.2.2 CTL (by decide)]
+  rw [h.arr CTL (by decide)]
 grind_pattern [arena_grind] Frame.size_ctl => Frame POOL m m', (m'.arr64 CTL).size
 
 theorem PFrame.top {m m' : Mem} (h : PFrame m m') : m'.top = m.top := by
@@ -750,10 +737,12 @@ grind_pattern [arena_grind] PFrame.size_ctl => PFrame m m', (m'.arr64 CTL).size
 while the top is in tier 1, the saved tier-0 top `PT0[0]` is inside tier 0's array (with the top
 in tier 0, `PT0[0]` is dead: `scratch_reset` overwrites it before reading it, `pool_alloc0`
 reads it only in tier 1; so the truncation, which cuts `POOL` to the top, keeps the invariant). -/
-def PoolOK (m : Mem) : Prop :=
-  m.HasW CTL ∧ 0 < (m.arr64 CTL).size ∧ pcap m < 2 ^ 63 ∧ m.top.toNat ≤ pcap m ∧
-  (m.top.toNat < 2 ^ 40 ∨ m.ptop0.toNat ≤ (m.arr64 POOL).size) ∧
-  (m.top &&& 1099511627775).toNat ≤ (m.arr64 (tierA POOL (m.top >>> 40))).size
+structure PoolOK (m : Mem) : Prop where
+  ctl : 0 < (m.arr64 CTL).size
+  cap : pcap m < 2 ^ 63
+  top : m.top.toNat ≤ pcap m
+  ptop0 : m.top.toNat < 2 ^ 40 ∨ m.ptop0.toNat ≤ (m.arr64 POOL).size
+  inTier : (m.top &&& 1099511627775).toNat ≤ (m.arr64 (tierA POOL (m.top >>> 40))).size
 
 /-- `m'` is `m` with limbs appended to the pool: only the pool's tier arrays and the top
 changed, the pool below the old top did not, and the top only moved up, inside its tier. Every
@@ -776,10 +765,10 @@ def SliceOK (m : Mem) (o l : Word) : Prop :=
   (m.top.toNat < 2 ^ 40 ∨ 2 ^ 40 ≤ o.toNat ∨ o.toNat + l.toNat ≤ m.ptop0.toNat)
 
 /-- The tier-array size facts of a pool invariant. -/
-theorem PoolOK.small {m : Mem} (h : PoolOK m) : PSmall m := pcap_small m (by have := h.2.2.1; omega)
+theorem PoolOK.small {m : Mem} (h : PoolOK m) : PSmall m := pcap_small m (by have := h.cap; omega)
 
 theorem PoolOK.top41 {m : Mem} (h : PoolOK m) : m.top.toNat < 2 ^ 41 := by
-  have := h.2.2.2.1; rw [pcap_eq m (by have := h.2.2.1; omega)] at this; omega
+  have := h.top; rw [pcap_eq m (by have := h.cap; omega)] at this; omega
 
 theorem PSmall.tier {m : Mem} (h : PSmall m) (t : Word) : (m.arr64 (tierA POOL t)).size < 2 ^ 40 := by
   rcases tierA_pool t with e | e <;> rw [e]
@@ -829,7 +818,7 @@ theorem Grows.write (m m₂ : Mem) (n : Word) (hok : PoolOK m) (hf : PFrame m m�
   have hs := hok.small
   have h41 := hok.top41
   have hsz := hs.tier (m.top >>> 40)
-  have hctl : 0 < (m₂.arr64 CTL).size := by rw [hf.ctl]; exact hok.2.1
+  have hctl : 0 < (m₂.arr64 CTL).size := by rw [hf.ctl]; exact hok.ctl
   have htop : (m₂.set64 CTL 0 (m.top + n)).top = m.top + n := Mem.top_set64 _ _ hctl
   have hn : (m.top + n).toNat = m.top.toNat + n.toNat := by
     rw [UInt64.toNat_add]; exact Nat.mod_eq_of_lt (by omega)
@@ -846,12 +835,11 @@ theorem ptop0_congr {m m' : Mem} (h : m'.arr64 PT0 = m.arr64 PT0) : m'.ptop0 = m
 /-- The pool invariant survives a frame that keeps the pool's arrays, `PT0`, `CTL`'s size and top. -/
 theorem PoolOK.frame {m m' : Mem} (h : PoolOK m) (h0 : m'.arr64 POOL = m.arr64 POOL)
     (h1 : m'.arr64 POOL1 = m.arr64 POOL1) (ht : m'.arr64 PT0 = m.arr64 PT0)
-    (hc : (m'.arr64 CTL).size = (m.arr64 CTL).size) (htop : m'.top = m.top)
-    (hw : m.SameShape m') : PoolOK m' := by
-  obtain ⟨a1, a2, a3, a4, a5, a6⟩ := h
+    (hc : (m'.arr64 CTL).size = (m.arr64 CTL).size) (htop : m'.top = m.top) : PoolOK m' := by
   have hp : pcap m' = pcap m := pcap_congr' h0 h1
-  refine ⟨a1.of_sameShape hw, by rw [hc]; exact a2, by rw [hp]; exact a3, by rw [hp, htop]; exact a4,
-    by rw [ptop0_congr ht, h0, htop]; exact a5, ?_⟩
+  refine ⟨by rw [hc]; exact h.ctl, by rw [hp]; exact h.cap, by rw [hp, htop]; exact h.top,
+    by rw [ptop0_congr ht, h0, htop]; exact h.ptop0, ?_⟩
+  have a6 := h.inTier
   rw [htop]
   rcases tierA_pool (m.top >>> 40) with e | e <;> rw [e] <;> rw [e] at a6
   · rw [h0]; exact a6
@@ -860,14 +848,12 @@ theorem PoolOK.frame {m m' : Mem} (h : PoolOK m) (h0 : m'.arr64 POOL = m.arr64 P
 /-- A grown pool keeps the pool invariant. -/
 theorem PoolOK.grows {m m' : Mem} (h : PoolOK m) (hg : Grows m m') : PoolOK m' := by
   obtain ⟨hf, -, hle, htp, hp, ht, hin⟩ := hg
-  obtain ⟨h1, h2, h3, h4, h5, h6⟩ := h
   have hc : m'.arr64 CTL = (m.set64 CTL 0 m'.top).arr64 CTL := hf.ctl
-  refine ⟨?_, ?_, by omega, htp, ?_, hin⟩
-  · exact h1.of_sameShape ((Mem.sameShape_set64 _ _ _ _).trans hf.size)
-  · rw [hc, Mem.size_arr64_set64]; exact h2
+  refine ⟨?_, by have := h.cap; omega, htp, ?_, hin⟩
+  · rw [hc, Mem.size_arr64_set64]; exact h.ctl
   · rw [Mem.ptop0, hf.arr PT0 (by decide) (by decide), Mem.arr64_set64_ne _ _ _ _ _ (by decide),
       hf.size0, Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
-    rcases h5 with h5 | h5
+    rcases h.ptop0 with h5 | h5
     · rcases ht with ht | ht
       · exact .inl ht
       · omega
@@ -913,8 +899,6 @@ theorem Grows.trans (m m' m'' : Mem) (h : Grows m m') (h' : Grows m' m'') : Grow
     rw [h.frame.ctl, Mem.size_arr64_set64]
   have hf : PFrame (m.set64 CTL 0 m''.top) m'' := by
     refine ⟨by rw [h'.frame.bytes, Mem.bytes_set64, h.frame.bytes, Mem.bytes_set64, Mem.bytes_set64],
-      (Mem.sameShape_set64 _ _ _ _).symm.trans ((Mem.sameShape_set64 _ _ _ _).trans
-        (h.frame.size.trans ((Mem.sameShape_set64 _ _ _ _).trans h'.frame.size))),
       fun b h0 h1 => ?_, ?_, ?_, by show m''.glob = m.glob; rw [h'.frame.glob]; exact h.frame.glob⟩
     · rw [h'.frame.arr b h0 h1]
       by_cases hbc : b = CTL

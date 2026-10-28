@@ -427,7 +427,7 @@ theorem erecVgW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv
   have hsz : ((wrER m1 g [vk, rdW (m1.arr64 EREC) (p + 1), rdW (m1.arr64 EREC) (p + 2),
       rdW (m1.arr64 EREC) (p + 3), rdW (m1.arr64 EREC) (p + 4),
       rdW (m1.arr64 EREC) (p + 5)]).arr64 EREC).size = (m.arr64 EREC).size :=
-    ((wrER_frame _ _ _).2.2.1 EREC).trans (by rw [hE1])
+    ((wrER_frame _ _ _).size EREC).trans (by rw [hE1])
   have hEs := hS.2.2.2.2.1
   have hg6 : g.toNat + 6 < 2 ^ 64 := by
     simp only [List.length_cons, List.length_nil] at htop; omega
@@ -525,16 +525,16 @@ theorem envPushW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEn
      hS.1.core.frame (by decide) (fun x hx => by simp at hx; subst hx; decide) hfr,
      hS.1.pins.frame (by decide) hfr, hE, hS.1.mode.frame hfr (by decide) (by decide)⟩
   obtain ⟨hI1, hE1, hsz, hEs, hc⟩ := hS.2
-  have hI : (envPushMem m vis q).arr64 IW = m.arr64 IW := hfr.1 IW (by decide) (by decide)
-  have hER : (envPushMem m vis q).arr64 EREC = m.arr64 EREC := hfr.1 EREC (by decide) (by decide)
-  have h200 : iwTop (envPushMem m vis q) = iwTop m := by simp only [iwTop, hfr.2.1 200 (by decide)]
-  have h129 : erTop (envPushMem m vis q) = erTop m := by simp only [erTop, hfr.2.1 129 (by decide)]
+  have hI : (envPushMem m vis q).arr64 IW = m.arr64 IW := hfr.arr IW (by decide) (by decide)
+  have hER : (envPushMem m vis q).arr64 EREC = m.arr64 EREC := hfr.arr EREC (by decide) (by decide)
+  have h200 : iwTop (envPushMem m vis q) = iwTop m := by simp only [iwTop, hfr.ctl 200 (by decide)]
+  have h129 : erTop (envPushMem m vis q) = erTop m := by simp only [erTop, hfr.ctl 129 (by decide)]
   refine ⟨⟨hC, ?_, ?_, ?_, ?_, ?_⟩, ?_⟩
   · rw [h200, hI]; exact hI1
   · rw [h129, hER]; exact hE1
   · rw [hI]; exact hsz
   · rw [hER]; exact hEs
-  · rw [hfr.2.2.1 CTL]; exact hc
+  · rw [hfr.size CTL]; exact hc
   · exact ⟨by omega, by omega, fun i _ => by rw [hI], fun i _ => by rw [hER]⟩
 
 

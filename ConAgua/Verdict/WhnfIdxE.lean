@@ -254,7 +254,7 @@ theorem iotaRecCmpE_of : IotaRecCmpE p := by
         (by rw [hE0]; exact herec) hspn (by rw [hE0]; exact hpins) rp m1 c1'
       refine ⟨fr, gr, fun _ => ⟨hr0, lv, pins, hfire, by rw [hr0]; exact hsp, ?_⟩⟩
       have hb := hsp.bound
-      have hsz := fr.2.2.1 SPN
+      have hsz := fr.size SPN
       rw [hr0, ht1, UInt64.toNat_add, Nat.mod_eq_of_lt (by omega)]
       exact Nat.le_refl _
     · obtain ⟨-, rfl⟩ := callW_erecPush_no p hp.erecPush (N + 1) s₀.mem _ _ _ hk1 rp m1

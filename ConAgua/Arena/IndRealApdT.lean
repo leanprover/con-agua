@@ -84,9 +84,9 @@ theorem _root_.L.Arena.TwinOK.apd {dn : NIdx → Option ConLeche.Name} {fe : IFE
     {a : AState} (h : TwinOK dn m a fe) (hf : ApdFr m m') {mp : Std.HashMap EIdx Bool}
     (hM : apdMR m' mp) : TwinOK dn m' a fe := by
   obtain ⟨hIl, hAb, -, ⟨mf, hfl⟩, ⟨ml, hlsb⟩, hLP⟩ := h.memos
-  refine ⟨h.readL, h.readLs, h.nwf, by rw [hf.2.2.1]; exact h.erec, by rw [hf.2.2.1]; exact h.spn,
+  refine ⟨h.readL, h.readLs, h.nwf, by rw [hf.size]; exact h.erec, by rw [hf.size]; exact h.spn,
     ⟨?_, ?_, apdMR_ws hM, ⟨mf, ?_⟩, ⟨ml, ?_⟩, hLP.frame hf (by decide) (by decide)⟩,
-    by rw [hf.2.2.1]; exact h.bstk, h.den.mem m'⟩
+    by rw [hf.size]; exact h.bstk, h.den.mem m'⟩
   · obtain ⟨mp, hm⟩ := hIl
     exact ⟨mp, memoRG_frame coreIlSch coreIlSch_wf lfKey _ _ _ (by decide) (by decide) m m' hf mp hm⟩
   · obtain ⟨mp, hm⟩ := hAb

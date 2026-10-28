@@ -182,7 +182,7 @@ theorem Grow.ex {m m' : Mem} (h : Grow m m') (xa : ArrId) (x0 x1 : Nat) : IGrow 
 
 theorem Room.sizes {m m' : Mem} (hf : MemFrame [IFR, IFL] [] m m') :
     (m'.arr64 IFR).size = (m.arr64 IFR).size ∧ (m'.arr64 IFL).size = (m.arr64 IFL).size :=
-  ⟨hf.2.2.1 IFR, hf.2.2.1 IFL⟩
+  ⟨hf.size IFR, hf.size IFL⟩
 
 /-- A write into `IFR`/`IFL` at a word other than the top. -/
 theorem grow_set (m : Mem) (A : ArrId) (hA : A = IFR ∨ A = IFL) (i x : Word) (x0 x1 : Nat)
@@ -287,7 +287,7 @@ theorem pushLW_facts (m m' : Mem) (x o : Word) (hR : Room m) (h : pushLW m x = s
   obtain ⟨a1, a2, a3, a4, -, a6, a7⟩ := allocW_facts m m₁ IFL (.inr rfl) 1 o₁ hR ha
   have h1 : (1 : Word).toNat = 1 := rfl
   rw [h1] at a2 a6
-  have hin : o₁.toNat < (m₁.arr64 IFL).size := by rw [a4.fr.2.2.1 IFL]; omega
+  have hin : o₁.toNat < (m₁.arr64 IFL).size := by rw [a4.fr.size IFL]; omega
   obtain ⟨g1, g2, g3⟩ := grow_set m₁ IFL (.inr rfl) o₁ x (topN m IFL + 1) (topN m IFL + 2)
     (by omega) (by omega) (by omega)
   refine ⟨a1, by rw [g3, a2], g2 a3, ⟨a4.fr.trans g1.fr, fun c hc => Nat.le_trans (a4.top c hc) (g1.top c hc),

@@ -33,24 +33,24 @@ theorem LoopR.of_frame {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche
   have hcA : a'.caches = a.caches := congrArg Prod.fst hcp
   have hpA : a'.pins = a.pins := congrArg Prod.snd hcp
   have hIW : m'.arr64 L.Ind.IW = m.arr64 L.Ind.IW :=
-    hf.1 _ (fun h => by have := hA _ h; revert this; decide) (by decide)
+    hf.arr _ (fun h => by have := hA _ h; revert this; decide) (by decide)
   refine ⟨⟨hD, ?_, ?_, hE, hmode⟩, ?_, ?_, ?_, ⟨pm', hP⟩, ?_⟩
   · rw [hcA]
     exact hR.check.core.frame (fun b hb => by have := hA b hb; omega)
       (fun x hx => by have := hC x hx; omega) hf
   · rw [hpA]
     exact hR.check.pins.frame (fun b hb => by have := hA b hb; omega) hf
-  · exact hR.pend.ext (hf.1 _ (fun h => by have := hA _ h; revert this; decide) (by decide))
-      (hf.2.1 130 (fun h => by have := hC _ h; simp at this)) hg.ext
-  · rw [hf.1 DECL (fun h => by have := hA _ h; revert this; decide) (by decide),
-      hf.1 DLP (fun h => by have := hA _ h; revert this; decide) (by decide)]
+  · exact hR.pend.ext (hf.arr _ (fun h => by have := hA _ h; revert this; decide) (by decide))
+      (hf.ctl 130 (fun h => by have := hC _ h; simp at this)) hg.ext
+  · rw [hf.arr DECL (fun h => by have := hA _ h; revert this; decide) (by decide),
+      hf.arr DLP (fun h => by have := hA _ h; revert this; decide) (by decide)]
     exact hR.decls
-  · refine ⟨?_, hts, ?_, by rw [hf.2.2.1]; exact hiw4, by rw [hf.2.2.1]; exact hiw5⟩
+  · refine ⟨?_, hts, ?_, by rw [hf.size]; exact hiw4, by rw [hf.size]; exact hiw5⟩
     · simp only [L.Ind.iwTop, hIW]
-      rw [hf.2.1 200 (fun h => by have := hC _ h; simp at this)]; exact hiw1
+      rw [hf.ctl 200 (fun h => by have := hC _ h; simp at this)]; exact hiw1
     · rw [hIW]; exact hiw3
   · exact PinSetsR.grow hR.pinsets ⟨hg.1, hg.2.1⟩
-      (hf.2.1 150 (fun h => by have := hC _ h; simp at this))
-      (hf.2.1 151 (fun h => by have := hC _ h; simp at this))
+      (hf.ctl 150 (fun h => by have := hC _ h; simp at this))
+      (hf.ctl 151 (fun h => by have := hC _ h; simp at this))
 
 end L.Arena

@@ -464,7 +464,7 @@ theorem mputMemE_reg (S : MemoSch) (hS : S.WF) (m : Mem) (fd s k1 k2 w e c : Wor
       have := hz m 0 e hs (by decide)
       simpa using this
     · exact hz m 3 w hs (by decide)
-  obtain ⟨h1, h2, h3, h4, -⟩ := reg_congr S m _ hh (hf.2.1 S.cs (by simp [hcs])) (hf.2.2.1 S.arr)
+  obtain ⟨h1, h2, h3, h4, -⟩ := reg_congr S m _ hh (hf.ctl S.cs (by simp [hcs])) (hf.size S.arr)
   exact ⟨h1, h2, h3, h4, hh 0 (by decide)⟩
 
 theorem mputMem_frame (S : MemoSch) (hS : S.WF) (m : Mem) (fd j k1 k2 v : Word) :
@@ -799,7 +799,7 @@ theorem memoRV_putNG (hVS : VStable S VR) (m : Mem) (mp : Std.HashMap κ ν)
     hVS m m' (hf.mono (by simp) (fun y hy => by simp at hy; simp [hy]))
   have hsl : ∀ j, InReg (mbG S m) (nG S m) j → j.toNat < slotsG S m := fun j hj => by
     have := hj.2; omega
-  refine ⟨by rw [hf.2.2.1]; exact hctl, by rw [g1]; exact hep, ⟨?_, ?_, ?_, ?_⟩, ?_⟩
+  refine ⟨by rw [hf.size]; exact hctl, by rw [g1]; exact hep, ⟨?_, ?_, ?_, ?_⟩, ?_⟩
   · rw [g2, g3, g4]; right; exact ⟨hb1, hbn⟩
   · intro j hj'; rw [g4] at hj'; rw [(rd j hj').1, g1]
     split
@@ -886,7 +886,7 @@ def RInv {κ ν : Type} [BEq κ] [Hashable κ] (S : MemoSch) (K : MemoKey κ)
 
 theorem slotsG_frame (S : MemoSch) {A : List TieredArray} {C : List Word} {m m' : Mem}
     (h : MemFrame A C m m') : slotsG S m' = slotsG S m := by
-  simp only [slotsG, len64_eq, h.2.2.1]
+  simp only [slotsG, len64_eq, h.size]
 
 section grow
 variable {κ ν : Type} [BEq κ] [Hashable κ] [LawfulBEq κ] [LawfulHashable κ]
@@ -1117,7 +1117,7 @@ theorem memoRV_grow (hVS : VStable S VR) (m : Mem) (mp : Std.HashMap κ ν)
   have hz2 : 2 < (m'.arr64 S.arr).size := by
     have : 1 ≤ slotsG S m' := by rw [hm's]; omega
     rw [slotsG_toNat] at this; have := (m'.arr64 S.arr).size.mod_le (2 ^ 64); omega
-  have hctl' : S.cs.toNat + 2 ≤ (m'.arr64 CTL).size := by rw [hIf.2.2.1]; exact hctl
+  have hctl' : S.cs.toNat + 2 ≤ (m'.arr64 CTL).size := by rw [hIf.size]; exact hctl
   have hcs1 : (S.cs + 1).toNat < (m'.arr64 CTL).size := by
     have := hS.cs; rw [UInt64.toNat_add]; simp; omega
   have hcs : S.cs ≠ S.cs + 1 := by intro h; have := hS.cs; grind
@@ -1141,7 +1141,7 @@ theorem memoRV_grow (hVS : VStable S VR) (m : Mem) (mp : Std.HashMap κ ν)
   have hep₁ : epG S m₁ = epG S m := by
     simp only [epG]; rw [← hM, rdW_set64]; simp only [Ne.symm hcs, false_and, and_false, ↓reduceIte]
     simp only [Mem.arr64_set64_ne _ _ _ _ _ (TieredArray.t0_ne (Ne.symm hac))]
-    rw [hIf.2.1 S.cs (by simp)]
+    rw [hIf.ctl S.cs (by simp)]
   have hd₁ : rdW (m₁.arr64 S.arr) 0 = epG S m₁ := by simp only [hep₁, hh]; simp
   have hb₁ : mbG S m₁ = mbG S m + nG S m := by simp only [mbG, hd₁, ↓reduceIte, hh]; simp
   have hn₁ : nG S m₁ = nG S m * 2 := by simp only [nG, hd₁, ↓reduceIte, hh]
@@ -1175,7 +1175,7 @@ theorem memoRV_grow (hVS : VStable S VR) (m : Mem) (mp : Std.HashMap κ ν)
     exact (((fa _ _ _).trans (fa _ _ _)).trans (fa _ _ _)).trans
       ((MemFrame.setCtl _ (S.cs + 1) c').mono (by simp) (by simp))
   have hV' : ∀ w v, VR m' w v → VR m₁ w v := hVS m' m₁ (hf'.mono (by simp) (by simp))
-  refine ⟨⟨by rw [hf₁.2.2.1]; exact hctl, by rw [hep₁]; exact hep, ⟨?_, ?_, ?_, ?_⟩, ?_⟩,
+  refine ⟨⟨by rw [hf₁.size]; exact hctl, by rw [hep₁]; exact hep, ⟨?_, ?_, ?_, ?_⟩, ?_⟩,
     hep₁, hb₁, hn₁, hc₁⟩
   · right; rw [hb₁, hn₁, hs₁, hnb, hnn]; rw [hnb, hnn] at hfit; omega
   · intro j hj
@@ -1237,8 +1237,8 @@ theorem memoRV_clear (m : Mem) (mp : Std.HashMap κ ν) (hR : MemoRV S K VR m mp
     (hw : rdW (m.arr64 CTL) S.cs + 2 ≠ 0) : MemoRV S K VR (mclearG S m) ∅ := by
   obtain ⟨hctl, hep, hreg, -⟩ := hR
   have hf := mclearG_frame S m
-  have hsz := hf.2.2.1
-  have hb : (mclearG S m).arr64 S.arr = m.arr64 S.arr := hf.1 S.arr (by simp) (TieredArray.t0_ne hS.arr_ctl)
+  have hsz := hf.size
+  have hb : (mclearG S m).arr64 S.arr = m.arr64 S.arr := hf.arr S.arr (by simp) (TieredArray.t0_ne hS.arr_ctl)
   have hsl : slotsG S (mclearG S m) = slotsG S m := slotsG_frame S hf
   have hs : ∀ j, mstG S (mclearG S m) j = mstG S m j := fun j => by simp only [mstG, hb]
   have hcs : S.cs + 1 ≠ S.cs := by
@@ -1259,15 +1259,15 @@ stamp**, when the values' denotations do (a heap that only grows, say). -/
 theorem memoRV_frame (A : List TieredArray) (C : List Word) (hA : (S.arr : TieredArray) ∉ A) (hC : S.cs ∉ C)
     (m m' : Mem) (hf : MemFrame A C m m') (hV : ∀ w v, VR m w v → VR m' w v)
     (mp : Std.HashMap κ ν) (hR : MemoRV S K VR m mp) : MemoRV S K VR m' mp := by
-  have hb : m'.arr64 S.arr = m.arr64 S.arr := hf.1 S.arr hA (TieredArray.t0_ne hS.arr_ctl)
-  obtain ⟨g1, g2, g3, g4, -⟩ := reg_congr S m m' (fun f _ => by rw [hb]) (hf.2.1 S.cs hC)
+  have hb : m'.arr64 S.arr = m.arr64 S.arr := hf.arr S.arr hA (TieredArray.t0_ne hS.arr_ctl)
+  obtain ⟨g1, g2, g3, g4, -⟩ := reg_congr S m m' (fun f _ => by rw [hb]) (hf.ctl S.cs hC)
     (by rw [hb])
   have hs : ∀ j, mstG S m' j = mstG S m j := fun j => by simp only [mstG, hb]
   have hk : ∀ j, mk1G S m' j = mk1G S m j := fun j => by simp only [mk1G, hb]
   have hk' : ∀ j, mk2G S m' j = mk2G S m j := fun j => by simp only [mk2G, hb]
   have hv : ∀ j, mvG S m' j = mvG S m j := fun j => by simp only [mvG, hb]
   obtain ⟨hctl, hep, ⟨r1, r2, r3, r4⟩, hlive, huniq, hrun⟩ := hR
-  refine ⟨by rw [hf.2.2.1]; exact hctl, by rw [g1]; exact hep,
+  refine ⟨by rw [hf.size]; exact hctl, by rw [g1]; exact hep,
     ⟨by rw [g2, g3, g4]; exact r1, fun j hj => by rw [hs, g1]; exact r2 j (g4 ▸ hj),
       fun j h1 h2 => by rw [hs, g1]; exact r3 j (by rw [← g2, ← g3]; exact h1) (g4 ▸ h2),
       by rw [hb, g1]; exact r4⟩, ?_, ?_, ?_⟩

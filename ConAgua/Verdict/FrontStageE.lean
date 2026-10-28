@@ -94,7 +94,6 @@ theorem preludeStageE {X : StateD → AState → Prop} (hV : L.Front.Ind.Validat
   obtain ⟨sA, hA, h3⟩ := hQ
   have h3 : R3 (loadMem b pb sz) s.mem pb sA := h3
   have hcap := CapsOK.keep h3.since.keep h3.since.caps
-  have h0 : s.mem.HasB IN := trivial
   have hpool : (s.mem.arr64 POOL).size < 2 ^ 63 := by have := hcap.pool; omega
   have hc := callE_of_run_err hr
   have hE := triple_of_callE_err (builtinPrelude_specE checkerProg checkerProg_builtin n
@@ -121,7 +120,7 @@ theorem preludeStageE {X : StateD → AState → Prop} (hV : L.Front.Ind.Validat
   simp only [builtinPreludeLE.k_pre_front_run] at hE
   cases hE
   have hrun := run_of_callE_err h1
-  have hsim := preFrontRun_errSim n ⟨s.mem, Locals.init []⟩ e h0 hrun (Err.code_ne_of_cls hk)
+  have hsim := preFrontRun_errSim n ⟨s.mem, Locals.init []⟩ e hrun (Err.code_ne_of_cls hk)
   have hc' := callE_of_run_err hsim
   simp only [St.setIn_mem] at hc'
   rw [← callE_frontAll (by decide) n [] _] at hc'

@@ -45,8 +45,6 @@ def _root_.L.Mem.setA (m : Mem) (b : TieredArray) (v : Array Word) : Mem :=
 theorem Mem.setA_arr (m : Mem) (b c : TieredArray) (v : Array Word) :
     (m.setA b v).arr64 c = if c = b then v else m.arr64 c := rfl
 
-theorem Mem.setA_words (m : Mem) (b : TieredArray) (v : Array Word) : m.SameShape (m.setA b v) := trivial
-
 theorem Mem.setA_self (m m' : Mem) (b : TieredArray) :
     (m.setA b (m'.arr64 b)).arr64 b = m'.arr64 b := by
   rw [Mem.setA_arr, ite_eq_left rfl]
@@ -88,8 +86,6 @@ def fzSrcs : List TieredArray := tier0s
 theorem frozen_srcs : (frozen.drop 1).map (fun e => (e.2.src : TieredArray)) = fzSrcs := by decide
 
 theorem fzSrcs_nodup : fzSrcs.Nodup := by decide
-
-theorem truncFrozen_words (m : Mem) : m.SameShape (truncFrozen m) := trivial
 
 theorem frozen_pairwise : (frozen.drop 1).Pairwise (fun e e' => e.2.src ≠ e'.2.src) := by
   have := fzSrcs_nodup

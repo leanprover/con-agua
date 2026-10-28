@@ -509,7 +509,7 @@ theorem node_const (x c z : Word) (nm : Nat) (us : List Nat) (hx : ItemR x nm)
     have := UInt64.not_lt.mp hle; rw [UInt64.le_iff_toNat_le, hlen] at this; exact this
   obtain ⟨F1, -, F4, F5, F6, F7, F8⟩ := lsLoopM_facts b.data m.top h41 m (c + 1) 0 m₂ hP
     (by simpa using ht') hsz
-  obtain ⟨F2, F9⟩ := F8 hpok.2.1
+  obtain ⟨F2, F9⟩ := F8 hpok.ctl
   simp only [UInt64.toNat_zero, Nat.zero_add, Nat.add_zero] at F1 F4 F5 F6
   have htc : (m.top + lsCntN b.data (c + 1) 0).toNat = m.top.toNat + (lsCntN b.data (c + 1) 0).toNat := by
     rw [UInt64.toNat_add]; omega

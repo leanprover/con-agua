@@ -229,7 +229,7 @@ theorem ColT2.frame {L : Lens α δ k} {A : ArrId} {f : δ → Word} {m m' : Mem
 theorem ColT2.frameM {L : Lens α δ k} {A : ArrId} {f : δ → Word} {Ar : List TieredArray} {C : List Word}
     {m m' : Mem} {a : AState} (h : ColT2 L A f m a) (hf : MemFrame Ar C m m') (hA : (A : TieredArray) ∉ Ar)
     (hA' : tier1 A ∉ Ar) (hc : (A : TieredArray) ≠ CTL) : ColT2 L A f m' a :=
-  h.frame (hf.1 A hA hc) (hf.1 _ hA' ((tier1_ne_t0 _ _)))
+  h.frame (hf.arr A hA hc) (hf.arr _ hA' ((tier1_ne_t0 _ _)))
 
 omit [Inhabited δ] in
 theorem tbl_push_size (tb : Tbl α (Idx k) δ) (key : α) (d : δ) (y : Idx k) :
@@ -383,7 +383,7 @@ theorem colMkC {C : ConsSch} (hW : C.WF) {A : ArrId} (hA : C.col = some A)
   simp only [ite_true, show (1 : Word) ≠ 0 by decide, ite_false] at c0 c1 d0 d1 k0 k1
   have hp0 := (tbl_push_size (L.getP a) key d y).1
   have hp1 := (tbl_push_size (L.getS a) key d y).1
-  rcases consInternM_out hW hI with rfl | ⟨t, ht, hok, -, he, -, -⟩
+  rcases consInternM_out hW hI with rfl | ⟨t, ht, hok, -, he, -⟩
   · rcases hst with rfl | ⟨-, -, -, rfl⟩ | ⟨-, -, -, rfl⟩
     · exact hc
     · rw [L.getP_setP] at d0; omega

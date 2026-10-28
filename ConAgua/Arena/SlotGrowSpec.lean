@@ -136,19 +136,18 @@ def kgrowM (sa : ArrId) (G : Mem → Word → Word) (t : Word) (m : Mem) : Optio
 /-! ## The frame of the growth -/
 
 /-- From `m` to `m'` only array `sa` changes, and no size. -/
-def GFr (sa : TieredArray) (m m' : Mem) : Prop :=
-  (∀ b, b ≠ sa → m'.arr64 b = m.arr64 b) ∧ (∀ b, (m'.arr64 b).size = (m.arr64 b).size) ∧
-    m.SameShape m'
+structure GFr (sa : TieredArray) (m m' : Mem) : Prop where
+  arr : ∀ b, b ≠ sa → m'.arr64 b = m.arr64 b
+  size : ∀ b, (m'.arr64 b).size = (m.arr64 b).size
 
-theorem GFr.refl (sa : TieredArray) (m : Mem) : GFr sa m m := ⟨fun _ _ => rfl, fun _ => rfl, .refl m⟩
+theorem GFr.refl (sa : TieredArray) (m : Mem) : GFr sa m m := ⟨fun _ _ => rfl, fun _ => rfl⟩
 
 theorem GFr.trans {sa : TieredArray} {m₁ m₂ m₃ : Mem} (h₁ : GFr sa m₁ m₂) (h₂ : GFr sa m₂ m₃) :
     GFr sa m₁ m₃ :=
-  ⟨fun b hb => (h₂.1 b hb).trans (h₁.1 b hb), fun b => (h₂.2.1 b).trans (h₁.2.1 b),
-    h₁.2.2.trans h₂.2.2⟩
+  ⟨fun b hb => (h₂.arr b hb).trans (h₁.arr b hb), fun b => (h₂.size b).trans (h₁.size b)⟩
 
 theorem GFr.set64 (sa : TieredArray) (m : Mem) (i v : Word) : GFr sa m (m.set64 sa i v) := by
-  refine ⟨fun b hb => Mem.arr64_set64_ne _ _ _ _ _ hb, fun b => ?_, Mem.sameShape_set64 _ _ _ _⟩
+  refine ⟨fun b hb => Mem.arr64_set64_ne _ _ _ _ _ hb, fun b => ?_⟩
   by_cases h : b = sa
   · subst h; exact Mem.size_arr64_set64 _ _ _ _
   · rw [Mem.arr64_set64_ne _ _ _ _ _ h]

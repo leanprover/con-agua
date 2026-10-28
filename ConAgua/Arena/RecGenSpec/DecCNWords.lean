@@ -104,7 +104,7 @@ theorem AgreeA.set_iw {b : Nat} (m : Mem) {i : Word} (v : Word) (hi : i.toNat < 
 
 theorem KeepW.of_mfr {S : List TieredArray} {T : List Word} {m m' : Mem} (h : MFr S T m m') : KeepW m m' := by
   obtain ⟨A, C, hf, -, -⟩ := h
-  exact hf.2.2.1
+  exact hf.size
 
 /-- `CtorLp` holds on as the pools grow and keep their sizes. -/
 theorem CtorLp.grow {m m' : Mem} {cA : Word} {x : IConstantVal × Nat} (h : CtorLp m cA)

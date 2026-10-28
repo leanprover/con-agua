@@ -99,7 +99,7 @@ theorem apdF_simR {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
   refine ⟨hAb.frame hf (by decide) (by decide), hI1.frame hf (by decide) (by decide),
     hCr.frame hf (by decide) (by decide), hIl.frame hf (by decide) (by decide),
     ⟨apdMR_ws hM, ⟨mf, ?_⟩, ⟨ml, ?_⟩, hLP.frame hf (by decide) (by decide)⟩,
-    by rw [hf.2.2.1]; exact hE, by rw [hf.2.2.1]; exact hSp, by rw [hf.2.2.1]; exact hB,
+    by rw [hf.size]; exact hE, by rw [hf.size]; exact hSp, by rw [hf.size]; exact hB,
     by rw [pinW_frame hf (by decide)]; exact hP⟩
   · exact memoRG_frame coreFlSch coreFlSch_wf bmKey _ _ _ (by decide) (by decide) _ _ hf mf hfl
   · exact memoRG_frame coreLsbSch coreLsbSch_wf bmKey _ _ _ (by decide) (by decide) _ _ hf ml hlsb
@@ -343,17 +343,17 @@ theorem envPushTable_stage {p : Prog} (hP : TblProg p) {dn : NIdx → Option Con
      hS.1.core.frame (by decide) (fun x hx => by simp at hx; subst hx; decide) hfr,
      hS.1.pins.frame (by decide) hfr, hE', hS.1.mode.frame hfr (by decide) (by decide)⟩
   obtain ⟨hI1, hE1, hsz, hEs, hc'⟩ := hS.2
-  have hI : m'.arr64 IW = m.arr64 IW := hfr.1 IW (by decide) (by decide)
-  have hER : m'.arr64 EREC = m.arr64 EREC := hfr.1 EREC (by decide) (by decide)
-  have h200 : iwTop m' = iwTop m := by simp only [iwTop, hfr.2.1 200 (by decide)]
-  have h129 : erTop m' = erTop m := by simp only [erTop, hfr.2.1 129 (by decide)]
+  have hI : m'.arr64 IW = m.arr64 IW := hfr.arr IW (by decide) (by decide)
+  have hER : m'.arr64 EREC = m.arr64 EREC := hfr.arr EREC (by decide) (by decide)
+  have h200 : iwTop m' = iwTop m := by simp only [iwTop, hfr.ctl 200 (by decide)]
+  have h129 : erTop m' = erTop m := by simp only [erTop, hfr.ctl 129 (by decide)]
   refine ⟨⟨hC, ?_, ?_, ?_, ?_, ?_⟩, ⟨by omega, by omega, fun i _ => by rw [hI], fun i _ => by rw [hER]⟩,
     MFr.of_frame hfr (by decide) (fun x hx => by simp at hx; subst hx; decide), AFr.of_frame hfr⟩
   · rw [h200, hI]; exact hI1
   · rw [h129, hER]; exact hE1
   · rw [hI]; exact hsz
   · rw [hER]; exact hEs
-  · rw [hfr.2.2.1 CTL]; exact hc'
+  · rw [hfr.size CTL]; exact hc'
 
 /-- **`check_struct_proj_table`'s model (`realCall p`) refines `checkStructProjTable`** (with the
 scoping through the real `all_level_params_defined`, `sctW_okR`): beyond the stage relation the

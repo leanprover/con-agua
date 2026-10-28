@@ -43,7 +43,7 @@ theorem consR_truncL {α δ : Type} {k : IdxKind} [BEq α] [Hashable α] {C : Co
     (hC : C ∈ fzCS) (h1 : tier1 C.ra ∉ fzSrcs) (h2 : tier1 C.sa ∉ fzSrcs)
     (h : ConsR C R m on P Q) : ConsR C R (truncFrozen m) on P Q :=
   consR_iff.mpr (storeR_trunc C.sch R C.hsM C.KP hW.sch hW.kframe (storeTr_trunc m hC h1 h2)
-    (rTrans_local hW.sch hF hL (truncFrozen_words m)) (consR_iff.mp h))
+    (rTrans_local hW.sch hF hL) (consR_iff.mp h))
 
 section tables
 variable {m : Mem} {a : AState}
@@ -126,7 +126,8 @@ theorem top_tier0 {m : Mem} (htop : m.top.toNat < 2 ^ 40) :
 /-- **The pool invariant survives the truncation**, the top in tier 0. -/
 theorem PoolOK.trunc {m : Mem} (h : PoolOK m) (htop : m.top.toNat < 2 ^ 40) :
     PoolOK (truncFrozen m) := by
-  obtain ⟨a1, a2, a3, a4, a5, a6⟩ := h
+  have a6 := h.inTier
+  have a3 := h.cap
   have hP := poolTr_trunc m htop
   have hc := truncFrozen_ctl m
   have hp1 : (truncFrozen m).arr64 POOL1 = m.arr64 POOL1 := truncFrozen_other m _ (by decide)
@@ -137,8 +138,8 @@ theorem PoolOK.trunc {m : Mem} (h : PoolOK m) (htop : m.top.toNat < 2 ^ 40) :
     rw [truncFrozen_pool, size_extract0]; omega
   have hsm' : PSmall (truncFrozen m) := ⟨by rw [hsz]; omega, by rw [hp1]; exact hsm.2⟩
   have hpc : pcap (truncFrozen m) = pcap m := by rw [pcap_of_small _ hsm, pcap_of_small _ hsm']
-  refine ⟨a1.of_sameShape (truncFrozen_words m), by rw [hc]; exact a2, by rw [hpc]; exact a3,
-    by rw [hpc, hP.top]; exact a4, by rw [hP.top]; exact .inl htop, ?_⟩
+  refine ⟨by rw [hc]; exact h.ctl, by rw [hpc]; exact h.cap,
+    by rw [hpc, hP.top]; exact h.top, by rw [hP.top]; exact .inl htop, ?_⟩
   rw [hP.top, e1, tierA_pool0, e2, hsz]; exact Nat.le_refl _
 
 section pooltab
@@ -150,7 +151,7 @@ theorem rTrans_pool (hF : RFrame S R hs)
     (hP : ∀ m₁ m₂ : Mem, (∀ t, m₂.arr64 (tierA S.ra t) = m₁.arr64 (tierA S.ra t)) → PoolTr m₁ m₂ →
       (∀ t i a, R m₁ t i a → R m₂ t i a) ∧ ∀ t i, hs m₂ t i = hs m₁ t i)
     (hx : ∀ b ∈ ([POOL, POOL1, PT0, CTL] : List TieredArray), b ≠ S.ra ∧ b ≠ tier1 S.ra)
-    {m m' : Mem} (_hw : m.SameShape m') (hp : PoolTr m m') : RTrans S R hs m m' := by
+    {m m' : Mem} (hp : PoolTr m m') : RTrans S R hs m m' := by
   intro t i hf
   let m₁ := (m.setA S.ra (m'.arr64 S.ra)).setA (tier1 S.ra) (m'.arr64 (tier1 S.ra))
   have hne : (S.ra : TieredArray) ≠ tier1 S.ra := t0_ne_tier1 _ _
@@ -216,21 +217,21 @@ theorem LitR.trunc (h : LitR m a) : LitR (truncFrozen m) a :=
     (storeTr_trunc m (by simp [fzCS]) (by decide) (by decide))
     (rTrans_pool litFrame (fun _ _ hr hp => ⟨RecRel_ptr hr hp,
       fun t i => congrArg (fun a => rdW a (i * 4 + 3)) (hr t)⟩) (by decide)
-      (truncFrozen_words m) (poolTr_trunc m htop)) (consR_iff.mp h.2))⟩
+      (poolTr_trunc m htop)) (consR_iff.mp h.2))⟩
 
 theorem NStrR.trunc (h : NStrR m a) : NStrR (truncFrozen m) a :=
   consR_iff.mpr (storeR_trunc _ NsRecRel _ _ nstrCS_wf.sch nstrCS_wf.kframe
     (storeTr_trunc m (by simp [fzCS]) (by decide) (by decide))
     (rTrans_pool nstrFrame (fun _ _ hr hp => ⟨NsRecRel_ptr hr hp,
       fun t i => congrArg (fun a => rdW a (i * 4 + 3)) (hr t)⟩) (by decide)
-      (truncFrozen_words m) (poolTr_trunc m htop)) (consR_iff.mp h))
+      (poolTr_trunc m htop)) (consR_iff.mp h))
 
 theorem LsR.trunc (h : LsR m a) : LsR (truncFrozen m) a :=
   consR_iff.mpr (storeR_trunc _ LsRecRel _ _ lsCS_wf.sch lsCS_wf.kframe
     (storeTr_trunc m (by simp [fzCS]) (by decide) (by decide))
     (rTrans_pool lsFrame (fun _ _ hr hp => ⟨LsRecRel_ptr hr hp,
       fun t i => congrArg (fun a => rdW a (i * 3 + 2)) (hr t)⟩) (by decide)
-      (truncFrozen_words m) (poolTr_trunc m htop)) (consR_iff.mp h))
+      (poolTr_trunc m htop)) (consR_iff.mp h))
 
 end pooltables
 

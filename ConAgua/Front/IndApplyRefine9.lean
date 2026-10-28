@@ -88,7 +88,7 @@ theorem flat_pos (LS : List (List NIdx)) (p : Nat) (hp : p < LS.flatten.length) 
 
 /-- A write set of the level heap only is an `IExt`. -/
 theorem iext_of_heap {m m' : Mem} (h : MemFrame [LH] [192] m m') : IExt m m' := by
-  have hI : m'.arr64 IFL = m.arr64 IFL := h.1 IFL (by decide) (by decide)
+  have hI : m'.arr64 IFL = m.arr64 IFL := h.arr IFL (by decide) (by decide)
   refine ⟨h.mono (by simp) (by simp), by simp [topN, wd, hI], fun i _ _ => by simp [wd, hI]⟩
 
 
@@ -397,7 +397,7 @@ theorem validateW_twin {b : ByteArray} {n : Nat} {m m' : Mem} {a : AState} {st :
         · simp [hz', he, hz, keOf]
       · have hz' : wd m IFR (co.toNat + 10 * kk + 4) ≠ 0 := fun e => hz (by rw [← c4.1, e]; rfl)
         simp [hz', hz, keOf]
-  have hsz5 : (m'.arr64 IFL).size = (m₅.arr64 IFL).size := k1.2.2.1 IFL
+  have hsz5 : (m'.arr64 IFL).size = (m₅.arr64 IFL).size := k1.size IFL
   have htop56 : topN m' IFL = topN m₅ IFL := by simp only [topN, wd, hIFL56]
   refine ⟨_, validateIndD_ok hV, e16, ⟨by rw [hsz5]; exact o3.1, by rw [hsz5, htop56]; exact o3.2⟩,
     ordList_length _ _ _ _ _, by omega, by rw [htop56, o4, o1]; omega, fun p hp => ?_, np3⟩

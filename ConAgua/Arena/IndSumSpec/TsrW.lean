@@ -501,7 +501,7 @@ theorem tsrmW_afr : ∀ (n : Nat) {m m' : Mem} {ro rl flo fll fpo fpl : Word} {r
 
 theorem rcPoolSmall {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m : Mem} {a : AState}
     (h : StageR dn vis fe m a) : PoolSmall m := by
-  have := h.1.arena.1.lit.1.2.2.1
+  have := h.1.arena.1.lit.1.cap
   unfold PoolSmall; omega
 
 def efF : Nat → Mem → Word → Word → Option (List Word × Mem)

@@ -136,14 +136,14 @@ theorem StageR.alloc {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFE
   have htop : iwTop (allocMem m k) = q.toNat + k.toNat := by
     simp only [iwTop, allocMem_top m k h5, ← hq]
     rw [UInt64.toNat_add]; exact Nat.mod_eq_of_lt (by omega)
-  have h129 : rdW ((allocMem m k).arr64 CTL) 129 = rdW (m.arr64 CTL) 129 := hf.2.1 129 (by simp)
+  have h129 : rdW ((allocMem m k).arr64 CTL) 129 = rdW (m.arr64 CTL) 129 := hf.ctl 129 (by simp)
   have hE : (allocMem m k).arr64 EREC = m.arr64 EREC := hf.1 EREC (by simp [EREC, IW]) (by decide)
   refine ⟨⟨CheckR.frame_iw hf hS.1, ?_, ?_, ?_, ?_, ?_⟩, allocMem_grow m k (by omega) h5, hq, hroom, htop⟩
-  · rw [htop, hf.2.2.1 IW]; exact hroom
+  · rw [htop, hf.size IW]; exact hroom
   · simp only [erTop, h129, hE]; exact h2
-  · rw [hf.2.2.1 IW]; exact h3
+  · rw [hf.size IW]; exact h3
   · rw [hE]; exact h4
-  · rw [hf.2.2.1 CTL]; exact h5
+  · rw [hf.size CTL]; exact h5
 
 /-! ## `nest_canon_crest` -/
 

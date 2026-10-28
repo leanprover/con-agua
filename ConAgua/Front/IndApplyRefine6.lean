@@ -102,7 +102,7 @@ theorem kExpW_twin {n : Nat} {m m' : Mem} {a : AState} (hR : ArenaR m a)
   have hf : MemFrame [LH] [192] m m₃ :=
     ((reset_frame m).mono (by simp) (by simp)).trans (hx1.memFrame.trans hx3.memFrame)
   have hfr : rdW (m₃.arr64 IFR) (rdW (m.arr64 IFL) oo + 4) = rdW (m.arr64 IFR) (rdW (m.arr64 IFL) oo + 4) := by
-    rw [hf.1 IFR (by decide) (by decide)]
+    rw [hf.arr IFR (by decide) (by decide)]
   rw [hfr] at h
   have hke : ke = if rdW (m.arr64 IFR) (rdW (m.arr64 IFL) oo + 4) = 0 ∧
       ConLeche.Level.isEquiv L .zero = some true then 2 else 1 := by

@@ -225,7 +225,7 @@ theorem sleW_ok (ks : List Name) (vs : List Level) (usIds : List LIdx) (ko kc vo
     have hpool₂c := pcap_congr' hpool₂ hpool₂'
     have htop₂ : (m₁.set64 SPN b h).top = m.top := by
       simp only [Mem.top]; rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
-      have := hf₁.2.1 0 (by simp [lvCtl])
+      have := hf₁.ctl 0 (by simp [lvCtl])
       simpa [rdW] using this
     have hsz₂ : ((m₁.set64 SPN b h).arr64 SPN).size = (m.arr64 SPN).size := by
       rw [Mem.size_arr64_set64, hspn₁]
@@ -412,7 +412,7 @@ theorem slpW_ok (ks : List Name) (vs : List Level) (usIds : List LIdx) (ko kc vo
     have hpool₂c := pcap_congr' hpool₂ hpool₂'
     have htop₂ : (m₁.set64 SPN b h).top = m.top := by
       simp only [Mem.top]; rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
-      have := hf₁.2.1 0 (by simp [lvCtl])
+      have := hf₁.ctl 0 (by simp [lvCtl])
       simpa [rdW] using this
     have hsz₂ : ((m₁.set64 SPN b h).arr64 SPN).size = (m.arr64 SPN).size := by
       rw [Mem.size_arr64_set64, hspn₁]
@@ -501,7 +501,7 @@ theorem spnLsW_ok (n : Nat) (m m' : Mem) (a : AState) (b l r : Word) (hs : List 
     hf₃.1 POOL (by simp [tier1, lsSch, LSREC, LSSLOT, LSHP, POOL]) (by decide)
   have hpool₃' : m'.arr64 POOL1 = m₂.arr64 POOL1 :=
     hf₃.1 POOL1 (by simp [tier1, lsSch, LSREC, LSSLOT, LSHP, POOL1]) (by decide)
-  have htop₃ : m'.top = m₂.top := by simp only [top_rdW]; exact hf₃.2.1 0 (by simp [lsSch])
+  have htop₃ : m'.top = m₂.top := by simp only [top_rdW]; exact hf₃.ctl 0 (by simp [lsSch])
   refine ⟨_, hrun, hA₃, hr, ?_, ?_, ?_, ?_, hca, hpi, hme⟩
   · exact (hmf.mono (by simp) (by simp)).trans (hf₃.mono (by simp [lsSch]) (by simp [lsSch]))
   · rw [vpool_congr hpool₃ hpool₃']; exact hg.agree
@@ -540,7 +540,7 @@ theorem keysPushW_ok {N : Word → Name → Prop} (n : Nat) (m m₁ : Mem) (po p
   obtain ⟨hk₁, hf₁, hb₁⟩ := ekCopyW_ok ks n m mc po (spTop m) pc hk hroom hsz hc
   have hspn : (mc.set64 CTL 136 (spTop m + pc)).arr64 SPN = mc.arr64 SPN :=
     Mem.arr64_set64_ne _ _ _ _ _ (by decide)
-  have hctl' : (136 : Word).toNat < (mc.arr64 CTL).size := by rw [hf₁.2.2.1 CTL]; simpa using hctl
+  have hctl' : (136 : Word).toNat < (mc.arr64 CTL).size := by rw [hf₁.size CTL]; simpa using hctl
   refine ⟨rfl, hk₁.of_arr hspn, (hf₁.mono (by simp) (by simp)).trans
     ((MemFrame.setCtl _ _ _).mono (by simp) (by simp)), ?_, hroom, fun i hi => by rw [hspn]; exact hb₁ i hi⟩
   simp only [spTop]; rw [rdW_set64]; simp only [hctl', and_self, ↓reduceIte]

@@ -244,8 +244,8 @@ theorem checkDeclOpaque_errT {p : Prog} (hV : ValProg p) (hC : CrpProg p) (hq : 
     ConLeche.Expr.WScoped.of_not_hasFvar (ConRon.Bridge.checkOpaqueVal_noFvar hpure2)
   have hf3 := (run_memFrame hlc checkOpaqueVal_loop (run_of_callW (callW_of_callE h3))).1
   have hmem3 : TwinMem dn s3.mem a3 :=
-    ⟨by rw [hf3.2.2.1]; exact hS2.twin.erec, by rw [hf3.2.2.1]; exact hS2.twin.spn,
-      by rw [hf3.2.2.1]; exact hS2.twin.bstk, hM3,
+    ⟨by rw [hf3.size]; exact hS2.twin.erec, by rw [hf3.size]; exact hS2.twin.spn,
+      by rw [hf3.size]; exact hS2.twin.bstk, hM3,
       fun k y e => hstep2.ext.lss.ls.ns k y (hS2.twin.den.dnN k y e)⟩
   have hflag3 : pinW s3.mem 0 ≠ 0 := by
     simp only [pinW, hf3.1 PINS loopA_pins (by decide)]; exact hS2.flag

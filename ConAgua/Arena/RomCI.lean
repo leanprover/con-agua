@@ -630,7 +630,7 @@ theorem MemoR.fresh (mem : Mem) (hc : 132 < (mem.arr64 CTL).size) : MemoR (reset
     simp only [memoCnt, resetMem, mclearG, rsetSch, rdW_set64]
     simp [hc]
   refine ⟨by rw [hc0]; rfl, fun k hk => by simp at hk, fun e he => by simp at he, by simp, ?_⟩
-  rw [hf.2.2.1]; exact hc
+  rw [hf.size]; exact hc
 
 set_option experimental.vcgen true in
 theorem internAllPins_specW (rom : List UInt8) (off : Word) (p : Prog) (hL : ItemsProg rom p)
@@ -669,12 +669,12 @@ theorem internAllPins_refines (rom : List UInt8) (off : Word) (p : Prog) (hL : I
   apply M.triple_of_run
   intro s r s' hs hrun
   obtain ⟨hloc, hc, n', q, -, hW⟩ := M.of_run (P := fun s => s = s₀) hs hrun
-    (internAllPins_specW rom off p hL hp n s₀ ⟨hA.1.lit.1.2.2.1, hA.1.lit.1.top41⟩)
+    (internAllPins_specW rom off p hL hp n s₀ ⟨hA.1.lit.1.cap, hA.1.lit.1.top41⟩)
   subst hs
   have hA' : ArenaD (resetMem s.mem) a₀ := ArenaD.frameHi (resetMem_frame1 _) (by simp) (by simp) hA
   obtain ⟨m', a', -, hrunI, hR, -, -, hf, -⟩ := romItemsW_ok rom hr _ hfit n' (resetMem s.mem) a₀ off rest []
     ∅ q s'.mem hA' ((memFrame_top (resetMem_frame1 s.mem) (by decide)).mode hA.1.lit.1 hmo) (MemoR.fresh s.mem hc) hd (by rw [resetMem_stk]; exact hst)
-    (by rw [(resetMem_frame1 _).2.2.1]; omega) hW
+    (by rw [(resetMem_frame1 _).size]; omega) hW
   obtain ⟨v, hv⟩ := simZ_internAllPins pins ∅ a₀ m' a' hP (by rw [runItems_reset]; exact hrunI)
   exact ⟨hloc, v, a', hv, hR, (resetMem_frame _).trans hf⟩
 

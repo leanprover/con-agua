@@ -54,7 +54,7 @@ theorem loopZero_of_since {b pb : ByteArray} {sz : TieredArray → Nat} {m : Mem
     (h : Since (ConAgua.Final.loadMem b pb sz) m pb) : LoopZero m := by
   have hf := h.frame
   refine ⟨?_, fun a ha j => ?_, fun x hx => ?_⟩
-  · rw [hf.2.2.1]; have := h.caps.2.1; simp only [ctlMin] at this; omega
+  · rw [hf.size]; have := h.caps.2.1; simp only [ctlMin] at this; omega
   · have hm : a ∈ loopZeroArrs := ha
     have hn : a ∉ preLoopA := by
       intro hc
@@ -62,8 +62,8 @@ theorem loopZero_of_since {b pb : ByteArray} {sz : TieredArray → Nat} {m : Mem
       simp [hc] at this
     have hc : a ≠ CTL := by
       intro e; subst e; exact absurd hm (by decide)
-    rw [hf.1 a hn hc]; exact loadMem_rd (b := b) (pb := pb) (sz := sz) a j
-  · rw [hf.2.1 x (not_mem_of_toNat preLoopC_loopZeroCtls x (loopZeroCtl_mem hx))]
+    rw [hf.arr a hn hc]; exact loadMem_rd (b := b) (pb := pb) (sz := sz) a j
+  · rw [hf.ctl x (not_mem_of_toNat preLoopC_loopZeroCtls x (loopZeroCtl_mem hx))]
     exact loadMem_rd (b := b) (pb := pb) (sz := sz) _ x
 
 /-- `FrontDecls` from the twin prefix's shape fact (lane `pipeline`'s `prefix_frontDecls`). -/
@@ -99,7 +99,7 @@ theorem core_of_R7 {b pb : ByteArray} {sz : TieredArray → Nat} {sA : AState} {
     rw [loadMem_arr] at this; simp only [Array.size_replicate, ctlMin] at this; omega
   obtain ⟨M, hM⟩ := cachesEmpty_refines sz hctl
   have hf0 : MemFrame [] [] (initMem sz) (ConAgua.Final.loadMem b pb sz) :=
-    ⟨fun _ _ _ => rfl, fun _ _ => rfl, fun _ => rfl, trivial⟩
+    ⟨fun _ _ _ => rfl, fun _ _ => rfl, fun _ => rfl⟩
   exact ⟨M, (hM.frame (fun _ h => by simp at h) (fun _ h => by simp at h) hf0).frame
     preLoopA_avoidCore preLoopC_avoidCore h7.since.frame⟩
 

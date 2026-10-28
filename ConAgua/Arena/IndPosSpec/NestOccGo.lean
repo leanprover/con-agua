@@ -53,7 +53,7 @@ theorem maConstW_ok (n : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) 
     ArenaR.frame (A := []) (C := [maSch.cs, maSch.cs + 1]) (fun b hb => by simp at hb)
       (fun x hx => by simp [maSch] at hx; rcases hx with rfl | rfl <;> exact not_mem_arenaCtl _ (by decide)) hf0
       hS.1.arena.1
-  have hws0 : SlR (mclearG maSch m) no nl ws := slR_congr (hf0.1 IW (by simp) (by decide)) hws
+  have hws0 : SlR (mclearG maSch m) no nl ws := slR_congr (hf0.arr IW (by simp) (by decide)) hws
   rcases hg : maGoW n (mclearG maSch m) no nl CWF e with _ | ⟨r1, m1⟩ <;> rw [hg] at hb; · simp [maClrK] at hb
   by_cases h1 : rdW (m1.arr64 CTL) maSch.cs + 2 = 0
   · simp [maClrK, h1] at hb
@@ -173,7 +173,7 @@ theorem noConstW_ok (n : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) 
     ArenaR.frame (A := []) (C := [noSch.cs, noSch.cs + 1]) (fun b hb => by simp at hb)
       (fun x hx => by simp [noSch] at hx; rcases hx with rfl | rfl <;> exact not_mem_arenaCtl _ (by decide)) hf0
       hS.1.arena.1
-  have hws0 : SlR (mclearG noSch m) no nl ws := slR_congr (hf0.1 IW (by simp) (by decide)) hws
+  have hws0 : SlR (mclearG noSch m) no nl ws := slR_congr (hf0.arr IW (by simp) (by decide)) hws
   rcases hg : noGoW n (mclearG noSch m) no nl lo hi CWF e with _ | ⟨r1, m1⟩ <;> rw [hg] at hb; · simp [noClrK] at hb
   by_cases h1 : rdW (m1.arr64 CTL) noSch.cs + 2 = 0
   · simp [noClrK, h1] at hb

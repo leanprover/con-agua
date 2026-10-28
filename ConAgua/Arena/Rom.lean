@@ -524,7 +524,7 @@ theorem romPutW_facts (m : Mem) (i l : Word) (hpool : PoolOK m) (hok : romPutOK 
   have hsz := hsm.tier (m.top >>> 40)
   have hsplit := tag_split m.top
   have htier := tag_tier_le m.top h41
-  have hctl0 : 0 < (m.arr64 CTL).size := hpool.2.1
+  have hctl0 : 0 < (m.arr64 CTL).size := hpool.ctl
   obtain ⟨h1, h1', h3, h4, -⟩ := hok
   simp only [RomOK] at hr
   have hil : (i + l).toNat = i.toNat + l.toNat := by
@@ -669,8 +669,8 @@ theorem consInternM_top {C : ConsSch} (hW : C.WF) (hc : C.ca ≠ 0) (hc1 : C.ca 
     {ks : List Word} {w : Word} (h : consInternM C m ks = some (w, m')) :
     m'.top = m.top ∧ pcap m' = pcap m := by
   have hf := consInternM_frame hW h
-  refine ⟨?_, pcap_congr (hf.2.2.1 _) (hf.2.2.1 _)⟩
-  have := hf.2.1 0 (by simp only [List.mem_cons, List.not_mem_nil, or_false]; rintro (e | e) <;> first | exact hc e.symm | exact hc1 e.symm)
+  refine ⟨?_, pcap_congr (hf.size _) (hf.size _)⟩
+  have := hf.ctl 0 (by simp only [List.mem_cons, List.not_mem_nil, or_false]; rintro (e | e) <;> first | exact hc e.symm | exact hc1 e.symm)
   simpa [Mem.top, rdW] using this
 
 theorem top_set64_lt (m : Mem) (v : Word) (hv : v.toNat < 2 ^ 41) : (m.set64 CTL 0 v).top.toNat < 2 ^ 41 := by
@@ -715,8 +715,8 @@ theorem TopK.of_eq {m m' : Mem} (ht : m'.top = m.top) (hp : pcap m' = pcap m) (h
 
 theorem memFrame_top {A : List TieredArray} {C : List Word} {m m' : Mem} (h : MemFrame A C m m')
     (h0 : (0 : Word) ∉ C) (h1 : (1 : Word) ∉ C := by decide) : TopK m m' :=
-  TopK.of_eq (by simpa [Mem.top, rdW] using h.2.1 0 h0) (pcap_congr (h.2.2.1 _) (h.2.2.1 _))
-    (by simpa [Mem.flag, rdW] using h.2.1 1 h1)
+  TopK.of_eq (by simpa [Mem.top, rdW] using h.ctl 0 h0) (pcap_congr (h.size _) (h.size _))
+    (by simpa [Mem.flag, rdW] using h.ctl 1 h1)
 
 theorem cons_topK {C : ConsSch} (hW : C.WF) (hc : C.ca ≠ 0) (hc1 : C.ca + 1 ≠ 0) {m m' : Mem}
     {ks : List Word} {w : Word} (h : consInternM C m ks = some (w, m'))
@@ -844,7 +844,7 @@ theorem romNameW_top (rom : List UInt8) : ∀ (n : Nat) (m : Mem) (pos h q : Wor
         · simp at hW
 
 theorem TopK.mode {m m' : Mem} (h : TopK m m') (hp : PoolOK m) (hmo : ModeOK m) : ModeOK m' :=
-  (h (by have := hp.2.2.1; omega) hp.top41).2.2 hmo
+  (h (by have := hp.cap; omega) hp.top41).2.2 hmo
 
 theorem romNameW_topK {rom : List UInt8} {n : Nat} {m : Mem} {pos h q : Word} {m' : Mem}
     (hW : romNameW rom n m pos = some (h, q, m')) : TopK m m' := romNameW_top rom n m pos h q m' hW
@@ -1114,7 +1114,7 @@ theorem romName_refines (rom : List UInt8) (p : Prog) (hL : NameProg rom p) (hr 
   apply M.triple_of_run
   intro s r s' hs hrun
   obtain ⟨hloc, hW⟩ := M.of_run (P := fun s => s = s₀) hs hrun
-    (romName_specW rom p hL n s₀ pos ⟨hA.1.lit.1.2.2.1, hA.1.lit.1.top41⟩)
+    (romName_specW rom p hL n s₀ pos ⟨hA.1.lit.1.cap, hA.1.lit.1.top41⟩)
   subst hs
   exact ⟨hloc, romNameW_ok rom hr x hx n _ a₀ pos rest _ _ _ hA hmo hd hW⟩
 

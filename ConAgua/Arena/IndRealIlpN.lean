@@ -287,7 +287,7 @@ theorem grows_pset_ti {m₀ m : Mem} (hg : Grows m₀ m) (hok : PoolOK m₀) {t 
     (ht : t.toNat ≤ 1) (hq : m₀.top.toNat ≤ t.toNat * 2 ^ 40 + i.toNat)
     (hi : i.toNat < (m.arr64 (tierA POOL t)).size) :
     Grows m₀ (m.set64 (tierA POOL t) i x) := by
-  have hpc : pcap m < 2 ^ 64 := by rw [hg.pcapEq]; have := hok.2.2.1; omega
+  have hpc : pcap m < 2 ^ 64 := by rw [hg.pcapEq]; have := hok.cap; omega
   have hsz := pcap_tier m t hpc
   have hv := vpool_set64t m t i x ht hi (by omega)
   have hne : tierA POOL t ≠ CTL := Ne.symm (tierA_pool_ne _ _ (by decide) (by decide))
@@ -323,7 +323,7 @@ theorem digW_ok (m₀ : Mem) (hok : PoolOK m₀) (T : Word) (hT : T.toNat < 2 ^ 
   | zero => intro m m' j x h; simp [digW] at h
   | succ f ih =>
     intro m m' j x h hj hjs hg
-    have hpc : pcap m < 2 ^ 64 := by rw [hg.pcapEq]; have := hok.2.2.1; omega
+    have hpc : pcap m < 2 ^ 64 := by rw [hg.pcapEq]; have := hok.cap; omega
     have hsz := pcap_tier m (T >>> 40) hpc
     have hp4 : ((T &&& 1099511627775) + 4).toNat = (T &&& 1099511627775).toNat + 4 := by
       have h4 : (4 : Word).toNat = 4 := rfl
@@ -375,7 +375,7 @@ theorem recIBytes_ok (m : Mem) (hpool : PoolOK m) (R : Word) (hR : 4 ≤ R.toNat
       ((recIBytes (m.set64 CTL 0 (m.top + R)) m.top).arr64 (tierA POOL (m.top >>> 40))).size =
         (m.arr64 (tierA POOL (m.top >>> 40))).size ∧
       sliceL (vpool (recIBytes (m.set64 CTL 0 (m.top + R)) m.top)) m.top.toNat 4 = [114, 101, 99, 95] := by
-  have hc := hpool.2.1
+  have hc := hpool.ctl
   have h41 := hpool.top41
   have hsz := hpool.small.tier (m.top >>> 40)
   have hsplit := tag_split m.top
@@ -462,7 +462,7 @@ theorem nriF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
   rw [h2] at hW
   simp only at hW
   have hpool : PoolOK m₁ := hS.1.arena.1.lit.1
-  obtain ⟨ho, hm₂, hno, hroom⟩ := prW_some (callW_pr rfl h2) (by have := hpool.2.2.1; omega)
+  obtain ⟨ho, hm₂, hno, hroom⟩ := prW_some (callW_pr rfl h2) (by have := hpool.cap; omega)
   rw [ho, hm₂] at hW
   have h41 := hpool.top41
   have hsplit := tag_split m₁.top
@@ -500,7 +500,7 @@ theorem nriF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
   obtain ⟨hr, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
   have hR₄ : ArenaR m₄ a := ArenaR.grow m₁ m₄ hg4 a hS.1.arena.1
   have hmo₄ : ModeOK m₄ := hS.1.mode.grows hg4
-  have hpc₄ : pcap m₄ < 2 ^ 64 := by rw [hg4.pcapEq]; have := hpool.2.2.1; omega
+  have hpc₄ : pcap m₄ < 2 ^ 64 := by rw [hg4.pcapEq]; have := hpool.cap; omega
   have hcap₄ : m₁.top.toNat + (k + 4).toNat ≤ pcap m₄ := by have := hsl.le; have := hg4.cap; omega
   obtain ⟨s₅, hs₅, -, hok, hR₅, hres⟩ := triple_of_callW
     (internNStr_refinesA nriProg rfl rfl rfl rfl rfl rfl a n ⟨m₄, Locals.init []⟩ x m₁.top (k + 4) hR₄

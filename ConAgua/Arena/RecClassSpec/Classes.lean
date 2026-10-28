@@ -46,7 +46,7 @@ theorem slCons_decN {m m' : Mem} {x o l : Word} {n : Nat} {xs : List Nat}
     simp only [consPre, allocMem, hq]
     rw [Mem.arr64_set64_same, Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
   have hm1sz : ((consPre m x l).arr64 IW).size = (m.arr64 IW).size := by rw [hm1IW]; simp
-  obtain ⟨hA, hS, hW, hG⟩ := copyW_get n _ _ _ _ _ h (by rw [hq1]; omega) (by rw [hq1, hm1sz]; omega)
+  obtain ⟨hA, hS, hG⟩ := copyW_get n _ _ _ _ _ h (by rw [hq1]; omega) (by rw [hq1, hm1sz]; omega)
     (by rw [hm1sz]; exact hsz)
   have hm1get : ∀ i, ((consPre m x l).arr64 IW)[i]? =
       if i = q.toNat then some x else (m.arr64 IW)[i]? := by
@@ -77,7 +77,7 @@ theorem slCons_decN {m m' : Mem} {x o l : Word} {n : Nat} {xs : List Nat}
   have htop : rdW (m'.arr64 CTL) 200 = q + (l + 1) := by
     rw [hA CTL (by decide)]; simp only [consPre, allocMem]
     rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide), rdW_set64]; simp [hc, hq]
-  refine ⟨?_, ⟨?_, ?_, ?_, ?_⟩, ⟨?_, ?_, ?_, ?_⟩, htop⟩
+  refine ⟨?_, ⟨?_, ?_, ?_, ?_⟩, ⟨?_, ?_, ?_⟩, htop⟩
   · rw [hl1, decNL_succ]
     have h0 : iwN m' q.toNat = some x.toNat := by
       simp [iwN, nat?, iwA, hget]
@@ -109,7 +109,6 @@ theorem slCons_decN {m m' : Mem} {x o l : Word} {n : Nat} {xs : List Nat}
     by_cases hb : b = IW
     · subst hb; rw [hS, hm1sz]
     · rw [hA b hb]; simp only [consPre, allocMem, size_set64]
-  · exact Mem.SameShape.trans (by simp [consPre, allocMem]) hW
 
 /-- `consW` is the memory `slCons_dec` speaks about. -/
 theorem consW_decN {n : Nat} {m m' : Mem} {x o l : Word} {r : List Word} {xs : List Nat}
@@ -163,7 +162,7 @@ theorem consW_roomN {n : Nat} {m m' : Mem} {x o l : Word} {r : List Word}
     {xs : List Nat} (hxs : decNL m o.toNat l.toNat = some xs) :
     iwTop m' ≤ (m'.arr64 IW).size := by
   obtain ⟨-, -, -, hf, -, ht⟩ := consW_decN h hsz hc hsrc hxs
-  rw [← ht, hf.2.2.1 IW]
+  rw [← ht, hf.size IW]
   simp only [consW] at h
   by_cases h0 : l + 1 = 0
   · simp [h0] at h
@@ -192,14 +191,14 @@ theorem consW_stageN {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFE
   obtain ⟨hI1, hE1, hsz, hEs, hc⟩ := hS.2
   obtain ⟨hr, hd, hg, hf, -, ht⟩ := consW_decN h hsz hc hsrc hxs
   have hroom := consW_roomN h hsz hc hsrc hxs
-  have h129 : rdW (m'.arr64 CTL) 129 = rdW (m.arr64 CTL) 129 := hf.2.1 129 (by simp)
+  have h129 : rdW (m'.arr64 CTL) 129 = rdW (m.arr64 CTL) 129 := hf.ctl 129 (by simp)
   have hE : m'.arr64 EREC = m.arr64 EREC := hf.1 EREC (by simp [EREC, IW]) (by decide)
   subst hr
   refine ⟨⟨CheckR.frame_iw hf hS.1, hroom, ?_, ?_, ?_, ?_⟩, hg, by simpa using hd, by simpa using ht⟩
   · simp only [erTop, h129, hE]; exact hE1
-  · rw [hf.2.2.1 IW]; exact hsz
+  · rw [hf.size IW]; exact hsz
   · rw [hE]; exact hEs
-  · rw [hf.2.2.1 CTL]; exact hc
+  · rw [hf.size CTL]; exact hc
 
 theorem gafF_afr {m m' : Mem} {args r : List Word} (h : gafF m args = some (r, m')) : AFr m m' :=
   AFr.of_frame (gafF_frame h)

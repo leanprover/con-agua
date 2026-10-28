@@ -120,8 +120,8 @@ theorem matesW_ok (n : Nat) : ∀ (m m' : Mem) (c off l oO oL : Word) (block out
         rw [matesK3_some] at h
         obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
         have hE2 : m2.arr64 EREC = m.arr64 EREC := hfr2.1 EREC (by decide) (by decide)
-        have hsz2 : (m2.arr64 IW).size < 2 ^ 64 := by rw [hfr2.2.2.1 IW]; exact hsz
-        have hc2 : 200 < (m2.arr64 CTL).size := by rw [hfr2.2.2.1 CTL]; exact hc200
+        have hsz2 : (m2.arr64 IW).size < 2 ^ 64 := by rw [hfr2.size IW]; exact hsz
+        have hc2 : 200 < (m2.arr64 CTL).size := by rw [hfr2.size CTL]; exact hc200
         obtain ⟨hd, hg, hE', htop⟩ := ih m2 m3 c (off + 1) (l - 1) _ (oL + 1) rest _ r3 hrec hsz2 hc2
           (by rw [hE2]; exact hEs) hc (by simp only [erA]; rw [hE2]; exact hblock') (by simpa using hdec2)
           (Nat.le_of_eq htop2) (by have : iwTop m2 < 2 ^ 64 := (rdW (m2.arr64 CTL) 200).toNat_lt; omega)

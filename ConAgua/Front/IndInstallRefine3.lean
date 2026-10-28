@@ -169,10 +169,10 @@ theorem rulesGoW_twin {st : StateD} (a : AState) {lo o l : Word} {rules : List R
     rw [hw1] at R3 R4
     have hj1 : (j + 1).toNat = j.toNat + 1 := widx2 _ _ (by simp; omega)
     have hL1 : LkR m₁ st := hL.frame R2 (by
-      unfold topN; rw [R3 0 (.inl (by omega)), R2.2.2.1 DLP]; exact hL.ptop)
+      unfold topN; rw [R3 0 (.inl (by omega)), R2.size DLP]; exact hL.ptop)
     have hifl : m₁.arr64 IFL = m.arr64 IFL := R2.1 IFL (by decide) (by decide)
     obtain ⟨I1, I2, I3⟩ := rulesGoW_twin a hl ho n m₁ m' (j + 1) hL1
-      (fun k hk => (hRF k hk).congr hifl) (by rw [R2.2.2.1 DLP]; exact hlo) hlo1 (by omega) h
+      (fun k hk => (hRF k hk).congr hifl) (by rw [R2.size DLP]; exact hlo) hlo1 (by omega) h
     rw [hj1] at I2 I3
     refine ⟨R2.trans I1, fun i hi => ?_, fun k hk hk' => ?_⟩
     · rw [I2 i (by omega), R3 i (by omega)]
@@ -222,7 +222,7 @@ theorem rulesW_twin {n : Nat} {m m' : Mem} {st : StateD} (a : AState) (hD : LkR 
     obtain ⟨k, hk, rfl⟩ := List.mem_iff_getElem.mp hru
     exact (I3 k hk (Nat.zero_le _)).1
   refine ⟨mapM_run _ _ a rules hrun, ⟨P1.frame.trans I1, by omega, fun i h1 h2 => ?_⟩, P2, rfl, ht2,
-    hL1.frame I1 (by rw [ht2, I1.2.2.1 DLP, hs1]; omega), fun P hP => ?_⟩
+    hL1.frame I1 (by rw [ht2, I1.size DLP, hs1]; omega), fun P hP => ?_⟩
   · rw [I2 i (.inl (by omega)), P1.keep i h1 h2]
   · unfold decRules
     rw [hl]
@@ -315,7 +315,7 @@ theorem recRW_twin {n : Nat} {b : ByteArray} {m m' : Mem} {st : StateD} (a : ASt
         resOf (ConRon.Arena.Frontend.parseRuleD st ru) a), a) := by
     unfold recT; rw [run_bind _ _ a _ Q1, run_bind _ _ a _ C1]; rfl
   rw [resOf_eq hrun]
-  have hs4 : (m₄.arr64 DLP).size = (m.arr64 DLP).size := by rw [C2.2.2.1 DLP, hs3]
+  have hs4 : (m₄.arr64 DLP).size = (m.arr64 DLP).size := by rw [C2.size DLP, hs3]
   have ht4 : topN m₄ DLP = topN m DLP + 9 + 11 * rc.rules.length + rc.cv.levelParams.length := by
     rw [C3, ht3]
   have hc0 : ∀ i, (i < q1.toNat + 5 ∨ q1.toNat + 9 ≤ i) →
@@ -325,7 +325,7 @@ theorem recRW_twin {n : Nat} {b : ByteArray} {m m' : Mem} {st : StateD} (a : ASt
     unfold topN; rw [hc0 0 (by omega)]
   have hfr := Pq.frame.trans (Q2.frame.trans (C2.trans (recTailM_frame m₄ q1 r lo (wd m IFR (r.toNat + 10)))))
   have hsz5 : ((recTailM m₄ q1 r lo (wd m IFR (r.toNat + 10))).arr64 DLP).size = (m.arr64 DLP).size := by
-    rw [(recTailM_frame m₄ q1 r lo _).2.2.1 DLP, hs4]
+    rw [(recTailM_frame m₄ q1 r lo _).size DLP, hs4]
   refine ⟨hrun, ⟨hfr, by rw [ht5, ht4]; omega, fun i h1 h2 => ?_⟩, P2, ?_, ?_⟩
   · rw [hc0 i (by omega), C4 i h1 (by omega), Q2.keep i h1 (by omega), Pq.keep i h1 h2]
   · exact hD.frame hfr (by rw [ht5, hsz5, ← hs4]; exact C3')

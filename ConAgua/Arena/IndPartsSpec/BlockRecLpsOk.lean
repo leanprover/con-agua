@@ -160,7 +160,7 @@ theorem lpsOneW_ok (n : Nat) (m m' : Mem) (rc wo wl : Word) (r : List Word) (rec
   obtain ⟨e, he, h⟩ := ipK_inv1 h (by simp [lpsOneW.loK2])
   rw [loK2_some] at h
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-  have hsz1 : (m1.arr64 IW).size < 2 ^ 64 := by rw [hf.2.2.1 IW]; exact hsz
+  have hsz1 : (m1.arr64 IW).size < 2 ^ 64 := by rw [hf.size IW]; exact hsz
   have hbound1 : (rp.headD 0).toNat + (rp.getD 1 0).toNat < 2 ^ 64 := by
     rw [htp]; simp only [iwTop]; exact UInt64.toNat_lt _
   obtain ⟨ws1, hs1, hn1, hl1⟩ := slR_of_decHL m1 _ _ _ hdec hbound1
@@ -219,8 +219,8 @@ theorem lpsGoW_ok (n : Nat) : ∀ (m0 m m' : Mem) (ro rl wo wl : Word) (r : List
       have hwb' : wo.toNat + wl.toNat ≤ iwTop m := by have := hg0.1; omega
       obtain ⟨hr1, hg1, hf1, hw1⟩ := lpsOneW_ok n m m1 (UInt64.ofNat v) wo wl r1 rc ns h1 hsz hc
         (by rw [hE]; exact hE64) (by rw [hvv]; exact hrcd) (hdn m hg0) hwb'
-      have hsz1 : (m1.arr64 IW).size < 2 ^ 64 := by rw [hf1.2.2.1 IW]; exact hsz
-      have hc1 : 200 < (m1.arr64 CTL).size := by rw [hf1.2.2.1 CTL]; exact hc
+      have hsz1 : (m1.arr64 IW).size < 2 ^ 64 := by rw [hf1.size IW]; exact hsz
+      have hc1 : 200 < (m1.arr64 CTL).size := by rw [hf1.size CTL]; exact hc
       have hE1 : m1.arr64 EREC = m0.arr64 EREC := by
         rw [hf1.1 EREC (by simp [EREC, IW]) (by decide)]; exact hE
       by_cases hbeq : (rc.cvR.levelParams == ns) = true
@@ -329,8 +329,8 @@ theorem lokW_ok (n : Nat) (m m' : Mem) (p : Word) (r : List Word) (bs : BlockSha
   obtain ⟨lr, m1, h1, h⟩ := ipK_inv h (by simp [lokK1])
   obtain ⟨hlr, hdec1, hg1, hf1, hlt1, hw1⟩ := lpsW_dec h1 hsz hc hE hq hp64
   have hq1 := hstab m1 hg1
-  have hsz1 : (m1.arr64 IW).size < 2 ^ 64 := by rw [hf1.2.2.1 IW]; exact hsz
-  have hc1 : 200 < (m1.arr64 CTL).size := by rw [hf1.2.2.1 CTL]; exact hc
+  have hsz1 : (m1.arr64 IW).size < 2 ^ 64 := by rw [hf1.size IW]; exact hsz
+  have hc1 : 200 < (m1.arr64 CTL).size := by rw [hf1.size CTL]; exact hc
   have hE1 : m1.arr64 EREC = m.arr64 EREC := hf1.1 EREC (by simp [EREC, IW]) (by decide)
   obtain ⟨-, -, -, h4, -, h6, -⟩ := decBS_some hq1
   have e7 : UInt64.ofNat (p.toNat + 7) = p + 7 := by
@@ -356,8 +356,8 @@ theorem lokW_ok (n : Nat) (m m' : Mem) (p : Word) (r : List Word) (bs : BlockSha
     have hgm : IWGrow m (m2) := hg1.trans hg2
     have hE2 : m2.arr64 EREC = m.arr64 EREC := by
       rw [hf2.1 EREC (by simp [EREC, IW]) (by decide)]; exact hE1
-    have hsz2 : (m2.arr64 IW).size < 2 ^ 64 := by rw [hf2.2.2.1 IW]; exact hsz1
-    have hc2 : 200 < (m2.arr64 CTL).size := by rw [hf2.2.2.1 CTL]; exact hc1
+    have hsz2 : (m2.arr64 IW).size < 2 ^ 64 := by rw [hf2.size IW]; exact hsz1
+    have hc2 : 200 < (m2.arr64 CTL).size := by rw [hf2.size CTL]; exact hc1
     obtain ⟨r3, m3, h3, h⟩ := ipK_inv h (by simp [lokK3])
     rw [lokK3_some] at h
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)

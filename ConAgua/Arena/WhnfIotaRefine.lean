@@ -551,9 +551,9 @@ theorem CoreS.setMemo {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : ASt
       rw [UInt64.toNat_add]; simp; omega
     omega
   have hspn : m'.arr64 SPN = m.arr64 SPN :=
-    hf.1 SPN (fun h => by simp at h; simp only [SPN] at h; rw [← har] at h; rw [← h] at n2; exact absurd n2 (by decide)) (by decide)
+    hf.arr SPN (fun h => by simp at h; simp only [SPN] at h; rw [← har] at h; rw [← h] at n2; exact absurd n2 (by decide)) (by decide)
   have h136 : rdW (m'.arr64 CTL) 136 = rdW (m.arr64 CTL) 136 :=
-    hf.2.1 136 (fun h => by
+    hf.ctl 136 (fun h => by
       simp at h
       have : (S.cs + 1).toNat = S.cs.toNat + 1 := by
         rw [UInt64.toNat_add]; simp; omega
@@ -569,13 +569,13 @@ theorem CoreS.setMemo {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : ASt
         omega) m m' hf a hS.arena.1).caches_irrel c
   · have := DerR.frameM [S.arr] [S.cs + 1] m m' hf (fun b hb => by simp at hb; subst hb; simp only; rw [← har]; omega) a hS.arena.2
     exact DerR.of_store _ _ _ this rfl
-  · exact hS.pins.congr (hf.1 PINS (fun h => by simp at h; simp only [PINS] at h; rw [← har] at h; rw [← h] at n2; exact absurd n2 (by decide))
+  · exact hS.pins.congr (hf.arr PINS (fun h => by simp at h; simp only [PINS] at h; rw [← har] at h; rw [← h] at n2; exact absurd n2 (by decide))
       (by decide))
   · exact hS.env.frame (aA 129 144 (Or.inr (by omega))) (aC 128 136 (Or.inr (by omega))) hf
   · intro h l e; exact hS.readL h l (by simpa [hL] using e)
   · intro h l e; exact hS.readLs h l (by simpa [hLs] using e)
-  · exact hf.2.2.1 EREC ▸ hS.erec
-  · exact hf.2.2.1 SPN ▸ hS.spn
+  · exact hf.size EREC ▸ hS.erec
+  · exact hf.size SPN ▸ hS.spn
   · exact hS.memos.frame_hi hf
       (fun b hb => by simp at hb; subst hb; refine ⟨rfl, ?_⟩; simp only; rw [← har]; omega)
       (fun x hx => by
@@ -589,8 +589,8 @@ theorem CoreS.setMemo {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : ASt
         have : (S.cs + 1).toNat = S.cs.toNat + 1 := by
           rw [UInt64.toNat_add]; simp; omega
         omega)
-  · exact hf.2.2.1 BSTK ▸ hS.bstk
-  · exact (hS.den.frameE (hf.1 EREC (fun h => by
+  · exact hf.size BSTK ▸ hS.bstk
+  · exact (hS.den.frameE (hf.arr EREC (fun h => by
       simp only [List.mem_singleton, TieredArray.t0_inj] at h; have h2' := h2; rw [← h] at h2'
       exact absurd h2' (by decide))
       (by decide))).caches rfl rfl hN

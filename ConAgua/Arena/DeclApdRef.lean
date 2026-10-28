@@ -620,7 +620,7 @@ theorem apdEntry_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEn
   have hps0 : NmsR (nameN a.store.lss.ls.ns) m IW o l ks :=
     nmsR_of_slice hsz _ o l lps ks rfl hdec hks
   have hps : NmsR (nameN a.store.lss.ls.ns) (mclearG apdSch m) IW o l ks :=
-    nmsR_congr (hf0.1 IW (by simp) (by decide)) hps0
+    nmsR_congr (hf0.arr IW (by simp) (by decide)) hps0
   obtain ⟨b, mp1, hrun, hr, hM1, hfr1⟩ := apdGoOK env n _ _ o l _ e r _ ks hA0 hps he hM0 hb
   have hfall : MemFrame [APDM] [apdSch.cs, apdSch.cs + 1] m m' :=
     (hf0.mono (by simp) (by simp)).trans (hfr1.mono (by simp) (by simp))

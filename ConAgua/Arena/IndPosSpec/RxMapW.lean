@@ -371,8 +371,8 @@ theorem RfInv.frame {m m' : Mem} {M : Std.HashMap (EIdx × Word) EIdx} {G g : Wo
   obtain ⟨A, C, hfr, hA, hC, h218, h219⟩ := hf
   obtain ⟨hR, ⟨hB1, hB2, hgG, hGl, hsz⟩, hF⟩ := h
   refine ⟨memoRV_frame rfSch rfSch_wf rfK rfV A C hA hC m m' hfr (fun _ _ h => h) M hR,
-    ⟨by rw [hfr.2.1 218 h218]; exact hB1, by rw [show (218 : Word) + 1 = 219 from rfl, hfr.2.1 219 h219]; exact hB2,
-      hgG, hGl, by rw [hfr.2.2.1]; exact hsz⟩, hF⟩
+    ⟨by rw [hfr.ctl 218 h218]; exact hB1, by rw [show (218 : Word) + 1 = 219 from rfl, hfr.ctl 219 h219]; exact hB2,
+      hgG, hGl, by rw [hfr.size]; exact hsz⟩, hF⟩
 
 theorem ceinternW_low {m m' : Mem} {f x r : Word} (h : ceinternW m f x = some (r, m')) : LowFr m m' := by
   exact ⟨_, _, (ceinternW_frame (hI := h)), by simp [tier1, CREC, CSLOT, CLP], by simp⟩

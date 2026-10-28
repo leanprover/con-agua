@@ -265,13 +265,13 @@ relation. -/
 theorem stkeep_of_frame {m m' : Mem} (hf : MemFrame [IW] [200] m m') (hg : IWGrow m m')
     (hI : IWOK m) (htop : iwTop m' ≤ (m'.arr64 IW).size) : StKeep m m' := by
   obtain ⟨hI1, hE1, hsz, hEs, hct⟩ := hI
-  have h129 : rdW (m'.arr64 CTL) 129 = rdW (m.arr64 CTL) 129 := hf.2.1 129 (by simp)
-  have hE : m'.arr64 EREC = m.arr64 EREC := hf.1 EREC (by simp [EREC, IW]) (by decide)
+  have h129 : rdW (m'.arr64 CTL) 129 = rdW (m.arr64 CTL) 129 := hf.ctl 129 (by simp)
+  have hE : m'.arr64 EREC = m.arr64 EREC := hf.arr EREC (by simp [EREC, IW]) (by decide)
   refine ⟨hg, fun dn vis fe a hS => ⟨CheckR.frame_iw hf hS.1, htop, ?_, ?_, ?_, ?_⟩⟩
   · simp only [erTop, h129, hE]; exact hE1
-  · rw [hf.2.2.1 IW]; exact hsz
+  · rw [hf.size IW]; exact hsz
   · rw [hE]; exact hEs
-  · rw [hf.2.2.1 CTL]; exact hct
+  · rw [hf.size CTL]; exact hct
 
 /-- What a record builder leaves: its words at the old top, the pool grown. -/
 def RecPost (m m' : Mem) (r : List Word) (ws : List Word) : Prop :=
@@ -289,7 +289,7 @@ theorem recPost_wr (m : Mem) (ws : List Word) (k : Word) (hk : k.toNat = ws.leng
     simp only [iwTop] at hroom
     rw [Nat.mod_eq_of_lt (by omega), hk]
   refine ⟨rfl, stkeep_of_frame hf hg ⟨hI1, hE1, hsz, hEs, hct⟩ ?_, hroom, hit, fun j hj => hget j hj⟩
-  rw [hit, hf.2.2.1 IW]; exact hroom
+  rw [hit, hf.size IW]; exact hroom
 
 theorem rec2_fref (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
     (hp : p.lookup "rec2" = some rec2) (a b : Word) :

@@ -334,7 +334,7 @@ theorem caps_rel {m₀ : Mem} {a₀ : AState} {T : Nat} (dn : NIdx → Option Co
   obtain ⟨hI8, hE8, hIW8, ht8, -⟩ := hI1.expr hA1 hmo1 (hf1.mono (fun b hb => by simp [ExprA, RomA, hb])
     (fun x hx => by simp [ExprC, RomC, hx])) hk1
   have hM8 := hM1.frameG hf1 (by decide) (by decide)
-  have hs8 : stkTop m8 = stkTop (setERs m ws) := hf1.2.1 131 (by decide)
+  have hs8 : stkTop m8 = stkTop (setERs m ws) := hf1.ctl 131 (by decide)
   obtain ⟨hI9, hM9, hs9, ht9, hIW9⟩ := setER_facts hI8 hM8 (c + 1) (r1.headD 0) (by comega)
   -- the three name lists
   cases k with

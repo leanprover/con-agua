@@ -170,7 +170,7 @@ theorem indMemos_wframe : WFrame CTL imA imC (fun m₀ m => IndMemos m₀ → In
     · exact (h h0).frame (MemFrame.setCtl m i v) (by simp)
         (fun x hx => by simp at hx; subst hx; exact imC_spec x hi)
   setG _ _ _ _ h h0 := (h h0).frame (A := []) (C := [])
-    ⟨fun _ _ _ => rfl, fun _ _ => rfl, fun _ => rfl, trivial⟩ (by simp) (by simp)
+    ⟨fun _ _ _ => rfl, fun _ _ => rfl, fun _ => rfl⟩ (by simp) (by simp)
 
 /-- `consts_resolve_ffast` keeps `IndMemos`: it writes only its memo (`crfF_frame`). -/
 theorem IndMemos.crfF {m m' : Mem} {args r : List Word} (h : L.Ind.crfF m args = some (r, m'))
@@ -475,8 +475,8 @@ theorem LoopT.of_core {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.
   obtain ⟨hfr, -⟩ := run_memFrame hcl hf (run_of_callW h)
   have hI : m'.arr64 IW = m.arr64 IW := hfr.1 _ coreLoopA_iw (by decide)
   have hE : m'.arr64 EREC = m.arr64 EREC := hfr.1 _ coreLoopA_erec (by decide)
-  have h129 : rdW (m'.arr64 CTL) 129 = rdW (m.arr64 CTL) 129 := hfr.2.1 _ coreLoopC_129
-  have h200 : rdW (m'.arr64 CTL) 200 = rdW (m.arr64 CTL) 200 := hfr.2.1 _ coreLoopC_200
+  have h129 : rdW (m'.arr64 CTL) 129 = rdW (m.arr64 CTL) 129 := hfr.ctl _ coreLoopC_129
+  have h200 : rdW (m'.arr64 CTL) 200 = rdW (m.arr64 CTL) 200 := hfr.ctl _ coreLoopC_200
   obtain ⟨hCR, hT⟩ := hC.checkR
   have hS : StageR dn vis fe m' a' :=
     ⟨hCR, IWOK.frame hfr coreLoopA_iw coreLoopA_erec coreLoopC_129 coreLoopC_200 hL.loop.iw⟩

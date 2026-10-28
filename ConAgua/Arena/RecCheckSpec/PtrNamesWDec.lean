@@ -135,13 +135,13 @@ theorem ptrNamesW_dec {n : Nat} {m m' : Mem} {o l : Word} {r : List Word} (cvs :
     rw [hIW, hv']
     simp only [iwTop, hqq] at hvb
     rw [UInt64.toNat_ofNat_of_lt' (by rw [UInt64_size_eq]; omega)]; exact hvb
-  obtain ⟨hA, hS, hW, hG⟩ := nameCopyW_get (n - 1) _ _ _ _ _ hcp
+  obtain ⟨hA, hS, hG⟩ := nameCopyW_get (n - 1) _ _ _ _ _ hcp
     (by simp only [iwTop, hqq] at hsrc; omega)
     (by rw [hIW]; exact hroom) (by rw [hIW]; exact hsz) hptr'
   rw [hIW] at hS hG
   rw [hEE] at hG
   have hfr : MemFrame [IW] [200] m m2 :=
-    (allocMem_frame m _).trans (copy_frame hA (by rw [hS, hIW]) hW)
+    (allocMem_frame m _).trans (copy_frame hA (by rw [hS, hIW]))
   have htop : rdW (m2.arr64 CTL) 200 = q + l := by
     rw [hA CTL (by decide), allocMem_top m _ hc, hqq]
   have hsum : (q + l).toNat = q.toNat + l.toNat := by

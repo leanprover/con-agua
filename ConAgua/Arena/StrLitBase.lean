@@ -72,7 +72,7 @@ theorem CoreS.of_ls {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : AS
     (DerR.frameM A C m m' hf (fun b hb => by have := hA b hb; omega) a hS.arena.2) hL.pers hL.scr
   refine ⟨⟨⟨hR, hD⟩, ?_, ?_, hS.env.frame (fun b hb => by have := hA b hb; omega)
       (fun x hx => .inl (by have := hC x hx; omega)) hf, ?_, ?_, ?_,
-      hf.2.2.1 EREC ▸ hS.erec, hf.2.2.1 SPN ▸ hS.spn,
+      hf.size EREC ▸ hS.erec, hf.size SPN ▸ hS.spn,
       hS.memos.frame hf ⟨nA _ (by decide), nA _ (by decide)⟩
         ⟨fun h => absurd (hC _ h) (by decide), fun h => absurd (hC _ h) (by decide)⟩
         ⟨nA _ (by decide), nA _ (by decide), nA _ (by decide)⟩
@@ -81,7 +81,7 @@ theorem CoreS.of_ls {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : AS
         ⟨nA _ (by decide), nA _ (by decide), nA _ (by decide)⟩
         ⟨fun h => absurd (hC _ h) (by decide), fun h => absurd (hC _ h) (by decide),
           fun h => absurd (hC _ h) (by decide)⟩,
-      hf.2.2.1 BSTK ▸ hS.bstk,
+      hf.size BSTK ▸ hS.bstk,
       hS.den.mono ⟨by rw [hL.ls]; exact LExt.refl _, fun i us h => by
           unfold denoteLs at h ⊢
           revert h
@@ -98,7 +98,7 @@ theorem CoreS.of_ls {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : AS
     exact CoreRM.frame (A := A) (C := C) (fun b hb => by have := hA b hb; omega)
       (fun x hx => .inl (by have := hC x hx; omega)) hf hS.core
   · rw [hL.pins]
-    exact hS.pins.congr (hf.1 PINS (nA PINS (by decide)) (by decide))
+    exact hS.pins.congr (hf.arr PINS (nA PINS (by decide)) (by decide))
   · intro h l e
     rw [hL.caches] at e
     have := hS.readL h l e
@@ -191,7 +191,7 @@ theorem internParam_core (hS : CoreS dn m a vis fe M eb) (u : Word) (hu : HW u)
       (fun n hn => by
         simp only [LNodeView.nchildren, List.mem_cons, List.mem_nil_iff, or_false] at hn
         subst hn; exact hdn) (AM.run_of_ok _ _ hok)).1
-    (lvlCnt_of_arena hS.arena.1 hR' (hf.2.1 1 (by decide))
+    (lvlCnt_of_arena hS.arena.1 hR' (hf.ctl 1 (by decide))
       (LTGrow.internLNode (AM.run_of_ok _ _ hok)).1 (LTGrow.internLNode (AM.run_of_ok _ _ hok)).2
       (by simp [hL.lsp]) (by simp [hL.lss]))
   have hw := consInternM_lt paramCS_wf hS.arena.1.param hI₂
@@ -216,7 +216,7 @@ theorem internZero_core (hS : CoreS dn m a vis fe M eb)
     (lvlAll_internLNode hS.arena.1 hS.den.lvlAll
       (fun c hc => by simp [LNodeView.lchildren] at hc)
       (fun n hn => by simp [LNodeView.nchildren] at hn) (AM.run_of_ok _ _ hok)).1
-    (lvlCnt_of_arena hS.arena.1 hR' (hf.2.1 1 (by decide))
+    (lvlCnt_of_arena hS.arena.1 hR' (hf.ctl 1 (by decide))
       (LTGrow.internLNode (AM.run_of_ok _ _ hok)).1 (LTGrow.internLNode (AM.run_of_ok _ _ hok)).2
       (by simp [hL.lsp]) (by simp [hL.lss]))
   have hw := consInternM_lt zeroCS_wf hS.arena.1.zero hI₂
@@ -315,7 +315,7 @@ theorem Grows.push1t (m : Mem) (v : Word) (h : PoolOK m)
   have hg := Grows.write m _ 1 h (PFrame.set64 _ _ _ (PFrame.refl _))
     (by rw [hv]; intro j hj; rw [Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds,
       ite_eq_right (by omega)]) (by simp only [UInt64.toNat_one]; omega)
-  refine ⟨hg, ?_, Mem.top_set64 _ _ (by rw [arr64_set64_tier_ne _ _ _ _ _ (by decide)]; exact h.2.1)⟩
+  refine ⟨hg, ?_, Mem.top_set64 _ _ (by rw [arr64_set64_tier_ne _ _ _ _ _ (by decide)]; exact h.ctl)⟩
   rw [vpool_set64_ne _ _ _ _ (by decide), hv, Array.set!_eq_setIfInBounds,
     Array.getElem?_setIfInBounds, ite_eq_left rfl, ite_eq_left (by rw [vpool_size]; exact h41)]
 
@@ -410,7 +410,7 @@ theorem romLit_call (hS : CoreS dn m a vis fe M eb) {c : Word}
     CoreRef (internE (.lit (.natVal c.toNat))) a decH dn m vis fe M eb r m' := by
   obtain ⟨s', hs', -, hI⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (L.Rom.romLit_spec p hp.litHash' hp.limbsEq' hp.litMatch' hp.litFind' hp.litPush' hp.internLit
-      hp.romLit n _ c ⟨hS.arena.1.lit.1.2.2.1, hS.arena.1.lit.1.top41⟩) h
+      hp.romLit n _ c ⟨hS.arena.1.lit.1.cap, hS.arena.1.lit.1.top41⟩) h
   rw [hs'] at hI
   have h := romLitW_core hS c _ hI
   exact ⟨h.1, h.2.1, h.2.2.1, h.2.2.2⟩
@@ -453,8 +453,8 @@ theorem ls1_call (hS : CoreS dn m a vis fe M eb) {u : Word} (hu : HW u)
     exact (UInt64.toNat_inj.mp (by simp; omega)).symm
   obtain ⟨s₂, hs₂, -, hI⟩ := triple_of_callW (s₀ := ⟨m₀, Locals.init []⟩)
     (internLs_spec p hp.litHash' hp.limbsEq' hp.lsMatch hp.lsFind hp.lsPush hp.internLs n _ m.top 1
-      (by show pcap m₀ < 2 ^ 64; have := hK.1.arena.1.lit.1.2.2.1; omega)
-      (by show _ ≤ pcap m₀; have := hK.1.arena.1.lit.1.2.2.2.1; have := hq.1
+      (by show pcap m₀ < 2 ^ 64; have := hK.1.arena.1.lit.1.cap; omega)
+      (by show _ ≤ pcap m₀; have := hK.1.arena.1.lit.1.top; have := hq.1
           omega)) h1
   rw [hs₂] at hI
   obtain ⟨hok, hX, hres⟩ := lsintern_correct m₀ a hK.1.arena.1.lit.1 hK.1.arena.1.ls m.top 1 hq
@@ -473,7 +473,7 @@ theorem ls1_call (hS : CoreS dn m a vis fe M eb) {u : Word} (hu : HW u)
                     rcases hx with rfl | rfl <;> decide)
     (lsAll_internLsNode hK.1.arena.1 hK.1.den.lsAll
       (fun c hc => by rw [List.mem_singleton] at hc; subst hc; exact hd) (AM.run_of_ok _ _ hok)).1
-    (lvlCnt_internLsNode hK.1.arena.1 hR' (hf.2.1 1 (by decide)) (AM.run_of_ok _ _ hok))
+    (lvlCnt_internLsNode hK.1.arena.1 hR' (hf.ctl 1 (by decide)) (AM.run_of_ok _ _ hok))
   have hw := consInternM_lt lsCS_wf hK.1.arena.1.ls hI₂
   exact ⟨hok, ⟨M, hS', KeptAll.refl _ _, hK.2.trans hst⟩, by rw [hres, decLs, hr], by
     unfold ResH; rw [← hr]; exact hw⟩

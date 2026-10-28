@@ -39,7 +39,7 @@ theorem crOK_wframe : WFrame CTL imA imC (fun m₀ m => L.Stubs.CrOK m₀ → L.
     · exact CrOK.frame (h h0) (MemFrame.setCtl m i v) (by simp)
         (fun hx => by simp at hx; subst hx; exact (imC_spec _ hi).2.1 rfl)
   setG _ _ _ _ h h0 := CrOK.frame (h h0) (A := []) (C := [])
-    ⟨fun _ _ _ => rfl, fun _ _ => rfl, fun _ => rfl, trivial⟩ (by simp) (by simp)
+    ⟨fun _ _ _ => rfl, fun _ _ => rfl, fun _ => rfl⟩ (by simp) (by simp)
 
 /-- Every call of a leaf of `imFns` keeps `CrOK`. -/
 theorem crOK_leaf {p : Prog} (hp : L.Ind.CrfF p) :

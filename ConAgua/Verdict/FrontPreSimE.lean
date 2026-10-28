@@ -129,7 +129,7 @@ macro "noabS" : tactic => `(tactic| repeat (first
 
 /-- `k` fails on the copy `c` with a nonzero code only as on the original `o`. -/
 def KRelE (k : Stmt → M Sig) (c o : Stmt) : Prop := ∀ (s : St) (e : Err),
-  s.mem.HasB IN → (k c).run s = .error e → e.code ≠ 0 → (k o).run (s.setIn preIn) = .error e
+  (k c).run s = .error e → e.code ≠ 0 → (k o).run (s.setIn preIn) = .error e
 
 theorem run_bind_error {α β : Type} {x : M α} {g : α → M β} {s : St} {e : Err}
     (h : (x >>= g).run s = .error e) :
@@ -156,7 +156,7 @@ theorem bind_noAb {α β : Type} {x : M α} {g : α → M β} {s : St} {e : Err}
   · exact h1
 
 theorem callFn_simE {k : Stmt → M Sig} {dc dd : FunDecl} (hk : KRelE k dc.body dd.body)
-    (vs : List Word) (s : St) (e : Err) (h0 : s.mem.HasB IN)
+    (vs : List Word) (s : St) (e : Err)
     (h : (callFn k dc vs).run s = .error e) (hc : e.code ≠ 0) :
     (callFn k dd vs).run (s.setIn preIn) = .error e := by
   unfold callFn at h ⊢
@@ -169,7 +169,7 @@ theorem callFn_simE {k : Stmt → M Sig} {dc dd : FunDecl} (hk : KRelE k dc.body
   refine run_bind_error_of (s' := s.setIn preIn) (a := s.setIn preIn) rfl ?_
   refine run_bind_error_of (a := ()) (s' := { s with loc := Locals.init vs }.setIn preIn) rfl ?_
   rcases run_bind_error h6 with h7 | ⟨rr, s5, h7, h8⟩
-  · exact run_bind_error_left (hk _ e h0 h7 hc)
+  · exact run_bind_error_left (hk _ e h7 hc)
   · have : NoAb ((fun r => do
         modify fun s' : St => { s' with loc := s.loc }
         Pure.pure r.retVal) rr : M (List Word)) := by noab
@@ -212,7 +212,7 @@ theorem noAb_lookupFn (p : Prog) (f : FnName) : NoAb (lookupFn p f) :=
 
 theorem invoke_simE_copy {p : Prog} {t : NTree} {S : FnName → Bool} (hP : PreSimProg p t S)
     (hA : AbNoIn p) (n : Nat) (ih : KSimE p t S n) (g : FnName) (hg : isCopied t g = true)
-    (vs : List Word) (s : St) (e : Err) (h0 : s.mem.HasB IN)
+    (vs : List Word) (s : St) (e : Err)
     (h : (invoke p (exec p n) ("pre_" ++ g) vs).run s = .error e) (hc : e.code ≠ 0) :
     (invoke p (exec p n) g vs).run (s.setIn preIn) = .error e := by
   unfold invoke at h ⊢
@@ -224,11 +224,11 @@ theorem invoke_simE_copy {p : Prog} {t : NTree} {S : FnName → Bool} (hP : PreS
   have ha : (preFn t fd).body.abNoIn = true := by
     simp only [preFn]; rw [abNoIn_preS]; exact hA g fd hl
   exact run_bind_error_of (lookupFn_run hl _)
-    (callFn_simE (ih _ _ (sim_preS _ hst hcl) ha) vs s e h0 h2 hc)
+    (callFn_simE (ih _ _ (sim_preS _ hst hcl) ha) vs s e h2 hc)
 
 theorem invoke_simE_shared {p : Prog} {t : NTree} {S : FnName → Bool} (hP : PreSimProg p t S)
     (hA : AbNoIn p) (n : Nat) (ih : KSimE p t S n) (g : FnName) (hg : S g = true) (vs : List Word)
-    (s : St) (e : Err) (h0 : s.mem.HasB IN)
+    (s : St) (e : Err)
     (h : (invoke p (exec p n) g vs).run s = .error e) (hc : e.code ≠ 0) :
     (invoke p (exec p n) g vs).run (s.setIn preIn) = .error e := by
   unfold invoke at h ⊢
@@ -236,11 +236,11 @@ theorem invoke_simE_shared {p : Prog} {t : NTree} {S : FnName → Bool} (hP : Pr
   obtain ⟨hl, rfl⟩ := lookupFn_ok h1
   obtain ⟨-, hn, hcl⟩ := hP.shared g fd hg hl
   exact run_bind_error_of (lookupFn_run hl _)
-    (callFn_simE (ih _ _ (sim_noIn _ hn hcl) (hA g fd hl)) vs s e h0 h2 hc)
+    (callFn_simE (ih _ _ (sim_noIn _ hn hcl) (hA g fd hl)) vs s e h2 hc)
 
 /-- A statement whose step never aborts (no `abort`, call or compound statement inside). -/
 theorem krelE_of_noAb {k : Stmt → M Sig} {c o : Stmt} (h : NoAb (k c)) : KRelE k c o :=
-  fun s e _ he hc => absurd (h s e he) hc
+  fun s e he hc => absurd (h s e he) hc
 
 theorem setLocs_noAb (xs : List Var) (rs : List Word) :
     NoAb (do setLocs xs rs; return Sig.normal : M Sig) := by
@@ -253,11 +253,11 @@ theorem step_simE {p : Prog} {t : NTree} {S : FnName → Bool} (hP : PreSimProg 
   | «skip» => exact fun _ => krelE_of_noAb (by simp only [step]; noabS)
   | brk => exact fun _ => krelE_of_noAb (by simp only [step]; noabS)
   | «abort» ex =>
-    intro ha s e h0 h hc
+    intro ha s e h hc
     simp only [Stmt.abNoIn] at ha
     simp only [step] at h ⊢
     obtain ⟨v, s2, h1, h2⟩ := bind_noAb (noAb_evalE _) h hc
-    obtain ⟨rfl, h1'⟩ := erel_noIn ex ha s v s2 h0 h1
+    obtain ⟨rfl, h1'⟩ := erel_noIn ex ha s v s2 h1
     exact run_bind_error_of h1' h2
   | set x _ => exact fun _ => krelE_of_noAb (by simp only [step, setLoc]; noabS)
   | gset g _ => exact fun _ => krelE_of_noAb (by simp only [step, setG]; noabS)
@@ -272,77 +272,76 @@ theorem step_simE {p : Prog} {t : NTree} {S : FnName → Bool} (hP : PreSimProg 
       simp only [step, setLoc]; noabS)
   | ret _ => exact fun _ => krelE_of_noAb (by simp only [step]; noabS)
   | seq h1 h2 ih1 ih2 =>
-    intro ha s e h0 h hc
+    intro ha s e h hc
     simp only [Stmt.abNoIn, Bool.and_eq_true] at ha
     simp only [step] at h ⊢
     rcases run_bind_error h with h3 | ⟨a, s2, h3, h4⟩
-    · exact run_bind_error_left (ih1 ha.1 s e h0 h3 hc)
-    · obtain ⟨h3', hK⟩ := step_sim hP n (ksim hP n) h1 s a s2 h0 h3
+    · exact run_bind_error_left (ih1 ha.1 s e h3 hc)
+    · obtain ⟨h3', hK⟩ := step_sim hP n (ksim hP n) h1 s a s2 h3
       refine run_bind_error_of h3' ?_
       cases a with
-      | normal => exact ih2 ha.2 s2 e trivial h4 hc
+      | normal => exact ih2 ha.2 s2 e h4 hc
       | brk => cases h4
       | ret v => cases h4
   | ite hcc h1 h2 ih1 ih2 =>
-    intro ha s e h0 h hc
+    intro ha s e h hc
     simp only [Stmt.abNoIn, Bool.and_eq_true] at ha
     simp only [step] at h ⊢
     obtain ⟨b, s2, h3, h4⟩ := bind_noAb (noAb_evalC _) h hc
-    obtain ⟨rfl, h3'⟩ := hcc s b s2 h0 h3
+    obtain ⟨rfl, h3'⟩ := hcc s b s2 h3
     refine run_bind_error_of h3' ?_
     cases b
-    · exact ih2 ha.2 s e h0 h4 hc
-    · exact ih1 ha.1 s e h0 h4 hc
+    · exact ih2 ha.2 s e h4 hc
+    · exact ih1 ha.1 s e h4 hc
   | «while» hcc hb ihb =>
-    intro ha s e h0 h hc
+    intro ha s e h hc
     have ha' := ha
     simp only [Stmt.abNoIn] at ha'
     simp only [step] at h ⊢
     obtain ⟨b, s2, h3, h4⟩ := bind_noAb (noAb_evalC _) h hc
-    obtain ⟨rfl, h3'⟩ := hcc s b s2 h0 h3
+    obtain ⟨rfl, h3'⟩ := hcc s b s2 h3
     refine run_bind_error_of h3' ?_
     cases b
     · cases h4
     · rcases run_bind_error h4 with h5 | ⟨a, s3, h5, h6⟩
-      · exact run_bind_error_left (ihb ha' s e h0 h5 hc)
-      · obtain ⟨h5', hK⟩ := step_sim hP n (ksim hP n) hb s a s3 h0 h5
+      · exact run_bind_error_left (ihb ha' s e h5 hc)
+      · obtain ⟨h5', hK⟩ := step_sim hP n (ksim hP n) hb s a s3 h5
         refine run_bind_error_of h5' ?_
         cases a with
-        | normal => exact ihn _ _ (.while hcc hb) ha s3 e trivial h6 hc
+        | normal => exact ihn _ _ (.while hcc hb) ha s3 e h6 hc
         | brk => cases h6
         | ret v => cases h6
   | callC xs hg ha =>
-    intro _ s e h0 h hc
+    intro _ s e h hc
     simp only [step] at h ⊢
     obtain ⟨vs, s2, h1, h2⟩ := bind_noAb (noAb_evalArgs _) h hc
-    obtain ⟨rfl, h1'⟩ := ha s vs s2 h0 h1
+    obtain ⟨rfl, h1'⟩ := ha s vs s2 h1
     refine run_bind_error_of h1' ?_
     rcases run_bind_error h2 with h3 | ⟨rs, s3, h3, h4⟩
-    · exact run_bind_error_left (invoke_simE_copy hP hA n ihn _ hg vs s e h0 h3 hc)
+    · exact run_bind_error_left (invoke_simE_copy hP hA n ihn _ hg vs s e h3 hc)
     · exact absurd (setLocs_noAb xs rs s3 e h4) hc
   | callS xs hg ha =>
-    intro _ s e h0 h hc
+    intro _ s e h hc
     simp only [step] at h ⊢
     obtain ⟨vs, s2, h1, h2⟩ := bind_noAb (noAb_evalArgs _) h hc
-    obtain ⟨rfl, h1'⟩ := ha s vs s2 h0 h1
+    obtain ⟨rfl, h1'⟩ := ha s vs s2 h1
     refine run_bind_error_of h1' ?_
     rcases run_bind_error h2 with h3 | ⟨rs, s3, h3, h4⟩
-    · exact run_bind_error_left (invoke_simE_shared hP hA n ihn _ hg vs s e h0 h3 hc)
+    · exact run_bind_error_left (invoke_simE_shared hP hA n ihn _ hg vs s e h3 hc)
     · exact absurd (setLocs_noAb xs rs s3 e h4) hc
 
 theorem ksimE {p : Prog} {t : NTree} {S : FnName → Bool} (hP : PreSimProg p t S) (hA : AbNoIn p) :
     ∀ n, KSimE p t S n
-  | 0 => fun _ _ _ _ s e _ h hc => by cases h; exact absurd rfl hc
+  | 0 => fun _ _ _ _ s e h hc => by cases h; exact absurd rfl hc
   | n + 1 => fun _ _ hs ha => step_simE hP hA n (ksimE hP hA n) hs ha
 
 /-- **The simulation, for errors**: a run of the copy `pre_f` that fails with a nonzero code
 fails the same way as `f` on the state whose input is the prelude's bytes. -/
 theorem preSimE {p : Prog} {t : NTree} {S : FnName → Bool} (hP : PreSimProg p t S) (hA : AbNoIn p)
     (n : Nat) (f : FnName) (hf : isCopied t f = true) (vs : List Word) (s : St) (e : Err)
-    (h0 : s.mem.HasB IN)
     (h : (invoke p (exec p n) ("pre_" ++ f) vs).run s = .error e) (hk : e.code ≠ 0) :
     (invoke p (exec p n) f vs).run (s.setIn preIn) = .error e :=
-  invoke_simE_copy hP hA n (ksimE hP hA n) f hf vs s e h0 h hk
+  invoke_simE_copy hP hA n (ksimE hP hA n) f hf vs s e h hk
 
 /-! ## The checker's program -/
 
@@ -353,10 +352,10 @@ theorem checkerProg_abNoIn : AbNoIn checkerProg :=
   fun _ _ hl => checkerProg_abNoInAll _ (mem_of_lookup hl)
 
 /-- **`pre_front_run` fails as `front_run` on the prelude's bytes** (errors of nonzero code). -/
-theorem preFrontRun_errSim (n : Nat) (s : St) (e : Err) (h0 : s.mem.HasB IN)
+theorem preFrontRun_errSim (n : Nat) (s : St) (e : Err)
     (h : (invoke checkerProg (exec checkerProg n) "pre_front_run" []).run s = .error e)
     (hk : e.code ≠ 0) :
     (invoke checkerProg (exec checkerProg n) "front_run" []).run (s.setIn preIn) = .error e :=
-  preSimE checkerProg_preSim checkerProg_abNoIn n "front_run" isCopied_front_run [] s e h0 h hk
+  preSimE checkerProg_preSim checkerProg_abNoIn n "front_run" isCopied_front_run [] s e h hk
 
 end L.Checker

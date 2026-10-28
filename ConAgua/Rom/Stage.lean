@@ -47,7 +47,7 @@ theorem internAllPinsW_fixed (rom : List UInt8) (hr : RomOK rom) (rest : List UI
   obtain ⟨m', a', -, hrunI, hR, -, hq, hf, hs, hz⟩ := romItemsW_ok rom hr _ allPins_fits n (resetMem mem) a
     allPinsOff rest [] ∅ q m₁ hA' ((memFrame_top (resetMem_frame1 mem) (by decide)).mode hA.1.lit.1 hmo)
     (MemoR.fresh mem hc) hd (by rw [resetMem_stk]; exact hst)
-    (by rw [(resetMem_frame1 _).2.2.1]; omega) hI
+    (by rw [(resetMem_frame1 _).size]; omega) hI
   obtain ⟨v, hv⟩ := simZ_internAllPins [] ∅ a m' a' hP (by rw [runItems_reset]; exact hrunI)
   have hqd : q = UInt64.ofNat romData.length := by
     have hl := romData_len
@@ -184,7 +184,7 @@ theorem internAllPinsW_dec (rom : List UInt8) (hr : RomOK rom) (rest : List UInt
     internAllPinsW_fixed rom hr rest hrom n mem mem' a hA hmo hP hst (by omega) hW
   obtain ⟨hok1, -⟩ := internAllPins_run hok hpins hpp hoff hv
   obtain ⟨pins, ips, a', hrun, hA', hPS, hok', hR', -, -, -, htop, hmo'⟩ := internPinSetsW_dec rom hr n' m₁ a₁ _ q' mem' hA1
-    hmo1 (hz hR) hok1 (by rw [hs]; exact hst) (by rw [hf.2.2.1]; exact hc) hS
+    hmo1 (hz hR) hok1 (by rw [hs]; exact hst) (by rw [hf.size]; exact hc) hS
   refine ⟨pins, ips, a', ?_, hA', hPS, hok', hR', htop, hmo'⟩
   rw [internAllPins_split, run_bind_of _ _ _ _ _ hv]; exact hrun
 
@@ -215,7 +215,7 @@ theorem internAllPins_PB (P : Prog) (hno : Prog.noSt8PB P = true) (bs : List UIn
   apply M.triple_of_run
   intro s r s' hs hrun
   obtain ⟨hloc, hW⟩ := M.of_run (P := fun s => s = s₀) hs hrun
-    (internAllPinsPB_specW bs (Prog.subPB bs P) hL n s₀ ⟨hA.1.lit.1.2.2.1, hA.1.lit.1.top41⟩)
+    (internAllPinsPB_specW bs (Prog.subPB bs P) hL n s₀ ⟨hA.1.lit.1.cap, hA.1.lit.1.top41⟩)
   subst hs
   exact ⟨hloc, internAllPinsW_dec bs hr _ hpre n _ _ a₀ hA hmo hP hok hpins hpp hoff hR hst hc hW⟩
 

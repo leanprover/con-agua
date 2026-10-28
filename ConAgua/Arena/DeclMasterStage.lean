@@ -55,7 +55,7 @@ theorem stage_of_name {β δ : Type} [BEq β] [Hashable β] {L : Lens β δ .nam
     rcases hcs with h | ⟨t, h⟩ | ⟨t, h⟩ <;> rw [h]
     · exact (hv t).1
     · exact (hv t).2
-  exact ⟨_, hrun', h1, h2, hvw, hf.2.2.1⟩
+  exact ⟨_, hrun', h1, h2, hvw, hf.size⟩
 
 theorem internNAnon_stage (hS : StageR dn vis fe m a) (hI : nainternW m = some (r, m')) :
     ∃ a', (internNNode .anonymous).run a = .ok (decI r, a') ∧ StageR dn vis fe m' a' ∧

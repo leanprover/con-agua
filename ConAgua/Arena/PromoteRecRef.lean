@@ -313,7 +313,7 @@ theorem slice_gen {k : IdxKind} (kw : Word) (gl : FnName)
     hlist (n + 1) _ a pm f o l (q.headD 0) us r₂ m₂ hD₁ hP₁ (by rw [hE₁]; exact hsl)
       (by rw [hqv]; exact hot) (by rw [hqv, hE₁]; omega) (by rw [hE₁]; exact hsz) hcb
   have h129 : rdW (m₂.arr64 CTL) 129 = q.headD 0 + l := by
-    rw [hfr.2.1 129 (by simp)]; rw [rdW_set64]; simp [hctl]
+    rw [hfr.ctl 129 (by simp)]; rw [rdW_set64]; simp [hctl]
   rw [← hm]
   refine ⟨by rw [← hr, hq], ?_, ?_, a₂, pm₂, us₂, hrun, hD₂, hP₂, by rw [← hqv]; exact hsl₂,
     fun i hi => by rw [hag i (by omega), hE₁], by rw [hsz₂, hE₁], hcp, ?_,
@@ -465,7 +465,7 @@ theorem cv_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f s : Word) (cv : 
   obtain ⟨a₁, pm₁, hrun₁, hD₁, hP₁, hpw₁, hcp₁, hfr₁, -, -, -⟩ :=
     (pn_rel p hp n).1 m a pm f w0 r₁ m₁ hD hP hw0l hca
   have hE₁ : m₁.arr64 EREC = m.arr64 EREC := hfr₁.1 EREC (by decide) (by decide)
-  have ht₁ : erecTop m₁ = erecTop m := by simp only [erecTop]; rw [hfr₁.2.1 129 (by decide)]
+  have ht₁ : erecTop m₁ = erecTop m := by simp only [erecTop]; rw [hfr₁.ctl 129 (by decide)]
   cases hcb : callW p n "promote_slice" [0, f, wo, wl] m₁ with
   | none => rw [hcb] at hW; cases hW
   | some x =>
@@ -488,7 +488,7 @@ theorem cv_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f s : Word) (cv : 
   obtain ⟨a₃, pm₃, hrun₃, hD₃, hP₃, hpw₃, hcp₃, hfr₃, htk₃⟩ :=
     (pe_rel p hp n).1 m₂ a₂ pm₂ f w3 r₃ m₃ hD₂ hP₂ hw3l hcc
   have hE₃ : m₃.arr64 EREC = m₂.arr64 EREC := hfr₃.1 EREC (by decide) (by decide)
-  have ht₃ : erecTop m₃ = erecTop m₂ := by simp only [erecTop]; rw [hfr₃.2.1 129 (by decide)]
+  have ht₃ : erecTop m₃ = erecTop m₂ := by simp only [erecTop]; rw [hfr₃.ctl 129 (by decide)]
   have hqv : (r₂.headD 0).toNat = erecTop m := by rw [hq, ← ht₁]; rfl
   rw [← hm, ← hr]
   refine ⟨a₃, pm₃, ⟨decI (r₁.headD 0), lps', decE (r₃.headD 0)⟩, ?_, hD₃, hP₃, ?_, ?_, ?_,
@@ -646,8 +646,8 @@ theorem vg_rel (n : Nat) (m : Mem) (a : AState) (pm₀ : PMemo) (g vis : Word) (
   obtain ⟨hP₁, hf₁⟩ := clear_rel hP hW₁
   have hD₁ : ArenaD m₁ a :=
     ⟨ArenaR.frame_ext _ _ (by simp) (by simp) m _ hf₁ a hD.1, DerR.frameM _ _ m _ hf₁ (by simp) a hD.2⟩
-  have hE₁ : m₁.arr64 EREC = m.arr64 EREC := hf₁.1 EREC (by simp) (by decide)
-  have ht₁ : erecTop m₁ = erecTop m := by simp only [erecTop]; rw [hf₁.2.1 129 (by simp)]
+  have hE₁ : m₁.arr64 EREC = m.arr64 EREC := hf₁.arr EREC (by simp) (by decide)
+  have ht₁ : erecTop m₁ = erecTop m := by simp only [erecTop]; rw [hf₁.ctl 129 (by simp)]
   have hP₁r : erecP m₁ = erecP m := by simp only [erecP, hE₁, ht₁]
   -- the record's words
   simp only [decVG, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def,
@@ -684,7 +684,7 @@ theorem vg_rel (n : Nat) (m : Mem) (a : AState) (pm₀ : PMemo) (g vis : Word) (
   obtain ⟨a₃, pm₃, hrun₃, hD₃, hP₃, hpw₃, hcp₃, hfr₃, htk₃⟩ :=
     (pe_rel p hp (n + 1)).1 m₂ a₂ pm₂ _ jw xr m₃ hD₂ hP₂ hjl hcc
   have hE₃ : m₃.arr64 EREC = m₂.arr64 EREC := hfr₃.1 EREC (by decide) (by decide)
-  have ht₃ : erecTop m₃ = erecTop m₂ := by simp only [erecTop]; rw [hfr₃.2.1 129 (by decide)]
+  have ht₃ : erecTop m₃ = erecTop m₂ := by simp only [erecTop]; rw [hfr₃.ctl 129 (by decide)]
   -- the allocation
   cases hcd : callW p (n + 1) "erec_alloc" [6] m₃ with
   | none => rw [hcd] at hW; cases hW
@@ -718,7 +718,7 @@ theorem vg_rel (n : Nat) (m : Mem) (a : AState) (pm₀ : PMemo) (g vis : Word) (
     simp only [erecTop]
     rw [rdW_set64, ite_eq_left ⟨rfl, rfl, by simpa using hctl⟩, hd6, hdv]; rfl
   have ht₅ : erecTop m₅ = erecTop m₃ + 6 := by
-    simp only [erecTop] at ht₄ ⊢; rw [hf₅.2.1 129 (by simp)]; exact ht₄
+    simp only [erecTop] at ht₄ ⊢; rw [hf₅.ctl 129 (by simp)]; exact ht₄
   have hts₅ : erecTop m₅ ≤ (m₅.arr64 EREC).size := by rw [ht₅, hsz₅, hE₄]; omega
   have rd : ∀ i, i < 6 → (erecP m₅)[(dr.headD 0).toNat + i]? =
       (m₅.arr64 EREC)[(dr.headD 0).toNat + i]? := fun i hi =>

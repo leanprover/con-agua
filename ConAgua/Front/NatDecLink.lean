@@ -328,7 +328,7 @@ theorem natDecW_val (b : Array UInt8) (m m' : Mem) (c d : Word) (r : List Word)
       pv (vpool m') m.top.toNat l.toNat = decN b c.toNat (d.toNat - c.toNat) := by
   have hsm := hp.small
   have h41 := hp.top41
-  have hin := hp.2.2.2.2.2
+  have hin := hp.inTier
   unfold natDecW at h
   rw [rdW_ctl_top] at h
   split at h
@@ -344,7 +344,7 @@ theorem natDecW_val (b : Array UInt8) (m m' : Mem) (c d : Word) (r : List Word)
     (Nat.le_of_lt (hsm.tier _)) (UInt64.le_refl _) hcd (by simpa using hin) (by simp [decN, pv])
     (fun h0 => by simp at h0) hD
   have hg := Grows.write m m₁ l hp hf hag (by rw [← PFrame.tsize _ hf]; exact htl)
-  have hctl1 : 0 < (m₁.arr64 CTL).size := by rw [hf.ctl]; exact hp.2.1
+  have hctl1 : 0 < (m₁.arr64 CTL).size := by rw [hf.ctl]; exact hp.ctl
   have htop' := Mem.top_set64 m₁ (m.top + l) hctl1
   refine ⟨l, rfl, hg, SliceOK.fresh hg htop', ?_, ?_⟩
   · rw [vpool_set64_ne _ _ _ _ (by decide)]; exact hN
