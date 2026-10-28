@@ -575,4 +575,39 @@ l_model tTup3_spec (p : Prog) (hp : p.lookup "t_tup3" = some tTup3)
 example (p : Prog) (n : Nat) (m : Mem) : tTup3E p (n + 3) m 1 = .ok (1, 1, 2, m) := by
   simp [tTup3E, tTup3E.loop1]
 
+/-- A callee guard without a `Decidable` instance (as `flush_caches`' `FlushOK`): the model
+decides it classically (and is `noncomputable`), it does not hold `sorry`. -/
+def UG (_m : Mem) : Prop := ∀ k : Nat, k = k
+
+-- con-ron: none — an `l_model` test function
+def tUg : FunDecl := lfn (x) {
+  TW.u64[0] := x;
+  return 0
+}
+
+theorem tUg_spec (p : Prog) (hp : p.lookup "t_ug" = some tUg) (n : Nat) (s₀ : St) (x : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "t_ug" [x]
+    ⦃fun _r s' => LocEq s' s₀ ∧ UG s₀.mem ∧ s'.mem = s₀.mem.set64 TW 0 x; ⊤⦄ := by
+  rw [invoke_eq _ hp]; simp only [callFn, tUg]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, st64] <;>
+      simp_all [UG, Locals.init, LocEq]
+
+-- con-ron: none — an `l_model` test function
+def tUseUg : FunDecl := lfn (x) locals (a) {
+  a := call t_ug(x);
+  return x + 1
+}
+
+l_model tUseUg_spec (p : Prog) (fs : List FnName) (hmem : ∀ {f : FnName}, f ∈ ["t_ug"] → f ∈ fs)
+    (hp : p.lookup "t_use_ug" = some tUseUg) (hq : p.lookup "t_ug" = some tUg)
+  fns [hp ↦ tUseUgE]
+  specs [tUg_spec p hq n]
+  grind [arena_grind] simp [] unified nv [closedNV p fs = true, hmem]
+
+example (p : Prog) (m : Mem) : tUseUgE p m 1 = .ok (2, m.set64 TW 0 1) := by
+  simp [tUseUgE, UG]
+
 end L.ModelGenTest
