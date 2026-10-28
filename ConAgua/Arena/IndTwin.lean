@@ -4,6 +4,8 @@ import ConAgua.Arena.InferLeaves
 import ConAgua.Arena.WhnfIotaRefine4
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
+import ConAgua.Arena.KnotE
+import ConAgua.L.ModelGen
 
 /-!
 # The stage relation with the twin's invariants: `StageT` (lane `indproofs3`)
@@ -163,36 +165,44 @@ end
 
 /-! ## The entry points -/
 
+/-- **`whnf_top`'s model, both outcomes**: the `whnf` slot (verified mode) through its run. -/
+l_model wtopE_spec (p : Prog) (hf : p.lookup "whnf_top" = some whnfTopL)
+  fns [hf ↦ wtopE list] grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] unified
+
+
 section entry
 variable (p : Prog) (hp : KnotEntryProg p) (hw : p.lookup "whnf_top" = some whnfTopL)
   (hK : ∀ n, KnotOK p n) (hcl : CoreStageClosed p)
 variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
 
-include hw in
-theorem whnfTop_spec (n : Nat) (s₀ : St) (vis dep e : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "whnf_top" [vis, dep, e]
-    ⦃fun r s' => LocEq s' s₀ ∧ call1W p n "whnf" [0, vis, dep, e] s₀.mem = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hw]
-  simp only [callFn, whnfTopL]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, callW_spec p n "whnf"] <;>
-    finish [call1W_some]
-
 theorem stage_fuel {n : Nat} (hn : n + 1 ≤ 2 ^ 62) : n ≤ checkFuel := by
   unfold checkFuel; omega
 
+include hK in
+/-- **`whnf_top(vis, dep, e)` refines `whnf .verified fe F dep e`, both outcomes**: the `whnf`
+slot's (`KnotOK`, `KnotUpToE`). -/
+theorem whnfTop_ref (n : Nat) (hn : n + 1 ≤ 2 ^ 62) (F : Nat) (hF : n ≤ F) (s₀ : St) (a₀ : AState)
+    (M : ModeMaps) (dep e : Word) (hS : CoreS dn s₀.mem a₀ vis fe M 0) (he : HW e) :
+    RefE (KnotUpToE p n) (wtopE p (n + 1) s₀.mem vis dep e) (whnf V fe F dep.toNat (decE e)) a₀
+      (fun v y a' => CorePost decH dn s₀.mem vis fe M 0 ResH v.1 v.2 y a') := by
+  simp only [wtopE]
+  rcases h : callE p n "whnf" [0, vis, dep, e] s₀.mem with e1 | ⟨r, m₁⟩
+  · exact fun hG => CoreSpecE.of_callE ((hG n (Nat.le_refl _)).whnf F s₀ a₀ dn vis fe M 0 0 dep e
+      hF (by omega) (slotPre_zero hS) he) h
+  obtain ⟨hrun, hR⟩ := (CoreSpec.of_callW ((hK n).whnf F s₀ a₀ dn vis fe M 0 0 dep e hF (by omega)
+    (slotPre_zero hS) he) (callW_of_callE h)).post
+  exact RefE.ret hrun ⟨hR.after, by simpa [decH] using hR.res, by simpa [ResH] using hR.ok⟩
+
 include hw hK in
-/-- `whnf_top(vis, dep, e)` refines `whnf .verified fe checkFuel dep e` under `CoreS`. -/
+/-- `whnf_top(vis, dep, e)` refines `whnf .verified fe checkFuel dep e` under `CoreS`
+(`whnfTop_ref`'s ok half). -/
 theorem whnfTop_core (n : Nat) (hn : n + 1 ≤ 2 ^ 62) (F : Nat) (hF : n ≤ F) (s₀ : St) (a₀ : AState)
     (M : ModeMaps) (dep e : Word) (hS : CoreS dn s₀.mem a₀ vis fe M 0) (he : HW e) :
     CoreSpec p (n + 1) "whnf_top" [vis, dep, e] (whnf V fe F dep.toNat (decE e)) decH
-      s₀ a₀ dn vis fe M 0 := by
-  apply L.M.triple_of_run
-  intro s r s' hs0 hrun
-  obtain ⟨hloc, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun (whnfTop_spec p hw n s₀ vis dep e)
-  subst hs0
-  exact ⟨hloc, CoreSpec.of_call1W ((hK n).whnf F s a₀ dn vis fe M 0 0 dep e hF
-    (by omega) (slotPre_zero hS) he) (fun r r' h => by simp only [decH, h]) hW⟩
+      s₀ a₀ dn vis fe M 0 :=
+  CoreSpec.of_refE (w := id) (wtopE_spec p hw (n + 1) s₀ vis dep e)
+    (whnfTop_ref p hK n hn F hF s₀ a₀ M dep e hS he) fun _ _ => ⟨rfl, rfl, id⟩
 
 /-- `H` and `HW` are one bound. -/
 theorem hw_of_h {e : Word} (he : H e) : HW e := he

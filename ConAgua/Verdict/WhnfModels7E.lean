@@ -35,10 +35,6 @@ l_model lnE_spec (p : Prog) (hf : p.lookup "lazy_nat" = some lazyNatL)
   fns [hf ↦ lnE list] grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] errors
 
-l_model wtopE_spec (p : Prog) (hf : p.lookup "whnf_top" = some whnfTopL)
-  fns [hf ↦ wtopE list] grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] errors
-
 l_model ecE_spec (p : Prog) (hf : p.lookup "eta_cert" = some etaCertL)
   fns [hf ↦ ecE list] grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] errors
