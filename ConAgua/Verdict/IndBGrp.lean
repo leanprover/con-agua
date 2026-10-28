@@ -1,6 +1,5 @@
 import ConAgua.Verdict.IndBGrpM
 import ConAgua.Verdict.IndBGck
-import ConAgua.Verdict.IndBRec3
 import ConAgua.Verdict.IndBCcs
 import ConAgua.Verdict.IndBStream
 /-!

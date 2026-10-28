@@ -1376,3 +1376,57 @@ d4f85701, load 32–59):
 | **sum (11 modules)** | **42.3** | **29.7** |
 
 No module is slower.
+
+### 3.18 Batch 3b, the rules and recursor types (`class_rec_tys_ok`, `class_rules_ok`, `class_recs_rules_ok_go`, `class_recs_rules_ok`)
+
+The depth-3–4 functions of the `IndBRec*` family whose callees are unified (`class_rec_ty_ok`,
+§3.16; `class_rules_ok_one`, §3.17):
+
+| function | before: ok refinement + error claim(s) | after | change |
+|---|---|---|---:|
+| `class_rec_tys_ok` | `rtsW_simC` 115, `rtsE_claim` 132, `classRecTysOk_claim` 21 = 268 | `rts_ref` 115 + `RtsPost` 6 + `classRecTysOk_claim` 18 = 139 | −48 % |
+| `class_rules_ok` | `crsW_simC` 136, `crsE_claim` 178, `classRulesOk_claim` 26 = 340 | `crs_ref` 143 + `CrsPost` 7 = 150 | −56 % |
+| `class_recs_rules_ok_go`, `class_recs_rules_ok` | `crrW_simC` 147, `crrE_claim` 177, `classRecsRulesOk_claim` 33 = 357 | `crr_ref` 161 + `crra_ref` 27 + `CrrPost` 8 + `classRecsRulesOk_claim` 16 = 212 | −41 % |
+| the three `@[refines]` | 25 + 33 + 33 = 91 | 26 + 33 + 26 = 85 | −7 % |
+| **pairs** | **965** | **501** | **−48 %** |
+
+Gone with them: the hand models `rtsW`/`rtsK1–3`/`rtoR`, `crsW`/`crsK1–6`/`cr1R`, `crrW`/`crrK1–5`/`crraW`,
+their arms, grind patterns and specs (`classRecTysOk_spec`, `classRulesOk_spec`,
+`classRecsRulesOkGo_spec`, `classRecsRulesOk_spec`, `rtoR_spec`, `cr1R_spec`); the files
+`Arena/IndT/RecGen7`, `RecGen9`, `RecGen10` and `Arena/RecGenSpec/CrsK6`. `classRulesOk_claim` had no
+user left (its one user was `crrE_claim`). Whole diff against master d4f85701: +487 −1 330 in 15 files.
+
+* **`G`**: `VerdictCtxU p` for all four (the callees' `rto_ref` and `cr1_ref` have it; the
+  functions' own errors are aborts `0` and lifted no-verdict callees).
+* **Models**: `classRecTysOkE` calls `classRecTyOkE`, `crsE` calls `cr1E`, `crrE` calls `crsE`,
+  `crraE` calls `crrE` (unified callees); `sl_cons`, `cv_lps` (`cvLps_specW1`, so `IndBRec5` imports
+  `Verdict/DeclValE`), `param_levels`, `class_gen_rule`, `target_major_at` and `rec4` lifted. The
+  recursion is the model's own; each refinement is one induction over it. The `classGenRule = none`
+  reject is `ErrClaim.fail` in place.
+* **Posts**: `RtsPost` (stage, growth, `decCVS`, memo), `CrsPost` and `CrrPost` (the same with
+  `decEL`/`decRRS` and the core step). `class_recs_rules_ok` repacks `class_recs_rules_ok_go`'s
+  result, so `crra_ref` shares `CrrPost`.
+* **Callers**: the spine (`gen_rec_check_prep`'s `grpE`, `gen_rec_check`'s `gckE`, `GenRec2`,
+  `GenRec3`) already read these through the run; they keep `classRecTysOk_refinesC`,
+  `classRecsRulesOk_refinesC` (`RefE.triple`) and the two claims (`RefE.coreSpecE`) with unchanged
+  statements; only two imports changed.
+* **Placement**: the refinements and the derived theorems in `Verdict/IndBRec3`, `IndBRec5`,
+  `IndBRec6` (`ctorsAt_denote` moved there from `RecGen10`).
+* **Recipes**: the default `finish` for `classRecTysOkE` (it was `simp []` as an `errors` model),
+  `simp [Cmp.evalW, Cmp.eval]` for `crsE`, `crrE`, `crraE` (as before). No generator or kit change
+  was needed.
+
+Elaboration (user seconds, `lean` on the module alone, median of 3 interleaved runs, base master
+d4f85701, load ≈ 28):
+
+| module | base | new | |
+|---|---:|---:|---|
+| `Arena/RecGenSpec/Rec3TmdWDecB` | 17.87 | 1.15 | the hand specs `classRecsRulesOkGo_spec` etc. gone |
+| `Arena/RecGenSpec/ClassRecTysOk`, `DecCVX`, `DecRR`, `CrsK6` (deleted) | 5.93 | 1.52 | |
+| `Arena/IndT/RecGen7`, `RecGen9`, `RecGen10` (deleted) | 3.41 | — | |
+| `Verdict/IndBRec3`, `IndBRec4`, `IndBRec5`, `IndBRec6` | 13.52 | 11.67 | |
+| `Arena/IndT/GenRec2`, `GenRec3` | 3.74 | 4.00 | `GenRec2` 2.41 → 2.65 (+0.24 s, import change only: it now imports `IndBRec3`) |
+| **sum (14 modules)** | **44.5** | **18.3** | **−59 %** |
+
+No module of the family is more than 10 % slower (`GenRec2`'s +10 % is 0.24 s and comes from its
+import, not from a proof in it).
