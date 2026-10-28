@@ -16,8 +16,8 @@ while every convention that makes a register survive a call costs instructions s
 * Reserving `r12` for non-leaf functions (leaves give it up) costs +0.9 %.
 * The only variant without a cost, **interprocedural allocation** (a non-leaf function takes a
   callee-saved register that no function it can reach writes; no saves anywhere), saves **−0.3 %**.
-* Cycles could not be measured to better than about ±10 % on this machine today (load 25–80).
-  The best runs of all four binaries are within 2 % of each other.
+* In cycles nothing is faster. On `Init`, measured in quiet rounds: IPRA +0.2 %, `r12` reserved
+  +1.0 %, callee-saved +2.3 %. On the default set all are within 0.6 % of master.
 
 None of these reaches lnext's estimate. **Recommendation: no implementation lane now.** §6 says
 what would change that.
@@ -136,26 +136,49 @@ Findings:
   allocation of a whole fast path, which has no calls; the new scanner's record loop calls its
   leaves.
 
-**Cycles.** `bench.py --set init --reps 5 --no-conron --no-ref`, interleaved, three times: CPUs
-40–41 at load 60–140, CPUs 40–41 at load 16–47, and an idle core (17 and its sibling 65) at load
-24–45. The same binary varied between 82 G and 190 G cycles on `Init` (spread 64–190 %), so the
-medians mean nothing. The best run of each binary over the three benches:
+**Cycles.** `bench.py --set init --reps 5 --no-conron --no-ref`, interleaved, four times:
+* CPUs 40–41 at load 60–140;
+* CPUs 40–41 at load 16–47;
+* an idle core (17 and its SMT sibling 65), twice, at load 24–45 and at load 8–37.
 
-| binary | cycles |
-|---|---:|
-| master | 82.7 G |
-| IPRA | 82.9 G |
-| B (`r12`) | 81.4 G |
-| A K=3 | 83.0 G |
+The same binary varied between 81 G and 217 G cycles on `Init`, so the medians mean nothing. The
+last bench's first two rounds ran while the machine was quiet. Cycles on `Init`, both rounds:
 
-That is parity within the noise. A's removal of 12 G frame accesses (36.3 → 24.2 G frame
-loads+stores) does not show up as a cycle gain that outweighs its 14 G extra instructions. The
-default set: §3.1. **A cycles verdict needs a quiet machine** (load < 10). The instruction counts
-above are exact and do not depend on the load.
+| binary | instructions | cycles, rounds 1 and 2 | against master (best run) |
+|---|---:|---:|---:|
+| master | 242.98 G | 81.1 G, 81.5 G | |
+| IPRA (D) | 242.21 G | 82.1 G, 81.3 G | +0.2 % |
+| B (`r12`) | 244.95 G | 81.9 G, 83.9 G | +1.0 % |
+| A K=3 | 257.09 G | 83.0 G, 83.9 G | +2.3 % |
+
+The best run of every binary over all four benches agrees within 2 %. **No variant is faster in
+cycles; A is about 2 % slower.**
+* A removes 12 G frame accesses (frame loads+stores 36.3 → 24.2 G). This does not outweigh its
+  14 G extra instructions (saves, restores, register moves).
+* The store-forwarding latency of `addq $1, (%rsp)` loops did not show up as a measurable cost.
+* The instruction counts above are exact and do not depend on the load.
 
 ### 3.1 Default set
 
-DEFAULT-SET-PLACEHOLDER
+`bench.py --set default --reps 5 --cpus 17,65 --no-conron --no-ref`. Load 8–34 during the run. The
+spread is 2–15 % except for `inmodel_nested` (34–54 %). Geometric means over the 13 fixtures,
+against master:
+
+| binary | instructions | cycles (median) | wall |
+|---|---:|---:|---:|
+| IPRA (D) | 0.997 | 1.001 | 0.995 |
+| B (`r12`, uses ≥ 8) | 1.012 | 0.999 | 0.996 |
+| A K=3 | 1.055 | 1.006 | 1.002 |
+
+The largest inputs:
+
+| input | instructions, A K=3 against master | cycles |
+|---|---:|---:|
+| `c04a_restart_70` | 19.75 G against 18.63 G (+6.0 %) | parity |
+| `beta-ladder` | +4.1 % | parity |
+| `let-ladder` | +4.4 % | parity |
+
+Again: parity in cycles, more instructions.
 
 ### 3.2 Verdicts
 
@@ -232,8 +255,9 @@ Risks:
   better done in that order.
 * **Freeing `rbp`** (store the trampoline's stack pointer in the table, `ca_finish` reloads it from
   `r15`) gives a fourth register without any convention.
-* **A quiet-machine cycles measurement** of IPRA and B. If B (`r12` reserved) shows ≥ 3 % cycles on
-  `Init` despite +0.8 % instructions, it becomes worth its 1.2 k proof lines.
+* **Not cycles.** The hope was that registers pay in cycles even where they do not save
+  instructions (store forwarding on frame slots). The quiet `Init` rounds and the default set
+  show no such gain (§3). Registers alone do not close the scanfast leaf/non-leaf gap.
 
 ## 6. Recommendation
 
