@@ -1,5 +1,4 @@
 import ConAgua.Verdict.IndBK53
-import ConAgua.Verdict.IndBTmn
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 /-!

@@ -1,4 +1,3 @@
-import ConAgua.Arena.IndT.RecCheckTcm
 import ConAgua.Arena.IndSumSpec.ConsBlockRecsTF
 import ConAgua.Arena.IndSumSpec.SoaW
 import ConAgua.Arena.RecCheckSpec.CnfW

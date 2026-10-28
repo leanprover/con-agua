@@ -1,9 +1,3 @@
-import ConAgua.Arena.IndT.RecCheckTcm
-import ConAgua.Arena.IndSumSpec.ConsBlockRecsTF
-import ConAgua.Arena.IndSumSpec.SoaW
-import ConAgua.Arena.RecCheckSpec.CnfW
-import ConAgua.Arena.RecCheckSpec.TargetMajorDefault
-import ConAgua.Arena.RecCheckSpec.Tmn
 import ConAgua.Verdict.IndBTcm
 import ConAgua.Arena.IndT.RecGen19
 import ConAgua.Arena.RecCheckSpec.Tka

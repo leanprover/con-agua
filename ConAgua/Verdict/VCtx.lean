@@ -1,5 +1,5 @@
 import ConAgua.Verdict.DeclValE
-import ConAgua.Checker.NoVerdictTree
+import ConAgua.Checker.NoVerdictFns
 
 /-!
 # What the error claims assume about the program
