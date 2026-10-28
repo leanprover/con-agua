@@ -8,8 +8,8 @@ import ConAgua.Arena.IndPosSpec.NestCrest
 `pfv_ref` refines the twin's `pfK` (the `.fvar` arm of `nestPos`, its continuation split off by
 `pfK_eq`) by `pfvE` (unified), `ncc_ref` the checks of `nestCont` (`nccT`, the rest split off by
 `nccT_eq`) by `nccE` (unified). The callees are outside the verdict closure (lifted), so the
-errors' claims need only `closedNV`. Their ok halves serve `appOKC_step` and `contOKC_step` through
-the run (`RefE.run_okW`), their error halves `appOKE_step` and `contOKE_step` (`RefE.run_err`).
+errors' claims need only `closedNV`. Both halves serve `appRef_step` and `contRef_step` through the run
+(`RefE.run_ok`, `RefE.run_err`).
 -/
 
 open ConRon.Arena
