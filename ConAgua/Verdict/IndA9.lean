@@ -1,5 +1,5 @@
 import ConAgua.Verdict.IndA6
-import ConAgua.Verdict.PosAllE
+import ConAgua.Verdict.PosKnotE
 import ConAgua.Verdict.PosTopE5
 import ConAgua.Verdict.IndsE7
 import ConAgua.Verdict.BlkE1
@@ -14,7 +14,7 @@ import ConAgua.Verdict.KnotAllE
 
 `cid_claim2`: `cid_claim` with `check_block_inds`, `check_block_ctors`, `check_block_classes`,
 `check_block_positivity`, `nest_seeds`, `check_block_idx_sorts`, `check_block_tables` proved
-(`IndsE*`, `BlkE*`, `PosTopE*`, the positivity walk `nbOKE_all`; the core stubs and `whnf_top`
+(`IndsE*`, `BlkE*`, `PosTopE*`, the positivity walk `nbRef_all`; the core stubs and `whnf_top`
 from the error knot). Left: `gen_rec_check` (`GenRecCheckE`), the `indB` callees (`IndBE.lean`,
 `CheckStructProjTableRE`), and `check_basis_decl`/`check_constant_val` (`IndA8.lean` discharges
 them; it waits for `DeclHdrE`).
@@ -29,13 +29,9 @@ open L.Arena
 
 local notation "V" => ConLeche.CheckMode.verified
 
-/-- The positivity walk's claims for every well-formed environment, from the program. -/
-theorem nbOKE_prog {p : Prog} (P : CidProg p) (hkp : KnotStageProg p) (hIlpf : IlpfF p)
-    (hLC : LvlCacheProg p) (hnv : closedNV p _root_.L.Checker.nvFns = true) :
-    ∀ dn vis fe env, ConLeche.EnvWF env → ∀ n, n ≤ 2 ^ 62 → NbOKE p dn vis fe env n :=
-  fun _ _ _ _ henv => nbOKE_all P.cb.pass.pos.rs.nb hkp hIlpf hLC hnv
-    (hkp.toKnotTopProg.coreStubsE hnv)
-    (whnfTop_stageE hkp.whnfTop hkp.knotOK (KnotAllProg.knotE_all hkp.knot hnv)) henv
+/-- What the positivity walk's error claims assume, from the program. -/
+theorem nbG_prog {p : Prog} (hkp : KnotStageProg p) (hnv : closedNV p _root_.L.Checker.nvFns = true) : NbG p :=
+  ⟨hnv, hkp.toKnotTopProg.coreStubsE hnv, whnfTop_stageE hkp.whnfTop hkp.knotOK (KnotAllProg.knotE_all hkp.knot hnv)⟩
 
 /-- **`check_ind_decl`'s error refinement**, the pass and the tail discharged. -/
 theorem cid_claim2 {p : Prog} (hkp : KnotStageProg p) (hV : ValProg p)
@@ -70,13 +66,13 @@ theorem cid_claim2 {p : Prog} (hkp : KnotStageProg p) (hV : ValProg p)
     (hlpd : BlockLpsDn dn block) :
     ErrClaim (checkDecl V pins fe (.indDecl block w.toNat)) a e := by
   have hcE : CoreStubsE p := hkp.toKnotTopProg.coreStubsE hnv
-  have hNbE := nbOKE_prog P hkp hIlpf hLC hnv
+  have hG := nbG_prog hkp hnv
   have hNit : ∀ dn vis fe env, ConLeche.EnvWF env → NitE p dn vis fe env :=
     fun dn vis fe env _ => nitE_all P.cb.pass.pos.rs.nb hkp hIlpf hLC hnv dn vis fe env
   exact cid_claim hkp hV hOpf hLC hLT hApd hCrk hIlpf hLz P hcl hfs hfr hcl2 hfs2 hclR hfR hclT hfT hclC hfC
     hkP hkt hkr hnv hCBD eCcv (checkBlockIdxSortsE_claim hnv eSF) eGrc (checkBlockTablesE_claim hnv eTbl)
     (checkBlockIndsE_claim hnv hcE eCcv eSum) (checkBlockCtorsE_claim hnv eSC)
-    (checkBlockClassesE_claim hnv eKey eClm) (checkBlockPositivityE_claim hnv hNbE eSF)
-    (nestSeedsE_claim hnv hNbE hNit) hn hdn he hT hfold hblk hb hden hM hfB hfRc hclH hfH hclM hfM hlpd
+    (checkBlockClassesE_claim hnv eKey eClm) (checkBlockPositivityE_claim hG eSF)
+    (nestSeedsE_claim hG hNit) hn hdn he hT hfold hblk hb hden hM hfB hfRc hclH hfH hclM hfM hlpd
 
 end L.Ind

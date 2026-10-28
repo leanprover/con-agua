@@ -131,22 +131,27 @@ theorem p2sdW_okC : ∀ (n : Nat), n ≤ 2 ^ 62 → ∀ (m m' : Mem) (a : AState
     have e3 := pos2_key_rd hg12 htop hk4 (j := 3) (by omega)
     rw [show (key + 1 : Word) = key + UInt64.ofNat 1 from rfl, show (key + 2 : Word) = key + UInt64.ofNat 2 from rfl,
       show (key + 3 : Word) = key + UInt64.ofNat 3 from rfl, e0, e1, e2, e3] at h
-    have hKey := (nbOKC_all (dn := dn) (vis := vis) (fe := fe) Lb hq hIlpf hLC henv (n' + 1) (by omega)).2.2.2.2.1
-    rcases hk3 : nbKeyW (realCall p) (n' + 1) m2 vis ctx (rf.headD 0) 0 0 0 (rdW (m.arr64 IW) key)
+    rcases hk3 : keyR (realCall p) (n' + 1) m2 vis ctx (rf.headD 0) 0 0 0 (rdW (m.arr64 IW) key)
         (rdW (m.arr64 IW) (key + UInt64.ofNat 1)) (rdW (m.arr64 IW) (key + UInt64.ofNat 2))
         (rdW (m.arr64 IW) (key + UInt64.ofNat 3)) nPc (r2.tail.headD 0) ns with _ | ⟨r3, m3⟩; · rw [hk3] at h; simp [p2sdK3] at h
     rw [hk3, p2sdK3_some] at h
     have hnnd' : decI (rdW (m.arr64 IW) key) = kk.cname := hnnd
     have husd' : decI (rdW (m.arr64 IW) (key + UInt64.ofNat 1)) = kk.lvls := husd
-    obtain ⟨x3, a3, hrun3, hC3, hg3, -, hns3, hP3, hA3, c3⟩ := hKey m2 m3 a2 ctx (rf.headD 0) 0 0 0 _ _ _ _ nPc _ ns
-      c [] kk.ds NS r3 ctxP [] keyP.cname keyP.lvls keyP.ds niP.2 nsP
-      hk3 hC2 (hW.grow hg12) hnnH husH
+    obtain ⟨s3, hs3, -, x3, a3, hrun3, hR3⟩ := RefE.run_okW
+      (nckE_spec p Lb.pkey (n' + 1) ⟨m2, Locals.init []⟩ _ _ _ _ _ _ _ _ _ _ _ _ _)
+      ((nbRef_all (dn := dn) (vis := vis) (fe := fe) Lb hq hIlpf hLC henv (n' + 1) (by omega)).key m2 a2 ctx
+      (rf.headD 0) 0 0 0 (rdW (m.arr64 IW) key) (rdW (m.arr64 IW) (key + UInt64.ofNat 1))
+      (rdW (m.arr64 IW) (key + UInt64.ofNat 2)) (rdW (m.arr64 IW) (key + UInt64.ofNat 3)) nPc (r2.tail.headD 0) ns
+      c [] kk.ds NS ctxP [] keyP.cname keyP.lvls keyP.ds niP.2 nsP
+      hC2 (hW.grow hg12) hnnH husH
       (by show decHL (truncM m2) _ _ = _; rw [decHL_truncM (by simpa using hksl2)]
           rw [decHL_agree (RdS.of_grow hg12) (fun j hj => by simpa using hdsb j hj)]; simpa using hdsd)
       (by simpa using hksl2) hctyH (hns.grow hg12 htop) hP2 hA2
       hc (dCtx_ext _ hx02 _ _ hctx) rfl (by rw [hnnd']; exact ConRon.Bridge.denoteN_ext hkc hx02)
       (by rw [husd']; exact ConRon.Bridge.denoteLs_ext hkl hx02) (ConRon.Bridge.denoteEList_ext hx02 _ _ hkd)
-      (by rw [hctyd]; exact hni2) (dState_ext hx02 _ _ hnsP) (by simpa using hw _ List.mem_cons_self) hni3
+      (by rw [hctyd]; exact hni2) (dState_ext hx02 _ _ hnsP) (by simpa using hw _ List.mem_cons_self) hni3) hk3
+    rw [hs3] at hR3; dsimp only at hR3
+    obtain ⟨hC3, hg3, -, hns3, hP3, hA3, c3⟩ := hR3
     have htop3 : iwTop m3 < 2 ^ 64 := Nat.lt_of_le_of_lt hC3.stage.2.1 hC3.stage.2.2.2.1
     have hg13 := hg12.trans hg3
     have hsO1 : (sO + 1).toNat = sO.toNat + 1 := word_add_toNat (by simp; omega)
