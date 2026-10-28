@@ -484,7 +484,7 @@ theorem romLevel_refines (rom : List UInt8) (p : Prog) (hL : LevelProg rom p) (h
   apply M.triple_of_run
   intro s r s' hs hrun
   obtain ⟨hloc, hW⟩ := M.of_run (P := fun s => s = s₀) hs hrun
-    (romLevel_specW rom p hL n s₀ pos ⟨hA.1.lit.1.2.2.1, hA.1.lit.1.top41⟩)
+    (romLevel_specW rom p hL n s₀ pos ⟨hA.1.lit.1.cap, hA.1.lit.1.top41⟩)
   subst hs
   exact ⟨hloc, romLevelW_ok rom hr l hl n _ a₀ pos rest _ _ _ hA hmo hd hW⟩
 

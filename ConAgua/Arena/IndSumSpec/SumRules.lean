@@ -245,7 +245,7 @@ theorem sumDecRule_words {a : Array Word} {q : Nat} {c nF nP rhs k e : Word}
 theorem rlDec_set_iw (m : Mem) (o v : Word) : rlDec (m.set64 IW o v) = rlDec m := by
   have hf := set64IW_frame m o v
   unfold rlDec erecP erecTop
-  rw [hf.1 EREC (by decide) (by decide), hf.2.1 129 (by decide)]
+  rw [hf.1 EREC (by decide) (by decide), hf.ctl 129 (by decide)]
 
 theorem sumToNat_succ {w : Word} (h : w.toNat < 2 ^ 64 - 1) : (w + 1).toNat = w.toNat + 1 := by
   rw [UInt64.toNat_add]; simp; omega

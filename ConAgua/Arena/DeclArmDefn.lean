@@ -175,6 +175,6 @@ end model
 /-- A frame of the step's write set keeps the variant list. -/
 theorem PinSetsR.step {m m' : Mem} {ips : List INatOpPinSet} (h : PinSetsR m ips)
     (hg : IWGrow m m') (hf : MemFrame stepA stepC m m') : PinSetsR m' ips :=
-  PinSetsR.grow h (IWGrow.recGrow hg) (hf.2.1 _ step_pins.1) (hf.2.1 _ step_pins.2)
+  PinSetsR.grow h (IWGrow.recGrow hg) (hf.ctl _ step_pins.1) (hf.ctl _ step_pins.2)
 
 end L.Arena

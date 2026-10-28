@@ -29,8 +29,8 @@ def AtOk {α : Type} (op : AM (PMemo × α)) (dec : Word → α) (m : Mem) (a : 
 
 theorem eFrame_erec {m m' : Mem} (h : MemFrame eArrs eCtl m m') :
     m'.arr64 EREC = m.arr64 EREC ∧ erecTop m' = erecTop m := by
-  refine ⟨h.1 EREC (by decide) (by decide), ?_⟩
-  simp only [erecTop]; rw [h.2.1 129 (by decide)]
+  refine ⟨h.arr EREC (by decide) (by decide), ?_⟩
+  simp only [erecTop]; rw [h.ctl 129 (by decide)]
 
 /-- A promotion's frame inside the record pool's (by membership: `simp` over the long array
 lists runs out of recursion depth). -/
@@ -586,9 +586,9 @@ theorem proj_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f q : Word) (D :
     (by rw [k1, hszc]; omega) (by rw [k1, hszc]; exact hsz) hwr
   have hTc' : erecTop mc = erecTop m + 13 + wl.toNat + wlb.toNat + wlg.toNat := by
     rw [hTc, hTb, hTa'] <;> omega
-  have hTd : erecTop md = erecTop mc := by simp only [erecTop]; rw [k2.2.1 129 (by simp)]
+  have hTd : erecTop md = erecTop mc := by simp only [erecTop]; rw [k2.ctl 129 (by simp)]
   have hTe : erecTop me = erecTop mc := by
-    simp only [erecTop]; rw [w2.2.1 129 (by simp), k2.2.1 129 (by simp)]
+    simp only [erecTop]; rw [w2.ctl 129 (by simp), k2.ctl 129 (by simp)]
   have hsze : (me.arr64 EREC).size = (mc.arr64 EREC).size := by rw [w1, k1]
   have hgrs : SlotGrow mc me (r5.headD 0).toNat ((r5.headD 0).toNat + 13) :=
     ⟨by rw [hTe]; exact Nat.le_refl _, fun i hi hout => by

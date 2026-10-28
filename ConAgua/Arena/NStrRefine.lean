@@ -151,8 +151,8 @@ theorem nstrMatchOK :
   obtain ⟨hpre, hsl, hw, hh⟩ := (NsRecRel_raw m t i k).mp hr
   have hle := hsl.le
   have hq1 := hq.le
-  have htop := hpool.2.2.2.1
-  have hpc := pcap_eq m (by have := hpool.2.2.1; omega)
+  have htop := hpool.top
+  have hpc := pcap_eq m (by have := hpool.cap; omega)
   have hw' : sliceL (tpool m) (nsO m t i).toNat (nsL m t i).toNat = strWords k.s := by
     rw [sliceL_tpool m _ _ (by omega)]; exact hw
   have hk' : sliceL (tpool m) o.toNat l.toNat = strWords s := by

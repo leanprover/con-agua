@@ -183,7 +183,7 @@ theorem pushW_facts (m m' : Mem) (k n o l t v q h : Word) (c : Word)
   have e7 : (1 + c * 8 + 7).toNat = 1 + 8 * c.toNat + 7 := by
     rw [UInt64.toNat_add, hx]; simp; omega
   have hsR : ((recM m (1 + c * 8) k n o l t v q h).arr64 DECL).size = (m.arr64 DECL).size :=
-    (MemFrame.ofRecM _ _ _ _ _ _ _ _ _ _).2.2.1 DECL
+    (MemFrame.ofRecM _ _ _ _ _ _ _ _ _ _).size DECL
   refine ⟨?_, hc60, hroom, ?_, fun j hj0 hj => ?_, ?_⟩
   · exact MemFrame.set64' (MemFrame.ofRecM _ _ _ _ _ _ _ _ _ _) DECL (by decide) (by simp) _ _
   · rw [arr_set64, ite_eq_left ⟨by simp, by rw [hsR]; omega⟩]
@@ -374,7 +374,7 @@ theorem cv_core (b : ByteArray) (m m' : Mem) (a₀ : AState) (st : StateD) (hA :
     have hf : MemFrame [DLP, DECL] [] m m' :=
       (F2.mono (by simp) (by simp)).trans (G1.mono (by simp) (by simp))
     have hfr : ∀ B : TieredArray, B ≠ DLP → B ≠ DECL → B ≠ CTL → m'.arr64 B = m.arr64 B :=
-      fun B h1 h2 h3 => hf.1 B (by simp [h1, h2]) h3
+      fun B h1 h2 h3 => hf.arr B (by simp [h1, h2]) h3
     have htc : (rdW (m.arr64 DLP) 0 + lsCntN b.data (f.lps + 1) 0).toNat =
         (rdW (m.arr64 DLP) 0).toNat + (lsCntN b.data (f.lps + 1) 0).toNat := by
       rw [UInt64.toNat_add]; simp; omega
@@ -386,9 +386,9 @@ theorem cv_core (b : ByteArray) (m m' : Mem) (a₀ : AState) (st : StateD) (hA :
     refine ⟨hD.names.frame hf (.inl rfl) (by simp [DLP, DECL, idArrs, NID, LID, EID, NIDS, LIDS, EIDS]) (by simp),
       hD.levels.frame hf (.inr (.inl rfl)) (by simp [DLP, DECL, idArrs, NID, LID, EID, NIDS, LIDS, EIDS]) (by simp),
       hD.exprs.frame hf (.inr (.inr rfl)) (by simp [DLP, DECL, idArrs, NID, LID, EID, NIDS, LIDS, EIDS]) (by simp), ?_,
-      by rw [hf.2.2.1, hf.2.2.1]; exact hD.ifs⟩
+      by rw [hf.size, hf.size]; exact hD.ifs⟩
     rw [hcn'] at G3
-    refine DeclsF.push _ _ _ _ _ _ hDR (by rw [G1.2.2.1, hm'D]) (by rw [hm'P, F2.2.2.1])
+    refine DeclsF.push _ _ _ _ _ _ hDR (by rw [G1.size, hm'D]) (by rw [hm'P, F2.size])
       (by rw [hD0, hc1, hcn']) (by rw [← hm'D]; omega)
       (by rw [hP0, htc, ← hrd]; omega) (by rw [hP0, htc]; omega)
       (fun j hj0 hj => by rw [G5 j hj0 (by rw [hcn']; exact hj), hm'D])

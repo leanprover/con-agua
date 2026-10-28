@@ -248,13 +248,13 @@ theorem CoreS.frame_stk {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : A
       (fun x hx => by rw [hC x hx]; decide) m m' hf a hS.arena.1,
       DerR.frameM A C m m' hf (fun b hb => by rw [hA b hb]; decide) a hS.arena.2⟩,
     hS.core.frame (aA 96 128 (by decide)) (aC 96 128 (by decide)) hf,
-    hS.pins.congr (hf.1 PINS (fun h => by have := hA _ h; simp [PINS, SPN] at this) (by decide)),
+    hS.pins.congr (hf.arr PINS (fun h => by have := hA _ h; simp [PINS, SPN] at this) (by decide)),
     hS.env.frame (aA 129 144 (by decide)) (aC 128 136 (by decide)) hf,
-    hS.readL, hS.readLs, hS.nwf, hf.2.2.1 EREC ▸ hS.erec, hf.2.2.1 SPN ▸ hS.spn,
+    hS.readL, hS.readLs, hS.nwf, hf.size EREC ▸ hS.erec, hf.size SPN ▸ hS.spn,
     hS.memos.frame_hi hf (fun b hb => by rw [hA b hb]; decide) (fun x hx => by rw [hC x hx]; decide)
       (fun b hb => by rw [hA b hb]; decide) (fun x hx => by rw [hC x hx]; decide),
-    hf.2.2.1 BSTK ▸ hS.bstk,
-    hS.den.frameE (hf.1 EREC (fun h => by have := hA _ h; simp [EREC, SPN] at this) (by decide)),
+    hf.size BSTK ▸ hS.bstk,
+    hS.den.frameE (hf.arr EREC (fun h => by have := hA _ h; simp [EREC, SPN] at this) (by decide)),
     hS.mode.frame hf (fun h => by have := hC _ h; simp at this) (fun h => by have := hC _ h; simp at this)⟩
 
 theorem SpineR.keep {m m' : Mem} {off cnt : Word} {xs : Array EIdx} (h : SpineR m off cnt xs)

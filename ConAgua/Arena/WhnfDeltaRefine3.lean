@@ -44,7 +44,8 @@ theorem internLit_refinesD_hw (p : Prog) (hph : p.lookup "lit_hash" = some litHa
       ArenaD s'.mem (AM.st (internE (.lit (.natVal (pv (vpool s₀.mem) o.toNat l.toNat)))) a₀) ∧
       AM.res (internE (.lit (.natVal (pv (vpool s₀.mem) o.toNat l.toNat)))) a₀ =
         decE (r.headD 0) ∧ HW (r.headD 0); ⊤⦄ := by
-  have ⟨_, _, hps, htop⟩ := hA.1.lit.1
+  have hps := hA.1.lit.1.cap
+  have htop := hA.1.lit.1.top
   have hspec := internLit_spec p hph hpe hpm hpf hpp hp n s₀ o l (by omega)
     (by simp only [SliceOK] at hq; omega)
   apply M.triple_of_run

@@ -233,11 +233,11 @@ theorem snocW_core {n : Nat} {m m' : Mem} {o l x : Word} {r : List Word}
   have hql : (q + l).toNat = q.toNat + l.toNat := by
     rw [UInt64.toNat_add]; simp; omega
   have hIW := allocMem_IW m (l + 1)
-  obtain ⟨hA, hS, hW, hG⟩ := copyW_get (n - 1) _ _ _ _ _ hcp (by omega)
+  obtain ⟨hA, hS, hG⟩ := copyW_get (n - 1) _ _ _ _ _ hcp (by omega)
     (by rw [hIW]; omega) (by rw [hIW]; exact hsz)
   rw [hIW] at hS hG
   have hfr : MemFrame [IW] [200] m (m2.set64 IW (q + l) x) :=
-    ((allocMem_frame m (l + 1)).trans (copy_frame hA (by rw [hS, hIW]) (by first | exact hW | exact Mem.SameShape.trans (by simp [allocMem]) hW))).trans
+    ((allocMem_frame m (l + 1)).trans (copy_frame hA (by rw [hS, hIW]))).trans
       (set64IW_frame m2 (q + l) x)
   have hget : ∀ i, ((m2.set64 IW (q + l) x).arr64 IW)[i]? =
       if i = q.toNat + l.toNat then some x
@@ -440,7 +440,7 @@ theorem maFrame_arena {m m' : Mem} {a : AState} (hf : MemFrame [MAM] [203] m m')
     (fun x hx => by simp at hx; subst hx; exact not_mem_arenaCtl _ (by decide)) hf hR
 
 theorem maFrame_iw {m m' : Mem} (hf : MemFrame [MAM] [203] m m') : m'.arr64 IW = m.arr64 IW :=
-  hf.1 IW (by decide) (by decide)
+  hf.arr IW (by decide) (by decide)
 
 def MaGoOK (n : Nat) : Prop :=
   ∀ (m m' : Mem) (a : AState) (no nl f h r : Word) (ws : List Word) (mp : Std.HashMap EIdx Bool),

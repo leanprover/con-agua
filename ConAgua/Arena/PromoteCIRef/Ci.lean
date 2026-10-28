@@ -194,7 +194,7 @@ theorem pciMk_rel {n : Nat} {q k nm qq l t kw : Word} {m m' : Mem} {r : List Wor
       (v2.mono (by simp) (by simp))
   have hTc : erecTop mc = erecTop m + k.toNat := by
     simp only [erecTop]
-    rw [v2.2.1 129 (by simp), u2.2.1 129 (by simp)]
+    rw [v2.ctl 129 (by simp), u2.ctl 129 (by simp)]
     exact hTa'
   have hszc : (mc.arr64 EREC).size = (m.arr64 EREC).size := by rw [v1, u1, hEa]
   refine ⟨by rw [← hr]; exact hdn, hTc, ⟨by omega, fun i hi => ?_, hszc⟩, hfr, by rw [hszc]; omega,
@@ -419,7 +419,7 @@ theorem ctor_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f q : Word) (D :
   subst hm3
   obtain ⟨hDf, hPf⟩ := arenaD_erec129 hD1 hP1 b4
   obtain ⟨hDg, hPg⟩ := arenaD_erecFrame hDf hPf t2
-  have hT3 : erecTop m₃ = erecTop m₂ := by simp only [erecTop]; rw [t2.2.1 129 (by simp)]
+  have hT3 : erecTop m₃ = erecTop m₂ := by simp only [erecTop]; rw [t2.ctl 129 (by simp)]
   have hsz3 : (m₃.arr64 EREC).size = (m₂.arr64 EREC).size := t1
   have hgs : SlotGrow m₂ m₃ (erecTop m₁ + 5) (erecTop m₁ + 7) :=
     ⟨by rw [hT3]; exact Nat.le_refl _, fun i hi hout => t3 i (by omega), hsz3⟩
@@ -555,7 +555,7 @@ theorem defn_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f q : Word) (D :
   subst hm4
   obtain ⟨hDf, hPf⟩ := arenaD_erec129 hD2 hP2 b4
   obtain ⟨hDg, hPg⟩ := arenaD_erecFrame hDf hPf t2
-  have hT4 : erecTop m₄ = erecTop m₃ := by simp only [erecTop]; rw [t2.2.1 129 (by simp)]
+  have hT4 : erecTop m₄ = erecTop m₃ := by simp only [erecTop]; rw [t2.ctl 129 (by simp)]
   have hsz4 : (m₄.arr64 EREC).size = (m₃.arr64 EREC).size := t1
   have hgs : SlotGrow m₃ m₄ (erecTop m₂ + 5) (erecTop m₂ + 8) :=
     ⟨by rw [hT4]; exact Nat.le_refl _, fun i hi hout => t3 i (by omega), hsz4⟩
@@ -758,7 +758,7 @@ theorem recBlock_rel {n : Nat} {d5 w5 w6 l : Word} {m m' : Mem} {r : List Word}
   obtain ⟨t1, t2, t3, t4, t5, t6, t7⟩ := wr4_rel p hp (d := d5) (by rw [hEa]; omega)
     (by rw [hEa]; exact hsz) hwr
   have hT : erecTop mb = erecTop m + 11 * l.toNat := by
-    simp only [erecTop]; rw [t2.2.1 129 (by simp)]; exact hTa
+    simp only [erecTop]; rw [t2.ctl 129 (by simp)]; exact hTa
   have hsz' : (mb.arr64 EREC).size = (m.arr64 EREC).size := by rw [t1, hEa]
   refine ⟨h60, by rw [← hr]; exact hd5, hT, ⟨by omega, fun i hi hout => ?_, hsz'⟩,
     (hfa.mono (by simp) (by simp)).trans (t2.mono (by simp) (by simp)), by rw [hT, hsz']; omega,

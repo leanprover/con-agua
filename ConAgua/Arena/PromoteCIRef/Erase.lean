@@ -111,9 +111,9 @@ theorem erase_rel (dn : NIdx → Option ConLeche.Name) : ∀ (n : Nat) (m : Mem)
     have hfr : MemFrame [EIXA, EIXS, EIXN, EIXA1, EIXS1, EIXN1] [] m m1 := by
       rw [← hs2, hmem]; exact rowSet_frame _ _ _ _ hrt
     rw [hs1] at hE1
-    have hEE : m1.arr64 EREC = m.arr64 EREC := hfr.1 EREC (by decide) (by decide)
-    have hEC : m1.arr64 ECON = m.arr64 ECON := hfr.1 ECON (by decide) (by decide)
-    have hP1 : erecP m1 = erecP m := erecP_congr hEE (hfr.2.1 129 (by simp))
+    have hEE : m1.arr64 EREC = m.arr64 EREC := hfr.arr EREC (by decide) (by decide)
+    have hEC : m1.arr64 ECON = m.arr64 ECON := hfr.arr ECON (by decide) (by decide)
+    have hP1 : erecP m1 = erecP m := erecP_congr hEE (hfr.ctl 129 (by simp))
     have hszz : (m1.arr64 EREC).size < 2 ^ 64 := by rw [hEE]; exact hsz
     have hlenk : (k - 1).toNat = cs.length := by
       rw [toNat_sub1 k hk0]; simp at hk; omega

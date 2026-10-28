@@ -247,25 +247,24 @@ theorem fzCalls_run {p : Prog} (n : Nat) (rest : Stmt) :
 structure OutFrame (m m' : Mem) : Prop where
   arr : ∀ a : TieredArray, a ≠ OUT → m'.arr64 a = m.arr64 a
   size : ∀ a : TieredArray, (m'.arr64 a).size = (m.arr64 a).size
-  words : m.SameShape m'
   bytes : m'.bytes = m.bytes
   glob : m'.glob = m.glob
 
-theorem OutFrame.refl (m : Mem) : OutFrame m m := ⟨fun _ _ => rfl, fun _ => rfl, .refl m, rfl, rfl⟩
+theorem OutFrame.refl (m : Mem) : OutFrame m m := ⟨fun _ _ => rfl, fun _ => rfl, rfl, rfl⟩
 
 theorem OutFrame.trans {m₁ m₂ m₃ : Mem} (h₁ : OutFrame m₁ m₂) (h₂ : OutFrame m₂ m₃) :
     OutFrame m₁ m₃ :=
   ⟨fun a ha => (h₂.arr a ha).trans (h₁.arr a ha), fun a => (h₂.size a).trans (h₁.size a),
-    h₁.words.trans h₂.words, h₂.bytes.trans h₁.bytes, h₂.glob.trans h₁.glob⟩
+    h₂.bytes.trans h₁.bytes, h₂.glob.trans h₁.glob⟩
 
 theorem OutFrame.set64 (m : Mem) (i v : Word) : OutFrame m (m.set64 OUT i v) :=
   ⟨fun _ ha => Mem.arr64_set64_ne _ _ _ _ _ ha, fun _ => size_set64 _ _ _ _ _,
-    Mem.sameShape_set64 _ _ _ _, rfl, rfl⟩
+    rfl, rfl⟩
 
 theorem OutFrame.copy64 (m : Mem) (di : Word) (s : ArrId) (si : Word) (n : Nat) :
     OutFrame m (m.copy64 OUT di s si n) :=
   ⟨fun _ ha => arr64_copy64_ne _ _ _ _ _ _ ha, fun _ => size_copy64 _ _ _ _ _ _ _,
-    (Mem.SameShape.refl m).copy64 _ _ _ _ _, Mem.copy64_bytes _ _ _ _ _ _, Mem.copy64_glob _ _ _ _ _ _⟩
+    Mem.copy64_bytes _ _ _ _ _ _, Mem.copy64_glob _ _ _ _ _ _⟩
 
 theorem OutFrame.fzStep (m : Mem) (c : Word) (i : Nat) (z : Fz) (o : Word) :
     OutFrame m (fzStep m c i z o) := by
@@ -606,7 +605,7 @@ theorem parCompactMem_out (m : Mem) (vis c : Word) : OutFrame m (parCompactMem m
 /-- **`par_compact`'s write set**, as a `MemFrame`: only `OUT`. -/
 theorem parCompactMem_frame (m : Mem) (vis c : Word) : MemFrame [OUT] [] m (parCompactMem m vis c) := by
   have h := parCompactMem_out m vis c
-  refine ⟨fun b hb _ => h.arr b (by simpa using hb), fun x _ => ?_, h.size, h.words⟩
+  refine ⟨fun b hb _ => h.arr b (by simpa using hb), fun x _ => ?_, h.size⟩
   rw [h.arr CTL (by decide)]
 
 /-- A run that stayed in bounds had room for the header. -/

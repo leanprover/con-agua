@@ -150,7 +150,7 @@ theorem grows_pset_k {m₀ m : Mem} (hg : Grows m₀ m) (hok : PoolOK m₀) {T k
     (hT : T.toNat < 2 ^ 41) (hq : m₀.top.toNat ≤ (T + k).toNat)
     (hi : (T &&& 1099511627775).toNat + k.toNat < (m.arr64 (tierA POOL (T >>> 40))).size) :
     Grows m₀ (m.set64 (tierA POOL (T >>> 40)) ((T &&& 1099511627775) + k) x) := by
-  have hpc : pcap m < 2 ^ 64 := by rw [hg.pcapEq]; have := hok.2.2.1; omega
+  have hpc : pcap m < 2 ^ 64 := by rw [hg.pcapEq]; have := hok.cap; omega
   have hsz := pcap_tier m (T >>> 40) hpc
   have hv := vpool_st_k m T k x hT (by omega) hi
   have hne : tierA POOL (T >>> 40) ≠ CTL := Ne.symm (tierA_pool_ne _ _ (by decide) (by decide))
@@ -246,7 +246,7 @@ theorem iwpW_ok {m₀ : Mem} (hok : PoolOK m₀) : ∀ (n : Nat) (m m' : Mem) (s
       exact ⟨hg, MemFrame.refl _ _ _, fun _ _ => rfl, by simp [sliceL]⟩
     rw [iwpW_cons n m s d l hl] at h
     have hl1 : 1 ≤ l.toNat := Nat.pos_of_ne_zero fun h0 => hl (UInt64.toNat_inj.mp (by simpa using h0))
-    have hpc : pcap m < 2 ^ 64 := by rw [hg.pcapEq]; have := hok.2.2.1; omega
+    have hpc : pcap m < 2 ^ 64 := by rw [hg.pcapEq]; have := hok.cap; omega
     have hsz := pcap_tier m (d >>> 40) hpc
     have hsplit := tag_split d
     have htier := tag_tier_le d hd41
@@ -336,7 +336,7 @@ theorem recBytes_ok (m : Mem) (hpool : PoolOK m)
     Grows m (recBytes (m.set64 CTL 0 (m.top + 3)) m.top) ∧
       SliceOK (recBytes (m.set64 CTL 0 (m.top + 3)) m.top) m.top 3 ∧
       sliceL (vpool (recBytes (m.set64 CTL 0 (m.top + 3)) m.top)) m.top.toNat 3 = strWords "rec" := by
-  have hc := hpool.2.1
+  have hc := hpool.ctl
   have h41 := hpool.top41
   have hsz := hpool.small.tier (m.top >>> 40)
   have hsplit := tag_split m.top
@@ -393,7 +393,7 @@ theorem nrF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (x
   rw [h1] at hW
   simp only at hW
   have hpool : PoolOK m := hS.1.arena.1.lit.1
-  obtain ⟨ho, hm₁, hno, hroom⟩ := prW_some (callW_pr rfl h1) (by have := hpool.2.2.1; omega)
+  obtain ⟨ho, hm₁, hno, hroom⟩ := prW_some (callW_pr rfl h1) (by have := hpool.cap; omega)
   rw [ho, hm₁] at hW
   obtain ⟨hg, hsl, hk⟩ := recBytes_ok m hpool hroom
   generalize hm₂ : recBytes (m.set64 CTL 0 (m.top + 3)) m.top = m₂ at hW hg hsl hk
@@ -405,7 +405,7 @@ theorem nrF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (x
   obtain ⟨hr, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
   have hR₂ : ArenaR m₂ a := ArenaR.grow m m₂ hg a hS.1.arena.1
   have hmo₂ : ModeOK m₂ := hS.1.mode.grows hg
-  have hpc₂ : pcap m₂ < 2 ^ 64 := by rw [hg.pcapEq]; have := hpool.2.2.1; omega
+  have hpc₂ : pcap m₂ < 2 ^ 64 := by rw [hg.pcapEq]; have := hpool.cap; omega
   have hcap₂ : m.top.toNat + (3 : Word).toNat ≤ pcap m₂ := by have := hsl.le; have := hg.cap; omega
   obtain ⟨s₃, hs₃, -, hok, hR₃, hres⟩ := triple_of_callW
     (internNStr_refinesA nrProg rfl rfl rfl rfl rfl rfl a n ⟨m₂, Locals.init []⟩ x m.top 3 hR₂ hx hsl
@@ -529,7 +529,7 @@ theorem ilF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (o
   rw [h1] at hW
   simp only at hW
   have hpool : PoolOK m := hS.1.arena.1.lit.1
-  obtain ⟨ho, hm₁, hno, hroom⟩ := prW_some (callW_pr rfl h1) (by have := hpool.2.2.1; omega)
+  obtain ⟨ho, hm₁, hno, hroom⟩ := prW_some (callW_pr rfl h1) (by have := hpool.cap; omega)
   rw [ho] at hW
   rcases h2 : callW ilProg n "iw_pool" [o, m.top, l] m₁ with _ | ⟨r₂, m₂⟩
   · rw [h2] at hW; cases hW
@@ -541,7 +541,7 @@ theorem ilF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (o
   simp only at hW
   obtain ⟨c, hW⟩ := of_ite_none hW
   obtain ⟨hr, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
-  have hc0 := hpool.2.1
+  have hc0 := hpool.ctl
   have h41 := hpool.top41
   have hsz := hpool.small.tier (m.top >>> 40)
   have hsplit := tag_split m.top
@@ -563,13 +563,13 @@ theorem ilF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (o
     (by rw [htier₁]; exact hroom) hol
   rw [hiw₁] at hsl₂
   have htop₂ : m₂.top = m.top + l := by
-    have e := hf₂.2.1 0 (by simp)
+    have e := hf₂.ctl 0 (by simp)
     simp only [top_rdW] at e ⊢
     rw [e, hm₁]; exact Mem.top_set64 _ _ hc0
   have hA₂ : ArenaD m₂ a := ArenaD.grow m m₂ hg a hS.1.arena
   have hmo₂ : ModeOK m₂ := hS.1.mode.grows hg
   have hsl₂' : SliceOK m₂ m.top l := SliceOK.fresh hg htop₂
-  have hpc₂ : pcap m₂ < 2 ^ 64 := by rw [hg.pcapEq]; have := hpool.2.2.1; omega
+  have hpc₂ : pcap m₂ < 2 ^ 64 := by rw [hg.pcapEq]; have := hpool.cap; omega
   have hcap₂ : m.top.toNat + l.toNat ≤ pcap m₂ := by have := hsl₂'.le; have := hg.cap; omega
   obtain ⟨s₃, hs₃, -, hI⟩ := triple_of_callW (s₀ := ⟨m₂, Locals.init []⟩)
     (internLs_spec ilProg rfl rfl rfl rfl rfl rfl n _ m.top l hpc₂ hcap₂) h3

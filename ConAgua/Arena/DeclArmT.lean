@@ -74,7 +74,7 @@ theorem erecCiW_okT {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEn
   refine ⟨⟨hS', hS.twin.frame hf ⟨by decide, by decide⟩ ⟨by decide, by decide⟩
       ⟨by decide, by decide, by decide⟩ ⟨by decide, by decide, by decide⟩
       ⟨by decide, by decide, by decide⟩ ⟨by decide, by decide, by decide⟩,
-    by simp only [pinW, hf.1 PINS (by decide) (by decide)]; exact hS.flag⟩, hg, h1, h2, h3, h4⟩
+    by simp only [pinW, hf.arr PINS (by decide) (by decide)]; exact hS.flag⟩, hg, h1, h2, h3, h4⟩
 
 /-- `lvl_eq_c` at its text (`FireProg.lvlText`). -/
 theorem _root_.L.Ind.KnotStageProg.lvlEqC {p : Prog} (hq : KnotStageProg p) :

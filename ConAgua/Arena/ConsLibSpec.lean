@@ -1086,7 +1086,7 @@ theorem kgrowH_spec (p : Prog) (C : ConsSch) (n : Nat) (s₀ : St) :
   · rw [b7, l2, a1]
 
 theorem kzeroW_arr (sa : TieredArray) (x : Word) (e : Nat) (m : Mem) (b : TieredArray) (hb : b ≠ sa) :
-    (kzeroW sa x e m).arr64 b = m.arr64 b := (kzeroW_fr sa e x m).1 b hb
+    (kzeroW sa x e m).arr64 b = m.arr64 b := (kzeroW_fr sa e x m).arr b hb
 
 /-- **The growth block** (renamed into the push): it keeps the push's variables (below `gO`) and
 leaves `kgrowM`'s memory. -/
@@ -1853,10 +1853,7 @@ theorem consInternM_cases {C : ConsSch} {m m₁ : Mem} {ks : List Word} {r : Wor
 
 /-- **The growth writes only the slot array** (and keeps every size). -/
 theorem kgrowIf_frame (C : ConsSch) (t : Word) (m₀ m m' : Mem) (c : Word)
-    (h : kgrowIf C t m₀ m c = some m') :
-    (∀ b, b ≠ tierA C.sa t → m'.arr64 b = m.arr64 b) ∧ (∀ b, (m'.arr64 b).size = (m.arr64 b).size) ∧
-      m.SameShape m' := by
-  change GFr (tierA C.sa t) m m'
+    (h : kgrowIf C t m₀ m c = some m') : GFr (tierA C.sa t) m m' := by
   unfold kgrowIf at h
   split at h
   · exact kgrowM_fr _ _ _ _ _ h
@@ -1874,13 +1871,6 @@ theorem wrRecK_size (ra : TieredArray) (k : Word) (b : TieredArray) :
   induction vs with
   | nil => intro m f; rfl
   | cons v vs ih => intro m f; rw [wrRecK, ih, arr64_size_set64]
-
-theorem wrRecK_words (ra : TieredArray) (k : Word) :
-    ∀ (vs : List Word) (m : Mem) (f : Word), m.SameShape (wrRecK ra k m f vs) := by
-  intro vs
-  induction vs with
-  | nil => intro m f; exact .refl m
-  | cons v vs ih => intro m f; rw [wrRecK]; exact (Mem.sameShape_set64 _ _ _ _).trans (ih _ _)
 
 
 /-- The memory after the append of the key's node to tier `t`, outside the slot array: the
@@ -1902,12 +1892,6 @@ theorem colW_size (C : ConsSch) (t c x : Word) (m : Mem) (b : TieredArray) :
   unfold colW; split
   · rfl
   · exact arr64_size_set64 _ _ _ _ _
-
-theorem colW_words (C : ConsSch) (t c x : Word) (m : Mem) :
-    m.SameShape (colW C t c x m) := by
-  unfold colW; split
-  · exact .refl m
-  · exact Mem.sameShape_set64 _ _ _ _
 
 theorem arr64_set64_congr {M₁ M₂ : Mem} {a b : TieredArray} (h : M₁.arr64 a = M₂.arr64 a)
     (hb : M₁.arr64 b = M₂.arr64 b) (i v : Word) :
@@ -1942,24 +1926,21 @@ theorem consInternM_outA {C : ConsSch} {m : Mem} (hsc : C.sa ≠ CTL)
     (h : consInternM C m ks = some (w, m')) :
     m' = m ∨ ∃ t, t ≤ 1 ∧ pushOKC C m t = true ∧ w = (if t = 0 then C.P else C.S) + cntC C m t ∧
       (∀ b, b ≠ tierA C.sa t → m'.arr64 b = (pushRec C m t ks).arr64 b) ∧
-      (∀ b, (m'.arr64 b).size = (m.arr64 b).size) ∧ m.SameShape m' := by
+      (∀ b, (m'.arr64 b).size = (m.arr64 b).size) := by
   rcases consInternM_cases h with e | ⟨t, j, ht, hok, hg, hr⟩
   · exact .inl e
   refine .inr ⟨t, ht, hok, hr, ?_⟩
-  obtain ⟨g1, g2, g3⟩ := kgrowIf_frame _ _ _ _ _ _ hg
-  refine ⟨fun b hb => ?_, fun b => ?_, ?_⟩
-  · rw [g1 b hb]
+  have g := kgrowIf_frame _ _ _ _ _ _ hg
+  refine ⟨fun b hb => ?_, fun b => ?_⟩
+  · rw [g.arr b hb]
     simp only [pushMX, pushMC, tailM, pushRec]
     refine OutSa.colW C t (fun A hA => tierA_ne (hcol A hA) t t)
       (fun b hb => ?_) _ _ b hb
     refine OutSa.set64 (fun b hb => ?_)
       (ne_tierA (Ne.symm hsc) t) _ _ b hb
     exact OutSa.set64_sa (OutSa.set64_sa (fun _ _ => rfl) _ _) _ _ b hb
-  · rw [g2 b]
+  · rw [g.size b]
     simp only [pushMX, pushMC, tailM, colW_size, arr64_size_set64, wrRecK_size]
-  · refine Mem.SameShape.trans ?_ g3
-    simp only [pushMX, pushMC, tailM]
-    exact ((((wrRecK_words _ _ _ m 0).set64 _ _ _).set64 _ _ _).set64 _ _ _).trans (colW_words _ _ _ _ _)
 
 
 

@@ -433,11 +433,11 @@ theorem erToIwW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IF
         obtain ⟨q, m1⟩ := qm
         obtain ⟨-, -, hroom⟩ := allocW_facts hal hsz
         obtain ⟨hq, -, -⟩ := allocW_facts hal hsz
-        rw [← htop, hfr.2.2.1 IW]; subst hq; exact hroom
-    · simp only [erTop, hfr.2.1 129 (by simp), hEeq]; exact hE1
-    · rw [hfr.2.2.1 IW]; exact hsz
+        rw [← htop, hfr.size IW]; subst hq; exact hroom
+    · simp only [erTop, hfr.ctl 129 (by simp), hEeq]; exact hE1
+    · rw [hfr.size IW]; exact hsz
     · rw [hEeq]; exact hEs
-    · rw [hfr.2.2.1 CTL]; exact hc
+    · rw [hfr.size CTL]; exact hc
 
 /-- **`er_to_iw` writes only the pool and its top** (`IW`, `CTL[200]`). -/
 theorem erToIwW_frame {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
@@ -523,21 +523,21 @@ theorem iwReset_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IF
       (m.set64 CTL 200 0).arr64 EREC = m.arr64 EREC ∧ erTop (m.set64 CTL 200 0) = erTop m := by
   have hf : MemFrame [] [200] m (m.set64 CTL 200 0) := MemFrame.setCtl m 200 0
   obtain ⟨hI1, hE1, hsz, hEs, hc⟩ := hS.2
-  have hE : (m.set64 CTL 200 0).arr64 EREC = m.arr64 EREC := hf.1 EREC (by simp) (by decide)
-  have h129 : erTop (m.set64 CTL 200 0) = erTop m := by simp only [erTop, hf.2.1 129 (by simp)]
+  have hE : (m.set64 CTL 200 0).arr64 EREC = m.arr64 EREC := hf.arr EREC (by simp) (by decide)
+  have h129 : erTop (m.set64 CTL 200 0) = erTop m := by simp only [erTop, hf.ctl 129 (by simp)]
   refine ⟨⟨CheckR.frame_hi (by simp) (by simp) hf hS.1, ?_, ?_, ?_, ?_, ?_⟩, rfl, hE, h129⟩
-  · have hIW := hf.2.2.1 IW
+  · have hIW := hf.size IW
     simp only [iwTop, rdW_set64]; split
     · simp
     · rw [hIW]; exact hI1
   · rw [h129, hE]; exact hE1
-  · rw [hf.2.2.1 IW]; exact hsz
+  · rw [hf.size IW]; exact hsz
   · rw [hE]; exact hEs
-  · rw [hf.2.2.1 CTL]; exact hc
+  · rw [hf.size CTL]; exact hc
 
 theorem erecP_reset (m : Mem) : erecP (m.set64 CTL 200 0) = erecP m := by
   have hf : MemFrame [] [200] m (m.set64 CTL 200 0) := MemFrame.setCtl m 200 0
-  simp only [erecP, erecTop, hf.1 EREC (by simp) (by decide), hf.2.1 129 (by simp)]
+  simp only [erecP, erecTop, hf.arr EREC (by simp) (by decide), hf.ctl 129 (by simp)]
 
 theorem word_add_toNat (g : Word) (k : Nat) (h : g.toNat + k < 2 ^ 64) :
     (g + UInt64.ofNat k).toNat = g.toNat + k := by

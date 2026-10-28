@@ -116,13 +116,13 @@ theorem CoreS.arena_frameD {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a 
   obtain ⟨hc, hp, hl⟩ := hcpl
   refine ⟨hD, ?_, ?_, hS.env.frame henv
       (fun x hx => (hCenv x hx).elim (fun h => .inl h) (fun h => .inr h)) hf, ?_, ?_, ?_,
-      hf.2.2.1 EREC ▸ hS.erec, hf.2.2.1 SPN ▸ hS.spn, hS.memos.frame hf hmA hmC hmWA hmWC hmLA hmLC,
-      hf.2.2.1 BSTK ▸ hS.bstk, hden, hmode⟩
+      hf.size EREC ▸ hS.erec, hf.size SPN ▸ hS.spn, hS.memos.frame hf hmA hmC hmWA hmWC hmLA hmLC,
+      hf.size BSTK ▸ hS.bstk, hden, hmode⟩
   · rw [hc]
     exact CoreRM.frame (A := A) (C := C)
       (fun b hb => (h128 b hb).elim (fun h => .inl h) (fun h => .inr h))
       (fun x hx => (hC128 x hx).elim (fun h => .inl h) (fun h => .inr h)) hf hS.core
-  · rw [hp]; exact hS.pins.congr (hf.1 PINS hpins (by decide))
+  · rw [hp]; exact hS.pins.congr (hf.arr PINS hpins (by decide))
   · intro h l e; rw [hc] at e; have := hS.readL h l e; simp only [EStore.ls] at this ⊢; rw [hl]; exact this
   · intro h l e; rw [hc] at e; have := hS.readLs h l e; rw [hl]; exact this
   · rw [hl]; exact hS.nwf
@@ -241,8 +241,8 @@ theorem callW_mkAppNFrom (p : Prog) (hp : SpineProg p) (n : Nat) (s₀ : St) (a�
 theorem StackKept.of_app_frame {m m' : Mem} (hf : MemFrame [AREC, ASLOT, ADER, tier1 AREC, tier1 ASLOT, tier1 ADER] [4, 5] m m') :
     StackKept m m' := by
   have hspn : m'.arr64 SPN = m.arr64 SPN :=
-    hf.1 SPN (by simp [tier1, AREC, ASLOT, ADER, SPN]) (by decide)
-  have h136 : rdW (m'.arr64 CTL) 136 = rdW (m.arr64 CTL) 136 := hf.2.1 136 (by simp)
+    hf.arr SPN (by simp [tier1, AREC, ASLOT, ADER, SPN]) (by decide)
+  have h136 : rdW (m'.arr64 CTL) 136 = rdW (m.arr64 CTL) 136 := hf.ctl 136 (by simp)
   exact StackKept.of_frame hf
 
 /-- **`CoreS` across an `app` interning step.** -/

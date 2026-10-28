@@ -87,7 +87,7 @@ theorem instGo_twin {α : Type} [Inhabited α] {st : StateD} (a : AState) (xs : 
       unfold topN; rw [wd_set_ne _ _ _ _ _ (by omega)]
     have hfr1 : MemFrame [DLP] [] m₁ (m₁.set64 DLP (bo + j) q) := MemFrame.set64 _ DLP (by decide) _ _
     have hL1 : LkR (m₁.set64 DLP (bo + j) q) st := S4.frame hfr1 (by
-      rw [ht1, hfr1.2.2.1 DLP]; exact S4.ptop)
+      rw [ht1, hfr1.size DLP]; exact S4.ptop)
     have htm : topN m DLP ≤ topN m₁ DLP := S2.top
     obtain ⟨I1, I2, I3, I4, I5⟩ := instGo_twin a xs f R ptr m₀ bo tn htn hR n _ m' (j + 1) hL1
       (hf.trans (S2.frame.trans hfr1)) (by omega) hbo1 (by rw [ht1]; omega) h

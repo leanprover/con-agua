@@ -162,11 +162,11 @@ open L.Arena
 /-- A writer of neither `IW`, `EREC` nor `CTL[129]`, `CTL[200]` keeps the pool's growth. -/
 theorem IWGrow.of_frame {A : List TieredArray} {C : List Word} {m m' : Mem} (hf : MemFrame A C m m')
     (hA : (IW : TieredArray) ∉ A ∧ (EREC : TieredArray) ∉ A) (hC : (200 : Word) ∉ C ∧ (129 : Word) ∉ C) : IWGrow m m' := by
-  have hI : m'.arr64 IW = m.arr64 IW := hf.1 IW hA.1 (by decide)
-  have hE : m'.arr64 EREC = m.arr64 EREC := hf.1 EREC hA.2 (by decide)
+  have hI : m'.arr64 IW = m.arr64 IW := hf.arr IW hA.1 (by decide)
+  have hE : m'.arr64 EREC = m.arr64 EREC := hf.arr EREC hA.2 (by decide)
   refine ⟨?_, ?_, fun i _ => by rw [hI], fun i _ => by rw [hE]⟩
-  · simp only [iwTop, hf.2.1 200 hC.1]; exact Nat.le_refl _
-  · simp only [erTop, hf.2.1 129 hC.2]; exact Nat.le_refl _
+  · simp only [iwTop, hf.ctl 200 hC.1]; exact Nat.le_refl _
+  · simp only [erTop, hf.ctl 129 hC.2]; exact Nat.le_refl _
 
 /-- **The model of `struct_ps_at_go` refines `structPsAt.go`** from a memory related to `a` by
 `ArenaR`. -/
@@ -199,7 +199,7 @@ theorem psGoW_ok (n : Nat) : ∀ (m m' : Mem) (a : AState) (o nP N k : Word) (r 
       refine ⟨[], a, by simp [structPsAt.go]; rfl, ArenaR.frame
         (fun b hb => by simp at hb; subst hb; decide)
         (fun x hx => by simp at hx; subst hx; exact not_mem_arenaCtl _ (by decide)) hf hR,
-        allocMem_grow m 0 (by simp; omega) hc, hf.2.2.1, by simp [decHL, hslice?], ?_⟩
+        allocMem_grow m 0 (by simp; omega) hc, hf.size, by simp [decHL, hslice?], ?_⟩
       simp [iwTop, allocMem, rdW_set64, hc]
     · rw [psGoW_cons n m o nP N k hN] at h
       rcases hI : binternW m (o + nP - 1 - k) with _ | ⟨b, m1⟩
@@ -230,8 +230,8 @@ theorem psGoW_ok (n : Nat) : ∀ (m m' : Mem) (a : AState) (o nP N k : Word) (r 
       have hR1 := hR.lift_bvar _ _ _ _ hX hfr
         (AM.st_proto bvarLens _ _ _ _ _ _ a (internE_bvar_run _ a) hok)
       have hg1 := IWGrow.of_frame hfr (by decide) (by decide)
-      have hs1 : ∀ b, (m1.arr64 b).size = (m.arr64 b).size := hfr.2.2.1
-      have hiw1 : m1.arr64 IW = m.arr64 IW := hfr.1 IW (by decide) (by decide)
+      have hs1 : ∀ b, (m1.arr64 b).size = (m.arr64 b).size := hfr.size
+      have hiw1 : m1.arr64 IW = m.arr64 IW := hfr.arr IW (by decide) (by decide)
       -- the recursion
       have hk1 : (k + 1).toNat = k.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
       have hN1' : (N - 1).toNat = N.toNat - 1 := by rw [UInt64.toNat_sub]; simp; omega
@@ -244,7 +244,7 @@ theorem psGoW_ok (n : Nat) : ∀ (m m' : Mem) (a : AState) (o nP N k : Word) (r 
       refine ⟨decE b :: xs, a2, ?_, ArenaR.frame
         (fun b hb => by simp at hb; subst hb; decide)
         (fun x hx => by simp at hx; subst hx; exact not_mem_arenaCtl _ (by decide)) hf3 hR2,
-        (hg1.trans hg2).trans hg3, fun b => by rw [hf3.2.2.1, hs2, hs1], ?_, by simpa using ht3⟩
+        (hg1.trans hg2).trans hg3, fun b => by rw [hf3.size, hs2, hs1], ?_, by simpa using ht3⟩
       · have hu : (o + nP - 1 - k).toNat = o.toNat + nP.toNat - 1 - k.toNat := by
           rw [UInt64.toNat_sub, UInt64.toNat_sub, UInt64.toNat_add]; simp; omega
         have hNs : N.toNat = (N.toNat - 1) + 1 := by omega

@@ -307,7 +307,7 @@ theorem rule_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f s d : Word) (D
     peAt_rel p hp n m₂ a2 pm2 f (s + 8) rl.rhs rr m₃ hD2 hP2 (by rw [hsz2]; exact hsz) hd8 hcc
   obtain ⟨hE3, hT3⟩ := eFrame_erec hfr3
   have hsz3 : (m₃.arr64 EREC).size = (m.arr64 EREC).size := by
-    have := hfr3.2.2.1 EREC; rw [this, hsz2]
+    have := hfr3.size EREC; rw [this, hsz2]
   have key3 : ∀ i < erecTop m, (m₃.arr64 EREC)[i]? = (m.arr64 EREC)[i]? := fun i hi => by
     rw [hE3, key2 i hi]
   have hg03 : ErecGrow m m₃ :=
@@ -334,7 +334,7 @@ theorem rule_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f s d : Word) (D
   have hsz5 : (m₅.arr64 EREC).size = (m.arr64 EREC).size := by rw [t1, q1, hsz3]
   have hT5 : erecTop m₅ = erecTop m₃ := by
     simp only [erecTop]
-    rw [t2.2.1 129 (by simp), q2.2.1 129 (by simp)]
+    rw [t2.ctl 129 (by simp), q2.ctl 129 (by simp)]
   have hfr45 : MemFrame [EREC] [] m₃ m₅ := q2.trans t2
   have hgr : SlotGrow m₃ m₅ d.toNat (d.toNat + 11) :=
     ⟨by rw [hT5]; exact Nat.le_refl _, fun i hi hout => by

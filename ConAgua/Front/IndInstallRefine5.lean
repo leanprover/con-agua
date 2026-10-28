@@ -122,7 +122,7 @@ theorem installW_twin {b : ByteArray} {n : Nat} {m m' : Mem} {a : AState} {st : 
   rw [instTypesW_eq] at h2
   obtain ⟨T1, T2, T3, T4, T5⟩ := instGo_twin a tys (tyT st) (fun _ m p => typeW b.data m p)
     (fun _ j => to + 11 * j) m₁ bo tn hTn (fun n' mi k q mo hLi hf hk hR => by
-      have hifr : mi.arr64 IFR = m.arr64 IFR := by rw [hf.1 IFR (by decide) (by decide), hifr1]
+      have hifr : mi.arr64 IFR = m.arr64 IFR := by rw [hf.arr IFR (by decide) (by decide), hifr1]
       have hk' := ofNat_toNat_lt k (by omega)
       have hw : (to + 11 * UInt64.ofNat k).toNat = to.toNat + 11 * k := by
         have := w_addmul to (UInt64.ofNat k) 11 (by decide) (by rw [hk']; omega)
@@ -138,9 +138,9 @@ theorem installW_twin {b : ByteArray} {n : Nat} {m m' : Mem} {a : AState} {st : 
     (fun m j => rdW (m.arr64 IFL) (oo + j)) m₂ (bo + tn) cn (by rw [hCn, hord])
     (fun n' mi p q mo hLi hf hp hR => by
       have hifr : mi.arr64 IFR = m.arr64 IFR := by
-        rw [hf.1 IFR (by decide) (by decide), T1.1 IFR (by decide) (by decide), hifr1]
+        rw [hf.arr IFR (by decide) (by decide), T1.1 IFR (by decide) (by decide), hifr1]
       have hifl : mi.arr64 IFL = m.arr64 IFL := by
-        rw [hf.1 IFL (by decide) (by decide), T1.1 IFL (by decide) (by decide), hifl1]
+        rw [hf.arr IFL (by decide) (by decide), T1.1 IFL (by decide) (by decide), hifl1]
       obtain ⟨k, hk, hw, hok⟩ := hptr p hp
       have hp' := ofNat_toNat_lt p (by omega)
       have hrd : rdW (mi.arr64 IFL) (oo + UInt64.ofNat p) = co + 10 * UInt64.ofNat k := by
@@ -163,10 +163,10 @@ theorem installW_twin {b : ByteArray} {n : Nat} {m m' : Mem} {a : AState} {st : 
     (fun _ j => ro + 11 * j) m₃ (bo + tn + cn) rn hRn
     (fun n' mi k q mo hLi hf hk hR => by
       have hifr : mi.arr64 IFR = m.arr64 IFR := by
-        rw [hf.1 IFR (by decide) (by decide), C1.1 IFR (by decide) (by decide),
+        rw [hf.arr IFR (by decide) (by decide), C1.1 IFR (by decide) (by decide),
           T1.1 IFR (by decide) (by decide), hifr1]
       have hifl : mi.arr64 IFL = m.arr64 IFL := by
-        rw [hf.1 IFL (by decide) (by decide), C1.1 IFL (by decide) (by decide),
+        rw [hf.arr IFL (by decide) (by decide), C1.1 IFL (by decide) (by decide),
           T1.1 IFL (by decide) (by decide), hifl1]
       have hk' := ofNat_toNat_lt k (by omega)
       have hw : (ro + 11 * UInt64.ofNat k).toNat = ro.toNat + 11 * k := by
@@ -180,7 +180,7 @@ theorem installW_twin {b : ByteArray} {n : Nat} {m m' : Mem} {a : AState} {st : 
   simp only [UInt64.toNat_zero, Nat.add_zero] at R4 R5
   -- the push
   have hfr4 : MemFrame [DLP] [] m m₄ := P1.frame.trans (T1.trans (C1.trans R1))
-  have hdecl4 : m₄.arr64 DECL = m.arr64 DECL := hfr4.1 DECL (by decide) (by decide)
+  have hdecl4 : m₄.arr64 DECL = m.arr64 DECL := hfr4.arr DECL (by decide) (by decide)
   obtain ⟨G1, G2, G3, G4, G5, w0, w1, w2, w3, w4, w5, w6, w7⟩ :=
     pushW_facts m₄ m' _ _ _ _ _ _ _ _ (rdW (m.arr64 DECL) 0) (by rw [hdecl4]) h
       (by rw [hdecl4]; exact hD.decls.dsize)
@@ -221,13 +221,13 @@ theorem installW_twin {b : ByteArray} {n : Nat} {m m' : Mem} {a : AState} {st : 
     have hf : MemFrame [DLP, DECL] [] m m' :=
       (hfr4.mono (by simp) (by simp)).trans (G1.mono (by simp) (by simp))
     have hfr : ∀ B, B ≠ DLP → B ≠ DECL → B ≠ CTL → m'.arr64 B = m.arr64 B :=
-      fun B h1 h2 h3 => hf.1 B (by simp [h1, h2]) (TieredArray.t0_ne h3)
+      fun B h1 h2 h3 => hf.arr B (by simp [h1, h2]) (TieredArray.t0_ne h3)
     have hcn' : (rdW (m.arr64 DECL) 0).toNat = st.decls.size := hD.decls.count
     have hm'P : m'.arr64 DLP = m₄.arr64 DLP := G1.1 DLP (by simp) (by decide)
     have hc1 : (rdW (m.arr64 DECL) 0 + 1).toNat = (rdW (m.arr64 DECL) 0).toNat + 1 := by
       rw [UInt64.toNat_add]; simp; omega
     have hD0 : (m'.arr64 DECL)[0]?.getD 0 = rdW (m.arr64 DECL) 0 + 1 := by rw [G4]; rfl
-    have hs4 : (m₄.arr64 DLP).size = (m.arr64 DLP).size := hfr4.2.2.1 DLP
+    have hs4 : (m₄.arr64 DLP).size = (m.arr64 DLP).size := hfr4.size DLP
     have hpt4 := R3.ptop
     have hP0 : ((m'.arr64 DLP)[0]?.getD 0).toNat = topN m₄ DLP := by rw [hm'P]; rfl
     have hP00 : ((m.arr64 DLP)[0]?.getD 0).toNat = topN m DLP := rfl
@@ -237,9 +237,9 @@ theorem installW_twin {b : ByteArray} {n : Nat} {m m' : Mem} {a : AState} {st : 
     refine ⟨hD.names.frame hf (.inl rfl) (by simp [DLP, DECL, idArrs, NID, LID, EID, NIDS, LIDS, EIDS]) (by simp),
       hD.levels.frame hf (.inr (.inl rfl)) (by simp [DLP, DECL, idArrs, NID, LID, EID, NIDS, LIDS, EIDS]) (by simp),
       hD.exprs.frame hf (.inr (.inr rfl)) (by simp [DLP, DECL, idArrs, NID, LID, EID, NIDS, LIDS, EIDS]) (by simp), ?_,
-      by rw [hf.2.2.1, hf.2.2.1]; exact hD.ifs⟩
+      by rw [hf.size, hf.size]; exact hD.ifs⟩
     rw [hcn'] at G3 G5
-    refine DeclsF.push _ _ _ _ _ _ hD.decls (by rw [G1.2.2.1, hdecl4]) (by rw [hm'P, hs4])
+    refine DeclsF.push _ _ _ _ _ _ hD.decls (by rw [G1.size, hdecl4]) (by rw [hm'P, hs4])
       (by rw [hD0, hc1, hcn']) (by rw [← hdecl4]; omega)
       (by rw [hP0, hP00]; omega) (by rw [hP0]; rw [hs4] at hpt4; omega)
       (fun j hj0 hj => by rw [G5 j hj0 hj, hdecl4])

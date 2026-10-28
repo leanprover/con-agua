@@ -1019,21 +1019,21 @@ theorem andPinOk_refinesT (hlc : LeafClosed p) (hp : p.lookup "and_pin_ok" = som
     obtain ⟨hok', hext, hc, hpins⟩ := ConRon.Bridge.andPinOk_run hok hpk hx hrun
     obtain ⟨env, hFo⟩ := hF
     refine ⟨h1, h2, hR.of_step hS' hfs (IWGrow.erecPExt hg), hdec.1.symm,
-      hTw.of_grow hok'.wf hext hc hpins (by rw [hf.2.2.1]; exact hTw.erec)
-        (by rw [hf.2.2.1]; exact hTw.spn) (by rw [hf.2.2.1]; exact hTw.bstk)
+      hTw.of_grow hok'.wf hext hc hpins (by rw [hf.size]; exact hTw.erec)
+        (by rw [hf.size]; exact hTw.spn) (by rw [hf.size]; exact hTw.bstk)
         (hTw.memos.frame hf leafA_memo leafC_memo leafA_walk leafC_walk leafA_lp leafC_lp), ?_,
       by rw [andPinOk_scratch hok hpk hrun]; exact hoff,
       ⟨env, hFo.step (hFo.check.mono hok' hext hc hpins) hext hpins⟩,
       ⟨x, ConRon.Bridge.denoteDecl_pext (PExt.of_ext hext) hpd hx⟩,
       hPD.imp fun q h => PinsDenote.pmono (PExt.of_ext hext) _ _ hpps h, hIMf hIM⟩
-    simp only [pinW, hf.1 PINS leafA_pins (by decide)]; exact hfl
+    simp only [pinW, hf.arr PINS leafA_pins (by decide)]; exact hfl
   have hpd' : ∀ b k, dsAt ds i ≠ .indDecl b k := fun b k e => hind ⟨b, k, e⟩
   refine triple_post (triple_and (andPinOk_refines (pins := pins) dn ds p hp n s₀ a₀ vis fe pend i hi hpd' hR)
     (triple_and (invoke_memFrame hlc n (leaf_mem _ rfl) [i] s₀) hI)) fun r s' ⟨⟨h1, h2, h3, h4⟩, ⟨hf, _⟩, hIMf⟩ => ?_
   have e := andPinOk_st_one hpk hpd' h2
   refine ⟨h1, h2, h3, h4, by rw [e]; exact hTw.leaf hf, ?_, by rw [e]; exact hoff,
     by rw [e]; exact hF, by rw [e]; exact hden, by rw [e]; exact hPD, hIMf hIM⟩
-  simp only [pinW, hf.1 PINS leafA_pins (by decide)]; exact hfl
+  simp only [pinW, hf.arr PINS leafA_pins (by decide)]; exact hfl
 
 end leaves
 

@@ -40,11 +40,11 @@ structure PEnv (m : Mem) (a : AState) (dsAll : Array IDeclaration) (np nw ord mk
 
 /-- What `prep_front`/`prep_rest` keep: arrays and `CTL` words from `64` on but `IW`, every
 size, and the `IW` words outside `[ord, mk + n)`. -/
-def PFr (ord mk nw : Word) (m m' : Mem) : Prop :=
-  (∀ b : TieredArray, b ∉ lowTierArrs → b ≠ IW → m'.arr64 b = m.arr64 b) ∧
-    (∀ x : Word, 64 ≤ x.toNat → rdW (m'.arr64 CTL) x = rdW (m.arr64 CTL) x) ∧
-    (∀ b, (m'.arr64 b).size = (m.arr64 b).size) ∧ m.SameShape m' ∧
-    ∀ x : Nat, (x < ord.toNat ∨ mk.toNat + nw.toNat ≤ x) → (m'.arr64 IW)[x]? = (m.arr64 IW)[x]?
+structure PFr (ord mk nw : Word) (m m' : Mem) : Prop where
+  arr : ∀ b : TieredArray, b ∉ lowTierArrs → b ≠ IW → m'.arr64 b = m.arr64 b
+  ctl : ∀ x : Word, 64 ≤ x.toNat → rdW (m'.arr64 CTL) x = rdW (m.arr64 CTL) x
+  size : ∀ b, (m'.arr64 b).size = (m.arr64 b).size
+  iw : ∀ x : Nat, (x < ord.toNat ∨ mk.toNat + nw.toNat ≤ x) → (m'.arr64 IW)[x]? = (m.arr64 IW)[x]?
 
 
 /-! ## The unmarked positions -/
@@ -145,36 +145,35 @@ theorem pick_miss (k : NIdx) (dsAll : Array IDeclaration) (l : List Nat)
 
 theorem PFr.trans {ord mk nw : Word} {m₁ m₂ m₃ : Mem} (h₁ : PFr ord mk nw m₁ m₂)
     (h₂ : PFr ord mk nw m₂ m₃) : PFr ord mk nw m₁ m₃ :=
-  ⟨fun b hb hi => (h₂.1 b hb hi).trans (h₁.1 b hb hi), fun x hx => (h₂.2.1 x hx).trans (h₁.2.1 x hx),
-    fun b => (h₂.2.2.1 b).trans (h₁.2.2.1 b), h₁.2.2.2.1.trans h₂.2.2.2.1,
-    fun x hx => (h₂.2.2.2.2 x hx).trans (h₁.2.2.2.2 x hx)⟩
+  ⟨fun b hb hi => (h₂.arr b hb hi).trans (h₁.arr b hb hi), fun x hx => (h₂.ctl x hx).trans (h₁.ctl x hx),
+    fun b => (h₂.size b).trans (h₁.size b), fun x hx => (h₂.iw x hx).trans (h₁.iw x hx)⟩
 
 theorem PFr.refl (ord mk nw : Word) (m : Mem) : PFr ord mk nw m m :=
-  ⟨fun _ _ _ => rfl, fun _ _ => rfl, fun _ => rfl, .refl m, fun _ _ => rfl⟩
+  ⟨fun _ _ _ => rfl, fun _ _ => rfl, fun _ => rfl, fun _ _ => rfl⟩
 
 theorem PFr.of_high {ord mk nw : Word} {m m' : Mem} (h : HighFr m m') : PFr ord mk nw m m' :=
-  ⟨fun b hb _ => h.1 b hb, h.2.1, h.2.2.1, h.2.2.2, fun x _ => by rw [h.1 IW (by decide)]⟩
+  ⟨fun b hb _ => h.arr b hb, h.ctl, h.size, fun x _ => by rw [h.arr IW (by decide)]⟩
 
 theorem PFr.of_frame {ord mk nw : Word} {m m' : Mem} (h : MemFrame [IW] [] m m')
     (hIW : ∀ x : Nat, (x < ord.toNat ∨ mk.toNat + nw.toNat ≤ x) → (m'.arr64 IW)[x]? = (m.arr64 IW)[x]?) :
     PFr ord mk nw m m' :=
-  ⟨fun b hl hb => h.1 b (by simpa using hb) (by rintro rfl; exact hl (by decide)),
-    fun x _ => h.2.1 x (by simp), h.2.2.1, h.2.2.2, hIW⟩
+  ⟨fun b hl hb => h.arr b (by simpa using hb) (by rintro rfl; exact hl (by decide)),
+    fun x _ => h.ctl x (by simp), h.size, hIW⟩
 
 theorem PEnv.frame {m m' : Mem} {a a' : AState} {dsAll : Array IDeclaration} {np nw ord mk : Word}
     (hE : PEnv m a dsAll np nw ord mk) (hf : PFr ord mk nw m m') (hA : ArenaR m' a') :
     PEnv m' a' dsAll np nw ord mk := by
-  have hctl : ∀ x : Word, 64 ≤ x.toNat → rdW (m'.arr64 CTL) x = rdW (m.arr64 CTL) x := hf.2.1
+  have hctl : ∀ x : Word, 64 ≤ x.toNat → rdW (m'.arr64 CTL) x = rdW (m.arr64 CTL) x := hf.ctl
   have htop : iwTop m' = iwTop m := by simp only [iwTop, hctl 200 (by decide)]
   refine ⟨fun x hx => ?_, hE.size, hE.n59, hE.np, hE.rg1, htop ▸ hE.rg2, ?_, hA⟩
-  · rw [hf.1 DECL (by decide) (by decide), hf.1 DLP (by decide) (by decide)]; exact hE.recs x hx
+  · rw [hf.arr DECL (by decide) (by decide), hf.arr DLP (by decide) (by decide)]; exact hE.recs x hx
   · obtain ⟨i1, i2, i3, i4, i5⟩ := hE.iwok
     refine ⟨?_, ?_, ?_, ?_, ?_⟩
-    · rw [htop, hf.2.2.1]; exact i1
-    · simp only [erTop, hctl 129 (by decide), hf.2.2.1]; exact i2
-    · rw [hf.2.2.1]; exact i3
-    · rw [hf.2.2.1]; exact i4
-    · rw [hf.2.2.1]; exact i5
+    · rw [htop, hf.size]; exact i1
+    · simp only [erTop, hctl 129 (by decide), hf.size]; exact i2
+    · rw [hf.size]; exact i3
+    · rw [hf.size]; exact i4
+    · rw [hf.size]; exact i5
 
 theorem getIW_set64 (m : Mem) (w v : Word) (x : Nat) :
     ((m.set64 IW w v).arr64 IW)[x]? =

@@ -339,14 +339,14 @@ theorem CoreS.of_nat {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : A
     (fun x hx => by
       simp only [natC, List.mem_cons, List.mem_nil_iff, or_false] at hx
       rcases hx with rfl | rfl | rfl | rfl | rfl <;> decide)
-    (hS.den.of_views hk.1 hk.2.1 hk.2.2 (hf.1 EREC (by simp [tier1, natA, POOL, POOL1, REC, SLOT, CREC, CSLOT, CLP, EREC]) (by decide))
+    (hS.den.of_views hk.1 hk.2.1 hk.2.2 (hf.arr EREC (by simp [tier1, natA, POOL, POOL1, REC, SLOT, CREC, CSLOT, CLP, EREC]) (by decide))
       hv) (hmode := hS.mode.poolGrew hP)
 
 theorem StackKept.of_nat_frame {m m' : Mem} (hf : MemFrame natA natC m m') (hP : PoolGrew m m') :
     StackKept m m' := by
   have hspn : m'.arr64 SPN = m.arr64 SPN :=
-    hf.1 SPN (by simp [tier1, natA, POOL, POOL1, REC, SLOT, CREC, CSLOT, CLP, SPN]) (by decide)
-  have h136 : rdW (m'.arr64 CTL) 136 = rdW (m.arr64 CTL) 136 := hf.2.1 136 (by simp [natC])
+    hf.arr SPN (by simp [tier1, natA, POOL, POOL1, REC, SLOT, CREC, CSLOT, CLP, SPN]) (by decide)
+  have h136 : rdW (m'.arr64 CTL) 136 = rdW (m.arr64 CTL) 136 := hf.ctl 136 (by simp [natC])
   exact ⟨by simp only [spTop, h136], by rw [hspn], fun i _ => by simp only [spW, hspn],
     BKept.of_frame hf (by decide) (by decide), hP⟩
 
@@ -533,7 +533,7 @@ theorem natLitToCtor_refines (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀
   have hPoolv := vpool_congr hPool hPool1
   have hPoolc := pcap_congr' hPool hPool1
   have hTop : m₂.top = s₀.mem.top := by
-    rw [← rdW_ctl_top', ← rdW_ctl_top']; exact hfr.2.1 0 (by simp)
+    rw [← rdW_ctl_top', ← rdW_ctl_top']; exact hfr.ctl 0 (by simp)
   have hs₂ : SliceOK m₂ o cnt := (SliceOK_congr _ _ hTop hPt).mpr hs
   cases h3 : callW p n "nat_pred_lit" [o, cnt] m₂ with
   | none => rw [h3, natLitToCtorW.k_nat_pred_lit.none] at hW; cases hW
@@ -704,7 +704,7 @@ theorem litToCtorIfNat_refines (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a�
   have hPoolv := vpool_congr hPool hPool1
   have hPoolc := pcap_congr' hPool hPool1
   have hTop : m₁.top = s₀.mem.top := by
-    rw [← rdW_ctl_top', ← rdW_ctl_top']; exact hfr1.2.1 0 (by simp)
+    rw [← rdW_ctl_top', ← rdW_ctl_top']; exact hfr1.ctl 0 (by simp)
   simp only [tfld_arr_eq (R := LIT) hE hE'] at hW
   cases h2 : callW p n "nat_lit_to_ctor" [tfld s₀.mem LIT (tierW h) (idxW h) 1,
       tfld s₀.mem LIT (tierW h) (idxW h) 2] m₁ with
@@ -767,8 +767,8 @@ theorem CoreS.set_cv {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : ASta
     fun S K mp hS' h1 h2 hR =>
       memoRV_frame S hS' K _ [(CV : TieredArray)] [111] (by simpa using h1) (by simpa using h2) m m' hf
         (vh_const m m') mp hR
-  have hspn : m'.arr64 SPN = m.arr64 SPN := hf.1 SPN (by decide) (by decide)
-  have h136 : rdW (m'.arr64 CTL) 136 = rdW (m.arr64 CTL) 136 := hf.2.1 136 (by simp)
+  have hspn : m'.arr64 SPN = m.arr64 SPN := hf.arr SPN (by decide) (by decide)
+  have h136 : rdW (m'.arr64 CTL) 136 = rdW (m.arr64 CTL) 136 := hf.ctl 136 (by simp)
   refine ⟨⟨⟨ArenaR.caches_irrel _ (ArenaR.frame_ext [(CV : TieredArray)] [111] (by decide) (by simp) m m' hf a
         hS.arena.1), DerR.of_store _ _ _ (DerR.frameM [(CV : TieredArray)] [111] m m' hf (by decide) a hS.arena.2) rfl⟩,
       ⟨mr (coreSch_wf _ _ (by decide) (by decide)) vh_const (by decide) (by decide) hS.core.wc,
@@ -783,12 +783,12 @@ theorem CoreS.set_cv {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : ASta
         frv _ _ _ (coreSch_wf _ _ (by decide) (by decide)) (by decide) (by decide) hS.core.rr,
         fr _ _ _ _ (coreSch_wf _ _ (by decide) (by decide)) (by decide) (by decide) hS.core.lq,
         fr _ _ _ _ (coreSch_wf _ _ (by decide) (by decide)) (by decide) (by decide) hS.core.lsq⟩,
-      hS.pins.congr (hf.1 PINS (by decide) (by decide)),
+      hS.pins.congr (hf.arr PINS (by decide) (by decide)),
       hS.env.frame (fun b hb => by simp at hb; subst hb; decide)
         (fun x hx => by simp at hx; subst hx; decide) hf,
       fun h l e => hS.readL h l e, fun h l e => hS.readLs h l e, hS.nwf,
-      hf.2.2.1 EREC ▸ hS.erec, hf.2.2.1 SPN ▸ hS.spn, hS.memos.frame hf (by decide) (by decide), hf.2.2.1 BSTK ▸ hS.bstk,
-      (hS.den.frameE (hf.1 EREC (by decide) (by decide))).caches rfl rfl rfl,
+      hf.size EREC ▸ hS.erec, hf.size SPN ▸ hS.spn, hS.memos.frame hf (by decide) (by decide), hf.size BSTK ▸ hS.bstk,
+      (hS.den.frameE (hf.arr EREC (by decide) (by decide))).caches rfl rfl rfl,
       hS.mode.frame hf (by simp) (by simp)⟩,
     StackKept.of_frame hf⟩
 

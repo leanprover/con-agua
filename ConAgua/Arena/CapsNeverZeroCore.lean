@@ -42,20 +42,20 @@ theorem CoreS.frame_lhs {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : A
         simp only [List.mem_cons, List.mem_nil_iff, or_false] at hb
         rcases hb with rfl | rfl <;> decide) a hS.arena.2⟩,
     hS.core.frame (by decide) (aC 96 128 (by omega)) hf,
-    hS.pins.congr (hf.1 PINS (by decide) (by decide)),
+    hS.pins.congr (hf.arr PINS (by decide) (by decide)),
     hS.env.frame (by decide) (aC 128 136 (by omega)) hf,
-    hS.readL, hS.readLs, hS.nwf, hf.2.2.1 EREC ▸ hS.erec, hf.2.2.1 SPN ▸ hS.spn,
+    hS.readL, hS.readLs, hS.nwf, hf.size EREC ▸ hS.erec, hf.size SPN ▸ hS.spn,
     hS.memos.frame_hi hf hA64 hC64 (by decide) (fun x hx => by
       rcases hC2 x hx with rfl | rfl <;> simp),
-    hf.2.2.1 BSTK ▸ hS.bstk,
-    hS.den.frameE (hf.1 EREC (by decide) (by decide)), hS.mode.frame hf (by decide) (by decide)⟩
+    hf.size BSTK ▸ hS.bstk,
+    hS.den.frameE (hf.arr EREC (by decide) (by decide)), hS.mode.frame hf (by decide) (by decide)⟩
 
 /-- A writer of the level heap and of the spine stack above its top, the top put back, keeps
 the stack. -/
 theorem StackKept.of_lhsFrame {m m' : Mem} (hf : MemFrame [LH, SPN] [192, 136] m m')
     (ht : spTop m' = spTop m) (hb : ∀ i : Word, i < spTop m → spW m' i = spW m i) :
     StackKept m m' :=
-  ⟨ht, hf.2.2.1 SPN, hb, BKept.of_frame hf (by decide) (by decide),
+  ⟨ht, hf.size SPN, hb, BKept.of_frame hf (by decide) (by decide),
     PoolGrew.of_frame hf (by decide) (by decide)⟩
 
 theorem mapM_of_sub {f g : NIdx → Option Name} (hfg : ∀ k x, f k = some x → g k = some x) :

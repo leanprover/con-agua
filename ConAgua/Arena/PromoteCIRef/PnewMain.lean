@@ -166,13 +166,13 @@ theorem pnew_main {pins : List INatOpPinSet} (dn : NIdx → Option ConLeche.Name
   obtain ⟨hD₂, hP₂⟩ := arenaD_rows hD₁ hP₁ hfr₂
   have hEE₂ : m₂.arr64 EREC = m₁.arr64 EREC := hfr₂.1 EREC (by decide) (by decide)
   have hEC₂ : m₂.arr64 ECON = m₁.arr64 ECON := hfr₂.1 ECON (by decide) (by decide)
-  have hT₂ : erecTop m₂ = erecTop m₁ := by simp only [erecTop]; rw [hfr₂.2.1 129 (by simp)]
+  have hT₂ : erecTop m₂ = erecTop m₁ := by simp only [erecTop]; rw [hfr₂.ctl 129 (by simp)]
   have hsz₂ : (m₂.arr64 EREC).size < 2 ^ 64 := by rw [hEE₂]; exact hsz₁
   have hts₂ : erecTop m₂ ≤ (m₂.arr64 EREC).size := by rw [hEE₂, hT₂]; exact hts₁
   have hP₂e : erecP m₂ = erecP m₁ := by
     rw [erecP_eq_preE, erecP_eq_preE, hT₂]; exact preE_congr hEE₂ _
   have hg₁₂ : ErecGrow m₁ m₂ := ErecGrow.of_eq hEE₂ hT₂
-  have h128₂ : rdW (m₂.arr64 CTL) 128 = rdW (m₁.arr64 CTL) 128 := hfr₂.2.1 128 (by simp)
+  have h128₂ : rdW (m₂.arr64 CTL) 128 = rdW (m₁.arr64 CTL) 128 := hfr₂.ctl 128 (by simp)
   -- promote
   obtain ⟨⟨r₂, m₃⟩, hcb, hW⟩ := Option.bind_eq_some_iff.mp hW
   dsimp only at hW
@@ -181,7 +181,7 @@ theorem pnew_main {pins : List INatOpPinSet} (dn : NIdx → Option ConLeche.Name
       hj1 (by rw [← erecP_eq_preE, hP₂e, hEC₂]; exact hCA') (Nat.le_refl _) hcb
   have hg₁₃ : ErecGrow m₁ m₃ := hg₁₂.trans hg₂₃
   have hE128₃ : rdW (m₃.arr64 CTL) 128 = rdW (m₁.arr64 CTL) 128 := by
-    rw [hfr₃.2.1 128 (by decide), h128₂]
+    rw [hfr₃.ctl 128 (by decide), h128₂]
   have hEC₃rows : ∀ b : Nat, 132 ≤ b → b < 143 → (b < 135 ∨ 140 ≤ b) → m₃.arr64 b = m₂.arr64 b := by
     intro b h1 h2 h3
     apply hfr₃.1 b _ (fun h => by rw [TieredArray.t0_inj] at h; rw [h] at h1; simp [CTL] at h1)
@@ -212,7 +212,7 @@ theorem pnew_main {pins : List INatOpPinSet} (dn : NIdx → Option ConLeche.Name
     have h0 := hE₂.tables
     rw [envTables_eq] at h0 ⊢
     have hc133 : tblCnt m₃ = tblCnt m₂ := by
-      simp only [tblCnt]; rw [hfr₃.2.1 133 (fun h => by have := pnew_ctl _ h; simp at this)]
+      simp only [tblCnt]; rw [hfr₃.ctl 133 (fun h => by have := pnew_ctl _ h; simp at this)]
     rw [hc133]
     exact tdec_mono hg₂₃.ext _ _ (fun i _ => by
       rw [hfr₃.1 ETAB (fun h => absurd (pnew_arrs' _ h) (by decide))
@@ -241,7 +241,7 @@ theorem pnew_main {pins : List INatOpPinSet} (dn : NIdx → Option ConLeche.Name
     (by rw [hL'c]; omega) hcons₃ hcd
   obtain ⟨hD₄, hP₄⟩ := arenaD_rows hD₃ hP₃ hfr₄
   have hEE₄ : m₄.arr64 EREC = m₃.arr64 EREC := hfr₄.1 EREC (by decide) (by decide)
-  have hT₄ : erecTop m₄ = erecTop m₃ := by simp only [erecTop]; rw [hfr₄.2.1 129 (by simp)]
+  have hT₄ : erecTop m₄ = erecTop m₃ := by simp only [erecTop]; rw [hfr₄.ctl 129 (by simp)]
   have hg₁₄ : ErecGrow m₁ m₄ := hg₁₃.trans (ErecGrow.of_eq hEE₄ hT₄)
   have hts₄ : erecTop m₄ ≤ (m₄.arr64 EREC).size := by rw [hEE₄, hT₄]; exact hts₃
   have hrowsub : ∀ b ∈ ([EIXA, EIXS, EIXN, EIXA1, EIXS1, EIXN1] : List TieredArray), b ∈ (EIXA : TieredArray) :: (EIXS : TieredArray) :: (EIXN : TieredArray) :: (EIXA1 : TieredArray) :: (EIXS1 : TieredArray) :: (EIXN1 : TieredArray) :: (ECON : TieredArray) :: (EREC : TieredArray) :: eArrs := by
@@ -258,7 +258,7 @@ theorem pnew_main {pins : List INatOpPinSet} (dn : NIdx → Option ConLeche.Name
     rw [htake, ← L.Ind.CWF_eq]; exact hrun₃
   refine ⟨a₃, pm₃, Lc', hrun₃', ?_⟩
   rw [htake, hdrop]
-  have hfl : m₄.flag = m₁.flag := hfA.2.1 1 (by decide)
+  have hfl : m₄.flag = m₁.flag := hfA.ctl 1 (by decide)
   have htk : TierKeep m₁ m₄ :=
     (TierKeep.of_frame hfr₂ (by simp)).trans (htk₃.trans (TierKeep.of_frame hfr₄ (by simp)))
   exact ⟨LoopR.of_frame hR₁ hD₄ hfA (fun b hb => .inl (pnew_arrs b hb)) (fun x hx => .inl (pnew_ctl x hx)) hcp₃ hg₁₄ hts₄ hP₄ hE₄

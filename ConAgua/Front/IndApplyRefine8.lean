@@ -69,7 +69,7 @@ theorem orderW_twin {b : ByteArray} {n : Nat} {m m' : Mem} {a : AState} {st : St
   have hI : IExt m m₂ := ⟨a1.frame.trans (g1.1.mono (by simp) (by simp)), by rw [ht0]; exact a1.top,
     fun i h1 h2 => by rw [g1.2 i (by omega)]; exact a1.keep i h1 h2⟩
   have hcnt : ∀ k, cntF m₁ to k = cntF m to k := fun k => by simp only [cntF, wd, a1.ifr]
-  refine ⟨a3, hI, ⟨by rw [g1.1.2.2.1]; exact a2.1, by rw [g1.1.2.2.1, ht0]; exact a2.2⟩,
+  refine ⟨a3, hI, ⟨by rw [g1.1.size]; exact a2.1, by rw [g1.1.size, ht0]; exact a2.2⟩,
     by rw [ht0, a4], fun k hk c hc => ?_⟩
   rw [← hcnt] at hc
   obtain ⟨kk, e1, e2⟩ := g3 k (Nat.zero_le _) hk c hc

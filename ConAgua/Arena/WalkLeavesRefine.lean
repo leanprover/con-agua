@@ -248,7 +248,7 @@ theorem flGoOK_succ (n : Nat) (ih : FlNodeOK n) : FlGoOK (n + 1) := by
       have hM₁ := memoRG_set flSch flSch_wf bmKey decU m seen hM h 0 0 hk m₁ hs
       simp only [bmKey, decU] at hM₁
       have hD₁ : ArenaD m₁ a := FlFrame.arenaD (hf₁.mono (by simp) (by simp)) hD
-      have hL₁ : LeafR m₁ k acc := hL.frame (hf₁.1 LVS (by decide) (by decide))
+      have hL₁ : LeafR m₁ k acc := hL.frame (hf₁.arr LVS (by decide) (by decide))
       obtain ⟨acc', seen', ha, hM', hL', hf'⟩ := ih m₁ m' a _ acc h k (c - 1) k' hD₁ hM₁ hL₁ hh hb
       exact ⟨acc', seen', ha, hM', hL', (hf₁.mono (by simp) (by simp)).trans hf'⟩
 

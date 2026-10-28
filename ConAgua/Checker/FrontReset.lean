@@ -92,8 +92,8 @@ theorem _root_.L.Front.TblR.empty {k : IdxKind} {m m' : Mem} {b : ArrId} {t : Co
     (hf : MemFrame [] idCtl m m') (hz : szW m' b = 0)
     (hsp : MemoRV (spS b) idKey hVR m' (∅ : Std.HashMap Nat (Idx k))) :
     TblR m' b ({} : ConLeche.Frontend.IdTable (Idx k)) where
-  size := by rw [hf.2.2.1 b]; exact h.size
-  ctl := by rw [hf.2.2.1 CTL]; exact h.ctl
+  size := by rw [hf.size b]; exact h.size
+  ctl := by rw [hf.size CTL]; exact h.ctl
   sz := by rw [hz]; simp
   dense := fun i hi => by rw [hz] at hi; exact absurd hi (UInt64.not_lt_zero)
   sparse := ⟨∅, hsp, fun i _ => by simp [IdTable.get?_empty]⟩
@@ -127,8 +127,8 @@ theorem frontReset_stateDR {m : Mem} {st : StateD} (h : StateDR m st) (hok : Res
     h.levels.empty hf (resetM_szW m LID (.inr (.inl rfl)) h.levels.ctl) nL,
     h.exprs.empty hf (resetM_szW m EID (.inr (.inr rfl)) h.exprs.ctl) nE, ?_, ?_⟩
   · simp only [StateD.pre_decls, StateD.blank, Array.append_empty]
-    rw [hf.1 DECL (by simp) (by decide), hf.1 DLP (by simp) (by decide)]
+    rw [hf.arr DECL (by simp) (by decide), hf.arr DLP (by simp) (by decide)]
     exact h.decls
-  · rw [hf.2.2.1, hf.2.2.1]; exact h.ifs
+  · rw [hf.size, hf.size]; exact h.ifs
 
 end L.Checker

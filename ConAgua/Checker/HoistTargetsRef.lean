@@ -48,7 +48,7 @@ theorem LowFr.trans {tg : Word} {m₁ m₂ m₃ : Mem} (h₁ : LowFr tg m₁ m�
 
 theorem LowFr.ofHFr {tg ws : Word} {c : Nat} {m m' : Mem} (h : HFr tg ws c m m') : LowFr tg m m' :=
   ⟨h.1.mono (by simp) (by simp), fun x hx => h.2 x (Or.inl hx),
-    by simp only [iwTop]; rw [h.1.2.1 200 (by decide)]; exact Nat.le_refl _⟩
+    by simp only [iwTop]; rw [h.1.ctl 200 (by decide)]; exact Nat.le_refl _⟩
 
 theorem LowFr.ofAFr {tg : Word} {m m' : Mem} (h : AFr m m') (ht : tg.toNat ≤ iwTop m) : LowFr tg m m' :=
   ⟨h.1.mono (by simp) (by simp), fun x hx => h.2.1.2.2.1 x (by omega), h.2.1.1⟩

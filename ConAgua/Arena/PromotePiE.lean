@@ -97,7 +97,7 @@ theorem pi_gen {g : FnName} {args : List Word} {op opP : AM EIdx} {A : List Tier
   | some x =>
   obtain ⟨rr, m₁⟩ := x
   obtain ⟨hok, hD₁, hres, hpw, hf⟩ := hc rr m₁ hcall
-  have hsz : 1 < (m₁.arr64 CTL).size := by rw [hf.2.2.1]; simpa [size_set64] using hcs
+  have hsz : 1 < (m₁.arr64 CTL).size := by rw [hf.size]; simpa [size_set64] using hcs
   rw [hcall, piK_some _ _ _ hsz] at h
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   obtain ⟨a', h1, h2, h3⟩ := pi_E hD hok hD₁ hres hk heq
@@ -255,7 +255,8 @@ theorem piLit_rel0 (m : Mem) (a : AState) (hD : ArenaD m a) (o l : Word) (hsl : 
     ∃ a', (internPersistentE (.lit (.natVal (pv (vpool m) o.toNat l.toNat)))).run a =
       .ok (decE r, a') ∧ ArenaD m' a' ∧ PW r ∧ cp a' = cp a ∧ MemFrame [REC, tier1 REC, SLOT, tier1 SLOT] [2, 3] m m' :=
   pi_gen p n hD (fun _ _ hcall => by
-    have ⟨_, _, hps, htop⟩ := (hD.flag 0).1.lit.1
+    have hps := (hD.flag 0).1.lit.1.cap
+    have htop := (hD.flag 0).1.lit.1.top
     obtain ⟨hpool, hsl₀⟩ := slice0 hsl
     have hpoolv := vpool_congr hpool (Mem.arr64_set64_ne _ _ _ _ _ (by decide))
     obtain ⟨s', rfl, -, hI⟩ := callW_triple (internLit_spec p (hp.get "lit_hash") (hp.get "limbs_eq") (hp.get "lit_match")
@@ -276,7 +277,8 @@ theorem piLitStr_rel0 (m : Mem) (a : AState) (hD : ArenaD m a) (o l : Word) (hsl
     ∃ a', (internPersistentE (.lit (.strVal s))).run a = .ok (decE r, a') ∧ ArenaD m' a' ∧
       PW r ∧ cp a' = cp a ∧ MemFrame [REC, tier1 REC, SLOT, tier1 SLOT] [2, 3] m m' :=
   pi_gen p n hD (fun _ _ hcall => by
-    have ⟨_, _, hps, htop⟩ := (hD.flag 0).1.lit.1
+    have hps := (hD.flag 0).1.lit.1.cap
+    have htop := (hD.flag 0).1.lit.1.top
     obtain ⟨hpool, hsl₀⟩ := slice0 hsl
     have hpoolv := vpool_congr hpool (Mem.arr64_set64_ne _ _ _ _ _ (by decide))
     obtain ⟨s', rfl, -, hI⟩ := callW_triple (internLitStr_spec p (hp.get "lit_hash") (hp.get "limbs_eq")

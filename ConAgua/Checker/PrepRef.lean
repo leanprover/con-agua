@@ -73,7 +73,7 @@ theorem pPrepCore_ok (p : Prog) (hx : HoistExt p) (n : Nat) (m m' : Mem) (a : AS
   have hC75 : (75 : Word) ∉ C := by decide
   have pfr_mf : ∀ {ord mk nw : Word} {m₁ m₂ : Mem}, PFr ord mk nw m₁ m₂ → MemFrame A C m₁ m₂ := by
     intro ord mk nw m₁ m₂ hf
-    refine ⟨fun b hb _ => hf.1 b ?_ ?_, fun x hx => hf.2.1 x ?_, hf.2.2.1, hf.2.2.2.1⟩
+    refine ⟨fun b hb _ => hf.arr b ?_ ?_, fun x hx => hf.ctl x ?_, hf.size⟩
     · exact fun hl => hb (List.mem_append_left _ hl)
     · intro e; exact hb (List.mem_append_right _ (by simp [e]))
     · exact Nat.le_of_not_lt fun hlt =>
@@ -119,8 +119,8 @@ theorem pPrepCore_ok (p : Prog) (hx : HoistExt p) (n : Nat) (m m' : Mem) (a : AS
   obtain ⟨mk, m₂⟩ := rr
   rw [ha₂, pPrepW.k_iw_alloc_2.arm1] at h
   obtain ⟨hA₂, hmk, htop₂, hroom₂⟩ := allocW_afr ha₂ hA₁.2.2
-  have hsz₁ : (m₁.arr64 IW).size = (m.arr64 IW).size := hA₁.1.2.2.1 IW
-  have hsz₂ : (m₂.arr64 IW).size = (m.arr64 IW).size := by rw [hA₂.1.2.2.1 IW, hsz₁]
+  have hsz₁ : (m₁.arr64 IW).size = (m.arr64 IW).size := hA₁.1.size IW
+  have hsz₂ : (m₂.arr64 IW).size = (m.arr64 IW).size := by rw [hA₂.1.size IW, hsz₁]
   -- the marks zeroed
   cases hz : hZeroW n m₂ mk nw 0 with
   | none => rw [hz] at h; simp [pPrepW.k_hoist_zero.eq_1] at h
@@ -128,18 +128,18 @@ theorem pPrepCore_ok (p : Prog) (hx : HoistExt p) (n : Nat) (m m' : Mem) (a : AS
   obtain ⟨z₃, m₃⟩ := rr
   rw [hz, pPrepW.k_hoist_zero.arm1] at h
   obtain ⟨hf₃, hrd₃⟩ := hZero_ok n m₂ m₃ mk nw 0 z₃ (by rw [hsz₂]; omega) (by rw [hsz₂]; exact hsz) hz
-  have hsz₃ : (m₃.arr64 IW).size = (m.arr64 IW).size := by rw [hf₃.2.2.1 IW, hsz₂]
-  have htop₃ : iwTop m₃ = iwTop m₂ := by simp only [iwTop]; rw [hf₃.2.1 200 (by simp)]
+  have hsz₃ : (m₃.arr64 IW).size = (m.arr64 IW).size := by rw [hf₃.size IW, hsz₂]
+  have htop₃ : iwTop m₃ = iwTop m₂ := by simp only [iwTop]; rw [hf₃.ctl 200 (by simp)]
   have hmf₃ : MemFrame A C m m₃ :=
     ((iw_mf hA₁.1).trans (iw_mf hA₂.1)).trans (iw_mf0 hf₃)
-  have hDECL₃ : m₃.arr64 DECL = m.arr64 DECL := hmf₃.1 DECL (by decide) (by decide)
-  have hDLP₃ : m₃.arr64 DLP = m.arr64 DLP := hmf₃.1 DLP (by decide) (by decide)
+  have hDECL₃ : m₃.arr64 DECL = m.arr64 DECL := hmf₃.arr DECL (by decide) (by decide)
+  have hDLP₃ : m₃.arr64 DLP = m.arr64 DLP := hmf₃.arr DLP (by decide) (by decide)
   have hI₃ : IWOK m₃ := by
     obtain ⟨h1, h2, h3, h4, h5⟩ := hA₂.2.2
     have hER : m₃.arr64 EREC = m₂.arr64 EREC := hf₃.1 EREC (by decide) (by decide)
-    have h129 : erTop m₃ = erTop m₂ := by simp only [erTop]; rw [hf₃.2.1 129 (by simp)]
-    exact ⟨by rw [htop₃, hf₃.2.2.1 IW]; exact h1, by rw [h129, hER]; exact h2,
-      by rw [hf₃.2.2.1 IW]; exact h3, by rw [hER]; exact h4, by rw [hf₃.2.2.1 CTL]; exact h5⟩
+    have h129 : erTop m₃ = erTop m₂ := by simp only [erTop]; rw [hf₃.ctl 129 (by simp)]
+    exact ⟨by rw [htop₃, hf₃.size IW]; exact h1, by rw [h129, hER]; exact h2,
+      by rw [hf₃.size IW]; exact h3, by rw [hER]; exact h4, by rw [hf₃.size CTL]; exact h5⟩
   have hA₃ : ArenaR m₃ a := by
     refine ArenaR.frame_ext [IW] [200]
       (by intro b hb; simp only [List.mem_cons, List.not_mem_nil, or_false] at hb; subst hb; decide)
@@ -178,13 +178,13 @@ theorem pPrepCore_ok (p : Prog) (hx : HoistExt p) (n : Nat) (m m' : Mem) (a : AS
   | some rr =>
   obtain ⟨c, m₅⟩ := rr
   rw [hrs, pPrepW.k_prep_rest.arm1] at h
-  have hsz₄ : (m₄.arr64 IW).size = (m.arr64 IW).size := by rw [hpf₄.2.2.1 IW, hsz₃]
+  have hsz₄ : (m₄.arr64 IW).size = (m.arr64 IW).size := by rw [hpf₄.size IW, hsz₃]
   obtain ⟨hc, hrestW, hmf₅', hkeep₅⟩ := pRest_ok nw ord mk n m₄ m₅ np np c hE₄.rg1
     (by have := hE₄.rg2; have := hE₄.iwok.1; omega) (by rw [hsz₄]; exact hsz) (Nat.le_refl _) hnpn hrs
   have hmf₅ : MemFrame A C m m₅ := (hmf₃.trans (pfr_mf hpf₄)).trans (iw_mf0 hmf₅')
-  have hDECL₅ : m₅.arr64 DECL = m.arr64 DECL := hmf₅.1 DECL (by decide) (by decide)
-  have hDLP₅ : m₅.arr64 DLP = m.arr64 DLP := hmf₅.1 DLP (by decide) (by decide)
-  have hsz₅ : (m₅.arr64 IW).size = (m.arr64 IW).size := by rw [hmf₅.2.2.1 IW]
+  have hDECL₅ : m₅.arr64 DECL = m.arr64 DECL := hmf₅.arr DECL (by decide) (by decide)
+  have hDLP₅ : m₅.arr64 DLP = m.arr64 DLP := hmf₅.arr DLP (by decide) (by decide)
+  have hsz₅ : (m₅.arr64 IW).size = (m.arr64 IW).size := by rw [hmf₅.size IW]
   have hrg2 := hE₄.rg2; have hrg1 := hE₄.rg1; have hiw4 := hE₄.iwok.1
   generalize hU : unm m₄ mk np.toNat nw.toNat = U at hrest hc hrestW
   have hUlt : ∀ x ∈ U, np.toNat ≤ x ∧ x < nw.toNat := by
@@ -220,15 +220,15 @@ theorem pPrepCore_ok (p : Prog) (hx : HoistExt p) (n : Nat) (m m' : Mem) (a : AS
       exact ⟨by omega, hD _ (by omega)⟩
   -- the hoist
   have hP₅ : PinsR m₅ a₁.pins := by
-    rw [hpins₁]; exact hP.congr (hmf₅.1 PINS (by decide) (by decide))
+    rw [hpins₁]; exact hP.congr (hmf₅.arr PINS (by decide) (by decide))
   have hI₅ : IWOK m₅ := by
     obtain ⟨h1, h2, h3, h4, h5⟩ := hE₄.iwok
     have hER : m₅.arr64 EREC = m₄.arr64 EREC := hmf₅'.1 EREC (by decide) (by decide)
-    have h200 : iwTop m₅ = iwTop m₄ := by simp only [iwTop]; rw [hmf₅'.2.1 200 (by simp)]
-    have h129 : erTop m₅ = erTop m₄ := by simp only [erTop]; rw [hmf₅'.2.1 129 (by simp)]
-    exact ⟨by rw [h200, hmf₅'.2.2.1 IW]; exact h1, by rw [h129, hER]; exact h2,
-      by rw [hmf₅'.2.2.1 IW]; exact h3, by rw [hER]; exact h4, by rw [hmf₅'.2.2.1 CTL]; exact h5⟩
-  have htop₅ : iwTop m₅ = iwTop m₄ := by simp only [iwTop]; rw [hmf₅'.2.1 200 (by simp)]
+    have h200 : iwTop m₅ = iwTop m₄ := by simp only [iwTop]; rw [hmf₅'.ctl 200 (by simp)]
+    have h129 : erTop m₅ = erTop m₄ := by simp only [erTop]; rw [hmf₅'.ctl 129 (by simp)]
+    exact ⟨by rw [h200, hmf₅'.size IW]; exact h1, by rw [h129, hER]; exact h2,
+      by rw [hmf₅'.size IW]; exact h3, by rw [hER]; exact h4, by rw [hmf₅'.size CTL]; exact h5⟩
+  have htop₅ : iwTop m₅ = iwTop m₄ := by simp only [iwTop]; rw [hmf₅'.ctl 200 (by simp)]
   have hA₅ : ArenaR m₅ a₁ := by
     refine ArenaR.frame_ext [IW] [] (by
       intro b hb; simp only [List.mem_cons, List.not_mem_nil, or_false] at hb; subst hb; decide)
@@ -278,8 +278,8 @@ theorem pPrepCore_ok (p : Prog) (hx : HoistExt p) (n : Nat) (m m' : Mem) (a : AS
   obtain ⟨hdw, hmf₉, -, hD0, -⟩ := pCopyBack_ok n n m₇ m₈ m₉ ord' c t z₈ z₉
     (fun i hi => by rw [hIW₇ i hi]; exact (hO₆ i (by omega)).1)
     (by rw [hDs₇, ← hdsA] at *; omega) (by rw [ht]; exact hord₆)
-    (by rw [hA₇.1.2.2.1 IW]; omega) hA₇.2.2.2.2.1 (by rw [hDs₇]; exact hDsz') hcp hbk
-  have hD₉s : (m₉.arr64 DECL).size = (m.arr64 DECL).size := by rw [hmf₉.2.2.1 DECL, hDs₇]
+    (by rw [hA₇.1.size IW]; omega) hA₇.2.2.2.2.1 (by rw [hDs₇]; exact hDsz') hcp hbk
+  have hD₉s : (m₉.arr64 DECL).size = (m.arr64 DECL).size := by rw [hmf₉.size DECL, hDs₇]
   have hP₉ : m₉.arr64 DLP = m₆.arr64 DLP := by rw [hmf₉.1 DLP (by decide) (by decide), hP₇]
   have hfin : (m₉.set64 DECL 0 c).arr64 DECL = (m₉.arr64 DECL).set! 0 c := Mem.arr64_set64_same _ _ _ _
   have hfinP : (m₉.set64 DECL 0 c).arr64 DLP = m₉.arr64 DLP := Mem.arr64_set64_ne _ _ _ _ _ (by decide)
@@ -316,11 +316,11 @@ theorem pPrepCore_ok (p : Prog) (hx : HoistExt p) (n : Nat) (m m' : Mem) (a : AS
   · obtain ⟨h1, h2, h3, h4, h5⟩ := hA₇.2.2
     have hf : MemFrame [IW, DECL] [] m₇ (m₉.set64 DECL 0 c) :=
       hmf₉.trans ((MemFrame.set64 m₉ DECL (by decide) _ _).mono (by simp) (by simp))
-    have hER : (m₉.set64 DECL 0 c).arr64 EREC = m₇.arr64 EREC := hf.1 EREC (by decide) (by decide)
-    have h200 : iwTop (m₉.set64 DECL 0 c) = iwTop m₇ := by simp only [iwTop]; rw [hf.2.1 200 (by simp)]
-    have h129 : erTop (m₉.set64 DECL 0 c) = erTop m₇ := by simp only [erTop]; rw [hf.2.1 129 (by simp)]
-    exact ⟨by rw [h200, hf.2.2.1 IW]; exact h1, by rw [h129, hER]; exact h2,
-      by rw [hf.2.2.1 IW]; exact h3, by rw [hER]; exact h4, by rw [hf.2.2.1 CTL]; exact h5⟩
+    have hER : (m₉.set64 DECL 0 c).arr64 EREC = m₇.arr64 EREC := hf.arr EREC (by decide) (by decide)
+    have h200 : iwTop (m₉.set64 DECL 0 c) = iwTop m₇ := by simp only [iwTop]; rw [hf.ctl 200 (by simp)]
+    have h129 : erTop (m₉.set64 DECL 0 c) = erTop m₇ := by simp only [erTop]; rw [hf.ctl 129 (by simp)]
+    exact ⟨by rw [h200, hf.size IW]; exact h1, by rw [h129, hER]; exact h2,
+      by rw [hf.size IW]; exact h3, by rw [hER]; exact h4, by rw [hf.size CTL]; exact h5⟩
   · refine hP₆.congr ?_
     rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide), hmf₉.1 PINS (by decide) (by decide),
       hA₇.1.1 PINS (by decide) (by decide)]

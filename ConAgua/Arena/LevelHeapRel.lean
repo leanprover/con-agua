@@ -81,20 +81,19 @@ structure HeapExt (m m' : Mem) : Prop where
   ctl : ∀ k : Word, k ≠ 192 → rdW (m'.arr64 CTL) k = rdW (m.arr64 CTL) k
   /-- No array changes its size. -/
   size : ∀ b : TieredArray, (m'.arr64 b).size = (m.arr64 b).size
-  wsize : m.SameShape m'
   /-- The heap top does not move down, and the heap below it stays. -/
   top : (htop m).toNat ≤ (htop m').toNat
   lh : ∀ k : Word, k.toNat < (htop m).toNat → rdW (m'.arr64 LH) k = rdW (m.arr64 LH) k
 
 theorem HeapExt.refl (m : Mem) : HeapExt m m :=
-  ⟨fun _ _ => rfl, fun _ _ _ => rfl, fun _ _ => rfl, fun _ => rfl, .refl m, Nat.le_refl _,
+  ⟨fun _ _ => rfl, fun _ _ _ => rfl, fun _ _ => rfl, fun _ => rfl, Nat.le_refl _,
     fun _ _ => rfl⟩
 
 theorem HeapExt.trans {m₁ m₂ m₃ : Mem} (h₁ : HeapExt m₁ m₂) (h₂ : HeapExt m₂ m₃) :
     HeapExt m₁ m₃ :=
   ⟨fun p hp => by rw [h₂.view p (by rw [h₁.view p hp]; exact hp), h₁.view p hp],
     fun A a b => by rw [h₂.arr A a b, h₁.arr A a b], fun k hk => by rw [h₂.ctl k hk, h₁.ctl k hk],
-    fun b => by rw [h₂.size b, h₁.size b], h₁.wsize.trans h₂.wsize, Nat.le_trans h₁.top h₂.top,
+    fun b => by rw [h₂.size b, h₁.size b], Nat.le_trans h₁.top h₂.top,
     fun k hk => by rw [h₂.lh k (Nat.lt_of_lt_of_le hk h₁.top), h₁.lh k hk]⟩
 
 theorem LvR.mono (he : HeapExt m m') {p : Word} {l : Level} (h : LvR N m p l) : LvR N m' p l := by
@@ -132,7 +131,6 @@ structure HeapFrame (m m' : Mem) : Prop where
   top : (htop m).toNat ≤ (htop m').toNat
   lh : ∀ k : Word, k.toNat < (htop m).toNat → rdW (m'.arr64 LH) k = rdW (m.arr64 LH) k
   size : ∀ b : TieredArray, (m'.arr64 b).size = (m.arr64 b).size
-  wsize : m.SameShape m'
 
 theorem ctl_ne (c : Word) (hc : c.toNat ≤ 14) (p : Word) : c + tierW p ≠ 192 := by
   intro h
@@ -205,7 +203,7 @@ theorem HeapFrame.heap (h : HeapFrame m m') (p : Word) (hb : ¬ p >>> 32 = 0)
     h.lh _ (by simp only [htop]; omega), h.lh _ (by simp only [htop]; omega)]
 
 theorem HeapFrame.ext (h : HeapFrame m m') : HeapExt m m' := by
-  refine ⟨fun p hp => ?_, fun A a b => h.arr A b a, h.ctl, h.size, h.wsize, h.top, h.lh⟩
+  refine ⟨fun p hp => ?_, fun A a b => h.arr A b a, h.ctl, h.size, h.top, h.lh⟩
   by_cases hb : p >>> 32 = 0
   · simp only [lvNodeW, hb, ne_eq, not_true_eq_false, ↓reduceIte]
     have c1 : rdW (m'.arr64 CTL) 1 = rdW (m.arr64 CTL) 1 := h.ctl 1 (by simp)
@@ -296,8 +294,7 @@ theorem lhMkW_ext {g a b r : Word} (h : lhMkW m g a b = some (r, m')) :
       simp only [htop]; rw [lhMem_ctl _ _ _ _ _ hctl]; simp
     refine ⟨HeapFrame.ext ⟨fun A h1 h2 => lhMem_arr _ _ _ _ _ A h1 h2,
       fun k hk => by rw [lhMem_ctl _ _ _ _ _ hctl, ite_eq_right hk], by rw [htop', e3]; omega,
-      fun k hk => ?_, fun b => by simp only [lhMem, size_set64L],
-      by simp only [lhMem]; exact ((((Mem.sameShape_set64 _ _ _ _).set64 _ _ _).set64 _ _ _).set64 _ _ _)⟩, ?_, by rw [htop', e3]⟩
+      fun k hk => ?_, fun b => by simp only [lhMem, size_set64L]⟩, ?_, by rw [htop', e3]⟩
     · rw [lhMem_lh _ _ _ _ _ hl ht]
       have n2 : k ≠ htop m + 2 := fun e => by rw [e, ek 2 (by decide)] at hk; simp at hk; omega
       have n1 : k ≠ htop m + 1 := fun e => by rw [e, ek 1 (by decide)] at hk; simp at hk; omega

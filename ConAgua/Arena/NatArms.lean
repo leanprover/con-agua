@@ -730,7 +730,8 @@ theorem natBeqLit_refinesA (n : Nat) (s₀ : St) (a₀ : AState) (hR : ArenaR s�
   have hT' := AM.of_run_ok _ _ _ _ hT
   have hF' := AM.of_run_ok _ _ _ _ hF
   have hE' := AM.of_run_ok _ _ _ _ hE
-  simp only [PoolOK, SliceOK] at hok ha hb
+  have := hok.ctl; have := hok.cap; have := hok.top; have := hok.ptop0; have := hok.inTier; clear hok
+  simp only [SliceOK] at ha hb
   rw [invoke_eq _ (show natArmProg.lookup "nat_beq_lit" = some natBeqLit from rfl)]
   simp only [callFn, natBeqLit]
   cases n with
@@ -763,7 +764,8 @@ theorem natBleLit_refinesA (n : Nat) (s₀ : St) (a₀ : AState) (hR : ArenaR s�
   have hT' := AM.of_run_ok _ _ _ _ hT
   have hF' := AM.of_run_ok _ _ _ _ hF
   have hE' := AM.of_run_ok _ _ _ _ hE
-  simp only [PoolOK, SliceOK] at hok ha hb
+  have := hok.ctl; have := hok.cap; have := hok.top; have := hok.ptop0; have := hok.inTier; clear hok
+  simp only [SliceOK] at ha hb
   rw [invoke_eq _ (show natArmProg.lookup "nat_ble_lit" = some natBleLit from rfl)]
   simp only [callFn, natBleLit]
   cases n with

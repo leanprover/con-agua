@@ -67,7 +67,7 @@ theorem frame_set (m : Mem) (i v : Word) : MemFrame [IW] [] m (m.set64 IW i v) :
   MemFrame.set64 m IW (by decide) i v
 
 theorem frame_size {m m' : Mem} (h : MemFrame [IW] [] m m') :
-    (m'.arr64 IW).size = (m.arr64 IW).size := h.2.2.1 IW
+    (m'.arr64 IW).size = (m.arr64 IW).size := h.size IW
 
 /-! ## `hoist_zero` -/
 

@@ -97,8 +97,8 @@ theorem piBW_room (n : Nat) (m m' : Mem) (a : AState) (fuel h : Word) (rs : List
   have hb2 : ((eViewW m h).getD 2 0).toNat < 2 ^ 32 := by rw [hew]; exact hb
   obtain ⟨bs1, e1, -, -, hdec1, -, -, -, hf1, hle1⟩ :=
     piBW_ok n m m1 a (fuel - 1) _ rs1 hR hrec hb2 hsz hc
-  have hsz1 : (m1.arr64 IW).size < 2 ^ 64 := by rw [hf1.2.2.1 IW]; exact hsz
-  have hc1 : 200 < (m1.arr64 CTL).size := by rw [hf1.2.2.1 CTL]; exact hc
+  have hsz1 : (m1.arr64 IW).size < 2 ^ 64 := by rw [hf1.size IW]; exact hsz
+  have hc1 : 200 < (m1.arr64 CTL).size := by rw [hf1.size CTL]; exact hc
   exact consW_room hcons hsz1 hc1 hle1 hty2 hdec1
 
 /-- `pi_binders` as a simulation: the twin keeps its state, the binders a slice below the top. -/
@@ -112,7 +112,7 @@ theorem simPiBinders {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFE
   obtain ⟨bs, e, hrun, -, hdec, -, -, hg, hf, hle⟩ :=
     piBW_ok n m m' a CWF h rs hS.1.arena.1 hp hh hS.2.2.2.1 hS.2.2.2.2.2
   have hroom := piBW_room n m m' a CWF h rs hS.1.arena.1 hp hh hS.2.2.2.1 hS.2.2.2.2.2 hS.2.1
-  refine ⟨(bs, e), a, by rw [← CWF_eq]; exact hrun, stage_frame_iw hS hf (by rw [← hf.2.2.1 IW]; exact hroom),
+  refine ⟨(bs, e), a, by rw [← CWF_eq]; exact hrun, stage_frame_iw hS hf (by rw [← hf.size IW]; exact hroom),
     hg, by simpa [getD_one] using hdec, by simpa [getD_one] using hle⟩
 
 theorem drop3_headD (r : List Word) : (r.drop 3).headD 0 = r.tail.tail.tail.headD 0 := by

@@ -44,7 +44,7 @@ theorem zeroCtl_rd (x : Word) :
     · exact ih _ hx
     · have hy : x = y := by simpa [hx] using h
       subst hy
-      rw [zeroCtl, (zeroCtl_frame xs _).2.1 x hx, rdW_set64]
+      rw [zeroCtl, (zeroCtl_frame xs _).ctl x hx, rdW_set64]
       split
       · rfl
       · simp only [rdW]; rw [Array.getElem?_eq_none (by grind)]; rfl
@@ -61,16 +61,16 @@ theorem resetMemA_frame (m : Mem) (f : Word) : MemFrame [] resetCtl m (resetMemA
 
 theorem resetMemA_base (m : Mem) (f : Word) (h : SCB.toNat < (m.arr64 CTL).size) :
     rdW ((resetMemA m f).arr64 CTL) SCB = rdW (m.arr64 CTL) SCB + 4294967296 := by
-  rw [resetMemA_eq, (zeroCtl_frame _ _).2.1 SCB (by simp [scratchCnts, SCB]), rdW_set64, rdW_set64]
+  rw [resetMemA_eq, (zeroCtl_frame _ _).ctl SCB (by simp [scratchCnts, SCB]), rdW_set64, rdW_set64]
   simp [SCB] at h ⊢; omega
 
 theorem resetMemA_flag (m : Mem) (f : Word) (h : SCB.toNat < (m.arr64 CTL).size) :
     rdW ((resetMemA m f).arr64 CTL) 1 = f := by
-  rw [resetMemA_eq, (zeroCtl_frame _ _).2.1 1 (by simp [scratchCnts]), rdW_set64, size_set64]
+  rw [resetMemA_eq, (zeroCtl_frame _ _).ctl 1 (by simp [scratchCnts]), rdW_set64, size_set64]
   simp [SCB] at h ⊢; omega
 
 theorem resetMemA_top (m : Mem) (f : Word) : (resetMemA m f).top = m.top := by
-  simp only [top_rdW]; exact (resetMemA_frame m f).2.1 0 (by simp [resetCtl, scratchCnts, SCB])
+  simp only [top_rdW]; exact (resetMemA_frame m f).ctl 0 (by simp [resetCtl, scratchCnts, SCB])
 
 theorem resetMemA_pt0 (m : Mem) (f : Word) : (resetMemA m f).arr64 PT0 = m.arr64 PT0 :=
   (resetMemA_frame m f).1 PT0 (by simp) (by decide)
@@ -91,11 +91,11 @@ theorem resetMem_frame (m : Mem) (f : Word) : MemFrame [PT0] (0 :: resetCtl) m (
 
 theorem resetMem_base (m : Mem) (f : Word) (h : SCB.toNat < (m.arr64 CTL).size) :
     rdW ((resetMem m f).arr64 CTL) SCB = rdW (m.arr64 CTL) SCB + 4294967296 := by
-  rw [resetMem, (resetTop_frame _ f).2.1 SCB (by simp [SCB]), resetMemA_base m f h]
+  rw [resetMem, (resetTop_frame _ f).ctl SCB (by simp [SCB]), resetMemA_base m f h]
 
 theorem resetMem_flag (m : Mem) (f : Word) (h : SCB.toNat < (m.arr64 CTL).size) :
     rdW ((resetMem m f).arr64 CTL) 1 = f := by
-  rw [resetMem, (resetTop_frame _ f).2.1 1 (by simp), resetMemA_flag m f h]
+  rw [resetMem, (resetTop_frame _ f).ctl 1 (by simp), resetMemA_flag m f h]
 
 /-! ## The wrap (`preMem`) -/
 
@@ -124,8 +124,7 @@ theorem not_mem_slot1 {b : ArrId} : (b : TieredArray) ∉ slot1Arrs := fun hb =>
 
 theorem GFr.memFrame {sa : TieredArray} {m m' : Mem} (h : GFr sa m m') (hc : sa ≠ CTL) :
     MemFrame [sa] [] m m' :=
-  ⟨fun b hb _ => h.1 b (by simpa using hb), fun x _ => by rw [h.1 CTL (Ne.symm hc)],
-    h.2.1, h.2.2⟩
+  ⟨fun b hb _ => h.arr b (by simpa using hb), fun x _ => by rw [h.arr CTL (Ne.symm hc)], h.size⟩
 
 theorem vacL_frame : ∀ (l : List ArrId) (m : Mem), MemFrame (l.map (tierA · 1)) [] m (vacL l m)
   | [], m => MemFrame.refl _ _ m
@@ -166,7 +165,7 @@ theorem vacL_rd (sa : ArrId) : ∀ (l : List ArrId) (m : Mem), l.Nodup → sa �
       have e : (vacL as (vacW a m)).arr64 (tierA a 1) = (vacW a m).arr64 (tierA a 1) :=
         vacL_arr as _ _ (fun b hb' => tierA_ne (fun h : a = b => hna (h ▸ hb')) 1 1)
       rw [e]
-      exact ⟨(kzeroW_fr _ _ _ m).2.1 _, kzeroW_rd _ _ _ m hb⟩
+      exact ⟨(kzeroW_fr _ _ _ m).size _, kzeroW_rd _ _ _ m hb⟩
     · have hin' : sa ∈ as := by simpa [Ne.symm ha] using hin
       have e : (vacW a m).arr64 (tierA sa 1) = m.arr64 (tierA sa 1) :=
         vacW_arr a m _ (tierA_ne (Ne.symm ha) 1 1)
@@ -205,11 +204,11 @@ theorem tier0_iff (x : Word) : x >>> 40 = 0 ↔ x.toNat < 2 ^ 40 := by
 theorem rslice_resetTop (m : Mem) (f : Word) (hp : PoolOK m)
     (hpt : m.top >>> 40 = 0 → 0 < (m.arr64 PT0).size) {o l : Word} (h : RSlice m 0 o l) :
     RSlice (resetTopMem m f) 0 o l := by
-  obtain ⟨hp0, hpt0⟩ := resetTop_tops m f hp.2.1 hpt
+  obtain ⟨hp0, hpt0⟩ := resetTop_tops m f hp.ctl hpt
   obtain ⟨⟨h1, h2⟩, h3⟩ := h
   have ho := h3 rfl
   have hsz := hp.small.1
-  have h5 := hp.2.2.2.2.1
+  have h5 := hp.ptop0
   have e40 : (1099511627776 : Word).toNat = 2 ^ 40 := rfl
   have htl : m.top >>> 40 = 0 ↔ m.top.toNat < 2 ^ 40 := tier0_iff _
   refine ⟨⟨?_, ?_⟩, fun _ => ho⟩
@@ -284,12 +283,13 @@ end pooltabs
 /-- The pool invariant across the tops' stores. -/
 theorem poolOK_resetTop (m : Mem) (f : Word) (hp : PoolOK m)
     (hpt : m.top >>> 40 = 0 → 0 < (m.arr64 PT0).size) : PoolOK (resetTopMem m f) := by
-  obtain ⟨hp0, hpt0⟩ := resetTop_tops m f hp.2.1 hpt
+  obtain ⟨hp0, hpt0⟩ := resetTop_tops m f hp.ctl hpt
   have hf := resetTop_frame m f
   have hs := hp.small
-  obtain ⟨a1, a2, a3, a4, a5, a6⟩ := hp
-  have hpc : pcap (resetTopMem m f) = pcap m := pcap_congr (hf.2.2.1 _) (hf.2.2.1 _)
-  have e0 : (resetTopMem m f).arr64 POOL = m.arr64 POOL := hf.1 POOL (by simp) (by decide)
+  have a5 := hp.ptop0
+  have a6 := hp.inTier
+  have hpc : pcap (resetTopMem m f) = pcap m := pcap_congr (hf.size _) (hf.size _)
+  have e0 : (resetTopMem m f).arr64 POOL = m.arr64 POOL := hf.arr POOL (by simp) (by decide)
   have hpcv : pcap m = 2 ^ 41 - 1 := pcap_of_small m hs
   have hsz0 := hs.1
   have e40 : (1099511627776 : Word).toNat = 2 ^ 40 := rfl
@@ -305,7 +305,7 @@ theorem poolOK_resetTop (m : Mem) (f : Word) (hp : PoolOK m)
       rcases a5 with a5 | a5
       · exact absurd ((tier0_iff _).mpr a5) ht
       · exact a5
-  refine ⟨a1.of_sameShape hf.2.2.2, by rw [hf.2.2.1]; exact a2, by rw [hpc]; exact a3, ?_, ?_, ?_⟩
+  refine ⟨by rw [hf.size]; exact hp.ctl, by rw [hpc]; exact hp.cap, ?_, ?_, ?_⟩
   · rw [hpt0, hpc, hpcv]
     by_cases hf' : f ≠ 0
     · rw [ite_eq_left hf', e40]; omega
@@ -347,7 +347,7 @@ theorem consR_resetP {C : ConsSch} {R : Mem → Word → Word → α → Prop} {
   have hra' : ∀ t, (resetMemA (preMem m) f).arr64 (tierA C.ra t) = m.arr64 (tierA C.ra t) :=
     fun t => hF.tier C.ra not_mem_slot1 hra hS.ra_ctl t
   have e1 : (resetMemA (preMem m) f).arr64 (tierA C.sa 1) = (preMem m).arr64 (tierA C.sa 1) :=
-    hfA.1 _ (by simp) (hS.sa_ctl' 1)
+    hfA.arr _ (by simp) (hS.sa_ctl' 1)
   have hb : rdW ((resetMemA (preMem m) f).arr64 CTL) SCB = rdW ((preMem m).arr64 CTL) SCB + 4294967296 :=
     resetMemA_base (preMem m) f h62
   -- the tier-1 slot array: its size, count and offset words, and its slots free
@@ -378,12 +378,12 @@ theorem consR_resetP {C : ConsSch} {R : Mem → Word → Word → α → Prop} {
       refine ⟨by rw [e1'], by rw [e1'], by rw [e1'], ?_⟩
       exact hR.free_raise e1' (by simpa only [ep] using hlo) hb'
   obtain ⟨t1, t2, t3, t4⟩ := hT1
-  have hloc := hl m (resetMemA (preMem m) f) hra' (fun b hb' => hF.1 b (hA₀ b hb').1 (hA₀ b hb').2)
-    (fun x hx => hF.2.1 x (hC₀ x hx))
-  refine hR.resetG hra' (hF.1 _ not_mem_slot1 (TieredArray.t0_ne hS.sa_ctl)) t1 t2 t3 t4 (hF.2.2.1 CTL) ?_ ?_ ?_
+  have hloc := hl m (resetMemA (preMem m) f) hra' (fun b hb' => hF.arr b (hA₀ b hb').1 (hA₀ b hb').2)
+    (fun x hx => hF.ctl x (hC₀ x hx))
+  refine hR.resetG hra' (hF.arr _ not_mem_slot1 (TieredArray.t0_ne hS.sa_ctl)) t1 t2 t3 t4 (hF.size CTL) ?_ ?_ ?_
     (by rw [resetMemA_flag (preMem m) f h62]) (hloc.1 0) (hloc.2 0)
   · simp only [cntC, UInt64.add_zero]
-    exact hF.2.1 _ (by simp only [resetCtl, List.mem_cons, not_or]; exact ⟨hsc.1, hsc.2.2.1, hca.1⟩)
+    exact hF.ctl _ (by simp only [resetCtl, List.mem_cons, not_or]; exact ⟨hsc.1, hsc.2.2.1, hca.1⟩)
   · simp only [cntC]
     rw [resetMemA_eq]; exact zeroCtl_rd _ _ _ hca.2
   · rw [hb]; rw [UInt64.toNat_add]; simp; omega
@@ -397,8 +397,8 @@ theorem consR_resetTop {C : ConsSch} {R : Mem → Word → Word → α → Prop}
     (h : ConsR C R m on tbP (Tbl.empty : Tbl α (Idx k) δ)) :
     ConsR C R (resetTopMem m f) on tbP (Tbl.empty : Tbl α (Idx k) δ) := by
   have hf := resetTop_frame m f
-  refine h.mono' (fun t => hf.1 _ (by simp [(hra t).1]) (hra t).2)
-    (fun t => hf.1 _ (by simp [(hsa t).1]) (hsa t).2) (hf.2.2.1 CTL) (fun x hx => hf.2.1 x ?_)
+  refine h.mono' (fun t => hf.arr _ (by simp [(hra t).1]) (hra t).2)
+    (fun t => hf.arr _ (by simp [(hsa t).1]) (hsa t).2) (hf.size CTL) (fun x hx => hf.ctl x ?_)
     (fun i a _ hr => hR0 i a hr) (fun i a hi _ => by simp [Tbl.empty] at hi) hh
   rcases hx with rfl | rfl | rfl | rfl
   · simp
@@ -434,9 +434,8 @@ theorem ArenaD.resetA (m : Mem) (a : AState) (hD : ArenaD m a) (f : Word)
     fun C R hW hl hA₀ hC₀ hca hsa hra on' tbP tbS h =>
       consR_resetP hW hl hA₀ hC₀ hca hsa hra m f hlo h62 h
   have hpool : PoolOK (resetMemA (preMem m) f) :=
-    hR.lit.1.frame (hf.1 POOL (by decide) (by decide)) (hf.1 POOL1 (by decide) (by decide))
-      (hf.1 PT0 (by decide) (by decide)) (hf.2.2.1 CTL) (by rw [resetMemA_top, preMem_top])
-      hf.2.2.2
+    hR.lit.1.frame (hf.arr POOL (by decide) (by decide)) (hf.arr POOL1 (by decide) (by decide))
+      (hf.arr PT0 (by decide) (by decide)) (hf.size CTL) (by rw [resetMemA_top, preMem_top])
   have hM : MemosR (resetMemA (preMem m) f) a.memos :=
     hR.memos.frame (by decide) (by simp [resetCtl, scratchCnts, memoCtl, SCB]) hf
   have hcP : ∀ {α : Type} (A : ArrId), A ≠ CTL → (A : TieredArray) ∉ slot1Arrs → tier1 A ∉ slot1Arrs →
@@ -664,15 +663,15 @@ theorem modeOK_resetMem (m : Mem) (f : Word) (hp : PoolOK m) (h62 : SCB.toNat < 
   · right
     have hfA := resetMemA_frame m f
     have hpA : PoolOK (resetMemA m f) :=
-      hp.frame (hfA.1 POOL (by simp) (by decide)) (hfA.1 POOL1 (by simp) (by decide))
-        (hfA.1 PT0 (by simp) (by decide)) (hfA.2.2.1 CTL) (resetMemA_top m f) hfA.2.2.2
-    obtain ⟨-, ht⟩ := resetTop_tops (resetMemA m f) f hpA.2.1 (fun h => hpt (Or.inl h))
+      hp.frame (hfA.arr POOL (by simp) (by decide)) (hfA.arr POOL1 (by simp) (by decide))
+        (hfA.arr PT0 (by simp) (by decide)) (hfA.size CTL) (resetMemA_top m f)
+    obtain ⟨-, ht⟩ := resetTop_tops (resetMemA m f) f hpA.ctl (fun h => hpt (Or.inl h))
     show (resetTopMem (resetMemA m f) f).top.toNat < 2 ^ 40
     rw [ht, ite_eq_right (by simpa using hf)]
     by_cases h0 : (resetMemA m f).top >>> 40 = 0
     · rw [ite_eq_left h0]; exact (tier0_iff _).mp h0
     · rw [ite_eq_right h0]
-      have := hpA.2.2.2.2.1
+      have := hpA.ptop0
       have := hpA.small.1
       have := mt (tier0_iff _).mpr h0
       omega
@@ -686,7 +685,7 @@ theorem modeOK_enterMem (m : Mem) (h62 : SCB.toNat < ((preMem m).arr64 CTL).size
   have hf := clears_frame (resetMem (preMem m) 1)
   have e : enterMem m =
       mclearG frSch (mclearG imSch (mclearG lfSch (mclearG bmSch (resetMem (preMem m) 1)))) := rfl
-  rw [e, flag_rdW, hf.2.1 1 (by simp [memoCtl]), resetMem_flag (preMem m) 1 h62]; decide
+  rw [e, flag_rdW, hf.ctl 1 (by simp [memoCtl]), resetMem_flag (preMem m) 1 h62]; decide
 
 /-! ## The other tiers -/
 
@@ -776,9 +775,9 @@ theorem scratchDrop_refinesC (p : Prog) (hp : p.lookup "scratch_drop" = some scr
       ((flushMem_frame s.mem).mono (by simp) (fun x h => List.mem_append_left _ h)).trans
         ((preMem_frame _).mono (fun b h => h) (fun x h => List.mem_append_right _ h))
     have hp := hC.arena.1.lit.1
-    refine modeOK_resetMem _ 0 (hp.frame (hff.1 POOL (by decide) (by decide))
-      (hff.1 POOL1 (by decide) (by decide)) (hff.1 PT0 (by decide) (by decide)) (hff.2.2.1 CTL)
-      (hff.top_eq (by decide)) hff.2.2.2) h62 hpt
+    refine modeOK_resetMem _ 0 (hp.frame (hff.arr POOL (by decide) (by decide))
+      (hff.arr POOL1 (by decide) (by decide)) (hff.arr PT0 (by decide) (by decide)) (hff.size CTL)
+      (hff.top_eq (by decide))) h62 hpt
 
 /- Two scratch rounds: the base rises by `2^32` each time, the flag follows. -/
 #guard

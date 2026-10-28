@@ -128,7 +128,7 @@ theorem liNode_core (v : LNodeView) (W : Mem → Option (Word × Mem))
   have hk := internLNode_keep _ _ _ _ hrun
   have hL := internLNode_step _ _ _ _ hrun
   obtain ⟨hall, hden⟩ := lvlAll_internLNode hS.arena.1 hS.den.lvlAll hch hnch hrun
-  have hlc := lvlCnt_of_arena hS.arena.1 hR.1 (hf.2.1 1 lvCtl_one)
+  have hlc := lvlCnt_of_arena hS.arena.1 hR.1 (hf.ctl 1 lvCtl_one)
     (LTGrow.internLNode hrun).1 (LTGrow.internLNode hrun).2 (by simp [hL.lsp]) (by simp [hL.lss])
   obtain ⟨hS', -⟩ := hS.of_level hL hR.1 hf lvArrs_lo lvCtl_lo hall hlc lvArrs_stk.2.2 lvCtl_stk.2.2
   exact ⟨_, hrun, hS', hlt, hden, hf, hk, viewsKept_of hS.arena.1 hR.1 hk hf, hL,

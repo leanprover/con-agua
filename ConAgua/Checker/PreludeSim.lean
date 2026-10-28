@@ -180,51 +180,51 @@ theorem keep_sim {X : Prop} {s s1 s2 : St} (hK : Keep s s1) (H : X ∧ Keep s1 s
 /-! ## Expressions and conditions -/
 
 /-- `ce` on `s` evaluates as `oe` on `s` with the input replaced. -/
-def ERel (ce oe : Expr) : Prop := ∀ (s : St) (v : Word) (s1 : St), s.mem.HasB IN →
+def ERel (ce oe : Expr) : Prop := ∀ (s : St) (v : Word) (s1 : St),
   (evalE ce).run s = .ok (v, s1) → s = s1 ∧ (evalE oe).run (s.setIn preIn) = .ok (v, s.setIn preIn)
 
-def CRel (cc co : Cond) : Prop := ∀ (s : St) (v : Bool) (s1 : St), s.mem.HasB IN →
+def CRel (cc co : Cond) : Prop := ∀ (s : St) (v : Bool) (s1 : St),
   (evalC cc).run s = .ok (v, s1) → s = s1 ∧ (evalC co).run (s.setIn preIn) = .ok (v, s.setIn preIn)
 
 def ARel (ces oes : List Expr) : Prop := ∀ (s : St) (v : List Word) (s1 : St),
-  s.mem.HasB IN → (evalArgs ces).run s = .ok (v, s1) →
+  (evalArgs ces).run s = .ok (v, s1) →
     s = s1 ∧ (evalArgs oes).run (s.setIn preIn) = .ok (v, s.setIn preIn)
 
 theorem ERel.bin {op : BinOp} {ca cb oa ob : Expr} (ha : ERel ca oa) (hb : ERel cb ob) :
     ERel (.bin op ca cb) (.bin op oa ob) := by
-  intro s v s1 h0 h
+  intro s v s1 h
   simp only [evalE] at h ⊢
   obtain ⟨x, s2, h1, h2⟩ := run_bind_ok h
-  obtain ⟨rfl, h1'⟩ := ha s x s2 h0 h1
+  obtain ⟨rfl, h1'⟩ := ha s x s2 h1
   obtain ⟨y, s3, h3, h4⟩ := run_bind_ok h2
-  obtain ⟨rfl, h3'⟩ := hb s y s3 h0 h3
+  obtain ⟨rfl, h3'⟩ := hb s y s3 h3
   simp only [StateT.run_pure] at h4
   obtain ⟨rfl, rfl⟩ := h4
   exact ⟨rfl, run_bind_of h1' (run_bind_of h3' rfl)⟩
 
 theorem ERel.cmpw {c : Cmp} {ca cb oa ob : Expr} (ha : ERel ca oa) (hb : ERel cb ob) :
     ERel (.cmpw c ca cb) (.cmpw c oa ob) := by
-  intro s v s1 h0 h
+  intro s v s1 h
   simp only [evalE] at h ⊢
   obtain ⟨x, s2, h1, h2⟩ := run_bind_ok h
-  obtain ⟨rfl, h1'⟩ := ha s x s2 h0 h1
+  obtain ⟨rfl, h1'⟩ := ha s x s2 h1
   obtain ⟨y, s3, h3, h4⟩ := run_bind_ok h2
-  obtain ⟨rfl, h3'⟩ := hb s y s3 h0 h3
+  obtain ⟨rfl, h3'⟩ := hb s y s3 h3
   simp only [StateT.run_pure] at h4
   obtain ⟨rfl, rfl⟩ := h4
   exact ⟨rfl, run_bind_of h1' (run_bind_of h3' rfl)⟩
 
 /-- An index expression followed by a stateless read that agrees on the two states. -/
 theorem ERel.load {ci oi : Expr} (hi : ERel ci oi) {fc fo : Word → M Word}
-    (hf : ∀ (s : St) (j v : Word) (s1 : St), s.mem.HasB IN → (fc j).run s = .ok (v, s1) →
+    (hf : ∀ (s : St) (j v : Word) (s1 : St), (fc j).run s = .ok (v, s1) →
       s = s1 ∧ (fo j).run (s.setIn preIn) = .ok (v, s.setIn preIn))
     {ec eo : Expr} (hc : ∀ s, (evalE ec).run s = (evalE ci >>= fc).run s)
     (ho : ∀ s, (evalE eo).run s = (evalE oi >>= fo).run s) : ERel ec eo := by
-  intro s v s1 h0 h
+  intro s v s1 h
   rw [hc] at h; rw [ho]
   obtain ⟨j, s2, h1, h2⟩ := run_bind_ok h
-  obtain ⟨rfl, h1'⟩ := hi s j s2 h0 h1
-  obtain ⟨rfl, h2'⟩ := hf s j v s1 h0 h2
+  obtain ⟨rfl, h1'⟩ := hi s j s2 h1
+  obtain ⟨rfl, h2'⟩ := hf s j v s1 h2
   exact ⟨rfl, run_bind_of h1' h2'⟩
 
 theorem ld8_run (a : ArrId) (j : Word) (s : St) :
@@ -249,7 +249,7 @@ theorem ldc_run (d : List UInt8) (j : Word) (s : St) :
 theorem erel_ld8_ne {a : ArrId} (ha : a ≠ IN) {ci oi : Expr} (hi : ERel ci oi) :
     ERel (.ld8 a ci) (.ld8 a oi) := by
   refine ERel.load hi (fc := ld8 a) (fo := ld8 a) ?_ (fun _ => rfl) (fun _ => rfl)
-  intro s j v s1 _ h
+  intro s j v s1 h
   rw [ld8_run] at h ⊢
   simp only [St.setIn_mem, Mem.arr8_setIn_ne ha]
   split at h
@@ -261,7 +261,7 @@ theorem erel_ld8_ne {a : ArrId} (ha : a ≠ IN) {ci oi : Expr} (hi : ERel ci oi)
 theorem erel_ld8_zero {ci oi : Expr} (hi : ERel ci oi) :
     ERel (.ldc preludeBytes ci) (.ld8 IN oi) := by
   refine ERel.load hi (fc := ldc preludeBytes) (fo := ld8 IN) ?_ (fun _ => rfl) (fun _ => rfl)
-  intro s j v s1 h0 h
+  intro s j v s1 h
   rw [ldc_run] at h; rw [ld8_run]
   simp only [St.setIn_mem, Mem.arr8_setIn_zero, preIn, List.size_toArray, List.getElem_toArray]
   split at h
@@ -280,12 +280,12 @@ theorem ld64_sim (b : TieredArray) (s : St) (j v : Word) (s1 : St) (h : (ld64 b 
   · cases h
 
 theorem erel_ld64 {a : ArrId} {ci oi : Expr} (hi : ERel ci oi) : ERel (.ld64 a ci) (.ld64 a oi) :=
-  ERel.load hi (fc := ld64 a) (fo := ld64 a) (fun s j v s1 _ h => ld64_sim _ s j v s1 h)
+  ERel.load hi (fc := ld64 a) (fo := ld64 a) (fun s j v s1 h => ld64_sim _ s j v s1 h)
     (fun _ => rfl) (fun _ => rfl)
 
 theorem erel_ldc {d : List UInt8} {ci oi : Expr} (hi : ERel ci oi) : ERel (.ldc d ci) (.ldc d oi) := by
   refine ERel.load hi (fc := ldc d) (fo := ldc d) ?_ (fun _ => rfl) (fun _ => rfl)
-  intro s j v s1 _ h
+  intro s j v s1 h
   rw [ldc_run] at h ⊢
   split at h
   · simp only [Except.ok.injEq, Prod.mk.injEq] at h
@@ -296,48 +296,48 @@ theorem erel_ldc {d : List UInt8} {ci oi : Expr} (hi : ERel ci oi) : ERel (.ldc 
 /-- A stateless leaf expression whose value on the renamed state is the copy's. -/
 theorem erel_leaf {ec eo : Expr} (fc fo : St → Word) (hc : ∀ s, (evalE ec).run s = .ok (fc s, s))
     (ho : ∀ s, (evalE eo).run s = .ok (fo s, s))
-    (hf : ∀ s, s.mem.HasB IN → fo (s.setIn preIn) = fc s) : ERel ec eo := by
-  intro s v s1 h0 h
+    (hf : ∀ s, fo (s.setIn preIn) = fc s) : ERel ec eo := by
+  intro s v s1 h
   rw [hc] at h
   simp only [Except.ok.injEq, Prod.mk.injEq] at h
   obtain ⟨rfl, rfl⟩ := h
-  exact ⟨rfl, by rw [ho, hf s h0]⟩
+  exact ⟨rfl, by rw [ho, hf s]⟩
 
 theorem erel_ld64t {a : ArrId} {ct ot ci oi : Expr} (ht : ERel ct ot) (hi : ERel ci oi) :
     ERel (.ld64t a ct ci) (.ld64t a ot oi) := by
-  intro s v s1 h0 h
+  intro s v s1 h
   simp only [evalE] at h ⊢
   obtain ⟨u, s2, h1, h2⟩ := run_bind_ok h
-  obtain ⟨rfl, h1'⟩ := ht s u s2 h0 h1
+  obtain ⟨rfl, h1'⟩ := ht s u s2 h1
   obtain ⟨j, s3, h3, h4⟩ := run_bind_ok h2
-  obtain ⟨rfl, h3'⟩ := hi s j s3 h0 h3
+  obtain ⟨rfl, h3'⟩ := hi s j s3 h3
   obtain ⟨rfl, h4'⟩ := ld64_sim _ s j v s1 h4
   exact ⟨rfl, run_bind_of h1' (run_bind_of h3' h4')⟩
 
 theorem erel_len64t {a : ArrId} {ct ot : Expr} (ht : ERel ct ot) :
     ERel (.len64t a ct) (.len64t a ot) := by
-  intro s v s1 h0 h
+  intro s v s1 h
   simp only [evalE] at h ⊢
   obtain ⟨u, s2, h1, h2⟩ := run_bind_ok h
-  obtain ⟨rfl, h1'⟩ := ht s u s2 h0 h1
+  obtain ⟨rfl, h1'⟩ := ht s u s2 h1
   obtain ⟨rfl, rfl⟩ : s.mem.len64 (tierA a u) = v ∧ s = s1 := by cases h2; exact ⟨rfl, rfl⟩
   exact ⟨rfl, run_bind_of h1' rfl⟩
 
 /-- A byte source of the copy reads, on a state, what the original's reads on the renamed state. -/
-def BRel (cb ob : BSrc) : Prop := ∀ s : St, s.mem.HasB IN → (s.setIn preIn).mem.src8 ob = s.mem.src8 cb
+def BRel (cb ob : BSrc) : Prop := ∀ s : St, (s.setIn preIn).mem.src8 ob = s.mem.src8 cb
 
 theorem brel_preB : ∀ b, BRel (preB b) b
-  | .arr a, s, h0 => by
+  | .arr a, s => by
     by_cases ha : a = IN
     · subst ha; simp [preB, Mem.src8, Mem.arr8_setIn_zero, preIn]
     · simp [preB, ha, Mem.src8, Mem.arr8_setIn_ne ha]
-  | .rom d, _, _ => rfl
+  | .rom d, _ => rfl
 
 theorem brel_noIn : ∀ b, b.noIn = true → BRel b b
-  | .arr a, h, s, _ => by
+  | .arr a, h, s => by
     simp only [BSrc.noIn, bne_iff_ne] at h
     simp [Mem.src8, Mem.arr8_setIn_ne h]
-  | .rom d, _, _, _ => rfl
+  | .rom d, _, _ => rfl
 
 theorem ld8x8_run (b : BSrc) (j : Word) (s : St) :
     (ld8x8 b j).run s = if j.toNat + 8 ≤ (s.mem.src8 b).size
@@ -349,9 +349,9 @@ theorem ld8x8_run (b : BSrc) (j : Word) (s : St) :
 theorem erel_ld8x8 {cb ob : BSrc} (hb : BRel cb ob) {ci oi : Expr} (hi : ERel ci oi) :
     ERel (.ld8x8 cb ci) (.ld8x8 ob oi) := by
   refine ERel.load hi (fc := ld8x8 cb) (fo := ld8x8 ob) ?_ (fun _ => rfl) (fun _ => rfl)
-  intro s j v s1 h0 h
+  intro s j v s1 h
   rw [ld8x8_run] at h ⊢
-  rw [hb s h0]
+  rw [hb s]
   split at h
   · simp only [Except.ok.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl⟩ := h
@@ -359,10 +359,10 @@ theorem erel_ld8x8 {cb ob : BSrc} (hb : BRel cb ob) {ci oi : Expr} (hi : ERel ci
   · cases h
 
 theorem erel_preE : ∀ e, ERel (preE e) e
-  | .const w => erel_leaf (fun _ => w) (fun _ => w) (fun _ => rfl) (fun _ => rfl) (fun _ _ => rfl)
-  | .var x => erel_leaf (fun s => s.loc x) (fun s => s.loc x) (fun _ => rfl) (fun _ => rfl) (fun _ _ => rfl)
-  | .glob g => erel_leaf (fun s => s.mem.glob g) (fun s => s.mem.glob g) (fun _ => rfl) (fun _ => rfl) (fun _ _ => rfl)
-  | .len64 a => erel_leaf (fun s => s.mem.len64 a) (fun s => s.mem.len64 a) (fun _ => rfl) (fun _ => rfl) (fun _ _ => rfl)
+  | .const w => erel_leaf (fun _ => w) (fun _ => w) (fun _ => rfl) (fun _ => rfl) (fun _ => rfl)
+  | .var x => erel_leaf (fun s => s.loc x) (fun s => s.loc x) (fun _ => rfl) (fun _ => rfl) (fun _ => rfl)
+  | .glob g => erel_leaf (fun s => s.mem.glob g) (fun s => s.mem.glob g) (fun _ => rfl) (fun _ => rfl) (fun _ => rfl)
+  | .len64 a => erel_leaf (fun s => s.mem.len64 a) (fun s => s.mem.len64 a) (fun _ => rfl) (fun _ => rfl) (fun _ => rfl)
   | .bin op a b => ERel.bin (erel_preE a) (erel_preE b)
   | .cmpw c a b => ERel.cmpw (erel_preE a) (erel_preE b)
   | .ld64 a i => erel_ld64 (erel_preE i)
@@ -378,17 +378,17 @@ theorem erel_preE : ∀ e, ERel (preE e) e
     by_cases ha : a = IN
     · subst ha; simp only [preE, ite_true]
       refine erel_leaf (fun _ => preludeLenW) (fun s => s.mem.len8 IN) (fun _ => rfl) (fun _ => rfl)
-        (fun s h0 => ?_)
+        (fun s => ?_)
       simp only [Mem.len8, St.setIn_mem, Mem.arr8_setIn_zero, preIn, List.size_toArray, preludeLenW]
     · simp only [preE, ha, ite_false]
-      refine erel_leaf (fun s => s.mem.len8 a) (fun s => s.mem.len8 a) (fun _ => rfl) (fun _ => rfl) (fun s _ => ?_)
+      refine erel_leaf (fun s => s.mem.len8 a) (fun s => s.mem.len8 a) (fun _ => rfl) (fun _ => rfl) (fun s => ?_)
       simp only [Mem.len8, St.setIn_mem, Mem.arr8_setIn_ne ha]
 
 theorem erel_noIn : ∀ e, e.noIn = true → ERel e e
-  | .const w, _ => erel_leaf (fun _ => w) (fun _ => w) (fun _ => rfl) (fun _ => rfl) (fun _ _ => rfl)
-  | .var x, _ => erel_leaf (fun s => s.loc x) (fun s => s.loc x) (fun _ => rfl) (fun _ => rfl) (fun _ _ => rfl)
-  | .glob g, _ => erel_leaf (fun s => s.mem.glob g) (fun s => s.mem.glob g) (fun _ => rfl) (fun _ => rfl) (fun _ _ => rfl)
-  | .len64 a, _ => erel_leaf (fun s => s.mem.len64 a) (fun s => s.mem.len64 a) (fun _ => rfl) (fun _ => rfl) (fun _ _ => rfl)
+  | .const w, _ => erel_leaf (fun _ => w) (fun _ => w) (fun _ => rfl) (fun _ => rfl) (fun _ => rfl)
+  | .var x, _ => erel_leaf (fun s => s.loc x) (fun s => s.loc x) (fun _ => rfl) (fun _ => rfl) (fun _ => rfl)
+  | .glob g, _ => erel_leaf (fun s => s.mem.glob g) (fun s => s.mem.glob g) (fun _ => rfl) (fun _ => rfl) (fun _ => rfl)
+  | .len64 a, _ => erel_leaf (fun s => s.mem.len64 a) (fun s => s.mem.len64 a) (fun _ => rfl) (fun _ => rfl) (fun _ => rfl)
   | .bin op a b, h => by
     simp only [Expr.noIn, Bool.and_eq_true] at h
     exact ERel.bin (erel_noIn a h.1) (erel_noIn b h.2)
@@ -409,23 +409,23 @@ theorem erel_noIn : ∀ e, e.noIn = true → ERel e e
     exact erel_ld8_ne h.1 (erel_noIn i h.2)
   | .len8 a, h => by
     simp only [Expr.noIn, bne_iff_ne] at h
-    refine erel_leaf (fun s => s.mem.len8 a) (fun s => s.mem.len8 a) (fun _ => rfl) (fun _ => rfl) (fun s _ => ?_)
+    refine erel_leaf (fun s => s.mem.len8 a) (fun s => s.mem.len8 a) (fun _ => rfl) (fun _ => rfl) (fun s => ?_)
     simp only [Mem.len8, St.setIn_mem, Mem.arr8_setIn_ne h]
 
 /-- A block operand of the copy names, on a state, the original's array on the renamed state. -/
-def WRel (cw ow : WArr) : Prop := ∀ (s : St) (a : TieredArray) (s1 : St), s.mem.HasB IN →
+def WRel (cw ow : WArr) : Prop := ∀ (s : St) (a : TieredArray) (s1 : St),
   (warr cw).run s = .ok (a, s1) → s = s1 ∧ (warr ow).run (s.setIn preIn) = .ok (a, s.setIn preIn)
 
 theorem wrel_of {ct ot : Expr} (ht : ERel ct ot) (a : ArrId) : WRel (.tier a ct) (.tier a ot) := by
-  intro s b s1 h0 h
+  intro s b s1 h
   simp only [warr] at h ⊢
   obtain ⟨u, s2, h1, h2⟩ := run_bind_ok h
-  obtain ⟨rfl, h1'⟩ := ht s u s2 h0 h1
+  obtain ⟨rfl, h1'⟩ := ht s u s2 h1
   obtain ⟨rfl, rfl⟩ := pure_run_ok h2
   exact ⟨rfl, run_bind_of h1' rfl⟩
 
 theorem wrel_plain (a : ArrId) : WRel (.plain a) (.plain a) := by
-  intro s b s1 _ h
+  intro s b s1 h
   obtain ⟨rfl, rfl⟩ := pure_run_ok h
   exact ⟨rfl, rfl⟩
 
@@ -439,45 +439,45 @@ theorem wrel_noIn : ∀ w, w.noIn = true → WRel w w
 
 theorem CRel.cmp {c : Cmp} {ca cb oa ob : Expr} (ha : ERel ca oa) (hb : ERel cb ob) :
     CRel (.cmp c ca cb) (.cmp c oa ob) := by
-  intro s v s1 h0 h
+  intro s v s1 h
   simp only [evalC] at h ⊢
   obtain ⟨x, s2, h1, h2⟩ := run_bind_ok h
-  obtain ⟨rfl, h1'⟩ := ha s x s2 h0 h1
+  obtain ⟨rfl, h1'⟩ := ha s x s2 h1
   obtain ⟨y, s3, h3, h4⟩ := run_bind_ok h2
-  obtain ⟨rfl, h3'⟩ := hb s y s3 h0 h3
+  obtain ⟨rfl, h3'⟩ := hb s y s3 h3
   simp only [StateT.run_pure] at h4
   obtain ⟨rfl, rfl⟩ := h4
   exact ⟨rfl, run_bind_of h1' (run_bind_of h3' rfl)⟩
 
 theorem CRel.and {cp cq op oq : Cond} (hp : CRel cp op) (hq : CRel cq oq) :
     CRel (.and cp cq) (.and op oq) := by
-  intro s v s1 h0 h
+  intro s v s1 h
   simp only [evalC] at h ⊢
   obtain ⟨x, s2, h1, h2⟩ := run_bind_ok h
-  obtain ⟨rfl, h1'⟩ := hp s x s2 h0 h1
+  obtain ⟨rfl, h1'⟩ := hp s x s2 h1
   cases x
   · obtain ⟨rfl, rfl⟩ := pure_run_ok h2
     exact ⟨rfl, run_bind_of h1' rfl⟩
-  · obtain ⟨rfl, h'⟩ := hq s v s1 h0 h2
+  · obtain ⟨rfl, h'⟩ := hq s v s1 h2
     exact ⟨rfl, run_bind_of h1' h'⟩
 
 theorem CRel.or {cp cq op oq : Cond} (hp : CRel cp op) (hq : CRel cq oq) :
     CRel (.or cp cq) (.or op oq) := by
-  intro s v s1 h0 h
+  intro s v s1 h
   simp only [evalC] at h ⊢
   obtain ⟨x, s2, h1, h2⟩ := run_bind_ok h
-  obtain ⟨rfl, h1'⟩ := hp s x s2 h0 h1
+  obtain ⟨rfl, h1'⟩ := hp s x s2 h1
   cases x
-  · obtain ⟨rfl, h'⟩ := hq s v s1 h0 h2
+  · obtain ⟨rfl, h'⟩ := hq s v s1 h2
     exact ⟨rfl, run_bind_of h1' h'⟩
   · obtain ⟨rfl, rfl⟩ := pure_run_ok h2
     exact ⟨rfl, run_bind_of h1' rfl⟩
 
 theorem CRel.not {cp op : Cond} (hp : CRel cp op) : CRel (.not cp) (.not op) := by
-  intro s v s1 h0 h
+  intro s v s1 h
   simp only [evalC] at h ⊢
   obtain ⟨x, s2, h1, h2⟩ := run_bind_ok h
-  obtain ⟨rfl, h1'⟩ := hp s x s2 h0 h1
+  obtain ⟨rfl, h1'⟩ := hp s x s2 h1
   simp only [StateT.run_pure] at h2
   obtain ⟨rfl, rfl⟩ := h2
   exact ⟨rfl, run_bind_of h1' rfl⟩
@@ -501,19 +501,19 @@ theorem crel_noIn : ∀ c, c.noIn = true → CRel c c
   | .not p, h => CRel.not (crel_noIn p h)
 
 theorem ARel.nil : ARel [] [] := by
-  intro s v s1 _ h
+  intro s v s1 h
   simp only [evalArgs, StateT.run_pure] at h
   obtain ⟨rfl, rfl⟩ := h
   exact ⟨rfl, rfl⟩
 
 theorem ARel.cons {ce oe : Expr} {ces oes : List Expr} (he : ERel ce oe) (hs : ARel ces oes) :
     ARel (ce :: ces) (oe :: oes) := by
-  intro s v s1 h0 h
+  intro s v s1 h
   simp only [evalArgs] at h ⊢
   obtain ⟨x, s2, h1, h2⟩ := run_bind_ok h
-  obtain ⟨rfl, h1'⟩ := he s x s2 h0 h1
+  obtain ⟨rfl, h1'⟩ := he s x s2 h1
   obtain ⟨y, s3, h3, h4⟩ := run_bind_ok h2
-  obtain ⟨rfl, h3'⟩ := hs s y s3 h0 h3
+  obtain ⟨rfl, h3'⟩ := hs s y s3 h3
   simp only [StateT.run_pure] at h4
   obtain ⟨rfl, rfl⟩ := h4
   exact ⟨rfl, run_bind_of h1' (run_bind_of h3' rfl)⟩
@@ -651,7 +651,7 @@ theorem sim_noIn {t : NTree} {S : FnName → Bool} : ∀ s : Stmt, s.noIn = true
 
 /-- `k` runs the copy `c` as the original `o`. -/
 def KRel (k : Stmt → M Sig) (c o : Stmt) : Prop := ∀ (s : St) (r : Sig) (s1 : St),
-  s.mem.HasB IN → (k c).run s = .ok (r, s1) →
+  (k c).run s = .ok (r, s1) →
     (k o).run (s.setIn preIn) = .ok (r, s1.setIn preIn) ∧ Keep s s1
 
 theorem lookupFn_ok {p : Prog} {f : FnName} {s : St} {fd : FunDecl} {s1 : St}
@@ -670,7 +670,7 @@ theorem lookupFn_run {p : Prog} {f : FnName} {fd : FunDecl} (h : p.lookup f = so
   unfold lookupFn; rw [h]; rfl
 
 theorem callFn_sim {k : Stmt → M Sig} {dc dd : FunDecl} (hk : KRel k dc.body dd.body)
-    (vs : List Word) (s : St) (r : List Word) (s1 : St) (h0 : s.mem.HasB IN)
+    (vs : List Word) (s : St) (r : List Word) (s1 : St)
     (h : (callFn k dc vs).run s = .ok (r, s1)) :
     (callFn k dd vs).run (s.setIn preIn) = .ok (r, s1.setIn preIn) ∧ Keep s s1 := by
   unfold callFn at h ⊢
@@ -686,7 +686,7 @@ theorem callFn_sim {k : Stmt → M Sig} {dc dd : FunDecl} (hk : KRel k dc.body d
   obtain ⟨-, rfl⟩ := h9
   simp only [StateT.run_pure] at h10
   obtain ⟨rfl, rfl⟩ := h10
-  obtain ⟨h7', hK⟩ := hk { s with loc := Locals.init vs } rr s5 h0 h7
+  obtain ⟨h7', hK⟩ := hk { s with loc := Locals.init vs } rr s5 h7
   refine ⟨?_, hK⟩
   refine run_bind_of (s' := s.setIn preIn) (a := s.setIn preIn) rfl ?_
   refine run_bind_of (a := ()) (s' := { s with loc := Locals.init vs }.setIn preIn) rfl ?_
@@ -700,7 +700,7 @@ def KSim (p : Prog) (t : NTree) (S : FnName → Bool) (n : Nat) : Prop :=
 
 theorem invoke_sim_copy {p : Prog} {t : NTree} {S : FnName → Bool} (hP : PreSimProg p t S)
     (n : Nat) (ih : KSim p t S n) (g : FnName) (hg : isCopied t g = true) (vs : List Word) (s : St)
-    (r : List Word) (s1 : St) (h0 : s.mem.HasB IN)
+    (r : List Word) (s1 : St)
     (h : (invoke p (exec p n) ("pre_" ++ g) vs).run s = .ok (r, s1)) :
     (invoke p (exec p n) g vs).run (s.setIn preIn) = .ok (r, s1.setIn preIn) ∧ Keep s s1 := by
   unfold invoke at h ⊢
@@ -709,19 +709,19 @@ theorem invoke_sim_copy {p : Prog} {t : NTree} {S : FnName → Bool} (hP : PreSi
   obtain ⟨fd, hl⟩ := Option.isSome_iff_exists.mp (hP.defined g hg)
   obtain ⟨hc, hst, hcl⟩ := hP.copy g fd hg hl
   rw [hc] at hl'; cases hl'
-  obtain ⟨H, hK⟩ := callFn_sim (ih _ _ (sim_preS _ hst hcl)) vs s r s1 h0 h2
+  obtain ⟨H, hK⟩ := callFn_sim (ih _ _ (sim_preS _ hst hcl)) vs s r s1 h2
   exact ⟨run_bind_of (lookupFn_run hl _) H, hK⟩
 
 theorem invoke_sim_shared {p : Prog} {t : NTree} {S : FnName → Bool} (hP : PreSimProg p t S)
     (n : Nat) (ih : KSim p t S n) (g : FnName) (hg : S g = true) (vs : List Word) (s : St)
-    (r : List Word) (s1 : St) (h0 : s.mem.HasB IN)
+    (r : List Word) (s1 : St)
     (h : (invoke p (exec p n) g vs).run s = .ok (r, s1)) :
     (invoke p (exec p n) g vs).run (s.setIn preIn) = .ok (r, s1.setIn preIn) ∧ Keep s s1 := by
   unfold invoke at h ⊢
   obtain ⟨fd, s2, h1, h2⟩ := run_bind_ok h
   obtain ⟨hl, rfl⟩ := lookupFn_ok h1
   obtain ⟨-, hn, hcl⟩ := hP.shared g fd hg hl
-  obtain ⟨H, hK⟩ := callFn_sim (ih _ _ (sim_noIn _ hn hcl)) vs s r s1 h0 h2
+  obtain ⟨H, hK⟩ := callFn_sim (ih _ _ (sim_noIn _ hn hcl)) vs s r s1 h2
   exact ⟨run_bind_of (lookupFn_run hl _) H, hK⟩
 
 theorem st8_run (a : ArrId) (j v : Word) (s : St) :
@@ -743,23 +743,23 @@ theorem step_sim {p : Prog} {t : NTree} {S : FnName → Bool} (hP : PreSimProg p
     KRel (step p (exec p n)) c o := by
   induction hs with
   | «skip» =>
-    intro s r s1 _ h
+    intro s r s1 h
     obtain ⟨rfl, rfl⟩ := pure_run_ok h
     exact ⟨rfl, Keep.refl _⟩
   | brk =>
-    intro s r s1 _ h
+    intro s r s1 h
     obtain ⟨rfl, rfl⟩ := pure_run_ok h
     exact ⟨rfl, Keep.refl _⟩
   | «abort» =>
-    intro s r s1 _ h
+    intro s r s1 h
     simp only [step] at h
     obtain ⟨v, s2, h1, h2⟩ := run_bind_ok h
     cases h2
   | set x he =>
-    intro s r s1 h0 h
+    intro s r s1 h
     simp only [step] at h ⊢
     obtain ⟨v, s2, h1, h2⟩ := run_bind_ok h
-    obtain ⟨rfl, h1'⟩ := he s v s2 h0 h1
+    obtain ⟨rfl, h1'⟩ := he s v s2 h1
     obtain ⟨u, s3, h3, h4⟩ := run_bind_ok h2
     simp only [setLoc, StateT.run_modify] at h3
     obtain ⟨-, rfl⟩ := h3
@@ -767,10 +767,10 @@ theorem step_sim {p : Prog} {t : NTree} {S : FnName → Bool} (hP : PreSimProg p
     exact ⟨run_bind_of h1' (run_bind_of (a := ()) (s' := (s.setLoc x v).setIn preIn) rfl rfl),
       Keep.of_mem rfl⟩
   | gset g he =>
-    intro s r s1 h0 h
+    intro s r s1 h
     simp only [step] at h ⊢
     obtain ⟨v, s2, h1, h2⟩ := run_bind_ok h
-    obtain ⟨rfl, h1'⟩ := he s v s2 h0 h1
+    obtain ⟨rfl, h1'⟩ := he s v s2 h1
     obtain ⟨u, s3, h3, h4⟩ := run_bind_ok h2
     simp only [setG, StateT.run_modify] at h3
     obtain ⟨-, rfl⟩ := h3
@@ -778,12 +778,12 @@ theorem step_sim {p : Prog} {t : NTree} {S : FnName → Bool} (hP : PreSimProg p
     exact ⟨run_bind_of h1' (run_bind_of (a := ()) (s' := (s.setG g v).setIn preIn) rfl rfl),
       rfl⟩
   | st8 ha hi he =>
-    intro s r s1 h0 h
+    intro s r s1 h
     simp only [step] at h ⊢
     obtain ⟨j, s2, h1, h2⟩ := run_bind_ok h
-    obtain ⟨rfl, h1'⟩ := hi s j s2 h0 h1
+    obtain ⟨rfl, h1'⟩ := hi s j s2 h1
     obtain ⟨v, s3, h3, h4⟩ := run_bind_ok h2
-    obtain ⟨rfl, h3'⟩ := he s v s3 h0 h3
+    obtain ⟨rfl, h3'⟩ := he s v s3 h3
     obtain ⟨u, s4, h5, h6⟩ := run_bind_ok h4
     obtain ⟨rfl, rfl⟩ := pure_run_ok h6
     rw [st8_run] at h5
@@ -798,12 +798,12 @@ theorem step_sim {p : Prog} {t : NTree} {S : FnName → Bool} (hP : PreSimProg p
       simp only [St.setIn, Mem.set8_setIn ha]
     · cases h5
   | st64 a hi he =>
-    intro s r s1 h0 h
+    intro s r s1 h
     simp only [step] at h ⊢
     obtain ⟨j, s2, h1, h2⟩ := run_bind_ok h
-    obtain ⟨rfl, h1'⟩ := hi s j s2 h0 h1
+    obtain ⟨rfl, h1'⟩ := hi s j s2 h1
     obtain ⟨v, s3, h3, h4⟩ := run_bind_ok h2
-    obtain ⟨rfl, h3'⟩ := he s v s3 h0 h3
+    obtain ⟨rfl, h3'⟩ := he s v s3 h3
     obtain ⟨u, s4, h5, h6⟩ := run_bind_ok h4
     obtain ⟨rfl, rfl⟩ := pure_run_ok h6
     rw [st64_run] at h5
@@ -817,14 +817,14 @@ theorem step_sim {p : Prog} {t : NTree} {S : FnName → Bool} (hP : PreSimProg p
       exact ite_eq_left hlt
     · cases h5
   | st64t a ht hi he =>
-    intro s r s1 h0 h
+    intro s r s1 h
     simp only [step] at h ⊢
     obtain ⟨u, s0, h0', h00⟩ := run_bind_ok h
-    obtain ⟨rfl, h0''⟩ := ht s u s0 h0 h0'
+    obtain ⟨rfl, h0''⟩ := ht s u s0 h0'
     obtain ⟨j, s2, h1, h2⟩ := run_bind_ok h00
-    obtain ⟨rfl, h1'⟩ := hi s j s2 h0 h1
+    obtain ⟨rfl, h1'⟩ := hi s j s2 h1
     obtain ⟨v, s3, h3, h4⟩ := run_bind_ok h2
-    obtain ⟨rfl, h3'⟩ := he s v s3 h0 h3
+    obtain ⟨rfl, h3'⟩ := he s v s3 h3
     obtain ⟨w, s4, h5, h6⟩ := run_bind_ok h4
     obtain ⟨rfl, rfl⟩ := pure_run_ok h6
     rw [st64_run] at h5
@@ -838,18 +838,18 @@ theorem step_sim {p : Prog} {t : NTree} {S : FnName → Bool} (hP : PreSimProg p
       exact ite_eq_left hlt
     · cases h5
   | copy64 hd hdi hs hsi hn =>
-    intro s r s1 h0 h
+    intro s r s1 h
     simp only [step] at h ⊢
     obtain ⟨da, s2, h1, h2⟩ := run_bind_ok h
-    obtain ⟨rfl, h1'⟩ := hd s da s2 h0 h1
+    obtain ⟨rfl, h1'⟩ := hd s da s2 h1
     obtain ⟨i, s3, h3, h4⟩ := run_bind_ok h2
-    obtain ⟨rfl, h3'⟩ := hdi s i s3 h0 h3
+    obtain ⟨rfl, h3'⟩ := hdi s i s3 h3
     obtain ⟨sa, s5, h5, h6⟩ := run_bind_ok h4
-    obtain ⟨rfl, h5'⟩ := hs s sa s5 h0 h5
+    obtain ⟨rfl, h5'⟩ := hs s sa s5 h5
     obtain ⟨j, s7, h7, h8⟩ := run_bind_ok h6
-    obtain ⟨rfl, h7'⟩ := hsi s j s7 h0 h7
+    obtain ⟨rfl, h7'⟩ := hsi s j s7 h7
     obtain ⟨k, s9, h9, h10⟩ := run_bind_ok h8
-    obtain ⟨rfl, h9'⟩ := hn s k s9 h0 h9
+    obtain ⟨rfl, h9'⟩ := hn s k s9 h9
     obtain ⟨st, s11, h11, h12⟩ := run_bind_ok h10
     simp only [StateT.run_get] at h11
     obtain ⟨rfl, rfl⟩ := h11
@@ -868,20 +868,20 @@ theorem step_sim {p : Prog} {t : NTree} {S : FnName → Bool} (hP : PreSimProg p
       rfl
     · cases h12
   | copy8w hd hdi hs hsi hn =>
-    intro s r s1 h0 h
+    intro s r s1 h
     simp only [step] at h ⊢
     obtain ⟨da, s2, h1, h2⟩ := run_bind_ok h
-    obtain ⟨rfl, h1'⟩ := hd s da s2 h0 h1
+    obtain ⟨rfl, h1'⟩ := hd s da s2 h1
     obtain ⟨i, s3, h3, h4⟩ := run_bind_ok h2
-    obtain ⟨rfl, h3'⟩ := hdi s i s3 h0 h3
+    obtain ⟨rfl, h3'⟩ := hdi s i s3 h3
     obtain ⟨j, s7, h7, h8⟩ := run_bind_ok h4
-    obtain ⟨rfl, h7'⟩ := hsi s j s7 h0 h7
+    obtain ⟨rfl, h7'⟩ := hsi s j s7 h7
     obtain ⟨k, s9, h9, h10⟩ := run_bind_ok h8
-    obtain ⟨rfl, h9'⟩ := hn s k s9 h0 h9
+    obtain ⟨rfl, h9'⟩ := hn s k s9 h9
     obtain ⟨st, s11, h11, h12⟩ := run_bind_ok h10
     simp only [StateT.run_get] at h11
     obtain ⟨rfl, rfl⟩ := h11
-    have hb := hs s h0
+    have hb := hs s
     split at h12
     · rename_i hc
       obtain ⟨u, s13, h13, h14⟩ := run_bind_ok h12
@@ -899,16 +899,16 @@ theorem step_sim {p : Prog} {t : NTree} {S : FnName → Bool} (hP : PreSimProg p
       rfl
     · cases h12
   | scan8 x c hs hi he =>
-    intro s r s1 h0 h
+    intro s r s1 h
     simp only [step] at h ⊢
     obtain ⟨vi, s2, h1, h2⟩ := run_bind_ok h
-    obtain ⟨rfl, h1'⟩ := hi s vi s2 h0 h1
+    obtain ⟨rfl, h1'⟩ := hi s vi s2 h1
     obtain ⟨ve, s3, h3, h4⟩ := run_bind_ok h2
-    obtain ⟨rfl, h3'⟩ := he s ve s3 h0 h3
+    obtain ⟨rfl, h3'⟩ := he s ve s3 h3
     obtain ⟨st, s11, h11, h12⟩ := run_bind_ok h4
     simp only [StateT.run_get] at h11
     obtain ⟨rfl, rfl⟩ := h11
-    have hb := hs s h0
+    have hb := hs s
     simp only [St.setIn_mem] at hb
     split at h12
     · rename_i hc
@@ -923,53 +923,53 @@ theorem step_sim {p : Prog} {t : NTree} {S : FnName → Bool} (hP : PreSimProg p
       rfl
     · cases h12
   | seq _ _ ih1 ih2 =>
-    intro s r s1 h0 h
+    intro s r s1 h
     simp only [step] at h ⊢
     obtain ⟨a, s2, h1, h2⟩ := run_bind_ok h
-    obtain ⟨h1', hK⟩ := ih1 s a s2 h0 h1
+    obtain ⟨h1', hK⟩ := ih1 s a s2 h1
     refine bind_sim h1' (keep_sim hK ?_)
     cases a with
-    | normal => exact ih2 s2 r s1 trivial h2
+    | normal => exact ih2 s2 r s1 h2
     | brk => obtain ⟨rfl, rfl⟩ := pure_run_ok h2; exact ⟨rfl, Keep.refl _⟩
     | ret v => obtain ⟨rfl, rfl⟩ := pure_run_ok h2; exact ⟨rfl, Keep.refl _⟩
   | ite hc _ _ ih1 ih2 =>
-    intro s r s1 h0 h
+    intro s r s1 h
     simp only [step] at h ⊢
     obtain ⟨b, s2, h1, h2⟩ := run_bind_ok h
-    obtain ⟨rfl, h1'⟩ := hc s b s2 h0 h1
+    obtain ⟨rfl, h1'⟩ := hc s b s2 h1
     refine bind_sim h1' ?_
     cases b
-    · exact ih2 s r s1 h0 h2
-    · exact ih1 s r s1 h0 h2
+    · exact ih2 s r s1 h2
+    · exact ih1 s r s1 h2
   | «while» hc hb ihb =>
-    intro s r s1 h0 h
+    intro s r s1 h
     simp only [step] at h ⊢
     obtain ⟨b, s2, h1, h2⟩ := run_bind_ok h
-    obtain ⟨rfl, h1'⟩ := hc s b s2 h0 h1
+    obtain ⟨rfl, h1'⟩ := hc s b s2 h1
     refine bind_sim h1' ?_
     cases b
     · obtain ⟨rfl, rfl⟩ := pure_run_ok h2; exact ⟨rfl, Keep.refl _⟩
     · obtain ⟨a, s3, h3, h4⟩ := run_bind_ok h2
-      obtain ⟨h3', hK⟩ := ihb s a s3 h0 h3
+      obtain ⟨h3', hK⟩ := ihb s a s3 h3
       refine bind_sim h3' (keep_sim hK ?_)
       cases a with
-      | normal => exact ihn _ _ (.while hc hb) s3 r s1 trivial h4
+      | normal => exact ihn _ _ (.while hc hb) s3 r s1 h4
       | brk => obtain ⟨rfl, rfl⟩ := pure_run_ok h4; exact ⟨rfl, Keep.refl _⟩
       | ret v => obtain ⟨rfl, rfl⟩ := pure_run_ok h4; exact ⟨rfl, Keep.refl _⟩
   | ret ha =>
-    intro s r s1 h0 h
+    intro s r s1 h
     simp only [step] at h ⊢
     obtain ⟨vs, s2, h1, h2⟩ := run_bind_ok h
-    obtain ⟨rfl, h1'⟩ := ha s vs s2 h0 h1
+    obtain ⟨rfl, h1'⟩ := ha s vs s2 h1
     obtain ⟨rfl, rfl⟩ := pure_run_ok h2
     exact ⟨run_bind_of h1' rfl, Keep.refl _⟩
   | callC xs hg ha =>
-    intro s r s1 h0 h
+    intro s r s1 h
     simp only [step] at h ⊢
     obtain ⟨vs, s2, h1, h2⟩ := run_bind_ok h
-    obtain ⟨rfl, h1'⟩ := ha s vs s2 h0 h1
+    obtain ⟨rfl, h1'⟩ := ha s vs s2 h1
     obtain ⟨rs, s3, h3, h4⟩ := run_bind_ok h2
-    obtain ⟨h3', hK⟩ := invoke_sim_copy hP n ihn _ hg vs s rs s3 h0 h3
+    obtain ⟨h3', hK⟩ := invoke_sim_copy hP n ihn _ hg vs s rs s3 h3
     obtain ⟨u, s4, h5, h6⟩ := run_bind_ok h4
     simp only [setLocs, StateT.run_modify] at h5
     obtain ⟨-, rfl⟩ := h5
@@ -979,12 +979,12 @@ theorem step_sim {p : Prog} {t : NTree} {S : FnName → Bool} (hP : PreSimProg p
     simp only [setLocs, StateT.run_modify, St.setLocs_setIn]
     rfl
   | callS xs hg ha =>
-    intro s r s1 h0 h
+    intro s r s1 h
     simp only [step] at h ⊢
     obtain ⟨vs, s2, h1, h2⟩ := run_bind_ok h
-    obtain ⟨rfl, h1'⟩ := ha s vs s2 h0 h1
+    obtain ⟨rfl, h1'⟩ := ha s vs s2 h1
     obtain ⟨rs, s3, h3, h4⟩ := run_bind_ok h2
-    obtain ⟨h3', hK⟩ := invoke_sim_shared hP n ihn _ hg vs s rs s3 h0 h3
+    obtain ⟨h3', hK⟩ := invoke_sim_shared hP n ihn _ hg vs s rs s3 h3
     obtain ⟨u, s4, h5, h6⟩ := run_bind_ok h4
     simp only [setLocs, StateT.run_modify] at h5
     obtain ⟨-, rfl⟩ := h5
@@ -996,28 +996,27 @@ theorem step_sim {p : Prog} {t : NTree} {S : FnName → Bool} (hP : PreSimProg p
 
 theorem ksim {p : Prog} {t : NTree} {S : FnName → Bool} (hP : PreSimProg p t S) :
     ∀ n, KSim p t S n
-  | 0 => fun _ _ _ s r s1 _ h => by cases h
+  | 0 => fun _ _ _ s r s1 h => by cases h
   | n + 1 => fun _ _ hs => step_sim hP n (ksim hP n) hs
 
 /-- **The simulation.** -/
 theorem preSim {p : Prog} {t : NTree} {S : FnName → Bool} (hP : PreSimProg p t S) (n : Nat)
     (f : FnName) (hf : isCopied t f = true) (vs : List Word) (s : St) (r : List Word) (s' : St)
-    (h0 : s.mem.HasB IN)
     (h : (invoke p (exec p n) ("pre_" ++ f) vs).run s = .ok (r, s')) :
     (invoke p (exec p n) f vs).run (s.setIn preIn) = .ok (r, s'.setIn preIn) ∧
       s'.mem.arr8 IN = s.mem.arr8 IN := by
-  exact invoke_sim_copy hP n (ksim hP n) f hf vs s r s' h0 h
+  exact invoke_sim_copy hP n (ksim hP n) f hf vs s r s' h
 
 /-- **A spec of `f` is a spec of its copy**, on the memory with the prelude's bytes as input. -/
 theorem preSim_triple {p : Prog} {t : NTree} {S : FnName → Bool} (hP : PreSimProg p t S)
     (n : Nat) (f : FnName) (hf : isCopied t f = true) (vs : List Word)
-    (s₀ : St) (h0 : s₀.mem.HasB IN) {Q : List Word → St → Prop}
+    (s₀ : St) {Q : List Word → St → Prop}
     (hQ : ⦃fun s => s = s₀.setIn preIn⦄ invoke p (exec p n) f vs ⦃fun r s => Q r s; ⊤⦄) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) ("pre_" ++ f) vs
     ⦃fun r s => Q r (s.setIn preIn) ∧ s.mem.arr8 IN = s₀.mem.arr8 IN; ⊤⦄ := by
   apply M.triple_of_run
   intro s r s' hs hrun
-  obtain ⟨h1, h2⟩ := preSim hP n f hf vs s r s' (hs ▸ h0) hrun
+  obtain ⟨h1, h2⟩ := preSim hP n f hf vs s r s' hrun
   exact ⟨M.of_run (P := fun x => x = s₀.setIn preIn) (by rw [hs]) h1 hQ, hs ▸ h2⟩
 
 end L.Checker

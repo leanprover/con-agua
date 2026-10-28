@@ -159,8 +159,8 @@ section loc
 variable {α : Type} {S : Schema} {R : Mem → Word → Word → α → Prop} {hs : Mem → Word → Word → Word}
 
 /-- **A node relation local to its record has the transfer** between memories of one shape. -/
-theorem rTrans_local (hS : S.WF) (hF : RFrame S R hs) (hL : RLocal S R hs [] []) {m m' : Mem}
-    (_hw : m.SameShape m') : RTrans S R hs m m' := by
+theorem rTrans_local (hS : S.WF) (hF : RFrame S R hs) (hL : RLocal S R hs [] []) {m m' : Mem} :
+    RTrans S R hs m m' := by
   intro t i hf
   let m₁ := (m.setA S.ra (m'.arr64 S.ra)).setA (tier1 S.ra) (m'.arr64 (tier1 S.ra))
   have hne : (S.ra : TieredArray) ≠ tier1 S.ra := t0_ne_tier1 _ _

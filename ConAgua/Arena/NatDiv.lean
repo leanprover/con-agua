@@ -175,7 +175,7 @@ variable (p : Prog) (hpl : p.lookup "nat_limb" = some natLimb)
 
 /-- The invariant of `div_shl1`'s pass, over the entry pool `P0`. -/
 def Shl1Inv (P0 : Array Word) (C : Nat) (s : St) : Prop :=
-  s.mem.HasW POOL ∧ C < 2 ^ 64 ∧ P0.size = 2 ^ 41 ∧ pcap s.mem = C ∧
+  C < 2 ^ 64 ∧ P0.size = 2 ^ 41 ∧ pcap s.mem = C ∧
   (s.loc 0).toNat + (s.loc 1).toNat ≤ C ∧ (s.loc 3).toNat ≤ (s.loc 1).toNat ∧
   s.loc 6 = s.loc 0 >>> 40 ∧ s.loc 7 = s.loc 0 &&& 1099511627775 ∧
   (s.mem.arr64 (tierA POOL (s.loc 6))).size ≤ 2 ^ 40 ∧ (s.loc 6).toNat ≤ 1 ∧ (s.loc 0).toNat < 2 ^ 41 ∧
@@ -204,7 +204,7 @@ theorem shl1Loop_spec (n : Nat) (s₀ : St) (h : Shl1Inv P0 C s₀) :
 
 /-- The invariant of `div_sub`'s pass. -/
 def DSubInv (P0 : Array Word) (C : Nat) (s : St) : Prop :=
-  s.mem.HasW POOL ∧ C < 2 ^ 64 ∧ P0.size = 2 ^ 41 ∧ pcap s.mem = C ∧
+  C < 2 ^ 64 ∧ P0.size = 2 ^ 41 ∧ pcap s.mem = C ∧
   (s.loc 0).toNat + (s.loc 1).toNat ≤ C ∧ (s.loc 2).toNat + (s.loc 3).toNat ≤ (s.loc 0).toNat ∧
   s.loc 8 = s.loc 0 >>> 40 ∧ s.loc 9 = s.loc 0 &&& 1099511627775 ∧
   (s.mem.arr64 (tierA POOL (s.loc 8))).size ≤ 2 ^ 40 ∧ (s.loc 8).toNat ≤ 1 ∧ (s.loc 0).toNat < 2 ^ 41 ∧
@@ -239,7 +239,7 @@ theorem dsubLoop_spec (n : Nat) (s₀ : St) (h : DSubInv P0 C s₀) :
 
 /-- The invariant of `div_add`'s pass. -/
 def DAddInv (P0 : Array Word) (C : Nat) (s : St) : Prop :=
-  s.mem.HasW POOL ∧ C < 2 ^ 64 ∧ P0.size = 2 ^ 41 ∧ pcap s.mem = C ∧
+  C < 2 ^ 64 ∧ P0.size = 2 ^ 41 ∧ pcap s.mem = C ∧
   (s.loc 0).toNat + (s.loc 1).toNat ≤ C ∧ (s.loc 2).toNat + (s.loc 3).toNat ≤ (s.loc 0).toNat ∧
   s.loc 8 = s.loc 0 >>> 40 ∧ s.loc 9 = s.loc 0 &&& 1099511627775 ∧
   (s.mem.arr64 (tierA POOL (s.loc 8))).size ≤ 2 ^ 40 ∧ (s.loc 8).toNat ≤ 1 ∧ (s.loc 0).toNat < 2 ^ 41 ∧
@@ -292,7 +292,7 @@ variable (p : Prog) (hpl : p.lookup "nat_limb" = some natLimb)
   (hps : p.lookup "sub_borrow" = some subBorrow) (hpc : p.lookup "add_carry" = some addCarry)
 
 theorem divShl1_spec (hp : p.lookup "div_shl1" = some divShl1) (n : Nat) (s₀ : St)
-    (r k bit : Word) (hs : pcap s₀.mem < 2 ^ 64) (hw : s₀.mem.HasW POOL)
+    (r k bit : Word) (hs : pcap s₀.mem < 2 ^ 64)
     (hr : r.toNat + k.toNat ≤ pcap s₀.mem) (hb : bit.toNat ≤ 1) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "div_shl1" [r, k, bit]
@@ -313,7 +313,7 @@ theorem divShl1_spec (hp : p.lookup "div_shl1" = some divShl1) (n : Nat) (s₀ :
 
 include hpl hps in
 theorem divSub_spec (hp : p.lookup "div_sub" = some divSub) (n : Nat) (s₀ : St)
-    (r k ob lb : Word) (hs : pcap s₀.mem < 2 ^ 64) (hw : s₀.mem.HasW POOL)
+    (r k ob lb : Word) (hs : pcap s₀.mem < 2 ^ 64)
     (hr : r.toNat + k.toNat ≤ pcap s₀.mem) (hb : ob.toNat + lb.toNat ≤ r.toNat) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "div_sub" [r, k, ob, lb]
@@ -334,7 +334,7 @@ theorem divSub_spec (hp : p.lookup "div_sub" = some divSub) (n : Nat) (s₀ : St
 
 include hpl hpc in
 theorem divAdd_spec (hp : p.lookup "div_add" = some divAdd) (n : Nat) (s₀ : St)
-    (r k ob lb : Word) (hs : pcap s₀.mem < 2 ^ 64) (hw : s₀.mem.HasW POOL)
+    (r k ob lb : Word) (hs : pcap s₀.mem < 2 ^ 64)
     (hr : r.toNat + k.toNat ≤ pcap s₀.mem) (hb : ob.toNat + lb.toNat ≤ r.toNat) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "div_add" [r, k, ob, lb]
@@ -475,9 +475,9 @@ theorem pv_exit (p : Array Word) (pa oa : Nat) (i la : Word) (h : ¬ i < la)
 grind_pattern [natop_grind] pv_exit => pv p pa i.toNat, pv p oa la.toNat, i < la
 
 theorem Grows.refl (m : Mem) (h : PoolOK m) : Grows m m := by
-  have h2 := h.2.1
+  have h2 := h.ctl
   have hf : PFrame (m.set64 CTL 0 m.top) m := by
-    refine ⟨by rw [Mem.bytes_set64], (Mem.sameShape_set64 _ _ _ _).symm, fun b _ _ => ?_,
+    refine ⟨by rw [Mem.bytes_set64], fun b _ _ => ?_,
       by rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)],
       by rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)], rfl⟩
     by_cases hb : b = CTL
@@ -486,7 +486,7 @@ theorem Grows.refl (m : Mem) (h : PoolOK m) : Grows m m := by
       simp only [Array.set!_eq_setIfInBounds, show (0 : Word).toNat = 0 from rfl]
       grind
     · rw [Mem.arr64_set64_ne _ _ _ _ _ hb]
-  exact Grows.intro m m h hf (Agree.refl _ _) (Nat.le_refl _) (by have := h.2.2.2.2.2; omega)
+  exact Grows.intro m m h hf (Agree.refl _ _) (Nat.le_refl _) (by have := h.inTier; omega)
 grind_pattern [arena_grind] Grows.refl => Grows m m
 
 /-- A shorter prefix of a slice in use is in use. -/
@@ -510,7 +510,7 @@ theorem Grows.write_at (m m₂ : Mem) (v : Word) (hok : PoolOK m) (hf : PFrame m
     (hk : (m.top &&& 1099511627775).toNat + (v.toNat - m.top.toNat) ≤
       (m.arr64 (tierA POOL (m.top >>> 40))).size) :
     Grows m (m₂.set64 CTL 0 v) := by
-  have hctl : 0 < (m₂.arr64 CTL).size := by rw [hf.ctl]; exact hok.2.1
+  have hctl : 0 < (m₂.arr64 CTL).size := by rw [hf.ctl]; exact hok.ctl
   have htop : (m₂.set64 CTL 0 v).top = v := Mem.top_set64 _ _ hctl
   apply Grows.intro m _ hok
   · rw [htop]; exact PFrame.set64_both CTL 0 _ hf (by decide) (by decide)
@@ -535,7 +535,7 @@ theorem SliceOK.write_at (m m₂ : Mem) (v o l : Word) (hok : PoolOK m) (hf : PF
     (ho : m.top.toNat ≤ o.toNat) (hl : o.toNat + l.toNat ≤ v.toNat) :
     SliceOK (m₂.set64 CTL 0 v) o l := by
   have hg := Grows.write_at m m₂ v hok hf ha hv hk
-  have hctl : 0 < (m₂.arr64 CTL).size := by rw [hf.ctl]; exact hok.2.1
+  have hctl : 0 < (m₂.arr64 CTL).size := by rw [hf.ctl]; exact hok.ctl
   exact SliceOK.sub hg ho (by rw [Mem.top_set64 _ _ hctl]; exact hl)
 grind_pattern [arena_grind] SliceOK.write_at => PoolOK m, SliceOK (m₂.set64 CTL 0 v) o l
 
@@ -636,7 +636,7 @@ variable (p : Prog) (hpl : p.lookup "nat_limb" = some natLimb)
 include hpl hps hpc hp1 hp2 hp3 in
 /-- One step of the long division: `R' + qbit · b = 2 R + bit`, `R' < b`, in place. -/
 theorem divStep_spec (hp4 : p.lookup "div_step" = some divStep) (n : Nat) (s₀ : St)
-    (r k ob lb bit : Word) (hs : pcap s₀.mem < 2 ^ 64) (hw : s₀.mem.HasW POOL)
+    (r k ob lb bit : Word) (hs : pcap s₀.mem < 2 ^ 64)
     (hr : r.toNat + k.toNat ≤ pcap s₀.mem) (hb : ob.toNat + lb.toNat ≤ r.toNat)
     (hk : k.toNat = lb.toNat + 1) (hbit : bit.toNat ≤ 1)
     (hR : pv (vpool s₀.mem) r.toNat k.toNat < pv (vpool s₀.mem) ob.toNat lb.toNat) :
@@ -671,7 +671,7 @@ variable (p : Prog) (hpl : p.lookup "nat_limb" = some natLimb)
 quotient's `la` limbs at `top` and the remainder's `n = lb + 1` limbs at `ro = top + la` fit;
 `a` and `b` lie below `top`; `b > 0`. -/
 def DivBase (Pg : Array Word) (C : Nat) (s : St) : Prop :=
-  s.mem.HasW POOL ∧ C < 2 ^ 63 ∧ Pg.size = 2 ^ 41 ∧ pcap s.mem = C ∧
+  C < 2 ^ 63 ∧ Pg.size = 2 ^ 41 ∧ pcap s.mem = C ∧
   Agree (vpool s.mem) Pg (s.loc 4).toNat ∧
   (s.loc 6).toNat = (s.loc 4).toNat + (s.loc 1).toNat ∧ (s.loc 5).toNat = (s.loc 3).toNat + 1 ∧
   (s.loc 6).toNat + (s.loc 5).toNat ≤ C ∧
@@ -827,8 +827,8 @@ theorem natDivmod_spec (n : Nat) (s₀ : St) (oa la ob lb : Word) (hok : PoolOK 
   have h41 := hok.top41
   have hsz := hsm.tier (s₀.mem.top >>> 40)
   -- the `ptop0` disjunct of `PoolOK` is dead here, and `grind` splits on it in every goal
-  obtain ⟨hok1, hok2, hok3, hok4, -, hok6⟩ := hok
-  have hok0 : s₀.mem.HasW POOL := hok1.mono (by decide)
+  have hok2 := hok.ctl; have hok3 := hok.cap; have hok4 := hok.top; have hok6 := hok.inTier
+  clear hok
   have ha1 := ha.1
   have hb1 := hb.1
   rw [invoke_eq _ hpn]

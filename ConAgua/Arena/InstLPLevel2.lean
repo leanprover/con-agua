@@ -152,7 +152,7 @@ theorem spnLs_core (p : Prog) (hL : LsProg p) {n : Nat} {m m' : Mem} {a : AState
       ILWGrow a a' ∧ a'.memos = a.memos ∧ MemFrame [POOL, POOL1, LSREC, LSSLOT, LSHP, tier1 LSREC, tier1 LSSLOT, tier1 LSHP] [0, 40, 41] m m' := by
   have hp := hS.arena.1.lit.1
   obtain ⟨s₄, hs₄m, -, hW⟩ := triple_of_callW (spnLs_spec p hL n ⟨m, Locals.init []⟩ b l
-    (by show pcap m < 2 ^ 64; have := hp.2.2.1; omega) hp.top41) h
+    (by show pcap m < 2 ^ 64; have := hp.cap; omega) hp.top41) h
   rw [hs₄m] at hW
   change spnLsW n m b l = some (rs.headD 0, m') at hW
   generalize rs.headD 0 = r' at hW ⊢
@@ -175,7 +175,7 @@ theorem spnLs_core (p : Prog) (hL : LsProg p) {n : Nat} {m m' : Mem} {a : AState
     (fun x hx => by simp only [lsSch, List.mem_cons, List.mem_nil_iff, or_false] at hx
                     rcases hx with rfl | rfl <;> decide)
     (lsAll_internLsNode hK.1.arena.1 hK.1.den.lsAll hel hrun).1
-    (lvlCnt_internLsNode hK.1.arena.1 hA₃.1 (hf₃.2.1 1 (by decide)) hrun)
+    (lvlCnt_internLsNode hK.1.arena.1 hA₃.1 (hf₃.ctl 1 (by decide)) hrun)
   obtain ⟨hden, hext⟩ := denoteLs_internLsNode hK.1.arena.1 hel hrun
   obtain ⟨-, -, hme⟩ := internLsNode_keep _ _ _ _ hrun
   obtain ⟨hls, -⟩ := internLsNode_ext _ _ _ _ hrun

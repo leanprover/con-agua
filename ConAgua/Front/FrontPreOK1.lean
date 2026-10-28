@@ -52,7 +52,7 @@ theorem DK.grow {m m' : Mem} (h : DK m m') : DGrow m m' :=
 
 theorem DK.ofFrame {A : List TieredArray} {C : List Word} {m m' : Mem} (hf : MemFrame A C m m')
     (hd : (DECL : TieredArray) ∉ A := by tapart) (hq : (DLP : TieredArray) ∉ A := by tapart) : DK m m' :=
-  ⟨hf.1 DECL hd (by decide), hf.1 DLP hq (by decide)⟩
+  ⟨hf.arr DECL hd (by decide), hf.arr DLP hq (by decide)⟩
 
 theorem DK.set64 (m : Mem) (b : ArrId) (hd : b ≠ DECL) (hq : b ≠ DLP) (i v : Word) :
     DK m (m.set64 b i v) :=

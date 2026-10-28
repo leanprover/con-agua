@@ -152,7 +152,7 @@ theorem DerR.frameM (A : List TieredArray) (C : List Word) (m m' : Mem) (hf : Me
     DerR m' a :=
   DerR.frame m m' a hD fun B hB t => by
     rcases tierA_eq_or B t with e | e <;> rw [e] <;>
-      refine hf.1 _ (fun h => by
+      refine hf.arr _ (fun h => by
         have := hA _ h; rcases hB with rfl | rfl | rfl | rfl | rfl <;> revert this <;> decide) (by
         rcases hB with rfl | rfl | rfl | rfl | rfl <;> decide)
 
@@ -479,7 +479,7 @@ theorem mkApp_ok (m : Mem) (a : AState) (hA : ArenaD m a) (f x r : Word) (m' : M
       derFW_ok m a hR hD f hf, derFW_ok m a hR hD x hx, bvar_derApp, fvar_derApp,
       derLW_ok m a hR hD f hf, derLW_ok m a hR hD x hx]; simp only [lpW, lp_derApp, b2w_or]) hP
   have o := fun (B : TieredArray) (hB : B ≠ ADER) (hB' : B ≠ tier1 ADER) (hC : B ≠ CTL) =>
-    hfr₂.1 B (by simp [hB, hB']) hC
+    hfr₂.arr B (by simp [hB, hB']) hC
   refine ⟨hok, ⟨ArenaR.frame_above _ _ (by simp [tier1, ADER]) (by simp) _ _ hfr₂ _ hR₁, ?_⟩, hres⟩
   rcases hcs with h | ⟨-, -, -, h⟩ | ⟨-, -, -, h⟩ <;> rw [h] at hnew ⊢ <;>
   exact ⟨hD₁.bvar, hD₁.fvar, hD₁.sort, hD₁.const, hD₁.lit, hnew,
@@ -521,7 +521,7 @@ theorem mkLam_ok (m : Mem) (a : AState) (hA : ArenaD m a) (t b r : Word) (m' : M
       derFW_ok m a hR hD t ht, derFW_ok m a hR hD b hb, bvar_derBind, fvar_derBind, derLW_ok m a hR hD t ht, derLW_ok m a hR hD b hb] <;>
       simp only [lpW, lp_derBind, b2w_or]) hP
   have o := fun (B : TieredArray) (hB : B ≠ LADER) (hB' : B ≠ tier1 LADER) (hC : B ≠ CTL) =>
-    hfr₂.1 B (by simp [hB, hB']) hC
+    hfr₂.arr B (by simp [hB, hB']) hC
   refine ⟨hok, ⟨ArenaR.frame_above _ _ (by simp [tier1, LADER]) (by simp) _ _ hfr₂ _ hR₁, ?_⟩, hres⟩
   rcases hcs with h | ⟨-, -, -, h⟩ | ⟨-, -, -, h⟩ <;> rw [h] at hnew ⊢ <;>
   exact ⟨hD₁.bvar, hD₁.fvar, hD₁.sort, hD₁.const, hD₁.lit,
@@ -565,7 +565,7 @@ theorem mkForall_ok (m : Mem) (a : AState) (hA : ArenaD m a) (t b r : Word) (m' 
       derFW_ok m a hR hD t ht, derFW_ok m a hR hD b hb, bvar_derBind, fvar_derBind, derLW_ok m a hR hD t ht, derLW_ok m a hR hD b hb] <;>
       simp only [lpW, lp_derBind, b2w_or]) hP
   have o := fun (B : TieredArray) (hB : B ≠ FADER) (hB' : B ≠ tier1 FADER) (hC : B ≠ CTL) =>
-    hfr₂.1 B (by simp [hB, hB']) hC
+    hfr₂.arr B (by simp [hB, hB']) hC
   refine ⟨hok, ⟨ArenaR.frame_above _ _ (by simp [tier1, FADER]) (by simp) _ _ hfr₂ _ hR₁, ?_⟩, hres⟩
   rcases hcs with h | ⟨-, -, -, h⟩ | ⟨-, -, -, h⟩ <;> rw [h] at hnew ⊢ <;>
   exact ⟨hD₁.bvar, hD₁.fvar, hD₁.sort, hD₁.const, hD₁.lit,
@@ -614,7 +614,7 @@ theorem mkLet_ok (m : Mem) (a : AState) (hA : ArenaD m a) (t v b r : Word) (m' :
       derLW_ok m a hR hD t ht, derLW_ok m a hR hD v hv, derLW_ok m a hR hD b hb] <;>
       simp only [lpW, lp_derLet, b2w_or]) hP
   have o := fun (B : TieredArray) (hB : B ≠ LEDER) (hB' : B ≠ tier1 LEDER) (hC : B ≠ CTL) =>
-    hfr₂.1 B (by simp [hB, hB']) hC
+    hfr₂.arr B (by simp [hB, hB']) hC
   refine ⟨hok, ⟨ArenaR.frame_above _ _ (by simp [tier1, LEDER]) (by simp) _ _ hfr₂ _ hR₁, ?_⟩, hres⟩
   rcases hcs with h | ⟨-, -, -, h⟩ | ⟨-, -, -, h⟩ <;> rw [h] at hnew ⊢ <;>
   exact ⟨hD₁.bvar, hD₁.fvar, hD₁.sort, hD₁.const, hD₁.lit,
@@ -656,7 +656,7 @@ theorem mkProj_ok (m : Mem) (a : AState) (hA : ArenaD m a) (n i e r : Word) (m' 
     hres.symm (by rw [derBW_ok m a hR hD e he, derFW_ok m a hR hD e he, bvar_derProj,
       fvar_derProj, derLW_ok m a hR hD e he]; simp only [lpW, lp_derProj]) hP
   have o := fun (B : TieredArray) (hB : B ≠ PJDER) (hB' : B ≠ tier1 PJDER) (hC : B ≠ CTL) =>
-    hfr₂.1 B (by simp [hB, hB']) hC
+    hfr₂.arr B (by simp [hB, hB']) hC
   refine ⟨hok, ⟨ArenaR.frame_above _ _ (by simp [tier1, PJDER]) (by simp) _ _ hfr₂ _ hR₁, ?_⟩, hres⟩
   rcases hcs with h | ⟨-, -, -, h⟩ | ⟨-, -, -, h⟩ <;> rw [h] at hnew ⊢ <;>
   exact ⟨hD₁.bvar, hD₁.fvar, hD₁.sort, hD₁.const, hD₁.lit,
@@ -837,8 +837,8 @@ theorem internLit_refinesD (p : Prog) (hph : p.lookup "lit_hash" = some litHash)
       ArenaD s'.mem (AM.st (internE (.lit (.natVal (pv (vpool s₀.mem) o.toNat l.toNat)))) a₀) ∧
       AM.res (internE (.lit (.natVal (pv (vpool s₀.mem) o.toNat l.toNat)))) a₀ =
         decE (r.headD 0); ⊤⦄ := by
-  have hps := hA.1.lit.1.2.2.1
-  have htop := hA.1.lit.1.2.2.2.1
+  have hps := hA.1.lit.1.cap
+  have htop := hA.1.lit.1.top
   have hq1 := hq.le
   have hspec := internLit_spec p hph hpe hpm hpf hpp hp n s₀ o l (by omega) (by omega)
   apply M.triple_of_run

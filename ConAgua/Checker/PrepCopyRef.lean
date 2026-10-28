@@ -140,7 +140,7 @@ theorem pCopy_ok (ord c t : Word) (n : Nat) : ∀ (m m' : Mem) (i z : Word), i.t
         obtain ⟨hf1, hr1⟩ := pCopyRec_ok t _ i n m m₁ 0 z₁ (by decide) (by omega) hs hrc
         have h0 : (0 : Word).toNat = 0 := rfl
         rw [h0] at hr1
-        have hs1 : (m₁.arr64 IW).size = (m.arr64 IW).size := hf1.2.2.1 IW
+        have hs1 : (m₁.arr64 IW).size = (m.arr64 IW).size := hf1.size IW
         obtain ⟨hf2, hr2⟩ := ih m₁ m' (i + 1) z (by omega) ho (by omega) (by omega) h
         refine ⟨hf1.trans hf2, fun x => ?_⟩
         have hD : m₁.arr64 DECL = m.arr64 DECL := hf1.1 DECL (by decide) (by decide)
@@ -186,7 +186,7 @@ theorem pBack_ok (t c : Word) (n : Nat) : ∀ (m m' : Mem) (i z : Word), i.toNat
         obtain ⟨hf1, hr1⟩ := pBackRec_ok t i n m m₁ 0 z₁ (by decide) (by omega) hs hrc
         have h0 : (0 : Word).toNat = 0 := rfl
         rw [h0] at hr1
-        have hs1 : (m₁.arr64 DECL).size = (m.arr64 DECL).size := hf1.2.2.1 DECL
+        have hs1 : (m₁.arr64 DECL).size = (m.arr64 DECL).size := hf1.size DECL
         obtain ⟨hf2, hr2⟩ := ih m₁ m' (i + 1) z (by omega) (by omega) (by omega) h
         refine ⟨hf1.trans hf2, fun x => ?_⟩
         have hI : m₁.arr64 IW = m.arr64 IW := hf1.1 IW (by decide) (by decide)

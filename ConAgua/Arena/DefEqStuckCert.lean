@@ -22,7 +22,7 @@ namespace L.Arena
 theorem erecP_frame {A : List TieredArray} {C : List Word} {m m' : Mem} (hf : MemFrame A C m m')
     (hA : (EREC : TieredArray) ∉ A) (hC : (129 : Word) ∉ C) : erecP m' = erecP m := by
   unfold erecP erecTop
-  rw [hf.1 EREC hA (by decide), hf.2.1 129 hC]
+  rw [hf.arr EREC hA (by decide), hf.ctl 129 hC]
 
 /-- The kind word of a decoded record says whether it is an inductive. -/
 theorem decCI_indK {a b : Array Word} {dn : NIdx → Option ConLeche.Name} {q : Word}

@@ -493,15 +493,15 @@ theorem appendW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IF
     rw [UInt64.toNat_add]; simp; omega
   have hIW := allocMem_IW m (l1 + l2)
   have hqt : q.toNat = iwTop m := by simp only [iwTop, hqq]
-  obtain ⟨hA1, hS1', hW1, hG1⟩ := copyW_get (n - 1) _ _ _ _ _ hcp1 (by omega)
+  obtain ⟨hA1, hS1', hG1⟩ := copyW_get (n - 1) _ _ _ _ _ hcp1 (by omega)
     (by rw [hIW]; omega) (by rw [hIW]; exact hsz)
-  obtain ⟨hA2, hS2', hW2, hG2⟩ := copyW_get (n - 1) _ _ _ _ _ hcp2 (by rw [hql]; omega)
+  obtain ⟨hA2, hS2', hG2⟩ := copyW_get (n - 1) _ _ _ _ _ hcp2 (by rw [hql]; omega)
     (by rw [hql, hS1', hIW]; omega) (by rw [hS1', hIW]; exact hsz)
   rw [hIW] at hS1' hG1
   have hfr : MemFrame [IW] [200] m m3 :=
     (allocMem_frame m (l1 + l2)).trans
-      ((copy_frame hA1 (by rw [hS1', hIW]) hW1).trans
-       (copy_frame hA2 hS2' hW2))
+      ((copy_frame hA1 (by rw [hS1', hIW])).trans
+       (copy_frame hA2 hS2'))
   have hget : ∀ i, (m3.arr64 IW)[i]? =
       if q.toNat ≤ i ∧ i < q.toNat + l1.toNat then (m.arr64 IW)[o1.toNat + (i - q.toNat)]?
       else if q.toNat + l1.toNat ≤ i ∧ i < q.toNat + l1.toNat + l2.toNat then

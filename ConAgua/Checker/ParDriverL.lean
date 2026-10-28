@@ -41,8 +41,8 @@ theorem PhaseBStart.frame0 (hf : MemFrame [] [] m m') (h : PhaseBStart pins dn d
   refine ⟨h.loop.of_lo (CheckR.frame_hi (by simp) (by simp) hf h.loop.check) hf' (by simp), ?_,
     CoreMemos.frame_hi hf (by simp) (by simp) h.core, h.twin, CrOK.frame h.cr hf (by simp) (by simp)⟩
   have hM := h.mem
-  exact ⟨by rw [hf.2.2.1]; exact hM.erec, by rw [hf.2.2.1]; exact hM.spn, by rw [hf.2.2.1]; exact hM.bstk,
-    by simp only [pinW, hf.1 PINS (by simp) (by decide)]; exact hM.flag, hM.dnP⟩
+  exact ⟨by rw [hf.size]; exact hM.erec, by rw [hf.size]; exact hM.spn, by rw [hf.size]; exact hM.bstk,
+    by simp only [pinW, hf.arr PINS (by simp) (by decide)]; exact hM.flag, hM.dnP⟩
 
 end frame0
 
@@ -69,7 +69,7 @@ theorem checkPendingGo_agree (bs : List UInt8) (hP : PhaseBProg (Prog.subPB bs c
   subst hx hy hz
   -- phase A's memory with the worker's globals and byte arrays
   let m₂ : Mem := { m with glob := s.mem.glob }
-  have hf : MemFrame [] [] m m₂ := ⟨fun _ _ _ => rfl, fun _ _ => rfl, fun _ => rfl, trivial⟩
+  have hf : MemFrame [] [] m m₂ := ⟨fun _ _ _ => rfl, fun _ _ => rfl, fun _ => rfl⟩
   have h₂ := PhaseBStart.frame0 hf h
   let s₂ : St := ⟨m₂, s.loc⟩
   have hAg : Agree phaseBS (fun _ => false) s.mem s₂.mem :=

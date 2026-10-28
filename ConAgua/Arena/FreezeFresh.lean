@@ -45,23 +45,23 @@ theorem PhaseBStart.cut {t : Mem} (h : PhaseBStart pins dn ds fe pend t a v) :
   have hn : ∀ k : Nat, k < 256 → (UInt64.ofNat k : Word) ∉ hiC (t.arr64 CTL).size := fun k hk hx => by
     have := hC _ hx; rw [UInt64.toNat_ofNat_of_lt' (by simp only [UInt64.size]; omega)] at this; omega
   have he : erecP (ctlCut t) = erecP t :=
-    erecP_congr (hf.1 EREC (by simp) (by decide)) (hf.2.1 129 (hn 129 (by decide)))
+    erecP_congr (hf.arr EREC (by simp) (by decide)) (hf.ctl 129 (hn 129 (by decide)))
   obtain ⟨hL, hM, hCM, hT, hcr⟩ := h
   refine ⟨⟨?_, ?_, ?_, ?_, ?_, ?_⟩, ?_, ?_, hT, ?_⟩
   · exact CheckR.frame_hi (A := []) (by simp) (fun x hx => by have := hC x hx; omega) hf hL.check
-  · exact hL.pend.ext (hf.1 PEND (by simp) (by decide)) (hf.2.1 130 (hn 130 (by decide)))
+  · exact hL.pend.ext (hf.arr PEND (by simp) (by decide)) (hf.ctl 130 (hn 130 (by decide)))
       (by rw [he]; exact fun _ _ h => h)
-  · rw [hf.1 _ (by simp) (by decide), hf.1 _ (by simp) (by decide)]; exact hL.decls
+  · rw [hf.arr _ (by simp) (by decide), hf.arr _ (by simp) (by decide)]; exact hL.decls
   · exact IWOK.frame hf (by simp) (by simp) (hn 129 (by decide)) (hn 200 (by decide)) hL.iw
   · obtain ⟨pm, hm⟩ := hL.pmemo
     exact ⟨pm, hm.frame (by simp) (fun x hx => .inr (by have := hC x hx; omega)) hf⟩
   · exact PinSetsR.grow hL.pinsets
-      ⟨by simp only [L.Ind.erTop, hf.2.1 129 (hn 129 (by decide))]; exact Nat.le_refl _,
-        fun i _ => by rw [hf.1 EREC (by simp) (by decide)]⟩
-      (hf.2.1 150 (hn 150 (by decide))) (hf.2.1 151 (hn 151 (by decide)))
-  · refine ⟨by rw [hf.2.2.1]; exact hM.erec, by rw [hf.2.2.1]; exact hM.spn,
-      by rw [hf.2.2.1]; exact hM.bstk, ?_, hM.dnP⟩
-    simp only [pinW, hf.1 PINS (by simp) (by decide)]; exact hM.flag
+      ⟨by simp only [L.Ind.erTop, hf.ctl 129 (hn 129 (by decide))]; exact Nat.le_refl _,
+        fun i _ => by rw [hf.arr EREC (by simp) (by decide)]⟩
+      (hf.ctl 150 (hn 150 (by decide))) (hf.ctl 151 (hn 151 (by decide)))
+  · refine ⟨by rw [hf.size]; exact hM.erec, by rw [hf.size]; exact hM.spn,
+      by rw [hf.size]; exact hM.bstk, ?_, hM.dnP⟩
+    simp only [pinW, hf.arr PINS (by simp) (by decide)]; exact hM.flag
   · exact CoreMemos.frame_hi hf (by simp) (fun x hx => by have := hC x hx; omega) hCM
       (by simp) (fun x hx => .inr (by have := hC x hx; omega))
   · obtain ⟨memo, hm⟩ := hcr
@@ -84,12 +84,10 @@ section zero
 variable (m : Mem)
 
 theorem fresh_keep {b : TieredArray} (hb : b ∉ freshZ) : (freshMem m).arr64 b = (cutT m).arr64 b :=
-  (fresh_frame m).1 b hb (fun h => hb (h ▸ ctl_mem_freshZ))
-
-theorem fresh_words : (cutT m).SameShape (freshMem m) := (fresh_frame m).2.2.2
+  (fresh_frame m).arr b hb (fun h => hb (h ▸ ctl_mem_freshZ))
 
 theorem fresh_size (b : TieredArray) : ((freshMem m).arr64 b).size = ((cutT m).arr64 b).size :=
-  (fresh_frame m).2.2.1 b
+  (fresh_frame m).size b
 
 theorem fresh_getD {b : TieredArray} (hb : b ∈ freshZ) (hc : b ≠ CTL) (i : Nat) :
     ((freshMem m).arr64 b)[i]?.getD 0 = 0 := by
@@ -115,7 +113,7 @@ theorem consR_freshL {C : ConsSch} {R : Mem → Word → Word → α → Prop} {
     ConsR C R (freshMem m) on P Q :=
   consR_iff.mpr (storeR_fresh C.sch R C.hsM C.KP hW.kframe (fresh_ctl m) (fresh_keep m h1)
     (fresh_keep m h2) (fresh_zero m h3 (tier1_ne_ctl C.sa)) (fresh_size m _)
-    (rTrans_local hW.sch hF hL (fresh_words m)) h0 (consR_iff.mp h))
+    (rTrans_local hW.sch hF hL) h0 (consR_iff.mp h))
 
 /-- A cons table whose records point into the pool below a tier-0 top keeps its relation. -/
 theorem consR_freshP {C : ConsSch} {R : Mem → Word → Word → α → Prop} {on : Bool}
@@ -129,7 +127,7 @@ theorem consR_freshP {C : ConsSch} {R : Mem → Word → Word → α → Prop} {
     ConsR C R (freshMem m) on P Q :=
   consR_iff.mpr (storeR_fresh C.sch R C.hsM C.KP hW.kframe (fresh_ctl m) (fresh_keep m h1)
     (fresh_keep m h2) (fresh_zero m h3 (tier1_ne_ctl C.sa)) (fresh_size m _)
-    (rTrans_pool0 hF hP hx (fresh_words m)
+    (rTrans_pool0 hF hP hx
       (poolTr0_of (fresh_keep m (by decide)) (fresh_ctl m) htop)) h0 (consR_iff.mp h))
 
 end stores
@@ -142,12 +140,11 @@ theorem scr_empty {a : AState} (hd : a.store.dropScratch = a.store) :
 
 theorem PoolOK.fresh (h : PoolOK (cutT m)) (htop : (cutT m).top.toNat < 2 ^ 40) :
     PoolOK (freshMem m) := by
-  obtain ⟨a1, a2, a3, a4, -, a6⟩ := h
   have ht : (freshMem m).top = (cutT m).top := by simp only [Mem.top, fresh_ctl]
   have hpc : pcap (freshMem m) = pcap (cutT m) := by simp only [pcap, PSmall, fresh_size]
-  refine ⟨a1.of_sameShape (fresh_words m), by rw [fresh_ctl]; exact a2, by rw [hpc]; exact a3,
-    by rw [hpc, ht]; exact a4, .inl (by rw [ht]; exact htop), ?_⟩
-  rw [ht, fresh_size]; exact a6
+  refine ⟨by rw [fresh_ctl]; exact h.ctl, by rw [hpc]; exact h.cap, by rw [hpc, ht]; exact h.top,
+    .inl (by rw [ht]; exact htop), ?_⟩
+  rw [ht, fresh_size]; exact h.inTier
 
 section arena
 variable {a : AState} (hd : a.store.dropScratch = a.store)

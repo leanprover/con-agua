@@ -68,7 +68,6 @@ theorem poolCopyW_get (n : Nat) : ∀ (m m' : Mem) (d s l : Word), poolCopyW n m
     s.toNat + l.toNat ≤ 2 ^ 41 → d.toNat + l.toNat ≤ (m.arr64 IW).size →
     (m.arr64 IW).size < 2 ^ 64 →
     (∀ b : TieredArray, b ≠ ↑IW → m'.arr64 b = m.arr64 b) ∧ (m'.arr64 IW).size = (m.arr64 IW).size ∧
-    m.SameShape m' ∧
     ∀ i, (m'.arr64 IW)[i]? =
       if d.toNat ≤ i ∧ i < d.toNat + l.toNat then (vpool m)[s.toNat + (i - d.toNat)]?
       else (m.arr64 IW)[i]? := by
@@ -80,7 +79,7 @@ theorem poolCopyW_get (n : Nat) : ∀ (m m' : Mem) (d s l : Word), poolCopyW n m
     · rw [poolCopyW_nil n m d s l hl] at h
       cases h
       subst hl
-      refine ⟨fun _ _ => rfl, rfl, .refl _, fun i => ?_⟩
+      refine ⟨fun _ _ => rfl, rfl, fun i => ?_⟩
       have : ¬ (d.toNat ≤ i ∧ i < d.toNat + (0 : Word).toNat) := by
         simp only [UInt64.toNat_zero]; omega
       simp only [this, ite_false]
@@ -109,12 +108,11 @@ theorem poolCopyW_get (n : Nat) : ∀ (m m' : Mem) (d s l : Word), poolCopyW n m
           simp only [hdlt, ite_true]
           rw [vpool_get? m s (by omega)]
         · simp [hi, Ne.symm hi]
-      obtain ⟨hA, hS, hW, hG⟩ := ih m1 m' (d + 1) (s + 1) (l - 1) h
+      obtain ⟨hA, hS, hG⟩ := ih m1 m' (d + 1) (s + 1) (l - 1) h
         (by rw [hs1, hl1]; omega) (by rw [hd1, hl1, hsz1]; omega) (by rw [hsz1]; exact hsz)
       rw [hE1v] at hG
-      refine ⟨fun b hb => (hA b hb).trans ?_, hS.trans hsz1, Mem.SameShape.trans ?_ hW, fun i => ?_⟩
+      refine ⟨fun b hb => (hA b hb).trans ?_, hS.trans hsz1, fun i => ?_⟩
       · rw [hm1, Mem.arr64_set64_ne _ _ _ _ _ hb]
-      · rw [hm1]; exact Mem.sameShape_set64 _ _ _ _
       · rw [hG i, hd1, hl1, hs1]
         by_cases hi : d.toNat ≤ i ∧ i < d.toNat + l.toNat
         · rw [ite_eq_left hi]
@@ -256,12 +254,12 @@ theorem viewLsW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv
   have hPPv : vpool (allocMem m l) = vpool m := by
     simp only [allocMem]; exact vpool_set64_ne _ _ _ _ ⟨by decide, by decide⟩
   have h41 := hR.lit.1.top41
-  obtain ⟨hA, hS2, hW, hG⟩ := poolCopyW_get (n - 1) _ _ _ _ _ hcp (by omega)
+  obtain ⟨hA, hS2, hG⟩ := poolCopyW_get (n - 1) _ _ _ _ _ hcp (by omega)
     (by rw [hIW]; exact hroom) (by rw [hIW]; exact hsz)
   rw [hIW] at hS2 hG
   rw [hPPv] at hG
   have hfr : MemFrame [IW] [200] m m2 :=
-    (allocMem_frame m l).trans (copy_frame hA (by rw [hS2, hIW]) hW)
+    (allocMem_frame m l).trans (copy_frame hA (by rw [hS2, hIW]))
   have htop : rdW (m2.arr64 CTL) 200 = q + l := by
     rw [hA CTL (by decide), allocMem_top m _ hc, hqq]
   have hsum : (q + l).toNat = q.toNat + l.toNat := by
@@ -287,17 +285,17 @@ theorem viewLsW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv
   have hroom2 : iwTop m2 ≤ (m2.arr64 IW).size := by rw [htop', hS2]; omega
   have hSt : StageR dn vis fe m2 a := by
     refine ⟨CheckR.frame_iw hfr hS.1, hroom2, ?_, ?_, ?_, ?_⟩
-    · have h129 : rdW (m2.arr64 CTL) 129 = rdW (m.arr64 CTL) 129 := hfr.2.1 129 (by simp)
-      have hE2 : m2.arr64 EREC = m.arr64 EREC := hfr.1 EREC (by decide) (by decide)
+    · have h129 : rdW (m2.arr64 CTL) 129 = rdW (m.arr64 CTL) 129 := hfr.ctl 129 (by simp)
+      have hE2 : m2.arr64 EREC = m.arr64 EREC := hfr.arr EREC (by decide) (by decide)
       simp only [erTop, h129, hE2]; exact hE1
-    · rw [hfr.2.2.1 IW]; exact hsz
-    · rw [hfr.1 EREC (by decide) (by decide)]; exact hEs
-    · rw [hfr.2.2.1 CTL]; exact hc
+    · rw [hfr.size IW]; exact hsz
+    · rw [hfr.arr EREC (by decide) (by decide)]; exact hEs
+    · rw [hfr.size CTL]; exact hc
   refine ⟨ids, viewLs_run' _ _ _ hv, hSt, hgrow, ⟨?_, ?_⟩, ?_⟩
   · simpa using hdec
   · show q.toNat + l.toNat ≤ iwTop m2
     omega
   · simp only [PoolSmall]
-    rw [pcap_congr (hfr.2.2.1 POOL) (hfr.2.2.1 POOL1)]; exact hP
+    rw [pcap_congr (hfr.size POOL) (hfr.size POOL1)]; exact hP
 
 end L.Ind

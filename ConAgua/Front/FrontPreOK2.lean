@@ -125,12 +125,12 @@ theorem installW_grow {b : ByteArray} {n : Nat} {m m' : Mem} (a : AState) {st : 
   simp only [UInt64.toNat_zero, Nat.add_zero] at R4 R5
   -- the push
   have hfr4 : MemFrame [DLP] [] m m₄ := P1.frame.trans (T1.trans (C1.trans R1))
-  have hdecl4 : m₄.arr64 DECL = m.arr64 DECL := hfr4.1 DECL (by decide) (by decide)
+  have hdecl4 : m₄.arr64 DECL = m.arr64 DECL := hfr4.arr DECL (by decide) (by decide)
   obtain ⟨G1, G2, G3, G4, G5, w0, w1, w2, w3, w4, w5, w6, w7⟩ :=
     pushW_facts m₄ m' _ _ _ _ _ _ _ _ (rdW (m.arr64 DECL) 0) (by rw [hdecl4]) h
       (by rw [hdecl4]; exact hD.decls.dsize)
   have hm'P : m'.arr64 DLP = m₄.arr64 DLP := G1.1 DLP (by simp) (by decide)
-  have hs4 : (m₄.arr64 DLP).size = (m.arr64 DLP).size := hfr4.2.2.1 DLP
+  have hs4 : (m₄.arr64 DLP).size = (m.arr64 DLP).size := hfr4.size DLP
   have hkeep : ∀ j, 1 ≤ j → j ≤ topN m DLP → wd m₄ DLP j = wd m DLP j := fun j h1 h2 => by
     rw [R4 j h1 (by omega) (.inl (by omega)), C4 j h1 (by omega) (.inl (by omega)),
       T4 j h1 (by omega) (.inl (by omega)), P1.keep j h1 h2]
@@ -182,8 +182,8 @@ theorem applyIndW_grow {b : ByteArray} (h64 : System.Platform.numBits = 64) (hsi
     ⟨ArenaR.frame_ext _ _ (by simp [IFR, IFL]) (by simp) _ _ hfr1 _ hA.1,
       DerR.frameT hfr1 (by simp [IFR, IFL]) hA.2⟩
   have hD1 : StateDR m₁ st := hD.frame hfr1 (by decide) (by decide) (by decide) (by decide) (by decide)
-  have hs1 : (m₁.arr64 IFR).size = (m.arr64 IFR).size := hfr1.2.2.1 IFR
-  have hs1' : (m₁.arr64 IFL).size = (m.arr64 IFL).size := hfr1.2.2.1 IFL
+  have hs1 : (m₁.arr64 IFR).size = (m.arr64 IFR).size := hfr1.size IFR
+  have hs1' : (m₁.arr64 IFL).size = (m.arr64 IFL).size := hfr1.size IFL
   have hT1 : TopOK m₁ := ⟨by have := hRoom.2.1; exact this, Nat.le_of_lt hRoom.2.2.2⟩
   have hIFR1 : topN m₁ IFR < 2 ^ 62 := by have := hRoom.2.2.1; omega
   obtain ⟨ordered, V1, V2, V3, V4, V5, V6, V7, V8⟩ := validateW_twin hA1.1 hD1 hok hT1 hF hIFR1 h2
@@ -193,7 +193,7 @@ theorem applyIndW_grow {b : ByteArray} (h64 : System.Platform.numBits = 64) (hsi
       DerR.frameT hfr2 (by simp [IFL, LH]) hA1.2⟩
   have hD2 : StateDR m₂ st := hD1.frame hfr2 (by decide) (by decide) (by decide) (by decide) (by decide)
   have hifr2 : m₂.arr64 IFR = m₁.arr64 IFR := V2.ifr
-  have hs2' : (m₂.arr64 IFL).size = (m.arr64 IFL).size := by rw [hfr2.2.2.1 IFL, hs1']
+  have hs2' : (m₂.arr64 IFL).size = (m.arr64 IFL).size := by rw [hfr2.size IFL, hs1']
   have hIFR2 : topN m₂ IFR < 2 ^ 62 := by unfold topN wd; rw [hifr2]; exact hIFR1
   have hIFL2 : topN m₂ IFL < 2 ^ 62 := by have := V3.2; omega
   have hk : DK m m₂ := (DK.ofFrame hfr1 (by decide) (by decide)).trans

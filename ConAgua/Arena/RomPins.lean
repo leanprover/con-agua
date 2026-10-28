@@ -410,7 +410,7 @@ theorem internReservedPins_run (a : AState)
 
 theorem pinW_frame {C : List Word} {m m' : Mem} (h : MemFrame StoreA C m m') (i : Nat) :
     pinW m' i = pinW m i := by
-  simp only [pinW, h.1 PINS (by decide) (by decide)]
+  simp only [pinW, h.arr PINS (by decide) (by decide)]
 
 theorem pinW_fill (m : Mem) (us z s1 : Word) (i : Nat) (hs : 55 ≤ (m.arr64 PINS).size) :
     pinW (irpFill m us z s1) i =
@@ -537,7 +537,7 @@ theorem irpW_ok (off : Word) (rest : List UInt8)
       ((frame_store hf5 (by simp [tier1, succSch, SREC, SSLOT, SHP]) (by simp [succSch])).trans
       (frame_store hf6 (by simp [tier1, sortSch, SOREC, SOSLOT, SOLP]) (by simp [sortSch])))
   have hsz : (m₆.arr64 PINS).size = (m.arr64 PINS).size := by
-    rw [hfS.2.2.1, hf2'.2.2.1, hf1'.2.2.1]
+    rw [hfS.size, hf2'.size, hf1'.size]
   have hsz71 : 71 ≤ (m.arr64 PINS).size := by
     have : ¬ (UInt64.ofNat (m.arr64 PINS).size) < 71 := by simpa [Mem.len64] using hlen
     rw [UInt64.lt_iff_toNat_lt, UInt64.toNat_ofNat', show (71 : UInt64).toNat = 71 from rfl] at this
@@ -571,7 +571,7 @@ theorem irpW_ok (off : Word) (rest : List UInt8)
       show (1 : UInt64).toNat = 1 from rfl] at hl1 hl2 hj1 hj2 hk2
     refine { size := ?_, names_size := ?_, names_lt := ?_, names := ?_, lv_lt := ?_,
              emptyLevels := ?_, zeroLevel := ?_, sortOne := ?_, reserved_lt := ?_, reserved := ?_ }
-    · rw [(irpFill_frame m₆ us z s1).2.2.1, hsz]; exact hsz71
+    · rw [(irpFill_frame m₆ us z s1).size, hsz]; exact hsz71
     · simp [hl1]
     · intro i hi
       rw [hlo _ (by omega) (by omega)]
@@ -628,7 +628,7 @@ theorem internReservedPins_refines (rom : List UInt8) (off : Word) (p : Prog) (h
   apply M.triple_of_run
   intro s r s' hs hrun
   obtain ⟨hloc, hW⟩ := M.of_run (P := fun s => s = s₀) hs hrun
-    (internReservedPins_specW rom off p hL n s₀ ⟨hA.1.lit.1.2.2.1, hA.1.lit.1.top41⟩)
+    (internReservedPins_specW rom off p hL n s₀ ⟨hA.1.lit.1.cap, hA.1.lit.1.top41⟩)
   subst hs
   exact ⟨hloc, irpW_ok rom hr off rest hd hf1 hf2 n _ a₀ _ hA hmo hW⟩
 

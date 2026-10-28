@@ -309,7 +309,7 @@ def PoolInv (m₀ m : Mem) (top k : Word) (L : List UInt8) : Prop :=
   k.toNat = L.length ∧ sliceL (vpool m) top.toNat k.toNat = L.map UInt8.toUInt64
 
 theorem poolInv_init (m : Mem) (hp : PoolOK m) : PoolInv m m m.top 0 [] :=
-  ⟨PFrame.refl _, fun _ _ => rfl, by simpa using hp.2.2.2.2.2, rfl, by simp [sliceL]⟩
+  ⟨PFrame.refl _, fun _ _ => rfl, by simpa using hp.inTier, rfl, by simp [sliceL]⟩
 
 section inv
 variable (m₀ : Mem) (hs : PSmall m₀) (top : Word) (ht : top.toNat < 2 ^ 41)
@@ -700,7 +700,7 @@ theorem strPutEsc_link (h64 : System.Platform.numBits = 64) (b : ByteArray)
     (by rw [show (USize.ofNat 0) = 0 from rfl]; exact hU) hL
   obtain ⟨hf, hag, hb, -, hsl⟩ := hI
   have hg := Grows.write m m₁ l₁ hpool hf hag (by rw [← PFrame.tsize _ hf]; exact hb)
-  have hctl₁ : 0 < (m₁.arr64 CTL).size := by rw [hf.ctl]; exact hpool.2.1
+  have hctl₁ : 0 < (m₁.arr64 CTL).size := by rw [hf.ctl]; exact hpool.ctl
   have htop' := Mem.top_set64 m₁ (m.top + l₁) hctl₁
   refine ⟨hg, SliceOK.fresh hg htop', ?_⟩
   rw [vpool_set64_ne _ _ _ _ (by decide), hsl, strWords]

@@ -261,7 +261,7 @@ theorem blockCall (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
   obtain ⟨-, rfl, -⟩ := allocW_facts hal hI2.ok.2.2.1
   have hf3 := allocMem_frame m2 (UInt64.ofNat cs.length)
   have hM3 := hM2.frameG hf3 (by decide) (by decide)
-  have hs3 : stkTop (allocMem m2 (UInt64.ofNat cs.length)) = stkTop m2 := hf3.2.1 131 (by decide)
+  have hs3 : stkTop (allocMem m2 (UInt64.ofNat cs.length)) = stkTop m2 := hf3.ctl 131 (by decide)
   obtain ⟨r4, m4, h4, hw⟩ := ntBW_inv hw
   simp only [Option.some.injEq, Prod.mk.injEq] at hw
   obtain ⟨rfl, rfl⟩ := hw

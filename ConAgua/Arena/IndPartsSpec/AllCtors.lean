@@ -79,7 +79,6 @@ theorem ccW_get {n : Nat} {m m1 : Mem} {off q k cl : Word}
     (hd : (q + k).toNat + cl.toNat ≤ (m.arr64 IW).size) (hsz : (m.arr64 IW).size < 2 ^ 64) :
     cl = rdW (m.arr64 IW) (rdW (m.arr64 IW) off + 3) ∧
     (∀ b : TieredArray, b ≠ ↑IW → m1.arr64 b = m.arr64 b) ∧ (m1.arr64 IW).size = (m.arr64 IW).size ∧
-    m.SameShape m1 ∧
     ∀ i, (m1.arr64 IW)[i]? =
       if (q + k).toNat ≤ i ∧ i < (q + k).toNat + cl.toNat then
         (m.arr64 IW)[(rdW (m.arr64 IW) (rdW (m.arr64 IW) off + 2)).toNat + (i - (q + k).toNat)]?
@@ -96,8 +95,8 @@ theorem ccW_get {n : Nat} {m m1 : Mem} {off q k cl : Word}
     · have hz : rdW (m.arr64 IW) (rdW (m.arr64 IW) off + 3) = 0 := UInt64.toNat_inj.mp (by simpa using h0)
       rw [hz] at hc hd ⊢
       rw [copyW_src0] at hc
-      obtain ⟨hA, hS, hW, hG⟩ := copyW_get n m m2 _ _ _ hc (by simp) hd hsz
-      refine ⟨rfl, hA, hS, hW, fun i => ?_⟩
+      obtain ⟨hA, hS, hG⟩ := copyW_get n m m2 _ _ _ hc (by simp) hd hsz
+      refine ⟨rfl, hA, hS, fun i => ?_⟩
       rw [hG i]
       have : ¬ ((q + k).toNat ≤ i ∧ i < (q + k).toNat + (0 : Word).toNat) := by simp
       rw [ite_eq_right this, ite_eq_right this]
@@ -166,8 +165,7 @@ theorem acGoW_ok (n : Nat) : ∀ (m0 m mf : Mem) (off l q k : Word) (ms : List M
       ws.mapM (fun w => decCN (truncM m0) w.toNat) = some (ms.map (·.ctors)).flatten ∧
       (∀ i, ¬ (q.toNat + k.toNat ≤ i ∧ i < q.toNat + k.toNat + ws.length) →
         (mf.arr64 IW)[i]? = (m.arr64 IW)[i]?) ∧
-      (∀ b : TieredArray, b ≠ ↑IW → mf.arr64 b = m.arr64 b) ∧ (mf.arr64 IW).size = (m.arr64 IW).size ∧
-      m.SameShape mf := by
+      (∀ b : TieredArray, b ≠ ↑IW → mf.arr64 b = m.arr64 b) ∧ (mf.arr64 IW).size = (m.arr64 IW).size := by
   induction n with
   | zero => intro m0 m mf off l q k ms h; simp [acGoW] at h
   | succ n ih =>
@@ -180,7 +178,7 @@ theorem acGoW_ok (n : Nat) : ∀ (m0 m mf : Mem) (off l q k : Word) (ms : List M
         have := decPL_length _ (show decPL _ _ _ _ = _ from hmsB)
         rw [hl] at this; simpa using this
       subst hmsn
-      exact ⟨[], rfl, fun i hi => absurd hi (by simp), rfl, fun i _ => rfl, fun _ _ => rfl, rfl, .refl _⟩
+      exact ⟨[], rfl, fun i hi => absurd hi (by simp), rfl, fun i _ => rfl, fun _ _ => rfl, rfl⟩
     · obtain ⟨j', hj'⟩ : ∃ j', l.toNat = j' + 1 := by
         have : l.toNat ≠ 0 := fun h0 => hl (UInt64.toNat_inj.mp (by simpa using h0))
         exact ⟨l.toNat - 1, by omega⟩
@@ -227,7 +225,7 @@ theorem acGoW_ok (n : Nat) : ∀ (m0 m mf : Mem) (off l q k : Word) (ms : List M
       have hclv : cl.toNat = cl' := by
         rw [ccW_len hc1, hclW]; exact UInt64.toNat_ofNat_of_lt' (by rw [UInt64_size_eq]; exact hclb)
       have hcoV : (UInt64.ofNat co).toNat = co := UInt64.toNat_ofNat_of_lt' (by rw [UInt64_size_eq]; exact hcob)
-      obtain ⟨hcl_eq, hA, hS1, hW1, hcells⟩ := ccW_get hc1
+      obtain ⟨hcl_eq, hA, hS1, hcells⟩ := ccW_get hc1
         (by
           rcases Nat.eq_zero_or_pos cl' with h0 | hp
           · left; rw [hclv]; exact h0
@@ -247,12 +245,12 @@ theorem acGoW_ok (n : Nat) : ∀ (m0 m mf : Mem) (off l q k : Word) (ms : List M
       have hrestsum : (List.map (fun x => x.ctors.length) (ms0 :: rest)).sum =
           cl' + (List.map (fun x => x.ctors.length) rest).sum := by
         simp only [List.map_cons, List.sum_cons]; rw [hlenc]
-      obtain ⟨wsr, hlr, hcr, hmr, hor, hAr, hSr, hWr⟩ := ih m0 m1 mf (off + 1) (l - 1) q (k + cl)
+      obtain ⟨wsr, hlr, hcr, hmr, hor, hAr, hSr⟩ := ih m0 m1 mf (off + 1) (l - 1) q (k + cl)
         rest h hg1 hsz1 hag1 hq
         (by show decPL _ _ _ _ = _; rw [hoff1, hl1]; exact decPL_tail hdB)
         (by rw [hkc, hS1]; omega)
       refine ⟨wsj ++ wsr, by rw [List.length_append, hlj, hlr, hrestsum], fun i hi => ?_, ?_, fun i hi => ?_,
-        fun b hb => (hAr b hb).trans (hA b hb), hSr.trans hS1, hW1.trans hWr⟩
+        fun b hb => (hAr b hb).trans (hA b hb), hSr.trans hS1⟩
       · by_cases hi1 : i < wsj.length
         · rw [List.getElem_append_left hi1]
           have e1 := hor (q.toNat + k.toNat + i) (by rw [hkc]; omega)
@@ -334,13 +332,13 @@ theorem acW_ok (n : Nat) (m m2 : Mem) (p : Word) (r : List Word) (bs : BlockShap
   have hT : tot.toNat = (bs.members.map fun x => x.ctors.length).sum := by
     rw [htot, UInt64.toNat_ofNat_of_lt' (by rw [UInt64_size_eq]; exact hnc), numCtorsOf_sum]
   have hg1 : IWGrow m (allocMem m tot) := allocMem_grow m tot (by omega) hc
-  obtain ⟨ws, hwl, hwc, hwm, hwo, hwA, hwS, hwW⟩ := acGoW_ok n m (allocMem m tot) m2' (UInt64.ofNat o)
+  obtain ⟨ws, hwl, hwc, hwm, hwo, hwA, hwS⟩ := acGoW_ok n m (allocMem m tot) m2' (UInt64.ofNat o)
     (UInt64.ofNat l) q 0 bs.members hgo hg1 (by rw [hIW1]; exact hsz)
     (fun i hi => by rw [hIW1]) (by omega)
     (by show decPL _ _ _ _ = _; rw [hoo, hll]; exact hg)
     (by rw [hIW1, ← hT]; simp only [UInt64.toNat_zero]; omega)
   have hf : MemFrame [IW] [200] m m2' :=
-    (allocMem_frame m tot).trans (copy_frame hwA hwS hwW)
+    (allocMem_frame m tot).trans (copy_frame hwA hwS)
   have htop : rdW (m2'.arr64 CTL) 200 = rdW (m.arr64 CTL) 200 + tot := by
     rw [hwA CTL (by decide), allocMem_top m tot hc]
   have hlow : ∀ i < iwTop m, (m2'.arr64 IW)[i]? = (m.arr64 IW)[i]? := by

@@ -45,7 +45,7 @@ theorem erToIwW_wordsA {n : Nat} {m m' : Mem} {o l : Word} {r : List Word}
   have hIW := allocMem_IW m l
   have hEE : (allocMem m l).arr64 EREC = m.arr64 EREC := by
     simp only [allocMem]; rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
-  obtain ⟨hA, hS, hW, hG⟩ := erCopyW_get (n - 1) _ _ _ _ _ hcp (by rw [hEE]; exact hsrc)
+  obtain ⟨hA, hS, hG⟩ := erCopyW_get (n - 1) _ _ _ _ _ hcp (by rw [hEE]; exact hsrc)
     (by rw [hEE]; exact hE) (by rw [hIW]; exact hroom) (by rw [hIW]; exact hsz)
   rw [hEE] at hG
   intro i hi
@@ -235,7 +235,7 @@ theorem erToIw_blk {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv
     simp only [erTop] at hE1 hb; omega)
   have hw := L.Ind.erToIwW_wordsA h hsz (by omega) hEs (by simp only [erTop] at hE1 hb; omega)
   have hS' := (L.Arena.erToIwW_stage h hS (Or.inr (by simp only [erTop] at hE1 hb; omega))).2.2.2.1
-  have hP' : erecP m' = erecP m := erecP_congr hE (hf.2.1 129 (by simp))
+  have hP' : erecP m' = erecP m := erecP_congr hE (hf.ctl 129 (by simp))
   subst hr
   simp only [List.headD_cons, List.tail_cons]
   refine ⟨hS', hg, trivial, ?_, by omega⟩

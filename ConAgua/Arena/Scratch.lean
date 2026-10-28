@@ -130,7 +130,7 @@ def preMem (m : Mem) : Mem :=
   if SCBLIM ≤ rdW (m.arr64 CTL) SCB then (vacL scrSlots m).set64 CTL SCB 0 else m
 
 theorem vacW_arr (sa : ArrId) (m : Mem) (b : TieredArray) (hb : b ≠ tierA sa 1) :
-    (vacW sa m).arr64 b = m.arr64 b := (kzeroW_fr _ _ _ m).1 b hb
+    (vacW sa m).arr64 b = m.arr64 b := (kzeroW_fr _ _ _ m).arr b hb
 
 theorem vacL_arr : ∀ (l : List ArrId) (m : Mem) (b : TieredArray), (∀ sa ∈ l, b ≠ tierA sa 1) →
     (vacL l m).arr64 b = m.arr64 b
@@ -150,10 +150,6 @@ theorem vacL_ctl (m : Mem) : (vacL scrSlots m).arr64 CTL = m.arr64 CTL :=
 
 theorem vacL_pt0 (m : Mem) : (vacL scrSlots m).arr64 PT0 = m.arr64 PT0 :=
   vacL_arr _ _ _ (by decide)
-
-theorem vacL_words : ∀ (l : List ArrId) (m : Mem), m.SameShape (vacL l m)
-  | [], m => .refl m
-  | a :: as, m => by simp only [vacL]; exact (kzeroW_fr _ _ _ m).2.2.trans (vacL_words as _)
 
 /-- `scratch_reset`'s head: at the limit the wrap (the scratch tables vacated, the slot base
 restarted at `0`). -/

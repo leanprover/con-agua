@@ -598,7 +598,7 @@ tree.
 * **Batch 8 (cleanup):**
   * `Mem.HasW`, `HasWs`, `HasB` and `SameShape` are `True`, but their 180 or so uses remain:
     hypotheses, `trivial` arguments, the `SameShape` conjunct of `MemFrame`/`OutFrame`. Delete
-    the predicates and the conjuncts.
+    the predicates and the conjuncts. Done (§9.4).
   * The numeral ids above: `Unescape`'s `tierA 0`; the `TRec` rows (`⟨2, 4, 2, 0⟩`) by name.
   * IdTable's `szC b = b + 6` and `spS`'s `2 * b - 64` derive `CTL` offsets from an array's
     number.
@@ -606,32 +606,44 @@ tree.
     of an unwritten array in interpreter runs (E2E works around it with a shared zero array).
   * `ArrCheck` could check the table against `Prog.layout` once that exists.
 
-### 9.4 Batch 8's predicates: kept (2026-10-28, lane layoutleft)
+### 9.4 Batch 8's predicates: deleted (2026-10-28, lane deadpred)
 
-Batch 8's first item (delete `Mem.HasW`, `HasWs`, `HasB`, `SameShape` and their conjuncts) was
-looked at and skipped: it does not pay off.
+A first look (lane layoutleft) kept `Mem.HasW`, `HasWs`, `HasB` and `SameShape` (all `True`):
+deleting a conjunct renumbers every positional access after it. The maintainer decided to delete
+them anyway and to stop the positional access that made it expensive.
 
-* **What is there** (master 61fcf0d6): 170 lines in 50 files mention the four predicates or their
-  lemmas (`HasW` 35 lines in 10 files, `HasWs` 5 in `L/Semantics.lean` only, `HasB` 24 in 5,
-  `SameShape` 80 in 30). Every one of them is `True` and proved by `trivial`, so no proof
-  depends on them and no statement is weaker or stronger for having them.
-* **Where the cost is.** The uses are not standalone hypotheses one can drop locally: `SameShape`
-  is a conjunct of `MemFrame` (cited in 287 files), `Frame`, `PFrame` (field `size`), `FreezeSpec`'s
-  frame (field `words`), `LevelHeapRel` (`wsize`) and the copy specs' posts; `HasW POOL`/`HasW
-  CTL` is the first conjunct of `PoolOK` (141 uses) and of the `Nat*` loop invariants (`ShrInv`,
-  `AddInv`, `DSubInv`, …), which are built as anonymous tuples and taken apart positionally
-  (`obtain ⟨hok1, hok2, …⟩`, `.2.2.1`) or by `grind`; `HasB IN` is the first premise of
-  `PreludeSim`'s `ERel`/`CRel`/`BRel`/`WRel`, which their proofs `intro`. Deleting a conjunct
-  renumbers every positional access after it, in about 360 files that mention these frames, and
-  the change starts in `L/Semantics.lean`, so each round of fixing rebuilds the whole tree and a
-  failing module hides its dependents' errors until the next round. It would be a `--wide`
-  landing that holds every other lane's entries.
-* **What it would buy:** about 170 lines shorter, statements without a `True` conjunct. No proof
-  gets simpler in substance, no kernel or build time is spent on them (they are `trivial`), and
-  nothing in the final theorems mentions them.
-
-So they stay, defined as `True` with their lemmas (`L/Semantics.lean`, "Which arrays exist"),
-until a change rewrites `MemFrame`/`PoolOK` anyway; then dropping the conjunct costs nothing extra.
-`HasWs` and its two lemmas are used nowhere and can go with the next change to `L/Semantics.lean`.
-The other batch 8 items (numeral ids, `szC`/`spS`, `loadMem`'s fresh arrays, `ArrCheck`) are
-unaffected by this note.
+* **Deleted:** the four predicates and their 20 lemmas (`L/Semantics.lean`, "Which arrays
+  exist"; `Mem.SameShape.copy64`/`copy8w` in `L/Blocks.lean`; the `*_words` lemmas of the
+  freeze, store and scratch files), the `SameShape` field or conjunct of `MemFrame`, `Frame`,
+  `PFrame` (`size`), `OutFrame` (`words`), `HeapExt`/`HeapFrame` (`wsize`), `GFr`, `HighFr`,
+  `PFr`, the copy specs' posts (`copyW_get` and its siblings, `kgrowIf_frame`,
+  `consInternM_out(A)`) and the `hW` premises of `copy_frame`, `memFrame_of_copy`,
+  `erAllocCopy_frame`, `rTrans_local`/`rTrans_pool`/`rTrans_pool0`, `PoolOK.frame`; the `HasW
+  CTL` conjunct of `PoolOK`, the `HasW POOL` conjunct of the `Nat*` loop invariants and the `hw`
+  premises of the `div_*` specs; the `HasB IN` premise of `PreludeSim`'s `ERel`/`CRel`/`ARel`/
+  `BRel`/`WRel`/`KRel`, of `FrontPreSimE`'s `KRelE` and of every simulation lemma that passed it
+  on, and the conjunct of `PipePrelude`'s `BP0`.
+* **Records made structures** (Prop-valued, named fields, uses switched to the names):
+  `MemFrame` (`arr`, `ctl`, `size`), `Frame` (`arr`, `bytes`), `PoolOK` (`ctl`, `cap`, `top`,
+  `ptop0`, `inTier`), `GFr` (`arr`, `size`), `HighFr` (`arr`, `ctl`, `size`), `PFr` (`arr`,
+  `ctl`, `size`, `iw`); `PFrame`, `OutFrame`, `HeapExt`, `HeapFrame` were structures already.
+  Positional projections of them (`.2.1`, `.2.2.1`, `hpool.2.2.2.1`, `obtain ⟨a1, …, a6⟩ := hok`)
+  became field names: the `.2…` ones all failed to elaborate and were rewritten, the `.1` ones of
+  `MemFrame`/`GFr`/`HighFr`/`PFr` (still type-correct, `arr` is the first field) were rewritten
+  where the name is bound to a frame in the same file (about 250 lines); a few remain where the
+  frame comes out of a conjunction or a call. Two places needed the fields spelled out where a
+  `def` used to unfold: a frame over `m.setG g v` (`wFr_wframe`, `CheckARun`) is
+  `⟨h.arr, h.ctl, h.size⟩` now, no longer `h` itself.
+* **Kept as conjunctions** (dead conjunct removed only): the `Nat*` loop invariants (`AddInv`,
+  `ShrInv`, `DSubInv`, …), `LitR`, `WFr`, `BP0` and the copy specs' posts. The loop invariants
+  are unfolded into `grind` (`grind [AddInv]`), which splits conjunctions itself; a structure
+  would need its own constructor/projection lemmas in the `grind` set. The others are
+  destructured once or twice each.
+* **Automation and time:** the `grind`/`simp`/`omega` calls that saw `PoolOK` as a conjunction
+  (`NatArms`' `simp only [PoolOK, SliceOK] at hok`, the `Nat*` functions' `obtain ⟨hok1, …⟩`) now
+  get its fields as named hypotheses (`have hok2 := hok.ctl; …; clear hok`), the same facts as
+  before. Elaboration of the affected heavy files is unchanged (master 8dc00910 vs this branch,
+  `lake env lean`, one run each: `NatAdd` 9.1/8.6 s, `NatDiv` 17.3/18.1 s, `Pool` 1.6/1.5 s,
+  `ScratchRefine` 3.5/3.5 s, `LitRefine` 1.5/1.5 s). A cold build was not measured.
+* **Size:** `.lean` files 1415 lines added, 1589 deleted (−174) in 251 files. `checker.s` is
+  unchanged (no L code changed).

@@ -211,17 +211,17 @@ theorem CoreS.of_walk {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : 
   simp only [cpl, Prod.mk.injEq] at hk
   obtain ⟨hc, hp, hl⟩ := hk
   have hspn : m'.arr64 SPN = m.arr64 SPN :=
-    hf.1 SPN (fun h => absurd (hA _ h) (by decide)) (by decide)
+    hf.arr SPN (fun h => absurd (hA _ h) (by decide)) (by decide)
   have h136 : rdW (m'.arr64 CTL) 136 = rdW (m.arr64 CTL) 136 :=
-    hf.2.1 136 (fun h => absurd (hC _ h) (by decide))
+    hf.ctl 136 (fun h => absurd (hC _ h) (by decide))
   refine ⟨⟨hD, ?_, ?_, hS.env.frame (.of_low hA (by decide)) (.of_lt hC (by decide)) hf, ?_, ?_, ?_,
-    hf.2.2.1 EREC ▸ hS.erec, hf.2.2.1 SPN ▸ hS.spn, hmem, hf.2.2.1 BSTK ▸ hS.bstk,
+    hf.size EREC ▸ hS.erec, hf.size SPN ▸ hS.spn, hmem, hf.size BSTK ▸ hS.bstk,
     hS.den.of_arena hS.arena.1 hD.1 hc hp hl hf hscA hscC, hS.mode.frame hf hP0 hscC.1⟩,
     StackKept.of_frame hf
       ⟨fun h => absurd (hA _ h) (by decide), fun h => absurd (hA _ h) (by decide), hP⟩
       ⟨fun h => absurd (hC _ h) (by decide), fun h => absurd (hC _ h) (by decide), hP0⟩ hLv hP1 hPT⟩
   · rw [hc]; exact hS.core.frame (.of_low hA (by decide)) (.of_lt hC (by decide)) hf
-  · rw [hp]; exact hS.pins.congr (hf.1 PINS (fun h => absurd (hA _ h) (by decide)) (by decide))
+  · rw [hp]; exact hS.pins.congr (hf.arr PINS (fun h => absurd (hA _ h) (by decide)) (by decide))
   · intro h l e; rw [hc] at e; have := hS.readL h l e; simp only [EStore.ls] at this ⊢; rw [hl]
     exact this
   · intro h l e; rw [hc] at e; have := hS.readLs h l e; rw [hl]; exact this

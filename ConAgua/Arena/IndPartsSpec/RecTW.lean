@@ -167,8 +167,8 @@ theorem piBW_ok (n : Nat) : ∀ (m m' : Mem) (a : AState) (fuel h : Word) (rs : 
         rw [UInt64.toNat_sub_of_le _ _ (by simp [UInt64.le_iff_toNat_le]; omega)]; simp
       obtain ⟨bs1, e1, hrun1, hsh1, hdec1, hbe1, hbe2, hg1, hf1, hle1⟩ :=
         ih m m1 a (fuel - 1) _ rs1 hR hrec hb2 hsz hc
-      have hsz1 : (m1.arr64 IW).size < 2 ^ 64 := by rw [hf1.2.2.1 IW]; exact hsz
-      have hc1 : 200 < (m1.arr64 CTL).size := by rw [hf1.2.2.1 CTL]; exact hc
+      have hsz1 : (m1.arr64 IW).size < 2 ^ 64 := by rw [hf1.size IW]; exact hsz
+      have hc1 : 200 < (m1.arr64 CTL).size := by rw [hf1.size CTL]; exact hc
       obtain ⟨hr2, hdec2, hg2, hf2, hl1, htop2⟩ :=
         consW_dec hcons hsz1 hc1 hle1 hty2 hdec1
       have hk : fuel.toNat = (fuel.toNat - 1) + 1 := by

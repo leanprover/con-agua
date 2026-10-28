@@ -146,8 +146,8 @@ theorem lsMatchOK :
   obtain ⟨hsl, hw, hh⟩ := (LsRecRel_raw m t i k).mp hr
   have hle := hsl.le
   have hq1 := hq.le
-  have htop := hpool.2.2.2.1
-  have hpc := pcap_eq m (by have := hpool.2.2.1; omega)
+  have htop := hpool.top
+  have hpc := pcap_eq m (by have := hpool.cap; omega)
   have hw' : sliceL (tpool m) (lsO m t i).toNat (lsL m t i).toNat = lsWords k.us := by
     rw [sliceL_tpool m _ _ (by omega)]; exact hw
   have hk' : sliceL (tpool m) o.toNat l.toNat = lsWords us := by

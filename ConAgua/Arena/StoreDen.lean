@@ -282,9 +282,9 @@ theorem StoreDen.of_arena {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a
     (hscA : (SOREC : TieredArray) ∉ A ∧ (CREC : TieredArray) ∉ A ∧ tier1 SOREC ∉ A ∧ tier1 CREC ∉ A)
     (hscC : (1 : Word) ∉ C ∧ (16 : Word) ∉ C ∧ (17 : Word) ∉ C ∧ (18 : Word) ∉ C ∧ (19 : Word) ∉ C) :
     StoreDen dn m' a' fe := by
-  have hsc : scTabs a' = scTabs a := scTabs_eq hR hR' (hf.1 SOREC hscA.1 (by decide))
-    (hf.1 CREC hscA.2.1 (by decide)) (hf.1 _ hscA.2.2.1 (by decide)) (hf.1 _ hscA.2.2.2 (by decide))
-    (fun x hx => hf.2.1 x (by
+  have hsc : scTabs a' = scTabs a := scTabs_eq hR hR' (hf.arr SOREC hscA.1 (by decide))
+    (hf.arr CREC hscA.2.1 (by decide)) (hf.arr _ hscA.2.2.1 (by decide)) (hf.arr _ hscA.2.2.2 (by decide))
+    (fun x hx => hf.ctl x (by
       rcases hx with rfl | rfl | rfl | rfl | rfl <;>
         first | exact hscC.1 | exact hscC.2.1 | exact hscC.2.2.1 | exact hscC.2.2.2.1 | exact hscC.2.2.2.2))
   exact h.mono (by rw [hl]; exact LsExt.refl _) (by rw [hp]) (by rw [hp]) (fun _ _ hk => .inl (hc ▸ hk))

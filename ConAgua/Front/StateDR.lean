@@ -159,8 +159,8 @@ macro "t01" : tactic => `(tactic| (simp (config := { failIfUnchanged := false })
 /-- A frame that keeps `CTL[0]` (the top) and `CTL[1]` (the scratch flag) keeps the mode. -/
 theorem MemFrame.modeOK {A : List TieredArray} {C : List Word} {m m' : Mem} (hf : MemFrame A C m m')
     (h0 : (0 : Word) ∉ C := by t01) (h1 : (1 : Word) ∉ C := by t01) (h : ModeOK m) : ModeOK m' := by
-  have et : m'.top = m.top := hf.2.1 0 h0
-  have ef : m'.flag = m.flag := hf.2.1 1 h1
+  have et : m'.top = m.top := hf.ctl 0 h0
+  have ef : m'.flag = m.flag := hf.ctl 1 h1
   unfold ModeOK at h ⊢
   rw [et, ef]; exact h
 
@@ -173,8 +173,8 @@ theorem StateDR.frame {A : List TieredArray} {C : List Word} {m m' : Mem} {st : 
     (h : StateDR m st) : StateDR m' st :=
   ⟨h.names.frame hf (.inl rfl) hs hc, h.levels.frame hf (.inr (.inl rfl)) hs hc,
     h.exprs.frame hf (.inr (.inr rfl)) hs hc,
-    by rw [hf.1 DECL hd (by decide), hf.1 DLP hq (by decide)]; exact h.decls,
-    by rw [hf.2.2.1, hf.2.2.1]; exact h.ifs⟩
+    by rw [hf.arr DECL hd (by decide), hf.arr DLP hq (by decide)]; exact h.decls,
+    by rw [hf.size, hf.size]; exact h.ifs⟩
 
 /-- `DerR` reads the arena state only through its two expression tiers. -/
 theorem DerR.congrSt {m : Mem} {a a' : AState} (hp : a'.store.pers = a.store.pers)
@@ -222,10 +222,10 @@ theorem StateDR.putName {A : List TieredArray} {C : List Word} {m m₁ m₂ : Me
   have h₁ := h.frame hf hn hl he hd hq hs hc
   have hfr := tblPutW_frame (.inl rfl) hp
   refine ⟨h₁.names.put (.inl rfl) i w hw hp hst, ?_, ?_, ?_,
-    by rw [hfr.2.2.1, hfr.2.2.1]; exact h₁.ifs⟩
+    by rw [hfr.size, hfr.size]; exact h₁.ifs⟩
   · rw [hlv]; exact h₁.levels.frameD hfr (.inr (.inl rfl)) (by decide) (by decide) (by decide) (by decide)
   · rw [hex]; exact h₁.exprs.frameD hfr (.inr (.inr rfl)) (by decide) (by decide) (by decide) (by decide)
-  · rw [hfr.1 DECL (by decide) (by decide), hfr.1 DLP (by decide) (by decide), hdc]
+  · rw [hfr.arr DECL (by decide) (by decide), hfr.arr DLP (by decide) (by decide), hdc]
     exact h₁.decls
 
 /-- Level id `i` bound to `w` after a frame: the level table with `i` bound to `w`. -/
@@ -240,10 +240,10 @@ theorem StateDR.putLevel {A : List TieredArray} {C : List Word} {m m₁ m₂ : M
   have h₁ := h.frame hf hn hl he hd hq hs hc
   have hfr := tblPutW_frame (.inr (.inl rfl)) hp
   refine ⟨?_, h₁.levels.put (.inr (.inl rfl)) i w hw hp hst, ?_, ?_,
-    by rw [hfr.2.2.1, hfr.2.2.1]; exact h₁.ifs⟩
+    by rw [hfr.size, hfr.size]; exact h₁.ifs⟩
   · rw [hnm]; exact h₁.names.frameD hfr (.inl rfl) (by decide) (by decide) (by decide) (by decide)
   · rw [hex]; exact h₁.exprs.frameD hfr (.inr (.inr rfl)) (by decide) (by decide) (by decide) (by decide)
-  · rw [hfr.1 DECL (by decide) (by decide), hfr.1 DLP (by decide) (by decide), hdc]
+  · rw [hfr.arr DECL (by decide) (by decide), hfr.arr DLP (by decide) (by decide), hdc]
     exact h₁.decls
 
 /-- Expression id `i` bound to `w` after a frame: the expression table with `i` bound to `w`. -/
@@ -258,10 +258,10 @@ theorem StateDR.putExpr {A : List TieredArray} {C : List Word} {m m₁ m₂ : Me
   have h₁ := h.frame hf hn hl he hd hq hs hc
   have hfr := tblPutW_frame (.inr (.inr rfl)) hp
   refine ⟨?_, ?_, h₁.exprs.put (.inr (.inr rfl)) i w hw hp hst, ?_,
-    by rw [hfr.2.2.1, hfr.2.2.1]; exact h₁.ifs⟩
+    by rw [hfr.size, hfr.size]; exact h₁.ifs⟩
   · rw [hnm]; exact h₁.names.frameD hfr (.inl rfl) (by decide) (by decide) (by decide) (by decide)
   · rw [hlv]; exact h₁.levels.frameD hfr (.inr (.inl rfl)) (by decide) (by decide) (by decide) (by decide)
-  · rw [hfr.1 DECL (by decide) (by decide), hfr.1 DLP (by decide) (by decide), hdc]
+  · rw [hfr.arr DECL (by decide) (by decide), hfr.arr DLP (by decide) (by decide), hdc]
     exact h₁.decls
 
 /-! ## Each interning under `ArenaD`, with its memory frame -/
@@ -580,8 +580,8 @@ theorem applyNStr_refines (hp : p.lookup "apply_nstr" = some applyNStr) (i pre o
     ⦃fun _ s' => LocEq s' s₀ ∧ AM.ok (parseNameEntryD st i.toNat (.str pre.toNat s)) a₀ ∧
       ArenaD s'.mem (AM.st (parseNameEntryD st i.toNat (.str pre.toNat s)) a₀) ∧
       StateDR s'.mem (AM.res (parseNameEntryD st i.toNat (.str pre.toNat s)) a₀); ⊤⦄ := by
-  have hps := hR.1.lit.1.2.2.1
-  have htop := hR.1.lit.1.2.2.2.1
+  have hps := hR.1.lit.1.cap
+  have htop := hR.1.lit.1.top
   have hspec := applyNStr_spec p hL hp n s₀ i pre o l (by omega)
     (by simp only [SliceOK] at hq; omega)
   apply M.triple_of_run

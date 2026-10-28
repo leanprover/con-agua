@@ -48,7 +48,7 @@ theorem ptr_lt_of_stab {α : Type} {f : Mem → Option α} {m : Mem} {x : α} {i
   rcases Nat.lt_or_ge i (iwTop m) with hlt | hge
   · exact hlt
   obtain ⟨hg, hset, hoth⟩ := perturb hge hil hsz (UInt64.ofNat (2 ^ 64 - 1))
-  exact absurd (h _ hg) (hfail hge _ hset hoth ((set64IW_frame m _ _).2.2.1 IW))
+  exact absurd (h _ hg) (hfail hge _ hset hoth ((set64IW_frame m _ _).size IW))
 
 /-- A read at index `2^64 - 1` (or any index past the array) fails. -/
 theorem iwN_huge {m : Mem} (hsz : (m.arr64 IW).size < 2 ^ 64) : iwN m (2 ^ 64 - 1) = none := by
