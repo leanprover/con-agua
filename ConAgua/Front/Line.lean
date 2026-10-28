@@ -1,8 +1,6 @@
-import ConAgua.Front.FieldsExpr
 import ConAgua.Front.ApplyDecl
 import ConAgua.Front.FieldsDeclSpec
 import ConAgua.Front.RunModel
-import ConAgua.Scan.Line
 import ConAgua.Scan.FastSound
 import ConAgua.Arena.GrindAttr
 import ConAgua.Census.Attr

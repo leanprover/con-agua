@@ -1,14 +1,9 @@
 module
 
 meta import ConAgua.L.Semantics
-public import ConAgua.L.Notation
-public import ConAgua.L.Logic
 public import ConAgua.L.LitWord
-public import ConAgua.Scan.Utf8
 public import ConAgua.Front.Fields
-public import ConAgua.Scan.Key
 import ConAgua.L.GrindAttr
-import ConAgua.Scan.Common
 import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
