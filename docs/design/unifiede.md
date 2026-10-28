@@ -1430,3 +1430,58 @@ d4f85701, load ≈ 28):
 
 No module of the family is more than 10 % slower (`GenRec2`'s +10 % is 0.24 s and comes from its
 import, not from a proof in it).
+
+### 3.18 Batch 3a, first landing (the `Nat.div` pin gate, `certify_nat_eqs`)
+
+The batch's functions (§3.1's inventory at depth 3–5 in the `Decl*`/`DefEq*`/`Whnf*` families, and
+what batch 2 left): `check_div_mod_pin_loop` (depth 3), `check_div_mod_pin` (depth 4), with them
+the pin gate `defn_div_gate` (no `@[refines]` of its own, so not in the inventory; §3.13 left it
+for depth ≥ 3) and the depth-0 leaf `certify_nat_eqs` (error model and claim beside the ok
+refinement `certW_okT`; `dnc_ref` read it through `callE`). This landing migrates these four;
+`class_stream_recs`, `check_sum_tele_slow` and `check_sum_tele` are the second. The other
+`Decl*`/`DefEq*`/`Whnf*` functions of the inventory are done; the `errors` models left in
+`DefEqLazyE`, `DefEqSpineE`, `DefEqQuickE`, `DefEqEagerE`, `WhnfModels3E` are the knot's own
+functions (their ok halves are the knot's `CoreSpec` slots, not in §3.1's inventory).
+
+| function | before: ok refinement(s) + error claim(s) | after | change |
+|---|---|---|---:|
+| `check_div_mod_pin_loop` | `loopC` 146; `loopCE` 152, `LoopClaimE`/`loopClaimE` 24, `CpaClaimE`/`cpaClaimE_of` 18 = 340 | `loop_ref` 122 + `PinPost` 5 = 127 | −63 % |
+| `check_div_mod_pin` | `cpC` 108; `cpCE` 133 = 241 | `cp_ref` 116 + `CpPost` 4 = 120 | −50 % |
+| `defn_div_gate` | `divGateSpecC` 78; `divGateSpecE_of` 94 = 172 | `dg_ref` 81 + `DgPost` 6 + `divGateSpecC` 13 + `divGateSpecE_of` 9 = 109 | −37 % |
+| `certify_nat_eqs` | `certW_okT` 78; `certE_okT` 60 = 138 | `cert_ref` 61 + `CertPost` 5 + `certW_okT` 13 = 79 | −43 % |
+| **pairs** | **891** | **435** | **−51 %** |
+
+Also gone: the generated `W` models `loopW`, `dmCpW`, `dgW` with their specs, the hand `certW` with
+`certify_specW`, the two unused `errors` models of `check_div_mod_pin(_loop)` in
+`Verdict/DeclGatesE2` (each function had two), and with `divGateSpecE_of` moved out the modules
+`Verdict/DeclGatesE2` and `Verdict/DeclGatesE` (`gateNvList`/`nvlG` had no other user). Whole diff
+against master d4f85701: +353 −951 in 12 files.
+
+* **`G := CoreStubsE p`** for all four: the lifted callees' errors are `.oob`; the attempt
+  (`cpa_ref`) and `is_def_eq_core` need the core stubs' claims.
+* **The callers keep their statements.** `cdf_ref` (`DeclDefnT`) reads the gate through `callE`
+  (it needs the call's write-set frame, as in §3.13), so `DivGateSpecC` (with `PinSetsR` after and
+  the frame) and `DivGateSpecE` stay as statements, now one-liners from `dg_ref` through the run
+  (`RefE.run_okW`, `RefE.run_err`); `DgPost` leaves out what only the run gives. `dnc_ref`'s
+  certificate arm takes `RefE.run_err … cert_ref`; `certW_okT` (`@[refines]`) and `certW_okC`
+  keep their statements.
+* **Placement**: `loop_ref`, `cp_ref` in `Verdict/DivModPinE` (now imported by `Arena/DeclDivGateT`
+  instead of `DeclDivGateT2`), `dg_ref` with `DivGateSpecC/E` in `Arena/DeclDivGateT`, `cert_ref` in
+  `Arena/DeclNatGateT`. Models take the program bundle (`fns [hD.lCheckDivModPinLoop ↦ …]`).
+* **Recipes**: `extra [ld64_rdW_specE] simp []` (the old `errors` recipe) for the three gate models;
+  the full `extra` list and `simp []` for `certifyNatEqsE`. No kit or generator change needed.
+
+Elaboration (user seconds, `lean` on the module alone, median of 3 interleaved runs, base master
+d4f85701, `_tmp/unify-b3a/times1.txt`, load 30–80; `DeclDivGateT`, `DeclDivGateT2`, `TopE` from
+a second series, `times1b.txt`, the first being noisy for `DeclDivGateT2`):
+
+| module | base | new | |
+|---|---:|---:|---|
+| `Arena/DeclDivGateT` | 1.51 | **1.98** | **slower (+0.5 s)**: `defnDivGateE` and `dg_ref` moved in … |
+| `Verdict/DeclGatesE2`, `DeclGatesE` (deleted) | 4.56 | — | … from here |
+| `Verdict/DivModPinE` | 6.47 | 3.77 | the two unified models and refinements instead of the claims |
+| `Arena/DeclDivGateT2` | 13.30 | 12.57 | `loopC` gone |
+| `Arena/DeclDivModSpec/DecCIDefnValue`, `RomPinSets` | 4.52 | 2.18 | the `W` models gone |
+| `Arena/DeclNatEq`, `DeclNatGateT` | 9.33 | 9.31 | |
+| `Arena/DeclDefnT`, `Verdict/DeclDefnE`, `TopE` | 4.72 | 4.37 | |
+| **sum** | **44.4** | **34.2** | **−23 %** |

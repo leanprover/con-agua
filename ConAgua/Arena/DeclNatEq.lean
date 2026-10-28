@@ -460,25 +460,6 @@ theorem EqL.cons {m : Mem} {o l : Nat} {e : EIdx × EIdx} {es : List (EIdx × EI
     refine ⟨p', a', b', ?_, hr', ha', hb', by simpa using he'⟩
     simpa [Nat.add_assoc, Nat.add_comm 1 j] using hp'
 
-def certW (p : Prog) (cl : CallM) (n : Nat) (m : Mem) (vis o l : Word) : Option (List Word × Mem) :=
-  if l = 0 then some ([1], m) else
-  ntBW (cl n "is_def_eq_core" [vis, 2, rdW (m.arr64 IW) (rdW (m.arr64 IW) o),
-      rdW (m.arr64 IW) (rdW (m.arr64 IW) o + 1)] m) fun r1 m1 =>
-  if r1.headD 0 = 0 then some ([0], m1)
-  else ntBW (callW p n "certify_nat_eqs" [vis, o + 1, l - 1] m1) fun r2 m2 => some ([r2.headD 0], m2)
-
-theorem certify_specW (p : Prog) (hp : p.lookup "certify_nat_eqs" = some certifyNatEqsL)
-    (cl : CallM) (hc : CallSpec p cl) (n : Nat)
-    (s₀ : St) (vis o l : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "certify_nat_eqs" [vis, o, l]
-    ⦃fun r s' => LocEq s' s₀ ∧ certW p cl n s₀.mem vis o l = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, certifyNatEqsL]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      hc n "is_def_eq_core", callW_spec p n "certify_nat_eqs"] <;>
-    finish (gen := 20) [certW, ntBW]
-
 local notation "V" => ConLeche.CheckMode.verified
 
 end eq
