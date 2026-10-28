@@ -1,3 +1,5 @@
+import ConAgua.Arena.RecGenSpec.DecCIIndCv
+import ConAgua.Arena.RecClassSpec.ClassNPcOf
 import ConAgua.Arena.Verdict
 import ConAgua.Arena.IlpRdReal
 import ConAgua.Arena.RecGenSpec.OcW

@@ -1,12 +1,7 @@
+import ConAgua.Arena.IndSumSpec.Row
+import ConAgua.Arena.IndPartsSpec.IndPartsProg2
 import ConAgua.Arena.RecCheckSpec.PtrNamesWDec
-import ConAgua.Arena.RecGenSpec.DecTMDecBOf
-import ConAgua.Arena.IndInstallSpec.CapsProg
-import ConAgua.Arena.IndInstallSpec.DecCNS
-import ConAgua.Arena.IndInstallSpec.InstallRec2Tele
-import ConAgua.Arena.IndInstallSpec.NestCtx
-import ConAgua.Arena.IndInstallSpec.NhW
 import ConAgua.Arena.IndPosSpec.FgW
-import ConAgua.Arena.IndSumSpec.DecHLTake
 import ConAgua.Arena.IndGrindAttr
 
 /-!

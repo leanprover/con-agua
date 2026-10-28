@@ -1,4 +1,6 @@
-import ConAgua.Arena.IndT.RecGenTmf
+import ConAgua.Verdict.IndBToi
+import ConAgua.Arena.IndSumSpec.ParamLevels
+import ConAgua.Arena.IndRealLvlC
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.ModelGen
 /-!

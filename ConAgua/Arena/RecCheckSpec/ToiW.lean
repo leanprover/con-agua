@@ -1,8 +1,4 @@
 import ConAgua.Arena.IndPosSpec.InstW
-import ConAgua.Arena.IndPosSpec.PiBWStage
-import ConAgua.Arena.RecClassSpec.ClassNPcOf
-import ConAgua.Arena.RecGenSpec.DecCIIndCv
-import ConAgua.Arena.IndPartsSpec.BlockCounts
 import ConAgua.Arena.RecCheckSpec.DecHLTruncMBound
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
