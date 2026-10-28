@@ -182,7 +182,16 @@ Again: parity in cycles, more instructions.
 
 ### 3.2 Verdicts
 
-VERDICT-PLACEHOLDER
+`diff-e2e.py --bin … --refs --parallel 16` on 634 fixtures (a smoke check of the prototypes, not
+evidence of correctness):
+
+| binary | sequential | `--jobs 4` |
+|---|---|---|
+| IPRA (`ipra3m2mix`) | 634 agree, 0 REFDIFF | 634 agree |
+| A K=3 (`k3m2pref`) | 0 UNSOUND, INCOMPLETE, CRASH, TIMEOUT or REFDIFF | not run |
+
+Every other variant accepts the prelude. The first A build, before the abort stub, rejected it
+(`rbx` clobbered by `if c abort k`, §1).
 
 ## 4. Proof plan (for D, and for A/B if they are ever wanted)
 
