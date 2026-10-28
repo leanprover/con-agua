@@ -1,5 +1,4 @@
 import ConAgua.Verdict.PosNgc
-import ConAgua.Verdict.DeclValE
 import ConAgua.Verdict.PosE
 import ConAgua.Arena.IndT.PosCrest
 import ConAgua.Arena.IndT.PosNew

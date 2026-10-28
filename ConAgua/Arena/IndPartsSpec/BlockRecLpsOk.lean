@@ -1,6 +1,5 @@
 import ConAgua.Arena.IndPartsSpec.BlockRecNamesUnreserved
 import ConAgua.Arena.IndPartsSpec.EqW
-import ConAgua.Arena.IndPartsSpec.RecTW
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr

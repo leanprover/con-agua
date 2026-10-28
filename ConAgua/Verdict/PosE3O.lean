@@ -1,4 +1,3 @@
-import ConAgua.Verdict.DeclValE
 import ConAgua.Verdict.PosE
 import ConAgua.Verdict.PosE3Cm
 import ConAgua.Arena.IndT.PosOne

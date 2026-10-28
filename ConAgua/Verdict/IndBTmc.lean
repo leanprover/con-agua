@@ -1,4 +1,3 @@
-import ConAgua.Verdict.IndBTmm
 import ConAgua.Verdict.IndBTmo
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.ModelGen
@@ -6,7 +5,7 @@ import ConAgua.L.ModelGen
 # Error refinement of `target_major_of_const` (lane `verdicts-b`, helper `ib`)
 
 Mirrors `tmcW_simC` (`IndT/RecGenTmf`): `block_shape_member_names` and `sl_find` are `closedNV`;
-the member branch is `tmm_claim`, the outside branch `tmo_claim`.
+the member branch is `tmm_ref`'s error half, the outside branch `tmo_claim`.
 -/
 
 set_option experimental.vcgen true
@@ -118,11 +117,13 @@ theorem tmcE_claim (n : Nat) {m : Mem} {a : AState}
     | error e6 =>
       rw [h6, tmcE.k_target_major_of_member.none] at he
       cases he
-      have := CoreSpecE.of_callE (tmm_claim hP.tmm hnv n (s₀ := ⟨s4.mem, Locals.init []⟩) (a := a) (bs := bs)
-        (css := css) (pfvs := pfvs) (fvs := fvs) (args := args) hS4 (hq.grow (decBS_mono _) hg4)
-        (partsHsrc_grow hg4 hq9 hsrc) (hcss.grow decCNS_mono hg4) (hpf.grow (OMono.decHL _ _) hg4)
-        (hfv.grow (OMono.decHL _ _) hg4) (Nat.le_trans hfvb hg4.1) (hag.grow (OMono.decHL _ _) hg4)
-        (Nat.le_trans hagb hg4.1) hx hy hP4) h6
+      have := RefE.run_err
+        (tmmE_spec p hP.tmm n ⟨s4.mem, Locals.init []⟩ pp cao cal pfo pfl fvo fvl ao al x y (UInt64.ofNat i))
+        hnv hnv (tmm_ref (dn := dn) (vis := vis) (fe := fe) n (a := a) (bs := bs) (css := css) (pfvs := pfvs)
+          (fvs := fvs) (args := args) hS4 (hq.grow (decBS_mono _) hg4)
+          (partsHsrc_grow hg4 hq9 hsrc) (hcss.grow decCNS_mono hg4) (hpf.grow (OMono.decHL _ _) hg4)
+          (hfv.grow (OMono.decHL _ _) hg4) (Nat.le_trans hfvb hg4.1) (hag.grow (OMono.decHL _ _) hg4)
+          (Nat.le_trans hagb hg4.1) hx hy hP4) h6
       rw [hie] at this
       exact this
     | ok q6 =>

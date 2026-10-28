@@ -1,7 +1,5 @@
 import ConAgua.Verdict.WhnfModelsE
-import ConAgua.Arena.KnotE
 import ConAgua.Arena.DefEqKnot
-import ConAgua.Checker.NoVerdictTree
 
 /-!
 # The knot's `whnf_core` and `whnf` slots' verdict claims (lane `verdicts-b`, helper `k2`)
@@ -13,19 +11,6 @@ open scoped Lean.Order
 
 
 namespace L.Arena
-
-/-- The twin computations agree on the run from `a`. -/
-theorem ErrClaim.of_run_eqW {α : Type} {T T' : AM α} {a a' : AState} {e : Err}
-    (h : T.run a = T'.run a') (h' : ErrClaim T' a' e) : ErrClaim T a e := fun hk => by
-  obtain ⟨ce, hce, hc⟩ := h' hk
-  exact ⟨ce, h ▸ hce, hc⟩
-
-/-- The twin's run from `a` fails where `T'`'s from `a'` does. -/
-theorem ErrClaim.of_run_err {α β : Type} {T : AM α} {T' : AM β} {a a' : AState} {e : Err}
-    (h : ∀ ce, T'.run a' = .error ce → T.run a = .error ce) (h' : ErrClaim T' a' e) :
-    ErrClaim T a e := fun hk => by
-  obtain ⟨ce, hce, hc⟩ := h' hk
-  exact ⟨ce, h ce hce, hc⟩
 
 /-- A continuation that passes errors on and fails nowhere else: its error is its argument's. -/
 theorem err_of_k {β γ : Type} {k : Except Err β → Except Err γ}
@@ -383,14 +368,6 @@ theorem whnfCoreSlot_stepE (n : Nat) (hk : KnotUpTo p n) (hkE : KnotUpToE p n) :
 end slot
 
 /-! ## `whnf_step` -/
-
-/-- `reduce_nat`'s error claim at fuel `N` (the ok side's `ReduceNatSpec'` shape). -/
-def ReduceNatE (p : Prog) : Prop :=
-  ∀ N, KnotUpTo p N → KnotUpToE p N → ∀ (F : Nat) (s₀ : St) (a₀ : AState)
-    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (MM : ModeMaps)
-    (eb mode d e : Word), N ≤ F → N ≤ 2 ^ 62 → SlotPre s₀ a₀ dn vis fe MM eb mode → HW e →
-    CoreSpecE p N "reduce_nat" [mode, vis, d, e]
-      (reduceNat (coreKnot (decMode mode) fe id F) fe d.toNat (decE e)) s₀ a₀
 
 theorem whnfStep_err1 (r : CoreFnsA) (fe : IFEnv) (depth : Nat) (e : EIdx) (a : AState)
     (ce : CheckError) (hw : (r.whnfCore false depth e).run a = .error ce) :

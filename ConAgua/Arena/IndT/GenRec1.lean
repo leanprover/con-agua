@@ -1,7 +1,7 @@
 import ConAgua.Arena.IndT.KeepC
 import ConAgua.Arena.IndT.StreamRecs
 import ConAgua.Arena.IndT.RecGen28
-import ConAgua.Arena.RecCheckSpec.TargetRecPins
+import ConAgua.Verdict.IndBRecPins
 import ConAgua.Arena.RecGenSpec.Classes
 import ConAgua.Arena.IndInstallSpec.GpbWSimF
 import ConAgua.Arena.IndInstallSpec.Icvg
@@ -164,7 +164,7 @@ theorem grpAW_okC (P : GrcProg p) {fsR : List FnName} (hclR : closedA p rcFreeA 
   obtain ⟨⟨r1, m1⟩, c1, h⟩ := of_K h rfl
   rw [grpK1_some] at h
   obtain ⟨s1, hs1, -, hok1, hS1, hg1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (targetRecPins_refines p P.rp n _ a dn vis fe pp bO bL bs block hS hbs.1 hblk)
+    (targetRecPins_refines P.rp n _ a pp bO bL bs block hS hbs.1 hblk)
     (callW_mono c1 (Nat.le_add_right n 3))
   simp only at hs1 hS1 hg1; subst hs1
   have hrun1 := AM.run_of_ok _ a hok1

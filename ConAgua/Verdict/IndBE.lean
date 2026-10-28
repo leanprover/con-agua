@@ -8,7 +8,6 @@ import ConAgua.Arena.IndSumSpec.SumProg
 import ConAgua.Arena.IndSumSpec.TblProg
 import ConAgua.Arena.KnotEntry
 import ConAgua.Arena.RecGenSpec.OcW
-import ConAgua.Arena.Verdict
 import ConRon.Bridge.Inductives.ClassRead
 import ConAgua.Verdict.IndAGen
 import ConAgua.Arena.IndRealSctC
@@ -16,7 +15,6 @@ import ConAgua.Arena.IndT.RecGen19
 import ConAgua.Arena.IndT.Sum2
 import ConAgua.Arena.IndT.Sum3
 import ConAgua.Arena.IndT.Sum5
-import ConAgua.Arena.RecGenSpec.ClassKeyCanon
 
 /-!
 # The `indB` family's error claims used by `check_ind_decl`'s pass and tail (lane `verdicts-b`,

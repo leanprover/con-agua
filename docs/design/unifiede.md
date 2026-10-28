@@ -349,3 +349,198 @@ Not migrated in this batch, and why:
   the model (`unsafeW_twin`: no record is unsafe), not twin runs, and their error halves are
   `VerdictClaimL` about the whole `validateIndD` (failures as record verdicts). `RefE` fits
   neither; it needs a variant over `ErrClaimV`-style twins with a `Prop` ok post (a kit change).
+
+### 3.6 Batch 1c, first landing (`IndBTpd`, `IndBTmm`, `IndBToi`, `IndBPins`, `IndBRecPins`)
+
+Migrated: `target_params_def_eq_step` and `target_params_def_eq` (`pds_ref`, `pde_ref`;
+`target_class_match`'s `tcmE` now calls `pdeE` as a unified callee, and `tcm_ref` takes both halves
+from `pde_ref`), `target_major_of_member` (`tmm_ref`), `target_outside_inst` (`toi_ref`),
+`target_pin_tys` (`tpt_ref`), `target_rec_pins` (`trp_ref`). Posts are named-field structures
+(`TpdPost`, `PdsPost extends TpdPost` with the core step, `TmmPost`, `ToiPost`, `TptPost`, `TrpPost`).
+The `@[refines]` theorems keep their statements (`RefE.triple`); `targetParamsDefEq_claim`,
+`tmm_claim`, `targetOutsideInst_claim`, `targetPinTys_claim`, `targetRecPins_claim` are gone (their
+callers read `RefE.run_err`). Deleted hand models with their arms and specs: `pdsW`/`pdsK1–11`,
+`pdsF`, `pdeW`/`pdeK1`, `tpdStep_spec`, `tpd_spec`, `pdsC_ok`; `tmmW`/`tmmK1–4`, `tmm_spec`;
+`toiW`/`toiK1–5`, the hand `targetOutsideInst_spec`; `tptW`/`tptK*`, `targetPinTys_spec`;
+`trpW`/`trpK1–6`, `trp_spec`.
+
+Findings:
+
+* **A unified model whose refinement does not need its lookups drops them.** `pds_ref`,
+  `pde_ref` and then `tcm_ref` lost their `TpLook`/`TcmLook` argument: the lookups are needed by
+  the spec (`RefE.triple`, `RefE.run_err`), not by the refinement of the model value.
+* **A caller of a unified callee that is not unified itself also needs `nv`**: `pdeE` has no
+  `Option` callee, but `pdsE_spec`'s error post assumes `closedNV`, so `pdeE` takes
+  `nv [closedNV …, nv_mem]` to have it in its own error post.
+* **A unified callee in tail position has no continuation**: `tcmE.k_target_holes.arm1` ends in
+  `pdeE …` directly, so the old `tcmE.k_target_params_def_eq` is gone.
+* **The post of a recursive call is from its own start**: `pde_ref`'s inductive step carries the
+  growth across (`hg1.trans hR2.grow`), 3 lines; a kit lemma `RefE.mono` (weaken `R` under an
+  implication) would make it one.
+* **`G`**: the leaves that call no core stub (`target_major_of_member`, `target_outside_inst`) state
+  their refinement under `G := closedNV p nvFns = true`, not `VerdictCtx p`: their callers'
+  error claims (`tmcE_claim`, `tmtE_claim`, not migrated) have `hnv` only.
+* **Skipped: `class_rule_ok_guards`** (`IndBRec4`). Its error half needs `UceProg p` (with
+  `StrLitSupportedOK`, a semantic fact) for `uce_errClaim_hi`; as a plain hypothesis of the
+  refinement it would reach every ok refinement above (`cruleW_okC`, `RecGen9`), the trap of §1.2.
+  It needs `VerdictCtx` (or a variant) to carry `UceProg`, a kit change; batch 1d's `Decl*E` meet
+  the same. Its twin side also needs a guards-prefix definition (`classRuleOk = guardsT >>= rest`).
+
+Lines (`declen.py`, master 63762a3f against this branch; before = ok refinement(s) + error claim(s)):
+
+| function | before | after | change |
+|---|---|---|---:|
+| `target_params_def_eq(_step)` | `pdsC_ok` 73, `pdsR_okC` 105, `pdsW_okC` 41, `pdeW_okC` 94; `pdsStep_claim` 280, `pdeE_claim` 94, `targetParamsDefEq_claim` 26 = 713 | `pds_ref` 227 + `pde_ref` 88 + posts 12 = 327 | **−54 %** |
+| `target_major_of_member` | `tmmW_sim` 174; `tmmE_claim` 154, `tmm_claim` 20 = 348 | `tmm_ref` 167 + `TmmPost` 7 + `tmmE_kpl` 7 = 181 | **−48 %** |
+| `target_outside_inst` | `toiW_ok` 101; `toiE_claim` 175, `targetOutsideInst_claim` 15 = 291 | `toi_ref` 150 + `ToiPost` 7 = 157 | **−46 %** |
+| `target_pin_tys` | `tptW_okC` 58; `tptE_claim` 67, `targetPinTys_claim` 15 = 140 | `tpt_ref` 60 + `TptPost` 5 = 65 | **−54 %** |
+| `target_rec_pins` | `trpW_ok` 117; `trpE_claim` 203, `targetRecPins_claim` 12 = 332 | `trp_ref` 199 + `TrpPost` 5 = 204 | **−39 %** |
+| `tcm_ref` (caller) | 157 | 144 | |
+| **pairs** | **1 824** | **934** | **−49 %** |
+
+Whole diff of this landing against master 63762a3f (models, specs, refinements, callers, imports):
+**+873 −2 278 = −1 405 lines** in 30 files.
+
+Elaboration (user seconds, `lean` on the module alone, median of 3 interleaved runs, base master
+63762a3f, `_tmp/unify-b1c/time.sh`, `times1.txt`; load 10–30):
+
+| module | base | new | |
+|---|---:|---:|---|
+| `Verdict/IndBTpd` | 5.51 | 5.01 | |
+| `Arena/IndT/RecCheckTpd`, `RecCheckSpec/Tpd`, `TaGoWMfr`, `PdsC`, `BvbWStageC` | 9.75 | 3.11 | the hand models, `tpdStep_spec`/`tpd_spec` and the ok refinements gone |
+| `Verdict/IndBTcm`, `IndBTmn`, `Arena/IndT/RecCheckK53` | 7.00 | 6.83 | |
+| `Verdict/IndBTmm` | 22.01 | **32.22** | **slower (+10.2 s)**: `tmmE`'s generated `simp` steps (now with the four callees' specs; `finish` fails, `locals` 39 s) |
+| `Arena/IndSumSpec/ParamLevels` | 8.87 | 0.78 | the hand `tmm_spec` gone; with `IndBTmm`: 30.9 → 33.0 (+7 %) |
+| `Verdict/IndBToi` | 2.44 | **3.99** | **slower (+1.6 s)**: `toiE`'s steps (`finish` fails, `locals` 6.0 s) |
+| `Arena/RecCheckSpec/ToiW` | 1.84 | 0.48 | the hand `targetOutsideInst_spec` gone; with `IndBToi`: 4.3 → 4.5 |
+| `Verdict/IndBRecPins` | 4.19 | **6.76** | **slower (+2.6 s)**: `trp_ref` and `targetRecPins_refines` moved in (`finish` 7.5 s, `locals` 10.0 s) |
+| `Arena/RecCheckSpec/TargetRecPins` | 5.31 | 3.49 | the hand model and `trp_spec` gone; with `IndBRecPins`: 9.5 → 10.3 |
+| `Arena/RecCheckSpec/ErToIwWStage` | 11.00 | 8.92 | `targetPinTys_spec` gone, `tptR` in |
+| `IndBPins`, `IndBGrp`, `IndBClm`, `RecCheckPins`, `RecGen19`, `GenRec1` | 11.40 | 11.11 | |
+| `IndBTmc`, `IndBTmt`, `IndBTmo`, `RecGenTmf`, `DecTMDecBOf`, `OcW` | 19.34 | 18.88 | |
+| **sum** | **108.7** | **101.6** | **−7 %** |
+
+Each flagged module is offset by the module that held the deleted hand spec, except `IndBRecPins`
+(+0.8 s over the pair).
+
+### 3.7 Batch 1a (`WhnfModels2E`: `reduce_nat*`; `WhnfModels6E`: `m2c_*`)
+
+All 17 functions migrated in one landing: the `reduce_nat` family (7) and `major_to_ctor`'s pieces
+(10). `major_to_ctor` itself keeps its `errors` model (a wrapper outside the batch); its claim
+`majorToCtorE_of` is `m2cHead_ref`'s error half through the run (`RefE.run_err`), its ok refinement
+`majorToCtor_refines'` the ok half (`RefE.growRefW`).
+
+| family | before: ok refinements + error claims | after | change |
+|---|---|---:|---:|
+| `reduce_nat*` (7) | `callW_reduceNat*` 799 + `callE_reduceNat*` 519 = 1 318 | `reduceNat*_ref` 584 | **−56 %** |
+| `m2c_*` (10) | `m2c*_ok` 956 + `m2c*E_ok` 830 + the hand error model `m2cAnd2HE` 37 = 1 823 | `m2c*_ref` 868 | **−52 %** |
+| shared pieces | | `CorePost` + `RefE.coreSpec` (`KnotE`), `RefE.tail(_eq)`, `CorePost.relist`, `GrowPost` + 3 lemmas, `M2CCtxE`, `PreOk`/`PreRef`, `and2Push_of` | ≈ +150 |
+
+Also gone: the generated `W` models of `reduce_nat*` (`WhnfDeltaRefine3`), the hand `W` models of
+`m2c_*` with their specs (≈ 330 lines, `WhnfM2CRefine`), `CoreRef.congr`. Whole diff of the
+batch against master: +1 403 −3 403 (including the imports the new import graph makes redundant).
+
+Choices:
+
+* **`G` is the knot's error half at the callees' fuel.** These functions are called from the
+  knot's slots, and their errors are the slots' (`whnf`, `infer_io`, `defeq`): `G` is
+  `KnotUpToE p n` for `reduce_nat*` and `M2CCtxE p n` (`KnotUpToE` and `ProofIrrelWE`, `proof_irrel`
+  being outside the knot) for `m2c_*`. The ok halves need only `KnotUpTo`, as before.
+* **The post is `CoreRef`'s, as a structure** (`CorePost dec dn m₀ vis fe M eb ok`: the relation
+  after the run, the result decoded, the result words valid), so the `CoreSpec` statements of the
+  knot (`ReduceNatSpec'`, `MajorToCtorOK`) are `RefE.coreSpec` one-liners. The arms that leave a
+  slice on the stack use `GrowPost` (`CoreAfterG`, `GrowRef`).
+* **`m2c_pre` is not a twin function**: it runs a prefix of each arm (`m2cPreT … k`), so an ok run
+  is not an ok run of a twin computation. Its refinement is `PreRef`: the ok value gives the twin's
+  prefix (`PreOk`, around the old `PreRun`), an error claims the failure of `m2cPreT … k` for every
+  continuation `k`. Its callers apply it as before.
+* **Tail calls** (`reduce_nat_head` → `_k`/`_ap`, `m2c_arms` → the arms, …): the caller's model
+  re-lists the callee's result, the twin runs the callee's twin from some state. `RefE.tail` takes
+  the callee's `RefE` through both (`RefE.tail_eq` when the runs are equal); each such call is
+  3–6 lines.
+* **Placement.** The knot's ok side (`DefEqKnot`, `WhnfDeltaRefine4`'s `whnf_step`) uses these
+  refinements, so they sit below it: `reduce_nat*` in `Verdict/WhnfNatE` (no longer importing
+  `WhnfSlotE`; `DefEqKnot` imports it; `ReduceNatE`, `reduceNat_refines` moved in), `m2c_*` in
+  `Arena/WhnfM2CRefine2..5` in place of the ok refinements (importing `WhnfModels6E` and `KnotE`;
+  `ProofIrrelWE` moved to `WhnfM2CRefine2`). `ErrClaim.of_run_err`/`of_run_eqW` moved from
+  `WhnfSlotE` to `KnotE`. The new graph makes about 45 imports elsewhere redundant (removed, shake).
+* **Two model recipes changed**: `m2c_eta`'s unified model by the default recipe (`simp []` needed
+  `heartbeats 1000000` and took 16 s; default 8 s). For `reduce_nat*` `simp []` stays: the default
+  recipe and `finish … gen 30` fail, `simp [] locals` is slower.
+
+Elaboration (user seconds, `lean` on the module alone, median of 3 interleaved runs, base master
+63762a3f, load 17–32):
+
+| module | base | new | |
+|---|---:|---:|---|
+| `Verdict/WhnfModels2E` | 29.41 | 34.01 | **slower (+4.6 s, +16 %)**: the unified models do the work of the deleted `W` models' steps (below) with the callee specs lifted; recipes tried above |
+| `Arena/WhnfDeltaRefine3` | 13.86 | 3.72 | `W` models of `reduce_nat*`, three ok refinements gone |
+| `Verdict/WhnfNatE` | 5.47 | 1.61 | |
+| `Arena/WhnfDeltaRefine4`, `DefEqKnot`, `KnotE` | 4.30 | 3.30 | |
+| `Verdict/WhnfSlotE`, `WhnfMidE`, `WhnfKnotE` | 4.28 | 4.08 | |
+| `Verdict/WhnfModels6E` | 18.03 | 14.95 | `m2c_eta` by the default recipe |
+| `Arena/WhnfM2CRefine` | 18.12 | 2.56 | hand `W` specs gone |
+| `Arena/WhnfM2CRefine2..5` | 7.46 | 6.56 | |
+| `Verdict/WhnfM2CE`, `WhnfPirrE`, `WhnfStuckE` | 6.74 | 3.00 | the claims gone |
+| **sum** | **107.7** | **73.8** | **−31 %** |
+
+For the generator/kit (not changed here): `CorePost`/`RefE.coreSpec` (and the `GrowPost` variant)
+are the `RefE` form of `CoreRef`/`CoreSpec` for every knot function (batch 1d's `WhnfModels3E/E/7E`
+will want them; they sit in `Arena/KnotE`); `RefE.tail` (a tail call whose continuation re-lists the
+callee's value) recurs in every nested family and belongs to the kit; a `PreRef`-like shape (an ok
+half that is not a twin run) recurs for prefixes of twin functions.
+
+### 3.8 Batch 1c, second landing (`IndBRec1`, `IndBFields`)
+
+Migrated: `class_key_of` (`kof_ref`, `KofPost`; `classKeyOf_refines` moved to `IndBRec1`, same
+statement), `class_minor_slot` (`cms_ref`, `CmsPost`; the `DecB` slices of the second invariant
+package are a conditional field `ihsB`, §1.4; `class_minor_slot_go` stays a run, its spec's `∃`
+post is no model the generator reads), `class_rec_ty_ok_guards` (`rg_ref`, `RgPost`),
+`class_fields_of_go` (`cfg_ref`, `CfgPost`, by induction; all seven callees lifted). The callers'
+error claims (`IndBCtor`, `IndBRec2`'s `classRecTyOk_claim`, `IndArmE`'s `classKeyOfE_of`) read
+`RefE.run_err`, their ok refinements `RefE.run_okW`; `cfoW` calls `class_fields_of_go` through
+`callW`, and `cfoW_sim`/`classFieldsOf_refines` moved into `IndBFields`.
+
+* **A function that stands for a prefix of a twin function**: `class_rec_ty_ok_guards` has no twin
+  of its own; its old ok proof (`rgW_sim`), its pass lemma (`rgW_pass`) and its claim (`rgE_claim`,
+  over `do …guards…; rest` for any `rest`) were three copies of the guard analysis. Now one twin
+  definition of the prefix, `rgT` (the guards, ending in `pure ci`), with `rgT_bind :
+  classRecTyOk … = rgT … >>= rest`, and `rg_ref` against `rgT`. The hand model `rtoW` reads the
+  guards through `cR` (`rtoW_simC`, `rtsW_simC` gained `hrp : RtoProg p`, three call sites).
+  `class_rule_ok_guards` (skipped in §3.6) has the same shape.
+* **`G := closedNV p nvFns = true`** for all four (no core stub below them), as in §3.6.
+* **Skipped: `class_const_ok_header`** (`IndBHdr`). Its ok half is `install_header`'s model `ihW` and
+  `ihW_okT` (the same body), and batch 1d skipped `install_header` for the same reason (§3.5): each
+  waits for the other. They should be migrated together, by one lane: one unified model of the
+  body, one refinement, used by both.
+* **Recipe**: `classRecTyOkGuardsE` with `simp []` (the old `errors` recipe) took 13.0 s for the
+  module; with the default `finish` 5.0 s. `cfgE`, `classKeyOfE`, `classMinorSlotE` keep theirs
+  (`finish` fails or is slower).
+
+Lines (`declen.py`, master 63762a3f against this branch; before = ok refinement(s) + error claim(s);
+the `rg` row includes `rgT`/`rgT_bind` after, the `cms` row the reworked scan lemmas `cmsGo_hits`,
+`cmsGo_decB`):
+
+| function | before | after | change |
+|---|---:|---:|---:|
+| `class_key_of` | 155 | 93 | **−40 %** |
+| `class_minor_slot` | 212 | 170 | **−20 %** |
+| `class_rec_ty_ok_guards` | 361 | 185 | **−49 %** |
+| `class_fields_of_go` | 374 | 179 | **−52 %** |
+| **pairs** | **1 102** | **627** | **−43 %** |
+
+The hand models, arms and specs deleted on top: about 250 lines. Whole diff of this landing
+against the first one (2853d80e): **+658 −1 317 = −659 lines** in 21 files.
+
+Elaboration (as §3.6, `times2.txt`; load 14–25; `IndBRec1` new after the recipe change, 3 runs
+5.00–5.24):
+
+| module | base | new | |
+|---|---:|---:|---|
+| `Verdict/IndBRec1` | 5.93 | 5.02 | the three refinements; 13.78 with `simp []` for `classRecTyOkGuardsE` |
+| `Verdict/IndBFields` | 3.98 | **4.45** | **slower (+0.5 s)**: `cfoW`, its spec and `cfoW_sim` moved in |
+| `Arena/RecGenSpec/ClassFieldsOf` | 3.03 | 0.72 | …moved out of here; with `IndBFields`: 7.0 → 5.2 |
+| `RecGenSpec/ClassConstOk`, `ClassKeyCanon`, `ClassMinorSlot`, `RgW`, `CntW` | 16.62 | 13.24 | hand models and specs gone |
+| `IndBCtor`, `IndBRec2`, `IndBRec3`, `IndArmE`, `IndBE`, `RecGen27`, `RecGen7` | 21.43 | 22.19 | |
+| `CfoProg`, `ClassFeR`, `ClassMinorSlotHit`, `ClassMinorSlotW`, `KcW` | 18.32 | 18.13 | |
+| **sum** | **69.3** | **63.8** | **−8 %** |

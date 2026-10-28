@@ -1,5 +1,4 @@
 import ConAgua.Arena.WhnfM2C
-import ConAgua.Arena.WhnfCoreProj
 import ConAgua.Arena.WhnfIotaRefine
 import Std.Tactic.BVDecide.Normalize.BitVec
 import Std.Tactic.BVDecide.Normalize.Prop
@@ -14,7 +13,9 @@ import ConAgua.L.Examples
 The twin `majorToCtor` (`Core.lean:1705-1820`) is one function; its pieces are named here
 (`m2cHeadT` … `m2cCheckT`), each the twin's own code with the values decoded so far as
 parameters, and `majorToCtor` unfolds into them by `rfl` (`majorToCtor_eq`). Each L piece of
-`WhnfM2C.lean` gets a word-level model through `callW` and an L spec by `vcgen` + `finish`.
+`WhnfM2C.lean` has a unified model (`Verdict/WhnfModels6E.lean`); `major_to_ctor` itself and the
+leaves outside the verdict closure (`m2c_const_view`, `m2c_eta2`) get a word-level model through
+`callW` and an L spec by `vcgen` + `finish` here.
 -/
 
 open ConRon.Arena
@@ -181,35 +182,6 @@ theorem majorToCtor_spec (p : Prog) (hp : p.lookup "major_to_ctor" = some majorT
     Locals.init_cons_zero, Locals.init_cons_succ, Sig.retVal, Sig.retOr, rdW, CTL] <;>
   (congr 1; rw [Array.getElem?_eq_getElem]; rfl)
 
-/-- Model of `m2c_head`. -/
-def m2cHeadW (p : Prog) (n : Nat) (m : Mem) (mode vis d ro rc major : Word) :
-    Option (Word × Mem) :=
-  match callW p n "is_ctor_app" [vis, major] m with
-  | none => none
-  | some (r₁, m₁) =>
-  if r₁.headD 0 ≠ 0 then some (major, m₁) else
-  if rc ≠ 1 then some (major, m₁) else
-  match callW p n "env_find" [rdW (m₁.arr64 EREC) ro, vis] m₁ with
-  | none => none
-  | some (r₂, m₂) =>
-  if r₂.headD 0 = 0 then some (major, m₂) else
-  if rdW (m₂.arr64 EREC) (r₂.tail.headD 0) ≠ 4 then some (major, m₂) else
-  match callW p n "m2c_ctor" [mode, vis, d, ro, r₂.tail.headD 0, major] m₂ with
-  | none => none
-  | some (r₃, m₃) => some (r₃.headD 0, m₃)
-
-theorem m2cHead_spec (p : Prog) (hp : p.lookup "m2c_head" = some m2cHeadL) (n : Nat) (s₀ : St)
-    (mode vis d ro rc major : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "m2c_head" [mode, vis, d, ro, rc, major]
-    ⦃fun r s' => LocEq s' s₀ ∧ m2cHeadW p n s₀.mem mode vis d ro rc major = some (r.headD 0, s'.mem);
-      ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, m2cHeadL]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      callW_spec p n "is_ctor_app", callW_spec p n "env_find", callW_spec p n "m2c_ctor"] <;>
-    finish [m2cHeadW]
-
 /-- Model of `m2c_const_view`. -/
 def cvwW (m : Mem) (hh : Word) : Option (List Word) :=
   if tierW hh ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
@@ -230,236 +202,6 @@ theorem m2cConstView_spec (p : Prog) (hp : p.lookup "m2c_const_view" = some m2cC
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt,
         tcntM, evalE_tierE, evalE_idxE] <;>
       finish [cvwW, tierW, idxW]
-
-/-- Model of `m2c_ctor`. -/
-def m2cCtorW (p : Prog) (n : Nat) (m : Mem) (mode vis d ro cvjP major : Word) :
-    Option (Word × Mem) :=
-  match callW p n "pi_result" [rdW (m.arr64 EREC) (cvjP + 4)] m with
-  | none => none
-  | some (r₁, m₁) =>
-  match callW p n "get_app_fn" [r₁.headD 0] m₁ with
-  | none => none
-  | some (r₂, m₂) =>
-  if r₂.headD 0 >>> 28 ≠ 3 then some (major, m₂) else
-  match callW p n "m2c_const_view" [r₂.headD 0] m₂ with
-  | none => none
-  | some (r₃, m₃) =>
-  match callW p n "env_find" [r₃.headD 0, vis] m₃ with
-  | none => none
-  | some (r₄, m₄) =>
-  if r₄.headD 0 = 0 then some (major, m₄) else
-  if rdW (m₄.arr64 EREC) (r₄.tail.headD 0) ≠ 3 then some (major, m₄) else
-  match callW p n "m2c_arms" [mode, vis, d, ro, cvjP, r₃.headD 0, r₄.tail.headD 0, major] m₄ with
-  | none => none
-  | some (r₅, m₅) => some (r₅.headD 0, m₅)
-
-theorem m2cCtor_spec (p : Prog) (hp : p.lookup "m2c_ctor" = some m2cCtorL) (n : Nat) (s₀ : St)
-    (mode vis d ro cvjP major : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "m2c_ctor" [mode, vis, d, ro, cvjP, major]
-    ⦃fun r s' => LocEq s' s₀ ∧
-      m2cCtorW p n s₀.mem mode vis d ro cvjP major = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, m2cCtorL]
-  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-    callW_spec p n "pi_result", callW_spec p n "get_app_fn", callW_spec p n "m2c_const_view",
-    callW_spec p n "env_find", callW_spec p n "m2c_arms"] <;>
-  simp_all [-UInt64.toNat_add, m2cCtorW, EREC, BinOp.eval, getElem_rdW', Cmp.eval, LocEq,
-    St.setLocs_cons, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Locals.init_cons_zero,
-    Locals.init_cons_succ, Sig.retVal, Sig.retOr]
-
-/-- Model of `m2c_arms`. -/
-def m2cArmsW (p : Prog) (n : Nat) (m : Mem) (mode vis d ro cvjP T indP major : Word) :
-    Option (Word × Mem) :=
-  if rdW (m.arr64 EREC) (ro + 9) ≠ 0 then
-    match callW p n "m2c_k" [mode, vis, d, T, major, rdW (m.arr64 EREC) ro,
-        rdW (m.arr64 EREC) (cvjP + 3), rdW (m.arr64 EREC) (cvjP + 5)] m with
-    | none => none
-    | some (r, m₁) => some (r.headD 0, m₁)
-  else if rdW (m.arr64 EREC) (ro + 10) ≠ 0 then
-    match callW p n "m2c_eta" [mode, vis, d, T, indP, major] m with
-    | none => none
-    | some (r, m₁) => some (r.headD 0, m₁)
-  else
-    match callW p n "m2c_and" [mode, vis, d, T, major, rdW (m.arr64 EREC) ro,
-        rdW (m.arr64 EREC) (cvjP + 3), rdW (m.arr64 EREC) (cvjP + 5)] m with
-    | none => none
-    | some (r, m₁) => some (r.headD 0, m₁)
-
-theorem m2cArms_spec (p : Prog) (hp : p.lookup "m2c_arms" = some m2cArmsL) (n : Nat) (s₀ : St)
-    (mode vis d ro cvjP T indP major : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "m2c_arms" [mode, vis, d, ro, cvjP, T, indP, major]
-    ⦃fun r s' => LocEq s' s₀ ∧
-      m2cArmsW p n s₀.mem mode vis d ro cvjP T indP major = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, m2cArmsL]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      callW_spec p n "m2c_k", callW_spec p n "m2c_eta", callW_spec p n "m2c_and"] <;>
-    finish [m2cArmsW]
-
-/-- Model of `m2c_pre`: the five result words. -/
-def m2cPreW (p : Prog) (n : Nat) (m : Mem) (mode vis d major : Word) :
-    Option (List Word × Mem) :=
-  match callW p n "infer_io" [mode, vis, d, major] m with
-  | none => none
-  | some (r₁, m₁) =>
-  match callW p n "whnf" [mode, vis, d, r₁.headD 0] m₁ with
-  | none => none
-  | some (r₂, m₂) =>
-  match callW p n "get_app_fn" [r₂.headD 0] m₂ with
-  | none => none
-  | some (r₃, m₃) =>
-  if r₃.headD 0 >>> 28 ≠ 3 then some ([0, 0, 0, 0, 0], m₃) else
-  match callW p n "m2c_const_view" [r₃.headD 0] m₃ with
-  | none => none
-  | some (r₄, m₄) =>
-  match callW p n "ls_node" [r₄.tail.headD 0] m₄ with
-  | none => none
-  | some (r₅, m₅) => some ([1, r₂.headD 0, r₄.headD 0, r₄.tail.headD 0, r₅.tail.headD 0], m₅)
-
-theorem m2cPre_spec (p : Prog) (hp : p.lookup "m2c_pre" = some m2cPreL) (n : Nat) (s₀ : St)
-    (mode vis d major : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "m2c_pre" [mode, vis, d, major]
-    ⦃fun r s' => LocEq s' s₀ ∧ m2cPreW p n s₀.mem mode vis d major = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, m2cPreL]
-  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-    callW_spec p n "infer_io", callW_spec p n "whnf", callW_spec p n "get_app_fn",
-    callW_spec p n "m2c_const_view", callW_spec p n "ls_node"] <;>
-  simp_all [-UInt64.toNat_add, m2cPreW, BinOp.eval, Cmp.eval, LocEq,
-    St.setLocs_cons, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Locals.init_cons_zero,
-    Locals.init_cons_succ, Sig.retVal, Sig.retOr]
-
-/-- Model of `m2c_check`. -/
-def m2cCheckW (p : Prog) (n : Nat) (m : Mem) (mode vis d tmaj fab major : Word) :
-    Option (Word × Mem) :=
-  match callW p n "fab_scope_ok" [d, fab, major] m with
-  | none => none
-  | some (r₁, m₁) =>
-  if r₁.headD 0 = 0 then some (major, m₁) else
-  match callW p n "infer_io" [mode, vis, d, fab] m₁ with
-  | none => none
-  | some (r₂, m₂) =>
-  match callW p n "defeq" [mode, vis, d, tmaj, r₂.headD 0] m₂ with
-  | none => none
-  | some (r₃, m₃) =>
-  if r₃.headD 0 = 0 then some (major, m₃) else
-  if mode &&& 1 = 0 then
-    match callW p n "proof_irrel" [mode, vis, d, fab, major] m₃ with
-    | none => none
-    | some (r₄, m₄) => if r₄.headD 0 ≠ 0 then some (fab, m₄) else some (major, m₄)
-  else some (fab, m₃)
-
-theorem m2cCheck_spec (p : Prog) (hp : p.lookup "m2c_check" = some m2cCheckL) (n : Nat) (s₀ : St)
-    (mode vis d tmaj fab major : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "m2c_check" [mode, vis, d, tmaj, fab, major]
-    ⦃fun r s' => LocEq s' s₀ ∧
-      m2cCheckW p n s₀.mem mode vis d tmaj fab major = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, m2cCheckL]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      callW_spec p n "fab_scope_ok", callW_spec p n "infer_io", callW_spec p n "defeq",
-      callW_spec p n "proof_irrel"] <;>
-    finish [m2cCheckW]
-
-/-- Model of `m2c_k`. -/
-def m2cKW (p : Prog) (n : Nat) (m : Mem) (mode vis d T major ctor lpl cnP : Word) :
-    Option (Word × Mem) :=
-  match callW p n "m2c_pre" [mode, vis, d, major] m with
-  | none => none
-  | some (r₁, m₁) =>
-  if r₁.headD 0 = 0 then some (major, m₁) else
-  if r₁.tail.tail.headD 0 ≠ T then some (major, m₁) else
-  if lpl ≠ r₁.tail.tail.tail.tail.headD 0 then some (major, m₁) else
-  match callW p n "m2c_k2" [mode, vis, d, ctor, cnP, r₁.tail.headD 0, r₁.tail.tail.tail.headD 0,
-      major] m₁ with
-  | none => none
-  | some (r₂, m₂) => some (r₂.headD 0, m₂)
-
-theorem m2cK_spec (p : Prog) (hp : p.lookup "m2c_k" = some m2cKL) (n : Nat) (s₀ : St)
-    (mode vis d T major ctor lpl cnP : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "m2c_k" [mode, vis, d, T, major, ctor, lpl, cnP]
-    ⦃fun r s' => LocEq s' s₀ ∧
-      m2cKW p n s₀.mem mode vis d T major ctor lpl cnP = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, m2cKL]
-  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-    callW_spec p n "m2c_pre", callW_spec p n "m2c_k2"] <;>
-  simp_all [-UInt64.toNat_add, m2cKW, Cmp.eval, LocEq,
-    St.setLocs_cons, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Locals.init_cons_zero,
-    Locals.init_cons_succ, Sig.retVal, Sig.retOr]
-
-/-- Model of `m2c_k2`. -/
-def m2cK2W (p : Prog) (n : Nat) (m : Mem) (mode vis d ctor cnP tmaj ust major : Word) :
-    Option (Word × Mem) :=
-  match callW p n "get_app_args" [tmaj] m with
-  | none => none
-  | some (r₁, m₁) =>
-  if r₁.tail.headD 0 < cnP then some (major, m₁) else
-  match callW p n "intern_const" [ctor, ust] m₁ with
-  | none => none
-  | some (r₂, m₂) =>
-  match callW p n "mk_app_n" [r₂.headD 0, r₁.headD 0, cnP] m₂ with
-  | none => none
-  | some (r₃, m₃) =>
-  match callW p n "m2c_check" [mode, vis, d, tmaj, r₃.headD 0, major] m₃ with
-  | none => none
-  | some (r₄, m₄) => some (r₄.headD 0, m₄)
-
-theorem m2cK2_spec (p : Prog) (hp : p.lookup "m2c_k2" = some m2cK2L) (n : Nat) (s₀ : St)
-    (mode vis d ctor cnP tmaj ust major : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "m2c_k2" [mode, vis, d, ctor, cnP, tmaj, ust, major]
-    ⦃fun r s' => LocEq s' s₀ ∧
-      m2cK2W p n s₀.mem mode vis d ctor cnP tmaj ust major = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, m2cK2L]
-  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-    callW_spec p n "get_app_args", callW_spec p n "intern_const", callW_spec p n "mk_app_n",
-    callW_spec p n "m2c_check"] <;>
-  simp_all [-UInt64.toNat_add, m2cK2W, Cmp.eval, LocEq,
-    St.setLocs_cons, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Locals.init_cons_zero,
-    Locals.init_cons_succ, Sig.retVal, Sig.retOr] <;>
-  (intro h1; exact absurd h1 (UInt64.not_lt.mpr ‹_›))
-
-/-- Model of `m2c_eta` (the record words read at entry). -/
-def m2cEtaW (p : Prog) (n : Nat) (m : Mem) (mode vis d T indP major : Word) :
-    Option (Word × Mem) :=
-  match callW p n "m2c_pre" [mode, vis, d, major] m with
-  | none => none
-  | some (r₁, m₁) =>
-  if r₁.headD 0 = 0 then some (major, m₁) else
-  match callW p n "get_app_args" [r₁.tail.headD 0] m₁ with
-  | none => none
-  | some (r₂, m₂) =>
-  match callW p n "caps_never_zero" [rdW (m.arr64 EREC) (indP + 2), rdW (m.arr64 EREC) (indP + 3),
-      r₁.tail.tail.tail.headD 0, rdW (m.arr64 EREC) (indP + 12), rdW (m.arr64 EREC) (indP + 13),
-      rdW (m.arr64 EREC) (indP + 14)] m₂ with
-  | none => none
-  | some (r₃, m₃) =>
-  if r₁.tail.tail.headD 0 ≠ T then some (major, m₃) else
-  if r₂.tail.headD 0 ≠ rdW (m.arr64 EREC) (indP + 7) then some (major, m₃) else
-  if r₁.tail.tail.tail.tail.headD 0 ≠ rdW (m.arr64 EREC) (indP + 3) then some (major, m₃) else
-  if r₃.headD 0 = 0 then some (major, m₃) else
-  match callW p n "m2c_eta2" [vis, d, T, rdW (m.arr64 EREC) (indP + 6),
-      rdW (m.arr64 EREC) (indP + 8), r₂.headD 0, r₂.tail.headD 0, r₁.tail.tail.tail.headD 0,
-      major] m₃ with
-  | none => none
-  | some (r₄, m₄) => some (r₄.headD 0, m₄)
-
-theorem m2cEta_spec (p : Prog) (hp : p.lookup "m2c_eta" = some m2cEtaL) (n : Nat) (s₀ : St)
-    (mode vis d T indP major : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "m2c_eta" [mode, vis, d, T, indP, major]
-    ⦃fun r s' => LocEq s' s₀ ∧
-      m2cEtaW p n s₀.mem mode vis d T indP major = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, m2cEtaL]
-  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-    callW_spec p n "m2c_pre", callW_spec p n "get_app_args", callW_spec p n "caps_never_zero",
-    callW_spec p n "m2c_eta2"] <;>
-  simp_all [-UInt64.toNat_add, m2cEtaW, EREC, BinOp.eval, getElem_rdW', Cmp.eval, LocEq,
-    St.setLocs_cons, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Locals.init_cons_zero,
-    Locals.init_cons_succ, Sig.retVal, Sig.retOr]
 
 /-- Model of `m2c_eta2`. -/
 def m2cEta2W (p : Prog) (n : Nat) (m : Mem) (vis d T ec ef to tn ust major : Word) :
@@ -504,46 +246,6 @@ theorem m2cEta2_spec (p : Prog) (hp : p.lookup "m2c_eta2" = some m2cEta2L) (n : 
     St.setLocs_cons, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Locals.init_cons_zero,
     Locals.init_cons_succ, Sig.retVal, Sig.retOr]
 
-/-- Model of `m2c_and`. -/
-def m2cAndW (p : Prog) (n : Nat) (m : Mem) (mode vis d T major ctor lpl cnP : Word) :
-    Option (Word × Mem) :=
-  match callW p n "pin_at" [11] m with
-  | none => none
-  | some (r₁, m₁) =>
-  if T ≠ r₁.headD 0 then some (major, m₁) else
-  match callW p n "m2c_pre" [mode, vis, d, major] m₁ with
-  | none => none
-  | some (r₂, m₂) =>
-  if r₂.headD 0 = 0 then some (major, m₂) else
-  match callW p n "get_app_args" [r₂.tail.headD 0] m₂ with
-  | none => none
-  | some (r₃, m₃) =>
-  match callW p n "and_rescue_slots" [vis, ctor, cnP, r₂.tail.tail.tail.headD 0] m₃ with
-  | none => none
-  | some (r₄, m₄) =>
-  if r₂.tail.tail.headD 0 ≠ T then some (major, m₄) else
-  if r₃.tail.headD 0 ≠ cnP then some (major, m₄) else
-  if lpl ≠ r₂.tail.tail.tail.tail.headD 0 then some (major, m₄) else
-  if r₄.headD 0 = 0 then some (major, m₄) else
-  match callW p n "m2c_and2" [mode, vis, d, ctor, T, r₂.tail.headD 0, r₃.headD 0, r₃.tail.headD 0,
-      r₂.tail.tail.tail.headD 0, major] m₄ with
-  | none => none
-  | some (r₅, m₅) => some (r₅.headD 0, m₅)
-
-theorem m2cAnd_spec (p : Prog) (hp : p.lookup "m2c_and" = some m2cAndL) (n : Nat) (s₀ : St)
-    (mode vis d T major ctor lpl cnP : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "m2c_and" [mode, vis, d, T, major, ctor, lpl, cnP]
-    ⦃fun r s' => LocEq s' s₀ ∧
-      m2cAndW p n s₀.mem mode vis d T major ctor lpl cnP = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, m2cAndL]
-  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-    callW_spec p n "pin_at", callW_spec p n "m2c_pre", callW_spec p n "get_app_args",
-    callW_spec p n "and_rescue_slots", callW_spec p n "m2c_and2"] <;>
-  simp_all [-UInt64.toNat_add, m2cAndW, Cmp.eval, LocEq,
-    St.setLocs_cons, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Locals.init_cons_zero,
-    Locals.init_cons_succ, Sig.retVal, Sig.retOr]
-
 /-- The stack writes of `m2c_and2`: the two projections at `to + tn`, `to + tn + 1`, the top
 raised past them. -/
 def and2Push (m : Mem) (to tn p0 p1 : Word) : Option Mem :=
@@ -553,43 +255,6 @@ def and2Push (m : Mem) (to tn p0 p1 : Word) : Option Mem :=
       136 < (((m.set64 SPN (to + tn) p0).set64 SPN (to + tn + 1) p1).arr64 CTL).size then
     some (((m.set64 SPN (to + tn) p0).set64 SPN (to + tn + 1) p1).set64 CTL 136 (to + tn + 2))
   else none
-
-/-- Model of `m2c_and2`. -/
-def m2cAnd2W (p : Prog) (n : Nat) (m : Mem) (mode vis d ctor T tmaj to tn ust major : Word) :
-    Option (Word × Mem) :=
-  match callW p n "mk_proj" [T, 0, major] m with
-  | none => none
-  | some (r₁, m₁) =>
-  match callW p n "mk_proj" [T, 1, major] m₁ with
-  | none => none
-  | some (r₂, m₂) =>
-  match and2Push m₂ to tn (r₁.headD 0) (r₂.headD 0) with
-  | none => none
-  | some m₃ =>
-  match callW p n "intern_const" [ctor, ust] m₃ with
-  | none => none
-  | some (r₄, m₄) =>
-  match callW p n "mk_app_n" [r₄.headD 0, to, tn + 2] m₄ with
-  | none => none
-  | some (r₅, m₅) =>
-  match callW p n "m2c_check" [mode, vis, d, tmaj, r₅.headD 0, major] m₅ with
-  | none => none
-  | some (r₆, m₆) => some (r₆.headD 0, m₆)
-
-theorem m2cAnd2_spec (p : Prog) (hp : p.lookup "m2c_and2" = some m2cAnd2L) (n : Nat) (s₀ : St)
-    (mode vis d ctor T tmaj to tn ust major : Word) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p (n + 1)) "m2c_and2" [mode, vis, d, ctor, T, tmaj, to, tn, ust, major]
-    ⦃fun r s' => LocEq s' s₀ ∧
-      m2cAnd2W p n s₀.mem mode vis d ctor T tmaj to tn ust major = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, m2cAnd2L]
-  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-    callW_spec p n "mk_proj", callW_spec p n "intern_const", callW_spec p n "mk_app_n",
-    callW_spec p n "m2c_check"] <;>
-  simp_all [-UInt64.toNat_add, m2cAnd2W, and2Push, Mem.len64, SPN, CTL, BinOp.eval, Cmp.eval, LocEq,
-    St.setLocs_cons, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Locals.init_cons_zero,
-    Locals.init_cons_succ, Sig.retVal, Sig.retOr]
 
 /-! ## `reserved_contains(x)` (`WhnfIota.lean`'s `reservedContainsL`, the η arm's two tests) -/
 
@@ -640,7 +305,6 @@ theorem resContLoop_spec (p : Prog) (k : Nat) (s₀ : St) :
     sym only [lang_grind, arena_grind] =>
       vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih] <;>
       finish [rcLoopW_end, rcLoopW_hit, rcLoopW_cont, rdW]
-
 
 /-- Model of `reserved_contains`. -/
 def rcW_m2c (k : Nat) (m : Mem) (x : Word) : Option (List Word × Mem) :=

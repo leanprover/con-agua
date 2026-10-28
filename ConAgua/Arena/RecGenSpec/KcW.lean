@@ -111,6 +111,11 @@ theorem ckc2K2_closed (h : ¬ nP < rf.headD 0) :
 end arms0
 attribute [ind_grind] ckc2W_nil ckc2W_cons ckc2K1_open ckc2K1_closed ckc2K2_open ckc2K2_closed
 
+/-- `class_key_canon` at any exec fuel. -/
+def kcWf : Nat → Mem → Word → Word → Word → Option (List Word × Mem)
+  | 0, _, _, _, _ => none
+  | k + 1, m, po, pl, key => kcW k m po pl key
+
 /-! ## The `vcgen` specs -/
 
 section spec
@@ -160,6 +165,13 @@ theorem kc_spec (k : Nat) (s₀ : St) (po pl key : Word) :
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       iwAlloc_specW p L.rx.ha k, ckg_spec L k, posRec4_specW p L.rx.ha L.rx.h4 k] <;>
     finish (gen := 20) [kcW, kcK, rdW_eq]
+
+theorem kc_specF (k : Nat) (s₀ : St) (po pl key : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p k) "class_key_canon" [po, pl, key]
+    ⦃fun r s' => LocEq s' s₀ ∧ kcWf k s₀.mem po pl key = some (r, s'.mem); ⊤⦄ := by
+  cases k with
+  | zero => rw [invoke_eq _ L.kc]; simp only [callFn, classKeyCanonL]; vcgen [exec] <;> grind
+  | succ k => exact kc_spec L k s₀ po pl key
 
 theorem ckc2_spec (k : Nat) : ∀ (s₀ : St) (nP o l : Word),
     ⦃fun s => s = s₀⦄ invoke p (exec p k) "class_key_of_closed" [nP, o, l]

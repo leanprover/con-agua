@@ -5,8 +5,6 @@ import ConAgua.Arena.DeclValSpec
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr
-import ConAgua.Arena.Verdict
-import ConAgua.Checker.NoVerdictTree
 import ConAgua.L.ModelGen
 
 /-!
