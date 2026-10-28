@@ -1,3 +1,4 @@
+import ConAgua.Verdict.PosE
 import ConAgua.Arena.IndT.RecGen19
 import ConAgua.Arena.IndPosSpec.Pos2DecHLSplit
 import ConAgua.Arena.IndPosSpec.Snoc

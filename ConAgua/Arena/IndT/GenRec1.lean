@@ -1,3 +1,4 @@
+import ConAgua.Arena.RecGenSpec.CfhW
 import ConAgua.Arena.IndT.KeepC
 import ConAgua.Arena.IndT.StreamRecs
 import ConAgua.Arena.IndT.RecGen28

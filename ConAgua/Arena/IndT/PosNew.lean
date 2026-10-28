@@ -1,5 +1,5 @@
+import ConAgua.Verdict.PosE
 import ConAgua.Verdict.PosE2
-import ConAgua.Verdict.PosE1N
 import ConAgua.Arena.IndPosSpec.Pos2DecHLSplit
 import ConAgua.Arena.IndPosSpec.Snoc
 

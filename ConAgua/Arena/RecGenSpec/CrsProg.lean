@@ -1,6 +1,5 @@
+import ConAgua.Arena.RecGenSpec.CruleProg
 import ConAgua.Arena.RecClassSpec.RuProg
-import ConAgua.Arena.RecGenSpec.CrsK6
-import ConAgua.Arena.RecGenSpec.FlushStage
 
 /-!
 # CrsProg

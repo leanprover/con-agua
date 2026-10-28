@@ -1,8 +1,6 @@
 import ConAgua.Arena.IndPosSpec.NestContParamsClosed
 import ConAgua.Arena.IndPosSpec.GgW2
 import ConAgua.Verdict.LefRef
-import ConAgua.Checker.NoVerdictTree
-import ConAgua.Arena.Verdict
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen

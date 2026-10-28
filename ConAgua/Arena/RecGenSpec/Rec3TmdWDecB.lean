@@ -1,5 +1,5 @@
+import ConAgua.Arena.RecGenSpec.CrsK6
 import ConAgua.Arena.RecClassSpec.ClassGenRule
-import ConAgua.Arena.RecGenSpec.CfhW
 import ConAgua.Arena.RecGenSpec.CrsProg
 import ConAgua.Arena.RecGenSpec.DecRR
 import ConAgua.Arena.RecGenSpec.Rec3CVX

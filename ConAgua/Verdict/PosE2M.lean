@@ -1,7 +1,4 @@
-import ConAgua.Arena.IndPosSpec.NestGroupCtors
 import ConAgua.Verdict.PosE1M
-import ConAgua.Checker.NoVerdictTree
-import ConAgua.Arena.Verdict
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen

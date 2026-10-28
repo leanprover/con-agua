@@ -1,5 +1,4 @@
-import ConAgua.Arena.IndSumSpec.StructProjArgP
-import ConAgua.Arena.RecGenSpec.CruleProg
+import ConAgua.Arena.DeclCvg
 import ConAgua.Arena.IndGrindAttr
 
 /-!

@@ -1,7 +1,4 @@
 import ConAgua.Arena.IndPosSpec.FgW
-import ConAgua.Arena.IndPosSpec.NtyLook
-import ConAgua.Arena.IndPosSpec.UnW
-import ConAgua.Arena.IndPartsSpec.BlockCounts
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr

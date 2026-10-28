@@ -1,4 +1,4 @@
-import ConAgua.Verdict.PosE
+import ConAgua.Verdict.PosE2M
 import ConAgua.Verdict.PosE1N
 import ConAgua.Arena.IndT.RecGen19
 /-!

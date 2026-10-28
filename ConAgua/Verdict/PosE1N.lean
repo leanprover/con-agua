@@ -1,6 +1,6 @@
-import ConAgua.Verdict.LefRef
+import ConAgua.Arena.IndPosSpec.NtyW
+import ConAgua.Arena.IndPosSpec.Grow
 import ConAgua.Verdict.PosNty
-import ConAgua.Verdict.PosE
 import ConAgua.Arena.IlpRdReal
 import ConAgua.Arena.IndRealAbsPos
 /-!

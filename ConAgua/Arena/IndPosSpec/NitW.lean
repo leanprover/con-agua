@@ -1,6 +1,5 @@
-import ConAgua.Arena.WhnfCoreProj
-import ConAgua.Arena.IndPosSpec.Grow
-import ConAgua.Arena.IndPosSpec.NtyW
+import ConAgua.Arena.IndPosSpec.NoGoStep
+import ConAgua.Arena.IndRealAbs
 import ConAgua.Arena.IndGrindAttr
 
 /-!
