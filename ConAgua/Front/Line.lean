@@ -195,13 +195,24 @@ theorem frontLineW_canon (p : Prog) (b : Array UInt8) (hb : b.size < 2 ^ 63) (m 
     frontLineW p b m i = (applyExprW b m (r.tail.headD 0) (r.tail.tail.headD 0)
       (r.tail.tail.tail.headD 0) (r.tail.tail.tail.tail.headD 0)
       (r.tail.tail.tail.tail.tail.headD 0)).map (okRes (r.headD 0)) := by
+  have hexpr : ∀ (nx : Word) (f : L.Front.Fields.Fld), LineOK b i nx →
+      (L.Front.Fields.recLineN b (i + 1)).pl = 0 → L.Front.Fields.exprLineN b (i + 1) = f →
+      f.pl ≠ 0 →
+      frontLineW p b m i = (applyExprW b m f.pl f.idx f.a f.c f.d).map (okRes nx) := by
+    intro nx f hL hr he hf
+    unfold frontLineW applyAnyW
+    rw [hL.fwd, hL.ws, UInt64.ofNat_toNat, ite_eq_right (by simp), ite_eq_left ⟨hL.lt, hL.brace⟩,
+      ite_eq_right (by simp [hr]), he, ite_eq_left hf]
   cases h with
   | app h =>
     obtain ⟨hL, hr, he⟩ := appLine_sound hb h
-    unfold frontLineW applyAnyW
-    rw [hL.fwd, hL.ws, UInt64.ofNat_toNat, ite_eq_right (by simp), ite_eq_left ⟨hL.lt, hL.brace⟩,
-      ite_eq_right (by simp [hr]), he, ite_eq_left (by simp)]
-    rfl
+    exact hexpr _ _ hL hr he (by simp)
+  | lam h =>
+    obtain ⟨hL, hr, he⟩ := lamLine_sound hb h
+    exact hexpr _ _ hL hr he (by simp)
+  | pi h =>
+    obtain ⟨hL, hr, he⟩ := forallLine_sound hb h
+    exact hexpr _ _ hL hr he (by simp)
 
 /-- The same as an equation for `finish`: a nonzero answer of `fast_line` is applied. -/
 theorem frontLineW_fast (p : Prog) (b : Array UInt8) (hb : b.size < 2 ^ 63) (m : Mem) (i : Word)
