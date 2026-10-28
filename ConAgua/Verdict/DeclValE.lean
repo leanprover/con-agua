@@ -1,4 +1,5 @@
 import ConAgua.Arena.DeclValT
+import ConAgua.Verdict.VCtx
 import ConAgua.Arena.IndRealLvlT
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
@@ -38,22 +39,6 @@ local notation "V" => ConLeche.CheckMode.verified
 /-- A callee outside the verdict closure: its errors are of class `0` (`callE_nv`). -/
 def NVAt (p : Prog) (f : FnName) : Prop :=
   ∀ n args m e, callE p n f args m = .error e → e.cls = 0
-
-/-- **The core stubs' error claims under `StageT`**: the error halves of `KnotStageProg`'s
-`inferTypeCore_sim`, `ensureSortCore_sim`, `isDefEqCore_sim`. -/
-structure CoreStubsE (p : Prog) : Prop where
-  inferTypeCore : ∀ (n : Nat), n ≤ 2 ^ 62 → ∀ {dn : NIdx → Option ConLeche.Name} {vis : Word}
-    {fe : IFEnv} {m : Mem} {a : AState}, StageT dn vis fe m a → ∀ (dep t : Word), H t →
-    ∀ e, callE p n "infer_type_core" [vis, dep, t] m = .error e →
-      ErrClaim (inferTypeCore V fe checkFuel dep.toNat (decI t)) a e
-  ensureSortCore : ∀ (n : Nat), n ≤ 2 ^ 62 → ∀ {dn : NIdx → Option ConLeche.Name} {vis : Word}
-    {fe : IFEnv} {m : Mem} {a : AState}, StageT dn vis fe m a → ∀ (dep t : Word), H t →
-    ∀ e, callE p n "ensure_sort_core" [vis, dep, t] m = .error e →
-      ErrClaim (ensureSortCore V fe checkFuel dep.toNat (decI t)) a e
-  isDefEqCore : ∀ (n : Nat), n ≤ 2 ^ 62 → ∀ {dn : NIdx → Option ConLeche.Name} {vis : Word}
-    {fe : IFEnv} {m : Mem} {a : AState}, StageT dn vis fe m a → ∀ (dep x y : Word), H x → H y →
-    ∀ e, callE p n "is_def_eq_core" [vis, dep, x, y] m = .error e →
-      ErrClaim (isDefEqCore V fe checkFuel dep.toNat (decI x) (decI y)) a e
 
 /-- **`install_value_guards`' error claim under `StageT`** (the error half of `IvgT`). -/
 def IvgE (p : Prog) : Prop :=

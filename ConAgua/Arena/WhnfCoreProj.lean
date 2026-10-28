@@ -2,6 +2,7 @@ import ConAgua.Arena.ProjView
 import ConAgua.Arena.WhnfCoreApp
 import ConAgua.Arena.WhnfCoreSlot
 import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.RefECore
 import ConAgua.L.GrindAttr
 import Std.Tactic.BVDecide.Normalize.BitVec
 import Std.Tactic.BVDecide.Normalize.Prop
@@ -670,41 +671,6 @@ theorem rpFire_spec (p : Prog) (hp : WhnfCoreProg p) (n : Nat) (s₀ : St)
   (intro h1; first | exact absurd h1 (UInt64.not_lt.mpr ‹_›) | exact absurd h1 (UInt64.not_le.mpr ‹_›))
 
 /-! ## Runs that leave their pushed slice on the stack -/
-
-/-- **After a core run that left a slice on the stack**: as `CoreAfter`, the stack below the old top
-kept, the top possibly grown. -/
-def CoreAfterG (dn : NIdx → Option ConLeche.Name) (m₀ m : Mem) (a : AState) (vis : Word)
-    (fe : IFEnv) (M : ModeMaps) (eb : Word) : Prop :=
-  ∃ M', CoreS dn m a vis fe M' eb ∧ KeptAll M M' eb ∧ StackGrew m₀ m
-
-theorem CoreAfter.toG {dn : NIdx → Option ConLeche.Name} {m₀ m : Mem} {a : AState} {vis : Word}
-    {fe : IFEnv} {M : ModeMaps} {eb : Word} (h : CoreAfter dn m₀ m a vis fe M eb) :
-    CoreAfterG dn m₀ m a vis fe M eb :=
-  let ⟨M', hS, hK, hSt⟩ := h
-  ⟨M', hS, hK, hSt.toGrew⟩
-
-/-- `CoreRef` with `CoreAfterG`. -/
-def GrowRef {α : Type} [Inhabited α] (T : AM α) (a₀ : AState) (dec : List Word → α)
-    (dn : NIdx → Option ConLeche.Name) (m₀ : Mem) (vis : Word) (fe : IFEnv) (M : ModeMaps)
-    (eb : Word) (r : List Word) (m : Mem) (ok : List Word → Prop := ResH) : Prop :=
-  AM.ok T a₀ ∧ CoreAfterG dn m₀ m (AM.st T a₀) vis fe M eb ∧ AM.res T a₀ = dec r ∧ ok r
-
-/-- `CorePost` with the stack grown (`CoreAfterG`, an arm that leaves a slice on the stack): what
-a run `v = (r, m)` from `m₀` gives besides the twin's result `y` and final state `a'`. -/
-structure GrowPost {α : Type} (dec : List Word → α) (dn : NIdx → Option ConLeche.Name) (m₀ : Mem)
-    (vis : Word) (fe : IFEnv) (M : ModeMaps) (eb : Word) (ok : List Word → Prop)
-    (v : List Word × Mem) (y : α) (a' : AState) : Prop where
-  after : CoreAfterG dn m₀ v.2 a' vis fe M eb
-  res : y = dec v.1
-  valid : ok v.1
-
-theorem GrowPost.growRef {α : Type} [Inhabited α] {T : AM α} {a : AState} {dec : List Word → α}
-    {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {M : ModeMaps} {eb : Word}
-    {ok : List Word → Prop} {m₀ m : Mem} {r : List Word} {y : α} {a' : AState}
-    (hT : T.run a = .ok (y, a')) (h : GrowPost dec dn m₀ vis fe M eb ok (r, m) y a') :
-    GrowRef T a dec dn m₀ vis fe M eb r m ok := by
-  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hT
-  exact ⟨hok, hst ▸ h.after, hres.trans h.res, h.valid⟩
 
 /-- `CoreSpec` with `GrowRef`. -/
 def GrowSpec {α : Type} [Inhabited α] (p : Prog) (n : Nat) (f : FnName) (args : List Word)

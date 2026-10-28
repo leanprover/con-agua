@@ -165,35 +165,6 @@ theorem GrowRef.of_run {T : AM EIdx} {a a' : AState} {v : EIdx} {dn : NIdx → O
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
   exact ⟨hok, hst ▸ hA, hres.trans hv, hr⟩
 
-/-- A run that ends with a pure answer `w`: its result list. -/
-theorem CoreAfterG.compK {dn : NIdx → Option ConLeche.Name} {m₀ m₁ m₂ : Mem} {a₂ : AState}
-    {vis : Word} {fe : IFEnv} {M M' : ModeMaps} {eb : Word}
-    (hK : KeptAll M M' eb) (hSt : StackGrew m₀ m₁)
-    (h₂ : CoreAfterG dn m₁ m₂ a₂ vis fe M' eb) : CoreAfterG dn m₀ m₂ a₂ vis fe M eb := by
-  obtain ⟨M'', hS', hK', hSt'⟩ := h₂
-  exact ⟨M'', hS', hK.trans hK', hSt.trans hSt'⟩
-
-/-- The ok half at a callee's run (`callW`), as `GrowRef`. -/
-theorem RefE.growRefW {α : Type} [Inhabited α] {T : AM α} {a : AState} {dec : List Word → α}
-    {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {M : ModeMaps} {eb : Word}
-    {ok : List Word → Prop} {G Gs : Prop} {p : Prog} {n : Nat} {f : FnName} {args : List Word}
-    {s₀ : St} {fx : Except Err (List Word × Mem)}
-    (hs : ⦃fun s => s = s₀⦄ invoke p (exec p n) f args
-      ⦃fun r s' => LocEq s' s₀ ∧ fx = .ok (r, s'.mem); fun ε => Gs → ε.cls ≠ 0 → fx = .error ε⦄)
-    (h : RefE G fx T a (GrowPost dec dn s₀.mem vis fe M eb ok)) {r : List Word} {m' : Mem}
-    (hc : callW p n f args s₀.mem = some (r, m')) :
-    GrowRef T a dec dn s₀.mem vis fe M eb r m' ok := by
-  obtain ⟨s', rfl, -, y, a', hT, hR⟩ := RefE.run_okW hs h hc
-  exact hR.growRef hT
-
-/-- The arm's result word is the callee's (a tail call), after a run that kept the stack from `m₀`
-to `m₁` (`hK`, `hSt`). -/
-theorem GrowPost.of_tail {dn : NIdx → Option ConLeche.Name} {m₀ m₁ : Mem} {vis : Word} {fe : IFEnv}
-    {M M' : ModeMaps} {eb : Word} (hK : KeptAll M M' eb) (hSt : StackGrew m₀ m₁)
-    (v : List Word × Mem) (y : EIdx) (a' : AState) (h : GrowPost decH dn m₁ vis fe M' eb ResH v y a') :
-    GrowPost decH dn m₀ vis fe M eb ResH ([v.1.headD 0], v.2) y a' :=
-  ⟨CoreAfterG.compK hK hSt h.after, h.res, h.valid⟩
-
 /-! ## `m2c_pre` -/
 
 /-- The twin's run of the common prefix (`m2cPreT`'s calls), as the L run `L` answers it. -/
@@ -237,14 +208,13 @@ structure PreOk (R : CoreFnsA) (d : Nat) (major : EIdx) (a : AState)
   hw : L.headD 0 ≠ 0 → HW (L.tail.headD 0) ∧ HW (L.tail.tail.headD 0) ∧
     HW (L.tail.tail.tail.headD 0)
 
-/-- **`m2c_pre`'s refinement for both outcomes** (`RefE` for a prefix): an ok value is the twin's
+/-- **`m2c_pre`'s refinement for both outcomes** (`RefC`, a prefix): an ok value is the twin's
 prefix (`PreOk`); an error claims the failure of the twin's arm whatever its continuation. -/
 def PreRef (G : Prop) (x : Except Err (List Word × Mem)) (R : CoreFnsA) (d : Nat) (major : EIdx)
     (a : AState) (dn : NIdx → Option ConLeche.Name) (m : Mem) (vis : Word) (fe : IFEnv)
     (M : ModeMaps) (eb : Word) : Prop :=
-  match x with
-  | .ok (L, m') => ∃ a', PreOk R d major a dn m vis fe M eb L m' a'
-  | .error e => G → ∀ k, ErrClaim (m2cPreT R d major k) a e
+  RefC G x (fun v => ∃ a', PreOk R d major a dn m vis fe M eb v.1 v.2 a')
+    (fun e => ∀ k, ErrClaim (m2cPreT R d major k) a e)
 
 /-- `proof_irrel`'s error claim at fuel `N + 1` (the premises of `ProofIrrelOKM`). -/
 def ProofIrrelWE (p : Prog) : Prop :=
