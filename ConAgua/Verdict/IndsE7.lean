@@ -5,7 +5,7 @@ import ConAgua.Verdict.IndsE5
 # `check_block_inds`' error refinement (lane `verdicts-b`, helper `ia2-inds`)
 
 `ibiW_simC`'s proof on the error model `cbiE`: member 0's former by `cbtE_claim`, the other
-formers by `cbtsE_claim`, the agreements by `cbagE_claim`; past them only class-`0` errors
+formers by `cbtsE_claim`, the agreements by `cbag_ref`; past them only class-`0` errors
 (`block_shape_with_sort`, `check_block_inds_cv_tas`, `cons_block_inds`, the empty block's abort).
 `CheckBlockIndsE` from the claims of `check_constant_val`, `check_sum_tele` and the core stubs.
 -/
@@ -135,14 +135,13 @@ theorem checkBlockIndsE_claim : CheckBlockIndsE p := by
       r2.headD 0, r2.tail.headD 0] s2.mem with
   | error e3 =>
     rw [h3, cbiE.k_check_block_agree.none] at he; cases he
-    have hW3 := triple_of_callE_err (cbagE_spec p hP.agreeP.agree (k + 1) ⟨s2.mem, Locals.init []⟩ vis
-      (UInt64.ofNat bs.nP) (r1.headD 0) (r1.tail.headD 0) (r2.headD 0) (r2.tail.headD 0)) h3 (Err.code_ne_of_cls hk0)
-    simp only at hW3
     rw [← hsd'] at h1b
-    have hcl := cbagE_claim hq henv hOpf hLC hnv hcE hP.agreeP (UInt64.ofNat bs.nP) (r1.headD 0)
+    have hcl := RefE.run_err (cbagE_spec p hP.agreeP.agree hP.agreeP.one (k + 1) ⟨s2.mem, Locals.init []⟩ vis
+      (UInt64.ofNat bs.nP) (r1.headD 0) (r1.tail.headD 0) (r2.headD 0) (r2.tail.headD 0)) hnv ⟨hnv, hcE⟩
+      (cbag_ref hq henv hOpf hLC hP.agreeP (UInt64.ofNat bs.nP) (r1.headD 0)
       (r1.tail.headD 0) cvTa0 hw1 (k + 1) (by omega) s2.mem a2 (r2.headD 0) (r2.tail.headD 0) cvs cvsP hC2 hA2
       (hc0.grow (OMono.decCVp _) hg2) hs32 hcvs (ConRon.Bridge.denoteCV_ext h1a c2.ext)
-      (ConRon.Bridge.denoteL_ext h1b c2.ext) h2' hw2 e hW3
+      (ConRon.Bridge.denoteL_ext h1b c2.ext) h2' hw2) h3
     rw [hnp, hsd'] at hcl
     exact ErrClaim.bind_left hcl
   | ok q3 =>
