@@ -1264,3 +1264,59 @@ Each flagged module is offset by the module that held the deleted hand model, ex
 For the generator: nothing was missing in this landing; `nestSeedsFuel_spec` (a singleton-list post)
 and `nckE_spec` (a unified spec with `G = True`) were taken without wrappers, so the wrappers of §3.9
 (`noaW1`, `cpW1`, `ucW1`) may be removable.
+
+### 3.17 Batch 2b, second landing (`class_rule_ok`, `class_rules_ok_one`, `nest_inst_type`)
+
+The three functions that waited for `class_rule_ok_guards` and `lvl_eq_fueled` (§3.11):
+
+| function | before: ok refinement(s) + error claim(s) | after | change |
+|---|---|---|---:|
+| `class_rule_ok` | `cruleW_okC` 84, `classRuleOk_claim` 142 = 226 | `crule_ref` 109 + `CrulePost` 9 = 118 | −48 % |
+| `class_rules_ok_one` | `cr1W_relC` 42, `cr1_claim` 50 = 92 | `cr1_ref` 37 (`CrulePost`) | −60 % |
+| `nest_inst_type` | `nitW_ok` 71, `nitLe_realC` 36, `NitLe` 19, `NtyOk`/`nty_ok` 13; `nitE_all` 163, `NitE` 8 = 310 | `nit_ref` 127 + `NitPost` 9 = 136 | −56 % |
+| **pairs** | **628** | **291** | **−54 %** |
+
+Gone with them: the hand models `cruleW`/`cruK1–4`, `cr1W`/`cr1K`, `nitW`/`nitK1–5`, `ntyR`, their arms
+and specs (`classRuleOk_spec`, `classRulesOkOne_spec`, both `nestInstType_spec`), `nitWf`; the files
+`Arena/IndT/RecGen4`, `Arena/IndPosSpec/NitLe`, `Arena/IndT/PosNit`. Whole diff against master
+62ca90b6: +413 −1 049 in 30 files.
+
+* **`G`**: `VerdictCtxU p` for `class_rule_ok` and `class_rules_ok_one` (the domains' consts-resolve
+  site, `uce_errClaim_hi`, as `class_rule_ok_guards`); `closedNV p nvFns = true` for
+  `nest_inst_type` (`lvl_eq_fueled`'s `NVAt p "lvl_eq_c"` follows from it, `nvAt_of`).
+* **`NitE` is gone.** It was the error claim of `nest_inst_type` that the block's steps and the
+  depth-2 callers assumed; they now read `nit_ref` (`nest_grow_group`'s `nggE` and `nest_seeds`'
+  `nsdE` call `nitE` as a unified callee; `nest_cont`'s `errors` model `ncE` keeps `callE` and reads
+  both halves through the run). `ngg_ref`'s `G` weakened from `NitE …` to `closedNV`. `NbG` did not
+  change (`NitE` was derived inside the block from it, `nitE_all`).
+* **`class_rules_ok_one`** moved to `IndBRec4` next to `class_rule_ok` (its unified model ends in
+  `cruleE`, and `RecGen9` imports it there). `class_rules_ok`' hand model reads it through
+  `cr1R`; `crsW_simC`/`crrW_simC` take `CrsProg` instead of `CruleProg` (the lookup).
+* **Generator observations** (not changed here): `cruleE` needs `open Classical in`: the callee
+  spec of `flush_caches` has an undecidable guard (`FlushOK`), and without it the generated
+  model reads `sorry = true` for that guard and the steps fail, silently. A spec whose post
+  has an extra length conjunct `r = [r.headD 0, r.getD 1 0, r.getD 2 0]` is rejected as an
+  "ambiguous post" in `unified` mode (`piBinders_spec`; `nitE` lists `piBinders_spec'`).
+* **Recipes**: the default `finish` for `nitE`; `simp [Cmp.evalW, Cmp.eval]` for `cruleE`/`cr1E`
+  (`IndBRec4` 1.96 s against 2.30 s with `finish`). With `nitE` lifted, `nggE` stays `simp []`
+  (17.7–19.4 s for `PosE2M`; `simp [rdW]` 18.5–23.2, `finish` fails) and `nsdE` the default
+  (`PosTopE4` 3.9–4.8 s; `simp []` the same, `simp [rdW]` 64–87 s).
+
+Elaboration (user seconds, `lean` on the module alone, median of 3 interleaved runs, base master
+62ca90b6; load 5–100):
+
+| module | base | new | |
+|---|---:|---:|---|
+| `Arena/RecGenSpec/Rec3TmdWDecB`, `CfhW`, `CrsK6`, `CrsProg`, `CruleProg`, `FlushStage` | 20.54 | 15.18 | hand models and specs gone |
+| `Verdict/IndBRec4`, `IndBRec5`, `IndBRec6`, `IndBCrg` | 12.08 | 10.75 | |
+| `Arena/IndT/RecGen4`, `IndPosSpec/NitLe`, `IndT/PosNit` (deleted) | 1.88 | — | |
+| `Verdict/PosE1M` | 24.61 | 21.29 | `nitE` unified (noise: load) |
+| `Verdict/PosE2M`, `PosTopE4` | 21.41 | 20.98 | `nitE` lifted in `nggE`, `nsdE` |
+| `IndPosSpec/NitW`, `NtyW`, `NestOccAny`, `GgW` | 6.05 | 4.65 | |
+| the other 9 modules | 10.83 | 9.95 | |
+| **sum (29 modules)** | **97.4** | **82.8** | **−15 %** |
+
+No module is more than 10 % slower.
+
+Batch 2b in all: 14 functions migrated, the pair lines 2 781 + 628 = 3 409 → 1 399 + 291 = 1 690
+(−50 %), plus about 850 lines of hand models and specs and the shared `ihW`/`ihW_okT`.
