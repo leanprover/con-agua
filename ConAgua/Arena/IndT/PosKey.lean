@@ -121,7 +121,7 @@ theorem keyRef_step (L : NbLook p) (n : Nat) (ih : NbRef p dn vis fe env n) : Ke
       (ConRon.Bridge.denoteN_ext hnP p2.ext) (ConRon.Bridge.denoteLs_ext husP p2.ext)
       (ConRon.Bridge.denoteEList_ext p2.ext _ _ hdsP) (ConRon.Bridge.denote_ext hctyP p2.ext)
       (dState_ext p2.ext _ _ hnsP) hwds hni
-    have hsp := nnewE_specU p L.pnew (n' + 1) ⟨m3, Locals.init []⟩ vis ctx fu po pl kb nn us dO dL nPc cty ns
+    have hsp := nnewE_spec p L.pnew (n' + 1) ⟨m3, Locals.init []⟩ vis ctx fu po pl kb nn us dO dL nPc cty ns
     simp only [nckE.j1]
     cases h5 : callE p (n' + 1) "nest_cont_new" [vis, ctx, fu, po, pl, kb, nn, us, dO, dL, nPc, cty, ns] m3 with
     | error e5 =>

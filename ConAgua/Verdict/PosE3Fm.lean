@@ -299,7 +299,7 @@ theorem triple_uni_of_code {p : Prog} {n : Nat} {f : FnName} {args : List Word} 
   M.triple_of_run' (P := fun s => s = s₀) (fun _ _ _ hp hr => M.of_run' (P := fun s => s = s₀) hp hr h)
     fun _ _ hp hr _ hc => M.of_run_err (P := fun s => s = s₀) hp hr h (Err.code_ne_of_cls hc)
 
-theorem nfE_specCode (p : Prog) (hf : p.lookup "nest_fields" = some nestFieldsL) (n : Nat) (s₀ : St)
+theorem nfE_specC (p : Prog) (hf : p.lookup "nest_fields" = some nestFieldsL) (n : Nat) (s₀ : St)
     (vis ctx fuel progOff progLen base nF j cur ns ksOff ksLen ndsOff ndsLen : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "nest_fields"
       [vis, ctx, fuel, progOff, progLen, base, nF, j, cur, ns, ksOff, ksLen, ndsOff, ndsLen]
@@ -336,6 +336,6 @@ theorem nfE_spec (p : Prog) (hf : p.lookup "nest_fields" = some nestFieldsL) (n 
       nfE p n s₀.mem vis ctx fuel progOff progLen base nF j cur ns ksOff ksLen ndsOff ndsLen = .ok (r, s'.mem);
      fun ε => True → ε.cls ≠ 0 →
       nfE p n s₀.mem vis ctx fuel progOff progLen base nF j cur ns ksOff ksLen ndsOff ndsLen = .error ε⦄ :=
-  triple_uni_of_code (nfE_specCode p hf n s₀ _ _ _ _ _ _ _ _ _ _ _ _ _ _)
+  triple_uni_of_code (nfE_specC p hf n s₀ _ _ _ _ _ _ _ _ _ _ _ _ _ _)
 
 end L.Ind

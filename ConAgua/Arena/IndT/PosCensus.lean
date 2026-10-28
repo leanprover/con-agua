@@ -169,7 +169,7 @@ theorem nestContNew_refinesC (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState) (ct
       ∃ x a', (nestContNew V fe c fu.toNat prog kb.toNat (decI nn) (decI us) ds nPc.toNat (decI cty) NS).run a₀ = .ok (x, a') ∧
       StageC dn vis fe env s'.mem a' ∧ IWGrow s₀.mem s'.mem ∧ decNFK (r.headD 0) = some x.1 ∧
       NSB s'.mem (r.tail.headD 0) x.2 ∧ PosMR s'.mem ∧ AbsOK s'.mem ∧ ConRon.Bridge.CoreStep V env fe a₀ a'; ⊤⦄ := by
-  refine triple_post (RefE.triple (nnewE_specU p L.pnew n s₀ vis ctx fu po pl kb nn us dO dL nPc cty ns)
+  refine triple_post (RefE.triple (nnewE_spec p L.pnew n s₀ vis ctx fu po pl kb nn us dO dL nPc cty ns)
     ((nbRef_all L hq hIlpf hLC henv n hn).new s₀.mem a₀ ctx fu po pl kb nn us dO dL nPc cty ns c prog ds NS _ _ _ _ _ _ _ h0 h1 h2 h3 h4 h5 h6 h7 hP hA hc hctx hprog hnP husP hdsP hctyP hnsP hwds hni)) ?_
   rintro r s' ⟨hlc, x, a', hrun, hR⟩
   exact ⟨hlc, x, a', hrun, hR.stage, hR.grow, hR.kind, hR.ns, hR.pos, hR.abs, hR.core⟩
@@ -259,7 +259,7 @@ theorem nestCtorsOne_refinesC (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState) (c
       ConRon.Bridge.CoreStep V env fe a₀ a' ∧
       (∃ oP, dOut a'.store (ks, closed) = some oP ∧ ConLeche.Expr.WScoped hi.toNat oP.2) ∧
       (∃ nsP3, dState a'.store NS3 = some nsP3); ⊤⦄ := by
-  refine triple_post (RefE.triple (noE_specU p L.pone n s₀ vis ctx root fu po pl hi us dO dL no nl hO hL cv nF ns)
+  refine triple_post (RefE.triple (noE_spec p L.pone n s₀ vis ctx root fu po pl hi us dO dL no nl hO hL cv nF ns)
     ((nbRef_all L hq hIlpf hLC henv n hn).one s₀.mem a₀ ctx root fu po pl hi us dO dL no nl hO hL cv nF ns c prog ds names holes cvv NS _ _ _ _ _ _ _ _ h0 h1 h2 h3 h4 h5 hP hA hc hctx hprog hpre hcvP hcl hnsP)) ?_
   rintro r s' ⟨hlc, x, a', hrun, hR⟩
   exact ⟨hlc, x.1.1, x.1.2, x.2, a', fun K => by rw [oneK_split]; simp only [StateT.run_bind, hrun]; rfl, hR.stage, hR.grow, hR.kinds, hR.kindsb, hR.hcl, hR.cl, hR.ns, hR.pos, hR.abs, hR.core, hR.out, hR.st⟩

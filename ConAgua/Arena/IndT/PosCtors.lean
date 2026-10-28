@@ -78,7 +78,7 @@ theorem ctorsRef_step (n : Nat) (ih : NbRef p dn vis fe env n) : CtorsRef p dn v
     ns c prog ds names holes cvv NS ctxP progP usP dsP namesP holesP cvP nsP hC hW hCc (by rw [hrq]; exact hcvv)
     (by rw [hrq]; exact hq3) hns hP hA hc hctx hprog hpre hcvP (hcsF _ List.mem_cons_self) hnsP
   rw [hrn] at hR1
-  have hs1 := noE_specU p L.pone n ⟨m, Locals.init []⟩ vis ctx root fu po pl hi us dO dL no nl hO hL
+  have hs1 := noE_spec p L.pone n ⟨m, Locals.init []⟩ vis ctx root fu po pl hi us dO dL no nl hO hL
     (rdW (m.arr64 IW) w) (rdW (m.arr64 IW) (w + 1)) ns
   rcases c1 : callE p n "nest_ctors_one" [vis, ctx, root, fu, po, pl, hi, us, dO, dL, no, nl, hO, hL,
       rdW (m.arr64 IW) w, rdW (m.arr64 IW) (w + 1), ns] m with e1 | ⟨r1, m1⟩
