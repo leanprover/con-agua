@@ -349,3 +349,76 @@ Not migrated in this batch, and why:
   the model (`unsafeW_twin`: no record is unsafe), not twin runs, and their error halves are
   `VerdictClaimL` about the whole `validateIndD` (failures as record verdicts). `RefE` fits
   neither; it needs a variant over `ErrClaimV`-style twins with a `Prop` ok post (a kit change).
+
+### 3.6 Batch 1c, first landing (`IndBTpd`, `IndBTmm`, `IndBToi`, `IndBPins`, `IndBRecPins`)
+
+Migrated: `target_params_def_eq_step` and `target_params_def_eq` (`pds_ref`, `pde_ref`;
+`target_class_match`'s `tcmE` now calls `pdeE` as a unified callee, and `tcm_ref` takes both halves
+from `pde_ref`), `target_major_of_member` (`tmm_ref`), `target_outside_inst` (`toi_ref`),
+`target_pin_tys` (`tpt_ref`), `target_rec_pins` (`trp_ref`). Posts are named-field structures
+(`TpdPost`, `PdsPost extends TpdPost` with the core step, `TmmPost`, `ToiPost`, `TptPost`, `TrpPost`).
+The `@[refines]` theorems keep their statements (`RefE.triple`); `targetParamsDefEq_claim`,
+`tmm_claim`, `targetOutsideInst_claim`, `targetPinTys_claim`, `targetRecPins_claim` are gone (their
+callers read `RefE.run_err`). Deleted hand models with their arms and specs: `pdsW`/`pdsK1–11`,
+`pdsF`, `pdeW`/`pdeK1`, `tpdStep_spec`, `tpd_spec`, `pdsC_ok`; `tmmW`/`tmmK1–4`, `tmm_spec`;
+`toiW`/`toiK1–5`, the hand `targetOutsideInst_spec`; `tptW`/`tptK*`, `targetPinTys_spec`;
+`trpW`/`trpK1–6`, `trp_spec`.
+
+Findings:
+
+* **A unified model whose refinement does not need its lookups drops them.** `pds_ref`,
+  `pde_ref` and then `tcm_ref` lost their `TpLook`/`TcmLook` argument: the lookups are needed by
+  the spec (`RefE.triple`, `RefE.run_err`), not by the refinement of the model value.
+* **A caller of a unified callee that is not unified itself also needs `nv`**: `pdeE` has no
+  `Option` callee, but `pdsE_spec`'s error post assumes `closedNV`, so `pdeE` takes
+  `nv [closedNV …, nv_mem]` to have it in its own error post.
+* **A unified callee in tail position has no continuation**: `tcmE.k_target_holes.arm1` ends in
+  `pdeE …` directly, so the old `tcmE.k_target_params_def_eq` is gone.
+* **The post of a recursive call is from its own start**: `pde_ref`'s inductive step carries the
+  growth across (`hg1.trans hR2.grow`), 3 lines; a kit lemma `RefE.mono` (weaken `R` under an
+  implication) would make it one.
+* **`G`**: the leaves that call no core stub (`target_major_of_member`, `target_outside_inst`) state
+  their refinement under `G := closedNV p nvFns = true`, not `VerdictCtx p`: their callers'
+  error claims (`tmcE_claim`, `tmtE_claim`, not migrated) have `hnv` only.
+* **Skipped: `class_rule_ok_guards`** (`IndBRec4`). Its error half needs `UceProg p` (with
+  `StrLitSupportedOK`, a semantic fact) for `uce_errClaim_hi`; as a plain hypothesis of the
+  refinement it would reach every ok refinement above (`cruleW_okC`, `RecGen9`), the trap of §1.2.
+  It needs `VerdictCtx` (or a variant) to carry `UceProg`, a kit change; batch 1d's `Decl*E` meet
+  the same. Its twin side also needs a guards-prefix definition (`classRuleOk = guardsT >>= rest`).
+
+Lines (`declen.py`, master 63762a3f against this branch; before = ok refinement(s) + error claim(s)):
+
+| function | before | after | change |
+|---|---|---|---:|
+| `target_params_def_eq(_step)` | `pdsC_ok` 73, `pdsR_okC` 105, `pdsW_okC` 41, `pdeW_okC` 94; `pdsStep_claim` 280, `pdeE_claim` 94, `targetParamsDefEq_claim` 26 = 713 | `pds_ref` 227 + `pde_ref` 88 + posts 12 = 327 | **−54 %** |
+| `target_major_of_member` | `tmmW_sim` 174; `tmmE_claim` 154, `tmm_claim` 20 = 348 | `tmm_ref` 167 + `TmmPost` 7 + `tmmE_kpl` 7 = 181 | **−48 %** |
+| `target_outside_inst` | `toiW_ok` 101; `toiE_claim` 175, `targetOutsideInst_claim` 15 = 291 | `toi_ref` 150 + `ToiPost` 7 = 157 | **−46 %** |
+| `target_pin_tys` | `tptW_okC` 58; `tptE_claim` 67, `targetPinTys_claim` 15 = 140 | `tpt_ref` 60 + `TptPost` 5 = 65 | **−54 %** |
+| `target_rec_pins` | `trpW_ok` 117; `trpE_claim` 203, `targetRecPins_claim` 12 = 332 | `trp_ref` 199 + `TrpPost` 5 = 204 | **−39 %** |
+| `tcm_ref` (caller) | 157 | 144 | |
+| **pairs** | **1 824** | **934** | **−49 %** |
+
+Whole diff of this landing against master 63762a3f (models, specs, refinements, callers, imports):
+**+873 −2 278 = −1 405 lines** in 30 files.
+
+Elaboration (user seconds, `lean` on the module alone, median of 3 interleaved runs, base master
+63762a3f, `_tmp/unify-b1c/time.sh`, `times1.txt`; load 10–30):
+
+| module | base | new | |
+|---|---:|---:|---|
+| `Verdict/IndBTpd` | 5.51 | 5.01 | |
+| `Arena/IndT/RecCheckTpd`, `RecCheckSpec/Tpd`, `TaGoWMfr`, `PdsC`, `BvbWStageC` | 9.75 | 3.11 | the hand models, `tpdStep_spec`/`tpd_spec` and the ok refinements gone |
+| `Verdict/IndBTcm`, `IndBTmn`, `Arena/IndT/RecCheckK53` | 7.00 | 6.83 | |
+| `Verdict/IndBTmm` | 22.01 | **32.22** | **slower (+10.2 s)**: `tmmE`'s generated `simp` steps (now with the four callees' specs; `finish` fails, `locals` 39 s) |
+| `Arena/IndSumSpec/ParamLevels` | 8.87 | 0.78 | the hand `tmm_spec` gone; with `IndBTmm`: 30.9 → 33.0 (+7 %) |
+| `Verdict/IndBToi` | 2.44 | **3.99** | **slower (+1.6 s)**: `toiE`'s steps (`finish` fails, `locals` 6.0 s) |
+| `Arena/RecCheckSpec/ToiW` | 1.84 | 0.48 | the hand `targetOutsideInst_spec` gone; with `IndBToi`: 4.3 → 4.5 |
+| `Verdict/IndBRecPins` | 4.19 | **6.76** | **slower (+2.6 s)**: `trp_ref` and `targetRecPins_refines` moved in (`finish` 7.5 s, `locals` 10.0 s) |
+| `Arena/RecCheckSpec/TargetRecPins` | 5.31 | 3.49 | the hand model and `trp_spec` gone; with `IndBRecPins`: 9.5 → 10.3 |
+| `Arena/RecCheckSpec/ErToIwWStage` | 11.00 | 8.92 | `targetPinTys_spec` gone, `tptR` in |
+| `IndBPins`, `IndBGrp`, `IndBClm`, `RecCheckPins`, `RecGen19`, `GenRec1` | 11.40 | 11.11 | |
+| `IndBTmc`, `IndBTmt`, `IndBTmo`, `RecGenTmf`, `DecTMDecBOf`, `OcW` | 19.34 | 18.88 | |
+| **sum** | **108.7** | **101.6** | **−7 %** |
+
+Each flagged module is offset by the module that held the deleted hand spec, except `IndBRecPins`
+(+0.8 s over the pair).

@@ -1,14 +1,11 @@
-import ConAgua.Arena.IlpRdReal
 import ConAgua.Arena.IndRealLvlC
-import ConAgua.Arena.IndSumSpec.ParamLevels
-import ConAgua.Arena.IndSumSpec.StructCtorResidOk
 import ConAgua.Arena.RecClassSpec.CrW
 import ConAgua.Arena.RecGenSpec.ClassKeyCanon
-import ConAgua.Arena.RecGenSpec.OcW
 import ConAgua.Arena.RecGenSpec.Tmc
 import ConAgua.Arena.IndInstallSpec.ConsBlockCtors
-import ConAgua.Arena.IndInstallSpec.InstallRec2PSl
 import ConAgua.Arena.DeclBasisSpec
+import ConAgua.Verdict.IndBTmm
+import ConAgua.Verdict.IndBToi
 
 /-!
 # `target_major_of` under `StageC` with the real `inst_lp_fast` (lane `indstaget`, helper `rcC`)
@@ -62,43 +59,6 @@ theorem ckc2W_afr : ∀ (n : Nat) (m m' : Mem) (nP o l : Word) (r : List Word),
 section calls
 variable {p : Prog} {n : Nat} {m m' : Mem} {r : List Word}
 
-theorem tmmC_afr (hP : TmmProg p) {pp cao cal pfo pfl fvo fvl ao al I us t : Word}
-    (h : callW p n "target_major_of_member" [pp, cao, cal, pfo, pfl, fvo, fvl, ao, al, I, us, t] m =
-      some (r, m')) : AFr m m' := by
-  rcases n with _ | k
-  · rw [callW_zero] at h; cases h
-  obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (tmm_spec p hP.mem k _ pp cao cal pfo pfl fvo fvl ao al I us t) h
-  unfold tmmW at hW
-  split at hW; · cases hW
-  split at hW; · cases hW
-  unfold tmmK1 tmmK2 tmmK3 tmmK4 at hW
-  split at hW; · cases hW
-  rename_i r1 m1 h1
-  obtain ⟨s1, rfl, -, hW1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (blockShapeLps_spec p hP.alloc hP.erCopy hP.erToIw hP.lps k _ pp) h1
-  refine (lpsW_afr hW1).trans ?_
-  split at hW; · cases hW
-  rename_i r2 m2 h2
-  obtain ⟨s2, rfl, -, hW2⟩ := triple_of_callW (s₀ := ⟨s1.mem, Locals.init []⟩)
-    (plW_spec p hP.alloc hP.copy hP.cons hP.get hP.pfind hP.ppush hP.iparam hP.plgo hP.pl hP.il k _ _ _) h2
-  refine (plW_afr hW2).trans ?_
-  split at hW; · cases hW
-  rename_i r3 m3 h3
-  obtain ⟨s3, rfl, -, hm3, -⟩ := triple_of_callW (s₀ := ⟨s2.mem, Locals.init []⟩)
-    (slEq_spec p hP.eq k _ ao _ fvo _) h3
-  simp only at hm3
-  rw [← hm3]
-  split at hW; · cases hW
-  split at hW; · cases hW
-  split at hW; · cases hW
-  rename_i r4 m4 h4
-  simp only [Option.some.injEq, Prod.mk.injEq] at hW
-  rw [← hW.2]
-  obtain ⟨s4, rfl, -, hW4⟩ := triple_of_callW (s₀ := ⟨s3.mem, Locals.init []⟩)
-    (mkTargetMajor_spec p hP.alloc hP.mkTm k _ _ _ _ _ _ _ _ _ _ _ _ _ _) h4
-  exact mkTMW_afr hW4
-
 theorem noC_afr (hN : NoProg p) {no nl lo hi e : Word}
     (h : callW p n "nest_occ" [no, nl, lo, hi, e] m = some (r, m')) : AFr m m' := by
   rcases n with _ | k
@@ -136,9 +96,6 @@ theorem mkTmC_afr (ha : p.lookup "iw_alloc" = some iwAlloc)
 
 end calls
 
-/-- `AbsOK` across `target_outside_inst`'s callees after `inst_lp_fast`. -/
-theorem toiAfr : ToiAfr := fun _ _ _ _ _ _ h => piBW_afr _ _ _ _ _ _ h
-
 /-! ## The sims under `StageC` -/
 
 /-- **`target_major_of_outside_tail`'s model under `StageC`** (`tmtW_simG`'s, with the real
@@ -169,14 +126,13 @@ theorem tmtW_simC {p : Prog} (hP : TmtProg p) (hIlpf : IlpfF p) (hcore : CoreSta
     (Q := fun r x m' a' => ToiR r x ∧ StageC dn vis fe env m' a' ∧ IWGrow m m' ∧ PosMR m' ∧ AbsOK m' ∧
       ConRon.Bridge.CoreStep V env fe a a' ∧ ∃ l, denoteL a'.store.ls x.2 = some l) ?_ ?_
   · intro r1 m1 e1
-    obtain ⟨s1, rfl, -, hW1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-      (targetOutsideInst_spec p hP.toi (realCall p) (realCall_spec p) n _ vis I us dso dsl) e1
-    obtain ⟨x, a', hrun, hS1, hg1, hT1, hAF⟩ := toiW_ok (IlpRd.realC hIlpf hC) hW1 hS hI hus hds hdsb
-    have hA1 := hAF toiAfr hA
+    obtain ⟨s1, rfl, -, x, a', hrun, hR⟩ := RefE.run_okW
+      (toiE_spec p hP.toi n ⟨m, Locals.init []⟩ vis I us dso dsl) (toi_ref hP.toi hIlpf n hC hI hus hds hdsb) e1
+    have hA1 := hR.afr hA
     obtain ⟨c1, v, ⟨-, hlP⟩, -⟩ := ConRon.Bridge.Inductives.targetOutsideInst_spec fe (decI I) IP
       (decI us) usP ds dsP a a' x hC.check ⟨hIP, husP, hdsP⟩ hrun
-    exact ⟨x, a', hrun, hT1, hC.of_check hS1 hA1 c1.ok c1.ext, hg1,
-      hPm.fr (toiW_mfr (IlpFr.real hIlpf) hW1), hA1, c1, v.2, hlP⟩
+    exact ⟨x, a', hrun, hR.res, hC.of_check hR.stage hA1 c1.ok c1.ext, hR.grow, hPm.fr hR.mfr, hA1, c1, v.2,
+      hlP⟩
   rintro r1 ⟨nIdx, sI⟩ m1 a1 ⟨⟨hr1, hn1, hsH, hsd⟩, hC1, hg1, hP1, hA1, c1, lP, hlP⟩
   obtain ⟨-, -, hrsH, hrsd⟩ := partsShapeWords hg1 hq hq9
   rw [tmtK1_some]
@@ -465,17 +421,14 @@ theorem tmcW_simC {p : Prog} (hP : TmfProg p) (hIlpf : IlpfF p) (hcore : CoreSta
       (Q := fun r x m' a' => DecB (fun m => decTM m (r.headD 0).toNat) m' x ∧ StageR dn vis fe m' a' ∧
         IWGrow s4.mem m' ∧ PosMR m' ∧ AbsOK m') ?_ ?_
     · intro r6 m6 e6
-      rcases n with _ | k
-      · rw [callW_zero] at e6; cases e6
-      obtain ⟨s6, rfl, -, hW6⟩ := triple_of_callW (s₀ := ⟨s4.mem, Locals.init []⟩)
-        (tmm_spec p hP.tmm.mem k _ pp cao cal pfo pfl fvo fvl ao al x y (UInt64.ofNat i)) e6
-      have := tmmW_sim hP.tmm k (t := UInt64.ofNat i) (bs := bs) (css := css) hS4 (hq.grow (decBS_mono _) hg4)
-        (partsHsrc_grow hg4 hq9 hsrc) (hcss.grow decCNS_mono hg4) (hpf.grow (OMono.decHL _ _) hg4)
-        (hfv.grow (OMono.decHL _ _) hg4) (Nat.le_trans hfvb hg4.1) (hag.grow (OMono.decHL _ _) hg4)
-        (Nat.le_trans hagb hg4.1) hx hy hP4 r6 s6.mem hW6
-      rw [hie] at this
-      obtain ⟨x', a', hrun, h1, h2, h3, h4⟩ := this
-      exact ⟨x', a', hrun, h1, h2, h3, h4, tmmC_afr hP.tmm e6 hA4⟩
+      obtain ⟨s6, rfl, -, x', a', hrun, hR⟩ := RefE.run_okW
+        (tmmE_spec p hP.tmm n ⟨s4.mem, Locals.init []⟩ pp cao cal pfo pfl fvo fvl ao al x y (UInt64.ofNat i))
+        (tmm_ref (dn := dn) (vis := vis) (fe := fe) n (t := UInt64.ofNat i) (bs := bs) (css := css) hS4
+          (hq.grow (decBS_mono _) hg4) (partsHsrc_grow hg4 hq9 hsrc) (hcss.grow decCNS_mono hg4)
+          (hpf.grow (OMono.decHL _ _) hg4) (hfv.grow (OMono.decHL _ _) hg4) (Nat.le_trans hfvb hg4.1)
+          (hag.grow (OMono.decHL _ _) hg4) (Nat.le_trans hagb hg4.1) hx hy hP4) e6
+      rw [hie] at hrun
+      exact ⟨x', a', hrun, hR.dec, hR.stage, hR.grow, hR.pos, hR.afr hA4⟩
     rintro r x' m' a' ⟨h1, h2, h3, h4, h5⟩
     exact ⟨by simpa using h1, h2, hg4.trans h3, h4, h5⟩
   | none =>

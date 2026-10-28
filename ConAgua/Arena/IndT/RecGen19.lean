@@ -39,24 +39,40 @@ theorem coreC_mfr {n : Nat} {args r : List Word} {m m' : Mem}
   MFr.of_frame (run_memFrame hq.closed (by decide) (run_of_callW h)).1 coreStageA_stage coreStageC_stage
 
 include hq in
-theorem tptW_mfrR : ∀ (n : Nat) (m m' : Mem) (vis d xo xl : Word) (r : List Word),
-    tptW (realCall p) n m vis d xo xl = some (r, m') → MFr [] [] m m'
-  | 0, _, _, _, _, _, _, _, h => by simp [tptW] at h
-  | n + 1, m, m', vis, d, xo, xl, r, h => by
+theorem tptE_mfr : ∀ (n : Nat) (m m' : Mem) (vis d xo xl v : Word),
+    tptE p n m vis d xo xl = .ok (v, m') → MFr [] [] m m'
+  | 0, _, _, _, _, _, _, _, h => by rw [tptE.eq_def] at h; cases h
+  | n + 1, m, m', vis, d, xo, xl, v, h => by
     by_cases hl : xl = 0
-    · rw [tptW_nil (realCall p) n m vis d xo xl hl] at h
-      simp only [Option.some.injEq, Prod.mk.injEq] at h; rw [← h.2]; exact MFr.refl _ _ _
-    rw [tptW_cons (realCall p) n m vis d xo xl hl] at h
-    obtain ⟨⟨r1, m1⟩, h1, h⟩ := of_K h (by simp only [tptK])
-    rw [tptK_some] at h
-    refine (coreC_mfr hq h1).trans ?_
-    obtain ⟨⟨r2, m2⟩, h2, h⟩ := of_K h rfl
-    rw [tptK2_some] at h
-    simp only [Option.some.injEq, Prod.mk.injEq] at h
-    rw [← h.2]; exact tptW_mfrR n _ _ _ _ _ _ _ h2
+    · rw [tptE.arm1 p n m vis d xo xl hl] at h
+      cases h; exact MFr.refl _ _ _
+    rw [tptE.arm2 p n m vis d xo xl hl] at h
+    rcases h1 : callE p n "infer_type_core" [vis, d, rdW (m.arr64 IW) xo] m with e1 | ⟨r1, m1⟩ <;>
+      rw [h1] at h
+    · rw [tptE.k_infer_type_core.none] at h; cases h
+    rw [tptE.k_infer_type_core.arm1] at h
+    refine (coreC_mfr hq (callW_of_callE h1)).trans ?_
+    rcases h2 : tptE p n m1 vis d (xo + 1) (xl - 1) with e2 | ⟨v2, m2⟩ <;> rw [h2] at h
+    · rw [tptE.k_target_pin_tys.none] at h; cases h
+    rw [tptE.k_target_pin_tys.arm1] at h
+    cases h
+    exact tptE_mfr n _ _ _ _ _ _ _ h2
 
 include hq in
-theorem tmpW_mfrR {N : Nat} {m m' : Mem} {vis rP M : Word} {r : List Word}
+theorem tptR_mfr (hp : p.lookup "target_pin_tys" = some targetPinTys) {n : Nat} {m m' : Mem}
+    {vis d xo xl : Word} {r : List Word} (h : tptR (realCall p) n m vis d xo xl = some (r, m')) :
+    MFr [] [] m m' := by
+  rw [show tptR (realCall p) n m vis d xo xl = callW p n "target_pin_tys" [vis, d, xo, xl] m from rfl,
+    callW_eq_callE] at h
+  rcases hE : callE p n "target_pin_tys" [vis, d, xo, xl] m with e | ⟨r1, m1⟩ <;> rw [hE] at h <;>
+    simp only [Except.toOption, reduceCtorEq, Option.some.injEq, Prod.mk.injEq] at h
+  obtain ⟨rfl, rfl⟩ := h
+  obtain ⟨s1, rfl, -, he⟩ := triple_of_callE (s₀ := ⟨m, Locals.init []⟩) (tptE_spec p hp n _ vis d xo xl) hE
+  exact tptE_mfr hq _ _ _ _ _ _ _ _ he
+
+include hq in
+theorem tmpW_mfrR (hp : p.lookup "target_pin_tys" = some targetPinTys) {N : Nat} {m m' : Mem}
+    {vis rP M : Word} {r : List Word}
     (h : tmpW (realCall p) N m vis rP M = some (r, m')) : MFr [] [] m m' := by
   rcases N with _ | N
   · simp [tmpW] at h
@@ -66,7 +82,7 @@ theorem tmpW_mfrR {N : Nat} {m m' : Mem} {vis rP M : Word} {r : List Word}
   rw [tmpW_out (realCall p) N m vis rP M hm] at h
   obtain ⟨⟨r1, m1⟩, h1, h⟩ := of_K h rfl
   rw [tmpK1_some] at h
-  refine (tptW_mfrR hq _ _ _ _ _ _ _ _ h1).trans ?_
+  refine (tptR_mfr hq hp h1).trans ?_
   obtain ⟨⟨hd, m2⟩, h2, h⟩ := of_K h rfl
   rw [tmpK2_some] at h
   refine (ceinternW_mfr h2).trans ?_
@@ -250,14 +266,14 @@ theorem clmW_simC (hP : ClmProg p) (pp cao cal pfo pfl : Word) (bs : BlockShape)
     have hrB : (rdW (m3.arr64 IW) (pp + 4)).toNat = bs.nP := by
       rw [hnpw, UInt64.toNat_ofNat_of_lt' hnpb]
     have hrP : (rdW (m3.arr64 IW) (pp + 4)).toNat = pP.nP := hrB.trans hnP
-    obtain ⟨a4, hrun4, hC4, hg4, hA4⟩ := tmpW_okC hq henv
+    obtain ⟨a4, hrun4, hC4, hg4, hA4⟩ := tmpW_okC hq henv hP.tmp.tpt
       (by omega) hW4 hC3 hA3 hd3 hm (fun _ => by rw [hrP]; exact hdsW)
     have hrun4' := hrun4
     rw [hrP] at hrun4'
     obtain ⟨c4, -⟩ := ConRon.Bridge.Inductives.targetMajorPins_spec fe (ConRon.Bridge.CoreSpec.of_core rfl)
       henv pP.nP tm MP (fun _ => hdsW) a3 a4 () hC3.check hm hrun4'
     rw [hrB] at hrun4
-    exact ⟨(), a4, hrun4, hC4, hg4, hP3.fr (tmpW_mfrR hq hW4), hA4, c4⟩
+    exact ⟨(), a4, hrun4, hC4, hg4, hP3.fr (tmpW_mfrR hq hP.tmp.tpt hW4), hA4, c4⟩
   rintro r4 - m4 a4 ⟨hC4, hg4, hP4, hA4, c4⟩
   have hg04 := hg03.trans hg4
   have c14 := (c12.trans c3).trans c4

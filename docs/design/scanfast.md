@@ -274,7 +274,17 @@ Deviation D41 (`docs/deviations.md`).
 |---|---|---:|---:|
 | base (master 53ec1c4b) | – | 257.66 G | – |
 | 1 | app | 236.79 G (−8.1 %) | 1148; +68 |
+| 2 | + lam, forallE | 231.00 G (−10.3 %) | 2018; +78 |
 
-Measured with `bench.py --set init --reps 3 --cpus 46,47 --no-conron --no-ref`, base and candidate
-interleaved, load 38 (walls noisy: 18.3 s against 22.1 s). Verdicts: `diff-e2e --refs --parallel
-16` and `--jobs 4`, 634 of 634 agree.
+Measured with `bench.py --set init --reps 3 --cpus 46,47 --no-conron --no-ref`, base (53ec1c4b's
+`checker.s`) and candidate interleaved; the load was 38 at landing 1 and 24–47 at landing 2, so the
+walls mean nothing (landing 2: 24.6 s against 24.3 s, spreads 75–119 %). Verdicts at each landing:
+`diff-e2e --refs --parallel 16` and `--jobs 4`, 634 of 634 agree.
+
+Landing 2 adds the binder shapes: a named block `biB` for the binder's value (four literals, one
+spec, `BiAt`; `binderInfoN_at` walks `match_lit`'s four tries on it) and `bndB` for the object's
+members, shared by the two shapes and unfolded in their proofs. `bndObj_sound` (the object under
+`binderN` and `recObjN`) serves both lines. A note for the proof cost: in the shape specs,
+`assumption` over the many position facts took 22 s (it unified unrelated `numR` positions by
+`whnf`); `with_reducible assumption` takes milliseconds. The two binder specs still need
+`maxHeartbeats 1000000` (about 60 paths after `vcgen`).
