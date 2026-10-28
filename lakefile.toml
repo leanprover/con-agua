@@ -97,7 +97,6 @@ globs = ["ConAgua", "ConAgua.L.ModelGenTest", "ConAgua.Arena.PromoteCIRef.+", "C
   "ConAgua.Arena.IndT.StreamRecs",
   "ConAgua.Arena.IndT.RecCheckTpd",
   "ConAgua.Arena.IndT.RecCheckTcm",
-  "ConAgua.Arena.IndT.RecCheckTmn",
   "ConAgua.Arena.IndT.RecCheckK53",
   "ConAgua.Arena.IndT.RecGen23",
   "ConAgua.Arena.IndT.RecGen24",

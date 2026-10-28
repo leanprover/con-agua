@@ -5,7 +5,14 @@ import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
 /-!
-# Error refinement of `target_class_match` (lane `verdicts-b`, helper `ib`)
+# `target_class_match`: one model and one refinement for both outcomes
+
+`tcmE` (`l_model … unified`): `target_params_def_eq` through its run (`callE`), the callees outside
+the verdict closure (`lvls_eq_c`, the shape's member names and parameters, `param_levels`,
+`target_holes`) through their `Option` models. `tcm_ref` refines `targetClassMatch` for both
+outcomes; its ok half is `targetClassMatch_refinesC` and the callers' ok refinements
+(`target_major_nfs`, `target_k53_args` through the run, `RefE.run_okW`), its error half
+`tcm_claimA`.
 -/
 
 noncomputable section

@@ -11,8 +11,7 @@ it): its error model is written by hand over the ok model's pieces (`cnsW`, `ncp
 RecGenSpec/DecB.lean), keeping only what an error of class `≠ 0` can come from, the
 `target_major_nfs` call (`iw_alloc` is outside the verdict closure, the copy loop and the stores
 fail with code `0`). The claim follows `cnsW_okC` (IndT/RecGen28.lean) step by step;
-`target_major_nfs`' claim in `tmnW_okPC`'s shape (`tmnE_claimP`, a copy of `tmnE_claim`): the
-classes' constructor slices are decoded without a bound on an empty slice's offset.
+`target_major_nfs` by `tmn_ref` (both of its outcomes).
 -/
 
 set_option experimental.vcgen true
