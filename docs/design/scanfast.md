@@ -305,3 +305,57 @@ acceptable coupling (a generic single-pass scanner is the alternative, §4 rank 
 * The coupling is to performance only: a line in any other form (whitespace, other key order,
   escapes, long numbers) declines to the generic proved scanner, so a format change of
   lean4export costs speed, never a verdict.
+
+## 7. Redirect: one generic pass (lane `scanfast-p3`, from 2026-10-28)
+
+The canonical-shape fast path (§5–6) is retired: it couples the scanner's speed to lean4export's
+byte format. In its place `front_line` reads each line once with a generic scanner shaped like
+con-ron's `scan_line_fwd`/`scan_line_loop`: one walk over the members (`next_member`), each value
+read once, validating and recording the fields together. `frontLine_spec` and `frontLineW` stay as
+they are.
+
+**What the single pass is proved against.** `frontLineW` speaks of three models of the same
+member walk: the validator `lineN`/`lineFwdN` (with `objN` for the sub-objects), and the two
+record passes `recN` (names, levels, the header) and `exprN` (expressions; `objRecN` for the
+sub-objects). All three call `nextMemberN` at the same positions; they differ in what they keep
+and in what they check. The single pass gets one model of its own that mirrors its code, and
+the link to the three is a pure theorem:
+* `lineRecN b i w ik pk f` (the line loop): `(end, kind, fields)`, the validator's checks
+  (`ik`/`pk` are `lineN`'s index and payload kinds) and the fields of `Fld` (`pl` 1–7 as `recN`,
+  8–17 as `exprN`). Its theorem: `end = lineN b i w ik pk`, and on an accepted line the fields
+  are `recN b i w f`'s when the kind is a name, level or the header, `exprN b i w f`'s when it is
+  an expression (both accumulate the index the same way while no payload key has been read, so
+  one accumulator `f` serves both). On an expression line `recN` gives `Fld.none` and on a
+  declaration line both do, which is `applyAnyW`'s dispatch.
+* `objFN kind b i w seen o` (the sub-object loop for `app`, `lam`/`forallE`, `letE`, `const`,
+  `proj`): validates with the kind's key bits and mask and fills the slots as `objRecN`. The value
+  of a key is `exValN` for every kind (the validator's per-record value scanners agree with it on
+  every key the record has), so the theorem is `(objFN …).e = objN (bit kind) (val kind) (mask
+  kind) …` and, when it is not `0`, the slots are `objRecN`'s.
+* `strFN`, `numFN` (the name objects): the same against `strNameN`/`numNameN` and
+  `strRecN`/`numRecN`.
+* `max`/`imax` keep the two list readers (`scan_nat_list` validates and counts, `rec_nat_list`
+  reads the pair; rare lines), with a lemma that the pair reader ends where the validator does.
+* Declaration lines are validated in the pass (`scan_axiom` …) and read afterwards by
+  `apply_dline`, as now (0.2 G of 27 G on `Init`).
+
+Each model is proved against its L loop by `vcgen` (one spec per arm, as `lineLoop`), the
+theorems above by functional induction over the member walk, one step lemma per key. Named-field
+structures for the loop states and the per-key results.
+
+**What goes.** `fast_line`, `L/LitWord.lean`, `Scan/Fast*.lean`, `front_line`'s fast arm and D41;
+the record passes' L code that nothing calls any more (`rec_line_loop`, `rec_expr_loop`,
+`expr_val`, `rec_obj`, `obj_val`'s caller, `rec_str_name`, `rec_num_name`, `apply_any`) with their
+specs; `recN`/`exprN`/`objRecN` stay (they are `frontLineW`'s and the con-leche links'). The Stage
+B validator (`Scan/Validator.lean`, `scan_line` and the `scan_*` record loops) stays: it is its own
+program, and the declaration validators are shared.
+
+**Landing order.** (1) the object and name loops with their models and theorems, used by the line
+loop of the same landing; the line loop; `front_line` on the single pass; the fast path and the
+dead record passes deleted. One landing, since nothing in between would have a caller. (2) Measure;
+then a separate follow-up if the profile shows a hot spot worth a leaf.
+
+**Expected.** About 12 G for the scanner on `Init` (§4: the record passes' 14.7 G go, the
+validator's walk remains with the values read once), so `Init` near 243 G, above the fast path's
+231 G: the speed beyond con-ron is the later compiler step (registers for the locals of non-leaf
+functions), for which the loops are kept as small functions over few locals.
