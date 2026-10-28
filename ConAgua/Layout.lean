@@ -32,6 +32,11 @@ constant index below `k`. The entry stubs establish it and their proofs prove it
 length in the buffer, declining below the minimum; an array that is neither frozen nor owned gets no
 memory there, so it has no minimum. The minima are the largest constant index the program uses,
 plus one (`CTL`: 256, `L.Checker.ctlMin`).
+
+**The table-relative array.** `CTL`'s row is marked `at table` (`ArrDecl.atTable`): the stubs place
+its `min` words inside the table's slot, past the table, at an offset the compiler knows
+(`L.Compiler.Tab.tbl`), and the code addresses it from the table's register without loading its
+base.
 -/
 
 namespace L
