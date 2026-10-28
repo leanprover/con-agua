@@ -1,4 +1,3 @@
-import ConAgua.Verdict.PosE3Fm
 import ConAgua.Arena.IndRealLvlC
 import ConAgua.Arena.IndSim
 import ConAgua.Arena.IndSumSpec.CheckStructFieldSortsISucc

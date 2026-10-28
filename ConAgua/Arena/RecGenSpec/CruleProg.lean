@@ -1,5 +1,6 @@
 import ConAgua.Arena.IndRealCrF
-import ConAgua.Arena.DeclCvg
+import ConAgua.Arena.IndRealWalk
+import ConAgua.Arena.RecGen
 
 /-!
 # CruleProg

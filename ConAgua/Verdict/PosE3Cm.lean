@@ -1,4 +1,3 @@
-import ConAgua.Verdict.PosE3Fm
 import ConAgua.Arena.IndPosSpec.CfW
 import ConAgua.Checker.NoVerdictTree
 import ConAgua.Arena.Verdict
