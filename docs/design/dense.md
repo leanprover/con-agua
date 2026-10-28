@@ -563,5 +563,10 @@ Landed as one `checker.s` regeneration. Base: master f3a463b8 (lsugar, lsugar-c 
 * `ca_check_b`'s worker region still reserves a slot for `CTL` (`workerNeed own = abiSlot ·
   (2 + |own|)`, `CTL` is owned but lives in slot 0): one unused slot per worker, 32 GiB of
   address space. Removing it changes `ca_worker_size` and `BufLayout`'s `ownOff`.
-* The wall-time comparison on a quiet machine (`c04a` above).
+* ~~The wall-time comparison on a quiet machine~~ done 2026-10-28 (`bench.py --reps 5 --cpus 40,41
+  --asm` with `checker.s` of f3a463b8 and 58ef722d, interleaved, load 1–2; output in
+  `_tmp/coordinator/quietbench`): the default set's geometric means are instructions 1.000,
+  cycles 0.983, wall 0.993; `complete_c04a_restart_70` 2.302 → 2.309 s (spread 1 %);
+  Init 19.02 → 19.17 s (+0.8 %, spread 2 %). Dense is neutral; the +10 % cycles on `c04a`
+  under load 64–70 was noise.
 * `Mem.HasW`, `HasB`, `SameShape` (absarrays batch 8) are untouched.
