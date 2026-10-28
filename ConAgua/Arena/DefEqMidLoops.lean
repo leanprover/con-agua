@@ -2,7 +2,6 @@ import ConAgua.Arena.DefEqMid
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
-import ConAgua.Arena.KnotE
 
 /-!
 # `defeq_lst`, `defeq_list_rev`: the twin's `defEqList` over two stack slices (lane `defeq`)
