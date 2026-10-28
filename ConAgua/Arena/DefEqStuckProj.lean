@@ -1,4 +1,4 @@
-import ConAgua.Arena.DefEqStuckIrrel
+import ConAgua.Arena.DefEqStuck
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
@@ -56,41 +56,26 @@ theorem ldpr_exit_run (mode : ConLeche.CheckMode) (r : CoreFnsA) (fe : IFEnv) (d
 
 /-! ## `ldpr_exit` -/
 
-section exK
-variable (p : Prog) (n : Nat) (mode vis d sn i a b k : Word)
+/-- **`reduce_proj_core`'s error spec** (whnf family; the error half of `ReduceProjCoreH`). -/
+def ReduceProjCoreE (p : Prog) : Prop :=
+  ∀ (n : Nat), KnotUpTo p n → KnotUpToE p n → ∀ (F : Nat), n ≤ F → n ≤ 2 ^ 62 →
+  ∀ (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
+    (MM : ModeMaps) (eb mode d sn i c : Word), SlotPre s₀ a₀ dn vis fe MM eb mode → HW sn → HW c →
+    CoreSpecE p (n + 1) "reduce_proj_core" [mode, vis, d, sn, i, c]
+      (reduceProjCore (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decI sn) i.toNat
+        (decE c)) s₀ a₀
 
-def exK2 (px : Word) (res : Option (List Word × Mem)) : Option (Word × Mem) :=
-  match res with
-  | none => none
-  | some (r, m) =>
-    if r.headD 0 ≠ 0 then call1W p n "defeq" [mode, vis, d, px, r.tail.headD 0] m
-    else call1W p n "defeq" [mode, vis, d, a, b] m
+/-- **What `ldpr_exit`'s errors claim from**: the `defeq` slot's and `reduce_proj_core`'s. -/
+structure ExitG (p : Prog) (n : Nat) : Prop where
+  knot : KnotUpToE p n
+  rpc : ReduceProjCoreE p
 
-def exK1 (res : Option (List Word × Mem)) : Option (Word × Mem) :=
-  match res with
-  | none => none
-  | some (r, m) =>
-    if r.headD 0 ≠ 0 then exK2 p n mode vis d a b (r.tail.headD 0)
-      (callW p n "reduce_proj_core" [mode, vis, d, sn, i, b] m)
-    else call1W p n "defeq" [mode, vis, d, a, b] m
-
-/-- **The model of `ldpr_exit`.** -/
-def exK (m : Mem) : Option (Word × Mem) :=
-  if k = 1 then some (1, m)
-  else exK1 p n mode vis d sn i a b (callW p n "reduce_proj_core" [mode, vis, d, sn, i, a] m)
-
-end exK
-
-theorem ldprExit_spec (p : Prog) (hq : StuckProg p) (n : Nat) (s₀ : St) (mode vis d sn i a b k : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "ldpr_exit" [mode, vis, d, sn, i, a, b, k]
-    ⦃fun r s' => LocEq s' s₀ ∧ exK p n mode vis d sn i a b k s₀.mem = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hq.ldprExit]
-  simp only [callFn, ldprExitL]
-  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, callW_spec p n "reduce_proj_core",
-      callW_spec p n "defeq"] <;>
-  simp_all [exK, exK1, exK2, call1W, LocEq, St.setLocs_cons, Cmp.eval,
-    St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Sig.retVal, Sig.retOr, Locals.init_cons_zero,
-    Locals.init_cons_succ]
+/-- **`ldpr_exit`'s model, both outcomes** (generated; `reduce_proj_core` and the `defeq` slot
+through their runs). -/
+l_model exE_spec (p : Prog) (hf : p.lookup "ldpr_exit" = some ldprExitL)
+  fns [hf ↦ exE list]
+  grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] unified
 
 theorem decOptR_someS {r : List Word} (h : r.headD 0 ≠ 0) : decOptR r = some (decE (r.tail.headD 0)) := by
   simp only [decOptR, decOpt, h, ↓reduceIte]
@@ -115,38 +100,36 @@ theorem decDS_ne_cont {r : List Word} (h : r.headD 0 ≠ 0) (a b : EIdx) : decDS
   · exact fun e => by cases e
   · exact fun e => by cases e
 
-/-- **`ldpr_exit` refines `ldprExitT`** on a verdict word `k ≠ 0`. -/
-@[refines_part ConRon.Arena.lazyDeltaProjReduction "the exit on a verdict (ldprExitT)"]
-theorem ldprExit_refines (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (n : Nat)
+/-- **`ldpr_exit` refines `ldprExitT`, both outcomes**, on a verdict word `k ≠ 0`: the errors are
+`reduce_proj_core`'s and the `defeq` slot's. -/
+theorem ex_ref (p : Prog) (hc : StuckCallees p) (n : Nat)
     (hk : KnotUpTo p n) (F : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
     (vis : Word) (fe : IFEnv) (M : ModeMaps) (eb mode d sn i a b k : Word) (hF : n ≤ F)
     (hn : n ≤ 2 ^ 62) (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (hsn : HW sn) (ha : HW a) (hb : HW b)
     (hk0 : k ≠ 0) :
-    CoreSpec p (n + 1) "ldpr_exit" [mode, vis, d, sn, i, a, b, k]
+    RefE (ExitG p n) (exE p (n + 1) s₀.mem mode vis d sn i a b k)
       (ldprExitT (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decI sn) i.toNat
-        (decE a) (decE b) (decDSs [k])) decBool s₀ a₀ dn vis fe M eb := by
-  apply L.M.triple_of_run
-  intro s r s' hs0 hrun
-  obtain ⟨hloc, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun
-    (ldprExit_spec p hq n s₀ mode vis d sn i a b k)
-  subst hs0
-  refine ⟨hloc, ?_⟩
+        (decE a) (decE b) (decDSs [k])) a₀ (CorePost decBool dn s₀.mem vis fe M eb ResH) := by
   have hS := hs.rel
-  have hK := hk n (Nat.le_refl _)
   have hdef : ∀ (st : AState) (m : Mem) (M' : ModeMaps) (x y : Word), CoreS dn m st vis fe M' eb →
-      HW x → HW y → call1W p n "defeq" [mode, vis, d, x, y] m = some (r.headD 0, s'.mem) →
-      CoreRef ((coreKnot (decMode mode) fe id F).defeq d.toNat (decE x) (decE y)) st decBool
-        dn m vis fe M' eb r s'.mem := fun st m M' x y hS' hx hy hc' =>
-    CoreSpec.of_call1W (s₀ := ⟨m, Locals.init []⟩)
-      (hK.defeq F _ st dn vis fe M' eb mode d x y hF hn ⟨hS', hs.mode4, hs.eb_mode⟩ hx hy)
-      (fun r r' h => by simp only [decBool, h]) hc'
-  simp only [exK] at hW
+      HW x → HW y →
+      RefE (ExitG p n) (exE.k_defeq p (callE p n "defeq" [mode, vis, d, x, y] m))
+        ((coreKnot (decMode mode) fe id F).defeq d.toNat (decE x) (decE y)) st
+        (CorePost decBool dn m vis fe M' eb ResH) := by
+    intro st m M' x y hS' hx hy
+    rcases c : callE p n "defeq" [mode, vis, d, x, y] m with e | ⟨r, m'⟩
+    · exact fun hG => CoreSpecE.of_callE (s₀ := ⟨m, Locals.init []⟩)
+        ((hG.knot n (Nat.le_refl _)).defeq F _ st dn vis fe M' eb mode d x y hF hn
+          ⟨hS', hs.mode4, hs.eb_mode⟩ hx hy) c
+    obtain ⟨hrun, hP⟩ := (CoreSpec.of_callW (s₀ := ⟨m, Locals.init []⟩)
+      ((hk n (Nat.le_refl _)).defeq F _ st dn vis fe M' eb mode d x y hF hn
+        ⟨hS', hs.mode4, hs.eb_mode⟩ hx hy) (callW_of_callE c)).post
+    exact RefE.ret hrun ⟨hP.after, hP.res.trans (by simp only [decBool, List.headD_cons]), hP.valid⟩
+  simp only [exE]
   by_cases h1 : k = 1
-  · rw [ite_eq_left h1] at hW
-    have : decDSs [k] = .eq := by simp [decDSs, h1]
-    rw [this]
-    exact coreRef_true hS hW
-  rw [ite_eq_right h1] at hW
+  · rw [ite_eq_left h1, show decDSs [k] = .eq by simp [decDSs, h1]]
+    exact RefE.ret rfl (CorePost.ret hS rfl hw1)
+  rw [ite_eq_right h1]
   have hst : decDSs [k] = (if k = 2 then .diff else .unknown) := by
     unfold decDSs; simp [hk0, h1]
   have hbody : ∀ st, (st = DeltaStepA.diff ∨ st = DeltaStepA.unknown) →
@@ -163,45 +146,48 @@ theorem ldprExit_refines (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (n 
     rintro st (rfl | rfl) <;> rfl
   rw [hbody _ (by rw [hst]; split <;> simp)]
   cases n with
-  | zero => simp [exK1, callW_zero] at hW
+  | zero =>
+    obtain ⟨e', he', h0⟩ := callE_zero p "reduce_proj_core" [mode, vis, d, sn, i, a] s₀.mem
+    rw [he']; exact RefE.of_cls0 h0
   | succ n' =>
-  obtain ⟨r₁, m₁, hc1, hW1⟩ := callW_cases rfl hW
-  have h₁ := CoreSpec.of_callW (hc.reduceProjCore n' (hk.mono (by omega)) F (by omega) (by omega) s a₀
-    dn vis fe M eb mode d sn i a hs hsn ha) hc1
-  refine coreRef_bind h₁ (fun M₁ hS₁ => ?_)
-  simp only [exK1] at hW1
+  rcases c1 : callE p (n' + 1) "reduce_proj_core" [mode, vis, d, sn, i, a] s₀.mem with e | ⟨r₁, m₁⟩
+  · exact fun hG => ErrClaim.bind_left (CoreSpecE.of_callE (hG.rpc n' (hk.mono (by omega))
+      (hG.knot.mono (by omega)) F (by omega) (by omega) s₀ a₀ dn vis fe M eb mode d sn i a hs hsn ha) c1)
+  have h₁ := CoreSpec.of_callW (hc.reduceProjCore n' (hk.mono (by omega)) F (by omega) (by omega) s₀ a₀
+    dn vis fe M eb mode d sn i a hs hsn ha) (callW_of_callE c1)
+  simp only [exE.k_reduce_proj_core]
+  refine RefE.bind_core (w := id) h₁ (fun M₁ hS₁ _ => ?_)
   by_cases f1 : r₁.headD 0 ≠ 0
-  · simp only [f1, ne_eq, not_false_eq_true, ↓reduceIte] at hW1
-    rw [decOptR_someS f1]
-    obtain ⟨r₂, m₂, hc2, hW2⟩ := callW_cases rfl hW1
+  · rw [ite_eq_left f1, decOptR_someS f1]
+    rcases c2 : callE p (n' + 1) "reduce_proj_core" [mode, vis, d, sn, i, b] m₁ with e | ⟨r₂, m₂⟩
+    · exact fun hG => ErrClaim.bind_left (CoreSpecE.of_callE (s₀ := ⟨m₁, Locals.init []⟩)
+        (hG.rpc n' (hk.mono (by omega)) (hG.knot.mono (by omega)) F (by omega) (by omega) _ _ dn vis fe
+          M₁ eb mode d sn i b ⟨hS₁, hs.mode4, hs.eb_mode⟩ hsn hb) c2)
     have h₂ := CoreSpec.of_callW (hc.reduceProjCore n' (hk.mono (by omega)) F (by omega) (by omega)
-      ⟨m₁, Locals.init []⟩ _ dn vis fe M₁ eb mode d sn i b ⟨hS₁, hs.mode4, hs.eb_mode⟩ hsn hb) hc2
-    refine coreRef_bind h₂ (fun M₂ hS₂ => ?_)
-    simp only [exK2] at hW2
+      ⟨m₁, Locals.init []⟩ _ dn vis fe M₁ eb mode d sn i b ⟨hS₁, hs.mode4, hs.eb_mode⟩ hsn hb)
+      (callW_of_callE c2)
+    simp only [exE.k_reduce_proj_core_2]
+    refine RefE.bind_core (w := id) h₂ (fun M₂ hS₂ _ => ?_)
     by_cases f2 : r₂.headD 0 ≠ 0
-    · simp only [f2, ne_eq, not_false_eq_true, ↓reduceIte] at hW2
-      rw [decOptR_someS f2]
-      exact hdef _ m₂ M₂ _ _ hS₂ h₁.2.2.2.2 h₂.2.2.2.2 hW2
-    · simp only [f2, ↓reduceIte] at hW2
-      rw [decOptR_noneS (by simpa using f2)]
-      exact hdef _ m₂ M₂ _ _ hS₂ ha hb hW2
-  · simp only [f1, ↓reduceIte] at hW1
-    rw [decOptR_noneS (by simpa using f1)]
-    exact hdef _ m₁ M₁ _ _ hS₁ ha hb hW1
+    · rw [ite_eq_left f2, decOptR_someS f2]
+      exact hdef _ m₂ M₂ _ _ hS₂ h₁.2.2.2.2 h₂.2.2.2.2
+    · rw [ite_eq_right f2, decOptR_noneS (by simpa using f2)]
+      exact hdef _ m₂ M₂ _ _ hS₂ ha hb
+  · rw [ite_eq_right f1, decOptR_noneS (by simpa using f1)]
+    exact hdef _ m₁ M₁ _ _ hS₁ ha hb
 
-theorem ldprExit_at (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) :
-    ∀ (n : Nat), KnotUpTo p n → ∀ (F : Nat) (s₀ : St) (a₀ : AState)
-      (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps)
-      (eb mode d sn i a b k : Word), n ≤ F → n ≤ 2 ^ 62 → SlotPre s₀ a₀ dn vis fe M eb mode →
-      HW sn → HW a → HW b → k ≠ 0 →
-      CoreSpec p n "ldpr_exit" [mode, vis, d, sn, i, a, b, k]
-        (ldprExitT (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decI sn) i.toNat
-          (decE a) (decE b) (decDSs [k])) decBool s₀ a₀ dn vis fe M eb
-  | 0, _, _, s₀, a₀, dn, vis, fe, M, eb, _, _, _, _, _, _, _, _, _, _, _, _, _, _ =>
-      CoreSpec.zeroLet p _ _ _ _ s₀ a₀ dn vis fe M eb _
-  | n + 1, hk, F, s₀, a₀, dn, vis, fe, M, eb, mode, d, sn, i, a, b, k, hF, hn, hs, h1, h2, h3, h4 =>
-      ldprExit_refines p hq hc n (hk.mono (by omega)) F s₀ a₀ dn vis fe M eb mode d sn i a b k
-        (by omega) (by omega) hs h1 h2 h3 h4
+/-- **`ldpr_exit` refines `ldprExitT`** on a verdict word `k ≠ 0` (`ex_ref`'s ok half). -/
+@[refines_part ConRon.Arena.lazyDeltaProjReduction "the exit on a verdict (ldprExitT)"]
+theorem ldprExit_refines (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (n : Nat)
+    (hk : KnotUpTo p n) (F : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
+    (vis : Word) (fe : IFEnv) (M : ModeMaps) (eb mode d sn i a b k : Word) (hF : n ≤ F)
+    (hn : n ≤ 2 ^ 62) (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (hsn : HW sn) (ha : HW a) (hb : HW b)
+    (hk0 : k ≠ 0) :
+    CoreSpec p (n + 1) "ldpr_exit" [mode, vis, d, sn, i, a, b, k]
+      (ldprExitT (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decI sn) i.toNat
+        (decE a) (decE b) (decDSs [k])) decBool s₀ a₀ dn vis fe M eb :=
+  RefE.coreSpec (exE_spec p hq.ldprExit (n + 1) s₀ mode vis d sn i a b k)
+    (ex_ref p hc n hk F s₀ a₀ dn vis fe M eb mode d sn i a b k hF hn hs hsn ha hb hk0)
 
 /-! ## The loop -/
 
@@ -211,8 +197,9 @@ l_model ldpr_specE (p : Prog) (hf : p.lookup "lazy_delta_proj_reduction" = some 
   fns [hf ↦ ldprE] grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] unified
 
-/-- **What the projection loop's errors claim from**: `lazy_delta_step`'s and `ldpr_exit`'s error
-claims at every L fuel up to `n` (`Verdict/DefEqTailE.lean`). -/
+/-- **What the projection loop's errors claim from**: `lazy_delta_step`'s claims at every L fuel up
+to `n` (its refinement is outside the stuck side), the `defeq` slot's and `reduce_proj_core`'s
+(through `ldpr_exit`'s refinement). -/
 structure LdprG (p : Prog) (n : Nat) : Prop where
   step : ∀ j, j ≤ n → ∀ (F : Nat), j ≤ F → j ≤ 2 ^ 62 →
     ∀ (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
@@ -221,12 +208,11 @@ structure LdprG (p : Prog) (n : Nat) : Prop where
       CoreSpecE p (j + 1) "lazy_delta_step" [mode, vis, d, a, b]
         (lazyDeltaStep (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b))
         s₀ a₀
-  exit : ∀ j, j ≤ n → ∀ (F : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
-      (vis : Word) (fe : IFEnv) (M : ModeMaps) (eb mode d sn i a b k : Word), j ≤ F → j ≤ 2 ^ 62 →
-      SlotPre s₀ a₀ dn vis fe M eb mode → HW sn → HW a → HW b → k ≠ 0 →
-      CoreSpecE p (j + 1) "ldpr_exit" [mode, vis, d, sn, i, a, b, k]
-        (ldprExitT (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decI sn) i.toNat
-          (decE a) (decE b) (decDSs [k])) s₀ a₀
+  knot : KnotUpToE p n
+  rpc : ReduceProjCoreE p
+
+theorem LdprG.mono {p : Prog} {n n' : Nat} (h : LdprG p n) (hn : n' ≤ n) : LdprG p n' :=
+  ⟨fun j hj => h.step j (by omega), h.knot.mono hn, h.rpc⟩
 
 /-- **The projection loop refines `lazyDeltaProjReduction`, both outcomes**, at every twin loop
 fuel `K + 1 ≥ k`. -/
@@ -287,12 +273,13 @@ theorem ldpr_ref (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (n : Nat) (
     rcases hx' : callE p (j + 1) "ldpr_exit" [mode, vis, d, sn, i, x, y, r.headD 0] m₁ with
       e | ⟨r', m₂⟩
     · rw [ldprE.k_ldpr_exit.none]
-      exact fun hG => CoreSpecE.of_callE (s₀ := ⟨m₁, Locals.init []⟩)
-        (hG.exit j (by omega) F ⟨m₁, Locals.init []⟩ _ dn vis fe M' eb mode d sn i x y (r.headD 0)
-          (by omega) (by omega) ⟨hS₁, hmode, heb⟩ hsn hx hy h0) hx'
+      exact fun hG => RefE.run_err (exE_spec p hq.ldprExit (j + 1) ⟨m₁, Locals.init []⟩ mode vis d sn
+        i x y (r.headD 0)) trivial ⟨hG.knot.mono (by omega), hG.rpc⟩
+        (ex_ref p hc j (hk.mono (by omega)) F ⟨m₁, Locals.init []⟩ _ dn vis fe M' eb mode d sn i x y
+          (r.headD 0) (by omega) (by omega) ⟨hS₁, hmode, heb⟩ hsn hx hy h0) hx'
     rw [ldprE.k_ldpr_exit.arm1]
     obtain ⟨hrun₂, hR⟩ := (CoreSpec.of_callW (s₀ := ⟨m₁, Locals.init []⟩)
-      (ldprExit_at p hq hc (j + 1) (hk.mono (by omega)) F ⟨m₁, Locals.init []⟩ _ dn vis fe
+      (ldprExit_refines p hq hc j (hk.mono (by omega)) F ⟨m₁, Locals.init []⟩ _ dn vis fe
         M' eb mode d sn i x y (r.headD 0) (by omega) (by omega) ⟨hS₁, hmode, heb⟩ hsn hx hy h0)
       (callW_of_callE hx')).post
     exact RefE.ret hrun₂ ⟨CoreAfter.comp hK₁ hSt₁ hR.after, by simpa [decBool] using hR.res, hR.valid⟩
@@ -329,38 +316,14 @@ theorem ldpr_refines (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (n : Na
 
 /-! ## `defeq_proj_pair` -/
 
-section ppK
-variable (p : Prog) (n : Nat) (mode vis d a b : Word)
-
-/-- **The model of `defeq_proj_pair`.** -/
-def ppK (m : Mem) : Option (Word × Mem) :=
-  if a >>> 28 ≠ 9 then some (0, m)
-  else if b >>> 28 ≠ 9 then some (0, m)
-  else if tierW a ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
-  else if tcnt m PROJ (tierW a) ≤ idxW a then none
-  else if tierW b ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
-  else if tcnt m PROJ (tierW b) ≤ idxW b then none
-  else if tfld m PROJ (tierW a) (idxW a) 0 ≠ tfld m PROJ (tierW b) (idxW b) 0
-    then some (0, m)
-  else if tfld m PROJ (tierW a) (idxW a) 1 ≠
-      tfld m PROJ (tierW b) (idxW b) 1 then some (0, m)
-  else call1W p n "lazy_delta_proj_reduction" [mode, vis, d,
-    tfld m PROJ (tierW a) (idxW a) 0, tfld m PROJ (tierW a) (idxW a) 1,
-    tfld m PROJ (tierW a) (idxW a) 2, tfld m PROJ (tierW b) (idxW b) 2] m
-
-end ppK
-
-theorem projPair_spec (p : Prog) (hq : StuckProg p) (n : Nat) (s₀ : St) (mode vis d a b : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "defeq_proj_pair" [mode, vis, d, a, b]
-    ⦃fun r s' => LocEq s' s₀ ∧ ppK p n mode vis d a b s₀.mem = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hq.projPair]
-  simp only [callFn, defeqProjPairL]
-  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rdW_spec, evalE_tld, tld,
-    evalE_cnt, tcntM, evalE_tierE, evalE_idxE,
-      callW_spec p n "lazy_delta_proj_reduction"] <;>
-  simp_all [ppK, call1W, tierW, idxW, LocEq, BinOp.eval, St.setLocs_cons, CTL, Cmp.eval,
-    St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Sig.retVal, Sig.retOr, Locals.init_cons_zero,
-    Locals.init_cons_succ]
+/-- **`defeq_proj_pair`'s model, both outcomes** (generated; the projection loop by its unified
+model). -/
+l_model ppE_spec (p : Prog) (hf : p.lookup "defeq_proj_pair" = some defeqProjPairL)
+    (hl : p.lookup "lazy_delta_proj_reduction" = some lazyDeltaProjReductionL)
+  fns [hf ↦ ppE list]
+  specs [ldpr_specE p hl n]
+  grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] unified
 
 section ppRuns
 variable (mode : ConLeche.CheckMode) (r : CoreFnsA) (fe : IFEnv) (depth : Nat) (a b : EIdx)
@@ -383,21 +346,89 @@ theorem pp_both (h : (a.tag == ETag.proj && b.tag == ETag.proj) = true) (s₁ s�
 
 end ppRuns
 
-theorem ldpr_at (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) :
-    ∀ (n : Nat), KnotUpTo p n → ∀ (F K : Nat), n ≤ F → n ≤ K + 1 → n ≤ 2 ^ 62 → ∀ (s₀ : St)
-      (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps)
-      (eb mode d sn i a b : Word), SlotPre s₀ a₀ dn vis fe M eb mode → HW sn → HW a → HW b →
-      d.toNat < 2 ^ 63 →
-      CoreSpec p n "lazy_delta_proj_reduction" [mode, vis, d, sn, i, a, b]
-        (lazyDeltaProjReduction (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decI sn)
-          i.toNat K (decE a) (decE b)) decBool s₀ a₀ dn vis fe M eb
-  | 0, _, _, _, _, _, _, s₀, a₀, dn, vis, fe, M, eb, _, _, _, _, _, _, _, _, _, _, _ =>
-      CoreSpec.zeroLet p _ _ _ _ s₀ a₀ dn vis fe M eb _
-  | n + 1, hk, F, K, hF, hK, hn, s₀, a₀, dn, vis, fe, M, eb, mode, d, sn, i, a, b, hs, h1, h2, h3, hd =>
-      ldpr_refines p hq hc n (hk.mono (by omega)) F K (by omega) (by omega) (by omega) s₀ a₀ dn vis fe
-        M eb mode d sn i a b hs h1 h2 h3 hd
+/-- **`defeq_proj_pair` refines `defeqProjPair`, both outcomes**: the errors are the projection
+loop's. -/
+theorem pp_ref (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (n : Nat)
+    (hk : KnotUpTo p n) (F : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
+    (vis : Word) (fe : IFEnv) (M : ModeMaps) (eb mode d a b : Word) (hF : n ≤ F)
+    (hn : n ≤ 2 ^ 62) (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (ha : HW a) (hb : HW b)
+    (hd : d.toNat < 2 ^ 63) :
+    RefE (LdprG p n) (ppE p (n + 1) s₀.mem mode vis d a b)
+      (defeqProjPair (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b)) a₀
+      (CorePost decBool dn s₀.mem vis fe M eb ResH) := by
+  have hS := hs.rel
+  have hR := hS.arena.1
+  have htag : ∀ h : Word, HW h → ((decE h).tag == ETag.proj) = decide (h >>> 28 = 9) :=
+    fun h hh => tag_beq_w _ hh 9 (by decide) ETag.proj rfl 9 rfl
+  have hfalse : (((decE a).tag == ETag.proj && (decE b).tag == ETag.proj) = false) →
+      RefE (LdprG p n) (.ok ([0], s₀.mem) : Except Err (List Word × Mem))
+        (defeqProjPair (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b))
+        a₀ (CorePost decBool dn s₀.mem vis fe M eb ResH) := fun hno =>
+    RefE.ret (pp_no _ _ fe _ _ _ a₀ hno) (CorePost.ret hS rfl hw0)
+  simp only [ppE]
+  by_cases g1 : a >>> 28 ≠ 9
+  · rw [ite_eq_left g1]
+    exact hfalse (by rw [htag a ha]; simp [g1])
+  rw [ite_eq_right g1]
+  by_cases g2 : b >>> 28 ≠ 9
+  · rw [ite_eq_left g2]
+    exact hfalse (by rw [htag a ha, htag b hb]; simp [g2])
+  rw [ite_eq_right g2]
+  have g1' : a >>> 28 = 9 := by simpa using g1
+  have g2' : b >>> 28 = 9 := by simpa using g2
+  by_cases c1 : tierW a ≠ 0 ∧ rdW (s₀.mem.arr64 CTL) 1 = 0
+  · rw [ite_eq_left c1]; exact RefE.of_cls0 rfl
+  rw [ite_eq_right c1]
+  by_cases c2 : tcnt s₀.mem PROJ (tierW a) ≤ idxW a
+  · rw [ite_eq_left c2]; exact RefE.of_cls0 rfl
+  rw [ite_eq_right c2]
+  by_cases c3 : tierW b ≠ 0 ∧ rdW (s₀.mem.arr64 CTL) 1 = 0
+  · rw [ite_eq_left c3]; exact RefE.of_cls0 rfl
+  rw [ite_eq_right c3]
+  by_cases c4 : tcnt s₀.mem PROJ (tierW b) ≤ idxW b
+  · rw [ite_eq_left c4]; exact RefE.of_cls0 rfl
+  rw [ite_eq_right c4]
+  obtain ⟨hva, hx1, hx3⟩ := view_proj s₀.mem a₀ hR a ha ⟨c1, by simpa using c2⟩ g1'
+  obtain ⟨hvb, hy1, hy3⟩ := view_proj s₀.mem a₀ hR b hb ⟨c3, by simpa using c4⟩ g2'
+  have hboth : ((decE a).tag == ETag.proj && (decE b).tag == ETag.proj) = true := by
+    rw [htag a ha, htag b hb]; simp [g1', g2']
+  refine RefE.of_run_eq (pp_both _ _ fe _ _ _ a₀ hboth _ _ _ _ _ _ hva hvb) ?_
+  generalize tfld s₀.mem PROJ (tierW a) (idxW a) 0 = x1 at hx1 ⊢
+  generalize tfld s₀.mem PROJ (tierW b) (idxW b) 0 = y1 at hy1 ⊢
+  generalize tfld s₀.mem PROJ (tierW a) (idxW a) 1 = x2
+  generalize tfld s₀.mem PROJ (tierW b) (idxW b) 1 = y2
+  generalize tfld s₀.mem PROJ (tierW a) (idxW a) 2 = x3 at hx3 ⊢
+  generalize tfld s₀.mem PROJ (tierW b) (idxW b) 2 = y3 at hy3 ⊢
+  by_cases e1 : x1 ≠ y1
+  · rw [ite_eq_left e1]
+    have : ((decI x1 : NIdx) == decI y1 && x2.toNat == y2.toNat) = false := by
+      rw [decI_beq _ _ hx1 hy1]; simp [e1]
+    rw [this]
+    exact RefE.ret rfl (CorePost.ret hS rfl hw0)
+  rw [ite_eq_right e1]
+  by_cases e2 : x2 ≠ y2
+  · rw [ite_eq_left e2]
+    have : ((decI x1 : NIdx) == decI y1 && x2.toNat == y2.toNat) = false := by
+      have : x2.toNat ≠ y2.toNat := fun e => e2 (UInt64.toNat_inj.mp e)
+      simp [this]
+    rw [this]
+    exact RefE.ret rfl (CorePost.ret hS rfl hw0)
+  rw [ite_eq_right e2]
+  have e1' : x1 = y1 := by simpa using e1
+  have e2' : x2 = y2 := by simpa using e2
+  subst e1' e2'
+  simp only [beq_self_eq_true, Bool.and_self, ↓reduceIte]
+  cases n with
+  | zero => exact RefE.of_cls0 (e := .outOfFuel) rfl
+  | succ k =>
+  have H := ldpr_refC p hq hc k (hk.mono (by omega)) F defeqLoopFuel (by omega)
+    (by unfold defeqLoopFuel; omega) (by omega) s₀ a₀ dn vis fe M eb mode d x1 x2 x3 y3 hs hx1 hx3 hy3 hd
+  simp only [ppE.k_lazy_delta_proj_reduction]
+  rcases h : ldprE p (k + 1) s₀.mem mode vis d x1 x2 x3 y3 with e | ⟨r₁, m₁⟩
+  · rw [h] at H; exact fun hG => H (hG.mono (by omega))
+  rw [h] at H; exact H
 
-/-- **`defeq_proj_pair` refines `defeqProjPair`** at the knot. -/
+/-- **`defeq_proj_pair` refines `defeqProjPair`** at the knot (`pp_ref`'s ok half). -/
 @[refines ConRon.Arena.defeqProjPair]
 theorem projPair_refines (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (n : Nat)
     (hk : KnotUpTo p n) (F : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
@@ -406,77 +437,8 @@ theorem projPair_refines (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (n 
     (hd : d.toNat < 2 ^ 63) :
     CoreSpec p (n + 1) "defeq_proj_pair" [mode, vis, d, a, b]
       (defeqProjPair (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b))
-      decBool s₀ a₀ dn vis fe M eb := by
-  apply L.M.triple_of_run
-  intro s r s' hs0 hrun
-  obtain ⟨hloc, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun
-    (projPair_spec p hq n s₀ mode vis d a b)
-  subst hs0
-  refine ⟨hloc, ?_⟩
-  have hS := hs.rel
-  have hR := hS.arena.1
-  have htag : ∀ h : Word, HW h → ((decE h).tag == ETag.proj) = decide (h >>> 28 = 9) :=
-    fun h hh => tag_beq_w _ hh 9 (by decide) ETag.proj rfl 9 rfl
-  have hfalse : ∀ (hW' : some ((0 : Word), s.mem) = some (r.headD 0, s'.mem)),
-      (((decE a).tag == ETag.proj && (decE b).tag == ETag.proj) = false) →
-      CoreRef (defeqProjPair (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decE a)
-        (decE b)) a₀ decBool dn s.mem vis fe M eb r s'.mem := by
-    intro hW' hno
-    obtain ⟨hr, hm⟩ := some_pair_inj hW'
-    rw [← hm]
-    exact coreRef_pure hS (pp_no _ _ fe _ _ _ a₀ hno) (decBool_false_of hr.symm).symm
-      (by unfold ResH; rw [← hr]; exact hw0)
-  simp only [ppK] at hW
-  by_cases g1 : a >>> 28 ≠ 9
-  · rw [ite_eq_left g1] at hW
-    exact hfalse hW (by rw [htag a ha]; simp [g1])
-  rw [ite_eq_right g1] at hW
-  by_cases g2 : b >>> 28 ≠ 9
-  · rw [ite_eq_left g2] at hW
-    exact hfalse hW (by rw [htag a ha, htag b hb]; simp [g2])
-  rw [ite_eq_right g2] at hW
-  have g1' : a >>> 28 = 9 := by simpa using g1
-  have g2' : b >>> 28 = 9 := by simpa using g2
-  obtain ⟨c1, hW⟩ := of_ite_none hW
-  obtain ⟨c2, hW⟩ := of_ite_none hW
-  obtain ⟨c3, hW⟩ := of_ite_none hW
-  obtain ⟨c4, hW⟩ := of_ite_none hW
-  obtain ⟨hva, hx1, hx3⟩ := view_proj s.mem a₀ hR a ha ⟨c1, by simpa using c2⟩ g1'
-  obtain ⟨hvb, hy1, hy3⟩ := view_proj s.mem a₀ hR b hb ⟨c3, by simpa using c4⟩ g2'
-  have hboth : ((decE a).tag == ETag.proj && (decE b).tag == ETag.proj) = true := by
-    rw [htag a ha, htag b hb]; simp [g1', g2']
-  refine coreRef_congr (pp_both _ _ fe _ _ _ a₀ hboth _ _ _ _ _ _ hva hvb) ?_
-  generalize tfld s.mem PROJ (tierW a) (idxW a) 0 = x1 at hW hx1
-  generalize tfld s.mem PROJ (tierW b) (idxW b) 0 = y1 at hW hy1
-  generalize tfld s.mem PROJ (tierW a) (idxW a) 1 = x2 at hW
-  generalize tfld s.mem PROJ (tierW b) (idxW b) 1 = y2 at hW
-  generalize tfld s.mem PROJ (tierW a) (idxW a) 2 = x3 at hW hx3
-  generalize tfld s.mem PROJ (tierW b) (idxW b) 2 = y3 at hW hy3
-  by_cases e1 : x1 ≠ y1
-  · rw [ite_eq_left e1] at hW
-    obtain ⟨hr, hm⟩ := some_pair_inj hW
-    rw [← hm]
-    have : ((decI x1 : NIdx) == decI y1 && x2.toNat == y2.toNat) = false := by
-      rw [decI_beq _ _ hx1 hy1]; simp [e1]
-    rw [this]
-    exact coreRef_pure hS rfl (decBool_false_of hr.symm).symm (by unfold ResH; rw [← hr]; exact hw0)
-  rw [ite_eq_right e1] at hW
-  by_cases e2 : x2 ≠ y2
-  · rw [ite_eq_left e2] at hW
-    obtain ⟨hr, hm⟩ := some_pair_inj hW
-    rw [← hm]
-    have : ((decI x1 : NIdx) == decI y1 && x2.toNat == y2.toNat) = false := by
-      have : x2.toNat ≠ y2.toNat := fun e => e2 (UInt64.toNat_inj.mp e)
-      simp [this]
-    rw [this]
-    exact coreRef_pure hS rfl (decBool_false_of hr.symm).symm (by unfold ResH; rw [← hr]; exact hw0)
-  rw [ite_eq_right e2] at hW
-  have e1' : x1 = y1 := by simpa using e1
-  have e2' : x2 = y2 := by simpa using e2
-  subst e1' e2'
-  simp only [beq_self_eq_true, Bool.and_self, ↓reduceIte]
-  exact CoreSpec.of_call1W (s₀ := ⟨s.mem, Locals.init []⟩)
-    (ldpr_at p hq hc n hk F defeqLoopFuel hF (by unfold defeqLoopFuel; omega) hn _ a₀ dn vis fe M eb
-      mode d x1 x2 x3 y3 ⟨hS, hs.mode4, hs.eb_mode⟩ hx1 hx3 hy3 hd) (fun r r' h => by simp only [decBool, h]) hW
+      decBool s₀ a₀ dn vis fe M eb :=
+  RefE.coreSpec (ppE_spec p hq.projPair hq.ldpr (n + 1) s₀ mode vis d a b)
+    (pp_ref p hq hc n hk F s₀ a₀ dn vis fe M eb mode d a b hF hn hs ha hb hd)
 
 end L.Arena

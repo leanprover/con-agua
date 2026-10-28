@@ -2161,8 +2161,7 @@ the slots, as `m2c_*` in §3.7):
 - [ ] `is_def_eq`: `Verdict/DefEqQuickE` (4), `DefEqLamsE` (2), `DefEqEagerE` (2), `DefEqPeelE`
   (5), `DefEqSpineE` (3), `DefEqLazyE` (8), `DefEqTailE` (9), `DefEqLoopsE` (1), `DefEqSlotE` (3:
   `defeq_slot`, `defeq_body`, `is_def_eq_core`). Done: `DefEqQuickE`, `DefEqLamsE`, `DefEqPeelE`,
-  `DefEqSpineE` (and `defeq_lams_inner`; §3.41), `DefEqLazyE` (§3.43), `DefEqTailE`'s stuck side
-  (six of nine, §3.45);
+  `DefEqSpineE` (and `defeq_lams_inner`; §3.41), `DefEqLazyE` (§3.43), `DefEqTailE` (§3.45, §3.46);
 - [ ] `infer`: `Verdict/InferLeavesE` (`infer_const`; done, §3.44), `InferBindE` (6: `infer_lams`/`infer_pis` and
   their leaves), `InferSpineE` (4), `InferArmsE` (8), `InferKnotE` (4: `infer_body(_io)`, `infer`,
   `infer_io`).
@@ -2997,4 +2996,36 @@ Elaboration (user seconds, median of 3 interleaved runs, base master 4f05df22): 
 3.12 → 1.12, `WhnfDeltaRefine4` 1.21 → 0.77, `WhnfSlotRefine` – → 0.98, `Verdict/WhnfModelsE`
 12.23 → 11.73, `WhnfSlotE` 0.99 → 0.49, `Arena/WhnfDelta`, `DefEqKnot`, `KnotSlot` 8.71 → 8.77;
 sum 26.26 → 23.86 (−9 %).
+
+### 3.46 Retirement, group B, `is_def_eq`, fourth landing (the projection pair and `defeq_tail`)
+
+The last three of `Verdict/DefEqTailE`: `ldpr_exit` (`ex_ref`), `defeq_proj_pair` (`pp_ref`,
+`Arena/DefEqStuckProj`), `defeq_tail` (`dt_ref`, `DefEqStuckTail`). `lazy_delta_proj_reduction`'s
+loop (`ldpr_ref`, unified since batch 2) reads `ex_ref` by `RefE.run_err` and its ok half
+`ldprExit_refines` (a `RefE.coreSpec` one-liner). `DefEqTailE` keeps `LazyDeltaStepE` and the
+one-liner `defeqTail_refinesE` (`DefeqTailE`, read by the `defeq` slot's error half). Gone: the
+claims `ldprExit_refinesE`, `ldpr_refinesE`, `projPair_refinesE`, `defeqTail_refinesE`'s proof with
+their `errors` models, the statements `ProjPairE`, `DefeqStuckE`, `LdprE` (and `ReduceProjCoreE`
+there: it moved to `DefEqStuckProj`), `defeqStuck_refinesE`; the ok models with their specs (`exK*`,
+`ppK`, `dtK*`) and `ldprExit_at`, `ldpr_at`, `projPair_at`, `defeqStuck_at`.
+
+| functions | before: ok refinements, models, specs + claims | after | change |
+|---|---:|---:|---:|
+| the 3 above | 397 + 405 = 802 | 346 + 38 = 384 | **−52 %** |
+
+* **`G`**: `ExitG p n` (the knot, `reduce_proj_core`'s claim `ReduceProjCoreE`: the stuck side
+  reads it through `StuckCallees`, `rp_ref` is not below it) for `ldpr_exit`; `LdprG p n` now holds
+  the step's claims (`lazy_delta_step` is outside the stuck side), the knot and `ReduceProjCoreE`
+  in place of `ldpr_exit`'s claims; `TailG p n` (`LdprG` and `StuckG`'s `ProofIrrelWE`,
+  `DefeqLstWE`) for `defeq_tail`.
+* **Callees**: `defeq_proj_pair` lists the loop's unified spec (its value is the loop's word, the
+  post re-lists it as `ldpr_ref`'s does); `defeq_tail` lists `defeq_proj_pair`'s and
+  `defeq_stuck`'s, the slots through `callE`.
+
+Diff of the landing against master: +312 −737 lines in 4 files (before the imports). Elaboration
+(user seconds, median of 3 interleaved runs, base master 63437296, `_tmp/retire-defeq/times4.txt`):
+`Arena/DefEqStuckProj` 5.77 → 9.29 (+61 %), `DefEqStuckTail` 1.71 → 2.80 (+64 %),
+`Verdict/DefEqTailE` 10.64 → 0.46, `DefEqAllE` 0.50 → 0.50, `KnotAllE` 3.05 → 3.07; sum 21.67 →
+16.12 (−26 %). The two Arena modules are slower for the same reason as in §3.45 (the generated
+models moved in with the refinements). No generator or kit change was needed.
 

@@ -61,12 +61,8 @@ theorem KnotAllProg.lazyDeltaReductionE : LazyDeltaReductionE p :=
 include hq hw hnv in
 /-- `defeq_tail`'s error claim. -/
 theorem KnotAllProg.defeqTailE : DefeqTailE p :=
-  let sp := hq.body.stuck
-  let sc := KnotAllProg.stuck hq
-  defeqTail_refinesE p sp sc
-    (projPair_refinesE p sp (ldpr_refinesE p sp sc (KnotAllProg.lazyDeltaStepE hq hnv)
-      hw.reduceProjCore))
-    (defeqStuck_refinesE p sp hq.body.iota sc hw.proofIrrel (defeqLst_refinesE p hq.lst) hnv) hnv
+  defeqTail_refinesE p hq.body.stuck hq.body.iota (KnotAllProg.stuck hq) (KnotAllProg.lazyDeltaStepE hq hnv)
+    hw.reduceProjCore hw.proofIrrel (defeqLst_refinesE p hq.lst) hnv
 
 include hq hw hnv in
 /-- **`defeq_body`'s callees' error claims**, all of this family's proved. -/
