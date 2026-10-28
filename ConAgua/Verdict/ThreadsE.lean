@@ -61,7 +61,7 @@ theorem checkPendingGo_emptyE (hP : PhaseBProg p) (n : Nat) (m : Mem) (k v : Wor
     · exact hk0
     exfalso
     have hW := triple_of_callE_err (checkPendingGo_specE p hP.cpg (n + 1) ⟨m, Locals.init []⟩ k k v)
-      h (Err.code_ne_of_cls hk0)
+      h trivial hk0
     simp only [checkPendingGoE] at hW
     rw [ite_eq_left trivial] at hW
     cases hW
@@ -82,7 +82,7 @@ theorem PhaseBStart.oneE (hP : PhaseBProg p)
     rw [hc] at he'; cases he'; exact absurd h0 hk0
   | succ n =>
     have hW := triple_of_callE_err (checkPendingGo_specE p hP.cpg (n + 1) ⟨m, Locals.init []⟩ j (j + 1) v)
-      hc (Err.code_ne_of_cls hk0)
+      hc trivial hk0
     simp only [checkPendingGoE] at hW
     have g1 : ¬ j = j + 1 := fun e' => by have := congrArg UInt64.toNat e'; omega
     rw [ite_eq_right g1] at hW
@@ -102,7 +102,7 @@ theorem PhaseBStart.oneE (hP : PhaseBProg p)
         have hn' : n ≤ 2 ^ 62 := by omega
         have hW := triple_of_callE_err
           (checkPendingNext_specE p hP.cpx (n + 1) ⟨m, Locals.init []⟩ j (j + 1) v) h2
-          (Err.code_ne_of_cls hk0)
+          trivial hk0
         simp only [checkPendingNextE] at hW
         have g2 : ¬ 4611686018427387904 ≤ j := fun g => by
           have := UInt64.le_iff_toNat_le.mp g; simp at this; omega

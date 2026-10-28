@@ -250,7 +250,7 @@ theorem applyAnyW_refines (p : Prog) (hFI : L.Front.Ind.IndFieldLookups p)
       | ind tys cts rcs =>
         obtain ⟨-, v, hv, e', hscan⟩ := hX
         obtain ⟨x, hx, hxm⟩ := runF_some h
-        have hW := M.of_run (P := fun s => s = ⟨m, Locals.init []⟩) rfl hx
+        have hW := M.of_run' (P := fun s => s = ⟨m, Locals.init []⟩) rfl hx
           (L.Front.Ind.applyInd_specE p hXI.apply_ind x.1 _ f.name)
         rw [hxm, hv] at hW
         have hP := L.Front.Ind.applyInd_ref hAI hFI hII h64 hsize x.1 hm hR hD hok hscan
