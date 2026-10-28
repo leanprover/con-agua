@@ -246,7 +246,6 @@ grind_pattern [ind_grind] agK4_abort => agK4 (some (re, m1))
 
 theorem checkBlockAgreeOne_spec (p : Prog)
     (hd : p.lookup "check_block_doms_at" = some checkBlockDomsAt)
-    (hl : p.lookup "lvl_eq_fueled" = some lvlEqFueled)
     (hp : p.lookup "check_block_agree_one" = some checkBlockAgreeOne) (had : AdF p) (cR : CallM) (hcR : CallSpec p cR) (n : Nat) (s₀ : St)
     (vis nP fvs0O fvs0L s0 cvTa s : Word) :
     ⦃fun st => st = s₀⦄ invoke p (exec p n) "check_block_agree_one"

@@ -45,7 +45,7 @@ def IvgE (p : Prog) : Prop :=
 
 /-- **`check_thm_val`'s verdict claim under `StageT`** (`tvW_okT`'s hypotheses): the type not a
 proposition and the type mismatch are the twin's `invalid`, the level comparison out of fuel its
-`notImplemented` (`lvlEqFueled_errT`); the core stubs and `install_value_guards` by their claims. -/
+`notImplemented` (`lef_ref`'s error half); the core stubs and `install_value_guards` by their claims. -/
 theorem tvE_okT {p : Prog} (hq : KnotStageProg p) (hV : ValProg p) (hL : LvlCacheProg p)
     (hap : ApdF p) (hkp : CrKeep p) (hcE : CoreStubsE p) (hivE : IvgE p)
     (hnvP : NVAt p "pin_word") (hnvL : NVAt p "lvl_eq_c") (hnvE : NVAt p "env_push")

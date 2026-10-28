@@ -8,7 +8,7 @@ import ConAgua.Arena.IndRealAbsPos
 # `nest_inst_type`: error claim (lane `verdicts-b`, helper `ia2`, fork `kn1`)
 
 `nitE_all`: `NitE` (`PosE.lean`), `nitW_ok`'s proof with `nitLe_realC`'s twin side; the level
-comparison's decline by `lvlEqFueled_errT`.
+comparison's decline by `lef_ref`'s error half (`RefE.run_err`).
 -/
 
 open ConRon.Arena

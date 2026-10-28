@@ -187,7 +187,7 @@ theorem checkBlockAgreeOne_refinesC
       IWGrow s₀.mem s'.mem ∧ AbsOK s'.mem ∧
       ConRon.Bridge.CoreStep V env fe a₀ (AM.st (agreeBodyAM fe nP.toNat fvs0 cv (decI s) (decI s0)) a₀);
       ⊤⦄ := by
-  refine triple_post (checkBlockAgreeOne_spec p hd hl hp had (realCall p) (realCall_spec p) (n + 1) s₀
+  refine triple_post (checkBlockAgreeOne_spec p hd hp had (realCall p) (realCall_spec p) (n + 1) s₀
     vis nP fvs0O fvs0L s0 cvTa s) ?_
   rintro r s' ⟨hlq, hm⟩
   obtain ⟨a', hrun, hC', hg, hA', hcs⟩ := agW_okC hq henv hOpf hLC hl n hn s₀.mem s'.mem a₀ nP fvs0O fvs0L s0 cvTa
