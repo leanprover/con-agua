@@ -118,7 +118,7 @@ theorem cnaW_okC (k : Nat) (hk : k ≤ 2 ^ 62) : ∀ (m m' : Mem) (a : AState) (
     (tk_spec p P.k53 (realCall p) (realCall_spec p) k _ vis q fto ftl mc teo tel leaf w) c2
   simp only at hs2 hw2
   subst hs2
-  obtain ⟨c, a2, run2, hc, hC2, hg2, hP2, hA2⟩ := tkW_okC hq henv k (by omega) hw2 hC1 hA1 (hbs.grow hg1)
+  obtain ⟨c, a2, run2, hc, hC2, hg2, hP2, hA2⟩ := tkW_okC hq henv P.k53.tmn.tcm k (by omega) hw2 hC1 hA1 (hbs.grow hg1)
     (by rw [decHL_grow hg1 hftb]; exact hft) (by have := hg1.1; omega) (hMc.grow (decTM_mono _) hg1)
     (htl.grow hg1) hl hwH hP1
     (ConRon.Bridge.Inductives.dShape_ext q1.ext _ _ hsh) (denoteEList_ext q1.ext _ _ hftP)

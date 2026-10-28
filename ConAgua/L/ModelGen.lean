@@ -1848,8 +1848,9 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
   -- run before with `defs`), so that facts about the models can be proved in between
   let defsOnly := stx[24].getNumArgs != 0
   let noDefs := stx[25].getNumArgs != 0
-  -- `unified`: `errors` with the class in the error post and `Option` callees lifted (`nv [h, mem]`:
-  -- `h : closedNV p fs = true`, `mem` proves `f ∈ fs` from a `decide`-able fact)
+  -- `unified`: `errors` with the class in the error post and `Option` callees lifted (`nv [G, mem]`:
+  -- `G` the closedness `closedNV p fs = true`, an assumption of the error posts; `mem` proves `f ∈ fs`
+  -- from a `decide`-able fact)
   let uni := stx[26].getNumArgs != 0
   let exc := exc || uni
   let nvT? : Option (Term × Term) := if stx[27].getNumArgs == 0 then none else some (⟨stx[27][2]⟩, ⟨stx[27][4]⟩)
@@ -2321,14 +2322,16 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
   let specsW := if keepTxt.isNone then specsTxt else
     (specsTxt.zip specAr.toList).map fun (t, k) => keepWrap t k
   -- `unified`: the spec `S` of an `Option` callee (outside the verdict closure) with the error post
-  -- of class `0`, `fun x₁ … xₖ => L.Triple.nv h (mem (by decide +kernel)) (S x₁ … xₖ)`
+  -- of class `0`, `fun x₁ … xₖ => L.Triple.nv (mem (by decide +kernel)) (S x₁ … xₖ)`
   let nvTxt ← nvT?.mapM fun (h, mem) => do return (← pp h.raw, ← pp mem.raw)
+  -- `unified`: the error posts assume `G` (`nv [G, mem]`; `True` without `nv`)
+  let uniG : Term ← match nvT? with | some (g, _) => pure g | none => `(True)
   let specsW ← ((specsW.zip specAr.toList).zip callees.toList).mapM fun ((t, k), (fname, c)) => do
     if !(uni && c.opt) then return t
-    let some (h, mem) := nvTxt |
-      throwError "l_model: `unified`: the callee {fname} has an `Option` model; give `nv [h, mem]`"
+    let some (_, mem) := nvTxt |
+      throwError "l_model: `unified`: the callee {fname} has an `Option` model; give `nv [G, mem]`"
     let xs := String.intercalate " " ((List.range k).map (s!"κ{·}"))
-    return s!"(fun {xs} => L.Triple.nv ({h}) ({mem} (by decide +kernel)) (({t}) {xs}))"
+    return s!"(fun {xs} => L.Triple.nv ({mem} (by decide +kernel)) (({t}) {xs}))"
   let calleeSpecs (called : Array String) : List String :=
     ((specsW.zip callees.toList).filter (called.contains ·.2.1)).map (·.1) ++
       ((st.autoE.filter called.contains).toList.map fun f => s!"L.callE_spec p n \"{f}\"")
@@ -2387,7 +2390,7 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
         else if fi.multi then pure #[l] else pure #[← `(List.headD $l 0)]
       conj := conj.push (← `($lhs = $okI $(← tupP (comps ++ (if lm.ro then #[] else #[memSP])))))
     let post ← conj.pop.foldrM (init := conj.back!) fun c acc => `($c ∧ $acc)
-    let epost ← if uni then `(fun $(mkIdent `ε) => L.Err.cls $(mkIdent `ε) ≠ 0 → $lhs = Except.error $(mkIdent `ε))
+    let epost ← if uni then `(fun $(mkIdent `ε) => $uniG → L.Err.cls $(mkIdent `ε) ≠ 0 → $lhs = Except.error $(mkIdent `ε))
       else if exc then `(fun $(mkIdent `ε) => L.Err.code $(mkIdent `ε) ≠ 0 → $lhs = Except.error $(mkIdent `ε))
       else `(Lean.Order.top)
     let vcg := String.intercalate ", "
@@ -2451,7 +2454,7 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
       | false, true =>
         `(fun r s' => L.LocEq s' $s0 ∧ $Wapp = $okI (r, L.St.mem s'))
     -- the exceptional post: `⊤`, or in `errors` mode every error with a code is the model's
-    let epost ← if uni then `(fun $(mkIdent `ε) => L.Err.cls $(mkIdent `ε) ≠ 0 → $Wapp = Except.error $(mkIdent `ε))
+    let epost ← if uni then `(fun $(mkIdent `ε) => $uniG → L.Err.cls $(mkIdent `ε) ≠ 0 → $Wapp = Except.error $(mkIdent `ε))
       else if exc then `(fun $(mkIdent `ε) => L.Err.code $(mkIdent `ε) ≠ 0 → $Wapp = Except.error $(mkIdent `ε))
       else `(Lean.Order.top)
     let fstr := Syntax.mkStrLit fi.lname

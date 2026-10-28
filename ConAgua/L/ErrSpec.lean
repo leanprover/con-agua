@@ -49,6 +49,10 @@ def Err.cls (e : Err) : Word := e.code &&& 3
 @[simp, grind =] theorem Err.cls_outOfFuel : Err.outOfFuel.cls = 0 := by simp [Err.cls]
 @[simp, grind =] theorem Err.cls_noFun (f : FnName) : (Err.noFun f).cls = 0 := by simp [Err.cls]
 
+/-- An error with code `0` has class `0` (a load out of bounds, in the `unified` models' steps). -/
+@[grind →, lang_grind →] theorem Err.cls_of_code {e : Err} (h : e.code = 0) : e.cls = 0 := by
+  simp [Err.cls, h]
+
 /-- An error of class other than `0` is an abort. -/
 theorem Err.eq_abort_of_cls {e : Err} (h : e.cls ≠ 0) : e = .abort e.code := by
   cases e <;> simp_all
@@ -347,13 +351,14 @@ theorem invoke_nv (p : Prog) (hp : closedNV p fs = true) (n : Nat) (f : FnName) 
     (vs : List Word) : ⦃fun _ => True⦄ invoke p (exec p n) f vs ⦃fun _ _ => True; NVE⦄ :=
   invoke_nvK p hp _ (exec_nv p hp n) f hf vs
 
-/-- **A spec of a call that claims nothing**, error-precise: its errors have class `0` (the
-`Option` callees of `l_model … unified`). -/
-theorem Triple.nv {p : Prog} (hp : closedNV p fs = true) {f : FnName} (hf : f ∈ fs) {n : Nat}
+/-- **A spec of a call that claims nothing**, error-precise: its errors have class `0` if the
+no-verdict set `fs` is closed (the `Option` callees of `l_model … unified`; the closedness is an
+assumption of the error post only, so the ok post holds without it). -/
+theorem Triple.nv {p : Prog} {f : FnName} (hf : f ∈ fs) {n : Nat}
     {vs : List Word} {s₀ : St} {Q : List Word → St → Prop}
     (h : ⦃fun s => s = s₀⦄ invoke p (exec p n) f vs ⦃Q; ⊤⦄) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) f vs ⦃Q; NVE⦄ :=
-  Triple.and_err h (M.triple_of_run' (fun _ _ _ _ _ => trivial) fun _ _ _ hr =>
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) f vs ⦃Q; fun e => closedNV p fs = true → NVE e⦄ :=
+  Triple.and_err h (M.triple_of_run' (fun _ _ _ _ _ => trivial) fun _ _ _ hr hp =>
     M.of_run_err (P := fun _ => True) trivial hr (invoke_nv p hp n f hf vs))
 
 /-- **A failing call of `f ∈ fs` fails with class `0`.** -/

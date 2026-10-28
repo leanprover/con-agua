@@ -59,8 +59,9 @@ def tkaK7 (cR : CallM) (n : Nat) (vis q fto ftl Mc usp lao lpl : Word) : Option 
   | none => none
   | some (occ, m) =>
     if occ = 0 then some ([0], m)
-    else tkaK8 (tcmF cR n m vis q fto ftl (rdW (m.arr64 IW) (Mc + 11)) (rdW (m.arr64 IW) (Mc + 12))
-      (rdW (m.arr64 IW) (Mc + 1)) (rdW (m.arr64 IW) (Mc + 2)) (rdW (m.arr64 IW) (Mc + 3)) usp lao lpl)
+    else tkaK8 (cR n "target_class_match" [vis, q, fto, ftl, rdW (m.arr64 IW) (Mc + 11),
+      rdW (m.arr64 IW) (Mc + 12), rdW (m.arr64 IW) (Mc + 1), rdW (m.arr64 IW) (Mc + 2),
+      rdW (m.arr64 IW) (Mc + 3), usp, lao, lpl] m)
 
 def tkaK6 (cR : CallM) (n : Nat) (vis q fto ftl Mc usp lao lpl app : Word) :
     Option (List Word × Mem) → Option (List Word × Mem)

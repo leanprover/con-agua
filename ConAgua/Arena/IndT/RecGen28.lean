@@ -1,4 +1,9 @@
-import ConAgua.Arena.IndT.RecCheckTmn
+import ConAgua.Arena.IndT.RecCheckTcm
+import ConAgua.Arena.IndSumSpec.ConsBlockRecsTF
+import ConAgua.Arena.IndSumSpec.SoaW
+import ConAgua.Arena.RecCheckSpec.CnfW
+import ConAgua.Arena.RecCheckSpec.TargetMajorDefault
+import ConAgua.Arena.RecCheckSpec.Tmn
 
 /-!
 # `classesNfs` under `StageC` (lane `indstaget`, helper `pds`)

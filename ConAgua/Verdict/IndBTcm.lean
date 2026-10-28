@@ -1,5 +1,6 @@
 import ConAgua.Arena.IndT.RecCheckTcm
 import ConAgua.Verdict.IndBTpd
+import ConAgua.Verdict.VCtx
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
@@ -23,7 +24,7 @@ open L.Arena
 
 local notation "V" => ConLeche.CheckMode.verified
 
-l_model tcmE_spec (p : Prog) (hL : TcmLook p) (hnv : closedNV p _root_.L.Checker.nvFns = true)
+l_model tcmE_spec (p : Prog) (hL : TcmLook p)
   fns [hL.tcm ↦ tcmE]
   specs [callW_spec p n "lvls_eq_c", blockShapeMemberNames_spec p hL.ha hL.mnc hL.mn n,
     blockShapeLps_spec p hL.ha hL.erc hL.eri hL.lps n,
@@ -31,7 +32,8 @@ l_model tcmE_spec (p : Prog) (hL : TcmLook p) (hnv : closedNV p _root_.L.Checker
     targetHoles_spec p hL.ff hL.fp hL.iff hL.ic hL.ha hL.sc hL.th n]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
-  heartbeats 4000000 simp [Cmp.evalW, Cmp.eval] unified nv [hnv, _root_.L.Checker.nv_mem]
+  heartbeats 4000000 simp [Cmp.evalW, Cmp.eval] unified
+  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 /-- What `target_class_match` gives besides the twin's result `c` (from `m`): the result word, the
 stage invariant, the growth. -/
@@ -48,7 +50,7 @@ variable {p : Prog} (hq : KnotStageProg p) {dn : NIdx → Option ConLeche.Name} 
   {fe : IFEnv} {env : ConLeche.Env} (henv : ConLeche.EnvWF env)
   (hnv : closedNV p _root_.L.Checker.nvFns = true) (hcE : CoreStubsE p)
 
-include hq henv hnv hcE in
+include hq henv in
 /-- **`target_class_match` refines `targetClassMatch`, both outcomes** (twin side: con-ron's
 `targetClassMatch_spec`'s proof): `lvlsEq?` (`lvlsEqC_simC`), the shape's member names and
 parameters (L only), `paramLevels`, `targetHoles`, then `targetParamsDefEq` (`pdeW_okC`, its
@@ -71,7 +73,7 @@ theorem tcm_ref (hL : TcmLook p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AS
     (hedsP : Frontend.denoteEList a.store eds = some edsP)
     (hformer : ∀ t ∈ formerTysP, ConLeche.Expr.WScoped 0 t)
     (hpw : ∀ x ∈ pfvsP, ConLeche.Expr.WScoped pfvsP.length x) :
-    RefE (tcmE p n m vis q fto ftl pfo pfl us dso dsl lvls edso edsl)
+    RefE (VerdictCtx p) (tcmE p n m vis q fto ftl pfo pfl us dso dsl lvls edso edsl)
       (ConRon.Arena.targetClassMatch V fe bs formerTys pfvs (decI us) ds (decI lvls) eds) a
       (fun v c a' => TcmPost dn vis fe env m v.1 v.2 c a') := by
   cases n with
@@ -172,6 +174,7 @@ theorem tcm_ref (hL : TcmLook p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AS
   rw [← hdb] at hbl4
   have hdn5 : decHL m5 (rn.headD 0).toNat (rn.tail.headD 0).toNat = some bs.memberNames := by
     rw [decHL_grow hg25 (by omega)]; exact hdn
+  have hnb5 : (rn.headD 0).toNat + (rn.tail.headD 0).toNat ≤ iwTop m5 := by have := hg25.1; omega
   have hTA : TAArgs bs.memberNames (decI (rb.headD 0)) holes pP.memberNames
       (pP.lps.map ConLeche.Level.param) (ConLeche.targetHoles formerTysP pfvsP.length) a5.store :=
     ⟨ConRon.Bridge.denoteNListE_ext c15.ext _ _
@@ -192,10 +195,10 @@ theorem tcm_ref (hL : TcmLook p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AS
       rh.headD 0, rh.tail.headD 0, pfo, pfl, dso, dsl, edso, edsl] m5 with
   | error e6 =>
     rw [tcmE.k_target_params_def_eq.none]
-    exact CoreSpecE.of_callE (targetParamsDefEq_claim hq henv hnv hcE hL.tp n (by omega)
+    exact fun hV => CoreSpecE.of_callE (targetParamsDefEq_claim hq henv hV.nv hV.core hL.tp n (by omega)
       ⟨m5, Locals.init []⟩ a5 (pfl + ftl) (rn.headD 0) (rn.tail.headD 0) (rb.headD 0) (rh.headD 0)
       (rh.tail.headD 0) pfo pfl dso dsl edso edsl bs.memberNames holes pfvs ds eds hC5 hA5 hH4 hdn5
-      (by have := hg25.1; omega) hdh hbh (hpf.grow hg05) (hds.grow hg05) (heds.grow hg05) hP5 hTA
+      hnb5 hdh hbh (hpf.grow hg05) (hds.grow hg05) (heds.grow hg05) hP5 hTA
       (denoteEList_ext c15.ext _ _ hpfP) (denoteEList_ext c15.ext _ _ hdsP)
       (denoteEList_ext c15.ext _ _ hedsP) habs hpw5) h6
   | ok q6 =>
@@ -205,10 +208,75 @@ theorem tcm_ref (hL : TcmLook p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AS
       ⟨m5, Locals.init []⟩ _ _ _ _ _ _ _ _ _ _ _ _ _) (callW_of_callE h6)
     subst hs6
     obtain ⟨c, a6, run6, hc, hC6, hg6, hP6, hA6⟩ := pdeW_okC hq henv n (by omega) h6m hC5 hA5 hH4 hdn5
-      (by have := hg25.1; omega) hdh hbh (hpf.grow hg05) (hds.grow hg05) (heds.grow hg05) hP5 hTA
+      hnb5 hdh hbh (hpf.grow hg05) (hds.grow hg05) (heds.grow hg05) hP5 hTA
       (denoteEList_ext c15.ext _ _ hpfP) (denoteEList_ext c15.ext _ _ hdsP)
       (denoteEList_ext c15.ext _ _ hedsP) habs hpw5
     exact RefE.ret run6 ⟨by simpa using hc, hC6, hg05.trans hg6, hP6, hA6⟩
+
+include hq henv hnv hcE in
+/-- `target_class_match`'s error claim (`tcm_ref`'s error half). -/
+theorem tcm_claimA (hL : TcmLook p) (n : Nat) (hn : n ≤ 2 ^ 62) (s₀ : St)
+    (a₀ : AState) (q fto ftl pfo pfl us dso dsl lvls edso edsl : Word)
+    (bs : BlockShape) (formerTys pfvs ds eds : List EIdx) (hC : StageC dn vis fe env s₀.mem a₀)
+    (hA : AbsOK s₀.mem) (hbs : BSOK s₀.mem q.toNat bs) (hus : H us) (hlv : H lvls)
+    (hft : decHL s₀.mem fto.toNat ftl.toNat = some formerTys)
+    (hftb : fto.toNat + ftl.toNat ≤ iwTop s₀.mem)
+    (hpf : HSl0 s₀.mem pfo pfl pfvs) (hds : HSl0 s₀.mem dso dsl ds)
+    (heds : HSl0 s₀.mem edso edsl eds) (hP : RcMR s₀.mem)
+    {pP : ConLeche.BlockShape} {formerTysP pfvsP dsP edsP : List ConLeche.Expr}
+    {usP lvlsP : List ConLeche.Level}
+    (hsh : dShape a₀.store bs = some pP)
+    (hftP : Frontend.denoteEList a₀.store formerTys = some formerTysP)
+    (hpfP : Frontend.denoteEList a₀.store pfvs = some pfvsP)
+    (husP : denoteLs a₀.store.lss (decI us) = some usP)
+    (hdsP : Frontend.denoteEList a₀.store ds = some dsP)
+    (hlvP : denoteLs a₀.store.lss (decI lvls) = some lvlsP)
+    (hedsP : Frontend.denoteEList a₀.store eds = some edsP)
+    (hformer : ∀ t ∈ formerTysP, ConLeche.Expr.WScoped 0 t)
+    (hpw : ∀ x ∈ pfvsP, ConLeche.Expr.WScoped pfvsP.length x) :
+    CoreSpecE p n "target_class_match" [vis, q, fto, ftl, pfo, pfl, us, dso, dsl, lvls, edso, edsl]
+      (ConRon.Arena.targetClassMatch V fe bs formerTys pfvs (decI us) ds (decI lvls) eds) s₀ a₀ :=
+  RefE.coreSpecE (tcmE_spec p hL n s₀ vis q fto ftl pfo pfl us dso dsl lvls edso edsl) hnv ⟨hnv, hcE⟩
+    (tcm_ref hq henv hL n hn hC hA hbs hus hlv hft hftb hpf hds heds hP hsh hftP hpfP husP hdsP
+      hlvP hedsP hformer hpw)
+
+include hq henv in
+/-- **`target_class_match` refines `targetClassMatch`** under `StageC` (`tcm_ref`'s ok half). -/
+@[refines ConRon.Arena.targetClassMatch]
+theorem targetClassMatch_refinesC (hL : TcmLook p) (n : Nat) (hn : n ≤ 2 ^ 62) (s₀ : St)
+    (a₀ : AState) (q fto ftl pfo pfl us dso dsl lvls edso edsl : Word)
+    (bs : BlockShape) (formerTys pfvs ds eds : List EIdx) (hC : StageC dn vis fe env s₀.mem a₀)
+    (hA : AbsOK s₀.mem) (hbs : BSOK s₀.mem q.toNat bs) (hus : H us) (hlv : H lvls)
+    (hft : decHL s₀.mem fto.toNat ftl.toNat = some formerTys)
+    (hftb : fto.toNat + ftl.toNat ≤ iwTop s₀.mem)
+    (hpf : HSl0 s₀.mem pfo pfl pfvs) (hds : HSl0 s₀.mem dso dsl ds)
+    (heds : HSl0 s₀.mem edso edsl eds) (hP : RcMR s₀.mem)
+    {pP : ConLeche.BlockShape} {formerTysP pfvsP dsP edsP : List ConLeche.Expr}
+    {usP lvlsP : List ConLeche.Level}
+    (hsh : dShape a₀.store bs = some pP)
+    (hftP : Frontend.denoteEList a₀.store formerTys = some formerTysP)
+    (hpfP : Frontend.denoteEList a₀.store pfvs = some pfvsP)
+    (husP : denoteLs a₀.store.lss (decI us) = some usP)
+    (hdsP : Frontend.denoteEList a₀.store ds = some dsP)
+    (hlvP : denoteLs a₀.store.lss (decI lvls) = some lvlsP)
+    (hedsP : Frontend.denoteEList a₀.store eds = some edsP)
+    (hformer : ∀ t ∈ formerTysP, ConLeche.Expr.WScoped 0 t)
+    (hpw : ∀ x ∈ pfvsP, ConLeche.Expr.WScoped pfvsP.length x) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "target_class_match"
+      [vis, q, fto, ftl, pfo, pfl, us, dso, dsl, lvls, edso, edsl]
+    ⦃fun r s' => LocEq s' s₀ ∧
+      AM.ok (ConRon.Arena.targetClassMatch V fe bs formerTys pfvs (decI us) ds (decI lvls) eds) a₀ ∧
+      (r.headD 0 != 0) =
+        AM.res (ConRon.Arena.targetClassMatch V fe bs formerTys pfvs (decI us) ds (decI lvls) eds) a₀ ∧
+      StageC dn vis fe env s'.mem
+        (AM.st (ConRon.Arena.targetClassMatch V fe bs formerTys pfvs (decI us) ds (decI lvls) eds) a₀) ∧
+      IWGrow s₀.mem s'.mem ∧ RcMR s'.mem ∧ AbsOK s'.mem; ⊤⦄ := by
+  refine triple_post (RefE.triple (tcmE_spec p hL n s₀ vis q fto ftl pfo pfl us dso dsl lvls edso edsl)
+    (tcm_ref hq henv hL n hn hC hA hbs hus hlv hft hftb hpf hds heds hP hsh hftP hpfP husP hdsP
+      hlvP hedsP hformer hpw)) ?_
+  rintro r s' ⟨hl', c, a', run, hR⟩
+  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ run
+  exact ⟨hl', hok, by rw [hres]; exact hR.res, by rw [hst]; exact hR.stage, hR.grow, hR.rc, hR.abs⟩
 
 end sims
 

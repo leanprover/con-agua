@@ -472,13 +472,13 @@ l_model tUniC_spec (p : Prog) (hp : p.lookup "t_uni_c" = some tUniC)
   fns [hp ↦ tUniCE]
   grind [arena_grind] simp [] unified
 
-l_model tUni_spec (p : Prog) (fs : List FnName) (hnv : closedNV p fs = true)
+l_model tUni_spec (p : Prog) (fs : List FnName)
     (hmem : ∀ {f : FnName}, f ∈ ["t_leaf_u"] → f ∈ fs)
     (hp : p.lookup "t_uni" = some tUni) (hl : p.lookup "t_leaf_u" = some tLeafU)
     (hc : p.lookup "t_uni_c" = some tUniC)
   fns [hp ↦ tUniE]
   specs [tLeafU_spec p hl n, tUniC_spec p hc n]
-  grind [arena_grind] simp [] unified nv [hnv, hmem]
+  grind [arena_grind] simp [] unified nv [closedNV p fs = true, hmem]
 
 example (p : Prog) (n : Nat) (m : Mem) : tUniE p (n + 1) m 0 5 = .ok (0, m) := by simp [tUniE]
 example (p : Prog) (m : Mem) : tUniCE p m 3 = .error (.abort 8) := by simp [tUniCE]
