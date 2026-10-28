@@ -1,4 +1,5 @@
 import ConAgua.Arena.IndT.PosCrest
+import ConAgua.Verdict.PosNgc
 import ConAgua.Arena.IndPosSpec.Pos2DecHLSplit
 import ConAgua.Arena.IndPosSpec.Snoc
 
@@ -7,7 +8,7 @@ import ConAgua.Arena.IndPosSpec.Snoc
 
 `frameOK_step`'s proof (`IndPosSpec/Pos2DecHLSplit`) at `realCall p`, its twin side con-ron's
 `nestFrame_spec`'s: the group's head name (`internNNode_run`), the instantiation (`internConstE_run`,
-`mkAppN_run`) typed (`inferC_rsim`), the group's constructors (`nestGroupCtors_spec`), the frame's
+`mkAppN_run`) typed (`inferC_rsim`), the group's constructors (`ngc_ref`), the frame's
 holes (`frameHoles_run`), the constructors walked (the block's `CtorsOKC` at `n`).
 -/
 
@@ -26,7 +27,7 @@ variable {p : Prog} (hq : KnotStageProg p) (dn : NIdx → Option ConLeche.Name) 
   {env : ConLeche.Env} (henv : ConLeche.EnvWF env)
 
 include hq henv in
-theorem frameOKC_step (n : Nat) (hn : n + 1 ≤ 2 ^ 62) (ih : NbOKC p dn vis fe env n) :
+theorem frameOKC_step (hL : NbLook p) (n : Nat) (hn : n + 1 ≤ 2 ^ 62) (ih : NbOKC p dn vis fe env n) :
     FrameOKC p dn vis fe env (n + 1) := by
   obtain ⟨-, -, -, -, -, -, -, hCtors, -, -, -⟩ := ih
   intro m m' a ctx fu po pl hi us dO dL nPc gO gL ns c prog ds grp NS r ctxP progP usP dsP grpP nsP h hC hW hhi hus
@@ -136,10 +137,14 @@ theorem frameOKC_step (n : Nat) (hn : n + 1 ≤ 2 ^ 62) (ih : NbOKC p dn vis fe 
     (hW.hs.grow hg14) (by simp [decHL, hslice?]) (by simp)
   simp only [List.nil_append] at hP5 hN5
   -- the group's constructors
-  rcases hgc : gcW n m5 vis nPc (rp.tail.tail.headD 0) (rp.tail.tail.tail.headD 0) 0 0 with _ | ⟨rc, m6⟩ <;> rw [hgc] at h; · simp [nbFrameK6] at h
+  rcases hgc : ngcR (realCall p) n m5 vis nPc (rp.tail.tail.headD 0) (rp.tail.tail.tail.headD 0) 0 0 with _ | ⟨rc, m6⟩ <;> rw [hgc] at h; · simp [nbFrameK6] at h
   rw [nbFrameK6_some] at h
-  obtain ⟨ctors, a6, hrun6, hS6, hg6, hcl6, hcb6, hcs6⟩ := gcW_ok dn fe vis nPc n m5 m6 a4 _ _ 0 0 (grp.map (·.1)) []
-    rc hgc hS5 hN5 (fun j hj => by omega) (by simp) (by simp) (fun i hi => by simp at hi)
+  obtain ⟨s6, hs6, -, ctors, a6, hrun6, ⟨hS6, hg6, hcl6, hcb6, hcs6, hA6, hM6⟩⟩ := RefE.run_okW
+    (ngcE_spec p hL.nt hL.nit.hc2 hL.hap hL.hgc n ⟨m5, Locals.init []⟩ vis nPc _ _ 0 0)
+    (ngc_ref dn fe vis nPc n m5 a4 _ _ 0 0 (grp.map (·.1)) [] hS5 hN5 (fun j hj => by omega) (by simp) (by simp)
+      (fun i hi => by simp at hi)) hgc
+  dsimp only at hS6 hg6 hcl6 hcb6 hcs6 hA6 hM6
+  rw [hs6] at hS6 hg6 hcb6 hcs6 hA6 hM6
   have hx04 := c3.ext.trans c4.ext
   have hgrp4 := ConRon.Bridge.Inductives.dGrp_ext hx04 _ _ hgrpP
   obtain ⟨p5, vc, hvc, -, hvcl⟩ := ConRon.Bridge.Inductives.nestGroupCtors_spec ctxP hfind hc nPc.toNat _ _ [] []
@@ -173,7 +178,7 @@ theorem frameOKC_step (n : Nat) (hn : n + 1 ≤ 2 ^ 62) (ih : NbOKC p dn vis fe 
   have hg47 := (hg5.trans hg6).trans hg7
   have hg17 := (hg14.trans hg47)
   have htop7 : iwTop m7 < 2 ^ 64 := Nat.lt_of_le_of_lt hS7.2.1 hS7.2.2.2.1
-  have hA7 : AbsOK m7 := fhW_afr _ _ _ _ _ _ _ _ _ hfh (gcW_afr _ _ _ _ _ _ _ _ _ _ hgc
+  have hA7 : AbsOK m7 := fhW_afr _ _ _ _ _ _ _ _ _ hfh (hA6
     (fgW_afr _ _ _ _ _ _ _ _ _ _ _ _ _ _ hfg hA4))
   have p57 := p5.trans p6
   have hC7 : StageC dn vis fe env m7 a7 := hC4.of_pstep hS7 hA7 p57
@@ -215,7 +220,7 @@ theorem frameOKC_step (n : Nat) (hn : n + 1 ≤ 2 ^ 62) (ih : NbOKC p dn vis fe 
       hH7, hHb7⟩
     hcl6 (by have := hg7.1; omega) (hcs6.grow hcb6 hg7) (hns.grow hg17 htop) (OutsB.nil _ _) (by simp)
     ((((((hP.fr hf1).fr (ceinternW_mfr hic)).fr (MFr.ofMknF hma)).fr (coreF_mfr hq (by decide) hit)).fr
-      (fgW_mfr _ _ _ _ _ _ _ _ _ _ _ _ _ _ hfg)).fr (gcW_mfr _ _ _ _ _ _ _ _ _ _ hgc) |>.fr
+      (fgW_mfr _ _ _ _ _ _ _ _ _ _ _ _ _ _ hfg)).fr hM6 |>.fr
       (fhW_mfr _ _ _ _ _ _ _ _ _ hfh)) hA7
     hc (dCtx_ext _ hx07 _ _ hctx) hprog2 hpre (ConRon.Bridge.Inductives.dCtors_ext p6.ext _ _ hvc) hvcl
     (dState_ext hx07 _ _ hnsP) rfl

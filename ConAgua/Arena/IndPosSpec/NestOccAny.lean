@@ -1,8 +1,8 @@
 import ConAgua.Arena.IndPosSpec.NoConstWf
-import ConAgua.Arena.RecCheckSpec.ErToIwWStage
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr
+import ConAgua.Arena.IndInstallSpec.LvlEqFueledSpecC
 
 /-!
 # NestOccAny
@@ -59,59 +59,9 @@ theorem nestOccAny_spec (p : Prog) (hl : NoLook p) (hp : p.lookup "nest_occ_any"
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, nestOcc_spec' p hl k, ih] <;>
       finish (gen := 20) [Locals.init_cons_zero]
 
-def ntyK6 : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r6, m6) => if r6.headD 0 = 0 then none else some ([r6.tail.headD 0], m6)
-def ntyK5 (k : Nat) (key : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r5, m5) => ntyK6 (instW k m5 (rdW (m5.arr64 IW) (key + 2)) (rdW (m5.arr64 IW) (key + 3)) (r5.headD 0))
-def ntyK4 (cR : CallM) (k : Nat) (key cvC : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r4, m4) => ntyK5 k key (cR k "inst_lp_fast" [CWF, r4.headD 0, r4.tail.headD 0,
-      rdW (m4.arr64 IW) (key + 1), rdW (m4.arr64 EREC) (cvC + 3)] m4)
-def ntyK3 (cR : CallM) (k : Nat) (key cvC : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r3, m3) => if r3.headD 0 = 0 then none else ntyK4 cR k key cvC (cvLpsW k m3 cvC)
-def ntyK1 (cR : CallM) (k : Nat) (key : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m1) =>
-    if r.headD 0 = 0 then none
-    else if rdW (m1.arr64 EREC) (r.tail.headD 0) ≠ 3 then none
-    else if lsNodeW m1 (rdW (m1.arr64 IW) (key + 1)) = [] then none
-    else if (lsNodeW m1 (rdW (m1.arr64 IW) (key + 1))).tail.headD 0 ≠
-        rdW (m1.arr64 EREC) (r.tail.headD 0 + 1 + 2) then none
-    else ntyK3 cR k key (r.tail.headD 0 + 1) (stripF 6 m1 [rdW (m1.arr64 IW) (key + 3),
-      rdW (m1.arr64 EREC) (r.tail.headD 0 + 1 + 3)])
-/-- The model of `nest_inst_type_ty(vis, key)` at exec fuel `k + 1` (its `inst_lp_fast` read through
-`cR`). -/
-def ntyW (cR : CallM) (k : Nat) (m : Mem) (vis key : Word) : Option (List Word × Mem) :=
-  ntyK1 cR k key (envFindW m (rdW (m.arr64 IW) key) vis)
-
-section arms
-variable (cR : CallM) (k : Nat) (m1 m3 m4 m5 m6 : Mem) (key cvC : Word) (r r3 r4 r5 r6 : List Word)
-theorem ntyK6_some (h : ¬ r6.headD 0 = 0) : ntyK6 (some (r6, m6)) = some ([r6.tail.headD 0], m6) := by
-  rw [ntyK6, ite_eq_right h]
-theorem ntyK5_some : ntyK5 k key (some (r5, m5)) =
-    ntyK6 (instW k m5 (rdW (m5.arr64 IW) (key + 2)) (rdW (m5.arr64 IW) (key + 3)) (r5.headD 0)) := rfl
-theorem ntyK4_some : ntyK4 cR k key cvC (some (r4, m4)) = ntyK5 k key (cR k "inst_lp_fast" [CWF, r4.headD 0,
-    r4.tail.headD 0, rdW (m4.arr64 IW) (key + 1), rdW (m4.arr64 EREC) (cvC + 3)] m4) := rfl
-theorem ntyK3_some (h : ¬ r3.headD 0 = 0) : ntyK3 cR k key cvC (some (r3, m3)) = ntyK4 cR k key cvC (cvLpsW k m3 cvC) := by
-  rw [ntyK3, ite_eq_right h]
-theorem ntyK1_eq (r : List Word) (m1 : Mem) : ntyK1 cR k key (some (r, m1)) =
-    if r.headD 0 = 0 then none
-    else if rdW (m1.arr64 EREC) (r.tail.headD 0) ≠ 3 then none
-    else if lsNodeW m1 (rdW (m1.arr64 IW) (key + 1)) = [] then none
-    else if (lsNodeW m1 (rdW (m1.arr64 IW) (key + 1))).tail.headD 0 ≠
-        rdW (m1.arr64 EREC) (r.tail.headD 0 + 1 + 2) then none
-    else ntyK3 cR k key (r.tail.headD 0 + 1) (stripF 6 m1 [rdW (m1.arr64 IW) (key + 3),
-      rdW (m1.arr64 EREC) (r.tail.headD 0 + 1 + 3)]) := rfl
-end arms
-attribute [ind_grind] ntyK6_some ntyK5_some ntyK4_some ntyK3_some ntyK1_eq
-
-/-- `nest_inst_type_ty` at any exec fuel. -/
-def ntyWf (cR : CallM) : Nat → Mem → Word → Word → Option (List Word × Mem)
-  | 0, _, _, _ => none
-  | k + 1, m, vis, key => ntyW cR k m vis key
+/-- `nest_inst_type_ty(vis, key)` through its run (its model `ntyE`, `Verdict/PosE1M.lean`). -/
+def ntyR (cR : CallM) (k : Nat) (m : Mem) (vis key : Word) : Option (List Word × Mem) :=
+  cR k "nest_inst_type_ty" [vis, key] m
 
 def nitK5 (ty : Word) (rs : List Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
@@ -134,7 +84,7 @@ def nitK1 (cR : CallM) (k : Nat) (ctx hi : Word) : Option (List Word × Mem) →
   | some (r1, m1) => nitK2 cR k ctx hi (r1.headD 0) (piBW k m1 CWF (r1.headD 0))
 /-- The model of `nest_inst_type(vis, ctx, hi, key)` at exec fuel `k + 1`. -/
 def nitW (cR : CallM) (k : Nat) (m : Mem) (vis ctx hi key : Word) : Option (List Word × Mem) :=
-  nitK1 cR k ctx hi (ntyWf cR k m vis key)
+  nitK1 cR k ctx hi (ntyR cR k m vis key)
 
 section arms
 variable (cR : CallM) (k : Nat) (m1 m2 m4 m5 : Mem) (ctx hi ty : Word) (r1 rs r4 r5 v : List Word)

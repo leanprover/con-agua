@@ -29,7 +29,7 @@ def NitLe (cR : CallM) (k : Nat) (dn : NIdx → Option ConLeche.Name) (vis : Wor
     Prop :=
   ∀ (m1 m2 m3 m4 : Mem) (r1 rs r3 r4 : List Word) (cv : IConstantVal) (caps : IIndCaps)
     (q : List EIdx × EIdx) (a3 a4 a5 : AState) (tl ty : EIdx) (bs : List EIdx) (e : EIdx) (uw : Word),
-    ntyWf cR k m vis key = some (r1, m1) → AFr m m1 → piBW k m1 CWF (r1.headD 0) = some (rs, m2) →
+    ntyR cR k m vis key = some (r1, m1) → AFr m m1 → piBW k m1 CWF (r1.headD 0) = some (rs, m2) →
     noaW k m2 (rdW (m2.arr64 IW) ctx) (rdW (m2.arr64 IW) (ctx + 1)) (rdW (m2.arr64 IW) (ctx + 4)) hi
       (rs.headD 0) (rs.getD 1 0) = some (r3, m3) →
     fe.find? kk.cname = some (.indInfo cv caps) →

@@ -506,17 +506,6 @@ theorem pos2PinW_ok {m m' : Mem} {a : AState} {i : Word} {r : List Word}
   · exact hF.names_lt i.toNat hi'
   · exact pinAt_run hF i.toNat hi'
 
-section arms
-variable (k : Nat) (m1 m2 : Mem) (hp nn dO dL : Word) (r : List Word)
-theorem p2ccK2_z (h : r.headD 0 = 0) : p2ccK2 (some (r, m2)) = none := by rw [p2ccK2, ite_eq_left h]
-theorem p2ccK1_eq : p2ccK1 k hp nn dO dL (some (r, m1)) =
-    if r.headD 0 ≠ 0 then none
-    else match pos2PinW m1 47 with
-      | none => none
-      | some (q, m2) => if nn = q.headD 0 then none else p2ccK2 (cpW k m2 hp dO dL) := rfl
-end arms
-attribute [ind_grind] p2ccK2_z
-
 end L.Ind
 
 namespace L.Ind

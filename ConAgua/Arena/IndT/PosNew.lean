@@ -1,5 +1,6 @@
 import ConAgua.Arena.IndT.PosNit
 import ConAgua.Arena.IndT.PosDefs
+import ConAgua.Verdict.PosNty
 import ConAgua.Arena.IndT.RecGen19
 import ConAgua.Arena.IndPosSpec.Pos2DecHLSplit
 import ConAgua.Arena.IndPosSpec.Snoc
@@ -47,7 +48,7 @@ theorem denoteNList_memN : ∀ {st : NStore} {l : List NIdx} {L : List ConLeche.
 section steps
 variable (p : Prog) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) {env : ConLeche.Env}
 
-theorem newOKC_step (hIlpf : IlpfF p) (hcl : CoreStageClosed p) (hLC : LvlCacheProg p) (n : Nat) (ih : NbOKC p dn vis fe env n) : NewOKC p dn vis fe env (n + 1) := by
+theorem newOKC_step (hIlpf : IlpfF p) (hcl : CoreStageClosed p) (hLC : LvlCacheProg p) (hL : NtyLook p) (n : Nat) (ih : NbOKC p dn vis fe env n) : NewOKC p dn vis fe env (n + 1) := by
   obtain ⟨-, -, -, -, -, -, hFrame, -, -, -, -⟩ := ih
   intro m m' a ctx fu po pl kb nn us dO dL nPc cty ns c prog ds NS r ctxP progP nP usP dsP ctyP nsP h hC hW hnn hus
     hds hdsb hcty hns hP hA hc hctx hprog hnP husP hdsP hctyP hnsP hwds hni
@@ -127,9 +128,9 @@ theorem newOKC_step (hIlpf : IlpfF p) (hcl : CoreStageClosed p) (hLC : LvlCacheP
   rw [hgg, nbNewK5_some] at h
   have hg14 := hg1.trans (hg2.trans hg24)
   obtain ⟨grp, a5, hrun5, hS5, hg5, hgl5, hgb5, hgrp5, hP5, hJ5⟩ := ggW_ok dn fe vis ctx (nhiW m2 ctx (rw.tail.headD 0)) us
-    dO dL (c.hiAt wp.length) hhw c ds hus (realCall p) (IlpFr.real hIlpf)
+    dO dL (c.hiAt wp.length) hhw c ds hus (realCall p)
     (fun m' a' => StageC dn vis fe env m' a' ∧ AbsOK m' ∧ ConRon.Arena.Ext a1.store a'.store)
-    (nestFrameMates fe (decI nn)) (fun _ _ hJ => IlpRd.realC hIlpf hJ.1) (fun m' _ => AbsOK m')
+    (nestFrameMates fe (decI nn)) (fun _ _ _ _ hJ => nty_ok hL (IlpRd.realC hIlpf hJ.1)) (fun m' _ => AbsOK m')
     (fun k' _ a' key n0 hJ hn0 => by
       obtain ⟨hCm, hAm, hxm⟩ := hJ
       obtain ⟨n0P, hn0P⟩ := denoteNList_memN hmates n0 hn0

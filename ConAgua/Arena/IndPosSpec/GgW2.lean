@@ -1,3 +1,4 @@
+import ConAgua.Arena.IndPosSpec.CfW
 import ConAgua.Arena.IndPosSpec.Nb
 import ConAgua.Arena.IndPosSpec.NcnW2
 import ConAgua.Arena.IndPosSpec.NitW
@@ -66,19 +67,19 @@ theorem snocW_iwFr {n : Nat} {m m' : Mem} {o l x : Word} {r : List Word} (h : sn
 
 /-- **`nest_grow_group`'s model refines `nestGrowGroup`**, its `nest_inst_type` calls read through
 `cR`: an invariant `J` (the caller's: `True` for the stubs, `StageC` for the program's own reading)
-gives the `inst_lp_fast` contract at each call's start and is kept by the pool writers and each
+gives `nest_inst_type_ty`'s ok half (`NtyOk`) at each call's start and is kept by the pool writers and each
 `nest_inst_type`. -/
 theorem ggW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis ctx hi us dO dL : Word) (HI : Nat)
-    (hHI : hi.toNat = HI) (c : NestCtx) (ds : List EIdx) (hus : H us) (cR : CallM) (hF : IlpFr cR)
+    (hHI : hi.toNat = HI) (c : NestCtx) (ds : List EIdx) (hus : H us) (cR : CallM)
     (J : Mem → AState → Prop) (csA : List NIdx)
-    (hJI : ∀ m a, J m a → IlpRd cR dn vis fe (IlpBase m a)) (Qn : Mem → AState → Prop)
+    (hJty : ∀ k m a key, J m a → NtyOk cR dn vis fe k m a key) (Qn : Mem → AState → Prop)
     (hJle : ∀ (k : Nat) (m : Mem) (a : AState) (key : Word) (n0 : NIdx), J m a → n0 ∈ csA →
       NitLe cR k dn vis fe ctx hi key c ⟨n0, decI us, ds⟩ Qn m a)
     (hJiw : ∀ m m' a, J m a → MemFrame [IW] [200] m m' → StageR dn vis fe m' a → J m' a)
     (hJnit : ∀ (k : Nat) (m m' : Mem) (a a' : AState) (key : Word) (n0 : NIdx) (x : Nat × EIdx)
       (r : List Word), J m a → n0 ∈ csA → nitW cR k m vis ctx hi key = some (r, m') →
       (ConRon.Arena.nestInstType fe c HI ⟨n0, decI us, ds⟩).run a = .ok (x, a') →
-      StageR dn vis fe m' a' → (∀ r1 m1, ntyWf cR k m vis key = some (r1, m1) → AFr m m1) → Qn m' a' →
+      StageR dn vis fe m' a' → (∀ r1 m1, ntyR cR k m vis key = some (r1, m1) → AFr m m1) → Qn m' a' →
       J m' a')
     (k : Nat) :
     ∀ (m m' : Mem) (a : AState) (cO cL gO gL : Word) (cs : List NIdx) (grp : List (NIdx × EIdx))
@@ -157,7 +158,7 @@ theorem ggW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis ctx hi us 
     rcases hnit : nitW cR k m1 vis ctx hi key with _ | ⟨r2, m2⟩ <;> rw [hnit] at h; · simp [ggK2] at h
     rw [ggK2_some] at h
     obtain ⟨x, a2, hrun2, hS2, hg2, hx1, htH, htd, hP2, hAty, hQ2⟩ := nitW_ok k dn fe vis ctx hi HI hHI c m1 m2 a key
-      _ r2 cR (hJI m1 a hJ1) hF Qn (hJle k m1 a key n0 hJ1 (hcsA n0 List.mem_cons_self)) hnit hS1
+      _ r2 cR (hJty k m1 a key hJ1) Qn (hJle k m1 a key n0 hJ1 (hcsA n0 List.mem_cons_self)) hnit hS1
       (hU.grow hg1) hdk hkin hksl (hP.fr (posRecW_mfr hk))
     have hJ2 := hJnit k m1 m2 a a2 key n0 x r2 hJ1 (hcsA n0 List.mem_cons_self) hnit hrun2 hS2 hAty hQ2
     -- the pair record and the snoc
@@ -396,19 +397,6 @@ theorem nestArity_spec' (p : Prog) (hl : NaLook p) (k : Nat) (s₀ : St) (vis c 
   | zero => rw [invoke_eq _ hl.hp]; simp only [callFn, nestArityL]; vcgen [exec] <;> grind
   | succ k => exact nestArity_spec p hl k s₀ vis c
 
-theorem nestPosFvar_spec (p : Prog) (L : PfLook p) (n : Nat) (s₀ : St) (vis ctx po pl kb hi i aO aL : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "nest_pos_fvar" [vis, ctx, po, pl, kb, hi, i, aO, aL]
-    ⦃fun r s' => LocEq s' s₀ ∧ pfW n s₀.mem vis ctx po pl kb hi i aO aL = some ([r.headD 0], s'.mem); ⊤⦄ := by
-  simp only [invoke_eq _ L.hp, callFn, nestPosFvarL]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        nestHoleAt_spec' p L n, nestOccAny_spec p L.no L.hoa n, nestArity_spec' p L.na n,
-        nestPosHoleKind_spec p L.hh L.hk n] <;>
-      finish (gen := 20) (instances := 5000) [pfW, p2pfK1_eq, p2pfK2_eq, p2pfK3_eq, rdW_eq]
-
 end L.Ind
 
 namespace L.Ind
@@ -523,17 +511,17 @@ theorem nbAppK6_some (r : List Word) (m3 : Mem) :
 theorem nbAppK5_some (contF : MW11) (m2 : Mem) (vis ctx fu po pl kb ns aO aL : Word) (v : List Word) (o : Word) :
     nbAppK5 contF m2 vis ctx fu po pl kb ns aO aL v (some o) = if o ≠ 0 then none
     else nbAppK6 (contF m2 vis ctx fu po pl kb (v.tail.headD 0) (v.tail.tail.headD 0) aO aL ns) := rfl
-theorem nbAppK2_some (n : Nat) (contF : MW11) (vis ctx fu po pl kb hi ns aO aL : Word) (rh : List Word) (m2 : Mem) :
-    nbAppK2 n contF vis ctx fu po pl kb hi ns aO aL (some (rh, m2)) =
+theorem nbAppK2_some (cR : CallM) (n : Nat) (contF : MW11) (vis ctx fu po pl kb hi ns aO aL : Word) (rh : List Word) (m2 : Mem) :
+    nbAppK2 cR n contF vis ctx fu po pl kb hi ns aO aL (some (rh, m2)) =
     if eViewW m2 (rh.headD 0) = [] then none
     else if (eViewW m2 (rh.headD 0)).headD 0 = 1 then
-      nbAppK4 ns (pfW n m2 vis ctx po pl kb hi ((eViewW m2 (rh.headD 0)).tail.headD 0) aO aL)
+      nbAppK4 ns (pfvR cR n m2 vis ctx po pl kb hi ((eViewW m2 (rh.headD 0)).tail.headD 0) aO aL)
     else if (eViewW m2 (rh.headD 0)).headD 0 = 3 then
       nbAppK5 contF m2 vis ctx fu po pl kb ns aO aL (eViewW m2 (rh.headD 0))
         (containsW n m2 (rdW (m2.arr64 IW) ctx) (rdW (m2.arr64 IW) (ctx + 1)) ((eViewW m2 (rh.headD 0)).tail.headD 0))
     else none := rfl
-theorem nbAppK1_some (n : Nat) (contF : MW11) (vis ctx fu po pl kb hi w ns : Word) (ra : List Word) (m1 : Mem) :
-    nbAppK1 n contF vis ctx fu po pl kb hi w ns (some (ra, m1)) = nbAppK2 n contF vis ctx fu po pl kb hi ns (ra.headD 0) (ra.tail.headD 0)
+theorem nbAppK1_some (cR : CallM) (n : Nat) (contF : MW11) (vis ctx fu po pl kb hi w ns : Word) (ra : List Word) (m1 : Mem) :
+    nbAppK1 cR n contF vis ctx fu po pl kb hi w ns (some (ra, m1)) = nbAppK2 cR n contF vis ctx fu po pl kb hi ns (ra.headD 0) (ra.tail.headD 0)
       (gafF m1 [CWF, w]) := rfl
 theorem nbContK4_some (keyF : MW13) (vis ctx fu po pl kb nn us aO aL ns nPc : Word) (r4 : List Word) (m4 : Mem) :
     nbContK4 keyF vis ctx fu po pl kb nn us aO aL ns nPc (some (r4, m4)) =
@@ -548,7 +536,7 @@ theorem nbContK1_some (cR : CallM) (k : Nat) (keyF : MW13) (vis ctx fu po pl kb 
     if r.headD 0 = 0 then none
     else if aL < r.tail.headD 0 then none
     else nbContK2 cR k keyF vis ctx fu po pl kb nn us aO aL ns (r.tail.headD 0) (nhiW m1 ctx pl)
-      (p2ccW k m1 ctx (nhiW m1 ctx pl) nn aO (r.tail.headD 0) (aO + r.tail.headD 0) (aL - r.tail.headD 0)) := rfl
+      (nccR cR k m1 ctx (nhiW m1 ctx pl) nn aO (r.tail.headD 0) (aO + r.tail.headD 0) (aL - r.tail.headD 0)) := rfl
 theorem nbKeyK2_some (k : Nat) (newF : MW13) (vis ctx fu po pl kb nn us dO dL nPc cty ns key : Word) (r : List Word) (m2 : Mem) :
     nbKeyK2 k newF vis ctx fu po pl kb nn us dO dL nPc cty ns key (some (r, m2)) =
     if r.headD 0 ≠ 0 then
@@ -601,15 +589,15 @@ theorem nbFrameK7_some (ctorsF : MW19) (vis ctx fu hi us dO dL gL ns p2O p2L nO 
 theorem nbFrameK6_some (k : Nat) (ctorsF : MW19) (vis ctx fu hi us dO dL gO gL ns p2O p2L nO nL : Word) (rc : List Word) (m6 : Mem) :
     nbFrameK6 k ctorsF vis ctx fu hi us dO dL gO gL ns p2O p2L nO nL (some (rc, m6)) = nbFrameK7 ctorsF vis ctx fu hi us dO dL gL ns p2O p2L nO nL (rc.headD 0) (rc.tail.headD 0)
       (fhW k m6 hi gO gL 0 0) := rfl
-theorem nbFrameK5_some (k : Nat) (ctorsF : MW19) (vis ctx fu hi us dO dL nPc gO gL ns : Word) (rp : List Word) (m5 : Mem) :
-    nbFrameK5 k ctorsF vis ctx fu hi us dO dL nPc gO gL ns (some (rp, m5)) = nbFrameK6 k ctorsF vis ctx fu hi us dO dL gO gL ns (rp.headD 0) (rp.tail.headD 0)
+theorem nbFrameK5_some (cR : CallM) (k : Nat) (ctorsF : MW19) (vis ctx fu hi us dO dL nPc gO gL ns : Word) (rp : List Word) (m5 : Mem) :
+    nbFrameK5 cR k ctorsF vis ctx fu hi us dO dL nPc gO gL ns (some (rp, m5)) = nbFrameK6 k ctorsF vis ctx fu hi us dO dL gO gL ns (rp.headD 0) (rp.tail.headD 0)
       (rp.tail.tail.headD 0) (rp.tail.tail.tail.headD 0)
-      (gcW k m5 vis nPc (rp.tail.tail.headD 0) (rp.tail.tail.tail.headD 0) 0 0) := rfl
-theorem nbFrameK4_some (k : Nat) (ctorsF : MW19) (vis ctx fu po pl hi us dO dL nPc gO gL ns : Word) (w_ : List Word) (m4 : Mem) :
-    nbFrameK4 k ctorsF vis ctx fu po pl hi us dO dL nPc gO gL ns (some (w_, m4)) = nbFrameK5 k ctorsF vis ctx fu hi us dO dL nPc gO gL ns
+      (ngcR cR k m5 vis nPc (rp.tail.tail.headD 0) (rp.tail.tail.tail.headD 0) 0 0) := rfl
+theorem nbFrameK4_some (cR : CallM) (k : Nat) (ctorsF : MW19) (vis ctx fu po pl hi us dO dL nPc gO gL ns : Word) (w_ : List Word) (m4 : Mem) :
+    nbFrameK4 cR k ctorsF vis ctx fu po pl hi us dO dL nPc gO gL ns (some (w_, m4)) = nbFrameK5 cR k ctorsF vis ctx fu hi us dO dL nPc gO gL ns
       (fgW k m4 hi us dO dL gO gL po pl 0 0) := rfl
 theorem nbFrameK3_some (cR : CallM) (k : Nat) (ctorsF : MW19) (vis ctx fu po pl hi us dO dL nPc gO gL ns : Word) (ra : List Word) (m3 : Mem) :
-    nbFrameK3 cR k ctorsF vis ctx fu po pl hi us dO dL nPc gO gL ns (some (ra, m3)) = nbFrameK4 k ctorsF vis ctx fu po pl hi us dO dL nPc gO gL ns
+    nbFrameK3 cR k ctorsF vis ctx fu po pl hi us dO dL nPc gO gL ns (some (ra, m3)) = nbFrameK4 cR k ctorsF vis ctx fu po pl hi us dO dL nPc gO gL ns
       (cR k "infer_type_core" [vis, hi, ra.headD 0] m3) := rfl
 theorem nbFrameK2_some (cR : CallM) (k : Nat) (ctorsF : MW19) (vis ctx fu po pl hi us dO dL nPc gO gL ns : Word) (hc : Word) (m2 : Mem) :
     nbFrameK2 cR k ctorsF vis ctx fu po pl hi us dO dL nPc gO gL ns (some (hc, m2)) =
@@ -789,10 +777,10 @@ theorem nbOne_step (s₀ : St) (vis ctx root fu po pl hi us dO dL no nl hO hL cv
   have R := L.ct.cr.rx
   simp only [invoke_eq _ L.pone, callFn, nestCtorsOneL]
   vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-      nestCtorsCrest_spec p L.ct cR hcR n, hWalk, nestCtorsU4_spec p L.usl L.hu4 n,
+      hcR n "nest_ctors_crest", hWalk, nestCtorsU4_spec p L.usl L.hu4 n,
       nestCtorsResOk_spec p L.nit.no L.nit.hoa L.hrh L.nt.ad L.hro n, nestCtorNf_spec' p L n,
       slSnoc_specW p R.ha L.nit.hc2 L.nag.hsn n, rec6_specW p R.ha L.h6 n] <;>
-    simp_all [nbOneW_succ, nbOneK1_some, nbOneK2_some, nbOneK3_some, nbOneK4_some, nbOneK5_some,
+    simp_all [nbOneW_succ, crestR, nbOneK1_some, nbOneK2_some, nbOneK3_some, nbOneK4_some, nbOneK5_some,
       nbOneK6_some, nbOneK7_some,
       LocEq, BinOp.eval, St.setLocs_cons, Cmp.eval, St.setLoc_loc, St.setLoc_mem,
       St.setLocs_nil, Sig.retVal, Sig.retOr, Locals.init_cons_zero, Locals.init_cons_succ, rdW, pos2_getElem_getD]
@@ -821,10 +809,10 @@ theorem nbFrame_step (s₀ : St) (vis ctx fu po pl hi us dO dL nPc gO gL ns : Wo
       naF_spec p L.na n, internConst_spec p R.cf R.cp R.ci n,
       mknF_spec p L.nt.ad n, hcR n "infer_type_core",
       nestFrameGrp_spec p R.ha L.nit.hc2 R.h2 R.h4 L.nag.hsn L.hfg n,
-      nestGroupCtors_spec p L.nt L.nit.hc2 L.hap L.hgc n,
+      hcR n "nest_group_ctors",
       nestFrameHoles_spec p R.ha L.nit.hc2 L.nag.hsn R.hl.hff R.hl.hfp R.hl.hif L.hfh n, hCtors] <;>
     simp_all [nbFrameW_succ, nbFrameK1_some, nbFrameK2_some, nbFrameK3_some, nbFrameK4_some,
-      nbFrameK5_some, nbFrameK6_some, nbFrameK7_some, nbFrameK8_some,
+      nbFrameK5_some, ngcR, nbFrameK6_some, nbFrameK7_some, nbFrameK8_some,
       LocEq, BinOp.eval, St.setLocs_cons, Cmp.eval, St.setLoc_loc, St.setLoc_mem,
       St.setLocs_nil, Sig.retVal, Sig.retOr, Locals.init_cons_zero, Locals.init_cons_succ, rdW, pos2_getElem_getD]
 
@@ -871,13 +859,12 @@ theorem nbCont_step (s₀ : St) (vis ctx fu po pl kb nn us aO aL ns : Word) :
   simp only [invoke_eq _ L.pcont, callFn, nestContL]
   vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
       nt_spec' p L.nt n, nestCtxHiAt_specE p R.hi n,
-      nestContChecks_spec p L.nit.no L.nit.hoa L.hpa L.usl.hbp L.dc.hf L.hpc L.hcc n, posRec4_specW p R.ha R.h4 n,
+      hcR n "nest_cont_checks", posRec4_specW p R.ha R.h4 n,
       nestInstType_spec' p L.nit cR hcR n, hKey] <;>
-    simp_all [nbContW_succ, nbContK1_some, nbContK2_some, nbContK3_some, nbContK4_some, nbAppK6_some,
+    simp_all [nbContW_succ, nbContK1_some, nbContK2_some, nbContK3_some, nbContK4_some, nbAppK6_some, nccR,
       LocEq, BinOp.eval, St.setLocs_cons, Cmp.eval, St.setLoc_loc, St.setLoc_mem,
       St.setLocs_nil, Sig.retVal, Sig.retOr, Locals.init_cons_zero, Locals.init_cons_succ]
 
-omit hcR in
 theorem nbApp_step (s₀ : St) (vis ctx fu po pl kb hi w ns : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "nest_pos_app" [vis, ctx, fu, po, pl, kb, hi, w, ns]
     ⦃fun r s' => LocEq s' s₀ ∧ nbAppW cR (n + 1) s₀.mem vis ctx fu po pl kb hi w ns =
@@ -887,8 +874,8 @@ theorem nbApp_step (s₀ : St) (vis ctx fu po pl kb hi w ns : Word) :
   simp only [invoke_eq _ L.papp, callFn, nestPosAppL]
   vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
       gaaF_spec p L.nt.ad n, gafF_spec p L.nt.ad n, eView_spec p R.hl.hv n,
-      nestPosFvar_spec p L.pf n, slContains_spec p L.nit.no.hc n, hCont] <;>
-    simp_all [nbAppW_succ, nbAppK1_some, nbAppK2_some, nbAppK4_some, nbAppK5_some, nbAppK6_some,
+      hcR n "nest_pos_fvar", slContains_spec p L.nit.no.hc n, hCont] <;>
+    simp_all [nbAppW_succ, nbAppK1_some, nbAppK2_some, pfvR, nbAppK4_some, nbAppK5_some, nbAppK6_some,
       LocEq, BinOp.eval, St.setLocs_cons, Cmp.eval, St.setLoc_loc, St.setLoc_mem,
       St.setLocs_nil, Sig.retVal, Sig.retOr, Locals.init_cons_zero, Locals.init_cons_succ, rdW, pos2_getElem_getD]
 
@@ -939,7 +926,7 @@ theorem nbSpec_all {p : Prog} (L : NbLook p) (cR : CallM) (hcR : CallSpec p cR) 
   induction n with
   | zero => exact nbSpec_zero p cR
   | succ n ih =>
-    exact ⟨nbPos_step L cR hcR n ih, nbBind_step L cR n ih, nbApp_step L cR n ih, nbCont_step L cR hcR n ih, nbKey_step L cR n ih,
+    exact ⟨nbPos_step L cR hcR n ih, nbBind_step L cR n ih, nbApp_step L cR hcR n ih, nbCont_step L cR hcR n ih, nbKey_step L cR n ih,
       nbNew_step L cR hcR n ih, nbFrame_step L cR hcR n ih, nbCtors_step L cR n ih, nbOne_step L cR hcR n ih, nbWalk_step L cR n ih,
       nbFields_step L cR n ih⟩
 

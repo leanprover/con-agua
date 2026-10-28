@@ -1,4 +1,6 @@
+import ConAgua.Arena.IndT.PosNit
 import ConAgua.Verdict.PosE1L
+import ConAgua.Verdict.PosNty
 import ConAgua.Verdict.PosE
 import ConAgua.Arena.IndT.PosCrest
 /-!
@@ -414,12 +416,12 @@ theorem appOKE_step {p : Prog} (L : NbLook p) (hnv : closedNV p _root_.L.Checker
         ra.headD 0, ra.tail.headD 0] m2 with
     | error e4 =>
       rw [h4, npaE.k_nest_pos_fvar.eq_1] at hce; cases hce
-      have h4' := triple_of_callE_err (pfvE_spec p L.pf.hp n ⟨m2, Locals.init []⟩ vis ctx po pl kb hi _ _ _) h4
-        (Err.code_ne_of_cls hk0)
-      dsimp only at h4'
-      have := pfvE_claim L.pf hnv dn vis fe h4' hS2 (hW.grow hg12).u (hW.grow hg12).hs hargs2
-        (by have := hg2.1; omega) hP2 (fun k => (pure (k, (decI w : EIdx), NS) : AM (NestFieldKind × EIdx × NestState)))
-      rw [hi1] at this
+      have hhi0 : c.hiAt 0 < 2 ^ 64 := by have := hW.hb; simp only [NestCtx.hiAt] at this ⊢; omega
+      have hab2 : (ra.headD 0).toNat + (ra.tail.headD 0).toNat ≤ iwTop m2 := by have := hg2.1; omega
+      have := RefE.run_err (pfvE_spec p L.pf n ⟨m2, Locals.init []⟩ vis ctx po pl kb hi _ _ _) hnv hnv
+        (pfv_ref dn vis fe hS2 (hW.grow hg12).u (hW.grow hg12).hs hhi0 hargs2 hab2 hP2) h4
+      have := ErrClaim.bind_left (f := fun k => (pure (k, (decI w : EIdx), NS) : AM (NestFieldKind × EIdx × NestState))) this
+      rw [← pfK_eq, hi1] at this
       exact this
     | ok q4 =>
       obtain ⟨r4, m4⟩ := q4
@@ -584,21 +586,19 @@ theorem contOKE_step {p : Prog} (L : NbLook p) (hq : KnotStageProg p) (hIlpf : I
   cases h3 : callE p (n' + 1) "nest_cont_checks" [ctx, nhiW m1 ctx pl, nn, aO, nPcW, aO + nPcW, aL - nPcW] m1 with
   | error e3 =>
     rw [h3, ncE.k_nest_cont_checks.eq_1] at hce; cases hce
-    have h3' := triple_of_callE_err (nccE_spec p L.hcc (n' + 1) ⟨m1, Locals.init []⟩ ctx _ nn aO nPcW _ _) h3
-      (Err.code_ne_of_cls hk0)
-    dsimp only at h3'
-    exact nccE_claim L hnv dn vis fe h3' hS1 hW1.u hds (fun j hj => by omega) (by rw [hiO, hiL]; exact hidx)
-      (fun j hj => by rw [hiO, hiL] at *; omega) hnn hP1 _
+    rw [nccT_eq]
+    exact ErrClaim.bind_left (RefE.run_err (nccE_spec p L (n' + 1) ⟨m1, Locals.init []⟩ ctx _ nn aO nPcW _ _) hnv
+      hnv (ncc_ref (dO := aO) (dL := nPcW) (iO := aO + nPcW) (iL := aL - nPcW) dn vis fe hS1 hW1.u hds (fun j hj => by dsimp only; omega) (by rw [hiO, hiL]; exact hidx)
+        (fun j hj => by dsimp only; rw [hiO, hiL] at *; omega) hnn hP1) h3)
   | ok q3 =>
   obtain ⟨r2, m2⟩ := q3
-  obtain ⟨s3, hs3, -, hcc⟩ := triple_of_callW (nestContChecks_spec p L.nit.no L.nit.hoa L.hpa L.usl.hbp L.dc.hf L.hpc
-    L.hcc (n' + 1) ⟨m1, Locals.init []⟩ ctx _ nn aO nPcW _ _) (callW_of_callE h3)
-  dsimp only at hcc
-  rw [hs3] at hcc
   rw [h3, ncE.k_nest_cont_checks.arm1] at hce
-  obtain ⟨-, q, a2, hrun2a, hrun2q, hq, hrun2c, -, hS2, hg2, hP2⟩ := p2ccW_okW dn vis fe hcc hS1 hW1.u hds
-    (fun j hj => by omega) (by rw [hiO, hiL]; exact hidx) (fun j hj => by rw [hiO, hiL] at *; omega) hnn hP1
-  have hA2 : AbsOK m2 := p2ccW_afr hcc (ntWf_afr (k := n' + 1) (by simpa [ntWf] using hnt) hA)
+  obtain ⟨s2, hs2, -, -, a2, -, hR2⟩ := RefE.run_ok (nccE_spec p L (n' + 1) ⟨m1, Locals.init []⟩ ctx _ nn aO nPcW _ _)
+    (ncc_ref (dO := aO) (dL := nPcW) (iO := aO + nPcW) (iL := aL - nPcW) dn vis fe hS1 hW1.u hds (fun j hj => by dsimp only; omega) (by rw [hiO, hiL]; exact hidx)
+      (fun j hj => by dsimp only; rw [hiO, hiL] at *; omega) hnn hP1) h3
+  rw [hs2] at hR2; dsimp only at hR2
+  obtain ⟨hrun2a, ⟨q, hrun2q, hq⟩, hrun2c, hS2, hg2, hP2, hA2⟩ := hR2
+  replace hA2 : AbsOK m2 := hA2 (ntWf_afr (k := n' + 1) (by simpa [ntWf] using hnt) hA)
   have hargsT1 := ConRon.Bridge.Inductives.denoteEList_take
     (ConRon.Bridge.denoteEList_ext p1.ext _ _ hargsP) nPcW.toNat
   obtain ⟨p2, hpc⟩ := ConRon.Bridge.Inductives.paramsLocal_spec (nhiW m1 ctx pl).toNat _ _ a1 a2 true p1.ok
@@ -669,7 +669,7 @@ theorem contOKE_step {p : Prog} (L : NbLook p) (hq : KnotStageProg p) (hIlpf : I
   rw [h5] at hce
   simp only [nitWf] at hni
   obtain ⟨xi, a4, hrun4, hS4, hg4, hni0, hctyH, hctyd, hP4, -, hA4⟩ := nitW_ok n' dn fe vis ctx (nhiW m1 ctx pl)
-    _ rfl c m3 m4 a2 key _ _ (realCall p) (IlpRd.realC hIlpf hC3) (IlpFr.real hIlpf) _
+    _ rfl c m3 m4 a2 key _ _ (realCall p) (nty_ok L.nit.ty (IlpRd.realC hIlpf hC3)) _
     (nitLe_realC hcl hLC n' _ _ key c _ hC3 hA3 (dCtx_ext _ hx02 _ _ hctx) hkey2) hni hS3
     ((hW1.grow (hg2.trans hg3)).u) hKd hKin hksl hP3
   simp only [List.headD_cons, List.tail_cons] at hni0 hctyH hctyd

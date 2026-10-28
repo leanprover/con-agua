@@ -1,12 +1,15 @@
-import ConAgua.Arena.IndT.PosCont
 import ConAgua.Verdict.PosE1M
+import ConAgua.Arena.IndRealAbsPos
+import ConAgua.Arena.IndPosSpec.NestCrest
 
 /-!
-# `nest_pos_fvar`, `nest_cont_checks`: error claims (lane `verdicts-b`, helper `ia2`, fork `kn1`)
+# `nest_pos_fvar`, `nest_cont_checks`: one refinement for both outcomes
 
-`pfvE_claim`: the twin's `pfK` (the `.fvar` arm of `nestPos`) fails, whatever its continuation
-(`pfW_ok`'s proof on the error model). `nccE_claim`: `nestCont`'s checks (`nccT`, the rest of the
-twin `REST`) fail (`p2ccW_okW`'s proof on the error model).
+`pfv_ref` refines the twin's `pfK` (the `.fvar` arm of `nestPos`, its continuation split off by
+`pfK_eq`) by `pfvE` (unified), `ncc_ref` the checks of `nestCont` (`nccT`, the rest split off by
+`nccT_eq`) by `nccE` (unified). The callees are outside the verdict closure (lifted), so the
+errors' claims need only `closedNV`. Their ok halves serve `appOKC_step` and `contOKC_step` through
+the run (`RefE.run_okW`), their error halves `appOKE_step` and `contOKE_step` (`RefE.run_err`).
 -/
 
 open ConRon.Arena
@@ -16,101 +19,110 @@ open scoped Lean.Order
 namespace L.Ind
 open L.Arena
 
-/-- **`nest_pos_fvar`'s error claim**: the twin's `pfK` fails, whatever its continuation (the
-hypotheses of `pfW_ok`). -/
-theorem pfvE_claim {p : Prog} (L : PfLook p) (hnv : closedNV p _root_.L.Checker.nvFns = true)
-    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
+/-- `pfK` with its continuation split off. -/
+theorem pfK_eq {β : Type} (fe : IFEnv) (c : NestCtx) (prog : List NestHole) (kb hi i : Nat)
+    (args : List EIdx) (K : NestFieldKind → AM β) :
+    pfK fe c prog kb hi i args K = pfK fe c prog kb hi i args pure >>= K := by
+  unfold pfK
+  split
+  · funext s; rfl
+  · simp only [bind_assoc]
+    congr 1; funext b
+    split
+    · funext s; rfl
+    · simp only [bind_assoc]
+      congr 1; funext ar
+      split
+      · simp
+      · funext s; rfl
+
+/-- `pfK`'s run through its continuation, from its run alone. -/
+theorem pfK_run {β : Type} {fe : IFEnv} {c : NestCtx} {prog : List NestHole} {kb hi i : Nat}
+    {args : List EIdx} {x : NestFieldKind} {a a' : AState}
+    (h : (pfK fe c prog kb hi i args pure).run a = .ok (x, a')) (K : NestFieldKind → AM β) :
+    (pfK fe c prog kb hi i args K).run a = (K x).run a' := by
+  rw [pfK_eq]; simp only [StateT.run_bind, h]; rfl
+
+/-- What `nest_pos_fvar` gives besides the twin's field kind `x`: the stage, the growth, the
+result word, the frames. -/
+structure PfvPost (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (m : Mem) (w : Word)
+    (m' : Mem) (x : NestFieldKind) (a' : AState) : Prop where
+  stage : StageR dn vis fe m' a'
+  grow : IWGrow m m'
+  kind : decNFK w = some x
+  pos : PosMR m'
+  abs : AFr m m'
+
+/-- **`nest_pos_fvar` refines `pfK`, both outcomes.** -/
+theorem pfv_ref {p : Prog} (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     {k : Nat} {m : Mem} {a : AState} {ctx po pl kb hi i aO aL : Word} {c : NestCtx}
-    {prog : List NestHole} {args : List EIdx} {e : Err}
-    (h : pfvE p k m vis ctx po pl kb hi i aO aL = .error e) (hS : StageR dn vis fe m a)
-    (hU : UCtx dn vis fe m ctx c) (hpr : HSl m po.toNat pl.toNat prog)
+    {prog : List NestHole} {args : List EIdx} (hS : StageR dn vis fe m a)
+    (hU : UCtx dn vis fe m ctx c) (hpr : HSl m po.toNat pl.toNat prog) (hhi : c.hiAt 0 < 2 ^ 64)
     (hargs : decHL m aO.toNat aL.toNat = some args) (hab : aO.toNat + aL.toNat ≤ iwTop m) (hP : PosMR m) :
-    ∀ {β : Type} (K : NestFieldKind → AM β), ErrClaim (pfK fe c prog kb.toNat hi.toNat i.toNat args K) a e := by
-  intro β K
-  by_cases hk0 : e.cls = 0
-  · exact ErrClaim.of_cls0 hk0
+    RefE (closedNV p _root_.L.Checker.nvFns = true) (pfvE p k m vis ctx po pl kb hi i aO aL)
+      (pfK fe c prog kb.toNat hi.toNat i.toNat args pure) a
+      (fun v x a' => PfvPost dn vis fe m v.1 v.2 x a') := by
   cases k with
-  | zero => rw [pfvE.eq_1] at h; cases h; exact absurd rfl hk0
+  | zero => rw [pfvE.eq_1]; exact RefE.of_cls0 (by simp)
   | succ k =>
-  rw [pfvE.arm1] at h
+  rw [pfvE.arm1]
   have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
-  cases h1 : callE p k "nest_hole_at" [ctx, po, pl, i] m with
-  | error e1 =>
-    rw [h1, pfvE.k_nest_hole_at.eq_1] at h; cases h
-    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h1
-  | ok q1 =>
-  obtain ⟨r1, m1⟩ := q1
-  obtain ⟨s1, hs1, -, hha⟩ := triple_of_callW (nestHoleAt_spec' p L k ⟨m, Locals.init []⟩ ctx po pl i)
-    (callW_of_callE h1)
-  dsimp only at hha
-  rw [hs1] at hha
-  rw [h1] at h
+  rcases hha : haWf k m ctx po pl i with _ | ⟨r1, m1⟩
+  · rw [liftE_none, pfvE.k_nest_hole_at.none]; exact RefE.of_cls0 (by simp)
+  rw [liftE_some]
   cases k with
   | zero => simp [haWf] at hha
   | succ k =>
-  obtain ⟨hS1, hg1, hon⟩ := haW_ok k dn fe vis a m m1 ctx po pl i r1 c prog (by simpa [haWf] using hha) hS hU.dec
-    hU.inn hpr
+  have hha' : haW k m ctx po pl i = some (r1, m1) := by simpa [haWf] using hha
+  obtain ⟨hS1, hg1, hon⟩ := haW_ok k dn fe vis a m m1 ctx po pl i r1 c prog hha' hS hU.dec hU.inn hpr
   unfold pfK
   cases hnh : ConRon.Arena.nestHoleAt c prog i.toNat with
   | none =>
     rw [hnh] at hon; simp only [decONH] at hon
-    rw [pfvE.k_nest_hole_at.abort1 _ _ _ _ _ _ _ _ _ _ _ hon] at h; cases h
-    exact ErrClaim.fail _ _ (by decide)
+    rw [pfvE.k_nest_hole_at.abort1 _ _ _ _ _ _ _ _ _ _ _ hon]
+    exact fun _ => ErrClaim.fail _ _ (by decide)
   | some hl =>
   rw [hnh] at hon
   obtain ⟨hon1, hdec, hnin⟩ := hon
-  rw [pfvE.k_nest_hole_at.arm1 _ _ _ _ _ _ _ _ _ _ _ (by rw [hon1]; decide)] at h
+  rw [pfvE.k_nest_hole_at.arm1 _ _ _ _ _ _ _ _ _ _ _ (by rw [hon1]; decide)]
   dsimp only
   have hU1 := hU.grow hg1
   have htop1 : iwTop m1 < 2 ^ 64 := Nat.lt_of_le_of_lt hS1.2.1 hS1.2.2.2.1
   obtain ⟨hn1, -, -, -, hnP1, -⟩ := ctx_fields hU1.dec hU1.inn htop1
   have hne1 := ctx_names_end hU1.dec hU1.inn hU1.sl htop1
-  cases h2 : callE p (k + 1) "nest_occ_any" [rdW (m1.arr64 IW) ctx, rdW (m1.arr64 IW) (ctx + 1),
-      rdW (m1.arr64 IW) (ctx + 4), hi, aO, aL] m1 with
-  | error e2 =>
-    rw [h2, pfvE.k_nest_occ_any.eq_1] at h; cases h
-    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h2
-  | ok q2 =>
-  obtain ⟨r2, m2⟩ := q2
-  obtain ⟨s2, hs2, -, hoa⟩ := triple_of_callW (nestOccAny_spec p L.no L.hoa (k + 1) ⟨m1, Locals.init []⟩ _ _ _ _ _ _)
-    (callW_of_callE h2)
-  dsimp only at hoa
-  rw [hs2] at hoa
-  rw [h2] at h
+  rcases hoa1 : noaW1 (k + 1) m1 (rdW (m1.arr64 IW) ctx) (rdW (m1.arr64 IW) (ctx + 1))
+      (rdW (m1.arr64 IW) (ctx + 4)) hi aO aL with _ | ⟨o2, m2⟩
+  · rw [liftE_none, pfvE.k_nest_occ_any.none]; exact RefE.of_cls0 (by simp)
+  rw [liftE_some]
+  obtain ⟨r2, hoa, hr2o⟩ := noaW1_some hoa1
   obtain ⟨b, hrunoa, hS2, hg2, hr2, hP2⟩ := noaW_ok dn fe vis _ _ _ _ c.names (k + 1) m1 m2 a aO aL args _ hoa hS1
     hn1 hne1 (by rw [decHL_agree (RdS.of_grow hg1) (fun j hj => by omega)]; exact hargs)
-    (fun j hj => by have := hg1.1; omega) (hP.fr (haW_mfr (by simpa [haWf] using hha)))
+    (fun j hj => by have := hg1.1; omega) (hP.fr (haW_mfr hha'))
   rw [hnP1] at hrunoa
-  simp only [List.headD_cons] at hr2
-  refine ErrClaim.bind_right hrunoa ?_
+  rw [hr2o] at hr2
+  refine RefE.bind_right hrunoa ?_
   cases b with
   | true =>
-    rw [pfvE.k_nest_occ_any.abort1 _ _ _ _ _ _ _ _ _ _ (by rw [hr2]; decide)] at h; cases h
-    exact ErrClaim.ite_pos rfl (ErrClaim.fail _ _ (by decide))
+    rw [pfvE.k_nest_occ_any.abort1 _ _ _ _ _ _ _ _ _ _ (by rw [hr2]; decide)]
+    exact fun _ => ErrClaim.ite_pos rfl (ErrClaim.fail _ _ (by decide))
   | false =>
-  rw [pfvE.k_nest_occ_any.arm1 _ _ _ _ _ _ _ _ _ _ (by rw [hr2]; rfl)] at h
-  refine ErrClaim.ite_neg (by simp) ?_
+  rw [pfvE.k_nest_occ_any.arm1 _ _ _ _ _ _ _ _ _ _ (by rw [hr2]; rfl)]
+  refine RefE.ite_neg (by simp) ?_
   have htop2 : iwTop m2 < 2 ^ 64 := Nat.lt_of_le_of_lt hS2.2.1 hS2.2.2.2.1
   obtain ⟨hd2, hnin2⟩ := hnin.grow hg2
   rw [← hd2] at hdec
   obtain ⟨hcH, hcd, hdl⟩ := nh_key_words hdec hnin2 htop2
-  cases h3 : callE p (k + 1) "nest_arity" [vis, rdW (m2.arr64 IW) (rdW (m2.arr64 IW) (r1.tail.headD 0))] m2 with
-  | error e3 =>
-    rw [h3, pfvE.k_nest_arity.eq_1] at h; cases h
-    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h3
-  | ok q3 =>
-  obtain ⟨r3, m3⟩ := q3
-  obtain ⟨s3, hs3, -, hna⟩ := triple_of_callW (nestArity_spec' p L.na (k + 1) ⟨m2, Locals.init []⟩ _ _)
-    (callW_of_callE h3)
-  dsimp only at hna
-  rw [hs3] at hna
-  rw [h3] at h
-  obtain ⟨ar, a3, hrun3, hS3, hg3, hr3⟩ := naW_ok dn fe vis _ hcH k m2 m3 a r3 (by simpa [naWf] using hna) hS2
+  rcases hna : naWf (k + 1) m2 vis (rdW (m2.arr64 IW) (rdW (m2.arr64 IW) (r1.tail.headD 0))) with _ | ⟨r3, m3⟩
+  · rw [liftE_none, pfvE.k_nest_arity.none]; exact RefE.of_cls0 (by simp)
+  rw [liftE_some]
+  have hna' : naW k m2 vis (rdW (m2.arr64 IW) (rdW (m2.arr64 IW) (r1.tail.headD 0))) = some (r3, m3) := by
+    simpa [naWf] using hna
+  obtain ⟨ar, a3, hrun3, hS3, hg3, hr3⟩ := naW_ok dn fe vis _ hcH k m2 m3 a r3 hna' hS2
   rw [hcd] at hrun3
-  refine ErrClaim.bind_right hrun3 ?_
+  refine RefE.bind_right hrun3 ?_
   have hal := decHL_length m hargs
   by_cases hov : aL + rdW (m2.arr64 IW) (rdW (m2.arr64 IW) (r1.tail.headD 0) + 3) < aL
-  · rw [pfvE.k_nest_arity.abort1 _ _ _ _ _ _ _ _ _ hov] at h; cases h; exact absurd rfl hk0
+  · rw [pfvE.k_nest_arity.abort1 _ _ _ _ _ _ _ _ _ hov]; exact RefE.of_cls0 (by simp)
   have hsum : (aL + rdW (m2.arr64 IW) (rdW (m2.arr64 IW) (r1.tail.headD 0) + 3)).toNat =
       aL.toNat + hl.key.ds.length := by
     rw [← hdl]
@@ -120,20 +132,24 @@ theorem pfvE_claim {p : Prog} (L : PfLook p) (hnv : closedNV p _root_.L.Checker.
     · exfalso; apply hov; apply UInt64.lt_iff_toNat_lt.mpr; rw [UInt64.toNat_add]
       have := aL.toNat_lt; have := (rdW (m2.arr64 IW) (rdW (m2.arr64 IW) (r1.tail.headD 0) + 3)).toNat_lt; omega
   by_cases hne : aL + rdW (m2.arr64 IW) (rdW (m2.arr64 IW) (r1.tail.headD 0) + 3) ≠ r3.headD 0
-  · rw [pfvE.k_nest_arity.abort2 _ _ _ _ _ _ _ _ _ hov hne] at h; cases h
-    refine ErrClaim.ite_neg ?_ (ErrClaim.fail _ _ (by decide))
+  · rw [pfvE.k_nest_arity.abort2 _ _ _ _ _ _ _ _ _ hov hne]
+    refine RefE.ite_neg ?_ (fun _ => ErrClaim.fail _ _ (by decide))
     intro hq
     apply hne
     apply UInt64.toNat_inj.mp
     rw [hsum, hr3, ← hal]; simpa using hq
-  · rw [pfvE.k_nest_arity.arm1 _ _ _ _ _ _ _ _ _ hov (by simpa using hne)] at h
-    cases h4 : callE p (k + 1) "nest_pos_hole_kind" [ctx, kb, i] m3 with
-    | error e4 =>
-      rw [h4, pfvE.k_nest_pos_hole_kind.eq_1] at h; cases h
-      exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h4
-    | ok q4 =>
-      obtain ⟨r4, m4⟩ := q4
-      rw [h4, pfvE.k_nest_pos_hole_kind.arm1] at h; cases h
+  rw [pfvE.k_nest_arity.arm1 _ _ _ _ _ _ _ _ _ hov (by simpa using hne)]
+  have heq : args.length + hl.key.ds.length = ar := by
+    rw [hal, ← hsum, ← hr3]; simp only [ne_eq, Decidable.not_not] at hne; rw [hne]
+  refine RefE.ite_pos (by simp [heq]) ?_
+  rcases hk : hkWf (k + 1) m3 ctx kb i with _ | w
+  · rw [liftE_none, pfvE.k_nest_pos_hole_kind.none]; exact RefE.of_cls0 (by simp)
+  rw [liftE_some, pfvE.k_nest_pos_hole_kind.arm1]
+  have hU3 := (hU1.grow hg2).grow hg3
+  have htop3 : iwTop m3 < 2 ^ 64 := Nat.lt_of_le_of_lt hS3.2.1 hS3.2.2.2.1
+  have hw := hkW_ok (by simpa [hkWf] using hk) hU3.dec hU3.inn htop3 hhi (nestHoleAt_nP hnh)
+  exact RefE.ret rfl ⟨hS3, (hg1.trans hg2).trans hg3, by simpa using hw,
+    hP2.fr (naW_mfr hna'), ((haW_afr hha').trans (noaW_afr _ _ _ _ _ _ _ _ _ _ hoa)).trans (naW_afr hna')⟩
 
 /-- `nestCont`'s checks between the container and the instantiation's former (`nest_cont_checks`),
 the rest of the twin `REST`. -/
@@ -148,91 +164,174 @@ def nccT {β : Type} (c : NestCtx) (hp : Nat) (n : NIdx) (ds idx : List EIdx) (R
         fail (.invalid "nested positivity: nested inductive datatypes parameters cannot contain local variables")
       else REST
 
-/-- **`nest_cont_checks`' error claim** (the hypotheses of `p2ccW_okW`). -/
-theorem nccE_claim {p : Prog} (L : NbLook p) (hnv : closedNV p _root_.L.Checker.nvFns = true)
-    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
+/-- `cpW_ok` with no exec-fuel bound (its walks run at `CWF`: `bvbW_stageW`'s first case). -/
+theorem cpW_okW (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis hp : Word) (n : Nat) :
+    ∀ (m m' : Mem) (a : AState) (dO dL : Word) (ds : List EIdx) (r : List Word),
+    cpW n m hp dO dL = some (r, m') → StageR dn vis fe m a →
+    decHL m dO.toNat dL.toNat = some ds → (∀ j < dL.toNat, dO.toNat + j < iwTop m) →
+    ∃ b a', (ds.allM (pcF hp.toNat)).run a = .ok (b, a') ∧ StageR dn vis fe m' a' ∧ IWGrow m m' ∧
+      r.headD 0 = (if b then 1 else 0) := by
+  induction n with
+  | zero => intro m m' a dO dL ds r h; simp [cpW] at h
+  | succ n ih =>
+    intro m m' a dO dL ds r h hS hds hin
+    by_cases hl0 : dL = 0
+    · rw [cpW_nil (h := hl0)] at h
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
+      subst hl0
+      have : ds = [] := by simpa [decHL, hslice?] using hds.symm
+      subst this
+      exact ⟨true, a, rfl, hS, IWGrow.refl _, rfl⟩
+    rw [cpW_cons (h := hl0)] at h
+    have hl : dL.toNat ≠ 0 := fun e => hl0 (UInt64.toNat_inj.mp (by simpa using e))
+    obtain ⟨l', hl'⟩ : ∃ l', dL.toNat = l' + 1 := ⟨dL.toNat - 1, by omega⟩
+    have hds' := hds
+    simp only [decHL, hl', hslice?_succ, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def, Option.some.injEq] at hds'
+    obtain ⟨x, hx, xs, hxs, rfl⟩ := hds'
+    obtain ⟨hxH, hxd⟩ := rd_iwH0E (m := m) (o := dO) (k := IdxKind.expr) (by simpa [iwH, iwA] using hx)
+    have hdO1 : (dO + 1).toNat = dO.toNat + 1 :=
+      word_add_toNat (show dO.toNat + 1 < 2 ^ 64 by have := hin 0 (by omega); have := hS.2.1; have := hS.2.2.2.1; omega)
+    have hl1 : (dL - 1).toNat = l' := by
+      rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simp; omega))]; simp; omega
+    rw [List.allM_cons]
+    rcases hb : bvbW n m (rdW (m.arr64 IW) dO) CWF with _ | ⟨bb, m1⟩ <;> rw [hb] at h; · simp [cpK1] at h
+    obtain ⟨a1, hrun1, hS1, hg1, -⟩ := bvbW_stageW dn vis fe hS n coreWalkFuel CWF (.inl (Nat.le_of_eq CWF_eq)) _ bb hxH hb
+    rw [decE_eq, hxd] at hrun1
+    by_cases hbb : bb ≠ 0
+    · rw [cpK1_b (h := hbb)] at h
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
+      refine ⟨false, a1, ?_, hS1, hg1, rfl⟩
+      have : (bb.toNat != 0) = true := by
+        simp only [bne_iff_ne, ne_eq]; intro h0; exact hbb (UInt64.toNat_inj.mp (by simpa using h0))
+      simp only [pcF, StateT.run_bind, hrun1, except_ok_bind, this, ite_true]
+      rfl
+    rw [cpK1_ok (h := hbb)] at h
+    have hbb0 : (bb.toNat != 0) = false := by simp at hbb; simp [hbb]
+    have hrd1 : rdW (m1.arr64 IW) dO = rdW (m.arr64 IW) dO := by
+      simp only [rdW]; rw [hg1.2.2.1 _ (by simpa using hin 0 (by omega))]
+    rw [hrd1] at h
+    rcases hst : fvbF m1 [CWF, rdW (m.arr64 IW) dO] with _ | ⟨r2, m2⟩ <;> rw [hst] at h; · simp [cpK2] at h
+    obtain ⟨k, a2, hrun2, hS2, hg2, hk⟩ := fvbF_ok dn vis fe CWF _ hxH _ _ a1 r2 hst hS1
+    rw [CWF_eq, hxd] at hrun2
+    simp only [decW0Nat] at hk
+    by_cases hc : hp < r2.headD 0
+    · rw [cpK2_out (h := hc)] at h
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
+      have hgt : ¬ k ≤ hp.toNat := by have := UInt64.lt_iff_toNat_lt.mp hc; omega
+      refine ⟨false, a2, ?_, hS2, hg1.trans hg2, rfl⟩
+      simp only [pcF, StateT.run_bind, hrun1, except_ok_bind, hbb0, Bool.false_eq_true, ite_false,
+        hrun2, hgt, decide_false]
+      rfl
+    rw [cpK2_in (h := hc)] at h
+    have hle : k ≤ hp.toNat := by
+      have : ¬ hp.toNat < (r2.headD 0).toNat := fun e => hc (UInt64.lt_iff_toNat_lt.mpr e)
+      omega
+    have hg12 := hg1.trans hg2
+    obtain ⟨b, a', hrun, hS', hg', hr⟩ := ih m2 m' a2 (dO + 1) (dL - 1) xs r h hS2
+      (by rw [hdO1, hl1, ← hxs, decHL]; exact decHL_agree (RdS.of_grow hg12) (fun j hj => by
+            have := hin (j + 1) (by omega); simp only [decHL] at *; omega))
+      (fun j hj => by rw [hdO1, hl1] at *; have := hin (j + 1) (by omega); have := hg12.1; omega)
+    refine ⟨b, a', ?_, hS', hg12.trans hg', hr⟩
+    simp only [pcF, StateT.run_bind, hrun1, except_ok_bind, hbb0, Bool.false_eq_true, ite_false,
+      hrun2, hle, decide_true]
+    exact hrun
+
+/-- `nccT` with its rest split off. -/
+theorem nccT_eq {β : Type} (c : NestCtx) (hp : Nat) (n : NIdx) (ds idx : List EIdx) (REST : AM β) :
+    nccT c hp n ds idx REST = nccT c hp n ds idx (pure ()) >>= fun _ => REST := by
+  unfold nccT
+  simp only [bind_assoc]
+  congr 1; funext b
+  split
+  · funext s; rfl
+  · simp only [bind_assoc]
+    congr 1; funext q
+    split
+    · funext s; rfl
+    · simp only [bind_assoc]
+      congr 1; funext pc
+      split
+      · funext s; rfl
+      · simp
+
+/-- What `nest_cont_checks` gives (from `m`, the twin from `a`): the three checks' runs, the stage,
+the growth, the frames. -/
+structure NccPost (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (c : NestCtx) (a : AState)
+    (m : Mem) (hp nn : Word) (ds idx : List EIdx) (m' : Mem) (a' : AState) : Prop where
+  occ : (idx.anyM (fun x => ConRon.Arena.nestOcc c.names c.nP hp.toNat x)).run a = .ok (false, a)
+  quot : ∃ q, pinQuot.run a = .ok (q, a) ∧ (decI nn == q) = false
+  params : (ds.allM (pcF hp.toNat)).run a = .ok (true, a')
+  stage : StageR dn vis fe m' a'
+  grow : IWGrow m m'
+  pos : PosMR m'
+  abs : AFr m m'
+
+/-- **`nest_cont_checks` refines `nccT`, both outcomes.** -/
+theorem ncc_ref {p : Prog} (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     {k : Nat} {m : Mem} {a : AState} {ctx hp nn dO dL iO iL : Word}
-    {c : NestCtx} {ds idx : List EIdx} {e : Err}
-    (h : nccE p k m ctx hp nn dO dL iO iL = .error e) (hS : StageR dn vis fe m a)
+    {c : NestCtx} {ds idx : List EIdx} (hS : StageR dn vis fe m a)
     (hU : UCtx dn vis fe m ctx c) (hds : decHL m dO.toNat dL.toNat = some ds)
     (hdsb : ∀ j < dL.toNat, dO.toNat + j < iwTop m) (hidx : decHL m iO.toNat iL.toNat = some idx)
     (hidxb : ∀ j < iL.toNat, iO.toNat + j < iwTop m) (hnH : H nn) (hP : PosMR m) :
-    ∀ {β : Type} (REST : AM β), ErrClaim (nccT c hp.toNat (decI nn) ds idx REST) a e := by
-  intro β REST
-  by_cases hk0 : e.cls = 0
-  · exact ErrClaim.of_cls0 hk0
+    RefE (closedNV p _root_.L.Checker.nvFns = true) (nccE p k m ctx hp nn dO dL iO iL)
+      (nccT c hp.toNat (decI nn) ds idx (pure ())) a
+      (fun v _ a' => NccPost dn vis fe c a m hp nn ds idx v.2 a') := by
   cases k with
-  | zero => rw [nccE.eq_1] at h; cases h; exact absurd rfl hk0
+  | zero => rw [nccE.eq_1]; exact RefE.of_cls0 (by simp)
   | succ k =>
-  rw [nccE.arm1] at h
+  rw [nccE.arm1]
   have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
   obtain ⟨hn, -, -, -, hnP, -⟩ := ctx_fields hU.dec hU.inn htop
   have hne := ctx_names_end hU.dec hU.inn hU.sl htop
-  cases h1 : callE p k "nest_occ_any" [rdW (m.arr64 IW) ctx, rdW (m.arr64 IW) (ctx + 1),
-      rdW (m.arr64 IW) (ctx + 4), hp, iO, iL] m with
-  | error e1 =>
-    rw [h1, nccE.k_nest_occ_any.eq_1] at h; cases h
-    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h1
-  | ok q1 =>
-  obtain ⟨r1, m1⟩ := q1
-  obtain ⟨s1, hs1, -, hoa⟩ := triple_of_callW (nestOccAny_spec p L.nit.no L.nit.hoa k ⟨m, Locals.init []⟩ _ _ _ _ _ _)
-    (callW_of_callE h1)
-  dsimp only at hoa
-  rw [hs1] at hoa
-  rw [h1] at h
+  rcases hoa1 : noaW1 k m (rdW (m.arr64 IW) ctx) (rdW (m.arr64 IW) (ctx + 1)) (rdW (m.arr64 IW) (ctx + 4)) hp
+      iO iL with _ | ⟨o1, m1⟩
+  · rw [liftE_none, nccE.k_nest_occ_any.none]; exact RefE.of_cls0 (by simp)
+  rw [liftE_some]
+  obtain ⟨r1, hoa, hr1o⟩ := noaW1_some hoa1
   obtain ⟨b, hrunoa, hS1, hg1, hr1, hP1⟩ := noaW_ok dn fe vis _ _ _ _ c.names k m m1 a iO iL idx _ hoa hS
     hn hne hidx hidxb hP
-  simp only [List.headD_cons] at hr1
+  rw [hr1o] at hr1
   rw [hnP] at hrunoa
   unfold nccT
-  refine ErrClaim.bind_right hrunoa ?_
+  refine RefE.bind_right hrunoa ?_
   cases b with
   | true =>
-    rw [nccE.k_nest_occ_any.abort1 _ _ _ _ _ _ _ _ (by rw [hr1]; decide)] at h; cases h
-    exact ErrClaim.ite_pos rfl (ErrClaim.fail _ _ (by decide))
+    rw [nccE.k_nest_occ_any.abort1 _ _ _ _ _ _ _ _ (by rw [hr1]; decide)]
+    exact fun _ => ErrClaim.ite_pos rfl (ErrClaim.fail _ _ (by decide))
   | false =>
-  rw [nccE.k_nest_occ_any.arm1 _ _ _ _ _ _ _ _ (by rw [hr1]; rfl)] at h
-  refine ErrClaim.ite_neg (by simp) ?_
-  cases h2 : callE p k "pin_at" [47] m1 with
-  | error e2 =>
-    rw [h2, nccE.k_pin_at.eq_1] at h; cases h
-    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h2
-  | ok q2 =>
-  obtain ⟨rq, m2⟩ := q2
-  obtain ⟨s2, hs2, -, hq⟩ := triple_of_callW (pos2Pin_spec p L.hpa k ⟨m1, Locals.init []⟩ 47) (callW_of_callE h2)
-  dsimp only at hq
-  rw [hs2] at hq
-  rw [h2] at h
+  rw [nccE.k_nest_occ_any.arm1 _ _ _ _ _ _ _ _ (by rw [hr1]; rfl)]
+  refine RefE.ite_neg (by simp) ?_
+  rcases hq : pos2PinW m1 47 with _ | ⟨rq, m2⟩
+  · rw [liftE_none, nccE.k_pin_at.none]; exact RefE.of_cls0 (by simp)
+  rw [liftE_some]
   obtain ⟨hm2, hqH, hqrun⟩ := pos2PinW_ok hq hS1.1.pins
-  rw [hm2] at h
+  subst hm2
   have hpq : pinQuot = pinAt 47 := rfl
-  refine ErrClaim.bind_right (v := decI (rq.headD 0)) (a₁ := a) (by rw [hpq]; simpa using hqrun) ?_
+  have hqrun' : pinQuot.run a = .ok ((decI (rq.headD 0) : NIdx), a) := by rw [hpq]; simpa using hqrun
+  refine RefE.bind_right hqrun' ?_
   by_cases hnq : nn = rq.headD 0
-  · rw [nccE.k_pin_at.abort1 _ _ _ _ _ _ _ _ hnq] at h; cases h
-    exact ErrClaim.ite_pos (by rw [hnq]; simp) (ErrClaim.fail _ _ (by decide))
-  rw [nccE.k_pin_at.arm1 _ _ _ _ _ _ _ _ hnq] at h
-  refine ErrClaim.ite_neg (by rw [decI_beq _ _ hnH hqH]; simpa using hnq) ?_
-  cases h3 : callE p k "nest_cont_params_closed" [hp, dO, dL] m1 with
-  | error e3 =>
-    rw [h3, nccE.k_nest_cont_params_closed.eq_1] at h; cases h
-    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h3
-  | ok q3 =>
-  obtain ⟨r3, m3⟩ := q3
-  obtain ⟨s3, hs3, -, hcp⟩ := triple_of_callW
-    (nestContParamsClosed_spec p L.usl.hbp L.dc.hf L.hpc k ⟨m1, Locals.init []⟩ _ _ _) (callW_of_callE h3)
-  dsimp only at hcp
-  rw [hs3] at hcp
-  rw [h3] at h
-  obtain ⟨b3, a3, hrun3, -, -, hr3⟩ := cpW_okW dn fe vis hp k m1 m3 a dO dL ds _ hcp hS1
+  · rw [nccE.k_pin_at.abort1 _ _ _ _ _ _ _ _ hnq]
+    exact fun _ => ErrClaim.ite_pos (by rw [hnq]; simp) (ErrClaim.fail _ _ (by decide))
+  rw [nccE.k_pin_at.arm1 _ _ _ _ _ _ _ _ hnq]
+  have hbeq : ((decI nn : NIdx) == decI (rq.headD 0)) = false := by rw [decI_beq _ _ hnH hqH]; simpa using hnq
+  refine RefE.ite_neg (by rw [hbeq]; simp) ?_
+  rcases hcp1 : cpW1 k m2 hp dO dL with _ | ⟨b3w, m3⟩
+  · rw [liftE_none, nccE.k_nest_cont_params_closed.none]; exact RefE.of_cls0 (by simp)
+  rw [liftE_some]
+  obtain ⟨r3, hcp, hr3o⟩ := cpW1_some hcp1
+  obtain ⟨b3, a3, hrun3, hS3, hg3, hr3⟩ := cpW_okW dn fe vis hp k m2 m3 a dO dL ds r3 hcp hS1
     (by rw [decHL_agree (RdS.of_grow hg1) (fun j hj => hdsb j hj)]; exact hds)
     (fun j hj => by have := hdsb j hj; have := hg1.1; omega)
-  simp only [List.headD_cons] at hr3
-  refine ErrClaim.bind_right hrun3 ?_
+  rw [hr3o] at hr3
+  refine RefE.bind_right hrun3 ?_
   cases b3 with
   | false =>
-    rw [nccE.k_nest_cont_params_closed.abort1 _ _ _ (by rw [hr3]; rfl)] at h; cases h
-    exact ErrClaim.ite_pos rfl (ErrClaim.fail _ _ (by decide))
+    rw [nccE.k_nest_cont_params_closed.abort1 _ _ _ (by rw [hr3]; rfl)]
+    exact fun _ => ErrClaim.ite_pos rfl (ErrClaim.fail _ _ (by decide))
   | true =>
-    rw [nccE.k_nest_cont_params_closed.arm1 _ _ _ (by rw [hr3]; decide)] at h; cases h
+    rw [nccE.k_nest_cont_params_closed.arm1 _ _ _ (by rw [hr3]; decide)]
+    exact RefE.ite_neg (by simp) (RefE.ret rfl ⟨hrunoa, ⟨_, hqrun', hbeq⟩, hrun3, hS3, hg1.trans hg3,
+      hP1.fr (cpW_mfr _ _ _ _ _ _ _ hcp),
+      ((noaW_afr _ _ _ _ _ _ _ _ _ _ hoa).trans (pos2PinW_afr hq)).trans (cpW_afr _ _ _ _ _ _ _ hcp)⟩)
 
 end L.Ind

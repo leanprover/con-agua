@@ -1,7 +1,7 @@
-import ConAgua.Arena.IndPosSpec.CfW
 import ConAgua.Arena.IndPosSpec.NbKeyK2
 import ConAgua.Arena.IndRealNames
 import ConAgua.Arena.IndGrindAttr
+import ConAgua.Arena.IndPosSpec.NestGroupCtors
 
 /-!
 # NbPosW
@@ -26,38 +26,48 @@ def nwsWf : Nat → Mem → Word → Word → Word → Word → Word → Option 
   | _, _, _, _, _, _, _ => none
 
 abbrev MW17 := Mem → Word → Word → Word → Word → Word → Word → Word → Word → Word → Word → Word → Word → Word → Word → Word → Word → Word → Option (List Word × Mem)
-def nbAppK2 (n : Nat) (contF : MW11) (vis ctx fu po pl kb hi ns aO aL : Word) :
+/-- `nest_pos_fvar(vis, ctx, progOff, progLen, kb, hi, i, argsOff, argsLen)` through its run. -/
+def pfvR (cR : CallM) (n : Nat) (m : Mem) (vis ctx po pl kb hi i aO aL : Word) : Option (List Word × Mem) :=
+  cR n "nest_pos_fvar" [vis, ctx, po, pl, kb, hi, i, aO, aL] m
+/-- `nest_ctors_crest(vis, namesOff, namesLen, us, dsOff, dsLen, holesOff, holesLen, cv, hi)` through its
+run. -/
+def crestR (cR : CallM) (k : Nat) (m : Mem) (vis no nl us dO dL hO hL cv hi : Word) : Option (List Word × Mem) :=
+  cR k "nest_ctors_crest" [vis, no, nl, us, dO, dL, hO, hL, cv, hi] m
+def nbAppK2 (cR : CallM) (n : Nat) (contF : MW11) (vis ctx fu po pl kb hi ns aO aL : Word) :
     Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (rh, m2) =>
     if eViewW m2 (rh.headD 0) = [] then none
     else if (eViewW m2 (rh.headD 0)).headD 0 = 1 then
-      nbAppK4 ns (pfW n m2 vis ctx po pl kb hi ((eViewW m2 (rh.headD 0)).tail.headD 0) aO aL)
+      nbAppK4 ns (pfvR cR n m2 vis ctx po pl kb hi ((eViewW m2 (rh.headD 0)).tail.headD 0) aO aL)
     else if (eViewW m2 (rh.headD 0)).headD 0 = 3 then
       nbAppK5 contF m2 vis ctx fu po pl kb ns aO aL (eViewW m2 (rh.headD 0))
         (containsW n m2 (rdW (m2.arr64 IW) ctx) (rdW (m2.arr64 IW) (ctx + 1)) ((eViewW m2 (rh.headD 0)).tail.headD 0))
     else none
-def nbAppK1 (n : Nat) (contF : MW11) (vis ctx fu po pl kb hi w ns : Word) :
+def nbAppK1 (cR : CallM) (n : Nat) (contF : MW11) (vis ctx fu po pl kb hi w ns : Word) :
     Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (ra, m1) => nbAppK2 n contF vis ctx fu po pl kb hi ns (ra.headD 0) (ra.tail.headD 0)
+  | some (ra, m1) => nbAppK2 cR n contF vis ctx fu po pl kb hi ns (ra.headD 0) (ra.tail.headD 0)
       (gafF m1 [CWF, w])
 
-def nbFrameK5 (k : Nat) (ctorsF : MW19) (vis ctx fu hi us dO dL nPc gO gL ns : Word) :
+/-- `nest_group_ctors(vis, nPc, off, l, outOff, outLen)` through its run. -/
+def ngcR (cR : CallM) (n : Nat) (m : Mem) (vis nPc off l oo ol : Word) : Option (List Word × Mem) :=
+  cR n "nest_group_ctors" [vis, nPc, off, l, oo, ol] m
+def nbFrameK5 (cR : CallM) (k : Nat) (ctorsF : MW19) (vis ctx fu hi us dO dL nPc gO gL ns : Word) :
     Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (rp, m5) => nbFrameK6 k ctorsF vis ctx fu hi us dO dL gO gL ns (rp.headD 0) (rp.tail.headD 0)
       (rp.tail.tail.headD 0) (rp.tail.tail.tail.headD 0)
-      (gcW k m5 vis nPc (rp.tail.tail.headD 0) (rp.tail.tail.tail.headD 0) 0 0)
-def nbFrameK4 (k : Nat) (ctorsF : MW19) (vis ctx fu po pl hi us dO dL nPc gO gL ns : Word) :
+      (ngcR cR k m5 vis nPc (rp.tail.tail.headD 0) (rp.tail.tail.tail.headD 0) 0 0)
+def nbFrameK4 (cR : CallM) (k : Nat) (ctorsF : MW19) (vis ctx fu po pl hi us dO dL nPc gO gL ns : Word) :
     Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (_, m4) => nbFrameK5 k ctorsF vis ctx fu hi us dO dL nPc gO gL ns
+  | some (_, m4) => nbFrameK5 cR k ctorsF vis ctx fu hi us dO dL nPc gO gL ns
       (fgW k m4 hi us dO dL gO gL po pl 0 0)
 def nbFrameK3 (cR : CallM) (k : Nat) (ctorsF : MW19) (vis ctx fu po pl hi us dO dL nPc gO gL ns : Word) :
     Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (ra, m3) => nbFrameK4 k ctorsF vis ctx fu po pl hi us dO dL nPc gO gL ns
+  | some (ra, m3) => nbFrameK4 cR k ctorsF vis ctx fu po pl hi us dO dL nPc gO gL ns
       (cR k "infer_type_core" [vis, hi, ra.headD 0] m3)
 def nbFrameK2 (cR : CallM) (k : Nat) (ctorsF : MW19) (vis ctx fu po pl hi us dO dL nPc gO gL ns : Word) :
     Option (Word × Mem) → Option (List Word × Mem)
@@ -92,7 +102,7 @@ def nbBindW (cR : CallM) : Nat → MW9
 def nbAppW (cR : CallM) : Nat → MW9
   | 0, _, _, _, _, _, _, _, _, _, _ => none
   | n + 1, m, vis, ctx, fu, po, pl, kb, hi, w, ns =>
-    nbAppK1 n (nbContW cR n) vis ctx fu po pl kb hi w ns (gaaF m [CWF, w])
+    nbAppK1 cR n (nbContW cR n) vis ctx fu po pl kb hi w ns (gaaF m [CWF, w])
 /-- `nest_cont(vis, ctx, fuel, progOff, progLen, kb, n, us, argsOff, argsLen, ns)`. -/
 def nbContW (cR : CallM) : Nat → MW11
   | 0, _, _, _, _, _, _, _, _, _, _, _, _ => none
@@ -128,7 +138,7 @@ namesLen, holesOff, holesLen, cv, nF, ns)`. -/
 def nbOneW (cR : CallM) : Nat → MW17
   | 0, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => none
   | k + 1, m, vis, ctx, root, fu, po, pl, hi, us, dO, dL, no, nl, hO, hL, cv, nF, ns =>
-    nbOneK1 k (nbWalkW cR k) vis ctx root fu po pl hi us dO dL cv nF ns (p2ctW cR k m vis no nl us dO dL hO hL cv hi)
+    nbOneK1 k (nbWalkW cR k) vis ctx root fu po pl hi us dO dL cv nF ns (crestR cR k m vis no nl us dO dL hO hL cv hi)
 /-- `nest_ctors_walk(vis, ctx, root, fuel, progOff, progLen, hi, nF, crest, ns)`. -/
 def nbWalkW (cR : CallM) : Nat → MW10
   | 0, _, _, _, _, _, _, _, _, _, _, _ => none
@@ -163,7 +173,7 @@ theorem nbBindW_succ (cR : CallM) (n : Nat) (m : Mem) (vis ctx fu po pl dep kb w
           (nhiW m ctx pl) ((eViewW m w).tail.headD 0)) := by
   rw [nbBindW]
 theorem nbAppW_succ (cR : CallM) (n : Nat) (m : Mem) (vis ctx fu po pl kb hi w ns : Word) :
-    nbAppW cR (n + 1) m vis ctx fu po pl kb hi w ns = nbAppK1 n (nbContW cR n) vis ctx fu po pl kb hi w ns (gaaF m [CWF, w]) := by
+    nbAppW cR (n + 1) m vis ctx fu po pl kb hi w ns = nbAppK1 cR n (nbContW cR n) vis ctx fu po pl kb hi w ns (gaaF m [CWF, w]) := by
   rw [nbAppW]
 theorem nbContW_succ (cR : CallM) (k : Nat) (m : Mem) (vis ctx fu po pl kb nn us aO aL ns : Word) :
     nbContW cR (k + 1) m vis ctx fu po pl kb nn us aO aL ns = nbContK1 cR k (nbKeyW cR k) vis ctx fu po pl kb nn us aO aL ns (ntWf k m vis nn) := by
@@ -187,7 +197,7 @@ theorem nbCtorsW_succ (cR : CallM) (k : Nat) (m : Mem) (vis ctx root fu po pl hi
           (rdW (m.arr64 IW) (rdW (m.arr64 IW) cO + 1)) ns) := by
   rw [nbCtorsW]
 theorem nbOneW_succ (cR : CallM) (k : Nat) (m : Mem) (vis ctx root fu po pl hi us dO dL no nl hO hL cv nF ns : Word) :
-    nbOneW cR (k + 1) m vis ctx root fu po pl hi us dO dL no nl hO hL cv nF ns = nbOneK1 k (nbWalkW cR k) vis ctx root fu po pl hi us dO dL cv nF ns (p2ctW cR k m vis no nl us dO dL hO hL cv hi) := by
+    nbOneW cR (k + 1) m vis ctx root fu po pl hi us dO dL no nl hO hL cv nF ns = nbOneK1 k (nbWalkW cR k) vis ctx root fu po pl hi us dO dL cv nF ns (crestR cR k m vis no nl us dO dL hO hL cv hi) := by
   rw [nbOneW]
 theorem nbWalkW_succ (cR : CallM) (k : Nat) (m : Mem) (vis ctx root fu po pl hi nF crest ns : Word) :
     nbWalkW cR (k + 1) m vis ctx root fu po pl hi nF crest ns =

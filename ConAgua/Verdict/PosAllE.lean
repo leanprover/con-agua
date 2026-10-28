@@ -31,7 +31,7 @@ theorem nbOKE_all {p : Prog} (L : NbLook p) (hq : KnotStageProg p) (hIlpf : Ilpf
   | 0, _ => nbOKE_zero p dn vis fe env
   | n + 1, hn => by
     have ihE := nbOKE_all (dn := dn) (vis := vis) (fe := fe) L hq hIlpf hLC hnv hcE hW henv n (by omega)
-    have ihC := nbOKC_all (dn := dn) (vis := vis) (fe := fe) hq hIlpf hLC henv n (by omega)
+    have ihC := nbOKC_all (dn := dn) (vis := vis) (fe := fe) L hq hIlpf hLC henv n (by omega)
     have hNit := nitE_all L hq hIlpf hLC hnv dn vis fe env
     exact ⟨posOKE_step L hq hnv hW dn vis fe henv n (by omega) ihE,
       bindOKE_step L hnv dn vis fe n ihE,

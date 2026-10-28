@@ -216,40 +216,6 @@ def naWf : Nat → Mem → Word → Word → Option (List Word × Mem)
   | 0, _, _, _ => none
   | k + 1, m, vis, c => naW k m vis c
 
-def p2pfK2 (k : Nat) (vis ctx kb i aL hp : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m2) =>
-    if r.headD 0 ≠ 0 then none
-    else p2pfK3 k ctx kb i aL (rdW (m2.arr64 IW) (rdW (m2.arr64 IW) hp + 3))
-      (naWf k m2 vis (rdW (m2.arr64 IW) (rdW (m2.arr64 IW) hp)))
-def p2pfK1 (k : Nat) (vis ctx kb hi i aO aL : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m1) =>
-    if r.headD 0 = 0 then none
-    else p2pfK2 k vis ctx kb i aL (r.tail.headD 0) (noaW k m1 (rdW (m1.arr64 IW) ctx) (rdW (m1.arr64 IW) (ctx + 1))
-      (rdW (m1.arr64 IW) (ctx + 4)) hi aO aL)
-/-- The model of `nest_pos_fvar(vis, ctx, progOff, progLen, kb, hi, i, argsOff, argsLen)`. -/
-def pfW : Nat → Mem → Word → Word → Word → Word → Word → Word → Word → Word → Word → Option (List Word × Mem)
-  | 0, _, _, _, _, _, _, _, _, _, _ => none
-  | k + 1, m, vis, ctx, po, pl, kb, hi, i, aO, aL => p2pfK1 k vis ctx kb hi i aO aL (haWf k m ctx po pl i)
-
-section arms
-variable (k : Nat) (m1 m2 m3 : Mem) (vis ctx kb hi i aO aL hp dL2 : Word) (r : List Word)
-theorem p2pfK1_eq : p2pfK1 k vis ctx kb hi i aO aL (some (r, m1)) =
-    if r.headD 0 = 0 then none
-    else p2pfK2 k vis ctx kb i aL (r.tail.headD 0) (noaW k m1 (rdW (m1.arr64 IW) ctx) (rdW (m1.arr64 IW) (ctx + 1))
-      (rdW (m1.arr64 IW) (ctx + 4)) hi aO aL) := rfl
-theorem p2pfK2_eq : p2pfK2 k vis ctx kb i aL hp (some (r, m2)) =
-    if r.headD 0 ≠ 0 then none
-    else p2pfK3 k ctx kb i aL (rdW (m2.arr64 IW) (rdW (m2.arr64 IW) hp + 3))
-      (naWf k m2 vis (rdW (m2.arr64 IW) (rdW (m2.arr64 IW) hp))) := rfl
-theorem p2pfK3_eq : p2pfK3 k ctx kb i aL dL2 (some (r, m3)) =
-    if aL + dL2 < aL then none
-    else if aL + dL2 ≠ r.headD 0 then none
-    else match hkWf k m3 ctx kb i with
-      | none => none
-      | some w => some ([w], m3) := rfl
-end arms
 
 end L.Ind
 
@@ -336,37 +302,6 @@ theorem nestCrest_spec' (p : Prog) (L : CrLook p) (k : Nat) (s₀ : St) (no nl u
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, canonCrest_exec1 p L.cc] <;> finish
   | k + 3 => exact nestCrest_spec p L k s₀ no nl us dO dL hO hL cty
-
-section arms
-variable (cR : CallM) (k : Nat) (m1 m2 m3 m4 : Mem) (vis no nl us dO dL hO hL cv hi crest : Word) (r : List Word)
-theorem p2ctK4_eq : p2ctK4 cR k vis hi crest (some (r, m4)) = match cR k "ensure_sort_core" [vis, hi, r.headD 0] m4 with
-    | none => none
-    | some (_, m5) => some ([crest], m5) := rfl
-theorem p2ctK3_eq : p2ctK3 cR k vis hi (some (r, m3)) = if r.headD 0 = 0 then none
-    else p2ctK4 cR k vis hi (r.tail.headD 0) (cR k "infer_type_core" [vis, hi, r.tail.headD 0] m3) := rfl
-theorem p2ctK2_some : p2ctK2 cR k vis no nl us dO dL hO hL hi (some (r, m2)) =
-    p2ctK3 cR k vis hi (pcrWf k m2 no nl us dO dL hO hL (r.headD 0)) := rfl
-theorem p2ctK1_eq : p2ctK1 cR k vis no nl us dO dL hO hL cv hi (some (r, m1)) =
-    match nodupW k m1 (r.headD 0) (r.tail.headD 0) with
-    | none => none
-    | some b => if b = 0 then none
-      else p2ctK2 cR k vis no nl us dO dL hO hL hi (cR k "inst_lp_fast" [CWF, r.headD 0, r.tail.headD 0, us,
-        rdW (m1.arr64 EREC) (cv + 3)] m1) := rfl
-end arms
-attribute [ind_grind] p2ctK2_some
-
-theorem nestCtorsCrest_spec (p : Prog) (L : CtLook p) (cR : CallM) (hcR : CallSpec p cR) (n : Nat) (s₀ : St) (vis no nl us dO dL hO hL cv hi : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "nest_ctors_crest" [vis, no, nl, us, dO, dL, hO, hL, cv, hi]
-    ⦃fun r s' => LocEq s' s₀ ∧ p2ctW cR n s₀.mem vis no nl us dO dL hO hL cv hi = some ([r.headD 0], s'.mem); ⊤⦄ := by
-  simp only [invoke_eq _ L.hp, callFn, nestCtorsCrestL]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        cvLps_spec p L.ha L.hc L.he L.hcv n, slNodup_spec p L.hsc L.hnd n, hcR n "inst_lp_fast",
-        nestCrest_spec' p L.cr n, hcR n "infer_type_core", hcR n "ensure_sort_core"] <;>
-      finish (gen := 20) (instances := 5000) [p2ctW, p2ctK1_eq, p2ctK3_eq, p2ctK4_eq, rdW_eq]
 
 end L.Ind
 
