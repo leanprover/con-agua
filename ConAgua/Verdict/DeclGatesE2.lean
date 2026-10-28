@@ -1,4 +1,5 @@
 import ConAgua.Verdict.DeclGatesE
+import ConAgua.Arena.DeclDefnT
 import ConAgua.Verdict.DivModPinE
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.ModelGen

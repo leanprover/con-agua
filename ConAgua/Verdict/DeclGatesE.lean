@@ -1,5 +1,5 @@
-import ConAgua.Arena.DeclDefnT
-import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.Verdict
+import ConAgua.Checker.NoVerdictTree
 /-!
 # The definition arm's gates: their callees outside the verdict closure (lane `verdicts-b`)
 
@@ -8,19 +8,9 @@ The `Nat.div`-family pin gate's claims (`defn_div_gate` / `check_div_mod_pin*`) 
 `DeclGatesE2.lean`; the structural gate's refinement is `dng_ref` (`DeclNatGateT.lean`).
 -/
 
-set_option experimental.vcgen true
-
 open ConRon.Arena
-open Std.WP
-open scoped Lean.Order
 
 namespace L.Arena
-
-open L.Ind
-open L.Rom (PinSetsR)
-open ConRon.Bridge (FoldOK PinsDenote CheckOK StepOK)
-
-local notation "V" => ConLeche.CheckMode.verified
 
 /-- The gates' callees outside the verdict closure. -/
 def gateNvList : List FnName :=
