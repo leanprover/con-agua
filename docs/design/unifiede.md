@@ -1753,3 +1753,40 @@ d4f85701, load 22–130, `_tmp/unify-b3c/times1.txt`):
 
 The three flagged modules are the new homes of the unified models; with the modules they came from
 they are 42.7 → 27.8 s.
+
+### 3.21 Batch 3c, block checks, second landing (`check_block_tables_one`, `check_block_tables`)
+
+The batch-2c leftovers of the family (§3.12, §3.15) that have no core call:
+
+| function | before: ok refinement + error claim | after | change |
+|---|---|---|---:|
+| `check_block_tables_one` | `ctoW_simR` 143 + `ctoE_claim` 138 = 281 | `cto_ref` 151 + `TabPost` 7 = 158 | −44 % |
+| `check_block_tables` | `ctbW_simR` 120 + `ctbE_claim` 128 + `checkBlockTablesE_claim` 11 = 259 | `ctb_ref` 119 + `checkBlockTablesE_claim` 7 = 126 | −51 % |
+| **pairs** | **540** | **284** | **−47 %** |
+
+Also gone: the hand models `ctoW`/`ctoK1–3`, `ctbW`/`ctbK1–2` with their arms and `cto_spec`,
+`ctb_spec` (the file `IndInstallSpec/CtbW`, 157 lines), the `errors` models. `ctoE`/`ctbE`
+(`l_model … unified`, default `finish`; `simp []` 13–15 s and `simp [rdW]` 21–24 s for the module
+against 10–11 s) and the refinements sit in `Arena/IndRealSctC` beside `tblW_okR`; `G` is
+`check_struct_proj_table`'s claim in the `StageR` shape, `CheckStructProjTableRE` (moved there from
+`Verdict/BlkE3`; `struct_proj_guards` and `block_shape_lps` are lifted). One post `TabPost` for
+both (the stage at the returned view). `check_block_tail`'s ok proof (`Tail`) reads `ctb_ref`
+through the run (`RefE.run_okW`; `RcMR.ofClosedHb` needs the call's run);
+`checkBlockTablesE_claim` (`BlkE3`) is `RefE.run_err`.
+
+Elaboration (as §3.20, base master f5e47a7f, load 36–85, `_tmp/unify-b3c-blk/timesB.txt`):
+
+| module | base | new | |
+|---|---:|---:|---|
+| `Arena/IndRealSctC` | 4.61 | **9.95** | **slower (+5.3 s)**: `ctoE`, `ctbE` and their refinements moved in … |
+| `Verdict/BlkE3`, `Arena/IndInstallSpec/CtbW` (deleted) | 27.80 | 0.60 | … from here; the three 32.4 → 10.6 |
+| `Arena/IndT/Tail`, `Verdict/IndA4` | 10.73 | 10.02 | |
+| **sum** | **43.1** | **20.6** | **−52 %** |
+
+**Not migrated** (the family's other depth-0 leftovers): `check_struct_field_sorts_i(_go)`,
+`check_block_doms_at`/`check_struct_doms_at` and `check_sum_ctors`. Their hand models (`csfW`,
+`fsortsW`, `domsW`/`sdomsW`, `sctsW`) read the core functions (`infer_type_core`,
+`ensure_sort_core`) through a `CallM` and are shared between several ok proofs, and their callees
+`check_field_sort_bound` (`cfbW`, an `errors` model in `IndE`) and `check_sum_ctor(_tail)`
+(`IndBSum3`) are not migrated: they go bottom-up with those callees, over the core-callee kit
+(`RefE.bind_core`, `CorePost`).
