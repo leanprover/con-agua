@@ -622,43 +622,4 @@ theorem viRecs_refinesE {p : Prog} (hL : IndApplyLookups p) (hnv : NVCls p recsN
     (triple_of_callE_err (recs_specE p hL.vi_recs n ⟨m, Locals.init []⟩ _ _ _ _ _ _ _ _ _ _) hc
       (Err.code_ne_of_cls hk)) hk
 
-
-/-- **`vi_rec`'s error refinement** at a failing call (`recE_claim`). -/
-theorem viRec_refinesE {p : Prog} (hL : IndApplyLookups p) (hnv : NVCls p recsNV)
-    (hG : closedNV p L.Checker.nvFns = true) {b : ByteArray}
-    {m : Mem} {a : AState} {st : StateD} (hR : ArenaR m a)
-    (hD : StateDR m st) {rc : IndRecRec} {r np tn cn ke tyn tyt fuel : Word}
-    (hrec : RecF b m r.toNat rc) (hr : r.toNat + 11 < 2 ^ 63) (hnp : np.toNat < 10 ^ 18)
-    (hke : ke = 0 ∨ ke = 1 ∨ ke = 2) (hb : tyn.toNat + tn.toNat ≤ 2 ^ 63)
-    (hb' : tyt.toNat + tn.toNat ≤ 2 ^ 63)
-    (hTN : ∀ k, k < tn.toNat → (wd m IFL (tyn.toNat + k)).toNat < 2 ^ 32) (n : Nat) (e : Err)
-    (hc : callE p n "vi_rec" [r, np, tn, cn, ke, tyn, tyt, fuel] m = .error e) (hk : e.cls ≠ 0) :
-    e.cls = 1 ∧ RecFail st a (islice m tyn.toNat tn.toNat) (islice m tyt.toNat tn.toNat) np.toNat
-      tn.toNat cn.toNat (keOf ke) fuel.toNat rc :=
-  recE_claim hL hnv hG hR hD hrec hr hnp hke hb hb' hTN e
-    (triple_of_callE_err (rec_specE p hL.vi_rec n ⟨m, Locals.init []⟩ _ _ _ _ _ _ _ _) hc
-      (Err.code_ne_of_cls hk)) hk
-
-/-- **`vi_recs_go`'s error refinement** at a failing call (`recsGoE_claim`). -/
-theorem viRecsGo_refinesE {p : Prog} (hL : IndApplyLookups p) (hnv : NVCls p recsNV)
-    (hG : closedNV p L.Checker.nvFns = true) {b : ByteArray}
-    {m : Mem} {a : AState} {st : StateD} (hR : ArenaR m a)
-    (hD : StateDR m st) {rcs : List IndRecRec} {ro rn np tn cn ke tyn tyt fuel j : Word}
-    (hL' : ListF (RecF b m) m 11 ro.toNat rcs) (hrn : rn.toNat = rcs.length)
-    (hro : ro.toNat + 11 * rcs.length < 2 ^ 63) (hnp : np.toNat < 10 ^ 18)
-    (hke : ke = 0 ∨ ke = 1 ∨ ke = 2) (hb : tyn.toNat + tn.toNat ≤ 2 ^ 63)
-    (hb' : tyt.toNat + tn.toNat ≤ 2 ^ 63)
-    (hTN : ∀ k, k < tn.toNat → (wd m IFL (tyn.toNat + k)).toNat < 2 ^ 32) (n : Nat) (e : Err)
-    (hc : callE p n "vi_recs_go" [ro, rn, np, tn, cn, ke, tyn, tyt, fuel, j] m = .error e)
-    (hk : e.cls ≠ 0) :
-    e.cls = 1 ∧ ∃ k, ∃ hk : k < rcs.length, j.toNat ≤ k ∧
-      (∀ i (hi : i < k), j.toNat ≤ i →
-        RecOK st a (islice m tyn.toNat tn.toNat) (islice m tyt.toNat tn.toNat) np.toNat tn.toNat
-          cn.toNat (keOf ke) fuel.toNat (rcs[i]'(by omega))) ∧
-      RecFail st a (islice m tyn.toNat tn.toNat) (islice m tyt.toNat tn.toNat) np.toNat tn.toNat
-        cn.toNat (keOf ke) fuel.toNat rcs[k] :=
-  recsGoE_claim hL hnv hG hR hD hL' hrn hro hnp hke hb hb' hTN n j e
-    (triple_of_callE_err (recsGo_specE p hL.vi_recs_go n ⟨m, Locals.init []⟩ _ _ _ _ _ _ _ _ _ _) hc
-      (Err.code_ne_of_cls hk)) hk
-
 end L.Front.Ind
