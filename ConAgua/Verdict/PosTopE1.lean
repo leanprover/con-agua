@@ -2,6 +2,8 @@ import ConAgua.Arena.Verdict
 import ConAgua.Arena.IndInstall
 import ConAgua.Arena.IndPos2
 import ConAgua.Arena.IndPosSpec.NuW
+import ConAgua.Arena.IndPosSpec.P2rtW
+import ConAgua.Arena.IndPosSpec.PiBWStage
 import ConAgua.Checker.NoVerdictTree
 import Std.Tactic.BVDecide.Normalize.Prop
 import ConAgua.Arena.GrindAttr
@@ -62,9 +64,22 @@ l_model nuE_spec (p : Prog) (hL : NuLook p) (hc : p.lookup "nest_uniform_cs" = s
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [rdW] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
-l_model nrtE_spec (p : Prog) (hf : p.lookup "nest_root" = some nestRootL)
-  fns [hf ↦ nrtE list] grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [rdW] errors
+/-- `nest_ctx_hi_at`'s model as an `Option` (the generator lifts those, not pure models). -/
+def nhiO (m : Mem) (ctx nf : Word) : Option (Word × Mem) := some (nhiW m ctx nf, m)
+
+theorem nestCtxHiAt_specO (p : Prog) (hp : p.lookup "nest_ctx_hi_at" = some nestCtxHiAt) (n : Nat)
+    (s₀ : St) (ctx nf : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "nest_ctx_hi_at" [ctx, nf]
+    ⦃fun r s' => LocEq s' s₀ ∧ nhiO s₀.mem ctx nf = some (r.headD 0, s'.mem); ⊤⦄ :=
+  triple_post (nestCtxHiAt_specE p hp n s₀ ctx nf) fun _ _ ⟨hl, hm, hr⟩ => ⟨hl, by rw [nhiO, hm, hr]⟩
+
+l_model nrtE_spec (p : Prog) (hL : RsLook p)
+  fns [hL.proot ↦ nrtE list]
+  specs [nestCtxHiAt_specO p hL.nb.ct.cr.rx.hi n, posRec2_specW p hL.nb.ct.cr.rx.ha hL.nb.ct.cr.rx.h2 n,
+    slSnoc_specW p hL.nb.ct.cr.rx.ha hL.nb.nit.hc2 hL.nb.nag.hsn n]
+  grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [rdW] unified
+  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 l_model nsdE_spec (p : Prog) (hf : p.lookup "nest_seeds" = some nestSeedsL)
   fns [hf ↦ nsdE list] grind [arena_grind] fold [tierW, idxW]
