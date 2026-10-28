@@ -437,4 +437,50 @@ l_model tTwo_spec (p : Prog) (hp : p.lookup "t_two" = some tTwo)
   pre [rdW (s₀.mem.arr64 TW) 0 = 0]
   grind [arena_grind] nodefs
 
+/-! ## `unified`: one model for both outcomes
+
+`t_uni` calls a callee outside the verdict closure through its `Option` model (`t_leaf_u`, lifted
+by `L.liftE`), aborts, calls itself (its error passes through) and calls a `unified` callee
+(`t_uni_c`, through its `Except` model). -/
+
+-- con-ron: none — an `l_model` test function
+def tLeafU : FunDecl := lfn (x) {
+  return TW.u64[x] + 1
+}
+
+-- con-ron: none — an `l_model` test function
+def tUniC : FunDecl := lfn (y) {
+  if y == 3 { abort R8 };
+  return y + 1
+}
+
+-- con-ron: none — an `l_model` test function
+def tUni : FunDecl := lfn (k, x) locals (a, b) {
+  if k == 0 { return 0 };
+  a := call t_leaf_u(x);
+  if a == 7 { abort R7 };
+  b := call t_uni(k - 1, a);
+  b := call t_uni_c(b);
+  return b
+}
+
+l_model tLeafU_spec (p : Prog) (hp : p.lookup "t_leaf_u" = some tLeafU)
+  fns [hp ↦ tLeafUW ro]
+  grind [arena_grind] extra [ld64_rd_spec] simp []
+
+l_model tUniC_spec (p : Prog) (hp : p.lookup "t_uni_c" = some tUniC)
+  fns [hp ↦ tUniCE]
+  grind [arena_grind] simp [] unified
+
+l_model tUni_spec (p : Prog) (fs : List FnName) (hnv : closedNV p fs = true)
+    (hmem : ∀ {f : FnName}, f ∈ ["t_leaf_u"] → f ∈ fs)
+    (hp : p.lookup "t_uni" = some tUni) (hl : p.lookup "t_leaf_u" = some tLeafU)
+    (hc : p.lookup "t_uni_c" = some tUniC)
+  fns [hp ↦ tUniE]
+  specs [tLeafU_spec p hl n, tUniC_spec p hc n]
+  grind [arena_grind] simp [] unified nv [hnv, hmem]
+
+example (p : Prog) (n : Nat) (m : Mem) : tUniE p (n + 1) m 0 5 = .ok (0, m) := by simp [tUniE]
+example (p : Prog) (m : Mem) : tUniCE p m 3 = .error (.abort 8) := by simp [tUniCE]
+
 end L.ModelGenTest

@@ -131,6 +131,15 @@ def callE (p : Prog) (n : Nat) (f : FnName) (vs : List Word) (m : Mem) :
   | .ok (r, s) => .ok (r, s.mem)
   | .error e => .error e
 
+/-- **An `Option` model as an error model** (`l_model … unified`): `none` is an error of class `0`
+(a callee outside the verdict closure, whose errors claim nothing). -/
+def liftE {α : Type} : Option α → Except Err α
+  | none => .error .oob
+  | some a => .ok a
+
+@[simp, grind =, lang_grind =] theorem liftE_some {α : Type} (a : α) : liftE (some a) = .ok a := rfl
+@[simp, grind =, lang_grind =] theorem liftE_none {α : Type} : liftE (none : Option α) = .error .oob := rfl
+
 theorem invoke_run_loc' (p : Prog) (k : Stmt → M Sig) (f : FnName) (vs : List Word) (s : St) :
     (invoke p k f vs).run s =
       ((invoke p k f vs).run ⟨s.mem, Locals.init []⟩).map
@@ -337,6 +346,15 @@ theorem exec_nv (p : Prog) (hp : closedNV p fs = true) (n : Nat) : NVK fs (exec 
 theorem invoke_nv (p : Prog) (hp : closedNV p fs = true) (n : Nat) (f : FnName) (hf : f ∈ fs)
     (vs : List Word) : ⦃fun _ => True⦄ invoke p (exec p n) f vs ⦃fun _ _ => True; NVE⦄ :=
   invoke_nvK p hp _ (exec_nv p hp n) f hf vs
+
+/-- **A spec of a call that claims nothing**, error-precise: its errors have class `0` (the
+`Option` callees of `l_model … unified`). -/
+theorem Triple.nv {p : Prog} (hp : closedNV p fs = true) {f : FnName} (hf : f ∈ fs) {n : Nat}
+    {vs : List Word} {s₀ : St} {Q : List Word → St → Prop}
+    (h : ⦃fun s => s = s₀⦄ invoke p (exec p n) f vs ⦃Q; ⊤⦄) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) f vs ⦃Q; NVE⦄ :=
+  Triple.and_err h (M.triple_of_run' (fun _ _ _ _ _ => trivial) fun _ _ _ hr =>
+    M.of_run_err (P := fun _ => True) trivial hr (invoke_nv p hp n f hf vs))
 
 /-- **A failing call of `f ∈ fs` fails with class `0`.** -/
 theorem callE_nv {p : Prog} (hp : closedNV p fs = true) {f : FnName} (hf : f ∈ fs) (n : Nat)

@@ -414,6 +414,8 @@ meta inductive CKind where
 
 meta structure Callee where
   kind : CKind
+  /-- the model is an `Option` (`some` in the post), not an `Except` (`.ok`, `callE_spec`) -/
+  opt : Bool := false
   deriving Inhabited
 
 meta def substT (t : Term) (mem : Term) (args : Array Term) : MetaM Term := do
@@ -525,6 +527,7 @@ meta def analyseSpec (spec : Lean.Expr) : TermElabM (String × Callee) := do
     let mut unitF : Option Lean.Expr := none
     let mut tupF : Option (Lean.Expr × Nat × Bool) := none
     let mut guards : Array Lean.Expr := #[]
+    let mut opt := false
     -- a conjunct over the states' memories (and the arguments), not over the results: a fact the
     -- callee's spec states besides its model (`Keep s₀.mem s'.mem`, from `Triple.keep`)
     let isFact (c : Lean.Expr) : Bool := !c.containsFVar r.fvarId!
@@ -557,6 +560,7 @@ meta def analyseSpec (spec : Lean.Expr) : TermElabM (String × Callee) := do
             | (``Option.some, #[_, v]) => some v
             | (``Except.ok, #[_, _, v]) => some v
             | _ => none
+          if b.isAppOf ``Option.some then opt := true
           match someV? with
           | some v =>
             if v.isConstOf ``Unit.unit || v.isConstOf ``PUnit.unit ||
@@ -631,7 +635,7 @@ meta def analyseSpec (spec : Lean.Expr) : TermElabM (String × Callee) := do
     -- other conjuncts over the arguments and the initial state (`i < 51`) are facts the callee's
     -- post states besides its model: the model does not need them (only a total memory model
     -- turns them into guards, above)
-    return (fname, { kind })
+    return (fname, { kind, opt })
 
 /-! ## The L text -/
 
@@ -835,6 +839,10 @@ meta structure Env where
   /-- `errors`: the models are `Except L.Err` (an `abort`'s code kept, a callee's error passed
   on), and a callee without a spec is called through `callE_spec p n "f"` -/
   exc : Bool := false
+  /-- `unified` (with `exc`): the error post is over the class (`ε.cls ≠ 0`), and a callee with an
+  `Option` model (outside the verdict closure, `nv`) is called through `L.liftE` (`none` is an
+  error of class `0`) -/
+  uni : Bool := false
   /-- the members without results (`void`) -/
   voids : Array String := #[]
 
@@ -1377,16 +1385,24 @@ meta partial def transCall (E : Env) (ctx : Ctx) (xs : Array Ident) (f : Ident)
       pure ({ kind := .effL (← `(L.callE $(mkIdent `p) $(mkIdent `n) $(Syntax.mkStrLit fname) $(mkIdent `__al) $(mkIdent `__m))) } : Callee)
   if E.exc then
     match c.kind with
-    | .pure .. | .list .. | .memOpt .. | .memTot .. =>
+    | .memOpt .. => if !(E.uni && c.opt) then
+        throwErrorAt f "l_model: in `errors` mode the callee {fname} needs a spec with an error post (`callE_spec`)"
+    | .pure .. | .list .. | .memTot .. =>
       throwErrorAt f "l_model: in `errors` mode the callee {fname} needs a spec with an error post (`callE_spec`)"
     | _ => pure ()
+    if c.opt && !E.uni then
+      throwErrorAt f "l_model: in `errors` mode the callee {fname} needs a spec with an error post (`callE_spec`); `unified` with `nv` lifts the `Option` model of a callee outside the verdict closure"
+  -- `unified`: an `Option` model as `L.liftE` (its `none` an error of class `0`)
+  let substC (t : Term) : GenM Term := do
+    let x ← substT t memT argsT
+    if E.exc && c.opt then `(L.liftE $x) else pure x
   match c.kind with
   | .eff t =>
     if ctx.ro then throwErrorAt f "l_model: a read-only model calls an effectful one"
-    effK (.raw (← substT t memT argsT)) isTail xk
+    effK (.raw (← substC t)) isTail xk
   | .effL t =>
     if ctx.ro then throwErrorAt f "l_model: a read-only model calls an effectful one"
-    bindK E ctx xk (.raw (← substT t memT argsT)) rest
+    bindK E ctx xk (.raw (← substC t)) rest
   | .pure ts =>
     let vs ← ts.mapM fun t => do return MT.raw (← substT t memT argsT)
     transS E (assign ctx vs) rest
@@ -1413,7 +1429,7 @@ meta partial def transCall (E : Env) (ctx : Ctx) (xs : Array Ident) (f : Ident)
     return body
   | .memOpt t =>
     if ctx.ro then throwErrorAt f "l_model: a read-only model cannot write"
-    mkK E ctx 1 none xk (.raw (← substT t memT argsT)) rest
+    mkK E ctx 1 none xk (.raw (← substC t)) rest
   | .memTot t guards =>
     if ctx.ro then throwErrorAt f "l_model: a read-only model cannot write"
     let m' ← substT t memT argsT
@@ -1424,18 +1440,19 @@ meta partial def transCall (E : Env) (ctx : Ctx) (xs : Array Ident) (f : Ident)
       r := .ite (← negC g) .none r
     return r
   | .ro t =>
-    let callT := MT.raw (← substT t memT argsT)
+    let callT := MT.raw (← substC t)
     if ctx.ro && isTail then return .tail callT
     mkK E ctx 2 xk[0]? xk callT rest
-  | .roL t => mkK E ctx 6 none xk (.raw (← substT t memT argsT)) rest
+  | .roL t => mkK E ctx 6 none xk (.raw (← substC t)) rest
   | .effT t k =>
     if ctx.ro then throwErrorAt f "l_model: a read-only model calls an effectful one"
-    mkK E ctx 5 none xk (.raw (← substT t memT argsT)) rest k false
-  | .roT t k => mkK E ctx 5 none xk (.raw (← substT t memT argsT)) rest k true
+    mkK E ctx 5 none xk (.raw (← substC t)) rest k false
+  | .roT t k => mkK E ctx 5 none xk (.raw (← substC t)) rest k true
   | .unitOpt t =>
     let u ← substT t memT argsT
     let body ← transS E (assign ctx #[]) rest
-    return .ite (.cmp "=" (.raw u) (.raw (← `(Option.none)))) .none body
+    let fail : MR ← if E.exc then pure (.tail (.raw (← `(Except.error L.Err.oob)))) else pure .none
+    return .ite (.cmp "=" (.raw u) (.raw (← `(Option.none)))) fail body
 
 /-- Make the continuation of a call: the rest of the code, as a definition over the locals it
 reads. -/
@@ -1763,7 +1780,9 @@ syntax (name := lmodel) (docComment)? "l_model " ident bracketedBinder*
   (&" trace")?
   (&" locals")?
   (&" defs")?
-  (&" nodefs")? : command
+  (&" nodefs")?
+  (&" unified")?
+  (&" nv " "[" term "," term "]")? : command
 
 meta structure FnInfo where
   lname : String
@@ -1829,6 +1848,11 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
   -- run before with `defs`), so that facts about the models can be proved in between
   let defsOnly := stx[24].getNumArgs != 0
   let noDefs := stx[25].getNumArgs != 0
+  -- `unified`: `errors` with the class in the error post and `Option` callees lifted (`nv [h, mem]`:
+  -- `h : closedNV p fs = true`, `mem` proves `f ∈ fs` from a `decide`-able fact)
+  let uni := stx[26].getNumArgs != 0
+  let exc := exc || uni
+  let nvT? : Option (Term × Term) := if stx[27].getNumArgs == 0 then none else some (⟨stx[27][2]⟩, ⟨stx[27][4]⟩)
   let preT? : Option Term := if stx[8].getNumArgs == 0 then none else some ⟨stx[8][2]⟩
   let keepT? : Option Term := if stx[9].getNumArgs == 0 then none else some ⟨stx[9][2]⟩
   let stx := stx'
@@ -1853,15 +1877,17 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
         let e ← elabTerm s none
         Term.synthesizeSyntheticMVarsNoPostponing
         let e ← instantiateMVars e
-        callees := callees.push (← analyseSpec e)
-        -- `keep`: the spec's binders (all explicit), for `fun x₁ … => Triple.keep h (spec x₁ …)`
-        if keepT?.isSome then
-          let ar ← forallTelescopeReducing (← inferType e) fun xs _ => do
-            for x in xs do
-              unless (← x.fvarId!.getBinderInfo).isExplicit do
-                throwErrorAt s "l_model: `keep` needs a callee spec with explicit binders only"
-            pure xs.size
-          specAr := specAr.push ar
+        let c ← analyseSpec e
+        callees := callees.push c
+        -- `keep` (every spec), `unified` (an `Option` callee's spec): the spec's binders (all
+        -- explicit), for `fun x₁ … => Triple.keep h (spec x₁ …)`, `… Triple.nv h hf (spec x₁ …)`
+        let wrap := keepT?.isSome || (uni && c.2.opt)
+        let ar ← forallTelescopeReducing (← inferType e) fun xs _ => do
+          for x in xs do
+            unless !wrap || (← x.fvarId!.getBinderInfo).isExplicit do
+              throwErrorAt s "l_model: `keep`/`unified` needs a callee spec with explicit binders only"
+          pure xs.size
+        specAr := specAr.push ar
       let foldRules ← foldIds.mapM fun f => do mkFold (← realizeGlobalConstNoOverloadWithInfo f)
       return (infos, callees, foldRules, specAr)
   -- the models' Lean parameters: explicit binders the callee models mention
@@ -1912,7 +1938,7 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
         | _ => false
       blocks := blocks.push (key t, c, ss, isLoop)
       for x in ss do todo := todo ++ splices x
-  let E : Env := { group := grp, callees := callees, folds := foldRules, noguard := noguard, mps, blocks, bind := bindC, exc, voids := (fis.filter (·.void)).map (·.lname) }
+  let E : Env := { group := grp, callees := callees, folds := foldRules, noguard := noguard, mps, blocks, bind := bindC, exc, uni, voids := (fis.filter (·.void)).map (·.lname) }
   -- translate
   let (bodies, st) ← runTermElabM fun _ => do
     let go : GenM (Array (MR × Array String × Array Name)) := fis.mapM fun fi => do
@@ -2294,6 +2320,15 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
       s!"(fun {xs} => L.Triple.keep ({h}) (({t}) {xs}))"
   let specsW := if keepTxt.isNone then specsTxt else
     (specsTxt.zip specAr.toList).map fun (t, k) => keepWrap t k
+  -- `unified`: the spec `S` of an `Option` callee (outside the verdict closure) with the error post
+  -- of class `0`, `fun x₁ … xₖ => L.Triple.nv h (mem (by decide +kernel)) (S x₁ … xₖ)`
+  let nvTxt ← nvT?.mapM fun (h, mem) => do return (← pp h.raw, ← pp mem.raw)
+  let specsW ← ((specsW.zip specAr.toList).zip callees.toList).mapM fun ((t, k), (fname, c)) => do
+    if !(uni && c.opt) then return t
+    let some (h, mem) := nvTxt |
+      throwError "l_model: `unified`: the callee {fname} has an `Option` model; give `nv [h, mem]`"
+    let xs := String.intercalate " " ((List.range k).map (s!"κ{·}"))
+    return s!"(fun {xs} => L.Triple.nv ({h}) ({mem} (by decide +kernel)) (({t}) {xs}))"
   let calleeSpecs (called : Array String) : List String :=
     ((specsW.zip callees.toList).filter (called.contains ·.2.1)).map (·.1) ++
       ((st.autoE.filter called.contains).toList.map fun f => s!"L.callE_spec p n \"{f}\"")
@@ -2352,7 +2387,8 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
         else if fi.multi then pure #[l] else pure #[← `(List.headD $l 0)]
       conj := conj.push (← `($lhs = $okI $(← tupP (comps ++ (if lm.ro then #[] else #[memSP])))))
     let post ← conj.pop.foldrM (init := conj.back!) fun c acc => `($c ∧ $acc)
-    let epost ← if exc then `(fun $(mkIdent `ε) => L.Err.code $(mkIdent `ε) ≠ 0 → $lhs = Except.error $(mkIdent `ε))
+    let epost ← if uni then `(fun $(mkIdent `ε) => L.Err.cls $(mkIdent `ε) ≠ 0 → $lhs = Except.error $(mkIdent `ε))
+      else if exc then `(fun $(mkIdent `ε) => L.Err.code $(mkIdent `ε) ≠ 0 → $lhs = Except.error $(mkIdent `ε))
       else `(Lean.Order.top)
     let vcg := String.intercalate ", "
       ((["L.step", "L.evalE", "L.evalC", "L.evalArgs", "L.setLoc", "L.setLocs"] ++ loadTxt ++ ["L.st64", "L.setG"] ++
@@ -2415,7 +2451,8 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
       | false, true =>
         `(fun r s' => L.LocEq s' $s0 ∧ $Wapp = $okI (r, L.St.mem s'))
     -- the exceptional post: `⊤`, or in `errors` mode every error with a code is the model's
-    let epost ← if exc then `(fun $(mkIdent `ε) => L.Err.code $(mkIdent `ε) ≠ 0 → $Wapp = Except.error $(mkIdent `ε))
+    let epost ← if uni then `(fun $(mkIdent `ε) => L.Err.cls $(mkIdent `ε) ≠ 0 → $Wapp = Except.error $(mkIdent `ε))
+      else if exc then `(fun $(mkIdent `ε) => L.Err.code $(mkIdent `ε) ≠ 0 → $Wapp = Except.error $(mkIdent `ε))
       else `(Lean.Order.top)
     let fstr := Syntax.mkStrLit fi.lname
     match preT? with
