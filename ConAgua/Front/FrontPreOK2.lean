@@ -176,8 +176,9 @@ theorem applyIndW_grow {p : Prog} (hAL : IndApplyLookups p) {b : ByteArray} (h64
     indFields_link b h64 hsize m m₁ ⟨by omega, by omega⟩ v tys cts rcs e hscan _ h1
   have hfr1 : MemFrame [IFR, IFL] [] m m₁ := hfR.1
   have hRoom : Room m₁ := hfR.2
-  simp only [List.headD, List.tail] at h
-  rcases h2 : validateW p n m₁ to tn co cn ro rn with _ | ⟨⟨oo, np⟩, m₂⟩ <;> simp only [h2, pmK, reduceCtorEq] at h
+  simp only [List.headD_cons, List.tail_cons] at h
+  rcases h2 : callW p n "validate_ind_d" [to, tn, co, cn, ro, rn] m₁ with _ | ⟨q, m₂⟩ <;>
+    simp only [h2, reduceCtorEq] at h
   have hA1 : ArenaD m₁ a :=
     ⟨ArenaR.frame_ext _ _ (by simp [IFR, IFL]) (by simp) _ _ hfr1 _ hA.1,
       DerR.frameT hfr1 (by simp [IFR, IFL]) hA.2⟩
@@ -186,7 +187,13 @@ theorem applyIndW_grow {p : Prog} (hAL : IndApplyLookups p) {b : ByteArray} (h64
   have hs1' : (m₁.arr64 IFL).size = (m.arr64 IFL).size := hfr1.size IFL
   have hT1 : TopOK m₁ := ⟨by have := hRoom.2.1; exact this, Nat.le_of_lt hRoom.2.2.2⟩
   have hIFR1 : topN m₁ IFR < 2 ^ 62 := by have := hRoom.2.2.1; omega
-  obtain ⟨ordered, V1, V2, V3, V4, V5, V6, V7, V8⟩ := validateW_twin hAL hA1.1 hD1 hok hT1 hF hIFR1 h2
+  obtain ⟨s2, hs2, -, hV⟩ := RefC.run_okW (validate_specE p hAL n ⟨m₁, Locals.init []⟩ to tn co cn ro rn)
+    (validate_ref hA1.1 hD1 hok hT1 hF hIFR1 p n (st := st)) h2
+  rw [hs2] at hV
+  obtain ⟨⟨ordered, V1, V4, V7⟩, V2, V3, V5, V6, V8⟩ := hV
+  dsimp only at V1 V2 V3 V4 V5 V6 V7 V8
+  generalize q.headD 0 = oo at h V1 V5 V6 V7
+  generalize q.tail.headD 0 = np at h V1 V8
   have hfr2 := V2.frame
   have hA2 : ArenaD m₂ a :=
     ⟨ArenaR.frame_ext _ _ (by simp [IFL, LH]) (by simp) _ _ hfr2 _ hA1.1,
