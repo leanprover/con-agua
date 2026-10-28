@@ -158,6 +158,7 @@ theorem cnaE_claim (k : Nat) (hk : k ≤ 2 ^ 62) : ∀ (m : Mem) (a : AState) (j
   obtain ⟨s2, rfl, -, c, a2, run2, hR2⟩ := RefE.run_ok hT hR h2
   have hc : (r2.headD 0 != 0) = c := hR2.res
   obtain ⟨-, hC2, hg2, hP2, hA2⟩ := hR2
+  dsimp only at hC2 hg2 hP2 hA2
   have c1' := q1.toCore hC.check
   obtain ⟨c2', -⟩ := ConRon.Bridge.Inductives.targetK53_spec fe (ConRon.Bridge.CoreSpec.of_core rfl)
     henv bs pP formerTys formerTysP TM McP tele teleP (decE leaf) (decE w) leafP fP hformer hMs
