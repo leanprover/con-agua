@@ -10,7 +10,7 @@ import ConAgua.L.ModelGen
 
 `trpE` (`l_model … unified`): every callee through its run (`callE`; they are outside the verdict
 closure). `trp_ref` refines `targetRecPins` for both outcomes; its ok half is
-`targetRecPins_refines`, its error half the error claim of `gen_rec_check_prep` (`IndBGrp`).
+`targetRecPins_refines`, its error half read by `gen_rec_check_prep`'s refinement (`grpB_ref`).
 -/
 
 set_option experimental.vcgen true

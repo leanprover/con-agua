@@ -1,5 +1,4 @@
 import ConAgua.Arena.IndT.GenRec2
-import ConAgua.Verdict.IndBGrpM
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr

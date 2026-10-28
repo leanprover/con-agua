@@ -1,3 +1,7 @@
+import ConAgua.Arena.IndInstallSpec.PosFreeMfr
+import ConAgua.Arena.IndT.KeepC
+import ConAgua.Arena.RecGenSpec.Classes
+import ConAgua.Verdict.IndBGrpM
 import ConAgua.Arena.IndT.GenRec1
 import ConAgua.Verdict.IndBRec3
 import ConAgua.Arena.IndT.RecGen27

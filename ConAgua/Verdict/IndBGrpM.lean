@@ -1,7 +1,6 @@
 import ConAgua.Arena.RecGen
 import ConAgua.Arena.Verdict
 import ConAgua.Checker.NoVerdictTree
-import ConAgua.Arena.WhnfBase
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen

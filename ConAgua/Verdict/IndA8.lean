@@ -6,7 +6,7 @@ import ConAgua.Verdict.DeclBasisE
 `verdicts-b`, helper `ia2`)
 
 From `cbdE_okT` (DeclBasisE.lean) and `ccvE_okT` (DeclValsE.lean, under `CoreStubsE`). `cid_claim3`:
-`check_ind_decl`'s claim from `GenRecCheckE` and the `indB` callees' claims only.
+`check_ind_decl`'s claim from `classes_nfs`' claim and the `indB` callees' claims only.
 -/
 
 open ConRon.Arena
@@ -28,7 +28,7 @@ theorem checkConstantValE_of {p : Prog} (hnv : closedNV p _root_.L.Checker.nvFns
 local notation "V" => ConLeche.CheckMode.verified
 
 /-- **`check_ind_decl`'s error refinement**, every `indA` callee discharged: left are
-`gen_rec_check` and the `indB` callees. -/
+`classes_nfs` and the `indB` callees. -/
 theorem cid_claim3 {p : Prog} (hkp : KnotStageProg p) (hV : ValProg p)
     (hOpf : OpfF p) (hLC : LvlCacheProg p) (hLT : p.lookup "lv_leq_top" = some lvLeqTop)
     (hApd : ApdF p) (hCrk : CrKeep p) (hIlpf : IlpfF p) (hLz : LzcF p)
@@ -41,7 +41,8 @@ theorem cid_claim3 {p : Prog} (hkp : KnotStageProg p) (hV : ValProg p)
     (hfC : ∀ f ∈ cidFrameCallees, f ∈ fsC)
     (hkP : ∀ f ∈ passKeepCalleesC, AbsKeep p f) (hkt : ∀ f ∈ tailKeepCalleesC, AbsKeep p f)
     (hkr : AbsKeep p "block_raw_rec")
-    (hnv : closedNV p _root_.L.Checker.nvFns = true) (hUL : UceLookups p) (eGrc : GenRecCheckE p)
+    (hnv : closedNV p _root_.L.Checker.nvFns = true) (hU : UceProg p)
+    (hNfs : ∀ dn vis fe env, ConLeche.EnvWF env → ClassesNfsE p dn vis fe env)
     (eSum : CheckSumTeleE p) (eSC : CheckSumCtorsE p) (eSF : CheckStructFieldSortsIE p)
     (eTbl : CheckStructProjTableRE p)
     {n : Nat} (hn : n ≤ 2 ^ 62)
@@ -60,7 +61,7 @@ theorem cid_claim3 {p : Prog} (hkp : KnotStageProg p) (hV : ValProg p)
     (hlpd : BlockLpsDn dn block) :
     ErrClaim (checkDecl V pins fe (.indDecl block w.toNat)) a e :=
   cid_claim2 hkp hV hOpf hLC hLT hApd hCrk hIlpf hLz P hcl hfs hfr hcl2 hfs2 hclR hfR hclT hfT hclC hfC hkP hkt
-    hkr hnv (checkBasisDeclE_of hnv) (checkConstantValE_of hnv (hkp.toKnotTopProg.coreStubsE hnv) hUL) eGrc eSum
+    hkr hnv (checkBasisDeclE_of hnv) (checkConstantValE_of hnv (hkp.toKnotTopProg.coreStubsE hnv) hU.toUceLookups) hU hNfs eSum
     eSC eSF eTbl hn hdn he hT hfold hblk hb hden hM hfB hfRc hclH hfH hclM hfM hlpd
 
 end L.Ind

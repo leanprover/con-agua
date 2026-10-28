@@ -1,3 +1,4 @@
+import ConAgua.Arena.IndInstallSpec.Icb
 import ConAgua.Arena.IndT.Pass
 import ConAgua.Arena.IndInstallSpec.BlockRawRec
 

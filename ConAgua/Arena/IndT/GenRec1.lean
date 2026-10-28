@@ -1,14 +1,6 @@
-import ConAgua.Arena.RecGenSpec.CfhW
-import ConAgua.Arena.IndT.KeepC
-import ConAgua.Arena.IndT.StreamRecs
 import ConAgua.Arena.IndT.RecGen28
-import ConAgua.Verdict.IndBRecPins
-import ConAgua.Arena.RecGenSpec.Classes
 import ConAgua.Arena.IndInstallSpec.GpbWSimF
-import ConAgua.Arena.IndInstallSpec.Icvg
-import ConAgua.Arena.IndInstallSpec.PosFreeMfr
 import ConRon.Bridge.Inductives.GenRec
-import ConAgua.Verdict.IndBGrpM
 
 /-!
 # `genRecCheck` under `StageC`, part 1 (lane `indstaget`, helper `grc`)

@@ -1,6 +1,4 @@
-import ConAgua.Arena.RecGen
-import ConAgua.Arena.WhnfBase
-import ConAgua.L.Records
+import ConAgua.Arena.SlotGrow
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr
@@ -17,7 +15,6 @@ import Std.WP.Tactic
 
 set_option experimental.vcgen true
 
-open ConRon.Arena
 open Std.WP
 open scoped Lean.Order
 

@@ -1,6 +1,6 @@
 import ConAgua.Verdict.IndA3
 import ConAgua.Verdict.IndA5
-import ConAgua.Verdict.IndA7
+import ConAgua.Verdict.IndA4
 
 /-!
 # `check_ind_decl`'s error refinement, assembled (lane `verdicts-b`, helper `ia`)
@@ -8,9 +8,9 @@ import ConAgua.Verdict.IndA7
 `cid_claim`: the inductive arm of `checkDecl`, a failing call of `check_ind_decl` of class `1`/`2`
 claims the twin's `checkDecl` fails with that class, under the hypotheses of `cidW_okC` and the
 error claims of the leaves of the arm that are not proved here (the callee hypotheses below, each
-in the shape of the callee's ok refinement): `check_basis_decl`, `check_constant_val`,
-`check_block_idx_sorts`, `gen_rec_check`, `check_block_tables`, `check_block_inds`,
-`check_block_ctors`, `check_block_classes`, `check_block_positivity`, `nest_seeds`.
+in the shape of the callee's ok refinement): `check_basis_decl`, `check_constant_val`, the tail's
+callees (`TailG`), `check_block_inds`, `check_block_ctors`, `check_block_classes`,
+`check_block_positivity`, `nest_seeds`.
 -/
 
 open ConRon.Arena
@@ -43,8 +43,7 @@ theorem cid_claim (P : CidProg p) {fs fs2 fsR fsT fsC : List FnName}
     (hkP : ∀ f ∈ passKeepCalleesC, AbsKeep p f) (hkt : ∀ f ∈ tailKeepCalleesC, AbsKeep p f)
     (hkr : AbsKeep p "block_raw_rec")
     (hnv : closedNV p _root_.L.Checker.nvFns = true)
-    (hCBD : CheckBasisDeclE p) (eCcv : CheckConstantValE p) (eIdx : CheckBlockIdxSortsE p)
-    (eGrc : GenRecCheckE p) (eTab : CheckBlockTablesE p) (eInds : CheckBlockIndsE p)
+    (hCBD : CheckBasisDeclE p) (eCcv : CheckConstantValE p) (hTG : TailG p) (eInds : CheckBlockIndsE p)
     (eCtors : CheckBlockCtorsE p) (eCls : CheckBlockClassesE p) (ePos : CheckBlockPositivityE p)
     (eSeeds : NestSeedsE p)
     {n : Nat} (hn : n ≤ 2 ^ 62)
@@ -70,7 +69,7 @@ theorem cid_claim (P : CidProg p) {fs fs2 fsR fsT fsC : List FnName}
   exact cidE_claim hkp hV hOpf hLC hLT hApd hCrk hIlpf hLz P hcl hfs hfr hcl2 hfs2 hclR hfR hclT hfT hclC hfC hkP hkt hkr
     hnv hCBD
     (checkBlockE_claim hnv (checkBlockPassE_claim hnv ⟨eInds, eCtors, eCls, ePos, eSeeds⟩)
-      (checkBlockTailE_claim hnv eIdx (checkBlockRecE_claim eGrc) eTab))
+      (checkBlockTailE_claim hnv hTG))
     (checkShapelessE_claim eCcv) hn hdn he hT hfold hblk hb hden hM hfB hfRc hclH hfH hclM hfM hlpd
 
 end sims

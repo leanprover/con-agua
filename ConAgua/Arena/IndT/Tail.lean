@@ -2,11 +2,12 @@ import ConAgua.Arena.IndT.IdxSorts
 import ConAgua.Arena.IndT.GenRec3
 import ConAgua.Arena.IndT.ArmMemos
 import ConAgua.Arena.IndRealSctC
-import ConAgua.Arena.IndT.Install4
 import ConAgua.Arena.RecCheckSpec.BlockNestedBit
 import ConAgua.Arena.IndInstallSpec.BpRecBpassR
 import ConAgua.Arena.IndInstallSpec.ConsRecsTFSimOf
-import ConAgua.Arena.IndInstallSpec.Icb
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
+import ConAgua.L.ModelGen
 
 /-!
 # `checkBlockTail` under `StageC` (lane `indstaget`)
@@ -19,6 +20,8 @@ index and environment), the recursor stage (`checkBlockRec_refinesC`), then the 
 and the tables under `StageR` (no core call follows them).
 -/
 
+
+noncomputable section
 
 open ConRon.Arena
 open Std.WP
@@ -41,6 +44,46 @@ theorem StageC.of_parts {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : 
     ⟨hA.2.2.2.2.2.1, hA.2.2.2.2.2.2.1, hA.2.2.2.2.2.2.2.1, ⟨hA.2.2.2.1, hA.1, hA.2.2.2.2.1⟩, hdn⟩,
     hA.2.2.2.2.2.2.2.2⟩
 
+set_option experimental.vcgen true in
+/-- **`check_block_tail_rec`'s unified model**: the recursor stage and the tables through their runs
+(the ok half reads the calls' memos), the recursors consed (outside the verdict closure) lifted. -/
+l_model ictrE_spec (p : Prog) (hP : TailProg p)
+  fns [hP.tailrec ↦ ictrE] specs [callW_spec p n "cons_block_recs_tf"]
+  grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [rdW] unified
+  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
+
+set_option experimental.vcgen true in
+/-- **`check_block_tail`'s unified model**: the index sorts through their run, the constructors consed,
+the flush and the nested bit (outside the verdict closure) lifted, `check_block_tail_rec` by its
+unified model. -/
+l_model ictlE_spec (p : Prog) (hP : TailProg p)
+  fns [hP.tail ↦ ictlE]
+  specs [callW_spec p n "cons_block_ctors", callW_spec p n "flush_caches", callW_spec p n "block_nested_bit",
+    ictrE_spec p hP n]
+  grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [rdW] unified
+  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
+
+/-- What the error arms of `check_block_tail` assume: the verdict context with
+`unresolved_consts_error`'s program and `classes_nfs`' claim at every stage (the recursor stage,
+`GrpG`), the abstract constructors' sorts' claim (`iisr_ref`) and the projection tables' (`ctb_ref`). -/
+structure TailG (p : Prog) : Prop where
+  u : VerdictCtxU p
+  nfs : ∀ dn vis fe env, ConLeche.EnvWF env → ClassesNfsE p dn vis fe env
+  csf : CheckStructFieldSortsIE p
+  tab : CheckStructProjTableRE p
+
+/-- What `check_block_tail` gives besides the index `x` it returns, at the view `w` (from `m`): the
+stage, the growth, the `hb` memo, `AbsOK`, the recursor stage's memos. -/
+structure TailPost (dn : NIdx → Option ConLeche.Name) (m : Mem) (w : Word) (x : IFEnv) (m' : Mem)
+    (a' : AState) : Prop where
+  stage : StageR dn w x m' a'
+  grow : IWGrow m m'
+  memo : HbMemo m'
+  abs : AbsOK m'
+  rc : RcMR m'
+
 section sims
 variable {p : Prog} (hkp : KnotStageProg p) {env₁ : ConLeche.Env} (henv₁ : ConLeche.EnvWF env₁)
   (hV : ValProg p)
@@ -48,18 +91,21 @@ variable {p : Prog} (hkp : KnotStageProg p) {env₁ : ConLeche.Env} (henv₁ : C
   (hApd : ApdF p) (hCrk : CrKeep p) (hIlpf : IlpfF p)
 
 include hkp henv₁ hV hOpf hLC hLT hApd hCrk hIlpf in
-/-- **`check_block_tail` under `StageC`** (`ictlW_sim`'s; twin side con-ron's `checkBlockTail_of`). -/
-theorem ictlW_simC (hP : TailProg p) (hRecs : ConsRecsTFSim p) {fs : List FnName}
-    (hfs : ∀ f ∈ tailCallees, f ∈ fs) (hcl : closedA p hbFreeA hbFreeC fs = true) (n : Nat)
+/-- **`check_block_tail` refines `checkBlockTail`, both outcomes** (twin side con-ron's
+`checkBlockTail_of`): the index sorts (`iisr_ref`, `checkBlockIdxSorts_refinesC` on the run), the
+constructors consed, the flush, the nested bit, then `check_block_tail_rec`'s model (no refinement
+of its own: it is the tail's second half): the recursor stage (`icr_ref` on the run), the recursors
+consed, the tables (`ctb_ref` on the run). -/
+theorem tail_ref (hP : TailProg p) (L : CbrLook p) {fs : List FnName}
+    (hfs : ∀ f ∈ tailCallees, f ∈ fs) (hcl : closedA p hbFreeA hbFreeC fs = true) (N : Nat)
     {fsR : List FnName} (hclR : closedA p rcFreeA rcFreeC fsR = true)
     (hfR : ∀ f ∈ tailRcCallees, f ∈ fsR) {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
     {m : Mem} {a : AState} {bO bL q : Word} {bp : BlockPass} {block : List IConstantInfo}
-    (hn : n ≤ 2 ^ 62) (hC : StageC dn vis fe env₁ m a) (hq : BPassR vis fe m q bp)
+    (hN : N ≤ 2 ^ 62 + 1) (hC : StageC dn vis fe env₁ m a) (hq : BPassR vis fe m q bp)
     (hblk : DecB (fun m => decEBlk dn m bO.toNat bL.toNat) m block) (hM : HbMemo m) (hA : AbsOK m)
     (hkeep : ∀ f ∈ tailKeepCalleesC, AbsKeep p f) (hR : RcMR m)
     (hrb : RecsB m (rdW (m.arr64 IW) (q + 3)))
     (hlp : ClassesLp m (rdW (m.arr64 IW) (q + 15)) (rdW (m.arr64 IW) (q + 16)))
-
     (hcoh : ConRon.Bridge.IFEnvCoh fe) (hden : ConRon.Bridge.denoteFEnv a.store fe = some env₁)
     {qP : ConLeche.BlockPass ConLeche.Env}
     (hqP : ConRon.Bridge.Inductives.dPass a.store env₁ bp = some qP)
@@ -69,8 +115,8 @@ theorem ictlW_simC (hP : TailProg p) (hRecs : ConsRecsTFSim p) {fs : List FnName
     (hMs : ∀ M ∈ qP.cls, ConLeche.Cached.ClassMajScoped qP.p.nP M)
     (hfRc : ∀ f ∈ grcRcCallees ++ ["cons_block_recs_tf"], f ∈ fsR) {fsH : List FnName}
     (hclH : closedA p rcHbFreeA rcHbFreeC fsH = true) (hfH : "check_block_tables" ∈ fsH) :
-    Sim (ictlW p n m bO bL q) (ConRon.Arena.checkBlockTail V block bp) a
-      (fun r x m' a' => StageR dn (r.headD 0) x m' a' ∧ IWGrow m m' ∧ HbMemo m' ∧ AbsOK m' ∧ RcMR m') := by
+    RefE (TailG p) (ictlE p N m bO bL q) (ConRon.Arena.checkBlockTail V block bp) a
+      (fun v x a' => TailPost dn m v.1 x v.2 a') := by
   have hS := hC.stage
   obtain ⟨hdq, hB, hw0, hsrc⟩ := hq
   have hT : iwTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 200).toNat_lt
@@ -123,70 +169,89 @@ theorem ictlW_simC (hP : TailProg p) (hRecs : ConsRecsTFSim p) {fs : List FnName
   have htbl' := bpPSl (fun q => decNCN_mono q) htbl (hB.2 17 (by simp)) (w := q + 17) (w1 := q + 18)
     (e 17 (by decide) _ rfl) (e 18 (by decide) _ rfl)
   -- `check_block_idx_sorts`
-  unfold ictlW
-  rw [hw0, hw3]
+  rcases N with _ | n
+  · rw [ictlE.eq_1]; exact RefE.of_cls0 Err.cls_outOfFuel
+  have hn : n ≤ 2 ^ 62 := by omega
+  rw [ictlE.arm1, hw0, hw3]
   unfold ConRon.Arena.checkBlockTail
-  refine Sim.bindK (K := ictlK1 p n bO bL q (UInt64.ofNat pw) vis) rfl (fun _ _ => rfl)
-    (Q := fun _ _ m1 a1 => StageC dn vis fe env₁ m1 a1 ∧ IWGrow m m1 ∧ HbMemo m1 ∧ RcMR m1 ∧
-      KeepW m m1 ∧ AbsOK m1 ∧ ConRon.Bridge.CoreStep V env₁ fe a a1)
-    (fun r m1 e1 => by
-      obtain ⟨s1, rfl, -, hok, hC1, hg1, -, hA1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-        (checkBlockIdxSorts_refinesC hkp henv₁ hOpf hLC hLT hP.idx n hn _ a _ _ _ _ _ bs bs.members cvTas hC hA hbsD
-          hsrc hmss hcvs hshP hcvP hTw hden) e1
-      have hrun := AM.run_of_ok _ a hok
-      obtain ⟨c1, -⟩ := ConRon.Bridge.Inductives.checkBlockIdxSorts_specF fe
-        (ConRon.Bridge.CoreSpec.of_core rfl) henv₁ bs shP bs.members shP.members cvTas qP.cvTas hTw _ _ _
-        hC.check ⟨hshP, hmsP, hcvP, hden⟩ hrun
-      exact ⟨_, _, partsRunOfOk hok, hC1, hg1, HbMemo.ofClosed hcl (hfs _ (by decide)) e1 hM,
-        RcMR.ofClosed hclR (hfR _ (by decide)) e1 hR, callW_keepW e1, hA1, c1⟩) ?_
-  rintro r1 - m1 a1 ⟨hC1, hg1, hM1, hR1, hk1, hA1, c1⟩
+  dsimp only
+  rcases c1 : callE p n "check_block_idx_sorts" [vis, UInt64.ofNat pw, rdW (m.arr64 IW) (UInt64.ofNat pw),
+      rdW (m.arr64 IW) (UInt64.ofNat pw + 1), rdW (m.arr64 IW) (q + 1), rdW (m.arr64 IW) (q + 2)] m with
+    e1 | ⟨r1, m1⟩
+  · rw [ictlE.k_check_block_idx_sorts.none]
+    exact RefE.bind_left fun hG => RefE.run_err (iisrE_spec p hP.idx hOpf n ⟨m, Locals.init []⟩ vis _ _ _ _ _)
+      hG.u.nv hG.csf (iisr_ref hkp henv₁ hLC hLT hP.idx (UInt64.ofNat pw) bs n hn hC hA hbsD hsrc hmss hcvs hshP hcvP hTw
+        hden) c1
+  rw [ictlE.k_check_block_idx_sorts.arm1]
+  have d1 := callW_of_callE c1
+  obtain ⟨s1, rfl, -, hok, hC1, hg1, -, hA1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (checkBlockIdxSorts_refinesC hkp henv₁ hOpf hLC hLT hP.idx n hn _ a _ _ _ _ _ bs bs.members cvTas hC hA hbsD
+      hsrc hmss hcvs hshP hcvP hTw hden) d1
+  replace hg1 : IWGrow m s1.mem := hg1
+  have hrun := AM.run_of_ok _ a hok
+  obtain ⟨c1', -⟩ := ConRon.Bridge.Inductives.checkBlockIdxSorts_specF fe
+    (ConRon.Bridge.CoreSpec.of_core rfl) henv₁ bs shP bs.members shP.members cvTas qP.cvTas hTw _ _ _
+    hC.check ⟨hshP, hmsP, hcvP, hden⟩ hrun
+  have hM1 : HbMemo s1.mem := HbMemo.ofClosed hcl (hfs _ (by decide)) d1 hM
+  have hR1 : RcMR s1.mem := RcMR.ofClosed hclR (hfR _ (by decide)) d1 hR
+  have hk1 : KeepW m s1.mem := callW_keepW d1
+  refine RefE.bind_right (partsRunOfOk hok) ?_
+  generalize AM.st (ConRon.Arena.checkBlockIdxSorts V fe bs bs.members cvTas) a = a1 at hC1 c1' ⊢
   have hS1 := hC1.stage
-  rw [ictlK1_some]
   -- `cons_block_ctors` (the twin's `fe₂`, a pure function)
   obtain ⟨hnp1, -, -, -⟩ := partsShapeWords hg1 hbsD hq9
   have hca1 := hcas.grow decCNS_mono hg1
-  refine Sim.mstep (K := ictlK2 p n bO bL q (UInt64.ofNat pw)) rfl (fun _ _ => rfl) fun r2 m2 h2 => ?_
   rw [partsRdIW_grow hg1 (w := q + 4) (by rw [e 4 (by decide) (q + 4) rfl]; omega),
-    partsRdIW_grow hg1 (w := q + 5) (by rw [e 5 (by decide) (q + 5) rfl]; omega)] at h2
-  rw [hnp1] at h2
-  obtain ⟨s2, rfl, -, hS2, hg2⟩ := triple_of_callW (s₀ := ⟨m1, Locals.init []⟩)
-    (consBlockCtors_refines p hP.recp hP.hci hP.hcs hP.hcbc n _ a1 dn fe _ _ _ vis ctorsAs hS1 hca1) h2
-  have hM2 : HbMemo s2.mem := HbMemo.ofClosed hcl (hfs _ (by decide)) h2 hM1
-  have hA2 : AbsOK s2.mem := hkeep _ (by simp [tailKeepCalleesC, grcKeepCalleesC]) _ _ _ _ _ h2 hA1
-  have hR2 : RcMR s2.mem := RcMR.ofClosed hclR (hfR _ (by decide)) h2 hR1
-  have hk2 := hk1.trans (callW_keepW h2)
+    partsRdIW_grow hg1 (w := q + 5) (by rw [e 5 (by decide) (q + 5) rfl]; omega), hnp1]
+  rcases c2 : callW p n "cons_block_ctors" [UInt64.ofNat bs.nP, rdW (m.arr64 IW) (q + 4),
+      rdW (m.arr64 IW) (q + 5), vis] s1.mem with _ | ⟨r2, m2⟩
+  · rw [liftE_none, ictlE.k_cons_block_ctors.none]; exact RefE.of_cls0 (by simp)
+  rw [liftE_some, ictlE.k_cons_block_ctors.arm1]
+  obtain ⟨s2, rfl, -, hS2, hg2⟩ := triple_of_callW (s₀ := ⟨s1.mem, Locals.init []⟩)
+    (consBlockCtors_refines p hP.recp hP.hci hP.hcs hP.hcbc n _ a1 dn fe _ _ _ vis ctorsAs hS1 hca1) c2
+  have hM2 : HbMemo s2.mem := HbMemo.ofClosed hcl (hfs _ (by decide)) c2 hM1
+  have hA2 : AbsOK s2.mem := hkeep _ (by simp [tailKeepCalleesC, grcKeepCalleesC]) _ _ _ _ _ c2 hA1
+  have hR2 : RcMR s2.mem := RcMR.ofClosed hclR (hfR _ (by decide)) c2 hR1
+  have hk2 := hk1.trans (callW_keepW c2)
   rw [UInt64.toNat_ofNat_of_lt' (partsShapeWords (IWGrow.refl m) hbsD hq9).2.1] at hS2
   obtain ⟨hcons, hconsOK⟩ := ConRon.Bridge.Inductives.consBlockCtors_spec a1.store bs.nP ctorsAs
-    qP.ctorsAs fe env₁ (ConRon.Bridge.Inductives.dCtors_ext.list c1.ext _ _ hcaP)
-    (ConRon.Bridge.denoteFEnv_mono c1.ext hden) hcoh
-  rw [ictlK2_some]
+    qP.ctorsAs fe env₁ (ConRon.Bridge.Inductives.dCtors_ext.list c1'.ext _ _ hcaP)
+    (ConRon.Bridge.denoteFEnv_mono c1'.ext hden) hcoh
   -- the flush
-  dsimp only
-  refine Sim.bindK (K := ictlK3 p n bO bL q (UInt64.ofNat pw) (r2.headD 0)) rfl (fun _ _ => rfl)
-    (Sim.withRunC (Sim.withFr (F := fun m3 => (RcMR m3 ∧ KeepW m m3) ∧ AbsOK m3) (tailSimFlush hP.flush n hS2 hM2)
-      (fun _ m3 e3 => ⟨⟨RcMR.ofClosed hclR (hfR _ (by decide)) e3 hR2, hk2.trans (callW_keepW e3)⟩, by
-        obtain ⟨s', rfl, -, -, hmem⟩ := triple_of_callW (s₀ := ⟨s2.mem, Locals.init []⟩) (flushCaches_spec p hP.flush n _) e3
-        rw [hmem]; exact AFr.of_frame (flushMem_frame _) (by decide) (by decide) hA2⟩))) ?_
-  intro u3 x3 m3 a3 hh3
-  obtain ⟨⟨⟨hS3, hg3, hM3⟩, ⟨hR3, hk3⟩, hA3⟩, hrun3⟩ := hh3
+  rcases c3 : callW p n "flush_caches" [] s2.mem with _ | ⟨r3, m3⟩
+  · rw [liftE_none, ictlE.k_flush_caches.none]; exact RefE.of_cls0 (by simp)
+  rw [liftE_some, ictlE.k_flush_caches.arm1]
+  obtain ⟨u3, a3, hrun3, hS3, hg3, hM3⟩ := tailSimFlush hP.flush n hS2 hM2 _ _ c3
+  have hR3 : RcMR m3 := RcMR.ofClosed hclR (hfR _ (by decide)) c3 hR2
+  have hk3 := hk2.trans (callW_keepW c3)
+  have hA3 : AbsOK m3 := by
+    obtain ⟨s', rfl, -, -, hmem⟩ := triple_of_callW (s₀ := ⟨s2.mem, Locals.init []⟩) (flushCaches_spec p hP.flush n _) c3
+    rw [hmem]; exact AFr.of_frame (flushMem_frame _) (by decide) (by decide) hA2
   obtain ⟨hck3, -, hst3⟩ := ConRon.Bridge.Inductives.ReadOK.flush (μ := V)
-    (⟨c1.ok.state, c1.ok.pins, hconsOK c1.ok.state.wf (ConRon.Bridge.TablesStored.of_envWF henv₁) c1.ok.ienv.toS a1 rfl⟩ :
+    (⟨c1'.ok.state, c1'.ok.pins, hconsOK c1'.ok.state.wf (ConRon.Bridge.TablesStored.of_envWF henv₁) c1'.ok.ienv.toS a1 rfl⟩ :
       ConRon.Bridge.Inductives.ReadOK _ _ a1) hrun3
   have hC3 := StageC.of_parts hS3 hck3 hA3
-    (fun k x e => by rw [hst3]; exact c1.ext.lss.ls.ns k x (hC.mem.dnN k x e))
-  rw [ictlK3_some]
+    (fun k x e => by rw [hst3]; exact c1'.ext.lss.ls.ns k x (hC.mem.dnN k x e))
+  refine RefE.bind_right hrun3 ?_
   have hg03 := (hg1.trans hg2).trans hg3
   -- `block_nested_bit` (the twin's `nested`, a pure function)
-  refine Sim.mstep (K := ictlK4 p n bO bL q (UInt64.ofNat pw) (r2.headD 0)) rfl (fun _ _ => rfl) fun r4 m4 h4 => ?_
   have hks3 := hks.grow hkfm hg03
   rw [partsRdIW_grow hg03 (w := q + 8) (by rw [e 8 (by decide) (q + 8) rfl]; omega),
-    partsRdIW_grow hg03 (w := q + 9) (by rw [e 9 (by decide) (q + 9) rfl]; omega)] at h4
+    partsRdIW_grow hg03 (w := q + 9) (by rw [e 9 (by decide) (q + 9) rfl]; omega)]
+  rcases c4 : callW p n "block_nested_bit" [UInt64.ofNat pw, rdW (m.arr64 IW) (q + 8), rdW (m.arr64 IW) (q + 9)]
+    m3 with _ | ⟨r4, m4⟩
+  · rw [liftE_none, ictlE.k_block_nested_bit.none]; exact RefE.of_cls0 (by simp)
+  rw [liftE_some, ictlE.k_block_nested_bit.arm1]
   obtain ⟨s4, rfl, hs4, hr4⟩ := triple_of_callW (s₀ := ⟨m3, Locals.init []⟩)
     (blockNestedBit_refines p hP.nf hP.ni hP.nm hP.nk hP.ng hP.nb n _ _ _ _ bs kinds hS3.2.2.2.1
-      (DecB.get (decBS_mono _) (hbsD.grow (decBS_mono _) hg03)) (DecB.get (OMono.decPL hkfm _ _) hks3.1)) h4
+      (DecB.get (decBS_mono _) (hbsD.grow (decBS_mono _) hg03)) (DecB.get (OMono.decPL hkfm _ _) hks3.1)) c4
   subst hs4
   have hnb : (r4.headD 0 != 0) = ConRon.Arena.blockNestedBit bs kinds := by
     rw [hr4]; cases ConRon.Arena.blockNestedBit bs kinds <;> rfl
+  -- through `check_block_tail_rec`'s model
+  rcases n with _ | k
+  · rw [ictrE.eq_1]; exact RefE.of_cls0 Err.cls_outOfFuel
+  rw [ictrE.arm1]
   -- `check_block_rec`
   have hrd3 : rdW (m3.arr64 IW) (q + 14) = UInt64.ofNat rdp := by
     rw [partsRdIW_grow hg03 (w := q + 14) (by rw [e 14 (by decide) (q + 14) rfl]; omega)]; exact hw14
@@ -220,83 +285,74 @@ theorem ictlW_simC (hP : TailProg p) (hRecs : ConsRecsTFSim p) {fs : List FnName
     · rw [r 15 (by decide) (q + 15) rfl, r 16 (by decide) (q + 16) rfl]; exact hcls'.grow (fun q => decTM_mono q) hg03
     · rw [r 1 (by decide) (q + 1) rfl, r 2 (by decide) (q + 2) rfl]; exact hcvs.grow (fun q => OMono.decCVp q) hg03
     · exact decEBlk_mono _ _ _
-  -- through `check_block_tail_rec`
-  rw [ictlK4_some]
-  refine Sim.post (K := ictlK7) rfl (fun _ _ => rfl) ?_ (fun r x m' a' h => h)
-  cases n with
-  | zero => rw [callW_zero]; exact Sim.of_none
-  | succ k =>
-  refine Sim.of_model (mo' := ictrW p k m3 bO bL q (UInt64.ofNat pw) (r2.headD 0) (r4.headD 0))
-    (fun r m' e => ?_) ?_
-  · obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m3, Locals.init []⟩)
-      (ictr_spec p hP.tailrec k _ bO bL q (UInt64.ofNat pw) (r2.headD 0) (r4.headD 0)) e
-    exact hW
-  unfold ictrW
-  have hrec : Sim (callW p k "check_block_rec" [r2.headD 0, UInt64.ofNat pw, r4.headD 0,
-        rdW (m3.arr64 IW) (q + 12), rdW (m3.arr64 IW) (q + 13), rdW (m3.arr64 IW) (q + 17),
-        rdW (m3.arr64 IW) (q + 18), rdW (m3.arr64 IW) (q + 14), rdW (m3.arr64 IW) (q + 15),
-        rdW (m3.arr64 IW) (q + 16), bO, bL, rdW (m3.arr64 IW) (q + 1), rdW (m3.arr64 IW) (q + 2)] m3)
-      (ConRon.Arena.checkBlockRec V (ConRon.Arena.consBlockCtors bs.nP ctorsAs fe) ⟨bs⟩ (ConRon.Arena.blockNestedBit bs kinds) params tbl rd
-        cls block cvTas) a3
-      (fun r x m' a' => ((StageR dn (r.headD 0) x.1 m' a' ∧ IWGrow m3 m' ∧ decRRS m' r.tail x.2 ∧ AbsOK m' ∧
-        RcMR m') ∧ HbMemo m') ∧ (ConRon.Arena.checkBlockRec V (ConRon.Arena.consBlockCtors bs.nP ctorsAs fe) ⟨bs⟩
-          (ConRon.Arena.blockNestedBit bs kinds) params tbl rd cls block cvTas).run a3 = .ok (x, a')) := by
-    have hx3 : Ext a.store a3.store := by rw [hst3]; exact c1.ext
-    have hnP : qP.p.nP = bs.nP := by rw [hpPeq]; exact hnPP.symm
-    rw [hnP] at henv₂
-    rw [hpPeq] at hMs
-    have d1 := ConRon.Bridge.Inductives.dShape_ext hx3 _ _ hshP
-    have d2 := ConRon.Bridge.denoteEList_ext hx3 _ _ hpaP
-    have d3 := ConRon.Bridge.Inductives.dCtorNf_ext.list hx3 _ _ htbP
-    have d4 := ConRon.Bridge.Inductives.dClassRead_ext hx3 _ _ hrdP
-    have d5 := ConRon.Bridge.Inductives.dMajor_ext.list hx3 _ _ hclP
-    have d6 : cvTas.mapM (Frontend.denoteCV a3.store) = some qP.cvTas :=
-      ConRon.Bridge.Inductives.DExt.list (d := Frontend.denoteCV)
-        (fun hx _ _ h => ConRon.Bridge.denoteCV_ext h hx) hx3 _ _ hcvP
-    have d7 := ConRon.Bridge.denoteCIList_mono hx3 _ _ hbP
-    refine Sim.withRunC <| Sim.withFr (Sim.callW_posB (N := k) (fun j hj => installSimCall
-      (checkBlockRec_refinesC hkp henv₂ hV hApd hCrk hIlpf hP.crec hP.grc hclR (fun f hf => hfR f (by
-          simp only [grcMemoCallees, List.mem_cons, List.not_mem_nil, or_false] at hf
-          rcases hf with rfl | rfl <;> decide)) j (by omega)
-        ⟨m3, Locals.init []⟩ a3 dn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ bs
-        params tbl rd cls cvTas block hC3 hpre hrb3 hlp3 hR3 hA3
-        (fun f hf => hkeep f (List.mem_append_right _ hf)) hcons.coh
-        (by obtain ⟨e, h, rfl⟩ := hcons.denote; rw [hst3]; exact h) d1 d2 d3 d4 d5 d6 d7 hMs hTw (fun f hf => hfRc f (List.mem_append_left _ hf))) (fun r s' h => by
-          obtain ⟨-, hok, hC', hg, hd, hA', hR', -⟩ := h; rw [hnb] at hok hC' hd
-          exact ⟨hok, hC'.stage, hg, hd, hA', hR'⟩)) k (Nat.le_refl _))
-      (fun r m' e5 => HbMemo.ofClosed hcl (hfs _ (by decide)) e5 hM3)
-  refine Sim.bindK (K := ictrK5 p k q (UInt64.ofNat pw) (r2.headD 0)) rfl (fun _ _ => rfl)
-    hrec ?_
-  rintro r5 ⟨fe2b, outs⟩ m5 a5 ⟨⟨⟨hS5, hg5, hd5, hA5, hR5⟩, hM5⟩, hrun5⟩
-  dsimp only
-  rw [ictrK5_some, hS2.1.env.vis]
-  -- con-ron's recursor stage on the twin's run (the recursors' readings, their freshness)
-  have hx3 : Ext a.store a3.store := by rw [hst3]; exact c1.ext
+  have hx3 : Ext a.store a3.store := by rw [hst3]; exact c1'.ext
   have hnP : qP.p.nP = bs.nP := by rw [hpPeq]; exact hnPP.symm
   rw [hnP] at henv₂
   rw [hpPeq] at hMs
+  have dd1 := ConRon.Bridge.Inductives.dShape_ext hx3 _ _ hshP
+  have dd2 := ConRon.Bridge.denoteEList_ext hx3 _ _ hpaP
+  have dd3 := ConRon.Bridge.Inductives.dCtorNf_ext.list hx3 _ _ htbP
+  have dd4 := ConRon.Bridge.Inductives.dClassRead_ext hx3 _ _ hrdP
+  have dd5 := ConRon.Bridge.Inductives.dMajor_ext.list hx3 _ _ hclP
+  have dd6 : cvTas.mapM (Frontend.denoteCV a3.store) = some qP.cvTas :=
+    ConRon.Bridge.Inductives.DExt.list (d := Frontend.denoteCV)
+      (fun hx _ _ h => ConRon.Bridge.denoteCV_ext h hx) hx3 _ _ hcvP
+  have dd7 := ConRon.Bridge.denoteCIList_mono hx3 _ _ hbP
   have hden₂ : ConRon.Bridge.denoteFEnv a3.store (ConRon.Arena.consBlockCtors bs.nP ctorsAs fe) =
       some (ConLeche.consBlockCtors bs.nP qP.ctorsAs env₁) := by
     obtain ⟨e, h, rfl⟩ := hcons.denote; rw [hst3]; exact h
-  obtain ⟨c3, outP, ⟨hcoh₂b, hfe₂b, hout, hfresh⟩, -⟩ :=
+  have hfRc1 : ∀ f ∈ grcMemoCallees, f ∈ fsR := fun f hf => hfR f (by
+    simp only [grcMemoCallees, List.mem_cons, List.not_mem_nil, or_false] at hf
+    rcases hf with rfl | rfl <;> decide)
+  have hR5 := icr_ref hkp henv₂ hV hApd hCrk hIlpf hP.crec hP.grc hclR hfRc1 k (by omega) m3 a3 dn _ _ _ _ _ _ _ _
+    _ _ _ _ _ _ bs params tbl rd cls cvTas block hC3 hpre hrb3 hlp3 hR3 hA3
+    (fun f hf => hkeep f (List.mem_append_right _ hf)) hcons.coh hden₂ dd1 dd2 dd3 dd4 dd5 dd6 dd7 hMs hTw
+    (fun f hf => hfRc f (List.mem_append_left _ hf)) (nested := r4.headD 0)
+  have hT5 := icrE_spec p hP.grc hP.crec k ⟨m3, Locals.init []⟩ (r2.headD 0) (UInt64.ofNat pw) (r4.headD 0)
+    (rdW (m3.arr64 IW) (q + 12)) (rdW (m3.arr64 IW) (q + 13)) (rdW (m3.arr64 IW) (q + 17))
+    (rdW (m3.arr64 IW) (q + 18)) (rdW (m3.arr64 IW) (q + 14)) (rdW (m3.arr64 IW) (q + 15))
+    (rdW (m3.arr64 IW) (q + 16)) bO bL (rdW (m3.arr64 IW) (q + 1)) (rdW (m3.arr64 IW) (q + 2))
+  rw [hnb] at hR5
+  rcases c6 : callE p k "check_block_rec" [r2.headD 0, UInt64.ofNat pw, r4.headD 0,
+      rdW (m3.arr64 IW) (q + 12), rdW (m3.arr64 IW) (q + 13), rdW (m3.arr64 IW) (q + 17),
+      rdW (m3.arr64 IW) (q + 18), rdW (m3.arr64 IW) (q + 14), rdW (m3.arr64 IW) (q + 15),
+      rdW (m3.arr64 IW) (q + 16), bO, bL, rdW (m3.arr64 IW) (q + 1), rdW (m3.arr64 IW) (q + 2)] m3 with
+    e6 | ⟨r6, m6⟩
+  · rw [ictrE.k_check_block_rec.none]
+    exact RefE.bind_left fun hG => RefE.run_err hT5 hG.u.nv ⟨hG.u, hG.nfs _ _ _ _ henv₂⟩ hR5 c6
+  rw [ictrE.k_check_block_rec.arm1]
+  have d6 := callW_of_callE c6
+  obtain ⟨s5, hs5, -, ⟨fe2b, outs⟩, a5, hrun5, hR5'⟩ := RefE.run_ok hT5 hR5 c6
+  subst hs5
+  have hC5' := hR5'.stage
+  have hd5 := hR5'.rrs
+  have hA5 := hR5'.abs
+  have hg5 := hR5'.grow
+  dsimp only at hC5' hd5 hA5 hg5
+  have hM5 : HbMemo s5.mem := HbMemo.ofClosed hcl (hfs _ (by decide)) d6 hM3
+  have hR5r : RcMR s5.mem := hR5'.rc
+  refine RefE.bind_right hrun5 ?_
+  dsimp only
+  have hS5 := hC5'.stage
+  -- con-ron's recursor stage on the twin's run (the recursors' readings, their freshness)
+  obtain ⟨cr3, outP, ⟨hcoh₂b, hfe₂b, hout, hfresh⟩, -⟩ :=
     ConRon.Bridge.Inductives.recStage (μ := V) rfl (ConRon.Bridge.CoreSpec.of_core rfl) _ _ ⟨bs⟩ ⟨shP⟩
       _ params qP.params tbl qP.tbl.toList rd qP.rd cls qP.cls cvTas qP.cvTas block blockP henv₂ hcons.coh hTw
       hMs a3 a5 _ hck3
       ⟨hden₂, by simp only [ConRon.Bridge.Inductives.dParts, ConRon.Bridge.Inductives.dShape_ext hx3 _ _ hshP]; rfl,
-        ConRon.Bridge.denoteEList_ext hx3 _ _ hpaP, ConRon.Bridge.Inductives.dCtorNf_ext.list hx3 _ _ htbP,
-        ConRon.Bridge.Inductives.dClassRead_ext hx3 _ _ hrdP, ConRon.Bridge.Inductives.dMajor_ext.list hx3 _ _ hclP,
-        ConRon.Bridge.Inductives.DExt.list (d := Frontend.denoteCV)
-          (fun hx _ _ h => ConRon.Bridge.denoteCV_ext h hx) hx3 _ _ hcvP,
-        ConRon.Bridge.denoteCIList_mono hx3 _ _ hbP⟩ hrun5
-  have x35 := c3.ext
+        dd2, dd3, dd4, dd5, dd6, dd7⟩ hrun5
+  have x35 := cr3.ext
   -- `cons_block_recs_tf`
-  refine Sim.bindK (K := ictrK6 p k q (UInt64.ofNat pw))
-    rfl (fun _ _ => rfl)
-    (Sim.withRunC <| Sim.withFr (F := RcMR) (hRecs k dn (r5.headD 0) (r2.headD 0) (UInt64.ofNat pw) fe2b m5 a5 bs r5.tail outs hS5
-      ((hbsD.grow (decBS_mono _) hg03).grow (decBS_mono _) hg5) hd5 hM5 hA5)
-      (fun _ _ e6 => RcMR.ofClosed hclR (hfRc _ (by simp)) e6 hR5)) ?_
-  rintro r6 fe3 m6 a6 ⟨⟨⟨hS6, hg6, hM6, hA6⟩, hR6⟩, hrun6⟩
-  rw [ictrK6_some]
+  rw [hS2.1.env.vis]
+  rcases c7 : callW p k "cons_block_recs_tf" [r2.headD 0, UInt64.ofNat pw, 0, r6.tail.headD 0,
+      r6.tail.tail.headD 0, r6.headD 0] s5.mem with _ | ⟨r7, m7⟩
+  · rw [liftE_none, ictrE.k_cons_block_recs_tf.none]; exact RefE.of_cls0 (by simp)
+  rw [liftE_some, ictrE.k_cons_block_recs_tf.arm1]
+  obtain ⟨fe3, a6, hrun6, hS6, hg6, hM6, hA6⟩ := consRecsTFSim_of L hcl (hfs _ (by decide)) k dn (r6.headD 0)
+    (r2.headD 0) (UInt64.ofNat pw) fe2b s5.mem a5 bs r6.tail outs hS5
+    ((hbsD.grow (decBS_mono _) hg03).grow (decBS_mono _) hg5) hd5 hM5 hA5 _ _ c7
+  have hR6 : RcMR m7 := RcMR.ofClosed hclR (hfRc _ (by simp)) c7 hR5r
+  refine RefE.bind_right hrun6 ?_
   -- con-ron's recursors' cons on the twin's run: the store extended, the state and pins kept
   have hvis : fe2b.visibleBelow = (ConRon.Arena.consBlockCtors bs.nP ctorsAs fe).visibleBelow := by
     rw [hcoh₂b.1, hcons.coh.1, hfe₂b]
@@ -311,36 +367,42 @@ theorem ictlW_simC (hP : TailProg p) (hRecs : ConsRecsTFSim p) {fs : List FnName
   have hview : (fe2b.restrictTo (ConRon.Arena.consBlockCtors bs.nP ctorsAs fe).visibleBelow).find?
       = (ConRon.Arena.consBlockCtors bs.nP ctorsAs fe).find? := by
     rw [← hvis]; exact hfind₂b
-  obtain ⟨c4, -⟩ := ConRon.Bridge.Inductives.consBlockRecsTF_spec (μ := V)
+  obtain ⟨c4'', -⟩ := ConRon.Bridge.Inductives.consBlockRecsTF_spec (μ := V)
     (ConRon.Arena.consBlockCtors bs.nP ctorsAs fe).visibleBelow bs shP outs outP 0
-    fe2b _ a5 a6 fe3 c3.ok (ConRon.Bridge.Inductives.RC.IFEnvOK.of_find? c3.ok.ienv hview hraw₂b)
+    fe2b _ a5 a6 fe3 cr3.ok (ConRon.Bridge.Inductives.RC.IFEnvOK.of_find? cr3.ok.ienv hview hraw₂b)
     (Nat.le_of_eq hvis.symm) hcoh₂b hden₂b (ConRon.Bridge.Inductives.dShape_ext x05 _ _ hshP) hout hfresh
     (by rw [hS2.1.env.vis]; exact hrun6)
-  have x06 : Ext a.store a6.store := x05.trans c4.ext
+  have x06 : Ext a.store a6.store := x05.trans c4''.ext
   -- `check_block_tables`
   have hg06 := (hg03.trans hg5).trans hg6
-  have r : ∀ k, k < 19 → ∀ w : Word, w = q + UInt64.ofNat k → rdW (m6.arr64 IW) w = rdW (m.arr64 IW) w :=
+  have r : ∀ k, k < 19 → ∀ w : Word, w = q + UInt64.ofNat k → rdW (m7.arr64 IW) w = rdW (m.arr64 IW) w :=
     fun k hk w hw => partsRdIW_grow hg06 (by rw [e k hk w hw]; omega)
   rw [partsRdIW_grow hg06 (w := UInt64.ofNat pw) (by rw [hpw']; omega),
     partsRdIW_grow hg06 (w := UInt64.ofNat pw + 1) (by rw [UInt64.toNat_add, hpw']; simp; omega),
     r 4 (by decide) (q + 4) rfl, r 5 (by decide) (q + 5) rfl, r 6 (by decide) (q + 6) rfl,
     r 7 (by decide) (q + 7) rfl]
-  refine Sim.post (K := ictlK7) rfl (fun _ _ => rfl)
-    (Q := fun r x m' a' => StageR dn (r.headD 0) x m' a' ∧ IWGrow m6 m' ∧ HbMemo m' ∧ AbsOK m' ∧ RcMR m')
-    (fun r m' e7 => by
-      obtain ⟨s7, rfl, -, x, a', h1, h2⟩ := RefE.run_okW (ctbE_spec p hP.tabs.one hP.tabs.tabs k ⟨m6, Locals.init []⟩
-        _ _ _ _ _ _ _ _) (ctb_ref hP.tabs hApd dn (UInt64.ofNat pw) bs k (by omega) m6 a6 (r6.headD 0) fe3 _ _ _ _ _
-        _ bs.members ctorsAs sss
-        hS6 ((hbsD.grow (decBS_mono _) hg06)) (partsHsrc_grow hg06 hq9 hsrc) (hmss.grow decMS_mono hg06)
-        (hcas.grow decCNS_mono hg06) (hsss'.grow decISS_mono hg06) hM6 hA6
-        (fun f hf => hkeep f (by simp_all [tablesKeepCallees, tailKeepCalleesC, grcKeepCalleesC]))
-        c4.ok.state c4.ok.pins ⟨shP, ConRon.Bridge.Inductives.dShape_ext x06 _ _ hshP⟩
-        ⟨_, ConRon.Bridge.Inductives.dMember_ext.list x06 _ _ hmsP⟩
-        ⟨_, ConRon.Bridge.Inductives.dCtors_ext.list x06 _ _ hcaP⟩
-        ⟨_, ConRon.Bridge.Inductives.DExt.list (d := ConRon.Bridge.Inductives.denoteLLists)
-          (fun hx x y h => ConRon.Bridge.Inductives.BI.denoteLLists_ext hx x y h) x06 _ _ hssP⟩) e7
-      exact ⟨x, a', h1, h2.stage, h2.grow, h2.memo, h2.abs, RcMR.ofClosedHb hclH hfH e7 hR6 h2.memo⟩)
-    (fun r x m7 a7 h => ⟨h.1, hg06.trans h.2.1, h.2.2⟩)
+  have hT8 := ctbE_spec p hP.tabs.one hP.tabs.tabs k ⟨m7, Locals.init []⟩ (UInt64.ofNat pw)
+    (rdW (m.arr64 IW) (UInt64.ofNat pw)) (rdW (m.arr64 IW) (UInt64.ofNat pw + 1)) (rdW (m.arr64 IW) (q + 4))
+    (rdW (m.arr64 IW) (q + 5)) (rdW (m.arr64 IW) (q + 6)) (rdW (m.arr64 IW) (q + 7)) (r7.headD 0)
+  have hR8 := ctb_ref hP.tabs hApd dn (UInt64.ofNat pw) bs k (by omega) m7 a6 (r7.headD 0) fe3 _ _ _ _ _ _
+      bs.members ctorsAs sss hS6 (hbsD.grow (decBS_mono _) hg06) (partsHsrc_grow hg06 hq9 hsrc)
+      (hmss.grow decMS_mono hg06) (hcas.grow decCNS_mono hg06) (hsss'.grow decISS_mono hg06) hM6 hA6
+      (fun f hf => hkeep f (by simp_all [tablesKeepCallees, tailKeepCalleesC, grcKeepCalleesC]))
+      c4''.ok.state c4''.ok.pins ⟨shP, ConRon.Bridge.Inductives.dShape_ext x06 _ _ hshP⟩
+      ⟨_, ConRon.Bridge.Inductives.dMember_ext.list x06 _ _ hmsP⟩
+      ⟨_, ConRon.Bridge.Inductives.dCtors_ext.list x06 _ _ hcaP⟩
+      ⟨_, ConRon.Bridge.Inductives.DExt.list (d := ConRon.Bridge.Inductives.denoteLLists)
+        (fun hx x y h => ConRon.Bridge.Inductives.BI.denoteLLists_ext hx x y h) x06 _ _ hssP⟩
+  rcases c8 : callE p k "check_block_tables" [UInt64.ofNat pw, rdW (m.arr64 IW) (UInt64.ofNat pw),
+      rdW (m.arr64 IW) (UInt64.ofNat pw + 1), rdW (m.arr64 IW) (q + 4), rdW (m.arr64 IW) (q + 5),
+      rdW (m.arr64 IW) (q + 6), rdW (m.arr64 IW) (q + 7), r7.headD 0] m7 with e8 | ⟨r8, m8⟩
+  · rw [ictrE.k_check_block_tables.none]
+    exact fun hG => RefE.run_err hT8 hG.u.nv hG.tab hR8 c8
+  rw [ictrE.k_check_block_tables.arm1]
+  obtain ⟨s8, hs8, -, x, a', h1, h2⟩ := RefE.run_ok hT8 hR8 c8
+  subst hs8
+  exact RefE.ret h1 ⟨h2.stage, hg06.trans h2.grow, h2.memo, h2.abs,
+    RcMR.ofClosedHb hclH hfH (callW_of_callE c8) hR6 h2.memo⟩
 
 include hkp henv₁ hV hOpf hLC hLT hApd hCrk hIlpf in
 /-- **`check_block_tail` refines `checkBlockTail` under `StageC`** (`checkBlockTail_refines`'s;
@@ -371,14 +433,15 @@ theorem checkBlockTail_refinesC (hP : TailProg p) (L : CbrLook p) {fs : List FnN
       StageR dn (r.headD 0) (AM.res (ConRon.Arena.checkBlockTail V block bp) a₀) s'.mem
         (AM.st (ConRon.Arena.checkBlockTail V block bp) a₀) ∧
       IWGrow s₀.mem s'.mem ∧ HbMemo s'.mem ∧ AbsOK s'.mem ∧ RcMR s'.mem; ⊤⦄ := by
-  refine triple_post (ictl_spec p hP.tail n s₀ bO bL q) ?_
-  rintro r s' ⟨hl, hm⟩
-  obtain ⟨x, a', hrun, hS', hg, hM', hA', hR'⟩ :=
-    ictlW_simC hkp henv₁ hV hOpf hLC hLT hApd hCrk hIlpf hP (consRecsTFSim_of L hcl (hfs _ (by decide))) hfs hcl n hclR hfR hn hC
-      hq hblk hM hA hk hR hrb hlp hcoh hden hqP hbP hTw henv₂ hMs hfRc hclH hfH r s'.mem hm
-  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
-  exact ⟨hl, hok, by rw [hres, hst]; exact hS', hg, hM', hA', hR'⟩
+  refine triple_post (RefE.triple (ictlE_spec p hP (n + 1) s₀ bO bL q)
+    (tail_ref hkp henv₁ hV hOpf hLC hLT hApd hCrk hIlpf hP L hfs hcl (n + 1) hclR hfR (by omega) hC hq hblk hM hA hk
+      hR hrb hlp hcoh hden hqP hbP hTw henv₂ hMs hfRc hclH hfH)) ?_
+  rintro r s' ⟨hl, x, a', run, hR'⟩
+  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ run
+  exact ⟨hl, hok, by rw [hres, hst]; exact hR'.stage, hR'.grow, hR'.memo, hR'.abs, hR'.rc⟩
 
 end sims
 
 end L.Ind
+
+end

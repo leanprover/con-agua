@@ -1,14 +1,14 @@
+import ConAgua.Arena.IndT.Sum2
+import ConAgua.Verdict.IndBE
+import ConAgua.Arena.IndT.Install7
 import ConAgua.Verdict.IndBTbl
-import ConAgua.Verdict.IndA7
-import ConAgua.Arena.IndT.GenRec3
 
 /-!
 # Part B's claims in the shapes `check_ind_decl`'s claim takes (lane `verdicts-b`, helper `fin`)
 
 `cid_claim3` (IndA8.lean) takes the `indB` callees' claims as the generated statements of
 IndBE.lean (`err_stmt`: every fuel `F ≤ 2 ^ 62`, the error of a `callE`), `CheckStructProjTableRE`
-(Arena/IndRealSctC.lean, under `StageR`) and `GenRecCheckE` (IndA7.lean); part B proved them as `CoreSpecE`s
-(`ct_ref`, …, `gck_ref`). The bridges below restate
+(Arena/IndRealSctC.lean, under `StageR`); part B proved them as `CoreSpecE`s (`ct_ref`, …). The bridges below restate
 them, discharging the fuels part B's statements leave out (`0`, `1`: the calls run out of fuel).
 -/
 
@@ -69,22 +69,5 @@ theorem checkStructFieldSortsIE_of {p : Prog} (hnv : closedNV p _root_.L.Checker
     exact CoreSpecE.of_callE (checkStructFieldSortsI_claim hkp henv hLC hLT hnv hcE hg hpw het hsc hcfs
       hgo hia hcsf hftd F (by omega) s₀ a₀ isProp large s nP fo fl io il nW fvs idxArgs hC hA hfv hfvb
       hix hixb hs hsP hnW hfvsP hws) hc
-
-/-- **`gen_rec_check`'s claim in the generated shape** (`GenRecCheckE`), from `gck_ref`
-and the claim of `classes_nfs` at every stage. -/
-theorem genRecCheckE_of {p : Prog} (hnv : closedNV p _root_.L.Checker.nvFns = true)
-    (hcE : CoreStubsE p) (hU : UceProg p)
-    (hNfs : ∀ dn vis fe env, ConLeche.EnvWF env → ClassesNfsE p dn vis fe env) : GenRecCheckE p :=
-  fun hkp {_env} henv hV hApd hCrk hIlpf P {_fsR} hclR hfR s₀ a₀ {_dn _vis _fe _pp _nested _pO _pL _tO _tL _rd
-      _mO _mL _cO _cL _bO _bL _bs _params _tbl _rdv _ms _cvTas _block} hC hbs hrb hpar hparb htbl hrd hms
-      hcv hblk hlp hP hA hkeep hcoh hfe {_pP _paramsP _tblP _rdP _MsP _cvTasP _blockP} hsh hparP htblP
-      hrdP hmsP hcvTP hblkP hMs hT hfRc F hF _e hc => by
-    rcases F with _ | n
-    · obtain ⟨e', he', h0⟩ := callE_zero p "gen_rec_check" _ s₀.mem
-      rw [hc] at he'; cases he'; exact ErrClaim.of_cls0 h0
-    exact RefE.run_err (gckE_spec p P (n + 1) ⟨s₀.mem, Locals.init []⟩ _ _ _ _ _ _ _ _ _ _ _ _ _ _) hnv
-      ⟨⟨⟨hnv, hcE⟩, hU⟩, hNfs _ _ _ _ henv⟩
-      (gck_ref hkp henv hV hApd hCrk hIlpf P hclR hfR n (by omega) hC hbs hrb hpar hparb htbl hrd hms hcv hblk hlp
-        hP hA hkeep hcoh hfe hsh hparP htblP hrdP hmsP hcvTP hblkP hT (fun M hM => (hMs M hM).1) hfRc) hc
 
 end L.Ind
