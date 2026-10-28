@@ -71,6 +71,9 @@ ConAgua/Arena/PropReadRefine3.lean	public import ConAgua.Arena.WhnfCoreProj	# a 
 ConAgua/Arena/RecCheckSpec/Tka.lean	public import ConAgua.Arena.LdRd	# the build needs it (vcgen [ld64_rd_spec]: a name the tactic reads; the proof term does not keep it)
 ConAgua/Arena/RecCheckSpec/TkhK5.lean	public import ConAgua.Arena.Reasons	# a constant the module uses (an auxiliary realized in several modules: the tool names another copy)
 ConAgua/Arena/RecCheckSpec/Tpd.lean	public import ConAgua.Arena.RecClassSpec.MnW	# the build needs it (a name the tool does not attribute: a command reads it, or an auxiliary realized in several modules)
+ConAgua/Arena/RecCheckSpec/TruncSl.lean	public import ConAgua.Arena.IndSumSpec.Row	# the build needs it: the modules above (RecCheckTpd, PdWMfr, DecTMSlices, DecB) reach their names through it; it lost its own uses with the hand model of target_class_match
+ConAgua/Arena/RecCheckSpec/TruncSl.lean	public import ConAgua.Arena.RecCheckSpec.TcmF	# the build needs it: the modules above (RecCheckTpd, PdWMfr, DecTMSlices, DecB) reach their names through it; it lost its own uses with the hand model of target_class_match
+ConAgua/Arena/RecCheckSpec/TruncSl.lean	public import ConAgua.Arena.RecCheckSpec.Tpd	# the build needs it: the modules above (RecCheckTpd, PdWMfr, DecTMSlices, DecB) reach their names through it; it lost its own uses with the hand model of target_class_match
 ConAgua/Arena/RecClassSpec/CrW.lean	public import ConAgua.Arena.LdRd	# the build needs it (vcgen [ld64_rd_spec]: a name the tactic reads; the proof term does not keep it)
 ConAgua/Arena/RecClassSpec/MnW.lean	public import ConAgua.Arena.LdRd	# the build needs it (vcgen [ld64_rd_spec]: a name the tactic reads; the proof term does not keep it)
 ConAgua/Arena/RecGenSpec/ClassFeR.lean	public import ConAgua.Arena.LdRd	# the build needs it (vcgen [ld64_rd_spec]: a name the tactic reads; the proof term does not keep it)

@@ -1,4 +1,3 @@
-import ConAgua.Arena.IndT.RecCheckTpd
 import ConAgua.Arena.IndRealLvlC
 import ConAgua.Arena.IndSumSpec.StructCtorResidOk
 import ConAgua.Arena.IndInstallSpec.InstallRec2PSl

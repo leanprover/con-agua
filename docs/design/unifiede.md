@@ -150,10 +150,10 @@ Declarations replaced (lines with their doc comments, `_tmp/unifiedE/declen.py`)
 half. `target_major_nfs` adds the merged second package.
 
 Whole diff of the pilot's files against master (models, specs, refinements, claims, callers;
-without the generator, the kit and the test): **+470 −1 359 = −889 lines**. Of the removed lines,
+without the generator, the kit and the test): **+493 −1 409 = −916 lines**. Of the removed lines,
 about 300 are the hand ok models and their specs: `TcmLook`'s `tcmK*`/`tcmW`, `TruncSl`'s arms and
-specs, `TcmF`, `TcmK6`, `Tmn`'s `tmnW` part. One-time infrastructure: +267 −23 (`RefE` kit 116,
-`VerdictCtx` 19, `ErrSpec` 23, generator +63 −23, tests 46).
+specs, `TcmF`, `TcmK6`, `Tmn`'s `tmnW` part; `IndT/RecCheckTcm` and `IndT/RecCheckTmn` are gone. One-time infrastructure: +285 −23 (`RefE` kit 116,
+`VerdictCtx` 19, `ErrSpec` 23, generator with its documentation +81 −23, tests 46).
 
 ### 2.2 Elaboration time
 
@@ -162,11 +162,11 @@ User seconds of `lean` on each module alone, three interleaved runs, base (maste
 
 | module | base | new | |
 |---|---:|---:|---|
-| `Verdict/IndBTcm` | 2.29 | 2.29 | `tcm_ref` instead of `tcm_claim` |
+| `Verdict/IndBTcm` | 2.29 | 2.30 | `tcm_ref` instead of `tcm_claim`; `thW_afr` moved in |
 | `Verdict/IndBTmn` | 2.09 | **2.76** | **slower (+0.7 s)**: `tmnE`'s generated step 1.39 → 1.90 s (`finish`; with the `simp [Cmp.evalW, Cmp.eval]` recipe of the old `tmnE` it took 3.0 s), `tmn_ref` 0.33 s against `tmnE_claim` 1.52 s |
 | `Verdict/IndBNfs` | 14.68 | 14.27 | noisy (14.2–16.1) |
 | `Verdict/IndBTka` | 5.32 | 5.27 | |
-| `Arena/IndT/RecCheckTcm` | 1.49 | 0.54 | `tcmW_okC` gone |
+| `Arena/IndT/RecCheckTcm` | 1.49 | — | deleted (`tcmW_okC`; `thW_afr` moved to `IndBTcm`) |
 | `Arena/IndT/RecCheckTmn` | 0.79 | — | deleted |
 | `Arena/IndT/RecGen28` | 4.45 | 4.07 | `tmnW_okPC` gone |
 | `Arena/IndT/RecCheckK53` | 1.60 | 1.61 | |
@@ -175,7 +175,7 @@ User seconds of `lean` on each module alone, three interleaved runs, base (maste
 | `Arena/RecCheckSpec/TcmLook`, `TcmF`, `TcmK6` | 1.38 | 1.17 | |
 | `Arena/RecCheckSpec/K53Look` | 0.50 | 0.51 | |
 | `Arena/RecCheckSpec/Tka` | 14.48 | 14.48 | 15.6 when its model called `cR n "target_class_match" [12 words] m` directly: the list literal costs `grind` 8 %; a named reading `tcmR` (the run, 12 word arguments) is at parity |
-| **sum** | **53.7** | **48.3** | **−10 %** |
+| **sum** | **53.7** | **47.8** | **−11 %** |
 
 `IndBTmn` is the one module that got slower: its generated step now does what the deleted
 hand `tmn_spec` did, and the sum over the modules is lower.
