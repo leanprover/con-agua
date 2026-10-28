@@ -3,12 +3,11 @@ import ConAgua.Arena.IndInstallSpec.NhW
 import ConAgua.Arena.RecStab
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr
-import ConAgua.L.ModelGen
 
 /-!
 # InstallSimCall
 
-`installSimCall`, `installSortSim`, `ibt_spec`, `ibtW`, `MemOK.grow`, `_root_.L.Arena.Sim.callW_pos`.
+`installSimCall`, `installSortSim`, `MemOK.grow`, `_root_.L.Arena.Sim.callW_pos`.
 -/
 
 noncomputable section
@@ -49,15 +48,6 @@ theorem installSortSim {p : Prog} (hP : CstProg p) (n : Nat) {dn : NIdx → Opti
     (internSort_spec p hP.sortFind hP.sortPush hP.internSort n _ u) e
   obtain ⟨a', hrun, hS', hg⟩ := internSort_stage hS u hu hI
   exact ⟨_, a', hrun, hS', hg, rfl, sointernW_afr hI⟩
-
-/-! ## `check_block_tele` -/
-
-/-- **`check_block_tele` is its model `ibtW`** (generated). -/
-l_model ibt_spec (p : Prog) (hp : p.lookup "check_block_tele" = some checkBlockTele)
-  fns [hp ↦ ibtW]
-  specs [callW_spec p n "check_constant_val", callW_spec p n "check_sum_tele",
-    callW_spec p n "strip_pis", callW_spec p n "intern_sort"]
-  grind [ind_grind] finish [rdW_eq] gen 20
 
 theorem MemOK.grow {m m' : Mem} {q : Nat} {ms : MemberShape} (h : MemOK m q ms) (hg : IWGrow m m') :
     MemOK m' q ms := by
