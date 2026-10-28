@@ -230,7 +230,7 @@ l_model classRecTyOkGuardsE_spec (p : Prog) (hp : RtoProg p)
   fns [hp.rg ↦ classRecTyOkGuardsE]
   specs [targetMajorAt_spec p hp.alloc hp.pw hp.mtm hp.tmd hp.tma hp.na n]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] unified
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 /-- **The twin's guards of `classRecTyOk`** (the prefix `class_rec_ty_ok_guards` stands for): the
