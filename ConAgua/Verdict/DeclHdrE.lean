@@ -33,7 +33,7 @@ local notation "V" => ConLeche.CheckMode.verified
 l_model installHeader_specE (p : Prog) (hP : IhProg p)
   fns [hP.ih ↦ installHeaderE]
   specs [envFind_specW p hP.ix hP.rowGet hP.find n, resCont_spec p hP.resF hP.resC n,
-    cvLps_specW1 p hP.alloc hP.copy hP.eti hP.lps n, slNodup_spec p hP.cont hP.nodup n,
+    cvLps_specW p hP.alloc hP.copy hP.eti hP.lps n, slNodup_spec p hP.cont hP.nodup n,
     lbbF_spec p hP.bvb n, hffF_spec p hP.hf n]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]

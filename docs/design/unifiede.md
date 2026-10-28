@@ -128,7 +128,15 @@ missing shape is a kit change, reported, not a local helper).
   half from `callE`/`callW … = ok`), `RefE.run_err` (the `ErrClaim` of a failing run),
   `RefE.coreSpecE` (as `CoreSpecE`), `RefE.triple` (the ok triple, the `@[refines]` shape);
 * `ErrClaim.of_run_eqW`, `ErrClaim.of_run_err` (a claim through equal or failing runs),
-  `callW_of_callE` and `callE_of_callW`.
+  `callW_of_callE` and `callE_of_callW`;
+* a twin's prefix (its guards as a function of their own, `crgT`, `cchT`, `rgT`) split off a
+  `do` block that copies the rest into each guard's branches:
+  `simp only [prefix, bind_assoc, ite_bindAM, fail_bindAM, pure_bind]` (`crgT_bind`).
+
+There is no lemma from a unified model's ok value back to the call's run: the model does not
+model bounds (a load is `rdW`) or fuel failures of class `0`, so an ok model value does not make
+the run ok. An arm that needs the run (a callee's write-set frame, `run_memFrame`) calls the
+callee through `callE` and reads both halves (`RefE.run_ok`, `RefE.run_err`).
 
 **`RefC` (`Arena/Verdict.lean`)**, a model value whose ok half is a fact, not a twin run:
 `RefC G x Ok C` says an ok value satisfies `Ok v` and an error `e` the claim `C e` under `G`.
@@ -301,7 +309,12 @@ The list with depths, files and callees: `_tmp/unifiedE/split.txt`.
    (`some (r.headD 0, m)`, `some (r, m)`, a tuple), a total model (`r.headD 0 = F`,
    `r ≠ [] ∧ r = F` as `e_view`'s, `s'.mem = F`), one result as a list
    (`some ([r.headD 0], m)`). `↦ fW tuple` counts the `return`s of the named blocks spliced into
-   the body (a loop's `return (k, x, y)`).
+   the body (a loop's `return (k, x, y)`). A post's length conjunct
+   (`r = [r.headD 0, r.getD 1 0, …]` or `r.tail.headD 0`) is accepted and, under `simp […]`,
+   taken apart by `L.List.eq_headD_cons` (it no longer loops `simp_all`): list the spec as it
+   is, no primed variant. A guard without a `Decidable` instance (`flush_caches`' `FlushOK`) is
+   decided classically (the definitions `noncomputable`), no `open Classical in`; a generated
+   definition holding `sorry` stops the command with an error.
 
 ### 3.3a Rules for batch lanes
 
@@ -1790,3 +1803,31 @@ Elaboration (as §3.20, base master f5e47a7f, load 36–85, `_tmp/unify-b3c-blk/
 `check_field_sort_bound` (`cfbW`, an `errors` model in `IndE`) and `check_sum_ctor(_tail)`
 (`IndBSum3`) are not migrated: they go bottom-up with those callees, over the core-callee kit
 (`RefE.bind_core`, `CorePost`).
+
+### 3.24 Generator and kit, after batch 2 (lane `unify-gen`)
+
+* **No `sorry` from the generator.** A callee guard without a `Decidable` instance
+  (`flush_caches`' `FlushOK`) became `decide sorry` unless the `l_model` sat under
+  `open Classical in` (`cruleE`). `analyseSpec` now looks for an instance and decides a guard
+  without one classically (`@decide g (Classical.propDecidable _)`, the definitions in a
+  `noncomputable section`), and the command stops at the first generated definition that holds
+  `sorry`. `cruleE` lost its `open Classical in`. Test `tUseUg`.
+* **Length conjuncts.** A callee post `… ∧ r = [r.headD 0, r.getD 1 0, …]` was "ambiguous"
+  (`resIdx` did not know `List.getD`), and with `r.tail.headD 0` it looped `simp_all` under
+  `simp […]`. `resIdx` reads `r.getD i 0`; the generated `simp_all` takes the conjunct apart by
+  the pre-lemma `L.List.eq_headD_cons` (`L/Logic`; not in `ModelGen`, which holds no constants, or
+  shake reads every `import ConAgua.L.ModelGen` as unused). Gone: `piBinders_spec'`,
+  `cvLps_specW1` (eight call sites list `piBinders_spec`, `cvLps_specW`). Test `tUseLen`.
+* **A twin's guard prefix.** `crgT_bind`, `cchT_bind`, `rgT_bind` are one `simp only [prefix,
+  bind_assoc, ite_bindAM, fail_bindAM, pure_bind]` each (−24 lines); `ite_bindAM`, `fail_bindAM`
+  moved from `Arena/DeclValSpec` to the kit (`Arena/Verdict`), `rgFail_bind` is gone.
+* **Not done.** A lemma from a unified model's ok value back to the call's run is not provable
+  (§1.5: the error post says nothing about class-`0` errors, and an `Option` callee's spec nothing
+  about its failures). `dv_ref`/`ov_ref` stay two proofs: one proof over both models needs their
+  eleven arm equations abstracted (≈ 40 lines of structure to save 85). The §3.9 wrappers were
+  already gone (§3.11).
+
+Elaboration (user seconds, median of 3 interleaved runs, base master 02beda5d): every touched
+module at parity (`Arena/RecClassSpec/CrW` 24.5/24.5, `Verdict/PosE1M` 21.9/21.8, `DeclValE`
+8.5/7.7, `IndBHdr` 5.5/5.2, the 14 others within 0.4 s) but `L/ModelGenTest` 23.2 → 25.4 (the two
+new tests).
