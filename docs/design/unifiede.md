@@ -2163,7 +2163,8 @@ the slots, as `m2c_*` in §3.7):
 - [ ] `is_def_eq`: `Verdict/DefEqQuickE` (4), `DefEqLamsE` (2), `DefEqEagerE` (2), `DefEqPeelE`
   (5), `DefEqSpineE` (3), `DefEqLazyE` (8), `DefEqTailE` (9), `DefEqLoopsE` (1), `DefEqSlotE` (3:
   `defeq_slot`, `defeq_body`, `is_def_eq_core`). Done: `DefEqQuickE`, `DefEqLamsE`, `DefEqPeelE`,
-  `DefEqSpineE` (and `defeq_lams_inner`; §3.41), `DefEqLazyE` (§3.43);
+  `DefEqSpineE` (and `defeq_lams_inner`; §3.41), `DefEqLazyE` (§3.43), `DefEqTailE`'s stuck side
+  (six of nine, §3.45);
 - [ ] `infer`: `Verdict/InferLeavesE` (`infer_const`; done, §3.44), `InferBindE` (6: `infer_lams`/`infer_pis` and
   their leaves), `InferSpineE` (4), `InferArmsE` (8), `InferKnotE` (4: `infer_body(_io)`, `infer`,
   `infer_io`).
@@ -2929,4 +2930,47 @@ pieces cut by `seqTake`/`seqDrop` (the head, the record, the `find_proj` call on
 and only after an `if` whose branches both fall through, which `infer_proj`'s miss block (its `then`
 branch fails) is not. **Generator wish**: `cut` at a statement whose `if`'s failing branch ends in
 `fail` (or several cuts), so `ipE`'s step splits as the old hand pieces did.
+
+### 3.45 Retirement, group B, `is_def_eq`, third landing (the stuck side)
+
+Six of `Verdict/DefEqTailE`'s nine: `stuck_irrel` (`si_ref`, `Arena/DefEqStuckIrrel`), `stuck_str`
+(`str_ref`, `DefEqStuckStr`), `stuck_app_cong`, `stuck_app` (`ac_ref`, `sa_ref`, `DefEqStuckApp`),
+`stuck_rest`, `defeq_stuck` (`dr_ref`, `ds_ref`, `DefEqStuckDisp`). The `@[refines]`/`refines_part`
+theorems stay as `RefE.coreSpec` one-liners; `DefeqStuckE`, which `defeq_tail`'s claim reads, is a
+`RefE.coreSpecE` one-liner (`defeqStuck_refinesE`). Gone: the claims `stuckIrrel_refinesE`,
+`stuckRest_refinesE`, `stuckStr_refinesE`, `appCong_refinesE`, `stuckApp_refinesE` with their
+`errors` models and the statements `StuckIrrelE`, `AppCongE`, `StuckStrE`, `StuckAppE`,
+`StuckRestE`, `SetCertE`, `SuCertE`, `EtaCertE`, `ProofIrrelE`, `DefeqLstE` (the last two were the
+whnf family's `ProofIrrelWE`, `DefeqLstWE` again); `DefeqWhnfE`'s fields `setCert`, `suCert`,
+`etaCert` and their builders in `KnotAllE`; the ok models with their specs (`siK*`, `strK*`,
+`apK*`, `sapK1`, `dsLv`, `dsEta`, `drK`, `dsArm`, `dsK`) and the fuel-generic wrappers
+`setCert_at`, `suCert_at`, `stuckIrrel_at`, `etaCert_at`, `stuckApp_at`, `stuckStr_at`,
+`stuckRest_at`, `appCong_at`.
+
+| functions | before: ok refinements, models, specs + claims | after | change |
+|---|---:|---:|---:|
+| the 6 above | 840 + 795 = 1 635 | 741 + 18 = 759 | **−54 %** |
+
+Diff of the landing against master: +639 −1 581 lines in 8 files.
+
+Choices:
+
+* **`G`**: `StuckG p n` (`DefEqStuckIrrel`): the knot's slots, `proof_irrel`'s claim
+  `ProofIrrelWE` (it stays `callE`, its ok half `StuckCallees.proofIrrel`) and `defeq_lst`'s
+  `DefeqLstWE` (`stuck_app_cong` calls it through `callE`, its ok half `StuckCallees.defeqLst`;
+  `struct_eta_cert`'s `SetG` is `StuckG.set`).
+* **Callees**: the whnf family's unified `struct_eta_cert`, `struct_unit_cert`, `eta_cert` and the
+  family's own are listed by their unified specs; tails that re-list the answer word go through
+  `RefE.tail_eq` (`si_tail` for `stuck_irrel`'s five sites, `relist1` for `defeq_stuck`'s arms).
+* **`stuck_app_cong`'s stack top**: its leaves read `GrowPost.restore` over the composed
+  `StackGrew` of the two spines and the kept stacks after `defeq` and `defeq_lst` (`leaf` in
+  `ac_ref`); the old `GrowRef.restore`'s `136 < size` bound is gone.
+
+Elaboration (user seconds, median of 3 interleaved runs, base master f6ca221b,
+`_tmp/retire-defeq/times3.txt`): `Arena/DefEqStuckIrrel` 0.89 → 1.15, `DefEqStuckStr` 10.02 → 22.38
+(+123 %), `DefEqStuckApp` 1.58 → 2.29 (+45 %), `DefEqStuckDisp` 6.18 → 9.00 (+46 %),
+`Verdict/DefEqTailE` 44.23 → 10.74, `DefEqAllE` 0.51 → 0.50, `KnotAllE` 3.15 → 3.21; sum 66.56 →
+49.27 (−26 %). **Three modules are more than 10 % slower**: the unified models moved in with the
+refinements (`strE`'s generation alone is about 20 s, as was the `errors` model's in `DefEqTailE`);
+the default recipe fails on `strE` (88 s). No generator or kit change was needed.
 
