@@ -40,13 +40,4 @@ theorem nvlG {p : Prog} (hnv : closedNV p L.Checker.nvFns = true) {α : Type} {T
     (h : callE p n f vs m = .error e) : ErrClaim T a e :=
   ErrClaim.of_callE_nv hnv (gateNv_mem f hf) h
 
-/-- **`defn_nat_gate`'s error claim** (`NatGateSpecE`). -/
-theorem natGateSpecE_of {p : Prog} (hN : NatSubProg' p) (hq : KnotStageProg p) (hcl : LeafClosed p)
-    (hcE : CoreStubsE p) (hnv : closedNV p L.Checker.nvFns = true)
-    (hg : p.lookup "defn_nat_gate" = some defnNatGate)
-    (hc : p.lookup "defn_nat_cert" = some defnNatCert) : NatGateSpecE p :=
-  fun _dn _vis _w _fe2 _env _env2 _n _nm k hk m _a hn hSw hC henv hie hnm _e hcall =>
-    RefE.run_err (s₀ := ⟨m, Locals.init []⟩) (defnNatGate_specE p hg hc k _ _ _ _) hnv hcE
-      (dng_ref hN hq hcl k hk hn hSw hC henv hie hnm) hcall
-
 end L.Arena

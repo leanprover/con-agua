@@ -213,8 +213,9 @@ theorem checkDeclOpaque_loopT (hA : ArmProg p) (hV : ValProg p) (hC : CrpProg p)
   rw [hst, hres]
   exact hR.of_step hS' hf (IWGrow.erecPExt hg')
 
-/-- **`check_decl_defn` under `StageT`** (helpers `loopt3-nat`/`loopt3-div`'s `cdfW_okT`: the
-structural-`Nat` gate and the `Nat.div`-family pin gate under `StageC`). -/
+/-- **`check_decl_defn` under `StageT`** (`cdf_ref`: the structural-`Nat` gate and the
+`Nat.div`-family pin gate under `StageC`). -/
+@[refines_part ConRon.Arena.checkDecl "the definition arm, under StageT"]
 theorem checkDeclDefn_loopT (hA : ArmProg p) (hV : ValProg p) (hG : DefnProgT p pins)
     (hq : KnotStageProg p) (hcl : LeafClosed p) (hlc : LoopClosed p) (hin : StepIn p indFns)
     (hap : ApdF p) (hkp : CrKeep p) (hdn : DnInj dn) (cv : IConstantVal) (v : EIdx)
@@ -223,10 +224,6 @@ theorem checkDeclDefn_loopT (hA : ArmProg p) (hV : ValProg p) (hG : DefnProgT p 
   intro n hn s₀ a₀ vis fe pend i hi hd _ hR hS hF hden hPD hCr
   apply M.triple_of_run
   intro s r s' hs hrun
-  obtain ⟨hloc, hW⟩ := M.of_run (P := fun s => s = s₀) hs hrun (cdf_specW p hG.df n s₀ i vis)
-  obtain ⟨hf, -⟩ := M.of_run (P := fun s => s = s₀) hs hrun
-    (hin.memFrame n (f := "check_decl_defn") (by decide) [i, vis] s₀)
-  subst hs
   have hd' : ds[i.toNat] = .defnDecl cv v hh := by
     rw [Array.getElem?_eq_getElem hi] at hd; exact Option.some.inj hd
   obtain ⟨env, hF⟩ := hF
@@ -236,12 +233,16 @@ theorem checkDeclDefn_loopT (hA : ArmProg p) (hV : ValProg p) (hG : DefnProgT p 
   rotate_left
   · cases hx
   rename_i c e hc he
-  obtain ⟨fe', a', hrun', hS', hcm, hg', -⟩ :=
-    cdfW_okT hA hV hG hq hcl hlc hap hkp hdn hn hW hS hR.pinsets hR.decls hi hd' hF hc he hPD hCr
+  obtain ⟨hloc, fe', a', hrun', hQ⟩ := M.of_run (P := fun s => s = s₀) hs hrun
+    (RefE.triple (checkDeclDefn_specE p hG.df n s₀ i vis)
+      (cdf_ref hA hV hG hq hcl hlc hap hkp hdn n hn hS hR.pinsets hR.decls hi hd' hF hc he hPD hCr))
+  obtain ⟨hf, -⟩ := M.of_run (P := fun s => s = s₀) hs hrun
+    (hin.memFrame n (f := "check_decl_defn") (by decide) [i, vis] s₀)
+  subst hs
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun'
-  refine ⟨hloc, hok, ?_, hcm⟩
+  refine ⟨hloc, hok, ?_, hQ.memos⟩
   rw [hst, hres]
-  exact hR.of_step hS' hf (IWGrow.erecPExt hg')
+  exact hR.of_step hQ.stage hf (IWGrow.erecPExt hQ.grow)
 
 /-- **`check_decl_axiom` under `StageT`** (helper `loopt3-axq`'s `cdaW_okT`). -/
 theorem checkDeclAxiom_loopT (hA : ArmProg p) (hX : AxProg p) (hq : KnotStageProg p)
