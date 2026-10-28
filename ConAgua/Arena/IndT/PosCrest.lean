@@ -1,13 +1,17 @@
 import ConAgua.Arena.IndT.PosDefs
 import ConAgua.Arena.IndT.RecGen19
+import ConAgua.Verdict.PosE3Cm
+import ConAgua.Verdict.VCtx
 
 /-!
-# `nest_ctors_crest` under `StageC` (lane `indstaget`, helper `indstaget-pos`)
+# `nest_ctors_crest`: one refinement for both outcomes
 
-`p2ctW_ok`'s proof (`IndPosSpec/NestCrest`) at `realCall p`, its twin side transcribed from con-ron's
-`nestCtors_spec` (the cons case's head): the level instantiation (`instLPFast_cstep`), the crest
-(`nestCrest_spec`, well scoped by `WScoped_nestCrest`), its type (`inferC_rsim`) and that type's
-sort (`ensureSortC_rsim`).
+`crest_ref` refines `crestT` (the head of `oneK`, split off by `oneK_eq`) by `ncrE` (unified):
+its twin side transcribed from con-ron's `nestCtors_spec` (the cons case's head), the level
+instantiation (`instLPFast_cstep`), the crest (`nestCrest_spec`, well scoped by
+`WScoped_nestCrest`), its type (`inferC_rsim`) and that type's sort (`ensureSortC_rsim`), whose
+errors are the core stubs' claims. Its ok half serves `oneOKC_step` through the run, its error
+half `oneOKE_step`.
 -/
 
 
@@ -25,18 +29,84 @@ theorem coreF_mfr {p : Prog} (hq : KnotStageProg p) {f : FnName} (hf : f ∈ sta
     {args r : List Word} {m m' : Mem} (h : realCall p n f args m = some (r, m')) : MFr [] [] m m' :=
   MFr.of_frame (run_memFrame hq.closed hf (run_of_callW h)).1 coreStageA_stage coreStageC_stage
 
+section twin
+variable (mode : ConLeche.CheckMode) (fe : IFEnv) (ctx : NestCtx) (fuel : Nat) (prog : List NestHole)
+
+/-- The head of `oneK` (`nest_ctors_crest`): the crest, typed. -/
+def crestT (hi : Nat) (us : LsIdx) (ds : List EIdx) (names : List NIdx) (holes : List EIdx)
+    (cv : IConstantVal) : AM EIdx :=
+  if !nameNodup cv.levelParams then
+    fail (.invalid "nested positivity: invalid nested inductive datatype, its constructor has a duplicate universe level parameter (official: duplicate universe level parameter)")
+  else do
+    let cty ← instLPFast coreWalkFuel cv.levelParams us cv.type
+    match ← ConRon.Arena.nestCrest names us ds holes cty with
+    | none => fail (.invalid "nested positivity: invalid nested inductive datatype, its constructor type does not bind the parameters (official: ill-formed constructor)")
+    | some crest => do
+      let ty ← inferTypeCore mode fe checkFuel hi crest
+      let _ ← ensureSortCore mode fe checkFuel hi ty
+      pure crest
+
+/-- The rest of `oneK` after the crest. -/
+def oneRest {β : Type} (root : Bool) (hi : Nat) (us : LsIdx) (ds : List EIdx) (cv : IConstantVal) (nF : Nat)
+    (ns : NestState) (K : List NestFieldKind × EIdx → NestState → AM β) (crest : EIdx) : AM β :=
+  walkK mode fe ctx fuel prog root hi nF crest ns fun ks _nds cur ns2 closed => do
+    let u4 ← (List.range nF).anyM (u4F ks closed)
+    if u4 then
+      fail (.invalid "nested positivity: non valid occurrence of the datatypes being declared (a later field or the result depends on a recursive or nested field)")
+    else do
+      roK ctx hi cur fun resOk =>
+        if !resOk then
+          fail (.invalid "nested positivity: invalid return type — a constructor's result index mentions the block")
+        else do
+          let nf ← ConRon.Arena.nestCtorNf ctx prog us ds cv closed
+          let ns3 := { ns2 with ctorNfs := ns2.ctorNfs.push nf }
+          K (ks, closed) ns3
+
+theorem oneK_eq {β : Type} (root : Bool) (hi : Nat) (us : LsIdx) (ds : List EIdx) (names : List NIdx)
+    (holes : List EIdx) (cv : IConstantVal) (nF : Nat) (ns : NestState)
+    (K : List NestFieldKind × EIdx → NestState → AM β) :
+    oneK mode fe ctx fuel prog root hi us ds names holes cv nF ns K =
+      crestT mode fe hi us ds names holes cv >>= oneRest mode fe ctx fuel prog root hi us ds cv nF ns K := by
+  unfold oneK crestT
+  split
+  · funext s; rfl
+  · simp only [bind_assoc]
+    congr 1; funext cty
+    congr 1; funext x
+    split
+    · funext s; rfl
+    · simp only [bind_assoc, pure_bind]
+      rfl
+
+end twin
+
+/-- What `nest_ctors_crest` gives besides the crest `crest` (from `m`, the twin from `a`): the stage,
+the growth, the result word, the frames, the twin's step, the crest denoting a term well scoped at
+the frame's depth. -/
+structure CrestPost (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (env : ConLeche.Env)
+    (a : AState) (m : Mem) (hi w : Word) (m' : Mem) (crest : EIdx) (a' : AState) : Prop where
+  stage : StageC dn vis fe env m' a'
+  grow : IWGrow m m'
+  hw : H w
+  dec : decI w = crest
+  pos : PosMR m'
+  abs : AbsOK m'
+  core : ConRon.Bridge.CoreStep V env fe a a'
+  den : ∃ crestP, denoteE a'.store crest = some crestP ∧ ConLeche.Expr.WScoped hi.toNat crestP
+
 section crest
 variable {p : Prog} (hq : KnotStageProg p) (hIlpf : IlpfF p) (dn : NIdx → Option ConLeche.Name) (vis : Word)
   (fe : IFEnv) {env : ConLeche.Env} (henv : ConLeche.EnvWF env)
 
 include hq hIlpf henv in
-/-- **`nest_ctors_crest` under `StageC`**: `p2ctW_ok` with `StageC`, con-ron's preconditions of the
-constructor's head (`nestCtors_spec`'s), and after: `StageC`, the `CoreStep`, the crest denoting a
-term well scoped at the frame's depth. -/
-theorem p2ctW_okC {k : Nat} (hn : k ≤ 2 ^ 62) {m m' : Mem} {a : AState}
+/-- **`nest_ctors_crest` refines `crestT` (the head of `oneK`), both outcomes**, under `StageC`
+and con-ron's preconditions of the constructor's head (`nestCtors_spec`'s): the level parameters
+and the duplicate check, the level instantiation (`instLPFast_cstep`), the crest
+(`nestCrest_spec`, well scoped by `WScoped_nestCrest`), its type (`inferC_rsim`) and that type's
+sort (`ensureSortC_rsim`); the errors of the last two are the core stubs' claims. -/
+theorem crest_ref {k : Nat} (hn : k ≤ 2 ^ 62) {m : Mem} {a : AState}
     {no nl us dO dL hO hL cv hi : Word} {names : List NIdx}
-    {ds holes : List EIdx} {cvv : IConstantVal} {r : List Word}
-    (h : p2ctW (realCall p) k m vis no nl us dO dL hO hL cv hi = some (r, m')) (hC : StageC dn vis fe env m a)
+    {ds holes : List EIdx} {cvv : IConstantVal} (hC : StageC dn vis fe env m a)
     (hus : H us) (hdec : decHL m no.toNat nl.toNat = some names) (hit : no.toNat + nl.toNat ≤ iwTop m)
     (hnn : dL.toNat + names.length < 2 ^ 64)
     (hds : decHL m dO.toNat dL.toNat = some ds) (hdsb : dO.toNat + dL.toNat ≤ iwTop m)
@@ -46,119 +116,148 @@ theorem p2ctW_okC {k : Nat} (hn : k ≤ 2 ^ 62) {m m' : Mem} {a : AState}
     {holesP : List ConLeche.Expr} {cvP : ConLeche.ConstantVal}
     (hpre : CtorsPre a.store (decI us) ds names holes hi.toNat usP dsP namesP holesP)
     (hcvP : Frontend.denoteCV a.store cvv = some cvP) (hcl : cvP.type.hasFvar = false) :
-    ∃ cty a1 crest a2 ty a3 so a4, nameNodup cvv.levelParams = true ∧
-      (instLPFast coreWalkFuel cvv.levelParams (decI us) cvv.type).run a = .ok (cty, a1) ∧
-      (ConRon.Arena.nestCrest names (decI us) ds holes cty).run a1 = .ok (some crest, a2) ∧
-      (inferTypeCore .verified fe checkFuel hi.toNat crest).run a2 = .ok (ty, a3) ∧
-      (ensureSortCore .verified fe checkFuel hi.toNat ty).run a3 = .ok (so, a4) ∧
-      StageC dn vis fe env m' a4 ∧ IWGrow m m' ∧ H (r.headD 0) ∧ decI (r.headD 0) = crest ∧ PosMR m' ∧
-      AbsOK m' ∧ ConRon.Bridge.CoreStep V env fe a a4 ∧
-      ∃ crestP, denoteE a4.store crest = some crestP ∧ ConLeche.Expr.WScoped hi.toNat crestP := by
+    RefE (VerdictCtx p) (ncrE p k m vis no nl us dO dL hO hL cv hi)
+      (crestT V fe hi.toNat (decI us) ds names holes cvv) a
+      (fun v crest a' => CrestPost dn vis fe env a m hi v.1 v.2 crest a') := by
   have hS := hC.stage
   cases k with
-  | zero => simp [p2ctW] at h
+  | zero => rw [ncrE.eq_1]; exact RefE.of_cls0 (by simp)
   | succ k =>
-  simp only [p2ctW] at h
+  rw [ncrE.arm1]
   have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
   obtain ⟨hcvn, hcvl, hcvt⟩ := ConRon.Bridge.Core.denoteCV_inv hcvP
   -- the level parameters
-  rcases hlp : cvLpsW k m cv with _ | ⟨r1, m1⟩ <;> rw [hlp] at h; · simp [p2ctK1] at h
-  rw [p2ctK1_eq] at h
+  rcases hlp : cvLpsW k m cv with _ | ⟨r1, m1⟩
+  · rw [liftE_none, ncrE.k_cv_lps.none]; exact RefE.of_cls0 (by simp)
+  rw [liftE_some, ncrE.k_cv_lps.arm1]
   obtain ⟨hS1, hg1, hE1, hdec1, ht1⟩ := pos2_cvLpsW_stage hlp hS hcv hcv3
   have hA1 : AbsOK m1 := erToIwW_afr (show erToIwW _ m _ _ = some (r1, m1) from hlp) hA
   have htop1 : iwTop m1 < 2 ^ 64 := Nat.lt_of_le_of_lt hS1.2.1 hS1.2.2.2.1
   obtain ⟨ws, hws, hwsd, hwH⟩ := slR_of_decHL m1 _ _ _ hdec1 (by omega)
   simp only [UInt64.ofNat_toNat] at hws
-  rcases hnd : nodupW k m1 (r1.headD 0) (r1.tail.headD 0) with _ | b <;> rw [hnd] at h; · cases h
-  simp only at h
+  -- the duplicate check
+  rcases hnd : nodupW k m1 (r1.headD 0) (r1.tail.headD 0) with _ | b
+  · rw [liftE_none, ncrE.k_sl_nodup.none]; exact RefE.of_cls0 (by simp)
+  rw [liftE_some]
+  have hb := nodupW_ok k m1 _ _ b ws hws hnd
+  unfold crestT
   by_cases hb0 : b = 0
-  · rw [ite_eq_left hb0] at h; cases h
-  rw [ite_eq_right hb0] at h
+  · rw [ncrE.k_sl_nodup.abort1 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hb0]
+    have hnod : nameNodup cvv.levelParams = false := by
+      rw [hwsd, nameNodup_map ws hwH]
+      by_cases hn : ws.Nodup
+      · rw [ite_eq_left hn] at hb; rw [hb] at hb0; exact absurd hb0 (by decide)
+      · simp [hn]
+    exact RefE.ite_pos (by simp [hnod]) (fun _ => ErrClaim.fail _ _ (by decide))
+  rw [ncrE.k_sl_nodup.arm1 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hb0]
   have hnod : nameNodup cvv.levelParams = true := by
-    have := nodupW_ok k m1 _ _ b ws hws hnd
     rw [hwsd, nameNodup_map ws hwH]
     by_cases hn : ws.Nodup
     · simp [hn]
-    · rw [ite_eq_right hn] at this; exact absurd this hb0
+    · rw [ite_eq_right hn] at hb; exact absurd hb hb0
+  refine RefE.ite_neg (by simp [hnod]) ?_
   -- the instantiated type
   obtain ⟨-, -, hty⟩ := decCV_some hcv
   obtain ⟨wt, hwt, hwtH, hwtd⟩ := hd?_some hty
   have e3 : (cv + 3).toNat = cv.toNat + 3 := word_add_toNat (by simp; omega)
   have hrdt : rdW (m1.arr64 EREC) (cv + 3) = wt := by
     rw [hE1]; simp only [erA] at hwt; simp [rdW, e3, hwt]
-  rw [hrdt] at h
-  rcases hil : realCall p k "inst_lp_fast" [CWF, r1.headD 0, r1.tail.headD 0, us, wt] m1 with _ | ⟨r2, m2⟩ <;> rw [hil] at h; · simp [p2ctK2] at h
-  rw [p2ctK2_some] at h
+  rw [hrdt]
+  rcases hil : callW p k "inst_lp_fast" [CWF, r1.headD 0, r1.tail.headD 0, us, wt] m1 with _ | ⟨r2, m2⟩
+  · rw [liftE_none, ncrE.k_inst_lp_fast.none]; exact RefE.of_cls0 (by simp)
+  rw [liftE_some, ncrE.k_inst_lp_fast.arm1]
   obtain ⟨cty, a1, hrun1, ⟨hS2, hg2, hcH, hcd⟩, ⟨A2, C2, hA2s, hC2s, hfr2⟩, hAF2⟩ :=
     IlpRd.realC hIlpf hC k CWF _ _ _ _ cvv.levelParams m1 m2 a r2 hus hwtH ⟨rfl, erToIwW_iwFr hlp⟩ hS1 hdec1 hil
   rw [CWF_eq, ← hwtd] at hrun1
   have hA2 : AbsOK m2 := hAF2 hA1
   obtain ⟨c1, hctyP⟩ := ConRon.Bridge.Inductives.instLPFast_cstep hC.check hcvl hpre.hus hcvt hrun1
   have hC2 : StageC dn vis fe env m2 a1 := hC.of_cstep hS2 hA2 c1
+  refine RefE.bind_right hrun1 ?_
   -- the crest
   have hg12 := hg1.trans hg2
+  rcases hpc0 : pcrWf k m2 no nl us dO dL hO hL (r2.headD 0) with _ | ⟨r3, m3⟩
+  · rw [liftE_none, ncrE.k_nest_crest.none]; exact RefE.of_cls0 (by simp)
+  rw [liftE_some]
   cases k with
-  | zero => simp [pcrWf, p2ctK3] at h
+  | zero => simp [pcrWf] at hpc0
   | succ k =>
   cases k with
-  | zero => simp [pcrWf, p2ctK3] at h
+  | zero => simp [pcrWf] at hpc0
   | succ k =>
   cases k with
-  | zero => simp [pcrWf, p2ctK3] at h
+  | zero => simp [pcrWf] at hpc0
   | succ k =>
-  simp only [pcrWf] at h
-  rcases hpc : pcrW k m2 no nl us dO dL hO hL (r2.headD 0) with _ | ⟨r3, m3⟩ <;> rw [hpc] at h; · simp [p2ctK3] at h
-  rw [p2ctK3_eq] at h
+  simp only [pcrWf] at hpc0
   have hP2 : PosMR m2 := (hP.fr (posmemo_cvLpsW_mfr hlp)).fr (MFr.of_frame hfr2 hA2s hC2s)
   obtain ⟨M, G, g, hR⟩ := hP2.rf
   obtain ⟨mp2, hM2⟩ := hP2.rp
   obtain ⟨x, a2, hrun2, hx, ⟨M', G', hS3, hg3, hR3, -⟩, hM3⟩ := pcrW_ok dn fe vis k m2 m3 a1 no nl us dO dL hO hL
-    (r2.headD 0) r3 names ds holes M G g hpc hS2 hcH hus
+    (r2.headD 0) r3 names ds holes M G g hpc0 hS2 hcH hus
     (by rw [decHL_agree (RdS.of_grow hg12) (fun j hj => by omega)]; exact hdec) (by omega)
     (by have := hg12.1; omega) hnn mp2 hM2
     (by rw [decHL_agree (RdS.of_grow hg12) (fun j hj => by omega)]; exact hds) (by have := hg12.1; omega)
     (by rw [decHL_agree (RdS.of_grow hg12) (fun j hj => by omega)]; exact hho) (by have := hg12.1; omega) hR
   rw [hcd] at hrun2
-  have hA3 : AbsOK m3 := pcrW_afr hpc hA2
+  have hA3 : AbsOK m3 := pcrW_afr hpc0 hA2
   obtain ⟨p2, ho⟩ := ConRon.Bridge.Inductives.nestCrest_spec names namesP (decI us) usP ds dsP holes holesP cty _
     a1 a2 x hC2.check.state hC2.check.pins
     ⟨ConRon.Bridge.denoteNListE_ext c1.ext _ _ hpre.hnames, ConRon.Bridge.denoteLs_ext hpre.hus c1.ext,
       ConRon.Bridge.denoteEList_ext c1.ext _ _ hpre.hds, ConRon.Bridge.denoteEList_ext c1.ext _ _ hpre.hholes,
       hctyP⟩ hrun2
+  refine RefE.bind_right hrun2 ?_
   cases x with
-  | none => simp only [decOE] at hx; rw [ite_eq_left hx] at h; cases h
+  | none =>
+    simp only [decOE] at hx
+    rw [ncrE.k_nest_crest.abort1 _ _ _ _ _ _ hx]
+    exact fun _ => ErrClaim.fail _ _ (by decide)
   | some crest =>
   obtain ⟨hx1, hxH, hxd⟩ := hx
-  rw [ite_eq_right (by rw [hx1]; decide)] at h
+  rw [ncrE.k_nest_crest.arm1 _ _ _ _ _ _ (by rw [hx1]; decide)]
   obtain ⟨crestP, hcrestP, hcrest⟩ := ho
   have hwc : ConLeche.Expr.WScoped hi.toNat crestP :=
     ConLeche.WScoped_nestCrest (by rw [ConLeche.Expr.hasFvar_instantiateLevelParams]; exact hcl) hpre.hlen
       (fun y hy => (List.mem_append.mp hy).elim (hpre.wds y) (hpre.wholes y)) hcrestP
-  have hP3 : PosMR m3 := hP2.setCr (pcrW_mfr hpc) hM3 ⟨M', G', g, hR3⟩
+  have hP3 : PosMR m3 := hP2.setCr (pcrW_mfr hpc0) hM3 ⟨M', G', g, hR3⟩
   have hC3 : StageC dn vis fe env m3 a2 := hC2.of_pstep hS3 hA3 p2
   have hxH' : H (r3.tail.headD 0) := by simpa using hxH
   have hxd' : decI (r3.tail.headD 0) = crest := by simpa [decE_eq] using hxd
   -- its type
-  rcases hit2 : realCall p (k + 1 + 1 + 1) "infer_type_core" [vis, hi, r3.tail.headD 0] m3 with _ | ⟨r4, m4⟩ <;> rw [hit2] at h; · simp [p2ctK4] at h
-  rw [p2ctK4_eq] at h
+  cases c5 : callE p (k + 1 + 1 + 1) "infer_type_core" [vis, hi, r3.tail.headD 0] m3 with
+  | error e5 =>
+    rw [ncrE.k_infer_type_core.none]
+    intro hV
+    have h5 := hV.core.inferTypeCore (k + 1 + 1 + 1) (by omega) hC3.stageT hi (r3.tail.headD 0) hxH' _ c5
+    rw [hxd'] at h5
+    exact ErrClaim.bind_left h5
+  | ok q5 =>
+  obtain ⟨r4, m4⟩ := q5
+  rw [ncrE.k_infer_type_core.arm1]
   obtain ⟨ty, a3, hrun3, hC4, hg4, hdec4, hA4, c4, tyP, htyP, hwty⟩ :=
     inferC_rsim hq henv (k + 1 + 1 + 1) (by omega) hC3 hA3 hi (r3.tail.headD 0) hxH'
-      (by rw [hxd']; exact hcrest) hwc _ hit2
+      (by rw [hxd']; exact hcrest) hwc _ (callW_of_callE c5)
   obtain ⟨htyH, htyd⟩ := hdec4
   rw [hxd'] at hrun3
-  have hP4 : PosMR m4 := hP3.fr (coreF_mfr hq (by decide) hit2)
+  have hP4 : PosMR m4 := hP3.fr (coreF_mfr hq (by decide) (callW_of_callE c5))
+  refine RefE.bind_right hrun3 ?_
   -- its sort
-  rcases hes : realCall p (k + 1 + 1 + 1) "ensure_sort_core" [vis, hi, r4.headD 0] m4 with _ | ⟨r5, m5⟩ <;> rw [hes] at h; · cases h
-  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
+  cases c6 : callE p (k + 1 + 1 + 1) "ensure_sort_core" [vis, hi, r4.headD 0] m4 with
+  | error e6 =>
+    rw [ncrE.k_ensure_sort_core.none]
+    intro hV
+    have h6 := hV.core.ensureSortCore (k + 1 + 1 + 1) (by omega) hC4.stageT hi (r4.headD 0) htyH _ c6
+    rw [htyd] at h6
+    exact ErrClaim.bind_left h6
+  | ok q6 =>
+  obtain ⟨r5, m5⟩ := q6
+  rw [ncrE.k_ensure_sort_core.arm1]
   obtain ⟨so, a4, hrun4, hC5, hg5, -, hA5, c5, -⟩ :=
     ensureSortC_rsim hq henv (k + 1 + 1 + 1) (by omega) hC4 hA4 hi (r4.headD 0) htyH
-      (by rw [htyd]; exact htyP) hwty _ hes
+      (by rw [htyd]; exact htyP) hwty _ (callW_of_callE c6)
   rw [htyd] at hrun4
-  exact ⟨cty, a1, crest, a2, ty, a3, so, a4, hnod, hrun1, hrun2, hrun3, hrun4, hC5,
-    ((hg12.trans hg3).trans hg4).trans hg5, by simpa using hxH', by simpa using hxd',
-    hP4.fr (coreF_mfr hq (by decide) hes), hA5,
+  refine RefE.bind_right hrun4 (RefE.ret rfl ⟨hC5, ((hg12.trans hg3).trans hg4).trans hg5, hxH', hxd',
+    hP4.fr (coreF_mfr hq (by decide) (callW_of_callE c6)), hA5,
     ((c1.trans (p2.toCore hC2.check)).trans c4).trans c5,
-    crestP, ConRon.Bridge.denote_ext hcrest (c4.ext.trans c5.ext), hwc⟩
+    crestP, ConRon.Bridge.denote_ext hcrest (c4.ext.trans c5.ext), hwc⟩)
 
 end crest
 

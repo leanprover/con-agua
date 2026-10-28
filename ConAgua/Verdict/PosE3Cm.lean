@@ -1,4 +1,7 @@
 import ConAgua.Arena.IndPos2
+import ConAgua.Arena.IndPosSpec.CfW
+import ConAgua.Arena.RecCheckSpec.ErToIwWStage
+import ConAgua.Checker.NoVerdictTree
 import ConAgua.Arena.Verdict
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.ModelGen
@@ -10,6 +13,8 @@ import Std.WP.Tactic
 The generator's `errors` model with the recursive call through `callE` (as `PosE3Fm.lean`); its
 spec by hand.
 -/
+
+noncomputable section
 
 open ConRon.Arena
 open Std.WP
@@ -225,12 +230,18 @@ l_model nwE_spec (p : Prog) (hf : p.lookup "nest_ctors_walk" = some nestCtorsWal
   fns [hf ↦ nwE list] grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] errors
 
-l_model ncrE_spec (p : Prog) (hf : p.lookup "nest_ctors_crest" = some nestCtorsCrestL)
-  fns [hf ↦ ncrE] grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] errors
+l_model ncrE_spec (p : Prog) (hL : CtLook p)
+  fns [hL.hp ↦ ncrE]
+  specs [cvLps_spec p hL.ha hL.hc hL.he hL.hcv n, slNodup_spec p hL.hsc hL.hnd n,
+    callW_spec p n "inst_lp_fast", nestCrest_spec' p hL.cr n]
+  grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] unified
+  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 l_model noE_spec (p : Prog) (hf : p.lookup "nest_ctors_one" = some nestCtorsOneL)
   fns [hf ↦ noE list] grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] errors
 
 end L.Ind
+
+end

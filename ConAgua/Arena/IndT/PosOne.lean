@@ -5,7 +5,7 @@ import ConAgua.Arena.IndPosSpec.Snoc
 # `nest_ctors_one` under `StageC` (lane `indstaget`, helper `indstaget-pos`)
 
 `oneOK_step`'s proof (`IndPosSpec/Pos2DecHLSplit`) with the twin side of con-ron's `nestCtors_spec` (its cons
-case): the crest typed (`p2ctW_okC`), the fields walked (the block's `WalkOKC` at `n`), the
+case): the crest typed (`crest_ref`), the fields walked (the block's `WalkOKC` at `n`), the
 later-use check (`anyM_pstep`, `structUsedLater_spec`), the result's head (`nestResHead_spec`,
 `nestOcc_spec`), the constructor's normal form (`nestCtorNf_spec`).
 -/
@@ -74,7 +74,7 @@ variable {p : Prog} (hq : KnotStageProg p) (hIlpf : IlpfF p) (dn : NIdx → Opti
   {env : ConLeche.Env} (henv : ConLeche.EnvWF env)
 
 include hq hIlpf henv in
-theorem oneOKC_step (n : Nat) (hn : n + 1 ≤ 2 ^ 62) (ih : NbOKC p dn vis fe env n) :
+theorem oneOKC_step (hCt : CtLook p) (n : Nat) (hn : n + 1 ≤ 2 ^ 62) (ih : NbOKC p dn vis fe env n) :
     OneOKC p dn vis fe env (n + 1) := by
   obtain ⟨-, -, -, -, -, -, -, -, -, hWalk, -⟩ := ih
   intro m m' a ctx root fu po pl hi us dO dL no nl hO hL cv nF ns c prog ds names holes cvv NS r ctxP progP
@@ -83,13 +83,14 @@ theorem oneOKC_step (n : Nat) (hn : n + 1 ≤ 2 ^ 62) (ih : NbOKC p dn vis fe en
   have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
   rw [nbOneW_succ] at h
   -- the crest, typed
-  rcases hct : p2ctW (realCall p) n m vis no nl us dO dL hO hL cv hi with _ | ⟨rc, m1⟩ <;> rw [hct] at h; · simp [nbOneK1] at h
+  rcases hct : crestR (realCall p) n m vis no nl us dO dL hO hL cv hi with _ | ⟨rc, m1⟩ <;> rw [hct] at h; · simp [nbOneK1] at h
   rw [nbOneK1_some] at h
-  obtain ⟨cty, a1, crest, a2, ty, a3, so, a4, hnod, hrun1, hrun2, hrun3, hrun4, hC1, hg1, hcrH, hcrd, hP1, hA1, c1,
-      crestP, hcrP, hwc⟩ :=
-    p2ctW_okC hq hIlpf dn vis fe henv (by omega) hct hC hCc.hus hCc.hnames hCc.hnamesb hCc.hnn
+  obtain ⟨s1, hs1, -, crest, a4, hcr, hR1⟩ := RefE.run_okW (ncrE_spec p hCt n ⟨m, Locals.init []⟩ _ _ _ _ _ _ _ _ _ _)
+    (crest_ref hq hIlpf dn vis fe henv (by omega) hC hCc.hus hCc.hnames hCc.hnamesb hCc.hnn
       (hCc.hds.get (OMono.decHL _ _)) hCc.hdsb hCc.hholes hCc.hholesb ((erecP_ext m).decCV hcv) hcv3 hP hA hpre
-      hcvP hcl
+      hcvP hcl) hct
+  rw [hs1] at hR1; dsimp only at hR1
+  obtain ⟨hC1, hg1, hcrH, hcrd, hP1, hA1, c1, crestP, hcrP, hwc⟩ := hR1
   have hS1 := hC1.stage
   -- the walk
   rcases hwk : nbWalkW (realCall p) n m1 vis ctx root fu po pl hi nF (rc.headD 0) ns with _ | ⟨rw, m2⟩ <;> rw [hwk] at h; · simp [nbOneK2] at h
@@ -196,8 +197,8 @@ theorem oneOKC_step (n : Nat) (hn : n + 1 ≤ 2 ^ 62) (ih : NbOKC p dn vis fe en
       rw [List.range_eq_range', ← hcld]; simpa using hrun6
     rw [hcrd] at hW5
     rw [hcurd] at hrun7
-    simp only [oneK, hnod, Bool.not_true, Bool.false_eq_true, ite_false, StateT.run_bind, hrun1, except_ok_bind,
-      hrun2, hrun3, hrun4]
+    rw [oneK_eq]
+    simp only [StateT.run_bind, hcr, except_ok_bind, oneRest]
     simp only [hW5, StateT.run_bind, hr6, except_ok_bind, Bool.false_eq_true, ite_false, hrun7, Bool.not_true, hr8]
   · simp only [List.headD_cons, List.tail_cons]
     exact hks.grow ((((hg3.trans hg4).trans hg5).trans hg6).trans hg7)

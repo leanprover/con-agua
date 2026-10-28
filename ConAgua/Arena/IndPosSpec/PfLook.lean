@@ -176,18 +176,6 @@ namespace L.Ind
 
 open L.Arena
 
-/-! ## `nest_ctors_crest`: the group abstracted, typed at the frame's context -/
-
-def p2ctK4 (cR : CallM) (k : Nat) (vis hi : Word) (crest : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m4) => match cR k "ensure_sort_core" [vis, hi, r.headD 0] m4 with
-    | none => none
-    | some (_, m5) => some ([crest], m5)
-def p2ctK3 (cR : CallM) (k : Nat) (vis hi : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m3) =>
-    if r.headD 0 = 0 then none
-    else p2ctK4 cR k vis hi (r.tail.headD 0) (cR k "infer_type_core" [vis, hi, r.tail.headD 0] m3)
 end L.Ind
 
 end

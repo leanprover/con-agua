@@ -29,6 +29,10 @@ abbrev MW17 := Mem → Word → Word → Word → Word → Word → Word → Wor
 /-- `nest_pos_fvar(vis, ctx, progOff, progLen, kb, hi, i, argsOff, argsLen)` through its run. -/
 def pfvR (cR : CallM) (n : Nat) (m : Mem) (vis ctx po pl kb hi i aO aL : Word) : Option (List Word × Mem) :=
   cR n "nest_pos_fvar" [vis, ctx, po, pl, kb, hi, i, aO, aL] m
+/-- `nest_ctors_crest(vis, namesOff, namesLen, us, dsOff, dsLen, holesOff, holesLen, cv, hi)` through its
+run. -/
+def crestR (cR : CallM) (k : Nat) (m : Mem) (vis no nl us dO dL hO hL cv hi : Word) : Option (List Word × Mem) :=
+  cR k "nest_ctors_crest" [vis, no, nl, us, dO, dL, hO, hL, cv, hi] m
 def nbAppK2 (cR : CallM) (n : Nat) (contF : MW11) (vis ctx fu po pl kb hi ns aO aL : Word) :
     Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
@@ -131,7 +135,7 @@ namesLen, holesOff, holesLen, cv, nF, ns)`. -/
 def nbOneW (cR : CallM) : Nat → MW17
   | 0, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => none
   | k + 1, m, vis, ctx, root, fu, po, pl, hi, us, dO, dL, no, nl, hO, hL, cv, nF, ns =>
-    nbOneK1 k (nbWalkW cR k) vis ctx root fu po pl hi us dO dL cv nF ns (p2ctW cR k m vis no nl us dO dL hO hL cv hi)
+    nbOneK1 k (nbWalkW cR k) vis ctx root fu po pl hi us dO dL cv nF ns (crestR cR k m vis no nl us dO dL hO hL cv hi)
 /-- `nest_ctors_walk(vis, ctx, root, fuel, progOff, progLen, hi, nF, crest, ns)`. -/
 def nbWalkW (cR : CallM) : Nat → MW10
   | 0, _, _, _, _, _, _, _, _, _, _, _ => none
@@ -190,7 +194,7 @@ theorem nbCtorsW_succ (cR : CallM) (k : Nat) (m : Mem) (vis ctx root fu po pl hi
           (rdW (m.arr64 IW) (rdW (m.arr64 IW) cO + 1)) ns) := by
   rw [nbCtorsW]
 theorem nbOneW_succ (cR : CallM) (k : Nat) (m : Mem) (vis ctx root fu po pl hi us dO dL no nl hO hL cv nF ns : Word) :
-    nbOneW cR (k + 1) m vis ctx root fu po pl hi us dO dL no nl hO hL cv nF ns = nbOneK1 k (nbWalkW cR k) vis ctx root fu po pl hi us dO dL cv nF ns (p2ctW cR k m vis no nl us dO dL hO hL cv hi) := by
+    nbOneW cR (k + 1) m vis ctx root fu po pl hi us dO dL no nl hO hL cv nF ns = nbOneK1 k (nbWalkW cR k) vis ctx root fu po pl hi us dO dL cv nF ns (crestR cR k m vis no nl us dO dL hO hL cv hi) := by
   rw [nbOneW]
 theorem nbWalkW_succ (cR : CallM) (k : Nat) (m : Mem) (vis ctx root fu po pl hi nF crest ns : Word) :
     nbWalkW cR (k + 1) m vis ctx root fu po pl hi nF crest ns =

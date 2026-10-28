@@ -168,7 +168,7 @@ theorem nbOKC_all (L : NbLook p) (hq : KnotStageProg p) (hIlpf : IlpfF p) (hLC :
     exact ⟨posOKC_step hq dn vis fe henv n (by omega) ih, bindOKC_step p dn vis fe henv n ih,
       appOKC_step p dn vis fe L.pf n ih, contOKC_step p dn vis fe L hIlpf hq.closed hLC n ih, keyOKC_step p dn vis fe n ih,
       newOKC_step p dn vis fe hIlpf hq.closed hLC n ih, frameOKC_step hq dn vis fe henv n hn ih, ctorsOKC_step p dn vis fe env n ih,
-      oneOKC_step hq hIlpf dn vis fe henv n hn ih, walkOKC_step p dn vis fe henv n ih,
+      oneOKC_step hq hIlpf dn vis fe henv L.ct n hn ih, walkOKC_step p dn vis fe henv n ih,
       fieldsOKC_step p dn vis fe henv n ih⟩
 
 end all
