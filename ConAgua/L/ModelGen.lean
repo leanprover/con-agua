@@ -656,7 +656,8 @@ meta partial def shiftPos (s : Syntax) (off : Nat) : Syntax :=
   | .missing => .missing
 
 /-- The `lfn` term of `c`, read back from its source file (this file, or the `.lean` file of the
-module that declares it, found from the module name relative to the working directory). -/
+module that declares it, found from the module name relative to the working directory), with the
+sugar statements expanded as the notation expands them (`L.Notation.desugarAll`). -/
 meta def declSyntax (c : Name) (kw : String := "lfn") : TermElabM Syntax := do
   let some rs ← findDeclarationRanges? c | throwError "l_model: no source for {c}"
   let env ← getEnv
@@ -686,7 +687,8 @@ meta def declSyntax (c : Name) (kw : String := "lfn") : TermElabM Syntax := do
   let i := String.Pos.Raw.extract txt ⟨start⟩ ⟨txt.utf8ByteSize⟩
   let off := p1.byteIdx + start
   match Parser.runParserCategory (← getEnv) `term i with
-  | .ok stx => return if here then shiftPos stx off else stx
+  -- the sugar statements as the plain ones they stand for (`L.Notation.desugar`)
+  | .ok stx => liftMacroM (L.Notation.desugarAll (if here then shiftPos stx off else stx))
   | .error e => throwError "l_model: cannot re-parse the L text of {c}: {e}"
 
 meta def lfnSyntax (c : Name) : CommandElabM Syntax := liftTermElabM (declSyntax c)

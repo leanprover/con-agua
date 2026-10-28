@@ -54,10 +54,7 @@ namespace L.Arena
 def isCtorAppL : FunDecl := lfn (vis, e) locals (hh, t, i, c, flag, q) {
   hh := call get_app_fn(e);
   if hh >> 28 != 3 { return 0 };
-  t := ⟦hh⟧.tier;
-  i := ⟦hh⟧.idx;
-  if t != 0 && CTL.u64[1] == 0 { abort };
-  if CONST⟨t⟩.count <= i { abort };
+  (t, i) := node CONST⟦hh⟧;
   c := CONST⟨t, i⟩.n;
   (flag, q) := call env_find(c, vis);
   if flag == 0 { return 0 };
@@ -69,10 +66,7 @@ def isCtorAppL : FunDecl := lfn (vis, e) locals (hh, t, i, c, flag, q) {
 @[l_impl ConRon.Arena.isStrLit]
 def isStrLitL : FunDecl := lfn (h) locals (t, i) {
   if h >> 28 != 8 { return 0 };
-  t := ⟦h⟧.tier;
-  i := ⟦h⟧.idx;
-  if t != 0 && CTL.u64[1] == 0 { abort };
-  if LIT⟨t⟩.count <= i { abort };
+  (t, i) := node LIT⟦h⟧;
   return u64(LIT⟨t, i⟩.kind == 1)
 }
 
@@ -82,10 +76,7 @@ Both read only the 11-word rule records at `(ro, rc)` in `EREC`; neither touches
 
 /-- The scan of `find_rule` (a named block, for the proofs). -/
 def findRuleLoop : Stmt := lblk (ro, rc, c, i) {
-  while i < rc {
-    if EREC.u64[ro + 11 * i] == c { return (1, ro + 11 * i) };
-    i += 1
-  }
+  for i < rc { if EREC.u64[ro + 11 * i] == c { return (1, ro + 11 * i) } }
 }
 
 /-- con-leche: `Core.lean:777-876` (`iotaRec`'s own lookup) `findRule` — the rule whose
@@ -134,10 +125,7 @@ def eRecGetL : FunDecl := lfn (k) locals () { return EREC.u64[k] }
 /-- The head name of a `const` handle (the view checks, then the stored name). -/
 -- con-ron: ConRon/Arena/Core.lean:348-365 ConRon.Arena.iotaCtorNeverProp
 def constNameOfL : FunDecl := lfn (hh) locals (t, i) {
-  t := ⟦hh⟧.tier;
-  i := ⟦hh⟧.idx;
-  if t != 0 && CTL.u64[1] == 0 { abort };
-  if CONST⟨t⟩.count <= i { abort };
+  (t, i) := node CONST⟦hh⟧;
   return CONST⟨t, i⟩.n
 }
 
@@ -190,10 +178,9 @@ def iotaCase3L : FunDecl := lfn (rlk, vis, ctorP, us) locals (np) {
 
 /-- The slot walk of `tower_slots_all` (a named block, for the proofs). -/
 def towerSlotsAllLoop : Stmt := lblk (vis, T, nF, j, flag, q) {
-  while j < nF {
+  for j < nF {
     (flag, q) := call find_proj(vis, T, j);
-    if flag == 0 { return 0 };
-    j += 1
+    if flag == 0 { return 0 }
   }
 }
 
@@ -209,10 +196,9 @@ def towerSlotsAllL : FunDecl := lfn (vis, T, nF) locals (j, flag, q) {
 
 /-- The projection walk of `eta_projs` (a named block, for the proofs). -/
 def etaProjsLoop : Stmt := lblk (T, b, nF, o, j, pr) {
-  while j < nF {
+  for j < nF {
     pr := call mk_proj(T, j, b);
-    SPN.u64[o + j] := pr;
-    j += 1
+    SPN.u64[o + j] := pr
   }
 }
 
@@ -297,10 +283,7 @@ literal to its reduced constructor form. -/
 @[l_impl ConRon.Arena.litMajorToCtor]
 def litMajorToCtorL : FunDecl := lfn (mode, vis, d, h) locals (t, i, kind, sup, c, r) {
   if h >> 28 != 8 { r := call lit_to_ctor_if_nat(vis, h); return r };
-  t := ⟦h⟧.tier;
-  i := ⟦h⟧.idx;
-  if t != 0 && CTL.u64[1] == 0 { abort };
-  if LIT⟨t⟩.count <= i { abort };
+  (t, i) := node LIT⟦h⟧;
   kind := LIT⟨t, i⟩.kind;
   if kind != 1 { r := call lit_to_ctor_if_nat(vis, h); return r };
   sup := call str_lit_supported(vis);
@@ -366,16 +349,12 @@ def prepareMajorL : FunDecl := lfn (mode, vis, d, rec, ro, rc, major)
 
 /-- The telescope walk of `pi_residual` (a named block, for the proofs). -/
 def piResidualLoop : Stmt := lblk (e, ao, an, i, t, x, body, b2) {
-  while i < an {
+  for i < an {
     if e >> 28 != 6 { return (0, 0) };
-    t := ⟦e⟧.tier;
-    x := ⟦e⟧.idx;
-    if t != 0 && CTL.u64[1] == 0 { abort };
-    if FORALL⟨t⟩.count <= x { abort };
+    (t, x) := node FORALL⟦e⟧;
     body := FORALL⟨t, x⟩.b;
     b2 := call inst_entry(body, SPN.u64[ao + i], 0);
-    e := b2;
-    i += 1
+    e := b2
   }
 }
 
@@ -445,10 +424,7 @@ def proofIrrelHalfL : FunDecl := lfn (mode, vis, d, x)
   tta := call infer_io(mode, vis, d, ta);
   hh := call whnf(mode, vis, d, tta);
   if hh >> 28 != 2 { return 0 };
-  t := ⟦hh⟧.tier;
-  i := ⟦hh⟧.idx;
-  if t != 0 && CTL.u64[1] == 0 { abort };
-  if SORT⟨t⟩.count <= i { abort };
+  (t, i) := node SORT⟦hh⟧;
   uT := SORT⟨t, i⟩.u;
   z := call pin_word(53);
   ok := call lvl_eq_c(uT, z);
@@ -507,10 +483,9 @@ def constTyAtL : FunDecl := lfn (n, po, pl, ty, us) locals (fd, j, dd, r, dum) {
 
 /-- The instantiation walk of `inst_spine` (a named block, for the proofs). -/
 def instSpineLoop : Stmt := lblk (ao, an, t, e, i) {
-  while i < an {
+  for i < an {
     e := call inst_entry(e, SPN.u64[ao + i], t);
-    t := t - 1;
-    i += 1
+    t := t - 1
   }
 }
 
@@ -528,12 +503,11 @@ def instSpineL : FunDecl := lfn (ao, an, t, e) locals (i) {
 is raised) as soon as it is stored: the next iteration's callees may use the stack above the top,
 and the earlier results must lie below it. -/
 def instSpinePinsLoop : Stmt := lblk (po, pl, us, ao, an, rP, pvo, pvc, so, j, q, s) {
-  while j < pvc {
+  for j < pvc {
     q := call inst_lp(po, pl, us, SPN.u64[pvo + j]);
     s := call inst_spine(ao, an, rP - 1, q);
     SPN.u64[so + j] := s;
-    CTL.u64[136] := so + j + 1;
-    j += 1
+    CTL.u64[136] := so + j + 1
   }
 }
 
@@ -616,10 +590,7 @@ def spnGetL : FunDecl := lfn (k) locals () { return SPN.u64[k] }
 /-- The record of a `forallE` handle: its domain and body (the guards of a stored-node read). -/
 -- con-ron: ConRon/Arena/Core.lean:1285-1317 ConRon.Arena.iotaCertsFullAux
 def iotaCertsFullPartsL : FunDecl := lfn (h) locals (t, x) {
-  t := ⟦h⟧.tier;
-  x := ⟦h⟧.idx;
-  if t != 0 && CTL.u64[1] == 0 { abort };
-  if FORALL⟨t⟩.count <= x { abort };
+  (t, x) := node FORALL⟦h⟧;
   return (FORALL⟨t, x⟩.ty, FORALL⟨t, x⟩.b)
 }
 

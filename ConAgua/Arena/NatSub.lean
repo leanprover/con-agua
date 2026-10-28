@@ -64,12 +64,11 @@ def subBorrow : FunDecl := lfn (x, y, c) locals (d) {
 /-! ## `nat_sub(oa, la, ob, lb)` -/
 
 def subLoop : Stmt := lblk (oa, la, ob, lb, top, n, i, c, x, y, pt, pb) {
-  while i < n {
+  for i < n {
     x := call nat_limb(oa, la, i);
     y := call nat_limb(ob, lb, i);
     POOL⟨pt⟩[pb + i] := x - y - c;
-    c := call sub_borrow(x, y, c);
-    i += 1
+    c := call sub_borrow(x, y, c)
   }
 }
 

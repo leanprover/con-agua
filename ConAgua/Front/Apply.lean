@@ -181,10 +181,7 @@ variable (m m' : Mem) (top vs n j j' : Word)
 end putArms
 
 def putLoop : Stmt := lblk (vs, ve, top, n, j, pt, pb) {
-  while j < n {
-    POOL⟨pt⟩[pb + j] := IN.u8[vs + j];
-    j += 1
-  }
+  for j < n { POOL⟨pt⟩[pb + j] := IN.u8[vs + j] }
 }
 
 /-- con-ron: ConRon/Arena/Frontend/ExportC.lean:166-178 ConRon.Arena.Frontend.parseNameEntryD -/

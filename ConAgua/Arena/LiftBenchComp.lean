@@ -24,10 +24,7 @@ def liftBench : FunDecl := lfn (n, k, shift, cutoff) locals (b, x, i, r) {
   b := call intern_bvar(k & 9223372036854775807);
   x := b;
   i := 0;
-  while i < n {
-    x := call mk_app(x, b);
-    i += 1
-  };
+  for i < n { x := call mk_app(x, b) };
   if k >> 63 != 0 { return x };
   r := call lift_entry(x, shift, cutoff, 4000000000);
   return r

@@ -80,10 +80,7 @@ grind_pattern [arena_grind] hashN_tstep => hashN (tpool m) o.toNat k, prd m (o +
 
 /-- The loop over a resolved slice (`sliceRes`): `POOL⟨t⟩[x + i]` is limb `i` of `(o, l)`. -/
 def hashLoop : Stmt := lblk (o, l, i, h, t, x) {
-  while i < l {
-    h := (h ^ POOL⟨t⟩[x + i]) * ⟪fnvPrime⟫;
-    i += 1
-  }
+  for i < l { h := (h ^ POOL⟨t⟩[x + i]) * ⟪fnvPrime⟫ }
 }
 
 /-- con-ron: none — the open-addressing table's own key hash/compare (the twin's `Std.HashMap`) -/
@@ -205,10 +202,7 @@ grind_pattern [arena_grind] eqWv_eq => eqW (tpool m) a b l i, prd m (a + i), prd
 
 /-- The loop over two resolved slices (`sliceRes`): `POOL⟨ta⟩[xa + i]` is limb `i` of `(a, l)`. -/
 def eqLoop : Stmt := lblk (a, b, l, i, ta, xa, tb, xb) {
-  while i < l {
-    if POOL⟨ta⟩[xa + i] != POOL⟨tb⟩[xb + i] { return 0 };
-    i += 1
-  }
+  for i < l { if POOL⟨ta⟩[xa + i] != POOL⟨tb⟩[xb + i] { return 0 } }
 }
 
 /-- con-ron: none — the open-addressing table's own key hash/compare (the twin's `Std.HashMap`) -/

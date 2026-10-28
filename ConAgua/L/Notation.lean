@@ -60,6 +60,11 @@ lfn (b_dummy, j) locals (c) {
   `while c { … }`, `break`, `return e`, `return (e, e', …)`, `abort`, `abort R`, `fail R`, `skip`, and `⟪t⟫` for a
   named block `t : L.Stmt` (see `lblk`; a block written with other variables than a prefix of
   the enclosing ones is an error).
+* Two statements are shorthand for plain ones (`desugar`): `(t, i) := node R⟦h⟧`, the checked
+  node read (`t := ⟦h⟧.tier; i := ⟦h⟧.idx; if t != 0 && CTL.u64[1] == 0 { abort };
+  if R⟨t⟩.count <= i { abort }`), and `for j < n { … }`, the counted loop
+  (`while j < n { …; j += 1 }`; the body assigns neither `j` nor `n`, and `L/For.lean` has its
+  loop rule).
 -/
 
 namespace L.Notation
@@ -155,6 +160,13 @@ syntax "copy!" "(" ident (noWs "⟨" lexpr "⟩")? ", " lexpr ", " ident (noWs "
   lexpr ")" : lstmt
 syntax "skip" : lstmt
 syntax "⟪" term "⟫" : lstmt
+/-- `(t, i) := node R⟦h⟧`: the tier and index of the node that the handle word `h` names in the
+store `R`, checked (sugar, `desugar`): abort on a scratch-tier handle while the scratch tier is
+closed, and on an index at or past the tier's node count. -/
+syntax "(" ident ", " ident ")" " := " &"node" ident noWs "⟦" lexpr "⟧" : lstmt
+/-- `for j < n { body }`: the counted loop `while j < n { body; j += 1 }` (sugar, `desugar`);
+`body` assigns neither `j` nor `n`. -/
+syntax "for " ident " < " ident lblock : lstmt
 
 open Lean
 
@@ -295,6 +307,63 @@ meta partial def transCond (env : Array Name) : TSyntax `lcond → MacroM Term
     `(L.Cond.cmp $op $(← transExpr env a) $(← transExpr env b))
 end
 
+/-- The variables a statement assigns (directly, or in a nested block; not in a spliced named
+block). -/
+meta partial def assigned (stx : Syntax) : Array Name :=
+  let here : Array Name := match (⟨stx⟩ : TSyntax `lstmt) with
+    | `(lstmt| $x:ident := call $_:ident($_,*)) => #[x.getId]
+    | `(lstmt| ($x:ident, $xs:ident,* ) := call $_:ident($_,*)) => #[x.getId] ++ xs.getElems.map (·.getId)
+    | `(lstmt| $x:ident := $_:lexpr) => #[x.getId]
+    | `(lstmt| $x:ident += $_:lexpr) => #[x.getId]
+    | `(lstmt| $x:ident -= $_:lexpr) => #[x.getId]
+    | `(lstmt| $x:ident := scan!($_:ident, $_:lexpr, $_:lexpr, $_:ident)) => #[x.getId]
+    | `(lstmt| ($t:ident, $i:ident) := node $_:ident⟦$_:lexpr⟧) => #[t.getId, i.getId]
+    | `(lstmt| for $j:ident < $_:ident $_:lblock) => #[j.getId]
+    | _ => #[]
+  stx.getArgs.foldl (fun acc a => acc ++ assigned a) here
+
+/-- **The sugar statements**, as the plain statements they stand for, at the syntax level: the
+notation (`transBlock`) and the model generator (`l_model`, `desugarAll`) both expand them with
+this function, so a function written with them is the term, and has the models, of the function
+written without them.
+
+* `(t, i) := node R⟦h⟧` is `t := ⟦h⟧.tier; i := ⟦h⟧.idx; if t != 0 && CTL.u64[1] == 0 { abort };
+  if R⟨t⟩.count <= i { abort }`;
+* `for j < n { body }` is `while j < n { body; j += 1 }`.
+
+Other statements are returned unchanged. -/
+meta def desugar (s : TSyntax `lstmt) : MacroM (Array (TSyntax `lstmt)) := withRef s do
+  match s with
+  | `(lstmt| ($t:ident, $i:ident) := node $r:ident⟦$h:lexpr⟧) =>
+    -- built with `mkIdent`: hygiene would rename them, and the accessors compare names
+    let (ctl, tier, idx, cnt) := (mkIdent `CTL.u64, mkIdent `tier, mkIdent `idx, mkIdent `count)
+    return #[← `(lstmt| $t:ident := ⟦$h⟧.$tier:ident), ← `(lstmt| $i:ident := ⟦$h⟧.$idx:ident),
+      ← `(lstmt| if $t:ident != 0 && $ctl:ident[1] == 0 { abort }),
+      ← `(lstmt| if $r:ident⟨$t:ident⟩.$cnt:ident <= $i:ident { abort })]
+  | `(lstmt| for $j:ident < $n:ident { $ss;* }) => do
+    for x in ss.getElems do
+      let a := assigned x
+      if a.contains j.getId || a.contains n.getId then
+        Macro.throwErrorAt x s!"the body of `for {j.getId} < {n.getId}` assigns `{j.getId}` or `{n.getId}`"
+    let body : Syntax.TSepArray `lstmt "; " := .ofElems (ss.getElems.push (← `(lstmt| $j:ident += 1)))
+    return #[← `(lstmt| while $j:ident < $n:ident { $body;* })]
+  | _ => return #[s]
+
+/-- `desugar` everywhere in an L text (`lfn`/`lblk` syntax): every block's statements, inner
+blocks first. The model generator reads the text through this. -/
+meta partial def desugarAll (stx : Syntax) : MacroM Syntax := do
+  let stx ← match stx with
+    | .node info k args => pure (Syntax.node info k (← args.mapM desugarAll))
+    | _ => pure stx
+  match (⟨stx⟩ : TSyntax `lblock) with
+  | `(lblock| { $ss;* }) =>
+    let ss := ss.getElems
+    let ss' ← ss.flatMapM desugar
+    if ss'.size == ss.size && (ss.zip ss').all fun (a, b) => a.raw == b.raw then return stx
+    let body : Syntax.TSepArray `lstmt "; " := .ofElems ss'
+    return stx.setArg 1 (mkNullNode body.elemsAndSeps)
+  | _ => return stx
+
 mutual
 meta partial def transStmt (env : Array Name) : TSyntax `lstmt → MacroM Term
   | `(lstmt| $x:ident := call $f:ident($args,*)) => do
@@ -384,7 +453,7 @@ where
 /-- A block is a right-nested `seq`; the empty block is `skip`. -/
 meta partial def transBlock (env : Array Name) : TSyntax `lblock → MacroM Term
   | `(lblock| { $ss;* }) => do
-    let ss := ss.getElems
+    let ss ← ss.getElems.flatMapM desugar
     match ss.back? with
     | none => `(L.Stmt.skip)
     | some last =>

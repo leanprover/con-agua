@@ -157,10 +157,9 @@ theorem callW_keepW {p : Prog} {n : Nat} {f : FnName} {vs : List Word} {m m' : M
 /-- The loop of `classCtorOfNfs` (RecGen.lean), named for its spec. -/
 -- con-ron: none — `classCtorOfNfs`' own loop (`rfl`), a named block for the proof
 def cnfLoop : Stmt := lblk (nfsOff, nfsLen, name, q, j, nf, rp) {
-  while j < nfsLen {
+  for j < nfsLen {
     nf := IW.u64[nfsOff + j];
-    if IW.u64[nf] == name { IW.u64[q + rp] := nf; rp += 1 };
-    j += 1
+    if IW.u64[nf] == name { IW.u64[q + rp] := nf; rp += 1 }
   }
 }
 

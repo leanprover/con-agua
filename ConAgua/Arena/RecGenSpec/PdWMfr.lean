@@ -30,15 +30,14 @@ local notation "V" => ConLeche.CheckMode.verified
 -- con-ron: none — `classNodesAgreeL`'s own loop (`rfl`), a named block for the proof
 def cnaLoop : Stmt := lblk (vis, p, ftOff, ftLen, mc, teleOff, teleLen, leaf, fvsOff, fvsLen, i,
     esOff, esLen, j, e, ok, domsOff, domsLen, f, b) {
-  while j < esLen {
+  for j < esLen {
     e := IW.u64[esOff + j];
     (ok, domsOff, domsLen) := call target_pi_doms_with(fvsOff, fvsLen, IW.u64[e + 4]);
     if ok == 0 { domsLen := 0 };
     if domsLen <= i { fail R_GENERATED_RECURSOR_A };
     f := IW.u64[domsOff + i];
     b := call target_k53(vis, p, ftOff, ftLen, mc, teleOff, teleLen, leaf, f);
-    if b == 0 { fail R_GENERATED_RECURSOR_FIELD_OF };
-    j += 1
+    if b == 0 { fail R_GENERATED_RECURSOR_FIELD_OF }
   }
 }
 

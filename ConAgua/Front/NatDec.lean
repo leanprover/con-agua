@@ -46,10 +46,9 @@ open L.Scan.Utf8 (byteW)
 /-! ## `dec_chunk(i, k)` -/
 
 def chunkLoop : Stmt := lblk (i, k, ch, pw, j) {
-  while j < k {
+  for j < k {
     ch := ch * 10 + ((IN.u8[i + j] - 48) & 255);
-    pw := pw * 10;
-    j += 1
+    pw := pw * 10
   }
 }
 
@@ -85,12 +84,11 @@ grind_pattern [lang_grind] chunkN_step => chunkN b i k j ch pw, b[(i + j).toNat]
 /-! ## `nat_mad(o, n, w, y)` -/
 
 def madLoop : Stmt := lblk (o, n, w, y, i, x, lo, pt, pb) {
-  while i < n {
+  for i < n {
     x := POOL⦃o + i⦄;
     lo := x * w + y;
     y := mulhi(x, w) + u64(lo < y);
-    POOL⟨pt⟩[pb + i] := lo;
-    i += 1
+    POOL⟨pt⟩[pb + i] := lo
   }
 }
 

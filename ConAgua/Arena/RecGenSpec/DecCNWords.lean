@@ -145,10 +145,9 @@ theorem decNL_write (m : Mem) (o j : Nat) (w v : Word) (ps : List Nat) (hw : w.t
 /-- The loop of `classCtorsOfL` (RecGen.lean), named for its spec. -/
 -- con-ron: none — `classCtorsOfL`'s own loop (`rfl`), a named block for the proof
 def cosLoop : Stmt := lblk (vis, p, ftOff, ftLen, rd, msOff, msLen, c, cAsOff, cAsLen, q, j, cc) {
-  while j < cAsLen {
+  for j < cAsLen {
     cc := call class_ctor_of(vis, p, ftOff, ftLen, rd, msOff, msLen, c, IW.u64[cAsOff + j]);
-    IW.u64[q + j] := cc;
-    j += 1
+    IW.u64[q + j] := cc
   }
 }
 
@@ -262,13 +261,12 @@ def CtorsLp (m : Mem) (ao al : Word) : Prop :=
 /-- The loop of `classesCtorsL` (RecGen.lean), named for its spec. -/
 -- con-ron: none — `classesCtorsL`'s own loop (`rfl`), a named block for the proof
 def ccsLoop : Stmt := lblk (vis, p, ftOff, ftLen, rd, msOff, msLen, q, c, m, xsOff, xsLen, hdr) {
-  while c < msLen {
+  for c < msLen {
     m := IW.u64[msOff + c];
     (xsOff, xsLen) := call class_ctors_of(vis, p, ftOff, ftLen, rd, msOff, msLen, c,
       IW.u64[m + 6], IW.u64[m + 7]);
     hdr := call rec2(xsOff, xsLen);
-    IW.u64[q + c] := hdr;
-    c += 1
+    IW.u64[q + c] := hdr
   }
 }
 

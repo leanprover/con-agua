@@ -398,10 +398,7 @@ def arNode : FunDecl := lfn (h, c, d, k, fu) locals (x, g, t, i, v, r) {
   if g == 5 { r := call ar_lam(h, c, d, k, fu); return r };
   if g == 6 { r := call ar_forall(h, c, d, k, fu); return r };
   if g == 1 {
-    t := ⟦h⟧.tier;
-    i := ⟦h⟧.idx;
-    if t != 0 && CTL.u64[1] == 0 { abort };
-    if FVAR⟨t⟩.count <= i { abort };
+    (t, i) := node FVAR⟦h⟧;
     if d + k < d { abort };
     x := FVAR⟨t, i⟩.i;
     if d <= x && x < d + k {
@@ -422,10 +419,7 @@ def arNode : FunDecl := lfn (h, c, d, k, fu) locals (x, g, t, i, v, r) {
 def arApp : FunDecl := lfn (h, c, d, k, fu) locals (fd, j, e0, t, i, f, a, x, y, r, u) {
   (fd, j, e0) := call ab_find(h, c);
   if fd != 0 { return ABMEMO.u64[j * 4 + 3] };
-  t := ⟦h⟧.tier;
-  i := ⟦h⟧.idx;
-  if t != 0 && CTL.u64[1] == 0 { abort };
-  if APP⟨t⟩.count <= i { abort };
+  (t, i) := node APP⟦h⟧;
   f := APP⟨t, i⟩.f;
   a := APP⟨t, i⟩.a;
   x := call ar_go(f, c, d, k, fu);
@@ -442,10 +436,7 @@ def arLam : FunDecl := lfn (h, c, d, k, fu) locals (fd, j, e0, t, i, f, a, x, y,
   if c + 1 == 0 { abort };
   (fd, j, e0) := call ab_find(h, c);
   if fd != 0 { return ABMEMO.u64[j * 4 + 3] };
-  t := ⟦h⟧.tier;
-  i := ⟦h⟧.idx;
-  if t != 0 && CTL.u64[1] == 0 { abort };
-  if LAM⟨t⟩.count <= i { abort };
+  (t, i) := node LAM⟦h⟧;
   f := LAM⟨t, i⟩.ty;
   a := LAM⟨t, i⟩.b;
   x := call ar_go(f, c, d, k, fu);
@@ -462,10 +453,7 @@ def arForall : FunDecl := lfn (h, c, d, k, fu) locals (fd, j, e0, t, i, f, a, x,
   if c + 1 == 0 { abort };
   (fd, j, e0) := call ab_find(h, c);
   if fd != 0 { return ABMEMO.u64[j * 4 + 3] };
-  t := ⟦h⟧.tier;
-  i := ⟦h⟧.idx;
-  if t != 0 && CTL.u64[1] == 0 { abort };
-  if FORALL⟨t⟩.count <= i { abort };
+  (t, i) := node FORALL⟦h⟧;
   f := FORALL⟨t, i⟩.ty;
   a := FORALL⟨t, i⟩.b;
   x := call ar_go(f, c, d, k, fu);
@@ -482,10 +470,7 @@ def arLet : FunDecl := lfn (h, c, d, k, fu) locals (fd, j, e0, t, i, f, a, b, x,
   if c + 1 == 0 { abort };
   (fd, j, e0) := call ab_find(h, c);
   if fd != 0 { return ABMEMO.u64[j * 4 + 3] };
-  t := ⟦h⟧.tier;
-  i := ⟦h⟧.idx;
-  if t != 0 && CTL.u64[1] == 0 { abort };
-  if LET⟨t⟩.count <= i { abort };
+  (t, i) := node LET⟦h⟧;
   f := LET⟨t, i⟩.ty;
   a := LET⟨t, i⟩.v;
   b := LET⟨t, i⟩.b;
@@ -503,10 +488,7 @@ def arLet : FunDecl := lfn (h, c, d, k, fu) locals (fd, j, e0, t, i, f, a, b, x,
 def arProj : FunDecl := lfn (h, c, d, k, fu) locals (fd, j, e0, t, i, nm, ix, e, x, r, u) {
   (fd, j, e0) := call ab_find(h, c);
   if fd != 0 { return ABMEMO.u64[j * 4 + 3] };
-  t := ⟦h⟧.tier;
-  i := ⟦h⟧.idx;
-  if t != 0 && CTL.u64[1] == 0 { abort };
-  if PROJ⟨t⟩.count <= i { abort };
+  (t, i) := node PROJ⟦h⟧;
   nm := PROJ⟨t, i⟩.n;
   ix := PROJ⟨t, i⟩.i;
   e := PROJ⟨t, i⟩.e;

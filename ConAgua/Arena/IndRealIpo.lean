@@ -30,7 +30,7 @@ open L.Arena
 /-- The loop of `indParamsOkL`, named for its spec. -/
 -- con-ron: none — `indParamsOkL`'s own loop (`rfl`), a named block for the proof
 def ipoLoop : Stmt := lblk (np, o, l, j, p, k, ok, n) {
-  while j < l {
+  for j < l {
     p := EREC.u64[o + j];
     k := EREC.u64[p];
     if k == 3 {
@@ -39,8 +39,7 @@ def ipoLoop : Stmt := lblk (np, o, l, j, p, k, ok, n) {
     };
     if k == 4 {
       if EREC.u64[p + 5] != np { return 0 }
-    };
-    j += 1
+    }
   }
 }
 

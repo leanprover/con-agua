@@ -41,10 +41,9 @@ theorem LITS_length : LITS.length = 9 := rfl
 /-! ## `match_lit` -/
 
 def matchLitLoop : Stmt := lblk (i, o, n, k, c) {
-  while k < n {
+  for k < n {
     if i + k < len(IN.u8) { c := IN.u8[i + k] } else { c := 0 };
-    if c != LITS.c8[o + k] { return 0 };
-    k += 1
+    if c != LITS.c8[o + k] { return 0 }
   }
 }
 

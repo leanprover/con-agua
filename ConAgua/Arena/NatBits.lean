@@ -75,29 +75,26 @@ def xorF : Word → Word → Word := fun a b => a ^^^ b
 three loops are the same shape (`AddInv`'s, without a carry); only the combining operator
 differs, so each needs its own `Stmt` (L has no higher-order operator parameter). -/
 def andLoop : Stmt := lblk (oa, la, ob, lb, top, n, i, x, y, pt, pb) {
-  while i < n {
+  for i < n {
     x := call nat_limb(oa, la, i);
     y := call nat_limb(ob, lb, i);
-    POOL⟨pt⟩[pb + i] := x & y;
-    i += 1
+    POOL⟨pt⟩[pb + i] := x & y
   }
 }
 
 def orLoop : Stmt := lblk (oa, la, ob, lb, top, n, i, x, y, pt, pb) {
-  while i < n {
+  for i < n {
     x := call nat_limb(oa, la, i);
     y := call nat_limb(ob, lb, i);
-    POOL⟨pt⟩[pb + i] := x | y;
-    i += 1
+    POOL⟨pt⟩[pb + i] := x | y
   }
 }
 
 def xorLoop : Stmt := lblk (oa, la, ob, lb, top, n, i, x, y, pt, pb) {
-  while i < n {
+  for i < n {
     x := call nat_limb(oa, la, i);
     y := call nat_limb(ob, lb, i);
-    POOL⟨pt⟩[pb + i] := x ^ y;
-    i += 1
+    POOL⟨pt⟩[pb + i] := x ^ y
   }
 }
 

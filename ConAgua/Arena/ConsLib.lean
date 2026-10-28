@@ -446,10 +446,9 @@ def kinnerL (C : ConsSch) : Stmt := lblk (t, n2, n, H, Q, ob, nb, x, e, v, q, h,
 
 /-- The re-insertion loop over the old half's slots `H = 0 ‥ n - 1`. -/
 def krehashL (C : ConsSch) : Stmt := lblk (t, n2, n, H, Q, ob, nb, x, e, v, q, h, j, d, bt) {
-  while H < n {
+  for H < n {
     v := C.sa⟨t⟩[ob + H * 2];
-    ⟪kinnerL C⟫;
-    H += 1
+    ⟪kinnerL C⟫
   }
 }
 

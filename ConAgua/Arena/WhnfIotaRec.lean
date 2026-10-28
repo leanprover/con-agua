@@ -35,10 +35,9 @@ namespace L.Arena
 /-- The copy loop of `erec_push` (a named block, for the proofs): each word stored at the top,
 the top raised past it. -/
 def erecPushLoop : Stmt := lblk (o, c, k, so, j) {
-  while j < c {
+  for j < c {
     SPN.u64[so + j] := EREC.u64[o + j];
-    CTL.u64[136] := so + j + 1;
-    j += 1
+    CTL.u64[136] := so + j + 1
   }
 }
 
@@ -153,10 +152,7 @@ def iotaRecFireL : FunDecl := lfn (mode, vis, d, c, us, recP, so, usj, ctorP, rl
 -- con-ron: ConRon/Arena/Core.lean:2013-2098 ConRon.Arena.iotaRecAt
 def iotaRecHeadL : FunDecl := lfn (hh) locals (t, i) {
   if hh >> 28 != 3 { return (0, 0, 0) };
-  t := ⟦hh⟧.tier;
-  i := ⟦hh⟧.idx;
-  if t != 0 && CTL.u64[1] == 0 { abort };
-  if CONST⟨t⟩.count <= i { abort };
+  (t, i) := node CONST⟦hh⟧;
   return (1, CONST⟨t, i⟩.n, CONST⟨t, i⟩.us)
 }
 

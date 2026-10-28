@@ -66,32 +66,27 @@ end mac
 /-! ## `nat_mul(oa, la, ob, lb)`: append `a * b` to the pool, return its length -/
 
 def zeroLoop : Stmt := lblk (oa, la, ob, lb, top, n, i, j, c, x, y, t, pt, pb) {
-  while i < la {
-    POOL⟨pt⟩[pb + i] := 0;
-    i += 1
-  }
+  for i < la { POOL⟨pt⟩[pb + i] := 0 }
 }
 
 /-- One row: add `a * y`, shifted by `j` limbs, into the result (con-ron's `mul_u64_from`). -/
 def colLoop : Stmt := lblk (oa, la, ob, lb, top, n, i, j, c, x, y, t, pt, pb) {
-  while i < la {
+  for i < la {
     x := POOL⦃oa + i⦄;
     t := POOL⟨pt⟩[pb + (i + j)];
     POOL⟨pt⟩[pb + (i + j)] := x * y + t + c;
-    c := call mac_hi(x, y, t, c);
-    i += 1
+    c := call mac_hi(x, y, t, c)
   }
 }
 
 /-- All rows (con-ron's `mul_from`). -/
 def rowLoop : Stmt := lblk (oa, la, ob, lb, top, n, i, j, c, x, y, t, pt, pb) {
-  while j < lb {
+  for j < lb {
     y := POOL⦃ob + j⦄;
     c := 0;
     i := 0;
     ⟪colLoop⟫;
-    POOL⟨pt⟩[pb + (la + j)] := c;
-    j += 1
+    POOL⟨pt⟩[pb + (la + j)] := c
   }
 }
 
