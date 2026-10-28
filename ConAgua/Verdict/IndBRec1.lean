@@ -9,9 +9,13 @@ import ConRon.Bridge.Inductives.GenRec
 import ConAgua.Checker.NoVerdictTree
 
 /-!
-# Error refinements of the recursor generation's leaves (lane `verdicts-b`, helper `ib`)
+# The recursor generation's leaves: one model and one refinement for both outcomes
 
-`class_key_of`, ... : a failing call of class `1`/`2` claims that the twin fails with that class.
+`class_key_of` (`kof_ref`), `class_minor_slot` (`cms_ref`), `class_rec_ty_ok_guards` (`rg_ref`, against
+the twin's guards of `classRecTyOk`, `rgT`): `l_model … unified` models, their callees outside the
+verdict closure lifted (`class_minor_slot_go` through its run). Each refinement's ok half is the
+function's `@[refines]` theorem and its callers' ok refinements (`RefE.run_okW`), its error half the
+callers' error claims (`RefE.run_err`); an error of class `1`/`2` claims the twin's failure.
 -/
 
 noncomputable section
