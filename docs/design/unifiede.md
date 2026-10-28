@@ -1692,3 +1692,31 @@ No kit change was needed.
 
 Batch 3b in all (3 landings): `target_major_of*` and `class_majors` 869 → 358 pair lines, the
 class rules and recursor types 965 → 501, `target_k53*` 953 → 425: 2 787 → 1 284 (−54 %).
+
+### 3.24 Generator and kit, after batch 2 (lane `unify-gen`)
+
+* **No `sorry` from the generator.** A callee guard without a `Decidable` instance
+  (`flush_caches`' `FlushOK`) became `decide sorry` unless the `l_model` sat under
+  `open Classical in` (`cruleE`). `analyseSpec` now looks for an instance and decides a guard
+  without one classically (`@decide g (Classical.propDecidable _)`, the definitions in a
+  `noncomputable section`), and the command stops at the first generated definition that holds
+  `sorry`. `cruleE` lost its `open Classical in`. Test `tUseUg`.
+* **Length conjuncts.** A callee post `… ∧ r = [r.headD 0, r.getD 1 0, …]` was "ambiguous"
+  (`resIdx` did not know `List.getD`), and with `r.tail.headD 0` it looped `simp_all` under
+  `simp […]`. `resIdx` reads `r.getD i 0`; the generated `simp_all` takes the conjunct apart by
+  the pre-lemma `L.List.eq_headD_cons` (`L/Logic`; not in `ModelGen`, which holds no constants, or
+  shake reads every `import ConAgua.L.ModelGen` as unused). Gone: `piBinders_spec'`,
+  `cvLps_specW1` (eight call sites list `piBinders_spec`, `cvLps_specW`). Test `tUseLen`.
+* **A twin's guard prefix.** `crgT_bind`, `cchT_bind`, `rgT_bind` are one `simp only [prefix,
+  bind_assoc, ite_bindAM, fail_bindAM, pure_bind]` each (−24 lines); `ite_bindAM`, `fail_bindAM`
+  moved from `Arena/DeclValSpec` to the kit (`Arena/Verdict`), `rgFail_bind` is gone.
+* **Not done.** A lemma from a unified model's ok value back to the call's run is not provable
+  (§1.5: the error post says nothing about class-`0` errors, and an `Option` callee's spec nothing
+  about its failures). `dv_ref`/`ov_ref` stay two proofs: one proof over both models needs their
+  eleven arm equations abstracted (≈ 40 lines of structure to save 85). The §3.9 wrappers were
+  already gone (§3.11).
+
+Elaboration (user seconds, median of 3 interleaved runs, base master 02beda5d): every touched
+module at parity (`Arena/RecClassSpec/CrW` 24.5/24.5, `Verdict/PosE1M` 21.9/21.8, `DeclValE`
+8.5/7.7, `IndBHdr` 5.5/5.2, the 14 others within 0.4 s) but `L/ModelGenTest` 23.2 → 25.4 (the two
+new tests).
