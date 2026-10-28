@@ -410,6 +410,17 @@ theorem RefC.run_okW
     ∃ s', s'.mem = m' ∧ Q r s' ∧ Ok (V r s') :=
   RefC.run_ok hs h (callE_of_callW hc)
 
+/-- The ok half as a triple (the shape of the `@[refines]` theorems; `RefE.triple`'s counterpart). -/
+theorem RefC.triple
+    (hs : ⦃fun s => s = s₀⦄ invoke p (exec p n) f args
+      ⦃fun r s' => Q r s' ∧ fx = .ok (V r s'); fun ε => Gs → ε.cls ≠ 0 → fx = .error ε⦄)
+    (h : RefC G fx Ok C) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) f args ⦃fun r s' => Q r s' ∧ Ok (V r s'); ⊤⦄ :=
+  M.triple_of_run fun _ _ _ hp hr => by
+    obtain ⟨hQ, hx⟩ := M.of_run' (P := fun s => s = s₀) hp hr hs
+    rw [hx] at h
+    exact ⟨hQ, h⟩
+
 /-- **The error half**: a failing run of the call satisfies the claim (`C0`: the claim holds for
 every error of class `0`, as `ErrClaim`'s and `ErrClaimV`'s do). -/
 theorem RefC.run_err
