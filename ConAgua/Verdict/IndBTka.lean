@@ -1,4 +1,6 @@
 import ConAgua.Arena.IndT.RecCheckK53
+import ConAgua.Arena.RecCheckSpec.Tka
+import ConAgua.Verdict.IndBTcm
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen

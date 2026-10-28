@@ -1,6 +1,7 @@
-import ConAgua.Verdict.IndBTcm
-import ConAgua.Arena.IndT.RecGen19
-import ConAgua.Arena.RecCheckSpec.Tka
+import ConAgua.Arena.RecCheckSpec.EqWDec
+import ConAgua.Arena.IndRealAbsPos
+import ConAgua.Arena.RecCheckSpec.EeW
+import ConRon.Bridge.Inductives.RecCheck
 
 /-!
 # `targetK53`'s steps under `StageC`: frames and erasures (lane `indstaget`, helper `pds`)

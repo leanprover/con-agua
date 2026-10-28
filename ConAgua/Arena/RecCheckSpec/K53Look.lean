@@ -1,4 +1,3 @@
-import ConAgua.Arena.RecCheckSpec.EeW
 import ConAgua.Arena.RecCheckSpec.TcmF
 
 /-!

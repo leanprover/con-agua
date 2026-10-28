@@ -1,4 +1,5 @@
 import ConAgua.Verdict.IndBTka
+import ConAgua.Arena.IndT.RecGen19
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.ModelGen
 
