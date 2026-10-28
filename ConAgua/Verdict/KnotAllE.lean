@@ -15,7 +15,7 @@ The three families' error halves of the knot's slots one level up, put together:
   (`defeqArg_refinesE` over the `defeq` slot and `defeq_e`'s `defeqE_refinesE`);
 * the `whnf_core`/`whnf` slots (`whnfSlotsE_of`, `WhnfKnotE.lean`), over `defeq_list`'s claim
   (`defeqList_refinesE`, `DefEqLoopsE.lean`);
-* the `defeq` slot (`KnotAllProg.defeqSlotE_all`, `DefEqAllE.lean`), over the whnf family's ten
+* the `defeq` slot (`KnotAllProg.defeqSlotE_all`, `DefEqAllE.lean`), over the whnf family's seven
   claims (`DefeqWhnfE`), each from its `Whnf*E.lean` proof. The whnf family's local copies
   `ProofIrrelWE`, `DefeqLstWE`, `QuickDefeqWE` of the defeq family's `ProofIrrelE`, `DefeqLstE`,
   `QuickDefeqSpecE` are the same propositions (bridged by unfolding).
@@ -67,16 +67,7 @@ theorem KnotAllProg.whnfCE : WhnfCalleesE p :=
   ⟨defeqList_refinesE p hq.iotaRec.toIotaProg'⟩
 
 include hq hnv in
-/-- `quick_defeq`'s error claim at every fuel from the two knots (`QuickDefeqWE`, the whnf
-family's copy of `QuickDefeqSpecE`). -/
-theorem KnotAllProg.quickDefeqWE (n : Nat) (hk : KnotUpTo p n) (hkE : KnotUpToE p n) :
-    QuickDefeqWE p n := by
-  cases n with
-  | zero => intro F s₀ a₀ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _; exact CoreSpecE.zero p _ _ _ s₀ a₀
-  | succ k => exact KnotAllProg.quickDefeqE hq hnv k (hk.mono (by omega)) (hkE.mono (by omega))
-
-include hq hnv in
-/-- **The whnf family's ten error claims the `defeq` family takes** (`DefeqWhnfE`). -/
+/-- **The whnf family's seven error claims the `defeq` family takes** (`DefeqWhnfE`). -/
 theorem KnotAllProg.defeqWhnfE : DefeqWhnfE p where
   boolTrueShortcut := fun n hk hkE F s₀ a₀ dn vis fe M eb mode d a hF hn hs ha =>
     RefE.coreSpecE (btsE_spec p hq.body.lazy.mid.bts (n + 1) s₀ mode vis d a) hnv hkE
@@ -106,18 +97,6 @@ theorem KnotAllProg.defeqWhnfE : DefeqWhnfE p where
       (n + 1) s₀ mode vis d ty1 body1 b) hnv hkE
       (ec_ref p hq.body.stuck (KnotAllProg.stuck hq) n hk F s₀ a₀ dn vis fe M eb mode d ty1 body1 b hF
         hn hs hty hbody hb)
-  deltaQuick := fun n hk hkE F s₀ a₀ dn vis fe M eb mode d a b hF hn hs ha hb hd =>
-    RefE.coreSpecE (dqE_spec p hq.body.lazy.mid.dq (n + 1) s₀ mode vis d a b) hnv
-      (KnotAllProg.quickDefeqWE hq hnv n hk hkE)
-      (dq_ref p n (quickUpTo hq.body.lazy (KnotAllProg.lazy hq) hk n (by omega)) F s₀ a₀ dn vis fe M
-        eb mode d a b hF hn hs ha hb hd)
-  tryUnfoldProjApp := fun n hk hkE F s₀ a₀ dn vis fe M eb mode d e hF hn hs he =>
-    RefE.coreSpecE (tupaE_spec p hq.body.lazy.mid.tupa (n + 1) s₀ mode vis d e) hnv hkE
-      (tupa_ref p hq.body.lazy.mid n hk F s₀ a₀ dn vis fe M eb mode d e hF hn hs he)
-  lazyNat := fun n hk hkE F hF hn s₀ a₀ dn vis fe M eb mode d a b hs ha hb =>
-    RefE.coreSpecE (lnE_spec p hq.body.lazy.nat (n + 1) s₀ mode vis d a b) hnv
-      ⟨hkE, reduceNatE_of p hq.delta hnv⟩
-      (ln_ref p (KnotAllProg.lazy hq) n hk F hF hn s₀ a₀ dn vis fe M eb mode d a b hs ha hb)
 
 include hq hnv in
 /-- **The error knot's step**: the five slots' error halves one level up from the knot and the
