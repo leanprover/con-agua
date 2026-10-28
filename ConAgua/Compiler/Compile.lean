@@ -243,6 +243,10 @@ theorem Tab.pos64_eq {s : TieredArray} {p : Nat} (h : t.lmap.find s.code = some 
 theorem Tab.pos8_eq {a : ArrId} {p : Nat} (h : t.lmap.find (TieredArray.t0 a).code = some p) : t.pos8 a = p := by
   simp [Tab.pos8, h]
 
+theorem Tab.dom64_of_find {s : TieredArray} {p : Nat} (h : t.lmap.find s.code = some p) (hp : t.nb ≤ p) :
+    t.dom64 s = true := by
+  unfold Tab.dom64; rw [h]; simpa using hp
+
 /-- A word array's position is a word position. -/
 theorem Tab.pos64_lt {s : TieredArray} (h : t.dom64 s = true) : t.nb ≤ t.pos64 s ∧ t.pos64 s < t.nb + t.nw := by
   obtain ⟨p, e, hp⟩ := t.dom64_find h

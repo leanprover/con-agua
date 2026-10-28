@@ -231,9 +231,10 @@ def ownOff (tab : Tab) (s : TieredArray) (k : Nat) : Nat :=
   | some c => c
   | none => abiSlot * (2 + k)
 
-/-- `ca_check_b`'s descriptor words at position `p`, for the word array `tab.wAt p` there (`rdi` the
-buffer, `rcx` the table). -/
+/-- `ca_check_b`'s descriptor words at position `p`, for the array `tab.wAt p` there (`rdi` the
+buffer, `rcx` the table): a byte position gets no memory. -/
 def parDescB (tab : Tab) (fz own : List TieredArray) (p : Nat) : Program :=
+  if p < tab.nb then [movRI .rax 0, movMR (mb .rcx (tab.dbase p)) .rax, movMR (mb .rcx (tab.dlen p)) .rax] else
   match fz.idxOf? (tab.wAt p) with
   | some i =>
     [movRM .rax (mb .rdi (8 * (8 + 2 * i))), i64 (.shl (.reg (rr .rax)) (.imm8 (.int64 (Int64.ofInt 3)))),
@@ -247,22 +248,29 @@ def parDescB (tab : Tab) (fz own : List TieredArray) (p : Nat) : Program :=
        movMR (mb .rcx (tab.dlen p)) .rax]
     | none => [movRI .rax 0, movMR (mb .rcx (tab.dbase p)) .rax, movMR (mb .rcx (tab.dlen p)) .rax]
 
+/-- `ca_check_seq`'s base at position `p` (`seqVals`). -/
+def seqBase (tab : Tab) (out hdrf ctlf : ArrId) (p : Nat) : SVal :=
+  if p < tab.nb then .imm 0 else
+  let a := tab.wAt p
+  if a = ↑out ∨ a = ↑ctlf then .imm 0
+  else if a = ↑hdrf then .addr (abiSlot * abiSlot64 tab out)
+  else .addr (abiOff tab p)
+
+/-- `ca_check_seq`'s length at position `p` (`seqVals`). -/
+def seqLen (tab : Tab) (out hdrf ctlf : ArrId) (hw : Nat) (p : Nat) : SVal :=
+  if p < tab.nb then .imm 0 else
+  let a := tab.wAt p
+  if a = ↑out ∨ a = ↑ctlf then .imm 0
+  else if a = ↑hdrf then .imm hw.toUInt64
+  else .imm (abiSz tab (tab.wAt p)).toUInt64
+
 /-- `ca_check_seq`'s table words, in `abiVals`' order: `ca_setup`'s layout of the region, except
 that `out`, the seed `ctlf` and the byte arrays get no memory and the header `hdrf` is the first
 `hw` words of `out`'s slot. Static values only (`storesCode`, as `abiStub`). -/
 def seqVals (tab : Tab) (out hdrf ctlf : ArrId) (hw : Nat) : List SVal :=
   [.addr (abiSlot + abiStack), .addr abiSlot] ++
-  (List.range tab.nb).flatMap (fun _ => [.imm 0, .imm 0]) ++
-  (List.range tab.nw).map (fun p =>
-    let a := tab.wposInv p
-    if a = out ∨ a = ctlf then .imm 0
-    else if a = hdrf then .addr (abiSlot * abiSlot64 tab out)
-    else .addr (abiOff tab p)) ++
-  (List.range tab.nw).map (fun p =>
-    let a := tab.wposInv p
-    if a = out ∨ a = ctlf then .imm 0
-    else if a = hdrf then .imm hw.toUInt64
-    else .imm (abiSz tab (tab.wAt p)).toUInt64) ++
+  (List.range (tab.nb + tab.nw)).map (seqBase tab out hdrf ctlf) ++
+  (List.range (tab.nb + tab.nw)).map (seqLen tab out hdrf ctlf hw) ++
   romVals tab.rom
 
 /-- `[r + d] := v₀`, `[r + d + 8] := v₁`, … for immediate words. -/
@@ -304,10 +312,8 @@ def parStub0 (tab : Tab) (mode plo phi : GVar) (out hdrf ctlf : ArrId) (hw : Nat
    movRI .rax (abiSlot + abiStack).toUInt64, i64 (.add (.reg (rr .rax)) (oR .rcx)),
    movMR (mb .rcx Tab.stackTop) .rax,
    movRI .rax abiSlot.toUInt64, i64 (.add (.reg (rr .rax)) (oR .rcx)),
-   movMR (mb .rcx Tab.stackLimit) .rax,
-   movRI .rax 0] ++
-  ((List.range tab.nb).flatMap fun a => [movMR (mb .rcx (tab.base8 a)) .rax, movMR (mb .rcx (tab.len8 a)) .rax]) ++
-  ((List.range tab.nw).flatMap fun p => parDescB tab fz own p) ++
+   movMR (mb .rcx Tab.stackLimit) .rax] ++
+  ((List.range (tab.nb + tab.nw)).flatMap fun p => parDescB tab fz own p) ++
   immStores .rcx tab.romBase.toNat (romVals tab.rom) ++
   [movMR (mb .rcx (tab.globOff plo)) .rdx, movMR (mb .rcx (tab.globOff phi)) .r9,
    movRI .rax 2, movMR (mb .rcx (tab.globOff mode)) .rax,
