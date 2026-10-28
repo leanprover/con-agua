@@ -172,6 +172,12 @@ slots from there). `ca_region_size` is the sequential driver's need (`drvNeed`, 
 def abiSymbols (tab : Tab) : String :=
   s!".section .rodata\n.globl ca_region_size\n.globl ca_slot\n.globl ca_w0\nca_region_size: .quad {drvNeed tab}\nca_slot: .quad {abiSlot}\nca_w0: .quad {abiSlot * tab.slotOf tab.nb}\n"
 
+/-- The table's counts for the harness and the tools: `ca_nw`, the slots from `ca_w0` on (the
+word arrays' slots; `main.c` advises huge pages for them), `ca_nb` and `ca_npos`, the byte
+positions and all positions (the descriptor columns, for the profiler). -/
+def tabSymbols (tab : Tab) : String :=
+  s!".section .rodata\n.globl ca_nw\n.globl ca_nb\n.globl ca_npos\nca_nw: .quad {tab.nslot - tab.slotOf tab.nb}\nca_nb: .quad {tab.nb}\nca_npos: .quad {tab.nb + tab.nw}\n"
+
 /-- The assembler file of a program without the parallel mode's entries (the e2e tools): the
 stub, labelled `ca_start` as well, then `code` (the trampoline and the functions), as
 `asmTextOf`. -/

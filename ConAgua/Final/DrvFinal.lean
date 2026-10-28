@@ -27,7 +27,7 @@ theorem code_of_checkerFile_par [Host] {k0 : Nat} (hcode : Code checkerFile k0) 
   rw [checkerFile_eq, checkerStub_eq, List.append_assoc] at hcode
   exact hcode
 
-theorem checker_seqParamsOk : seqParamsOk checkerTab OUT HDRF CTLF 132 = true := by decide
+theorem checker_seqParamsOk : seqParamsOk checkerTab OUT HDRF CTLF 132 = true := by decide +kernel
 
 /-- `getD 0 0` is the head. -/
 theorem getD_zero_headD (rs : List Word) : rs.getD 0 0 = rs.headD 0 := by cases rs <;> rfl

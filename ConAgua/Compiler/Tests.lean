@@ -23,22 +23,22 @@ open L L.Compiler L.Examples
 
 namespace L.Compiler.Tests
 
-/-- `runKraken` on the smallest table that has every array `p` names (`Prog.arrs`). -/
+/-- `runKraken` on the table of the arrays `p` names (`Prog.tab`). -/
 def rk (p : Prog) (f : FnName) (args : List Word) (m : Mem) (fuel : Word) (stack : Nat := 4096) :
     Except String Outcome :=
-  runKraken p f args m (Prog.arrs p).1 (Prog.arrs p).2 fuel stack
+  runKraken p f args m fuel stack
 
 def agrees (p : Prog) (f : FnName) (args : List Word) (m : Mem) (fuel : Nat := 100000)
     (stack : Nat := 4096) : Bool :=
   (rk p f args m fuel.toUInt64 stack).toOption ==
-    some (Outcome.ofL (Prog.tab p (Prog.arrs p).1 (Prog.arrs p).2).nres (run p fuel f args m))
+    some (Outcome.ofL (Prog.tab p).nres (run p fuel f args m))
 
 def inp (s : String) : Mem := Mem.ofBytes [(IN, s.toUTF8.data)]
 
 /-! `skip_braced` and `str_close` (`L/Examples.lean`). -/
 
 -- The compiler theorem applies: the program is well formed for one byte array.
-#guard Prog.wf (Prog.tab scanProg 1 0) scanProg
+#guard Prog.wf (Prog.tab scanProg) scanProg
 
 #guard agrees scanProg "skip_braced" [1, 0] (inp "{\"a\":[1,{\"b\\\"\":2}]} x")
 #guard agrees scanProg "skip_braced" [1, 0] (inp "{\"a\":1")
@@ -58,7 +58,7 @@ def inp (s : String) : Mem := Mem.ofBytes [(IN, s.toUTF8.data)]
 /-! Word arrays, stores, arithmetic, signed comparisons, recursion, `break`, `abort`. -/
 
 def W : ArrId := 0
-def B : ArrId := 0
+def B : ArrId := IN
 
 /-- Sums `W.u64[0..n)` into `W.u64[n]`, doubles every byte of `B`, mixes some arithmetic. -/
 -- con-ron: none — a compiler test program
@@ -101,8 +101,8 @@ def boom : FunDecl := lfn (n) {
 
 def recProg : Prog := [("sum_to", sumTo), ("boom", boom)]
 
-#guard Prog.wf { nb := 0, nw := 0 } recProg
-#guard Prog.wf { nb := 1, nw := 1 } [("mix", mix)]
+#guard Prog.wf (Prog.tab recProg) recProg
+#guard Prog.wf (Prog.tab [("mix", mix)]) [("mix", mix)]
 
 #guard agrees recProg "sum_to" [100] {}
 #guard agrees recProg "boom" [7] {}
@@ -130,7 +130,7 @@ def ext : FunDecl := lfn (x, y, i) locals (k, ok) {
 
 def extProg : Prog := [("ext", ext)]
 
-#guard Prog.wf (Prog.tab extProg 1 0) extProg
+#guard Prog.wf (Prog.tab extProg) extProg
 #guard Prog.rom extProg = LITS
 #guard agrees extProg "ext" [0xffffffffffffffff, 0xffffffffffffffff, 0] (inp "false")
 #guard agrees extProg "ext" [0x123456789abcdef0, 0x0fedcba987654321, 1] (inp " false")
@@ -169,8 +169,8 @@ def useWide : FunDecl := lfn (x, y) locals (lo, hi, c, a, b, z) {
 
 def wideProg : Prog := [("use", useWide), ("wide", wide), ("one", one), ("none'", none')]
 
-#guard (Prog.tab wideProg 0 0).nres = 3
-#guard Prog.wf (Prog.tab wideProg 0 0) wideProg
+#guard (Prog.tab wideProg).nres = 3
+#guard Prog.wf (Prog.tab wideProg) wideProg
 #guard agrees wideProg "use" [0xffffffffffffffff, 0xfffffffffffffff0] {}
 #guard agrees wideProg "use" [12345, 678910] {}
 #guard agrees wideProg "wide" [0xffffffffffffffff, 0xfffffffffffffff0] {}
@@ -205,8 +205,8 @@ def useNine : FunDecl := lfn (x) locals (a, b, c, d, e, f, g, h, i, z) {
 
 def nineProg : Prog := [("use", useNine), ("nine", nine), ("seven", seven)]
 
-#guard (Prog.tab nineProg 0 0).nres = 10
-#guard Prog.wf (Prog.tab nineProg 0 0) nineProg
+#guard (Prog.tab nineProg).nres = 10
+#guard Prog.wf (Prog.tab nineProg) nineProg
 #guard agrees nineProg "use" [5] {}
 #guard agrees nineProg "use" [0xfffffffffffffff0] {}
 #guard agrees nineProg "nine" [7] {}
@@ -216,7 +216,7 @@ def nineProg : Prog := [("use", useNine), ("nine", nine), ("seven", seven)]
 /-! `match_lit`/`scan_bool` (`Scan/Lit.lean`): constant data and three results. -/
 
 open L.Scan.Lit in
-#guard Prog.wf (Prog.tab litProg 1 0) litProg
+#guard Prog.wf (Prog.tab litProg) litProg
 open L.Scan.Lit in
 #guard [" true", "false", "fals", "", "falsetto", "tru"].all fun t =>
   [0, 1].all fun i => agrees litProg "scan_bool" [i] (inp t)
@@ -224,7 +224,7 @@ open L.Scan.Lit in
 /-! `utf8_decode` (`Scan/Utf8.lean`): two results, stores into a word array. -/
 
 open L.Scan.Utf8 in
-#guard Prog.wf (Prog.tab utf8Prog 1 1) utf8Prog
+#guard Prog.wf (Prog.tab utf8Prog) utf8Prog
 open L.Scan.Utf8 in
 #guard [[], "plain ascii".toUTF8.toList, [0xC3, 0xA9], [0xE2, 0x86, 0x92], [0xF0, 0x9F, 0x98, 0x80],
     [0x80], [0xC0, 0x80], [0xE0, 0x80, 0x80], [0xED, 0xA0, 0x80], [0xF4, 0x90, 0x80, 0x80],
@@ -253,8 +253,8 @@ def gmain : FunDecl := lfn (n) locals (i, r) {
 }
 def globProg : Prog := [("gmain", gmain), ("gbump", gbump)]
 
-#guard (Prog.tab globProg 0 1).ng == 3
-#guard Prog.wf (Prog.tab globProg 0 1) globProg
+#guard (Prog.tab globProg).ng == 3
+#guard Prog.wf (Prog.tab globProg) globProg
 #guard agrees globProg "gmain" [5] (Mem.ofWords [(W, #[0])])
 #guard agrees globProg "gmain" [0] (Mem.ofWords [(W, #[0])])
 #guard (rk globProg "gmain" [4] (Mem.ofWords [(W, #[0])]) 1000).toOption ==
@@ -295,8 +295,8 @@ def tierProg : Prog := [("tiers", tiers)]
 def tierMem : Mem :=
   Mem.ofWords [(W, Array.replicate 4 7), (tier1 W, Array.replicate 6 9)]
 
-#guard Prog.wf { nb := 0, nw := 257 } tierProg
-#guard Prog.arrs tierProg == (0, 257)
+#guard Prog.wf (Prog.tab tierProg) tierProg
+#guard (Prog.tab tierProg).nw == 2
 #guard agrees tierProg "tiers" [0, 3] tierMem
 #guard agrees tierProg "tiers" [0x08000000, 3] tierMem
 #guard agrees tierProg "tiers" [0x08000000, 6] tierMem

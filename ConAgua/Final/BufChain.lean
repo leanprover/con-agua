@@ -65,10 +65,12 @@ theorem RegionRel.of_memRel (hdisj : ∀ a ∈ own, a ∉ fz) {m : Mem} {d : Dat
     simpa [List.idxOf?_eq_none_iff] using hdisj a ha
   refine ⟨fun a ha k hk => ?_, fun a ha k hk i hi => ?_, fun g hg => ?_⟩
   · have := hm.size64 a ha
-    simp only [bufLayout_s64, bufLayout_tab, tab.wAt_pos64 ha] at this
+    simp only [bufLayout_tab] at this
+    rw [bufLayout_s64 _ _ _ _ _ _ (tab.pos64_lt ha).1, tab.wAt_pos64 ha] at this
     simpa [bufL, hfz a k hk, hk] using this
   · have := hm.get64 a ha i hi
-    simp only [bufLayout_b64, bufLayout_tab, tab.wAt_pos64 ha] at this
+    simp only [bufLayout_tab] at this
+    rw [bufLayout_b64 _ _ _ _ _ _ (tab.pos64_lt ha).1, tab.wAt_pos64 ha] at this
     simpa [bufB, hfz a k hk, hk] using this
   · have := hm.glob g hg
     rw [← Layout.globAddr_toNat] at this

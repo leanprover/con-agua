@@ -238,14 +238,16 @@ theorem threadsRun_twinAcceptsPooled_regs [Host] (k0 : Nat) (hcode : Code checke
   have hge : 9223372036854775808 ≤ (rs₁.headD 0).toNat := by rw [← hrax₁]; exact hR.rax₀
   -- the buffer is `OUT`'s prefix
   obtain ⟨hlen, h126, hent', hinc'⟩ := entry1_buf b pb _ hin abiFuel hN rs₁ m₁ h₁ hge _ rfl
-  have hOUT : checkerTab.dom64 ↑OUT = true := (checkerTab.dom64_t0_iff OUT).2 ⟨by decide, by decide⟩
+  have hOUT : checkerTab.dom64 ↑OUT = true := by decide +kernel
+  have hOUTp : 2 ≤ checkerTab.pos64 ↑OUT := by
+    have := checkerTab.pos64_lt hOUT; have := (abiTabOk_spec checkerTab_abiOk).1; omega
   have hsz := hMem₁.size64 _ hOUT
   have hget : ∀ i (h : i < (m₁.arr64 OUT).size),
       rdW st₀.data.dmem (A (outAddr dm₀.regs.r8.toNat + 8 * i)) = some (m₁.arr64 OUT)[i] := fun i h => by
     have := hMem₁.get64 _ hOUT i h
-    simp only [abiLayout_b64, abiLayout_tab] at this
-    rw [abiOff_slot (by rw [checkerTab.wAt_pos64 hOUT]; decide)] at this
-    simpa only [checkerTab.wposInv_pos64 hOUT, curNum_t0, outAddr] using this
+    simp only [abiLayout_tab] at this
+    rw [abiLayout_b64 _ _ _ _ _ _ hOUTp, abiOff_slot (by rw [checkerTab.wAt_pos64 hOUT]; decide)] at this
+    simpa only [outAddr, abiSlot64] using this
   have hBsz : B.size = ((m₁.arr64 OUT).getD 1 0).toNat := by
     obtain ⟨w, hw, hwB⟩ := hR.buflen
     have h1 := hget 1 (by omega)

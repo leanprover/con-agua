@@ -633,14 +633,19 @@ def sortDedup (l : List Nat) : List Nat :=
   let s := l.mergeSort
   (s.zip ((none :: s.map some).take s.length)).filterMap fun (x, y) => if y == some x then none else some x
 
+/-- The byte arrays a program names, by number. -/
+def Prog.byteArrs (p : Prog) : List ArrId := sortDedup (((Prog.arrU p).filter (·.2 == 0)).map (·.1))
+
+/-- The word arrays a program names, by number, each with whether it is tiered. -/
+def Prog.wordArrs (p : Prog) : List (ArrId × Bool) :=
+  let us := Prog.arrU p
+  let ts := sortDedup ((us.filter (·.2 == 2)).map (·.1))
+  (sortDedup ((us.filter (·.2 != 0)).map (·.1))).map fun a => (a, ts.contains a)
+
 /-- **The table of a program**: its byte arrays, then its word arrays (by number; tier 1 of a tiered
 one right after its tier 0, `Tab.ofArrs`), its constant data, its result and global counts. -/
 def Prog.tab (p : Prog) : Tab :=
-  let us := Prog.arrU p
-  let ts := sortDedup ((us.filter (·.2 == 2)).map (·.1))
-  Tab.ofArrs (sortDedup ((us.filter (·.2 == 0)).map (·.1)))
-    ((sortDedup ((us.filter (·.2 != 0)).map (·.1))).map fun a => (a, ts.contains a))
-    (Prog.rom p) ((p.map fun (_, fd) => Stmt.nres fd.body).foldl max 1)
+  Tab.ofArrs (Prog.byteArrs p) (Prog.wordArrs p) (Prog.rom p) ((p.map fun (_, fd) => Stmt.nres fd.body).foldl max 1)
     ((p.map fun (_, fd) => Stmt.nglob fd.body).foldl max 0)
 
 /-! ## Instruction helpers -/

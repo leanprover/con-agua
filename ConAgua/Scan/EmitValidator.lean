@@ -10,4 +10,4 @@ open L L.Compiler L.Scan.Validator
 
 def main (args : List String) : IO Unit := do
   let out := args.headD "validate.s"
-  IO.FS.writeFile out (asmText (Prog.tab valProg 1 0) valProg "validate")
+  IO.FS.writeFile out (asmText (Prog.tab valProg) valProg "validate")
