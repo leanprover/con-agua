@@ -261,7 +261,7 @@ theorem nggE_claim {p : Prog} (L : NbLook p) (hIlpf : IlpfF p) (hcl : CoreStageC
     | succ k =>
     simp only [nitWf] at hnit
     obtain ⟨x, a2, hrun2, hS2, hg2, hx1, htH, htd, hP2, -, hA2⟩ := nitW_ok k dn fe vis ctx hi HI hHI c m1 m2 a key
-      _ _ (realCall p) (IlpRd.realC hIlpf hC1) (IlpFr.real hIlpf) _
+      _ _ (realCall p) (nty_ok L.nit.ty (IlpRd.realC hIlpf hC1)) _
       (nitLe_realC hcl hLC k _ _ key c _ hC1 hA1 hctxa hkeyP) hnit hS1
       (hU.grow hg1) hdk hkin hksl hP1
     obtain ⟨c4, -⟩ := ConRon.Bridge.Inductives.nestInstType_spec hc c HI ⟨n0, decI us, ds⟩
@@ -867,9 +867,9 @@ theorem newOKE_step (hIlpf : IlpfF p) (hLC : LvlCacheProg p) (hNit : NitE p dn v
   have q1 : rg5.tail.headD 0 = rg.tail.headD 0 := by rw [← hrg]; rfl
   rw [q0, q1] at he
   obtain ⟨grp, a5, hrun5, hS5, hg5, hgl5, hgb5, hgrp5, hP5, hJ5⟩ := ggW_ok dn fe vis ctx (nhiW m2b ctx (rw.tail.headD 0)) us
-    dO dL (c.hiAt wp.length) hhw c ds hus (realCall p) (IlpFr.real hIlpf)
+    dO dL (c.hiAt wp.length) hhw c ds hus (realCall p)
     (fun m' a' => StageC dn vis fe env m' a' ∧ AbsOK m' ∧ ConRon.Arena.Ext a1.store a'.store)
-    (nestFrameMates fe (decI nn)) (fun _ _ hJ => IlpRd.realC hIlpf hJ.1) (fun m' _ => AbsOK m')
+    (nestFrameMates fe (decI nn)) (fun _ _ _ _ hJ => nty_ok LK.nit.ty (IlpRd.realC hIlpf hJ.1)) (fun m' _ => AbsOK m')
     (fun k' _ a' key n0 hJ hn0 => by
       obtain ⟨hCm, hAm, hxm⟩ := hJ
       obtain ⟨n0P, hn0P⟩ := denoteNList_memN hmates n0 hn0

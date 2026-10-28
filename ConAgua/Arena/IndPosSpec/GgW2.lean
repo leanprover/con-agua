@@ -66,19 +66,19 @@ theorem snocW_iwFr {n : Nat} {m m' : Mem} {o l x : Word} {r : List Word} (h : sn
 
 /-- **`nest_grow_group`'s model refines `nestGrowGroup`**, its `nest_inst_type` calls read through
 `cR`: an invariant `J` (the caller's: `True` for the stubs, `StageC` for the program's own reading)
-gives the `inst_lp_fast` contract at each call's start and is kept by the pool writers and each
+gives `nest_inst_type_ty`'s ok half (`NtyOk`) at each call's start and is kept by the pool writers and each
 `nest_inst_type`. -/
 theorem ggW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis ctx hi us dO dL : Word) (HI : Nat)
-    (hHI : hi.toNat = HI) (c : NestCtx) (ds : List EIdx) (hus : H us) (cR : CallM) (hF : IlpFr cR)
+    (hHI : hi.toNat = HI) (c : NestCtx) (ds : List EIdx) (hus : H us) (cR : CallM)
     (J : Mem → AState → Prop) (csA : List NIdx)
-    (hJI : ∀ m a, J m a → IlpRd cR dn vis fe (IlpBase m a)) (Qn : Mem → AState → Prop)
+    (hJty : ∀ k m a key, J m a → NtyOk cR dn vis fe k m a key) (Qn : Mem → AState → Prop)
     (hJle : ∀ (k : Nat) (m : Mem) (a : AState) (key : Word) (n0 : NIdx), J m a → n0 ∈ csA →
       NitLe cR k dn vis fe ctx hi key c ⟨n0, decI us, ds⟩ Qn m a)
     (hJiw : ∀ m m' a, J m a → MemFrame [IW] [200] m m' → StageR dn vis fe m' a → J m' a)
     (hJnit : ∀ (k : Nat) (m m' : Mem) (a a' : AState) (key : Word) (n0 : NIdx) (x : Nat × EIdx)
       (r : List Word), J m a → n0 ∈ csA → nitW cR k m vis ctx hi key = some (r, m') →
       (ConRon.Arena.nestInstType fe c HI ⟨n0, decI us, ds⟩).run a = .ok (x, a') →
-      StageR dn vis fe m' a' → (∀ r1 m1, ntyWf cR k m vis key = some (r1, m1) → AFr m m1) → Qn m' a' →
+      StageR dn vis fe m' a' → (∀ r1 m1, ntyR cR k m vis key = some (r1, m1) → AFr m m1) → Qn m' a' →
       J m' a')
     (k : Nat) :
     ∀ (m m' : Mem) (a : AState) (cO cL gO gL : Word) (cs : List NIdx) (grp : List (NIdx × EIdx))
@@ -157,7 +157,7 @@ theorem ggW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis ctx hi us 
     rcases hnit : nitW cR k m1 vis ctx hi key with _ | ⟨r2, m2⟩ <;> rw [hnit] at h; · simp [ggK2] at h
     rw [ggK2_some] at h
     obtain ⟨x, a2, hrun2, hS2, hg2, hx1, htH, htd, hP2, hAty, hQ2⟩ := nitW_ok k dn fe vis ctx hi HI hHI c m1 m2 a key
-      _ r2 cR (hJI m1 a hJ1) hF Qn (hJle k m1 a key n0 hJ1 (hcsA n0 List.mem_cons_self)) hnit hS1
+      _ r2 cR (hJty k m1 a key hJ1) Qn (hJle k m1 a key n0 hJ1 (hcsA n0 List.mem_cons_self)) hnit hS1
       (hU.grow hg1) hdk hkin hksl (hP.fr (posRecW_mfr hk))
     have hJ2 := hJnit k m1 m2 a a2 key n0 x r2 hJ1 (hcsA n0 List.mem_cons_self) hnit hrun2 hS2 hAty hQ2
     -- the pair record and the snoc
