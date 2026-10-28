@@ -3,7 +3,6 @@ import ConAgua.Verdict.DeclValE
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
-import ConAgua.Checker.NoVerdictTree
 
 /-!
 # Error refinement of `target_pin_tys`, `target_major_pins` (lane `verdicts-b`, helper `ib`)
