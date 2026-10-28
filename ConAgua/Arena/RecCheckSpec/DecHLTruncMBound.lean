@@ -4,7 +4,7 @@ import ConAgua.Arena.IndInstallSpec.DomsW
 /-!
 # DecHLTruncMBound
 
-`tmpK4`, `TmpProg`, `decHL_truncM_bound`.
+`TmpProg`, `decHL_truncM_bound`.
 -/
 
 noncomputable section
@@ -22,10 +22,6 @@ open L.Arena
 local notation "V" => ConLeche.CheckMode.verified
 
 /-! ## `target_major_pins` -/
-
-def tmpK4 : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (_, m4) => some ([], m4)
 
 /-- The lookups `target_major_pins` needs. -/
 structure TmpProg (p : Prog) : Prop where
