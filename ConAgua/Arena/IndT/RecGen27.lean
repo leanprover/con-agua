@@ -1,3 +1,4 @@
+import ConAgua.Verdict.IndBRec1
 import ConAgua.Arena.RecCheckSpec.CnfW
 import ConAgua.Arena.IndT.RecGen24
 import ConAgua.Arena.RecCheckSpec.TargetMajorAt
@@ -218,18 +219,16 @@ theorem cxoW_okC (n : Nat) (hn : n ≤ 2 ^ 62) {m m' : Mem} {a : AState} {vis q 
   -- `class_minor_slot`
   obtain ⟨⟨r3, m3⟩, c3, h⟩ := of_K h rfl
   rw [cxoK3_some] at h
-  obtain ⟨s3, rfl, -, hm3, hw3⟩ := triple_of_callW (s₀ := ⟨s2.mem, Locals.init []⟩)
-    (classMinorSlot_spec p P.cmsg P.cms n _ rd c (rdW (s1.mem.arr64 EREC) (UInt64.ofNat ca))) c3
-  rw [hm3] at h
   have hsz5' : (s2.mem.arr64 IW).size + 5 < 2 ^ 64 := by rw [hk2 IW, hk1 IW]; exact hsz5
-  obtain ⟨s, ihs, hhits, -, hihs⟩ := cms_decB n hw3 (hR.grow (decCR_mono _) hg12) hnmH hsz5'
-  have hrun3 : (ConRon.Arena.classMinorSlot R c.toNat cA'.1.name).run a1 = .ok ((s, ihs), a1) := by
-    have hits := hitsFrom_eq c.toNat (decI (rdW (s1.mem.arr64 EREC) (UInt64.ofNat ca))) 0 R.slots
-    simp only [Nat.zero_add] at hits
-    rw [← hnmD]
-    simp only [ConRon.Arena.classMinorSlot]
-    erw [hits, hhits]
-    rfl
+  obtain ⟨s3, rfl, -, ⟨s, ihs⟩, a3, hrun3, hm3, ha3, -, -, hihs⟩ := RefE.run_okW
+    (classMinorSlotE_spec p P.cms (n + 1) ⟨s2.mem, Locals.init []⟩ rd c
+      (rdW (s1.mem.arr64 EREC) (UInt64.ofNat ca)))
+    (cms_ref P.cmsg (n + 1) (a := a1) ((hR.grow (decCR_mono _) hg12).get (decCR_mono _)) hnmH hsz5')
+    c3
+  dsimp only at hm3 hihs
+  replace hihs := hihs (hR.grow (decCR_mono _) hg12)
+  rw [hm3] at h
+  rw [hnmD, ha3] at hrun3
   -- `open_pis_at_fvars_f`
   obtain ⟨ca2, hca2, -, -, -, -, hnF2, -, -⟩ := decCN_words (hcA.grow (decCN_mono _) hg12) hsz2
   have hq4 : rdW (s2.mem.arr64 IW) (q + 4) = UInt64.ofNat bs.nP := (partsShapeWords hg12 hbsD hq9).1
