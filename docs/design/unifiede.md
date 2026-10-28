@@ -1841,7 +1841,7 @@ Elaboration (user seconds, `lean` on the module alone, median of 3 interleaved r
 | `Arena/IndSumSpec/CtorX`, `Arena/IndT/Sum5` (deleted), `Verdict/IndBSum4` | 17.76 | 12.14 | `sctsW` and its spec gone |
 | `Arena/IndSumSpec/StructProjArgP`, `CtlW`, `CtlK1` | 16.88 | 11.54 | `sdomsW` and its arms gone |
 | `Verdict/IndBSum3` | 27.80 | 21.91 | |
-| the other 13 | 32.36 | 28.70 | |
+| the other 11 | 32.36 | 27.81 | |
 | **sum (26 modules)** | **115.7** | **84.8** | **−27 %** |
 
 Both flagged modules are the new homes of models whose old modules got faster by more.
