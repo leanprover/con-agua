@@ -924,3 +924,64 @@ gone; the callers' models `tvK3`, `agK3`, `nitK4` read the function through the 
   Only the ok model `ihW` is shared. They need two unified models and two refinements (the second
   against a header prefix of `classConstOk` with a `…_bind` lemma); the shared `ihW` goes when
   both are done.
+
+### 3.12 Batch 2c, first landing (the block checks: `BlkE1`, `BlkE2`, `BlkE4`)
+
+Batch 2c's functions, from §3.1 (depth 1–2, `Verdict/Blk*`, `Verdict/IndsE*`):
+`check_block_classes_keys`, `check_block_ctors_one`, `check_block_ctors_go`,
+`check_block_idx_sorts_one`, `check_block_idx_sorts` (this landing), `check_block_agree_one` and
+`check_block_agree` (next landing: their models nest `lvl_eq_fueled`'s hand models, which the kit
+lane replaces first).
+
+| function | before: ok refinement + error claim | after | change |
+|---|---|---|---:|
+| `check_block_classes_keys` | `ckkW_sim` 40 + `ckkE_claim` 47 = 87 | `ckk_ref` 54 + `CkkPost` 6 = 60 | −31 % |
+| `check_block_ctors_one` | `icboW_simC` 77 + `icboE_claim` 77 = 154 | `icbo_ref` 80 + `IcboPost` 10 = 90 | −42 % |
+| `check_block_ctors_go` | `icbgW_simC` 94 + `icbgE_claim` 96 = 190 | `icbg_ref` 101 + `IcbgPost` 9 + `CtorsG` 3 = 113 | −41 % |
+| `check_block_idx_sorts_one` | `iisW_simC` 117 + `iisE_claim` 92 = 209 | `iis_ref` 120 + `IisPost` 7 = 127 | −39 % |
+| `check_block_idx_sorts` | `iisrW_simC` 69 + `iisrE_claim` 75 = 144 | `iisr_ref` 75 + `IisrPost` 7 = 82 | −43 % |
+| **pairs** | **784** | **472** | **−40 %** |
+
+Also gone: the hand model `iisW`/`iisK1–3` with `iis_spec` (`Iis.lean`, deleted), the generated ok
+models `icboW`, `icbgW`, `iisrW`, `ckkW` with their specs, `kofCall_sim`, and what only they used
+(`Sim.tail`, `installCons_afr`, the `callW` forms of the `rec2` header lemmas, now over `recW`). The
+`@[refines]` theorems (`checkBlockIdxSorts_refinesC`, `checkBlockCtors_refinesC`, whose ok model
+`ictW` reads `check_block_ctors_go` through `callW`) keep their statements. Whole diff against
+master: +637 −1 054 in 18 files.
+
+Choices:
+
+* **`G` per function**: `closedNV p nvFns = true` for `check_block_classes_keys` (`class_key_of` is
+  unified under it, `sl_cons` lifted); `CheckStructFieldSortsIE p` alone for the index sorts (the
+  lifted callees' errors are `.oob`; `check_struct_field_sorts_i` stays `callE`); `CtorsG p`
+  (`nv`, `sc : CheckSumCtorsE p`) for the constructors (`check_sum_ctors` stays `callE`).
+  `check_sum_ctors`, `check_struct_field_sorts_i(_go)`, `check_struct_doms_at`,
+  `check_block_doms_at` and `check_block_tables` are depth-0 leaves that no batch-1 list named;
+  they are still split.
+* **Placement**: `ckk_ref` in `Arena/RecGenSpec/CntW` (its ok user `RecGen21`), `icbo_ref`/`icbg_ref`
+  in `Arena/IndT/Install7` (`checkBlockCtors_refinesC`), `iis_ref`/`iisr_ref` in a new
+  `Arena/IndT/IdxSorts` (imports `Verdict/IndBE` for the claim; `Tail` imports it). The Verdict
+  files keep only the derived claims of the depth-3 callers (`RefE.run_err`).
+* **`CheckSumCtorsE` moved** from `Verdict/IndBE` to `Install7` (next to `checkSumCtors_refinesC`'s
+  users; `err_stmt` needs only `Verdict/IndAGen`): importing `IndBE` there would have added 69
+  modules below `Install7`.
+* **`ClassKeyOfE` is gone**: `check_block_classes`' claim reads `class_key_of` through `ckk_ref`,
+  so the statement, `classKeyOfE_of` and the hypothesis in `cid_claim2/3` went.
+* **Recipes**: the default `finish` for `icboE`/`icbgE` (4.2 s for `Install7`; `simp [rdW]` 4.7 s);
+  `simp [rdW]` for `ckkE` (4.5 s for `CntW`; default 5.0 s); `simp [rdW]` for `iisE`/`iisrE`.
+
+Elaboration (user seconds, `lean` on the module alone, median of 3 interleaved runs, base master
+affbbf73; load 18–42; `CntW` from a separate series after the recipe change):
+
+| module | base | new | |
+|---|---:|---:|---|
+| `Arena/IndT/Install7` | 0.96 | **4.19** | **slower (+3.2 s)**: `icboE`/`icbgE` moved in |
+| `Arena/IndInstallSpec/Icbo`, `Verdict/BlkE1` | 10.46 | 2.11 | the generated ok models and the error models gone |
+| `Arena/IndT/IdxSorts` (new) | — | 5.57 | the unified models and refinements |
+| `Arena/IndInstallSpec/Iis` (deleted), `Arena/IndT/Install5`, `Verdict/BlkE2` | 12.43 | 1.20 | |
+| `Arena/RecGenSpec/CntW` | 4.29 | 4.46 | `ckkE` moved in |
+| `Verdict/BlkE4` | 3.73 | 3.16 | |
+| `GrcProg`, `InstallRec2PSl`, `RecGen21`, `Tail`, `IndBE`, `IndArmE`, `IndArmTopE`, `IndA8`, `IndA9` | 9.47 | 9.91 | |
+| **sum** | **41.3** | **30.6** | **−26 %** |
+
+`Install7` is the one flagged module; with the files it replaces (`Icbo`, `BlkE1`) it is 11.4 → 6.3 s.

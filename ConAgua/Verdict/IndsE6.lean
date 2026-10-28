@@ -1,5 +1,4 @@
 import ConAgua.Verdict.IndA5
-import ConAgua.Verdict.IndBE
 import ConAgua.Verdict.IndsE1
 import ConAgua.Verdict.IndsE2
 /-!

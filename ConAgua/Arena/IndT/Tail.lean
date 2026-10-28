@@ -1,4 +1,4 @@
-import ConAgua.Arena.IndT.Install5
+import ConAgua.Arena.IndT.IdxSorts
 import ConAgua.Arena.IndT.GenRec3
 import ConAgua.Arena.IndT.ArmMemos
 import ConAgua.Arena.IndRealSctC
