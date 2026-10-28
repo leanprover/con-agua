@@ -1,3 +1,4 @@
+import ConAgua.Verdict.IndBSum1
 import ConAgua.Arena.IndT.Sum2
 import ConAgua.Verdict.IndBE
 import ConAgua.Arena.IndT.Install7
@@ -23,13 +24,6 @@ open L.Arena
 
 local notation "V" => ConLeche.CheckMode.verified
 
-/-- `check_constant_val`'s claim in the shape part B takes (`CcvE`), from `ccvE_okT`. -/
-theorem ccvE_of {p : Prog} (hq : KnotStageProg p) (hp : ValProg p) (hap : ApdF p) (hkp : CrKeep p)
-    (hnv : closedNV p _root_.L.Checker.nvFns = true) (hcE : CoreStubsE p) (hUL : UceLookups p) :
-    CcvE p :=
-  fun _n hn _s₀ _a₀ _q _cv hS hqd hqb hlps hCr =>
-    CoreSpecE.of_runs fun _e hc => ccvE_okT hq hp hap hkp hnv hcE hUL hn hc hS hqd hqb hlps hCr
-
 /-- `check_sum_tele`'s claim in the generated shape (`CheckSumTeleE`): `ct_ref`'s error half. -/
 theorem checkSumTeleE_of {p : Prog} (hG : CtsG p) : CheckSumTeleE p :=
   fun hkp {_dn vis _fe _env} henv hV hApd hCrk h1 h2 h3 h4 h5 h6 h7 h8 h9 h10 h11 h12 h13 h14 h15 h16 h17 h18
@@ -41,11 +35,11 @@ theorem checkSumTeleE_of {p : Prog} (hG : CtsG p) : CheckSumTeleE p :=
         hcv hcvb hcvs hta htab htas hA hcvP hcvTaP hws hfe) hc
 
 theorem checkSumCtorsE_of {p : Prog} (hnv : closedNV p _root_.L.Checker.nvFns = true)
-    (hcE : CoreStubsE p) (hCcv : CcvE p) : CheckSumCtorsE p :=
+    (hcE : CoreStubsE p) (hU : UceProg p) : CheckSumCtorsE p :=
   fun hkp {_dn _vis _fe _env} henv hV hOpf hLC hLT hApd hCrk P s₀ a₀ vis0 T lo ll nP nIdx rs isP lg cvTaw cO cL lps cvTa cs
       hC hT hrs hlps hlpsb hcv hcs hA {_env₀ _TP _lpsP _rsP _cvTaP _csP} hTP hlpsP hrsP hcvP hws hcsP hie hfe F hF _e hc =>
-    RefE.run_err (sctsE_spec p P F s₀ vis0 _ T lo ll nP nIdx rs isP lg cvTaw cO cL) hnv ⟨⟨hnv, hcE⟩, hCcv⟩
-      (scts_ref hkp henv hV hOpf hLC hLT hApd hCrk P vis0 T lo ll nP nIdx rs isP lg cvTaw lps cvTa hT hrs hws F hF
+    RefE.run_err (sctsE_spec p P hV F s₀ vis0 _ T lo ll nP nIdx rs isP lg cvTaw cO cL) hnv ⟨⟨hnv, hcE⟩, hU⟩
+      (scts_ref hkp henv hOpf hLC hLT hApd hCrk P vis0 T lo ll nP nIdx rs isP lg cvTaw lps cvTa hT hrs hws F hF
         s₀.mem a₀ cO cL cs _ hC hlps hlpsb hcv hcs hA hTP hlpsP hrsP hcvP hcsP hie hfe) hc
 
 theorem checkStructFieldSortsIE_of {p : Prog} (hnv : closedNV p _root_.L.Checker.nvFns = true)

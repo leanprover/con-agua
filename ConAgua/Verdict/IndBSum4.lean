@@ -1,4 +1,3 @@
-import ConAgua.Verdict.IndBSum3
 import ConAgua.Arena.IndSumSpec.CtorX
 import ConAgua.Arena.IndSumSpec.SoaW
 import ConAgua.Arena.GrindAttr
@@ -8,11 +7,13 @@ import ConAgua.Arena.IndT.Sum4
 /-!
 # `check_sum_ctors`: one model and one refinement for both outcomes
 
-`sctsE` (`l_model … unified`): `check_sum_ctor` through its run (not migrated), the `rec2`s and the
-`sl_cons` (outside the verdict closure) lifted. `scts_ref` refines `checkSumCtors` under `SctsG`
-(the no-verdict closure, the core stubs' and `check_constant_val`'s claims, which
-`check_sum_ctor`'s claim `ctor_claim` takes); `checkSumCtors_refinesC` is its ok half.
+`sctsE` (`l_model … unified`): `check_sum_ctor` by its unified model, the `rec2`s and the
+`sl_cons` (outside the verdict closure) lifted. `scts_ref` refines `checkSumCtors` under `VerdictCtxU`
+(`ctor_ref`'s: the no-verdict closure, the core stubs' claims, `unresolved_consts_error`'s program);
+`checkSumCtors_refinesC` is its ok half.
 -/
+
+noncomputable section
 
 set_option experimental.vcgen true
 
@@ -27,19 +28,13 @@ open L.Arena
 
 local notation "V" => ConLeche.CheckMode.verified
 
-l_model sctsE_spec (p : Prog) (hP : SumProg p)
+l_model sctsE_spec (p : Prog) (hP : SumProg p) (hV : ValProg p)
   fns [hP.hcs ↦ sctsE]
-  specs [rec2_specW p hP.ha n hP.hrec2, slCons_specW p hP.ha hP.hc hP.hsc n]
+  specs [ctorE_spec p hP hV n, rec2_specW p hP.ha n hP.hrec2, slCons_specW p hP.ha hP.hc hP.hsc n]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
   heartbeats 4000000 simp [Cmp.evalW, Cmp.eval] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
-
-/-- What `check_sum_ctors`' error arms assume: the no-verdict closure (the `rec2`s, the
-`sl_cons`), the core stubs' and `check_constant_val`'s claims (`check_sum_ctor`'s claim,
-`ctor_claim`, not migrated). -/
-structure SctsG (p : Prog) : Prop extends VerdictCtx p where
-  ccv : CcvE p
 
 /-- What `check_sum_ctors` gives besides the twin's constructors and sorts `x` (from `m`): the
 stage invariant, the growth, the two slices `r = [cO, cL, sO, sL]` decoded below the top,
@@ -64,11 +59,10 @@ variable {p : Prog} (hq : KnotStageProg p) {dn : NIdx → Option ConLeche.Name} 
   (hLT : p.lookup "lv_leq_top" = some lvLeqTop)
   (hApd : ApdF p) (hCrk : CrKeep p)
 
-include hq henv hV hOpf hLC hLT hApd hCrk in
+include hq henv hOpf hLC hLT hApd hCrk in
 /-- **`check_sum_ctors` refines `checkSumCtors`, both outcomes** (twin side: con-ron's
-`checkSumCtors_spec`'s proof): the head by `ctorW_okC` and `ctor_claim` (`check_sum_ctor` through
-its run), the records and the conses (outside the verdict closure) claim nothing, the rest by
-induction. -/
+`checkSumCtors_spec`'s proof): the head by `ctor_ref` (`check_sum_ctor` by its unified model), the
+records and the conses (outside the verdict closure) claim nothing, the rest by induction. -/
 theorem scts_ref (hP : SumProg p)
     (vis0 T lo ll nP nIdx rs isP lg cvTaw : Word) (lps : List NIdx) (cvTa : IConstantVal)
     (hT : H T) (hrs : H rs) {env₀ : ConLeche.Env} {TP : ConLeche.Name} {lpsP : List ConLeche.Name}
@@ -84,7 +78,7 @@ theorem scts_ref (hP : SumProg p)
     ConRon.Bridge.Inductives.denoteCtors a.store cs = some csP →
     ConRon.Bridge.Inductives.IFEnvOKS env₀ (fe.restrictTo vis0.toNat) a.store →
     ConRon.Bridge.denoteFEnv a.store fe = some env →
-    RefE (SctsG p) (sctsE p k m vis0 vis T lo ll nP nIdx rs isP lg cvTaw cO cL)
+    RefE (VerdictCtxU p) (sctsE p k m vis0 vis T lo ll nP nIdx rs isP lg cvTaw cO cL)
       (checkSumCtors V (fe.restrictTo vis0.toNat) fe (decI T) lps nP.toNat nIdx.toNat (decI rs)
         (isP != 0) (lg != 0) cvTa cs) a
       (fun v x a' => SctsPost dn vis fe env m a v.1 v.2 x a') := by
@@ -141,47 +135,32 @@ theorem scts_ref (hP : SumProg p)
   have hnf : nP.toNat + w3.toNat < 2 ^ 64 := by rw [← sumAddNoOv hov2]; exact UInt64.toNat_lt _
   subst hw3v
   simp only [checkSumCtors]
-  -- the head constructor (`check_sum_ctor` through its run)
-  rcases h1 : callE p k "check_sum_ctor" [vis0, vis, T, lo, ll, nP, nIdx, rs, isP, lg, w2, w3, cvTaw] m
-    with e1 | ⟨r, m1⟩
-  · rw [sctsE.k_check_sum_ctor.none]
-    refine RefE.bind_left fun hG => ?_
-    rcases Nat.eq_zero_or_pos k with hk00 | hk00
-    · subst hk00
-      obtain ⟨e', he', h0⟩ := callE_zero p "check_sum_ctor" [vis0, vis, T, lo, ll, nP, nIdx, rs, isP, lg, w2, w3, cvTaw] m
-      rw [h1] at he'
-      cases he'
-      exact ErrClaim.of_cls0 h0
-    · obtain ⟨k', rfl⟩ : ∃ k', k = k' + 1 := ⟨k - 1, by omega⟩
-      exact CoreSpecE.of_callE (ctor_claim hq henv hOpf hLC hLT hG.nv hG.core hV hApd hCrk hG.ccv hP k' (by omega)
-        ⟨m, Locals.init []⟩ a vis0 T lo ll nP nIdx rs isP lg w2 w3 cvTaw lps cv cvTa hC hT hlps hlb hcvB hta hrs
-        hni hnf hA hTP hlpsP hrsP hcvP hcvTaP hws hok₀ hfe) h1
+  -- the head constructor (by its unified model)
+  rcases k with _ | j
+  · rw [ctorE.eq_1, sctsE.k_check_sum_ctor.none]; exact RefE.of_cls0 Err.cls_outOfFuel
+  have h1R := ctor_ref hq henv hOpf hLC hLT hApd hCrk hP j (by omega) m a vis0 T lo ll nP nIdx rs isP lg w2 w3 cvTaw
+    lps cv cvTa hC hT hlps hlb hcvB hta hrs hni hnf hA hTP hlpsP hrsP hcvP hcvTaP hws hok₀ hfe
+  rcases h1 : ctorE p (j + 1) m vis0 vis T lo ll nP nIdx rs isP lg w2 w3 cvTaw with e1 | ⟨r, m1⟩ <;>
+    rw [h1] at h1R
+  · rw [sctsE.k_check_sum_ctor.none]; exact RefE.bind_left h1R
   rw [sctsE.k_check_sum_ctor.arm1]
-  obtain ⟨s1, hs1, -, h1m⟩ := triple_of_callW (ctorX_spec p hP (realCall p) (realCall_spec p) k ⟨m, Locals.init []⟩
-    vis0 vis T lo ll nP nIdx rs isP lg w2 w3 cvTaw) (callW_of_callE h1)
-  subst hs1
-  obtain hk3 | ⟨j, rfl⟩ : k < 3 ∨ ∃ j, k = j + 3 := by
-    rcases Nat.lt_or_ge k 3 with h | h
-    · exact .inl h
-    · exact .inr ⟨k - 3, by omega⟩
-  · exfalso
-    have : ctorX (realCall p) k m vis0 vis T lo ll nP nIdx rs isP lg w2 w3 cvTaw = none := by
-      match k, hk3 with
-      | 0, _ => rfl
-      | 1, _ => rfl
-      | 2, _ => rfl
-    rw [this] at h1m
-    cases h1m
-  obtain ⟨x, a1, hrun1, hC1, hg1, hr0, hx1, hsorts, hsb, hA1, c1⟩ :=
-    ctorW_okC hq henv hV hOpf hLC hLT hApd hCrk hP j (by omega) m a vis0 T lo ll nP nIdx rs isP lg w2 w3 cvTaw lps cv cvTa
-      hC hT hlps hlb hcvB hta hrs hni hnf hA hTP hlpsP hrsP hcvP hcvTaP hws hok₀ hfe r s1.mem h1m
+  obtain ⟨x, a1, hrun1, hR1⟩ := h1R
+  have hC1 := hR1.stage
+  have hg1 := hR1.grow
+  have hr0 := hR1.cvW
+  have hx1 := hR1.cv
+  have hsorts := hR1.sorts
+  have hsb := hR1.sortsB
+  have hA1 := hR1.abs
+  have c1 := hR1.core
+  dsimp only at hC1 hg1 hr0 hx1 hsorts hsb hA1
   refine RefE.bind_right hrun1 ?_
   have hS1 := hC1.stage
   obtain ⟨cvCa, sorts⟩ := x
   simp only at hx1 hsorts
   subst hx1
   -- the two `rec2`s (L only)
-  rcases hn : recW s1.mem 2 [r.headD 0, w3] with _ | ⟨rn, m2⟩
+  rcases hn : recW m1 2 [r.headD 0, w3] with _ | ⟨rn, m2⟩
   · rw [liftE_none, sctsE.k_rec2.none]; exact RefE.of_cls0 (by simp)
   rw [liftE_some, sctsE.k_rec2.arm1]
   obtain ⟨hS2, hg2, hn0, hn1⟩ := sumRec2 hn hS1
@@ -205,7 +184,7 @@ theorem scts_ref (hP : SumProg p)
     (ConRon.Bridge.denoteL_ext hrsP x1) (ConRon.Bridge.denoteCV_ext hcvTaP x1)
     (ConRon.Bridge.Inductives.denoteCtors_ext x1 _ _ hrestP) (hok₀.mono x1)
     (ConRon.Bridge.denoteFEnv_mono x1 hfe)
-  rcases h4' : sctsE p (j + 3) m3 vis0 vis T lo ll nP nIdx rs isP lg cvTaw (cO + 1) (cL - 1) with e4 | ⟨rr, m4⟩
+  rcases h4' : sctsE p (j + 1) m3 vis0 vis T lo ll nP nIdx rs isP lg cvTaw (cO + 1) (cL - 1) with e4 | ⟨rr, m4⟩
   · rw [h4'] at h4
     rw [sctsE.k_check_sum_ctors.none]; exact RefE.bind_left h4
   rw [h4'] at h4
@@ -216,14 +195,14 @@ theorem scts_ref (hP : SumProg p)
   have hS4 := hR4.stage.stage
   obtain ⟨ps1, hps1t, hps1, hmap1⟩ := sumDecNL_of_decB hR4.cns
   -- the two `sl_cons` (L only)
-  rcases hc1 : consW (j + 3) m4 (rn.headD 0) (rr.headD 0) (rr.tail.headD 0) with _ | ⟨r1, m5⟩
+  rcases hc1 : consW (j + 1) m4 (rn.headD 0) (rr.headD 0) (rr.tail.headD 0) with _ | ⟨r1, m5⟩
   · rw [liftE_none, sctsE.k_sl_cons.none]; exact RefE.of_cls0 (by simp)
   rw [liftE_some, sctsE.k_sl_cons.arm1]
   obtain ⟨hS5, hg5, hd5, ht5⟩ := consW_stageN hc1 hS4 hR4.cnsB hps1
   obtain ⟨ps2, hps2t, hps2, hmap2⟩ := sumDecNL_of_decB hR4.sorts
   have hb2' : (rr.tail.tail.headD 0).toNat + (rr.tail.tail.tail.headD 0).toNat ≤ iwTop m5 := by
     have := hg5.1; have := hR4.sortsB; omega
-  rcases hc2 : consW (j + 3) m5 (rh.headD 0) (rr.tail.tail.headD 0) (rr.tail.tail.tail.headD 0) with _ | ⟨r2, m6⟩
+  rcases hc2 : consW (j + 1) m5 (rh.headD 0) (rr.tail.tail.headD 0) (rr.tail.tail.tail.headD 0) with _ | ⟨r2, m6⟩
   · rw [liftE_none, sctsE.k_sl_cons_2.none]; exact RefE.of_cls0 (by simp)
   rw [liftE_some, sctsE.k_sl_cons_2.arm1]
   obtain ⟨hS6, hg6, hd6, ht6⟩ := consW_stageN hc2 hS5 hb2'
@@ -286,8 +265,8 @@ theorem checkSumCtors_refinesC (hP : SumProg p) (k : Nat) (hk : k ≤ 2 ^ 62) (s
       DecB (fun m => decPL m (sortsDec m) (r.tail.tail.headD 0).toNat (r.tail.tail.tail.headD 0).toNat)
         s'.mem (AM.res (checkSumCtors V (fe.restrictTo vis0.toNat) fe (decI T) lps nP.toNat
           nIdx.toNat (decI rs) (isP != 0) (lg != 0) cvTa cs) a₀).2 ∧ AbsOK s'.mem; ⊤⦄ :=
-  triple_post (RefE.triple (sctsE_spec p hP k s₀ vis0 vis T lo ll nP nIdx rs isP lg cvTaw cO cL)
-    (scts_ref hq henv hV hOpf hLC hLT hApd hCrk hP vis0 T lo ll nP nIdx rs isP lg cvTaw lps cvTa hT hrs hws k hk
+  triple_post (RefE.triple (sctsE_spec p hP hV k s₀ vis0 vis T lo ll nP nIdx rs isP lg cvTaw cO cL)
+    (scts_ref hq henv hOpf hLC hLT hApd hCrk hP vis0 T lo ll nP nIdx rs isP lg cvTaw lps cvTa hT hrs hws k hk
       s₀.mem a₀ cO cL cs csP hC hlps hlb hta hcs hA hTP hlpsP hrsP hcvTaP hcsP hok₀ hfe))
     fun _ _ ⟨hl, _, _, hrun, hR⟩ =>
       let ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun

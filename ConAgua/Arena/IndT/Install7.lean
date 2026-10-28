@@ -127,8 +127,8 @@ theorem installSimSumCtorsC (hP : SumProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : 
         ConRon.Bridge.CoreStep V env fe a a') := by
   intro r m' e
   have hfev : fe.restrictTo vis.toNat = fe := by rw [← hC.stage.1.env.vis]; rfl
-  have h := RefE.run_okW (sctsE_spec p hP n ⟨m, Locals.init []⟩ vis vis T lo ll nP nIdx rs isP lg cvTa co cl)
-    (scts_ref (dn := dn) (vis := vis) (fe := fe) hq henv hV hOpf hLC hLT hApd hCrk hP vis T lo ll nP nIdx rs isP
+  have h := RefE.run_okW (sctsE_spec p hP hV n ⟨m, Locals.init []⟩ vis vis T lo ll nP nIdx rs isP lg cvTa co cl)
+    (scts_ref (dn := dn) (vis := vis) (fe := fe) hq henv hOpf hLC hLT hApd hCrk hP vis T lo ll nP nIdx rs isP
       lg cvTa lps cvv hT hrs hws n hn m a co cl cs csP hC hl hlb hcv hcs hA hTP hlpsP hrsP hcvTaP hcsP
       (by rw [hfev]; exact hok₀) hfe) e
   rw [hfev] at h
