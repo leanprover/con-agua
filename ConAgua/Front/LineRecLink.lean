@@ -183,4 +183,167 @@ theorem subN_numRecN (mk : Word) : ∀ i w seen o,
          rw [numRecN_close b _ _ _ _ ‹_›]
          split at he <;> (try split at he) <;> (try split) <;> (try split) <;> simp_all [Obj.none])
 
+/-! ## The single pass's member step against Stage B's -/
+
+theorem subRecN_e (kd mk : Word) (bit : Word → Word) (val : Word → Word → Word → Word)
+    (hbit : subBit kd = bit) (hval : ∀ k ks v, bit k ≠ 0 → subVal b k ks v = val k ks v)
+    (v : Word) : (subRecN b v kd mk).e = objEntryN bit val mk b v := by
+  unfold subRecN objEntryN
+  split
+  · rw [subN_objN, hbit, objN_congr bit (subVal b) val mk hval]
+  · rfl
+
+/-- The object of a payload key is Stage B's (`lineVal`). -/
+theorem subRecN_lineVal (k ks v : Word)
+    (hk : k = 56 ∨ k = 38 ∨ k = 2 ∨ k = 29 ∨ k = 14 ∨ k = 30 ∨ k = 9 ∨ k = 48) :
+    (subRecN b v k (if k = 56 ∨ k = 38 then 3 else exprMask k)).e = L.Scan.Line.lineVal b k ks v := by
+  rcases hk with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;>
+  · simp only [L.Scan.Line.lineVal, exprMask, strNameN, numNameN, appN, binderN, letEN, constEN,
+      projN]
+    simp only [reduceIte, Nat.reduceEqDiff, or_false, false_or, or_true, true_or,
+      show ∀ a b : Word, a = b ↔ a = b from fun _ _ => Iff.rfl]
+    apply subRecN_e
+    · funext k; simp [subBit]
+    · intro k ks v hk
+      simp only [strNameBit, numNameBit, appBit, binderBit, letEBit, constEBit, projBit] at hk
+      split at hk <;> (try split at hk) <;> (try split at hk) <;> (try split at hk) <;>
+        (try split at hk) <;>
+        simp_all [subVal, strNameVal, numNameVal, appVal, binderVal, letEVal, constEVal, projVal]
+
+open L.Scan.Line (lineStepN lineKind lineVal) in
+/-- A payload key whose step has the standard form: Stage B's value end `E` and kind `K`. -/
+theorem std_step {k ks v ik pk E K : Word} {g : Fld} (h1 : k ≠ 21) (h2 : k ≠ 19) (h3 : k ≠ 18)
+    (hK : lineKind k = K) (hK0 : K ≠ 0) (hE : lineVal b k ks v = E) :
+    (if pk = 0 ∧ E ≠ 0 ∧ ks < E then (⟨E, ik, K, g⟩ : LRS) else .fail).e =
+      (lineStepN b k ks v ik pk).1 ∧
+    ((if pk = 0 ∧ E ≠ 0 ∧ ks < E then (⟨E, ik, K, g⟩ : LRS) else .fail).e ≠ 0 →
+      (if pk = 0 ∧ E ≠ 0 ∧ ks < E then (⟨E, ik, K, g⟩ : LRS) else .fail).ik =
+        (lineStepN b k ks v ik pk).2.1 ∧
+      (if pk = 0 ∧ E ≠ 0 ∧ ks < E then (⟨E, ik, K, g⟩ : LRS) else .fail).pk =
+        (lineStepN b k ks v ik pk).2.2) := by
+  rw [L.Scan.Line.lineStepN_pay b k ks v ik pk h1 h2 h3, hK, hE]
+  by_cases h : pk = 0 ∧ E ≠ 0 ∧ ks < E
+  · rw [if_pos h, if_pos ⟨hK0, h.1, h.2.2⟩]; simp
+  · rw [if_neg h]
+    by_cases h' : K ≠ 0 ∧ pk = 0 ∧ ks < E
+    · exfalso; apply h; refine ⟨h'.2.1, fun h0 => ?_, h'.2.2⟩; rw [h0] at h'
+      exact UInt64.not_lt_zero h'.2.2
+    · rw [if_neg h']; simp [LRS.fail]
+
+/-- A successful `slot_nat` passes the key: the nat arms in the standard form. -/
+theorem slot_std (ks v : Word) (P : Prop) [Decidable P] (r : LRS) :
+    (if P ∧ slotNatN b ks v ≠ 0 then r else .fail) =
+      if P ∧ slotNatN b ks v ≠ 0 ∧ ks < slotNatN b ks v then r else .fail := by
+  by_cases h : P ∧ slotNatN b ks v ≠ 0
+  · rw [if_pos h, if_pos ⟨h.1, h.2, slotNatN_pos b ks v h.2⟩]
+  · rw [if_neg h, if_neg (fun h' => h ⟨h'.1, h'.2.1⟩)]
+
+open L.Scan.Line (lineStepN lineKind lineVal) in
+/-- **One member: the single pass ends and classifies as Stage B does.** -/
+theorem lrStepN_line (k ks v ik pk : Word) (f : Fld) :
+    (lrStepN b k ks v ik pk f).e = (lineStepN b k ks v ik pk).1 ∧
+    ((lrStepN b k ks v ik pk f).e ≠ 0 →
+      (lrStepN b k ks v ik pk f).ik = (lineStepN b k ks v ik pk).2.1 ∧
+      (lrStepN b k ks v ik pk f).pk = (lineStepN b k ks v ik pk).2.2) := by
+  by_cases hi : k = 21 ∨ k = 19 ∨ k = 18
+  · rw [L.Scan.Line.lineStepN_idx b k ks v ik pk hi]
+    simp only [lrStepN, hi, reduceIte, lrIdx]
+    rw [slot_std]
+    by_cases h : ik = 0 ∧ slotNatN b ks v ≠ 0 ∧ ks < slotNatN b ks v
+    · rw [if_pos h, if_pos ⟨h.1, h.2.2⟩]; simp
+    · have hn : ¬ (ik = 0 ∧ ks < slotNatN b ks v) := fun h' => h ⟨h'.1, fun h0 => by
+        have := h'.2; rw [h0] at this; exact UInt64.not_lt_zero this, h'.2⟩
+      rw [if_neg h, if_neg hn]; simp [LRS.fail]
+  have h1 : k ≠ 21 := fun e => hi (.inl e)
+  have h2 : k ≠ 19 := fun e => hi (.inr (.inl e))
+  have h3 : k ≠ 18 := fun e => hi (.inr (.inr e))
+  by_cases hn : k = 7 ∨ k = 55 ∨ k = 59 ∨ k = 46
+  · simp only [lrStepN, hi, hn, reduceIte, lrNat]
+    rw [slot_std]
+    exact std_step h1 h2 h3 (by rcases hn with rfl | rfl | rfl | rfl <;> decide)
+      (by split <;> decide) (by rcases hn with rfl | rfl | rfl | rfl <;> simp [lineVal])
+  by_cases hl : k = 32 ∨ k = 20
+  · simp only [lrStepN, hi, hn, hl, reduceIte, lrList]
+    have hE : lineVal b k ks v = if (natListEntryN b v).1 = 0 then 0
+        else if (natListEntryN b v).2 = 2 then (natListEntryN b v).1 else 0 := by
+      rcases hl with rfl | rfl <;> simp only [lineVal] <;> rfl
+    have hstd : (if pk = 0 ∧ (natListEntryN b v).1 ≠ 0 ∧ (natListEntryN b v).2 = 2 ∧
+          ks < (natListEntryN b v).1 then
+        (⟨(natListEntryN b v).1, ik, 2,
+          ⟨if k = 32 then 4 else 5, f.idx, (pairEntryN b v).2.1, (pairEntryN b v).2.2, f.d⟩⟩ : LRS)
+        else .fail) =
+        if pk = 0 ∧ lineVal b k ks v ≠ 0 ∧ ks < lineVal b k ks v then
+          (⟨lineVal b k ks v, ik, 2,
+            ⟨if k = 32 then 4 else 5, f.idx, (pairEntryN b v).2.1, (pairEntryN b v).2.2, f.d⟩⟩ : LRS)
+        else .fail := by
+      rw [hE]
+      by_cases ha : (natListEntryN b v).1 = 0 <;> by_cases hc : (natListEntryN b v).2 = 2 <;>
+        simp [ha, hc]
+    rw [hstd]
+    exact std_step h1 h2 h3 (by rcases hl with rfl | rfl <;> decide) (by decide) rfl
+  by_cases hm : k = 56 ∨ k = 38
+  · simp only [lrStepN, hi, hn, hl, hm, reduceIte, lrName]
+    have he := subRecN_lineVal (b := b) k ks v (by rcases hm with h | h <;> simp [h])
+    rw [if_pos hm] at he
+    rw [he]
+    exact std_step h1 h2 h3 (by rcases hm with rfl | rfl <;> decide) (by decide) rfl
+  by_cases hx : k = 2 ∨ k = 29 ∨ k = 14 ∨ k = 30 ∨ k = 9 ∨ k = 48
+  · simp only [lrStepN, hi, hn, hl, hm, hx, reduceIte, lrExpr]
+    have he := subRecN_lineVal (b := b) k ks v (by
+      rcases hx with h | h | h | h | h | h <;> simp [h])
+    rw [if_neg hm] at he
+    rw [he]
+    exact std_step h1 h2 h3 (by rcases hx with rfl | rfl | rfl | rfl | rfl | rfl <;> decide)
+      (by decide) rfl
+  by_cases ht : k = 35 ∨ k = 57
+  · simp only [lrStepN, hi, hn, hl, hm, hx, ht, reduceIte, lrLit]
+    have he : litEnd b k v = lineVal b k ks v := by
+      rcases ht with rfl | rfl <;> simp [litEnd, lineVal]
+    rw [he]
+    exact std_step h1 h2 h3 (by rcases ht with rfl | rfl <;> decide) (by decide) rfl
+  by_cases hd : k = 4 ∨ k = 12 ∨ k = 60 ∨ k = 45 ∨ k = 49 ∨ k = 23
+  · simp only [lrStepN, hi, hn, hl, hm, hx, ht, hd, reduceIte, lrDecl]
+    exact std_step h1 h2 h3 (by rcases hd with rfl | rfl | rfl | rfl | rfl | rfl <;> decide)
+      (by decide) rfl
+  by_cases hme : k = 33
+  · subst hme
+    simp only [lrStepN, reduceIte, lrMeta, Nat.reduceEqDiff, or_self, or_false, false_or]
+    exact std_step h1 h2 h3 (by decide) (by decide) (by simp [lineVal, metaN])
+  · simp only [lrStepN, hi, hn, hl, hm, hx, ht, hd, hme, reduceIte]
+    rw [L.Scan.Line.lineStepN_pay b k ks v ik pk h1 h2 h3]
+    have hK : lineKind k = 0 := by
+      simp only [lineKind]
+      simp_all
+    simp [hK, LRS.fail]
+
+/-! ## The line -/
+
+theorem Fld.mk_eta (f : Fld) : (⟨f.pl, f.idx, f.a, f.c, f.d⟩ : Fld) = f := rfl
+
+/-- **The single pass ends where Stage B's validator does**: it accepts exactly its lines. -/
+theorem lineRecN_e (i w ik pk : Word) (f : Fld) :
+    (lineRecN b i w ik pk f).e = L.Scan.Line.lineN b i w ik pk := by
+  induction i, w, ik, pk, f using lineRecN.induct b with
+  | case1 i w ik pk f h0 =>
+    rw [lineRecN_err b i w ik pk f h0, L.Scan.Line.lineN_err b i w ik pk h0]; rfl
+  | case5 i w ik pk f h0 h1 hlt ih =>
+    obtain ⟨he, hk⟩ := lrStepN_line (b := b) (nextMemberN b i w).key (nextMemberN b i w).pos
+      (nextMemberN b i w).val ik pk f
+    have hne : (lrStepN b (nextMemberN b i w).key (nextMemberN b i w).pos (nextMemberN b i w).val
+        ik pk f).e ≠ 0 := fun h => by rw [h] at hlt; exact UInt64.not_lt_zero hlt
+    obtain ⟨hik, hpk⟩ := hk hne
+    rw [lineRecN_step b i w ik pk f h0 h1, ite_eq_right hne, Fld.mk_eta, ih,
+      L.Scan.Line.lineN_step b i w ik pk h0 h1, ← he, ite_eq_right hne, hik, hpk]
+  | case6 i w ik pk f h0 h1 hlt =>
+    obtain ⟨he, -⟩ := lrStepN_line (b := b) (nextMemberN b i w).key (nextMemberN b i w).pos
+      (nextMemberN b i w).val ik pk f
+    have h0' : (lrStepN b (nextMemberN b i w).key (nextMemberN b i w).pos (nextMemberN b i w).val
+        ik pk f).e = 0 := Decidable.byContradiction fun hne =>
+      hlt (lrStepN_lt b ik pk f _ _ _ hne)
+    rw [lineRecN_step b i w ik pk f h0 h1, ite_eq_left h0', L.Scan.Line.lineN_step b i w ik pk h0 h1,
+      ← he, ite_eq_left h0']; rfl
+  | _ =>
+    rw [lineRecN_close b _ _ _ _ _ ‹_›, L.Scan.Line.lineN_close b _ _ _ _ ‹_›]
+    split <;> (try split) <;> simp_all [LRS.fail]
+
 end L.Front.LineRec
