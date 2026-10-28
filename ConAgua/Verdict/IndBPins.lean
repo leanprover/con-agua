@@ -9,7 +9,6 @@ import ConAgua.Arena.RecCheckSpec.RcLook
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
-import ConAgua.Checker.NoVerdictTree
 
 /-!
 # `target_pin_tys` (one model and one refinement for both outcomes), `target_major_pins`' error claim

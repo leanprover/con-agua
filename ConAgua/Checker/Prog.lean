@@ -128,6 +128,7 @@ import ConAgua.L.Syntax
 import ConAgua.Layout
 import ConAgua.Rom.CIRead
 import ConAgua.Rom.PinRead
+import ConAgua.Scan.Fast
 import ConAgua.Scan.Key
 import ConAgua.Scan.Leaves
 import ConAgua.Scan.Line
@@ -146,7 +147,7 @@ to the `FunDecl` of the lanes' modules: the one body every non-stub binding of t
 (`L.Checker.entryProg` first). `checkerStubs` are the called functions with no L code yet: they
 abort (the checker declines). DESIGN.md, "The checker as one program (lane `integrate`)".
 
-1838 functions, 0 of them stubs.
+1840 functions, 0 of them stubs.
 -/
 
 namespace L.Checker
@@ -156,7 +157,7 @@ open L L.Compiler
 /-- The called functions with no L code yet (each aborts). -/
 def checkerStubs : List String := []
 
-/-- The frontend functions `builtin_prelude` runs on the prelude's bytes (110; `preFn`,
+/-- The frontend functions `builtin_prelude` runs on the prelude's bytes (111; `preFn`,
 `ConAgua/Checker/Prelude.lean`), each bound as `pre_<name>`. -/
 def preNames : List String := [
   "apply_any",
@@ -175,6 +176,7 @@ def preNames : List String := [
   "esc_sur",
   "expr_node",
   "expr_val",
+  "fast_line",
   "front_line",
   "front_run",
   "has_escape",
@@ -939,6 +941,7 @@ def checkerProg : Prog := [
   ("expr_val", L.Front.Fields.exprVal),
   ("expr_view_ok", L.Arena.exprViewOkL),
   ("fab_scope_ok", L.Arena.fabScopeOkL),
+  ("fast_line", L.Scan.Fast.fastLine),
   ("field_doms_resolve", L.Ind.fieldDomsResolveL),
   ("field_sort_zero", L.Arena.fieldSortZeroL),
   ("find_is", L.Ind.findIs),
@@ -2179,6 +2182,7 @@ def checkerProg : Prog := [
   ("pre_esc_sur", preFn preTree (L.Front.Unescape.escSur)),
   ("pre_expr_node", preFn preTree (L.Front.exprNode)),
   ("pre_expr_val", preFn preTree (L.Front.Fields.exprVal)),
+  ("pre_fast_line", preFn preTree (L.Scan.Fast.fastLine)),
   ("pre_front_line", preFn preTree (L.Front.frontLine)),
   ("pre_front_run", preFn preTree (L.Front.frontRun)),
   ("pre_has_escape", preFn preTree (L.Scan.Leaves.hasEscape)),

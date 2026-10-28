@@ -6,7 +6,6 @@ import ConAgua.Verdict.VCtx
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
-import ConAgua.Checker.NoVerdictTree
 
 /-!
 # `target_params_def_eq` and its head step: one model and one refinement for both outcomes
