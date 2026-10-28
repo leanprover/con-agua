@@ -49,9 +49,12 @@ PRE_PARTS = 4
 ENTRY_SOURCES = ["L.Checker.entryProg", "L.Checker.preludeProg"]
 PRE = "pre_"
 # the frontend's input (`ConAgua/Checker/Prelude.lean`, `preFn`: byte array 0)
-# the input byte array's number (`IN` in `ConAgua/Layout.lean`)
+# a read or write of the input byte array: `IN`'s number in `ConAgua/Layout.lean`, or `0`, its
+# number before byte and word arrays shared one name space (no byte array has number `0` now; a
+# `--no-build` run on oleans older than the table, as the merge queue's when its build step is
+# skipped, still dumps `0`)
 IN_ID = next(n for n, name in arr_names.byte_names().items() if name == "IN")
-TOUCH = re.compile(rf"\((?:l8|s8) {IN_ID} |\(n8 {IN_ID}\)")
+TOUCH = re.compile(rf"\((?:l8|s8) (?:{IN_ID}|0) |\(n8 (?:{IN_ID}|0)\)")
 ENTRY = "check"
 # every module that imports the generated file (the asm parts, the write-set decisions, ...): its
 # olean may be stale or missing while the file is regenerated
