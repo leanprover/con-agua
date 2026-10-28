@@ -163,7 +163,7 @@ theorem oneRef_step (n : Nat) (hn : n + 1 ≤ 2 ^ 62) (ih : NbRef p dn vis fe en
   rw [hcurd] at hrun7
   have p7 : PStep a6 a7 := roK_pstep hrun7 p6.ok
     (ConRon.Bridge.denote_ext hcurP p6.ext) hcn
-  refine RefE.of_runEq (hrun7 _) ?_
+  refine RefE.of_run_eq (hrun7 _) ?_
   cases bo with
   | false =>
     rw [noE.k_nest_ctors_res_ok.abort1 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ (by rw [hrr]; rfl)]

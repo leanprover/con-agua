@@ -23,18 +23,6 @@ open L.Arena
 
 local notation "V" => ConLeche.CheckMode.verified
 
-/-- The twin's runs agree: a refinement moves along an equation of runs. -/
-theorem RefE.of_run_eq_st {α β : Type} {G : Prop} {x : Except Err α} {T T' : AM β} {a a' : AState}
-    {R : α → β → AState → Prop} (h : T.run a = T'.run a') (h' : RefE G x T' a' R) : RefE G x T a R := by
-  cases x with
-  | ok v =>
-    obtain ⟨y, b, hy, hp⟩ := h'
-    exact ⟨y, b, by rw [h]; exact hy, hp⟩
-  | error e =>
-    exact fun hG hk => by
-      obtain ⟨ce, hce, hc⟩ := h' hG hk
-      exact ⟨ce, by rw [h]; exact hce, hc⟩
-
 /-- The head of `nestFrame`'s group (its first step). -/
 def nestHeadT (grp : List (NIdx × EIdx)) : AM NIdx :=
   match grp with
@@ -167,7 +155,7 @@ theorem frameRef_step (L : NbLook p) (n : Nat) (hn : n ≤ 2 ^ 62) (ih : NbRef p
     have : ¬ (4294967296 : Word).toNat ≤ (rn.headD 0).toNat := by simpa using hrnH
     exact fun e => this (UInt64.le_iff_toNat_le.mp e)
   rw [nfrE.j1.arm1 p n vis ctx fu po pl hi us dO dL nPc gO gL ns _ m1 hrnb]
-  refine RefE.of_run_eq_st (nestFrame_run hrun1) ?_
+  refine RefE.of_run_eq (nestFrame_run hrun1) ?_
   unfold nestFrameRest
   -- the instantiation `hn.{us} ds`, typed
   cases h2 : callE p n "intern_const" [rn.headD 0, us] m1 with

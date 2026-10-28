@@ -125,7 +125,7 @@ theorem walkRef_step (n : Nat) (ih : NbRef p dn vis fe env n) : WalkRef p dn vis
       (hP.setDp hf1 ⟨∅, hM1⟩) hA1 (PStep.refl hC.check.state)
     rw [← hwr, hwd] at h1
     rw [← hwr]
-    refine RefE.of_runEq ?_ h1
+    refine RefE.of_run_eq ?_ h1
     rw [hdec]
     simp only [walkT, walkK, dite_true, Bool.false_eq_true, dite_false, StateT.run_bind, ← decE_eq, hrunw,
       except_ok_bind]

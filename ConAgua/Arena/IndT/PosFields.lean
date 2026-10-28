@@ -25,13 +25,6 @@ local notation "V" => ConLeche.CheckMode.verified
 /-- The core's spec at `.verified` (con-ron's `CoreSpec.of_core`). -/
 theorem coreSpecV : ConRon.Bridge.CoreSpec V checkFuel := ConRon.Bridge.CoreSpec.of_core rfl
 
-/-- Twin computations with the same run (from other states): one refinement serves both. -/
-theorem RefE.of_runEq {α β : Type} {G : Prop} {x : Except Err α} {T T' : AM β} {a a' : AState}
-    {R : α → β → AState → Prop} (h : T.run a = T'.run a') (h' : RefE G x T' a' R) : RefE G x T a R := by
-  cases x with
-  | error e => exact fun hG => ErrClaim.of_run_eqW h (h' hG)
-  | ok v => obtain ⟨y, a'', hy, hR⟩ := h'; exact ⟨y, a'', h ▸ hy, hR⟩
-
 section steps
 variable {p : Prog} (L : NbLook p) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
   {env : ConLeche.Env} (henv : ConLeche.EnvWF env)
@@ -85,7 +78,7 @@ theorem fieldsRef_step (n : Nat) (ih : NbRef p dn vis fe env n) : FieldsRef p dn
     (ConRon.Bridge.view_forallE_of_viewBind (by simp [htag]) hvbS.symm) hcurP
   simp only [ConLeche.Expr.WScoped] at hw
   -- the twin up to the domain's walk
-  refine RefE.of_runEq (a' := a)
+  refine RefE.of_run_eq (a' := a)
     (T' := ConRon.Arena.nestPos V fe c fu.toNat prog (base + j).toNat (0 : Word).toNat (decI d) NS >>= fun v => (do
         let fv ← internFVarE (base.toNat + j.toNat) (decI d)
         let b2 ← instantiate1Fast coreWalkFuel (decI b) fv 0
