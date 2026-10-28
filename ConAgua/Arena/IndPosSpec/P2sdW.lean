@@ -4,7 +4,7 @@ import ConAgua.Arena.IndPosSpec.P2rtW
 /-!
 # P2sdW
 
-`p2sdW`, `p2sdK1`, `p2sdK2`, `p2sdK3`, `p2rtW_succ`, `p2rtK1_some` and the lemmas only they use.
+`p2sdW`, `p2sdK1`, `p2sdK2`, `p2sdK3`, `nestSeeds_spec` and the lemmas only they use.
 -/
 
 noncomputable section
@@ -42,22 +42,8 @@ def p2sdK3 (cR : CallM) (n : Nat) (vis ctx sO sL : Word) : Option (List Word × 
 end
 
 section arms
-variable (cR : CallM) (n : Nat) (m m1 : Mem) (vis ctx hO hL cO cL ns oO oL ns2 q dO dL k f sO sL hi key nPc : Word)
+variable (cR : CallM) (n : Nat) (m m1 : Mem) (vis ctx ns f sO sL hi key nPc : Word)
   (r : List Word)
-theorem p2rtW_succ : p2rtW cR (n + 1) m vis ctx hO hL cO cL ns oO oL =
-    if cL = 0 then some ([oO, oL, ns], m)
-    else p2rtK1 cR n vis ctx hO hL cO cL oO oL
-      (nbCtorsW cR n m vis ctx 1 0 0 0 (nhiW m ctx 0) (rdW (m.arr64 IW) (ctx + 10)) (rdW (m.arr64 IW) (ctx + 7))
-        (rdW (m.arr64 IW) (ctx + 8)) (rdW (m.arr64 IW) ctx) (rdW (m.arr64 IW) (ctx + 1)) hO hL
-        (rdW (m.arr64 IW) (rdW (m.arr64 IW) cO)) (rdW (m.arr64 IW) (rdW (m.arr64 IW) cO + 1)) ns 0 0) := by
-  rw [p2rtW]
-theorem p2rtK1_some : p2rtK1 cR n vis ctx hO hL cO cL oO oL (some (r, m1)) =
-    p2rtK2 cR n vis ctx hO hL cO cL oO oL (r.tail.tail.headD 0) (posRecW m1 [r.headD 0, r.tail.headD 0]) := by
-  rw [p2rtK1]
-theorem p2rtK2_some : p2rtK2 cR n vis ctx hO hL cO cL oO oL ns2 (some (q, m1)) =
-    p2rtK3 cR n vis ctx hO hL cO cL ns2 (snocW n m1 oO oL q) := by rw [p2rtK2]
-theorem p2rtK3_some : p2rtK3 cR n vis ctx hO hL cO cL ns2 (some (r, m1)) =
-    p2rtW cR n m1 vis ctx hO hL (cO + 1) (cL - 1) ns2 (r.headD 0) (r.tail.headD 0) := by rw [p2rtK3]
 theorem p2sdW_succ : p2sdW cR (n + 1) m vis ctx sO sL ns =
     if sL = 0 then some ([ns], m)
     else p2sdK1 cR n vis ctx sO sL (nhiW m ctx 0) (rdW (m.arr64 IW) (rdW (m.arr64 IW) sO))
@@ -77,26 +63,6 @@ end arms
 section spec
 variable {p : Prog} (L : RsLook p)
 include L
-
-theorem nestRoot_spec (cR : CallM) (hcR : CallSpec p cR) (n : Nat) : ∀ (s₀ : St) (vis ctx hO hL cO cL ns oO oL : Word),
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "nest_root" [vis, ctx, hO, hL, cO, cL, ns, oO, oL]
-    ⦃fun r s' => LocEq s' s₀ ∧ p2rtW cR n s₀.mem vis ctx hO hL cO cL ns oO oL =
-      some ([r.headD 0, r.tail.headD 0, r.tail.tail.headD 0], s'.mem); ⊤⦄ := by
-  induction n with
-  | zero =>
-    intro s₀ vis ctx hO hL cO cL ns oO oL
-    exact triple_post (invoke_exec0 p _ _ s₀) (fun _ _ h => h.elim)
-  | succ n ih =>
-    intro s₀ vis ctx hO hL cO cL ns oO oL
-    have R := L.nb.ct.cr.rx
-    have hCtors := (nbSpec_all L.nb cR hcR n).2.2.2.2.2.2.2.1
-    simp only [invoke_eq _ L.proot, callFn, nestRootL]
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-        nestCtxHiAt_specE p R.hi n, hCtors, posRec2_specW p R.ha R.h2 n,
-        slSnoc_specW p R.ha L.nb.nit.hc2 L.nb.nag.hsn n, ih] <;>
-      simp_all [p2rtW_succ, p2rtK1_some, p2rtK2_some, p2rtK3_some,
-        LocEq, BinOp.eval, St.setLocs_cons, Cmp.eval, St.setLoc_loc, St.setLoc_mem,
-        St.setLocs_nil, Sig.retVal, Sig.retOr, Locals.init_cons_zero, Locals.init_cons_succ, rdW, pos2_getElem_getD]
 
 theorem nestSeeds_spec (cR : CallM) (hcR : CallSpec p cR) (n : Nat) : ∀ (s₀ : St) (vis ctx sO sL ns : Word),
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "nest_seeds" [vis, ctx, sO, sL, ns]

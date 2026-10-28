@@ -1,5 +1,6 @@
 import ConAgua.Arena.IndT.KeepC
 import ConAgua.Arena.IndT.PosRoot
+import ConAgua.Verdict.PosTopE2
 import ConAgua.Arena.IndT.BncAfr
 import ConAgua.Arena.IndT.Install6
 import ConAgua.Arena.IndInstallSpec.Pos3Init
@@ -14,8 +15,7 @@ import ConAgua.L.GrindAttr
 
 `cbposW_ok`'s proof (`IndInstallSpec/Pos3Init`) under `StageC`, its twin side transcribed from con-ron's
 `checkBlockPositivity_spec`: the walk's context (`bncW_sim`, con-ron's `blockNestCtx_spec` on its
-run for the `CoreStep` and the context's denotation), `nest_uniform` (`nestUniform_refines`,
-`nestUniform_spec`), the fresh state (an L-only step), `nest_root` (`nestRoot_refinesC`; con-ron's
+run for the `CoreStep` and the context's denotation), `nest_uniform` (`nu_ref`), the fresh state (an L-only step), `nest_root` (`nestRoot_refinesC`; con-ron's
 `nestRoot_spec` on its run for the kinds' denotation), `pin_word(53)` (`zeroLevel_run`),
 `lvl_eq_c` (its `StageR` contract `lvlEqStub_spec` with `lvlEq?_crun`), the fields' universes
 (`iaaW_simC`), the normal forms (an L-only step). The `CoreStep` of the whole run from
@@ -268,8 +268,6 @@ theorem cbposW_okC (hP : PosBlkProg p) {fs : List FnName} (hclP : closedA p posF
   -- `nest_uniform`
   rcases h2 : callW p (n + 2) "nest_uniform" [r1.headD 0, caO, caL] s1.mem with _ | ⟨r2, m2⟩ <;> rw [h2] at h; · simp [cbposW.k_nest_uniform.none] at h
   rw [cbposW.k_nest_uniform.arm1] at h
-  obtain ⟨s2, rfl, -, hw2⟩ := triple_of_callW (s₀ := ⟨s1.mem, Locals.init []⟩)
-    (nestUniform_spec p hP.nu hP.nuCs hP.nuP (realCall p) (realCall_spec p) (n + 2) _ (r1.headD 0) caO caL) h2
   have hcss1P := ConRon.Bridge.Inductives.dCtors_ext.list c1.ext _ _ hcssP
   have hPc : ∀ cs ∈ css, ∀ x ∈ cs, ∃ cvP, Frontend.denoteCV a1.store x.1 = some cvP := by
     intro cs hcs x hx
@@ -278,7 +276,9 @@ theorem cbposW_okC (hP : PosBlkProg p) {fs : List FnName} (hclP : closedA p posF
     simp only [ConRon.Bridge.Inductives.dCtor, Option.map_eq_some_iff] at hz
     obtain ⟨cvP, hcvP', -⟩ := hz
     exact ⟨cvP, hcvP'⟩
-  obtain ⟨a2, hrun2, hS2, hg2, hP2, hJ2⟩ := unW_ok dn fe vis (r1.headD 0) c hhi1 (realCall p)
+  obtain ⟨s2, rfl, -, _, a2, hrun2, hS2, hg2, hP2, hJ2⟩ := RefE.run_okW
+    (nuE_spec p hP.nu hP.nuCs hP.nuP (n + 2) ⟨s1.mem, Locals.init []⟩ (r1.headD 0) caO caL)
+    (nu_ref dn fe vis (r1.headD 0) c hhi1
     (fun m' a' => StageC dn vis fe env m' a' ∧ AbsOK m' ∧ ConRon.Arena.Ext a1.store a'.store)
     (fun cvv => ∃ cvP, Frontend.denoteCV a1.store cvv = some cvP)
     (fun _ a' _ cvv hJ hPx _ _ m1' a1' _ b hpd hrun hS1' => by
@@ -298,7 +298,7 @@ theorem cbposW_okC (hP : PosBlkProg p) {fs : List FnName} (hclP : closedA p posF
         ⟨ConRon.Bridge.Inductives.dCtx_ext _ hxm _ _ hctx, ConRon.Bridge.denoteCV_ext hcvP' hxm⟩ hrun
       have hAm' := hA' nuAfr hAm
       exact ⟨hCm.of_cstep hS' hAm' c3, hAm', hxm.trans c3.ext⟩)
-    (n + 2) s1.mem s2.mem a1 caO caL css hw2 hS1 ⟨hC1, hA1, ConRon.Arena.Ext.refl _⟩ hPc hU1 hlen hcss1 hP1
+    (n + 2) hS1 ⟨hC1, hA1, ConRon.Arena.Ext.refl _⟩ hPc hU1 hlen hcss1 hP1) h2
   obtain ⟨c2, -, -, -⟩ := ConRon.Bridge.Inductives.nestUniform_spec (μ := V) (env := env) (fe := fe)
     env.find? c ctxP css cssP a1 _ _ hC1.check
     ⟨hctx, hcss1P⟩ hrun2
