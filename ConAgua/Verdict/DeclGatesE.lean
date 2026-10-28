@@ -1,11 +1,11 @@
-import ConAgua.Verdict.DeclDefnE
+import ConAgua.Arena.DeclDefnT
 import ConAgua.Arena.GrindAttr
 /-!
-# The verdict claims of the definition arm's gates (lane `verdicts-b`, helper `d`)
+# The definition arm's gates: their callees outside the verdict closure (lane `verdicts-b`)
 
-`defn_nat_gate`'s (the structural-`Nat` gate: `dng_ref`'s error half, `DeclNatGateT.lean`); the
-`Nat.div`-family pin gate's (`defn_div_gate` / `check_div_mod_pin*` / `check_type_pins` /
-`check_div_mod_certs`) are in `DeclGatesE2.lean`.
+`gateNvList` and `nvlG`: a failing callee of the gates outside the verdict closure claims nothing.
+The `Nat.div`-family pin gate's claims (`defn_div_gate` / `check_div_mod_pin*`) are in
+`DeclGatesE2.lean`; the structural gate's refinement is `dng_ref` (`DeclNatGateT.lean`).
 -/
 
 set_option experimental.vcgen true

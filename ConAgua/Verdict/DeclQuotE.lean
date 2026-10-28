@@ -1,4 +1,3 @@
-import ConAgua.Verdict.DeclBasisE
 import ConAgua.Verdict.DeclArmsE
 import ConAgua.Arena.DeclAxQuotT
 import ConAgua.Arena.GrindAttr

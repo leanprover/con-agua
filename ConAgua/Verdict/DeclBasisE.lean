@@ -1,4 +1,3 @@
-import ConAgua.Verdict.DeclHdrE
 import ConAgua.Arena.DeclBasisSpec2
 
 /-!

@@ -1,5 +1,4 @@
 import ConAgua.Arena.DeclDivGateT1
-import ConAgua.Verdict.VCtx
 import ConAgua.Arena.DeclDivModSpec.RomPinSets
 import ConAgua.Arena.DeclCrpT
 

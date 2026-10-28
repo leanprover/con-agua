@@ -1,4 +1,3 @@
-import ConAgua.Arena.DeclValT
 import ConAgua.Verdict.DeclValsE
 import ConAgua.Arena.DeclArmLoop
 import ConRon.Bridge.Checker.Split

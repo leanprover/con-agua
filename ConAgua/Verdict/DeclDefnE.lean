@@ -1,7 +1,6 @@
 import ConAgua.Verdict.DeclArmsE
 import ConAgua.Arena.DeclDefnT
 import ConAgua.Arena.GrindAttr
-import ConAgua.L.ModelGen
 
 /-!
 # The verdict claim of the definition arm `check_decl_defn` (lane `verdicts-b`, helper `d`)
