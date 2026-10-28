@@ -3423,6 +3423,35 @@ not rerun (same tree, same result; the landing note says so). `_tmp/mq-log.csv` 
 modules the gate build compiled, so misses show. The build gate's timeout is back to 90 min (it was raised
 to 3 h as a stopgap).
 
+## Warnings of cache-restored modules (2026-10-28, lane `warngate`)
+
+**Problem.** CI fails on any Lean warning, but local gates did not see them: Lake's artifact cache
+(`_tmp/lake-cache-v2/outputs/<pkg>/<input hash>.json`) maps an input hash to the outputs (olean, ilean, c,
+ir) only; a module restored from it gets a *synthetic* trace with `"log": []`, so Lake neither prints nor
+replays its warnings. Every module a lane touches that some other checkout had compiled first (a helper
+lane, the queue, a second worktree) passed silently; master got an unused variable, deprecated
+`if_pos`/`if_neg` and unused simp arguments this way. `LAKE_COLD=1` sees them but rebuilds everything.
+
+**Fix.** A log store beside the cache, `_tmp/lake-cache-v2/logs/ConAgua/<input hash>.json` = the module
+and its non-trace log entries. `scripts/lake` fills it after every writing (or cold) build whose sources
+did not change, from the non-synthetic traces that build wrote (the guard that publishes the mappings, so
+the TOCTOU of "Cache incident" cannot attach a log to the wrong text). The input hash (the trace's
+`depHash`) covers source, imports' oleans and options, and olean non-determinism ("Cache misses between
+worktrees") cannot make two logs for one hash differ. The new gate step `warnings`
+(`scripts/lean_warnings.py`, after `build`, selected with it) takes, per .lean file changed since the base:
+the local trace's log if Lake compiled it here, else the store's entry for the trace's `depHash`, else
+elaborates it with `lake lean FILE -- --json` (Lake's `prepareLeanCommand`: the module's own setup and
+`leanArgs`, as in the build), four at a time, and stores that log too. It first checks
+`lake build --no-build` on those modules, so a trace never belongs to an older text.
+
+**Measurements** (warngate worktree, master 72557e98, built from the cache in 7 s). The step on the
+28 .lean files of the retire-front landing (0dd595e6): 28 elaborated (no logs stored yet) 1 min 11 s
+(sequential through the wrapper's lock it was 5 min 5 s); rerun, all 28 from the store, 3 s; 5 files from
+the trace or the store, 0.5 s. An injected unused variable in a module restored from the cache in a
+second worktree: the build log is clean, the step reports it from the store (0.6 s); with the store entry
+removed, by elaboration (8 s). A cold build of master 72557e98 (`LAKE_COLD=1`, 1318 modules compiled,
+8 min 21 s at 16 threads): no warning in ConAgua (only Kraken's).
+
 ## Does the relation scale? (2026-10-21, lane `scale`)
 
 Question: does the L ⊑ twin relation (`ArenaR`, `ArenaD`, the `GoOK`-style specs) scale to all the

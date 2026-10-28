@@ -261,6 +261,12 @@ Lanes do not merge into master: they **submit** a gated branch to the merge queu
    the steps your change since master can affect: the cheap checks always, `build` only for Lean
    sources, the lakefile, the manifest or checker.s, the closure `--check`s only when their inputs changed, `e2e`
    only for main.c, checker.s or pins.bin; `--list` shows the selection and why, `--all` runs everything).
+   With `build` comes `warnings` (`scripts/lean_warnings.py`): it fails on any Lean warning in the .lean
+   files your branch changed (vendor/ excluded), modules restored from the shared cache included, whose
+   warnings a build log never shows: it reads each module's log from its trace, from the log store
+   `scripts/lake` keeps beside the cache (`_tmp/lake-cache-v2/logs/`), or, if neither has it, elaborates
+   the file once (`lake lean`, and stores that log). CI fails on any warning, so fix them before submitting
+   (`scripts/fix-lean-warnings.py` does the mechanical kinds from the step's log).
    A green run on a clean tree stamps the commit: when the queue's merge is exactly that tree (you merged
    the current master), the queue reruns only the cheap steps; otherwise its build is incremental (cache
    hits except for modules both sides affect).
