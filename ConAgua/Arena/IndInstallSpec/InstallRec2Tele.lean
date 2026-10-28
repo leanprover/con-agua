@@ -5,12 +5,11 @@ import ConAgua.Arena.RecClassSpec.PiBWRoom
 import ConAgua.Arena.RecStab
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr
-import ConAgua.L.ModelGen
 
 /-!
 # InstallRec2Tele
 
-`MemsOK`, `MemsOK.grow`, `decTele`, `decTele_mono`, `ibts_spec`, `ibtsW` and the lemmas only they use.
+`MemsOK`, `MemsOK.grow`, `decTele`, `decTele_mono` and the lemmas only they use.
 -/
 
 noncomputable section
@@ -72,12 +71,6 @@ theorem decTele_mono (q : Nat) : OMono (fun m => decTele m q) := by
     | apply OMono.bind
     | intro _
     )
-
-/-- **`check_block_teles` is its model `ibtsW`** (generated). -/
-l_model ibts_spec (p : Prog) (hp : p.lookup "check_block_teles" = some checkBlockTeles)
-  fns [hp ↦ ibtsW]
-  specs [callW_spec p n "check_block_tele", callW_spec p n "rec2", callW_spec p n "sl_cons"]
-  grind [ind_grind] finish [rdW_eq] gen 20
 
 /-! ## The relation -/
 
