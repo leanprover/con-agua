@@ -22,14 +22,6 @@ open L.Arena
 
 local notation "V" => ConLeche.CheckMode.verified
 
-l_model fsortsE_spec (p : Prog) (hf : p.lookup "check_struct_field_sorts_i" = some checkStructFieldSortsIL)
-  fns [hf ↦ fsortsE] grind [arena_grind] fold [tierW, idxW]
-=======
-l_model sdomsE_spec (p : Prog) (hf : p.lookup "check_struct_doms_at" = some checkStructDomsAtL)
-  fns [hf ↦ sdomsE] grind [arena_grind] fold [tierW, idxW]
->>>>>>> unify-left-fs
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] errors
-
 section sims
 variable {p : Prog} (hq : KnotStageProg p) {dn : NIdx → Option ConLeche.Name} {vis : Word}
   {fe : IFEnv} {env : ConLeche.Env} (henv : ConLeche.EnvWF env)
