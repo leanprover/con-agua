@@ -1,4 +1,3 @@
-import ConAgua.Front.FrontPreOK2
 import ConAgua.Front.FrontRun
 
 /-!
@@ -48,10 +47,12 @@ theorem applyAnyW_grow (p : Prog) (hFI : L.Front.Ind.IndFieldLookups p)
       | ind tys cts rcs =>
         obtain ⟨-, v, hv, e', hscan⟩ := hX
         obtain ⟨x, hx, hxm⟩ := runF_some h
-        have hW := M.of_run (P := fun s => s = ⟨m, Locals.init []⟩) rfl hx
-          (L.Front.Ind.applyInd_spec p hFI hAI hII hXI b.data hsize x.1 _ hm f.name)
+        have hW := M.of_run' (P := fun s => s = ⟨m, Locals.init []⟩) rfl hx
+          (L.Front.Ind.applyInd_specE p hXI.apply_ind x.1 _ f.name)
         rw [hxm, hv] at hW
-        exact L.Front.Ind.applyIndW_grow hAI h64 hsize hR hD hok hscan hW.2
+        have hP := L.Front.Ind.applyInd_ref hAI hFI hII h64 hsize x.1 hm hR hD hok hscan
+        rw [hW.2] at hP
+        exact hP.grow
       | ax _ _ => exact absurd (hX.1.symm.trans h25) (by decide)
       | defn _ _ _ _ => exact absurd (hX.1.symm.trans h25) (by decide)
       | thm _ _ => exact absurd (hX.1.symm.trans h25) (by decide)

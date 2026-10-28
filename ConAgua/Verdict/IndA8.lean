@@ -43,7 +43,7 @@ theorem cid_claim3 {p : Prog} (hkp : KnotStageProg p) (hV : ValProg p)
     (hkr : AbsKeep p "block_raw_rec")
     (hnv : closedNV p _root_.L.Checker.nvFns = true) (hUL : UceLookups p) (eGrc : GenRecCheckE p)
     (eSum : CheckSumTeleE p) (eSC : CheckSumCtorsE p) (eSF : CheckStructFieldSortsIE p)
-    (eTbl : CheckStructProjTableRE p) (eClm : ClassMajorsE p)
+    (eTbl : CheckStructProjTableRE p)
     {n : Nat} (hn : n ≤ 2 ^ 62)
     {dn : NIdx → Option ConLeche.Name} (hdn : DnInj dn) {vis : Word} {fe : IFEnv} {m : Mem}
     {a : AState} {o l w : Word} {block : List IConstantInfo}
@@ -61,6 +61,6 @@ theorem cid_claim3 {p : Prog} (hkp : KnotStageProg p) (hV : ValProg p)
     ErrClaim (checkDecl V pins fe (.indDecl block w.toNat)) a e :=
   cid_claim2 hkp hV hOpf hLC hLT hApd hCrk hIlpf hLz P hcl hfs hfr hcl2 hfs2 hclR hfR hclT hfT hclC hfC hkP hkt
     hkr hnv (checkBasisDeclE_of hnv) (checkConstantValE_of hnv (hkp.toKnotTopProg.coreStubsE hnv) hUL) eGrc eSum
-    eSC eSF eTbl eClm hn hdn he hT hfold hblk hb hden hM hfB hfRc hclH hfH hclM hfM hlpd
+    eSC eSF eTbl hn hdn he hT hfold hblk hb hden hM hfB hfRc hclH hfH hclM hfM hlpd
 
 end L.Ind

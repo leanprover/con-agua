@@ -7,7 +7,7 @@ import ConAgua.L.GrindAttr
 /-!
 # CfaFv
 
-`cfaLoop`, `classFieldsAgreeL'`, `classFieldsAgreeL_eq`, `cfaK5`, `cfaK4`, `cfaK3` and the lemmas only they use.
+What `class_fields_agree`'s refinement reads: the datum variable (`cfaFv_in`/`cfaFv_out`), the callees' write sets, the fields' records, `CfaProg`.
 -/
 
 noncomputable section
@@ -24,186 +24,15 @@ open L.Arena
 
 local notation "V" => ConLeche.CheckMode.verified
 
-/-! ## The loop as a named block -/
+/-! ## The datum variable -/
 
-/-- The loop of `classFieldsAgreeL` (RecGen.lean), named for its spec. -/
--- con-ron: none — `classFieldsAgreeL`'s own loop (`rfl`), a named block for the proof
-def cfaLoop : Stmt := lblk (vis, p, ftOff, ftLen, msOff, msLen, fvsOff, fvsLen, esOff, esLen, i0,
-    ksOff, ksLen, j, i, kf, tag, t, tele, fv, fty, ok, teleOff, teleLen, leaf, mt, b) {
-  for j < ksLen {
-    kf := IW.u64[ksOff + j];
-    tag := IW.u64[kf];
-    if tag == 1 {
-      t := IW.u64[kf + 1];
-      tele := IW.u64[kf + 2];
-      if i < fvsLen { fv := IW.u64[fvsOff + i] } else { fv := call intern_bvar(0) };
-      fty := call fvar_type_d(fv);
-      (ok, teleOff, teleLen, leaf) := call strip_pis(tele, fty);
-      if ok == 0 { abort };
-      mt := call target_major_at(msOff, msLen, t);
-      b := call class_leaf_at(mt, leaf);
-      if b == 0 { fail R_GENERATED_RECURSOR_FIELD };
-      b := call class_nodes_agree(vis, p, ftOff, ftLen, mt, teleOff, teleLen, leaf, fvsOff, fvsLen,
-        i, esOff, esLen)
-    };
-    i := i + 1
-  }
-}
-
-/-- `classFieldsAgreeL`, with its loop spliced from `cfaLoop`. -/
--- con-ron: none — `classFieldsAgreeL` itself (`rfl`), its loop a named block for the proof
-def classFieldsAgreeL' : FunDecl := lfn
-    (vis, p, ftOff, ftLen, msOff, msLen, fvsOff, fvsLen, esOff, esLen, i0, ksOff, ksLen)
-    locals (j, i, kf, tag, t, tele, fv, fty, ok, teleOff, teleLen, leaf, mt, b) {
-  j := 0;
-  i := i0;
-  ⟪cfaLoop⟫;
-  return 0
-}
-
-theorem classFieldsAgreeL_eq : classFieldsAgreeL = classFieldsAgreeL' := rfl
-
-/-! ## The model -/
-
-section model
-variable (p : Prog) (k : Nat)
-
-/-- After `class_leaf_at`: node agreement. -/
-def cfaK5 (vis q fto ftl fvo fvl i eo el teo tel leaf mt : Word) (rest : Mem → Option Mem) :
-    Option (List Word × Mem) → Option Mem
-  | none => none
-  | some (r, m) => if r.headD 0 = 0 then none else
-      cfaK6 rest (callW p k "class_nodes_agree" [vis, q, fto, ftl, mt, teo, tel, leaf, fvo, fvl, i, eo, el] m)
-
-/-- After `target_major_at`: the leaf's class. -/
-def cfaK4 (vis q fto ftl fvo fvl i eo el teo tel leaf : Word) (rest : Mem → Option Mem) :
-    Option (List Word × Mem) → Option Mem
-  | none => none
-  | some (r, m) => cfaK5 p k vis q fto ftl fvo fvl i eo el teo tel leaf (r.headD 0) rest
-      (callW p k "class_leaf_at" [r.headD 0, leaf] m)
-
-/-- After `strip_pis`: the field's class. -/
-def cfaK3 (vis q fto ftl mo ml fvo fvl i eo el t : Word) (rest : Mem → Option Mem) :
-    Option (List Word × Mem) → Option Mem
-  | none => none
-  | some (r, m) => if r.headD 0 = 0 then none else
-      cfaK4 p k vis q fto ftl fvo fvl i eo el (r.tail.headD 0) (r.tail.tail.headD 0)
-        (r.tail.tail.tail.headD 0) rest (callW p k "target_major_at" [mo, ml, t] m)
-
-/-- After `fvar_type_d`: the field's telescope. -/
-def cfaK2 (vis q fto ftl mo ml fvo fvl i eo el t tele : Word) (rest : Mem → Option Mem) :
-    Option (List Word × Mem) → Option Mem
-  | none => none
-  | some (r, m) => cfaK3 p k vis q fto ftl mo ml fvo fvl i eo el t rest
-      (callW p k "strip_pis" [tele, r.headD 0] m)
-
-/-- After the datum variable: its type. -/
-def cfaK1 (vis q fto ftl mo ml fvo fvl i eo el t tele : Word) (rest : Mem → Option Mem) :
-    Option (List Word × Mem) → Option Mem
-  | none => none
-  | some (r, m) => cfaK2 p k vis q fto ftl mo ml fvo fvl i eo el t tele rest
-      (callW p k "fvar_type_d" [r.headD 0] m)
-
-/-- **The model of `class_fields_agree`'s loop** at L fuel `k`, from cursor `j` and field `i`: the
-memory at the exit. -/
-def cfaW : Nat → Mem → Word → Word → Word → Word → Word → Word → Word → Word → Word → Word → Word →
-    Word → Word → Word → Option Mem
-  | 0, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => none
-  | k + 1, m, vis, q, fto, ftl, mo, ml, fvo, fvl, eo, el, ko, kl, j, i =>
-    if j < kl then
-      if rdW (m.arr64 IW) (rdW (m.arr64 IW) (ko + j)) = 1 then
-        cfaK1 p k vis q fto ftl mo ml fvo fvl i eo el
-          (rdW (m.arr64 IW) (rdW (m.arr64 IW) (ko + j) + 1)) (rdW (m.arr64 IW) (rdW (m.arr64 IW) (ko + j) + 2))
-          (fun m' => cfaW k m' vis q fto ftl mo ml fvo fvl eo el ko kl (j + 1) (i + 1))
-          (cfaFv p k m fvo fvl i)
-      else cfaW k m vis q fto ftl mo ml fvo fvl eo el ko kl (j + 1) (i + 1)
-    else some m
-
-section arms
-variable (m : Mem) (vis q fto ftl mo ml fvo fvl eo el ko kl j i t tele teo tel leaf mt : Word)
-  (r : List Word) (rest : Mem → Option Mem)
-theorem cfaK6_some : cfaK6 rest (some (r, m)) = rest m := rfl
-theorem cfaK5_bad (h : r.headD 0 = 0) :
-    cfaK5 p k vis q fto ftl fvo fvl i eo el teo tel leaf mt rest (some (r, m)) = none := by
-  simp only [cfaK5]; rw [ite_eq_left h]
-theorem cfaK5_ok (h : ¬ r.headD 0 = 0) :
-    cfaK5 p k vis q fto ftl fvo fvl i eo el teo tel leaf mt rest (some (r, m)) =
-      cfaK6 rest (callW p k "class_nodes_agree" [vis, q, fto, ftl, mt, teo, tel, leaf, fvo, fvl, i, eo, el] m) := by
-  simp only [cfaK5]; rw [ite_eq_right h]
-theorem cfaK4_some : cfaK4 p k vis q fto ftl fvo fvl i eo el teo tel leaf rest (some (r, m)) =
-    cfaK5 p k vis q fto ftl fvo fvl i eo el teo tel leaf (r.headD 0) rest
-      (callW p k "class_leaf_at" [r.headD 0, leaf] m) := rfl
-theorem cfaK3_bad (h : r.headD 0 = 0) :
-    cfaK3 p k vis q fto ftl mo ml fvo fvl i eo el t rest (some (r, m)) = none := by
-  simp only [cfaK3]; rw [ite_eq_left h]
-theorem cfaK3_ok (h : ¬ r.headD 0 = 0) :
-    cfaK3 p k vis q fto ftl mo ml fvo fvl i eo el t rest (some (r, m)) =
-      cfaK4 p k vis q fto ftl fvo fvl i eo el (r.tail.headD 0) (r.tail.tail.headD 0)
-        (r.tail.tail.tail.headD 0) rest (callW p k "target_major_at" [mo, ml, t] m) := by
-  simp only [cfaK3]; rw [ite_eq_right h]
-theorem cfaK2_some : cfaK2 p k vis q fto ftl mo ml fvo fvl i eo el t tele rest (some (r, m)) =
-    cfaK3 p k vis q fto ftl mo ml fvo fvl i eo el t rest (callW p k "strip_pis" [tele, r.headD 0] m) := rfl
-theorem cfaK1_some : cfaK1 p k vis q fto ftl mo ml fvo fvl i eo el t tele rest (some (r, m)) =
-    cfaK2 p k vis q fto ftl mo ml fvo fvl i eo el t tele rest (callW p k "fvar_type_d" [r.headD 0] m) := rfl
+section dv
+variable (p : Prog) (k : Nat) (m : Mem) (fvo fvl i : Word)
 theorem cfaFv_in (h : i < fvl) : cfaFv p k m fvo fvl i = some ([rdW (m.arr64 IW) (fvo + i)], m) := by
   simp only [cfaFv]; rw [ite_eq_left h]
 theorem cfaFv_out (h : ¬ i < fvl) : cfaFv p k m fvo fvl i = callW p k "intern_bvar" [0] m := by
   simp only [cfaFv]; rw [ite_eq_right h]
-theorem cfaW_exit (h : ¬ j < kl) :
-    cfaW p (k + 1) m vis q fto ftl mo ml fvo fvl eo el ko kl j i = some m := by
-  simp only [cfaW]; rw [ite_eq_right h]
-theorem cfaW_ord (h : j < kl) (h1 : ¬ rdW (m.arr64 IW) (rdW (m.arr64 IW) (ko + j)) = 1) :
-    cfaW p (k + 1) m vis q fto ftl mo ml fvo fvl eo el ko kl j i =
-      cfaW p k m vis q fto ftl mo ml fvo fvl eo el ko kl (j + 1) (i + 1) := by
-  simp only [cfaW]; rw [ite_eq_left h, ite_eq_right h1]
-theorem cfaW_rec (h : j < kl) (h1 : rdW (m.arr64 IW) (rdW (m.arr64 IW) (ko + j)) = 1) :
-    cfaW p (k + 1) m vis q fto ftl mo ml fvo fvl eo el ko kl j i =
-      cfaK1 p k vis q fto ftl mo ml fvo fvl i eo el
-        (rdW (m.arr64 IW) (rdW (m.arr64 IW) (ko + j) + 1)) (rdW (m.arr64 IW) (rdW (m.arr64 IW) (ko + j) + 2))
-        (fun m' => cfaW p k m' vis q fto ftl mo ml fvo fvl eo el ko kl (j + 1) (i + 1))
-        (cfaFv p k m fvo fvl i) := by
-  simp only [cfaW]; rw [ite_eq_left h, ite_eq_left h1]
-end arms
-
-end model
-
-attribute [ind_grind] cfaK6_some cfaK5_bad cfaK5_ok cfaK4_some cfaK3_bad cfaK3_ok cfaK2_some cfaK1_some
-  cfaFv_in cfaFv_out cfaW_exit cfaW_ord cfaW_rec
-
-/-! ## The `vcgen` specs -/
-
-set_option maxHeartbeats 1600000 in
-theorem cfaLoop_spec (p : Prog) (k : Nat) (s₀ : St) :
-    ⦃fun s => s = s₀⦄ exec p k cfaLoop
-    ⦃fun r s' => r = .normal ∧
-      cfaW p k s₀.mem (s₀.loc 0) (s₀.loc 1) (s₀.loc 2) (s₀.loc 3) (s₀.loc 4) (s₀.loc 5) (s₀.loc 6)
-        (s₀.loc 7) (s₀.loc 8) (s₀.loc 9) (s₀.loc 11) (s₀.loc 12) (s₀.loc 13) (s₀.loc 14) = some s'.mem; ⊤⦄ := by
-  induction k generalizing s₀ with
-  | zero => vcgen [exec] <;> grind
-  | succ k ih =>
-    rw [exec, step_while (w := cfaLoop) rfl]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih,
-        callW_spec p k "intern_bvar", callW_spec p k "fvar_type_d", callW_spec p k "strip_pis",
-        callW_spec p k "target_major_at", callW_spec p k "class_leaf_at",
-        callW_spec p k "class_nodes_agree"] <;>
-      finish (gen := 40) (instances := 20000) [rdW_eq]
-
-theorem cfa_spec (p : Prog) (hp : p.lookup "class_fields_agree" = some classFieldsAgreeL) (n : Nat)
-    (s₀ : St) (vis q fto ftl mo ml fvo fvl eo el i0 ko kl : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "class_fields_agree"
-      [vis, q, fto, ftl, mo, ml, fvo, fvl, eo, el, i0, ko, kl]
-    ⦃fun _ s' => LocEq s' s₀ ∧
-      cfaW p n s₀.mem vis q fto ftl mo ml fvo fvl eo el ko kl 0 i0 = some s'.mem; ⊤⦄ := by
-  rcases n with _ | n
-  · exact triple_post (invoke_exec_zero p _ _ _) (fun _ _ h => h.elim)
-  rw [invoke_eq _ hp, classFieldsAgreeL_eq]
-  simp only [callFn, classFieldsAgreeL']
-  sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
-      fun s => Triple.step_exec (cfaLoop_spec p (n + 1) s)] <;>
-    finish (gen := 40) (instances := 20000) [loc_init4, loc_init5, loc_init6, loc_init7, loc_init8,
-      loc_init9, loc_init10, loc_init11, loc_init12]
+end dv
 
 /-! ## Write sets -/
 

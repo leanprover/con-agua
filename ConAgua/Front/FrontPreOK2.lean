@@ -1,6 +1,5 @@
 import ConAgua.Front.FrontPreOK1
 import ConAgua.Front.IndApplyRefine9
-import ConAgua.Front.IndApplySpec3
 import ConAgua.Front.IndFieldsLink3
 import ConAgua.Front.IndInstallRefine5
 import Std.Tactic.BVDecide.Normalize.Prop
@@ -8,16 +7,20 @@ import Std.Tactic.BVDecide.Normalize.Prop
 /-!
 # The frontend's records, word by word, II: an inductive line (lane `pipeline`)
 
-`applyIndW_grow`: a successful `apply_ind` (on con-leche's `ok` path of the block's scan) appends
-one record of kind `6` whose block offset is the old top of `DLP` plus one, and changes neither the
-old records nor the pool up to its old top (`DGrow`). `installW_grow` is the first part of
+`apply_ind`'s unified model and refinement (`applyInd_ref`): a successful `apply_ind` (on
+con-leche's `ok` path of the block's scan) is the twin's `.ind` arm and appends one record of kind
+`6` whose block offset is the old top of `DLP` plus one, changing neither the old records nor the
+pool up to its old top (`DGrow`); its failure is the line's verdict. `installW_grow` is the first part of
 `installW_twin`'s proof (`IndInstallRefine5.lean`, up to the record's push): the frames come out of
 the twin's install loop (`instGo_twin`), so the twin's hypotheses stay.
 -/
 
+set_option experimental.vcgen true
+
 open L.Arena
 open ConRon.Arena
 open ConRon.Arena.Frontend
+open Std.WP
 open ConLeche.Frontend (IndCtorRec IndTypeRec IndRecRec CVRec RuleRec DeclRec scanIndDecl)
 
 
@@ -159,52 +162,136 @@ theorem DGrow.ofDK {m m₁ m' : Mem} (hk : DK m m₁) (hg : DGrow m₁ m') : DGr
   · rw [hg.decl j h1 (by omega), hk.1]
   · rw [hg.dlp j h1 (by omega), hk.2]
 
-/-- **`apply_ind` appends one inductive record.** -/
-theorem applyIndW_grow {p : Prog} (hAL : IndApplyLookups p) {b : ByteArray} (h64 : System.Platform.numBits = 64) (hsize : b.size < 2 ^ 63)
-    {n : Nat} {m m' : Mem} {a : AState} {st : StateD}
+/-! ## `apply_ind`: one model and one refinement -/
+
+/-- **`apply_ind`'s unified model**: `ind_fields` and `install_ind_d` (outside the verdict closure)
+lifted, `validate_ind_d` through its run (the install needs the input bytes kept, `Keep`, which
+comes from the run). -/
+l_model applyInd_specE (p : Prog) (hf : p.lookup "apply_ind" = some applyInd)
+  fns [hf ↦ applyIndE] specs [callW_spec p n "ind_fields", callW_spec p n "install_ind_d"]
+  grind [arena_grind] unified nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
+
+/-- `validateIndD`'s verdict is the `.ind` line's. -/
+theorem claimR_of_validate {st : StateD} {tys : List IndTypeRec} {cts : List IndCtorRec}
+    {rcs : List IndRecRec} {a : AState} {e : Err}
+    (h : VerdictClaimL (ConRon.Arena.Frontend.validateIndD st tys cts rcs) a e) :
+    VerdictClaimR (applyLine st (.decl (.ind tys cts rcs))) a e := by
+  intro hk
+  have hrun : (applyLine st (.decl (.ind tys cts rcs))).run a =
+      (processLineCoreD st (.ind tys cts rcs)).run a := rfl
+  rcases h hk with ⟨ce, hce, hc⟩ | ⟨v, a', hv, hc⟩
+  · refine .inl ⟨ce, ?_, hc⟩
+    rw [hrun]; unfold processLineCoreD
+    simp only [StateT.run_bind, show (ConRon.Arena.Frontend.validateIndD st tys cts rcs).run a = _ from hce]
+    rfl
+  · refine .inr ⟨v, a', ?_, hc⟩
+    rw [hrun]; unfold processLineCoreD
+    simp only [StateT.run_bind, show (ConRon.Arena.Frontend.validateIndD st tys cts rcs).run a = _ from hv]
+    rfl
+
+/-- What `apply_ind`'s error arms assume: the no-verdict closure (the lifted callees,
+`validate_ind_d`'s spec) and the twin's name reads (`validate_ref`'s `XV`). -/
+structure ApplyIndG (p : Prog) (st : StateD) (a : AState) : Prop where
+  nv : closedNV p _root_.L.Checker.nvFns = true
+  xv : XV st a
+
+/-- What a successful `apply_ind` from `m` gives at `m'`: the twin's `.ind` arm accepts (the state
+`a` unchanged) at a related state, the arena kept, the mode kept, one record appended. -/
+structure ApplyIndPost (st : StateD) (a : AState) (tys : List IndTypeRec) (cts : List IndCtorRec)
+    (rcs : List IndRecRec) (m m' : Mem) : Prop where
+  twin : ∃ st', (processLineCoreD st (.ind tys cts rcs)).run a = .ok (.inl st', a) ∧ StateDR m' st'
+  arena : ArenaD m' a
+  mode : ModeOK m → ModeOK m'
+  grow : DGrow m m'
+
+/-- **`apply_ind` refines the `.ind` arm of `processLineCoreD`, both outcomes**: on con-leche's
+`ok` path of the block's scan (`scanIndDecl`), `ind_fields` gives the three lists
+(`indFields_link`), `validate_ind_d` the twin's `validateIndD` (`validate_ref`: its verdict
+`.inr (ordered, nPd)`, or its record verdict, the line's), `install_ind_d` its `installIndD`
+(`installW_twin`, `installW_grow`). -/
+@[refines_part ConRon.Arena.Frontend.processLineCoreD "inductive"]
+theorem applyInd_ref {p : Prog} (hAL : IndApplyLookups p) (hFI : IndFieldLookups p)
+    (hII : IndInstallLookups p) {b : ByteArray} (h64 : System.Platform.numBits = 64)
+    (hsize : b.size < 2 ^ 63) (n : Nat) {m : Mem} {a : AState} {st : StateD} (hm : m.arr8 IN = b.data)
     (hA : ArenaD m a) (hD : StateDR m st) (hok : ConRon.Bridge.StateOK a) {v : USize}
     {tys : List IndTypeRec} {cts : List IndCtorRec} {rcs : List IndRecRec} {e : USize}
-    (hscan : scanIndDecl b v = .ok (.ind tys cts rcs) e)
-    (h : applyIndW p n b.data m v.toUInt64 = some m') : DGrow m m' := by
+    (hscan : scanIndDecl b v = .ok (.ind tys cts rcs) e) :
+    RefC (ApplyIndG p st a) (applyIndE p n m v.toUInt64) (fun x => ApplyIndPost st a tys cts rcs m x.2)
+      (VerdictClaimR (applyLine st (.decl (.ind tys cts rcs))) a) := by
+  have hno := hAL.decl.expr.no_st8
   cases n with
-  | zero => simp [applyIndW] at h
+  | zero => simp only [applyIndE, RefC_error]; exact fun _ hk => absurd Err.cls_outOfFuel hk
   | succ n =>
-  simp only [applyIndW] at h
-  rcases h1 : indFieldsW b.data m v.toUInt64 with _ | ⟨r, m₁⟩ <;> simp only [h1, lK, reduceCtorEq] at h
+  rw [applyIndE.arm1]
+  -- `ind_fields`
+  rcases h1 : callW p n "ind_fields" [v.toUInt64] m with _ | ⟨r, m₁⟩
+  · rw [liftE_none, applyIndE.k_ind_fields.none]; exact fun _ hk => absurd (by simp) hk
+  rw [liftE_some, applyIndE.k_ind_fields.arm1]
+  obtain ⟨s1, rfl, ⟨-, hW1⟩, hK1, -⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (Triple.keep hno (indFields_spec p hFI b.data hsize n ⟨m, Locals.init []⟩ hm v.toUInt64)) h1
   have hifs := hD.ifs
   obtain ⟨to, tn, co, cn, ro, rn, rfl, hF, hfR⟩ :=
-    indFields_link b h64 hsize m m₁ ⟨by omega, by omega⟩ v tys cts rcs e hscan _ h1
-  have hfr1 : MemFrame [IFR, IFL] [] m m₁ := hfR.1
-  have hRoom : Room m₁ := hfR.2
-  simp only [List.headD_cons, List.tail_cons] at h
-  rcases h2 : callW p n "validate_ind_d" [to, tn, co, cn, ro, rn] m₁ with _ | ⟨q, m₂⟩ <;>
-    simp only [h2, reduceCtorEq] at h
-  have hA1 : ArenaD m₁ a :=
+    indFields_link b h64 hsize m s1.mem ⟨by omega, by omega⟩ v tys cts rcs e hscan _ hW1
+  have hfr1 : MemFrame [IFR, IFL] [] m s1.mem := hfR.1
+  have hRoom : Room s1.mem := hfR.2
+  simp only [List.headD_cons, List.tail_cons]
+  have hA1 : ArenaD s1.mem a :=
     ⟨ArenaR.frame_ext _ _ (by simp [IFR, IFL]) (by simp) _ _ hfr1 _ hA.1,
       DerR.frameT hfr1 (by simp [IFR, IFL]) hA.2⟩
-  have hD1 : StateDR m₁ st := hD.frame hfr1 (by decide) (by decide) (by decide) (by decide) (by decide)
-  have hs1 : (m₁.arr64 IFR).size = (m.arr64 IFR).size := hfr1.size IFR
-  have hs1' : (m₁.arr64 IFL).size = (m.arr64 IFL).size := hfr1.size IFL
-  have hT1 : TopOK m₁ := ⟨by have := hRoom.2.1; exact this, Nat.le_of_lt hRoom.2.2.2⟩
-  have hIFR1 : topN m₁ IFR < 2 ^ 62 := by have := hRoom.2.2.1; omega
-  obtain ⟨s2, hs2, -, hV⟩ := RefC.run_okW (validate_specE p hAL n ⟨m₁, Locals.init []⟩ to tn co cn ro rn)
-    (validate_ref hA1.1 hD1 hok hT1 hF hIFR1 p n (st := st)) h2
-  rw [hs2] at hV
-  obtain ⟨⟨ordered, V1, V4, V7⟩, V2, V3, V5, V6, V8⟩ := hV
+  have hD1 : StateDR s1.mem st := hD.frame hfr1 (by decide) (by decide) (by decide) (by decide) (by decide)
+  have hs1 : (s1.mem.arr64 IFR).size = (m.arr64 IFR).size := hfr1.size IFR
+  have hs1' : (s1.mem.arr64 IFL).size = (m.arr64 IFL).size := hfr1.size IFL
+  have hT1 : TopOK s1.mem := ⟨by have := hRoom.2.1; exact this, Nat.le_of_lt hRoom.2.2.2⟩
+  have hIFR1 : topN s1.mem IFR < 2 ^ 62 := by have := hRoom.2.2.1; omega
+  have hV := validate_ref hA1.1 hD1 hok hT1 hF hIFR1 p n (st := st)
+  have hsV := validate_specE p hAL n ⟨s1.mem, Locals.init []⟩ to tn co cn ro rn
+  -- `validate_ind_d`
+  cases h2 : callE p n "validate_ind_d" [to, tn, co, cn, ro, rn] s1.mem with
+  | error e2 =>
+    rw [applyIndE.k_validate_ind_d.none]
+    exact fun hG => claimR_of_validate
+      (RefC.run_err hsV (fun _ h0 h => absurd h0 h) hG.nv hG.xv hV h2)
+  | ok q2 =>
+  obtain ⟨q, m₂⟩ := q2
+  rw [applyIndE.k_validate_ind_d.arm1]
+  obtain ⟨s2, hs2, -, hV2⟩ := RefC.run_ok hsV hV h2
+  obtain ⟨s2', hs2', -, hK2, -⟩ := triple_of_callW (s₀ := ⟨s1.mem, Locals.init []⟩)
+    (Triple.keep hno (callW_spec p n "validate_ind_d" [to, tn, co, cn, ro, rn] ⟨s1.mem, Locals.init []⟩))
+    (callW_of_callE h2)
+  rw [hs2] at hV2
+  rw [hs2'] at hK2
+  obtain ⟨⟨ordered, V1, V4, V7⟩, V2, V3, V5, V6, V8⟩ := hV2
   dsimp only at V1 V2 V3 V4 V5 V6 V7 V8
-  generalize q.headD 0 = oo at h V1 V5 V6 V7
-  generalize q.tail.headD 0 = np at h V1 V8
+  -- `install_ind_d`
+  rcases h3 : callW p n "install_ind_d" [to, tn, q.headD 0, cn, ro, rn, q.tail.headD 0] m₂ with _ | ⟨r3, m₃⟩
+  · rw [liftE_none, applyIndE.k_install_ind_d.none]; exact fun _ hk => absurd (by simp) hk
+  rw [liftE_some, applyIndE.k_install_ind_d.arm1]
+  have hm2 : m₂.arr8 IN = b.data := by rw [hK2.arr8, hK1.arr8]; exact hm
+  obtain ⟨s3, rfl, -, hW3⟩ := triple_of_callW (s₀ := ⟨m₂, Locals.init []⟩)
+    (install_spec p hAL hII b.data hsize n ⟨m₂, Locals.init []⟩ hm2 to tn (q.headD 0) cn ro rn
+      (q.tail.headD 0)) h3
+  generalize q.headD 0 = oo at hW3 V1 V5 V6 V7
+  generalize q.tail.headD 0 = np at hW3 V1 V8
   have hfr2 := V2.frame
   have hA2 : ArenaD m₂ a :=
     ⟨ArenaR.frame_ext _ _ (by simp [IFL, LH]) (by simp) _ _ hfr2 _ hA1.1,
       DerR.frameT hfr2 (by simp [IFL, LH]) hA1.2⟩
   have hD2 : StateDR m₂ st := hD1.frame hfr2 (by decide) (by decide) (by decide) (by decide) (by decide)
-  have hifr2 : m₂.arr64 IFR = m₁.arr64 IFR := V2.ifr
-  have hs2' : (m₂.arr64 IFL).size = (m.arr64 IFL).size := by rw [hfr2.size IFL, hs1']
+  have hifr2 : m₂.arr64 IFR = s1.mem.arr64 IFR := V2.ifr
+  have hs2'' : (m₂.arr64 IFL).size = (m.arr64 IFL).size := by rw [hfr2.size IFL, hs1']
   have hIFR2 : topN m₂ IFR < 2 ^ 62 := by unfold topN wd; rw [hifr2]; exact hIFR1
   have hIFL2 : topN m₂ IFL < 2 ^ 62 := by have := V3.2; omega
+  obtain ⟨st', I1, I2, I3, I4⟩ := installW_twin hA2 hD2 (hF.ext V2) hIFR2 hIFL2 V4 (by omega) V7 hW3
   have hk : DK m m₂ := (DK.ofFrame hfr1 (by decide) (by decide)).trans
     (DK.ofFrame hfr2 (by decide) (by decide))
-  exact DGrow.ofDK hk (installW_grow a hD2 (hF.ext V2) hIFR2 hIFL2 V4 (by omega) V7 h)
+  refine ⟨⟨st', ?_, I3⟩, I2, fun hmo => MemFrame.modeOK I4 (by simp) (by simp)
+    (MemFrame.modeOK hfr2 (by decide) (by decide) (MemFrame.modeOK hfr1 (by simp) (by simp) hmo)),
+    DGrow.ofDK hk (installW_grow a hD2 (hF.ext V2) hIFR2 hIFL2 V4 (by omega) V7 hW3)⟩
+  unfold processLineCoreD
+  simp only []
+  rw [run_bind _ _ a _ V1]
+  simp only []
+  rw [run_bind _ _ a _ I1]
+  rfl
 
 end L.Front.Ind

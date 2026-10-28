@@ -1921,3 +1921,93 @@ Elaboration (user seconds, `lean` on the module alone, median of 3 interleaved r
 Both flagged modules are the new homes of models whose old modules got faster by more.
 
 No kit or generator change was needed.
+
+### 3.28 Batch 4, the spine, first landing (the class chain, `check_block_classes`, `check_block_inds`, `check_block_pass`; `apply_ind`; phase B)
+
+Batch 4's functions (§3.1's inventory at depth 6–19, re-run on master 97ff8cd6, plus phase B), in
+call order: `class_nodes_agree`, `class_fields_agree`, `class_ctor_of`, `class_ctors_of`,
+`classes_ctors`, `gen_rec_check_prep`, `gen_rec_check`, `check_block_rec`, `check_block_tail_rec`,
+`check_block_tail` (the generator's side); `check_block_classes`, `check_block_inds`,
+`check_block_pass`, `check_block`, `check_ind_decl`, `check_decl`, `install_step_go` (the block's
+and the declaration's side); `apply_ind` (the front's) and phase B's `check_pending_go`/`_next`. This
+landing migrates eleven of them:
+
+| function | before: ok refinement + error claim(s) | after | change |
+|---|---|---|---:|
+| `class_nodes_agree` | `cnaW_okC` 123, `cnaE_claim` 155, `classNodesAgree_claim` 42 = 320 | `cnaLoop_ref` 141 + `cna_ref` 29 + `CnaPost` 7 = 177 | −45 % |
+| `class_fields_agree` | `cfaW_okC` 197, `cfaE_claim` 281, `classFieldsAgree_claim` 41 = 519 | `cfaLoop_ref` 226 + `cfa_ref` 28 = 254 | −51 % |
+| `class_ctor_of` | `cxoW_okC` 270, `cxoE_claim` 279, `classCtorOf_claim` 29 = 578 | `cxo_ref` 303 + `CxoPost` 8 = 311 | −46 % |
+| `class_ctors_of` | `cosW_okC` 114, `cosF_okC` 39, `cosE_claim` 107, `classCtorsOf_claim` 53 = 313 | `cosLoop_ref` 124 + `cos_ref` 46 = 170 | −46 % |
+| `classes_ctors` | `ccsW_okC` 150, `ccsF_okC` 39, `ccsE_claim` 140, `classesCtors_claim` 51 = 380 | `ccsLoop_ref` 159 + `ccs_ref` 46 + `classesCtors_claim` 28 = 233 | −39 % |
+| (the two loops' posts) | | `SlotsLoopPost` 11 + `SlotsPost` 9 = 20 | |
+| `check_block_classes` | `cbcW_simC` 154, `checkBlockClassesE_claim` 179 = 333 | `cbc_ref` 174 + `CbcPost` 9 + claim 11 = 194 | −42 % |
+| `check_block_inds` | `ibiW_simC` 171, `checkBlockIndsE_claim` 144 = 315 | `cbi_ref` 175 + `IndsPost`/`IndsG` 12 + claim 10 = 197 | −37 % |
+| `check_block_pass` | `icpW_simC` 415, `checkBlockPassE_claim` 418 = 833 | `pass_ref` 443 + `PassPost`/`PassG` 17 + claim 7 = 467 | −44 % |
+| `apply_ind` | `applyIndW_twin` 63, `applyIndW_grow` 47, `applyIndE_claim` 51, `ValidateClaim` 7, `validateClaim_frontAll` 5 = 173 | `applyInd_ref` 84 + `ApplyIndPost` 6 + `ApplyIndG` 3 = 93 | −46 % |
+| `check_pending_go`, `_next` | the ok specs and steps 86, the error specs and steps 94 = 180 | `cp_ref` 78 + `CPGoRef`/`CPNextRef` 15 + the kept statements 46 = 139 | −23 % |
+| the eight `@[refines]` | 236 | 244 (`RefE.triple`) | |
+| **pairs** | **3 944** | **2 255** | **−43 %** |
+
+Also gone: the hand ok models with their arms and specs: `cnaW`/`cnaK1–2`/`cna_spec`, `cfaW`/
+`cfaK1–6`/`cfa_spec`, `cxoW`/`cxoK1–9`/`cxo_spec`, `cosW`/`cosF`/`cos_spec`, `ccsW`/`ccsF`/`ccs_spec`,
+the generated `cbcW`/`cbc_spec`, `ibiW`/`ibi_spec`, the hand `icpW`/`icpK1–8`/`icp_spec`, `applyIndW`/
+`applyInd_spec` (about 820 lines); the files `Verdict/IndBNodes`, `IndBAgree`, `IndBCtor`, `IndBCos`,
+`IndsE1` and `Front/IndApplyTwin`, and the `errors` models. `ClassMajorsE` (with `classMajorsE_of`, `classMajors_claim`) had no
+user left once `check_block_classes` reads `clm_ref`. Whole diff against master 57da5c00: +1 584
+−4 241 in 44 files.
+
+Choices:
+
+* **`G`**: `VerdictCtx p` for the class chain (`tk_ref`'s) and `check_block_classes` (`clm_ref`'s);
+  `IndsG` (`nv`, `core`, and `TeleG`'s `ccv`, `sum`) for `check_block_inds`; for `check_block_pass`
+  `PassG`, the five checks' claims (`CheckBlockIndsE`, …, `NestSeedsE`; the `err_stmt`s moved from
+  `Verdict/IndA3` to `Arena/IndT/Pass`), as they are every-fuel statements and the checks' refinements
+  are at fuel `n + 1`, `n + 3`; `ApplyIndG` (`nv`, `validate_ind_d`'s `XV`) for `apply_ind`;
+  `check_pending`'s claim (`CPErrT`) for phase B.
+* **Callees through their runs** where the ok half reads the run: `class_fields_of`,
+  `class_fields_agree` (`callW_keepW`), `class_ctor_of`, `class_ctors_of` (the same),
+  `check_block_classes_keys` (`AbsKeep`), the five checks of the pass (`PosMR.ofClosed`),
+  `validate_ind_d` (the input bytes kept). The others are unified callees (`tk_ref`, `cna_ref`,
+  `cms_ref`, `clm_ref`, `cbt_ref`, `cbts_ref`, `cbag_ref`) or lifted.
+* **Loops over a non-tail twin** (`class_ctors_of`, `classes_ctors`: L's loop is tail-recursive, the
+  twin conses after the recursive call): the step is `RefE.tail` with `k := id` and the twin's
+  `bind`, so no new kit lemma was needed. One post for both result slices, `SlotsLoopPost`/`SlotsPost`
+  over the slice's decoder.
+* **`check_block_pass`** keeps its structure: the error arms read the claims, the ok arms the
+  `…_refinesC` triples on the runs raised to the fixed fuel (`callW_mono`), as the two old proofs
+  did. Merging them was mechanical (the claim mirrored the ok proof line by line).
+* **`apply_ind`** is a `RefC` (its error half is the line's record verdict, `VerdictClaimR`); the
+  front's claim chain takes `ApplyIndG` instead of abstracting over `ValidateClaim`. **Phase B**: one
+  induction over the two mutually recursive unified models (`cp_ref`), a `RefC` per function with
+  `ErrClaimV` errors.
+* **Placement**: each refinement with its ok users (`RecGen21/23/24/27`, `Install4`, `Pass`,
+  `Front/FrontPreOK2`, `Arena/PhaseBT`); the Verdict files keep the derived claims (`IndBCcs`,
+  `BlkE4`, `IndsE7`, `IndA3`).
+* **Recipes**: `simp [Cmp.evalW, Cmp.eval]` for `cfaE` (the default `finish` fails), `cxoE`, `cosE`,
+  `ccsE`; `simp [rdW]` for `cbcE`, `cbiE`, `icpE`; the default for `cnaE`, `applyIndE` and phase B's.
+  Every unified model here generates in seconds.
+
+Elaboration (user seconds, `lean` on the module alone, median of 3 interleaved runs, base master
+57da5c00, load 3–154, `_tmp/unify-spine/times1.txt`):
+
+| module | base | new | |
+|---|---:|---:|---|
+| `Arena/IndT/RecGen23`, `RecGen24`, `RecGen27` | 6.75 | **23.64** | **slower**: the class chain's unified models and refinements moved in … |
+| `Verdict/IndBNodes`, `IndBAgree`, `IndBCtor`, `IndBCos` (deleted), `IndBCcs` | 25.71 | 0.53 | … from here |
+| `Arena/RecGenSpec/PdWMfr`, `CfaFv`, `DecTMSlices`, `DecCNWords` | 12.66 | 2.73 | the hand models gone; the family 45.1 → 26.9 |
+| `Arena/IndT/RecGen21` | 0.89 | **2.97** | **slower (+2.1 s)**: `cbcE`, `cbc_ref` … |
+| `Verdict/BlkE4`, `Arena/RecGenSpec/OcW` | 10.02 | 4.66 | … from here; the three 10.9 → 7.6 |
+| `Arena/IndT/Install4` | 0.92 | **2.46** | **slower (+1.5 s)**: `cbiE`, `cbi_ref` … |
+| `Verdict/IndsE1` (deleted), `IndsE7`, `Arena/IndInstallSpec/IcvgW` | 5.48 | 1.44 | … from here; the four 6.4 → 3.9 |
+| `Arena/IndT/Pass` | 2.14 | **8.66** | **slower (+6.5 s)**: `icpE`, `pass_ref` … |
+| `Verdict/IndA3`, `Arena/IndInstallSpec/Icp` | 14.24 | 2.01 | … from here; the three 16.4 → 10.7 |
+| `IwNLtSize`, `IndA6`, `IndA9`, `BlkE1`, `PosTopE5` | 2.81 | 2.81 | |
+| **sum (27 modules)** | **81.6** | **51.9** | **−36 %** |
+
+`apply_ind` and phase B (measured separately, base 97ff8cd6): `Front/FrontPreOK2` 2.11 → **2.8**
+(`applyIndE` and `applyInd_ref` moved in; `IndApplyTwin` and `IndApplySpec3` 1.45 → 0.39),
+`Arena/PhaseBT` 2.27 → 2.44, `Verdict/PhaseBE` 1.35 → 0.56; 12 modules 37.2 → 35.8 s.
+
+Every flagged module is the new home of a family's models and refinements; each family is faster
+in all. For the kit: no `RefC.triple` (the counterpart of `RefE.triple`): phase B's
+`checkPendingGo_refinesT` writes that step out (≈ 5 lines twice).

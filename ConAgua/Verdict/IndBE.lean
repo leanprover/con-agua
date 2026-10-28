@@ -1,12 +1,8 @@
 import ConAgua.Arena.CrOKFrame
 import ConAgua.Arena.DeclValSpec
-import ConAgua.Arena.IndInstallSpec.CapsProg
-import ConAgua.Arena.IndInstallSpec.DecCNS
 import ConAgua.Arena.IndRealApdT
-import ConAgua.Arena.IndRealIlpL
 import ConAgua.Arena.IndSumSpec.TblProg
 import ConAgua.Arena.KnotEntry
-import ConAgua.Arena.RecGenSpec.OcW
 import ConRon.Bridge.Inductives.ClassRead
 import ConAgua.Verdict.IndAGen
 import ConAgua.Arena.IndRealSctC
@@ -33,6 +29,5 @@ err_stmt CheckSumTeleE := checkSumTele_refinesC fuel k
 err_stmt CheckConstantValE := checkConstantVal_refinesT fuel n
 err_stmt CheckStructFieldSortsIE := checkStructFieldSortsI_refinesC fuel n
 err_stmt CheckStructProjTableE := checkStructProjTable_refinesC fuel n
-err_stmt ClassMajorsE := classMajors_refinesC fuel n
 
 end L.Ind

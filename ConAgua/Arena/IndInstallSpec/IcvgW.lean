@@ -118,16 +118,6 @@ theorem RecsB.grow {m m' : Mem} {pp : Word} (h : RecsB m pp) (hg : IWGrow m m') 
   rw [iwN_grow hg h3] at hl
   exact Nat.le_trans (h o l ho hl) hg.1
 
-/-! ## `check_block_inds` -/
-
-/-- **`check_block_inds` is its model `ibiW`** (generated). -/
-l_model ibi_spec (p : Prog) (hp : p.lookup "check_block_inds" = some checkBlockInds)
-  fns [hp ↦ ibiW]
-  specs [callW_spec p n "check_block_tele", callW_spec p n "check_block_teles",
-    callW_spec p n "check_block_agree", callW_spec p n "block_shape_with_sort",
-    callW_spec p n "check_block_inds_cv_tas", callW_spec p n "cons_block_inds"]
-  grind [ind_grind] finish [rdW_eq] gen 40 heartbeats 1600000 instances 20000
-
 end L.Ind
 
 end

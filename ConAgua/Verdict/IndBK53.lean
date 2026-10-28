@@ -11,7 +11,7 @@ unified models (`tkaE`, `tkhE`), the callees outside the verdict closure (`get_a
 `get_app_args_f`, `e_view`, `strip_pis`, `target_k53_tele`) through their `Option` models.
 `tkh_ref` and `tk_ref` refine `tkHeads` and `targetK53` for both outcomes (`tka_ref` below them);
 `tk_ref`'s ok half is `targetK53_refinesC` and `class_nodes_agree`'s ok refinement (`RecGen23`,
-through the run), its error half `class_nodes_agree`'s error claim (`IndBNodes`).
+through the run), its error half `class_nodes_agree`'s refinement (`cna_ref`, `RecGen23`).
 -/
 
 noncomputable section

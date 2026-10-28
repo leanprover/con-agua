@@ -10,7 +10,6 @@ import ConAgua.Arena.IndInstallSpec.PartsAt
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr
-import ConAgua.L.ModelGen
 
 /-!
 # OcW
@@ -315,16 +314,6 @@ theorem ccRes_pslR {m : Mem} {r : List Word} {keys : List ClassKey} (h : CcRes m
   rw [hat]
   simp only [Option.bind_eq_bind, Option.bind_some]
   exact decCK_truncM (hext _ (List.getElem_mem _))
-
-/-! ## The model -/
-
-set_option maxHeartbeats 1600000 in
-l_model cbc_spec (p : Prog) (hp : p.lookup "check_block_classes" = some checkBlockClassesL)
-  fns [hp ↦ cbcW]
-  specs [callW_spec p n "class_read", callW_spec p n "class_read_classes",
-    callW_spec p n "check_block_classes_keys", callW_spec p n "class_majors",
-    callW_spec p n "check_block_classes_one_per_member"]
-  grind [arena_grind] finish [rdW_eq] gen 40 instances 20000
 
 /-! ## The relation -/
 
