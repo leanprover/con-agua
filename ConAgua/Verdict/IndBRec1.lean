@@ -1,4 +1,3 @@
-import ConAgua.Arena.Verdict
 import ConAgua.Arena.RecGenSpec.ClassKeyCanon
 import ConAgua.Arena.RecGenSpec.ClassMinorSlot
 import ConAgua.Arena.RecGenSpec.RgW
@@ -6,7 +5,6 @@ import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
 import ConRon.Bridge.Inductives.GenRec
-import ConAgua.Checker.NoVerdictTree
 
 /-!
 # Error refinements of the recursor generation's leaves (lane `verdicts-b`, helper `ib`)

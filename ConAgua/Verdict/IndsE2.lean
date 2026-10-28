@@ -4,7 +4,6 @@ import ConAgua.Arena.IndInstallSpec.IagW
 import ConAgua.Arena.IndInstallSpec.InstallRec2Tele
 import ConAgua.Arena.IndRealApdT
 import ConAgua.Arena.KnotEntry
-import ConAgua.Arena.Verdict
 import ConRon.Bridge.Inductives.BlockInstall
 import ConAgua.Verdict.IndAGen
 import ConAgua.Arena.IndT.Install1

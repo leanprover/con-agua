@@ -1,6 +1,5 @@
 import ConAgua.Arena.RecGenSpec.CfaFv
 import ConAgua.Arena.RecGenSpec.CtorLp
-import ConAgua.Arena.InferBodyIntern
 import ConAgua.Arena.RecGenSpec.CfoProg
 import ConAgua.Arena.RecGenSpec.Set64
 import ConAgua.Arena.GrindAttr

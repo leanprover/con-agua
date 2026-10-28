@@ -1,10 +1,8 @@
 import ConAgua.Arena.RecGenSpec.DecTMDecBOf
 import ConAgua.Arena.IndInstallSpec.NestCtx
-import ConAgua.Arena.Verdict
 import ConAgua.Arena.IndSumSpec.ParamLevels
 import ConAgua.L.ModelGen
 import ConRon.Bridge.Inductives.RecCheck
-import ConAgua.Checker.NoVerdictTree
 import ConAgua.Arena.IndSumSpec.StructCtorResidOk
 import ConAgua.Arena.IndInstallSpec.InstallRec2PSl
 

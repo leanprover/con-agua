@@ -1,5 +1,4 @@
 import ConAgua.Arena.ConstsResolveFRefine
-import ConAgua.Arena.InferLeaves
 
 /-!
 # `consts_resolve_ffast` refines `constsResolveFFast`: the walk (lane `tails`)
