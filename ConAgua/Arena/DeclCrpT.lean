@@ -1,5 +1,4 @@
 import ConAgua.Arena.DeclArmT
-import ConAgua.Arena.DeclArmOpaque
 import ConAgua.Arena.RecGenSpec.CruleProg
 import ConAgua.Arena.DeclReducePin
 
@@ -20,7 +19,7 @@ flag. Mirrors con-ron's `checkReducePin_bridge`:
 * the two `is_def_eq_core` calls by the knot's `StageT` sim and `CheckOK` after from con-ron's
   `KnotSpec.defeq` (`StageC.of_T`).
 
-The opaque arm (`cdoW_okT`) carries con-ron's fold invariant `FoldOK` from its entry across the
+The opaque arm (`cdo_ref`) carries con-ron's fold invariant `FoldOK` from its entry across the
 constant check (`checkConstantVal_bridge_of_fold`) and the value check (`checkOpaqueVal_bridge`),
 as con-ron's `checkDecl_bridge_opaque` does; the gate's `CheckOK` at the restricted pushed index
 is `CheckOK.congr_find` of it (`restrict_pushed_find`).
@@ -30,6 +29,8 @@ open ConRon.Arena
 open Std.WP
 open scoped Lean.Order
 
+
+noncomputable section
 
 namespace L.Arena
 
@@ -203,49 +204,62 @@ theorem defeq_check {env : ConLeche.Env} {fe : IFEnv} {a a' : AState} {d : Nat} 
   ConRon.Bridge.AM.of_run (P := fun t => t = a) rfl hrun
     (((CoreSpec.of_core rfl).knot env fe henv).defeq a d i j x y hck hi hj hwx hwy)
 
-/-- **`check_reduce_pin` under `StageC`** (`crpW_ok`'s, con-ron's `checkReducePin_bridge`'s
-decomposition): from the stage relation at the pushed view `vis2`, con-ron's `CheckOK` at the
-pre-insertion view `vis` of the index (at `env`, the environment before the push), the pushed
-index's `StepOK` (at `env2`), the memory's half of `TwinOK`, the pin flag, the name's and the
-value's denotations; the gate at `vis`, the stage relation at `vis2` and `StageC` at `vis` after. -/
+/-- What `check_reduce_pin` gives besides the twin's run (from `m`): the stage relation at the
+pushed view `vis2`, `StageC` at the pre-insertion view `vis`, the growth. -/
+structure CrpPost (dn : NIdx → Option ConLeche.Name) (vis vis2 : Word) (fe2 : IFEnv)
+    (env : ConLeche.Env) (m m' : Mem) (a' : AState) : Prop where
+  stage2 : StageR dn vis2 fe2 m' a'
+  stageC : StageC dn vis (fe2.restrictTo vis.toNat) env m' a'
+  grow : IWGrow m m'
+
+/-- **`check_reduce_pin` refines `checkReducePin`, both outcomes** (con-ron's
+`checkReducePin_bridge`'s decomposition): from the stage relation at the pushed view `vis2`,
+con-ron's `CheckOK` at the pre-insertion view `vis` of the index (at `env`, the environment before
+the push), the pushed index's `StepOK` (at `env2`), the memory's half of `TwinOK`, the pin flag, the
+name's and the value's denotations. The three guards and the spelling test decline; the identity
+certificate failing is the twin's `internal` (class `0`); `is_def_eq_core`'s errors are the core
+stub's claims. -/
 @[refines ConRon.Arena.checkReducePin]
-theorem crpW_okT {p : Prog} (hC : CrpProg p) (hq : KnotStageProg p) (hcl : LeafClosed p)
-    (hkp : CrKeep p) {dn : NIdx → Option ConLeche.Name} (hdn : DnInj dn) {vis vis2 : Word} {fe2 : IFEnv}
-    {env env2 : ConLeche.Env} {a : AState} {n : Nat} (hn : n ≤ 2 ^ 62) {m m' : Mem} {c v : Word}
-    {r : List Word} {nm : ConLeche.Name} {x : ConLeche.Expr}
-    (hW : crpW p (realCall p) n m vis vis2 c v = some (r, m')) (hS : StageR dn vis2 fe2 m a)
+theorem crp_ref {p : Prog} (hC : CrpProg p) (hq : KnotStageProg p) (hcl : LeafClosed p)
+    (hkp : CrKeep p) {dn : NIdx → Option ConLeche.Name} (hdn : DnInj dn) {vis vis2 : Word}
+    {fe2 : IFEnv} {env env2 : ConLeche.Env} {a : AState} {n : Nat} (hn : n ≤ 2 ^ 62) {m : Mem}
+    {c v : Word} {nm : ConLeche.Name} {x : ConLeche.Expr}
+    (hS : StageR dn vis2 fe2 m a)
     (hck : CheckOK V env (fe2.restrictTo vis.toNat) a) (henv : ConLeche.EnvWF env)
     (hok2 : StepOK env2 fe2 a) (hmem : TwinMem dn m a) (hflag : pinW m 0 ≠ 0)
     (hnm : denoteN a.store.ns (decI c) = some nm) (hvx : denoteE a.store (decI v) = some x)
     (hws : ConLeche.Expr.WScoped 0 x) (hc : c.toNat < 2 ^ 32) (hv : v.toNat < 2 ^ 32)
     (hCr : L.Stubs.CrOK m) :
-    ∃ a', (checkReducePin V (fe2.restrictTo vis.toNat) fe2 (decI c) (decI v)).run a = .ok ((), a') ∧
-      StageR dn vis2 fe2 m' a' ∧ StageC dn vis (fe2.restrictTo vis.toNat) env m' a' ∧
-      IWGrow m m' := by
+    RefE (CoreStubsE p) (checkReducePinE p n m vis vis2 c v)
+      (checkReducePin V (fe2.restrictTo vis.toNat) fe2 (decI c) (decI v)) a
+      (fun w _ a' => CrpPost dn vis vis2 fe2 env m w.2 a') := by
   cases n with
-  | zero => simp [crpW] at hW
+  | zero => rw [checkReducePinE.eq_1]; exact RefE.of_cls0 (by simp)
   | succ n =>
   have hn' : n ≤ 2 ^ 62 := by omega
-  rw [crpW_step] at hW
+  rw [checkReducePinE.eq_2]
+  simp only [checkReducePin]
   have hvb : fe2.visibleBelow = vis2.toNat := hS.1.env.vis
   have hC0 : StageC dn vis (fe2.restrictTo vis.toNat) env m a := ⟨hS.restrict vis, hck, hmem, hflag⟩
   generalize hfe : fe2.restrictTo vis.toNat = fe at hC0 hck ⊢
   -- the stored constant, at `vis2`
-  cases h1 : callW p n "reduce_stored_ok" [vis2, c] m with
-  | none => rw [h1] at hW; cases hW
-  | some rm1 =>
-  obtain ⟨r1, m1⟩ := rm1
-  rw [h1, crpK1_some] at hW
+  rcases h1 : callW p n "reduce_stored_ok" [vis2, c] m with _ | ⟨r1, m1⟩
+  · rw [liftE_none, checkReducePinE.k_reduce_stored_ok.none]; exact RefE.of_cls0 (by simp)
+  rw [liftE_some]
   have hCr1 := hkp.call (im_mem _ rfl) h1 hCr
   obtain ⟨s1, hs1, -, hok1, hS1, hg1, hb1, -⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (reduceStoredOk_refines p hC.red dn vis2 fe2 c hc n ⟨m, Locals.init []⟩ a hS) h1
   subst hs1
   have hrun1 := AM.run_of_ok _ _ hok1
   by_cases e1 : r1.headD 0 = 0
-  · rw [ite_eq_left e1] at hW; cases hW
-  rw [ite_eq_right e1] at hW
+  · rw [checkReducePinE.k_reduce_stored_ok.abort1 p _ _ _ _ _ _ e1]
+    have t1 : AM.res (reduceStoredOk fe2 (decI c)) a = false := by rw [← hb1]; simpa using e1
+    rw [t1] at hrun1
+    exact RefE.bind_right hrun1 (RefE.ite_neg (by decide) fun _ => ErrClaim.fail _ _ rfl)
+  rw [checkReducePinE.k_reduce_stored_ok.arm1 p _ _ _ _ _ _ e1]
   have t1 : AM.res (reduceStoredOk fe2 (decI c)) a = true := by rw [← hb1]; simpa using e1
   rw [t1] at hrun1
+  refine RefE.bind_right hrun1 (RefE.ite_pos rfl ?_)
   obtain ⟨hi1, -⟩ := ConRon.Bridge.reduceStoredOk_run hck.state hck.pins hok2.ienv hnm _ _ hrun1
   generalize AM.st (reduceStoredOk fe2 (decI c)) a = a1 at hrun1 hS1 hi1
   have hC1 : StageC dn vis fe env s1.mem a1 :=
@@ -254,21 +268,23 @@ theorem crpW_okT {p : Prog} (hC : CrpProg p) (hq : KnotStageProg p) (hcl : LeafC
   have hnm1 := ConRon.Bridge.denoteN_ext hnm hi1.ext
   have hv1 := ConRon.Bridge.denote_ext hvx hi1.ext
   -- the element inductive
-  cases h2 : callW p n "reduce_elem_ok" [vis, c] s1.mem with
-  | none => rw [h2] at hW; cases hW
-  | some rm2 =>
-  obtain ⟨r2, m2⟩ := rm2
-  rw [h2, crpK2_some] at hW
+  rcases h2 : callW p n "reduce_elem_ok" [vis, c] s1.mem with _ | ⟨r2, m2⟩
+  · rw [liftE_none, checkReducePinE.k_reduce_elem_ok.none]; exact RefE.of_cls0 (by simp)
+  rw [liftE_some]
   have hCr2 := hkp.call (im_mem _ rfl) h2 hCr1
   obtain ⟨s2, hs2, -, hok2', hS2, hg2, hb2, -⟩ := triple_of_callW (s₀ := ⟨s1.mem, Locals.init []⟩)
     (reduceElemOk_refines p hC.red dn hdn vis fe c hc n ⟨s1.mem, Locals.init []⟩ a1 hC1.stage) h2
   subst hs2
   have hrun2 := AM.run_of_ok _ _ hok2'
   by_cases e2 : r2.headD 0 = 0
-  · rw [ite_eq_left e2] at hW; cases hW
-  rw [ite_eq_right e2] at hW
+  · rw [checkReducePinE.k_reduce_elem_ok.abort1 p _ _ _ _ _ _ e2]
+    have t2 : AM.res (reduceElemOk fe (decI c)) a1 = false := by rw [← hb2]; simpa using e2
+    rw [t2] at hrun2
+    exact RefE.bind_right hrun2 (RefE.ite_neg (by decide) fun _ => ErrClaim.fail _ _ rfl)
+  rw [checkReducePinE.k_reduce_elem_ok.arm1 p _ _ _ _ _ _ e2]
   have t2 : AM.res (reduceElemOk fe (decI c)) a1 = true := by rw [← hb2]; simpa using e2
   rw [t2] at hrun2
+  refine RefE.bind_right hrun2 (RefE.ite_pos rfl ?_)
   obtain ⟨hi2, -⟩ := ConRon.Bridge.reduceElemOk_run hC1.check.state hC1.check.pins
     hC1.check.ienv hnm1 _ _ hrun2
   generalize AM.st (reduceElemOk fe (decI c)) a1 = a2 at hrun2 hS2 hi2
@@ -276,11 +292,9 @@ theorem crpW_okT {p : Prog} (hC : CrpProg p) (hq : KnotStageProg p) (hcl : LeafC
   have hnm2 := ConRon.Bridge.denoteN_ext hnm1 hi2.ext
   have hv2 := ConRon.Bridge.denote_ext hv1 hi2.ext
   -- the pin's guards
-  cases h3 : callW p n "reduce_pin_guard" [vis, c] s2.mem with
-  | none => rw [h3] at hW; cases hW
-  | some rm3 =>
-  obtain ⟨r3, m3⟩ := rm3
-  rw [h3, crpK3_some] at hW
+  rcases h3 : callW p n "reduce_pin_guard" [vis, c] s2.mem with _ | ⟨r3, m3⟩
+  · rw [liftE_none, checkReducePinE.k_reduce_pin_guard.none]; exact RefE.of_cls0 (by simp)
+  rw [liftE_some]
   obtain ⟨s3, hs3, -, hW3⟩ := triple_of_callW (s₀ := ⟨s2.mem, Locals.init []⟩)
     (rpg_specW p hC.bvb hC.hf hC.rpg (realCall p) (realCall_spec p) n ⟨s2.mem, Locals.init []⟩ vis c)
     h3
@@ -288,10 +302,14 @@ theorem crpW_okT {p : Prog} (hC : CrpProg p) (hq : KnotStageProg p) (hcl : LeafC
   obtain ⟨x3, a3, hrun3, hC3, hx3, hr3, hg3, hb3⟩ :=
     rpgW_okC hC.red.pa hC.rdp hC.red.rom hcl hC.apd hkp hW3 hC2 hc hnm2 hCr2
   by_cases e3 : r3.headD 0 = 0
-  · rw [ite_eq_left e3] at hW; cases hW
-  rw [ite_eq_right e3] at hW
+  · rw [checkReducePinE.k_reduce_pin_guard.abort1 p _ _ _ _ _ _ e3]
+    have t3 : x3 = false := by rw [← hb3.1]; simpa using e3
+    rw [t3] at hrun3
+    exact RefE.bind_right hrun3 (RefE.ite_neg (by decide) fun _ => ErrClaim.fail _ _ rfl)
+  rw [checkReducePinE.k_reduce_pin_guard.arm1 p _ _ _ _ _ _ e3]
   have t3 : x3 = true := by rw [← hb3.1]; simpa using e3
   rw [t3] at hrun3
+  refine RefE.bind_right hrun3 (RefE.ite_pos rfl ?_)
   have hc2 : ConLeche.reducePinGuard env nm = true := by rw [← hr3, t3]
   have hwsP : ConLeche.Expr.WScoped 0 (ConLeche.reduceDeclPin nm) := by
     refine ConLeche.Expr.WScoped.of_not_hasFvar ?_
@@ -300,11 +318,9 @@ theorem crpW_okT {p : Prog} (hC : CrpProg p) (hq : KnotStageProg p) (hcl : LeafC
   have hnm3 := ConRon.Bridge.denoteN_ext hnm2 hx3
   have hv3 := ConRon.Bridge.denote_ext hv2 hx3
   -- the pin
-  cases h4 : callW p n "reduce_decl_pin" [c] s3.mem with
-  | none => rw [h4] at hW; cases hW
-  | some rm4 =>
-  obtain ⟨r4, m4⟩ := rm4
-  rw [h4, crpK4_some] at hW
+  rcases h4 : callW p n "reduce_decl_pin" [c] s3.mem with _ | ⟨r4, m4⟩
+  · rw [liftE_none, checkReducePinE.k_reduce_decl_pin.none]; exact RefE.of_cls0 (by simp)
+  rw [liftE_some, checkReducePinE.k_reduce_decl_pin.arm1]
   obtain ⟨s4, hs4, -, hok4, hS4, hg4, hpl, hpe⟩ := triple_of_callW (s₀ := ⟨s3.mem, Locals.init []⟩)
     (reduceDeclPin_refines p hC.red.pa n ⟨s3.mem, Locals.init []⟩ a3 dn fe vis c hC3.stage hc
       hC.red.rom hC.rdp) h4
@@ -313,34 +329,39 @@ theorem crpW_okT {p : Prog} (hC : CrpProg p) (hq : KnotStageProg p) (hcl : LeafC
   rw [← hpe] at hrun4
   obtain ⟨hi4, hpd⟩ := ConRon.Bridge.reduceDeclPin_run hC3.check.state hC3.check.pins hnm3 hrun4
   generalize AM.st (reduceDeclPin (decI c)) a3 = a4 at hrun4 hS4 hi4 hpd
+  refine RefE.bind_right hrun4 ?_
   have hC4 := StageC.of_leaf hC3 hS4 (callW_leafFrame hcl (leaf_mem _ (by decide)) h4) hi4
   have hnm4 := ConRon.Bridge.denoteN_ext hnm3 hi4.ext
   have hv4 := ConRon.Bridge.denote_ext hv3 hi4.ext
-  -- the value against the pin
-  cases h5 : realCall p n "is_def_eq_core" [vis, 0, v, r4.headD 0] s4.mem with
-  | none => rw [h5] at hW; simp [crpK5] at hW
-  | some rm5 =>
-  obtain ⟨r5, m5⟩ := rm5
-  rw [h5, crpK5_some] at hW
-  obtain ⟨x5, a5, hrun5, hT5, hg5, hx5⟩ :=
-    hq.isDefEqCore_sim n hn' hC4.stageT 0 v (r4.headD 0) hv hpl r5 m5 h5
   have h00 : (0 : Word).toNat = 0 := rfl
   have h01 : (1 : Word).toNat = 1 := rfl
+  -- the value against the pin
+  rcases h5 : callE p n "is_def_eq_core" [vis, 0, v, r4.headD 0] s4.mem with e5 | ⟨r5, m5⟩
+  · rw [checkReducePinE.k_is_def_eq_core.none]
+    refine RefE.bind_left fun hcE => ?_
+    have := hcE.isDefEqCore n hn' hC4.stageT 0 v (r4.headD 0) hv hpl _ h5
+    rwa [h00] at this
+  obtain ⟨x5, a5, hrun5, hT5, hg5, hx5⟩ :=
+    hq.isDefEqCore_sim n hn' hC4.stageT 0 v (r4.headD 0) hv hpl r5 m5 (callW_of_callE h5)
   rw [h00] at hrun5
   obtain ⟨hck5, hx5', -, -⟩ := defeq_check henv hC4.check hv4 hpd hws hwsP hrun5
   have hC5 := StageC.of_T hT5 hck5
+  refine RefE.bind_right hrun5 ?_
   by_cases e5 : r5.headD 0 = 0
-  · rw [ite_eq_left e5] at hW; cases hW
-  rw [ite_eq_right e5] at hW
+  · rw [checkReducePinE.k_is_def_eq_core.abort1 p _ _ _ _ _ _ e5]
+    have t5 : x5 = false := by rw [← hx5, decBool, e5]; rfl
+    rw [t5]
+    exact RefE.ite_neg (by decide) fun _ => ErrClaim.fail _ _ rfl
+  rw [checkReducePinE.k_is_def_eq_core.arm1 p _ _ _ _ _ _ e5]
   have t5 : x5 = true := by rw [← hx5]; simpa [decBool] using e5
+  rw [t5]
+  refine RefE.ite_pos rfl ?_
   have hnm5 := ConRon.Bridge.denoteN_ext hnm4 hx5'
   have hv5 := ConRon.Bridge.denote_ext hv4 hx5'
   -- the certificate's variable
-  cases h6 : callW p n "reduce_cert_var" [c] m5 with
-  | none => rw [h6] at hW; simp [crpK6] at hW
-  | some rm6 =>
-  obtain ⟨r6, m6⟩ := rm6
-  rw [h6, crpK6_some] at hW
+  rcases h6 : callW p n "reduce_cert_var" [c] m5 with _ | ⟨r6, m6⟩
+  · rw [liftE_none, checkReducePinE.k_reduce_cert_var.none]; exact RefE.of_cls0 (by simp)
+  rw [liftE_some]
   obtain ⟨s6, hs6, -, hok6, hS6, hg6, hx6⟩ := triple_of_callW (s₀ := ⟨m5, Locals.init []⟩)
     (reduceCertVar_refines p hC.rcv n ⟨m5, Locals.init []⟩ a5 dn fe vis c hC5.stage hc) h6
   subst hs6
@@ -348,19 +369,18 @@ theorem crpW_okT {p : Prog} (hC : CrpProg p) (hq : KnotStageProg p) (hcl : LeafC
   rw [hx6] at hrun6
   obtain ⟨hi6, hxv⟩ := ConRon.Bridge.reduceCertVar_run hck5.state hck5.pins hnm5 hrun6
   generalize AM.st (reduceCertVar (decI c)) a5 = a6 at hrun6 hS6 hi6 hxv
+  refine RefE.bind_right hrun6 ?_
   have hC6 := StageC.of_leaf hC5 hS6 (callW_leafFrame hcl (leaf_mem _ (by decide)) h6) hi6
   have hv6 : denoteE a6.store (decE v) = some x := ConRon.Bridge.denote_ext hv5 hi6.ext
   by_cases e6 : 4294967296 ≤ r6.headD 0
-  · rw [ite_eq_left e6] at hW; cases hW
-  rw [ite_eq_right e6] at hW
+  · rw [checkReducePinE.k_reduce_cert_var.abort1 p _ _ _ _ _ e6]; exact RefE.of_cls0 rfl
+  rw [checkReducePinE.k_reduce_cert_var.arm1 p _ _ _ _ _ e6]
   have hxl : (r6.headD 0).toNat < 2 ^ 32 := by
     have := UInt64.lt_iff_toNat_lt.mp (UInt64.not_le.mp e6); simpa using this
   -- the application
-  cases h7 : mkAppW s6.mem v (r6.headD 0) with
-  | none => rw [h7] at hW; cases hW
-  | some rm7 =>
-  obtain ⟨ax, m7⟩ := rm7
-  rw [h7, crpK7_some] at hW
+  rcases h7 : mkAppW s6.mem v (r6.headD 0) with _ | ⟨ax, m7⟩
+  · rw [liftE_none, checkReducePinE.k_mk_app.none]; exact RefE.of_cls0 (by simp)
+  rw [liftE_some, checkReducePinE.k_mk_app.arm1]
   obtain ⟨a7, hrun7, hS7, hg7⟩ := mkApp_stage hC6.stage v (r6.headD 0) h7
   have haxl := mkAppW_hw s6.mem a6 hC6.stage.1.arena v (r6.headD 0) ax m7 h7
   obtain ⟨hi7, hax⟩ := ConRon.Bridge.Frontend.internE_sstep hC6.check.state
@@ -376,74 +396,81 @@ theorem crpW_okT {p : Prog} (hC : CrpProg p) (hq : KnotStageProg p) (hcl : LeafC
   have hwsA : ConLeche.Expr.WScoped 1 (.app x (ConLeche.reduceCertVar nm)) := by
     unfold ConLeche.Expr.WScoped
     exact ⟨ConLeche.Expr.WScoped.mono (by omega) hws, hwsC⟩
+  have e7 : (internE (.app (decI v) (decE (r6.headD 0)))).run a6 = .ok (decE ax, a7) := hrun7
+  refine RefE.bind_right e7 ?_
   -- the identity certificate
-  cases h8 : realCall p n "is_def_eq_core" [vis, 1, ax, r6.headD 0] m7 with
-  | none => rw [h8] at hW; simp [crpK8] at hW
-  | some rm8 =>
-  obtain ⟨r8, m8⟩ := rm8
-  rw [h8, crpK8_some] at hW
+  rcases h8 : callE p n "is_def_eq_core" [vis, 1, ax, r6.headD 0] m7 with e8 | ⟨r8, m8⟩
+  · rw [checkReducePinE.k_is_def_eq_core_2.none]
+    refine RefE.bind_left fun hcE => ?_
+    have := hcE.isDefEqCore n hn' hC7.stageT 1 ax (r6.headD 0) haxl hxl _ h8
+    rwa [h01] at this
   obtain ⟨x8, a8, hrun8, hT8, hg8, hx8⟩ :=
-    hq.isDefEqCore_sim n hn' hC7.stageT 1 ax (r6.headD 0) haxl hxl r8 m8 h8
+    hq.isDefEqCore_sim n hn' hC7.stageT 1 ax (r6.headD 0) haxl hxl r8 m8 (callW_of_callE h8)
   rw [h01] at hrun8
   obtain ⟨hck8, -, -, -⟩ := defeq_check henv hC7.check hax'
     (ConRon.Bridge.denote_ext hxv hi7.ext) hwsA hwsC hrun8
   have hC8 := StageC.of_T hT8 hck8
+  refine RefE.bind_right hrun8 ?_
   by_cases e8 : r8.headD 0 = 0
-  · rw [ite_eq_left e8] at hW; cases hW
-  rw [ite_eq_right e8] at hW
+  · rw [checkReducePinE.k_is_def_eq_core_2.abort1 p _ _ e8]; exact RefE.of_cls0 rfl
+  rw [checkReducePinE.k_is_def_eq_core_2.arm1 p _ _ e8]
   have t8 : x8 = true := by rw [← hx8]; simpa [decBool] using e8
-  simp only [Option.some.injEq, Prod.mk.injEq] at hW
-  obtain ⟨rfl, rfl⟩ := hW
-  refine ⟨a8, ?_, ?_, hC8, hg1.trans (hg2.trans (hg3.trans (hg4.trans (hg5.trans (hg6.trans
-    (hg7.trans hg8))))))⟩
-  · simp only [checkReducePin, StateT.run_bind, hrun1, exc_ok_bind', ite_true]
-    simp only [hrun2, exc_ok_bind', ite_true, StateT.run_bind, hrun3, hrun4, hrun5, t5, hrun6]
-    have e7 : (internE (.app (decI v) (decE (r6.headD 0)))).run a6 = .ok (decE ax, a7) := hrun7
-    simp only [e7, exc_ok_bind']
-    have e8 : (isDefEqCore V fe checkFuel 1 (decE ax) (decE (r6.headD 0))).run a7 =
-        .ok (x8, a8) := hrun8
-    simp only [e8, t8]
-    rfl
-  · have := StageR.restrict hC8.stage vis2
-    rw [← hfe, IFEnv.restrictTo_restrictTo, ← hvb, IFEnv.restrictTo_self] at this
-    exact this
+  rw [t8]
+  refine RefE.ite_pos rfl (RefE.ret rfl ⟨?_, by rw [← hfe] at hC8; exact hC8, hg1.trans (hg2.trans (hg3.trans (hg4.trans
+    (hg5.trans (hg6.trans (hg7.trans hg8))))))⟩)
+  have := StageR.restrict hC8.stage vis2
+  rw [← hfe, IFEnv.restrictTo_restrictTo, ← hvb, IFEnv.restrictTo_self] at this
+  exact this
 
-/-- **The opaque arm under `StageT`** (`cdoW_ok`'s): the constant check and the value check under
-`StageT` (`checkConstantVal_refinesT`, `dvW_okT`), then for `Lean.reduceNat`/`Lean.reduceBool` the
-reduce-pin gate under `StageC` (`crpW_okT`). The twin side is con-ron's `checkDecl_bridge_opaque`:
-the fold invariant `FoldOK` at the arm's entry (`TwinFold.fold`), the declaration's constant and
-value denoting (`TwinFold.den`). After the value check's push `TwinOK` is not re-derived: the gate
-runs from `StageC` at the pre-insertion view (con-ron's `CheckOK`, restricted, and the memory's
-half: the call's frame by `LoopClosed`, the core memos by `dvW_okT`). Post: the stage relation at
-the pushed environment and the core's memos. -/
-theorem cdoW_okT {p : Prog} (hV : ValProg p) (hC : CrpProg p) (hq : KnotStageProg p)
-    (hcl : LeafClosed p) (hlc : LoopClosed p) (hap : ApdF p) (hkp : CrKeep p) {dn : NIdx → Option ConLeche.Name} (hdn : DnInj dn)
-    {vis : Word} {fe : IFEnv} {env : ConLeche.Env} {a : AState} {n : Nat} (hn : n ≤ 2 ^ 62)
-    {m m' : Mem} {i : Word} {r : List Word} {ds : Array IDeclaration} {pins : List INatOpPinSet}
+set_option experimental.vcgen true in
+/-- **The model of `check_decl_opaque`, both outcomes**: its callees through their runs. -/
+l_model checkDeclOpaque_specE (p : Prog)
+  (hf : p.lookup "check_decl_opaque" = some checkDeclOpaque)
+  fns [hf ↦ checkDeclOpaqueE] grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
+  heartbeats 400000 simp [] unified
+
+/-- **The opaque arm refines `checkDecl`, both outcomes**, under `StageT` (con-ron's
+`checkDecl_bridge_opaque`): the constant check and the value check (`ccv_ref`, `ov_ref`), then for
+`Lean.reduceNat`/`Lean.reduceBool` the reduce-pin gate under `StageC` (`crp_ref`) at the
+pre-insertion view (con-ron's `CheckOK`, restricted, and the memory's half: the call's frame by
+`LoopClosed`, the core memos by `ov_ref`). From the fold invariant `FoldOK` at the arm's entry and
+the declaration's constant and value denoting. -/
+theorem cdo_ref {p : Prog} (hV : ValProg p) (hC : CrpProg p) (hq : KnotStageProg p)
+    (hcl : LeafClosed p) (hlc : LoopClosed p) (hap : ApdF p) (hkp : CrKeep p)
+    {dn : NIdx → Option ConLeche.Name} (hdn : DnInj dn)
+    {vis : Word} {fe : IFEnv} {env : ConLeche.Env} {a : AState} (n : Nat) (hn : n ≤ 2 ^ 62)
+    {m : Mem} {i : Word} {ds : Array IDeclaration} {pins : List INatOpPinSet}
     {cv : IConstantVal} {v : EIdx} {c : ConLeche.ConstantVal} {x : ConLeche.Expr}
-    (h : cdoW p n m i vis = some (r, m')) (hS : StageT dn vis fe m a)
+    (hS : StageT dn vis fe m a)
     (hD : DeclsF (m.arr64 DECL) (m.arr64 DLP) ds) (hi : i.toNat < ds.size)
     (hd : ds[i.toNat] = .opaqueDecl cv v) (hfold : FoldOK V env fe a)
     (hcvd : Frontend.denoteCV a.store cv = some c) (hvd : denoteE a.store v = some x)
     (hCr : L.Stubs.CrOK m) :
-    ∃ fe' a', (checkDecl V pins fe (.opaqueDecl cv v)).run a = .ok (fe', a') ∧
-      StageR dn (r.headD 0) fe' m' a' ∧ CoreMemos m' ∧ IWGrow m m' := by
+    RefE (CdtCtx p) (checkDeclOpaqueE p n m i vis) (checkDecl V pins fe (.opaqueDecl cv v)) a
+      (fun w y a' => ArmPost dn m w.1 w.2 y a') := by
+  show RefE _ _ (do checkConstantVal V fe cv
+                    let fe2 ← checkOpaqueVal V fe cv v
+                    if (← reduceOpNames).contains cv.name then
+                      checkReducePin V (fe2.restrictTo fe.visibleBelow) fe2 cv.name v
+                    pure fe2) a _
   cases n with
-  | zero => simp [cdoW] at h
+  | zero => rw [checkDeclOpaqueE.eq_1]; exact RefE.of_cls0 rfl
   | succ n =>
   have hn' : n ≤ 2 ^ 62 := by omega
-  rw [cdoW_step] at h
-  cases h1 : erecCiW n m i 0 with
-  | none => rw [h1] at h; cases h
-  | some rm1 =>
-  obtain ⟨r1, m1⟩ := rm1
-  rw [h1, cdoK1_some] at h
-  have hCr1 := CrOK.frame hCr (erecCiW_frame h1) (by decide) (by decide)
+  rw [checkDeclOpaqueE.arm1]
+  -- `erec_ci`
+  rcases h1 : callE p n "erec_ci" [i, 0] m with e1 | ⟨r1, m1⟩
+  · rw [checkDeclOpaqueE.k_erec_ci.none]; exact fun hG => nvl hG.nv (by decide +kernel) h1
+  rw [checkDeclOpaqueE.k_erec_ci.arm1]
+  obtain ⟨s1, hs1, -, hW1⟩ := triple_of_callE (erecCi_specW p hV.rcp n ⟨m, Locals.init []⟩ i 0) h1
+  subst hs1
+  have hCr1 := CrOK.frame hCr (erecCiW_frame hW1) (by decide) (by decide)
   obtain ⟨hS1, hg1, hci1, hcv1, hval1, htop1⟩ :=
-    erecCiW_okT (ci := .axiomInfo cv) h1 hS hD hi (by rw [hd]; rfl)
+    erecCiW_okT (ci := .axiomInfo cv) hW1 hS hD hi (by rw [hd]; rfl)
   rw [hd] at hcv1 hval1
   simp only [stepCV, stepVal] at hcv1 hval1
-  generalize hq0 : r1.headD 0 = q at h hci1 hcv1 hval1 htop1
+  generalize hq0 : r1.headD 0 = q at hci1 hcv1 hval1 htop1 ⊢
   have hqb : q.toNat + 8 < 2 ^ 64 := by
     have := hS1.stage.2.2.1; have := hS1.stage.2.2.2.2.1; omega
   have hq1 : (q + 1).toNat = q.toNat + 1 := toNat_add_small q 1 (by omega)
@@ -452,40 +479,41 @@ theorem cdoW_okT {p : Prog} (hV : ValProg p) (hC : CrpProg p) (hq : KnotStagePro
   obtain ⟨wn, hwn, hwnl, hname0⟩ := decCI_name hci1
   have hname : cv.name = decI wn := hname0
   obtain ⟨wv, hwv, hwvl, rfl⟩ := hd?_some hval1
-  rw [rdW_of_get? hq1.symm (erecP_get hwn), rdW_of_get? hq5.symm (erecP_get hwv)] at h
+  rw [rdW_of_get? hq1.symm (erecP_get hwn), rdW_of_get? hq5.symm (erecP_get hwv)]
   -- `check_constant_val`
-  cases h2 : callW p n "check_constant_val" [vis, q + 1] m1 with
-  | none => rw [h2] at h; cases h
-  | some rm2 =>
-  obtain ⟨r2, m2⟩ := rm2
-  rw [h2, cdoK2_some] at h
-  have hCr2 := hkp.call (im_mem _ rfl) h2 hCr1
-  obtain ⟨s2, hs2, -, hok2, hS2, hg2, -⟩ := triple_of_callW (s₀ := ⟨m1, Locals.init []⟩)
-    (checkConstantVal_refinesT p hV hq hap hkp n hn' ⟨m1, Locals.init []⟩ a dn fe vis (q + 1) cv hS1
-      (by rw [hq1]; exact hcv1) (by omega) (denoteCV_lps hcvd) hCr1) h2
+  have h2R := ccv_ref hq hap hkp hn' hS1 (by rw [hq1]; exact hcv1) (by omega) (denoteCV_lps hcvd)
+    hCr1
+  rcases h2 : callE p n "check_constant_val" [vis, q + 1] s1.mem with e2 | ⟨r2, m2⟩
+  · rw [checkDeclOpaqueE.k_check_constant_val.none]
+    exact RefE.bind_left fun hG => RefE.run_err (s₀ := ⟨s1.mem, Locals.init []⟩)
+      (checkConstantVal_specE p hV n _ vis (q + 1)) hG.nv hG.toVerdictCtxU h2R h2
+  rw [checkDeclOpaqueE.k_check_constant_val.arm1]
+  obtain ⟨s2, hs2, -, _, a2, hrun2, hP2⟩ := RefE.run_ok (s₀ := ⟨s1.mem, Locals.init []⟩)
+    (checkConstantVal_specE p hV n _ vis (q + 1)) h2R h2
   subst hs2
-  have hrun2 := AM.run_of_ok _ _ hok2
   obtain ⟨hstep1, F1, hpure1⟩ :=
     ConRon.Bridge.checkConstantVal_bridge_of_fold rfl (CoreSpec.of_core rfl) hfold hcvd hrun2
   have hok1 := hfold.ofCore hstep1
   have hcA := ConRon.Bridge.denoteCV_ext hcvd hstep1.ext
   have hv1 := ConRon.Bridge.denote_ext hvd hstep1.ext
-  generalize AM.st (checkConstantVal V fe cv) a = a2 at hrun2 hS2 hok1 hcA hv1
+  refine RefE.bind_right hrun2 ?_
   -- `check_opaque_val`
-  cases h3 : callW p n "check_opaque_val" [vis, q] s2.mem with
-  | none => rw [h3] at h; cases h
-  | some rm3 =>
-  obtain ⟨r3, m3⟩ := rm3
-  rw [h3, cdoK3_some] at h
-  have hCr3 := hkp.call (im_mem _ rfl) h3 hCr2
-  have hx2 : ArrExt (erecP m1) (erecP s2.mem) := IWGrow.erecPExt hg2
+  have hx2 : ArrExt (erecP s1.mem) (erecP s2.mem) := IWGrow.erecPExt hP2.grow
+  have h3R := ov_ref hq hV hap hkp hn' "type mismatch in opaque" hP2.stage
+    (ArrExt.decCI hx2 hci1) (ArrExt.decCV hx2 (decCI_cvTA hci1 (.inr rfl)))
+    (ArrExt.hd? hx2 hval1) (denoteCV_lps hcA) hP2.crOK
+  rcases h3 : callE p n "check_opaque_val" [vis, q] s2.mem with e3 | ⟨r3, m3⟩
+  · rw [checkDeclOpaqueE.k_check_opaque_val.none]
+    refine RefE.bind_left fun hG => ?_
+    rw [checkOpaqueVal_dvT]
+    exact RefE.run_err (s₀ := ⟨s2.mem, Locals.init []⟩) (checkOpaqueVal_specE p hV n _ vis q)
+      trivial ⟨fun _ _ _ _ h => callE_nv hG.nv (declNv_mem _ (by decide +kernel)) _ _ _ h,
+        hG.core, hG.ivg⟩ h3R h3
+  rw [checkDeclOpaqueE.k_check_opaque_val.arm1]
+  have h3w := callW_of_callE h3
+  have hCr3 := hkp.call (im_mem _ rfl) h3w hP2.crOK
   obtain ⟨s3, hs3, -, y3, a3, hrun3, hS3, hM3, hg3, rfl⟩ :=
-    RefE.run_okW (s₀ := ⟨s2.mem, Locals.init []⟩)
-    (checkOpaqueVal_specE p hV n _ vis q)
-    (ov_ref hq hV hC.apd hkp hn' "type mismatch in opaque"
-      hS2 (ArrExt.decCI hx2 hci1)
-    (by have := ArrExt.decCV hx2 (decCI_cvTA hci1 (.inr rfl)); exact this) (ArrExt.hd? hx2 hval1)
-    (denoteCV_lps hcA) hCr2) h3
+    RefE.run_ok (s₀ := ⟨s2.mem, Locals.init []⟩) (checkOpaqueVal_specE p hV n _ vis q) h3R h3
   subst hs3
   rw [← checkOpaqueVal_dvT] at hrun3
   -- the twin's value check: `CheckOK` at the old index, `StepOK` at the pushed one
@@ -498,44 +526,49 @@ theorem cdoW_okT {p : Prog} (hV : ValProg p) (hC : CrpProg p) (hq : KnotStagePro
   have hv3 := ConRon.Bridge.denote_ext hv1 hstep2.ext
   have hvis : fe.visibleBelow = vis.toNat := hS.stage.1.env.vis
   have hpre := ConRon.Bridge.restrict_pushed_find (fe2 := fe.push (.axiomInfo cv)) rfl
-    (hok3.check.ienv.find?_none (show denoteN a3.store.ns cv.name = some c.name by rw [hname]; exact hnm3)
+    (hok3.check.ienv.find?_none
+      (show denoteN a3.store.ns cv.name = some c.name by rw [hname]; exact hnm3)
       (ConRon.Bridge.checkConstantVal_fresh hpure1))
   have hck3 : CheckOK V env ((fe.push (.axiomInfo cv)).restrictTo vis.toNat) a3 := by
     rw [← hvis]; exact hok3.check.congr_find hpre rfl
   have hws : ConLeche.Expr.WScoped 0 x :=
     ConLeche.Expr.WScoped.of_not_hasFvar (ConRon.Bridge.checkOpaqueVal_noFvar hpure2)
   -- the memory's half after the push: the call's frame, the core memos
-  have hf3 := (run_memFrame hlc checkOpaqueVal_loop (run_of_callW h3)).1
+  have hf3 := (run_memFrame hlc checkOpaqueVal_loop (run_of_callW h3w)).1
   have hmem3 : TwinMem dn s3.mem a3 :=
-    ⟨by rw [hf3.size]; exact hS2.twin.erec, by rw [hf3.size]; exact hS2.twin.spn,
-      by rw [hf3.size]; exact hS2.twin.bstk, hM3,
-      fun k y e => hstep2.ext.lss.ls.ns k y (hS2.twin.den.dnN k y e)⟩
+    ⟨by rw [hf3.size]; exact hP2.stage.twin.erec, by rw [hf3.size]; exact hP2.stage.twin.spn,
+      by rw [hf3.size]; exact hP2.stage.twin.bstk, hM3,
+      fun k y e => hstep2.ext.lss.ls.ns k y (hP2.stage.twin.den.dnN k y e)⟩
   have hflag3 : pinW s3.mem 0 ≠ 0 := by
-    simp only [pinW, hf3.1 PINS loopA_pins (by decide)]; exact hS2.flag
-  generalize hfe2 : fe.push (.axiomInfo cv) = fe2 at hS3 hrun3 hck3 hstepOK2
+    simp only [pinW, hf3.1 PINS loopA_pins (by decide)]; exact hP2.stage.flag
+  refine RefE.bind_right hrun3 ?_
+  generalize hfe2 : fe.push (.axiomInfo cv) = fe2 at hS3 hrun3 hck3 hstepOK2 ⊢
   -- the two pins
-  cases h4 : pinAtW s3.mem 43 with
-  | none => rw [h4] at h; cases h
-  | some rm4 =>
-  obtain ⟨r4, m4⟩ := rm4
-  rw [h4, cdoK4_some] at h
-  obtain ⟨hm4, hr4, -, -⟩ := pinAtW_ok h4 hS3.1.pins
-  rw [hm4] at h
-  cases h5 : pinAtW s3.mem 44 with
-  | none => rw [h5] at h; cases h
-  | some rm5 =>
-  obtain ⟨r5, m5⟩ := rm5
-  rw [h5, cdoK5_some] at h
-  obtain ⟨hm5, hr5, -, -⟩ := pinAtW_ok h5 hS3.1.pins
-  subst hm5
+  rcases h4 : callE p n "pin_at" [43] s3.mem with e4 | ⟨r4, m4⟩
+  · rw [checkDeclOpaqueE.k_pin_at.none]; exact fun hG => nvl hG.nv (by decide +kernel) h4
+  rw [checkDeclOpaqueE.k_pin_at.arm1]
+  obtain ⟨s4, hs4, -, hW4⟩ := triple_of_callE
+    (pinAt_specW p hC.red.pa n ⟨s3.mem, Locals.init []⟩ 43) h4
+  obtain ⟨hm4, hr4, -, -⟩ := pinAtW_ok hW4 hS3.1.pins
+  have hm4' : m4 = s3.mem := hs4.symm.trans hm4
+  subst hm4'
+  rcases h5 : callE p n "pin_at" [44] s3.mem with e5 | ⟨r5, m5⟩
+  · rw [checkDeclOpaqueE.k_pin_at_2.none]; exact fun hG => nvl hG.nv (by decide +kernel) h5
+  obtain ⟨s5, hs5, -, hW5⟩ := triple_of_callE
+    (pinAt_specW p hC.red.pa n ⟨s3.mem, Locals.init []⟩ 44) h5
+  obtain ⟨hm5, hr5, -, -⟩ := pinAtW_ok hW5 hS3.1.pins
+  have hm5' : m5 = s3.mem := hs5.symm.trans hm5
+  subst hm5'
   have e4 : r4.headD 0 = pinW s3.mem (1 + (43 : Word).toNat) := by rw [hr4]; rfl
   have e5 : r5.headD 0 = pinW s3.mem (1 + (44 : Word).toNat) := by rw [hr5]; rfl
   have hF := hS3.1.pins.full hflag3
   have hcont : (reduceOpNames.run a3) =
       .ok ((List.range' 44 2).map (fun j => decI (pinW s3.mem j)), a3) := reduceOpNames_run hF
   have hiff := contains_pins hF hwnl 44 2 (by omega) (by omega)
+  refine RefE.bind_right hcont ?_
+  rw [hname]
   by_cases hin : wn = r4.headD 0 ∨ wn = r5.headD 0
-  · rw [ite_eq_left hin] at h
+  · rw [checkDeclOpaqueE.k_pin_at_2.arm1 p _ _ _ _ _ _ _ _ hin]
     rw [e4, e5] at hin
     have hc : ((List.range' 44 2).map fun j => (decI (pinW s3.mem j) : NIdx)).contains (decI wn) =
         true := by
@@ -543,33 +576,24 @@ theorem cdoW_okT {p : Prog} (hV : ValProg p) (hC : CrpProg p) (hq : KnotStagePro
       rcases hin with e | e
       · exact ⟨44, by omega, by omega, e.symm⟩
       · exact ⟨45, by omega, by omega, e.symm⟩
-    cases h6 : callW p n "check_reduce_pin" [vis, r3.headD 0, wn, wv] s3.mem with
-    | none => rw [h6] at h; cases h
-    | some rm6 =>
-    obtain ⟨r6, m6⟩ := rm6
-    rw [h6, cdoK6_some] at h
-    simp only [Option.some.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl⟩ := h
-    obtain ⟨s6, hs6, -, hW6⟩ := triple_of_callW (s₀ := ⟨s3.mem, Locals.init []⟩)
-      (crp_specW p hC (realCall p) (realCall_spec p) n ⟨s3.mem, Locals.init []⟩ vis (r3.headD 0)
-        wn wv) h6
+    refine RefE.ite_pos hc ?_
+    have h6R := crp_ref hC hq hcl hkp hdn hn' hS3 hck3 hok3.envWF hstepOK2 hmem3 hflag3 hnm3 hv3
+      hws hwnl hwvl hCr3
+    rcases h6 : callE p n "check_reduce_pin" [vis, r3.headD 0, wn, wv] s3.mem with e6 | ⟨r6, m6⟩
+    · rw [checkDeclOpaqueE.k_check_reduce_pin.none]
+      refine RefE.bind_left fun hG => ?_
+      rw [hvis]
+      exact RefE.run_err (s₀ := ⟨s3.mem, Locals.init []⟩)
+        (checkReducePin_specE p hC n _ vis (r3.headD 0) wn wv) hG.nv hG.core h6R h6
+    rw [checkDeclOpaqueE.k_check_reduce_pin.arm1, checkDeclOpaqueE.j1.arm1]
+    obtain ⟨s6, hs6, -, _, a6, hrun6, hR6⟩ := RefE.run_ok (s₀ := ⟨s3.mem, Locals.init []⟩)
+      (checkReducePin_specE p hC n _ vis (r3.headD 0) wn wv) h6R h6
     subst hs6
-    obtain ⟨a6, hrun6, hS6, hC6, hg6⟩ := crpW_okT hC hq hcl hkp hdn hn' hW6 hS3 hck3 hok3.envWF
-      hstepOK2 hmem3 hflag3 hnm3 hv3 hws hwnl hwvl hCr3
-    refine ⟨fe2, a6, ?_, by simpa using hS6, hC6.mem.memos,
-      hg1.trans (hg2.trans (hg3.trans hg6))⟩
-    show (do checkConstantVal V fe cv
-             let fe2 ← checkOpaqueVal V fe cv (decI wv)
-             if (← reduceOpNames).contains cv.name then
-               checkReducePin V (fe2.restrictTo fe.visibleBelow) fe2 cv.name (decI wv)
-             pure fe2).run a = _
-    simp only [StateT.run_bind, hrun2, exc_ok_bind', hrun3, hcont, hname, hc, ite_true, hvis]
-    simp only [hrun6, exc_ok_bind', StateT.run_pure]
-    rfl
-  · rw [ite_eq_right hin] at h
+    rw [hvis]
+    exact RefE.bind_right hrun6 (RefE.ret rfl ⟨by simpa using hR6.stage2, hR6.stageC.mem.memos,
+      hg1.trans (hP2.grow.trans (hg3.trans hR6.grow))⟩)
+  · rw [checkDeclOpaqueE.k_pin_at_2.arm2 p _ _ _ _ _ _ _ _ hin, checkDeclOpaqueE.j1.arm1]
     rw [e4, e5] at hin
-    simp only [Option.some.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl⟩ := h
     have hc : ((List.range' 44 2).map fun j => (decI (pinW s3.mem j) : NIdx)).contains (decI wn) =
         false := by
       cases hcb : ((List.range' 44 2).map fun j => (decI (pinW s3.mem j) : NIdx)).contains (decI wn)
@@ -582,14 +606,7 @@ theorem cdoW_okT {p : Prog} (hV : ValProg p) (hC : CrpProg p) (hq : KnotStagePro
       rcases this with rfl | rfl
       · exact .inl e.symm
       · exact .inr e.symm
-    refine ⟨fe2, _, ?_, by simpa using hS3, hM3, hg1.trans (hg2.trans hg3)⟩
-    show (do checkConstantVal V fe cv
-             let fe2 ← checkOpaqueVal V fe cv (decI wv)
-             if (← reduceOpNames).contains cv.name then
-               checkReducePin V (fe2.restrictTo fe.visibleBelow) fe2 cv.name (decI wv)
-             pure fe2).run a = _
-    simp only [StateT.run_bind, hrun2, exc_ok_bind', hrun3, hcont, hname, hc, Bool.false_eq_true,
-      ite_false, StateT.run_pure]
-    rfl
+    refine RefE.ite_neg (by rw [hc]; decide) ?_
+    exact RefE.ret rfl ⟨by simpa using hS3, hM3, hg1.trans (hP2.grow.trans hg3)⟩
 
 end L.Arena

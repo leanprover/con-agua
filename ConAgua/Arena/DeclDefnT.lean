@@ -1,4 +1,5 @@
 import ConAgua.Arena.DeclNatGateT
+import ConAgua.Arena.DeclArmLoop
 import ConAgua.Arena.DeclDivGateT
 
 /-!

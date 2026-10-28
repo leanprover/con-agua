@@ -1,3 +1,4 @@
+import ConAgua.Arena.IndCallM
 import ConAgua.Arena.IndPosSpec.NoConstWf
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
