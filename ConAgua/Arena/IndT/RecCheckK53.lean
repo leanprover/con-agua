@@ -1,4 +1,4 @@
-import ConAgua.Arena.IndT.RecCheckTmn
+import ConAgua.Verdict.IndBTcm
 import ConAgua.Arena.IndT.RecGen19
 import ConAgua.Arena.RecCheckSpec.Tka
 import ConAgua.Arena.RecCheckSpec.TkhK2V2
@@ -11,7 +11,7 @@ import ConAgua.Arena.RecCheckSpec.TkhK2V2
 (`stripPis_pstep`, read-only), the telescopes' annotations erased (`mapM_RE_P` of
 `eraseFVarTys_spec`), the heads and arguments (`getAppFn_run`, `viewConst_run`, `getAppArgs_run`,
 read-only), the arguments' check (`internConstE_run`, `mkAppN_run`; `nestOcc` read-only), then
-`tcmF_okC`.
+`tcm_ref` (its ok half).
 -/
 
 
@@ -104,7 +104,7 @@ variable {p : Prog} (hq : KnotStageProg p) {dn : NIdx → Option ConLeche.Name} 
 include hq henv in
 /-- **`target_k53_args` under `StageC`** (twin side: con-ron's `targetK53_spec`, the arguments'
 part). -/
-theorem tkaW_okC (n : Nat) (hn : n ≤ 2 ^ 62) {m m' : Mem} {a : AState}
+theorem tkaW_okC (hT : TcmLook p) (n : Nat) (hn : n ≤ 2 ^ 62) {m m' : Mem} {a : AState}
     {q fto ftl Mc ip usp lao lal mao mal : Word}
     {r : List Word} {bs : BlockShape} {formerTys : List EIdx} {TM : TargetMajor} {la ma : List EIdx}
     (h : tkaW (realCall p) n m vis q fto ftl Mc ip usp lao lal mao mal = some (r, m'))
@@ -235,20 +235,21 @@ theorem tkaW_okC (n : Nat) (hn : n ≤ 2 ^ 62) {m m' : Mem} {a : AState}
     show UInt64.ofNat 1 = (1 : Word) from rfl, show UInt64.ofNat 2 = (2 : Word) from rfl,
     show UInt64.ofNat 3 = (3 : Word) from rfl] at e11 e12 e1 e2 e3
   rw [e11, e12, e1, e2, e3] at h
-  rcases h8 : tcmF (realCall p) n m6 vis q fto ftl (rdW (m.arr64 IW) (Mc + 11)) (rdW (m.arr64 IW) (Mc + 12))
+  rcases h8 : tcmR (realCall p) n m6 vis q fto ftl (rdW (m.arr64 IW) (Mc + 11)) (rdW (m.arr64 IW) (Mc + 12))
       (rdW (m.arr64 IW) (Mc + 1)) (rdW (m.arr64 IW) (Mc + 2)) (rdW (m.arr64 IW) (Mc + 3)) usp lao lpl with _ | ⟨r8, m8⟩ <;> simp only [h8, tkaK8, reduceCtorEq] at h
   simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨rfl, rfl⟩ := h
   have hpfl := ConRon.Bridge.Inductives.denoteEList_length (denoteEList_ext q14.ext _ _ hMpf)
-  obtain ⟨c, a8, run8, hc, hC8, hg8, hP8, hA8⟩ := tcmF_okC hq henv n (by omega) h8 hC6 hA6
+  obtain ⟨s8, rfl, -, c, a8, run8, hR8⟩ := RefE.run_okW (s₀ := ⟨m6, Locals.init []⟩)
+    (tcmE_spec p hT n _ _ _ _ _ _ _ _ _ _ _ _ _) (tcm_ref hq henv hT n (by omega) hC6 hA6
     (hbs.grow hg06) hlvH hus
-    (by rw [decHL_grow hg06 hftb]; exact hft) (by have := hg06.1; omega) (hpfS.grow hg06) (hdsS.grow hg06)
+    (by rw [decHL_grow hg06 hftb]; exact hft) (by dsimp only; have := hg06.1; omega) (hpfS.grow hg06) (hdsS.grow hg06)
     (hlp.grow ((hg4.trans hg5).trans hg6)) hP6
     (ConRon.Bridge.Inductives.dShape_ext q14.ext _ _ hsh) (denoteEList_ext q14.ext _ _ hftP)
     (denoteEList_ext q14.ext _ _ hMpf) (by rw [hlvD]; exact ConRon.Bridge.denoteLs_ext hMlv q14.ext)
     (denoteEList_ext q14.ext _ _ hMds) (ConRon.Bridge.denoteLs_ext husP q14.ext) (denoteEList_ext q4.ext _ _ hlpP) hformer
-    hMs.1
+    hMs.1) h8
   rw [hlvD] at run8
-  refine ⟨c, a8, ?_, by simpa using hc, hC8, hg06.trans hg8, hP8, hA8⟩
+  refine ⟨c, a8, ?_, by simpa using hR8.res, hR8.stage, hg06.trans hR8.grow, hR8.rc, hR8.abs⟩
   simp only [tkArgs, StateT.run_bind, run1, except_ok_bind, run2, bne_self_eq_false, Bool.false_eq_true,
     ite_false, ConRon.Arena.internConstE, run3, hrun4, run6, ite_true]
   exact run8
@@ -256,7 +257,7 @@ theorem tkaW_okC (n : Nat) (hn : n ≤ 2 ^ 62) {m m' : Mem} {a : AState}
 include hq henv in
 /-- **`target_k53_heads` under `StageC`** (twin side: con-ron's `targetK53_spec`, the heads' part:
 read-only steps). -/
-theorem tkhW_okC (n : Nat) (hn : n ≤ 2 ^ 62) {m m' : Mem} {a : AState} {q fto ftl Mc leafW majDom : Word}
+theorem tkhW_okC (hT : TcmLook p) (n : Nat) (hn : n ≤ 2 ^ 62) {m m' : Mem} {a : AState} {q fto ftl Mc leafW majDom : Word}
     {r : List Word} {bs : BlockShape} {formerTys : List EIdx} {TM : TargetMajor}
     (h : tkhW (realCall p) n m vis q fto ftl Mc leafW majDom = some (r, m'))
     (hC : StageC dn vis fe env m a) (hA : AbsOK m)
@@ -384,7 +385,7 @@ theorem tkhW_okC (n : Nat) (hn : n ≤ 2 ^ 62) {m m' : Mem} {a : AState} {q fto 
   rcases h5 : tkaW (realCall p) n m4 vis q fto ftl Mc ip usp (ra.headD 0) (ra.tail.headD 0) (rb.headD 0)
       (rb.tail.headD 0) with _ | ⟨r5, m5⟩ <;> simp only [h5, tkhK5, reduceCtorEq] at h
   simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨rfl, rfl⟩ := h
-  obtain ⟨c, a5, run5, hc, hC5, hg5, hP5, hA5⟩ := tkaW_okC hq henv n (by omega) h5 hC4 hA4
+  obtain ⟨c, a5, run5, hc, hC5, hg5, hP5, hA5⟩ := tkaW_okC hq henv hT n (by omega) h5 hC4 hA4
     (hbs.grow hg14) (by rw [decHL_grow hg14 hftb]; exact hft) (by have := hg14.1; omega)
     (hMc.grow (decTM_mono _) hg14) hipH husH hla4 hma4 hP4 hsh hftP hMcP hI' hus' hlaP hmaP hformer hMs
   refine ⟨c, a5, ?_, by simpa using hc, hC5, hg14.trans hg5, hP5, hA5⟩
@@ -393,7 +394,7 @@ theorem tkhW_okC (n : Nat) (hn : n ≤ 2 ^ 62) {m m' : Mem} {a : AState} {q fto 
 
 include hq henv in
 /-- **`target_k53` under `StageC`** (twin side: con-ron's `targetK53_spec`'s proof). -/
-theorem tkW_okC (n : Nat) (hn : n ≤ 2 ^ 62) {m m' : Mem} {a : AState}
+theorem tkW_okC (hT : TcmLook p) (n : Nat) (hn : n ≤ 2 ^ 62) {m m' : Mem} {a : AState}
     {q fto ftl Mc teo tel majDom f : Word}
     {r : List Word} {bs : BlockShape} {formerTys : List EIdx} {TM : TargetMajor} {tele : List EIdx}
     (h : tkW (realCall p) n m vis q fto ftl Mc teo tel majDom f = some (r, m'))
@@ -460,7 +461,7 @@ theorem tkW_okC (n : Nat) (hn : n ≤ 2 ^ 62) {m m' : Mem} {a : AState}
   rcases h3 : tkhW (realCall p) n m2 vis q fto ftl Mc (rs.tail.tail.tail.headD 0) majDom with _ | ⟨r3, m3⟩ <;> simp only [h3, tkK3, reduceCtorEq] at h
   simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨rfl, rfl⟩ := h
   rw [← decE_eq] at hlwD
-  obtain ⟨c, a3, run3, hc, hC3, hg3, hP3, hA3⟩ := tkhW_okC hq henv n (by omega) h3 hC2 hA2
+  obtain ⟨c, a3, run3, hc, hC3, hg3, hP3, hA3⟩ := tkhW_okC hq henv hT n (by omega) h3 hC2 hA2
     (hbs.grow hg12) (by rw [decHL_grow hg12 hftb]; exact hft) (by have := hg12.1; omega)
     (hMc.grow (decTM_mono _) hg12) hlwH hmj hP2
     (ConRon.Bridge.Inductives.dShape_ext q2.ext _ _ hsh) (denoteEList_ext q2.ext _ _ hftP)
@@ -502,7 +503,7 @@ theorem targetK53_refinesC (L : K53Look p) (n : Nat) (hn : n ≤ 2 ^ 62) (s₀ :
       IWGrow s₀.mem s'.mem ∧ RcMR s'.mem ∧ AbsOK s'.mem; ⊤⦄ := by
   refine triple_post (tk_spec p L (realCall p) (realCall_spec p) n s₀ vis q fto ftl Mc teo tel majDom f) ?_
   rintro r s' ⟨hl', hm⟩
-  obtain ⟨c, a', run, hc, hC', hg, hP', hA'⟩ := tkW_okC hq henv n hn hm hC hA hbs hft hftb hMc htl hmj
+  obtain ⟨c, a', run, hc, hC', hg, hP', hA'⟩ := tkW_okC hq henv L.tmn.tcm n hn hm hC hA hbs hft hftb hMc htl hmj
     hf hP hsh hftP hMcP htlP hmdP hfP hformer hMs
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ run
   exact ⟨hl', hok, by rw [hres]; exact hc, by rw [hst]; exact hC', hg, hP', hA'⟩

@@ -179,6 +179,122 @@ theorem CoreSpecE.zero {α : Type} (p : Prog) (f : FnName) (args : List Word) (T
     rw [he] at he'; cases he'
     exact ErrClaim.of_cls0 h0
 
+/-! ## One refinement for both outcomes
+
+A function's `unified` model (`l_model … unified`) is its run with the errors kept: an ok value
+for an ok run, the run's error for every error of class other than `0`. `RefE G x T a R` relates
+such a model value `x` to the twin computation `T` from `a`: an ok value is `T`'s ok run, the
+results and the final states in `R`; an error claims `T`'s failure (`ErrClaim`) under `G`, what
+the error claims assume about the program (the no-verdict closure, the core stubs' claims). So
+one theorem per function, by one induction over its model, is both its ok refinement (which does
+not need `G`) and its error claim; callers take either half from the call's run (`RefE.run_ok`,
+`RefE.run_okW`, `RefE.run_err`, `RefE.coreSpecE`, `RefE.triple`), through the model's spec, whose
+error post assumes `Gs` (the no-verdict closure, for the callees outside it). -/
+
+/-- **One refinement for both outcomes**: the model value `x` against the twin computation `T`
+from `a`; the errors' claims under `G`. -/
+def RefE {α β : Type} (G : Prop) (x : Except Err α) (T : AM β) (a : AState)
+    (R : α → β → AState → Prop) : Prop :=
+  match x with
+  | .ok v => ∃ y a', T.run a = .ok (y, a') ∧ R v y a'
+  | .error e => G → ErrClaim T a e
+
+section refE
+variable {α β γ : Type} {G : Prop} {T : AM β} {a : AState} {R : α → β → AState → Prop}
+
+@[simp] theorem RefE_ok {v : α} :
+    RefE G (.ok v) T a R ↔ ∃ y a', T.run a = .ok (y, a') ∧ R v y a' := Iff.rfl
+
+@[simp] theorem RefE_error {e : Err} :
+    RefE G (.error e : Except Err α) T a R ↔ (G → ErrClaim T a e) := Iff.rfl
+
+/-- An ok value: the twin's ok run. -/
+theorem RefE.ret {v : α} {y : β} {a' : AState} (h : T.run a = .ok (y, a')) (hR : R v y a') :
+    RefE G (.ok v) T a R := ⟨y, a', h, hR⟩
+
+/-- An error of class `0` claims nothing. -/
+theorem RefE.of_cls0 {e : Err} (h : e.cls = 0) : RefE G (.error e : Except Err α) T a R :=
+  fun _ => ErrClaim.of_cls0 h
+
+/-- The error came from the twin's first step (a callee). -/
+theorem RefE.bind_left {x : AM γ} {f : γ → AM β} {e : Err} (h : G → ErrClaim x a e) :
+    RefE G (.error e : Except Err α) (x >>= f) a R := fun hG => ErrClaim.bind_left (h hG)
+
+/-- The twin's first step ran ok: the rest decides, for both outcomes. -/
+theorem RefE.bind_right {x : AM γ} {f : γ → AM β} {a₁ : AState} {v : γ} {r : Except Err α}
+    (hx : x.run a = .ok (v, a₁)) (h : RefE G r (f v) a₁ R) : RefE G r (x >>= f) a R := by
+  cases r with
+  | error e => exact fun hG => ErrClaim.bind_right hx (h hG)
+  | ok w =>
+    obtain ⟨y, a', hy, hR⟩ := h
+    exact ⟨y, a', by simp only [StateT.run_bind, hx]; exact hy, hR⟩
+
+/-- `if` in the twin: the branch taken. -/
+theorem RefE.ite_pos {c : Prop} [Decidable c] {x y : AM β} {r : Except Err α} (hc : c)
+    (h : RefE G r x a R) : RefE G r (if c then x else y) a R := by
+  rw [ite_eq_left hc]; exact h
+
+theorem RefE.ite_neg {c : Prop} [Decidable c] {x y : AM β} {r : Except Err α} (hc : ¬ c)
+    (h : RefE G r y a R) : RefE G r (if c then x else y) a R := by
+  rw [ite_eq_right hc]; exact h
+
+/-! ### The halves, from the call's run (through the model's spec) -/
+
+variable {p : Prog} {n : Nat} {f : FnName} {args : List Word} {s₀ : St} {Gs : Prop}
+  {Q : List Word → St → Prop} {fx : Except Err α} {V : List Word → St → α}
+
+/-- **The ok half**: an ok run of the call is the twin's ok run. -/
+theorem RefE.run_ok
+    (hs : ⦃fun s => s = s₀⦄ invoke p (exec p n) f args
+      ⦃fun r s' => Q r s' ∧ fx = .ok (V r s'); fun ε => Gs → ε.cls ≠ 0 → fx = .error ε⦄)
+    (h : RefE G fx T a R) {r : List Word} {m' : Mem} (hc : callE p n f args s₀.mem = .ok (r, m')) :
+    ∃ s', s'.mem = m' ∧ Q r s' ∧ ∃ y a', T.run a = .ok (y, a') ∧ R (V r s') y a' := by
+  obtain ⟨s', hm, hQ, hx⟩ := triple_of_callE hs hc
+  rw [hx] at h
+  exact ⟨s', hm, hQ, h⟩
+
+/-- The ok half from `callW` (the ok models' reading of a call). -/
+theorem RefE.run_okW
+    (hs : ⦃fun s => s = s₀⦄ invoke p (exec p n) f args
+      ⦃fun r s' => Q r s' ∧ fx = .ok (V r s'); fun ε => Gs → ε.cls ≠ 0 → fx = .error ε⦄)
+    (h : RefE G fx T a R) {r : List Word} {m' : Mem} (hc : callW p n f args s₀.mem = some (r, m')) :
+    ∃ s', s'.mem = m' ∧ Q r s' ∧ ∃ y a', T.run a = .ok (y, a') ∧ R (V r s') y a' := by
+  refine RefE.run_ok hs h ?_
+  rw [callW_eq_callE] at hc
+  cases hE : callE p n f args s₀.mem <;> simp_all [Except.toOption]
+
+/-- **The error half**: a failing run of the call claims the twin's failure. -/
+theorem RefE.run_err
+    (hs : ⦃fun s => s = s₀⦄ invoke p (exec p n) f args
+      ⦃fun r s' => Q r s' ∧ fx = .ok (V r s'); fun ε => Gs → ε.cls ≠ 0 → fx = .error ε⦄)
+    (hGs : Gs) (hG : G) (h : RefE G fx T a R) {e : Err} (hc : callE p n f args s₀.mem = .error e) :
+    ErrClaim T a e := by
+  by_cases h0 : e.cls = 0
+  · exact ErrClaim.of_cls0 h0
+  rw [triple_of_callE_err hs hc hGs h0] at h
+  exact h hG
+
+/-- The error half as the error spec of the call (`CoreSpecE`). -/
+theorem RefE.coreSpecE
+    (hs : ⦃fun s => s = s₀⦄ invoke p (exec p n) f args
+      ⦃fun r s' => Q r s' ∧ fx = .ok (V r s'); fun ε => Gs → ε.cls ≠ 0 → fx = .error ε⦄)
+    (hGs : Gs) (hG : G) (h : RefE G fx T a R) : CoreSpecE p n f args T s₀ a :=
+  CoreSpecE.of_runs fun _ hc => RefE.run_err hs hGs hG h hc
+
+/-- The ok half as a triple (the shape of the `@[refines]` theorems). -/
+theorem RefE.triple
+    (hs : ⦃fun s => s = s₀⦄ invoke p (exec p n) f args
+      ⦃fun r s' => Q r s' ∧ fx = .ok (V r s'); fun ε => Gs → ε.cls ≠ 0 → fx = .error ε⦄)
+    (h : RefE G fx T a R) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) f args
+    ⦃fun r s' => Q r s' ∧ ∃ y a', T.run a = .ok (y, a') ∧ R (V r s') y a'; ⊤⦄ :=
+  M.triple_of_run fun _ _ _ hp hr => by
+    obtain ⟨hQ, hx⟩ := M.of_run' (P := fun s => s = s₀) hp hr hs
+    rw [hx] at h
+    exact ⟨hQ, h⟩
+
+end refE
+
 /-! ## Twin computations that report failures as values
 
 The frontend's stages and the fold return `.ok (.error (ce, n))` for a failing record (the

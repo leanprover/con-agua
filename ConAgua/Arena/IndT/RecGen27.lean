@@ -1,3 +1,4 @@
+import ConAgua.Arena.RecCheckSpec.CnfW
 import ConAgua.Arena.IndT.RecGen24
 import ConAgua.Arena.RecCheckSpec.TargetMajorAt
 import ConAgua.Arena.RecGenSpec.DecTMSlices

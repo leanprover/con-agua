@@ -55,11 +55,17 @@ structure K53Look (p : Prog) : Prop where
   tk : p.lookup "target_k53" = some targetK53
   strip : StripProg p
 
+/-- `target_class_match` as `target_k53_args` reads it: its run (`cR`; its refinement is `tcm_ref`'s
+ok half through the run). -/
+def tcmR (cR : CallM) (n : Nat) (m : Mem) (vis q fto ftl pfo pfl us dso dsl lvls edso edsl : Word) :
+    Option (List Word × Mem) :=
+  cR n "target_class_match" [vis, q, fto, ftl, pfo, pfl, us, dso, dsl, lvls, edso, edsl] m
+
 def tkaK7 (cR : CallM) (n : Nat) (vis q fto ftl Mc usp lao lpl : Word) : Option (Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (occ, m) =>
     if occ = 0 then some ([0], m)
-    else tkaK8 (tcmF cR n m vis q fto ftl (rdW (m.arr64 IW) (Mc + 11)) (rdW (m.arr64 IW) (Mc + 12))
+    else tkaK8 (tcmR cR n m vis q fto ftl (rdW (m.arr64 IW) (Mc + 11)) (rdW (m.arr64 IW) (Mc + 12))
       (rdW (m.arr64 IW) (Mc + 1)) (rdW (m.arr64 IW) (Mc + 2)) (rdW (m.arr64 IW) (Mc + 3)) usp lao lpl)
 
 def tkaK6 (cR : CallM) (n : Nat) (vis q fto ftl Mc usp lao lpl app : Word) :
