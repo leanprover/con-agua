@@ -457,7 +457,7 @@ l_model classReadMinor_spec (p : Prog) (hfh : p.lookup "fvar_head" = some fvarHe
     (htl : p.lookup "class_read_minor_tail" = some classReadMinorTail) (had : AdF p)
     (cR : CallM) (hcR : CallSpec p cR)
   fns [hmin ↦ minorW list]
-  specs [piBinders_spec' p ha hc hv hsc hpb n, hcR n "open_pis_at_fvars_f",
+  specs [piBinders_spec p ha hc hv hsc hpb n, hcR n "open_pis_at_fvars_f",
     fvarHead_spec p hfh hv had n, classOfMotiveVar_spec p hf hcm n,
     classReadMinorTail_spec p hfh hv hf hcm hc ha hsc h2 h5 hi1 his hfin htl had n]
   grind [arena_grind] extra [ld64_rd_spec] simp []
@@ -1041,7 +1041,7 @@ open L.Arena
 
 l_model classReadSlotMotive_spec (p : Prog) (hP : SlotProg p)
   fns [hP.smot ↦ slotMotW list]
-  specs [piBinders_spec' p hP.a hP.c hP.v hP.sc hP.pb n, gafF_spec p hP.ad n,
+  specs [piBinders_spec p hP.a hP.c hP.v hP.sc hP.pb n, gafF_spec p hP.ad n,
     gaaF_spec p hP.ad n, eView_spec p hP.v n,
     classNPcOf_spec p hP.a hP.mc hP.mn hP.ct hP.x hP.g hP.ef hP.npc n,
     rec4_specW p hP.a n hP.r4, rec2_specW p hP.a n hP.r2]

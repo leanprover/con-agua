@@ -69,7 +69,7 @@ l_model ntyE_spec (p : Prog) (hL : NtyLook p)
 
 l_model nitE_spec (p : Prog) (hL : NitLook p)
   fns [hL.hp ↦ nitE]
-  specs [ntyE_spec p hL.ty n, piBinders_spec' p hL.ty.ha hL.hc2 hL.ty.hv hL.hs hL.hpb n, eView_spec p hL.ty.hv n,
+  specs [ntyE_spec p hL.ty n, piBinders_spec p hL.ty.ha hL.hc2 hL.ty.hv hL.hs hL.hpb n, eView_spec p hL.ty.hv n,
     nestOccAny_spec p hL.no hL.hoa n, lefE_spec p hL.hlf n]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] unified

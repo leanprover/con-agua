@@ -610,4 +610,59 @@ l_model tUseUg_spec (p : Prog) (fs : List FnName) (hmem : ∀ {f : FnName}, f �
 example (p : Prog) (m : Mem) : tUseUgE p m 1 = .ok (2, m.set64 TW 0 1) := by
   simp [tUseUgE, UG]
 
+/-- A callee post with the result's length (`r = [r.headD 0, r.getD 1 0]`, `piBinders_spec`'s
+shape; also as `r.tail.headD 0`): the model reads it as the list, and `simp_all` takes it apart
+(`L.List.eq_headD_cons`) instead of looping on it. -/
+-- con-ron: none — an `l_model` test function
+def tLen : FunDecl := lfn (x) locals (a, b) {
+  if x == 9 { abort };
+  a := x;
+  b := x + 1;
+  return (a, b)
+}
+
+/-- `t_len`'s model. -/
+def tLenL (m : Mem) (x : Word) : Option (List Word × Mem) :=
+  if x = 9 then none else some ([x, x + 1], m)
+
+theorem tLen_spec (p : Prog) (hp : p.lookup "t_len" = some tLen) (n : Nat) (s₀ : St) (x : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "t_len" [x]
+    ⦃fun r s' => LocEq s' s₀ ∧ tLenL s₀.mem x = some (r, s'.mem) ∧ r = [r.headD 0, r.getD 1 0]; ⊤⦄ := by
+  rw [invoke_eq _ hp]; simp only [callFn, tLen]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs] <;>
+      simp_all [tLenL, Sig.retVal, Sig.retOr, Locals.init, LocEq, BinOp.eval, Cmp.eval, St.setLoc_loc,
+        St.setLoc_mem]
+
+theorem tLen_specT (p : Prog) (hp : p.lookup "t_len" = some tLen) (n : Nat) (s₀ : St) (x : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "t_len" [x]
+    ⦃fun r s' => LocEq s' s₀ ∧ tLenL s₀.mem x = some (r, s'.mem) ∧ r = [r.headD 0, r.tail.headD 0]; ⊤⦄ :=
+  M.triple_of_run fun _ _ _ hs hr => by
+    obtain ⟨h1, h2, h3⟩ := M.of_run (P := fun s => s = s₀) hs hr (tLen_spec p hp n s₀ x)
+    exact ⟨h1, h2, by rw [h3]; rfl⟩
+
+-- con-ron: none — an `l_model` test function
+def tUseLen : FunDecl := lfn (x) locals (a, b) {
+  (a, b) := call t_len(x);
+  TW.u64[0] := b;
+  return a + b
+}
+
+l_model tUseLen_spec (p : Prog) (fs : List FnName) (hmem : ∀ {f : FnName}, f ∈ ["t_len"] → f ∈ fs)
+    (hp : p.lookup "t_use_len" = some tUseLen) (hq : p.lookup "t_len" = some tLen)
+  fns [hp ↦ tUseLenE]
+  specs [tLen_spec p hq n]
+  grind [arena_grind] simp [] unified nv [closedNV p fs = true, hmem]
+
+l_model tUseLenT_spec (p : Prog) (fs : List FnName) (hmem : ∀ {f : FnName}, f ∈ ["t_len"] → f ∈ fs)
+    (hp : p.lookup "t_use_len" = some tUseLen) (hq : p.lookup "t_len" = some tLen)
+  fns [hp ↦ tUseLenTE]
+  specs [tLen_specT p hq n]
+  grind [arena_grind] simp [] unified nv [closedNV p fs = true, hmem]
+
+example (p : Prog) (m : Mem) : tUseLenE p m 1 = .ok (3, m.set64 TW 0 2) := by
+  simp [tUseLenE, tUseLenE.k_t_len, tLenL]
+
 end L.ModelGenTest

@@ -164,6 +164,14 @@ updates `g += e`, stores `R⟨t, i⟩.f := e`. Array bounds are not modelled: a 
 spec says nothing.
 -/
 
+/-- A callee post's length conjunct `r = [r.headD 0, r.getD 1 0, …]` (or `r.tail.headD 0`, …) as
+facts `simp_all` can use: as it stands, a rule `r → […]` whose right side holds `r` (it loops).
+Rewritten before its parts (`↓`) at each cons, it ends as `r ≠ [] ∧ r.tail = […]` (no `r` on the
+right) or `r ≠ [] ∧ r.tail ≠ [] ∧ r.tail.tail = []`. -/
+theorem L.List.eq_headD_cons {α : Type} {l t : List α} {d : α} :
+    (l = l.headD d :: t) ↔ (l ≠ [] ∧ l.tail = t) := by
+  cases l <;> simp
+
 namespace L.ModelGen
 
 open Lean Elab Command Term Meta
@@ -465,10 +473,11 @@ meta partial def conjuncts (e : Lean.Expr) : Array Lean.Expr :=
   | (``And, #[a, b]) => conjuncts a ++ conjuncts b
   | _ => #[e]
 
-/-- `r.headD 0`, `r.tail.headD 0`, …: the index of the result word. -/
+/-- `r.headD 0`, `r.tail.headD 0`, `r.getD i 0`, …: the index of the result word. -/
 meta partial def resIdx (r e : Lean.Expr) : Option Nat :=
   match e.consumeMData.getAppFnArgs with
   | (``List.headD, #[_, l, _]) => go l 0
+  | (``List.getD, #[_, l, i, _]) => i.nat?.bind (go l ·)
   | _ => none
 where go (l : Lean.Expr) (k : Nat) : Option Nat :=
   if l == r then some k else
@@ -2348,7 +2357,7 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
   let simpBase := ["L.LocEq", "L.St.setLoc_loc", "L.St.setLoc_mem", "L.St.setLocs_nil",
       "L.St.setLocs_cons", "L.Locals.init_nil", "L.Locals.init_cons_zero", "L.Locals.init_cons_succ",
       "L.Sig.retVal", "L.Sig.retOr", "L.BinOp.eval", "L.Cmp.eval", "List.headD_cons", "List.headD_nil",
-      "List.tail_cons", "List.tail_nil"]
+      "List.tail_cons", "List.tail_nil", "↓L.List.eq_headD_cons"]
   let simpTxt? ← simpTs?.mapM fun ts => do
     -- a lemma that is not in scope would make `simp_all` fail on every step, silently under the
     -- recipe's `try`, so it is an error here (CkcW, ErToIwWStage named an unimported lemma)
