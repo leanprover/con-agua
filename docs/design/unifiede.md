@@ -2511,7 +2511,7 @@ Elaboration (user seconds, `lean` on the module alone, median of 3 interleaved r
 `Sum4` is the new home of the two models (the `ctlE` step alone is about 20 s, as the `errors` one
 was); the family is faster in all. No kit or generator change was needed.
 
-### 3.35 Retirement, group B, the `whnf` leaves, third landing (`lit_major_to_ctor`, `prepare_major`)
+### 3.36 Retirement, group B, the `whnf` leaves, third landing (`lit_major_to_ctor`, `prepare_major`)
 
 `lmtc_ref` (`Arena/WhnfIotaRefine3`, `G` = `KnotUpToE p n`) and `pm_ref` (`Arena/WhnfIotaRefine4`,
 `G` = `PmG p n`: the knot's slots, the verdict closure, `major_to_ctor`'s claim `MajorToCtorE`,
