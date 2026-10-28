@@ -1268,15 +1268,13 @@ theorem installDeclStep_refines (hm : mode = .verified) (hb : BracketProg p) (hd
     obtain ⟨_, hF, _⟩ := hT.fold
     exact TwinOK.of_check hF.check ⟨hM.erec, hM.spn, hM.bstk, hc, fun k x e => (hM.dnP k x e).2⟩
   have h := ids_ref hdc hFD hLD hb hpp hpn hps (N := n) (by omega) hi hT hR hTw hM.flag hIM
+  have ht := RefC.triple (installDeclStep_specE p hp hpi hdc.istg hdc.cd.cd n s₀ i vis) h
   apply M.triple_of_run
   intro s r s' hs hrun
-  obtain ⟨hl, hx⟩ := M.of_run' (P := fun s => s = s₀) hs hrun
-    (installDeclStep_specE p hp hpi hdc.istg hdc.cd.cd n s₀ i vis)
+  obtain ⟨hl, x, a', hrun', hP⟩ := M.of_run' (P := fun s => s = s₀) hs hrun ht
   obtain ⟨hf, -⟩ := M.of_run (P := fun s => s = s₀) hs hrun
     (invoke_memFrame hdc.loop n installDeclStep_loop [i, vis] s₀)
   subst hs
-  rw [hx] at h
-  obtain ⟨x, a', hrun', hP⟩ := h
   have e : dsAt ds i = ds[i.toNat] := by simp [dsAt, Array.getD, hi]
   have hpx := (hT.step_pext hi (by rw [← e]; exact hrun')).2
   exact ⟨hl, x, a', hrun', hP.loop, hM.step hf hpx, hP.core, hP.ind⟩
@@ -1456,12 +1454,9 @@ theorem fold_ref (n : Nat) (hn : n ≤ 2 ^ 62) :
 @[refines ConRon.Arena.installFold]
 theorem installFoldGo_refines (n : Nat) (hn : n ≤ 2 ^ 62) : FoldGoSpec mode pins dn ds p n := by
   intro s₀ a₀ i cnt vis fe pend hi hc hT hR hM hcm him
-  have hr := (fold_ref mode pins dn ds p hpp hpn hps hpi hpd hpg hpx hsz hb hdc hm hFD hLD n hn).1
-    s₀.mem a₀ i cnt vis fe pend hi hc hT hR hM hcm him
-  exact M.triple_of_run fun _ _ _ hp hrun => by
-    obtain ⟨hl, hx⟩ := M.of_run' (P := fun s => s = s₀) hp hrun
-      (installFoldGo_specE p hpg n s₀ i cnt vis)
-    rw [hx] at hr; exact ⟨hl, hr⟩
+  exact (RefC.triple (installFoldGo_specE p hpg n s₀ i cnt vis)
+    ((fold_ref mode pins dn ds p hpp hpn hps hpi hpd hpg hpx hsz hb hdc hm hFD hLD n hn).1
+      s₀.mem a₀ i cnt vis fe pend hi hc hT hR hM hcm him) :)
 
 end fold
 
