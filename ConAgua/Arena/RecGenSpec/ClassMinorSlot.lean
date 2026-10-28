@@ -210,71 +210,7 @@ theorem classLeafAt_refines (p : Prog) (hp : p.lookup "class_leaf_at" = some cla
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok (ConRon.Arena.classLeafAt bigM (decI leaf)) a₀ a' b hrun
   exact ⟨hl', hok, by rw [hst]; exact hS', hg, by rw [hres]; exact ⟨h1, h2⟩⟩
 
-/-! ## `class_stream_recs` (loop rewritten as recursion: check the first, the rest, then `sl_cons`) -/
-
-mutual
-/-- **The model of `class_stream_recs`.** -/
-def csrW (cR : CallM) : Nat → Mem → Word → Word → Word → Option (List Word × Mem)
-  | 0, _, _, _, _ => none
-  | n + 1, m, vis, rcso, rcsl =>
-    if rcsl = 0 then some ([0, 0], m)
-    else csK1 cR n vis rcso rcsl (rdW (m.arr64 IW) (rdW (m.arr64 IW) rcso))
-      (cR n "check_constant_val" [vis, rdW (m.arr64 IW) (rdW (m.arr64 IW) rcso)] m)
-
-/-- After `check_constant_val`. -/
-def csK1 (cR : CallM) (n : Nat) (vis rcso rcsl cv : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (_, m1) => csK2 cR n cv (csrW cR n m1 vis (rcso + 1) (rcsl - 1))
-
-/-- After the recursive call: `sl_cons`. -/
-def csK2 (_cR : CallM) (n : Nat) (cv : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m2) => csK3 (consW n m2 cv (r.headD 0) (r.tail.headD 0))
-
-/-- After `sl_cons`. -/
-def csK3 : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m3) => some ([r.headD 0, r.tail.headD 0], m3)
-end
-
-section arms
-variable (cR : CallM) (n : Nat) (m m1 m2 m3 : Mem) (vis rcso rcsl cv : Word) (r : List Word)
-theorem csrW_nil (h : rcsl = 0) : csrW cR (n + 1) m vis rcso rcsl = some ([0, 0], m) := by simp [csrW, h]
-theorem csrW_cons (h : rcsl ≠ 0) : csrW cR (n + 1) m vis rcso rcsl =
-    csK1 cR n vis rcso rcsl (rdW (m.arr64 IW) (rdW (m.arr64 IW) rcso))
-      (cR n "check_constant_val" [vis, rdW (m.arr64 IW) (rdW (m.arr64 IW) rcso)] m) := by
-  simp [csrW, h]
-theorem csK1_some (r0 : List Word) : csK1 cR n vis rcso rcsl cv (some (r0, m1)) =
-    csK2 cR n cv (csrW cR n m1 vis (rcso + 1) (rcsl - 1)) := by rw [csK1]
-theorem csK2_some : csK2 cR n cv (some (r, m2)) = csK3 (consW n m2 cv (r.headD 0) (r.tail.headD 0)) := by
-  rw [csK2]
-theorem csK3_some : csK3 (some (r, m3)) = some ([r.headD 0, r.tail.headD 0], m3) := by rw [csK3]
-end arms
-
-grind_pattern [ind_grind] csrW_nil => csrW cR (n + 1) m vis rcso rcsl
-grind_pattern [ind_grind] csrW_cons => csrW cR (n + 1) m vis rcso rcsl
-grind_pattern [ind_grind] csK1_some => csK1 cR n vis rcso rcsl cv (some (r0, m1))
-grind_pattern [ind_grind] csK2_some => csK2 cR n cv (some (r, m2))
-grind_pattern [ind_grind] csK3_some => csK3 (some (r, m3))
-
-theorem classStreamRecs_spec (p : Prog) (hc : p.lookup "iw_copy" = some iwCopy)
-    (ha : p.lookup "iw_alloc" = some iwAlloc) (hsc : p.lookup "sl_cons" = some slCons)
-    (hp : p.lookup "class_stream_recs" = some classStreamRecsL) (cR : CallM) (hcR : CallSpec p cR) (n : Nat) :
-    ∀ (s₀ : St) (vis rcso rcsl : Word),
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "class_stream_recs" [vis, rcso, rcsl]
-    ⦃fun r s' => LocEq s' s₀ ∧ csrW cR n s₀.mem vis rcso rcsl = some (r, s'.mem); ⊤⦄ := by
-  induction n with
-  | zero =>
-    intro s₀ vis rcso rcsl; rw [invoke_eq _ hp]; simp only [callFn, classStreamRecsL]
-    vcgen [exec] <;> grind
-  | succ n ih =>
-    intro s₀ vis rcso rcsl
-    rw [invoke_eq _ hp]
-    simp only [callFn, classStreamRecsL]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        hcR n "check_constant_val", slCons_specW p ha hc hsc n, ih] <;>
-      finish (gen := 20) [rdW_eq]
+/-! ## `class_stream_recs`'s reading -/
 
 /-- The recursor shapes' constant records, as `class_stream_recs` reads them: slice entry `j` is a
 pointer to a shape whose first word points to the constant `cvs[j]`, all below the pools' tops. -/

@@ -417,16 +417,6 @@ open L.Arena
 
 /-! ## `whnf_telescope` -/
 
-/-- **`whnf_telescope` as its callers' models read it**: its run (`wtE`, `wt_ref` in
-`IndT/Sum1.lean` refine it). -/
-def wtR (cR : CallM) (k : Nat) (m : Mem) (vis i n e : Word) : Option (List Word × Mem) :=
-  cR k "whnf_telescope" [vis, i, n, e] m
-
-theorem wtR_spec (p : Prog) (cR : CallM) (hcR : CallSpec p cR) (k : Nat) (s₀ : St) (vis i n e : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p k) "whnf_telescope" [vis, i, n, e]
-    ⦃fun r s' => LocEq s' s₀ ∧ wtR cR k s₀.mem vis i n e = some (r, s'.mem); ⊤⦄ :=
-  hcR k _ _ s₀
-
 local notation "V" => ConLeche.CheckMode.verified
 
 /-! ### The twin, one level unfolded

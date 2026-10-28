@@ -1,6 +1,6 @@
 import ConAgua.Arena.IndT.KeepC
-import ConAgua.Arena.IndT.PosRoot
 import ConAgua.Verdict.PosTopE2
+import ConAgua.Verdict.PosTopE4
 import ConAgua.Arena.IndT.BncAfr
 import ConAgua.Arena.IndT.Install6
 import ConAgua.Arena.IndInstallSpec.Pos3Init
@@ -10,18 +10,20 @@ import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.Arena.IndInstallSpec.PosFreeMfr
+import ConAgua.L.ModelGen
 
 /-!
 # `check_block_positivity` under `StageC` (lane `indstaget`, helper `indstaget-cbpos`)
 
-`cbposW_ok`'s proof (`IndInstallSpec/Pos3Init`) under `StageC`, its twin side transcribed from con-ron's
-`checkBlockPositivity_spec`: the walk's context (`bncW_sim`, con-ron's `blockNestCtx_spec` on its
-run for the `CoreStep` and the context's denotation), `nest_uniform` (`nu_ref`), the fresh state (an L-only step), `nest_root` (`nestRoot_refinesC`; con-ron's
-`nestRoot_spec` on its run for the kinds' denotation), `pin_word(53)` (`zeroLevel_run`),
-`lvl_eq_c` (its `StageR` contract `lvlEqStub_spec` with `lvlEq?_crun`), the fields' universes
-(`iaaW_simC`), the normal forms (an L-only step). The `CoreStep` of the whole run from
-`checkBlockPositivity_spec`. No fuel premise against the core walk's: `nest_root`'s `StageC`
-version needs none.
+`check_block_positivity`'s unified model `cbpE` and its refinement for both outcomes `cbp_ref`
+under `StageC` (`CbpG`: the walk's `NbG`, `check_struct_field_sorts_i`'s claim), its twin side
+transcribed from con-ron's `checkBlockPositivity_spec`: the walk's context (`bncW_sim`, con-ron's
+`blockNestCtx_spec` on its run for the `CoreStep` and the context's denotation), `nest_uniform`
+(`nu_ref`), the fresh state (an L-only step), `nest_root` (`nrt_ref`; con-ron's `nestRoot_spec` on
+its run for the kinds' denotation), `pin_word(53)` (`zeroLevel_run`), `lvl_eq_c` (its `StageR`
+contract `lvlEqStub_spec` with `lvlEq?_crun`), the fields' universes (`iaa_ref`, through the run:
+the call's frame keeps the walk memos), the normal forms (an L-only step). The `CoreStep` of the
+whole run from `checkBlockPositivity_spec`. No fuel premise against the core walk's.
 -/
 
 
@@ -29,6 +31,8 @@ open ConRon.Arena
 open Std.WP
 open scoped Lean.Order
 open ConRon.Bridge.Inductives (PStep dCtx dCtors dOutss dState)
+
+noncomputable section
 
 namespace L.Ind
 
@@ -215,20 +219,54 @@ theorem bncC_mfr {p : Prog} (hOpf : OpfF p) {n : Nat} {m m' : Mem} {vis q cvO cv
   rw [← h.2]
   exact f2.trans (pos3_nhGoW_mfr _ _ _ _ _ _ _ _ _ _ _ h3)
 
+set_option experimental.vcgen true in
+/-- **`check_block_positivity`'s unified model**: the callees outside the verdict closure lifted,
+`nest_uniform` and `nest_root` through their unified models, `check_abs_ctor_sorts_all` through its
+run (its ok half needs the call's frame, `PosMR.ofClosed`). -/
+l_model cbpE_spec (p : Prog) (hP : PosBlkProg p)
+  fns [hP.cbp ↦ cbpE list]
+  specs [callW_spec p n "block_nest_ctx", nuE_spec p hP.nu hP.nuCs hP.nuP n,
+    callW_spec p n "check_block_positivity_init", nrtE_spec p hP.rs n, callW_spec p n "pin_word",
+    callW_spec p n "lvl_eq_true", callW_spec p n "check_block_positivity_nfs"]
+  grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] unified
+  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
+
+/-- What the error arms of `check_block_positivity` assume: the walk's (`NbG`: `nest_root`, the
+no-verdict closure) and `check_struct_field_sorts_i`'s claim (`check_abs_ctor_sorts_all`'s). -/
+structure CbpG (p : Prog) : Prop where
+  nb : NbG p
+  csf : CheckStructFieldSortsIE p
+
+/-- What `check_block_positivity` gives besides the twin's kinds, normal forms and walk state `x`
+(from `m`, `a`): the stage, the growth, the walk memos, `AbsOK`, the three results' layout, the core
+step. -/
+structure CbpPost (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (env : ConLeche.Env)
+    (m : Mem) (a : AState) (r : List Word) (m' : Mem)
+    (x : List (List (List NestFieldKind)) × List (List EIdx) × NestState) (a' : AState) : Prop where
+  stage : StageC dn vis fe env m' a'
+  grow : IWGrow m m'
+  pos : PosMR m'
+  abs : AbsOK m'
+  kinds : PSlR decKSS x.1 (r.headD 0) (r.tail.headD 0) m'
+  nfs : PSlR decNFS x.2.1 (r.tail.tail.headD 0) (r.tail.tail.tail.headD 0) m'
+  ns : NSB m' ((r.drop 4).headD 0) x.2.2
+  core : ConRon.Bridge.CoreStep V env fe a a'
+
 section sim
 variable {p : Prog} (hq : KnotStageProg p) (hIlpf : IlpfF p) {dn : NIdx → Option ConLeche.Name} {vis : Word}
   {fe : IFEnv} {env : ConLeche.Env} (henv : ConLeche.EnvWF env)
   (hOpf : OpfF p) (hLC : LvlCacheProg p) (hLT : p.lookup "lv_leq_top" = some lvLeqTop) (hApd : ApdF p)
 
 include hq hIlpf henv hOpf hLC hLT hApd in
-/-- **`check_block_positivity`'s model refines `checkBlockPositivity` under `StageC`** (con-ron's
-`checkBlockPositivity_spec`'s preconditions). -/
-theorem cbposW_okC (hP : PosBlkProg p) {fs : List FnName} (hclP : closedA p posFreeA posFreeC fs = true)
-    (hfa : "check_abs_ctor_sorts_all" ∈ fs) (n : Nat) (hn : n + 2 ≤ 2 ^ 62) {m m' : Mem} {a : AState}
+/-- **`check_block_positivity` refines `checkBlockPositivity`, both outcomes** under `StageC`
+(con-ron's `checkBlockPositivity_spec`'s preconditions). -/
+theorem cbp_ref (hP : PosBlkProg p) {fs : List FnName} (hclP : closedA p posFreeA posFreeC fs = true)
+    (hfa : "check_abs_ctor_sorts_all" ∈ fs) (n : Nat) (hn : n + 2 ≤ 2 ^ 62) {m : Mem} {a : AState}
     {q cvO cvL caO caL : Word} {P : BlockParts} {cvTas : List IConstantVal}
-    {css : List (List (IConstantVal × Nat))} {r : List Word} {pP : ConLeche.BlockParts}
+    {css : List (List (IConstantVal × Nat))} {pP : ConLeche.BlockParts}
     {cvsP : List ConLeche.ConstantVal} {cssP : List (List (ConLeche.ConstantVal × Nat))}
-    (h : cbposW p (n + 3) m vis q cvO cvL caO caL = some (r, m')) (hC : StageC dn vis fe env m a)
+    (hC : StageC dn vis fe env m a)
     (hqd : DecB (fun m => decBS m q.toNat) m P.shape) (hsrc : ShapeSrc m q)
     (hcv : PSlR decCVp cvTas cvO cvL m) (hcss : PSlR decCNSB css caO caL m) (hPM : PosMR m)
     (hA : AbsOK m) (hk : ∀ f ∈ posKeepCalleesC, AbsKeep p f)
@@ -238,21 +276,20 @@ theorem cbposW_okC (hP : PosBlkProg p) {fs : List FnName} (hclP : closedA p posF
     (hfe : ConRon.Bridge.denoteFEnv a.store fe = some env)
     (hT : ∀ cv ∈ cvsP, ConLeche.Expr.WScoped 0 cv.type)
     (hct : ∀ cs ∈ cssP, ∀ c ∈ cs, ConLeche.Expr.WScoped 0 c.1.type) :
-    ∃ x a', (ConRon.Arena.checkBlockPositivity V fe P cvTas css).run a = .ok (x, a') ∧
-      StageC dn vis fe env m' a' ∧ IWGrow m m' ∧ PosMR m' ∧ AbsOK m' ∧
-      PSlR decKSS x.1 (r.headD 0) (r.tail.headD 0) m' ∧
-      PSlR decNFS x.2.1 (r.tail.tail.headD 0) (r.tail.tail.tail.headD 0) m' ∧
-      NSB m' ((r.drop 4).headD 0) x.2.2 ∧ ConRon.Bridge.CoreStep V env fe a a' := by
+    RefE (CbpG p) (cbpE p (n + 3) m vis q cvO cvL caO caL) (ConRon.Arena.checkBlockPositivity V fe P cvTas css) a
+      (fun v x a' => CbpPost dn vis fe env m a v.1 v.2 x a') := by
   have hS := hC.stage
   have hpP0 := hpP
   simp only [ConRon.Bridge.Inductives.dParts, Option.map_eq_some_iff] at hpP
   obtain ⟨qP, hqP, rfl⟩ := hpP
   have hcl : ∀ cs ∈ cssP, ∀ c ∈ cs, c.1.type.hasFvar = false :=
     fun cs hcs c hc => ConLeche.Cached.ws0_hasFvar (hct cs hcs c hc)
-  rw [cbposW.arm1] at h
+  rw [cbpE.arm1]
+  unfold ConRon.Arena.checkBlockPositivity
   -- the walk's context
-  rcases h1 : callW p (n + 2) "block_nest_ctx" [vis, q, cvO, cvL] m with _ | ⟨r1, m1⟩ <;> rw [h1] at h; · simp [cbposW.k_block_nest_ctx.none] at h
-  rw [cbposW.k_block_nest_ctx.arm1] at h
+  rcases h1 : callW p (n + 2) "block_nest_ctx" [vis, q, cvO, cvL] m with _ | ⟨r1, m1⟩
+  · rw [liftE_none, cbpE.k_block_nest_ctx.none]; exact RefE.of_cls0 (by simp)
+  rw [liftE_some, cbpE.k_block_nest_ctx.arm1]
   obtain ⟨s1, rfl, -, hW1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (bnc_specC p hP.nck hP.nh hP.bnc (realCall p) (realCall_spec p) n _ vis q cvO cvL) h1
   obtain ⟨⟨c, holes⟩, a1, hrun1, hc1, hho1, hhob1, hS1, hg1, hin1, hsl1, hhi1, hpn1, hA1⟩ :=
@@ -262,13 +299,12 @@ theorem cbposW_okC (hP : PosBlkProg p) {fs : List FnName} (hclP : closedA p posF
     ConRon.Bridge.Inductives.blockNestCtx_spec fe henv P.shape qP cvTas cvsP hT a a1 (c, holes)
       hC.check ⟨hqP, hcvP⟩ hrun1
   dsimp only at hctx hholes hhw hpar hnh
+  refine RefE.bind_right hrun1 ?_
   have hP1 : PosMR s1.mem := hPM.fr (bncC_mfr hOpf hW1)
   have hC1 : StageC dn vis fe env s1.mem a1 := hC.of_cstep hS1 hA1 c1
   have hU1 : UCtx dn vis fe s1.mem (r1.headD 0) c := ⟨hc1.get (decCtx_mono _), hin1, hsl1⟩
   obtain ⟨hlen, hcb1, hcss1⟩ := pos3_cssAt (hcss.grow decCNSB_mono hg1)
   -- `nest_uniform`
-  rcases h2 : callW p (n + 2) "nest_uniform" [r1.headD 0, caO, caL] s1.mem with _ | ⟨r2, m2⟩ <;> rw [h2] at h; · simp [cbposW.k_nest_uniform.none] at h
-  rw [cbposW.k_nest_uniform.arm1] at h
   have hcss1P := ConRon.Bridge.Inductives.dCtors_ext.list c1.ext _ _ hcssP
   have hPc : ∀ cs ∈ css, ∀ x ∈ cs, ∃ cvP, Frontend.denoteCV a1.store x.1 = some cvP := by
     intro cs hcs x hx
@@ -277,9 +313,7 @@ theorem cbposW_okC (hP : PosBlkProg p) {fs : List FnName} (hclP : closedA p posF
     simp only [ConRon.Bridge.Inductives.dCtor, Option.map_eq_some_iff] at hz
     obtain ⟨cvP, hcvP', -⟩ := hz
     exact ⟨cvP, hcvP'⟩
-  obtain ⟨s2, rfl, -, _, a2, hrun2, hS2, hg2, hP2, hJ2⟩ := RefE.run_okW
-    (nuE_spec p hP.nu hP.nuCs hP.nuP (n + 2) ⟨s1.mem, Locals.init []⟩ (r1.headD 0) caO caL)
-    (nu_ref dn fe vis (r1.headD 0) c hhi1
+  have hnu := nu_ref dn fe vis (r1.headD 0) c hhi1
     (fun m' a' => StageC dn vis fe env m' a' ∧ AbsOK m' ∧ ConRon.Arena.Ext a1.store a'.store)
     (fun cvv => ∃ cvP, Frontend.denoteCV a1.store cvv = some cvP)
     (fun _ a' _ cvv hJ hPx _ _ m1' a1' _ b hpd hrun hS1' => by
@@ -299,15 +333,21 @@ theorem cbposW_okC (hP : PosBlkProg p) {fs : List FnName} (hclP : closedA p posF
         ⟨ConRon.Bridge.Inductives.dCtx_ext _ hxm _ _ hctx, ConRon.Bridge.denoteCV_ext hcvP' hxm⟩ hrun
       have hAm' := hA' nuAfr hAm
       exact ⟨hCm.of_cstep hS' hAm' c3, hAm', hxm.trans c3.ext⟩)
-    (n + 2) hS1 ⟨hC1, hA1, ConRon.Arena.Ext.refl _⟩ hPc hU1 hlen hcss1 hP1) h2
+    (n + 2) hS1 ⟨hC1, hA1, ConRon.Arena.Ext.refl _⟩ hPc hU1 hlen hcss1 hP1
+  rcases h2 : nuE p (n + 2) s1.mem (r1.headD 0) caO caL with e2 | ⟨r2, m2⟩ <;> rw [h2] at hnu
+  · rw [cbpE.k_nest_uniform.none]; exact RefE.bind_left fun hG => hnu hG.nb.nv
+  rw [cbpE.k_nest_uniform.arm1]
+  obtain ⟨_, a2, hrun2, hS2, hg2, hP2, hJ2⟩ := hnu
   obtain ⟨c2, -, -, -⟩ := ConRon.Bridge.Inductives.nestUniform_spec (μ := V) (env := env) (fe := fe)
     env.find? c ctxP css cssP a1 _ _ hC1.check
     ⟨hctx, hcss1P⟩ hrun2
-  have hA2 : AbsOK s2.mem := hJ2.2.1
+  have hA2 : AbsOK m2 := hJ2.2.1
   have hC2 := hC1.of_cstep hS2 hA2 c2
+  refine RefE.bind_right hrun2 ?_
   -- the empty state
-  rcases h3 : callW p (n + 2) "check_block_positivity_init" [] s2.mem with _ | ⟨r3, m3⟩ <;> rw [h3] at h; · simp [cbposW.k_check_block_positivity_init.none] at h
-  rw [cbposW.k_check_block_positivity_init.arm1] at h
+  rcases h3 : callW p (n + 2) "check_block_positivity_init" [] m2 with _ | ⟨r3, m3⟩
+  · rw [liftE_none, cbpE.k_check_block_positivity_init.none]; exact RefE.of_cls0 (by simp)
+  rw [liftE_some, cbpE.k_check_block_positivity_init.arm1]
   obtain ⟨hS3, hg3, hf3, hns3⟩ := pos3_init hP h3 hS2
   have hA3 : AbsOK m3 := hk _ (by simp [posKeepCalleesC]) _ _ _ _ _ h3 hA2
   have hC3 := hC2.of_pstep hS3 hA3 (PStep.refl hC2.check.state)
@@ -319,17 +359,17 @@ theorem cbposW_okC (hP : PosBlkProg p) {fs : List FnName} (hclP : closedA p posF
   have hholes2 := ConRon.Bridge.denoteEList_ext c2.ext _ _ hholes
   have hlenP : ctxP.names.length ≤ holesP.length := by
     rw [ConLeche.nestHoles_length hnh]; exact Nat.le_refl _
-  rcases h4 : callW p (n + 2) "nest_root" [vis, r1.headD 0, r1.tail.headD 0, r1.tail.tail.headD 0, caO, caL,
-      r3.headD 0, 0, 0] m3 with _ | ⟨r4, m4⟩; · rw [h4] at h; simp [cbposW.k_nest_root.none] at h
-  rw [h4, cbposW.k_nest_root.arm1] at h
-  obtain ⟨s4, rfl, -, ⟨outs, ns⟩, a4, hrun4, hC4, hg4, hO4, hOb4, hns4, hP4, hA4, c3⟩ :=
-    triple_of_callW (s₀ := ⟨m3, Locals.init []⟩)
-    (nestRoot_refinesC hP.rs hq hIlpf hLC (n + 2) dn vis fe henv hn _ _ (r1.headD 0) (r1.tail.headD 0)
-      (r1.tail.tail.headD 0) caO caL (r3.headD 0) 0 0 c holes css {} [] hC3 (hU1.grow hg13) hhi1 hpn1
-      (by rw [decHL_grow3 hg13 hhob1]; exact hho1) (Nat.le_trans hhob1 hg13.1) hlen
-      (Nat.le_trans hcb1 hg13.1) (hcss1.grow hg13) hns3 (by simp [RootOutsB, DecB, decPL]) (by simp)
-      (hP2.fr hf3) hA3 hctxOk (fun y hy => (hhw y hy).1) hlenP hpar hctx2 hholes2 hcssP2
-      (nsP := {}) (by simp [dState]) rfl hcl) h4
+  have hnrt := nrt_ref hP.rs hq hIlpf hLC dn vis fe henv (r1.headD 0) (r1.tail.headD 0)
+    (r1.tail.tail.headD 0) c holes hctxOk (fun y hy => (hhw y hy).1) hlenP hpar (n + 2) hn m3 a2 caO caL
+    (r3.headD 0) 0 0 css {} [] cssP {} [] hC3 (hU1.grow hg13) hhi1 hpn1
+    (by rw [decHL_grow3 hg13 hhob1]; exact hho1) (Nat.le_trans hhob1 hg13.1) hlen
+    (Nat.le_trans hcb1 hg13.1) (hcss1.grow hg13) hns3 (by simp [RootOutsB, DecB, decPL]) (by simp)
+    (hP2.fr hf3) hA3 hctx2 hholes2 hcssP2 (by simp [dState]) rfl hcl
+  rcases h4 : nrtE p (n + 2) m3 vis (r1.headD 0) (r1.tail.headD 0) (r1.tail.tail.headD 0) caO caL
+      (r3.headD 0) 0 0 with e4 | ⟨r4, m4⟩ <;> rw [h4] at hnrt
+  · rw [cbpE.k_nest_root.none]; exact RefE.bind_left fun hG => hnrt hG.nb
+  rw [cbpE.k_nest_root.arm1]
+  obtain ⟨⟨outs, ns⟩, a4, hrun4, hC4, hg4, hO4, hOb4, hns4, hP4, hA4, c3⟩ := hnrt
   obtain ⟨-, ⟨outsP, nsP⟩, ⟨houts, -, hwN⟩, -⟩ := ConRon.Bridge.Inductives.nestRoot_spec coreSpecV henv
     hctxOk holes holesP (fun y hy => (hhw y hy).1) hlenP hpar css cssP {} {} [] [] hcl _ a4 (outs, ns)
     hC3.check ⟨hctx2, hholes2, hcssP2, by simp [dState], rfl⟩ hrun4
@@ -337,31 +377,35 @@ theorem cbposW_okC (hP : PosBlkProg p) {fs : List FnName} (hclP : closedA p posF
   dsimp only at houts hwN
   have hS4 := hC4.stage
   have hg14 := hg13.trans hg4
+  refine RefE.bind_right hrun4 ?_
   -- `pin_word(53)`
-  rcases h5 : callW p (n + 2) "pin_word" [53] s4.mem with _ | ⟨r5, m5⟩ <;> rw [h5] at h; · simp [cbposW.k_pin_word.none] at h
-  rw [cbposW.k_pin_word.arm1] at h
-  obtain ⟨s5, rfl, -, hm5, hz5⟩ := triple_of_callW (s₀ := ⟨s4.mem, Locals.init []⟩)
+  rcases h5 : callW p (n + 2) "pin_word" [53] m4 with _ | ⟨r5, m5⟩
+  · rw [liftE_none, cbpE.k_pin_word.none]; exact RefE.of_cls0 (by simp)
+  rw [liftE_some, cbpE.k_pin_word.arm1]
+  obtain ⟨s5, rfl, -, hm5, hz5⟩ := triple_of_callW (s₀ := ⟨m4, Locals.init []⟩)
     (pinWord_specV p hP.pin (n + 2) _ 53) h5
   simp only at hm5 hz5
-  rw [hm5] at h
+  rw [hm5]
   obtain ⟨hrunz, hzH⟩ := pinZero_stage hS4 hz5
   obtain ⟨-, hz⟩ := ConRon.Bridge.Inductives.zeroLevel_run hC4.check.pins hrunz
+  refine RefE.bind_right hrunz ?_
   -- `lvl_eq_true`
   obtain ⟨huH, hue⟩ := installCtxWord9 (hc1.grow (decCtx_mono _) hg14) hS4.2.2.2.1
-  rcases h6 : callW p (n + 2) "lvl_eq_true" [rdW (s4.mem.arr64 IW) (r1.headD 0 + 9), r5.headD 0] s4.mem with _ | ⟨r6, m6⟩ <;> rw [h6] at h; · simp [cbposW.k_lvl_eq_true.none] at h
-  rw [cbposW.k_lvl_eq_true.arm1] at h
-  obtain ⟨s6, rfl, -, he6⟩ := triple_of_callW (s₀ := ⟨s4.mem, Locals.init []⟩)
+  rcases h6 : callW p (n + 2) "lvl_eq_true" [rdW (m4.arr64 IW) (r1.headD 0 + 9), r5.headD 0] m4 with _ | ⟨r6, m6⟩
+  · rw [liftE_none, cbpE.k_lvl_eq_true.none]; exact RefE.of_cls0 (by simp)
+  rw [liftE_some, cbpE.k_lvl_eq_true.arm1]
+  obtain ⟨s6, rfl, -, he6⟩ := triple_of_callW (s₀ := ⟨m4, Locals.init []⟩)
     (eqTrue_specC p hP.eqt (realCall p) (realCall_spec p) (n + 2) _ _ _) h6
   simp only at he6
   rw [eqTrueC_succ] at he6
-  rcases hs6 : realCall p (n + 1) "lvl_eq_c" [rdW (s4.mem.arr64 IW) (r1.headD 0 + 9), r5.headD 0] s4.mem with _ | ⟨r6', m6'⟩ <;> rw [hs6] at he6; · simp [eqTrueK] at he6
+  rcases hs6 : realCall p (n + 1) "lvl_eq_c" [rdW (m4.arr64 IW) (r1.headD 0 + 9), r5.headD 0] m4 with _ | ⟨r6', m6'⟩ <;> rw [hs6] at he6; · simp [eqTrueK] at he6
   rw [eqTrueK_some] at he6
   obtain ⟨hr6, hm6⟩ := Prod.mk.inj (Option.some.inj he6)
   subst hm6
   obtain ⟨namesP, lpsP, paramsP, sortP, hceq, -, -, -, hsort, -⟩ := ConRon.Bridge.Inductives.dCtx_inv hctx
   have hfind : ctxP.find? = env.find? := by rw [hceq]
   have hx14 := c2.ext.trans c3.ext
-  have hsort' : ConRon.Arena.denoteL a4.store.ls (decI (rdW (s4.mem.arr64 IW) (r1.headD 0 + 9))) =
+  have hsort' : ConRon.Arena.denoteL a4.store.ls (decI (rdW (m4.arr64 IW) (r1.headD 0 + 9))) =
       some ctxP.sort := by
     rw [hue, hceq]; exact ConRon.Bridge.denoteL_ext hsort hx14
   obtain ⟨y, a6, hrun6, hC6, hg6, hy6, hA6, -⟩ :=
@@ -375,27 +419,36 @@ theorem cbposW_okC (hP : PosBlkProg p) {fs : List FnName} (hclP : closedA p posF
     rw [← hr6]
     simp only [decLvlEq] at hy6
     rcases y with _ | _ | _ <;> simp_all
+  rw [hue] at hrun6
+  refine RefE.bind_right hrun6 ?_
   -- the fields' universes at the holes
   have hg16 := hg14.trans hg6
-  rcases h7 : callW p (n + 2) "check_abs_ctor_sorts_all" [vis, r1.headD 0, r6.headD 0, caO, caL, r4.headD 0,
-      r4.tail.headD 0] s6.mem with _ | ⟨r7, m7⟩; · rw [h7] at h; simp [cbposW.k_check_abs_ctor_sorts_all.none] at h
-  rw [h7, cbposW.k_check_abs_ctor_sorts_all.arm1] at h
-  obtain ⟨s7, rfl, -, hW7⟩ := triple_of_callW (s₀ := ⟨s6.mem, Locals.init []⟩)
-    (iaa_spec p hP.abs.all (n + 2) _ _ _ _ _ _ _ _) h7
-  have hP7 : PosMR s7.mem := PosMR.ofClosed hclP hfa h7 hP6
   have hOb6 : (r4.headD 0).toNat + (r4.tail.headD 0).toNat ≤ iwTop s6.mem := Nat.le_trans hOb4 hg6.1
   have hx16 := hx14.trans c5.ext
-  obtain ⟨u7, a7, hrun7, hC7, hg7, hA7⟩ := iaaW_simC hq henv hOpf hLC hLT hApd hP.abs (r1.headD 0) (r6.headD 0) c
+  have hiaa := iaa_ref hq henv hOpf hLC hLT hApd hP.abs (r1.headD 0) (r6.headD 0) c
     (y == some true) hb6 hhi1 (n + 2) hn s6.mem a6 caO caL (r4.headD 0) (r4.tail.headD 0) css outs cssP outsP
     hC6 hA6 (hc1.grow (decCtx_mono _) hg16) ((pos3_cns hcss).grow decCNS_mono (hg1.trans hg16))
     ⟨hO4.grow hg6, Or.inr hOb6⟩ (by rw [hfind]; exact ConRon.Bridge.Inductives.dCtx_ext _ hx16 _ _ hctx)
     (ConRon.Bridge.Inductives.dCtors_ext.list (c1.ext.trans hx16) _ _ hcssP)
     (ConRon.Bridge.Inductives.dOutss_ext c5.ext _ _ houts) hwN
-    (ConRon.Bridge.denoteFEnv_mono (c1.ext.trans hx16) hfe) r7 s7.mem hW7
+    (ConRon.Bridge.denoteFEnv_mono (c1.ext.trans hx16) hfe)
+  have hsI := iaaE_spec p hP.abs.one hP.abs.abs hP.abs.all (n + 2) ⟨s6.mem, Locals.init []⟩ vis (r1.headD 0)
+    (r6.headD 0) caO caL (r4.headD 0) (r4.tail.headD 0)
+  cases h7 : callE p (n + 2) "check_abs_ctor_sorts_all" [vis, r1.headD 0, r6.headD 0, caO, caL, r4.headD 0,
+      r4.tail.headD 0] s6.mem with
+  | error e7 =>
+    rw [cbpE.k_check_abs_ctor_sorts_all.none]
+    exact RefE.bind_left fun hG => RefE.run_err hsI hG.nb.nv hG.csf hiaa h7
+  | ok q7 =>
+  obtain ⟨r7, m7⟩ := q7
+  rw [cbpE.k_check_abs_ctor_sorts_all.arm1]
+  obtain ⟨s7, rfl, -, u7, a7, hrun7, hC7, hg7, hA7, -⟩ := RefE.run_ok hsI hiaa h7
+  have hP7 : PosMR s7.mem := PosMR.ofClosed hclP hfa (callW_of_callE h7) hP6
+  refine RefE.bind_right hrun7 ?_
   -- the normal forms
-  rcases h8 : callW p (n + 2) "check_block_positivity_nfs" [r4.headD 0, r4.tail.headD 0] s7.mem with _ | ⟨r8, m8⟩ <;> rw [h8] at h; · simp [cbposW.k_check_block_positivity_nfs.none] at h
-  rw [cbposW.k_check_block_positivity_nfs.arm1] at h
-  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
+  rcases h8 : callW p (n + 2) "check_block_positivity_nfs" [r4.headD 0, r4.tail.headD 0] s7.mem with _ | ⟨r8, m8⟩
+  · rw [liftE_none, cbpE.k_check_block_positivity_nfs.none]; exact RefE.of_cls0 (by simp)
+  rw [liftE_some, cbpE.k_check_block_positivity_nfs.arm1]
   obtain ⟨s8, rfl, -, hW8⟩ := triple_of_callW (s₀ := ⟨s7.mem, Locals.init []⟩)
     (pnf_spec p hP.nfs.nfs (n + 2) _ _ _) h8
   have hOb7 : (r4.headD 0).toNat + (r4.tail.headD 0).toNat ≤ iwTop s7.mem := Nat.le_trans hOb6 hg7.1
@@ -409,12 +462,13 @@ theorem cbposW_okC (hP : PosBlkProg p) {fs : List FnName} (hclP : closedA p posF
     rw [hrun2]; simp only [except_ok_bind]
     rw [hrun4]; simp only [except_ok_bind]
     rw [hrunz]; simp only [except_ok_bind]
-    rw [← hue, hrun6]; simp only [except_ok_bind]
+    rw [hrun6]; simp only [except_ok_bind]
     rw [hrun7]; simp only [except_ok_bind]
     rfl
   obtain ⟨cAll, -⟩ := ConRon.Bridge.Inductives.checkBlockPositivity_spec fe coreSpecV henv P _ cvTas cvsP
     css cssP hT hct a a7 _ hC.check ⟨hpP0, hcvP, hcssP, hfe⟩ hrun
-  refine ⟨_, a7, hrun, hC7.of_pstep hS8 hA8 (PStep.refl hC7.check.state), (hg1.trans hg14).trans hg48,
+  refine RefE.ret (y := (outs.map (·.map (·.1)), outs.map (·.map (·.2)), ns)) rfl
+    ⟨hC7.of_pstep hS8 hA8 (PStep.refl hC7.check.state), (hg1.trans hg14).trans hg48,
     hP7.fr hf8, hA8, ⟨?_, ?_⟩, ?_, ?_, cAll⟩
   · exact pos3_kinds (hO4.grow hg48)
   · simp only [List.headD_cons, List.tail_cons]; exact Nat.le_trans hOb7 hg8.1
@@ -465,15 +519,17 @@ theorem checkBlockPositivity_refinesC (hP : PosBlkProg p) {fs : List FnName}
       NSB s'.mem ((r.drop 4).headD 0) (AM.res (ConRon.Arena.checkBlockPositivity V fe P cvTas css) a₀).2.2 ∧
       ConRon.Bridge.CoreStep V env fe a₀ (AM.st (ConRon.Arena.checkBlockPositivity V fe P cvTas css) a₀);
       ⊤⦄ := by
-  refine triple_post (cbpos_spec p hP.cbp (n + 3) s₀ vis q cvO cvL caO caL) ?_
-  rintro r s' ⟨hl, hm⟩
-  obtain ⟨x, a', hrun, hQ⟩ := cbposW_okC hq hIlpf henv hOpf hLC hLT hApd hP hclP hfa n hn hm hC hqd hsrc hcv hcss hPM hA hk hpP hcvP hcssP hfe
-    hT hct
+  refine triple_post (RefE.triple (cbpE_spec p hP (n + 3) s₀ vis q cvO cvL caO caL)
+    (cbp_ref hq hIlpf henv hOpf hLC hLT hApd hP hclP hfa n hn hC hqd hsrc hcv hcss hPM hA hk hpP hcvP hcssP hfe
+      hT hct)) ?_
+  rintro r s' ⟨hl, x, a', hrun, hR⟩
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
   refine ⟨hl, hok, ?_⟩
   rw [hst, hres]
-  exact hQ
+  exact ⟨hR.stage, hR.grow, hR.pos, hR.abs, hR.kinds, hR.nfs, hR.ns, hR.core⟩
 
 end census
 
 end L.Ind
+
+end

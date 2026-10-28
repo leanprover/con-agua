@@ -155,8 +155,6 @@ ConAgua/Verdict/IndBE.lean	public import ConAgua.Arena.IndRealSctC	# the build n
 ConAgua/Verdict/IndBE.lean	public import ConAgua.Arena.IndT.RecGen19	# the build needs it (a name the tool does not attribute: a command reads it, or an auxiliary realized in several modules)
 ConAgua/Verdict/IndBE.lean	public import ConAgua.Arena.IndT.Sum2	# the build needs it (a name the tool does not attribute: a command reads it, or an auxiliary realized in several modules)
 ConAgua/Verdict/IndBE.lean	public import ConAgua.Arena.IndT.Sum3	# the build needs it (a name the tool does not attribute: a command reads it, or an auxiliary realized in several modules)
-ConAgua/Verdict/IndsE2.lean	public import ConAgua.Arena.IndT.Install1	# the build needs it (a name the tool does not attribute: a command reads it, or an auxiliary realized in several modules)
-ConAgua/Verdict/IndsE2.lean	public import ConAgua.Arena.IndT.Install3	# the build needs it (a name the tool does not attribute: a command reads it, or an auxiliary realized in several modules)
 ConAgua/Verdict/InferLeavesE.lean	public import ConAgua.Arena.WhnfIotaRefine6	# a constant the module uses (an auxiliary realized in several modules: the tool names another copy)
 ConAgua/Verdict/PosE3Fm.lean	public import ConAgua.Arena.Verdict	# the build needs it (a name the tool does not attribute: a command reads it, or an auxiliary realized in several modules)
 ConAgua/Arena/RecGenSpec/Rec3TmdWDecB.lean	public import ConAgua.Arena.IndSumSpec.Row	# the build needs it: the modules above (Sum5, Install3, IndBSum4, …) reach `recW_afr` and the inductive specs through it
