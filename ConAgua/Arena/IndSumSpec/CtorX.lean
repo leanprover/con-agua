@@ -1,4 +1,4 @@
-import ConAgua.Arena.IndSumSpec.CtlW
+import ConAgua.Arena.IndSumSpec.CheckSumCtor
 import ConAgua.Arena.RecClassSpec.PiBWRoom
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
@@ -7,7 +7,7 @@ import ConAgua.L.GrindAttr
 /-!
 # CtorX
 
-`sumAddNoOv`, `ctorX`, `ctorX_spec`, the decoders `check_sum_ctors`' refinement reads (`sortsDec`,
+`sumAddNoOv`, the decoders `check_sum_ctors`' refinement reads (`sortsDec`,
 `sumRec2`, `sumDecCN_of`, `sumSortsDec_of`).
 -/
 
@@ -30,48 +30,6 @@ theorem sumAddNoOv {a b : Word} (h : ¬ a + b < a) : (a + b).toNat = a.toNat + b
   rw [UInt64.lt_iff_toNat_lt, UInt64.toNat_add] at h
   have := b.toNat_lt; have := a.toNat_lt
   rw [UInt64.toNat_add]; omega
-
-/-! ## `check_sum_ctor` at every fuel -/
-
-/-- `check_sum_ctor`'s model at exec fuel `k`. -/
-def ctorX (cR : CallM) : Nat → Mem → Word → Word → Word → Word → Word → Word → Word → Word → Word → Word → Word →
-    Word → Word → Option (List Word × Mem)
-  | n + 3, m, vis0, vis, T, lo, ll, nP, nIdx, rs, isP, lg, cvC, nF, cvTa =>
-    ctorW cR n m vis0 vis T lo ll nP nIdx rs isP lg cvC nF cvTa
-  | _, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => none
-
-set_option maxHeartbeats 4000000 in
-theorem ctorX_spec (p : Prog) (hP : SumProg p) (cR : CallM) (hcR : CallSpec p cR) (k : Nat) (s₀ : St)
-    (vis0 vis T lo ll nP nIdx rs isP lg cvC nF cvTa : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p k) "check_sum_ctor"
-      [vis0, vis, T, lo, ll, nP, nIdx, rs, isP, lg, cvC, nF, cvTa]
-    ⦃fun r s' => LocEq s' s₀ ∧
-      ctorX cR k s₀.mem vis0 vis T lo ll nP nIdx rs isP lg cvC nF cvTa = some (r, s'.mem); ⊤⦄ := by
-  match k with
-  | n + 3 => exact ctorW_spec p hP cR hcR n s₀ vis0 vis T lo ll nP nIdx rs isP lg cvC nF cvTa
-  | 0 =>
-    rw [invoke_eq _ hP.hctor]; simp only [callFn, checkSumCtorL]
-    vcgen [exec] <;> grind
-  | 1 =>
-    rw [invoke_eq _ hP.hctor]; simp only [callFn, checkSumCtorL]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        hcR 0 "check_constant_val", stripPis_specF p hP.strip 0,
-        srW_spec p hP.ha hP.hc hP.hsc hP.hg hP.hpf hP.hpp hP.hip hP.hplg hP.hpl hP.hil hP.hcf hP.hcp hP.hic
-          hP.hbf hP.hbp hP.hib hP.hpg hP.hps hP.heq hP.hsr hP.ad 0,
-        callW_spec p 0 "open_pis_at_fvars_f", callW_spec p 0 "fvar_type_ds",
-        callW_spec p 0 "check_struct_doms_at", callW_spec p 0 "check_sum_ctor_tail"] <;>
-      finish (gen := 30) (instances := 5000) [srW]
-  | 2 =>
-    rw [invoke_eq _ hP.hctor]; simp only [callFn, checkSumCtorL]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        hcR 1 "check_constant_val", stripPis_specF p hP.strip 1,
-        srW_spec p hP.ha hP.hc hP.hsc hP.hg hP.hpf hP.hpp hP.hip hP.hplg hP.hpl hP.hil hP.hcf hP.hcp hP.hic
-          hP.hbf hP.hbp hP.hib hP.hpg hP.hps hP.heq hP.hsr hP.ad 1,
-        callW_spec p 1 "open_pis_at_fvars_f", callW_spec p 1 "fvar_type_ds",
-        callW_spec p 1 "check_struct_doms_at", callW_spec p 1 "check_sum_ctor_tail"] <;>
-      finish (gen := 30) (instances := 5000) [srW, srK1, plW]
 
 /-! ## The relation to the twin -/
 
