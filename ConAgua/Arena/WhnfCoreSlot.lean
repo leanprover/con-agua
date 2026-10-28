@@ -1,4 +1,4 @@
-import ConAgua.Arena.WhnfCore
+import ConAgua.Arena.WhnfBase
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import Std.Tactic.BVDecide.Normalize.BitVec
@@ -14,10 +14,9 @@ import Std.WP.Tactic
 otherwise, at the current generation) answers the entry, a miss runs `whnf_core_loop` (the
 body, `whnfCoreBody … (coreKnot … F)`), records it and answers it.
 
-The proof is the pattern for every core function that calls another: a word-level model
-(`whnfCoreW`) whose callee is `callW` (the callee's run, `WhnfBase.lean`), the L spec by
-`vcgen` + `finish` with `callW_spec`, then the refinement with the callee's own spec applied to
-that run (`CoreSpec.of_callW`) and the memo lemmas of `CoreRefine.lean`.
+Here: the tags, the memo's model `memoSlotW` (the other memo slots' pattern), the relation across a
+mode memo's `find; put`, the twin's slot runs. The refinement is `core_ref` (`WhnfCoreLoop.lean`),
+over the unified model, with the memo lemmas of `CoreRefine.lean`.
 -/
 
 open ConRon.Arena
@@ -73,13 +72,6 @@ def memoSlotW (S : MemoSch) (m : Mem) (e k : Word) (res : Option (List Word × M
 /-- The second key word of a one-handle mode memo at the mode's eager bit. -/
 def ebKey (mode : Word) : Word := ((mode >>> 1) &&& 1) <<< 32
 
-/-- **The model of `whnf_core`**, the loop through its run. -/
-def whnfCoreW (p : Prog) (n : Nat) (m : Mem) (mode cheap vis d e : Word) : Option (Word × Mem) :=
-  if e >>> 28 ≠ 4 ∧ e >>> 28 ≠ 9 ∧ e >>> 28 ≠ 7 ∧ e >>> 28 ≠ 0 then some (e, m)
-  else if cheap ≠ 0 then
-    memoSlotW wkSch m e (ebKey mode) (callW p n "whnf_core_loop" [mode, 1, vis, d, e] m)
-  else memoSlotW wcSch m e (ebKey mode) (callW p n "whnf_core_loop" [mode, 0, vis, d, e] m)
-
 section arms
 variable (S : MemoSch) (m m₁ m₂ : Mem) (e k : Word) (r : List Word)
 
@@ -96,44 +88,6 @@ theorem memoSlotW_miss (h0 : mfindG S m e k ≠ []) (h1 : (mfindG S m e k).headD
   simp only [h2]
 
 end arms
-
-theorem whnfCoreW_stuck (p : Prog) (n : Nat) (m : Mem) (mode cheap vis d e : Word)
-    (h : e >>> 28 ≠ 4 ∧ e >>> 28 ≠ 9 ∧ e >>> 28 ≠ 7 ∧ e >>> 28 ≠ 0) :
-    whnfCoreW p n m mode cheap vis d e = some (e, m) := by
-  unfold whnfCoreW; rw [ite_eq_left h]
-
-theorem whnfCoreW_cheap (p : Prog) (n : Nat) (m : Mem) (mode cheap vis d e : Word)
-    (h : ¬ (e >>> 28 ≠ 4 ∧ e >>> 28 ≠ 9 ∧ e >>> 28 ≠ 7 ∧ e >>> 28 ≠ 0)) (hc : cheap ≠ 0) :
-    whnfCoreW p n m mode cheap vis d e =
-      memoSlotW wkSch m e (ebKey mode) (callW p n "whnf_core_loop" [mode, 1, vis, d, e] m) := by
-  unfold whnfCoreW; rw [ite_eq_right h, ite_eq_left hc]
-
-theorem whnfCoreW_full (p : Prog) (n : Nat) (m : Mem) (mode cheap vis d e : Word)
-    (h : ¬ (e >>> 28 ≠ 4 ∧ e >>> 28 ≠ 9 ∧ e >>> 28 ≠ 7 ∧ e >>> 28 ≠ 0)) (hc : cheap = 0) :
-    whnfCoreW p n m mode cheap vis d e =
-      memoSlotW wcSch m e (ebKey mode) (callW p n "whnf_core_loop" [mode, 0, vis, d, e] m) := by
-  unfold whnfCoreW; rw [ite_eq_right h, ite_eq_right (by simpa using hc)]
-
-/-! ## The L spec -/
-
-section spec
-variable (p : Prog) (hp : WhnfCoreProg p)
-
-include hp in
-theorem whnfCore_spec (n : Nat) (s₀ : St) (mode cheap vis d e : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "whnf_core" [mode, cheap, vis, d, e]
-    ⦃fun r s' => LocEq s' s₀ ∧ whnfCoreW p n s₀.mem mode cheap vis d e = some (r.headD 0, s'.mem);
-      ⊤⦄ := by
-  rw [invoke_eq _ hp.core]
-  simp only [callFn, whnfCoreL]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      memoFindG_spec wkSch p _ hp.wkf n, memoPutG_spec wkSch p _ hp.wkp n,
-      memoFindG_spec wcSch p _ hp.wcf n, memoPutG_spec wcSch p _ hp.wcp n,
-      callW_spec p n "whnf_core_loop"] <;>
-    finish [whnfCoreW_stuck, whnfCoreW_cheap, whnfCoreW_full, memoSlotW_hit, memoSlotW_miss, mvG, ebKey]
-
-end spec
 
 /-! ## The relation across a mode memo's `find; put` -/
 

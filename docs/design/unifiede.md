@@ -2157,7 +2157,8 @@ the slots, as `m2c_*` in §3.7):
 - [ ] `whnf` itself: `Verdict/WhnfModels2E` (6: `core_step_proj`, `reduce_proj_core`,
   `proj_lit_to_ctor`, `core_app`, `core_app2`, `whnf_app`; claims in `WhnfProjE`, `WhnfAppE`; done,
   §3.42),
-  `Verdict/WhnfModelsE` (5: `whnf_core`, `whnf_core_step`, `whnf`, `whnf_loop`, `whnf_step`; claims
+  `Verdict/WhnfModelsE` (5: `whnf_core`, `whnf_core_step` (these two done, §3.43), `whnf`,
+  `whnf_loop`, `whnf_step`; claims
   in `WhnfSlotE`);
 - [ ] `is_def_eq`: `Verdict/DefEqQuickE` (4), `DefEqLamsE` (2), `DefEqEagerE` (2), `DefEqPeelE`
   (5), `DefEqSpineE` (3), `DefEqLazyE` (8), `DefEqTailE` (9), `DefEqLoopsE` (1), `DefEqSlotE` (3:
@@ -2846,4 +2847,29 @@ Elaboration (user seconds, median of 3 interleaved runs, base master 7d656c31,
 10 % slower**: they now generate the unified models whose `errors` versions `DefEqLazyE` generated
 (the ok models they replace were cheaper, with the callees as `callW` runs); the default recipe was
 tried (above). No generator or kit change was needed.
+
+### 3.43 Retirement, group B, `whnf` itself, second landing (`whnf_core_step`, `whnf_core`)
+
+`step_ref` and `core_ref` (`Arena/WhnfCoreLoop`), over the unified models `whnfCoreStepE`
+(`whnf_core_app`'s and `whnf_core_step_proj`'s unified specs listed, `inst1` lifted) and
+`whnfCoreE` (the memo's probes and puts lifted, `whnf_core_loop` through its run). The ok halves
+`whnfCoreStep_refines'` and `whnfCoreSlot_step` and the claims `coreStepE_of` (`CoreStepE`, what
+the loop's errors assume) and `whnfCoreSlot_stepE` (`WhnfSlotE`) are one-liners; `whnfSlotsE_step`
+takes `iota_rec_at`'s claim instead of the `app` and `proj` arms' (`CoreAppE`, `StepProjE` are gone).
+Gone also: the hand models `coreStepW`/`stuckW` and `whnfCoreW` with their specs,
+`whnfCoreStep_refinesE`, `whnfCoreLoop_refinesE`.
+
+| functions | before: ok side + claims | after | change |
+|---|---:|---:|---:|
+| `whnf_core_step`, `whnf_core` | 556 | 304 | **−45 %** |
+
+* **`G`**: `AppG p n` for the step (its arms' refinements' `G`s); `CoreStepE p n` for the slot (the
+  body, `whnf_core_loop`, through `callE`: its ok half `whnfCoreBody_refines'`, its error half
+  `whnfCoreLoop_ref` by `RefE.coreSpecE`).
+* **The memo**: the unified model calls the probe and the put themselves; `callW_memoFind` and
+  `callW_memoSet` read them back as `mfindG` and `msetG` (what the hand model `memoSlotW` stated).
+
+Elaboration (user seconds, median of 3 interleaved runs, base master 0e3b414d):
+`Arena/WhnfCoreLoop` 4.08 → 2.35, `WhnfCoreSlot` 6.93 → 1.86, `Verdict/WhnfModelsE` 14.04 → 12.97,
+`WhnfSlotE` 2.83 → 1.02, `WhnfKnotE` 0.55 → 0.49; sum 28.43 → 18.69 (−34 %).
 
