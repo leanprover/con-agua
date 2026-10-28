@@ -51,7 +51,7 @@ theorem checkDeclSpecE_of (hdc : LoopCallees dn p) (hcE : CoreStubsE p) (hia : I
   have hnvL : NVAt p "lvl_eq_c" := fun _ _ _ _ h =>
     callE_nv hnv (_root_.L.Checker.nv_mem (f := "lvl_eq_c") (by decide +kernel)) _ _ _ h
   refine checkDecl_errT pins dn ds hdc.cd.cd hdc.andInd.toIbeProg hnv ⟨?_, ?_, ?_, ?_, ?_⟩ hia hFD hLD
-  · exact fun cv => checkDeclAxiom_errT pins dn ds hdc.cd.axp hdc.knot hap hkp hnv hcE hUL hdc.dninj hdc.quotDn cv
+  · exact fun cv => checkDeclAxiom_errT pins dn ds hdc.cd.axp hdc.knot hdc.leaf hap hkp hnv hcE hUL hdc.dninj hdc.quotDn cv
   · exact fun cv v hh => checkDeclDefn_errT pins dn ds hdc.cd.arm hdc.cd.val
       ⟨hdc.cd.df, hdc.cd.natSub, hdc.cd.natGate, hdc.cd.natCert, hdc.cd.natText,
         divGateSpecC hdc.cd.dm hdc.knot hdc.leaf hdc.cd.dgClosed (substC0_of hdc.cd.natSub.toNatSubProg)
