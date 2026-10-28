@@ -1,5 +1,4 @@
 import ConAgua.Arena.Verdict
-import ConAgua.Verdict.VCtx
 import ConAgua.Arena.RecGenSpec.ClassKeyCanon
 import ConAgua.Arena.RecGenSpec.ClassMinorSlot
 import ConAgua.Arena.RecGenSpec.RgW
@@ -58,7 +57,7 @@ theorem kof_ref (n : Nat) {m : Mem} {a : AState} {nP po pl key : Word} {pfvs : L
     {ck : ClassKey} (hS : StageR dn vis fe m a) (hpf : decHL m po.toNat pl.toNat = some pfvs)
     (hpb : po.toNat + pl.toNat ≤ iwTop m) (hk : DecB (fun m => decCK m key.toNat) m ck)
     (hP : PosMR m) :
-    RefE (VerdictCtx p) (classKeyOfE p n m nP po pl key) (ConRon.Arena.classKeyOf nP.toNat pfvs ck) a
+    RefE (closedNV p _root_.L.Checker.nvFns = true) (classKeyOfE p n m nP po pl key) (ConRon.Arena.classKeyOf nP.toNat pfvs ck) a
       (fun v x a' => KofPost dn vis fe m v.1 v.2 x a') := by
   cases n with
   | zero => rw [classKeyOfE.eq_1]; exact RefE.of_cls0 (by simp)
@@ -220,9 +219,41 @@ theorem classMinorSlot_refines (p : Prog)
     by rw [hres]; exact hR'.ihs⟩
 
 
-l_model classRecTyOkGuardsE_spec (p : Prog) (hf : p.lookup "class_rec_ty_ok_guards" = some classRecTyOkGuards)
-  fns [hf ↦ classRecTyOkGuardsE] grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] errors
+l_model classRecTyOkGuardsE_spec (p : Prog) (hp : RtoProg p)
+  fns [hp.rg ↦ classRecTyOkGuardsE]
+  specs [targetMajorAt_spec p hp.alloc hp.pw hp.mtm hp.tmd hp.tma hp.na n]
+  grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] unified
+  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
+
+/-- **The twin's guards of `classRecTyOk`** (the prefix `class_rec_ty_ok_guards` stands for): the
+class's major, the member guard, the rule prefix and major index guards. -/
+def rgT (G : ClassGen) (RS : RecShape) (k c : Nat) : AM TargetMajor := do
+  let ci ← ConRon.Arena.targetMajorAt G.cls c
+  unless RS.tgt == ci.member.getD k do
+    fail (.invalid "generated recursor: the recursor record's member is not its class's")
+  unless RS.rP == G.nP + G.slots.length && RS.mI == RS.rP + ci.nIdx do
+    fail (.invalid "generated recursor: the recursor record's rule prefix or major index is \
+      not the generated one")
+  pure ci
+
+theorem rgFail_bind {α β : Type} (e : CheckError) (f : α → AM β) : (fail e >>= f) = fail e := rfl
+
+/-- `classRecTyOk` is its guards, then the rest. -/
+theorem rgT_bind {γ : Type} (G : ClassGen) (RS : RecShape) (k c : Nat) (rest : AM γ) :
+    (do
+      let ci ← ConRon.Arena.targetMajorAt G.cls c
+      unless RS.tgt == ci.member.getD k do
+        fail (.invalid "generated recursor: the recursor record's member is not its class's")
+      unless RS.rP == G.nP + G.slots.length && RS.mI == RS.rP + ci.nIdx do
+        fail (.invalid "generated recursor: the recursor record's rule prefix or major index is \
+          not the generated one")
+      rest) = rgT G RS k c >>= fun _ => rest := by
+  simp only [rgT, bind_assoc]
+  congr 1; funext ci
+  by_cases h1 : (RS.tgt == ci.member.getD k) = true <;>
+    by_cases h2 : (RS.rP == G.nP + G.slots.length && RS.mI == RS.rP + ci.nIdx) = true <;>
+    simp [h1, h2, rgFail_bind]
 
 theorem memGuard_iff (tgt k8 : Nat) (k : Word) (ht : tgt < 2 ^ 64) (hk8 : k8 < 2 ^ 64) :
     (UInt64.ofNat tgt = (if (UInt64.ofNat k8 : Word) ≠ 0 then (UInt64.ofNat k8 : Word) - 1 else k)) ↔
@@ -243,132 +274,31 @@ theorem memGuard_iff (tgt k8 : Nat) (k : Word) (ht : tgt < 2 ^ 64) (hk8 : k8 < 2
     · intro h; exact rec2W_inj ht (by omega) h
     · intro h; rw [h]
 
+/-- What `class_rec_ty_ok_guards` gives besides the twin's major `tm` (from `m`, `a`): the twin's
+run of `targetMajorAt` (the guards keep the state), the stage invariant, the growth, the
+abstraction memo. -/
+structure RgPost (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (m : Mem) (a : AState)
+    (G : ClassGen) (c : Word) (m' : Mem) (tm : TargetMajor) (a' : AState) : Prop where
+  run : (ConRon.Arena.targetMajorAt G.cls c.toNat).run a = .ok (tm, a')
+  stage : StageR dn vis fe m' a'
+  grow : IWGrow m m'
+  abs : AbsOK m'
+
 section rg
 variable (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word)
 
-/-- **A passing guard run** (`rgW_sim`'s facts, for the error claims of the steps after the guards):
-the twin's `targetMajorAt` ran ok, and both of its guards hold. -/
-theorem rgW_pass (n : Nat) (m : Mem) (a : AState) (g k rc c : Word) (G : ClassGen)
-    (RS : RecShape) (hS : StageR dn vis fe m a) (hG : DecB (fun m => decCG m g.toNat) m G)
-    (hns : G.nP + G.slots.length < 2 ^ 64) (hrc : DecB (fun m => decRS m rc.toNat) m RS) (hA : AbsOK m)
-    (rg : List Word) (mg : Mem) (h : rgW (n + 1) m g k rc c = some (rg, mg)) :
-    ∃ tm a1, (ConRon.Arena.targetMajorAt G.cls c.toNat).run a = .ok (tm, a1) ∧
-      StageR dn vis fe mg a1 ∧ IWGrow m mg ∧ AbsOK mg ∧
-      (RS.tgt == tm.member.getD k.toNat) = true ∧
-      (RS.rP == G.nP + G.slots.length && RS.mI == RS.rP + tm.nIdx) = true := by
-  rw [rgW_eq] at h
-  have hsz := hS.2.2.2.1
-  have htop := hS.2.1
-  obtain ⟨-, hgt, ⟨o3, l3, h3, h4, hcls⟩, -⟩ := rec2CG_parts hG
-  obtain ⟨e3, t3⟩ := rec2RdN (w := g) (k := 3) h3 hsz
-  obtain ⟨e4, t4⟩ := rec2RdN (w := g) (k := 4) h4 hsz
-  simp only [show UInt64.ofNat 3 = (3 : Word) from rfl, show UInt64.ofNat 4 = (4 : Word) from rfl] at e3 e4
-  rw [e3, e4] at h
-  have hb3 : o3 + l3 < 2 ^ 64 := by
-    by_cases hl : l3 = 0
-    · have := iwN_rdW h3 (by omega); omega
-    · have := rec2DecB_PL_top hcls hl; omega
-  obtain ⟨⟨r1, m1⟩, hT, h⟩ := of_K h rfl
-  obtain ⟨tm, a1, hrun1, hS1, hg1, hTM, -⟩ := rec2SimTMA dn vis fe n m a (UInt64.ofNat o3) (UInt64.ofNat l3) c G.cls hS
-    (by rw [t3, t4]; exact hcls) (by rw [t3, t4]; exact hb3) (r1, m1) hT
-  dsimp only at hS1 hg1 hTM
-  have hb := h
-  simp only [rgK] at hb
-  obtain ⟨c1, hb⟩ := of_ite_none hb
-  obtain ⟨c2, hb⟩ := of_ite_none hb
-  obtain ⟨c3, hb⟩ := of_ite_none hb
-  obtain ⟨c4, hb⟩ := of_ite_none hb
-  obtain ⟨-, hmg⟩ := Prod.mk.inj (Option.some.inj hb)
-  subst hmg
-  have hsz1 := hS1.2.2.2.1
-  obtain ⟨k8, hk8, hmem⟩ := decTM_member hTM
-  obtain ⟨-, -, -, -, hni⟩ := rec2DecTM_parts hTM
-  obtain ⟨e8, -⟩ := rec2RdN (w := r1.headD 0) (k := 8) hk8 hsz1
-  obtain ⟨e5, -⟩ := rec2RdN (w := r1.headD 0) (k := 5) hni hsz1
-  have k8lt := (iwN_rdW_at (w := r1.headD 0) (k := 8) hk8 hsz1).2
-  have nilt := (iwN_rdW_at (w := r1.headD 0) (k := 5) hni hsz1).2
-  simp only [show UInt64.ofNat 8 = (8 : Word) from rfl, show UInt64.ofNat 5 = (5 : Word) from rfl] at e8 e5
-  obtain ⟨-, -, -, hrP, hmI, htgt⟩ := rec2DecRS_parts (hrc.stab (decRS_mono _) m1 hg1)
-  obtain ⟨eP, -⟩ := rec2RdN (w := rc) (k := 1) hrP hsz1
-  obtain ⟨eI, -⟩ := rec2RdN (w := rc) (k := 2) hmI hsz1
-  obtain ⟨eT, -⟩ := rec2RdN (w := rc) (k := 3) htgt hsz1
-  have rPlt := (iwN_rdW_at (w := rc) (k := 1) hrP hsz1).2
-  have mIlt := (iwN_rdW_at (w := rc) (k := 2) hmI hsz1).2
-  have tglt := (iwN_rdW_at (w := rc) (k := 3) htgt hsz1).2
-  simp only [show UInt64.ofNat 1 = (1 : Word) from rfl, show UInt64.ofNat 2 = (2 : Word) from rfl,
-    show UInt64.ofNat 3 = (3 : Word) from rfl] at eP eI eT
-  obtain ⟨hnP, hsl⟩ := rec2CG_get (hG.stab (decCG_mono _) m1 hg1)
-  obtain ⟨so, sl, hso, hsl', hsls⟩ := decAt_some hsl
-  have hlen := decPL_length m1 hsls
-  obtain ⟨eg, -⟩ := rec2RdN (w := g) (k := 0) (by simpa using hnP) hsz1
-  obtain ⟨eg8, -⟩ := rec2RdN (w := g) (k := 8) (by simpa [Nat.add_assoc] using hsl') hsz1
-  have nPlt := (iwN_rdW_at (w := g) (k := 0) (by simpa using hnP) hsz1).2
-  simp only [show UInt64.ofNat 0 = (0 : Word) from rfl, UInt64.add_zero,
-    show UInt64.ofNat 8 = (8 : Word) from rfl] at eg eg8
-  rw [eT, e8] at c1
-  rw [eP, eg, eg8] at c2
-  rw [eP, e5] at c3
-  rw [eI, eP, e5] at c4
-  have sllt := (iwN_rdW_at (w := g) (k := 8) (by simpa [Nat.add_assoc] using hsl') hsz1).2
-  -- the member guard
-  have g1 : (RS.tgt == tm.member.getD k.toNat) = true := by
-    rw [hmem]; simp only [decON]
-    by_cases hz : k8 = 0
-    · subst hz
-      simp only [show (UInt64.ofNat 0 : Word) = 0 from rfl, ne_eq, not_true_eq_false, ite_false,
-        Decidable.not_not] at c1
-      have := congrArg UInt64.toNat c1
-      rw [UInt64.toNat_ofNat_of_lt' tglt] at this
-      simp [this]
-    · have hz' : (UInt64.ofNat k8 : Word) ≠ 0 := fun e => hz (rec2W_inj k8lt (by decide) e)
-      simp only [hz', ne_eq, not_false_eq_true, ite_true, Decidable.not_not] at c1
-      have e1 : (UInt64.ofNat k8 - 1 : Word) = UInt64.ofNat (k8 - 1) := by
-        obtain ⟨j, rfl⟩ : ∃ j, k8 = j + 1 := ⟨k8 - 1, by omega⟩
-        simp [UInt64.ofNat_add]
-      rw [e1] at c1
-      have := rec2W_inj tglt (by omega) c1
-      simp [hz, this]
-  -- the prefix and major index guards
-  have hsl8 : sl = G.slots.length := hlen.symm
-  have c2' := Decidable.of_not_not c2
-  have hrPe : RS.rP = G.nP + G.slots.length := by
-    have := congrArg UInt64.toNat c2'
-    rw [UInt64.toNat_ofNat_of_lt' rPlt, rec2W_add _ _ nPlt sllt, hsl8] at this
-    rw [this, Nat.mod_eq_of_lt hns]
-  have hno : RS.rP + tm.nIdx < 2 ^ 64 := by
-    have : ¬ (UInt64.ofNat RS.rP + UInt64.ofNat tm.nIdx : Word).toNat < (UInt64.ofNat RS.rP : Word).toNat :=
-      fun x => c3 (UInt64.lt_iff_toNat_lt.mpr x)
-    rw [rec2W_add _ _ rPlt nilt, UInt64.toNat_ofNat_of_lt' rPlt] at this
-    omega
-  have hmIe : RS.mI = RS.rP + tm.nIdx := by
-    have := congrArg UInt64.toNat (Decidable.of_not_not c4)
-    rw [UInt64.toNat_ofNat_of_lt' mIlt, rec2W_add _ _ rPlt nilt, Nat.mod_eq_of_lt hno] at this
-    exact this
-  have g2 : (RS.rP == G.nP + G.slots.length && RS.mI == RS.rP + tm.nIdx) = true := by
-    simp [hrPe, hmIe]
-  exact ⟨tm, a1, hrun1, hS1, hg1, tmaW_afr hT hA, g1, g2⟩
-
-
-/-- **`class_rec_ty_ok_guards`' error claim**, in the shape of `rgW_sim`: a failing guard run of class
-`1`/`2` claims that the twin's `classRecTyOk` prefix (the member and the rule prefix guards, then
-the `rest`) fails. -/
-theorem rgE_claim {γ : Type} {p : Prog} (hnv : closedNV p _root_.L.Checker.nvFns = true)
-    (h : RtoProg p)
-    (n : Nat) (m : Mem) (a : AState) (g k rc c : Word) (G : ClassGen)
-    (RS : RecShape) (hS : StageR dn vis fe m a) (hG : DecB (fun m => decCG m g.toNat) m G)
-    (_hns : G.nP + G.slots.length < 2 ^ 64) (hrc : DecB (fun m => decRS m rc.toNat) m RS) (_hA : AbsOK m)
-    (rest : AM γ) (e : Err)
-    (he : classRecTyOkGuardsE p (n + 1) m g k rc c = .error e) :
-    ErrClaim (do
-      let ci ← ConRon.Arena.targetMajorAt G.cls c.toNat
-      unless RS.tgt == ci.member.getD k.toNat do
-        fail (.invalid "generated recursor: the recursor record's member is not its class's")
-      unless RS.rP == G.nP + G.slots.length && RS.mI == RS.rP + ci.nIdx do
-        fail (.invalid "generated recursor: the recursor record's rule prefix or major index is \
-          not the generated one")
-      rest) a e := by
-  by_cases hk0 : e.cls = 0
-  · exact ErrClaim.of_cls0 hk0
+/-- **`class_rec_ty_ok_guards` refines `classRecTyOk`'s guards (`rgT`), both outcomes**: the class's
+major (`target_major_at`, outside the verdict closure), then the member guard and the rule prefix
+and major index guards, each a reject site of the twin's. -/
+theorem rg_ref {p : Prog} (n : Nat) {m : Mem} {a : AState} {g k rc c : Word} {G : ClassGen}
+    {RS : RecShape} (hS : StageR dn vis fe m a) (hG : DecB (fun m => decCG m g.toNat) m G)
+    (hns : G.nP + G.slots.length < 2 ^ 64) (hrc : DecB (fun m => decRS m rc.toNat) m RS)
+    (hA : AbsOK m) :
+    RefE (closedNV p _root_.L.Checker.nvFns = true) (classRecTyOkGuardsE p n m g k rc c)
+      (rgT G RS k.toNat c.toNat) a (fun v tm a' => RgPost dn vis fe m a G c v.2 tm a') := by
+  cases n with
+  | zero => rw [classRecTyOkGuardsE.eq_1]; exact RefE.of_cls0 (by simp)
+  | succ n =>
   have hsz := hS.2.2.2.1
   have htop := hS.2.1
   obtain ⟨-, hgt, ⟨o3, l3, h3, h4, hcls⟩, -⟩ := rec2CG_parts hG
@@ -379,21 +309,16 @@ theorem rgE_claim {γ : Type} {p : Prog} (hnv : closedNV p _root_.L.Checker.nvFn
     by_cases hl : l3 = 0
     · have := iwN_rdW h3 (by omega); omega
     · have := rec2DecB_PL_top hcls hl; omega
-  rw [classRecTyOkGuardsE.arm1, e3, e4] at he
-  cases h1 : callE p n "target_major_at" [UInt64.ofNat o3, UInt64.ofNat l3, c] m with
-  | error e1 =>
-    rw [h1, classRecTyOkGuardsE.k_target_major_at.none] at he
-    cases he
-    exact ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h1
-  | ok q =>
-  obtain ⟨r1, m1⟩ := q
-  obtain ⟨s1, hs1, -, hmod⟩ := triple_of_callW
-    (targetMajorAt_spec p h.alloc h.pw h.mtm h.tmd h.tma h.na n ⟨m, Locals.init []⟩ _ _ c)
-    (callW_of_callE h1)
-  obtain ⟨tm, a1, hrun1, hS1, hg1, hTM, -⟩ := rec2SimTMA dn vis fe n m a (UInt64.ofNat o3) (UInt64.ofNat l3) c G.cls hS
-    (by rw [t3, t4]; exact hcls) (by rw [t3, t4]; exact hb3) (r1, m1) (by rw [← hs1]; exact hmod)
+  rw [classRecTyOkGuardsE.arm1, e3, e4]
+  rcases h1 : tmaW n m (UInt64.ofNat o3) (UInt64.ofNat l3) c with _ | ⟨r1, m1⟩
+  · rw [liftE_none, classRecTyOkGuardsE.k_target_major_at.none]; exact RefE.of_cls0 (by simp)
+  rw [liftE_some]
+  obtain ⟨tm, a1, hrun1, hS1, hg1, hTM, -⟩ := rec2SimTMA dn vis fe n m a (UInt64.ofNat o3) (UInt64.ofNat l3)
+    c G.cls hS (by rw [t3, t4]; exact hcls) (by rw [t3, t4]; exact hb3) (r1, m1) h1
   dsimp only at hS1 hg1 hTM
-  refine ErrClaim.bind_right hrun1 ?_
+  have hA1 : AbsOK m1 := tmaW_afr h1 hA
+  unfold rgT
+  refine RefE.bind_right hrun1 ?_
   have hsz1 := hS1.2.2.2.1
   obtain ⟨k8, hk8, hmem⟩ := decTM_member hTM
   obtain ⟨-, -, -, -, hni⟩ := rec2DecTM_parts hTM
@@ -423,43 +348,58 @@ theorem rgE_claim {γ : Type} {p : Prog} (hnv : closedNV p _root_.L.Checker.nvFn
   have hsl8 : sl = G.slots.length := hlen.symm
   have hmg := memGuard_iff RS.tgt k8 k tglt k8lt
   rw [← hmem] at hmg
-  rw [h1] at he
   have key : ∀ memv : Word, memv = (if (UInt64.ofNat k8 : Word) ≠ 0 then (UInt64.ofNat k8 : Word) - 1 else k) →
-      classRecTyOkGuardsE.j1 p g rc (r1.headD 0) memv m1 = .error e → ErrClaim (do
-      unless RS.tgt == tm.member.getD k.toNat do
-        fail (.invalid "generated recursor: the recursor record's member is not its class's")
-      unless RS.rP == G.nP + G.slots.length && RS.mI == RS.rP + tm.nIdx do
-        fail (.invalid "generated recursor: the recursor record's rule prefix or major index is \
-          not the generated one")
-      rest) a1 e := by
-    intro memv hmv hj
+      RefE (closedNV p _root_.L.Checker.nvFns = true) (classRecTyOkGuardsE.j1 p g rc (r1.headD 0) memv m1)
+        (do
+          unless RS.tgt == tm.member.getD k.toNat do
+            fail (.invalid "generated recursor: the recursor record's member is not its class's")
+          unless RS.rP == G.nP + G.slots.length && RS.mI == RS.rP + tm.nIdx do
+            fail (.invalid "generated recursor: the recursor record's rule prefix or major index is \
+              not the generated one")
+          pure tm) a1 (fun v tm' a' => RgPost dn vis fe m a G c v.2 tm' a') := by
+    intro memv hmv
     by_cases c1 : rdW (m1.arr64 IW) (rc + 3) = memv
-    · by_cases c2 : rdW (m1.arr64 IW) (rc + 1) = rdW (m1.arr64 IW) g + rdW (m1.arr64 IW) (g + 8)
-      · by_cases c3 : rdW (m1.arr64 IW) (rc + 1) + rdW (m1.arr64 IW) (r1.headD 0 + 5) <
+    · have g1t : (RS.tgt == tm.member.getD k.toNat) = true := by
+        apply hmg.mp; rw [← hmv, ← eT]; exact c1
+      by_cases c2 : rdW (m1.arr64 IW) (rc + 1) = rdW (m1.arr64 IW) g + rdW (m1.arr64 IW) (g + 8)
+      · have hrPe : RS.rP = G.nP + G.slots.length := by
+          have := congrArg UInt64.toNat c2
+          rw [eP, eg, eg8, UInt64.toNat_ofNat_of_lt' rPlt, rec2W_add _ _ nPlt sllt, hsl8] at this
+          rw [this, Nat.mod_eq_of_lt hns]
+        by_cases c3 : rdW (m1.arr64 IW) (rc + 1) + rdW (m1.arr64 IW) (r1.headD 0 + 5) <
             rdW (m1.arr64 IW) (rc + 1)
-        · rw [classRecTyOkGuardsE.j1.abort3 p g rc _ memv m1 c1 c2 c3] at hj
-          cases hj
-          exact ErrClaim.of_cls0 rfl
-        · by_cases c4 : rdW (m1.arr64 IW) (rc + 2) = rdW (m1.arr64 IW) (rc + 1) + rdW (m1.arr64 IW) (r1.headD 0 + 5)
-          · rw [classRecTyOkGuardsE.j1.arm1 p g rc _ memv m1 c1 c2 c3 c4] at hj
-            cases hj
-          · rw [classRecTyOkGuardsE.j1.abort4 p g rc _ memv m1 c1 c2 c3 c4] at hj
-            cases hj
-            have g1t : (RS.tgt == tm.member.getD k.toNat) = true := by
-              apply hmg.mp; rw [← hmv, ← eT]; exact c1
-            have g2f : (RS.rP == G.nP + G.slots.length && RS.mI == RS.rP + tm.nIdx) = false := by
-              cases hh : (RS.rP == G.nP + G.slots.length && RS.mI == RS.rP + tm.nIdx)
-              · rfl
-              · exfalso
-                simp only [Bool.and_eq_true, beq_iff_eq] at hh
-                apply c4
-                rw [eI, eP, e5, hh.2, UInt64.ofNat_add]
-            simp only [g1t, g2f, Bool.false_eq_true, ite_true, ite_false]
-            exact ErrClaim.bind_left (ErrClaim.fail _ _ (by decide))
-      · rw [classRecTyOkGuardsE.j1.abort2 p g rc _ memv m1 c1 c2] at hj
-        cases hj
-        have g1t : (RS.tgt == tm.member.getD k.toNat) = true := by
-          apply hmg.mp; rw [← hmv, ← eT]; exact c1
+        · rw [classRecTyOkGuardsE.j1.abort3 p g rc _ memv m1 c1 c2 c3]
+          exact RefE.of_cls0 rfl
+        have hno : RS.rP + tm.nIdx < 2 ^ 64 := by
+          rw [eP, e5] at c3
+          have : ¬ (UInt64.ofNat RS.rP + UInt64.ofNat tm.nIdx : Word).toNat < (UInt64.ofNat RS.rP : Word).toNat :=
+            fun x => c3 (UInt64.lt_iff_toNat_lt.mpr x)
+          rw [rec2W_add _ _ rPlt nilt, UInt64.toNat_ofNat_of_lt' rPlt] at this
+          omega
+        by_cases c4 : rdW (m1.arr64 IW) (rc + 2) = rdW (m1.arr64 IW) (rc + 1) + rdW (m1.arr64 IW) (r1.headD 0 + 5)
+        · rw [classRecTyOkGuardsE.j1.arm1 p g rc _ memv m1 c1 c2 c3 c4]
+          have hmIe : RS.mI = RS.rP + tm.nIdx := by
+            have := congrArg UInt64.toNat c4
+            rw [eI, eP, e5, UInt64.toNat_ofNat_of_lt' mIlt, rec2W_add _ _ rPlt nilt, Nat.mod_eq_of_lt hno] at this
+            exact this
+          have g2t : (RS.rP == G.nP + G.slots.length && RS.mI == RS.rP + tm.nIdx) = true := by
+            simp [hrPe, hmIe]
+          refine RefE.ret (y := tm) (a' := a1) ?_ ⟨hrun1, hS1, hg1, hA1⟩
+          simp only [g1t, g2t, ite_true]
+          rfl
+        · rw [classRecTyOkGuardsE.j1.abort4 p g rc _ memv m1 c1 c2 c3 c4]
+          refine fun _ => ?_
+          have g2f : (RS.rP == G.nP + G.slots.length && RS.mI == RS.rP + tm.nIdx) = false := by
+            cases hh : (RS.rP == G.nP + G.slots.length && RS.mI == RS.rP + tm.nIdx)
+            · rfl
+            · exfalso
+              simp only [Bool.and_eq_true, beq_iff_eq] at hh
+              apply c4
+              rw [eI, eP, e5, hh.2, UInt64.ofNat_add]
+          simp only [g1t, g2f, Bool.false_eq_true, ite_true, ite_false]
+          exact ErrClaim.bind_left (ErrClaim.fail _ _ (by decide))
+      · rw [classRecTyOkGuardsE.j1.abort2 p g rc _ memv m1 c1 c2]
+        refine fun _ => ?_
         have g2f : (RS.rP == G.nP + G.slots.length && RS.mI == RS.rP + tm.nIdx) = false := by
           cases hh : (RS.rP == G.nP + G.slots.length && RS.mI == RS.rP + tm.nIdx)
           · rfl
@@ -469,8 +409,8 @@ theorem rgE_claim {γ : Type} {p : Prog} (hnv : closedNV p _root_.L.Checker.nvFn
             rw [eP, eg, eg8, hh.1, ← hsl8, UInt64.ofNat_add]
         simp only [g1t, g2f, Bool.false_eq_true, ite_true, ite_false]
         exact ErrClaim.bind_left (ErrClaim.fail _ _ (by decide))
-    · rw [classRecTyOkGuardsE.j1.abort1 p g rc _ memv m1 c1] at hj
-      cases hj
+    · rw [classRecTyOkGuardsE.j1.abort1 p g rc _ memv m1 c1]
+      refine fun _ => ?_
       rw [eT, hmv] at c1
       have g1f : (RS.tgt == tm.member.getD k.toNat) = false := by
         cases hh : (RS.tgt == tm.member.getD k.toNat)
@@ -479,12 +419,12 @@ theorem rgE_claim {γ : Type} {p : Prog} (hnv : closedNV p _root_.L.Checker.nvFn
       simp only [g1f, Bool.false_eq_true, ite_false]
       exact ErrClaim.bind_left (ErrClaim.fail _ _ (by decide))
   by_cases hmz : rdW (m1.arr64 IW) (r1.headD 0 + 8) ≠ 0
-  · rw [classRecTyOkGuardsE.k_target_major_at.arm1 p g k rc r1 m1 hmz] at he
-    refine key _ ?_ he
+  · rw [classRecTyOkGuardsE.k_target_major_at.arm1 p g k rc r1 m1 hmz]
+    refine key _ ?_
     rw [e8] at hmz ⊢
     simp [hmz]
-  · rw [classRecTyOkGuardsE.k_target_major_at.arm2 p g k rc r1 m1 (by simpa using hmz)] at he
-    refine key _ ?_ he
+  · rw [classRecTyOkGuardsE.k_target_major_at.arm2 p g k rc r1 m1 (by simpa using hmz)]
+    refine key _ ?_
     rw [e8] at hmz
     simp [hmz]
 

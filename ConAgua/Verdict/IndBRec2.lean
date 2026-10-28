@@ -67,23 +67,23 @@ theorem classRecTyOk_claim (hp : RtoProg p) (n : Nat) (hn : n ≤ 2 ^ 62) (s₀ 
   | error e1 =>
     rw [h1, classRecTyOkE.k_class_rec_ty_ok_guards.none] at hW
     cases hW
-    exact rgE_claim dn fe vis hnv hp n s₀.mem a₀ g k rc c G RS hC.stage hG hns hrc hA _ er
-      (triple_of_callE_err (classRecTyOkGuardsE_spec p hp.rg (n + 1) ⟨s₀.mem, Locals.init []⟩ g k rc c) h1
-        (Err.code_ne_of_cls hk0))
+    rw [rgT_bind]
+    exact ErrClaim.bind_left (RefE.run_err
+      (classRecTyOkGuardsE_spec p hp (n + 1) ⟨s₀.mem, Locals.init []⟩ g k rc c) hnv hnv
+      (rg_ref dn fe vis (n + 1) hC.stage hG hns hrc hA) h1)
   | ok q1 =>
   obtain ⟨r1, m1⟩ := q1
   rw [h1, classRecTyOkE.k_class_rec_ty_ok_guards.arm1] at hW
-  obtain ⟨s1, hs1, -, hmg⟩ := triple_of_callW
-    (classRecTyOkGuards_spec p hp (n + 1) ⟨s₀.mem, Locals.init []⟩ g k rc c) (callW_of_callE h1)
+  obtain ⟨s1, hs1, -, tm, a1, hrunT, hrun1, hS1, hg1, hA1⟩ := RefE.run_ok
+    (classRecTyOkGuardsE_spec p hp (n + 1) ⟨s₀.mem, Locals.init []⟩ g k rc c)
+    (rg_ref dn fe vis (n + 1) hC.stage hG hns hrc hA) h1
   subst hs1
-  obtain ⟨tm, a1, hrun1, hS1, hg1, hA1, g1t, g2t⟩ :=
-    rgW_pass dn fe vis n s₀.mem a₀ g k rc c G RS hC.stage hG hns hrc hA r1 s1.mem hmg
   obtain ⟨-, -, hcls, -, -, -, -, -⟩ := dClassGen_inv hgP
   obtain ⟨p1, -⟩ := ConRon.Bridge.Inductives.targetMajorAt_spec G.cls gP.cls c.toNat a₀ a1 tm
     hC.check.state hC.check.pins hcls hrun1
   have hC1 : StageC dn vis fe env s1.mem a1 := hC.of_pstep hS1 hA1 p1
-  refine ErrClaim.bind_right hrun1 ?_
-  simp only [g1t, g2t, ite_true]
+  rw [rgT_bind]
+  refine ErrClaim.bind_right hrunT ?_
   cases h2 : callE p (n + 1) "class_gen_rec_ty" [g, c] s1.mem with
   | error e2 =>
     rw [h2, classRecTyOkE.k_class_gen_rec_ty.none] at hW
