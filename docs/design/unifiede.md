@@ -422,3 +422,70 @@ Elaboration (user seconds, `lean` on the module alone, median of 3 interleaved r
 
 Each flagged module is offset by the module that held the deleted hand spec, except `IndBRecPins`
 (+0.8 s over the pair).
+
+### 3.7 Batch 1a (`WhnfModels2E`: `reduce_nat*`; `WhnfModels6E`: `m2c_*`)
+
+All 17 functions migrated in one landing: the `reduce_nat` family (7) and `major_to_ctor`'s pieces
+(10). `major_to_ctor` itself keeps its `errors` model (a wrapper outside the batch); its claim
+`majorToCtorE_of` is `m2cHead_ref`'s error half through the run (`RefE.run_err`), its ok refinement
+`majorToCtor_refines'` the ok half (`RefE.growRefW`).
+
+| family | before: ok refinements + error claims | after | change |
+|---|---|---:|---:|
+| `reduce_nat*` (7) | `callW_reduceNat*` 799 + `callE_reduceNat*` 519 = 1 318 | `reduceNat*_ref` 584 | **−56 %** |
+| `m2c_*` (10) | `m2c*_ok` 956 + `m2c*E_ok` 830 + the hand error model `m2cAnd2HE` 37 = 1 823 | `m2c*_ref` 868 | **−52 %** |
+| shared pieces | | `CorePost` + `RefE.coreSpec` (`KnotE`), `RefE.tail(_eq)`, `CorePost.relist`, `GrowPost` + 3 lemmas, `M2CCtxE`, `PreOk`/`PreRef`, `and2Push_of` | ≈ +150 |
+
+Also gone: the generated `W` models of `reduce_nat*` (`WhnfDeltaRefine3`), the hand `W` models of
+`m2c_*` with their specs (≈ 330 lines, `WhnfM2CRefine`), `CoreRef.congr`. Whole diff of the
+batch against master: +1 403 −3 403 (with 46 imports the new import graph makes redundant).
+
+Choices:
+
+* **`G` is the knot's error half at the callees' fuel.** These functions are called from the
+  knot's slots, and their errors are the slots' (`whnf`, `infer_io`, `defeq`): `G` is
+  `KnotUpToE p n` for `reduce_nat*` and `M2CCtxE p n` (`KnotUpToE` and `ProofIrrelWE`, `proof_irrel`
+  being outside the knot) for `m2c_*`. The ok halves need only `KnotUpTo`, as before.
+* **The post is `CoreRef`'s, as a structure** (`CorePost dec dn m₀ vis fe M eb ok`: the relation
+  after the run, the result decoded, the result words valid), so the `CoreSpec` statements of the
+  knot (`ReduceNatSpec'`, `MajorToCtorOK`) are `RefE.coreSpec` one-liners. The arms that leave a
+  slice on the stack use `GrowPost` (`CoreAfterG`, `GrowRef`).
+* **`m2c_pre` is not a twin function**: it runs a prefix of each arm (`m2cPreT … k`), so an ok run
+  is not an ok run of a twin computation. Its refinement is `PreRef`: the ok value gives the twin's
+  prefix (`PreOk`, around the old `PreRun`), an error claims the failure of `m2cPreT … k` for every
+  continuation `k`. Its callers apply it as before.
+* **Tail calls** (`reduce_nat_head` → `_k`/`_ap`, `m2c_arms` → the arms, …): the caller's model
+  re-lists the callee's result, the twin runs the callee's twin from some state. `RefE.tail` takes
+  the callee's `RefE` through both (`RefE.tail_eq` when the runs are equal); each such call is
+  3–6 lines.
+* **Placement.** The knot's ok side (`DefEqKnot`, `WhnfDeltaRefine4`'s `whnf_step`) uses these
+  refinements, so they sit below it: `reduce_nat*` in `Verdict/WhnfNatE` (no longer importing
+  `WhnfSlotE`; `DefEqKnot` imports it; `ReduceNatE`, `reduceNat_refines` moved in), `m2c_*` in
+  `Arena/WhnfM2CRefine2..5` in place of the ok refinements (importing `WhnfModels6E` and `KnotE`;
+  `ProofIrrelWE` moved to `WhnfM2CRefine2`). `ErrClaim.of_run_err`/`of_run_eqW` moved from
+  `WhnfSlotE` to `KnotE`. The new graph makes 46 imports elsewhere redundant (removed, shake).
+* **Two model recipes changed**: `m2c_eta`'s unified model by the default recipe (`simp []` needed
+  `heartbeats 1000000` and took 16 s; default 8 s). For `reduce_nat*` `simp []` stays: the default
+  recipe and `finish … gen 30` fail, `simp [] locals` is slower.
+
+Elaboration (user seconds, `lean` on the module alone, median of 3 interleaved runs, base master
+63762a3f, load 17–32):
+
+| module | base | new | |
+|---|---:|---:|---|
+| `Verdict/WhnfModels2E` | 29.41 | 34.01 | **slower (+4.6 s, +16 %)**: the unified models do the work of the deleted `W` models' steps (below) with the callee specs lifted; recipes tried above |
+| `Arena/WhnfDeltaRefine3` | 13.86 | 3.72 | `W` models of `reduce_nat*`, three ok refinements gone |
+| `Verdict/WhnfNatE` | 5.47 | 1.61 | |
+| `Arena/WhnfDeltaRefine4`, `DefEqKnot`, `KnotE` | 4.30 | 3.30 | |
+| `Verdict/WhnfSlotE`, `WhnfMidE`, `WhnfKnotE` | 4.28 | 4.08 | |
+| `Verdict/WhnfModels6E` | 18.03 | 14.95 | `m2c_eta` by the default recipe |
+| `Arena/WhnfM2CRefine` | 18.12 | 2.56 | hand `W` specs gone |
+| `Arena/WhnfM2CRefine2..5` | 7.46 | 6.56 | |
+| `Verdict/WhnfM2CE`, `WhnfPirrE`, `WhnfStuckE` | 6.74 | 3.00 | the claims gone |
+| **sum** | **107.7** | **73.8** | **−31 %** |
+
+For the generator/kit (not changed here): `CorePost`/`RefE.coreSpec` (and the `GrowPost` variant)
+are the `RefE` form of `CoreRef`/`CoreSpec` for every knot function (batch 1d's `WhnfModels3E/E/7E`
+will want them; they sit in `Arena/KnotE`); `RefE.tail` (a tail call whose continuation re-lists the
+callee's value) recurs in every nested family and belongs to the kit; a `PreRef`-like shape (an ok
+half that is not a twin run) recurs for prefixes of twin functions.
