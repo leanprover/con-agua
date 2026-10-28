@@ -2139,10 +2139,11 @@ is one model and one refinement by §3.2 unless it says otherwise.
 - [x] `Verdict/FrontE` (`decl_kind`, `apply_decl`), `Verdict/FrontRunE` (`apply_d_line`): `RefC`s over
   the line's record verdict (`VerdictClaimR`), as `apply_ind` (§3.28). Done (§3.32: `declKind_ref`,
   `applyDecl_ref`, `applyDLine_ref`).
-- [ ] `Verdict/FrontStageE` (`builtin_prelude`), `Verdict/FrontRunE` (`front_line`, `front_run`):
+- [x] `Verdict/FrontStageE` (`builtin_prelude`), `Verdict/FrontRunE` (`front_line`, `front_run`):
   their ok sides are not per-function refinements but the generic driver (`Front/Driver`'s `runW`/
   `runI` over a line model `lineKW`, `DriverRefine`, the invariant steps of `FrontRun`/`FrontPreOK`)
-  and the stage composition (`builtin_of_parts`, `preSim`); see §3.32.
+  and the stage composition (`builtin_of_parts`, `preSim`); see §3.32. Done (§3.38‥§3.40:
+  `frontLine_ref`, `frontRun_ref`, `builtinPrelude_ref`; the generic driver is gone).
 
 **B. The knot's own functions** (ok halves the knot's `CoreSpec` slots, outside §3.1's
 inventory; `G` the knot's error half at the callees' fuel and `RefE.coreSpec`/`RefE.coreSpecE` for
