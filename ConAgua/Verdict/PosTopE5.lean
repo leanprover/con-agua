@@ -1,5 +1,5 @@
+import ConAgua.Arena.IndT.Pass
 import ConAgua.Verdict.PosTopEMono
-import ConAgua.Verdict.IndA3
 /-!
 # `check_block_positivity`'s and `nest_seeds`' error claims, discharged (lane `verdicts-b`,
 helper `ia2`, fork `top`)

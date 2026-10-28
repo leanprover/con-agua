@@ -1,4 +1,4 @@
-import ConAgua.Verdict.IndA3
+import ConAgua.Arena.IndT.Pass
 /-!
 # `check_block_classes`' error claim
 

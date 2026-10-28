@@ -1,6 +1,6 @@
-import ConAgua.Front.FrontPreOK
+import ConAgua.Front.DeclsPre
+import ConAgua.Front.FrontRun
 import ConAgua.Checker.NoVerdictClosed
-import ConAgua.Final.TwinVerdict
 import ConAgua.L.ModelGen
 /-!
 # The front's error arms' assumptions at the driver's program

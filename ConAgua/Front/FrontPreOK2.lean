@@ -1,10 +1,8 @@
 import ConAgua.Front.FrontPreOK1
 import ConAgua.Front.IndApplyRefine9
-import ConAgua.Front.IndApplySpec3
 import ConAgua.Front.IndFieldsLink3
 import ConAgua.Front.IndInstallRefine5
 import Std.Tactic.BVDecide.Normalize.Prop
-import ConAgua.L.ModelGen
 
 /-!
 # The frontend's records, word by word, II: an inductive line (lane `pipeline`)

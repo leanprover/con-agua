@@ -1,4 +1,4 @@
-import ConAgua.Front.Line
+import ConAgua.Front.IndApplySpec3
 import ConAgua.Front.FrontPreOK2
 import ConAgua.Scan.LineLink
 import Std.Tactic.BVDecide.Normalize.Prop

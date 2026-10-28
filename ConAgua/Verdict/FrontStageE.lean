@@ -1,4 +1,3 @@
-import ConAgua.Verdict.FrontValidE
 import ConAgua.Verdict.FrontSafeE
 import ConAgua.Verdict.FrontPreSimE
 import ConAgua.Checker.VerdictEntry1

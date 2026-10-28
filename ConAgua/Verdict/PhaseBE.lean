@@ -1,7 +1,6 @@
 import ConAgua.Arena.PhaseBT
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
-import ConAgua.L.ModelGen
 
 /-!
 # Phase B's loop fails only where the twin does (lane verdicts-b, calibration)

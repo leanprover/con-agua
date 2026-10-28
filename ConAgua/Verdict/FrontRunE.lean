@@ -1,5 +1,5 @@
+import ConAgua.Front.FrontPreOK
 import ConAgua.Verdict.FrontValidE
-import ConAgua.Checker.NoVerdictClosed
 import ConAgua.Final.TwinVerdict
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
