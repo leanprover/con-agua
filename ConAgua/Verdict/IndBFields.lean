@@ -1,8 +1,6 @@
-import ConAgua.Arena.Verdict
 import ConAgua.Arena.RecGenSpec.ClassFieldsOf
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.ModelGen
-import ConAgua.Checker.NoVerdictTree
 
 /-!
 # Error refinement of `class_fields_of(_go)` (lane `verdicts-b`, helper `ib`)

@@ -1,6 +1,7 @@
 import ConAgua.Verdict.WhnfModels2E
 import ConAgua.Arena.WhnfDeltaRefine4
 import ConAgua.Arena.KnotE
+import ConAgua.Arena.CoreNatOp
 /-!
 # `reduce_nat`'s family: one model and one refinement for both outcomes
 

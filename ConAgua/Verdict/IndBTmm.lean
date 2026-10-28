@@ -1,4 +1,3 @@
-import ConAgua.Arena.Verdict
 import ConAgua.Arena.IndSumSpec.ParamLevels
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
@@ -6,7 +5,6 @@ import ConAgua.L.ModelGen
 import ConRon.Bridge.Inductives.Records
 import ConRon.Bridge.Inductives.Run
 import ConRon.Bridge.Inductives.RecCheck
-import ConAgua.Checker.NoVerdictTree
 
 /-!
 # Error refinement of `target_major_of_member` (lane `verdicts-b`, helper `ib`)

@@ -1,9 +1,7 @@
-import ConAgua.Arena.Verdict
 import ConAgua.Arena.IlpRdReal
 import ConAgua.Arena.RecCheckSpec.ToiW
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.ModelGen
-import ConAgua.Checker.NoVerdictTree
 
 /-!
 # Error refinement of `target_outside_inst` (lane `verdicts-b`, helper `ib`)

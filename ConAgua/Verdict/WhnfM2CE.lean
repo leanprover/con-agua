@@ -1,4 +1,3 @@
-import ConAgua.Verdict.WhnfModels6E
 import ConAgua.Verdict.WhnfPrepE
 /-!
 # `major_to_ctor`'s verdict claims

@@ -1,7 +1,5 @@
 import ConAgua.Verdict.WhnfModelsE
-import ConAgua.Arena.KnotE
 import ConAgua.Arena.DefEqKnot
-import ConAgua.Checker.NoVerdictTree
 
 /-!
 # The knot's `whnf_core` and `whnf` slots' verdict claims (lane `verdicts-b`, helper `k2`)
