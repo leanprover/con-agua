@@ -1,3 +1,4 @@
+import ConAgua.Verdict.PosE3Fm
 import ConAgua.Arena.IndPosSpec.NestGroupCtors
 import ConAgua.Checker.NoVerdictTree
 import ConAgua.Arena.Verdict
@@ -42,8 +43,19 @@ l_model nnewE_spec (p : Prog) (hf : p.lookup "nest_cont_new" = some nestContNewL
   fns [hf ↦ nnewE list] grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [rdW] errors
 
+/-- `nest_cont_new`'s unified spec (the error post over the class; the generated `unified` steps fail). -/
+theorem nnewE_specU (p : Prog) (hf : p.lookup "nest_cont_new" = some nestContNewL) (n : Nat) (s₀ : St)
+    (vis ctx fuel progOff progLen kb n' us dsOff dsLen nPc cty ns : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "nest_cont_new"
+      [vis, ctx, fuel, progOff, progLen, kb, n', us, dsOff, dsLen, nPc, cty, ns]
+    ⦃fun r s' => LocEq s' s₀ ∧
+      nnewE p n s₀.mem vis ctx fuel progOff progLen kb n' us dsOff dsLen nPc cty ns = .ok (r, s'.mem);
+     fun ε => True → ε.cls ≠ 0 →
+      nnewE p n s₀.mem vis ctx fuel progOff progLen kb n' us dsOff dsLen nPc cty ns = .error ε⦄ :=
+  triple_uni_of_code (nnewE_spec p hf n s₀ _ _ _ _ _ _ _ _ _ _ _ _ _)
+
 l_model nfrE_spec (p : Prog) (hf : p.lookup "nest_frame" = some nestFrameL)
   fns [hf ↦ nfrE list] grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [rdW] errors
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] unified
 
 end L.Ind
