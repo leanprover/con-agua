@@ -10,6 +10,7 @@ import ConAgua.Arena.IndInstallSpec.ConsBlockCtors
 import ConAgua.Arena.IndInstallSpec.InstallRec2PSl
 import ConAgua.Arena.DeclBasisSpec
 import ConAgua.Verdict.IndBTmm
+import ConAgua.Verdict.IndBToi
 
 /-!
 # `target_major_of` under `StageC` with the real `inst_lp_fast` (lane `indstaget`, helper `rcC`)
@@ -100,9 +101,6 @@ theorem mkTmC_afr (ha : p.lookup "iw_alloc" = some iwAlloc)
 
 end calls
 
-/-- `AbsOK` across `target_outside_inst`'s callees after `inst_lp_fast`. -/
-theorem toiAfr : ToiAfr := fun _ _ _ _ _ _ h => piBW_afr _ _ _ _ _ _ h
-
 /-! ## The sims under `StageC` -/
 
 /-- **`target_major_of_outside_tail`'s model under `StageC`** (`tmtW_simG`'s, with the real
@@ -133,14 +131,13 @@ theorem tmtW_simC {p : Prog} (hP : TmtProg p) (hIlpf : IlpfF p) (hcore : CoreSta
     (Q := fun r x m' a' => ToiR r x ∧ StageC dn vis fe env m' a' ∧ IWGrow m m' ∧ PosMR m' ∧ AbsOK m' ∧
       ConRon.Bridge.CoreStep V env fe a a' ∧ ∃ l, denoteL a'.store.ls x.2 = some l) ?_ ?_
   · intro r1 m1 e1
-    obtain ⟨s1, rfl, -, hW1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-      (targetOutsideInst_spec p hP.toi (realCall p) (realCall_spec p) n _ vis I us dso dsl) e1
-    obtain ⟨x, a', hrun, hS1, hg1, hT1, hAF⟩ := toiW_ok (IlpRd.realC hIlpf hC) hW1 hS hI hus hds hdsb
-    have hA1 := hAF toiAfr hA
+    obtain ⟨s1, rfl, -, x, a', hrun, hR⟩ := RefE.run_okW
+      (toiE_spec p hP.toi n ⟨m, Locals.init []⟩ vis I us dso dsl) (toi_ref hP.toi hIlpf n hC hI hus hds hdsb) e1
+    have hA1 := hR.afr hA
     obtain ⟨c1, v, ⟨-, hlP⟩, -⟩ := ConRon.Bridge.Inductives.targetOutsideInst_spec fe (decI I) IP
       (decI us) usP ds dsP a a' x hC.check ⟨hIP, husP, hdsP⟩ hrun
-    exact ⟨x, a', hrun, hT1, hC.of_check hS1 hA1 c1.ok c1.ext, hg1,
-      hPm.fr (toiW_mfr (IlpFr.real hIlpf) hW1), hA1, c1, v.2, hlP⟩
+    exact ⟨x, a', hrun, hR.res, hC.of_check hR.stage hA1 c1.ok c1.ext, hR.grow, hPm.fr hR.mfr, hA1, c1, v.2,
+      hlP⟩
   rintro r1 ⟨nIdx, sI⟩ m1 a1 ⟨⟨hr1, hn1, hsH, hsd⟩, hC1, hg1, hP1, hA1, c1, lP, hlP⟩
   obtain ⟨-, -, hrsH, hrsd⟩ := partsShapeWords hg1 hq hq9
   rw [tmtK1_some]
