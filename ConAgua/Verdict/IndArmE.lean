@@ -11,7 +11,7 @@ import ConAgua.Verdict.IndBSum4
 `cid_claim3` (IndA8.lean) takes the `indB` callees' claims as the generated statements of
 IndBE.lean (`err_stmt`: every fuel `F ≤ 2 ^ 62`, the error of a `callE`), `CheckStructProjTableRE`
 (BlkE3.lean, under `StageR`) and `GenRecCheckE` (IndA7.lean); part B proved them as `CoreSpecE`s
-(`classMajors_claim`, `checkSumTele_claim`, …, `genRecCheck_claim'`). The bridges below restate
+(`classMajors_claim`, `ct_ref`, …, `genRecCheck_claim'`). The bridges below restate
 them, discharging the fuels part B's statements leave out (`0`, `1`: the calls run out of fuel).
 -/
 
@@ -48,14 +48,15 @@ theorem checkStructProjTableRE_of {p : Prog} (hnv : closedNV p _root_.L.Checker.
     CoreSpecE.of_callE (checkStructProjTable_claim (s₀ := ⟨m, Locals.init []⟩) hT hApd hnv F a hS hTH
       hCH hrs hnP hlps hlpsb hg hgb hcv hA hst hks hTP hcty) hc
 
-theorem checkSumTeleE_of {p : Prog} (hnv : closedNV p _root_.L.Checker.nvFns = true) (hW : WtE p)
-    (hCcv : CcvE p) : CheckSumTeleE p :=
-  fun hkp {_dn _vis _fe _env} henv _hV _hApd _hCrk h1 h2 h3 h4 h5 h6 h7 h8 h9 h10 h11 h12 h13 h14 h15 h16 h17 h18 h19 h20
-      hI1 hAb hcst hst s₀ a₀ cv n cvTa0 cvv cvTa hC hcv hcvb hcvs hta htab htas hA {_cvP _cvTaP} hcvP hcvTaP hws hfe
-      F hF _e hc =>
-    CoreSpecE.of_callE (checkSumTele_claim hkp henv hnv hW hCcv h1 h2 h3 h4 h5 h6 h7 h8 h9
-      h10 h11 h12 h13 h14 h15 h16 h17 h18 h19 h20 hI1 hAb hcst hst F hF s₀ a₀ cv n cvTa0 cvv cvTa hC
-      hcv hcvb hcvs hta htab htas hA hcvP hcvTaP hws hfe) hc
+/-- `check_sum_tele`'s claim in the generated shape (`CheckSumTeleE`): `ct_ref`'s error half. -/
+theorem checkSumTeleE_of {p : Prog} (hG : CtsG p) : CheckSumTeleE p :=
+  fun hkp {_dn vis _fe _env} henv hV hApd hCrk h1 h2 h3 h4 h5 h6 h7 h8 h9 h10 h11 h12 h13 h14 h15 h16 h17 h18
+      h19 h20 hI1 hAb hcst hst s₀ a₀ cv n cvTa0 cvv cvTa hC hcv hcvb hcvs hta htab htas hA {_cvP _cvTaP} hcvP
+      hcvTaP hws hfe F hF _e hc =>
+    RefE.run_err (ctE_spec p hV ⟨⟨⟨h1, h2, h3, h4, h5, h6, h7, h8, hI1⟩, h9, h10, h11, h12, h13, h14, h15,
+        h16, h17, h18, h19, h20, hAb⟩, hst, hcst⟩ F s₀ vis cv n cvTa0) hG.nv hG
+      (ct_ref hkp henv hApd hCrk ⟨h1, h2, h3, h4, h5, h6, h7, h8, hI1⟩ F hF s₀.mem a₀ cv n cvTa0 cvv cvTa hC
+        hcv hcvb hcvs hta htab htas hA hcvP hcvTaP hws hfe) hc
 
 theorem checkSumCtorsE_of {p : Prog} (hnv : closedNV p _root_.L.Checker.nvFns = true)
     (hcE : CoreStubsE p) (hCcv : CcvE p) : CheckSumCtorsE p :=
@@ -82,14 +83,14 @@ theorem checkStructFieldSortsIE_of {p : Prog} (hnv : closedNV p _root_.L.Checker
 /-- **`gen_rec_check`'s claim in the generated shape** (`GenRecCheckE`), from `genRecCheck_claim'`
 and the claims of `classes_nfs`, `target_k53_args` at every stage. -/
 theorem genRecCheckE_of {p : Prog} (hnv : closedNV p _root_.L.Checker.nvFns = true)
-    (hcE : CoreStubsE p) (hU : UceProg p) (hCcv : CcvE p)
+    (hcE : CoreStubsE p) (hU : UceProg p)
     (hNfs : ∀ dn vis fe env, ConLeche.EnvWF env → ClassesNfsE p dn vis fe env)
     (hTka : ∀ dn vis fe env, ConLeche.EnvWF env → TkaE p dn vis fe env) : GenRecCheckE p :=
   fun hkp {_env} henv hV hApd hCrk hIlpf P {_fsR} hclR hfR s₀ a₀ {_dn _vis _fe _pp _nested _pO _pL _tO _tL _rd
       _mO _mL _cO _cL _bO _bL _bs _params _tbl _rdv _ms _cvTas _block} hC hbs hrb hpar hparb htbl hrd hms
       hcv hblk hlp hP hA hkeep hcoh hfe {_pP _paramsP _tblP _rdP _MsP _cvTasP _blockP} hsh hparP htblP
       hrdP hmsP hcvTP hblkP hMs hT hfRc F hF _e hc =>
-    CoreSpecE.of_callE (genRecCheck_claim' hkp henv hV hApd hCrk hIlpf hnv hcE hU hCcv P hclR hfR F hF
+    CoreSpecE.of_callE (genRecCheck_claim' hkp henv hV hApd hCrk hIlpf hnv hcE hU P hclR hfR F hF
       s₀ a₀ hC hbs hrb hpar hparb htbl hrd hms hcv hblk hlp hP hA hkeep hcoh hfe hsh hparP htblP hrdP
       hmsP hcvTP hblkP hMs hT hfRc (hNfs _ _ _ _ henv) (hTka _ _ _ _ henv)) hc
 
