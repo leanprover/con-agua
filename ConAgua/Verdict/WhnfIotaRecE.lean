@@ -109,24 +109,7 @@ variable (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p) (hw : WhnfCallees
 include hp hc hw hEI hER hEK hnv hCmp hCF hIx in
 /-- **`iota_rec_vck`'s verdicts**: the level comparison out of fuel declines; the parameters', the
 telescope's and the indices' checks are their callees'. -/
-theorem iotaRecVck_refinesE :
-    ∀ (n : Nat), KnotUpTo p n → KnotUpToE p n → ∀ (F : Nat), n ≤ F → n ≤ 2 ^ 62 →
-    ∀ (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
-    (MM : ModeMaps) (eb mode d us recP so usj ctorP rl mo mn cmpL sn : Word) (lps : List NIdx)
-    (rule : IRecRule) (cvj : IConstantVal) (args margs : Array EIdx),
-    CoreS dn s₀.mem a₀ vis fe MM eb → mode < 4 → eb = (mode >>> 1) &&& 1 → HW us → HW usj →
-    HW cmpL →
-    hslice? (s₀.mem.arr64 EREC) (rdW (s₀.mem.arr64 EREC) (recP + 2)).toNat
-      (rdW (s₀.mem.arr64 EREC) (recP + 3)).toNat = some lps →
-    decRule (s₀.mem.arr64 EREC) rl.toNat = some rule →
-    decCV (s₀.mem.arr64 EREC) (ctorP.toNat + 1) = some cvj →
-    SpineR s₀.mem so sn args → so.toNat + sn.toNat ≤ (spTop s₀.mem).toNat →
-    (rdW (s₀.mem.arr64 EREC) (recP + 5)).toNat + 1 = sn.toNat →
-    SpineR s₀.mem mo mn margs → mo + mn = spTop s₀.mem → rule.ctorParams ≤ mn.toNat →
-    CoreSpecE p (n + 1) "iota_rec_vck" [mode, vis, d, us, recP, so, usj, ctorP, rl, mo, mn, cmpL]
-      (iotaRecVckT (coreKnot (decMode mode) fe id F) fe d.toNat
-        (rdW (s₀.mem.arr64 EREC) (recP + 5)).toNat (rdW (s₀.mem.arr64 EREC) (recP + 6)).toNat lps
-        (decI us) args.toList (decI usj) cvj rule margs.toList (decI cmpL)) s₀ a₀ := by
+theorem iotaRecVck_refinesE : IotaRecVckE p := by
   intro n hk hkE F hnF hn62 s₀ a₀ dn vis fe MM eb mode d us recP so usj ctorP rl mo mn cmpL sn lps
     rule cvj args margs hS hm4 hebm hus husj hcmpL hlps hrule hcv hsa hsat hmI hsm hsmt hcpm
   refine CoreSpecE.of_runs fun er hc0 => ?_
@@ -291,13 +274,6 @@ variable (mode : ConLeche.CheckMode) (r : CoreFnsA) (fe : IFEnv) (depth mI rP : 
   (lps : List NIdx) (us : LsIdx) (args : List EIdx) (usj : LsIdx) (cvj : IConstantVal)
   (rl : IRecRule) (margs : List EIdx)
 
-theorem famT_err_vck (a a1 a2 : AState) (cmpL : LsIdx) (h : mode.verifiedChecks = true)
-    (h1 : (recFireLevels rl lps us cvj.levelParams).run a = .ok (cmpL, a1))
-    (h2 : (iotaCase3 fe rl cvj cmpL).run a1 = .ok (true, a2)) (ce : CheckError)
-    (h3 : (iotaRecVckT r fe depth mI rP lps us args usj cvj rl margs cmpL).run a2 = .error ce) :
-    (iotaRecFamT mode r fe depth mI rP lps us args usj cvj rl margs).run a = .error ce := by
-  simp only [iotaRecFamT, h, ↓reduceIte, StateT.run_bind, h1, except_ok_bind, h2, h3]
-
 theorem fire2T_err_fam (c : NIdx) (a : AState) (h : margs.length = rl.ctorParams + rl.nfields)
     (ce : CheckError)
     (h1 : (iotaRecFamT mode r fe depth mI rP lps us args usj cvj rl margs).run a = .error ce) :
@@ -319,7 +295,7 @@ variable (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p) (hw : WhnfCallees
   (hIx : IotaIndexOkE p)
 
 include hp hc hw hEI hER hEK hnv hCmp hCF hIx in
-/-- **`iota_rec_fam`'s verdicts** are `iota_rec_vck`'s. -/
+/-- **`iota_rec_fam`'s verdicts** are `iota_rec_vck`'s (`fam_ref`'s error half). -/
 theorem iotaRecFam_refinesE :
     ∀ (n : Nat), KnotUpTo p n → KnotUpToE p n → ∀ (F : Nat), n ≤ F → n ≤ 2 ^ 62 →
     ∀ (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
@@ -337,97 +313,18 @@ theorem iotaRecFam_refinesE :
     CoreSpecE p (n + 1) "iota_rec_fam" [mode, vis, d, us, recP, so, usj, ctorP, rl, mo, mn]
       (iotaRecFamT (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat
         (rdW (s₀.mem.arr64 EREC) (recP + 5)).toNat (rdW (s₀.mem.arr64 EREC) (recP + 6)).toNat lps
-        (decI us) args.toList (decI usj) cvj rule margs.toList) s₀ a₀ := by
-  intro n hk hkE F hnF hn62 s₀ a₀ dn vis fe MM eb mode d us recP so usj ctorP rl mo mn sn lps rule cvj
-    np nf args margs hS hm4 hebm hus husj hlps hrule hci hfe hsa hsat hmI hsm hsmt hcpm
-  refine CoreSpecE.of_runs fun er hc0 => ?_
-  by_cases hk0 : er.cls = 0
-  · exact ErrClaim.of_cls0 hk0
-  have hW := triple_of_callE_err (irFamE_spec p hp.fam (n + 1) ⟨s₀.mem, Locals.init []⟩
-    mode vis d us recP so usj ctorP rl mo mn) hc0 (Err.code_ne_of_cls hk0)
-  simp only [irFamE] at hW
-  have hspn := hS.spn
-  have herec := hS.erec
-  have hfc := fireCore_of hS hrule hci hfe
-  have hld := lpsDen_of hS hfe
-  obtain ⟨-, -, -, -, -, -, -, -, hkw⟩ := decRule_rd herec hrule
-  have hcv := decCI_ctorInfo_cv hci
-  have hmsz : (mo + mn).toNat = mo.toNat + mn.toNat := by
-    have := hsm.bound; rw [UInt64.toNat_add, Nat.mod_eq_of_lt (by omega)]
-  generalize hE0 : s₀.mem.arr64 EREC = E at *
-  by_cases hv : mode &&& 1 ≠ 0
-  · rw [ite_eq_left hv] at hW; cases hW
-  rw [ite_eq_right hv] at hW
-  have hvc : (decMode mode).verifiedChecks = true := by
-    rw [decMode_verified mode hm4]; simpa using hv
-  cases c1 : callE p n "rec_fire_levels" [rdW E (rl + 3), rdW E (rl + 4), rdW E (rl + 5),
-      rdW E (recP + 2), rdW E (recP + 3), us, rdW E (ctorP + 2), rdW E (ctorP + 3)] s₀.mem with
-  | error e1 =>
-    rw [c1, irFamE.k_rec_fire_levels.none] at hW; cases hW
-    exact ErrClaim.of_callE_nv hnv (whnfIotaE_nv "rec_fire_levels" (by simp)) c1
-  | ok q =>
-  obtain ⟨rv, m1⟩ := q
-  rw [c1] at hW
-  simp only [irFamE.k_rec_fire_levels] at hW
-  obtain ⟨hrun1, ⟨M1, hS1, hK1, hSt1⟩, hr1⟩ := CoreSpec.run
-    (hc.recFireLevels n ⟨s₀.mem, Locals.init []⟩ a₀ dn vis fe MM eb _ _ _ _ _ us _ _ rule lps
-      cvj.levelParams hS hus (by show hslice? (s₀.mem.arr64 EREC) _ _ = _; rw [hE0]; exact hlps)
-      hld hfc) (callW_of_callE c1)
-  have e1 : m1.arr64 EREC = E := by rw [hER _ _ _ _ _ _ (by simp) (callW_of_callE c1), hE0]
-  rw [e1] at hW
-  cases c2 : callE p n "iota_case3" [rdW E (rl + 9), vis, ctorP, rv.headD 0] m1 with
-  | error e2 =>
-    rw [c2, irFamE.k_iota_case3.none] at hW; cases hW
-    exact ErrClaim.of_callE_nv hnv (whnfIotaE_nv "iota_case3" (by simp)) c2
-  | ok q =>
-  obtain ⟨r3, m2⟩ := q
-  rw [c2] at hW
-  simp only [irFamE.k_iota_case3] at hW
-  obtain ⟨hrun2, ⟨M2, hS2, hK2, hSt2⟩, hr2⟩ := CoreSpec.run
-    (iotaCase3_refines p hp.toIotaProg4 hc.capsNeverZero n ⟨m1, Locals.init []⟩ _ dn vis fe M1
-      eb (rdW E (rl + 9)) ctorP (rv.headD 0) rule cvj np nf hS1 hr1 hkw (by rw [e1]; exact hci))
-    (callW_of_callE c2)
-  have e2 : m2.arr64 EREC = E := by rw [hER _ _ _ _ _ _ (by simp) (callW_of_callE c2), e1]
-  have hSt12 := hSt1.trans hSt2
-  by_cases g0 : r3.headD 0 = 0
-  · rw [ite_eq_left g0] at hW; cases hW
-  rw [ite_eq_right g0] at hW
-  rw [decBool_t_m2c g0] at hrun2
-  have hW' := err_of_k (by intro q e; simp [irFamE.k_iota_rec_vck]) (fun _ => rfl) hW
-  cases n with
-  | zero => exact ErrClaim.of_callE_zeroW hW'
-  | succ N =>
-  have hvk := iotaRecVck_refinesE p hp hc hw hEI hER hEK hnv hCmp hCF hIx N (hk.mono (by omega))
-    (hkE.mono (by omega)) F (by omega) (by omega) ⟨m2, Locals.init []⟩ _ dn vis fe M2 eb mode d us
-    recP so usj ctorP rl mo mn (rv.headD 0) sn lps rule cvj args margs hS2 hm4 hebm hus husj hr1
-  simp only [e2] at hvk
-  exact ErrClaim.of_run_err (fun ce h' => famT_err_vck _ _ _ _ _ _ _ _ _ _ _ _ _ a₀ _ _ _ hvc hrun1
-      hrun2 ce h')
-    (CoreSpecE.of_callE (hvk hlps hrule hcv (hsa.keep hSt12.size hSt12.below hsat hspn)
-      (by rw [hSt12.1]; exact hsat) hmI
-      (hsm.keep hSt12.size hSt12.below (by rw [← hsmt, hmsz]; exact Nat.le_refl _) hspn)
-      (by rw [hSt12.1]; exact hsmt) hcpm) hW')
+        (decI us) args.toList (decI usj) cvj rule margs.toList) s₀ a₀ :=
+  fun n hk hkE F hnF hn62 s₀ a₀ dn vis fe MM eb mode d us recP so usj ctorP rl mo mn sn lps rule cvj np
+      nf args margs hS hm4 hebm hus husj hlps hrule hci hfe hsa hsat hmI hsm hsmt hcpm =>
+    RefE.coreSpecE (irFamE_spec p hp.fam (n + 1) s₀ mode vis d us recP so usj ctorP rl mo mn) hnv
+      ⟨hkE, iotaRecVck_refinesE p hp hc hw hEI hER hEK hnv hCmp hCF hIx⟩
+      (fam_ref p hp hc hw hEI hER hEK n hk F hnF hn62 s₀ a₀ dn vis fe MM eb mode d us recP so usj ctorP
+        rl mo mn sn lps rule cvj np nf args margs hS hm4 hebm hus husj hlps hrule hci hfe hsa hsat hmI
+        hsm hsmt hcpm)
 
 include hp hc hw hEI hER hEK hnv hCmp hCF hIx in
 /-- **`iota_rec_fire2`'s verdicts** are `iota_rec_fam`'s. -/
-theorem iotaRecFire2_refinesE :
-    ∀ (n : Nat), KnotUpTo p n → KnotUpToE p n → ∀ (F : Nat), n ≤ F → n ≤ 2 ^ 62 →
-    ∀ (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
-    (MM : ModeMaps) (eb mode d c us recP so usj ctorP rl mo mn sn : Word) (lps : List NIdx)
-    (rule : IRecRule) (cvj : IConstantVal) (np nf : Nat) (args margs : Array EIdx),
-    CoreS dn s₀.mem a₀ vis fe MM eb → mode < 4 → eb = (mode >>> 1) &&& 1 → HW c → HW us → HW usj →
-    hslice? (s₀.mem.arr64 EREC) (rdW (s₀.mem.arr64 EREC) (recP + 2)).toNat
-      (rdW (s₀.mem.arr64 EREC) (recP + 3)).toNat = some lps →
-    decRule (s₀.mem.arr64 EREC) rl.toNat = some rule →
-    decCI (s₀.mem.arr64 EREC) dn ctorP.toNat = some (.ctorInfo cvj np nf) →
-    FireEnv fe lps rule cvj →
-    SpineR s₀.mem so sn args → so.toNat + sn.toNat ≤ (spTop s₀.mem).toNat →
-    (rdW (s₀.mem.arr64 EREC) (recP + 5)).toNat + 1 = sn.toNat →
-    SpineR s₀.mem mo mn margs → mo + mn = spTop s₀.mem →
-    CoreSpecE p (n + 1) "iota_rec_fire2" [mode, vis, d, c, us, recP, so, usj, ctorP, rl, mo, mn]
-      (iotaRecFire2T (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decI c)
-        (rdW (s₀.mem.arr64 EREC) (recP + 5)).toNat (rdW (s₀.mem.arr64 EREC) (recP + 6)).toNat lps
-        (decI us) args.toList (decI usj) cvj rule margs.toList) s₀ a₀ := by
+theorem iotaRecFire2_refinesE : IotaRecFire2E p := by
   intro n hk hkE F hnF hn62 s₀ a₀ dn vis fe MM eb mode d c us recP so usj ctorP rl mo mn sn lps rule cvj
     np nf args margs hS hm4 hebm hcw hus husj hlps hrule hci hfe hsa hsat hmI hsm hsmt
   refine CoreSpecE.of_runs fun er hc0 => ?_
@@ -499,58 +396,16 @@ theorem iotaRecFire2_refinesE :
   | ok q => rw [c4] at hW; cases hW
 
 include hp hc hw hEI hER hEK hnv hCmp hCF hIx in
-/-- **`IotaRecFireE`**: `iota_rec_fire`'s verdicts are `iota_rec_fire2`'s. -/
-theorem iotaRecFireE_of : IotaRecFireE p := by
-  intro n hk hkE F hnF hn62 s₀ a₀ dn vis fe MM eb mode d c us recP so usj ctorP rl major sn lps rule cvj
-    np nf args hS hm4 hebm hcw hus husj hmaj hlps hrule hci hfe hsa hsat hmI
-  refine CoreSpecE.of_runs fun er hc0 => ?_
-  by_cases hk0 : er.cls = 0
-  · exact ErrClaim.of_cls0 hk0
-  have hW := triple_of_callE_err (irFireE_spec p hp.fire (n + 1) ⟨s₀.mem, Locals.init []⟩
-    mode vis d c us recP so usj ctorP rl major) hc0 (Err.code_ne_of_cls hk0)
-  simp only [irFireE] at hW
-  have hspn := hS.spn
-  cases c1 : callE p n "get_app_args" [major] s₀.mem with
-  | error e1 =>
-    rw [c1, irFireE.k_get_app_args.none] at hW; cases hW
-    exact ErrClaim.of_callE_nv hnv (whnfIotaE_nv "get_app_args" (by simp)) c1
-  | ok q =>
-  obtain ⟨ra, m1⟩ := q
-  rw [c1] at hW
-  simp only [irFireE.k_get_app_args] at hW
-  have hW' := err_of_k (by intro q e; simp [irFireE.k_iota_rec_fire2]) (fun _ => rfl) hW
-  obtain ⟨t1, ht1, -, fr1, gr1, hr0, htop1, xs, hrunA, hxs⟩ := triple_of_callE
-    (getAppArgs_refines' p hp.spine.args hp.spine.cnt hp.spine.fill n ⟨s₀.mem, Locals.init []⟩ a₀
-      hS.arena.1 major hmaj hspn) c1
-  rw [ht1] at fr1 gr1 htop1 hxs
-  have hS1 : CoreS dn m1 a₀ vis fe MM eb := hS.frame_stk fr1 (by simp) (by simp)
-  have e1 : m1.arr64 EREC = s₀.mem.arr64 EREC := fr1.1 EREC (by simp [SPN, EREC]) (by decide)
-  cases n with
-  | zero => exact ErrClaim.of_callE_zeroW hW'
-  | succ N =>
-  have hf2 := iotaRecFire2_refinesE p hp hc hw hEI hER hEK hnv hCmp hCF hIx N (hk.mono (by omega))
-    (hkE.mono (by omega)) F (by omega) (by omega) ⟨m1, Locals.init []⟩ a₀ dn vis fe MM eb mode d c us
-    recP so usj ctorP rl (ra.headD 0) (ra.tail.headD 0) sn lps rule cvj np nf args xs.toArray hS1 hm4
-    hebm hcw hus husj
-  simp only [e1] at hf2
-  have hEq : ∀ ce, (iotaRecFire2T (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decI c)
-      (rdW (s₀.mem.arr64 EREC) (recP + 5)).toNat (rdW (s₀.mem.arr64 EREC) (recP + 6)).toNat lps
-      (decI us) args.toList (decI usj) cvj rule xs.toArray.toList).run a₀ = .error ce →
-      (iotaRecFireT (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decI c)
-      (rdW (s₀.mem.arr64 EREC) (recP + 5)).toNat (rdW (s₀.mem.arr64 EREC) (recP + 6)).toNat lps
-      (decI us) args.toList (decE major) (decI usj) cvj rule).run a₀ = .error ce := by
-    intro ce h'
-    simp only [iotaRecFireT, StateT.run_bind, hrunA, except_ok_bind]
-    simpa using h'
-  exact ErrClaim.of_run_err hEq (CoreSpecE.of_callE (hf2 hlps hrule hci hfe
-    (hsa.keep gr1.size gr1.below hsat hspn)
-    (by
-      show so.toNat + sn.toNat ≤ (spTop m1).toNat
-      have := UInt64.le_iff_toNat_le.mp gr1.1
-      have htq : (spTop ({ mem := s₀.mem, loc := Locals.init [] } : St).mem).toNat =
-        (spTop s₀.mem).toNat := rfl
-      omega)
-    hmI hxs (by rw [htop1, hr0])) hW')
+/-- **`IotaRecFireE`**: `iota_rec_fire`'s verdicts are `iota_rec_fire2`'s (`fire_ref`'s error
+half). -/
+theorem iotaRecFireE_of : IotaRecFireE p :=
+  fun n hk hkE F hnF hn62 s₀ a₀ dn vis fe MM eb mode d c us recP so usj ctorP rl major sn lps rule cvj
+      np nf args hS hm4 hebm hcw hus husj hmaj hlps hrule hci hfe hsa hsat hmI =>
+    RefE.coreSpecE (irFireE_spec p hp.fire (n + 1) s₀ mode vis d c us recP so usj ctorP rl major) hnv
+      ⟨hkE, iotaRecFire2_refinesE p hp hc hw hEI hER hEK hnv hCmp hCF hIx⟩
+      (fire_ref p hp hc hw hEI hER hEK n hk F hnF hn62 s₀ a₀ dn vis fe MM eb mode d c us recP so usj
+        ctorP rl major sn lps rule cvj np nf args hS hm4 hebm hcw hus husj hmaj hlps hrule hci hfe hsa
+        hsat hmI)
 
 end fire
 
