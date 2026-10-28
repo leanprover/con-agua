@@ -1,6 +1,5 @@
 import ConAgua.Checker.Prog
 import ConAgua.Arena.IndTwin
-import ConAgua.Compiler.WriteSetSplit
 
 /-!
 # The core leaves the stage's pools and the pins alone (lane `indproofs3`)

@@ -1,4 +1,3 @@
-import ConAgua.Verdict.WhnfModels3E
 import ConAgua.Verdict.WhnfAppE
 /-!
 # `iota_rec_at`'s verdict claims, the top (lane `verdicts-b`, helper `k2`)
