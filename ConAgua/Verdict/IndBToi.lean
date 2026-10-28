@@ -13,8 +13,8 @@ import ConAgua.L.ModelGen
 `e_view` (through its run, `callE`: its spec's post is a list, `r ≠ [] ∧ r = eViewW …`).
 `toi_ref` refines `targetOutsideInst` for both outcomes: the four rejects are the twin's `fail`s
 (the structure is not stored or not an inductive; `inst_pis_with` does not bind the parameters;
-the type former does not end in a sort). Its ok half is `target_major_of_outside_tail`'s
-refinement (`tmtW_simC`), its error half `tmtE_claim`'s first step.
+the type former does not end in a sort). It is the first step of
+`target_major_of_outside_tail`'s refinement (`tmt_ref`).
 -/
 
 noncomputable section
