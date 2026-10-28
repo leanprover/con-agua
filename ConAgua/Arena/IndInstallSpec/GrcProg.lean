@@ -1,3 +1,4 @@
+import ConAgua.Arena.RecGenSpec.ClassFeR
 import ConAgua.Arena.IndInstallSpec.Iis
 import ConAgua.Arena.IndInstallSpec.TabsProg
 import ConAgua.Arena.IndRealBle

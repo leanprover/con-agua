@@ -1,4 +1,6 @@
-import ConAgua.Arena.RecGenSpec.ClassFeR
+import ConAgua.Arena.RecGenSpec.RgW
+import ConAgua.Arena.RecGenSpec.DecCVX
+import ConAgua.Arena.RecStab
 import ConAgua.Arena.RecGenSpec.ClassMinorSlot
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr

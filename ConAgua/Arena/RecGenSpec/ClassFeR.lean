@@ -1,6 +1,6 @@
+import ConAgua.Arena.RecClassSpec.PiBWRoom
 import ConAgua.Arena.LdRd
 import ConAgua.Arena.IndSumSpec.ConsSumCtors
-import ConAgua.Arena.RecClassSpec.ClassGenRecTy
 import ConAgua.Arena.RecClassSpec.ClassNPcOf
 import ConAgua.Arena.RecGenSpec.Rec3CVX
 import ConAgua.Arena.RecGenSpec.RgW
