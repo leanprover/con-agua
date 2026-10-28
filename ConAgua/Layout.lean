@@ -32,6 +32,11 @@ constant index below `k`. The entry stubs establish it and their proofs prove it
 length in the buffer, declining below the minimum; an array that is neither frozen nor owned gets no
 memory there, so it has no minimum. The minima are the largest constant index the program uses,
 plus one (`CTL`: 256, `L.Checker.ctlMin`).
+
+**The table-relative array.** `CTL`'s row is marked `at table` (`ArrDecl.atTable`): the stubs place
+its `min` words inside the table's slot, past the table, at an offset the compiler knows
+(`L.Compiler.Tab.tbl`), and the code addresses it from the table's register without loading its
+base.
 -/
 
 namespace L
@@ -45,7 +50,7 @@ declare_arrays checkerArrays
   -- the stores (`Arena/StoreFields.lean`): the pool, then per table its records and cons slots
   | /-- The limb pool: limbs, level lists' handles, names' bytes (`Arena/Pool.lean`). -/
     Arena.POOL : word tiered := 0
-  | /-- The control words; word 0 is the pool top. -/ Arena.CTL : word min 256 := 1
+  | /-- The control words; word 0 is the pool top. -/ Arena.CTL : word min 256 at table := 1
   | /-- The `lit` records (four words per node). -/ Arena.REC : word tiered := 2
   | /-- The `lit` cons-table slots. -/ Arena.SLOT : word tiered min 2 := 3
   | /-- The `app` records (one packed word per node). -/ Arena.AREC : word tiered := 4

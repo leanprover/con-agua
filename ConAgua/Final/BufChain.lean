@@ -18,27 +18,37 @@ namespace ConAgua.Final
 
 open L L.Compiler L.Arena
 
-/-- The memory of a zero region: every word array `abiWords` zeros, every global `0`. -/
-def zeroMem : Mem where
-  words _ := Array.replicate abiWords 0
+/-- The memory of a zero region: every word array zeros of the length `abiSz` gives it, every
+global `0`. -/
+def zeroMem (tab : Tab) : Mem where
+  words s := Array.replicate (abiSz tab s) 0
 
 section
 variable {tab : Tab} {fz own : List TieredArray} {B : Array Word} {buf base blen : Nat}
 
+/-- Byte `j` of word `i` of owned array `s` (number `k`) is in the region. -/
+theorem own_region_bytes (hok : abiTabOk tab = true) (hn : abiSlot * (2 + own.length) ≤ blen) {s : TieredArray}
+    {k base i j : Nat} (hk : k < own.length) (hi : i < abiSz tab s) (hj : j < 8) :
+    base ≤ base + ownOff tab s k + 8 * i + j ∧ base + ownOff tab s k + 8 * i + j < base + blen := by
+  rcases own_bytes hok (s := s) (k := k) (base := base) (x := base + ownOff tab s k + 8 * i + j)
+    (by omega) (by omega) with ⟨-, h⟩ | ⟨-, h⟩
+  · have := h.lt (n := 2 + own.length) (by omega)
+    unfold InSlot at h; omega
+  · unfold InTbl at h; simp only [abiSlot] at hn; omega
+
 /-- A zero region holds the zero memory. -/
 theorem regionRel_zero (hok : abiTabOk tab = true) (hn : workerNeed own ≤ blen) (hf : base + blen < 2 ^ 64)
     (d : DataMem) (hz : ∀ x, base ≤ x → x < base + blen → d.get? (A x) = some 0) :
-    RegionRel tab base own (zeroMem) d := by
+    RegionRel tab base own (zeroMem tab) d := by
   obtain ⟨hnb, htab, -⟩ := abiTabOk_spec hok
   unfold workerNeed at hn
   have hb31 : 2 ^ 31 ≤ blen := by simp only [abiSlot] at hn; omega
   refine ⟨fun a _ k _ => by simp [zeroMem, Mem.arr64], fun a _ k hk i hi => ?_, fun g hg => ?_⟩
   · have hk' := idxOf?_lt hk
-    have hle : abiSlot * (2 + k) + abiSlot ≤ abiSlot * (2 + own.length) := by
-      rw [← Nat.mul_succ]; exact Nat.mul_le_mul_left _ (by omega)
-    have hi' : i < abiWords := by simpa [zeroMem, Mem.arr64] using hi
-    rw [rdW_of_zero (by simp only [abiSlot, abiWords] at hle hn hi' ⊢; omega) fun j hj =>
-      hz _ (by omega) (by simp only [abiSlot, abiWords] at hle hn hi' ⊢; omega)]
+    have hi' : i < abiSz tab a := by simpa [zeroMem, Mem.arr64] using hi
+    have hb := fun j (hj : j < 8) => own_region_bytes hok hn hk' (s := a) (base := base) (i := i) (j := j) hi' hj
+    have hb7 := hb 7 (by omega)
+    rw [rdW_of_zero (by omega) fun j hj => hz _ (hb j hj).1 (hb j hj).2]
     simp [zeroMem, Mem.arr64]
   · rw [rdW_of_zero (by simp only [Tab.globOff, Tab.globBase] at *; omega) fun j hj =>
       hz _ (by omega) (by simp only [Tab.globOff, Tab.globBase] at *; omega)]
@@ -74,12 +84,12 @@ theorem RegionRel.transfer (hok : abiTabOk tab = true) (hn : workerNeed own ≤ 
   refine ⟨hr.size, fun a ha k hk i hi => ?_, fun g hg => ?_⟩
   · have hk' := idxOf?_lt hk
     have hs := hr.size a ha k hk
-    have hle : abiSlot * (2 + k) + abiSlot ≤ abiSlot * (2 + own.length) := by
-      rw [← Nat.mul_succ]; exact Nat.mul_le_mul_left _ (by omega)
     rw [← hr.get a ha k hk i hi]
     refine rdW_congr fun j hj => ?_
     rw [A_add]
-    exact hsame _ (by omega) (by simp only [abiSlot, abiWords] at hle hn hs hi ⊢; omega)
+    have hb := own_region_bytes hok hn hk' (s := a) (base := base) (i := i) (j := j)
+      (by omega) hj
+    exact hsame _ hb.1 hb.2
   · rw [← hr.glob g hg]
     refine rdW_congr fun j hj => ?_
     rw [A_add]
@@ -91,7 +101,7 @@ end
 `[base, base + blen)` (zero at the first call) and the buffer at `buf` holding `B`; the return
 state `st i` of call `i` satisfies `abiB_outcome`'s post for the region's memory at the call
 (`hpost`), reports accept, and the harness hands the region to the next call unchanged. Then the
-region's L memories `rm 0 = zeroMem`, `rm 1`, … are each the final memory of the run before,
+region's L memories `rm 0 = zeroMem tab`, `rm 1`, … are each the final memory of the run before,
 every run accepts, and every call returns with the caller's registers (`RegsRestored`). -/
 theorem thread_chain (p : Prog) (tab : Tab) (hok : abiTabOk tab = true) (hnres : 1 ≤ tab.nres)
     (fz own : List TieredArray) (hdisj : ∀ a ∈ own, a ∉ fz) (plo phi mode : GVar) (B : Array Word)
@@ -104,12 +114,12 @@ theorem thread_chain (p : Prog) (tab : Tab) (hok : abiTabOk tab = true) (hnres :
     (hacc : ∀ i < n, (st i).data.regs.rdx = 0 ∧ (st i).data.regs.rax = ACCEPT)
     (hnext : ∀ i, i + 1 < n → ∀ x, base ≤ x → x < base + blen →
       (dm (i + 1)).dmem.get? (A x) = (st i).data.dmem.get? (A x)) :
-    ∃ rm : Nat → Mem, rm 0 = zeroMem ∧ ∀ i < n, ∃ rs,
+    ∃ rm : Nat → Mem, rm 0 = zeroMem tab ∧ ∀ i < n, ∃ rs,
       L.run p abiFuel "check" [] (bufMemG fz own plo phi mode B (rm i) (dm i).regs.rdx) = .ok (rs, rm (i + 1)) ∧
       rs.getD 0 0 = ACCEPT ∧ MemRel (bufLayout tab buf B base fz own) (rm (i + 1)) (st i).data.dmem ∧
       RegsRestored (dm i).regs (st i).data.regs := by
   -- the chain up to call `m`, and the region's memory at call `m`
-  suffices H : ∀ m ≤ n, ∃ rm : Nat → Mem, rm 0 = zeroMem ∧
+  suffices H : ∀ m ≤ n, ∃ rm : Nat → Mem, rm 0 = zeroMem tab ∧
       (∀ i < m, ∃ rs, L.run p abiFuel "check" [] (bufMemG fz own plo phi mode B (rm i) (dm i).regs.rdx) =
         .ok (rs, rm (i + 1)) ∧ rs.getD 0 0 = ACCEPT ∧
         MemRel (bufLayout tab buf B base fz own) (rm (i + 1)) (st i).data.dmem ∧
@@ -121,7 +131,7 @@ theorem thread_chain (p : Prog) (tab : Tab) (hok : abiTabOk tab = true) (hnres :
   induction m with
   | zero =>
     intro _
-    exact ⟨fun _ => zeroMem, rfl, fun i h => absurd h (by omega),
+    exact ⟨fun _ => zeroMem tab, rfl, fun i h => absurd h (by omega),
       fun h => regionRel_zero hok hn hf _ (hzero h)⟩
   | succ m ih =>
     intro hm

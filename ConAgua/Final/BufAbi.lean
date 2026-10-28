@@ -194,10 +194,10 @@ theorem sim_desc (Q : MachineState → Prop) (hok : abiTabOk tab = true) (hg : B
       simp only [Tab.dlen64, hnb]; omega
     have hrc : ∀ s : MachineData, (∀ r, r ≠ .rax → s.regs.get64 r = R.get64 r) → (s.regs.get64 .rcx).toNat = base :=
       fun s h => by rw [h .rcx (by decide)]; simpa using hrcx
-    have hvB : bufVal tab buf B base fz own (6 + p) = (UInt64.ofNat (bufB B buf base fz own (tab.wAt p))).toBitVec := by
+    have hvB : bufVal tab buf B base fz own (6 + p) = (UInt64.ofNat (bufB tab B buf base fz own (tab.wAt p))).toBitVec := by
       simp only [bufVal, show 6 + p ≠ 0 by omega, show 6 + p ≠ 1 by omega, show ¬ 6 + p < 6 by omega,
         show 6 + p < 6 + tab.nw by omega, ite_false, ite_true, show 6 + p - 6 = p by omega]
-    have hvL : bufVal tab buf B base fz own (6 + tab.nw + p) = (UInt64.ofNat (bufL B fz own (tab.wAt p))).toBitVec := by
+    have hvL : bufVal tab buf B base fz own (6 + tab.nw + p) = (UInt64.ofNat (bufL tab B fz own (tab.wAt p))).toBitVec := by
       simp only [bufVal, show 6 + tab.nw + p ≠ 0 by omega, show 6 + tab.nw + p ≠ 1 by omega,
         show ¬ 6 + tab.nw + p < 6 by omega, show ¬ 6 + tab.nw + p < 6 + tab.nw by omega,
         show 6 + tab.nw + p < 6 + 2 * tab.nw by omega, ite_false, ite_true, show 6 + tab.nw + p - 6 - tab.nw = p by omega]
@@ -236,11 +236,15 @@ theorem sim_desc (Q : MachineState → Prop) (hok : abiTabOk tab = true) (hg : B
           (hcell1 _ hq2) ?_
         refine hrest _ _ (by simp [parDescB, hfz, hown]) rfl ?_
         intro r hr; rsimp; rw [← hR r hr]; cases r <;> first | exact absurd rfl hr | rfl
-      · -- owned: slot `2 + k'`
+      · -- owned: slot `2 + k'`, or the table-relative array inside the table's slot
         simp only [parDescB, hfz, hown] at hc0
         have hk' := idxOf?_lt hown
-        have hle : abiSlot * (2 + k') + abiSlot ≤ abiSlot * (2 + own.length) := by
-          rw [← Nat.mul_succ]; exact Nat.mul_le_mul_left _ (by omega)
+        have hle : ownOff tab (tab.wAt p) k' + abiSlot ≤ abiSlot * (2 + own.length) := by
+          cases hct : tab.tbl64 (tab.wAt p) with
+          | none =>
+            rw [ownOff_slot hct, ← Nat.mul_succ]; exact Nat.mul_le_mul_left _ (by omega)
+          | some c =>
+            rw [ownOff_tbl hct]; have := abiTabOk_tbl hok hct; simp only [abiSlot]; omega
         refine ev_movRI (Code.get (i := 0) hc0 rfl) ?_
         refine ev_binO (op := .add) (o := oR .rcx) rfl (Code.get (i := 1) hc0 rfl)
           (Or.inr (Or.inr ⟨.rcx, rfl, rfl⟩)) fun st => ?_
@@ -249,7 +253,8 @@ theorem sim_desc (Q : MachineState → Prop) (hok : abiTabOk tab = true) (hg : B
         · rsimp; rw [hvB]; simp only [bufB, hfz, hown, BinOp.eval]
           have e1 := hR .rcx (by decide)
           simp only [Reg64s.get64_rcx] at e1
-          have heq : (abiSlot * (2 + k')).toUInt64 + s.regs.rcx = UInt64.ofNat (base + abiSlot * (2 + k')) := by
+          have heq : (ownOff tab (tab.wAt p) k').toUInt64 + s.regs.rcx =
+              UInt64.ofNat (base + ownOff tab (tab.wAt p) k') := by
             apply UInt64.toNat_inj.mp
             rw [UInt64.toNat_add, UInt64.toBitVec_inj.mp e1, hrcx, Nat.toUInt64,
               UInt64.toNat_ofNat_of_lt' (by simp only [UInt64.size, abiSlot] at hle hn ⊢; omega),

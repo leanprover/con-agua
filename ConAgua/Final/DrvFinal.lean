@@ -41,10 +41,11 @@ theorem seqMem_arr64 (m : Mem) (lo hi : Word) (s : TieredArray) :
 /-- **The driver's accept is the twin's**: `DrvAccepts` at the checker's program gives
 `TwinAccepts [b]`. -/
 theorem drvAccepts_twin (b pb : ByteArray) (h64 : System.Platform.numBits = 64)
-    (h : DrvAccepts checkerProg MODE PLO PHI OUT HDRF CTLF 132 b pb) :
+    (h : DrvAccepts checkerTab checkerProg MODE PLO PHI OUT HDRF CTLF 132 b pb) :
     TwinAccepts [b] := by
   obtain ⟨hb, hpb, h⟩ := h
-  have hin : InputsOK b pb (fun _ => abiWords) := ⟨h64, hb, hpb, fun _ => by simp [abiWords]⟩
+  have hin : InputsOK b pb (abiSz checkerTab) := ⟨h64, hb, hpb, fun s => by
+    have := abiSz_le checkerTab_abiOk s; simp only [abiWords] at this; omega⟩
   obtain ⟨rs₁, m₁, h₁, hcase⟩ := h
   have hN : abiFuel < 2 ^ 62 := by simp [abiFuel]
   rcases hcase with hacc | ⟨hge, rs₂, m₂, h₂, hacc₂⟩

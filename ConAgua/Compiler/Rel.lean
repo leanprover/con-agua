@@ -64,9 +64,10 @@ def In8 (a x : Nat) : Prop := G.b8 a ≤ x ∧ x < G.b8 a + G.s8 a
 def In64 (a x : Nat) : Prop := G.b64 a ≤ x ∧ x < G.b64 a + 8 * G.s64 a
 def InArr (x : Nat) : Prop := (∃ a < G.tab.nb, G.In8 a x) ∨ (∃ a < G.tab.nw, G.In64 a x)
 
-/-- The regions are inside the address space and pairwise disjoint, and every word array the
-program may name has at least its minimum length (`Tab.min64`, the hint the code generator drops
-constant-index bounds checks by). -/
+/-- The regions are inside the address space and pairwise disjoint, every word array the program
+may name has at least its minimum length (`Tab.min64`, the hint the code generator drops
+constant-index bounds checks by), and the table-relative array (`Tab.tbl64`) starts where the
+code addresses it, at `T + c`. -/
 structure Ok : Prop where
   tab_end : G.tabEnd < 2 ^ 64
   hi_le : G.hi < 2 ^ 64
@@ -80,6 +81,7 @@ structure Ok : Prop where
   arr64_disj : ∀ a < G.tab.nw, ∀ b < G.tab.nw, a ≠ b → ∀ x, G.In64 a x → ¬ G.In64 b x
   arr8_64 : ∀ a < G.tab.nb, ∀ b < G.tab.nw, ∀ x, G.In8 a x → ¬ G.In64 b x
   min64 : ∀ s, G.tab.dom64 s = true → G.tab.min64 s ≤ G.s64 (G.tab.pos64 s)
+  tbl64 : ∀ s c, G.tab.dom64 s = true → G.tab.tbl64 s = some c → G.b64 (G.tab.pos64 s) = G.T + c
 
 theorem InRes.tab {G : Layout} {x : Nat} (h : G.InRes x) : G.InTab x :=
   ⟨by have := h.1; omega, by have := h.2; simp only [Layout.tabEnd]; omega⟩

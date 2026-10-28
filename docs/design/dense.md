@@ -413,3 +413,68 @@ mgen2's files (`L/ModelGen.lean` and the model conversions) do not intersect any
 3. **D3 + D4 as one regeneration**, after D1/D2, or not at all for now.
 4. **Hint syntax** in `declare_arrays`: `min k`, `at table`, a `hot` order flag. The tiered flag
    exists already.
+
+## 8. Journal of the implementation (lane dense-impl, D1 and D2)
+
+The coordinator's decisions: `CTL` at a static 256 words; `ca_check_b` checks the frozen buffer
+lengths in the stub; D3 and D4 later, as one regeneration; hints `min k` and `at table`, no `hot`.
+
+### D1: minimum lengths (landed, #75)
+
+* **Table.** `ArrDecl.min` (`… : word min k := n`), `ArrTable.mins` (keyed by
+  `TieredArray.code`: tier 0, and tier 1 of a tiered row), `Tab.mins`, `Tab.min64`. A tiered
+  access uses `Tab.min64t a`, the smaller of the two tiers. The minima in `Layout.lean`: `CTL`
+  256, the memo headers 3, the slot tables 2, `PT0` 1, `PINS` 55, `HDRF` 4. Only arrays that
+  `ca_check_b` gives memory (frozen or owned) can have one: the front end's arrays (`DECL`, `NIDS`,
+  `HSEEN`, …) keep their checks.
+* **The premise.** A new field `Layout.Ok.min64 : ∀ s, dom64 s → min64 s ≤ s64 (pos64 s)`. It is a
+  field of `Layout.Ok`, not a separate hypothesis: every simulation lemma already takes
+  `hG : G.Ok`, and the stubs already prove `Layout.Ok`. The final theorems are unchanged.
+* **Code.** `genLd`/`genSt` take the minimum; a constant index below it emits the base load and the
+  access without `cmp`/`jbe` (`genLdW_spec`, `genSt_tailWKm`, ~60 lines).
+* **Discharged by the stubs.** `ca_setup`: every array has `abiWords` words, and `abiTabOk` checks
+  every minimum below `2^31` (`abiTabOk_min`). `ca_check_seq`: `seqParamsOk` checks
+  `min64 OUT = min64 CTLF = 0` and `min64 HDRF ≤ 132`. `ca_check_b`: `bufMinOk` (a `decide +kernel`
+  over the positions) checks that every array with a minimum is frozen or owned; the stub's new
+  entry `bufMinStub` compares each frozen array's length word `buf[9 + 2i]` with its minimum
+  (`cmpq $k, 72(%rdi); jb ca_abi_decline`, 21 pairs) and declines below it, before writing
+  anything (`sim_bufMinChk`; the decline returns `rdx = 1` with the memory unchanged, so
+  `EntryPost` holds). `abiB_outcome` is now the tests, then `abiB_go`, the old proof.
+* **`checker.s`:** 1 483 `cmpq $k, …; jbe ca_error` pairs gone (the prototype's `minall` removed
+  1 676, including the front-end arrays), `ca_check_b` gained the tests and a `jmp
+  ca_check_b_go`.
+* **Measured.** Init 273.416 G → 263.095 G instructions (−3.78 %; prototype `minall` 263.079 G).
+  Default set, 3 interleaved rounds, load 14: instructions 0.966, cycles 0.978, wall 0.986.
+* Proof lines: about +300.
+
+### D2: `CTL` table-relative
+
+* **Table.** `ArrDecl.atTable` (`… : word min 256 at table := 1`; at most one row, a non-tiered
+  word array with a minimum, `ArrTable.wf`), `Tab.tbl = some (CTL, c)`, `Tab.tbl64`. The offset is
+  `Tab.tblBase`: past the table (no entry arguments) and the 32-byte save area, rounded to 64
+  bytes; for the checker `c = 44 864`.
+* **The premise.** A second new field `Layout.Ok.tbl64 : ∀ s c, dom64 s → tbl64 s = some c →
+  b64 (pos64 s) = T + c`. `MemRel` is unchanged; the disjointness fields cover the new region.
+* **Code.** `genLdT`/`genStT` (and `genSt64` choosing between the two for `st64`): a constant index
+  is `[r15 + c + 8k]`, an index in a register `[r15 + 8r + c]`; the bounds check stays for a
+  variable index (against the descriptor's length) and for a constant at or above the minimum.
+  The descriptor still holds the base, so block copies and the fallback `compileE` path are
+  unchanged. New step lemmas `ev_stT`/`ev_stTI` (stores through `tdesc`). `genLdTW_spec`,
+  `sim_genStT`, `stT_disp`, `stT_idx`: ~350 lines.
+* **Discharged by the stubs.** `abiOff`/`abiSz`/`ownOff` give the table-relative array `base + c`
+  and `min64` words in all three layouts; `abiTabOk` checks `tabBytes + 32 ≤ c` and
+  `c + 8·min ≤ 2^31` (`abiTblOk`), `seqParamsOk` that `OUT`, `HDRF`, `CTLF` are not it,
+  `bufMinOk` that it is owned and not frozen. The region proofs got one more case: its bytes are in
+  `InTbl` (past the table and the save area, below `base + 2^31`), apart from the table, the save
+  area, the stack, every slot and the buffers (`abiLayout_in64`, `seq_in64`, `buf_in64`,
+  `own_bytes`). L's initial and zero memories give every array `abiSz` words (`loadMem b pb
+  (abiSz tab)`, `zeroMem tab`; `InputsOK` only needs sizes below `2^64`). `CTL`'s own slot stays
+  reserved and unused (D3 removes it with the dense layout).
+* **`checker.s`:** every `CTL` access loses its base load (`movq 64(%r15), %R; movq N(%R), …` →
+  `movq 44864+N(%r15), …`), the three stubs write `CTL`'s descriptor as `base + 44 864`, 256 words.
+* **Measured.** Init 257.658 G instructions (−5.76 % against D1's base; prototype `tblall`
+  257.643 G). Default set, 5 interleaved rounds (load low at the start): instructions 0.950,
+  cycles 0.964, wall 0.979 against the base (D1 alone: 0.966 / 0.978 / 0.985). The Init wall
+  rounds ran at load 89 (spread over 80 %) and say nothing.
+* Verdicts: `diff-e2e.py --refs` and `--jobs 4`, 634 fixtures agree, for D1 and D2.
+* Proof lines: about +700 (`git diff --stat` of the lane).

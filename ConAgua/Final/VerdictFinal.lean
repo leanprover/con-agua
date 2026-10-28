@@ -22,10 +22,11 @@ open L L.Compiler L.Checker L.Arena ConRon.Arena
 the entries' verdict claims, gives `TwinVerdict [b]` at that class. -/
 theorem drvErr_twin (b pb : ByteArray) (h64 : System.Platform.numBits = 64) (k : Word)
     (hV : SeqVerdicts checkerProg)
-    (h : DrvErr checkerProg MODE PLO PHI OUT HDRF CTLF 132 b pb k) (hk : k &&& 3 ≠ 0) :
+    (h : DrvErr checkerTab checkerProg MODE PLO PHI OUT HDRF CTLF 132 b pb k) (hk : k &&& 3 ≠ 0) :
     TwinVerdict [b] (k &&& 3) := by
   obtain ⟨hb, hpb, h⟩ := h
-  have hin : InputsOK b pb (fun _ => abiWords) := ⟨h64, hb, hpb, fun _ => by simp [abiWords]⟩
+  have hin : InputsOK b pb (abiSz checkerTab) := ⟨h64, hb, hpb, fun s => by
+    have := abiSz_le checkerTab_abiOk s; simp only [abiWords] at this; omega⟩
   have hN : abiFuel < 2 ^ 62 := by simp [abiFuel]
   rcases h with ⟨e, he, hc⟩ | ⟨rs₁, m₁, h₁, hge, e, he, hc⟩
   · subst hc
