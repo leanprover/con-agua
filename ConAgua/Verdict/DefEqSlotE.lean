@@ -122,7 +122,7 @@ def QuickDefeqSpecE (p : Prog) (n : Nat) : Prop :=
     CoreSpecE p n "quick_defeq" [mode, vis, d, x, y]
       (quickDefEq (decMode mode) (coreKnot (decMode mode) fe id F) d.toNat (decE x) (decE y)) s₀ a₀
 
-/-- `quick_defeq`'s error spec one level up from the two knots (`quickDefeq_refinesE`). -/
+/-- `quick_defeq`'s error spec one level up from the two knots (`qd_ref`'s error half). -/
 def QuickDefeqE (p : Prog) : Prop :=
   ∀ n, KnotUpTo p n → KnotUpToE p n → QuickDefeqSpecE p (n + 1)
 
