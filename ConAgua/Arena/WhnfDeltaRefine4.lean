@@ -6,7 +6,8 @@ import Std.WP.Tactic
 /-!
 # δ and `Nat` literals: proofs of `WhnfDelta.lean`'s specs, part 4 (`reduce_nat`'s dispatch, `whnf_step`)
 
-Split from `WhnfDeltaRefine.lean`.
+Split from `WhnfDeltaRefine.lean`. The dispatch's twin pieces; `reduce_nat`'s refinement (both
+outcomes, `reduceNat_refines`) is `Verdict/WhnfNatE.lean`'s.
 -/
 
 open ConRon.Arena

@@ -9,7 +9,10 @@ import Std.Tactic.BVDecide.Normalize.BitVec
 import Std.Tactic.BVDecide.Normalize.Prop
 
 /-!
-# Error models of `reduce_nat`'s family and the `whnf_core` arms (lane `verdicts-b`, helper `k2`)
+# The models of `reduce_nat`'s family (both outcomes) and the `whnf_core` arms' error models
+
+`reduce_nat`'s family: `l_model … unified`, the `whnf` slot through its run, the family through
+its unified models, every other callee (outside the verdict closure) through its `Option` model.
 -/
 
 open ConRon.Arena

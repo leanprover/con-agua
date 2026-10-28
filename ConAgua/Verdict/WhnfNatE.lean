@@ -20,20 +20,6 @@ namespace L.Arena
 
 theorem resW_zero : ResW [0, 0] := by unfold ResW HW; exact ⟨by decide, by decide⟩
 
-/-- A tail call whose continuation passes the callee's errors on and maps its value (`f`), against
-a twin with the same run. -/
-theorem RefE.tail {α β : Type} {G G' : Prop} {x : Except Err α} {k : Except Err α → Except Err α}
-    {f : α → α} {T T' : AM β} {a : AState} {R R' : α → β → AState → Prop}
-    (hk : ∀ e, k (.error e) = .error e) (hk' : ∀ v, k (.ok v) = .ok (f v)) (hG : G → G')
-    (hT : T.run a = T'.run a) (hR : ∀ v y a', R v y a' → R' (f v) y a') (h : RefE G' x T' a R) :
-    RefE G (k x) T a R' := by
-  cases x with
-  | error e => rw [hk]; exact fun g => ErrClaim.of_run_eqW hT (h (hG g))
-  | ok v =>
-    rw [hk']
-    obtain ⟨y, a', hr, hR'⟩ := h
-    exact ⟨y, a', hT ▸ hr, hR _ _ _ hR'⟩
-
 /-- The callee's first two result words, after a run of constant frame (the caller's result). -/
 theorem CorePost.relist {dn : NIdx → Option ConLeche.Name} {m₀ m₁ : Mem} {vis : Word} {fe : IFEnv}
     {MM : ModeMaps} {eb : Word}
@@ -474,7 +460,7 @@ theorem reduceNatK_ref (n F : Nat) (hF : n ≤ F) (hn2 : n ≤ 2 ^ 62)
       (decI (tfld s₀.mem CONST (tierW f) (idxW f) 0)) (decI (tfld s₀.mem CONST (tierW f) (idxW f) 1)) _
       (decE b) a₀ hel (by
     rw [hbne _ _ hul hC.pins.lv_lt.1]; simp [hne'])
-  exact RefE.tail (reduceNatKE.k_reduce_nat_succ.none p) (fun v => reduceNatKE.k_reduce_nat_succ.arm1 p v.1 v.2)
+  exact RefE.tail_eq (reduceNatKE.k_reduce_nat_succ.none p) (fun v => reduceNatKE.k_reduce_nat_succ.arm1 p v.1 v.2)
     (fun h => h.mono (by omega)) (hcg.trans hcongr)
     (CorePost.relist (MemFrame.refl _ _ _))
     (reduceNatSucc_ref p hp n F (by omega) (by omega) (hk.mono (by omega)) s₀ a₀ dn vis fe MM eb mode d _ b hS
@@ -575,13 +561,13 @@ theorem reduceNatAp_ref (hno : NatOpResultOK p) (n F : Nat) (hF : n ≤ F) (hn2 
     (natBinOpSel (pinW s₀.mem) cw) (decBool r₃) hbin (by rw [hb3, hbb3])
   by_cases hgo : r₂.headD 0 ≠ 0 ∧ r₃.headD 0 ≠ 0
   · rw [reduceNatApE.k_nat_op_stored.arm1 _ _ _ _ _ _ _ _ _ _ _ hgo]
-    exact RefE.tail (reduceNatApE.k_reduce_nat_op.none p) (fun v => reduceNatApE.k_reduce_nat_op.arm1 p v.1 v.2)
+    exact RefE.tail_eq (reduceNatApE.k_reduce_nat_op.none p) (fun v => reduceNatApE.k_reduce_nat_op.arm1 p v.1 v.2)
       (fun h => h.mono (by omega))
       (by rw [hcg0, hcongrApp, hredbin, hbool, decide_eq_true hgo]; rfl) (CorePost.relist hfr3)
       (reduceNatOp_ref p hp hno n F (by omega) (by omega) (hk.mono (by omega))
         ⟨m₃, Locals.init []⟩ a₀ dn vis fe MM eb mode d cw xw b hSP3 hnl hxw hb)
   · rw [reduceNatApE.k_nat_op_stored.arm2 _ _ _ _ _ _ _ _ _ _ _ hgo]
-    exact RefE.tail (reduceNatApE.k_reduce_nat_op.none p) (fun v => reduceNatApE.k_reduce_nat_op.arm1 p v.1 v.2)
+    exact RefE.tail_eq (reduceNatApE.k_reduce_nat_op.none p) (fun v => reduceNatApE.k_reduce_nat_op.arm1 p v.1 v.2)
       (fun h => h.mono (by omega))
       (by rw [hcg0, hcongrApp, hredbin, hbool, decide_eq_false hgo]; rfl) (CorePost.relist hfr3)
       (reduceNatWf_ref p hp n F (by omega) (by omega) (hk.mono (by omega))
@@ -623,7 +609,7 @@ theorem reduceNatHead_ref (hno : NatOpResultOK p) (n F : Nat) (hF : n ≤ F) (hn
   have hmono : KnotUpToE p (n + 1) → KnotUpToE p n := fun h => h.mono (by omega)
   by_cases g3 : f >>> 28 = 3
   · rw [ite_eq_left g3]
-    exact RefE.tail (reduceNatHeadE.k_reduce_nat_k.none p)
+    exact RefE.tail_eq (reduceNatHeadE.k_reduce_nat_k.none p)
       (fun v => reduceNatHeadE.k_reduce_nat_k.arm1 p v.1 v.2) hmono rfl
       (CorePost.relist (MemFrame.refl _ _ _))
       (reduceNatK_ref p hp n F (by omega) (by omega) (hk.mono (by omega)) s₀ a₀ dn vis fe MM eb mode d f b
@@ -631,7 +617,7 @@ theorem reduceNatHead_ref (hno : NatOpResultOK p) (n F : Nat) (hF : n ≤ F) (hn
   rw [ite_eq_right g3]
   by_cases g4 : f >>> 28 = 4
   · rw [ite_eq_left g4]
-    exact RefE.tail (reduceNatHeadE.k_reduce_nat_k.none p)
+    exact RefE.tail_eq (reduceNatHeadE.k_reduce_nat_k.none p)
       (fun v => reduceNatHeadE.k_reduce_nat_k.arm1 p v.1 v.2) hmono rfl
       (CorePost.relist (MemFrame.refl _ _ _))
       (reduceNatAp_ref p hp hno n F (by omega) (by omega) (hk.mono (by omega)) s₀ a₀ dn vis fe MM eb mode d
@@ -698,7 +684,7 @@ theorem reduceNat_ref (hno : NatOpResultOK p) (n F : Nat) (hF : n ≤ F) (hn2 : 
   · rw [ite_eq_left hbd]; exact RefE.of_cls0 (by simp)
   rw [ite_eq_right hbd]
   obtain ⟨hview, hfw, hbw⟩ := view_app s₀.mem a₀ hC.arena.1 e he ⟨hsc, by simpa using hbd⟩ g4'
-  exact RefE.tail (reduceNatE.k_reduce_nat_head.none p)
+  exact RefE.tail_eq (reduceNatE.k_reduce_nat_head.none p)
     (fun v => reduceNatE.k_reduce_nat_head.arm1 p v.1 v.2) (fun h => h.mono (by omega))
     (reduceNat_head_eq _ fe d.toNat (decE e) _ _ a₀ (by rw [hap]; exact beq_iff_eq.mpr g4') hview)
     (CorePost.relist (MemFrame.refl _ _ _))

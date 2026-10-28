@@ -114,6 +114,31 @@ to the twin's run by `CorePost`: what `CoreRef` says besides the twin's ok run. 
 from the call's run through the model's spec: the ok spec (`RefE.coreSpec`), the `CoreRef` of a
 callee's run (`RefE.coreRefW`), the error spec (`RefE.coreSpecE`). -/
 
+/-- A tail call whose continuation passes the callee's errors on and maps its value (`f`), against
+a twin that runs as the callee's twin `T'` from `a₁`. -/
+theorem RefE.tail {α β γ : Type} {G G' : Prop} {x : Except Err α} {k : Except Err α → Except Err α}
+    {f : α → α} {T : AM β} {T' : AM γ} {a a₁ : AState} {R : α → γ → AState → Prop}
+    {R' : α → β → AState → Prop}
+    (hk : ∀ e, k (.error e) = .error e) (hk' : ∀ v, k (.ok v) = .ok (f v)) (hG : G → G')
+    (hT : ∀ y a', T'.run a₁ = .ok (y, a') → ∃ y', T.run a = .ok (y', a') ∧ ∀ v, R v y a' → R' (f v) y' a')
+    (hTe : ∀ ce, T'.run a₁ = .error ce → T.run a = .error ce) (h : RefE G' x T' a₁ R) :
+    RefE G (k x) T a R' := by
+  cases x with
+  | error e => rw [hk]; exact fun g => ErrClaim.of_run_err hTe (h (hG g))
+  | ok v =>
+    rw [hk']
+    obtain ⟨y, a', hr, hR'⟩ := h
+    obtain ⟨y', hr', hf⟩ := hT y a' hr
+    exact ⟨y', a', hr', hf v hR'⟩
+
+/-- `RefE.tail` against a twin with the same run. -/
+theorem RefE.tail_eq {α β : Type} {G G' : Prop} {x : Except Err α} {k : Except Err α → Except Err α}
+    {f : α → α} {T T' : AM β} {a a₁ : AState} {R R' : α → β → AState → Prop}
+    (hk : ∀ e, k (.error e) = .error e) (hk' : ∀ v, k (.ok v) = .ok (f v)) (hG : G → G')
+    (hT : T.run a = T'.run a₁) (hR : ∀ v y a', R v y a' → R' (f v) y a') (h : RefE G' x T' a₁ R) :
+    RefE G (k x) T a R' :=
+  RefE.tail hk hk' hG (fun y a' hr => ⟨y, hT.trans hr, fun v => hR v y a'⟩) (fun _ he => hT.trans he) h
+
 /-- What a core function's run `v = (r, m)` from `m₀` gives besides the twin's result `y` and
 final state `a'`: the relation after it, the result words decoded, their validity. -/
 structure CorePost {α : Type} (dec : List Word → α) (dn : NIdx → Option ConLeche.Name) (m₀ : Mem)

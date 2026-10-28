@@ -9,7 +9,8 @@ import Std.WP.Tactic
 /-!
 # δ and `Nat` literals: proofs of `WhnfDelta.lean`'s specs, part 3 (`nat_succ_lit`, `reduce_nat`'s arms)
 
-Split from `WhnfDeltaRefine.lean`.
+Split from `WhnfDeltaRefine.lean`. The twin's arms and their runs; the arms' refinements, for
+both outcomes, are `Verdict/WhnfNatE.lean`'s.
 -/
 
 open ConRon.Arena
