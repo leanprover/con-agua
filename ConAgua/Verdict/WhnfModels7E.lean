@@ -1,6 +1,5 @@
 import ConAgua.Arena.Verdict
 import ConAgua.Arena.DefEq
-import ConAgua.Arena.WhnfEntry
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen

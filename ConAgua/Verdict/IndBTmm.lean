@@ -1,6 +1,5 @@
 import ConAgua.Arena.RecGenSpec.DecTMDecBOf
 import ConAgua.Arena.IndInstallSpec.NestCtx
-import ConAgua.Arena.Verdict
 import ConAgua.Arena.IndSumSpec.ParamLevels
 import ConAgua.L.ModelGen
 import ConRon.Bridge.Inductives.RecCheck

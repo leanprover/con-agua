@@ -1,5 +1,4 @@
 import ConAgua.Verdict.WhnfModelsE
-import ConAgua.Arena.KnotE
 import ConAgua.Arena.DefEqKnot
 import ConAgua.Checker.NoVerdictTree
 

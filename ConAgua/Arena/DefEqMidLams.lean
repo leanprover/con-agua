@@ -2,7 +2,6 @@ import ConAgua.Arena.DefEqMidPeel
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
-import ConAgua.Arena.KnotE
 
 /-!
 # The λ-telescope: `defeq_lams` (lane `defeq`)

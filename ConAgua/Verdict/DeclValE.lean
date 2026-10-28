@@ -1,5 +1,4 @@
 import ConAgua.Arena.DeclValT
-import ConAgua.Arena.Verdict
 import ConAgua.Arena.IndRealLvlT
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr

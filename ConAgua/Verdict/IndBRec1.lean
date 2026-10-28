@@ -1,4 +1,3 @@
-import ConAgua.Arena.Verdict
 import ConAgua.Arena.RecGenSpec.ClassKeyCanon
 import ConAgua.Arena.RecGenSpec.ClassMinorSlot
 import ConAgua.Arena.RecGenSpec.RgW

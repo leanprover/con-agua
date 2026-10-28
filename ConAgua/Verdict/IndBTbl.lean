@@ -1,5 +1,4 @@
 import ConAgua.Arena.IndRealSctC
-import ConAgua.Arena.Verdict
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.ModelGen
 import ConAgua.Checker.NoVerdictTree

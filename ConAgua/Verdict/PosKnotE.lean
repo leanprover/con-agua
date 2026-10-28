@@ -1,5 +1,4 @@
 import ConAgua.Verdict.PosE
-import ConAgua.Verdict.WhnfMidE
 import ConAgua.Verdict.DefEqBaseE
 
 /-!

@@ -4,7 +4,6 @@ import ConAgua.Arena.InferLeaves
 import ConAgua.Arena.WhnfIotaRefine4
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
-import ConAgua.Arena.KnotE
 import ConAgua.L.ModelGen
 
 /-!
