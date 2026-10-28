@@ -1,11 +1,11 @@
-import ConAgua.Arena.DeclCrpT
+import ConAgua.Arena.CheckerT
 import ConAgua.Arena.GrindAttr
 
 /-!
 # The verdict claims of the `check_decl` arms (lane `verdicts-b`, helper `d`)
 
-`ArmSpecE`: the error half of `ArmSpecT` (`Arena/CheckerT.lean`), the arm's failing runs claim
-the twin's `checkDecl` failure. Under the hypotheses of the ok refinements and the callees' error
+The arms' `ArmSpecE` (`Arena/CheckerT.lean`, the error half of `ArmSpecT`): the arm's failing runs
+claim the twin's `checkDecl` failure. Under the hypotheses of the ok refinements and the callees' error
 claims (`CoreStubsE`, `IvgE`).
 -/
 
@@ -25,17 +25,6 @@ local notation "V" => ConLeche.CheckMode.verified
 
 section arms
 variable (pins : List INatOpPinSet) (dn : NIdx → Option ConLeche.Name) (ds : Array IDeclaration)
-
-/-- **The shape of an arm's error spec** (`ArmSpecT`'s error half): a failing run of the arm on
-record `d` claims the twin's `checkDecl` failure from the same state. -/
-def ArmSpecE (p : Prog) (f : FnName) (d : IDeclaration) : Prop :=
-  ∀ (n : Nat), n ≤ 2 ^ 62 → ∀ (m : Mem) (a₀ : AState) (vis : Word) (fe : IFEnv)
-    (pend : Array PendingCheck) (i : Word), i.toNat < ds.size → ds[i.toNat]? = some d →
-    ConRon.Bridge.StateOK a₀ → LoopR pins dn m a₀ vis fe pend ds →
-    StageT dn vis fe m a₀ → (∃ env, FoldOK V env fe a₀) →
-    (∃ x, Frontend.denoteDecl a₀.store d = some x) → (∃ pinsP, PinsDenote a₀.store pins pinsP) →
-    L.Stubs.CrOK m → ∀ e, callE p n f [i, vis] m = .error e →
-    ErrClaim (checkDecl V pins fe d) a₀ e
 
 /-- **`check_decl_thm`'s error claim under `StageT`** (`cdt_ref`'s error half). -/
 theorem checkDeclThm_errT {p : Prog} (hV : ValProg p) (hq : KnotStageProg p) (hap : ApdF p)

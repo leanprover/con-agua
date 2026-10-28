@@ -7,6 +7,7 @@ import ConAgua.Arena.DeclAxQuotT
 import ConAgua.Arena.DeclNatSubAll
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
+import ConAgua.L.ModelGen
 
 /-!
 # Phase A under `StageT` (lane `loopt2`)
@@ -61,7 +62,7 @@ def FrontDecls (ds : Array IDeclaration) : Prop :=
   ∀ i (h : i < ds.size) b nP, ds[i] = .indDecl b nP → FrontBlock b
 
 /-- **The block's level-parameter handles have decoder names**: `L.Ind.BlockLpsDn dn block`
-(`Arena/IndArmLps.lean`), what `cidW_okC` takes; the loop has it from `DeclsLpsDn`. -/
+(`Arena/IndArmLps.lean`), what `cid_ref` takes; the loop has it from `DeclsLpsDn`. -/
 abbrev BlockLpsDnA (dn : NIdx → Option ConLeche.Name) (block : List IConstantInfo) : Prop :=
   L.Ind.BlockLpsDn dn block
 
@@ -321,32 +322,14 @@ def CheckDeclSpecT : Prop :=
 
 end cd
 
-/-- An arm's run through `callW`, under `StageT`. -/
-theorem arm_callWT {p : Prog} {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Name}
-    {ds : Array IDeclaration} {f : FnName} {d : IDeclaration} (hA : ArmSpecT pins dn ds p f d)
-    {n : Nat} (hn : n ≤ 2 ^ 62) {m m' : Mem} {a : AState} {vis : Word} {fe : IFEnv}
-    {pend : Array PendingCheck} {i : Word} {r : List Word} (hi : i.toNat < ds.size)
-    (hd : ds[i.toNat]? = some d) (hok : ConRon.Bridge.StateOK a)
-    (hR : LoopR pins dn m a vis fe pend ds) (hS : StageT dn vis fe m a)
-    (hF : ∃ env, FoldOK V env fe a) (hden : ∃ x, Frontend.denoteDecl a.store d = some x)
-    (hPD : ∃ pinsP, PinsDenote a.store pins pinsP) (hcl : IndMemoClosed p) (hcrf : L.Ind.CrfF p)
-    (hf : f ∈ imFns) (hIM : IndMemos m)
-    (h : cdRet (callW p n f [i, vis] m) = some (r, m')) :
-    AM.ok (checkDecl V pins fe d) a ∧
-      LoopR pins dn m' (AM.st (checkDecl V pins fe d) a) (r.headD 0) (AM.res (checkDecl V pins fe d) a)
-        pend ds ∧ CoreMemos m' ∧ IndMemos m' := by
-  cases h1 : callW p n f [i, vis] m with
-  | none => rw [h1] at h; cases h
-  | some rm1 =>
-  obtain ⟨r1, m1⟩ := rm1
-  rw [h1, cdRet_some] at h
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨rfl, rfl⟩ := h
-  have hIM' := callW_indMemos hcl hcrf hf h1 hIM
-  obtain ⟨s', hs', -, hok, hL, hc⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (hA n hn ⟨m, Locals.init []⟩ a vis fe pend i hi hd hok hR hS hF hden hPD hIM.cr) h1
-  subst hs'
-  exact ⟨hok, by simpa using hL, hc, hIM'⟩
+/-- **`check_decl`'s unified model**: the inductive branch's block copy (outside the verdict
+closure) lifted; the arms and `check_ind_decl` through their runs (their contracts read them). -/
+l_model checkDecl_specE (p : Prog) (hf : p.lookup "check_decl" = some checkDeclL)
+  fns [hf ↦ checkDeclE] specs [callW_spec p n "ind_block_to_erec"]
+  grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
+  heartbeats 400000 simp [] unified
+  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 /-- A call of a function with a step's write set (`StepIn`) keeps the memory outside it. -/
 theorem stepIn_callW {p : Prog} {fs : List FnName} (h : StepIn p fs) {f : FnName} (hf : f ∈ fs)
@@ -355,65 +338,182 @@ theorem stepIn_callW {p : Prog} {fs : List FnName} (h : StepIn p fs) {f : FnName
   obtain ⟨s', hs', hfr, -⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩) (h.memFrame n hf args _) hc
   rw [← hs']; exact hfr
 
-/-- **The inductive branch of `check_decl` under `StageT`** (kind `6`): `ind_block_to_erec`
-copies the record's block into `EREC` (`indBlockToErec_ok`; it writes only `EREC` and its top,
-so `TwinOK` and the pin flag stay), then `check_ind_decl` by the inductive arm's contract
-(`IndArmSpec`); the loop's relation after it by the write set of `indFns`. -/
-theorem indArm_callWT {p : Prog} {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Name}
-    {ds : Array IDeclaration} (hib : IbeProg p) (hin : StepIn p indFns) (hia : IndArmSpec p dn)
-    {n : Nat} (hn : n ≤ 2 ^ 62) {m m' : Mem} {a : AState} {vis : Word} {fe : IFEnv}
-    {pend : Array PendingCheck} {i : Word} {r : List Word} {block : List IConstantInfo} {nP : Nat}
-    (hi : i.toNat < ds.size) (hd : ds[i.toNat] = .indDecl block nP) (hFB : FrontBlock block)
-    (hok : ConRon.Bridge.StateOK a) (hR : LoopR pins dn m a vis fe pend ds)
-    (hS : StageT dn vis fe m a) (hF : ∃ env, FoldOK V env fe a)
-    (hden : ∃ x, Frontend.denoteDecl a.store (.indDecl block nP) = some x)
-    (hlpd : BlockLpsDnA dn block) (hIM : IndMemos m)
-    (h : cdInd p n i vis (callW p n "ind_block_to_erec" [i] m) = some (r, m')) :
-    AM.ok (checkDecl V pins fe (.indDecl block nP)) a ∧
-      LoopR pins dn m' (AM.st (checkDecl V pins fe (.indDecl block nP)) a) (r.headD 0)
-        (AM.res (checkDecl V pins fe (.indDecl block nP)) a) pend ds ∧ CoreMemos m' ∧
-      IndMemos m' := by
-  have hdecl : IndDeclAt (m.arr64 DECL) (m.arr64 DLP) i.toNat block nP := by
-    have := hR.decls.recs i.toNat hi
-    rw [hd] at this; exact this
-  have hD : (m.arr64 DECL).size < 2 ^ 63 := hR.decls.dsize
-  have hP : (m.arr64 DLP).size < 2 ^ 63 := hR.decls.psize
-  cases h1 : callW p n "ind_block_to_erec" [i] m with
-  | none => rw [h1] at h; cases h
-  | some rm1 =>
-  obtain ⟨r1, m1⟩ := rm1
-  rw [h1, cdInd_some] at h
-  obtain ⟨hS1, hg1, hf1, -, hl1, hdec1, htop1⟩ := indBlockToErec_ok hib h1 hS.stage hdecl hFB hD hP
-  have hT1 : StageT dn vis fe m1 a :=
-    ⟨hS1, hS.twin.frame hf1 (by decide) (by decide) (by decide) (by decide) (by decide) (by decide),
-      by rw [pinW_frame hf1 (by decide)]; exact hS.flag⟩
-  have hfs1 := stepIn_callW hin (by decide) h1
-  have hIM1 : IndMemos m1 :=
-    hIM.frame hf1 (fun b hb => by simp at hb; subst hb; decide) (fun x hx => by simp at hx; subst hx; decide)
-  have hw : (rdW (m1.arr64 DECL) (5 + 8 * i)).toNat = nP := by
-    rw [hf1.1 DECL (by decide) (by decide)]
-    have h0 : dw (m.arr64 DECL) i.toNat 0 ≠ 0 := by rw [hdecl.1]; decide
-    rw [rdW_dwI hD h0 rfl (by decide)]
-    exact hdecl.2.1
-  cases h2 : callW p n "check_ind_decl"
-      [vis, r1.headD 0, r1.tail.headD 0, rdW (m1.arr64 DECL) (5 + 8 * i)] m1 with
-  | none => rw [h2] at h; cases h
-  | some rm2 =>
-  obtain ⟨r2, m2⟩ := rm2
-  rw [h2, cdRet_some] at h
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨rfl, rfl⟩ := h
-  obtain ⟨env, hFo⟩ := hF
-  obtain ⟨fe', a', hrun, hS2, hcm, hg2, hIM2⟩ := hia pins n hn m1 m2 a vis fe env block nP _ _ _ r2 hl1
-    hw hdec1 htop1 hFB hT1 hok hFo hden hlpd hIM1 h2
-  have hfs2 := stepIn_callW hin (by decide) h2
-  obtain ⟨hok', hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
-  refine ⟨hok', ?_, hcm, hIM2⟩
-  rw [hst, hres]
-  simpa using hR.of_step hS2 (hfs1.trans hfs2) (IWGrow.erecPExt (hg1.trans hg2))
+section cdRef
+variable (pins : List INatOpPinSet) (dn : NIdx → Option ConLeche.Name) (ds : Array IDeclaration)
+  (p : Prog)
 
-/-- **`check_decl` refines `checkDecl` under `StageT`**, for the front's record kinds: each arm by
-its `StageT` theorem, the inductive one by its contract `IndArmSpec`. -/
+/-- **The shape of an arm's error spec** (`ArmSpecT`'s error half): a failing run of the arm on
+record `d` claims the twin's `checkDecl` failure from the same state. -/
+def ArmSpecE (f : FnName) (d : IDeclaration) : Prop :=
+  ∀ (n : Nat), n ≤ 2 ^ 62 → ∀ (m : Mem) (a₀ : AState) (vis : Word) (fe : IFEnv)
+    (pend : Array PendingCheck) (i : Word), i.toNat < ds.size → ds[i.toNat]? = some d →
+    ConRon.Bridge.StateOK a₀ → LoopR pins dn m a₀ vis fe pend ds →
+    StageT dn vis fe m a₀ → (∃ env, FoldOK V env fe a₀) →
+    (∃ x, Frontend.denoteDecl a₀.store d = some x) → (∃ pinsP, PinsDenote a₀.store pins pinsP) →
+    L.Stubs.CrOK m → ∀ e, callE p n f [i, vis] m = .error e →
+    ErrClaim (checkDecl V pins fe d) a₀ e
+
+/-- The arms' error claims, for every record of the kind. -/
+structure ArmsE : Prop where
+  axiom_ : ∀ cv, ArmSpecE pins dn ds p "check_decl_axiom" (.axiomDecl cv)
+  defn : ∀ cv v hh, ArmSpecE pins dn ds p "check_decl_defn" (.defnDecl cv v hh)
+  thm : ∀ cv v, ArmSpecE pins dn ds p "check_decl_thm" (.thmDecl cv v)
+  opaque_ : ∀ cv v, ArmSpecE pins dn ds p "check_decl_opaque" (.opaqueDecl cv v)
+  quot : ∀ k cv, ArmSpecE pins dn ds p "check_decl_quot" (.quotDecl k cv)
+
+end cdRef
+
+/-- **`check_ind_decl`'s error claim** (the inductive arm's contract, error half of
+`IndArmSpec`): a failing run claims the twin's `checkDecl` failure. -/
+def IndArmSpecE (p : Prog) (dn : NIdx → Option ConLeche.Name) : Prop :=
+  ∀ (pins : List INatOpPinSet) (n : Nat), n ≤ 2 ^ 62 → ∀ (m : Mem) (a : AState) (vis : Word)
+    (fe : IFEnv) (env : ConLeche.Env) (block : List IConstantInfo) (nP : Nat) (o l w : Word),
+    l.toNat = block.length → w.toNat = nP →
+    decCIs (erecP m) dn o.toNat l.toNat = some block → o.toNat + l.toNat ≤ erTop m →
+    FrontBlock block → StageT dn vis fe m a → ConRon.Bridge.StateOK a → FoldOK V env fe a →
+    (∃ x, Frontend.denoteDecl a.store (.indDecl block nP) = some x) → BlockLpsDnA dn block →
+    IndMemos m → ∀ e, callE p n "check_ind_decl" [vis, o, l, w] m = .error e →
+    ErrClaim (checkDecl V pins fe (.indDecl block nP)) a e
+
+/-- What the error arms of `check_decl` assume: the arms' claims and the inductive arm's. -/
+structure CdG (pins : List INatOpPinSet) (dn : NIdx → Option ConLeche.Name) (ds : Array IDeclaration)
+    (p : Prog) : Prop where
+  arms : ArmsE pins dn ds p
+  ind : IndArmSpecE p dn
+
+/-- What `check_decl` gives besides the twin's run, a view `w` and the memory `m'`: the loop's
+relation and the memos. -/
+structure CdPost (pins : List INatOpPinSet) (dn : NIdx → Option ConLeche.Name) (ds : Array IDeclaration)
+    (pend : Array PendingCheck) (w : Word) (x : IFEnv) (m' : Mem) (a' : AState) : Prop where
+  loop : LoopR pins dn m' a' w x pend ds
+  core : CoreMemos m'
+  ind : IndMemos m'
+
+/-- An arm through its run: the ok half by its contract (`ArmSpecT`), the error half by its claim. -/
+theorem cd_arm {p : Prog} {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Name}
+    {ds : Array IDeclaration} {f : FnName} {d : IDeclaration} (hA : ArmSpecT pins dn ds p f d)
+    (hE : CdG pins dn ds p → ArmSpecE pins dn ds p f d)
+    {n : Nat} (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState} {vis : Word} {fe : IFEnv}
+    {pend : Array PendingCheck} {i : Word} (hi : i.toNat < ds.size)
+    (hd : ds[i.toNat]? = some d) (hok : ConRon.Bridge.StateOK a)
+    (hR : LoopR pins dn m a vis fe pend ds) (hS : StageT dn vis fe m a)
+    (hF : ∃ env, FoldOK V env fe a) (hden : ∃ x, Frontend.denoteDecl a.store d = some x)
+    (hPD : ∃ pinsP, PinsDenote a.store pins pinsP) (hcl : IndMemoClosed p) (hcrf : L.Ind.CrfF p)
+    (hf : f ∈ imFns) (hIM : IndMemos m) :
+    RefE (CdG pins dn ds p) (checkDeclE.k_check_ind_decl p (callE p n f [i, vis] m))
+      (checkDecl V pins fe d) a (fun v x a' => CdPost pins dn ds pend v.1 x v.2 a') := by
+  rcases c : callE p n f [i, vis] m with e | ⟨r, m'⟩
+  · rw [checkDeclE.k_check_ind_decl.none]
+    exact fun hG => hE hG n hn m a vis fe pend i hi hd hok hR hS hF hden hPD hIM.cr e c
+  rw [checkDeclE.k_check_ind_decl.arm1]
+  have h1 := callW_of_callE c
+  have hIM' := callW_indMemos hcl hcrf hf h1 hIM
+  obtain ⟨s', hs', -, hok', hL, hc⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (hA n hn ⟨m, Locals.init []⟩ a vis fe pend i hi hd hok hR hS hF hden hPD hIM.cr) h1
+  subst hs'
+  exact RefE.ret (AM.run_of_ok _ _ hok') ⟨by simpa using hL, hc, hIM'⟩
+
+/-- **`check_decl` refines `checkDecl` under `StageT`, both outcomes**, for the front's record
+kinds: each arm by its `StageT` theorem and its claim (`CdG`), the inductive one by its contracts
+(`IndArmSpec`, `IndArmSpecE`) after `ind_block_to_erec` copies the record's block into `EREC`
+(`indBlockToErec_ok`; it writes only `EREC` and its top, so `TwinOK` and the pin flag stay); the
+loop's relation after it by the write set of `indFns`. -/
+theorem cd_ref {p : Prog} (hP : CheckDeclProg p) (hq : KnotStageProg p)
+    (hcl : LeafClosed p) (hlc : LoopClosed p) (hib : IbeProg p) (hin : StepIn p indFns)
+    (pins : List INatOpPinSet) (dn : NIdx → Option ConLeche.Name) (hdn : DnInj dn)
+    (hQd : QuotDn dn) (hia : IndArmSpec p dn) (hicl : IndMemoClosed p) (hcrf : L.Ind.CrfF p)
+    (ds : Array IDeclaration) (hFD : FrontDecls ds) (hLD : DeclsLpsDn dn ds)
+    {N : Nat} (hN : N ≤ 2 ^ 62 + 1) {m : Mem} {a : AState} {vis : Word} {fe : IFEnv}
+    {pend : Array PendingCheck} {i : Word} (hi : i.toNat < ds.size) (hok : ConRon.Bridge.StateOK a)
+    (hR : LoopR pins dn m a vis fe pend ds) (hS : StageT dn vis fe m a)
+    (hF : ∃ env, FoldOK V env fe a) (hden : ∃ x, Frontend.denoteDecl a.store (dsAt ds i) = some x)
+    (hPD : ∃ pinsP, PinsDenote a.store pins pinsP) (hIM : IndMemos m) :
+    RefE (CdG pins dn ds p) (checkDeclE p N m i vis) (checkDecl V pins fe (dsAt ds i)) a
+      (fun v x a' => CdPost pins dn ds pend v.1 x v.2 a') := by
+  have hdecl := hR.decls.recs i.toNat hi
+  have hds : dsAt ds i = ds[i.toNat] := by simp [dsAt, Array.getD, hi]
+  have hd : ds[i.toNat]? = some ds[i.toNat] := Array.getElem?_eq_getElem hi
+  rw [hds] at hden ⊢
+  have h1 := hR.decls.room
+  have h2 := hR.decls.dsize
+  have hw0 : rdW (m.arr64 DECL) (1 + 8 * i) = dw (m.arr64 DECL) i.toNat 0 :=
+    rdW_dw _ (by omega) (by decide) (by decide)
+  rcases N with _ | n
+  · rw [checkDeclE.eq_1]; exact RefE.of_cls0 Err.cls_outOfFuel
+  have hn' : n ≤ 2 ^ 62 := by omega
+  generalize hdi : ds[i.toNat] = d at hdecl hd hden
+  cases d with
+  | axiomDecl cv =>
+    rw [checkDeclE.arm2 _ _ _ _ _ (by rw [hw0, hdecl.1]; decide) (by rw [hw0, hdecl.1])]
+    exact cd_arm (checkDeclAxiom_loopT pins dn ds hP.arm hP.axp hq hcl hP.crp.apd ⟨hicl, hcrf⟩ hdn hQd cv)
+      (fun hG => hG.arms.axiom_ cv) hn' hi hd hok hR hS hF hden hPD hicl hcrf (im_mem _ rfl) hIM
+  | defnDecl cv v hh =>
+    rw [checkDeclE.arm3 _ _ _ _ _ (by rw [hw0, hdecl.1]; decide) (by rw [hw0, hdecl.1]; decide)
+      (by rw [hw0, hdecl.1])]
+    exact cd_arm (checkDeclDefn_loopT pins dn ds hP.arm hP.val
+        ⟨hP.df, hP.natSub, hP.natGate, hP.natCert, hP.natText,
+          divGateSpecC hP.dm hq hcl hP.dgClosed (substC0_of hP.natSub.toNatSubProg)
+            (substCAll_of ⟨hP.natSub.toNatSubProg, hP.dm.lSubstConstAll⟩) ⟨hicl, hcrf⟩ pins⟩
+        hq hcl hlc hin hP.crp.apd ⟨hicl, hcrf⟩ hdn cv v hh)
+      (fun hG => hG.arms.defn cv v hh) hn' hi hd hok hR hS hF hden hPD hicl hcrf (im_mem _ rfl) hIM
+  | thmDecl cv v =>
+    rw [checkDeclE.arm4 _ _ _ _ _ (by rw [hw0, hdecl.1]; decide) (by rw [hw0, hdecl.1]; decide)
+      (by rw [hw0, hdecl.1]; decide) (by rw [hw0, hdecl.1])]
+    exact cd_arm (checkDeclThm_loopT pins dn ds hP.arm hP.val hq hP.crp.apd ⟨hicl, hcrf⟩ hP.th cv v)
+      (fun hG => hG.arms.thm cv v) hn' hi hd hok hR hS hF hden hPD hicl hcrf (im_mem _ rfl) hIM
+  | opaqueDecl cv v =>
+    rw [checkDeclE.arm5 _ _ _ _ _ (by rw [hw0, hdecl.1]; decide) (by rw [hw0, hdecl.1]; decide)
+      (by rw [hw0, hdecl.1]; decide) (by rw [hw0, hdecl.1]; decide) (by rw [hw0, hdecl.1])]
+    exact cd_arm (checkDeclOpaque_loopT pins dn ds hP.arm hP.val hP.crp hq hcl hlc hP.crp.apd ⟨hicl, hcrf⟩ hdn
+        hP.op cv v)
+      (fun hG => hG.arms.opaque_ cv v) hn' hi hd hok hR hS hF hden hPD hicl hcrf (im_mem _ rfl) hIM
+  | quotDecl k cv =>
+    rw [checkDeclE.arm6 _ _ _ _ _ (by rw [hw0, hdecl.1]; decide) (by rw [hw0, hdecl.1]; decide)
+      (by rw [hw0, hdecl.1]; decide) (by rw [hw0, hdecl.1]; decide) (by rw [hw0, hdecl.1]; decide)
+      (by rw [hw0, hdecl.1])]
+    exact cd_arm (checkDeclQuot_loopT pins dn ds hP.arm hP.quot hP.val.rcp hcl hdn hQd k cv)
+      (fun hG => hG.arms.quot k cv) hn' hi hd hok hR hS hF hden hPD hicl hcrf (im_mem _ rfl) hIM
+  | indDecl block nP =>
+    rw [checkDeclE.arm1 _ _ _ _ _ (by rw [hw0, hdecl.1])]
+    have hdecl' : IndDeclAt (m.arr64 DECL) (m.arr64 DLP) i.toNat block nP := by
+      have := hR.decls.recs i.toNat hi
+      rw [hdi] at this; exact this
+    have hFB := hFD _ hi _ _ hdi
+    have hlpd := hLD _ hi _ _ hdi
+    have hD : (m.arr64 DECL).size < 2 ^ 63 := hR.decls.dsize
+    have hP' : (m.arr64 DLP).size < 2 ^ 63 := hR.decls.psize
+    rcases c1 : callW p n "ind_block_to_erec" [i] m with _ | ⟨r1, m1⟩
+    · rw [liftE_none, checkDeclE.k_ind_block_to_erec.none]; exact RefE.of_cls0 (by simp)
+    rw [liftE_some, checkDeclE.k_ind_block_to_erec.arm1]
+    obtain ⟨hS1, hg1, hf1, -, hl1, hdec1, htop1⟩ := indBlockToErec_ok hib c1 hS.stage hdecl' hFB hD hP'
+    have hT1 : StageT dn vis fe m1 a :=
+      ⟨hS1, hS.twin.frame hf1 (by decide) (by decide) (by decide) (by decide) (by decide) (by decide),
+        by rw [pinW_frame hf1 (by decide)]; exact hS.flag⟩
+    have hfs1 := stepIn_callW hin (by decide) c1
+    have hIM1 : IndMemos m1 :=
+      hIM.frame hf1 (fun b hb => by simp at hb; subst hb; decide) (fun x hx => by simp at hx; subst hx; decide)
+    have hw : (rdW (m1.arr64 DECL) (5 + 8 * i)).toNat = nP := by
+      rw [hf1.1 DECL (by decide) (by decide)]
+      have h0 : dw (m.arr64 DECL) i.toNat 0 ≠ 0 := by rw [hdecl'.1]; decide
+      rw [rdW_dwI hD h0 rfl (by decide)]
+      exact hdecl'.2.1
+    obtain ⟨env, hFo⟩ := hF
+    rcases c2 : callE p n "check_ind_decl"
+        [vis, r1.headD 0, r1.tail.headD 0, rdW (m1.arr64 DECL) (5 + 8 * i)] m1 with e2 | ⟨r2, m2⟩
+    · rw [checkDeclE.k_check_ind_decl.none]
+      exact fun hG => hG.ind pins n hn' m1 a vis fe env block nP _ _ _ hl1 hw hdec1 htop1 hFB hT1 hok hFo
+        hden hlpd hIM1 e2 c2
+    rw [checkDeclE.k_check_ind_decl.arm1]
+    have d2 := callW_of_callE c2
+    obtain ⟨fe', a', hrun, hS2, hcm, hg2, hIM2⟩ := hia pins n hn' m1 m2 a vis fe env block nP _ _ _ r2 hl1
+      hw hdec1 htop1 hFB hT1 hok hFo hden hlpd hIM1 d2
+    have hfs2 := stepIn_callW hin (by decide) d2
+    exact RefE.ret hrun ⟨by simpa using hR.of_step hS2 (hfs1.trans hfs2) (IWGrow.erecPExt (hg1.trans hg2)),
+      hcm, hIM2⟩
+  | basisDecl _ => exact hdecl.elim
+
+/-- **`check_decl` refines `checkDecl` under `StageT`**, for the front's record kinds: the ok half
+of `cd_ref`. -/
 @[refines_part ConRon.Arena.checkDecl "the front's records (kinds 1-6), under StageT, the inductive arm by IndArmSpec"]
 theorem checkDecl_loopT {p : Prog} (hP : CheckDeclProg p) (hq : KnotStageProg p)
     (hcl : LeafClosed p) (hlc : LoopClosed p) (hib : IbeProg p) (hin : StepIn p indFns)
@@ -422,64 +522,12 @@ theorem checkDecl_loopT {p : Prog} (hP : CheckDeclProg p) (hq : KnotStageProg p)
     (ds : Array IDeclaration) (hFD : FrontDecls ds) (hLD : DeclsLpsDn dn ds) :
     CheckDeclSpecT V pins dn ds p := by
   intro n hn s₀ a₀ vis fe pend i hi hok hR hS hF hden hPD hIM
-  refine triple_post (cd_specW p hP.cd n s₀ i vis) ?_
-  rintro r s' ⟨hl, h⟩
-  refine ⟨hl, ?_⟩
-  have hdecl := hR.decls.recs i.toNat hi
-  have hds : dsAt ds i = ds[i.toNat] := by simp [dsAt, Array.getD, hi]
-  have hd : ds[i.toNat]? = some ds[i.toNat] := Array.getElem?_eq_getElem hi
-  rw [hds] at hden ⊢
-  have h1 := hR.decls.room
-  have h2 := hR.decls.dsize
-  have hw0 : rdW (s₀.mem.arr64 DECL) (1 + 8 * i) = dw (s₀.mem.arr64 DECL) i.toNat 0 :=
-    rdW_dw _ (by omega) (by decide) (by decide)
-  cases n with
-  | zero => simp [cdW] at h
-  | succ n =>
-  have hn' : n ≤ 2 ^ 62 := by omega
-  rw [cdW_step, hw0] at h
-  generalize hdi : ds[i.toNat] = d at hdecl hd hden
-  cases d with
-  | axiomDecl cv =>
-    rw [hdecl.1] at h
-    simp only [cdSel, show (1 : Word) ≠ 6 by decide, ite_false, ite_true] at h
-    exact arm_callWT (checkDeclAxiom_loopT pins dn ds hP.arm hP.axp hq hcl hP.crp.apd ⟨hicl, hcrf⟩ hdn hQd cv)
-      hn' hi hd hok hR hS hF hden hPD hicl hcrf (im_mem _ rfl) hIM h
-  | defnDecl cv v hh =>
-    rw [hdecl.1] at h
-    simp only [cdSel, show (2 : Word) ≠ 6 by decide, show (2 : Word) ≠ 1 by decide, ite_false,
-      ite_true] at h
-    exact arm_callWT (checkDeclDefn_loopT pins dn ds hP.arm hP.val
-        ⟨hP.df, hP.natSub, hP.natGate, hP.natCert, hP.natText,
-          divGateSpecC hP.dm hq hcl hP.dgClosed (substC0_of hP.natSub.toNatSubProg)
-            (substCAll_of ⟨hP.natSub.toNatSubProg, hP.dm.lSubstConstAll⟩) ⟨hicl, hcrf⟩ pins⟩
-        hq hcl hlc hin hP.crp.apd ⟨hicl, hcrf⟩ hdn cv v hh)
-      hn' hi hd hok hR hS hF hden hPD hicl hcrf (im_mem _ rfl) hIM h
-  | thmDecl cv v =>
-    rw [hdecl.1] at h
-    simp only [cdSel, show (3 : Word) ≠ 6 by decide, show (3 : Word) ≠ 1 by decide,
-      show (3 : Word) ≠ 2 by decide, ite_false, ite_true] at h
-    exact arm_callWT (checkDeclThm_loopT pins dn ds hP.arm hP.val hq hP.crp.apd ⟨hicl, hcrf⟩ hP.th cv v)
-      hn' hi hd hok hR hS hF hden hPD hicl hcrf (im_mem _ rfl) hIM h
-  | opaqueDecl cv v =>
-    rw [hdecl.1] at h
-    simp only [cdSel, show (4 : Word) ≠ 6 by decide, show (4 : Word) ≠ 1 by decide,
-      show (4 : Word) ≠ 2 by decide, show (4 : Word) ≠ 3 by decide, ite_false, ite_true] at h
-    exact arm_callWT (checkDeclOpaque_loopT pins dn ds hP.arm hP.val hP.crp hq hcl hlc hP.crp.apd ⟨hicl, hcrf⟩ hdn hP.op cv v)
-      hn' hi hd hok hR hS hF hden hPD hicl hcrf (im_mem _ rfl) hIM h
-  | quotDecl k cv =>
-    rw [hdecl.1] at h
-    simp only [cdSel, show (5 : Word) ≠ 6 by decide, show (5 : Word) ≠ 1 by decide,
-      show (5 : Word) ≠ 2 by decide, show (5 : Word) ≠ 3 by decide, show (5 : Word) ≠ 4 by decide,
-      ite_false, ite_true] at h
-    exact arm_callWT (checkDeclQuot_loopT pins dn ds hP.arm hP.quot hP.val.rcp hcl hdn hQd k cv)
-      hn' hi hd hok hR hS hF hden hPD hicl hcrf (im_mem _ rfl) hIM h
-  | indDecl b nP =>
-    rw [hdecl.1] at h
-    simp only [cdSel, ite_true] at h
-    exact indArm_callWT hib hin hia hn' hi hdi (hFD _ hi _ _ hdi) hok hR hS hF hden
-      (hLD _ hi _ _ hdi) hIM h
-  | basisDecl _ => exact hdecl.elim
+  refine triple_post (RefE.triple (checkDecl_specE p hP.cd n s₀ i vis)
+    (cd_ref hP hq hcl hlc hib hin pins dn hdn hQd hia hicl hcrf ds hFD hLD (by omega) hi hok hR hS hF hden hPD
+      hIM)) ?_
+  rintro r s' ⟨hl, x, a', run, hR'⟩
+  obtain ⟨hok', hst, hres⟩ := AM.of_run_ok _ _ _ _ run
+  exact ⟨hl, hok', by rw [hst, hres]; exact hR'.loop, hR'.core, hR'.ind⟩
 
 /-! ## `install_value` and `install_step_go` under `StageT` -/
 
@@ -531,74 +579,112 @@ theorem installValue_loopT (hP : IvProg p) (hC : CvgProg p) (hap : ApdF p) (hkp 
 
 end loopSpecs
 
-/-! ## The relational lemma of `install_step_go` -/
+/-- **`install_step_go`'s unified model**: the scratch reset and the pin test (outside the verdict
+closure) lifted, `check_decl` by its unified model, `install_value` through its run (the inductive
+memos read it). -/
+l_model installStepGo_specE (p : Prog) (hG : IstgProg p) (hcd : p.lookup "check_decl" = some checkDeclL)
+  fns [hG.go ↦ installStepGoE]
+  specs [callW_spec p n "iw_reset", callW_spec p n "pin_in", checkDecl_specE p hcd n]
+  grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
+  heartbeats 1600000 simp [] unified
+  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
-section istgOk
-variable (mode : ConLeche.CheckMode) (pins : List INatOpPinSet) (dn : NIdx → Option ConLeche.Name)
-  (ds : Array IDeclaration) (p : Prog)
 
-/-- What a run of the step body leaves, against the twin's `T`. -/
-def IstgPost (pend : Array PendingCheck) (T : AM (IFEnv × Option ValueGroup)) (a : AState)
-    (m' : Mem) (r : List Word) : Prop :=
-  ∃ x a', T.run a = .ok (x, a') ∧ LoopR pins dn m' a' (r.headD 0) x.1 pend ds ∧
-    x.2 = vgOut m' (r.tail.headD 0) (r.tail.tail.headD 0) ∧ (r.tail.headD 0 ≠ 0 → x.2 ≠ none) ∧
-    CoreMemos m' ∧ IndMemos m'
+/-! ## `install_step_go` refines `installStepGo`, both outcomes -/
 
-theorem istg_cd (hCD : CheckDeclSpecT mode pins dn ds p) {n : Nat} (hn : n ≤ 2 ^ 62) {m0 m' : Mem} {a : AState} {vis : Word}
-    {fe : IFEnv} {pend : Array PendingCheck} {i : Word} {rc r : List Word}
-    {T : AM (IFEnv × Option ValueGroup)} (hi : i.toNat < ds.size) (hok0 : ConRon.Bridge.StateOK a)
-    (hR : LoopR pins dn m0 a vis fe pend ds) (hS : StageT dn vis fe m0 a)
-    (hF : ∃ env, FoldOK V env fe a) (hden : ∃ x, Frontend.denoteDecl a.store (dsAt ds i) = some x)
-    (hPD : ∃ pinsP, PinsDenote a.store pins pinsP) (hIM : IndMemos m0)
-    (hc : callW p n "check_decl" [i, vis] m0 = some (rc, m'))
-    (hr : istgCD (some (rc, m')) = some (r, m'))
-    (hT : T.run a = (cdT mode pins fe (dsAt ds i)).run a) :
-    IstgPost pins dn ds pend T a m' r := by
-  simp only [istgCD, Option.some.injEq, Prod.mk.injEq] at hr
-  obtain ⟨rfl, -⟩ := hr
-  obtain ⟨s', hs', -, hok, hL, hcm, hIM'⟩ := triple_of_callW (s₀ := ⟨m0, Locals.init []⟩)
-    (hCD n hn ⟨m0, Locals.init []⟩ a vis fe pend i hi hok0 hR hS hF hden hPD hIM) hc
-  have hrun := AM.run_of_ok _ _ hok
-  refine ⟨_, _, hT.trans (cdT_run hrun), ?_, ?_, ?_, hs' ▸ hcm, hs' ▸ hIM'⟩
-  · simpa [hs'] using hL
-  · simp [vgOut]
-  · simp
+section istg
+variable (pins : List INatOpPinSet) (dn : NIdx → Option ConLeche.Name) (ds : Array IDeclaration)
+  (p : Prog)
 
+/-- What the error arms of `install_step_go` assume: `check_decl`'s (`CdG`) and `install_value`'s
+(`IvCtx`). -/
+structure IstgG : Prop where
+  cd : CdG pins dn ds p
+  iv : IvCtx p
+
+/-- What `install_step_go` gives besides the twin's run, its three words `r` and the memory `m'`:
+the loop's relation at the new view and environment, the value group out of the flag and record,
+the memos. -/
+structure IstgPost (pend : Array PendingCheck) (r : List Word) (x : IFEnv × Option ValueGroup) (m' : Mem)
+    (a' : AState) : Prop where
+  loop : LoopR pins dn m' a' (r.headD 0) x.1 pend ds
+  vg : x.2 = vgOut m' (r.tail.headD 0) (r.tail.tail.headD 0)
+  some : r.tail.headD 0 ≠ 0 → x.2 ≠ none
+  core : CoreMemos m'
+  ind : IndMemos m'
+
+variable {pins dn ds p}
+
+/-- The `check_decl` branch: `cd_ref`, against a twin that runs as `cdT`. -/
+theorem istg_cd {n : Nat} {m0 : Mem} {a : AState} {vis : Word} {fe : IFEnv} {pend : Array PendingCheck}
+    {i : Word} {d : IDeclaration} {T : AM (IFEnv × Option ValueGroup)}
+    (h : RefE (CdG pins dn ds p) (checkDeclE p n m0 i vis) (checkDecl V pins fe d) a
+      (fun v x a' => CdPost pins dn ds pend v.1 x v.2 a'))
+    (hT : T.run a = (cdT V pins fe d).run a) :
+    RefE (IstgG pins dn ds p) (installStepGoE.k_check_decl p (checkDeclE p n m0 i vis)) T a
+      (fun v x a' => IstgPost pins dn ds pend v.1 x v.2 a') := by
+  rcases hx : checkDeclE p n m0 i vis with e | ⟨w, m'⟩
+  · rw [installStepGoE.k_check_decl.none]
+    rw [hx] at h
+    exact fun hG => ErrClaim.of_run_eqW hT (ErrClaim.bind_left (h hG.cd))
+  rw [installStepGoE.k_check_decl.arm1]
+  rw [hx] at h
+  obtain ⟨y, a', hy, hR⟩ := h
+  exact RefE.ret (hT.trans (cdT_run hy)) ⟨by simpa using hR.loop, by simp [vgOut], by simp, hR.core, hR.ind⟩
+
+/-- The `install_value` branch: `iv_ref` on the call's run, against a twin that runs as `ivT`. -/
 theorem istg_iv (hP : IvProg p) (hC : CvgProg p) (hcl : IndMemoClosed p) (hcrf : L.Ind.CrfF p)
-    (hap : ApdF p) {n : Nat} {m0 m' : Mem} {a : AState} {vis : Word} {fe : IFEnv}
-    {pend : Array PendingCheck} {i ck vk : Word} {rv r : List Word}
+    (hap : ApdF p) {n : Nat} {m0 : Mem} {a : AState} {vis : Word} {fe : IFEnv}
+    {pend : Array PendingCheck} {i ck vk : Word}
     {T : AM (IFEnv × Option ValueGroup)} (hi : i.toNat < ds.size) (hk : IvArgs ck vk (dsAt ds i))
     (hR : LoopR pins dn m0 a vis fe pend ds) (hS : StageT dn vis fe m0 a) (hIM : IndMemos m0)
     (hF : ∃ env, FoldOK V env fe a) (hden : ∃ x, Frontend.denoteDecl a.store (dsAt ds i) = some x)
-    (hc : callW p n "install_value" [i, vis, ck, vk] m0 = some (rv, m'))
-    (hr : istgIV (some (rv, m')) = some (r, m')) (hT : T.run a = (ivT fe (dsAt ds i)).run a) :
-    IstgPost pins dn ds pend T a m' r := by
-  simp only [istgIV, Option.some.injEq, Prod.mk.injEq] at hr
-  obtain ⟨rfl, -⟩ := hr
+    (hT : T.run a = (ivT fe (dsAt ds i)).run a) :
+    RefE (IstgG pins dn ds p) (installStepGoE.k_install_value p (callE p n "install_value" [i, vis, ck, vk] m0))
+      T a (fun v x a' => IstgPost pins dn ds pend v.1 x v.2 a') := by
+  have hT8 := installValue_specE p hP n ⟨m0, Locals.init []⟩ i vis ck vk
+  have hR8 := iv_ref hP.recP hC hap ⟨hcl, hcrf⟩ n hS hR.decls hi hk hF (ivArgs_denoteCV hk hden.choose_spec)
+    hIM.cr
+  rcases c : callE p n "install_value" [i, vis, ck, vk] m0 with e | ⟨rv, m'⟩
+  · rw [installStepGoE.k_install_value.none]
+    exact fun hG => ErrClaim.of_run_eqW hT (RefE.run_err hT8 hG.iv.nv hG.iv hR8 c)
+  rw [installStepGoE.k_install_value.arm1]
+  have hc := callW_of_callE c
   have hIM' := callW_indMemos hcl hcrf (im_mem _ rfl) hc hIM
   obtain ⟨s', hs', -, hok, hL, hvg, hne, hcm⟩ := triple_of_callW (s₀ := ⟨m0, Locals.init []⟩)
     (installValue_loopT pins dn ds p hP hC hap ⟨hcl, hcrf⟩ n ⟨m0, Locals.init []⟩ a vis fe pend i ck vk
       hi hk hR hS hF hden hIM.cr) hc
   have hrun := AM.run_of_ok _ _ hok
   subst hs'
-  refine ⟨_, _, hT.trans hrun, by simpa using hL, ?_, fun _ => hne, hcm, hIM'⟩
+  refine RefE.ret (hT.trans hrun) ⟨by simpa using hL, ?_, fun _ => hne, hcm, hIM'⟩
   simp only [List.headD_cons, List.tail_cons, vgOut, show (1 : Word) ≠ 0 by decide, ite_false]
   exact hvg
 
-theorem istgW_ok (_hm : mode = .verified) (hCD : CheckDeclSpecT mode pins dn ds p) (hP : IvProg p) (hC : CvgProg p)
-    (hcl : IndMemoClosed p) (hcrf : L.Ind.CrfF p) (hap : ApdF p) {n : Nat} (hn : n ≤ 2 ^ 62) {m m' : Mem} {a : AState} {vis : Word}
-    {fe : IFEnv} {pend : Array PendingCheck} {i : Word} {r : List Word}
-    (h : istgW p n m i vis = some (r, m')) (hR : LoopR pins dn m a vis fe pend ds)
-    (hTw : TwinOK dn m a fe) (hfl : pinW m 0 ≠ 0) (hFo : ∃ env, FoldOK V env fe a)
+/-- **`install_step_go` refines `installStepGo` under `StageT`, both outcomes**: the scratch reset,
+then by the record's kind (and for the pinnable ones `pin_in`'s answer) `check_decl` (`cd_ref`, its
+model inlined) or `install_value` (`iv_ref` on the run). -/
+theorem istg_ref (hdc : LoopCallees dn p) (hFD : FrontDecls ds) (hLD : DeclsLpsDn dn ds) {N : Nat}
+    (hN : N ≤ 2 ^ 62 + 1) {m : Mem} {a : AState} {vis : Word} {fe : IFEnv} {pend : Array PendingCheck}
+    {i : Word} (hi : i.toNat < ds.size) (hok0 : ConRon.Bridge.StateOK a) (hFo : ∃ env, FoldOK V env fe a)
+    (hR : LoopR pins dn m a vis fe pend ds) (hTw : TwinOK dn m a fe) (hfl : pinW m 0 ≠ 0)
     (hden : ∃ x, Frontend.denoteDecl a.store (dsAt ds i) = some x)
-    (hPD : ∃ pinsP, PinsDenote a.store pins pinsP)
-    (hi : i.toNat < ds.size) (hok0 : ConRon.Bridge.StateOK a) (hIM : IndMemos m) :
-    IstgPost pins dn ds pend (installStepGo mode pins fe (dsAt ds i)) a m' r := by
-  cases n with
-  | zero => simp [istgW] at h
-  | succ n =>
+    (hPD : ∃ pinsP, PinsDenote a.store pins pinsP) (hIM : IndMemos m) :
+    RefE (IstgG pins dn ds p) (installStepGoE p N m i vis) (installStepGo V pins fe (dsAt ds i)) a
+      (fun v x a' => IstgPost pins dn ds pend v.1 x v.2 a') := by
+  rcases N with _ | n
+  · rw [installStepGoE.eq_1]; exact RefE.of_cls0 Err.cls_outOfFuel
   have hn' : n ≤ 2 ^ 62 := by omega
-  rw [istgW_step, show iwResetW m = some ([], m.set64 CTL 200 0) from rfl, istgK0_some] at h
+  rw [installStepGoE.arm1]
+  rcases c0 : callW p n "iw_reset" [] m with _ | ⟨r0, m0'⟩
+  · rw [liftE_none, installStepGoE.k_iw_reset.none]; exact RefE.of_cls0 (by simp)
+  rw [liftE_some]
+  obtain ⟨s0, hs0, -, hW0⟩ := triple_of_callW (iwReset_specW p hdc.istg.reset n ⟨m, Locals.init []⟩) c0
+  rw [show iwResetW m = some ([], m.set64 CTL 200 0) from rfl] at hW0
+  simp only [Option.some.injEq, Prod.mk.injEq] at hW0
+  obtain ⟨-, hm0⟩ := hW0
+  have hm0' : m0' = m.set64 CTL 200 0 := hs0.symm.trans hm0.symm
+  subst hm0'
   have hR0 := hR.reset
   have hS0 : StageT dn vis fe (m.set64 CTL 200 0) a :=
     ⟨⟨hR0.check, hR0.iw⟩,
@@ -607,7 +693,7 @@ theorem istgW_ok (_hm : mode = .verified) (hCD : CheckDeclSpecT mode pins dn ds 
         ⟨by decide, by decide, by decide⟩,
       by rw [pinW_frame (MemFrame.setCtl m 200 0) (by simp)]; exact hfl⟩
   have hIM0 := hIM.setCtl 200 0 (by decide)
-  generalize m.set64 CTL 200 0 = m0 at h hR0 hS0 hIM0
+  generalize m.set64 CTL 200 0 = m0 at hR0 hS0 hIM0 ⊢
   have hdecl : DeclAtF (m0.arr64 DECL) (m0.arr64 DLP) i.toNat (dsAt ds i) := by
     have := hR0.decls.recs i.toNat hi
     simpa [dsAt, Array.getD, hi] using this
@@ -621,8 +707,12 @@ theorem istgW_ok (_hm : mode = .verified) (hCD : CheckDeclSpecT mode pins dn ds 
     have : (2 + 8 * i).toNat = 1 + 8 * i.toNat + 1 := by
       rw [UInt64.toNat_add, UInt64.toNat_mul]; simp; omega
     simp [rdW, dw, this]
-  rw [hw0, hw1] at h
-  generalize hd : dsAt ds i = d at hdecl
+  have hCD := cd_ref hdc.cd hdc.knot hdc.leaf hdc.loop hdc.andInd.toIbeProg hdc.indIn pins dn hdc.dninj hdc.quotDn
+    hdc.indArm hdc.indMemo hdc.crf ds hFD hLD (N := n) (by omega) hi hok0 hR0 hS0 hFo hden hPD hIM0
+  have hIV := fun {ck vk : Word} {T : AM (IFEnv × Option ValueGroup)} (hk : IvArgs ck vk (dsAt ds i))
+      (hT : T.run a = (ivT fe (dsAt ds i)).run a) =>
+    istg_iv (pend := pend) hdc.iv hdc.cvg hdc.indMemo hdc.crf hdc.cd.crp.apd (n := n) hi hk hR0 hS0 hIM0 hFo hden hT
+  generalize hd : dsAt ds i = d at hdecl hCD hIV
   -- the pinned-name test, for the two pinnable kinds
   have pinT : ∀ {cv : IConstantVal} {k hi' c : Word}, CVAt (m0.arr64 DECL) (m0.arr64 DLP) i.toNat cv →
       pinInW n m0 (dw (m0.arr64 DECL) i.toNat 1 &&& 4294967295) k hi' = some c →
@@ -633,141 +723,82 @@ theorem istgW_ok (_hm : mode = .verified) (hCD : CheckDeclSpecT mode pins dn ds 
     have hF := hR0.check.pins.full (pinInW_flag hp)
     refine ⟨hF, ?_⟩
     rw [pinIn_contains hF hp (mask_lt _) hk1 hk hk2, decI_mask, hcv.1]
+  -- `pin_in` through its model
+  have pinC : ∀ {k hi' : Word} {r : List Word} {m1 : Mem},
+      callW p n "pin_in" [rdW (m0.arr64 DECL) (2 + 8 * i) &&& 4294967295, k, hi'] m0 = some (r, m1) →
+      m1 = m0 ∧ pinInW n m0 (dw (m0.arr64 DECL) i.toNat 1 &&& 4294967295) k hi' = some (r.headD 0) := by
+    intro k hi' r m1 hc
+    obtain ⟨s', hs', -, hm', hW⟩ := triple_of_callW (s₀ := ⟨m0, Locals.init []⟩)
+      (pinIn_specW p hdc.istg.pin n _ _ k hi') hc
+    rw [hw1] at hW
+    exact ⟨hs'.symm.trans hm', hW⟩
   cases d with
   | axiomDecl cv =>
     obtain ⟨hk, -⟩ := hdecl
-    rw [hk] at h
-    simp only [show (1 : Word) ≠ 2 by decide, show (1 : Word) ≠ 3 by decide,
-      show (1 : Word) ≠ 4 by decide, ite_false] at h
-    cases hc : callW p n "check_decl" [i, vis] m0 with
-    | none => rw [hc] at h; simp [istgCD] at h
-    | some rcm =>
-    obtain ⟨rc, m1⟩ := rcm
-    rw [hc] at h
-    have hm1 : m1 = m' := by simp [istgCD] at h; exact h.2
-    subst hm1
-    rw [← hd]
-    exact istg_cd mode pins dn ds p hCD hn' hi hok0 hR0 hS0 hFo hden hPD hIM0 hc h (by rw [hd]; rfl)
+    rw [installStepGoE.k_iw_reset.arm4 _ _ _ _ _ _ (by rw [hw0, hk]; decide) (by rw [hw0, hk]; decide)
+      (by rw [hw0, hk]; decide)]
+    exact istg_cd hCD rfl
   | quotDecl k cv =>
     obtain ⟨hk, -⟩ := hdecl
-    rw [hk] at h
-    simp only [show (5 : Word) ≠ 2 by decide, show (5 : Word) ≠ 3 by decide,
-      show (5 : Word) ≠ 4 by decide, ite_false] at h
-    cases hc : callW p n "check_decl" [i, vis] m0 with
-    | none => rw [hc] at h; simp [istgCD] at h
-    | some rcm =>
-    obtain ⟨rc, m1⟩ := rcm
-    rw [hc] at h
-    have hm1 : m1 = m' := by simp [istgCD] at h; exact h.2
-    subst hm1
-    rw [← hd]
-    exact istg_cd mode pins dn ds p hCD hn' hi hok0 hR0 hS0 hFo hden hPD hIM0 hc h (by rw [hd]; rfl)
-  | thmDecl cv v =>
-    obtain ⟨hk, -⟩ := hdecl
-    rw [hk] at h
-    simp only [show (3 : Word) ≠ 2 by decide, ite_false, ite_true] at h
-    cases hc : callW p n "install_value" [i, vis, 2, 1] m0 with
-    | none => rw [hc] at h; simp [istgIV] at h
-    | some rvm =>
-    obtain ⟨rv, m1⟩ := rvm
-    rw [hc] at h
-    have hm1 : m1 = m' := by simp [istgIV] at h; exact h.2
-    subst hm1
-    rw [← hd]
-    exact istg_iv pins dn ds p hP hC hcl hcrf hap hi (by rw [hd]; exact ⟨rfl, rfl⟩) hR0 hS0 hIM0 hFo hden hc h (by rw [hd]; rfl)
-  | defnDecl cv v hint =>
-    obtain ⟨hk, hcv, -⟩ := hdecl
-    rw [hk] at h
-    simp only [ite_true] at h
-    cases hp : pinInW n m0 (dw (m0.arr64 DECL) i.toNat 1 &&& 4294967295) 15 30 with
-    | none => rw [hp] at h; simp [istgPin] at h
-    | some c =>
-    rw [hp, istgPin_some] at h
-    obtain ⟨hF, hiff⟩ := pinT hcv hp (by decide) (by decide) (by decide)
-    have hT := installStepGo_defn mode pins fe hF cv v hint
-    rw [pinnedDefnL_eq] at hT
-    by_cases hc0 : c ≠ 0
-    · rw [ite_eq_left hc0] at h
-      have hpin : ((List.range' 15 15).map fun j => (decI (pinW m0 j) : NIdx)).contains cv.name =
-          true := hiff.mp hc0
-      rw [ite_eq_left hpin] at hT
-      cases hc : callW p n "check_decl" [i, vis] m0 with
-      | none => rw [hc] at h; simp [istgCD] at h
-      | some rcm =>
-      obtain ⟨rc, m1⟩ := rcm
-      rw [hc] at h
-      have hm1 : m1 = m' := by simp [istgCD] at h; exact h.2
-      subst hm1
-      rw [← hd]
-      exact istg_cd mode pins dn ds p hCD hn' hi hok0 hR0 hS0 hFo hden hPD hIM0 hc h (by rw [hd]; exact hT)
-    · rw [ite_eq_right hc0] at h
-      have hpin : ¬ ((List.range' 15 15).map fun j => (decI (pinW m0 j) : NIdx)).contains cv.name =
-          true := fun h' => hc0 (hiff.mpr h')
-      rw [ite_eq_right hpin] at hT
-      cases hc : callW p n "install_value" [i, vis, 1, 0] m0 with
-      | none => rw [hc] at h; simp [istgIV] at h
-      | some rvm =>
-      obtain ⟨rv, m1⟩ := rvm
-      rw [hc] at h
-      have hm1 : m1 = m' := by simp [istgIV] at h; exact h.2
-      subst hm1
-      rw [← hd]
-      exact istg_iv pins dn ds p hP hC hcl hcrf hap hi (by rw [hd]; exact ⟨rfl, rfl⟩) hR0 hS0 hIM0 hFo hden hc h (by rw [hd]; exact hT)
-  | opaqueDecl cv v =>
-    obtain ⟨hk, hcv, -⟩ := hdecl
-    rw [hk] at h
-    simp only [show (4 : Word) ≠ 2 by decide, show (4 : Word) ≠ 3 by decide, ite_false,
-      ite_true] at h
-    cases hp : pinInW n m0 (dw (m0.arr64 DECL) i.toNat 1 &&& 4294967295) 44 46 with
-    | none => rw [hp] at h; simp [istgPin] at h
-    | some c =>
-    rw [hp, istgPin_some] at h
-    obtain ⟨hF, hiff⟩ := pinT hcv hp (by decide) (by decide) (by decide)
-    have hT := installStepGo_opaque mode pins fe hF cv v
-    by_cases hc0 : c ≠ 0
-    · rw [ite_eq_left hc0] at h
-      have hpin : ((List.range' 44 2).map fun j => (decI (pinW m0 j) : NIdx)).contains cv.name =
-          true := hiff.mp hc0
-      rw [ite_eq_left (show (pinnedOpaqueL m0).contains cv.name = true from hpin)] at hT
-      cases hc : callW p n "check_decl" [i, vis] m0 with
-      | none => rw [hc] at h; simp [istgCD] at h
-      | some rcm =>
-      obtain ⟨rc, m1⟩ := rcm
-      rw [hc] at h
-      have hm1 : m1 = m' := by simp [istgCD] at h; exact h.2
-      subst hm1
-      rw [← hd]
-      exact istg_cd mode pins dn ds p hCD hn' hi hok0 hR0 hS0 hFo hden hPD hIM0 hc h (by rw [hd]; exact hT)
-    · rw [ite_eq_right hc0] at h
-      have hpin : ¬ ((List.range' 44 2).map fun j => (decI (pinW m0 j) : NIdx)).contains cv.name =
-          true := fun h' => hc0 (hiff.mpr h')
-      rw [ite_eq_right (show ¬ (pinnedOpaqueL m0).contains cv.name = true from hpin)] at hT
-      cases hc : callW p n "install_value" [i, vis, 0, 2] m0 with
-      | none => rw [hc] at h; simp [istgIV] at h
-      | some rvm =>
-      obtain ⟨rv, m1⟩ := rvm
-      rw [hc] at h
-      have hm1 : m1 = m' := by simp [istgIV] at h; exact h.2
-      subst hm1
-      rw [← hd]
-      exact istg_iv pins dn ds p hP hC hcl hcrf hap hi (by rw [hd]; exact ⟨rfl, rfl⟩) hR0 hS0 hIM0 hFo hden hc h (by rw [hd]; exact hT)
+    rw [installStepGoE.k_iw_reset.arm4 _ _ _ _ _ _ (by rw [hw0, hk]; decide) (by rw [hw0, hk]; decide)
+      (by rw [hw0, hk]; decide)]
+    exact istg_cd hCD rfl
   | indDecl b nP =>
     have hk : dw (m0.arr64 DECL) i.toNat 0 = 6 := hdecl.1
-    rw [hk] at h
-    simp only [show (6 : Word) ≠ 2 by decide, show (6 : Word) ≠ 3 by decide,
-      show (6 : Word) ≠ 4 by decide, ite_false] at h
-    cases hc : callW p n "check_decl" [i, vis] m0 with
-    | none => rw [hc] at h; simp [istgCD] at h
-    | some rcm =>
-    obtain ⟨rc, m1⟩ := rcm
-    rw [hc] at h
-    have hm1 : m1 = m' := by simp [istgCD] at h; exact h.2
-    subst hm1
-    rw [← hd]
-    exact istg_cd mode pins dn ds p hCD hn' hi hok0 hR0 hS0 hFo hden hPD hIM0 hc h (by rw [hd]; rfl)
+    rw [installStepGoE.k_iw_reset.arm4 _ _ _ _ _ _ (by rw [hw0, hk]; decide) (by rw [hw0, hk]; decide)
+      (by rw [hw0, hk]; decide)]
+    exact istg_cd hCD rfl
+  | thmDecl cv v =>
+    obtain ⟨hk, -⟩ := hdecl
+    rw [installStepGoE.k_iw_reset.arm2 _ _ _ _ _ _ (by rw [hw0, hk]; decide) (by rw [hw0, hk])]
+    exact hIV ⟨rfl, rfl⟩ rfl
+  | defnDecl cv v hint =>
+    obtain ⟨hk, hcv, -⟩ := hdecl
+    rw [installStepGoE.k_iw_reset.arm1 _ _ _ _ _ _ (by rw [hw0, hk])]
+    rcases cp : callW p n "pin_in" [rdW (m0.arr64 DECL) (2 + 8 * i) &&& 4294967295, 15, 30] m0 with
+      _ | ⟨rp, m1⟩
+    · rw [liftE_none, installStepGoE.k_pin_in.none]; exact RefE.of_cls0 (by simp)
+    rw [liftE_some]
+    obtain ⟨rfl, hp⟩ := pinC cp
+    obtain ⟨hF, hiff⟩ := pinT hcv hp (by decide) (by decide) (by decide)
+    have hT := installStepGo_defn V pins fe hF cv v hint
+    rw [pinnedDefnL_eq] at hT
+    by_cases hc0 : rp.headD 0 ≠ 0
+    · rw [installStepGoE.k_pin_in.arm1 _ _ _ _ _ _ hc0]
+      have hpin : ((List.range' 15 15).map fun j => (decI (pinW m1 j) : NIdx)).contains cv.name =
+          true := hiff.mp hc0
+      rw [ite_eq_left hpin] at hT
+      exact istg_cd hCD hT
+    · rw [installStepGoE.k_pin_in.arm2 _ _ _ _ _ _ (Decidable.not_not.mp hc0)]
+      have hpin : ¬ ((List.range' 15 15).map fun j => (decI (pinW m1 j) : NIdx)).contains cv.name =
+          true := fun h' => hc0 (hiff.mpr h')
+      rw [ite_eq_right hpin] at hT
+      exact hIV ⟨rfl, rfl⟩ hT
+  | opaqueDecl cv v =>
+    obtain ⟨hk, hcv, -⟩ := hdecl
+    rw [installStepGoE.k_iw_reset.arm3 _ _ _ _ _ _ (by rw [hw0, hk]; decide) (by rw [hw0, hk]; decide)
+      (by rw [hw0, hk])]
+    rcases cp : callW p n "pin_in" [rdW (m0.arr64 DECL) (2 + 8 * i) &&& 4294967295, 44, 46] m0 with
+      _ | ⟨rp, m1⟩
+    · rw [liftE_none, installStepGoE.k_pin_in_2.none]; exact RefE.of_cls0 (by simp)
+    rw [liftE_some]
+    obtain ⟨rfl, hp⟩ := pinC cp
+    obtain ⟨hF, hiff⟩ := pinT hcv hp (by decide) (by decide) (by decide)
+    have hT := installStepGo_opaque V pins fe hF cv v
+    by_cases hc0 : rp.headD 0 ≠ 0
+    · rw [installStepGoE.k_pin_in_2.arm1 _ _ _ _ _ _ hc0]
+      have hpin : ((List.range' 44 2).map fun j => (decI (pinW m1 j) : NIdx)).contains cv.name =
+          true := hiff.mp hc0
+      rw [ite_eq_left (show (pinnedOpaqueL m1).contains cv.name = true from hpin)] at hT
+      exact istg_cd hCD hT
+    · rw [installStepGoE.k_pin_in_2.arm2 _ _ _ _ _ _ (Decidable.not_not.mp hc0)]
+      have hpin : ¬ ((List.range' 44 2).map fun j => (decI (pinW m1 j) : NIdx)).contains cv.name =
+          true := fun h' => hc0 (hiff.mpr h')
+      rw [ite_eq_right (show ¬ (pinnedOpaqueL m1).contains cv.name = true from hpin)] at hT
+      exact hIV ⟨rfl, rfl⟩ hT
   | basisDecl _ => exact absurd hdecl id
 
-end istgOk
+end istg
 
 /-! ## `install_step_go` refines `installStepGo` -/
 
@@ -775,13 +806,12 @@ section spec
 variable (mode : ConLeche.CheckMode) (pins : List INatOpPinSet) (dn : NIdx → Option ConLeche.Name)
   (ds : Array IDeclaration) (p : Prog)
 
-/-- **`install_step_go` refines `installStepGo`** under `StageT` (through `check_decl`'s spec,
-`CheckDeclSpecT`, and `install_value`'s, `installValue_loopT`): the new view and environment, the
-value group out of the flag and record, the core's memos well formed. -/
+/-- **`install_step_go` refines `installStepGo`** under `StageT` (the ok half of `istg_ref`): the
+new view and environment, the value group out of the flag and record, the core's memos well
+formed. -/
 @[refines ConRon.Arena.installStepGo]
-theorem installStepGo_specT (hm : mode = .verified) (hCD : CheckDeclSpecT mode pins dn ds p)
-    (hG : IstgProg p) (hP : IvProg p) (hC : CvgProg p) (hcl : IndMemoClosed p)
-    (hcrf : L.Ind.CrfF p) (hap : ApdF p) :
+theorem installStepGo_specT (hm : mode = .verified) (hdc : LoopCallees dn p) (hFD : FrontDecls ds)
+    (hLD : DeclsLpsDn dn ds) :
     ∀ (n : Nat), n ≤ 2 ^ 62 → ∀ (s₀ : St) (a₀ : AState) (vis : Word) (fe : IFEnv)
       (pend : Array PendingCheck) (i : Word) (_hi : i.toNat < ds.size), ConRon.Bridge.StateOK a₀ →
       (∃ env, FoldOK V env fe a₀) →
@@ -796,14 +826,14 @@ theorem installStepGo_specT (hm : mode = .verified) (hCD : CheckDeclSpecT mode p
         vgOut s'.mem (r.tail.headD 0) (r.tail.tail.headD 0) ∧
       (r.tail.headD 0 ≠ 0 → (AM.res (installStepGo mode pins fe (dsAt ds i)) a₀).2 ≠ none) ∧
       CoreMemos s'.mem ∧ IndMemos s'.mem; ⊤⦄ := by
+  subst hm
   intro n hn s₀ a₀ vis fe pend i _hi hok0 hF hR hTw hfl hden hPD hIM
-  refine triple_post (istg_specW p hG n s₀ i vis) ?_
-  rintro r s' ⟨hloc, hW⟩
-  obtain ⟨x, a', hrun, hL, hvg, hne, hcm, hIM'⟩ :=
-    istgW_ok mode pins dn ds p hm hCD hP hC hcl hcrf hap hn hW hR hTw hfl hF hden hPD _hi hok0 hIM
+  refine triple_post (RefE.triple (installStepGo_specE p hdc.istg hdc.cd.cd n s₀ i vis)
+    (istg_ref hdc hFD hLD (by omega) _hi hok0 hF hR hTw hfl hden hPD hIM)) ?_
+  rintro r s' ⟨hloc, x, a', hrun, hR'⟩
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
-  exact ⟨hloc, hok, by rw [hst, hres]; exact hL, by rw [hres]; exact hvg,
-    fun h => by rw [hres]; exact hne h, hcm, hIM'⟩
+  exact ⟨hloc, hok, by rw [hst, hres]; exact hR'.loop, by rw [hres]; exact hR'.vg,
+    fun h => by rw [hres]; exact hR'.some h, hR'.core, hR'.ind⟩
 
 end spec
 
@@ -1043,7 +1073,7 @@ theorem installStep_pieces (hm : mode = .verified) (hdc : LoopCallees dn p) (hFD
         tblCnt_spec p (hb.pr.get "tbl_cnt") n,
         (flush_loopW (pins := pins) dn ds p hb n · a₀ vis fe pend),
         (enter_loopW (pins := pins) dn ds p hb n · (AM.st flushCaches a₀) vis fe pend hwf' hoff'),
-        (installStepGo_specT mode pins dn ds p hm (hm ▸ checkDecl_loopT hdc.cd hdc.knot hdc.leaf hdc.loop hdc.andInd.toIbeProg hdc.indIn pins dn hdc.dninj hdc.quotDn hdc.indArm hdc.indMemo hdc.crf ds hFD hLD) hdc.istg hdc.iv hdc.cvg hdc.indMemo hdc.crf hdc.cd.crp.apd n hn' · (AM.st enterScratch (AM.st flushCaches a₀)) · fe pend · · (TwinFold.enterAM hok) hFe),
+        (installStepGo_specT mode pins dn ds p hm hdc hFD hLD n hn' · (AM.st enterScratch (AM.st flushCaches a₀)) · fe pend · · (TwinFold.enterAM hok) hFe),
         (isNone_refinesC pins dn ds p hdc.leaf hdc.indMemo hdc.crf hb hpn n · (AM.st (installStepGo mode pins fe (dsAt ds i)) (AM.st enterScratch (AM.st flushCaches a₀))) · · · (AM.res (installStepGo mode pins fe (dsAt ds i)) (AM.st enterScratch (AM.st flushCaches a₀))).1 pend),
         (isSome_refinesC pins dn ds p hdc.leaf hdc.indMemo hdc.crf hb hpp hps n · (AM.st (installStepGo mode pins fe (dsAt ds i)) (AM.st enterScratch (AM.st flushCaches a₀))) · · · · · (AM.res (installStepGo mode pins fe (dsAt ds i)) (AM.st enterScratch (AM.st flushCaches a₀))).1 pend ((AM.res (installStepGo mode pins fe (dsAt ds i)) (AM.st enterScratch (AM.st flushCaches a₀))).2.getD default))] <;>
       -- the view `vis` is read after three calls: four `LocEq` hops (depth, not search)

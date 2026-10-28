@@ -1,14 +1,17 @@
 import ConAgua.Arena.RecGen
 import ConAgua.Arena.Verdict
+import ConAgua.Checker.NoVerdictTree
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
 
 /-!
-# The error model of `gen_rec_check_prep` (lane `verdicts-b`, helper `ib`)
+# The unified model of `gen_rec_check_prep`
 
-Generated alone: it takes minutes (the function has twelve callees and the record's fourteen
-writes).
+Generated alone: the function has thirteen callees and the record's fourteen writes. The callees
+outside the verdict closure are lifted; the five checks (`target_rec_pins`, `class_stream_recs`,
+`classes_nfs`, `classes_ctors`, `class_rec_tys_ok`) are read through their runs (the ok half reads
+the calls' walk memos and array sizes).
 -/
 
 set_option experimental.vcgen true
@@ -17,13 +20,23 @@ open ConRon.Arena
 open Std.WP
 open scoped Lean.Order
 
+noncomputable section
+
 namespace L.Ind
 
 open L.Arena
 
 l_model grpE_spec (p : Prog) (hf : p.lookup "gen_rec_check_prep" = some genRecCheckPrep)
-  fns [hf ↦ grpE] grind [arena_grind] fold [tierW, idxW]
+  fns [hf ↦ grpE]
+  specs [callW_spec p n "block_large_elim_allowed", callW_spec p n "class_gen_prefix_binders",
+    callW_spec p n "gen_rec_check_any_no_member", callW_spec p n "gen_rec_check_former_tys",
+    callW_spec p n "gen_rec_check_former_tys_c", callW_spec p n "gen_rec_check_minor_ok",
+    callW_spec p n "iw_alloc", callW_spec p n "struct_elim_level"]
+  grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
-  heartbeats 20000000 simp [Cmp.evalW, Cmp.eval] errors locals
+  heartbeats 20000000 simp [Cmp.evalW, Cmp.eval] locals unified
+  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 end L.Ind
+
+end

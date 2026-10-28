@@ -1,15 +1,21 @@
 import ConAgua.Arena.IndT.Pass
 import ConAgua.Arena.IndInstallSpec.BlockRawRec
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
+import ConAgua.L.ModelGen
 
 /-!
 # `checkBlock` under `StageC` (lane `indstaget`)
 
-`check_block`'s model (`icbW_sim`'s proof) from `StageC` at the entry index: the iw-only steps and
-the names' checks keep the twin's state; the flush (`ReadOK.flush`: `CheckOK` at the cleared caches)
-and the raw recursion bit (core-free, the state kept) before the pass (`checkBlockPass_refinesC`:
-`StageC` at the formers' index and what the tail takes), then the tail (`checkBlockTail_refinesC`).
+`check_block`'s unified model `icbE` and its refinement `block_ref` (both outcomes) from `StageC` at
+the entry index: the iw-only steps and the names' checks keep the twin's state; the flush
+(`ReadOK.flush`: `CheckOK` at the cleared caches) and the raw recursion bit (core-free, the state
+kept) before the pass (`pass_ref`: `StageC` at the formers' index and what the tail takes), then the
+tail (`tail_ref`). `checkBlock_refinesC` is its ok half.
 -/
 
+
+noncomputable section
 
 open ConRon.Arena
 open Std.WP
@@ -21,6 +27,35 @@ open L.Arena
 
 local notation "V" => ConLeche.CheckMode.verified
 
+set_option experimental.vcgen true in
+/-- **`check_block`'s unified model**: the pass, the raw recursion bit and the tail through their runs
+(the ok half reads the calls' memos), the shape's and the names' steps, the duplicate checks and the
+flush (outside the verdict closure) lifted. -/
+l_model icbE_spec (p : Prog) (hP : CbProg p)
+  fns [hP.cb ↦ icbE]
+  specs [callW_spec p n "block_shape_all_ctors", callW_spec p n "block_caps_ctor_names",
+    callW_spec p n "block_shape_member_names", callW_spec p n "sl_nodup", callW_spec p n "flush_caches"]
+  grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [rdW] unified
+  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
+
+/-- What the error arms of `check_block` assume: the claims of the pass's checks (`PassG`) and of
+the tail's callees (`TailG`). -/
+structure BlockG (p : Prog) : Prop where
+  pass : PassG p
+  tail : TailG p
+
+/-- What `check_block` gives besides the twin's run, a view `w` and the memory `m'` (from `m`): the
+stage, the growth, the memos of the tail, `AbsOK`, the recursors' memo, the main-arg memo. -/
+structure BlockPost (dn : NIdx → Option ConLeche.Name) (m : Mem) (w : Word) (x : IFEnv) (m' : Mem)
+    (a' : AState) : Prop where
+  stage : StageR dn w x m' a'
+  grow : IWGrow m m'
+  memo : HbMemo m'
+  abs : AbsOK m'
+  rc : RcMR m'
+  ma : ∃ mp, maMR m' mp
+
 section sims
 variable {p : Prog} (hkp : KnotStageProg p) {env : ConLeche.Env} (henv : ConLeche.EnvWF env)
   (hV : ValProg p)
@@ -28,15 +63,18 @@ variable {p : Prog} (hkp : KnotStageProg p) {env : ConLeche.Env} (henv : ConLech
   (hApd : ApdF p) (hCrk : CrKeep p) (hIlpf : IlpfF p) (hLz : LzcF p)
 
 include hkp henv hV hOpf hLC hLT hApd hCrk hIlpf hLz in
-/-- **`check_block`'s model under `StageC`** (`icbW_sim`'s; twin side con-ron's
-`checkBlock_bridge_of`). -/
-theorem icbW_simC (hP : CbProg p) {fs fs2 : List FnName}
+/-- **`check_block` refines `checkBlock`, both outcomes** under `StageC` (twin side con-ron's
+`checkBlock_bridge_of`): the iw-only steps and the names' checks keep the twin's state; the flush
+(`ReadOK.flush`: `CheckOK` at the cleared caches) and the raw recursion bit (core-free, the state
+kept), then the pass (`pass_ref` on the run: `StageC` at the formers' index and what the tail takes)
+and the tail (`tail_ref` on the run). -/
+theorem block_ref (hP : CbProg p) {fs fs2 : List FnName}
     (hcl : closedA p posFreeA posFreeC fs = true) (hfs : ∀ f ∈ passCallees, f ∈ fs)
     (hfr : "block_raw_rec" ∈ fs) (hcl2 : closedA p hbFreeA hbFreeC fs2 = true)
     (hfs2 : ∀ f ∈ tailCallees, f ∈ fs2) {fsR fsT : List FnName} (hclR : closedA p rcFreeA rcFreeC fsR = true)
     (hfR : ∀ f ∈ tailRcCallees, f ∈ fsR) (hclT : closedA p taFreeA taFreeC fsT = true)
-    (hfT : ∀ f ∈ blockTaCallees, f ∈ fsT) (n : Nat)
-    (hn : n + 4 ≤ 2 ^ 62)
+    (hfT : ∀ f ∈ blockTaCallees, f ∈ fsT) (N : Nat)
+    (hN : N ≤ 2 ^ 62 + 1)
     {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m : Mem} {a : AState}
     {bO bL p0 : Word} {bs : BlockShape} {block : List IConstantInfo}
     (hC : StageC dn vis fe env m a) (hq : DecB (fun m => decBS m p0.toNat) m bs) (hsrc : ShapeSrc m p0)
@@ -53,22 +91,21 @@ theorem icbW_simC (hP : CbProg p) {fs fs2 : List FnName}
     (hclM : closedA p maFreeA maFreeC fsM = true)
     (hfM : ∀ f ∈ ["check_block_pass", "check_block_tail"], f ∈ fsM)
     (hlpsDn : ∀ ms ∈ bs.members, ∀ k ∈ ms.cvT.levelParams, (dn k).isSome) :
-    Sim (icbW p (n + 4) m vis bO bL p0) (ConRon.Arena.checkBlock V fe block ⟨bs⟩) a
-      (fun r x m' a' => StageR dn (r.headD 0) x m' a' ∧ IWGrow m m' ∧ HbMemo m' ∧ AbsOK m' ∧ RcMR m' ∧
-        ∃ mp, maMR m' mp) := by
+    RefE (BlockG p) (icbE p N m vis bO bL p0) (ConRon.Arena.checkBlock V fe block ⟨bs⟩) a
+      (fun v x a' => BlockPost dn m v.1 x v.2 a') := by
   have hS := hC.stage
-  intro r m' h
-  unfold icbW at h
   have hT0 : iwTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 200).toNat_lt
   obtain ⟨hq', hq9, hptr⟩ := partsShapeFacts hq hsrc
+  rcases N with _ | n
+  · rw [icbE.eq_1]; exact RefE.of_cls0 Err.cls_outOfFuel
+  have hn : n ≤ 2 ^ 62 := by omega
+  rw [icbE.arm1]
   -- the constructors
-  cases c1 : callW p (n + 4) "block_shape_all_ctors" [p0] m with
-  | none => rw [c1] at h; cases h
-  | some q1 =>
-  obtain ⟨r1, m1⟩ := q1
-  rw [c1, icbK1_some] at h
+  rcases c1 : callW p n "block_shape_all_ctors" [p0] m with _ | ⟨r1, m1⟩
+  · rw [liftE_none, icbE.k_block_shape_all_ctors.none]; exact RefE.of_cls0 (by simp)
+  rw [liftE_some, icbE.k_block_shape_all_ctors.arm1]
   obtain ⟨s1, hs1, -, hW1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (blockShapeAllCtors_spec p hP.ha hP.cp hP.nco hP.acc hP.acg hP.ac (n + 4) _ p0) c1
+    (blockShapeAllCtors_spec p hP.ha hP.cp hP.nco hP.acc hP.acg hP.ac n _ p0) c1
   simp only at hs1 hW1
   subst hs1
   obtain ⟨cq, tot, rfl, hdc, hg1, hf1, htop1, hroom1⟩ := acW_ok _ _ _ p0 _ bs hW1 hq hS.2.2.2.1 hS.2.2.2.2.2
@@ -79,19 +116,16 @@ theorem icbW_simC (hP : CbProg p) {fs fs2 : List FnName}
   have hA1 : AbsOK s1.mem := AFr.of_frame hf1 (by decide) (by decide) hA
   obtain ⟨tp0, htp0⟩ := hta
   have hta1 : ∃ mp, taMR s1.mem mp := ⟨tp0, taMR_mfr (MFr.of_iw hf1) (by simp) (by simp) htp0⟩
-  have hk1 := callW_keepW c1
-  simp only [List.headD_cons, List.tail_cons] at h
+  simp only [List.headD_cons, List.tail_cons]
   have hT1 : iwTop s1.mem < 2 ^ 64 := (rdW (s1.mem.arr64 CTL) 200).toNat_lt
   -- the constructors' names
   have hdc1 : decPL s1.mem (decCN s1.mem) cq.toNat tot.toNat = some bs.allCtors :=
     hdc.get (OMono.decPL (fun q => decCN_mono q) _ _)
-  cases c2 : callW p (n + 4) "block_caps_ctor_names" [cq, tot] s1.mem with
-  | none => rw [c2] at h; cases h
-  | some q2 =>
-  obtain ⟨r2, m2⟩ := q2
-  rw [c2, icbK2_some] at h
+  rcases c2 : callW p n "block_caps_ctor_names" [cq, tot] s1.mem with _ | ⟨r2, m2⟩
+  · rw [liftE_none, icbE.k_block_caps_ctor_names.none]; exact RefE.of_cls0 (by simp)
+  rw [liftE_some, icbE.k_block_caps_ctor_names.arm1]
   obtain ⟨s2, hs2, -, hW2⟩ := triple_of_callW (s₀ := ⟨s1.mem, Locals.init []⟩)
-    (blockCapsCtorNames_spec p hP.ha hP.mnc hP.bccn (n + 4) _ cq tot) c2
+    (blockCapsCtorNames_spec p hP.ha hP.mnc hP.bccn n _ cq tot) c2
   simp only at hs2 hW2
   subst hs2
   have hcsd : decPL (truncM s1.mem) (decCN (truncM s1.mem)) cq.toNat tot.toNat = some bs.allCtors := hdc
@@ -110,29 +144,26 @@ theorem icbW_simC (hP : CbProg p) {fs fs2 : List FnName}
   have hS2 : StageR dn vis fe s2.mem a := stage_frame_iw hS1 hf2 (by
     have := ctorNamesW_room hW2 hS1.2.2.2.1; simp only [iwTop] at this ht2 ⊢; omega)
   subst hr2
-  simp only [List.map_map] at h hd2
+  simp only [List.map_map] at hd2
   have hP2 := hP1.fr (MFr.of_iw hf2)
   have hma2 := maMR_mfr (MFr.of_iw hf2) hma1
   have hA2 : AbsOK s2.mem := AFr.of_frame hf2 (by decide) (by decide) hA1
   have hta2 : ∃ mp, taMR s2.mem mp :=
     let ⟨mp, h⟩ := hta1; ⟨mp, taMR_mfr (MFr.of_iw hf2) (by simp) (by simp) h⟩
-  have hk2 := hk1.trans (callW_keepW c2)
   have hg12 := hg1.trans hg2
   have hT2 : iwTop s2.mem < 2 ^ 64 := (rdW (s2.mem.arr64 CTL) 200).toNat_lt
   -- the members' names
   have hq2 := hq.grow (decBS_mono _) hg12
   have hsrc2 := partsHsrc_grow hg12 hq9 hsrc
   obtain ⟨hqd2, hq92, hptr2⟩ := partsShapeFacts hq2 hsrc2
-  cases c3 : callW p (n + 4) "block_shape_member_names" [p0] s2.mem with
-  | none => rw [c3] at h; cases h
-  | some q3 =>
-  obtain ⟨r3, m3⟩ := q3
-  rw [c3, icbK3_some] at h
+  rcases c3 : callW p n "block_shape_member_names" [p0] s2.mem with _ | ⟨r3, m3⟩
+  · rw [liftE_none, icbE.k_block_shape_member_names.none]; exact RefE.of_cls0 (by simp)
+  rw [liftE_some, icbE.k_block_shape_member_names.arm1]
   obtain ⟨s3, hs3, hr3, hdn3, hg3, hf3, ht3⟩ := triple_of_callW (s₀ := ⟨s2.mem, Locals.init []⟩)
-    (blockShapeMemberNames_refines p hP.ha hP.mnc hP.bsmn (n + 4) _ p0 bs hqd2 (by omega) hS2.2.2.2.1
+    (blockShapeMemberNames_refines p hP.ha hP.mnc hP.bsmn n _ p0 bs hqd2 (by omega) hS2.2.2.2.1
       hS2.2.2.2.2.2 hsrc2 (fun o l j v h1 h2 h3 h4 => Nat.lt_of_succ_lt (hptr2 o l j v h1 h2 h3 h4))) c3
   obtain ⟨s3', hs3', -, hW3⟩ := triple_of_callW (s₀ := ⟨s2.mem, Locals.init []⟩)
-    (blockShapeMemberNames_spec p hP.ha hP.mnc hP.bsmn (n + 4) _ p0) c3
+    (blockShapeMemberNames_spec p hP.ha hP.mnc hP.bsmn n _ p0) c3
   have hroom := memberNamesW_room hW3 hS2.2.2.2.1
   rw [partsShapeK hqd2 hq92] at hroom
   have hkb : bs.k < 2 ^ 64 := by
@@ -144,13 +175,12 @@ theorem icbW_simC (hP : CbProg p) {fs fs2 : List FnName}
   have hS3 : StageR dn vis fe s3.mem a := stage_frame_iw hS2 hf3 (by
     rw [← ht3]; simp only [iwTop] at hroom ⊢; omega)
   subst hr3
-  simp only [List.headD_cons, List.tail_cons] at h
+  simp only [List.headD_cons, List.tail_cons]
   have hP3 := hP2.fr (MFr.of_iw hf3)
   have hma3 := maMR_mfr (MFr.of_iw hf3) hma2
   have hA3 : AbsOK s3.mem := AFr.of_frame hf3 (by decide) (by decide) hA2
   have hta3 : ∃ mp, taMR s3.mem mp :=
     let ⟨mp, h⟩ := hta2; ⟨mp, taMR_mfr (MFr.of_iw hf3) (by simp) (by simp) h⟩
-  have hk3 := hk2.trans (callW_keepW c3)
   -- the two `sl_nodup`s
   have hcn3 : (decHL s3.mem (rdW (s1.mem.arr64 CTL) 200).toNat tot.toNat : Option (List NIdx)) =
       some (bs.allCtors.map (fun x => x.1.name)) := by
@@ -160,31 +190,35 @@ theorem icbW_simC (hP : CbProg p) {fs fs2 : List FnName}
   obtain ⟨wm, hslm, hwm, hwml⟩ := slR_of_decHL s3.mem _ _ _ hdn3
     (by rw [ht3]; exact (rdW (s3.mem.arr64 CTL) 200).toNat_lt)
   rw [UInt64.ofNat_toNat] at hslm
-  cases c4 : callW p (n + 4) "sl_nodup" [rdW (s1.mem.arr64 CTL) 200, tot] s3.mem with
-  | none => rw [c4] at h; cases h
-  | some q4 =>
-  obtain ⟨r4, m4⟩ := q4
-  rw [c4, icbK4_some] at h
+  rcases c4 : callW p n "sl_nodup" [rdW (s1.mem.arr64 CTL) 200, tot] s3.mem with _ | ⟨r4, m4⟩
+  · rw [liftE_none, icbE.k_sl_nodup.none]; exact RefE.of_cls0 (by simp)
+  rw [liftE_some, icbE.k_sl_nodup.arm1]
   obtain ⟨s4, hs4, -, hm4, hnd1⟩ := triple_of_callW (s₀ := ⟨s3.mem, Locals.init []⟩)
-    (slNodup_refines p hP.slc hP.nodup (n + 4) _ _ _ wc hslc hwcl) c4
+    (slNodup_refines p hP.slc hP.nodup n _ _ _ wc hslc hwcl) c4
   simp only at hs4 hm4 hnd1
   subst hs4
-  rw [hm4] at h
-  simp only [List.headD_cons, List.tail_cons] at h
-  cases c5 : callW p (n + 4) "sl_nodup" [rdW (s2.mem.arr64 CTL) 200, UInt64.ofNat bs.k] s3.mem with
-  | none => rw [c5] at h; cases h
-  | some q5 =>
-  obtain ⟨r5, m5⟩ := q5
-  rw [c5] at h
+  rw [hm4]
+  rcases c5 : callW p n "sl_nodup" [rdW (s2.mem.arr64 CTL) 200, UInt64.ofNat bs.k] s3.mem with _ | ⟨r5, m5⟩
+  · rw [liftE_none, icbE.k_sl_nodup_2.none]; exact RefE.of_cls0 (by simp)
   obtain ⟨s5, hs5, -, hm5, hnd2⟩ := triple_of_callW (s₀ := ⟨s3.mem, Locals.init []⟩)
-    (slNodup_refines p hP.slc hP.nodup (n + 4) _ _ _ wm hslm hwml) c5
+    (slNodup_refines p hP.slc hP.nodup n _ _ _ wm hslm hwml) c5
   simp only at hs5 hm5 hnd2
   subst hs5
   rw [← hwc] at hnd1
   rw [← hwm] at hnd2
+  rw [liftE_some]
+  unfold ConRon.Arena.checkBlock
   by_cases hdup : r4.headD 0 = 0 ∨ r5.headD 0 = 0
-  · rw [icbK5_dup (h := hdup)] at h; cases h
-  rw [icbK5_ok (h := hdup), hm5] at h
+  · rw [icbE.k_sl_nodup_2.abort1 _ _ _ _ _ _ _ _ _ hdup]
+    have hcond : (!ConRon.Arena.nameNodup (bs.allCtors.map (fun x => x.1.name)) ||
+        !ConRon.Arena.nameNodup bs.memberNames) = true := by
+      rw [← hnd1, ← hnd2]
+      rcases hdup with h | h
+      · rw [h]; rfl
+      · rw [h]; simp
+    simp only [hcond, ite_true]
+    exact fun _ => ErrClaim.fail _ _ (by decide)
+  rw [icbE.k_sl_nodup_2.arm1 _ _ _ _ _ _ _ _ _ hdup, hm5]
   have hnodup : (!ConRon.Arena.nameNodup (bs.allCtors.map (fun x => x.1.name)) ||
       !ConRon.Arena.nameNodup bs.memberNames) = false := by
     rw [← hnd1, ← hnd2]
@@ -193,15 +227,14 @@ theorem icbW_simC (hP : CbProg p) {fs fs2 : List FnName}
     have e1 : (r4.headD 0 != 0) = true := by simpa using h1
     have e2 : (r5.headD 0 != 0) = true := by simpa using h2
     rw [e1, e2]; rfl
+  simp only [hnodup, Bool.false_eq_true, ite_false]
   -- the flush
   have hg13 := hg12.trans hg3
-  cases c6 : callW p (n + 4) "flush_caches" [] s3.mem with
-  | none => rw [c6] at h; cases h
-  | some q6 =>
-  obtain ⟨r6, m6⟩ := q6
-  rw [c6, icbK6_some] at h
+  rcases c6 : callW p n "flush_caches" [] s3.mem with _ | ⟨r6, m6⟩
+  · rw [liftE_none, icbE.k_flush_caches.none]; exact RefE.of_cls0 (by simp)
+  rw [liftE_some, icbE.k_flush_caches.arm1]
   obtain ⟨s6, hs6, -, hfok, hfm⟩ := triple_of_callW (s₀ := ⟨s3.mem, Locals.init []⟩)
-    (flushCaches_spec p hP.pass.flush (n + 4) _) c6
+    (flushCaches_spec p hP.pass.flush n _) c6
   simp only at hs6 hfok hfm
   subst hs6
   obtain ⟨hS6, hg6⟩ := flush_stage hS3 hfok
@@ -214,30 +247,32 @@ theorem icbW_simC (hP : CbProg p) {fs fs2 : List FnName}
   have hA6 : AbsOK s6.mem := by rw [hfm]; exact AFr.of_frame (flushMem_frame s3.mem) (by decide) (by decide) hA3
   have hta6 : ∃ mp, taMR s6.mem mp :=
     let ⟨mp, h⟩ := hta3; ⟨mp, taMR_mfr hfr6 (by simp) (by simp) h⟩
-  have hk6 := hk3.trans (callW_keepW c6)
   have hg16 := hg13.trans hg6
+  refine RefE.bind_right (flushCaches_run a) ?_
   -- the raw recursion bit
   have hq6 := hq.grow (decBS_mono _) hg16
   have hsrc6 := partsHsrc_grow hg16 hq9 hsrc
-  cases c7 : callW p (n + 4) "block_raw_rec" [p0] s6.mem with
-  | none => rw [c7] at h; cases h
-  | some q7 =>
-  obtain ⟨r7, m7⟩ := q7
-  rw [c7, icbK7_some] at h
+  rcases c7 : callE p n "block_raw_rec" [p0] s6.mem with e7 | ⟨r7, m7⟩
+  · rw [icbE.k_block_raw_rec.none]
+    exact fun hG => ErrClaim.of_callE_nv hG.tail.u.nv (_root_.L.Checker.nv_mem (by decide +kernel)) c7
+  rw [icbE.k_block_raw_rec.arm1]
+  have d7 := callW_of_callE c7
+  rcases n with _ | k
+  · rw [callW_zero] at d7; cases d7
   obtain ⟨s7, hs7, -, hok7, hst7, hr7, hma7, hS7, hg7⟩ := triple_of_callW (s₀ := ⟨s6.mem, Locals.init []⟩)
-    (blockRawRec_refines p hP.ma hP.ha hP.mnc hP.bsmn hP.pdm hP.brm hP.brg hP.brr (n + 3) _ _ dn vis fe p0 bs
-      _ hS6 hq6 hsrc6 hma6) c7
+    (blockRawRec_refines p hP.ma hP.ha hP.mnc hP.bsmn hP.pdm hP.brm hP.brg hP.brr k _ _ dn vis fe p0 bs
+      _ hS6 hq6 hsrc6 hma6) d7
   simp only at hs7 hst7 hr7 hma7 hS7 hg7
   subst hs7
-  have hP7 := PosMR.ofClosed hcl hfr c7 hP6
-  have hA7 : AbsOK s7.mem := hkr _ _ _ _ _ c7 hA6
+  have hP7 := PosMR.ofClosed hcl hfr d7 hP6
+  have hA7 : AbsOK s7.mem := hkr _ _ _ _ _ d7 hA6
   have hrun7 := AM.run_of_ok _ _ hok7
   rw [hst7] at hrun7
-  generalize AM.res (ConRon.Arena.blockRawRec ⟨bs⟩) { a with caches := Caches.empty } = raw at hrun7 hr7
+  refine RefE.bind_right hrun7 ?_
+  generalize AM.res (ConRon.Arena.blockRawRec ⟨bs⟩) { a with caches := Caches.empty } = raw at hrun7 hr7 ⊢
   subst hr7
   have hg17 := hg16.trans hg7
-  have hta7 := taMR.ofClosed hclT (hfT _ (by decide)) c7 hta6
-  have hk7 := hk6.trans (callW_keepW c7)
+  have hta7 := taMR.ofClosed hclT (hfT _ (by decide)) d7 hta6
   obtain ⟨cf, -, -⟩ := ConRon.Bridge.Inductives.ReadOK.flush (μ := V) hC.check.toR
     (show ConRon.Arena.flushCaches a = .ok ((), { a with caches := Caches.empty }) from rfl)
   have hC7 := StageC.of_parts hS7 cf hA7 hC.mem.dnN
@@ -245,42 +280,36 @@ theorem icbW_simC (hP : CbProg p) {fs fs2 : List FnName}
   have hq7 := hq.grow (decBS_mono _) hg17
   have hsrc7 := partsHsrc_grow hg17 hq9 hsrc
   have hcx7 := hcx.grow hg17 hq9 hsrc hptr
-  cases c8 : callW p (n + 4) "check_block_pass" [vis, p0, [if raw then (1 : Word) else 0].headD 0] s7.mem with
-  | none => rw [c8] at h; cases h
-  | some q8 =>
-  obtain ⟨r8, m8⟩ := q8
-  rw [c8, icbK8_some] at h
-  obtain ⟨s8, hs8, -, x8, a8, hrun8, ⟨hS8, hg8, hBP8, hP8, hA8, hrb8, hlp8⟩, env₁, hC8, qP, i8, hcoh8,
-      hden8, henv₁, hqP, hTw, henv₂, hMs⟩ :=
-    triple_of_callW (s₀ := ⟨s7.mem, Locals.init []⟩)
-    (checkBlockPass_refinesC hkp henv hV hOpf hLC hLT hApd hCrk hIlpf hLz hP.pass hcl hfs n hn _ _ hC7 hq7 hsrc7 hcx7 (b := raw)
-      (by cases raw <;> rfl) hP7 hA7 hkP hcoh hden hshP hlpsDn) c8
-  simp only at hs8 hS8 hg8 hBP8 hP8 hA8 hrb8 hlp8 hC8
+  have hT8 := icpE_spec p hP.pass (k + 1) ⟨s7.mem, Locals.init []⟩ vis p0 ([if raw then (1 : Word) else 0].headD 0)
+  have hR8 := pass_ref hkp henv hV hOpf hLC hLT hApd hCrk hIlpf hLz hP.pass hcl hfs (k + 1) hn hC7 hq7 hsrc7 hcx7
+    (isRec := [if raw then (1 : Word) else 0].headD 0) (b := raw) (by cases raw <;> rfl) hP7 hA7 hkP hcoh hden hshP hlpsDn
+  rcases c8 : callE p (k + 1) "check_block_pass" [vis, p0, [if raw then (1 : Word) else 0].headD 0] s7.mem with
+    e8 | ⟨r8, m8⟩
+  · rw [icbE.k_check_block_pass.none]
+    exact RefE.bind_left fun hG => RefE.run_err hT8 hG.tail.u.nv hG.pass hR8 c8
+  rw [icbE.k_check_block_pass.arm1]
+  have d8 := callW_of_callE c8
+  obtain ⟨s8, hs8, -, x8, a8, hrun8, hR8'⟩ := RefE.run_ok hT8 hR8 c8
   subst hs8
-  have hma8 := maMR.ofClosed hclM (hfM _ (by simp)) c8 hma7
-  have hg18 := hg17.trans hg8
-  have hta8 := taMR.ofClosed hclT (hfT _ (by decide)) c8 hta7
-  replace hrb8 := hrb8 (hrb.grow hg17 (by omega))
+  obtain ⟨env₁, hC8, qP, i8, hcoh8, hden8, henv₁, hqP, hTw, henv₂, hMs⟩ := hR8'.twin
+  have hma8 := maMR.ofClosed hclM (hfM _ (by simp)) d8 hma7
+  have hg18 := hg17.trans hR8'.grow
+  have hta8 := taMR.ofClosed hclT (hfT _ (by decide)) d8 hta7
+  have hrb8 := hR8'.recs (hrb.grow hg17 (by omega))
+  refine RefE.bind_right hrun8 ?_
   -- the tail
-  cases c9 : callW p (n + 4) "check_block_tail" [bO, bL, r8.headD 0] s8.mem with
-  | none => rw [c9] at h; cases h
-  | some q9 =>
-  obtain ⟨r9, m9⟩ := q9
-  rw [c9, icbK9_some] at h
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨rfl, rfl⟩ := h
-  obtain ⟨s9, hs9, -, hok9, hS9, hg9, hM9, hA9, hR9⟩ := triple_of_callW (s₀ := ⟨s8.mem, Locals.init []⟩)
-    (checkBlockTail_refinesC hkp henv₁ hV hOpf hLC hLT hApd hCrk hIlpf hP.tail hP.cbr hfs2 hcl2 (n + 3) (by omega) hclR hfR _ _ hC8
-      hBP8 (hblk.grow (decEBlk_mono _ _ _) hg18) hP8.hbOK hA8 hkt ⟨hP8, hta8⟩ hrb8 hlp8 hcoh8 hden8 hqP
-      (ConRon.Bridge.denoteCIList_mono i8.ext _ _ hbP) hTw henv₂ hMs hfRc hclH hfH) c9
-  simp only at hs9 hS9 hg9 hM9 hA9 hR9
+  have hT9 := ictlE_spec p hP.tail (k + 1) ⟨s8.mem, Locals.init []⟩ bO bL (r8.headD 0)
+  have hR9 := tail_ref hkp henv₁ hV hOpf hLC hLT hApd hCrk hIlpf hP.tail hP.cbr hfs2 hcl2 (k + 1) hclR hfR
+    (by omega) hC8 hR8'.bpass (hblk.grow (decEBlk_mono _ _ _) hg18) hR8'.pos.hbOK hR8'.abs hkt ⟨hR8'.pos, hta8⟩
+    hrb8 hR8'.classes hcoh8 hden8 hqP (ConRon.Bridge.denoteCIList_mono i8.ext _ _ hbP) hTw henv₂ hMs hfRc hclH hfH
+  rcases c9 : callE p (k + 1) "check_block_tail" [bO, bL, r8.headD 0] s8.mem with e9 | ⟨r9, m9⟩
+  · rw [icbE.k_check_block_tail.none]
+    exact fun hG => RefE.run_err hT9 hG.tail.u.nv hG.tail hR9 c9
+  rw [icbE.k_check_block_tail.arm1]
+  obtain ⟨s9, hs9, -, x9, a9, hrun9, hR9'⟩ := RefE.run_ok hT9 hR9 c9
   subst hs9
-  have hrun9 := AM.run_of_ok _ _ hok9
-  have hma9 := maMR.ofClosed hclM (hfM _ (by simp)) c9 hma8
-  refine ⟨_, _, ?_, by simpa using hS9, hg18.trans hg9, hM9, hA9, hR9, hma9⟩
-  simp only [ConRon.Arena.checkBlock, hnodup]
-  simp only [Bool.false_eq_true, ite_false, StateT.run_bind, flushCaches_run, except_ok_bind, hrun7,
-    hrun8, hrun9]
+  exact RefE.ret hrun9 ⟨hR9'.stage, hg18.trans hR9'.grow, hR9'.memo, hR9'.abs, hR9'.rc,
+    maMR.ofClosed hclM (hfM _ (by simp)) (callW_of_callE c9) hma8⟩
 
 include hkp henv hV hOpf hLC hLT hApd hCrk hIlpf hLz in
 /-- **`check_block(vis, block.off, block.len, p0)` refines `checkBlock` under `StageC`**
@@ -315,11 +344,14 @@ theorem checkBlock_refinesC (hP : CbProg p) {fs fs2 : List FnName}
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.checkBlock V fe block ⟨bs⟩) a₀ ∧
       StageR dn (r.headD 0) (AM.res (ConRon.Arena.checkBlock V fe block ⟨bs⟩) a₀) s'.mem
         (AM.st (ConRon.Arena.checkBlock V fe block ⟨bs⟩) a₀) ∧
-      IWGrow s₀.mem s'.mem ∧ HbMemo s'.mem ∧ AbsOK s'.mem ∧ RcMR s'.mem ∧ (∃ mp, maMR s'.mem mp); ⊤⦄ :=
-  triple_post (icb_spec p hP.cb (n + 4) s₀ vis bO bL p0) fun _ _ ⟨hl, hm⟩ =>
-    let ⟨hok, hQ⟩ := Sim.run (icbW_simC hkp henv hV hOpf hLC hLT hApd hCrk hIlpf hLz hP hcl hfs hfr hcl2 hfs2 hclR hfR hclT hfT n hn hC hq
-      hsrc hcx hblk hPm hma hA hkP hkt hkr hta hrb hcoh hden hshP hbP hfRc hclH hfH hclM hfM hlpsDn) hm
-    ⟨hl, hok, hQ⟩
+      IWGrow s₀.mem s'.mem ∧ HbMemo s'.mem ∧ AbsOK s'.mem ∧ RcMR s'.mem ∧ (∃ mp, maMR s'.mem mp); ⊤⦄ := by
+  refine triple_post (RefE.triple (icbE_spec p hP (n + 5) s₀ vis bO bL p0)
+    (block_ref hkp henv hV hOpf hLC hLT hApd hCrk hIlpf hLz hP hcl hfs hfr hcl2 hfs2 hclR hfR hclT hfT (n + 5)
+      (by omega) hC hq hsrc hcx hblk hPm hma hA hkP hkt hkr hta hrb hcoh hden hshP hbP hfRc hclH hfH hclM hfM
+      hlpsDn)) ?_
+  rintro r s' ⟨hl, x, a', run, hR'⟩
+  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ run
+  exact ⟨hl, hok, by rw [hres, hst]; exact hR'.stage, hR'.grow, hR'.memo, hR'.abs, hR'.rc, hR'.ma⟩
 
 end sims
 

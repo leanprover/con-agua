@@ -2011,3 +2011,169 @@ Elaboration (user seconds, `lean` on the module alone, median of 3 interleaved r
 Every flagged module is the new home of a family's models and refinements; each family is faster
 in all. For the kit: no `RefC.triple` (the counterpart of `RefE.triple`): phase B's
 `checkPendingGo_refinesT` writes that step out (≈ 5 lines twice).
+
+### 3.29 Batch 4, the spine, second landing (the generator's side, `check_block`, `check_ind_decl`, `check_decl`, `install_step_go`)
+
+The rest of batch 4 (§3.28's list): `gen_rec_check_prep`, `gen_rec_check`, `check_block_rec`,
+`check_block_tail` (with `check_block_tail_rec`, which has no refinement of its own: its model is
+inlined into the tail's), `check_block`, `check_ind_decl`, `check_decl`, `install_step_go`. With
+§3.28 the whole batch is migrated; nothing was skipped.
+
+| function | before: ok refinement(s) + error claim(s) | after | change |
+|---|---|---|---:|
+| `gen_rec_check_prep` | `grpAW_okC` 153, `grpCW_okC` 207, `grpBW_okC` 207, `grpW_okC` 55; `grpCE_claim` 207, `grpBE_claim` 258, `grpE_claim` 248, `genRecCheckPrep_claim` 41, `grc_mapM_mem` 10 = 1 386 | `grpC_ref` 222 + `grpB_ref` 243 + `grp_ref` 245 + `GrpG`/`GrpPost` 20 = 730 | −47 % |
+| `gen_rec_check` | `gckW_simC` 156, `genRecCheck_refinesC` 46; `gckE_claim` 170, `genRecCheck_claim` 44, `genRecCheck_claim'` 38, `ErrClaim.of_runB` 4, `genRecCheckE_of` 10 = 468 | `gck_ref` 172 + `GckPost` 9 + `genRecCheck_refinesC` 47 = 228 | −51 % |
+| `check_block_rec` | `checkBlockRec_refinesC` 58; `checkBlockRecE_claim` 26 = 84 | `icr_ref` 43 + `checkBlockRec_refinesC` 48 = 91 | +8 % |
+| `check_block_tail` | `ictlW_simC` 294, `checkBlockTail_refinesC` 32; `checkBlockTailE_claim` 350, `CheckBlockTablesE` 15, `checkBlockIdxSortsE_claim` 7, `checkBlockTablesE_claim` 7 = 705 | `tail_ref` 307 + `TailG`/`TailPost` 12 + `checkBlockTail_refinesC` 31 = 350 | −50 % |
+| `check_block` | `icbW_simC` 251, `checkBlock_refinesC` 33; `checkBlockE_claim` 279, `CheckBlockE` 29, `checkBlockPassE_claim` 7 = 599 | `block_ref` 242 + `BlockG`/`BlockPost` 11 + `checkBlock_refinesC` 36 = 289 | −52 % |
+| `check_ind_decl` | `cidW_okC` 175, `indArmSpec_of` 26; `cidE_claim` 181, `cid_claim` 39 = 421 | `cid_ref` 173 + `CidG`/`CidPost` 10 + `checkIndDecl_refinesC` 32 + `indArmSpec_of` 23 + `cid_claim` 33 = 271 | −36 % |
+| `check_decl` | `checkDecl_loopT` 68, `arm_callWT` 26, `indArm_callWT` 52; `checkDecl_errT` 95, `checkDeclSpecE_of` 22 = 263 | `cd_ref` 93 + `cd_arm` 23 + `CdG`/`CdPost` 10 + `checkDecl_loopT` 16 + `armsE_of` 19 = 161 | −39 % |
+| `install_step_go` | `istgW_ok` 181, `istg_cd` 19, `istg_iv` 20, `IstgPost` 6, `installStepGo_specT` 26; `installStepGo_errT` 185, `installValue_errT` 13 = 450 | `istg_ref` 133 + `istg_cd` 16 + `istg_iv` 27 + `IstgG`/`IstgPost` 10 + `installStepGo_specT` 25 + `installStepGo_errT` 5 = 216 | −52 % |
+| **pairs** | **4 376** | **2 336** | **−47 %** |
+
+Batch 4 in all (§3.28 and this): 19 functions, pairs 3 944 + 4 376 = 8 320 → 2 255 + 2 336 = 4 591
+(−45 %).
+
+Also gone: the hand ok models with their arms and specs: `grpAW`/`grpBW`/`grpCW`/`grpW` with
+`grpK*`, `grpB1–6`, `grpC1–4`, `grpD`/`grpS*` and their specs, `genRecCheckPrep'`; `gckW`/`gckK1–6`/
+`gck_spec`; `icrW`/`icr_spec`; `ictlW`/`ictrW` with `ictlK1–7`, `ictrK5–6`; `icbW`/`icbK1–9`/`icb_spec`;
+`cidW`/`cidK1–4`/`cidK2`/`cid_specW`; `cdW`/`cdSel`/`cdRet`/`cdInd`/`cd_specW`; `istgW`/`istgK0`/
+`istgCD`/`istgIV`/`istgPin`/`istg_specW`; the `errors` models `grpE`, `gckE`, `icrE`, `ictlE`/`ictrE`,
+`icbE`, `cidE`, `checkDeclE`, `installStepGoE` (each now the `unified` one of the same name); the
+statements `GenRecCheckE`, `CheckBlockRecE`, `CheckBlockIdxSortsE`, `CheckBlockTablesE`,
+`CheckBlockPassE`, `CheckBlockTailE`, `CheckBlockE`, `CheckDeclSpecE`; the files
+`Arena/IndInstallSpec/Icb`, `Icr`, `Verdict/IndA1`, `IndA2`, `IndA3`, `IndA4`, `IndA7`, `BlkE2`,
+`BlkE3`, `IndBGrp`, `IndBGck`, `IndBCcs`, `IndBStream`, `DeclCdE`. Whole diff against master
+12dbc6cd: +1 608 −4 874 in 50 files.
+
+Choices:
+
+* **`G`**: `GrpG` (`VerdictCtxU` and `classes_nfs`' claim, `ClassesNfsE`, now in `Arena/IndT/GenRec2`)
+  for the generator's side; `TailG` (that, at every stage, with the two callee claims
+  `CheckStructFieldSortsIE`, `CheckStructProjTableRE`) for the tail; `BlockG` (`PassG`, `TailG`) for
+  `check_block`; `CidG` (`check_basis_decl`'s and `check_shapeless`' claims, `BlockG`) for
+  `check_ind_decl`; `CdG` (the five arms' claims `ArmsE` and the inductive arm's `IndArmSpecE`) for
+  `check_decl`; `IstgG` (`CdG`, `install_value`'s `IvCtx`) for `install_step_go`. Each `G` collects the
+  claims the old claim took as separate hypotheses, so the claim chain (`IndA6`, `IndA8`, `IndA9`,
+  `IndArmTopE`, `DeclTopE`) now passes one structure where it passed three to ten statements.
+* **CPS twins as `RefC`**: `gen_rec_check_prep`'s two parts (`grpC_ref`, `grpB_ref`) are `RefC`s
+  (their ok fact is the continuation's run, as their old `…W_okC` were), combined by `RefC.mono`.
+* **Callees through their runs** where the ok half reads the run: `check_block_pass` and
+  `check_block_tail` in `check_block` (`maMR.ofClosed`, `taMR.ofClosed`), `block_raw_rec`
+  (`PosMR.ofClosed`), `check_block` in `check_ind_decl` (`mcMR.ofClosed`), the arms in `check_decl`
+  (their contracts `ArmSpecT`, `IndArmSpec`), `install_value` in `install_step_go` (`callW_indMemos`).
+  Unified callees inlined: `check_block_tail_rec` into the tail, `check_decl` into
+  `install_step_go`. With `pass_ref`/`tail_ref`/`block_ref` at any fuel `≤ 2 ^ 62 + 1` the old
+  `callW_mono` lifts to fuel `n + 4`/`n + 5` are gone.
+* **The ok side's contracts reach the claims.** `cid_ref` needs `mcMR`'s write set for its ok post,
+  so the claim chain takes `hclMc`/`hfMc` (the checker's program has them, `armMc_block`), and
+  `cd_ref` needs the arms' ok contracts, so `checkDecl`'s claim reads them from `LoopCallees` as the
+  ok side does. `ArmSpecE`, `ArmsE`, `IndArmSpecE` moved next to their ok halves in `CheckerT`.
+* **Placement**: with the ok users (`GenRec2/3`, `Tail`, `Block`, `CheckIndDecl`, `CheckerT`); the
+  Verdict side keeps one-liners (`IndA6`'s `cid_claim`, `DeclStepE`'s `installStepGo_errT`).
+* **Recipes**: `heartbeats 20000000 simp [Cmp.evalW, Cmp.eval]` with `locals unified` for `grpE`
+  (68 s, the old `errors` model 79 s); `simp [rdW]` for the block's models; `simp []` for
+  `checkDeclE`/`installStepGoE` (as their `errors` models).
+
+Elaboration (user seconds, `lean` on the module alone, median of 3 interleaved runs, base master
+12dbc6cd, load 3–15, `_tmp/unify-spine/times2.txt`):
+
+| module | base | new | |
+|---|---:|---:|---|
+| `Arena/IndT/GenRec3` | 1.22 | **3.80** | **slower (+2.6 s)**: `gckE`, `icrE` and their refinements moved in … |
+| `Verdict/IndBGck`, `IndBGrp`, `IndA7`, `IndBCcs`, `IndBStream`, `Arena/IndInstallSpec/Icr` (deleted), `GenRecCheckPrep`, `GpbWSimF`, `Arena/IndT/GenRec1`, `GenRec2` | 29.71 | 5.36 | … from here (the hand models gone) |
+| `Verdict/IndBGrpM` | 79.24 | 67.94 | `grpE` now `unified`; the family 110.2 → 77.1 |
+| `Arena/IndT/Tail` | 1.86 | **7.54** | **slower (+5.7 s)**: `ictlE`/`ictrE` and `tail_ref` moved in … |
+| `Arena/IndT/Block` | 1.12 | **2.27** | **slower (+1.2 s)**: `icbE`, `block_ref` … |
+| `Verdict/IndA2`, `IndA3`, `IndA4`, `BlkE2`, `BlkE3`, `Arena/IndInstallSpec/Icb` (deleted) | 20.77 | – | … from here; the family 23.8 → 9.8 |
+| `Arena/IndT/CheckIndDecl` | 1.32 | **2.01** | **slower (+0.7 s)**: `cidE`, `cid_ref` … |
+| `Verdict/IndA1` (deleted), `Arena/IndInstallSpec/ShapeCVOfDecB` | 2.81 | 0.68 | … from here; the three 4.1 → 2.7 |
+| `Arena/CheckerT` | 5.90 | **7.81** | **slower (+1.9 s)**: `checkDeclE`, `installStepGoE`, `cd_ref`, `istg_ref` … |
+| `Verdict/DeclCdE` (deleted), `DeclStepE`, `Arena/DeclCheckLoop`, `DeclStepGo` | 10.56 | 5.33 | … from here; the five 16.5 → 13.1 |
+| the other 22 | 79.21 | 79.40 | |
+| **sum (50 modules)** | **233.7** | **182.1** | **−22 %** |
+
+Every flagged module is the new home of a family's models and refinements; each family is faster
+in all. No kit or generator change was needed.
+
+### 3.30 §3.4's retirement, as a checklist (after batch 4)
+
+What still uses the separate error machinery on master after §3.29: 113 `errors`-mode models in
+30 files (and two generator tests), their claims through `triple_of_callE_err … Err.code_ne_of_cls`
+(39 files) or `CoreSpecE.of_runs`, and a few hand `Except` models. By group, bottom-up within each; every item
+is one model and one refinement by §3.2 unless it says otherwise.
+
+**A. Outside the knot, with an ok refinement elsewhere** (the recipe as in batches 1–4):
+
+- [ ] `Verdict/IndE`: `check_field_sort_bound` (`cfbE`; ok `cfbW`). Its one other reader,
+  `Arena/IndT/Sum3` (`triple_of_callE_err … Err.code_ne_of_cls` in `csfGo_ref`), then reads its
+  refinement by `RefE.run_err`.
+- [ ] `Verdict/IndBSum3`: `check_sum_ctor_tail`, `check_sum_ctor` (`ctlE`, `ctorE`; ok `ctlW_okC`,
+  `ctorW_okC`). `sctsE` reads `ctor_claim` through `callE` today; afterwards `SctsG` loses `CcvE`'s
+  detour.
+- [ ] `Verdict/IndBTbl`: `check_struct_proj_table` (`tblE`; ok `tblW_okR`). Removes `TailG.tab`
+  and the statement `CheckStructProjTableRE` (with `checkStructProjTableRE_of` in `IndArmE`).
+- [ ] `Verdict/IndA5`: `check_shapeless_formers`, `check_shapeless` (`csfE`, `cslE`; no ok
+  refinement: `check_shapeless` never returns, `checkShapeless_never`, so the ok case of its `RefE`
+  is empty). Then `cidE` lists the unified spec and `CidG.shapeless` (`CheckShapelessE`,
+  `checkShapelessE_claim`) goes.
+- [ ] `Verdict/UnresolvedE`: `unresolved_consts_error` (`uceE`, `uce_errClaim_hi`); the `uce`
+  field of `VerdictCtxU` stays as its `G`.
+- [ ] `Verdict/DeclStepE`: `install_step`, `install_decl_step` (`installStepE`,
+  `installDeclStepE`; ok `installStep_refines`/`installStep_pieces`, `installDeclStep_refines` in
+  `Arena/CheckerT`). `G` is `IstgG` plus the bracket's (`nv`).
+- [ ] `Verdict/DeclFoldE`: `install_fold_go`, `install_fold_next` (`installFoldGoE`,
+  `installFoldNextE`; ok `installFoldGo_refines`, `foldGo_step`, `foldNext_step`). The twin reports
+  failures as values: `RefC` with `ErrClaimV` errors, one induction over the two mutually recursive
+  models, as phase B's `cp_ref` (§3.28). `Verdict/DeclTopE` then only builds `G`.
+- [ ] `Verdict/DeclPendE`: `check_pending` (`checkPendingE`, its claim by `CoreSpecE.of_runs`; ok
+  `checkPending_refinesT` in `Arena/PhaseBT`). `cp_ref` takes its claim (`CPErrT`) as `G` today and can
+  then inline its unified model.
+- [ ] `Verdict/FrontStageE` (`builtin_prelude`), `Verdict/FrontE` (`decl_kind`, `apply_decl`),
+  `Verdict/FrontRunE` (`apply_d_line`, `front_line`, `front_run`): the front's ok refinements in
+  `Front/…`; `apply_decl` and up are `RefC`s over the line's record verdict (`VerdictClaimR`), as
+  `apply_ind` (§3.28).
+
+**B. The knot's own functions** (ok halves the knot's `CoreSpec` slots, outside §3.1's
+inventory; `G` the knot's error half at the callees' fuel and `RefE.coreSpec`/`RefE.coreSpecE` for
+the slots, as `m2c_*` in §3.7):
+
+- [ ] the `whnf` leaves: `Verdict/WhnfModels7E` (15: `bts`, `tupa`, `dq`, `ln`, `ec`/`ecb`/`ect`,
+  `sec`/`secw`/`secwtb`/`secg`/`sect`, `suc`/`suh`/`sut`), `WhnfModels3E` (8: the iota recursor's
+  `irAt`/`irC`/`irMajor`/`irFire`/`irFam`, `pm`, `lmtc`, `pirr`), `WhnfModels6E` (`mtc`); their claims
+  in `WhnfMidE`, `WhnfUnitE`, `WhnfIotaE`, `WhnfIotaRecE`, `WhnfPrepE`, `WhnfIdxE`, `WhnfPirrE`,
+  `WhnfM2CE`, `WhnfCertsE`, `WhnfSetE`, `WhnfStuckE`;
+- [ ] `whnf` itself: `Verdict/WhnfModels2E` (6: `core_step_proj`, `reduce_proj_core`,
+  `proj_lit_to_ctor`, `core_app`, `core_app2`, `whnf_app`; claims in `WhnfProjE`, `WhnfAppE`),
+  `Verdict/WhnfModelsE` (5: `whnf_core`, `whnf_core_step`, `whnf`, `whnf_loop`, `whnf_step`; claims
+  in `WhnfSlotE`);
+- [ ] `is_def_eq`: `Verdict/DefEqQuickE` (4), `DefEqLamsE` (2), `DefEqEagerE` (2), `DefEqPeelE`
+  (5), `DefEqSpineE` (3), `DefEqLazyE` (8), `DefEqTailE` (9), `DefEqLoopsE` (1), `DefEqSlotE` (3:
+  `defeq_slot`, `defeq_body`, `is_def_eq_core`);
+- [ ] `infer`: `Verdict/InferLeavesE` (`infer_const`), `InferBindE` (6: `infer_lams`/`infer_pis` and
+  their leaves), `InferSpineE` (4), `InferArmsE` (8), `InferKnotE` (4: `infer_body(_io)`, `infer`,
+  `infer_io`).
+
+**C. Hand `Except` models**:
+
+- [ ] `Verdict/InferLeavesE`: `inferProjE`'s hand continuations (`inferProjE.j2`,
+  `.k_env_find_2`, `.k_infer_proj_at`) and `ipaE2–5`/`ipaEP` (`infer_proj_at`): with B's `infer`
+  family;
+- [ ] `Verdict/IndBNfs`: `cnsEK1–3`, `cnfsE` (`classes_nfs`, nested loops; its claim `ClassesNfsE` is
+  a field of `GrpG`/`TailG`): waits for nested-loop `unified` models in the generator (§3.3), or a
+  hand unified model over `tmn_ref`;
+- [ ] `Verdict/WhnfUnitE` (`suhH`), `Verdict/WhnfStuckE` (`piHE`): with B's leaves.
+
+**D. Then the machinery itself**:
+
+- [ ] `L/ModelGen`: drop the `errors` keyword and its path (the `exc` models without the class,
+  `callE_spec` as the default spec, the `errors`-only error messages); make `unified` the default
+  for functions outside `nvFns`. `L/ModelGenTest`'s two `errors` tests (`tNestE_spec`,
+  `tExit_spec`) become `unified` ones.
+- [ ] `L/ErrSpec`: `Err.code_ne_of_cls` loses its users. `triple_of_callE_err` stays (`RefE.run_err`
+  is built on it), as do `ErrClaim`, `CoreSpecE`, `CoreSpecE.of_runs` (`RefE.coreSpecE`) and
+  `callE_spec` (callees without a spec).
+- [ ] `err_stmt` (every-fuel claim statements, now only as `G` fields: `Arena/IndT/Pass` 5,
+  `Arena/IndT/Install7` 1, `Verdict/IndBE` 4): kept while a `G` names a callee's claim; each goes
+  when its function's refinement can be listed as a unified callee instead (§3.28's `PassG` reads
+  five).

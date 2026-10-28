@@ -1,4 +1,5 @@
 import ConAgua.Verdict.DeclDefnE
+import ConAgua.Verdict.DeclArmsE
 import ConAgua.Verdict.DeclAxiomE
 import ConAgua.Verdict.DeclFoldE
 import ConAgua.Verdict.DeclQuotE
@@ -35,19 +36,14 @@ section top
 variable (pins : List INatOpPinSet) (dn : NIdx → Option ConLeche.Name) (ds : Array IDeclaration)
   (p : Prog)
 
-/-- **`check_decl`'s error claim from the arms'**: the five arms by their theorems, the inductive
-one by its hypothesis. -/
-theorem checkDeclSpecE_of (hdc : LoopCallees dn p) (hcE : CoreStubsE p) (hia : IndArmSpecE p dn)
-    (hDG : DivGateSpecE p pins)
-    (hnv : closedNV p L.Checker.nvFns = true) (hUL : UceLookups p) (hFD : FrontDecls ds)
-    (hLD : DeclsLpsDn dn ds) :
-    CheckDeclSpecE pins dn ds p := by
+/-- **`check_decl`'s arms' error claims** (`ArmsE`), from their theorems. -/
+theorem armsE_of (hdc : LoopCallees dn p) (hcE : CoreStubsE p) (hDG : DivGateSpecE p pins)
+    (hnv : closedNV p L.Checker.nvFns = true) (hUL : UceLookups p) : ArmsE pins dn ds p := by
   have hkp : CrKeep p := ⟨hdc.indMemo, hdc.crf⟩
   have hap := hdc.cd.crp.apd
   have hU : UceProg p := ⟨hUL, strLitSupported_core p hdc.knot.knot.str⟩
   have hivE : IvgE p := ivgE_okT hdc.cvg hap hkp hnv hU
-  have hnvE : NVAt p "env_push" := nvAt_of_closed hnv (by decide +kernel)
-  refine checkDecl_errT pins dn ds hdc.cd.cd hdc.andInd.toIbeProg hnv ⟨?_, ?_, ?_, ?_, ?_⟩ hia hFD hLD
+  refine ⟨?_, ?_, ?_, ?_, ?_⟩
   · exact fun cv => checkDeclAxiom_errT pins dn ds hdc.cd.axp hdc.knot hdc.leaf hap hkp hnv hcE hUL hdc.dninj hdc.quotDn cv
   · exact fun cv v hh => checkDeclDefn_errT pins dn ds hdc.cd.arm hdc.cd.val
       ⟨hdc.cd.df, hdc.cd.natSub, hdc.cd.natGate, hdc.cd.natCert, hdc.cd.natText,
@@ -77,8 +73,8 @@ theorem installFoldGo_errTop (hdc : LoopCallees dn p) (hcE : CoreStubsE p) (hia 
   have hap := hdc.cd.crp.apd
   have hU : UceProg p := ⟨hUL, strLitSupported_core p hdc.knot.knot.str⟩
   have hivE : IvgE p := ivgE_okT hdc.cvg hap hkp hnv hU
-  have hCD := checkDeclSpecE_of pins dn ds p hdc hcE hia hDG hnv hUL hFD hLD
-  have hGo := installStepGo_errT pins dn ds hdc.istg hdc.iv hdc.cvg hap hkp hnv hivE hU hCD
+  have hGo := installStepGo_errT pins dn ds hdc hFD hLD hnv
+    ⟨⟨armsE_of pins dn ds p hdc hcE hDG hnv hUL, hia⟩, ⟨hnv, hU, hivE⟩⟩
   have hSt := installStep_errT pins dn ds hb hpi hnv hGo
   have hDS := installDeclStep_errT pins dn ds hdc hFD hnv hpd hSt
   exact installFoldGo_refinesE pins dn ds p hpp hpn hps hpi hpd hpg hpx hsz hb hdc hFD hLD hDS n hn

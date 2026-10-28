@@ -27,7 +27,7 @@ open L.Arena
 theorem indArmSpecE_of {p : Prog} (hkp : KnotStageProg p) (hV : ValProg p)
     (hOpf : OpfF p) (hLC : LvlCacheProg p) (hLT : p.lookup "lv_leq_top" = some lvLeqTop)
     (hApd : ApdF p) (hCrk : CrKeep p) (hIlpf : IlpfF p) (hLz : LzcF p)
-    (P : CidProg p) {fs fs2 fsR fsT fsC fsH fsM : List FnName}
+    (P : CidProg p) {fs fs2 fsR fsT fsC fsH fsM fsMc : List FnName}
     (hcl : closedA p posFreeA posFreeC fs = true) (hfs : ∀ f ∈ passCallees, f ∈ fs)
     (hfr : "block_raw_rec" ∈ fs) (hcl2 : closedA p hbFreeA hbFreeC fs2 = true)
     (hfs2 : ∀ f ∈ tailCallees, f ∈ fs2) (hclR : closedA p rcFreeA rcFreeC fsR = true)
@@ -40,6 +40,7 @@ theorem indArmSpecE_of {p : Prog} (hkp : KnotStageProg p) (hV : ValProg p)
     (hclH : closedA p rcHbFreeA rcHbFreeC fsH = true) (hfH : "check_block_tables" ∈ fsH)
     (hclM : closedA p maFreeA maFreeC fsM = true)
     (hfM : ∀ f ∈ ["check_block_pass", "check_block_tail"], f ∈ fsM)
+    (hclMc : closedA p mcFreeA mcFreeC fsMc = true) (hfMc : "check_block" ∈ fsMc)
     (hnv : closedNV p _root_.L.Checker.nvFns = true) (hU : UceProg p)
     (hWt : WhnfTopE p)
     (hNfs : ∀ dn vis fe env, ConLeche.EnvWF env → ClassesNfsE p dn vis fe env) :
@@ -49,10 +50,10 @@ theorem indArmSpecE_of {p : Prog} (hkp : KnotStageProg p) (hV : ValProg p)
   have hcE : CoreStubsE p := hkp.toKnotTopProg.coreStubsE hnv
   have hCcv : CcvE p := ccvE_of hkp hV hApd hCrk hnv hcE hU.toUceLookups
   exact cid_claim3 hkp hV hOpf hLC hLT hApd hCrk hIlpf hLz P hcl hfs hfr hcl2 hfs2 hclR hfR hclT hfT
-    hclC hfC hkP hkt hkr hnv hU.toUceLookups (genRecCheckE_of hnv hcE hU hNfs)
+    hclC hfC hkP hkt hkr hnv hU hNfs
     (checkSumTeleE_of ⟨⟨⟨hnv, hcE⟩, hU⟩, hWt⟩) (checkSumCtorsE_of hnv hcE hCcv) (checkStructFieldSortsIE_of hnv hcE)
     (checkStructProjTableRE_of hnv) hn hdn hc hT hfold
-    (decB_decEBlk_of_decCIs hdec) hb hden hM hfB hfRc hclH hfH hclM hfM hlpd
+    (decB_decEBlk_of_decCIs hdec) hb hden hM hfB hfRc hclH hfH hclM hfM hclMc hfMc hlpd
 
 end L.Ind
 
@@ -86,6 +87,7 @@ theorem indArmVerdict_proved : IndArmVerdict := by
     armCid_basis armRc_grc
     (closedW_subPB bs checkerProg_armRcHb) armRcHb_tables
     (closedW_subPB bs checkerProg_armMa) armMa_pass
+    (closedW_subPB bs checkerProg_armMc) armMc_block
     hnv hU hWt
     (fun dn vis fe _env henv => classesNfsE_of hkp henv hCns hnv hcE dn vis fe) dn hdn
 

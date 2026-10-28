@@ -13,8 +13,8 @@ noncomputable section
 `install_step_go(i, vis)` reads the record's kind and name, asks `pin_in` whether a definition or
 an opaque is pinned, and goes to `check_decl` (the pinned names and every other kind) or to
 `install_value` (the guard-and-install arm). This file: `pin_in`'s model and meaning, the twin's
-name lists under the pin table, the arm's twin (`ivT`), the models. The refinement itself, under
-`StageT`, is `CheckerT.lean`'s `installStepGo_specT` (lane `loopt2`).
+name lists under the pin table, the arm's twin (`ivT`). The unified model and the refinement, under
+`StageT`, are `CheckerT.lean`'s `installStepGoE` and `istg_ref` (lane `loopt2`).
 -/
 
 noncomputable section
@@ -230,87 +230,11 @@ theorem installStepGo_opaque (h : PinsFull m a.pins) (cv : IConstantVal) (v : EI
 
 end twin
 
-/-! ## The model of `install_step_go` (its two big callees through `callW`) -/
-
-section model
-variable (p : Prog)
-
-/-- `check_decl`'s result as `install_step_go` returns it. -/
-def istgCD : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m) => some ([r.headD 0, 0, 0], m)
-
-/-- `install_value`'s result as `install_step_go` returns it. -/
-def istgIV : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m) => some ([r.headD 0, 1, r.tail.headD 0], m)
-
-/-- A pinnable kind: `pin_in`'s answer picks `check_decl` or `install_value(i, vis, ck, vk)`. -/
-def istgPin (n : Nat) (i vis ck vk : Word) (m0 : Mem) : Option Word → Option (List Word × Mem)
-  | none => none
-  | some c =>
-    if c ≠ 0 then istgCD (callW p n "check_decl" [i, vis] m0)
-    else istgIV (callW p n "install_value" [i, vis, ck, vk] m0)
-
-/-- After `iw_reset`: the record's kind and name. -/
-def istgK0 (n : Nat) (i vis : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (_, m0) =>
-    if rdW (m0.arr64 DECL) (1 + 8 * i) = 2 then
-      istgPin p n i vis 1 0 m0 (pinInW n m0 (rdW (m0.arr64 DECL) (2 + 8 * i) &&& 4294967295) 15 30)
-    else if rdW (m0.arr64 DECL) (1 + 8 * i) = 3 then
-      istgIV (callW p n "install_value" [i, vis, 2, 1] m0)
-    else if rdW (m0.arr64 DECL) (1 + 8 * i) = 4 then
-      istgPin p n i vis 0 2 m0 (pinInW n m0 (rdW (m0.arr64 DECL) (2 + 8 * i) &&& 4294967295) 44 46)
-    else istgCD (callW p n "check_decl" [i, vis] m0)
-
-/-- **The model of `install_step_go`.** -/
-def istgW : Nat → Mem → Word → Word → Option (List Word × Mem)
-  | 0, _, _, _ => none
-  | n + 1, m, i, vis => istgK0 p n i vis (iwResetW m)
-
-section arms
-variable (n : Nat) (m m0 : Mem) (i vis ck vk c : Word) (r0 : List Word)
-theorem istgW_step : istgW p (n + 1) m i vis = istgK0 p n i vis (iwResetW m) := rfl
-theorem istgK0_some : istgK0 p n i vis (some (r0, m0)) =
-    if rdW (m0.arr64 DECL) (1 + 8 * i) = 2 then
-      istgPin p n i vis 1 0 m0 (pinInW n m0 (rdW (m0.arr64 DECL) (2 + 8 * i) &&& 4294967295) 15 30)
-    else if rdW (m0.arr64 DECL) (1 + 8 * i) = 3 then
-      istgIV (callW p n "install_value" [i, vis, 2, 1] m0)
-    else if rdW (m0.arr64 DECL) (1 + 8 * i) = 4 then
-      istgPin p n i vis 0 2 m0 (pinInW n m0 (rdW (m0.arr64 DECL) (2 + 8 * i) &&& 4294967295) 44 46)
-    else istgCD (callW p n "check_decl" [i, vis] m0) := rfl
-theorem istgPin_some : istgPin p n i vis ck vk m0 (some c) =
-    if c ≠ 0 then istgCD (callW p n "check_decl" [i, vis] m0)
-    else istgIV (callW p n "install_value" [i, vis, ck, vk] m0) := rfl
-end arms
-
-grind_pattern [ind_grind] istgW_step => istgW p (n + 1) m i vis
-grind_pattern [ind_grind] istgK0_some => istgK0 p n i vis (some (r0, m0))
-grind_pattern [ind_grind] istgPin_some => istgPin p n i vis ck vk m0 (some c)
-
 /-- The lookups `install_step_go`'s body needs. -/
 structure IstgProg (p : Prog) : Prop where
   go : p.lookup "install_step_go" = some installStepGoL
   reset : p.lookup "iw_reset" = some iwReset
   pin : p.lookup "pin_in" = some pinIn
-
-set_option maxHeartbeats 1600000 in
-theorem istg_specW (h : IstgProg p) (n : Nat) (s₀ : St) (i vis : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "install_step_go" [i, vis]
-    ⦃fun r s' => LocEq s' s₀ ∧ istgW p n s₀.mem i vis = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ h.go]
-  simp only [callFn, installStepGoL]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        iwReset_specW p h.reset n, pinIn_specW p h.pin n,
-        callW_spec p n "check_decl", callW_spec p n "install_value"] <;>
-      finish (gen := 20) [istgCD, istgIV, rdW_eq]
-
-end model
 
 /-! ## The loop's relation around the body -/
 

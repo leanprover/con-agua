@@ -5,7 +5,7 @@ import ConAgua.Checker.IndArmTrees2
 /-!
 # The write sets of the inductive arm's callees in `checkerProg` (lane `indproofs4`)
 
-The per-function checks (`prog_all`) behind the `closedA` facts `cidW_okC`
+The per-function checks (`prog_all`) behind the `closedA` facts `cid_ref`
 (`Arena/IndT/CheckIndDecl.lean`) takes, for the checker's program, over the call-closed function
 sets of `Checker/IndArmFns.lean`; and behind the write set (apart from the walk memos) of the arm's
 `AbsKeep` callees that reach no walk (`armAbsFns`). As `Checker/IndMemoClosed.lean`. They are put

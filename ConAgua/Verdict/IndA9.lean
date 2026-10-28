@@ -3,8 +3,6 @@ import ConAgua.Verdict.PosKnotE
 import ConAgua.Verdict.PosTopE5
 import ConAgua.Verdict.IndsE7
 import ConAgua.Verdict.BlkE1
-import ConAgua.Verdict.BlkE2
-import ConAgua.Verdict.BlkE3
 import ConAgua.Verdict.BlkE4
 import ConAgua.Verdict.KnotAllE
 
@@ -13,9 +11,9 @@ import ConAgua.Verdict.KnotAllE
 `verdicts-b`, helper `ia2`)
 
 `cid_claim2`: `cid_claim` with `check_block_inds`, `check_block_ctors`, `check_block_classes`,
-`check_block_positivity`, `nest_seeds`, `check_block_idx_sorts`, `check_block_tables` proved
+`check_block_positivity`, `nest_seeds` and the tail (`TailG`) proved
 (`IndsE*`, `BlkE*`, `PosTopE*`, the positivity walk `nbRef_all`; the core stubs and `whnf_top`
-from the error knot). Left: `gen_rec_check` (`GenRecCheckE`), the `indB` callees (`IndBE.lean`,
+from the error knot). Left: `classes_nfs` (`ClassesNfsE`), the `indB` callees (`IndBE.lean`,
 `CheckStructProjTableRE`), and `check_basis_decl`/`check_constant_val` (`IndA8.lean` discharges
 them; it waits for `DeclHdrE`).
 -/
@@ -47,7 +45,8 @@ theorem cid_claim2 {p : Prog} (hkp : KnotStageProg p) (hV : ValProg p)
     (hkP : ∀ f ∈ passKeepCalleesC, AbsKeep p f) (hkt : ∀ f ∈ tailKeepCalleesC, AbsKeep p f)
     (hkr : AbsKeep p "block_raw_rec")
     (hnv : closedNV p _root_.L.Checker.nvFns = true)
-    (hCBD : CheckBasisDeclE p) (eCcv : CheckConstantValE p) (eGrc : GenRecCheckE p)
+    (hCBD : CheckBasisDeclE p) (eCcv : CheckConstantValE p) (hU : UceProg p)
+    (hNfs : ∀ dn vis fe env, ConLeche.EnvWF env → ClassesNfsE p dn vis fe env)
     (eSum : CheckSumTeleE p) (eSC : CheckSumCtorsE p) (eSF : CheckStructFieldSortsIE p)
     (eTbl : CheckStructProjTableRE p)
     {n : Nat} (hn : n ≤ 2 ^ 62)
@@ -60,17 +59,18 @@ theorem cid_claim2 {p : Prog} (hkp : KnotStageProg p) (hV : ValProg p)
     (hblk : DecB (fun m => decEBlk dn m o.toNat l.toNat) m block) (hb : o.toNat + l.toNat ≤ erTop m)
     (hden : ∃ x, Frontend.denoteDecl a.store (.indDecl block w.toNat) = some x) (hM : IndMemos m)
     (hfB : "check_basis_decl" ∈ fsC) (hfRc : ∀ f ∈ grcRcCallees ++ ["cons_block_recs_tf"], f ∈ fsR)
-    {fsH fsM : List FnName} (hclH : closedA p rcHbFreeA rcHbFreeC fsH = true)
+    {fsH fsM fsMc : List FnName} (hclH : closedA p rcHbFreeA rcHbFreeC fsH = true)
     (hfH : "check_block_tables" ∈ fsH) (hclM : closedA p maFreeA maFreeC fsM = true)
     (hfM : ∀ f ∈ ["check_block_pass", "check_block_tail"], f ∈ fsM)
+    (hclMc : closedA p mcFreeA mcFreeC fsMc = true) (hfMc : "check_block" ∈ fsMc)
     (hlpd : BlockLpsDn dn block) :
     ErrClaim (checkDecl V pins fe (.indDecl block w.toNat)) a e := by
   have hcE : CoreStubsE p := hkp.toKnotTopProg.coreStubsE hnv
   have hG := nbG_prog hkp hnv
   exact cid_claim hkp hV hOpf hLC hLT hApd hCrk hIlpf hLz P hcl hfs hfr hcl2 hfs2 hclR hfR hclT hfT hclC hfC
-    hkP hkt hkr hnv hCBD eCcv (checkBlockIdxSortsE_claim hnv eSF) eGrc (checkBlockTablesE_claim hnv eTbl)
+    hkP hkt hkr hnv hCBD eCcv ⟨⟨⟨hnv, hcE⟩, hU⟩, hNfs, eSF, eTbl⟩
     (checkBlockIndsE_claim ⟨hnv, hcE, eCcv, eSum⟩) (checkBlockCtorsE_claim hnv eSC)
     (checkBlockClassesE_claim ⟨hnv, hcE⟩) (checkBlockPositivityE_claim hG eSF)
-    (nestSeedsE_claim hG) hn hdn he hT hfold hblk hb hden hM hfB hfRc hclH hfH hclM hfM hlpd
+    (nestSeedsE_claim hG) hn hdn he hT hfold hblk hb hden hM hfB hfRc hclH hfH hclM hfM hclMc hfMc hlpd
 
 end L.Ind

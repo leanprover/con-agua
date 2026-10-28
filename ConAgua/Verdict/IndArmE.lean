@@ -1,14 +1,14 @@
+import ConAgua.Arena.IndT.Sum2
+import ConAgua.Verdict.IndBE
+import ConAgua.Arena.IndT.Install7
 import ConAgua.Verdict.IndBTbl
-import ConAgua.Verdict.IndA7
-import ConAgua.Verdict.IndBGrp
 
 /-!
 # Part B's claims in the shapes `check_ind_decl`'s claim takes (lane `verdicts-b`, helper `fin`)
 
 `cid_claim3` (IndA8.lean) takes the `indB` callees' claims as the generated statements of
 IndBE.lean (`err_stmt`: every fuel `F ≤ 2 ^ 62`, the error of a `callE`), `CheckStructProjTableRE`
-(Arena/IndRealSctC.lean, under `StageR`) and `GenRecCheckE` (IndA7.lean); part B proved them as `CoreSpecE`s
-(`ct_ref`, …, `genRecCheck_claim'`). The bridges below restate
+(Arena/IndRealSctC.lean, under `StageR`); part B proved them as `CoreSpecE`s (`ct_ref`, …). The bridges below restate
 them, discharging the fuels part B's statements leave out (`0`, `1`: the calls run out of fuel).
 -/
 
@@ -69,18 +69,5 @@ theorem checkStructFieldSortsIE_of {p : Prog} (hnv : closedNV p _root_.L.Checker
     exact CoreSpecE.of_callE (checkStructFieldSortsI_claim hkp henv hLC hLT hnv hcE hg hpw het hsc hcfs
       hgo hia hcsf hftd F (by omega) s₀ a₀ isProp large s nP fo fl io il nW fvs idxArgs hC hA hfv hfvb
       hix hixb hs hsP hnW hfvsP hws) hc
-
-/-- **`gen_rec_check`'s claim in the generated shape** (`GenRecCheckE`), from `genRecCheck_claim'`
-and the claim of `classes_nfs` at every stage. -/
-theorem genRecCheckE_of {p : Prog} (hnv : closedNV p _root_.L.Checker.nvFns = true)
-    (hcE : CoreStubsE p) (hU : UceProg p)
-    (hNfs : ∀ dn vis fe env, ConLeche.EnvWF env → ClassesNfsE p dn vis fe env) : GenRecCheckE p :=
-  fun hkp {_env} henv hV hApd hCrk hIlpf P {_fsR} hclR hfR s₀ a₀ {_dn _vis _fe _pp _nested _pO _pL _tO _tL _rd
-      _mO _mL _cO _cL _bO _bL _bs _params _tbl _rdv _ms _cvTas _block} hC hbs hrb hpar hparb htbl hrd hms
-      hcv hblk hlp hP hA hkeep hcoh hfe {_pP _paramsP _tblP _rdP _MsP _cvTasP _blockP} hsh hparP htblP
-      hrdP hmsP hcvTP hblkP hMs hT hfRc F hF _e hc =>
-    CoreSpecE.of_callE (genRecCheck_claim' hkp henv hV hApd hCrk hIlpf hnv hcE hU P hclR hfR F hF
-      s₀ a₀ hC hbs hrb hpar hparb htbl hrd hms hcv hblk hlp hP hA hkeep hcoh hfe hsh hparP htblP hrdP
-      hmsP hcvTP hblkP hMs hT hfRc (hNfs _ _ _ _ henv)) hc
 
 end L.Ind
