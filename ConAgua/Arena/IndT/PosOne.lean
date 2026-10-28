@@ -1,5 +1,4 @@
 import ConAgua.Arena.IndT.PosCrest
-import ConAgua.Arena.IndT.PosFields
 
 /-!
 # `nest_ctors_one` refines `oneT`, both outcomes

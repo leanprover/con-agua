@@ -747,14 +747,14 @@ at the merge; load 4–95):
 | module | base | new | |
 |---|---:|---:|---|
 | `Arena/IndPosSpec/GgW2` | 70.6 | 11.1 | the hand models' specs `nb*_step` gone |
-| `Verdict/PosE1M` | 38.9 | 34.9 | block models back in `errors` mode (the `unified` ones measured 38.6) |
-| `Verdict/IndE` | 4.69 | 3.86 | the same for `nckE` (with `unified`: 5.59) |
+| `Verdict/PosE1M` | 38.9 | 34.9 | block models back in `errors` mode (second series; first series with `unified`: 34.4 → 38.6) |
+| `Verdict/IndE` | 4.69 | 3.86 | the same for `nckE` (first series with `unified`: 3.96 → 5.59) |
 | `Verdict/PosE` | 0.69 | 1.08 | the statements, posts, split lemmas |
 | `Verdict/PosE2` | 4.47 | 1.54 | `newOKE_step`, `frameOKE_step` gone |
 | `Verdict/PosE1S`, `PosE3C/O/W/F`, `PosAllE` | 7.07 | — | deleted |
-| `Arena/IndT/Pos*` (the eleven step files, `PosAll`, `PosCensus`, `PosDefs`) | 18.2 | 15.1 | |
-| `PosE2M`, `PosE3Cm`, `PosE3Fm`, `NbPosW`, `NbKeyK2`, `Nb`, `WalkOK`, rest | 49.6 | 47.6 | |
-| **sum (41 modules, first series)** | **192.6** | **124.9** | **−35 %** |
+| `Arena/IndT/Pos*` (the eleven step files, `PosAll`, `PosCensus`, `PosDefs`) | 15.8 | 14.1 | |
+| `PosE2M`, `PosE3Cm`, `PosE3Fm`, `NbPosW`, `NbKeyK2`, `Nb`, `WalkOK` and 10 more | 55.6 | 53.0 | |
+| **sum (41 modules, first series, still with the `unified` block models)** | **192.6** | **124.9** | **−35 %** |
 
 Kit candidate: `RefE.of_run_eq` (`Arena/KnotE.lean`, from another batch) moves a refinement along
 an equation of twin runs. Two helpers wrote it again before finding it. It belongs in
