@@ -424,6 +424,20 @@ theorem RefC.run_err
 
 end refC
 
+/-! ## A twin's prefix and the rest
+
+A `do` block whose guards `if c then fail e` / `unless ← t do fail e` are followed by more code
+elaborates with the continuation copied into each branch. The prefix as a function of its own
+(`crgT`, `cchT`, `rgT`: the guards a refinement stands for) is split off by
+`simp only [prefix, bind_assoc, ite_bindAM, fail_bindAM, pure_bind]`, which pushes the rest into
+the prefix's branches (`crgT_bind`, `cchT_bind`, `rgT_bind`). -/
+
+theorem ite_bindAM {α β : Type} (c : Prop) [Decidable c] (x y : AM α) (f : α → AM β) :
+    ((if c then x else y) >>= f) = if c then x >>= f else y >>= f := by
+  split <;> rfl
+
+theorem fail_bindAM {α β : Type} (e : CheckError) (f : α → AM β) : (fail e >>= f) = fail e := rfl
+
 /-! ## Twin computations that report failures as values
 
 The frontend's stages and the fold return `.ok (.error (ce, n))` for a failing record (the

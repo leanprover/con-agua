@@ -13,7 +13,7 @@ import ConAgua.Arena.IndRealSctC
 import ConAgua.Arena.IndT.RecGen19
 import ConAgua.Arena.IndT.Sum2
 import ConAgua.Arena.IndT.Sum3
-import ConAgua.Arena.IndT.Sum5
+import ConAgua.Arena.DeclArmT
 
 /-!
 # The `indB` family's error claims used by `check_ind_decl`'s pass and tail (lane `verdicts-b`,

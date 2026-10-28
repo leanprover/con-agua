@@ -1,5 +1,6 @@
 import ConAgua.Arena.DeclCvg
 import ConAgua.Arena.IndGrindAttr
+import ConAgua.Arena.DeclCvg
 
 /-!
 # FlushStage

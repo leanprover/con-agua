@@ -1,5 +1,4 @@
 import ConAgua.Arena.RecGenSpec.CruleProg
-import ConAgua.Arena.DeclValSpec
 import ConAgua.Verdict.VCtx
 import ConAgua.Arena.IndT.Lift
 import ConAgua.Arena.IndT.WalkC
@@ -65,16 +64,7 @@ theorem crgT_bind {γ : Type} (feR : IFEnv) (cv : IConstantVal) (gen : EIdx) (re
       unless ← constsResolveFFast feR gen do
         fail (← unresolvedConstsError "generated rule of" gen)
       rest) = crgT feR cv gen >>= fun _ => rest := by
-  simp only [crgT, bind_assoc]
-  congr 1; funext b1
-  cases b1 <;> simp only [↓reduceIte, Bool.false_eq_true, fail_bindAM, bind_assoc] <;>
-    congr 1 <;> funext b2 <;> cases b2 <;>
-    simp only [↓reduceIte, Bool.false_eq_true, fail_bindAM, bind_assoc] <;>
-    congr 1 <;> funext b3 <;> cases b3 <;>
-    simp only [↓reduceIte, Bool.false_eq_true, fail_bindAM, bind_assoc] <;>
-    congr 1 <;> funext b4 <;> cases b4 <;>
-    simp only [↓reduceIte, Bool.false_eq_true, fail_bindAM, pure_bind, bind_assoc]
-  all_goals done
+  simp only [crgT, bind_assoc, ite_bindAM, fail_bindAM, pure_bind]
 
 /-- What `class_rule_ok_guards` gives besides the twin's guards' run (from `m`, `a`): the stage
 relation, the growth, the abstraction memo, the core step, the rule closed. -/

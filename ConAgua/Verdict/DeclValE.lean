@@ -45,14 +45,6 @@ def IvgE (p : Prog) : Prop :=
     (∃ ks, cv.levelParams.mapM (denoteN a.store.ns) = some ks) → L.Stubs.CrOK m →
     ErrClaim (installValueGuards fe cv (decI v)) a e
 
-/-- `cv_lps`' spec without the result's length (as a `simp` hypothesis `r = [r.headD 0, …]` loops). -/
-theorem cvLps_specW1 (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
-    (hc : p.lookup "er_copy" = some erCopy) (he : p.lookup "er_to_iw" = some erToIw)
-    (hp : p.lookup "cv_lps" = some cvLps) (n : Nat) (s₀ : St) (q : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "cv_lps" [q]
-    ⦃fun r s' => LocEq s' s₀ ∧ cvLpsW n s₀.mem q = some (r, s'.mem); ⊤⦄ :=
-  triple_post (cvLps_specW p ha hc he hp n s₀ q) fun _ _ h => ⟨h.1, h.2.1⟩
-
 /-- What `install_header`'s error arms assume: the no-verdict closure (`all_level_params_defined`,
 `consts_resolve_ffast`) and `unresolved_consts_error`'s program. -/
 structure IhCtx (p : Prog) : Prop where
@@ -64,7 +56,7 @@ lifted, `all_level_params_defined`, `consts_resolve_ffast` and `unresolved_const
 their runs. -/
 l_model installValueGuards_specE (p : Prog) (hP : CvgProg p)
   fns [hP.ivg ↦ installValueGuardsE]
-  specs [cvLps_specW1 p hP.alloc hP.copy hP.eti hP.lps n, lbbF_spec p hP.bvb n, hffF_spec p hP.hf n]
+  specs [cvLps_specW p hP.alloc hP.copy hP.eti hP.lps n, lbbF_spec p hP.bvb n, hffF_spec p hP.hf n]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
   heartbeats 400000 simp [] locals unified

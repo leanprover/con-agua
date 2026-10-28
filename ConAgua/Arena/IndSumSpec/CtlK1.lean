@@ -75,7 +75,7 @@ def ctorK7 (cR : CallM) (n : Nat) (vis0 vis T lo ll nP nIdx rs isP lg nF cvC cqO
     Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (rt, m) => ctorK8 cR n vis0 vis T lo ll nP nIdx rs isP lg nF cvC cqO cqL cqB
-      (sdomsW cR (n + 2) m vis 0 cqO cqL (rt.headD 0) (rt.tail.headD 0) nP)
+      (cR (n + 2) "check_struct_doms_at" [vis, 0, cqO, cqL, rt.headD 0, rt.tail.headD 0, nP] m)
 end L.Ind
 
 end

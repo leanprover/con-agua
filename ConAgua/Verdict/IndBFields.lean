@@ -34,7 +34,7 @@ local notation "V" => ConLeche.CheckMode.verified
 l_model cfgE_spec (p : Prog) (hP : CfoProg p)
   fns [hP.go ↦ cfgE]
   specs [ftdF_spec0 p hP.ftd n, nestOcc_spec' p hP.no n, classFieldsOfHits_spec p hP.hits n,
-    iwAlloc_specW p hP.alloc n, piBinders_spec' p hP.alloc hP.copy hP.no.hv hP.cons hP.pb n,
+    iwAlloc_specW p hP.alloc n, piBinders_spec p hP.alloc hP.copy hP.no.hv hP.cons hP.pb n,
     rec3_specW p hP.alloc n hP.r3, slCons_specW p hP.alloc hP.copy hP.cons n]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
