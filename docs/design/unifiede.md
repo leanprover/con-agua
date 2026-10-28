@@ -350,6 +350,62 @@ Not migrated in this batch, and why:
   `VerdictClaimL` about the whole `validateIndD` (failures as record verdicts). `RefE` fits
   neither; it needs a variant over `ErrClaimV`-style twins with a `Prop` ok post (a kit change).
 
+**Landing 2: the knot families' leaves** (`DefEq*E`, `WhnfModels3E/E/7E`). Nine functions:
+
+| function | before: ok model/spec + ok refinement + error claim | after: ref + post + derived | change |
+|---|---:|---:|---:|
+| `whnf_top` | 39 | 26 | −33 % |
+| `whnf_core_loop` | ≈ 170 | ≈ 93 | −45 % |
+| `defeq_lst` | 174 | 106 | −39 % |
+| `defeq_list_rev` | 183 | 111 | −39 % |
+| `lazy_delta_reduction` | 165 | 83 | −50 % |
+| `lazy_delta_proj_reduction` | 180 | 119 | −34 % |
+| `defeq_lams` | 267 | 136 | −49 % |
+| `defeq_peel` | 315 | ≈ 214 | −32 % |
+| `proof_irrel_half` (with `proof_irrel`'s ok and error proofs over it) | 432 | 276 | −36 % |
+| **sum** | **≈ 1 925** | **≈ 1 164** | **−40 %** |
+
+Plus 81 lines of shared helpers in `Arena/KnotE.lean`; whole diff +1 047 −1 726.
+
+* **Placement**: as in landing 1, the unified model and its `…_ref` sit in the Arena file of the
+  ok side (`DefEqMidLoops`, `DefEqMidLazy2`, `DefEqStuckProj`, `DefEqMidLams`, `DefEqMidPeel`,
+  `WhnfCoreLoop`, `WhnfIotaRefine4`, `IndTwin`), because the knot's construction (`KnotUpTo`,
+  `DefEqKnot`, `KnotTagged`, `KnotEntry`) needs the ok halves there. The Verdict files keep the
+  old `…_refinesE` as one-liners (`RefE.coreSpecE`).
+* **`G`**: `KnotUpToE p n` where that suffices, else a named-field structure of the non-migrated
+  callees' `CoreSpecE` claims and the no-verdict callees' class-`0` facts (`CoreStepE`,
+  `LazyIterUpToE`, `LdprG`, `LamsG`, `PeelG`, `PihG`).
+* **Ok halves**: the slot theorems (`CoreSpec`) are one-liners through `CoreSpec.of_refE`
+  (`KnotE.lean`: batch 1a's `RefE.coreSpec` for a model value that `w` reads back as `(r, m)`;
+  over 1a's `CorePost`, with `RefE.bind_core`, `CorePost.ret`); `defeqPeel_refines` keeps its
+  `GrowRefP` shape (batch 1a's `GrowPost`, moved down to `WhnfCoreProj`; `RefE.bind_grow`).
+* **`proof_irrel_half`**'s twin was a relation (`PiHalfRun`); it is now a computation
+  (`piHalfA : AM (Option Bool)`, `piHalfT_eq`), so that `RefE` applies. `PiHalfRun`, `pihW`,
+  `growRef_ret`, `growRef_bindK`, `GrowRefP.of_core` are gone.
+* **Callers**: `whnfTop_refinesE` needs the ok knot (`∀ n, KnotOK p n`) and moved to its user
+  `PosKnotE`; `whnfTop_stageE` gained it (`IndA9`, `IndBWt` pass `knotOK`). `whnfCoreLoop_err`
+  moved to `WhnfCoreSlot`.
+* **For the kit/generator** (not changed here): `RefE.of_run_eq` and `RefE.mono` (`KnotE.lean`)
+  are generic and belong next to `RefE`; the `tuple` mode on `lazy_delta_reduction` (three result
+  words) kept only two in the unified model, so it uses `list`.
+
+Elaboration (as above; base master 488d6d54, load 7–30):
+
+| module | base | new | |
+|---|---:|---:|---|
+| `Arena/WhnfCoreLoop` | 3.35 / 3.22 | 4.13 / 3.83 | **slower (+0.7 s)**: the unified loop model moved in (`simp` instead of `finish`: the same) |
+| `Verdict/WhnfModelsE` | 13.67 | 13.19 | its old home |
+| `Arena/WhnfIotaRefine4` | 5.69 / 5.61 | 6.31 / 6.14 | +0.6 s: `pihE` moved in |
+| `Verdict/WhnfModels3E` | 11.42 | 9.71 | its old home |
+| `Arena/DefEqMidLams`, `DefEqMidPeel` | 6.35, 10.37 | 5.09, 8.37 | |
+| `Verdict/DefEqLoopsE`, `DefEqLamsE`, `DefEqPeelE`, `WhnfPirrE` | 14.17 | 6.47 | the claims gone |
+| `Verdict/IndBWt` | 5.44 / 5.37 | 6.21 / 5.38 | noise |
+| the other 14 modules | 131.3 | 131.6 | |
+| **sum (24 modules)** | **188.3** | **177.2** | **−6 %** |
+
+Batch 1d in all: 13 functions migrated, the pair lines ≈ 2 910 → ≈ 1 670 (−43 %); `lvl_eq_fueled`
+and `install_header` wait for batches 1b/1c, the `vi_*` leaves for a `RefE` variant (above).
+
 ### 3.6 Batch 1c, first landing (`IndBTpd`, `IndBTmm`, `IndBToi`, `IndBPins`, `IndBRecPins`)
 
 Migrated: `target_params_def_eq_step` and `target_params_def_eq` (`pds_ref`, `pde_ref`;
@@ -423,57 +479,124 @@ Elaboration (user seconds, `lean` on the module alone, median of 3 interleaved r
 Each flagged module is offset by the module that held the deleted hand spec, except `IndBRecPins`
 (+0.8 s over the pair).
 
-**Landing 2: the knot families' leaves** (`DefEq*E`, `WhnfModels3E/E/7E`). Nine functions:
+### 3.7 Batch 1a (`WhnfModels2E`: `reduce_nat*`; `WhnfModels6E`: `m2c_*`)
 
-| function | before: ok model/spec + ok refinement + error claim | after: ref + post + derived | change |
-|---|---:|---:|---:|
-| `whnf_top` | 39 | 26 | −33 % |
-| `whnf_core_loop` | ≈ 170 | ≈ 93 | −45 % |
-| `defeq_lst` | 174 | 106 | −39 % |
-| `defeq_list_rev` | 183 | 111 | −39 % |
-| `lazy_delta_reduction` | 165 | 83 | −50 % |
-| `lazy_delta_proj_reduction` | 180 | 119 | −34 % |
-| `defeq_lams` | 267 | 136 | −49 % |
-| `defeq_peel` | 315 | ≈ 214 | −32 % |
-| `proof_irrel_half` (with `proof_irrel`'s ok and error proofs over it) | 432 | 276 | −36 % |
-| **sum** | **≈ 1 925** | **≈ 1 164** | **−40 %** |
+All 17 functions migrated in one landing: the `reduce_nat` family (7) and `major_to_ctor`'s pieces
+(10). `major_to_ctor` itself keeps its `errors` model (a wrapper outside the batch); its claim
+`majorToCtorE_of` is `m2cHead_ref`'s error half through the run (`RefE.run_err`), its ok refinement
+`majorToCtor_refines'` the ok half (`RefE.growRefW`).
 
-Plus 81 lines of shared helpers in `Arena/KnotE.lean`; whole diff +1 047 −1 726.
+| family | before: ok refinements + error claims | after | change |
+|---|---|---:|---:|
+| `reduce_nat*` (7) | `callW_reduceNat*` 799 + `callE_reduceNat*` 519 = 1 318 | `reduceNat*_ref` 584 | **−56 %** |
+| `m2c_*` (10) | `m2c*_ok` 956 + `m2c*E_ok` 830 + the hand error model `m2cAnd2HE` 37 = 1 823 | `m2c*_ref` 868 | **−52 %** |
+| shared pieces | | `CorePost` + `RefE.coreSpec` (`KnotE`), `RefE.tail(_eq)`, `CorePost.relist`, `GrowPost` + 3 lemmas, `M2CCtxE`, `PreOk`/`PreRef`, `and2Push_of` | ≈ +150 |
 
-* **Placement**: as in landing 1, the unified model and its `…_ref` sit in the Arena file of the
-  ok side (`DefEqMidLoops`, `DefEqMidLazy2`, `DefEqStuckProj`, `DefEqMidLams`, `DefEqMidPeel`,
-  `WhnfCoreLoop`, `WhnfIotaRefine4`, `IndTwin`), because the knot's construction (`KnotUpTo`,
-  `DefEqKnot`, `KnotTagged`, `KnotEntry`) needs the ok halves there. The Verdict files keep the
-  old `…_refinesE` as one-liners (`RefE.coreSpecE`).
-* **`G`**: `KnotUpToE p n` where that suffices, else a named-field structure of the non-migrated
-  callees' `CoreSpecE` claims and the no-verdict callees' class-`0` facts (`CoreStepE`,
-  `LazyIterUpToE`, `LdprG`, `LamsG`, `PeelG`, `PihG`).
-* **Ok halves**: the slot theorems (`CoreSpec`) are one-liners through `CoreSpec.of_refE`
-  (`KnotE.lean`, with `CorePost`, `RefE.bind_core`); `defeqPeel_refines` keeps its `GrowRefP`
-  shape (`GrowPost`, `RefE.bind_grow`).
-* **`proof_irrel_half`**'s twin was a relation (`PiHalfRun`); it is now a computation
-  (`piHalfA : AM (Option Bool)`, `piHalfT_eq`), so that `RefE` applies. `PiHalfRun`, `pihW`,
-  `growRef_ret`, `growRef_bindK`, `GrowRefP.of_core` are gone.
-* **Callers**: `whnfTop_refinesE` needs the ok knot (`∀ n, KnotOK p n`) and moved to its user
-  `PosKnotE`; `whnfTop_stageE` gained it (`IndA9`, `IndBWt` pass `knotOK`). `whnfCoreLoop_err`
-  moved to `WhnfCoreSlot`.
-* **For the kit/generator** (not changed here): `RefE.of_run_eq` and `RefE.mono` (`KnotE.lean`)
-  are generic and belong next to `RefE`; the `tuple` mode on `lazy_delta_reduction` (three result
-  words) kept only two in the unified model, so it uses `list`.
+Also gone: the generated `W` models of `reduce_nat*` (`WhnfDeltaRefine3`), the hand `W` models of
+`m2c_*` with their specs (≈ 330 lines, `WhnfM2CRefine`), `CoreRef.congr`. Whole diff of the
+batch against master: +1 403 −3 403 (including the imports the new import graph makes redundant).
 
-Elaboration (as above; base master 488d6d54, load 7–30):
+Choices:
+
+* **`G` is the knot's error half at the callees' fuel.** These functions are called from the
+  knot's slots, and their errors are the slots' (`whnf`, `infer_io`, `defeq`): `G` is
+  `KnotUpToE p n` for `reduce_nat*` and `M2CCtxE p n` (`KnotUpToE` and `ProofIrrelWE`, `proof_irrel`
+  being outside the knot) for `m2c_*`. The ok halves need only `KnotUpTo`, as before.
+* **The post is `CoreRef`'s, as a structure** (`CorePost dec dn m₀ vis fe M eb ok`: the relation
+  after the run, the result decoded, the result words valid), so the `CoreSpec` statements of the
+  knot (`ReduceNatSpec'`, `MajorToCtorOK`) are `RefE.coreSpec` one-liners. The arms that leave a
+  slice on the stack use `GrowPost` (`CoreAfterG`, `GrowRef`).
+* **`m2c_pre` is not a twin function**: it runs a prefix of each arm (`m2cPreT … k`), so an ok run
+  is not an ok run of a twin computation. Its refinement is `PreRef`: the ok value gives the twin's
+  prefix (`PreOk`, around the old `PreRun`), an error claims the failure of `m2cPreT … k` for every
+  continuation `k`. Its callers apply it as before.
+* **Tail calls** (`reduce_nat_head` → `_k`/`_ap`, `m2c_arms` → the arms, …): the caller's model
+  re-lists the callee's result, the twin runs the callee's twin from some state. `RefE.tail` takes
+  the callee's `RefE` through both (`RefE.tail_eq` when the runs are equal); each such call is
+  3–6 lines.
+* **Placement.** The knot's ok side (`DefEqKnot`, `WhnfDeltaRefine4`'s `whnf_step`) uses these
+  refinements, so they sit below it: `reduce_nat*` in `Verdict/WhnfNatE` (no longer importing
+  `WhnfSlotE`; `DefEqKnot` imports it; `ReduceNatE`, `reduceNat_refines` moved in), `m2c_*` in
+  `Arena/WhnfM2CRefine2..5` in place of the ok refinements (importing `WhnfModels6E` and `KnotE`;
+  `ProofIrrelWE` moved to `WhnfM2CRefine2`). `ErrClaim.of_run_err`/`of_run_eqW` moved from
+  `WhnfSlotE` to `KnotE`. The new graph makes about 45 imports elsewhere redundant (removed, shake).
+* **Two model recipes changed**: `m2c_eta`'s unified model by the default recipe (`simp []` needed
+  `heartbeats 1000000` and took 16 s; default 8 s). For `reduce_nat*` `simp []` stays: the default
+  recipe and `finish … gen 30` fail, `simp [] locals` is slower.
+
+Elaboration (user seconds, `lean` on the module alone, median of 3 interleaved runs, base master
+63762a3f, load 17–32):
 
 | module | base | new | |
 |---|---:|---:|---|
-| `Arena/WhnfCoreLoop` | 3.35 / 3.22 | 4.13 / 3.83 | **slower (+0.7 s)**: the unified loop model moved in (`simp` instead of `finish`: the same) |
-| `Verdict/WhnfModelsE` | 13.67 | 13.19 | its old home |
-| `Arena/WhnfIotaRefine4` | 5.69 / 5.61 | 6.31 / 6.14 | +0.6 s: `pihE` moved in |
-| `Verdict/WhnfModels3E` | 11.42 | 9.71 | its old home |
-| `Arena/DefEqMidLams`, `DefEqMidPeel` | 6.35, 10.37 | 5.09, 8.37 | |
-| `Verdict/DefEqLoopsE`, `DefEqLamsE`, `DefEqPeelE`, `WhnfPirrE` | 14.17 | 6.47 | the claims gone |
-| `Verdict/IndBWt` | 5.44 / 5.37 | 6.21 / 5.38 | noise |
-| the other 14 modules | 131.3 | 131.6 | |
-| **sum (24 modules)** | **188.3** | **177.2** | **−6 %** |
+| `Verdict/WhnfModels2E` | 29.41 | 34.01 | **slower (+4.6 s, +16 %)**: the unified models do the work of the deleted `W` models' steps (below) with the callee specs lifted; recipes tried above |
+| `Arena/WhnfDeltaRefine3` | 13.86 | 3.72 | `W` models of `reduce_nat*`, three ok refinements gone |
+| `Verdict/WhnfNatE` | 5.47 | 1.61 | |
+| `Arena/WhnfDeltaRefine4`, `DefEqKnot`, `KnotE` | 4.30 | 3.30 | |
+| `Verdict/WhnfSlotE`, `WhnfMidE`, `WhnfKnotE` | 4.28 | 4.08 | |
+| `Verdict/WhnfModels6E` | 18.03 | 14.95 | `m2c_eta` by the default recipe |
+| `Arena/WhnfM2CRefine` | 18.12 | 2.56 | hand `W` specs gone |
+| `Arena/WhnfM2CRefine2..5` | 7.46 | 6.56 | |
+| `Verdict/WhnfM2CE`, `WhnfPirrE`, `WhnfStuckE` | 6.74 | 3.00 | the claims gone |
+| **sum** | **107.7** | **73.8** | **−31 %** |
 
-Batch 1d in all: 13 functions migrated, the pair lines ≈ 2 910 → ≈ 1 670 (−43 %); `lvl_eq_fueled`
-and `install_header` wait for batches 1b/1c, the `vi_*` leaves for a `RefE` variant (above).
+For the generator/kit (not changed here): `CorePost`/`RefE.coreSpec` (and the `GrowPost` variant)
+are the `RefE` form of `CoreRef`/`CoreSpec` for every knot function (batch 1d's `WhnfModels3E/E/7E`
+will want them; they sit in `Arena/KnotE`); `RefE.tail` (a tail call whose continuation re-lists the
+callee's value) recurs in every nested family and belongs to the kit; a `PreRef`-like shape (an ok
+half that is not a twin run) recurs for prefixes of twin functions.
+
+### 3.8 Batch 1c, second landing (`IndBRec1`, `IndBFields`)
+
+Migrated: `class_key_of` (`kof_ref`, `KofPost`; `classKeyOf_refines` moved to `IndBRec1`, same
+statement), `class_minor_slot` (`cms_ref`, `CmsPost`; the `DecB` slices of the second invariant
+package are a conditional field `ihsB`, §1.4; `class_minor_slot_go` stays a run, its spec's `∃`
+post is no model the generator reads), `class_rec_ty_ok_guards` (`rg_ref`, `RgPost`),
+`class_fields_of_go` (`cfg_ref`, `CfgPost`, by induction; all seven callees lifted). The callers'
+error claims (`IndBCtor`, `IndBRec2`'s `classRecTyOk_claim`, `IndArmE`'s `classKeyOfE_of`) read
+`RefE.run_err`, their ok refinements `RefE.run_okW`; `cfoW` calls `class_fields_of_go` through
+`callW`, and `cfoW_sim`/`classFieldsOf_refines` moved into `IndBFields`.
+
+* **A function that stands for a prefix of a twin function**: `class_rec_ty_ok_guards` has no twin
+  of its own; its old ok proof (`rgW_sim`), its pass lemma (`rgW_pass`) and its claim (`rgE_claim`,
+  over `do …guards…; rest` for any `rest`) were three copies of the guard analysis. Now one twin
+  definition of the prefix, `rgT` (the guards, ending in `pure ci`), with `rgT_bind :
+  classRecTyOk … = rgT … >>= rest`, and `rg_ref` against `rgT`. The hand model `rtoW` reads the
+  guards through `cR` (`rtoW_simC`, `rtsW_simC` gained `hrp : RtoProg p`, three call sites).
+  `class_rule_ok_guards` (skipped in §3.6) has the same shape.
+* **`G := closedNV p nvFns = true`** for all four (no core stub below them), as in §3.6.
+* **Skipped: `class_const_ok_header`** (`IndBHdr`). Its ok half is `install_header`'s model `ihW` and
+  `ihW_okT` (the same body), and batch 1d skipped `install_header` for the same reason (§3.5): each
+  waits for the other. They should be migrated together, by one lane: one unified model of the
+  body, one refinement, used by both.
+* **Recipe**: `classRecTyOkGuardsE` with `simp []` (the old `errors` recipe) took 13.0 s for the
+  module; with the default `finish` 5.0 s. `cfgE`, `classKeyOfE`, `classMinorSlotE` keep theirs
+  (`finish` fails or is slower).
+
+Lines (`declen.py`, master 63762a3f against this branch; before = ok refinement(s) + error claim(s);
+the `rg` row includes `rgT`/`rgT_bind` after, the `cms` row the reworked scan lemmas `cmsGo_hits`,
+`cmsGo_decB`):
+
+| function | before | after | change |
+|---|---:|---:|---:|
+| `class_key_of` | 155 | 93 | **−40 %** |
+| `class_minor_slot` | 212 | 170 | **−20 %** |
+| `class_rec_ty_ok_guards` | 361 | 185 | **−49 %** |
+| `class_fields_of_go` | 374 | 179 | **−52 %** |
+| **pairs** | **1 102** | **627** | **−43 %** |
+
+The hand models, arms and specs deleted on top: about 250 lines. Whole diff of this landing
+against the first one (2853d80e): **+658 −1 317 = −659 lines** in 21 files.
+
+Elaboration (as §3.6, `times2.txt`; load 14–25; `IndBRec1` new after the recipe change, 3 runs
+5.00–5.24):
+
+| module | base | new | |
+|---|---:|---:|---|
+| `Verdict/IndBRec1` | 5.93 | 5.02 | the three refinements; 13.78 with `simp []` for `classRecTyOkGuardsE` |
+| `Verdict/IndBFields` | 3.98 | **4.45** | **slower (+0.5 s)**: `cfoW`, its spec and `cfoW_sim` moved in |
+| `Arena/RecGenSpec/ClassFieldsOf` | 3.03 | 0.72 | …moved out of here; with `IndBFields`: 7.0 → 5.2 |
+| `RecGenSpec/ClassConstOk`, `ClassKeyCanon`, `ClassMinorSlot`, `RgW`, `CntW` | 16.62 | 13.24 | hand models and specs gone |
+| `IndBCtor`, `IndBRec2`, `IndBRec3`, `IndArmE`, `IndBE`, `RecGen27`, `RecGen7` | 21.43 | 22.19 | |
+| `CfoProg`, `ClassFeR`, `ClassMinorSlotHit`, `ClassMinorSlotW`, `KcW` | 18.32 | 18.13 | |
+| **sum** | **69.3** | **63.8** | **−8 %** |

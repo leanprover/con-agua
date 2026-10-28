@@ -200,7 +200,7 @@ theorem pih_ref (p : Prog) (hp : IotaProg4 p) (hld : LvlDen) (n F : Nat) (hknot 
     (m : Mem) (a : AState) (M : ModeMaps) (hS : CoreS dn m a vis fe M eb) :
     RefE (PihG p n) (pihE p (n + 1) m mode vis d x)
       (piHalfA (coreKnot (decMode mode) fe id F) d.toNat (decE x)) a
-      (fun v y a' => CorePost (fun r => decO (r.headD 0)) dn m vis fe M eb ResH v.1 v.2 y a') := by
+      (fun v y a' => CorePost (fun r => decO (r.headD 0)) dn m vis fe M eb ResH v y a') := by
   simp only [pihE]
   unfold piHalfA
   rcases c1 : callE p n "infer_io" [mode, vis, d, x] m with e1 | ⟨r1, m1⟩

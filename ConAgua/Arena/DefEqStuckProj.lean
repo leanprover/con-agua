@@ -239,7 +239,7 @@ theorem ldpr_ref (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (n : Nat) (
       RefE (LdprG p n) (ldprE.loop1 p k m mode vis d sn i x y)
         (lazyDeltaProjReduction (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat
           (decI sn) i.toNat K (decE x) (decE y)) a
-        (fun v y' a' => CorePost decBool dn m vis fe MM eb ResH [v.1] v.2 y' a') := by
+        (fun v y' a' => CorePost decBool dn m vis fe MM eb ResH ([v.1], v.2) y' a') := by
   intro k
   induction k with
   | zero =>
@@ -277,7 +277,7 @@ theorem ldpr_ref (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (n : Nat) (
       exact RefE.of_run_eq (ldpr_cont_run (decMode mode) (coreKnot (decMode mode) fe id F) fe
         d.toNat (decI sn) i.toNat K' (decE x) (decE y) _ _ a _ hsr)
         ((ih (by omega) K' (by omega) m₁ _ M' eb _ _ hS₁ heb hrw.2.1 hrw.2.2).mono
-          fun _ _ _ h => ⟨CoreAfter.comp hK₁ hSt₁ h.after, h.res, h.ok⟩)
+          fun _ _ _ h => ⟨CoreAfter.comp hK₁ hSt₁ h.after, h.res, h.valid⟩)
     rw [ldprE.k_lazy_delta_step.arm1 _ _ _ _ _ _ _ _ _ _ _ h0]
     have hds : decDSs r = decDSs [r.headD 0] := decDS_nz h0
     have hnc : ∀ a' b', decDSs r ≠ .cont a' b' := decDS_ne_cont h0
@@ -296,7 +296,7 @@ theorem ldpr_ref (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (n : Nat) (
       (ldprExit_at p hq hc (j + 1) (hk.mono (by omega)) F ⟨m₁, Locals.init []⟩ _ dn vis fe
         M' eb mode d sn i x y (r.headD 0) (by omega) (by omega) ⟨hS₁, hmode, heb⟩ hsn hx hy h0)
       (callW_of_callE hx')).post
-    exact RefE.ret hrun₂ ⟨CoreAfter.comp hK₁ hSt₁ hR.after, by simpa [decBool] using hR.res, hR.ok⟩
+    exact RefE.ret hrun₂ ⟨CoreAfter.comp hK₁ hSt₁ hR.after, by simpa [decBool] using hR.res, hR.valid⟩
 
 /-- `lazy_delta_proj_reduction` from its run, both outcomes (`ldpr_ref` at the call's fuel). -/
 theorem ldpr_refC (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (n : Nat)
@@ -307,7 +307,7 @@ theorem ldpr_refC (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (n : Nat)
     RefE (LdprG p n) (ldprE p (n + 1) s₀.mem mode vis d sn i a b)
       (lazyDeltaProjReduction (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decI sn)
         i.toNat K (decE a) (decE b)) a₀
-      (fun v y a' => CorePost decBool dn s₀.mem vis fe M eb ResH [v.1] v.2 y a') := by
+      (fun v y a' => CorePost decBool dn s₀.mem vis fe M eb ResH ([v.1], v.2) y a') := by
   rw [ldprE.arm1]
   exact ldpr_ref p hq hc n hk F hF hn dn vis fe mode d sn i hs.mode4 hsn hd (n + 1) (Nat.le_refl _) K
     (by omega) s₀.mem a₀ M eb a b hs.rel hs.eb_mode ha hb

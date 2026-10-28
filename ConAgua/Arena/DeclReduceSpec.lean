@@ -1,5 +1,4 @@
 import ConAgua.Rom.CIReadSpec
-import ConAgua.Arena.WhnfDeltaRefine
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr

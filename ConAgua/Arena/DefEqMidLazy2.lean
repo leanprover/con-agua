@@ -409,7 +409,7 @@ theorem lazy_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n 
       RefE (LazyIterUpToE p n) (ldrE.loop1 p j m mode vis d a b)
         (lazyDeltaReduction (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat K
           (decE a) (decE b)) s
-        (fun v y a' => CorePost decLR dn m vis fe M eb Res3 v.1 v.2 y a') := by
+        (fun v y a' => CorePost decLR dn m vis fe M eb Res3 v y a') := by
   intro j
   induction j with
   | zero =>
@@ -454,7 +454,7 @@ theorem lazyDeltaReduction_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n �
     RefE (LazyIterUpToE p n) (ldrE p (n + 1) s₀.mem mode vis d a b)
       (lazyDeltaReduction (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat defeqLoopFuel
         (decE a) (decE b)) a₀
-      (fun v y a' => CorePost decLR dn s₀.mem vis fe M eb Res3 v.1 v.2 y a') := by
+      (fun v y a' => CorePost decLR dn s₀.mem vis fe M eb Res3 v y a') := by
   rw [ldrE.arm1]
   have hL : (2 : Nat) ^ 62 = defeqLoopFuel := rfl
   exact lazy_ref p hp hc n hk F hF hn dn vis fe mode d hs.mode4 hd (n + 1) (Nat.le_refl _)

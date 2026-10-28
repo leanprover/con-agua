@@ -3,7 +3,6 @@ import ConAgua.Arena.IndRealLvlT
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
-import ConAgua.Checker.NoVerdictTree
 
 /-!
 # The verdict claims of `check_thm_val` and `check_value_group` (lane `verdicts-b`)

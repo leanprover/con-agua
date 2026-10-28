@@ -316,7 +316,7 @@ theorem coreLoop_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn 
       RefE (CoreStepE p n) (whnfCoreLoopE.loop1 p k m mode cheap vis d e)
         (whnfCoreLoop (decMode mode) (coreKnot (decMode mode) fe id F) fe (cheap != 0)
           d.toNat K (decE e)) a
-        (fun v y a' => CorePost decH dn m vis fe MM eb ResH [v.1] v.2 y a') := by
+        (fun v y a' => CorePost decH dn m vis fe MM eb ResH ([v.1], v.2) y a') := by
   intro k
   induction k with
   | zero =>
@@ -358,7 +358,7 @@ theorem coreLoop_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn 
     exact RefE.of_run_eq (whnfCoreLoop_cont (decMode mode) (coreKnot (decMode mode) fe id F) fe
         (cheap != 0) d.toNat K' (decE e) _ a _ hsr)
       ((ih (by omega) K' (by omega) m₁ _ M' eb _ hS₁ heb hrw.2).mono
-        fun _ _ _ h => ⟨CoreAfter.comp hK₁ hSt₁ h.after, h.res, h.ok⟩)
+        fun _ _ _ h => ⟨CoreAfter.comp hK₁ hSt₁ h.after, h.res, h.valid⟩)
 
 include hp hwc hcc hsup in
 /-- `whnf_core_loop` from its run, both outcomes (`coreLoop_ref` at the call's fuel). -/
@@ -369,7 +369,7 @@ theorem whnfCoreLoop_ref (n : Nat) (hk : KnotUpTo p n) (F K : Nat) (hF : n ≤ F
     RefE (CoreStepE p n) (whnfCoreLoopE p (n + 1) s₀.mem mode cheap vis d e)
       (whnfCoreLoop (decMode mode) (coreKnot (decMode mode) fe id F) fe (cheap != 0) d.toNat K
         (decE e)) a₀
-      (fun v y a' => CorePost decH dn s₀.mem vis fe MM eb ResH [v.1] v.2 y a') := by
+      (fun v y a' => CorePost decH dn s₀.mem vis fe MM eb ResH ([v.1], v.2) y a') := by
   rw [whnfCoreLoopE.arm1]
   exact coreLoop_ref p hp hwc hcc hsup n hk F hF hn dn vis fe mode cheap d hs.mode4 (n + 1)
     (Nat.le_refl _) K (by omega) s₀.mem a₀ MM eb e hs.rel hs.eb_mode he

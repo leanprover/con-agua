@@ -372,7 +372,7 @@ theorem lams_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n 
       RefE (LamsG p n) (lamsE.loop1 p k m mode vis d ty₁ body₁ ty₂ body₂)
         (defeqLams (decMode mode) (coreKnot (decMode mode) fe id F) K d.toNat (decE ty₁)
           (decE body₁) (decE ty₂) (decE body₂)) s
-        (fun v y a' => CorePost decBool dn m vis fe M eb ResH [v.1] v.2 y a') := by
+        (fun v y a' => CorePost decBool dn m vis fe M eb ResH ([v.1], v.2) y a') := by
   intro k
   induction k with
   | zero =>
@@ -428,7 +428,7 @@ theorem lams_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n 
       obtain ⟨hrun, hR⟩ := (CoreSpec.of_callW (s₀ := ⟨m₂, Locals.init []⟩)
         (defeqLamsInner_refines p hp.mid k' (hk.mono (by omega)) F _ _ dn vis fe M₂ eb mode d _ _
           (by omega) (by omega) ⟨hS₂, hmode, heb⟩ (by omega) hr1 hr2) (callW_of_callE hc3)).post
-      exact RefE.ret hrun ⟨hR.after, by simpa [decBool] using hR.res, hR.ok⟩
+      exact RefE.ret hrun ⟨hR.after, by simpa [decBool] using hR.res, hR.valid⟩
     simp only [decLP, hq, ↓reduceIte, decE_beq_eq _ _ hr1 hr2]
     by_cases he : r.tail.headD 0 = r.tail.tail.headD 0
     · rw [lamsE.k_lam_pair.arm2 (hc1 := hq) (hc2 := he)]
@@ -452,7 +452,7 @@ theorem defeqLams_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn
     RefE (LamsG p n) (lamsE p (n + 1) s₀.mem mode vis d ty₁ body₁ ty₂ body₂)
       (defeqLams (decMode mode) (coreKnot (decMode mode) fe id F) lamsFuel d.toNat (decE ty₁)
         (decE body₁) (decE ty₂) (decE body₂)) a₀
-      (fun v y a' => CorePost decBool dn s₀.mem vis fe M eb ResH [v.1] v.2 y a') := by
+      (fun v y a' => CorePost decBool dn s₀.mem vis fe M eb ResH ([v.1], v.2) y a') := by
   rw [lamsE.arm1]
   have hL : (2 : Nat) ^ 62 = lamsFuel := rfl
   exact lams_ref p hp hi n hk F hF hn dn vis fe mode hs.mode4 (n + 1) (Nat.le_refl _) lamsFuel

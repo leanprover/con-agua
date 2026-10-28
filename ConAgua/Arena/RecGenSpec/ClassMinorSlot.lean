@@ -1,16 +1,15 @@
 import ConAgua.Arena.RecClassSpec.Classes
 import ConAgua.Arena.RecClassSpec.IhW
 import ConAgua.Arena.RecClassSpec.MjProg
-import ConAgua.Arena.RecGenSpec.ClassMinorSlotW
 import ConAgua.Arena.RecGenSpec.IwNLtSize
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr
 
 /-!
-# ClassMinorSlot: `ConRon.Arena.ClassSlot.isMinor`, `ConRon.Arena.classLeafAt`, `ConRon.Arena.classMinorSlot`
+# ClassMinorSlot: `ConRon.Arena.ClassSlot.isMinor`, `ConRon.Arena.classLeafAt`, `class_minor_slot`'s scan
 
-The refinement theorems `classSlotIsMinor_refines`, `classMinorSlot_refines`, `classLeafAt_refines` and the lemmas only they use.
+The refinement theorems `classSlotIsMinor_refines`, `classLeafAt_refines`, `class_minor_slot`'s scan lemmas (`cmsGo_decB`) and the lemmas only they use.
 -/
 
 section
@@ -84,16 +83,6 @@ theorem classMinorSlotGo_spec (p : Prog) (hp : p.lookup "class_minor_slot_go" = 
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih] <;>
       finish (gen := 20)
 
-theorem classMinorSlot_spec (p : Prog) (hgo : p.lookup "class_minor_slot_go" = some classMinorSlotGo)
-    (hp : p.lookup "class_minor_slot" = some classMinorSlotL) (n : Nat) (s₀ : St) (rd c cc : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "class_minor_slot" [rd, c, cc]
-    ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧ classMinorSlotW n s₀.mem rd c cc = some r; ⊤⦄ := by
-  rw [invoke_eq _ hp]; simp only [callFn, classMinorSlotL]
-  sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      classMinorSlotGo_spec p hgo n] <;>
-    finish [classMinorSlotW]
-
 theorem hitsFrom_eq (c : Nat) (C : NIdx) : ∀ (j : Nat) (sls : List ClassSlot),
     (List.range sls.length).filterMap (fun s =>
       match (sls[s]? : Option ClassSlot) with
@@ -118,33 +107,6 @@ theorem hitsFrom_eq (c : Nat) (C : NIdx) : ∀ (j : Nat) (sls : List ClassSlot),
     cases sl with
     | motive k => simp [hitsFrom]
     | minor c' C' ihs => by_cases hh : (c' == c && C' == C) = true <;> simp [hitsFrom, hh]
-
-/-- **`class_minor_slot` refines `classMinorSlot`**: the twin succeeds (without touching the state)
-with the unique `.minor c cc` slot, and the words are its position and `ihs` slice. -/
-@[refines ConRon.Arena.classMinorSlot]
-theorem classMinorSlot_refines (p : Prog)
-    (hgo : p.lookup "class_minor_slot_go" = some classMinorSlotGo)
-    (hp : p.lookup "class_minor_slot" = some classMinorSlotL) (n : Nat) (s₀ : St) (a₀ : AState)
-    (rd c cc : Word) (R : ClassRead) (hR : decCR s₀.mem rd.toNat = some R) (hcc : cc.toNat < 2 ^ 32)
-    (hsz : (s₀.mem.arr64 IW).size + 5 < 2 ^ 64) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "class_minor_slot" [rd, c, cc]
-    ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧
-      AM.ok (ConRon.Arena.classMinorSlot R c.toNat (decI cc)) a₀ ∧
-      AM.st (ConRon.Arena.classMinorSlot R c.toNat (decI cc)) a₀ = a₀ ∧
-      r.headD 0 = UInt64.ofNat (AM.res (ConRon.Arena.classMinorSlot R c.toNat (decI cc)) a₀).1 ∧
-      decPL s₀.mem (decNN s₀.mem) (r.tail.headD 0).toNat (r.tail.tail.headD 0).toNat =
-        some (AM.res (ConRon.Arena.classMinorSlot R c.toNat (decI cc)) a₀).2; ⊤⦄ := by
-  refine triple_post (classMinorSlot_spec p hgo hp n s₀ rd c cc) ?_
-  rintro r s' ⟨hl, hm, hw⟩
-  obtain ⟨s, ihs, hh, e1, e2⟩ := classMinorSlotW_ok n s₀.mem rd c cc R r hR hcc hsz hw
-  have hits := hitsFrom_eq c.toNat (decI cc) 0 R.slots
-  simp only [Nat.zero_add] at hits
-  have hrun : (ConRon.Arena.classMinorSlot R c.toNat (decI cc)).run a₀ = .ok ((s, ihs), a₀) := by
-    simp only [ConRon.Arena.classMinorSlot]
-    erw [hits, hh]
-    rfl
-  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
-  refine ⟨hl, hm, hok, hst, by rw [hres]; exact e1, by rw [hres]; exact e2⟩
 
 theorem leafAt_spec (p : Prog) (hp : p.lookup "class_leaf_at" = some classLeafAtL)
     (hv : p.lookup "e_view" = some eView) (had : AdF p) (n : Nat) (s₀ : St) (mm leaf : Word) :
@@ -438,30 +400,17 @@ theorem hitsFrom_get (c : Nat) (C : NIdx) : ∀ (j : Nat) (sls : List ClassSlot)
       refine ⟨by omega, ?_⟩
       rw [show s - j = (s - (j + 1)) + 1 by omega]; simpa using h2
 
-/-- **`class_minor_slot` with the class reading decoded below the tops**: the twin's unique hit,
-its slice decoded below the tops too. -/
-theorem cms_decB (n : Nat) {m : Mem} {rd c cc : Word} {R : ClassRead} {r : List Word}
-    (h : classMinorSlotW n m rd c cc = some r) (hR : DecB (fun m => decCR m rd.toNat) m R)
-    (hcc : cc.toNat < 2 ^ 32) (hsz : (m.arr64 IW).size + 5 < 2 ^ 64) :
-    ∃ s ihs, hitsFrom c.toNat (decI cc) 0 R.slots = [(s, ihs)] ∧ r.headD 0 = UInt64.ofNat s ∧
-      DecB (fun m => decPL m (decNN m) (r.tail.headD 0).toNat (r.tail.tail.headD 0).toNat) m ihs := by
+/-- **`class_minor_slot`'s scan with the class reading decoded below the tops**: the twin's unique
+hit's slice is decoded below the tops too. -/
+theorem cmsGo_decB (n : Nat) {m : Mem} {rd c cc x y z w : Word} {R : ClassRead} {s : Nat}
+    {ihs : List (Nat × Nat)}
+    (hg : classMinorSlotGoW n m (rdW (m.arr64 IW) rd) (rdW (m.arr64 IW) (rd + 1)) 0 c cc 0 0 0 0 =
+      some (x, y, z, w))
+    (hR : DecB (fun m => decCR m rd.toNat) m R) (hh : hitsFrom c.toNat (decI cc) 0 R.slots = [(s, ihs)])
+    (e1 : y = UInt64.ofNat s) (e2 : decPL m (decNN m) z.toNat w.toNat = some ihs)
+    (hsz : (m.arr64 IW).size + 5 < 2 ^ 64) :
+    DecB (fun m => decPL m (decNN m) z.toNat w.toNat) m ihs := by
   have hR0 : decCR (truncM m) rd.toNat = some R := hR
-  obtain ⟨s, ihs, hh, e1, e2⟩ := classMinorSlotW_ok n m rd c cc R r (hR.get (decCR_mono _)) hcc hsz h
-  refine ⟨s, ihs, hh, e1, ?_⟩
-  -- the scan's words
-  simp only [classMinorSlotW] at h
-  split at h
-  rotate_left
-  · cases h
-  rcases hg : classMinorSlotGoW n m (rdW (m.arr64 IW) rd) (rdW (m.arr64 IW) (rd + 1)) 0 c cc 0 0 0 0 with _ | xyzw
-  · rw [hg] at h; cases h
-  obtain ⟨x, y, z, w⟩ := xyzw
-  rw [hg] at h
-  by_cases hx : x ≠ 1
-  · simp [hx] at h
-  simp only [hx, ite_false, Option.some.injEq] at h
-  subst h
-  simp only [List.headD_cons, List.tail_cons] at e1 e2 ⊢
   rcases cmsGo_words n _ _ _ _ _ _ _ _ _ _ _ _ _ _ hg with ⟨-, rfl, rfl⟩ | ⟨hz, hw⟩
   · have : ihs = [] := by simpa [decPL] using e2.symm
     subst this
@@ -492,10 +441,10 @@ theorem cms_decB (n : Nat) {m : Mem} {rd c cc : Word} {R : ClassRead} {r : List 
   obtain ⟨-, h4'⟩ := rec2IwN_trunc h4
   have hrd : rdW (m.arr64 IW) rd = UInt64.ofNat o := by
     have := iwN_rdW_at (w := rd) (k := 0) (by simpa using ho') hsz64; simpa using this.1
-  have hy : y = UInt64.ofNat s := by rw [← e1]
+  have hy : y = UInt64.ofNat s := e1
   have hos : (UInt64.ofNat o : Word) + UInt64.ofNat s = UInt64.ofNat (o + s) := by
     apply UInt64.toNat_inj.mp
-    have := iwN_lt_size hv'; have := (iwN_rdW ho' (by omega)).2
+    have := iwN_lt_size hv'; have := rd.toNat_lt; have := (iwN_rdW ho' (by omega)).2
     rw [UInt64.toNat_add]; simp <;> omega
   have hvw := iwN_rdW hv' (by have := iwN_lt_size hv'; omega)
   have hv3 : UInt64.ofNat v + 3 = UInt64.ofNat (v + 3) := by

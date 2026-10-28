@@ -1,7 +1,6 @@
 import ConAgua.Verdict.IndBE
 import ConAgua.Verdict.PosTopE1
 import ConAgua.Arena.IndT.Install6
-import ConAgua.Checker.NoVerdictTree
 
 /-!
 # The error claims of `check_abs_ctor_sorts_one`, `check_abs_ctor_sorts`,

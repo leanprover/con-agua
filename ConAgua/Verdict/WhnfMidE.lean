@@ -1,11 +1,11 @@
 import ConAgua.Verdict.WhnfModels7E
-import ConAgua.Verdict.WhnfNatE
+import ConAgua.Verdict.WhnfSlotE
 /-!
 # The `whnf` family's `defeq` helpers: `bool_true_shortcut`, `try_unfold_proj_app`,
 `delta_quick`, `lazy_nat` (lane `verdicts-b`, helper `k2`)
 
 No verdict site of their own: their claims are the knot's slots' (`KnotUpToE`), `reduce_nat`'s
-(`callE_reduceNat`) and `quick_defeq`'s (a callee of the `defeq` family: `QuickDefeqWE`).
+(`reduceNatE_of`) and `quick_defeq`'s (a callee of the `defeq` family: `QuickDefeqWE`).
 -/
 
 open ConRon.Arena
@@ -147,7 +147,7 @@ theorem lazyNat_refinesE (n : Nat) (hk : KnotUpTo p n) (hkE : KnotUpToE p n) (F 
   | error e1 =>
     rw [c1, lnE.k_reduce_nat.none] at hW; cases hW
     refine ErrClaim.of_run_err (fun ce h' => ?_)
-      (callE_reduceNat p hdp hnv n F hF hn hk hkE s₀ a₀ dn vis fe M eb mode d a hs ha _ c1)
+      (CoreSpecE.of_callE (reduceNatE_of p hdp hnv n hk hkE F s₀ a₀ dn vis fe M eb mode d a hF hn hs ha) c1)
     simp only [natT, StateT.run_bind, h']; rfl
   | ok q =>
   obtain ⟨r₁, m₁⟩ := q
@@ -177,8 +177,8 @@ theorem lazyNat_refinesE (n : Nat) (hk : KnotUpTo p n) (hkE : KnotUpToE p n) (F 
   | error e2 =>
     rw [c2, lnE.k_reduce_nat_2.none] at hW; cases hW
     refine ErrClaim.of_run_err (fun ce h' => ?_)
-      (callE_reduceNat p hdp hnv n F hF hn hk hkE ⟨m₁, Locals.init []⟩ _ dn vis fe M₁ eb mode d b
-        ⟨hS₁, hs.mode4, hs.eb_mode⟩ hb _ c2)
+      (CoreSpecE.of_callE (reduceNatE_of p hdp hnv n hk hkE F ⟨m₁, Locals.init []⟩ _ dn vis fe M₁ eb
+        mode d b hF hn ⟨hS₁, hs.mode4, hs.eb_mode⟩ hb) c2)
     simp only [natT, StateT.run_bind, hrun1, except_ok_bind, h']; rfl
   | ok q =>
   obtain ⟨r₂, m₂⟩ := q

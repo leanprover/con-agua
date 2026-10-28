@@ -184,14 +184,14 @@ slot's (`KnotOK`, `KnotUpToE`). -/
 theorem whnfTop_ref (n : Nat) (hn : n + 1 ≤ 2 ^ 62) (F : Nat) (hF : n ≤ F) (s₀ : St) (a₀ : AState)
     (M : ModeMaps) (dep e : Word) (hS : CoreS dn s₀.mem a₀ vis fe M 0) (he : HW e) :
     RefE (KnotUpToE p n) (wtopE p (n + 1) s₀.mem vis dep e) (whnf V fe F dep.toNat (decE e)) a₀
-      (fun v y a' => CorePost decH dn s₀.mem vis fe M 0 ResH v.1 v.2 y a') := by
+      (fun v y a' => CorePost decH dn s₀.mem vis fe M 0 ResH v y a') := by
   simp only [wtopE]
   rcases h : callE p n "whnf" [0, vis, dep, e] s₀.mem with e1 | ⟨r, m₁⟩
   · exact fun hG => CoreSpecE.of_callE ((hG n (Nat.le_refl _)).whnf F s₀ a₀ dn vis fe M 0 0 dep e
       hF (by omega) (slotPre_zero hS) he) h
   obtain ⟨hrun, hR⟩ := (CoreSpec.of_callW ((hK n).whnf F s₀ a₀ dn vis fe M 0 0 dep e hF (by omega)
     (slotPre_zero hS) he) (callW_of_callE h)).post
-  exact RefE.ret hrun ⟨hR.after, by simpa [decH] using hR.res, by simpa [ResH] using hR.ok⟩
+  exact RefE.ret hrun ⟨hR.after, by simpa [decH] using hR.res, by simpa [ResH] using hR.valid⟩
 
 include hw hK in
 /-- `whnf_top(vis, dep, e)` refines `whnf .verified fe checkFuel dep e` under `CoreS`

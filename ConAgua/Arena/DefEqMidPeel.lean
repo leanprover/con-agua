@@ -776,21 +776,12 @@ theorem defeqPeel_leaf_run (r : CoreFnsA) (d peel : Nat) (a b : EIdx) (k : Nat) 
 theorem word_toNat_zero_iff (w : Word) : w.toNat = 0 ↔ w = 0 :=
   ⟨fun h => UInt64.toNat_inj.mp (by simpa using h), fun h => by rw [h]; rfl⟩
 
-/-- **What the descent gives besides the twin's result `y` and state `a'`** (`GrowRefP`'s
-conjuncts after the run: the stack grown). -/
-structure GrowPost {α : Type} (dec : List Word → α) (dn : NIdx → Option ConLeche.Name) (m₀ : Mem)
-    (vis : Word) (fe : IFEnv) (M : ModeMaps) (eb : Word) (ok : List Word → Prop) (r : List Word)
-    (m : Mem) (y : α) (a' : AState) : Prop where
-  after : ∃ M', CoreS dn m a' vis fe M' eb ∧ KeptAll M M' eb ∧ StackGrew m₀ m
-  res : y = dec r
-  ok : ok r
-
 theorem GrowPost.of_core {α : Type} {dec : List Word → α} {dn : NIdx → Option ConLeche.Name}
     {m₀ m : Mem} {vis : Word} {fe : IFEnv} {M : ModeMaps} {eb : Word} {ok : List Word → Prop}
-    {r : List Word} {y : α} {a' : AState} (h : CorePost dec dn m₀ vis fe M eb ok r m y a') :
-    GrowPost dec dn m₀ vis fe M eb ok r m y a' :=
+    {r : List Word} {y : α} {a' : AState} (h : CorePost dec dn m₀ vis fe M eb ok (r, m) y a') :
+    GrowPost dec dn m₀ vis fe M eb ok (r, m) y a' :=
   let ⟨M', hS, hK, hSt⟩ := h.after
-  ⟨⟨M', hS, hK, hSt.toGrew'⟩, h.res, h.ok⟩
+  ⟨⟨M', hS, hK, hSt.toGrew'⟩, h.res, h.valid⟩
 
 /-- A growing callee's ok run, then the rest, both outcomes. -/
 theorem RefE.bind_grow {α β γ : Type} [Inhabited γ] {G : Prop} {x : Except Err α} {T₁ : AM γ}
@@ -800,13 +791,13 @@ theorem RefE.bind_grow {α β γ : Type} [Inhabited γ] {G : Prop} {x : Except E
     (h₁ : GrowRefP T₁ a₀ dec₁ dn m₀ vis fe M eb r₁ m₁ ok₁)
     (h₂ : ∀ M', CoreS dn m₁ (AM.st T₁ a₀) vis fe M' eb → StackGrew m₀ m₁ →
       RefE G x (f (dec₁ r₁)) (AM.st T₁ a₀)
-        (fun v y a' => GrowPost dec dn m₁ vis fe M' eb ok (w v).1 (w v).2 y a')) :
-    RefE G x (T₁ >>= f) a₀ (fun v y a' => GrowPost dec dn m₀ vis fe M eb ok (w v).1 (w v).2 y a') := by
+        (fun v y a' => GrowPost dec dn m₁ vis fe M' eb ok (w v) y a')) :
+    RefE G x (T₁ >>= f) a₀ (fun v y a' => GrowPost dec dn m₀ vis fe M eb ok (w v) y a') := by
   obtain ⟨M', hS, hK, hSt⟩ := h₁.2.1
   exact RefE.bind_right (by rw [AM.run_of_ok _ _ h₁.1, h₁.2.2.1])
     ((h₂ M' hS hSt).mono fun _ _ _ h =>
       let ⟨M'', hS'', hK'', hSt''⟩ := h.after
-      ⟨⟨M'', hS'', hK.trans hK'', hSt.trans' hSt''⟩, h.res, h.ok⟩)
+      ⟨⟨M'', hS'', hK.trans hK'', hSt.trans' hSt''⟩, h.res, h.valid⟩)
 
 /-- A kept-stack callee's ok run, then a growing rest, both outcomes. -/
 theorem RefE.bind_growK {α β γ : Type} [Inhabited γ] {G : Prop} {x : Except Err α} {T₁ : AM γ}
@@ -816,13 +807,13 @@ theorem RefE.bind_growK {α β γ : Type} [Inhabited γ] {G : Prop} {x : Except 
     (h₁ : CoreRef T₁ a₀ dec₁ dn m₀ vis fe M eb r₁ m₁ ok₁)
     (h₂ : ∀ M', CoreS dn m₁ (AM.st T₁ a₀) vis fe M' eb → StackKept m₀ m₁ →
       RefE G x (f (dec₁ r₁)) (AM.st T₁ a₀)
-        (fun v y a' => GrowPost dec dn m₁ vis fe M' eb ok (w v).1 (w v).2 y a')) :
-    RefE G x (T₁ >>= f) a₀ (fun v y a' => GrowPost dec dn m₀ vis fe M eb ok (w v).1 (w v).2 y a') := by
+        (fun v y a' => GrowPost dec dn m₁ vis fe M' eb ok (w v) y a')) :
+    RefE G x (T₁ >>= f) a₀ (fun v y a' => GrowPost dec dn m₀ vis fe M eb ok (w v) y a') := by
   obtain ⟨M', hS, hK, hSt⟩ := h₁.2.1
   exact RefE.bind_right (by rw [AM.run_of_ok _ _ h₁.1, h₁.2.2.1])
     ((h₂ M' hS hSt).mono fun _ _ _ h =>
       let ⟨M'', hS'', hK'', hSt''⟩ := h.after
-      ⟨⟨M'', hS'', hK.trans hK'', hSt.toGrew'.trans' hSt''⟩, h.res, h.ok⟩)
+      ⟨⟨M'', hS'', hK.trans hK'', hSt.toGrew'.trans' hSt''⟩, h.res, h.valid⟩)
 
 section loopRef
 variable (p : Prog) (hp : PeelProg p) (hil : InstListOK p)
@@ -838,7 +829,7 @@ theorem peel_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n 
       RefE (PeelG p n) (peelE.loop1 p j m mode vis d peel a b k fo)
         (defeqPeel (coreKnot (decMode mode) fe id F) d.toNat peel.toNat (decE a) (decE b)
           k.toNat fvs) s
-        (fun v y a' => GrowPost decBool dn m vis fe M eb ResH [v.1] v.2 y a') := by
+        (fun v y a' => GrowPost decBool dn m vis fe M eb ResH ([v.1], v.2) y a') := by
   intro j
   induction j with
   | zero =>
@@ -878,7 +869,7 @@ theorem peel_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n 
       obtain ⟨hrun, hR⟩ := (CoreSpec.of_callW (s₀ := ⟨m, Locals.init []⟩)
         (peelLeaf_refines p hp hil j' (hk.mono (by omega)) F (by omega) (by omega) _ s dn vis fe M eb
           mode d a b k fo ⟨hS, hmode, heb⟩ ha hb fvs hx (by omega)) (callW_of_callE h1)).post
-      exact RefE.ret hrun (GrowPost.of_core ⟨hR.after, by simpa [decBool] using hR.res, hR.ok⟩)
+      exact RefE.ret hrun (GrowPost.of_core ⟨hR.after, by simpa [decBool] using hR.res, hR.valid⟩)
     have hp0 : peel ≠ 0 := fun h0 => hl (.inl h0)
     have hga : a >>> 28 = 6 := Classical.byContradiction fun h' => hl (.inr (.inl h'))
     have hgb : b >>> 28 = 6 := Classical.byContradiction fun h' => hl (.inr (.inr h'))
@@ -940,7 +931,7 @@ theorem defeqPeel_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn
     (hdk : d.toNat + k.toNat + peel.toNat < 2 ^ 64) :
     RefE (PeelG p n) (peelE p (n + 1) s₀.mem mode vis d peel a b k fo)
       (defeqPeel (coreKnot (decMode mode) fe id F) d.toNat peel.toNat (decE a) (decE b) k.toNat fvs) a₀
-      (fun v y a' => GrowPost decBool dn s₀.mem vis fe M eb ResH [v.1] v.2 y a') := by
+      (fun v y a' => GrowPost decBool dn s₀.mem vis fe M eb ResH ([v.1], v.2) y a') := by
   rw [peelE.arm1]
   exact peel_ref p hp hil n hk F hF hn dn vis fe mode d fo hs.mode4 (n + 1) (Nat.le_refl _) peel a b k
     s₀.mem a₀ M eb fvs hs.rel hs.eb_mode ha hb hx hdk
@@ -964,7 +955,7 @@ theorem defeqPeel_refines (p : Prog) (hp : PeelProg p) (hil : InstListOK p) (n :
       (defeqPeel_ref p hp hil n hk F hF hn s₀ a₀ dn vis fe M eb mode d peel a b k fo hs ha hb fvs hx
         hdk))
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
-  exact ⟨hl, hok, hst ▸ hR.after, hres ▸ hR.res.trans (by simp [decBool]), hR.ok⟩
+  exact ⟨hl, hok, hst ▸ hR.after, hres ▸ hR.res.trans (by simp [decBool]), hR.valid⟩
 
 /-! ## `defeq_binders` -/
 

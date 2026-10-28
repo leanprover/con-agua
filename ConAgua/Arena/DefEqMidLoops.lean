@@ -109,7 +109,7 @@ theorem lst_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n �
       CoreS dn m a vis fe M eb → eb = (mode >>> 1) &&& 1 → StackKept m₀ m → i ≤ an → i ≤ bn →
       RefE (KnotUpToE p n) (lstE.loop1 p k m mode vis d ao an bo bn i)
         (defEqList (coreKnot (decMode mode) fe id F) fe d.toNat (xs.drop i.toNat) (ys.drop i.toNat)) a
-        (fun v y a' => CorePost decBool dn m vis fe M eb ResH [v.1] v.2 y a') := by
+        (fun v y a' => CorePost decBool dn m vis fe M eb ResH ([v.1], v.2) y a') := by
   have hxl := slice_len hx
   have hyl := slice_len hy
   intro k
@@ -178,7 +178,7 @@ theorem defeqLst_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn 
     (hyt : bo.toNat + bn.toNat ≤ (spTop s₀.mem).toNat) :
     RefE (KnotUpToE p n) (lstE p (n + 1) s₀.mem mode vis d ao an bo bn)
       (defEqList (coreKnot (decMode mode) fe id F) fe d.toNat xs ys) a₀
-      (fun v y a' => CorePost decBool dn s₀.mem vis fe M eb ResH [v.1] v.2 y a') := by
+      (fun v y a' => CorePost decBool dn s₀.mem vis fe M eb ResH ([v.1], v.2) y a') := by
   rw [lstE.arm1]
   simpa only [UInt64.toNat_zero, List.drop_zero] using
     lst_ref p n hk F hF hn dn vis fe mode d ao an bo bn hs.mode4 s₀.mem xs ys hx hy hxt hyt
@@ -234,7 +234,7 @@ theorem lrev_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n 
       RefE (KnotUpToE p n) (lrevE.loop1 p k m mode vis d ao an bo bn i j)
         (defEqList (coreKnot (decMode mode) fe id F) fe d.toNat (xs.take i.toNat).reverse
           (ys.take j.toNat).reverse) a
-        (fun v y a' => CorePost decBool dn m vis fe M eb ResH [v.1] v.2 y a') := by
+        (fun v y a' => CorePost decBool dn m vis fe M eb ResH ([v.1], v.2) y a') := by
   have hxl := slice_len hx
   have hyl := slice_len hy
   intro k
@@ -299,7 +299,7 @@ theorem defeqListRev_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) 
     (hyt : bo.toNat + bn.toNat ≤ (spTop s₀.mem).toNat) :
     RefE (KnotUpToE p n) (lrevE p (n + 1) s₀.mem mode vis d ao an bo bn)
       (defEqList (coreKnot (decMode mode) fe id F) fe d.toNat xs.reverse ys.reverse) a₀
-      (fun v y a' => CorePost decBool dn s₀.mem vis fe M eb ResH [v.1] v.2 y a') := by
+      (fun v y a' => CorePost decBool dn s₀.mem vis fe M eb ResH ([v.1], v.2) y a') := by
   rw [lrevE.arm1]
   have hxl := slice_len hx
   have hyl := slice_len hy

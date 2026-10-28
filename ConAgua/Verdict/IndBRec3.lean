@@ -126,7 +126,7 @@ theorem rtsE_claim (hp : RtsProg p) (g k : Word) (G : ClassGen) (hns : G.nP + G.
       (UInt64.ofNat pr) (UInt64.ofNat pv) (UInt64.ofNat c0)) (callW_of_callE h1)
   subst hs1
   obtain ⟨x, a1, hrun1, ⟨⟨hC1, hg1, hx⟩, hA1⟩⟩ :=
-    (rtoW_simC hq hApd hCrk henv n (by omega) m a g k (UInt64.ofNat pr) (UInt64.ofNat pv)
+    (rtoW_simC hq hApd hCrk henv hp.toRtoProg n (by omega) m a g k (UInt64.ofNat pr) (UInt64.ofNat pv)
       (UInt64.ofNat c0) G RS CV hC hG hns (by rw [tp]; exact hRS) (by rw [tp]; exact hcvR)
       (by rw [tv]; exact hCV) hA hgP hrcP hcvP (hw _ List.mem_cons_self)) (r1, s1.mem) hmodel
   dsimp only at hC1 hg1 hx hA1

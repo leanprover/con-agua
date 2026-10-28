@@ -4,11 +4,15 @@ import ConAgua.Arena.WhnfDelta
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
+import ConAgua.Checker.NoVerdictTree
 import Std.Tactic.BVDecide.Normalize.BitVec
 import Std.Tactic.BVDecide.Normalize.Prop
 
 /-!
-# Error models of `reduce_nat`'s family and the `whnf_core` arms (lane `verdicts-b`, helper `k2`)
+# The models of `reduce_nat`'s family (both outcomes) and the `whnf_core` arms' error models
+
+`reduce_nat`'s family: `l_model … unified`, the `whnf` slot through its run, the family through
+its unified models, every other callee (outside the verdict closure) through its `Option` model.
 -/
 
 open ConRon.Arena
@@ -19,33 +23,56 @@ set_option experimental.vcgen true
 
 namespace L.Arena
 
-l_model reduceNatWf_specE (p : Prog) (hf : p.lookup "reduce_nat_wf" = some reduceNatWfL)
-  fns [hf ↦ reduceNatWfE list] grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] errors
+l_model reduceNatSuccE_spec (p : Prog) (hp : WhnfDeltaProg p)
+  fns [hp.reduceNatSucc ↦ reduceNatSuccE list]
+  specs [callW_spec p n "nat_lit_supported", callW_spec p n "pin_at", callW_spec p n "raw_nat_lit",
+    callW_spec p n "nat_succ_lit"]
+  grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] unified
+  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
-l_model reduceNatOp_specE (p : Prog) (hf : p.lookup "reduce_nat_op" = some reduceNatOpL)
-  fns [hf ↦ reduceNatOpE list] grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] errors
+l_model reduceNatOpE_spec (p : Prog) (hp : WhnfDeltaProg p)
+  fns [hp.reduceNatOp ↦ reduceNatOpE list]
+  specs [callW_spec p n "raw_nat_lit", callW_spec p n "nat_op_result"]
+  grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] unified
+  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
-l_model reduceNatSucc_specE (p : Prog) (hf : p.lookup "reduce_nat_succ" = some reduceNatSuccL)
-  fns [hf ↦ reduceNatSuccE list] grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] errors
+l_model reduceNatWfE_spec (p : Prog) (hp : WhnfDeltaProg p)
+  fns [hp.reduceNatWf ↦ reduceNatWfE list]
+  specs [callW_spec p n "nat_op_is_wf", callW_spec p n "nat_lit_supported", callW_spec p n "raw_nat_lit"]
+  grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] unified
+  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
-l_model reduceNatK_specE (p : Prog) (hf : p.lookup "reduce_nat_k" = some reduceNatKL)
-  fns [hf ↦ reduceNatKE list] grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] errors
+l_model reduceNatKE_spec (p : Prog) (hp : WhnfDeltaProg p)
+  fns [hp.reduceNatK ↦ reduceNatKE list]
+  specs [callW_spec p n "pin_word", reduceNatSuccE_spec p hp n]
+  grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] unified
+  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
-l_model reduceNatAp_specE (p : Prog) (hf : p.lookup "reduce_nat_ap" = some reduceNatApL)
-  fns [hf ↦ reduceNatApE list] grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] errors
+l_model reduceNatApE_spec (p : Prog) (hp : WhnfDeltaProg p)
+  fns [hp.reduceNatAp ↦ reduceNatApE list]
+  specs [callW_spec p n "pin_word", callW_spec p n "nat_bin_op_name", callW_spec p n "nat_op_stored",
+    reduceNatOpE_spec p hp n, reduceNatWfE_spec p hp n]
+  grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] unified
+  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
-l_model reduceNatHead_specE (p : Prog) (hf : p.lookup "reduce_nat_head" = some reduceNatHeadL)
-  fns [hf ↦ reduceNatHeadE list] grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] errors
+l_model reduceNatHeadE_spec (p : Prog) (hp : WhnfDeltaProg p)
+  fns [hp.reduceNatHead ↦ reduceNatHeadE list]
+  specs [reduceNatKE_spec p hp n, reduceNatApE_spec p hp n]
+  grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] unified
+  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
-l_model reduceNat_specE (p : Prog) (hf : p.lookup "reduce_nat" = some reduceNatL)
-  fns [hf ↦ reduceNatE list] grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] errors
+l_model reduceNatE_spec (p : Prog) (hp : WhnfDeltaProg p)
+  fns [hp.reduceNat ↦ reduceNatE list]
+  specs [reduceNatHeadE_spec p hp n]
+  grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] unified
+  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 l_model coreStepProj_specE (p : Prog) (hf : p.lookup "whnf_core_step_proj" = some whnfCoreStepProjL)
   fns [hf ↦ coreStepProjE list] grind [arena_grind] fold [tierW, idxW]

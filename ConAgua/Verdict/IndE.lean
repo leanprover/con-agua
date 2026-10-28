@@ -9,7 +9,6 @@ import ConAgua.Arena.IndSumSpec.CheckStructFieldSortsISucc
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
-import ConAgua.Checker.NoVerdictTree
 
 /-!
 # Error refinements of `check_field_sort_bound`, `nest_cont_key` (lane `verdicts-b`, helper `c6`)

@@ -29,6 +29,8 @@ its locals stay in registers). The shapes so far:
 | shape | line | `pl` |
 |---|---|---|
 | app | `{"app":{"arg":A,"fn":F},"ie":I}` | 10 |
+| lam | `{"ie":I,"lam":{"binderInfo":"…","body":B,"name":N,"type":T}}` | 11 |
+| forallE | `{"forallE":{"binderInfo":"…","body":B,"name":N,"type":T},"ie":I}` | 12 |
 
 A line with fewer than 160 bytes after its start declines, so no read leaves the buffer.
 -/
@@ -44,19 +46,50 @@ open L.Scan.Utf8 (byteW)
 
 /-! ## Literals -/
 
-/-- The bytes of an ASCII string. -/
-def bytesOf (s : String) : List UInt8 := s.toList.map fun c => c.toNat.toUInt8
-
 /-- `{"app":{` -/
-def hApp : List UInt8 := bytesOf "{\"app\":{"
+def hApp : List UInt8 := [123, 34, 97, 112, 112, 34, 58, 123]
 /-- `"arg":` -/
-def kArg : List UInt8 := bytesOf "\"arg\":"
+def kArg : List UInt8 := [34, 97, 114, 103, 34, 58]
 /-- `,"fn":` -/
-def kFn : List UInt8 := bytesOf ",\"fn\":"
+def kFn : List UInt8 := [44, 34, 102, 110, 34, 58]
 /-- `},"ie":` -/
-def kIe : List UInt8 := bytesOf "},\"ie\":"
+def kIe : List UInt8 := [125, 44, 34, 105, 101, 34, 58]
 /-- `}` and the newline -/
-def kEnd1 : List UInt8 := bytesOf "}\n"
+def kEnd1 : List UInt8 := [125, 10]
+/-- `{"ie":` -/
+def hIe : List UInt8 := [123, 34, 105, 101, 34, 58]
+/-- `,"lam":{` -/
+def kLam : List UInt8 := [44, 34, 108, 97, 109, 34, 58, 123]
+/-- `{"forall` -/
+def hForall : List UInt8 := [123, 34, 102, 111, 114, 97, 108, 108]
+/-- `E":{` -/
+def kForallE : List UInt8 := [69, 34, 58, 123]
+/-- `"binderI` -/
+def kBinderI : List UInt8 := [34, 98, 105, 110, 100, 101, 114, 73]
+/-- `nfo":"` -/
+def kNfo : List UInt8 := [110, 102, 111, 34, 58, 34]
+/-- `default"` -/
+def biD : List UInt8 := [100, 101, 102, 97, 117, 108, 116, 34]
+/-- `implicit` -/
+def biI8 : List UInt8 := [105, 109, 112, 108, 105, 99, 105, 116]
+/-- `"` -/
+def kQ : List UInt8 := [34]
+/-- `instImpl` -/
+def biN8 : List UInt8 := [105, 110, 115, 116, 73, 109, 112, 108]
+/-- `icit"` -/
+def biN5 : List UInt8 := [105, 99, 105, 116, 34]
+/-- `strictIm` -/
+def biS8 : List UInt8 := [115, 116, 114, 105, 99, 116, 73, 109]
+/-- `plicit"` -/
+def biS7 : List UInt8 := [112, 108, 105, 99, 105, 116, 34]
+/-- `,"body":` -/
+def kBody : List UInt8 := [44, 34, 98, 111, 100, 121, 34, 58]
+/-- `,"name":` -/
+def kName : List UInt8 := [44, 34, 110, 97, 109, 101, 34, 58]
+/-- `,"type":` -/
+def kType : List UInt8 := [44, 34, 116, 121, 112, 101, 34, 58]
+/-- `}}` and the newline -/
+def kEnd2 : List UInt8 := [125, 125, 10]
 
 /-! ## The code -/
 
@@ -64,6 +97,12 @@ def kEnd1 : List UInt8 := bytesOf "}\n"
 def litB (l : List UInt8) : Stmt := lblk (i, p) {
   if (le64!(IN.u8, p) & ⟪mskW l.length⟫) != ⟪litW l⟫ { return 0 };
   p += ⟪UInt64.ofNat l.length⟫
+}
+
+/-- The literal `l` of eight bytes at `p`, and `p` past it; else decline. -/
+def litB8 (l : List UInt8) : Stmt := lblk (i, p) {
+  if le64!(IN.u8, p) != ⟪litW l⟫ { return 0 };
+  p += 8
 }
 
 /-- The digits after the first: `x` accumulates, `p` moves on, `c` is the byte at `p`; a digit at
@@ -106,12 +145,67 @@ def appS : Stmt := lblk (i, p, x, n, c, a, f, idx, w) {
   }
 }
 
+/-- A binder's value after its opening quote, and the closing quote: `p` past it; else decline. -/
+def biB : Stmt := lblk (i, p, x) {
+  x := le64!(IN.u8, p);
+  if x == ⟪litW biD⟫ { p += 8 }
+  else if x == ⟪litW biI8⟫ && (le64!(IN.u8, p + 8) & ⟪mskW 1⟫) == ⟪litW kQ⟫ { p += 9 }
+  else if x == ⟪litW biN8⟫ && (le64!(IN.u8, p + 8) & ⟪mskW 5⟫) == ⟪litW biN5⟫ { p += 13 }
+  else if x == ⟪litW biS8⟫ && (le64!(IN.u8, p + 8) & ⟪mskW 7⟫) == ⟪litW biS7⟫ { p += 15 }
+  else { return 0 }
+}
+
+/-- A binder object's members `"binderInfo":"…","body":B,"name":N,"type":T` at `p`: `a := B`,
+`f := T`, `p` at its closing brace. -/
+def bndB : Stmt := lblk (i, p, x, n, c, a, f) {
+  ⟪litB8 kBinderI⟫;
+  ⟪litB kNfo⟫;
+  ⟪biB⟫;
+  ⟪litB8 kBody⟫;
+  ⟪numB⟫;
+  a := x;
+  ⟪litB8 kName⟫;
+  ⟪numB⟫;
+  ⟪litB8 kType⟫;
+  ⟪numB⟫;
+  f := x
+}
+
+/-- A lambda line: `{"ie":I,"lam":{…}}`. -/
+def lamS : Stmt := lblk (i, p, x, n, c, a, f, idx, w) {
+  if (w & ⟪mskW 6⟫) == ⟪litW hIe⟫ {
+    p := i + 6;
+    ⟪numB⟫;
+    idx := x;
+    ⟪litB8 kLam⟫;
+    ⟪bndB⟫;
+    ⟪litB kEnd2⟫;
+    return (p, 11, idx, f, a, a)
+  }
+}
+
+/-- A pi line: `{"forallE":{…},"ie":I}`. -/
+def forallS : Stmt := lblk (i, p, x, n, c, a, f, idx, w) {
+  if w == ⟪litW hForall⟫ {
+    p := i + 8;
+    ⟪litB kForallE⟫;
+    ⟪bndB⟫;
+    ⟪litB kIe⟫;
+    ⟪numB⟫;
+    idx := x;
+    ⟪litB kEnd1⟫;
+    return (p, 12, idx, f, a, a)
+  }
+}
+
 /-- The fast path: `(next, pl, idx, a, c, d)` for a canonical line, `0` otherwise. -/
 -- con-ron: none — a canonical-form fast path in front of `scan_line_fwd` (docs/deviations.md)
 def fastLine : FunDecl := lfn (i) locals (p, x, n, c, a, f, idx, w) {
   if len(IN.u8) < i + 160 { return 0 };
   w := le64!(IN.u8, i);
   ⟪appS⟫;
+  ⟪lamS⟫;
+  ⟪forallS⟫;
   return 0
 }
 
@@ -367,12 +461,129 @@ structure AppLine (b : Array UInt8) (i nx idx f a : Word) : Prop where
   tail : LitAt b (numR b ((numR b ((numR b (i + 8 + 6)).1 + 6)).1 + 7)).1 kEnd1
   next : nx = (numR b ((numR b ((numR b (i + 8 + 6)).1 + 6)).1 + 7)).1 + 2
 
+/-- Where `biB` leaves `p`: past the binder's value and its closing quote (`p` if none). -/
+def biEnd (b : Array UInt8) (p : Word) : Word :=
+  if le64 b p.toNat = litW biD then p + 8
+  else if le64 b p.toNat = litW biI8 ∧ le64 b (p + 8).toNat &&& mskW 1 = litW kQ then p + 9
+  else if le64 b p.toNat = litW biN8 ∧ le64 b (p + 8).toNat &&& mskW 5 = litW biN5 then p + 13
+  else if le64 b p.toNat = litW biS8 ∧ le64 b (p + 8).toNat &&& mskW 7 = litW biS7 then p + 15
+  else p
+
+/-- The state after `biB` (when it accepts). -/
+def biS (b : Array UInt8) (s : St) : St :=
+  (s.setLoc 2 (le64 b (s.loc 1).toNat)).setLoc 1 (biEnd b (s.loc 1))
+
+/-- A binder's value at `p` (after its opening quote), its closing quote before `e`. -/
+inductive BiAt (b : Array UInt8) (p : Word) : Word → Prop
+  | dflt : LitAt b p biD → BiAt b p (p + 8)
+  | impl : LitAt b p biI8 → LitAt b (p + 8) kQ → BiAt b p (p + 9)
+  | inst : LitAt b p biN8 → LitAt b (p + 8) biN5 → BiAt b p (p + 13)
+  | strict : LitAt b p biS8 → LitAt b (p + 8) biS7 → BiAt b p (p + 15)
+
+/-- The positions in a binder object whose first key is at `p`: after the binder's value, and
+after the `body`, `name` and `type` numbers. -/
+abbrev bE1 (b : Array UInt8) (p : Word) : Word := biEnd b (p + 8 + 6)
+abbrev bE2 (b : Array UInt8) (p : Word) : Word := (numR b (bE1 b p + 8)).1
+abbrev bE3 (b : Array UInt8) (p : Word) : Word := (numR b (bE2 b p + 8)).1
+abbrev bE4 (b : Array UInt8) (p : Word) : Word := (numR b (bE3 b p + 8)).1
+
+/-- A binder object's members from its first key at `p`:
+`"binderInfo":"…","body":bd,"name":…,"type":t`, its closing brace at `bE4 b p`. -/
+structure BndAt (b : Array UInt8) (p bd t : Word) : Prop where
+  k1 : LitAt b p kBinderI
+  k2 : LitAt b (p + 8) kNfo
+  bi : BiAt b (p + 8 + 6) (bE1 b p)
+  body : LitAt b (bE1 b p) kBody
+  nb : NumAt b (bE1 b p + 8) (bE2 b p) bd
+  name : LitAt b (bE2 b p) kName
+  nn : NumAt b (bE2 b p + 8) (bE3 b p) (numR b (bE2 b p + 8)).2
+  type : LitAt b (bE3 b p) kType
+  nt : NumAt b (bE3 b p + 8) (bE4 b p) t
+
+/-- A lambda line at `i`: `{"ie":idx,"lam":{…}}` and its newline, `nx` after it. -/
+structure LamLine (b : Array UInt8) (i nx idx t bd : Word) : Prop where
+  head : LitAt b i hIe
+  ni : NumAt b (i + 6) (numR b (i + 6)).1 idx
+  lam : LitAt b (numR b (i + 6)).1 kLam
+  bnd : BndAt b ((numR b (i + 6)).1 + 8) bd t
+  tail : LitAt b (bE4 b ((numR b (i + 6)).1 + 8)) kEnd2
+  next : nx = bE4 b ((numR b (i + 6)).1 + 8) + 3
+
+/-- A pi line at `i`: `{"forallE":{…},"ie":idx}` and its newline, `nx` after it. -/
+structure ForallLine (b : Array UInt8) (i nx idx t bd : Word) : Prop where
+  head : LitAt b i hForall
+  k : LitAt b (i + 8) kForallE
+  bnd : BndAt b (i + 8 + 4) bd t
+  ie : LitAt b (bE4 b (i + 8 + 4)) kIe
+  ni : NumAt b (bE4 b (i + 8 + 4) + 7) (numR b (bE4 b (i + 8 + 4) + 7)).1 idx
+  tail : LitAt b (numR b (bE4 b (i + 8 + 4) + 7)).1 kEnd1
+  next : nx = (numR b (bE4 b (i + 8 + 4) + 7)).1 + 2
+
 /-- The lines `fast_line` accepts, with the words it returns. -/
 inductive Canon (b : Array UInt8) (i : Word) : List Word → Prop
   | app {nx idx f a : Word} : AppLine b i nx idx f a → Canon b i [nx, 10, idx, f, a, a]
+  | lam {nx idx t bd : Word} : LamLine b i nx idx t bd → Canon b i [nx, 11, idx, t, bd, bd]
+  | pi {nx idx t bd : Word} : ForallLine b i nx idx t bd → Canon b i [nx, 12, idx, t, bd, bd]
 
 /-- What `fast_line(i)` returns: `0` (declined), or a canonical line's words. -/
 def FastOK (b : Array UInt8) (i : Word) (v : List Word) : Prop := v.headD 0 ≠ 0 → Canon b i v
+
+/-! ### The binder's value -/
+
+section
+variable {b : Array UInt8} {p : Word}
+
+theorem lit8 (l : List UInt8) (hl : l.length = 8 := by decide) (hne : l ≠ [] := by decide)
+    (h0 : 0 ∉ l := by decide) (h : le64 b p.toNat = litW l) : LitAt b p l :=
+  (le64_lit8 b p l hl hne h0).mp h
+
+theorem litm (l : List UInt8) (hl : l.length ≤ 8 := by decide) (hne : l ≠ [] := by decide)
+    (h0 : 0 ∉ l := by decide) (h : le64 b p.toNat &&& mskW l.length = litW l) : LitAt b p l :=
+  (le64_lit b p l hl hne h0).mp h
+
+theorem biEnd_d (h : le64 b p.toNat = litW biD) : biEnd b p = p + 8 := by
+  rw [biEnd, ite_eq_left h]
+theorem biEnd_i (h0 : ¬ le64 b p.toNat = litW biD)
+    (h : le64 b p.toNat = litW biI8 ∧ le64 b (p + 8).toNat &&& mskW 1 = litW kQ) :
+    biEnd b p = p + 9 := by
+  rw [biEnd, ite_eq_right h0, ite_eq_left h]
+theorem biEnd_n (h0 : ¬ le64 b p.toNat = litW biD)
+    (h1 : ¬ (le64 b p.toNat = litW biI8 ∧ le64 b (p + 8).toNat &&& mskW 1 = litW kQ))
+    (h : le64 b p.toNat = litW biN8 ∧ le64 b (p + 8).toNat &&& mskW 5 = litW biN5) :
+    biEnd b p = p + 13 := by
+  rw [biEnd, ite_eq_right h0, ite_eq_right h1, ite_eq_left h]
+theorem biEnd_s (h0 : ¬ le64 b p.toNat = litW biD)
+    (h1 : ¬ (le64 b p.toNat = litW biI8 ∧ le64 b (p + 8).toNat &&& mskW 1 = litW kQ))
+    (h2 : ¬ (le64 b p.toNat = litW biN8 ∧ le64 b (p + 8).toNat &&& mskW 5 = litW biN5))
+    (h : le64 b p.toNat = litW biS8 ∧ le64 b (p + 8).toNat &&& mskW 7 = litW biS7) :
+    biEnd b p = p + 15 := by
+  rw [biEnd, ite_eq_right h0, ite_eq_right h1, ite_eq_right h2, ite_eq_left h]
+
+theorem biAt_d (h : le64 b p.toNat = litW biD) : BiAt b p (biEnd b p) := by
+  rw [biEnd, ite_eq_left h]; exact .dflt (lit8 biD (h := h))
+
+theorem biAt_i (h0 : ¬ le64 b p.toNat = litW biD)
+    (h : le64 b p.toNat = litW biI8 ∧ le64 b (p + 8).toNat &&& mskW 1 = litW kQ) :
+    BiAt b p (biEnd b p) := by
+  rw [biEnd, ite_eq_right h0, ite_eq_left h]
+  exact .impl (lit8 biI8 (h := h.1)) (litm kQ (h := h.2))
+
+theorem biAt_n (h0 : ¬ le64 b p.toNat = litW biD)
+    (h1 : ¬ (le64 b p.toNat = litW biI8 ∧ le64 b (p + 8).toNat &&& mskW 1 = litW kQ))
+    (h : le64 b p.toNat = litW biN8 ∧ le64 b (p + 8).toNat &&& mskW 5 = litW biN5) :
+    BiAt b p (biEnd b p) := by
+  rw [biEnd, ite_eq_right h0, ite_eq_right h1, ite_eq_left h]
+  exact .inst (lit8 biN8 (h := h.1)) (litm biN5 (h := h.2))
+
+theorem biAt_s (h0 : ¬ le64 b p.toNat = litW biD)
+    (h1 : ¬ (le64 b p.toNat = litW biI8 ∧ le64 b (p + 8).toNat &&& mskW 1 = litW kQ))
+    (h2 : ¬ (le64 b p.toNat = litW biN8 ∧ le64 b (p + 8).toNat &&& mskW 5 = litW biN5))
+    (h : le64 b p.toNat = litW biS8 ∧ le64 b (p + 8).toNat &&& mskW 7 = litW biS7) :
+    BiAt b p (biEnd b p) := by
+  rw [biEnd, ite_eq_right h0, ite_eq_right h1, ite_eq_right h2, ite_eq_left h]
+  exact .strict (lit8 biS8 (h := h.1)) (litm biS7 (h := h.2))
+
+end
 
 section spec
 variable (p : Prog) (b : Array UInt8)
@@ -410,6 +621,45 @@ theorem litB_spec (l : List UInt8) (hl : LitOK l) (n : Nat) (s₀ : St) :
     | grind [Sig.retOr]
     | exact (le64_lit _ _ l hl.short hl.ne hl.nz).mp ‹_›
 
+theorem litB8_spec (l : List UInt8) (hl : LitOK l) (h8 : l.length = 8) (n : Nat) (s₀ : St) :
+    ⦃fun s => s = s₀ ∧ s.mem.arr8 IN = b⦄
+    step p (exec p n) (litB8 l)
+    ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧
+      (r = .normal → s' = s₀.setLoc 1 (s₀.loc 1 + 8) ∧ LitAt b (s₀.loc 1) l) ∧
+      (r ≠ .normal → r.retOr [0] = [0]); ⊤⦄ := by
+  dsimp only [litB8]
+  vcgen [step, L.evalE_spec, L.evalC_spec, evalArgs, setLoc, setLocs]
+  all_goals subst_vars
+  all_goals simp only [Cond.pval, Expr.pval, St.setLoc_loc, St.setLoc_mem, Cmp.eval, BinOp.eval,
+      beq_iff_eq, bne_iff_ne, ne_eq, Nat.reduceEqDiff, reduceIte, Mem.src8, decide_eq_true_eq,
+      Decidable.not_not] at *
+  all_goals first
+    | grind [Sig.retOr]
+    | exact (le64_lit8 _ _ l h8 hl.ne hl.nz).mp ‹_›
+
+theorem biB_spec (n : Nat) (s₀ : St) :
+    ⦃fun s => s = s₀ ∧ s.mem.arr8 IN = b⦄
+    step p (exec p n) biB
+    ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧
+      (r = .normal → s' = biS b s₀ ∧ BiAt b (s₀.loc 1) (biEnd b (s₀.loc 1))) ∧
+      (r ≠ .normal → r.retOr [0] = [0]); ⊤⦄ := by
+  dsimp only [biB]
+  vcgen [step, L.evalE_spec, L.evalC_spec, evalArgs, setLoc, setLocs]
+  all_goals subst_vars
+  all_goals simp only [Cond.pval, Expr.pval, St.setLoc_loc, St.setLoc_mem, Cmp.eval, BinOp.eval,
+      beq_iff_eq, bne_iff_ne, ne_eq, Nat.reduceEqDiff, reduceIte, Mem.src8, decide_eq_true_eq,
+      Decidable.not_not, Bool.and_eq_true] at *
+  all_goals first
+    | grind [Sig.retOr]
+    | (rw [biS, biEnd_d ‹_›])
+    | (rw [biS, biEnd_i ‹_› ‹_›])
+    | (rw [biS, biEnd_n ‹_› ‹_› ‹_›])
+    | (rw [biS, biEnd_s ‹_› ‹_› ‹_› ‹_›])
+    | exact biAt_d ‹_›
+    | (apply biAt_i <;> assumption)
+    | (apply biAt_n <;> assumption)
+    | (apply biAt_s <;> assumption)
+
 theorem numB_spec (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀ ∧ s.mem.arr8 IN = b⦄
     step p (exec p n) numB
@@ -443,7 +693,14 @@ theorem head_app {b : Array UInt8} {i : Word} (h : le64 b i.toNat = litW hApp) :
 
 /-- The literals' lengths, as the code adds them. -/
 theorem lit_len : UInt64.ofNat kArg.length = 6 ∧ UInt64.ofNat kFn.length = 6 ∧
-    UInt64.ofNat kIe.length = 7 ∧ UInt64.ofNat kEnd1.length = 2 := by decide
+    UInt64.ofNat kIe.length = 7 ∧ UInt64.ofNat kEnd1.length = 2 ∧ UInt64.ofNat kNfo.length = 6 ∧
+    UInt64.ofNat kEnd2.length = 3 ∧ UInt64.ofNat kForallE.length = 4 := by decide
+
+theorem head_lam {b : Array UInt8} {i : Word} (h : le64 b i.toNat &&& mskW 6 = litW hIe) :
+    LitAt b i hIe := litm hIe (h := h)
+
+theorem head_forall {b : Array UInt8} {i : Word} (h : le64 b i.toNat = litW hForall) :
+    LitAt b i hForall := lit8 hForall (h := h)
 
 section spec2
 variable (p : Prog) (b : Array UInt8)
@@ -481,8 +738,82 @@ theorem appS_spec (hb : b.size < 2 ^ 63) (n : Nat) (s₀ : St)
        all_goals first
          | (rw [hw] at *; exact head_app ‹_›)
          | rfl
-         | assumption
-         | exact numAt_of_ok _ hb _ ‹_›)
+         | with_reducible assumption
+         | with_reducible exact numAt_of_ok _ hb _ ‹_›)
+
+-- the binder shapes are the longest straight-line code: about 60 paths after `vcgen`
+set_option maxHeartbeats 1000000 in
+theorem lamS_spec (hb : b.size < 2 ^ 63) (n : Nat) (s₀ : St)
+    (hw : s₀.loc 8 = le64 b (s₀.loc 0).toNat) :
+    ⦃fun s => s = s₀ ∧ s.mem.arr8 IN = b⦄
+    step p (exec p n) lamS
+    ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧ (r = .normal → s' = s₀) ∧
+      (r ≠ .normal → FastOK b (s₀.loc 0) (r.retOr [])); ⊤⦄ := by
+  dsimp only [lamS, bndB]
+  vcgen [step, L.evalE_spec, L.evalC_spec, evalArgs, setLoc, setLocs,
+    fun l hl => litB_spec p b l hl n, fun l hl h8 => litB8_spec p b l hl h8 n, numB_spec p b n,
+    biB_spec p b n]
+  all_goals (try subst_vars)
+  all_goals simp only [Cond.pval, Expr.pval, St.setLoc_loc, St.setLoc_mem, Cmp.eval, BinOp.eval,
+      beq_iff_eq, bne_iff_ne, ne_eq, Nat.reduceEqDiff, reduceIte, Mem.src8, decide_eq_true_eq,
+      Decidable.not_not, Sig.retOr, FastOK, List.headD_cons, true_implies, reduceCtorEq,
+      not_false_eq_true, true_and, not_true, false_implies, and_true, lit_len] at *
+  all_goals repeat (cases ‹_ ∧ _›)
+  all_goals (try subst_vars)
+  all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, numS_loc, numS_mem, biS, Nat.reduceEqDiff,
+    reduceIte, true_implies] at *)
+  all_goals repeat (cases ‹_ ∧ _›)
+  all_goals (try subst_vars)
+  all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, numS_loc, numS_mem, biS, Nat.reduceEqDiff,
+    reduceIte, true_implies] at *)
+  all_goals first
+    | (show LitOK _; exact ⟨by decide, by decide, by decide⟩)
+    | (show List.length _ = 8; decide)
+    | grind [Sig.retOr]
+    | (intro _
+       refine Canon.lam ⟨?_, ?_, ?_, ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩, ?_, ?_⟩
+       all_goals first
+         | (rw [hw] at *; exact head_lam ‹_›)
+         | rfl
+         | with_reducible assumption
+         | with_reducible exact numAt_of_ok _ hb _ ‹_›)
+
+-- the binder shapes are the longest straight-line code: about 60 paths after `vcgen`
+set_option maxHeartbeats 1000000 in
+theorem forallS_spec (hb : b.size < 2 ^ 63) (n : Nat) (s₀ : St)
+    (hw : s₀.loc 8 = le64 b (s₀.loc 0).toNat) :
+    ⦃fun s => s = s₀ ∧ s.mem.arr8 IN = b⦄
+    step p (exec p n) forallS
+    ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧ (r = .normal → s' = s₀) ∧
+      (r ≠ .normal → FastOK b (s₀.loc 0) (r.retOr [])); ⊤⦄ := by
+  dsimp only [forallS, bndB]
+  vcgen [step, L.evalE_spec, L.evalC_spec, evalArgs, setLoc, setLocs,
+    fun l hl => litB_spec p b l hl n, fun l hl h8 => litB8_spec p b l hl h8 n, numB_spec p b n,
+    biB_spec p b n]
+  all_goals (try subst_vars)
+  all_goals simp only [Cond.pval, Expr.pval, St.setLoc_loc, St.setLoc_mem, Cmp.eval, BinOp.eval,
+      beq_iff_eq, bne_iff_ne, ne_eq, Nat.reduceEqDiff, reduceIte, Mem.src8, decide_eq_true_eq,
+      Decidable.not_not, Sig.retOr, FastOK, List.headD_cons, true_implies, reduceCtorEq,
+      not_false_eq_true, true_and, not_true, false_implies, and_true, lit_len] at *
+  all_goals repeat (cases ‹_ ∧ _›)
+  all_goals (try subst_vars)
+  all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, numS_loc, numS_mem, biS, Nat.reduceEqDiff,
+    reduceIte, true_implies] at *)
+  all_goals repeat (cases ‹_ ∧ _›)
+  all_goals (try subst_vars)
+  all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, numS_loc, numS_mem, biS, Nat.reduceEqDiff,
+    reduceIte, true_implies] at *)
+  all_goals first
+    | (show LitOK _; exact ⟨by decide, by decide, by decide⟩)
+    | (show List.length _ = 8; decide)
+    | grind [Sig.retOr]
+    | (intro _
+       refine Canon.pi ⟨?_, ?_, ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩, ?_, ?_, ?_, ?_⟩
+       all_goals first
+         | (rw [hw] at *; exact head_forall ‹_›)
+         | rfl
+         | with_reducible assumption
+         | with_reducible exact numAt_of_ok _ hb _ ‹_›)
 
 /-- **`fast_line(i)`**: it changes nothing, and what it returns is `0` or a canonical line's
 words. -/
@@ -497,13 +828,17 @@ theorem fastLine_spec (hp : p.lookup "fast_line" = some fastLine) (hb : b.size <
   | zero => vcgen [exec] <;> grind
   | succ n =>
     vcgen [exec, step, L.evalE_spec, L.evalC_spec, evalArgs, setLoc, setLocs,
-      fun s₁ hw => appS_spec p b hb n s₁ hw]
+      fun s₁ hw => appS_spec p b hb n s₁ hw, fun s₁ hw => lamS_spec p b hb n s₁ hw,
+      fun s₁ hw => forallS_spec p b hb n s₁ hw]
     all_goals (try subst_vars)
     all_goals simp only [Cond.pval, Expr.pval, St.setLoc_loc, St.setLoc_mem, Cmp.eval, BinOp.eval,
       Mem.src8, Locals.init_cons_zero, Nat.reduceEqDiff, reduceIte, true_implies, reduceCtorEq,
       FastOK, Sig.retVal, Sig.retOr, List.headD_cons, List.headD_nil, ne_eq, not_true_eq_false,
       false_implies, implies_true] at *
     all_goals repeat (cases ‹_ ∧ _›)
+    all_goals (try subst_vars)
+    all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, Locals.init_cons_zero, reduceIte,
+      Nat.reduceEqDiff] at *)
     all_goals first
       | grind
       | (cases ‹St›; simp_all)

@@ -1,5 +1,5 @@
 import ConAgua.Verdict.WhnfModels7E
-import ConAgua.Verdict.WhnfM2CE
+import ConAgua.Verdict.WhnfSlotE
 /-!
 # The `whnf` family's stuck-side helpers: `prop_irrel` (lane `verdicts-b`, helper `k2`)
 

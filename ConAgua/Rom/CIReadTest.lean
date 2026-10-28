@@ -1,6 +1,5 @@
 import ConAgua.Rom.CIRead
 import ConAgua.Arena.DeclRomStubs
-import ConAgua.Arena.PromoteProg
 import ConAgua.Rom.PinStream
 
 /-!
