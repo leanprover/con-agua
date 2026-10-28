@@ -1,5 +1,5 @@
 import ConAgua.Arena.IndT.GenRec2
-import ConAgua.Arena.IndT.RecGen10
+import ConAgua.Verdict.IndBRec6
 import ConAgua.Arena.IndInstallSpec.Icr
 import ConAgua.Arena.IndInstallSpec.InstallSimCall
 

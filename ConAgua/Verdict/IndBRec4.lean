@@ -16,8 +16,7 @@ aborts are of class `0` (the twin's `.internal`) but for the domains' consts-res
 `unresolved_consts_error` (`uce_errClaim_hi`, so `G` is `VerdictCtxU`); the guards' errors are
 `crg_ref`'s, the inference's the core stub's claim. `class_rules_ok_one` (`cr1_ref`) is its word
 sum's overflow abort, then `class_rule_ok` in tail position. Their ok halves are
-`classRuleOk_refinesC` and `class_rules_ok`'s refinement (`cr1R`, `RefE.run_okW`), their error
-halves `class_rules_ok`'s error claim (`RefE.run_err`).
+`classRuleOk_refinesC`; both halves of both go into `class_rules_ok`'s refinement (`crs_ref`).
 -/
 
 noncomputable section
@@ -34,7 +33,6 @@ open L.Arena
 
 local notation "V" => ConLeche.CheckMode.verified
 
-open Classical in
 l_model cruleE_spec (p : Prog) (hp : CruleProg p)
   fns [hp.rule ↦ cruleE]
   specs [crgE_spec p hp n, flushCaches_spec p hp.toFlushProg n, stripLams_specF p hp.strip n,
