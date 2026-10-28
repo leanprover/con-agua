@@ -1,6 +1,7 @@
 import ConAgua.Arena.IndRealCrF
 import ConAgua.Arena.IndRealNames
-import ConAgua.Arena.IndSumSpec.CheckStructFieldSortsISucc
+import ConAgua.Arena.IndRealSpine
+import ConAgua.Arena.IndCallM
 
 /-!
 # SumProg

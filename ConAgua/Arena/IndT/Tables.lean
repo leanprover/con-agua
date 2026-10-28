@@ -1,10 +1,13 @@
 import ConAgua.Arena.IndRealSctC
 import ConAgua.Arena.IndInstallSpec.SpgWZero
-import ConAgua.Arena.Verdict
-import ConAgua.Checker.NoVerdictTree
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
+import ConAgua.Arena.RecCheckSpec.DecHLTruncMBound
+import ConAgua.Arena.IndInstallSpec.ConsBlockCtors
+import ConAgua.Arena.IndInstallSpec.InstallRec2PSl
+import ConAgua.Arena.IndInstallSpec.NestCtx
+import ConAgua.Arena.IndInstallSpec.PosFreeMfr
 
 /-!
 # `check_block_tables`: one model and one refinement for both outcomes

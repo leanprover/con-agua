@@ -3,6 +3,7 @@ import ConAgua.Verdict.IndBE
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
+import ConAgua.Arena.IndT.Install1
 
 /-!
 # `check_block_idx_sorts`: one model and one refinement for both outcomes

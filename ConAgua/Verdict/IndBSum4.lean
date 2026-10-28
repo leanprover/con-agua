@@ -4,6 +4,7 @@ import ConAgua.Arena.IndSumSpec.SoaW
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
+import ConAgua.Arena.IndT.Sum4
 /-!
 # `check_sum_ctors`: one model and one refinement for both outcomes
 

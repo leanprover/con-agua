@@ -1,12 +1,7 @@
-import ConAgua.Arena.RecCheckSpec.DecHLTruncMBound
 import ConAgua.Arena.IndRealMemoCrT
 import ConAgua.Arena.IndRealWalkT
 import ConAgua.Arena.TblFrame
 import ConAgua.Arena.IndSumSpec.CheckSumCtor
-import ConAgua.Arena.IndInstallSpec.ConsBlockCtors
-import ConAgua.Arena.IndInstallSpec.InstallRec2PSl
-import ConAgua.Arena.IndInstallSpec.NestCtx
-import ConAgua.Arena.IndInstallSpec.PosFreeMfr
 import ConAgua.Arena.IndInstallSpec.TabSimSpg
 import ConAgua.Arena.IndRealApdT
 import ConRon.Bridge.Inductives.BlockTail

@@ -4,6 +4,7 @@ import ConAgua.Arena.IndInstallSpec.IacW
 import ConAgua.Arena.IndInstallSpec.PnfW
 import ConAgua.Verdict.PosTopE1
 import ConAgua.Verdict.IndBE
+import ConAgua.Arena.IndT.Install1
 
 /-!
 # `checkAbsCtorSorts`, `checkAbsCtorSortsAll` under `StageC` (lane `indstaget`)

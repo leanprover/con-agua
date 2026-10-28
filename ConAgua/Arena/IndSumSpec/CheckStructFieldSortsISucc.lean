@@ -1,4 +1,3 @@
-import ConAgua.Arena.IndRealFvtD
 import ConAgua.Arena.IndCallM
 import ConAgua.Arena.IndSum
 import ConAgua.Arena.IndPosSpec.MatesW

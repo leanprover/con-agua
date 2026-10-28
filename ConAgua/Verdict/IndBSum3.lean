@@ -1,9 +1,12 @@
 import ConAgua.Verdict.IndBSum2
 import ConAgua.Verdict.IndBSum1
-import ConAgua.Arena.IndT.Sum4
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
+import ConAgua.Arena.IndT.Install1
+import ConAgua.Arena.RecGenSpec.Classes
+import ConAgua.Arena.DeclArmT
+import ConAgua.Arena.IndSumSpec.CheckSumCtor
 /-!
 # Error refinements of `check_sum_ctor_tail`, `check_sum_ctor`, `check_sum_ctors`
 (lane `verdicts-b`, helper `ib`)

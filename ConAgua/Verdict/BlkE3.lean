@@ -1,5 +1,4 @@
 import ConAgua.Verdict.IndA4
-import ConAgua.Arena.IndT.Tables
 /-!
 # `check_block_tables`' error claim
 
