@@ -1,7 +1,7 @@
 import ConAgua.Front.ApplyDecl
 import ConAgua.Front.FieldsDeclSpec
 import ConAgua.Front.RunModel
-import ConAgua.Scan.FastSound
+import ConAgua.Front.LineRecLink
 import ConAgua.Arena.GrindAttr
 import ConAgua.Census.Attr
 import ConAgua.L.GrindAttr
@@ -12,14 +12,17 @@ import Std.WP.Tactic
 /-!
 # One line of the export, applied: `front_line`
 
-`front_line(i)` first asks the fast path (`fast_line`, `ConAgua.Scan.Fast`): a line in
-lean4export's canonical form of a common shape is applied right away (`apply_expr`). Otherwise it
-scans the line at `i` with Stage B's validator (`scan_line`), and, if it is a name or level line, reads its fields (`rec_line_loop`, `ConAgua.Front.Fields`) and applies it to
-the parse state (`apply_nstr`, `apply_nnum`, `apply_level`, `ConAgua.Front.Apply`). It returns
-`(0, 0)` for a line that does not scan, `(1, next)` otherwise (`next` as `scan_line`'s). A blank
-line and the `meta` header change nothing. Expression, declaration and inductive lines go to
-`apply_any`/`apply_dline` (below). A number of more than 18 digits aborts
+`front_line(i)` reads the line at `i` once, as con-ron's `scan_line_fwd` does (`line_rec`,
+`ConAgua.Front.LineRec`): it validates the line and reads its record's fields in one pass, then
+applies the record to the parse state: a name or level line by `apply_rec` (`apply_nstr`,
+`apply_nnum`, `apply_level`, `ConAgua.Front.Apply`), an expression line by `apply_expr`, a
+declaration or inductive line by `apply_dline` (below). It returns `(0, 0)` for a line that does
+not scan, `(1, next)` otherwise (`next` after the line's newline, `0` at the end of the input). A
+blank line and the `meta` header change nothing. A number of more than 18 digits aborts
 (`docs/deviations.md`, D2), as does a full pool or table.
+
+The model `frontLineW` is the validator's `lineFwdN` with the record passes' fields (`recLineN`,
+`exprLineN`); `frontLineW_eq` shows it is the single pass's (`ConAgua.Front.LineRecLink`).
 
 `frontLine_refines`: when `front_line(i)` returns `(1, next)`, con-leche's `scanLineFwd b i` is
 `.ok r next'` with `next'` the word `next`, and con-ron's `applyLine st r` runs, its state is
@@ -40,36 +43,22 @@ namespace L.Front
 
 /-- con-ron: ConRon/Arena/Frontend/ExportC.lean:464-477 ConRon.Arena.Frontend.applyLine -/
 @[l_impl ConRon.Arena.Frontend.applyLine]
-def frontLine : FunDecl := lfn (i) locals (ok, nx, s, pl, idx, a, c, d) {
-  (nx, pl, idx, a, c, d) := call fast_line(i);
-  if nx != 0 {
-    ok := call apply_expr(pl, idx, a, c, d);
-    return (1, nx)
-  };
-  (ok, nx) := call scan_line(i);
-  if ok == 0 { return (0, 0) };
+-- con-leche: ConLeche/Frontend/Scan/Fast.lean:2587-2599 ConLeche.Frontend.scanLineFwd
+def frontLine : FunDecl := lfn (i) locals (ok, nx, s, pl, idx, a, c, d, j, q) {
   s := call skip_ws(i);
-  if !(s < len(IN.u8) && IN.u8[s] == 123) { return (1, nx) };
-  ok := call apply_any(s + 1);
+  if s < len(IN.u8) && IN.u8[s] == 10 { return (1, s + 1) };
+  if len(IN.u8) <= s { return (1, 0) };
+  if IN.u8[s] != 123 { return (0, 0) };
+  (j, pl, idx, a, c, d) := call line_rec(s + 1);
+  if j == 0 { return (0, 0) };
+  q := call skip_ws(j);
+  if q < len(IN.u8) && IN.u8[q] == 10 { nx := q + 1 }
+  else if len(IN.u8) <= q { nx := 0 }
+  else { return (0, 0) };
+  if pl == 0 { ok := call apply_dline(s + 1) }
+  else if pl <= 7 { ok := call apply_rec(pl, idx, a, c, d) }
+  else { ok := call apply_expr(pl, idx, a, c, d) };
   return (1, nx)
-}
-
-/-- The fields of the record after the line's `{` at `j - 1`, applied: a name or level line, else
-an expression line; a declaration line aborts. -/
--- con-ron: ConRon/Arena/Frontend/ExportC.lean:464-477 ConRon.Arena.Frontend.applyLine
-def applyAny : FunDecl := lfn (j) locals (pl, idx, a, c, d, z) {
-  (pl, idx, a, c, d) := call rec_line_loop(j);
-  if pl != 0 {
-    z := call apply_rec(pl, idx, a, c, d);
-    return 0
-  };
-  (pl, idx, a, c, d) := call rec_expr_loop(j);
-  if pl != 0 {
-    z := call apply_expr(pl, idx, a, c, d);
-    return 0
-  };
-  z := call apply_dline(j);
-  return 0
 }
 
 /-- A declaration line: its fields, applied (an inductive block by `apply_ind` at its value's
@@ -187,42 +176,101 @@ noncomputable def frontLineW (p : Prog) (b : Array UInt8) (m : Mem) (i : Word) :
 
 theorem map_okRes (nx : Word) (m : Mem) : Option.map (okRes nx) (some m) = some ([1, nx], m) := rfl
 
-open L.Scan.Fast L.Scan.FastSound in
-/-- **The fast arm's model**: on a line `fast_line` accepts, `front_line`'s model applies the
-fields it returns. -/
-theorem frontLineW_canon (p : Prog) (b : Array UInt8) (hb : b.size < 2 ^ 63) (m : Mem) (i : Word)
-    (r : List Word) (h : Canon b i r) :
-    frontLineW p b m i = (applyExprW b m (r.tail.headD 0) (r.tail.tail.headD 0)
-      (r.tail.tail.tail.headD 0) (r.tail.tail.tail.tail.headD 0)
-      (r.tail.tail.tail.tail.tail.headD 0)).map (okRes (r.headD 0)) := by
-  have hexpr : ∀ (nx : Word) (f : L.Front.Fields.Fld), LineOK b i nx →
-      (L.Front.Fields.recLineN b (i + 1)).pl = 0 → L.Front.Fields.exprLineN b (i + 1) = f →
-      f.pl ≠ 0 →
-      frontLineW p b m i = (applyExprW b m f.pl f.idx f.a f.c f.d).map (okRes nx) := by
-    intro nx f hL hr he hf
-    unfold frontLineW applyAnyW
-    rw [hL.fwd, hL.ws, UInt64.ofNat_toNat, ite_eq_right (by simp), ite_eq_left ⟨hL.lt, hL.brace⟩,
-      ite_eq_right (by simp [hr]), he, ite_eq_left hf]
-  cases h with
-  | app h =>
-    obtain ⟨hL, hr, he⟩ := appLine_sound hb h
-    exact hexpr _ _ hL hr he (by simp)
-  | lam h =>
-    obtain ⟨hL, hr, he⟩ := lamLine_sound hb h
-    exact hexpr _ _ hL hr he (by simp)
-  | pi h =>
-    obtain ⟨hL, hr, he⟩ := forallLine_sound hb h
-    exact hexpr _ _ hL hr he (by simp)
+open L.Front.LineRec in
+/-- The record of a line that scans, applied as `front_line` dispatches on `pl`. -/
+noncomputable def lineApplyW (p : Prog) (b : Array UInt8) (m : Mem) (j : Word) (r : LRS) :
+    Option Mem :=
+  if r.f.pl = 0 then applyDLineW p b m j
+  else if r.f.pl ≤ 7 then lineRecW b m r.f.pl r.f.idx r.f.a r.f.c r.f.d
+  else applyExprW b m r.f.pl r.f.idx r.f.a r.f.c r.f.d
 
-/-- The same as an equation for `finish`: a nonzero answer of `fast_line` is applied. -/
-theorem frontLineW_fast (p : Prog) (b : Array UInt8) (hb : b.size < 2 ^ 63) (m : Mem) (i : Word)
-    (r : List Word) (h : L.Scan.Fast.FastOK b i r) (h0 : r.headD 0 ≠ 0) :
-    frontLineW p b m i = (applyExprW b m (r.tail.headD 0) (r.tail.tail.headD 0)
-      (r.tail.tail.tail.headD 0) (r.tail.tail.tail.tail.headD 0)
-      (r.tail.tail.tail.tail.tail.headD 0)).map (okRes (r.headD 0)) :=
-  frontLineW_canon p b hb m i r (h h0)
+open L.Front.LineRec in
+/-- After the line's closing brace, at the first non-blank byte `q`. -/
+noncomputable def lineEndW (p : Prog) (b : Array UInt8) (m : Mem) (j : Word) (r : LRS) (q : Word) :
+    Option (List Word × Mem) :=
+  if q < UInt64.ofNat b.size ∧ byteW b q = 10 then (lineApplyW p b m j r).map (okRes (q + 1))
+  else if UInt64.ofNat b.size ≤ q then (lineApplyW p b m j r).map (okRes 0)
+  else some ([0, 0], m)
 
-grind_pattern [lang_grind] frontLineW_fast => frontLineW p b m i, L.Scan.Fast.FastOK b i r
+open L.Front.LineRec in
+/-- `front_line(i)`'s code as a model: from the first non-blank byte `s`. -/
+noncomputable def frontLine2W (p : Prog) (b : Array UInt8) (m : Mem) (s : Word) :
+    Option (List Word × Mem) :=
+  if s < UInt64.ofNat b.size ∧ byteW b s = 10 then some ([1, s + 1], m)
+  else if UInt64.ofNat b.size ≤ s then some ([1, 0], m)
+  else if byteW b s ≠ 123 then some ([0, 0], m)
+  else if (lineRecEntryN b (s + 1)).e = 0 then some ([0, 0], m)
+  else lineEndW p b m (s + 1) (lineRecEntryN b (s + 1))
+    (UInt64.ofNat (skipWsN b (lineRecEntryN b (s + 1)).e.toNat))
+
+open L.Front.LineRec in
+/-- **The record passes' dispatch is the single pass's**, on a line that scans. -/
+theorem applyAnyW_lineRec (p : Prog) (b : Array UInt8) (m : Mem) (j : Word)
+    (he : (lineRecEntryN b j).e ≠ 0) :
+    applyAnyW p b m j = lineApplyW p b m j (lineRecEntryN b j) := by
+  have hpl : PlOK 0 Fld.none.pl := ⟨fun _ => rfl, fun h => by simp at h, fun h => by simp at h⟩
+  obtain ⟨⟨k0, k1, k2⟩, hk, -⟩ := lineRecN_kind (b := b) j 1 0 0 .none hpl he
+  unfold applyAnyW lineApplyW lineRecEntryN at *
+  rcases hk with h | h | h | h | h
+  · have hr := lineRecN_recN (b := b) j 1 0 0 .none he (.inl h) (.inl rfl)
+    obtain ⟨l1, l2⟩ := k1 (.inl h)
+    rw [recLineN, hr, ite_eq_left (by intro h0; rw [h0] at l1; simp at l1),
+      ite_eq_right (by intro h0; rw [h0] at l1; simp at l1), ite_eq_left l2]
+  · have hr := lineRecN_recN (b := b) j 1 0 0 .none he (.inr (.inl h)) (.inl rfl)
+    obtain ⟨l1, l2⟩ := k1 (.inr (.inl h))
+    rw [recLineN, hr, ite_eq_left (by intro h0; rw [h0] at l1; simp at l1),
+      ite_eq_right (by intro h0; rw [h0] at l1; simp at l1), ite_eq_left l2]
+  · have hr := lineRecN_recN_none (b := b) j 1 0 0 .none he (.inl h) rfl
+    have hx := lineRecN_exprN (b := b) j 1 0 0 .none he h (.inl rfl)
+    have l := k2 h
+    have l0 : (lineRecN b j 1 0 0 .none).f.pl ≠ 0 := fun h0 => by rw [h0] at l; simp at l
+    have l7 : ¬ (lineRecN b j 1 0 0 .none).f.pl ≤ 7 := fun hle => by
+      rw [UInt64.le_iff_toNat_le] at hle l; simp at hle l; omega
+    rw [recLineN, exprLineN, hr, hx, ite_eq_right (by simp), ite_eq_left l0, ite_eq_right l0,
+      ite_eq_right l7]
+  · have hr := lineRecN_recN_none (b := b) j 1 0 0 .none he (.inr h) rfl
+    have hx := lineRecN_exprN_none (b := b) j 1 0 0 .none he h rfl
+    rw [recLineN, exprLineN, hr, hx, ite_eq_right (by simp), ite_eq_right (by simp),
+      ite_eq_left (k0 (.inr h))]
+  · have hr := lineRecN_recN (b := b) j 1 0 0 .none he (.inr (.inr h)) (.inl rfl)
+    obtain ⟨l1, l2⟩ := k1 (.inr (.inr h))
+    rw [recLineN, hr, ite_eq_left (by intro h0; rw [h0] at l1; simp at l1),
+      ite_eq_right (by intro h0; rw [h0] at l1; simp at l1), ite_eq_left l2]
+
+open L.Front.LineRec in
+/-- **`front_line`'s model is its single pass.** -/
+theorem frontLineW_eq (p : Prog) (b : Array UInt8) (m : Mem) (i : Word) :
+    frontLineW p b m i = frontLine2W p b m (UInt64.ofNat (skipWsN b i.toNat)) := by
+  unfold frontLineW frontLine2W lineFwdN lineFwdN.lineFwd2N
+  generalize UInt64.ofNat (skipWsN b i.toNat) = s
+  by_cases h10 : s < UInt64.ofNat b.size ∧ byteW b s = 10
+  · rw [ite_eq_left h10, ite_eq_left h10, ite_eq_right (by simp),
+      ite_eq_right (fun h => by rw [h10.2] at h; simp at h)]
+  rw [ite_eq_right h10, ite_eq_right h10]
+  by_cases hend : UInt64.ofNat b.size ≤ s
+  · rw [ite_eq_left hend, ite_eq_left hend, ite_eq_right (by simp),
+      ite_eq_right (fun h => absurd h.1 (UInt64.not_lt.mpr hend))]
+  rw [ite_eq_right hend, ite_eq_right hend]
+  by_cases h123 : byteW b s ≠ 123
+  · rw [ite_eq_left h123, ite_eq_left h123, ite_eq_left rfl]
+  rw [ite_eq_right h123, ite_eq_right h123]
+  have hlt : s < UInt64.ofNat b.size := UInt64.not_le.mp hend
+  have hb : byteW b s = 123 := Decidable.not_not.mp h123
+  have hL : lineLoopN b (s + 1) = (lineRecEntryN b (s + 1)).e := by
+    rw [lineLoopN, lineRecEntryN, lineRecN_e]
+  rw [hL]
+  by_cases h0 : (lineRecEntryN b (s + 1)).e = 0
+  · rw [ite_eq_left h0, ite_eq_left h0, ite_eq_left rfl]
+  rw [ite_eq_right h0, ite_eq_right h0]
+  unfold lineFwdN.lineEndN lineEndW
+  rw [applyAnyW_lineRec p b m (s + 1) h0]
+  generalize UInt64.ofNat (skipWsN b (lineRecEntryN b (s + 1)).e.toNat) = q
+  by_cases hq : q < UInt64.ofNat b.size ∧ byteW b q = 10
+  · rw [ite_eq_left hq, ite_eq_left hq, ite_eq_right (by simp), ite_eq_left ⟨hlt, hb⟩]
+  rw [ite_eq_right hq, ite_eq_right hq]
+  by_cases he : UInt64.ofNat b.size ≤ q
+  · rw [ite_eq_left he, ite_eq_left he, ite_eq_right (by simp), ite_eq_left ⟨hlt, hb⟩]
+  rw [ite_eq_right he, ite_eq_right he, ite_eq_left rfl]
 
 /-! ## The spec -/
 
@@ -257,14 +305,12 @@ def scanLookupsFns : Prog :=
    ("skip_braced", L.Examples.skipBraced), ("scan_quoted_nat", L.Scan.Values.scanQuotedNat),
    ("scan_line_loop", L.Scan.Line.scanLineLoop), ("scan_line", L.Scan.Line.scanLine),
    ("validate", L.Scan.Line.validate), ("read_nat", L.Front.Fields.readNat),
-   ("rec_nat_list", L.Front.Fields.recNatList), ("rec_str_name", L.Front.Fields.recStrName),
-   ("rec_num_name", L.Front.Fields.recNumName), ("rec_line_loop", L.Front.Fields.recLineLoop),
-   ("obj_val", L.Front.Fields.objVal), ("rec_obj", L.Front.Fields.recObj),
-   ("expr_val", L.Front.Fields.exprVal), ("rec_expr_loop", L.Front.Fields.recExprLoop),
-   ("esc_sur", escSur), ("esc_one", escOne), ("utf8_put", utf8Put), ("str_put_esc", strPutEsc),
-   ("fast_line", L.Scan.Fast.fastLine)]
+   ("rec_nat_list", L.Front.Fields.recNatList), ("sub_bit", L.Front.LineRec.subBitF),
+   ("sub_val", L.Front.LineRec.subValF), ("sub_rec", L.Front.LineRec.subRec),
+   ("line_rec", L.Front.LineRec.lineRec),
+   ("esc_sur", escSur), ("esc_one", escOne), ("utf8_put", utf8Put), ("str_put_esc", strPutEsc)]
 
-/-- Every function of the validator and of the fields pass, at its name in `p`. -/
+/-- Every function of the validator and of the single pass, at its name in `p`. -/
 abbrev ScanLookups (p : Prog) : Prop := ProgHas p scanLookupsFns
 
 section spec
@@ -273,15 +319,15 @@ variable (p : Prog) (hS : ScanLookups p) (hL : FrontLookups p)
   (hpn : p.lookup "apply_nstr" = some applyNStr) (hpu : p.lookup "apply_nnum" = some applyNNum)
   (hpl : p.lookup "apply_level" = some applyLevel)
   (hpr : p.lookup "apply_rec" = some applyRec) (hpt : p.lookup "apply_str" = some applyStr)
-  (hE : ExprLookups p) (hpy : p.lookup "apply_any" = some applyAny)
+  (hE : ExprLookups p)
   (hF : DeclFieldLookups p) (hDL : DeclLookups p) (hpz : p.lookup "apply_dline" = some applyDLine)
   (b : Array UInt8) (hb : b.size < 2 ^ 63)
-include hS hL hpf hps hpn hpu hpl hpr hpt hE hpy hF hDL hpz hb
+include hS hL hpf hps hpn hpu hpl hpr hpt hE hF hDL hpz hb
 
 attribute [local lang_grind =] map_okRes
 
 omit hb in
-omit hpf hps hpu hpl hpr hpy hF hDL hpz in
+omit hpf hps hpu hpl hpr hF hDL hpz in
 theorem applyStr_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (hpool : pcap s₀.mem < 2 ^ 63)
     (htop : s₀.mem.top.toNat ≤ pcap s₀.mem)
     (idx a c d : Word) :
@@ -305,7 +351,7 @@ theorem applyStr_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (hpool :
         applyNStr_spec p hL hpn n] <;> finish [applyStrW, Keep.size]
 
 omit hb in
-omit hpf hps hpy hF hDL hpz in
+omit hpf hps hF hDL hpz in
 theorem applyRec_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (hpool : pcap s₀.mem < 2 ^ 63)
     (htop : s₀.mem.top.toNat ≤ pcap s₀.mem)
     (pl idx a c d : Word) :
@@ -322,7 +368,7 @@ theorem applyRec_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (hpool :
         applyStr_spec p hS hL hpn hpt hE b n,
         applyNNum_spec p hL hpu n, applyLevel_spec p hL hpl n] <;> finish [lineRecW, NONE]
 
-omit hS hL hpf hps hpn hpu hpl hpr hpt hE hpy in
+omit hS hL hpf hps hpn hpu hpl hpr hpt hE in
 theorem applyDLine_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (j : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "apply_dline" [j]
@@ -337,28 +383,6 @@ theorem applyDLine_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (j : W
         recDeclLine_spec p hF b hb n, applyDecl_spec p hDL b hb n, runF_spec p "apply_ind" _ n] <;>
         finish [applyDLineW, DFld.enc]
 
-omit hpf hps in
-theorem applyAny_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b)
-    (hpool : pcap s₀.mem < 2 ^ 63)
-    (htop : s₀.mem.top.toNat ≤ pcap s₀.mem) (j : Word) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "apply_any" [j]
-    ⦃fun _ s' => LocEq s' s₀ ∧ applyAnyW p b s₀.mem j = some s'.mem; ⊤⦄ := by
-  rw [invoke_eq _ hpy]
-  simp only [callFn, applyAny]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym (gen := 16) only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
-        L.Front.Fields.recLineLoop_spec p b hb (hS.get "skip_ws") (hS.get "skip_digits") (hS.get "key_end") (hS.get "num_end") (hS.get "key_at_g1") (hS.get "key_at_g2") (hS.get "key_at_g3") (hS.get "key_at_g4") (hS.get "key_at_g5") (hS.get "key_at_g6") (hS.get "key_at") (hS.get "value_at") (hS.get "next_member") (hS.get "slot_nat") (hS.get "utf8_char") (hS.get "utf8_valid") (hS.get "byte_in") (hS.get "hex_val") (hS.get "hex4") (hS.get "hex3") (hS.get "u_next") (hS.get "unescape") (hS.get "str_close") (hS.get "has_escape") (hS.get "scan_string") (hS.get "skip_braced") (hS.get "read_nat") (hS.get "rec_nat_list") (hS.get "rec_str_name") (hS.get "rec_num_name") (hS.get "rec_line_loop") n,
-        L.Front.Fields.recExprLoop_spec p b hb (hS.get "skip_ws") (hS.get "skip_digits") (hS.get "key_end") (hS.get "num_end") (hS.get "key_at_g1") (hS.get "key_at_g2") (hS.get "key_at_g3") (hS.get "key_at_g4") (hS.get "key_at_g5") (hS.get "key_at_g6") (hS.get "key_at") (hS.get "value_at") (hS.get "next_member") (hS.get "slot_nat") (hS.get "scan_quoted_nat") (hS.get "match_word") (hS.get "scan_binder_info") (hS.get "scan_nat_list") (hS.get "match_lit") (hS.get "scan_bool") (hS.get "utf8_char") (hS.get "utf8_valid") (hS.get "byte_in") (hS.get "hex_val") (hS.get "hex4") (hS.get "hex3") (hS.get "u_next") (hS.get "unescape") (hS.get "str_close") (hS.get "has_escape") (hS.get "scan_string") (hS.get "read_nat") (hS.get "obj_val") (hS.get "rec_obj") (hS.get "expr_val") (hS.get "rec_expr_loop") n,
-        applyRec_spec p hS hL hpn hpu hpl hpr hpt hE b n,
-        applyExpr_spec p hE b hb (hS.get "byte_in") (hS.get "hex_val") (hS.get "hex4") (hS.get "hex3") (hS.get "esc_sur") (hS.get "esc_one")
-          (hS.get "utf8_put") (hS.get "str_put_esc") n,
-        applyDLine_spec p hF hDL hpz b hb n] <;>
-        finish [applyAnyW, Fld.enc]
-
 omit hps in
 theorem frontLine_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Word)
     (hi : i.toNat ≤ b.size) (hpool : pcap s₀.mem < 2 ^ 63)
@@ -372,15 +396,17 @@ theorem frontLine_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Wo
   | zero => vcgen [exec] <;> grind
   | succ n =>
     have hb64 : b.size < 2 ^ 64 := by omega
+    rw [frontLineW_eq]
     sym (gen := 16) only [lang_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld8,
-        L.Scan.Line.scanLine_spec p b hb (hS.get "skip_ws") (hS.get "skip_digits") (hS.get "key_end") (hS.get "num_end") (hS.get "key_at_g1") (hS.get "key_at_g2") (hS.get "key_at_g3") (hS.get "key_at_g4") (hS.get "key_at_g5") (hS.get "key_at_g6") (hS.get "key_at") (hS.get "value_at") (hS.get "next_member") (hS.get "slot_nat") (hS.get "match_word") (hS.get "scan_binder_info") (hS.get "hints_num") (hS.get "hints_obj") (hS.get "scan_hints") (hS.get "scan_nat_list") (hS.get "match_lit") (hS.get "scan_bool") (hS.get "utf8_char") (hS.get "utf8_valid") (hS.get "byte_in") (hS.get "hex_val") (hS.get "hex4") (hS.get "hex3") (hS.get "u_next") (hS.get "unescape") (hS.get "str_close") (hS.get "has_escape") (hS.get "scan_string") (hS.get "scan_str_name") (hS.get "scan_num_name") (hS.get "scan_app") (hS.get "scan_binder") (hS.get "scan_let") (hS.get "scan_const") (hS.get "scan_proj") (hS.get "scan_rule") (hS.get "scan_rules") (hS.get "scan_ind_rec") (hS.get "scan_ind_recs") (hS.get "scan_ind_type") (hS.get "scan_ind_types") (hS.get "scan_ind_ctor") (hS.get "scan_ind_ctors") (hS.get "scan_axiom") (hS.get "scan_def") (hS.get "scan_thm") (hS.get "scan_opaque") (hS.get "scan_quot") (hS.get "scan_ind_decl") (hS.get "skip_braced") (hS.get "scan_quoted_nat") (hS.get "scan_line_loop") (hS.get "scan_line") n,
+        L.Front.LineRec.lineRec_spec p b hb (hS.get "skip_ws") (hS.get "skip_digits") (hS.get "key_end") (hS.get "num_end") (hS.get "key_at_g1") (hS.get "key_at_g2") (hS.get "key_at_g3") (hS.get "key_at_g4") (hS.get "key_at_g5") (hS.get "key_at_g6") (hS.get "key_at") (hS.get "value_at") (hS.get "next_member") (hS.get "slot_nat") (hS.get "match_word") (hS.get "scan_binder_info") (hS.get "scan_nat_list") (hS.get "match_lit") (hS.get "scan_bool") (hS.get "utf8_char") (hS.get "utf8_valid") (hS.get "byte_in") (hS.get "hex_val") (hS.get "hex4") (hS.get "hex3") (hS.get "u_next") (hS.get "unescape") (hS.get "str_close") (hS.get "has_escape") (hS.get "scan_string") (hS.get "read_nat") (hS.get "sub_bit") (hS.get "sub_val") (hS.get "sub_rec") (hS.get "rec_nat_list") (hS.get "scan_quoted_nat") (hS.get "skip_braced") (hS.get "hints_num") (hS.get "hints_obj") (hS.get "scan_hints") (hS.get "scan_rule") (hS.get "scan_rules") (hS.get "scan_ind_rec") (hS.get "scan_ind_recs") (hS.get "scan_ind_type") (hS.get "scan_ind_types") (hS.get "scan_ind_ctor") (hS.get "scan_ind_ctors") (hS.get "scan_axiom") (hS.get "scan_def") (hS.get "scan_thm") (hS.get "scan_opaque") (hS.get "scan_quot") (hS.get "scan_ind_decl") (hS.get "line_rec") n,
         L.Scan.Leaves.skipWs_spec p (hS.get "skip_ws") b hb64 n,
-        L.Scan.Fast.fastLine_spec p b (hS.get "fast_line") hb n,
+        applyRec_spec p hS hL hpn hpu hpl hpr hpt hE b n,
         applyExpr_spec p hE b hb (hS.get "byte_in") (hS.get "hex_val") (hS.get "hex4") (hS.get "hex3") (hS.get "esc_sur") (hS.get "esc_one")
           (hS.get "utf8_put") (hS.get "str_put_esc") n,
-        applyAny_spec p hS hL hpn hpu hpl hpr hpt hE hpy hF hDL hpz b hb n] <;>
-        finish [frontLineW, okRes]
+        applyDLine_spec p hF hDL hpz b hb n] <;>
+        finish [frontLine2W, lineEndW, lineApplyW, okRes, L.Front.LineRec.LRS.enc,
+          L.Front.LineRec.lineRecEntryN_le]
 
 end spec
 

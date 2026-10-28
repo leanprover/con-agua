@@ -757,4 +757,11 @@ theorem lineRecN_exprN_none (i w ik pk : Word) (f : Fld) (he : (lineRecN b i w i
   | case1 i w ik pk f h0 => rw [lineRecN_err b i w ik pk f h0] at he; exact absurd rfl he
   | _ => rw [lineRecN_close_ok ‹_› he] at hk; simp_all
 
+/-- The line's end is inside the input. -/
+theorem lineRecEntryN_le (j : Word) : (lineRecEntryN b j).e.toNat ≤ b.size := by
+  rw [lineRecEntryN, lineRecN_e]
+  by_cases h : L.Scan.Line.lineN b j 1 0 0 = 0
+  · rw [h]; simp
+  · exact L.Scan.Line.lineN_le b j 1 0 0 h
+
 end L.Front.LineRec
