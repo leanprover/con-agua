@@ -40,15 +40,6 @@ theorem rec2DecCV_erecP {m : Mem} {q : Nat} {cv : IConstantVal} (h : decCVp m q 
     simp only [Nat.zero_add]
     split <;> simp_all <;> omega
 
-def rtoK1 (cR : CallM) (n : Nat) (vis g rc cvRi c : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (_, m1) => rtoK2 cR n vis rc cvRi (gtW n m1 g c)
-
-/-- **The model of `class_rec_ty_ok`.** -/
-def rtoW (cR : CallM) : Nat → Mem → Word → Word → Word → Word → Word → Word → Option (List Word × Mem)
-  | 0, _, _, _, _, _, _, _ => none
-  | n + 1, m, vis, g, k, rc, cvRi, c => rtoK1 cR n vis g rc cvRi c (cR n "class_rec_ty_ok_guards" [g, k, rc, c] m)
-
 end L.Ind
 
 end

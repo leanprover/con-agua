@@ -1,18 +1,15 @@
-import ConAgua.Verdict.IndBRec1
-import ConAgua.Arena.IndT.RecGen3
+import ConAgua.Verdict.IndBRec2
 import ConAgua.Arena.IndT.Lift
 import ConAgua.Arena.RecGenSpec.ClassRecTysOk
 import ConRon.Bridge.Inductives.GenRec
 
 /-!
-# `classRecTyOk`, `classRecTysOk` under `StageC` (lane `indstaget`)
+# `classRecTysOk` under `StageC` (lane `indstaget`)
 
-`class_rec_ty_ok`'s model at `realCall p`, from `StageC` and the inputs' denotations con-ron's
-`classRecTyOk_spec` asks (`dClassGen`, `dRec`, the stream's checked constant), its twin side
-transcribed from that spec's proof: `targetMajorAt` (`targetMajorAt_spec`), `classGenRecTy`
-(`classGenRecTy_spec`, a core-free grower: `RSim.liftPP` of `gtW_sim`), the record write (twin
-side none), `classConstOk` (`ccoW_simT` and con-ron's `classConstOk_spec`), `isDefEqCore`
-(`isDefEqC_rsim`).
+`class_rec_tys_ok`'s model at `realCall p`, from `StageC` and the inputs' denotations con-ron's
+`classRecTysOk_spec` asks: each recursor's `class_rec_ty_ok` read through its run (`rtoR`; its ok
+half `rto_ref`'s, `IndBRec2.lean`), the extension after it from con-ron's `classRecTyOk_spec`, then
+the list's `cons`.
 -/
 
 
@@ -28,143 +25,9 @@ open L.Arena
 
 local notation "V" => ConLeche.CheckMode.verified
 
-/-- The usual `RSim` post under `StageC`. -/
-def KPC {α : Type} (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
-    (env : ConLeche.Env) (m : Mem) (dec : Mem → List Word → α → Prop) (b : List Word × Mem)
-    (a' : AState) (x : α) : Prop :=
-  StageC dn vis fe env b.2 a' ∧ IWGrow m b.2 ∧ dec b.2 b.1 x
-
 section sims
 variable {p : Prog} (hq : KnotStageProg p) (hApd : ApdF p) (hCrk : CrKeep p) {dn : NIdx → Option ConLeche.Name} {vis : Word}
   {fe : IFEnv} {env : ConLeche.Env} (henv : ConLeche.EnvWF env)
-
-include hq hApd hCrk henv in
-/-- **`class_const_ok` under `StageC`**: `ccoW_simT` and con-ron's `classConstOk_spec`. -/
-theorem ccoW_simC (n : Nat) (hn : n ≤ 2 ^ 62) (m : Mem) (a : AState) (q : Word)
-    (cv : IConstantVal) (hC : StageC dn vis fe env m a) (hq' : decCV (erecP m) q.toNat = some cv)
-    (hqb : q.toNat + 3 < 2 ^ 64) (hA : AbsOK m) {cP : ConLeche.ConstantVal}
-    (hcP : Frontend.denoteCV a.store cv = some cP) :
-    RSim (ccoW (realCall p) n m vis q) (ConRon.Arena.classConstOk V fe cv) a
-      (fun b a' x => (KPC dn vis fe env m decUnit b a' x ∧ AbsOK b.2) ∧
-        ConLeche.Expr.WScoped 0 cP.type ∧ ConRon.Bridge.CoreStep V env fe a a') := by
-  have h := RSim.liftC hC (Q := fun b _ _ => (IWGrow m b.2 ∧ True) ∧ AbsOK b.2)
-    (RSim.mono (ccoW_simT hq hApd hCrk n hn m a q cv hC.stageT hq' hqb hA (denoteCV_lps hcP))
-      fun _ _ _ _ ⟨⟨hT, hg, hd⟩, hA'⟩ => ⟨hT, ⟨hg, hd⟩, hA'⟩)
-    (ConRon.Bridge.Inductives.classConstOk_spec fe (ConRon.Bridge.CoreSpec.of_core rfl) henv cv cP) hcP
-  refine RSim.mono h fun _ _ _ _ hh => ?_
-  obtain ⟨hC', ⟨⟨hg, hd⟩, hA'⟩, ⟨_, ⟨hw, -⟩, -⟩, hs⟩ := hh
-  exact ⟨⟨⟨hC', hg, hd⟩, hA'⟩, hw, hs⟩
-
-include hq hApd hCrk henv in
-/-- **`class_rec_ty_ok` under `StageC`** (twin side: con-ron's `classRecTyOk_spec`'s proof). -/
-theorem rtoW_simC (hrp : RtoProg p) (n : Nat) (hn : n ≤ 2 ^ 62) (m : Mem) (a : AState) (g k rc cvRi c : Word)
-    (G : ClassGen) (RS : RecShape) (CVRi : IConstantVal) (hC : StageC dn vis fe env m a)
-    (hG : DecB (fun m => decCG m g.toNat) m G) (hns : G.nP + G.slots.length < 2 ^ 64)
-    (hrc : DecB (fun m => decRS m rc.toNat) m RS) (hcvR : ∀ q, iwN m rc.toNat = some q → CVExt m q)
-    (hcvRi : DecB (fun m => decCVp m cvRi.toNat) m CVRi) (hA : AbsOK m)
-    {gP : ConLeche.ClassGen} {rcP : ConLeche.RecShape} {cvRiP : ConLeche.ConstantVal}
-    (hgP : dClassGen a.store G = some gP) (hrcP : dRec a.store RS = some rcP)
-    (hRiP : Frontend.denoteCV a.store CVRi = some cvRiP) (hRi : ConLeche.Expr.WScoped 0 cvRiP.type) :
-    RSim (rtoW (realCall p) n m vis g k rc cvRi c)
-      (ConRon.Arena.classRecTyOk V fe G k.toNat RS CVRi c.toNat) a
-      (fun b a' x => KPC dn vis fe env m decCVR b a' x ∧ AbsOK b.2) := by
-  rcases n with _ | n
-  · exact RSim.none
-  rw [rtoW_eq]
-  unfold ConRon.Arena.classRecTyOk
-  rcases n with _ | n
-  · refine RSim.lstep (K := rtoK1 (realCall p) 0 vis g rc cvRi c) rfl fun b hb => ?_
-    obtain ⟨e', he', -⟩ := callE_zero p "class_rec_ty_ok_guards" [g, k, rc, c] m
-    simp [realCall, callW_eq_callE, he', Except.toOption] at hb
-  obtain ⟨-, -, hcls, -, -, -, -, -⟩ := dClassGen_inv hgP
-  rw [rgT_bind]
-  refine RSim.bind (K := rtoK1 (realCall p) (n + 1) vis g rc cvRi c) rfl
-    (Q1 := fun b a1 tm => RgPost dn vis fe m a G c b.2 tm a1) (fun ⟨r1, m1⟩ hb => ?_) ?_
-  · obtain ⟨s1, rfl, -, tm, a1, run1, hR⟩ := RefE.run_okW
-      (classRecTyOkGuardsE_spec p hrp (n + 1) ⟨m, Locals.init []⟩ g k rc c)
-      (rg_ref dn fe vis (n + 1) hC.stage hG hns hrc hA) hb
-    exact ⟨tm, a1, run1, hR⟩
-  rintro ⟨r1, m1⟩ tm a1 - ⟨hrun1, hS1, hg1, hA1⟩
-  obtain ⟨p1, -⟩ := ConRon.Bridge.Inductives.targetMajorAt_spec G.cls gP.cls c.toNat a a1 tm hC.check.state
-    hC.check.pins hcls hrun1
-  have hC1 : StageC dn vis fe env m1 a1 := hC.of_pstep hS1 hA1 p1
-  rw [rtoK1_some]
-  refine RSim.bind (K := rtoK2 (realCall p) (n + 1) vis rc cvRi) rfl
-    (RSim.liftPP hC1 (gtW_sim dn vis fe (n + 1) m1 a1 g c G hS1 (hG.grow (decCG_mono _) hg1) hns hA1)
-      (fun _ _ _ h => ⟨h.1.1, h.2⟩) (ConRon.Bridge.Inductives.classGenRecTy_spec G gP c.toNat)
-      (dClassGen_ext p1.ext _ _ hgP)) ?_
-  rintro ⟨r2, m2⟩ o a2 - ⟨hC2, ⟨⟨hS2, hg2, ho⟩, hA2⟩, hR2, p2⟩
-  dsimp only at hS2 hg2 ho hA2 hC2
-  rcases o with _ | gty
-  · rw [rtoK2_fail (h := ho)]; exact RSim.none
-  obtain ⟨gtyP, -, hgtyd⟩ := hR2
-  obtain ⟨h21, hgH, hgd⟩ := ho
-  rw [rtoK2_ok (h := by rw [h21]; decide)]
-  subst hgd
-  have hg12 := hg1.trans hg2
-  obtain ⟨q0, hq0, -⟩ := rec2DecRS_parts (show decRS (truncM m) rc.toNat = some RS from hrc)
-  obtain ⟨hrct, hq0m⟩ := rec2IwN_trunc hq0
-  have hq2 : iwN m2 rc.toNat = some q0 := by rw [iwN_grow hg12 hrct]; exact hq0m
-  obtain ⟨q0', hq0', hcv2, -⟩ := rec2DecRS_parts (hrc.stab (decRS_mono _) m2 hg12)
-  rw [hq2] at hq0'; cases hq0'
-  have hext2 := CVExt_grow hg12 (hcvR q0 hq0m)
-  obtain ⟨erc, trc⟩ := rec2RdN (w := rc) (k := 0) (by simpa using hq2) hS2.2.2.2.1
-  simp only [show UInt64.ofNat 0 = (0 : Word) from rfl, UInt64.add_zero] at erc
-  rw [erc]
-  refine RSim.lstep (K := rtoK3 (realCall p) (n + 1) vis cvRi (r2.tail.headD 0)) rfl
-    fun ⟨q, m3⟩ h3 => ?_
-  obtain ⟨hS3, hg3, hqe, htop3, hsl3, hdec3⟩ := cvNew_stage (cq := UInt64.ofNat q0) h3 hS2
-    (by rw [trc]; exact hcv2) (by rw [trc]; exact hext2.1) (by rw [trc]; exact hext2.2) hgH
-  rw [rtoK3_some]
-  have hext3 : CVExt m3 q.toNat :=
-    ⟨by omega, fun o l ho hl => (hsl3 o l ho hl).imp_left fun h => Nat.le_trans h hg3.2.1⟩
-  have hqb : q.toNat + 3 < 2 ^ 64 := by
-    obtain ⟨-, hE1, -, hEs, -⟩ := hS3.2
-    omega
-  have hA3 := cvNewW_afr h3 hA2
-  have hC3 : StageC dn vis fe env m3 a2 := hC2.of_pstep hS3 hA3 (PStep.refl hC2.check.state)
-  have p12 := p1.trans p2
-  obtain ⟨hnm, hlps, -⟩ :=
-    ConRon.Bridge.Core.denoteCV_inv (dExt_denoteCV p12.ext _ _ (dRec_inv hrcP).1)
-  have hcvG : Frontend.denoteCV a2.store { RS.cvR with type := decI (r2.tail.headD 0) } =
-      some { rcP.cvR with type := gtyP } := by
-    simp only [Frontend.denoteCV, hnm, hlps, hgtyd]
-  refine RSim.bind (K := rtoK4 (realCall p) (n + 1) vis cvRi (r2.tail.headD 0) q) rfl
-    (ccoW_simC hq hApd hCrk henv (n + 1) (by omega) m3 a2 q _ hC3 (rec2DecCV_erecP hdec3 hext3) hqb hA3
-      hcvG) ?_
-  rintro ⟨r4, m4⟩ u a4 - ⟨⟨⟨hC4, hg4, -⟩, hA4⟩, hwG, c4⟩
-  dsimp only at hC4 hg4 hA4
-  rw [rtoK4_some]
-  have hg14 := hg12.trans (hg3.trans hg4)
-  have hri := hcvRi.stab (OMono.decCVp _) m4 hg14
-  obtain ⟨wt, hwt, hwtH, hwtE⟩ := decCV_typeW hri
-  have hEi := (Array.getElem?_eq_some_iff.mp hwt).1
-  have hE64 := hC4.stage.2.2.2.2.1
-  have et : rdW (m4.arr64 EREC) (cvRi + 3) = wt :=
-    rdW_of_get? (by rw [UInt64.toNat_add]; simp [erA] at hEi ⊢; omega) hwt
-  rw [et]
-  have hdx : denoteE a4.store (decI wt) = some cvRiP.type := by
-    rw [← hwtE]
-    exact (ConRon.Bridge.Core.denoteCV_inv
-      (dExt_denoteCV (p12.ext.trans c4.ext) _ _ hRiP)).2.2
-  have hdy : denoteE a4.store (decI (r2.tail.headD 0)) = some gtyP :=
-    ConRon.Bridge.denote_ext hgtyd c4.ext
-  have hi := isDefEqC_rsim hq henv (n + 1) (by omega) hC4 hA4 0 wt (r2.tail.headD 0) hwtH hgH
-    hdx hdy hRi hwG
-  rw [show (0 : Word).toNat = 0 from rfl, ← hwtE] at hi
-  refine RSim.bind (K := rtoK5 q) rfl hi ?_
-  rintro ⟨r5, m5⟩ bb a5 - ⟨hC5, hg5, hbb, hA5, -⟩
-  dsimp only at hC5 hg5 hbb hA5
-  by_cases h50 : r5.headD 0 = 0
-  · rw [rtoK5_fail (h := h50)]; exact RSim.none
-  rw [rtoK5_ok (h := h50)]
-  have hbt : bb = true := by rw [← hbb]; simpa [decBool] using h50
-  subst hbt
-  simp only [ite_true]
-  have hg35 := hg4.trans hg5
-  refine RSim.pure_some ⟨⟨hC5, hg14.trans hg5, ?_, CVExt_grow hg35 hext3⟩, hA5⟩
-  show decCVp m5 q.toNat = _
-  rw [decCVp_grow_r hg35 hext3, hdec3]
 
 include hq hApd hCrk henv in
 /-- **`class_rec_tys_ok` under `StageC`** (twin side: con-ron's `classRecTysOk_spec`'s proof; the
@@ -243,9 +106,16 @@ theorem rtsW_simC (hrp : RtoProg p) (g k : Word) (G : ClassGen) (hns : G.nP + G.
   have hvl1 := rec2ToNat_pred hvl
   have hcl1 := rec2ToNat_pred hcl
   unfold ConRon.Arena.classRecTysOk
-  have hr := RSim.withRun (rtoW_simC hq hApd hCrk henv hrp n (by omega) m a g k (UInt64.ofNat pr) (UInt64.ofNat pv)
-    (UInt64.ofNat c0) G RS CV hC hG hns (by rw [tp]; exact hRS) (by rw [tp]; exact hcvR)
-    (by rw [tv]; exact hCV) hA hgP hrcP hcvP (hw _ List.mem_cons_self))
+  have hr : RSim (rtoR (realCall p) n m vis g k (UInt64.ofNat pr) (UInt64.ofNat pv) (UInt64.ofNat c0))
+      (ConRon.Arena.classRecTyOk V fe G k.toNat RS CV (UInt64.ofNat c0).toNat) a
+      (fun b a' x => (KPC dn vis fe env m decCVR b a' x ∧ AbsOK b.2) ∧
+        (ConRon.Arena.classRecTyOk V fe G k.toNat RS CV (UInt64.ofNat c0).toNat).run a = .ok (x, a')) :=
+    fun ⟨r1, m1⟩ hb => by
+      obtain ⟨s1, rfl, -, x, a1, run1, hR⟩ := RefE.run_okW
+        (classRecTyOkE_spec p hrp n ⟨m, Locals.init []⟩ vis g k _ _ _)
+        (rto_ref hq hApd hCrk henv n (by omega) hC hG hns (by rw [tp]; exact hRS) (by rw [tp]; exact hcvR)
+          (by rw [tv]; exact hCV) hA hgP hrcP hcvP (hw _ List.mem_cons_self)) hb
+      exact ⟨x, a1, run1, ⟨⟨hR.stage, hR.grow, hR.dec⟩, hR.abs⟩, run1⟩
   rw [tc] at hr
   refine RSim.bind (K := rtsK1 (realCall p) n vis g k ro rl vo vl co cl) (by simp [rtsK1]) hr ?_
   rintro ⟨r1, m1⟩ x a1 - ⟨⟨⟨hC1, hg1, hx⟩, hA1⟩, hrun1⟩
@@ -277,32 +147,6 @@ theorem rtsW_simC (hrp : RtoProg p) (g k : Word) (G : ClassGen) (hns : G.nP + G.
   have hA3 := consW_afr h3 hA2
   exact RSim.pure_some ⟨⟨hC2.of_pstep hS3 hA3 (PStep.refl hC2.check.state),
     hg1.trans (hg2.trans hg3), by simpa [decCVS] using hsp3⟩, hA3⟩
-
-include hq hApd hCrk henv in
-/-- **`class_rec_ty_ok` refines `classRecTyOk`** under `StageC` (the knot's core calls; the inputs'
-denotations as con-ron's `classRecTyOk_spec` asks). -/
-@[refines ConRon.Arena.classRecTyOk]
-theorem classRecTyOk_refinesC (hp : RtoProg p) (n : Nat) (hn : n ≤ 2 ^ 62) (s₀ : St)
-    (a₀ : AState) (g k rc cvRi c : Word) (G : ClassGen) (RS : RecShape) (CVRi : IConstantVal)
-    (hC : StageC dn vis fe env s₀.mem a₀) (hG : DecB (fun m => decCG m g.toNat) s₀.mem G)
-    (hns : G.nP + G.slots.length < 2 ^ 64) (hrc : DecB (fun m => decRS m rc.toNat) s₀.mem RS)
-    (hcvR : ∀ q, iwN s₀.mem rc.toNat = some q → CVExt s₀.mem q)
-    (hcvRi : DecB (fun m => decCVp m cvRi.toNat) s₀.mem CVRi) (hA : AbsOK s₀.mem)
-    {gP : ConLeche.ClassGen} {rcP : ConLeche.RecShape} {cvRiP : ConLeche.ConstantVal}
-    (hgP : dClassGen a₀.store G = some gP) (hrcP : dRec a₀.store RS = some rcP)
-    (hRiP : Frontend.denoteCV a₀.store CVRi = some cvRiP)
-    (hRi : ConLeche.Expr.WScoped 0 cvRiP.type) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "class_rec_ty_ok" [vis, g, k, rc, cvRi, c]
-    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.classRecTyOk V fe G k.toNat RS CVRi c.toNat) a₀ ∧
-      KPC dn vis fe env s₀.mem decCVR (r, s'.mem)
-        (AM.st (ConRon.Arena.classRecTyOk V fe G k.toNat RS CVRi c.toNat) a₀)
-        (AM.res (ConRon.Arena.classRecTyOk V fe G k.toNat RS CVRi c.toNat) a₀) ∧
-      AbsOK s'.mem; ⊤⦄ :=
-  triple_post (classRecTyOk_spec p hp (realCall p) (realCall_spec p) n s₀ vis g k rc cvRi c)
-    fun _ _ ⟨hl, hw⟩ =>
-      let h := (rtoW_simC hq hApd hCrk henv hp n hn _ a₀ g k rc cvRi c G RS CVRi hC hG hns hrc hcvR hcvRi hA
-        hgP hrcP hRiP hRi).am hw
-      ⟨hl, h.1, h.2.1, h.2.2⟩
 
 include hq hApd hCrk henv in
 /-- **`class_rec_tys_ok` refines `classRecTysOk`** under `StageC`. -/
