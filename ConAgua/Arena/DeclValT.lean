@@ -4,6 +4,7 @@ import ConAgua.Arena.IndT.WalkC
 import ConAgua.Arena.IndT.Base
 import ConAgua.Arena.DeclStepSpec
 import ConAgua.Arena.DeclValSpec
+import ConAgua.Verdict.LefRef
 
 /-!
 # The value checks under `StageT` (lane `loopt2`)
@@ -310,56 +311,6 @@ theorem ccvW_okTA {p : Prog} (hq : KnotStageProg p) (hApd : ApdF p) (hkp : CrKee
   obtain ⟨-, rfl⟩ := h
   exact absOK_core hq.closed (by decide) h3 hA2 hS3
 
-/-- **`lvl_eq_fueled` under `StageT`**: `lvl_eq_c` through `lvlEqC_simT`; an answer other than
-`0` is the twin's `some true` (the callers abort on `0`). -/
-theorem lfW_okT {p : Prog} (hq : KnotStageProg p) (hL : LvlCacheProg p)
-    (hpc : p.lookup "lvl_eq_c" = some lvlEqCL) {dn : NIdx → Option ConLeche.Name} {vis : Word}
-    {fe : IFEnv} {n : Nat} {m m' : Mem} {a : AState} {u v : Word} {r : List Word}
-    (h : lfW (realCall p) n m u v = some (r, m')) (hS : StageT dn vis fe m a) (hu : H u) (hv : H v)
-    (lu lv : ConLeche.Level) (hdu : denoteL a.store.ls (decI u) = some lu)
-    (hdv : denoteL a.store.ls (decI v) = some lv) :
-    ∃ x a', (lvlEq? (decI u) (decI v)).run a = .ok (x, a') ∧ StageT dn vis fe m' a' ∧
-      IWGrow m m' ∧ (r.headD 0 ≠ 0 → x = some true) := by
-  cases n with
-  | zero => simp [lfW] at h
-  | succ n =>
-  simp only [lfW] at h
-  cases hs : realCall p n "lvl_eq_c" [u, v] m with
-  | none => simp [hs] at h
-  | some rm1 =>
-  obtain ⟨r1, m1⟩ := rm1
-  simp only [hs] at h
-  by_cases h0 : r1.headD 0 = 0
-  · rw [ite_eq_left h0] at h; exact absurd h (by simp)
-  rw [ite_eq_right h0] at h
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨rfl, rfl⟩ := h
-  obtain ⟨x, a1, hrun, hSt, hg, hdec, -⟩ :=
-    lvlEqC_simT p hq.closed hL hpc n hS u v hu hv lu lv hdu hdv r1 m1 hs
-  refine ⟨x, a1, hrun, hSt, hg, fun hne => ?_⟩
-  have h2 : r1.headD 0 = 2 := Classical.byContradiction fun h2 => by
-    simp only [List.headD_cons] at hne
-    exact hne (ite_eq_right h2)
-  rw [← hdec, h2]; rfl
-
-/-- `lvl_eq_fueled`'s model keeps `consts_resolve_ffast`'s memo (its one call is a program call). -/
-theorem lfW_crOK {p : Prog} (hkp : CrKeep p) {n : Nat} {m m' : Mem} {u v : Word} {r : List Word}
-    (h : lfW (realCall p) n m u v = some (r, m')) (hCr : L.Stubs.CrOK m) : L.Stubs.CrOK m' := by
-  cases n with
-  | zero => simp [lfW] at h
-  | succ n =>
-  simp only [lfW] at h
-  cases hs : realCall p n "lvl_eq_c" [u, v] m with
-  | none => simp [hs] at h
-  | some rm1 =>
-  obtain ⟨r1, m1⟩ := rm1
-  simp only [hs] at h
-  split at h
-  · cases h
-  · simp only [Option.some.injEq, Prod.mk.injEq] at h
-    obtain ⟨-, rfl⟩ := h
-    exact hkp.call (im_mem _ rfl) hs hCr
-
 /-- **The value checks' common tail under `StageT`** (`dvK1_ok`'s): after the push, the stage
 relation at the extended environment and the core's memos well formed. -/
 theorem dvK1_okT {p : Prog} (hq : KnotStageProg p) (hRp : RecProg p)
@@ -460,7 +411,7 @@ theorem dvW_okT {p : Prog} (hq : KnotStageProg p) (hRp : RecProg p) (hap : ApdF 
 
 /-- **`check_thm_val` under `StageT`** (`tvW_ok`'s). -/
 theorem tvW_okT {p : Prog} (hq : KnotStageProg p) (hRp : RecProg p) (hL : LvlCacheProg p)
-    (hpc : p.lookup "lvl_eq_c" = some lvlEqCL) (hap : ApdF p) (hkp : CrKeep p)
+    (hlef : p.lookup "lvl_eq_fueled" = some lvlEqFueled) (hap : ApdF p) (hkp : CrKeep p)
     {dn : NIdx → Option ConLeche.Name} {vis : Word}
     {fe : IFEnv} {a : AState} {n : Nat} (hn : n ≤ 2 ^ 62) {m m' : Mem} {c : Word} {r : List Word}
     {cv : IConstantVal} {v : EIdx}
@@ -523,14 +474,16 @@ theorem tvW_okT {p : Prog} (hq : KnotStageProg p) (hRp : RecProg p) (hL : LvlCac
   obtain ⟨lz, hdz⟩ := hS2.twin.den.zero
   rw [hF.zeroLevel] at hdz
   -- the comparison
-  cases h4 : lfW (realCall p) n m2 (r2.headD 0) (pinW m2 53) with
+  cases h4 : realCall p n "lvl_eq_fueled" [r2.headD 0, pinW m2 53] m2 with
   | none => rw [h4] at h; simp [tvK4] at h
   | some rm4 =>
   obtain ⟨r4, m4⟩ := rm4
   rw [h4, tvK4_some] at h
-  have hCr4 := lfW_crOK hkp h4 hCr2
-  obtain ⟨x4, a4, hrun4, hS4, hg4, hr4⟩ :=
-    lfW_okT hq hL hpc h4 hS2 hx2l hF.lv_lt.2.1 lu lz hdu hdz
+  have hCr4 := hkp.call (im_mem _ rfl) h4 hCr2
+  obtain ⟨s4, hs4, -, b4, a4, -, ⟨hrun4, hr4, hS4, hg4, -⟩⟩ :=
+    RefE.run_okW (lefE_spec p hlef n ⟨m2, Locals.init []⟩ _ _)
+      (lef_ref hq.closed hL n hS2 hx2l hF.lv_lt.2.1 hdu hdz) h4
+  rw [hs4] at hS4 hg4
   -- the parameters' names read back at the guards: the prefix extends the store
   have hlps4 : ∃ ks, cv.levelParams.mapM (denoteN a4.store.ns) = some ks := by
     obtain ⟨env, cP, henv, hck, hcvd, hws⟩ := hpre
@@ -546,7 +499,11 @@ theorem tvW_okT {p : Prog} (hq : KnotStageProg p) (hRp : RecProg p) (hL : LvlCac
   by_cases hb4 : r4.headD 0 = 0
   · rw [ite_eq_left hb4] at h; simp at h
   rw [ite_eq_right hb4] at h
-  have ex4 := hr4 hb4
+  have ex4 : b4 = true := by
+    dsimp only at hr4
+    cases b4
+    · exact absurd hr4 (by simpa using hb4)
+    · rfl
   -- the value's guards, then the common tail
   cases h5 : ivgW (realCall p) n m4 vis (c + 1) wv with
   | none => rw [h5] at h; simp [dvK1] at h
