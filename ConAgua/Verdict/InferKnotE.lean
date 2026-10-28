@@ -196,9 +196,9 @@ theorem inferBody_refinesE (p : Prog) (hq : InferAllProg p) (hc : InferCallees p
     | zero => exact absurd (callE_zero_cls h1) hk0
     | succ k =>
     rw [← hdn, ← hdu] at hv
-    exact ErrClaim.of_run_eq' (fun ce h => (inferBody_const _ fe d.toNat (decE e) a₀ _ _ hv).trans h)
+    exact ErrClaim.of_run_err (fun ce h => (inferBody_const _ fe d.toNat (decE e) a₀ _ _ hv).trans h)
       (CoreSpecE.of_callE (s₀ := ⟨s₀.mem, Locals.init []⟩)
-        (inferConst_refinesE p hq.leaf hnv k _ a₀ dn vis fe MM eb _ _ hS hn1 hu2) h1)
+        (inferConst_refinesE p hq.leaf hc.constTy hnv k _ a₀ dn vis fe MM eb _ _ hS hn1 hu2) h1)
   | lit l =>
     have hg : (L.Ind.eViewW s₀.mem e).headD 0 = 8 := hvr
     simp (config := { decide := true }) only [inferBodyE.k_e_view, hg, ↓reduceIte] at hW
@@ -207,7 +207,7 @@ theorem inferBody_refinesE (p : Prog) (hq : InferAllProg p) (hc : InferCallees p
     | zero => exact absurd (callE_zero_cls h1) hk0
     | succ k =>
     have h8 : e >>> 28 = 8 := by rw [← hhd, hg]
-    exact ErrClaim.of_run_eq' (fun ce h => (inferBody_lit _ fe d.toNat (decE e) a₀ l hv).trans h)
+    exact ErrClaim.of_run_err (fun ce h => (inferBody_lit _ fe d.toNat (decE e) a₀ l hv).trans h)
       (CoreSpecE.of_callE (s₀ := ⟨s₀.mem, Locals.init []⟩)
         (inferLit_refinesE p hq.leaf hc.lit hnv k _ a₀ dn vis fe MM eb e l hS he h8 hv) h1)
   | forallE ty b =>
@@ -219,7 +219,7 @@ theorem inferBody_refinesE (p : Prog) (hq : InferAllProg p) (hc : InferCallees p
     | zero => exact absurd (callE_zero_cls h1) hk0
     | succ k =>
     rw [← hd1, ← hd2] at hv
-    exact ErrClaim.of_run_eq' (fun ce h => (inferBody_forall _ fe d.toNat (decE e) a₀ _ _ hv).trans h)
+    exact ErrClaim.of_run_err (fun ce h => (inferBody_forall _ fe d.toNat (decE e) a₀ _ _ hv).trans h)
       (CoreSpecE.of_callE (s₀ := ⟨s₀.mem, Locals.init []⟩)
         (inferForall_refinesE p hq.leaf hq.bind hq.body hc.instList hnv hc.bcap k (hk.mono (by omega))
           (hkE.mono (by omega)) F (by omega) (by omega) _ a₀ dn vis fe MM eb mode d _ _ hsl h1' h2') h1)
@@ -232,7 +232,7 @@ theorem inferBody_refinesE (p : Prog) (hq : InferAllProg p) (hc : InferCallees p
     | zero => exact absurd (callE_zero_cls h1) hk0
     | succ k =>
     rw [← hd1, ← hd2] at hv
-    exact ErrClaim.of_run_eq' (fun ce h => (inferBody_lam _ fe d.toNat (decE e) a₀ _ _ hv).trans h)
+    exact ErrClaim.of_run_err (fun ce h => (inferBody_lam _ fe d.toNat (decE e) a₀ _ _ hv).trans h)
       (CoreSpecE.of_callE (s₀ := ⟨s₀.mem, Locals.init []⟩)
         (inferLam_refinesE p hq.leaf hq.bind hq.body hc.instList hnv hc.bcap k (hk.mono (by omega))
           (hkE.mono (by omega)) F (by omega) (by omega) _ a₀ dn vis fe MM eb mode d _ _ hsl h1' h2') h1)
@@ -244,7 +244,7 @@ theorem inferBody_refinesE (p : Prog) (hq : InferAllProg p) (hc : InferCallees p
     | zero => exact absurd (callE_zero_cls h1) hk0
     | succ k =>
     have h4 : e >>> 28 = 4 := by rw [← hhd, hg]
-    exact ErrClaim.of_run_eq' (fun ce h => (inferBody_app _ fe d.toNat (decE e) a₀ f x hv).trans h)
+    exact ErrClaim.of_run_err (fun ce h => (inferBody_app _ fe d.toNat (decE e) a₀ f x hv).trans h)
       (CoreSpecE.of_callE (s₀ := ⟨s₀.mem, Locals.init []⟩)
         (inferApp_refinesE p hq.leaf hq.knot hq.spf hq.spine hc.eager hcE.defeqArg hc.instList hnv k
           (hk.mono (by omega)) (hkE.mono (by omega)) F (by omega) (by omega) _ a₀ dn vis fe MM eb mode
@@ -258,7 +258,7 @@ theorem inferBody_refinesE (p : Prog) (hq : InferAllProg p) (hc : InferCallees p
     | zero => exact absurd (callE_zero_cls h1) hk0
     | succ k =>
     rw [← hd1, ← hd2, ← hd3] at hv
-    exact ErrClaim.of_run_eq' (fun ce h => (inferBody_let _ fe d.toNat (decE e) a₀ _ _ _ hv).trans h)
+    exact ErrClaim.of_run_err (fun ce h => (inferBody_let _ fe d.toNat (decE e) a₀ _ _ _ hv).trans h)
       (CoreSpecE.of_callE (s₀ := ⟨s₀.mem, Locals.init []⟩)
         (inferLet_refinesE p hq.leaf hq.body hnv hc.inst1 k (hk.mono (by omega)) (hkE.mono (by omega)) F
           _ a₀ dn vis fe MM eb mode d _ _ _ (by omega) (by omega) hsl h1' h2' h3') h1)
@@ -271,7 +271,7 @@ theorem inferBody_refinesE (p : Prog) (hq : InferAllProg p) (hc : InferCallees p
     | zero => exact absurd (callE_zero_cls h1) hk0
     | succ k =>
     rw [← hd1, ← h2', ← hd3] at hv
-    exact ErrClaim.of_run_eq' (fun ce h => (inferBody_proj _ fe d.toNat (decE e) a₀ _ _ _ hv).trans h)
+    exact ErrClaim.of_run_err (fun ce h => (inferBody_proj _ fe d.toNat (decE e) a₀ _ _ _ hv).trans h)
       (CoreSpecE.of_callE (s₀ := ⟨s₀.mem, Locals.init []⟩)
         (hcE.proj k (hk.mono (by omega)) (hkE.mono (by omega)) F _ a₀ dn vis fe MM eb mode d _ _ _
           (by omega) (by omega) hsl h1' h3').1 h1)
@@ -345,9 +345,9 @@ theorem inferBodyIO_refinesE (p : Prog) (hq : InferAllProg p) (hc : InferCallees
     | zero => exact absurd (callE_zero_cls h1) hk0
     | succ k =>
     rw [← hdn, ← hdu] at hv
-    exact ErrClaim.of_run_eq' (fun ce h => (inferBodyIO_const _ fe d.toNat (decE e) a₀ _ _ hv).trans h)
+    exact ErrClaim.of_run_err (fun ce h => (inferBodyIO_const _ fe d.toNat (decE e) a₀ _ _ hv).trans h)
       (ErrClaim.constIO (CoreSpecE.of_callE (s₀ := ⟨s₀.mem, Locals.init []⟩)
-        (inferConst_refinesE p hq.leaf hnv k _ a₀ dn vis fe MM eb _ _ hS hn1 hu2) h1))
+        (inferConst_refinesE p hq.leaf hc.constTy hnv k _ a₀ dn vis fe MM eb _ _ hS hn1 hu2) h1))
   | lit l =>
     have hg : (L.Ind.eViewW s₀.mem e).headD 0 = 8 := hvr
     simp (config := { decide := true }) only [inferBodyIOE.k_e_view, hg, ↓reduceIte] at hW
@@ -356,7 +356,7 @@ theorem inferBodyIO_refinesE (p : Prog) (hq : InferAllProg p) (hc : InferCallees
     | zero => exact absurd (callE_zero_cls h1) hk0
     | succ k =>
     have h8 : e >>> 28 = 8 := by rw [← hhd, hg]
-    exact ErrClaim.of_run_eq' (fun ce h => (inferBodyIO_lit _ fe d.toNat (decE e) a₀ l hv).trans h)
+    exact ErrClaim.of_run_err (fun ce h => (inferBodyIO_lit _ fe d.toNat (decE e) a₀ l hv).trans h)
       (CoreSpecE.of_callE (s₀ := ⟨s₀.mem, Locals.init []⟩)
         (inferLit_refinesE p hq.leaf hc.lit hnv k _ a₀ dn vis fe MM eb e l hS he h8 hv) h1)
   | forallE ty b =>
@@ -368,7 +368,7 @@ theorem inferBodyIO_refinesE (p : Prog) (hq : InferAllProg p) (hc : InferCallees
     | zero => exact absurd (callE_zero_cls h1) hk0
     | succ k =>
     rw [← hd1, ← hd2] at hv
-    exact ErrClaim.of_run_eq' (fun ce h => (inferBodyIO_forall _ fe d.toNat (decE e) a₀ _ _ hv).trans h)
+    exact ErrClaim.of_run_err (fun ce h => (inferBodyIO_forall _ fe d.toNat (decE e) a₀ _ _ hv).trans h)
       (CoreSpecE.of_callE (s₀ := ⟨s₀.mem, Locals.init []⟩)
         (inferForallIO_refinesE p hq.leaf hq.body hnv hc.inst1 k (hk.mono (by omega)) (hkE.mono (by omega))
           F _ a₀ dn vis fe MM eb mode d _ _ (by omega) (by omega) hsl h1' h2') h1)
@@ -381,7 +381,7 @@ theorem inferBodyIO_refinesE (p : Prog) (hq : InferAllProg p) (hc : InferCallees
     | zero => exact absurd (callE_zero_cls h1) hk0
     | succ k =>
     rw [← hd1, ← hd2] at hv
-    exact ErrClaim.of_run_eq' (fun ce h => (inferBodyIO_lam _ fe d.toNat (decE e) a₀ _ _ hv).trans h)
+    exact ErrClaim.of_run_err (fun ce h => (inferBodyIO_lam _ fe d.toNat (decE e) a₀ _ _ hv).trans h)
       (CoreSpecE.of_callE (s₀ := ⟨s₀.mem, Locals.init []⟩)
         (inferLamIO_refinesE p hq.body hnv hc.inst1 k (hkE.mono (by omega)) F _ a₀ dn vis fe MM eb mode d
           _ _ (by omega) (by omega) hsl h1' h2') h1)
@@ -393,7 +393,7 @@ theorem inferBodyIO_refinesE (p : Prog) (hq : InferAllProg p) (hc : InferCallees
     | zero => exact absurd (callE_zero_cls h1) hk0
     | succ k =>
     have h4 : e >>> 28 = 4 := by rw [← hhd, hg]
-    exact ErrClaim.of_run_eq' (fun ce h => (inferBodyIO_app _ fe d.toNat (decE e) a₀ f x hv).trans h)
+    exact ErrClaim.of_run_err (fun ce h => (inferBodyIO_app _ fe d.toNat (decE e) a₀ f x hv).trans h)
       (CoreSpecE.of_callE (s₀ := ⟨s₀.mem, Locals.init []⟩)
         (inferAppIO_refinesE p hq.spio hq.spine hc.instList hnv k (hk.mono (by omega))
           (hkE.mono (by omega)) F (by omega) (by omega) _ a₀ dn vis fe MM eb mode d e hsl he h4) h1)
@@ -402,7 +402,7 @@ theorem inferBodyIO_refinesE (p : Prog) (hq : InferAllProg p) (hc : InferCallees
     rw [getD1] at h1' hd1; rw [getD2] at h2' hd2; rw [getD3] at h3' hd3
     simp (config := { decide := true }) only [inferBodyIOE.k_e_view, hg, ↓reduceIte] at hW
     rw [← hd1, ← hd2, ← hd3] at hv
-    refine ErrClaim.of_run_eq' (fun ce h => (inferBodyIO_let _ fe d.toNat (decE e) a₀ _ _ _ hv).trans h) ?_
+    refine ErrClaim.of_run_err (fun ce h => (inferBodyIO_let _ fe d.toNat (decE e) a₀ _ _ _ hv).trans h) ?_
     cases hi : callE p n "inst1" [(L.Ind.eViewW s₀.mem e).tail.tail.tail.headD 0,
         (L.Ind.eViewW s₀.mem e).tail.tail.headD 0, 0] s₀.mem with
     | error e1 =>
@@ -427,7 +427,7 @@ theorem inferBodyIO_refinesE (p : Prog) (hq : InferAllProg p) (hc : InferCallees
     | zero => exact absurd (callE_zero_cls h1) hk0
     | succ k =>
     rw [← hd1, ← h2', ← hd3] at hv
-    exact ErrClaim.of_run_eq' (fun ce h => (inferBodyIO_proj _ fe d.toNat (decE e) a₀ _ _ _ hv).trans h)
+    exact ErrClaim.of_run_err (fun ce h => (inferBodyIO_proj _ fe d.toNat (decE e) a₀ _ _ _ hv).trans h)
       (CoreSpecE.of_callE (s₀ := ⟨s₀.mem, Locals.init []⟩)
         (hcE.proj k (hk.mono (by omega)) (hkE.mono (by omega)) F _ a₀ dn vis fe MM eb mode d _ _ _
           (by omega) (by omega) hsl h1' h3').2 h1)
@@ -492,7 +492,7 @@ theorem infer_refinesE (p : Prog) (hp : KnotProg p) (hnv : closedNV p L.Checker.
     rw [h2, inferE.k_infer_body.none] at hW; cases hW
     have hcl := CoreSpecE.of_callE (s₀ := ⟨s₀.mem, Locals.init []⟩) (hb F' _ a₀ dn vis fe MM eb mode d e
       (by omega) (by omega) ⟨hS, hs.mode4, hs.eb_mode⟩ he hk hkE) h2
-    exact ErrClaim.of_run_eq' (fun ce h => knot_infer_missE _ fe F' d.toNat _ a₀ hmiss ce h) hcl
+    exact ErrClaim.of_run_err (fun ce h => knot_infer_missE _ fe F' d.toNat _ a₀ hmiss ce h) hcl
   | ok q =>
   obtain ⟨r₂, m₂⟩ := q
   rw [h2, inferE.k_infer_body.arm1] at hW
@@ -545,7 +545,7 @@ theorem inferIO_refinesE (p : Prog) (hp : KnotProg p) (hnv : closedNV p L.Checke
     rw [h2, inferIOE.k_infer_body_io.none] at hW; cases hW
     have hcl := CoreSpecE.of_callE (s₀ := ⟨s₀.mem, Locals.init []⟩) (hb F' _ a₀ dn vis fe MM eb mode d e
       (by omega) (by omega) ⟨hS, hs.mode4, hs.eb_mode⟩ he hk hkE) h2
-    exact ErrClaim.of_run_eq' (fun ce h => knot_inferIO_missE _ fe F' d.toNat _ a₀ hmiss ce h) hcl
+    exact ErrClaim.of_run_err (fun ce h => knot_inferIO_missE _ fe F' d.toNat _ a₀ hmiss ce h) hcl
   | ok q =>
   obtain ⟨r₂, m₂⟩ := q
   rw [h2, inferIOE.k_infer_body_io.arm1] at hW

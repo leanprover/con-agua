@@ -3,19 +3,21 @@ import ConAgua.Arena.DefEqLeaves2
 import ConAgua.Arena.CoreDen
 import ConAgua.Arena.InferBodySpine
 import ConAgua.Arena.WhnfCoreProj
+import ConAgua.Arena.RefECore
+import ConAgua.Arena.KnotE
+import ConAgua.L.ModelGen
+import ConAgua.Checker.NoVerdictTree
 
 /-!
 # `inferProj`: `proj_type_at` and `infer_proj_at` (lane `defeq2`, helper `defeq2-proj`)
 
-The callW pattern (`InferBodyLet.lean`): a word model of each function with its callees through
-their runs, the L spec by `vcgen`, the refinement from the callees' specs, the twin's run computed
-step by step from the callees' runs.
-
 * `proj_type_at(q, i, us, to, tn, pe)` refines `IProjEntry.typeAt` at the entry of the table record
-  `q` (`projTypeAt_refines`): `inst_lp` on the body, `pe` pushed onto the argument slice at the
-  stack top, `inst_list`.
+  `q` (`projTypeAt_refines`, the callW pattern of `InferBodyLet.lean`): `inst_lp` on the body, `pe`
+  pushed onto the argument slice at the stack top, `inst_list`.
 * `infer_proj_at(vis, sn, i, pe, te, T, us, q)` refines `projAtT`, `inferProj` past the table
-  lookup (`inferProjAt_refines`).
+  lookup, both outcomes (`ipa_ref` over its unified model `ipaE`): another structure, a
+  parameter-count mismatch, a propositional structure's non-propositional field reject, a
+  level-count mismatch declines; every callee is outside the verdict closure.
 
 The table's words are read from `EREC` after `lvl_eq_c` and `field_sort_zero` ran: `ErecKeptProj`
 (a hypothesis, as lane `whnf`'s `ErecKept`) says those two leave the record pool alone.
@@ -359,77 +361,16 @@ theorem lvlEq?_store (u v : LIdx) (a a' : AState) (o : Option Bool) (lu lv : Con
     obtain ⟨X, hr, -⟩ := lvlEq?_miss a u v lu lv hu hv hc hm
     rw [hr] at h; cases h; rfl
 
-theorem w_le_false {a b : Word} (h : a < b) : (b ≤ a) = False := eq_false (UInt64.not_le.mpr h)
-
 /-! ## `infer_proj_at` -/
 
-section ipaK
-variable (p : Prog) (n : Nat) (top i pe us q to tn : Word)
-
-/-- After `proj_type_at`: the top put back. -/
-def ipaK5 (res : Option (List Word × Mem)) : Option (Word × Mem) :=
-  match res with
-  | none => none
-  | some (r, m) =>
-    if ¬ (136 : Word).toNat < (m.arr64 CTL).size then none
-    else some (r.headD 0, m.set64 CTL 136 top)
-
-/-- After `field_sort_zero`: its verdict, then the type. -/
-def ipaK4 (res : Option (List Word × Mem)) : Option (Word × Mem) :=
-  match res with
-  | none => none
-  | some (r, m) =>
-    if r.headD 0 = 0 then none
-    else ipaK5 top (callW p n "proj_type_at" [q, i, us, to, tn, pe] m)
-
-/-- After `lvl_eq_c`: the propositional-structure test when the structure is a `Prop`. -/
-def ipaK3 (res : Option (List Word × Mem)) : Option (Word × Mem) :=
-  match res with
-  | none => none
-  | some (r, m) =>
-    if 2 ≤ r.headD 0 then
-      ipaK4 p n top i pe us q to tn (callW p n "field_sort_zero"
-        [rdW (m.arr64 EREC) (q + 3), rdW (m.arr64 EREC) (q + 4), us, guardW m q i] m)
-    else ipaK5 top (callW p n "proj_type_at" [q, i, us, to, tn, pe] m)
-
-/-- After `ls_node`: the level count, then `lvl_eq_c` against the pinned zero. -/
-def ipaK2 (res : Option (List Word × Mem)) : Option (Word × Mem) :=
-  match res with
-  | none => none
-  | some (r, m) =>
-    if r.tail.headD 0 ≠ rdW (m.arr64 EREC) (q + 4) then none
-    else ipaK3 p n top i pe us q to tn
-      (callW p n "lvl_eq_c" [rdW (m.arr64 EREC) (q + 8), rdW (m.arr64 PINS) 53] m)
-
-end ipaK
-
-/-- After `get_app_args`: the structure and the parameter count, then `ls_node`. -/
-def ipaK1 (p : Prog) (n : Nat) (top sn i pe T us q : Word) (res : Option (List Word × Mem)) :
-    Option (Word × Mem) :=
-  match res with
-  | none => none
-  | some (r, m) =>
-    if T ≠ sn then none
-    else if r.tail.headD 0 ≠ rdW (m.arr64 EREC) (q + 5) then none
-    else ipaK2 p n top i pe us q (r.headD 0) (r.tail.headD 0) (callW p n "ls_node" [us] m)
-
-/-- **The model of `infer_proj_at`.** -/
-def ipaW (p : Prog) (n : Nat) (m : Mem) (sn i pe te T us q : Word) : Option (Word × Mem) :=
-  ipaK1 p n (rdW (m.arr64 CTL) 136) sn i pe T us q (callW p n "get_app_args" [te] m)
-
-theorem inferProjAt_spec (p : Prog) (hp : InferProjProg p) (n : Nat) (s₀ : St)
-    (vis sn i pe te T us q : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "infer_proj_at" [vis, sn, i, pe, te, T, us, q]
-    ⦃fun r s' => LocEq s' s₀ ∧ ipaW p n s₀.mem sn i pe te T us q = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp.ipa]
-  simp only [callFn, inferProjAtL]
-  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rdW_spec, st64_spec,
-      callW_spec p n "get_app_args", callW_spec p n "ls_node", pinWord_rd p hp.leaf.pinword n,
-      callW_spec p n "lvl_eq_c", callW_spec p n "field_sort_zero", callW_spec p n "proj_type_at"] <;>
-  simp_all [ipaW, ipaK1, ipaK2, ipaK3, ipaK4, ipaK5, guardW, sliceAt, Cmp.eval, LocEq, BinOp.eval,
-    St.setLocs_cons, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Sig.retVal, Sig.retOr,
-    Locals.init_cons_zero, Locals.init_cons_succ, CTL, EREC, PINS, w_lt_false,
-    w_le_false]
+/-- **`infer_proj_at`'s unified model**: every callee (outside the verdict closure) lifted. -/
+l_model ipaE_spec (p : Prog) (hf : p.lookup "infer_proj_at" = some inferProjAtL)
+  fns [hf ↦ ipaE list]
+  specs [callW_spec p n "get_app_args", callW_spec p n "ls_node", callW_spec p n "pin_word",
+    callW_spec p n "lvl_eq_c", callW_spec p n "field_sort_zero", callW_spec p n "proj_type_at"]
+  grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] unified
+  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 /-! ## `infer_proj_at` refines `projAtT` -/
 
@@ -496,44 +437,89 @@ theorem projAtT_run (sn T : NIdx) (us : LsIdx) (entry : IProjEntry) (te pe : EId
   simp only [projAtT, StateT.run_bind, hxs, except_ok_bind, bne_self_eq_false, hlen,
     Bool.false_eq_true, ↓reduceIte, ip_viewLsLen_run, hvl, hz, hlv]
 
-/-- **`infer_proj_at` refines `projAtT`** (`inferProj` past the table lookup) at the table record
-`q` of field `i`, the subject type `te` headed by `T.{us}`. -/
-@[refines_part ConRon.Arena.inferProj "past the table lookup (projAtT)"]
-theorem inferProjAt_refines (p : Prog) (hp : InferProjProg p) (hc : InferProjCallees p) (n : Nat)
+theorem ErrClaim.of_error {α : Type} {T : AM α} {a : AState} {e : Err} {ce : CheckError}
+    (h : T.run a = .error ce) (hk : e.cls = twinCls ce) : ErrClaim T a e :=
+  fun _ => ⟨ce, h, hk.symm⟩
+
+theorem projAtT_errT (sn T : NIdx) (us : LsIdx) (entry : IProjEntry) (te pe : EIdx) (a : AState)
+    (xs : List EIdx) (hxs : (getAppArgs coreWalkFuel te).run a = .ok (xs, a)) (hT : (T != sn) = true) :
+    (projAtT sn T us entry te pe).run a =
+      .error (.invalid "invalid projection: the node names another structure") := by
+  simp only [projAtT, StateT.run_bind, hxs, except_ok_bind, hT, ↓reduceIte]; rfl
+
+theorem projAtT_errNP (sn T : NIdx) (us : LsIdx) (entry : IProjEntry) (te pe : EIdx) (a : AState)
+    (xs : List EIdx) (hxs : (getAppArgs coreWalkFuel te).run a = .ok (xs, a)) (hT : T = sn)
+    (hl : (xs.length != entry.numParams) = true) :
+    (projAtT sn T us entry te pe).run a = .error (.invalid "projection parameter mismatch") := by
+  subst hT
+  simp only [projAtT, StateT.run_bind, hxs, except_ok_bind, bne_self_eq_false, Bool.false_eq_true,
+    ↓reduceIte, hl]; rfl
+
+theorem projAtT_errLP (sn T : NIdx) (us : LsIdx) (entry : IProjEntry) (te pe : EIdx) (a : AState)
+    (xs : List EIdx) (l : Nat) (hxs : (getAppArgs coreWalkFuel te).run a = .ok (xs, a)) (hT : T = sn)
+    (hlen : xs.length = entry.numParams) (hvl : a.store.lss.viewLen us = some l)
+    (hl : l ≠ entry.levelParams.length) :
+    (projAtT sn T us entry te pe).run a =
+      .error (.notImplemented "projection without a native entry") := by
+  subst hT
+  simp only [projAtT, StateT.run_bind, hxs, except_ok_bind, bne_self_eq_false, Bool.false_eq_true,
+    ↓reduceIte, hlen, bne_self_eq_false, ip_viewLsLen_run, hvl, hl]; rfl
+
+/-- What the inference functions' error arms assume: the knot's error half at the callees' fuel
+and the verdict closure. -/
+structure InferG (p : Prog) (n : Nat) : Prop where
+  knot : KnotUpToE p n
+  nv : closedNV p L.Checker.nvFns = true
+
+/-- **`infer_proj_at` refines `projAtT`, both outcomes** (`inferProj` past the table lookup) at the
+table record `q` of field `i`, the subject type `te` headed by `T.{us}`. -/
+theorem ipa_ref (p : Prog) (hp : InferProjProg p) (hc : InferProjCallees p) (n : Nat)
     (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (M : ModeMaps) (eb sn i pe te T us q : Word) (tbl : IProjTable)
     (hS : CoreS dn s₀.mem a₀ vis fe M eb) (hq : decTbl (s₀.mem.arr64 EREC) q.toNat = some tbl)
     (hfe : ∃ c, fe.findTable? c = some tbl)
     (hi : i.toNat < tbl.numFields) (hus : HW us) (hte : HW te) (hpe : HW pe)
-    (hden : ∃ ls, denoteLs a₀.store.lss (decI us) = some ls) :
-    CoreSpec p (n + 1) "infer_proj_at" [vis, sn, i, pe, te, T, us, q]
-      (projAtT (decI sn) (decI T) (decI us) (tbl.entry i.toNat) (decE te) (decE pe)) decH
-      s₀ a₀ dn vis fe M eb := by
-  apply L.M.triple_of_run
-  intro s r s' hs0 hrun
-  obtain ⟨hloc, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun
-    (inferProjAt_spec p hp n s₀ vis sn i pe te T us q)
-  subst hs0
-  refine ⟨hloc, ?_⟩
+    (hden : ∃ ls, denoteLs a₀.store.lss (decI us) = some ls) (hsn : HW sn) (hT : HW T) :
+    RefE (closedNV p L.Checker.nvFns = true) (ipaE p (n + 1) s₀.mem vis sn i pe te T us q)
+      (projAtT (decI sn) (decI T) (decI us) (tbl.entry i.toNat) (decE te) (decE pe)) a₀
+      (CorePost decH dn s₀.mem vis fe M eb ResH) := by
   obtain ⟨cT, hfeT⟩ := hfe
-  unfold ipaW at hW
+  simp only [ipaE]
   -- `get_app_args`
-  obtain ⟨r₁, m₁, hc1, hW⟩ := callW_cases rfl hW
+  rcases hc1 : callW p n "get_app_args" [te] s₀.mem with _ | ⟨r₁, m₁⟩
+  · rw [liftE_none]; exact RefE.of_cls0 (by simp)
+  rw [liftE_some]; simp only [ipaE.k_get_app_args]
   obtain ⟨t₁, ht₁, -, hf₁, hg₁, ho₁, htop₁, xs, hxs, hsp₁⟩ := triple_of_callW
-    (getAppArgs_refines p hp.leaf.core.spine n s a₀ hS.arena.1 te hte hS.spn) hc1
+    (getAppArgs_refines p hp.leaf.core.spine n ⟨s₀.mem, Locals.init []⟩ a₀ hS.arena.1 te hte hS.spn) hc1
   rw [ht₁] at hf₁ hg₁ htop₁ hsp₁
   have hS₁ := hS.frame_stk hf₁ (by simp) (by simp)
-  have hE₁ : m₁.arr64 EREC = s.mem.arr64 EREC := hf₁.1 EREC (by simp [SPN, EREC]) (by decide)
+  have hE₁ : m₁.arr64 EREC = s₀.mem.arr64 EREC := hf₁.1 EREC (by simp [SPN, EREC]) (by decide)
   have hq₁ : decTbl (m₁.arr64 EREC) q.toNat = some tbl := by rw [hE₁]; exact hq
-  simp only [ipaK1] at hW
-  obtain ⟨g1, hW⟩ := of_ite_none hW
+  obtain ⟨hlp, hnp, -, -, -⟩ := decTbl_words hq₁ hS₁.erec
+  have hlen0 : xs.length = (r₁.tail.headD 0).toNat := by
+    have := hsp₁.size; simp only [List.size_toArray] at this; exact this
+  by_cases g1 : T ≠ sn
+  · rw [ite_eq_left g1]
+    have hne : ((decI T : NIdx) != decI sn) = true := by
+      simp only [bne_iff_ne, ne_eq]; exact fun h => g1 (decI_inj hT hsn h)
+    exact fun _ => ErrClaim.of_error (projAtT_errT _ _ _ _ _ _ _ xs hxs hne) rfl
+  rw [ite_eq_right g1]
   have hTs : T = sn := Classical.not_not.mp g1
-  obtain ⟨g2, hW⟩ := of_ite_none hW
+  by_cases g2 : r₁.tail.headD 0 ≠ rdW (m₁.arr64 EREC) (q + 5)
+  · rw [ite_eq_left g2]
+    have hl : (xs.length != (tbl.entry i.toNat).numParams) = true := by
+      simp only [bne_iff_ne, ne_eq, hlen0]
+      intro h; apply g2; apply UInt64.toNat_inj.mp; rw [h]; exact hnp
+    exact fun _ => ErrClaim.of_error (projAtT_errNP _ _ _ _ _ _ _ xs hxs (by rw [hTs]) hl) rfl
+  rw [ite_eq_right g2]
   have g2' : r₁.tail.headD 0 = rdW (m₁.arr64 EREC) (q + 5) := Classical.not_not.mp g2
+  have hlen : xs.length = (tbl.entry i.toNat).numParams := by rw [hlen0, g2']; exact hnp.symm
   -- `ls_node`
-  obtain ⟨r₂, m₂, hc2, hW⟩ := callW_cases rfl hW
+  rcases hc2 : callW p n "ls_node" [us] m₁ with _ | ⟨r₂, m₂⟩
+  · rw [liftE_none]; exact RefE.of_cls0 (by simp)
+  rw [liftE_some]; simp only [ipaE.k_ls_node]
   obtain ⟨t₂, ht₂, ht₂s, hne₂, hr₂⟩ :=
-    triple_of_callW (lsNode_spec p hp.lv.lsnode n { s with mem := m₁ } us) hc2
+    triple_of_callW (lsNode_spec p hp.lv.lsnode n ⟨m₁, Locals.init []⟩ us) hc2
   have hm₂ : m₂ = m₁ := by rw [← ht₂, ht₂s]
   subst hm₂
   obtain ⟨o₂, l₂, hl₂⟩ : ∃ o l, lsNodeW m₂ us = [o, l] := by
@@ -543,56 +529,98 @@ theorem inferProjAt_refines (p : Prog) (hp : InferProjProg p) (hc : InferProjCal
   have hr₂' : r₂ = [o₂, l₂] := by rw [hr₂]; exact hl₂
   subst hr₂'
   have hvl : a₀.store.lss.viewLen (decI us) = some l₂.toNat := lsNodeW_viewLen hS₁.arena.1 hus hl₂
-  simp only [ipaK2] at hW
-  obtain ⟨g3, hW⟩ := of_ite_none hW
+  by_cases g3 : [o₂, l₂].tail.headD 0 ≠ rdW (m₂.arr64 EREC) (q + 4)
+  · rw [ite_eq_left g3]
+    have hl : l₂.toNat ≠ (tbl.entry i.toNat).levelParams.length := by
+      intro h; apply g3; apply UInt64.toNat_inj.mp; simp only [List.tail_cons, List.headD_cons]
+      rw [h]; exact hlp
+    exact fun _ => ErrClaim.of_error (projAtT_errLP _ _ _ _ _ _ _ xs _ hxs (by rw [hTs]) hlen hvl hl) rfl
+  rw [ite_eq_right g3]
   have g3' : l₂ = rdW (m₂.arr64 EREC) (q + 4) := by simpa using g3
-  -- the table's words
-  obtain ⟨hlp, hnp, -, -, -⟩ := decTbl_words hq₁ hS₁.erec
-  obtain ⟨-, hss, hssd, -, -⟩ := decTbl_fields hq₁ hS₁.erec
-  have hlen : xs.length = (tbl.entry i.toNat).numParams := by
-    have := hsp₁.size; simp only [List.size_toArray] at this
-    rw [this, g2']; exact hnp.symm
   have hlpl : l₂.toNat = (tbl.entry i.toNat).levelParams.length := by rw [g3']; exact hlp.symm
-  -- the pinned zero
+  -- `pin_word(53)`
+  rcases hcp : callW p n "pin_word" [53] m₂ with _ | ⟨rp, mp⟩
+  · rw [liftE_none]; exact RefE.of_cls0 (by simp)
+  rw [liftE_some]; simp only [ipaE.k_pin_word]
+  obtain ⟨tp, htp, hmp, -, hrp⟩ := triple_of_callW (pinWord_rd p hp.leaf.pinword n ⟨m₂, Locals.init []⟩ 53) hcp
+  have hmp' : mp = m₂ := htp ▸ hmp
+  subst hmp'
+  rw [hrp]
+  -- the table's words, the pinned zero, readbacks
+  obtain ⟨-, hss, hssd, -, -⟩ := decTbl_fields hq₁ hS₁.erec
   have hP := hS₁.pins
-  have hzw : pinW m₂ 53 = rdW (m₂.arr64 PINS) 53 := pinW_rdW m₂ 53 53 rfl
-  have hz32 : HW (rdW (m₂.arr64 PINS) 53) := by rw [← hzw]; exact hP.lv_lt.2.1
-  have hzl : (zeroLevel).run a₀ = .ok (decI (rdW (m₂.arr64 PINS) 53), a₀) := by
+  have hzw : pinW mp 53 = rdW (mp.arr64 PINS) 53 := pinW_rdW mp 53 53 rfl
+  have hz32 : HW (rdW (mp.arr64 PINS) 53) := by rw [← hzw]; exact hP.lv_lt.2.1
+  have hzl : (zeroLevel).run a₀ = .ok (decI (rdW (mp.arr64 PINS) 53), a₀) := by
     rw [← hzw]; exact pinZeroLevel_run hP
-  -- readbacks
-  have hD := hc.den dn m₂ a₀ vis fe M eb hS₁
+  have hD := hc.den dn mp a₀ vis fe M eb hS₁
   obtain ⟨lz, hdz⟩ := hD.zero
   rw [hP.zeroLevel, hzw] at hdz
   obtain ⟨⟨lss, hdss⟩, -, -⟩ := hD.proj cT tbl hfeT
   rw [hssd] at hdss
   -- `lvl_eq_c`
+  rcases hc3 : callW p n "lvl_eq_c" [rdW (mp.arr64 EREC) (q + 8), rdW (mp.arr64 PINS) 53] mp
+    with _ | ⟨r₃, m₃⟩
+  · rw [liftE_none]; exact RefE.of_cls0 (by simp)
+  rw [liftE_some]; simp only [ipaE.k_lvl_eq_c]
   rcases Nat.lt_or_ge n 2 with hsm | hbig
-  · rw [ip_lvlEqC_small p hp.lv.c n hsm] at hW; cases hW
+  · rw [ip_lvlEqC_small p hp.lv.c n hsm] at hc3; cases hc3
   obtain ⟨N, rfl⟩ : ∃ N, n = N + 2 := ⟨n - 2, by omega⟩
-  obtain ⟨r₃, m₃, hc3, hW⟩ := callW_cases rfl hW
-  have h₃ := CoreSpec.of_callW (lvlEqC_refines p hp.lv N ⟨m₂, Locals.init []⟩ a₀ dn vis fe M eb hS₁
+  have h₃ := CoreSpec.of_callW (lvlEqC_refines p hp.lv N ⟨mp, Locals.init []⟩ a₀ dn vis fe M eb hS₁
     _ _ hss hz32 _ _ hdss hdz) hc3
   have hrun3 := ipRun_of_ref h₃
   obtain ⟨-, ⟨M₃, hS₃, hK₃, hSt₃⟩, -, -⟩ := h₃
-  have hE₃ : m₃.arr64 EREC = m₂.arr64 EREC := hc.erecProj _ _ _ _ _ _ (Or.inl rfl) hc3
+  have hE₃ : m₃.arr64 EREC = mp.arr64 EREC := hc.erecProj _ _ _ _ _ _ (Or.inl rfl) hc3
   have hq₃ : decTbl (m₃.arr64 EREC) q.toNat = some tbl := by rw [hE₃]; exact hq₁
   have hst₃ := lvlEq?_store _ _ _ _ _ _ _ hdss hdz hS.readL hrun3
-  have hss' : (tbl.entry i.toNat).structSort = decI (rdW (m₂.arr64 EREC) (q + 8)) := hssd
+  have hss' : (tbl.entry i.toNat).structSort = decI (rdW (mp.arr64 EREC) (q + 8)) := hssd
   have hT1 := projAtT_run (decI sn) (decI T) (decI us) (tbl.entry i.toNat) (decE te) (decE pe) a₀ _
     xs l₂.toNat _ _ hxs (by rw [hTs]) hlen hvl hlpl hzl (by rw [hss']; exact hrun3)
   rw [decO_true] at hT1
   -- the slice and the top for `proj_type_at`
-  have hto : r₁.headD 0 = spTop s.mem := ho₁
-  have htop₂ : spTop m₂ = r₁.headD 0 + r₁.tail.headD 0 := by rw [htop₁, hto]
+  have hto : r₁.headD 0 = spTop s₀.mem := ho₁
+  have htop₂ : spTop mp = r₁.headD 0 + r₁.tail.headD 0 := by rw [htop₁, hto]
   have hspn₁ := hS₁.spn
   have hbnd := hsp₁.bound
-  have htopv : (r₁.headD 0).toNat + (r₁.tail.headD 0).toNat ≤ (spTop m₂).toNat := by
+  have htopv : (r₁.headD 0).toNat + (r₁.tail.headD 0).toNat ≤ (spTop mp).toNat := by
     rw [htop₂, addW _ _ (by omega)]; exact Nat.le_refl _
-  have hfin : rdW (s.mem.arr64 CTL) 136 = spTop s.mem := rfl
-  simp only [ipaK3] at hW
+  -- `proj_type_at` from `m'`, after the run to `m'` kept the stack, both outcomes
+  have hpta : ∀ (m' : Mem) (a' : AState) (M' : ModeMaps), CoreS dn m' a' vis fe M' eb →
+      KeptAll M M' eb → StackKept mp m' → decTbl (m'.arr64 EREC) q.toNat = some tbl →
+      (∀ y a'', ((tbl.entry i.toNat).typeAt (decI us) xs (decE pe)).run a' = .ok (y, a'') →
+        (projAtT (decI sn) (decI T) (decI us) (tbl.entry i.toNat) (decE te) (decE pe)).run a₀ =
+          .ok (y, a'')) →
+      RefE (closedNV p L.Checker.nvFns = true) (ipaE.j1 p (N + 2) i pe us q
+          (rdW (s₀.mem.arr64 CTL) 136) (r₁.headD 0) (r₁.tail.headD 0) m')
+        (projAtT (decI sn) (decI T) (decI us) (tbl.entry i.toNat) (decE te) (decE pe)) a₀
+        (CorePost decH dn s₀.mem vis fe M eb ResH) := by
+    intro m' a' M' hS' hK' hSt' hq' hok
+    simp only [ipaE.j1]
+    rcases hc5 : callW p (N + 2) "proj_type_at" [q, i, us, r₁.headD 0, r₁.tail.headD 0, pe] m'
+      with _ | ⟨r₅, m₅⟩
+    · rw [liftE_none]; exact RefE.of_cls0 (by simp)
+    rw [liftE_some]; simp only [ipaE.k_proj_type_at]
+    have hsp' : SpineR m' (r₁.headD 0) (r₁.tail.headD 0) xs.toArray :=
+      hsp₁.keep hSt'.size hSt'.below htopv hspn₁
+    have h₅ := CoreSpec.of_callW (projTypeAt_refines p hp hc.instLP (N + 1) ⟨m', Locals.init []⟩ _ dn
+      vis fe M' eb q i us _ _ pe tbl xs hS' hq' hus hpe hsp' (by rw [hSt'.1, htop₂])) hc5
+    have hrun5 := ipRun_of_ref h₅
+    obtain ⟨-, ⟨M₅, hS₅, hK₅, hSt₅⟩, -, hrw5⟩ := h₅
+    have hgK := hg₁.trans (hSt'.trans hSt₅).toGrew
+    exact RefE.ret (hok _ _ hrun5) ⟨⟨M₅, hS₅.frame_stk (MemFrame.setCtl m₅ 136 _) (by simp) (by simp),
+      hK'.trans hK₅, StackKept.restoreG' hgK⟩, rfl, hrw5⟩
   by_cases g4 : 2 ≤ r₃.headD 0
-  · rw [ite_eq_left g4] at hW
+  · rw [ite_eq_left g4]
     rw [ite_eq_left (by simpa using g4)] at hT1
+    have hj : (if i < rdW (m₃.arr64 EREC) (q + 12) then
+          ipaE.j2 p (N + 2) i pe us q (rdW (s₀.mem.arr64 CTL) 136) (r₁.headD 0) (r₁.tail.headD 0)
+            (rdW (m₃.arr64 EREC) (rdW (m₃.arr64 EREC) (q + 11) + i)) m₃
+        else ipaE.j2 p (N + 2) i pe us q (rdW (s₀.mem.arr64 CTL) 136) (r₁.headD 0) (r₁.tail.headD 0)
+            0 m₃) =
+        ipaE.j2 p (N + 2) i pe us q (rdW (s₀.mem.arr64 CTL) 136) (r₁.headD 0) (r₁.tail.headD 0)
+          (guardW m₃ q i) m₃ := by
+      unfold guardW sliceAt; split <;> rfl
+    rw [hj]; simp only [ipaE.j2]
     -- `field_sort_zero`
     obtain ⟨hlps₃, -, -, -, hgd₃⟩ := decTbl_fields hq₃ hS₃.erec
     obtain ⟨hfw, hfdec⟩ := sliceAt_dec (k := .level) hS₃.erec hgd₃ i
@@ -600,60 +628,34 @@ theorem inferProjAt_refines (p : Prog) (hp : InferProjProg p) (hc : InferProjCal
     obtain ⟨-, hgds, hks⟩ := hD₃.proj cT tbl hfeT
     obtain ⟨lf, hdf⟩ := hgds i.toNat hi
     rw [← hfdec] at hdf
-    have hdus : ∃ ls, denoteLs (AM.st (lvlEq? (decI (rdW (m₂.arr64 EREC) (q + 8)))
-        (decI (rdW (m₂.arr64 PINS) 53))) a₀).store.lss (decI us) = some ls := by
+    have hdus : ∃ ls, denoteLs (AM.st (lvlEq? (decI (rdW (mp.arr64 EREC) (q + 8)))
+        (decI (rdW (mp.arr64 PINS) 53))) a₀).store.lss (decI us) = some ls := by
       rw [hst₃]; exact hden
-    obtain ⟨r₄, m₄, hc4, hW⟩ := callW_cases rfl hW
+    rcases hc4 : callW p (N + 2) "field_sort_zero" [rdW (m₃.arr64 EREC) (q + 3),
+        rdW (m₃.arr64 EREC) (q + 4), us, guardW m₃ q i] m₃ with _ | ⟨r₄, m₄⟩
+    · rw [liftE_none]; exact RefE.of_cls0 (by simp)
+    rw [liftE_some]; simp only [ipaE.k_field_sort_zero]
     have h₄ := CoreSpec.of_callW (fieldSortZero_core p hp.fsz (N + 2) ⟨m₃, Locals.init []⟩ _ dn vis fe
       M₃ eb _ _ us (guardW m₃ q i) tbl.levelParams hS₃ hus hfw hlps₃ hD₃.readN hks hdus ⟨lf, hdf⟩) hc4
     have hrun4 := ipRun_of_ref h₄
     obtain ⟨-, ⟨M₄, hS₄, hK₄, hSt₄⟩, -, -⟩ := h₄
     have hE₄ : m₄.arr64 EREC = m₃.arr64 EREC := hc.erecProj _ _ _ _ _ _ (Or.inr rfl) hc4
     have hq₄ : decTbl (m₄.arr64 EREC) q.toNat = some tbl := by rw [hE₄]; exact hq₃
-    simp only [ipaK4] at hW
-    obtain ⟨g5, hW⟩ := of_ite_none hW
-    have hb : decBool r₄ = true := by simp only [decBool, bne_iff_ne]; exact g5
     have hfs : (tbl.entry i.toNat).fieldSort = decI (guardW m₃ q i) := hfdec.symm
     have hT2 := fszTail_run (tbl.entry i.toNat) (decI us) xs (decE pe) _ _ _
       (by rw [hfs]; exact hrun4)
+    by_cases g5 : r₄.headD 0 = 0
+    · rw [ite_eq_left g5]
+      have hb : decBool r₄ = false := by simp only [decBool, g5, bne_self_eq_false]
+      rw [hb] at hT2
+      exact fun _ => ErrClaim.of_error (hT1.trans hT2) rfl
+    rw [ite_eq_right g5]
+    have hb : decBool r₄ = true := by simp only [decBool, bne_iff_ne]; exact g5
     rw [hb] at hT2
-    -- `proj_type_at`
-    have hSt14 := (hSt₃.trans hSt₄)
-    have hsp₄ : SpineR m₄ (r₁.headD 0) (r₁.tail.headD 0) xs.toArray :=
-      hsp₁.keep hSt14.size hSt14.below htopv hspn₁
-    obtain ⟨r₅, m₅, hc5, hW⟩ := callW_cases rfl hW
-    have h₅ := CoreSpec.of_callW (projTypeAt_refines p hp hc.instLP (N + 1) ⟨m₄, Locals.init []⟩ _ dn
-      vis fe M₄ eb q i us _ _ pe tbl xs hS₄ hq₄ hus hpe hsp₄ (by rw [hSt14.1, htop₂])) hc5
-    have hrun5 := ipRun_of_ref h₅
-    obtain ⟨-, ⟨M₅, hS₅, hK₅, hSt₅⟩, -, hrw5⟩ := h₅
-    simp only [ipaK5] at hW
-    obtain ⟨g6, hW⟩ := of_ite_none hW
-    obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
-    rw [← hm]
-    have hgK := hg₁.trans (hSt14.trans hSt₅).toGrew
-    refine ipRef_of_run (M' := M₅) (v := decH r₅)
-      (by rw [hT1, hT2]; simp only [Bool.not_true, Bool.false_eq_true, ↓reduceIte]; exact hrun5)
-      (by simp only [decH, hr]) ?_ ((hK₃.trans hK₄).trans hK₅) ?_
-      (by unfold ResH; rw [← hr]; exact hrw5)
-    · exact hS₅.frame_stk (MemFrame.setCtl m₅ 136 _) (by simp) (by simp)
-    · exact StackKept.restoreG hgK (Classical.not_not.mp g6)
-  · rw [ite_eq_right g4] at hW
+    refine hpta m₄ _ M₄ hS₄ (hK₃.trans hK₄) (hSt₃.trans hSt₄) hq₄ (fun y a'' h => ?_)
+    rw [hT1, hT2]; simpa using h
+  · rw [ite_eq_right g4]
     rw [ite_eq_right (by simpa using g4)] at hT1
-    have hsp₃ : SpineR m₃ (r₁.headD 0) (r₁.tail.headD 0) xs.toArray :=
-      hsp₁.keep hSt₃.size hSt₃.below htopv hspn₁
-    obtain ⟨r₅, m₅, hc5, hW⟩ := callW_cases rfl hW
-    have h₅ := CoreSpec.of_callW (projTypeAt_refines p hp hc.instLP (N + 1) ⟨m₃, Locals.init []⟩ _ dn
-      vis fe M₃ eb q i us _ _ pe tbl xs hS₃ hq₃ hus hpe hsp₃ (by rw [hSt₃.1, htop₂])) hc5
-    have hrun5 := ipRun_of_ref h₅
-    obtain ⟨-, ⟨M₅, hS₅, hK₅, hSt₅⟩, -, hrw5⟩ := h₅
-    simp only [ipaK5] at hW
-    obtain ⟨g6, hW⟩ := of_ite_none hW
-    obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
-    rw [← hm]
-    have hgK := hg₁.trans (hSt₃.trans hSt₅).toGrew
-    refine ipRef_of_run (M' := M₅) (v := decH r₅) (by rw [hT1]; exact hrun5)
-      (by simp only [decH, hr]) ?_ (hK₃.trans hK₅) ?_ (by unfold ResH; rw [← hr]; exact hrw5)
-    · exact hS₅.frame_stk (MemFrame.setCtl m₅ 136 _) (by simp) (by simp)
-    · exact StackKept.restoreG hgK (Classical.not_not.mp g6)
+    exact hpta m₃ _ M₃ hS₃ hK₃ hSt₃ hq₃ (fun y a'' h => by rw [hT1]; exact h)
 
 end L.Arena

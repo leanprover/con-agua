@@ -55,10 +55,9 @@ theorem KnotAllProg.defeqArgE : DefeqArgE p := by
 include hq hnv in
 /-- **The inference bodies' callees' error claims** (`InferCalleesE`). -/
 theorem KnotAllProg.inferCE : InferCalleesE p :=
-  ⟨hnv, inferProj_refinesE' p hq.proj
+  ⟨hnv, inferProj_refinesE' p hq.proj hq.projp
       ⟨coreDen_of, findProj_refines p hq.projp, projFound p hq.projp, erecKept_of hq.hcl, hq.instLP,
-        erecKeptProj_of hq.hcl⟩
-      ⟨hnv, hq.projp.tblix, hq.projp.tblrow, hq.projp.findTable⟩,
+        erecKeptProj_of hq.hcl⟩ hnv,
     KnotAllProg.defeqArgE hq hnv⟩
 
 include hq in
