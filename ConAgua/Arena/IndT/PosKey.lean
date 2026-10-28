@@ -25,7 +25,7 @@ open L.Arena
 local notation "V" => ConLeche.CheckMode.verified
 
 section steps
-variable (p : Prog) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) {env : ConLeche.Env}
+variable {p : Prog} (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) {env : ConLeche.Env}
 
 /-- **`nest_cont_key` refines `nestContKey`, both outcomes**, at L fuel `n + 1`: the key, not in
 progress, the parameters' closedness, then a cache hit or a new frame (the block's `NewRef` at `n`). -/
