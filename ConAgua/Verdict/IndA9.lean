@@ -67,12 +67,10 @@ theorem cid_claim2 {p : Prog} (hkp : KnotStageProg p) (hV : ValProg p)
     ErrClaim (checkDecl V pins fe (.indDecl block w.toNat)) a e := by
   have hcE : CoreStubsE p := hkp.toKnotTopProg.coreStubsE hnv
   have hG := nbG_prog hkp hnv
-  have hNit : ∀ dn vis fe env, ConLeche.EnvWF env → NitE p dn vis fe env :=
-    fun dn vis fe env _ => nitE_all P.cb.pass.pos.rs.nb hkp hIlpf hLC hnv dn vis fe env
   exact cid_claim hkp hV hOpf hLC hLT hApd hCrk hIlpf hLz P hcl hfs hfr hcl2 hfs2 hclR hfR hclT hfT hclC hfC
     hkP hkt hkr hnv hCBD eCcv (checkBlockIdxSortsE_claim hnv eSF) eGrc (checkBlockTablesE_claim hnv eTbl)
     (checkBlockIndsE_claim hnv hcE eCcv eSum) (checkBlockCtorsE_claim hnv eSC)
     (checkBlockClassesE_claim hnv eKey eClm) (checkBlockPositivityE_claim hG eSF)
-    (nestSeedsE_claim hG hNit) hn hdn he hT hfold hblk hb hden hM hfB hfRc hclH hfH hclM hfM hlpd
+    (nestSeedsE_claim hG) hn hdn he hT hfold hblk hb hden hM hfB hfRc hclH hfH hclM hfM hlpd
 
 end L.Ind
