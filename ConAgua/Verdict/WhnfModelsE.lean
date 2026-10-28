@@ -33,16 +33,25 @@ l_model whnfCoreStepE_spec (p : Prog) (hp : WhnfCoreProg p)
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
-l_model whnf_specE (p : Prog) (hf : p.lookup "whnf" = some whnfL)
-  fns [hf ↦ whnfE] grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] finish [tierW, idxW] errors
+l_model whnfStepE_spec (p : Prog) (hp : WhnfDeltaProg p)
+  fns [hp.whnfStep ↦ whnfStepE list]
+  specs [reduceNatE_spec p hp n, callW_spec p n "unfold_definition"]
+  grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] finish [tierW, idxW] unified
+  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
-l_model whnfLoop_specE (p : Prog) (hf : p.lookup "whnf_loop" = some whnfLoopL)
-  fns [hf ↦ whnfLoopE] grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] finish [tierW, idxW] errors
+l_model whnfLoopE_spec (p : Prog) (hp : WhnfDeltaProg p)
+  fns [hp.whnfLoop ↦ whnfLoopE]
+  specs [whnfStepE_spec p hp n]
+  grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] finish [tierW, idxW] unified
+  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
-l_model whnfStep_specE (p : Prog) (hf : p.lookup "whnf_step" = some whnfStepL)
-  fns [hf ↦ whnfStepE list] grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] finish [tierW, idxW] errors
+l_model whnfE_spec (p : Prog) (hp : WhnfDeltaProg p)
+  fns [hp.whnf ↦ whnfE list]
+  specs [callW_spec p n "wh_find", callW_spec p n "wh_put", whnfLoopE_spec p hp n]
+  grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] finish [tierW, idxW] unified
+  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 end L.Arena
