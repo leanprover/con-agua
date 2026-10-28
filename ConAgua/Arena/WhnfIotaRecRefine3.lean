@@ -1,6 +1,5 @@
 import ConAgua.Arena.WhnfIotaRecRefine2
 import ConAgua.Arena.GrindAttr
-import ConAgua.L.ModelGen
 
 /-!
 # `iota_rec_at`'s pieces, part 3: the recursor's block and the top

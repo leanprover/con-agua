@@ -1,4 +1,4 @@
-import ConAgua.Verdict.WhnfIotaE
+import ConAgua.Arena.WhnfIotaRecRefine2
 /-!
 # `prepare_major`'s verdict claims (lane `verdicts-b`, helper `k2`)
 

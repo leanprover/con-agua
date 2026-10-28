@@ -2,9 +2,6 @@ import ConAgua.Arena.LdRd
 import ConAgua.Arena.RecFireEnv
 import ConAgua.Arena.WhnfIotaRefine6
 import ConAgua.Arena.GrindAttr
-import ConAgua.Arena.RefECore
-import ConAgua.Arena.KnotE
-import ConAgua.Verdict.WhnfModels3E
 import ConAgua.L.GrindAttr
 
 /-!
