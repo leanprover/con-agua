@@ -407,7 +407,7 @@ theorem min64_le_abiSz {tab : Tab} (hok : abiTabOk tab = true) (s : TieredArray)
 /-- The table-relative array of `tab.tbl = some (a, c)` is `↑a`, at offset `c`. -/
 theorem Tab.tbl64_t0 {tab : Tab} {a : ArrId} {c : Nat} (h : tab.tbl = some (a, c)) :
     tab.tbl64 (TieredArray.t0 a) = some c := by
-  simp [Tab.tbl64, h, TieredArray.t0]
+  simp [Tab.tbl64, h]
 
 /-- The position holding the table-relative array is the last one. -/
 theorem tbl_pos_last {tab : Tab} (hok : abiTabOk tab = true) {p c : Nat} (hp : p < tab.nb + tab.nw)

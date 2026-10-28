@@ -98,7 +98,7 @@ def build(s_path, out):
     # table layout, for the categories: from the source text
     src = "\n".join(lines)
     meta = {}
-    for k in ("ca_nw", "ca_nb", "ca_ng", "ca_rom_len"):
+    for k in ("ca_npos", "ca_nb", "ca_ng", "ca_rom_len"):
         m = re.search(rf"^{k}: \.quad (\d+)", src, re.M)
         meta[k] = int(m.group(1)) if m else 0
     m = re.search(r"^lea (\d+)\(%r15\), %rsi", src, re.M)
@@ -109,7 +109,7 @@ def build(s_path, out):
 
 
 def category(ins, meta):
-    arr_end = 16 + 16 * (meta["ca_nb"] + meta["ca_nw"])
+    arr_end = 16 + 16 * meta["ca_npos"]
     glob_base = meta["args"] - 8 * meta["ca_ng"]
     rom_end = arr_end + 8 * ((meta["ca_rom_len"] + 7) // 8)
 
@@ -118,10 +118,8 @@ def category(ins, meta):
         if off < 16:
             return "stack"
         if off < arr_end:
-            if off < 16 + 16 * meta["ca_nb"]:
-                return "len" if (off // 8) % 2 == 1 else "base"
-            # word arrays (lane tiercost): all bases, then all lengths
-            return "base" if off < 16 + 16 * meta["ca_nb"] + 8 * meta["ca_nw"] else "len"
+            # one position space: all bases, then all lengths
+            return "base" if off < 16 + 8 * meta["ca_npos"] else "len"
         if off < rom_end:
             return "rom"
         if off < glob_base:

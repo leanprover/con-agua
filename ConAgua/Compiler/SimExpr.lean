@@ -629,9 +629,9 @@ theorem sim_cmpIn {ctx : Ctx} (hT : ctx.tab = G.tab)
 
 /-! ### Tiered accesses (lane tierarr)
 
-`tierDesc r` turns a tier word in `r` into the address of the tier's descriptor block,
-`T + 4096 (u & 1)`: tier `1` of array `a` is array `a + tierOff`, whose descriptor is
-`16 · tierOff = 4096` bytes after `a`'s. -/
+`tierDesc r` turns a tier word in `r` into the tier `u & 1`, which indexes the descriptor words:
+tier `1` of array `a` is at the position after tier `0`'s (`Tab.pos64_tierA`), its descriptor
+words 8 bytes after `a`'s. -/
 
 omit [Host] in
 theorem set64_set64 (R : Reg64s) (r : Reg64) (a b : BitVec 64) : (R.set64 r a).set64 r b = R.set64 r b := by

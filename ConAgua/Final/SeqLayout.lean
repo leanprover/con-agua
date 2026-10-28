@@ -268,9 +268,9 @@ theorem seqLayout_ok (hok : abiTabOk tab = true) (hp : seqParamsOk tab out hdrf 
       have hwo : tab.wAt (tab.pos64 (TieredArray.t0 out)) = TieredArray.t0 out := tab.wAt_pos64 dout
       by_cases e1 : tab.wAt p = TieredArray.t0 hdrf <;> by_cases e2 : tab.wAt q = TieredArray.t0 hdrf
       · exact hpq (tab.wAt_inj hpa hqb (e1.trans e2.symm))
-      · rw [if_pos e1, if_neg e2] at e; rw [← e, hwo] at hb'; exact hb' (.inl rfl)
-      · rw [if_neg e1, if_pos e2] at e; rw [e, hwo] at ha'; exact ha' (.inl rfl)
-      · rw [if_neg e1, if_neg e2] at e; exact hpq e
+      · rw [ite_eq_left e1, ite_eq_right e2] at e; rw [← e, hwo] at hb'; exact hb' (.inl rfl)
+      · rw [ite_eq_right e1, ite_eq_left e2] at e; rw [e, hwo] at ha'; exact ha' (.inl rfl)
+      · rw [ite_eq_right e1, ite_eq_right e2] at e; exact hpq e
     · exact t2.not_slot (by unfold seqSlot; split <;> omega) s1
     · exact t1.not_slot (by unfold seqSlot; split <;> omega) s2
     · exact hpq (tbl_pos_eq hok hpa hqb hc hc')
@@ -292,7 +292,7 @@ theorem seqLayout_ok (hok : abiTabOk tab = true) (hp : seqParamsOk tab out hdrf 
     have := tab.pos64_lt hs
     obtain ⟨no, nh, nc⟩ := seq_tbl_ne hp hc
     have hc' : tab.tbl64 (tab.wAt (tab.pos64 s)) = some c := by rw [tab.wAt_pos64 hs]; exact hc
-    rw [seqLayout_b64 _ _ _ _ _ _ this.1, tab.wAt_pos64 hs, if_neg (fun h => h.elim no nc), if_neg nh,
+    rw [seqLayout_b64 _ _ _ _ _ _ this.1, tab.wAt_pos64 hs, ite_eq_right (fun h => h.elim no nc), ite_eq_right nh,
       abiOff_tbl hc']
 
 end

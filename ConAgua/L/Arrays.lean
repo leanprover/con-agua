@@ -14,10 +14,10 @@ are names, not addresses: where an array lives is the compiler's choice. This fi
 above the syntax that a program's arrays are declared in:
 
 * **A table** (`ArrTable`) lists every array with its name, its number, its kind (byte or word;
-  the two kinds are separate number spaces) and whether it is **tiered** (word arrays only: tier
+  one name space for both kinds) and whether it is **tiered** (word arrays only: tier
   `t` of array `a` is the array `tierA a t`, §"Tiers" below). `declare_arrays` declares the
   arrays as Lean constants and the table from one list of rows, so each number is written once.
-  `ArrTable.wf` checks that the numbers are distinct within a kind.
+  `ArrTable.wf` checks that the numbers are distinct.
 * **The surface check** (`ArrTable.progOK`) reads a program's text: a byte access names a byte
   array of the table, a tiered access (`A⟨t⟩[i]`) a tiered array, and a plain word access a word
   array of the table.
@@ -85,7 +85,7 @@ abbrev tier0s (l : List ArrId) : List TieredArray := l.map TieredArray.t0
 
 /-! ## Tables -/
 
-/-- The kind of an array: bytes or words (two separate number spaces). -/
+/-- The kind of an array: bytes or words (one name space: a number names one array). -/
 inductive ArrKind where
   | byte
   | word

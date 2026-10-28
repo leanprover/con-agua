@@ -32,7 +32,7 @@ A word array of L's memory is a `TieredArray`: tier `hi` of source array `arr`. 
 is its tier 0 (`↑a`, the coercion `TieredArray.t0`); tier 1 of a tiered array `a` is `tier1 a`.
 Distinct source arrays, and the two tiers of one array, are distinct `TieredArray`s by
 construction: no numbering is involved. Where the arrays live in machine memory is the
-compiler's choice (its layout map, `Compiler.WLay`); L and the proofs above it never see it. -/
+compiler's choice (its layout map, `Compiler.Tab.pos64`); L and the proofs above it never see it. -/
 
 /-- Tier `hi` of source array `arr` (`hi = false`: tier 0, which is every untiered array). -/
 structure TieredArray where
