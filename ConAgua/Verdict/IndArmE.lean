@@ -10,7 +10,7 @@ import ConAgua.Verdict.IndBSum4
 
 `cid_claim3` (IndA8.lean) takes the `indB` callees' claims as the generated statements of
 IndBE.lean (`err_stmt`: every fuel `F ≤ 2 ^ 62`, the error of a `callE`), `CheckStructProjTableRE`
-(BlkE3.lean, under `StageR`) and `GenRecCheckE` (IndA7.lean); part B proved them as `CoreSpecE`s
+(Arena/IndT/Tables.lean, under `StageR`) and `GenRecCheckE` (IndA7.lean); part B proved them as `CoreSpecE`s
 (`classMajors_claim`, `checkSumTele_claim`, …, `genRecCheck_claim'`). The bridges below restate
 them, discharging the fuels part B's statements leave out (`0`, `1`: the calls run out of fuel).
 -/
