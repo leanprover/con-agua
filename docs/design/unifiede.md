@@ -985,3 +985,44 @@ affbbf73; load 18–42; `CntW` from a separate series after the recipe change):
 | **sum** | **41.3** | **30.6** | **−26 %** |
 
 `Install7` is the one flagged module; with the files it replaces (`Icbo`, `BlkE1`) it is 11.4 → 6.3 s.
+
+### 3.13 Batch 2c, second landing (`check_block_agree_one`, `check_block_agree`)
+
+After `lvl_eq_fueled` (§3.11): `cbaoE` and `cbagE` are unified (`IndsE4`, `IndsE5`, moved from
+`IndsE1`); `cbaoE` calls `lvl_eq_fueled` through its unified model `lefE` (the twin rewritten with
+`lefT_bind`; ok and error arms from `lef_ref`), `cbagE` calls `cbaoE`; `open_pis_at_fvars_f` and
+`fvar_type_ds` are lifted; `check_block_doms_at` stays `callE` (`cbdaE_claim`, `domsW_simC`).
+`G := VerdictCtx p` (`check_block_doms_at`'s claim needs `nv` and `core`). One post for both,
+`AgreePost` (`stage`, `grow`, `abs`, `core`). `checkBlockAgree_refinesC` keeps its statement
+(`RefE.triple`); `check_block_inds`' claim (`IndsE7`) reads `RefE.run_err`.
+
+| function | before: ok refinements + error claim | after | change |
+|---|---|---|---:|
+| `check_block_agree_one` | `agW_okC` 119 + `checkBlockAgreeOne_refinesC` 32 + `cbaoE_claim` 166 = 317 | `cbao_ref` 170 + `AgreePost` 6 = 176 | −44 % |
+| `check_block_agree` | `iagW_simC` 116 + `checkBlockAgree_refinesC` 21 + `cbagE_claim` 134 = 271 | `cbag_ref` 124 + `checkBlockAgree_refinesC` 22 = 146 | −46 % |
+| **pairs** | **588** | **322** | **−45 %** |
+
+Also gone: the hand models `agW`/`agK1–4` with `checkBlockAgreeOne_spec`, `iagW`/`iagK1–3` with
+`iag_spec`, the module `Arena/IndT/Install2`, the statements `CheckBlockAgreeE`/`CheckBlockAgreeOneE`.
+Whole diff against master 985859c8: +230 −668 in 11 files.
+
+**Not migrated: `check_block_doms_at`.** Its hand model `domsW` and ok proof `domsW_simC` are shared
+with `check_struct_doms_at` (`sdomsW` is `domsW` with the words dropped; `sdomsW_simC` is built on
+`domsW_simC`, used by `Sum4`, `IndBSum1`). The two depth-0 leaves should be migrated together, as
+`install_header`/`class_const_ok_header`. With them, the batch-1 leftovers of this family are
+`check_sum_ctors`, `check_struct_field_sorts_i(_go)` and `check_block_tables` (§3.12).
+
+Elaboration (as §3.12, base master 985859c8, load 9–12; `IndsE5` from a separate series after the
+recipe change: `simp [rdW]` 3.25 s, the default 2.2 s; `IndsE4` keeps `simp [rdW]`, 2.9 s against
+3.3 s):
+
+| module | base | new | |
+|---|---:|---:|---|
+| `Verdict/IndsE4` | 1.07 | **2.94** | **slower (+1.9 s)**: `cbaoE` moved in |
+| `Verdict/IndsE5` | 0.78 | **2.2** | **slower (+1.4 s)**: `cbagE` moved in |
+| `Verdict/IndsE1` | 8.96 | 5.57 | the two models moved out |
+| `Arena/IndInstallSpec/IagW`, `DomsW`, `Arena/IndT/Install2` (deleted) | 9.95 | 4.33 | the hand models and ok refinements gone |
+| `IndsE2`, `IndsE7`, `Install4` | 2.21 | 2.20 | |
+| **sum** | **23.0** | **17.2** | **−25 %** |
+
+Batch 2c in all: 7 functions, pairs 1 372 → 794 lines (−42 %); no kit or generator change needed.
