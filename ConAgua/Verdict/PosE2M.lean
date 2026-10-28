@@ -1,4 +1,3 @@
-import ConAgua.Arena.IndPos2
 import ConAgua.Arena.IndPosSpec.NestGroupCtors
 import ConAgua.Checker.NoVerdictTree
 import ConAgua.Arena.Verdict

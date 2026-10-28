@@ -1,5 +1,4 @@
 import ConAgua.Verdict.PosE
-import ConAgua.Verdict.PosE3Cm
 import ConAgua.Arena.IndT.PosOne
 /-!
 # `nest_ctors_one`'s error claim

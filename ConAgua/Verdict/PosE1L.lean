@@ -1,9 +1,6 @@
-import ConAgua.Arena.IndT.PosDefs
-import ConAgua.Arena.IndT.PosNit
-import ConAgua.Arena.IndT.RecGen19
-import ConAgua.Arena.IndPosSpec.Pos2DecHLSplit
-import ConAgua.Arena.IndPosSpec.Snoc
 import ConAgua.Verdict.PosE1M
+import ConAgua.Arena.IndRealAbsPos
+import ConAgua.Arena.IndPosSpec.NestCrest
 
 /-!
 # `nest_pos_fvar`, `nest_cont_checks`: one refinement for both outcomes

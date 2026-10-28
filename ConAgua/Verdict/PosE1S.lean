@@ -1,3 +1,4 @@
+import ConAgua.Arena.IndT.PosNit
 import ConAgua.Verdict.PosE1L
 import ConAgua.Verdict.PosNty
 import ConAgua.Verdict.PosE

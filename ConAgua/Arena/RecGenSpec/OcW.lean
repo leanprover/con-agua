@@ -1,3 +1,4 @@
+import ConAgua.Arena.IlpRd
 import ConAgua.Arena.RecCheckSpec.ToiW
 import ConAgua.Arena.RecClassSpec.ReadProg
 import ConAgua.Arena.RecGenSpec.DecTMDecBOf

@@ -1,7 +1,6 @@
 import ConAgua.Arena.IndT.PosDefs
 import ConAgua.Arena.IndT.RecGen19
 import ConAgua.Verdict.PosE3Cm
-import ConAgua.Verdict.VCtx
 
 /-!
 # `nest_ctors_crest`: one refinement for both outcomes

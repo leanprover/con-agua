@@ -1,8 +1,8 @@
 import ConAgua.Arena.IndPosSpec.NoConstWf
-import ConAgua.Arena.RecCheckSpec.ErToIwWStage
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr
+import ConAgua.Arena.IndInstallSpec.LvlEqFueledSpecC
 
 /-!
 # NestOccAny

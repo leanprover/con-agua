@@ -1,14 +1,11 @@
 import ConAgua.Arena.Verdict
-import ConAgua.Arena.IndInstall
-import ConAgua.Arena.IndPos2
 import ConAgua.Arena.IndPosSpec.NuW
-import ConAgua.Arena.IndPosSpec.P2rtW
-import ConAgua.Arena.IndPosSpec.PiBWStage
 import ConAgua.Checker.NoVerdictTree
 import Std.Tactic.BVDecide.Normalize.Prop
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
+import ConAgua.Arena.IndPosSpec.RsLook
 
 /-!
 # The positivity pass's entry points: error models (lane `verdicts-b`, helper `ia2`, fork `top`)

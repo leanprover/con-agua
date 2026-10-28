@@ -1,4 +1,3 @@
-import ConAgua.Arena.IndPos2
 import ConAgua.Arena.IndPosSpec.GgW2
 import ConAgua.Checker.NoVerdictTree
 import ConAgua.Arena.Verdict

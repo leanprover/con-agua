@@ -1,6 +1,5 @@
 import ConAgua.Verdict.PosTopE1
 import ConAgua.Arena.IndPosSpec.UnW2
-import ConAgua.Checker.NoVerdictTree
 
 /-!
 # `nest_uniform`: one model and one refinement for both outcomes

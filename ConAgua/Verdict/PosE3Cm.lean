@@ -1,6 +1,4 @@
-import ConAgua.Arena.IndPos2
 import ConAgua.Arena.IndPosSpec.CfW
-import ConAgua.Arena.RecCheckSpec.ErToIwWStage
 import ConAgua.Checker.NoVerdictTree
 import ConAgua.Arena.Verdict
 import ConAgua.Arena.GrindAttr

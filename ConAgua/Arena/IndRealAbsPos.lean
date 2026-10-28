@@ -1,6 +1,8 @@
-import ConAgua.Arena.IndPosSpec.CfW
 import ConAgua.Arena.IndPosSpec.NcnW
 import ConAgua.Arena.IndPosSpec.NestContParamsClosed
+import ConAgua.Arena.IndPosSpec.P2ctK1
+import ConAgua.Arena.IndPosSpec.NestGroupCtors
+import ConAgua.Arena.IndPosSpec.NestHoles
 
 /-!
 # The `abstract1` memo across the positivity check's models (lane `indproofs4`, helper `abs`)

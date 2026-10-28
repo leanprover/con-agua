@@ -1,5 +1,4 @@
 import ConAgua.Arena.IndPosSpec.FgW2
-import ConAgua.Arena.IndPosSpec.NestOccAny
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr
