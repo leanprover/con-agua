@@ -1,5 +1,5 @@
-import ConAgua.Arena.DeclCvg
-import ConAgua.Arena.IndCallM
+import ConAgua.Arena.IndRealWalk
+import ConAgua.Arena.DeclStep
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr

@@ -1,7 +1,4 @@
-import ConAgua.Arena.IndRealMemoCrT
-import ConAgua.Arena.CrOKFrame
-import ConAgua.Arena.DeclCvgT
-import ConAgua.Arena.IndT.WalkC
+import ConAgua.Arena.DeclRec
 
 /-!
 # `env_push`'s frame

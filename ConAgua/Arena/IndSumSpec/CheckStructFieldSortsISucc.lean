@@ -1,3 +1,6 @@
+import ConAgua.Arena.IndRealFvtD
+import ConAgua.Arena.IndCallM
+import ConAgua.Arena.IndSum
 import ConAgua.Arena.IndPosSpec.MatesW
 import ConAgua.Arena.IndPosSpec.NestBlockOfKey
 import ConAgua.Arena.GrindAttr
