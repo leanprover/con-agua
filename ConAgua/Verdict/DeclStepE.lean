@@ -1,9 +1,9 @@
-import ConAgua.Verdict.DeclCdE
+import ConAgua.Arena.CheckerT
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.ModelGen
 
 /-!
-# The verdict claims of `install_value`, `install_step_go`, `install_step`, `install_decl_step`
+# The verdict claims of `install_step_go`, `install_step`, `install_decl_step`
 (lane `verdicts-b`, helper `d`)
 -/
 
@@ -21,11 +21,6 @@ open ConRon.Bridge (FoldOK PinsDenote CheckOK StepOK PersDecl PersPinSets PExt)
 
 local notation "V" => ConLeche.CheckMode.verified
 
-l_model installStepGo_specE (p : Prog) (hf : p.lookup "install_step_go" = some installStepGoL)
-  fns [hf ↦ installStepGoE] grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
-  heartbeats 400000 simp [] errors
-
 l_model installStep_specE (p : Prog) (hf : p.lookup "install_step" = some installStepL)
   fns [hf ↦ installStepE] grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
@@ -35,28 +30,6 @@ l_model installDeclStep_specE (p : Prog) (hf : p.lookup "install_decl_step" = so
   fns [hf ↦ installDeclStepE] grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
   heartbeats 400000 simp [] errors
-
-section iv
-variable (pins : List INatOpPinSet) (dn : NIdx → Option ConLeche.Name) (ds : Array IDeclaration)
-  (p : Prog)
-
-/-- **`install_value`'s error claim under `StageT`** (`installValue_loopT`'s hypotheses;
-`iv_ref`'s error half). -/
-theorem installValue_errT {p : Prog} (hP : IvProg p) (hC : CvgProg p) (hap : ApdF p) (hkp : CrKeep p)
-    (hnv : closedNV p L.Checker.nvFns = true) (hivE : IvgE p) (hU : UceProg p)
-    {n : Nat} {m : Mem} {a : AState} {vis : Word} {fe : IFEnv}
-    {pend : Array PendingCheck} {i ck vk : Word} (hi : i.toNat < ds.size)
-    (hk : IvArgs ck vk (dsAt ds i))
-    (hR : LoopR pins dn m a vis fe pend ds) (hS : StageT dn vis fe m a)
-    (hF : ∃ env, FoldOK V env fe a) (hden : ∃ x, Frontend.denoteDecl a.store (dsAt ds i) = some x)
-    (hCr : L.Stubs.CrOK m) {e : Err}
-    (hc : callE p n "install_value" [i, vis, ck, vk] m = .error e) :
-    ErrClaim (ivT fe (dsAt ds i)) a e :=
-  RefE.run_err (s₀ := ⟨m, Locals.init []⟩) (installValue_specE p hP n _ i vis ck vk) hnv
-    ⟨hnv, hU, hivE⟩
-    (iv_ref hP.recP hC hap hkp n hS hR.decls hi hk hF (ivArgs_denoteCV hk hden.choose_spec) hCr) hc
-
-end iv
 
 section istg
 variable (pins : List INatOpPinSet) (dn : NIdx → Option ConLeche.Name) (ds : Array IDeclaration)
@@ -74,193 +47,13 @@ def InstallStepGoSpecE : Prop :=
     ∀ e, callE p n "install_step_go" [i, vis] m = .error e →
     ErrClaim (installStepGo V pins fe (dsAt ds i)) a e
 
-/-- **`install_step_go` fails only where `installStepGo` does** (through `check_decl`'s error
-claim and `install_value`'s). -/
-theorem installStepGo_errT {p : Prog} (hG : IstgProg p) (hP : IvProg p) (hC : CvgProg p) (hap : ApdF p)
-    (hkp : CrKeep p) (hnv : closedNV p L.Checker.nvFns = true) (hivE : IvgE p) (hU : UceProg p)
-    (hCD : CheckDeclSpecE pins dn ds p) : InstallStepGoSpecE pins dn ds p := by
+/-- **`install_step_go` fails only where `installStepGo` does**: the error half of `istg_ref`
+(`check_decl`'s arms' and inductive arm's claims, `install_value`'s). -/
+theorem installStepGo_errT {p : Prog} (hdc : LoopCallees dn p) (hFD : FrontDecls ds) (hLD : DeclsLpsDn dn ds)
+    (hnv : closedNV p L.Checker.nvFns = true) (hG : IstgG pins dn ds p) : InstallStepGoSpecE pins dn ds p := by
   intro n hn m a vis fe pend i hi hok0 hFo hR hTw hfl hden hPD hIM e hc
-  by_cases hk0 : e.cls = 0
-  · exact ErrClaim.of_cls0 hk0
-  have hW := triple_of_callE_err (installStepGo_specE p hG.go n ⟨m, Locals.init []⟩ i vis) hc
-    (Err.code_ne_of_cls hk0)
-  cases n with
-  | zero => rw [installStepGoE.eq_1] at hW; cases hW; exact absurd rfl hk0
-  | succ n =>
-  have hn' : n ≤ 2 ^ 62 := by omega
-  rw [installStepGoE.arm1] at hW
-  cases h0 : callE p n "iw_reset" [] m with
-  | error e0 =>
-    rw [h0, installStepGoE.k_iw_reset.none] at hW; cases hW
-    exact nvl hnv (by decide +kernel) h0
-  | ok q0 =>
-  obtain ⟨r0, m0'⟩ := q0
-  rw [h0] at hW
-  obtain ⟨s0, hs0, -, hW0⟩ := triple_of_callE (iwReset_specW p hG.reset n ⟨m, Locals.init []⟩) h0
-  rw [show iwResetW m = some ([], m.set64 CTL 200 0) from rfl] at hW0
-  simp only [Option.some.injEq, Prod.mk.injEq] at hW0
-  obtain ⟨-, hm0⟩ := hW0
-  have hm0' : m0' = m.set64 CTL 200 0 := hs0.symm.trans hm0.symm
-  subst hm0'
-  have hR0 := hR.reset
-  have hS0 : StageT dn vis fe (m.set64 CTL 200 0) a :=
-    ⟨⟨hR0.check, hR0.iw⟩,
-      hTw.frame (MemFrame.setCtl m 200 0) ⟨by simp, by simp⟩ ⟨by decide, by decide⟩
-        ⟨by simp, by simp, by simp⟩ ⟨by decide, by decide, by decide⟩ ⟨by simp, by simp, by simp⟩
-        ⟨by decide, by decide, by decide⟩,
-      by rw [pinW_frame (MemFrame.setCtl m 200 0) (by simp)]; exact hfl⟩
-  have hIM0 := hIM.setCtl 200 0 (by decide)
-  generalize m.set64 CTL 200 0 = m1 at hW hR0 hS0 hIM0
-  have hdecl : DeclAtF (m1.arr64 DECL) (m1.arr64 DLP) i.toNat (dsAt ds i) := by
-    have := hR0.decls.recs i.toNat hi
-    simpa [dsAt, Array.getD, hi] using this
-  have h1 := hR0.decls.room
-  have h2 := hR0.decls.dsize
-  have hw0 : rdW (m1.arr64 DECL) (1 + 8 * i) = dw (m1.arr64 DECL) i.toNat 0 := by
-    have : (1 + 8 * i).toNat = 1 + 8 * i.toNat + 0 := by
-      rw [UInt64.toNat_add, UInt64.toNat_mul]; simp; omega
-    simp [rdW, dw, this]
-  have hw1 : rdW (m1.arr64 DECL) (2 + 8 * i) = dw (m1.arr64 DECL) i.toNat 1 := by
-    have : (2 + 8 * i).toNat = 1 + 8 * i.toNat + 1 := by
-      rw [UInt64.toNat_add, UInt64.toNat_mul]; simp; omega
-    simp [rdW, dw, this]
-  rw [installStepGoE.k_iw_reset.eq_2, hw0] at hW
-  -- the `check_decl` branch
-  have cdbranch : ∀ {e' : Err}, installStepGoE.k_check_decl p (callE p n "check_decl" [i, vis] m1) = .error e' →
-      ∀ T : AM (IFEnv × Option ValueGroup), (∀ ce, (cdT V pins fe (dsAt ds i)).run a = .error ce → T.run a = .error ce) →
-      ErrClaim T a e' := by
-    intro e' h T hT
-    cases hc' : callE p n "check_decl" [i, vis] m1 with
-    | error e1 =>
-      rw [hc', installStepGoE.k_check_decl.none] at h; cases h
-      have := hCD n hn' m1 a vis fe pend i hi hok0 hR0 hS0 hFo hden hPD hIM0 _ hc'
-      refine ErrClaim.of_run_eq hT ?_
-      exact ErrClaim.bind_left this
-    | ok q =>
-      obtain ⟨r, m2⟩ := q
-      rw [hc', installStepGoE.k_check_decl.arm1] at h; cases h
-  generalize hd : dsAt ds i = d at hdecl
-
-  cases d with
-  | axiomDecl cv =>
-    obtain ⟨hk, -⟩ := hdecl
-    rw [hk] at hW
-    simp only [show (1 : Word) ≠ 2 by decide, show (1 : Word) ≠ 3 by decide,
-      show (1 : Word) ≠ 4 by decide, ite_false] at hW
-    exact cdbranch hW _ (fun ce h => by rw [hd] at h; exact h)
-  | quotDecl k cv =>
-    obtain ⟨hk, -⟩ := hdecl
-    rw [hk] at hW
-    simp only [show (5 : Word) ≠ 2 by decide, show (5 : Word) ≠ 3 by decide,
-      show (5 : Word) ≠ 4 by decide, ite_false] at hW
-    exact cdbranch hW _ (fun ce h => by rw [hd] at h; exact h)
-  | indDecl b nP =>
-    have hk : dw (m1.arr64 DECL) i.toNat 0 = 6 := hdecl.1
-    rw [hk] at hW
-    simp only [show (6 : Word) ≠ 2 by decide, show (6 : Word) ≠ 3 by decide,
-      show (6 : Word) ≠ 4 by decide, ite_false] at hW
-    exact cdbranch hW _ (fun ce h => by rw [hd] at h; exact h)
-  | basisDecl _ => exact absurd hdecl id
-  | thmDecl cv v =>
-    obtain ⟨hk, -⟩ := hdecl
-    rw [hk] at hW
-    simp only [show (3 : Word) ≠ 2 by decide, ite_false, ite_true] at hW
-    cases hc' : callE p n "install_value" [i, vis, 2, 1] m1 with
-    | error e1 =>
-      rw [hc', installStepGoE.k_install_value.none] at hW; cases hW
-      have := installValue_errT pins dn ds hP hC hap hkp hnv hivE hU hi
-        (by rw [hd]; exact ⟨rfl, rfl⟩) hR0 hS0 hFo hden hIM0.cr hc'
-      rw [hd] at this
-      exact this
-    | ok q =>
-      obtain ⟨r, m2⟩ := q
-      rw [hc', installStepGoE.k_install_value.arm1] at hW; cases hW
-  | defnDecl cv v hint =>
-    obtain ⟨hk, hcv, -⟩ := hdecl
-    rw [hk] at hW
-    simp only [ite_true] at hW
-    cases hp : callE p n "pin_in" [rdW (m1.arr64 DECL) (2 + 8 * i) &&& 4294967295, 15, 30] m1 with
-    | error e1 =>
-      rw [hp, installStepGoE.k_pin_in.none] at hW; cases hW
-      exact nvl hnv (by decide +kernel) hp
-    | ok q =>
-      obtain ⟨r, m2⟩ := q
-      rw [hp] at hW
-      obtain ⟨s2, hs2, -, hm2, hW2⟩ := triple_of_callE
-        (pinIn_specW p hG.pin n ⟨m1, Locals.init []⟩ _ 15 30) hp
-      have hm2' : m1 = m2 := (hs2.symm.trans hm2).symm
-      subst hm2'
-      rw [hw1] at hW2
-      have hF := hR0.check.pins.full (pinInW_flag hW2)
-      have hiff := pinIn_contains hF hW2 (mask_lt _) (by decide) (by decide) (by decide)
-      rw [decI_mask, hcv.1] at hiff
-      have hT := installStepGo_defn V pins fe hF cv v hint
-      rw [pinnedDefnL_eq] at hT
-      by_cases hc0 : r.headD 0 ≠ 0
-      · rw [installStepGoE.k_pin_in.arm1 p _ _ _ _ _ hc0] at hW
-        have hpin : ((List.range' 15 15).map fun j => (decI (pinW m1 j) : NIdx)).contains cv.name =
-            true := hiff.mp hc0
-        rw [ite_eq_left hpin] at hT
-        exact cdbranch hW _ (fun ce h => by rw [hd] at h; rw [hT]; exact h)
-      · have hc0' : r.headD 0 = 0 := by simpa using hc0
-        rw [installStepGoE.k_pin_in.arm2 p _ _ _ _ _ hc0'] at hW
-        have hpin : ¬ ((List.range' 15 15).map fun j => (decI (pinW m1 j) : NIdx)).contains cv.name =
-            true := fun h' => hc0 (hiff.mpr h')
-        rw [ite_eq_right hpin] at hT
-        cases hc' : callE p n "install_value" [i, vis, 1, 0] m1 with
-        | error e1 =>
-          rw [hc', installStepGoE.k_install_value.none] at hW; cases hW
-          have := installValue_errT pins dn ds hP hC hap hkp hnv hivE hU hi
-            (by rw [hd]; exact ⟨rfl, rfl⟩) hR0 hS0 hFo hden hIM0.cr hc'
-          rw [hd] at this
-          refine ErrClaim.of_run_eq (T' := ivT fe (.defnDecl cv v hint)) ?_ this
-          intro ce h; rw [hT]; exact h
-        | ok q =>
-          obtain ⟨r', m3⟩ := q
-          rw [hc', installStepGoE.k_install_value.arm1] at hW; cases hW
-  | opaqueDecl cv v =>
-    obtain ⟨hk, hcv, -⟩ := hdecl
-    rw [hk] at hW
-    simp only [show (4 : Word) ≠ 2 by decide, show (4 : Word) ≠ 3 by decide, ite_false,
-      ite_true] at hW
-    cases hp : callE p n "pin_in" [rdW (m1.arr64 DECL) (2 + 8 * i) &&& 4294967295, 44, 46] m1 with
-    | error e1 =>
-      rw [hp, installStepGoE.k_pin_in_2.none] at hW; cases hW
-      exact nvl hnv (by decide +kernel) hp
-    | ok q =>
-      obtain ⟨r, m2⟩ := q
-      rw [hp] at hW
-      obtain ⟨s2, hs2, -, hm2, hW2⟩ := triple_of_callE
-        (pinIn_specW p hG.pin n ⟨m1, Locals.init []⟩ _ 44 46) hp
-      have hm2' : m1 = m2 := (hs2.symm.trans hm2).symm
-      subst hm2'
-      rw [hw1] at hW2
-      have hF := hR0.check.pins.full (pinInW_flag hW2)
-      have hiff := pinIn_contains hF hW2 (mask_lt _) (by decide) (by decide) (by decide)
-      rw [decI_mask, hcv.1] at hiff
-      have hT := installStepGo_opaque V pins fe hF cv v
-      by_cases hc0 : r.headD 0 ≠ 0
-      · rw [installStepGoE.k_pin_in_2.arm1 p _ _ _ _ _ hc0] at hW
-        have hpin : ((List.range' 44 2).map fun j => (decI (pinW m1 j) : NIdx)).contains cv.name =
-            true := hiff.mp hc0
-        rw [ite_eq_left (show (pinnedOpaqueL m1).contains cv.name = true from hpin)] at hT
-        exact cdbranch hW _ (fun ce h => by rw [hd] at h; rw [hT]; exact h)
-      · have hc0' : r.headD 0 = 0 := by simpa using hc0
-        rw [installStepGoE.k_pin_in_2.arm2 p _ _ _ _ _ hc0'] at hW
-        have hpin : ¬ ((List.range' 44 2).map fun j => (decI (pinW m1 j) : NIdx)).contains cv.name =
-            true := fun h' => hc0 (hiff.mpr h')
-        rw [ite_eq_right (show ¬ (pinnedOpaqueL m1).contains cv.name = true from hpin)] at hT
-        cases hc' : callE p n "install_value" [i, vis, 0, 2] m1 with
-        | error e1 =>
-          rw [hc', installStepGoE.k_install_value.none] at hW; cases hW
-          have := installValue_errT pins dn ds hP hC hap hkp hnv hivE hU hi
-            (by rw [hd]; exact ⟨rfl, rfl⟩) hR0 hS0 hFo hden hIM0.cr hc'
-          rw [hd] at this
-          refine ErrClaim.of_run_eq (T' := ivT fe (.opaqueDecl cv v)) ?_ this
-          intro ce h; rw [hT]; exact h
-        | ok q =>
-          obtain ⟨r', m3⟩ := q
-          rw [hc', installStepGoE.k_install_value.arm1] at hW; cases hW
+  exact RefE.run_err (installStepGo_specE p hdc.istg hdc.cd.cd n ⟨m, Locals.init []⟩ i vis) hnv hG
+    (istg_ref hdc hFD hLD (by omega) hi hok0 hFo hR hTw hfl hden hPD hIM) hc
 
 end istg
 

@@ -579,74 +579,112 @@ theorem installValue_loopT (hP : IvProg p) (hC : CvgProg p) (hap : ApdF p) (hkp 
 
 end loopSpecs
 
-/-! ## The relational lemma of `install_step_go` -/
+/-- **`install_step_go`'s unified model**: the scratch reset and the pin test (outside the verdict
+closure) lifted, `check_decl` by its unified model, `install_value` through its run (the inductive
+memos read it). -/
+l_model installStepGo_specE (p : Prog) (hG : IstgProg p) (hcd : p.lookup "check_decl" = some checkDeclL)
+  fns [hG.go ↦ installStepGoE]
+  specs [callW_spec p n "iw_reset", callW_spec p n "pin_in", checkDecl_specE p hcd n]
+  grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
+  heartbeats 1600000 simp [] unified
+  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
-section istgOk
-variable (mode : ConLeche.CheckMode) (pins : List INatOpPinSet) (dn : NIdx → Option ConLeche.Name)
-  (ds : Array IDeclaration) (p : Prog)
 
-/-- What a run of the step body leaves, against the twin's `T`. -/
-def IstgPost (pend : Array PendingCheck) (T : AM (IFEnv × Option ValueGroup)) (a : AState)
-    (m' : Mem) (r : List Word) : Prop :=
-  ∃ x a', T.run a = .ok (x, a') ∧ LoopR pins dn m' a' (r.headD 0) x.1 pend ds ∧
-    x.2 = vgOut m' (r.tail.headD 0) (r.tail.tail.headD 0) ∧ (r.tail.headD 0 ≠ 0 → x.2 ≠ none) ∧
-    CoreMemos m' ∧ IndMemos m'
+/-! ## `install_step_go` refines `installStepGo`, both outcomes -/
 
-theorem istg_cd (hCD : CheckDeclSpecT mode pins dn ds p) {n : Nat} (hn : n ≤ 2 ^ 62) {m0 m' : Mem} {a : AState} {vis : Word}
-    {fe : IFEnv} {pend : Array PendingCheck} {i : Word} {rc r : List Word}
-    {T : AM (IFEnv × Option ValueGroup)} (hi : i.toNat < ds.size) (hok0 : ConRon.Bridge.StateOK a)
-    (hR : LoopR pins dn m0 a vis fe pend ds) (hS : StageT dn vis fe m0 a)
-    (hF : ∃ env, FoldOK V env fe a) (hden : ∃ x, Frontend.denoteDecl a.store (dsAt ds i) = some x)
-    (hPD : ∃ pinsP, PinsDenote a.store pins pinsP) (hIM : IndMemos m0)
-    (hc : callW p n "check_decl" [i, vis] m0 = some (rc, m'))
-    (hr : istgCD (some (rc, m')) = some (r, m'))
-    (hT : T.run a = (cdT mode pins fe (dsAt ds i)).run a) :
-    IstgPost pins dn ds pend T a m' r := by
-  simp only [istgCD, Option.some.injEq, Prod.mk.injEq] at hr
-  obtain ⟨rfl, -⟩ := hr
-  obtain ⟨s', hs', -, hok, hL, hcm, hIM'⟩ := triple_of_callW (s₀ := ⟨m0, Locals.init []⟩)
-    (hCD n hn ⟨m0, Locals.init []⟩ a vis fe pend i hi hok0 hR hS hF hden hPD hIM) hc
-  have hrun := AM.run_of_ok _ _ hok
-  refine ⟨_, _, hT.trans (cdT_run hrun), ?_, ?_, ?_, hs' ▸ hcm, hs' ▸ hIM'⟩
-  · simpa [hs'] using hL
-  · simp [vgOut]
-  · simp
+section istg
+variable (pins : List INatOpPinSet) (dn : NIdx → Option ConLeche.Name) (ds : Array IDeclaration)
+  (p : Prog)
 
+/-- What the error arms of `install_step_go` assume: `check_decl`'s (`CdG`) and `install_value`'s
+(`IvCtx`). -/
+structure IstgG : Prop where
+  cd : CdG pins dn ds p
+  iv : IvCtx p
+
+/-- What `install_step_go` gives besides the twin's run, its three words `r` and the memory `m'`:
+the loop's relation at the new view and environment, the value group out of the flag and record,
+the memos. -/
+structure IstgPost (pend : Array PendingCheck) (r : List Word) (x : IFEnv × Option ValueGroup) (m' : Mem)
+    (a' : AState) : Prop where
+  loop : LoopR pins dn m' a' (r.headD 0) x.1 pend ds
+  vg : x.2 = vgOut m' (r.tail.headD 0) (r.tail.tail.headD 0)
+  some : r.tail.headD 0 ≠ 0 → x.2 ≠ none
+  core : CoreMemos m'
+  ind : IndMemos m'
+
+variable {pins dn ds p}
+
+/-- The `check_decl` branch: `cd_ref`, against a twin that runs as `cdT`. -/
+theorem istg_cd {n : Nat} {m0 : Mem} {a : AState} {vis : Word} {fe : IFEnv} {pend : Array PendingCheck}
+    {i : Word} {d : IDeclaration} {T : AM (IFEnv × Option ValueGroup)}
+    (h : RefE (CdG pins dn ds p) (checkDeclE p n m0 i vis) (checkDecl V pins fe d) a
+      (fun v x a' => CdPost pins dn ds pend v.1 x v.2 a'))
+    (hT : T.run a = (cdT V pins fe d).run a) :
+    RefE (IstgG pins dn ds p) (installStepGoE.k_check_decl p (checkDeclE p n m0 i vis)) T a
+      (fun v x a' => IstgPost pins dn ds pend v.1 x v.2 a') := by
+  rcases hx : checkDeclE p n m0 i vis with e | ⟨w, m'⟩
+  · rw [installStepGoE.k_check_decl.none]
+    rw [hx] at h
+    exact fun hG => ErrClaim.of_run_eqW hT (ErrClaim.bind_left (h hG.cd))
+  rw [installStepGoE.k_check_decl.arm1]
+  rw [hx] at h
+  obtain ⟨y, a', hy, hR⟩ := h
+  exact RefE.ret (hT.trans (cdT_run hy)) ⟨by simpa using hR.loop, by simp [vgOut], by simp, hR.core, hR.ind⟩
+
+/-- The `install_value` branch: `iv_ref` on the call's run, against a twin that runs as `ivT`. -/
 theorem istg_iv (hP : IvProg p) (hC : CvgProg p) (hcl : IndMemoClosed p) (hcrf : L.Ind.CrfF p)
-    (hap : ApdF p) {n : Nat} {m0 m' : Mem} {a : AState} {vis : Word} {fe : IFEnv}
-    {pend : Array PendingCheck} {i ck vk : Word} {rv r : List Word}
+    (hap : ApdF p) {n : Nat} {m0 : Mem} {a : AState} {vis : Word} {fe : IFEnv}
+    {pend : Array PendingCheck} {i ck vk : Word}
     {T : AM (IFEnv × Option ValueGroup)} (hi : i.toNat < ds.size) (hk : IvArgs ck vk (dsAt ds i))
     (hR : LoopR pins dn m0 a vis fe pend ds) (hS : StageT dn vis fe m0 a) (hIM : IndMemos m0)
     (hF : ∃ env, FoldOK V env fe a) (hden : ∃ x, Frontend.denoteDecl a.store (dsAt ds i) = some x)
-    (hc : callW p n "install_value" [i, vis, ck, vk] m0 = some (rv, m'))
-    (hr : istgIV (some (rv, m')) = some (r, m')) (hT : T.run a = (ivT fe (dsAt ds i)).run a) :
-    IstgPost pins dn ds pend T a m' r := by
-  simp only [istgIV, Option.some.injEq, Prod.mk.injEq] at hr
-  obtain ⟨rfl, -⟩ := hr
+    (hT : T.run a = (ivT fe (dsAt ds i)).run a) :
+    RefE (IstgG pins dn ds p) (installStepGoE.k_install_value p (callE p n "install_value" [i, vis, ck, vk] m0))
+      T a (fun v x a' => IstgPost pins dn ds pend v.1 x v.2 a') := by
+  have hT8 := installValue_specE p hP n ⟨m0, Locals.init []⟩ i vis ck vk
+  have hR8 := iv_ref hP.recP hC hap ⟨hcl, hcrf⟩ n hS hR.decls hi hk hF (ivArgs_denoteCV hk hden.choose_spec)
+    hIM.cr
+  rcases c : callE p n "install_value" [i, vis, ck, vk] m0 with e | ⟨rv, m'⟩
+  · rw [installStepGoE.k_install_value.none]
+    exact fun hG => ErrClaim.of_run_eqW hT (RefE.run_err hT8 hG.iv.nv hG.iv hR8 c)
+  rw [installStepGoE.k_install_value.arm1]
+  have hc := callW_of_callE c
   have hIM' := callW_indMemos hcl hcrf (im_mem _ rfl) hc hIM
   obtain ⟨s', hs', -, hok, hL, hvg, hne, hcm⟩ := triple_of_callW (s₀ := ⟨m0, Locals.init []⟩)
     (installValue_loopT pins dn ds p hP hC hap ⟨hcl, hcrf⟩ n ⟨m0, Locals.init []⟩ a vis fe pend i ck vk
       hi hk hR hS hF hden hIM.cr) hc
   have hrun := AM.run_of_ok _ _ hok
   subst hs'
-  refine ⟨_, _, hT.trans hrun, by simpa using hL, ?_, fun _ => hne, hcm, hIM'⟩
+  refine RefE.ret (hT.trans hrun) ⟨by simpa using hL, ?_, fun _ => hne, hcm, hIM'⟩
   simp only [List.headD_cons, List.tail_cons, vgOut, show (1 : Word) ≠ 0 by decide, ite_false]
   exact hvg
 
-theorem istgW_ok (_hm : mode = .verified) (hCD : CheckDeclSpecT mode pins dn ds p) (hP : IvProg p) (hC : CvgProg p)
-    (hcl : IndMemoClosed p) (hcrf : L.Ind.CrfF p) (hap : ApdF p) {n : Nat} (hn : n ≤ 2 ^ 62) {m m' : Mem} {a : AState} {vis : Word}
-    {fe : IFEnv} {pend : Array PendingCheck} {i : Word} {r : List Word}
-    (h : istgW p n m i vis = some (r, m')) (hR : LoopR pins dn m a vis fe pend ds)
-    (hTw : TwinOK dn m a fe) (hfl : pinW m 0 ≠ 0) (hFo : ∃ env, FoldOK V env fe a)
+/-- **`install_step_go` refines `installStepGo` under `StageT`, both outcomes**: the scratch reset,
+then by the record's kind (and for the pinnable ones `pin_in`'s answer) `check_decl` (`cd_ref`, its
+model inlined) or `install_value` (`iv_ref` on the run). -/
+theorem istg_ref (hdc : LoopCallees dn p) (hFD : FrontDecls ds) (hLD : DeclsLpsDn dn ds) {N : Nat}
+    (hN : N ≤ 2 ^ 62 + 1) {m : Mem} {a : AState} {vis : Word} {fe : IFEnv} {pend : Array PendingCheck}
+    {i : Word} (hi : i.toNat < ds.size) (hok0 : ConRon.Bridge.StateOK a) (hFo : ∃ env, FoldOK V env fe a)
+    (hR : LoopR pins dn m a vis fe pend ds) (hTw : TwinOK dn m a fe) (hfl : pinW m 0 ≠ 0)
     (hden : ∃ x, Frontend.denoteDecl a.store (dsAt ds i) = some x)
-    (hPD : ∃ pinsP, PinsDenote a.store pins pinsP)
-    (hi : i.toNat < ds.size) (hok0 : ConRon.Bridge.StateOK a) (hIM : IndMemos m) :
-    IstgPost pins dn ds pend (installStepGo mode pins fe (dsAt ds i)) a m' r := by
-  cases n with
-  | zero => simp [istgW] at h
-  | succ n =>
+    (hPD : ∃ pinsP, PinsDenote a.store pins pinsP) (hIM : IndMemos m) :
+    RefE (IstgG pins dn ds p) (installStepGoE p N m i vis) (installStepGo V pins fe (dsAt ds i)) a
+      (fun v x a' => IstgPost pins dn ds pend v.1 x v.2 a') := by
+  rcases N with _ | n
+  · rw [installStepGoE.eq_1]; exact RefE.of_cls0 Err.cls_outOfFuel
   have hn' : n ≤ 2 ^ 62 := by omega
-  rw [istgW_step, show iwResetW m = some ([], m.set64 CTL 200 0) from rfl, istgK0_some] at h
+  rw [installStepGoE.arm1]
+  rcases c0 : callW p n "iw_reset" [] m with _ | ⟨r0, m0'⟩
+  · rw [liftE_none, installStepGoE.k_iw_reset.none]; exact RefE.of_cls0 (by simp)
+  rw [liftE_some]
+  obtain ⟨s0, hs0, -, hW0⟩ := triple_of_callW (iwReset_specW p hdc.istg.reset n ⟨m, Locals.init []⟩) c0
+  rw [show iwResetW m = some ([], m.set64 CTL 200 0) from rfl] at hW0
+  simp only [Option.some.injEq, Prod.mk.injEq] at hW0
+  obtain ⟨-, hm0⟩ := hW0
+  have hm0' : m0' = m.set64 CTL 200 0 := hs0.symm.trans hm0.symm
+  subst hm0'
   have hR0 := hR.reset
   have hS0 : StageT dn vis fe (m.set64 CTL 200 0) a :=
     ⟨⟨hR0.check, hR0.iw⟩,
@@ -655,7 +693,7 @@ theorem istgW_ok (_hm : mode = .verified) (hCD : CheckDeclSpecT mode pins dn ds 
         ⟨by decide, by decide, by decide⟩,
       by rw [pinW_frame (MemFrame.setCtl m 200 0) (by simp)]; exact hfl⟩
   have hIM0 := hIM.setCtl 200 0 (by decide)
-  generalize m.set64 CTL 200 0 = m0 at h hR0 hS0 hIM0
+  generalize m.set64 CTL 200 0 = m0 at hR0 hS0 hIM0 ⊢
   have hdecl : DeclAtF (m0.arr64 DECL) (m0.arr64 DLP) i.toNat (dsAt ds i) := by
     have := hR0.decls.recs i.toNat hi
     simpa [dsAt, Array.getD, hi] using this
@@ -669,8 +707,12 @@ theorem istgW_ok (_hm : mode = .verified) (hCD : CheckDeclSpecT mode pins dn ds 
     have : (2 + 8 * i).toNat = 1 + 8 * i.toNat + 1 := by
       rw [UInt64.toNat_add, UInt64.toNat_mul]; simp; omega
     simp [rdW, dw, this]
-  rw [hw0, hw1] at h
-  generalize hd : dsAt ds i = d at hdecl
+  have hCD := cd_ref hdc.cd hdc.knot hdc.leaf hdc.loop hdc.andInd.toIbeProg hdc.indIn pins dn hdc.dninj hdc.quotDn
+    hdc.indArm hdc.indMemo hdc.crf ds hFD hLD (N := n) (by omega) hi hok0 hR0 hS0 hFo hden hPD hIM0
+  have hIV := fun {ck vk : Word} {T : AM (IFEnv × Option ValueGroup)} (hk : IvArgs ck vk (dsAt ds i))
+      (hT : T.run a = (ivT fe (dsAt ds i)).run a) =>
+    istg_iv (pend := pend) hdc.iv hdc.cvg hdc.indMemo hdc.crf hdc.cd.crp.apd (n := n) hi hk hR0 hS0 hIM0 hFo hden hT
+  generalize hd : dsAt ds i = d at hdecl hCD hIV
   -- the pinned-name test, for the two pinnable kinds
   have pinT : ∀ {cv : IConstantVal} {k hi' c : Word}, CVAt (m0.arr64 DECL) (m0.arr64 DLP) i.toNat cv →
       pinInW n m0 (dw (m0.arr64 DECL) i.toNat 1 &&& 4294967295) k hi' = some c →
@@ -681,141 +723,82 @@ theorem istgW_ok (_hm : mode = .verified) (hCD : CheckDeclSpecT mode pins dn ds 
     have hF := hR0.check.pins.full (pinInW_flag hp)
     refine ⟨hF, ?_⟩
     rw [pinIn_contains hF hp (mask_lt _) hk1 hk hk2, decI_mask, hcv.1]
+  -- `pin_in` through its model
+  have pinC : ∀ {k hi' : Word} {r : List Word} {m1 : Mem},
+      callW p n "pin_in" [rdW (m0.arr64 DECL) (2 + 8 * i) &&& 4294967295, k, hi'] m0 = some (r, m1) →
+      m1 = m0 ∧ pinInW n m0 (dw (m0.arr64 DECL) i.toNat 1 &&& 4294967295) k hi' = some (r.headD 0) := by
+    intro k hi' r m1 hc
+    obtain ⟨s', hs', -, hm', hW⟩ := triple_of_callW (s₀ := ⟨m0, Locals.init []⟩)
+      (pinIn_specW p hdc.istg.pin n _ _ k hi') hc
+    rw [hw1] at hW
+    exact ⟨hs'.symm.trans hm', hW⟩
   cases d with
   | axiomDecl cv =>
     obtain ⟨hk, -⟩ := hdecl
-    rw [hk] at h
-    simp only [show (1 : Word) ≠ 2 by decide, show (1 : Word) ≠ 3 by decide,
-      show (1 : Word) ≠ 4 by decide, ite_false] at h
-    cases hc : callW p n "check_decl" [i, vis] m0 with
-    | none => rw [hc] at h; simp [istgCD] at h
-    | some rcm =>
-    obtain ⟨rc, m1⟩ := rcm
-    rw [hc] at h
-    have hm1 : m1 = m' := by simp [istgCD] at h; exact h.2
-    subst hm1
-    rw [← hd]
-    exact istg_cd mode pins dn ds p hCD hn' hi hok0 hR0 hS0 hFo hden hPD hIM0 hc h (by rw [hd]; rfl)
+    rw [installStepGoE.k_iw_reset.arm4 _ _ _ _ _ _ (by rw [hw0, hk]; decide) (by rw [hw0, hk]; decide)
+      (by rw [hw0, hk]; decide)]
+    exact istg_cd hCD rfl
   | quotDecl k cv =>
     obtain ⟨hk, -⟩ := hdecl
-    rw [hk] at h
-    simp only [show (5 : Word) ≠ 2 by decide, show (5 : Word) ≠ 3 by decide,
-      show (5 : Word) ≠ 4 by decide, ite_false] at h
-    cases hc : callW p n "check_decl" [i, vis] m0 with
-    | none => rw [hc] at h; simp [istgCD] at h
-    | some rcm =>
-    obtain ⟨rc, m1⟩ := rcm
-    rw [hc] at h
-    have hm1 : m1 = m' := by simp [istgCD] at h; exact h.2
-    subst hm1
-    rw [← hd]
-    exact istg_cd mode pins dn ds p hCD hn' hi hok0 hR0 hS0 hFo hden hPD hIM0 hc h (by rw [hd]; rfl)
-  | thmDecl cv v =>
-    obtain ⟨hk, -⟩ := hdecl
-    rw [hk] at h
-    simp only [show (3 : Word) ≠ 2 by decide, ite_false, ite_true] at h
-    cases hc : callW p n "install_value" [i, vis, 2, 1] m0 with
-    | none => rw [hc] at h; simp [istgIV] at h
-    | some rvm =>
-    obtain ⟨rv, m1⟩ := rvm
-    rw [hc] at h
-    have hm1 : m1 = m' := by simp [istgIV] at h; exact h.2
-    subst hm1
-    rw [← hd]
-    exact istg_iv pins dn ds p hP hC hcl hcrf hap hi (by rw [hd]; exact ⟨rfl, rfl⟩) hR0 hS0 hIM0 hFo hden hc h (by rw [hd]; rfl)
-  | defnDecl cv v hint =>
-    obtain ⟨hk, hcv, -⟩ := hdecl
-    rw [hk] at h
-    simp only [ite_true] at h
-    cases hp : pinInW n m0 (dw (m0.arr64 DECL) i.toNat 1 &&& 4294967295) 15 30 with
-    | none => rw [hp] at h; simp [istgPin] at h
-    | some c =>
-    rw [hp, istgPin_some] at h
-    obtain ⟨hF, hiff⟩ := pinT hcv hp (by decide) (by decide) (by decide)
-    have hT := installStepGo_defn mode pins fe hF cv v hint
-    rw [pinnedDefnL_eq] at hT
-    by_cases hc0 : c ≠ 0
-    · rw [ite_eq_left hc0] at h
-      have hpin : ((List.range' 15 15).map fun j => (decI (pinW m0 j) : NIdx)).contains cv.name =
-          true := hiff.mp hc0
-      rw [ite_eq_left hpin] at hT
-      cases hc : callW p n "check_decl" [i, vis] m0 with
-      | none => rw [hc] at h; simp [istgCD] at h
-      | some rcm =>
-      obtain ⟨rc, m1⟩ := rcm
-      rw [hc] at h
-      have hm1 : m1 = m' := by simp [istgCD] at h; exact h.2
-      subst hm1
-      rw [← hd]
-      exact istg_cd mode pins dn ds p hCD hn' hi hok0 hR0 hS0 hFo hden hPD hIM0 hc h (by rw [hd]; exact hT)
-    · rw [ite_eq_right hc0] at h
-      have hpin : ¬ ((List.range' 15 15).map fun j => (decI (pinW m0 j) : NIdx)).contains cv.name =
-          true := fun h' => hc0 (hiff.mpr h')
-      rw [ite_eq_right hpin] at hT
-      cases hc : callW p n "install_value" [i, vis, 1, 0] m0 with
-      | none => rw [hc] at h; simp [istgIV] at h
-      | some rvm =>
-      obtain ⟨rv, m1⟩ := rvm
-      rw [hc] at h
-      have hm1 : m1 = m' := by simp [istgIV] at h; exact h.2
-      subst hm1
-      rw [← hd]
-      exact istg_iv pins dn ds p hP hC hcl hcrf hap hi (by rw [hd]; exact ⟨rfl, rfl⟩) hR0 hS0 hIM0 hFo hden hc h (by rw [hd]; exact hT)
-  | opaqueDecl cv v =>
-    obtain ⟨hk, hcv, -⟩ := hdecl
-    rw [hk] at h
-    simp only [show (4 : Word) ≠ 2 by decide, show (4 : Word) ≠ 3 by decide, ite_false,
-      ite_true] at h
-    cases hp : pinInW n m0 (dw (m0.arr64 DECL) i.toNat 1 &&& 4294967295) 44 46 with
-    | none => rw [hp] at h; simp [istgPin] at h
-    | some c =>
-    rw [hp, istgPin_some] at h
-    obtain ⟨hF, hiff⟩ := pinT hcv hp (by decide) (by decide) (by decide)
-    have hT := installStepGo_opaque mode pins fe hF cv v
-    by_cases hc0 : c ≠ 0
-    · rw [ite_eq_left hc0] at h
-      have hpin : ((List.range' 44 2).map fun j => (decI (pinW m0 j) : NIdx)).contains cv.name =
-          true := hiff.mp hc0
-      rw [ite_eq_left (show (pinnedOpaqueL m0).contains cv.name = true from hpin)] at hT
-      cases hc : callW p n "check_decl" [i, vis] m0 with
-      | none => rw [hc] at h; simp [istgCD] at h
-      | some rcm =>
-      obtain ⟨rc, m1⟩ := rcm
-      rw [hc] at h
-      have hm1 : m1 = m' := by simp [istgCD] at h; exact h.2
-      subst hm1
-      rw [← hd]
-      exact istg_cd mode pins dn ds p hCD hn' hi hok0 hR0 hS0 hFo hden hPD hIM0 hc h (by rw [hd]; exact hT)
-    · rw [ite_eq_right hc0] at h
-      have hpin : ¬ ((List.range' 44 2).map fun j => (decI (pinW m0 j) : NIdx)).contains cv.name =
-          true := fun h' => hc0 (hiff.mpr h')
-      rw [ite_eq_right (show ¬ (pinnedOpaqueL m0).contains cv.name = true from hpin)] at hT
-      cases hc : callW p n "install_value" [i, vis, 0, 2] m0 with
-      | none => rw [hc] at h; simp [istgIV] at h
-      | some rvm =>
-      obtain ⟨rv, m1⟩ := rvm
-      rw [hc] at h
-      have hm1 : m1 = m' := by simp [istgIV] at h; exact h.2
-      subst hm1
-      rw [← hd]
-      exact istg_iv pins dn ds p hP hC hcl hcrf hap hi (by rw [hd]; exact ⟨rfl, rfl⟩) hR0 hS0 hIM0 hFo hden hc h (by rw [hd]; exact hT)
+    rw [installStepGoE.k_iw_reset.arm4 _ _ _ _ _ _ (by rw [hw0, hk]; decide) (by rw [hw0, hk]; decide)
+      (by rw [hw0, hk]; decide)]
+    exact istg_cd hCD rfl
   | indDecl b nP =>
     have hk : dw (m0.arr64 DECL) i.toNat 0 = 6 := hdecl.1
-    rw [hk] at h
-    simp only [show (6 : Word) ≠ 2 by decide, show (6 : Word) ≠ 3 by decide,
-      show (6 : Word) ≠ 4 by decide, ite_false] at h
-    cases hc : callW p n "check_decl" [i, vis] m0 with
-    | none => rw [hc] at h; simp [istgCD] at h
-    | some rcm =>
-    obtain ⟨rc, m1⟩ := rcm
-    rw [hc] at h
-    have hm1 : m1 = m' := by simp [istgCD] at h; exact h.2
-    subst hm1
-    rw [← hd]
-    exact istg_cd mode pins dn ds p hCD hn' hi hok0 hR0 hS0 hFo hden hPD hIM0 hc h (by rw [hd]; rfl)
+    rw [installStepGoE.k_iw_reset.arm4 _ _ _ _ _ _ (by rw [hw0, hk]; decide) (by rw [hw0, hk]; decide)
+      (by rw [hw0, hk]; decide)]
+    exact istg_cd hCD rfl
+  | thmDecl cv v =>
+    obtain ⟨hk, -⟩ := hdecl
+    rw [installStepGoE.k_iw_reset.arm2 _ _ _ _ _ _ (by rw [hw0, hk]; decide) (by rw [hw0, hk])]
+    exact hIV ⟨rfl, rfl⟩ rfl
+  | defnDecl cv v hint =>
+    obtain ⟨hk, hcv, -⟩ := hdecl
+    rw [installStepGoE.k_iw_reset.arm1 _ _ _ _ _ _ (by rw [hw0, hk])]
+    rcases cp : callW p n "pin_in" [rdW (m0.arr64 DECL) (2 + 8 * i) &&& 4294967295, 15, 30] m0 with
+      _ | ⟨rp, m1⟩
+    · rw [liftE_none, installStepGoE.k_pin_in.none]; exact RefE.of_cls0 (by simp)
+    rw [liftE_some]
+    obtain ⟨rfl, hp⟩ := pinC cp
+    obtain ⟨hF, hiff⟩ := pinT hcv hp (by decide) (by decide) (by decide)
+    have hT := installStepGo_defn V pins fe hF cv v hint
+    rw [pinnedDefnL_eq] at hT
+    by_cases hc0 : rp.headD 0 ≠ 0
+    · rw [installStepGoE.k_pin_in.arm1 _ _ _ _ _ _ hc0]
+      have hpin : ((List.range' 15 15).map fun j => (decI (pinW m1 j) : NIdx)).contains cv.name =
+          true := hiff.mp hc0
+      rw [ite_eq_left hpin] at hT
+      exact istg_cd hCD hT
+    · rw [installStepGoE.k_pin_in.arm2 _ _ _ _ _ _ (Decidable.not_not.mp hc0)]
+      have hpin : ¬ ((List.range' 15 15).map fun j => (decI (pinW m1 j) : NIdx)).contains cv.name =
+          true := fun h' => hc0 (hiff.mpr h')
+      rw [ite_eq_right hpin] at hT
+      exact hIV ⟨rfl, rfl⟩ hT
+  | opaqueDecl cv v =>
+    obtain ⟨hk, hcv, -⟩ := hdecl
+    rw [installStepGoE.k_iw_reset.arm3 _ _ _ _ _ _ (by rw [hw0, hk]; decide) (by rw [hw0, hk]; decide)
+      (by rw [hw0, hk])]
+    rcases cp : callW p n "pin_in" [rdW (m0.arr64 DECL) (2 + 8 * i) &&& 4294967295, 44, 46] m0 with
+      _ | ⟨rp, m1⟩
+    · rw [liftE_none, installStepGoE.k_pin_in_2.none]; exact RefE.of_cls0 (by simp)
+    rw [liftE_some]
+    obtain ⟨rfl, hp⟩ := pinC cp
+    obtain ⟨hF, hiff⟩ := pinT hcv hp (by decide) (by decide) (by decide)
+    have hT := installStepGo_opaque V pins fe hF cv v
+    by_cases hc0 : rp.headD 0 ≠ 0
+    · rw [installStepGoE.k_pin_in_2.arm1 _ _ _ _ _ _ hc0]
+      have hpin : ((List.range' 44 2).map fun j => (decI (pinW m1 j) : NIdx)).contains cv.name =
+          true := hiff.mp hc0
+      rw [ite_eq_left (show (pinnedOpaqueL m1).contains cv.name = true from hpin)] at hT
+      exact istg_cd hCD hT
+    · rw [installStepGoE.k_pin_in_2.arm2 _ _ _ _ _ _ (Decidable.not_not.mp hc0)]
+      have hpin : ¬ ((List.range' 44 2).map fun j => (decI (pinW m1 j) : NIdx)).contains cv.name =
+          true := fun h' => hc0 (hiff.mpr h')
+      rw [ite_eq_right (show ¬ (pinnedOpaqueL m1).contains cv.name = true from hpin)] at hT
+      exact hIV ⟨rfl, rfl⟩ hT
   | basisDecl _ => exact absurd hdecl id
 
-end istgOk
+end istg
 
 /-! ## `install_step_go` refines `installStepGo` -/
 
@@ -823,13 +806,12 @@ section spec
 variable (mode : ConLeche.CheckMode) (pins : List INatOpPinSet) (dn : NIdx → Option ConLeche.Name)
   (ds : Array IDeclaration) (p : Prog)
 
-/-- **`install_step_go` refines `installStepGo`** under `StageT` (through `check_decl`'s spec,
-`CheckDeclSpecT`, and `install_value`'s, `installValue_loopT`): the new view and environment, the
-value group out of the flag and record, the core's memos well formed. -/
+/-- **`install_step_go` refines `installStepGo`** under `StageT` (the ok half of `istg_ref`): the
+new view and environment, the value group out of the flag and record, the core's memos well
+formed. -/
 @[refines ConRon.Arena.installStepGo]
-theorem installStepGo_specT (hm : mode = .verified) (hCD : CheckDeclSpecT mode pins dn ds p)
-    (hG : IstgProg p) (hP : IvProg p) (hC : CvgProg p) (hcl : IndMemoClosed p)
-    (hcrf : L.Ind.CrfF p) (hap : ApdF p) :
+theorem installStepGo_specT (hm : mode = .verified) (hdc : LoopCallees dn p) (hFD : FrontDecls ds)
+    (hLD : DeclsLpsDn dn ds) :
     ∀ (n : Nat), n ≤ 2 ^ 62 → ∀ (s₀ : St) (a₀ : AState) (vis : Word) (fe : IFEnv)
       (pend : Array PendingCheck) (i : Word) (_hi : i.toNat < ds.size), ConRon.Bridge.StateOK a₀ →
       (∃ env, FoldOK V env fe a₀) →
@@ -844,14 +826,14 @@ theorem installStepGo_specT (hm : mode = .verified) (hCD : CheckDeclSpecT mode p
         vgOut s'.mem (r.tail.headD 0) (r.tail.tail.headD 0) ∧
       (r.tail.headD 0 ≠ 0 → (AM.res (installStepGo mode pins fe (dsAt ds i)) a₀).2 ≠ none) ∧
       CoreMemos s'.mem ∧ IndMemos s'.mem; ⊤⦄ := by
+  subst hm
   intro n hn s₀ a₀ vis fe pend i _hi hok0 hF hR hTw hfl hden hPD hIM
-  refine triple_post (istg_specW p hG n s₀ i vis) ?_
-  rintro r s' ⟨hloc, hW⟩
-  obtain ⟨x, a', hrun, hL, hvg, hne, hcm, hIM'⟩ :=
-    istgW_ok mode pins dn ds p hm hCD hP hC hcl hcrf hap hn hW hR hTw hfl hF hden hPD _hi hok0 hIM
+  refine triple_post (RefE.triple (installStepGo_specE p hdc.istg hdc.cd.cd n s₀ i vis)
+    (istg_ref hdc hFD hLD (by omega) _hi hok0 hF hR hTw hfl hden hPD hIM)) ?_
+  rintro r s' ⟨hloc, x, a', hrun, hR'⟩
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
-  exact ⟨hloc, hok, by rw [hst, hres]; exact hL, by rw [hres]; exact hvg,
-    fun h => by rw [hres]; exact hne h, hcm, hIM'⟩
+  exact ⟨hloc, hok, by rw [hst, hres]; exact hR'.loop, by rw [hres]; exact hR'.vg,
+    fun h => by rw [hres]; exact hR'.some h, hR'.core, hR'.ind⟩
 
 end spec
 
@@ -1091,7 +1073,7 @@ theorem installStep_pieces (hm : mode = .verified) (hdc : LoopCallees dn p) (hFD
         tblCnt_spec p (hb.pr.get "tbl_cnt") n,
         (flush_loopW (pins := pins) dn ds p hb n · a₀ vis fe pend),
         (enter_loopW (pins := pins) dn ds p hb n · (AM.st flushCaches a₀) vis fe pend hwf' hoff'),
-        (installStepGo_specT mode pins dn ds p hm (hm ▸ checkDecl_loopT hdc.cd hdc.knot hdc.leaf hdc.loop hdc.andInd.toIbeProg hdc.indIn pins dn hdc.dninj hdc.quotDn hdc.indArm hdc.indMemo hdc.crf ds hFD hLD) hdc.istg hdc.iv hdc.cvg hdc.indMemo hdc.crf hdc.cd.crp.apd n hn' · (AM.st enterScratch (AM.st flushCaches a₀)) · fe pend · · (TwinFold.enterAM hok) hFe),
+        (installStepGo_specT mode pins dn ds p hm hdc hFD hLD n hn' · (AM.st enterScratch (AM.st flushCaches a₀)) · fe pend · · (TwinFold.enterAM hok) hFe),
         (isNone_refinesC pins dn ds p hdc.leaf hdc.indMemo hdc.crf hb hpn n · (AM.st (installStepGo mode pins fe (dsAt ds i)) (AM.st enterScratch (AM.st flushCaches a₀))) · · · (AM.res (installStepGo mode pins fe (dsAt ds i)) (AM.st enterScratch (AM.st flushCaches a₀))).1 pend),
         (isSome_refinesC pins dn ds p hdc.leaf hdc.indMemo hdc.crf hb hpp hps n · (AM.st (installStepGo mode pins fe (dsAt ds i)) (AM.st enterScratch (AM.st flushCaches a₀))) · · · · · (AM.res (installStepGo mode pins fe (dsAt ds i)) (AM.st enterScratch (AM.st flushCaches a₀))).1 pend ((AM.res (installStepGo mode pins fe (dsAt ds i)) (AM.st enterScratch (AM.st flushCaches a₀))).2.getD default))] <;>
       -- the view `vis` is read after three calls: four `LocEq` hops (depth, not search)
