@@ -84,10 +84,10 @@ noncomputable def cruK1 (cR : CallM) (N : Nat) (visT visR n gen : Word) : Option
   | none => none
   | some (_, m1) => cruK2 N visT n gen (cR N "infer_type_core" [visR, 0, gen] m1)
 
-/-- **The model of `class_rule_ok`.** -/
+/-- **The model of `class_rule_ok`** (`class_rule_ok_guards` read through `cR`, its run). -/
 noncomputable def cruleW (cR : CallM) : Nat → Mem → Word → Word → Word → Word → Word → Option (List Word × Mem)
   | 0, _, _, _, _, _, _ => none
-  | N + 1, m, visT, visR, cvR, n, gen => cruK1 cR N visT visR n gen (crgW cR N m visR cvR gen)
+  | N + 1, m, visT, visR, cvR, n, gen => cruK1 cR N visT visR n gen (cR N "class_rule_ok_guards" [visR, cvR, gen] m)
 
 section arms
 variable (cR : CallM) (N : Nat) (m m0 m1 m2 m3 m4 : Mem) (visT visR cvR n gen : Word) (r0 r1 r2 r3 r4 : List Word)
