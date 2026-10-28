@@ -284,12 +284,41 @@ The list with depths, files and callees: `_tmp/unifiedE/split.txt`.
 6. Pitfalls met in the pilot:
    * after `rcases` on a value, the hypotheses about `(r, m).fst` need `dsimp only` before `omega`;
    * a `by … omega` argument whose goal mentions `{ mem := m, … }.mem` needs `dsimp only` first;
-   * `Err.cls_of_code` (`grind →`) is needed by the generated steps for loads out of bounds;
+   * a load out of bounds is `.error .oob` exactly (`ld64_rdW_specE`, `L.ld8_specE`), so the
+     generated steps close its error goal by `simp` (with a post over the code they needed
+     `Err.cls_of_code` and `grind` at every load);
    * a caller's `Option` model reads the run through a named function of word arguments
      (`tcmR cR n m args := cR n "f" [args] m`, its spec `hcR n _ _ s₀`), not a list literal
      (`Tka` 8 % slower otherwise);
    * try the default `finish` recipe before `simp [...]` on the unified model (`tmnE`: 1.9 s
      against 3.0 s).
+   * an induction hypothesis applied in a `have` with tactic arguments (`ih (by omega) …`,
+     `HSl0.of (by rw …)`): the tactic arguments run before the implicit arguments are fixed by
+     unification, so `omega`/`rw` see metavariables. Name the implicits
+     (`ih (ao := ao + 1) (al := al - 1) …`) or apply it where the goal is known (`exact`,
+     `refine`), as `pde_ref` and `cfg_ref` do.
+7. Callee specs the generator lifts in `unified` mode (no wrapper needed): an `Option` model
+   (`some (r.headD 0, m)`, `some (r, m)`, a tuple), a total model (`r.headD 0 = F`,
+   `r ≠ [] ∧ r = F` as `e_view`'s, `s'.mem = F`), one result as a list
+   (`some ([r.headD 0], m)`). `↦ fW tuple` counts the `return`s of the named blocks spliced into
+   the body (a loop's `return (k, x, y)`).
+
+### 3.3a Rules for batch lanes
+
+* Use the kit (§1.5); do not define local copies of its lemmas. A missing shape or generator
+  feature is reported to the coordinator, with the function that needs it, and the function is
+  skipped until the kit has it.
+* `G` by the rule of §1.5: the weakest assumption the error arms need, named.
+* The post is a named-field structure; a second invariant package is a conditional field (§1.4).
+* One model and one refinement per function: delete the hand ok model, its arms and spec, the
+  old ok refinement and the error claim once no user is left; derive the `@[refines]` theorem
+  and any `CoreSpecE` a non-migrated caller needs as one-liners (`RefE.triple`,
+  `RefE.coreSpecE`).
+* Place the refinement where its ok users can import it; the old Verdict file keeps one-liners.
+* Measure the modules touched (user seconds, median of 3 interleaved runs, base and new); a
+  module more than 10 % slower is flagged with what was tried (`finish` before `simp […]`).
+* Merge master before each landing: the kit and the generator are shared, a sibling's landing
+  may change imports (shake).
 
 ### 3.3 Batches (for migration lanes)
 
