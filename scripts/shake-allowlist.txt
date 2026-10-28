@@ -24,6 +24,7 @@ ConAgua/Arena/DefEqStuckEta.lean	public import ConAgua.Arena.WhnfCoreProj	# a co
 ConAgua/Arena/DefEqStuckShape.lean	public import ConAgua.Arena.WhnfIotaRefine	# a constant the module uses (an auxiliary realized in several modules: the tool names another copy)
 ConAgua/Arena/Freeze.lean	public import ConAgua.Arena.DeclBase	# the build needs it: the array names moved to ConAgua.Layout, its other names (L notation, the stores) still come through it
 ConAgua/Arena/IndCallM.lean	public import ConAgua.Arena.IndIface	# a constant the module uses (an auxiliary realized in several modules: the tool names another copy)
+ConAgua/Arena/IndInstallSpec/DomsW.lean	public import ConAgua.Arena.IndRealSpine	# the build needs it: its importers (DecHLTruncMBound, FlushStage, …) take IndRealSpine's names through it
 ConAgua/Arena/IndInstallSpec/GfcW.lean	public import ConAgua.Arena.LdRd	# the build needs it: `ld64_rd_spec` in the `l_model`s' `extra`, named only in their generated proofs
 ConAgua/Arena/IndInstallSpec/GrcTwinA.lean	public import ConAgua.Arena.IndIface	# the build needs it: the array names moved to ConAgua.Layout, its other names (L notation, the stores) still come through it
 ConAgua/Arena/IndInstallSpec/IcbiW.lean	public import ConAgua.L.Examples	# a constant the module uses (an auxiliary realized in several modules: the tool names another copy)
@@ -156,7 +157,6 @@ ConAgua/Verdict/IndBE.lean	public import ConAgua.Arena.IndT.Sum2	# the build nee
 ConAgua/Verdict/IndBE.lean	public import ConAgua.Arena.IndT.Sum3	# the build needs it (a name the tool does not attribute: a command reads it, or an auxiliary realized in several modules)
 ConAgua/Verdict/IndBE.lean	public import ConAgua.Arena.IndT.Sum5	# the build needs it (a name the tool does not attribute: a command reads it, or an auxiliary realized in several modules)
 ConAgua/Verdict/IndsE2.lean	public import ConAgua.Arena.IndT.Install1	# the build needs it (a name the tool does not attribute: a command reads it, or an auxiliary realized in several modules)
-ConAgua/Verdict/IndsE2.lean	public import ConAgua.Arena.IndT.Install2	# the build needs it (a name the tool does not attribute: a command reads it, or an auxiliary realized in several modules)
 ConAgua/Verdict/IndsE2.lean	public import ConAgua.Arena.IndT.Install3	# the build needs it (a name the tool does not attribute: a command reads it, or an auxiliary realized in several modules)
 ConAgua/Verdict/InferLeavesE.lean	public import ConAgua.Arena.WhnfIotaRefine6	# a constant the module uses (an auxiliary realized in several modules: the tool names another copy)
 ConAgua/Verdict/PosE3Fm.lean	public import ConAgua.Arena.Verdict	# the build needs it (a name the tool does not attribute: a command reads it, or an auxiliary realized in several modules)
