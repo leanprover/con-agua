@@ -97,7 +97,7 @@ l_model mtcE_spec (p : Prog) (hp : M2CProg p) (hf : p.lookup "major_to_ctor" = s
   fns [hf ↦ mtcE list]
   specs [m2cHeadE_spec p hp n]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] unified
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 end L.Arena
