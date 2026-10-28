@@ -3,6 +3,7 @@ import ConAgua.Arena.StoreDenIntern
 import ConAgua.Arena.WhnfIotaRefine4
 import ConRon.Bridge.Grind
 import ConAgua.Verdict.WhnfModels6E
+import ConAgua.Arena.DefEqStuck
 
 /-!
 # `major_to_ctor`: refinements of `m2c_pre`, `m2c_check` and the K arm
@@ -215,24 +216,6 @@ def PreRef (G : Prop) (x : Except Err (List Word × Mem)) (R : CoreFnsA) (d : Na
     (M : ModeMaps) (eb : Word) : Prop :=
   RefC G x (fun v => ∃ a', PreOk R d major a dn m vis fe M eb v.1 v.2 a')
     (fun e => ∀ k, ErrClaim (m2cPreT R d major k) a e)
-
-/-- `proof_irrel`'s error claim at fuel `N + 1` (the premises of `ProofIrrelOKM`). -/
-def ProofIrrelWE (p : Prog) : Prop :=
-  ∀ (n : Nat), KnotUpTo p n → KnotUpToE p n → ∀ (F : Nat), n ≤ F → n ≤ 2 ^ 62 →
-    ∀ (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
-    (MM : ModeMaps) (eb mode d a b : Word), CoreS dn s₀.mem a₀ vis fe MM eb → mode < 4 →
-    eb = (mode >>> 1) &&& 1 → HW a → HW b →
-    CoreSpecE p (n + 1) "proof_irrel" [mode, vis, d, a, b]
-      (proofIrrel (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b)) s₀ a₀
-
-/-- **What the pieces' error claims assume** at L fuel `N + 1`: the knot's slots' claims up to `N`,
-`proof_irrel`'s. -/
-structure M2CCtxE (p : Prog) (N : Nat) : Prop where
-  knot : KnotUpToE p N
-  pirr : ProofIrrelWE p
-
-theorem M2CCtxE.mono {p : Prog} {N N' : Nat} (h : M2CCtxE p N) (hN : N' ≤ N) : M2CCtxE p N' :=
-  ⟨h.knot.mono hN, h.pirr⟩
 
 theorem pre_err_io {R : CoreFnsA} {d : Nat} {major : EIdx} {a : AState} {ce : CheckError}
     (h : (R.inferIO d major).run a = .error ce) (k : EIdx → NIdx → LsIdx → AM EIdx) :

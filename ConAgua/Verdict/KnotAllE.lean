@@ -4,7 +4,6 @@ import ConAgua.Verdict.WhnfSetE
 import ConAgua.Verdict.DefEqAllE
 import ConAgua.Verdict.DefEqEagerE
 import ConAgua.Checker.LoopProg
-import ConAgua.Verdict.WhnfStuckE
 import ConAgua.Checker.NoVerdictClosed
 
 /-!
@@ -84,9 +83,9 @@ theorem KnotAllProg.defeqWhnfE : DefeqWhnfE p where
     RefE.coreSpecE (btsE_spec p hq.body.lazy.mid.bts (n + 1) s₀ mode vis d a) hnv hkE
       (bts_ref p hq.body.lazy.mid n hk F s₀ a₀ dn vis fe M eb mode d a hF hn hs ha)
   propIrrel := fun n hk hkE F s₀ a₀ dn vis fe M eb mode d a b hF hn hs ha hb =>
-    propIrrel_refinesE p hq.body.stuck (KnotAllProg.stuck hq) hnv
-      (proofIrrelE_of p hq.m2c.toIotaProg4 (LvlDen.of_den coreDen_of) hnv)
-      n hk hkE F s₀ a₀ dn vis fe M eb mode d a b hF hn hs ha hb
+    RefE.coreSpecE (piE_spec p hq.body.stuck.propIrrel (n + 1) s₀ mode vis d a b) hnv
+      ⟨hkE, proofIrrelE_of p hq.m2c.toIotaProg4 (LvlDen.of_den coreDen_of) hnv⟩
+      (pi_ref p (KnotAllProg.stuck hq) n hk F s₀ a₀ dn vis fe M eb mode d a b hF hn hs ha hb)
   reduceProjCore := fun n hk hkE F hF hn s₀ a₀ dn vis fe MM eb mode d sn i c hs _ hc =>
     reduceProjCore_refinesE p hq.core (strLitSupported_core p hq.str) (strLitCtor_core p hq.str) hnv
       n hk hkE F hF hn s₀ a₀ dn vis fe MM eb mode d sn i c hs hc (supKeep_of fe)
@@ -99,8 +98,10 @@ theorem KnotAllProg.defeqWhnfE : DefeqWhnfE p where
       (suc_ref p hq.body.stuck (KnotAllProg.stuck hq) n hk F s₀ a₀ dn vis fe M eb mode d a b hF hn hs ha hb)
   proofIrrel := proofIrrelE_of p hq.m2c.toIotaProg4 (LvlDen.of_den coreDen_of) hnv
   etaCert := fun n hk hkE F s₀ a₀ dn vis fe M eb mode d ty1 body1 b hF hn hs hty hbody hb =>
-    etaCert_refinesE p hq.body.stuck (KnotAllProg.stuck hq) hnv
-      n hk hkE F s₀ a₀ dn vis fe M eb mode d ty1 body1 b hF hn hs hty hbody hb
+    RefE.coreSpecE (ecE_spec p hq.body.stuck.etaCert hq.body.stuck.etaCertBody hq.body.stuck.etaCertTy
+      (n + 1) s₀ mode vis d ty1 body1 b) hnv hkE
+      (ec_ref p hq.body.stuck (KnotAllProg.stuck hq) n hk F s₀ a₀ dn vis fe M eb mode d ty1 body1 b hF
+        hn hs hty hbody hb)
   deltaQuick := fun n hk hkE F s₀ a₀ dn vis fe M eb mode d a b hF hn hs ha hb hd =>
     RefE.coreSpecE (dqE_spec p hq.body.lazy.mid.dq (n + 1) s₀ mode vis d a b) hnv
       (KnotAllProg.quickDefeqWE hq hnv n hk hkE)

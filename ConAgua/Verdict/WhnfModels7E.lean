@@ -45,17 +45,35 @@ l_model lnE_spec (p : Prog) (hf : p.lookup "lazy_nat" = some lazyNatL)
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
-l_model ecE_spec (p : Prog) (hf : p.lookup "eta_cert" = some etaCertL)
-  fns [hf ↦ ecE list] grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] errors
-
-l_model ecbE_spec (p : Prog) (hf : p.lookup "eta_cert_body" = some etaCertBodyL)
-  fns [hf ↦ ecbE list] grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] errors
+l_model piE_spec (p : Prog) (hf : p.lookup "prop_irrel" = some propIrrelL)
+  fns [hf ↦ piE list]
+  specs [callW_spec p n "not_proof_fast", callW_spec p n "is_proof_fast"]
+  grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] gen 20 unified
+  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 l_model ectE_spec (p : Prog) (hf : p.lookup "eta_cert_ty" = some etaCertTyL)
-  fns [hf ↦ ectE list] grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] errors
+  fns [hf ↦ ectE list]
+  specs [callW_spec p n "inst1"]
+  grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] unified
+  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
+
+l_model ecbE_spec (p : Prog) (hf : p.lookup "eta_cert_body" = some etaCertBodyL)
+    (ht : p.lookup "eta_cert_ty" = some etaCertTyL)
+  fns [hf ↦ ecbE list]
+  specs [callW_spec p n "intern_fvar", callW_spec p n "inst1", callW_spec p n "mk_app", ectE_spec p ht n]
+  grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] unified
+  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
+
+l_model ecE_spec (p : Prog) (hf : p.lookup "eta_cert" = some etaCertL)
+    (hb : p.lookup "eta_cert_body" = some etaCertBodyL) (ht : p.lookup "eta_cert_ty" = some etaCertTyL)
+  fns [hf ↦ ecE list]
+  specs [callW_spec p n "io_neutral", ecbE_spec p hb ht n]
+  grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] unified
+  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 l_model secE_spec (p : Prog) (hf : p.lookup "struct_eta_cert" = some structEtaCertL)
   fns [hf ↦ secE list] grind [arena_grind] fold [tierW, idxW]
