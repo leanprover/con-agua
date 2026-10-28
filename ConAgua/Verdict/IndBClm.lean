@@ -1,6 +1,5 @@
-import ConAgua.Arena.IndT.RecGenTmf
-import ConAgua.Arena.IndT.RecCheckPins
-import ConAgua.Arena.RecGenSpec.CntW
+import ConAgua.Verdict.IndBTmf
+import ConAgua.Verdict.IndBPins
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
