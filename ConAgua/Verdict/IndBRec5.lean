@@ -1,5 +1,5 @@
 import ConAgua.Verdict.IndBRec4
-import ConAgua.Verdict.DeclValE
+import ConAgua.Arena.DeclCvg
 import ConAgua.Arena.IndSumSpec.StructCtorResidOk
 import ConAgua.Arena.RecClassSpec.RuW
 import ConAgua.Arena.IndPartsSpec.PlW

@@ -3,7 +3,7 @@ import ConAgua.Verdict.IndBCrg
 import ConAgua.Arena.RecGenSpec.Rec3TmdWDecB
 import ConAgua.Arena.RecGenSpec.ClassFeR
 import ConAgua.Arena.IndSumSpec.FieldDomsResolve
-import ConAgua.Arena.DeclValSpec
+import ConAgua.Arena.Verdict
 import ConRon.Bridge.Inductives.GenRec
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.ModelGen

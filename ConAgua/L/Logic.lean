@@ -183,4 +183,12 @@ theorem step_while {p : Prog} {k : Stmt → M Sig} {w : Stmt} {c : Cond} {s : St
       else return .normal) := by
   subst h; rfl
 
+/-- A callee post's length conjunct `r = [r.headD 0, r.getD 1 0, …]` (or `r.tail.headD 0`, …) as
+facts `simp_all` can use: as it stands, a rule `r → […]` whose right side holds `r` (it loops).
+Rewritten before its parts (`↓`) at each cons, it ends as `r ≠ [] ∧ r.tail = […]` (no `r` on the
+right) or `r ≠ [] ∧ r.tail ≠ [] ∧ r.tail.tail = []`. -/
+theorem List.eq_headD_cons {α : Type} {l t : List α} {d : α} :
+    (l = l.headD d :: t) ↔ (l ≠ [] ∧ l.tail = t) := by
+  cases l <;> simp
+
 end L

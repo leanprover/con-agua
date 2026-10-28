@@ -1,7 +1,7 @@
 import ConAgua.Arena.DeclValRef
 import ConAgua.Arena.IndPartsSpec.BlockRecNamesUnreserved
 import ConAgua.Arena.DeclRec
-import ConAgua.Arena.DeclValSpec
+import ConAgua.Arena.Verdict
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr
