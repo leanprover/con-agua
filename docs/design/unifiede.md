@@ -1079,7 +1079,103 @@ c4aef6d6, load 15–96, `_tmp/unify-b2a/times1.txt`):
 
 Every flagged module is a new home of models and refinements whose old modules got faster by more.
 
-### 3.14 Batch 2b, first landing (inductive targets and classes: `IndBPins`, `IndBTmt/Tmo`, `IndBHdr`, `IndBRec2`, `IndBFields`, `PosTopE1`, `PosE2M`)
+### 3.14 Batch 2a, second landing (the declaration arms, `check_thm_val`, `install_value_guards`)
+
+The rest of the batch's list (§3.13), now that `lvl_eq_fueled` is unified (§3.11's follow-up), and
+`install_value_guards`:
+
+| function | before: ok refinement(s) + error claim(s) | after | change |
+|---|---|---|---:|
+| `check_reduce_pin` | `crpW_okT` 199 + `crpE_okT` 240 = 439 | `crp_ref` 202 + `CrpPost` 5 + `crpE_okT` 16 = 223 | −49 % |
+| `check_decl_axiom` | `cdaW_gen` 293 + `cdaW_okT` 33 + `checkDeclAxiom_errT` 408 + `checkDeclAxiom_loopT` 24 = 758 | `cda_ref` 340 + `CdaPost` 5 + `checkDeclAxiom_errT` 14 + `checkDeclAxiom_loopT` 24 = 383 | −49 % |
+| `check_thm_val` | `tvW_okT` 116 + `dvK1_okT` 58 + `tvE_okT` 196 + `checkThmVal_refinesT` 21 = 391 | `tv_ref` 177 + `TvCtx` 4 + `ArmPost` 5 + `checkThmVal_refinesT` 19 = 205 | −48 % |
+| `check_decl_thm` | `cdtW_okT` 65 + `checkDeclThm_errT` 79 = 144 | `cdt_ref` 61 + `CdtCtx` 2 + `CdtPost` 5 + `checkDeclThm_errT` 20 = 88 | −39 % |
+| `check_decl_opaque` | `cdoW_okT` 174 + `checkDeclOpaque_errT` 180 + `checkDeclOpaque_loopT` 28 = 382 | `cdo_ref` 172 + `checkDeclOpaque_errT` 20 + `checkDeclOpaque_loopT` 27 = 219 | −43 % |
+| `install_value_guards` | `IvgT` 9 + `ivgW_okT` 86 + `ivgE_okT` 148 = 243 | `ivg_ref` 117 + `IvgPost` 6 + `ivgE_okT` 8 = 131 | −46 % |
+| **pairs** | **2 357** | **1 249** | **−47 %** |
+
+Gone with them: the hand models `crpW`/`crpK1–8`, `cdaW`/`cdaK1–10`/`cdaQ1–2`/`cdaT`/`cdaRet`,
+`tvW`/`tvK1–4` and the shared tail `dvK1–4`, `cdtW`/`cdtK1–3`, `cdoW`/`cdoK1–6` (the file
+`Arena/DeclArmOpaque`), `ivgW`/`ivgK1–5`, with their arms and specs. `Arena/DeclValSpec` holds only
+`ValProg` and the twin equations. Whole diff against master 9458a945: **+1 065 −2 774** in 25
+files.
+
+* **`G`**: `CoreStubsE p` (`check_reduce_pin`), `VerdictCtxU p` (`check_decl_axiom`), `TvCtx`
+  (core stubs, `IvgE`, `lvl_eq_c` outside the closure) for `check_thm_val`, `CdtCtx`
+  (`VerdictCtxU` and `IvgE`) for the theorem and the opaque arms, `IhCtx` (`closedNV`, `UceProg`)
+  for `install_value_guards` as for `install_header`.
+* **`install_value_guards`** was not in §3.1's list (no `@[refines]` of its own) but has an error
+  claim (`IvgE`) and an ok proof (`ivgW_okT`) read by five refinements. `ivg_ref` (in
+  `Verdict/DeclValE`, below `check_value_group`'s and `check_thm_val`'s) replaces both; the five
+  call sites read it through the run (`RefE.run_ok`), and `IvgE` stays as the claim's shape
+  (`ivgE_okT` is `RefE.run_err`) for the hypotheses of `CvgCtx`, `DvCtx`, `TvCtx`, `CdtCtx`.
+* **The arms read their callees through their runs**, as the definition arm (§3.13), where the
+  ok half needs the call's write-set frame or the loop's `run_memFrame`.
+* **Shake.** The new import graph left 16 imports unused; removing them broke five downstream
+  modules that had used them transitively (`DeclHeader`, `DeclAxQuotT`, `DeclDefnT`, `RecGen3`,
+  `RecGen7`), which now import what they use.
+* **Not here**: `install_header`'s shared hand model `ihW` and `ihW_okT` stay for
+  `class_const_ok_header` (batch 2b).
+
+Elaboration (user seconds, median of 3 interleaved runs, base master 9458a945, load 14–28,
+`_tmp/unify-b2a/times2.txt`):
+
+| module | base | new | |
+|---|---:|---:|---|
+| `Arena/DeclAxQuotT` | 0.73 | **6.51** | `checkDeclAxiomE` and `cda_ref` moved in |
+| `Verdict/DeclAxiomE`, `Arena/DeclArmAxiom` | 11.18 | 1.18 | …from here; with `DeclAxQuotT`: 11.9 → 7.7 |
+| `Arena/DeclCrpT` | 1.67 | **2.84** | `checkDeclOpaqueE`, `cdo_ref`, `crp_ref` |
+| `Verdict/DeclCrpE`, `DeclArmsE`, `Arena/DeclArmOpaque` | 5.66 | 1.23 | …from here; with `DeclCrpT`: 7.3 → 4.1 |
+| `Verdict/DeclValE` | 4.76 | **6.08** | `installValueGuardsE`, `ivg_ref`, `checkThmValE`, `tv_ref` |
+| `Verdict/DeclHdrE`, `Arena/DeclValSpec`, `DeclCvg`, `DeclCvgT` | 9.59 | 7.03 | …from here; with `DeclValE`: 14.4 → 13.1 |
+| the other 13 | 24.4 | 24.6 | |
+| **sum (25 modules)** | **58.0** | **49.5** | **−15 %** |
+
+Batch 2a in all: 21 functions, one model and one refinement each; the pairs 5 619 → 3 072
+(−45 %).
+
+### 3.15 Batch 2c, second landing (`check_block_agree_one`, `check_block_agree`)
+
+After `lvl_eq_fueled` (§3.11): `cbaoE` and `cbagE` are unified (`IndsE4`, `IndsE5`, moved from
+`IndsE1`); `cbaoE` calls `lvl_eq_fueled` through its unified model `lefE` (the twin rewritten with
+`lefT_bind`; ok and error arms from `lef_ref`), `cbagE` calls `cbaoE`; `open_pis_at_fvars_f` and
+`fvar_type_ds` are lifted; `check_block_doms_at` stays `callE` (`cbdaE_claim`, `domsW_simC`).
+`G := VerdictCtx p` (`check_block_doms_at`'s claim needs `nv` and `core`). One post for both,
+`AgreePost` (`stage`, `grow`, `abs`, `core`). `checkBlockAgree_refinesC` keeps its statement
+(`RefE.triple`); `check_block_inds`' claim (`IndsE7`) reads `RefE.run_err`.
+
+| function | before: ok refinements + error claim | after | change |
+|---|---|---|---:|
+| `check_block_agree_one` | `agW_okC` 119 + `checkBlockAgreeOne_refinesC` 32 + `cbaoE_claim` 166 = 317 | `cbao_ref` 170 + `AgreePost` 6 = 176 | −44 % |
+| `check_block_agree` | `iagW_simC` 116 + `checkBlockAgree_refinesC` 21 + `cbagE_claim` 134 = 271 | `cbag_ref` 124 + `checkBlockAgree_refinesC` 22 = 146 | −46 % |
+| **pairs** | **588** | **322** | **−45 %** |
+
+Also gone: the hand models `agW`/`agK1–4` with `checkBlockAgreeOne_spec`, `iagW`/`iagK1–3` with
+`iag_spec`, the module `Arena/IndT/Install2`, the statements `CheckBlockAgreeE`/`CheckBlockAgreeOneE`.
+Whole diff against master 985859c8: +230 −668 in 11 files.
+
+**Not migrated: `check_block_doms_at`.** Its hand model `domsW` and ok proof `domsW_simC` are shared
+with `check_struct_doms_at` (`sdomsW` is `domsW` with the words dropped; `sdomsW_simC` is built on
+`domsW_simC`, used by `Sum4`, `IndBSum1`). The two depth-0 leaves should be migrated together, as
+`install_header`/`class_const_ok_header`. With them, the batch-1 leftovers of this family are
+`check_sum_ctors`, `check_struct_field_sorts_i(_go)` and `check_block_tables` (§3.12).
+
+Elaboration (as §3.12, base master 985859c8, load 9–12; `IndsE5` from a separate series after the
+recipe change: `simp [rdW]` 3.25 s, the default 2.2 s; `IndsE4` keeps `simp [rdW]`, 2.9 s against
+3.3 s):
+
+| module | base | new | |
+|---|---:|---:|---|
+| `Verdict/IndsE4` | 1.07 | **2.94** | **slower (+1.9 s)**: `cbaoE` moved in |
+| `Verdict/IndsE5` | 0.78 | **2.2** | **slower (+1.4 s)**: `cbagE` moved in |
+| `Verdict/IndsE1` | 8.96 | 5.57 | the two models moved out |
+| `Arena/IndInstallSpec/IagW`, `DomsW`, `Arena/IndT/Install2` (deleted) | 9.95 | 4.33 | the hand models and ok refinements gone |
+| `IndsE2`, `IndsE7`, `Install4` | 2.21 | 2.20 | |
+| **sum** | **23.0** | **17.2** | **−25 %** |
+
+Batch 2c in all: 7 functions, pairs 1 372 → 794 lines (−42 %); no kit or generator change needed.
+
+### 3.16 Batch 2b, first landing (inductive targets and classes: `IndBPins`, `IndBTmt/Tmo`, `IndBHdr`, `IndBRec2`, `IndBFields`, `PosTopE1`, `PosE2M`)
 
 The batch's functions (depth 1–2 of §3.1 in the `IndB*`/`Pos*` families, callees migrated):
 `target_major_pins`, `target_major_of_outside_tail`, `target_major_of_outside`,

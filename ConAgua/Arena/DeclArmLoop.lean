@@ -5,7 +5,7 @@ import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr
 
 /-!
-# The `checkDecl` arms at the loop's relation: the text, the theorem arm (lane `decls3`)
+# The `checkDecl` arms at the loop's relation: the text (lane `decls3`)
 
 `check_decl`'s arms run on the stage relation; the loop's relation `LoopR` adds the pending checks
 and the declaration records, which no callee spec mentions, so they come from the program text
@@ -16,8 +16,6 @@ and the declaration records, which no callee spec mentions, so they come from th
   five arms reach. A program `p` with that text (`ArmProg p`, a `TextProg`: agreeing there but
   on `openFns`) has a step's write set on them (`StepIn`); the arms' specs take their callees' lookup structures
   (`ValProg`, `RecProg`, …) beside it, as `DeclCallees` does.
-* The theorem arm `check_decl_thm(i, vis)` at the stage relation (`cdtW_ok`); its spec at the
-  loop's relation is `CheckerT.lean`'s `checkDeclThm_loopT`.
 -/
 
 open ConRon.Arena
@@ -93,64 +91,5 @@ def armFns : List FnName := thmArmFns ++ opqArmFns ++ qaxArmFns ++ defnArmFns
 
 /-- A program with the arms' text. -/
 structure ArmProg (p : Prog) : Prop extends TextProg p armText armFns
-
-/-! ## The theorem arm `check_decl_thm(i, vis)` -/
-
-section thm
-variable (p : Prog)
-
-/-- After `check_thm_val`. -/
-def cdtK3 : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r3, m3) => some ([r3.headD 0], m3)
-
-/-- After `check_constant_val`. -/
-def cdtK2 (n : Nat) (vis c : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (_, m2) => cdtK3 (callW p n "check_thm_val" [vis, c] m2)
-
-/-- After `erec_ci`. -/
-def cdtK1 (n : Nat) (vis : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r1, m1) =>
-    cdtK2 p n vis (r1.headD 0) (callW p n "check_constant_val" [vis, r1.headD 0 + 1] m1)
-
-/-- **The model of `check_decl_thm(i, vis)`.** -/
-def cdtW : Nat → Mem → Word → Word → Option (List Word × Mem)
-  | 0, _, _, _ => none
-  | n + 1, m, i, vis => cdtK1 p n vis (erecCiW n m i 2)
-
-section arms
-variable (n : Nat) (m m1 m2 m3 : Mem) (i vis c : Word) (r1 r2 r3 : List Word)
-theorem cdtW_step : cdtW p (n + 1) m i vis = cdtK1 p n vis (erecCiW n m i 2) := rfl
-theorem cdtK1_some : cdtK1 p n vis (some (r1, m1)) =
-    cdtK2 p n vis (r1.headD 0) (callW p n "check_constant_val" [vis, r1.headD 0 + 1] m1) := rfl
-theorem cdtK2_some : cdtK2 p n vis c (some (r2, m2)) =
-    cdtK3 (callW p n "check_thm_val" [vis, c] m2) := rfl
-theorem cdtK3_some : cdtK3 (some (r3, m3)) = some ([r3.headD 0], m3) := rfl
-end arms
-
-grind_pattern [ind_grind] cdtW_step => cdtW p (n + 1) m i vis
-grind_pattern [ind_grind] cdtK1_some => cdtK1 p n vis (some (r1, m1))
-grind_pattern [ind_grind] cdtK2_some => cdtK2 p n vis c (some (r2, m2))
-grind_pattern [ind_grind] cdtK3_some => cdtK3 (some (r3, m3))
-
-theorem cdt_specW (hp : p.lookup "check_decl_thm" = some checkDeclThm) (hR : RecProg p)
-    (n : Nat) (s₀ : St) (i vis : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "check_decl_thm" [i, vis]
-    ⦃fun r s' => LocEq s' s₀ ∧ cdtW p n s₀.mem i vis = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, checkDeclThm]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, erecCi_specW p hR n,
-        callW_spec p n "check_constant_val", callW_spec p n "check_thm_val"] <;>
-      finish (gen := 20)
-
-end thm
-
-local notation "V" => ConLeche.CheckMode.verified
 
 end L.Arena
