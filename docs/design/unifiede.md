@@ -1064,12 +1064,12 @@ Elaboration (user seconds, `lean` on the module alone, median of 3 interleaved r
 | `Verdict/PosTopE1` | 10.99 | 7.88 | … from here; the pair 13.0 → 12.0 |
 | `Verdict/IndBHdr` | 3.34 | **4.63** | **slower (+1.3 s)**: the unified header model (`finish … gen 20`); with the deleted `ClassConstOk(Header)` 6.3 → 4.6 |
 | `Verdict/IndBRec2`, `IndBRec3` | 3.47 | 4.04 | `rto_ref` moved in; with `RgW`, `RecGen7` (−0.3) |
-| `Verdict/IndBTmt`, `IndBTmo`, `IndBToi`, `IndBTmc` | 8.23 | 8.32 | `IndBTmt` with `simp [Cmp.evalW, Cmp.eval]` (`finish`: 9.2) |
+| `Verdict/IndBTmt`, `IndBTmo`, `IndBToi`, `IndBTmc` | 8.23 | 8.32 | `IndBTmt` with `simp [Cmp.evalW, Cmp.eval]` (`finish`: 9.4) |
 | `Arena/IndInstallSpec/IacW`, `IndPosSpec/GgW`, `GgW2`, `IndT/PosRoot`, `RecGenSpec/OcW` | 39.18 | 20.55 | hand models and specs gone |
 | `IndPosSpec/P2sdW`, `IndT/RecGen3`, `RecGenSpec/ClassConstOk`, `ClassConstOkHeader` (deleted) | 7.87 | — | |
 | `Verdict/PosE1M` | 24.92 | 27.03 | import changes only (noise; load) |
-| the other 30 modules | 73.4 | 74.1 | |
-| **sum (48 modules)** | **192.3** | **171.4** | **−11 %** |
+| the other 30 modules | 74.4 | 74.0 | |
+| **sum (48 modules)** | **192.3** | **171.2** | **−11 %** |
 
 Each flagged module is offset by the module that held the deleted hand model, except `PosE2M`.
 For the generator: nothing was missing in this landing; `nestSeedsFuel_spec` (a singleton-list post)
