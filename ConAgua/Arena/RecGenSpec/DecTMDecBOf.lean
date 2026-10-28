@@ -7,7 +7,7 @@ import ConAgua.Arena.RecCheck
 /-!
 # DecTMDecBOf
 
-`decTM_decB_of`, `tmmK4`, `TmmProg`.
+`decTM_decB_of`, `TmmProg`.
 -/
 
 namespace L.Ind
@@ -57,9 +57,6 @@ theorem decTM_decB_of {m : Mem} {q : Nat} {a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11
 
 /-! ## `target_major_of_member` -/
 
-def tmmK4 : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m) => some ([r.headD 0], m)
 /-- The lookups of `target_major_of_member`. -/
 structure TmmProg (p : Prog) : Prop where
   alloc : p.lookup "iw_alloc" = some iwAlloc
