@@ -1,6 +1,6 @@
 import ConAgua.Arena.IndT.Install1
 import ConRon.Bridge.Inductives.BlockInstall
-import ConAgua.Arena.IndRealLvlC
+import ConAgua.Verdict.LefRef
 import ConAgua.Arena.IndInstallSpec.IagW
 import ConAgua.Arena.IndInstallSpec.InstallSimCall
 import ConAgua.Arena.IndInstallSpec.InstallRec2Tele
@@ -30,35 +30,6 @@ open L.Arena
 
 local notation "V" => ConLeche.CheckMode.verified
 
-/-- **`lvl_eq_fueled`, its `lvl_eq_c` the real call, under `StageC`** (`lveW_ok`'s statement with
-`lvlEqC_simC` for the stub contract): an answer other than `0` is the twin's verdict. -/
-theorem lveC_okC {p : Prog} (hcl : CoreStageClosed p) (hLC : LvlCacheProg p)
-    {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {env : ConLeche.Env} {n : Nat}
-    {m m' : Mem} {a : AState} {u v : Word} {r : List Word}
-    (h : lveC (realCall p) n m u v = some (r, m')) (hC : StageC dn vis fe env m a) (hA : AbsOK m)
-    (hu : H u) (hv : H v) {lu lv : ConLeche.Level} (hdu : denoteL a.store.ls (decI u) = some lu)
-    (hdv : denoteL a.store.ls (decI v) = some lv) :
-    ∃ b a', (lvlEq? (decI u) (decI v)).run a = .ok (some b, a') ∧ StageC dn vis fe env m' a' ∧
-      IWGrow m m' ∧ AbsOK m' ∧ PStep a a' ∧ r.headD 0 = (if b then 1 else 0) := by
-  rcases n with _ | n
-  · simp [lveC] at h
-  simp only [lveC] at h
-  rcases hs : realCall p n "lvl_eq_c" [u, v] m with _ | ⟨r1, m1⟩
-  · simp [hs] at h
-  simp only [hs] at h
-  by_cases h0 : r1.headD 0 = 0
-  · rw [ite_eq_left h0] at h; exact absurd h (by simp)
-  rw [ite_eq_right h0] at h
-  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-  obtain ⟨x, a1, hrun, hC1, hg, hdec, hA1, hp⟩ :=
-    lvlEqC_simC p hcl hLC n hC hA u v hu hv lu lv hdu hdv r1 m1 hs
-  simp only [decLvlEq] at hdec
-  cases x with
-  | none => exact absurd hdec h0
-  | some b =>
-    refine ⟨b, a1, hrun, hC1, hg, hA1, hp, ?_⟩
-    cases b <;> simp at hdec ⊢ <;> simp [hdec]
-
 section sims
 variable {p : Prog} (hq : KnotStageProg p) {dn : NIdx → Option ConLeche.Name} {vis : Word}
   {fe : IFEnv} {env : ConLeche.Env} (henv : ConLeche.EnvWF env)
@@ -67,7 +38,8 @@ variable {p : Prog} (hq : KnotStageProg p) {dn : NIdx → Option ConLeche.Name} 
 include hq henv hOpf hLC in
 /-- **`check_block_agree_one` under `StageC`** (twin side: one member of con-ron's
 `checkBlockAgree_specF`'s proof). -/
-theorem agW_okC (n : Nat) (hn : n + 1 ≤ 2 ^ 62) (m m' : Mem)
+theorem agW_okC (hl : p.lookup "lvl_eq_fueled" = some lvlEqFueled) (n : Nat) (hn : n + 1 ≤ 2 ^ 62)
+    (m m' : Mem)
     (a : AState) (nP fvs0O fvs0L s0 cvTa s : Word) (r : List Word) (cv : IConstantVal)
     (fvs0 : List EIdx)
     (h : agW (realCall p) (n + 1) m vis nP fvs0O fvs0L s0 cvTa s = some (r, m'))
@@ -154,16 +126,20 @@ theorem agW_okC (n : Nat) (hn : n + 1 ≤ 2 ^ 62) (m m' : Mem)
   obtain ⟨c3, -⟩ := ConRon.Bridge.Inductives.checkBlockDomsAt_specF fe
     (ConRon.Bridge.CoreSpec.of_core rfl) henv 0 fvs x2 xs1 (xs0.map ConLeche.Expr.fvarTypeD) hc ht
     nP.toNat a2 a3 u3 hC2.check ⟨hxs1', hdoms⟩ hrun3
-  rcases hl : lveC (realCall p) n m3 s s0 with _ | ⟨re, m4⟩
-  · rw [hl] at h; simp [agK4] at h
-  rw [hl] at h
+  rcases hl4 : realCall p n "lvl_eq_fueled" [s, s0] m3 with _ | ⟨re, m4⟩
+  · rw [hl4] at h; simp [agK4] at h
+  rw [hl4] at h
   by_cases hre : re.headD 0 = 0
   · rw [agK4_abort (m1 := m4) (re := re) hre] at h; simp at h
   rw [agK4_ok (m1 := m4) (re := re) hre] at h
   obtain ⟨-, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   have hx03 := p1.ext.trans (p2.ext.trans c3.ext)
-  obtain ⟨b, a4, hrun4, hC4, hg4, hA4, -, hbre⟩ := lveC_okC hq.closed hLC hl hC3 hA3 hs hs0
-    (ConRon.Bridge.denoteL_ext hsP hx03) (ConRon.Bridge.denoteL_ext hs0P hx03)
+  obtain ⟨s4, hs4, -, b, a4, -, ⟨hrun4, hbre, -, hg4, -, hC4'⟩⟩ :=
+    RefE.run_okW (lefE_spec p hl n ⟨m3, Locals.init []⟩ s s0) (lef_ref hq.closed hLC n hC3.stageT hs hs0
+      (ConRon.Bridge.denoteL_ext hsP hx03) (ConRon.Bridge.denoteL_ext hs0P hx03)) hl4
+  subst hs4
+  obtain ⟨hC4, hA4, -⟩ := hC4' env hC3 hA3
+  dsimp only at hbre hg4
   obtain ⟨c4, -⟩ := ConRon.Bridge.Inductives.lvlEq?_crun hC3.check
     (ConRon.Bridge.denoteL_ext hsP hx03) (ConRon.Bridge.denoteL_ext hs0P hx03) hrun4
   have hb : b = true := by
@@ -214,7 +190,7 @@ theorem checkBlockAgreeOne_refinesC
   refine triple_post (checkBlockAgreeOne_spec p hd hl hp had (realCall p) (realCall_spec p) (n + 1) s₀
     vis nP fvs0O fvs0L s0 cvTa s) ?_
   rintro r s' ⟨hlq, hm⟩
-  obtain ⟨a', hrun, hC', hg, hA', hcs⟩ := agW_okC hq henv hOpf hLC n hn s₀.mem s'.mem a₀ nP fvs0O fvs0L s0 cvTa
+  obtain ⟨a', hrun, hC', hg, hA', hcs⟩ := agW_okC hq henv hOpf hLC hl n hn s₀.mem s'.mem a₀ nP fvs0O fvs0L s0 cvTa
     s r cv fvs0 hm hC hA hty hfvs0 hfot hs hs0 htyP hwx hxs0 hsc0 hsP hs0P
   obtain ⟨hok, hst, -⟩ := AM.of_run_ok _ _ _ _ hrun
   exact ⟨hlq, hok, by rw [hst]; exact hC', hg, hA', by rw [hst]; exact hcs⟩

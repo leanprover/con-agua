@@ -146,7 +146,7 @@ theorem nitW_ok (k : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis
   have hU3 := hU2.grow hg3
   have htop3 : iwTop m3 < 2 ^ 64 := Nat.lt_of_le_of_lt hS3.2.1 hS3.2.2.2.1
   obtain ⟨-, -, -, -, -, -, -, hsH, hsd, -⟩ := ctx_fields hU3.dec hU3.inn htop3
-  rcases hle : lveC cR k m3 ((eViewW m2 (rs.getD 2 0)).tail.headD 0) (rdW (m3.arr64 IW) (ctx + 9)) with _ | ⟨r4, m4⟩ <;> rw [hle] at h; · simp [nitK5] at h
+  rcases hle : cR k "lvl_eq_fueled" [(eViewW m2 (rs.getD 2 0)).tail.headD 0, rdW (m3.arr64 IW) (ctx + 9)] m3 with _ | ⟨r4, m4⟩ <;> rw [hle] at h; · simp [nitK5] at h
   have huH' : H ((eViewW m2 (rs.getD 2 0)).tail.headD 0) := by rw [← getD1_eq]; exact huH
   have hrunpb' : (ConRon.Arena.piBinders coreWalkFuel ty).run a5 = .ok ((bs, e), a5) := htyd ▸ hrunpb
   have hview' : (view e).run a5 = .ok (.sort u, a5) := view_run _ _ _ (hresd ▸ hview)

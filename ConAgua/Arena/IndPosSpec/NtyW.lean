@@ -90,7 +90,7 @@ theorem nestInstType_spec (p : Prog) (hl : NitLook p) (cR : CallM) (hcR : CallSp
   sym only [lang_grind, arena_grind, ind_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       hcR k "nest_inst_type_ty", piBinders_spec p hl.ty.ha hl.hc2 hl.ty.hv hl.hs hl.hpb k,
-      eView_spec p hl.ty.hv k, nestOccAny_spec p hl.no hl.hoa k, lvlEqFueled_specC p hl.hlf cR hcR k] <;>
+      eView_spec p hl.ty.hv k, nestOccAny_spec p hl.no hl.hoa k, hcR k "lvl_eq_fueled"] <;>
     finish (gen := 20) [nitW, ntyR, rdW_eq, Locals.init_cons_zero, List.getD_cons_zero, List.getD_cons_succ]
 
 end L.Ind

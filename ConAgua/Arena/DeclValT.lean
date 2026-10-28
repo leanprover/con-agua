@@ -480,7 +480,7 @@ theorem tvW_okT {p : Prog} (hq : KnotStageProg p) (hRp : RecProg p) (hL : LvlCac
   obtain ⟨r4, m4⟩ := rm4
   rw [h4, tvK4_some] at h
   have hCr4 := hkp.call (im_mem _ rfl) h4 hCr2
-  obtain ⟨s4, hs4, -, b4, a4, -, ⟨hrun4, hr4, hS4, hg4, -⟩⟩ :=
+  obtain ⟨s4, hs4, -, b4, a4, -, ⟨hrun4, hr4, hS4, hg4, -, -⟩⟩ :=
     RefE.run_okW (lefE_spec p hlef n ⟨m2, Locals.init []⟩ _ _)
       (lef_ref hq.closed hL n hS2 hx2l hF.lv_lt.2.1 hdu hdz) h4
   rw [hs4] at hS4 hg4

@@ -70,7 +70,8 @@ def nitK4 (cR : CallM) (k : Nat) (ctx ty : Word) (rs v : List Word) :
     Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r4, m4) =>
-    if r4.headD 0 ≠ 0 then none else nitK5 ty rs (lveC cR k m4 (v.tail.headD 0) (rdW (m4.arr64 IW) (ctx + 9)))
+    if r4.headD 0 ≠ 0 then none
+    else nitK5 ty rs (cR k "lvl_eq_fueled" [v.tail.headD 0, rdW (m4.arr64 IW) (ctx + 9)] m4)
 def nitK2 (cR : CallM) (k : Nat) (ctx hi ty : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (rs, m2) =>
@@ -91,7 +92,8 @@ variable (cR : CallM) (k : Nat) (m1 m2 m4 m5 : Mem) (ctx hi ty : Word) (r1 rs r4
 theorem nitK5_some (h : ¬ r5.headD 0 = 0) : nitK5 ty rs (some (r5, m5)) = some ([rs.getD 1 0, ty], m5) := by
   rw [nitK5, ite_eq_right h]
 theorem nitK4_ok (h : ¬ r4.headD 0 ≠ 0) : nitK4 cR k ctx ty rs v (some (r4, m4)) =
-    nitK5 ty rs (lveC cR k m4 (v.tail.headD 0) (rdW (m4.arr64 IW) (ctx + 9))) := by rw [nitK4, ite_eq_right h]
+    nitK5 ty rs (cR k "lvl_eq_fueled" [v.tail.headD 0, rdW (m4.arr64 IW) (ctx + 9)] m4) := by
+  rw [nitK4, ite_eq_right h]
 theorem nitK2_eq : nitK2 cR k ctx hi ty (some (rs, m2)) =
     if eViewW m2 (rs.getD 2 0) = [] then none
     else if (eViewW m2 (rs.getD 2 0)).headD 0 ≠ 2 then none

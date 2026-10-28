@@ -46,7 +46,7 @@ theorem lefT_bind {β : Type} (u v : LIdx) (k : Bool → AM β) :
   simp only [lefT, bind_assoc]
 
 /-- What `lvl_eq_fueled` gives besides the twin's answer `b` (from `m`, `a`): `lvlEq?`'s run,
-the word, the stage relation, the growth; under `StageC` and `AbsOK` before, both after and the
+the word, the stage relation, the growth, the frame (only the core's memos); under `StageC` and `AbsOK` before, both after and the
 twin's step a `PStep`. -/
 structure LefPost (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (u v : Word)
     (m : Mem) (a : AState) (w : Word) (m' : Mem) (b : Bool) (a' : AState) : Prop where
@@ -54,6 +54,7 @@ structure LefPost (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
   res : w = if b then 1 else 0
   stage : StageT dn vis fe m' a'
   grow : IWGrow m m'
+  mfr : MFr [] [] m m'
   stageC : ∀ env, StageC dn vis fe env m a → AbsOK m →
     StageC dn vis fe env m' a' ∧ AbsOK m' ∧ ConRon.Bridge.Inductives.PStep a a'
 
@@ -84,7 +85,9 @@ theorem lef_ref {p : Prog} (hcl : CoreStageClosed p) (hL : LvlCacheProg p) (n : 
   rw [lefE.k_lvl_eq_c.arm1 p r1 m1 h0]
   rcases x with _ | b
   · exact absurd hdec h0
-  refine RefE.ret rfl ⟨hrun, ?_, hSt, hg, fun env hC hA => ?_⟩
+  refine RefE.ret rfl ⟨hrun, ?_, hSt, hg,
+    MFr.of_frame (run_memFrame hcl (by decide) (run_of_callW h1')).1 coreStageA_stage coreStageC_stage,
+    fun env hC hA => ?_⟩
   · cases b <;> simp at hdec ⊢ <;> simp [hdec]
   obtain ⟨x', a1', hrun', hC1, -, -, hA1, hP⟩ :=
     lvlEqC_simC p hcl hL n hC hA u v hu hv lu lv hdu hdv r1 m1 h1'

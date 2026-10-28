@@ -147,7 +147,7 @@ theorem tvE_okT {p : Prog} (hq : KnotStageProg p) (hV : ValProg p) (hL : LvlCach
   obtain ⟨r4, m4⟩ := q
   rw [h4] at hW
   have hCr4 := hkp.call (im_mem _ rfl) (callW_of_callE h4) hCr2
-  obtain ⟨s4, hs4, -, b4, a4, hrunT, ⟨hrun4, hr4, hS4, hg4, -⟩⟩ := RefE.run_ok hsL hRL h4
+  obtain ⟨s4, hs4, -, b4, a4, hrunT, ⟨hrun4, hr4, hS4, hg4, -, -⟩⟩ := RefE.run_ok hsL hRL h4
   subst hs4
   dsimp only at hS4 hg4 hr4
   have hrun4' := hrun4
