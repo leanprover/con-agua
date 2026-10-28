@@ -256,7 +256,7 @@ include hq in
 theorem KnotAllProg.inferC : InferCallees p :=
   ⟨hq.walks.inst1OK, hq.walks.instListOK, (KnotAllProg.defeq hq).abstract1, (KnotAllProg.defeq hq).abstractRange,
     KnotAllProg.constTy hq, hq.lit, isEagerReduceH_of p hq.body.stuck.leaf, bstkCap_of,
-    inferProj_refines p hq.proj ⟨coreDen_of, (findProj_refines p hq.projp), (projFound p hq.projp), erecKept_of hq.hcl, hq.instLP, erecKeptProj_of hq.hcl⟩⟩
+    inferProj_refines p hq.proj hq.projp ⟨coreDen_of, (findProj_refines p hq.projp), (projFound p hq.projp), erecKept_of hq.hcl, hq.instLP, erecKeptProj_of hq.hcl⟩⟩
 
 /-- **The knot at fuel `0`**: every L call at fuel `0` fails. -/
 theorem knot_zero (p : Prog) : KnotOK p 0 where

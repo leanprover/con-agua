@@ -6,17 +6,24 @@ the one-line results the scripts print, never whole logs, and never read code.
 
 ## The loop
 
-1. Run `scripts/mq-next.sh` from `/home/joachim/con-agua` **with `run_in_background: true`** (a
-   build can take longer than a foreground command may run), and wait for its completion
-   notification. Then read only the tail of its output (the `landed`/`bounced`/`split`/`queue:`
-   lines, at most ~15 lines).
+Stay quiet while there is nothing to do: never end your turn to wait. Every wait below is a
+**foreground** command of at most ~9 minutes, repeated in a loop; ending a turn (or waiting on a
+background command's notification) wakes the coordinator for nothing. Message the coordinator only
+for the results listed in step 2.
+
+1. Start `scripts/mq-next.sh` detached and remember its pid:
+   `(scripts/mq-next.sh; echo "exit=$?") > _tmp/mq/agent-run.log 2>&1 & echo $!`
+   Then wait for it in the foreground, repeating while it still runs:
+   `timeout 540 tail --pid=<pid> -f /dev/null; kill -0 <pid> 2>/dev/null && echo running || echo done`.
+   When done, read only the tail of `_tmp/mq/agent-run.log` (the `landed`/`bounced`/`split`/`queue:`
+   lines and the final `exit=` line, at most ~15 lines).
 2. Act on its exit status:
    - **0** (landed) or **1** (something bounced): send the coordinator one line per `landed` or
      `bounced` line, as printed (a bounce line names the log; the lane fixes it, not you). Go to 1.
-   - **3** (queue empty): run `scripts/mq-wait.sh --queue` with `run_in_background: true`; when it
-     ends (exit 0: an entry arrived; exit 2: an hour passed), go to 1.
+   - **3** (queue empty): run `scripts/mq-wait.sh --queue --timeout 540` in the foreground and
+     repeat it while it exits 2 (timeout); on exit 0 (an entry arrived) go to 1. Say nothing.
    - **4** (busy: another mq-next runs, or the queue is held): tell the coordinator once, then wait
-     with `scripts/mq-wait.sh --queue --timeout 600` (background) and go to 1.
+     with `scripts/mq-wait.sh --queue --timeout 540` (foreground) and go to 1.
    - **5** (infrastructure error: main checkout dirty or not on master, master keeps moving, a
      lock timeout) or anything else: send the coordinator the `error:` line and stop the loop
      until the coordinator answers. Do not try to repair the main checkout.

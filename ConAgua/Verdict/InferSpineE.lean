@@ -115,7 +115,7 @@ theorem spioLoopE_ref (p : Prog) (hil : InstListOK p) (hnv : closedNV p L.Checke
         have hih := ih (by omega) _ a M _ (i + 1) (cn + 1) _ hS' hbody hacc' htop' hb' hsz' hbk' hpg'
           er hk0 hF'
         rw [hi1] at hih
-        refine ErrClaim.of_run_eq' (fun ce h => ?_) hih
+        refine ErrClaim.of_run_err (fun ce h => ?_) hih
         rw [← h, inferSpineIO]
         simp only [hlt', dite_true, decE_tag_forallE_beq ty ht, ht6, decide_true, ite_true, StateT.run_bind,
           viewBind_run', hvb, except_ok_bind, hxi]
@@ -151,7 +151,7 @@ theorem spioLoopE_ref (p : Prog) (hil : InstListOK p) (hnv : closedNV p L.Checke
         cases h2 : callE p k "whnf" [mode, vis, d, r₁.headD 0] m₁ with
         | error e2 =>
           rw [h2, inferSpineIOE.k_whnf.none] at hF; cases hF
-          refine ErrClaim.of_run_eq' (fun ce h => hpre.trans h) ?_
+          refine ErrClaim.of_run_err (fun ce h => hpre.trans h) ?_
           exact ErrClaim.bind_left (CoreSpecE.of_callE
             (s₀ := ⟨m₁, Locals.init []⟩) ((hkE k (by omega)).whnf F ⟨m₁, Locals.init []⟩ _ dn vis fe M₁ eb
               mode d (r₁.headD 0) (by omega) (by omega) ⟨hS₁, hmode, heb⟩ hrw1) h2)
@@ -215,7 +215,7 @@ theorem spioLoopE_ref (p : Prog) (hil : InstListOK p) (hnv : closedNV p L.Checke
           rw [← tfld_spPush m₂ co 0 (spW m (ao + i))]; exact hF
         have hih := ih (by omega) _ _ M₂ _ (i + 1) 1 _ hS' hbody hacc' htop' hb' hsz' hbk' hpg' er hk0 hF'
         rw [hi1] at hih
-        refine ErrClaim.of_run_eq' (fun ce h => hpre2.trans ?_) hih
+        refine ErrClaim.of_run_err (fun ce h => hpre2.trans ?_) hih
         have hfa : ((decE (r₂.headD 0)).tag == ETag.forallE) = true := by
           rw [decE_tag_forallE_beq _ hrw2]; exact decide_eq_true g1'
         rw [← h]
@@ -498,7 +498,7 @@ theorem spLoopE_ref (p : Prog) (hp : InferLeafProg p) (hkp : KnotProg p) (hq : S
             m₁ with
         | error e2 =>
           rw [h2, inferSpineE.k_infer_spine_arg.none] at hF; cases hF
-          refine ErrClaim.of_run_eq' (fun ce h => hpre.trans h) (spineArg_errClaim _ _ _ _ _ _ _ ?_)
+          refine ErrClaim.of_run_err (fun ce h => hpre.trans h) (spineArg_errClaim _ _ _ _ _ _ _ ?_)
           exact CoreSpecE.of_callE (s₀ := ⟨m₁, Locals.init []⟩) (inferSpineArg_anyE p hp hkp hq he hda
             k (hk.mono (by omega)) (hkE.mono (by omega)) F (by omega) (by omega) ⟨m₁, Locals.init []⟩ _
             dn vis fe M₁ eb mode d _ (r₁.headD 0) ⟨hS₁, hmode, heb⟩ hvv hrw1) h2
@@ -524,7 +524,7 @@ theorem spLoopE_ref (p : Prog) (hp : InferLeafProg p) (hkp : KnotProg p) (hq : S
         have hih := ih (by omega) _ _ M₂ _ (i + 1) (cn + 1) _ hS' hbody hacc' htop' hb' hsz' hbk' hpg'
           er hk0 hF
         rw [hi1] at hih
-        refine ErrClaim.of_run_eq' (fun ce h => hpre.trans ?_) hih
+        refine ErrClaim.of_run_err (fun ce h => hpre.trans ?_) hih
         rw [← h]
         exact spineArg_run _ _ _ _ _ _ _ (by rw [AM.run_of_ok _ _ hok2])
       · rw [ite_eq_right ht6] at hF
@@ -561,7 +561,7 @@ theorem spLoopE_ref (p : Prog) (hp : InferLeafProg p) (hkp : KnotProg p) (hq : S
         cases h2 : callE p k "whnf" [mode, vis, d, r₁.headD 0] m₁ with
         | error e2 =>
           rw [h2, inferSpineE.k_whnf.none] at hF; cases hF
-          refine ErrClaim.of_run_eq' (fun ce h => hpre.trans h) ?_
+          refine ErrClaim.of_run_err (fun ce h => hpre.trans h) ?_
           exact ErrClaim.bind_left (CoreSpecE.of_callE
             (s₀ := ⟨m₁, Locals.init []⟩) ((hkE k (by omega)).whnf F ⟨m₁, Locals.init []⟩ _ dn vis fe M₁ eb
               mode d (r₁.headD 0) (by omega) (by omega) ⟨hS₁, hmode, heb⟩ hrw1) h2)
@@ -623,7 +623,7 @@ theorem spLoopE_ref (p : Prog) (hp : InferLeafProg p) (hkp : KnotProg p) (hq : S
             tfld m₂ FORALL (tierW (r₂.headD 0)) (idxW (r₂.headD 0)) 0] m₂ with
         | error e3 =>
           rw [h3, inferSpineE.k_infer_spine_arg_2.none] at hF; cases hF
-          refine ErrClaim.of_run_eq' (fun ce h => hpre3.trans h) (spineArg_errClaim _ _ _ _ _ _ _ ?_)
+          refine ErrClaim.of_run_err (fun ce h => hpre3.trans h) (spineArg_errClaim _ _ _ _ _ _ _ ?_)
           exact CoreSpecE.of_callE (s₀ := ⟨m₂, Locals.init []⟩) (inferSpineArg_anyE p hp hkp hq he hda
             k (hk.mono (by omega)) (hkE.mono (by omega)) F (by omega) (by omega) ⟨m₂, Locals.init []⟩ _
             dn vis fe M₂ eb mode d _ _ ⟨hS₂, hmode, heb⟩ hvv hdom) h3
@@ -648,7 +648,7 @@ theorem spLoopE_ref (p : Prog) (hp : InferLeafProg p) (hkp : KnotProg p) (hq : S
           (by simp) (by simp)
         have hih := ih (by omega) _ _ M₃ _ (i + 1) 1 _ hS' hbody hacc' htop' hb' hsz' hbk' hpg' er hk0 hF
         rw [hi1] at hih
-        refine ErrClaim.of_run_eq' (fun ce h => hpre3.trans ?_) hih
+        refine ErrClaim.of_run_err (fun ce h => hpre3.trans ?_) hih
         rw [← h]
         exact spineArg_run _ _ _ _ _ _ _ (by rw [AM.run_of_ok _ _ hok3])
     · rw [ite_eq_right hlt] at hF; cases hF

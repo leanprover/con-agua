@@ -1,6 +1,5 @@
 import ConAgua.Verdict.InferLeavesE
 import ConAgua.Arena.IndTwin
-import ConAgua.Arena.InferBodySpineF
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
