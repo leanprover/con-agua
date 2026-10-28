@@ -374,7 +374,7 @@ l_model tblE_spec (p : Prog) (hP : TblProg p)
     erecAlloc_specW p hP.hea n, callW_spec p n "env_push_table"]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
-  heartbeats 4000000 simp [Cmp.evalW, Cmp.eval] unified
+  heartbeats 4000000 simp [] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 /-- What `check_struct_proj_table` gives besides the environment `x` it returns (from `m`, `a`):

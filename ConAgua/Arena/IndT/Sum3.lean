@@ -96,7 +96,7 @@ l_model cfbE_spec (p : Prog) (hf : p.lookup "check_field_sort_bound" = some chec
   specs [callW_spec p n "lv_leq_top", callW_spec p n "pin_word", callW_spec p n "lvl_eq_true",
     callW_spec p n "sl_contains"]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] unified
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 /-- What `check_field_sort_bound` gives besides the twin's run (from `m`): the stage relation,
