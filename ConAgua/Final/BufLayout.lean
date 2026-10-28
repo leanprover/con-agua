@@ -117,10 +117,8 @@ def bufLayout (tab : Tab) (buf : Nat) (B : Array Word) (base : Nat) (fz own : Li
     L.Compiler.Layout where
   tab
   T := base
-  b8 _ := 0
-  s8 _ := 0
-  b64 p := bufB tab B buf base fz own (tab.wAt p)
-  s64 p := bufL tab B fz own (tab.wAt p)
+  b p := if p < tab.nb then 0 else bufB tab B buf base fz own (tab.wAt p)
+  s p := if p < tab.nb then 0 else bufL tab B fz own (tab.wAt p)
   lo := base + abiSlot
   hi := base + abiSlot + abiStack
   nargs := 0
@@ -129,12 +127,16 @@ section
 variable (tab : Tab) (buf : Nat) (B : Array Word) (base : Nat) (fz own : List TieredArray)
 @[simp] theorem bufLayout_tab : (bufLayout tab buf B base fz own).tab = tab := rfl
 @[simp] theorem bufLayout_T : (bufLayout tab buf B base fz own).T = base := rfl
-@[simp] theorem bufLayout_b8 (a : Nat) : (bufLayout tab buf B base fz own).b a = 0 := rfl
-@[simp] theorem bufLayout_s8 (a : Nat) : (bufLayout tab buf B base fz own).s a = 0 := rfl
-@[simp] theorem bufLayout_b64 (p : Nat) :
-    (bufLayout tab buf B base fz own).b p = bufB tab B buf base fz own (tab.wAt p) := rfl
-@[simp] theorem bufLayout_s64 (p : Nat) :
-    (bufLayout tab buf B base fz own).s p = bufL tab B fz own (tab.wAt p) := rfl
+theorem bufLayout_b8 {p : Nat} (hp : p < tab.nb) : (bufLayout tab buf B base fz own).b p = 0 := by
+  simp [bufLayout, hp]
+theorem bufLayout_s8 {p : Nat} (hp : p < tab.nb) : (bufLayout tab buf B base fz own).s p = 0 := by
+  simp [bufLayout, hp]
+theorem bufLayout_b64 {p : Nat} (hp : tab.nb ≤ p) :
+    (bufLayout tab buf B base fz own).b p = bufB tab B buf base fz own (tab.wAt p) := by
+  simp [bufLayout, show ¬ p < tab.nb by omega]
+theorem bufLayout_s64 {p : Nat} (hp : tab.nb ≤ p) :
+    (bufLayout tab buf B base fz own).s p = bufL tab B fz own (tab.wAt p) := by
+  simp [bufLayout, show ¬ p < tab.nb by omega]
 @[simp] theorem bufLayout_lo : (bufLayout tab buf B base fz own).lo = base + abiSlot := rfl
 @[simp] theorem bufLayout_hi : (bufLayout tab buf B base fz own).hi = base + abiSlot + abiStack := rfl
 @[simp] theorem bufLayout_nargs : (bufLayout tab buf B base fz own).nargs = 0 := rfl
@@ -172,7 +174,7 @@ theorem idxOf?_inj {l : List TieredArray} {a b : TieredArray} {i : Nat} (ha : l.
 array (`dom64`) are skipped. The table-relative array (`Tab.tbl`) is owned, not frozen: the stub
 places it inside the table's slot. -/
 def bufMinOk (tab : Tab) (fz own : List TieredArray) : Bool :=
-  ((List.range tab.nw).all fun p =>
+  ((List.range (tab.nb + tab.nw)).all fun p =>
     !tab.dom64 (tab.wAt p) || tab.min64 (tab.wAt p) == 0 || fz.contains (tab.wAt p) ||
       own.contains (tab.wAt p)) &&
   match tab.tbl with
@@ -228,14 +230,14 @@ variable {tab : Tab} {fz own : List TieredArray} {B : Array Word} {buf base blen
 /-- A byte of the word array at position `p` is in the buffer (frozen), or in the region's slot
 `2 + k` or (the table-relative array) in `InTbl` (owned). -/
 theorem buf_in64 (hok : abiTabOk tab = true) (_hg : BufGeom tab fz own B buf base blen) {p x : Nat}
-    (h : (bufLayout tab buf B base fz own).In64 p x) :
+    (hp : tab.nb ≤ p) (h : (bufLayout tab buf B base fz own).In64 p x) :
     (∃ i, fz.idxOf? (tab.wAt p) = some i ∧ buf + 8 * (bufEntry B i).1 ≤ x ∧
         x < buf + 8 * ((bufEntry B i).1 + (bufEntry B i).2)) ∨
       (fz.idxOf? (tab.wAt p) = none ∧ ∃ k, own.idxOf? (tab.wAt p) = some k ∧
         ((tab.tbl64 (tab.wAt p) = none ∧ InSlot base (2 + k) x) ∨
           ((∃ c, tab.tbl64 (tab.wAt p) = some c) ∧ InTbl tab base x))) := by
   unfold Layout.In64 at h
-  simp only [bufLayout_b64, bufLayout_s64] at h
+  simp only [bufLayout_b64 _ _ _ _ _ _ hp, bufLayout_s64 _ _ _ _ _ _ hp] at h
   generalize tab.wAt p = a at h ⊢
   simp only [bufB, bufL] at h
   split at h
@@ -260,8 +262,17 @@ theorem buf_inStack {x : Nat} (h : (bufLayout tab buf B base fz own).InStack x) 
   simp only [bufLayout_lo, bufLayout_hi] at h
   unfold InSlot; simp only [abiSlot, abiStack] at h ⊢; omega
 
-theorem buf_notIn8 {a x : Nat} : ¬ (bufLayout tab buf B base fz own).In8 a x := by
-  unfold Layout.In8; simp
+theorem buf_notIn8 {p x : Nat} (hp : p < tab.nb) : ¬ (bufLayout tab buf B base fz own).In p x := by
+  unfold Layout.In; rw [bufLayout_b8 _ _ _ _ _ _ hp, bufLayout_s8 _ _ _ _ _ _ hp]; omega
+
+/-- A byte of the layout's arrays: at a word position. -/
+theorem buf_inArr {x : Nat} (h : (bufLayout tab buf B base fz own).InArr x) :
+    ∃ p, tab.nb ≤ p ∧ p < tab.nb + tab.nw ∧ (bufLayout tab buf B base fz own).In64 p x := by
+  obtain ⟨p, hp, hx⟩ := h
+  simp only [bufLayout_tab] at hp
+  by_cases hb : p < tab.nb
+  · exact absurd hx (buf_notIn8 hb)
+  · exact ⟨p, by omega, hp, Layout.In.to64 (by simp only [bufLayout_tab]; omega) hx⟩
 
 /-- Bytes of the region's slots `< 2 + |own|` are in the region. -/
 theorem _root_.L.Compiler.InSlot.region (hg : BufGeom tab fz own B buf base blen) {j x : Nat} (h : InSlot base j x)
@@ -285,10 +296,10 @@ theorem buf_part (hok : abiTabOk tab = true) (hg : BufGeom tab fz own B buf base
     (h : (bufLayout tab buf B base fz own).InStack x ∨ (bufLayout tab buf B base fz own).InArr x ∨
       (bufLayout tab buf B base fz own).InTab x) :
     (base ≤ x ∧ x < base + blen) ∨ (buf ≤ x ∧ x < buf + 8 * B.size) := by
-  rcases h with h | (⟨a, _, h⟩ | ⟨a, ha, h⟩) | h
+  rcases h with h | h | h
   · exact Or.inl ((buf_inStack h).region hg (by omega))
-  · exact absurd h buf_notIn8
-  · rcases buf_in64 hok hg h with ⟨i, hi, h1, h2⟩ | ⟨-, k, hk, hs⟩
+  · obtain ⟨p, hp1, -, h⟩ := buf_inArr h
+    rcases buf_in64 hok hg hp1 h with ⟨i, hi, h1, h2⟩ | ⟨-, k, hk, hs⟩
     · have := hg.ent i (idxOf?_lt hi); right; omega
     · exact Or.inl (own_region hg (idxOf?_lt hk) (hs.imp (fun h => h.2) (fun h => h.2)))
   · exact Or.inl ((buf_inTab hok h).1.region hg (by omega))
@@ -307,9 +318,8 @@ theorem buf_save (hok : abiTabOk tab = true) (hg : BufGeom tab fz own B buf base
   refine ⟨by omega, by simp only [abiSlot] at hn; omega, fun h => ?_, fun h => ?_⟩
   · have := buf_inStack h
     unfold InSlot abiSlot at this; omega
-  · rcases h with ⟨a, _, h⟩ | ⟨a, _, h⟩
-    · exact buf_notIn8 h
-    · rcases buf_in64 hok hg h with ⟨i, hi, h3, h4⟩ | ⟨-, k, -, ⟨-, h3⟩ | ⟨-, h3⟩⟩
+  · obtain ⟨p, hp1, -, h⟩ := buf_inArr h
+    · rcases buf_in64 hok hg hp1 h with ⟨i, hi, h3, h4⟩ | ⟨-, k, -, ⟨-, h3⟩ | ⟨-, h3⟩⟩
       · have := hg.ent i (idxOf?_lt hi)
         rcases hg.apart x (by omega) (by omega) with h5 | h5
         · omega
@@ -331,9 +341,12 @@ theorem bufLayout_ok (hok : abiTabOk tab = true) (hg : BufGeom tab fz own B buf 
   · simp only [Layout.tabEnd, bufLayout_T, bufLayout_tab, bufLayout_nargs]; simp only [abiSlot] at hn; omega
   · simp only [bufLayout_hi, abiSlot, abiStack]; simp only [abiSlot] at hn; omega
   · simp only [bufLayout_lo, bufLayout_hi]; omega
-  · intro a _; simp
   · intro a ha
-    simp only [bufLayout_b64, bufLayout_s64]
+    simp only [bufLayout_tab] at ha ⊢
+    by_cases hb : a < tab.nb
+    · rw [bufLayout_b8 _ _ _ _ _ _ hb, bufLayout_s8 _ _ _ _ _ _ hb]; omega
+    rw [bufLayout_b64 _ _ _ _ _ _ (by omega), bufLayout_s64 _ _ _ _ _ _ (by omega),
+      show tab.wd a = 8 by simp [Tab.wd, hb]]
     generalize tab.wAt a = s
     simp only [bufB, bufL]
     split
@@ -355,30 +368,33 @@ theorem bufLayout_ok (hok : abiTabOk tab = true) (hg : BufGeom tab fz own B buf 
   · intro x h1 h2
     exact absurd (InSlot.eq (buf_inTab hok h1).1 (buf_inStack h2)) (by omega)
   · intro x h1 h2
-    rcases h2 with ⟨a, _, h⟩ | ⟨a, _, h⟩
-    · exact buf_notIn8 h
+    obtain ⟨p, hp1, -, h⟩ := buf_inArr h2
     · have ht := (buf_inTab hok h1).1.region hg (by omega)
       have ht2 := (buf_inTab hok h1).2
-      rcases buf_in64 hok hg h with ⟨i, hi, q1, q2⟩ | ⟨-, k, hk, ⟨-, hs⟩ | ⟨-, hs⟩⟩
+      rcases buf_in64 hok hg hp1 h with ⟨i, hi, q1, q2⟩ | ⟨-, k, hk, ⟨-, hs⟩ | ⟨-, hs⟩⟩
       · have := hg.ent i (idxOf?_lt hi)
         rcases hg.apart x (by omega) (by omega) with h' | h' <;> omega
       · exact absurd (InSlot.eq (buf_inTab hok h1).1 hs) (by omega)
       · unfold InTbl at hs; omega
   · intro x h1 h2
-    rcases h2 with ⟨a, _, h⟩ | ⟨a, _, h⟩
-    · exact buf_notIn8 h
+    obtain ⟨p, hp1, -, h⟩ := buf_inArr h2
     · have ht := (buf_inStack h1).region hg (by omega)
-      rcases buf_in64 hok hg h with ⟨i, hi, q1, q2⟩ | ⟨-, k, hk, ⟨-, hs⟩ | ⟨-, hs⟩⟩
+      rcases buf_in64 hok hg hp1 h with ⟨i, hi, q1, q2⟩ | ⟨-, k, hk, ⟨-, hs⟩ | ⟨-, hs⟩⟩
       · have := hg.ent i (idxOf?_lt hi)
         rcases hg.apart x (by omega) (by omega) with h' | h' <;> omega
       · exact absurd (InSlot.eq (buf_inStack h1) hs) (by omega)
       · exact hs.not_slot (Nat.le_refl _) (buf_inStack h1)
-  · intro a _ b _ _ x h; exact absurd h buf_notIn8
   · intro a ha b hb hab' x h1 h2
     simp only [bufLayout_tab] at ha hb
+    by_cases hba : a < tab.nb
+    · exact absurd h1 (buf_notIn8 hba)
+    by_cases hbb : b < tab.nb
+    · exact absurd h2 (buf_notIn8 hbb)
+    replace h1 := Layout.In.to64 (by simp only [bufLayout_tab]; omega) h1
+    replace h2 := Layout.In.to64 (by simp only [bufLayout_tab]; omega) h2
     have hab : tab.wAt a ≠ tab.wAt b := fun e => hab' (tab.wAt_inj ha hb e)
-    rcases buf_in64 hok hg h1 with ⟨i, hi, p1, p2⟩ | ⟨hn1, k, hk, hs⟩ <;>
-      rcases buf_in64 hok hg h2 with ⟨i', hi', p3, p4⟩ | ⟨hn2, k', hk', hs'⟩
+    rcases buf_in64 hok hg (by omega) h1 with ⟨i, hi, p1, p2⟩ | ⟨hn1, k, hk, hs⟩ <;>
+      rcases buf_in64 hok hg (by omega) h2 with ⟨i', hi', p3, p4⟩ | ⟨hn2, k', hk', hs'⟩
     · have hii : i ≠ i' := fun e => hab (idxOf?_inj hi (e ▸ hi'))
       rcases hg.disj i (idxOf?_lt hi) i' (idxOf?_lt hi') hii with h | h | h | h <;> omega
     · have := hg.ent i (idxOf?_lt hi)
@@ -396,10 +412,11 @@ theorem bufLayout_ok (hok : abiTabOk tab = true) (hg : BufGeom tab fz own B buf 
         obtain ⟨a2, e2, s2⟩ := Tab.tbl64_some hc'
         rw [e1] at e2; cases e2
         exact hab (s1.trans s2.symm)
-  · intro a _ b _ x h; exact absurd h buf_notIn8
   · intro s hs
-    simp only [bufLayout_tab, bufLayout_s64] at hs ⊢
-    have hp := List.all_eq_true.mp ((Bool.and_eq_true _ _).mp hmo).1 _ (List.mem_range.mpr (tab.pos64_lt hs))
+    simp only [bufLayout_tab] at hs ⊢
+    have hps := tab.pos64_lt hs
+    have hp := List.all_eq_true.mp ((Bool.and_eq_true _ _).mp hmo).1 _ (List.mem_range.mpr hps.2)
+    rw [bufLayout_s64 _ _ _ _ _ _ hps.1]
     rw [tab.wAt_pos64 hs] at hp ⊢
     simp only [bufL]
     split
@@ -418,8 +435,8 @@ theorem bufLayout_ok (hok : abiTabOk tab = true) (hg : BufGeom tab fz own B buf 
         · obtain ⟨k, hk⟩ := idxOf?_of_contains hp; rw [hn] at hk; cases hk
         · obtain ⟨k, hk⟩ := idxOf?_of_contains hp; rw [hn'] at hk; cases hk
   · intro s c hs hc
-    simp only [bufLayout_tab, bufLayout_b64, bufLayout_T] at hs hc ⊢
-    rw [tab.wAt_pos64 hs]
+    simp only [bufLayout_tab, bufLayout_T] at hs hc ⊢
+    rw [bufLayout_b64 _ _ _ _ _ _ (tab.pos64_lt hs).1, tab.wAt_pos64 hs]
     obtain ⟨ho, hf⟩ := bufMinOk_tbl hmo hc
     obtain ⟨k, hk⟩ := idxOf?_of_contains ho
     simp only [bufB, idxOf?_of_not_contains (by rw [hf]; decide), hk, ownOff_tbl hc]
@@ -476,17 +493,18 @@ def romBits (rom : List UInt8) (i : Nat) : BitVec 64 :=
   | _ => 0
 
 /-- The number of table words the stub writes. -/
-def bufN (tab : Tab) : Nat := 6 + 2 * tab.nw + tab.romWords
+def bufN (tab : Tab) : Nat := 2 + 2 * (tab.nb + tab.nw) + tab.romWords
 
-/-- **Table word `q` as `ca_check_b` writes it.** -/
+/-- **Table word `q` as `ca_check_b` writes it**: the stack top and limit, the bases and the
+lengths of `bufLayout`'s positions, the constant data. -/
 def bufVal (tab : Tab) (buf : Nat) (B : Array Word) (base : Nat) (fz own : List TieredArray) (q : Nat) :
     BitVec 64 :=
   if q = 0 then (UInt64.ofNat (base + abiSlot + abiStack)).toBitVec
   else if q = 1 then (UInt64.ofNat (base + abiSlot)).toBitVec
-  else if q < 6 then 0
-  else if q < 6 + tab.nw then (UInt64.ofNat (bufB tab B buf base fz own (tab.wAt (q - 6)))).toBitVec
-  else if q < 6 + 2 * tab.nw then (UInt64.ofNat (bufL tab B fz own (tab.wAt (q - 6 - tab.nw)))).toBitVec
-  else romBits tab.rom (q - 6 - 2 * tab.nw)
+  else if q < 2 + (tab.nb + tab.nw) then (UInt64.ofNat ((bufLayout tab buf B base fz own).b (q - 2))).toBitVec
+  else if q < 2 + 2 * (tab.nb + tab.nw) then
+    (UInt64.ofNat ((bufLayout tab buf B base fz own).s (q - 2 - (tab.nb + tab.nw)))).toBitVec
+  else romBits tab.rom (q - 2 - 2 * (tab.nb + tab.nw))
 
 theorem bufMem0_arr8 (fz own : List TieredArray) (B : Array Word) (r : Mem) (a : Nat) :
     (bufMem0 fz own B r).arr8 a = #[] := rfl
@@ -522,10 +540,12 @@ theorem buf_memRel (hok : abiTabOk tab = true) (hg : BufGeom tab fz own B buf ba
   have hW : ∀ q, q < bufN tab → rdW (qwrs base (bufVal tab buf B base fz own) d qs) (A (base + 8 * q)) =
       some (UInt64.ofBitVec (bufVal tab buf B base fz own q)) := fun q h => qwrs_rdW qs d q (hq q h) hfit
   constructor
-  · intro a _; simp [bufMem0_arr8]
   · intro a ha
-    simp only [bufLayout_tab] at ha
-    rw [bufMem0_arr64 fz own B r, bufLayout_s64, bufLayout_tab, tab.wAt_pos64 ha]
+    simp only [bufLayout_tab] at ha ⊢
+    rw [bufLayout_s8 _ _ _ _ _ _ (tab.pos8_lt ha)]; simp [bufMem0_arr8]
+  · intro a ha
+    simp only [bufLayout_tab] at ha ⊢
+    rw [bufMem0_arr64 fz own B r, bufLayout_s64 _ _ _ _ _ _ (tab.pos64_lt ha).1, tab.wAt_pos64 ha]
     rcases hfz : fz.idxOf? a with _ | i
     · simp only [bufL, hfz]
       by_cases hc : own.contains a = true
@@ -537,9 +557,9 @@ theorem buf_memRel (hok : abiTabOk tab = true) (hg : BufGeom tab fz own B buf ba
       rw [Nat.min_eq_left this]; omega
   · intro a _ i hi; simp [bufMem0_arr8] at hi
   · intro a ha i hi
-    simp only [bufLayout_tab] at ha
+    simp only [bufLayout_tab] at ha ⊢
     have e := bufMem0_arr64 fz own B r a
-    simp only [bufLayout_b64, bufLayout_tab, tab.wAt_pos64 ha]
+    rw [bufLayout_b64 _ _ _ _ _ _ (tab.pos64_lt ha).1, tab.wAt_pos64 ha]
     rcases hfz : fz.idxOf? a with _ | i'
     · simp only [e, hfz] at hi ⊢
       simp only [bufB, hfz]
@@ -558,7 +578,7 @@ theorem buf_memRel (hok : abiTabOk tab = true) (hg : BufGeom tab fz own B buf ba
           refine ⟨?_, (own_region hg hk' (hx.imp (fun h => h.2) (fun h => h.2))).2⟩
           rcases hx with ⟨-, h3⟩ | ⟨-, h3⟩
           · unfold InSlot at h3; simp only [bufN, abiSlot] at hN h3 ⊢; omega
-          · unfold InTbl at h3; simp only [bufN, hnb] at h3 ⊢; omega
+          · unfold InTbl at h3; simp only [bufN] at h3 ⊢; omega
         have hb0 := hb 0 (by omega); have hb7 := hb 7 (by omega)
         rw [hO.rdW_eq (by omega) (Or.inr (by omega))]
         exact hr.get a ha k hk i hi
@@ -577,53 +597,39 @@ theorem buf_memRel (hok : abiTabOk tab = true) (hg : BufGeom tab fz own B buf ba
       simp [bufImg]
   · have := hW 1 (by simp only [bufN]; omega)
     simpa [bufVal, bufLayout_T, bufLayout_lo] using this
-  · intro a ha
-    simp only [bufLayout_tab, hnb] at ha
-    have := hW (2 + 2 * a) (by simp only [bufN]; omega)
-    simp only [bufLayout_T, bufLayout_b8, Tab.dbase]
-    rw [show (16 + 16 * (a : Int)).toNat = 8 * (2 + 2 * a) by omega, this]
-    simp only [bufVal, show 2 + 2 * a ≠ 0 by omega, show 2 + 2 * a ≠ 1 by omega,
-      show 2 + 2 * a < 6 by omega, ite_false, ite_true]
-    rfl
-  · intro a ha
-    simp only [bufLayout_tab, hnb] at ha
-    have := hW (3 + 2 * a) (by simp only [bufN]; omega)
-    simp only [bufLayout_T, bufLayout_s8, Tab.dlen]
-    rw [show (24 + 16 * (a : Int)).toNat = 8 * (3 + 2 * a) by omega, this]
-    simp only [bufVal, show 3 + 2 * a ≠ 0 by omega, show 3 + 2 * a ≠ 1 by omega,
-      show 3 + 2 * a < 6 by omega, ite_false, ite_true]
-    rfl
   · intro p hp
     simp only [bufLayout_tab] at hp
-    have := hW (6 + p) (by simp only [bufN]; omega)
-    simp only [bufLayout_T, bufLayout_tab, bufLayout_b64, Tab.dbase, hnb]
-    rw [show (16 + 16 * ((2 : Nat) : Int) + 8 * (p : Int)).toNat = 8 * (6 + p) by omega, this]
-    simp only [bufVal, show 6 + p ≠ 0 by omega, show 6 + p ≠ 1 by omega,
-      show ¬ 6 + p < 6 by omega, show 6 + p < 6 + tab.nw by omega, ite_false, ite_true,
-      show 6 + p - 6 = p by omega, UInt64.ofBitVec_toBitVec]
+    have := hW (2 + p) (by simp only [bufN]; omega)
+    simp only [bufLayout_T, Tab.dbase]
+    rw [show (16 + 8 * (p : Int)).toNat = 8 * (2 + p) by omega, this]
+    simp only [bufVal, show 2 + p ≠ 0 by omega, show 2 + p ≠ 1 by omega,
+      show 2 + p < 2 + (tab.nb + tab.nw) by omega, ite_false, ite_true,
+      show 2 + p - 2 = p by omega, UInt64.ofBitVec_toBitVec]
   · intro p hp
     simp only [bufLayout_tab] at hp
-    have := hW (6 + tab.nw + p) (by simp only [bufN]; omega)
-    simp only [bufLayout_T, bufLayout_tab, bufLayout_s64, Tab.dlen, hnb]
-    rw [show (16 + 16 * ((2 : Nat) : Int) + 8 * (tab.nw : Int) + 8 * (p : Int)).toNat =
-      8 * (6 + tab.nw + p) by omega, this]
-    simp only [bufVal, show 6 + tab.nw + p ≠ 0 by omega, show 6 + tab.nw + p ≠ 1 by omega,
-      show ¬ 6 + tab.nw + p < 6 by omega, show ¬ 6 + tab.nw + p < 6 + tab.nw by omega,
-      show 6 + tab.nw + p < 6 + 2 * tab.nw by omega, ite_false, ite_true,
-      show 6 + tab.nw + p - 6 - tab.nw = p by omega, UInt64.ofBitVec_toBitVec]
+    have := hW (2 + (tab.nb + tab.nw) + p) (by simp only [bufN]; omega)
+    simp only [bufLayout_T, bufLayout_tab, Tab.dlen]
+    rw [show (16 + 8 * ((tab.nb : Int) + (tab.nw : Int)) + 8 * (p : Int)).toNat =
+      8 * (2 + (tab.nb + tab.nw) + p) by omega, this]
+    simp only [bufVal, show 2 + (tab.nb + tab.nw) + p ≠ 0 by omega, show 2 + (tab.nb + tab.nw) + p ≠ 1 by omega,
+      show ¬ 2 + (tab.nb + tab.nw) + p < 2 + (tab.nb + tab.nw) by omega,
+      show 2 + (tab.nb + tab.nw) + p < 2 + 2 * (tab.nb + tab.nw) by omega, ite_false, ite_true,
+      show 2 + (tab.nb + tab.nw) + p - 2 - (tab.nb + tab.nw) = p by omega, UInt64.ofBitVec_toBitVec]
   · intro i hi
     simp only [bufLayout_tab] at hi
-    simp only [bufLayout_T, bufLayout_tab, hnb]
+    simp only [bufLayout_T, bufLayout_tab]
     obtain ⟨w, hw1, hw2⟩ := romVals_byte tab.rom i hi
     have hlt : i / 8 < tab.romWords := by
       have := tab.rom_length_le; simp only [Tab.romWords] at this ⊢; omega
-    have hq0 : 6 + 2 * tab.nw + i / 8 < bufN tab := by simp only [bufN]; omega
-    rw [show base + 16 + 16 * (2 + tab.nw) + i = base + 8 * (6 + 2 * tab.nw + i / 8) + i % 8 by omega,
+    have hq0 : 2 + 2 * (tab.nb + tab.nw) + i / 8 < bufN tab := by simp only [bufN]; omega
+    rw [show base + 16 + 16 * (tab.nb + tab.nw) + i = base + 8 * (2 + 2 * (tab.nb + tab.nw) + i / 8) + i % 8 by omega,
       qwrs_byte qs d _ _ (hq _ hq0) (Nat.mod_lt _ (by omega)) hfit]
-    simp only [bufVal, show 6 + 2 * tab.nw + i / 8 ≠ 0 by omega, show 6 + 2 * tab.nw + i / 8 ≠ 1 by omega,
-      show ¬ 6 + 2 * tab.nw + i / 8 < 6 by omega, show ¬ 6 + 2 * tab.nw + i / 8 < 6 + tab.nw by omega,
-      show ¬ 6 + 2 * tab.nw + i / 8 < 6 + 2 * tab.nw by omega, ite_false,
-      show 6 + 2 * tab.nw + i / 8 - 6 - 2 * tab.nw = i / 8 by omega, romBits, hw1, UInt64.ofBitVec_toBitVec]
+    simp only [bufVal, show 2 + 2 * (tab.nb + tab.nw) + i / 8 ≠ 0 by omega,
+      show 2 + 2 * (tab.nb + tab.nw) + i / 8 ≠ 1 by omega,
+      show ¬ 2 + 2 * (tab.nb + tab.nw) + i / 8 < 2 + (tab.nb + tab.nw) by omega,
+      show ¬ 2 + 2 * (tab.nb + tab.nw) + i / 8 < 2 + 2 * (tab.nb + tab.nw) by omega, ite_false,
+      show 2 + 2 * (tab.nb + tab.nw) + i / 8 - 2 - 2 * (tab.nb + tab.nw) = i / 8 by omega, romBits, hw1,
+      UInt64.ofBitVec_toBitVec]
     exact hw2
   · intro x hx
     have := (buf_inStack hx).region hg (by omega)
@@ -636,7 +642,7 @@ theorem buf_memRel (hok : abiTabOk tab = true) (hg : BufGeom tab fz own B buf ba
     rw [← Layout.globAddr_toNat]
     simp only [bufLayout_T, bufLayout_tab]
     rw [hO.rdW_eq (by simp only [Tab.globOff, Tab.globBase] at *; omega)
-      (Or.inr (by simp only [bufN, Tab.globOff, Tab.globBase, hnb]; omega))]
+      (Or.inr (by simp only [bufN, Tab.globOff, Tab.globBase]; omega))]
     exact hr.glob g hg'
 
 end
