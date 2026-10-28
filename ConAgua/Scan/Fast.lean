@@ -281,8 +281,10 @@ theorem numS_mem (b : Array UInt8) (s : St) : (numS b s).mem = s.mem := by
 /-- The number at `p` ends at `e` and has the value `x`, as the generic scanner reads it:
 `num_end`'s end, at most 18 digits, `read_nat`'s value. -/
 structure NumAt (b : Array UInt8) (p e x : Word) : Prop where
+  first : byteW b p - 48 < 10
   lt : p < e
   short : e.toNat ≤ p.toNat + 18
+  inb : e.toNat ≤ b.size
   endN : L.Scan.Leaves.numEndN b p.toNat = e.toNat
   val : x = L.Front.Fields.rdLoopN b p e 0
 
@@ -319,29 +321,30 @@ theorem numAt_of_ok (b : Array UInt8) (hb : b.size < 2 ^ 63) (p : Word) (h : Num
   obtain ⟨e, x⟩ := E
   simp only at *
   have he : e.toNat ≤ p.toNat + 18 := by rw [hlim] at a2; split at a2 <;> omega
-  refine ⟨?_, he, ?_, ?_⟩
+  have hsd : L.Scan.Leaves.skipDigitsN b p.toNat = e.toNat := by
+    apply skipDigitsN_run b _ _ (by omega)
+    · intro k h1 h2
+      have hs : UInt64.size = 2 ^ 64 := rfl
+      have hk : (UInt64.ofNat k).toNat = k := UInt64.toNat_ofNat_of_lt' (by omega)
+      by_cases hkp : k = p.toNat
+      · exact hkp ▸ ⟨hp, hd0⟩
+      · have := (dig_iff b (UInt64.ofNat k)).mp (a3 _ (by omega) (by omega))
+        simp only [hk] at this
+        exact this
+    · intro he' hde
+      exact hstop ((dig_iff b e).mpr ⟨he', hde⟩)
+  refine ⟨h.first, ?_, he, ?_, ?_, ?_⟩
   · rw [UInt64.lt_iff_toNat_lt]; omega
-  · have hsd : L.Scan.Leaves.skipDigitsN b p.toNat = e.toNat := by
-      apply skipDigitsN_run b _ _ (by omega)
-      · intro k h1 h2
-        have hs : UInt64.size = 2 ^ 64 := rfl
-        have hk : (UInt64.ofNat k).toNat = k := UInt64.toNat_ofNat_of_lt' (by omega)
-        by_cases hkp : k = p.toNat
-        · exact hkp ▸ ⟨hp, hd0⟩
-        · have := (dig_iff b (UInt64.ofNat k)).mp (a3 _ (by omega) (by omega))
-          simp only [hk] at this
-          exact this
-      · intro he' hde
-        exact hstop ((dig_iff b e).mpr ⟨he', hde⟩)
-    unfold L.Scan.Leaves.numEndN
+  · rw [← hsd]; exact L.Scan.Leaves.skipDigitsN_le b _ (by omega)
+  · unfold L.Scan.Leaves.numEndN
     simp only [hsd]
-    rw [if_neg (by omega)]
-    rw [if_neg]
+    rw [ite_eq_right (by omega)]
+    rw [ite_eq_right]
     rintro ⟨h48, hne⟩
     apply hne
     have : byteW b p - 48 = 0 := by
       rw [byteW_get b p hp]; simp [Array.getD, hp] at h48; rw [h48]; rfl
-    rw [hlim, if_pos this] at a2
+    rw [hlim, ite_eq_left this] at a2
     omega
   · rw [L.Front.Fields.rdLoopN_step b p e 0 (by rw [UInt64.lt_iff_toNat_lt]; omega), a5,
       and255 _ h.first]
