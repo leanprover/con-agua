@@ -266,9 +266,10 @@ theorem ensureSortCore_simT (hl : InferLeafProg p) (n : Nat) (hn : n ≤ 2 ^ 62)
   rcases n with _ | _ | k
   · intro r m' h; rw [callW_zero] at h; cases h
   · intro r m' h
-    obtain ⟨s', -, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-      (L.Arena.ensureSortCore_spec p hp 0 _ vis dep t) h
-    simp [call1W, callW_zero] at hW
+    obtain ⟨s', -, -, hW⟩ := triple_of_callE (s₀ := ⟨m, Locals.init []⟩)
+      (escE_spec p hp.ensureSortCore 1 _ vis dep t) (callE_of_callW h)
+    obtain ⟨e', he', -⟩ := callE_zero p "ensure_sort" [0, vis, dep, t] m
+    simp [escE, he', escE.k_ensure_sort] at hW
   refine Sim.mono (StageT.sim_core hcl (by simp [stageCoreFns]) hS
     (fun s₀ M hC => ensureSortCore_refines p hl hp k (fun j _ => hK j) checkFuel s₀ a dn vis fe M dep t
       (stage_fuel (by omega)) (by omega) hC (hw_of_h ht))) ?_

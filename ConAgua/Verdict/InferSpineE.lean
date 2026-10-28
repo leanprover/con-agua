@@ -398,7 +398,7 @@ theorem spineArg_errClaim {β : Type} (r : CoreFnsA) (depth : Nat) (a dom : EIdx
 
 /-- `infer_spine_arg`'s error claim at every L fuel up to `n + 1`. -/
 theorem inferSpineArg_anyE (p : Prog) (hp : InferLeafProg p) (hkp : KnotProg p) (hq : SpineFProg p)
-    (he : IsEagerReduceH p) (hda : DefeqArgE p) :
+    (he : IsEagerReduceH p) (hda : DefeqArgE p) (hnv : closedNV p L.Checker.nvFns = true) :
     ∀ n, KnotUpTo p n → KnotUpToE p n → ∀ (F : Nat), n ≤ F → n ≤ 2 ^ 62 → ∀ (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps)
     (eb mode d a dom : Word), SlotPre s₀ a₀ dn vis fe M eb mode → HW a → HW dom →
@@ -406,7 +406,7 @@ theorem inferSpineArg_anyE (p : Prog) (hp : InferLeafProg p) (hkp : KnotProg p) 
       (inferSpineArgT (coreKnot (decMode mode) fe id F) d.toNat (decE a) (decE dom)) s₀ a₀
   | 0, _, _, _, _, _, s₀, a₀, _, _, _, _, _, _, _, _, _, _, _, _ => CoreSpecE.zero p _ _ _ s₀ a₀
   | n + 1, hk, hkE, F, hF, hn, s₀, a₀, dn, vis, fe, M, eb, mode, d, a, dom, hs, ha, hdom =>
-      inferSpineArg_refinesE p hp hkp hq he hda n (hk.mono (by omega)) (hkE.mono (by omega)) F
+      inferSpineArg_refinesE p hp hkp hq he hda hnv n (hk.mono (by omega)) (hkE.mono (by omega)) F
         (by omega) (by omega) s₀ a₀ dn vis fe M eb mode d a dom hs ha hdom
 
 /-- **The full spine's loop claims `inferSpine`'s failure** (by induction on the loop fuel, as
@@ -499,7 +499,7 @@ theorem spLoopE_ref (p : Prog) (hp : InferLeafProg p) (hkp : KnotProg p) (hq : S
         | error e2 =>
           rw [h2, inferSpineE.k_infer_spine_arg.none] at hF; cases hF
           refine ErrClaim.of_run_err (fun ce h => hpre.trans h) (spineArg_errClaim _ _ _ _ _ _ _ ?_)
-          exact CoreSpecE.of_callE (s₀ := ⟨m₁, Locals.init []⟩) (inferSpineArg_anyE p hp hkp hq he hda
+          exact CoreSpecE.of_callE (s₀ := ⟨m₁, Locals.init []⟩) (inferSpineArg_anyE p hp hkp hq he hda hnv
             k (hk.mono (by omega)) (hkE.mono (by omega)) F (by omega) (by omega) ⟨m₁, Locals.init []⟩ _
             dn vis fe M₁ eb mode d _ (r₁.headD 0) ⟨hS₁, hmode, heb⟩ hvv hrw1) h2
         | ok q =>
@@ -624,7 +624,7 @@ theorem spLoopE_ref (p : Prog) (hp : InferLeafProg p) (hkp : KnotProg p) (hq : S
         | error e3 =>
           rw [h3, inferSpineE.k_infer_spine_arg_2.none] at hF; cases hF
           refine ErrClaim.of_run_err (fun ce h => hpre3.trans h) (spineArg_errClaim _ _ _ _ _ _ _ ?_)
-          exact CoreSpecE.of_callE (s₀ := ⟨m₂, Locals.init []⟩) (inferSpineArg_anyE p hp hkp hq he hda
+          exact CoreSpecE.of_callE (s₀ := ⟨m₂, Locals.init []⟩) (inferSpineArg_anyE p hp hkp hq he hda hnv
             k (hk.mono (by omega)) (hkE.mono (by omega)) F (by omega) (by omega) ⟨m₂, Locals.init []⟩ _
             dn vis fe M₂ eb mode d _ _ ⟨hS₂, hmode, heb⟩ hvv hdom) h3
         | ok q =>
