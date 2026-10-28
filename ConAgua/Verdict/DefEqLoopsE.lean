@@ -21,8 +21,8 @@ namespace L.Arena
 
 /-! ## `defeq_lst` -/
 
-/-- **`defeq_lst`'s error claim** (`DefeqLstE`, `defeqLst_ref`'s error half). -/
-theorem defeqLst_refinesE (p : Prog) (hp : p.lookup "defeq_lst" = some defeqLstL) : DefeqLstE p :=
+/-- **`defeq_lst`'s error claim** (`DefeqLstWE`, `defeqLst_ref`'s error half). -/
+theorem defeqLst_refinesE (p : Prog) (hp : p.lookup "defeq_lst" = some defeqLstL) : DefeqLstWE p :=
   fun n hk hkE F hF hn s₀ a₀ dn vis fe M eb mode d ao an bo bn xs ys hs hx hy hxt hyt =>
     RefE.coreSpecE (defeqLst_specE p hp (n + 1) s₀ mode vis d ao an bo bn) trivial hkE
       (defeqLst_ref p n hk F hF hn s₀ a₀ dn vis fe M eb mode d ao an bo bn hs xs.toList ys.toList
