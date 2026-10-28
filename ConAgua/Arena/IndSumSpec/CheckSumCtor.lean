@@ -1,4 +1,4 @@
-import ConAgua.Arena.IndSumSpec.CtlK1
+import ConAgua.Arena.IndSumSpec.SumProg
 import ConAgua.Arena.IndSumSpec.FieldDomsResolve
 import ConAgua.Arena.IndSumSpec.StructCtorResidOk
 import ConAgua.Arena.RecGenSpec.CruleProg
@@ -9,7 +9,7 @@ import ConAgua.Arena.IndSumSpec.CheckStructFieldSortsISucc
 /-!
 # CheckSumCtor
 
-`ctlK8_no`, `ctlK7_no`, `ctlK6_no`, `ctlK3_big`, `ctlK1_no`, `sumGetD1` and the lemmas only they use.
+`sumGetD0–2`, the callees of `check_sum_ctor(_tail)` as `Sim`s, `checkSumCtor_eq`, `sumTypeWord`.
 -/
 
 noncomputable section
@@ -25,23 +25,6 @@ namespace L.Ind
 open L.Arena
 
 local notation "V" => ConLeche.CheckMode.verified
-
-section arms
-variable (cR : CallM) (n : Nat) (m : Mem) (vis0 vis T lo ll nP nIdx rs isP lg nF cqO cqL xo xl xb hd xfn ao al e : Word)
-  (r : List Word)
-theorem ctlK8_no (h : r.headD 0 = 0) : ctlK8 cR n vis isP lg rs nP nF xo xl ao al (some (r, m)) = none := by
-  simp only [ctlK8]; rw [ite_eq_left h]
-theorem ctlK7_no (h : r.headD 0 = 0) :
-    ctlK7 cR n vis0 vis isP lg rs nP nF xo xl ao al (some (r, m)) = none := by simp only [ctlK7]; rw [ite_eq_left h]
-theorem ctlK6_no (h : xfn ≠ hd ∨ al ≠ nP + nIdx ∨ e = 0) :
-    ctlK6 cR n vis0 vis nP nIdx rs isP lg nF xo xl hd xfn ao al m (some e) = none := by
-  simp only [ctlK6]; rw [ite_eq_left h]
-theorem ctlK3_big (h : 4294967296 ≤ hd) :
-    ctlK3 cR n vis0 vis nP nIdx rs isP lg nF cqO cqL xo xl xb (some (hd, m)) = none := by simp only [ctlK3]; rw [ite_eq_left h]
-theorem ctlK1_no (h : r.headD 0 = 0) :
-    ctlK1 cR n vis0 vis T lo ll nP nIdx rs isP lg nF cqO cqL (some (r, m)) = none := by simp only [ctlK1]; rw [ite_eq_left h]
-end arms
-attribute [ind_grind] ctlK8_no ctlK7_no ctlK6_no ctlK3_big ctlK1_no
 
 theorem sumGetD1 (r : List Word) : r.getD 1 0 = r.tail.headD 0 := by
   rcases r with _ | ⟨a, _ | ⟨b, r⟩⟩ <;> rfl
@@ -91,67 +74,6 @@ theorem sumKeep_restrict {dn : NIdx → Option ConLeche.Name} {vis vis0 : Word} 
     (h : KeepPost dn vis0 (fe.restrictTo vis0.toNat) decW0B m m' a' r b) :
     StageR dn vis fe m' a' ∧ IWGrow m m' ∧ (r.headD 0 != 0) = b :=
   ⟨h.1.unrestrict hv, h.2.1, h.2.2.1⟩
-
-/-- After the type former's opened telescope. -/
-def ctorK6 (cR : CallM) (n : Nat) (vis0 vis T lo ll nP nIdx rs isP lg nF cvC cqO cqL cqB : Word) :
-    Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (rq, m) => if rq.headD 0 = 0 then none
-    else ctorK7 cR n vis0 vis T lo ll nP nIdx rs isP lg nF cvC cqO cqL cqB
-      (ftdsF m [rq.tail.headD 0, rq.tail.tail.headD 0])
-/-- After the constructor's opened telescope. -/
-def ctorK5 (cR : CallM) (n : Nat) (vis0 vis T lo ll nP nIdx rs isP lg nF cvC cvTa : Word) :
-    Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (rc, m) => if rc.headD 0 = 0 then none
-    else ctorK6 cR n vis0 vis T lo ll nP nIdx rs isP lg nF cvC (rc.tail.headD 0) (rc.tail.tail.headD 0)
-      (rc.tail.tail.tail.headD 0) (cR (n + 2) "open_pis_at_fvars_f" [nP, rdW (m.arr64 EREC) (cvTa + 3), 0] m)
-/-- After `struct_ctor_resid_ok`. -/
-def ctorK4 (cR : CallM) (n : Nat) (vis0 vis T lo ll nP nIdx rs isP lg nF cvC cvTa : Word) :
-    Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (rr, m) => if rr.headD 0 = 0 then none
-    else ctorK5 cR n vis0 vis T lo ll nP nIdx rs isP lg nF cvC cvTa
-      (cR (n + 2) "open_pis_at_fvars_f" [nP, rdW (m.arr64 EREC) (cvC + 3), 0] m)
-/-- After `strip_pis`. -/
-def ctorK3 (cR : CallM) (n : Nat) (vis0 vis T lo ll nP nIdx rs isP lg nF cvC cvTa : Word) :
-    Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (rs', m) => if rs'.headD 0 = 0 then none
-    else ctorK4 cR n vis0 vis T lo ll nP nIdx rs isP lg nF cvC cvTa
-      (srW (n + 2) m T lo ll nP nF nIdx (rs'.tail.tail.tail.headD 0))
-/-- After `check_constant_val`. -/
-def ctorK2 (cR : CallM) (n : Nat) (vis0 vis T lo ll nP nIdx rs isP lg nF cvC cvTa : Word) :
-    Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (_, m) => ctorK3 cR n vis0 vis T lo ll nP nIdx rs isP lg nF cvC cvTa
-      (stripF 6 m [nP + nF, rdW (m.arr64 EREC) (cvC + 3)])
-
-/-- **The model of `check_sum_ctor(vis0, vis, T, lo, ll, nP, nIdx, rs, isP, lg, cvC, nF, cvTa)`**
-(its callees at exec fuel `n + 2`). -/
-def ctorW (cR : CallM) (n : Nat) (m : Mem) (vis0 vis T lo ll nP nIdx rs isP lg cvC nF cvTa : Word) :
-    Option (List Word × Mem) :=
-  ctorK2 cR n vis0 vis T lo ll nP nIdx rs isP lg nF cvC cvTa (cR (n + 2) "check_constant_val" [vis, cvC] m)
-
-section arms
-variable (cR : CallM) (n : Nat) (m : Mem) (vis0 vis T lo ll nP nIdx rs isP lg nF cvC cvTa cqO cqL cqB : Word)
-  (r : List Word)
-theorem ctorK6_no (h : r.headD 0 = 0) :
-    ctorK6 cR n vis0 vis T lo ll nP nIdx rs isP lg nF cvC cqO cqL cqB (some (r, m)) = none := by
-  simp only [ctorK6]; rw [ite_eq_left h]
-theorem ctorK5_no (h : r.headD 0 = 0) :
-    ctorK5 cR n vis0 vis T lo ll nP nIdx rs isP lg nF cvC cvTa (some (r, m)) = none := by
-  simp only [ctorK5]; rw [ite_eq_left h]
-theorem ctorK4_no (h : r.headD 0 = 0) :
-    ctorK4 cR n vis0 vis T lo ll nP nIdx rs isP lg nF cvC cvTa (some (r, m)) = none := by
-  simp only [ctorK4]; rw [ite_eq_left h]
-theorem ctorK3_no (h : r.headD 0 = 0) :
-    ctorK3 cR n vis0 vis T lo ll nP nIdx rs isP lg nF cvC cvTa (some (r, m)) = none := by
-  simp only [ctorK3]; rw [ite_eq_left h]
-end arms
-attribute [ind_grind] ctorK6_no ctorK5_no ctorK4_no ctorK3_no
-
-/-! ## `check_sum_ctor`: the relation to the twin -/
 
 /-- **`checkSumCtor` is its head followed by `cscTailT`** (definitionally). -/
 theorem checkSumCtor_eq (fe₀ fe : IFEnv) (T : NIdx) (lps : List NIdx) (nP nIdx : Nat) (resSort : LIdx)
