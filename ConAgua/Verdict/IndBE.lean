@@ -4,7 +4,6 @@ import ConAgua.Arena.IndInstallSpec.CapsProg
 import ConAgua.Arena.IndInstallSpec.DecCNS
 import ConAgua.Arena.IndRealApdT
 import ConAgua.Arena.IndRealIlpL
-import ConAgua.Arena.IndSumSpec.SumProg
 import ConAgua.Arena.IndSumSpec.TblProg
 import ConAgua.Arena.KnotEntry
 import ConAgua.Arena.RecGenSpec.OcW

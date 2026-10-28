@@ -3,7 +3,6 @@ import ConAgua.Verdict.BlkE3
 import ConAgua.Verdict.DeclValsE
 import ConAgua.Verdict.IndA7
 import ConAgua.Verdict.IndBClm
-import ConAgua.Verdict.IndBE
 import ConAgua.Verdict.IndBGrp
 import ConAgua.Verdict.IndBSum4
 

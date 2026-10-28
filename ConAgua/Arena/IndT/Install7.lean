@@ -1,5 +1,5 @@
 import ConAgua.Arena.IndT.Sum5
-import ConAgua.Arena.IndT.Install5
+import ConAgua.Arena.IndInstallSpec.InstallRec2PSl
 import ConAgua.Arena.IndInstallSpec.ConsBlockCtors
 import ConAgua.Arena.IndInstallSpec.Icbo
 import ConAgua.Arena.IndInstallSpec.NestCtx

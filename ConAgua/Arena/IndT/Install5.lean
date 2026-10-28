@@ -1,6 +1,4 @@
 import ConAgua.Arena.IndT.Sum3
-import ConAgua.Arena.IndInstallSpec.IcvgW
-import ConAgua.Arena.IndInstallSpec.InstallRec2PSl
 
 /-!
 # `check_struct_field_sorts_i` as a callee under `StageC`

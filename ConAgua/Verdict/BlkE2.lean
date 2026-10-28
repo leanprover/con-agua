@@ -1,5 +1,4 @@
 import ConAgua.Verdict.IndA4
-import ConAgua.Arena.IndT.IdxSorts
 
 /-!
 # `check_block_idx_sorts`' error claim
