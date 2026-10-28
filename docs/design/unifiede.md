@@ -2163,15 +2163,16 @@ the slots, as `m2c_*` in §3.7):
   (5), `DefEqSpineE` (3), `DefEqLazyE` (8), `DefEqTailE` (9), `DefEqLoopsE` (1), `DefEqSlotE` (3:
   `defeq_slot`, `defeq_body`, `is_def_eq_core`). Done: `DefEqQuickE`, `DefEqLamsE`, `DefEqPeelE`,
   `DefEqSpineE` (and `defeq_lams_inner`; §3.41);
-- [ ] `infer`: `Verdict/InferLeavesE` (`infer_const`), `InferBindE` (6: `infer_lams`/`infer_pis` and
+- [ ] `infer`: `Verdict/InferLeavesE` (`infer_const`; done, §3.43), `InferBindE` (6: `infer_lams`/`infer_pis` and
   their leaves), `InferSpineE` (4), `InferArmsE` (8), `InferKnotE` (4: `infer_body(_io)`, `infer`,
   `infer_io`).
 
 **C. Hand `Except` models**:
 
-- [ ] `Verdict/InferLeavesE`: `inferProjE`'s hand continuations (`inferProjE.j2`,
+- [x] `Verdict/InferLeavesE`: `inferProjE`'s hand continuations (`inferProjE.j2`,
   `.k_env_find_2`, `.k_infer_proj_at`) and `ipaE2–5`/`ipaEP` (`infer_proj_at`): with B's `infer`
   family;
+  Done (§3.43: generated `unified` models `ipE`, `ipaE`; `ip_ref`, `ipa_ref`).
 - [ ] `Verdict/IndBNfs`: `cnsEK1–3`, `cnfsE` (`classes_nfs`, nested loops; its claim `ClassesNfsE` is
   a field of `GrpG`/`TailG`): waits for nested-loop `unified` models in the generator (§3.3), or a
   hand unified model over `tmn_ref`;
@@ -2801,4 +2802,60 @@ Elaboration (user seconds, `lean` on the module, median of 3 interleaved runs, b
 72557e98): `Arena/WhnfCoreProj` 8.26 → 6.63, `WhnfCoreAppLoop` 6.31 → 1.66, `WhnfCoreStep` 1.44 →
 0.73, `Verdict/WhnfModels2E` 29.36 → 26.06, `WhnfProjE` + `WhnfAppE` 2.83 → –, `WhnfKnotE`,
 `WhnfIotaE`, `KnotAllE` 4.47 → 4.13; sum 52.67 → 39.21 (−26 %). No module is slower.
+
+### 3.43 Retirement, group B, `infer`, first landing (`infer_const`, `infer_proj`, `infer_proj_at`)
+
+The leaves of `Verdict/InferLeavesE` (and C's hand `Except` models of `infer_proj` and
+`infer_proj_at`). Each has one generated `unified` model and one refinement with `CorePost`, placed
+where the ok refinement was: `inferConstE`/`inferConst_ref` (`Arena/InferLeaves`), `ipaE`/`ipa_ref`
+(`Arena/InferProj`), `ipE`/`ip_ref` over `ip_grade` (`Arena/InferProj2`). The ok statements the
+knot reads (`inferConst_refines`, `InferProjOK` by `inferProj_refines`) are `RefE.coreSpec`
+one-liners, the claims the error knot reads (`inferConst_refinesE`, `InferProjOKE` by
+`inferProj_refinesE'`) `RefE.coreSpecE` one-liners; `Verdict/InferLeavesE` keeps only these three.
+Gone: the hand ok models `constArmK`, `ipaK1–5`/`ipaW`, `ipK1–4`/`ipHead`/`ipFirst`/`ipW` with their
+specs, `ipRef_trans`; the `errors` model `inferConstE`, the hand error models `inferProjE.*` (with
+the three-piece spec `inferProjTail/Mid_specE`) and `ipaE1–5`/`ipaEP`, `InferProjAtE`,
+`InferProjEProg`, the local `ld64_rdW_specOob`, `st64_specE`, `ErrClaim.of_run_eq'` (the kit's
+`ErrClaim.of_run_err`).
+
+| function | before: ok refinement + error claim | after | change |
+|---|---:|---:|---:|
+| `infer_const` | 49 + 112 = 161 | `inferConst_ref` 90 + 2 one-liners 19 = 109 | −32 % |
+| `infer_proj_at` | 157 + 190 (with `InferProjAtE`, `_holds`) = 347 | `ipa_ref` 184 | −47 % |
+| `infer_proj` | 109 + 250 = 359 | `ip_grade` 176 + `ip_ref` 18 + 2 one-liners 13 = 207 | −42 % |
+| **pairs** | **867** | **500** | **−42 %** |
+
+With the hand models, specs and helpers: 1 594 → 773 lines. Diff of the landing against master:
++738 −1 534.
+
+* **`G`**: `closedNV p nvFns = true` for `infer_const` and `infer_proj_at` (every callee lifted);
+  `InferG p n` (`knot`, `nv`; `Arena/InferProj`) for `infer_proj`, whose `infer`/`infer_io`/`whnf`
+  stay `callE` (ok halves the knot's slots). `find_table`'s program (read only on a miss) is now an
+  ok-side argument, `ProjProg` (`inferProj_refines` takes it; `DefEqKnot` passes `hq.projp`).
+* **The generator now takes both**: `l_model … errors` timed out on `infer_proj` and `finish`
+  failed on `infer_proj_at`, hence the hand models. In `unified` mode with the lifted callees
+  `ipaE` generates with `simp []` in a few seconds, `ipE` with `simp []`, `heartbeats 2000000` and
+  `cut 1` (the `infer`/`infer_io` branch).
+* `infer_proj_at`'s unified model drops the bound of the final top store: the ok half restores
+  the top by `StackKept.restoreG'`.
+
+Elaboration (user seconds, `lean` on the module, median of 3 interleaved runs, base master
+619488ec, `_tmp/retire-infer/times1.txt`):
+
+| module | base | new | |
+|---|---:|---:|---|
+| `Arena/InferProj2` | 2.01 | **83.77** | **slower (+81.8 s)**: `ipE`'s generated spec (≈ 76 s) … |
+| `Verdict/InferLeavesE` | 30.75 | 0.57 | … against the hand error models' specs here |
+| `Arena/InferProj` | 3.32 | **7.68** | **slower (+4.4 s)**: `ipaE`'s generated spec |
+| `Arena/InferLeaves`, `DefEqKnot`, `Verdict/InferKnotE`, `KnotAllE` | 25.35 | 27.64 | |
+| **sum** | **61.43** | **119.66** | **+95 %** |
+
+`ipE` is the cost: one generated step over every path of `infer_proj` (the miss block's nested
+`if`s and four lifted calls after `find_proj`), proved for both posts. Recipes tried: the default
+`finish` and `finish [tierW, idxW, tfld, tcnt]` fail, `simp [] locals` fails, `simp [tierW, idxW,
+tfld, tcnt]` takes as long (79 s), without `cut 1` 105 s. The old error model was proved in three
+pieces cut by `seqTake`/`seqDrop` (the head, the record, the `find_proj` call on); `cut k` cuts once
+and only after an `if` whose branches both fall through, which `infer_proj`'s miss block (its `then`
+branch fails) is not. **Generator wish**: `cut` at a statement whose `if`'s failing branch ends in
+`fail` (or several cuts), so `ipE`'s step splits as the old hand pieces did.
 
