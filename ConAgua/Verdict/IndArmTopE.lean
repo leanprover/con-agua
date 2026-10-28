@@ -74,8 +74,7 @@ theorem indArmVerdict_proved : IndArmVerdict := by
   have hU : UceProg (Prog.subPB bs checkerProg) :=
     ⟨checkerProg_uceLookupsPB bs, strLitSupported_core _ hkp.knot.str⟩
   have hW : WtE (Prog.subPB bs checkerProg) :=
-    wtE_of hkp hnv (by prog_bundle []) (by prog_bundle []) (by prog_bundle []) (by prog_bundle [])
-      (by prog_bundle []) (by prog_bundle [])
+    wtE_of hkp hnv (by prog_bundle [])
   have hcE : CoreStubsE (Prog.subPB bs checkerProg) := hkp.toKnotTopProg.coreStubsE hnv
   have hCns : CnsProg (Prog.subPB bs checkerProg) := by prog_bundle []
   have hK53 : K53Look (Prog.subPB bs checkerProg) := by prog_bundle []

@@ -173,46 +173,6 @@ l_model installBasisDecl_specE (p : Prog) (hB : BasisProg p)
   heartbeats 400000 simp [] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
-/-- After the head's install: the rest, through `callW` (the recursion). -/
-def ibdsK1 (n : Nat) (o l : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r1, m1) =>
-    match callW p n "install_basis_decls" [r1.headD 0, o + 1, l - 1] m1 with
-    | none => none
-    | some (r2, m2) => some ([r2.headD 0], m2)
-
-/-- **The model of `install_basis_decls(vis, o, l)`.** -/
-def ibdsW : Nat → Mem → Word → Word → Word → Option (List Word × Mem)
-  | 0, _, _, _, _ => none
-  | n + 1, m, vis, o, l =>
-    if l = 0 then some ([vis], m)
-    else ibdsK1 p n o l (callW p n "install_basis_decl" [vis, rdW (m.arr64 IW) o] m)
-
-theorem ibdsW_step (n : Nat) (m : Mem) (vis o l : Word) : ibdsW p (n + 1) m vis o l =
-    if l = 0 then some ([vis], m)
-    else ibdsK1 p n o l (callW p n "install_basis_decl" [vis, rdW (m.arr64 IW) o] m) := rfl
-theorem ibdsK1_some (n : Nat) (o l : Word) (r1 : List Word) (m1 : Mem) :
-    ibdsK1 p n o l (some (r1, m1)) =
-      match callW p n "install_basis_decls" [r1.headD 0, o + 1, l - 1] m1 with
-      | none => none
-      | some (r2, m2) => some ([r2.headD 0], m2) := rfl
-
-grind_pattern [ind_grind] ibdsW_step => ibdsW p (n + 1) m vis o l
-grind_pattern [ind_grind] ibdsK1_some => ibdsK1 p n o l (some (r1, m1))
-
-theorem ibds_specW (h : BasisProg p) (n : Nat) (s₀ : St) (vis o l : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "install_basis_decls" [vis, o, l]
-    ⦃fun r s' => LocEq s' s₀ ∧ ibdsW p n s₀.mem vis o l = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ h.ibds]
-  simp only [callFn, installBasisDeclsL]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        callW_spec p n "install_basis_decl", callW_spec p n "install_basis_decls"] <;>
-      finish (gen := 20) [rdW_eq]
-
 end models
 
 /-! ### The relational lemmas -/
@@ -278,36 +238,37 @@ theorem basisDec_mono (dn : NIdx → Option ConLeche.Name) (o l : Nat) :
     OMono (basisDec dn o l) :=
   OMono.decPL (f := fun m q => decCI (erA m) dn q) (fun _ => ⟨fun _ _ _ he h => he.2.decCI h⟩) o l
 
-/-- **`install_basis_decls` refines `installBasisDecls`** at the run level, by induction on the
-fuel (the recursion through `callW`). -/
-theorem ibds_rel {p : Prog} (hp : BasisProg p) (dn : NIdx → Option ConLeche.Name) :
-    ∀ (n : Nat) (m m' : Mem) (vis : Word) (fe : IFEnv) (a : AState) (o l : Word) (r : List Word)
-      (cis : List IConstantInfo),
-      callW p n "install_basis_decls" [vis, o, l] m = some (r, m') → StageR dn vis fe m a →
-      DecB (basisDec dn o.toNat l.toNat) m cis →
-      ∃ fe' a', (installBasisDecls fe cis).run a = .ok (fe', a') ∧
-        StageR dn (r.headD 0) fe' m' a' ∧ IWGrow m m' := by
+/-- **The model of `install_basis_decls(vis, o, l)`, both outcomes** (the recursion is the
+model's own; `install_basis_decl` by its unified model). -/
+l_model installBasisDecls_specE (p : Prog) (hB : BasisProg p)
+  fns [hB.ibds ↦ installBasisDeclsE]
+  specs [installBasisDecl_specE p hB n]
+  grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
+  heartbeats 400000 simp [] unified
+  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
+
+/-- **`install_basis_decls` refines `installBasisDecls`, both outcomes**, by induction on the
+fuel (the recursion is the model's): the head by `ibd_ref`, the rest by the induction
+hypothesis. -/
+theorem ibds_ref {p : Prog} (hB : BasisProg p) (dn : NIdx → Option ConLeche.Name) :
+    ∀ (n : Nat) {m : Mem} {vis : Word} {fe : IFEnv} {a : AState} {o l : Word}
+      {cis : List IConstantInfo}, StageR dn vis fe m a → DecB (basisDec dn o.toNat l.toNat) m cis →
+      RefE True (installBasisDeclsE p n m vis o l) (installBasisDecls fe cis) a
+        (fun v fe' a' => IbdPost dn m v.1 v.2 fe' a') := by
   intro n
   induction n with
-  | zero => intro m m' vis fe a o l r cis h; simp [callW_zero] at h
+  | zero => intros; rw [installBasisDeclsE.eq_1]; exact RefE.of_cls0 (by simp)
   | succ n ih =>
-  intro m m' vis fe a o l r cis h hS hD
-  obtain ⟨s', hs', -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (ibds_specW p hp (n + 1) ⟨m, Locals.init []⟩ vis o l) h
-  subst hs'
-  rw [ibdsW_step] at hW
+  intro m vis fe a o l cis hS hD
   by_cases hl : l = 0
-  · rw [ite_eq_left hl] at hW
-    simp only [Option.some.injEq, Prod.mk.injEq] at hW
-    obtain ⟨rfl, hm⟩ := hW
+  · rw [installBasisDeclsE.arm1 p n m vis o l hl]
     subst hl
     have : cis = [] := by
       simpa [DecB, basisDec, decPL] using hD.symm
     subst this
-    rw [← hm]
-    exact ⟨fe, a, rfl, by simpa using hS, IWGrow.refl _⟩
-  rw [ite_eq_right hl] at hW
-  -- the head
+    exact RefE.ret rfl ⟨hS, IWGrow.refl _⟩
+  rw [installBasisDeclsE.arm2 p n m vis o l hl]
   obtain ⟨k, hk⟩ : ∃ k, l.toNat = k + 1 := ⟨l.toNat - 1, by
     have : l.toNat ≠ 0 := fun e => hl (UInt64.toNat_inj.mp (by simpa using e)); omega⟩
   have hD' : basisDec dn o.toNat (k + 1) (truncM m) = some cis := by rw [← hk]; exact hD
@@ -321,25 +282,14 @@ theorem ibds_rel {p : Prog} (hp : BasisProg p) (dn : NIdx → Option ConLeche.Na
   obtain ⟨w0, hw0, rfl⟩ : ∃ w0, (iwA m)[o.toNat]? = some w0 ∧ w0.toNat = v := by
     simp only [iwN, nat?, Option.map_eq_some_iff] at hvm; exact hvm
   have ew : rdW (m.arr64 IW) o = w0 := by simp [rdW, iwA] at hw0 ⊢; simp [hw0]
-  rw [ew] at hW
-  cases h1 : callW p n "install_basis_decl" [vis, w0] m with
-  | none => rw [h1] at hW; simp [ibdsK1] at hW
-  | some rm1 =>
-  obtain ⟨r1, m1⟩ := rm1
-  rw [h1, ibdsK1_some] at hW
-  obtain ⟨s1, hs1, -, fe1, a1, hrun1, hS1, hg1⟩ := RefE.run_okW (s₀ := ⟨m, Locals.init []⟩)
-    (installBasisDecl_specE p hp n _ vis w0) (ibd_ref hp n hS hci') h1
-  subst hs1
-  -- the rest
-  cases h2 : callW p n "install_basis_decls" [r1.headD 0, o + 1, l - 1] s1.mem with
-  | none => rw [h2] at hW; simp at hW
-  | some rm2 =>
-  obtain ⟨r2, m2⟩ := rm2
-  rw [h2] at hW
-  simp only [Option.some.injEq, Prod.mk.injEq] at hW
-  obtain ⟨hr, hm2⟩ := hW
-  subst hr
-  rw [← hm2]
+  rw [ew]
+  have h1 := ibd_ref hB n hS hci'
+  simp only [installBasisDecls]
+  rcases e1 : installBasisDeclE p n m vis w0 with e1 | ⟨r1, m1⟩ <;> rw [e1] at h1
+  · rw [installBasisDeclsE.k_install_basis_decl.none]; exact RefE.bind_left h1
+  obtain ⟨fe1, a1, hrun1, hR1⟩ := h1
+  rw [installBasisDeclsE.k_install_basis_decl.arm1]
+  refine RefE.bind_right hrun1 ?_
   have hob : o.toNat + 1 < 2 ^ 64 := by
     have := (Array.getElem?_eq_some_iff.mp hw0).1
     have := hS.2.2.2.1; simp only [iwA] at *; omega
@@ -348,12 +298,8 @@ theorem ibds_rel {p : Prog} (hp : BasisProg p) (dn : NIdx → Option ConLeche.Na
     rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simp; omega))]; simp; omega
   have hDt : DecB (basisDec dn (o + 1).toNat (l - 1).toNat) m cs := by
     rw [ho1, hl1]; exact decPL_tail hD'
-  obtain ⟨fe', a', hrun2, hS2, hg2⟩ :=
-    ih s1.mem m2 (r1.headD 0) fe1 a1 (o + 1) (l - 1) r2 cs h2 hS1
-      (DecB.grow (basisDec_mono dn _ _) hg1 hDt)
-  refine ⟨fe', a', ?_, by simpa using hS2, hg1.trans hg2⟩
-  simp only [installBasisDecls, StateT.run_bind, hrun1, exc_ok_bind']
-  exact hrun2
+  exact (ih hR1.stage (DecB.grow (basisDec_mono dn _ _) hR1.grow hDt)).mono
+    fun _ _ _ hR => ⟨hR.stage, hR1.grow.trans hR.grow⟩
 
 local notation "V" => ConLeche.CheckMode.verified
 
@@ -381,10 +327,10 @@ theorem installBasisDecls_refines (p : Prog) (hp : BasisProg p) (n : Nat) (s₀ 
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (installBasisDecls fe cis) a₀ ∧
       StageR dn (r.headD 0) (AM.res (installBasisDecls fe cis) a₀) s'.mem
         (AM.st (installBasisDecls fe cis) a₀) ∧ IWGrow s₀.mem s'.mem; ⊤⦄ := by
-  refine triple_post (callW_spec p n "install_basis_decls" [vis, o, l] s₀) ?_
-  rintro r s' ⟨hl, hc⟩
-  obtain ⟨fe', a', hrun, hS', hg⟩ := ibds_rel hp dn n s₀.mem s'.mem vis fe a₀ o l r cis hc hS hD
+  refine triple_post (RefE.triple (installBasisDecls_specE p hp n s₀ vis o l)
+    (ibds_ref hp dn n hS hD)) ?_
+  rintro r s' ⟨hl, fe', a', hrun, hR⟩
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
-  exact ⟨hl, hok, by rw [hst, hres]; exact hS', hg⟩
+  exact ⟨hl, hok, by rw [hst, hres]; exact hR.stage, hR.grow⟩
 
 end L.Arena
