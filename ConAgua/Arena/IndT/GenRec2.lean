@@ -1,5 +1,5 @@
 import ConAgua.Arena.IndT.GenRec1
-import ConAgua.Arena.IndT.RecGen7
+import ConAgua.Verdict.IndBRec3
 import ConAgua.Arena.IndT.RecGen27
 import ConAgua.Arena.RecGenSpec.CftW
 import ConAgua.Arena.IndInstallSpec.GfcW
