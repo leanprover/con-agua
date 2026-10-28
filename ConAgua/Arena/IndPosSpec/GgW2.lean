@@ -535,7 +535,7 @@ theorem nbContK1_some (cR : CallM) (k : Nat) (keyF : MW13) (vis ctx fu po pl kb 
     if r.headD 0 = 0 then none
     else if aL < r.tail.headD 0 then none
     else nbContK2 cR k keyF vis ctx fu po pl kb nn us aO aL ns (r.tail.headD 0) (nhiW m1 ctx pl)
-      (p2ccW k m1 ctx (nhiW m1 ctx pl) nn aO (r.tail.headD 0) (aO + r.tail.headD 0) (aL - r.tail.headD 0)) := rfl
+      (nccR cR k m1 ctx (nhiW m1 ctx pl) nn aO (r.tail.headD 0) (aO + r.tail.headD 0) (aL - r.tail.headD 0)) := rfl
 theorem nbKeyK2_some (k : Nat) (newF : MW13) (vis ctx fu po pl kb nn us dO dL nPc cty ns key : Word) (r : List Word) (m2 : Mem) :
     nbKeyK2 k newF vis ctx fu po pl kb nn us dO dL nPc cty ns key (some (r, m2)) =
     if r.headD 0 ≠ 0 then
@@ -858,9 +858,9 @@ theorem nbCont_step (s₀ : St) (vis ctx fu po pl kb nn us aO aL ns : Word) :
   simp only [invoke_eq _ L.pcont, callFn, nestContL]
   vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
       nt_spec' p L.nt n, nestCtxHiAt_specE p R.hi n,
-      nestContChecks_spec p L.nit.no L.nit.hoa L.hpa L.usl.hbp L.dc.hf L.hpc L.hcc n, posRec4_specW p R.ha R.h4 n,
+      hcR n "nest_cont_checks", posRec4_specW p R.ha R.h4 n,
       nestInstType_spec' p L.nit cR hcR n, hKey] <;>
-    simp_all [nbContW_succ, nbContK1_some, nbContK2_some, nbContK3_some, nbContK4_some, nbAppK6_some,
+    simp_all [nbContW_succ, nbContK1_some, nbContK2_some, nbContK3_some, nbContK4_some, nbAppK6_some, nccR,
       LocEq, BinOp.eval, St.setLocs_cons, Cmp.eval, St.setLoc_loc, St.setLoc_mem,
       St.setLocs_nil, Sig.retVal, Sig.retOr, Locals.init_cons_zero, Locals.init_cons_succ]
 

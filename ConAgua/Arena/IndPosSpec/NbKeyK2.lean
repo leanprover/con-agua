@@ -115,6 +115,9 @@ def nbContK2 (cR : CallM) (k : Nat) (keyF : MW13) (vis ctx fu po pl kb nn us aO 
     Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (_, m2) => nbContK3 cR k keyF vis ctx fu po pl kb nn us aO aL ns nPc hp (posRecW m2 [nn, us, aO, nPc])
+/-- `nest_cont_checks(ctx, hp, n, dsOff, dsLen, idxOff, idxLen)` through its run. -/
+def nccR (cR : CallM) (k : Nat) (m : Mem) (ctx hp nn dO dL iO iL : Word) : Option (List Word × Mem) :=
+  cR k "nest_cont_checks" [ctx, hp, nn, dO, dL, iO, iL] m
 def nbContK1 (cR : CallM) (k : Nat) (keyF : MW13) (vis ctx fu po pl kb nn us aO aL ns : Word) :
     Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
@@ -122,7 +125,7 @@ def nbContK1 (cR : CallM) (k : Nat) (keyF : MW13) (vis ctx fu po pl kb nn us aO 
     if r.headD 0 = 0 then none
     else if aL < r.tail.headD 0 then none
     else nbContK2 cR k keyF vis ctx fu po pl kb nn us aO aL ns (r.tail.headD 0) (nhiW m1 ctx pl)
-      (p2ccW k m1 ctx (nhiW m1 ctx pl) nn aO (r.tail.headD 0) (aO + r.tail.headD 0) (aL - r.tail.headD 0))
+      (nccR cR k m1 ctx (nhiW m1 ctx pl) nn aO (r.tail.headD 0) (aO + r.tail.headD 0) (aL - r.tail.headD 0))
 
 def nbKeyK2 (k : Nat) (newF : MW13) (vis ctx fu po pl kb nn us dO dL nPc cty ns key : Word) :
     Option (List Word × Mem) → Option (List Word × Mem)

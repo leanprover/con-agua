@@ -564,12 +564,4 @@ theorem pos2PinW_afr {m m' : Mem} {i : Word} {r : List Word} (h : pos2PinW m i =
   simp only [pos2PinW] at h
   afr_auto h []
 
-theorem p2ccW_afr {k : Nat} {m m' : Mem} {ctx hp nn dO dL iO iL : Word} {r : List Word}
-    (h : p2ccW k m ctx hp nn dO dL iO iL = some (r, m')) : AFr m m' := by
-  cases k with
-  | zero => simp [p2ccW] at h
-  | succ k =>
-  simp only [p2ccW, p2ccK1.eq_def, p2ccK2.eq_def] at h
-  afr_auto h [noaW_afr _ _ _ _ _ _ _ _ _ _, pos2PinW_afr, cpW_afr _ _ _ _ _ _ _]
-
 end L.Ind

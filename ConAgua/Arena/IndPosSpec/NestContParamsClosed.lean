@@ -84,35 +84,6 @@ theorem pos2Pin_spec (p : Prog) (hp : p.lookup "pin_at" = some pinAtL) (n : Nat)
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64] <;>
       finish [pos2PinW, pinW_eq, rdW_eq]
 
-/-- The model of `nest_cont_checks(ctx, hp, n, dsOff, dsLen, idxOff, idxLen)`. -/
-def p2ccW : Nat → Mem → Word → Word → Word → Word → Word → Word → Word → Option (List Word × Mem)
-  | 0, _, _, _, _, _, _, _, _ => none
-  | k + 1, m, ctx, hp, nn, dO, dL, iO, iL =>
-    p2ccK1 k hp nn dO dL (noaW k m (rdW (m.arr64 IW) ctx) (rdW (m.arr64 IW) (ctx + 1))
-      (rdW (m.arr64 IW) (ctx + 4)) hp iO iL)
-
-section arms
-variable (k : Nat) (m1 m2 : Mem) (hp nn dO dL : Word) (r : List Word)
-theorem p2ccK2_nz (h : ¬ r.headD 0 = 0) : p2ccK2 (some (r, m2)) = some ([0], m2) := by rw [p2ccK2, ite_eq_right h]
-end arms
-attribute [ind_grind] p2ccK2_nz
-
-theorem nestContChecks_spec (p : Prog) (hl : NoLook p) (hoa : p.lookup "nest_occ_any" = some nestOccAnyL)
-    (hpa : p.lookup "pin_at" = some pinAtL) (hb : BvbProg p) (hf : HfF p)
-    (hpc : p.lookup "nest_cont_params_closed" = some nestContParamsClosedL)
-    (hp : p.lookup "nest_cont_checks" = some nestContChecksL) (n : Nat) (s₀ : St)
-    (ctx hpw nn dO dL iO iL : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "nest_cont_checks" [ctx, hpw, nn, dO, dL, iO, iL]
-    ⦃fun r s' => LocEq s' s₀ ∧ p2ccW n s₀.mem ctx hpw nn dO dL iO iL = some ([r.headD 0], s'.mem); ⊤⦄ := by
-  simp only [invoke_eq _ hp, callFn, nestContChecksL]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        nestOccAny_spec p hl hoa n, pos2Pin_spec p hpa n, nestContParamsClosed_spec p hb hf hpc n] <;>
-      finish (gen := 20) [p2ccW, p2ccK1, rdW_eq]
-
 end L.Ind
 
 end
