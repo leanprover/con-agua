@@ -1,6 +1,5 @@
 import ConAgua.Arena.IndRealMemoCrT
 import ConAgua.Arena.CrOKFrame
-import ConAgua.Arena.Verdict
 import ConAgua.Arena.DeclCvgT
 import ConAgua.Arena.IndT.WalkC
 import ConAgua.Verdict.VCtx

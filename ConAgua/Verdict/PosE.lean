@@ -1,6 +1,5 @@
 import ConAgua.Verdict.PosE3Fm
 import ConAgua.Arena.IndPosSpec.BvbWMfr
-import ConAgua.Arena.Verdict
 import ConAgua.Arena.IndPosSpec.KlB
 import ConAgua.Arena.IndPosSpec.WCtx
 import ConAgua.Arena.IndPosSpec.OneK
