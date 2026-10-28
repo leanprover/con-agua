@@ -15,9 +15,8 @@ The three families' error halves of the knot's slots one level up, put together:
   (`defeqArg_refinesE` over the `defeq` slot and `defeq_e`'s `defeqE_refinesE`);
 * the `whnf_core`/`whnf` slots (`whnfSlotsE_of`, `WhnfKnotE.lean`), over `defeq_list`'s claim
   (`defeqList_refinesE`, `DefEqLoopsE.lean`);
-* the `defeq` slot (`KnotAllProg.defeqSlotE_all`, `DefEqAllE.lean`), over the whnf family's four
-  claims (`DefeqWhnfE`), each from its `Whnf*E.lean` proof. The whnf family's `QuickDefeqWE` and
-  the defeq family's `QuickDefeqSpecE` are the same proposition (bridged by unfolding).
+* the `defeq` slot (`KnotAllProg.defeqSlotE_all`, `DefEqAllE.lean`), over the whnf family's two
+  claims (`DefeqWhnfE`), each from its `Whnf*E.lean` proof.
 
 `KnotAllProg.knotStepE` is the error knot's step (`KnotStepE`), `KnotAllProg.knotE_all` the error
 knot at every fuel (`knotE_upTo`). `KnotTopProg.coreStubsE`: the three `*_core` stage stubs'
@@ -65,15 +64,8 @@ theorem KnotAllProg.whnfCE : WhnfCalleesE p :=
   ⟨defeqList_refinesE p hq.iotaRec.toIotaProg'⟩
 
 include hq hnv in
-/-- **The whnf family's four error claims the `defeq` family takes** (`DefeqWhnfE`). -/
+/-- **The whnf family's two error claims the `defeq` family takes** (`DefeqWhnfE`). -/
 theorem KnotAllProg.defeqWhnfE : DefeqWhnfE p where
-  boolTrueShortcut := fun n hk hkE F s₀ a₀ dn vis fe M eb mode d a hF hn hs ha =>
-    RefE.coreSpecE (btsE_spec p hq.body.lazy.mid.bts (n + 1) s₀ mode vis d a) hnv hkE
-      (bts_ref p hq.body.lazy.mid n hk F s₀ a₀ dn vis fe M eb mode d a hF hn hs ha)
-  propIrrel := fun n hk hkE F s₀ a₀ dn vis fe M eb mode d a b hF hn hs ha hb =>
-    RefE.coreSpecE (piE_spec p hq.body.stuck.propIrrel (n + 1) s₀ mode vis d a b) hnv
-      ⟨hkE, proofIrrelE_of p hq.m2c.toIotaProg4 (LvlDen.of_den coreDen_of) hnv⟩
-      (pi_ref p (KnotAllProg.stuck hq) n hk F s₀ a₀ dn vis fe M eb mode d a b hF hn hs ha hb)
   reduceProjCore := fun n hk hkE F hF hn s₀ a₀ dn vis fe MM eb mode d sn i c hs hsn hc =>
     RefE.coreSpecE (reduceProjCoreE_spec p hq.core.rproj hq.core.plit (n + 1) s₀ mode vis d sn i c) hnv
       hkE (rp_ref p hq.core (strLitSupported_core p hq.str) (strLitCtor_core p hq.str)
@@ -106,7 +98,8 @@ theorem KnotTopProg.coreStubsE {p : Prog} (hq : KnotTopProg p)
   inferTypeCore := inferTypeCore_refinesE p hq.entry (KnotAllProg.knotE_all hq.knot hnv)
   ensureSortCore := ensureSortCore_refinesE p hq.entry hq.knot.infer.leaf (knot_all hq.knot)
     (KnotAllProg.knotE_all hq.knot hnv)
-  isDefEqCore := L.Ind.isDefEqCore_stageE hq.entry fun n => (KnotAllProg.knotE_all hq.knot hnv n).defeq
+  isDefEqCore := L.Ind.isDefEqCore_stageE hq.entry (fun n => (knot_all hq.knot n).defeq)
+    fun n => (KnotAllProg.knotE_all hq.knot hnv n).defeq
 
 end L.Arena
 
