@@ -3,10 +3,7 @@ import ConAgua.Arena.DefEqLeaves2
 import ConAgua.Arena.CoreDen
 import ConAgua.Arena.InferBodySpine
 import ConAgua.Arena.WhnfCoreProj
-import ConAgua.Arena.RefECore
-import ConAgua.Arena.KnotE
 import ConAgua.L.ModelGen
-import ConAgua.Checker.NoVerdictTree
 
 /-!
 # `inferProj`: `proj_type_at` and `infer_proj_at` (lane `defeq2`, helper `defeq2-proj`)

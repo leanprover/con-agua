@@ -1,5 +1,4 @@
 import ConAgua.Verdict.InferBindE
-import ConAgua.Arena.InferBodyDisp
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen

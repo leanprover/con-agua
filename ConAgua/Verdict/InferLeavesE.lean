@@ -1,4 +1,3 @@
-import ConAgua.Arena.InferLeaves
 import ConAgua.Arena.InferProj2
 
 /-!

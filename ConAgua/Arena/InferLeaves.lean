@@ -10,9 +10,7 @@ import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
 import ConAgua.Arena.WhnfCoreApp
 import ConAgua.Arena.WhnfCoreRefine
-import ConAgua.Arena.RefECore
 import ConAgua.L.ModelGen
-import ConAgua.Checker.NoVerdictTree
 
 /-!
 # The leaf inference functions of `Infer.lean` (lane `defeq`)

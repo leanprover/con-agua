@@ -1,6 +1,4 @@
 import ConAgua.Verdict.InferSpineE
-import ConAgua.Arena.IndSumSpec.DecCVpGrow
-import ConAgua.Arena.InferBodyBind
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
