@@ -48,10 +48,9 @@ theorem indArmSpecE_of {p : Prog} (hkp : KnotStageProg p) (hV : ValProg p)
   intro dn hdn pins n hn m a vis fe env block nP o l w _ hw hdec hb _ hT _ hfold hden hlpd hM e hc
   subst hw
   have hcE : CoreStubsE p := hkp.toKnotTopProg.coreStubsE hnv
-  have hCcv : CcvE p := ccvE_of hkp hV hApd hCrk hnv hcE hU.toUceLookups
   exact cid_claim3 hkp hV hOpf hLC hLT hApd hCrk hIlpf hLz P hcl hfs hfr hcl2 hfs2 hclR hfR hclT hfT
     hclC hfC hkP hkt hkr hnv hU hNfs
-    (checkSumTeleE_of ⟨⟨⟨hnv, hcE⟩, hU⟩, hWt⟩) (checkSumCtorsE_of hnv hcE hCcv) (checkStructFieldSortsIE_of hnv hcE)
+    (checkSumTeleE_of ⟨⟨⟨hnv, hcE⟩, hU⟩, hWt⟩) (checkSumCtorsE_of hnv hcE hU) (checkStructFieldSortsIE_of hnv hcE)
     hn hdn hc hT hfold
     (decB_decEBlk_of_decCIs hdec) hb hden hM hfB hfRc hclH hfH hclM hfM hclMc hfMc hlpd
 

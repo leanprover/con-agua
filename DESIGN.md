@@ -3120,7 +3120,7 @@ whole-buffer parse accepts) and the final memory is related to `a'` by `ArenaD` 
 `StateDR`. Only `propext`, `Classical.choice`, `Quot.sound`. No `sorry` in `ConAgua/Front`.
 (2026-10-28: the generic loop model `runW`/`runI`, `frontLineW` and `lineKW` are gone; `front_line`
 and `front_run` have generated models and one refinement each for both outcomes, `frontLine_ref`
-(`LineRef.lean`) and `frontRun_ref` (`FrontRunRef.lean`), `docs/design/unifiede.md` §3.34.)
+(`LineRef.lean`) and `frontRun_ref` (`FrontRunRef.lean`), `docs/design/unifiede.md` §3.36.)
 
 * **Expression lines.** `front_line` reads a line's fields with `rec_line_loop` (names, levels);
   if that finds no name/level payload, with `rec_expr_loop` (`apply_any`). All ten `ExprRec` kinds

@@ -6,7 +6,9 @@ import ConAgua.Arena.DefEqStuckShape
 
 `structEtaCertWith` in L's pieces: the constructor's head and spine (`with`), the type's head
 and spine (`wtb`, `setWtbT`), then `go` (`DefEqStuckGo.lean`). The slices pushed on the way stay
-on the stack until `with` puts the top back (`GrowRef.restore`).
+on the stack until `with` puts the top back (`GrowPost.restore`). One refinement per piece for
+both outcomes (`RefE` over its unified model, `Verdict/WhnfModels7E.lean`); the errors are the
+knot's slots' and `defeq_lst`'s (`SetG`).
 -/
 
 open ConRon.Arena
@@ -97,63 +99,6 @@ theorem setWtbT_ind (T : NIdx) (us' : LsIdx) (ht : (hh.tag == ETag.const) = true
 
 end wtbRuns
 
-/-! ## The model of `struct_eta_cert_wtb` -/
-
-section wbK
-variable (p : Prog) (n : Nat) (mode vis d b us c pc ao an wtb : Word)
-
-def wbK3 (T q us2 : Word) (res : Option (List Word × Mem)) : Option (Word × Mem) :=
-  match res with
-  | none => none
-  | some (r, m) => call1W p n "struct_eta_cert_go"
-      [mode, vis, d, b, us, c, pc, T, q, us2, ao, an, r.headD 0, r.tail.headD 0] m
-
-def wbK2 (T us2 : Word) (res : Option (List Word × Mem)) : Option (Word × Mem) :=
-  match res with
-  | none => none
-  | some (r, m) =>
-    if r.headD 0 = 0 then some (0, m)
-    else if rdW (m.arr64 EREC) (r.tail.headD 0) ≠ 3 then some (0, m)
-    else wbK3 p n mode vis d b us c pc ao an T (r.tail.headD 0) us2
-      (callW p n "get_app_args" [wtb] m)
-
-/-- **The model of `struct_eta_cert_wtb`** past `get_app_fn`'s run. -/
-def wbK1 (res : Option (List Word × Mem)) : Option (Word × Mem) :=
-  match res with
-  | none => none
-  | some (r, m) =>
-    if r.headD 0 >>> 28 ≠ 3 then some (0, m)
-    else if tierW (r.headD 0) ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
-    else if tcnt m CONST (tierW (r.headD 0)) ≤ idxW (r.headD 0) then none
-    else wbK2 p n mode vis d b us c pc ao an wtb
-      (tfld m CONST (tierW (r.headD 0)) (idxW (r.headD 0)) 0)
-      (tfld m CONST (tierW (r.headD 0)) (idxW (r.headD 0)) 1)
-      (callW p n "env_find" [tfld m CONST (tierW (r.headD 0)) (idxW (r.headD 0)) 0, vis] m)
-
-variable (r : List Word) (m : Mem) (T us2 q : Word)
-
-theorem wbK3_some : wbK3 p n mode vis d b us c pc ao an T q us2 (some (r, m)) =
-    call1W p n "struct_eta_cert_go"
-      [mode, vis, d, b, us, c, pc, T, q, us2, ao, an, r.headD 0, r.tail.headD 0] m := rfl
-
-end wbK
-
-theorem setWtb_spec (p : Prog) (hq : StuckProg p) (n : Nat) (s₀ : St)
-    (mode vis d b us c pc ao an wtb : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "struct_eta_cert_wtb"
-      [mode, vis, d, b, us, c, pc, ao, an, wtb]
-    ⦃fun r s' => LocEq s' s₀ ∧ wbK1 p n mode vis d b us c pc ao an wtb
-      (callW p n "get_app_fn" [wtb] s₀.mem) = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hq.setWtb]
-  simp only [callFn, structEtaCertWtbL]
-  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rdW_spec, evalE_tld, tld,
-    evalE_cnt, tcntM, evalE_tierE, evalE_idxE,
-      callW_spec p n "get_app_fn", callW_spec p n "env_find", callW_spec p n "get_app_args",
-      callW_spec p n "struct_eta_cert_go"] <;>
-  simp_all [wbK1, wbK2, wbK3, call1W, tierW, idxW, LocEq, BinOp.eval,
-    St.setLocs_cons, CTL, EREC, Cmp.eval, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Sig.retVal, Sig.retOr,
-    Locals.init_cons_zero, Locals.init_cons_succ]
-
 /-- A step that only pushed (twin unchanged) in front of a run that grew the stack. -/
 theorem growRef_preG {α : Type} [Inhabited α] {T : AM α} {a₀ : AState} {dec : List Word → α}
     {dn : NIdx → Option ConLeche.Name} {m₀ m₁ m : Mem} {vis : Word} {fe : IFEnv} {M : ModeMaps}
@@ -165,9 +110,10 @@ theorem growRef_preG {α : Type} [Inhabited α] {T : AM α} {a₀ : AState} {dec
 theorem addW_toNat {x y : Word} (h : x.toNat + y.toNat < 2 ^ 64) : (x + y).toNat = x.toNat + y.toNat := by
   rw [UInt64.toNat_add, Nat.mod_eq_of_lt h]
 
-/-- **`struct_eta_cert_wtb` refines `setWtbT`** at the knot (its slices left on the stack). -/
+/-- **`struct_eta_cert_wtb` refines `setWtbT`, both outcomes** (its slices left on the stack): the
+errors are `struct_eta_cert_go`'s. -/
 @[refines_part ConRon.Arena.structEtaCertWith "the type's head and spine (setWtbT)"]
-theorem setWtb_refines (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : StuckCallees p)
+theorem secwtb_ref (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : StuckCallees p)
     (n : Nat) (hk : KnotUpTo p n) (F : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps)
     (eb mode d b us c pc ao an wtb : Word) (aargs : Array EIdx) (cvc : IConstantVal) (np nf : Nat)
@@ -176,71 +122,69 @@ theorem setWtb_refines (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : St
     (hvus : ∃ x c', a₀.store.view x = some (.const c' (decI us)))
     (hcvc : decCI (erecP s₀.mem) dn pc.toNat = some (.ctorInfo cvc np nf))
     (ha : SpineR s₀.mem ao an aargs) (hat : ao.toNat + an.toNat ≤ (spTop s₀.mem).toNat) :
-    GrowSpec p (n + 1) "struct_eta_cert_wtb" [mode, vis, d, b, us, c, pc, ao, an, wtb]
+    RefE (SetG p n) (secwtbE p (n + 1) s₀.mem mode vis d b us c pc ao an wtb)
       (setWtbT (coreKnot (decMode mode) fe id F) fe d.toNat (decE b) (decI c) (decI us) cvc
-        aargs.toList (decE wtb)) decBool s₀ a₀ dn vis fe M eb := by
-  apply L.M.triple_of_run
-  intro s r s' hs0 hrun
-  obtain ⟨hloc, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun
-    (setWtb_spec p hq n s₀ mode vis d b us c pc ao an wtb)
-  subst hs0
-  refine ⟨hloc, ?_⟩
+        aargs.toList (decE wtb)) a₀ (GrowPost decBool dn s₀.mem vis fe M eb ResH) := by
   have hS := hs.rel
   have hR := hS.arena.1
-  have hres : ∀ x : Word, some (x, s.mem) = some (r.headD 0, s'.mem) → HW x → ∀ v,
-      (setWtbT (coreKnot (decMode mode) fe id F) fe d.toNat (decE b) (decI c) (decI us) cvc
-        aargs.toList (decE wtb)).run a₀ = .ok (v, a₀) → v = (x != 0) →
-      GrowRef (setWtbT (coreKnot (decMode mode) fe id F) fe d.toNat (decE b) (decI c) (decI us) cvc
-        aargs.toList (decE wtb)) a₀ decBool dn s.mem vis fe M eb r s'.mem := by
-    intro x hxy hx v hv hvx
-    obtain ⟨h1, h3⟩ := some_pair_inj hxy
-    rw [← h3]
-    refine growRef_pure hS hv ?_ ?_
-    · rw [hvx, decBool, ← h1]
-    · unfold ResH; rw [← h1]; exact hx
-  obtain ⟨r₁, m₁, hc1, hW1⟩ := callW_cases rfl hW
-  obtain ⟨rfl, hh, hgaf⟩ := getAppFn_callW hq.leaf hR hwtb hc1
-  simp only [wbK1] at hW1
-  generalize r₁.headD 0 = h at hh hgaf hW1
-  rcases (Classical.em (h >>> 28 = 3)).symm with h3 | h3
-  · simp only [ne_eq, h3, not_false_eq_true, ↓reduceIte] at hW1
-    exact hres 0 hW1 hw0 _
-      (setWtbT_nonconst _ fe _ _ _ _ _ _ _ a₀ _ hgaf (by rw [decE_tag_const_beq _ hh]; simp [h3])) rfl
-  have hsc : ¬ (tierW h ≠ 0 ∧ rdW (s.mem.arr64 CTL) 1 = 0) := fun hsc => by simp [h3, hsc] at hW1
-  have hcc : ¬ tcnt s.mem CONST (tierW h) ≤ idxW h := fun hcc => by simp [h3, hsc, hcc] at hW1
-  simp only [h3, hsc, hcc, ne_eq, not_true_eq_false, ↓reduceIte] at hW1
-  have hvo : viewOK s.mem h CONST := ⟨hsc, by simpa using hcc⟩
-  obtain ⟨hv, hnw, huw⟩ := L.Ind.view_const_f s.mem a₀ hR h hh hvo h3
-  have hct : ((decE h).tag == ETag.const) = true := by rw [decE_tag_const_beq _ hh]; simp [h3]
-  generalize tfld s.mem CONST (tierW h) (idxW h) 0 = k at hnw hW1 hv
-  generalize tfld s.mem CONST (tierW h) (idxW h) 1 = us2 at huw hW1 hv
-  obtain ⟨r₂, m₂, hc2, hW2⟩ := callW_cases rfl hW1
-  obtain ⟨rfl, hfind, hfound⟩ := envFind_callW hq.leaf.core hS.env hnw hc2
-  simp only [wbK2] at hW2
+  have hl : RefE (SetG p n) (.ok ([0], s₀.mem) : Except Err (List Word × Mem)) (pure false : AM Bool)
+      a₀ (GrowPost decBool dn s₀.mem vis fe M eb ResH) :=
+    RefE.ret rfl (GrowPost.of_core (CorePost.ret hS rfl hw0))
+  simp only [secwtbE]
+  rcases c1 : callW p n "get_app_fn" [wtb] s₀.mem with _ | ⟨r₁, m₁⟩
+  · rw [liftE_none, secwtbE.k_get_app_fn.none]; exact RefE.of_cls0 (by simp)
+  rw [liftE_some]
+  obtain ⟨rfl, hh, hgaf⟩ := getAppFn_callW hq.leaf hR hwtb c1
+  simp only [secwtbE.k_get_app_fn]
+  generalize r₁.headD 0 = h at hh hgaf
+  by_cases h3 : h >>> 28 ≠ 3
+  · rw [ite_eq_left h3]
+    exact RefE.of_run_eq (setWtbT_nonconst _ fe _ _ _ _ _ _ _ a₀ _ hgaf
+      (by rw [decE_tag_const_beq _ hh]; simpa using h3)) hl
+  rw [ite_eq_right h3]
+  have h3' : h >>> 28 = 3 := by simpa using h3
+  by_cases hsc : tierW h ≠ 0 ∧ rdW (s₀.mem.arr64 CTL) 1 = 0
+  · rw [ite_eq_left hsc]; exact RefE.of_cls0 (by decide)
+  rw [ite_eq_right hsc]
+  by_cases hcc : tcnt s₀.mem CONST (tierW h) ≤ idxW h
+  · rw [ite_eq_left hcc]; exact RefE.of_cls0 (by decide)
+  rw [ite_eq_right hcc]
+  have hvo : viewOK s₀.mem h CONST := ⟨hsc, by simpa using hcc⟩
+  obtain ⟨hv, hnw, huw⟩ := L.Ind.view_const_f s₀.mem a₀ hR h hh hvo h3'
+  have hct : ((decE h).tag == ETag.const) = true := by rw [decE_tag_const_beq _ hh]; simp [h3']
+  generalize tfld s₀.mem CONST (tierW h) (idxW h) 0 = k at hnw hv
+  generalize tfld s₀.mem CONST (tierW h) (idxW h) 1 = us2 at huw hv
+  rcases c2 : callW p n "env_find" [k, vis] s₀.mem with _ | ⟨r₂, m₂⟩
+  · rw [liftE_none, secwtbE.k_env_find.none]; exact RefE.of_cls0 (by simp)
+  rw [liftE_some]
+  obtain ⟨rfl, hfind, hfound⟩ := envFind_callW hq.leaf.core hS.env hnw c2
+  simp only [secwtbE.k_env_find]
   by_cases h0 : r₂.headD 0 = 0
-  · simp only [h0, ↓reduceIte] at hW2
+  · rw [ite_eq_left h0]
     have hnone : fe.find? (decI k) = none := by rw [hfind]; simp only [decFound, h0, ↓reduceIte]
-    exact hres 0 hW2 hw0 _ (setWtbT_other _ fe _ _ _ _ _ _ _ a₀ _ hgaf _ _ hct hv
-      (fun cv caps e => by rw [hnone] at e; cases e)) rfl
+    exact RefE.of_run_eq (setWtbT_other _ fe _ _ _ _ _ _ _ a₀ _ hgaf _ _ hct hv
+      (fun cv caps e => by rw [hnone] at e; cases e)) hl
+  rw [ite_eq_right h0]
   obtain ⟨ci, hci⟩ := hfound h0
   have hfind' := find_of_found hfind h0 hci
   have hind := decCI_indK hci (erecP_ext _) hS.erec
-  rcases (Classical.em (rdW (s.mem.arr64 EREC) (r₂.tail.headD 0) = 3)).symm with h4 | h4
-  · simp only [h0, h4, ne_eq, not_false_eq_true, ↓reduceIte] at hW2
-    exact hres 0 hW2 hw0 _ (setWtbT_other _ fe _ _ _ _ _ _ _ a₀ _ hgaf _ _ hct hv
-      (fun cv caps e => hind.2 h4 cv caps (by rw [hfind'] at e; exact Option.some.inj e))) rfl
-  simp only [h0, h4, ne_eq, not_true_eq_false, ↓reduceIte] at hW2
-  obtain ⟨cvT, caps, hci_eq⟩ := hind.1 h4
+  by_cases h4 : rdW (s₀.mem.arr64 EREC) (r₂.tail.headD 0) ≠ 3
+  · rw [ite_eq_left h4]
+    exact RefE.of_run_eq (setWtbT_other _ fe _ _ _ _ _ _ _ a₀ _ hgaf _ _ hct hv
+      (fun cv caps e => hind.2 h4 cv caps (by rw [hfind'] at e; exact Option.some.inj e))) hl
+  rw [ite_eq_right h4]
+  obtain ⟨cvT, caps, hci_eq⟩ := hind.1 (by simpa using h4)
   rw [hci_eq] at hci
   -- the type's spine
-  obtain ⟨r₃, m₃, hc3, hW3⟩ := callW_cases rfl hW2
-  obtain ⟨hf3, hg3, hr30, htop3, targs, hargs, hsp⟩ := getAppArgs_callW hq.leaf.core.spine hS hwtb hc3
+  rcases c3 : callW p n "get_app_args" [wtb] s₀.mem with _ | ⟨r₃, m₃⟩
+  · rw [liftE_none, secwtbE.k_get_app_args.none]; exact RefE.of_cls0 (by simp)
+  rw [liftE_some]
+  obtain ⟨hf3, hg3, hr30, htop3, targs, hargs, hsp⟩ := getAppArgs_callW hq.leaf.core.spine hS hwtb c3
   have hS₃ := hS.frame_stk hf3 (by simp) (by simp)
-  have hep : erecP m₃ = erecP s.mem := erecP_frame hf3 (by simp [EREC, SPN]) (by simp)
-  rw [wbK3_some] at hW3
-  refine growRef_congrS (setWtbT_ind _ fe _ _ _ _ _ _ _ a₀ _ hgaf _ _ hct hv cvT caps
+  have hep : erecP m₃ = erecP s₀.mem := erecP_frame hf3 (by simp [EREC, SPN]) (by simp)
+  simp only [secwtbE.k_get_app_args]
+  refine RefE.of_run_eq (setWtbT_ind _ fe _ _ _ _ _ _ _ a₀ _ hgaf _ _ hct hv cvT caps
     (by rw [hfind', hci_eq]) targs hargs) ?_
-  refine growRef_preG hg3 ?_
   have hspn := hS.spn
   have hb3 := hsp.bound
   have hsz3 : (m₃.arr64 SPN).size < 2 ^ 63 := hg3.size ▸ hspn
@@ -248,15 +192,15 @@ theorem setWtb_refines (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : St
     have e := addW_toNat (x := r₃.headD 0) (y := r₃.tail.headD 0) (by omega)
     rw [htop3, ← hr30]; omega
   cases n with
-  | zero => simp [call1W, callW_zero] at hW3
+  | zero => exact RefE.of_cls0 (e := .outOfFuel) rfl
   | succ n' =>
-  exact GrowSpec.of_call1W (s₀ := ⟨m₃, Locals.init []⟩)
-    (setGo_refines p hq hi hc n' (hk.mono (by omega)) F ⟨m₃, Locals.init []⟩ a₀ dn vis fe M eb mode d
+  exact RefE.tail_eq (fun _ => rfl) (fun _ => rfl) (fun hG => hG.mono (Nat.le_succ n')) rfl
+    (fun _ _ _ h => ⟨CoreAfterG.compK (KeptAll.refl _ _) hg3 h.after, h.res, h.valid⟩)
+    (secg_ref p hq hi hc n' (hk.mono (by omega)) F ⟨m₃, Locals.init []⟩ a₀ dn vis fe M eb mode d
       b us c pc k (r₂.tail.headD 0) us2 ao an (r₃.headD 0) (r₃.tail.headD 0) aargs targs.toArray
       cvc np nf cvT caps (by omega) (by omega) ⟨hS₃, hs.mode4, hs.eb_mode⟩ hb hus hcw hnw huw
       hvus ⟨_, _, hv⟩ (by rw [hep]; exact hcvc) (by rw [hep]; exact hci) (ha.grew hg3 hat hspn) hsp
       (Nat.le_trans hat (UInt64.le_iff_toNat_le.mp hg3.1)) htt)
-    (fun r r' h => by simp only [decBool, h]) (by simpa using hW3)
 
 /-! ## `struct_eta_cert_with` -/
 
@@ -275,68 +219,9 @@ theorem structEtaCertWith_eq (r : CoreFnsA) (fe : IFEnv) (depth : Nat) (a b wtb 
           | _ => pure false
       else pure false) := rfl
 
-section swK
-variable (p : Prog) (n : Nat) (mode vis d a b wtb : Word)
-
-/-- The top put back, then the verdict `v`. -/
+/-- The top put back, then the verdict `v` (a model step of `stuck_app_cong`, `DefEqStuckApp.lean`). -/
 def swRet (top v : Word) (m : Mem) : Option (Word × Mem) :=
   if (136 : Word).toNat < (m.arr64 CTL).size then some (v, m.set64 CTL 136 top) else none
-
-def swK3 (top : Word) (res : Option (List Word × Mem)) : Option (Word × Mem) :=
-  match res with
-  | none => none
-  | some (r, m) => swRet top (r.headD 0) m
-
-/-- After the constructor's spine: the count test, then `wtb`. -/
-def swK2 (us c top pc : Word) (res : Option (List Word × Mem)) : Option (Word × Mem) :=
-  match res with
-  | none => none
-  | some (r, m) =>
-    if r.tail.headD 0 < rdW (m.arr64 EREC) (pc + 6) then swRet top 0 m
-    else if r.tail.headD 0 - rdW (m.arr64 EREC) (pc + 6) ≠ rdW (m.arr64 EREC) (pc + 5) then
-      swRet top 0 m
-    else swK3 top (callW p n "struct_eta_cert_wtb"
-      [mode, vis, d, b, us, c, pc, r.headD 0, r.tail.headD 0, wtb] m)
-
-def swK1' (c us : Word) (res : Option (List Word × Mem)) : Option (Word × Mem) :=
-  match res with
-  | none => none
-  | some (r, m) =>
-    if r.headD 0 = 0 then some (0, m)
-    else if rdW (m.arr64 EREC) (r.tail.headD 0) ≠ 4 then some (0, m)
-    else swK2 p n mode vis d b wtb us c (rdW (m.arr64 CTL) 136) (r.tail.headD 0)
-      (callW p n "get_app_args" [a] m)
-
-/-- **The model of `struct_eta_cert_with`** past `get_app_fn`'s run. -/
-def swK1 (res : Option (List Word × Mem)) : Option (Word × Mem) :=
-  match res with
-  | none => none
-  | some (r, m) =>
-    if r.headD 0 >>> 28 ≠ 3 then some (0, m)
-    else if tierW (r.headD 0) ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
-    else if tcnt m CONST (tierW (r.headD 0)) ≤ idxW (r.headD 0) then none
-    else swK1' p n mode vis d a b wtb
-      (tfld m CONST (tierW (r.headD 0)) (idxW (r.headD 0)) 0)
-      (tfld m CONST (tierW (r.headD 0)) (idxW (r.headD 0)) 1)
-      (callW p n "env_find" [tfld m CONST (tierW (r.headD 0)) (idxW (r.headD 0)) 0, vis] m)
-
-end swK
-
-theorem setWith_spec (p : Prog) (hq : StuckProg p) (n : Nat) (s₀ : St) (mode vis d a b wtb : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "struct_eta_cert_with" [mode, vis, d, a, b, wtb]
-    ⦃fun r s' => LocEq s' s₀ ∧ swK1 p n mode vis d a b wtb
-      (callW p n "get_app_fn" [a] s₀.mem) = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hq.setWith]
-  simp only [callFn, structEtaCertWithL]
-  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rdW_spec, evalE_tld, tld,
-    evalE_cnt, tcntM, evalE_tierE, evalE_idxE, st64_spec,
-      callW_spec p n "get_app_fn", callW_spec p n "env_find", callW_spec p n "get_app_args",
-      callW_spec p n "struct_eta_cert_wtb"] <;>
-  simp_all [swK1, swK1', swK2, swK3, swRet, tierW, idxW, LocEq,
-    BinOp.eval, St.setLocs_cons,
-    CTL, EREC, Cmp.eval, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Sig.retVal, Sig.retOr,
-    Locals.init_cons_zero, Locals.init_cons_succ] <;>
-  (intro h1; exact absurd h1 (UInt64.not_lt.mpr ‹_›))
 
 section withRuns
 variable (r : CoreFnsA) (fe : IFEnv) (depth : Nat) (a b wtb : EIdx) (st : AState) (hh : EIdx)
@@ -383,141 +268,103 @@ theorem count_iff (an npw nfw : Word) :
     have := congrArg UInt64.toNat h2
     rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr h1')] at this; omega
 
-/-- **`struct_eta_cert_with` refines `structEtaCertWith`** at the knot (the top put back). -/
-@[refines ConRon.Arena.structEtaCertWith]
-theorem setWith_refines (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : StuckCallees p)
+/-- **`struct_eta_cert_with` refines `structEtaCertWith`, both outcomes** (the top put back): the
+errors are `struct_eta_cert_wtb`'s. -/
+theorem secw_ref (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : StuckCallees p)
     (n : Nat) (hk : KnotUpTo p n) (F : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps)
     (eb mode d a b wtb : Word) (hF : n ≤ F) (hn : n ≤ 2 ^ 62)
     (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (ha : HW a) (hb : HW b) (hwtb : HW wtb) :
-    CoreSpec p (n + 1) "struct_eta_cert_with" [mode, vis, d, a, b, wtb]
+    RefE (SetG p n) (secwE p (n + 1) s₀.mem mode vis d a b wtb)
       (structEtaCertWith (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b) (decE wtb))
-      decBool s₀ a₀ dn vis fe M eb := by
-  apply L.M.triple_of_run
-  intro s r s' hs0 hrun
-  obtain ⟨hloc, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun
-    (setWith_spec p hq n s₀ mode vis d a b wtb)
-  subst hs0
-  refine ⟨hloc, ?_⟩
+      a₀ (CorePost decBool dn s₀.mem vis fe M eb ResH) := by
   have hS := hs.rel
   have hR := hS.arena.1
-  have hres : ∀ x : Word, some (x, s.mem) = some (r.headD 0, s'.mem) → HW x → ∀ v,
-      (structEtaCertWith (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b)
-        (decE wtb)).run a₀ = .ok (v, a₀) → v = (x != 0) →
-      CoreRef (structEtaCertWith (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b)
-        (decE wtb)) a₀ decBool dn s.mem vis fe M eb r s'.mem := by
-    intro x hxy hx v hv hvx
-    obtain ⟨h1, h3⟩ := some_pair_inj hxy
-    rw [← h3]
-    refine coreRef_pure hS hv ?_ ?_
-    · rw [hvx, decBool, ← h1]
-    · unfold ResH; rw [← h1]; exact hx
-  obtain ⟨r₁, m₁, hc1, hW1⟩ := callW_cases rfl hW
-  obtain ⟨rfl, hh, hgaf⟩ := getAppFn_callW hq.leaf hR ha hc1
-  simp only [swK1] at hW1
-  generalize r₁.headD 0 = h at hh hgaf hW1
-  rcases (Classical.em (h >>> 28 = 3)).symm with h3 | h3
-  · simp only [ne_eq, h3, not_false_eq_true, ↓reduceIte] at hW1
-    exact hres 0 hW1 hw0 _
-      (setWith_nonconst _ fe _ _ _ _ a₀ _ hgaf (by rw [decE_tag_const_beq _ hh]; simp [h3])) rfl
-  have hsc : ¬ (tierW h ≠ 0 ∧ rdW (s.mem.arr64 CTL) 1 = 0) := fun hsc => by simp [h3, hsc] at hW1
-  have hcc : ¬ tcnt s.mem CONST (tierW h) ≤ idxW h := fun hcc => by simp [h3, hsc, hcc] at hW1
-  simp only [h3, hsc, hcc, ne_eq, not_true_eq_false, ↓reduceIte] at hW1
-  have hvo : viewOK s.mem h CONST := ⟨hsc, by simpa using hcc⟩
-  obtain ⟨hv, hnw, huw⟩ := L.Ind.view_const_f s.mem a₀ hR h hh hvo h3
-  have hct : ((decE h).tag == ETag.const) = true := by rw [decE_tag_const_beq _ hh]; simp [h3]
-  generalize tfld s.mem CONST (tierW h) (idxW h) 0 = k at hnw hW1 hv
-  generalize tfld s.mem CONST (tierW h) (idxW h) 1 = us at huw hW1 hv
-  obtain ⟨r₂, m₂, hc2, hW2⟩ := callW_cases rfl hW1
-  obtain ⟨rfl, hfind, hfound⟩ := envFind_callW hq.leaf.core hS.env hnw hc2
-  simp only [swK1'] at hW2
+  have hl : RefE (SetG p n) (.ok ([0], s₀.mem) : Except Err (List Word × Mem)) (pure false : AM Bool)
+      a₀ (CorePost decBool dn s₀.mem vis fe M eb ResH) := RefE.ret rfl (CorePost.ret hS rfl hw0)
+  simp only [secwE]
+  rcases c1 : callW p n "get_app_fn" [a] s₀.mem with _ | ⟨r₁, m₁⟩
+  · rw [liftE_none, secwE.k_get_app_fn.none]; exact RefE.of_cls0 (by simp)
+  rw [liftE_some]
+  obtain ⟨rfl, hh, hgaf⟩ := getAppFn_callW hq.leaf hR ha c1
+  simp only [secwE.k_get_app_fn]
+  generalize r₁.headD 0 = h at hh hgaf
+  by_cases h3 : h >>> 28 ≠ 3
+  · rw [ite_eq_left h3]
+    exact RefE.of_run_eq (setWith_nonconst _ fe _ _ _ _ a₀ _ hgaf
+      (by rw [decE_tag_const_beq _ hh]; simpa using h3)) hl
+  rw [ite_eq_right h3]
+  have h3' : h >>> 28 = 3 := by simpa using h3
+  by_cases hsc : tierW h ≠ 0 ∧ rdW (s₀.mem.arr64 CTL) 1 = 0
+  · rw [ite_eq_left hsc]; exact RefE.of_cls0 (by decide)
+  rw [ite_eq_right hsc]
+  by_cases hcc : tcnt s₀.mem CONST (tierW h) ≤ idxW h
+  · rw [ite_eq_left hcc]; exact RefE.of_cls0 (by decide)
+  rw [ite_eq_right hcc]
+  have hvo : viewOK s₀.mem h CONST := ⟨hsc, by simpa using hcc⟩
+  obtain ⟨hv, hnw, huw⟩ := L.Ind.view_const_f s₀.mem a₀ hR h hh hvo h3'
+  have hct : ((decE h).tag == ETag.const) = true := by rw [decE_tag_const_beq _ hh]; simp [h3']
+  generalize tfld s₀.mem CONST (tierW h) (idxW h) 0 = k at hnw hv
+  generalize tfld s₀.mem CONST (tierW h) (idxW h) 1 = us at huw hv
+  rcases c2 : callW p n "env_find" [k, vis] s₀.mem with _ | ⟨r₂, m₂⟩
+  · rw [liftE_none, secwE.k_env_find.none]; exact RefE.of_cls0 (by simp)
+  rw [liftE_some]
+  obtain ⟨rfl, hfind, hfound⟩ := envFind_callW hq.leaf.core hS.env hnw c2
+  simp only [secwE.k_env_find]
   by_cases h0 : r₂.headD 0 = 0
-  · simp only [h0, ↓reduceIte] at hW2
+  · rw [ite_eq_left h0]
     have hnone : fe.find? (decI k) = none := by rw [hfind]; simp only [decFound, h0, ↓reduceIte]
-    exact hres 0 hW2 hw0 _ (setWith_other _ fe _ _ _ _ a₀ _ hgaf _ _ hct hv
-      (fun cv np nf e => by rw [hnone] at e; cases e)) rfl
+    exact RefE.of_run_eq (setWith_other _ fe _ _ _ _ a₀ _ hgaf _ _ hct hv
+      (fun cv np nf e => by rw [hnone] at e; cases e)) hl
+  rw [ite_eq_right h0]
   obtain ⟨ci, hci⟩ := hfound h0
   have hfind' := find_of_found hfind h0 hci
   have hctor := decCI_ctorF hci (erecP_ext _) hS.erec
-  rcases (Classical.em (rdW (s.mem.arr64 EREC) (r₂.tail.headD 0) = 4)).symm with h4 | h4
-  · simp only [h0, h4, ne_eq, not_false_eq_true, ↓reduceIte] at hW2
-    exact hres 0 hW2 hw0 _ (setWith_other _ fe _ _ _ _ a₀ _ hgaf _ _ hct hv
-      (fun cv np nf e => hctor.2 h4 cv np nf (by rw [hfind'] at e; exact Option.some.inj e))) rfl
-  simp only [h0, h4, ne_eq, not_true_eq_false, ↓reduceIte] at hW2
-  obtain ⟨cvc, hci_eq⟩ := hctor.1 h4
+  by_cases h4 : rdW (s₀.mem.arr64 EREC) (r₂.tail.headD 0) ≠ 4
+  · rw [ite_eq_left h4]
+    exact RefE.of_run_eq (setWith_other _ fe _ _ _ _ a₀ _ hgaf _ _ hct hv
+      (fun cv np nf e => hctor.2 h4 cv np nf (by rw [hfind'] at e; exact Option.some.inj e))) hl
+  rw [ite_eq_right h4]
+  obtain ⟨cvc, hci_eq⟩ := hctor.1 (by simpa using h4)
   rw [hci_eq] at hci
   -- the constructor's spine
-  obtain ⟨r₃, m₃, hc3, hW3⟩ := callW_cases rfl hW2
-  obtain ⟨hf3, hg3, hr30, htop3, aargs, hargs, hsp⟩ := getAppArgs_callW hq.leaf.core.spine hS ha hc3
+  rcases c3 : callW p n "get_app_args" [a] s₀.mem with _ | ⟨r₃, m₃⟩
+  · rw [liftE_none, secwE.k_get_app_args.none]; exact RefE.of_cls0 (by simp)
+  rw [liftE_some]
+  obtain ⟨hf3, hg3, hr30, htop3, aargs, hargs, hsp⟩ := getAppArgs_callW hq.leaf.core.spine hS ha c3
   have hS₃ := hS.frame_stk hf3 (by simp) (by simp)
-  have hep : erecP m₃ = erecP s.mem := erecP_frame hf3 (by simp [EREC, SPN]) (by simp)
-  have herec : m₃.arr64 EREC = s.mem.arr64 EREC := hf3.1 EREC (by simp [EREC, SPN]) (by decide)
-  refine coreRef_congr (setWith_ctor _ fe _ _ _ _ a₀ _ hgaf _ _ hct hv cvc _ _
+  have hep : erecP m₃ = erecP s₀.mem := erecP_frame hf3 (by simp [EREC, SPN]) (by simp)
+  have herec : m₃.arr64 EREC = s₀.mem.arr64 EREC := hf3.1 EREC (by simp [EREC, SPN]) (by decide)
+  refine RefE.of_run_eq (setWith_ctor _ fe _ _ _ _ a₀ _ hgaf _ _ hct hv cvc _ _
     (by rw [hfind', hci_eq]) aargs hargs) ?_
   have hlen : aargs.length = (r₃.tail.headD 0).toNat := by simpa using hsp.size
-  simp only [swK2, herec] at hW3
-  have hspn := hS.spn
-  have hsz3 : (m₃.arr64 SPN).size < 2 ^ 63 := hg3.size ▸ hspn
-  by_cases hcnt : ¬ r₃.tail.headD 0 < rdW (s.mem.arr64 EREC) (r₂.tail.headD 0 + 6) ∧
-      r₃.tail.headD 0 - rdW (s.mem.arr64 EREC) (r₂.tail.headD 0 + 6) =
-        rdW (s.mem.arr64 EREC) (r₂.tail.headD 0 + 5)
-  · rw [ite_eq_right hcnt.1, ite_eq_right (by simpa using hcnt.2)] at hW3
+  have hsz3 : (m₃.arr64 SPN).size < 2 ^ 63 := hg3.size ▸ hS.spn
+  simp only [secwE.k_get_app_args, herec]
+  by_cases hcnt : ¬ r₃.tail.headD 0 < rdW (s₀.mem.arr64 EREC) (r₂.tail.headD 0 + 6) ∧
+      r₃.tail.headD 0 - rdW (s₀.mem.arr64 EREC) (r₂.tail.headD 0 + 6) =
+        rdW (s₀.mem.arr64 EREC) (r₂.tail.headD 0 + 5)
+  · rw [ite_eq_right (fun h => h.elim hcnt.1 (fun h' => h' hcnt.2))]
     rw [ite_eq_left (by rw [hlen]; exact (count_iff _ _ _).mpr hcnt)]
-    obtain ⟨r₄, m₄, hc4, hW4⟩ := callW_cases rfl hW3
-    simp only [swK3, swRet] at hW4
-    have h136 : (136 : Word).toNat < (m₄.arr64 CTL).size := by
-      by_cases hh' : (136 : Word).toNat < (m₄.arr64 CTL).size
-      · exact hh'
-      · simp only [hh', ↓reduceIte] at hW4; cases hW4
-    simp only [h136, ↓reduceIte] at hW4
-    obtain ⟨hr, hm⟩ := some_pair_inj hW4
-    rw [← hm]
     cases n with
-    | zero => rw [callW_zero] at hc4; cases hc4
+    | zero => exact RefE.of_cls0 (e := .outOfFuel) rfl
     | succ n' =>
-    have hg := GrowSpec.of_callW (setWtb_refines p hq hi hc n' (hk.mono (by omega)) F
-      ⟨m₃, Locals.init []⟩ a₀ dn vis fe M eb mode d b us k (r₂.tail.headD 0) (r₃.headD 0)
-      (r₃.tail.headD 0) wtb aargs.toArray cvc _ _ (by omega) (by omega) ⟨hS₃, hs.mode4, hs.eb_mode⟩
-      hb huw hnw hwtb ⟨_, _, hv⟩ (by rw [hep]; exact hci) hsp (by
-        have e := addW_toNat (x := r₃.headD 0) (y := r₃.tail.headD 0) (by have := hsp.bound; omega)
-        rw [htop3, ← hr30]; omega)) hc4
-    have hg' := growRef_preG hg3 hg
-    have := hg'.restore h136
-    simp only at this
-    exact ⟨this.1, this.2.1, this.2.2.1.trans (by simp only [decBool, hr]),
-      by unfold ResH; rw [← hr]; exact this.2.2.2⟩
-  · have hW3' : swRet (rdW (s.mem.arr64 CTL) 136) 0 m₃ = some (r.headD 0, s'.mem) := by
-      by_cases hc1 : r₃.tail.headD 0 < rdW (s.mem.arr64 EREC) (r₂.tail.headD 0 + 6)
-      · rw [ite_eq_left hc1] at hW3; exact hW3
-      · rw [ite_eq_right hc1, ite_eq_left (fun e => hcnt ⟨hc1, e⟩)] at hW3; exact hW3
-    simp only [swRet] at hW3'
-    have h136 : (136 : Word).toNat < (m₃.arr64 CTL).size := by
-      by_cases hh' : (136 : Word).toNat < (m₃.arr64 CTL).size
-      · exact hh'
-      · simp only [hh', ↓reduceIte] at hW3'; cases hW3'
-    simp only [h136, ↓reduceIte] at hW3'
-    obtain ⟨hr, hm⟩ := some_pair_inj hW3'
-    rw [← hm]
+    exact RefE.tail_eq (fun _ => rfl) (fun _ => rfl) (fun hG => hG.mono (Nat.le_succ n')) rfl
+      (fun v _ _ h => (GrowPost.mk (CoreAfterG.compK (KeptAll.refl _ _) hg3 h.after) h.res
+        h.valid).restore _ rfl h.valid)
+      (secwtb_ref p hq hi hc n' (hk.mono (by omega)) F ⟨m₃, Locals.init []⟩ a₀ dn vis fe M eb mode
+        d b us k (r₂.tail.headD 0) (r₃.headD 0) (r₃.tail.headD 0) wtb aargs.toArray cvc _ _
+        (by omega) (by omega) ⟨hS₃, hs.mode4, hs.eb_mode⟩ hb huw hnw hwtb ⟨_, _, hv⟩
+        (by rw [hep]; exact hci) hsp (by
+          have e := addW_toNat (x := r₃.headD 0) (y := r₃.tail.headD 0)
+            (by have := hsp.bound; omega)
+          rw [htop3, ← hr30]; omega))
+  · rw [ite_eq_left (by
+      by_cases hc1 : r₃.tail.headD 0 < rdW (s₀.mem.arr64 EREC) (r₂.tail.headD 0 + 6)
+      · exact .inl hc1
+      · exact .inr (fun e => hcnt ⟨hc1, e⟩))]
     rw [ite_eq_right (by rw [hlen, count_iff]; exact hcnt)]
-    obtain ⟨hS', hK'⟩ := hS.restoreTop hf3 hg3 h136
-    obtain ⟨hok, hst, hres'⟩ := AM.of_run_ok (pure false : AM Bool) a₀ a₀ false rfl
-    refine ⟨hok, by rw [hst]; exact ⟨M, hS', KeptAll.refl _ _, hK'⟩, ?_,
-      by unfold ResH; rw [← hr]; exact hw0⟩
-    rw [hres', decBool, ← hr]; rfl
-
-theorem setWith_at (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : StuckCallees p) :
-    ∀ (n : Nat), KnotUpTo p n → ∀ (F : Nat) (s₀ : St) (a₀ : AState)
-      (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps)
-      (eb mode d a b wtb : Word), n ≤ F → n ≤ 2 ^ 62 → SlotPre s₀ a₀ dn vis fe M eb mode →
-      HW a → HW b → HW wtb →
-      CoreSpec p n "struct_eta_cert_with" [mode, vis, d, a, b, wtb]
-        (structEtaCertWith (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b) (decE wtb))
-        decBool s₀ a₀ dn vis fe M eb
-  | 0, _, _, s₀, a₀, dn, vis, fe, M, eb, _, _, _, _, _, _, _, _, _, _, _ =>
-      CoreSpec.zeroLet p _ _ _ _ s₀ a₀ dn vis fe M eb _
-  | n + 1, hk, F, s₀, a₀, dn, vis, fe, M, eb, mode, d, a, b, wtb, hF, hn, hs, h1, h2, h3 =>
-      setWith_refines p hq hi hc n (hk.mono (by omega)) F s₀ a₀ dn vis fe M eb mode d a b wtb
-        (by omega) (by omega) hs h1 h2 h3
+    obtain ⟨hS', hK'⟩ := hS.restoreTop' hf3 hg3
+    exact RefE.ret rfl ⟨⟨M, hS', KeptAll.refl _ _, hK'⟩, rfl, hw0⟩
 
 theorem etaCtorShape_at (p : Prog) (hq : StuckProg p) :
     ∀ (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word)
@@ -529,53 +376,54 @@ theorem etaCtorShape_at (p : Prog) (hq : StuckProg p) :
 
 /-! ## `struct_eta_cert` -/
 
-section secK
-variable (p : Prog) (n : Nat) (mode vis d a b : Word)
+/-- **`struct_eta_cert` refines `structEtaCert`, both outcomes**: the errors are the `infer_io`,
+`whnf` slots' and `struct_eta_cert_with`'s. -/
+theorem sec_ref (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : StuckCallees p)
+    (n : Nat) (hk : KnotUpTo p n) (F : Nat) (s₀ : St) (a₀ : AState)
+    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps)
+    (eb mode d a b : Word) (hF : n ≤ F) (hn : n ≤ 2 ^ 62)
+    (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (ha : HW a) (hb : HW b) :
+    RefE (SetG p n) (secE p (n + 1) s₀.mem mode vis d a b)
+      (structEtaCert (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b)) a₀
+      (CorePost decBool dn s₀.mem vis fe M eb ResH) := by
+  have hK := hk n (Nat.le_refl _)
+  simp only [secE]
+  unfold structEtaCert
+  rcases c1 : callW p n "eta_ctor_shape" [vis, a] s₀.mem with _ | ⟨r₁, m₁⟩
+  · rw [liftE_none, secE.k_eta_ctor_shape.none]; exact RefE.of_cls0 (by simp)
+  rw [liftE_some]
+  have h₁ := CoreSpec.of_callW (etaCtorShape_at p hq n s₀ a₀ dn vis fe M eb a hs.rel ha) c1
+  refine RefE.bind_core (w := id) h₁ (fun M₁ hS₁ _ => ?_)
+  simp only [secE.k_eta_ctor_shape]
+  by_cases h0 : r₁.headD 0 = 0
+  · rw [ite_eq_left h0, decBool_false_of h0]
+    exact RefE.ret rfl (CorePost.ret hS₁ rfl hw0)
+  rw [ite_eq_right h0, decBool_true_of h0]
+  simp only [↓reduceIte]
+  rcases c2 : callE p n "infer_io" [mode, vis, d, b] m₁ with e2 | ⟨r₂, m₂⟩
+  · exact fun hG => ErrClaim.bind_left (CoreSpecE.of_callE ((hG.knot n (Nat.le_refl _)).inferIO F
+      ⟨m₁, Locals.init []⟩ _ dn vis fe M₁ eb mode d b hF hn ⟨hS₁, hs.mode4, hs.eb_mode⟩ hb) c2)
+  have h₂ := CoreSpec.of_callW (hK.inferIO F ⟨m₁, Locals.init []⟩ _ dn vis fe M₁ eb mode d b hF hn
+    ⟨hS₁, hs.mode4, hs.eb_mode⟩ hb) (callW_of_callE c2)
+  refine RefE.bind_core (w := id) h₂ (fun M₂ hS₂ _ => ?_)
+  simp only [secE.k_infer_io]
+  rcases c3 : callE p n "whnf" [mode, vis, d, r₂.headD 0] m₂ with e3 | ⟨r₃, m₃⟩
+  · exact fun hG => ErrClaim.bind_left (CoreSpecE.of_callE ((hG.knot n (Nat.le_refl _)).whnf F
+      ⟨m₂, Locals.init []⟩ _ dn vis fe M₂ eb mode d (r₂.headD 0) hF hn ⟨hS₂, hs.mode4, hs.eb_mode⟩
+      h₂.2.2.2) c3)
+  have h₃ := CoreSpec.of_callW (hK.whnf F ⟨m₂, Locals.init []⟩ _ dn vis fe M₂ eb mode d (r₂.headD 0)
+    hF hn ⟨hS₂, hs.mode4, hs.eb_mode⟩ h₂.2.2.2) (callW_of_callE c3)
+  refine RefE.bind_core (w := id) h₃ (fun M₃ hS₃ _ => ?_)
+  simp only [secE.k_whnf]
+  cases n with
+  | zero => exact RefE.of_cls0 (e := .outOfFuel) rfl
+  | succ N =>
+  exact RefE.tail_eq (fun _ => rfl) (fun _ => rfl) (fun hG => hG.mono (Nat.le_succ N)) rfl
+    (fun _ _ _ h => ⟨h.after, h.res, h.valid⟩)
+    (secw_ref p hq hi hc N (hk.mono (Nat.le_succ N)) F ⟨m₃, Locals.init []⟩ _ dn vis fe M₃ eb mode d
+      a b (r₃.headD 0) (by omega) (by omega) ⟨hS₃, hs.mode4, hs.eb_mode⟩ ha hb h₃.2.2.2)
 
-def secK3 (res : Option (List Word × Mem)) : Option (Word × Mem) :=
-  match res with
-  | none => none
-  | some (r, m) => call1W p n "struct_eta_cert_with" [mode, vis, d, a, b, r.headD 0] m
-
-def secK2 (res : Option (List Word × Mem)) : Option (Word × Mem) :=
-  match res with
-  | none => none
-  | some (r, m) => secK3 p n mode vis d a b (callW p n "whnf" [mode, vis, d, r.headD 0] m)
-
-/-- **The model of `struct_eta_cert`** past `eta_ctor_shape`'s run. -/
-def secK1 (res : Option (List Word × Mem)) : Option (Word × Mem) :=
-  match res with
-  | none => none
-  | some (r, m) =>
-    if r.headD 0 = 0 then some (0, m)
-    else secK2 p n mode vis d a b (callW p n "infer_io" [mode, vis, d, b] m)
-
-variable (r : List Word) (m : Mem)
-theorem secK3_some : secK3 p n mode vis d a b (some (r, m)) =
-    call1W p n "struct_eta_cert_with" [mode, vis, d, a, b, r.headD 0] m := rfl
-theorem secK2_some : secK2 p n mode vis d a b (some (r, m)) =
-    secK3 p n mode vis d a b (callW p n "whnf" [mode, vis, d, r.headD 0] m) := rfl
-theorem secK1_no (h : r.headD 0 = 0) : secK1 p n mode vis d a b (some (r, m)) = some (0, m) := by
-  simp only [secK1, h, ↓reduceIte]
-theorem secK1_yes (h : r.headD 0 ≠ 0) : secK1 p n mode vis d a b (some (r, m)) =
-    secK2 p n mode vis d a b (callW p n "infer_io" [mode, vis, d, b] m) := by
-  simp only [secK1, h, ↓reduceIte]
-
-end secK
-
-theorem setCert_spec (p : Prog) (hq : StuckProg p) (n : Nat) (s₀ : St) (mode vis d a b : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "struct_eta_cert" [mode, vis, d, a, b]
-    ⦃fun r s' => LocEq s' s₀ ∧ secK1 p n mode vis d a b
-      (callW p n "eta_ctor_shape" [vis, a] s₀.mem) = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hq.setCert]
-  simp only [callFn, structEtaCertL]
-  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, callW_spec p n "eta_ctor_shape",
-      callW_spec p n "infer_io", callW_spec p n "whnf", callW_spec p n "struct_eta_cert_with"] <;>
-  simp_all [secK1, secK2, secK3, call1W, LocEq, St.setLocs_cons, Cmp.eval,
-    St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Sig.retVal, Sig.retOr, Locals.init_cons_zero,
-    Locals.init_cons_succ]
-
-/-- **`struct_eta_cert` refines `structEtaCert`** at the knot. -/
+/-- **`struct_eta_cert` refines `structEtaCert`** at the knot (`sec_ref`'s ok half). -/
 @[refines ConRon.Arena.structEtaCert]
 theorem setCert_refines (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : StuckCallees p)
     (n : Nat) (hk : KnotUpTo p n) (F : Nat) (s₀ : St) (a₀ : AState)
@@ -584,39 +432,8 @@ theorem setCert_refines (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : S
     (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (ha : HW a) (hb : HW b) :
     CoreSpec p (n + 1) "struct_eta_cert" [mode, vis, d, a, b]
       (structEtaCert (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b)) decBool
-      s₀ a₀ dn vis fe M eb := by
-  apply L.M.triple_of_run
-  intro s r s' hs0 hrun
-  obtain ⟨hloc, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun
-    (setCert_spec p hq n s₀ mode vis d a b)
-  subst hs0
-  refine ⟨hloc, ?_⟩
-  have hK := hk n (Nat.le_refl _)
-  obtain ⟨r₁, m₁, hc1, hW1⟩ := callW_cases rfl hW
-  have h₁ := CoreSpec.of_callW (etaCtorShape_at p hq n s a₀ dn vis fe M eb a hs.rel ha) hc1
-  unfold structEtaCert
-  refine coreRef_bind h₁ (fun M₁ hS₁ => ?_)
-  by_cases h0 : r₁.headD 0 = 0
-  · rw [secK1_no (h := h0)] at hW1
-    obtain ⟨hr, hm⟩ := some_pair_inj hW1
-    rw [← hm, decBool_false_of h0]
-    exact coreRef_pure hS₁ rfl (decBool_false_of hr.symm).symm (by unfold ResH; rw [← hr]; exact hw0)
-  rw [secK1_yes (h := h0)] at hW1
-  rw [decBool_true_of h0]
-  simp only [↓reduceIte]
-  obtain ⟨r₂, m₂, hc2, hW2⟩ := callW_cases rfl hW1
-  rw [secK2_some] at hW2
-  obtain ⟨r₃, m₃, hc3, hW3⟩ := callW_cases rfl hW2
-  rw [secK3_some] at hW3
-  have h₂ := CoreSpec.of_callW (hK.inferIO F ⟨m₁, Locals.init []⟩ _ dn vis fe M₁ eb mode d b hF hn
-    ⟨hS₁, hs.mode4, hs.eb_mode⟩ hb) hc2
-  refine coreRef_bind h₂ (fun M₂ hS₂ => ?_)
-  have h₃ := CoreSpec.of_callW (hK.whnf F ⟨m₂, Locals.init []⟩ _ dn vis fe M₂ eb mode d (r₂.headD 0)
-    hF hn ⟨hS₂, hs.mode4, hs.eb_mode⟩ h₂.2.2.2) hc3
-  refine coreRef_bind h₃ (fun M₃ hS₃ => ?_)
-  exact CoreSpec.of_call1W (s₀ := ⟨m₃, Locals.init []⟩)
-    (setWith_at p hq hi hc n hk F _ _ dn vis fe M₃ eb mode d a b (r₃.headD 0) hF hn
-      ⟨hS₃, hs.mode4, hs.eb_mode⟩ ha hb h₃.2.2.2)
-    (fun r r' h => by simp only [decBool, h]) hW3
+      s₀ a₀ dn vis fe M eb :=
+  RefE.coreSpec (secE_spec p hq.setCert hq.setWith hq.setWtb hq.setGo hq.setTail (n + 1) s₀ mode vis
+    d a b) (sec_ref p hq hi hc n hk F s₀ a₀ dn vis fe M eb mode d a b hF hn hs ha hb)
 
 end L.Arena

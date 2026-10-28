@@ -1,6 +1,5 @@
 import ConAgua.Verdict.InferKnotE
 import ConAgua.Verdict.WhnfKnotE
-import ConAgua.Verdict.WhnfSetE
 import ConAgua.Verdict.DefEqAllE
 import ConAgua.Verdict.DefEqEagerE
 import ConAgua.Checker.LoopProg
@@ -90,8 +89,11 @@ theorem KnotAllProg.defeqWhnfE : DefeqWhnfE p where
     reduceProjCore_refinesE p hq.core (strLitSupported_core p hq.str) (strLitCtor_core p hq.str) hnv
       n hk hkE F hF hn s₀ a₀ dn vis fe MM eb mode d sn i c hs hc (supKeep_of fe)
   setCert := fun n hk hkE F s₀ a₀ dn vis fe M eb mode d a b hF hn hs ha hb =>
-    setCert_refinesE p hq.body.stuck hq.body.iota (KnotAllProg.stuck hq) hnv
-      (defeqLst_refinesE p hq.lst) n hk hkE F s₀ a₀ dn vis fe M eb mode d a b hF hn hs ha hb
+    RefE.coreSpecE (secE_spec p hq.body.stuck.setCert hq.body.stuck.setWith hq.body.stuck.setWtb
+      hq.body.stuck.setGo hq.body.stuck.setTail (n + 1) s₀ mode vis d a b) hnv
+      ⟨hkE, defeqLst_refinesE p hq.lst⟩
+      (sec_ref p hq.body.stuck hq.body.iota (KnotAllProg.stuck hq) n hk F s₀ a₀ dn vis fe M eb mode d
+        a b hF hn hs ha hb)
   suCert := fun n hk hkE F s₀ a₀ dn vis fe M eb mode d a b hF hn hs ha hb =>
     RefE.coreSpecE (sucE_spec p hq.body.stuck.sunit hq.body.stuck.suHead hq.body.stuck.suTail (n + 1) s₀
       mode vis d a b) hnv hkE

@@ -75,25 +75,46 @@ l_model ecE_spec (p : Prog) (hf : p.lookup "eta_cert" = some etaCertL)
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
-l_model secE_spec (p : Prog) (hf : p.lookup "struct_eta_cert" = some structEtaCertL)
-  fns [hf ↦ secE list] grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] errors
-
-l_model secwE_spec (p : Prog) (hf : p.lookup "struct_eta_cert_with" = some structEtaCertWithL)
-  fns [hf ↦ secwE list] grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] errors
-
-l_model secwtbE_spec (p : Prog) (hf : p.lookup "struct_eta_cert_wtb" = some structEtaCertWtbL)
-  fns [hf ↦ secwtbE list] grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] errors
+l_model sectE_spec (p : Prog) (hf : p.lookup "struct_eta_cert_tail" = some structEtaCertTailL)
+  fns [hf ↦ sectE list]
+  specs [callW_spec p n "lvls_eq_c", callW_spec p n "eta_projs"]
+  grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] unified
+  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 l_model secgE_spec (p : Prog) (hf : p.lookup "struct_eta_cert_go" = some structEtaCertGoL)
-  fns [hf ↦ secgE list] grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] errors
+    (ht : p.lookup "struct_eta_cert_tail" = some structEtaCertTailL)
+  fns [hf ↦ secgE list]
+  specs [callW_spec p n "er_slice_eq", callW_spec p n "reserved_contains_w", callW_spec p n "ls_node", callW_spec p n "tower_slots_all", sectE_spec p ht n]
+  grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] unified
+  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
-l_model sectE_spec (p : Prog) (hf : p.lookup "struct_eta_cert_tail" = some structEtaCertTailL)
-  fns [hf ↦ sectE list] grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] errors
+l_model secwtbE_spec (p : Prog) (hf : p.lookup "struct_eta_cert_wtb" = some structEtaCertWtbL)
+    (hg : p.lookup "struct_eta_cert_go" = some structEtaCertGoL) (ht : p.lookup "struct_eta_cert_tail" = some structEtaCertTailL)
+  fns [hf ↦ secwtbE list]
+  specs [callW_spec p n "get_app_fn", callW_spec p n "env_find", callW_spec p n "get_app_args", secgE_spec p hg ht n]
+  grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] unified
+  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
+
+l_model secwE_spec (p : Prog) (hf : p.lookup "struct_eta_cert_with" = some structEtaCertWithL)
+    (hb : p.lookup "struct_eta_cert_wtb" = some structEtaCertWtbL)
+    (hg : p.lookup "struct_eta_cert_go" = some structEtaCertGoL) (ht : p.lookup "struct_eta_cert_tail" = some structEtaCertTailL)
+  fns [hf ↦ secwE list]
+  specs [callW_spec p n "get_app_fn", callW_spec p n "env_find", callW_spec p n "get_app_args", secwtbE_spec p hb hg ht n]
+  grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] unified
+  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
+
+l_model secE_spec (p : Prog) (hf : p.lookup "struct_eta_cert" = some structEtaCertL)
+    (hw : p.lookup "struct_eta_cert_with" = some structEtaCertWithL) (hb : p.lookup "struct_eta_cert_wtb" = some structEtaCertWtbL)
+    (hg : p.lookup "struct_eta_cert_go" = some structEtaCertGoL) (ht : p.lookup "struct_eta_cert_tail" = some structEtaCertTailL)
+  fns [hf ↦ secE list]
+  specs [callW_spec p n "eta_ctor_shape", secwE_spec p hw hb hg ht n]
+  grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] unified
+  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 l_model sutE_spec (p : Prog) (hf : p.lookup "struct_unit_tail" = some structUnitTailL)
   fns [hf ↦ sutE list]

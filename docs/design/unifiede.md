@@ -2109,7 +2109,7 @@ is one model and one refinement by §3.2 unless it says otherwise.
 - [x] `Verdict/IndE`: `check_field_sort_bound` (`cfbE`; ok `cfbW`). Its one other reader,
   `Arena/IndT/Sum3` (`triple_of_callE_err … Err.code_ne_of_cls` in `csfGo_ref`), then reads its
   refinement by `RefE.run_err`.
-- [ ] `Verdict/IndBSum3`: `check_sum_ctor_tail`, `check_sum_ctor` (`ctlE`, `ctorE`; ok `ctlW_okC`,
+- [x] `Verdict/IndBSum3`: `check_sum_ctor_tail`, `check_sum_ctor` (`ctlE`, `ctorE`; ok `ctlW_okC`,
   `ctorW_okC`). `sctsE` reads `ctor_claim` through `callE` today; afterwards `SctsG` loses `CcvE`'s
   detour.
 - [x] `Verdict/IndBTbl`: `check_struct_proj_table` (`tblE`; ok `tblW_okR`). Removes `TailG.tab`
@@ -2412,7 +2412,106 @@ dfe405f0, load 10–20, `_tmp/retire-a3/times1.txt`):
 
 No module is more than 10 % slower. No generator or kit change was needed.
 
-### 3.34 Retirement, group A: the frontend's driver, design (`front_line`, `front_run`, `builtin_prelude`)
+### 3.34 Retirement, group B, the `whnf` leaves, second landing (`struct_eta_cert*`, `proof_irrel`, `major_to_ctor`)
+
+Seven more of §3.30 B's first bullet: `struct_eta_cert` and its pieces `_with`, `_wtb`, `_go`,
+`_tail`, then `proof_irrel` and `major_to_ctor`. As in §3.32: one `*_ref` per function over its
+unified model, `@[refines]` theorems with users as `RefE.coreSpec` one-liners, the error claims the
+knot reads (`KnotAllE`'s `setCert`, `ProofIrrelWE`, `MajorToCtorE`) as `RefE.coreSpecE`
+one-liners. Gone: `Verdict/WhnfSetE`; the hand ok models `stK1–3`, `sgK1–5`, `wbK1–3`, `swK1–3`,
+`secK1–3`, `pirrW`, `mtcW` with their specs; `GrowSpec.of_call1W`, `growRef_pre`, `setWith_at`.
+
+| functions | before: ok side + claims | after | change |
+|---|---:|---:|---:|
+| the 7 above | ok refinements, models, specs 811 + claims 752 = 1 563 | `*_ref` + one-liners + `G`s 666 | **−57 %** |
+
+Diff of the landing against master: +604 −1 589 lines in 14 files.
+
+Choices:
+
+* **`G`**: `SetG p n` for the `struct_eta_cert` chain (the knot's slots and `defeq_lst`'s claim
+  `DefeqLstWE`, moved from `WhnfSetE` to `DefEqStuckWith`; `SetG.lstE` applies it to a failing
+  call at any fuel); `PihG p n` (`pih_ref`'s) for `proof_irrel`; `M2CCtxE p n` for
+  `major_to_ctor`.
+* **Callees**: `proof_irrel` lists `proof_irrel_half` by its unified spec (`pirrE_spec` moved next
+  to `pihE_spec` in `Arena/WhnfIotaRefine4`); `major_to_ctor` lists `m2c_head`'s; the chain's
+  pieces each list the next (lookup hypotheses as extra parameters). `defeq_lst` stays `callE`
+  (its ok half `StuckCallees.defeqLst`).
+* **The stack top put back without its bound.** As with `struct_unit_head` (§3.32), the unified
+  models of `struct_eta_cert_with` and `major_to_ctor` drop the bound of the top's store, so their
+  ok halves restore it without one: `StackKept.restoreG'` (`WhnfCoreRefine`: out of bounds the top
+  reads `0`, and the grown run's old top was below it) and `GrowPost.restore` (`DefEqStuckWith`).
+* `major_to_ctor`'s unified model by the default recipe (13.0 s, 17.6 s with `simp []`).
+
+Elaboration (user seconds, `lean` on the module, median of 3 interleaved runs, base master
+19299e46; `WhnfModels6E` re-measured alone after the recipe change):
+
+| module | base | new |
+|---|---:|---:|
+| `Arena/DefEqStuckCert` | 6.25 | 1.87 |
+| `Arena/DefEqStuckGo` | 6.01 | 1.78 |
+| `Arena/DefEqStuckWith` | 1.88 | 1.46 |
+| `Arena/WhnfCoreRefine` | 2.37 | 2.62 |
+| `Arena/WhnfIotaRefine4` | 5.92 | 6.89 |
+| `Arena/WhnfM2CRefine`, `WhnfM2CRefine5` | 5.40 | 4.82 |
+| `Verdict/KnotAllE` | 3.99 | 3.67 |
+| `Verdict/WhnfModels3E` | 12.54 | 10.98 |
+| `Verdict/WhnfModels6E` | 15.19 | 13.1 |
+| `Verdict/WhnfModels7E` | 47.46 | 34.05 |
+| `Verdict/WhnfM2CE`, `WhnfPirrE`, `WhnfSetE` | 3.42 | 1.06 |
+| **sum** | **110.4** | **82.3** (−25 %) |
+
+`Arena/WhnfIotaRefine4` is 16 % slower: `pirrE`'s model moved there from `WhnfModels3E` (which got
+1.6 s faster); together −0.6 s. No generator or kit change was needed; `GrowPost.restore` is a
+candidate for `RefECore`.
+
+### 3.35 Retirement, group A: the inductive checker's leaves, second landing (`check_sum_ctor_tail`, `check_sum_ctor`)
+
+| function | before: ok refinement + error claim(s) | after | change |
+|---|---|---|---:|
+| `check_sum_ctor_tail` | `ctlW_okC` 215, `ctl_claim` 360 = 575 | `ctl_ref` 314 + `CtlPost` 10 = 324 | −44 % |
+| `check_sum_ctor` | `ctorW_okC` 203, `sdSimC` 22, `ctor_claim` 308 = 533 | `ctor_ref` 250 + `CtorPost` 11 = 261 | −51 % |
+| (`check_sum_ctors`' `G`) | `SctsG` 2, `CcvE` 6, `ccvE_of` 6 = 14 | – | |
+| `checkSumCtor_refinesC` | 38 | 38 (`RefE.triple`) | |
+| **pairs** | **1 160** | **623** | **−46 %** |
+
+Also gone: the hand ok models `ctlW`/`ctlK1–9` and `ctorW`/`ctorK2–9` with their arms and the specs
+`ctlW_spec`, `ctorW_spec`, `ctorX`/`ctorX_spec`, `fsortsR`; the `errors` models `ctlE`, `ctorE` (each
+now the `unified` one of the same name); the files `Verdict/IndBSum2`, `Verdict/IndBSum3`,
+`Arena/IndSumSpec/CtlK1`, `Arena/IndSumSpec/CtlW`. Whole diff: +545 −1 531 in 13 files.
+
+* **Unified callees**: `ctlE` lists `fsortsE_spec`; `ctorE` lists `checkConstantVal_specE`,
+  `sdomsE_spec` and `ctlE_spec`; `sctsE` lists `ctorE_spec` (`sctsE_spec` takes `ValProg`). The other
+  callees (the telescope openers, `param_levels`, `intern_const`, the spine readers, `sl_eq`, the two
+  resolution tests, `strip_pis`, `struct_ctor_resid_ok`, `fvar_type_ds`) are outside the verdict
+  closure and lifted (`callW_spec`); the refinements read them through the old `Sim`s on the run.
+* **`G`**: `VerdictCtx` for the tail (`fsorts_ref`'s), `VerdictCtxU` for `check_sum_ctor` (`ccv_ref`'s;
+  `sds_ref`'s `CoreStubsE` is its `core`). `scts_ref` is under `VerdictCtxU` too, so `SctsG` and the
+  detour through `CcvE` (`ccvE_of`) are gone; `checkSumCtorsE_of` takes `UceProg` instead.
+* **The proofs** are the old claims with the ok ends filled in: the claims already rebuilt every ok
+  step of the twin to reach the failing one, so `ctl_ref`/`ctor_ref` are their arms with the error
+  cases of the lifted callees one `RefE.of_cls0` line each, the tail call of `ctorE` into `ctlE` read
+  by `ctl_ref` directly. `checkSumCtor_refinesC` is now at fuel `n + 1` (`n + 1 ≤ 2 ^ 62`); it has no
+  users.
+* **Recipes**: `simp [Cmp.evalW, Cmp.eval]` for `ctlE` (as its `errors` model; `locals` loops, `simp []`,
+  `simp [rdW]` and the default `finish` fail), `simp []` for `ctorE` (29.6 s for `Sum4` against 31.0 s
+  with the old recipe).
+
+Elaboration (user seconds, `lean` on the module alone, median of 3 interleaved runs, base master
+9477fe75, `_tmp/retire-a1/times4–5.txt`):
+
+| module | base | new | |
+|---|---:|---:|---|
+| `Arena/IndT/Sum4` | 1.46 | **29.60** | **slower (+28.1 s)**: `ctlE`, `ctorE` and their refinements moved in … |
+| `Verdict/IndBSum3`, `IndBSum2` (deleted) | 22.12 | – | … from here |
+| `Arena/IndSumSpec/CtlW`, `CtlK1` (deleted), `CtorX` | 13.74 | 0.54 | the hand models gone; the family 37.3 → 30.1 |
+| the other 6 | 10.67 | 10.43 | |
+| **sum (12 modules)** | **48.0** | **40.6** | **−15 %** |
+
+`Sum4` is the new home of the two models (the `ctlE` step alone is about 20 s, as the `errors` one
+was); the family is faster in all. No kit or generator change was needed.
+
+### 3.36 Retirement, group A: the frontend's driver, design (`front_line`, `front_run`, `builtin_prelude`)
 
 §3.32 skipped these three because their ok halves are not refinements of the functions but of
 generic models: `front_line`'s hand model `frontLineW` (the validator's `lineFwdN` with the record
