@@ -4,7 +4,6 @@ meta import ConAgua.L.Semantics
 public import ConAgua.Front.Fields
 import ConAgua.Census.Attr
 public import ConAgua.Scan.Records
-import ConAgua.Front.Preserve
 import ConAgua.L.GrindAttr
 import ConAgua.Scan.Common
 import Std.Tactic.BVDecide.Normalize.Prop

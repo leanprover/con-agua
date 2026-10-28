@@ -1,7 +1,6 @@
 module
 
 public import ConAgua.Front.LineRec
-import ConAgua.Scan.Common
 
 @[expose] public section
 
