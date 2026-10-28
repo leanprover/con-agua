@@ -553,7 +553,7 @@ The two sugar statements stand for plain ones and give the same terms
 is `while j < n { …; j += 1 }`, where the body assigns neither `j` nor `n`. The
 model generator reads L text through the same function. A counted loop has a
 loop rule proved once
-([`Triple.forUp`](https://github.com/leanprover/con-agua/blob/master/ConAgua/L/For.lean#L66-L82)):
+([`Triple.forUp`](https://github.com/leanprover/con-agua/blob/master/ConAgua/L/For.lean#L69-L85)):
 an invariant that each iteration keeps gives the loop's spec, without an
 induction on the fuel.
 

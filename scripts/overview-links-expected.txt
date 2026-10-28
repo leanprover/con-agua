@@ -951,24 +951,24 @@
    349      return #[← `(lstmt| while $j:ident < $n:ident { $body;* })]
    350    | _ => return #[s]
 
-== ConAgua/L/For.lean#L66-L82
-    66  /-- **The counted-loop rule.** An invariant `I` that the body keeps (with `j += 1` after it)
-    67  while `j < n`, and that gives the post when `j < n` fails, gives the loop's triple at every
-    68  fuel. -/
-    69  theorem Triple.forUp {p : Prog} {w body : Stmt} {j n : Var} (hw : w = forS j n body)
-    70      (I : St → Prop) (Q : Sig → St → Prop)
-    71      (hexit : ∀ s, I s → ¬ s.loc j < s.loc n → Q .normal s)
-    72      (hbody : ∀ k s₀, ⦃fun s => s = s₀ ∧ I s ∧ s.loc j < s.loc n⦄ step p (exec p k) body
-    73        ⦃fun r s' => ForPost I Q j r s'; ⊤⦄) :
-    74      ∀ k s₀, ⦃fun s => s = s₀ ∧ I s⦄ exec p k w ⦃Q; ⊤⦄ := by
-    75    intro k
-    76    induction k with
-    77    | zero => intro s₀; vcgen [exec] <;> grind
-    78    | succ k ih =>
-    79      intro s₀
-    80      rw [exec, step_while (c := .cmp .ult (.var j) (.var n)) hw, step_snoc]
-    81      vcgen [step, evalC, evalE, setLoc, hbody k, ih]
-    82      all_goals (subst_vars; simp_all [Cmp.eval, BinOp.eval])
+== ConAgua/L/For.lean#L69-L85
+    69  /-- **The counted-loop rule.** An invariant `I` that the body keeps (with `j += 1` after it)
+    70  while `j < n`, and that gives the post when `j < n` fails, gives the loop's triple at every
+    71  fuel. -/
+    72  theorem Triple.forUp {p : Prog} {w body : Stmt} {j n : Var} (hw : w = forS j n body)
+    73      (I : St → Prop) (Q : Sig → St → Prop)
+    74      (hexit : ∀ s, I s → ¬ s.loc j < s.loc n → Q .normal s)
+    75      (hbody : ∀ k s₀, ⦃fun s => s = s₀ ∧ I s ∧ s.loc j < s.loc n⦄ step p (exec p k) body
+    76        ⦃fun r s' => ForPost I Q j r s'; ⊤⦄) :
+    77      ∀ k s₀, ⦃fun s => s = s₀ ∧ I s⦄ exec p k w ⦃Q; ⊤⦄ := by
+    78    intro k
+    79    induction k with
+    80    | zero => intro s₀; vcgen [exec] <;> grind
+    81    | succ k ih =>
+    82      intro s₀
+    83      rw [exec, step_while (c := .cmp .ult (.var j) (.var n)) hw, step_snoc]
+    84      vcgen [step, evalC, evalE, setLoc, hbody k, ih]
+    85      all_goals (subst_vars; simp_all [Cmp.eval, BinOp.eval])
 
 == ConAgua/L/Semantics.lean#L7-L21
      7  /-!
