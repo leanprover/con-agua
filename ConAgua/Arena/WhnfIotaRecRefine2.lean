@@ -636,7 +636,7 @@ theorem fire_ref (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
       (iotaRecFire2T (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decI c)
       (rdW (s₀.mem.arr64 EREC) (recP + 5)).toNat (rdW (s₀.mem.arr64 EREC) (recP + 6)).toNat lps
       (decI us) args.toList (decI usj) cvj rule xs.toArray.toList).run a₀ := by
-    simp only [iotaRecFireT, StateT.run_bind, hrunA, except_ok_bind, List.toList_toArray]
+    simp only [iotaRecFireT, StateT.run_bind, hrunA, except_ok_bind]
   refine RefE.of_run_eq hEq ?_
   have hsa1 := hsa.keep gr1.size gr1.below hsat hspn
   have hsat1 : so.toNat + sn.toNat ≤ (spTop m1).toNat := by
