@@ -22,10 +22,10 @@ hypothesis, in every round.
   caller's locals.
 
 What is left are the memories, the callees' results, their equations and the path conditions;
-reads of locals of `⟨m, t.loc⟩` are reads of `t`. Run it after the reads were resolved on the
-shared terms (`simp only [L.reduceLoc, L.reduceLocMem] at *`): substituting first unshares the
-nested states that `vcgen` built (the reads then cost several times more). Used by `l_model`'s
-`flat` recipe (`ModelGen.lean`).
+reads of locals of `⟨m, t.loc⟩` are reads of `t`, which `grind`'s normalizer resolves
+(`L.reduceLoc`, `LocNF.lean`). `l_model`'s `flat` recipe (`ModelGen.lean`) is `vcgen`, `vc_flat`,
+`grind`. (`simp only [L.reduceLoc, …] at *` after `vc_flat` costs several times more than before
+it: the substitutions unshare the nested states `vcgen` built.)
 -/
 
 namespace L.VcFlat
