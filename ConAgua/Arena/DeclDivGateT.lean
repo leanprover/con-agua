@@ -22,7 +22,7 @@ for the environment guard. It runs here from the real program (`realCall p`) und
 
 Parts 1 and 2 (`DeclDivGateT1.lean`, `DeclDivGateT2.lean`) carry the guards and the attempt; here
 the gate itself (`check_div_mod_pin`, `cpC`; `defn_div_gate`, `divGateSpecC`). The definition arm
-(helper `loopt3-nat`'s `cdfW_okT`) consumes `DivGateSpecC`.
+(`cdf_ref`) consumes `DivGateSpecC`.
 -/
 
 open ConRon.Arena

@@ -1,6 +1,5 @@
 import ConAgua.Verdict.IndA9
 import ConAgua.Verdict.DeclBasisE
-import ConAgua.Verdict.DeclValsE
 
 /-!
 # `check_ind_decl`'s leaf hypotheses `CheckBasisDeclE`, `CheckConstantValE` discharged (lane

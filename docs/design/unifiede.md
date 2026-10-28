@@ -985,3 +985,96 @@ affbbf73; load 18–42; `CntW` from a separate series after the recipe change):
 | **sum** | **41.3** | **30.6** | **−26 %** |
 
 `Install7` is the one flagged module; with the files it replaces (`Icbo`, `BlkE1`) it is 11.4 → 6.3 s.
+
+### 3.13 Batch 2a, first landing (`Decl*`, `whnf_telescope`)
+
+The batch's functions (`_tmp/unifiedE/inv.py` on master 1dc86825, the `Decl*`/`DefEq*`/`Whnf*`
+families and `IndBWt`; `DefEq*`/`Whnf*` have nothing left at depth 1–2): depth 0 left over
+`install_header`, `install_basis_decls`, `check_defn_val`, `check_opaque_val`, `check_reduce_pin`,
+`check_div_mod_certs`, `check_type_pins`; depth 1 `check_constant_val`, `install_value`,
+`check_thm_val`, `check_basis_decl`, `check_div_mod_pin_value`, `whnf_telescope`; depth 2
+`check_decl_axiom`, `check_decl_defn`, `check_decl_opaque`, `check_decl_quot`, `check_decl_thm`,
+`check_div_mod_pin_at`. This landing migrates fourteen of them:
+
+| function | before: ok refinement(s) + error claim(s) | after | change |
+|---|---|---|---:|
+| `install_header` | `ihE_okT` 244 (`ihW_okT` stays: `class_const_ok_header`'s) | `ih_ref` 185 + `IhPost` 7 + `IhCtx` 3 = 195 | (−20 %) |
+| `check_constant_val` | `ccvW_okT` 47 + `ccvW_okTA` 39 + `ccvE_okT` 60 = 146 | `ccv_ref` 54 + `CcvPost` 6 + `ccvE_okT` 13 = 73 | −50 % |
+| `install_value` | `ivW_genT` 102 + `ivW_okT` 62 + `ivE_core` 107 + `installValue_errT` 66 = 337 | `ivc_ref` 99 + `iv_ref` 37 + `IvPost`/`IvCtx`/`ivCoreT` 16 + `installValue_errT` 13 = 165 | −51 % |
+| `check_defn_val`, `check_opaque_val` | `dvW_okT` 36 + `defnvE_okT` 90 + `opaquevE_okT` 90 = 216 | `dv_ref` 85 + `ov_ref` 85 + `DvCtx`/`DvPost` 10 + the two claims 28 = 208 | −4 % |
+| `check_decl_defn` | `cdfW_okT` 143 + `checkDeclDefn_errT` 161 + `NatGateSpecE`/`natGateSpecE_of` 16 = 320 | `cdf_ref` 147 + `CdfCtx`/`CdfPost` 9 + `checkDeclDefn_errT` 22 = 178 | −44 % |
+| `install_basis_decls` | 143 | 64 | −55 % |
+| `check_basis_decl` | 242 | 117 | −52 % |
+| `check_decl_quot` | 231 | 106 | −54 % |
+| `check_div_mod_certs`, `check_type_pins`, `check_div_mod_pin_value`, `check_div_mod_pin_at` | `cmC` 239, `ctpC` 118, `cpvC` 105, `cpaC` 52; `cmE` 259, `ctpE` 112, `cpvE` 128, `cpaE` 71, `cpaClaimE_of` 7 = 1 091 | `cm_ref` 239, `ctp_ref` 112, `cpv_ref` 98, `cpa_ref` 55, `DmPost` 7; `cmC` 22, `cpvC` 17, `cpaC` 18, `cpaClaimE_of` 9 = 570 | −48 % |
+| `whnf_telescope` | `wtW_simC` 138 + `wtE_claim` 154 = 292 | `wt_ref` 135 + `WtPost`/`WtG` 12 = 147 | −50 % |
+| **pairs** | **3 262** | **1 823** | **−44 %** |
+
+The hand ok models with their arms and specs are gone too: `ccvW`/`ccvK1–3`/`ccv_specW`, `ivW`/
+`ivK1–5`/`iv_specW`, `dvW`/`dv_specW`/`ov_specW`/`dvBody_specW`, `cdfW`/`cdfK1–5`/`cdf_specW`,
+`ibdsW`, `cbdW`, `cdqW`, the file `DeclDivModSpec/CmW` (`cmW`, `dmCtpW`, `dmCpvW`, `cpaW` and their
+specs), `wtW`/`wtK1–6`/`wtW_spec`. Whole diff against master c4aef6d6: **+1 608 −3 652** in 38
+files.
+
+Choices and findings:
+
+* **`install_header` alone.** Its body and `class_const_ok_header`'s are two functions (§3.11);
+  `ih_ref` is `install_header`'s. The shared hand model `ihW` and `ihW_okT` stay for
+  `class_const_ok_header`'s ok proof (`RecGen3`, `IndBHdr`; batch 2b) and go with it. `G` is
+  `IhCtx p` (`closedNV` and `UceProg`: its consts-resolve site), the weakest that fits; callers
+  pass `⟨hG.nv, hG.uce⟩` from `VerdictCtxU`.
+* **`G` per function**: `VerdictCtxU p` for `check_constant_val` (the core stubs and the header);
+  `IvCtx` (`nv`, `uce`, `IvgE`) for `install_value`; `DvCtx` (`NVAt "env_push"`, `CoreStubsE`,
+  `IvgE`) for the value checks; `CdfCtx pins` (`VerdictCtxU`, `IvgE`, the pin gate's
+  `DivGateSpecE`) for the definition arm; `True` for the basis family; `CoreStubsE p` for the
+  `Nat.div` gates; `WtG` (`closedNV`, `WhnfTopE`) for `whnf_telescope`.
+* **A callee read through its run where the caller needs the run.** The definition arm needs each
+  callee's write-set frame (`PinSetsR.step`, `run_memFrame`), which comes from the program run, not
+  from a unified model's value. So `checkDeclDefnE` calls all its callees through `callE` and its
+  refinement takes their halves from the runs (`RefE.run_ok`, `RefE.run_err` with `ccv_ref`,
+  `dv_ref`, `dng_ref`). `whnf_telescope` does the same for `whnf_top` (`whnfC_rsim` reads the run).
+  A kit lemma from a unified model's ok value back to the call's run would allow listing such
+  callees by their unified specs.
+* **`install_value` against a kind-generic twin.** `ivT` has three kinds; `ivc_ref` is against
+  `ivCoreT` (header, guards unless `vk = 1`, push) and `iv_ref` reads each kind by
+  `RefE.of_run_eq`. The ok proof needs `install_value_guards`' spec, so `installValue_errT` and
+  `installStepGo_errT` gained `CvgProg p` (`DeclTopE` passes `hdc.cvg`).
+* **Two value checks, one text, two models.** `check_defn_val` and `check_opaque_val` differ only
+  in the abort code; their unified models are two constants, so `dv_ref` and `ov_ref` are the same
+  proof twice. They replace one shared ok proof and two error claims: −4 % only.
+* **`NatGateSpecE` gone**: with `dng_ref` read from the run, the definition arm's error claim no
+  longer takes the structural gate's claim as a hypothesis; `natGateSpecE_of`, and the hypothesis
+  in `DeclTopE`/`TopE`, are gone. `DivGateSpecE` moved to `Arena/DeclDefnT` (the pin gate is not
+  migrated: depth ≥ 3).
+* **Recipes.** `simp []` for every model here (with `locals` for `installHeaderE`); `finish` fails
+  for `installHeaderE`, `checkBasisDeclE`, `checkDivModCertsE`. `cv_lps`' spec carries the result's
+  length (`r = [r.headD 0, r.tail.headD 0]`), which as a `simp_all` hypothesis loops (max
+  recursion); `cvLps_specW1` drops it for the generator.
+* **Placement**: `ccv_ref`, `dv_ref`/`ov_ref` in `Verdict/DeclValsE` (now imported by
+  `Arena/DeclArmT`), `ih_ref` in `Verdict/DeclHdrE`, `iv_ref` in `Arena/DeclArmT`, `cdf_ref` in
+  `Arena/DeclDefnT`, the `Nat.div` gates in `Arena/DeclDivGateT2`, `wt_ref` in `Arena/IndT/Sum1`.
+* **Left for the next landing**: `check_reduce_pin`, `check_decl_axiom`, `check_decl_thm`,
+  `check_thm_val` (after `lvl_eq_fueled`), `check_decl_opaque`. `install_value_guards` (depth 0,
+  not in §3.1's list: no `@[refines]` of its own) has its hand model `ivgW` nested in
+  `check_thm_val`'s; it follows that.
+
+Elaboration (user seconds, `lean` on the module alone, median of 3 interleaved runs, base master
+c4aef6d6, load 15–96, `_tmp/unify-b2a/times1.txt`):
+
+| module | base | new | |
+|---|---:|---:|---|
+| `Arena/DeclDivGateT2` | 2.42 | **10.59** | the four unified models and refinements moved in |
+| `Verdict/DeclGatesE2`, `Arena/DeclDivModSpec/CmW` | 29.54 | 2.92 | …from here (`CmW` deleted); with `DeclDivGateT2`: 32.0 → 13.5 |
+| `Arena/IndT/Sum1` | 2.34 | **6.46** | `wtE` and `wt_ref` moved in |
+| `Verdict/IndBWt`, `Arena/IndSumSpec/WtW`, `StructProjArgP` | 21.81 | 12.10 | …from here; with `Sum1`: 24.2 → 18.6 |
+| `Arena/DeclDefnT` | 1.23 | **2.58** | `checkDeclDefnE` and `cdf_ref` moved in |
+| `Verdict/DeclDefnE` | 2.51 | 0.57 | …from here; with `DeclDefnT`: 3.7 → 3.2 |
+| `Arena/DeclArmT` | 1.61 | **2.18** | `installValueE`, `iv_ref` |
+| `Arena/DeclCrpT`, `DeclDivGateT` | 2.57 | 3.95 | call sites only (load noise; 0.4 s for a doc change) |
+| `Verdict/DeclValsE` | 2.23 | 2.56 | three unified models |
+| `Verdict/DeclBasisE`, `DeclQuotE` | 7.02 | 1.15 | claims gone |
+| `Verdict/DeclHdrE`, `DeclStepE` | 8.64 | 7.96 | |
+| the other 21 | 45.6 | 41.8 | |
+| **sum (38 modules)** | **127.5** | **94.8** | **−26 %** |
+
+Every flagged module is a new home of models and refinements whose old modules got faster by more.

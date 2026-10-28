@@ -9,7 +9,7 @@ import ConRon.Bridge.Inductives.SumInstall
 
 `check_sum_tele_slow`'s model at `realCall p`, from `StageC` and con-ron's preconditions of
 `checkSumTele_spec` (the two constant values denote, the stored type is closed, the environment
-denotes), its twin side transcribed from that spec's `slow` arm: `whnfTelescope` (`wtW_simC`, and
+denotes), its twin side transcribed from that spec's `slow` arm: `whnfTelescope` (`wt_ref`, and
 con-ron's `whnfTelescope_spec` on its run for the answer's denotation), the sort's intern
 (`internSortE_run`), `closeTelescope` (`closeTelescope_spec`), the record write (twin side none),
 `checkConstantVal` (the stub's `StageR` contract, con-ron's `checkConstantVal_bridge` on its run
@@ -32,9 +32,9 @@ section sims
 variable {p : Prog} (hq : KnotStageProg p) {dn : NIdx → Option ConLeche.Name} {vis : Word}
   {fe : IFEnv} {env : ConLeche.Env} (henv : ConLeche.EnvWF env)
   (hV : ValProg p)
-  (hApd : ApdF p) (hCrk : CrKeep p)
+  (hApd : ApdF p) (hCrk : CrKeep p) (hP : WtProg p)
 
-include hq henv hV hApd hCrk in
+include hq henv hV hApd hCrk hP in
 /-- **`check_sum_tele_slow` under `StageC`** (twin side: the `slow` arm of con-ron's
 `checkSumTele_spec`). -/
 theorem ctsW_okC (k : Nat) (hk : k ≤ 2 ^ 62)
@@ -67,8 +67,11 @@ theorem ctsW_okC (k : Nat) (hk : k ≤ 2 ^ 62)
     rw [hwd]; exact ConRon.Bridge.denoteCV_type hcvTaP
   obtain ⟨r1, m1, h1, h⟩ := kSome_inv h rfl (fun _ _ => rfl)
   rw [ctsK1_some] at h
-  obtain ⟨⟨bs, s⟩, a1, hrun1, hC1, hg1, hd1, ht1, hs32, hs, hA1⟩ :=
-    wtW_simC hq henv k (by omega) m a 0 n w hC hA hw32 (by simpa using n.toNat_lt) hdw hws _ h1
+  obtain ⟨s1, hs1, -, ⟨bs, s⟩, a1, hrun1, hR1⟩ := RefE.run_okW (s₀ := ⟨m, Locals.init []⟩)
+    (wtE_spec p hP k _ vis 0 n w)
+    (wt_ref hq hP henv k (by omega) m a 0 n w hC hA hw32 (by simpa using n.toNat_lt) hdw hws) h1
+  rw [hs1] at hR1
+  obtain ⟨hC1, hg1, hd1, ht1, hs32, hs, hA1⟩ := hR1
   dsimp only at hC1 hg1 hd1 ht1 hs32 hs hA1
   have hS1 := hC1.stage
   rw [show (0 : Word).toNat = 0 from rfl] at hrun1
@@ -166,7 +169,7 @@ theorem ctsW_okC (k : Nat) (hk : k ≤ 2 ^ 62)
     rw [hn 1 (by decide)] at e1; rw [hn 2 (by decide)] at e2
     have := hsl4 lo ll e1 e2; have := hg4.2.1; have := hg5.2.1; omega
 
-include hq henv hV hApd hCrk in
+include hq henv hV hApd hCrk hP in
 /-- **`check_sum_tele` under `StageC`** (twin side: con-ron's `checkSumTele_spec`'s proof:
 `stripPis` leaves the twin's state, the syntactic sort is a read, the slow arm `ctsW_okC`). -/
 theorem ctW_okC (k : Nat) (hk : k ≤ 2 ^ 62)
@@ -256,7 +259,7 @@ theorem ctW_okC (k : Nat) (hk : k ≤ 2 ^ 62)
     obtain ⟨r2, m2, h2, h⟩ := kSome_inv h rfl (fun _ _ => rfl)
     rw [ctK2_some] at h
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-    obtain ⟨res, a2, hrun2, hC2, hg2, hdec2, hb2, hsl2, hs32, hs, hA2⟩ := ctsW_okC hq henv hV hApd hCrk k (by omega)
+    obtain ⟨res, a2, hrun2, hC2, hg2, hdec2, hb2, hsl2, hs32, hs, hA2⟩ := ctsW_okC hq henv hV hApd hCrk hP k (by omega)
       m1 m2 a cv n cvTa0 r2 cvv cvTa h2 hC1 hcv1 (by have := hg1.2.1; omega)
       (fun lo ll e1 e2 => by
         rw [hnat cv hcvb 1 (by decide)] at e1; rw [hnat cv hcvb 2 (by decide)] at e2
@@ -323,11 +326,11 @@ theorem checkSumTeleSlow_refinesC (k : Nat) (hk : k ≤ 2 ^ 62) (s₀ : St) (a�
       (r.tail.headD 0).toNat < 2 ^ 32 ∧
       decI (r.tail.headD 0) = (AM.res (checkSumTele.checkSumTeleSlow V fe cvv n.toNat cvTa) a₀).2 ∧
       AbsOK s'.mem; ⊤⦄ := by
-  refine triple_post (ctsW_spec p ha hc hsc hv hff hfp hif hwt hsf hsp his hd hpf hpp hpi hmk hct
-    hea hcn hsl hi1 hab (realCall p) (realCall_spec p) k s₀ vis cv n cvTa0) ?_
+  refine triple_post (ctsW_spec p hsf hsp his hd hpf hpp hpi hmk hct
+    hea hcn hsl hab (realCall p) (realCall_spec p) k s₀ vis cv n cvTa0) ?_
   rintro r s' ⟨hl, hm⟩
   obtain ⟨res, a', hrun, hC', hg, hdec, -, -, hs32, hs, hA'⟩ :=
-    ctsW_okC hq henv hV hApd hCrk k hk _ _ _ _ _ _ _ _ _ hm hC hcv hcvb hsl' hta hta4 hA hcvP hcvTaP hws hfe
+    ctsW_okC hq henv hV hApd hCrk ⟨ha, hc, hsc, hv, hff, hfp, hif, hwt, hi1⟩ k hk _ _ _ _ _ _ _ _ _ hm hC hcv hcvb hsl' hta hta4 hA hcvP hcvTaP hws hfe
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
   exact ⟨hl, hok, by rw [hst]; exact hC', hg, by rw [hres]; exact hdec, hs32, by rw [hres]; exact hs, hA'⟩
 
@@ -359,11 +362,11 @@ theorem checkSumTele_refinesC (hp : p.lookup "check_sum_tele" = some checkSumTel
       (∀ lo ll, nat? (erA s'.mem) ((r.headD 0).toNat + 1) = some lo →
         nat? (erA s'.mem) ((r.headD 0).toNat + 2) = some ll → lo + ll ≤ erTop s'.mem ∨ ll = 0) ∧
       AbsOK s'.mem; ⊤⦄ := by
-  refine triple_post (ctW_spec p ha hc hsc hv hff hfp hif hwt hsf hsp his hd hpf hpp hpi hmk hct
-    hea hcn hsl hp hst hi1 hab (realCall p) (realCall_spec p) k s₀ vis cv n cvTa0) ?_
+  refine triple_post (ctW_spec p hv hsf hsp his hd hpf hpp hpi hmk hct
+    hea hcn hsl hp hst hab (realCall p) (realCall_spec p) k s₀ vis cv n cvTa0) ?_
   rintro r s' ⟨hl, hm⟩
   obtain ⟨res, a', hrun, hC', hg, hdec, hb, hslr, hs32, hs, hA'⟩ :=
-    ctW_okC hq henv hV hApd hCrk k hk _ _ _ _ _ _ _ _ _ hm hC hcv hcvb hsl' hta hta4 hslTa hA hcvP hcvTaP hws hfe
+    ctW_okC hq henv hV hApd hCrk ⟨ha, hc, hsc, hv, hff, hfp, hif, hwt, hi1⟩ k hk _ _ _ _ _ _ _ _ _ hm hC hcv hcvb hsl' hta hta4 hslTa hA hcvP hcvTaP hws hfe
   obtain ⟨hok, hst', hres⟩ := AM.of_run_ok _ _ _ _ hrun
   exact ⟨hl, hok, by rw [hst']; exact hC', hg, by rw [hres]; exact hdec, hs32, by rw [hres]; exact hs,
     hb, hslr, hA'⟩

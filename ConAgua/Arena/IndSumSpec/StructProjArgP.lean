@@ -513,52 +513,16 @@ open L.Arena
 
 /-! ## `whnf_telescope` -/
 
-/-- After `sl_cons`: the slice and the sort. -/
-def wtK6 (s : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (ro, m5) => some ([ro.headD 0, ro.tail.headD 0, s], m5)
+/-- **`whnf_telescope` as its callers' models read it**: its run (`wtE`, `wt_ref` in
+`IndT/Sum1.lean` refine it). -/
+def wtR (cR : CallM) (k : Nat) (m : Mem) (vis i n e : Word) : Option (List Word × Mem) :=
+  cR k "whnf_telescope" [vis, i, n, e] m
 
-mutual
-/-- **The model of `whnf_telescope`.** -/
-def wtW (cR : CallM) : Nat → Mem → Word → Word → Word → Word → Option (List Word × Mem)
-  | 0, _, _, _, _, _ => none
-  | k + 1, m, vis, i, n, e => wtK1 cR k vis i n (cR k "whnf_top" [vis, i, e] m)
-/-- After `whnf`: the view. -/
-def wtK1 (cR : CallM) (k : Nat) (vis i n : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r1, m1) => wtK2 cR k vis i n m1 (eViewW m1 (r1.headD 0))
-/-- The view's arms. -/
-def wtK2 (cR : CallM) (k : Nat) (vis i n : Word) (m1 : Mem) (v : List Word) : Option (List Word × Mem) :=
-  if v.headD 0 = 2 ∧ n = 0 then some ([0, 0, v.tail.headD 0], m1)
-  else if v.headD 0 = 6 ∧ n ≠ 0 then
-    wtK3 cR k vis i n (v.tail.headD 0) (v.tail.tail.headD 0) (fvinternW m1 i (v.tail.headD 0))
-  else none
-/-- After `intern_fvar`. -/
-def wtK3 (cR : CallM) (k : Nat) (vis i n x y : Word) : Option (Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (fv, m2) =>
-    if 4294967296 ≤ fv then none
-    else wtK4 cR k vis i n x (i1F m2 [CWF, y, fv, 0])
-/-- After `instantiate1_fast`: the recursion. -/
-def wtK4 (cR : CallM) (k : Nat) (vis i n x : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (rb, m3) => wtK5 k x (wtW cR k m3 vis (i + 1) (n - 1) (rb.headD 0))
-/-- After the recursion: the cons. -/
-def wtK5 (k : Nat) (x : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (rr, m4) => wtK6 (rr.tail.tail.headD 0) (consW k m4 x (rr.headD 0) (rr.tail.headD 0))
-end
+theorem wtR_spec (p : Prog) (cR : CallM) (hcR : CallSpec p cR) (k : Nat) (s₀ : St) (vis i n e : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p k) "whnf_telescope" [vis, i, n, e]
+    ⦃fun r s' => LocEq s' s₀ ∧ wtR cR k s₀.mem vis i n e = some (r, s'.mem); ⊤⦄ :=
+  hcR k _ _ s₀
 
-section arms
-variable (cR : CallM) (k : Nat) (m m1 m2 m3 m4 m5 : Mem) (vis i n e x y s fv : Word) (v r1 rb rr ro : List Word)
-theorem wtK2_none (h1 : ¬ (v.headD 0 = 2 ∧ n = 0)) (h2 : ¬ (v.headD 0 = 6 ∧ n ≠ 0)) :
-    wtK2 cR k vis i n m1 v = none := by simp only [wtK2, ite_eq_right h1, ite_eq_right h2]
-theorem wtK3_big (h : 4294967296 ≤ fv) : wtK3 cR k vis i n x y (some (fv, m2)) = none := by
-  simp [wtK3, h]
-end arms
-
-grind_pattern [ind_grind] wtK2_none => wtK2 cR k vis i n m1 v
-grind_pattern [ind_grind] wtK3_big => wtK3 cR k vis i n x y (some (fv, m2))
 local notation "V" => ConLeche.CheckMode.verified
 
 /-! ### The twin, one level unfolded
