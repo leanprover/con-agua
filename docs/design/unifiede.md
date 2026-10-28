@@ -1544,7 +1544,7 @@ Elaboration (user seconds, `lean` on the module alone, median of 3 interleaved r
 | `Verdict/IndBSum3` | 27.34 / 30.74 | **31.79 / 37.08** | **slower (+15–20 %)**: only `ctor_claim`'s `check_struct_doms_at` call changed (6 lines shorter); the import header loads as fast (0.67 s both) |
 | `Verdict/IndA4` | 9.27 / 11.79 | **11.06 / 13.36** | **slower (+13–19 %)**: doc comment only; it now imports the unified models of `Tables` and `IndBSum1`'s importers |
 | `Verdict/IndsE4` | 3.16 / 4.05 | 4.28 / 4.75 | `cbao_ref` reads `cbda_ref` from the run |
-| the other 14 | 57.82 | 53.33 | |
+| the other 14 | 53.21 | 40.86 | |
 | **sum (31 modules)** | **178.4** | **134.9** | **−24 %** |
 
 `IndBSum3` and `IndA4` are slower although their own text barely changed; a guess is a larger
