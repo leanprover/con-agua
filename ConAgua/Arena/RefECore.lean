@@ -1,4 +1,5 @@
 import ConAgua.Arena.Verdict
+import ConAgua.Arena.WhnfCoreRefine
 
 /-!
 # The unified refinements of core functions
@@ -9,7 +10,9 @@ the relation after it, the result decoded and valid. `CorePost` is that post as 
 (`RefE … (CorePost …)`), and `RefE.coreSpec` / `CoreSpec.of_refE` give the knot's `CoreSpec` from
 it. An arm that leaves a slice on the stack has `GrowPost` (`CoreAfterG`: the stack below the old
 top kept, the top possibly grown) and `GrowRef`. A callee's ok run is threaded by
-`RefE.bind_core` (kept stack) and `RefE.bind_grow`/`bind_growK` (grown).
+`RefE.bind_core` (kept stack) and `RefE.bind_grow`/`bind_growK` (grown). A knot callee that is
+read through its run (`callE`) is `RefE.bind_callE`: its ok half from its `CoreSpec`, its error half
+from its claim. `GrowPost.restore` puts a grown stack's top back.
 -/
 
 open ConRon.Arena
@@ -101,6 +104,26 @@ theorem CoreSpec.of_refE {α β : Type} [Inhabited β] {p : Prog} {n : Nat} {f :
   obtain ⟨hl, y, a', hrun, hR⟩ := L.M.of_run (P := fun s => s = s₀) hp hr (RefE.triple hs h)
   obtain ⟨hm, hd, ho⟩ := hw r s'
   exact ⟨hl, CorePost.coreRef hrun ⟨hm ▸ hR.after, hR.res.trans hd, ho hR.valid⟩⟩
+
+/-- **A knot callee read through its run (`callE`), both outcomes, then the rest**: the ok half
+from the callee's `CoreSpec`, the error half from its claim under `G` (`CoreSpecE`; for a unified
+callee `RefE.coreSpecE`). `x` is the caller's model after the call, which passes the callee's
+errors on. -/
+theorem RefE.bind_callE {α β γ : Type} [Inhabited γ] {G : Prop} {p : Prog} {n : Nat} {f : FnName}
+    {args : List Word} {s₀ : St} {x : Except Err (List Word × Mem) → Except Err α}
+    (hx : ∀ e, x (.error e) = .error e) {T : AM γ} {k : γ → AM β} {a : AState}
+    {dec : List Word → γ} {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
+    {M : ModeMaps} {eb : Word} {ok : List Word → Prop} {R : α → β → AState → Prop}
+    (hok : CoreSpec p n f args T dec s₀ a dn vis fe M eb ok)
+    (herr : G → CoreSpecE p n f args T s₀ a)
+    (h : ∀ r m', callE p n f args s₀.mem = .ok (r, m') →
+      CoreRef T a dec dn s₀.mem vis fe M eb r m' ok → RefE G (x (.ok (r, m'))) (k (dec r)) (AM.st T a) R) :
+    RefE G (x (callE p n f args s₀.mem)) (T >>= k) a R := by
+  rcases c : callE p n f args s₀.mem with e | ⟨r, m'⟩
+  · rw [hx]
+    exact RefE.bind_left fun hG => CoreSpecE.of_callE (herr hG) c
+  have h1 := CoreSpec.of_callW hok (callW_of_callE c)
+  exact RefE.bind_right (by rw [AM.run_of_ok _ _ h1.1, h1.2.2.1]) (h r m' c h1)
 
 /-! ## Runs that leave their pushed slice on the stack -/
 
@@ -206,5 +229,16 @@ theorem RefE.bind_growK {α β γ : Type} [Inhabited γ] {G : Prop} {x : Except 
     ((h₂ M' hS hSt).mono fun _ _ _ h =>
       let ⟨M'', hS'', hK'', hSt''⟩ := h.after
       ⟨⟨M'', hS'', hK.trans hK'', hSt.toGrew.trans hSt''⟩, h.res, h.valid⟩)
+
+/-- **The top put back** after a run that grew the stack (`GrowPost` to `CorePost`), the result
+relisted as `r'`. -/
+theorem GrowPost.restore {α : Type} {dec : List Word → α} {dn : NIdx → Option ConLeche.Name}
+    {m₀ : Mem} {vis : Word} {fe : IFEnv} {M : ModeMaps} {eb : Word} {ok : List Word → Prop}
+    {r : List Word} {m : Mem} {y : α} {a' : AState} (h : GrowPost dec dn m₀ vis fe M eb ok (r, m) y a')
+    (r' : List Word) (hr : dec r' = dec r) (hok : ok r') :
+    CorePost dec dn m₀ vis fe M eb ok (r', m.set64 CTL 136 (rdW (m₀.arr64 CTL) 136)) y a' := by
+  obtain ⟨M', hS, hK, hg⟩ := h.after
+  exact ⟨⟨M', hS.frame_stk (MemFrame.setCtl _ _ _) (by simp) (by simp), hK, StackKept.restoreG' hg⟩,
+    h.res.trans hr.symm, hok⟩
 
 end L.Arena
