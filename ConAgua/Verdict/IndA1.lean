@@ -1,8 +1,6 @@
-import ConAgua.Arena.Verdict
 import ConAgua.Arena.IndT.CheckIndDecl
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.ModelGen
-import ConAgua.Checker.NoVerdictTree
 
 /-!
 # `check_ind_decl`'s error refinement (lane `verdicts-b`, helper `ia`)

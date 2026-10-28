@@ -1,12 +1,11 @@
 import ConAgua.Arena.IndSumSpec.ColW
 import ConAgua.Arena.RecCheckSpec.TaGoWMfr
-import ConAgua.Arena.RecCheckSpec.TcmK6
 import ConAgua.Arena.IndGrindAttr
 
 /-!
 # TcmLook
 
-`pinternW_mfr`, `plgW_mfr`, `plW_mfr`, `thW_mfr`, `lpsW_mfr`, `tcmK5` and the lemmas only they use.
+`pinternW_mfr`, `plgW_mfr`, `plW_mfr`, `thW_mfr`, `lpsW_mfr`, `TcmLook` and the lemmas only they use.
 -/
 
 noncomputable section
@@ -104,48 +103,6 @@ theorem lpsW_mfr {n : Nat} {m m' : Mem} {q : Word} {r : List Word} (h : lpsW n m
     split at h
     · simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨-, rfl⟩ := h; exact MFr.refl _ _ _
     · exact erToIwW_mfr h
-
-def tcmK5 (cR : CallM) (n : Nat) (vis pfo pfl dso dsl edso edsl d : Word) (rn rb : List Word) :
-    Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (rh, m) => tcmK6 (pdeW cR n m vis d (rn.headD 0) (rn.tail.headD 0) (rb.headD 0) (rh.headD 0)
-      (rh.tail.headD 0) pfo pfl dso dsl edso edsl)
-
-def tcmK4 (cR : CallM) (n : Nat) (vis fto ftl pfo pfl dso dsl edso edsl : Word) (rn : List Word) :
-    Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (rb, m) =>
-    if pfl + ftl < pfl then none
-    else tcmK5 cR n vis pfo pfl dso dsl edso edsl (pfl + ftl) rn rb (thW n m fto ftl pfl)
-
-def tcmK3 (cR : CallM) (n : Nat) (vis fto ftl pfo pfl dso dsl edso edsl : Word) (rn : List Word) :
-    Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (rl, m) => tcmK4 cR n vis fto ftl pfo pfl dso dsl edso edsl rn (plW n m (rl.headD 0) (rl.tail.headD 0))
-
-def tcmK2 (cR : CallM) (n : Nat) (vis p fto ftl pfo pfl dso dsl edso edsl : Word) :
-    Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (rn, m) => tcmK3 cR n vis fto ftl pfo pfl dso dsl edso edsl rn (lpsW n m p)
-
-def tcmK1 (cR : CallM) (n : Nat) (vis p fto ftl pfo pfl dso dsl edso edsl : Word) :
-    Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m) =>
-    if r.headD 0 ≠ 2 then some ([0], m)
-    else tcmK2 cR n vis p fto ftl pfo pfl dso dsl edso edsl (memberNamesW n m p)
-
-/-- **The model of `target_class_match`** (body fuel `n`). -/
-def tcmW (cR : CallM) (n : Nat) (m : Mem) (vis p fto ftl pfo pfl us dso dsl lvls edso edsl : Word) :
-    Option (List Word × Mem) :=
-  tcmK1 cR n vis p fto ftl pfo pfl dso dsl edso edsl (cR n "lvls_eq_c" [us, lvls] m)
-
-section arms
-variable (cR : CallM) (n : Nat) (m : Mem) (vis p fto ftl pfo pfl dso dsl edso edsl d : Word) (r rn rb rh rl : List Word)
-theorem tcmK4_wrap (h : pfl + ftl < pfl) : tcmK4 cR n vis fto ftl pfo pfl dso dsl edso edsl rn (some (rb, m)) =
-    none := by simp only [tcmK4]; rw [ite_eq_left h]
-end arms
-attribute [ind_grind] tcmK4_wrap
 
 /-- The lookups of `target_class_match`. -/
 structure TcmLook (p : Prog) : Prop where
