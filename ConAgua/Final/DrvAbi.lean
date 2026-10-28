@@ -23,7 +23,7 @@ checked it), entry 1's run of `check` (mode word `3`) ends with result `r₁`, a
 (`seqMem m₁ … 0 k`) ends with `ACCEPT`. -/
 def DrvAccepts (p : Prog) (mode plo phi : GVar) (out hdrf ctlf : ArrId) (hw : Nat)
     (b pb : ByteArray) : Prop :=
-  b.size < 2 ^ 63 ∧ pb.size < 2 ^ 63 ∧ ∃ rs1 m1, L.run p abiFuel "check" [] ((loadMem b pb fun _ => abiWords).setG mode 3) =
+  b.size < 2 ^ 63 ∧ pb.size < 2 ^ 63 ∧ ∃ rs1 m1, L.run p abiFuel "check" [] ((loadMem b pb (abiSz tab)).setG mode 3) =
       .ok (rs1, m1) ∧
     (rs1.getD 0 0 = ACCEPT ∨
       (2 ^ 63 ≤ (rs1.getD 0 0).toNat ∧ ∃ rs2 m2,
@@ -36,9 +36,9 @@ fails with an error of code `k`. -/
 def DrvErr (p : Prog) (mode plo phi : GVar) (out hdrf ctlf : ArrId) (hw : Nat)
     (b pb : ByteArray) (k : Word) : Prop :=
   b.size < 2 ^ 63 ∧ pb.size < 2 ^ 63 ∧
-  ((∃ e, L.run p abiFuel "check" [] ((loadMem b pb fun _ => abiWords).setG mode 3) =
+  ((∃ e, L.run p abiFuel "check" [] ((loadMem b pb (abiSz tab)).setG mode 3) =
       .error e ∧ e.code = k) ∨
-   (∃ rs1 m1, L.run p abiFuel "check" [] ((loadMem b pb fun _ => abiWords).setG mode 3) =
+   (∃ rs1 m1, L.run p abiFuel "check" [] ((loadMem b pb (abiSz tab)).setG mode 3) =
       .ok (rs1, m1) ∧ 2 ^ 63 ≤ (rs1.getD 0 0).toNat ∧ ∃ e,
       L.run p abiFuel "check" [] (seqMem m1 mode plo phi out hdrf ctlf hw 0 (rs1.getD 0 0 - 9223372036854775808)) =
         .error e ∧ e.code = k))
@@ -393,7 +393,7 @@ theorem drv_outcome [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = true)
     exact UInt64.toBitVec_inj.mp hz0
   have hout' := hout.resolve_left (by rw [hrdx0]; decide)
   obtain ⟨hb, hpb⟩ := hsz.resolve_left (by rw [hrdx0]; decide)
-  rcases hres : L.run p abiFuel "check" [] ((loadMem b pb fun _ => abiWords).setG mode 3)
+  rcases hres : L.run p abiFuel "check" [] ((loadMem b pb (abiSz tab)).setG mode 3)
     with e | ⟨rs1, m1⟩
   · rw [hres] at hout'
     cases e <;> simp only [OutcomeRel] at hout' <;> (rw [hrdx0] at hout'; exact absurd hout'.1 (by decide))

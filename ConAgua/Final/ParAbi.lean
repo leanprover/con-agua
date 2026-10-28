@@ -195,7 +195,7 @@ theorem abiMode_outcome [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = true
     (fd : FunDecl) (hentry : p.lookup "check" = some fd) (hnp : fd.nparams = 0)
     (b pb : ByteArray) (dm : MachineData) (ra : Word) (hc : AbiCall b pb dm ra) :
     Ev (fun st => EntryPost (abiLayout tab dm.regs.r8.toNat dm.regs.rdi.toNat b.size dm.regs.rdx.toNat pb.size)
-        dm ra (L.run p abiFuel "check" [] ((loadMem b pb fun _ => abiWords).setG mode w)) st ∧
+        dm ra (L.run p abiFuel "check" [] ((loadMem b pb (abiSz tab)).setG mode w)) st ∧
         SizesPost b pb st)
       dm (label lab) := by
   obtain ⟨hnb, htab, hneed64⟩ := abiTabOk_spec hok
@@ -271,7 +271,7 @@ theorem abiA_outcome [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = true)
     (fd : FunDecl) (hentry : p.lookup "check" = some fd) (hnp : fd.nparams = 0)
     (b pb : ByteArray) (dm : MachineData) (ra : Word) (hc : AbiCall b pb dm ra) :
     Ev (fun st => EntryPost (abiLayout tab dm.regs.r8.toNat dm.regs.rdi.toNat b.size dm.regs.rdx.toNat pb.size)
-        dm ra (L.run p abiFuel "check" [] ((loadMem b pb fun _ => abiWords).setG mode 1)) st ∧
+        dm ra (L.run p abiFuel "check" [] ((loadMem b pb (abiSz tab)).setG mode 1)) st ∧
         SizesPost b pb st)
       dm (label abiStartAL) := by
   have hcP := hcode.left
@@ -291,7 +291,7 @@ theorem abiA0_outcome [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = true)
     (fd : FunDecl) (hentry : p.lookup "check" = some fd) (hnp : fd.nparams = 0)
     (b pb : ByteArray) (dm : MachineData) (ra : Word) (hc : AbiCall b pb dm ra) :
     Ev (fun st => EntryPost (abiLayout tab dm.regs.r8.toNat dm.regs.rdi.toNat b.size dm.regs.rdx.toNat pb.size)
-        dm ra (L.run p abiFuel "check" [] ((loadMem b pb fun _ => abiWords).setG mode 3)) st ∧
+        dm ra (L.run p abiFuel "check" [] ((loadMem b pb (abiSz tab)).setG mode 3)) st ∧
         SizesPost b pb st)
       dm (label abiStartA0L) := by
   have hcP := hcode.left
