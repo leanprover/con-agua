@@ -636,15 +636,6 @@ l_model defeqPeel_specE (p : Prog) (hf : p.lookup "defeq_peel" = some defeqPeelL
   fns [hf ↦ peelE] grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] unified
 
-/-- **What the descent's errors claim from**: the knot's slots up to fuel `n` (through `peel_leaf`'s
-and `peel_step`'s refinements) and the verdict closure (`peel_push`, the lifted callees). -/
-structure PeelG (p : Prog) (n : Nat) : Prop where
-  knot : KnotUpToE p n
-  nv : closedNV p L.Checker.nvFns = true
-
-theorem PeelG.mono {p : Prog} {n n' : Nat} (h : PeelG p n) (hn : n' ≤ n) : PeelG p n' :=
-  ⟨h.knot.mono hn, h.nv⟩
-
 /-! ## The loop refines `defeqPeel` -/
 
 theorem defeqPeel_eq_run (r : CoreFnsA) (d peel : Nat) (a b : EIdx) (k : Nat) (fvs : Array EIdx)
@@ -675,7 +666,7 @@ theorem peel_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n 
     ∀ j, j ≤ n + 1 → ∀ (peel a b k : Word) (m : Mem) (s : AState) (M : ModeMaps) (eb : Word)
       (fvs : Array EIdx), CoreS dn m s vis fe M eb → eb = (mode >>> 1) &&& 1 → HW a → HW b →
       FvsR m fo k fvs → d.toNat + k.toNat + peel.toNat < 2 ^ 64 →
-      RefE (PeelG p n) (peelE.loop1 p j m mode vis d peel a b k fo)
+      RefE (KnotNvG p n) (peelE.loop1 p j m mode vis d peel a b k fo)
         (defeqPeel (coreKnot (decMode mode) fe id F) d.toNat peel.toNat (decE a) (decE b)
           k.toNat fvs) s
         (fun v y a' => GrowPost decBool dn m vis fe M eb ResH ([v.1], v.2) y a') := by
@@ -780,7 +771,7 @@ theorem defeqPeel_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn
     (M : ModeMaps) (eb mode d peel a b k fo : Word) (hs : SlotPre s₀ a₀ dn vis fe M eb mode)
     (ha : HW a) (hb : HW b) (fvs : Array EIdx) (hx : FvsR s₀.mem fo k fvs)
     (hdk : d.toNat + k.toNat + peel.toNat < 2 ^ 64) :
-    RefE (PeelG p n) (peelE p (n + 1) s₀.mem mode vis d peel a b k fo)
+    RefE (KnotNvG p n) (peelE p (n + 1) s₀.mem mode vis d peel a b k fo)
       (defeqPeel (coreKnot (decMode mode) fe id F) d.toNat peel.toNat (decE a) (decE b) k.toNat fvs) a₀
       (fun v y a' => GrowPost decBool dn s₀.mem vis fe M eb ResH ([v.1], v.2) y a') := by
   rw [peelE.arm1]
@@ -852,7 +843,7 @@ theorem db_ref (p : Prog) (hp : PeelProg p) (hil : InstListOK p) (n : Nat)
     (eb mode d ty1 body1 ty2 body2 : Word) (hs : SlotPre s₀ a₀ dn vis fe M eb mode)
     (h1 : HW ty1) (hb1 : HW body1) (h2 : HW ty2) (hb2 : HW body2)
     (hd : d.toNat + 1 + peelFuel < 2 ^ 64) :
-    RefE (PeelG p n) (dbE p (n + 1) s₀.mem mode vis d ty1 body1 ty2 body2)
+    RefE (KnotNvG p n) (dbE p (n + 1) s₀.mem mode vis d ty1 body1 ty2 body2)
       (defeqBinders (coreKnot (decMode mode) fe id F) d.toNat (decE ty1) (decE body1) (decE ty2)
         (decE body2)) a₀ (CorePost decBool dn s₀.mem vis fe M eb ResH) := by
   simp only [dbE]

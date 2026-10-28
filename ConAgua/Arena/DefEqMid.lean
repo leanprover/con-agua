@@ -374,6 +374,16 @@ def QuickDefeqWE (p : Prog) (n : Nat) : Prop :=
     CoreSpecE p n "quick_defeq" [mode, vis, d, x, y]
       (quickDefEq (decMode mode) (coreKnot (decMode mode) fe id F) d.toNat (decE x) (decE y)) s₀ a₀
 
+/-- **The knot's slots up to fuel `n` and the verdict closure**: what the errors of the `defeq`
+family's pieces that call the slots and lifted callees claim from (`peel_*`, `lams_*`,
+`quick_*`). -/
+structure KnotNvG (p : Prog) (n : Nat) : Prop where
+  knot : KnotUpToE p n
+  nv : closedNV p L.Checker.nvFns = true
+
+theorem KnotNvG.mono {p : Prog} {n n' : Nat} (h : KnotNvG p n) (hn : n' ≤ n) : KnotNvG p n' :=
+  ⟨h.knot.mono hn, h.nv⟩
+
 /-! ## `delta_quick` -/
 
 theorem res3_of {x y z : Word} {r : List Word} (hx : HW x) (hy : HW y) (hz : HW z)

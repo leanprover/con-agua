@@ -1,7 +1,5 @@
 import ConAgua.Verdict.DefEqLoopsE
 import ConAgua.Verdict.DefEqLazyE
-import ConAgua.Verdict.DefEqLamsE
-import ConAgua.Verdict.DefEqPeelE
 
 /-!
 # The `defeq` slot's error half one level up, assembled (lane `verdicts-b`, helper `k3`)
@@ -54,8 +52,11 @@ include hq hnv in
 theorem KnotAllProg.quickDefeqE : QuickDefeqE p :=
   let qp := hq.body.lazy.spine.quick
   let lc := KnotAllProg.lazy hq
-  quickDefeq_refinesE p qp lc.store (defeqBinders_refinesE p qp.lams.peel lc.instList hnv)
-    (defeqLams_refinesE p qp.lams lc.inst1 hnv) hnv
+  fun n hk hkE F s₀ a₀ dn vis fe M eb mode d x y hF hn hs hx hy hd =>
+    RefE.coreSpecE (qdE_spec p qp.qd qp.qs qp.qf qp.ql qp.lams.peel.binders qp.lams.lams (n + 1) s₀
+      mode vis d x y) hnv ⟨hkE, hnv⟩
+      (qd_ref p qp lc.instList lc.inst1 lc.store n hk F s₀ a₀ dn vis fe M eb mode d x y (by omega)
+        (by omega) hs hx hy hd)
 
 include hq hw hnv in
 /-- `lazy_delta_reduction`'s error claim. -/

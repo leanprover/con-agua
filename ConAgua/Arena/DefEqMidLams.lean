@@ -298,12 +298,6 @@ l_model defeqLams_specE (p : Prog) (hf : p.lookup "defeq_lams" = some defeqLamsL
   fns [hf ↦ lamsE] grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] unified
 
-/-- **What the telescope loop's errors claim from**: the knot's slots up to fuel `n` (through
-`lams_open`'s and `defeq_lams_inner`'s refinements) and the verdict closure (`lam_pair`). -/
-structure LamsG (p : Prog) (n : Nat) : Prop where
-  knot : KnotUpToE p n
-  nv : closedNV p L.Checker.nvFns = true
-
 /-! ## The loop refines `defeqLams` -/
 
 section loopRef
@@ -317,7 +311,7 @@ theorem lams_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n 
     ∀ k, k ≤ n + 1 → ∀ K, k ≤ K + 1 → ∀ (d ty₁ body₁ ty₂ body₂ : Word) (m : Mem) (s : AState)
       (M : ModeMaps) (eb : Word), CoreS dn m s vis fe M eb → eb = (mode >>> 1) &&& 1 → HW ty₁ →
       HW body₁ → HW ty₂ → HW body₂ → d.toNat + k < 2 ^ 64 →
-      RefE (LamsG p n) (lamsE.loop1 p k m mode vis d ty₁ body₁ ty₂ body₂)
+      RefE (KnotNvG p n) (lamsE.loop1 p k m mode vis d ty₁ body₁ ty₂ body₂)
         (defeqLams (decMode mode) (coreKnot (decMode mode) fe id F) K d.toNat (decE ty₁)
           (decE body₁) (decE ty₂) (decE body₂)) s
         (fun v y a' => CorePost decBool dn m vis fe M eb ResH ([v.1], v.2) y a') := by
@@ -400,7 +394,7 @@ theorem defeqLams_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn
     (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (M : ModeMaps) (eb mode d ty₁ body₁ ty₂ body₂ : Word) (hs : SlotPre s₀ a₀ dn vis fe M eb mode)
     (h1 : HW ty₁) (hb1 : HW body₁) (h2 : HW ty₂) (hb2 : HW body₂) (hd : d.toNat < 2 ^ 63) :
-    RefE (LamsG p n) (lamsE p (n + 1) s₀.mem mode vis d ty₁ body₁ ty₂ body₂)
+    RefE (KnotNvG p n) (lamsE p (n + 1) s₀.mem mode vis d ty₁ body₁ ty₂ body₂)
       (defeqLams (decMode mode) (coreKnot (decMode mode) fe id F) lamsFuel d.toNat (decE ty₁)
         (decE body₁) (decE ty₂) (decE body₂)) a₀
       (fun v y a' => CorePost decBool dn s₀.mem vis fe M eb ResH ([v.1], v.2) y a') := by
