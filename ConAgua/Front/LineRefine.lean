@@ -357,7 +357,7 @@ theorem frontLine_refines (p : Prog) (hS : ScanLookups p) (hL : FrontLookups p)
     (hpn : p.lookup "apply_nstr" = some applyNStr) (hpu : p.lookup "apply_nnum" = some applyNNum)
     (hpl : p.lookup "apply_level" = some applyLevel) (hpr : p.lookup "apply_rec" = some applyRec)
     (hpt : p.lookup "apply_str" = some applyStr) (hE : ExprLookups p)
-    (hpy : p.lookup "apply_any" = some applyAny) (hF : DeclFieldLookups p) (hDL : DeclLookups p)
+    (hF : DeclFieldLookups p) (hDL : DeclLookups p)
     (hpz : p.lookup "apply_dline" = some applyDLine) (hFI : L.Front.Ind.IndFieldLookups p)
     (hAI : L.Front.Ind.IndApplyLookups p) (hII : L.Front.Ind.IndInstallLookups p)
     (hXI : L.Front.Ind.IndLineLookups p) (b : ByteArray) (h64 : System.Platform.numBits = 64) (hsize : b.size < 2 ^ 63)
@@ -370,7 +370,7 @@ theorem frontLine_refines (p : Prog) (hS : ScanLookups p) (hL : FrontLookups p)
   apply M.triple_of_run
   intro s r s' hs hrun
   have hW := M.of_run (P := fun s => s = s₀) hs hrun
-    (frontLine_spec p hS hL hpf hpn hpu hpl hpr hpt hE hpy hF hDL hpz b.data hsize n s₀ hm i.toUInt64
+    (frontLine_spec p hS hL hpf hpn hpu hpl hpr hpt hE hF hDL hpz b.data hsize n s₀ hm i.toUInt64
       (by rw [USize.toNat_toUInt64]; exact hi) hR.1.lit.1.cap hR.1.lit.1.top)
   intro nx hr
   subst hr

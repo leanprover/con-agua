@@ -13,7 +13,7 @@ import Std.Tactic.BVDecide.Normalize.Prop
 /-!
 # The fields of expression lines, linked to con-leche
 
-On a line con-leche's scanner accepts with an expression record, `rec_expr_loop`'s words are the
+On a line con-leche's scanner accepts with an expression record, `exprLineN`'s words are the
 record's fields in the sense of `ExprR` (`exprLine_link`). As for name and level lines
 (`ConAgua.Front.FieldsLink`), every link is on con-leche's `ok` path only.
 
@@ -743,13 +743,13 @@ theorem strVal_link (v : USize) (s : String) (e : USize) (h : ConLeche.Frontend.
 
 end entries
 
-/-! ## `rec_expr_loop` -/
+/-! ## The line (`exprLineN`) -/
 
 section line
 variable (b : ByteArray) (h64 : System.Platform.numBits = 64) (hsize : b.size < 2 ^ 63)
 include h64 hsize
 
-/-- **The expression line loop, linked**: on con-leche's `ok` path, if `rec_expr_loop`'s kind is
+/-- **The expression line loop, linked**: on con-leche's `ok` path, if `exprN`'s kind is
 not `0`, its words are the fields of con-leche's expression record (`ERecR`). -/
 theorem exprLine_link (i : USize) (w : Bool) (ik : UInt8) (idx : Nat) (pl : LinePayload) (f : Fld)
     (r : LineRec) (e : USize) (h : scanLineLoop b i w ik idx pl = .ok r e)
@@ -881,7 +881,7 @@ decreasing_by
     | (have := USize.lt_iff_toNat_lt.mp ‹i < numEnd b _›; omega)
     | (have := USize.lt_iff_toNat_lt.mp ‹i < _›; omega)
 
-/-- `rec_expr_loop(i)`, from the line's first member: what `front_line` calls. -/
+/-- The expression record from the line's first member (`exprLineN`, `front_line`'s model). -/
 theorem exprLineN_link (i : USize) (r : LineRec) (e : USize)
     (h : scanLineLoop b i true 0 0 .absent = .ok r e) :
     (exprLineN b.data i.toUInt64).pl ≠ 0 → ERecR b r (exprLineN b.data i.toUInt64) :=
@@ -891,7 +891,5 @@ end line
 
 /-- info: 'ConAgua.Front.FieldsLink.exprLineN_link' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms exprLineN_link
-/-- info: 'L.Front.Fields.recExprLoop_spec' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs in #print axioms L.Front.Fields.recExprLoop_spec
 
 end ConAgua.Front.FieldsLink
