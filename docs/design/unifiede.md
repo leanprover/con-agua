@@ -2564,3 +2564,57 @@ What replaces what:
 
 `Audit/Final` and the stage statements (`StageSpec`, `StageSpecE`, `RelSpec`) do not change.
 Landing in two steps: `front_line` and `front_run` first, `builtin_prelude` second.
+
+### 3.37 Retirement, group A: the frontend's driver, first landing (`front_line`, `front_run`)
+
+§3.36's design, the first two functions; nothing skipped (`builtin_prelude` is the second landing).
+
+| function | before: ok side (models, specs, refinements) + error claims | after | change |
+|---|---:|---:|---:|
+| `front_line` | `frontLineW` and its pieces 40, `applyAnyW_lineRec`/`frontLineW_eq` 65, `frontLine_spec` 23, `applyAnyW_refines`/`frontLineW_refines`/`frontLine_refines` 131, `applyAnyW_grow`/`frontLineW_grow` 56, `applyDLine_runF` 16; `frontLine_specE`, `lineFwd2N_ne`, `frontLineE_claim(_all)` 189, `SafeLink` 7 = 527 | `frontLine_specE` 11, `LineLookups` 13, `lineRec_fields`/`scan_of_fwd`/`scan_shape`/`lineStep_blank` 86, `FrontLineG`/`LineClaim`/`FrontLinePost` 16, `frontLine_ref` 150, `frontLine_refines` 15, `frontAllProg_line` 5, `SafeLink` 7 = 303 | −42 % |
+| `front_run` | `Driver`'s `runW`/`runK`/`runI` with lemmas, `runLoop_spec(I)`, `frontRun_spec(I)` 132; `runW_refines`/`runI_refines` 83; `lineKW`, `FrontInv`, `lineKW_step(_pre/_ok)`, `inv_step`, `initKW_inv`, `initK_inv`, `frontLineK_spec`, `lineKW_grow`, `frontLineW_shape` 196; `frontRunW_refines(_pre_ok)`, `frontRun_refines`, `frontAll_refines(_pre_ok)`, `frontRunOK_checker`, the two `parseChunks` ones 128; `frontRun_specE`, `NVCls`, `frontNV*`, `loop1_claim`, `frontRunE_claim`, `frontStageE` 147 = 686 | `frontRun_specE` 6, `lineStep_ok` 31, `FrontRunG` 5, `loop_ref` 84, `frontRun_ref` 30, `frontRun_refines` 14, `frontRunOK_checker` 22, `frontRun_checker_chunks` 15, `frontRun_errClaim` 13, `frontStageE` 21, `pre_nil`s 4 = 245 | −64 % |
+| **pairs** | **1213** | **548** | **−55 %** |
+
+Whole diff (without this report and the warning fixes below): +837 −1706 in 26 files. Gone besides:
+the files `Verdict/FrontRunE`, `Front/FrontPreOK3`; `runF` and its lemmas (`RunModel` keeps
+`invoke_loc`); `frontAll_refines_chunks` (its statement at `checkerProg`, `frontRun_checker_chunks`,
+carries `@[refines parseChunks]`).
+
+Choices:
+
+* **`G`**: `FrontLineG` (`ApplyIndG`, `SafeLink b`) for the line; `FrontRunG` (`nv`, `SafeLink b`)
+  for the driver, whose invariant gives the line's `XV` (`xOfTwin`).
+* **One invariant**: the loop runs under `FrontInvOK D b` only; the stream's blank start is
+  `D = #[]` (`frontRun_refines`, `frontRun_checker_chunks`), so `FrontInv` and its step are gone.
+  `frontLine_ref` is stated at any related parse state; `lineStep_ok` moves its ok fact from
+  `st.pre D` to the invariant at `st`.
+* **Through the run**: the loop calls `front_line` by `callE` (the next line needs the input bytes
+  kept, `Keep`, a fact of the run: `Triple.keep`) and reads `frontLine_ref` by
+  `RefC.run_ok`/`run_err`; the line's callees are lifted, `apply_dline` its unified model.
+* **The scan** is read through the validator (`lineFwd_link`) at the arm's `lineFwdN` value; the
+  record's fields against the record passes' links through `lineRec_fields` (from
+  `applyAnyW_lineRec`).
+* **Recipes**: `simp [Cmp.evalW, Cmp.eval]` with `heartbeats 1000000` for `frontLineE` (the default
+  `finish` fails, also with `finish [Cmp.evalW, Cmp.eval]`; `simp []` takes as long), the default
+  for `frontRunE`.
+* Also in this landing (warnings a cold build shows): `Front/LineRec`, `LineRecLink` (unused simp
+  arguments and variable, deprecated names), `ApplyDeclRefine`, `FieldsDeclLink` (`if_pos`/`if_neg`).
+
+Elaboration (user seconds, `lean` on the module alone, median of 3 interleaved runs, base master
+0a05a703, `_tmp/retire-front/times1.txt`):
+
+| module | base | new | |
+|---|---:|---:|---|
+| `Front/LineRef` (new) | – | **20.18** | `frontLineE`'s generated step proof is 19.2 of it … |
+| `Verdict/FrontRunE` (deleted) | 8.88 | – | … the `errors` model and claims were here … |
+| `Front/Line` | 6.06 | 1.86 | … and `frontLine_spec` here |
+| `Front/FrontRunRef` (new) | – | 3.00 | |
+| `Front/FrontPreOK`, `FrontPreOK3` (deleted), `Driver`, `DriverRefine`, `LineRefine`, `FrontStageE`, `ChunkBridge` | 9.78 | 4.94 | |
+| `Front/FrontRun`, `FrontPre`, `ApplyDLineRef`, `Checker/FrontProg`, `PipePrelude`, `PipeRest` | 47.55 | 46.55 | |
+| **sum (17 modules)** | **72.37** | **76.53** | **+6 %** |
+
+Flagged: `Front/LineRef` (20.2 s) is slower than the three places it replaces (15.0 s): the
+unified model's step proof over the line's nine arms. Tried: `simp []` (21.1 s), `finish
+[Cmp.evalW, Cmp.eval]` (fails). No generator or kit change was needed; a faster unified recipe for
+long straight-line arms (the `errors` model of the same function took about 6 s) would be a
+generator wish.
