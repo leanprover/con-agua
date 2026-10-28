@@ -20,6 +20,29 @@ namespace L.Arena
 
 theorem resW_00 : ResW [0, 0] := by unfold ResW HW; exact ⟨by decide, by decide⟩
 
+/-- A tail call whose continuation passes the callee's errors on and maps its value (`f`), against
+a twin with the same run. -/
+theorem RefE.tail {α β : Type} {G G' : Prop} {x : Except Err α} {k : Except Err α → Except Err α}
+    {f : α → α} {T T' : AM β} {a : AState} {R R' : α → β → AState → Prop}
+    (hk : ∀ e, k (.error e) = .error e) (hk' : ∀ v, k (.ok v) = .ok (f v)) (hG : G → G')
+    (hT : T.run a = T'.run a) (hR : ∀ v y a', R v y a' → R' (f v) y a') (h : RefE G' x T' a R) :
+    RefE G (k x) T a R' := by
+  cases x with
+  | error e => rw [hk]; exact fun g => ErrClaim.of_run_eqW hT (h (hG g))
+  | ok v =>
+    rw [hk']
+    obtain ⟨y, a', hr, hR'⟩ := h
+    exact ⟨y, a', hT ▸ hr, hR _ _ _ hR'⟩
+
+/-- The callee's first two result words, after a run of constant frame (the caller's result). -/
+theorem CorePost.relist {dn : NIdx → Option ConLeche.Name} {m₀ m₁ : Mem} {vis : Word} {fe : IFEnv}
+    {MM : ModeMaps} {eb : Word}
+    (hfr : MemFrame [CREC, tier1 CREC, CSLOT, tier1 CSLOT, CLP, tier1 CLP] [18, 19] m₀ m₁)
+    (v : List Word × Mem) (y : Option EIdx) (a' : AState)
+    (h : CorePost decOptR dn m₁ vis fe MM eb ResW v y a') :
+    CorePost decOptR dn m₀ vis fe MM eb ResW ([v.1.headD 0, v.1.tail.headD 0], v.2) y a' :=
+  ⟨CoreAfter.comp (KeptAll.refl _ _) (StackKept.of_const_frame hfr) h.after, h.res, h.valid⟩
+
 /-! ## The twin's failing runs of the arms -/
 
 section redruns
@@ -404,6 +427,322 @@ theorem reduceNatWf_ref (n F : Nat) (hF : n ≤ F) (hn2 : n ≤ 2 ^ 62)
           hrun4 (by rw [hrun5]; rfl) hrun6]; rfl)
     (ErrClaim.fail _ _ rfl)
 
+include hp in
+/-- **`reduce_nat_k` refines `redHeadT` at a constant head, both outcomes** (`redConstT`; the
+errors are `reduce_nat_succ`'s). -/
+theorem reduceNatK_ref (n F : Nat) (hF : n ≤ F) (hn2 : n ≤ 2 ^ 62)
+    (hk : KnotUpTo p n) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word)
+    (fe : IFEnv) (MM : ModeMaps) (eb mode d f b : Word) (hS : SlotPre s₀ a₀ dn vis fe MM eb mode)
+    (hf : HW f) (hb : HW b) (hg3 : f >>> 28 = 3)
+    (hsc : ¬(tierW f ≠ 0 ∧ rdW (s₀.mem.arr64 CTL) 1 = 0)) :
+    RefE (KnotUpToE p n) (reduceNatKE p n s₀.mem mode vis d f b)
+      (redHeadT (coreKnot (decMode mode) fe id F) fe d.toNat (decE f) (decE b)) a₀
+      (CorePost decOptR dn s₀.mem vis fe MM eb ResW) := by
+  have hC := hS.rel
+  cases n with
+  | zero => rw [reduceNatKE.eq_1]; exact RefE.of_cls0 (by simp)
+  | succ n =>
+  by_cases hbd : tcnt s₀.mem CONST (tierW f) ≤ idxW f
+  · rw [reduceNatKE.abort1 _ _ _ _ _ _ _ _ hbd]; exact RefE.of_cls0 (by simp)
+  rw [reduceNatKE.arm1 _ _ _ _ _ _ _ _ hbd]
+  obtain ⟨n_, us_, hview, hn, hu, hnl, hul⟩ :=
+    view_const_words s₀.mem a₀ hC.arena.1 f hf ⟨hsc, by simpa using hbd⟩ hg3
+  have hcg := redHead_const (coreKnot (decMode mode) fe id F) fe d.toNat (decE f) (decE b) a₀ n_ us_ hview
+  subst hn hu
+  rcases h1 : callW p n "pin_word" [52] s₀.mem with _ | ⟨r₁, m₁⟩
+  · rw [liftE_none, reduceNatKE.k_pin_word.none]; exact RefE.of_cls0 (by simp)
+  rw [liftE_some]
+  obtain ⟨hm1, -, hr₁⟩ := callW_pinWord p hp.pinWord n s₀.mem 52 r₁ m₁ h1
+  subst m₁
+  simp only [show (52 : Word).toNat = 52 from rfl] at hr₁
+  have hel := pinEmptyLevels_run hC.pins
+  have hbne : ∀ v w : Word, HW v → HW w → ((decI v : LsIdx) != decI w) = !decide (v = w) := by
+    intro v w hv hw; simp only [bne, decI_beq v w hv hw]
+  by_cases hne : tfld s₀.mem CONST (tierW f) (idxW f) 1 ≠ r₁.headD 0
+  · rw [reduceNatKE.k_pin_word.arm1 _ _ _ _ _ _ _ _ _ _ hne]
+    have hz := redConst_ne (coreKnot (decMode mode) fe id F) fe d.toNat
+      (decI (tfld s₀.mem CONST (tierW f) (idxW f) 0)) (decI (tfld s₀.mem CONST (tierW f) (idxW f) 1)) _
+      (decE b) a₀ hel (by
+      rw [hbne _ _ hul hC.pins.lv_lt.1]
+      have : tfld s₀.mem CONST (tierW f) (idxW f) 1 ≠ pinW s₀.mem 52 := by rw [← hr₁]; exact hne
+      simp [this])
+    exact RefE.ret (hcg.trans hz) ⟨⟨MM, hC, KeptAll.refl _ _, StackKept.refl _⟩, rfl, resW_00⟩
+  rw [reduceNatKE.k_pin_word.arm2 _ _ _ _ _ _ _ _ _ _ (by simpa using hne)]
+  have hne' : tfld s₀.mem CONST (tierW f) (idxW f) 1 = pinW s₀.mem 52 := by
+    rw [← hr₁]; simpa using hne
+  have hcongr := redConst_eq (coreKnot (decMode mode) fe id F) fe d.toNat
+      (decI (tfld s₀.mem CONST (tierW f) (idxW f) 0)) (decI (tfld s₀.mem CONST (tierW f) (idxW f) 1)) _
+      (decE b) a₀ hel (by
+    rw [hbne _ _ hul hC.pins.lv_lt.1]; simp [hne'])
+  exact RefE.tail (reduceNatKE.k_reduce_nat_succ.none p) (fun v => reduceNatKE.k_reduce_nat_succ.arm1 p v.1 v.2)
+    (fun h => h.mono (by omega)) (hcg.trans hcongr)
+    (CorePost.relist (MemFrame.refl _ _ _))
+    (reduceNatSucc_ref p hp n F (by omega) (by omega) (hk.mono (by omega)) s₀ a₀ dn vis fe MM eb mode d _ b hS
+      hnl hb)
+
+include hp in
+/-- **`reduce_nat_ap` refines `redHeadT` at an application head, both outcomes** (`redAppT`; the
+errors are `reduce_nat_op`'s or `reduce_nat_wf`'s). -/
+theorem reduceNatAp_ref (hno : NatOpResultOK p) (n F : Nat) (hF : n ≤ F) (hn2 : n ≤ 2 ^ 62)
+    (hk : KnotUpTo p n) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word)
+    (fe : IFEnv) (MM : ModeMaps) (eb mode d f b : Word) (hS : SlotPre s₀ a₀ dn vis fe MM eb mode)
+    (hf : HW f) (hb : HW b) (hg4 : f >>> 28 = 4)
+    (hsc : ¬(tierW f ≠ 0 ∧ rdW (s₀.mem.arr64 CTL) 1 = 0)) :
+    RefE (KnotUpToE p n) (reduceNatApE p n s₀.mem mode vis d f b)
+      (redHeadT (coreKnot (decMode mode) fe id F) fe d.toNat (decE f) (decE b)) a₀
+      (CorePost decOptR dn s₀.mem vis fe MM eb ResW) := by
+  have hC := hS.rel
+  cases n with
+  | zero => rw [reduceNatApE.eq_1]; exact RefE.of_cls0 (by simp)
+  | succ n =>
+  rw [reduceNatApE.eq_2]
+  by_cases hbd : tcnt s₀.mem APP (tierW f) ≤ idxW f
+  · rw [ite_eq_left hbd]; exact RefE.of_cls0 (by simp)
+  rw [ite_eq_right hbd]
+  obtain ⟨hviewf, hgw, hxw⟩ := view_app s₀.mem a₀ hC.arena.1 f hf ⟨hsc, by simpa using hbd⟩ hg4
+  have hcg0 := redHead_app (coreKnot (decMode mode) fe id F) fe d.toNat (decE f) (decE b) _ _ a₀ hviewf
+  generalize tfld s₀.mem APP (tierW f) (idxW f) 0 = gw at hgw hviewf hcg0 ⊢
+  generalize tfld s₀.mem APP (tierW f) (idxW f) 1 = xw at hxw hviewf hcg0 ⊢
+  have hCA : CoreAfter dn s₀.mem s₀.mem a₀ vis fe MM eb := ⟨MM, hC, KeptAll.refl _ _, StackKept.refl _⟩
+  by_cases g3 : gw >>> 28 ≠ 3
+  · rw [ite_eq_left g3]
+    have ht : ((decE (gw)).tag == ETag.const) = false := by
+      rw [decE_const_tag _ hgw]; exact beq_eq_false_iff_ne.mpr g3
+    exact RefE.ret (hcg0.trans (redApp_notconst _ fe d.toNat (decE gw) (decE xw) (decE b) a₀ ht))
+      ⟨hCA, rfl, resW_00⟩
+  rw [ite_eq_right g3]
+  have g3' : gw >>> 28 = 3 := by simpa using g3
+  have ht : ((decE (gw)).tag == ETag.const) = true := by
+    rw [decE_const_tag _ hgw]; exact beq_iff_eq.mpr g3'
+  by_cases hs2 : tierW (gw) ≠ 0 ∧ rdW (s₀.mem.arr64 CTL) 1 = 0
+  · rw [ite_eq_left hs2]; exact RefE.of_cls0 (by simp)
+  rw [ite_eq_right hs2]
+  by_cases hb2 : tcnt s₀.mem CONST (tierW (gw)) ≤ idxW (gw)
+  · rw [ite_eq_left hb2]; exact RefE.of_cls0 (by simp)
+  rw [ite_eq_right hb2]
+  obtain ⟨n_, us_, hview, hn, hu, hnl, hul⟩ := view_const_words s₀.mem a₀ hC.arena.1 _ hgw
+    ⟨hs2, by simpa using hb2⟩ g3'
+  subst hn hu
+  generalize tfld s₀.mem CONST (tierW gw) (idxW gw) 0 = cw at *
+  generalize tfld s₀.mem CONST (tierW gw) (idxW gw) 1 = uw at *
+  rcases h1 : callW p n "pin_word" [52] s₀.mem with _ | ⟨r₁, m₁⟩
+  · rw [liftE_none, reduceNatApE.k_pin_word.none]; exact RefE.of_cls0 (by simp)
+  rw [liftE_some]
+  obtain ⟨hm1, hflag, hr₁⟩ := callW_pinWord p hp.pinWord n s₀.mem 52 r₁ m₁ h1
+  subst m₁
+  simp only [show (52 : Word).toNat = 52 from rfl] at hr₁
+  have hel := pinEmptyLevels_run hC.pins
+  have hbne : ∀ v w : Word, HW v → HW w → ((decI v : LsIdx) != decI w) = !decide (v = w) := by
+    intro v w hv hw; simp only [bne, decI_beq v w hv hw]
+  by_cases hne : uw ≠ r₁.headD 0
+  · rw [reduceNatApE.k_pin_word.arm1 _ _ _ _ _ _ _ _ _ _ _ hne]
+    have hz := redApp_ne (coreKnot (decMode mode) fe id F) fe d.toNat (decE gw) (decE xw) (decE b) a₀
+      (decI cw) (decI uw) (decI (pinW s₀.mem 52)) ht hview hel (by
+        rw [hbne _ _ hul hC.pins.lv_lt.1]
+        have : uw ≠ pinW s₀.mem 52 := by rw [← hr₁]; exact hne
+        simp [this])
+    exact RefE.ret (hcg0.trans hz) ⟨hCA, rfl, resW_00⟩
+  rw [reduceNatApE.k_pin_word.arm2 _ _ _ _ _ _ _ _ _ _ _ (by simpa using hne)]
+  have hne' : uw = pinW s₀.mem 52 := by rw [← hr₁]; simpa using hne
+  have hcongrApp := redApp_eq (coreKnot (decMode mode) fe id F) fe d.toNat (decE gw) (decE xw) (decE b) a₀
+    (decI cw) (decI uw) (decI (pinW s₀.mem 52)) ht hview hel
+    (by rw [hbne _ _ hul hC.pins.lv_lt.1]; simp [hne'])
+  -- `nat_bin_op_name`
+  rcases h2 : callW p n "nat_bin_op_name" [cw] s₀.mem with _ | ⟨r₂, m₂⟩
+  · rw [liftE_none, reduceNatApE.k_nat_bin_op_name.none]; exact RefE.of_cls0 (by simp)
+  rw [liftE_some, reduceNatApE.k_nat_bin_op_name.arm1]
+  obtain ⟨t₂, ht₂, hm₂, -, hsel2, -⟩ := triple_of_callW
+    (natBinOpNameL_spec p hp.natBinOpName n ⟨s₀.mem, Locals.init []⟩ hflag cw) h2
+  have hm2 : m₂ = s₀.mem := by rw [← ht₂, hm₂]
+  subst hm2
+  rcases h3 : callW p n "nat_op_stored" [vis, cw] s₀.mem with _ | ⟨r₃, m₃⟩
+  · rw [liftE_none, reduceNatApE.k_nat_op_stored.none]; exact RefE.of_cls0 (by simp)
+  rw [liftE_some]
+  obtain ⟨hok3, hS3, hres3, hfr3, hrh3⟩ := callW_natOpStored p hp n ⟨s₀.mem, Locals.init []⟩ a₀ dn vis fe
+    MM eb cw hC hnl r₃ m₃ h3
+  obtain ⟨b3, hb3⟩ := natOpStored_run_pure fe (decI cw) a₀
+  have hst3 : AM.st (natOpStored fe (decI cw)) a₀ = a₀ := (AM.of_run_ok _ _ _ _ hb3).2.1
+  have hbb3 : b3 = decBool r₃ := by
+    have := (AM.of_run_ok _ _ _ _ hb3).2.2
+    rw [hres3] at this; exact this.symm
+  rw [hst3] at hS3
+  have hbin : (natBinOpName (decI cw)).run a₀ = .ok (natBinOpSel (pinW s₀.mem ) cw, a₀) :=
+    natBinOpName_run hC.pins cw hnl
+  have hSP3 : SlotPre ⟨m₃, Locals.init []⟩ a₀ dn vis fe MM eb mode := ⟨hS3, hS.mode4, hS.eb_mode⟩
+  have hbool : (natBinOpSel (pinW s₀.mem) cw && decBool r₃) = decide (r₂.headD 0 ≠ 0 ∧ r₃.headD 0 ≠ 0) := by
+    rw [← hsel2]; exact bne_and_bne _ _
+  have hredbin := redBin_run (coreKnot (decMode mode) fe id F) fe d.toNat (decI cw) (decE xw) (decE b) a₀
+    (natBinOpSel (pinW s₀.mem) cw) (decBool r₃) hbin (by rw [hb3, hbb3])
+  by_cases hgo : r₂.headD 0 ≠ 0 ∧ r₃.headD 0 ≠ 0
+  · rw [reduceNatApE.k_nat_op_stored.arm1 _ _ _ _ _ _ _ _ _ _ _ hgo]
+    exact RefE.tail (reduceNatApE.k_reduce_nat_op.none p) (fun v => reduceNatApE.k_reduce_nat_op.arm1 p v.1 v.2)
+      (fun h => h.mono (by omega))
+      (by rw [hcg0, hcongrApp, hredbin, hbool, decide_eq_true hgo]; rfl) (CorePost.relist hfr3)
+      (reduceNatOp_ref p hp hno n F (by omega) (by omega) (hk.mono (by omega))
+        ⟨m₃, Locals.init []⟩ a₀ dn vis fe MM eb mode d cw xw b hSP3 hnl hxw hb)
+  · rw [reduceNatApE.k_nat_op_stored.arm2 _ _ _ _ _ _ _ _ _ _ _ hgo]
+    exact RefE.tail (reduceNatApE.k_reduce_nat_op.none p) (fun v => reduceNatApE.k_reduce_nat_op.arm1 p v.1 v.2)
+      (fun h => h.mono (by omega))
+      (by rw [hcg0, hcongrApp, hredbin, hbool, decide_eq_false hgo]; rfl) (CorePost.relist hfr3)
+      (reduceNatWf_ref p hp n F (by omega) (by omega) (hk.mono (by omega))
+        ⟨m₃, Locals.init []⟩ a₀ dn vis fe MM eb mode d cw xw b hSP3 hnl hxw hb)
+
+include hp in
+/-- **`reduce_nat_head` refines `redHeadT`, both outcomes** (the errors are `reduce_nat_k`'s or
+`reduce_nat_ap`'s). -/
+theorem reduceNatHead_ref (hno : NatOpResultOK p) (n F : Nat) (hF : n ≤ F) (hn2 : n ≤ 2 ^ 62)
+    (hk : KnotUpTo p n) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word)
+    (fe : IFEnv) (MM : ModeMaps) (eb mode d f b : Word) (hS : SlotPre s₀ a₀ dn vis fe MM eb mode)
+    (hf : HW f) (hb : HW b) :
+    RefE (KnotUpToE p n) (reduceNatHeadE p n s₀.mem mode vis d f b)
+      (redHeadT (coreKnot (decMode mode) fe id F) fe d.toNat (decE f) (decE b)) a₀
+      (CorePost decOptR dn s₀.mem vis fe MM eb ResW) := by
+  have hC := hS.rel
+  cases n with
+  | zero => rw [reduceNatHeadE.eq_1]; exact RefE.of_cls0 (by simp)
+  | succ n =>
+  rw [reduceNatHeadE.eq_2]
+  by_cases hsc : tierW f ≠ 0 ∧ rdW (s₀.mem.arr64 CTL) 1 = 0
+  · rw [ite_eq_left hsc]; exact RefE.of_cls0 (by simp)
+  rw [ite_eq_right hsc]
+  -- the tags that only check a bound
+  have simple : ∀ (c : TRec), (f >>> 28 = 0 ∧ c = BVAR) ∨ (f >>> 28 = 1 ∧ c = FVAR) ∨
+      (f >>> 28 = 2 ∧ c = SORT) ∨ (f >>> 28 = 5 ∧ c = LAM) ∨ (f >>> 28 = 6 ∧ c = FORALL) ∨
+      (f >>> 28 = 7 ∧ c = LET) ∨ (f >>> 28 = 8 ∧ c = LIT) ∨ (f >>> 28 = 9 ∧ c = PROJ) →
+      RefE (KnotUpToE p (n + 1)) (if tcnt s₀.mem c (tierW f) ≤ idxW f then .error (Err.abort 0) else
+        .ok ([0, 0], s₀.mem))
+        (redHeadT (coreKnot (decMode mode) fe id F) fe d.toNat (decE f) (decE b)) a₀
+        (CorePost decOptR dn s₀.mem vis fe MM eb ResW) := by
+    intro c hcg
+    by_cases hbd : tcnt s₀.mem c (tierW f) ≤ idxW f
+    · rw [ite_eq_left hbd]; exact RefE.of_cls0 (by simp)
+    rw [ite_eq_right hbd]
+    obtain ⟨v, hv, hc, hp'⟩ := view_nca s₀.mem a₀ hC.arena.1 f hf c ⟨hsc, by simpa using hbd⟩ hcg
+    exact RefE.ret (redHead_other _ fe d.toNat _ (decE b) a₀ v hv hc hp')
+      ⟨⟨MM, hC, KeptAll.refl _ _, StackKept.refl _⟩, rfl, resW_00⟩
+  have hmono : KnotUpToE p (n + 1) → KnotUpToE p n := fun h => h.mono (by omega)
+  by_cases g3 : f >>> 28 = 3
+  · rw [ite_eq_left g3]
+    exact RefE.tail (reduceNatHeadE.k_reduce_nat_k.none p)
+      (fun v => reduceNatHeadE.k_reduce_nat_k.arm1 p v.1 v.2) hmono rfl
+      (CorePost.relist (MemFrame.refl _ _ _))
+      (reduceNatK_ref p hp n F (by omega) (by omega) (hk.mono (by omega)) s₀ a₀ dn vis fe MM eb mode d f b
+        hS hf hb g3 hsc)
+  rw [ite_eq_right g3]
+  by_cases g4 : f >>> 28 = 4
+  · rw [ite_eq_left g4]
+    exact RefE.tail (reduceNatHeadE.k_reduce_nat_k.none p)
+      (fun v => reduceNatHeadE.k_reduce_nat_k.arm1 p v.1 v.2) hmono rfl
+      (CorePost.relist (MemFrame.refl _ _ _))
+      (reduceNatAp_ref p hp hno n F (by omega) (by omega) (hk.mono (by omega)) s₀ a₀ dn vis fe MM eb mode d
+        f b hS hf hb g4 hsc)
+  rw [ite_eq_right g4]
+  by_cases g0 : f >>> 28 = 0
+  · rw [ite_eq_left g0]; exact simple BVAR (Or.inl ⟨g0, rfl⟩)
+  rw [ite_eq_right g0]
+  by_cases g1 : f >>> 28 = 1
+  · rw [ite_eq_left g1]; exact simple FVAR (Or.inr (Or.inl ⟨g1, rfl⟩))
+  rw [ite_eq_right g1]
+  by_cases g2 : f >>> 28 = 2
+  · rw [ite_eq_left g2]; exact simple SORT (Or.inr (Or.inr (Or.inl ⟨g2, rfl⟩)))
+  rw [ite_eq_right g2]
+  by_cases g5 : f >>> 28 = 5
+  · rw [ite_eq_left g5]; exact simple LAM (Or.inr (Or.inr (Or.inr (Or.inl ⟨g5, rfl⟩))))
+  rw [ite_eq_right g5]
+  by_cases g6 : f >>> 28 = 6
+  · rw [ite_eq_left g6]; exact simple FORALL (Or.inr (Or.inr (Or.inr (Or.inr (Or.inl ⟨g6, rfl⟩)))))
+  rw [ite_eq_right g6]
+  by_cases g7 : f >>> 28 = 7
+  · rw [ite_eq_left g7]
+    exact simple LET (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inl ⟨g7, rfl⟩))))))
+  rw [ite_eq_right g7]
+  by_cases g8 : f >>> 28 = 8
+  · rw [ite_eq_left g8]
+    exact simple LIT (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inl ⟨g8, rfl⟩)))))))
+  rw [ite_eq_right g8]
+  by_cases g9 : f >>> 28 ≠ 9
+  · rw [ite_eq_left g9]; exact RefE.of_cls0 (by simp)
+  rw [ite_eq_right g9]
+  exact simple PROJ (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr ⟨by simpa using g9, rfl⟩)))))))
+
+include hp in
+/-- **`reduce_nat` refines `reduceNat`, both outcomes** (the errors are `reduce_nat_head`'s). -/
+theorem reduceNat_ref (hno : NatOpResultOK p) (n F : Nat) (hF : n ≤ F) (hn2 : n ≤ 2 ^ 62)
+    (hk : KnotUpTo p n) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word)
+    (fe : IFEnv) (MM : ModeMaps) (eb mode d e : Word) (hS : SlotPre s₀ a₀ dn vis fe MM eb mode)
+    (he : HW e) :
+    RefE (KnotUpToE p n) (reduceNatE p n s₀.mem mode vis d e)
+      (reduceNat (coreKnot (decMode mode) fe id F) fe d.toNat (decE e)) a₀
+      (CorePost decOptR dn s₀.mem vis fe MM eb ResW) := by
+  have hC := hS.rel
+  cases n with
+  | zero => rw [reduceNatE.eq_1]; exact RefE.of_cls0 (by simp)
+  | succ n =>
+  rw [reduceNatE.eq_2]
+  have hap : ((decE e).tag == ETag.app) = (e >>> 28 == 4) := by
+    by_cases g : e >>> 28 = 4
+    · have := (decE_tag_app e he).mpr g
+      rw [beq_iff_eq.mpr this, beq_iff_eq.mpr g]
+    · have : ¬ (decE e).tag = ETag.app := fun h' => g ((decE_tag_app e he).mp h')
+      rw [beq_eq_false_iff_ne.mpr this, beq_eq_false_iff_ne.mpr g]
+  by_cases g4 : e >>> 28 ≠ 4
+  · rw [ite_eq_left g4]
+    exact RefE.ret (reduceNat_notapp _ fe d.toNat (decE e) a₀ (by rw [hap]; exact beq_eq_false_iff_ne.mpr g4))
+      ⟨⟨MM, hC, KeptAll.refl _ _, StackKept.refl _⟩, rfl, resW_00⟩
+  rw [ite_eq_right g4]
+  have g4' : e >>> 28 = 4 := by simpa using g4
+  by_cases hsc : tierW e ≠ 0 ∧ rdW (s₀.mem.arr64 CTL) 1 = 0
+  · rw [ite_eq_left hsc]; exact RefE.of_cls0 (by simp)
+  rw [ite_eq_right hsc]
+  by_cases hbd : tcnt s₀.mem APP (tierW e) ≤ idxW e
+  · rw [ite_eq_left hbd]; exact RefE.of_cls0 (by simp)
+  rw [ite_eq_right hbd]
+  obtain ⟨hview, hfw, hbw⟩ := view_app s₀.mem a₀ hC.arena.1 e he ⟨hsc, by simpa using hbd⟩ g4'
+  exact RefE.tail (reduceNatE.k_reduce_nat_head.none p)
+    (fun v => reduceNatE.k_reduce_nat_head.arm1 p v.1 v.2) (fun h => h.mono (by omega))
+    (reduceNat_head_eq _ fe d.toNat (decE e) _ _ a₀ (by rw [hap]; exact beq_iff_eq.mpr g4') hview)
+    (CorePost.relist (MemFrame.refl _ _ _))
+    (reduceNatHead_ref p hp hno n F (by omega) (by omega) (hk.mono (by omega)) s₀ a₀ dn vis fe MM eb mode d
+      _ _ hS hfw hbw)
+
 end refs
+
+/-! ## The halves -/
+
+section halves
+variable (p : Prog) (hp : WhnfDeltaProg' p)
+
+include hp in
+/-- **`reduce_nat` refines `reduceNat`** (`reduceNat_ref`'s ok half; the statement of
+`reduceNat_refines`, with the fuel bound `n ≤ 2 ^ 62` the knot's `whnf` slot needs, and the
+program/stub hypotheses explicit). -/
+theorem reduceNat_refines' (hno : NatOpResultOK p) (n : Nat) : ReduceNatSpec' p n :=
+  fun F s₀ a₀ dn vis fe MM eb mode d e hF hn2 hS he hk =>
+    RefE.coreSpec (reduceNatE_spec p hp.toWhnfDeltaProg n s₀ mode vis d e)
+      (reduceNat_ref p hp hno n F hF hn2 hk s₀ a₀ dn vis fe MM eb mode d e hS he)
+
+include hp in
+@[refines ConRon.Arena.reduceNat]
+theorem reduceNat_refines (n : Nat) : ReduceNatSpec' p n :=
+  reduceNat_refines' p hp (natOpResultOK_of_agree hp.natAgree) n
+
+/-- `reduce_nat`'s error claim at fuel `N` (the ok side's `ReduceNatSpec'` shape). -/
+def ReduceNatE (p : Prog) : Prop :=
+  ∀ N, KnotUpTo p N → KnotUpToE p N → ∀ (F : Nat) (s₀ : St) (a₀ : AState)
+    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (MM : ModeMaps)
+    (eb mode d e : Word), N ≤ F → N ≤ 2 ^ 62 → SlotPre s₀ a₀ dn vis fe MM eb mode → HW e →
+    CoreSpecE p N "reduce_nat" [mode, vis, d, e]
+      (reduceNat (coreKnot (decMode mode) fe id F) fe d.toNat (decE e)) s₀ a₀
+
+include hp in
+/-- **`ReduceNatE`**: `reduce_nat`'s error claim (`reduceNat_ref`'s error half), the `whnf_step`
+slot body's hypothesis. -/
+theorem reduceNatE_of (hnv : closedNV p L.Checker.nvFns = true) : ReduceNatE p :=
+  fun N hk hkE F s₀ a₀ dn vis fe MM eb mode d e hF hn hs he =>
+    RefE.coreSpecE (reduceNatE_spec p hp.toWhnfDeltaProg N s₀ mode vis d e) hnv hkE
+      (reduceNat_ref p hp (natOpResultOK_of_agree hp.natAgree) N F hF hn hk s₀ a₀ dn vis fe MM eb
+        mode d e hs he)
+
+end halves
 
 end L.Arena

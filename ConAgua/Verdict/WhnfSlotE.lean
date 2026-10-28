@@ -371,14 +371,6 @@ end slot
 
 /-! ## `whnf_step` -/
 
-/-- `reduce_nat`'s error claim at fuel `N` (the ok side's `ReduceNatSpec'` shape). -/
-def ReduceNatE (p : Prog) : Prop :=
-  ∀ N, KnotUpTo p N → KnotUpToE p N → ∀ (F : Nat) (s₀ : St) (a₀ : AState)
-    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (MM : ModeMaps)
-    (eb mode d e : Word), N ≤ F → N ≤ 2 ^ 62 → SlotPre s₀ a₀ dn vis fe MM eb mode → HW e →
-    CoreSpecE p N "reduce_nat" [mode, vis, d, e]
-      (reduceNat (coreKnot (decMode mode) fe id F) fe d.toNat (decE e)) s₀ a₀
-
 theorem whnfStep_err1 (r : CoreFnsA) (fe : IFEnv) (depth : Nat) (e : EIdx) (a : AState)
     (ce : CheckError) (hw : (r.whnfCore false depth e).run a = .error ce) :
     (whnfStep r fe depth e).run a = .error ce := by
