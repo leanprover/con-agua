@@ -3,12 +3,12 @@ import ConAgua.Arena.GrindAttr
 import ConAgua.L.ModelGen
 
 /-!
-# The verdict claims of `check_constant_val`, `check_defn_val`, `check_opaque_val` (lane
-`verdicts-b`, helper `d`)
+# `check_constant_val`'s refinement; the verdict claims of `check_defn_val`, `check_opaque_val`
 
-Under the hypotheses of the ok refinements (`checkConstantVal_refinesT`, `checkDefnVal_refinesT`,
-`checkOpaqueVal_refinesT`) and the callees' error claims (`CoreStubsE`, `IvgE`; `install_header`
-by `ihE_okT`).
+`check_constant_val`: one unified model and one refinement for both outcomes (`ccv_ref`), its error
+claim `ccvE_okT` from it. `check_defn_val`, `check_opaque_val`: error claims under the hypotheses
+of the ok refinements (`checkDefnVal_refinesT`, `checkOpaqueVal_refinesT`) and the callees' error
+claims (`CoreStubsE`, `IvgE`).
 -/
 
 noncomputable section

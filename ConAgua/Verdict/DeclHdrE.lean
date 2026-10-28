@@ -2,15 +2,15 @@ import ConAgua.Verdict.DeclValE
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.ModelGen
 /-!
-# The verdict claims of `install_value_guards` and `install_header` (lane `verdicts-b`, helper `d`)
+# `install_header`'s refinement and `install_value_guards`' verdict claim
 
-The error models and error refinements of the two guard functions, under the hypotheses of their
-ok refinements (`ivgW_okT`, `ihW_okT`): a failing call of class `1`/`2` claims the twin's
-`installValueGuards`/`installHeader` fails with an error of that class. The callees are all
-outside the verdict closure (`nvFns`), so their failures claim nothing; the abort sites are the
-twin's `fail`s. The consts-resolve site is a call of `unresolved_consts_error` (it always fails):
-its error's class is the twin's `unresolvedConstsErrorL (← strLitSupported fe) …`
-(`uce_errClaim_lo`, `UnresolvedE.lean`).
+`install_header`: one unified model and one refinement for both outcomes (`ih_ref`, under
+`StageT`). `install_value_guards`: its error model and error claim (`ivgE_okT`) under the
+hypotheses of its ok refinement (`ivgW_okT`). The callees are all outside the verdict closure
+(`nvFns`), so their failures claim nothing; the abort sites are the twin's `fail`s. The
+consts-resolve site is a call of `unresolved_consts_error` (it always fails): its error's class is
+the twin's `unresolvedConstsErrorL (← strLitSupported fe) …` (`uce_errClaim_lo`,
+`UnresolvedE.lean`).
 -/
 
 noncomputable section
