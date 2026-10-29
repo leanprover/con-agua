@@ -32,7 +32,8 @@ out (`L.Compiler.Tab`), then tail-jumps into the trampoline `ca_enter(T, fuel)`:
   gets no slot (`Tab.nslot`).
 * The constant data is written into the table by immediate stores (no `.rodata` read); the result
   area and the global variables are the region's zeros.
-* The fuel is `2^62 - 1` (`compile_correct` takes any `N < 2^62`).
+* The fuel is `abiFuelM = 2^62 - 1 - abiInl` (`compile_correct` takes any `N < 2^62`): the run of the
+  inlined program it stands for is a run of the program with `abiFuel = 2^62 - 1` (`MainRef.lean`).
 
 Nothing here is trusted: `sim_abiStub` (`ConAgua/Compiler/AbiSim.lean`) runs the stub on the
 machine, `abiLayout_ok` and `abi_memRel` (`ConAgua/Final/Abi.lean`) show that it establishes

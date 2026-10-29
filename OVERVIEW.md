@@ -361,7 +361,8 @@ Master `54018587`, 2026-10-28, `scripts/perf-overview.py`: the default run, 3 in
 ## 4. Architecture
 
 ```
-checker.s          ⊑  checkerProg (L)        the verified compiler, compile_correct, against Kraken's x64 semantics
+checker.s          ⊑  checkerProgI (L)       the verified compiler, compile_correct, against Kraken's x64 semantics
+checkerProgI       ⊑  checkerProg            the inliner, inlineProg_run (one more unit of fuel)
 checkerProg        ⊑  the twin's pipeline    drv_twinAccepts: per-function refinements, composed along both entries
 the twin           ⊑  con-leche's pure fold  con-ron's Theorem 1 (vendored)
 con-leche accepts  ⇒  a model, no False      con-leche
@@ -381,7 +382,9 @@ fixed-capacity array and a length word. Its meaning is a Lean function into
 ### 4.2 The verified compiler
 
 `compileProg` translates an L program to Kraken x64 in one pass, without
-optimisation beyond a few local ones (§8.1).
+optimisation beyond a few local ones (§8.1). Before it, one L → L pass inlines
+small leaf functions into their callers (§8.6); what the compiler compiles is
+`checkerProgI`, which refines `checkerProg`.
 [`compile_correct`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Main.lean#L774-L797)
 is a forward simulation against Kraken's semantics: from `ca_enter`, with L's
 memory `m` laid out as the layout `G` describes (`MemRel`), 32 mapped bytes
@@ -919,7 +922,7 @@ it when the file changes. Then
 [`checkerFile_eq`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Checker/AsmFileEq.lean#L23-L24)
 proves `checkerFile = checkerStub ++ checkerAsm`, where `checkerAsm` is a
 literal that the kernel checked, function by function, to be
-`compileProg checkerTab checkerProg "check"`
+`compileProg checkerTab checkerProgI "check"` (§8.6)
 ([`Checker/Asm.lean`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Checker/Asm.lean#L12-L21)).
 So neither the compiler run as compiled Lean code nor the printer that wrote
 the file is trusted; a stale file fails the build, naming the first function
@@ -950,6 +953,31 @@ Regeneration is a convenience, not part of the trust: the build fails at
 `checkerFile_eq` if `checker.s` is not exactly the compiler's output (§8.4),
 and the theorem holds at every pin-data buffer.
 
+
+### 8.6 Inlining
+
+[`inlineProg`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Inline.lean)
+replaces each call of a leaf function (one whose body makes no call) of at most
+80 nodes by the callee's body: its locals shifted past the caller's (all inlined
+calls of a function share one region), the locals it may read before it assigns
+them zeroed, its parameters set from the arguments, and its exits turned into
+assignments to the call's result locals. The conversion passes the rest of the
+body as a continuation, so a `return` drops it and an `if` whose one branch
+always exits gets it in the other branch only; a body it cannot convert (an
+`if` with exits that does not always exit, a `return` in a loop) stays a call.
+On `Init` it saves 2.1 % of the instructions.
+
+[`inlineProg_run`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/InlineCorrect.lean):
+a run of the inlined program that does not run out of fuel is a run of the
+original with the same results and memory, or the same error, with one more unit
+of fuel per round (an inlined body runs at its caller's level of fuel; it is a
+leaf, so this never compounds). The entry stubs pass `abiFuel - 1` to the
+trampoline, so the final theorems still speak of `checkerProg` with `abiFuel`
+([`compile_correct_frame_ref`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/MainRef.lean)).
+The kernel does not run the pass over the whole program: the inlined program is
+a literal (`checkerProgI`), one kernel-checked equation per function
+([`inl_round_fns`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/InlineLit.lean)),
+which the whole-program checks of the compiled code then read.
 ## 9. Parallel checking
 
 con-ron checks phase B (the pending declaration bodies) on worker threads that
@@ -1119,7 +1147,7 @@ files plus the patch series), `scripts/provenance.py check` and the import check
 | where | what |
 |---|---|
 | [`L/`](ConAgua/L/) | the language: syntax, semantics, notation, logic, write sets, non-interference, `l_model` |
-| [`Compiler/`](ConAgua/Compiler/) | the compiler, the entry stub, the simulation proof, `compile_correct`, well-formedness |
+| [`Compiler/`](ConAgua/Compiler/) | the inliner and its proof, the compiler, the entry stub, the simulation proof, `compile_correct`, well-formedness |
 | [`AsmFile/`](ConAgua/AsmFile/) | the assembler-file parser (`include_asm`), the cross-check, the file equation |
 | [`Scan/`](ConAgua/Scan/) | the NDJSON scanner (con-ron's `scan_fast.rs`) and its links to con-leche |
 | [`Front/`](ConAgua/Front/) | the frontend: fields, id tables, records into the stores, inductive lines |
