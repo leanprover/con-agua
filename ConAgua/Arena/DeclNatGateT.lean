@@ -115,7 +115,7 @@ theorem cert_ref (hq : KnotStageProg p) (o l : Word) (ps : List (EIdx × EIdx)) 
     have heb' : rdW (m.arr64 IW) (pp + 1) = eb := by
       obtain ⟨h1, -, h3⟩ := hrec
       have hpb : (pp + 1).toNat = pp.toNat + 1 := by
-        have e1 := hS.stage.iw.1; have e2 := hS.stage.iw.2.2.1
+        have e1 := hS.stage.iw.iw; have e2 := hS.stage.iw.iwSize
         have e3 : pp.toNat + 1 < 2 ^ 64 := by omega
         rw [UInt64.toNat_add]; simp only [UInt64.toNat_one]; exact Nat.mod_eq_of_lt e3
       simp only [iwA] at h3; simp [rdW, hpb, h3]

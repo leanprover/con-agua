@@ -213,7 +213,7 @@ theorem tmn_ref (n : Nat) (hn : n ≤ 2 ^ 62) : ∀ {m : Mem} {a : AState}
     hR2.stage.of_pstep hS3 hA3 (PStep.refl hR2.stage.check.state), hg12.trans hg3, hR2.rc.fr hf3, hA3,
     fun mb ps hps hpb => ?_⟩
   obtain ⟨v, heT, hpv, -, pr, hpr, hprb⟩ := hptr1 mb ps hps hpb
-  obtain ⟨hr, hd, -, -, -, -⟩ := consW_decN h4 hR2.stage.stage.iw.2.2.1 hR2.stage.stage.iw.2.2.2.2 hys2.2
+  obtain ⟨hr, hd, -, -, -, -⟩ := consW_decN h4 hR2.stage.stage.iw.iwSize hR2.stage.stage.iw.ctl hys2.2
     (by rw [decNL_grow hg2 hR1.slice.bound]; exact hpr)
   subst hr
   refine ⟨?_, e.toNat :: pr, by simpa using hd, ?_⟩

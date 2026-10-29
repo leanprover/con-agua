@@ -382,7 +382,7 @@ theorem htp_call {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a 
       first
       | (rw [hVR.1]; decide)
       | (rw [hVR]; decide)
-    simp only [vG, hg.1, hg.er, hg.2.2, false_and, ↓reduceIte, Option.some.injEq,
+    simp only [vG, hg.1, hg.2.1, hg.2.2, false_and, ↓reduceIte, Option.some.injEq,
       Prod.mk.injEq] at hW
     obtain ⟨rfl, rfl, rfl, rfl⟩ := hW
     exact ⟨none, a, by rw [hpre]; rfl, RdAfter.refl hS, rfl⟩

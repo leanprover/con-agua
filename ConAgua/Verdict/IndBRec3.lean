@@ -75,8 +75,8 @@ theorem rts_ref (g k : Word) (G : ClassGen) (hns : G.nP + G.slots.length < 2 ^ 6
   | zero => intros; rw [classRecTysOkE.eq_1]; exact RefE.of_cls0 Err.cls_outOfFuel
   | succ n ih =>
   intro m a ro rl vo vl co cl rcs cvs cs rcsP cvsP hC hG hrcs hok hcvs hcs hA hgP hrcsP hcvsP hw
-  have hsz := hC.stage.iw.2.2.1
-  have htop := hC.stage.iw.1
+  have hsz := hC.stage.iw.iwSize
+  have htop := hC.stage.iw.iw
   by_cases hrl : rl = 0
   · rw [classRecTysOkE.arm1 p n m vis g k ro rl vo vl co cl hrl]
     have : rcs = [] := by

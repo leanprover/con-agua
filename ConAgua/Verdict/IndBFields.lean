@@ -92,7 +92,7 @@ theorem cfgTailE {G : Prop} {n : Nat} {m m2 m5 : Mem} {a2 : AState} {k : Word} {
   obtain ⟨hS7, hg7, hsp7⟩ := SPLA.cons h7 hP6.stage (hsp6.mono (Nat.le_trans hg2.iw hg5.1))
     (Nat.le_trans hg2.iw (Nat.le_trans hg5.1 hP6.grow.iw)) (hy5.grow (AgreeA.of_grow hP6.grow))
   obtain ⟨-, hsb, ps, hps, -⟩ := hsp6
-  obtain ⟨-, -, -, hf7, -⟩ := consW_decN h7 hP6.stage.iw.2.2.1 hP6.stage.iw.2.2.2.2 hsb hps
+  obtain ⟨-, -, -, hf7, -⟩ := consW_decN h7 hP6.stage.iw.iwSize hP6.stage.iw.ctl hsb hps
   exact RefE.ret rfl ⟨hS7, hg2.trans (hg5.trans (hP6.grow.trans hg7)), by simpa using hsp7,
     ⟨mp6, rec2NoMR_iw hf7 hM6⟩, hf2.trans ((MFr.of_iw hf5).up.trans (hP6.frame.trans (MFr.of_iw hf7).up)),
     hA2.trans ((recW_afr h5).trans (hP6.afr.trans (consW_afr h7)))⟩

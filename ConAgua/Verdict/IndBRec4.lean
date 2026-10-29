@@ -234,7 +234,7 @@ theorem cr1_ref (hp : CruleProg p) (hApd : ApdF p) {visT visR : Word} {feR : IFE
   cases N with
   | zero => rw [cr1E.eq_1]; exact RefE.of_cls0 (by simp)
   | succ N =>
-  have hsz := hC.stage.iw.2.2.1
+  have hsz := hC.stage.iw.iwSize
   obtain ⟨hnP, -⟩ := rec2CG_parts hG
   obtain ⟨hsl, -⟩ := rec3CG_parts hG
   obtain ⟨hnF, -, -⟩ := rec2CC_parts (hX.get (decCC_mono _))

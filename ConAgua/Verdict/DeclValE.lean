@@ -460,7 +460,7 @@ theorem cvg_ref {p : Prog} (hq : KnotStageProg p) (hP : CvgProg p) (hL : LvlCach
   have hP0 : erecP (m.set64 CTL 200 0) = erecP m := erecP_reset m
   generalize hm0 : m.set64 CTL 200 0 = m0 at hCr0 hS0 hP0
   rw [← hP0] at hg
-  have hEs := hS0.stage.iw.2.2.2.1
+  have hEs := hS0.stage.iw.erSize
   obtain ⟨⟨wk, hwk, hvk⟩, hcv, wj, hwj, hwjl, hjv⟩ := decVG_words hg
   obtain ⟨wt, hwt, hwtl, hty⟩ := decCV_typeW hcv
   have hb5 : g.toNat + 5 < (m0.arr64 EREC).size := by

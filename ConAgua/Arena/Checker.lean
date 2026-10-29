@@ -125,7 +125,7 @@ theorem promoteVG_spec (hpr : PromoteProg p) :
     · simp only [L.Ind.iwTop, hIW]
       rw [hf.ctl 200 (fun h => by have := hC _ h; simp at this)]; exact hiw1
     · rw [hIW]; exact hiw3
-  · exact PinSetsR.grow hR.pinsets ⟨hg.1, hg.er⟩
+  · exact PinSetsR.grow hR.pinsets ⟨hg.top, hg.get⟩
       (hf.ctl 150 (fun h => by have := hC _ h; simp at this))
       (hf.ctl 151 (fun h => by have := hC _ h; simp at this))
 

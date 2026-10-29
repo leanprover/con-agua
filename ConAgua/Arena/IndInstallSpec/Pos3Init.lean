@@ -59,7 +59,7 @@ theorem pos3_init {p : Prog} (hP : PosBlkProg p) {n : Nat} {dn : NIdx → Option
   refine ⟨stage_frame_iw hS hf (by omega), hg, MFr.of_iw hf, ?_⟩
   rw [hr]
   have hsz' : iwTop s'.mem < 2 ^ 64 := Nat.lt_of_le_of_lt (stage_frame_iw hS hf (by omega)).2.1
-    (stage_frame_iw hS hf (by omega)).2.2.2.1
+    (stage_frame_iw hS hf (by omega)).iw.iwSize
   have := nsb_rec6 (m' := s'.mem) (q := rdW (m.arr64 CTL) 200) (kO := 0) (kL := 0) (aO := 0) (aL := 0)
     (nO := 0) (nL := 0) (keys := []) (act := []) (nfs := []) (by simp only [iwTop] at *; omega) hsz'
     (fun j hj => hget j hj) (by simp [KsB, DecB, decPL]) (by simp) (by simp [KsB, DecB, decPL]) (by simp)

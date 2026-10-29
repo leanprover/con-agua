@@ -163,7 +163,7 @@ theorem rto_ref (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState} {g k rc cvR
   have hri := hcvRi.stab (OMono.decCVp _) m4 hg14
   obtain ⟨wt, hwt, hwtH, hwtE⟩ := decCV_typeW hri
   have hEi := (Array.getElem?_eq_some_iff.mp hwt).1
-  have hE64 := hC4.stage.iw.2.2.2.1
+  have hE64 := hC4.stage.iw.erSize
   have et : rdW (m4.arr64 EREC) (cvRi + 3) = wt :=
     rdW_of_get? (by rw [UInt64.toNat_add]; simp [erA] at hEi ⊢; omega) hwt
   rw [et, hwtE]

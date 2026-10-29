@@ -408,7 +408,7 @@ theorem ilpfF_okT (f o l us e : Word) (hu : H us) (he : H e) (ks : List NIdx) :
   obtain ⟨M, hC⟩ := hT.core
   obtain ⟨hok, ⟨M', hC', -, -⟩, hres, hrh⟩ := CoreSpec.of_callW (s₀ := ⟨m, Locals.init []⟩)
     (instLPFastI_refines ilpfP ilpfP_entry rfl rfl rfl n _ a dn vis fe M 0 f o l us e ks hC he hu hdec
-      hT.stage.iw.2.2.1) hc
+      hT.stage.iw.iwSize) hc
   obtain ⟨hT', hg⟩ := StageT.of_coreFrame hfr (by decide) (by decide) (by decide) (by decide) (by decide)
     hT hC'
   exact ⟨_, _, AM.run_of_ok _ a hok, hT', hg, hrh, hres.symm⟩
