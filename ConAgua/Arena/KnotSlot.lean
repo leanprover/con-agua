@@ -1,6 +1,9 @@
 import ConAgua.Arena.Knot
 import ConAgua.Arena.WhnfDeltaSlot
 import ConAgua.Arena.SimLib
+import ConAgua.Arena.KnotE
+import ConAgua.Arena.RefECore
+import ConAgua.Checker.NoVerdictTree
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import Std.Tactic.BVDecide.Normalize.BitVec
@@ -15,8 +18,9 @@ a memo hit (`inferC`, array 99, at the mode's eager bit) answers the entry, a mi
 `infer_body` (the body, `inferBody (coreKnot … F)`), records it and answers it. The same for
 `infer_io` (`inferIOC`, array 100, the body at the io view) and `defeq` (`defeqC`, array 101, key
 `(a, b ∣ eb << 32)`, `Bool` values). The pattern of `WhnfDeltaSlot.lean`'s `whnf`, without the
-stuck tags: a word-level model (`memoSlotW`, `memoSlotD`), the L spec by `vcgen` + `finish`, the
-refinement from the body's spec (`InferBodySpec`, …, hypotheses) and the memo lemmas.
+stuck tags: a word-level model (`memoSlotW`), the L spec by `vcgen` + `finish`, the
+refinement from the body's spec (`InferBodySpec`, …, hypotheses) and the memo lemmas; `defeq` and
+`is_def_eq_core` by their unified models, one refinement for both outcomes (`dsl_ref`, `ice_ref`).
 -/
 
 open ConRon.Arena
@@ -41,37 +45,6 @@ structure KnotProg (p : Prog) : Prop where
   dePut : p.lookup "de_put" = some (memoPutG deSch)
 
 /-! ## The models -/
-
-/-- A `Bool` memo around a body (`defeq`): as `memoSlotW`, but a hit answers the verdict word
-`u64(v != 0)`. -/
-def memoSlotD (S : MemoSch) (m : Mem) (e k : Word) (res : Option (List Word × Mem)) :
-    Option (Word × Mem) :=
-  if mfindG S m e k = [] then none
-  else if (mfindG S m e k).headD 0 ≠ 0 then
-    some (Cmp.evalW .ne (mvG S m ((mfindG S m e k).tail.headD 0)) 0, m)
-  else match res with
-    | none => none
-    | some (r, m₁) =>
-      match msetG S m₁ e k (r.headD 0) with
-      | none => none
-      | some m₂ => some (r.headD 0, m₂)
-
-section arms
-variable (S : MemoSch) (m m₁ m₂ : Mem) (e k : Word) (r : List Word)
-
-theorem memoSlotD_hit (res : Option (List Word × Mem)) (h0 : mfindG S m e k ≠ [])
-    (h1 : (mfindG S m e k).headD 0 ≠ 0) :
-    memoSlotD S m e k res = some (Cmp.evalW .ne (mvG S m ((mfindG S m e k).tail.headD 0)) 0, m) := by
-  unfold memoSlotD; simp only [h0, h1, ite_false, ite_true, ne_eq, not_false_eq_true]
-
-theorem memoSlotD_miss (h0 : mfindG S m e k ≠ []) (h1 : (mfindG S m e k).headD 0 = 0)
-    (h2 : msetG S m₁ e k (r.headD 0) = some m₂) :
-    memoSlotD S m e k (some (r, m₁)) = some (r.headD 0, m₂) := by
-  unfold memoSlotD
-  rw [ite_eq_right h0, ite_eq_right (by simp only [ne_eq, Decidable.not_not]; exact h1)]
-  simp only [h2]
-
-end arms
 
 /-- **The model of a one-call forwarder** (`defeq_e`, the entry points): the callee's run, its
 first result word. -/
@@ -127,19 +100,6 @@ theorem inferIO_spec (n : Nat) (s₀ : St) (mode vis d e : Word) :
       memoFindG_spec ioSch p _ hp.ioFind n, memoPutG_spec ioSch p _ hp.ioPut n,
       callW_spec p n "infer_body_io"] <;>
     finish [memoSlotW_hit, memoSlotW_miss, mvG, ebKey]
-
-include hp in
-theorem defeq_spec (n : Nat) (s₀ : St) (mode vis d a b : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "defeq" [mode, vis, d, a, b]
-    ⦃fun r s' => LocEq s' s₀ ∧ memoSlotD deSch s₀.mem a (b ||| ebKey mode)
-      (callW p n "defeq_body" [mode, vis, d, a, b] s₀.mem) = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp.defeq]
-  simp only [callFn, defeqSlotL]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      memoFindG_spec deSch p _ hp.deFind n, memoPutG_spec deSch p _ hp.dePut n,
-      callW_spec p n "defeq_body"] <;>
-    finish [memoSlotD_hit, memoSlotD_miss, mvG, ebKey]
 
 include hp in
 theorem defeqE_spec (n : Nat) (s₀ : St) (mode vis d a b : Word) :
@@ -308,6 +268,40 @@ def DefeqBodySpec (p : Prog) (n : Nat) : Prop :=
       (defeqBody (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decE x) (decE y))
       decBool s₀ a₀ dn vis fe MM eb
 
+/-- **`defeq_body`'s error spec** (the error half of `DefeqBodySpec`): under the same hypotheses
+and the error knot up to `n`. -/
+def DefeqBodySpecE (p : Prog) (n : Nat) : Prop :=
+  ∀ (F : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
+    (MM : ModeMaps) (eb mode d x y : Word), n ≤ F → n ≤ 2 ^ 62 → SlotPre s₀ a₀ dn vis fe MM eb mode →
+    HW x → HW y → KnotUpTo p n → KnotUpToE p n →
+    CoreSpecE p n "defeq_body" [mode, vis, d, x, y]
+      (defeqBody (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decE x) (decE y)) s₀ a₀
+
+/-- **What the `defeq` slot's errors claim from**: `defeq_body`'s claim and the error knot at the
+body's fuel. -/
+structure SlotBodyG (p : Prog) (n : Nat) : Prop where
+  body : DefeqBodySpecE p n
+  knot : KnotUpToE p n
+
+/-- At a memo miss the twin's slot fails where its body does. -/
+theorem knot_defeq_missE (mode : ConLeche.CheckMode) (fe : IFEnv) (F d : Nat) (x y : EIdx)
+    (a : AState) (hm : a.caches.defeqC[(x, y)]? = none) {e : Err}
+    (h : ErrClaim (defeqBody mode (coreKnot mode fe id F) fe d x y) a e) :
+    ErrClaim ((coreKnot mode fe id (F + 1)).defeq d x y) a e := by
+  refine ErrClaim.of_run_eq (fun ce hce => ?_) h
+  simp [coreKnot, hm, StateT.run_bind, hce]
+  rfl
+
+/-- **The `defeq` slot's model, both outcomes** (generated; the memo's probes and put lifted,
+`defeq_body` through its run). -/
+l_model dslE_spec (p : Prog) (hf : p.lookup "defeq" = some defeqSlotL)
+  fns [hf ↦ dslE list]
+  specs [callW_spec p n "de_find", callW_spec p n "de_put"]
+  grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
+  finish [tierW, idxW] unified
+  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
+
 /-! ## The slots refine the knot's slots -/
 
 section slots
@@ -394,54 +388,77 @@ theorem inferIO_refines (n : Nat) (hk : KnotUpTo p n) (hb : InferIOBodySpec p n)
   rw [hst', ← hm, hres]
   exact ⟨_, hS₂, hK₁.io _ _, hSt₁.trans hSt₂⟩
 
-theorem evalW_ne_decB (v : Word) : (Cmp.evalW .ne v 0 != 0) = decB v := by
-  unfold Cmp.evalW Cmp.eval decB; by_cases h : v = 0 <;> simp [h]
-
-theorem evalW_ne_hw (v : Word) : HW (Cmp.evalW .ne v 0) := by
-  unfold Cmp.evalW HW; split <;> decide
+include hp in
+/-- **`defeq` refines the knot's `defeq` slot, both outcomes**, from `defeq_body`'s spec at L-fuel
+`n` and `KnotUpTo p n`: the errors are `defeq_body`'s at a memo miss. -/
+theorem dsl_ref (n : Nat) (hk : KnotUpTo p n) (hb : DefeqBodySpec p n) (F : Nat) (s₀ : St)
+    (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (MM : ModeMaps)
+    (eb mode d x y : Word) (hF : n + 1 ≤ F) (hn : n + 1 ≤ 2 ^ 62)
+    (hs : SlotPre s₀ a₀ dn vis fe MM eb mode) (hx : HW x) (hy : HW y) :
+    RefE (SlotBodyG p n) (dslE p (n + 1) s₀.mem mode vis d x y)
+      ((coreKnot (decMode mode) fe id F).defeq d.toNat (decE x) (decE y)) a₀
+      (CorePost decBool dn s₀.mem vis fe MM eb ResH) := by
+  obtain ⟨F', rfl⟩ : ∃ F', F = F' + 1 := ⟨F - 1, by omega⟩
+  have hS := hs.rel
+  have hkey : y ||| (mode >>> 1 &&& 1) <<< 32 = genW y eb := by rw [hs.eb_mode]; rfl
+  simp only [dslE]
+  rw [hkey]
+  rcases h1 : callW p n "de_find" [x, genW y eb] s₀.mem with _ | ⟨r₁, m₁⟩
+  · rw [liftE_none, dslE.k_de_find.none]; exact RefE.of_cls0 (by simp)
+  rw [liftE_some]
+  obtain ⟨t₁, ht₁, rfl, hne, rfl⟩ := triple_of_callW (s₀ := ⟨s₀.mem, Locals.init []⟩)
+    (memoFindG_spec deSch p _ hp.deFind n ⟨s₀.mem, Locals.init []⟩ x (genW y eb)) h1
+  simp only at ht₁
+  subst ht₁
+  have hf := hS.core.de.findD hS.core.eb1 x y hx hy hne
+  simp only [dslE.k_de_find]
+  by_cases h2 : (mfindG deSch s₀.mem x (genW y eb)).headD 0 ≠ 0
+  · rw [ite_eq_left h2]
+    exact RefE.ret (knot_defeq_hit _ fe F' d.toNat _ _ a₀ _ (hf.1 h2))
+      (CorePost.ret hS (by simp only [decBool, decB]; split <;> simp_all [mvG]) (by
+        unfold ResH HW; split <;> decide))
+  rw [ite_eq_right h2]
+  have hmiss := hf.2 (by simpa using h2)
+  rcases h3 : callE p n "defeq_body" [mode, vis, d, x, y] s₀.mem with e | ⟨r₃, m₃⟩
+  · exact fun hG => knot_defeq_missE _ fe F' d.toNat _ _ a₀ hmiss
+      (CoreSpecE.of_callE (hG.body F' s₀ a₀ dn vis fe MM eb mode d x y (by omega) (by omega) hs hx hy hk
+        hG.knot) h3)
+  obtain ⟨hok, ⟨M', hS₁, hK₁, hSt₁⟩, hres, hrw⟩ := CoreSpec.of_callW
+    (hb F' s₀ a₀ dn vis fe MM eb mode d x y (by omega) (by omega) hs hx hy hk) (callW_of_callE h3)
+  simp only [dslE.k_defeq_body]
+  rcases h4 : callW p n "de_find" [x, genW y eb] m₃ with _ | ⟨r₄, m₄⟩
+  · rw [liftE_none, dslE.k_de_find_2.none]; exact RefE.of_cls0 (by simp)
+  rw [liftE_some]
+  simp only [dslE.k_de_find_2]
+  rcases h5 : callW p n "de_put" [x, genW y eb, r₃.headD 0, r₄.headD 0, r₄.tail.headD 0] m₄ with
+    _ | ⟨r₅, m₅⟩
+  · rw [liftE_none, dslE.k_de_put.none]; exact RefE.of_cls0 (by simp)
+  rw [liftE_some]
+  simp only [dslE.k_de_put]
+  have hset : msetG deSch m₃ x (genW y eb) (r₃.headD 0) = some m₅ := by
+    obtain ⟨t₄, ht₄, rfl, hne₄, hr₄⟩ := triple_of_callW (s₀ := ⟨m₃, Locals.init []⟩)
+      (memoFindG_spec deSch p _ hp.deFind n ⟨m₃, Locals.init []⟩ x (genW y eb)) h4
+    simp only at ht₄
+    subst ht₄
+    obtain ⟨s', hm, -, hput⟩ := triple_of_callW
+      (memoPutG_spec deSch p _ hp.dePut n ⟨m₃, Locals.init []⟩ x (genW y eb) (r₃.headD 0) _ _) h5
+    unfold msetG
+    rw [← hr₄, ite_eq_right hne₄, hput, hm]
+  obtain ⟨hS₂, hSt₂⟩ := hS₁.set_de x y (r₃.headD 0) hx hy hset
+  have hrun := knot_defeq_miss _ fe F' d.toNat _ _ a₀ hmiss _ _ (AM.run_of_ok _ _ hok)
+  rw [hres] at hrun
+  exact RefE.ret hrun ⟨⟨_, hS₂, hK₁.de _ _, hSt₁.trans hSt₂⟩, by simp only [decBool, List.headD_cons],
+    hrw⟩
 
 include hp in
 /-- **`defeq` refines the knot's `defeq` slot**: `DefeqSlot p (n + 1)` from `defeq_body`'s spec
-at L-fuel `n` and `KnotUpTo p n`. -/
+at L-fuel `n` and `KnotUpTo p n` (`dsl_ref`'s ok half). -/
 @[refines_part ConRon.Arena.coreKnot "defeq"]
 theorem defeq_refines (n : Nat) (hk : KnotUpTo p n) (hb : DefeqBodySpec p n) :
-    DefeqSlot p (n + 1) := by
-  intro F s₀ a₀ dn vis fe MM eb mode d x y hF hn2 hs hx hy
-  obtain ⟨F', rfl⟩ : ∃ F', F = F' + 1 := ⟨F - 1, by omega⟩
-  apply L.M.triple_of_run
-  intro s r s' hs0 hrun
-  obtain ⟨hloc, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun
-    (defeq_spec p hp n s₀ mode vis d x y)
-  subst hs0
-  refine ⟨hloc, ?_⟩
-  have hS := hs.rel
-  have hkey : y ||| ebKey mode = genW y eb := by rw [hs.eb_mode]; rfl
-  rw [hkey] at hW
-  unfold memoSlotD at hW
-  obtain ⟨h0, hW⟩ := of_ite_none hW
-  have hf := hS.core.de.findD hS.core.eb1 x y hx hy h0
-  by_cases h1 : (mfindG deSch s.mem x (genW y eb)).headD 0 ≠ 0
-  · rw [ite_eq_left h1] at hW
-    obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
-    obtain ⟨hok, hst', hres⟩ := AM.of_run_ok _ _ _ _
-      (knot_defeq_hit _ fe F' d.toNat _ _ a₀ _ (hf.1 h1))
-    refine ⟨hok, ?_, by rw [hres, decBool, ← hr, evalW_ne_decB],
-      by unfold ResH; rw [← hr]; exact evalW_ne_hw _⟩
-    rw [hst', ← hm]; exact ⟨MM, hS, KeptAll.refl _ _, StackKept.refl _⟩
-  rw [ite_eq_right h1] at hW
-  have hmiss := hf.2 (by simpa using h1)
-  rcases hcall : callW p n "defeq_body" [mode, vis, d, x, y] s.mem with _ | ⟨r₁, m₁⟩ <;> simp only [hcall, reduceCtorEq] at hW
-  have hbody := hb F' s a₀ dn vis fe MM eb mode d x y (by omega) (by omega) hs hx hy hk
-  obtain ⟨hok, ⟨M', hS₁, hK₁, hSt₁⟩, hres, hrw⟩ := CoreSpec.of_callW hbody hcall
-  rcases hset : msetG deSch m₁ x (genW y eb) (r₁.headD 0) with _ | m₂ <;> simp only [hset, reduceCtorEq] at hW
-  obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
-  obtain ⟨hS₂, hSt₂⟩ := hS₁.set_de x y (r₁.headD 0) hx hy hset
-  have hrun := knot_defeq_miss _ fe F' d.toNat _ _ a₀ hmiss _ _ (AM.run_of_ok _ _ hok)
-  obtain ⟨hok', hst', hres'⟩ := AM.of_run_ok _ _ _ _ hrun
-  refine ⟨hok', ?_, by rw [hres', hres]; simp only [decBool, hr],
-    by unfold ResH; rw [← hr]; exact hrw⟩
-  rw [hst', ← hm, hres]
-  exact ⟨_, hS₂, hK₁.de _ _, hSt₁.trans hSt₂⟩
+    DefeqSlot p (n + 1) :=
+  fun F s₀ a₀ dn vis fe MM eb mode d x y hF hn hs hx hy =>
+    RefE.coreSpec (dslE_spec p hp.defeq (n + 1) s₀ mode vis d x y)
+      (dsl_ref p hp n hk hb F s₀ a₀ dn vis fe MM eb mode d x y hF hn hs hx hy)
 
 end slots
 
@@ -632,39 +649,48 @@ def EnsureSortSpec (p : Prog) (n : Nat) : Prop :=
     CoreSpec p n "ensure_sort" [mode, vis, d, e]
       (ensureSort (coreKnot (decMode mode) fe id F) fe d.toNat (decE e)) decLv s₀ a₀ dn vis fe M eb
 
+/-- **`is_def_eq_core`'s model, both outcomes** (generated; the `defeq` slot through its run). -/
+l_model iceE_spec (p : Prog) (hf : p.lookup "is_def_eq_core" = some isDefEqCoreL)
+  fns [hf ↦ iceE list]
+  grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
+  finish [tierW, idxW] unified
+
 section entry
 variable (p : Prog) (hp : KnotEntryProg p)
-
-include hp in
-theorem isDefEqCore_spec (n : Nat) (s₀ : St) (vis dep a b : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "is_def_eq_core" [vis, dep, a, b]
-    ⦃fun r s' => LocEq s' s₀ ∧
-      call1W p n "defeq" [0, vis, dep, a, b] s₀.mem = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp.isDefEqCore]
-  simp only [callFn, isDefEqCoreL]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, callW_spec p n "defeq"] <;>
-    finish [call1W_some]
 
 theorem slotPre_zero {s₀ : St} {a₀ : AState} {dn : NIdx → Option ConLeche.Name} {vis : Word}
     {fe : IFEnv} {M : ModeMaps} (hS : CoreS dn s₀.mem a₀ vis fe M 0) :
     SlotPre s₀ a₀ dn vis fe M 0 0 := ⟨hS, by decide, by decide⟩
 
+omit hp in
+/-- **`is_def_eq_core` refines `isDefEqCore`, both outcomes**, at the verified mode, from the
+`defeq` slot: the errors are the slot's. -/
+theorem ice_ref (n : Nat) (hd : DefeqSlot p n) (F : Nat) (s₀ : St) (a₀ : AState)
+    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps) (dep x y : Word)
+    (hF : n ≤ F) (hn : n ≤ 2 ^ 62) (hS : CoreS dn s₀.mem a₀ vis fe M 0) (hx : HW x) (hy : HW y) :
+    RefE (DefeqSlotE p n) (iceE p (n + 1) s₀.mem vis dep x y)
+      (isDefEqCore .verified fe F dep.toNat (decE x) (decE y)) a₀
+      (CorePost decBool dn s₀.mem vis fe M 0 ResH) := by
+  simp only [iceE]
+  rcases h1 : callE p n "defeq" [0, vis, dep, x, y] s₀.mem with e | ⟨r, m⟩
+  · exact fun hdE => CoreSpecE.of_callE (hdE F s₀ a₀ dn vis fe M 0 0 dep x y hF hn (slotPre_zero hS)
+      hx hy) h1
+  obtain ⟨hrun, hP⟩ := (CoreSpec.of_callW (hd F s₀ a₀ dn vis fe M 0 0 dep x y hF hn (slotPre_zero hS)
+    hx hy) (callW_of_callE h1)).post
+  exact RefE.ret hrun ⟨hP.after, hP.res.trans (by simp only [decBool, List.headD_cons]), hP.valid⟩
+
 include hp in
-/-- **`is_def_eq_core` refines `isDefEqCore`** at the verified mode, from the `defeq` slot. -/
+/-- **`is_def_eq_core` refines `isDefEqCore`** at the verified mode, from the `defeq` slot
+(`ice_ref`'s ok half). -/
 @[refines_part ConRon.Arena.isDefEqCore "from DefeqSlot"]
 theorem isDefEqCore_refines (n : Nat) (hd : DefeqSlot p n) (F : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps) (dep x y : Word)
     (hF : n ≤ F) (hn : n ≤ 2 ^ 62) (hS : CoreS dn s₀.mem a₀ vis fe M 0) (hx : HW x) (hy : HW y) :
     CoreSpec p (n + 1) "is_def_eq_core" [vis, dep, x, y]
-      (isDefEqCore .verified fe F dep.toNat (decE x) (decE y)) decBool s₀ a₀ dn vis fe M 0 := by
-  apply L.M.triple_of_run
-  intro s r s' hs0 hrun
-  obtain ⟨hloc, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun
-    (isDefEqCore_spec p hp n s₀ vis dep x y)
-  subst hs0
-  exact ⟨hloc, CoreSpec.of_call1W (hd F s a₀ dn vis fe M 0 0 dep x y hF hn (slotPre_zero hS) hx hy)
-    (fun r r' h => by simp only [decBool, h]) hW⟩
+      (isDefEqCore .verified fe F dep.toNat (decE x) (decE y)) decBool s₀ a₀ dn vis fe M 0 :=
+  RefE.coreSpec (iceE_spec p hp.isDefEqCore (n + 1) s₀ vis dep x y)
+    (ice_ref p n hd F s₀ a₀ dn vis fe M dep x y hF hn hS hx hy)
 
 end entry
 
