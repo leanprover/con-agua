@@ -687,7 +687,7 @@ theorem parCompactMem_img {m : Mem} {vis c : Word} (h : parCompactOK m c = true)
   have hW := parCompactOK_hdr h
   simp only [parCompactOK, Bool.and_eq_true] at h
   have hg := pcGo_good m c hW (fun _ => hlt) frozen.length (Nat.le_refl _) h.1.1
-  have ho := hg.iw hc |>.1 i (by omega)
+  have ho := hg.1 hc |>.1 i (by omega)
   refine ⟨ho, fun t ht => ?_⟩
   have : hdrW = 132 := by decide
   rw [parCompactMem, getD_pcTail_hi _ _ _ _ (by omega), ho]

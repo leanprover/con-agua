@@ -228,7 +228,7 @@ theorem cfb_ref {p : Prog} (hcl : CoreStageClosed p) (hLC : LvlCacheProg p)
   by_cases hg : (rq.headD 0) = 0 ∧ r3.headD 0 = 0
   · rw [cfbE.k_sl_contains.abort1 p _ r3 m3 hg]
     have hr1 : r1.headD 0 ≠ 2 := by
-      intro h2; rw [ite_eq_left h2] at hreq; rw [hg.iw] at hreq; exact absurd hreq (by decide)
+      intro h2; rw [ite_eq_left h2] at hreq; rw [hg.1] at hreq; exact absurd hreq (by decide)
     have hxn : x ≠ some true := by
       intro hxt; subst hxt; simp only [decLvlEq] at hx; exact hr1 hx
     have hnin : ws.contains fv = false := by

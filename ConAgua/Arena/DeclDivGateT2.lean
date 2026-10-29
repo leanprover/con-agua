@@ -174,7 +174,7 @@ theorem cm_ref (hD : DmProg8 p) (hq : KnotStageProg p) (hcl : LeafClosed p) (hkp
     refine RefE.ite_pos rfl ?_
     have hg' : ConLeche.divModCertGuard env nm v hx ex px = true := by rw [← hxv1, hx1]
     simp only [ConLeche.divModCertGuard, Bool.and_eq_true, Bool.not_eq_true'] at hg'
-    have hPf : (ConLeche.Expr.substConstAll nm v px).hasFvar = false := hg'.iw.1.1.1.2
+    have hPf : (ConLeche.Expr.substConstAll nm v px).hasFvar = false := hg'.1.1.1.1.2
     have hn1 := ConRon.Bridge.denoteN_ext hn c1.ext
     have hv1 := ConRon.Bridge.denote_ext hv c1.ext
     -- the substituted proof
