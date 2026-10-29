@@ -2422,13 +2422,16 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
   -- its rounds: on `infer_proj`'s tail (133 conditions) 50 s, this recipe 11 s. The `liftE` and
   -- result-list steps between two arms take generations too: `k + 5` stopped `infer_proj_at`'s
   -- paths at generation 13, `2k + 10` does not.
+  -- the `finish` hints and the folded definitions (the model's `ixLen` against the code's
+  -- arithmetic) go to `grind` as well
+  let flatHints := String.join ((hintsTxt ++ foldIds.toList.map (·.getId.toString)).map (", " ++ ·))
   let flatRounds := 2 * st.ks.size + 10
   let flatGen := (genN.getD flatRounds).max flatRounds
   let stepTac (attrs vcg : String) (ihs : List String) : String :=
     let clr := if ihs.isEmpty then "" else s!" <;> clear {String.intercalate " " ihs}"
     if flat then
       s!"(vcgen [{vcg}]{clr} <;> vc_flat <;> grind (ematch := {flatRounds}) (gen := {flatGen}) " ++
-        s!"{(match instN with | some i => s!"(instances := {i}) " | none => "")}[{attrs}])"
+        s!"{(match instN with | some i => s!"(instances := {i}) " | none => "")}[{attrs}{flatHints}])"
     else match simpTxt? with
     | some l =>
       let pre := if preLocals then s!" <;> (try simp only [{String.intercalate ", " simpBase}] at *)" else ""

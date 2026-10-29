@@ -446,7 +446,7 @@ theorem loc_init15 (x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 : Word
 
 l_model findSlotGo_spec (p : Prog) (h : RuProg p)
   fns [h.fsg ↦ fsgW list]
-  grind [arena_grind] simp [rdW_eq]
+  grind [arena_grind] flat
 
 l_model pvarsGo_spec (p : Prog) (h : RuProg p)
   fns [h.pv ↦ pvW list]
@@ -473,7 +473,7 @@ l_model call1_spec (p : Prog) (h : RuProg p)
   fns [h.c1 ↦ c1W list]
   specs [rec2ExprGetD_specF p h.bf h.bp h.ib h.egd n, rec2IhParts_specF p h.ihp h.ad h.opf n,
     classRecOf_spec p h.cro n, call1Tail_spec p h n]
-  grind [arena_grind] finish [] gen 20 trace
+  grind [arena_grind] finish [] gen 20 trace flat
 
 theorem c1W_tail_eq : c1W.k_class_gen_rule_call1_tail = fcK := by
   funext o; cases o <;> rfl
@@ -525,7 +525,7 @@ l_model ruleBody_spec (p : Prog) (h : RuProg p)
   fns [h.rb ↦ rbW list]
   specs [targetPiDomsWith_spec p h.ev h.copy h.alloc h.cons h.tpd h.hi1 n, pvarsGo_spec p h n,
     callsGo_spec p h n, ruleClose_spec p h n]
-  grind [arena_grind] simp [rdW_eq]
+  grind [arena_grind] flat
 
 def ruK2 (n : Nat) (g rco rcl cgo cgl rlvls x rP s : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none

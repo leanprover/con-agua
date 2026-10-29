@@ -120,7 +120,7 @@ l_model classGenMotiveTy_spec (p : Prog) (h : MtProg p)
   specs [classGenMajor_spec p h.toMjProg n, internSort_spec p h.sf h.sp h.isort n,
     mkForall_spec p h.db h.ff h.fp h.ifa h.mkf n, ftdsF_spec p h.ad n,
     closeTelescope_spec p h.db h.ff h.fp h.ifa h.mkf h.ct h.ab n]
-  grind [arena_grind] simp [rdW_eq]
+  grind [arena_grind] flat
 
 end L.Ind
 

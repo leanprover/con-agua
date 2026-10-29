@@ -3434,3 +3434,71 @@ no `errors` model and do not block group D, but go the same way.
 
 Nothing else: no `CoreSpecE.of_runs` user depends on an `errors` model (it stays, §3.30 D), and
 `triple_of_callE_err`'s other users take posts over the class.
+
+### 3.53 Generator: `flat` as the default? (lane `gen-cut`, second landing)
+
+**The sweep.** Each of the 193 modules with an `l_model` (master 98de7807's text), `lean` once as
+it is and once with every `l_model` switched to `flat` (`simp [..]`/`locals` dropped; user
+seconds, 4 runs in parallel, `_tmp/gen-cut/abres.txt`). Two full builds without the cache were
+tried first and dropped: their per-module wall times measure the contention (`L/ModelGen` 195 s
+against 18 s).
+
+| | modules | as is | `flat` |
+|---|---:|---:|---:|
+| build both ways | 173 | 1154 s | 1247 s (+8 %) |
+| of these > 10 % faster | 17 | | −37 s |
+| of these > 10 % slower | 69 | | +123 s |
+| break under `flat` | 20 | 200 s | |
+
+The 20 that break: `Verdict/IndBGrpM` (`simp [..] locals`; over 15 min against 69 s), the
+`Verdict/PosE1M`, `PosE2M`, `PosE3Cm`, `Arena/IndT/Pass`, `RecGen27` group (`grind` open goals, and
+3–9 times slower: 17.7 → 160 s for `PosE2M`), `Arena/DefEqBody` (not `unified`: a `simp [] locals`
+ok model), the nat-division gates (`DivModPinE`, `DeclDivGateT`, `DivModEnvGuard`),
+`WhnfIotaRecRefine2`, and nine of `IndInstallSpec`/`IndPartsSpec`/`IndPosSpec` (`Icvg`, `PapW`,
+`Pos3MapMProj`, `BlockRecNameSetOk`, `BlockShapeAllCtorsGo`, `BmgW`, `Bsp`, `IndPartsProg2`,
+`FgW2`): open `grind` goals. Since the sweep, `flat` passes the `finish` hints and the `fold`
+definitions to `grind` (what `iota_rec_vck` needed: the model's `ixLen` against the code's
+arithmetic); some of the fold-related breakages may pass with it (not re-swept).
+
+**So `flat` stays an option**, chosen per model by an A/B run: it wins on long paths (many
+continuations: `grind` walks one arm per round, `simp_all` re-simplifies the whole unfolded tree in
+each round) and loses on functions with many short paths, where `grind` costs about 60–100 ms per
+condition and `simp_all` less (`WhnfModels3E` 10.2 → 19.2 s, `WalkLeaves` 11.5 → 17.2 s).
+
+**A hypothesis for that cost** (not chased): `grind`'s preprocessing per goal, not its e-matching.
+On `DefEqStuckStr` (329 conditions) `grind` takes 7.2 s, of which its normalizer (`grind simp`)
+7.5 s cumulative and e-matching 0.3 s: every hypothesis is normalized and internalized, each word
+`x` brings `x.toBitVec.toNat ≤ 2^64 - 1` atoms for cutsat, each bound fact `i.toNat < size` its
+arithmetic, and the reads of locals through the unreduced `setLoc` chains are resolved again in
+each goal; `simp_all` on a short path is a few cheap rounds over a cached simp set. Clearing the
+theorem's binder hypotheses before `grind` saved 7 % there (not kept: a binder can be a fact a side
+goal needs).
+
+**Applied, per model** (a run with only that model on `flat` against the module as it is; taken
+where the model alone gains): `checkDeclAxiom_specE` (`DeclAxQuotT`), `certLand_specW` (`EqAt1`; its
+20 siblings gain nothing alone), `dsE` (`DefEqStuckDisp`; `drE` slower), `ppE` (`DefEqStuckProj`;
+`exE`, `ldprE` slower), `phApp_spec`, `wtE`, `soa_spec` (`TpnB`; `wan_spec` slower),
+`classGenMotiveTy_spec`, `classGenRecTy_spec`, `ruleBody_spec`, `call1_spec`, `findSlotGo_spec`
+(`PrefixBinders`; the other 9 nothing), `applyDLine_specE` (`ApplyDLineRef`; `applyDecl_specE`
+slower), `sctsE`, `tmmE`, `tmnE`, `tmoE`. The other DefEq modules of §3.41–3.48 gain nothing from
+`flat` (`DefEqStuckStr`: 329 conditions at about 60 ms with either recipe; `DefEqBody`, `Mid`,
+`MidLazy`, `StuckApp`, `StuckTail` slower). With them the kit leftovers: `DefEqStuckDisp`'s
+`relist1` is `RefE.tail_relist1`, `DefEqStuckProj`'s `ldprE` tail `RefE.tailMap_eq`.
+
+Elaboration (user seconds, median of 3 interleaved runs, base master's text of the module,
+`_tmp/gen-cut-times2.txt`):
+
+| module | base | new |
+|---|---:|---:|
+| `Arena/DeclDivModSpec/EqAt1` | 46.10 | 43.63 |
+| `Arena/RecClassSpec/PrefixBinders` | 17.49 | 13.67 |
+| `Verdict/IndBTmm` | 14.26 | 6.64 |
+| `Arena/DefEqStuckProj` | 9.57 | 8.46 |
+| `Front/ApplyDLineRef` | 9.45 | 4.12 |
+| `Arena/DefEqStuckDisp` | 8.82 | 6.17 |
+| `Arena/DeclAxQuotT` | 6.11 | 4.91 |
+| `Arena/IndT/Sum1` | 5.58 | 4.09 |
+| `Arena/RecClassSpec/ClassGenMajorCi`, `ClassGenRecTy`, `RecCheckSpec/TpnB`, `IndPosSpec/NestOccGo` | 14.81 | 11.54 |
+| `Verdict/IndBSum4`, `IndBTmn`, `IndBTmo` | 8.49 | 6.84 |
+| `L/ModelGen` | 13.59 | 13.61 |
+| **sum (16 modules)** | **154.27** | **123.68** (−20 %) |

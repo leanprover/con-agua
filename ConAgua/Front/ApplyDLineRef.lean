@@ -199,7 +199,7 @@ l_model applyDLine_specE (p : Prog) (hf : p.lookup "apply_dline" = some applyDLi
   (hd : p.lookup "apply_decl" = some applyDecl) (hk : p.lookup "decl_kind" = some declKind)
   fns [hf ↦ applyDLineE]
   specs [callW_spec p n "rec_decl_line", L.Front.Ind.applyInd_specE p hi n, applyDecl_specE p hd hk n]
-  grind [arena_grind] simp [] unified nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
+  grind [arena_grind] unified nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem] flat
 
 /-- What `apply_dline`'s error arms assume: `apply_ind`'s (`ApplyIndG`: the no-verdict closure,
 the twin's name reads) and the scanner's `safety` converse for the line's record. -/
