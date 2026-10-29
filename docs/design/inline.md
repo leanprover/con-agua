@@ -5,7 +5,7 @@ implemented as a compiler pass with one correctness theorem, composed with the c
 the final theorems (`Audit/Final.lean`) keep their statements. No L code and no per-function proof
 above the compiler changes.
 
-## 1. The pass (`Compiler/Inline.lean`, 279 lines)
+## 1. The pass (`Compiler/Inline.lean`, 280 lines)
 
 `inlineProg S t R p`: `R` rounds of `inlRound S t`, each replacing in every function every call
 `xs := g(args)` of a **leaf** `g` (no call in its body) of at most `S` nodes (`Stmt.size`, lnext's
@@ -68,7 +68,7 @@ runs at its caller's fuel level, one above where the call ran it (`exec p (n+1) 
 body under `exec p n`); its loops re-enter at one unit more than in the original. Inlined bodies
 are leaves, so this never compounds along a call chain: one unit per round.
 
-The proof (`Compiler/InlineCorrect.lean`, 1,580 lines with comments; namespace `L.Compiler.Inl`):
+The proof (`Compiler/InlineCorrect.lean`, 1,585 lines with comments; namespace `L.Compiler.Inl`):
 
 | part | what | lines |
 |---|---|---:|
@@ -110,25 +110,47 @@ again.
 
 **The structure now: a checked certificate.** The inlined program is a literal
 (`Compiler/InlineLit.lean`):
-* `idx_lit checkerIdx : checkerProg` (`Checker/ProgIdx.lean`): the name tree and
-  `Prog.idxTree checkerProg = some checkerIdx`, one check over the names (7 s).
-* `inl_round_fns checkerProgI : 80 checkerIdx checkerProg lo hi` (`Checker/ProgIPart0–3`): for each
+* `idx_lit checkerIdx : checkerProg` (`Checker/ProgIdx.lean`, 1 s): the name tree, computed by
+  compiled code. That it is `Prog.idxTree checkerProg` (`idx_lit_eq`, 7 s) is checked in
+  `Checker/ProgIRef.lean`: the literals below hold for any tree, only the correctness theorem
+  needs it.
+* `inl_round_fns checkerProgI : 80 checkerIdx checkerProg lo hi` (`Checker/ProgIPart0–6`): for each
   function, the literal of its inlined declaration (computed by compiled code; the original
   declaration's own term where inlining changes nothing) and
   `inlFn (envOf 80 checkerIdx checkerProg) fdᵢ = checkerProgI.fᵢ`, checked by the kernel eight
   functions per check, so the kernel's memory is released between checks. Byte strings in the
   literal are the environment's constants that hold them (the prelude's 15,700 bytes are
   referenced, not copied: 1.3 MB of `ldc` data sits in the changed functions).
-* `inl_round checkerProgI` (`Checker/ProgI.lean`): the list `[(f, checkerProgI.fᵢ), …]`;
-  compiled code runs it as the round itself (`implemented_by`), since the literals are not
-  compiled.
+  Compiled code runs each `checkerProgI.fᵢ` as `inlFn … fdᵢ` (`implemented_by`): the literals
+  are not compiled, and the whole-program commands below evaluate the program with compiled code
+  (without this, `skt_part` compiled the literals into its temporary definition and took minutes).
+* `inl_round checkerProgI` (`Checker/ProgI.lean`, 1 s): the list `[(f, checkerProgI.fᵢ), …]`.
 * `inl_round_eq` (`Checker/ProgIRef.lean`, off the path to the compiled code): `inlRound … =
   checkerProgI` from the per-function equations by congruence, no evaluation (0.8 s).
 
-Every whole-program module downstream (`ProgNrtI`, the `skt` and `prog_wf` parts, the asm parts)
-reads the literal, as before it read `checkerProg`.
+Every whole-program module downstream (`ProgNrt`, the `skt` and `prog_wf` parts, the asm parts)
+reads the literal, as before it read `checkerProg`. They are retargeted rather than added:
+`checkerNrt`, `checkerSkt` and the static check (`checkerProgI_wf`, with its own name tree
+`ProgTreeI`) are now about `checkerProgI`; `ProgTree` (the names of `checkerProg`) stays for the
+proofs above. `scripts/checker_prog.py` writes all of these (`INLINE_SIZE`, `INL_PARTS`).
 
-(numbers: §6)
+**Cost**, each module alone (`lake env lean F.lean`, one after the other, wall and peak RSS;
+before = the whole-program modules of lane wholeprog's split, on `checkerProg`):
+
+| modules | before: sum, slowest, peak | after |
+|---|---|---|
+| `ProgNrt` | 10 s, 4.2 GB | 11 s, 4.3 GB |
+| `ProgSktPart0–5`, `ProgSkt` | 46 s; 9.2 s; 4.2 GB | 66 s; 14.4 s; 4.5 GB |
+| `ProgWfPart0–3`, `ProgWf` | 44 s; 15.4 s; 3.4 GB | 59 s; 18.5 s; 3.4 GB |
+| `AsmPart0–9`, `Asm` | 175 s; 28.2 s; 4.1 GB | 206 s; 32.8 s; 4.1 GB |
+| new: `ProgIdx`, `ProgIPart0–6`, `ProgI`, `ProgTreeI`, `ProgIRef` | | 184 s; 27.1 s; 3.5 GB |
+| **all** | **275 module-s** | **526 module-s** |
+
+The downstream modules are 15–35 % slower (a bigger program: `checker.s` has 223,711 lines against
+205,835, more leaves, more frames). The new literal parts are 160 module-s, in parallel; on the
+path of an L change they add `ProgIdx` (1 s) + the slowest part (27 s) + `ProgI` (1 s), and the
+downstream modules' slowest parts are 4–5 s slower: about **+35 s of critical path**, no module
+above 4.5 GB. lnext2 measured 199 s of critical path for an L change before wholeprog's split.
 
 ## 5. Verdicts
 
@@ -137,4 +159,38 @@ TIMEOUT / REFDIFF. `--jobs 4`: 634 agree.
 
 ## 6. Numbers
 
-(pending)
+Binaries: master's `checker.s` (base) and this branch's (S = 80, one round). Load 2.3–6.7.
+
+**Instructions** (exact): `Init` 237.32 G → 232.39 G (**−2.08 %**); app-lam 50.17 G → 50.17 G
+(−0.01 %); c05b 14.43 G → 14.29 G (−1.0 %).
+
+**Wall**, interleaved paired rounds (`_tmp/internspeed/wb.py`, `wstats.py`):
+
+| cell | n | base | median paired | Wilcoxon p | mean, 95 % CI |
+|---|---:|---:|---:|---:|---:|
+| `Init`, one thread (CPUs 44,92) | 15 | 17.82 s | **−1.5 %** | 0.003 | −2.0 % [−3.5, −0.4] |
+| `Init`, `--jobs=16` (24–39) | 30 | 3.66 s | **−2.9 %** | < 0.001 | [−4.0, −1.1] |
+| app-lam, one thread | 15 | 10.10 s | −0.2 % | 0.030 | −0.8 % [−1.7, +0.2] |
+| c05b, one thread | 15 | 1.35 s | **−2.0 %** | < 0.001 | −5.4 % [−10.3, −0.3] |
+
+**Parse phase** (`_tmp/lnext2/phase.py`, 12 rounds, one thread, 50 ms windows): 1.85 s → 1.80 s,
+median paired **−2.7 %**, 12 of 12 rounds faster (sign test p < 0.001).
+
+**Peak RSS** unchanged: `Init` one thread 716 MB both, 16 threads 954 / 953 MB.
+
+lnext2 measured the prototype at −2.8 % (16 threads) and −3.4 % (one thread, wide interval);
+this pass saves a little more instructions, and the one-thread wall gain here is −1.5 % at a
+lower load.
+
+## 7. Sizes
+
+| file | lines | what |
+|---|---:|---|
+| `Compiler/Inline.lean` | 280 | the pass |
+| `Compiler/InlineCorrect.lean` | 1,585 | its proof |
+| `Compiler/InlineLit.lean` | 327 | `idx_lit`, `inl_round_fns`, `inl_round`, `inl_round_eq`, the literal printer |
+| `Compiler/MainRef.lean` | 66 | `Refines`, `compile_correct_frame_ref` |
+| `Checker/ProgIRef.lean` | 32 | `checkerProgI_refines` |
+| `Final/*`, `Compiler/Abi*.lean` | +74 / −61 | `q`/`p` in the ABI theorems, `abiFuelM` |
+
+No L code and no proof above the compiler changed; `Audit/Final.lean` is unchanged.
