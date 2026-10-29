@@ -38,7 +38,7 @@ theorem code_of_lookup [Host] {tab : Tab} {t sk : NTree} {f : FnName} {fd : FunD
     · exact ih _ (by simpa only [compileFns] using hc.right) hl
 
 section
-variable [Host] {G : Layout} (hG : G.Ok) (hTab : 16 + 16 * (G.tab.nb + G.tab.nw) + 8 * G.tab.romWords + 8 * G.tab.nxres + 8 * G.tab.ng < maxOff) (p : Prog) {sk : NTree}
+variable [Host] {G : Layout} (hG : G.Ok) (hTab : 16 + 24 * (G.tab.nb + G.tab.nw) + 8 * G.tab.romWords + 8 * G.tab.nxres + 8 * G.tab.ng < maxOff) (p : Prog) {sk : NTree}
 include hG hTab
 
 theorem stepSim (t : NTree) (hProg : ∀ f fd, p.lookup f = some fd → ∃ kf, Code (compileFn G.tab t sk f fd) kf)

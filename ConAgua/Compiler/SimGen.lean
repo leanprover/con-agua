@@ -214,7 +214,7 @@ theorem XPost.flags {W : List Reg64} {s s1 : MachineData} (h : XPost W s s1) (st
 
 section
 variable [Host] {G : Layout} (hG : G.Ok) {ctx : Ctx} (hT : ctx.tab = G.tab)
-  (hTab : 16 + 16 * (G.tab.nb + G.tab.nw) + 8 * G.tab.romWords + 8 * G.tab.nxres + 8 * G.tab.ng < maxOff)
+  (hTab : 16 + 24 * (G.tab.nb + G.tab.nw) + 8 * G.tab.romWords + 8 * G.tab.nxres + 8 * G.tab.ng < maxOff)
   {F : Nat} (hF : 8 * F + 8 < maxOff)
 
 /-- `g` is a code generator for `e`: its code leaves `e`'s value in the target register and
@@ -269,7 +269,7 @@ variable [Host] {G : Layout} {ctx : Ctx} {F : Nat}
 
 /-- A leaf whose code is one move of its simple operand. -/
 theorem gen_simple (hT : ctx.tab = G.tab)
-    (hTab : 16 + 16 * (G.tab.nb + G.tab.nw) + 8 * G.tab.romWords + 8 * G.tab.nxres + 8 * G.tab.ng < maxOff)
+    (hTab : 16 + 24 * (G.tab.nb + G.tab.nw) + 8 * G.tab.romWords + 8 * G.tab.nxres + 8 * G.tab.ng < maxOff)
     (hF : 8 * F + 8 < maxOff) {e : Expr} {g : GenF}
     (hs : ∀ d fr, g d fr = (simpleOp ctx e).map fun o => [i64 (.mov (.reg (rr d)) o)]) :
     GenSpec G ctx F e g := by
@@ -335,7 +335,7 @@ theorem mem_app_cons {W W' : List Reg64} {d : Reg64} (h1 : ∀ r ∈ W, r ∈ d 
 
 /-- `d := a op b` (`genAlu`). -/
 theorem genAlu_spec (hT : ctx.tab = G.tab)
-    (hTab : 16 + 16 * (G.tab.nb + G.tab.nw) + 8 * G.tab.romWords + 8 * G.tab.nxres + 8 * G.tab.ng < maxOff)
+    (hTab : 16 + 24 * (G.tab.nb + G.tab.nw) + 8 * G.tab.romWords + 8 * G.tab.nxres + 8 * G.tab.ng < maxOff)
     (hF : 8 * F + 8 < maxOff) {op : BinOp} {a b : Expr} {ga gb : GenF}
     (ha : GenSpec G ctx F a ga) (hb : GenSpec G ctx F b gb) :
     GenSpec G ctx F (.bin op a b) (genAlu ctx op a b ga gb) := by
@@ -523,7 +523,7 @@ theorem genPost_spec {op : BinOp} {a : Expr} {ga : GenF} {kk : Word} {d : Reg64}
 
 /-- `d := a op b` (`genBin`). -/
 theorem genBin_spec (hT : ctx.tab = G.tab)
-    (hTab : 16 + 16 * (G.tab.nb + G.tab.nw) + 8 * G.tab.romWords + 8 * G.tab.nxres + 8 * G.tab.ng < maxOff)
+    (hTab : 16 + 24 * (G.tab.nb + G.tab.nw) + 8 * G.tab.romWords + 8 * G.tab.nxres + 8 * G.tab.ng < maxOff)
     (hF : 8 * F + 8 < maxOff) (op : BinOp) {a b : Expr} {ga gb : GenF}
     (ha : GenSpec G ctx F a ga) (hb : GenSpec G ctx F b gb) :
     GenSpec G ctx F (.bin op a b) (genBin ctx op a b ga gb) := by
@@ -710,7 +710,7 @@ theorem genLd32W_spec (_hF : 8 * F + 8 < maxOff) {ln bs : AddrExpr} {i : Expr} {
     (hg : genLd32 ctx ln bs i gi d fr = some code) (hc : Code code k) (hok : GOk ctx i d fr)
     (hwf : Expr.wf ctx.nl G.tab i = true) {arr : Array Word}
     {σ : St} {s : MachineData} {Q : MachineState → Prop} (hI : Inv G ctx F σ s)
-    (hA : ∀ s', XPost (d :: fr) s s' → ArrW s' ln bs arr)
+    (hA : ∀ s', XPost (d :: fr) s s' → ArrW32 s' ln bs arr)
     (hv : ∀ j (h : (j / 2).toNat < arr.size) s', evalP σ i = .ok j →
       s'.regs.get64 d = (half32 arr[(j / 2).toNat] j).toBitVec →
       XPost (d :: fr) s s' → Ev Q s' (at_ (k + code.length)))
@@ -968,7 +968,7 @@ end
 
 section
 variable [Host] {G : Layout} (hG : G.Ok) {ctx : Ctx} {F : Nat} (hT : ctx.tab = G.tab)
-  (hTab : 16 + 16 * (G.tab.nb + G.tab.nw) + 8 * G.tab.romWords + 8 * G.tab.nxres + 8 * G.tab.ng < maxOff)
+  (hTab : 16 + 24 * (G.tab.nb + G.tab.nw) + 8 * G.tab.romWords + 8 * G.tab.nxres + 8 * G.tab.ng < maxOff)
 include hG hT hTab
 
 omit [Host] in
@@ -1052,7 +1052,7 @@ def CmpSpec (G : Layout) (ctx : Ctx) (F : Nat) (op : Cmp) (a b : Expr)
     Ev Q s (at_ k)
 
 theorem genCmp_spec (hT : ctx.tab = G.tab)
-    (hTab : 16 + 16 * (G.tab.nb + G.tab.nw) + 8 * G.tab.romWords + 8 * G.tab.nxres + 8 * G.tab.ng < maxOff)
+    (hTab : 16 + 24 * (G.tab.nb + G.tab.nw) + 8 * G.tab.romWords + 8 * G.tab.nxres + 8 * G.tab.ng < maxOff)
     (hF : 8 * F + 8 < maxOff) (op : Cmp) {a b : Expr} {ga gb : GenF}
     (ha : GenSpec G ctx F a ga) (hb : GenSpec G ctx F b gb) :
     CmpSpec G ctx F op a b (genCmp ctx op a b ga gb) := by
@@ -1132,7 +1132,7 @@ end
 
 section
 variable [Host] {G : Layout} (hG : G.Ok) {ctx : Ctx} {F : Nat} (hT : ctx.tab = G.tab)
-  (hTab : 16 + 16 * (G.tab.nb + G.tab.nw) + 8 * G.tab.romWords + 8 * G.tab.nxres + 8 * G.tab.ng < maxOff)
+  (hTab : 16 + 24 * (G.tab.nb + G.tab.nw) + 8 * G.tab.romWords + 8 * G.tab.nxres + 8 * G.tab.ng < maxOff)
   (hF : 8 * F + 8 < maxOff)
 include hG hT hTab hF
 
@@ -1303,7 +1303,7 @@ theorem gen_ld32t (a : ArrId) {t i : Expr} (ht : GenSpec G ctx F t (gen ctx t))
       simp [Reg64s.get64, hI.tr x hx]
     refine genLd32W_spec hF hi hg hc (hok.sub hok.nd (fun r h => h) hri) hwi hI
       (arr := σ.mem.arr64 (tierA a (σ.loc x)))
-      (fun s' hX => by have := arrW_tier hG hT hTab ha (hI.ghost hX hok.dr) (hrsi s' hX); exact this) ?_ ?_
+      (fun s' hX => by have := arrW32_tier hG hT hTab ha (hI.ghost hX hok.dr) (hrsi s' hX); exact this) ?_ ?_
     · intro j hj s' hji hd hX
       exact hv _ s' (by simp only [evalP, hji, bind, Except.bind]; rw [dite_eq_left hj]) hd hX
     · intro s' he hX
@@ -1349,7 +1349,7 @@ theorem gen_ld32t (a : ArrId) {t i : Expr} (ht : GenSpec G ctx F t (gen ctx t))
           · exact hds (e ▸ List.mem_cons_self)
           · exact hs0 h)]
         simp [rget_set]
-      have := arrW_tier hG hT hTab ha (hI2.ghost hX hoki.dr) hs0'
+      have := arrW32_tier hG hT hTab ha (hI2.ghost hX hoki.dr) hs0'
       exact this
     · intro j hj s' hji hd hX
       rw [hev _ i hri] at hji
@@ -1455,7 +1455,7 @@ theorem gen_ldc (dd : List UInt8) {i : Expr} (hi : GenSpec G ctx F i (gen ctx i)
     · simp only [rget_set, ite_true, ite_eq_right (Ne.symm htd), hd1, Reg64s.get64_r15, UInt64.toNat_toBitVec]
       have h15 := hI1.r15
       rw [show A (s1.regs.r15.toNat + (G.tab.romBase + (romIdx dd G.tab.rom : Int)).toNat) + j.toBitVec =
-          A (G.T + 16 + 16 * (G.tab.nb + G.tab.nw) + (romIdx dd G.tab.rom + j.toNat)) from ?_]
+          A (G.T + 16 + 24 * (G.tab.nb + G.tab.nw) + (romIdx dd G.tab.rom + j.toNat)) from ?_]
       · exact hb
       apply BitVec.eq_of_toNat_eq
       simp only [Tab.romBase, A, BitVec.toNat_add, BitVec.toNat_ofNat, UInt64.toNat_toBitVec, h15]

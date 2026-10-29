@@ -38,25 +38,25 @@ variable (G : Layout)
 
 /-- The bytes of the table that the code reads or writes: the descriptors, the constant data, the
 result area, the global variables and the entry arguments. -/
-def tabEnd : Nat := G.T + 16 + 16 * (G.tab.nb + G.tab.nw) + 8 * G.tab.romWords + 8 * G.tab.nxres +
+def tabEnd : Nat := G.T + 16 + 24 * (G.tab.nb + G.tab.nw) + 8 * G.tab.romWords + 8 * G.tab.nxres +
   8 * G.tab.ng + 8 * G.nargs
 
 /-- Where the global variables start. -/
-def globStart : Nat := G.T + 16 + 16 * (G.tab.nb + G.tab.nw) + 8 * G.tab.romWords + 8 * G.tab.nxres
+def globStart : Nat := G.T + 16 + 24 * (G.tab.nb + G.tab.nw) + 8 * G.tab.romWords + 8 * G.tab.nxres
 
 /-- Where global `g` is. -/
 def globAddr (g : GVar) : Nat := G.globStart + 8 * g.id
 
 /-- Where result `i ≥ maxRes` goes. -/
-def resAddr (i : Nat) : Nat := G.T + 16 + 16 * (G.tab.nb + G.tab.nw) + 8 * G.tab.romWords + 8 * (i - maxRes)
+def resAddr (i : Nat) : Nat := G.T + 16 + 24 * (G.tab.nb + G.tab.nw) + 8 * G.tab.romWords + 8 * (i - maxRes)
 
 def InTab (x : Nat) : Prop := G.T ≤ x ∧ x < G.tabEnd
 /-- The descriptors and the constant data (the part of the table that `MemRel` describes). -/
-def InDesc (x : Nat) : Prop := G.T ≤ x ∧ x < G.T + 16 + 16 * (G.tab.nb + G.tab.nw) + 8 * G.tab.romWords
+def InDesc (x : Nat) : Prop := G.T ≤ x ∧ x < G.T + 16 + 24 * (G.tab.nb + G.tab.nw) + 8 * G.tab.romWords
 /-- The result area (inside the table). -/
 def InRes (x : Nat) : Prop :=
-  G.T + 16 + 16 * (G.tab.nb + G.tab.nw) + 8 * G.tab.romWords ≤ x ∧
-    x < G.T + 16 + 16 * (G.tab.nb + G.tab.nw) + 8 * G.tab.romWords + 8 * G.tab.nxres
+  G.T + 16 + 24 * (G.tab.nb + G.tab.nw) + 8 * G.tab.romWords ≤ x ∧
+    x < G.T + 16 + 24 * (G.tab.nb + G.tab.nw) + 8 * G.tab.romWords + 8 * G.tab.nxres
 /-- The global variables (inside the table). -/
 def InGlob (x : Nat) : Prop := G.globStart ≤ x ∧ x < G.globStart + 8 * G.tab.ng
 def InStack (x : Nat) : Prop := G.lo ≤ x ∧ x < G.hi
@@ -156,8 +156,11 @@ structure MemRel (G : Layout) (m : Mem) (d : DataMem) : Prop where
   /-- The descriptors, by position: no L array in them. -/
   base : ∀ p < G.tab.nb + G.tab.nw, rdW d (A (G.T + (G.tab.dbase p).toNat)) = some (UInt64.ofNat (G.b p))
   len : ∀ p < G.tab.nb + G.tab.nw, rdW d (A (G.T + (G.tab.dlen p).toNat)) = some (UInt64.ofNat (G.s p))
+  /-- A word position's length in 32-bit elements. -/
+  len32 : ∀ p, G.tab.nb ≤ p → p < G.tab.nb + G.tab.nw →
+    rdW d (A (G.T + (G.tab.dlen32 p).toNat)) = some (UInt64.ofNat (2 * G.s p))
   rom : ∀ (i : Nat) (h : i < G.tab.rom.length),
-    d.get? (A (G.T + 16 + 16 * (G.tab.nb + G.tab.nw) + i)) = some G.tab.rom[i]
+    d.get? (A (G.T + 16 + 24 * (G.tab.nb + G.tab.nw) + i)) = some G.tab.rom[i]
   stack : ∀ x, G.InStack x → (d.get? (A x)).isSome
   res : ∀ x, G.InRes x → (d.get? (A x)).isSome
   /-- The global variables. -/
@@ -184,6 +187,10 @@ theorem base64A (hm : MemRel G m d) {s : TieredArray} (h : G.tab.dom64 s = true)
 theorem len64A (hm : MemRel G m d) {s : TieredArray} (h : G.tab.dom64 s = true) :
     rdW d (A (G.T + (G.tab.len64 s).toNat)) = some (UInt64.ofNat (G.s (G.tab.pos64 s))) :=
   hm.len _ (G.tab.pos64_lt h).2
+
+theorem len32A (hm : MemRel G m d) {s : TieredArray} (h : G.tab.dom64 s = true) :
+    rdW d (A (G.T + (G.tab.len32 s).toNat)) = some (UInt64.ofNat (2 * G.s (G.tab.pos64 s))) :=
+  hm.len32 _ (G.tab.pos64_lt h).1 (G.tab.pos64_lt h).2
 
 /-- Below the minimum length, an index is in bounds (`Layout.Ok.min64`). -/
 theorem lt_of_min (hm : MemRel G m d) (hG : G.Ok) {s : TieredArray} (h : G.tab.dom64 s = true) {k : Nat}
@@ -433,7 +440,7 @@ theorem Layout.Ok.notStack_of_tab {x : Nat} (h : G.InTab x) : ¬ G.InStack x :=
 /-- A table word at offset `off` (within the table) survives a change in the stack. -/
 theorem Only.rdW_tab {a b : Nat} {d d' : DataMem} (h : Only a b d d')
     (hab : ∀ x, a ≤ x → x < b → ¬ G.InDesc x ∧ ¬ G.InArr x)
-    {off : Nat} (hoff : 8 ≤ off + 8) (hend : G.T + off + 8 ≤ G.T + 16 + 16 * (G.tab.nb + G.tab.nw) + 8 * G.tab.romWords) :
+    {off : Nat} (hoff : 8 ≤ off + 8) (hend : G.T + off + 8 ≤ G.T + 16 + 24 * (G.tab.nb + G.tab.nw) + 8 * G.tab.romWords) :
     rdW d' (A (G.T + off)) = rdW d (A (G.T + off)) :=
   rdW_congr fun j hj => by
     rw [A_add]
@@ -484,6 +491,8 @@ theorem MemRel.onlyG {m m' : Mem} {d d' : DataMem} (hm : MemRel G m d) (hb : m'.
       rw [h.rdW_tab hG hab (by omega) (by simp only [Tab.dbase]; omega)]; exact hm.base c hc
     len := fun c hc => by
       rw [h.rdW_tab hG hab (by omega) (by simp only [Tab.dlen]; omega)]; exact hm.len c hc
+    len32 := fun c h1 h2 => by
+      rw [h.rdW_tab hG hab (by omega) (by simp only [Tab.dlen32]; omega)]; exact hm.len32 c h1 h2
     rom := fun i hi => by
       have hw : G.tab.rom.length ≤ 8 * G.tab.romWords := G.tab.rom_length_le
       have := hG.tab_end
@@ -491,7 +500,7 @@ theorem MemRel.onlyG {m m' : Mem} {d d' : DataMem} (hm : MemRel G m d) (hb : m'.
       rw [h.same _ (by omega) ?_, hm.rom i hi]
       refine Classical.byContradiction fun hc => ?_
       simp only [not_or, Nat.not_lt] at hc
-      exact (hab (G.T + 16 + 16 * (G.tab.nb + G.tab.nw) + i) (by omega) (by omega)).1
+      exact (hab (G.T + 16 + 24 * (G.tab.nb + G.tab.nw) + i) (by omega) (by omega)).1
         ⟨by omega, by omega⟩
     stack := fun x hx => h.grows _ (hm.stack x hx)
     res := fun x hx => h.grows _ (hm.res x hx)

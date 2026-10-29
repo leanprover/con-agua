@@ -109,7 +109,7 @@ def build(s_path, out):
 
 
 def category(ins, meta):
-    arr_end = 16 + 16 * meta["ca_npos"]
+    arr_end = 16 + 24 * meta["ca_npos"]
     glob_base = meta["args"] - 8 * meta["ca_ng"]
     rom_end = arr_end + 8 * ((meta["ca_rom_len"] + 7) // 8)
 
@@ -118,8 +118,10 @@ def category(ins, meta):
         if off < 16:
             return "stack"
         if off < arr_end:
-            # one position space: all bases, then all lengths
-            return "base" if off < 16 + 8 * meta["ca_npos"] else "len"
+            # one position space: all bases, then all lengths, then all 32-bit lengths
+            if off < 16 + 8 * meta["ca_npos"]:
+                return "base"
+            return "len" if off < 16 + 16 * meta["ca_npos"] else "len32"
         if off < rom_end:
             return "rom"
         if off < glob_base:

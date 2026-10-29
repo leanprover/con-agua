@@ -401,7 +401,7 @@ theorem not_lookup_fixed {ctx : Ctx} (h : AllocOk ctx) {r : Reg64} (hr : r ∉ a
     ∀ x, ctx.alloc.lookup x ≠ some r := fun x hx => hr (h.reg x r hx)
 
 section
-variable [Host] {G : Layout} (hG : G.Ok) (hTab : 16 + 16 * (G.tab.nb + G.tab.nw) + 8 * G.tab.romWords + 8 * G.tab.nxres + 8 * G.tab.ng < maxOff) (p : Prog) {sk : NTree}
+variable [Host] {G : Layout} (hG : G.Ok) (hTab : 16 + 24 * (G.tab.nb + G.tab.nw) + 8 * G.tab.romWords + 8 * G.tab.nxres + 8 * G.tab.ng < maxOff) (p : Prog) {sk : NTree}
 include hG hTab
 
 /-- A function's body after the tier entry (`fnBody0`) from the state `s4`, with an `F'`-word

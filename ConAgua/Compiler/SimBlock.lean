@@ -184,7 +184,7 @@ end
 
 section
 variable [Host] {G : Layout} (hG : G.Ok)
-  (hTab : 16 + 16 * (G.tab.nb + G.tab.nw) + 8 * G.tab.romWords + 8 * G.tab.nxres + 8 * G.tab.ng < maxOff)
+  (hTab : 16 + 24 * (G.tab.nb + G.tab.nw) + 8 * G.tab.romWords + 8 * G.tab.nxres + 8 * G.tab.ng < maxOff)
   (p : Prog) (K : Stmt → M Sig) (P : Nat → Prop) {sk : NTree}
 include hG hTab
 
@@ -767,17 +767,17 @@ theorem sim_scan8 (x : Var) (s : BSrc) (i e : Expr) (c : List UInt8) :
   have hw8 : G.tab.rom.length ≤ 8 * G.tab.romWords := G.tab.rom_length_le
   have hTE := hG.tab_end
   simp only [Layout.tabEnd] at hTE
-  have htbl : ∀ y < 256, d.dmem.get? (A (G.T + 16 + 16 * (G.tab.nb + G.tab.nw) + romIdx c G.tab.rom + y)) =
+  have htbl : ∀ y < 256, d.dmem.get? (A (G.T + 16 + 24 * (G.tab.nb + G.tab.nw) + romIdx c G.tab.rom + y)) =
       some c[y]! := fun y hy => by
     have hb := hI.mem.rom (romIdx c G.tab.rom + y) (by omega)
     have hd : G.tab.rom[romIdx c G.tab.rom + y]'(by omega) = c[y]'(by omega) := by
       rw [hcp.getElem (by omega), List.getElem_drop]
     rw [hd] at hb
-    rw [show G.T + 16 + 16 * (G.tab.nb + G.tab.nw) + romIdx c G.tab.rom + y =
-      G.T + 16 + 16 * (G.tab.nb + G.tab.nw) + (romIdx c G.tab.rom + y) by omega, hb]
+    rw [show G.T + 16 + 24 * (G.tab.nb + G.tab.nw) + romIdx c G.tab.rom + y =
+      G.T + 16 + 24 * (G.tab.nb + G.tab.nw) + (romIdx c G.tab.rom + y) by omega, hb]
     simp [show y < c.length by omega]
   have hTT : d.regs.get64 .r15 + BitVec.ofInt 64 (Int64.ofInt (ctx.tab.romBase + romIdx c ctx.tab.rom)).toInt =
-      A (G.T + 16 + 16 * (G.tab.nb + G.tab.nw) + romIdx c G.tab.rom) := by
+      A (G.T + 16 + 24 * (G.tab.nb + G.tab.nw) + romIdx c G.tab.rom) := by
     rw [hT]
     have hof : (Int64.ofInt (G.tab.romBase + (romIdx c G.tab.rom : Int))).toInt =
         G.tab.romBase + (romIdx c G.tab.rom : Int) := by

@@ -112,7 +112,7 @@ theorem FunDecl.wf_eq (p : Prog) (tab : Tab) (fd : FunDecl) :
 
 def Prog.wfSpec (tab : Tab) (p : Prog) : Bool :=
   p.all (fun (_, fd) => FunDecl.wf p tab fd) && decide (p.map (·.1)).Nodup &&
-    16 + 16 * (tab.nb + tab.nw) + 8 * tab.romWords + 8 * tab.nxres + 8 * tab.ng < maxOff
+    16 + 24 * (tab.nb + tab.nw) + 8 * tab.romWords + 8 * tab.nxres + 8 * tab.ng < maxOff
 
 /-- The program is well formed for the table layout `tab` (guarded: see above). -/
 def Prog.wf (tab : Tab) (p : Prog) : Bool := kernelOpaque (Prog.wfSpec tab p)

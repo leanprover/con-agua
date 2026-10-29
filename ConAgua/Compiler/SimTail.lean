@@ -92,7 +92,7 @@ theorem tailCode_some {ctx : Ctx} {s u : Stmt} {code : Program} (h : tailCode ct
     · cases h
 
 section
-variable [Host] {G : Layout} (hG : G.Ok) (hTab : 16 + 16 * (G.tab.nb + G.tab.nw) + 8 * G.tab.romWords + 8 * G.tab.nxres + 8 * G.tab.ng < maxOff)
+variable [Host] {G : Layout} (hG : G.Ok) (hTab : 16 + 24 * (G.tab.nb + G.tab.nw) + 8 * G.tab.romWords + 8 * G.tab.nxres + 8 * G.tab.ng < maxOff)
   (p : Prog) {sk : NTree}
 include hG hTab
 

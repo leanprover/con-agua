@@ -11,11 +11,11 @@ import Kraken.X64.Registers
 # The 32-bit load and store code (lane p32)
 
 `ld32Code x t d ln bs` (`d := A.u32[x]`) and `st32Code` (`A.u32[rax] := edx`), for a word array
-whose length and base the descriptor words `[ln]`, `[bs]` hold (`ArrW`): the bounds check compares
-`x >> 1` with the length in words, the access is the 4-byte move at `base + 4 x`, which is half
-`x % 2` of word `x / 2` (`load32_of_rdW`, `store32_eq`). The expression compiler (`SimExpr.lean`),
-the register-stack generator (`SimGen.lean`) and the statement compiler (`SimStore.lean`) use
-these two lemmas.
+whose length in 32-bit elements (`Tab.len32`) and base the descriptor words `[ln]`, `[bs]` hold
+(`ArrW32`): the bounds check compares `x` with that length (one `cmp`, as for a word load), the
+access is the 4-byte move at `base + 4 x`, which is half `x % 2` of word `x / 2`
+(`load32_of_rdW`, `store32_eq`). The expression compiler (`SimExpr.lean`), the register-stack
+generator (`SimGen.lean`) and the statement compiler (`SimStore.lean`) use these two lemmas.
 -/
 
 namespace L.Compiler
@@ -26,6 +26,13 @@ open L
 memory. -/
 structure ArrW (s : MachineData) (ln bs : AddrExpr) (arr : Array Word) : Prop where
   len : MemW s ln (UInt64.ofNat arr.size)
+  base : ∃ B : Nat, MemW s bs (UInt64.ofNat B) ∧ B + 8 * arr.size < 2 ^ 64 ∧
+    ∀ j (h : j < arr.size), rdW s.dmem (A (B + 8 * j)) = some arr[j]
+
+/-- As `ArrW`, with `[ln]` the length in 32-bit elements (twice the length in words,
+`Tab.len32`). -/
+structure ArrW32 (s : MachineData) (ln bs : AddrExpr) (arr : Array Word) : Prop where
+  len : MemW s ln (UInt64.ofNat (2 * arr.size))
   base : ∃ B : Nat, MemW s bs (UInt64.ofNat B) ∧ B + 8 * arr.size < 2 ^ 64 ∧
     ∀ j (h : j < arr.size), rdW s.dmem (A (B + 8 * j)) = some arr[j]
 
@@ -59,44 +66,32 @@ in `d`, the scratch `t` and the flags clobbered; or `ca_error` when word `j / 2`
 theorem ld32Code_spec {x t d : Reg64} {ln bs : AddrExpr} {arr : Array Word} {k : Nat} {s : MachineData}
     {Q : MachineState → Prop} (hc : Code (ld32Code x t d ln bs) k) (htx : t ≠ x) {j : Word}
     (hx : s.regs.get64 x = j.toBitVec)
-    (hA : ∀ s', s'.dmem = s.dmem → (∀ r, r ≠ t → s'.regs.get64 r = s.regs.get64 r) → ArrW s' ln bs arr)
+    (hA : ∀ s', s'.dmem = s.dmem → (∀ r, r ≠ t → s'.regs.get64 r = s.regs.get64 r) → ArrW32 s' ln bs arr)
     (hv : ∀ (h : (j / 2).toNat < arr.size) s', s'.regs.get64 d = (half32 arr[(j / 2).toNat] j).toBitVec →
-      s'.dmem = s.dmem → (∀ r, r ≠ t → r ≠ d → s'.regs.get64 r = s.regs.get64 r) → Ev Q s' (at_ (k + 6)))
+      s'.dmem = s.dmem → (∀ r, r ≠ t → r ≠ d → s'.regs.get64 r = s.regs.get64 r) → Ev Q s' (at_ (k + 4)))
     (herr : ∀ s', ¬ (j / 2).toNat < arr.size → s'.dmem = s.dmem →
       (∀ r, r ≠ t → s'.regs.get64 r = s.regs.get64 r) → Ev Q s' (label errorL)) :
     Ev Q s (at_ k) := by
   simp only [ld32Code] at hc
-  refine ev_movRR hc.head ?_
-  refine ev_shiftR (n := 1) (by decide) (op := .shr) (.inr rfl) hc.tail.head fun st1 => ?_
-  have hk2 : ∀ (R : Reg64s) (v1 v2 : BitVec 64) r, r ≠ t → ((R.set64 t v1).set64 t v2).get64 r = R.get64 r := by
-    intro R v1 v2 r hr; simp only [rget_set, ite_eq_right hr]
-  generalize hv2 : (BinOp.eval .shr (UInt64.ofBitVec ((s.regs.set64 t (s.regs.get64 x)).get64 t)) (UInt64.ofNat 1)).toBitVec = v2
-  have hkeep1 := fun r hr => hk2 s.regs (s.regs.get64 x) v2 r hr
-  obtain ⟨hlen, B, hB, hBs, hget⟩ := hA { s with regs := (s.regs.set64 t (s.regs.get64 x)).set64 t v2, status := st1 } rfl hkeep1
-  have hsz : arr.size < 2 ^ 64 := by omega
-  have hv2' : v2.toNat = j.toNat / 2 := by
-    subst hv2
-    simp only [rget_set, ite_true, hx, BinOp.eval, UInt64.ofBitVec_toBitVec, UInt64.toNat_toBitVec,
-      UInt64.toNat_shiftRight]
-    simp [Nat.shiftRight_eq_div_pow]
+  obtain ⟨hlen, B, hB, hBs, hget⟩ := hA s rfl (fun _ _ => rfl)
+  have hsz : 2 * arr.size < 2 ^ 64 := by omega
   have hj2 : (j / 2).toNat = j.toNat / 2 := by simp [UInt64.toNat_div]
-  refine ev_cmpRA hc.tail.tail.head hlen ?_
-  have hcmp : ∀ b, CondCode.nc.interp (cmpFlags (((s.regs.set64 t (s.regs.get64 x)).set64 t v2).get64 t)
-      (UInt64.ofNat arr.size).toBitVec) = b → (b = true ↔ ¬ (j / 2).toNat < arr.size) := by
+  refine ev_cmpRA hc.head hlen ?_
+  have hcmp : ∀ b, CondCode.nc.interp (cmpFlags (s.regs.get64 x) (UInt64.ofNat (2 * arr.size)).toBitVec) = b →
+      (b = true ↔ ¬ (j / 2).toNat < arr.size) := by
     intro b hb
-    have e : ((s.regs.set64 t (s.regs.get64 x)).set64 t v2).get64 t = (UInt64.ofBitVec v2).toBitVec := by
-      simp [rget_set]
-    rw [e, interp_nc] at hb
+    rw [hx, interp_nc] at hb
     subst hb
-    simp only [decide_eq_true_eq, UInt64.le_iff_toNat_le, UInt64.toNat_ofNat_of_lt' hsz, hj2,
-      UInt64.toNat_ofBitVec, hv2']
+    simp only [decide_eq_true_eq, UInt64.le_iff_toNat_le, UInt64.toNat_ofNat_of_lt' hsz, hj2]
     omega
-  refine ev_jcc hc.tail.tail.tail.head (fun hcc => ?_) (fun hcc => ?_)
-  · exact herr _ ((hcmp _ hcc).mp rfl) rfl hkeep1
+  refine ev_jcc hc.tail.head (fun hcc => ?_) (fun hcc => ?_)
+  · exact herr _ ((hcmp _ hcc).mp rfl) rfl (fun _ _ => rfl)
   · have hj : (j / 2).toNat < arr.size := by
       have := hcmp _ hcc; simp at this; omega
-    refine ev_movRA hc.tail.tail.tail.tail.head hB ?_
-    refine ev_ld32X hc.tail.tail.tail.tail.tail.head (v := (half32 arr[(j / 2).toNat] j).toNat) ?_
+    obtain ⟨_, hB2, -, -⟩ := (hA { s with status := cmpFlags (s.regs.get64 x) (UInt64.ofNat (2 * arr.size)).toBitVec }
+      rfl (fun _ _ => rfl)).base
+    refine ev_movRA hc.tail.tail.head hB ?_
+    refine ev_ld32X hc.tail.tail.tail.head (v := (half32 arr[(j / 2).toNat] j).toNat) ?_
       (by have := (arr[(j / 2).toNat]).toNat_lt; rw [half32_toNat]; split <;> omega) ?_
     · simp only [rget_set, ite_true, ite_eq_right htx.symm, hx]
       rw [addr32 B j (by rw [← hj2]; omega)]
@@ -111,68 +106,55 @@ theorem ld32Code_spec {x t d : Reg64} {ln bs : AddrExpr} {arr : Array Word} {k :
 `0`, with the array's base `B` and length in its descriptor words: the memory with word `j / 2`
 of the array replaced by `setHalf32` of it (the 4-byte store, `store32_eq`), `rcx`, `rdx` and the
 flags clobbered; or `ca_error` when word `j / 2` does not exist. -/
-theorem st32Code_spec {ctx : Ctx} {ln bs : AddrExpr} {arr : Array Word} {B : Nat} {k : Nat}
-    {s : MachineData} {Q : MachineState → Prop} (hc : Code (st32Code ctx ln bs) k) {j v : Word}
-    (hx : s.regs.rax = j) (hoff : SmallOff (8 * ((ctx.nl : Int) + ((0 : Nat) : Int))))
-    (hslot : rdW s.dmem (A (s.regs.rsp.toNat + 8 * ctx.nl)) = some v)
-    (hD : ∀ s', s'.dmem = s.dmem → (∀ r, r ≠ .rdx → s'.regs.get64 r = s.regs.get64 r) →
-      MemW s' ln (UInt64.ofNat arr.size) ∧ MemW s' bs (UInt64.ofNat B))
+theorem st32Code_spec {ln bs : AddrExpr} {arr : Array Word} {B : Nat} {k : Nat}
+    {s : MachineData} {Q : MachineState → Prop} (hc : Code (st32Code ln bs) k) {j v : Word}
+    (hx : s.regs.rax = j) (hv : s.regs.rdx = v)
+    (hD : ∀ s', s'.dmem = s.dmem → s'.regs = s.regs →
+      MemW s' ln (UInt64.ofNat (2 * arr.size)) ∧ MemW s' bs (UInt64.ofNat B))
     (hB : B + 8 * arr.size < 2 ^ 64) (hget : ∀ j (h : j < arr.size), rdW s.dmem (A (B + 8 * j)) = some arr[j])
     (hok : ∀ (h : (j / 2).toNat < arr.size) s',
       s'.dmem = wrW s.dmem (A (B + 8 * (j / 2).toNat)) (setHalf32 arr[(j / 2).toNat] j v).toBitVec →
-      (∀ r, r ≠ .rcx → r ≠ .rdx → s'.regs.get64 r = s.regs.get64 r) → Ev Q s' (at_ (k + 7)))
+      (∀ r, r ≠ .rcx → s'.regs.get64 r = s.regs.get64 r) → Ev Q s' (at_ (k + 4)))
     (herr : ∀ s', ¬ (j / 2).toNat < arr.size → s'.dmem = s.dmem →
-      (∀ r, r ≠ .rdx → s'.regs.get64 r = s.regs.get64 r) → Ev Q s' (label errorL)) :
+      (∀ r, r ≠ .rcx → s'.regs.get64 r = s.regs.get64 r) → Ev Q s' (label errorL)) :
     Ev Q s (at_ k) := by
   simp only [st32Code] at hc
-  refine ev_movRR hc.head ?_
-  refine ev_shiftR (n := 1) (by decide) (op := .shr) (.inr rfl) hc.tail.head fun st1 => ?_
-  have hk2 : ∀ (R : Reg64s) (v1 v2 : BitVec 64) r, r ≠ .rdx → ((R.set64 .rdx v1).set64 .rdx v2).get64 r = R.get64 r := by
-    intro R v1 v2 r hr; simp only [rget_set, ite_eq_right hr]
-  generalize hv2 : (BinOp.eval .shr (UInt64.ofBitVec ((s.regs.set64 .rdx (s.regs.get64 .rax)).get64 .rdx)) (UInt64.ofNat 1)).toBitVec = v2
-  have hkeep1 := fun r hr => hk2 s.regs (s.regs.get64 .rax) v2 r hr
-  obtain ⟨hlen, hbase⟩ := hD { s with regs := (s.regs.set64 .rdx (s.regs.get64 .rax)).set64 .rdx v2, status := st1 } rfl hkeep1
-  have hsz : arr.size < 2 ^ 64 := by omega
-  have hv2' : v2.toNat = j.toNat / 2 := by
-    subst hv2
-    simp only [rget_set, ite_true, Reg64s.get64_rax, hx, BinOp.eval, UInt64.ofBitVec_toBitVec, UInt64.toNat_toBitVec,
-      UInt64.toNat_shiftRight]
-    simp [Nat.shiftRight_eq_div_pow]
+  obtain ⟨hlen, _⟩ := hD s rfl rfl
+  have hsz : 2 * arr.size < 2 ^ 64 := by omega
   have hj2 : (j / 2).toNat = j.toNat / 2 := by simp [UInt64.toNat_div]
-  refine ev_cmpRA hc.tail.tail.head hlen ?_
-  have hcmp : ∀ b, CondCode.nc.interp (cmpFlags (((s.regs.set64 .rdx (s.regs.get64 .rax)).set64 .rdx v2).get64 .rdx)
-      (UInt64.ofNat arr.size).toBitVec) = b → (b = true ↔ ¬ (j / 2).toNat < arr.size) := by
+  have hxg : s.regs.get64 .rax = j.toBitVec := by simp [Reg64s.get64, hx]
+  refine ev_cmpRA hc.head hlen ?_
+  have hcmp : ∀ b, CondCode.nc.interp (cmpFlags (s.regs.get64 .rax) (UInt64.ofNat (2 * arr.size)).toBitVec) = b →
+      (b = true ↔ ¬ (j / 2).toNat < arr.size) := by
     intro b hb
-    have e : ((s.regs.set64 .rdx (s.regs.get64 .rax)).set64 .rdx v2).get64 .rdx = (UInt64.ofBitVec v2).toBitVec := by
-      rw [rget_set, ite_eq_left rfl]
-    rw [e, interp_nc] at hb
+    rw [hxg, interp_nc] at hb
     subst hb
-    simp only [decide_eq_true_eq, UInt64.le_iff_toNat_le, UInt64.toNat_ofNat_of_lt' hsz, hj2,
-      UInt64.toNat_ofBitVec, hv2']
+    simp only [decide_eq_true_eq, UInt64.le_iff_toNat_le, UInt64.toNat_ofNat_of_lt' hsz, hj2]
     omega
-  refine ev_jcc hc.tail.tail.tail.head (fun hcc => ?_) (fun hcc => ?_)
-  · exact herr _ ((hcmp _ hcc).mp rfl) rfl hkeep1
+  refine ev_jcc hc.tail.head (fun hcc => ?_) (fun hcc => ?_)
+  · exact herr _ ((hcmp _ hcc).mp rfl) rfl (fun _ _ => rfl)
   have hj : (j / 2).toNat < arr.size := by
     have := hcmp _ hcc; simp at this; omega
-  refine ev_movRA hc.tail.tail.tail.tail.head hbase ?_
-  refine ev_movRM hc.tail.tail.tail.tail.tail.head hoff (v := v) ?_ ?_
-  · rw [slot_addr _ (ctx.nl + 0) _ (by omega)]
-    simp only
-    exact hslot
+  obtain ⟨_, hbase⟩ := hD { s with status := cmpFlags (s.regs.get64 .rax) (UInt64.ofNat (2 * arr.size)).toBitVec }
+    rfl rfl
+  refine ev_movRA hc.tail.tail.head hbase ?_
   have hw := (arr[(j / 2).toNat]).toNat_lt
   have hX : B + 8 * (j.toNat / 2) + 8 ≤ 2 ^ 64 := by omega
   have hget' : rdW s.dmem (A (B + 8 * (j.toNat / 2))) = some arr[(j / 2).toNat] := by
     rw [← hj2]; exact hget _ hj
   have haddr : (UInt64.ofNat B).toBitVec + j.toBitVec * 4 = A (B + 8 * (j.toNat / 2) + 4 * (j.toNat % 2)) :=
     addr32 B j (by omega)
-  have hxg : s.regs.get64 .rax = j.toBitVec := by simp [Reg64s.get64, hx]
-  refine ev_st32X hc.tail.tail.tail.tail.tail.tail.head ?_ ?_
+  refine ev_st32X hc.tail.tail.tail.head ?_ ?_
   · simp only [rget_set, reduceCtorEq, ite_true, ite_false, hxg, haddr, load32_of_rdW hget' j, Option.isSome_some]
   · simp only [rget_set, reduceCtorEq, ite_true, ite_false, hxg, haddr]
     rw [store32_eq hX hget' j]
     refine hok hj _ ?_ ?_
     · simp only [hj2]
       rw [low32_toInt]
-      simp only [rget_set, ite_true, UInt64.toNat_toBitVec, setHalf32_mod]
-    · intro r h1 h2
-      simp only [rget_set, ite_eq_right h1, ite_eq_right h2]
+      have e : (s.regs.set64 .rcx (UInt64.ofNat B).toBitVec).rdx = v := by
+        have := rget_set (R := s.regs) (r := .rcx) (r' := .rdx) (v := (UInt64.ofNat B).toBitVec)
+        simp only [reduceCtorEq, ite_false, Reg64s.get64_rdx] at this
+        rw [← hv]; exact UInt64.toBitVec_inj.mp this
+      simp only [Reg64s.get64_rdx, UInt64.toNat_toBitVec, setHalf32_mod, e]
+    · intro r h1
+      simp only [rget_set, ite_eq_right h1]
