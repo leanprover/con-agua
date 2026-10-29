@@ -178,6 +178,17 @@ refinement:
 `CoreStubsE` and `VerdictCtx` sit below `Verdict/DeclValE.lean` (in `VCtx`), so the `Decl` files
 can use them.
 
+**The generator's `flat` recipe (`L/ModelGen.lean`, `L/VcFlat.lean`; §3.47).** `l_model … unified
+… flat` (in place of `simp [..]` or the default `finish`) proves each step by `vcgen`, then
+`vc_flat`, then `grind (ematch := 2k + 10) (gen := 2k + 10) [attrs]` for a model with `k`
+continuations. `vc_flat` takes the intermediate states out of every verification condition: a
+state equation is substituted, a callee's `LocEq s' s ∧ …` makes `s'` its memory over `s`'s locals,
+the conjunctions are split. What is left is the callees' results and memories, their equations and
+the path conditions; `grind` walks the model along the path by its guarded equations, one arm per
+e-matching round (its default of 5 rounds stops on a long path). It does not unfold the models with
+`simp_all`, which re-simplifies the whole model tree in each of its rounds. `cut k` combines with
+it. Try it first on a slow unified model; the statements do not change.
+
 ## 2. Pilot (`ctors_have_name`, `target_class_match`, `target_major_nfs`)
 
 * **`ctors_have_name`** has no error half: it is in the no-verdict closure (`nvFns`), and its old
@@ -3029,3 +3040,66 @@ Diff of the landing against master: +312 −737 lines in 4 files (before the imp
 16.12 (−26 %). The two Arena modules are slower for the same reason as in §3.45 (the generated
 models moved in with the refinements). No generator or kit change was needed.
 
+
+### 3.47 Generator: the `flat` recipe (lane `gen-cut`)
+
+**Why the whole-body proofs were slow** (profiled on `ipE`, `infer_proj`, §3.44: 76 s for its
+generated spec). Not `vcgen` (0.3 s) and not the kernel (the profiler's 67 s "type checking" is
+wall time of the asynchronous check: it stays with `debug.skipKernelTC`). The cost is the closing
+`simp_all [base, models]`: about 2 s on each of the 16 longest paths of the tail. Two reasons:
+
+* the conditions carry every intermediate state: each local a shared chain
+  `(PUnit.unit, s.setLocs ..).snd.setLoc ..`, each callee's post a function equation
+  `s'.loc = (…).loc` (75 KB of goal text per long path);
+* more expensive: `simp_all` with the models unfolds the whole model tree (every continuation
+  inlined, every branch visited) and simplifies it again in each round as the hypotheses change.
+  On the same condition with flat hypotheses, the hypotheses first normalized and the models then
+  unfolded once in the goal take under 0.1 s against 1.6 s.
+
+**The recipe.** `vc_flat` (`L/VcFlat.lean`, a tactic) removes the states: state equations are
+substituted, `LocEq s' s` makes `s'` the memory `m` over `s`'s locals (`cases`, then the locals
+substituted), conjunctions split; the dead state hypotheses are gone by construction. Then `grind`
+closes the condition by the models' guarded equations. On `ipE`'s tail (133 conditions):
+
+| closer after `vcgen` | s | open |
+|---|---:|---:|
+| `simp_all [base, models]`, `grind` (the `simp []` recipe) | ≈ 50 | 0 |
+| `vc_flat`, `simp_all [base]`, `simp [base, models, *]`, then as above | 12.7 | 0 |
+| `vc_flat`, `grind [attrs]` (with or without the models listed, or `simp only [base] at *` first) | 15 | 18 |
+| `vc_flat`, `grind (ematch := 30) (gen := 30) [attrs]` | **11.0** | 0 |
+| `grind (ematch := 30) (gen := 30) [attrs]` without `vc_flat` | 17.4 | 0 |
+
+The 18 open conditions of plain `grind` are the longest paths: a path through `d` continuations
+instantiates `d` arms one after the other, one e-matching round each, and `grind` stops after 5;
+case splits and arithmetic were not the issue. `k + 5` rounds and generations (`k` continuations)
+stopped `infer_proj_at`'s paths at generation 13 (the `liftE` and result-list steps between arms
+take generations too); `2k + 10` closes all. So `flat` = `vcgen`, `vc_flat`,
+`grind (ematch := 2k + 10) (gen := 2k + 10) [attrs]` (`gen n` raises the generations, `instances n`
+passes on). It is a recipe of its own (not with `simp [..]`), additive: `cut k` and the other
+recipes are unchanged. The LocNF simprocs before `vc_flat` are not needed with `grind` (its
+normalizer resolves the reads), and after `vc_flat` they cost more (the substitutions unshare the
+nested states).
+
+**Cut.** `ipE` keeps `cut 1`: without it the `infer`/`infer_io` branch doubles every path (30.1 s
+against 13.2 s). No new form of `cut` was needed, so the wish of §3.44 (a cut at an `if` whose
+branch fails) is dropped.
+
+**Applied** to the slow models (statements unchanged, no caller changed): `ipE` (`cut 1 flat`,
+`simp []` dropped), `ipaE`, `ctlE`, `ctorE`, `frontLineE`, `tblE` (`flat` for `simp [..]`). On
+`ctoE`/`ctbE` (`IndRealSctC`, default `finish`) it was slower (16.4 against 14.4 s for the module)
+and is not used. Tests `tUniF` (recursive, `unified`), `tCutF` (with `cut 2`).
+
+Elaboration (user seconds, `lean` on the module, median of 3 interleaved runs, base: master's text
+of the module, `_tmp/gen-cut-times1.txt`):
+
+| module | base | new | |
+|---|---:|---:|---|
+| `Arena/InferProj2` | 76.92 | 13.22 | `ipE` |
+| `Front/LineRef` | 20.05 | 10.08 | `frontLineE` |
+| `Arena/IndT/Sum4` | 29.81 | 10.35 | `ctlE`, `ctorE` |
+| `Arena/IndRealSctC` | 18.85 | 14.39 | `tblE` |
+| `Arena/InferProj` | 7.47 | 6.65 | `ipaE` |
+| `L/ModelGenTest` | 16.29 | **17.91** | **slower (+1.6 s)**: the two new tests |
+| `L/ModelGen` | 13.68 | 13.87 | |
+| `L/VcFlat` | – | 0.38 | new |
+| **sum** | **183.07** | **86.85** | **−53 %** |
