@@ -135,9 +135,9 @@ theorem fam_ref (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
     rw [he']; exact RefE.of_cls0 h0
   | succ N =>
   have hsa2 := hsa.keep hSt12.size hSt12.below hsat hspn
-  have hsat2 : so.toNat + sn.toNat ≤ (spTop m2).toNat := by rw [hSt12.check]; exact hsat
+  have hsat2 : so.toNat + sn.toNat ≤ (spTop m2).toNat := by rw [hSt12.1]; exact hsat
   have hsm2 := hsm.keep hSt12.size hSt12.below (by rw [← hsmt, hmsz]; exact Nat.le_refl _) hspn
-  have hsmt2 : mo + mn = spTop m2 := by rw [hSt12.check]; exact hsmt
+  have hsmt2 : mo + mn = spTop m2 := by rw [hSt12.1]; exact hsmt
   have hvk := vck_ref p hp hc hw hEI hER hEK N (hk.mono (by omega)) F (by omega) (by omega)
     ⟨m2, Locals.init []⟩ _ dn vis fe M2 eb mode d us recP so usj ctorP rl mo mn (rv.headD 0) sn lps rule
     cvj args margs hS2 hm4 hebm hus husj hr1
@@ -1073,7 +1073,7 @@ theorem major_ref (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
     obtain ⟨cr, mI, rP, hfr⟩ := hrecF
     exact ⟨⟨cr, cv, mI, rP, rules, hfr, rfl, hmem⟩, ⟨_, np, nf, hfind⟩⟩
   have hsa2 := hsa.keep hSt12.size hSt12.below hsat hspn
-  have hsat2 : so.toNat + sn.toNat ≤ (spTop m2).toNat := by rw [hSt12.check]; exact hsat
+  have hsat2 : so.toNat + sn.toNat ≤ (spTop m2).toNat := by rw [hSt12.1]; exact hsat
   -- the fire
   rcases c6 : callE p (N + 1) "iota_rec_fire" [mode, vis, d, c, us, recP, so, rv.tail.tail.headD 0,
       re.tail.headD 0, rr.tail.headD 0, rm.headD 0] m2 with e6 | ⟨rf, m7⟩

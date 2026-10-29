@@ -1110,8 +1110,8 @@ theorem vck_ref (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
     (by omega) ⟨m1, Locals.init []⟩ _ dn vis fe M1 eb mode d us recP so rl mo mn sn lps rule args
     margs hS1 hm4 hebm hus
   simp only [e1] at hcmpR
-  have hcmpR := hcmpR hlps hrule hsa1 (by rw [hSt1.check]; exact hsat) hmI hsm1
-    (by rw [hSt1.check, ← hsmt]; omega) hcpm
+  have hcmpR := hcmpR hlps hrule hsa1 (by rw [hSt1.1]; exact hsat) hmI hsm1
+    (by rw [hSt1.1, ← hsmt]; omega) hcpm
   rcases c2 : callE p (N + 2) "iota_rec_cmp" [mode, vis, d, us, recP, so, rl, mo] m1 with e2 | ⟨rc, m2⟩
   · simp only [vckE.k_iota_rec_cmp]
     exact fun hG => ErrClaim.of_run_err
@@ -1157,7 +1157,7 @@ theorem vck_ref (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
   have hsm3 : SpineR m3 mo mn margs := hsm.keep hSt13.size hSt13.below (by rw [← hsmt]; omega) hspn
   have hcfR := icfTop_ref p hp.toIotaProg4 hw.instList (N + 1) (hk.mono (by omega)) F (by omega)
     (by omega) ⟨m3, Locals.init []⟩ _ dn vis fe M3 eb mode d (rt.headD 0) mo mn margs hS3 hm4 hebm hr3
-    hsm3 (by rw [hSt13.check]; exact hsmt)
+    hsm3 (by rw [hSt13.1]; exact hsmt)
   have hcfS := (icfE_spec p hp.toIotaProg4 (N + 2)).2.2.2.2 ⟨m3, Locals.init []⟩ mode vis d
     (rt.headD 0) mo mn
   rcases c4 : callE p (N + 2) "iota_certs_full" [mode, vis, d, rt.headD 0, mo, mn] m3 with e4 | ⟨rf, m4⟩
@@ -1196,7 +1196,7 @@ theorem vck_ref (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
       (ixLen (rdW E (recP + 5)) (rdW E (recP + 6))).toNat ≤ (spTop m4).toNat := by
     have htq : (spTop ({ mem := s₀.mem, loc := Locals.init [] } : St).mem).toNat =
         (spTop s₀.mem).toNat := rfl
-    rw [hSt14.check, UInt64.toNat_add, hoff, Nat.mod_eq_of_lt (by omega), ixLen_eq, UInt64.toNat_ofNat',
+    rw [hSt14.1, UInt64.toNat_add, hoff, Nat.mod_eq_of_lt (by omega), ixLen_eq, UInt64.toNat_ofNat',
       Nat.mod_eq_of_lt (by omega)]
     omega
   have hioR := io_ref p hp.toIotaProg' hc.inst1 (N + 1) (hk.mono (by omega)) F (by omega) (by omega)
@@ -1204,7 +1204,7 @@ theorem vck_ref (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
       (rdW E (rl + 2)) (rt.headD 0) mo mn
       (so + (rdW E (recP + 6) - ixLen (rdW E (recP + 6)) (rdW E (recP + 5))))
       (ixLen (rdW E (recP + 5)) (rdW E (recP + 6))) margs _ hS4 hm4 hebm hr3 hsm4 hidx
-      (by rw [hSt14.check, ← hsmt]; omega) hxo
+      (by rw [hSt14.1, ← hsmt]; omega) hxo
   simp only [← hcpw] at hioR
   have hioS := ioE_spec p hp.toIotaProg'.iotaIndexOk hp.toIotaProg'.defeqList (N + 2) ⟨m4, Locals.init []⟩
     mode vis d (rdW E (recP + 5)) (rdW E (recP + 6)) (rdW E (rl + 2)) (rt.headD 0) mo mn
