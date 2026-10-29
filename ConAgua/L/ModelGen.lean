@@ -3,6 +3,7 @@ module
 public import ConAgua.L.Notation
 public import ConAgua.L.Logic
 public import ConAgua.L.ErrSpec
+public import ConAgua.L.VcFlat
 public meta import Lean
 public import Lean.Elab.Term.TermElabM
 
@@ -103,6 +104,12 @@ l_model liftGo_spec (p : Prog) (hp : LiftProg p)
   takes the body as `L.seqTake k F.body name.tailS` and the tail by that theorem, so the paths
   through the first statements are not multiplied by the paths after them (`target_k53_args`'s two
   index slices: 21.5 s → 4.9 s).
+* `flat` (a recipe of its own, not with `simp`): each step is `vcgen`, then `vc_flat`
+  (`VcFlat.lean`: the intermediate states out of every condition, a callee's post as its memory
+  over the caller's locals), then `grind` over the models' guarded equations, with `2k + 10`
+  e-matching rounds and generations for `k` continuations (a path through `d` continuations
+  instantiates their arms one after the other). No `simp_all` over the unfolded models, which
+  re-simplifies the whole model tree in each round: `infer_proj`'s steps 76 s → 11 s.
 * `pre [P]`: a precondition over the initial state `s₀` and the arguments (by their L names),
   e.g. `pre [pcap s₀.mem < 2 ^ 63 ∧ s₀.mem.top.toNat < 2 ^ 41]`: every member's spec becomes
   `∀ s₀ args, P → ⦃…⦄`; a callee spec with a hypothesis (or the induction hypothesis) leaves it
@@ -1861,7 +1868,8 @@ syntax (name := lmodel) (docComment)? "l_model " ident bracketedBinder*
   (&" nodefs")?
   (&" unified")?
   (&" nv " "[" term "," term "]")?
-  (&" cut " num)? : command
+  (&" cut " num)?
+  (&" flat")? : command
 
 meta structure FnInfo where
   lname : String
@@ -1938,6 +1946,10 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
   -- step theorem (`name.tail`), used by the function's step: the paths through the code before
   -- it are not multiplied by the paths after it
   let cutK? : Option Nat := if stx[28].getNumArgs == 0 then none else stx[28][1].isNatLit?
+  -- `flat`: the verification conditions without their intermediate states, closed by `grind`
+  -- (see `stepTac`)
+  let flat := stx[29].getNumArgs != 0
+  if flat && simpTs?.isSome then throwError "l_model: `flat` is a recipe of its own, without `simp [..]`"
   let preT? : Option Term := if stx[8].getNumArgs == 0 then none else some ⟨stx[8][2]⟩
   let keepT? : Option Term := if stx[9].getNumArgs == 0 then none else some ⟨stx[9][2]⟩
   let stx := stx'
@@ -2401,9 +2413,24 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
   -- Not the default: on small functions the extra pass costs more than it saves (WhnfModels7E runs
   -- out of heartbeats, ClassFeR 35 s -> 48 s), and where `simp_all` fails, `grind` needs the
   -- `LocEq`s folded (CkcW).
-  let stepTac (attrs vcg : String) (ihs : List String) : String := match simpTxt? with
+  -- `flat`: `vc_flat` takes the intermediate states out of each condition (the callees' posts
+  -- become memories over the caller's locals), and `grind` closes it with the models' guarded
+  -- equations (`fW.armᵢ`, `fW.k_g.armᵢ`, …). A path through `d` continuations instantiates `d`
+  -- arms one after the other, one e-matching round each, so the rounds and the generations are
+  -- about twice the number of continuations (`grind`'s default of 5 rounds stops in the middle
+  -- of a long path). `simp_all` over the unfolded models re-simplifies the whole model tree in each of
+  -- its rounds: on `infer_proj`'s tail (133 conditions) 50 s, this recipe 11 s. The `liftE` and
+  -- result-list steps between two arms take generations too: `k + 5` stopped `infer_proj_at`'s
+  -- paths at generation 13, `2k + 10` does not.
+  let flatRounds := 2 * st.ks.size + 10
+  let flatGen := (genN.getD flatRounds).max flatRounds
+  let stepTac (attrs vcg : String) (ihs : List String) : String :=
+    let clr := if ihs.isEmpty then "" else s!" <;> clear {String.intercalate " " ihs}"
+    if flat then
+      s!"(vcgen [{vcg}]{clr} <;> vc_flat <;> grind (ematch := {flatRounds}) (gen := {flatGen}) " ++
+        s!"{(match instN with | some i => s!"(instances := {i}) " | none => "")}[{attrs}])"
+    else match simpTxt? with
     | some l =>
-      let clr := if ihs.isEmpty then "" else s!" <;> clear {String.intercalate " " ihs}"
       let pre := if preLocals then s!" <;> (try simp only [{String.intercalate ", " simpBase}] at *)" else ""
       s!"(vcgen [{vcg}]{clr}{pre} <;> (try simp_all [{l}]) <;> grind [{attrs}])"
     | none => s!"sym {symCfg}only [{attrs}] => (vcgen [{vcg}] <;> finish {genTxt}{hintsT})"

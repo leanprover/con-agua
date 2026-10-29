@@ -68,8 +68,8 @@ l_model frontLine_specE (p : Prog) (hf : p.lookup "front_line" = some frontLine)
   fns [hf ↦ frontLineE]
   specs [callW_spec p n "skip_ws", callW_spec p n "line_rec", callW_spec p n "apply_rec",
     callW_spec p n "apply_expr", applyDLine_specE p hdl hi hd hk n]
-  grind [arena_grind] extra [L.Arena.ld64_rdW_specE] heartbeats 1000000 simp [Cmp.evalW, Cmp.eval]
-  unified nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
+  grind [arena_grind] extra [L.Arena.ld64_rdW_specE] heartbeats 1000000
+  unified nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem] flat
 
 /-! ## The twin's scan of a line -/
 

@@ -48,8 +48,8 @@ l_model ctlE_spec (p : Prog) (hP : SumProg p)
     fsortsE_spec p hP.hcfs hP.hcfg hP.ha hP.ad.ftd hP.hfsb n]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
-  heartbeats 4000000 simp [Cmp.evalW, Cmp.eval] unified
-  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
+  heartbeats 4000000 unified
+  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem] flat
 
 /-- **The model of `check_sum_ctor`, both outcomes**: the constant check, the domains and the tail by
 their unified models, the other callees (outside the verdict closure) lifted. -/
@@ -60,8 +60,8 @@ l_model ctorE_spec (p : Prog) (hP : SumProg p) (hV : ValProg p)
     ctlE_spec p hP n]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
-  heartbeats 4000000 simp [] unified
-  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
+  heartbeats 4000000 unified
+  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem] flat
 
 section sims
 variable {p : Prog} (hq : KnotStageProg p) {dn : NIdx → Option ConLeche.Name} {vis : Word}
