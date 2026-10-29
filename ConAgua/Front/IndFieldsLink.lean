@@ -70,28 +70,6 @@ theorem rdW_wd (m : Mem) (a : ArrId) (i : Word) : rdW (m.arr64 a) i = wd m a i.t
 
 /-! ## Numbers: below `10^18` -/
 
-theorem skipDigitsN_digits (b : Array UInt8) (i : Nat) :
-    ∀ j, i ≤ j → j < skipDigitsN b i → ∃ h : j < b.size, 48 ≤ b[j] ∧ b[j] ≤ 57 := by
-  fun_induction skipDigitsN b i with
-  | case1 i h hd ih =>
-    intro j hj1 hj2
-    by_cases hij : j = i
-    · subst hij; exact ⟨h, hd⟩
-    · exact ih j (by omega) hj2
-  | case2 i h hd => intro j hj1 hj2; omega
-  | case3 i h => intro j hj1 hj2; omega
-
-theorem numEndN_digits (b : Array UInt8) (i : Nat) :
-    ∀ j, i ≤ j → j < numEndN b i → ∃ h : j < b.size, 48 ≤ b[j] ∧ b[j] ≤ 57 := by
-  intro j hj1 hj2
-  unfold numEndN at hj2
-  dsimp only at hj2
-  split at hj2
-  · omega
-  split at hj2
-  · omega
-  · exact skipDigitsN_digits b i j hj1 hj2
-
 theorem rdLoopN_lt (b : Array UInt8) (e : Word) (v x : Word) (K : Nat)
     (hd : ∀ j, v.toNat ≤ j → j < e.toNat → ∃ h : j < b.size, 48 ≤ b[j] ∧ b[j] ≤ 57)
     (hx : x.toNat < 10 ^ K) (hk : K + (e.toNat - v.toNat) ≤ 18) :
@@ -136,10 +114,10 @@ theorem rdLoopN_lt (b : Array UInt8) (e : Word) (v x : Word) (K : Nat)
     rwa [show K + 1 + k = K + (k + 1) by omega] at this
 
 /-- A number `read_nat` reads over digits, if it is not `NONE`, has at most 18 digits. -/
-theorem rdNatN_lt (b : Array UInt8) (v e : Word) (hv : v.toNat < 2 ^ 63)
+theorem rdNatN_lt (b : Array UInt8) (v e : Word) (hv : v.toNat < 2 ^ 63) (hve : v.toNat ≤ e.toNat)
     (hd : ∀ j, v.toNat ≤ j → j < e.toNat → ∃ h : j < b.size, 48 ≤ b[j] ∧ b[j] ≤ 57)
     (hne : rdNatN b v e ≠ NONE) : (rdNatN b v e).toNat < 10 ^ 18 := by
-  unfold rdNatN at hne ⊢
+  rw [L.Front.Fields.rdNatN_digits b v e hve hd] at hne ⊢
   split at hne
   · exact absurd rfl hne
   rename_i h18
@@ -726,7 +704,8 @@ theorem num_word (i v : USize) (hne : ¬ numEnd b v = v) (hie : i < numEnd b v)
   rw [← hRn hx]
   have hb64 : b.size < 2 ^ 64 := by omega
   have hnt := numEnd_toNat_eq b h64 hb64 v
-  apply rdNatN_lt _ _ _ (by rw [USize.toNat_toUInt64]; omega) _ hx
+  apply rdNatN_lt _ _ _ (by rw [USize.toNat_toUInt64]; omega)
+    (by rw [USize.toNat_toUInt64, USize.toNat_toUInt64, hnt]; exact L.Scan.Values.numEndN_ge _ _) _ hx
   intro j hj1 hj2
   rw [USize.toNat_toUInt64] at hj1 hj2
   rw [hnt] at hj2

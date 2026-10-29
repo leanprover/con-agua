@@ -203,7 +203,8 @@ theorem hkv_link (v : USize) (hr : HintsRec) (e : USize) (h : scanHints b v = .o
               (by rw [USize.toNat_toUInt64]; omega) (by rw [USize.toNat_toUInt64]; omega) hsize
             rw [hvEq, USize.toNat_toUInt64] at this; exact this
           rw [hvEq, USize.toNat_toUInt64, ← numEnd_toUInt64_eq b h64 hb64]
-          refine ⟨rfl, rdNat_link b h64 hsize v' (numEnd b v') ?_ (numEnd_le b h64 hsize v' hv'le)⟩
+          refine ⟨rfl, rdNat_link b h64 hsize v' (numEnd b v') ?_ (numEnd_le b h64 hsize v' hv'le)
+            (numEnd_digits b h64 hsize v')⟩
           have := numEnd_toNat_eq b h64 hb64 v'
           rw [USize.le_iff_toNat_le, this]; exact L.Scan.Values.numEndN_ge _ _
         · cases h

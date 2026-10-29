@@ -321,6 +321,7 @@ theorem rd_item (i : USize) (h : i < b.usize) (hk : keyEnd b (i + 1) ≠ 0)
       (readNatAt b (valueAt b i (keyEnd b (i + 1))) (numEnd b (valueAt b i (keyEnd b (i + 1))))) := by
   have hvle := nm_key_le b h64 hsize i h hc hk hv
   exact rdNat_link b h64 hsize _ _ (le_numEnd b h64 hsize _ hvle) (numEnd_le b h64 hsize _ hvle)
+    (numEnd_digits b h64 hsize _)
 
 end objs
 
@@ -447,6 +448,7 @@ theorem items_link (i : USize) (acc : List Nat) (w : Bool) (us : List Nat) (e : 
           have := numEnd_toNat_eq b h64 (by omega) i
           rw [this]; exact L.Scan.Values.numEndN_le b.data i.toNat (by have := usizeInBounds b i hi; have hb : b.data.size = b.size := rfl; omega)
         have hR := rdNat_link b h64 hsize i (numEnd b i) (USize.le_of_lt hie) hle
+          (numEnd_digits b h64 hsize i)
         have := items_link (numEnd b i) _ false us e h (xs ++ [rdNatN b.data i.toUInt64 (numEnd b i).toUInt64])
           (by simpa using itemsR_append _ _ _ _ hx (show ItemsR [_] [_] from ⟨hR, trivial⟩))
         simpa using this
@@ -730,7 +732,8 @@ theorem natVal_link (v : USize) (n : Nat) (e : USize) (h : scanQuotedNat b v = .
     omega
   have hdin := usizeInBounds b _ hd
   rw [← hv1, hd1, UInt64.add_sub_cancel]
-  refine ⟨rdNat_link b h64 hsize _ _ (USize.le_of_lt hlt) (by omega),
+  refine ⟨rdNat_link b h64 hsize _ _ (USize.le_of_lt hlt) (by omega)
+    (by rw [skipDigits_toNat_eq b h64 (by omega)]; exact skipDigitsN_digits b.data _),
     v + 1, skipDigits b (v + 1), rfl, rfl, hlt, rfl, rfl⟩
 
 /-- A `strVal`'s body. -/

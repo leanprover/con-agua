@@ -104,6 +104,30 @@ def RecR (b : ByteArray) : LineRec → Fld → Prop
   | .header, f => f.pl = 7
   | _, _ => False
 
+/-- The bytes `[i, skipDigitsN b i)` are digits. -/
+theorem skipDigitsN_digits (b : Array UInt8) (i : Nat) :
+    ∀ j, i ≤ j → j < L.Scan.Leaves.skipDigitsN b i → ∃ h : j < b.size, 48 ≤ b[j] ∧ b[j] ≤ 57 := by
+  fun_induction L.Scan.Leaves.skipDigitsN b i with
+  | case1 i h hd ih =>
+    intro j hj1 hj2
+    by_cases hij : j = i
+    · subst hij; exact ⟨h, hd⟩
+    · exact ih j (by omega) hj2
+  | case2 i h hd => intro j hj1 hj2; omega
+  | case3 i h => intro j hj1 hj2; omega
+
+/-- The bytes `[i, numEndN b i)` are digits. -/
+theorem numEndN_digits (b : Array UInt8) (i : Nat) :
+    ∀ j, i ≤ j → j < L.Scan.Leaves.numEndN b i → ∃ h : j < b.size, 48 ≤ b[j] ∧ b[j] ≤ 57 := by
+  intro j hj1 hj2
+  unfold L.Scan.Leaves.numEndN at hj2
+  dsimp only at hj2
+  split at hj2
+  · omega
+  split at hj2
+  · omega
+  · exact skipDigitsN_digits b i j hj1 hj2
+
 section kit
 variable (b : ByteArray) (h64 : System.Platform.numBits = 64) (hsize : b.size < 2 ^ 63)
 include h64 hsize
@@ -129,9 +153,17 @@ theorem rdLoop_link (v e : USize) (x : UInt64) (he : e.toNat ≤ b.size) :
     rw [rdLoopN_stop _ _ _ _ (fun h' => by
       have := (lt_toUInt64_iff _ _).mpr h'; rw [USize.lt_iff_toNat_lt] at this; omega)]
 
-theorem rdNat_link (v e : USize) (hve : v ≤ e) (he : e.toNat ≤ b.size) :
+/-- The bytes `[v, numEnd b v)` are digits. -/
+theorem numEnd_digits (v : USize) :
+    ∀ j, v.toNat ≤ j → j < (numEnd b v).toNat → ∃ h : j < b.data.size, 48 ≤ b.data[j] ∧ b.data[j] ≤ 57 := by
+  rw [numEnd_toNat_eq b h64 (by omega)]
+  exact numEndN_digits b.data v.toNat
+
+theorem rdNat_link (v e : USize) (hve : v ≤ e) (he : e.toNat ≤ b.size)
+    (hd : ∀ j, v.toNat ≤ j → j < e.toNat → ∃ h : j < b.data.size, 48 ≤ b.data[j] ∧ b.data[j] ≤ 57) :
     ItemR (rdNatN b.data v.toUInt64 e.toUInt64) (readNatAt b v e) := by
-  unfold rdNatN
+  rw [rdNatN_digits b.data _ _ (by simpa [USize.toNat_toUInt64] using USize.le_iff_toNat_le.mp hve)
+    (by simpa [USize.toNat_toUInt64] using hd)]
   split
   · exact itemR_none _
   · rename_i hlong
@@ -217,6 +249,7 @@ theorem pair_link (i : USize) (acc : List Nat) (w : Bool) (us : List Nat) (e : U
           have := numEnd_toNat_eq b h64 (by omega) i
           rw [this]; exact L.Scan.Values.numEndN_le b.data i.toNat (by have := usizeInBounds b i hi; have hb : b.data.size = b.size := rfl; omega)
         have hR := rdNat_link b h64 hsize i (numEnd b i) (USize.le_of_lt hie) hle
+          (numEnd_digits b h64 hsize i)
         have hcnt : (cnt + 1).toNat = (readNatAt b i (numEnd b i) :: acc).length := by
           rw [UInt64.toNat_add, hc]; simp; have := usizeInBounds b i hi; omega
         refine pair_link (numEnd b i) _ false us e (cnt + 1) _ _ h hcnt
@@ -376,7 +409,8 @@ theorem num_val (i v : USize) (hne : ¬ numEnd b v = v) (hie : i < numEnd b v)
     L.Scan.Values.slotNatN b.data i.toUInt64 v.toUInt64 = (numEnd b v).toUInt64 ∧
     ItemR (rdNatN b.data v.toUInt64 (numEnd b v).toUInt64) (readNatAt b v (numEnd b v)) :=
   ⟨by rw [slotNatN_link b h64 hsize, ite_eq_right hne, ite_eq_left hie],
-    rdNat_link b h64 hsize v (numEnd b v) (le_numEnd b h64 hsize v hvle) (numEnd_le b h64 hsize v hvle)⟩
+    rdNat_link b h64 hsize v (numEnd b v) (le_numEnd b h64 hsize v hvle) (numEnd_le b h64 hsize v hvle)
+      (numEnd_digits b h64 hsize v)⟩
 
 /-! ## `rec_str_name`, `rec_num_name` -/
 
