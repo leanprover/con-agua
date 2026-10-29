@@ -1508,7 +1508,7 @@
     50    fW n s₀.mem args = some (r.headD 0, s'.mem); ⊤⦄` of every member (`some (r, s'.mem)` for a list
     51    model, `some (r.headD 0, r.tail.headD 0, …, s'.mem)` for a tuple model), as one conjunction
     52    over the group (`name`), a step theorem per member (`name.stepᵢ`: `vcgen` with the specs of the
-    53    callees and loops that member calls, then `finish`) and the induction on the fuel.
+    53    callees and loops that member calls, then `vc_flat` and `grind`, below) and the induction on the fuel.
     54  
     55  The definitions come in dependency order: each strongly connected component of the reference
     56  graph is one definition or one `mutual` block, well-founded on `(fuel, depth)` if it has a
