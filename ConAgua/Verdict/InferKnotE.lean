@@ -382,7 +382,7 @@ theorem inferBodyIO_refinesE (p : Prog) (hq : InferAllProg p) (hc : InferCallees
     rw [← hd1, ← hd2] at hv
     exact ErrClaim.of_run_err (fun ce h => (inferBodyIO_lam _ fe d.toNat (decE e) a₀ _ _ hv).trans h)
       (CoreSpecE.of_callE (s₀ := ⟨s₀.mem, Locals.init []⟩)
-        (inferLamIO_refinesE p hq.body hnv hc.inst1 k (hkE.mono (by omega)) F _ a₀ dn vis fe MM eb mode d
+        (inferLamIO_refinesE p hq.leaf hq.body hnv hc.inst1 hc.abs1 k (hk.mono (by omega)) (hkE.mono (by omega)) F _ a₀ dn vis fe MM eb mode d
           _ _ (by omega) (by omega) hsl h1' h2') h1)
   | app f x =>
     obtain ⟨hg, -⟩ := hvr

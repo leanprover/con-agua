@@ -7,13 +7,13 @@ import Std.WP.Tactic
 /-!
 # The `let` clause of `inferBody` and the chained binder clauses of `inferBodyIO` (lane `defeq`)
 
-The callW pattern (`InferLeaves.lean`): a word model of each function with its callees through
-their runs (`callW`), the L spec by `vcgen` + `finish`, the refinement from the callees' specs,
-threaded through the twin's `do` blocks by `coreRef_bind`.
+Each function has one unified model and one refinement for both outcomes (`RefE` with `CorePost`,
+`InferG`): the slots and `ensure_sort` through their runs, the callees outside the verdict closure
+lifted, threaded through the twin's `do` blocks by `RefE.bind_core`.
 
-* `infer_let` refines `inferBody`'s `.letE` clause (`inferLetT`, `inferBody_let`).
+* `infer_let` refines `inferBody`'s `.letE` clause (`inferLetT`, `inferBody_let`; `ilet_ref`).
 * `infer_lam_io` and `infer_forall_io` refine `inferBodyIO`'s `.lam` and `.forallE` clauses
-  (`inferLamIOT`, `inferForallIOT`) at the io view of the knot.
+  (`inferLamIOT`, `inferForallIOT`) at the io view of the knot (`ilam_ref`, `ifa_ref`).
 -/
 
 open ConRon.Arena
@@ -98,12 +98,12 @@ theorem inferBody_let (r : CoreFnsA) (fe : IFEnv) (d : Nat) (e : EIdx) (a : ASta
   simp only [inferBody, StateT.run_bind, view_run _ _ _ hv, except_ok_bind]
   rfl
 
-/-- **`infer_let` is its model `inferLetW`** (generated). -/
-l_model inferLet_spec (p : Prog) (hb : InferBodyProg p)
-  fns [hb.inferLet ↦ inferLetW]
-  specs [callW_spec p n "infer", callW_spec p n "ensure_sort", callW_spec p n "defeq",
-    callW_spec p n "inst1"]
-  grind [arena_grind] simp []
+/-- **`infer_let`'s unified model**: the slots and `ensure_sort` through their runs, `inst1` lifted. -/
+l_model iletE_spec (p : Prog) (hf : p.lookup "infer_let" = some inferLetL)
+  fns [hf ↦ iletE list]
+  specs [callW_spec p n "inst1"]
+  grind [arena_grind] simp [] unified
+  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 /-- Peel one call off a model: the run exists, and the model is the continuation's. -/
 theorem callW_cases {f : FnName} {p : Prog} {n : Nat} {vs : List Word} {m : Mem}
@@ -114,8 +114,74 @@ theorem callW_cases {f : FnName} {p : Prog} {n : Nat} {vs : List Word} {m : Mem}
   | none => rw [hc, hK] at h; cases h
   | some q => exact ⟨q.1, q.2, rfl, by rw [hc] at h; exact h⟩
 
-/-- **`infer_let` refines the `.letE` clause** (`inferLetT`) at the knot, from the knot's slots,
-`ensure_sort` and `inst1`'s spec. -/
+/-- **`infer_let` refines the `.letE` clause** (`inferLetT`) at the knot, both outcomes: the
+slots' (`infer`, `defeq`) and `ensure_sort`'s errors, a value of another type rejects; `inst1`
+claims nothing. -/
+theorem ilet_ref (p : Prog) (hp : InferLeafProg p) (hi1 : Inst1OK p) (n : Nat) (hk : KnotUpTo p n)
+    (F : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
+    (M : ModeMaps) (eb mode d ty v b : Word) (hF : n ≤ F) (hn : n ≤ 2 ^ 62)
+    (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (hty : HW ty) (hv : HW v) (hbb : HW b) :
+    RefE (InferG p n) (iletE p (n + 1) s₀.mem mode vis d ty v b)
+      (inferLetT (coreKnot (decMode mode) fe id F) fe d.toNat (decE ty) (decE v) (decE b)) a₀
+      (CorePost decH dn s₀.mem vis fe M eb ResH) := by
+  have hK := hk n (Nat.le_refl _)
+  simp only [iletE, inferLetT]
+  rcases c1 : callE p n "infer" [mode, vis, d, ty] s₀.mem with e1 | ⟨r₁, m₁⟩
+  · exact RefE.bind_left fun hG => CoreSpecE.of_callE ((hG.knot n (Nat.le_refl _)).infer F s₀ a₀ dn
+      vis fe M eb mode d ty hF hn hs hty) c1
+  have h₁ := CoreSpec.of_callW (hK.infer F s₀ a₀ dn vis fe M eb mode d ty hF hn hs hty)
+    (callW_of_callE c1)
+  refine RefE.bind_core (w := id) h₁ (fun M₁ hS₁ _ => ?_)
+  simp only [iletE.k_infer]
+  have hs₁ : SlotPre ⟨m₁, Locals.init []⟩ _ dn vis fe M₁ eb mode := ⟨hS₁, hs.mode4, hs.eb_mode⟩
+  rcases c2 : callE p n "ensure_sort" [mode, vis, d, r₁.headD 0] m₁ with e2 | ⟨r₂, m₂⟩
+  · exact RefE.bind_left fun hG => CoreSpecE.of_callE (s₀ := ⟨m₁, Locals.init []⟩)
+      (ensureSortSpecE_of_knot p hp n hk hG.knot F _ _ dn vis fe M₁ eb mode d (r₁.headD 0) hF hn hs₁
+        h₁.2.2.2) c2
+  have h₂ := CoreSpec.of_callW (ensureSortSpec_of_knot p hp n hk F ⟨m₁, Locals.init []⟩ _ dn vis fe
+    M₁ eb mode d (r₁.headD 0) hF hn hs₁ h₁.2.2.2) (callW_of_callE c2)
+  refine RefE.bind_core (w := id) h₂ (fun M₂ hS₂ _ => ?_)
+  simp only [iletE.k_ensure_sort]
+  have hs₂ : SlotPre ⟨m₂, Locals.init []⟩ _ dn vis fe M₂ eb mode := ⟨hS₂, hs.mode4, hs.eb_mode⟩
+  rcases c3 : callE p n "infer" [mode, vis, d, v] m₂ with e3 | ⟨r₃, m₃⟩
+  · exact RefE.bind_left fun hG => CoreSpecE.of_callE (s₀ := ⟨m₂, Locals.init []⟩)
+      ((hG.knot n (Nat.le_refl _)).infer F _ _ dn vis fe M₂ eb mode d v hF hn hs₂ hv) c3
+  have h₃ := CoreSpec.of_callW (hK.infer F ⟨m₂, Locals.init []⟩ _ dn vis fe M₂ eb mode d v hF hn hs₂
+    hv) (callW_of_callE c3)
+  refine RefE.bind_core (w := id) h₃ (fun M₃ hS₃ _ => ?_)
+  simp only [iletE.k_infer_2]
+  have hs₃ : SlotPre ⟨m₃, Locals.init []⟩ _ dn vis fe M₃ eb mode := ⟨hS₃, hs.mode4, hs.eb_mode⟩
+  rcases c4 : callE p n "defeq" [mode, vis, d, r₃.headD 0, ty] m₃ with e4 | ⟨r₄, m₄⟩
+  · exact RefE.bind_left fun hG => CoreSpecE.of_callE (s₀ := ⟨m₃, Locals.init []⟩)
+      ((hG.knot n (Nat.le_refl _)).defeq F _ _ dn vis fe M₃ eb mode d (r₃.headD 0) ty hF hn hs₃
+        h₃.2.2.2 hty) c4
+  have h₄ := CoreSpec.of_callW (hK.defeq F ⟨m₃, Locals.init []⟩ _ dn vis fe M₃ eb mode d (r₃.headD 0)
+    ty hF hn hs₃ h₃.2.2.2 hty) (callW_of_callE c4)
+  refine RefE.bind_core (w := id) h₄ (fun M₄ hS₄ _ => ?_)
+  simp only [iletE.k_defeq]
+  by_cases h0 : r₄.headD 0 = 0
+  · rw [ite_eq_left h0]
+    have hdb : decBool r₄ = false := by simp only [decBool, h0]; rfl
+    simp only [hdb, Bool.not_false, ↓reduceIte]
+    exact fun _ => ErrClaim.fail _ _ rfl
+  rw [ite_eq_right h0]
+  have hdb : decBool r₄ = true := by simp only [decBool, bne_iff_ne]; exact h0
+  simp only [hdb, Bool.not_true, Bool.false_eq_true, ↓reduceIte]
+  rcases c5 : callW p n "inst1" [b, v, 0] m₄ with _ | ⟨r₅, m₅⟩
+  · rw [liftE_none]; exact RefE.of_cls0 (by simp)
+  rw [liftE_some]
+  have h₅ := CoreSpec.of_callW (hi1 n ⟨m₄, Locals.init []⟩ _ dn vis fe M₄ eb b v 0 hS₄ hbb hv) c5
+  refine RefE.bind_core (w := id) h₅ (fun M₅ hS₅ _ => ?_)
+  simp only [iletE.k_inst1]
+  rcases c6 : callE p n "infer" [mode, vis, d, r₅.headD 0] m₅ with e6 | ⟨r₆, m₆⟩
+  · exact fun hG => CoreSpecE.of_callE (s₀ := ⟨m₅, Locals.init []⟩)
+      ((hG.knot n (Nat.le_refl _)).infer F _ _ dn vis fe M₅ eb mode d (r₅.headD 0) hF hn
+        ⟨hS₅, hs.mode4, hs.eb_mode⟩ h₅.2.2.2) c6
+  obtain ⟨hrun, hP⟩ := (CoreSpec.of_callW (hK.infer F ⟨m₅, Locals.init []⟩ _ dn vis fe M₅ eb mode d
+    (r₅.headD 0) hF hn ⟨hS₅, hs.mode4, hs.eb_mode⟩ h₅.2.2.2) (callW_of_callE c6)).post
+  exact RefE.ret hrun ⟨hP.after, hP.res, hP.valid⟩
+
+/-- **`infer_let` refines the `.letE` clause** (`inferLetT`) at the knot (`ilet_ref`'s ok half). -/
 @[refines_part ConRon.Arena.inferBody "letE (inferLetT)"]
 theorem inferLet_refines (p : Prog) (hp : InferLeafProg p) (hb : InferBodyProg p)
     (hi1 : Inst1OK p) (n : Nat) (hk : KnotUpTo p n) (F : Nat) (s₀ : St) (a₀ : AState)
@@ -124,58 +190,11 @@ theorem inferLet_refines (p : Prog) (hp : InferLeafProg p) (hb : InferBodyProg p
     (hty : HW ty) (hv : HW v) (hbb : HW b) :
     CoreSpec p (n + 1) "infer_let" [mode, vis, d, ty, v, b]
       (inferLetT (coreKnot (decMode mode) fe id F) fe d.toNat (decE ty) (decE v) (decE b)) decH
-      s₀ a₀ dn vis fe M eb := by
-  apply L.M.triple_of_run
-  intro s r s' hs0 hrun
-  obtain ⟨hloc, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun
-    (inferLet_spec p hb (n + 1) s₀ mode vis d ty v b)
-  subst hs0
-  refine ⟨hloc, ?_⟩
-  have hK := hk n (Nat.le_refl _)
-  have hes := ensureSortSpec_of_knot p hp n hk
-  rw [inferLetW.arm1] at hW
-  obtain ⟨r₁, m₁, hc1, hW⟩ := callW_cases rfl hW
-  rw [inferLetW.k_infer.arm1] at hW
-  obtain ⟨r₂, m₂, hc2, hW⟩ := callW_cases rfl hW
-  rw [inferLetW.k_ensure_sort.arm1] at hW
-  obtain ⟨r₃, m₃, hc3, hW⟩ := callW_cases rfl hW
-  rw [inferLetW.k_infer_2.arm1] at hW
-  obtain ⟨r₄, m₄, hc4, hW⟩ := callW_cases rfl hW
-  have h0 : ¬ r₄.headD 0 = 0 := fun h0 => by
-    rw [inferLetW.k_defeq.abort1 _ _ _ _ _ _ _ _ _ h0] at hW; cases hW
-  rw [inferLetW.k_defeq.arm1 (hc1 := h0)] at hW
-  obtain ⟨r₅, m₅, hc5, hW⟩ := callW_cases rfl hW
-  rw [inferLetW.k_inst1.arm1] at hW
-  have hW : call1W p n "infer" [mode, vis, d, r₅.headD 0] m₅ = some _ := hW
-  have h₁ := CoreSpec.of_callW (hK.infer F s a₀ dn vis fe M eb mode d ty hF hn hs hty) hc1
-  refine coreRef_bind h₁ (fun M₁ hS₁ => ?_)
-  have h₂ := CoreSpec.of_callW (hes F ⟨m₁, Locals.init []⟩ _ dn vis fe M₁ eb mode d (r₁.headD 0) hF hn
-    ⟨hS₁, hs.mode4, hs.eb_mode⟩ h₁.2.2.2) hc2
-  refine coreRef_bind h₂ (fun M₂ hS₂ => ?_)
-  have h₃ := CoreSpec.of_callW (hK.infer F ⟨m₂, Locals.init []⟩ _ dn vis fe M₂ eb mode d v hF hn
-    ⟨hS₂, hs.mode4, hs.eb_mode⟩ hv) hc3
-  refine coreRef_bind h₃ (fun M₃ hS₃ => ?_)
-  have h₄ := CoreSpec.of_callW (hK.defeq F ⟨m₃, Locals.init []⟩ _ dn vis fe M₃ eb mode d (r₃.headD 0) ty
-    hF hn ⟨hS₃, hs.mode4, hs.eb_mode⟩ h₃.2.2.2 hty) hc4
-  refine coreRef_bind h₄ (fun M₄ hS₄ => ?_)
-  have hbt : decBool r₄ = true := by simp only [decBool, bne_iff_ne]; exact h0
-  rw [hbt]
-  simp only [Bool.not_true, Bool.false_eq_true, ↓reduceIte]
-  have h₅ := CoreSpec.of_callW (hi1 n ⟨m₄, Locals.init []⟩ _ dn vis fe M₄ eb b v 0 hS₄ hbb hv) hc5
-  refine coreRef_bind h₅ (fun M₅ hS₅ => ?_)
-  exact CoreSpec.of_call1W (s₀ := ⟨m₅, Locals.init []⟩)
-    (hK.infer F _ _ dn vis fe M₅ eb mode d (r₅.headD 0) hF hn ⟨hS₅, hs.mode4, hs.eb_mode⟩ h₅.2.2.2)
-    (fun r r' h => by simp only [decH, h]) hW
+      s₀ a₀ dn vis fe M eb :=
+  RefE.coreSpec (iletE_spec p hb.inferLet (n + 1) s₀ mode vis d ty v b)
+    (ilet_ref p hp hi1 n hk F s₀ a₀ dn vis fe M eb mode d ty v b hF hn hs hty hv hbb)
 
 /-! ## `infer_lam_io`: the io body's `.lam` clause -/
-
-/-- A `view` read, then a run at the node it reads. -/
-theorem coreRef_view {β : Type} [Inhabited β] {h : EIdx} {v : ENodeView} {k : ENodeView → AM β}
-    {a₀ : AState} {dec : List Word → β} {dn : NIdx → Option ConLeche.Name} {m₀ m : Mem}
-    {vis : Word} {fe : IFEnv} {M : ModeMaps} {eb : Word} {r : List Word} {ok : List Word → Prop}
-    (hv : a₀.store.view h = some v) (h' : CoreRef (k v) a₀ dec dn m₀ vis fe M eb r m ok) :
-    CoreRef (view h >>= k) a₀ dec dn m₀ vis fe M eb r m ok :=
-  coreRef_congr (by rw [StateT.run_bind, view_run _ _ _ hv]; rfl) h'
 
 /-- **The `.lam` clause of `inferBodyIO`**, copied. -/
 def inferLamIOT (r : CoreFnsA) (depth : Nat) (ty body : EIdx) : AM EIdx := do
@@ -192,12 +211,12 @@ theorem inferBodyIO_lam (r : CoreFnsA) (fe : IFEnv) (d : Nat) (e : EIdx) (a : AS
   simp only [inferBodyIO, StateT.run_bind, view_run _ _ _ hv, except_ok_bind]
   rfl
 
-/-- **`infer_lam_io` is its model `inferLamIOW`** (generated). -/
-l_model inferLamIO_spec (p : Prog) (hb : InferBodyProg p)
-  fns [hb.inferLamIO ↦ inferLamIOW]
-  specs [callW_spec p n "intern_fvar", callW_spec p n "inst1", callW_spec p n "infer_io",
-    callW_spec p n "infer_lam_result"]
-  grind [arena_grind] simp []
+/-- **`infer_lam_io`'s unified model**: the `infer_io` slot through its run, the rest lifted. -/
+l_model ilamE_spec (p : Prog) (hf : p.lookup "infer_lam_io" = some inferLamIOL)
+  fns [hf ↦ ilamE list]
+  specs [callW_spec p n "intern_fvar", callW_spec p n "inst1", callW_spec p n "infer_lam_result"]
+  grind [arena_grind] simp [] unified
+  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 /-- `infer_lam_result` at every L fuel. -/
 theorem inferLamResult_any (p : Prog) (hp : InferLeafProg p) (ha : Abstract1OK p) (n : Nat)
@@ -220,7 +239,55 @@ theorem toNat_succ_of_ne {d : Word} (h : ¬ d + 1 = 0) : (d + 1).toNat = d.toNat
   simp; omega
 
 /-- **`infer_lam_io` refines the io body's `.lam` clause** (`inferLamIOT`) at the io view of the
-knot, from the `infer_io` slot, `inst1` and `abstract1`. -/
+knot, both outcomes: the body's type (the `infer_io` slot at `d + 1`); the rest claims nothing. -/
+theorem ilam_ref (p : Prog) (hp : InferLeafProg p) (hb : InferBodyProg p)
+    (hi1 : Inst1OK p) (ha1 : Abstract1OK p) (n : Nat) (hk : KnotUpTo p n) (F : Nat) (s₀ : St)
+    (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps)
+    (eb mode d ty body : Word) (hF : n ≤ F) (hn : n ≤ 2 ^ 62)
+    (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (hty : HW ty) (hbody : HW body) :
+    RefE (InferG p n) (ilamE p (n + 1) s₀.mem mode vis d ty body)
+      (inferLamIOT (CoreFnsA.ioView (coreKnot (decMode mode) fe id F)) d.toNat (decE ty) (decE body))
+      a₀ (CorePost decH dn s₀.mem vis fe M eb ResH) := by
+  have hK := hk n (Nat.le_refl _)
+  simp only [ilamE, inferLamIOT]
+  by_cases hd : d + 1 = 0
+  · rw [ite_eq_left hd]; exact RefE.of_cls0 rfl
+  rw [ite_eq_right hd]
+  have hd1 := toNat_succ_of_ne hd
+  rcases c1 : callW p n "intern_fvar" [d, ty] s₀.mem with _ | ⟨r₁, m₁⟩
+  · rw [liftE_none]; exact RefE.of_cls0 (by simp)
+  rw [liftE_some]
+  obtain ⟨s₁, hs₁, -, hfv⟩ := triple_of_callW (internFVar_spec p hb.fvf hb.fvp hb.fvi n s₀ d ty) c1
+  rw [hs₁] at hfv
+  refine RefE.bind_core (w := id) (internFVar_core hs.rel d ty hty r₁ hfv) (fun M₁ hS₁ _ => ?_)
+  simp only [ilamE.k_intern_fvar]
+  rcases c2 : callW p n "inst1" [body, r₁.headD 0, 0] m₁ with _ | ⟨r₂, m₂⟩
+  · rw [liftE_none]; exact RefE.of_cls0 (by simp)
+  rw [liftE_some]
+  have h₂ := CoreSpec.of_callW (hi1 n ⟨m₁, Locals.init []⟩ _ dn vis fe M₁ eb body (r₁.headD 0) 0 hS₁
+    hbody (internFVar_core hs.rel d ty hty r₁ hfv).2.2.2) c2
+  refine RefE.bind_core (w := id) h₂ (fun M₂ hS₂ _ => ?_)
+  simp only [ilamE.k_inst1]
+  have hs₂ : SlotPre ⟨m₂, Locals.init []⟩ _ dn vis fe M₂ eb mode := ⟨hS₂, hs.mode4, hs.eb_mode⟩
+  rcases c3 : callE p n "infer_io" [mode, vis, d + 1, r₂.headD 0] m₂ with e3 | ⟨r₃, m₃⟩
+  · refine RefE.bind_left fun hG => ?_
+    have h3 := CoreSpecE.of_callE (s₀ := ⟨m₂, Locals.init []⟩) ((hG.knot n (Nat.le_refl _)).inferIO F
+      _ _ dn vis fe M₂ eb mode (d + 1) (r₂.headD 0) hF hn hs₂ h₂.2.2.2) c3
+    rwa [hd1] at h3
+  have h₃ := CoreSpec.of_callW (hK.inferIO F ⟨m₂, Locals.init []⟩ _ dn vis fe M₂ eb mode (d + 1)
+    (r₂.headD 0) hF hn hs₂ h₂.2.2.2) (callW_of_callE c3)
+  rw [hd1] at h₃
+  refine RefE.bind_core (w := id) h₃ (fun M₃ hS₃ _ => ?_)
+  simp only [ilamE.k_infer_io]
+  rcases c4 : callW p n "infer_lam_result" [ty, r₃.headD 0, d] m₃ with _ | ⟨r₄, m₄⟩
+  · rw [liftE_none]; exact RefE.of_cls0 (by simp)
+  rw [liftE_some]
+  obtain ⟨hrun, hP⟩ := (CoreSpec.of_callW (inferLamResult_any p hp ha1 n ⟨m₃, Locals.init []⟩ _ dn vis
+    fe M₃ eb ty (r₃.headD 0) d hS₃ h₃.2.2.2) c4).post
+  exact RefE.ret hrun ⟨hP.after, hP.res, hP.valid⟩
+
+/-- **`infer_lam_io` refines the io body's `.lam` clause** (`inferLamIOT`) at the io view of the
+knot (`ilam_ref`'s ok half). -/
 @[refines_part ConRon.Arena.inferBodyIO "lam (inferLamIOT)"]
 theorem inferLamIO_refines (p : Prog) (hp : InferLeafProg p) (hb : InferBodyProg p)
     (hi1 : Inst1OK p) (ha1 : Abstract1OK p) (n : Nat) (hk : KnotUpTo p n) (F : Nat) (s₀ : St)
@@ -229,38 +296,9 @@ theorem inferLamIO_refines (p : Prog) (hp : InferLeafProg p) (hb : InferBodyProg
     (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (hty : HW ty) (hbody : HW body) :
     CoreSpec p (n + 1) "infer_lam_io" [mode, vis, d, ty, body]
       (inferLamIOT (CoreFnsA.ioView (coreKnot (decMode mode) fe id F)) d.toNat (decE ty) (decE body))
-      decH s₀ a₀ dn vis fe M eb := by
-  apply L.M.triple_of_run
-  intro s r s' hs0 hrun
-  obtain ⟨hloc, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun
-    (inferLamIO_spec p hb (n + 1) s₀ mode vis d ty body)
-  subst hs0
-  refine ⟨hloc, ?_⟩
-  have hK := hk n (Nat.le_refl _)
-  have hd : ¬ d + 1 = 0 := fun hd => by rw [inferLamIOW.abort1 _ _ _ _ _ _ _ _ hd] at hW; cases hW
-  rw [inferLamIOW.arm1 (hc1 := hd)] at hW
-  have hd1 := toNat_succ_of_ne hd
-  obtain ⟨r₁, m₁, hc1, hW⟩ := callW_cases rfl hW
-  rw [inferLamIOW.k_intern_fvar.arm1] at hW
-  obtain ⟨r₂, m₂, hc2, hW⟩ := callW_cases rfl hW
-  rw [inferLamIOW.k_inst1.arm1] at hW
-  obtain ⟨r₃, m₃, hc3, hW⟩ := callW_cases rfl hW
-  rw [inferLamIOW.k_infer_io.arm1] at hW
-  have hW : call1W p n "infer_lam_result" [ty, r₃.headD 0, d] m₃ = some _ := hW
-  obtain ⟨s₁, hs₁, -, hfv⟩ := triple_of_callW (internFVar_spec p hb.fvf hb.fvp hb.fvi n s d ty) hc1
-  rw [hs₁] at hfv
-  have h₁ := internFVar_core hs.rel d ty hty r₁ hfv
-  refine coreRef_bind h₁ (fun M₁ hS₁ => ?_)
-  have h₂ := CoreSpec.of_callW (hi1 n ⟨m₁, Locals.init []⟩ _ dn vis fe M₁ eb body (r₁.headD 0) 0 hS₁
-    hbody h₁.2.2.2) hc2
-  refine coreRef_bind h₂ (fun M₂ hS₂ => ?_)
-  have h₃ := CoreSpec.of_callW (hK.inferIO F ⟨m₂, Locals.init []⟩ _ dn vis fe M₂ eb mode (d + 1)
-    (r₂.headD 0) hF hn ⟨hS₂, hs.mode4, hs.eb_mode⟩ h₂.2.2.2) hc3
-  rw [hd1] at h₃
-  refine coreRef_bind h₃ (fun M₃ hS₃ => ?_)
-  exact CoreSpec.of_call1W (s₀ := ⟨m₃, Locals.init []⟩)
-    (inferLamResult_any p hp ha1 n _ _ dn vis fe M₃ eb ty (r₃.headD 0) d hS₃ h₃.2.2.2)
-    (fun r r' h => by simp only [decH, h]) hW
+      decH s₀ a₀ dn vis fe M eb :=
+  RefE.coreSpec (ilamE_spec p hb.inferLamIO (n + 1) s₀ mode vis d ty body)
+    (ilam_ref p hp hb hi1 ha1 n hk F s₀ a₀ dn vis fe M eb mode d ty body hF hn hs hty hbody)
 
 /-! ## `infer_forall_io`: the io body's `.forallE` clause -/
 
@@ -286,13 +324,16 @@ theorem inferBodyIO_forall (r : CoreFnsA) (fe : IFEnv) (d : Nat) (e : EIdx) (a :
   simp only [inferBodyIO, StateT.run_bind, view_run _ _ _ hv, except_ok_bind]
   rfl
 
-/-- **`infer_forall_io` is its model `inferForallIOW`** (generated). -/
-l_model inferForallIO_spec (p : Prog) (hb : InferBodyProg p)
-  fns [hb.inferForallIO ↦ inferForallIOW]
-  specs [callW_spec p n "infer_io", callW_spec p n "whnf", callW_spec p n "intern_fvar",
-    callW_spec p n "inst1", callW_spec p n "ensure_sort", callW_spec p n "intern_imax",
+/-- **`infer_forall_io`'s unified model**: the slots and `ensure_sort` through their runs, the
+interning and `inst1` lifted. -/
+l_model ifaE_spec (p : Prog) (hf : p.lookup "infer_forall_io" = some inferForallIOL)
+  fns [hf ↦ ifaE list]
+  specs [callW_spec p n "intern_fvar", callW_spec p n "inst1", callW_spec p n "intern_imax",
     callW_spec p n "intern_sort"]
-  grind [arena_grind] extra [ld64_rdW_spec, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [tierW, idxW, tfld]
+  grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
+  simp [tierW, idxW] unified
+  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 /-- **A forwarded run meets its callee's spec.** -/
 theorem of_call1W {p : Prog} {n : Nat} {f : FnName} {vs : List Word} {m m' : Mem} {w : Word}
@@ -306,7 +347,124 @@ theorem of_call1W {p : Prog} {n : Nat} {f : FnName} {vs : List Word} {m m' : Mem
   rw [hs'] at hX; exact hX
 
 /-- **`infer_forall_io` refines the io body's `.forallE` clause** (`inferForallIOT`) at the io
-view of the knot, from the `infer_io` and `whnf` slots, `ensure_sort` and `inst1`. -/
+view of the knot, both outcomes: the slots' (`infer_io` twice, `whnf`) and `ensure_sort`'s errors,
+a domain type that is no sort rejects; the interning and `inst1` claim nothing. -/
+theorem ifa_ref (p : Prog) (hp : InferLeafProg p) (hb : InferBodyProg p)
+    (hi1 : Inst1OK p) (n : Nat) (hk : KnotUpTo p n) (F : Nat) (s₀ : St)
+    (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps)
+    (eb mode d ty body : Word) (hF : n ≤ F) (hn : n ≤ 2 ^ 62)
+    (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (hty : HW ty) (hbody : HW body) :
+    RefE (InferG p n) (ifaE p (n + 1) s₀.mem mode vis d ty body)
+      (inferForallIOT (CoreFnsA.ioView (coreKnot (decMode mode) fe id F)) fe d.toNat (decE ty)
+        (decE body)) a₀ (CorePost decH dn s₀.mem vis fe M eb ResH) := by
+  have hK := hk n (Nat.le_refl _)
+  simp only [ifaE, inferForallIOT]
+  by_cases hd : d + 1 = 0
+  · rw [ite_eq_left hd]; exact RefE.of_cls0 rfl
+  rw [ite_eq_right hd]
+  have hd1 := toNat_succ_of_ne hd
+  rcases c1 : callE p n "infer_io" [mode, vis, d, ty] s₀.mem with e1 | ⟨r₁, m₁⟩
+  · exact RefE.bind_left fun hG => CoreSpecE.of_callE ((hG.knot n (Nat.le_refl _)).inferIO F s₀ a₀ dn
+      vis fe M eb mode d ty hF hn hs hty) c1
+  have h₁ := CoreSpec.of_callW (hK.inferIO F s₀ a₀ dn vis fe M eb mode d ty hF hn hs hty)
+    (callW_of_callE c1)
+  refine RefE.bind_core (w := id) h₁ (fun M₁ hS₁ _ => ?_)
+  simp only [ifaE.k_infer_io]
+  have hs₁ : SlotPre ⟨m₁, Locals.init []⟩ _ dn vis fe M₁ eb mode := ⟨hS₁, hs.mode4, hs.eb_mode⟩
+  rcases c2 : callE p n "whnf" [mode, vis, d, r₁.headD 0] m₁ with e2 | ⟨r₂, m₂⟩
+  · exact RefE.bind_left fun hG => CoreSpecE.of_callE (s₀ := ⟨m₁, Locals.init []⟩)
+      ((hG.knot n (Nat.le_refl _)).whnf F _ _ dn vis fe M₁ eb mode d (r₁.headD 0) hF hn hs₁ h₁.2.2.2) c2
+  have h₂ := CoreSpec.of_callW (hK.whnf F ⟨m₁, Locals.init []⟩ _ dn vis fe M₁ eb mode d (r₁.headD 0)
+    hF hn hs₁ h₁.2.2.2) (callW_of_callE c2)
+  refine RefE.bind_core (w := id) h₂ (fun M₂ hS₂ _ => ?_)
+  simp only [ifaE.k_whnf]
+  by_cases g1 : r₂.headD 0 >>> 28 ≠ 2
+  · rw [ite_eq_left g1]
+    simp only [show decH r₂ = decE (r₂.headD 0) from rfl, tag_sort_ne _ h₂.2.2.2 g1,
+      Bool.false_eq_true, ↓reduceIte]
+    exact fun _ => ErrClaim.fail _ _ rfl
+  rw [ite_eq_right g1]
+  by_cases g2 : tierW (r₂.headD 0) ≠ 0 ∧ rdW (m₂.arr64 CTL) 1 = 0
+  · rw [ite_eq_left g2]; exact RefE.of_cls0 rfl
+  rw [ite_eq_right g2]
+  by_cases g3 : tcnt m₂ SORT (tierW (r₂.headD 0)) ≤ idxW (r₂.headD 0)
+  · rw [ite_eq_left g3]; exact RefE.of_cls0 rfl
+  rw [ite_eq_right g3]
+  have hg : r₂.headD 0 >>> 28 = 2 := by simpa using g1
+  obtain ⟨hv, hu⟩ := L.Ind.view_sort_f m₂ _ hS₂.arena.1 (r₂.headD 0) h₂.2.2.2 ⟨g2, by simpa using g3⟩ hg
+  have htag : ((decH r₂).tag == ETag.sort) = true := tag_sort_beq _ h₂.2.2.2 hg
+  simp only [htag, ↓reduceIte]
+  refine RefE.bind_right (view_run _ _ _ hv) ?_
+  rcases c3 : callW p n "intern_fvar" [d, ty] m₂ with _ | ⟨r₃, m₃⟩
+  · rw [liftE_none]; exact RefE.of_cls0 (by simp)
+  rw [liftE_some]
+  obtain ⟨s₃, hs₃, -, hfv⟩ := triple_of_callW
+    (internFVar_spec p hb.fvf hb.fvp hb.fvi n ⟨m₂, Locals.init []⟩ d ty) c3
+  rw [hs₃] at hfv
+  have h₃ := internFVar_core hS₂ d ty hty r₃ hfv
+  refine RefE.bind_core (w := id) h₃ (fun M₃ hS₃ hT₃ => ?_)
+  simp only [ifaE.k_intern_fvar]
+  rcases c4 : callW p n "inst1" [body, r₃.headD 0, 0] m₃ with _ | ⟨r₄, m₄⟩
+  · rw [liftE_none]; exact RefE.of_cls0 (by simp)
+  rw [liftE_some]
+  have h₄ := CoreSpec.of_callW (hi1 n ⟨m₃, Locals.init []⟩ _ dn vis fe M₃ eb body (r₃.headD 0) 0 hS₃
+    hbody h₃.2.2.2) c4
+  refine RefE.bind_core (w := id) h₄ (fun M₄ hS₄ hT₄ => ?_)
+  simp only [ifaE.k_inst1]
+  have hs₄ : SlotPre ⟨m₄, Locals.init []⟩ _ dn vis fe M₄ eb mode := ⟨hS₄, hs.mode4, hs.eb_mode⟩
+  rcases c5 : callE p n "infer_io" [mode, vis, d + 1, r₄.headD 0] m₄ with e5 | ⟨r₅, m₅⟩
+  · refine RefE.bind_left fun hG => ?_
+    have h5 := CoreSpecE.of_callE (s₀ := ⟨m₄, Locals.init []⟩) ((hG.knot n (Nat.le_refl _)).inferIO F
+      _ _ dn vis fe M₄ eb mode (d + 1) (r₄.headD 0) hF hn hs₄ h₄.2.2.2) c5
+    rwa [hd1] at h5
+  have h₅ := CoreSpec.of_callW (hK.inferIO F ⟨m₄, Locals.init []⟩ _ dn vis fe M₄ eb mode (d + 1)
+    (r₄.headD 0) hF hn hs₄ h₄.2.2.2) (callW_of_callE c5)
+  rw [hd1] at h₅
+  refine RefE.bind_core (w := id) h₅ (fun M₅ hS₅ hT₅ => ?_)
+  simp only [ifaE.k_infer_io_2]
+  have hs₅ : SlotPre ⟨m₅, Locals.init []⟩ _ dn vis fe M₅ eb mode := ⟨hS₅, hs.mode4, hs.eb_mode⟩
+  rcases c6 : callE p n "ensure_sort" [mode, vis, d + 1, r₅.headD 0] m₅ with e6 | ⟨r₆, m₆⟩
+  · refine RefE.bind_left fun hG => ?_
+    have h6 := CoreSpecE.of_callE (s₀ := ⟨m₅, Locals.init []⟩) (ensureSortSpecE_of_knot p hp n hk
+      hG.knot F _ _ dn vis fe M₅ eb mode (d + 1) (r₅.headD 0) hF hn hs₅ h₅.2.2.2) c6
+    rwa [hd1] at h6
+  have h₆ := CoreSpec.of_callW (ensureSortSpec_of_knot p hp n hk F ⟨m₅, Locals.init []⟩ _ dn vis fe
+    M₅ eb mode (d + 1) (r₅.headD 0) hF hn hs₅ h₅.2.2.2) (callW_of_callE c6)
+  rw [hd1] at h₆
+  obtain ⟨x₆, hx₆⟩ := ensureSort_view (AM.run_of_ok _ _ h₆.1)
+  rw [h₆.2.2.1] at hx₆
+  refine RefE.bind_core (w := id) h₆ (fun M₆ hS₆ hT₆ => ?_)
+  simp only [ifaE.k_ensure_sort]
+  have hdu := lvl_den_later hS₂.arena.1 hS₆.arena.1 hS₆.den
+    (hT₃.trans (hT₄.trans (hT₅.trans hT₆))).pool.lvl hu (hS₂.den.sort _ _ hv)
+  have hdv := hS₆.den.sort _ _ hx₆
+  rcases c7 : callW p n "intern_imax" [_, r₆.headD 0] m₆ with _ | ⟨r₇, m₇⟩
+  · rw [liftE_none]; exact RefE.of_cls0 (by simp)
+  rw [liftE_some]
+  obtain ⟨s₇, hs₇, -, him⟩ := triple_of_callW
+    (internImax_spec p hb.imf hb.imp hb.imi n ⟨m₆, Locals.init []⟩ _ (r₆.headD 0)) c7
+  rw [hs₇] at him
+  have h₇ := internImax_core hS₆ _ _ hu h₆.2.2.2 r₇ him hdu hdv
+  have hd7 := internLNode_res_den hS₆
+    (fun c hc => by
+      simp only [LNodeView.lchildren, List.mem_cons, List.mem_nil_iff, or_false] at hc; rcases hc with rfl | rfl
+      · exact hdu
+      · exact hdv)
+    (fun n hn => by simp [LNodeView.nchildren] at hn) h₇.1
+  rw [h₇.2.2.1] at hd7
+  refine RefE.bind_core (w := id) h₇ (fun M₇ hS₇ _ => ?_)
+  simp only [ifaE.k_intern_imax]
+  rcases c8 : callW p n "intern_sort" [r₇.headD 0] m₇ with _ | ⟨r₈, m₈⟩
+  · rw [liftE_none]; exact RefE.of_cls0 (by simp)
+  rw [liftE_some]
+  obtain ⟨s₈, hs₈, -, hso⟩ := triple_of_callW
+    (internSort_spec p hb.sof hb.sop hb.soi n ⟨m₇, Locals.init []⟩ (r₇.headD 0)) c8
+  rw [hs₈] at hso
+  obtain ⟨hrun, hP⟩ := (internSort_core hS₇ (r₇.headD 0) h₇.2.2.2 r₈ hso hd7).post
+  exact RefE.ret hrun ⟨hP.after, hP.res, hP.valid⟩
+
+/-- **`infer_forall_io` refines the io body's `.forallE` clause** (`inferForallIOT`) at the io
+view of the knot (`ifa_ref`'s ok half). -/
 @[refines_part ConRon.Arena.inferBodyIO "forallE (inferForallIOT)"]
 theorem inferForallIO_refines (p : Prog) (hp : InferLeafProg p) (hb : InferBodyProg p)
     (hi1 : Inst1OK p) (n : Nat) (hk : KnotUpTo p n) (F : Nat) (s₀ : St)
@@ -315,84 +473,8 @@ theorem inferForallIO_refines (p : Prog) (hp : InferLeafProg p) (hb : InferBodyP
     (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (hty : HW ty) (hbody : HW body) :
     CoreSpec p (n + 1) "infer_forall_io" [mode, vis, d, ty, body]
       (inferForallIOT (CoreFnsA.ioView (coreKnot (decMode mode) fe id F)) fe d.toNat (decE ty)
-        (decE body)) decH s₀ a₀ dn vis fe M eb := by
-  apply L.M.triple_of_run
-  intro s r s' hs0 hrun
-  obtain ⟨hloc, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun
-    (inferForallIO_spec p hb (n + 1) s₀ mode vis d ty body)
-  subst hs0
-  refine ⟨hloc, ?_⟩
-  have hK := hk n (Nat.le_refl _)
-  have hes := ensureSortSpec_of_knot p hp n hk
-  have hd : ¬ d + 1 = 0 := fun hd => by rw [inferForallIOW.abort1 _ _ _ _ _ _ _ _ hd] at hW; cases hW
-  rw [inferForallIOW.arm1 (hc1 := hd)] at hW
-  have hd1 := toNat_succ_of_ne hd
-  obtain ⟨r₁, m₁, hc1, hW⟩ := callW_cases rfl hW
-  rw [inferForallIOW.k_infer_io.arm1] at hW
-  obtain ⟨r₂, m₂, hc2, hW⟩ := callW_cases rfl hW
-  have h₁ := CoreSpec.of_callW (hK.inferIO F s a₀ dn vis fe M eb mode d ty hF hn hs hty) hc1
-  refine coreRef_bind h₁ (fun M₁ hS₁ => ?_)
-  have h₂ := CoreSpec.of_callW (hK.whnf F ⟨m₁, Locals.init []⟩ _ dn vis fe M₁ eb mode d (r₁.headD 0)
-    hF hn ⟨hS₁, hs.mode4, hs.eb_mode⟩ h₁.2.2.2) hc2
-  refine coreRef_bind h₂ (fun M₂ hS₂ => ?_)
-  simp only [inferForallIOW.k_whnf] at hW
-  obtain ⟨g1, hW⟩ := of_ite_none hW
-  obtain ⟨g2, hW⟩ := of_ite_none hW
-  obtain ⟨g3, hW⟩ := of_ite_none hW
-  have hg : r₂.headD 0 >>> 28 = 2 := by simpa using g1
-  obtain ⟨hv, hu⟩ := L.Ind.view_sort_f m₂ _ hS₂.arena.1 (r₂.headD 0) h₂.2.2.2 ⟨g2, by simpa using g3⟩ hg
-  have htag : ((decH r₂).tag == ETag.sort) = true := tag_sort_beq _ h₂.2.2.2 hg
-  simp only [htag, ↓reduceIte]
-  refine coreRef_view hv ?_
-  obtain ⟨r₃, m₃, hc3, hW⟩ := callW_cases rfl hW
-  rw [inferForallIOW.k_intern_fvar.arm1] at hW
-  obtain ⟨r₄, m₄, hc4, hW⟩ := callW_cases rfl hW
-  rw [inferForallIOW.k_inst1.arm1] at hW
-  obtain ⟨r₅, m₅, hc5, hW⟩ := callW_cases rfl hW
-  rw [inferForallIOW.k_infer_io_2.arm1] at hW
-  obtain ⟨r₆, m₆, hc6, hW⟩ := callW_cases rfl hW
-  rw [inferForallIOW.k_ensure_sort.arm1] at hW
-  obtain ⟨r₇, m₇, hc7, hW⟩ := callW_cases rfl hW
-  rw [inferForallIOW.k_intern_imax.arm1] at hW
-  obtain ⟨s₃, hs₃, -, hfv⟩ := triple_of_callW
-    (internFVar_spec p hb.fvf hb.fvp hb.fvi n ⟨m₂, Locals.init []⟩ d ty) hc3
-  rw [hs₃] at hfv
-  have h₃ := internFVar_core hS₂ d ty hty r₃ hfv
-  refine coreRef_bind h₃ (fun M₃ hS₃ => ?_)
-  have h₄ := CoreSpec.of_callW (hi1 n ⟨m₃, Locals.init []⟩ _ dn vis fe M₃ eb body (r₃.headD 0) 0 hS₃
-    hbody h₃.2.2.2) hc4
-  refine coreRef_bind h₄ (fun M₄ hS₄ => ?_)
-  have h₅ := CoreSpec.of_callW (hK.inferIO F ⟨m₄, Locals.init []⟩ _ dn vis fe M₄ eb mode (d + 1)
-    (r₄.headD 0) hF hn ⟨hS₄, hs.mode4, hs.eb_mode⟩ h₄.2.2.2) hc5
-  rw [hd1] at h₅
-  refine coreRef_bind h₅ (fun M₅ hS₅ => ?_)
-  have h₆ := CoreSpec.of_callW (hes F ⟨m₅, Locals.init []⟩ _ dn vis fe M₅ eb mode (d + 1) (r₅.headD 0)
-    hF hn ⟨hS₅, hs.mode4, hs.eb_mode⟩ h₅.2.2.2) hc6
-  rw [hd1] at h₆
-  refine coreRef_bind h₆ (fun M₆ hS₆ => ?_)
-  obtain ⟨_, _, _, hT₃⟩ := h₃.2.1
-  obtain ⟨_, _, _, hT₄⟩ := h₄.2.1
-  obtain ⟨_, _, _, hT₅⟩ := h₅.2.1
-  obtain ⟨_, _, _, hT₆⟩ := h₆.2.1
-  have hdu := lvl_den_later hS₂.arena.1 hS₆.arena.1 hS₆.den
-    (hT₃.trans (hT₄.trans (hT₅.trans hT₆))).pool.lvl hu (hS₂.den.sort _ _ hv)
-  obtain ⟨x₆, hx₆⟩ := ensureSort_view (AM.run_of_ok _ _ h₆.1)
-  rw [h₆.2.2.1] at hx₆
-  have hdv := hS₆.den.sort _ _ hx₆
-  obtain ⟨s₇, hs₇, -, him⟩ := triple_of_callW
-    (internImax_spec p hb.imf hb.imp hb.imi n ⟨m₆, Locals.init []⟩ _ (r₆.headD 0)) hc7
-  rw [hs₇] at him
-  have h₇ := internImax_core hS₆ _ _ hu h₆.2.2.2 r₇ him hdu hdv
-  refine coreRef_bind h₇ (fun M₇ hS₇ => ?_)
-  have hso := of_call1W (X := fun m w m' => sointernW m (r₇.headD 0) = some (w, m'))
-    (fun s₀ => internSort_spec p hb.sof hb.sop hb.soi n s₀ (r₇.headD 0)) (hW : call1W p n "intern_sort" [r₇.headD 0] m₇ = _)
-  exact internSort_core hS₇ (r₇.headD 0) h₇.2.2.2 r hso (by
-    have hd := internLNode_res_den hS₆
-      (fun c hc => by
-        simp only [LNodeView.lchildren, List.mem_cons, List.mem_nil_iff, or_false] at hc; rcases hc with rfl | rfl
-        · exact hdu
-        · exact hdv)
-      (fun n hn => by simp [LNodeView.nchildren] at hn) h₇.1
-    rw [h₇.2.2.1] at hd; exact hd)
+        (decE body)) decH s₀ a₀ dn vis fe M eb :=
+  RefE.coreSpec (ifaE_spec p hb.inferForallIO (n + 1) s₀ mode vis d ty body)
+    (ifa_ref p hp hb hi1 n hk F s₀ a₀ dn vis fe M eb mode d ty body hF hn hs hty hbody)
 
 end L.Arena
