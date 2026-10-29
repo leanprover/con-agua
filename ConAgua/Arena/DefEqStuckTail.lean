@@ -101,7 +101,7 @@ theorem dt_ref (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : StuckCalle
       RefE (TailG p (k + 1)) (dtE.k_defeq_stuck p (dsE p (k + 1) m mode vis d a1 b1))
         (defeqStuck (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decE a1) (decE b1)) st
         (CorePost decBool dn m vis fe M' eb ResH) := fun st m M' hS' =>
-    relist1 (fun _ => rfl) (fun _ => rfl) (fun hG => hG.stuck.mono (by omega))
+    RefE.tail_relist1 (fun _ => rfl) (fun _ => rfl) (fun hG => hG.stuck.mono (by omega))
       (ds_ref p hq hi hc k (hk.mono (by omega)) F ⟨m, Locals.init []⟩ st dn vis fe M' eb mode d a1 b1
         (by omega) (by omega) ⟨hS', hs.mode4, hs.eb_mode⟩ ha hb)
   simp only [dtE]

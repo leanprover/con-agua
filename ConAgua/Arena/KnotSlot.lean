@@ -395,10 +395,7 @@ theorem dsl_ref (n : Nat) (hk : KnotUpTo p n) (hb : DefeqBodySpec p n) (F : Nat)
   rcases h1 : callW p n "de_find" [x, genW y eb] s₀.mem with _ | ⟨r₁, m₁⟩
   · rw [liftE_none, dslE.k_de_find.none]; exact RefE.of_cls0 (by simp)
   rw [liftE_some]
-  obtain ⟨t₁, ht₁, rfl, hne, rfl⟩ := triple_of_callW (s₀ := ⟨s₀.mem, Locals.init []⟩)
-    (memoFindG_spec deSch p _ hp.deFind n ⟨s₀.mem, Locals.init []⟩ x (genW y eb)) h1
-  simp only at ht₁
-  subst ht₁
+  obtain ⟨rfl, hne, rfl⟩ := callW_memoFind hp.deFind h1
   have hf := hS.core.de.findD hS.core.eb1 x y hx hy hne
   simp only [dslE.k_de_find]
   by_cases h2 : (mfindG deSch s₀.mem x (genW y eb)).headD 0 ≠ 0
@@ -424,15 +421,7 @@ theorem dsl_ref (n : Nat) (hk : KnotUpTo p n) (hb : DefeqBodySpec p n) (F : Nat)
   · rw [liftE_none, dslE.k_de_put.none]; exact RefE.of_cls0 (by simp)
   rw [liftE_some]
   simp only [dslE.k_de_put]
-  have hset : msetG deSch m₃ x (genW y eb) (r₃.headD 0) = some m₅ := by
-    obtain ⟨t₄, ht₄, rfl, hne₄, hr₄⟩ := triple_of_callW (s₀ := ⟨m₃, Locals.init []⟩)
-      (memoFindG_spec deSch p _ hp.deFind n ⟨m₃, Locals.init []⟩ x (genW y eb)) h4
-    simp only at ht₄
-    subst ht₄
-    obtain ⟨s', hm, -, hput⟩ := triple_of_callW
-      (memoPutG_spec deSch p _ hp.dePut n ⟨m₃, Locals.init []⟩ x (genW y eb) (r₃.headD 0) _ _) h5
-    unfold msetG
-    rw [← hr₄, ite_eq_right hne₄, hput, hm]
+  have hset := callW_memoSet hp.deFind hp.dePut h4 h5
   obtain ⟨hS₂, hSt₂⟩ := hS₁.set_de x y (r₃.headD 0) hx hy hset
   have hrun := knot_defeq_miss _ fe F' d.toNat _ _ a₀ hmiss _ _ (AM.run_of_ok _ _ hok)
   rw [hres] at hrun

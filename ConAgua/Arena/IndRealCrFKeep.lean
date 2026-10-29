@@ -223,11 +223,7 @@ theorem crfGo_keep : ∀ n m vis f h, CrOK m → CG (callW crfP n "crf_go" [vis,
       obtain ⟨rfl, rfl⟩ := hW
       exact ⟨(hg _ _ hl).1, by simpa using (hg _ _ hl).2⟩
   obtain ⟨⟨rf, mf⟩, hfd, hW⟩ := of_K hW rfl
-  obtain ⟨s', hmf, hs', hne', hrf⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (memoFindG_spec crSch crfP "crm_find" crfP_prog.find k _ h 0) hfd
-  subst hs'
-  simp only at hmf hrf
-  subst hmf hrf
+  obtain ⟨hmf, hne', rfl⟩ := callW_memoFind crfP_prog.find hfd; subst mf
   simp only [crfM] at hW
   split at hW
   · rename_i hhit
