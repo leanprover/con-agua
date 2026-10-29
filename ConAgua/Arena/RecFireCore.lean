@@ -26,17 +26,6 @@ namespace L.Arena
 section lev
 variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {M : ModeMaps} {eb : Word}
 
-/-- `CTL[136]` (the stack top) is a word of the control array: the walk memos' counters sit above
-it (`CoreMemos`). -/
-theorem CoreS.ctl136 {m : Mem} {a : AState} (hS : CoreS dn m a vis fe M eb) :
-    136 < (m.arr64 CTL).size := by
-  obtain ⟨mp, h⟩ := hS.memos.2.2.2.2.1
-  unfold MemoRG MemoRV at h
-  have := h.1
-  simp only at this
-  have e : (156 : Word).toNat = 156 := rfl
-  omega
-
 /-- `CoreS` with the name readback cache replaced by one that holds readbacks. -/
 theorem CoreS.withReadNC {m : Mem} {a : AState} (hS : CoreS dn m a vis fe M eb)
     (X : Std.HashMap NIdx Name) (hc : ReadNCOK { a with caches := { a.caches with readNC := X } }) :

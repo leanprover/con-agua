@@ -2173,9 +2173,9 @@ the slots, as `m2c_*` in §3.7):
   (5), `DefEqSpineE` (3), `DefEqLazyE` (8), `DefEqTailE` (9), `DefEqLoopsE` (1), `DefEqSlotE` (3:
   `defeq_slot`, `defeq_body`, `is_def_eq_core`). Done: `DefEqQuickE`, `DefEqLamsE`, `DefEqPeelE`,
   `DefEqSpineE` (and `defeq_lams_inner`; §3.41), `DefEqLazyE` (§3.43), `DefEqTailE` (§3.45, §3.46),
-  `DefEqLoopsE`, `DefEqSlotE` (§3.48). Left: `DefEqEagerE` (`defeq_e`, `defeq_arg`; see §3.48);
+  `DefEqLoopsE`, `DefEqSlotE` (§3.48), `DefEqEagerE` (§3.49);
 - [ ] `infer`: `Verdict/InferLeavesE` (`infer_const`; done, §3.44), `InferBindE` (6: `infer_lams`/`infer_pis` and
-  their leaves), `InferSpineE` (4), `InferArmsE` (8; done, §3.47), `InferKnotE` (4: `infer_body(_io)`,
+  their leaves), `InferSpineE` (4; done, §3.49), `InferArmsE` (8; done, §3.47), `InferKnotE` (4: `infer_body(_io)`,
   `infer`, `infer_io`).
 
 **C. Hand `Except` models**:
@@ -3195,3 +3195,59 @@ of the module, `_tmp/gen-cut-times1.txt`):
 | `L/ModelGen` | 13.68 | 13.87 | |
 | `L/VcFlat` | – | 0.38 | new |
 | **sum** | **183.07** | **86.85** | **−53 %** |
+
+### 3.49 Retirement, group B, `infer`, third landing (the spines; `defeq_e`, `defeq_arg`)
+
+The four functions of `Verdict/InferSpineE` and the two of `Verdict/DefEqEagerE` (left by §3.48).
+Each has one `unified` model and one refinement with `CorePost`: `spioE`/`spio_ref` over the loop's
+`spioLoop_ref` (`infer_spine_io`), `aioE`/`aio_ref` (`infer_app_io`; `Arena/InferBodySpine`),
+`ispE`/`isp_ref` over `spLoop_ref` (`infer_spine`), `aE`/`a_ref` (`infer_app`; `InferBodySpineF`),
+`deE`/`de_ref` (`defeq_e`, `KnotSlot`), `daE`/`da_ref` (`defeq_arg`, `InferLeaves`). The ok
+statements (`inferSpineIO_refines`, `inferAppIO_refines`, `inferSpine_refines`, `inferApp_refines`,
+`defeqE_refines`, `defeqArg_refines`) are `RefE.coreSpec` one-liners; the any-fuel error claims the
+callers read (`inferSpineIO_anyE`, `inferSpine_anyE`, `inferSpineArg_anyE`, `defeqArg_anyE`,
+`defeqE_anyE`) are `RefE.coreSpecE` one-liners next to them. `Verdict/InferSpineE` keeps the two
+claims `InferKnotE` reads; `Verdict/DefEqEagerE` is gone. Gone also: the loops as named blocks
+(`inferSpineIOW`/`inferSpineW`, `inferSpine(IO)L'`) with their models and specs (`spioLoop`, `spLoop`,
+`spTail`, `spioFull`, `spFull`, `spioFn`, `spFn`, `SpPost`), `appIOK2–4`, `inferApp_spec`,
+`spineArg_run`, `defeqArgK*`, `defeqArg_spec`, `defeqE_spec`, the six `errors` models and claims
+(`spioLoopE_ref`, `spLoopE_ref`, `spineArg_errClaim`, `DefeqESlotE`, `defeqE_refinesE`,
+`defeqArg_refinesE`), and **`DefeqArgE` with `InferArgG`**: `defeq_arg`'s errors now come from `da_ref`
+under the knot and the verdict closure, so `infer_spine_arg` and the spines take `InferG` and
+`InferCalleesE` loses its `defeqArg` field (`KnotAllProg.defeqArgE` is gone).
+
+| functions | before: ok side + error side | after | change |
+|---|---:|---:|---:|
+| `infer_spine_io`, `infer_app_io` | 411 + (in `InferSpineE`) | 309 | |
+| `infer_spine`, `infer_app` | 409 + (in `InferSpineE`) | 333 | |
+| `InferSpineE` | 780 | 40 | |
+| `defeq_e`, `defeq_arg` | 130 + 144 | 160 | |
+| **all** | **1 874** | **842** | **−55 %** |
+
+Diff of the landing against master: +781 −1 867 lines.
+
+* **`G`**: `InferG p n` for all six (the knot's slots at the loop fuel, `inst_list`,
+  `head_and_args` and `is_eager_reduce` lifted); `defeq_e` alone takes `DefeqSlotE p n`.
+* **The loops**: one induction over the model's `loop1` under its `k_loop1` (the exit, `spTail_ref`:
+  `inst_list` at the accumulator, the top put back by `StackKept.restoreG'` without the store's bound),
+  as `whnf_app`'s (§3.42). The model's pushes carry no bound check: `CoreS.ctl136` gives it (moved
+  from `RecFireCore` to `InferBodySpine`). The argument check's twin is split off the step of
+  `inferSpine` by `spineArg_bind` (`inferSpineArgT >>= fun _ => …`), which replaces `spineArg_run` and
+  `spineArg_errClaim`.
+* Name clashes with the `defeq` family's generated names (`spE`, `sp_ref`): `ispE`, `isp_ref`.
+
+Elaboration (user seconds, median of 3 interleaved runs, base master 544d949f,
+`_tmp/retire-infer2/times2.txt`):
+
+| module | base | new | |
+|---|---:|---:|---|
+| `Arena/InferBodySpine` | 3.17 | **5.88** | **slower (+2.7 s)**: the unified loop model `spioE` and `aioE` … |
+| `Arena/InferBodySpineF` | 3.73 | **8.20** | **slower (+4.5 s)**: `ispE`, `aE`, `isaE` … |
+| `Verdict/InferSpineE` | 13.42 | 0.41 | … against the `errors` models and claims here |
+| `Verdict/DefEqEagerE` | 1.13 | – | |
+| `Arena/KnotSlot`, `InferLeaves`, `InferBodyLet`, `Verdict/InferArmsE`, `KnotAllE` | 18.40 | 18.36 | |
+| **sum** | **39.85** | **32.85** | **−18 %** |
+
+Recipes tried on `spioE` (the module at 5.88 s with the default `finish [tierW, idxW]`): `flat` 6.95 s,
+`simp [tierW, idxW]` 6.83 s. No generator or kit change was needed.
+

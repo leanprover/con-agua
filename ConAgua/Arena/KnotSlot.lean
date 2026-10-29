@@ -101,17 +101,6 @@ theorem inferIO_spec (n : Nat) (s₀ : St) (mode vis d e : Word) :
       callW_spec p n "infer_body_io"] <;>
     finish [memoSlotW_hit, memoSlotW_miss, mvG, ebKey]
 
-include hp in
-theorem defeqE_spec (n : Nat) (s₀ : St) (mode vis d a b : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "defeq_e" [mode, vis, d, a, b]
-    ⦃fun r s' => LocEq s' s₀ ∧ call1W p n "defeq" [mode ||| 2, vis, d, a, b] s₀.mem = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp.defeqE]
-  simp only [callFn, defeqESlotL]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
-      callW_spec p n "defeq"] <;>
-    finish [call1W_some]
-
 end spec
 
 /-! ## `defeqC`'s `find; put` at the eager bit -/
@@ -584,48 +573,90 @@ def DefeqESlot (p : Prog) (n : Nat) : Prop :=
       ((coreKnot (decMode mode) fe id F).defeqE d.toNat (decE x) (decE y)) decBool s₀ a₀ dn vis fe
       M eb
 
+/-- **A failure of the eager tower's `defeq` slot from a plain mode** is the eager slot's. -/
+theorem knot_defeqE_plainE (mode : ConLeche.CheckMode) (fe : IFEnv) (F d : Nat) (x y : EIdx)
+    (a : AState) (h : mode.eager = false) (ce : CheckError)
+    (hr : ((coreKnot mode.toEager fe id (F + 1)).defeq d x y).run
+      { a with caches := enterC a.caches } = .error ce) :
+    ((coreKnot mode fe id (F + 1)).defeqE d x y).run a = .error ce := by
+  simp only [coreKnot, id] at hr ⊢
+  simp only [enterEager, h, Bool.false_eq_true, ite_false]
+  simp only [StateT.run_bind, StateT.run_get, StateT.run_set, StateT.run_pure, pure_bind] at hr ⊢
+  cases hc : (a.caches.eagerMemos.defeqC)[(x, y)]? with
+  | some w =>
+    simp only [enterC, hc, StateT.run_pure] at hr
+    cases hr
+  | none =>
+    simp only [enterC, hc, StateT.run_bind] at hr
+    cases hb : (defeqBody mode.toEager (coreKnot mode.toEager fe id F) fe d x y).run
+        { a with caches := enterC a.caches } with
+    | error e =>
+      simp only [enterC] at hb; simp only [hb] at hr
+      cases hr
+      simp only [StateT.run_bind, hb]
+      rfl
+    | ok q =>
+      simp only [enterC] at hb
+      simp only [hb, except_ok_bind, defeqSet, StateT.run_bind, StateT.run_get, StateT.run_set,
+        StateT.run_pure, pure_bind] at hr
+      cases hr
+
+/-- **`defeq_e`'s unified model**: the `defeq` slot at the mode word with bit 1 set, through its
+run. -/
+l_model deE_spec (p : Prog) (hf : p.lookup "defeq_e" = some defeqESlotL)
+  fns [hf ↦ deE list] grind [arena_grind] simp [] unified
+
 section eager
 variable (p : Prog) (hp : KnotProg p)
 
-include hp in
-/-- **`defeq_e` refines the knot's eager slot**: `DefeqESlot p (n + 1)` from the `defeq` slot at
-L-fuel `n` (`DefeqSlot p n`, at the mode word with bit 1 set). -/
-@[refines_part ConRon.Arena.coreKnot "defeqE"]
-theorem defeqE_refines (n : Nat) (hd : DefeqSlot p n) : DefeqESlot p (n + 1) := by
-  intro F s₀ a₀ dn vis fe MM eb mode d x y hF hn2 hs hx hy
+/-- **`defeq_e` refines the knot's eager slot, both outcomes**: from the `defeq` slot at L-fuel `n`
+(at the mode word with bit 1 set); its errors are that slot's. -/
+theorem de_ref (n : Nat) (hd : DefeqSlot p n) (F : Nat) (s₀ : St) (a₀ : AState)
+    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (MM : ModeMaps) (eb mode d x y : Word)
+    (hF : n + 1 ≤ F) (hn2 : n + 1 ≤ 2 ^ 62) (hs : SlotPre s₀ a₀ dn vis fe MM eb mode) (hx : HW x)
+    (hy : HW y) :
+    RefE (DefeqSlotE p n) (deE p (n + 1) s₀.mem mode vis d x y)
+      ((coreKnot (decMode mode) fe id F).defeqE d.toNat (decE x) (decE y)) a₀
+      (CorePost decBool dn s₀.mem vis fe MM eb ResH) := by
   obtain ⟨F', rfl⟩ : ∃ F', F = F' + 1 := ⟨F - 1, by omega⟩
-  apply L.M.triple_of_run
-  intro s r s' hs0 hrun
-  obtain ⟨hloc, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun
-    (defeqE_spec p hp n s₀ mode vis d x y)
-  subst hs0
-  refine ⟨hloc, ?_⟩
-  rcases hcall : callW p n "defeq" [mode ||| 2, vis, d, x, y] s.mem with _ | ⟨r₁, m₁⟩ <;> simp only [hcall, call1W, Option.some.injEq, Prod.mk.injEq, reduceCtorEq] at hW
-  obtain ⟨hr, hm⟩ := hW
-  have hdec : decBool r₁ = decBool r := by simp only [decBool, hr]
-  have hok₁ : ResH r₁ → ResH r := fun h => by unfold ResH at h ⊢; rw [← hr]; exact h
+  simp only [deE]
   cases he : (decMode mode).eager with
   | true =>
-    rw [mode_eager mode hs.mode4 he] at hcall
-    obtain ⟨hok, hA, hres, hrw⟩ := CoreSpec.of_callW
-      (hd (F' + 1) s a₀ dn vis fe MM eb mode d x y (by omega) (by omega) hs hx hy) hcall
-    rw [knot_defeqE_eager _ fe F' d.toNat _ _ he]
-    exact ⟨hok, hm ▸ hA, hres.trans hdec, hok₁ hrw⟩
+    rw [mode_eager mode hs.mode4 he, knot_defeqE_eager _ fe F' d.toNat _ _ he]
+    rcases hc : callE p n "defeq" [mode, vis, d, x, y] s₀.mem with e | ⟨r, m⟩
+    · exact fun hG => CoreSpecE.of_callE (hG (F' + 1) s₀ a₀ dn vis fe MM eb mode d x y (by omega)
+        (by omega) hs hx hy) hc
+    obtain ⟨hrun, hP⟩ := (CoreSpec.of_callW (hd (F' + 1) s₀ a₀ dn vis fe MM eb mode d x y (by omega)
+      (by omega) hs hx hy) (callW_of_callE hc)).post
+    exact RefE.ret hrun ⟨hP.after, hP.res, hP.valid⟩
   | false =>
     obtain ⟨hdm, heb0, hm4, heb1⟩ := mode_plain mode hs.mode4 he
     have heb : eb = 0 := hs.eb_mode.trans heb0
     subst heb
-    have hpre : SlotPre s { a₀ with caches := enterC a₀.caches } dn vis fe MM 1 (mode ||| 2) :=
+    have hpre : SlotPre s₀ { a₀ with caches := enterC a₀.caches } dn vis fe MM 1 (mode ||| 2) :=
       ⟨hs.rel.enter, hm4, heb1⟩
+    rcases hc : callE p n "defeq" [mode ||| 2, vis, d, x, y] s₀.mem with e | ⟨r, m⟩
+    · intro hG
+      have hE := CoreSpecE.of_callE
+        (hG (F' + 1) s₀ _ dn vis fe MM 1 (mode ||| 2) d x y (by omega) (by omega) hpre hx hy) hc
+      rw [hdm] at hE
+      exact ErrClaim.of_run_err (fun ce h => knot_defeqE_plainE _ fe F' d.toNat _ _ a₀ he ce h) hE
     obtain ⟨hok, ⟨M', hS', hK', hSt'⟩, hres, hrw⟩ := CoreSpec.of_callW
-      (hd (F' + 1) s _ dn vis fe MM 1 (mode ||| 2) d x y (by omega) (by omega) hpre hx hy) hcall
+      (hd (F' + 1) s₀ _ dn vis fe MM 1 (mode ||| 2) d x y (by omega) (by omega) hpre hx hy)
+      (callW_of_callE hc)
     rw [hdm] at hok hres hS'
     have hrun := knot_defeqE_plain (decMode mode) fe F' d.toNat (decE x) (decE y) a₀ he _ _
       (AM.run_of_ok _ _ hok)
-    obtain ⟨hok', hst', hres'⟩ := AM.of_run_ok _ _ _ _ hrun
-    refine ⟨hok', ?_, by rw [hres', hres, hdec], hok₁ hrw⟩
-    rw [hst', ← hm]
-    exact ⟨M', hS'.leave hs.rel.core hK', fun h => absurd rfl h, hSt'⟩
+    exact RefE.ret hrun ⟨⟨M', hS'.leave hs.rel.core hK', fun h => absurd rfl h, hSt'⟩, hres, hrw⟩
+
+include hp in
+/-- **`defeq_e` refines the knot's eager slot**: `DefeqESlot p (n + 1)` from the `defeq` slot at
+L-fuel `n` (`de_ref`'s ok half). -/
+@[refines_part ConRon.Arena.coreKnot "defeqE"]
+theorem defeqE_refines (n : Nat) (hd : DefeqSlot p n) : DefeqESlot p (n + 1) :=
+  fun F s₀ a₀ dn vis fe MM eb mode d x y hF hn2 hs hx hy =>
+    RefE.coreSpec (deE_spec p hp.defeqE (n + 1) s₀ mode vis d x y)
+      (de_ref p n hd F s₀ a₀ dn vis fe MM eb mode d x y hF hn2 hs hx hy)
 
 end eager
 
