@@ -119,7 +119,7 @@ theorem ctmW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
       cases n with
       | zero => cases e3
       | succ n =>
-      obtain ⟨hm3, o, hrun, hout⟩ := memW_ok n m2 m3 a2 no nl lvls (r2.headD 0) r3 ws hS2.1.arena.base hl2
+      obtain ⟨hm3, o, hrun, hout⟩ := memW_ok n m2 m3 a2 no nl lvls (r2.headD 0) r3 ws hS2.check.arena.base hl2
         hlv hws hwlt hlen e3
       have hrun' : (ConRon.Arena.memberIdxAt? names (decI lvls) x2).run a2 = .ok (o, a2) := by
         rw [hnm', ← he2]; exact hrun

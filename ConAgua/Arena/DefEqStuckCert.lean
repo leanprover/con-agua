@@ -410,9 +410,9 @@ theorem sec_ref (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : StuckCall
   rcases c3 : callE p n "whnf" [mode, vis, d, r₂.headD 0] m₂ with e3 | ⟨r₃, m₃⟩
   · exact fun hG => ErrClaim.bind_left (CoreSpecE.of_callE ((hG.knot n (Nat.le_refl _)).whnf F
       ⟨m₂, Locals.init []⟩ _ dn vis fe M₂ eb mode d (r₂.headD 0) hF hn ⟨hS₂, hs.mode4, hs.eb_mode⟩
-      h₂.2.2.2) c3)
+      h₂.resOk) c3)
   have h₃ := CoreSpec.of_callW (hK.whnf F ⟨m₂, Locals.init []⟩ _ dn vis fe M₂ eb mode d (r₂.headD 0)
-    hF hn ⟨hS₂, hs.mode4, hs.eb_mode⟩ h₂.2.2.2) (callW_of_callE c3)
+    hF hn ⟨hS₂, hs.mode4, hs.eb_mode⟩ h₂.resOk) (callW_of_callE c3)
   refine RefE.bind_core (w := id) h₃ (fun M₃ hS₃ _ => ?_)
   simp only [secE.k_whnf]
   cases n with
@@ -421,7 +421,7 @@ theorem sec_ref (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : StuckCall
   exact RefE.tail_eq (fun _ => rfl) (fun _ => rfl) (fun hG => hG.mono (Nat.le_succ N)) rfl
     (fun _ _ _ h => ⟨h.after, h.res, h.valid⟩)
     (secw_ref p hq hi hc N (hk.mono (Nat.le_succ N)) F ⟨m₃, Locals.init []⟩ _ dn vis fe M₃ eb mode d
-      a b (r₃.headD 0) (by omega) (by omega) ⟨hS₃, hs.mode4, hs.eb_mode⟩ ha hb h₃.2.2.2)
+      a b (r₃.headD 0) (by omega) (by omega) ⟨hS₃, hs.mode4, hs.eb_mode⟩ ha hb h₃.resOk)
 
 /-- **`struct_eta_cert` refines `structEtaCert`** at the knot (`sec_ref`'s ok half). -/
 @[refines ConRon.Arena.structEtaCert]

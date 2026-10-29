@@ -72,7 +72,7 @@ theorem toi_ref (n : Nat) {m : Mem} {a : AState} {I us dso dsl : Word} {ds : Lis
   rcases hef : envFindW m I vis with _ | ⟨r2, m2⟩
   · rw [liftE_none, toiE.k_env_find.none]; exact RefE.of_cls0 (by simp)
   rw [liftE_some]
-  obtain ⟨hm2, hfind, hdec⟩ := envFindW_found hef hS.1.env hI
+  obtain ⟨hm2, hfind, hdec⟩ := envFindW_found hef hS.check.env hI
   subst m2
   rw [ConRon.Arena.targetOutsideInst]
   by_cases hf0 : r2.headD 0 = 0
@@ -181,7 +181,7 @@ theorem toi_ref (n : Nat) {m : Mem} {a : AState} {I us dso dsl : Word} {ds : Lis
   subst hs7e
   dsimp only at hr7 hne7 hs7
   subst hs7
-  obtain ⟨v, hv, hvr⟩ := eViewW_ok m6 a5 hS6.1.arena.base _ (by rw [← hr7]; exact hne7)
+  obtain ⟨v, hv, hvr⟩ := eViewW_ok m6 a5 hS6.check.arena.base _ (by rw [← hr7]; exact hne7)
   rw [getD_two] at he6
   rw [he6] at hv
   rw [← hr7] at hvr

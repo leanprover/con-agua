@@ -192,7 +192,7 @@ theorem ipalGoW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv
       by_cases hv : eViewW m h = []
       · rw [ipalGoW_abort f o l n m h k hk h6 hv] at hW; cases hW
       have he6 : h >>> 28 = 6 := by simpa using h6
-      obtain ⟨v, hvw, hvr⟩ := eViewW_ok m a hS.1.arena.base h hv
+      obtain ⟨v, hvw, hvr⟩ := eViewW_ok m a hS.check.arena.base h hv
       have ht : (decE h).tag = ETag.forallE := by
         have h1 : ((decI h : EIdx).tag == ETag.forallE) = true := by
           rw [decI_tag_forallE_beq h hh, he6]; decide

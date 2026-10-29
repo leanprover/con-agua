@@ -842,7 +842,7 @@ theorem hbGo_step_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFE
   cases hvl : eViewW m1 h with
   | nil => simp only [hbK2, ite_true]; exact Sim.of_none
   | cons g vt =>
-    obtain ⟨v, hv, hvr⟩ := eViewW_ok m1 a1 hS1.1.arena.base h (by rw [hvl]; simp)
+    obtain ⟨v, hv, hvr⟩ := eViewW_ok m1 a1 hS1.check.arena.base h (by rw [hvl]; simp)
     rw [hvl] at hvr
     cases v with
     | bvar i' =>

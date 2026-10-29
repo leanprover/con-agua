@@ -598,7 +598,7 @@ theorem taGo_step_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Wo
   cases hvl : eViewW m h with
   | nil => simp [taG1]; exact Sim.of_none
   | cons g vt =>
-    obtain ⟨v, hv, hvr⟩ := eViewW_ok m a hS.1.arena.base h (by rw [hvl]; simp)
+    obtain ⟨v, hv, hvr⟩ := eViewW_ok m a hS.check.arena.base h (by rw [hvl]; simp)
     rw [hvl] at hvr
     cases v with
     | bvar _ | sort _ | lit _ | fvar _ _ =>

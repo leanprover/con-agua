@@ -244,7 +244,7 @@ theorem cp_ref (hD : DmProg8 p) (hq : KnotStageProg p) (hcl : LeafClosed p) (hkp
   rcases h2 : callW p k "env_find" [c, vis2] m1 with _ | ⟨r2, m2⟩
   · rw [liftE_none, checkDivModPinE.k_env_find.none]; exact RefE.of_cls0 (by simp)
   rw [liftE_some]
-  obtain ⟨hm2, hfd⟩ := envFind_call hD7.toDmProg6.toDmProg5.toMasterProg c hc hS1.1.env h2
+  obtain ⟨hm2, hfd⟩ := envFind_call hD7.toDmProg6.toDmProg5.toMasterProg c hc hS1.check.env h2
   subst hm2
   cases hf : fe2.find? (decI c) with
   | none =>

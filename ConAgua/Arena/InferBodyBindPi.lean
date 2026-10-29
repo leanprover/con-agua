@@ -125,31 +125,31 @@ theorem ipl_ref (p : Prog) (hp : InferLeafProg p) (hb : InferBodyProg p)
   · rw [liftE_none]; exact RefE.of_cls0 (by simp)
   rw [liftE_some]; simp only [iplE.k_inst_list]
   have h₁ := CoreSpec.of_callW (hil n s₀ a₀ dn vis fe M eb t fo k 0 fvs hS ht hf hftop) h1
-  have hK₁ := h₁.2.1.bkept
-  obtain ⟨_, _, _, hT₁⟩ := h₁.2.1
+  have hK₁ := h₁.after.bkept
+  obtain ⟨_, _, _, hT₁⟩ := h₁.after
   refine RefE.bind_core (w := id) h₁ (fun M₁ hS₁ _ => ?_)
   have hs₁ : SlotPre ⟨m₁, Locals.init []⟩ _ dn vis fe M₁ eb mode := ⟨hS₁, hs.mode4, hs.eb_mode⟩
   rcases h2 : callE p n "infer" [mode, vis, d + k, r₁.headD 0] m₁ with e2 | ⟨r₂, m₂⟩
   · exact RefE.bind_left fun hG => CoreSpecE.of_callE (s₀ := ⟨m₁, Locals.init []⟩)
       ((hG.knot n (Nat.le_refl _)).infer F _ _ dn vis fe M₁ eb mode (d + k) (r₁.headD 0) hF hn hs₁
-        h₁.2.2.2) h2
+        h₁.resOk) h2
   have h₂ := CoreSpec.of_callW ((hk n (Nat.le_refl _)).infer F ⟨m₁, Locals.init []⟩ _ dn vis fe M₁ eb
-    mode (d + k) (r₁.headD 0) hF hn hs₁ h₁.2.2.2) (callW_of_callE h2)
-  have hK₂ := h₂.2.1.bkept
-  obtain ⟨_, _, _, hT₂⟩ := h₂.2.1
+    mode (d + k) (r₁.headD 0) hF hn hs₁ h₁.resOk) (callW_of_callE h2)
+  have hK₂ := h₂.after.bkept
+  obtain ⟨_, _, _, hT₂⟩ := h₂.after
   refine RefE.bind_core (w := id) h₂ (fun M₂ hS₂ _ => ?_)
   simp only [iplE.k_infer]
   have hs₂ : SlotPre ⟨m₂, Locals.init []⟩ _ dn vis fe M₂ eb mode := ⟨hS₂, hs.mode4, hs.eb_mode⟩
   rcases h3 : callE p n "ensure_sort" [mode, vis, d + k, r₂.headD 0] m₂ with e3 | ⟨r₃, m₃⟩
   · exact RefE.bind_left fun hG => CoreSpecE.of_callE (s₀ := ⟨m₂, Locals.init []⟩)
       (ensureSortSpecE_of_knot p hp n hk hG.knot F _ _ dn vis fe M₂ eb mode (d + k) (r₂.headD 0) hF hn
-        hs₂ h₂.2.2.2) h3
+        hs₂ h₂.resOk) h3
   have h₃ := CoreSpec.of_callW (ensureSortSpec_of_knot p hp n hk F ⟨m₂, Locals.init []⟩ _ dn vis fe M₂
-    eb mode (d + k) (r₂.headD 0) hF hn hs₂ h₂.2.2.2) (callW_of_callE h3)
-  have hK₃ := h₃.2.1.bkept
-  obtain ⟨_, _, _, hT₃⟩ := h₃.2.1
-  obtain ⟨x₃, hx₃⟩ := ensureSort_view (AM.run_of_ok _ _ h₃.1)
-  rw [h₃.2.2.1] at hx₃
+    eb mode (d + k) (r₂.headD 0) hF hn hs₂ h₂.resOk) (callW_of_callE h3)
+  have hK₃ := h₃.after.bkept
+  obtain ⟨_, _, _, hT₃⟩ := h₃.after
+  obtain ⟨x₃, hx₃⟩ := ensureSort_view (AM.run_of_ok _ _ h₃.run)
+  rw [h₃.res] at hx₃
   refine RefE.bind_core (w := id) h₃ (fun M₃ hS₃ _ => ?_)
   simp only [iplE.k_ensure_sort]
   have hB₁ := hB.keep hK₁ hbtop hsz
@@ -160,7 +160,7 @@ theorem ipl_ref (p : Prog) (hp : InferLeafProg p) (hb : InferBodyProg p)
   have hwl₃ : ∀ (i : Nat) (h : i < ws.size), lvNodeW m₃ ws[i] ≠ [] :=
     fun i hi => lvNodeW_mono (hT₁.trans (hT₂.trans hT₃)).pool.lvl (hws i hi) (hwl i hi)
   have hL := pisOut_ref p hb hcap dn vis fe eb lo k ws hws (G := InferG p n) (n + 1) m₃ _ M₃ k
-    (r₃.headD 0) hS₃ h₃.2.2.2 hdv3 hwl₃ hB₃ (Nat.le_refl _) (by rw [hK₃.1, hK₂.1, hK₁.1]; exact hbtop)
+    (r₃.headD 0) hS₃ h₃.resOk hdv3 hwl₃ hB₃ (Nat.le_refl _) (by rw [hK₃.1, hK₂.1, hK₁.1]; exact hbtop)
   rcases hl : iplE.loop1 p (n + 1) m₃ lo (r₃.headD 0) k with e4 | ⟨v, m₄⟩
   · rw [hl] at hL; exact RefE.bind_left hL
   rw [hl] at hL

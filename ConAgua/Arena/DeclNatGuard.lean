@@ -86,7 +86,7 @@ theorem boolCtorOk_ref (hN : NatGuardProg p) (c : Word) (ci : IConstantInfo) :
     replace hw := ntBW_some hw; obtain ⟨r2, m2, h2, hw⟩ := hw
     obtain ⟨hm2, h0, hr2⟩ := pinAt_call hN.lPinAt (j := 30) rfl h2
     rw [hm2] at hw
-    have hF := hS1.1.pins.full h0
+    have hF := hS1.check.pins.full h0
     have hp2 : H (r2.headD 0) := by rw [hr2]; exact hF.names_lt 29 (by decide)
     replace hw := ntBW_some hw; obtain ⟨r3, m3, h3, hw⟩ := hw
     simp only [Option.some.injEq, Prod.mk.injEq] at hw
@@ -371,7 +371,7 @@ theorem natOpGuard_ref (hN : NatGuardProg p) (c : Word) :
   rw [h5, bW_some] at hw
   obtain ⟨hm5, -, hr5⟩ := pinAt_call hN.lPinAt (j := 21) rfl h5
   rw [hm5] at hw
-  have hF3 := hS3.1.pins.full h0
+  have hF3 := hS3.check.pins.full h0
   have hp4 : H (r4.headD 0) := by rw [hr4]; exact hF3.names_lt 19 (by decide)
   have hp5 : H (r5.headD 0) := by rw [hr5]; exact hF3.names_lt 20 (by decide)
   have e4 : (pinAt 19).run a3 = .ok (decI (r4.headD 0), a3) := by

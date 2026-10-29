@@ -222,11 +222,8 @@ theorem arW_ok (p : Prog) (hcc : ProjCallees p) (dn : NIdx → Option ConLeche.N
       j.toNat + K = 2 → CoreS dn m a vis fe M eb →
       (∃ (h : EIdx) (c : NIdx), a.store.view h = some (.const c (decI us))) →
       iotaArW p vis ctor nP us anW k m j = some (L, m') →
-      AM.ok (andRescueSlotsGo fe (decI anW) (decI ctor) nP.toNat (decI us) K j.toNat) a ∧
-      CoreAfter dn m m' (AM.st (andRescueSlotsGo fe (decI anW) (decI ctor) nP.toNat (decI us) K
-        j.toNat) a) vis fe M eb ∧
-      AM.res (andRescueSlotsGo fe (decI anW) (decI ctor) nP.toNat (decI us) K j.toNat) a = decBool L ∧
-      HW (L.headD 0) := by
+      CoreRef (andRescueSlotsGo fe (decI anW) (decI ctor) nP.toNat (decI us) K j.toNat) a decBool
+        dn m vis fe M eb L m' := by
   intro K
   induction K with
   | zero =>

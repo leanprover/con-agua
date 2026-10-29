@@ -243,7 +243,7 @@ theorem divModDeclPin_ref {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe 
   have hm1' := hm1.symm
   subst hm1'
   subst hr1
-  have hF := hS.1.pins.full h0
+  have hF := hS.check.pins.full h0
   refine ⟨_, a, divModDeclPin_run hF hc ip, hS, IWGrow.refl _, ?_⟩
   have := PinSetR.pin hP (j := dmSlotW m c) (slotW_lt m c)
   simp only [List.headD_cons]
@@ -271,7 +271,7 @@ theorem divModTypePins_ref {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe
   have hm1' := hm1.symm
   subst hm1'
   subst hr1
-  have hF := hS.1.pins.full h0
+  have hF := hS.check.pins.full h0
   refine ⟨_, a, divModTypePins_run hF hc ip, hS, IWGrow.refl _, ?_⟩
   have := PinSetR.thdr hP (j := dmSlotW m c) (slotW_lt m c)
   simpa [decTP] using this
@@ -332,7 +332,7 @@ theorem divModCertProofs_ref {dn : NIdx → Option ConLeche.Name} {vis : Word} {
   have hm1' := hm1.symm
   subst hm1'
   subst hr1
-  have hF := hS.1.pins.full h0
+  have hF := hS.check.pins.full h0
   simp only [List.headD_cons] at hw
   obtain ⟨r2, m2, he2, he⟩ := ntBW_some hw
   simp only [Option.some.injEq, Prod.mk.injEq] at he

@@ -549,7 +549,7 @@ theorem tmf_ref {p : Prog} (hP : TmfProg p) (hIlpf : IlpfF p) (hcore : CoreStage
   obtain ⟨s3, rfl, hs3e, hne, hr3⟩ := triple_of_callW (s₀ := ⟨s2.mem, Locals.init []⟩)
     (eView_spec p hP.ev n _ (r2.headD 0)) h3
   have hm3 : s3.mem = s2.mem := by rw [hs3e]
-  obtain ⟨hrun3, hxH, hyH⟩ := viewConstW hS2.1.arena.base (by rw [← hr3]; exact hne) hg
+  obtain ⟨hrun3, hxH, hyH⟩ := viewConstW hS2.check.arena.base (by rw [← hr3]; exact hne) hg
   rw [← hr3] at hrun3 hxH hyH
   obtain ⟨-, hvc⟩ := ConRon.Bridge.Inductives.viewConst_run hrun3
   obtain ⟨IP, usP, -, hIP, husP⟩ := ConRon.Bridge.denote_const_inv hC2.check.state.wf

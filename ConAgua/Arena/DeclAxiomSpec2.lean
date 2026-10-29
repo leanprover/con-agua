@@ -426,7 +426,7 @@ theorem tcoW_ok {p : Prog} (h : TcoProg p) {dn : NIdx → Option ConLeche.Name} 
   simp only [hb2, Bool.not_true, Bool.false_eq_true, ite_false]
   -- the `True.intro` clause
   rcases h3 : pinAtW m2 41 with _ | ⟨r3, m3⟩ <;> simp only [h3, tcoK3, reduceCtorEq] at hW
-  obtain ⟨hm3, hr3, hl3, hrun3⟩ := pinAtW_ok h3 hS2.1.pins
+  obtain ⟨hm3, hr3, hl3, hrun3⟩ := pinAtW_ok h3 hS2.check.pins
   rw [hm3, hr3] at hW
   simp only [List.headD_cons] at hW
   simp only [trueIntroName, pinTrueIntro, show PIN_TRUE_INTRO = (41 : Word).toNat from rfl,

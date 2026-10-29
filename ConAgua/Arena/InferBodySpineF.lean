@@ -74,9 +74,9 @@ theorem isa_ref (p : Prog) (hp : InferLeafProg p) (hkp : KnotProg p) (he : IsEag
   rcases c2 : callE p n "defeq_arg" [mode, vis, d, a, r₁.headD 0, dom] m₁ with e2 | ⟨r₂, m₂⟩
   · exact RefE.bind_left fun hG => CoreSpecE.of_callE (s₀ := ⟨m₁, Locals.init []⟩)
       (defeqArg_anyE p hp hkp he n hk hG F _ _ dn vis fe M₁ eb mode d a (r₁.headD 0) dom hF hn hs₁ ha
-        h₁.2.2.2 hdom) c2
+        h₁.resOk hdom) c2
   have h₂ := CoreSpec.of_callW (defeqArg_any p hp hkp he n hk F ⟨m₁, Locals.init []⟩ _ dn vis fe M₁ eb
-    mode d a (r₁.headD 0) dom hF hn hs₁ ha h₁.2.2.2 hdom) (callW_of_callE c2)
+    mode d a (r₁.headD 0) dom hF hn hs₁ ha h₁.resOk hdom) (callW_of_callE c2)
   refine RefE.bind_core (w := id) h₂ (fun M₂ hS₂ _ => ?_)
   simp only [isaE.k_defeq_arg]
   by_cases h0 : r₂.headD 0 = 0

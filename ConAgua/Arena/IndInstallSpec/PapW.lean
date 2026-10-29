@@ -228,7 +228,7 @@ theorem papW_ok {p : Prog} (hx : p.lookup "env_ix" = some envIxL)
   obtain ⟨r1', m1⟩ := x
   rw [c1, papW.k_env_pop_temp.arm1] at h
   obtain ⟨s1, hs1, -, hE1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (envPopTemp_refines p hx hs hpt k _ vis wn c q pv hS.1.env (by simpa using hwn32) hpv) c1
+    (envPopTemp_refines p hx hs hpt k _ vis wn c q pv hS.check.env (by simpa using hwn32) hpv) c1
   subst hs1
   have hfr := popTemp_frame hx hs hpt c1
   obtain ⟨hS1, hg1⟩ := StageR.of_envFrame hS hfr hE1

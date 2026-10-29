@@ -302,7 +302,7 @@ theorem qs_ref (p : Prog) (hp : QuickProg p) (hsd : StoreDenotes) (n : Nat) (s�
     rw [ite_eq_left hz, show decO (rz.headD 0) = none by unfold decO; rw [ite_eq_left hz]]
     exact fun _ => ErrClaim.bind_left (ErrClaim.fail _ _ rfl)
   rw [ite_eq_right hz, decO_ne_zero hz]
-  have h3 := e₃.2.2.2
+  have h3 := e₃.resOk
   unfold ResH HW at h3
   have hres : HW (rz.headD 0 - 1) := by
     unfold HW

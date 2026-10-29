@@ -300,7 +300,7 @@ theorem ncc_ref {p : Prog} (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe
   rcases hq : pos2PinW m1 47 with _ | ⟨rq, m2⟩
   · rw [liftE_none, nccE.k_pin_at.none]; exact RefE.of_cls0 (by simp)
   rw [liftE_some]
-  obtain ⟨hm2, hqH, hqrun⟩ := pos2PinW_ok hq hS1.1.pins
+  obtain ⟨hm2, hqH, hqrun⟩ := pos2PinW_ok hq hS1.check.pins
   subst hm2
   have hpq : pinQuot = pinAt 47 := rfl
   have hqrun' : pinQuot.run a = .ok ((decI (rq.headD 0) : NIdx), a) := by rw [hpq]; simpa using hqrun

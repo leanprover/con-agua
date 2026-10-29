@@ -302,7 +302,7 @@ theorem icfCheck_ref (p : Prog) (hil : InstListOK p) (K F : Nat) (hk : KnotUpTo 
       ⟨hS1, hm4, hebm⟩ harg)
     (fun hG => (hG K (Nat.le_refl _)).infer F ⟨m1, Locals.init []⟩ _ dn vis fe M1 eb mode d arg hnF hn62
       ⟨hS1, hm4, hebm⟩ harg) fun r2 m2 _ h2 => ?_
-  have hr1 : HW (r1.headD 0) := h1.2.2.2
+  have hr1 : HW (r1.headD 0) := h1.resOk
   rw [icfCheckE.k_infer.eq_2]
   have hS2 := h2.2.1
   obtain ⟨M2, hS2, hK2, hSt2⟩ := hS2
@@ -473,7 +473,7 @@ theorem icfFlush_ref (p : Prog) (hp : IotaProg4 p) (hil : InstListOK p) (N F : N
   refine RefE.of_run_eq (icf_eq_flush _ fe d.toNat (decE h) acc args i.toNat hisz a₀ x hvx
     (by rw [hacc.size]; intro h0; exact hacn (UInt64.toNat_inj.mp (by simpa using h0)))) ?_
   refine RefE.bind_growK (w := id) h1 fun M1 hS1 hSt1 => ?_
-  have hr1 : HW (r1.headD 0) := h1.2.2.2
+  have hr1 : HW (r1.headD 0) := h1.resOk
   have hsp1 : spTop m1 = aco + acn := by rw [hSt1.1, ← htop]
   have hnil : SpineR m1 (aco + acn) 0 #[] := SpineR.nil_at m1 _ (by rw [hsum, hSt1.size]; omega)
   have hargs1 : SpineR m1 ao an args := hargs.keep hSt1.size hSt1.below

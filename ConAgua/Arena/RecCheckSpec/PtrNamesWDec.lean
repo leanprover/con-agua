@@ -358,7 +358,7 @@ theorem tmdW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
   have hz : ls = pinW m1 52 := by
     simp only [pinWordV, hpne, ite_false, Option.some.injEq] at hp
     rw [← hp]; rfl
-  have hfull := hS1.1.pins.full hpne
+  have hfull := hS1.check.pins.full hpne
   have hlslt : ls.toNat < 2 ^ 32 := by rw [hz]; exact hfull.lv_lt.1
   have hrunP : pinEmptyLevels.run a1 = .ok (decI ls, a1) := by rw [hz]; exact pinEmptyLevels_run hfull
   rcases hmk : mkTMW m1 (ra.headD 0) ls 0 0 0 0 0 0 0 0 0 0 0 with _ | ⟨r3, m2⟩ <;> simp only [hmk, tmdK3, reduceCtorEq] at h

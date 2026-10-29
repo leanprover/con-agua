@@ -168,7 +168,7 @@ theorem natOpNames_ref (hN : NatGateProg p) :
   obtain ⟨hq0, hmq, hKeep, hroom, htop⟩ := iwAlloc_fref p hN.lIwAlloc 7 k m rq mq hS.2 hq
   simp only [Option.some.injEq, Prod.mk.injEq] at hw
   obtain ⟨rfl, rfl⟩ := hw
-  have hF := hS.1.pins.full h0
+  have hF := hS.check.pins.full h0
   have hlt : ∀ w ∈ [pinW m 15, pinW m 16, pinW m 17, pinW m 18, pinW m 19, pinW m 20, pinW m 21], w.toNat < 2 ^ 32 := by
     intro w hw
     simp only [List.mem_cons, List.not_mem_nil, or_false] at hw
@@ -231,7 +231,7 @@ theorem natDivModNames_ref (hN : NatGateProg p) :
   obtain ⟨hq0, hmq, hKeep, hroom, htop⟩ := iwAlloc_fref p hN.lIwAlloc 8 k m rq mq hS.2 hq
   simp only [Option.some.injEq, Prod.mk.injEq] at hw
   obtain ⟨rfl, rfl⟩ := hw
-  have hF := hS.1.pins.full h0
+  have hF := hS.check.pins.full h0
   have hlt : ∀ w ∈ [pinW m 22, pinW m 23, pinW m 24, pinW m 25, pinW m 26, pinW m 27, pinW m 28, pinW m 29], w.toNat < 2 ^ 32 := by
     intro w hw
     simp only [List.mem_cons, List.not_mem_nil, or_false] at hw

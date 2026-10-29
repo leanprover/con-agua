@@ -71,7 +71,7 @@ theorem lbbF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
   rcases n with _ | n
   · rw [callW_zero] at hc; cases hc
   obtain ⟨s', hs', -, hok, hD, hres, hle⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (lbbFast_refines bvbProg bvbProg_ok n _ a hS.1.arena f k e he) hc
+    (lbbFast_refines bvbProg bvbProg_ok n _ a hS.check.arena f k e he) hc
   rw [hs'] at hD
   have hrun := AM.run_of_ok _ a hok
   have hk : Keeps cp (looseBVarsBoundedFast f.toNat k.toNat (decE e)) :=
@@ -149,7 +149,7 @@ theorem fvbF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
   obtain ⟨s', hs', -, hm⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (fvarBL_spec hfProg hfProg_abs rfl n _ f e) hc
   rw [hs'] at hm
-  obtain ⟨a', hrun, hD, hfr⟩ := fvbW_okD n m m' a hS.1.arena e f _ he hm
+  obtain ⟨a', hrun, hD, hfr⟩ := fvbW_okD n m m' a hS.check.arena e f _ he hm
   obtain ⟨hS', hg⟩ := StageR.of_walk hS hD hfr (lt64A_of_all rfl) (lt64_of_all rfl)
     ((keepsW_fvarB _ _).cp_of_cpl.run hrun)
   exact ⟨_, _, hrun, hS', hg, rfl⟩
@@ -171,7 +171,7 @@ theorem hffF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
   have hle := hfK_le _ _ _ hI
   rw [hw, hfK_some] at hI
   obtain ⟨hr0, rfl⟩ := Prod.mk.inj (Option.some.inj hI)
-  obtain ⟨a', ha', hD, hfr⟩ := fvbW_okD n m _ a hS.1.arena e f x he hw
+  obtain ⟨a', ha', hD, hfr⟩ := fvbW_okD n m _ a hS.check.arena e f x he hw
   have hrun : (hasFvarFast f.toNat (decE e)).run a = .ok (x.toNat != 0, a') := by
     simp only [hasFvarFast, StateT.run_bind, ha']; rfl
   have hk : Keeps cp (hasFvarFast f.toNat (decE e)) :=

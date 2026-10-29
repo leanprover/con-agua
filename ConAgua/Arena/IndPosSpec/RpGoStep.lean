@@ -727,7 +727,7 @@ theorem rpGo_step_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Wo
   | nil => rw [hvl] at hb; simp [rpG1] at hb
   | cons g vt =>
     have hne : eViewW m h ≠ [] := by rw [hvl]; simp
-    obtain ⟨v, hv, hvr⟩ := eViewW_ok m a hS.1.arena.base h hne
+    obtain ⟨v, hv, hvr⟩ := eViewW_ok m a hS.check.arena.base h hne
     rw [hvl] at hvr hb
     have leaf : ∀ (hg : (g :: vt).headD 0 = 0 ∨ (g :: vt).headD 0 = 1 ∨ (g :: vt).headD 0 = 2 ∨ (g :: vt).headD 0 = 8),
         (match v with | .bvar _ | .sort _ | .lit _ | .fvar _ _ => True | _ => False) →

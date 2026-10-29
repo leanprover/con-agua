@@ -746,7 +746,7 @@ theorem phsGoW_ok (k : Nat) : ∀ (m m' : Mem) (a : AState) (q n i : Word) (ws :
         simp only [pinWordV, hpne, ite_false, Option.some.injEq] at hpw
         rw [← hpw]; simp [pinW, rdW]
       have hpin0 : pinW m 0 ≠ 0 := by simpa [pinW, rdW] using hpne
-      have hfull := hS.1.pins.full hpin0
+      have hfull := hS.check.pins.full hpin0
       rcases hso : sointernW m z with _ | ⟨s1, m1⟩ <;> rw [hso] at h; · simp [phsK2] at h
       by_cases hsb : 4294967296 ≤ s1
       · rw [phsK2_big _ _ _ _ _ _ hsb] at h; simp at h

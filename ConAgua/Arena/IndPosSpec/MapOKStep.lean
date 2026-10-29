@@ -982,7 +982,7 @@ theorem goOK_step (j : Nat) (hMap : MapOK dn fe vis j) (ih : ∀ k, k + 1 < j + 
   | nil => rw [hvl] at hgo; simp [rxG1] at hgo
   | cons g vt =>
   have hne : eViewW m h ≠ [] := by rw [hvl]; simp
-  obtain ⟨v, hv, hvr⟩ := eViewW_ok m a hS.1.arena.base h hne
+  obtain ⟨v, hv, hvr⟩ := eViewW_ok m a hS.check.arena.base h hne
   rw [hvl] at hvr hgo
   have leaf : ∀ (hg : (g :: vt).headD 0 = 0 ∨ (g :: vt).headD 0 = 2 ∨ (g :: vt).headD 0 = 8 ∨
       (g :: vt).headD 0 = 3),

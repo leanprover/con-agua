@@ -337,9 +337,9 @@ theorem stripGoW_ok : ∀ (f : Nat) (m m' : Mem) (n h : Word) (r : List Word),
   | some qm =>
   obtain ⟨q, m1⟩ := qm
   rw [stripGoW_step tg k o f m m1 n h q hn hg hv ha] at hm
-  obtain ⟨hvr, hty, hb⟩ := hvb m a h hS.1.arena.base hh hv hg'
+  obtain ⟨hvr, hty, hb⟩ := hvb m a h hS.check.arena.base hh hv hg'
   obtain ⟨hS1, hgr1, hq, ht1⟩ := allocW_stage ha hS
-  obtain ⟨-, rfl, hroom⟩ := allocW_facts ha hS.2.2.2.1
+  obtain ⟨-, rfl, hroom⟩ := allocW_facts ha hS.iw.iwSize
   have hS2 := hS1.set_iw q ((eViewW m h).tail.headD 0)
   have ht2 : iwTop ((allocMem m 1).set64 IW q ((eViewW m h).tail.headD 0)) = iwTop m + 1 := by
     have e : iwTop ((allocMem m 1).set64 IW q ((eViewW m h).tail.headD 0)) = iwTop (allocMem m 1) := by

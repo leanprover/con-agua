@@ -398,7 +398,7 @@ theorem gck_ref (P : GrcProg p) {fsR : List FnName} (hclR : closedA p rcFreeA rc
     (ConRon.Bridge.Inductives.GR.classFeR_go_ok hC1.check.state bs pP hsh1 (fun c => c) cvGs cvGsP rdv.recCls 0
       fe env [] hC1.check.ienv hcoh (ConRon.Bridge.denoteFEnv_mono c1'.ext hfe)
       (ConRon.Bridge.TablesStored.of_envWF henv) hcvGs).1
-  have hvis : fe.visibleBelow = vis.toNat := hS.1.env.vis
+  have hvis : fe.visibleBelow = vis.toNat := hS.check.env.vis
   have hview : ((ConRon.Arena.classFeR bs cvGs rdv.recCls fe).1.restrictTo fe.visibleBelow).find? =
       fe.find? := by
     simp only [ConRon.Arena.classFeR]

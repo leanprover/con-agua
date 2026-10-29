@@ -425,7 +425,7 @@ theorem andPinOkOne_ok {p : Prog} (hp : AndPinIndProg p) {dn : NIdx → Option C
   have e2 : rdW (s₀.mem.arr64 DECL) (2 + 8 * i) = dw (s₀.mem.arr64 DECL) i.toNat 1 :=
     rdW_dwI hD hk.1 rfl (by decide)
   obtain ⟨hfl, hm, hr⟩ := andpW_one hW (by rw [e1]; exact hk.2)
-  have hF : PinsFull s₀.mem a₀.pins := hS.1.pins.full hfl
+  have hF : PinsFull s₀.mem a₀.pins := hS.check.pins.full hfl
   obtain ⟨hok', hst, hres⟩ := AM.of_run_ok _ _ _ _ (andPinOk_run hd hF)
   refine ⟨hl, hok', ?_⟩
   rw [hst, hres, hm, hr]

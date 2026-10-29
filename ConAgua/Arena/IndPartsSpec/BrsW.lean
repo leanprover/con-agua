@@ -152,7 +152,7 @@ theorem bpfW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
     rw [hw] at h
     obtain ⟨hnl, hne⟩ := partsCVName (IWGrow.refl m) hcv hpb
     obtain ⟨b, hb, h⟩ := ipK_inv1 h (by simp [bpfK1])
-    obtain ⟨R', hR', hbv⟩ := partsResCont hnl hb hS.1.pins
+    obtain ⟨R', hR', hbv⟩ := partsResCont hnl hb hS.check.pins
     rw [partsResR hR hR', hne] at hbv
     by_cases hb0 : b ≠ 0
     · rw [bpfK1_res n m cto ctl lo ll _ b hb0] at h
@@ -205,7 +205,7 @@ theorem bprW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
     rcases hb : resContW n m (rdW (m.arr64 EREC) (UInt64.ofNat cvp)) with _ | b <;> rw [hb] at h
     · cases h
     simp only at h
-    obtain ⟨R', hR', hbv⟩ := partsResCont hnl hb hS.1.pins
+    obtain ⟨R', hR', hbv⟩ := partsResCont hnl hb hS.check.pins
     rw [partsResR hR hR', hne] at hbv
     by_cases hb0 : b ≠ 0
     · rw [ite_eq_left hb0] at h
@@ -268,7 +268,7 @@ theorem bpcW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
     rw [hw, hcw] at h
     obtain ⟨hnl, hne⟩ := partsCVName (IWGrow.refl m) (show DecB (fun m => decCVp m cvp) m cv from hcv) hcvb
     obtain ⟨b, hb, h⟩ := ipK_inv1 h (by simp [bpcK1])
-    obtain ⟨R', hR', hbv⟩ := partsResCont hnl hb hS.1.pins
+    obtain ⟨R', hR', hbv⟩ := partsResCont hnl hb hS.check.pins
     rw [partsResR hR hR', hne] at hbv
     by_cases hb0 : b ≠ 0
     · rw [bpcK1_res n m nP cso csl lo ll _ b hb0] at h
@@ -910,7 +910,7 @@ theorem bsoW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
     split at e
     · cases e
     rename_i hne
-    obtain ⟨v, hv, hvr⟩ := eViewW_ok m1 a1 hS1.1.arena.base _ hne
+    obtain ⟨v, hv, hvr⟩ := eViewW_ok m1 a1 hS1.check.arena.base _ hne
     have hvrun := view_run _ a1 v hv
     rw [show (decE (r1.tail.tail.tail.headD 0)) = e1 from hbe] at hvrun
     simp only [StateT.run_bind, hvrun]
@@ -1450,7 +1450,7 @@ theorem bbW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
   rcases h4 : bpoW (n + 2) m3 nPd cto ctl (r3.headD 0) (r3.tail.headD 0) rso rsl cso csl with _ | ⟨r4, m4⟩ <;> rw [h4] at e
   · cases e
   have h0 := bpoW_ready h4 hctl
-  have hRrun := pinReserved_run (hS3.1.pins.full h0)
+  have hRrun := pinReserved_run (hS3.check.pins.full h0)
   obtain ⟨hS4, hg4, hr4⟩ := bpoW_ok hRrun h4 hS3 (hts.grow (fun _ => OMono.decCVp _) hg03)
     (hrs.grow decSR_mono hg03) (hcs.grow decSC_mono hg03) hd3 (Nat.le_of_eq ht3)
   have hg04 := hg03.trans hg4

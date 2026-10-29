@@ -508,7 +508,7 @@ theorem certCtx_ref (hD : DmProg2 p) :
   obtain ⟨r0, m0, ⟨h0, hrec, hPINS, hr0⟩, hw⟩ := (natOpPins_fref hD.toNatGateProg).bind_ hS.2 hw
   have hg0 : IWGrow m m0 := hrec.2.1.1
   have hS0 := hrec.2.1.stage hS
-  have hF := hS.1.pins.full h0
+  have hF := hS.check.pins.full h0
   have hlt : ∀ j, j < 51 → (pinW m (1 + j)).toNat < 2 ^ 32 := hF.names_lt
   have rdk : ∀ mk, IWGrow m0 mk → ∀ kk : Word, kk.toNat < 21 →
       rdW (mk.arr64 IW) (r0.headD 0 + kk) = (pinRecW m).getD kk.toNat 0 :=

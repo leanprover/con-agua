@@ -286,7 +286,7 @@ theorem ncGoW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis C cs : W
     have hco1 : (co + 1).toNat = co.toNat + 1 :=
       word_add_toNat (show co.toNat + 1 < 2 ^ 64 by have := hS.2.2.1; have := hS.2.2.2.2.1; omega)
     rw [hwE] at h
-    have hE := hS.1.env
+    have hE := hS.check.env
     rw [List.filterMapM_cons]
     rcases hef : envFindW m w vis with _ | ⟨r1, m1⟩ <;> rw [hef] at h; · simp [ncK1] at h
     have hm1 := envFindW_mem hef

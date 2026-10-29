@@ -334,7 +334,7 @@ theorem tail_ref (hP : TailProg p) (L : CbrLook p) {fs : List FnName}
         dd2, dd3, dd4, dd5, dd6, dd7⟩ hrun5
   have x35 := cr3.ext
   -- `cons_block_recs_tf`
-  rw [hS2.1.env.vis]
+  rw [hS2.check.env.vis]
   rcases c7 : callW p k "cons_block_recs_tf" [r2.headD 0, UInt64.ofNat pw, 0, r6.tail.headD 0,
       r6.tail.tail.headD 0, r6.headD 0] s5.mem with _ | ⟨r7, m7⟩
   · rw [liftE_none, ictrE.k_cons_block_recs_tf.none]; exact RefE.of_cls0 (by simp)
@@ -362,7 +362,7 @@ theorem tail_ref (hP : TailProg p) (L : CbrLook p) {fs : List FnName}
     (ConRon.Arena.consBlockCtors bs.nP ctorsAs fe).visibleBelow bs shP outs outP 0
     fe2b _ a5 a6 fe3 cr3.ok (ConRon.Bridge.Inductives.RC.IFEnvOK.of_find? cr3.ok.ienv hview hraw₂b)
     (Nat.le_of_eq hvis.symm) hcoh₂b hden₂b (ConRon.Bridge.Inductives.dShape_ext x05 _ _ hshP) hout hfresh
-    (by rw [hS2.1.env.vis]; exact hrun6)
+    (by rw [hS2.check.env.vis]; exact hrun6)
   have x06 : Ext a.store a6.store := x05.trans c4''.ext
   -- `check_block_tables`
   have hg06 := (hg03.trans hg5).trans hg6

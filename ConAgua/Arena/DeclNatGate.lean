@@ -182,7 +182,7 @@ theorem depsStored_ref (hN : NatGateProg p) (o l : Word) (ns : List NIdx) :
     rw [depsStoredW.eq_2] at hw
     rw [ite_eq_right hl0] at hw
     replace hw := ntBW_some hw; obtain ⟨r1, m1, h1, hw⟩ := hw
-    obtain ⟨rfl, hfd⟩ := envFind_call hN.toMasterProg (rdW (m.arr64 IW) o) hwlt hS.1.env h1
+    obtain ⟨rfl, hfd⟩ := envFind_call hN.toMasterProg (rdW (m.arr64 IW) o) hwlt hS.check.env h1
     subst hn
     rw [natOpDepsStored_cons]
     cases hf : fe.find? (decI (rdW (m1.arr64 IW) o)) with

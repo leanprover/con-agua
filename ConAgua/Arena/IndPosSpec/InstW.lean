@@ -57,7 +57,7 @@ theorem instW_ok (n : Nat) : ∀ (dn : NIdx → Option ConLeche.Name) (fe : IFEn
           have hne : eViewW m e ≠ [] := by rw [hvl]; simp
           rw [hvl] at h
           rw [instK1_ok n m ao al _ (by simp)] at h
-          obtain ⟨v, hv, hvr⟩ := eViewW_ok m a hS.1.arena.base e hne
+          obtain ⟨v, hv, hvr⟩ := eViewW_ok m a hS.check.arena.base e hne
           rw [hvl] at hvr
           have ht : (decE e).tag = ETag.forallE := by
             have h1 : ((decI e : EIdx).tag == ETag.forallE) = true := by

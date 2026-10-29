@@ -361,7 +361,7 @@ theorem abF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (e
   rcases n with _ | j
   · rw [callW_zero] at hi; cases hi
   have hA : ArenaA m { a with memos := { a.memos with abs1C := mp } } :=
-    ⟨hS.1.arena.memo_irrel a.memos.instLC mp, hmp⟩
+    ⟨hS.check.arena.memo_irrel a.memos.instLC mp, hmp⟩
   obtain ⟨s'', hs'', -, hok, hA', hres, hlt⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (absEntry_refines abProg abProg_abs rfl j _ _ hA e d k he) hi
   rw [hs''] at hA'

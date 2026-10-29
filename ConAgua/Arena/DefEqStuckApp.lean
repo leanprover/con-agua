@@ -146,14 +146,14 @@ theorem ac_ref (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (n : Nat)
   have h₅ := CoreSpec.of_callW (s₀ := ⟨m₄, Locals.init []⟩)
     ((hk (k + 1) (Nat.le_refl _)).defeq F _ a₀ dn vis fe M eb mode d (r₃.headD 0) (r₄.headD 0) hF hn
       ⟨hS₂, hs.mode4, hs.eb_mode⟩ hh3 hh4) (callW_of_callE c5)
-  obtain ⟨M₅, hS₅, hK₅, hst₅⟩ := h₅.2.1
-  refine RefE.bind_right (by rw [AM.run_of_ok _ _ h₅.1, h₅.2.2.1]) ?_
+  obtain ⟨M₅, hS₅, hK₅, hst₅⟩ := h₅.after
+  refine RefE.bind_right (by rw [AM.run_of_ok _ _ h₅.run, h₅.res]) ?_
   simp only [acE.k_defeq]
   by_cases h0 : r₅.headD 0 = 0
   · rw [ite_eq_right (fun h => h h0), decBool_false_of h0]
     simp only [Bool.false_eq_true, ↓reduceIte]
     exact leaf _ m₅ _ _ false _ M₅ rfl hS₅ hK₅ ((hg1.trans hg2).trans hst₅.toGrew)
-      (decBool_false_of (r := [r₅.headD 0]) h0).symm h₅.2.2.2
+      (decBool_false_of (r := [r₅.headD 0]) h0).symm h₅.resOk
   rw [ite_eq_left h0, decBool_true_of h0]
   simp only [↓reduceIte]
   -- the spines below the top
@@ -180,10 +180,10 @@ theorem ac_ref (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (n : Nat)
       (r₁.tail.headD 0) (r₂.headD 0) (r₂.tail.headD 0) aa.toArray bb.toArray
       ⟨hS₅, hs.mode4, hs.eb_mode⟩ hA hB (by rw [h5top]; omega) (by rw [h5top]; omega))
     (callW_of_callE c6)
-  obtain ⟨M₆, hS₆, hK₆, hst₆⟩ := h₆.2.1
+  obtain ⟨M₆, hS₆, hK₆, hst₆⟩ := h₆.after
   simp only [acE.k_defeq_lst]
-  exact leaf _ m₆ _ _ _ _ M₆ (AM.run_of_ok _ _ h₆.1) hS₆ (hK₅.trans hK₆)
-    (((hg1.trans hg2).trans hst₅.toGrew).trans hst₆.toGrew) h₆.2.2.1 h₆.2.2.2
+  exact leaf _ m₆ _ _ _ _ M₆ (AM.run_of_ok _ _ h₆.run) hS₆ (hK₅.trans hK₆)
+    (((hg1.trans hg2).trans hst₅.toGrew).trans hst₆.toGrew) h₆.res h₆.resOk
 
 /-- **`stuck_app_cong` refines `appCongT`** at the knot (`ac_ref`'s ok half). -/
 @[refines_part ConRon.Arena.defeqStuck "the application arm's congruence (appCongT)"]

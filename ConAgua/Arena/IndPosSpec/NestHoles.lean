@@ -90,7 +90,7 @@ theorem nhGoW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis ctx : Wo
     intro m m' a mm off l oo ol ns out r h hS hc hin hsl hns hnb hout hob hmm
     have hsz := hS.2.2.2.1
     have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hsz
-    have hE := hS.1.env
+    have hE := hS.check.env
     by_cases hl0 : l = 0
     · rw [nhGoW_nil (h := hl0)] at h
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)

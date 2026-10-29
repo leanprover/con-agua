@@ -80,7 +80,7 @@ theorem naF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) :
   intro m m' a r hc hS
   have hW := naF_W hc
   obtain ⟨a', hrun, hS', hg, -, -⟩ := internNAnon_stage hS hW
-  exact ⟨_, a', hrun, hS', hg, nainternW_lt hS.1.arena.base.nanon hW, rfl⟩
+  exact ⟨_, a', hrun, hS', hg, nainternW_lt hS.check.arena.base.nanon hW, rfl⟩
 
 /-- `intern_nanon` writes the `anonymous` table only. -/
 theorem naF_frame {m m' : Mem} {args r : List Word} (h : naF m args = some (r, m')) :
@@ -392,7 +392,7 @@ theorem nrF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (x
   · rw [h1] at hW; cases hW
   rw [h1] at hW
   simp only at hW
-  have hpool : PoolOK m := hS.1.arena.base.lit.1
+  have hpool : PoolOK m := hS.check.arena.base.lit.1
   obtain ⟨ho, hm₁, hno, hroom⟩ := prW_some (callW_pr rfl h1) (by have := hpool.cap; omega)
   rw [ho, hm₁] at hW
   obtain ⟨hg, hsl, hk⟩ := recBytes_ok m hpool hroom
@@ -403,8 +403,8 @@ theorem nrF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (x
   simp only at hW
   obtain ⟨c, hW⟩ := of_ite_none hW
   obtain ⟨hr, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
-  have hR₂ : ArenaR m₂ a := ArenaR.grow m m₂ hg a hS.1.arena.base
-  have hmo₂ : ModeOK m₂ := hS.1.mode.grows hg
+  have hR₂ : ArenaR m₂ a := ArenaR.grow m m₂ hg a hS.check.arena.base
+  have hmo₂ : ModeOK m₂ := hS.check.mode.grows hg
   have hpc₂ : pcap m₂ < 2 ^ 64 := by rw [hg.pcapEq]; have := hpool.cap; omega
   have hcap₂ : m.top.toNat + (3 : Word).toNat ≤ pcap m₂ := by have := hsl.le; have := hg.cap; omega
   obtain ⟨s₃, hs₃, -, hok, hR₃, hres⟩ := triple_of_callW
@@ -528,7 +528,7 @@ theorem ilF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (o
   · rw [h1] at hW; cases hW
   rw [h1] at hW
   simp only at hW
-  have hpool : PoolOK m := hS.1.arena.base.lit.1
+  have hpool : PoolOK m := hS.check.arena.base.lit.1
   obtain ⟨ho, hm₁, hno, hroom⟩ := prW_some (callW_pr rfl h1) (by have := hpool.cap; omega)
   rw [ho] at hW
   rcases h2 : callW ilProg n "iw_pool" [o, m.top, l] m₁ with _ | ⟨r₂, m₂⟩
@@ -566,8 +566,8 @@ theorem ilF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (o
     have e := hf₂.ctl 0 (by simp)
     simp only [top_rdW] at e ⊢
     rw [e, hm₁]; exact Mem.top_set64 _ _ hc0
-  have hA₂ : ArenaD m₂ a := ArenaD.grow m m₂ hg a hS.1.arena
-  have hmo₂ : ModeOK m₂ := hS.1.mode.grows hg
+  have hA₂ : ArenaD m₂ a := ArenaD.grow m m₂ hg a hS.check.arena
+  have hmo₂ : ModeOK m₂ := hS.check.mode.grows hg
   have hsl₂' : SliceOK m₂ m.top l := SliceOK.fresh hg htop₂
   have hpc₂ : pcap m₂ < 2 ^ 64 := by rw [hg.pcapEq]; have := hpool.cap; omega
   have hcap₂ : m.top.toNat + l.toNat ≤ pcap m₂ := by have := hsl₂'.le; have := hg.cap; omega

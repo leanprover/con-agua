@@ -1171,7 +1171,7 @@ theorem slotMotW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFE
   have hg3 : r2.headD 0 >>> 28 = 3 := by simpa using hg
   have ht : (((decI (r2.headD 0) : EIdx)).tag == ETag.const) = true :=
     (tag_beq _ hb2 _ 3 (by decide) rfl).mpr hg3
-  obtain ⟨hvc, hnH, huH⟩ := viewConstW hS2.1.arena.base hne hg3
+  obtain ⟨hvc, hnH, huH⟩ := viewConstW hS2.check.arena.base hne hg3
   rw [ite_eq_left ht]
   refine RSim.tstep hvc ?_
   refine RSim.bind (K := slotMotW.k_get_app_args_f n p vis ((eViewW m2 (r2.headD 0)).tail.headD 0)
@@ -1701,7 +1701,7 @@ theorem slots_sims (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv
     have hg6 : e >>> 28 = 6 := by simpa using hg
     have ht : (((decI e : EIdx)).tag == ETag.forallE) = true := (tag_beq _ hH _ 6 (by decide) rfl).mpr hg6
     rw [ite_eq_left ht]
-    obtain ⟨hvb, hdomH, hbodyH⟩ := viewBindW hS.1.arena.base hH hne hg6
+    obtain ⟨hvb, hdomH, hbodyH⟩ := viewBindW hS.check.arena.base hH hne hg6
     refine RSim.tstep hvb ?_
     refine RSim.bind (K := ssK1 cR N p vis np n mo ml d ((eViewW m e).tail.headD 0)
       ((eViewW m e).tail.tail.headD 0)) (by rw [ssK1])

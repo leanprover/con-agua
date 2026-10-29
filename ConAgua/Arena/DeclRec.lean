@@ -642,7 +642,7 @@ theorem erecCiW_core {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFE
     have hsl : ∀ j < (dw (m.arr64 DECL) i.toNat 3).toNat, (erecP M)[s.toNat + j]? =
         some (mask32 ((m.arr64 DLP)[1 + (dw (m.arr64 DECL) i.toNat 2).toNat + j]?.getD 0)) := by
       intro j hj
-      rw [erecP_getE (by omega), hG'.2.2.2 _ (by omega), hget1 j hj, ← hW1,
+      rw [erecP_getE (by omega), hG'.erGet _ (by omega), hget1 j hj, ← hW1,
         dlpWords_get _ _ _ _ hj (by rw [hlo1]; omega), hlo1]
     rw [decCV_of_words w1 w2 w3 w4 hsl, sliceL_map_decI, hl, hn, ht]
   have hvM : (hd? (erecP M) (p.toNat + 5) : Option EIdx) =

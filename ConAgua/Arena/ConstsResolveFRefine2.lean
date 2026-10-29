@@ -321,7 +321,7 @@ theorem crf_step (n : Nat) (ih : CrfOK p dn vis fe n) : CrfOK p dn vis fe (n + 1
   subst hs'
   simp only at hmv hrv
   subst hmv hrv
-  obtain ⟨v, hview, hR⟩ := eViewW_ok m a hS.1.arena.base h hne
+  obtain ⟨v, hview, hR⟩ := eViewW_ok m a hS.check.arena.base h hne
   rw [ctrW_toNat f hf, constsResolveFGo, StateT.run_bind, view_run (decE h) a v hview,
     except_ok_bind]
   cases v with
@@ -455,7 +455,7 @@ theorem crf_step (n : Nat) (ih : CrfOK p dn vis fe n) : CrfOK p dn vis fe (n + 1
     have hS1 := (StageR.crf hS hF1).1
     rcases h2 : callW p n "env_find" [(eViewW m h).tail.headD 0, vis] ma with _ | ⟨re, me⟩
       <;> simp only [h2, reduceCtorEq, crfP2] at hW
-    obtain ⟨rfl, hval⟩ := envFind_callW hp hS1.1.env hb1 h2
+    obtain ⟨rfl, hval⟩ := envFind_callW hp hS1.check.env hb1 h2
     rw [hval, hres1, ite_and] at hW
     obtain ⟨rfl, hM2, hF2⟩ := crfT_callW hp hM1 hh rfl hW
     refine ⟨(fe.find? (decI ((eViewW m h).tail.headD 0))).isSome && b1,

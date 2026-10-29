@@ -286,7 +286,7 @@ theorem ct_ref (k : Nat) (hk : k ≤ 2 ^ 62)
     by_cases hne : eViewW m1 (r1.tail.tail.tail.headD 0) = []
     · rw [ctE.k_strip_pis.arm1 _ _ _ _ _ _ _ _ hf hne]; exact RefE.of_cls0 (by simp)
     rw [ctE.k_strip_pis.arm2 _ _ _ _ _ _ _ _ hf hne]
-    obtain ⟨vv, hview, hVR⟩ := eViewW_ok m1 a hS1.1.arena.base _ hne
+    obtain ⟨vv, hview, hVR⟩ := eViewW_ok m1 a hS1.check.arena.base _ hne
     have h2 := eViewW_head2 m1 _ hf.2 hne
     have htag : (decE (r1.tail.tail.tail.headD 0)).tag = ETag.sort :=
       (decE_tag_sort _ (by simpa using hb32)).mpr hf.2

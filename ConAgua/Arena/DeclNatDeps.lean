@@ -307,8 +307,8 @@ theorem natOpDeps_ref (hN : NatGateProg p) (c : Word) :
     have := pw_rec hS.2 hrec' j.toNat (by simp [pinRecW]; omega)
     rw [UInt64.ofNat_toNat] at this
     rw [this, pinRecW_get m _ _ hj]] at hw
-  exact ⟨_, a, natOpDeps_run (hS.1.pins.full ‹_›) hc,
-    armsW_keep hN (hrec.2.1.stage hS) hrec.2.1.1 (hS.1.pins.full ‹_›) depsTab depsTab_ok hw⟩
+  exact ⟨_, a, natOpDeps_run (hS.check.pins.full ‹_›) hc,
+    armsW_keep hN (hrec.2.1.stage hS) hrec.2.1.1 (hS.check.pins.full ‹_›) depsTab depsTab_ok hw⟩
 
 @[refines ConRon.Arena.natOpDeps]
 theorem natOpDeps_refines (hN : NatGateProg p) (c : Word) :

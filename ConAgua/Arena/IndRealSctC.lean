@@ -470,7 +470,7 @@ theorem tbl_ref {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
   · rw [tblE.k_env_find.abort1 p (n + 1) T C lo ll nP nF rs go gl vis _ _ rf m3 hf0]
     exact RefE.of_cls0 rfl
   rw [tblE.k_env_find.arm1 p (n + 1) T C lo ll nP nF rs go gl vis _ _ rf m3 hf0]
-  obtain ⟨hm32, hfind0, ci0, hci0⟩ := envFindW_hit hf hS2.1.env hT hf0
+  obtain ⟨hm32, hfind0, ci0, hci0⟩ := envFindW_hit hf hS2.check.env hT hf0
   subst m3
   have hhit : (fe.find? (decI T)).isSome := by rw [hfind0, hci0]; rfl
   simp only [hhit, ite_true]
@@ -478,12 +478,12 @@ theorem tbl_ref {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
   rcases hft : callW p (n + 1) "find_table" [vis, T] m2 with _ | ⟨rt, m3⟩
   · rw [liftE_none, tblE.k_find_table.none]; exact RefE.of_cls0 (by simp)
   rw [liftE_some]
-  obtain ⟨hm32, hfind⟩ := findTable_call hP hS2.1.env hT hft
+  obtain ⟨hm32, hfind⟩ := findTable_call hP hS2.check.env hT hft
   subst m3
   by_cases ht0 : rt.headD 0 ≠ 0
   · rw [tblE.k_find_table.abort1 p (n + 1) T C lo ll nP nF rs go gl vis _ _ rt m2 ht0]
     obtain ⟨-, -, -, -, -, hsome4⟩ := triple_of_callW (s₀ := ⟨m2, Locals.init []⟩)
-      (findTable_refines p hP.hix hP.hrg hP.htix hP.htrg hP.hftab (n + 1) _ vis T hS2.1.env hT) hft
+      (findTable_refines p hP.hix hP.hrg hP.htix hP.htrg hP.hftab (n + 1) _ vis T hS2.check.env hT) hft
     have hsome : ¬ (fe.findTable? (decI T)).isNone = true := by
       rw [hfind]
       have := hsome4 ht0

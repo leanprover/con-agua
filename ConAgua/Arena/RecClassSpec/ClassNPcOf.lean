@@ -294,7 +294,7 @@ theorem npcW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
   · rw [h3] at h; simp [npcK3] at h
   obtain ⟨r3, m3⟩ := rm3
   rw [h3] at h
-  obtain ⟨hm3, hfind, hdec⟩ := envFindW_found h3 hS1.1.env hi
+  obtain ⟨hm3, hfind, hdec⟩ := envFindW_found h3 hS1.check.env hi
   subst hm3
   have hnc : ¬ bs.memberNames.contains (decI i) = true := by rw [hcon]; exact hc
   by_cases h0 : r3.headD 0 = 0

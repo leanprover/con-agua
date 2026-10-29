@@ -291,11 +291,11 @@ theorem da_ref (p : Prog) (hkp : KnotProg p) (n : Nat) (he : IsEagerReduceH p) (
   · rw [liftE_none]; exact RefE.of_cls0 (by simp)
   rw [liftE_some]; simp only [daE.k_is_eager_reduce]
   have h₁ := CoreSpec.of_callW (he n s₀ a₀ dn vis fe M eb a hs.rel ha) hc
-  have hrun₁ := AM.run_of_ok _ _ h₁.1
-  rw [h₁.2.2.1] at hrun₁
+  have hrun₁ := AM.run_of_ok _ _ h₁.run
+  rw [h₁.res] at hrun₁
   refine RefE.of_run_eq (defeqArg_run (coreKnot (decMode mode) fe id F) d.toNat (decE a) (decE ta)
     (decE ty) a₀ _ _ hrun₁) ?_
-  obtain ⟨M', hS', hK', hSt'⟩ := h₁.2.1
+  obtain ⟨M', hS', hK', hSt'⟩ := h₁.after
   have hs' : SlotPre ⟨m₁, Locals.init []⟩ _ dn vis fe M' eb mode := ⟨hS', hs.mode4, hs.eb_mode⟩
   refine RefE.mono (R := CorePost decBool dn m₁ vis fe M' eb ResH) ?_
     (fun _ _ _ h => ⟨CoreAfter.comp hK' hSt' h.after, h.res, h.valid⟩)
@@ -473,8 +473,8 @@ theorem inferLamResult_refines (n : Nat) (ha : Abstract1OK p) (s₀ : St) (a₀ 
   obtain ⟨r₁, m₁⟩ := q
   rw [hc, lamResK_some] at hW
   have h₁ := CoreSpec.of_callW (ha n s a₀ dn vis fe M eb bt d 0 hS hbt) hc
-  have hrun₁ := AM.run_of_ok _ _ h₁.1
-  rw [h₁.2.2.1] at hrun₁
+  have hrun₁ := AM.run_of_ok _ _ h₁.run
+  rw [h₁.res] at hrun₁
   have hT := inferLamResult_run (decE ty) (decE bt) _ d.toNat a₀ _ hrun₁
   cases hc2 : callW p n "mk_forall" [ty, r₁.headD 0] m₁ with
   | none => simp only [call1W, hc2] at hW; cases hW
@@ -620,15 +620,15 @@ theorem il_ref (p : Prog) (hp : InferLeafProg p) (hc : InferLitCallees p) (n : N
     · rw [liftE_none]; exact RefE.of_cls0 (by simp)
     rw [liftE_some]; simp only [ilE.k_nat_lit_supported]
     have h₁ := CoreSpec.of_callW (hc.natLitSup n s₀ a₀ dn vis fe M eb hS) c1
-    have hrun₁ := AM.run_of_ok _ _ h₁.1
+    have hrun₁ := AM.run_of_ok _ _ h₁.run
     by_cases h0 : r₁.headD 0 = 0
     · rw [ite_eq_left h0]
-      rw [h₁.2.2.1, show decBool r₁ = false by simp only [decBool, h0]; rfl] at hrun₁
+      rw [h₁.res, show decBool r₁ = false by simp only [decBool, h0]; rfl] at hrun₁
       refine RefE.bind_right hrun₁ ?_
       simp only [Bool.false_eq_true, ↓reduceIte]
       exact fun _ => ErrClaim.fail _ _ rfl
     rw [ite_eq_right h0]
-    rw [h₁.2.2.1, show decBool r₁ = true by simp only [decBool, bne_iff_ne]; exact h0] at hrun₁
+    rw [h₁.res, show decBool r₁ = true by simp only [decBool, bne_iff_ne]; exact h0] at hrun₁
     exact il_arm p hp hc n 1 (by decide) h₁
       (fun nn hpin => inferLitT_nat_run fe N a₀ _ nn hrun₁ hpin)
   · rw [ite_eq_right h3]
@@ -639,15 +639,15 @@ theorem il_ref (p : Prog) (hp : InferLeafProg p) (hc : InferLitCallees p) (n : N
     · rw [liftE_none]; exact RefE.of_cls0 (by simp)
     rw [liftE_some]; simp only [ilE.k_str_lit_supported]
     have h₁ := CoreSpec.of_callW (hc.strLitSup n s₀ a₀ dn vis fe M eb hS) c1
-    have hrun₁ := AM.run_of_ok _ _ h₁.1
+    have hrun₁ := AM.run_of_ok _ _ h₁.run
     by_cases h0 : r₁.headD 0 = 0
     · rw [ite_eq_left h0]
-      rw [h₁.2.2.1, show decBool r₁ = false by simp only [decBool, h0]; rfl] at hrun₁
+      rw [h₁.res, show decBool r₁ = false by simp only [decBool, h0]; rfl] at hrun₁
       refine RefE.bind_right hrun₁ ?_
       simp only [Bool.false_eq_true, ↓reduceIte]
       exact fun _ => ErrClaim.fail _ _ rfl
     rw [ite_eq_right h0]
-    rw [h₁.2.2.1, show decBool r₁ = true by simp only [decBool, bne_iff_ne]; exact h0] at hrun₁
+    rw [h₁.res, show decBool r₁ = true by simp only [decBool, bne_iff_ne]; exact h0] at hrun₁
     exact il_arm p hp hc n 5 (by decide) h₁
       (fun nn hpin => inferLitT_str_run fe str a₀ _ nn hrun₁ hpin)
 

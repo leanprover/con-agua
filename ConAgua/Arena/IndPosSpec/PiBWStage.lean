@@ -29,7 +29,7 @@ theorem piBW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv
   | zero => intro m m' a fuel h rs hh; simp [piBW] at hh
   | succ n ih =>
     intro m m' a fuel h rs hpb hS hh
-    have hR := hS.1.arena.base
+    have hR := hS.check.arena.base
     by_cases hf : fuel = 0
     · rw [piBW_fuel0 n m fuel h hf] at hpb; simp at hpb
     by_cases hg : h >>> 28 ≠ 6

@@ -205,7 +205,7 @@ theorem ftdsGoW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv
         rw [word_ofNat_toNat] at this
         rw [this, hw]
       rw [hx] at h1
-      obtain ⟨hm1, hrun1, hlt1⟩ := ftdW_ok m m1 a hS.1.arena.base w hw32 r1 (ftdF_eq h1)
+      obtain ⟨hm1, hrun1, hlt1⟩ := ftdW_ok m m1 a hS.check.arena.base w hw32 r1 (ftdF_eq h1)
       rw [hm1] at h
       have hsz : (m.arr64 IW).size < 2 ^ 64 := hS.2.2.2.1
       have hk1 : (k + 1).toNat = k.toNat + 1 := by
@@ -588,7 +588,7 @@ theorem gaaF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj c')
   -- `get_app_args`
   obtain ⟨t1, ht1, -, hfr1, hr0, xs, hrun, hsp, hb64⟩ := triple_of_callW
-    (getAppArgs_refinesR gaaProg rfl rfl rfl k ⟨m, Locals.init []⟩ a hS.1.arena.base e he) c1
+    (getAppArgs_refinesR gaaProg rfl rfl rfl k ⟨m, Locals.init []⟩ a hS.check.arena.base e he) c1
   rw [ht1] at hfr1 hsp
   obtain ⟨hS1, hg1⟩ := stageR_hi hS hfr1 (by simp [SPN]) (by simp) (by decide) (by decide)
   -- the fresh slice

@@ -57,8 +57,8 @@ theorem ceW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (n
     · rw [ite_eq_left hne] at h; simp at h
     rw [ite_eq_right hne] at h
     rw [not_or] at hne
-    obtain ⟨vx, hvx, hrx⟩ := eViewW_ok m a hS.1.arena.base x hne.1
-    obtain ⟨vy, hvy, hry⟩ := eViewW_ok m a hS.1.arena.base y hne.2
+    obtain ⟨vx, hvx, hrx⟩ := eViewW_ok m a hS.check.arena.base x hne.1
+    obtain ⟨vy, hvy, hry⟩ := eViewW_ok m a hS.check.arena.base y hne.2
     have hfuel : fuel.toNat = (fuel - 1).toNat + 1 := toNat_pred hf
     rw [hfuel, ConRon.Arena.canonExprEq.eq_2, StateT.run_bind, view_run _ _ _ hvx, exc_ok_bind',
       StateT.run_bind, view_run _ _ _ hvy, exc_ok_bind']
@@ -122,7 +122,7 @@ theorem ceW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (n
       rw [hc, ceKL_some] at h
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       obtain ⟨b, hb, hrb⟩ := clW_ok n m a po pl qo ql co cl (fuel - 1) _ _ r1 ps qs cs hc
-        hS.1.arena.base hC hl1 hl2
+        hS.check.arena.base hC hl1 hl2
       rw [hu1, hu2] at hb
       exact ⟨b, hb, hrb, hS, IWGrow.refl _, hP⟩
     case neg.const.const =>

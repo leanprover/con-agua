@@ -549,19 +549,19 @@ theorem cdo_ref {p : Prog} (hV : ValProg p) (hC : CrpProg p) (hq : KnotStageProg
   rw [checkDeclOpaqueE.k_pin_at.arm1]
   obtain ⟨s4, hs4, -, hW4⟩ := triple_of_callE
     (pinAt_specW p hC.red.pa n ⟨s3.mem, Locals.init []⟩ 43) h4
-  obtain ⟨hm4, hr4, -, -⟩ := pinAtW_ok hW4 hS3.1.pins
+  obtain ⟨hm4, hr4, -, -⟩ := pinAtW_ok hW4 hS3.check.pins
   have hm4' : m4 = s3.mem := hs4.symm.trans hm4
   subst hm4'
   rcases h5 : callE p n "pin_at" [44] s3.mem with e5 | ⟨r5, m5⟩
   · rw [checkDeclOpaqueE.k_pin_at_2.none]; exact fun hG => nvl hG.nv (by decide +kernel) h5
   obtain ⟨s5, hs5, -, hW5⟩ := triple_of_callE
     (pinAt_specW p hC.red.pa n ⟨s3.mem, Locals.init []⟩ 44) h5
-  obtain ⟨hm5, hr5, -, -⟩ := pinAtW_ok hW5 hS3.1.pins
+  obtain ⟨hm5, hr5, -, -⟩ := pinAtW_ok hW5 hS3.check.pins
   have hm5' : m5 = s3.mem := hs5.symm.trans hm5
   subst hm5'
   have e4 : r4.headD 0 = pinW s3.mem (1 + (43 : Word).toNat) := by rw [hr4]; rfl
   have e5 : r5.headD 0 = pinW s3.mem (1 + (44 : Word).toNat) := by rw [hr5]; rfl
-  have hF := hS3.1.pins.full hflag3
+  have hF := hS3.check.pins.full hflag3
   have hcont : (reduceOpNames.run a3) =
       .ok ((List.range' 44 2).map (fun j => decI (pinW s3.mem j)), a3) := reduceOpNames_run hF
   have hiff := contains_pins hF hwnl 44 2 (by omega) (by omega)

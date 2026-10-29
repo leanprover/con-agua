@@ -103,7 +103,7 @@ theorem lamsInst_refines (p : Prog) (hp : LamsProg p) (hi : Inst1OK p) (n : Nat)
   rw [toNat_zero_w] at e₃
   refine coreRef_bind e₃ (fun M₃ hS₃ => ?_)
   rw [← hm]
-  exact coreRef_ret hS₃ (by simp only [decPair, decH, ← h1, ← h2]) ⟨h1 ▸ e₂.2.2.2, h2 ▸ e₃.2.2.2⟩
+  exact coreRef_ret hS₃ (by simp only [decPair, decH, ← h1, ← h2]) ⟨h1 ▸ e₂.resOk, h2 ▸ e₃.resOk⟩
 
 /-! ## `lams_open` -/
 
@@ -161,7 +161,7 @@ theorem lo_ref (p : Prog) (hp : LamsProg p) (hi : Inst1OK p) (n : Nat)
     (lamsInst_refines p hp hi n' _ _ dn vis fe M₁ eb d ty₂ body₁ body₂ hS₁ h₂ hb₁ hb₂) c2
   refine RefE.bind_core (w := id) e₂ (fun M₂ hS₂ _ => ?_)
   exact RefE.ret rfl (CorePost.ret hS₂ (by simp only [decLO, decPair]; rfl)
-    ⟨hw1, e₂.2.2.2.1, e₂.2.2.2.2⟩)
+    ⟨hw1, e₂.resOk.1, e₂.resOk.2⟩)
 
 /-! ## `lam_pair` -/
 
@@ -343,7 +343,7 @@ theorem lams_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n 
       (RefE.coreSpec (loE_spec p hp.open_ (k' + 1) ⟨m, Locals.init []⟩ mode vis d ty₁ body₁ ty₂ body₂)
         (lo_ref p hp hi k' (hk.mono (by omega)) F (by omega) (by omega) _ s dn vis fe M eb
           mode d ty₁ body₁ ty₂ body₂ ⟨hS, hmode, heb⟩ h1 hb1 h2 hb2)) (callW_of_callE hc)
-    obtain ⟨-, hr1, hr2⟩ := e₁.2.2.2
+    obtain ⟨-, hr1, hr2⟩ := e₁.resOk
     refine RefE.bind_core (w := fun (v : Word × Mem) => ([v.1], v.2)) e₁ (fun M₁ hS₁ _ => ?_)
     by_cases h0 : r.headD 0 = 0
     · rw [lamsE.k_lams_open.arm1 (hc1 := h0)]
@@ -359,7 +359,7 @@ theorem lams_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n 
     have e₂ := CoreSpec.of_callW (s₀ := ⟨m₁, Locals.init []⟩)
       (lamPair_refines p hp k' _ _ dn vis fe M₁ eb _ _ hS₁ hr1 hr2) (callW_of_callE hc2)
     refine RefE.bind_core (w := fun (v : Word × Mem) => ([v.1], v.2)) e₂ (fun M₂ hS₂ _ => ?_)
-    obtain ⟨-, hq1, hq2, hq3, hq4⟩ := e₂.2.2.2
+    obtain ⟨-, hq1, hq2, hq3, hq4⟩ := e₂.resOk
     by_cases hq : q.headD 0 = 0
     · rw [lamsE.k_lam_pair.arm1 (hc1 := hq)]
       simp only [decLP, hq, ↓reduceIte]

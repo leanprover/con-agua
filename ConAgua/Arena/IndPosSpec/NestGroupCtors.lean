@@ -415,7 +415,7 @@ theorem pdoW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis no nl lo 
       rw [hsucc, ConRon.Arena.piDomsOcc.eq_2]
       simp [htag]; rfl
     have hg6 : e >>> 28 = 6 := by simpa using h6
-    have hR := hS.1.arena.base
+    have hR := hS.check.arena.base
     by_cases hr : eViewW m e = []
     · rw [pdoW_empty (h := h0) (h6 := h6) (hv := hr)] at h; simp at h
     rw [pdoW_pi (h := h0) (h6 := h6) (hv := hr)] at h

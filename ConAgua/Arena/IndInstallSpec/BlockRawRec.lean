@@ -199,7 +199,7 @@ theorem pdmW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
     have hg6 : e >>> 28 = 6 := by rw [← hhd]; simpa using h6
     rw [pdmK_f (h := hv) (h6 := h6)] at h
     obtain ⟨hvok, hew⟩ := eViewW_forall m e hg6 hv
-    have hR := hS.1.arena.base
+    have hR := hS.check.arena.base
     obtain ⟨-, hty, hb⟩ := view_forall m a hR e he hvok hg6
     have hvb := viewBind_forall m a hR e he hvok hg6
     have htag : ((decE e).tag == ETag.forallE) = true := by

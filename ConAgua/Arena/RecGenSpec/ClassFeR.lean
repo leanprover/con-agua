@@ -465,7 +465,7 @@ theorem ferW_ok (p : Prog) (hp : CfrProg p) (dn : NIdx → Option ConLeche.Name)
     exact UInt64.le_iff_toNat_le.mpr (by omega)
   have htag : rowTag w ≤ 2 := by rw [← tagW_toNat]; exact UInt64.le_iff_toNat_le.mp ht2
   rw [rowCW_eq m w hwH ht2, rowPW_eq m w hwH ht2] at h
-  have hprev := rec3PrevD hS.1.env hwH htag
+  have hprev := rec3PrevD hS.check.env hwH htag
   obtain ⟨hmi, hrp⟩ := rec3FerMiRp (M := M) hrecs hsz
   -- the record
   obtain ⟨⟨kq, m1⟩, h1, h⟩ := of_K h (by simp only [ferK1])

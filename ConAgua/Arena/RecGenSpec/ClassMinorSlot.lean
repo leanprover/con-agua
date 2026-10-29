@@ -147,7 +147,7 @@ theorem leafAtW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv
     rw [ite_eq_right hf] at h
     obtain ⟨hev, h⟩ := of_ite_none h
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-    obtain ⟨v, hv, hR⟩ := eViewW_ok m1 a1 hS1.1.arena.base w hev
+    obtain ⟨v, hv, hR⟩ := eViewW_ok m1 a1 hS1.check.arena.base w hev
     have hhead := eViewW_head3 m1 w hev hf3
     have hdec : ∃ nn us : _, v = ENodeView.const nn us ∧ (eViewW m1 w).tail.headD 0 = (eViewW m1 w).getD 1 0 ∧
         ((eViewW m1 w).getD 1 0).toNat < 2 ^ 32 ∧ decI ((eViewW m1 w).getD 1 0) = nn := by

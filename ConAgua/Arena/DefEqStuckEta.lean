@@ -130,12 +130,12 @@ theorem ect_ref (p : Prog) (hc : StuckCallees p) (n : Nat)
   refine RefE.bind_core (w := id) h₂ (fun M₂ hS₂ _ => ?_)
   simp only [ectE.k_inst1]
   have hD := hK.defeq F ⟨m₂, Locals.init []⟩ _ dn vis fe M₂ eb mode (d + 1) (r₁.headD 0) (r₂.headD 0)
-    hF hn ⟨hS₂, hs.mode4, hs.eb_mode⟩ h₁.2.2.2 h₂.2.2.2
+    hF hn ⟨hS₂, hs.mode4, hs.eb_mode⟩ h₁.resOk h₂.resOk
   rw [hd1] at hD
   rcases c3 : callE p n "defeq" [mode, vis, d + 1, r₁.headD 0, r₂.headD 0] m₂ with e3 | ⟨r₃, m₃⟩
   · intro hkE
     have h := CoreSpecE.of_callE ((hkE n (Nat.le_refl _)).defeq F ⟨m₂, Locals.init []⟩ _ dn vis fe
-      M₂ eb mode (d + 1) _ _ hF hn ⟨hS₂, hs.mode4, hs.eb_mode⟩ h₁.2.2.2 h₂.2.2.2) c3
+      M₂ eb mode (d + 1) _ _ hF hn ⟨hS₂, hs.mode4, hs.eb_mode⟩ h₁.resOk h₂.resOk) c3
     rw [hd1] at h
     exact h
   obtain ⟨hrun, hP⟩ := (CoreSpec.of_callW hD (callW_of_callE c3)).post
@@ -188,12 +188,12 @@ theorem ecb_ref (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (n : Nat)
   refine RefE.bind_core (w := id) h₃ (fun M₃ hS₃ _ => ?_)
   simp only [ecbE.k_mk_app]
   have hD := hK.defeq F ⟨m₃, Locals.init []⟩ _ dn vis fe M₃ eb mode (d + 1) (r₂.headD 0) (r₃.headD 0)
-    hF hn ⟨hS₃, hs.mode4, hs.eb_mode⟩ h₂.2.2.2 h₃.2.2.2
+    hF hn ⟨hS₃, hs.mode4, hs.eb_mode⟩ h₂.resOk h₃.2.2.2
   rw [hd1] at hD
   rcases c4 : callE p n "defeq" [mode, vis, d + 1, r₂.headD 0, r₃.headD 0] m₃ with e4 | ⟨r₄, m₄⟩
   · intro hkE
     have h := CoreSpecE.of_callE ((hkE n (Nat.le_refl _)).defeq F ⟨m₃, Locals.init []⟩ _ dn vis fe
-      M₃ eb mode (d + 1) _ _ hF hn ⟨hS₃, hs.mode4, hs.eb_mode⟩ h₂.2.2.2 h₃.2.2.2) c4
+      M₃ eb mode (d + 1) _ _ hF hn ⟨hS₃, hs.mode4, hs.eb_mode⟩ h₂.resOk h₃.2.2.2) c4
     rw [hd1] at h
     exact ErrClaim.bind_left h
   have h₄ := CoreSpec.of_callW hD (callW_of_callE c4)
@@ -213,7 +213,7 @@ theorem ecb_ref (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (n : Nat)
     exact RefE.tail_eq (fun _ => rfl) (fun _ => rfl) (fun hkE => hkE.mono (Nat.le_succ N)) rfl
       (fun _ _ _ h => ⟨h.after, h.res, h.valid⟩)
       (ect_ref p hc N (hk.mono (Nat.le_succ N)) F ⟨m₄, Locals.init []⟩ _ dn vis fe M₄ eb mode d
-        (r₂.headD 0) cod2 (r₁.headD 0) (by omega) (by omega) ⟨hS₄, hs.mode4, hs.eb_mode⟩ hd h₂.2.2.2
+        (r₂.headD 0) cod2 (r₁.headD 0) (by omega) (by omega) ⟨hS₄, hs.mode4, hs.eb_mode⟩ hd h₂.resOk
         hcod h₁.2.2.2)
   · rw [ite_eq_right hm]
     simp only [hm, decide_false, Bool.false_eq_true, ↓reduceIte]
@@ -253,11 +253,11 @@ theorem ec_ref (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (n : Nat)
   rcases c3 : callE p n "whnf" [mode, vis, d, r₂.headD 0] m₂ with e3 | ⟨r₃, m₃⟩
   · exact fun hkE => ErrClaim.bind_left (CoreSpecE.of_callE ((hkE n (Nat.le_refl _)).whnf F
       ⟨m₂, Locals.init []⟩ _ dn vis fe M₂ eb mode d (r₂.headD 0) hF hn ⟨hS₂, hs.mode4, hs.eb_mode⟩
-      h₂.2.2.2) c3)
+      h₂.resOk) c3)
   have h₃ := CoreSpec.of_callW (hK.whnf F ⟨m₂, Locals.init []⟩ _ dn vis fe M₂ eb mode d (r₂.headD 0)
-    hF hn ⟨hS₂, hs.mode4, hs.eb_mode⟩ h₂.2.2.2) (callW_of_callE c3)
+    hF hn ⟨hS₂, hs.mode4, hs.eb_mode⟩ h₂.resOk) (callW_of_callE c3)
   refine RefE.bind_core (w := id) h₃ (fun M₃ hS₃ _ => ?_)
-  have hh3 : HW (r₃.headD 0) := h₃.2.2.2
+  have hh3 : HW (r₃.headD 0) := h₃.resOk
   simp only [ecE.k_whnf, decH, tag_beq_w _ hh3 6 (by decide) ETag.forallE rfl 6 rfl]
   by_cases h6 : r₃.headD 0 >>> 28 ≠ 6
   · rw [ite_eq_left h6]

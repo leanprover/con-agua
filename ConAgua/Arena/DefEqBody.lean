@@ -160,7 +160,7 @@ theorem body_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (s₀ : St) (a₀ : ASt
     by_cases hq4 : r₄.headD 0 ≠ 0
     · rw [ite_eq_left hq4]
       simp only [decOB, ite_eq_right hq4]
-      exact RefE.ret rfl (CorePost.ret hS₄ rfl h₄.2.2.2.2)
+      exact RefE.ret rfl (CorePost.ret hS₄ rfl h₄.resOk.2)
     rw [ite_eq_right hq4]
     simp only [decOB, ite_eq_left (show r₄.headD 0 = 0 by simpa using hq4)]
     rcases c5 : callE p (k + 1) "prop_irrel" [mode, vis, d, x, y] m₄ with e | ⟨r₅, m₅⟩
@@ -205,15 +205,15 @@ theorem body_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (s₀ : St) (a₀ : ASt
       e | ⟨r₈, m₈⟩
     · exact fun hG => ErrClaim.bind_left (CoreSpecE.of_callE (quickWEUpTo hq.lazy hc.lazy hk
         ⟨hG.knot, hG.nv⟩ (k + 1) (by omega) F ⟨m₇, Locals.init []⟩ _ dn vis fe M₇ eb mode d _ _
-        (by omega) (by omega) (hSP hS₇) h₆.2.2.2 h₇.2.2.2 hd) c8)
+        (by omega) (by omega) (hSP hS₇) h₆.resOk h₇.resOk hd) c8)
     have h₈ := CoreSpec.of_callW (hQ F ⟨m₇, Locals.init []⟩ _ dn vis fe M₇ eb mode d _ _
-      (by omega) (by omega) (hSP hS₇) h₆.2.2.2 h₇.2.2.2 hd) (callW_of_callE c8)
+      (by omega) (by omega) (hSP hS₇) h₆.resOk h₇.resOk hd) (callW_of_callE c8)
     simp only [bodyE.k_quick_defeq_2]
     refine RefE.bind_core (w := id) h₈ (fun M₈ hS₈ _ => ?_)
     by_cases hq8 : r₈.headD 0 ≠ 0
     · rw [ite_eq_left hq8]
       simp only [decOB, ite_eq_right hq8]
-      exact RefE.ret rfl (CorePost.ret hS₈ rfl h₈.2.2.2.2)
+      exact RefE.ret rfl (CorePost.ret hS₈ rfl h₈.resOk.2)
     rw [ite_eq_right hq8]
     simp only [decOB, ite_eq_left (show r₈.headD 0 = 0 by simpa using hq8)]
     rcases c9 : callE p (k + 1) "lazy_delta_reduction" [mode, vis, d, r₆.headD 0, r₇.headD 0] m₈
@@ -222,13 +222,13 @@ theorem body_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (s₀ : St) (a₀ : ASt
         ⟨m₈, Locals.init []⟩ mode vis d _ _) trivial
         ⟨⟨hG.knot.mono (by omega), hG.nv⟩, hG.reduceNat⟩
         (lazyDeltaReduction_ref p hq.lazy hc.lazy k hk' F (by omega) (by omega) ⟨m₈, Locals.init []⟩ _
-          dn vis fe M₈ eb mode d _ _ (hSP hS₈) h₆.2.2.2 h₇.2.2.2 hd) c9)
+          dn vis fe M₈ eb mode d _ _ (hSP hS₈) h₆.resOk h₇.resOk hd) c9)
     have h₉ := CoreSpec.of_callW (lazyDeltaReduction_refines p hq.lazy hc.lazy k hk' F (by omega)
-      (by omega) ⟨m₈, Locals.init []⟩ _ dn vis fe M₈ eb mode d _ _ (hSP hS₈) h₆.2.2.2 h₇.2.2.2 hd)
+      (by omega) ⟨m₈, Locals.init []⟩ _ dn vis fe M₈ eb mode d _ _ (hSP hS₈) h₆.resOk h₇.resOk hd)
       (callW_of_callE c9)
     simp only [bodyE.k_lazy_delta_reduction]
     refine RefE.bind_core (w := id) h₉ (fun M₉ hS₉ _ => ?_)
-    obtain ⟨g0, g1, g2⟩ := h₉.2.2.2
+    obtain ⟨g0, g1, g2⟩ := h₉.resOk
     by_cases l0 : r₉.headD 0 = 0
     · rw [ite_eq_left l0]
       simp only [decLR, ite_eq_left l0]

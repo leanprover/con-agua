@@ -86,7 +86,7 @@ theorem nit_ref {p : Prog} (L : NitLook p) (hcl : CoreStageClosed p) (hIlpf : Il
   -- `e_view`
   by_cases hv0 : eViewW m2 (rs.getD 2 0) = []
   · rw [nitE.k_pi_binders.arm1 _ _ _ _ _ _ _ (by rw [hg2']; exact hv0)]; exact RefE.of_cls0 rfl
-  obtain ⟨v, hview, hvr⟩ := eViewW_ok m2 a5 hS2.1.arena.base (rs.getD 2 0) hv0
+  obtain ⟨v, hview, hvr⟩ := eViewW_ok m2 a5 hS2.check.arena.base (rs.getD 2 0) hv0
   have hview' : (view e').run a5 = .ok (v, a5) := view_run _ _ _ (hresd ▸ hview)
   refine RefE.bind_right hview' ?_
   by_cases hv2 : (eViewW m2 (rs.getD 2 0)).headD 0 ≠ 2

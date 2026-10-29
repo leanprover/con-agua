@@ -120,7 +120,7 @@ theorem appRef_step (L : NbLook p) (n : Nat) (ih : NbRef p dn vis fe env n) : Ap
   dsimp only at hrv
   rw [npaE.k_e_view.eq_2, hm3', hrv]
   rw [hrv] at hev
-  obtain ⟨v, hview, hvr⟩ := eViewW_ok m2 a2 hS2.1.arena.base (rh.headD 0) hev
+  obtain ⟨v, hview, hvr⟩ := eViewW_ok m2 a2 hS2.check.arena.base (rh.headD 0) hev
   have hvrun : (view hd).run a2 = .ok (v, a2) := by rw [← hhdd, ← decE_eq]; exact view_run _ _ _ hview
   refine RefE.bind_right hvrun ?_
   have hargs2 : decHL m2 (ra.headD 0).toNat (ra.tail.headD 0).toNat = some args := by

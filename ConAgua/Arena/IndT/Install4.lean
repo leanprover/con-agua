@@ -68,7 +68,7 @@ theorem installWithSortSimC {p : Prog} (hcl : CoreStageClosed p) (hLC : LvlCache
   obtain ⟨bs', a', q, hrun, rfl, -, hS', hg, htopq, hcell, hD⟩ :=
     wsC_ok (realCall p) n dn fe vis m s'.mem a pp s r bs hW hS hs
       (fun m'' hg => hq.stab (decBS_mono _) m'' hg) hq9 (fun k r2 m2 h0 e2 => by
-        have hF := hS.1.pins.full h0
+        have hF := hS.check.pins.full h0
         obtain ⟨lz, hdz⟩ := hC.stageT.twin.den.zero
         rw [hF.zeroLevel] at hdz
         obtain ⟨x, a2, hrun2, hC2, hg2, hd2, -, -⟩ :=

@@ -708,7 +708,7 @@ theorem vg_rel (n : Nat) (m : Mem) (a : AState) (pm₀ : PMemo) (g vis : Word) (
   rw [hs₅, show ({ mem := m₃.set64 CTL 129 (dr.headD 0 + 6), loc := Locals.init [] } : St).mem =
     m₃.set64 CTL 129 (dr.headD 0 + 6) from rfl] at hW₅
   have hdv : (dr.headD 0).toNat = erecTop m₃ := by rw [hdq]; rfl
-  have hsz₃ : (m₃.arr64 EREC).size = (m.arr64 EREC).size := by rw [hE₃, hgr₂.2.2, hE₁]
+  have hsz₃ : (m₃.arr64 EREC).size = (m.arr64 EREC).size := by rw [hE₃, hgr₂.size, hE₁]
   have h6 : (6 : Word).toNat = 6 := rfl
   rw [h6] at hd6 hroom
   obtain ⟨hlt, w0, w1, w2, w3, w4, w5, hag, hsz₅, hf₅⟩ := vgStore_facts hW₅ (by omega)
@@ -759,9 +759,9 @@ theorem vg_rel (n : Nat) (m : Mem) (a : AState) (pm₀ : PMemo) (g vis : Word) (
     simp only [Option.bind_some, hn0]
     rw [show (decI (c.tail.tail.tail.headD 0) : EIdx) = cv'.type from ht3]
     rfl
-  · have := hgr₂.1
+  · have := hgr₂.top
     refine ⟨by rw [ht₅, ht₃]; rw [ht₁] at this; omega, fun i hi => ?_, by rw [hsz₅, hE₄, hsz₃]⟩
-    rw [hag i (by rw [hdv, ht₃]; omega), hE₄, hE₃, hgr₂.2.1 i (by rw [ht₁]; exact hi), hE₁]
+    rw [hag i (by rw [hdv, ht₃]; omega), hE₄, hE₃, hgr₂.get i (by rw [ht₁]; exact hi), hE₁]
   · exact ((((hf₁.mono (by simp) (by simp)).trans (hfr₂.mono (by simp) (by simp))).trans (hfr₃.mono (fun _ h => List.mem_cons_of_mem _ h)
       (by simp))).trans ((MemFrame.setCtl m₃ 129 _).mono (by simp) (by simp))).trans
       (hf₅.mono (by simp) (by simp))

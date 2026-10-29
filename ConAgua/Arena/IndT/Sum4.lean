@@ -109,7 +109,7 @@ theorem ctl_ref (hP : SumProg p) (m : Nat) (hn : m + 1 ≤ 2 ^ 62) (m0 : Mem)
       (fun v x a' => CtlPost dn vis fe env m0 a cvCa v.1 v.2 x a') := by
   rw [ctlE.arm1]
   have hS := hC.stage
-  have hv := hS.1.env.vis
+  have hv := hS.check.env.vis
   unfold cscTailT
   rcases h1 : callW p m "open_pis_at_fvars_f" [nF, cqB, nP] m0 with _ | ⟨rx, m1⟩
   · rw [liftE_none, ctlE.k_open_pis_at_fvars_f.none]; exact RefE.of_cls0 (by simp)

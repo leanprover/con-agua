@@ -55,7 +55,7 @@ theorem bct_ref (hD : DmProg6 p) (nm : Word) :
     (bct_specW p hD.lBoolCtorTyped (k + 1) · vis nm) hcall
   rw [dmBctW.arm1] at hw
   replace hw := ntBW_some hw; obtain ⟨rf, m1, h1, hw⟩ := hw
-  obtain ⟨hm1, hfd⟩ := envFind_call hD.toDmProg5.toMasterProg nm hn hS.1.env h1
+  obtain ⟨hm1, hfd⟩ := envFind_call hD.toDmProg5.toMasterProg nm hn hS.check.env h1
   subst hm1
   cases hf : fe.find? (decI nm) with
   | none =>
@@ -115,7 +115,7 @@ theorem internSort_ref (hM : MasterProg p) (u : Word) (hu : H u) :
   refine triple_post (internSort_spec p hM.lSortFind hM.lSortPush hM.lInternSort n s₀ u) ?_
   rintro r s' ⟨hl, hI⟩
   obtain ⟨a', hrun, hS', hg⟩ := internSort_stage hS u hu hI
-  exact ⟨hl, decE (r.headD 0), a', hrun, hS', hg, consInternM_lt sortCS_wf hS.1.arena.base.sort hI, rfl⟩
+  exact ⟨hl, decE (r.headD 0), a', hrun, hS', hg, consInternM_lt sortCS_wf hS.check.arena.base.sort hI, rfl⟩
 
 theorem tps_ref (hD : DmProg6 p) (nm : Word) :
     CallRef p "type_pin_stored" [vis, nm] (fun m a => StageR dn vis fe m a ∧ H nm)
@@ -125,7 +125,7 @@ theorem tps_ref (hD : DmProg6 p) (nm : Word) :
     (tps_specW p hD.lTypePinStored (k + 1) · vis nm) hcall
   rw [dmTpsW.arm1] at hw
   replace hw := ntBW_some hw; obtain ⟨rf, m1, h1, hw⟩ := hw
-  obtain ⟨hm1, hfd⟩ := envFind_call hD.toDmProg5.toMasterProg nm hn hS.1.env h1
+  obtain ⟨hm1, hfd⟩ := envFind_call hD.toDmProg5.toMasterProg nm hn hS.check.env h1
   subst hm1
   cases hf : fe.find? (decI nm) with
   | none =>

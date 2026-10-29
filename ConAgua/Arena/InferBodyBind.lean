@@ -161,7 +161,7 @@ theorem lamsOut_ref (p : Prog) (hp : InferLeafProg p) (hab : AbstractRangeOK p)
     · rw [liftE_none, ilfE.k_ar_entry_2.eq_1]; exact RefE.of_cls0 (by simp)
     rw [liftE_some, ilfE.k_ar_entry_2.eq_2]
     have h₁ := CoreSpec.of_callW (hab k ⟨m, Locals.init []⟩ a dn vis fe M eb _ d (n - 1) 0 hS hwj) h1
-    have hK₁ := h₁.2.1.bkept
+    have hK₁ := h₁.after.bkept
     have hsz := hcap _ _ _ _ _ _ _ hS
     refine RefE.bind_core (w := fun (v : Word × Mem) => ([v.1], v.2)) h₁ (fun M₁ hS₁ _ => ?_)
     rcases h2 : callW p k "mk_forall" [r₁.headD 0, cur] m₁ with _ | ⟨r₂, m₂⟩
@@ -210,31 +210,31 @@ theorem ilf_ref (p : Prog) (hp : InferLeafProg p)
   · rw [liftE_none]; exact RefE.of_cls0 (by simp)
   rw [liftE_some]; simp only [ilfE.k_inst_list]
   have h₁ := CoreSpec.of_callW (hil n s₀ a₀ dn vis fe M eb t fo k 0 fvs hS ht hf hftop) h1
-  have hK₁ := h₁.2.1.bkept
+  have hK₁ := h₁.after.bkept
   refine RefE.bind_core (w := id) h₁ (fun M₁ hS₁ _ => ?_)
   have hs₁ : SlotPre ⟨m₁, Locals.init []⟩ _ dn vis fe M₁ eb mode := ⟨hS₁, hs.mode4, hs.eb_mode⟩
   rcases h2 : callE p n "infer" [mode, vis, d + k, r₁.headD 0] m₁ with e2 | ⟨r₂, m₂⟩
   · exact RefE.bind_left fun hG => CoreSpecE.of_callE (s₀ := ⟨m₁, Locals.init []⟩)
       ((hG.knot n (Nat.le_refl _)).infer F _ _ dn vis fe M₁ eb mode (d + k) (r₁.headD 0) hF hn hs₁
-        h₁.2.2.2) h2
+        h₁.resOk) h2
   have h₂ := CoreSpec.of_callW ((hk n (Nat.le_refl _)).infer F ⟨m₁, Locals.init []⟩ _ dn vis fe M₁ eb
-    mode (d + k) (r₁.headD 0) hF hn hs₁ h₁.2.2.2) (callW_of_callE h2)
-  have hK₂ := h₂.2.1.bkept
+    mode (d + k) (r₁.headD 0) hF hn hs₁ h₁.resOk) (callW_of_callE h2)
+  have hK₂ := h₂.after.bkept
   refine RefE.bind_core (w := id) h₂ (fun M₂ hS₂ _ => ?_)
   simp only [ilfE.k_infer]
   rcases h3 : callW p n "ar_entry" [r₂.headD 0, d, k, 0] m₂ with _ | ⟨r₃, m₃⟩
   · rw [liftE_none]; exact RefE.of_cls0 (by simp)
   rw [liftE_some]; simp only [ilfE.k_ar_entry]
   have h₃ := CoreSpec.of_callW (hab n ⟨m₂, Locals.init []⟩ _ dn vis fe M₂ eb (r₂.headD 0) d k 0 hS₂
-    h₂.2.2.2) h3
-  have hK₃ := h₃.2.1.bkept
+    h₂.resOk) h3
+  have hK₃ := h₃.after.bkept
   refine RefE.bind_core (w := id) h₃ (fun M₃ hS₃ _ => ?_)
   have hB₁ := hB.keep hK₁ hbtop hsz
   have hB₂ := hB₁.keep hK₂ (by rw [hK₁.1]; exact hbtop) (by rw [hK₁.2.1]; exact hsz)
   have hB₃ := hB₂.keep hK₃ (by rw [hK₂.1, hK₁.1]; exact hbtop)
     (by rw [hK₂.2.1, hK₁.2.1]; exact hsz)
   have hL := lamsOut_ref p hp hab hcap dn vis fe eb d lo k ws hws (G := InferG p n) (n + 1) m₃ _ M₃ k
-    (r₃.headD 0) hS₃ h₃.2.2.2 hB₃ (Nat.le_refl _) (by rw [hK₃.1, hK₂.1, hK₁.1]; exact hbtop)
+    (r₃.headD 0) hS₃ h₃.resOk hB₃ (Nat.le_refl _) (by rw [hK₃.1, hK₂.1, hK₁.1]; exact hbtop)
   rcases hl : ilfE.loop1 p (n + 1) m₃ d lo (r₃.headD 0) k with e4 | ⟨cur, m₄⟩
   · rw [hl] at hL; exact hL
   rw [hl] at hL

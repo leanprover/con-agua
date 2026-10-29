@@ -170,7 +170,7 @@ theorem ex_ref (p : Prog) (hc : StuckCallees p) (n : Nat)
     refine RefE.bind_core (w := id) h₂ (fun M₂ hS₂ _ => ?_)
     by_cases f2 : r₂.headD 0 ≠ 0
     · rw [ite_eq_left f2, decOptR_someS f2]
-      exact hdef _ m₂ M₂ _ _ hS₂ h₁.2.2.2.2 h₂.2.2.2.2
+      exact hdef _ m₂ M₂ _ _ hS₂ h₁.resOk.2 h₂.resOk.2
     · rw [ite_eq_right f2, decOptR_noneS (by simpa using f2)]
       exact hdef _ m₂ M₂ _ _ hS₂ ha hb
   · rw [ite_eq_right f1, decOptR_noneS (by simpa using f1)]

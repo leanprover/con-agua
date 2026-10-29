@@ -947,7 +947,7 @@ theorem pdW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n
       by_cases hev : eViewW m e = []
       · rw [pdW_ev n m xo xl e hxl (by simpa using hf) hev] at h; simp at h
       rw [pdW_cons n m xo xl e hxl (by simpa using hf) hev] at h
-      obtain ⟨v, hv, hR⟩ := eViewW_ok m a hS.1.arena.base e hev
+      obtain ⟨v, hv, hR⟩ := eViewW_ok m a hS.check.arena.base e hev
       have hhead := eViewW_head6 m e hev hf6
       have hdec : ∃ ty b : EIdx, v = .forallE ty b ∧ (eViewW m e).tail.headD 0 = (eViewW m e).getD 1 0 ∧
           (eViewW m e).tail.tail.headD 0 = (eViewW m e).getD 2 0 ∧

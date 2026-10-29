@@ -261,7 +261,7 @@ theorem entryW_ok {dn : NIdx → Option ConLeche.Name} {fe : IFEnv} {vis : Word}
         | cons g vt =>
           have hne : eViewW m2 (r2.headD 0) ≠ [] := by rw [hvl]; simp
           rw [hvl] at h
-          obtain ⟨v, hv, hvr⟩ := eViewW_ok m2 a2 hS2.1.arena.base (r2.headD 0) hne
+          obtain ⟨v, hv, hvr⟩ := eViewW_ok m2 a2 hS2.check.arena.base (r2.headD 0) hne
           rw [hvl] at hvr
           have hdE : decE (r2.headD 0) = x2 := hdec2
           have ht : x2.tag = ETag.const := by

@@ -188,7 +188,7 @@ theorem cfb_ref {p : Prog} (hcl : CoreStageClosed p) (hLC : LvlCacheProg p)
   have hzp : rz.headD 0 = pinW m 53 := by
     simp only [pinWordV, hpne, ite_false, Option.some.injEq] at hz'
     rw [← hz']; rfl
-  have hF := hS.1.pins.full hpne
+  have hF := hS.check.pins.full hpne
   obtain ⟨lz, hdz⟩ := hC.stageT.twin.den.zero
   rw [hF.zeroLevel, ← hzp] at hdz
   refine RefE.bind_right hrun0 ?_

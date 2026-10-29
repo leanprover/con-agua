@@ -125,8 +125,8 @@ theorem tkh_ref (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState} {q fto ftl 
   · rw [tkhE.k_get_app_fn_f_2.arm4 (hc1 := t1') (hc2 := t2') (hc3 := v1) (hc4 := v2)]
     exact RefE.of_cls0 (by simp)
   rw [tkhE.k_get_app_fn_f_2.arm5 (hc1 := t1') (hc2 := t2') (hc3 := v1) (hc4 := v2)]
-  obtain ⟨vr1, hipH, husH⟩ := viewConstW hS2.1.arena.base v1 t1'
-  obtain ⟨vr2, hiiH, -⟩ := viewConstW hS2.1.arena.base v2 t2'
+  obtain ⟨vr1, hipH, husH⟩ := viewConstW hS2.check.arena.base v1 t1'
+  obtain ⟨vr2, hiiH, -⟩ := viewConstW hS2.check.arena.base v2 t2'
   generalize hip : (eViewW m2 (rl.headD 0)).tail.headD 0 = ip at vr1 hipH ⊢
   generalize hus : (eViewW m2 (rl.headD 0)).tail.tail.headD 0 = usp at vr1 husH ⊢
   generalize hii : (eViewW m2 (rm.headD 0)).tail.headD 0 = ii at vr2 hiiH ⊢

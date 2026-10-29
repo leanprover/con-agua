@@ -105,7 +105,7 @@ theorem natEqCtx_ref (hN : NatSubProg' p) (pi d : Word) :
   refine CallRef.of_succ fun k m a r m' ⟨hS, hP, hd⟩ hc => ?_
   have hw := callW_model (M := fun mm => natEqCtxW p (k + 1) mm pi d) (natEqCtx_specW p hN.lNatEqCtx (k + 1) · pi d) hc
   rw [natEqCtxW.arm1] at hw; simp only [pw_fold] at hw
-  have hF := hS.1.pins.full hP.1
+  have hF := hS.check.pins.full hP.1
   have hI := hS.2
   -- pin words at any later memory
   have pwr : ∀ m2, IWGrow m m2 → ∀ j (hj : j < 21), pw m2 pi (UInt64.ofNat j) = (pinRecW m)[j]'(by simp [pinRecW]; omega) :=
@@ -381,7 +381,7 @@ theorem natOpEquations_ref (hN : NatSubProg' p) (d c : Word) :
   refine CallRef.of_succ fun k m a r m' ⟨hS, hd, hc⟩ hw => ?_
   have hw := callW_model (M := fun mm => natOpEquationsW p (k + 1) mm d c) (natOpEquations_specW p hN.toNatSubProg.toNatEqProg.lNatOpEquations (k + 1) · d c) hw
   rw [natOpEquationsW.arm1] at hw
-  have hF := hS.1.pins.full
+  have hF := hS.check.pins.full
   have hGate := hN.toNatSubProg.toNatEqProg.toNatTyProg.toNatGuardProg.toNatLitProg.toNatCvProg.toNatGateProg
   replace hw := ntBW_some hw; obtain ⟨rp, m1, h1, hw⟩ := hw
   obtain ⟨h0, hrec, hpins, hrp⟩ := natOpPins_fref hGate k m rp m1 hS.2 h1

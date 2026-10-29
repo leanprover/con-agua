@@ -102,7 +102,7 @@ theorem famW_ok {p : Prog} (h : StdProg p) {dn : NIdx → Option ConLeche.Name} 
   simp only [hb2, Bool.not_true, Bool.false_eq_true, ite_false]
   -- the second clause
   rcases e3 : pinAtW m2 s2 with _ | ⟨r3, m3⟩ <;> simp only [e3, famW.k_pin_at_2, reduceCtorEq] at hW
-  obtain ⟨hm3, hr3, hl3, hrun3⟩ := pinAtW_ok e3 hS2.1.pins
+  obtain ⟨hm3, hr3, hl3, hrun3⟩ := pinAtW_ok e3 hS2.check.pins
   rw [hm3, hr3] at hW
   simp only [List.headD_cons] at hW
   simp only [StateT.run_bind, hrun3, exc_ok_bind']
@@ -119,7 +119,7 @@ theorem famW_ok {p : Prog} (h : StdProg p) {dn : NIdx → Option ConLeche.Name} 
   simp only [hb4, Bool.not_true, Bool.false_eq_true, ite_false]
   -- the third clause
   rcases e5 : pinAtW m4 s3 with _ | ⟨r5, m5⟩ <;> simp only [e5, famW.k_pin_at_3, reduceCtorEq] at hW
-  obtain ⟨hm5, hr5, hl5, hrun5⟩ := pinAtW_ok e5 hS4.1.pins
+  obtain ⟨hm5, hr5, hl5, hrun5⟩ := pinAtW_ok e5 hS4.check.pins
   rw [hm5, hr5] at hW
   simp only [List.headD_cons] at hW
   simp only [StateT.run_bind, hrun5, exc_ok_bind']

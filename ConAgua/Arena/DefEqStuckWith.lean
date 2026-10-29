@@ -281,7 +281,7 @@ theorem sect_ref (p : Prog) (hi : IotaProg' p) (hc : StuckCallees p)
   · rw [liftE_none, sectE.k_lvls_eq_c.none]; exact RefE.of_cls0 (by simp)
   rw [liftE_some]
   have h₁ := CoreSpec.of_callW (hc.lvlsEqC n s₀ a₀ dn vis fe M eb us us2 hs.rel hus hus2 hdus hdus2) c1
-  obtain ⟨_, _, _, hst₁⟩ := h₁.2.1
+  obtain ⟨_, _, _, hst₁⟩ := h₁.after
   unfold setTailT
   refine RefE.bind_growK (w := id) h₁ (fun M₁ hS₁ _ => ?_)
   simp only [sectE.k_lvls_eq_c]
@@ -326,7 +326,7 @@ theorem sect_ref (p : Prog) (hi : IotaProg' p) (hc : StuckCallees p)
     mode d ao tk to tn _ targs ⟨hS₁, hs.mode4, hs.eb_mode⟩ htake htp₁
     (by rw [htop₁]; omega) (by rw [htop₁]; exact htt)) (callW_of_callE c2)
   rw [etake] at h₂
-  obtain ⟨_, _, _, hst₂⟩ := h₂.2.1
+  obtain ⟨_, _, _, hst₂⟩ := h₂.after
   refine RefE.bind_growK (w := id) h₂ (fun M₂ hS₂ _ => ?_)
   simp only [sectE.k_defeq_lst]
   by_cases h20 : r₂.headD 0 = 0

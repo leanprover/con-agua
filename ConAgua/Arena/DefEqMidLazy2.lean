@@ -95,7 +95,7 @@ theorem ln_ref (p : Prog) (hc : LazyCallees p) (n : Nat)
   refine RefE.bind_core (w := id) e₁ (fun M₁ hS₁ _ => ?_)
   by_cases h1 : r₁.headD 0 ≠ 0
   · simp only [lnE.k_reduce_nat, decOptR_some h1]; rw [ite_eq_left h1]
-    exact dq _ _ _ _ _ hS₁ e₁.2.2.2.2 hb
+    exact dq _ _ _ _ _ hS₁ e₁.resOk.2 hb
   have h1' : r₁.headD 0 = 0 := by simpa using h1
   simp only [lnE.k_reduce_nat, h1', ne_eq, not_true_eq_false, ↓reduceIte, decOptR_none h1']
   rcases c2 : callE p n "reduce_nat" [mode, vis, d, b] m₁ with e2 | ⟨r₂, m₂⟩
@@ -107,7 +107,7 @@ theorem ln_ref (p : Prog) (hc : LazyCallees p) (n : Nat)
   refine RefE.bind_core (w := id) e₂ (fun M₂ hS₂ _ => ?_)
   by_cases h2 : r₂.headD 0 ≠ 0
   · simp only [lnE.k_reduce_nat_2, decOptR_some h2]; rw [ite_eq_left h2]
-    exact dq _ _ _ _ _ hS₂ ha e₂.2.2.2.2
+    exact dq _ _ _ _ _ hS₂ ha e₂.resOk.2
   have h2' : r₂.headD 0 = 0 := by simpa using h2
   simp only [lnE.k_reduce_nat_2, h2', ne_eq, not_true_eq_false, ↓reduceIte, decOptR_none h2']
   exact RefE.ret rfl (CorePost.ret hS₂ (by simp only [decNat]; rfl) (.inr (.inr rfl)))
@@ -417,7 +417,7 @@ theorem lazy_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n 
     have e := CoreSpec.of_callW (s₀ := ⟨m, Locals.init []⟩)
       (lazyIter_refines p hp hc j' (hk.mono (by omega)) F (by omega) (by omega) _ s dn vis fe M eb mode
         d a b ⟨hS, hmode, heb⟩ ha hb hd) (callW_of_callE hc1)
-    obtain ⟨g0, hr1, hr2⟩ := e.2.2.2
+    obtain ⟨g0, hr1, hr2⟩ := e.resOk
     refine RefE.bind_core (w := id) e (fun M₁ hS₁ _ => ?_)
     by_cases h3 : r.headD 0 ≠ 3
     · rw [ldrE.k_lazy_iter.arm1 (hc1 := h3), decIter_done h3]
