@@ -240,10 +240,6 @@ theorem Inv.ofE {G : Layout} (hG : G.Ok) {ctx : Ctx} {F t : Nat} {σ : St} {s s'
     hE.keep r (allocRegs_ne hr).1 (allocRegs_ne hr).2.1 (allocRegs_ne hr).2.2.1)
     fun _ => rsi_of_get64 (hE.keep .rsi (by decide) (by decide) (by decide))
 
-theorem slot_addr (s : MachineData) (j : Nat) (off : Int) (h : off = 8 * (j : Int)) :
-    A ((s.regs.get64 .rsp).toNat + off.toNat) = A (s.regs.rsp.toNat + 8 * j) := by
-  subst h; simp only [Reg64s.get64_rsp, UInt64.toNat_toBitVec]; congr 1; (try omega)
-
 theorem Inv.mapped {G : Layout} {ctx : Ctx} {F : Nat} {σ : St} {s : MachineData} (hI : Inv G ctx F σ s) {j : Nat}
     (hj : j ≤ F) : (rdW s.dmem (A (s.regs.rsp.toNat + 8 * j))).isSome :=
   isSome_rdW fun i hi => by

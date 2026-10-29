@@ -177,6 +177,19 @@ bounds). -/
 def Mem.set32 (m : Mem) (s : TieredArray) (i v : Word) : Mem :=
   m.set64 s (i / 2) (setHalf32 ((m.arr64 s).getD (i / 2).toNat 0) i v)
 
+/-- `setHalf32` reads only the low 32 bits of the value. -/
+theorem setHalf32_mod (w i v : Word) : setHalf32 w i (UInt64.ofNat (v.toNat % 4294967296)) = setHalf32 w i v := by
+  apply UInt64.toNat_inj.mp
+  rw [setHalf32_toNat, setHalf32_toNat]
+  have := v.toNat_lt
+  simp only [UInt64.toNat_ofNat', Nat.mod_mod_of_dvd _ (show 4294967296 ∣ 2 ^ 64 by decide), Nat.mod_mod]
+
+/-- In bounds, the 32-bit store is the word store of the word with its half replaced. -/
+theorem Mem.set32_eq (m : Mem) (s : TieredArray) (i v : Word) (h : (i / 2).toNat < (m.arr64 s).size) :
+    m.set32 s i v = m.set64 s (i / 2) (setHalf32 (m.arr64 s)[(i / 2).toNat] i v) := by
+  have h' : i.toNat / 2 < (m.arr64 s).size := by simpa [UInt64.toNat_div] using h
+  simp [Mem.set32, Array.getD, h']
+
 /-- Global `g` set to `v`. -/
 def Mem.setG (m : Mem) (g : GVar) (v : Word) : Mem :=
   { m with glob := fun h => if h = g then v else m.glob h }

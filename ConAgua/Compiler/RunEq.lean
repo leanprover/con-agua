@@ -98,6 +98,36 @@ theorem step_st64t_run (a : ArrId) (t i e : Expr) :
         · simp [h, StateT.run, bind, Except.bind, Except.pure,
             pure, throw, throwThe, MonadExceptOf.throw, StateT.lift]
 
+theorem step_st32t_run (a : ArrId) (t i e : Expr) :
+    stepRun p K (.st32t a t i e) σ =
+      match evalP σ t with
+      | .error x => .error x
+      | .ok u =>
+        match evalP σ i with
+        | .error x => .error x
+        | .ok j =>
+          match evalP σ e with
+          | .error x => .error x
+          | .ok v => if (j / 2).toNat < (σ.mem.arr64 (tierA a u)).size then
+              .ok (.normal, { σ with mem := σ.mem.set32 (tierA a u) j v })
+            else .error .oob := by
+  unfold stepRun
+  simp only [step, StateT.run_bind, evalE_run]
+  rcases evalP σ t with x | u
+  · rfl
+  · simp only [Except.map, bind, Except.bind]
+    rcases evalP σ i with x | j
+    · rfl
+    · simp only
+      rcases evalP σ e with x | v
+      · rfl
+      · simp only [L.st32, StateT.run_bind, StateT.run_get]
+        by_cases h : j.toNat / 2 < (σ.mem.arr64 (tierA a u)).size
+        · simp [h, StateT.run, set, MonadStateOf.set,
+            StateT.set, pure, StateT.pure, bind, Except.bind, Except.pure]
+        · simp [h, StateT.run, bind, Except.bind, Except.pure,
+            pure, throw, throwThe, MonadExceptOf.throw, StateT.lift]
+
 /-! ## Blocks (lane blkcopy) -/
 
 /-- `warr`, without the state. -/
@@ -290,6 +320,15 @@ theorem evalP_error {σ : St} {e : Expr} {x : Err} (h : evalP σ e = .error x) :
       · cases h
       · cases h; rfl
   | ld64t _ t i iht ihi =>
+    simp only [evalP, bind, Except.bind] at h
+    split at h
+    · rename_i he; cases h; exact iht he
+    · split at h
+      · rename_i he; cases h; exact ihi he
+      · split at h
+        · cases h
+        · cases h; rfl
+  | ld32t _ t i iht ihi =>
     simp only [evalP, bind, Except.bind] at h
     split at h
     · rename_i he; cases h; exact iht he
