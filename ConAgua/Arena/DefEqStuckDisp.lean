@@ -309,8 +309,8 @@ l_model dsE_spec (p : Prog) (hf : p.lookup "defeq_stuck" = some defeqStuckL)
   specs [callW_spec p n "e_view", strE_spec p hstr hi hc hw hb hg ht hu hh hut n,
     saE_spec p hsa hac hi hc hw hb hg ht hu hh hut n, drE_spec p hdr hi hc hw hb hg ht hu hh hut he heb het n]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] unified
-  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] unified
+  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem] flat
 
 theorem ite_ite_neg {α : Type} {c d : Prop} [Decidable c] [Decidable d] {x y : α} (h : ¬ (c ∧ d)) :
     (if c then (if d then x else y) else y) = y := by

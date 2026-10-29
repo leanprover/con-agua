@@ -323,7 +323,7 @@ l_model ppE_spec (p : Prog) (hf : p.lookup "defeq_proj_pair" = some defeqProjPai
   fns [hf ↦ ppE list]
   specs [ldpr_specE p hl n]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] unified
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] unified flat
 
 section ppRuns
 variable (mode : ConLeche.CheckMode) (r : CoreFnsA) (fe : IFEnv) (depth : Nat) (a b : EIdx)
