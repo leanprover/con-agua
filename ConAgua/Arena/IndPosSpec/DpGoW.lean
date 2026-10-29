@@ -128,7 +128,7 @@ theorem StageR.alloc {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFE
     {m m1 : Mem} {k q : Word} (hS : StageR dn vis fe m a) (h : allocW m k = some (q, m1)) :
     StageR dn vis fe m1 a ∧ IWGrow m m1 ∧ q = rdW (m.arr64 CTL) 200 ∧ q.toNat + k.toNat ≤ (m.arr64 IW).size ∧
       iwTop m1 = q.toNat + k.toNat := by
-  obtain ⟨h1, h2, h3, h4, h5⟩ := hS.2
+  obtain ⟨h1, h2, h3, h4, h5⟩ := hS.iw
   obtain ⟨hq, hm1, hroom⟩ := allocW_facts h h3
   subst hm1
   have hf := allocMem_frame m k
@@ -138,7 +138,7 @@ theorem StageR.alloc {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFE
     rw [UInt64.toNat_add]; exact Nat.mod_eq_of_lt (by omega)
   have h129 : rdW ((allocMem m k).arr64 CTL) 129 = rdW (m.arr64 CTL) 129 := hf.ctl 129 (by simp)
   have hE : (allocMem m k).arr64 EREC = m.arr64 EREC := hf.1 EREC (by simp [EREC, IW]) (by decide)
-  refine ⟨⟨CheckR.frame_iw hf hS.1, ?_, ?_, ?_, ?_, ?_⟩, allocMem_grow m k (by omega) h5, hq, hroom, htop⟩
+  refine ⟨⟨CheckR.frame_iw hf hS.check, ?_, ?_, ?_, ?_, ?_⟩, allocMem_grow m k (by omega) h5, hq, hroom, htop⟩
   · rw [htop, hf.size IW]; exact hroom
   · simp only [erTop, h129, hE]; exact h2
   · rw [hf.size IW]; exact h3

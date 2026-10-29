@@ -113,11 +113,11 @@ theorem sut_ref (p : Prog) (n : Nat) (hk : KnotUpTo p n) (F : Nat)
   rcases c2 : callE p n "whnf" [mode, vis, d, r₁.headD 0] m₁ with e2 | ⟨r₂, m₂⟩
   · exact fun hkE => ErrClaim.bind_left (CoreSpecE.of_callE (s₀ := ⟨m₁, Locals.init []⟩)
       ((hkE n (Nat.le_refl _)).whnf F _ _ dn vis fe M₁ eb mode d _ hF hn ⟨hS₁, hs.mode4, hs.eb_mode⟩
-        h₁.2.2.2) c2)
+        h₁.resOk) c2)
   have h₂ := CoreSpec.of_callW (s₀ := ⟨m₁, Locals.init []⟩) (hK.whnf F _ _ dn vis fe M₁ eb mode d
-    (r₁.headD 0) hF hn ⟨hS₁, hs.mode4, hs.eb_mode⟩ h₁.2.2.2) (callW_of_callE c2)
+    (r₁.headD 0) hF hn ⟨hS₁, hs.mode4, hs.eb_mode⟩ h₁.resOk) (callW_of_callE c2)
   refine RefE.bind_core (w := id) h₂ (fun M₂ hS₂ _ => ?_)
-  have hh2 : HW (r₂.headD 0) := h₂.2.2.2
+  have hh2 : HW (r₂.headD 0) := h₂.resOk
   simp only [sutE.k_whnf, isForallE, decH, tag_beq_w _ hh2 6 (by decide) ETag.forallE rfl 6 rfl]
   by_cases h6 : r₂.headD 0 >>> 28 = 6
   · simp only [h6, decide_true, ↓reduceIte]
@@ -149,7 +149,7 @@ theorem suh_ref (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (n : Nat)
       (suHeadT (coreKnot (decMode mode) fe id F) fe d.toNat (decE b) (decE wta)) a₀
       (CorePost decBool dn s₀.mem vis fe M eb ResH) := by
   have hS := hs.rel
-  have hR := hS.arena.1
+  have hR := hS.arena.base
   simp only [suhE]
   rcases c1 : callW p n "get_app_fn" [wta] s₀.mem with _ | ⟨r₁, m₁⟩
   · rw [liftE_none, suhE.k_get_app_fn.none]; exact RefE.of_cls0 (by simp)
@@ -216,7 +216,7 @@ theorem suh_ref (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (n : Nat)
       us2) c4
   have em₄ : m₄ = m₃.set64 CTL 136 (rdW (s₀.mem.arr64 CTL) 136) := by rw [← ht₄, ht₄s]
   rw [hr₄] at hne
-  have hvl := defeq_lsNodeW_viewLen hS₃.arena.1 huw hne
+  have hvl := defeq_lsNodeW_viewLen hS₃.arena.base huw hne
   rw [← hr₄] at hvl
   subst em₄
   simp only [suhE.k_ls_node]
@@ -296,9 +296,9 @@ theorem suc_ref (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (n : Nat)
   rcases c2 : callE p n "whnf" [mode, vis, d, r₁.headD 0] m₁ with e2 | ⟨r₂, m₂⟩
   · exact fun hkE => ErrClaim.bind_left (CoreSpecE.of_callE (s₀ := ⟨m₁, Locals.init []⟩)
       ((hkE n (Nat.le_refl _)).whnf F _ _ dn vis fe M₁ eb mode d _ hF hn ⟨hS₁, hs.mode4, hs.eb_mode⟩
-        h₁.2.2.2) c2)
+        h₁.resOk) c2)
   have h₂ := CoreSpec.of_callW (s₀ := ⟨m₁, Locals.init []⟩) (hK.whnf F _ _ dn vis fe M₁ eb mode d
-    (r₁.headD 0) hF hn ⟨hS₁, hs.mode4, hs.eb_mode⟩ h₁.2.2.2) (callW_of_callE c2)
+    (r₁.headD 0) hF hn ⟨hS₁, hs.mode4, hs.eb_mode⟩ h₁.resOk) (callW_of_callE c2)
   refine RefE.bind_core (w := id) h₂ (fun M₂ hS₂ _ => ?_)
   simp only [sucE.k_whnf]
   cases n with
@@ -307,7 +307,7 @@ theorem suc_ref (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (n : Nat)
   exact RefE.tail_eq (fun _ => rfl) (fun _ => rfl) (fun hkE => hkE.mono (Nat.le_succ N)) rfl
     (fun _ _ _ h => ⟨h.after, h.res, h.valid⟩)
     (suh_ref p hq hc N (hk.mono (Nat.le_succ N)) F ⟨m₂, Locals.init []⟩ _ dn vis fe M₂ eb mode d b
-      (r₂.headD 0) (by omega) (by omega) ⟨hS₂, hs.mode4, hs.eb_mode⟩ hb h₂.2.2.2)
+      (r₂.headD 0) (by omega) (by omega) ⟨hS₂, hs.mode4, hs.eb_mode⟩ hb h₂.resOk)
 
 /-- **`struct_unit_cert` refines `structUnitCert`** at the knot (`suc_ref`'s ok half). -/
 @[refines ConRon.Arena.structUnitCert]

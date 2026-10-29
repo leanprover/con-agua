@@ -66,7 +66,7 @@ theorem appRef_step (L : NbLook p) (n : Nat) (ih : NbRef p dn vis fe env n) : Ap
   intro m a ctx fu po pl kb hi w ns c prog NS ctxP progP wP nsP dep hC hW hhi hw hns hP hA hc hctx hprog
     hwP hnsP hww
   have hS := hC.stage
-  have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
+  have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.iw hS.iw.iwSize
   rw [npaE.arm1]
   -- the arguments
   cases h1 : callE p n "get_app_args_f" [CWF, w] m with
@@ -120,7 +120,7 @@ theorem appRef_step (L : NbLook p) (n : Nat) (ih : NbRef p dn vis fe env n) : Ap
   dsimp only at hrv
   rw [npaE.k_e_view.eq_2, hm3', hrv]
   rw [hrv] at hev
-  obtain ⟨v, hview, hvr⟩ := eViewW_ok m2 a2 hS2.1.arena.1 (rh.headD 0) hev
+  obtain ⟨v, hview, hvr⟩ := eViewW_ok m2 a2 hS2.check.arena.base (rh.headD 0) hev
   have hvrun : (view hd).run a2 = .ok (v, a2) := by rw [← hhdd, ← decE_eq]; exact view_run _ _ _ hview
   refine RefE.bind_right hvrun ?_
   have hargs2 : decHL m2 (ra.headD 0).toNat (ra.tail.headD 0).toNat = some args := by
@@ -135,7 +135,7 @@ theorem appRef_step (L : NbLook p) (n : Nat) (ih : NbRef p dn vis fe env n) : Ap
     dsimp only
     rw [← hi1, pfK_eq]
     have hhi0 : c.hiAt 0 < 2 ^ 64 := by have := hW.hb; simp only [NestCtx.hiAt] at this ⊢; omega
-    have hab2 : (ra.headD 0).toNat + (ra.tail.headD 0).toNat ≤ iwTop m2 := by have := hg2.1; omega
+    have hab2 : (ra.headD 0).toNat + (ra.tail.headD 0).toNat ≤ iwTop m2 := by have := hg2.iw; omega
     have hs := pfvE_spec p L.pf n ⟨m2, Locals.init []⟩ vis ctx po pl kb hi ((eViewW m2 (rh.headD 0)).tail.headD 0)
       (ra.headD 0) (ra.tail.headD 0)
     have hR := pfv_ref (p := p) (k := n) (kb := kb) (hi := hi) (i := (eViewW m2 (rh.headD 0)).tail.headD 0) dn vis fe hS2 (hW.grow hg12).u (hW.grow hg12).hs hhi0 hargs2 hab2 hP2
@@ -166,7 +166,7 @@ theorem appRef_step (L : NbLook p) (n : Nat) (ih : NbRef p dn vis fe env n) : Ap
     rw [pos2_getD2] at husH husd
     obtain ⟨nm, ls, -, hnmP, hlsP⟩ := ConRon.Bridge.denote_const_inv hC.check.state.wf
       (by rw [← hhdd, ← decE_eq]; exact hview) hhdP
-    have htop2 : iwTop m2 < 2 ^ 64 := Nat.lt_of_le_of_lt hS2.2.1 hS2.2.2.2.1
+    have htop2 : iwTop m2 < 2 ^ 64 := Nat.lt_of_le_of_lt hS2.iw.iw hS2.iw.iwSize
     obtain ⟨hn2, hnb2, -, -, -, -⟩ := ctx_fields (hW.grow hg12).u.dec (hW.grow hg12).u.inn htop2
     have hne2 := ctx_names_end (hW.grow hg12).u.dec (hW.grow hg12).u.inn (hW.grow hg12).u.sl htop2
     obtain ⟨ws, hws, hwsd, hwsH⟩ := slR_of_decHL m2 _ _ _ hn2 (by omega)
@@ -205,7 +205,7 @@ theorem appRef_step (L : NbLook p) (n : Nat) (ih : NbRef p dn vis fe env n) : Ap
     have hs := ncE_spec p L.pcont n ⟨m2, Locals.init []⟩ vis ctx fu po pl kb ((eViewW m2 (rh.headD 0)).tail.headD 0)
       ((eViewW m2 (rh.headD 0)).tail.tail.headD 0) (ra.headD 0) (ra.tail.headD 0) ns
     have hR := ih.cont m2 a2 ctx fu po pl kb _ _ _ _ ns c prog args NS ctxP progP nm ls wP.getAppArgs nsP dep hC2
-      (hW.grow hg12) hnH husH hargs2 (by have := hg2.1; omega) (hns.grow hg12 htop) hP2 hA2 hc hctx hprog
+      (hW.grow hg12) hnH husH hargs2 (by have := hg2.iw; omega) (hns.grow hg12 htop) hP2 hA2 hc hctx hprog
       (by rw [hnd]; exact hnmP) (by rw [husd]; exact hlsP) hargsP hnsP (ConLeche.Expr.WScoped.getAppArgs hww)
     rw [hnd, husd] at hR
     cases h5 : callE p n "nest_cont" [vis, ctx, fu, po, pl, kb, (eViewW m2 (rh.headD 0)).tail.headD 0,

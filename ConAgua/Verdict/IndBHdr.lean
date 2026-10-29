@@ -147,10 +147,10 @@ theorem cch_ref {p : Prog} (hApd : ApdF p) (hCrf : CrfF p) {dn : NIdx → Option
   by_cases hb1 : r1.headD 0 ≠ 0
   · rw [classConstOkHeaderE.k_env_find.abort1 _ _ _ _ _ _ _ _ hb1]
     have : (fe.find? cv.name).isSome = true := by
-      rw [hname]; exact envFindW_hitSome h1 hS.stage.1.env hwxl hb1
+      rw [hname]; exact envFindW_hitSome h1 hS.stage.check.env hwxl hb1
     exact fun _ => ErrClaim.ite_pos this (ErrClaim.fail_abort _ _ rfl)
   rw [classConstOkHeaderE.k_env_find.arm1 _ _ _ _ _ _ _ _ (by simpa using hb1)]
-  obtain ⟨hm1, hfind⟩ := envFindW_miss h1 hS.stage.1.env hwxl (by simpa using hb1)
+  obtain ⟨hm1, hfind⟩ := envFindW_miss h1 hS.stage.check.env hwxl (by simpa using hb1)
   rw [hm1]
   have hfind' : (fe.find? cv.name).isSome = false := by rw [hname, hfind]; rfl
   refine RefE.ite_neg (by simp [hfind']) ?_
@@ -160,13 +160,13 @@ theorem cch_ref {p : Prog} (hApd : ApdF p) (hCrf : CrfF p) {dn : NIdx → Option
   rw [liftE_some]
   by_cases hb2 : c ≠ 0
   · rw [classConstOkHeaderE.k_reserved_contains.abort1 _ _ _ _ _ _ _ hb2]
-    obtain ⟨l, hrunR, hcl⟩ := ibResContW_hit hb2 h2 hS.stage.1.pins
+    obtain ⟨l, hrunR, hcl⟩ := ibResContW_hit hb2 h2 hS.stage.check.pins
     refine fun _ => ErrClaim.bind_right hrunR (ErrClaim.ite_pos ?_ (ErrClaim.fail_abort _ _ rfl))
     rw [hname]; exact hcl
   have hc0 : c = 0 := by simpa using hb2
   subst hc0
   rw [classConstOkHeaderE.k_reserved_contains.arm1 _ _ _ _ _ _ _ rfl]
-  obtain ⟨l, hrunR, hcl⟩ := resContW_miss hwxl h2 hS.stage.1.pins
+  obtain ⟨l, hrunR, hcl⟩ := resContW_miss hwxl h2 hS.stage.check.pins
   refine RefE.bind_right hrunR (RefE.ite_neg ?_ ?_)
   · rw [hname, hcl]; decide
   -- `cv_lps(q)`
@@ -297,7 +297,7 @@ theorem cch_ref {p : Prog} (hApd : ApdF p) (hCrf : CrfF p) {dn : NIdx → Option
     · rw [classConstOkHeaderE.k_unresolved_consts_error.eq_1]
       obtain ⟨M9, hC9⟩ := hS9.core
       rw [hty]
-      exact fun hG => uce_errClaim_hi hG.uce hG.nv hC9.arena.1 hC9.pins hwtl (by decide) h10 "type of"
+      exact fun hG => uce_errClaim_hi hG.uce hG.nv hC9.arena.base hC9.pins hwtl (by decide) h10 "type of"
     · rw [classConstOkHeaderE.k_unresolved_consts_error.abort1]
       exact RefE.of_cls0 rfl
   rw [classConstOkHeaderE.k_consts_resolve_ffast.arm2 _ _ _ _ _ _ hb9]

@@ -170,7 +170,7 @@ theorem cfaFv_ok {k : Nat} {m m0 : Mem} {a : AState} {i : Word} {r0 : List Word}
     obtain ⟨s0, rfl, -, hb⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
       (internBVar_spec p P.bf P.bp P.ib k _ 0) h
     obtain ⟨a', hrun, hS', hg⟩ := internBVar_stage hS 0 hb
-    have hH := binternW_hw _ a hS.1.arena.1.bvar _ _ _ hb
+    have hH := binternW_hw _ a hS.check.arena.base.bvar _ _ _ hb
     refine ⟨a', ?_, hH, hS', hg, hP.fr (MFr.of_frame (binternW_frame _ _ _ _ hb) (by simp [tier1, BREC, BSLOT]) (by simp))⟩
     have hge : fvl.toNat ≤ i.toNat := by
       have : ¬ i.toNat < fvl.toNat := fun h => hi (UInt64.lt_iff_toNat_lt.mpr h)

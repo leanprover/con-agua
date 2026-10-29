@@ -153,8 +153,8 @@ theorem natIndOk_ref (hN : NatLitProg p) (found q : Word) (o : Option IConstantI
   refine CallRef.of_succ fun k m a r m' ⟨hS, h0, hfd⟩ hc => ?_
   have hw := callW_model (M := fun mm => natIndOkW p k mm found q) (natIndOk_specW p hN.lNatIndOk k · found q) hc
   unfold natIndOkW at hw
-  have hF := hS.1.pins.full h0
-  have hsz := hS.2.2.2.2.1
+  have hF := hS.check.pins.full h0
+  have hsz := hS.iw.erSize
   cases o with
   | none =>
     simp only [FoundR, decFd] at hfd
@@ -249,8 +249,8 @@ theorem natZeroOk_ref (hN : NatLitProg p) (found q : Word) (o : Option IConstant
   refine CallRef.of_succ fun k m a r m' ⟨hS, h0, hfd⟩ hc => ?_
   have hw := callW_model (M := fun mm => natZeroOkW p k mm found q) (natZeroOk_specW p hN.lNatZeroOk k · found q) hc
   unfold natZeroOkW at hw
-  have hF := hS.1.pins.full h0
-  have hsz := hS.2.2.2.2.1
+  have hF := hS.check.pins.full h0
+  have hsz := hS.iw.erSize
   cases o with
   | none =>
     simp only [FoundR, decFd] at hfd
@@ -358,8 +358,8 @@ theorem natSuccOk_ref (hN : NatLitProg p) (found q : Word) (o : Option IConstant
   refine CallRef.of_succ fun k m a r m' ⟨hS, h0, hfd⟩ hc => ?_
   have hw := callW_model (M := fun mm => natSuccOkW p k mm found q) (natSuccOk_specW p hN.lNatSuccOk k · found q) hc
   unfold natSuccOkW at hw
-  have hF := hS.1.pins.full h0
-  have hsz := hS.2.2.2.2.1
+  have hF := hS.check.pins.full h0
+  have hsz := hS.iw.erSize
   cases o with
   | none =>
     simp only [FoundR, decFd] at hfd
@@ -407,7 +407,7 @@ theorem natSuccOk_ref (hN : NatLitProg p) (found q : Word) (o : Option IConstant
             have hvok : viewOK m2 wt FORALL := ⟨hv1, by
               rw [UInt64.lt_iff_toNat_lt]
               exact Nat.lt_of_not_le (fun e => hv2 (UInt64.le_iff_toNat_le.mpr e))⟩
-            obtain ⟨hview, hdlt, hblt⟩ := view_forall m2 a2 hS2.1.arena.1 wt hlt hvok h6
+            obtain ⟨hview, hdlt, hblt⟩ := view_forall m2 a2 hS2.check.arena.base wt hlt hvok h6
             have hrun : (natSuccOk (some (.ctorInfo cv np nf))).run a =
                 .ok (decide (tfld m2 FORALL (tierW wt) (idxW wt) 0 = r2.headD 0 ∧
                   tfld m2 FORALL (tierW wt) (idxW wt) 1 = r2.headD 0), a2) := by
@@ -498,10 +498,10 @@ theorem natLitSupported_ref (hN : NatLitProg p) :
   replace hw := ntBW_some hw; obtain ⟨r1, m1, h1, hw⟩ := hw
   obtain ⟨hm1, h0, hr1⟩ := pinNat_call hN h1
   rw [hm1] at hw
-  have hF := hS.1.pins.full h0
+  have hF := hS.check.pins.full h0
   have hp1 : H (r1.headD 0) := by rw [hr1]; exact hF.names_lt 1 (by decide)
   replace hw := ntBW_some hw; obtain ⟨rf, m2, h2, hw⟩ := hw
-  obtain ⟨hm2, hfd⟩ := envFind_call hN.toMasterProg (r1.headD 0) hp1 hS.1.env h2
+  obtain ⟨hm2, hfd⟩ := envFind_call hN.toMasterProg (r1.headD 0) hp1 hS.check.env h2
   rw [hm2] at hw
   replace hw := ntBW_some hw; obtain ⟨ri, m3, h3, hw⟩ := hw
   obtain ⟨x1, a1, hrun1, hS1, hg1, hx1⟩ := natIndOk_ref (dn := dn) (vis := vis) (fe := fe) hN
@@ -529,10 +529,10 @@ theorem natLitSupported_ref (hN : NatLitProg p) :
     replace hw := ntBW_some hw; obtain ⟨r4, m4, h4, hw⟩ := hw
     obtain ⟨hm4, h0', hr4⟩ := pinAt_call hN.lPinAt (j := 3) rfl h4
     rw [hm4] at hw
-    have hF3 := hS1.1.pins.full h0'
+    have hF3 := hS1.check.pins.full h0'
     have hp4 : H (r4.headD 0) := by rw [hr4]; exact hF3.names_lt 2 (by decide)
     replace hw := ntBW_some hw; obtain ⟨rg, m5, h5, hw⟩ := hw
-    obtain ⟨hm5, hfd2⟩ := envFind_call hN.toMasterProg (r4.headD 0) hp4 hS1.1.env h5
+    obtain ⟨hm5, hfd2⟩ := envFind_call hN.toMasterProg (r4.headD 0) hp4 hS1.check.env h5
     rw [hm5] at hw
     replace hw := ntBW_some hw; obtain ⟨rz, m6, h6, hw⟩ := hw
     obtain ⟨x2, a2, hrun2, hS2, hg2, hx2⟩ := natZeroOk_ref (dn := dn) (vis := vis) (fe := fe) hN
@@ -561,10 +561,10 @@ theorem natLitSupported_ref (hN : NatLitProg p) :
       replace hw := ntBW_some hw; obtain ⟨r7, m7, h7, hw⟩ := hw
       obtain ⟨hm7, h0'', hr7⟩ := pinAt_call hN.lPinAt (j := 4) rfl h7
       rw [hm7] at hw
-      have hF6 := hS2.1.pins.full h0''
+      have hF6 := hS2.check.pins.full h0''
       have hp7 : H (r7.headD 0) := by rw [hr7]; exact hF6.names_lt 3 (by decide)
       replace hw := ntBW_some hw; obtain ⟨rh, m8, h8, hw⟩ := hw
-      obtain ⟨hm8, hfd3⟩ := envFind_call hN.toMasterProg (r7.headD 0) hp7 hS2.1.env h8
+      obtain ⟨hm8, hfd3⟩ := envFind_call hN.toMasterProg (r7.headD 0) hp7 hS2.check.env h8
       rw [hm8] at hw
       replace hw := ntBW_some hw; obtain ⟨rs, m9, h9, hw⟩ := hw
       simp only [Option.some.injEq, Prod.mk.injEq] at hw

@@ -208,8 +208,8 @@ theorem StageR.set_iw {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IF
   have hf := set64IW_frame m p x
   have hC : (m.set64 IW p x).arr64 CTL = m.arr64 CTL := Mem.arr64_set64_ne _ _ _ _ _ (by decide)
   have hE : (m.set64 IW p x).arr64 EREC = m.arr64 EREC := Mem.arr64_set64_ne _ _ _ _ _ (by decide)
-  refine ⟨CheckR.frame_iw hf hS.1, ?_⟩
-  obtain ⟨h1, h2, h3, h4, h5⟩ := hS.2
+  refine ⟨CheckR.frame_iw hf hS.check, ?_⟩
+  obtain ⟨h1, h2, h3, h4, h5⟩ := hS.iw
   have hI := hf.size IW
   refine ⟨?_, ?_, ?_, ?_, ?_⟩
   · simp only [iwTop, hC, hI]; exact h1
@@ -223,14 +223,14 @@ theorem StageR.set_top {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : I
     StageR dn vis fe (m.set64 CTL 200 o) a ∧ iwTop (m.set64 CTL 200 o) = o.toNat := by
   have hf : MemFrame [IW] [200] m (m.set64 CTL 200 o) :=
     MemFrame.mono (MemFrame.setCtl m 200 o) (by simp) (by simp)
-  obtain ⟨h1, h2, h3, h4, h5⟩ := hS.2
+  obtain ⟨h1, h2, h3, h4, h5⟩ := hS.iw
   have ht : iwTop (m.set64 CTL 200 o) = o.toNat := by
     simp only [iwTop, rdW_set64]
     have h200 : UInt64.toNat 200 < (m.arr64 CTL).size := by simpa using h5
     rw [ite_eq_left ⟨trivial, trivial, h200⟩]
   have h129 : rdW ((m.set64 CTL 200 o).arr64 CTL) 129 = rdW (m.arr64 CTL) 129 := hf.ctl 129 (by simp)
   have hE : (m.set64 CTL 200 o).arr64 EREC = m.arr64 EREC := hf.arr EREC (by simp [EREC, IW]) (by decide)
-  refine ⟨⟨CheckR.frame_iw hf hS.1, ?_, ?_, ?_, ?_, ?_⟩, ht⟩
+  refine ⟨⟨CheckR.frame_iw hf hS.check, ?_, ?_, ?_, ?_, ?_⟩, ht⟩
   · rw [ht, hf.size IW]; omega
   · simp only [erTop, h129, hE]; exact h2
   · rw [hf.size IW]; exact h3
@@ -337,9 +337,9 @@ theorem stripGoW_ok : ∀ (f : Nat) (m m' : Mem) (n h : Word) (r : List Word),
   | some qm =>
   obtain ⟨q, m1⟩ := qm
   rw [stripGoW_step tg k o f m m1 n h q hn hg hv ha] at hm
-  obtain ⟨hvr, hty, hb⟩ := hvb m a h hS.1.arena.1 hh hv hg'
+  obtain ⟨hvr, hty, hb⟩ := hvb m a h hS.check.arena.base hh hv hg'
   obtain ⟨hS1, hgr1, hq, ht1⟩ := allocW_stage ha hS
-  obtain ⟨-, rfl, hroom⟩ := allocW_facts ha hS.2.2.2.1
+  obtain ⟨-, rfl, hroom⟩ := allocW_facts ha hS.iw.iwSize
   have hS2 := hS1.set_iw q ((eViewW m h).tail.headD 0)
   have ht2 : iwTop ((allocMem m 1).set64 IW q ((eViewW m h).tail.headD 0)) = iwTop m + 1 := by
     have e : iwTop ((allocMem m 1).set64 IW q ((eViewW m h).tail.headD 0)) = iwTop (allocMem m 1) := by

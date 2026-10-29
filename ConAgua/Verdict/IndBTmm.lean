@@ -78,7 +78,7 @@ theorem tmm_ref (n : Nat) {m : Mem} {a : AState} {pp cao cal pfo pfl fvo fvl ao 
   cases n with
   | zero => rw [tmmE.eq_1]; exact RefE.of_cls0 (by simp)
   | succ n =>
-  have hT : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
+  have hT : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.iw hS.iw.iwSize
   obtain ⟨-, hq9, -⟩ := partsShapeFacts hq hsrc
   have hqt : decBS (truncM m) pp.toNat = some bs := hq
   obtain ⟨hmem, -, -, -, -, -, -⟩ := decBS_some hqt
@@ -108,7 +108,7 @@ theorem tmm_ref (n : Nat) {m : Mem} {a : AState} {pp cao cal pfo pfl fvo fvl ao 
       (by rw [UInt64.toNat_ofNat_of_lt' hvtb]; simp; omega)
     simpa using this.1
   -- the constructors
-  have hcd : decPL (truncM m) (decCNS (truncM m)) cao.toNat cal.toNat = some css := hcss.1
+  have hcd : decPL (truncM m) (decCNS (truncM m)) cao.toNat cal.toNat = some css := hcss.dec
   obtain ⟨hlenC, hgetC⟩ := pos2_decPL_trunc hcd
   obtain ⟨vc, hvc1, hvc2, hvcl, hvc3⟩ := hgetC t.toNat htc
   obtain ⟨rc, -⟩ := tmRdAt (o := cao) (i := t) hvc2 (by omega)
@@ -132,7 +132,7 @@ theorem tmm_ref (n : Nat) {m : Mem} {a : AState} {pp cao cal pfo pfl fvo fvl ao 
   · rw [liftE_none, tmmE.k_block_shape_lps.none]; exact RefE.of_cls0 (by simp)
   rw [liftE_some, tmmE.k_block_shape_lps.arm1]
   obtain ⟨hS1, hg1, hlps1, htop1⟩ := lpsW_ok' hl1 hS hq
-  have hT1 : iwTop m1 < 2 ^ 64 := Nat.lt_of_le_of_lt hS1.2.1 hS1.2.2.2.1
+  have hT1 : iwTop m1 < 2 ^ 64 := Nat.lt_of_le_of_lt hS1.iw.iw hS1.iw.iwSize
   -- `param_levels`
   rcases hl2 : plW n m1 (r1.headD 0) (r1.tail.headD 0) with _ | ⟨r2, m2⟩
   · rw [liftE_none, tmmE.k_param_levels.none]; exact RefE.of_cls0 (by simp)

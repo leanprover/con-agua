@@ -165,10 +165,10 @@ theorem natOpNames_ref (hN : NatGateProg p) :
   | some qq =>
   obtain ⟨rq, mq⟩ := qq
   rw [hq, bW_some] at hw
-  obtain ⟨hq0, hmq, hKeep, hroom, htop⟩ := iwAlloc_fref p hN.lIwAlloc 7 k m rq mq hS.2 hq
+  obtain ⟨hq0, hmq, hKeep, hroom, htop⟩ := iwAlloc_fref p hN.lIwAlloc 7 k m rq mq hS.iw hq
   simp only [Option.some.injEq, Prod.mk.injEq] at hw
   obtain ⟨rfl, rfl⟩ := hw
-  have hF := hS.1.pins.full h0
+  have hF := hS.check.pins.full h0
   have hlt : ∀ w ∈ [pinW m 15, pinW m 16, pinW m 17, pinW m 18, pinW m 19, pinW m 20, pinW m 21], w.toNat < 2 ^ 32 := by
     intro w hw
     simp only [List.mem_cons, List.not_mem_nil, or_false] at hw
@@ -180,7 +180,7 @@ theorem natOpNames_ref (hN : NatGateProg p) :
     · exact hF.names_lt 18 (by decide)
     · exact hF.names_lt 19 (by decide)
     · exact hF.names_lt 20 (by decide)
-  have hrec := recPost_wr m [pinW m 15, pinW m 16, pinW m 17, pinW m 18, pinW m 19, pinW m 20, pinW m 21] 7 rfl hS.2 (by simpa [iwTop] using hroom)
+  have hrec := recPost_wr m [pinW m 15, pinW m 16, pinW m 17, pinW m 18, pinW m 19, pinW m 20, pinW m 21] 7 rfl hS.iw (by simpa [iwTop] using hroom)
   subst hmq
   rw [hq0]
   have echain : ((((((((allocMem m 7).set64 IW (rdW (m.arr64 CTL) 200) (pinW m 15)).set64 IW (rdW (m.arr64 CTL) 200 + 1) (pinW m 16)).set64 IW (rdW (m.arr64 CTL) 200 + 2) (pinW m 17)).set64 IW (rdW (m.arr64 CTL) 200 + 3) (pinW m 18)).set64 IW (rdW (m.arr64 CTL) 200 + 4) (pinW m 19)).set64 IW (rdW (m.arr64 CTL) 200 + 5) (pinW m 20)).set64 IW (rdW (m.arr64 CTL) 200 + 6) (pinW m 21)) = wrIW (allocMem m 7) (rdW (m.arr64 CTL) 200) [pinW m 15, pinW m 16, pinW m 17, pinW m 18, pinW m 19, pinW m 20, pinW m 21] := by
@@ -228,10 +228,10 @@ theorem natDivModNames_ref (hN : NatGateProg p) :
   | some qq =>
   obtain ⟨rq, mq⟩ := qq
   rw [hq, bW_some] at hw
-  obtain ⟨hq0, hmq, hKeep, hroom, htop⟩ := iwAlloc_fref p hN.lIwAlloc 8 k m rq mq hS.2 hq
+  obtain ⟨hq0, hmq, hKeep, hroom, htop⟩ := iwAlloc_fref p hN.lIwAlloc 8 k m rq mq hS.iw hq
   simp only [Option.some.injEq, Prod.mk.injEq] at hw
   obtain ⟨rfl, rfl⟩ := hw
-  have hF := hS.1.pins.full h0
+  have hF := hS.check.pins.full h0
   have hlt : ∀ w ∈ [pinW m 22, pinW m 23, pinW m 24, pinW m 25, pinW m 26, pinW m 27, pinW m 28, pinW m 29], w.toNat < 2 ^ 32 := by
     intro w hw
     simp only [List.mem_cons, List.not_mem_nil, or_false] at hw
@@ -244,7 +244,7 @@ theorem natDivModNames_ref (hN : NatGateProg p) :
     · exact hF.names_lt 26 (by decide)
     · exact hF.names_lt 27 (by decide)
     · exact hF.names_lt 28 (by decide)
-  have hrec := recPost_wr m [pinW m 22, pinW m 23, pinW m 24, pinW m 25, pinW m 26, pinW m 27, pinW m 28, pinW m 29] 8 rfl hS.2 (by simpa [iwTop] using hroom)
+  have hrec := recPost_wr m [pinW m 22, pinW m 23, pinW m 24, pinW m 25, pinW m 26, pinW m 27, pinW m 28, pinW m 29] 8 rfl hS.iw (by simpa [iwTop] using hroom)
   subst hmq
   rw [hq0]
   have echain : (((((((((allocMem m 8).set64 IW (rdW (m.arr64 CTL) 200) (pinW m 22)).set64 IW (rdW (m.arr64 CTL) 200 + 1) (pinW m 23)).set64 IW (rdW (m.arr64 CTL) 200 + 2) (pinW m 24)).set64 IW (rdW (m.arr64 CTL) 200 + 3) (pinW m 25)).set64 IW (rdW (m.arr64 CTL) 200 + 4) (pinW m 26)).set64 IW (rdW (m.arr64 CTL) 200 + 5) (pinW m 27)).set64 IW (rdW (m.arr64 CTL) 200 + 6) (pinW m 28)).set64 IW (rdW (m.arr64 CTL) 200 + 7) (pinW m 29)) = wrIW (allocMem m 8) (rdW (m.arr64 CTL) 200) [pinW m 22, pinW m 23, pinW m 24, pinW m 25, pinW m 26, pinW m 27, pinW m 28, pinW m 29] := by
@@ -271,8 +271,8 @@ theorem emit_keep {κ : IdxKind} {dn : NIdx → Option ConLeche.Name} {vis : Wor
     (hm : m' = wrIW mq (rq.headD 0) ws) :
     KeepPost dn vis fe (decRL (fun m => (decHL m : Nat → Nat → Option (List (Idx κ)))) 0) m m' a r
       (ws.map (decI : Word → Idx κ)) := by
-  obtain ⟨hq0, hmq, hKeep, hroom, htop⟩ := iwAlloc_fref p hal N k m rq mq hS.2 hq
-  have hrec := recPost_wr m ws N hN hS.2 (by simpa [iwTop, hN] using hroom)
+  obtain ⟨hq0, hmq, hKeep, hroom, htop⟩ := iwAlloc_fref p hal N k m rq mq hS.iw hq
+  have hrec := recPost_wr m ws N hN hS.iw (by simpa [iwTop, hN] using hroom)
   subst hmq; subst hr; rw [hq0]; rw [hq0] at hm; subst hm
   exact slice_keep hS hrec hlt hN
 

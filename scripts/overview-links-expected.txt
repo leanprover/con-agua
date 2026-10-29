@@ -498,19 +498,19 @@
     30    | .error .outOfFuel, _ => False
     31    | .error e, s => s.regs.rdx = 2 ∧ s.regs.rax = e.code
 
-== ConAgua/Arena/IndIface.lean#L296-L307
-   296  /-- **A refinement of the twin's `op` by the L call `f(args)`**: from any memory satisfying `pre`
-   297  against `a₀`, a returning run keeps the caller's locals, the twin's run succeeds, and `post`
-   298  relates the memories before and after, the twin's state after, the L results and the twin's
-   299  result. Every stub spec and every refinement of the stage has this shape. -/
-   300  def RefAM {α : Type} [Inhabited α] (p : Prog) (f : FnName) (args : List Word)
-   301      (pre : Mem → AState → Prop) (op : AM α)
-   302      (post : Mem → Mem → AState → List Word → α → Prop) : Prop :=
-   303    ∀ (n : Nat) (s₀ : St) (a₀ : AState), pre s₀.mem a₀ →
-   304      ⦃fun s => s = s₀⦄ invoke p (exec p n) f args
-   305      ⦃fun r s' => LocEq s' s₀ ∧ AM.ok op a₀ ∧
-   306        post s₀.mem s'.mem (AM.st op a₀) r (AM.res op a₀); ⊤⦄
-   307  
+== ConAgua/Arena/IndIface.lean#L307-L318
+   307  /-- **A refinement of the twin's `op` by the L call `f(args)`**: from any memory satisfying `pre`
+   308  against `a₀`, a returning run keeps the caller's locals, the twin's run succeeds, and `post`
+   309  relates the memories before and after, the twin's state after, the L results and the twin's
+   310  result. Every stub spec and every refinement of the stage has this shape. -/
+   311  def RefAM {α : Type} [Inhabited α] (p : Prog) (f : FnName) (args : List Word)
+   312      (pre : Mem → AState → Prop) (op : AM α)
+   313      (post : Mem → Mem → AState → List Word → α → Prop) : Prop :=
+   314    ∀ (n : Nat) (s₀ : St) (a₀ : AState), pre s₀.mem a₀ →
+   315      ⦃fun s => s = s₀⦄ invoke p (exec p n) f args
+   316      ⦃fun r s' => LocEq s' s₀ ∧ AM.ok op a₀ ∧
+   317        post s₀.mem s'.mem (AM.st op a₀) r (AM.res op a₀); ⊤⦄
+   318  
 
 == ConAgua/Checker/Pipeline.lean#L92-L125
     92  /-- **Stage `cap_check`**: from the loaded memory to `R1`. -/

@@ -240,7 +240,7 @@ theorem fszW_ok {dn : NIdx → Option Name} {m m' : Mem} {a : AState} {vis : Wor
     (h : fszW n m po pl us fs = some (z, m')) :
     ∃ a', (fieldSortZeroT lps (decI us) (decI fs)).run a = .ok (decBool [z], a') ∧
       CoreAfter dn m m' a' vis fe M eb ∧ HW z := by
-  have hR := hS.arena.1
+  have hR := hS.arena.base
   have hR₀ : ArenaR (m.set64 CTL 192 0) a :=
     ArenaR.frame (by decide) c192_not_arena (reset_frame m) hR
   have hN := nameN_rel _ hS.nwf
@@ -298,7 +298,7 @@ theorem fszW_ok {dn : NIdx → Option Name} {m m' : Mem} {a : AState} {vis : Wor
     hn hS.readL hS.readLs
   subst hr
   refine ⟨_, by rw [hrun, decBool_fsz], ⟨M, ?_, KeptAll.refl _ _, hK₁⟩, by unfold HW; split <;> decide⟩
-  exact ⟨⟨ArenaR.caches_irrel _ hS₁.arena.1, DerR.of_store _ _ _ hS₁.arena.2 rfl⟩,
+  exact ⟨⟨ArenaR.caches_irrel _ hS₁.arena.base, DerR.of_store _ _ _ hS₁.arena.der rfl⟩,
     ((hS₁.core.readNC X).readLsC Y).readLC Z, hS₁.pins, hS₁.env, hl₃, hls₃, hS₁.nwf, hS₁.erec,
     hS₁.spn, hS₁.memos, hS₁.bstk,
     hS₁.den.mono (LsExt.refl _) rfl rfl (fun k x hk => .inr (hnX k x hk)) (fun _ _ hv => hv)

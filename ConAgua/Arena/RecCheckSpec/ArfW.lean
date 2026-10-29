@@ -82,7 +82,7 @@ theorem arfW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
   | zero => exact RSim.none
   | succ n =>
   rw [arfW.arm1]
-  have hsz := hS.2.2.2.1
+  have hsz := hS.iw.iwSize
   have hM0 := hM.get (decTM_mono _)
   obtain ⟨-, hlv, ⟨o, l, ho, hl, hds⟩, -⟩ := rec2DecTM_parts hM0
   obtain ⟨vl, evl, hvlH, dvl⟩ := iwH_rdW_at (w := M) (k := 1) hlv hsz
@@ -97,7 +97,7 @@ theorem arfW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
   obtain ⟨-, -, ⟨o', l', ho', hl', hds'⟩, -⟩ := rec2DecTM_parts h'
   obtain ⟨-, ho'm⟩ := rec2IwN_trunc ho'
   obtain ⟨-, hl'm⟩ := rec2IwN_trunc hl'
-  have hsz1 := hS1.2.2.2.1
+  have hsz1 := hS1.iw.iwSize
   obtain ⟨eo, to⟩ := rec2RdN (w := M) (k := 2) (by rw [iwN_grow hg1 (rec2IwN_trunc ho').1]; exact ho'm) hsz1
   obtain ⟨el, tl⟩ := rec2RdN (w := M) (k := 3) (by
     rw [iwN_grow hg1 (by have := (rec2IwN_trunc hl').1; simpa using this)]; simpa using hl'm) hsz1
@@ -113,7 +113,7 @@ theorem arfW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
   · rcases h2 : aplW n m1 rP (UInt64.ofNat o') (UInt64.ofNat l') with _ | ⟨r2, m2⟩ <;> simp only [h2, arfW.k_abstract_prefix_list, reduceCtorEq] at hb
     cases hb
     obtain ⟨xs, a2, hrun2, hS2, hg2, hd2, ht2, hA2⟩ := aplW_ok dn vis fe n m1 m2 a rP _ _ r2 TM.ds h2 hS1 hds1
-      (by rw [to, tl]; have := hS.2.1; omega) (by rw [to, tl]; have := hg1.1; omega) rP.toNat_lt hA1
+      (by rw [to, tl]; have := hS.iw.iw; omega) (by rw [to, tl]; have := hg1.iw; omega) rP.toNat_lt hA1
     refine ⟨.nested ids xs, a2, ?_, ⟨hS2, hg1.trans hg2, rfl, ⟨?_, ?_⟩, ⟨?_, ?_⟩⟩, hA2⟩
     · simp only [ConRon.Arena.auxRuleFire, StateT.run_bind]
       rw [← dvl, hrun1]
@@ -122,7 +122,7 @@ theorem arfW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
     · show decHL m2 (r1.headD 0).toNat (r1.tail.headD 0).toNat = some ids
       rw [decHL_grow hg2 hv1b]; exact hv1d
     · show (r1.headD 0).toNat + (r1.tail.headD 0).toNat ≤ iwTop m2
-      have := hg2.1; omega
+      have := hg2.iw; omega
     · simpa using hd2
     · simpa using ht2
   · subst hl0

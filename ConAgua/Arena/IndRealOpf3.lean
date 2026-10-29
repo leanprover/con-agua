@@ -187,7 +187,7 @@ theorem opfGo_ok : ∀ (k : Nat) (m m' : Mem) (a : AState) (n e i co cn : Word) 
   intro m m' a n e i co cn acc r hc hS hAb he hsl htop hib
   have c' := callW_model (M := fun mm => opfGoK opfP k mm n e i co cn)
     (fun s => opfGoK_spec opfP rfl k s n e i co cn) hc
-  have hw63 : (m.arr64 SPN).size < 2 ^ 63 := hAb.2.2.2.2.2.2.1
+  have hw63 : (m.arr64 SPN).size < 2 ^ 63 := hAb.wk.2.2.1
   have hcc : (co + cn).toNat = co.toNat + cn.toNat := wadd_toNat' (by have := hsl.bound; omega)
   simp only [opfGoK] at c'
   by_cases hn : n = 0
@@ -259,7 +259,7 @@ theorem opaGo_ok : ∀ (k : Nat) (m m' : Mem) (a : AState) (n e i : Word) (r : L
   intro m m' a n e i r hc hS hAb he htb hib
   have c' := callW_model (M := fun mm => opaGoK opfP k mm n e i)
     (fun s => opaGoK_spec opfP rfl k s n e i) hc
-  have hw63 : (m.arr64 SPN).size < 2 ^ 63 := hAb.2.2.2.2.2.2.1
+  have hw63 : (m.arr64 SPN).size < 2 ^ 63 := hAb.wk.2.2.1
   simp only [opaGoK] at c'
   by_cases hn : n = 0
   · rw [ite_eq_left hn] at c'
@@ -325,14 +325,14 @@ theorem opfTail_ok {k : Nat} {n co b : Word} {m2 m' : Mem} {a2 : AState} {fvs : 
   obtain ⟨⟨q, m3⟩, ha, h⟩ := of_K h rfl; rw [opfTail_some] at h
   obtain ⟨r3, m4, c3, h⟩ := ntBW_some h
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-  have hsz1 : (m2.arr64 IW).size < 2 ^ 64 := hS.2.2.2.1
+  have hsz1 : (m2.arr64 IW).size < 2 ^ 64 := hS.iw.iwSize
   obtain ⟨hq, rfl, hroom⟩ := allocW_facts ha hsz1
   have hm4 := s2iW_wr k _ _ _ _ _ _ c3
   generalize hws : spnWs (allocMem m2 n) co n.toNat = ws at hm4
   have hspn2 : (allocMem m2 n).arr64 SPN = m2.arr64 SPN :=
     (allocMem_frame m2 n).1 SPN (by simp [SPN, IW]) (by decide)
   have hlen : n.toNat = ws.length := by rw [← hws, spnWs_length]
-  have hrec := recPost_wr m2 ws n hlen hS.2 (by
+  have hrec := recPost_wr m2 ws n hlen hS.iw (by
     have : q.toNat = iwTop m2 := by rw [hq]; rfl
     rw [← hlen, ← this]; exact hroom)
   rw [← hq, ← hm4] at hrec
@@ -392,8 +392,8 @@ theorem opfF_ok (k e i : Word) (he : H e) :
   · rw [callW_zero] at hc; cases hc
   have c' := callW_model (M := fun mm => opfTopK opfP K mm k e i)
     (fun s => opfTopK_spec opfP rfl rfl rfl K s k e i) hc
-  have hw63 : (m.arr64 SPN).size < 2 ^ 63 := hAb.2.2.2.2.2.2.1
-  have hctl : 200 < (m.arr64 CTL).size := hS.2.2.2.2.2
+  have hw63 : (m.arr64 SPN).size < 2 ^ 63 := hAb.wk.2.2.1
+  have hctl : 200 < (m.arr64 CTL).size := hS.iw.ctl
   simp only [opfTopK] at c'
   obtain ⟨hsh, c'⟩ := of_ite_none c'
   have hi : i.toNat < 2 ^ 63 := by
@@ -430,7 +430,7 @@ theorem opfF_ok (k e i : Word) (he : H e) :
     obtain ⟨hS1', hg1'⟩ := stageR_hi hS1 (MemFrame.setCtl m1 136 co) (by simp) (by simp) (by decide)
       (by decide)
     have hAb1' := hAb1.frameD (MemFrame.setCtl m1 136 co) (by decide) (by decide)
-    have hctl1 : 200 < (m1.arr64 CTL).size := hS1.2.2.2.2.2
+    have hctl1 : 200 < (m1.arr64 CTL).size := hS1.iw.ctl
     have htop1 : rdW ((m1.set64 CTL 136 co).arr64 CTL) 136 = co := by
       rw [rdW_set64E, ite_eq_left ⟨rfl, rfl, by simp; omega⟩]
     have hsz1' : ((m1.set64 CTL 136 co).arr64 SPN).size = (m.arr64 SPN).size := by

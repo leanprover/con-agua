@@ -57,7 +57,7 @@ theorem toNat_add_small (c : Word) (k : Nat) (h : c.toNat + k < 2 ^ 64) :
 theorem erecP_bound {m : Mem} {i : Nat} {w : Word} (h : (erecP m)[i]? = some w) (hS : IWOK m) :
     i < 2 ^ 64 := by
   have := (Array.getElem?_eq_some_iff.mp (erecP_get h)).1
-  have := hS.2.2.2.1
+  have := hS.erSize
   omega
 
 /-! ## `check_constant_val` -/

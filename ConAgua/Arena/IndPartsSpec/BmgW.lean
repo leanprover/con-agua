@@ -263,7 +263,7 @@ theorem bmfW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
       refine Sim.congr (op := List.findM? (bmfPred names mm.toNat) rs' >>= pure) ?_ (bind_pure _)
       refine Sim.bindK rfl (fun _ _ => by rw [bmfW.k_block_member_counts_find])
         (ih m1 a1 (ro + 1) (rl - 1) rs' hS1 (hrs'.grow decSR_mono hg1) (hnm.grow (OMono.decHL _ _) hg1)
-          (Nat.le_trans hnb hg1.1)) ?_
+          (Nat.le_trans hnb hg1.iw)) ?_
       rintro r x m' a' ⟨rfl, hxb, hS', hg'⟩
       refine Sim.ret ⟨?_, hxb, hS', hg1.trans hg'⟩
       cases x <;> rfl
@@ -356,7 +356,7 @@ theorem NsR_three {x : Option (List Nat)} {r : List Word} {m : Mem} (h : NsR x r
     NsR x [r.headD 0, r.tail.headD 0, r.tail.tail.headD 0] m := by cases x <;> exact h
 
 theorem stageR_ptop {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m : Mem} {a : AState}
-    (hS : StageR dn vis fe m a) : PTop m := ⟨hS.2.1, hS.2.2.2.1, hS.2.2.2.2.2⟩
+    (hS : StageR dn vis fe m a) : PTop m := ⟨hS.iw.iw, hS.iw.iwSize, hS.iw.ctl⟩
 
 /-- **`block_member_counts_go`'s model refines `blockMemberCounts?` from member `idx`.** -/
 theorem bmgW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {nPd k nC no nl ro rl : Word}
@@ -413,16 +413,16 @@ theorem bmgW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
       | none =>
         intro hE; dsimp only; intro r2 m2 e
         obtain ⟨x2, hrun, hr2, hq2, hg2, hf2⟩ := bcW_ok n m1 m2 a1 nPd k nC rl (UInt64.ofNat pc) _ _ _ r2
-          cv0 none hS1.1.arena.1 e hcv1 hb3 (by subst hE; rfl) h1 h2 h3 h4 h5 h6 hS1.2.2.2.1 hS1.2.2.2.2.2
+          cv0 none hS1.check.arena.base e hcv1 hb3 (by subst hE; rfl) h1 h2 h3 h4 h5 h6 hS1.iw.iwSize hS1.iw.ctl
         have hP2 := bcW_ptop e (stageR_ptop hS1)
         exact ⟨x2, a1, hrun, rfl, hr2, hq2, stage_frame_iw hS1 hf2 (by rw [← hf2.size IW]; exact hP2.1), hg2⟩
       | some q =>
         intro hE; dsimp only; intro r2 m2 e
         obtain ⟨b1, b2⟩ := hxb q rfl
         obtain ⟨x2, hrun, hr2, hq2, hg2, hf2⟩ := bcW_ok n m1 m2 a1 nPd k nC rl (UInt64.ofNat pc) _ _ _ r2
-          cv0 (some (q.2.1, q.2.2.1)) hS1.1.arena.1 e hcv1 hb3
+          cv0 (some (q.2.1, q.2.2.1)) hS1.check.arena.base e hcv1 hb3
           (by subst hE; simp [encONN, UInt64.toNat_ofNat_of_lt' b1, UInt64.toNat_ofNat_of_lt' b2])
-          h1 h2 h3 h4 h5 h6 hS1.2.2.2.1 hS1.2.2.2.2.2
+          h1 h2 h3 h4 h5 h6 hS1.iw.iwSize hS1.iw.ctl
         have hP2 := bcW_ptop e (stageR_ptop hS1)
         exact ⟨x2, a1, hrun, rfl, hr2, hq2, stage_frame_iw hS1 hf2 (by rw [← hf2.size IW]; exact hP2.1), hg2⟩
     rintro r2 x2 m2 a2 ⟨rfl, rfl, hq2, hS2, hg2⟩
@@ -443,8 +443,8 @@ theorem bmgW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
     have hctl1 : (ctl - 1).toNat = ctl.toNat - 1 := by
       rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; simp; omega)]; simp
     have hrec := ih m2 _ (cto + 1) (ctl - 1) (idx + 1) ts' hS2 (hts'.grow (fun _ => OMono.decCVp _) hg02)
-      (hrs.grow decSR_mono hg02) (hnm.grow (OMono.decHL _ _) hg02) (Nat.le_trans hnb hg02.1)
-      (by rw [hidx1, hctl1]; have := hg02.1; omega)
+      (hrs.grow decSR_mono hg02) (hnm.grow (OMono.decHL _ _) hg02) (Nat.le_trans hnb hg02.iw)
+      (by rw [hidx1, hctl1]; have := hg02.iw; omega)
     rw [hidx1] at hrec
     refine Sim.bindK (by simp [bmgK3]) (fun _ _ => by rw [bmgK3]) hrec ?_
     rintro r3 x3 m3 a3 ⟨hR3, hS3, hg3⟩

@@ -62,9 +62,9 @@ theorem rec2SimMotVar {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IF
   rintro ⟨r, m'⟩ h
   obtain ⟨-, hgt, -⟩ := rec2CG_parts hG
   obtain ⟨hg, hsl⟩ := rec2CG_get (hG.get (decCG_mono _))
-  have := hS.2.1; have := hS.2.2.2.1
+  have := hS.iw.iw; have := hS.iw.iwSize
   obtain ⟨x, a', hrun, hS', hg', h1, h2⟩ := motVarW_ok dn vis fe n m m' a g c G r hS hg (by omega) hsl
-    hns (by omega) hS.2.2.2.1 h
+    hns (by omega) hS.iw.iwSize h
   exact ⟨x, a', hrun, hS', hg', h1, h2⟩
 
 l_model classGenRecTyTail_spec (p : Prog) (h : GtProg p)
@@ -123,14 +123,14 @@ theorem grtW_sim (n : Nat) (m : Mem) (a : AState) (g c rP fo fl maj t : Word) (G
   simp only [getD_zero, Nat.zero_add, getD_one] at hibs hib
   rw [grtW.k_fvar_type_ds.arm1]
   have hpo1 : iwN m1 (g.toNat + 12) = some po := by rw [iwN_grow hg1 (by omega)]; exact hpo
-  obtain ⟨e12, t12⟩ := rec2RdN (w := g) (k := 12) hpo1 hS1.2.2.2.1
+  obtain ⟨e12, t12⟩ := rec2RdN (w := g) (k := 12) hpo1 hS1.iw.iwSize
   simp only [show UInt64.ofNat 12 = (12 : Word) from rfl] at e12
   rw [e12]
   refine RSim.lstep (K := grtW.k_sl_append n g c fo fl maj t) rfl fun ⟨r2, m2⟩ h2 => ?_
   obtain ⟨hS2, hg2, hd2, hb2⟩ := rec2AppendW_dec h2 hS1 (by rw [t12]; exact hpre.grow (OMono.decHL _ _) hg1) hibs hib
   rw [grtW.k_sl_append.arm1]
   refine RSim.lstep (K := grtW.k_sl_snoc n g c fo fl t) rfl fun ⟨r3, m3⟩ h3 => ?_
-  obtain ⟨hr3, hd3, hg3, -, -, ht3⟩ := snocW_dec h3 hS2.2.2.2.1 hS2.2.2.2.2.2 hb2 hmaj hd2
+  obtain ⟨hr3, hd3, hg3, -, -, ht3⟩ := snocW_dec h3 hS2.iw.iwSize hS2.iw.ctl hb2 hmaj hd2
   have hS3 := snocW_stage h3 hS2
   have hA3 := snocW_afr h3 (appendW_afr h2 (hf1 hA))
   rw [grtW.k_sl_snoc.arm1]
@@ -143,7 +143,7 @@ theorem grtW_sim (n : Nat) (m : Mem) (a : AState) (g c rP fo fl maj t : Word) (G
   rw [grtW.k_class_gen_mot_var.arm1]
   have hg14 := hg13.trans hg4
   refine RSim.lstep (K := grtW.k_sl_snoc_2 n (r3.headD 0) (r3.tail.headD 0) (r4.headD 0)) rfl fun ⟨r5, m5⟩ h5 => ?_
-  obtain ⟨hr5, hd5, hg5, -, -, ht5⟩ := snocW_dec h5 hS4.2.2.2.1 hS4.2.2.2.2.2 (Nat.le_trans hfb hg14.1) ht
+  obtain ⟨hr5, hd5, hg5, -, -, ht5⟩ := snocW_dec h5 hS4.iw.iwSize hS4.iw.ctl (Nat.le_trans hfb hg14.iw) ht
     (by rw [decHL_grow hg14 hfb]; exact hifs)
   have hS5 := snocW_stage h5 hS4
   have hA5 := snocW_afr h5 (hf4 hA3)
@@ -163,7 +163,7 @@ theorem grtW_sim (n : Nat) (m : Mem) (a : AState) (g c rP fo fl maj t : Word) (G
     decW0E b.2 b.1 x ∧ AbsOK b.2) ?_ ?_
   · rintro ⟨r7, m7⟩ h7
     obtain ⟨x, a', hrun, hS', hg, hx, hA7⟩ := closeW_ok n dn fe vis m6 m7 a6 _ _ 0 _ _ r7 h7 hS6 hbH hd3'
-      (hS6.lt64 (Nat.le_trans hb3 hg36.1)) (Nat.le_trans hb3 hg36.1) (by simp only [UInt64.toNat_zero, Nat.zero_add]; exact UInt64.toNat_lt _)
+      (hS6.lt64 (Nat.le_trans hb3 hg36.iw)) (Nat.le_trans hb3 hg36.iw) (by simp only [UInt64.toNat_zero, Nat.zero_add]; exact UInt64.toNat_lt _)
       (hf6 hA5)
     refine ⟨x, a', ?_, hS', hg, hx, hA7⟩
     rw [← hbd]; simpa using hrun
@@ -182,7 +182,7 @@ theorem gtW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
   · exact RSim.none
   rw [gtW.arm1, rec2RecTy_eq]
   obtain ⟨-, hgt, -, -, -, ⟨o12, l12, h12, h13, hpre⟩⟩ := rec2CG_parts hG
-  obtain ⟨e13, t13⟩ := rec2RdN (w := g) (k := 13) h13 hS.2.2.2.1
+  obtain ⟨e13, t13⟩ := rec2RdN (w := g) (k := 13) h13 hS.iw.iwSize
   simp only [show UInt64.ofNat 13 = (13 : Word) from rfl] at e13
   rw [e13]
   have hlen : G.pre.length = l12 := decHL_length _ (hpre.get (OMono.decHL _ _))
@@ -226,7 +226,7 @@ theorem gtW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
   have hr := grtW_sim (dn := dn) (vis := vis) (fe := fe) n m2 a2 g c (UInt64.ofNat l12) _ _ _ t G ifs o12 hS2
     (hG.grow (decCG_mono _) hg12) hns (by rw [iwN_grow hg12 (by omega)]; exact h12)
     (by rw [t13]; exact hpre.grow (OMono.decHL _ _) hg12) (by rw [decHL_grow hg2 hfb]; exact hifs)
-    (Nat.le_trans hfb hg2.1) hmH htH (hf2 hA1)
+    (Nat.le_trans hfb hg2.iw) hmH htH (hf2 hA1)
   rw [hmd] at hr
   refine RSim.bindPure (K := gtW.k_class_gen_rec_ty_tail) rfl hr ?_
   rintro ⟨r5, m5⟩ y a5 - ⟨⟨hS5, hg5, hy⟩, hA5⟩

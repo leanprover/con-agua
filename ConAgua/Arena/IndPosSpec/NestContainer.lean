@@ -37,7 +37,7 @@ theorem NcOut.grow {m m' : Mem} {r : List Word} {x : Option (Nat × List (IConst
   | some p =>
     obtain ⟨n, cs⟩ := p
     obtain ⟨h1, h2, h3, h4, h5⟩ := h
-    exact ⟨h1, h2, h3, Nat.le_trans h4 hg.1, h5.grow h4 hg⟩
+    exact ⟨h1, h2, h3, Nat.le_trans h4 hg.iw, h5.grow h4 hg⟩
 
 section census
 variable (p : Prog) (hl : NtLook p)

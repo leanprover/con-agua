@@ -88,7 +88,7 @@ end model
 /-- The pool's size bound canon's comparisons take (`LitR`'s `PoolOK`). -/
 theorem poolSmall_of_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
     {m : Mem} {a : AState} (h : StageR dn vis fe m a) : PoolSmall m := by
-  have := h.1.arena.1.lit.1.cap
+  have := h.check.arena.base.lit.1.cap
   unfold PoolSmall; omega
 
 theorem slot_lt (k : ConLeche.QuotKind) : k.slot < 5 := by cases k <;> decide
@@ -138,7 +138,7 @@ theorem qphW_ok {p : Prog} (hC : CanonProg p) (hR : L.Rom.RomRefs p)
   obtain ⟨w, hw, rfl⟩ : ∃ w, (iwA m1)[o.toNat + k.slot]? = some w ∧ w.toNat = v := by
     simp only [iwN, nat?, Option.map_eq_some_iff] at hvm; exact hvm
   have hob : o.toNat + k.slot < 2 ^ 64 := by
-    have := (Array.getElem?_eq_some_iff.mp hw).1; have := hS1.2.2.2.1; simp only [iwA] at *; omega
+    have := (Array.getElem?_eq_some_iff.mp hw).1; have := hS1.iw.iwSize; simp only [iwA] at *; omega
   have hidx : (o + UInt64.ofNat k.slot).toNat = o.toNat + k.slot := by
     rw [UInt64.toNat_add, hks]; simp; omega
   have ew : rdW (m1.arr64 IW) (o + UInt64.ofNat k.slot) = w := by
@@ -252,7 +252,7 @@ theorem cdq_ref {p : Prog} (hQ : QuotProg p) {dn : NIdx → Option ConLeche.Name
   rw [liftE_some, checkDeclQuotE.k_erec_ci.arm1]
   obtain ⟨hS1, hg1, -, hcv1, htop1⟩ := erecCiW_okA h1 hS hD hi hcvAt
   have hqb : (r1.headD 0).toNat + 8 < 2 ^ 64 := by
-    have := hS1.2.2.1; have := hS1.2.2.2.2.1; omega
+    have := hS1.iw.er; have := hS1.iw.erSize; omega
   have hq1 : (r1.headD 0 + 1).toNat = (r1.headD 0).toNat + 1 := toNat_add_small _ 1 (by omega)
   -- `quot_pin_hit`
   rcases h2 : qphW p n m1 (UInt64.ofNat k.slot) (r1.headD 0 + 1) with _ | ⟨r2, m2⟩

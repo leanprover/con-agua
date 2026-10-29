@@ -75,7 +75,7 @@ structure RInv (m₀ : Mem) (a₀ : AState) (T : Nat) (m : Mem) (a : AState) : P
 
 theorem RInv.refl {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m : Mem} {a : AState}
     (hS : StageR dn vis fe m a) : RInv m a (iwTop m) m a :=
-  ⟨hS.1.arena, rfl, MemFrame.refl _ _ _, IWGrow.refl m, hS.2, rfl, hS.1.mode⟩
+  ⟨hS.check.arena, rfl, MemFrame.refl _ _ _, IWGrow.refl m, hS.iw, rfl, hS.check.mode⟩
 
 /-- **`StageR` back** from the entry's. -/
 theorem RInv.stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m₀ m : Mem}
@@ -83,10 +83,10 @@ theorem RInv.stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv
   have hc : a.caches = a₀.caches := congrArg Prod.fst h.hcp
   have hp : a.pins = a₀.pins := congrArg Prod.snd h.hcp
   have hf := h.frame
-  have hg : ErecGrow m₀ m := ⟨h.grow.2.1, h.grow.2.2.2, hf.size EREC⟩
+  have hg : ErecGrow m₀ m := ⟨h.grow.er, h.grow.erGet, hf.size EREC⟩
   refine ⟨⟨h.arena, ?_, ?_, ?_, h.mode⟩, h.ok⟩
-  · rw [hc]; exact hS.1.core.frame rciA_core rciC_core hf
-  · rw [hp]; exact hS.1.pins.frame rciA_pins hf
+  · rw [hc]; exact hS.check.core.frame rciA_core rciC_core hf
+  · rw [hp]; exact hS.check.pins.frame rciA_pins hf
   · exact EnvR.grow (fun b h1 h2 h3 => hf.arr b (fun hm => by
         have := rciA_arr hm; simp only [EREC, IW, RMEMO, RSET, RSTK] at this; omega)
         (fun hm => by simp only [TieredArray.t0_inj] at hm; subst hm; simp [CTL] at h1))
@@ -95,7 +95,7 @@ theorem RInv.stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv
         (fun b hb => by have := rciA_arr hb; simp only [EREC, IW, RMEMO, RSET, RSTK] at this; omega)
         (fun hm => by
           have := rciA_arr hm; simp only [ETAB, EREC, IW, RMEMO, RSET, RSTK] at this; omega)
-        (by decide) hf) hS.1.env
+        (by decide) hf) hS.check.env
 
 /-! ## The steps -/
 

@@ -133,7 +133,7 @@ theorem cda_ref {p : Prog} (hX : AxProg p) (hq : KnotStageProg p) (hcl : LeafClo
   have hM1 : CoreMemos m1 := hT1.twin.memos
   generalize hq0 : r1.headD 0 = q at hci1 hcv1 htop1
   have hqb : q.toNat + 8 < 2 ^ 64 := by
-    have := hS1.2.2.1; have := hS1.2.2.2.2.1; omega
+    have := hS1.iw.er; have := hS1.iw.erSize; omega
   have hq1 : (q + 1).toNat = q.toNat + 1 := toNat_add_small q 1 (by omega)
   obtain ⟨wn, hwn, hwnl, hname0⟩ := decCI_name hci1
   have hname : cv.name = decI wn := hname0
@@ -142,7 +142,7 @@ theorem cda_ref {p : Prog} (hX : AxProg p) (hq : KnotStageProg p) (hcl : LeafClo
   rcases h2 : pinAtW m1 4 with _ | ⟨r2, m2⟩
   · rw [liftE_none, checkDeclAxiomE.k_pin_at.none]; exact RefE.of_cls0 (by simp)
   rw [liftE_some]
-  obtain ⟨hm2, hr2, hl2, hrun2⟩ := pinAtW_ok h2 hS1.1.pins
+  obtain ⟨hm2, hr2, hl2, hrun2⟩ := pinAtW_ok h2 hS1.check.pins
   subst hm2
   have ep2 : r2.headD 0 = pinW m2 (1 + (4 : Word).toNat) := by rw [hr2]; rfl
   have hb2 := decI_beq (k := .name) wn _ hwnl hl2
@@ -184,7 +184,7 @@ theorem cda_ref {p : Prog} (hX : AxProg p) (hq : KnotStageProg p) (hcl : LeafClo
     obtain ⟨w, hw, rfl⟩ : ∃ w, (iwA m3)[o3.toNat + 4]? = some w ∧ w.toNat = v := by
       simp only [iwN, nat?, Option.map_eq_some_iff] at hvm; exact hvm
     have hob : o3.toNat + 4 < 2 ^ 64 := by
-      have := (Array.getElem?_eq_some_iff.mp hw).1; have := hS3.2.2.2.1; simp only [iwA] at *; omega
+      have := (Array.getElem?_eq_some_iff.mp hw).1; have := hS3.iw.iwSize; simp only [iwA] at *; omega
     have ew : rdW (m3.arr64 IW) (o3 + 4) = w := by
       have : (o3 + 4).toNat = o3.toNat + 4 := by
         rw [UInt64.toNat_add]; simp; omega
@@ -277,7 +277,7 @@ theorem cda_ref {p : Prog} (hX : AxProg p) (hq : KnotStageProg p) (hcl : LeafClo
   rcases h5 : pinAtW m4 42 with _ | ⟨r5, m5⟩
   · rw [liftE_none, checkDeclAxiomE.k_pin_at_2.none]; exact RefE.of_cls0 (by simp)
   rw [liftE_some]
-  obtain ⟨hm5, hr5, hl5, hrun5⟩ := pinAtW_ok h5 hS4.1.pins
+  obtain ⟨hm5, hr5, hl5, hrun5⟩ := pinAtW_ok h5 hS4.check.pins
   subst hm5
   have ep5 : r5.headD 0 = pinW m5 (1 + (42 : Word).toNat) := by rw [hr5]; rfl
   have hb5 := decI_beq (k := .name) wn _ hwnl hl5
@@ -316,13 +316,13 @@ theorem cda_ref {p : Prog} (hX : AxProg p) (hq : KnotStageProg p) (hcl : LeafClo
   rcases h7 : pinAtW m5 45 with _ | ⟨r7, m7⟩
   · rw [liftE_none, checkDeclAxiomE.k_pin_at_3.none]; exact RefE.of_cls0 (by simp)
   rw [liftE_some, checkDeclAxiomE.k_pin_at_3.arm1]
-  obtain ⟨hm7, hr7, hl7, hrun7⟩ := pinAtW_ok h7 hS4.1.pins
+  obtain ⟨hm7, hr7, hl7, hrun7⟩ := pinAtW_ok h7 hS4.check.pins
   subst hm7
   have ep7 : r7.headD 0 = pinW m7 (1 + (45 : Word).toNat) := by rw [hr7]; rfl
   rcases h8 : pinAtW m7 46 with _ | ⟨r8, m8⟩
   · rw [liftE_none, checkDeclAxiomE.k_pin_at_4.none]; exact RefE.of_cls0 (by simp)
   rw [liftE_some]
-  obtain ⟨hm8, hr8, hl8, hrun8⟩ := pinAtW_ok h8 hS4.1.pins
+  obtain ⟨hm8, hr8, hl8, hrun8⟩ := pinAtW_ok h8 hS4.check.pins
   subst hm8
   have ep8 : r8.headD 0 = pinW m8 (1 + (46 : Word).toNat) := by rw [hr8]; rfl
   have hb7 := decI_beq (k := .name) wn _ hwnl hl7
@@ -373,13 +373,13 @@ theorem cda_ref {p : Prog} (hX : AxProg p) (hq : KnotStageProg p) (hcl : LeafClo
   rcases h10 : pinAtW m8 32 with _ | ⟨r10, m10⟩
   · rw [liftE_none, checkDeclAxiomE.k_pin_at_5.none]; exact RefE.of_cls0 (by simp)
   rw [liftE_some, checkDeclAxiomE.k_pin_at_5.arm1]
-  obtain ⟨hm10, hr10, hl10, hrun10⟩ := pinAtW_ok h10 hS4.1.pins
+  obtain ⟨hm10, hr10, hl10, hrun10⟩ := pinAtW_ok h10 hS4.check.pins
   subst hm10
   have ep10 : r10.headD 0 = pinW m10 (1 + (32 : Word).toNat) := by rw [hr10]; rfl
   rcases h11 : pinAtW m10 33 with _ | ⟨r11, m11⟩
   · rw [liftE_none, checkDeclAxiomE.k_pin_at_6.none]; exact RefE.of_cls0 (by simp)
   rw [liftE_some]
-  obtain ⟨hm11, hr11, hl11, hrun11⟩ := pinAtW_ok h11 hS4.1.pins
+  obtain ⟨hm11, hr11, hl11, hrun11⟩ := pinAtW_ok h11 hS4.check.pins
   subst hm11
   have ep11 : r11.headD 0 = pinW m11 (1 + (33 : Word).toNat) := by rw [hr11]; rfl
   have hb10 := decI_beq (k := .name) wn _ hwnl hl10
@@ -409,7 +409,7 @@ theorem cda_ref {p : Prog} (hX : AxProg p) (hq : KnotStageProg p) (hcl : LeafClo
   rcases h12 : pinAtW m11 13 with _ | ⟨r12, m12⟩
   · rw [liftE_none, checkDeclAxiomE.k_pin_at_7.none]; exact RefE.of_cls0 (by simp)
   rw [liftE_some]
-  obtain ⟨hm12, hr12, hl12, hrun12⟩ := pinAtW_ok h12 hS4.1.pins
+  obtain ⟨hm12, hr12, hl12, hrun12⟩ := pinAtW_ok h12 hS4.check.pins
   subst hm12
   have ep12 : r12.headD 0 = pinW m12 (1 + (13 : Word).toNat) := by rw [hr12]; rfl
   have hb12 := decI_beq (k := .name) wn _ hwnl hl12

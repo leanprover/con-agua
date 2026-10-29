@@ -45,7 +45,7 @@ def PSlR0 {α : Type} (f : Mem → Nat → Option α) (xs : List α) (o l : Word
 
 theorem PSlR0.grow {α : Type} {f : Mem → Nat → Option α} (hf : ∀ q, OMono (fun m => f m q))
     {xs : List α} {o l : Word} {m m' : Mem} (h : PSlR0 f xs o l m) (hg : IWGrow m m') : PSlR0 f xs o l m' :=
-  ⟨h.1.grow (OMono.decPL hf _ _) hg, h.2.imp id fun h2 => Nat.le_trans h2 hg.1⟩
+  ⟨h.1.grow (OMono.decPL hf _ _) hg, h.2.imp id fun h2 => Nat.le_trans h2 hg.iw⟩
 
 theorem PSlR0.nil {α : Type} {f : Mem → Nat → Option α} {xs : List α} {o l : Word} {m : Mem}
     (h : PSlR0 f xs o l m) (hl : l = 0) : xs = [] := by

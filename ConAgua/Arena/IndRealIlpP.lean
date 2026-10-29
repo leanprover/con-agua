@@ -175,7 +175,7 @@ theorem ipalGoW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv
     have hlen := hxl m hdec
     by_cases hk : k < l
     · have hk' : k.toNat < l.toNat := UInt64.lt_iff_toNat_lt.mp hk
-      obtain ⟨w, hw, hwlt, hwx⟩ := decHL_word hdec hS.2.2.2.1 k.toNat hk'
+      obtain ⟨w, hw, hwlt, hwx⟩ := decHL_word hdec hS.iw.iwSize k.toNat hk'
       rw [word_ofNat_toNat] at hw
       have hdrop : xs.drop k.toNat = xs[k.toNat] :: xs.drop (k.toNat + 1) :=
         List.drop_eq_getElem_cons (by omega)
@@ -192,7 +192,7 @@ theorem ipalGoW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv
       by_cases hv : eViewW m h = []
       · rw [ipalGoW_abort f o l n m h k hk h6 hv] at hW; cases hW
       have he6 : h >>> 28 = 6 := by simpa using h6
-      obtain ⟨v, hvw, hvr⟩ := eViewW_ok m a hS.1.arena.1 h hv
+      obtain ⟨v, hvw, hvr⟩ := eViewW_ok m a hS.check.arena.base h hv
       have ht : (decE h).tag = ETag.forallE := by
         have h1 : ((decI h : EIdx).tag == ETag.forallE) = true := by
           rw [decI_tag_forallE_beq h hh, he6]; decide

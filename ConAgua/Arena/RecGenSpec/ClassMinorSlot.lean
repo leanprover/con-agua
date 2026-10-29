@@ -147,7 +147,7 @@ theorem leafAtW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv
     rw [ite_eq_right hf] at h
     obtain ⟨hev, h⟩ := of_ite_none h
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-    obtain ⟨v, hv, hR⟩ := eViewW_ok m1 a1 hS1.1.arena.1 w hev
+    obtain ⟨v, hv, hR⟩ := eViewW_ok m1 a1 hS1.check.arena.base w hev
     have hhead := eViewW_head3 m1 w hev hf3
     have hdec : ∃ nn us : _, v = ENodeView.const nn us ∧ (eViewW m1 w).tail.headD 0 = (eViewW m1 w).getD 1 0 ∧
         ((eViewW m1 w).getD 1 0).toNat < 2 ^ 32 ∧ decI ((eViewW m1 w).getD 1 0) = nn := by
@@ -164,7 +164,7 @@ theorem leafAtW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv
     obtain ⟨wi, hwi1, hwi2, hwi3⟩ := iwH_rdW (decTM_ind hM) (by have := Mp.toNat_lt; omega)
     rw [UInt64.ofNat_toNat] at hwi1
     have hwi1' : rdW (m1.arr64 IW) Mp = wi := by
-      have := hg1.2.2.1 Mp.toNat hMt
+      have := hg1.iwGet Mp.toNat hMt
       simp only [rdW] at hwi1 ⊢
       rw [show (m1.arr64 IW)[Mp.toNat]? = (m.arr64 IW)[Mp.toNat]? from this]; exact hwi1
     rw [ht1, hwi1']
@@ -221,11 +221,11 @@ def RecsOK (m : Mem) (ro rl : Nat) (cvs : List IConstantVal) : Prop :=
 theorem RecsOK_grow {m m' : Mem} (hg : IWGrow m m') {ro rl : Nat} {cvs : List IConstantVal}
     (h : RecsOK m ro rl cvs) : RecsOK m' ro rl cvs := by
   obtain ⟨h1, h2, h3⟩ := h
-  refine ⟨Nat.le_trans h1 hg.1, h2, fun j hj => ?_⟩
+  refine ⟨Nat.le_trans h1 hg.iw, h2, fun j hj => ?_⟩
   obtain ⟨p0, q, cv, hp0, hp1, hq, hcv, hext, hcvs⟩ := h3 j hj
   have hiw : ∀ i, i < iwTop m → iwN m' i = iwN m i := fun i hi => by
-    simp only [iwN, nat?, iwA]; rw [hg.2.2.1 i hi]
-  refine ⟨p0, q, cv, ?_, Nat.le_trans hp1 hg.1, ?_, ?_, CVExt_grow hg hext, hcvs⟩
+    simp only [iwN, nat?, iwA]; rw [hg.iwGet i hi]
+  refine ⟨p0, q, cv, ?_, Nat.le_trans hp1 hg.iw, ?_, ?_, CVExt_grow hg hext, hcvs⟩
   · rw [hiw _ (by omega)]; exact hp0
   · rw [hiw _ (by omega)]; exact hq
   · rw [decCVp_grow_r hg hext]; exact hcv

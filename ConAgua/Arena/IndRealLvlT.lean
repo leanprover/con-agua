@@ -70,7 +70,7 @@ theorem lvlEqCW_enc (hS : CoreS dn m a vis fe M eb) (n : Nat) (u v : Word) (hu :
   · simp [lvlEqW] at hl
   simp only [lvlEqW] at hl
   have hR₀ : ArenaR (m.set64 CTL 192 0) a :=
-    ArenaR.frame (by decide) c192_not_arena (reset_frame m) hS.arena.1
+    ArenaR.frame (by decide) c192_not_arena (reset_frame m) hS.arena.base
   have hwu : (decI u : LIdx).word.toUInt64 = u := (word_decI _ u hu).mpr rfl
   have hwv : (decI v : LIdx).word.toUInt64 = v := (word_decI _ v hv).mpr rfl
   have hl' := denoteL_lvR hR₀ (decI u) lu hdu
@@ -102,23 +102,23 @@ theorem lvlsEqCW_enc (hS : CoreS dn m a vis fe M eb) (n : Nat) (us vs : Word) (h
   have hn : ¬ (lsNodeW m us = [] ∨ lsNodeW m vs = []) := fun c => by rw [ite_eq_left c] at hl; cases hl
   rw [ite_eq_right hn] at hl
   obtain ⟨lu, hdu⟩ := hS.den.lsAll _ (by
-    obtain ⟨ids, e, -⟩ := lsNodeW_view hS.arena.1 hu (fun e => hn (.inl e)); rw [e]; rfl)
+    obtain ⟨ids, e, -⟩ := lsNodeW_view hS.arena.base hu (fun e => hn (.inl e)); rw [e]; rfl)
   obtain ⟨lv, hdv⟩ := hS.den.lsAll _ (by
-    obtain ⟨ids, e, -⟩ := lsNodeW_view hS.arena.1 hv (fun e => hn (.inr e)); rw [e]; rfl)
+    obtain ⟨ids, e, -⟩ := lsNodeW_view hS.arena.base hv (fun e => hn (.inr e)); rw [e]; rfl)
   obtain ⟨ids₁, hv₁, hd₁⟩ := denoteLs_view a (decI us) lu hdu
   obtain ⟨ids₂, hv₂, hd₂⟩ := denoteLs_view a (decI vs) lv hdv
-  obtain ⟨e₁, t₁, s₁⟩ := lsNodeW_store hS.arena.1 hu (by exact hv₁)
-  obtain ⟨e₂, t₂, s₂⟩ := lsNodeW_store hS.arena.1 hv (by exact hv₂)
+  obtain ⟨e₁, t₁, s₁⟩ := lsNodeW_store hS.arena.base hu (by exact hv₁)
+  obtain ⟨e₂, t₂, s₂⟩ := lsNodeW_store hS.arena.base hv (by exact hv₂)
   rw [e₁, e₂] at hl
   simp only [List.headD_cons, List.tail_cons] at hl
   have hR₀ : ArenaR (m.set64 CTL 192 0) a :=
-    ArenaR.frame (by decide) c192_not_arena (reset_frame m) hS.arena.1
+    ArenaR.frame (by decide) c192_not_arena (reset_frame m) hS.arena.base
   have hpool : (m.set64 CTL 192 0).arr64 POOL = m.arr64 POOL :=
     Mem.arr64_set64_ne _ _ _ _ _ (by decide)
   have hpool1 : (m.set64 CTL 192 0).arr64 POOL1 = m.arr64 POOL1 :=
     Mem.arr64_set64_ne _ _ _ _ _ (by decide)
   have hpoolv := vpool_congr hpool hpool1
-  have htop := (hS.arena.1).lit.1.top41
+  have htop := (hS.arena.base).lit.1.top41
   have hl₁ := lvsR_of_slice hR₀ ids₁ lu _ _ (by rw [hpoolv]; exact s₁) (by omega) hd₁
   have hl₂ := lvsR_of_slice hR₀ ids₂ lv _ _ (by rw [hpoolv]; exact s₂) (by omega) hd₂
   obtain ⟨-, hz⟩ := equivsW_ok (nameN_rel _ hS.nwf) n _ _ _ _ _ _ _ _ _ hl₁ hl₂ hl

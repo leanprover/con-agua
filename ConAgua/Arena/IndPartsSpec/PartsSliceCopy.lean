@@ -67,7 +67,7 @@ theorem partsSliceCopy {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : I
     StageR dn vis fe m' a ∧ IWGrow m m' ∧
       decHL m' (r.headD 0).toNat (r.tail.headD 0).toNat = some xs ∧
       (r.headD 0).toNat + (r.tail.headD 0).toNat = iwTop m' := by
-  obtain ⟨hI1, hE1, hsz, hEs, hc⟩ := hS.2
+  obtain ⟨hI1, hE1, hsz, hEs, hc⟩ := hS.iw
   have hdl : ∀ {r m'} (o : Word), erToIwW n m o l = some (r, m') →
       o.toNat + l.toNat ≤ (m.arr64 EREC).size → hslice? (erA m) o.toNat l.toNat = some xs →
       StageR dn vis fe m' a ∧ IWGrow m m' ∧

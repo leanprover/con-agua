@@ -60,8 +60,8 @@ theorem rdW_of_hd? {a : Array Word} {i : Nat} {k : IdxKind} {x : Idx k} (h : hd?
 theorem erec_set {m : Mem} {a : AState} {pm : PMemo} (hD : ArenaD m a) (hP : PMemoR m pm)
     (q x : Word) : ArenaD (m.set64 EREC q x) a ∧ PMemoR (m.set64 EREC q x) pm := by
   have hf : MemFrame [EREC] [] m (m.set64 EREC q x) := MemFrame.set64 m EREC (by decide) q x
-  exact ⟨⟨ArenaR.frame_ext _ _ (by simp [EREC]) (by simp) m _ hf a hD.1,
-    DerR.frameM _ _ m _ hf (by simp [EREC]) a hD.2⟩,
+  exact ⟨⟨ArenaR.frame_ext _ _ (by simp [EREC]) (by simp) m _ hf a hD.base,
+    DerR.frameM _ _ m _ hf (by simp [EREC]) a hD.der⟩,
     hP.frame (by simp [EREC]) (by simp) hf⟩
 
 /-! ## The twin's lists -/
@@ -306,7 +306,7 @@ theorem slice_gen {k : IdxKind} (kw : Word) (gl : FnName)
   have hE₁ : (m.set64 CTL 129 (q.headD 0 + l)).arr64 EREC = m.arr64 EREC :=
     Mem.arr64_set64_ne _ _ _ _ _ (by decide)
   have hD₁ : ArenaD (m.set64 CTL 129 (q.headD 0 + l)) a :=
-    ⟨ArenaR.frame_ext _ _ (by simp) (by simp) m _ hf₁ a hD.1, DerR.frameM _ _ m _ hf₁ (by simp) a hD.2⟩
+    ⟨ArenaR.frame_ext _ _ (by simp) (by simp) m _ hf₁ a hD.base, DerR.frameM _ _ m _ hf₁ (by simp) a hD.der⟩
   have hP₁ := hP.frame (by simp) (by simp) hf₁
   have hqv : (q.headD 0).toNat = erecTop m := by rw [hq]; rfl
   obtain ⟨a₂, pm₂, us₂, hrun, hD₂, hP₂, hsl₂, hag, hsz₂, hcp, hfr, htk⟩ :=
@@ -645,7 +645,7 @@ theorem vg_rel (n : Nat) (m : Mem) (a : AState) (pm₀ : PMemo) (g vis : Word) (
   rw [hs₁] at hW₁
   obtain ⟨hP₁, hf₁⟩ := clear_rel hP hW₁
   have hD₁ : ArenaD m₁ a :=
-    ⟨ArenaR.frame_ext _ _ (by simp) (by simp) m _ hf₁ a hD.1, DerR.frameM _ _ m _ hf₁ (by simp) a hD.2⟩
+    ⟨ArenaR.frame_ext _ _ (by simp) (by simp) m _ hf₁ a hD.base, DerR.frameM _ _ m _ hf₁ (by simp) a hD.der⟩
   have hE₁ : m₁.arr64 EREC = m.arr64 EREC := hf₁.arr EREC (by simp) (by decide)
   have ht₁ : erecTop m₁ = erecTop m := by simp only [erecTop]; rw [hf₁.ctl 129 (by simp)]
   have hP₁r : erecP m₁ = erecP m := by simp only [erecP, hE₁, ht₁]
@@ -708,7 +708,7 @@ theorem vg_rel (n : Nat) (m : Mem) (a : AState) (pm₀ : PMemo) (g vis : Word) (
   rw [hs₅, show ({ mem := m₃.set64 CTL 129 (dr.headD 0 + 6), loc := Locals.init [] } : St).mem =
     m₃.set64 CTL 129 (dr.headD 0 + 6) from rfl] at hW₅
   have hdv : (dr.headD 0).toNat = erecTop m₃ := by rw [hdq]; rfl
-  have hsz₃ : (m₃.arr64 EREC).size = (m.arr64 EREC).size := by rw [hE₃, hgr₂.2.2, hE₁]
+  have hsz₃ : (m₃.arr64 EREC).size = (m.arr64 EREC).size := by rw [hE₃, hgr₂.size, hE₁]
   have h6 : (6 : Word).toNat = 6 := rfl
   rw [h6] at hd6 hroom
   obtain ⟨hlt, w0, w1, w2, w3, w4, w5, hag, hsz₅, hf₅⟩ := vgStore_facts hW₅ (by omega)
@@ -759,9 +759,9 @@ theorem vg_rel (n : Nat) (m : Mem) (a : AState) (pm₀ : PMemo) (g vis : Word) (
     simp only [Option.bind_some, hn0]
     rw [show (decI (c.tail.tail.tail.headD 0) : EIdx) = cv'.type from ht3]
     rfl
-  · have := hgr₂.1
+  · have := hgr₂.top
     refine ⟨by rw [ht₅, ht₃]; rw [ht₁] at this; omega, fun i hi => ?_, by rw [hsz₅, hE₄, hsz₃]⟩
-    rw [hag i (by rw [hdv, ht₃]; omega), hE₄, hE₃, hgr₂.2.1 i (by rw [ht₁]; exact hi), hE₁]
+    rw [hag i (by rw [hdv, ht₃]; omega), hE₄, hE₃, hgr₂.get i (by rw [ht₁]; exact hi), hE₁]
   · exact ((((hf₁.mono (by simp) (by simp)).trans (hfr₂.mono (by simp) (by simp))).trans (hfr₃.mono (fun _ h => List.mem_cons_of_mem _ h)
       (by simp))).trans ((MemFrame.setCtl m₃ 129 _).mono (by simp) (by simp))).trans
       (hf₅.mono (by simp) (by simp))

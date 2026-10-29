@@ -66,7 +66,7 @@ theorem IWOK.trunc {m : Mem} (h : L.Ind.IWOK m) : L.Ind.IWOK (truncFrozen m) := 
   have he : ((truncFrozen m).arr64 EREC).size = min (erecTop m) (m.arr64 EREC).size := by
     rw [truncFrozen_erec, size_extract0]
   have ht : L.Ind.erTop m = erecTop m := rfl
-  simp only [L.Ind.IWOK, L.Ind.iwTop, L.Ind.erTop, hI, truncFrozen_ctl, he] at *
+  simp only [L.Ind.IWOK_iff, L.Ind.iwTop, L.Ind.erTop, hI, truncFrozen_ctl, he] at *
   refine ⟨h1, ?_, h3, by omega, h5⟩
   simp only [erecTop] at he ⊢; omega
 
@@ -290,7 +290,7 @@ include htop
 theorem CheckR.trunc {dn : NIdx → Option ConLeche.Name} {a : AState} {vis : Word} {fe : IFEnv}
     (hk : EnvKeysIn m fe) (h : CheckR dn m a vis fe) : CheckR dn (truncFrozen m) a vis fe :=
   ⟨h.arena.trunc htop, (keepNF_trunc m).coreR h.core, h.pins.trunc,
-    h.env.trunc (nmCnt_le h.arena.1) hk, h.mode.trunc⟩
+    h.env.trunc (nmCnt_le h.arena.base) hk, h.mode.trunc⟩
 
 theorem LoopR.trunc {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Name} {a : AState}
     {vis : Word} {fe : IFEnv} {pend : Array PendingCheck} {ds : Array IDeclaration}
@@ -315,7 +315,7 @@ theorem LoopMem.trunc {dn : NIdx → Option ConLeche.Name} {m : Mem} {a : AState
 theorem top_tier0_of {dn : NIdx → Option ConLeche.Name} {m : Mem} {a : AState} {vis : Word}
     {fe : IFEnv} (h : CheckR dn m a vis fe) (hoff : a.store.scratchOn = false) :
     m.top.toNat < 2 ^ 40 := by
-  have hf := h.arena.1.app.flag
+  have hf := h.arena.base.app.flag
   rw [hoff] at hf
   have h0 : m.flag = 0 := by
     simp only [Mem.flag]
@@ -446,7 +446,7 @@ theorem PhaseBStart.trunc' {pins : List INatOpPinSet} {dn : NIdx → Option ConL
     {ds : Array IDeclaration} {fe : IFEnv} {pend : Array PendingCheck} {m : Mem} {a : AState}
     {v : Word} (h : PhaseBStart pins dn ds fe pend m a v) :
     PhaseBStart pins dn ds fe pend (truncFrozen m) a v :=
-  h.trunc (envKeysIn_of h.loop.check.arena.1 h.twin)
+  h.trunc (envKeysIn_of h.loop.check.arena.base h.twin)
 
 /-- `PhaseBStart.trunc'` (the name the lane asked for). -/
 theorem PhaseBStart.trunc'' {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Name}

@@ -42,7 +42,7 @@ theorem mentionsConstGo_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx
       StageR dn vis fe s'.mem a₀ ∧ IWGrow s₀.mem s'.mem; ⊤⦄ := by
   refine triple_post (mcGo_spec p hv hf hput hgo n s₀ f T h) ?_
   rintro r s' ⟨hl, hm⟩
-  obtain ⟨⟨b, mp'⟩, _, hrun, rfl, hb, hM', hfr⟩ := mcGoOK n _ a₀ f T h mp hS.1.arena.1 hh hT hM _ _ hm
+  obtain ⟨⟨b, mp'⟩, _, hrun, rfl, hb, hM', hfr⟩ := mcGoOK n _ a₀ f T h mp hS.check.arena.base hh hT hM _ _ hm
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
   obtain ⟨hS', hg⟩ := StageR.frame_hi hS hfr (by intro b hb; simp at hb; subst hb; decide)
     (by intro x hx; simp at hx; subst hx; decide) (by decide) (by decide)
@@ -104,7 +104,7 @@ theorem mentionsConst_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx �
   have hA0 : ArenaR (mclearG mcSch s₀.mem) a₀ :=
     ArenaR.frame (A := []) (C := [mcSch.cs, mcSch.cs + 1]) (fun b hb => by simp at hb)
       (fun x hx => by simp [mcSch] at hx; rcases hx with rfl | rfl <;> exact not_mem_arenaCtl _ (by decide)) hf0
-      hS.1.arena.1
+      hS.check.arena.base
   obtain ⟨⟨c, mp1⟩, _, hrun, rfl, hbb, hM1, hfr1⟩ := mcGoOK n _ a₀ CWF T e ∅ hA0 hh hT hM0 _ _ hm
   have hfall : MemFrame [MCM] [mcSch.cs, mcSch.cs + 1] s₀.mem s'.mem :=
     (hf0.mono (by simp) (by simp)).trans (hfr1.mono (by simp) (by simp [mcSch]))

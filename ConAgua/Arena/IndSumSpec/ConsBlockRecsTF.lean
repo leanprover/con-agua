@@ -674,7 +674,7 @@ theorem riRec_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEn
     split at h1; · cases h1
     simp only [Option.some.injEq, Prod.mk.injEq] at h1; obtain ⟨-, rfl⟩ := h1
     simp only [erAllocMem]; exact Mem.arr64_set64_ne _ _ _ _ _ (by decide)
-  obtain ⟨-, hEtop, -, hEsz, -⟩ := hS.2
+  obtain ⟨-, hEtop, -, hEsz, -⟩ := hS.iw
   have hq1 : q1.toNat = erTop m := by
     simp only [erAllocW] at h1; split at h1; · cases h1
     split at h1; · cases h1
@@ -683,7 +683,7 @@ theorem riRec_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEn
     rdW (m.arr64 EREC) (cq + 1), rdW (m.arr64 EREC) (cq + 2), rdW (m.arr64 EREC) (cq + 3), mi, rp3, reo, rel]
     (by simp)
   have hroom : q1.toNat + 9 < 2 ^ 64 := by
-    obtain ⟨-, h2, -, h4, -⟩ := hS'.2; simp only [List.length_cons, List.length_nil] at htop'; omega
+    obtain ⟨-, h2, -, h4, -⟩ := hS'.iw; simp only [List.length_cons, List.length_nil] at htop'; omega
   rw [riMem_eq (by omega) hroom, hE1]
   refine ⟨hS', hg, by rw [← hE1]; exact erRec_mfr h1 _, ?_⟩
   generalize hM : wrER m1 q1 _ = M at hS' hg htop' hget
@@ -695,7 +695,7 @@ theorem riRec_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEn
   have hw : ∀ i, i < 4 → (erecP M)[q1.toNat + 1 + i]? = (erecP M)[cq.toNat + i]? := by
     intro i hi
     rw [show q1.toNat + 1 + i = q1.toNat + (i + 1) by omega, hP (i + 1) (by omega),
-      hget (i + 1) (by simp; omega), erecP_getE (by omega), hg.2.2.2 _ (by omega)]
+      hget (i + 1) (by simp; omega), erecP_getE (by omega), hg.erGet _ (by omega)]
     have hlt : cq.toNat + i < (m.arr64 EREC).size := by simp only [erTop] at hEtop hcq; omega
     rcases i with _ | _ | _ | _ | i
     all_goals first
@@ -761,7 +761,7 @@ theorem rteW_ok (n : Nat) {m m' : Mem} {a : AState} {ro rl : Word} {r : List Wor
     simp only [bool?, Option.map_eq_some_iff] at h10
     obtain ⟨w, hw, -⟩ := h10
     have := erecP_lt hw; omega
-  have hsz := hS.2.2.2.1
+  have hsz := hS.iw.iwSize
   have hrdv : ∀ j < rl.toNat, ∀ v, iwN m (ro.toNat + j) = some v →
       rdW (m.arr64 IW) (ro + UInt64.ofNat j) = UInt64.ofNat v ∧ v < 2 ^ 64 := by
     intro j hj v hv'
@@ -774,10 +774,10 @@ theorem rteW_ok (n : Nat) {m m' : Mem} {a : AState} {ro rl : Word} {r : List Wor
   obtain ⟨hS1, hg1, hq1, htop1, hget1⟩ := erRec_stage ha hS (ruleWords m1 ro rl.toNat)
     (by rw [ruleWords_length, hk])
   have hroom : b.toNat + 11 * rl.toNat ≤ (m1.arr64 EREC).size := by
-    obtain ⟨-, h2, -, h4, -⟩ := hS1.2
+    obtain ⟨-, h2, -, h4, -⟩ := hS1.iw
     have hs := (wrER_frame (ruleWords m1 ro rl.toNat) m1 b).size EREC
     rw [ruleWords_length] at htop1; omega
-  have hm2 := rteGoW_mem n m1 m2 b ro rl r1 h1 hold hroom (by rw [hE1]; exact hS.2.2.2.2.1)
+  have hm2 := rteGoW_mem n m1 m2 b ro rl r1 h1 hold hroom (by rw [hE1]; exact hS.iw.erSize)
   subst hm2
   refine ⟨hS1, hg1, rfl, ?_, erRec_mfr ha _⟩
   simp only [List.headD_cons]
@@ -797,11 +797,11 @@ theorem rteW_ok (n : Nat) {m m' : Mem} {a : AState} {ro rl : Word} {r : List Wor
     rw [List.getElem?_eq_getElem (by omega)] at hgj; exact Option.some.inj hgj
   rw [hrj]
   refine decRule_copy hfj hext (fun i hi => ?_)
-  have hEt : erTop m ≤ (m.arr64 EREC).size := hS.2.2.1
+  have hEt : erTop m ≤ (m.arr64 EREC).size := hS.iw.er
   rw [show b.toNat + 11 * j + i = b.toNat + (11 * j + i) by omega,
     erecP_getE (by rw [htop1, hrw]; omega), hget1 (11 * j + i) (by rw [hrw]; omega),
     ruleWords_get m1 ro rl.toNat j i hj hi, hI1, e, hE1, erecP_getE (by omega)]
-  have hEs : (m.arr64 EREC).size < 2 ^ 64 := hS.2.2.2.2.1
+  have hEs : (m.arr64 EREC).size < 2 ^ 64 := hS.iw.erSize
   refine (rdW_some ?_ (by omega)).symm
   rw [UInt64.toNat_add]; simp; omega
 
@@ -911,7 +911,7 @@ theorem cbpW_ok (p : Prog) (L : CbrLook p) (n : Nat) {m m' : Mem} {a : AState} {
   obtain ⟨wn, hwn, hwnl, -⟩ := decCI_name hci
   have hwn' : (rdW (m2.arr64 EREC) (rq.headD 0 + 1)).toNat < 2 ^ 32 := by
     have hq1 : (rq.headD 0 + 1).toNat = (rq.headD 0).toNat + 1 := by
-      have := erecP_lt hwn; obtain ⟨-, h2', -, h4, -⟩ := hS2.2
+      have := erecP_lt hwn; obtain ⟨-, h2', -, h4, -⟩ := hS2.iw
       rw [UInt64.toNat_add, show (1 : Word).toNat = 1 from rfl]; exact Nat.mod_eq_of_lt (by omega)
     rw [rdW_of_get? hq1.symm (erecP_get hwn)]; exact hwnl
   rcases h3 : callW p n "env_push" [vis, rq.headD 0] m2 with _ | ⟨rv, m3⟩ <;> simp only [h3, cbpK3, reduceCtorEq] at h
@@ -1144,7 +1144,7 @@ theorem cbrW_ok (p : Prog) (L : CbrLook p) (n : Nat) : ∀ {m m' : Mem} {a : ASt
     subst this
     exact ⟨fe, a, rfl, hS, IWGrow.refl _, hA⟩
   rw [cbrW_cons (h := hl)] at h
-  have hsz := hS.2.2.2.1
+  have hsz := hS.iw.iwSize
   obtain ⟨x, ys, rfl, hx, hys⟩ := hxs.uncons hl hsz
   obtain ⟨cvv, TM, rhss⟩ := x
   generalize hT : rdW (m.arr64 IW) lo = trip at h hx
@@ -1176,7 +1176,7 @@ theorem cbrW_ok (p : Prog) (L : CbrLook p) (n : Nat) : ∀ {m m' : Mem} {a : ASt
   rcases h1 : tsrW n m vis2 (UInt64.ofNat cvp) (brpW m pp mm) (UInt64.ofNat mp) (UInt64.ofNat o) (UInt64.ofNat l) with _ | ⟨rr, m1⟩ <;> simp only [h1, cbrK1, reduceCtorEq] at h
   obtain ⟨rules, a1, run1, hd1, hb1, hS1, hg1, hA1⟩ := tsrW_ok dn (fe.restrictTo vis2.toNat) vis2 n h1
     (hS.restrict vis2) hM hrh hA (cvv := cvv)
-  have hS1' : StageR dn vis fe m1 a1 := hS1.unrestrict hS.1.env.vis
+  have hS1' : StageR dn vis fe m1 a1 := hS1.unrestrict hS.check.env.vis
   rw [hrp] at run1
   rcases h2 : cbpW p n m1 vis (UInt64.ofNat cvp) (bmjW m pp mm) (brpW m pp mm) (rr.headD 0) (rr.tail.headD 0) with _ | ⟨rv, m2⟩ <;> simp only [h2, cbrK2, reduceCtorEq] at h
   obtain ⟨hS2, hg2, hf2⟩ := cbpW_ok dn fe vis p L n h2 hS1' ((IWGrow.erecPExtR hg1).decCV hcvE) hd1 hb1

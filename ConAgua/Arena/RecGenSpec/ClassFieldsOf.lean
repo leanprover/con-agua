@@ -38,7 +38,7 @@ theorem rec2SimPiBinders (n : Nat) (hS : StageR dn vis fe m a) {h : Word} (hh : 
   obtain ⟨x, a', hrun, hS', hg, hd, -⟩ := simPiBinders n hS hh b hb
   obtain ⟨rs, m'⟩ := b
   obtain ⟨bs, e, hrun2, -, -, -, -, -, hf, -⟩ :=
-    piBW_ok n m m' a CWF h rs hS.1.arena.1 hb hh hS.2.2.2.1 hS.2.2.2.2.2
+    piBW_ok n m m' a CWF h rs hS.check.arena.base hb hh hS.iw.iwSize hS.iw.ctl
   rw [CWF_eq, decE_eq] at hrun2
   have : (x, a') = ((bs, e), a) := by rw [hrun] at hrun2; injection hrun2
   cases this
@@ -102,7 +102,7 @@ theorem cons {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a :
     StageR dn vis fe m' a ∧ IWGrow m m' ∧
       SPLA b dec m' (r.headD 0).toNat (r.tail.headD 0).toNat (y :: xs) := by
   obtain ⟨h1, h2, ps, hps, hf⟩ := hl
-  obtain ⟨hr, -, -, -, -, -⟩ := consW_decN h hS.2.2.2.1 hS.2.2.2.2.2 h2 hps
+  obtain ⟨hr, -, -, -, -, -⟩ := consW_decN h hS.iw.iwSize hS.iw.ctl h2 hps
   obtain ⟨hS', hg, hdn, htop⟩ := consW_stageN h hS h2 hps
   refine ⟨hS', hg, .inr ?_, by omega, x.toNat :: ps, hdn,
     FA2.cons (hy.grow (AgreeA.of_grow hg)) (FA2.imp (fun _ _ hq => hq.grow (AgreeA.of_grow hg)) hf)⟩

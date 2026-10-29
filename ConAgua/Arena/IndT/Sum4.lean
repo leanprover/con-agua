@@ -109,7 +109,7 @@ theorem ctl_ref (hP : SumProg p) (m : Nat) (hn : m + 1 ≤ 2 ^ 62) (m0 : Mem)
       (fun v x a' => CtlPost dn vis fe env m0 a cvCa v.1 v.2 x a') := by
   rw [ctlE.arm1]
   have hS := hC.stage
-  have hv := hS.1.env.vis
+  have hv := hS.check.env.vis
   unfold cscTailT
   rcases h1 : callW p m "open_pis_at_fvars_f" [nF, cqB, nP] m0 with _ | ⟨rx, m1⟩
   · rw [liftE_none, ctlE.k_open_pis_at_fvars_f.none]; exact RefE.of_cls0 (by simp)
@@ -146,7 +146,7 @@ theorem ctl_ref (hP : SumProg p) (m : Nat) (hn : m + 1 ≤ 2 ^ 62) (m0 : Mem)
       ⟨m1, Locals.init []⟩ lo ll) (h2)
   subst hs2
   obtain ⟨us, a2, hrun2, hS2, hg2, hu, hus⟩ := plSim m m1 a1 lo ll lps hS1
-    (by rw [decHL_grow hg1 hlb]; exact hlps) (by have := hg1.1; omega) ru s2.mem h2m
+    (by rw [decHL_grow hg1 hlb]; exact hlps) (by have := hg1.iw; omega) ru s2.mem h2m
   have hA2 : AbsOK s2.mem := plW_afr h2m hA1
   obtain ⟨p2, husP⟩ := ConRon.Bridge.Inductives.paramLevels_spec lps lpsP a1 a2 us hC1.check.state
     (ConRon.Bridge.denoteNListE_ext p1.ext _ _ hlpsP) hrun2
@@ -243,7 +243,7 @@ theorem ctl_ref (hP : SumProg p) (m : Nat) (hn : m + 1 ≤ 2 ^ 62) (m0 : Mem)
     have hcq5 : decHL s5.mem cqO.toNat cqL.toNat = some cq1 := by rw [decHL_grow hg05 hcqb]; exact hcq
     have htk := decHL_take hargs nP.toNat hle2
     obtain ⟨ws1, hs1, hmm1, hb1⟩ := slR_of_decHL s5.mem _ _ _ htk (hS5.lt64 (by omega))
-    obtain ⟨ws2, hs2, hmm2, hb2⟩ := slR_of_decHL s5.mem _ _ _ hcq5 (hS5.lt64 (by have := hg05.1; omega))
+    obtain ⟨ws2, hs2, hmm2, hb2⟩ := slR_of_decHL s5.mem _ _ _ hcq5 (hS5.lt64 (by have := hg05.iw; omega))
     simp only [UInt64.ofNat_toNat] at hs1 hs2
     have heq := eqW_ok m s5.mem _ _ _ _ (re.headD 0) ws1 ws2 hs1 hs2 hq6
     have hb3 : re.headD 0 = if (args.take nP.toNat == cq1) then 1 else 0 := by
@@ -294,7 +294,7 @@ theorem ctl_ref (hP : SumProg p) (m : Nat) (hn : m + 1 ≤ 2 ^ 62) (m0 : Mem)
       simp only [htrue, ite_true]
       have hT5 : ao.toNat + al.toNat < 2 ^ 64 := hS5.lt64 hab
       have hxl5 : decHL s5.mem xo.toNat xlw.toNat = some xl1 := by rw [decHL_grow hg15 hxlb]; exact hxl
-      have hxlb5 : xo.toNat + xlw.toNat ≤ iwTop s5.mem := by have := hg15.1; omega
+      have hxlb5 : xo.toNat + xlw.toNat ≤ iwTop s5.mem := by have := hg15.iw; omega
       have hx03 := p1.ext.trans hx13
       have hread : ConRon.Bridge.Inductives.ReadOK env₀ (fe.restrictTo vis0.toNat) a3 :=
         ⟨hC5.check.state, hC5.check.pins, hok₀.mono hx03 a3 rfl⟩
@@ -332,7 +332,7 @@ theorem ctl_ref (hP : SumProg p) (m : Nat) (hn : m + 1 ≤ 2 ^ 62) (m0 : Mem)
         rw [hao', halp]
         exact decHL_drop nP.toNat (by rw [decHL_grow hg6 hab]; exact hargs) hle2
       have hdb6 : (ao + nP).toNat + (al - nP).toNat ≤ iwTop s7.mem := by
-        rw [hao', halp]; have := hg6.1; omega
+        rw [hao', halp]; have := hg6.iw; omega
       rcases h8 : callW p m "idx_args_resolve" [vis0, ao + nP, al - nP] s7.mem with _ | ⟨r8, m8⟩
       · rw [liftE_none, ctlE.k_idx_args_resolve.none]; exact RefE.of_cls0 (by simp)
       rw [liftE_some]
@@ -374,8 +374,8 @@ theorem ctl_ref (hP : SumProg p) (m : Nat) (hn : m + 1 ≤ 2 ^ 62) (m0 : Mem)
       · rw [fsortsE.eq_1, ctlE.k_check_struct_field_sorts_i.none]; exact RefE.of_cls0 Err.cls_outOfFuel
       have h9R := fsorts_ref hq henv hLC hLT hP.hg hP.hpw hP.het hP.hcn m' (by omega) s8.mem a7 isP lg rs nP xo
         xlw (ao + nP) (al - nP) nF xl1 (args.drop nP.toNat) hC7 hA7
-        (by rw [decHL_grow hg67 hxlb5]; exact hxl5) (by have := hg67.1; omega)
-        (by rw [decHL_grow hg7 hdb6]; exact hdrop6) (by have := hg7.1; omega) hrs
+        (by rw [decHL_grow hg67 hxlb5]; exact hxl5) (by have := hg67.iw; omega)
+        (by rw [decHL_grow hg7 hdb6]; exact hdrop6) (by have := hg7.iw; omega) hrs
         (ConRon.Bridge.denoteL_ext hrsP hx07) hnf hxfvs7 hxpos
       rcases h9 : fsortsE p (m' + 1) s8.mem vis isP lg rs nP xo xlw (ao + nP) (al - nP) nF with e9 | ⟨r9, m9⟩ <;>
         rw [h9] at h9R
@@ -467,7 +467,7 @@ theorem ctor_ref (hP : SumProg p) (m : Nat) (hn : m + 1 ≤ 2 ^ 62) (m0 : Mem) (
   have hwsA : ConLeche.Expr.WScoped 0 cvCP.type :=
     ConLeche.Expr.WScoped.of_not_hasFvar (ConLeche.checkConstantVal_typeWF hF₁).1
   -- `strip_pis`
-  obtain ⟨w1, hw1, hw1l, hw1d⟩ := sumTypeWord (hcv.stab (OMono.decCVp _) m1 hg1) hS1.2.2.2.2.1
+  obtain ⟨w1, hw1, hw1l, hw1d⟩ := sumTypeWord (hcv.stab (OMono.decCVp _) m1 hg1) hS1.iw.erSize
   rw [hw1]
   have h2 := stripF_pis_ok dn vis fe (nP + nF) w1 hw1l
   rw [sum_toNat_add hnf, hw1d] at h2
@@ -512,7 +512,7 @@ theorem ctor_ref (hP : SumProg p) (m : Nat) (hn : m + 1 ≤ 2 ^ 62) (m0 : Mem) (
     ⟨s2.mem, Locals.init []⟩ T lo ll nP nF nIdx _) (h3)
   subst hs3
   obtain ⟨b3, a3, hr3, hS3, hg3, hb3, -⟩ := srW_ok dn vis fe m s2.mem s3.mem a1 T lo ll nP nF nIdx _ r3 lps h3m
-    hS2 hT hcb hlps2 (hS2.lt64 (by have := hg02.1; omega)) (by have := hg02.1; omega) (by omega) hni
+    hS2 hT hcb hlps2 (hS2.lt64 (by have := hg02.iw; omega)) (by have := hg02.iw; omega) (by omega) hni
   have hA3 : AbsOK s3.mem := srW_afr _ _ _ _ _ _ _ _ _ _ _ h3m hA2
   have hx01 := c1.ext
   obtain ⟨p3, -⟩ := ConRon.Bridge.Inductives.structCtorResidOk_spec (decI T) TP lps lpsP nP.toNat
@@ -534,7 +534,7 @@ theorem ctor_ref (hP : SumProg p) (m : Nat) (hn : m + 1 ≤ 2 ^ 62) (m0 : Mem) (
   subst hb3'
   simp only [ite_true]
   -- the constructor's opened telescope
-  obtain ⟨w3, hw3, hw3l, hw3d⟩ := sumTypeWord (hcv.stab (OMono.decCVp _) s3.mem hg03) hS3.2.2.2.2.1
+  obtain ⟨w3, hw3, hw3l, hw3d⟩ := sumTypeWord (hcv.stab (OMono.decCVp _) s3.mem hg03) hS3.iw.erSize
   rw [hw3]
   have h4 := opfSimRA (n := m) (k := nP) (i := 0) hOpf hw3l hS3 hA3
   rw [hw3d, show (0 : Word).toNat = 0 from rfl] at h4
@@ -568,7 +568,7 @@ theorem ctor_ref (hP : SumProg p) (m : Nat) (hn : m + 1 ≤ 2 ^ 62) (m0 : Mem) (
   subst hcqBd
   have hg04 := hg03.trans hg4
   -- the type former's opened telescope
-  obtain ⟨w5, hw5, hw5l, hw5d⟩ := sumTypeWord (hta.stab (OMono.decCVp _) m4 hg04) hS4.2.2.2.2.1
+  obtain ⟨w5, hw5, hw5l, hw5d⟩ := sumTypeWord (hta.stab (OMono.decCVp _) m4 hg04) hS4.iw.erSize
   rw [hw5]
   have h5 := opfSimRA (n := m) (k := nP) (i := 0) hOpf hw5l hS4 hA4
   rw [hw5d, show (0 : Word).toNat = 0 from rfl] at h5
@@ -619,7 +619,7 @@ theorem ctor_ref (hP : SumProg p) (m : Nat) (hn : m + 1 ≤ 2 ^ 62) (m0 : Mem) (
   have hcl6 : decHL s6.mem (r4.tail.headD 0).toNat (r4.tail.tail.headD 0).toNat = some cl := by
     rw [decHL_grow hg56 hclb]; exact hcl
   have hclb6 : (r4.tail.headD 0).toNat + (r4.tail.tail.headD 0).toNat ≤ iwTop s6.mem := by
-    have := hg56.1; omega
+    have := hg56.iw; omega
   have hx46 := p5.ext.trans p6.ext
   have hcfvs6 := ConRon.Bridge.denoteEList_ext hx46 _ _ hcfvs
   have hws7 : ∀ i, i < nP.toNat → ∀ x y, cfvsP[i]? = some x →
@@ -659,8 +659,8 @@ theorem ctor_ref (hP : SumProg p) (m : Nat) (hn : m + 1 ≤ 2 ^ 62) (m0 : Mem) (
   rcases m with _ | m'
   · rw [ctlE.eq_1, ctorE.k_check_sum_ctor_tail.none]; exact RefE.of_cls0 Err.cls_outOfFuel
   have h8R := ctl_ref hq henv hOpf hLC hLT hP m' (by omega) m7 a7 vis0 T lo ll nP nIdx rs isP lg nF _ _ _ lps cl cvC
-    hC7 hT (by rw [decHL_grow (hg06.trans hg7) hlb]; exact hlps) (by have := (hg06.trans hg7).1; omega)
-    (by rw [decHL_grow hg7 hclb6]; exact hcl6) (by have := hg7.1; omega) hcqB hrs hni hnf hA7
+    hC7 hT (by rw [decHL_grow (hg06.trans hg7) hlb]; exact hlps) (by have := (hg06.trans hg7).iw; omega)
+    (by rw [decHL_grow hg7 hclb6]; exact hcl6) (by have := hg7.iw; omega) hcqB hrs hni hnf hA7
     (ConRon.Bridge.denoteN_ext hTP hx07) (ConRon.Bridge.denoteNListE_ext hx07 _ _ hlpsP)
     (ConRon.Bridge.denoteL_ext hrsP hx07)
     (ConRon.Bridge.denote_ext hcrest (hx46.trans c7.ext)) hwsc

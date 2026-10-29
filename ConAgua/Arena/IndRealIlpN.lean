@@ -461,7 +461,7 @@ theorem nriF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
   · rw [h2] at hW; cases hW
   rw [h2] at hW
   simp only at hW
-  have hpool : PoolOK m₁ := hS.1.arena.1.lit.1
+  have hpool : PoolOK m₁ := hS.check.arena.base.lit.1
   obtain ⟨ho, hm₂, hno, hroom⟩ := prW_some (callW_pr rfl h2) (by have := hpool.cap; omega)
   rw [ho, hm₂] at hW
   have h41 := hpool.top41
@@ -498,8 +498,8 @@ theorem nriF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
   simp only at hW
   obtain ⟨c, hW⟩ := of_ite_none hW
   obtain ⟨hr, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
-  have hR₄ : ArenaR m₄ a := ArenaR.grow m₁ m₄ hg4 a hS.1.arena.1
-  have hmo₄ : ModeOK m₄ := hS.1.mode.grows hg4
+  have hR₄ : ArenaR m₄ a := ArenaR.grow m₁ m₄ hg4 a hS.check.arena.base
+  have hmo₄ : ModeOK m₄ := hS.check.mode.grows hg4
   have hpc₄ : pcap m₄ < 2 ^ 64 := by rw [hg4.pcapEq]; have := hpool.cap; omega
   have hcap₄ : m₁.top.toNat + (k + 4).toNat ≤ pcap m₄ := by have := hsl.le; have := hg4.cap; omega
   obtain ⟨s₅, hs₅, -, hok, hR₅, hres⟩ := triple_of_callW

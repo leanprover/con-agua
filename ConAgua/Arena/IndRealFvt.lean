@@ -49,8 +49,8 @@ theorem stageR_hi {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
   have h200 : rdW (m'.arr64 CTL) 200 = rdW (m.arr64 CTL) 200 := hf.ctl 200 hC2
   have h129 : rdW (m'.arr64 CTL) 129 = rdW (m.arr64 CTL) 129 :=
     hf.ctl 129 (fun h => by have := (hC _ h).1; simp at this)
-  refine ⟨⟨CheckR.frame_hi hA hC hf hS.1, ?_⟩, ?_⟩
-  · simp only [IWOK, iwTop, erTop, hI, hE, h200, h129, hf.size CTL]; exact hS.2
+  refine ⟨⟨CheckR.frame_hi hA hC hf hS.check, ?_⟩, ?_⟩
+  · simp only [IWOK_iff, iwTop, erTop, hI, hE, h200, h129, hf.size CTL]; exact (IWOK_iff _).1 hS.iw
   · refine ⟨?_, ?_, fun i _ => by rw [hI], fun i _ => by rw [hE]⟩
     · simp only [iwTop, h200]; exact Nat.le_refl _
     · simp only [erTop, h129]; exact Nat.le_refl _
@@ -205,9 +205,9 @@ theorem ftdsGoW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv
         rw [word_ofNat_toNat] at this
         rw [this, hw]
       rw [hx] at h1
-      obtain ⟨hm1, hrun1, hlt1⟩ := ftdW_ok m m1 a hS.1.arena.1 w hw32 r1 (ftdF_eq h1)
+      obtain ⟨hm1, hrun1, hlt1⟩ := ftdW_ok m m1 a hS.check.arena.base w hw32 r1 (ftdF_eq h1)
       rw [hm1] at h
-      have hsz : (m.arr64 IW).size < 2 ^ 64 := hS.2.2.2.1
+      have hsz : (m.arr64 IW).size < 2 ^ 64 := hS.iw.iwSize
       have hk1 : (k + 1).toNat = k.toNat + 1 := by
         rw [UInt64.toNat_add]; simp; omega
       have hqk : (q + k).toNat = q.toNat + k.toNat := by
@@ -264,7 +264,7 @@ theorem ftdsF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
   rcases ha : allocW m l with _ | ⟨q, m1⟩
   · rw [ftdsW_none k m o l ha] at c'; cases c'
   rw [ftdsW_some k m m1 o l q ha] at c'
-  have hsz : (m.arr64 IW).size < 2 ^ 64 := hS.2.2.2.1
+  have hsz : (m.arr64 IW).size < 2 ^ 64 := hS.iw.iwSize
   obtain ⟨hq, rfl, hroom⟩ := allocW_facts ha hsz
   obtain ⟨hS1, -, -, -⟩ := allocW_stage ha hS
   have hqt : q.toNat = iwTop m := by rw [hq]; rfl
@@ -275,7 +275,7 @@ theorem ftdsF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
   have hlen' : l.toNat = ws.length := by simpa using hlen.symm
   have e0 : q + (0 : Word) = q := by simp
   rw [e0, hq] at hm'
-  have hrec := recPost_wr m ws l hlen' hS.2 (by rw [← hlen', ← hqt]; exact hroom)
+  have hrec := recPost_wr m ws l hlen' hS.iw (by rw [← hlen', ← hqt]; exact hroom)
   rw [← hm'] at hrec
   rw [← hq] at hrec
   have hK := slice_keep (κ := .expr) hS hrec hws hlen'
@@ -588,11 +588,11 @@ theorem gaaF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj c')
   -- `get_app_args`
   obtain ⟨t1, ht1, -, hfr1, hr0, xs, hrun, hsp, hb64⟩ := triple_of_callW
-    (getAppArgs_refinesR gaaProg rfl rfl rfl k ⟨m, Locals.init []⟩ a hS.1.arena.1 e he) c1
+    (getAppArgs_refinesR gaaProg rfl rfl rfl k ⟨m, Locals.init []⟩ a hS.check.arena.base e he) c1
   rw [ht1] at hfr1 hsp
   obtain ⟨hS1, hg1⟩ := stageR_hi hS hfr1 (by simp [SPN]) (by simp) (by decide) (by decide)
   -- the fresh slice
-  have hsz1 : (m1.arr64 IW).size < 2 ^ 64 := hS1.2.2.2.1
+  have hsz1 : (m1.arr64 IW).size < 2 ^ 64 := hS1.iw.iwSize
   obtain ⟨hq, rfl, hroom⟩ := allocW_facts ha hsz1
   generalize hn : r1.tail.headD 0 = cnt at hsp hb64 ha c3 hroom
   generalize ho : r1.headD 0 = o at hsp hb64 c3
@@ -601,7 +601,7 @@ theorem gaaF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
   have hspn2 : (allocMem m1 cnt).arr64 SPN = m1.arr64 SPN :=
     (allocMem_frame m1 cnt).1 SPN (by simp [SPN, IW]) (by decide)
   have hlen : cnt.toNat = ws.length := by rw [← hws, spnWs_length]
-  have hrec := recPost_wr m1 ws cnt hlen hS1.2 (by
+  have hrec := recPost_wr m1 ws cnt hlen hS1.iw (by
     have : q.toNat = iwTop m1 := by rw [hq]; rfl
     rw [← hlen, ← this]; exact hroom)
   rw [← hq, ← hm3] at hrec

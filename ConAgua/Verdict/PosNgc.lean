@@ -60,7 +60,7 @@ theorem ngc_ref {p : Prog} (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vi
       Option.some.injEq] at hcs2
     obtain ⟨c, hc, cs', hcs'', rfl⟩ := hcs2
     obtain ⟨hcH, hcd⟩ := rd_iwH0E (m := m) (o := off) (k := IdxKind.name) (by simpa [iwH, iwA] using hc)
-    have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
+    have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.iw hS.iw.iwSize
     have hoff1 : (off + 1).toNat = off.toNat + 1 :=
       word_add_toNat (show off.toNat + 1 < 2 ^ 64 by have := hcb 0 (by omega); omega)
     have hl1 : (l - 1).toNat = l' := by
@@ -112,7 +112,7 @@ theorem ngc_ref {p : Prog} (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vi
     rcases hap : appendW (k + 1) m1 oo ol (r1.tail.tail.headD 0) (r1.tail.tail.tail.headD 0) with _ | ⟨r2, m2⟩
     · rw [liftE_none, ngcE.k_sl_append.none]; exact RefE.of_cls0 (by simp)
     rw [liftE_some, ngcE.k_sl_append.arm1]
-    obtain ⟨hS2, hg2, hr20, hr21, ht2, hw1, hw2⟩ := appendW_stage hap hS1 (by have := hg1.1; omega)
+    obtain ⟨hS2, hg2, hr20, hr21, ht2, hw1, hw2⟩ := appendW_stage hap hS1 (by have := hg1.iw; omega)
       (by rw [h3]; exact h2b)
     rw [h3] at hr21 ht2 hw2
     have hcsA : CsAt m2 (r2.headD 0).toNat (out ++ ctors) (· < iwTop m2) := by
@@ -121,7 +121,7 @@ theorem ngc_ref {p : Prog} (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vi
       by_cases hio : i < out.length
       · obtain ⟨w, hw, hc'⟩ := hout i hio
         refine ⟨w, ?_, ?_⟩
-        · rw [hw1 i (by omega), hg1.2.2.1 _ (by omega)]; exact hw
+        · rw [hw1 i (by omega), hg1.iwGet _ (by omega)]; exact hw
         · rw [List.getElem_append_left hio]; exact (hc'.grow hg1).grow hg2
       · simp only [List.length_append] at hi
         obtain ⟨w, hw, hc'⟩ := hcs3 (i - out.length) (by omega)
@@ -134,7 +134,7 @@ theorem ngc_ref {p : Prog} (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vi
       (by rw [hoff1, hl1, decHL_agree (RdS.of_grow (hg1.trans hg2)) (fun j hj => by
             have := hcb (j + 1) (by omega); omega)]
           simpa [decHL] using hcs'')
-      (fun j hj => by rw [hoff1, hl1] at *; have := hcb (j + 1) (by omega); have := hg1.1; have := hg2.1; omega)
+      (fun j hj => by rw [hoff1, hl1] at *; have := hcb (j + 1) (by omega); have := hg1.iw; have := hg2.iw; omega)
       (by rw [hr21]; simp [hol]) (by rw [hr20]; simp; omega) hcsA
     rcases h3' : ngcE p (k + 1) m2 vis nPc (off + 1) (l - 1) (r2.headD 0) (r2.tail.headD 0) with e3 | ⟨r3, m3⟩
     · rw [ngcE.k_nest_group_ctors.none]; rw [h3'] at hR; exact hR

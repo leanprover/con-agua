@@ -138,10 +138,10 @@ theorem ih_ref {p : Prog} (hap : ApdF p) (hCrf : CrfF p) {dn : NIdx → Option C
   by_cases hb1 : r1.headD 0 ≠ 0
   · rw [installHeaderE.k_env_find.abort1 p _ _ _ _ _ _ _ hb1]
     have : (fe.find? cv.name).isSome = true := by
-      rw [hname]; exact envFindW_hitSome h1 hS.stage.1.env hwxl hb1
+      rw [hname]; exact envFindW_hitSome h1 hS.stage.check.env hwxl hb1
     exact fun _ => ErrClaim.ite_pos this (ErrClaim.fail_abort _ _ rfl)
   rw [installHeaderE.k_env_find.arm1 p _ _ _ _ _ _ _ (by simpa using hb1)]
-  obtain ⟨rfl, hfind⟩ := envFindW_miss h1 hS.stage.1.env hwxl (by simpa using hb1)
+  obtain ⟨rfl, hfind⟩ := envFindW_miss h1 hS.stage.check.env hwxl (by simpa using hb1)
   have hfind' : (fe.find? cv.name).isSome = false := by rw [hname, hfind]; rfl
   refine RefE.ite_neg (by simp [hfind']) ?_
   -- `reserved_contains(x)`
@@ -150,13 +150,13 @@ theorem ih_ref {p : Prog} (hap : ApdF p) (hCrf : CrfF p) {dn : NIdx → Option C
   rw [liftE_some]
   by_cases hb2 : c ≠ 0
   · rw [installHeaderE.k_reserved_contains.abort1 p _ _ _ _ _ _ hb2]
-    obtain ⟨l, hrunR, hcl⟩ := resContW_hit hb2 h2 hS.stage.1.pins
+    obtain ⟨l, hrunR, hcl⟩ := resContW_hit hb2 h2 hS.stage.check.pins
     refine RefE.bind_right hrunR (RefE.ite_pos ?_ (fun _ => ErrClaim.fail_abort _ _ rfl))
     rw [hname]; exact hcl
   have hc0 : c = 0 := by simpa using hb2
   subst hc0
   rw [installHeaderE.k_reserved_contains.arm1 p _ _ _ _ _ _ rfl]
-  obtain ⟨l, hrunR, hcl⟩ := resContW_miss hwxl h2 hS.stage.1.pins
+  obtain ⟨l, hrunR, hcl⟩ := resContW_miss hwxl h2 hS.stage.check.pins
   refine RefE.bind_right hrunR (RefE.ite_neg ?_ ?_)
   · rw [hname, hcl]; decide
   -- `cv_lps(q)`

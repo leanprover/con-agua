@@ -164,8 +164,8 @@ theorem reservedContains_callW {p : Prog} (hc : StuckCallees p) {n : Nat}
     CoreAfter dn m m' a vis fe M eb ∧ decBool r = a.pins.reserved.contains (decI x) := by
   have h := CoreSpec.of_callW (hc.reservedContains n ⟨m, Locals.init []⟩ a dn vis fe M eb x hS hx) hcall
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ (reservedContainsT_run hS.pins (decI x))
-  refine ⟨hst ▸ h.2.1, ?_⟩
-  rw [← h.2.2.1, hres]
+  refine ⟨hst ▸ h.after, ?_⟩
+  rw [← h.res, hres]
 
 /-- A `const` node's level list at a state, read back after `towerSlotsAll`. -/
 theorem constLs_after_tower {fe : IFEnv} {T : NIdx} {nF : Nat} {a : AState} {x : EIdx} {c : NIdx}
@@ -278,7 +278,7 @@ theorem secg_ref (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : StuckCal
   have em₄ : m₄ = m₃ := by rw [← ht₄, ht₄s]
   subst em₄
   rw [hr₄] at hne
-  have hvl := defeq_lsNodeW_viewLen hS₃.arena.1 hus2 hne
+  have hvl := defeq_lsNodeW_viewLen hS₃.arena.base hus2 hne
   rw [← hr₄] at hvl
   simp only [secgE.k_ls_node]
   -- `tower_slots_all`: the effect
@@ -289,7 +289,7 @@ theorem secg_ref (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : StuckCal
   have h₅ := CoreSpec.of_callW (hc.towerSlots (n' + 1) ⟨m₄, Locals.init []⟩ a₀ dn vis fe M₃ eb T _
     hS₃ hT) c5
   rw [← hIR.etaFields] at h₅
-  obtain ⟨_, _, _, hst₅⟩ := h₅.2.1
+  obtain ⟨_, _, _, hst₅⟩ := h₅.after
   refine RefE.of_run_eq (setGoT_run _ _ _ _ _ _ _ _ _ _ _ _ _ hS.pins _ hvl) ?_
   refine RefE.bind_growK (w := id) h₅ (fun M₅ hS₅ _ => ?_)
   unfold setGoK

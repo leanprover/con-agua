@@ -26,8 +26,8 @@ theorem pos2_forall_view {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe :
     ∃ d b, eViewW m w = [6, d, b, 0] ∧ H d ∧ H b ∧
       (viewBind (decI w)).run a = .ok (some (decI d, decI b), a) ∧ (decI w : EIdx).tag = ETag.forallE := by
   obtain ⟨hvok, hew⟩ := eViewW_forall m w h6 hne
-  obtain ⟨-, hty, hb⟩ := view_forall m a hS.1.arena.1 w hw hvok h6
-  have hvb := viewBind_forall m a hS.1.arena.1 w hw hvok h6
+  obtain ⟨-, hty, hb⟩ := view_forall m a hS.check.arena.base w hw hvok h6
+  have hvb := viewBind_forall m a hS.check.arena.base w hw hvok h6
   exact ⟨_, _, hew, hty, hb, by rw [viewBind_run']; simp only [← decE_eq]; rw [hvb],
     (decE_tag_forallE w hw).mpr h6⟩
 

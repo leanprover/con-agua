@@ -525,7 +525,7 @@ theorem fvarHeadW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFE
   · rw [ite_eq_left hf] at h
     obtain ⟨hne, h⟩ := of_ite_none h
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-    obtain ⟨v, hv, hR⟩ := eViewW_ok m1 a1 hS1.1.arena.1 w hne
+    obtain ⟨v, hv, hR⟩ := eViewW_ok m1 a1 hS1.check.arena.base w hne
     have htag : (decE w).tag = ETag.fvar := by
       rw [decE_tag w hd1, hf]; rfl
     cases v
@@ -710,7 +710,7 @@ theorem closeLamsW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IF
         obtain ⟨w, hw1, hw2, hw3⟩ := iwH_rdW hdom (by omega)
         rw [UInt64.ofNat_toNat] at hw1
         have hrd : rdW (m2.arr64 IW) bo = w := by
-          have e : (m2.arr64 IW)[bo.toNat]? = (m.arr64 IW)[bo.toNat]? := (hg1.trans hg2).2.2.1 bo.toNat (by omega)
+          have e : (m2.arr64 IW)[bo.toNat]? = (m.arr64 IW)[bo.toNat]? := (hg1.trans hg2).iwGet bo.toNat (by omega)
           simp only [rdW] at hw1 ⊢; rw [e]; exact hw1
         rw [hrd] at h
         obtain ⟨⟨rb, m3⟩, hm, h⟩ := of_K h rfl

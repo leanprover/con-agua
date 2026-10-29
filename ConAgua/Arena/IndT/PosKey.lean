@@ -32,7 +32,7 @@ theorem keyRef_step (L : NbLook p) (n : Nat) (ih : NbRef p dn vis fe env n) : Ke
     hds hdsb hcty hns hP hA hc hctx hprog hnP husP hdsP hctyP hnsP hwds hni
   have R := L.ct.cr.rx
   have hS := hC.stage
-  have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
+  have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.iw hS.iw.iwSize
   rw [nckE.arm1]
   -- the key
   cases h1 : callE p n "rec4" [nn, us, dO, dL] m with
@@ -50,7 +50,7 @@ theorem keyRef_step (L : NbLook p) (n : Nat) (ih : NbRef p dn vis fe env n) : Ke
   simp only [List.length_cons, List.length_nil] at ht1
   have hK : DecB (fun m => decNK m (rk.headD 0).toNat) m1 ⟨decI nn, decI us, ds⟩ :=
     pos2_key_rec hnn hus (by omega) hget1 (hds.grow (OMono.decHL _ _) hg1)
-  have htop1 : iwTop m1 < 2 ^ 64 := Nat.lt_of_le_of_lt hS1.2.1 hS1.2.2.2.1
+  have htop1 : iwTop m1 < 2 ^ 64 := Nat.lt_of_le_of_lt hS1.iw.iw hS1.iw.iwSize
   obtain ⟨hp6, hk0', ha0, -⟩ := nsb_words hns htop
   -- not in progress
   cases h2 : callE p n "nest_keys_contains" [rdW (m1.arr64 IW) (ns + 2), rdW (m1.arr64 IW) (ns + 3), rk.headD 0] m1 with
@@ -100,7 +100,7 @@ theorem keyRef_step (L : NbLook p) (n : Nat) (ih : NbRef p dn vis fe env n) : Ke
   have hhi0 : c.hiAt 0 < 2 ^ 64 := by have := hW.hb; simp only [NestCtx.hiAt] at this ⊢; omega
   obtain ⟨bc, a2, hrun2, hS2, hg2, hr2⟩ := dcWf_ok dn fe vis (n' + 1) m1 m3 a ctx dO dL c ds [r3.headD 0] hW3 hS1
     (hW.grow hg1).u.dec (hW.grow hg1).u.inn hhi0 ((hds.grow (OMono.decHL _ _) hg1).get (OMono.decHL _ _))
-    (fun j hj => by have := hg1.1; omega)
+    (fun j hj => by have := hg1.iw; omega)
   have hg12 := hg1.trans hg2
   have hP2 : PosMR m3 := (hP.fr (posRecW_mfr hk)).fr (dcWf_mfr hW3)
   have hA2 : AbsOK m3 := dcWf_afr hW3 (posRecW_afr hk hA)
@@ -117,7 +117,7 @@ theorem keyRef_step (L : NbLook p) (n : Nat) (ih : NbRef p dn vis fe env n) : Ke
       (nestContNew V fe c fu.toNat prog kb.toNat (decI nn) (decI us) ds nPc.toNat (decI cty) NS) a2
       (fun v x a' => KindPost dn vis fe env a m v.1 v.2 x a') := by
     have hR := ih.new m3 a2 ctx fu po pl kb nn us dO dL nPc cty ns c prog ds NS ctxP progP nP usP dsP ctyP nsP hC2
-      (hW.grow hg12) hnn hus (hds.grow (OMono.decHL _ _) hg12) (by have := hg12.1; omega) hcty
+      (hW.grow hg12) hnn hus (hds.grow (OMono.decHL _ _) hg12) (by have := hg12.iw; omega) hcty
       (hns.grow hg12 htop) hP2 hA2 hc (dCtx_ext _ p2.ext _ _ hctx) (dProg_ext p2.ext _ _ hprog)
       (ConRon.Bridge.denoteN_ext hnP p2.ext) (ConRon.Bridge.denoteLs_ext husP p2.ext)
       (ConRon.Bridge.denoteEList_ext p2.ext _ _ hdsP) (ConRon.Bridge.denote_ext hctyP p2.ext)
@@ -154,7 +154,7 @@ theorem keyRef_step (L : NbLook p) (n : Nat) (ih : NbRef p dn vis fe env n) : Ke
     obtain rfl := hm4.symm
     rw [pos2_rd_grow hg12 (by omega), pos2_ns_rd hg12 hp6 htop 1 (by decide)] at hW4
     have hb2 := nkcW_ok (rk.headD 0) _ (n' + 1) m3 _ _ _ NS.keys.toList hW4 (hk0'.grow hg12)
-      (hK.grow (decNK_mono _) hg2) (Nat.lt_of_le_of_lt hS2.2.1 hS2.2.2.2.1)
+      (hK.grow (decNK_mono _) hg2) (Nat.lt_of_le_of_lt hS2.iw.iw hS2.iw.iwSize)
     by_cases hb2n : r4.headD 0 ≠ 0
     · rw [nckE.k_nest_keys_contains_2.arm1 p (n' + 1) vis ctx fu po pl kb nn us dO dL nPc cty ns r4 m3 hb2n]
       have hin : NS.keys.contains ⟨decI nn, decI us, ds⟩ = true := by

@@ -239,7 +239,7 @@ theorem crp_ref {p : Prog} (hC : CrpProg p) (hq : KnotStageProg p) (hcl : LeafCl
   have hn' : n ≤ 2 ^ 62 := by omega
   rw [checkReducePinE.eq_2]
   simp only [checkReducePin]
-  have hvb : fe2.visibleBelow = vis2.toNat := hS.1.env.vis
+  have hvb : fe2.visibleBelow = vis2.toNat := hS.check.env.vis
   have hC0 : StageC dn vis (fe2.restrictTo vis.toNat) env m a := ⟨hS.restrict vis, hck, hmem, hflag⟩
   generalize hfe : fe2.restrictTo vis.toNat = fe at hC0 hck ⊢
   -- the stored constant, at `vis2`
@@ -382,7 +382,7 @@ theorem crp_ref {p : Prog} (hC : CrpProg p) (hq : KnotStageProg p) (hcl : LeafCl
   · rw [liftE_none, checkReducePinE.k_mk_app.none]; exact RefE.of_cls0 (by simp)
   rw [liftE_some, checkReducePinE.k_mk_app.arm1]
   obtain ⟨a7, hrun7, hS7, hg7⟩ := mkApp_stage hC6.stage v (r6.headD 0) h7
-  have haxl := mkAppW_hw s6.mem a6 hC6.stage.1.arena v (r6.headD 0) ax m7 h7
+  have haxl := mkAppW_hw s6.mem a6 hC6.stage.check.arena v (r6.headD 0) ax m7 h7
   obtain ⟨hi7, hax⟩ := ConRon.Bridge.Frontend.internE_sstep hC6.check.state
     (ConRon.Bridge.viewOK_app (by rw [hv6]; rfl) (by rw [hxv]; rfl)) hrun7
   have hax' : denoteE a7.store (decE ax) = some (.app x (ConLeche.reduceCertVar nm)) := by
@@ -472,7 +472,7 @@ theorem cdo_ref {p : Prog} (hV : ValProg p) (hC : CrpProg p) (hq : KnotStageProg
   simp only [stepCV, stepVal] at hcv1 hval1
   generalize hq0 : r1.headD 0 = q at hci1 hcv1 hval1 htop1 ⊢
   have hqb : q.toNat + 8 < 2 ^ 64 := by
-    have := hS1.stage.2.2.1; have := hS1.stage.2.2.2.2.1; omega
+    have := hS1.stage.iw.er; have := hS1.stage.iw.erSize; omega
   have hq1 : (q + 1).toNat = q.toNat + 1 := toNat_add_small q 1 (by omega)
   have hq5 : (q + 5).toNat = q.toNat + 5 := toNat_add_small q 5 (by omega)
   -- the name and value words
@@ -524,7 +524,7 @@ theorem cdo_ref {p : Prog} (hV : ValProg p) (hC : CrpProg p) (hq : KnotStageProg
     rw [← hname]
     exact ConRon.Bridge.denoteN_ext (ConRon.Bridge.denoteCV_inv hcA).1 hstep2.ext
   have hv3 := ConRon.Bridge.denote_ext hv1 hstep2.ext
-  have hvis : fe.visibleBelow = vis.toNat := hS.stage.1.env.vis
+  have hvis : fe.visibleBelow = vis.toNat := hS.stage.check.env.vis
   have hpre := ConRon.Bridge.restrict_pushed_find (fe2 := fe.push (.axiomInfo cv)) rfl
     (hok3.check.ienv.find?_none
       (show denoteN a3.store.ns cv.name = some c.name by rw [hname]; exact hnm3)
@@ -549,19 +549,19 @@ theorem cdo_ref {p : Prog} (hV : ValProg p) (hC : CrpProg p) (hq : KnotStageProg
   rw [checkDeclOpaqueE.k_pin_at.arm1]
   obtain ⟨s4, hs4, -, hW4⟩ := triple_of_callE
     (pinAt_specW p hC.red.pa n ⟨s3.mem, Locals.init []⟩ 43) h4
-  obtain ⟨hm4, hr4, -, -⟩ := pinAtW_ok hW4 hS3.1.pins
+  obtain ⟨hm4, hr4, -, -⟩ := pinAtW_ok hW4 hS3.check.pins
   have hm4' : m4 = s3.mem := hs4.symm.trans hm4
   subst hm4'
   rcases h5 : callE p n "pin_at" [44] s3.mem with e5 | ⟨r5, m5⟩
   · rw [checkDeclOpaqueE.k_pin_at_2.none]; exact fun hG => nvl hG.nv (by decide +kernel) h5
   obtain ⟨s5, hs5, -, hW5⟩ := triple_of_callE
     (pinAt_specW p hC.red.pa n ⟨s3.mem, Locals.init []⟩ 44) h5
-  obtain ⟨hm5, hr5, -, -⟩ := pinAtW_ok hW5 hS3.1.pins
+  obtain ⟨hm5, hr5, -, -⟩ := pinAtW_ok hW5 hS3.check.pins
   have hm5' : m5 = s3.mem := hs5.symm.trans hm5
   subst hm5'
   have e4 : r4.headD 0 = pinW s3.mem (1 + (43 : Word).toNat) := by rw [hr4]; rfl
   have e5 : r5.headD 0 = pinW s3.mem (1 + (44 : Word).toNat) := by rw [hr5]; rfl
-  have hF := hS3.1.pins.full hflag3
+  have hF := hS3.check.pins.full hflag3
   have hcont : (reduceOpNames.run a3) =
       .ok ((List.range' 44 2).map (fun j => decI (pinW s3.mem j)), a3) := reduceOpNames_run hF
   have hiff := contains_pins hF hwnl 44 2 (by omega) (by omega)

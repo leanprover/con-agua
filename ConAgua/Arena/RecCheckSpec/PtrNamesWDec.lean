@@ -358,12 +358,12 @@ theorem tmdW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
   have hz : ls = pinW m1 52 := by
     simp only [pinWordV, hpne, ite_false, Option.some.injEq] at hp
     rw [← hp]; rfl
-  have hfull := hS1.1.pins.full hpne
+  have hfull := hS1.check.pins.full hpne
   have hlslt : ls.toNat < 2 ^ 32 := by rw [hz]; exact hfull.lv_lt.1
   have hrunP : pinEmptyLevels.run a1 = .ok (decI ls, a1) := by rw [hz]; exact pinEmptyLevels_run hfull
   rcases hmk : mkTMW m1 (ra.headD 0) ls 0 0 0 0 0 0 0 0 0 0 0 with _ | ⟨r3, m2⟩ <;> simp only [hmk, tmdK3, reduceCtorEq] at h
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-  obtain ⟨hI, hE, hIsz, hEsz, hCsz⟩ := hS1.2
+  obtain ⟨hI, hE, hIsz, hEsz, hCsz⟩ := hS1.iw
   have hdec0 : ∀ {k : IdxKind} (mm : Mem), (decHL mm (0 : Word).toNat (0 : Word).toNat : Option (List (Idx k))) = some [] := by
     intro k mm; simp [decHL, hslice?]
   have hdecP : ∀ {α : Type} (mm : Mem) (f : Nat → Option α), decPL mm f (0 : Word).toNat (0 : Word).toNat = some [] := by
@@ -433,7 +433,7 @@ theorem plnW_stage {α : Type} {f : Mem → Nat → Option α} (cvOf : α → IC
     StageR dn vis fe m' a ∧ IWGrow m m' ∧ r = [rdW (m.arr64 CTL) 200, l] ∧
       decHL m' (rdW (m.arr64 CTL) 200).toNat l.toNat = some (xs.map fun x => (cvOf x).name) ∧
       (rdW (m.arr64 CTL) 200).toNat + l.toNat = iwTop m' := by
-  obtain ⟨-, -, hsz, -, hc⟩ := hS.2
+  obtain ⟨-, -, hsz, -, hc⟩ := hS.iw
   have hroom := ptrNamesW_room h hsz
   have hlen : xs.length = l.toNat := decPL_length _ hx.1
   by_cases hl : l = 0

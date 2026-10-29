@@ -53,7 +53,7 @@ theorem adF_ok {P : Prog} {fF g : FnName} {op : Nat → EIdx → AM EIdx}
   obtain rfl : f = CWF := Decidable.not_not.mp hf
   obtain ⟨⟨r', m''⟩, c'', c'⟩ := of_K (K := (ntBW · _)) c1 rfl; rw [bW_some] at c'
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj c')
-  obtain ⟨t, ht, hm, -, hHW, hrun⟩ := triple_of_callW (href k ⟨m, Locals.init []⟩ a hS.1.arena.1 e he) c''
+  obtain ⟨t, ht, hm, -, hHW, hrun⟩ := triple_of_callW (href k ⟨m, Locals.init []⟩ a hS.check.arena.base e he) c''
   have e_m : m = m'' := by rw [← ht, hm]
   subst e_m
   exact ⟨decE (r'.headD 0), a, by rw [CWF_eq]; exact hrun, hS, IWGrow.refl _, hHW, rfl⟩
@@ -335,7 +335,7 @@ theorem mknF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
     simp only [spW]; rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
   have hsz1 : ((m1.set64 CTL 136 (top + l)).arr64 SPN).size = (m.arr64 SPN).size := hfrA.size SPN
   have hl : xs.length = l.toNat := decHL_length m hxs
-  have hiwsz : (m.arr64 IW).size < 2 ^ 64 := hS.2.2.2.1
+  have hiwsz : (m.arr64 IW).size < 2 ^ 64 := hS.iw.iwSize
   have hsp : SpineR (m1.set64 CTL 136 (top + l)) top l xs.toArray := by
     refine ⟨by simp [hl], by rw [hsz1]; omega, fun i hi => ?_, fun i hi => ?_⟩
     · obtain ⟨w, hw, hw32, -⟩ := decHL_word hxs hiwsz i hi
@@ -354,8 +354,8 @@ theorem mknF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
   rw [ht2] at hL
   have h0 : (0 : Word).toNat = 0 := rfl
   obtain ⟨hok, hD2, hres⟩ := mkAppNFromW_ok l.toNat _ a f top l 0 xs.toArray (by rw [h0]; omega)
-    (by rw [h0]; omega) hS1.1.arena hsp (r2.headD 0) m2 hL
-  have hhw := mkAppNFromW_hw l.toNat _ a f top l 0 (by rw [h0]; omega) hS1.1.arena hf _ _ hL
+    (by rw [h0]; omega) hS1.check.arena hsp (r2.headD 0) m2 hL
+  have hhw := mkAppNFromW_hw l.toNat _ a f top l 0 (by rw [h0]; omega) hS1.check.arena hf _ _ hL
   have hfr2 := mkAppNFromW_frame l.toNat _ m2 f top l 0 (r2.headD 0) hL
   have hkeep := keeps_cpl_mkAppNFrom (decE f) xs.toArray 0
   rw [h0, mkAppNFrom_eq_mkAppN, List.toList_toArray] at hok hD2 hres

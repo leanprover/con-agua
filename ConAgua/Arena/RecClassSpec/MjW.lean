@@ -91,7 +91,7 @@ theorem mjtW_sim (n : Nat) (m : Mem) (a : AState) (ind lvls ds0 dl0 fo fl : Word
     simp at this; exact this
   refine RSim.lstep (K := mjtW.k_sl_append fo fl hd) rfl fun ⟨r2, m2⟩ h2 => ?_
   obtain ⟨hS2, hg2, hd2, hb2⟩ := rec2AppendW_dec h2 hS1 (hds.grow (OMono.decHL _ _) hg1)
-    (by rw [decHL_grow hg1 hfb]; exact hifs) (Nat.le_trans hfb hg1.1)
+    (by rw [decHL_grow hg1 hfb]; exact hifs) (Nat.le_trans hfb hg1.iw)
   rw [mjtW.k_sl_append.arm1]
   refine RSim.bind (K := mjtW.k_mk_app_n_f fo fl) rfl
     ((mknF_ok dn vis fe hd (r2.headD 0) (r2.tail.headD 0) hH (ds ++ ifs)).sim ⟨hS2, hd2⟩) ?_
@@ -102,7 +102,7 @@ theorem mjtW_sim (n : Nat) (m : Mem) (a : AState) (ind lvls ds0 dl0 fo fl : Word
   · show decHL m3 fo.toNat fl.toNat = some ifs
     rw [decHL_grow hg hfb]; exact hifs
   · show fo.toNat + fl.toNat ≤ iwTop m3
-    exact Nat.le_trans hfb hg.1
+    exact Nat.le_trans hfb hg.iw
   · exact hmaj
 
 theorem mjtW_afr {n : Nat} {m m' : Mem} {ind lvls ds0 dl0 fo fl : Word} {r : List Word}
@@ -151,8 +151,8 @@ theorem mjW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
   rcases n with _ | n
   · exact RSim.none
   rw [mjW.arm1, rec2Major_eq]
-  have hsz := hS.2.2.2.1
-  have htop := hS.2.1
+  have hsz := hS.iw.iwSize
+  have htop := hS.iw.iw
   obtain ⟨-, hgt, ⟨o3, l3, h3, h4, hcls⟩, ⟨o5, l5, h5, h6, hft⟩, -, -⟩ := rec2CG_parts hG
   obtain ⟨e3, t3⟩ := rec2RdN (w := g) (k := 3) h3 hsz
   obtain ⟨e4, t4⟩ := rec2RdN (w := g) (k := 4) h4 hsz
@@ -167,7 +167,7 @@ theorem mjW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
   rintro ⟨r1, m1⟩ tm a1 - ⟨⟨hS1, hg1, hTM, hds⟩, hf1⟩
   dsimp only at hS1 hg1 hTM hds
   rw [mjW.k_target_major_at.arm1]
-  have hsz1 := hS1.2.2.2.1
+  have hsz1 := hS1.iw.iwSize
   obtain ⟨hind, hlv, ⟨o, l, ho, hl, -⟩, -, hni⟩ := rec2DecTM_parts hTM
   have hds1 := hds o l ho hl
   obtain ⟨vi, evi, hvi, dvi⟩ := iwH_rdW_at (w := r1.headD 0) (k := 0) (by simpa using hind) hsz1
@@ -249,7 +249,7 @@ theorem motW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
   simp only [drop3_headD] at hmH hmd
   rw [motW.k_class_gen_major.arm2 (hc1 := by rw [h11]; decide)]
   obtain ⟨-, hgt, -, -, hel, -⟩ := rec2CG_parts hG
-  obtain ⟨ve, eve, hve, dve⟩ := iwH_rdW_at (w := g) (k := 11) (by rw [iwH_grow hg1 (show g.toNat + 11 < iwTop m by omega)]; exact hel) hS1.2.2.2.1
+  obtain ⟨ve, eve, hve, dve⟩ := iwH_rdW_at (w := g) (k := 11) (by rw [iwH_grow hg1 (show g.toNat + 11 < iwTop m by omega)]; exact hel) hS1.iw.iwSize
   simp only [show UInt64.ofNat 11 = (11 : Word) from rfl] at eve
   rw [eve]
   refine RSim.bind (K := motW.k_intern_sort n d _ _ _) rfl (Q1 := fun b a' x => StageR dn vis fe b.2 a' ∧
@@ -277,7 +277,7 @@ theorem motW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
   have hg13 := hg1.trans (hg2.trans hg3)
   rw [rec2MapM_classBinder]
   refine RSim.bind (K := motW.k_fvar_type_ds n d b) rfl (RSim.withF ((ftdsF_ok dn vis fe _ _ ifs).sim
-      ⟨hS3, by rw [decHL_grow (hg2.trans hg3) hfb]; exact hifs, fun _ => Nat.le_trans hfb (hg2.trans hg3).1⟩) (fun _ hb => ftdsF_afr hb)) ?_
+      ⟨hS3, by rw [decHL_grow (hg2.trans hg3) hfb]; exact hifs, fun _ => Nat.le_trans hfb (hg2.trans hg3).iw⟩) (fun _ hb => ftdsF_afr hb)) ?_
   rintro ⟨r4, m4⟩ bs a4 - ⟨⟨hS4, hg4, hbs, hbb⟩, hf4⟩
   dsimp only at hS4 hg4 hbs hbb
   simp only [getD_zero, Nat.zero_add, getD_one] at hbs hbb

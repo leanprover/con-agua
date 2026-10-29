@@ -60,7 +60,7 @@ theorem structElimLevel_stage {p : Prog} (P : SelProg p) (n : Nat) (s₀ : St) (
   refine triple_post (selm_spec p P.sel n s₀ elim large) ?_
   rintro r s' ⟨hl, hm⟩
   refine ⟨hl, ?_⟩
-  have hR := hS.1.arena.1
+  have hR := hS.check.arena.base
   unfold selmW at hm
   by_cases hlg : large ≠ 0
   · rw [ite_eq_left hlg] at hm
@@ -107,11 +107,11 @@ theorem StageR.of_envFrame {dn : NIdx → Option ConLeche.Name} {vis vis' : Word
           simp only [List.mem_cons, List.not_mem_nil, or_false] at hb
           rcases hb with rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> decide)
         (fun x hx => by simp at hx; subst hx; exact not_mem_arenaCtl _ (by decide)) hfr
-        hS.1.arena.1,
-      DerR.frameM _ _ m _ hfr (by decide) a hS.1.arena.2⟩,
-     hS.1.core.frame (by decide) (fun x hx => by simp at hx; subst hx; decide) hfr,
-     hS.1.pins.frame (by decide) hfr, hE, hS.1.mode.frame hfr (by decide) (by decide)⟩
-  obtain ⟨hI1, hE1, hsz, hEs, hc⟩ := hS.2
+        hS.check.arena.base,
+      DerR.frameM _ _ m _ hfr (by decide) a hS.check.arena.der⟩,
+     hS.check.core.frame (by decide) (fun x hx => by simp at hx; subst hx; decide) hfr,
+     hS.check.pins.frame (by decide) hfr, hE, hS.check.mode.frame hfr (by decide) (by decide)⟩
+  obtain ⟨hI1, hE1, hsz, hEs, hc⟩ := hS.iw
   have hI : m'.arr64 IW = m.arr64 IW := hfr.arr IW (by decide) (by decide)
   have hER : m'.arr64 EREC = m.arr64 EREC := hfr.arr EREC (by decide) (by decide)
   have h200 : iwTop m' = iwTop m := by simp only [iwTop, hfr.ctl 200 (by decide)]
@@ -189,7 +189,7 @@ theorem papW_ok {p : Prog} (hx : p.lookup "env_ix" = some envIxL)
   have hlen := decNL_length m hps
   have hplen : prevs.length = pl.toNat := by rw [← hfa.length_eq, hlen]
   have hT : iwTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 200).toNat_lt
-  have hsz := hS.2.2.2.1
+  have hsz := hS.iw.iwSize
   obtain ⟨i, hi⟩ : ∃ i, i = j.toNat - 1 := ⟨_, rfl⟩
   have hil : i < ps.length := by omega
   have hj1 : (j - 1).toNat = i := by
@@ -228,7 +228,7 @@ theorem papW_ok {p : Prog} (hx : p.lookup "env_ix" = some envIxL)
   obtain ⟨r1', m1⟩ := x
   rw [c1, papW.k_env_pop_temp.arm1] at h
   obtain ⟨s1, hs1, -, hE1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (envPopTemp_refines p hx hs hpt k _ vis wn c q pv hS.1.env (by simpa using hwn32) hpv) c1
+    (envPopTemp_refines p hx hs hpt k _ vis wn c q pv hS.check.env (by simpa using hwn32) hpv) c1
   subst hs1
   have hfr := popTemp_frame hx hs hpt c1
   obtain ⟨hS1, hg1⟩ := StageR.of_envFrame hS hfr hE1

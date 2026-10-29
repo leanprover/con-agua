@@ -50,7 +50,7 @@ theorem ahW_ok (n : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis 
       StageR dn vis fe m' a' ∧ IWGrow m m' ∧ decOE m' r x := by
   rw [ahWf.arm1] at hh
   rcases hph : phW n m b e nn with _ | r0 <;> rw [hph] at hh; · simp [ahWf.k_ph_app.none] at hh
-  obtain ⟨o, hrun, hpo⟩ := phW_ok n m a b e nn N r0 hN hph hS.1.arena.1 he hb
+  obtain ⟨o, hrun, hpo⟩ := phW_ok n m a b e nn N r0 hN hph hS.check.arena.base he hb
   by_cases hz : r0.headD 0 = 0
   · rw [ahWf.k_ph_app.arm1 n no nl us nn m r0 hz] at hh
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hh)
@@ -477,7 +477,7 @@ theorem rpBin_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word) 
   obtain ⟨a1, mp1, hr1, hS1, hg1, hM1⟩ := ih m m1 a no nl us b nn f1 x a2 N names mp h1 hS hx hus hdec hno hit hN hnn hb hM
   have hdec1 : decHL m1 no.toNat nl.toNat = some names := by rw [decHL_grow hg1 hit]; exact hdec
   obtain ⟨a2', mp2, hr2, hS2, hg2, hM2⟩ := ih m1 m2 a1 no nl us b nn f1 y x2 N names mp1 h2 hS1 hy hus hdec1 hno
-    (by have := hg1.1; omega) hN hnn hb hM1
+    (by have := hg1.iw; omega) hN hnn hb hM1
   obtain ⟨a3, hr3, hS3, hg3⟩ := hst m2 m' a2' a2 x2 r hS2 hn
   refine ⟨a3, mp2, ?_, hS3, (hg1.trans hg2).trans hg3, rpMR_low (hlow m2 m' a2 x2 r hn) hM2⟩
   simp only [StateT.run_bind, hr1, except_ok_bind, hr2, hr3]
@@ -508,11 +508,11 @@ theorem rpLet_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word) 
   obtain ⟨a1, mp1, hr1, hS1, hg1, hM1⟩ := ih m m1 a no nl us b nn f1 x a2 N names mp h1 hS hx hus hdec hno hit hN hnn hb hM
   have hdec1 : decHL m1 no.toNat nl.toNat = some names := by rw [decHL_grow hg1 hit]; exact hdec
   obtain ⟨a2', mp2, hr2, hS2, hg2, hM2⟩ := ih m1 m2 a1 no nl us b nn f1 y x2 N names mp1 h2 hS1 hy hus hdec1 hno
-    (by have := hg1.1; omega) hN hnn hb hM1
+    (by have := hg1.iw; omega) hN hnn hb hM1
   have hg12 := hg1.trans hg2
   have hdec2 : decHL m2 no.toNat nl.toNat = some names := by rw [decHL_grow hg12 hit]; exact hdec
   obtain ⟨a3', mp3, hr3, hS3, hg3, hM3⟩ := ih m2 m3 a2' no nl us b nn f1 z c2 N names mp2 h3 hS2 hz hus hdec2 hno
-    (by have := hg12.1; omega) hN hnn hb hM2
+    (by have := hg12.iw; omega) hN hnn hb hM2
   obtain ⟨a4, hr4, hS4, hg4⟩ := mkLet_stage hS3 a2 x2 c2 hn
   refine ⟨a4, mp3, ?_, hS4, (hg12.trans hg3).trans hg4, rpMR_low (mkLetW_low hn) hM3⟩
   simp only [StateT.run_bind, hr1, except_ok_bind, hr2, hr3]
@@ -586,7 +586,7 @@ theorem rpApp_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word) 
         (fun m a2 x2 => by simp [rpMkW])
         (fun m m' a u v r hS hI => mkApp_stage hS u v hI) (fun m m' u v r hI => mkAppW_low hI)
         m1 m' a1 no nl us b nn f1 x y r N names mp hn hS1 hx hy hus hdec1 hno
-        (by have := hg1.1; omega) hN hnn hb (rpMR_low (ahW_low hah) hM)
+        (by have := hg1.iw; omega) hN hnn hb (rpMR_low (ahW_low hah) hM)
       refine ⟨a', mp', ?_, hS', hg1.trans hg', hM'⟩
       simp only [rpArm, StateT.run_bind, hrun1, except_ok_bind]
       exact hr
@@ -727,7 +727,7 @@ theorem rpGo_step_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Wo
   | nil => rw [hvl] at hb; simp [rpG1] at hb
   | cons g vt =>
     have hne : eViewW m h ≠ [] := by rw [hvl]; simp
-    obtain ⟨v, hv, hvr⟩ := eViewW_ok m a hS.1.arena.1 h hne
+    obtain ⟨v, hv, hvr⟩ := eViewW_ok m a hS.check.arena.base h hne
     rw [hvl] at hvr hb
     have leaf : ∀ (hg : (g :: vt).headD 0 = 0 ∨ (g :: vt).headD 0 = 1 ∨ (g :: vt).headD 0 = 2 ∨ (g :: vt).headD 0 = 8),
         (match v with | .bvar _ | .sort _ | .lit _ | .fvar _ _ => True | _ => False) →
@@ -829,7 +829,7 @@ theorem rpConstW_ok (n : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) 
   rw [rpClrK_some r1 m1 h1] at hb
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hb)
   obtain ⟨a1, mp1, hrun, hS1, hg1, hM1⟩ := rpGoOK dn fe vis n _ _ a no nl us b nn CWF e r1 N names ∅ hg hS0 he hus hdec0
-    hno (by have := hg0.1; omega) hN hnn hbN hM0
+    hno (by have := hg0.iw; omega) hN hnn hbN hM0
   rw [CWF_eq] at hrun
   have hM2 := memoRG_clear raSch raSch_wf bmKey (fun w : Word => decE w) m1 mp1 hM1 h1
   have hf2 := mclearG_frame raSch m1

@@ -75,7 +75,7 @@ theorem consRecsTFSim_of {p : Prog} (L : CbrLook p) {fs : List FnName}
   intro n dn vis vis2 pp fe m a bs rr outs hS hbs hrr hM hA r m' hc
   obtain ⟨s', hs', -, hok, hS', hg, hA'⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (consBlockRecsTF_refines p L n _ a dn fe vis2 pp 0 (rr.headD 0) (rr.tail.headD 0) vis bs outs
-      hS hbs hrr (by simpa using (rr.tail.headD 0).toNat_lt) hA) hc
+      hS hbs ⟨hrr.1, hrr.2⟩ (by simpa using (rr.tail.headD 0).toNat_lt) hA) hc
   subst hs'
   have hrun := AM.run_of_ok _ a hok
   simp only [UInt64.toNat_zero] at hrun hS'

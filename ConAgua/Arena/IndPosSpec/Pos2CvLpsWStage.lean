@@ -42,7 +42,7 @@ theorem pos2_cvLpsW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe 
     have : cv.levelParams = [] := by simpa [hslice?] using hs.symm
     rw [this]
     simp only [cvLpsW, hr2, show (UInt64.ofNat 0 : Word) = 0 from rfl, erToIwW] at h
-    obtain ⟨hI1, hE1, hsz, hEs, hc⟩ := hS.2
+    obtain ⟨hI1, hE1, hsz, hEs, hc⟩ := hS.iw
     rcases hal : allocW m 0 with _ | ⟨q0, m1⟩; · rw [hal] at h; simp at h
     obtain ⟨hS1, hg1, -, -⟩ := allocW_stage hal hS
     obtain ⟨rfl, rfl, -⟩ := allocW_facts hal hsz
@@ -63,7 +63,7 @@ theorem pos2_cvLpsW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe 
       simp only [nat?, erA, Option.map_eq_some_iff] at ho
       obtain ⟨w, hw, rfl⟩ := ho
       simp [rdW, hq1, hw]
-    have hEs := hS.2.2.2.2.1
+    have hEs := hS.iw.erSize
     have hob : o' < 2 ^ 64 := by simp [erA] at hb; omega
     have hlb : l' < 2 ^ 64 := by simp [erA] at hb; omega
     have hlp : (rdW (m.arr64 EREC) (q + 1)).toNat + (rdW (m.arr64 EREC) (q + 2)).toNat ≤ (m.arr64 EREC).size := by

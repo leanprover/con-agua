@@ -103,7 +103,7 @@ theorem lineRecW_refines (m m' : Mem) (_hm : m.arr8 IN = b.data) (a₀ : AState)
     rcases r with ⟨I, (⟨P, S⟩ | ⟨P, N⟩)⟩ | ⟨_, (_ | ⟨_, _⟩ | ⟨_, _⟩ | _)⟩ | _ | _ | _ | _ <;>
       simp only [RecR, PlR, NameR] at hRR
     · obtain ⟨hI, -, hP', hS⟩ := hRR
-      obtain ⟨hg, hq, hk⟩ := ConAgua.Front.UnescapeLink.strPutEsc_link h64 b hsize m m₁ hR.1.lit.1 f.c f.d S
+      obtain ⟨hg, hq, hk⟩ := ConAgua.Front.UnescapeLink.strPutEsc_link h64 b hsize m m₁ hR.base.lit.1 f.c f.d S
         (hS hc0) l hP
       have hmo₁ := ModeOK.growsF hmode hg
       obtain ⟨hok', hR', hD', hM'⟩ := applyNStrW_refines m₁ m' a₀ st

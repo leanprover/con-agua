@@ -122,7 +122,7 @@ theorem rto_ref (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState} {g k rc cvR
   obtain ⟨q0', hq0', hcv2, -⟩ := rec2DecRS_parts (hrc.stab (decRS_mono _) m2 hg12)
   rw [hq2] at hq0'; cases hq0'
   have hext2 := CVExt_grow hg12 (hcvR q0 hq0m)
-  obtain ⟨erc, trc⟩ := rec2RdN (w := rc) (k := 0) (by simpa using hq2) hS2.2.2.2.1
+  obtain ⟨erc, trc⟩ := rec2RdN (w := rc) (k := 0) (by simpa using hq2) hS2.iw.iwSize
   simp only [show UInt64.ofNat 0 = (0 : Word) from rfl, UInt64.add_zero] at erc
   rw [erc]
   -- `cv_new(…)` (twin side none)
@@ -133,9 +133,9 @@ theorem rto_ref (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState} {g k rc cvR
   obtain ⟨hS3, hg3, hqe, htop3, hsl3, hdec3⟩ := cvNew_stage (cq := UInt64.ofNat q0) h3 hS2
     (by rw [trc]; exact hcv2) (by rw [trc]; exact hext2.1) (by rw [trc]; exact hext2.2) hgH
   have hext3 : CVExt m3 q.toNat :=
-    ⟨by omega, fun o l ho hl => (hsl3 o l ho hl).imp_left fun h => Nat.le_trans h hg3.2.1⟩
+    ⟨by omega, fun o l ho hl => (hsl3 o l ho hl).imp_left fun h => Nat.le_trans h hg3.er⟩
   have hqb : q.toNat + 3 < 2 ^ 64 := by
-    obtain ⟨-, hE1, -, hEs, -⟩ := hS3.2
+    obtain ⟨-, hE1, -, hEs, -⟩ := hS3.iw
     omega
   have hA3 := cvNewW_afr h3 hA2
   have hC3 : StageC dn vis fe env m3 a2 := hC2.of_pstep hS3 hA3 (PStep.refl hC2.check.state)
@@ -163,7 +163,7 @@ theorem rto_ref (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState} {g k rc cvR
   have hri := hcvRi.stab (OMono.decCVp _) m4 hg14
   obtain ⟨wt, hwt, hwtH, hwtE⟩ := decCV_typeW hri
   have hEi := (Array.getElem?_eq_some_iff.mp hwt).1
-  have hE64 := hC4.stage.2.2.2.2.1
+  have hE64 := hC4.stage.iw.erSize
   have et : rdW (m4.arr64 EREC) (cvRi + 3) = wt :=
     rdW_of_get? (by rw [UInt64.toNat_add]; simp [erA] at hEi ⊢; omega) hwt
   rw [et, hwtE]

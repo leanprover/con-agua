@@ -100,7 +100,7 @@ theorem cfaLoop_ref (k : Nat) (hk : k ≤ 2 ^ 62) : ∀ (m : Mem) (a : AState) (
   intro m a j i hC hA hbs hft hftb hms hmsb hfv hfvb hes hks hje hi hP hsh hftP hmsP hfvP hesP
     hformer hMs
   have hS := hC.stage
-  have hsz := hS.2.2.2.1
+  have hsz := hS.iw.iwSize
   have hkl := hks.length
   have hjk : j.toNat ≤ kl.toNat := UInt64.le_iff_toNat_le.mp hje
   by_cases hj : j < kl
@@ -257,10 +257,10 @@ theorem cfaLoop_ref (k : Nat) (hk : k ≤ 2 ^ 62) : ∀ (m : Mem) (a : AState) (
     have h5 := cna_ref hq henv P.toCnaProg vis q fto ftl (r3.headD 0) (r2.tail.headD 0)
       (r2.tail.tail.headD 0) (r2.tail.tail.tail.headD 0) fvo fvl i eo el bs formerTys tm teleB fvs
       (k' + 1) (by omega) s4.mem a4 es hC4 hA4
-      (hbs.grow hg04) (by rw [decHL_grow hg04 hftb]; exact hft) (Nat.le_trans hftb hg04.1)
+      (hbs.grow hg04) (by rw [decHL_grow hg04 hftb]; exact hft) (Nat.le_trans hftb hg04.iw)
       (hTM.grow (decTM_mono _) hg4) (HSl0.of (by rw [decHL_grow (hg3.trans hg4) hbl]; exact hdl)
-        (Nat.le_trans hbl (hg3.trans hg4).1)) hlwH
-      (by rw [decHL_grow hg04 hfvb]; exact hfv) (Nat.le_trans hfvb hg04.1)
+        (Nat.le_trans hbl (hg3.trans hg4).iw)) hlwH
+      (by rw [decHL_grow hg04 hfvb]; exact hfv) (Nat.le_trans hfvb hg04.iw)
       (hes.grow (fun q => decNCN_mono q) hg04) hP4
       (ConRon.Bridge.Inductives.dShape_ext q04.ext _ _ hsh) (denoteEList_ext q04.ext _ _ hftP)
       (ConRon.Bridge.Inductives.dMajor_ext q4.ext _ _ hmt) (denoteEList_ext q34.ext _ _ hteleB)
@@ -288,9 +288,9 @@ theorem cfaLoop_ref (k : Nat) (hk : k ≤ 2 ^ 62) : ∀ (m : Mem) (a : AState) (
     refine RefE.bind_right run5 ?_
     have := ih (by omega) m5 a5 (j + 1) (i + 1) hR5.stage hR5.abs
       (hbs.grow hg05)
-      (by rw [decHL_grow hg05 hftb]; exact hft) (by have := hg05.1; omega)
+      (by rw [decHL_grow hg05 hftb]; exact hft) (by have := hg05.iw; omega)
       (hms.grow (OMono.decPL (fun q => decTM_mono q) _ _) hg05) hmsb
-      (by rw [decHL_grow hg05 hfvb]; exact hfv) (by have := hg05.1; omega)
+      (by rw [decHL_grow hg05 hfvb]; exact hfv) (by have := hg05.iw; omega)
       (hes.grow (fun q => decNCN_mono q) hg05) (hks.grow hg05) hje1 hi' hR5.rc
       (ConRon.Bridge.Inductives.dShape_ext c06.ext _ _ hsh) (denoteEList_ext c06.ext _ _ hftP)
       (ConRon.Bridge.Inductives.dMajor_ext.list c06.ext _ _ hmsP) (denoteEList_ext c06.ext _ _ hfvP)

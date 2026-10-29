@@ -34,18 +34,18 @@ theorem ArenaD.imemo_set (m m' : Mem) (a : AState) (hA : ArenaD m a) (h c v : Wo
     (hh : h.toNat < 2 ^ 32) (hs : msetG imSch m h c v = some m') :
     ArenaD m' (withIC a (a.memos.inst1C.insert (decE h, c.toNat) (decE v))) := by
   have hf := msetG_frame imSch imSch_wf m m' h c v hs
-  refine ⟨?_, DerR.of_store m' a _ (DerR.frameM _ _ m m' hf (by simp [IMEMO]) _ hA.2) rfl⟩
-  exact hA.1.with_memos hf (by apart) (by apart) (by
-    memos_build hA.1.memos, hf with
-      exact memoRG_set imSch imSch_wf lfKey decE m _ hA.1.memos.inst1 h c v hh m' hs)
+  refine ⟨?_, DerR.of_store m' a _ (DerR.frameM _ _ m m' hf (by simp [IMEMO]) _ hA.der) rfl⟩
+  exact hA.base.with_memos hf (by apart) (by apart) (by
+    memos_build hA.base.memos, hf with
+      exact memoRG_set imSch imSch_wf lfKey decE m _ hA.base.memos.inst1 h c v hh m' hs)
 
 theorem ArenaD.imemo_clear (m : Mem) (a : AState) (hA : ArenaD m a)
     (h0 : rdW (m.arr64 CTL) 44 + 2 ≠ 0) : ArenaD (mclearG imSch m) (withIC a ∅) := by
   have hf := mclearG_frame imSch m
-  refine ⟨?_, DerR.of_store _ a _ (DerR.frameM _ _ m _ hf (by simp) _ hA.2) rfl⟩
-  exact hA.1.with_memos hf (by apart) (by apart) (by
-    memos_build hA.1.memos, hf with
-      exact memoRG_clear imSch imSch_wf lfKey decE m _ hA.1.memos.inst1 h0)
+  refine ⟨?_, DerR.of_store _ a _ (DerR.frameM _ _ m _ hf (by simp) _ hA.der) rfl⟩
+  exact hA.base.with_memos hf (by apart) (by apart) (by
+    memos_build hA.base.memos, hf with
+      exact memoRG_clear imSch imSch_wf lfKey decE m _ hA.base.memos.inst1 h0)
 
 theorem viewBVar_run (h : EIdx) (a : AState) :
     (viewBVar h).run a = .ok (a.store.viewBVar h, a) := rfl
@@ -105,11 +105,11 @@ theorem iprobe_ok (armW : Option (Word × Mem)) (miss : AM EIdx) (m m' : Mem) (a
   · rw [hhit hr hh0] at hb
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hb)
     rw [show a.memos.inst1C[(decE h, c.toNat)]? = _ from
-      memoRG_hit imSch lfKey decE m _ hA.1.memos.inst1 h c hr hh0 hh]
+      memoRG_hit imSch lfKey decE m _ hA.base.memos.inst1 h c hr hh0 hh]
     exact ⟨a, rfl, hA⟩
   · simp only [ne_eq, Decidable.not_not] at hh0
     rw [show a.memos.inst1C[(decE h, c.toNat)]? = none from
-      memoRG_miss imSch lfKey decE m _ hA.1.memos.inst1 h c hh hr hh0]
+      memoRG_miss imSch lfKey decE m _ hA.base.memos.inst1 h c hh hr hh0]
     exact hmiss hr hh0 hb
 
 /-! ## The statements, by fuel -/
@@ -160,7 +160,7 @@ theorem igoOK_succ (n : Nat) (ih : IArmOK n) : IGoOK (n + 1) := by
   intro m m' a h d v fu r hA hh hb
   by_cases hfu : fu = 0
   · rw [instW] at hb; simp [hfu] at hb
-  have hd := derBW_ok m a hA.1 hA.2 h hh
+  have hd := derBW_ok m a hA.base hA.der h hh
   rw [ctrW_toNat fu hfu, instantiate1Go_succ, StateT.run_bind, derivedE_run]
   simp only [except_ok_bind]
   by_cases hcut : derBW m h < 32767 ∧ derBW m h ≤ d
@@ -205,7 +205,7 @@ theorem igoOK_succ (n : Nat) (ih : IArmOK n) : IGoOK (n + 1) := by
     by_cases hc : tcnt m BVAR (tierW h) ≤ idxW h
     · rw [instW] at hb; simp [hfu, hcut, g0, hs, hc] at hb
     have hv : viewOK m h BVAR := ⟨hs, UInt64.not_le.mp hc⟩
-    rw [instantiate1ArmBVar, StateT.run_bind, viewBVar_run, viewBVar_ok m a hA.1 h hh hv]
+    rw [instantiate1ArmBVar, StateT.run_bind, viewBVar_run, viewBVar_ok m a hA.base h hh hv]
     simp only [except_ok_bind]
     by_cases he : tfld m BVAR (tierW h) (idxW h) 0 = d
     · rw [instW.arm5 n m h d v fu hfu hcut g4 g5 g6 g0 hs hc he] at hb

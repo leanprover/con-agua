@@ -100,7 +100,7 @@ theorem tka_ref (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState}
   obtain _ | n := n
   · rw [tkaE.eq_1]; exact RefE.of_cls0 (by simp)
   rw [tkaE_succ, tkaE.j2.arm1]
-  have hsz := hS.2.2.2.1
+  have hsz := hS.iw.iwSize
   obtain ⟨hlvH, hlvD, hdsS, hnP, hpfS, hMt⟩ := tmFields hMc hsz
   have hMk : ∀ k : Nat, k ≤ 12 → (Mc + UInt64.ofNat k).toNat < iwTop m := fun k hk => by
     rw [UInt64.toNat_add, UInt64.toNat_ofNat_of_lt' (by omega : k < 2 ^ 64), Nat.mod_eq_of_lt (by
@@ -134,7 +134,7 @@ theorem tka_ref (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState}
   rcases h3 : eqW n m2 (r1.headD 0) (r1.tail.headD 0) (r2.headD 0) (r2.tail.headD 0) with _ | e
   · rw [liftE_none, tkaE.k_sl_eq.none]; exact RefE.of_cls0 (by simp)
   rw [liftE_some]
-  have he := eqW_dec h3 (by rw [decHL_grow hg2 hb1]; exact hd1) (hS2.lt64 (by have := hg2.1; omega)) hd2
+  have he := eqW_dec h3 (by rw [decHL_grow hg2 hb1]; exact hd1) (hS2.lt64 (by have := hg2.iw; omega)) hd2
     (hS2.lt64 hb2)
   by_cases he0 : e = 0
   · rw [tkaE.k_sl_eq.arm1 _ _ _ _ _ _ _ _ _ _ _ _ _ _ he0]
@@ -191,7 +191,7 @@ theorem tka_ref (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState}
   rw [liftE_some, tkaE.k_block_shape_member_names.arm1]
   have hbs4 := hbs.grow hg04
   obtain ⟨hS5, hg5, -, hdn, htn⟩ := memberNamesW_stage h6 hS4 hbs4
-  have hf5 := (memberNamesW_dec h6 hS4.2.2.2.1 hS4.2.2.2.2.2 hbs4.dec
+  have hf5 := (memberNamesW_dec h6 hS4.iw.iwSize hS4.iw.ctl hbs4.dec
     (by have := hbs4.ptop; have := hS4.lt64 (Nat.le_refl _); omega) hbs4.2.1 hbs4.2.2).2.2.2.1
   have hP5 : RcMR m5 := hP4.fr (MFr.of_iw hf5)
   have hA5 := AFr.iw hf5 hA4
@@ -226,7 +226,7 @@ theorem tka_ref (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState}
   -- `target_class_match`: the twin's last step
   have h8 := tcm_ref hq henv n (by omega) hC6 hA6
     (hbs.grow hg06) hlvH hus
-    (by rw [decHL_grow hg06 hftb]; exact hft) (by have := hg06.1; omega) (hpfS.grow hg06) (hdsS.grow hg06)
+    (by rw [decHL_grow hg06 hftb]; exact hft) (by have := hg06.iw; omega) (hpfS.grow hg06) (hdsS.grow hg06)
     (hlp.grow ((hg4.trans hg5).trans hg6)) hP6
     (ConRon.Bridge.Inductives.dShape_ext q14.ext _ _ hsh) (denoteEList_ext q14.ext _ _ hftP)
     (denoteEList_ext q14.ext _ _ hMpf) (by rw [hlvD]; exact ConRon.Bridge.denoteLs_ext hMlv q14.ext)

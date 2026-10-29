@@ -77,8 +77,8 @@ theorem lvLeqTop_simC (p : Prog) (hL : LevelProg p) (hpt : p.lookup "lv_leq_top"
   obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (lvLeqTop_spec p hL hpt n _ u v) e
   obtain ⟨M, hCo⟩ := hS.core
-  have hlu := denoteL_lvR hCo.arena.1 (decI u) lu hdu
-  have hlv := denoteL_lvR hCo.arena.1 (decI v) lv hdv
+  have hlu := denoteL_lvR hCo.arena.base (decI u) lu hdu
+  have hlv := denoteL_lvR hCo.arena.base (decI v) lv hdv
   rw [word_decI _ _ hu |>.mpr rfl] at hlu
   rw [word_decI _ _ hv |>.mpr rfl] at hlv
   obtain ⟨hx, hz⟩ := leqTopW_ok (nameN_rel _ hCo.nwf) n _ _ _ _ _ _ _ hlu hlv hW

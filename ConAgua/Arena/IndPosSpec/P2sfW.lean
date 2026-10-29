@@ -61,7 +61,7 @@ theorem p2sfW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
       StageR dn vis fe m' a' ∧ IWGrow m m' ∧ PosMR m'
   | 0, m, m', a, k, f, r, h, _, _, _, _ => by simp [p2sfW] at h
   | n + 1, m, m', a, k, f, r, h, hS, hg0, hk, hP => by
-    have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
+    have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.iw hS.iw.iwSize
     by_cases hd : dL ≤ k
     · rw [p2sfW_done (h := hd)] at h
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
@@ -72,10 +72,10 @@ theorem p2sfW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     have hkl : k.toNat < dL.toNat := by
       have := UInt64.lt_iff_toNat_lt.mp (UInt64.not_le.mp hd); omega
     obtain ⟨w, hw, hH, hdj⟩ := hel k.toNat hkl
-    have hg0t := hg0.1
+    have hg0t := hg0.iw
     have hrd : rdW (m.arr64 IW) (dO + k) = w := by
       have e : (dO + k).toNat = dO.toNat + k.toNat := word_add_toNat (by omega)
-      simp only [rdW, e]; rw [hg0.2.2.1 _ (by omega), hw]; rfl
+      simp only [rdW, e]; rw [hg0.iwGet _ (by omega), hw]; rfl
     rw [hrd] at h
     rcases hwf : wfWf n m w with _ | ⟨rw, m1⟩ <;> rw [hwf] at h; · simp [p2sfK] at h
     rw [p2sfK_some] at h

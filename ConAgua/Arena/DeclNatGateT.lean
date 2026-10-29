@@ -115,7 +115,7 @@ theorem cert_ref (hq : KnotStageProg p) (o l : Word) (ps : List (EIdx × EIdx)) 
     have heb' : rdW (m.arr64 IW) (pp + 1) = eb := by
       obtain ⟨h1, -, h3⟩ := hrec
       have hpb : (pp + 1).toNat = pp.toNat + 1 := by
-        have e1 := hS.stage.2.1; have e2 := hS.stage.2.2.2.1
+        have e1 := hS.stage.iw.iw; have e2 := hS.stage.iw.iwSize
         have e3 : pp.toNat + 1 < 2 ^ 64 := by omega
         rw [UInt64.toNat_add]; simp only [UInt64.toNat_one]; exact Nat.mod_eq_of_lt e3
       simp only [iwA] at h3; simp [rdW, hpb, h3]
@@ -240,7 +240,7 @@ theorem dnc_ref (hN : NatSubProg' p) (hq : KnotStageProg p) (hcl : LeafClosed p)
   rcases h1 : callW p k "env_find" [n, w] m with _ | ⟨r1, m1⟩
   · rw [liftE_none, defnNatCertE.k_env_find.none]; exact RefE.of_cls0 (by simp)
   rw [liftE_some]
-  obtain ⟨hm1, hfd⟩ := envFind_call hG.toMasterProg n hn hSw.1.env h1
+  obtain ⟨hm1, hfd⟩ := envFind_call hG.toMasterProg n hn hSw.check.env h1
   subst hm1
   cases hf : fe2.find? (decI n) with
   | none =>
@@ -251,7 +251,7 @@ theorem dnc_ref (hN : NatSubProg' p) (hq : KnotStageProg p) (hcl : LeafClosed p)
   rw [hf] at hfd
   obtain ⟨hf1, hci⟩ := hfd
   have hnz : ¬ r1.headD 0 = 0 := by rw [hf1]; decide
-  have hsz := hSw.2.2.2.2.1
+  have hsz := hSw.iw.erSize
   by_cases hkk' : ¬ rdW (m1.arr64 EREC) (r1.tail.headD 0) = 1
   · rw [defnNatCertE.k_env_find.abort2 p _ _ _ _ _ hnz hkk']; exact RefE.of_cls0 rfl
   have hkk : rdW (m1.arr64 EREC) (r1.tail.headD 0) = 1 := Classical.not_not.mp hkk'
@@ -295,7 +295,7 @@ theorem dnc_ref (hN : NatSubProg' p) (hq : KnotStageProg p) (hcl : LeafClosed p)
     hst2 hx2 hc2 hp2
   have hE2 := decEqRL_headD hd2
   have e5' : rdW (m2.arr64 EREC) (q + 5) = wv := by
-    simp only [rdW, hq5]; rw [hg2.2.2.2 _ hqlt, erecP_get hk5]; rfl
+    simp only [rdW, hq5]; rw [hg2.erGet _ hqlt, erecP_get hk5]; rfl
   rw [e5']
   refine RefE.bind_right hrun2' ?_
   -- their substitution
@@ -304,7 +304,7 @@ theorem dnc_ref (hN : NatSubProg' p) (hq : KnotStageProg p) (hcl : LeafClosed p)
   · rw [liftE_none, defnNatCertE.k_subst_const0_pairs.none]; exact RefE.of_cls0 (by simp)
   rw [liftE_some, defnNatCertE.k_subst_const0_pairs.arm1]
   obtain ⟨x3, a3, hrun3, hS3, hg3, hd3⟩ := pairs_ref hN.toNatSubProg n wv hn hwl x2 (r2.headD 0)
-    (r2.tail.headD 0) k m2 a2 r3 m3 hS2 hE2 (EqL.lt64 hE2 hS2.2) h3
+    (r2.tail.headD 0) k m2 a2 r3 m3 hS2 hE2 (EqL.lt64 hE2 hS2.iw) h3
   have hvP2 : denoteE a2.store (decE wv) = some vP := by
     rw [hv]; exact ConRon.Bridge.denote_ext hjv hx2
   obtain ⟨hst3, hx3, hc3, hp3, hdps⟩ := ConRon.Bridge.substConst0Pairs_run hst2 hC2.check.pins
@@ -320,9 +320,9 @@ theorem dnc_ref (hN : NatSubProg' p) (hq : KnotStageProg p) (hcl : LeafClosed p)
   · rw [defnNatCertE.k_certify_nat_eqs.none]
     exact RefE.bind_left fun hcE => RefE.run_err (s₀ := ⟨m3, Locals.init []⟩)
       (certifyNatEqs_specE p hE.lNatCertify k _ vis (r3.headD 0) (r3.tail.headD 0)) trivial hcE
-      (cert_ref hq _ _ x3 k hk' m3 a3 hC3.stageT hE3 (EqL.lt64 hE3 hS3.2)) h4
+      (cert_ref hq _ _ x3 k hk' m3 a3 hC3.stageT hE3 (EqL.lt64 hE3 hS3.iw)) h4
   obtain ⟨x4, a4, hrun4, hC4, hg4, hd4, hx4⟩ := certW_okC hE hq henv hk' hC3 hE3
-    (EqL.lt64 hE3 hS3.2) hdps (ConRon.Bridge.natOpEqs_wscoped hie.envWF hfindP) (callW_of_callE h4)
+    (EqL.lt64 hE3 hS3.iw) hdps (ConRon.Bridge.natOpEqs_wscoped hie.envWF hfindP) (callW_of_callE h4)
   refine RefE.bind_right hrun4 ?_
   by_cases e4 : r4.headD 0 = 0
   · rw [defnNatCertE.k_certify_nat_eqs.abort1 p r4 m4 e4]
@@ -368,7 +368,7 @@ theorem dng_ref (hN : NatSubProg' p) (hq : KnotStageProg p) (hcl : LeafClosed p)
   have hT := hE.toNatTyProg
   have hGd := hT.toNatGuardProg
   have hG := hGd.toNatLitProg.toNatCvProg.toNatGateProg
-  have hvb : fe2.visibleBelow = w.toNat := hSw.1.env.vis
+  have hvb : fe2.visibleBelow = w.toNat := hSw.check.env.vis
   rw [natGateT_eq]
   -- the operation names
   rcases h1 : callW p k "nat_op_names" [] m with _ | ⟨r1, m1⟩

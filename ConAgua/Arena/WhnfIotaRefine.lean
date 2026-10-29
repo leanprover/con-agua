@@ -352,7 +352,7 @@ theorem isStrLit_refines (p : Prog) (hp : p.lookup "is_str_lit" = some isStrLitL
   intro s r s' hs0 hrun
   obtain ⟨hloc, hmem, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun (isStrLit_spec p hp n s₀ h)
   refine ⟨hloc, ?_⟩
-  have hR := hS.arena.1
+  have hR := hS.arena.base
   unfold islW at hW
   by_cases h8 : h >>> 28 = 8
   · simp only [h8, ne_eq, not_true_eq_false, ↓reduceIte] at hW
@@ -464,7 +464,7 @@ theorem isCtorApp_refines (p : Prog) (hp : IotaProg' p) :
     CoreSpec p (n + 1) "is_ctor_app" [vis, e] (isCtorApp fe (decE e)) decBool s₀ a₀ dn vis fe MM eb := by
   intro n s₀ a₀ dn vis fe MM eb e hS he
   refine triple_post (isCtorApp_spec p hp n s₀ vis e) fun r s' ⟨hloc, hW⟩ => ⟨hloc, ?_⟩
-  have hR := hS.arena.1
+  have hR := hS.arena.base
   simp only [icaW] at hW
   rcases hc : callW p n "get_app_fn" [e] s₀.mem with _ | ⟨r₁, m₁⟩ <;>
     simp only [hc, reduceCtorEq] at hW
@@ -566,8 +566,8 @@ theorem CoreS.setMemo {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : ASt
         simp at hx; subst hx
         have : (S.cs + 1).toNat = S.cs.toNat + 1 := by
           rw [UInt64.toNat_add]; simp; omega
-        omega) m m' hf a hS.arena.1).caches_irrel c
-  · have := DerR.frameM [S.arr] [S.cs + 1] m m' hf (fun b hb => by simp at hb; subst hb; simp only; rw [← har]; omega) a hS.arena.2
+        omega) m m' hf a hS.arena.base).caches_irrel c
+  · have := DerR.frameM [S.arr] [S.cs + 1] m m' hf (fun b hb => by simp at hb; subst hb; simp only; rw [← har]; omega) a hS.arena.der
     exact DerR.of_store _ _ _ this rfl
   · exact hS.pins.congr (hf.arr PINS (fun h => by simp at h; simp only [PINS] at h; rw [← har] at h; rw [← h] at n2; exact absurd n2 (by decide))
       (by decide))
@@ -991,11 +991,11 @@ theorem pirW_ok (p : Prog) (hinst : IotaInst1OK p) (dn : NIdx → Option ConLech
         [tfld m FORALL (tierW e) (idxW e) 1, rdW (m.arr64 SPN) (ao + i), 0] m with _ | ⟨r₁, m₁⟩
     · simp [pirW, hlt, h6, hv1, hv2, hc] at hL
     rw [pirW_cont p k m m₁ e ao an i r₁ hlt h6 hv1 hv2 hc] at hL
-    obtain ⟨hvb, hbw, -⟩ := view_forall m a hS.arena.1 e he ⟨hv1, UInt64.not_le.mp hv2⟩ h6'
-    have hvb' := viewBind_forall m a hS.arena.1 e he ⟨hv1, UInt64.not_le.mp hv2⟩ h6'
+    obtain ⟨hvb, hbw, -⟩ := view_forall m a hS.arena.base e he ⟨hv1, UInt64.not_le.mp hv2⟩ h6'
+    have hvb' := viewBind_forall m a hS.arena.base e he ⟨hv1, UInt64.not_le.mp hv2⟩ h6'
     obtain ⟨hrunT, ⟨M₁, hS₁, hK₁, hSt₁⟩, hr₁⟩ := CoreSpec.run
       (hinst k ⟨m, Locals.init []⟩ a dn vis fe M eb _ (rdW (m.arr64 SPN) (ao + i)) 0 hS (by
-        have := (view_forall m a hS.arena.1 e he ⟨hv1, UInt64.not_le.mp hv2⟩ h6').2.2
+        have := (view_forall m a hS.arena.base e he ⟨hv1, UInt64.not_le.mp hv2⟩ h6').2.2
         exact this)) hc
     have hsp₁ : SpineR m₁ ao an args := hsp.keep hSt₁.size hSt₁.below htop hS.spn
     have htop₁ : ao.toNat + an.toNat ≤ (spTop m₁).toNat := by rw [hSt₁.1]; exact htop

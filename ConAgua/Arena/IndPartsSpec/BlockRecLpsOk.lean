@@ -215,7 +215,7 @@ theorem lpsGoW_ok (n : Nat) : ∀ (m0 m m' : Mem) (ro rl wo wl : Word) (r : List
       rw [lpsGoW_cons n m ro rl wo wl hl, hv'] at h
       obtain ⟨r1, m1, h1, h⟩ := ipK_inv h (by simp [lgK1])
       have hvv : (UInt64.ofNat v).toNat = v := UInt64.toNat_ofNat_of_lt' (by rw [UInt64_size_eq]; exact hvb)
-      have hwb' : wo.toNat + wl.toNat ≤ iwTop m := by have := hg0.1; omega
+      have hwb' : wo.toNat + wl.toNat ≤ iwTop m := by have := hg0.iw; omega
       obtain ⟨hr1, hg1, hf1, hw1⟩ := lpsOneW_ok n m m1 (UInt64.ofNat v) wo wl r1 rc ns h1 hsz hc
         (by rw [hE]; exact hE64) (by rw [hvv]; exact hrcd) (hdn m hg0) hwb'
       have hsz1 : (m1.arr64 IW).size < 2 ^ 64 := by rw [hf1.size IW]; exact hsz
@@ -260,7 +260,7 @@ theorem iwN_lt_p {m : Mem} {i v : Nat} (h : iwN m i = some v) : i < (m.arr64 IW)
 theorem iwN_cell {m m' : Mem} {i v : Nat} (hg : IWGrow m m') (hi : i < iwTop m)
     (h : iwN m i = some v) : iwN m' i = some v := by
   simp only [iwN, nat?, iwA] at h ⊢
-  rw [hg.2.2.1 i hi]; exact h
+  rw [hg.iwGet i hi]; exact h
 
 /-- The record loop on top of a wanted list. -/
 theorem lokKey (n : Nat) (m m2 m' : Mem) (p wo wl : Word) (r : List Word) (bs : BlockShape)

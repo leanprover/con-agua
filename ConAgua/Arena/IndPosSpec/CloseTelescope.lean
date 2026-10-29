@@ -252,8 +252,8 @@ theorem nestFrameMates_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx 
     ⦃fun r s' => LocEq s' s₀ ∧
       decHL s'.mem (r.headD 0).toNat (r.tail.headD 0).toNat =
         some (ConRon.Arena.nestFrameMates fe (decI c)) ∧ IWGrow s₀.mem s'.mem; ⊤⦄ := by
-  obtain ⟨hOK1, hOK2, hOK3, hOK4, hOK5⟩ := hS.2
-  have hE := hS.1.env
+  obtain ⟨hOK1, hOK2, hOK3, hOK4, hOK5⟩ := hS.iw
+  have hE := hS.check.env
   simp only [invoke_eq _ hp, callFn, nestFrameMatesL]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,

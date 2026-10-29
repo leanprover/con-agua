@@ -125,8 +125,8 @@ theorem pcrW_ok (k : Nat) (m m' : Mem) (a : AState) (no nl us dO dL hO hL cty : 
     have g4 := iwN_of_get (by simpa using hget2 4 (by simp))
     have hfm : FMOk m2 f.toNat (.keyMap ds holes) :=
       ⟨by simpa using g0, by omega, ⟨dO.toNat, dL.toNat, g1, g2, by rw [decHL_grow hg12 hdsb]; exact hds,
-        by have := hg12.1; omega⟩, ⟨hO.toNat, hL.toNat, g3, g4, by rw [decHL_grow hg12 hhob]; exact hho,
-        by have := hg12.1; omega⟩⟩
+        by have := hg12.iw; omega⟩, ⟨hO.toNat, hL.toNat, g3, g4, by rw [decHL_grow hg12 hhob]; exact hho,
+        by have := hg12.iw; omega⟩⟩
     rcases hrx : rxW (k + 2) m2 f (r1.tail.headD 0) with _ | ⟨rr, m3⟩ <;> rw [hrx] at h; · simp [pcrK3] at h
     rw [pcrK3_some] at h
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
@@ -507,8 +507,8 @@ theorem u4W_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     obtain ⟨hwi, hw'⟩ := truncM_iw_get hw
     have hrd : rdW (m.arr64 IW) (ko + i) = w := by
       have e : (ko + i).toNat = ko.toNat + i.toNat := word_add_toNat (by
-        have := hS.2.1; have := hS.2.2.2.1; have := hg0.1; omega)
-      simp only [rdW, e]; simp only [iwA] at hw'; rw [hg0.2.2.1 _ hwi, hw']; rfl
+        have := hS.iw.iw; have := hS.iw.iwSize; have := hg0.iw; omega)
+      simp only [rdW, e]; simp only [iwA] at hw'; rw [hg0.iwGet _ hwi, hw']; rfl
     have hi1 : (i + 1).toNat = i.toNat + 1 := word_add_toNat (by have := nF.toNat_lt; simp; omega)
     have hrange : List.range' i.toNat (nF.toNat - i.toNat) =
         i.toNat :: List.range' (i + 1).toNat (nF.toNat - (i + 1).toNat) := by
@@ -590,7 +590,7 @@ theorem roW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
   obtain ⟨args, a2, hrun2, hS2, hg2, hargs⟩ := gaaF_ok dn vis fe CWF cur hcur m1 m2 a1 r2 hga hS1
   rw [CWF_eq] at hrun2
   have hU2 := (hU.grow hg1).grow hg2
-  have htop2 : iwTop m2 < 2 ^ 64 := Nat.lt_of_le_of_lt hS2.2.1 hS2.2.2.2.1
+  have htop2 : iwTop m2 < 2 ^ 64 := Nat.lt_of_le_of_lt hS2.iw.iw hS2.iw.iwSize
   obtain ⟨hn2, -, -, -, hnP2, -⟩ := ctx_fields hU2.dec hU2.inn htop2
   have hne2 := ctx_names_end hU2.dec hU2.inn hU2.sl htop2
   obtain ⟨hdA, hbA⟩ := hargs

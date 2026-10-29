@@ -131,10 +131,10 @@ def FrX (x : Nat) (m m' : Mem) : Prop :=
   iwTop m ≤ iwTop m' ∧ ∀ i < iwTop m, i ≠ x → (m'.arr64 IW)[i]? = (m.arr64 IW)[i]?
 
 theorem FrX.of_grow {x : Nat} {m m' : Mem} (h : IWGrow m m') : FrX x m m' :=
-  ⟨h.1, fun i hi _ => h.2.2.1 i hi⟩
+  ⟨h.iw, fun i hi _ => h.iwGet i hi⟩
 
 theorem FrX.trans_grow {x : Nat} {m₁ m₂ m₃ : Mem} (h₁ : FrX x m₁ m₂) (h₂ : IWGrow m₂ m₃) : FrX x m₁ m₃ :=
-  ⟨Nat.le_trans h₁.1 h₂.1, fun i hi hx => by rw [h₂.2.2.1 i (by have := h₁.1; omega)]; exact h₁.2 i hi hx⟩
+  ⟨Nat.le_trans h₁.1 h₂.iw, fun i hi hx => by rw [h₂.iwGet i (by have := h₁.1; omega)]; exact h₁.2 i hi hx⟩
 
 theorem FrX.set {x : Nat} {m₁ m₂ : Mem} (h₁ : FrX x m₁ m₂) (k v : Word) (hk : k.toNat = x) :
     FrX x m₁ (m₂.set64 IW k v) := by

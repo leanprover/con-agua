@@ -120,10 +120,10 @@ theorem partsHsrc_grow {m m' : Mem} (hg : IWGrow m m') {q : Word} (hq9 : q.toNat
     (hsrc : ∀ o l, iwN m q.toNat = some o → iwN m (q.toNat + 1) = some l → o + l ≤ iwTop m) :
     ∀ o l, iwN m' q.toNat = some o → iwN m' (q.toNat + 1) = some l → o + l ≤ iwTop m' := by
   intro o l h1 h2
-  have e1 : iwN m' q.toNat = iwN m q.toNat := by simp only [iwN, nat?, iwA]; rw [hg.2.2.1 _ (by omega)]
-  have e2 : iwN m' (q.toNat + 1) = iwN m (q.toNat + 1) := by simp only [iwN, nat?, iwA]; rw [hg.2.2.1 _ (by omega)]
+  have e1 : iwN m' q.toNat = iwN m q.toNat := by simp only [iwN, nat?, iwA]; rw [hg.iwGet _ (by omega)]
+  have e2 : iwN m' (q.toNat + 1) = iwN m (q.toNat + 1) := by simp only [iwN, nat?, iwA]; rw [hg.iwGet _ (by omega)]
   rw [e1] at h1; rw [e2] at h2
-  exact Nat.le_trans (hsrc o l h1 h2) hg.1
+  exact Nat.le_trans (hsrc o l h1 h2) hg.iw
 
 /-- The record's words read off a decoded shape (`nP`, `resSort`), in a grown memory. -/
 theorem partsShapeWords {m m' : Mem} (hg : IWGrow m m') {q : Word} {bs : BlockShape}

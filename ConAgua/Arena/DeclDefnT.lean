@@ -114,7 +114,7 @@ theorem cdf_ref {p : Prog} (hA : ArmProg p) (hV : ValProg p) {pins : List INatOp
   simp only [stepCV, stepVal] at hcv1 hval1
   generalize hq0 : r1.headD 0 = q at hci1 hcv1 hval1 htop1 ⊢
   have hqb : q.toNat + 8 < 2 ^ 64 := by
-    have := hS1.stage.2.2.1; have := hS1.stage.2.2.2.2.1; omega
+    have := hS1.stage.iw.er; have := hS1.stage.iw.erSize; omega
   have hq1 : (q + 1).toNat = q.toNat + 1 := toNat_add_small q 1 (by omega)
   obtain ⟨wn, hwn, hwnl, hname0⟩ := decCI_name hci1
   have hname : cv.name = decI wn := hname0
@@ -168,7 +168,7 @@ theorem cdf_ref {p : Prog} (hA : ArmProg p) (hV : ValProg p) {pins : List INatOp
     exact ConRon.Bridge.denoteN_ext (ConRon.Bridge.denoteCV_inv hcA).1 hstep2.ext
   have hPD3 : ∃ pinsP, PinsDenote a3.store pins pinsP := by
     obtain ⟨pp, hp⟩ := hPD1; exact ⟨pp, PinsDenote.mono hstep2.ext _ _ hp⟩
-  have hvis : fe.visibleBelow = vis.toNat := hS.stage.1.env.vis
+  have hvis : fe.visibleBelow = vis.toNat := hS.stage.check.env.vis
   have hpre := ConRon.Bridge.restrict_pushed_find (fe2 := fe.push (.defnInfo cv v hh)) rfl
     (hok3.check.ienv.find?_none
       (show denoteN a3.store.ns cv.name = some c.name by rw [hname]; exact hnm3)

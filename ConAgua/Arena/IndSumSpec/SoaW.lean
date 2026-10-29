@@ -90,8 +90,8 @@ theorem consW_pslr {α : Type} {f : Mem → Nat → Option α} (hf : ∀ q, OMon
     (hy : DecB (fun m => f m x.toNat) m y) :
     StageR dn vis fe m' a ∧ IWGrow m m' ∧ PSlR f (y :: xs) (r.headD 0) (r.tail.headD 0) m' ∧
       MFr [] [] m m' := by
-  obtain ⟨ps, -, hps, hmap⟩ := sumDecNL_of_decB hxs.1
-  obtain ⟨hS', hg, hd', ht'⟩ := consW_stageN h hS hxs.2 hps
+  obtain ⟨ps, -, hps, hmap⟩ := sumDecNL_of_decB hxs.dec
+  obtain ⟨hS', hg, hd', ht'⟩ := consW_stageN h hS hxs.bound hps
   exact ⟨hS', hg, ⟨sumDecB_cons hf hmap hd' (Nat.le_of_eq ht') hg (hy.grow (hf _) hg), Nat.le_of_eq ht'⟩,
     consW_mfr h⟩
 

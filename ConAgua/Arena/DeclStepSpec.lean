@@ -29,8 +29,8 @@ theorem IWGrow.erecPExt {m m' : Mem} (h : L.Ind.IWGrow m m') : ArrExt (erecP m) 
   · rename_i hi
     simp only [Nat.zero_add] at hv ⊢
     have hi' : i < L.Ind.erTop m := by simp [L.Ind.erTop, erecTop] at hi ⊢; omega
-    have h1 := h.2.1
-    have h2 := h.2.2.2 i hi'
+    have h1 := h.er
+    have h2 := h.erGet i hi'
     rw [h2]
     have hs : i < (m'.arr64 EREC).size := by
       have := (Array.getElem?_eq_some_iff.mp (h2.trans hv)).1; exact this
@@ -77,7 +77,7 @@ theorem LoopR.of_step {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.
   have hD1 : m'.arr64 DECL = m.arr64 DECL := hf.arr _ step_keeps.2.1 (by decide)
   have hD2 : m'.arr64 DLP = m.arr64 DLP := hf.arr _ step_keeps.2.2.1 (by decide)
   have hc : rdW (m'.arr64 CTL) 130 = rdW (m.arr64 CTL) 130 := hf.ctl _ step_keeps.2.2.2
-  exact ⟨hS.1, h.pend.ext hP hc hx, by rw [hD1, hD2]; exact h.decls, hS.2,
+  exact ⟨hS.check, h.pend.ext hP hc hx, by rw [hD1, hD2]; exact h.decls, hS.iw,
     h.pmemo.imp fun _ hq => hq.frame step_pmemo.1 step_pmemo.2 hf,
     PinSetsR.grow h.pinsets (RecGrow.of_ext h.iw hx) (hf.ctl _ step_pins.1) (hf.ctl _ step_pins.2)⟩
 

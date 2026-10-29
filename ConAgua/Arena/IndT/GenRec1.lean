@@ -31,9 +31,9 @@ theorem StageC.of_checkE {dn : NIdx → Option ConLeche.Name} {vis vis' : Word} 
     (hS : StageR dn vis' fe' m' a') (hA : AbsOK m') (hck : ConRon.Bridge.CheckOK V env' fe' a')
     (hx : ConRon.Arena.Ext a.store a'.store) : StageC dn vis' fe' env' m' a' :=
   ⟨hS, hck,
-    ⟨hA.2.2.2.2.2.1, hA.2.2.2.2.2.2.1, hA.2.2.2.2.2.2.2.1, ⟨hA.2.2.2.1, hA.1, hA.2.2.2.2.1⟩,
+    ⟨hA.wk.2.1, hA.wk.2.2.1, hA.wk.2.2.2.1, ⟨hA.il, hA.ab, hA.wk.1⟩,
       fun k x e => hx.lss.ls.ns k x (h.mem.dnN k x e)⟩,
-    hA.2.2.2.2.2.2.2.2⟩
+    hA.wk.2.2.2.2⟩
 
 /-- What `classes_nfs` gives besides the twin's classes `ys` (from `m`, the classes' slice `(mo, ml)`):
 the result slice, the stage, the growth, the memos, `AbsOK`; and, when the classes' constructor
@@ -92,7 +92,7 @@ theorem cnfs_ref {p : Prog} (hkp : KnotStageProg p) {env : ConLeche.Env}
     rw [decPL_eq_bind, show decNL (truncM mF) (r0.headD 0).toNat ml.toNat = some ws' from decNL_decB hws' htF]
     exact cnsRec_mapM hgF hacc'
   · simp only [List.headD_cons, List.tail_cons]
-    exact classesLp_of_cnsRec hlp hgF hk hC.stage.2.2.2.1 hws' hacc'
+    exact classesLp_of_cnsRec hlp hgF hk hC.stage.iw.iwSize hws' hacc'
 
 /-- **`classes_nfs` refines `classesNfs`** under `StageC` (`cnfs_ref`'s ok half). -/
 @[refines ConRon.Arena.classesNfs]

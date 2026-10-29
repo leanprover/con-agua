@@ -180,7 +180,7 @@ theorem pw_rec {m m1 : Mem} {pi : Word} {ws : List Word} (hI : IWOK m)
   obtain ⟨hq, hKeep, hroom, htop, hget⟩ := hrec
   have h1 := hget j hj
   have hpi : pi.toNat = iwTop m := by simp only [List.headD_cons] at hq; rw [hq]; rfl
-  have hsz := hI.2.2.1
+  have hsz := hI.iwSize
   have hj64 : (UInt64.ofNat j).toNat = j := by
     rw [UInt64.toNat_ofNat_of_lt' (Nat.lt_of_lt_of_le hj (by show ws.length ≤ 2 ^ 64; omega))]
   have hadd : (pi + UInt64.ofNat j).toNat = iwTop m + j := by
@@ -301,14 +301,14 @@ theorem natOpDeps_ref (hN : NatGateProg p) (c : Word) :
   | some qp =>
   obtain ⟨rp, m1⟩ := qp
   rw [hp, bW_some] at hw
-  obtain ⟨h0, hrec, -, hr⟩ := natOpPins_fref hN k m rp m1 hS.2 hp
+  obtain ⟨h0, hrec, -, hr⟩ := natOpPins_fref hN k m rp m1 hS.iw hp
   have hrec' : RecPost m m1 [rp.headD 0] (pinRecW m) := by rw [← hr]; exact hrec
   rw [depsArmW_eq (f := pinW m) fun j hj => by
-    have := pw_rec hS.2 hrec' j.toNat (by simp [pinRecW]; omega)
+    have := pw_rec hS.iw hrec' j.toNat (by simp [pinRecW]; omega)
     rw [UInt64.ofNat_toNat] at this
     rw [this, pinRecW_get m _ _ hj]] at hw
-  exact ⟨_, a, natOpDeps_run (hS.1.pins.full ‹_›) hc,
-    armsW_keep hN (hrec.2.1.stage hS) hrec.2.1.1 (hS.1.pins.full ‹_›) depsTab depsTab_ok hw⟩
+  exact ⟨_, a, natOpDeps_run (hS.check.pins.full ‹_›) hc,
+    armsW_keep hN (hrec.2.1.stage hS) hrec.2.1.1 (hS.check.pins.full ‹_›) depsTab depsTab_ok hw⟩
 
 @[refines ConRon.Arena.natOpDeps]
 theorem natOpDeps_refines (hN : NatGateProg p) (c : Word) :

@@ -33,7 +33,7 @@ theorem clsConsW {α : Type} {f : Mem → Nat → Option α}
     (hxs : PSlR f xs o l m) (hy : DecB (fun m => f m x.toNat) m y) :
     StageR dn vis fe m' a ∧ IWGrow m m' ∧ PSlR f (y :: xs) (r.headD 0) (r.tail.headD 0) m' ∧
       MFr [] [] m m' := by
-  obtain ⟨hS', hg, hd, htop⟩ := partsConsPL hf h hS hxs.2 hxs.1 hy
+  obtain ⟨hS', hg, hd, htop⟩ := partsConsPL hf h hS hxs.bound hxs.dec hy
   exact ⟨hS', hg, ⟨hd, Nat.le_of_eq htop⟩, consW_mfr h⟩
 
 /-- **`sl_cons` of a decoded record onto a decoded slice**, with its frame. -/
@@ -106,7 +106,7 @@ theorem ckk_ref {p : Prog} (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe
   have hg1 := hR1.grow
   -- the rest
   have h2 := ih m1 a1 (ko + 1) (kl - 1) ks' hR1.stage (hpf.grow (OMono.decHL _ _) hg1)
-    (Nat.le_trans hpb hg1.1) (hks'.grow decCK_mono hg1) hR1.pos
+    (Nat.le_trans hpb hg1.iw) (hks'.grow decCK_mono hg1) hR1.pos
   rcases h2' : ckkE p n m1 nP po pl (ko + 1) (kl - 1) with e2 | ⟨r2, m2⟩
   · rw [h2'] at h2
     rw [ckkE.k_check_block_classes_keys.none]; exact RefE.bind_left h2

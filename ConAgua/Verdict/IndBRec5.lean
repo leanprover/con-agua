@@ -86,7 +86,7 @@ theorem crs_ref (hP : CrsProg p) (henv : ConLeche.EnvWF env) (visT visR : Word) 
   | succ n ih =>
   intro m a xo xl Xs XsP hC hG hrc hcg hcv hext hXs hA hgP hcvsP hcvP hXsP hie
   have hS := hC.stage
-  have hsz := hS.2.2.2.1
+  have hsz := hS.iw.iwSize
   by_cases hxl : xl = 0
   · rw [crsE.arm1 p n m visT visR g rco rcl cgo cgl cvR c xo xl hxl]
     have : Xs = [] := by
@@ -105,7 +105,7 @@ theorem crs_ref (hP : CrsProg p) (henv : ConLeche.EnvWF env) (visT visR : Word) 
   obtain ⟨px, X, Xs', rfl, hpx, hX, hXsT⟩ := decPL_cons hXs'
   obtain ⟨XP, XsP', rfl, hXP, hXsP'⟩ := mapM_option_cons_inv hXsP
   obtain ⟨hxot, hpxm⟩ := rec2IwN_trunc hpx
-  have hxot' : iwTop m ≤ (m.arr64 IW).size := hS.2.1
+  have hxot' : iwTop m ≤ (m.arr64 IW).size := hS.iw.iw
   obtain ⟨ex, tx⟩ := rec2RdN (w := xo) (k := 0) (by simpa using hpxm) hsz
   simp only [show UInt64.ofNat 0 = (0 : Word) from rfl, UInt64.add_zero] at ex
   rw [ex]

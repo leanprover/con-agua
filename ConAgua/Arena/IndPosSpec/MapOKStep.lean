@@ -93,7 +93,7 @@ theorem posIwN_grow {m m' : Mem} (hg : IWGrow m m') {i : Nat} (hi : i < iwTop m)
   iwN_agree (RdS.of_grow hg) hi
 
 theorem FMOk.grow {m m' : Mem} {f : Nat} {fm : FvMap} (h : FMOk m f fm) (hg : IWGrow m m') : FMOk m' f fm := by
-  have ht := hg.1
+  have ht := hg.iw
   cases fm with
   | holeImg ctx prog n =>
     obtain ⟨h0, hb, ⟨c, hc, hdc, hci⟩, ⟨po, pl, hpo, hpl, hs⟩, hn, hlt⟩ := h
@@ -255,7 +255,7 @@ variable (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word)
 
 theorem mapOK_step (n : Nat) (hImg : ImgOK dn fe vis n) : MapOK dn fe vis (n + 1) := by
   intro m m' a f i fm r0 r1 M G g h hS hfm hR
-  have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
+  have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.iw hS.iw.iwSize
   cases fm with
   | holeImg ctx prog nn =>
     obtain ⟨h0, hb, ⟨c, hc, hdc, hci⟩, ⟨po, pl, hpo, hpl, hs⟩, hn, hlt⟩ := hfm
@@ -338,7 +338,7 @@ theorem rootOK (m m' : Mem) (a : AState) (ctx i : Word) (c : NestCtx) (prog : Li
     (hb : c.nP + c.names.length < 2 ^ 64) (hR : RfInv m M G g) :
     ∃ x a', (ConRon.Arena.nestHoleImg c prog 0 i.toNat).run a = .ok (x, a') ∧ OptE r0 r1 x ∧
       RxPost dn fe vis m m' a' M G g := by
-  have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
+  have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.iw hS.iw.iwSize
   obtain ⟨hn, hn', hpa, hpa', hnP, hlvH, hlv, -, -, h11⟩ := ctx_fields hc hin htop
   have hlen := decHL_length m hn
   have hhi : (hiW m ctx 0).toNat = c.nP + c.names.length := by
@@ -388,7 +388,7 @@ theorem rootOK (m m' : Mem) (a : AState) (ctx i : Word) (c : NestCtx) (prog : Li
 
 theorem imgOK_step (n : Nat) (hImg : ImgOK dn fe vis n) (hFr : FrOK dn fe vis n) : ImgOK dn fe vis (n + 1) := by
   intro m m' a ctx po pl nn i c prog r0 r1 M G g h hS hc hin hs hb hR
-  have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
+  have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.iw hS.iw.iwSize
   obtain ⟨hn, -, -, -, hnP, -, -, -, -, h11⟩ := ctx_fields hc hin htop
   have hlen := decHL_length m hn
   by_cases h0 : nn = 0
@@ -511,7 +511,7 @@ theorem frameTail (n : Nat) (hDs : DsOK dn fe vis n) (mh m' : Mem) (a : AState) 
         let r ← mkAppN hd ds
         pure (some r) : AM (Option EIdx)).run a = .ok (x, a') ∧ OptE r0 r1 x ∧
       RxPost dn fe vis mh m' a' M G g := by
-  have htop : iwTop mh < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
+  have htop : iwTop mh < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.iw hS.iw.iwSize
   obtain ⟨k, hk0, hkey⟩ := decNH_fields hh
   have hrk : (rdW (mh.arr64 IW) h).toNat = k := rdIW0 hk0
   have hNK := hhin.2.2 k hk0
@@ -535,20 +535,20 @@ theorem frameTail (n : Nat) (hDs : DsOK dn fe vis n) (mh m' : Mem) (a : AState) 
   rw [hkey] at ekey
   obtain ⟨hcn, hlv, hds⟩ := decNK_fields ekey
   obtain ⟨o, l, ho, hl, hdsl⟩ := decAt_some hds
-  have htop2 : iwTop m2 < 2 ^ 64 := Nat.lt_of_le_of_lt hS2.2.1 hS2.2.2.2.1
-  have hkb : k + 4 ≤ iwTop m2 := by have := hNK2.1 3 (by omega); have := hg2.1; omega
+  have htop2 : iwTop m2 < 2 ^ 64 := Nat.lt_of_le_of_lt hS2.iw.iw hS2.iw.iwSize
+  have hkb : k + 4 ≤ iwTop m2 := by have := hNK2.1 3 (by omega); have := hg2.iw; omega
   have ro := rdIW (m := m2) (f := rdW (mh.arr64 IW) h) (i := 2) (by rw [hrk]; exact ho) (by omega) (by decide)
   have rl := rdIW (m := m2) (f := rdW (mh.arr64 IW) h) (i := 3) (by rw [hrk]; simpa using hl) (by omega) (by decide)
   simp only [show UInt64.ofNat 2 = (2 : Word) from rfl, show UInt64.ofNat 3 = (3 : Word) from rfl] at ro rl
   have hsl : ∀ j < l, o + j < iwTop m2 := fun j hj =>
-    Nat.lt_of_lt_of_le (hNK2.2 o l ho (by simpa using hl) j hj) hg2.1
+    Nat.lt_of_lt_of_le (hNK2.2 o l ho (by simpa using hl) j hj) hg2.iw
   rcases hdsr : rxDsW n m2 f (rdW (m2.arr64 IW) (rdW (mh.arr64 IW) h + 2)) (rdW (m2.arr64 IW) (rdW (mh.arr64 IW) h + 3)) with _ | ⟨q, l3, m3⟩ <;> rw [hdsr] at hk; · simp [pfrK3] at hk
   rw [pfrK3_some] at hk
   obtain ⟨ys, a3, hrun3, hdec3, hq3, hpost3⟩ := hDs m2 m3 a f _ _ q l3 _ H0.key.ds M G g hdsr hS2 hfm
     (by rw [ro, rl]; exact hdsl) (by rw [ro, rl]; exact hsl) hR2
   obtain ⟨M3, G3, hS3, hg3, hR3, hk3, hG3⟩ := hpost3
-  have htop3 : iwTop m3 < 2 ^ 64 := Nat.lt_of_le_of_lt hS3.2.1 hS3.2.2.2.1
-  have := hg3.1
+  have htop3 : iwTop m3 < 2 ^ 64 := Nat.lt_of_le_of_lt hS3.iw.iw hS3.iw.iwSize
+  have := hg3.iw
   -- the container's head, in `m3`
   have hg23 := hg3
   obtain ⟨hcnH, hcnd⟩ := rd_iwH (m := m3) (p := rdW (mh.arr64 IW) h) (i := 0)
@@ -579,7 +579,7 @@ theorem default_hole : (default : NestHole) = ⟨⟨decI 0, decI 0, []⟩, 0⟩ 
 
 theorem frOK_step (n : Nat) (hDs : DsOK dn fe vis n) : FrOK dn fe vis (n + 1) := by
   intro m m' a ctx po pl n1 i c prog r0 r1 M G g h hS hc hin hs hb hR
-  have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
+  have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.iw hS.iw.iwSize
   obtain ⟨hpl, hpb, hH⟩ := hs
   unfold frameTwin
   by_cases hn : n1 < pl
@@ -608,7 +608,7 @@ theorem frOK_step (n : Nat) (hDs : DsOK dn fe vis n) : FrOK dn fe vis (n + 1) :=
     obtain ⟨hS2, hg2, hk2, ht2, hget2⟩ := posRecW_stage hr2 hS1 (by simp)
     simp only [List.length_cons, List.length_nil] at ht1 ht2
     have hkw : ∀ j < 4, (m2.arr64 IW)[k.toNat + j]? = some 0 := fun j hj => by
-      rw [hg2.2.2.1 _ (by omega), hget1 j (by simpa using hj)]
+      rw [hg2.iwGet _ (by omega), hget1 j (by simpa using hj)]
       rcases (show j = 0 ∨ j = 1 ∨ j = 2 ∨ j = 3 by omega) with rfl | rfl | rfl | rfl <;> rfl
     have hdk : decNK m2 k.toNat = some ⟨decI 0, decI 0, []⟩ := by
       have := decNK_of_words (m := m2) (k := k.toNat) (c := 0) (u := 0) (o := 0) (l := 0) (ds := [])
@@ -651,7 +651,7 @@ theorem dsOK_step (n : Nat) (hDg : DsGoOK dn fe vis n) : DsOK dn fe vis (n + 1) 
 theorem dsGoOK_step (n : Nat) (hRf : RfOK dn fe vis n) (hDg : DsGoOK dn fe vis n) :
     DsGoOK dn fe vis (n + 1) := by
   intro m0 m m' a f o l q j fm xs acc M G g h hS hg0 hq0 hql hfm hxs hsl hj hacc hR
-  have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
+  have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.iw hS.iw.iwSize
   have hxl := decHL_length m0 hxs
   have hal := decHL_length m hacc
   by_cases hd : l ≤ j
@@ -675,16 +675,16 @@ theorem dsGoOK_step (n : Nat) (hRf : RfOK dn fe vis n) (hDg : DsGoOK dn fe vis n
   have hqj : (q + j).toNat = q.toNat + j.toNat := word_add_toNat (by omega)
   have hj1 : (j + 1).toNat = j.toNat + 1 := word_add_toNat (show j.toNat + 1 < 2 ^ 64 by have := l.toNat_lt; omega)
   have hacc1 : decHL m1 q.toNat j.toNat = some acc := by rw [decHL_grow hg1 (by omega)]; exact hacc
-  have hsz1 : (m1.arr64 IW).size < 2 ^ 64 := hS1.2.2.2.1
-  have hdec2 := decHL_write m1 q j r acc hrH hsz1 (by have := hS1.2.1; have := hg1.1; omega) hacc1
+  have hsz1 : (m1.arr64 IW).size < 2 ^ 64 := hS1.iw.iwSize
+  have hdec2 := decHL_write m1 q j r acc hrH hsz1 (by have := hS1.iw.iw; have := hg1.iw; omega) hacc1
   have hS2 := hS1.set_iw (q + j) r
   have hg02 : IWGrow m0 (m1.set64 IW (q + j) r) := (hg0.trans hg1).set_iw (q + j) r (by omega)
   have ht2 : iwTop (m1.set64 IW (q + j) r) = iwTop m1 := by
     simp only [iwTop]; rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
   obtain ⟨ys, a', hrun, hdec', hS', hg', ht', M', G', hR', hk', hG'⟩ := hDg m0 _ m' a1 f o l q (j + 1) fm xs
-    (acc ++ [decE r]) M1 G1 g h hS2 hg02 hq0 (by rw [ht2]; have := hg1.1; omega) hfm hxs hsl
+    (acc ++ [decE r]) M1 G1 g h hS2 hg02 hq0 (by rw [ht2]; have := hg1.iw; omega) hfm hxs hsl
     (by rw [hj1]; omega) (by rw [hj1]; exact hdec2) (hR1.frame (RfFr.set_iw _ _ _))
-  refine ⟨decE r :: ys, a', ?_, by simpa using hdec', hS', hg', by have := hg1.1; omega, M', G', hR',
+  refine ⟨decE r :: ys, a', ?_, by simpa using hdec', hS', hg', by have := hg1.iw; omega, M', G', hR',
     hk1.trans hk' hG1, UInt64.le_trans hG1 hG'⟩
   simp only [List.drop_eq_getElem_cons (show j.toNat < xs.length by omega), List.mapM_cons, StateT.run_bind, ← hxd, show (decI x : EIdx) = decE x from rfl, hr1, except_ok_bind]
   rw [hj1] at hrun
@@ -982,7 +982,7 @@ theorem goOK_step (j : Nat) (hMap : MapOK dn fe vis j) (ih : ∀ k, k + 1 < j + 
   | nil => rw [hvl] at hgo; simp [rxG1] at hgo
   | cons g vt =>
   have hne : eViewW m h ≠ [] := by rw [hvl]; simp
-  obtain ⟨v, hv, hvr⟩ := eViewW_ok m a hS.1.arena.1 h hne
+  obtain ⟨v, hv, hvr⟩ := eViewW_ok m a hS.check.arena.base h hne
   rw [hvl] at hvr hgo
   have leaf : ∀ (hg : (g :: vt).headD 0 = 0 ∨ (g :: vt).headD 0 = 2 ∨ (g :: vt).headD 0 = 8 ∨
       (g :: vt).headD 0 = 3),

@@ -133,14 +133,14 @@ theorem tcm_ref (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState}
     · rfl
   subst ho1
   simp only []
-  have hsz := hS1.2.2.2.1
+  have hsz := hS1.iw.iwSize
   have hbs1 := hbs.grow hg1
   -- `block_shape_member_names`
   rcases h2 : memberNamesW n m1 q with _ | ⟨rn, m2⟩
   · rw [liftE_none, tcmE.k_block_shape_member_names.none]; exact RefE.of_cls0 (by simp)
   rw [liftE_some, tcmE.k_block_shape_member_names.arm1]
   obtain ⟨hS2, hg2, -, hdn, htn⟩ := memberNamesW_stage h2 hS1 hbs1
-  have hf2 := (memberNamesW_dec h2 hsz hS1.2.2.2.2.2 hbs1.dec
+  have hf2 := (memberNamesW_dec h2 hsz hS1.iw.ctl hbs1.dec
     (by have := hbs1.ptop; have := hS1.lt64 (Nat.le_refl _); omega) hbs1.2.1 hbs1.2.2).2.2.2.1
   have hP2 := hP1.fr (MFr.of_iw hf2)
   have hA2 := AFr.iw hf2 hA1
@@ -176,7 +176,7 @@ theorem tcm_ref (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState}
   · rw [liftE_none, tcmE.k_target_holes.none]; exact RefE.of_cls0 (by simp)
   rw [liftE_some, tcmE.k_target_holes.arm1]
   obtain ⟨holes, a5, run5, hS5, hg5, hdh, hbh⟩ := thW_ok dn vis fe n m4 m5 a4 fto ftl pfl rh formerTys h5 hS4
-    (by rw [decHL_grow hg04 hftb]; exact hft) (hS.lt64 hftb) (by have := hg04.1; omega)
+    (by rw [decHL_grow hg04 hftb]; exact hft) (hS.lt64 hftb) (by have := hg04.iw; omega)
     (by rw [← hd]; exact (pfl + ftl).toNat_lt)
   have hP5 := hP4.fr (thW_mfr n h5)
   have hA5 := thW_afr n h5 hA4
@@ -200,7 +200,7 @@ theorem tcm_ref (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState}
   rw [← hdb] at hbl4
   have hdn5 : decHL m5 (rn.headD 0).toNat (rn.tail.headD 0).toNat = some bs.memberNames := by
     rw [decHL_grow hg25 (by omega)]; exact hdn
-  have hnb5 : (rn.headD 0).toNat + (rn.tail.headD 0).toNat ≤ iwTop m5 := by have := hg25.1; omega
+  have hnb5 : (rn.headD 0).toNat + (rn.tail.headD 0).toNat ≤ iwTop m5 := by have := hg25.iw; omega
   have hTA : TAArgs bs.memberNames (decI (rb.headD 0)) holes pP.memberNames
       (pP.lps.map ConLeche.Level.param) (ConLeche.targetHoles formerTysP pfvsP.length) a5.store :=
     ⟨ConRon.Bridge.denoteNListE_ext c15.ext _ _

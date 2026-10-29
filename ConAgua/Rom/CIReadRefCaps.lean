@@ -251,7 +251,7 @@ theorem caps_rel {m₀ : Mem} {a₀ : AState} {T : Nat} (dn : NIdx → Option Co
   have hd' := hd.trans (encCaps_eq caps rest)
   simp only [bw] at hd'
   have hlt := hI.er_lt
-  have hgo := hI.grow.2.1
+  have hgo := hI.grow.er
   have hrom := hr; simp only [RomOK] at hrom
   have hlen := drop_len rom q.toNat (u64B (if caps.eta then 1 else 0)) _ hd' (by simp [u64B])
   simp only [u64B, List.length_cons, List.length_nil] at hlen
@@ -312,7 +312,7 @@ theorem caps_rel {m₀ : Mem} {a₀ : AState} {T : Nat} (dn : NIdx → Option Co
     intro jw hjw; rw [← hws] at hjw
     simp only [List.mem_cons, List.mem_nil_iff, or_false] at hjw
     rcases hjw with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> simp only [hc2, hc3, hc4, hc5, hc6, hc7, hc12] <;> comega)
-  have hsz : erTop m ≤ (m.arr64 EREC).size := hI.ok.2.1
+  have hsz : erTop m ≤ (m.arr64 EREC).size := hI.ok.er
   have hget : ∀ j w, (j, w) ∈ ws → (erA (setERs m ws))[j.toNat]? = some w := by
     intro j w hjw
     refine setERs_get ws m j w ?_ hjw ?_

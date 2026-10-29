@@ -615,8 +615,8 @@ theorem apdEntry_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEn
     ArenaR.frame (A := []) (C := [apdSch.cs, apdSch.cs + 1]) (fun b hb => by simp at hb)
       (fun x hx => by
         simp at hx; rcases hx with rfl | rfl <;> exact not_mem_arenaCtl _ (by decide)) hf0
-      hS.1.arena.1
-  have hsz := hS.2.2.2.1
+      hS.check.arena.base
+  have hsz := hS.iw.iwSize
   have hps0 : NmsR (nameN a.store.lss.ls.ns) m IW o l ks :=
     nmsR_of_slice hsz _ o l lps ks rfl hdec hks
   have hps : NmsR (nameN a.store.lss.ls.ns) (mclearG apdSch m) IW o l ks :=
@@ -670,7 +670,7 @@ theorem alpdGo_refines (p : Prog) (hp : ApdProg p) (n : Nat) (s₀ : St) (a₀ :
   refine triple_post (apdGo_spec p hp.eview hp.lsnode hp.find hp.put hp.lmem hp.lnode hp.lapd hp.ls
     hp.go n s₀ o l f h) ?_
   rintro r s' ⟨hl, hm⟩
-  obtain ⟨b, mp', hrun, hb, hM', hfr⟩ := apdGoOK env n _ _ o l f h _ mp ks hS.1.arena.1 hps hh hM hm
+  obtain ⟨b, mp', hrun, hb, hM', hfr⟩ := apdGoOK env n _ _ o l f h _ mp ks hS.check.arena.base hps hh hM hm
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
   obtain ⟨hS', hg⟩ := StageR.frame_hi hS hfr (by intro b hb; simp at hb; subst hb; decide)
     (by intro x hx; simp at hx; rcases hx with rfl | rfl <;> decide) (by decide) (by decide)

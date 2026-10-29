@@ -177,12 +177,12 @@ theorem depsStored_ref (hN : NatGateProg p) (o l : Word) (ns : List NIdx) :
     cases k with
     | zero => rw [callW_zero] at hc; cases hc
     | succ k =>
-    obtain ⟨hl0, hwlt, hn, hrest⟩ := decHL_cons_iw hS.2.2.2.1 hd
+    obtain ⟨hl0, hwlt, hn, hrest⟩ := decHL_cons_iw hS.iw.iwSize hd
     have hw := callW_model (M := fun mm => depsStoredW p (k + 1) mm vis o l) (depsStored_specW p hN.lNatOpDepsStored (k + 1) · vis o l) hc
     rw [depsStoredW.eq_2] at hw
     rw [ite_eq_right hl0] at hw
     replace hw := ntBW_some hw; obtain ⟨r1, m1, h1, hw⟩ := hw
-    obtain ⟨rfl, hfd⟩ := envFind_call hN.toMasterProg (rdW (m.arr64 IW) o) hwlt hS.1.env h1
+    obtain ⟨rfl, hfd⟩ := envFind_call hN.toMasterProg (rdW (m.arr64 IW) o) hwlt hS.check.env h1
     subst hn
     rw [natOpDepsStored_cons]
     cases hf : fe.find? (decI (rdW (m1.arr64 IW) o)) with
@@ -197,7 +197,7 @@ theorem depsStored_ref (hN : NatGateProg p) (o l : Word) (ns : List NIdx) :
       rw [hf] at hfd
       obtain ⟨hr1, hci⟩ := hfd
       rw [ite_eq_right (by rw [hr1]; decide)] at hw
-      rcases defnMono_words hS.2.2.2.2.1 hci with ⟨hne, hdm⟩ | ⟨hk1, hiff⟩
+      rcases defnMono_words hS.iw.erSize hci with ⟨hne, hdm⟩ | ⟨hk1, hiff⟩
       · rw [ite_eq_left hne] at hw
         simp only [Option.some.injEq, Prod.mk.injEq] at hw
         obtain ⟨rfl, rfl⟩ := hw

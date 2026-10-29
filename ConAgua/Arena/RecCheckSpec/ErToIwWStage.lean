@@ -184,7 +184,7 @@ theorem aplW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
       have hds1 : decHL m1 (dso + 1).toNat (dsl - 1).toNat = some ds' := by
         rw [decHL_grow hg1 (by omega)]; exact hds'
       obtain ⟨xs2, a2, hrun2, hS2, hg2, hd2, ht2, hA2⟩ := ih m1 m2 a1 rP (dso + 1) (dsl - 1) r2 ds' hr hS1 hds1
-        (by omega) (by have := hg1.1; omega) hrP hA1
+        (by omega) (by have := hg1.iw; omega) hrP hA1
       rcases hc : consW n m2 (ra.headD 0) (r2.headD 0) (r2.tail.headD 0) with _ | ⟨r3, m3⟩ <;> simp only [hc, aplW.k_sl_cons, reduceCtorEq] at h
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       obtain ⟨hS3, hg3, hd3, ht3⟩ := consW_stage hc hS2 ht2 hd11 hd2
@@ -303,7 +303,7 @@ theorem thW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n
       have htys1 : decHL m1 (tyo + 1).toNat (tyl - 1).toNat = some tys' := by
         rw [decHL_grow hg1 (by omega)]; exact htys'
       obtain ⟨xs2, a2, hrun2, hS2, hg2, hd2, ht2⟩ := ih m1 m2 a1 (tyo + 1) (tyl - 1) (base + 1) r2 tys' hr hS1
-        htys1 (by omega) (by have := hg1.1; omega) (by omega)
+        htys1 (by omega) (by have := hg1.iw; omega) (by omega)
       rcases hc : consW n m2 v (r2.headD 0) (r2.tail.headD 0) with _ | ⟨r3, m3⟩ <;> simp only [hc, thK3, reduceCtorEq] at h
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       obtain ⟨hS3, hg3, hd3, ht3⟩ := consW_stage hc hS2 ht2 hv32 hd2
@@ -414,7 +414,7 @@ theorem erToIwW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IF
       (decHL m' (r.headD 0).toNat (r.tail.headD 0).toNat : Option (List (Idx k))) =
         hslice? (erA m) o.toNat l.toNat ∧
       (r.headD 0).toNat + (r.tail.headD 0).toNat = iwTop m' ∧ m'.arr64 EREC = m.arr64 EREC := by
-  obtain ⟨hI1, hE1, hsz, hEs, hc⟩ := hS.2
+  obtain ⟨hI1, hE1, hsz, hEs, hc⟩ := hS.iw
   rcases hsrc with hl0 | hsrc
   · have hl : l = 0 := UInt64.toNat_inj.mp (by simpa using hl0)
     subst hl
@@ -455,7 +455,7 @@ theorem erToIwW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IF
         simpa using hr2
   have h129 : rdW (m'.arr64 CTL) 129 = rdW (m.arr64 CTL) 129 := hf.ctl 129 (by simp)
   subst hr
-  refine ⟨⟨CheckR.frame_iw hf hS.1, hroom, ?_, ?_, ?_, ?_⟩, hg, by simpa using hd, by simpa using ht, hE⟩
+  refine ⟨⟨CheckR.frame_iw hf hS.check, hroom, ?_, ?_, ?_, ?_⟩, hg, by simpa using hd, by simpa using ht, hE⟩
   · simp only [erTop, h129, hE]; exact hE1
   · rw [hf.size IW]; exact hsz
   · rw [hE]; exact hEs

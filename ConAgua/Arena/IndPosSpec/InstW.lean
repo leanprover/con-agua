@@ -57,7 +57,7 @@ theorem instW_ok (n : Nat) : ∀ (dn : NIdx → Option ConLeche.Name) (fe : IFEn
           have hne : eViewW m e ≠ [] := by rw [hvl]; simp
           rw [hvl] at h
           rw [instK1_ok n m ao al _ (by simp)] at h
-          obtain ⟨v, hv, hvr⟩ := eViewW_ok m a hS.1.arena.1 e hne
+          obtain ⟨v, hv, hvr⟩ := eViewW_ok m a hS.check.arena.base e hne
           rw [hvl] at hvr
           have ht : (decE e).tag = ETag.forallE := by
             have h1 : ((decI e : EIdx).tag == ETag.forallE) = true := by
@@ -88,7 +88,7 @@ theorem instW_ok (n : Nat) : ∀ (dn : NIdx → Option ConLeche.Name) (fe : IFEn
             rw [hao1, hal1, decHL_grow hg1 (by omega)]; exact hrest
           obtain ⟨x3, a3, hrun3, hS3, hg3, hout3⟩ :=
             ih dn fe vis m1 m3 a1 (ao + 1) (al - 1) (rb.headD 0) rest r3 hw hS1 hlt1 hdec'
-              (by rw [hao1, hal1]; omega) (by rw [hao1, hal1]; have := hg1.1; omega)
+              (by rw [hao1, hal1]; omega) (by rw [hao1, hal1]; have := hg1.iw; omega)
           refine ⟨x3, a3, ?_, hS3, hg1.trans hg3, ?_⟩
           · have htag : ((decI e : EIdx).tag == ETag.forallE) = true := by
               rw [decI_tag_forallE_beq e he, he6]; decide

@@ -51,8 +51,8 @@ theorem decRules_succ (a : Array Word) (off c : Nat) :
 
 theorem SlotGrow.join {m₁ m₂ m₃ : Mem} {lo mid hi : Nat} (h₁ : SlotGrow m₁ m₂ lo mid)
     (h₂ : SlotGrow m₂ m₃ mid hi) (hl : lo ≤ mid) (hm : mid ≤ hi) : SlotGrow m₁ m₃ lo hi := by
-  refine ⟨Nat.le_trans h₁.1 h₂.1, fun i hi1 hout => ?_, h₂.2.2.trans h₁.2.2⟩
-  rw [h₂.2.1 i (by have := h₁.1; omega) (by omega), h₁.2.1 i hi1 (by omega)]
+  refine ⟨Nat.le_trans h₁.top h₂.top, fun i hi1 hout => ?_, h₂.size.trans h₁.size⟩
+  rw [h₂.get i (by have := h₁.top; omega) (by omega), h₁.get i hi1 (by omega)]
 
 section rel
 variable (p : Prog) (hp : PromoteProg p)
@@ -98,7 +98,7 @@ theorem rules_rel : ∀ (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f s l d :
   dsimp only at hW
   obtain ⟨a1, pm1, rl', hrun1, hD1, hP1, hcp1, hfr1, htk1, hg1, hts1, hdr, hfh⟩ :=
     rule_rel p hp n m a pm f s d D r0 z m₁ hD hP hsz hts hr0 (by omega) hDt hdD (by omega) hca
-  have hsz1 : (m₁.arr64 EREC).size < 2 ^ 64 := by rw [hg1.2.2]; exact hsz
+  have hsz1 : (m₁.arr64 EREC).size < 2 ^ 64 := by rw [hg1.size]; exact hsz
   cases hcb : callW p n "promote_rules" [f, s + 11, l - 1, d + 11] m₁ with
   | none => rw [hcb] at hW; cases hW
   | some x =>
@@ -109,12 +109,12 @@ theorem rules_rel : ∀ (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f s l d :
   have e11s : (s + 11).toNat = s.toNat + 11 := by rw [UInt64.toNat_add]; simp; omega
   have e11d : (d + 11).toNat = d.toNat + 11 := by rw [UInt64.toNat_add]; simp; omega
   have hlow : ArrExt (preE m D) (preE m₁ D) := preE_ext (fun i hi => by
-    exact hg1.2.1 i (by omega) (Or.inl (by omega)))
+    exact hg1.get i (by omega) (Or.inl (by omega)))
   obtain ⟨a2, pm2, rs', hrun2, hD2, hP2, hcp2, hfr2, htk2, hg2, hts2, hdr2⟩ :=
     ih m₁ a1 pm1 f (s + 11) (l - 1) (d + 11) D rs0 z2 m₂ hD1 hP1 hsz1 hts1
       (by rw [e11s]; exact hlow.decRules hrs0)
-      (by rw [e11s, toNat_sub1 l hl]; omega) (by have := hg1.1; omega) (by rw [e11d]; omega)
-      (by rw [e11d, toNat_sub1 l hl]; have := hg1.1; omega) hcb
+      (by rw [e11s, toNat_sub1 l hl]; omega) (by have := hg1.top; omega) (by rw [e11d]; omega)
+      (by rw [e11d, toNat_sub1 l hl]; have := hg1.top; omega) hcb
   have hlpos : 1 ≤ l.toNat := by have := toNat_pred l hl; omega
   have hg2' : SlotGrow m₁ m₂ (d.toNat + 11) (d.toNat + 11 * l.toNat) := by
     have := hg2
@@ -131,8 +131,8 @@ theorem rules_rel : ∀ (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f s l d :
       intro i v hP hv
       obtain ⟨hi1, hv1⟩ := preE_get_lt (m := m₁) (T := erecTop m₁) hv
       unfold RuleP at hP
-      have := hg2'.2.1 i hi1 (by omega)
-      exact preE_of_get (m := m₂) (T := erecTop m₂) (by have := hg2'.1; omega)
+      have := hg2'.get i hi1 (by omega)
+      exact preE_of_get (m := m₂) (T := erecTop m₂) (by have := hg2'.top; omega)
         (by rw [this]; exact hv1)
     rw [e11d] at hdr2
     rw [hl1, decRules_succ, decRule_ext hext hdr hfh, Option.bind_some, hdr2]

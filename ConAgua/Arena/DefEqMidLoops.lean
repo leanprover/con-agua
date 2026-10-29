@@ -33,10 +33,10 @@ theorem coreRef_bindS {α β : Type} [Inhabited α] [Inhabited β] {T₁ : AM α
     (h₂ : ∀ M', CoreS dn m₁ (AM.st T₁ a₀) vis fe M' eb → StackKept m₀ m₁ →
       CoreRef (f (dec₁ r₁)) (AM.st T₁ a₀) dec dn m₁ vis fe M' eb r m ok) :
     CoreRef (T₁ >>= f) a₀ dec dn m₀ vis fe M eb r m ok := by
-  obtain ⟨M', hS, hK, hSt⟩ := h₁.2.1
+  obtain ⟨M', hS, hK, hSt⟩ := h₁.after
   obtain ⟨hok2, hA2, hres2, hrw2⟩ := h₂ M' hS hSt
   have hT : (T₁ >>= f).run a₀ = (f (dec₁ r₁)).run (AM.st T₁ a₀) := by
-    rw [StateT.run_bind, AM.run_of_ok _ _ h₁.1, h₁.2.2.1]; rfl
+    rw [StateT.run_bind, AM.run_of_ok _ _ h₁.run, h₁.res]; rfl
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ (hT.trans (AM.run_of_ok _ _ hok2))
   exact ⟨hok, hst ▸ CoreAfter.comp hK hSt hA2, hres.trans hres2, hrw2⟩
 

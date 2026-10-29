@@ -225,7 +225,7 @@ theorem callW_internConst (hpf : p.lookup "const_find" = some constFind)
   obtain ⟨h1, h2, h3⟩ := internConst_D s₀.mem a₀ hD f x _ hf hx _ hm
   refine ⟨h1, h2, h3, ?_, ceinternW_hw s₀.mem a₀ ?_ f x hf hx _ _ hm⟩
   · exact ceinternW_frame (hI := hm)
-  · exact hD.1.const
+  · exact hD.base.const
 
 end progs
 
@@ -800,7 +800,7 @@ theorem callW_natSuccOk (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀ : AS
   obtain ⟨hr, hm⟩ := hW
   rw [← hm]
   have hvOK : viewOK m₂ (rdW (s₀.mem.arr64 EREC) (q + 4)) FORALL := ⟨hsc, by simpa using hbd⟩
-  obtain ⟨hview, hd, hb⟩ := view_forall m₂ _ hS.arena.1 _ htyl hvOK hg'
+  obtain ⟨hview, hd, hb⟩ := view_forall m₂ _ hS.arena.base _ htyl hvOK hg'
   have hz := natSuccOk_run_forall hC.pins cv np nf _ _ _ hl0 hrun' (by
       rw [hty]; exact beq_iff_eq.mpr ((decE_tag_forallE _ htyl).mpr hg')) (by rw [hty]; exact hview)
   obtain ⟨hok', hst', hres'⟩ := AM.of_run_ok _ _ _ _ hz

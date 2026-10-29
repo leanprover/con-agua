@@ -29,7 +29,7 @@ theorem HSl0.grow {k : IdxKind} {m m' : Mem} {o l : Word} {xs : List (Idx k)} (h
   · have hx : xs = [] := by have := decHL_length _ hd; simpa using this
     subst hx
     exact ⟨by simp [decHL, hslice?], .inl rfl⟩
-  · exact ⟨by rw [decHL_grow hg hb]; exact hd, .inr (Nat.le_trans hb hg.1)⟩
+  · exact ⟨by rw [decHL_grow hg hb]; exact hd, .inr (Nat.le_trans hb hg.iw)⟩
 
 end L.Ind
 
@@ -119,7 +119,7 @@ theorem tteW_ok (n : Nat) {m m' : Mem} {a : AState} {bso bsl teo tel : Word} {r 
   obtain ⟨ys2, a2, run2, hd2, hb2, hS2, hg2, hP2⟩ := eeW_ok dn fe vis n h2 hS1 (htl.grow hg1) hP1
   rcases h3 : eqW n m2 (r1.headD 0) (r1.tail.headD 0) (r2.headD 0) (r2.tail.headD 0) with _ | e <;> simp only [h3, tteK3, reduceCtorEq] at h
   simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨rfl, rfl⟩ := h
-  have he := eqW_dec h3 (by rw [decHL_grow hg2 hb1]; exact hd1) (hS2.lt64 (by have := hg2.1; omega))
+  have he := eqW_dec h3 (by rw [decHL_grow hg2 hb1]; exact hd1) (hS2.lt64 (by have := hg2.iw; omega))
     hd2 (hS2.lt64 hb2)
   refine ⟨ys1 == ys2, a2, ?_, ?_, hS2, hg1.trans hg2, hP2⟩
   · simp only [tkTele, StateT.run_bind, run1, except_ok_bind, run2]; rfl

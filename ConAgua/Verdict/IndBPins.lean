@@ -112,7 +112,7 @@ theorem tpt_ref (n : Nat) (hn : n ≤ 2 ^ 62) :
   refine RefE.bind_right hrun1 ?_
   have hxs1 : HSl0 m1 (xo + 1) (xl - 1) xs' :=
     ⟨by rw [hxo1, hxl1, decHL_grow hg1 (by omega)]; exact hxs',
-      .inr (by rw [hxo1, hxl1]; have := hg1.1; omega)⟩
+      .inr (by rw [hxo1, hxl1]; have := hg1.iw; omega)⟩
   have hr := ih (by omega) hC1 hA1 hxs1 (ConRon.Bridge.denoteEList_ext c1'.ext _ _ hxsP')
     (fun y hy => hw y (List.mem_cons_of_mem _ hy))
   rcases h2 : tptE p n m1 vis d (xo + 1) (xl - 1) with e2 | ⟨v2, m2⟩ <;> rw [h2] at hr

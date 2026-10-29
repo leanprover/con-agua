@@ -83,7 +83,7 @@ theorem sgW_ok (k : Nat)
     ∃ x a', (ConRon.Arena.nestSeedOf c holes (decI ind) (decI us) ds nPc.toNat).run a = .ok (x, a') ∧
       decNK m' (r.headD 0).toNat = some x.1 ∧ (r.tail.headD 0).toNat = x.2 ∧
       NKIn m' (r.headD 0).toNat (· < iwTop m') ∧ RxPost dn fe vis m m' a' M G g ∧ PosMR m' := by
-  have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
+  have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.iw hS.iw.iwSize
   obtain ⟨-, -, hpa, hpa', -, -, -, -, -, h11⟩ := ctx_fields hc hin htop
   have hpsum : (rdW (m.arr64 IW) (ctx + 7)).toNat + (rdW (m.arr64 IW) (ctx + 8)).toNat ≤ iwTop m := by
     obtain ⟨-, -, -, -, hpm, -⟩ := decCtx_some hc
@@ -102,8 +102,8 @@ theorem sgW_ok (k : Nat)
   have g3 := iwN_of_get (by simpa using hget1 3 (by simp))
   have g4 := iwN_of_get (by simpa using hget1 4 (by simp))
   have hfm : FMOk m1 f.toNat (.keyMap c.params holes) :=
-    ⟨by simpa using g0, by omega, ⟨_, _, g1, g2, by rw [decHL_grow hg1 hpsum]; exact hpa, by have := hg1.1; omega⟩,
-      ⟨_, _, g3, g4, by rw [decHL_grow hg1 hhob]; exact hho, by have := hg1.1; omega⟩⟩
+    ⟨by simpa using g0, by omega, ⟨_, _, g1, g2, by rw [decHL_grow hg1 hpsum]; exact hpa, by have := hg1.iw; omega⟩,
+      ⟨_, _, g3, g4, by rw [decHL_grow hg1 hhob]; exact hho, by have := hg1.iw; omega⟩⟩
   obtain ⟨ec1, hci1⟩ := hin.grow hg1
   have hsl1 := hsl.grow hin hg1
   have hR1 := hR.frame (posRecW_fr hr1)
@@ -115,7 +115,7 @@ theorem sgW_ok (k : Nat)
   simp only at h
   obtain ⟨ys, a3, hrun, hdec3, hS3, hg13, ht3, ⟨M3, G3, hR3, hk3, hG3⟩, hP3⟩ := sgGoW_ok dn fe vis k m1 m2 m3 a ctx f
     dO dL q 0 c holes ds [] M G g hgo hS2 hg2 (by omega) (by omega) (by rw [ec1]; exact hc) hci1 hsl1 hb hfm
-    (by rw [decHL_agree (RdS.of_grow hg1) hdsb]; exact hds) (fun j hj => Nat.lt_of_lt_of_le (hdsb j hj) hg1.1)
+    (by rw [decHL_agree (RdS.of_grow hg1) hdsb]; exact hds) (fun j hj => Nat.lt_of_lt_of_le (hdsb j hj) hg1.iw)
     (by simp) (by simp [decHL, hslice?]) (hR1.frame (allocW_fr hal))
     ((hP.fr (posRecW_mfr hr1)).fr (allocW_mfr hal))
   rcases hr4 : posRecW m3 [ind, us, q, dL] with _ | ⟨key, m4⟩ <;> rw [hr4] at h; · simp [sgC] at h
@@ -123,7 +123,7 @@ theorem sgW_ok (k : Nat)
   obtain ⟨rfl, rfl⟩ := h
   obtain ⟨hS4, hg4, hk4, ht4, hget4⟩ := posRecW_stage hr4 hS3 (by simp)
   simp only [List.length_cons, List.length_nil] at ht4
-  have hqb : q.toNat + dL.toNat ≤ iwTop m3 := by have := hg13.1; omega
+  have hqb : q.toNat + dL.toNat ≤ iwTop m3 := by have := hg13.iw; omega
   have hdk : decNK m4 key.toNat = some ⟨decI ind, decI us, ys⟩ :=
     decNK_of_words (by simpa using hget4 0 (by simp)) hind (hget4 1 (by simp)) hus (hget4 2 (by simp))
       (hget4 3 (by simp)) (by rw [decHL_grow hg4 hqb]; simpa using hdec3)
@@ -140,7 +140,7 @@ theorem sgW_ok (k : Nat)
     have e3 := iwN_of_get (m := m4) (by simpa using hget4 3 (by simp))
     rw [e2] at ho; rw [e3] at hl
     cases ho; cases hl
-    have := hg4.1; omega
+    have := hg4.iw; omega
   · exact ⟨M3, G3, hS4, (hg1.trans hg13).trans hg4, hR3.frame (posRecW_fr hr4), hk3, hG3⟩
 
 end rel

@@ -427,12 +427,12 @@ theorem slotVarW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEn
   obtain ⟨hg0, h⟩ := of_ite_none' h
   have hu32 : (pinW m 53).toNat < 2 ^ 32 := by have : ¬ (4294967296 : Nat) ≤ (pinW m 53).toNat := hu; omega
   have hz32 : z.toNat < 2 ^ 32 := by have : ¬ (4294967296 : Nat) ≤ z.toNat := hz; omega
-  have hzl : zeroLevel.run a = .ok (decI (pinW m 53), a) := pinZeroLevel_run (hS.1.pins.full hpin)
+  have hzl : zeroLevel.run a = .ok (decI (pinW m 53), a) := pinZeroLevel_run (hS.check.pins.full hpin)
   obtain ⟨a1, hrun1, hS1, hg1⟩ := internSort_stage hS _ hu32 hso
   have hrd : rdW (m1.arr64 IW) g = UInt64.ofNat G.nP := by
     have e1 := (iwN_rdW hg (by have := g.toNat_lt; omega))
     rw [UInt64.ofNat_toNat] at e1
-    have : (m1.arr64 IW)[g.toNat]? = (m.arr64 IW)[g.toNat]? := hg1.2.2.1 g.toNat hgt
+    have : (m1.arr64 IW)[g.toNat]? = (m.arr64 IW)[g.toNat]? := hg1.iwGet g.toNat hgt
     simp only [rdW] at e1 ⊢; rw [this]; exact e1.1
   rw [hrd] at h
   split at h
@@ -821,7 +821,7 @@ theorem ihW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (m
     have hao : (r2.headD 0).toNat + (r2.tail.headD 0).toNat < 2 ^ 64 ∨ (r2.tail.headD 0).toNat = 0 := by
       rcases decHL_le hdec2' with h0 | h0
       · right; exact h0
-      · left; obtain ⟨-, -, hsz2, -, -⟩ := hS2.2; omega
+      · left; obtain ⟨-, -, hsz2, -, -⟩ := hS2.iw; omega
     by_cases hlt : UInt64.ofNat N < r2.tail.headD 0
     · rw [ite_eq_left hlt] at h
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
@@ -838,7 +838,7 @@ theorem ihW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (m
       refine ⟨some (xs, args.drop N), a2, htwin, hS2, hg1.trans hg2, ?_, hA2⟩
       refine ⟨rfl, ?_, ?_, ?_, ?_⟩
       · simpa using hxs2
-      · have := hg2.1; simpa using Nat.le_trans hxtop' this
+      · have := hg2.iw; simpa using Nat.le_trans hxtop' this
       · show decHL m2 (r2.headD 0 + UInt64.ofNat N).toNat (r2.tail.headD 0 - UInt64.ofNat N).toNat = _
         rw [hsum, hsub]; exact hdr
       · show (r2.headD 0 + UInt64.ofNat N).toNat + (r2.tail.headD 0 - UInt64.ofNat N).toNat ≤ iwTop m2
@@ -853,7 +853,7 @@ theorem ihW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (m
       refine ⟨some (xs, args.drop N), a2, htwin, hS2, hg1.trans hg2, ?_, hA2⟩
       refine ⟨rfl, ?_, ?_, ?_, ?_⟩
       · simpa using hxs2
-      · have := hg2.1; simpa using Nat.le_trans hxtop' this
+      · have := hg2.iw; simpa using Nat.le_trans hxtop' this
       · rw [hnil]; simp [decHL, hslice?]
       · show (r2.headD 0).toNat + (0 : Word).toNat ≤ iwTop m2
         simp only [UInt64.toNat_zero]; omega
@@ -947,7 +947,7 @@ theorem pdW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n
       by_cases hev : eViewW m e = []
       · rw [pdW_ev n m xo xl e hxl (by simpa using hf) hev] at h; simp at h
       rw [pdW_cons n m xo xl e hxl (by simpa using hf) hev] at h
-      obtain ⟨v, hv, hR⟩ := eViewW_ok m a hS.1.arena.1 e hev
+      obtain ⟨v, hv, hR⟩ := eViewW_ok m a hS.check.arena.base e hev
       have hhead := eViewW_head6 m e hev hf6
       have hdec : ∃ ty b : EIdx, v = .forallE ty b ∧ (eViewW m e).tail.headD 0 = (eViewW m e).getD 1 0 ∧
           (eViewW m e).tail.tail.headD 0 = (eViewW m e).getD 2 0 ∧
@@ -972,7 +972,7 @@ theorem pdW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n
       have hxs1 : decHL m1 (xo + 1).toNat (xl - 1).toNat = some xs' := by
         rw [decHL_grow hg1 (by omega)]; exact hxs'
       obtain ⟨res2, a2, hrun2, hS2, hg2, hres2⟩ := ih m1 m2 a1 (xo + 1) (xl - 1) (ri.headD 0) r2 xs' hr hS1 hd11
-        hxs1 (by omega) (by have := hg1.1; omega)
+        hxs1 (by omega) (by have := hg1.iw; omega)
       have htag : ((decE e).tag == ETag.forallE) = true := by simpa using hftag.mpr hf6
       have hvb := EStore.viewBind_of_view_forall _ _ _ _ hv
       have hrun1' : (instantiate1Fast coreWalkFuel bb (decI w) 0) a = .ok (t1, a1) := by

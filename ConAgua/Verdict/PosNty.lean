@@ -65,11 +65,11 @@ theorem nty_ref {p : Prog} (hl : NtyLook p) {dn : NIdx → Option ConLeche.Name}
   cases k with
   | zero => rw [ntyE.eq_1]; exact RefE.of_cls0 (by simp)
   | succ k =>
-  have hE := hS.1.env
-  have hR := hS.1.arena.1
-  have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
-  have hEb : erTop m ≤ (m.arr64 EREC).size := hS.2.2.1
-  have hEs : (m.arr64 EREC).size < 2 ^ 64 := hS.2.2.2.2.1
+  have hE := hS.check.env
+  have hR := hS.check.arena.base
+  have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.iw hS.iw.iwSize
+  have hEb : erTop m ≤ (m.arr64 EREC).size := hS.iw.er
+  have hEs : (m.arr64 EREC).size < 2 ^ 64 := hS.iw.erSize
   obtain ⟨hcH, hcd, hlH, hld, hds, hdsb, hk4⟩ := nk_fields hk hkin htop
   rw [ntyE.arm1]
   rcases hef : envFindW m (rdW (m.arr64 IW) key) vis with _ | ⟨r1, m1⟩
@@ -166,15 +166,15 @@ theorem nty_ref {p : Prog} (hl : NtyLook p) {dn : NIdx → Option ConLeche.Name}
   rcases hlp : cvLpsW k m3 (q + 1) with _ | ⟨r4, m4⟩
   · rw [liftE_none, ntyE.k_cv_lps.none]; exact RefE.of_cls0 (by simp)
   rw [liftE_some, ntyE.k_cv_lps.arm1]
-  obtain ⟨hS4, hg4, hE4, hdec4, -⟩ := pos2_cvLpsW_stage hlp hS3 hcv3 (by rw [e1]; have := hg3.2.1; omega)
+  obtain ⟨hS4, hg4, hE4, hdec4, -⟩ := pos2_cvLpsW_stage hlp hS3 hcv3 (by rw [e1]; have := hg3.er; omega)
   have hg34 := hg3.trans hg4
   have hlv4 : rdW (m4.arr64 IW) (key + 1) = rdW (m1.arr64 IW) (key + 1) := by
     have e : (key + 1).toNat = key.toNat + 1 := word_add_toNat (by simp; omega)
-    simp only [rdW, e]; rw [hg34.2.2.1 _ (by omega)]
+    simp only [rdW, e]; rw [hg34.iwGet _ (by omega)]
   have hwt4 : rdW (m4.arr64 EREC) (q + 1 + 3) = wt := by
     rw [hE4]
     have : (m3.arr64 EREC)[(q + 1 + 3).toNat]? = (m1.arr64 EREC)[(q + 1 + 3).toNat]? := by
-      rw [e13]; exact hg3.2.2.2 _ (by omega)
+      rw [e13]; exact hg3.erGet _ (by omega)
     simp only [rdW, this]; exact hrdt
   rw [hlv4, hwt4]
   -- `inst_lp_fast`
@@ -190,10 +190,10 @@ theorem nty_ref {p : Prog} (hl : NtyLook p) {dn : NIdx → Option ConLeche.Name}
   have hg35 := hg34.trans hg5
   have hrd2 : rdW (m5.arr64 IW) (key + 2) = rdW (m1.arr64 IW) (key + 2) := by
     have e : (key + 2).toNat = key.toNat + 2 := word_add_toNat (by simp; omega)
-    simp only [rdW, e]; rw [hg35.2.2.1 _ (by omega)]
+    simp only [rdW, e]; rw [hg35.iwGet _ (by omega)]
   have hrd3 : rdW (m5.arr64 IW) (key + 3) = rdW (m1.arr64 IW) (key + 3) := by
     have e : (key + 3).toNat = key.toNat + 3 := word_add_toNat (by simp; omega)
-    simp only [rdW, e]; rw [hg35.2.2.1 _ (by omega)]
+    simp only [rdW, e]; rw [hg35.iwGet _ (by omega)]
   rw [hrd2, hrd3]
   -- `inst_pis_with`
   rcases hiw : instW k m5 (rdW (m1.arr64 IW) (key + 2)) (rdW (m1.arr64 IW) (key + 3)) (r5.headD 0) with _ | ⟨r6, m6⟩
@@ -201,7 +201,7 @@ theorem nty_ref {p : Prog} (hl : NtyLook p) {dn : NIdx → Option ConLeche.Name}
   rw [liftE_some]
   obtain ⟨x6, a5, hrun5, hS6, hg6, hx6⟩ := instW_ok k dn fe vis m5 m6 a4 _ _ _ kk.ds r6 hiw hS5 htlH
     (by rw [decHL_agree (RdS.of_grow hg35) (fun j hj => hdsb j hj)]; exact hds) (by unfold NKSl at hksl; omega)
-    (by have := hg35.1; exact Nat.le_trans hksl this)
+    (by have := hg35.iw; exact Nat.le_trans hksl this)
   rw [htld] at hrun5
   refine RefE.bind_right hrun5 ?_
   cases x6 with

@@ -120,7 +120,7 @@ theorem cbc_ref (hP : CbcProg p) {fs : List FnName}
   obtain ⟨h1ok, hrdS, so, sl, hso, hsl', hspl⟩ := hd1
   have h1ne : ¬ r1.headD 0 = 0 := by rw [h1ok]; decide
   rw [cbcE.k_class_read.arm1 p n vis pp po pl co cl r1 s1.mem h1ne]
-  have hsz1 : (s1.mem.arr64 IW).size < 2 ^ 64 := hS1.2.2.2.1
+  have hsz1 : (s1.mem.arr64 IW).size < 2 ^ 64 := hS1.iw.iwSize
   obtain ⟨wso, hwsob⟩ := iwN_rdW_at (k := 0) (w := r1.tail.headD 0) (by simpa using hso) hsz1
   obtain ⟨wsl, hwslb⟩ := iwN_rdW_at (k := 1) (w := r1.tail.headD 0) hsl' hsz1
   rw [show (r1.tail.headD 0 + UInt64.ofNat 0 : Word) = r1.tail.headD 0 by simp] at wso
@@ -147,7 +147,7 @@ theorem cbc_ref (hP : CbcProg p) {fs : List FnName}
   obtain ⟨hnp2, -, -, -⟩ := partsShapeWords hg02 hbsD hq9
   rw [hnp2]
   have hR3 := ckk_ref (p := p) dn vis fe (UInt64.ofNat bs.nP) po pl pfvs n s2.mem a1 _ _ _ hS2
-    (hpf.grow (OMono.decHL _ _) hg02) (Nat.le_trans hpfb hg02.1) (ccRes_pslR hcc) hP2
+    (hpf.grow (OMono.decHL _ _) hg02) (Nat.le_trans hpfb hg02.iw) (ccRes_pslR hcc) hP2
   have hsT := ckkE_spec p hP.clm.keys n ⟨s2.mem, Locals.init []⟩ (UInt64.ofNat bs.nP) po pl (r2.headD 0)
     (r2.tail.headD 0)
   rcases c3 : callE p n "check_block_classes_keys" [UInt64.ofNat bs.nP, po, pl, r2.headD 0, r2.tail.headD 0]
@@ -173,7 +173,7 @@ theorem cbc_ref (hP : CbcProg p) {fs : List FnName}
   -- the majors
   have hR4 := clm_ref hq hIlpf hLC henv hP.clm pp co cl po pl bs css pfvs pP cssP pfvsP hpw n hn s3.mem a3 _ _ keys
       keysP hC3 hA3 (hbsD.grow (decBS_mono _) hg03) (partsHsrc_grow hg03 hq9 hsrc)
-      (hcss.grow decCNS_mono hg03) (hpf.grow (OMono.decHL _ _) hg03) (Nat.le_trans hpfb hg03.1) hks
+      (hcss.grow decCNS_mono hg03) (hpf.grow (OMono.decHL _ _) hg03) (Nat.le_trans hpfb hg03.iw) hks
       hP3 (fun k hk x hx => ⟨pP.nP, hnPP ▸ hwk k hk x hx⟩)
       (ConRon.Bridge.Inductives.dShape_ext c12.ext _ _ hshP)
       (ConRon.Bridge.Inductives.dCtors_ext.list c12.ext _ _ hcssP)
@@ -209,9 +209,9 @@ theorem cbc_ref (hP : CbcProg p) {fs : List FnName}
     have e : (pp + 1 : Word) = UInt64.ofNat (pp.toNat + 1) := by
       apply UInt64.toNat_inj.mp; rw [hq1]; simp; omega
     rw [e]; exact decBS_k (hbsD.get (decBS_mono _)) hpp1
-  have hsz4 : (m4.arr64 IW).size < 2 ^ 64 := hS4.2.2.2.1
+  have hsz4 : (m4.arr64 IW).size < 2 ^ 64 := hS4.iw.iwSize
   have hgood := opmW_ok n m4 0 _ _ _ _ ms hW5 (hms.1.get (OMono.decPL (fun q => decTM_mono q) _ _))
-    (by have := hms.2; have := Nat.lt_of_le_of_lt hS4.2.1 hsz4; omega) hsz4
+    (by have := hms.2; have := Nat.lt_of_le_of_lt hS4.iw.iw hsz4; omega) hsz4
   obtain ⟨ok, lk, -, hlk, hgdk⟩ := decAt_some (decBS_some (hbsD.get (decBS_mono _))).1
   have hkb : bs.k < 2 ^ 64 := by rw [BlockShape.k, decPL_length _ hgdk]; exact (iwN_rdW hlk hpp1).2
   rw [hk1', UInt64.toNat_ofNat_of_lt' hkb, show (0 : Word).toNat = 0 from rfl, Nat.sub_zero,
@@ -233,7 +233,7 @@ theorem cbc_ref (hP : CbcProg p) {fs : List FnName}
     _ _
   rw [hall, hm5]
   refine RefE.ret (y := (rd, ms)) (a' := a4) rfl ⟨hC4, hg04, ?_, by simpa using hms, hP4, hA4, c12.trans c3'⟩
-  exact stab_decCR_decB (by simpa using hrdS.grow (hg2.trans (hg3.trans hg4))) hS4.2.2.2.1
+  exact stab_decCR_decB (by simpa using hrdS.grow (hg2.trans (hg3.trans hg4))) hS4.iw.iwSize
 
 include hq hIlpf hLC henv in
 /-- **`check_block_classes` refines `checkBlockClasses`** under `StageC` (the inputs' denotations

@@ -60,7 +60,7 @@ theorem stage_of_ok {op : AM EIdx} {A : List TieredArray} {C : List Word} (hS : 
 theorem internBVar_stage (hS : StageR dn vis fe m a) (u : Word) (hI : binternW m u = some (r, m')) :
     ∃ a', (internE (.bvar u.toNat)).run a = .ok (decE r, a') ∧ StageR dn vis fe m' a' ∧
       IWGrow m m' := by
-  obtain ⟨hok, hD, hres⟩ := internBVar_D m a hS.1.arena u r m' hI
+  obtain ⟨hok, hD, hres⟩ := internBVar_D m a hS.check.arena u r m' hI
   have hI₂ := hI
   exact stage_of_ok hS hok hD hres (consInternM_frame bvarCS_wf hI₂)
     (by simp [tier1, ConsSch.wset, bvarCS, BREC, BSLOT]) (by simp [bvarCS]) (keeps_internE _)
@@ -69,7 +69,7 @@ theorem internFVar_stage (hS : StageR dn vis fe m a) (u ty : Word) (hty : ty.toN
     (hI : fvinternW m u ty = some (r, m')) :
     ∃ a', (internE (.fvar u.toNat (decE ty))).run a = .ok (decE r, a') ∧ StageR dn vis fe m' a' ∧
       IWGrow m m' := by
-  obtain ⟨hok, hD, hres⟩ := internFVar_D m a hS.1.arena u ty r hty m' hI
+  obtain ⟨hok, hD, hres⟩ := internFVar_D m a hS.check.arena u ty r hty m' hI
   exact stage_of_ok hS hok hD hres (fvinternW_frame m u ty _ _ hI)
     (by simp [tier1, FVREC, FVSLOT, FVLP]) (by simp) (keeps_internE _)
 
@@ -77,7 +77,7 @@ theorem internSort_stage (hS : StageR dn vis fe m a) (u : Word) (hu : u.toNat < 
     (hI : sointernW m u = some (r, m')) :
     ∃ a', (internE (.sort (decI u))).run a = .ok (decE r, a') ∧ StageR dn vis fe m' a' ∧
       IWGrow m m' := by
-  obtain ⟨hok, hD, hres⟩ := internSort_D m a hS.1.arena u r hu m' hI
+  obtain ⟨hok, hD, hres⟩ := internSort_D m a hS.check.arena u r hu m' hI
   exact stage_of_ok hS hok hD hres (sointernW_frame m u _ _ hI)
     (by simp [tier1, SOREC, SOSLOT, SOLP]) (by simp) (keeps_internE _)
 
@@ -85,14 +85,14 @@ theorem internConst_stage (hS : StageR dn vis fe m a) (f x : Word) (hf : f.toNat
     (hx : x.toNat < 2 ^ 32) (hI : ceinternW m f x = some (r, m')) :
     ∃ a', (internE (.const (decI (k := .name) f) (decI (k := .levels) x))).run a = .ok (decE r, a') ∧
       StageR dn vis fe m' a' ∧ IWGrow m m' := by
-  obtain ⟨hok, hD, hres⟩ := internConst_D m a hS.1.arena f x r hf hx m' hI
+  obtain ⟨hok, hD, hres⟩ := internConst_D m a hS.check.arena f x r hf hx m' hI
   exact stage_of_ok hS hok hD hres (ceinternW_frame m f x _ _ hI)
     (by simp [tier1, CREC, CSLOT, CLP]) (by simp) (keeps_internE _)
 
 theorem mkApp_stage (hS : StageR dn vis fe m a) (f x : Word) (hI : mkAppW m f x = some (r, m')) :
     ∃ a', (internE (.app (decE f) (decE x))).run a = .ok (decE r, a') ∧ StageR dn vis fe m' a' ∧
       IWGrow m m' := by
-  obtain ⟨hok, hD, hres⟩ := mkApp_ok m a hS.1.arena f x r m' hI
+  obtain ⟨hok, hD, hres⟩ := mkApp_ok m a hS.check.arena f x r m' hI
   have hf : MemFrame [ADER, tier1 ADER, AREC, tier1 AREC, ASLOT, tier1 ASLOT] [4, 5] m m' := by
     unfold mkAppW at hI; split at hI; · cases hI
     exact mkK_frame (by decide) (fun r₁ m₁ hx => by
@@ -102,7 +102,7 @@ theorem mkApp_stage (hS : StageR dn vis fe m a) (f x : Word) (hI : mkAppW m f x 
 theorem mkLam_stage (hS : StageR dn vis fe m a) (t b : Word) (hI : mkLamW m t b = some (r, m')) :
     ∃ a', (internE (.lam (decE t) (decE b))).run a = .ok (decE r, a') ∧ StageR dn vis fe m' a' ∧
       IWGrow m m' := by
-  obtain ⟨hok, hD, hres⟩ := mkLam_ok m a hS.1.arena t b r m' hI
+  obtain ⟨hok, hD, hres⟩ := mkLam_ok m a hS.check.arena t b r m' hI
   have hf : MemFrame [LADER, tier1 LADER, LAREC, tier1 LAREC, LASLOT, tier1 LASLOT] [28, 29] m m' := by
     unfold mkLamW at hI; split at hI; · cases hI
     exact mkK_frame (by decide) (fun r₁ m₁ hx => by
@@ -112,7 +112,7 @@ theorem mkLam_stage (hS : StageR dn vis fe m a) (t b : Word) (hI : mkLamW m t b 
 theorem mkForall_stage (hS : StageR dn vis fe m a) (t b : Word) (hI : mkForallW m t b = some (r, m')) :
     ∃ a', (internE (.forallE (decE t) (decE b))).run a = .ok (decE r, a') ∧
       StageR dn vis fe m' a' ∧ IWGrow m m' := by
-  obtain ⟨hok, hD, hres⟩ := mkForall_ok m a hS.1.arena t b r m' hI
+  obtain ⟨hok, hD, hres⟩ := mkForall_ok m a hS.check.arena t b r m' hI
   have hf : MemFrame [FADER, tier1 FADER, FAREC, tier1 FAREC, FASLOT, tier1 FASLOT] [30, 31] m m' := by
     unfold mkForallW at hI; split at hI; · cases hI
     exact mkK_frame (by decide) (fun r₁ m₁ hx => by
@@ -122,7 +122,7 @@ theorem mkForall_stage (hS : StageR dn vis fe m a) (t b : Word) (hI : mkForallW 
 theorem mkLet_stage (hS : StageR dn vis fe m a) (t v b : Word) (hI : mkLetW m t v b = some (r, m')) :
     ∃ a', (internE (.letE (decE t) (decE v) (decE b))).run a = .ok (decE r, a') ∧
       StageR dn vis fe m' a' ∧ IWGrow m m' := by
-  obtain ⟨hok, hD, hres⟩ := mkLet_ok m a hS.1.arena t v b r m' hI
+  obtain ⟨hok, hD, hres⟩ := mkLet_ok m a hS.check.arena t v b r m' hI
   have hf : MemFrame [LEDER, tier1 LEDER, LEREC, tier1 LEREC, LESLOT, tier1 LESLOT] [20, 21] m m' := by
     unfold mkLetW at hI; split at hI; · cases hI
     exact mkK_frame (by decide) (fun r₁ m₁ hx => by
@@ -132,7 +132,7 @@ theorem mkLet_stage (hS : StageR dn vis fe m a) (t v b : Word) (hI : mkLetW m t 
 theorem mkProj_stage (hS : StageR dn vis fe m a) (n i e : Word) (hI : mkProjW m n i e = some (r, m')) :
     ∃ a', (internE (.proj (decI n) i.toNat (decE e))).run a = .ok (decE r, a') ∧
       StageR dn vis fe m' a' ∧ IWGrow m m' := by
-  obtain ⟨hok, hD, hres⟩ := mkProj_ok m a hS.1.arena n i e r m' hI
+  obtain ⟨hok, hD, hres⟩ := mkProj_ok m a hS.check.arena n i e r m' hI
   have hf : MemFrame [PJDER, tier1 PJDER, PJREC, tier1 PJREC, PJSLOT, tier1 PJSLOT] [32, 33] m m' := by
     unfold mkProjW at hI; split at hI; · cases hI
     exact mkK_frame (by decide) (fun r₁ m₁ hx => by
@@ -176,13 +176,13 @@ theorem consW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEn
     StageR dn vis fe m' a ∧ IWGrow m m' ∧
       decHL m' (r.headD 0).toNat (r.tail.headD 0).toNat = some (decI x :: xs) ∧
       (r.headD 0).toNat + (r.tail.headD 0).toNat = iwTop m' := by
-  obtain ⟨hI1, hE1, hsz, hEs, hc⟩ := hS.2
+  obtain ⟨hI1, hE1, hsz, hEs, hc⟩ := hS.iw
   obtain ⟨hr, hd, hg, hf, -, ht⟩ := consW_dec h hsz hc hsrc hx hxs
   have hroom := consW_room h hsz hc hsrc hx hxs
   have h129 : rdW (m'.arr64 CTL) 129 = rdW (m.arr64 CTL) 129 := hf.ctl 129 (by simp)
   have hE : m'.arr64 EREC = m.arr64 EREC := hf.arr EREC (by simp [EREC, IW]) (by decide)
   subst hr
-  refine ⟨⟨CheckR.frame_iw hf hS.1, hroom, ?_, ?_, ?_, ?_⟩, hg, by simpa using hd, by simpa using ht⟩
+  refine ⟨⟨CheckR.frame_iw hf hS.check, hroom, ?_, ?_, ?_, ?_⟩, hg, by simpa using hd, by simpa using ht⟩
   · simp only [erTop, h129, hE]; exact hE1
   · rw [hf.size IW]; exact hsz
   · rw [hE]; exact hEs
@@ -213,7 +213,7 @@ theorem stage_of_level {β : Type} [BEq β] [Hashable β] {L : Lens β LDer .lev
     (hmode : ModeOK m') :
     ∃ a', op.run a = .ok (decI r, a') ∧ StageR dn vis fe m' a' ∧ IWGrow m m' := by
   have hD₁ : DerR m' a := DerR.frameM _ _ m m' hf (fun b hb => by have := hA b hb; omega) a
-    hS.1.arena.2
+    hS.check.arena.der
   have hcs := AM.st_proto L op key tag pf d err a hrun hok
   have hDk : DerR m' (AM.st op a) ∧ cp (AM.st op a) = cp a := by
     rcases hcs with h | ⟨t, h⟩ | ⟨t, h⟩ <;> rw [h]
@@ -230,7 +230,7 @@ theorem internParam_stage (hS : StageR dn vis fe m a) (u : Word) (hu : u.toNat <
     (hI : pinternW m u = some (r, m')) :
     ∃ a', (internLNode (.param (decI u))).run a = .ok (decI r, a') ∧ StageR dn vis fe m' a' ∧
       IWGrow m m' := by
-  have hR := hS.1.arena.1
+  have hR := hS.check.arena.base
   obtain ⟨hok, hX, hres⟩ := pintern_correct m a hR.param u hu _ _ hI
   have hL := pintern_hp m a hR.param u hu hR.paramHp _ _ hI
   have hI₂ := hI
@@ -239,12 +239,12 @@ theorem internParam_stage (hS : StageR dn vis fe m a) (u : Word) (hu : u.toNat <
     (hR.lift_param _ _ _ _ ⟨hX, hL⟩ hfr (AM.st_proto paramLens _ _ _ _ _ _ a (internLNode_param_run _ a) hok))
     hres hfr (by simp [tier1, ConsSch.wset, paramCS, PREC, PSLOT]) (by simp [paramCS]) (fun _ => ⟨DerR.lvl, rfl⟩)
     (fun _ => ⟨DerR.lvl, rfl⟩)
-    (hS.1.mode.frame hfr (by decide) (by decide))
+    (hS.check.mode.frame hfr (by decide) (by decide))
 
 theorem internZero_stage (hS : StageR dn vis fe m a) (hI : zinternW m = some (r, m')) :
     ∃ a', (internLNode .zero).run a = .ok (decI r, a') ∧ StageR dn vis fe m' a' ∧
       IWGrow m m' := by
-  have hR := hS.1.arena.1
+  have hR := hS.check.arena.base
   obtain ⟨hok, hX, hres⟩ := zintern_correct m a hR.zero _ _ hI
   have hL := zintern_hp m a hR.zero hR.zeroHp _ _ hI
   have hI₂ := hI
@@ -253,13 +253,13 @@ theorem internZero_stage (hS : StageR dn vis fe m a) (hI : zinternW m = some (r,
     (hR.lift_zero _ _ _ _ ⟨hX, hL⟩ hfr (AM.st_proto zeroLens _ _ _ _ _ _ a (internLNode_zero_run a) hok))
     hres hfr (by simp [tier1, ConsSch.wset, zeroCS, ZREC, ZSLOT]) (by simp [zeroCS]) (fun _ => ⟨DerR.lvl, rfl⟩)
     (fun _ => ⟨DerR.lvl, rfl⟩)
-    (hS.1.mode.frame hfr (by decide) (by decide))
+    (hS.check.mode.frame hfr (by decide) (by decide))
 
 theorem internMax_stage (hS : StageR dn vis fe m a) (u v : Word) (hu : u.toNat < 2 ^ 32)
     (hv : v.toNat < 2 ^ 32) (hI : minternW m u v = some (r, m')) :
     ∃ a', (internLNode (.max (decI u) (decI v))).run a = .ok (decI r, a') ∧
       StageR dn vis fe m' a' ∧ IWGrow m m' := by
-  have hR := hS.1.arena.1
+  have hR := hS.check.arena.base
   obtain ⟨hok, hX, hres⟩ := mintern_correct m a hR.max u v hu hv _ _ hI
   have hfr := minternW_frame m u v _ _ hI
   exact stage_of_level hS (internLNode_max_run _ _ a) hok
@@ -267,7 +267,7 @@ theorem internMax_stage (hS : StageR dn vis fe m a) (u v : Word) (hu : u.toNat <
       hfr (AM.st_proto maxLens _ _ _ _ _ _ a (internLNode_max_run _ _ a) hok))
     hres hfr (by simp [tier1, MREC, MSLOT, MHP]) (by simp) (fun _ => ⟨DerR.lvl, rfl⟩)
     (fun _ => ⟨DerR.lvl, rfl⟩)
-    (hS.1.mode.frame hfr (by decide) (by decide))
+    (hS.check.mode.frame hfr (by decide) (by decide))
 
 end levels
 
@@ -276,7 +276,7 @@ end levels
 theorem allocW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
     {m m1 : Mem} {k q : Word} (h : allocW m k = some (q, m1)) (hS : StageR dn vis fe m a) :
     StageR dn vis fe m1 a ∧ IWGrow m m1 ∧ q.toNat = iwTop m ∧ iwTop m1 = iwTop m + k.toNat := by
-  obtain ⟨hI1, hE1, hsz, hEs, hc⟩ := hS.2
+  obtain ⟨hI1, hE1, hsz, hEs, hc⟩ := hS.iw
   obtain ⟨rfl, rfl, hroom⟩ := allocW_facts h hsz
   have hf := allocMem_frame m k
   have htop : iwTop (allocMem m k) = iwTop m + k.toNat := by
@@ -286,7 +286,7 @@ theorem allocW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFE
     omega
   have h129 : rdW ((allocMem m k).arr64 CTL) 129 = rdW (m.arr64 CTL) 129 := hf.ctl 129 (by simp)
   have hE : (allocMem m k).arr64 EREC = m.arr64 EREC := hf.arr EREC (by simp [EREC, IW]) (by decide)
-  refine ⟨⟨CheckR.frame_iw hf hS.1, ?_, ?_, ?_, ?_, ?_⟩, ?_, rfl, htop⟩
+  refine ⟨⟨CheckR.frame_iw hf hS.check, ?_, ?_, ?_, ?_, ?_⟩, ?_, rfl, htop⟩
   · rw [htop, hf.size IW]; simp only [iwTop]; omega
   · simp only [erTop, h129, hE]; exact hE1
   · rw [hf.size IW]; exact hsz
@@ -362,22 +362,22 @@ theorem StageR.erec {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEn
     (hlow : ∀ i < erTop m, (m'.arr64 EREC)[i]? = (m.arr64 EREC)[i]?)
     (htop : erTop m ≤ erTop m') (hroom : erTop m' ≤ (m'.arr64 EREC).size) :
     StageR dn vis fe m' a ∧ IWGrow m m' := by
-  obtain ⟨hI1, hE1, hsz, hEs, hc⟩ := hS.2
+  obtain ⟨hI1, hE1, hsz, hEs, hc⟩ := hS.iw
   have hI : m'.arr64 IW = m.arr64 IW := hf.arr IW (by simp [EREC, IW]) (by decide)
   have h200 : rdW (m'.arr64 CTL) 200 = rdW (m.arr64 CTL) 200 := hf.ctl 200 (by simp)
   have hg : ErecGrow m m' := ⟨htop, hlow, hf.size EREC⟩
   have hC : CheckR dn m' a vis fe :=
     ⟨⟨ArenaR.frame (fun b hb => by simp at hb; subst hb; decide)
-        (fun x hx => by simp at hx; subst hx; exact not_mem_arenaCtl _ (by decide)) hf hS.1.arena.1,
-      DerR.frameM _ _ m m' hf (by decide) a hS.1.arena.2⟩,
-     hS.1.core.frame (fun b hb => by simp at hb; subst hb; decide)
+        (fun x hx => by simp at hx; subst hx; exact not_mem_arenaCtl _ (by decide)) hf hS.check.arena.base,
+      DerR.frameM _ _ m m' hf (by decide) a hS.check.arena.der⟩,
+     hS.check.core.frame (fun b hb => by simp at hb; subst hb; decide)
        (fun x hx => by simp at hx; subst hx; decide) hf,
-     hS.1.pins.frame (fun b hb => by simp at hb; subst hb; decide) hf,
+     hS.check.pins.frame (fun b hb => by simp at hb; subst hb; decide) hf,
      EnvR.grow (fun b h1 h2 h3 => hf.arr b (fun hm => by simp at hm; subst hm; simp [EREC] at h3)
          (fun hm => by simp at hm; subst hm; simp [CTL] at h1))
        (hf.ctl 128 (by simp)) hg
-       (TblSame.of_frame (by decide) (by decide) (by decide) hf) hS.1.env,
-     hS.1.mode.frame hf (by simp) (by simp)⟩
+       (TblSame.of_frame (by decide) (by decide) (by decide) hf) hS.check.env,
+     hS.check.mode.frame hf (by simp) (by simp)⟩
   refine ⟨⟨hC, ?_, hroom, ?_, ?_, ?_⟩, ?_⟩
   · simp only [iwTop, h200, hI]; exact hI1
   · rw [hI]; exact hsz
@@ -394,7 +394,7 @@ theorem erRec_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEn
     StageR dn vis fe (wrER m1 q ws) a ∧ IWGrow m (wrER m1 q ws) ∧ q.toNat = erTop m ∧
       erTop (wrER m1 q ws) = erTop m + ws.length ∧
       (∀ j < ws.length, ((wrER m1 q ws).arr64 EREC)[q.toNat + j]? = ws[j]?) := by
-  obtain ⟨hI1, hE1, hsz, hEs, hc⟩ := hS.2
+  obtain ⟨hI1, hE1, hsz, hEs, hc⟩ := hS.iw
   simp only [erAllocW] at h
   by_cases h1 : m.len64 EREC < rdW (m.arr64 CTL) 129
   · simp [h1] at h
@@ -543,7 +543,7 @@ theorem cvNew_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEn
     rdW (m.arr64 EREC) (cq + 1), rdW (m.arr64 EREC) (cq + 2), ty] (by simp)
   refine ⟨hS', hg, hq, htop, ?_, ?_⟩
   rotate_left
-  obtain ⟨-, hE1, -, hEs, -⟩ := hS.2
+  obtain ⟨-, hE1, -, hEs, -⟩ := hS.iw
   have hlt : ∀ j, j < 4 → cq.toNat + j < (m.arr64 EREC).size := fun j hj => by
     simp only [erTop] at hcq hE1; omega
   have hw : ∀ (j : Nat) (x : Word), j < 3 → x.toNat = cq.toNat + j →
@@ -554,7 +554,7 @@ theorem cvNew_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEn
   have hc2 : (cq + 2).toNat = cq.toNat + 2 := by rw [UInt64.toNat_add]; simp; omega
   have hlow : ∀ i < erTop m, ((wrER m1 q1 [rdW (m.arr64 EREC) cq,
       rdW (m.arr64 EREC) (cq + 1), rdW (m.arr64 EREC) (cq + 2), ty]).arr64 EREC)[i]? =
-      (m.arr64 EREC)[i]? := fun i hi => hg.2.2.2 i hi
+      (m.arr64 EREC)[i]? := fun i hi => hg.erGet i hi
   refine decCV_copy (erTop m) hcv ?_ ?_ ?_ ?_ hty hlow hsl
   · have := hget 0 (by simp); simp only [Nat.add_zero] at this
     simp only [erA]; rw [this]; have := hw 0 cq (by decide) (by simp); simp only [Nat.add_zero] at this
@@ -563,7 +563,7 @@ theorem cvNew_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEn
   · simp only [erA]; rw [hget 2 (by simp), hw 2 (cq + 2) (by decide) hc2]; simp
   · simp only [erA]; rw [hget 3 (by simp)]; simp
   · intro lo ll e1 e2
-    obtain ⟨-, hE1, -, hEs, -⟩ := hS.2
+    obtain ⟨-, hE1, -, hEs, -⟩ := hS.iw
     have hlt : ∀ j, j < 4 → cq.toNat + j < (m.arr64 EREC).size := fun j hj => by
       simp only [erTop] at hcq hE1; omega
     simp only [nat?, erA] at e1 e2

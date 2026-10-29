@@ -111,7 +111,7 @@ theorem callW_internConst' (hpf : p.lookup "const_find" = some constFind)
   obtain ⟨h1, h2, h3⟩ := internConst_D m a₀ hD f x _ hf hx _ hm
   refine ⟨h1, h2, h3, ?_, ceinternW_hw' m a₀ ?_ f x hf hx _ _ hm⟩
   · exact ceinternW_frame (hI := hm)
-  · exact hD.1.const
+  · exact hD.base.const
 
 /-- **`mk_app_n` as a run**, with the result a handle word. -/
 theorem callW_mkAppN' (hp : SpineProg p) (n : Nat) (m : Mem) (a₀ : AState) (hD : ArenaD m a₀)
@@ -268,7 +268,7 @@ theorem m2cPre_ref (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤
   · rw [liftE_none, m2cPreE.k_get_app_fn.none]; exact fun _ _ => ErrClaim.of_cls0 (by simp)
   rw [liftE_some]
   obtain ⟨t3, ht3, hm3, -, hh3, hga⟩ := triple_of_callW (s₀ := ⟨m2, Locals.init []⟩)
-    (getAppFn_refines' p hp.spine.fn N _ _ hS2.arena.1 (r2.headD 0) hr2) c3
+    (getAppFn_refines' p hp.spine.fn N _ _ hS2.arena.base (r2.headD 0) hr2) c3
   have hm3' : m3 = m2 := ht3.symm.trans hm3
   subst hm3'
   have hKA : KeptAll M M2 eb := hK1.trans hK2
@@ -291,7 +291,7 @@ theorem m2cPre_ref (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤
   obtain ⟨v1, hcv⟩ := of_ite_none hcv
   obtain ⟨v2, hcv⟩ := of_ite_none hcv
   have hr4 := (Option.some.inj hcv).symm
-  obtain ⟨hvw, hn32, hu32⟩ := view_const_f m4 _ hS2.arena.1 (r3.headD 0) hh3
+  obtain ⟨hvw, hn32, hu32⟩ := view_const_f m4 _ hS2.arena.base (r3.headD 0) hh3
     ⟨v1, UInt64.not_le.mp v2⟩ g3'
   rcases c5 : callW p N "ls_node" [r4.tail.headD 0] m4 with _ | ⟨r5, m5⟩
   · rw [liftE_none, m2cPreE.k_ls_node.none]; exact fun _ _ => ErrClaim.of_cls0 (by simp)
@@ -305,7 +305,7 @@ theorem m2cPre_ref (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤
     · rw [h'] at hr5; exact absurd hr5 hne5
     · exact h'
   have hus : HW (r4.tail.headD 0) := by rw [hr4]; exact hu32
-  have hvl := lsNodeW_viewLen hS2.arena.1 hus hl5
+  have hvl := lsNodeW_viewLen hS2.arena.base hus hl5
   have hr5' : r5.tail.headD 0 = l5 := by rw [hr5, hl5]; rfl
   refine ⟨_, ⟨⟨_, _, _, _, hrun1, hrun2, hga, fun h => absurd h (by simp),
     fun _ => ⟨?_, rfl, ?_, ?_⟩⟩, ⟨M2, hS2, hKA, hStA⟩, e2.trans e1, fun _ => ⟨hr2, ?_, hus⟩⟩⟩
@@ -535,7 +535,7 @@ theorem m2cK2_ref (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤ 
   · rw [liftE_none, m2cK2E.k_get_app_args.none]; exact RefE.of_cls0 (by simp)
   rw [liftE_some]
   obtain ⟨t1, ht1, -, hfr1, hg1, htop1, -, xs, hargs, hsp1⟩ := triple_of_callW
-    (s₀ := ⟨m, Locals.init []⟩) (getAppArgs_refines p hp.spine (N' + 1) _ a hS.arena.1 tmaj htm hS.spn) c1
+    (s₀ := ⟨m, Locals.init []⟩) (getAppArgs_refines p hp.spine (N' + 1) _ a hS.arena.base tmaj htm hS.spn) c1
   rw [ht1] at hfr1 hg1 hsp1
   have hA1 := CoreAfterG.of_stk hS hfr1 hg1
   have hS1 := hS.frame_stk hfr1 (by simp) (by simp)

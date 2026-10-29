@@ -96,7 +96,7 @@ theorem sgGoW_ok (k : Nat) :
   | zero => intro m0 m m' a ctx f dO dL q j c holes ds acc M G g h; simp [sgGoW] at h
   | succ k ih =>
   intro m0 m m' a ctx f dO dL q j c holes ds acc M G g h hS hg0 hq0 hql hc hin hsl hb hfm hds hdsb hj hacc hR hP
-  have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
+  have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.iw hS.iw.iwSize
   have hxl := decHL_length m0 hds
   have hal := decHL_length m hacc
   by_cases hd : dL ≤ j
@@ -150,7 +150,7 @@ theorem sgGoW_ok (k : Nat) :
   have hj1 : (j + 1).toNat = j.toNat + 1 := word_add_toNat (show j.toNat + 1 < 2 ^ 64 by have := dL.toNat_lt; omega)
   have hg12 := hg1.trans hg2
   have hacc2 : decHL m2 q.toNat j.toNat = some acc := by rw [decHL_grow hg12 (by omega)]; exact hacc
-  have hdec3 := decHL_write m2 q j z acc hzH hS2.2.2.2.1 (by have := hS2.2.1; have := hg12.1; omega) hacc2
+  have hdec3 := decHL_write m2 q j z acc hzH hS2.iw.iwSize (by have := hS2.iw.iw; have := hg12.iw; omega) hacc2
   have hS3 := hS2.set_iw (q + j) z
   have hg03 : IWGrow m0 (m2.set64 IW (q + j) z) := (hg0.trans hg12).set_iw (q + j) z (by omega)
   have ht3 : iwTop (m2.set64 IW (q + j) z) = iwTop m2 := by
@@ -158,9 +158,9 @@ theorem sgGoW_ok (k : Nat) :
   have hP3 : PosMR (m2.set64 IW (q + j) z) :=
     ((hP.setRp (rpConstW_mfr hra) ⟨∅, hM1⟩).setRf (rxW_mfr hrf) ⟨M2, G2, g, hR2⟩).fr (MFr.set_iw _ _ _)
   obtain ⟨ys, a', hrun, hdec', hS', hg', ht', ⟨M', G', hR', hk', hG'⟩, hP'⟩ := ih m0 _ m' a2 ctx f dO dL q (j + 1) c
-    holes ds (acc ++ [decE z]) M2 G2 g h hS3 hg03 hq0 (by rw [ht3]; have := hg12.1; omega) hc hin hsl hb hfm hds hdsb
+    holes ds (acc ++ [decE z]) M2 G2 g h hS3 hg03 hq0 (by rw [ht3]; have := hg12.iw; omega) hc hin hsl hb hfm hds hdsb
     (by rw [hj1]; omega) (by rw [hj1]; exact hdec3) (hR2.frame (RfFr.set_iw _ _ _)) hP3
-  refine ⟨decE z :: ys, a', ?_, by simpa using hdec', hS', hg', by have := hg12.1; omega, ⟨M', G', hR',
+  refine ⟨decE z :: ys, a', ?_, by simpa using hdec', hS', hg', by have := hg12.iw; omega, ⟨M', G', hR',
     hk2.trans hk' hG2, UInt64.le_trans hG2 hG'⟩, hP'⟩
   simp only [List.drop_eq_getElem_cons (show j.toNat < ds.length by omega), List.mapM_cons, StateT.run_bind, sgF, ← hxd, show (decI x : EIdx) = decE x from rfl, ← hlv]
   simp only [show ((0 : Word).toNat) = 0 from rfl] at hr1

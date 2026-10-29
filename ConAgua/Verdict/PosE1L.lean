@@ -66,7 +66,7 @@ theorem pfv_ref {p : Prog} (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe
   | zero => rw [pfvE.eq_1]; exact RefE.of_cls0 (by simp)
   | succ k =>
   rw [pfvE.arm1]
-  have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
+  have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.iw hS.iw.iwSize
   rcases hha : haWf k m ctx po pl i with _ | ⟨r1, m1⟩
   · rw [liftE_none, pfvE.k_nest_hole_at.none]; exact RefE.of_cls0 (by simp)
   rw [liftE_some]
@@ -87,7 +87,7 @@ theorem pfv_ref {p : Prog} (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe
   rw [pfvE.k_nest_hole_at.arm1 _ _ _ _ _ _ _ _ _ _ _ (by rw [hon1]; decide)]
   dsimp only
   have hU1 := hU.grow hg1
-  have htop1 : iwTop m1 < 2 ^ 64 := Nat.lt_of_le_of_lt hS1.2.1 hS1.2.2.2.1
+  have htop1 : iwTop m1 < 2 ^ 64 := Nat.lt_of_le_of_lt hS1.iw.iw hS1.iw.iwSize
   obtain ⟨hn1, -, -, -, hnP1, -⟩ := ctx_fields hU1.dec hU1.inn htop1
   have hne1 := ctx_names_end hU1.dec hU1.inn hU1.sl htop1
   rcases hoa : noaW (k + 1) m1 (rdW (m1.arr64 IW) ctx) (rdW (m1.arr64 IW) (ctx + 1))
@@ -96,7 +96,7 @@ theorem pfv_ref {p : Prog} (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe
   rw [liftE_some]
   obtain ⟨b, hrunoa, hS2, hg2, hr2, hP2⟩ := noaW_ok dn fe vis _ _ _ _ c.names (k + 1) m1 m2 a aO aL args _ hoa hS1
     hn1 hne1 (by rw [decHL_agree (RdS.of_grow hg1) (fun j hj => by omega)]; exact hargs)
-    (fun j hj => by have := hg1.1; omega) (hP.fr (haW_mfr hha'))
+    (fun j hj => by have := hg1.iw; omega) (hP.fr (haW_mfr hha'))
   rw [hnP1] at hrunoa
   refine RefE.bind_right hrunoa ?_
   cases b with
@@ -106,7 +106,7 @@ theorem pfv_ref {p : Prog} (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe
   | false =>
   rw [pfvE.k_nest_occ_any.arm1 _ _ _ _ _ _ _ _ _ _ (by rw [hr2]; rfl)]
   refine RefE.ite_neg (by simp) ?_
-  have htop2 : iwTop m2 < 2 ^ 64 := Nat.lt_of_le_of_lt hS2.2.1 hS2.2.2.2.1
+  have htop2 : iwTop m2 < 2 ^ 64 := Nat.lt_of_le_of_lt hS2.iw.iw hS2.iw.iwSize
   obtain ⟨hd2, hnin2⟩ := hnin.grow hg2
   rw [← hd2] at hdec
   obtain ⟨hcH, hcd, hdl⟩ := nh_key_words hdec hnin2 htop2
@@ -144,7 +144,7 @@ theorem pfv_ref {p : Prog} (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe
   · rw [liftE_none, pfvE.k_nest_pos_hole_kind.none]; exact RefE.of_cls0 (by simp)
   rw [liftE_some, pfvE.k_nest_pos_hole_kind.arm1]
   have hU3 := (hU1.grow hg2).grow hg3
-  have htop3 : iwTop m3 < 2 ^ 64 := Nat.lt_of_le_of_lt hS3.2.1 hS3.2.2.2.1
+  have htop3 : iwTop m3 < 2 ^ 64 := Nat.lt_of_le_of_lt hS3.iw.iw hS3.iw.iwSize
   have hw := hkW_ok (by simpa [hkWf] using hk) hU3.dec hU3.inn htop3 hhi (nestHoleAt_nP hnh)
   exact RefE.ret rfl ⟨hS3, (hg1.trans hg2).trans hg3, by simpa using hw,
     hP2.fr (naW_mfr hna'), ((haW_afr hha').trans (noaW_afr _ _ _ _ _ _ _ _ _ _ hoa)).trans (naW_afr hna')⟩
@@ -188,7 +188,7 @@ theorem cpW_okW (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis hp : Word
     obtain ⟨x, hx, xs, hxs, rfl⟩ := hds'
     obtain ⟨hxH, hxd⟩ := rd_iwH0E (m := m) (o := dO) (k := IdxKind.expr) (by simpa [iwH, iwA] using hx)
     have hdO1 : (dO + 1).toNat = dO.toNat + 1 :=
-      word_add_toNat (show dO.toNat + 1 < 2 ^ 64 by have := hin 0 (by omega); have := hS.2.1; have := hS.2.2.2.1; omega)
+      word_add_toNat (show dO.toNat + 1 < 2 ^ 64 by have := hin 0 (by omega); have := hS.iw.iw; have := hS.iw.iwSize; omega)
     have hl1 : (dL - 1).toNat = l' := by
       rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simp; omega))]; simp; omega
     rw [List.allM_cons]
@@ -206,7 +206,7 @@ theorem cpW_okW (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis hp : Word
     rw [cpK1_ok (h := hbb)] at h
     have hbb0 : (bb.toNat != 0) = false := by simp at hbb; simp [hbb]
     have hrd1 : rdW (m1.arr64 IW) dO = rdW (m.arr64 IW) dO := by
-      simp only [rdW]; rw [hg1.2.2.1 _ (by simpa using hin 0 (by omega))]
+      simp only [rdW]; rw [hg1.iwGet _ (by simpa using hin 0 (by omega))]
     rw [hrd1] at h
     rcases hst : fvbF m1 [CWF, rdW (m.arr64 IW) dO] with _ | ⟨r2, m2⟩ <;> rw [hst] at h; · simp [cpK2] at h
     obtain ⟨k, a2, hrun2, hS2, hg2, hk⟩ := fvbF_ok dn vis fe CWF _ hxH _ _ a1 r2 hst hS1
@@ -228,7 +228,7 @@ theorem cpW_okW (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis hp : Word
     obtain ⟨b, a', hrun, hS', hg', hr⟩ := ih m2 m' a2 (dO + 1) (dL - 1) xs r h hS2
       (by rw [hdO1, hl1, ← hxs, decHL]; exact decHL_agree (RdS.of_grow hg12) (fun j hj => by
             have := hin (j + 1) (by omega); simp only [decHL] at *; omega))
-      (fun j hj => by rw [hdO1, hl1] at *; have := hin (j + 1) (by omega); have := hg12.1; omega)
+      (fun j hj => by rw [hdO1, hl1] at *; have := hin (j + 1) (by omega); have := hg12.iw; omega)
     refine ⟨b, a', ?_, hS', hg12.trans hg', hr⟩
     simp only [pcF, StateT.run_bind, hrun1, except_ok_bind, hbb0, Bool.false_eq_true, ite_false,
       hrun2, hle, decide_true]
@@ -278,7 +278,7 @@ theorem ncc_ref {p : Prog} (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe
   | zero => rw [nccE.eq_1]; exact RefE.of_cls0 (by simp)
   | succ k =>
   rw [nccE.arm1]
-  have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
+  have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.iw hS.iw.iwSize
   obtain ⟨hn, -, -, -, hnP, -⟩ := ctx_fields hU.dec hU.inn htop
   have hne := ctx_names_end hU.dec hU.inn hU.sl htop
   rcases hoa : noaW k m (rdW (m.arr64 IW) ctx) (rdW (m.arr64 IW) (ctx + 1)) (rdW (m.arr64 IW) (ctx + 4)) hp
@@ -300,7 +300,7 @@ theorem ncc_ref {p : Prog} (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe
   rcases hq : pos2PinW m1 47 with _ | ⟨rq, m2⟩
   · rw [liftE_none, nccE.k_pin_at.none]; exact RefE.of_cls0 (by simp)
   rw [liftE_some]
-  obtain ⟨hm2, hqH, hqrun⟩ := pos2PinW_ok hq hS1.1.pins
+  obtain ⟨hm2, hqH, hqrun⟩ := pos2PinW_ok hq hS1.check.pins
   subst hm2
   have hpq : pinQuot = pinAt 47 := rfl
   have hqrun' : pinQuot.run a = .ok ((decI (rq.headD 0) : NIdx), a) := by rw [hpq]; simpa using hqrun
@@ -316,7 +316,7 @@ theorem ncc_ref {p : Prog} (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe
   rw [liftE_some]
   obtain ⟨b3, a3, hrun3, hS3, hg3, hr3⟩ := cpW_okW dn fe vis hp k m2 m3 a dO dL ds r3 hcp hS1
     (by rw [decHL_agree (RdS.of_grow hg1) (fun j hj => hdsb j hj)]; exact hds)
-    (fun j hj => by have := hdsb j hj; have := hg1.1; omega)
+    (fun j hj => by have := hdsb j hj; have := hg1.iw; omega)
   refine RefE.bind_right hrun3 ?_
   cases b3 with
   | false =>

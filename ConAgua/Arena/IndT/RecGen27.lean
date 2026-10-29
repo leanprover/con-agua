@@ -129,7 +129,7 @@ theorem cxo_ref (n : Nat) (hn : n + 1 ≤ 2 ^ 62) {m : Mem} {a : AState} {vis q 
       (ConRon.Arena.classCtorOf V fe bs formerTys R ms c.toNat cA') a
       (fun v x a' => CxoPost dn vis fe env m v.1 v.2 x a') := by
   have hS := hC.stage
-  have hsz := hS.2.2.2.1
+  have hsz := hS.iw.iwSize
   simp only [ConRon.Bridge.Inductives.dCtor, Option.map_eq_some_iff] at hcAP
   obtain ⟨cvP, hcvP, rfl⟩ := hcAP
   have hname := ConRon.Bridge.denoteCV_name hcvP
@@ -152,7 +152,7 @@ theorem cxo_ref (n : Nat) (hn : n + 1 ≤ 2 ^ 62) {m : Mem} {a : AState} {vis q 
   have hC1 := hC.of_pstep hS1 hA1 q1
   obtain ⟨-, -, hmdsP, -, -, -, -, hnfsP, -⟩ := ConRon.Bridge.Inductives.dMajor_inv hmP
   have hk1 := callW_keepW c1
-  have hsz1 := hS1.2.2.2.1
+  have hsz1 := hS1.iw.iwSize
   obtain ⟨⟨no, nl, h9, h10, hno, hnl, hnfs⟩, hds, hmw13⟩ := decTM_slices hTM hsz1
   obtain ⟨ca, hca, hca3, hcv, hnmH, hnmD, hnF, hnFb, -⟩ := decCN_words (hcA.grow (decCN_mono _) hg1) hsz1
   obtain ⟨cam, hcam, hca3m, -, -, -, -, -, hcAt⟩ := decCN_words hcA hsz
@@ -182,7 +182,7 @@ theorem cxo_ref (n : Nat) (hn : n + 1 ≤ 2 ^ 62) {m : Mem} {a : AState} {vis q 
     exact RefE.of_cls0 rfl
   rw [cxoE.k_class_ctor_of_nfs.arm1 p (n + 1) vis q fto ftl rd mo ml c cA _ _ r2 _ hel]
   -- the class's entries: the first
-  obtain ⟨e0', es', hes_eq, he0, -⟩ := hes.uncons hel hS2.2.2.2.1
+  obtain ⟨e0', es', hes_eq, he0, -⟩ := hes.uncons hel hS2.iw.iwSize
   rw [hes_eq] at hes
   have hEP := ConRon.Bridge.Inductives.filter_nfs hC1.check.state.wf
     (ConRon.Bridge.denoteN_ext hname q1.ext) _ _ hnfsP
@@ -190,7 +190,7 @@ theorem cxo_ref (n : Nat) (hn : n + 1 ≤ 2 ^ 62) {m : Mem} {a : AState} {vis q 
   obtain ⟨e0P, EsP', hEsP, he0P, hEsP'⟩ := ConRon.Bridge.Inductives.mapM_option_cons_inv hEP
   rw [hEsP] at hEP
   have he0ty := (ConRon.Bridge.Inductives.RC.dCtorNf_inv he0P).2.2.2
-  have hsz2 := hS2.2.2.2.1
+  have hsz2 := hS2.iw.iwSize
   generalize hE0 : rdW (s2.mem.arr64 IW) (r2.headD 0) = e0w at he0 ⊢
   obtain ⟨htyH, htyD⟩ := decNCN_ty he0 hsz2
   have hca64 : ca < 2 ^ 64 := by
@@ -301,8 +301,8 @@ theorem cxo_ref (n : Nat) (hn : n + 1 ≤ 2 ^ 62) {m : Mem} {a : AState} {vis q 
   have hR6 := cfa_ref hq henv P.toCfaProg vis q fto ftl mo ml (r4.tail.headD 0)
       (r4.tail.tail.headD 0) (r2.headD 0) (r2.tail.headD 0) (r5.headD 0) (r5.tail.headD 0) bs formerTys ms fvs
       (e0' :: es') kinds (n + 1) (by omega) _ a5 0 hC5 hA5 (hbs.grow hg15) (by rw [decHL_grow hg15 hftb]; exact hft)
-      (Nat.le_trans hftb hg15.1) (hms.grow (OMono.decPL (fun q => decTM_mono q) _ _) hg15)
-      hmsb (by rw [decHL_grow hg5 hbl]; exact hdl) (Nat.le_trans hbl hg5.1)
+      (Nat.le_trans hftb hg15.iw) (hms.grow (OMono.decPL (fun q => decTM_mono q) _ _) hg15)
+      hmsb (by rw [decHL_grow hg5 hbl]; exact hdl) (Nat.le_trans hbl hg5.iw)
       (hes.grow (fun q => decNCN_mono q) (hg4.trans hg5)) hsp5.toSPL
       (by simpa using (r5.tail.headD 0).toNat_lt) hP5
       (ConRon.Bridge.Inductives.dShape_ext q15.ext _ _ hsh) (denoteEList_ext q15.ext _ _ hftP)
@@ -364,7 +364,7 @@ theorem cxo_ref (n : Nat) (hn : n + 1 ≤ 2 ^ 62) {m : Mem} {a : AState} {vis q 
   have hg17 := hg16.trans hg7
   refine RefE.bind_right run7 ?_
   -- `inst_pis_with`
-  have hsz7 := hS7.2.2.2.1
+  have hsz7 := hS7.iw.iwSize
   obtain ⟨-, hds7, -⟩ := decTM_slices (hTM.grow (decTM_mono _) (hg26.trans hg7)) hsz7
   rcases c8 : callW p (n + 1) "inst_pis_with" [rdW (s7.mem.arr64 IW) (r1.headD 0 + 2),
       rdW (s7.mem.arr64 IW) (r1.headD 0 + 3), r7.headD 0] s7.mem with _ | ⟨r8, m8⟩
@@ -386,7 +386,7 @@ theorem cxo_ref (n : Nat) (hn : n + 1 ≤ 2 ^ 62) {m : Mem} {a : AState} {vis q 
   have h0 : ¬ r8.headD 0 = 0 := by rw [h81]; decide
   rw [cxoE.k_inst_pis_with.arm1 p (n + 1) _ _ _ _ _ r8 _ h0]
   -- `rec6`
-  have hsz8 := hS8.2.2.2.1
+  have hsz8 := hS8.iw.iwSize
   obtain ⟨ca8, hca8, -, hcv8, -, -, hnF8, -, -⟩ := decCN_words (hcA.grow (decCN_mono _) hg18) hsz8
   obtain ⟨hty8H, hty8D⟩ := decNCN_ty (he0.grow (decNCN_mono _) (hg4.trans (hg5.trans (hg6.trans (hg7.trans hg8)))))
     hsz8
@@ -406,9 +406,9 @@ theorem cxo_ref (n : Nat) (hn : n + 1 ≤ 2 ^ 62) {m : Mem} {a : AState} {vis q 
   have := rec6_decCC (m := s8.mem) (q := r9.headD 0) (cvw := UInt64.ofNat ca) (nFw := UInt64.ofNat cA'.2)
     (ko := r5.headD 0) (kl := r5.tail.headD 0) (tyD := r8.tail.headD 0) (tyN := rdW (s8.mem.arr64 IW) (e0w + 4))
     (fun j hj => by simpa using hget9 j (by simpa using hj)) (by simp at ht9; omega)
-    (by rw [hq9']; exact hg18.1) hg9
+    (by rw [hq9']; exact hg18.iw) hg9
     (by rw [hcaT]; exact hcv.grow (OMono.decCVp _) (hg26.trans (hg7.trans hg8)))
-    ((hsp5.mono hg14.1).grow (AgreeA.of_grow (hg6.trans (hg7.trans hg8)))) h8H hty8H
+    ((hsp5.mono hg14.iw).grow (AgreeA.of_grow (hg6.trans (hg7.trans hg8)))) h8H hty8H
   rw [h8D, hty8D, UInt64.toNat_ofNat_of_lt' hnFb] at this
   exact this
 
@@ -501,7 +501,7 @@ theorem cosLoop_ref (hbs : BSOK m0 q.toNat bs) (hft : decHL m0 fto.toNat ftl.toN
   have := al.toNat_lt
   have hj1 : (j + 1).toNat = j.toNat + 1 := by rw [UInt64.toNat_add]; simp <;> omega
   rw [cosE.loop1.arm1 p k m vis q fto ftl rd mo ml c ao al qo j hj]
-  have hsz := hS.2.2.2.1
+  have hsz := hS.iw.iwSize
   -- the constructor record
   obtain ⟨v, hv, hdv⟩ := decPL_getH (truncM m0) hcAs0 j.toNat hjl
   obtain ⟨hvt, hv0⟩ := rec2IwN_trunc hv
@@ -529,7 +529,7 @@ theorem cosLoop_ref (hbs : BSOK m0 q.toNat bs) (hft : decHL m0 fto.toNat ftl.toN
     rw [he', cosE.k_class_ctor_of.none]; exact RefE.of_cls0 h0
   have hT1 := cxoE_spec p P.toCxoProg (k + 1) ⟨m, Locals.init []⟩ vis q fto ftl rd mo ml c (UInt64.ofNat v)
   have hR1 := cxo_ref hkp henv P.toCxoProg hIlpf hOpf dn fe k (by omega) hC hA (hbs.grow hg)
-    (by rw [decHL_grow hg hftb]; exact hft) (Nat.le_trans hftb hg.1)
+    (by rw [decHL_grow hg hftb]; exact hft) (Nat.le_trans hftb hg.iw)
     (hR.grow (decCR_mono _) hg) (hms.grow (OMono.decPL (fun q => decTM_mono q) _ _) hg) hmsb
     (hcA0.grow (decCN_mono _) hg) (hlp0.grow hcA0 hsz0 hg hk) hnpk (by rw [hk IW]; exact hsz5) hP
     hsh hftP hmsP hcAP hformer hMs (vis := vis) (q := q) (fto := fto) (ftl := ftl) (rd := rd) (mo := mo)
@@ -553,7 +553,7 @@ theorem cosLoop_ref (hbs : BSOK m0 q.toNat bs) (hft : decHL m0 fto.toNat ftl.toN
   have hS1 := hC1.stage
   have hk1 := callW_keepW (callW_of_callE h1)
   -- the slot write
-  have hsz1 := hS1.2.2.2.1
+  have hsz1 := hS1.iw.iwSize
   have hTm := hS.lt64 (Nat.le_refl (iwTop m))
   have hqj : (qo + j).toNat = qo.toNat + j.toNat := by rw [UInt64.toNat_add]; simp <;> omega
   have hb0 : iwTop m0 + al.toNat ≤ iwTop m := htop
@@ -567,7 +567,7 @@ theorem cosLoop_ref (hbs : BSOK m0 q.toNat bs) (hft : decHL m0 fto.toNat ftl.toN
   have hps1 : decNL s1.mem qo.toNat j.toNat = some ps := by
     rw [decNL_grow hg1 (by omega)]; exact hps
   have hqb : (qo + j).toNat < (s1.mem.arr64 IW).size := by
-    have := hS1.2.1; have := hg1.1; omega
+    have := hS1.iw.iw; have := hg1.iw; omega
   have hps2 := decNL_write s1.mem qo.toNat j.toNat (qo + j) (r1.headD 0) ps hqj (by omega) hps1
   have hfa2 : FA2 (fun p x => StabA (iwTop m0 + al.toNat) (fun m => decCC m p)
       (s1.mem.set64 IW (qo + j) (r1.headD 0)) x) (ps ++ [(r1.headD 0).toNat]) (acc ++ [x1]) :=
@@ -576,7 +576,7 @@ theorem cosLoop_ref (hbs : BSOK m0 q.toNat bs) (hft : decHL m0 fto.toNat ftl.toN
   refine RefE.bind_right run1 ?_
   have ih' := ih (by omega) _ a1 (j + 1)
     (acc ++ [x1]) (ps ++ [(r1.headD 0).toNat]) csP' hC2 hAb2 hg2 hk2
-    (by rw [iwTop_set_iw]; exact Nat.le_trans htop hg1.1)
+    (by rw [iwTop_set_iw]; exact Nat.le_trans htop hg1.iw)
     (UInt64.le_iff_toNat_le.mpr (by omega)) (by rw [hj1]; exact hps2) hfa2 (hP1.fr (MFr.set_iw _ _ _))
     (ConRon.Bridge.Inductives.dShape_ext cs1.ext _ _ hsh) (denoteEList_ext cs1.ext _ _ hftP)
     (ConRon.Bridge.Inductives.dClassRead_ext cs1.ext _ _ hrdP)
@@ -774,7 +774,7 @@ theorem ccsLoop_ref (hbs : BSOK m0 q.toNat bs) (hft : decHL m0 fto.toNat ftl.toN
   have hT1 := cosE_spec p P.toCosProg (k' + 1) ⟨m, Locals.init []⟩ vis q fto ftl rd mo ml c (UInt64.ofNat o)
     (UInt64.ofNat l)
   have hR1 := cos_ref hkp henv P.toCosProg hIlpf hOpf dn fe k' (by omega) hC hA (hbs.grow hg)
-    (by rw [decHL_grow hg hftb]; exact hft) (Nat.le_trans hftb hg.1) (hR.grow (decCR_mono _) hg)
+    (by rw [decHL_grow hg hftb]; exact hft) (Nat.le_trans hftb hg.iw) (hR.grow (decCR_mono _) hg)
     (hms.grow (OMono.decPL (fun q => decTM_mono q) _ _) hg) hmsb
     (hcts'.grow (OMono.decPL (fun q => decCN_mono q) _ _) hg) (hlp0.grow hcts' hsz0 hg hk) hnpk
     (by rw [hk IW]; exact hsz5) hP hsh hftP hrdP hmsP hmc hformer hMs (vis := vis) (c := c)
@@ -804,8 +804,8 @@ theorem ccsLoop_ref (hbs : BSOK m0 q.toNat bs) (hft : decHL m0 fto.toNat ftl.toN
   obtain ⟨s2, hs2, -, hw2⟩ := triple_of_callW (s₀ := ⟨s1.mem, Locals.init []⟩)
     (rec2_specW p P.ha (k' + 1) P.r2 _ (r1.headD 0) (r1.tail.headD 0)) c2
   simp only at hs2 hw2; subst hs2
-  have hsz1 := hS1.2.2.2.1
-  obtain ⟨hr2, hget2, hg2, hf2, ht2, hroom2⟩ := recW_post hw2 hS1.2.2.2.2.2 hsz1 rfl
+  have hsz1 := hS1.iw.iwSize
+  obtain ⟨hr2, hget2, hg2, hf2, ht2, hroom2⟩ := recW_post hw2 hS1.iw.ctl hsz1 rfl
   have hS2 := stage_frame_iw hS1 hf2 (by simp at ht2 hroom2; omega)
   have hk2 : KeepW s1.mem s2.mem := KeepW.of_mfr (MFr.of_iw hf2)
   have hP2 := hP1.fr (MFr.of_iw hf2)
@@ -821,13 +821,13 @@ theorem ccsLoop_ref (hbs : BSOK m0 q.toNat bs) (hft : decHL m0 fto.toNat ftl.toN
       have e1 := hget2 1 (by simp)
       simp only [iwN, nat?, iwA, e1]; rfl
     have ht2' : iwTop s2.mem = iwTop s1.mem + 2 := by simpa using ht2
-    exact stabA_decLH hw0 hw1 (Nat.le_trans hb0 hg1.1) (by rw [ht2']; exact Nat.le_refl _)
+    exact stabA_decLH hw0 hw1 (Nat.le_trans hb0 hg1.iw) (by rw [ht2']; exact Nat.le_refl _)
       ((hd1.mono (by omega)).grow (AgreeA.of_grow hg2))
   -- the slot write
   have hTm := hS.lt64 (Nat.le_refl (iwTop m))
   have hqc : (qo + c).toNat = qo.toNat + c.toNat := by rw [UInt64.toNat_add]; simp <;> omega
   have hqb : (qo + c).toNat < (s2.mem.arr64 IW).size := by
-    have := hS2.2.1; have := hg1.1; have := hg2.1; omega
+    have := hS2.iw.iw; have := hg1.iw; have := hg2.iw; omega
   have hg12 := hg1.trans hg2
   have hS3 := hS2.set_iw (qo + c) (r2.headD 0)
   have hAb3 := set64IW_afr s2.mem (qo + c) (r2.headD 0) hAb2
@@ -843,7 +843,7 @@ theorem ccsLoop_ref (hbs : BSOK m0 q.toNat bs) (hft : decHL m0 fto.toNat ftl.toN
     FA2.snoc (FA2.imp (fun _ _ hq => (hq.grow (AgreeA.of_grow hg12)).grow hA3) hfa) (hhdr.grow hA3)
   have ih' := ih (by omega) _ a1 (c + 1)
     (acc ++ [x1]) (ps ++ [(r2.headD 0).toNat]) lP' hC3 hAb3 hg3 hk3
-    (by rw [iwTop_set_iw]; exact Nat.le_trans htop hg12.1)
+    (by rw [iwTop_set_iw]; exact Nat.le_trans htop hg12.iw)
     (UInt64.le_iff_toNat_le.mpr (by omega)) (by rw [hc1]; exact hps3) hfa3 (hP2.fr (MFr.set_iw _ _ _))
     (ConRon.Bridge.Inductives.dShape_ext cs1.ext _ _ hsh) (denoteEList_ext cs1.ext _ _ hftP)
     (ConRon.Bridge.Inductives.dClassRead_ext cs1.ext _ _ hrdP)

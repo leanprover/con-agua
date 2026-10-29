@@ -170,7 +170,7 @@ theorem ciRec_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEn
     split at h1; · cases h1
     simp only [Option.some.injEq, Prod.mk.injEq] at h1; obtain ⟨-, rfl⟩ := h1
     simp only [erAllocMem]; exact Mem.arr64_set64_ne _ _ _ _ _ (by decide)
-  obtain ⟨-, hEtop, -, hEsz, -⟩ := hS.2
+  obtain ⟨-, hEtop, -, hEsz, -⟩ := hS.iw
   have hq1 : q1.toNat = erTop m := by
     simp only [erAllocW] at h1; split at h1; · cases h1
     split at h1; · cases h1
@@ -179,7 +179,7 @@ theorem ciRec_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEn
     rdW (m.arr64 EREC) (cq + 1), rdW (m.arr64 EREC) (cq + 2), rdW (m.arr64 EREC) (cq + 3), nP, nF]
     (by simp)
   have hroom : q1.toNat + 7 < 2 ^ 64 := by
-    obtain ⟨-, h2, -, h4, -⟩ := hS'.2; simp only [List.length_cons, List.length_nil] at htop'; omega
+    obtain ⟨-, h2, -, h4, -⟩ := hS'.iw; simp only [List.length_cons, List.length_nil] at htop'; omega
   rw [ciRecMem_eq (by omega) hroom, hE1]
   refine ⟨hS', hg, ?_⟩
   generalize hM : wrER m1 q1 _ = M at hS' hg htop' hget
@@ -192,7 +192,7 @@ theorem ciRec_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEn
   have hw : ∀ i, i < 4 → (erecP M)[q1.toNat + 1 + i]? = (erecP M)[cq.toNat + i]? := by
     intro i hi
     rw [show q1.toNat + 1 + i = q1.toNat + (i + 1) by omega, hP (i + 1) (by omega),
-      hget (i + 1) (by simp; omega), erecP_getE (by omega), hg.2.2.2 _ (by omega)]
+      hget (i + 1) (by simp; omega), erecP_getE (by omega), hg.erGet _ (by omega)]
     have hlt : cq.toNat + i < (m.arr64 EREC).size := by simp only [erTop] at hEtop hcq; omega
     rcases i with _ | _ | _ | _ | i
     all_goals first
@@ -262,7 +262,7 @@ theorem cscW_ok (p : Prog) (hRp : RecProg p) {dn : NIdx → Option ConLeche.Name
     have htail := decPL_tail hcs'
     obtain ⟨⟨cqN, hcq, hcv⟩, hnF⟩ := decCN_some hc
     obtain ⟨w, hw, hwv, ho⟩ := rdW_of_iwN_truncM hpv
-    obtain ⟨hI1, -, hIsz, -, -⟩ := hS.2
+    obtain ⟨hI1, -, hIsz, -, -⟩ := hS.iw
     have hcq' : iwN (truncM m) w.toNat = some cqN := by rw [hwv]; exact hcq
     obtain ⟨w2, hw2, hw2v, hpvlt⟩ := rdW_of_iwN_truncM hcq'
     have hw1 : (w + 1).toNat = pv + 1 := by rw [UInt64.toNat_add, hwv]; simp; omega
@@ -277,7 +277,7 @@ theorem cscW_ok (p : Prog) (hRp : RecProg p) {dn : NIdx → Option ConLeche.Name
     obtain ⟨wn, hwn, hwnl, -⟩ := decCI_name hci
     have hwn' : (rdW (m1.arr64 EREC) (q + 1)).toNat < 2 ^ 32 := by
       have hq1 : (q + 1).toNat = q.toNat + 1 := by
-        have := erecP_lt hwn; obtain ⟨-, h2, -, h4, -⟩ := hS1.2; rw [UInt64.toNat_add]; simp; omega
+        have := erecP_lt hwn; obtain ⟨-, h2, -, h4, -⟩ := hS1.iw; rw [UInt64.toNat_add]; simp; omega
       rw [rdW_of_get? hq1.symm (erecP_get hwn)]; exact hwnl
     rcases h2 : callW p k "env_push" [vis, q] m1 with _ | ⟨rv, m2⟩
     · rw [h2] at h; simp [cscK2] at h

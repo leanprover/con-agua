@@ -78,7 +78,7 @@ theorem cftW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
   cases N with
   | zero => simp [cftW] at h
   | succ N =>
-  have hsz := hS.2.2.2.1
+  have hsz := hS.iw.iwSize
   have hM0 := hM.get (decTM_mono _)
   obtain ⟨k, hk, hmem⟩ := decTM_member hM0
   have hrk := iwN_rdW_at (w := mp) (k := 8) hk hsz
@@ -106,7 +106,7 @@ theorem cftW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
       have hty := decCVp_type (q := UInt64.ofNat v) (by rw [UInt64.toNat_ofNat_of_lt' hv64]; exact hcvv)
         (by
           rw [UInt64.toNat_ofNat_of_lt' hv64]
-          have := hS.2.2.2.2.1
+          have := hS.iw.erSize
           simp only [decCVp, decCV, bind, Option.bind_eq_some_iff] at hcvv
           obtain ⟨_, _, _, _, _, hty, -⟩ := hcvv
           obtain ⟨w, hw, -⟩ := hd?_some hty
@@ -140,7 +140,7 @@ theorem cftW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
     rw [hwi] at h
     obtain ⟨⟨r2, m2⟩, h2, h⟩ := of_K h rfl
     rw [cftK2_some] at h
-    obtain ⟨hm2, hfind, hdec⟩ := envFindW_found h2 hS.1.env hwiH
+    obtain ⟨hm2, hfind, hdec⟩ := envFindW_found h2 hS.check.env hwiH
     subst m2
     obtain ⟨hf0, h⟩ := of_ite_none h
     obtain ⟨hk3, h⟩ := of_ite_none h
@@ -158,7 +158,7 @@ theorem cftW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
       ArrExt.decCV (IWGrow.erecExt (IWGrow.refl m)) hcvP
     obtain ⟨w1, w2, hw1, hw2, hsl⟩ := decCV_slice hcvA
     have hqE := (Array.getElem?_eq_some_iff.mp hw2).1
-    have hE64 := hS.2.2.2.2.1
+    have hE64 := hS.iw.erSize
     have e1 : rdW (m.arr64 EREC) (r2.tail.headD 0 + 2) = w1 :=
       rdW_of_get? (by rw [UInt64.toNat_add]; simp [erA] at hqE ⊢; omega) hw1
     have e2 : rdW (m.arr64 EREC) (r2.tail.headD 0 + 3) = w2 :=
@@ -174,13 +174,13 @@ theorem cftW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
     rw [hr3t] at h
     have hdecL : decHL m3 (r3.headD 0).toNat w2.toNat = some cv.levelParams := by rw [hdec3]; exact hsl
     have hM3 : decTM m3 mp.toNat = some M := hM.stab (decTM_mono _) m3 hg3
-    obtain ⟨wu, hwu, hwuH, hwuE⟩ := iwH_rdW_at (w := mp) (k := 1) (decTM_lvls' hM3) hS3.2.2.2.1
+    obtain ⟨wu, hwu, hwuH, hwuE⟩ := iwH_rdW_at (w := mp) (k := 1) (decTM_lvls' hM3) hS3.iw.iwSize
     rw [show UInt64.ofNat 1 = (1 : Word) from rfl] at hwu
     have hcv3 : decCV (erA m3) ((r2.tail.headD 0).toNat + 1) = some cv :=
       ArrExt.decCV (IWGrow.erecExt hg3) hcvP
     obtain ⟨wt, hwt, hwtH, hwtE⟩ := decCV_typeW hcv3
     have hqE3 := (Array.getElem?_eq_some_iff.mp hwt).1
-    have hE364 := hS3.2.2.2.2.1
+    have hE364 := hS3.iw.erSize
     have et : rdW (m3.arr64 EREC) (r2.tail.headD 0 + 4) = wt :=
       rdW_of_get? (by rw [UInt64.toNat_add]; simp [erA] at hqE3 ⊢; omega) hwt
     rw [hwu, et] at h

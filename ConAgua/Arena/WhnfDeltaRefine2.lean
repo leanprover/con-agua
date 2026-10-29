@@ -121,7 +121,7 @@ theorem rawSimple {dn : NIdx → Option ConLeche.Name} {m : Mem} {a₀ : AState}
       (h >>> 28 = 4 ∧ c = APP) ∨ (h >>> 28 = 5 ∧ c = LAM) ∨ (h >>> 28 = 6 ∧ c = FORALL) ∨
       (h >>> 28 = 7 ∧ c = LET) ∨ (h >>> 28 = 9 ∧ c = PROJ))
     (r : List Word) (hr : r.headD 0 = 0) : RawOut m a₀ h r := by
-  obtain ⟨v, hv, hl, hc⟩ := view_other m a₀ hS.arena.1 h hh c ⟨hsc, by simpa using hb⟩ hcg
+  obtain ⟨v, hv, hl, hc⟩ := view_other m a₀ hS.arena.base h hh c ⟨hsc, by simpa using hb⟩ hcg
   exact RawOut.none (rawNatLit_run_other hv hl hc) hr
 
 section refs9
@@ -192,7 +192,7 @@ theorem callW_rawNatLit (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀ : AS
     subst m₂
     simp only [show (2 : Word).toNat = 2 from rfl, show (52 : Word).toNat = 52 from rfl] at hr₁ hr₂
     have hvOK : viewOK s₀.mem h CONST := ⟨hsc, by simpa using hb⟩
-    obtain ⟨n_, us_, hview, hn, hu, hnl, hul⟩ := view_const_words s₀.mem a₀ hC.arena.1 h hh hvOK g3
+    obtain ⟨n_, us_, hview, hn, hu, hnl, hul⟩ := view_const_words s₀.mem a₀ hC.arena.base h hh hvOK g3
     have hrun := rawNatLit_run_const hC.pins hview
     rw [hn, hu] at hrun
     have hbool : ((decI (tfld s₀.mem CONST (tierW h) (idxW h) 0) : NIdx) ==
@@ -256,7 +256,7 @@ theorem callW_rawNatLit (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀ : AS
     · rw [ite_eq_left hb] at hW; cases hW
     rw [ite_eq_right hb] at hW
     have hvOK : viewOK s₀.mem h LIT := ⟨hsc, by simpa using hb⟩
-    obtain ⟨hk0, hk1⟩ := view_lit_nat s₀.mem a₀ hC.arena.1 h hh hvOK g8
+    obtain ⟨hk0, hk1⟩ := view_lit_nat s₀.mem a₀ hC.arena.base h hh hvOK g8
     by_cases hk : tfld s₀.mem LIT (tierW h) (idxW h) 0 = 0
     · rw [ite_eq_left hk] at hW
       simp only [Option.some.injEq, Prod.mk.injEq] at hW
@@ -651,7 +651,7 @@ theorem litToCtorIfNat_refines (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a�
   · rw [ite_eq_left hbd] at hW; cases hW
   rw [ite_eq_right hbd] at hW
   have hvOK : viewOK s₀.mem h LIT := ⟨hsc, by simpa using hbd⟩
-  obtain ⟨hk0, hk1⟩ := view_lit_nat s₀.mem a₀ hC.arena.1 h hh hvOK hg8
+  obtain ⟨hk0, hk1⟩ := view_lit_nat s₀.mem a₀ hC.arena.base h hh hvOK hg8
   by_cases hk : tfld s₀.mem LIT (tierW h) (idxW h) 0 ≠ 0
   · rw [ite_eq_left hk] at hW
     simp only [Option.some.injEq, Prod.mk.injEq] at hW
@@ -770,7 +770,7 @@ theorem CoreS.set_cv {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : ASta
   have hspn : m'.arr64 SPN = m.arr64 SPN := hf.arr SPN (by decide) (by decide)
   have h136 : rdW (m'.arr64 CTL) 136 = rdW (m.arr64 CTL) 136 := hf.ctl 136 (by simp)
   refine ⟨⟨⟨ArenaR.caches_irrel _ (ArenaR.frame_ext [(CV : TieredArray)] [111] (by decide) (by simp) m m' hf a
-        hS.arena.1), DerR.of_store _ _ _ (DerR.frameM [(CV : TieredArray)] [111] m m' hf (by decide) a hS.arena.2) rfl⟩,
+        hS.arena.base), DerR.of_store _ _ _ (DerR.frameM [(CV : TieredArray)] [111] m m' hf (by decide) a hS.arena.der) rfl⟩,
       ⟨mr (coreSch_wf _ _ (by decide) (by decide)) vh_const (by decide) (by decide) hS.core.wc,
         mr (coreSch_wf _ _ (by decide) (by decide)) vh_const (by decide) (by decide) hS.core.wk,
         mr (coreSch_wf _ _ (by decide) (by decide)) vh_const (by decide) (by decide) hS.core.wh,
@@ -1031,7 +1031,7 @@ theorem callW_unfoldDefnAt (hp : WhnfDeltaProg' p) (hlp : InstLPOK p) (n : Nat) 
       tfld s₀.mem LVLS (tierW usw) (idxW usw) 1] := by
     unfold lsNodeW
     rw [ite_eq_right (by simpa using g1'), ite_eq_right g2, ite_eq_right g3]
-  have hvl' := lsNodeW_viewLen hC.arena.1 hus hls
+  have hvl' := lsNodeW_viewLen hC.arena.base hus hls
   rw [LsStore.viewLen_eq_map] at hvl'
   obtain ⟨l, hview, hllen⟩ : ∃ l, a₀.store.lss.view (decI usw) = some l ∧
       l.length = (tfld s₀.mem LVLS (tierW usw) (idxW usw) 1).toNat := by
@@ -1077,7 +1077,7 @@ theorem callW_unfoldDefnAt (hp : WhnfDeltaProg' p) (hlp : InstLPOK p) (n : Nat) 
   rw [h2] at hW
   dsimp only at hW
   obtain ⟨t₂, ht₂, -, hfr₂, hgrew, -, -, xs, hxrun, hsp⟩ := triple_of_callW
-    (getAppArgs_refines p hp.spine n ⟨m₃, Locals.init []⟩ _ hS₃.arena.1 e he hS₃.spn) h2
+    (getAppArgs_refines p hp.spine n ⟨m₃, Locals.init []⟩ _ hS₃.arena.base e he hS₃.spn) h2
   subst ht₂
   have hS₄ : CoreS dn t₂.mem _ vis fe M' eb :=
     hS₃.frame_stk hfr₂ (fun b hb => by simpa using hb) (fun x hx => by simpa using hx)
@@ -1184,7 +1184,7 @@ theorem callW_unfoldDefinition (hp : WhnfDeltaProg' p) (hlp : InstLPOK p) (n : N
   obtain ⟨r₁, m₁⟩ := q₁
   rw [h1, unfoldDefinitionW.k_get_app_fn.eq_2] at hW
   obtain ⟨t₁, ht₁, hm₁, -, hhw1, hgf⟩ := triple_of_callW
-    (getAppFn_refines p hp.spine n s₀ a₀ hC.arena.1 e he) h1
+    (getAppFn_refines p hp.spine n s₀ a₀ hC.arena.base e he) h1
   have hm1 : m₁ = s₀.mem := by rw [← ht₁, hm₁]
   subst hm1
   by_cases g0 : r₁.headD 0 >>> 28 ≠ 3
@@ -1209,7 +1209,7 @@ theorem callW_unfoldDefinition (hp : WhnfDeltaProg' p) (hlp : InstLPOK p) (n : N
   rw [ite_eq_right g2] at hW
   have hvOK : viewOK s₀.mem (r₁.headD 0) CONST := ⟨g1, by simpa using g2⟩
   obtain ⟨n_, us_, hview, hn, hu, hnl, hul⟩ :=
-    view_const_words s₀.mem a₀ hC.arena.1 (r₁.headD 0) hhw1 hvOK g0'
+    view_const_words s₀.mem a₀ hC.arena.base (r₁.headD 0) hhw1 hvOK g0'
   cases h2 : callW p n "env_find" [tfld s₀.mem CONST (tierW (r₁.headD 0)) (idxW (r₁.headD 0)) 0, vis] s₀.mem with
   | none => rw [h2, unfoldDefinitionW.k_env_find.none] at hW; cases hW
   | some q₂ =>

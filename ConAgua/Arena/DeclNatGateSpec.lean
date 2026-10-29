@@ -73,7 +73,7 @@ theorem decEqRL_headD {m : Mem} {r : List Word} {ps : List (EIdx × EIdx)} (h : 
 
 theorem EqL.lt64 {m : Mem} {o l : Nat} {ps : List (EIdx × EIdx)} (h : EqL m o l ps) (hI : IWOK m) :
     o + l < 2 ^ 64 := by
-  have := h.1; have := hI.1; have := hI.2.2.1; unfold iwTop at *; omega
+  have := h.1; have := hI.iw; have := hI.iwSize; unfold iwTop at *; omega
 
 def natCertT (fe2 feR : IFEnv) (c : NIdx) : AM Unit :=
   match fe2.find? c with

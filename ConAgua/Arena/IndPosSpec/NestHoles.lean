@@ -88,9 +88,9 @@ theorem nhGoW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis ctx : Wo
   | zero => intro m m' a mm off l oo ol ns out r h; simp [nhGoW] at h
   | succ k ih =>
     intro m m' a mm off l oo ol ns out r h hS hc hin hsl hns hnb hout hob hmm
-    have hsz := hS.2.2.2.1
-    have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hsz
-    have hE := hS.1.env
+    have hsz := hS.iw.iwSize
+    have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.iw hsz
+    have hE := hS.check.env
     by_cases hl0 : l = 0
     · rw [nhGoW_nil (h := hl0)] at h
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
@@ -141,7 +141,7 @@ theorem nhGoW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis ctx : Wo
     have hk3 : nat? (erecP m) ciq.toNat = some 3 := by
       have : (erecP m)[ciq.toNat]? = (m.arr64 EREC)[ciq.toNat]? := erecP_getE (by omega)
       simp only [nat?, this]
-      have hb : ciq.toNat < (m.arr64 EREC).size := by have := hS.2.2.1; omega
+      have hb : ciq.toNat < (m.arr64 EREC).size := by have := hS.iw.er; omega
       have : rdW (m.arr64 EREC) ciq = 3 := by simpa using h3
       simp [rdW, hb] at this ⊢; rw [this]; rfl
     obtain ⟨cv, caps, rfl, hcaps⟩ := decCI_kind3 hci hk3
@@ -155,7 +155,7 @@ theorem nhGoW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis ctx : Wo
       cases h2; exact h1
     obtain ⟨w, hw, hwH', hwd'⟩ := hd?_some (decCV_type hcv)
     have e4 : (ciq + 4).toNat = ciq.toNat + 1 + 3 := by
-      rw [word_add_toNat (by have := hS.2.2.1; have := hS.2.2.2.2.1; simp; omega)]; rfl
+      rw [word_add_toNat (by have := hS.iw.er; have := hS.iw.erSize; simp; omega)]; rfl
     have hrw : rdW (m.arr64 EREC) (ciq + 4) = w := by simp [rdW, e4, erecP_get hw]
     rw [hrw] at h
     simp only [hfind]
@@ -179,7 +179,7 @@ theorem nhGoW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis ctx : Wo
     have hnP2 : (rdW (m2.arr64 IW) (ctx + 4)).toNat = c.nP := by
       have : rdW (m2.arr64 IW) (ctx + 4) = rdW (m.arr64 IW) (ctx + 4) := by
         have e : (ctx + 4).toNat = ctx.toNat + 4 := word_add_toNat (by simp; omega)
-        simp only [rdW, e]; rw [hg2.2.2.1 _ (by omega)]
+        simp only [rdW, e]; rw [hg2.iwGet _ (by omega)]
       rw [this, hnP]
     have hu : (rdW (m2.arr64 IW) (ctx + 4) + mm).toNat = c.nP + mm.toNat := by
       rw [word_add_toNat (by rw [hnP2]; omega), hnP2]
@@ -194,8 +194,8 @@ theorem nhGoW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis ctx : Wo
       rw [decHL_agree (RdS.of_grow hg23) (fun j hj => by omega)]; exact hout
     rcases hsn : snocW k m3 oo ol v with _ | ⟨r4, m4⟩ <;> rw [hsn] at h; · simp [nhK4] at h
     rw [nhK4_some] at h
-    obtain ⟨hr4, hdec4, hg4, -, hol1, ht4⟩ := snocW_dec hsn hS3.2.2.2.1 hS3.2.2.2.2.2
-      (by have := hg23.1; omega) hvlt hout3
+    obtain ⟨hr4, hdec4, hg4, -, hol1, ht4⟩ := snocW_dec hsn hS3.iw.iwSize hS3.iw.ctl
+      (by have := hg23.iw; omega) hvlt hout3
     have hS4 := snocW_stage hsn hS3
     subst hr4
     simp only [List.headD_cons, List.tail_cons] at h
@@ -204,7 +204,7 @@ theorem nhGoW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis ctx : Wo
       hS4 (by rw [(CtxIn.grow hin hg24).1]; exact hc) (CtxIn.grow hin hg24).2 (hsl.grow hin hg24)
       (by rw [hoff1, hl1, decHL_agree (RdS.of_grow hg24) (fun j hj => by
             have := hnb (j + 1) (by omega); omega)]; simpa [decHL] using hns')
-      (fun j hj => by rw [hoff1, hl1] at *; have := hnb (j + 1) (by omega); have := hg24.1; omega)
+      (fun j hj => by rw [hoff1, hl1] at *; have := hnb (j + 1) (by omega); have := hg24.iw; omega)
       hdec4 (by omega) (by rw [hmm1, hl1]; omega)
     refine ⟨xr, a', ?_, hS', hg24.trans hg', hout'⟩
     simp only [StateT.run_bind, hrun2, except_ok_bind]
@@ -231,7 +231,7 @@ theorem nestHoles_refines (k : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → O
       NhOut s'.mem r (AM.res (ConRon.Arena.nestHoles fe c) a₀); ⊤⦄ := by
   refine triple_post (nestHoles_spec p hl k s₀ vis ctx) ?_
   rintro r s' ⟨hlc, hm⟩
-  have htop : iwTop s₀.mem < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
+  have htop : iwTop s₀.mem < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.iw hS.iw.iwSize
   obtain ⟨hn, hnb, -⟩ := ctx_fields hc hin htop
   have hlen := decHL_length _ hn
   obtain ⟨x, a', hrun, hS', hg, hout⟩ := nhGoW_ok dn fe vis ctx c k _ _ a₀ 0 _ _ 0 0 c.names [] _ hm hS hc hin

@@ -231,7 +231,7 @@ theorem tcpPW_ok (k : Nat) (m m' : Mem) (a : AState) (pfo pfl e z : Word) (pfvs 
   have g2 := iwN_of_get (by simpa using hget1 2 (by simp))
   have hfm : FMOk m1 f.toNat (.canon pfvs) :=
     ⟨by simpa using g0, by omega, ⟨_, _, g1, g2, by rw [decHL_grow hg1 hpb]; exact hpf,
-      by have := hg1.1; omega⟩⟩
+      by have := hg1.iw; omega⟩⟩
   have hP1 := hP.fr (posRecW_mfr hr1)
   obtain ⟨M, G, g, hR⟩ := hP1.rf
   obtain ⟨a', hrun, hzH, M', G', hS', hg2, hR', -, -⟩ :=
@@ -252,7 +252,7 @@ theorem ckgW_ok (k : Nat) :
   | zero => intro m0 m m' a po pl dO dL q j pfvs ds acc h; simp [ckgW] at h
   | succ k ih =>
   intro m0 m m' a po pl dO dL q j pfvs ds acc h hS hg0 hq0 hql hpf hpb hds hdsb hj hacc hP
-  have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
+  have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.iw hS.iw.iwSize
   have hxl := decHL_length m0 hds
   by_cases hd : dL ≤ j
   · rw [ckgW_done (h := hd)] at h
@@ -266,7 +266,7 @@ theorem ckgW_ok (k : Nat) :
     omega
   have hoj := hdsb j.toNat hjl
   obtain ⟨hxH, hxd⟩ := rd_iwH (m := m) (p := dO) (i := j)
-    (by rw [iwH_agree (RdS.of_grow hg0) hoj]; exact decHL_getI hds _ hjl) (by have := hg0.1; omega)
+    (by rw [iwH_agree (RdS.of_grow hg0) hoj]; exact decHL_getI hds _ hjl) (by have := hg0.iw; omega)
   generalize rdW (m.arr64 IW) (dO + j) = x at h hxH hxd
   cases k with
   | zero => simp [tcpPWf, ckgK] at h
@@ -275,19 +275,19 @@ theorem ckgW_ok (k : Nat) :
   obtain ⟨⟨z, m2⟩, htc, h⟩ := of_K h (by simp only [ckgK])
   rw [ckgK_some] at h
   obtain ⟨a1, hr1, hzH, hS2, hg2, hP2⟩ := tcpPW_ok dn fe vis k' m m2 a po pl x z pfvs htc hS
-    (by rw [decHL_grow hg0 hpb]; exact hpf) (by have := hg0.1; omega) hxH hP
+    (by rw [decHL_grow hg0 hpb]; exact hpf) (by have := hg0.iw; omega) hxH hP
   have hqj : (q + j).toNat = q.toNat + j.toNat := word_add_toNat (by omega)
   have hj1 : (j + 1).toNat = j.toNat + 1 := word_add_toNat (show j.toNat + 1 < 2 ^ 64 by have := dL.toNat_lt; omega)
   have hacc2 : decHL m2 q.toNat j.toNat = some acc := by rw [decHL_grow hg2 (by omega)]; exact hacc
-  have hdec3 := decHL_write m2 q j z acc hzH hS2.2.2.2.1 (by have := hS2.2.1; have := hg2.1; omega) hacc2
+  have hdec3 := decHL_write m2 q j z acc hzH hS2.iw.iwSize (by have := hS2.iw.iw; have := hg2.iw; omega) hacc2
   have hS3 := hS2.set_iw (q + j) z
   have hg03 : IWGrow m0 (m2.set64 IW (q + j) z) := (hg0.trans hg2).set_iw (q + j) z (by omega)
   have ht3 : iwTop (m2.set64 IW (q + j) z) = iwTop m2 := by
     simp only [iwTop]; rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
   obtain ⟨ys, a', hrun, hdec', hS', hg', ht', hP'⟩ := ih m0 _ m' a1 po pl dO dL q (j + 1) pfvs ds
-    (acc ++ [decE z]) h hS3 hg03 hq0 (by rw [ht3]; have := hg2.1; omega) hpf hpb hds hdsb
+    (acc ++ [decE z]) h hS3 hg03 hq0 (by rw [ht3]; have := hg2.iw; omega) hpf hpb hds hdsb
     (by rw [hj1]; omega) (by rw [hj1]; exact hdec3) (hP2.fr (MFr.set_iw _ _ _))
-  refine ⟨decE z :: ys, a', ?_, by simpa using hdec', hS', hg', by have := hg2.1; omega, hP'⟩
+  refine ⟨decE z :: ys, a', ?_, by simpa using hdec', hS', hg', by have := hg2.iw; omega, hP'⟩
   rw [List.drop_eq_getElem_cons (show j.toNat < ds.length by omega), List.mapM_cons]
   simp only [StateT.run_bind]
   rw [← hxd, show (decI x : EIdx) = decE x from rfl, hr1]
@@ -306,7 +306,7 @@ theorem kcW_ok (k : Nat) (m m' : Mem) (a : AState) (po pl key : Word) (r : List 
       (r.headD 0).toNat + 4 ≤ iwTop m' ∧
       (rdW (m'.arr64 IW) (r.headD 0 + 2)).toNat + (rdW (m'.arr64 IW) (r.headD 0 + 3)).toNat ≤ iwTop m' ∧
       StageR dn vis fe m' a' ∧ IWGrow m m' ∧ PosMR m' := by
-  have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
+  have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.iw hS.iw.iwSize
   obtain ⟨nk, hnk, rfl⟩ := decCK_decB_nk hk
   obtain ⟨hcH, hcd, huH, hud, hds, hdsb, hk4⟩ := pos2_nk_fields hnk htop
   unfold kcW at h
@@ -319,17 +319,17 @@ theorem kcW_ok (k : Nat) (m m' : Mem) (a : AState) (po pl key : Word) (r : List 
     (hP.fr (allocW_mfr hal))
   simp only [kcK] at h
   have e0 : rdW (m2.arr64 IW) key = rdW (m.arr64 IW) key := by
-    simp only [rdW]; rw [hg12.2.2.1 _ (by omega)]
+    simp only [rdW]; rw [hg12.iwGet _ (by omega)]
   have e1 : rdW (m2.arr64 IW) (key + 1) = rdW (m.arr64 IW) (key + 1) := by
     have e : (key + 1).toNat = key.toNat + 1 := word_add_toNat (by simp; omega)
-    simp only [rdW]; rw [e, hg12.2.2.1 _ (by omega)]
+    simp only [rdW]; rw [e, hg12.iwGet _ (by omega)]
   rw [e0, e1] at h
   rcases hr4 : posRecW m2 [rdW (m.arr64 IW) key, rdW (m.arr64 IW) (key + 1), q, rdW (m.arr64 IW) (key + 3)]
     with _ | ⟨nkw, m3⟩ <;> simp only [hr4, reduceCtorEq] at h
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   obtain ⟨hS3, hg3, hk3, ht3, hget3⟩ := posRecW_stage hr4 hS2 (by simp)
   simp only [List.length_cons, List.length_nil] at ht3
-  have hqb : q.toNat + (rdW (m.arr64 IW) (key + 3)).toNat ≤ iwTop m2 := by have := hg12.1; omega
+  have hqb : q.toNat + (rdW (m.arr64 IW) (key + 3)).toNat ≤ iwTop m2 := by have := hg12.iw; omega
   have hdk : decNK m3 nkw.toNat = some ⟨decI (rdW (m.arr64 IW) key), decI (rdW (m.arr64 IW) (key + 1)), ys⟩ :=
     decNK_of_words (by simpa using hget3 0 (by simp)) hcH (hget3 1 (by simp)) huH (hget3 2 (by simp))
       (hget3 3 (by simp)) (by rw [decHL_grow hg3 hqb]; simpa using hdec2)
@@ -339,8 +339,8 @@ theorem kcW_ok (k : Nat) (m m' : Mem) (a : AState) (po pl key : Word) (r : List 
     have e3 := iwN_of_get (m := m3) (by simpa using hget3 3 (by simp))
     rw [e2] at ho; rw [e3] at hl
     cases ho; cases hl
-    have := hg3.1; omega
-  have htop3 : iwTop m3 < 2 ^ 64 := Nat.lt_of_le_of_lt hS3.2.1 hS3.2.2.2.1
+    have := hg3.iw; omega
+  have htop3 : iwTop m3 < 2 ^ 64 := Nat.lt_of_le_of_lt hS3.iw.iw hS3.iw.iwSize
   have rk (j : Nat) (hj : j < 4) : rdW (m3.arr64 IW) (nkw + UInt64.ofNat j) =
       [rdW (m.arr64 IW) key, rdW (m.arr64 IW) (key + 1), q, rdW (m.arr64 IW) (key + 3)][j]'(by simpa using hj) := by
     have := hget3 j (by simpa using hj)
@@ -351,7 +351,7 @@ theorem kcW_ok (k : Nat) (m m' : Mem) (a : AState) (po pl key : Word) (r : List 
   have r3 : rdW (m3.arr64 IW) (nkw + 3) = rdW (m.arr64 IW) (key + 3) := rk 3 (by decide)
   refine ⟨ckOfNk ⟨decI (rdW (m.arr64 IW) key), decI (rdW (m.arr64 IW) (key + 1)), ys⟩, a2, ?_,
     decCK_decB_of_nk (decNK_decB_of_in hdk hin), by simp only [List.headD_cons]; omega,
-    by simp only [List.headD_cons]; rw [r2, r3]; have := hg3.1; omega, hS3, hg12.trans hg3, hP2.fr (posRecW_mfr hr4)⟩
+    by simp only [List.headD_cons]; rw [r2, r3]; have := hg3.iw; omega, hS3, hg12.trans hg3, hP2.fr (posRecW_mfr hr4)⟩
   simp only [ConRon.Arena.classKeyCanon, StateT.run_bind, ckOfNk]
   rw [show (0 : Word).toNat = 0 from rfl, List.drop_zero] at hrun
   rw [hrun]

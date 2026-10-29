@@ -396,8 +396,8 @@ def TaIn (m : Mem) (no nl ho hl : Word) (names : List NIdx) (holes : List EIdx) 
 
 theorem TaIn.grow {m m1 : Mem} {no nl ho hl : Word} {names : List NIdx} {holes : List EIdx}
     (h : TaIn m no nl ho hl names holes) (hg : IWGrow m m1) : TaIn m1 no nl ho hl names holes :=
-  ⟨by rw [decHL_grow hg h.2.1]; exact h.1, by have := hg.1; have := h.2.1; omega,
-    by rw [decHL_grow hg h.2.2.2]; exact h.2.2.1, by have := hg.1; have := h.2.2.2; omega⟩
+  ⟨by rw [decHL_grow hg h.2.1]; exact h.1, by have := hg.iw; have := h.2.1; omega,
+    by rw [decHL_grow hg h.2.2.2]; exact h.2.2.1, by have := hg.iw; have := h.2.2.2; omega⟩
 
 /-- The post of the `ta` walk from `m`: the result decoded, the stage kept, the memo related. -/
 abbrev TaQ (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word) (m : Mem) (r : Word)
@@ -598,7 +598,7 @@ theorem taGo_step_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Wo
   cases hvl : eViewW m h with
   | nil => simp [taG1]; exact Sim.of_none
   | cons g vt =>
-    obtain ⟨v, hv, hvr⟩ := eViewW_ok m a hS.1.arena.1 h (by rw [hvl]; simp)
+    obtain ⟨v, hv, hvr⟩ := eViewW_ok m a hS.check.arena.base h (by rw [hvl]; simp)
     rw [hvl] at hvr
     cases v with
     | bvar _ | sort _ | lit _ | fvar _ _ =>

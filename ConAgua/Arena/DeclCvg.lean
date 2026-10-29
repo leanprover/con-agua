@@ -204,7 +204,7 @@ theorem erToIwW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IF
     (∀ {k : IdxKind}, (decHL m' (r.headD 0).toNat l.toNat : Option (List (Idx k))) =
       hslice? (erA m) o.toNat l.toNat) ∧
     StageR dn vis fe m' a ∧ IWGrow m m' ∧ (r.headD 0).toNat + l.toNat ≤ iwTop m' := by
-  obtain ⟨hI1, hE1, hsz, hEs, hc⟩ := hS.2
+  obtain ⟨hI1, hE1, hsz, hEs, hc⟩ := hS.iw
   have hh := erToIwW_two h
   rcases hsrc with hl0 | hsrc
   · have hl : l = 0 := UInt64.toNat_inj.mp (by simpa using hl0)
@@ -235,7 +235,7 @@ theorem erToIwW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IF
         Option (List (Idx k))) = hslice? (erA m) o.toNat l.toNat := fun {k} =>
       (erToIwW_dec (k := k) h hsz hc hEs hsrc).2.1
     subst hr
-    refine ⟨rfl, rfl, fun {k} => hdec', ⟨CheckR.frame_iw hfr hS.1, ?_, ?_, ?_, ?_, ?_⟩, hgrow,
+    refine ⟨rfl, rfl, fun {k} => hdec', ⟨CheckR.frame_iw hfr hS.check, ?_, ?_, ?_, ?_, ?_⟩, hgrow,
       by simp only [List.headD_cons]; omega⟩
     · -- the new top is in bounds: the allocation checked the room
       simp only [erToIwW] at h
@@ -256,7 +256,7 @@ theorem erToIwW_frame {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IF
     {n : Nat} {m m' : Mem} {o l : Word} {r : List Word} (h : erToIwW n m o l = some (r, m'))
     (hS : StageR dn vis fe m a) (hsrc : l.toNat = 0 ∨ o.toNat + l.toNat ≤ (m.arr64 EREC).size) :
     MemFrame [IW] [200] m m' := by
-  obtain ⟨hI1, hE1, hsz, hEs, hc⟩ := hS.2
+  obtain ⟨hI1, hE1, hsz, hEs, hc⟩ := hS.iw
   rcases hsrc with hl0 | hsrc
   · have hl : l = 0 := UInt64.toNat_inj.mp (by simpa using hl0)
     subst hl
@@ -325,7 +325,7 @@ theorem IWGrow.erecExt {m m' : Mem} (h : IWGrow m m') : ArrExt (erecP m) (erA m'
   · rename_i hi
     simp only [Nat.zero_add] at hv
     have hi' : i < erTop m := by simp [erTop, erecTop] at hi ⊢; omega
-    simp only [erA]; rw [h.2.2.2 i hi']; exact hv
+    simp only [erA]; rw [h.erGet i hi']; exact hv
   · simp at hv
 
 /-- The memory after `iw_reset` is in the stage relation. -/
@@ -334,10 +334,10 @@ theorem iwReset_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IF
     StageR dn vis fe (m.set64 CTL 200 0) a ∧ m.set64 CTL 200 0 = m.set64 CTL 200 0 ∧
       (m.set64 CTL 200 0).arr64 EREC = m.arr64 EREC ∧ erTop (m.set64 CTL 200 0) = erTop m := by
   have hf : MemFrame [] [200] m (m.set64 CTL 200 0) := MemFrame.setCtl m 200 0
-  obtain ⟨hI1, hE1, hsz, hEs, hc⟩ := hS.2
+  obtain ⟨hI1, hE1, hsz, hEs, hc⟩ := hS.iw
   have hE : (m.set64 CTL 200 0).arr64 EREC = m.arr64 EREC := hf.arr EREC (by simp) (by decide)
   have h129 : erTop (m.set64 CTL 200 0) = erTop m := by simp only [erTop, hf.ctl 129 (by simp)]
-  refine ⟨⟨CheckR.frame_hi (by simp) (by simp) hf hS.1, ?_, ?_, ?_, ?_, ?_⟩, rfl, hE, h129⟩
+  refine ⟨⟨CheckR.frame_hi (by simp) (by simp) hf hS.check, ?_, ?_, ?_, ?_, ?_⟩, rfl, hE, h129⟩
   · have hIW := hf.size IW
     simp only [iwTop, rdW_set64]; split
     · simp

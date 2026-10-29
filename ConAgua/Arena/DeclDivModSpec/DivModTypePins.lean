@@ -50,14 +50,14 @@ theorem hslice_words {k : IdxKind} (a : Array Word) : ∀ (ws : List Word) (o : 
 
 theorem rdW_erec_grow {m m' : Mem} (hg : IWGrow m m') {i : Word} (hi : i.toNat < erecTop m) :
     rdW (m'.arr64 EREC) i = rdW (m.arr64 EREC) i := by
-  simp only [rdW]; rw [hg.2.2.2 i.toNat hi]
+  simp only [rdW]; rw [hg.erGet i.toNat hi]
 
 theorem erecTop_lt (m : Mem) : erecTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 129).toNat_lt
 
 theorem SliceR.grow {m m' : Mem} {o l : Word} {hs : List EIdx} (h : SliceR m o l hs)
     (hg : IWGrow m m') : SliceR m' o l hs := by
   obtain ⟨hb, hl, hv⟩ := h
-  refine ⟨Nat.le_trans hb hg.2.1, hl, fun i hi' => ?_⟩
+  refine ⟨Nat.le_trans hb hg.er, hl, fun i hi' => ?_⟩
   have ht := erecTop_lt m
   have hx : (o + UInt64.ofNat i).toNat = o.toNat + i := by
     rw [UInt64.toNat_add, UInt64.toNat_ofNat_of_lt' (by unfold UInt64.size; omega)]
@@ -67,7 +67,7 @@ theorem SliceR.grow {m m' : Mem} {o l : Word} {hs : List EIdx} (h : SliceR m o l
 
 theorem PinSetR.grow {m m' : Mem} {r : Word} {ip : INatOpPinSet} (h : PinSetR m r ip)
     (hg : IWGrow m m') : PinSetR m' r ip :=
-  L.Rom.PinSetR.keep h ⟨hg.2.1, hg.2.2.2⟩
+  L.Rom.PinSetR.keep h ⟨hg.er, hg.erGet⟩
 
 /-- The `j`-th pin of the record. -/
 theorem PinSetR.pin {m : Mem} {r : Word} {ip : INatOpPinSet} (h : PinSetR m r ip) {j : Word}
@@ -218,7 +218,7 @@ def decTP (m : Mem) (r : List Word) (tps : List (NIdx × EIdx)) : Prop :=
 
 theorem decTP.grow {m m' : Mem} {r : List Word} {tps : List (NIdx × EIdx)} (h : decTP m r tps)
     (hg : IWGrow m m') : decTP m' r tps :=
-  L.Rom.TPinsR.keep h ⟨hg.2.1, hg.2.2.2⟩
+  L.Rom.TPinsR.keep h ⟨hg.er, hg.erGet⟩
 
 /-! ## The reads -/
 
@@ -243,7 +243,7 @@ theorem divModDeclPin_ref {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe 
   have hm1' := hm1.symm
   subst hm1'
   subst hr1
-  have hF := hS.1.pins.full h0
+  have hF := hS.check.pins.full h0
   refine ⟨_, a, divModDeclPin_run hF hc ip, hS, IWGrow.refl _, ?_⟩
   have := PinSetR.pin hP (j := dmSlotW m c) (slotW_lt m c)
   simp only [List.headD_cons]
@@ -271,7 +271,7 @@ theorem divModTypePins_ref {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe
   have hm1' := hm1.symm
   subst hm1'
   subst hr1
-  have hF := hS.1.pins.full h0
+  have hF := hS.check.pins.full h0
   refine ⟨_, a, divModTypePins_run hF hc ip, hS, IWGrow.refl _, ?_⟩
   have := PinSetR.thdr hP (j := dmSlotW m c) (slotW_lt m c)
   simpa [decTP] using this
@@ -332,13 +332,13 @@ theorem divModCertProofs_ref {dn : NIdx → Option ConLeche.Name} {vis : Word} {
   have hm1' := hm1.symm
   subst hm1'
   subst hr1
-  have hF := hS.1.pins.full h0
+  have hF := hS.check.pins.full h0
   simp only [List.headD_cons] at hw
   obtain ⟨r2, m2, he2, he⟩ := ntBW_some hw
   simp only [Option.some.injEq, Prod.mk.injEq] at he
   obtain ⟨rfl, rfl⟩ := he
   have hsl := PinSetR.hdr hP (j := dmSlotW m c) (slotW_lt m c)
-  have hsz : erecTop m ≤ (m.arr64 EREC).size := hS.2.2.1
+  have hsz : erecTop m ≤ (m.arr64 EREC).size := hS.iw.er
   obtain ⟨hS2, hg2, hdec, htop, -⟩ := erToIwW_stage (k := IdxKind.expr) he2 hS (Or.inr (by
     have := hsl.1; omega))
   have hd2 : decHL m2 (r2.headD 0).toNat (r2.tail.headD 0).toNat =

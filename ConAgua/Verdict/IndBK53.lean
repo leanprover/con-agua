@@ -125,8 +125,8 @@ theorem tkh_ref (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState} {q fto ftl 
   · rw [tkhE.k_get_app_fn_f_2.arm4 (hc1 := t1') (hc2 := t2') (hc3 := v1) (hc4 := v2)]
     exact RefE.of_cls0 (by simp)
   rw [tkhE.k_get_app_fn_f_2.arm5 (hc1 := t1') (hc2 := t2') (hc3 := v1) (hc4 := v2)]
-  obtain ⟨vr1, hipH, husH⟩ := viewConstW hS2.1.arena.1 v1 t1'
-  obtain ⟨vr2, hiiH, -⟩ := viewConstW hS2.1.arena.1 v2 t2'
+  obtain ⟨vr1, hipH, husH⟩ := viewConstW hS2.check.arena.base v1 t1'
+  obtain ⟨vr2, hiiH, -⟩ := viewConstW hS2.check.arena.base v2 t2'
   generalize hip : (eViewW m2 (rl.headD 0)).tail.headD 0 = ip at vr1 hipH ⊢
   generalize hus : (eViewW m2 (rl.headD 0)).tail.tail.headD 0 = usp at vr1 husH ⊢
   generalize hii : (eViewW m2 (rm.headD 0)).tail.headD 0 = ii at vr2 hiiH ⊢
@@ -190,7 +190,7 @@ theorem tkh_ref (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState} {q fto ftl 
   refine RefE.ite_neg (by simp [hll]) ?_
   -- `target_k53_args`
   exact RefE.mono (tka_ref hq henv n (by omega) hC4 hA4 (hbs.grow hg14)
-    (by rw [decHL_grow hg14 hftb]; exact hft) (by have := hg14.1; omega)
+    (by rw [decHL_grow hg14 hftb]; exact hft) (by have := hg14.iw; omega)
     (hMc.grow (decTM_mono _) hg14) hipH husH hla4 hma4 hP4 hsh hftP hMcP hI' hus' hlaP hmaP hformer hMs)
     fun v c a' h => ⟨h.res, h.stage, hg14.trans h.grow, h.rc, h.abs⟩
 
@@ -265,7 +265,7 @@ theorem tk_ref (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState} {q fto ftl M
   -- `target_k53_heads`
   rw [← decE_eq] at hlwD
   have h3 := tkh_ref hq henv n (by omega) hC2 hA2
-    (hbs.grow hg12) (by rw [decHL_grow hg12 hftb]; exact hft) (by have := hg12.1; omega)
+    (hbs.grow hg12) (by rw [decHL_grow hg12 hftb]; exact hft) (by have := hg12.iw; omega)
     (hMc.grow (decTM_mono _) hg12) hlwH hmj hP2
     (ConRon.Bridge.Inductives.dShape_ext q2.ext _ _ hsh) (denoteEList_ext q2.ext _ _ hftP)
     (ConRon.Bridge.Inductives.dMajor_ext q2.ext _ _ hMcP) (by rw [hlwD]; exact denote_ext hlw q2.ext)

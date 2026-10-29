@@ -31,27 +31,28 @@ theorem tgtR_frameA {m m' : Mem} {tg : Word} {c : Nat} {T : Std.HashMap Nat Nat}
   rw [← hT.1 k hk]
   have hn : (tg + UInt64.ofNat k).toNat = tg.toNat + k := addW_toNat _ _ (by omega)
   simp only [rdW, hn]
-  rw [hf.2.1.2.2.1 _ (by omega)]
+  rw [hf.grow.iwGet _ (by omega)]
 
 /-- **What the targets pass keeps**: everything but `IW`, `HSEEN`, `CTL[73‥74, 200]`; the `IW`
 words below the targets; the pool only grows. -/
-def LowFr (tg : Word) (m m' : Mem) : Prop :=
-  MemFrame [IW, HSEEN] [73, 74, 200] m m' ∧
-    (∀ x : Nat, x < tg.toNat → (m'.arr64 IW)[x]? = (m.arr64 IW)[x]?) ∧ iwTop m ≤ iwTop m'
+structure LowFr (tg : Word) (m m' : Mem) : Prop where
+  fr : MemFrame [IW, HSEEN] [73, 74, 200] m m'
+  low : ∀ x : Nat, x < tg.toNat → (m'.arr64 IW)[x]? = (m.arr64 IW)[x]?
+  top : iwTop m ≤ iwTop m'
 
 theorem LowFr.refl (tg : Word) (m : Mem) : LowFr tg m m :=
   ⟨MemFrame.refl _ _ _, fun _ _ => rfl, Nat.le_refl _⟩
 
 theorem LowFr.trans {tg : Word} {m₁ m₂ m₃ : Mem} (h₁ : LowFr tg m₁ m₂) (h₂ : LowFr tg m₂ m₃) :
     LowFr tg m₁ m₃ :=
-  ⟨h₁.1.trans h₂.1, fun x hx => (h₂.2.1 x hx).trans (h₁.2.1 x hx), Nat.le_trans h₁.2.2 h₂.2.2⟩
+  ⟨h₁.fr.trans h₂.fr, fun x hx => (h₂.low x hx).trans (h₁.low x hx), Nat.le_trans h₁.top h₂.top⟩
 
 theorem LowFr.ofHFr {tg ws : Word} {c : Nat} {m m' : Mem} (h : HFr tg ws c m m') : LowFr tg m m' :=
   ⟨h.1.mono (by simp) (by simp), fun x hx => h.2 x (Or.inl hx),
     by simp only [iwTop]; rw [h.1.ctl 200 (by decide)]; exact Nat.le_refl _⟩
 
 theorem LowFr.ofAFr {tg : Word} {m m' : Mem} (h : AFr m m') (ht : tg.toNat ≤ iwTop m) : LowFr tg m m' :=
-  ⟨h.1.mono (by simp) (by simp), fun x hx => h.2.1.2.2.1 x (by omega), h.2.1.1⟩
+  ⟨h.fr.mono (by simp) (by simp), fun x hx => h.grow.iwGet x (by omega), h.grow.iw⟩
 
 /-- The kind of a record decides whether it is a definition. -/
 theorem defn_of_kind {D P : Array Word} {r : Nat} {d : IDeclaration} (hD : DeclAtF D P r d) :
@@ -137,7 +138,7 @@ theorem targets_ok {p : Prog} (hx : HoistExt p) {a : AState} {ds : Array IDeclar
     obtain ⟨hPF, L₁, L₂, hL₁, hL₂, hop, hf₁⟩ :=
       natOpRec_ok p hx n m m₁ a _ op hE.iwok hP.full hw hrec
     have hE₁ := hE.frameA hf₁
-    have hT₁ := tgtR_frameA hT (by omega) (by have := hE.iwok.1; omega) hf₁
+    have hT₁ := tgtR_frameA hT (by omega) (by have := hE.iwok.iw; omega) hf₁
     have hP₁ : PinsR m₁ a.pins := hP.congr (hf₁.1.1 PINS (by decide) (by decide))
     have hPF₁ : PinsFull m₁ a.pins := hPF.congr (hf₁.1.1 PINS (by decide) (by decide))
     -- the twin's test
@@ -162,22 +163,22 @@ theorem targets_ok {p : Prog} (hx : HoistExt p) {a : AState} {ds : Array IDeclar
       obtain ⟨gs, hgs, hG, hl, habove, hf₂⟩ :=
         natOpDepsCall_ok p hx n m₁ m₂ a _ rs hE₁.iwok hPF₁ hw hdc
       have hE₂ := hE₁.frameA hf₂
-      have hT₂ := tgtR_frameA hT₁ (by have := hE₁.top; omega) (by have := hE₁.iwok.1; have := hE₁.isz; omega) hf₂
+      have hT₂ := tgtR_frameA hT₁ (by have := hE₁.top; omega) (by have := hE₁.iwok.iw; have := hE₁.isz; omega) hf₂
       rw [HoistTwin.run_bind, hgs]
       simp only
       rcases hdp : hDepsW n m₂ iw (rs.headD 0) (rs.tail.headD 0) 0 ord tg ws with _ | ⟨z, m₃⟩ <;> rw [hdp] at h
       · simp [hTargetsGoW.k_hoist_deps.eq_1] at h
       rw [hTargetsGoW.k_hoist_deps.arm1, hTargetsGoW.j1.arm1] at h
       rw [hiw'] at hdp
-      have hsz2 : iwTop m₂ ≤ (m₂.arr64 IW).size := hf₂.2.2.1
+      have hsz2 : iwTop m₂ ≤ (m₂.arr64 IW).size := hf₂.ok.iw
       obtain ⟨T₃, hrun₃, hE₃, hT₃, hTv₃, hTi₃, hfr₃, hlt₃⟩ :=
         deps_ok hi (rs.headD 0) (rs.tail.headD 0) gs n m₂ m₃ T 0 z hE₂ hT₂ hTv
           (fun k t h => Nat.le_of_lt (hTi k t h)) hlt hG (by rw [hl]; simp)
-          (fun hne => by have := (habove hne).1; have := hE.top; have := hf₁.2.1.1; omega)
+          (fun hne => by have := (habove hne).1; have := hE.top; have := hf₁.grow.iw; omega)
           (by
             by_cases hne : gs = []
             · subst hne; simp only [List.length_nil] at hl; rw [hl]; have := (rs.headD 0).toNat_lt; omega
-            · have := (habove hne).2; rw [← hl] at this; have := hE₂.isz; have := hf₂.2.2.1; omega)
+            · have := (habove hne).2; rw [← hl] at this; have := hE₂.isz; have := hf₂.ok.iw; omega)
           hdp
       rw [HoistTwin.run_bind, hrun₃]
       simp only

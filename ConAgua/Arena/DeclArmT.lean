@@ -231,7 +231,7 @@ theorem cdt_ref {p : Prog} (hV : ValProg p) (hq : KnotStageProg p) (hap : ApdF p
   simp only [stepCV, stepVal] at hcv1 hval1
   generalize hq0 : r1.headD 0 = q at hci1 hcv1 hval1 htop1 ⊢
   have hqb : q.toNat + 8 < 2 ^ 64 := by
-    have := hS1.stage.2.2.1; have := hS1.stage.2.2.2.2.1; omega
+    have := hS1.stage.iw.er; have := hS1.stage.iw.erSize; omega
   have hq1 : (q + 1).toNat = q.toNat + 1 := toNat_add_small q 1 (by omega)
   -- `check_constant_val(vis, q + 1)`
   have h2 := ccv_ref hq hap hkp hn' hS1 (by rw [hq1]; exact hcv1) (by omega) (denoteCV_lps hcvd) hCr1
@@ -339,7 +339,7 @@ theorem ivc_ref {p : Prog} (hRp : RecProg p) (hC : CvgProg p) (hap : ApdF p) (hk
   obtain ⟨hS1, hg1, hci1, hcv1, hval1, htop1⟩ := erecCiW_okT h1 hS hD hi hci
   generalize hq : r1.headD 0 = q at hci1 hcv1 hval1 htop1 ⊢
   have hb : q.toNat + 8 < 2 ^ 64 := by
-    have h1 := hS1.stage.2.2.1; have h2 := hS1.stage.2.2.2.2.1; omega
+    have h1 := hS1.stage.iw.er; have h2 := hS1.stage.iw.erSize; omega
   have hq1 : (q + 1).toNat = q.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
   -- `install_header(vis, q + 1)`
   have h2R := ih_ref hap hkp.crf n hS1 (by rw [hq1]; exact hcv1) (by rw [hq1]; omega)
@@ -382,7 +382,7 @@ theorem ivc_ref {p : Prog} (hRp : RecProg p) (hC : CvgProg p) (hap : ApdF p) (hk
     rw [liftE_some, installValueE.k_erec_vg.arm1]
     have hx4 : ArrExt (erecP m1) (erecP s4.mem) := IWGrow.erecPExt (hg3.trans hg4)
     have htop4 : q.toNat + 8 ≤ erTop s4.mem := by
-      have := (hg3.trans hg4).2.1; omega
+      have := (hg3.trans hg4).er; omega
     obtain ⟨hS5, hg5, hvg⟩ := erecVgW_ok h5 hS4 (ArrExt.decCV hx4 hcv1) (ArrExt.hd? hx4 hval1)
       htop4 hk
     have hM5 : CoreMemos m5 := hM4.frame (erecVgW_frame h5)

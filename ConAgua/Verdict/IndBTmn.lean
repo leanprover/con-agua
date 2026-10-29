@@ -102,7 +102,7 @@ theorem tmn_ref (n : Nat) (hn : n ≤ 2 ^ 62) : ∀ {m : Mem} {a : AState}
     exact RefE.ret rfl ⟨PSlR.nil _ _, hC, IWGrow.refl _, hP, hA,
       fun _ _ _ _ => ⟨.inl rfl, [], by simp [decNL], FA2.nil⟩⟩
   rw [tmnE.arm2 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hl]
-  have hsz := hS.2.2.2.1
+  have hsz := hS.iw.iwSize
   obtain ⟨nf, nfs', rfl, hnf0, hnf'⟩ := hnf.uncons hl hsz
   obtain ⟨nfP, nfsP', rfl, hnfP1, hnfsP'⟩ := ConRon.Bridge.Inductives.mapM_option_cons_inv hnfP
   have hb64 := hS.lt64 hnf.2
@@ -125,7 +125,7 @@ theorem tmn_ref (n : Nat) (hn : n ≤ 2 ^ 62) : ∀ {m : Mem} {a : AState}
   have hS1 := hC1.stage
   have hnfo : nfo.toNat < iwTop m := by have := hnf.2; omega
   have he : rdW (m1.arr64 IW) nfo = rdW (m.arr64 IW) nfo := by
-    simp only [rdW]; rw [hg1.2.2.1 _ hnfo]
+    simp only [rdW]; rw [hg1.iwGet _ hnfo]
   rw [he]
   -- the table's head pointer: the entry `nf`, and its place in a pointer list
   have hptr0 : ∀ ps, decNL m nfo.toNat nfl.toNat = some ps → ∃ v ps', ps = v :: ps' ∧
@@ -140,7 +140,7 @@ theorem tmn_ref (n : Nat) (hn : n ≤ 2 ^ 62) : ∀ {m : Mem} {a : AState}
     exact ⟨v, ps', rfl, this, (iwN_rdW hv (by omega)).2, by rw [e1, e2, hLL]; simpa using hps'⟩
   generalize hE : rdW (m.arr64 IW) nfo = e at hnf0 hptr0 ⊢
   have hnf1 : DecB (fun m' => decNCN m' e.toNat) m1 nf := hnf0.grow (decNCN_mono _) hg1
-  have hsz1 := hS1.2.2.2.1
+  have hsz1 := hS1.iw.iwSize
   obtain ⟨hcH, hcD, hlH, hlD, hdsl⟩ := decNCN_fields hnf1 hsz1
   have hct1 := hct.grow (OMono.decPL decCN_mono _ _) hg1
   -- the tail's pointers, from the table's
@@ -173,7 +173,7 @@ theorem tmn_ref (n : Nat) (hn : n ≤ 2 ^ 62) : ∀ {m : Mem} {a : AState}
     (ConRon.Bridge.Inductives.dCtorNf_ext c1.ext _ _ hnfP1)
   -- `target_class_match`
   have h3 := tcm_ref hq henv n (by omega) hC1 hR1.abs (hbs.grow hg1) hus hlH
-    (by rw [decHL_grow hg1 hftb]; exact hft) (by have := hg1.1; omega)
+    (by rw [decHL_grow hg1 hftb]; exact hft) (by have := hg1.iw; omega)
     (hpf.grow hg1) (hds.grow hg1) hdsl hR1.rc
     (ConRon.Bridge.Inductives.dShape_ext c1.ext _ _ hsh) (denoteEList_ext c1.ext _ _ hftP)
     (denoteEList_ext c1.ext _ _ hpfP) (ConRon.Bridge.denoteLs_ext husP c1.ext)
@@ -195,7 +195,7 @@ theorem tmn_ref (n : Nat) (hn : n ≤ 2 ^ 62) : ∀ {m : Mem} {a : AState}
     subst hc0
     refine RefE.ret (y := ys) rfl ⟨hys2, hR2.stage, hg12, hR2.rc, hR2.abs, fun mb ps hps hpb => ?_⟩
     obtain ⟨v, -, -, hfr, pr, hpr, hprb⟩ := hptr1 mb ps hps hpb
-    have hb := hR1.slice.2
+    have hb := hR1.slice.bound
     dsimp only at hb hpr ⊢
     exact ⟨by simpa using hfr, pr, by simp only [List.headD_cons, List.tail_cons]; rw [decNL_grow hg2 hb]; exact hpr, hprb⟩
   rw [tmnE.k_target_class_match.arm2 _ _ _ _ _ _ _ hk]
@@ -213,11 +213,11 @@ theorem tmn_ref (n : Nat) (hn : n ≤ 2 ^ 62) : ∀ {m : Mem} {a : AState}
     hR2.stage.of_pstep hS3 hA3 (PStep.refl hR2.stage.check.state), hg12.trans hg3, hR2.rc.fr hf3, hA3,
     fun mb ps hps hpb => ?_⟩
   obtain ⟨v, heT, hpv, -, pr, hpr, hprb⟩ := hptr1 mb ps hps hpb
-  obtain ⟨hr, hd, -, -, -, -⟩ := consW_decN h4 hR2.stage.stage.2.2.2.1 hR2.stage.stage.2.2.2.2.2 hys2.2
-    (by rw [decNL_grow hg2 hR1.slice.2]; exact hpr)
+  obtain ⟨hr, hd, -, -, -, -⟩ := consW_decN h4 hR2.stage.stage.iw.iwSize hR2.stage.stage.iw.ctl hys2.2
+    (by rw [decNL_grow hg2 hR1.slice.bound]; exact hpr)
   subst hr
   refine ⟨?_, e.toNat :: pr, by simpa using hd, ?_⟩
-  · right; simp only [List.headD_cons]; exact hg12.1
+  · right; simp only [List.headD_cons]; exact hg12.iw
   · rw [heT]; exact FA2.cons hpv hprb
 
 include hq henv in
@@ -253,7 +253,7 @@ theorem targetMajorNfs_refinesC (hL : TmnLook p) (n : Nat) (hn : n ≤ 2 ^ 62) (
         (AM.st (ConRon.Arena.targetMajorNfs V fe bs formerTys pfvs (decI us) ds ctors nfs) a₀) ∧
       IWGrow s₀.mem s'.mem ∧ RcMR s'.mem ∧ AbsOK s'.mem; ⊤⦄ := by
   refine triple_post (RefE.triple (tmnE_spec p hL n s₀ vis q fto ftl pfo pfl us dso dsl cto ctl nfo nfl)
-    (tmn_ref hq henv n hn hC hA hbs hus hft hftb hpf hds hct.1 (hC.stage.lt64 hct.2) hnf hP hsh hftP
+    (tmn_ref hq henv n hn hC hA hbs hus hft hftb hpf hds hct.dec (hC.stage.lt64 hct.bound) hnf hP hsh hftP
       hpfP husP hdsP hctP hnfP hformer hpw)) ?_
   rintro r s' ⟨hl', ys, a', run, hR⟩
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ run

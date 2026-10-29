@@ -68,7 +68,7 @@ theorem installWithSortSimC {p : Prog} (hcl : CoreStageClosed p) (hLC : LvlCache
   obtain ⟨bs', a', q, hrun, rfl, -, hS', hg, htopq, hcell, hD⟩ :=
     wsC_ok (realCall p) n dn fe vis m s'.mem a pp s r bs hW hS hs
       (fun m'' hg => hq.stab (decBS_mono _) m'' hg) hq9 (fun k r2 m2 h0 e2 => by
-        have hF := hS.1.pins.full h0
+        have hF := hS.check.pins.full h0
         obtain ⟨lz, hdz⟩ := hC.stageT.twin.den.zero
         rw [hF.zeroLevel] at hdz
         obtain ⟨x, a2, hrun2, hC2, hg2, hd2, -, -⟩ :=
@@ -84,7 +84,7 @@ theorem installWithSortSimC {p : Prog} (hcl : CoreStageClosed p) (hLC : LvlCache
     have g2 : iwN s'.mem (q.toNat + 2) = iwN s'.mem (pp.toNat + 2) := by simp only [iwN, nat?, iwA, e2]
     have g3 : iwN s'.mem (q.toNat + 3) = iwN s'.mem (pp.toNat + 3) := by simp only [iwN, nat?, iwA, e3]
     rw [g2, hp2] at h1; rw [g3, hp3] at h2
-    exact Nat.le_trans (hrb o l h1 h2) hg.1
+    exact Nat.le_trans (hrb o l h1 h2) hg.iw
   intro o l h1 h2
   simp only [List.headD_cons] at h1 h2
   have e0 := hcell 0 (by decide) (by decide) (by decide)
@@ -95,7 +95,7 @@ theorem installWithSortSimC {p : Prog} (hcl : CoreStageClosed p) (hLC : LvlCache
   have g0 : iwN s'.mem q.toNat = iwN s'.mem pp.toNat := by simp only [iwN, nat?, iwA, e0]
   have g1 : iwN s'.mem (q.toNat + 1) = iwN s'.mem (pp.toNat + 1) := by simp only [iwN, nat?, iwA, e1]
   rw [g0, hp0] at h1; rw [g1, hp1] at h2
-  exact Nat.le_trans (hsrc o l h1 h2) hg.1
+  exact Nat.le_trans (hsrc o l h1 h2) hg.iw
 
 set_option experimental.vcgen true in
 /-- **`check_block_inds`' unified model**: the formers and the agreements by their unified models

@@ -96,9 +96,9 @@ theorem pos3_iwN_word {m : Mem} {i v : Nat} (h : iwN (truncM m) i = some v) :
 theorem pos3_cssAt {m : Mem} {o l : Word} {css : List (List (IConstantVal × Nat))}
     (h : PSlR decCNSB css o l m) :
     l.toNat = css.length ∧ o.toNat + css.length ≤ iwTop m ∧ CssAt m o.toNat css := by
-  have hlen : css.length = l.toNat := decPL_length _ h.1
-  refine ⟨hlen.symm, by rw [hlen]; exact h.2, fun i hi => ?_⟩
-  obtain ⟨v, hv, hcs⟩ := decPL_getH (truncM m) h.1 i (by omega)
+  have hlen : css.length = l.toNat := decPL_length _ h.dec
+  refine ⟨hlen.symm, by rw [hlen]; exact h.bound, fun i hi => ?_⟩
+  obtain ⟨v, hv, hcs⟩ := decPL_getH (truncM m) h.dec i (by omega)
   obtain ⟨hdr, hhdr, rfl, hi'⟩ := pos3_iwN_word hv
   obtain ⟨o', l', ho, hl, hb, hd⟩ := decCNSB_bound (m := m) (q := hdr.toNat) hcs
   obtain ⟨ow, how, rfl, hlt0⟩ := pos3_iwN_word ho
@@ -161,7 +161,7 @@ theorem pnmW_ok {p : Prog} (hP : NfsProg p) {dn : NIdx → Option ConLeche.Name}
   obtain ⟨-, -, ee, hee, -, rfl⟩ := hdqT
   obtain ⟨heelt, hee'⟩ := rec2IwH_trunc hee
   obtain ⟨ew, hew, hew32, hewe⟩ := iwH_rdW_at (w := UInt64.ofNat q) (k := 2) (by rw [hq']; exact hee')
-    hS.2.2.2.1
+    hS.iw.iwSize
   rw [show (UInt64.ofNat 2 : Word) = 2 from rfl] at hew
   -- the rest
   obtain ⟨⟨r1, m1⟩, h1, h⟩ := of_K h (pnmW.k_check_block_positivity_nfs_member.none ..)
@@ -172,7 +172,7 @@ theorem pnmW_ok {p : Prog} (hP : NfsProg p) {dn : NIdx → Option ConLeche.Name}
     rw [UInt64.toNat_add, hq']; simp only [UInt64.reduceToNat]; omega
   have hew1 : rdW (m1.arr64 IW) (UInt64.ofNat q + 2) = ew := by
     rw [← hew]; simp only [rdW]
-    rw [hq2, hg1.2.2.1 _ heelt]
+    rw [hq2, hg1.iwGet _ heelt]
   rw [hew1] at h
   obtain ⟨⟨r2, m2⟩, h2, h⟩ := of_K h rfl; rw [pnmW.k_sl_cons.arm1] at h
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
@@ -188,7 +188,7 @@ theorem pos3_rec2H {p : Prog} (hP : NfsProg p) {n : Nat} {dn : NIdx → Option C
     StageR dn vis fe m' a ∧ IWGrow m m' ∧ MFr [] [] m m' ∧ DecB (fun m => decNFS m (r.headD 0).toNat) m' xs := by
   obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (rec2_specW p hP.alloc n hP.rec2 _ _ _) h
-  obtain ⟨-, -, -, hf, -, -⟩ := recW_post hW hS.2.2.2.2.2 hS.2.2.2.1 rfl
+  obtain ⟨-, -, -, hf, -, -⟩ := recW_post hW hS.iw.ctl hS.iw.iwSize rfl
   obtain ⟨hS', hg, hr, hget, htop⟩ := recW_stage hW hS rfl
   refine ⟨hS', hg, MFr.of_iw hf, ?_⟩
   subst hr

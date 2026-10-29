@@ -181,7 +181,7 @@ theorem crg_ref {p : Prog} (hp : CruleProg p) (hApd : ApdF p) (n : Nat) {dn : NI
     rcases h6 : callE p N "unresolved_consts_error" [visR, gen, 3] m5 with e6 | ⟨r6, m6⟩
     · rw [crgE.k_unresolved_consts_error.none]
       obtain ⟨M5, hC5⟩ := hT5.core
-      exact fun hV => uce_errClaim_hi hV.uce hV.nv hC5.arena.1 hC5.pins hgen (by decide) h6 _
+      exact fun hV => uce_errClaim_hi hV.uce hV.nv hC5.arena.base hC5.pins hgen (by decide) h6 _
     rw [crgE.k_unresolved_consts_error.abort1]; exact RefE.of_cls0 rfl
   rw [crgE.k_consts_resolve_ffast.arm2 _ _ _ _ _ _ hb5]
   have ex5 : x5 = true := by rw [← hx5]; simpa using hb5

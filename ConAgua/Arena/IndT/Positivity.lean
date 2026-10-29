@@ -145,7 +145,7 @@ theorem bncC_simA (cR : CallM) {dn : NIdx → Option ConLeche.Name} {vis : Word}
   have hTm : iwTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 200).toNat_lt
   have hk1 : rdW (m1.arr64 IW) (q + 1) = UInt64.ofNat bs.k := by
     rw [← hkw]; simp only [rdW]
-    rw [show (q + 1 : Word).toNat = q.toNat + 1 by rw [UInt64.toNat_add]; simp; omega, hg1.2.2.1 _ (by omega)]
+    rw [show (q + 1 : Word).toNat = q.toNat + 1 by rw [UInt64.toNat_add]; simp; omega, hg1.iwGet _ (by omega)]
   have hpk : fvs.length + bs.k < 2 ^ 64 := by
     have := partsAddNoOv hov2
     rw [hk1, UInt64.toNat_ofNat_of_lt' hkb] at this
@@ -355,8 +355,8 @@ theorem cbp_ref (hP : PosBlkProg p) {fs : List FnName} (hclP : closedA p posFree
   have hnrt := nrt_ref hP.rs hq hIlpf hLC dn vis fe henv (r1.headD 0) (r1.tail.headD 0)
     (r1.tail.tail.headD 0) c holes hctxOk (fun y hy => (hhw y hy).1) hlenP hpar (n + 2) hn m3 a2 caO caL
     (r3.headD 0) 0 0 css {} [] cssP {} [] hC3 (hU1.grow hg13) hhi1 hpn1
-    (by rw [decHL_grow3 hg13 hhob1]; exact hho1) (Nat.le_trans hhob1 hg13.1) hlen
-    (Nat.le_trans hcb1 hg13.1) (hcss1.grow hg13) hns3 (by simp [RootOutsB, DecB, decPL]) (by simp)
+    (by rw [decHL_grow3 hg13 hhob1]; exact hho1) (Nat.le_trans hhob1 hg13.iw) hlen
+    (Nat.le_trans hcb1 hg13.iw) (hcss1.grow hg13) hns3 (by simp [RootOutsB, DecB, decPL]) (by simp)
     (hP2.fr hf3) hA3 hctx2 hholes2 hcssP2 (by simp [dState]) rfl hcl
   rcases h4 : nrtE p (n + 2) m3 vis (r1.headD 0) (r1.tail.headD 0) (r1.tail.tail.headD 0) caO caL
       (r3.headD 0) 0 0 with e4 | ⟨r4, m4⟩ <;> rw [h4] at hnrt
@@ -383,7 +383,7 @@ theorem cbp_ref (hP : PosBlkProg p) {fs : List FnName} (hclP : closedA p posFree
   obtain ⟨-, hz⟩ := ConRon.Bridge.Inductives.zeroLevel_run hC4.check.pins hrunz
   refine RefE.bind_right hrunz ?_
   -- `lvl_eq_true`
-  obtain ⟨huH, hue⟩ := installCtxWord9 (hc1.grow (decCtx_mono _) hg14) hS4.2.2.2.1
+  obtain ⟨huH, hue⟩ := installCtxWord9 (hc1.grow (decCtx_mono _) hg14) hS4.iw.iwSize
   rcases h6 : callW p (n + 2) "lvl_eq_true" [rdW (m4.arr64 IW) (r1.headD 0 + 9), r5.headD 0] m4 with _ | ⟨r6, m6⟩
   · rw [liftE_none, cbpE.k_lvl_eq_true.none]; exact RefE.of_cls0 (by simp)
   rw [liftE_some, cbpE.k_lvl_eq_true.arm1]
@@ -416,7 +416,7 @@ theorem cbp_ref (hP : PosBlkProg p) {fs : List FnName} (hclP : closedA p posFree
   refine RefE.bind_right hrun6 ?_
   -- the fields' universes at the holes
   have hg16 := hg14.trans hg6
-  have hOb6 : (r4.headD 0).toNat + (r4.tail.headD 0).toNat ≤ iwTop s6.mem := Nat.le_trans hOb4 hg6.1
+  have hOb6 : (r4.headD 0).toNat + (r4.tail.headD 0).toNat ≤ iwTop s6.mem := Nat.le_trans hOb4 hg6.iw
   have hx16 := hx14.trans c5.ext
   have hiaa := iaa_ref hq henv hOpf hLC hLT hApd hP.abs (r1.headD 0) (r6.headD 0) c
     (y == some true) hb6 hhi1 (n + 2) hn s6.mem a6 caO caL (r4.headD 0) (r4.tail.headD 0) css outs cssP outsP
@@ -444,7 +444,7 @@ theorem cbp_ref (hP : PosBlkProg p) {fs : List FnName} (hclP : closedA p posFree
   rw [liftE_some, cbpE.k_check_block_positivity_nfs.arm1]
   obtain ⟨s8, rfl, -, hW8⟩ := triple_of_callW (s₀ := ⟨s7.mem, Locals.init []⟩)
     (pnf_spec p hP.nfs.nfs (n + 2) _ _ _) h8
-  have hOb7 : (r4.headD 0).toNat + (r4.tail.headD 0).toNat ≤ iwTop s7.mem := Nat.le_trans hOb6 hg7.1
+  have hOb7 : (r4.headD 0).toNat + (r4.tail.headD 0).toNat ≤ iwTop s7.mem := Nat.le_trans hOb6 hg7.iw
   obtain ⟨hS8, hg8, hf8, hd8⟩ := pnfW_ok hP.nfs (n + 2) _ _ a7 _ _ outs r8 hW8 hC7.stage
     ⟨(hO4.grow (hg6.trans hg7)), hOb7⟩
   have hA8 : AbsOK s8.mem := hk _ (by simp [posKeepCalleesC]) _ _ _ _ _ h8 hA7
@@ -464,9 +464,9 @@ theorem cbp_ref (hP : PosBlkProg p) {fs : List FnName} (hclP : closedA p posFree
     ⟨hC7.of_pstep hS8 hA8 (PStep.refl hC7.check.state), (hg1.trans hg14).trans hg48,
     hP7.fr hf8, hA8, ⟨?_, ?_⟩, ?_, ?_, cAll⟩
   · exact pos3_kinds (hO4.grow hg48)
-  · simp only [List.headD_cons, List.tail_cons]; exact Nat.le_trans hOb7 hg8.1
+  · simp only [List.headD_cons, List.tail_cons]; exact Nat.le_trans hOb7 hg8.iw
   · simpa using hd8
-  · simpa using hns4.grow hg48 (Nat.lt_of_le_of_lt hS4.2.1 hS4.2.2.2.1)
+  · simpa using hns4.grow hg48 (Nat.lt_of_le_of_lt hS4.iw.iw hS4.iw.iwSize)
 
 end sim
 

@@ -106,7 +106,7 @@ theorem installRec2PSl {α : Type} {f : Mem → Nat → Option α}
     rw [iwN_truncM hq1]; have := hget 1 (by simp)
     simp only [List.getElem?_cons_succ, List.getElem?_cons_zero] at this
     simp [iwN, nat?, iwA, this]
-  have hd := hx.1.grow (OMono.decPL hf _ _) hg
+  have hd := hx.dec.grow (OMono.decPL hf _ _) hg
   show decAt (truncM m') _ _ = some xs
   simp only [decAt, List.headD_cons, w0, w1, Option.bind_eq_bind, Option.bind_some]
   exact hd
@@ -128,10 +128,10 @@ theorem installRec2PSlB {α : Type} {f : Mem → Nat → Option α}
     rw [iwN_truncM hq1]; have := hget 1 (by simp)
     simp only [List.getElem?_cons_succ, List.getElem?_cons_zero] at this
     simp [iwN, nat?, iwA, this]
-  have hd := hx.1.grow (OMono.decPL hf _ _) hg
+  have hd := hx.dec.grow (OMono.decPL hf _ _) hg
   show decAt (truncM m') _ _ = some xs
   simp only [decAt, List.headD_cons, w0, w1, Option.bind_eq_bind, Option.bind_some, decPLB]
-  rw [ite_eq_left (le_iwA_truncM_size (Nat.le_trans hx.2 hg.1) hS'.2.1)]
+  rw [ite_eq_left (le_iwA_truncM_size (Nat.le_trans hx.bound hg.iw) hS'.iw.1)]
   exact hd
 
 theorem lpsW_afr {n : Nat} {m m' : Mem} {q : Word} {r : List Word} (h : lpsW n m q = some (r, m')) :
@@ -163,10 +163,10 @@ open L.Arena
 /-- The constructors, read by `check_abs_ctor_sorts_all`. -/
 theorem pos3_cns {m : Mem} {o l : Word} {css : List (List (IConstantVal × Nat))}
     (h : PSlR decCNSB css o l m) : PSlR0 decCNS css o l m := by
-  refine ⟨?_, Or.inr h.2⟩
+  refine ⟨?_, Or.inr h.bound⟩
   show decPL (truncM m) _ o.toNat l.toNat = some css
   have := pos3_decPL_proj (m := truncM m) (g := decCNS (truncM m)) id
-    (fun v x hx => decCNSB_decCNS (m := m) (q := v) hx) h.1
+    (fun v x hx => decCNSB_decCNS (m := m) (q := v) hx) h.dec
   rwa [List.map_id] at this
 
 end L.Ind

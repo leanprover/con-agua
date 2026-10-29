@@ -481,7 +481,7 @@ theorem irpW_ok (off : Word) (rest : List UInt8)
   rw [h2] at hW
   simp only [irp2K] at hW
   obtain ⟨ok2, hR2, -, hf2', hl2, hj2, hk2⟩ := romNamesToW_ok rom hr reservedBasisNameValues hf2 n m₁ _ q
-    rest 16 55 q₂ m₂ hR1 ((romNamesToW_topK rom _ _ _ _ _ _ _ h1).mode hA.1.lit.1 hmo) hd2 (by simp [reserved_length]) (by simp [reserved_length]) h2
+    rest 16 55 q₂ m₂ hR1 ((romNamesToW_topK rom _ _ _ _ _ _ _ h1).mode hA.base.lit.1 hmo) hd2 (by simp [reserved_length]) (by simp [reserved_length]) h2
   cases h3 : lsinternW m₂ 0 0 with
   | none => rw [h3] at hW; simp [irp3K] at hW
   | some t =>
@@ -607,7 +607,7 @@ theorem irpW_ok (off : Word) (rest : List UInt8)
   · exact ((((((romNamesToW_topK rom _ _ _ _ _ _ _ h1).trans (romNamesToW_topK rom _ _ _ _ _ _ _ h2)).trans
       (cons_topK lsCS_wf (by decide) (by decide) h3)).trans (cons_topK zeroCS_wf (by decide) (by decide) h4)).trans
       (cons_topK succCS_wf (by decide) (by decide) h5)).trans ((cons_topK sortCS_wf (by decide) (by decide) h6).trans
-      (memFrame_top (irpFill_frame m₆ us z s1) (by simp)))).mode hA.1.lit.1 hmo
+      (memFrame_top (irpFill_frame m₆ us z s1) (by simp)))).mode hA.base.lit.1 hmo
 
 end irpRef
 
@@ -628,7 +628,7 @@ theorem internReservedPins_refines (rom : List UInt8) (off : Word) (p : Prog) (h
   apply M.triple_of_run
   intro s r s' hs hrun
   obtain ⟨hloc, hW⟩ := M.of_run (P := fun s => s = s₀) hs hrun
-    (internReservedPins_specW rom off p hL n s₀ ⟨hA.1.lit.1.cap, hA.1.lit.1.top41⟩)
+    (internReservedPins_specW rom off p hL n s₀ ⟨hA.base.lit.1.cap, hA.base.lit.1.top41⟩)
   subst hs
   exact ⟨hloc, irpW_ok rom hr off rest hd hf1 hf2 n _ a₀ _ hA hmo hW⟩
 

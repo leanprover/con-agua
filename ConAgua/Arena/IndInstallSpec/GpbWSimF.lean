@@ -272,7 +272,7 @@ theorem gpbW_simF (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
   rw [gpbW.arm1]
   unfold ConRon.Arena.ClassGen.prefixBinders
   rw [rec2MapM_genBinder]
-  have hsz := hS.2.2.2.1
+  have hsz := hS.iw.iwSize
   have hG' : decCG (truncM m) g.toNat = some G := hG
   simp only [decCG, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at hG'
   obtain ⟨nP, hnP, ps, hps, cls, hcls, ft, hft, sl, hsl, cts, hcts, el, hel, pre, hpre, hGe⟩ := hG'
@@ -318,14 +318,14 @@ theorem gpbW_simF (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
   rw [gpbW.k_class_gen_prefix_binders_slots_go.arm2 (hc1 := by rw [h21]; decide)]
   refine RSim.lstep (K := gpbW.k_sl_append) rfl fun ⟨r3, m3⟩ h3 => ?_
   obtain ⟨hS3, hg3, hd3, hb3⟩ := rec2AppendW_dec h3 hS2 ((decHL_decB hpbs hpbb).grow (OMono.decHL _ _) hg2) hsb hsbb
-  obtain ⟨hr3, -⟩ := appendW_dec h3 hS2.2.2.2.1 hS2.2.2.2.2.2 (Nat.le_trans hpbb hg2.1) hsbb
+  obtain ⟨hr3, -⟩ := appendW_dec h3 hS2.iw.iwSize hS2.iw.ctl (Nat.le_trans hpbb hg2.iw) hsbb
     ((decHL_decB hpbs hpbb).get (OMono.decHL _ _) |> fun h => by rw [decHL_grow hg2 hpbb]; exact h) hsb
   rw [gpbW.k_sl_append.arm1]
   refine RSim.pure_some ⟨⟨⟨hS3, hg1.trans (hg2.trans hg3), rfl, by simpa using hd3, by simpa using hb3⟩,
     appendW_afr h3 hA2⟩, fun _ _ => ?_⟩
   rw [hr3]
   simp only [List.tail_cons, List.headD_cons]
-  exact Nat.le_trans (hg1.trans hg2).1 (Nat.le_refl _)
+  exact Nat.le_trans (hg1.trans hg2).iw (Nat.le_refl _)
 
 /-! ## The record's stores, as one write -/
 
@@ -364,7 +364,7 @@ theorem ClassesLp.grow {m m' : Mem} {mo ml : Word} {ms : List TargetMajor} (h : 
     (hms : PSlR decTM ms mo ml m) (hg : IWGrow m m') (hk : KeepW m m') (hsz : (m.arr64 IW).size < 2 ^ 64) :
     ClassesLp m' mo ml := by
   intro c hc v o l hv ho hl
-  have hms0 : decPL (truncM m) (decTM (truncM m)) mo.toNat ml.toNat = some ms := hms.1
+  have hms0 : decPL (truncM m) (decTM (truncM m)) mo.toNat ml.toNat = some ms := hms.dec
   obtain ⟨v', hv', hsrc⟩ := decPL_getH (truncM m) hms0 c hc
   obtain ⟨hvt, hvm⟩ := rec2IwN_trunc hv'
   rw [iwN_grow hg hvt, hvm] at hv
@@ -441,7 +441,7 @@ theorem csRes_decB {m : Mem} {r : List Word} {cvs : List IConstantVal} (h : CsRe
 
 theorem decRRS.grow {m m' : Mem} {r : List Word} {xs : List (IConstantVal × TargetMajor × List EIdx)}
     (h : decRRS m r xs) (hg : IWGrow m m') : decRRS m' r xs :=
-  ⟨h.1.grow (OMono.decPL decRR_mono _ _) hg, Nat.le_trans h.2 hg.1⟩
+  ⟨h.1.grow (OMono.decPL decRR_mono _ _) hg, Nat.le_trans h.2 hg.iw⟩
 
 -- ==== S41J.lean
 

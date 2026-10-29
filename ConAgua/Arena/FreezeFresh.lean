@@ -356,7 +356,7 @@ theorem ModeOK.fresh (h : ModeOK (cutT m)) : ModeOK (freshMem m) :=
 
 theorem IWOK.fresh (h : L.Ind.IWOK (cutT m)) : L.Ind.IWOK (freshMem m) := by
   obtain ⟨h1, h2, h3, h4, h5⟩ := h
-  simp only [L.Ind.IWOK, L.Ind.iwTop, L.Ind.erTop, fresh_ctl, fresh_size] at *
+  simp only [L.Ind.IWOK_iff, L.Ind.iwTop, L.Ind.erTop, fresh_ctl, fresh_size] at *
   exact ⟨h1, h2, h3, h4, h5⟩
 
 section loop
@@ -438,7 +438,7 @@ theorem PhaseBStart.zeroed (hd : a.store.dropScratch = a.store) (hc : a.caches =
     (h : PhaseBStart pins dn ds fe pend (cutT m) a v) :
     PhaseBStart pins dn ds fe pend (freshMem m) { a with memos := Memos.empty } v :=
   have htop := top_tier0_of h.loop.check h.twin.off
-  have hk := envKeysIn_of h.loop.check.arena.1 h.twin
+  have hk := envKeysIn_of h.loop.check.arena.base h.twin
   ⟨h.loop.fresh hd hc htop hk, h.mem.fresh, CoreMemos.fresh h.core, h.twin.memos _, CrOK.fresh h.cr⟩
 
 /-- **What phase A leaves for phase B holds at a thread's fresh worker memory and the twin's

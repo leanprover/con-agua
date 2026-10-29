@@ -26,14 +26,14 @@ theorem partsPSl_cons {α : Type} {f : Mem → Nat → Option α} {xs : List α}
       DecB (fun m => f m p) m x ∧ PSlR f xs' (o + 1) (l - 1) m := by
   obtain ⟨L, hL⟩ : ∃ L, l.toNat = L + 1 :=
     ⟨l.toNat - 1, by have : l.toNat ≠ 0 := fun e => hl (UInt64.toNat_inj.mp (by simpa using e)); omega⟩
-  have hd := h.1; simp only [DecB, hL] at hd
+  have hd := h.dec; simp only [DecB, hL] at hd
   obtain ⟨p, x, xs', rfl, hp, hx, hxs'⟩ := decPL_cons hd
   obtain ⟨hw, hpb, holt⟩ := partsIwRd hp rfl
   have hT : iwTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 200).toNat_lt
   have ho1 : (o + 1).toNat = o.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
   refine ⟨p, x, xs', rfl, hw, hpb, hx, ⟨?_, ?_⟩⟩
   · show decPL _ _ _ _ = _; rw [ho1, partsPred_of hL]; exact hxs'
-  · rw [ho1, partsPred_of hL]; have := h.2; omega
+  · rw [ho1, partsPred_of hL]; have := h.bound; omega
 
 /-- A constant decoded below the tops: its name word, in any memory grown into. -/
 theorem partsCVName {m m' : Mem} (hg : IWGrow m m') {q : Nat} {cv : IConstantVal}

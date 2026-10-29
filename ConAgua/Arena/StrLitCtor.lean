@@ -183,18 +183,18 @@ theorem pre_call (hS : CoreS dn m a vis fe M eb)
   have c1 := pinZero_call p hp hS h1
   refine coreRef_bind c1 fun M₁ hS₁ => ?_
   obtain ⟨hm1, -, hr1⟩ := callW_pinWord p hp.pinWord n m 53 r₁ m₁ h1
-  have c2 := ls1_call p hp hS₁ c1.2.2.2 (zero_den hS₁ (by rw [hr1, hm1])) h2
+  have c2 := ls1_call p hp hS₁ c1.resOk (zero_den hS₁ (by rw [hr1, hm1])) h2
   refine coreRef_bind c2 fun M₂ hS₂ => ?_
   have c3 := pinAt_call p hp hS₂ (k := 10) rfl h3
   refine coreRef_bind c3 fun M₃ hS₃ => ?_
-  have c4 := constE_call p hp hS₃ c3.2.2.2 h4
+  have c4 := constE_call p hp hS₃ c3.resOk h4
   refine coreRef_bind c4 fun M₄ hS₄ => ?_
   have c5 := pinAt_call p hp hS₄ (k := 8) rfl h5
   refine coreRef_bind c5 fun M₅ hS₅ => ?_
-  have hd2 := ls1_den p hp hS₁ c1.2.2.2 h2 (zero_den hS₁ (by rw [hr1, hm1]))
+  have hd2 := ls1_den p hp hS₁ c1.resOk h2 (zero_den hS₁ (by rw [hr1, hm1]))
   have hd5 := lss_den (op := pinListNil) (lss_den (lss_den (op := pinChar) hd2 (keeps_cpl_pinAt _)
     c3 rfl) (keeps_cpl_constE _) c4 rfl) (keeps_cpl_pinAt _) c5 rfl
-  have c6 := const_call p hp hS₅ c5.2.2.2 c2.2.2.2 h6 hd5
+  have c6 := const_call p hp hS₅ c5.resOk c2.resOk h6 hd5
   refine coreRef_bind c6 fun M₆ hS₆ => ?_
   have c7 := app_call p hp hS₆ h7
   refine coreRef_bind c7 fun M₇ hS₇ => ?_
@@ -203,15 +203,15 @@ theorem pre_call (hS : CoreS dn m a vis fe M eb)
   have t8 := lss_den (op := pinListCons) (lss_den (op := internE (.app (decH r₆) (decH r₄)))
     (lss_den (op := internE (.const (decI (r₅.headD 0)) (decLs r₂))) hd5 (keeps_cpl_internConst _ _)
       c6 rfl) (keeps_cpl_internApp _ _) c7 rfl) (keeps_cpl_pinAt _) c8 rfl
-  have c9 := const_call p hp hS₈ c8.2.2.2 c2.2.2.2 h9 t8
+  have c9 := const_call p hp hS₈ c8.resOk c2.resOk h9 t8
   refine coreRef_bind c9 fun M₉ hS₉ => ?_
   have c10 := app_call p hp hS₉ h10
   refine coreRef_bind c10 fun M₁₀ hS₁₀ => ?_
   have c11 := pinAt_call p hp hS₁₀ (k := 12) rfl h11
   refine coreRef_bind c11 fun M₁₁ hS₁₁ => ?_
-  have c12 := constE_call p hp hS₁₁ c11.2.2.2 h12
+  have c12 := constE_call p hp hS₁₁ c11.resOk h12
   refine coreRef_bind c12 fun M₁₂ hS₁₂ => ?_
-  exact coreRef_ret hS₁₂ rfl ⟨c10.2.2.2, c12.2.2.2, c7.2.2.2⟩
+  exact coreRef_ret hS₁₂ rfl ⟨c10.resOk, c12.resOk, c7.resOk⟩
 
 end pre
 
@@ -313,7 +313,7 @@ theorem spine_call (cons ofNat nilE : Word) (hn : HW nilE) :
     simp only [spineW, hnle, ↓reduceIte] at hW
     wstep hW, h1 : callW p n "str_utf8_char" [k, e] m => cl, m₁
     obtain ⟨hm1, hc0, hc1⟩ := strUtf8Char_callW p hp.strUtf8Char n m k e c cs
-      (by rw [sliceL_tpool m _ _ (by have := pcap_ge m; have := pcap_eq m (by have := hS.arena.1.lit.1.cap; omega); omega)]; exact hs) hke
+      (by rw [sliceL_tpool m _ _ (by have := pcap_ge m; have := pcap_eq m (by have := hS.arena.base.lit.1.cap; omega); omega)]; exact hs) hke
       (by rw [tpool_size]; exact Nat.le_of_lt e.toNat_lt) he4 cl m₁ h1
     rw [hm1] at hW
     have hne : ¬ cl.tail.headD 0 = 0 := by
@@ -349,8 +349,8 @@ theorem spine_call (cons ofNat nilE : Word) (hn : HW nilE) :
     have c5 := app_call p hp hS₄ h5
     refine coreRef_bind c5 fun M₅ hS₅ => ?_
     have c6 := app_call p hp hS₅ h6
-    refine ⟨c6.1, c6.2.1, ?_, by unfold ResH; rw [← hr]; exact c6.2.2.2⟩
-    have := c6.2.2.1
+    refine ⟨c6.run, c6.after, ?_, by unfold ResH; rw [← hr]; exact c6.resOk⟩
+    have := c6.res
     simp only [decH] at this ⊢
     rw [this, ← hr]
 
@@ -437,12 +437,12 @@ theorem ctor_call (hS : CoreS dn m a vis fe M eb) {h : Word} (hh : HW h) {s : St
   refine coreRef_bind c1 fun M₁ hS₁ => ?_
   -- the literal is still there, and its record gives the bytes
   have hv₁ : (AM.st ctorPreT a).store.view (decE h) = some (.lit (.strVal s)) :=
-    vmono_ctorPreT.run (AM.run_of_ok _ _ c1.1) hv
+    vmono_ctorPreT.run (AM.run_of_ok _ _ c1.run) hv
   have g8' : h >>> 28 = 8 := by simpa using g8
   have hvOK : viewOK m₁ h LIT := ⟨gs, by simpa using gb⟩
-  obtain ⟨htop, -, hstr⟩ := lit_rec m₁ _ hS₁.arena.1 h hh hvOK g8' _ hv₁
+  obtain ⟨htop, -, hstr⟩ := lit_rec m₁ _ hS₁.arena.base h hh hvOK g8' _ hv₁
   obtain ⟨-, hsl⟩ := hstr s rfl
-  have hpool := hS₁.arena.1.lit.1
+  have hpool := hS₁.arena.base.lit.1
   have hsize := hpool.cap
   have htop' := hpool.top
   have hoc : (tfld m₁ LIT (tierW h) (idxW h) 1 +
@@ -451,17 +451,17 @@ theorem ctor_call (hS : CoreS dn m a vis fe M eb) {h : Word} (hh : HW h) {s : St
       (tfld m₁ LIT (tierW h) (idxW h) 2).toNat := by
     rw [UInt64.toNat_add]; omega
   unfold ctorRestT
-  have c2 := spine_call p hp (t.headD 0) (t.tail.headD 0) (t.tail.tail.headD 0) c1.2.2.2.2.2
+  have c2 := spine_call p hp (t.headD 0) (t.tail.headD 0) (t.tail.tail.headD 0) c1.resOk.2.2
     s.toList n m₁ m₂ _ M₁ _ _ sp hS₁ (by rw [hoc, Nat.add_sub_cancel_left, hsl, strWords_eq])
     (by rw [hoc]; omega) (by rw [hoc]; omega) (by rw [hoc]; omega) h2
   refine coreRef_bind c2 fun M₂ hS₂ => ?_
   have c3 := pinAt_call p hp hS₂ (k := 6) rfl h3
   refine coreRef_bind c3 fun M₃ hS₃ => ?_
-  have c4 := constE_call p hp hS₃ c3.2.2.2 h4
+  have c4 := constE_call p hp hS₃ c3.resOk h4
   refine coreRef_bind c4 fun M₄ hS₄ => ?_
   have c5 := app_call p hp hS₄ h5
-  refine ⟨c5.1, c5.2.1, ?_, by unfold ResH; rw [← hr]; exact c5.2.2.2⟩
-  have := c5.2.2.1
+  refine ⟨c5.run, c5.after, ?_, by unfold ResH; rw [← hr]; exact c5.resOk⟩
+  have := c5.res
   simp only [decH] at this ⊢
   rw [this, ← hr]
 

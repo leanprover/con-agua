@@ -60,7 +60,7 @@ theorem natOpCod_ref (hN : NatTyProg p) (c e : Word) :
   rw [h2, bW_some] at hw
   obtain ⟨hm2, -, hr2⟩ := pinAt_call hN.lPinAt (j := 21) rfl h2
   rw [hm2] at hw
-  have hF := hS.1.pins.full h0
+  have hF := hS.check.pins.full h0
   have hp1 : H (r1.headD 0) := by rw [hr1]; exact hF.names_lt 19 (by decide)
   have hp2 : H (r2.headD 0) := by rw [hr2]; exact hF.names_lt 20 (by decide)
   have e1 : (pinAt 19).run a = .ok (decI (r1.headD 0), a) := by
@@ -106,7 +106,7 @@ theorem natOpCod_ref (hN : NatTyProg p) (c e : Word) :
       | some q5 =>
       obtain ⟨rf, m5⟩ := q5
       rw [h5, bW_some] at hw
-      obtain ⟨hm5, hfd⟩ := envFind_call hN.toMasterProg (r3.headD 0) hp3 hS4.1.env h5
+      obtain ⟨hm5, hfd⟩ := envFind_call hN.toMasterProg (r3.headD 0) hp3 hS4.check.env h5
       rw [hm5] at hw
       cases hf : fe.find? (decI (r3.headD 0)) with
       | none =>
@@ -139,8 +139,8 @@ theorem natOpCod_ref (hN : NatTyProg p) (c e : Word) :
         rw [h7, bW_some] at hw
         obtain ⟨hm7, h07, hr7⟩ := callW_pinWord' hN.lPinWord h7
         rw [hm7] at hw
-        have hF6 := hS6.1.pins.full h07
-        obtain ⟨wt, hiff, hrd, hlt, hty, -⟩ := cvWordsAt hS6.2.2.2.2.1 hcv
+        have hF6 := hS6.check.pins.full h07
+        obtain ⟨wt, hiff, hrd, hlt, hty, -⟩ := cvWordsAt hS6.iw.erSize hcv
         have hp54 : (pinW m6 54).toNat < 2 ^ 32 := hF6.lv_lt.2.2
         have hr7' : r7.headD 0 = pinW m6 54 := by rw [hr7]; rfl
         by_cases hl : rdW (m6.arr64 EREC) (r6.headD 0 + 2) = 0
@@ -245,7 +245,7 @@ theorem natOpTyPinned_ref (hN : NatTyProg p) (c ty : Word) :
   rw [h1, bW_some] at hw
   obtain ⟨hm1, h0, hr1⟩ := pinAt_call hN.lPinAt (j := 2) rfl h1
   rw [hm1] at hw
-  have hF := hS.1.pins.full h0
+  have hF := hS.check.pins.full h0
   have hp1 : H (r1.headD 0) := by rw [hr1]; exact hF.names_lt 1 (by decide)
   have e1 : (pinAt 1).run a = .ok (decI (r1.headD 0), a) := by
     have := pinAt_run hF 1 (by decide); rw [hr1]; exact this
@@ -263,7 +263,7 @@ theorem natOpTyPinned_ref (hN : NatTyProg p) (c ty : Word) :
   rw [h3, bW_some] at hw
   obtain ⟨hm3, h02, hr3⟩ := pinAt_call hN.lPinAt (j := 15) rfl h3
   rw [hm3] at hw
-  have hF2 := hS2.1.pins.full h02
+  have hF2 := hS2.check.pins.full h02
   have hp3 : H (pr.headD 0) := by rw [hr3]; exact hF2.names_lt 14 (by decide)
   have e3 : (pinAt 14).run a2 = .ok (decI (pr.headD 0), a2) := by
     have := pinAt_run hF2 14 (by decide); rw [hr3]; exact this
@@ -433,7 +433,7 @@ theorem natOpStoredOk_ref (hN : NatTyProg p) (w : Word) :
   | some q1 =>
   obtain ⟨rf, m1⟩ := q1
   rw [h1, bW_some] at hW
-  obtain ⟨hm1, hfd⟩ := envFind_call hN.toMasterProg w hw hS.1.env h1
+  obtain ⟨hm1, hfd⟩ := envFind_call hN.toMasterProg w hw hS.check.env h1
   rw [hm1] at hW
   cases hf : fe.find? (decI w) with
   | none =>
@@ -447,7 +447,7 @@ theorem natOpStoredOk_ref (hN : NatTyProg p) (w : Word) :
     rw [hf] at hfd
     obtain ⟨hf1, hci⟩ := hfd
     rw [ite_eq_right (by rw [hf1]; decide)] at hW
-    have hsz := hS.2.2.2.2.1
+    have hsz := hS.iw.erSize
     rcases defnMono_words hsz hci with ⟨hne, hdm⟩ | ⟨hk1, hiff⟩
     · rw [ite_eq_left hne] at hW
       simp only [Option.some.injEq, Prod.mk.injEq] at hW
@@ -534,7 +534,7 @@ theorem okAll_ref (hN : NatTyProg p) (o l : Word) (ns : List NIdx) :
     cases k with
     | zero => rw [callW_zero] at hc; cases hc
     | succ k =>
-    obtain ⟨hl0, hwlt, hn, hrest⟩ := decHL_cons_iw hS.2.2.2.1 hd
+    obtain ⟨hl0, hwlt, hn, hrest⟩ := decHL_cons_iw hS.iw.iwSize hd
     have hw := callW_model (M := fun mm => okAllW p (k + 1) mm vis o l) (okAll_specW p hN.lNatOpStoredOkAll (k + 1) · vis o l) hc
     rw [okAllW.eq_2] at hw
     rw [ite_eq_right hl0] at hw
@@ -558,11 +558,11 @@ theorem okAll_ref (hN : NatTyProg p) (o l : Word) (ns : List NIdx) :
       simp only [Option.some.injEq, Prod.mk.injEq] at hw
       obtain ⟨rfl, rfl⟩ := hw
       have hrest1 : decHL m1 (o + 1).toNat (l - 1).toNat = some ns := by
-        obtain ⟨ho1, hl1⟩ := slice_succ hl0 (decHL_bnd m o l hd hS.2.2.2.1)
+        obtain ⟨ho1, hl1⟩ := slice_succ hl0 (decHL_bnd m o l hd hS.iw.iwSize)
         rw [decHL_grow hg1 (by rw [ho1]; omega)]; exact hrest
       have hb1 : (o + 1).toNat + (l - 1).toNat ≤ iwTop m1 := by
-        obtain ⟨ho1, hl1⟩ := slice_succ hl0 (decHL_bnd m o l hd hS.2.2.2.1)
-        have := hg1.1; rw [ho1]; omega
+        obtain ⟨ho1, hl1⟩ := slice_succ hl0 (decHL_bnd m o l hd hS.iw.iwSize)
+        have := hg1.iw; rw [ho1]; omega
       obtain ⟨x, a2, hrun2, hK⟩ := ih (o + 1) (l - 1) k m1 a1 r2 m2 hS1 hrest1 hb1 h2
       refine ⟨x, a2, ?_, hK.1, hg1.trans hK.2.1, by simpa [decW0B] using hK.2.2⟩
       simp only [natOpStoredOkAll, StateT.run_bind, hrun1, exc_ok_bind', hx, ite_true]

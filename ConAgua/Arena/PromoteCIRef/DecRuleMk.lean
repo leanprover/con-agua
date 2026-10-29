@@ -67,30 +67,30 @@ theorem decRule_mk {a : Array Word} {q : Nat} {c : NIdx} {nf cpar : Nat} {fire :
 /-! ## Slots -/
 
 /-- **The pool grew and only the words `[lo, hi)` below the old top changed.** -/
-def SlotGrow (m m' : Mem) (lo hi : Nat) : Prop :=
-  erecTop m ≤ erecTop m' ∧
-    (∀ i, i < erecTop m → (i < lo ∨ hi ≤ i) → (m'.arr64 EREC)[i]? = (m.arr64 EREC)[i]?) ∧
-    (m'.arr64 EREC).size = (m.arr64 EREC).size
+structure SlotGrow (m m' : Mem) (lo hi : Nat) : Prop where
+  top : erecTop m ≤ erecTop m'
+  get : ∀ i, i < erecTop m → (i < lo ∨ hi ≤ i) → (m'.arr64 EREC)[i]? = (m.arr64 EREC)[i]?
+  size : (m'.arr64 EREC).size = (m.arr64 EREC).size
 
 theorem SlotGrow.of_grow {m m' : Mem} (h : ErecGrow m m') (lo hi : Nat) : SlotGrow m m' lo hi :=
-  ⟨h.1, fun i hi _ => h.2.1 i hi, h.2.2⟩
+  ⟨h.top, fun i hi _ => h.get i hi, h.size⟩
 
 /-- A grow whose slot lies above the old top is a plain growth. -/
 theorem SlotGrow.toGrow {m m' : Mem} {lo hi : Nat} (h : SlotGrow m m' lo hi)
     (hlo : erecTop m ≤ lo) : ErecGrow m m' :=
-  ⟨h.1, fun i hi => h.2.1 i hi (Or.inl (by omega)), h.2.2⟩
+  ⟨h.top, fun i hi => h.get i hi (Or.inl (by omega)), h.size⟩
 
 /-- Two slot growths of nested slots compose: the second slot lies inside the first,
 or the second growth is a plain one. -/
 theorem SlotGrow.trans {m₁ m₂ m₃ : Mem} {lo hi lo' hi' : Nat} (h₁ : SlotGrow m₁ m₂ lo hi)
     (h₂ : SlotGrow m₂ m₃ lo' hi') (hl : lo ≤ lo') (hh : hi' ≤ hi) : SlotGrow m₁ m₃ lo hi := by
-  refine ⟨Nat.le_trans h₁.1 h₂.1, fun i hi1 hi2 => ?_, h₂.2.2.trans h₁.2.2⟩
-  rw [h₂.2.1 i (by have := h₁.1; omega) (by omega), h₁.2.1 i hi1 hi2]
+  refine ⟨Nat.le_trans h₁.top h₂.top, fun i hi1 hi2 => ?_, h₂.size.trans h₁.size⟩
+  rw [h₂.get i (by have := h₁.top; omega) (by omega), h₁.get i hi1 hi2]
 
 theorem arenaD_erecFrame {m m' : Mem} {a : AState} {pm : PMemo} (hD : ArenaD m a) (hP : PMemoR m pm)
     (hf : MemFrame [EREC] [] m m') : ArenaD m' a ∧ PMemoR m' pm :=
-  ⟨⟨ArenaR.frame_ext _ _ (by simp [EREC]) (by simp) m _ hf a hD.1,
-    DerR.frameM _ _ m _ hf (by simp [EREC]) a hD.2⟩,
+  ⟨⟨ArenaR.frame_ext _ _ (by simp [EREC]) (by simp) m _ hf a hD.base,
+    DerR.frameM _ _ m _ hf (by simp [EREC]) a hD.der⟩,
     hP.frame (by simp [EREC]) (by simp) hf⟩
 
 theorem hslice?_pre_le {m : Mem} {D o l : Nat} {k : IdxKind} {xs : List (Idx k)}

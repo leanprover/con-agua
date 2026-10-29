@@ -34,9 +34,9 @@ theorem CssAt.tail {m : Mem} {off : Nat} {x : List (IConstantVal × Nat)} {xs : 
 theorem CssAt.grow {m m' : Mem} {off : Nat} {css : List (List (IConstantVal × Nat))} (h : CssAt m off css)
     (hg : IWGrow m m') : CssAt m' off css := fun i hi => by
   obtain ⟨hdr, o, l, h1, h2, h3, h4, h5, h6, h7, h8⟩ := h i hi
-  refine ⟨hdr, o, l, by rw [hg.2.2.1 _ h4]; exact h1, by rw [hg.2.2.1 _ (by omega)]; exact h2,
-    by rw [hg.2.2.1 _ h5]; exact h3, by have := hg.1; omega, by have := hg.1; omega, h6,
-    by have := hg.1; omega, h8.grow (by omega) hg⟩
+  refine ⟨hdr, o, l, by rw [hg.iwGet _ h4]; exact h1, by rw [hg.iwGet _ (by omega)]; exact h2,
+    by rw [hg.iwGet _ h5]; exact h3, by have := hg.iw; omega, by have := hg.iw; omega, h6,
+    by have := hg.iw; omega, h8.grow (by omega) hg⟩
 
 end L.Ind
 

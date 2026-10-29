@@ -63,7 +63,7 @@ theorem naW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis C : Word) 
     (h : naW n m vis C = some (r, m')) (hS : StageR dn vis fe m a) :
     ∃ x a', (ConRon.Arena.nestArity fe (decI C)).run a = .ok (x, a') ∧ StageR dn vis fe m' a' ∧
       IWGrow m m' ∧ (r.headD 0).toNat = x := by
-  have hE := hS.1.env
+  have hE := hS.check.env
   unfold naW at h
   rcases hef : envFindW m C vis with _ | ⟨r1, m1⟩ <;> rw [hef] at h; · simp [naK1] at h
   have hm1 := envFindW_mem hef
@@ -93,7 +93,7 @@ theorem naW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis C : Word) 
   have hk3 : nat? (erecP m) ciq.toNat = some 3 := by
     have : (erecP m)[ciq.toNat]? = (m.arr64 EREC)[ciq.toNat]? := erecP_getE (by omega)
     simp only [nat?, this]
-    have hb : ciq.toNat < (m.arr64 EREC).size := by have := hS.2.2.1; omega
+    have hb : ciq.toNat < (m.arr64 EREC).size := by have := hS.iw.er; omega
     have : rdW (m.arr64 EREC) ciq = 3 := by simpa using h3
     simp [rdW, hb] at this ⊢; rw [this]; rfl
   obtain ⟨cv, caps, rfl, hcaps⟩ := decCI_kind3 hci hk3
@@ -107,7 +107,7 @@ theorem naW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis C : Word) 
     cases h2; exact h1
   obtain ⟨w, hw, hwH, hwd⟩ := hd?_some (decCV_type hcv)
   have e4 : (ciq + 4).toNat = ciq.toNat + 1 + 3 := by
-    rw [word_add_toNat (by have := hS.2.2.1; have := hS.2.2.2.2.1; simp; omega)]; rfl
+    rw [word_add_toNat (by have := hS.iw.er; have := hS.iw.erSize; simp; omega)]; rfl
   have hrw : rdW (m.arr64 EREC) (ciq + 4) = w := by simp [rdW, e4, erecP_get hw]
   rw [hrw] at h
   rcases hpb : piBW n m CWF w with _ | ⟨rs, m2⟩ <;> rw [hpb] at h; · simp [naK2] at h
@@ -218,9 +218,9 @@ theorem dcGoW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis hi : Wor
     simp only [decHL, hl', hslice?_succ, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def, Option.some.injEq] at hds'
     obtain ⟨x, hx, xs, hxs, rfl⟩ := hds'
     obtain ⟨hxH, hxd⟩ := rd_iwH0E (m := m) (o := off) (k := IdxKind.expr) (by simpa [iwH, iwA] using hx)
-    have hsz := hS.2.2.2.1
+    have hsz := hS.iw.iwSize
     have hoff1 : (off + 1).toNat = off.toNat + 1 :=
-      word_add_toNat (show off.toNat + 1 < 2 ^ 64 by have := hin 0 (by omega); have := hS.2.1; omega)
+      word_add_toNat (show off.toNat + 1 < 2 ^ 64 by have := hin 0 (by omega); have := hS.iw.iw; omega)
     have hl1 : (l - 1).toNat = l' := by
       rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simp; omega))]; simp; omega
     rcases hst : fvbF m [CWF, rdW (m.arr64 IW) off] with _ | ⟨r1, m1⟩ <;> rw [hst] at h; · simp [dcK] at h
@@ -243,7 +243,7 @@ theorem dcGoW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis hi : Wor
       obtain ⟨b, a', hrun, hS', hg', hr⟩ := ih m1 m' a1 (off + 1) (l - 1) xs r h hS1
         (by rw [hoff1, hl1, ← hxs, decHL]; exact decHL_agree hRd (fun j hj => by
               have := hin (j + 1) (by omega); simp only [decHL] at *; omega))
-        (fun j hj => by rw [hoff1, hl1] at *; have := hin (j + 1) (by omega); have := hg1.1; omega)
+        (fun j hj => by rw [hoff1, hl1] at *; have := hin (j + 1) (by omega); have := hg1.iw; omega)
       refine ⟨b, a', ?_, hS', hg1.trans hg', hr⟩
       simp only [dsF, StateT.run_bind, hrun1, except_ok_bind, hle, decide_true]
       exact hrun
@@ -269,7 +269,7 @@ theorem dcWf_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word) (
   cases n with
   | zero => simp [dcWf] at h
   | succ n =>
-    have hsz : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
+    have hsz : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.iw hS.iw.iwSize
     exact dcGoW_ok dn fe vis _ _ (by simpa using nhiW_toNat (nf := 0) hc hin hsz (by simpa using hhi)) n
       m m' a off l ds r h hS hds hdi
 
@@ -415,7 +415,7 @@ theorem pdoW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis no nl lo 
       rw [hsucc, ConRon.Arena.piDomsOcc.eq_2]
       simp [htag]; rfl
     have hg6 : e >>> 28 = 6 := by simpa using h6
-    have hR := hS.1.arena.1
+    have hR := hS.check.arena.base
     by_cases hr : eViewW m e = []
     · rw [pdoW_empty (h := h0) (h6 := h6) (hv := hr)] at h; simp at h
     rw [pdoW_pi (h := h0) (h6 := h6) (hv := hr)] at h
@@ -429,7 +429,7 @@ theorem pdoW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis no nl lo 
     have hnb' : no.toNat + nl.toNat < 2 ^ 64 := by
       rcases Nat.eq_zero_or_pos nl.toNat with hz | hz
       · rw [hz]; simpa using no.toNat_lt
-      · have := hnb (nl.toNat - 1) (by omega); have := hS.2.1; have := hS.2.2.2.1; omega
+      · have := hnb (nl.toNat - 1) (by omega); have := hS.iw.iw; have := hS.iw.iwSize; omega
     obtain ⟨c, hrun1, hc, hM1, hS1, hg1, hf1⟩ := noConstWf_ok k dn fe vis m m1 a no nl lo hi d r1 names mp hnc
       hS hty hn hnb' hM
     have hpre : (ConRon.Arena.piDomsOcc names lo.toNat hi.toNat n.toNat (decE e)).run a =
@@ -455,7 +455,7 @@ theorem pdoW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis no nl lo 
         UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simp; omega))
       obtain ⟨b', a', mp', hrun, hS', hg', hr', hM', hf'⟩ := ih m1 m' a (n - 1) b r ∅ h hS1 hb
         (by rw [decHL_agree (RdS.of_grow hg1) hnb]; exact hn)
-        (fun j hj => Nat.lt_of_lt_of_le (hnb j hj) hg1.1) hM1
+        (fun j hj => Nat.lt_of_lt_of_le (hnb j hj) hg1.iw) hM1
       refine ⟨b', a', mp', ?_, hS', hg1.trans hg', hr', hM', hf1.trans hf'⟩
       rw [hpre]; simp only [StateT.run_bind, hrun1, except_ok_bind]
       rw [← hn1]; exact hrun
@@ -503,7 +503,7 @@ theorem nt_spec' (p : Prog) (hl : NtLook p) (k : Nat) (s₀ : St) (vis C : Word)
 theorem CNOk.grow {m m' : Mem} {p : Nat} {x : IConstantVal × Nat} (h : CNOk m p x (· < iwTop m))
     (hg : IWGrow m m') : CNOk m' p x (· < iwTop m') :=
   (h.agree (RdS.of_grow hg) (GrowX.of_grow (q := 0) (n := 0) hg).erecP).mono
-    fun _ hx => Nat.lt_of_lt_of_le hx hg.1
+    fun _ hx => Nat.lt_of_lt_of_le hx hg.iw
 
 end L.Ind
 

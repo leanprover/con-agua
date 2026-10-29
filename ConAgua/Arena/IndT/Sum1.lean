@@ -128,7 +128,7 @@ theorem wt_ref (k : Nat) (hk : k ≤ 2 ^ 62) :
   subst hm2
   generalize hvv : eViewW m2 w = v at hr2
   subst hr2
-  obtain ⟨vv, hview, hVR⟩ := eViewW_ok m2 a1 hS1.1.arena.1 w (hvv ▸ hne2)
+  obtain ⟨vv, hview, hVR⟩ := eViewW_ok m2 a1 hS1.check.arena.base w (hvv ▸ hne2)
   rw [hvv] at hVR
   have hrv : (view (decI w)).run a1 = .ok (vv, a1) := by
     rw [← decE_eq]; exact view_run _ _ _ hview

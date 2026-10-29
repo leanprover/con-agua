@@ -215,8 +215,8 @@ theorem installW_twin {b : ByteArray} {n : Nat} {m m' : Mem} {a : AState} {st : 
     rw [run_bind _ _ a _ rT', run_bind _ _ a _ rC', run_bind _ _ a _ rR']; rfl
   · have hf : MemFrame [DLP, DECL] [] m m' :=
       (hfr4.mono (by simp) (by simp)).trans (G1.mono (by simp) (by simp))
-    exact ⟨ArenaR.frame_ext _ _ (by simp [DLP, DECL]) (by simp) _ _ hf _ hA.1,
-      DerR.frameT hf (by simp [DLP, DECL]) hA.2⟩
+    exact ⟨ArenaR.frame_ext _ _ (by simp [DLP, DECL]) (by simp) _ _ hf _ hA.base,
+      DerR.frameT hf (by simp [DLP, DECL]) hA.der⟩
   · -- `StateDR`: the record pushed
     have hf : MemFrame [DLP, DECL] [] m m' :=
       (hfr4.mono (by simp) (by simp)).trans (G1.mono (by simp) (by simp))

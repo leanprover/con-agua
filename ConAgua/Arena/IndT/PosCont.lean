@@ -36,7 +36,7 @@ theorem contRef_step (L : NbLook p) (hq : KnotStageProg p) (hIlpf : IlpfF p) (hL
   rw [ncE.arm1]
   have R := L.ct.cr.rx
   have hS := hC.stage
-  have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
+  have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.iw hS.iw.iwSize
   obtain ⟨-, -, hfind, -, -, -⟩ := ConRon.Bridge.Inductives.dCtx_fields hctx
   have hhpP : c.hiAt prog.length = ctxP.hiAt progP.length := by
     rw [ConRon.Bridge.Inductives.hiAt_eq hctx, ConRon.Bridge.Inductives.dProg_length hprog]
@@ -94,14 +94,14 @@ theorem contRef_step (L : NbLook p) (hq : KnotStageProg p) (hIlpf : IlpfF p) (hL
   refine RefE.ite_neg (by omega) ?_
   generalize hPw : r1.tail.headD 0 = nPcW at hnc1 ⊢
   subst hnc1
-  have htop1 : iwTop m1 < 2 ^ 64 := Nat.lt_of_le_of_lt hS1.2.1 hS1.2.2.2.1
+  have htop1 : iwTop m1 < 2 ^ 64 := Nat.lt_of_le_of_lt hS1.iw.iw hS1.iw.iwSize
   have hW1 := hW.grow hg1
   have hhp : (nhiW m1 ctx pl).toNat = c.hiAt prog.length := hW1.hi htop1
   have hargs1 : decHL m1 aO.toNat aL.toNat = some args := by
     rw [decHL_agree (RdS.of_grow hg1) (fun j hj => by omega)]; exact hargs
   obtain ⟨hds, hidx⟩ := pos2_decHL_split hargs1 (show nPcW.toNat ≤ aL.toNat by omega)
   have hPle : nPcW.toNat ≤ aL.toNat := by omega
-  have hab1 : aO.toNat + aL.toNat ≤ iwTop m1 := by have := hg1.1; omega
+  have hab1 : aO.toNat + aL.toNat ≤ iwTop m1 := by have := hg1.iw; omega
   have hiO : (aO + nPcW).toNat = aO.toNat + nPcW.toNat := word_add_toNat (by omega)
   have hiL : (aL - nPcW).toNat = aL.toNat - nPcW.toNat := by
     rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by omega))]
@@ -158,11 +158,11 @@ theorem contRef_step (L : NbLook p) (hq : KnotStageProg p) (hIlpf : IlpfF p) (hL
   obtain ⟨hS3, hg3, hkq, ht3, hget3⟩ := posRecW_stage hk4 hS2 (by simp)
   simp only [List.length_cons, List.length_nil] at ht3
   have hg13 := hg1.trans (hg2.trans hg3)
-  have hab3 : aO.toNat + aL.toNat ≤ iwTop m3 := by have := (hg2.trans hg3).1; omega
-  have htop3 : iwTop m3 < 2 ^ 64 := Nat.lt_of_le_of_lt hS3.2.1 hS3.2.2.2.1
+  have hab3 : aO.toNat + aL.toNat ≤ iwTop m3 := by have := (hg2.trans hg3).iw; omega
+  have htop3 : iwTop m3 < 2 ^ 64 := Nat.lt_of_le_of_lt hS3.iw.iw hS3.iw.iwSize
   have hdsB : DecB (fun m => (decHL m aO.toNat nPcW.toNat : Option (List EIdx))) m3 (args.take nPcW.toNat) :=
     decHL_decB (by rw [decHL_agree (RdS.of_grow (hg2.trans hg3)) (fun j hj => by omega)]; exact hds)
-      (by have := (hg2.trans hg3).1; omega)
+      (by have := (hg2.trans hg3).iw; omega)
   have hK : DecB (fun m => decNK m key.toNat) m3 ⟨decI nn, decI us, args.take nPcW.toNat⟩ :=
     pos2_key_rec hnn hus (by omega) hget3 hdsB
   obtain ⟨hKd, hKin⟩ := pos2_nk_in hK
@@ -170,7 +170,7 @@ theorem contRef_step (L : NbLook p) (hq : KnotStageProg p) (hIlpf : IlpfF p) (hL
     unfold NKSl
     rw [pos2_rd_get (by simpa using hget3 2 (by simp)) (by simp; omega),
       pos2_rd_get (by simpa using hget3 3 (by simp)) (by simp; omega)]
-    have := (hg2.trans hg3).1; omega
+    have := (hg2.trans hg3).iw; omega
   have hA3 : AbsOK m3 := posRecW_afr hk4 hA2
   have hC3 : StageC dn vis fe env m3 a2 := hC.of_pstep hS3 hA3 p12
   have hx02 := p12.ext
@@ -216,7 +216,7 @@ theorem contRef_step (L : NbLook p) (hq : KnotStageProg p) (hIlpf : IlpfF p) (hL
     (r4.tail.headD 0) ns
   have hR6 := ih.key m4 a4 ctx fu po pl kb nn us aO nPcW nPcW (r4.tail.headD 0) ns c prog (args.take nPcW.toNat) NS
     ctxP progP nP usP (argsP.take nPcW.toNat) niP.2 nsP
-    hC4 (hW.grow hg14) hnn hus (hdsB.grow (OMono.decHL _ _) hg4) (by have := hg14.1; omega) hctyH
+    hC4 (hW.grow hg14) hnn hus (hdsB.grow (OMono.decHL _ _) hg4) (by have := hg14.iw; omega) hctyH
     (hns.grow hg14 htop) hP4 hA4 hc (dCtx_ext _ hx04 _ _ hctx) (dProg_ext hx04 _ _ hprog)
     (ConRon.Bridge.denoteN_ext hnP hx04) (ConRon.Bridge.denoteLs_ext husP hx04)
     (ConRon.Bridge.Inductives.denoteEList_take (ConRon.Bridge.denoteEList_ext hx04 _ _ hargsP) nPcW.toNat)

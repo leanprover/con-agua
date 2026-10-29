@@ -112,7 +112,7 @@ theorem ckc2W_ok (n : Nat) :
           rw [ckcK3_some] at h
           obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
           obtain ⟨b3, a3, hrun3, hS3, hg3, hd3, hd31⟩ := ih m2 m3 a2 nP (o + 1) (l - 1) xs' r4 h4 hS2
-            (by rw [decHL_grow hg12 (by omega)]; exact hd') (by omega) (by have := hg12.1; omega)
+            (by rw [decHL_grow hg12 (by omega)]; exact hd') (by omega) (by have := hg12.iw; omega)
           refine ⟨b3, a3, ?_, hS3, hg12.trans hg3, by simpa [decW0B] using And.intro hd3 hd31⟩
           simp only [List.allM_cons, StateT.run_bind]
           rw [hrunT]

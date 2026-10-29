@@ -233,8 +233,8 @@ theorem viewLsW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv
     (hS : StageR dn vis fe m a) (hu : us.toNat < 2 ^ 32) (hP : PoolSmall m) :
     ∃ ids : List LIdx, (viewLs (decI us)).run a = .ok (ids, a) ∧ StageR dn vis fe m' a ∧
       IWGrow m m' ∧ decRL (fun m => decHL m) 0 m' r ids ∧ PoolSmall m' := by
-  obtain ⟨hI1, hE1, hsz, hEs, hc⟩ := hS.2
-  have hR := hS.1.arena.1
+  obtain ⟨hI1, hE1, hsz, hEs, hc⟩ := hS.iw
+  have hR := hS.check.arena.base
   unfold viewLsW at h
   have hne : ¬ lsNodeW m us = [] := fun hne => by rw [ite_eq_left hne] at h; simp at h
   rw [ite_eq_right hne] at h
@@ -284,7 +284,7 @@ theorem viewLsW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv
     exact hslice_sliceL (.inr (by rw [vpool_size]; omega)) hsl
   have hroom2 : iwTop m2 ≤ (m2.arr64 IW).size := by rw [htop', hS2]; omega
   have hSt : StageR dn vis fe m2 a := by
-    refine ⟨CheckR.frame_iw hfr hS.1, hroom2, ?_, ?_, ?_, ?_⟩
+    refine ⟨CheckR.frame_iw hfr hS.check, hroom2, ?_, ?_, ?_, ?_⟩
     · have h129 : rdW (m2.arr64 CTL) 129 = rdW (m.arr64 CTL) 129 := hfr.ctl 129 (by simp)
       have hE2 : m2.arr64 EREC = m.arr64 EREC := hfr.arr EREC (by decide) (by decide)
       simp only [erTop, h129, hE2]; exact hE1

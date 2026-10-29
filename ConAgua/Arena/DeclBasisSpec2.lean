@@ -88,7 +88,7 @@ theorem cbd_ref {p : Prog} (hB : BasisProg p) (hC : CanonProg p) (hR : L.Rom.Rom
     rcases h1 : pinAtW m 0 with _ | ⟨r1, m1⟩
     · rw [liftE_none, checkBasisDeclE.k_pin_at.none]; exact RefE.of_cls0 (by simp)
     rw [liftE_some, checkBasisDeclE.k_pin_at.arm1]
-    obtain ⟨hm1, hr1, hl1, hrun1⟩ := pinAtW_ok h1 hS.1.pins
+    obtain ⟨hm1, hr1, hl1, hrun1⟩ := pinAtW_ok h1 hS.check.pins
     subst hm1
     have hpe : pinEq.run a = .ok (decI (pinW m1 (1 + (0 : Word).toNat)), a) := by
       simpa [pinEq, PIN_EQ] using hrun1

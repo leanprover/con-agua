@@ -96,7 +96,7 @@ theorem blockTo_rel {m₀ : Mem} {a₀ : AState} {T : Nat} (dn : NIdx → Option
         hd0 h1
     have hlt := hI.iw_lt
     have hiw1 : iwTop m1 = iwTop m := hI1.top.trans hI.top.symm
-    have hszI : iwTop m ≤ (m.arr64 IW).size := hI.ok.1
+    have hszI : iwTop m ≤ (m.arr64 IW).size := hI.ok.iw
     have hI2 := hI1.setIW o (r1.headD 0) ho
     have hf2 := MemFrame.set64 m1 IW (by decide) o (r1.headD 0)
     have hM2 := hM1.frameG hf2 (by decide) (by simp)

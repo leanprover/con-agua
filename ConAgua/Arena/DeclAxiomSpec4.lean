@@ -85,7 +85,7 @@ theorem famW_ok {p : Prog} (h : StdProg p) {dn : NIdx → Option ConLeche.Name} 
   unfold famT
   -- the first clause
   rcases e1 : pinAtW m s1 with _ | ⟨r1, m1⟩ <;> simp only [e1, famW.k_pin_at, reduceCtorEq] at hW
-  obtain ⟨hm1, hr1, hl1, hrun1⟩ := pinAtW_ok e1 hS.1.pins
+  obtain ⟨hm1, hr1, hl1, hrun1⟩ := pinAtW_ok e1 hS.check.pins
   rw [hm1, hr1] at hW
   simp only [List.headD_cons] at hW
   simp only [StateT.run_bind, hrun1, exc_ok_bind']
@@ -102,7 +102,7 @@ theorem famW_ok {p : Prog} (h : StdProg p) {dn : NIdx → Option ConLeche.Name} 
   simp only [hb2, Bool.not_true, Bool.false_eq_true, ite_false]
   -- the second clause
   rcases e3 : pinAtW m2 s2 with _ | ⟨r3, m3⟩ <;> simp only [e3, famW.k_pin_at_2, reduceCtorEq] at hW
-  obtain ⟨hm3, hr3, hl3, hrun3⟩ := pinAtW_ok e3 hS2.1.pins
+  obtain ⟨hm3, hr3, hl3, hrun3⟩ := pinAtW_ok e3 hS2.check.pins
   rw [hm3, hr3] at hW
   simp only [List.headD_cons] at hW
   simp only [StateT.run_bind, hrun3, exc_ok_bind']
@@ -119,7 +119,7 @@ theorem famW_ok {p : Prog} (h : StdProg p) {dn : NIdx → Option ConLeche.Name} 
   simp only [hb4, Bool.not_true, Bool.false_eq_true, ite_false]
   -- the third clause
   rcases e5 : pinAtW m4 s3 with _ | ⟨r5, m5⟩ <;> simp only [e5, famW.k_pin_at_3, reduceCtorEq] at hW
-  obtain ⟨hm5, hr5, hl5, hrun5⟩ := pinAtW_ok e5 hS4.1.pins
+  obtain ⟨hm5, hr5, hl5, hrun5⟩ := pinAtW_ok e5 hS4.check.pins
   rw [hm5, hr5] at hW
   simp only [List.headD_cons] at hW
   simp only [StateT.run_bind, hrun5, exc_ok_bind']
@@ -141,7 +141,7 @@ theorem famW_ok {p : Prog} (h : StdProg p) {dn : NIdx → Option ConLeche.Name} 
   have hq7 : decCV (erA m7) q.toNat = some cv := ArrExt.decCV (IWGrow.erecExt hg) hq
   have hW' : mpW m7 q (r7.headD 0) = some (r, m') := by
     unfold mpW at hW ⊢; simpa [famW.k_matches_pin] using hW
-  obtain ⟨hm8, hrun8, hd8⟩ := mpW_ok (a := a7) hW' hS7.2.2.2.2.1 hq7
+  obtain ⟨hm8, hrun8, hd8⟩ := mpW_ok (a := a7) hW' hS7.iw.erSize hq7
     (DecB.get ⟨fun _ _ _ he h => he.2.decCV h⟩ hpin)
   subst hm8
   refine ⟨_, a7, ?_, hS7, hg, hd8⟩
@@ -189,7 +189,7 @@ theorem stdW_ok {p : Prog} (h : StdProg2 p) {dn : NIdx → Option ConLeche.Name}
   rw [stdW.arm1] at hW
   rw [stdAxiomOk_fam, hname]
   rcases e1 : pinAtW m 32 with _ | ⟨r1, m1⟩ <;> simp only [e1, stdW.k_pin_at, reduceCtorEq] at hW
-  obtain ⟨hm1, hr1, hl1, hrun1⟩ := pinAtW_ok e1 hS.1.pins
+  obtain ⟨hm1, hr1, hl1, hrun1⟩ := pinAtW_ok e1 hS.check.pins
   rw [hm1, ewn] at hW
   have ep : r1.headD 0 = pinW m (1 + (32 : Word).toNat) := by rw [hr1]; rfl
   have hbeq : ((decI wn : NIdx) == decI (pinW m (1 + (32 : Word).toNat))) =
@@ -201,7 +201,7 @@ theorem stdW_ok {p : Prog} (h : StdProg2 p) {dn : NIdx → Option ConLeche.Name}
     simp only [ep1, decide_true, ite_true]
     -- `propext`: the pinned `Eq`
     rcases e2 : pinAtW m 0 with _ | ⟨r2, m2⟩ <;> simp only [e2, stdW.k_pin_at_2, reduceCtorEq] at hW
-    obtain ⟨hm2, hr2, hl2, hrun2⟩ := pinAtW_ok e2 hS.1.pins
+    obtain ⟨hm2, hr2, hl2, hrun2⟩ := pinAtW_ok e2 hS.check.pins
     rw [hm2, hr2] at hW
     simp only [List.headD_cons] at hW
     simp only [StateT.run_bind, hrun2, exc_ok_bind']
@@ -239,7 +239,7 @@ theorem stdW_ok {p : Prog} (h : StdProg2 p) {dn : NIdx → Option ConLeche.Name}
     simp only [ep1, decide_false, Bool.false_eq_true, ite_false]
     -- `choice`
     rcases e2 : pinAtW m 33 with _ | ⟨r2, m2⟩ <;> simp only [e2, stdW.k_pin_at_3, reduceCtorEq] at hW
-    obtain ⟨hm2, hr2, hl2, hrun2⟩ := pinAtW_ok e2 hS.1.pins
+    obtain ⟨hm2, hr2, hl2, hrun2⟩ := pinAtW_ok e2 hS.check.pins
     rw [hm2] at hW
     have ec : r2.headD 0 = pinW m (1 + (33 : Word).toNat) := by rw [hr2]; rfl
     have hbeqc : ((decI wn : NIdx) == decI (pinW m (1 + (33 : Word).toNat))) =

@@ -218,8 +218,8 @@ theorem pFront_ok (dsAll : Array IDeclaration) (np nw ord mk : Word) :
     have hnp := hE.np
     have hrg1 := hE.rg1
     have hrg2 := hE.rg2
-    have hiw1 : iwTop m ≤ (m.arr64 IW).size := hE.iwok.1
-    have hiw3 : (m.arr64 IW).size < 2 ^ 64 := hE.iwok.2.2.1
+    have hiw1 : iwTop m ≤ (m.arr64 IW).size := hE.iwok.iw
+    have hiw3 : (m.arr64 IW).size < 2 ^ 64 := hE.iwok.iwSize
     by_cases hstop : np ≤ aw
     · rw [pFrontW.arm1 _ _ _ _ _ _ _ hstop] at h
       cases h

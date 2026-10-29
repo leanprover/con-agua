@@ -48,13 +48,13 @@ theorem nrcW_ok (k : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis
     (hnn : c.nP + c.names.length < 2 ^ 64) (hP : PosMR m) :
     ∃ x a', (ConRon.Arena.nestRootCanon c cvv).run a = .ok (x, a') ∧ StageR dn vis fe m' a' ∧
       IWGrow m m' ∧ decOE m' r x ∧ PosMR m' ∧ (PccAfr → AFr m m') := by
-  have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
+  have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.iw hS.iw.iwSize
   obtain ⟨-, -, hty⟩ := decCV_some hcv
   obtain ⟨wt, hwt, hwtH, hwtd⟩ := hd?_some hty
   have hcv3 : cv.toNat + 3 < erTop m := by
     have := (Array.getElem?_eq_some_iff.mp hwt).1; have := erecP_size_le m; omega
-  have hEb : erTop m ≤ (m.arr64 EREC).size := hS.2.2.1
-  have hEs : (m.arr64 EREC).size < 2 ^ 64 := hS.2.2.2.2.1
+  have hEb : erTop m ≤ (m.arr64 EREC).size := hS.iw.er
+  have hEs : (m.arr64 EREC).size < 2 ^ 64 := hS.iw.erSize
   unfold nrcW at h
   rcases hlp : cvLpsW (k + 2) m cv with _ | ⟨r1, m1⟩ <;> rw [hlp] at h; · simp [nrcK1] at h
   rw [nrcK1_some] at h
@@ -62,7 +62,7 @@ theorem nrcW_ok (k : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis
   -- the instantiation's arguments
   obtain ⟨cin1, cin1'⟩ := CtxIn.grow hin hg1
   rw [hc] at cin1
-  have htop1 : iwTop m1 < 2 ^ 64 := Nat.lt_of_le_of_lt hS1.2.1 hS1.2.2.2.1
+  have htop1 : iwTop m1 < 2 ^ 64 := Nat.lt_of_le_of_lt hS1.iw.iw hS1.iw.iwSize
   obtain ⟨-, -, -, -, -, hlvH, hlvd, -⟩ := ctx_fields cin1 cin1' htop1
   have e3 : (cv + 3).toNat = cv.toNat + 3 := word_add_toNat (by simp; omega)
   have hrd3 : rdW (m1.arr64 EREC) (cv + 3) = wt := by
@@ -79,7 +79,7 @@ theorem nrcW_ok (k : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis
   obtain ⟨cin2, cin2'⟩ := CtxIn.grow hin hg12
   rw [hc] at cin2
   have hsl2 := hsl.grow hin hg12
-  have htop2 : iwTop m2 < 2 ^ 64 := Nat.lt_of_le_of_lt hS2.2.1 hS2.2.2.2.1
+  have htop2 : iwTop m2 < 2 ^ 64 := Nat.lt_of_le_of_lt hS2.iw.iw hS2.iw.iwSize
   obtain ⟨hn2, -, -, -, hnP2, hlvH2, hlvd2, -⟩ := ctx_fields cin2 cin2' htop2
   have hne2 := ctx_names_end cin2 cin2' hsl2 htop2
   rcases hpc : pccW k m2 (rdW (m2.arr64 IW) ctx) (rdW (m2.arr64 IW) (ctx + 1)) (rdW (m2.arr64 IW) (ctx + 10))
@@ -120,14 +120,14 @@ theorem nuW_ok (k : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis 
     (hcv : decCV (erecP m) cv.toNat = some cvv) (hhi : c.hiAt 0 < 2 ^ 64) (hP : PosMR m) :
     ∃ x a', (ConRon.Arena.nestUniformOk c cvv).run a = .ok (x, a') ∧ StageR dn vis fe m' a' ∧
       IWGrow m m' ∧ r = [if x then 1 else 0] ∧ PosMR m' ∧ (NuAfr → AFr m m') := by
-  have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
+  have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.iw hS.iw.iwSize
   obtain ⟨hn, hnb, -, -, hnP, -⟩ := ctx_fields hc hin htop
   have hhiW := nhiW_toNat (nf := 0) hc hin htop (by simpa using hhi)
   obtain ⟨-, -, hty⟩ := decCV_some hcv
   obtain ⟨wt, hwt, hwtH, hwtd⟩ := hd?_some hty
   have hcv3 : cv.toNat + 3 < erTop m := by
     have := (Array.getElem?_eq_some_iff.mp hwt).1; have := erecP_size_le m; omega
-  have e3 : (cv + 3).toNat = cv.toNat + 3 := word_add_toNat (by have := hS.2.2.1; have := hS.2.2.2.2.1; simp; omega)
+  have e3 : (cv + 3).toNat = cv.toNat + 3 := word_add_toNat (by have := hS.iw.er; have := hS.iw.erSize; simp; omega)
   have hrd3 : rdW (m.arr64 EREC) (cv + 3) = wt := by simp [rdW, e3, erecP_get hwt]
   unfold nuW at h
   rw [hrd3] at h
@@ -178,7 +178,7 @@ theorem nuW_ok (k : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis 
   have hg12 := hg1.trans hg2
   obtain ⟨cin2, cin2'⟩ := CtxIn.grow hin hg12
   rw [hc] at cin2
-  have htop2 : iwTop m2 < 2 ^ 64 := Nat.lt_of_le_of_lt hS2.2.1 hS2.2.2.2.1
+  have htop2 : iwTop m2 < 2 ^ 64 := Nat.lt_of_le_of_lt hS2.iw.iw hS2.iw.iwSize
   obtain ⟨hn2, -⟩ := ctx_fields cin2 cin2' htop2
   have hne2 := ctx_names_end cin2 cin2' (hsl.grow hin hg12) htop2
   obtain ⟨mp2, hM2⟩ := hP2.no
@@ -347,14 +347,14 @@ theorem ucW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis ctx : Word
       subst hr1
       rw [ucK_yes (h := by simp)] at h
       have ho1 : (o + 1).toNat = o.toNat + 1 := word_add_toNat (by
-        have := hS.2.1; have := hS.2.2.2.1; simp at hob; simp; omega)
+        have := hS.iw.iw; have := hS.iw.iwSize; simp at hob; simp; omega)
       have hl1 : (l - 1).toNat = l.toNat - 1 :=
         UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simp; omega))
       have hcs1 := hcs.tail
       have hb1 : o.toNat + 1 + cs'.length ≤ iwTop m := by simp at hob; omega
       obtain ⟨b, a', hrun, hS', hg', hr, hP', hJ'⟩ := ih m1 m' a1 (o + 1) (l - 1) cs' r h hS1 hJ1
         (fun y hy => hPc y (List.mem_cons_of_mem _ hy)) (hU.grow hg1)
-        (by rw [hl1, hl]; simp) (by rw [ho1]; have := hg1.1; omega)
+        (by rw [hl1, hl]; simp) (by rw [ho1]; have := hg1.iw; omega)
         (by rw [ho1]; exact hcs1.grow hb1 hg1) hP1
       refine ⟨b, a', ?_, hS', hg1.trans hg', hr, hP', hJ'⟩
       simp only [StateT.run_bind, hrun1, except_ok_bind, ite_true]

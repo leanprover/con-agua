@@ -142,11 +142,11 @@ theorem oraW_ok {p : Prog} (h : OraProg p) {dn : NIdx → Option ConLeche.Name} 
   rw [oraW_step, ewn] at hW
   -- `of_reduce_op`
   rcases h1 : oroW m wn with _ | ⟨r1, m1⟩ <;> simp only [h1, oraK1, reduceCtorEq] at hW
-  obtain ⟨rfl, hcl, hrun1⟩ := oroW_ok h1 hS.1.pins hwnl
+  obtain ⟨rfl, hcl, hrun1⟩ := oroW_ok h1 hS.check.pins hwnl
   generalize r1.headD 0 = c at hW hcl hrun1
   -- the `Eq` pin and `eqA`
   rcases h2 : pinAtW m1 0 with _ | ⟨r2, m2⟩ <;> simp only [h2, oraK2, reduceCtorEq] at hW
-  obtain ⟨hm2, hr2, hl2, hrun2⟩ := pinAtW_ok h2 hS.1.pins
+  obtain ⟨hm2, hr2, hl2, hrun2⟩ := pinAtW_ok h2 hS.check.pins
   rw [hm2, hr2] at hW
   simp only [List.headD_cons] at hW
   rcases h3 : callW p n "rom_ci" [0] m1 with _ | ⟨r3, m3⟩ <;> simp only [h3, oraK3, reduceCtorEq] at hW
@@ -225,7 +225,7 @@ theorem oraW_ok {p : Prog} (h : OraProg p) {dn : NIdx → Option ConLeche.Name} 
   have hg := hg3.trans (hg4.trans (hg5.trans (hg6.trans hg7)))
   have hq7 : decCV (erA s7.mem) q.toNat = some cv := ArrExt.decCV (IWGrow.erecExt hg) hq
   obtain ⟨hm8, hrun8, hd8⟩ := mpW_ok (a := AM.st (ofReducePinA (decI wn)) a6) hW
-    hS7.2.2.2.2.1 hq7 (DecB.get ⟨fun _ _ _ he h => he.2.decCV h⟩ hpin)
+    hS7.iw.erSize hq7 (DecB.get ⟨fun _ _ _ he h => he.2.decCV h⟩ hpin)
   subst hm8
   refine ⟨_, _, ?_, hS7, hg, hd8⟩
   rw [hname]

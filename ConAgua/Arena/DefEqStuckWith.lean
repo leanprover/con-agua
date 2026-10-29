@@ -24,7 +24,7 @@ theorem GrowRef.of_core {α : Type} [Inhabited α] {T : AM α} {a₀ : AState} {
     {dn : NIdx → Option ConLeche.Name} {m₀ m : Mem} {vis : Word} {fe : IFEnv} {M : ModeMaps}
     {eb : Word} {r : List Word} {ok : List Word → Prop}
     (h : CoreRef T a₀ dec dn m₀ vis fe M eb r m ok) : GrowRef T a₀ dec dn m₀ vis fe M eb r m ok :=
-  ⟨h.1, h.2.1.toG, h.2.2.1, h.2.2.2⟩
+  ⟨h.run, h.after.toG, h.res, h.resOk⟩
 
 /-- **A run that grew the stack, then one from its state.** -/
 theorem growRef_then {α β : Type} [Inhabited α] [Inhabited β] {T₁ : AM α} {T₂ T : AM β}
@@ -281,7 +281,7 @@ theorem sect_ref (p : Prog) (hi : IotaProg' p) (hc : StuckCallees p)
   · rw [liftE_none, sectE.k_lvls_eq_c.none]; exact RefE.of_cls0 (by simp)
   rw [liftE_some]
   have h₁ := CoreSpec.of_callW (hc.lvlsEqC n s₀ a₀ dn vis fe M eb us us2 hs.rel hus hus2 hdus hdus2) c1
-  obtain ⟨_, _, _, hst₁⟩ := h₁.2.1
+  obtain ⟨_, _, _, hst₁⟩ := h₁.after
   unfold setTailT
   refine RefE.bind_growK (w := id) h₁ (fun M₁ hS₁ _ => ?_)
   simp only [sectE.k_lvls_eq_c]
@@ -326,7 +326,7 @@ theorem sect_ref (p : Prog) (hi : IotaProg' p) (hc : StuckCallees p)
     mode d ao tk to tn _ targs ⟨hS₁, hs.mode4, hs.eb_mode⟩ htake htp₁
     (by rw [htop₁]; omega) (by rw [htop₁]; exact htt)) (callW_of_callE c2)
   rw [etake] at h₂
-  obtain ⟨_, _, _, hst₂⟩ := h₂.2.1
+  obtain ⟨_, _, _, hst₂⟩ := h₂.after
   refine RefE.bind_growK (w := id) h₂ (fun M₂ hS₂ _ => ?_)
   simp only [sectE.k_defeq_lst]
   by_cases h20 : r₂.headD 0 = 0

@@ -72,7 +72,7 @@ theorem fdrW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (n : Nat) :
         obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
         have hg12 := hg1.trans hg2
         obtain ⟨b3, a3, hrun3, ⟨hS3, hg3, hd3, hd31⟩, hA3⟩ := ih m2 m3 a2 v (o + 1) (l - 1) xs' r3 h3 hS2
-          (by rw [decHL_grow hg12 (by omega)]; exact hd') (by omega) (by have := hg12.1; omega) hA2
+          (by rw [decHL_grow hg12 (by omega)]; exact hd') (by omega) (by have := hg12.iw; omega) hA2
         refine ⟨b3, a3, ?_, ⟨hS3, hg12.trans hg3, by simpa [decW0B] using And.intro hd3 hd31⟩, hA3⟩
         have := hrun12 (fun c => if c then fieldDomsResolve fe xs' else pure false)
         simp only [fieldDomsResolve]
@@ -123,7 +123,7 @@ theorem iarW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (n : Nat) :
         rw [resK'_some] at h
         obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
         obtain ⟨b3, a3, hrun3, ⟨hS3, hg3, hd3, hd31⟩, hA3⟩ := ih m2 m3 a2 v (o + 1) (l - 1) xs' r3 h3 hS2
-          (by rw [decHL_grow hg2 (by omega)]; exact hd') (by omega) (by have := hg2.1; omega) hA2
+          (by rw [decHL_grow hg2 (by omega)]; exact hd') (by omega) (by have := hg2.iw; omega) hA2
         refine ⟨b3, a3, ?_, ⟨hS3, hg2.trans hg3, by simpa [decW0B] using And.intro hd3 hd31⟩, hA3⟩
         have := hrun12 (fun c => if c then idxArgsResolve fe xs' else pure false)
         simp only [idxArgsResolve]

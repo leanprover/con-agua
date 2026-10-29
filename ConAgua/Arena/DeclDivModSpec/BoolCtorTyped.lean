@@ -55,7 +55,7 @@ theorem bct_ref (hD : DmProg6 p) (nm : Word) :
     (bct_specW p hD.lBoolCtorTyped (k + 1) · vis nm) hcall
   rw [dmBctW.arm1] at hw
   replace hw := ntBW_some hw; obtain ⟨rf, m1, h1, hw⟩ := hw
-  obtain ⟨hm1, hfd⟩ := envFind_call hD.toDmProg5.toMasterProg nm hn hS.1.env h1
+  obtain ⟨hm1, hfd⟩ := envFind_call hD.toDmProg5.toMasterProg nm hn hS.check.env h1
   subst hm1
   cases hf : fe.find? (decI nm) with
   | none =>
@@ -78,7 +78,7 @@ theorem bct_ref (hD : DmProg6 p) (nm : Word) :
       (constE_ref hD.toDmProg5.toMasterProg (r3.headD 0)).bind_ ⟨hS3, hl3⟩ hw
     simp only [Option.some.injEq, Prod.mk.injEq] at hw
     obtain ⟨rfl, rfl⟩ := hw
-    obtain ⟨wt, -, hrd, hwt, hty, hst⟩ := cvWordsAt hS2.2.2.2.2.1 hcv2
+    obtain ⟨wt, -, hrd, hwt, hty, hst⟩ := cvWordsAt hS2.iw.erSize hcv2
     have hrd4 := (hst m4 (hg3.trans hg4)).2
     refine ⟨decide (wt = r4.headD 0), a4, ?_, hS4, hg2.trans (hg3.trans hg4), ?_⟩
     · have hb := decI_beq (k := IdxKind.expr) _ _ hwt hl4
@@ -115,7 +115,7 @@ theorem internSort_ref (hM : MasterProg p) (u : Word) (hu : H u) :
   refine triple_post (internSort_spec p hM.lSortFind hM.lSortPush hM.lInternSort n s₀ u) ?_
   rintro r s' ⟨hl, hI⟩
   obtain ⟨a', hrun, hS', hg⟩ := internSort_stage hS u hu hI
-  exact ⟨hl, decE (r.headD 0), a', hrun, hS', hg, consInternM_lt sortCS_wf hS.1.arena.1.sort hI, rfl⟩
+  exact ⟨hl, decE (r.headD 0), a', hrun, hS', hg, consInternM_lt sortCS_wf hS.check.arena.base.sort hI, rfl⟩
 
 theorem tps_ref (hD : DmProg6 p) (nm : Word) :
     CallRef p "type_pin_stored" [vis, nm] (fun m a => StageR dn vis fe m a ∧ H nm)
@@ -125,7 +125,7 @@ theorem tps_ref (hD : DmProg6 p) (nm : Word) :
     (tps_specW p hD.lTypePinStored (k + 1) · vis nm) hcall
   rw [dmTpsW.arm1] at hw
   replace hw := ntBW_some hw; obtain ⟨rf, m1, h1, hw⟩ := hw
-  obtain ⟨hm1, hfd⟩ := envFind_call hD.toDmProg5.toMasterProg nm hn hS.1.env h1
+  obtain ⟨hm1, hfd⟩ := envFind_call hD.toDmProg5.toMasterProg nm hn hS.check.env h1
   subst hm1
   cases hf : fe.find? (decI nm) with
   | none =>
@@ -149,7 +149,7 @@ theorem tps_ref (hD : DmProg6 p) (nm : Word) :
       (ciToCv_ref hD.toDmProg5.cvProg (rf.tail.headD 0) ci).bind_ ⟨hS, hci⟩ hw
     simp only [Option.some.injEq, Prod.mk.injEq] at hw
     obtain ⟨rfl, rfl⟩ := hw
-    obtain ⟨wt, -, hrd, hwt, hty, -⟩ := cvWordsAt hS2.2.2.2.2.1 hcv2
+    obtain ⟨wt, -, hrd, hwt, hty, -⟩ := cvWordsAt hS2.iw.erSize hcv2
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Except.ok.inj hrun2)
     refine ⟨ci.toConstantVal.type, a, ?_, hS2, hg2, ?_⟩
     · simp only [typePinStored, hf]; rfl

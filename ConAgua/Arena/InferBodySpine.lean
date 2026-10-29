@@ -207,8 +207,8 @@ theorem spioLoop_ref (p : Prog) (hil : InstListOK p) (N : Nat) (hk : KnotUpTo p 
         rw [ite_eq_right c3, spioE.j1.eq_def]
         have c4 := lt_of_not_len64_le hspn c3
         have hv : viewOK m ty FORALL := ⟨c1, UInt64.not_le.mp c2⟩
-        obtain ⟨-, -, hbody⟩ := view_forall m a hS.arena.1 ty ht hv ht6
-        have hvb := viewBind_forall m a hS.arena.1 ty ht hv ht6
+        obtain ⟨-, -, hbody⟩ := view_forall m a hS.arena.base ty ht hv ht6
+        have hvb := viewBind_forall m a hS.arena.base ty ht hv ht6
         obtain ⟨hacc', htop', hb', hsz', -, hbk', hpg'⟩ := spPush_step hspn hacc hb hsz hbk hpg
           hS.ctl136 c4 hvv
         have hS' := hS.frame_stk (spnCtl_frame m (co + cn) (spW m (ao + i)) (co + (cn + 1)))
@@ -284,8 +284,8 @@ theorem spioLoop_ref (p : Prog) (hil : InstListOK p) (N : Nat) (hk : KnotUpTo p 
           exact (hSt12.below j hj').trans (hb j hj)
         have hsz₂ : (m₂.arr64 SPN).size = (m₀.arr64 SPN).size := hSt12.size.trans hsz
         have hv : viewOK m₂ (r₂.headD 0) FORALL := ⟨g2, UInt64.not_le.mp g3⟩
-        obtain ⟨-, -, hbody⟩ := view_forall m₂ _ hS₂.arena.1 (r₂.headD 0) hrw2 hv g1'
-        have hvb := viewBind_forall m₂ _ hS₂.arena.1 (r₂.headD 0) hrw2 hv g1'
+        obtain ⟨-, -, hbody⟩ := view_forall m₂ _ hS₂.arena.base (r₂.headD 0) hrw2 hv g1'
+        have hvb := viewBind_forall m₂ _ hS₂.arena.base (r₂.headD 0) hrw2 hv g1'
         have hacc0 := SpineR.empty m₂ co (by omega)
         obtain ⟨hacc', htop', hb', hsz', -, hbk', hpg'⟩ := spPush_step (cn := 0) hS₂.spn hacc0 hb₂
           hsz₂ (hbk.trans hSt12.bstk) (hpg.trans hSt12.pool) hS₂.ctl136 (by simpa using g5) hvv
@@ -458,7 +458,7 @@ theorem aio_ref (p : Prog) (hq : SpineInferProg p) (hsp : SpineProg p)
   · rw [liftE_none]; exact RefE.of_cls0 (by simp)
   rw [liftE_some]; simp only [aioE.k_head_and_args]
   obtain ⟨t₁, ht₁, -, hf₁, hg₁, hhw, ho1, htop1, xs, hha, hxs⟩ := triple_of_callW
-    (headAndArgs_app p hsp n s₀ a₀ hS.arena.1 e he h4 hS.spn) hc1
+    (headAndArgs_app p hsp n s₀ a₀ hS.arena.base e he h4 hS.spn) hc1
   rw [ht₁] at hf₁ hg₁ htop1 hxs
   have hS₁ := hS.frame_stk hf₁ (by simp) (by simp)
   have hb1 := hxs.bound

@@ -244,7 +244,7 @@ theorem cid_ref (P : CidProg p) {fs fs2 fsR fsT fsC : List FnName}
   rw [cidE.k_basis_pin_hit.arm2 _ _ _ _ _ _ _ _ hx]
   dsimp only
   have hbE : o.toNat + l.toNat < 2 ^ 64 := by
-    have := hS.2.2.1; have := hS.2.2.2.2.1; omega
+    have := hS.iw.er; have := hS.iw.erSize; omega
   -- `ind_params_ok`
   rcases c3 : callW p n "ind_params_ok" [w, o, l] m1 with _ | ⟨r3, m3⟩
   · rw [liftE_none, cidE.k_ind_params_ok.none]; exact RefE.of_cls0 (by simp)
@@ -296,7 +296,7 @@ theorem cid_ref (P : CidProg p) {fs fs2 fsR fsT fsC : List FnName}
     have z4 : r4.headD 0 = 0 := hR4
     rw [cidE.k_block_parts.arm2 _ _ _ _ _ _ _ z4]
     have h5 := csl_ref hkp hApd hCrk n (by omega) s4.mem a4 hC4.stageT
-      (hblk1.grow (decEBlk_mono _ _ _) hg4) hIM4.cr hlpd (Nat.le_trans hb (hg1.trans hg4).2.1)
+      (hblk1.grow (decEBlk_mono _ _ _) hg4) hIM4.cr hlpd (Nat.le_trans hb (hg1.trans hg4).er)
     rcases c5 : cslE p n s4.mem vis o l with e5 | ⟨r5, m5⟩ <;> rw [c5] at h5
     · rw [cidE.k_check_shapeless.none]
       exact fun hG => h5 hG.toVerdictCtxU
@@ -333,10 +333,10 @@ theorem cid_ref (P : CidProg p) {fs fs2 fsR fsT fsC : List FnName}
   subst hs5
   have hmc5 := mcMR.ofClosed hclMc hfMc (callW_of_callE c5) hIM4.stage.mc
   have hA5 := hR5'.abs
-  have hCM5 : CoreMemos s5.mem := ⟨hA5.2.2.2.1, hA5.1, hA5.2.2.2.2.1⟩
+  have hCM5 : CoreMemos s5.mem := ⟨hA5.il, hA5.ab, hA5.wk.1⟩
   obtain ⟨mp5, hma5⟩ := hR5'.ma
   exact RefE.ret hrun5 ⟨hR5'.stage, hCM5, hg1.trans (hg4.trans hR5'.grow),
-    ⟨⟨hR5'.rc.pos, ⟨mp5, hma5⟩, hmc5, hR5'.rc.ta⟩, hA5.2.1, hA5.2.2.1.crOK⟩⟩
+    ⟨⟨hR5'.rc.pos, ⟨mp5, hma5⟩, hmc5, hR5'.rc.ta⟩, hA5.i1, hA5.cr.crOK⟩⟩
 
 include hkp hV hOpf hLC hLT hApd hCrk hIlpf hLz in
 /-- **`check_ind_decl` refines the `.indDecl` arm of `checkDecl`** under `StageT` and the twin's

@@ -174,14 +174,14 @@ theorem ll_ref (p : Prog) (hp : LazyProg p) (hc : LazyCallees p) (n : Nat)
   rcases c2 : callE p n "whnf_core" [mode, 1, vis, d, r₁.tail.headD 0] m₁ with e | ⟨r₂, m₂⟩
   · exact fun hG => ErrClaim.bind_left (CoreSpecE.of_callE (s₀ := ⟨m₁, Locals.init []⟩)
       ((hG.knot n (Nat.le_refl _)).whnfCore F _ _ dn vis fe M₁ eb mode 1 d _ hF hn
-        ⟨hS₁, hs.mode4, hs.eb_mode⟩ e₁.2.2.2.2) c2)
+        ⟨hS₁, hs.mode4, hs.eb_mode⟩ e₁.resOk.2) c2)
   have e₂ := CoreSpec.of_callW (s₀ := ⟨m₁, Locals.init []⟩)
     ((hk n (Nat.le_refl _)).whnfCore F _ _ dn vis fe M₁ eb mode 1 d _ hF hn
-      ⟨hS₁, hs.mode4, hs.eb_mode⟩ e₁.2.2.2.2) (callW_of_callE c2)
+      ⟨hS₁, hs.mode4, hs.eb_mode⟩ e₁.resOk.2) (callW_of_callE c2)
   simp only [llE.k_whnf_core]
   refine RefE.bind_core (w := id) e₂ (fun M₂ hS₂ _ => ?_)
   exact dq_tail hp hc (fun _ => rfl) (fun _ => rfl) n hk F hF hn ⟨m₂, Locals.init []⟩ _ dn vis fe M₂
-    eb mode d _ b ⟨hS₂, hs.mode4, hs.eb_mode⟩ e₂.2.2.2 hb hd
+    eb mode d _ b ⟨hS₂, hs.mode4, hs.eb_mode⟩ e₂.resOk hb hd
 
 /-- **`lds_right` refines the right unfolding of `lazyDeltaStep`, both outcomes**. -/
 theorem lr_ref (p : Prog) (hp : LazyProg p) (hc : LazyCallees p) (n : Nat)
@@ -206,14 +206,14 @@ theorem lr_ref (p : Prog) (hp : LazyProg p) (hc : LazyCallees p) (n : Nat)
   rcases c2 : callE p n "whnf_core" [mode, 1, vis, d, r₁.tail.headD 0] m₁ with e | ⟨r₂, m₂⟩
   · exact fun hG => ErrClaim.bind_left (CoreSpecE.of_callE (s₀ := ⟨m₁, Locals.init []⟩)
       ((hG.knot n (Nat.le_refl _)).whnfCore F _ _ dn vis fe M₁ eb mode 1 d _ hF hn
-        ⟨hS₁, hs.mode4, hs.eb_mode⟩ e₁.2.2.2.2) c2)
+        ⟨hS₁, hs.mode4, hs.eb_mode⟩ e₁.resOk.2) c2)
   have e₂ := CoreSpec.of_callW (s₀ := ⟨m₁, Locals.init []⟩)
     ((hk n (Nat.le_refl _)).whnfCore F _ _ dn vis fe M₁ eb mode 1 d _ hF hn
-      ⟨hS₁, hs.mode4, hs.eb_mode⟩ e₁.2.2.2.2) (callW_of_callE c2)
+      ⟨hS₁, hs.mode4, hs.eb_mode⟩ e₁.resOk.2) (callW_of_callE c2)
   simp only [lrE.k_whnf_core]
   refine RefE.bind_core (w := id) e₂ (fun M₂ hS₂ _ => ?_)
   exact dq_tail hp hc (fun _ => rfl) (fun _ => rfl) n hk F hF hn ⟨m₂, Locals.init []⟩ _ dn vis fe M₂
-    eb mode d a _ ⟨hS₂, hs.mode4, hs.eb_mode⟩ ha e₂.2.2.2 hd
+    eb mode d a _ ⟨hS₂, hs.mode4, hs.eb_mode⟩ ha e₂.resOk hd
 
 /-! ## `lds_unfold2` -/
 
@@ -273,23 +273,23 @@ theorem u2_ref (p : Prog) (hp : LazyProg p) (hc : LazyCallees p) (n : Nat)
   rcases c3 : callE p n "whnf_core" [mode, 1, vis, d, ra.tail.headD 0] m₂ with e | ⟨r₃, m₃⟩
   · exact fun hG => ErrClaim.bind_left (CoreSpecE.of_callE (s₀ := ⟨m₂, Locals.init []⟩)
       ((hG.knot n (Nat.le_refl _)).whnfCore F _ _ dn vis fe M₂ eb mode 1 d _ hF hn
-        ⟨hS₂, hs.mode4, hs.eb_mode⟩ e₁.2.2.2.2) c3)
+        ⟨hS₂, hs.mode4, hs.eb_mode⟩ e₁.resOk.2) c3)
   have e₃ := CoreSpec.of_callW (s₀ := ⟨m₂, Locals.init []⟩)
     ((hk n (Nat.le_refl _)).whnfCore F _ _ dn vis fe M₂ eb mode 1 d _ hF hn
-      ⟨hS₂, hs.mode4, hs.eb_mode⟩ e₁.2.2.2.2) (callW_of_callE c3)
+      ⟨hS₂, hs.mode4, hs.eb_mode⟩ e₁.resOk.2) (callW_of_callE c3)
   simp only [u2E.k_whnf_core]
   refine RefE.bind_core (w := id) e₃ (fun M₃ hS₃ _ => ?_)
   rcases c4 : callE p n "whnf_core" [mode, 1, vis, d, rb.tail.headD 0] m₃ with e | ⟨r₄, m₄⟩
   · exact fun hG => ErrClaim.bind_left (CoreSpecE.of_callE (s₀ := ⟨m₃, Locals.init []⟩)
       ((hG.knot n (Nat.le_refl _)).whnfCore F _ _ dn vis fe M₃ eb mode 1 d _ hF hn
-        ⟨hS₃, hs.mode4, hs.eb_mode⟩ e₂.2.2.2.2) c4)
+        ⟨hS₃, hs.mode4, hs.eb_mode⟩ e₂.resOk.2) c4)
   have e₄ := CoreSpec.of_callW (s₀ := ⟨m₃, Locals.init []⟩)
     ((hk n (Nat.le_refl _)).whnfCore F _ _ dn vis fe M₃ eb mode 1 d _ hF hn
-      ⟨hS₃, hs.mode4, hs.eb_mode⟩ e₂.2.2.2.2) (callW_of_callE c4)
+      ⟨hS₃, hs.mode4, hs.eb_mode⟩ e₂.resOk.2) (callW_of_callE c4)
   simp only [u2E.k_whnf_core_2]
   refine RefE.bind_core (w := id) e₄ (fun M₄ hS₄ _ => ?_)
   exact dq_tail hp hc (fun _ => rfl) (fun _ => rfl) n hk F hF hn ⟨m₄, Locals.init []⟩ _ dn vis fe M₄
-    eb mode d _ _ ⟨hS₄, hs.mode4, hs.eb_mode⟩ e₃.2.2.2 e₄.2.2.2 hd
+    eb mode d _ _ ⟨hS₄, hs.mode4, hs.eb_mode⟩ e₃.resOk e₄.resOk hd
 
 /-! ## `lds_same` -/
 
@@ -558,7 +558,7 @@ theorem lds_ref (p : Prog) (hp : LazyProg p) (hc : LazyCallees p) (n : Nat)
     by_cases ht : rt.headD 0 ≠ 0
     · rw [ite_eq_left ht, decOptR_some ht]
       exact dq_tail hp hc (fun _ => rfl) (fun _ => rfl) (k + 1) hk F hF hn ⟨m₃, Locals.init []⟩ _ dn
-        vis fe M₃ eb mode d a _ ⟨hS₃, hs.mode4, hs.eb_mode⟩ ha hP.2.2.2.2 hd
+        vis fe M₃ eb mode d a _ ⟨hS₃, hs.mode4, hs.eb_mode⟩ ha hP.resOk.2 hd
     rw [ite_eq_right ht, decOptR_none (by simpa using ht)]
     exact RefE.tail_relist3 (fun _ => rfl) (fun _ => rfl) (fun hG => hG.mono (by omega))
       (ll_ref p hp hc k (hk.mono (by omega)) F (by omega) (by omega) ⟨m₃, Locals.init []⟩ _ dn vis fe
@@ -574,7 +574,7 @@ theorem lds_ref (p : Prog) (hp : LazyProg p) (hc : LazyCallees p) (n : Nat)
     by_cases ht : rt.headD 0 ≠ 0
     · rw [ite_eq_left ht, decOptR_some ht]
       exact dq_tail hp hc (fun _ => rfl) (fun _ => rfl) (k + 1) hk F hF hn ⟨m₃, Locals.init []⟩ _ dn
-        vis fe M₃ eb mode d _ b ⟨hS₃, hs.mode4, hs.eb_mode⟩ hP.2.2.2.2 hb hd
+        vis fe M₃ eb mode d _ b ⟨hS₃, hs.mode4, hs.eb_mode⟩ hP.resOk.2 hb hd
     rw [ite_eq_right ht, decOptR_none (by simpa using ht)]
     exact RefE.tail_relist3 (fun _ => rfl) (fun _ => rfl) (fun hG => hG.mono (by omega))
       (lr_ref p hp hc k (hk.mono (by omega)) F (by omega) (by omega) ⟨m₃, Locals.init []⟩ _ dn vis fe

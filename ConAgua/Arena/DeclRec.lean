@@ -316,7 +316,7 @@ theorem erecP_lt {m : Mem} {j : Nat} {v : Word} (h : (erecP m)[j]? = some v) : j
 theorem IWGrow.erecPExtR {m m' : Mem} (h : IWGrow m m') : ArrExt (erecP m) (erecP m') := by
   intro j v hv
   have hj := erecP_lt hv
-  rw [erecP_getE (by have := h.2.1; omega), h.2.2.2 j hj, ← erecP_getE hj]
+  rw [erecP_getE (by have := h.er; omega), h.erGet j hj, ← erecP_getE hj]
   exact hv
 
 /-! ### Memories -/
@@ -423,12 +423,12 @@ theorem erecVgW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv
   obtain ⟨hS', hG, hg, htop, hget⟩ := erRec_stage h1 hS [vk, rdW (m1.arr64 EREC) (p + 1),
     rdW (m1.arr64 EREC) (p + 2), rdW (m1.arr64 EREC) (p + 3), rdW (m1.arr64 EREC) (p + 4),
     rdW (m1.arr64 EREC) (p + 5)] rfl
-  obtain ⟨-, hE', -, hEs', -⟩ := hS'.2
+  obtain ⟨-, hE', -, hEs', -⟩ := hS'.iw
   have hsz : ((wrER m1 g [vk, rdW (m1.arr64 EREC) (p + 1), rdW (m1.arr64 EREC) (p + 2),
       rdW (m1.arr64 EREC) (p + 3), rdW (m1.arr64 EREC) (p + 4),
       rdW (m1.arr64 EREC) (p + 5)]).arr64 EREC).size = (m.arr64 EREC).size :=
     ((wrER_frame _ _ _).size EREC).trans (by rw [hE1])
-  have hEs := hS.2.2.2.2.1
+  have hEs := hS.iw.erSize
   have hg6 : g.toNat + 6 < 2 ^ 64 := by
     simp only [List.length_cons, List.length_nil] at htop; omega
   rw [← vgMem_eq m1 g p vk (by omega) hg6] at hS' hG htop hget hE' hsz
@@ -439,7 +439,7 @@ theorem erecVgW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv
   have hA : ∀ c : Nat, c < 8 → (erecP m)[p.toNat + c]? = some (rdW (m1.arr64 EREC) (p + UInt64.ofNat c)) := by
     intro c hc
     rw [erecP_getE (by omega), hE1]
-    obtain ⟨-, hE0, -, -, -⟩ := hS.2
+    obtain ⟨-, hE0, -, -, -⟩ := hS.iw
     exact getElem?_rdW' (by rw [UInt64.toNat_add]; simp; omega) (by omega)
   have hext : ArrExt (erecP m) (erecP M) := IWGrow.erecPExtR hG
   have hcvM : decCV (erecP M) (g.toNat + 1) = some cv :=
@@ -502,7 +502,7 @@ theorem envPushW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEn
       (rdW (m.arr64 CTL) 128 + 1) = envPushMem m vis q := by
     simp only [envPushMem, hw, hctl]
   rw [hM]
-  have hE := EnvR.push hS.1.env q ci hci hv (by rw [hw]; exact ht) (by rw [hw]; exact hb) hkc.2 hk1
+  have hE := EnvR.push hS.check.env q ci hci hv (by rw [hw]; exact ht) (by rw [hw]; exact hb) hkc.2 hk1
     hkc.1
   have hfr : MemFrame [EIXA, EIXS, EIXN, EIXA1, EIXS1, EIXN1, ECON] [128] m (envPushMem m vis q) := by
     have h1 : MemFrame [rowArr w] [] m (rowSet m w (vis + 1) q) :=
@@ -520,11 +520,11 @@ theorem envPushW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEn
           simp only [List.mem_cons, List.not_mem_nil, or_false] at hb
           rcases hb with rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> decide)
         (fun x hx => by simp at hx; subst hx; exact not_mem_arenaCtl _ (by decide)) hfr
-        hS.1.arena.1,
-      DerR.frameM _ _ m _ hfr (by decide) a hS.1.arena.2⟩,
-     hS.1.core.frame (by decide) (fun x hx => by simp at hx; subst hx; decide) hfr,
-     hS.1.pins.frame (by decide) hfr, hE, hS.1.mode.frame hfr (by decide) (by decide)⟩
-  obtain ⟨hI1, hE1, hsz, hEs, hc⟩ := hS.2
+        hS.check.arena.base,
+      DerR.frameM _ _ m _ hfr (by decide) a hS.check.arena.der⟩,
+     hS.check.core.frame (by decide) (fun x hx => by simp at hx; subst hx; decide) hfr,
+     hS.check.pins.frame (by decide) hfr, hE, hS.check.mode.frame hfr (by decide) (by decide)⟩
+  obtain ⟨hI1, hE1, hsz, hEs, hc⟩ := hS.iw
   have hI : (envPushMem m vis q).arr64 IW = m.arr64 IW := hfr.arr IW (by decide) (by decide)
   have hER : (envPushMem m vis q).arr64 EREC = m.arr64 EREC := hfr.arr EREC (by decide) (by decide)
   have h200 : iwTop (envPushMem m vis q) = iwTop m := by simp only [iwTop, hfr.ctl 200 (by decide)]
@@ -642,7 +642,7 @@ theorem erecCiW_core {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFE
     have hsl : ∀ j < (dw (m.arr64 DECL) i.toNat 3).toNat, (erecP M)[s.toNat + j]? =
         some (mask32 ((m.arr64 DLP)[1 + (dw (m.arr64 DECL) i.toNat 2).toNat + j]?.getD 0)) := by
       intro j hj
-      rw [erecP_getE (by omega), hG'.2.2.2 _ (by omega), hget1 j hj, ← hW1,
+      rw [erecP_getE (by omega), hG'.erGet _ (by omega), hget1 j hj, ← hW1,
         dlpWords_get _ _ _ _ hj (by rw [hlo1]; omega), hlo1]
     rw [decCV_of_words w1 w2 w3 w4 hsl, sliceL_map_decI, hl, hn, ht]
   have hvM : (hd? (erecP M) (p.toNat + 5) : Option EIdx) =

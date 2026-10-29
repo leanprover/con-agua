@@ -192,8 +192,8 @@ theorem slpOne_core {n : Nat} {m m₁ : Mem} {a : AState} {ko kc vo vc w h : Wor
     ∃ a₁, (internLevel (Level.subst ks vs (.param nm))).run a = .ok (decI h, a₁) ∧
       LvOut dn vis fe M eb m m₁ a a₁ h := by
   have htop := m.top.toNat_lt
-  have h41 := hS.arena.1.lit.1.top41
-  have hv := lvsR_of_slice hS.arena.1 us vs vo vc hE.vals (by have := hE.vtop; omega) hE.vden
+  have h41 := hS.arena.base.lit.1.top41
+  have hv := lvsR_of_slice hS.arena.base us vs vo vc hE.vals (by have := hE.vtop; omega) hE.vden
   cases e : lookupW SPN POOL n m ko kc vo vc w with
   | none => rw [e] at hW; simp [slpOne] at hW
   | some fv =>
@@ -376,9 +376,9 @@ theorem recFireLevelsOK_of (p : Prog) (hL : LsProg p) : RecFireLevelsOK p := by
   rw [hmx] at hW
   have hne' : lsNodeW m₀ us ≠ [] := by rw [← hv']; exact hne
   obtain ⟨vs, hdus⟩ := hS.den.lsAll _ (by
-    obtain ⟨ids, e, -⟩ := lsNodeW_view hS.arena.1 hus hne'; rw [e]; rfl)
+    obtain ⟨ids, e, -⟩ := lsNodeW_view hS.arena.base hus hne'; rw [e]; rfl)
   obtain ⟨ids, hvw, hdl'⟩ := denoteLs_view a₀ (decI us) vs hdus
-  obtain ⟨e₁, t₁, sl₁⟩ := lsNodeW_store hS.arena.1 hus hvw
+  obtain ⟨e₁, t₁, sl₁⟩ := lsNodeW_store hS.arena.base hus hvw
   rw [hv', e₁] at hW
   simp only [List.headD_cons, List.tail_cons] at hW
   -- the keys

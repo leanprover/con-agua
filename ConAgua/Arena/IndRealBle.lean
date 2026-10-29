@@ -150,14 +150,14 @@ theorem bleW_ok {p : Prog} (P : BleProg p) {n : Nat} {m m' : Mem} {a : AState} {
   have hT : iwTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 200).toNat_lt
   obtain ⟨hdec, hq9, -⟩ := partsShapeFacts hq hsrc
   obtain ⟨-, -, hrs32, hrse⟩ := partsShapeWords (IWGrow.refl m) hq hq9
-  have hsz : (m.arr64 IW).size < 2 ^ 64 := hS.2.2.2.1
+  have hsz : (m.arr64 IW).size < 2 ^ 64 := hS.iw.iwSize
   unfold bleW at h
   obtain ⟨⟨r1, m1⟩, c1, h⟩ := of_K h rfl
   obtain ⟨s1, hs1, -, hm1, hnz⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (lvNz_spec p P.node P.nz n _ (rdW (m.arr64 IW) (pp + 6))) c1
   simp only at hs1 hm1 hnz
   rw [hm1] at hs1; subst hs1
-  have hlv := denoteL_lvR hS.1.arena.1 (decI (rdW (m.arr64 IW) (pp + 6))) lv (by rw [hrse]; exact hd)
+  have hlv := denoteL_lvR hS.check.arena.base (decI (rdW (m.arr64 IW) (pp + 6))) lv (by rw [hrse]; exact hd)
   rw [word_decI _ _ hrs32 |>.mpr rfl] at hlv
   have hx := nzW_ok n m _ _ lv hlv hnz
   obtain ⟨X, hrun, hcX⟩ := readLevelM_run' a bs.resSort lv hd hrl

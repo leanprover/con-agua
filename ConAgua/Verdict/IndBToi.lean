@@ -72,7 +72,7 @@ theorem toi_ref (n : Nat) {m : Mem} {a : AState} {I us dso dsl : Word} {ds : Lis
   rcases hef : envFindW m I vis with _ | ⟨r2, m2⟩
   · rw [liftE_none, toiE.k_env_find.none]; exact RefE.of_cls0 (by simp)
   rw [liftE_some]
-  obtain ⟨hm2, hfind, hdec⟩ := envFindW_found hef hS.1.env hI
+  obtain ⟨hm2, hfind, hdec⟩ := envFindW_found hef hS.check.env hI
   subst m2
   rw [ConRon.Arena.targetOutsideInst]
   by_cases hf0 : r2.headD 0 = 0
@@ -110,7 +110,7 @@ theorem toi_ref (n : Nat) {m : Mem} {a : AState} {I us dso dsl : Word} {ds : Lis
     ArrExt.decCV (IWGrow.erecExt (IWGrow.refl m)) hcvP
   obtain ⟨w1, w2, hw1, hw2, hsl⟩ := decCV_slice hcvA
   have hqE := (Array.getElem?_eq_some_iff.mp hw2).1
-  have hE64 := hS.2.2.2.2.1
+  have hE64 := hS.iw.erSize
   have e1 : rdW (m.arr64 EREC) (r2.tail.headD 0 + 2) = w1 :=
     rdW_of_get? (by rw [UInt64.toNat_add]; simp [erA] at hqE ⊢; omega) hw1
   have e2 : rdW (m.arr64 EREC) (r2.tail.headD 0 + 3) = w2 :=
@@ -131,7 +131,7 @@ theorem toi_ref (n : Nat) {m : Mem} {a : AState} {I us dso dsl : Word} {ds : Lis
     ArrExt.decCV (IWGrow.erecExt hg3) hcvP
   obtain ⟨wt, hwt, hwtH, hwtE⟩ := decCV_typeW hcv3
   have hqE3 := (Array.getElem?_eq_some_iff.mp hwt).1
-  have hE364 := hS3.2.2.2.2.1
+  have hE364 := hS3.iw.erSize
   have et : rdW (m3.arr64 EREC) (r2.tail.headD 0 + 4) = wt :=
     rdW_of_get? (by rw [UInt64.toNat_add]; simp [erA] at hqE3 ⊢; omega) hwt
   rw [et]
@@ -181,7 +181,7 @@ theorem toi_ref (n : Nat) {m : Mem} {a : AState} {I us dso dsl : Word} {ds : Lis
   subst hs7e
   dsimp only at hr7 hne7 hs7
   subst hs7
-  obtain ⟨v, hv, hvr⟩ := eViewW_ok m6 a5 hS6.1.arena.1 _ (by rw [← hr7]; exact hne7)
+  obtain ⟨v, hv, hvr⟩ := eViewW_ok m6 a5 hS6.check.arena.base _ (by rw [← hr7]; exact hne7)
   rw [getD_two] at he6
   rw [he6] at hv
   rw [← hr7] at hvr

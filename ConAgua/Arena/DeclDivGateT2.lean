@@ -112,7 +112,7 @@ theorem cm_ref (hD : DmProg8 p) (hq : KnotStageProg p) (hcl : LeafClosed p) (hkp
     obtain ⟨hx, ex⟩ := xq
     obtain ⟨hsd1, hsd2, hsd3⟩ := hsd
     obtain ⟨hwh, hwe⟩ := hwq (hx, ex) (by simp)
-    obtain ⟨hsl0, q, hq0, hstm, hrest⟩ := StmtL.cons hS.2 hs
+    obtain ⟨hsl0, q, hq0, hstm, hrest⟩ := StmtL.cons hS.iw hs
     cases k with
     | zero => rw [checkDivModCertsE.eq_1]; exact RefE.of_cls0 (by simp)
     | succ k =>
@@ -124,7 +124,7 @@ theorem cm_ref (hD : DmProg8 p) (hq : KnotStageProg p) (hcl : LeafClosed p) (hkp
       exact RefE.ret rfl ⟨hC, CoreStep.refl hC.check, IWGrow.refl _, by simp [decW0B], hCr⟩
     | cons pf pfs =>
     obtain ⟨px, pxs, hpx, hpxs, rfl⟩ := ConRon.Bridge.denoteEList_cons hpr
-    obtain ⟨hpl0, hpwlt, hpf, hdrest⟩ := decHL_cons_iw hS.2.2.2.1 hd
+    obtain ⟨hpl0, hpwlt, hpf, hdrest⟩ := decHL_cons_iw hS.iw.iwSize hd
     subst hpf
     obtain ⟨ho, hl, e0, hr3, hbd, hdh, he, hst2⟩ := hstm
     obtain ⟨hp3, h0, h1, h2⟩ := hr3
@@ -132,8 +132,8 @@ theorem cm_ref (hD : DmProg8 p) (hq : KnotStageProg p) (hcl : LeafClosed p) (hkp
     subst hst2'
     rw [checkDivModCertsE.arm3 p k m vis c annVal so sl po pl (fun h => hsl0 h.1)
       (by rintro (h | h); exact hsl0 h; exact hpl0 h)]
-    have hsz := hS.2.2.2.1
-    have hI1 := hS.2.1
+    have hsz := hS.iw.iwSize
+    have hI1 := hS.iw.iw
     have r0 : rdW (m.arr64 IW) so = q := hq0
     have rq1 : rdW (m.arr64 IW) q = ho := rdW_iw_of h0 rfl
     have rq2 : rdW (m.arr64 IW) (q + 1) = hl := rdW_iw_of h1 (word_add_one (by omega))
@@ -201,7 +201,7 @@ theorem cm_ref (hD : DmProg8 p) (hq : KnotStageProg p) (hcl : LeafClosed p) (hkp
     have hdh2 : decHL m2 ho.toNat hl.toNat = some hy := by rw [decHL_grow hG2 hbd]; exact hdh
     have hCr3 := hkp.call (im_mem _ rfl) h3' hCr2
     obtain ⟨x3, a3, hrun3, hS3, hg3, hd3⟩ := sc0List_ref hD.toDmProg7.toDmProg6.toDmProg5 hs0 c
-      annVal hc hann hy ho hl k m2 a2 r3 m3 hC2.stage hdh2 (Nat.le_trans hbd hG2.1) h3'
+      annVal hc hann hy ho hl k m2 a2 r3 m3 hC2.stage hdh2 (Nat.le_trans hbd hG2.iw) h3'
     simp only [decRL, Nat.zero_add, ntGetD0, ntGetD1] at hd3
     obtain ⟨hi3, hhs⟩ := ConRon.Bridge.substConst0List_run hy hx hC2.check.state hC2.check.pins
       (ConRon.Bridge.denoteN_ext hn c02.ext) (ConRon.Bridge.denote_ext hv c02.ext)
@@ -299,7 +299,7 @@ theorem cm_ref (hD : DmProg8 p) (hq : KnotStageProg p) (hcl : LeafClosed p) (hkp
     have hdr1 : decHL m7 (po + 1).toNat (pl - 1).toNat = some pfs := by
       rw [decHL_grow hG7 (by rw [hpo1, hpl1]; omega)]; exact hdrest
     refine (ih xrest pfs pxs (so + 1) (sl - 1) (po + 1) (pl - 1) k (by omega) m7 a7 hC7 hCr7
-      (hrest.grow hG7) hdr1 (by rw [hpo1, hpl1]; have := hG7.1; omega)
+      (hrest.grow hG7) hdr1 (by rw [hpo1, hpl1]; have := hG7.iw; omega)
       (ConRon.Bridge.denoteN_ext hn c07.ext) (ConRon.Bridge.denote_ext hv c07.ext)
       (ConRon.Bridge.StmtsDenote.mono c07.ext _ _ hsd3)
       (ConRon.Bridge.denoteEList_ext c07.ext _ _ hpxs)
@@ -425,7 +425,7 @@ theorem ctp_ref (hD : DmProg8 p) (hq : KnotStageProg p) (hcl : LeafClosed p) (hk
         rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; simp; omega)]; simp
       have ho2 : (o + 2).toNat = o.toNat + 2 := L.Rom.addN (by simp; omega)
       refine L.Rom.TPinsR.keep ⟨by rw [ho2, hl1']; omega, by rw [hl1']; omega,
-        fun i hi => ?_⟩ ⟨hG2.2.1, hG2.2.2.2⟩
+        fun i hi => ?_⟩ ⟨hG2.er, hG2.erGet⟩
       have := hv (i + 1) (by simpa using hi)
       simp only [List.getElem_cons_succ] at this
       have e : o + 2 * UInt64.ofNat (i + 1) = o + 2 + 2 * UInt64.ofNat i := by

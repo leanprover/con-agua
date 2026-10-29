@@ -116,38 +116,41 @@ theorem HEnv.frame {m m' : Mem} {a : AState} {ds : Array IDeclaration} {idx : St
       by rw [hER]; exact h4, by rw [hf.1.size CTL]; exact h5⟩
 
 /-- **What an allocation keeps**: `IW` and `CTL[200]` only, the pool grown. -/
-def AFr (m m' : Mem) : Prop := MemFrame [IW] [200] m m' ∧ IWGrow m m' ∧ IWOK m'
+structure AFr (m m' : Mem) : Prop where
+  fr : MemFrame [IW] [200] m m'
+  grow : IWGrow m m'
+  ok : IWOK m'
 
 theorem AFr.refl (m : Mem) (h : IWOK m) : AFr m m := ⟨MemFrame.refl _ _ _, IWGrow.refl m, h⟩
 
 theorem AFr.trans {m₁ m₂ m₃ : Mem} (h₁ : AFr m₁ m₂) (h₂ : AFr m₂ m₃) : AFr m₁ m₃ :=
-  ⟨h₁.1.trans h₂.1, h₁.2.1.trans h₂.2.1, h₂.2.2⟩
+  ⟨h₁.fr.trans h₂.fr, h₁.grow.trans h₂.grow, h₂.ok⟩
 
 /-- **The setting survives an allocation.** -/
 theorem HEnv.frameA {m m' : Mem} {a : AState} {ds : Array IDeclaration} {idx : Std.HashMap NIdx Nat}
     {ord tg ws : Word} {c : Nat} (hE : HEnv m a ds idx ord tg ws c) (hf : AFr m m') :
     HEnv m' a ds idx ord tg ws c := by
-  have hD : ∀ b : TieredArray, b ∉ ([IW] : List TieredArray) → b ≠ CTL → m'.arr64 b = m.arr64 b := hf.1.1
+  have hD : ∀ b : TieredArray, b ∉ ([IW] : List TieredArray) → b ≠ CTL → m'.arr64 b = m.arr64 b := hf.fr.1
   have hDECL : m'.arr64 DECL = m.arr64 DECL := hD DECL (by decide) (by decide)
   have hDLP : m'.arr64 DLP = m.arr64 DLP := hD DLP (by decide) (by decide)
-  have hsz : (m'.arr64 IW).size = (m.arr64 IW).size := hf.1.size IW
+  have hsz : (m'.arr64 IW).size = (m.arr64 IW).size := hf.fr.size IW
   have hA : ∀ b ∈ ([IW] : List TieredArray), InHigh b := by decide
   have hC : ∀ x ∈ ([200] : List Word), 64 ≤ x.toNat := by simp
   obtain ⟨s, hs⟩ := hE.seen
-  refine ⟨ArenaR.frame_ext [IW] [200] hA hC m m' hf.1 a hE.arena,
-    ⟨s, memoRG_frame hsSch hsSch_wf bmKey _ [IW] [200] (by decide) (by decide) m m' hf.1 _ hs⟩,
+  refine ⟨ArenaR.frame_ext [IW] [200] hA hC m m' hf.fr a hE.arena,
+    ⟨s, memoRG_frame hsSch hsSch_wf bmKey _ [IW] [200] (by decide) (by decide) m m' hf.fr _ hs⟩,
     ?_, hE.size, hE.c60, ?_, hE.nixlt, hE.rg1, hE.rg2, by rw [hsz]; exact hE.rg3,
-    by rw [hsz]; exact hE.isz, Nat.le_trans hE.top hf.2.1.1, hf.2.2⟩
+    by rw [hsz]; exact hE.isz, Nat.le_trans hE.top hf.grow.iw, hf.ok⟩
   · intro k hk
     have hk' : k < c := hE.size ▸ hk
     have hn : (ord + UInt64.ofNat k).toNat = ord.toNat + k :=
       addW_toNat ord k (by have := hE.rg1; have := hE.rg2; have := hE.rg3; have := hE.isz; omega)
     have hr : rdW (m'.arr64 IW) (ord + UInt64.ofNat k) = rdW (m.arr64 IW) (ord + UInt64.ofNat k) := by
       simp only [rdW, hn]
-      rw [hf.2.1.2.2.1 _ (by have := hE.rg1; have := hE.rg2; have := hE.top; omega)]
+      rw [hf.grow.iwGet _ (by have := hE.rg1; have := hE.rg2; have := hE.top; omega)]
     rw [hr, hDECL, hDLP]
     exact hE.ordR k hk
-  · exact memoRV_frame hnSch hnSch_wf nmKey _ [IW] [200] (by decide) (by decide) m m' hf.1
+  · exact memoRV_frame hnSch hnSch_wf nmKey _ [IW] [200] (by decide) (by decide) m m' hf.fr
       (fun _ _ h => h) idx hE.nix
 
 /-! ## One note -/

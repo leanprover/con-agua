@@ -64,7 +64,7 @@ theorem capp2_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n
   rw [liftE_some]
   simp only [coreApp2E.k_head_and_args]
   obtain ⟨t₃, ht₃, -, hf₃, hg₃, hhw, ho3, htop3, xs, hha, hxs⟩ := triple_of_callW
-    (headAndArgs_refines p hp.spine (n + 1) ⟨s₀.mem, Locals.init []⟩ a₀ hS.arena.1 v hv hS.spn htop) h3
+    (headAndArgs_refines p hp.spine (n + 1) ⟨s₀.mem, Locals.init []⟩ a₀ hS.arena.base v hv hS.spn htop) h3
   rw [ht₃] at hf₃ hg₃ htop3 hxs
   have hS₃ := hS.frame_stk hf₃ (by simp) (by simp)
   have har₃ := har.keep hg₃.size hg₃.below (by omega) hS.spn
@@ -122,7 +122,7 @@ theorem capp_ref (N : Nat) (hk : KnotUpTo p N) (F : Nat) (hF : N ≤ F) (hn : N 
   rw [liftE_some]
   simp only [coreAppE.k_get_app_spine]
   obtain ⟨t₁, ht₁, -, hf₁, hg₁, hhw, ho1, htop1, xs, ns, hsp, hxs, hns⟩ := triple_of_callW
-    (getAppSpine_refines p hp.spine N ⟨s₀.mem, Locals.init []⟩ a₀ hS.arena.1 e he hS.spn) h1
+    (getAppSpine_refines p hp.spine N ⟨s₀.mem, Locals.init []⟩ a₀ hS.arena.base e he hS.spn) h1
   rw [ht₁] at hf₁ hg₁ htop1 hxs hns
   have hS₁ := hS.frame_stk hf₁ (by simp) (by simp)
   rw [whnfCoreAppT_eq]

@@ -191,7 +191,7 @@ theorem CoreS.arenaFrame {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a'
       (fun x hx => (hCenv x hx).elim (fun h => .inl h) (fun h => .inr h)) hf, ?_, ?_, ?_,
       hf.size EREC ▸ hS.erec, hf.size SPN ▸ hS.spn, hS.memos.frame hf hmA hmC hmWA hmWC hmLA hmLC,
       hf.size BSTK ▸ hS.bstk,
-      hS.den.of_arena hS.arena.1 hD.1 hc hp hl hf hscA hscC, hmode⟩
+      hS.den.of_arena hS.arena.base hD.base hc hp hl hf hscA hscC, hmode⟩
   · rw [hc]
     exact CoreRM.frame (A := A) (C := C)
       (fun b hb => (h128 b hb).elim (fun h => .inl h) (fun h => .inr h))
@@ -242,8 +242,8 @@ theorem internLit_core (p : Prog) (hph : p.lookup "lit_hash" = some litHash)
     (fe : IFEnv) (M : ModeMaps) (eb : Word) (m₀ : Mem) :
     InternSpecW p (CoreK dn vis fe M eb m₀) := by
   intro a₀ n s₀ o l hK hq hn hq0
-  have hps := hK.1.arena.1.lit.1.cap
-  have htop := hK.1.arena.1.lit.1.top
+  have hps := hK.1.arena.base.lit.1.cap
+  have htop := hK.1.arena.base.lit.1.top
   have hspec := internLit_spec p hph hpe hpm hpf hpp hp n s₀ o l (by omega)
     (by simp only [SliceOK] at hq; omega)
   apply L.M.triple_of_run
@@ -260,7 +260,7 @@ theorem internLit_core (p : Prog) (hph : p.lookup "lit_hash" = some litHash)
     exact (keeps_cplL_internNodeE _).run (by simpa only [internE] using this)
   refine ⟨hloc, hok, ⟨hK.1.arenaFrame hD hcpl hfr (by decide) (by decide) (by decide)
     (by simp) (by simp)
-    (hmode := hK.1.mode.frame hfr (by simp) (by simp)), hK.2.trans (StackKept.of_frame hfr)⟩, hres, hlw s.mem a₀ o l _ _ hK.1.arena.1.lit hI⟩
+    (hmode := hK.1.mode.frame hfr (by simp) (by simp)), hK.2.trans (StackKept.of_frame hfr)⟩, hres, hlw s.mem a₀ o l _ _ hK.1.arena.base.lit hI⟩
 
 /-! ## `nat_pred` -/
 
@@ -366,7 +366,7 @@ theorem natPred_refines (p : Prog) (hp : NatPredProg p) (hlw : LitInternHW) (n :
     (eb e : Word) (hS : CoreS dn s₀.mem a₀ vis fe MM eb) (he : HW e) :
     CoreSpec p (n + 1) "nat_pred" [e] (natPred? (decE e)) decOptR s₀ a₀ dn vis fe MM eb ResW := by
   refine triple_post (natPred_spec p hp n s₀ e) fun r s' ⟨hloc, hW⟩ => ⟨hloc, ?_⟩
-  have hR := hS.arena.1
+  have hR := hS.arena.base
   have hP := hS.pins
   -- the arms that keep the state
   have hres : ∀ (x y : Word), some (x, y, s₀.mem) = some (r.headD 0, r.tail.headD 0, s'.mem) →
@@ -427,7 +427,7 @@ theorem natPred_refines (p : Prog) (hp : NatPredProg p) (hlw : LitInternHW) (n :
       rw [hc2, Option.bind_some, npLitF, Option.some.injEq, Prod.mk.injEq, Prod.mk.injEq] at hW
       obtain ⟨hr0, hr1, hm⟩ := hW
       obtain ⟨t, ht, -, hok, hK, hres', hhw⟩ := triple_of_callW
-        (natPredLit_refines_hw p (CoreK dn vis fe MM eb s₀.mem) (fun _ _ h => h.1.arena.1.lit.1)
+        (natPredLit_refines_hw p (CoreK dn vis fe MM eb s₀.mem) (fun _ _ h => h.1.arena.base.lit.1)
           (fun m m' a h hg => h.grow hg)
           (internLit_core p hp.lhash hp.leq hp.lmatch hp.lfind hp.lpush hp.lintern hlw dn vis fe MM eb
             s₀.mem)

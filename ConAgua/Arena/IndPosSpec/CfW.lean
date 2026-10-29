@@ -63,12 +63,12 @@ theorem NSB.grow {m m' : Mem} {p : Word} {NS : NestState} (h : NSB m p NS) (hg :
   have e : ∀ i : Word, i.toNat < 6 → rdW (m'.arr64 IW) (p + i) = rdW (m.arr64 IW) (p + i) := by
     intro i hi
     have : (p + i).toNat = p.toNat + i.toNat := word_add_toNat (by omega)
-    simp only [rdW, this]; rw [hg.2.2.1 _ (by omega)]
+    simp only [rdW, this]; rw [hg.iwGet _ (by omega)]
   have e0 : rdW (m'.arr64 IW) p = rdW (m.arr64 IW) p := by simpa using e 0 (by decide)
   refine ⟨DecB.grow (decNS_mono _) hg h.dec, ?_, ?_, ?_⟩
-  · rw [e0, e 1 (by decide)]; have := h.b0; have := hg.1; omega
-  · rw [e 2 (by decide), e 3 (by decide)]; have := h.b2; have := hg.1; omega
-  · rw [e 4 (by decide), e 5 (by decide)]; have := h.b4; have := hg.1; omega
+  · rw [e0, e 1 (by decide)]; have := h.b0; have := hg.iw; omega
+  · rw [e 2 (by decide), e 3 (by decide)]; have := h.b2; have := hg.iw; omega
+  · rw [e 4 (by decide), e 5 (by decide)]; have := h.b4; have := hg.iw; omega
 
 /-- **A fresh `NestState` record** (`rec6` of three slices decoded below the tops). -/
 theorem nsb_rec6 {m' : Mem} {q kO kL aO aL nO nL : Word} {keys act : List NestKey} {nfs : List NestCtorNf}
@@ -160,12 +160,12 @@ theorem cfW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) {k
   | zero => simp [cfW] at h
   | succ k =>
   simp only [cfW] at h
-  have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
+  have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.iw hS.iw.iwSize
   have hdsD := hds.get (OMono.decHL _ _)
   rcases hdc : dcWf k m ctx dO dL with _ | ⟨r1, m1⟩ <;> rw [hdc] at h; · simp [cfK1] at h
   obtain ⟨b, a1, hrun1, hS1, hg1, hr1⟩ := dcWf_ok dn fe vis k m m1 a ctx dO dL c ds r1 hdc hS hU.dec hU.inn hhi hdsD
     (fun j hj => by omega)
-  have htop1 : iwTop m1 < 2 ^ 64 := Nat.lt_of_le_of_lt hS1.2.1 hS1.2.2.2.1
+  have htop1 : iwTop m1 < 2 ^ 64 := Nat.lt_of_le_of_lt hS1.iw.iw hS1.iw.iwSize
   have hns1 := hns.grow hg1 htop
   obtain ⟨hp6, hk1, -, hn1⟩ := nsb_words hns1 htop1
   have hkb1 := hns1.b0
@@ -180,7 +180,7 @@ theorem cfW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) {k
       rw [cfK1_acc (h := by rw [hr1]; decide)]
       rcases hag : nagW k m1 us dO dL gO gL (rdW (m1.arr64 IW) ns2) (rdW (m1.arr64 IW) (ns2 + 1)) with _ | ⟨rk, mk⟩; · rw [cfK1_acc (h := by rw [hr1]; decide), hag] at h; simp [cfK2] at h
       obtain ⟨h1, h2, h3, h4⟩ := nagW_ok dn vis fe us dO dL ds hus k m1 mk a1 gO gL _ _ grp NS2.keys rk hag hS1
-        (DecB.grow (OMono.decHL _ _) hg1 hds) hgl (by have := hg1.1; omega) (hgrp.grow hgb hg1) hk1 hkb1
+        (DecB.grow (OMono.decHL _ _) hg1 hds) hgl (by have := hg1.iw; omega) (hgrp.grow hgb hg1) hk1 hkb1
       exact ⟨rk, mk, rfl, h1, h2, by simpa using h3, h4⟩
     | false =>
       rw [cfK1_open (h := by rw [hr1]; decide)]
@@ -194,16 +194,16 @@ theorem cfW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) {k
   obtain ⟨hS3, hg3, hqq, ht3, hget3⟩ := posRecW_stage hq hSk (by simp)
   simp only [List.length_cons, List.length_nil] at ht3
   have hg13 := hg1.trans (hgk.trans hg3)
-  have htop3 : iwTop m3 < 2 ^ 64 := Nat.lt_of_le_of_lt hS3.2.1 hS3.2.2.2.1
+  have htop3 : iwTop m3 < 2 ^ 64 := Nat.lt_of_le_of_lt hS3.iw.iw hS3.iw.iwSize
   have hnk := (hns1.grow hgk htop1)
-  obtain ⟨-, -, -, hnk'⟩ := nsb_words hnk (Nat.lt_of_le_of_lt hSk.2.1 hSk.2.2.2.1)
+  obtain ⟨-, -, -, hnk'⟩ := nsb_words hnk (Nat.lt_of_le_of_lt hSk.iw.iw hSk.iw.iwSize)
   refine ⟨(.nested (kb.toNat != 0), (NestState.mk (if b then nestAcceptGroup (decI us) ds grp NS2.keys
     else NS2.keys) act NS2.ctorNfs)), a1, ?_, hS3, hg13, rfl, by simpa using decNFK_nestedW kb, ?_⟩
   · simp only [cfT, StateT.run_bind, hrun1, except_ok_bind]; rfl
   · have := nsb_rec6 (m' := m3) (q := q) (keys := (if b then nestAcceptGroup (decI us) ds grp NS2.keys
         else NS2.keys).toList) (act := act) (nfs := NS2.ctorNfs.toList) (by omega) htop3 hget3
-      (hksk.grow hg3) (by have := hg3.1; omega) ((hact.grow hg1).grow (hgk.trans hg3))
-      (by have := hg13.1; omega) (hnk'.grow hg3) (by have := hnk.b4; have := hg3.1; omega)
+      (hksk.grow hg3) (by have := hg3.iw; omega) ((hact.grow hg1).grow (hgk.trans hg3))
+      (by have := hg13.iw; omega) (hnk'.grow hg3) (by have := hnk.b4; have := hg3.iw; omega)
     simpa using this
 
 end L.Ind

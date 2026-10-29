@@ -75,16 +75,16 @@ theorem cns_ref (hq : qr.toNat = iwTop mb) (hms : PSlR decTM ms mo ml mb) (htbl 
     RefE (VerdictCtx p) (cnsE p k m vis q fto ftl tblo tbll mo ml qr j)
       (ConRon.Arena.classesNfs V fe bs formerTys tbl (ms.drop j.toNat)) a
       (fun m' rest a' => CnsPost dn vis fe env mb mo ml qr acc m' rest a') := by
-  have hms0 : decPL (truncM mb) (decTM (truncM mb)) mo.toNat ml.toNat = some ms := hms.1
+  have hms0 : decPL (truncM mb) (decTM (truncM mb)) mo.toNat ml.toNat = some ms := hms.dec
   have hlen := decPL_length _ hms0
-  obtain ⟨tps, -, htps, hmap⟩ := sumDecNL_of_decB htbl.1
+  obtain ⟨tps, -, htps, hmap⟩ := sumDecNL_of_decB htbl.dec
   have htpb : PtrsB mb tps tbl := ptrsB_of_mapM hmap
   induction k with
   | zero => intros; rw [cnsE_zero]; exact RefE.of_cls0 (by simp)
   | succ k ih =>
   intro m a j acc ws MsP hC hA hg htop hP hje hws hacc hsh hftP htblP hmsP hMs
   have hS := hC.stage
-  have hsz := hS.2.2.2.1
+  have hsz := hS.iw.iwSize
   have hjm : j.toNat ≤ ml.toNat := UInt64.le_iff_toNat_le.mp hje
   have hT := (rdW (m.arr64 CTL) 200).toNat_lt
   by_cases hj : ¬ j < ml
@@ -102,7 +102,7 @@ theorem cns_ref (hq : qr.toNat = iwTop mb) (hms : PSlR decTM ms mo ml mb) (htbl 
   obtain ⟨p0, hp0, hsrc⟩ := decPL_getH (truncM mb) hms0 j.toNat hjl
   obtain ⟨hp0t, hp0m⟩ := rec2IwN_trunc hp0
   have hp0m' : iwN m (mo.toNat + j.toNat) = some p0 := by
-    simp only [iwN, nat?, iwA] at hp0m ⊢; rw [hg.2.2.1 _ hp0t]; exact hp0m
+    simp only [iwN, nat?, iwA] at hp0m ⊢; rw [hg.iwGet _ hp0t]; exact hp0m
   obtain ⟨hrd, hp0b⟩ := iwN_rdW_at (w := mo) (k := j.toNat) hp0m' hsz
   rw [show mo + UInt64.ofNat j.toNat = mo + j by simp] at hrd
   rw [cnsE_step (h := hj), hrd]
@@ -124,7 +124,7 @@ theorem cns_ref (hq : qr.toNat = iwTop mb) (hms : PSlR decTM ms mo ml mb) (htbl 
     (rdW (m.arr64 IW) (UInt64.ofNat p0 + 3)) (rdW (m.arr64 IW) (UInt64.ofNat p0 + 6))
     (rdW (m.arr64 IW) (UInt64.ofNat p0 + 7)) tblo tbll
   have hT := tmn_ref hkp henv k (by omega) hC hA
-    (hbs.grow hg) hlH (by rw [decHL_grow hg hftb]; exact hft) (by have := hg.1; omega) hpfS hdsS hctB hctb
+    (hbs.grow hg) hlH (by rw [decHL_grow hg hftb]; exact hft) (by have := hg.iw; omega) hpfS hdsS hctB hctb
     (htbl.grow (fun q => decNCN_mono q) hg) hP hsh hftP hpfvsP (by rw [hlD]; exact hlvls) hdsP hctorsP
     htblP hformer hscp
   cases c1 : callE p k "target_major_nfs" [vis, q, fto, ftl,
@@ -143,7 +143,7 @@ theorem cns_ref (hq : qr.toNat = iwTop mb) (hms : PSlR decTM ms mo ml mb) (htbl 
   obtain ⟨s1, hs1, -, es, a1, run1, hR1⟩ := RefE.run_ok hsT hT c1
   subst hs1
   obtain ⟨hes, hC1, hg1, hP1, hA1, hptrs⟩ := hR1
-  obtain ⟨hfr, pse, hpse, hpseb⟩ := hptrs mb tps (by rw [decNL_grow hg htbl.2]; exact htps) htpb
+  obtain ⟨hfr, pse, hpse, hpseb⟩ := hptrs mb tps (by rw [decNL_grow hg htbl.bound]; exact htps) htpb
   dsimp only at hes hC1 hg1 hP1 hA1 hfr hpse
   rw [hlD] at run1
   obtain ⟨c1, -⟩ := ConRon.Bridge.Inductives.targetMajorNfs_spec fe (ConRon.Bridge.CoreSpec.of_core rfl)
@@ -165,12 +165,12 @@ theorem cns_ref (hq : qr.toNat = iwTop mb) (hms : PSlR decTM ms mo ml mb) (htbl 
   generalize hNM : r2.headD 0 = nm at hnm ⊢
   have h13 : (13 : Word).toNat = 13 := rfl
   rw [h13] at ht2
-  have hI2 := hS2.2.1
-  have hnmb : nm.toNat + 13 < 2 ^ 64 := by have := hS2.2.2.2.1; omega
+  have hI2 := hS2.iw.iw
+  have hnmb : nm.toNat + 13 < 2 ^ 64 := by have := hS2.iw.iwSize; omega
   have hp13 : p0 + 13 ≤ nm.toNat := by
     obtain ⟨_, hw12⟩ := decTM_get hsrc 12 (by omega)
     have := (truncM_iw_get hw12).1
-    have := hg.1; have := hg1.1; omega
+    have := hg.iw; have := hg1.iw; omega
   have hmw : (UInt64.ofNat p0 : Word).toNat + 9 ≤ nm.toNat := by rw [hp0T]; omega
   -- the copy loop
   cases c3 : ncpW (k + 1) s2.mem nm (UInt64.ofNat p0) 0 with
@@ -209,7 +209,7 @@ theorem cns_ref (hq : qr.toNat = iwTop mb) (hms : PSlR decTM ms mo ml mb) (htbl 
   have hn12 : (nm + 12).toNat = nm.toNat + 12 := by rw [UInt64.toNat_add]; simp; omega
   have hmt : ∀ t, t < 13 → (UInt64.ofNat p0 + UInt64.ofNat t : Word).toNat = p0 + t := fun t ht => by
     rw [UInt64.toNat_add, hp0T]; simp; omega
-  have hgm1 : iwTop m ≤ iwTop s1.mem := hg1.1
+  have hgm1 : iwTop m ≤ iwTop s1.mem := hg1.iw
   have hqnm : qr.toNat + ml.toNat ≤ nm.toNat := by omega
   -- sizes
   have szA : (mA.arr64 IW).size = (m3.arr64 IW).size := by rw [← hA, size_set64]
@@ -243,7 +243,7 @@ theorem cns_ref (hq : qr.toNat = iwTop mb) (hms : PSlR decTM ms mo ml mb) (htbl 
       rdW (s2.mem.arr64 IW) (UInt64.ofNat p0 + UInt64.ofNat t) = v := by
     intro t ht v hv
     obtain ⟨hlt, hv'⟩ := truncM_iw_get hv
-    have e : (s2.mem.arr64 IW)[p0 + t]? = (mb.arr64 IW)[p0 + t]? := ((hg.trans hg1).trans hg2).2.2.1 _ hlt
+    have e : (s2.mem.arr64 IW)[p0 + t]? = (mb.arr64 IW)[p0 + t]? := ((hg.trans hg1).trans hg2).iwGet _ hlt
     simp only [rdW, hmt t ht, e]; simp only [iwA] at hv'; rw [hv']; rfl
   have hlow : ∀ i, i < nm.toNat → (mC.arr64 IW)[i]? = (s2.mem.arr64 IW)[i]? := by
     intro i hi

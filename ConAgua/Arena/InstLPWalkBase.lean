@@ -139,10 +139,10 @@ theorem CoreS.frameLP (S : MemoSch) (h3 : S = lpSch ∨ S = lplSch ∨ S = lplsS
     (hS : CoreS dn m a vis fe M eb) (hf : MemFrame [S.arr] [S.cs, S.cs + 1] m m')
     (hmem : CoreMemos m') : CoreS dn m' a vis fe M eb ∧ StackKept m m' := by
   rcases h3 with rfl | rfl | rfl <;>
-  exact hS.of_walk ⟨hS.arena.1.frame
+  exact hS.of_walk ⟨hS.arena.base.frame
       (by decide)
       (by simp [arenaCtl, storeCtl, memoCtl]) hf,
-    DerR.frameM _ _ m m' hf (by simp [LPMEMO, LPLMEMO, LPLSMEMO]) a hS.arena.2⟩
+    DerR.frameM _ _ m m' hf (by simp [LPMEMO, LPLMEMO, LPLSMEMO]) a hS.arena.der⟩
     rfl hf (by simp [LPMEMO, LPLMEMO, LPLSMEMO])
     (by simp) hmem
     (by simp [LPMEMO, LPLMEMO, LPLSMEMO, POOL])

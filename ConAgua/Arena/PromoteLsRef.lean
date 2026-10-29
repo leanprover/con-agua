@@ -405,18 +405,18 @@ theorem plsArm_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f h : Word) (r
     omega
   by_cases hne : lsNodeW m h = []
   · simp [plsArmW, hne] at hW
-  have hc0 : (m.arr64 CTL).size ≠ 0 := by have := ctl_pos hD.1; omega
+  have hc0 : (m.arr64 CTL).size ≠ 0 := by have := ctl_pos hD.base; omega
   by_cases h1 : m.len64 (tierA POOL (m.top >>> 40)) < (m.top &&& 1099511627775)
   · simp [plsArmW, hh', hne, hc0, h1] at hW
   by_cases h2 : m.len64 (tierA POOL (m.top >>> 40)) - (m.top &&& 1099511627775) < (lsNodeW m h).tail.headD 0
   · unfold plsArmW at hW
     rw [ite_eq_right (by simp [hh', hne]), ite_eq_right hc0, ite_eq_right h1, ite_eq_left h2] at hW; cases hW
   rw [plsArmW_eq p n m f h hh' hne hc0 h1 h2] at hW
-  obtain ⟨ids, hv⟩ := promote_lsNodeW_view hD.1 hh hne
-  obtain ⟨hw, hso, hsl⟩ := lsNodeW_store' hD.1 hh hv
+  obtain ⟨ids, hv⟩ := promote_lsNodeW_view hD.base hh hne
+  obtain ⟨hw, hso, hsl⟩ := lsNodeW_store' hD.base hh hv
   rw [hw] at hW h2
   simp only [List.headD_cons, List.tail_cons] at hW h2
-  have hpk := hD.1.lit.1
+  have hpk := hD.base.lit.1
   have h41 := hpk.top41
   have hsz := hpk.small.tier (m.top >>> 40)
   have hlen : (m.len64 (tierA POOL (m.top >>> 40))).toNat = (m.arr64 (tierA POOL (m.top >>> 40))).size := by

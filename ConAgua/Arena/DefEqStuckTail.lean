@@ -156,7 +156,7 @@ theorem dt_ref (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : StuckCalle
   refine RefE.bind_core (w := id) h₅ (fun M₅ hS₅ _ => ?_)
   have heq : (decH r₄ == decE a1 && decH r₅ == decE b1) =
       decide (r₄.headD 0 = a1 ∧ r₅.headD 0 = b1) := by
-    simp only [decH, decE_beq h₄.2.2.2 ha, decE_beq h₅.2.2.2 hb, Bool.decide_and]
+    simp only [decH, decE_beq h₄.resOk ha, decE_beq h₅.resOk hb, Bool.decide_and]
   rw [heq]
   by_cases hm : r₄.headD 0 = a1 ∧ r₅.headD 0 = b1
   · rw [ite_eq_left hm]
@@ -167,10 +167,10 @@ theorem dt_ref (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : StuckCalle
   rcases c6 : callE p (k + 1) "defeq" [mode, vis, d, r₄.headD 0, r₅.headD 0] m₅ with e | ⟨r₆, m₆⟩
   · exact fun hG => CoreSpecE.of_callE (s₀ := ⟨m₅, Locals.init []⟩)
       ((hG.knot (k + 1) (Nat.le_refl _)).defeq F _ _ dn vis fe M₅ eb mode d (r₄.headD 0) (r₅.headD 0)
-        hF hn ⟨hS₅, hs.mode4, hs.eb_mode⟩ h₄.2.2.2 h₅.2.2.2) c6
+        hF hn ⟨hS₅, hs.mode4, hs.eb_mode⟩ h₄.resOk h₅.resOk) c6
   obtain ⟨hrun, hP⟩ := (CoreSpec.of_callW (s₀ := ⟨m₅, Locals.init []⟩)
     ((hk (k + 1) (Nat.le_refl _)).defeq F _ _ dn vis fe M₅ eb mode d (r₄.headD 0) (r₅.headD 0) hF hn
-      ⟨hS₅, hs.mode4, hs.eb_mode⟩ h₄.2.2.2 h₅.2.2.2) (callW_of_callE c6)).post
+      ⟨hS₅, hs.mode4, hs.eb_mode⟩ h₄.resOk h₅.resOk) (callW_of_callE c6)).post
   exact RefE.ret hrun ⟨hP.after, hP.res, hP.valid⟩
 
 /-- **`defeq_tail` refines `defeqTailT`** (`defeqBody` past the lazy-delta loop) at the knot

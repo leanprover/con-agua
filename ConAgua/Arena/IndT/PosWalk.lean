@@ -46,7 +46,7 @@ theorem walkRef_step (n : Nat) (ih : NbRef p dn vis fe env n) : WalkRef p dn vis
     have hcr1 := ConRon.Bridge.denote_ext hcrP p1.ext
     have hns1 := dState_ext p1.ext _ _ hnsP
     have hR1 := ih.fields m1 a1 ctx fu' po pl hi nF 0 crest ns 0 0 0 0 c prog NS [] [] ctxP progP crestP nsP []
-      hC1 (hW.grow hg1) hcr (hns.grow hg1 (Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1)) (KlB.nil _ _) (by simp)
+      hC1 (hW.grow hg1) hcr (hns.grow hg1 (Nat.lt_of_le_of_lt hS.iw.iw hS.iw.iwSize)) (KlB.nil _ _) (by simp)
       (by simp [decHL, hslice?]) (by simp) hP1 hA1 hc hctx1 hprog1 hcr1 hns1 rfl (by simpa using hwc)
     simp only [UInt64.toNat_zero] at hR1
     have hs1 := nfE_spec p L.pfields n ⟨m1, Locals.init []⟩ vis ctx fu' po pl hi nF 0 crest ns 0 0 0 0
@@ -77,7 +77,7 @@ theorem walkRef_step (n : Nat) (ih : NbRef p dn vis fe env n) : WalkRef p dn vis
       R.hk.forM L.hcl L.ab n ⟨m2, Locals.init []⟩ _ _ _ _) (callW_of_callE c2')
     simp only at hcl
     rw [hs3] at hcl
-    have htop2 : iwTop m2 < 2 ^ 64 := Nat.lt_of_le_of_lt hS2.2.1 hS2.2.2.2.1
+    have htop2 : iwTop m2 < 2 ^ 64 := Nat.lt_of_le_of_lt hS2.iw.iw hS2.iw.iwSize
     have hdl : (rf.tail.tail.tail.headD 0).toNat = nds.length := (decHL_length _ hD).symm
     have hib : hi.toNat + (rf.tail.tail.tail.headD 0).toNat < 2 ^ 64 := by
       rw [hdl, hl2]
@@ -91,7 +91,7 @@ theorem walkRef_step (n : Nat) (ih : NbRef p dn vis fe env n) : WalkRef p dn vis
     obtain ⟨p3, hclP⟩ := ConRon.Bridge.Inductives.closeTelescope_spec nds vf.2.1 hi.toNat cur vf.2.2.1
       a2 a3 cl hC2.check.state ⟨hnds, hcur⟩ hrun3
     refine RefE.bind_right hrun3 (RefE.ret rfl ⟨hC2.of_pstep hS3 hA3 p3, hg1.trans (hg2.trans hg3), hK.grow hg3,
-      by simp only [List.headD_cons, List.tail_cons]; have := hg3.1; omega, by simpa using hl1, hcH, hcd, hclH,
+      by simp only [List.headD_cons, List.tail_cons]; have := hg3.iw; omega, by simpa using hl1, hcH, hcd, hclH,
       hcld, hns2.grow hg3 htop2,
       hP2.fr (closeW_mfr _ _ _ _ _ _ _ _ hcl), hA3, (c1.trans c2).trans (p3.toCore hC2.check),
       vf.2.1, vf.2.2.1, vf.2.2.2, ConRon.Bridge.denoteEList_ext p3.ext _ _ hnds,

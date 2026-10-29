@@ -74,7 +74,9 @@ structure DerR (m : Mem) (a : AState) : Prop where
   proj : DerT2 a (·.projs) (cP PJDER m)
 
 /-- **The arena relation with the derived ranges.** -/
-def ArenaD (m : Mem) (a : AState) : Prop := ArenaR m a ∧ DerR m a
+structure ArenaD (m : Mem) (a : AState) : Prop where
+  base : ArenaR m a
+  der : DerR m a
 
 /-! ## Facts of one tier -/
 

@@ -76,7 +76,7 @@ theorem peel_internFVar_core {p : Prog} (hp : PeelProg p) {n : Nat} {dn : NIdx �
   have h136 : rdW (s'.mem.arr64 CTL) 136 = rdW (m.arr64 CTL) 136 := hf.ctl 136 (by simp)
   exact ⟨⟨hok, ⟨M, hS', KeptAll.refl _ _,
       StackKept.of_frame hf⟩,
-    by rw [hres]; rfl, fvinternW_hw m a hS.arena.1.fvar u ty _ _ hI⟩, hf⟩
+    by rw [hres]; rfl, fvinternW_hw m a hS.arena.base.fvar u ty _ _ hI⟩, hf⟩
 
 /-! ## Growing runs
 
@@ -173,11 +173,11 @@ theorem pl_ref (p : Prog) (hil : InstListOK p) (n : Nat)
   · intro hkE
     have := CoreSpecE.of_callE (s₀ := ⟨m₂, Locals.init []⟩)
       ((hkE n (Nat.le_refl _)).defeq F _ _ dn vis fe M₂ eb mode (d + k) _ _ hF hn
-        ⟨hS₂, hs.mode4, hs.eb_mode⟩ e₁.2.2.2 e₂.2.2.2) c3
+        ⟨hS₂, hs.mode4, hs.eb_mode⟩ e₁.resOk e₂.resOk) c3
     rwa [peel_word_add_toNat d k hdk] at this
   have e₃ := CoreSpec.of_callW (s₀ := ⟨m₂, Locals.init []⟩)
     ((hk n (Nat.le_refl _)).defeq F _ _ dn vis fe M₂ eb mode (d + k) _ _ hF hn
-      ⟨hS₂, hs.mode4, hs.eb_mode⟩ e₁.2.2.2 e₂.2.2.2) (callW_of_callE c3)
+      ⟨hS₂, hs.mode4, hs.eb_mode⟩ e₁.resOk e₂.resOk) (callW_of_callE c3)
   rw [peel_word_add_toNat d k hdk] at e₃
   obtain ⟨hrun, hP⟩ := e₃.post
   exact RefE.ret hrun ⟨hP.after, hP.res, hP.valid⟩
@@ -240,7 +240,7 @@ theorem pd_ref (p : Prog) (hil : InstListOK p) (n : Nat)
   · have hbq : (decE da == decE db) = true := by rw [he]; exact beq_self_eq_true _
     rw [ite_eq_left he]
     simp only [hbq, ↓reduceIte, pure_bind]
-    exact RefE.ret rfl (CorePost.ret hS₁ (by simp only [decDom, decH]; rfl) ⟨hw1, e₁.2.2.2⟩)
+    exact RefE.ret rfl (CorePost.ret hS₁ (by simp only [decDom, decH]; rfl) ⟨hw1, e₁.resOk⟩)
   rw [ite_eq_right he]
   have hbq : (decE da == decE db) = false := by
     rw [decE_beq_eq _ _ ha hb]; simp [he]
@@ -257,16 +257,16 @@ theorem pd_ref (p : Prog) (hil : InstListOK p) (n : Nat)
   · intro hkE
     have := CoreSpecE.of_callE (s₀ := ⟨m₂, Locals.init []⟩)
       ((hkE n (Nat.le_refl _)).defeq F _ _ dn vis fe M₂ eb mode (d + k) _ _ hF hn
-        ⟨hS₂, hs.mode4, hs.eb_mode⟩ e₁.2.2.2 e₂.2.2.2) c3
+        ⟨hS₂, hs.mode4, hs.eb_mode⟩ e₁.resOk e₂.resOk) c3
     rw [peel_word_add_toNat d k hdk] at this
     exact ErrClaim.bind_left this
   have e₃ := CoreSpec.of_callW (s₀ := ⟨m₂, Locals.init []⟩)
     ((hk n (Nat.le_refl _)).defeq F _ _ dn vis fe M₂ eb mode (d + k) _ _ hF hn
-      ⟨hS₂, hs.mode4, hs.eb_mode⟩ e₁.2.2.2 e₂.2.2.2) (callW_of_callE c3)
+      ⟨hS₂, hs.mode4, hs.eb_mode⟩ e₁.resOk e₂.resOk) (callW_of_callE c3)
   rw [peel_word_add_toNat d k hdk] at e₃
   refine RefE.bind_core (w := id) e₃ (fun M₃ hS₃ _ => ?_)
   exact RefE.ret rfl (CorePost.ret hS₃ (by simp only [decDom, decBool, decH]; rfl)
-    ⟨e₃.2.2.2, e₂.2.2.2⟩)
+    ⟨e₃.resOk, e₂.resOk⟩)
 
 /-! ## `e_view` runs -/
 
@@ -383,7 +383,7 @@ theorem ps2_ref (p : Prog) (hp : PeelProg p) (hil : InstListOK p) (n : Nat)
   · rw [liftE_none, ps2E.k_e_view.none]; exact RefE.of_cls0 (by simp)
   rw [liftE_some]; simp only [ps2E.k_e_view]
   obtain ⟨k', rfl⟩ := callW_succ c1
-  obtain ⟨rfl, -, -, hw1, hw2, hvb⟩ := eView_forall_callW (a := a₀) hp.eview hs.rel.arena.1 hb hg c1
+  obtain ⟨rfl, -, -, hw1, hw2, hvb⟩ := eView_forall_callW (a := a₀) hp.eview hs.rel.arena.base hb hg c1
   have hT : (peelStep2T (coreKnot (decMode mode) fe id F) d.toNat (decE da) (decE b) k.toNat fvs).run a₀ =
       (peelDomT (coreKnot (decMode mode) fe id F) d.toNat (decE da) (decE (r₁.tail.headD 0)) k.toNat fvs
         >>= fun x => pure (x.1, x.2, decE (r₁.tail.tail.headD 0))).run a₀ := by
@@ -420,7 +420,7 @@ theorem ps_ref (p : Prog) (hp : PeelProg p) (hil : InstListOK p) (n : Nat)
   · rw [liftE_none, psE.k_e_view.none]; exact RefE.of_cls0 (by simp)
   rw [liftE_some]; simp only [psE.k_e_view]
   obtain ⟨k', rfl⟩ := callW_succ c1
-  obtain ⟨rfl, -, -, hw1, hw2, hva⟩ := eView_forall_callW (a := a₀) hp.eview hs.rel.arena.1 ha hga c1
+  obtain ⟨rfl, -, -, hw1, hw2, hva⟩ := eView_forall_callW (a := a₀) hp.eview hs.rel.arena.base ha hga c1
   have hT : (peelStepT (coreKnot (decMode mode) fe id F) d.toNat (decE a) (decE b) k.toNat fvs).run a₀ =
       (peelStep2T (coreKnot (decMode mode) fe id F) d.toNat (decE (r₁.tail.headD 0)) (decE b) k.toNat fvs
         >>= fun y => pure (y.1, y.2.1, decE (r₁.tail.tail.headD 0), y.2.2)).run a₀ := by
@@ -733,7 +733,7 @@ theorem peel_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n 
       (peelStep_refines p hp hil j' (hk.mono (by omega)) F (by omega) (by omega) _ s dn vis fe M eb
         mode d a b k fo ⟨hS, hmode, heb⟩ ha hb hga hgb fvs hx (by omega)) (callW_of_callE hc)
     refine RefE.bind_growK (w := fun (v : Word × Mem) => ([v.1], v.2)) e₁ (fun M₁ hS₁ hst₁ => ?_)
-    obtain ⟨hw0, hw1, hw2, hw3⟩ := e₁.2.2.2
+    obtain ⟨hw0, hw1, hw2, hw3⟩ := e₁.resOk
     by_cases h0 : r₁.headD 0 = 0
     · rw [peelE.k_peel_step.arm1 (hc1 := h0)]
       simp only [decPS, h0, bne_self_eq_false, Bool.not_false, ↓reduceIte]

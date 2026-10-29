@@ -302,17 +302,17 @@ theorem icfCheck_ref (p : Prog) (hil : InstListOK p) (K F : Nat) (hk : KnotUpTo 
       ⟨hS1, hm4, hebm⟩ harg)
     (fun hG => (hG K (Nat.le_refl _)).infer F ⟨m1, Locals.init []⟩ _ dn vis fe M1 eb mode d arg hnF hn62
       ⟨hS1, hm4, hebm⟩ harg) fun r2 m2 _ h2 => ?_
-  have hr1 : HW (r1.headD 0) := h1.2.2.2
+  have hr1 : HW (r1.headD 0) := h1.resOk
   rw [icfCheckE.k_infer.eq_2]
-  have hS2 := h2.2.1
+  have hS2 := h2.after
   obtain ⟨M2, hS2, hK2, hSt2⟩ := hS2
   rcases c3 : callE p K "defeq" [mode, vis, d, r2.headD 0, r1.headD 0] m2 with e3 | ⟨r3, m3⟩
   · rw [icfCheckE.k_defeq.eq_1]
     exact fun hG => CoreSpecE.of_callE ((hG K (Nat.le_refl _)).defeq F ⟨m2, Locals.init []⟩ _ dn vis
-      fe M2 eb mode d _ _ hnF hn62 ⟨hS2, hm4, hebm⟩ h2.2.2.2 hr1) c3
+      fe M2 eb mode d _ _ hnF hn62 ⟨hS2, hm4, hebm⟩ h2.resOk hr1) c3
   rw [icfCheckE.k_defeq.eq_2]
   have h3 := CoreSpec.of_callW ((hk K (Nat.le_refl _)).defeq F ⟨m2, Locals.init []⟩ _ dn vis fe M2 eb
-    mode d _ _ hnF hn62 ⟨hS2, hm4, hebm⟩ h2.2.2.2 hr1) (callW_of_callE c3)
+    mode d _ _ hnF hn62 ⟨hS2, hm4, hebm⟩ h2.resOk hr1) (callW_of_callE c3)
   obtain ⟨hrun3, hP3⟩ := CoreRef.post h3
   exact RefE.ret hrun3 ⟨CoreAfter.comp hK2 hSt2 hP3.after, hP3.res, hP3.valid⟩
 
@@ -352,7 +352,7 @@ theorem icfForall_ref (p : Prog) (hp : IotaProg4 p) (hil : InstListOK p) (N F : 
   obtain ⟨g1, hparts⟩ := of_ite_none hparts
   obtain ⟨g2, hparts⟩ := of_ite_none hparts
   simp only [Option.some.injEq] at hparts
-  obtain ⟨hvw, hn1, hn2⟩ := view_forall s₀.mem a₀ hS.arena.1 h hh ⟨g1, UInt64.not_le.mp g2⟩ h6
+  obtain ⟨hvw, hn1, hn2⟩ := view_forall s₀.mem a₀ hS.arena.base h hh ⟨g1, UInt64.not_le.mp g2⟩ h6
   simp only [List.cons.injEq, and_true] at hparts
   obtain ⟨hp0, hp1⟩ := hparts
   rw [hp0] at hvw hn1
@@ -449,7 +449,7 @@ theorem icfFlush_ref (p : Prog) (hp : IotaProg4 p) (hil : InstListOK p) (N F : N
   obtain ⟨t0, ht0, -, hmem0, hev⟩ := triple_of_callW
     (exprViewOk_spec p hp.exprViewOk N' ⟨s₀.mem, Locals.init []⟩ h) c0
   obtain rfl : m0 = s₀.mem := by rw [← ht0]; exact hmem0
-  obtain ⟨-, hB, -, -⟩ := evo_view s₀.mem a₀ hS.arena.1 h hh _ hev
+  obtain ⟨-, hB, -, -⟩ := evo_view s₀.mem a₀ hS.arena.base h hh _ hev
   obtain ⟨x, hvx⟩ := hB h0
   have hisz : i.toNat < args.size := by rw [hargs.size]; exact hi
   by_cases hacn : acn = 0
@@ -473,7 +473,7 @@ theorem icfFlush_ref (p : Prog) (hp : IotaProg4 p) (hil : InstListOK p) (N F : N
   refine RefE.of_run_eq (icf_eq_flush _ fe d.toNat (decE h) acc args i.toNat hisz a₀ x hvx
     (by rw [hacc.size]; intro h0; exact hacn (UInt64.toNat_inj.mp (by simpa using h0)))) ?_
   refine RefE.bind_growK (w := id) h1 fun M1 hS1 hSt1 => ?_
-  have hr1 : HW (r1.headD 0) := h1.2.2.2
+  have hr1 : HW (r1.headD 0) := h1.resOk
   have hsp1 : spTop m1 = aco + acn := by rw [hSt1.1, ← htop]
   have hnil : SpineR m1 (aco + acn) 0 #[] := SpineR.nil_at m1 _ (by rw [hsum, hSt1.size]; omega)
   have hargs1 : SpineR m1 ao an args := hargs.keep hSt1.size hSt1.below
@@ -527,7 +527,7 @@ theorem icfAux_ref (p : Prog) (hp : IotaProg4 p) (N F : Nat)
   obtain ⟨t1, ht1, -, hmem1, hev⟩ := triple_of_callW
     (exprViewOk_spec p hp.exprViewOk N' ⟨s₀.mem, Locals.init []⟩ h) c1
   obtain rfl : m1 = s₀.mem := by rw [← ht1]; exact hmem1
-  obtain ⟨⟨v, hv⟩, -, -, hD⟩ := evo_view s₀.mem a₀ hS.arena.1 h hh _ hev
+  obtain ⟨⟨v, hv⟩, -, -, hD⟩ := evo_view s₀.mem a₀ hS.arena.base h hh _ hev
   obtain ⟨hn1, hn2⟩ := hD h0 h6 v hv
   exact RefE.ret (icf_run_other _ fe d.toNat (decE h) acc args i.toNat
     (by rw [hargs.size]; exact hi) a₀ (fun ty body hc => by rw [hv] at hc; exact hn1 ty body (Option.some.inj hc))

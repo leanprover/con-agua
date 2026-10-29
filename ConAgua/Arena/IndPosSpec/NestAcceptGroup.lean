@@ -79,7 +79,7 @@ theorem nagW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
   | zero => intro m m' a gO gL kO kL grp keys r h; simp [nagW] at h
   | succ n ih =>
     intro m m' a gO gL kO kL grp keys r h hS hds hgl hgb hgrp hks hkb
-    have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
+    have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.iw hS.iw.iwSize
     by_cases hg0 : gL = 0
     · rw [nagW_nil (h := hg0)] at h
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
@@ -106,7 +106,7 @@ theorem nagW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
     have hK : DecB (fun m => decNK m key.toNat) m1 ⟨decI cw, decI us, ds⟩ :=
       pos2_key_rec h4 hus (by omega) hget1 hds1
     have hks1 := hks.grow hg1
-    have htop1 : iwTop m1 < 2 ^ 64 := Nat.lt_of_le_of_lt hS1.2.1 hS1.2.2.2.1
+    have htop1 : iwTop m1 < 2 ^ 64 := Nat.lt_of_le_of_lt hS1.iw.iw hS1.iw.iwSize
     have hgO1 : (gO + 1).toNat = gO.toNat + 1 := word_add_toNat (by simp; omega)
     have hgL1 : (gL - 1).toNat = grp'.length := by
       rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simp; omega))]; simp; omega
@@ -127,7 +127,7 @@ theorem nagW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
         | true => rfl
         | false => rw [e] at hb; exact absurd hb (by simpa using hbn)
       obtain ⟨hS', hg', hk', hb'⟩ := ih m1 m' a (gO + 1) (gL - 1) kO kL grp' keys r h hS1 hds1 hgL1
-        (by rw [hgO1]; have := hg1.1; omega) hgrp' hks1 (by have := hg1.1; omega)
+        (by rw [hgO1]; have := hg1.iw; omega) hgrp' hks1 (by have := hg1.iw; omega)
       refine ⟨hS', hg1.trans hg', ?_, hb'⟩
       simp only [nestAcceptGroup, ← Array.contains_toList, hin, ite_true]
       exact hk'
@@ -138,13 +138,13 @@ theorem nagW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
         | true => rw [e] at hb; simp at hbn hb; rw [hbn] at hb; exact absurd hb (by decide)
       rcases hsn : snocW n m1 kO kL key with _ | ⟨r2, m2⟩ <;> rw [hsn] at h; · simp [nagK3] at h
       rw [nagK3_some] at h
-      obtain ⟨hS2, hg2, hr0, hr1, ht2, hw2, hx2⟩ := snocW_words hsn hS1 (by have := hg1.1; omega)
+      obtain ⟨hS2, hg2, hr0, hr1, ht2, hw2, hx2⟩ := snocW_words hsn hS1 (by have := hg1.iw; omega)
       have hks2 : KsB m2 (r2.headD 0).toNat (r2.tail.headD 0).toNat (keys.push ⟨c, decI us, ds⟩).toList := by
         rw [hr0, hr1, Array.toList_push]
         exact pos2_decB_snoc decNK_mono hks1 hg2 (by omega) hw2 hx2 (by rw [← h5]; exact DecB.grow (decNK_mono _) hg2 hK)
       obtain ⟨hS', hg', hk', hb'⟩ := ih m2 m' a (gO + 1) (gL - 1) _ _ grp' _ r h hS2
         (DecB.grow (OMono.decHL _ _) hg2 hds1) hgL1
-        (by rw [hgO1]; have := hg1.1; have := hg2.1; omega) (hgrp'.grow (by rw [hgO1]; have := hg1.1; omega) hg2) hks2
+        (by rw [hgO1]; have := hg1.iw; have := hg2.iw; omega) (hgrp'.grow (by rw [hgO1]; have := hg1.iw; omega) hg2) hks2
         (by rw [hr0, hr1]; omega)
       refine ⟨hS', (hg1.trans hg2).trans hg', ?_, hb'⟩
       simp only [nestAcceptGroup, ← Array.contains_toList, hout, Bool.false_eq_true, ite_false]

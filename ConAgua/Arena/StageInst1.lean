@@ -139,7 +139,7 @@ theorem i1F_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (e
     ⟨by unfold LiftProg liftProgFns; repeat (first | exact ProgHas.nil | refine ProgHas.cons rfl ?_),
       rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
   obtain ⟨s'', hs'', -, hok, hD, hres, hlt⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (instEntry_refines i1Prog hip rfl k _ a hS.1.arena e v d he) hi
+    (instEntry_refines i1Prog hip rfl k _ a hS.check.arena e v d he) hi
   rw [hs''] at hD
   have hrun := AM.run_of_ok _ a hok
   have hcp : cp (AM.st (instantiate1Fast coreWalkFuel (decE e) (decE v) d.toNat) a) = cp a :=

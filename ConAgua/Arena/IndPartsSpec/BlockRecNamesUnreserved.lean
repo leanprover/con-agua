@@ -438,10 +438,10 @@ theorem wsWrites_frame (m : Mem) (q p s f : Word) : MemFrame [IW] [] m (wsWrites
 theorem stage_frame_iw {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m m' : Mem}
     {a : AState} (hS : StageR dn vis fe m a) (hf : MemFrame [IW] [200] m m')
     (htop : iwTop m' ≤ (m.arr64 IW).size) : StageR dn vis fe m' a := by
-  obtain ⟨h1, h2, h3, h4, h5⟩ := hS.2
+  obtain ⟨h1, h2, h3, h4, h5⟩ := hS.iw
   have h129 : rdW (m'.arr64 CTL) 129 = rdW (m.arr64 CTL) 129 := hf.ctl 129 (by simp)
   have hE : m'.arr64 EREC = m.arr64 EREC := hf.arr EREC (by simp [EREC, IW]) (by decide)
-  refine ⟨CheckR.frame_iw hf hS.1, by rw [hf.size IW]; exact htop, ?_, ?_, ?_, ?_⟩
+  refine ⟨CheckR.frame_iw hf hS.check, by rw [hf.size IW]; exact htop, ?_, ?_, ?_, ?_⟩
   · simp only [erTop, h129]; rw [hf.size EREC]; exact h2
   · rw [hf.size IW]; exact h3
   · rw [hf.size EREC]; exact h4
@@ -488,7 +488,7 @@ theorem wsC_ok (cR : CallM) (n : Nat) (dn : NIdx → Option ConLeche.Name) (fe :
     simp only [pinWordV, hpne, ite_false, Option.some.injEq] at hpz
     rw [← hpz]; rfl
   have hpin0 : pinW m 0 ≠ 0 := hpne
-  have hfull := hS.1.pins.full hpin0
+  have hfull := hS.check.pins.full hpin0
   have hzlt : z.toNat < 2 ^ 32 := by rw [hz]; exact hfull.lv_lt.2.1
   have hrun1 : (zeroLevel).run a = .ok (decI z, a) := by rw [hz]; exact pinZeroLevel_run hfull
   obtain ⟨r2, m2, hrb, h⟩ := ipK_inv h (by simp [wsK2])
@@ -500,13 +500,13 @@ theorem wsC_ok (cR : CallM) (n : Nat) (dn : NIdx → Option ConLeche.Name) (fe :
   · simp at h
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   have hg12 : IWGrow m m2 := hg2
-  obtain ⟨hI2, hE2, hIsz2, hEsz2, hCsz2⟩ := hS2.2
+  obtain ⟨hI2, hE2, hIsz2, hEsz2, hCsz2⟩ := hS2.iw
   obtain ⟨hq, hm3, hroom⟩ := allocW_facts hal hIsz2
   subst hm3
   have hIW3 : (allocMem m2 9).arr64 IW = m2.arr64 IW := allocMem_IW m2 9
   have hqtop : q.toNat = iwTop m2 := by rw [hq]; rfl
   have hpq : p.toNat + 9 ≤ q.toNat := by
-    have := hg12.1; omega
+    have := hg12.iw; omega
   have hqs : q.toNat + 9 ≤ ((allocMem m2 9).arr64 IW).size := by
     rw [hIW3]; simpa using hroom
   have hsz3 : ((allocMem m2 9).arr64 IW).size < 2 ^ 64 := by rw [hIW3]; exact hIsz2
@@ -539,7 +539,7 @@ theorem wsC_ok (cR : CallM) (n : Nat) (dn : NIdx → Option ConLeche.Name) (fe :
       rw [UInt64.toNat_add, UInt64.toNat_ofNat_of_lt' (by rw [UInt64_size_eq]; omega)]
       exact Nat.mod_eq_of_lt (by omega)
     rw [hx, hIW3]
-    have hlt : p.toNat + j < (m2.arr64 IW).size := by have := hg12.1; omega
+    have hlt : p.toNat + j < (m2.arr64 IW).size := by have := hg12.iw; omega
     rw [Array.getElem?_eq_getElem hlt]; rfl
   have c6 : (m'.arr64 IW)[q.toNat + 6]? = some s := by
     rw [hWs.2, ite_eq_left (by omega)]; simp [wsWd]
@@ -558,7 +558,7 @@ theorem wsC_ok (cR : CallM) (n : Nat) (dn : NIdx → Option ConLeche.Name) (fe :
   have htopq : q.toNat + 9 ≤ iwTop m' := by
     simp only [iwTop, htop]; rw [UInt64.toNat_add]; simp
     have := hroom; simp at this; simp only [iwTop] at hqtop; omega
-  have hpT : ∀ j, j < 9 → p.toNat + j < iwTop m' := fun j hj => by have := hg12.1; have := hg2'.1; omega
+  have hpT : ∀ j, j < 9 → p.toNat + j < iwTop m' := fun j hj => by have := hg12.iw; have := hg2'.iw; omega
   have hDecB : DecB (fun m => decBS m p.toNat) m bs →
       DecB (fun m => decBS m q.toNat) m' { bs with resSort := decI s, isProp := f != 0 } := by
     intro hT

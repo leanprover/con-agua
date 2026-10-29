@@ -192,7 +192,7 @@ theorem caps_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f s d : Word) (D
   dsimp only at hW1
   obtain ⟨wo1, wl1, hn1, hn1', hsl1, a2, pm2, al', hrun2, hD2, hP2, hcp2, hfr2, hq2, hg2, hT2, hts2,
     hsl2, htk2⟩ := psAt0_rel p hp n m₁ a1 pm1 f (s + 10) caps.all x1 m₂ hD1 hP1 hsz1 hl10 hcc
-  have hsz2 : (m₂.arr64 EREC).size < 2 ^ 64 := by rw [hg2.2.2]; exact hsz1
+  have hsz2 : (m₂.arr64 EREC).size < 2 ^ 64 := by rw [hg2.size]; exact hsz1
   -- ctors
   have hl13 : hlist? (erecP m₂) (s + 13).toNat = some caps.ctors := by
     rw [e13]
@@ -212,10 +212,10 @@ theorem caps_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f s d : Word) (D
   obtain ⟨hy0, -⟩ := List.cons.inj hrest2
   rw [← hc0, ← hx0, ← hy0] at hW
   have hE3m : ∀ i < erecTop m, (m₃'.arr64 EREC)[i]? = (m.arr64 EREC)[i]? := fun i hi => by
-    rw [hg3.2.1 i (by rw [hT2, hT1]; omega), hg2.2.1 i (by rw [hT1]; exact hi), hE1]
-  have hsz3 : (m₃'.arr64 EREC).size = (m.arr64 EREC).size := by rw [hg3.2.2, hg2.2.2, hE1]
+    rw [hg3.get i (by rw [hT2, hT1]; omega), hg2.get i (by rw [hT1]; exact hi), hE1]
+  have hsz3 : (m₃'.arr64 EREC).size = (m.arr64 EREC).size := by rw [hg3.size, hg2.size, hE1]
   have hg03 : ErecGrow m m₃' :=
-    ⟨by rw [← hT1]; exact Nat.le_trans hg2.1 hg3.1, hE3m, hsz3⟩
+    ⟨by rw [← hT1]; exact Nat.le_trans hg2.top hg3.top, hE3m, hsz3⟩
   have hts3' : erecTop m₃' ≤ (m₃'.arr64 EREC).size := hts3
   -- the copy
   obtain ⟨⟨z, m₄⟩, hce, hW⟩ := Option.bind_eq_some_iff.mp hW
@@ -243,7 +243,7 @@ theorem caps_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f s d : Word) (D
   have hgrm : SlotGrow m m₅ d.toNat (d.toNat + 15) :=
     (SlotGrow.of_grow hg03 _ _).trans hgr (Nat.le_refl _) (Nat.le_refl _)
   have hts5 : erecTop m₅ ≤ (m₅.arr64 EREC).size := by rw [hT5, hsz5]; exact hts3'
-  have hT3m : erecTop m ≤ erecTop m₃' := hg03.1
+  have hT3m : erecTop m ≤ erecTop m₃' := hg03.top
   obtain ⟨hDf, hPf⟩ := arenaD_erecFrame hD3 hP3 (k2.trans w2)
   have hwd : ∀ i, i < 15 → i ≠ 1 → i ≠ 10 → i ≠ 13 →
       (erecP m₅)[d.toNat + i]? = (preE m D)[s.toNat + i]? := by
@@ -280,7 +280,7 @@ theorem caps_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f s d : Word) (D
     rw [e13] at hn2'
     obtain ⟨w, hw, hwl⟩ := nat?_get hn2'
     have := erecP_get hw
-    rw [hg2.2.1 _ (by rw [hT1]; omega), hE1] at this
+    rw [hg2.get _ (by rw [hT1]; omega), hE1] at this
     have hwe : w = wl2 := UInt64.toNat_inj.mp hwl
     subst hwe; exact this
   have h10' : (hlist? (erecP m₅) (d.toNat + 10) : Option (List NIdx)) = some al' := by

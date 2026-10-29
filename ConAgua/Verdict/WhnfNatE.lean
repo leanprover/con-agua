@@ -431,7 +431,7 @@ theorem reduceNatK_ref (n F : Nat) (hF : n ≤ F) (hn2 : n ≤ 2 ^ 62)
   · rw [reduceNatKE.abort1 _ _ _ _ _ _ _ _ hbd]; exact RefE.of_cls0 (by simp)
   rw [reduceNatKE.arm1 _ _ _ _ _ _ _ _ hbd]
   obtain ⟨n_, us_, hview, hn, hu, hnl, hul⟩ :=
-    view_const_words s₀.mem a₀ hC.arena.1 f hf ⟨hsc, by simpa using hbd⟩ hg3
+    view_const_words s₀.mem a₀ hC.arena.base f hf ⟨hsc, by simpa using hbd⟩ hg3
   have hcg := redHead_const (coreKnot (decMode mode) fe id F) fe d.toNat (decE f) (decE b) a₀ n_ us_ hview
   subst hn hu
   rcases h1 : callW p n "pin_word" [52] s₀.mem with _ | ⟨r₁, m₁⟩
@@ -484,7 +484,7 @@ theorem reduceNatAp_ref (hno : NatOpResultOK p) (n F : Nat) (hF : n ≤ F) (hn2 
   by_cases hbd : tcnt s₀.mem APP (tierW f) ≤ idxW f
   · rw [ite_eq_left hbd]; exact RefE.of_cls0 (by simp)
   rw [ite_eq_right hbd]
-  obtain ⟨hviewf, hgw, hxw⟩ := view_app s₀.mem a₀ hC.arena.1 f hf ⟨hsc, by simpa using hbd⟩ hg4
+  obtain ⟨hviewf, hgw, hxw⟩ := view_app s₀.mem a₀ hC.arena.base f hf ⟨hsc, by simpa using hbd⟩ hg4
   have hcg0 := redHead_app (coreKnot (decMode mode) fe id F) fe d.toNat (decE f) (decE b) _ _ a₀ hviewf
   generalize tfld s₀.mem APP (tierW f) (idxW f) 0 = gw at hgw hviewf hcg0 ⊢
   generalize tfld s₀.mem APP (tierW f) (idxW f) 1 = xw at hxw hviewf hcg0 ⊢
@@ -505,7 +505,7 @@ theorem reduceNatAp_ref (hno : NatOpResultOK p) (n F : Nat) (hF : n ≤ F) (hn2 
   by_cases hb2 : tcnt s₀.mem CONST (tierW (gw)) ≤ idxW (gw)
   · rw [ite_eq_left hb2]; exact RefE.of_cls0 (by simp)
   rw [ite_eq_right hb2]
-  obtain ⟨n_, us_, hview, hn, hu, hnl, hul⟩ := view_const_words s₀.mem a₀ hC.arena.1 _ hgw
+  obtain ⟨n_, us_, hview, hn, hu, hnl, hul⟩ := view_const_words s₀.mem a₀ hC.arena.base _ hgw
     ⟨hs2, by simpa using hb2⟩ g3'
   subst hn hu
   generalize tfld s₀.mem CONST (tierW gw) (idxW gw) 0 = cw at *
@@ -602,7 +602,7 @@ theorem reduceNatHead_ref (hno : NatOpResultOK p) (n F : Nat) (hF : n ≤ F) (hn
     by_cases hbd : tcnt s₀.mem c (tierW f) ≤ idxW f
     · rw [ite_eq_left hbd]; exact RefE.of_cls0 (by simp)
     rw [ite_eq_right hbd]
-    obtain ⟨v, hv, hc, hp'⟩ := view_nca s₀.mem a₀ hC.arena.1 f hf c ⟨hsc, by simpa using hbd⟩ hcg
+    obtain ⟨v, hv, hc, hp'⟩ := view_nca s₀.mem a₀ hC.arena.base f hf c ⟨hsc, by simpa using hbd⟩ hcg
     exact RefE.ret (redHead_other _ fe d.toNat _ (decE b) a₀ v hv hc hp')
       ⟨⟨MM, hC, KeptAll.refl _ _, StackKept.refl _⟩, rfl, resW_zero⟩
   have hmono : KnotUpToE p (n + 1) → KnotUpToE p n := fun h => h.mono (by omega)
@@ -682,7 +682,7 @@ theorem reduceNat_ref (hno : NatOpResultOK p) (n F : Nat) (hF : n ≤ F) (hn2 : 
   by_cases hbd : tcnt s₀.mem APP (tierW e) ≤ idxW e
   · rw [ite_eq_left hbd]; exact RefE.of_cls0 (by simp)
   rw [ite_eq_right hbd]
-  obtain ⟨hview, hfw, hbw⟩ := view_app s₀.mem a₀ hC.arena.1 e he ⟨hsc, by simpa using hbd⟩ g4'
+  obtain ⟨hview, hfw, hbw⟩ := view_app s₀.mem a₀ hC.arena.base e he ⟨hsc, by simpa using hbd⟩ g4'
   exact RefE.tail_eq (reduceNatE.k_reduce_nat_head.none p)
     (fun v => reduceNatE.k_reduce_nat_head.arm1 p v.1 v.2) (fun h => h.mono (by omega))
     (reduceNat_head_eq _ fe d.toNat (decE e) _ _ a₀ (by rw [hap]; exact beq_iff_eq.mpr g4') hview)

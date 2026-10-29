@@ -74,14 +74,14 @@ theorem tailSimFlush {p : Prog} (hF : FlushProg p) (n : Nat) {dn : NIdx → Opti
     intro x hx; left; have := flushCtl_lt x hx; omega))⟩
 
 theorem BPassB.grow {m m' : Mem} (hg : IWGrow m m') {q : Nat} (h : BPassB m q) : BPassB m' q := by
-  refine ⟨Nat.le_trans h.1 hg.1, fun i hi o l h1 h2 => ?_⟩
+  refine ⟨Nat.le_trans h.1 hg.iw, fun i hi o l h1 h2 => ?_⟩
   have hi' : i + 1 < 19 := by simp at hi; omega
   have e1 : iwN m' (q + i) = iwN m (q + i) := by
-    simp only [iwN, nat?, iwA]; rw [hg.2.2.1 _ (by have := h.1; omega)]
+    simp only [iwN, nat?, iwA]; rw [hg.iwGet _ (by have := h.1; omega)]
   have e2 : iwN m' (q + i + 1) = iwN m (q + i + 1) := by
-    simp only [iwN, nat?, iwA]; rw [hg.2.2.1 _ (by have := h.1; omega)]
+    simp only [iwN, nat?, iwA]; rw [hg.iwGet _ (by have := h.1; omega)]
   rw [e1] at h1; rw [e2] at h2
-  exact Nat.le_trans (h.2 i hi o l h1 h2) hg.1
+  exact Nat.le_trans (h.2 i hi o l h1 h2) hg.iw
 
 /-- **A pointer slice of a decoded record**, at the words L reads, below the tops. -/
 theorem bpPSl {α : Type} {f : Mem → Nat → Option α} (hf : ∀ q, OMono (fun m => f m q)) {m : Mem}

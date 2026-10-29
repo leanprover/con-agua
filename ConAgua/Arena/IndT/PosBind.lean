@@ -31,7 +31,7 @@ theorem bindRef_step (L : NbLook p) (n : Nat) (ih : NbRef p dn vis fe env n) : B
   intro m a ctx fu po pl dep kb w ns c prog NS ctxP progP wP nsP hC hW hw h6 hns hP hA hc hctx hprog hwP hnsP hww
   have R := L.ct.cr.rx
   have hS := hC.stage
-  have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
+  have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.iw hS.iw.iwSize
   rw [npbE.arm1]
   -- `nest_ctx_hi_at`
   cases h1 : callE p n "nest_ctx_hi_at" [ctx, pl] m with
@@ -220,7 +220,7 @@ theorem bindRef_step (L : NbLook p) (n : Nat) (ih : NbRef p dn vis fe env n) : B
     rw [← hnb2d]; exact hrun6
   obtain ⟨p6, -⟩ := ConRon.Bridge.Inductives.internForallEE_run p5.ok
     (ConRon.Bridge.denote_ext hdP (hx03.trans (c4.ext.trans p5.ext))) (r7 _ hnbP) e6
-  have htop4 : iwTop m6 < 2 ^ 64 := Nat.lt_of_le_of_lt hS4.2.1 hS4.2.2.2.1
+  have htop4 : iwTop m6 < 2 ^ 64 := Nat.lt_of_le_of_lt hS4.iw.iw hS4.iw.iwSize
   have hA6 : AbsOK m8 := mkForallW_afr hmf hA5
   refine RefE.ret (y := (x.1, decI (rz.headD 0), x.2.2)) (a' := a6) ?_
     ⟨hC4.of_pstep hS6 hA6 (p5.trans p6), ((hg13.trans hg4).trans hg5).trans hg6, by simpa using hk4,

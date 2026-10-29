@@ -609,7 +609,7 @@ theorem fire_ref (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
   rw [liftE_some]
   obtain ⟨t1, ht1, -, fr1, gr1, hr0, htop1, xs, hrunA, hxs⟩ := triple_of_callW
     (getAppArgs_refines' p hp.spine.args hp.spine.cnt hp.spine.fill (N + 1) ⟨s₀.mem, Locals.init []⟩ a₀
-      hS.arena.1 major hmaj hspn) c1
+      hS.arena.base major hmaj hspn) c1
   rw [ht1] at fr1 gr1 htop1 hxs
   have hS1 : CoreS dn m1 a₀ vis fe MM eb := hS.frame_stk fr1 (by simp) (by simp)
   have e1 : m1.arr64 EREC = s₀.mem.arr64 EREC := fr1.1 EREC (by simp [SPN, EREC]) (by decide)
@@ -998,14 +998,14 @@ theorem major_ref (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
   · rw [liftE_none, irMajorE.k_get_app_fn.none]; exact RefE.of_cls0 (by simp)
   rw [liftE_some]
   obtain ⟨t2, ht2, hm3, -, hhw, hrun2⟩ := triple_of_callW
-    (getAppFn_refines' p hp.spine.fn (N + 1) ⟨m2, Locals.init []⟩ _ hS2.arena.1 (rm.headD 0) hr1) c2
+    (getAppFn_refines' p hp.spine.fn (N + 1) ⟨m2, Locals.init []⟩ _ hS2.arena.base (rm.headD 0) hr1) c2
   have hm3' : m2 = m3 := hm3.symm.trans ht2
   subst hm3'
   simp only [irMajorE.k_get_app_fn]
   rcases c3 : callW p (N + 1) "iota_rec_head" [rh.headD 0] m2 with _ | ⟨rv, m4⟩
   · rw [liftE_none, irMajorE.k_iota_rec_head.none]; exact RefE.of_cls0 (by simp)
   rw [liftE_some]
-  obtain ⟨hm4, hnot, hyes⟩ := irCallW_head p hp.head (N + 1) m2 _ hS2.arena.1 _ hhw rv m4 c3
+  obtain ⟨hm4, hnot, hyes⟩ := irCallW_head p hp.head (N + 1) m2 _ hS2.arena.base _ hhw rv m4 c3
   subst m4
   have hSt12 := hSt1.trans hSt2
   have hpost : ∀ (a : AState), CorePost decOptR dn s₀.mem vis fe MM eb ResW ([0, 0], m2) none a ↔

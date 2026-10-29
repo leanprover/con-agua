@@ -78,7 +78,7 @@ theorem boolCtorOk_ref (hN : NatGuardProg p) (c : Word) (ci : IConstantInfo) :
   obtain ⟨cv, a1, hrun1, hS1, hg1, hcv⟩ := ciToCv_ref (dn := dn) (vis := vis) (fe := fe) hN.toNatCvProg
     c ci k m a r1 m1 ⟨hS, hci⟩ h1
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Except.ok.inj hrun1)
-  have hsz1 := hS1.2.2.2.2.1
+  have hsz1 := hS1.iw.erSize
   obtain ⟨wt, hiff, hrd, hlt, hty, hstay⟩ := cvWordsAt hsz1 hcv
   by_cases hl : rdW (m1.arr64 EREC) (r1.headD 0 + 2) = 0
   · rw [ite_eq_right (by simpa using hl)] at hw
@@ -86,7 +86,7 @@ theorem boolCtorOk_ref (hN : NatGuardProg p) (c : Word) (ci : IConstantInfo) :
     replace hw := ntBW_some hw; obtain ⟨r2, m2, h2, hw⟩ := hw
     obtain ⟨hm2, h0, hr2⟩ := pinAt_call hN.lPinAt (j := 30) rfl h2
     rw [hm2] at hw
-    have hF := hS1.1.pins.full h0
+    have hF := hS1.check.pins.full h0
     have hp2 : H (r2.headD 0) := by rw [hr2]; exact hF.names_lt 29 (by decide)
     replace hw := ntBW_some hw; obtain ⟨r3, m3, h3, hw⟩ := hw
     simp only [Option.some.injEq, Prod.mk.injEq] at hw
@@ -137,9 +137,9 @@ theorem pinFind_call (hN : NatGuardProg p) {i : Word} (hi : i.toNat < 51) {k : N
       decFd dn m rf (fe.find? (decI (r1.headD 0))) := by
   obtain ⟨hm1, h0, hr1⟩ := pinAt_call hN.lPinAt (j := 1 + i.toNat) rfl h1
   subst hm1
-  have hF := hS.1.pins.full h0
+  have hF := hS.check.pins.full h0
   have hp : H (r1.headD 0) := by rw [hr1]; exact hF.names_lt i.toNat hi
-  obtain ⟨hm2, hfd⟩ := envFind_call hN.toMasterProg (r1.headD 0) hp hS.1.env h2
+  obtain ⟨hm2, hfd⟩ := envFind_call hN.toMasterProg (r1.headD 0) hp hS.check.env h2
   refine ⟨rfl, hm2, h0, hp, hr1, ?_, hfd⟩
   have := pinAt_run hF i.toNat hi
   rw [hr1]; exact this
@@ -371,7 +371,7 @@ theorem natOpGuard_ref (hN : NatGuardProg p) (c : Word) :
   rw [h5, bW_some] at hw
   obtain ⟨hm5, -, hr5⟩ := pinAt_call hN.lPinAt (j := 21) rfl h5
   rw [hm5] at hw
-  have hF3 := hS3.1.pins.full h0
+  have hF3 := hS3.check.pins.full h0
   have hp4 : H (r4.headD 0) := by rw [hr4]; exact hF3.names_lt 19 (by decide)
   have hp5 : H (r5.headD 0) := by rw [hr5]; exact hF3.names_lt 20 (by decide)
   have e4 : (pinAt 19).run a3 = .ok (decI (r4.headD 0), a3) := by

@@ -103,7 +103,7 @@ theorem ocW_sim {p : Prog} (hN : NoProg p) {dn : NIdx → Option ConLeche.Name} 
   | zero => intro m a o l ds _ _ _ _ _ _; rw [ocW_zero]; exact Sim.of_none
   | succ n ih =>
   intro m a o l ds hS hws hwsb hds hdsb hP
-  have hT : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
+  have hT : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.iw hS.iw.iwSize
   by_cases hl : l = 0
   · rw [ocW_nil p n m no nl o l hl]
     have : ds = [] := by rw [hl] at hds; simpa [decHL, hslice?] using hds.symm
@@ -140,9 +140,9 @@ theorem ocW_sim {p : Prog} (hN : NoProg p) {dn : NIdx → Option ConLeche.Name} 
     rw [ite_eq_right h1]
     simp only [Bool.false_eq_true, ite_false]
     refine Sim.post (K := ocK2) (f := fun r => [r.headD 0]) rfl (fun _ _ => rfl)
-      (ih m1 a1 (o + 1) (l - 1) ds' hS1 (slR_grow hg1 hT hws hwsb) (fun i hi => Nat.lt_of_lt_of_le (hwsb i hi) hg1.1)
+      (ih m1 a1 (o + 1) (l - 1) ds' hS1 (slR_grow hg1 hT hws hwsb) (fun i hi => Nat.lt_of_lt_of_le (hwsb i hi) hg1.iw)
         (by rw [decHL_grow hg1 (by omega)]; exact hd')
-        (by have := hg1.1; omega) hP1) ?_
+        (by have := hg1.iw; omega) hP1) ?_
     rintro r b' m' a' ⟨h1, h2, h3, h4⟩
     exact ⟨by simpa using h1, h2, hg1.trans h3, h4⟩
 

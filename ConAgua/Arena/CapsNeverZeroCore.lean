@@ -37,10 +37,10 @@ theorem CoreS.frame_lhs {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : A
     rcases hC2 x hx with rfl | rfl <;> simp
   have aC : ∀ lo hi : Nat, hi ≤ 136 → AvoidC lo hi [192, 136] := fun lo hi h x hx => by
     right; rcases hC2 x hx with rfl | rfl <;> simp <;> omega
-  exact ⟨⟨ArenaR.frame_ext _ _ hA64 hC64 m m' hf a hS.arena.1,
+  exact ⟨⟨ArenaR.frame_ext _ _ hA64 hC64 m m' hf a hS.arena.base,
       DerR.frameM _ _ m m' hf (fun b hb => by
         simp only [List.mem_cons, List.mem_nil_iff, or_false] at hb
-        rcases hb with rfl | rfl <;> decide) a hS.arena.2⟩,
+        rcases hb with rfl | rfl <;> decide) a hS.arena.der⟩,
     hS.core.frame (by decide) (aC 96 128 (by omega)) hf,
     hS.pins.congr (hf.arr PINS (by decide) (by decide)),
     hS.env.frame (by decide) (aC 128 136 (by omega)) hf,
@@ -111,7 +111,7 @@ theorem capsNeverZeroOK_of (p : Prog) (hL : LvSubProg p) : CapsNeverZeroOK p := 
     | zero => simp [capsNeverZeroW] at hW
     | succ n => simp [capsNeverZeroW, e] at hW
   obtain ⟨vs, hdl⟩ := hS.den.lsAll _ (by
-    obtain ⟨ids, e, -⟩ := lsNodeW_view hS.arena.1 hus hne; rw [e]; rfl)
+    obtain ⟨ids, e, -⟩ := lsNodeW_view hS.arena.base hus hne; rw [e]; rfl)
   have hk := lp_nmsR_of_hslice a₀.store.lss.ls.ns s.mem EREC lps ks po pc hlps
     (hslice_noWrap hS.erec hlps) hks
   have hp := pwR_of_decPWw hS.den hS.erec hpw

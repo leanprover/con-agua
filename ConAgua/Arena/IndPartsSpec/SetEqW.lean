@@ -86,7 +86,7 @@ theorem setEqW_ok {n : Nat} {m : Mem} {o1 l1 o2 l2 r : Word} {ws1 ws2 : List Wor
 
 theorem partsPSl_nil {α : Type} {f : Mem → Nat → Option α} {xs : List α} {o : Word} {m : Mem}
     (h : PSlR f xs o 0 m) : xs = [] := by
-  have := decPL_length _ h.1; simpa using this
+  have := decPL_length _ h.dec; simpa using this
 
 /-! ## `block_rec_name_set_ok` -/
 

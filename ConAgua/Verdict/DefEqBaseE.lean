@@ -24,8 +24,8 @@ theorem ErrClaim.bind_core {α β : Type} [Inhabited α] {T₁ : AM α} {f : α 
     (h₁ : CoreRef T₁ a₀ dec₁ dn m₀ vis fe M eb r₁ m₁ ok₁)
     (h₂ : ∀ M', CoreS dn m₁ (AM.st T₁ a₀) vis fe M' eb → ErrClaim (f (dec₁ r₁)) (AM.st T₁ a₀) e) :
     ErrClaim (T₁ >>= f) a₀ e := by
-  obtain ⟨M', hS, -, -⟩ := h₁.2.1
-  exact ErrClaim.bind_right (by rw [AM.run_of_ok _ _ h₁.1, h₁.2.2.1]) (h₂ M' hS)
+  obtain ⟨M', hS, -, -⟩ := h₁.after
+  exact ErrClaim.bind_right (by rw [AM.run_of_ok _ _ h₁.run, h₁.res]) (h₂ M' hS)
 
 /-- `ErrClaim.bind_core`, also passing the stack kept across the callee's run. -/
 theorem ErrClaim.bind_coreS {α β : Type} [Inhabited α] {T₁ : AM α} {f : α → AM β} {a₀ : AState}
@@ -35,8 +35,8 @@ theorem ErrClaim.bind_coreS {α β : Type} [Inhabited α] {T₁ : AM α} {f : α
     (h₂ : ∀ M', CoreS dn m₁ (AM.st T₁ a₀) vis fe M' eb → StackKept m₀ m₁ →
       ErrClaim (f (dec₁ r₁)) (AM.st T₁ a₀) e) :
     ErrClaim (T₁ >>= f) a₀ e := by
-  obtain ⟨M', hS, -, hSt⟩ := h₁.2.1
-  exact ErrClaim.bind_right (by rw [AM.run_of_ok _ _ h₁.1, h₁.2.2.1]) (h₂ M' hS hSt)
+  obtain ⟨M', hS, -, hSt⟩ := h₁.after
+  exact ErrClaim.bind_right (by rw [AM.run_of_ok _ _ h₁.run, h₁.res]) (h₂ M' hS hSt)
 
 /-- A call at L fuel `0` fails with class `0`: it claims nothing. -/
 theorem ErrClaim.of_callE_zero {α : Type} {T : AM α} {a : AState} {p : Prog} {f : FnName}

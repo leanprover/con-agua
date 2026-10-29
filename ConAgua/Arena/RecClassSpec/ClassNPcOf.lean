@@ -49,11 +49,11 @@ theorem BSOK.grow {m m' : Mem} {p : Nat} {bs : BlockShape} (h : BSOK m p bs) (hg
   have ht := BSOK.ptop ⟨hd, hs, hp⟩
   refine ⟨hd.grow (decBS_mono p) hg, fun o l ho hl => ?_, fun o l j v ho hl hj hv => ?_⟩
   · rw [iwN_grow hg (by omega)] at ho; rw [iwN_grow hg (by omega)] at hl
-    exact Nat.le_trans (hs o l ho hl) hg.1
+    exact Nat.le_trans (hs o l ho hl) hg.iw
   · rw [iwN_grow hg (by omega)] at ho; rw [iwN_grow hg (by omega)] at hl
     have := hs o l ho hl
     rw [iwN_grow hg (by omega)] at hv
-    exact Nat.lt_of_lt_of_le (hp o l j v ho hl hj hv) hg.1
+    exact Nat.lt_of_lt_of_le (hp o l j v ho hl hj hv) hg.iw
 
 /-- `block_shape_member_names` under the stage relation. -/
 theorem memberNamesW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
@@ -63,12 +63,12 @@ theorem memberNamesW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe
     decHL m' (r.headD 0).toNat (r.tail.headD 0).toNat = some bs.memberNames ∧
     (r.headD 0).toNat + (r.tail.headD 0).toNat = iwTop m' := by
   have ht := hb.ptop
-  have hsz := hS.2.2.2.1
-  have hts : iwTop m ≤ (m.arr64 IW).size := hS.2.1
+  have hsz := hS.iw.iwSize
+  have hts : iwTop m ≤ (m.arr64 IW).size := hS.iw.iw
   have hk : bs.k < 2 ^ 64 := by
     obtain ⟨o, l, ho, hl, hg⟩ := decAt_some (decBS_some hb.dec).1
     have := decPL_length m hg; simp only [BlockShape.k, this]; exact (iwN_rdW hl (by omega)).2
-  obtain ⟨hr, hd, hg, hf, htop⟩ := memberNamesW_dec h hsz hS.2.2.2.2.2 hb.dec (by omega) hb.2.1 hb.2.2
+  obtain ⟨hr, hd, hg, hf, htop⟩ := memberNamesW_dec h hsz hS.iw.ctl hb.dec (by omega) hb.2.1 hb.2.2
   have hroom : iwTop m' ≤ (m'.arr64 IW).size := by
     simp only [memberNamesW] at h
     rcases hal : allocW m (rdW (m.arr64 IW) (p + 1)) with _ | qm
@@ -264,7 +264,7 @@ theorem npcW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
   rw [npcK1_some] at h
   obtain ⟨hS1, hg1, hr1, hd1, ht1⟩ := memberNamesW_stage h1 hS hb
   have hb1 : (r1.headD 0).toNat + (r1.tail.headD 0).toNat < 2 ^ 64 := by
-    have := hS1.2.1; have := hS1.2.2.2.1; omega
+    have := hS1.iw.iw; have := hS1.iw.iwSize; omega
   obtain ⟨ws, hws, hnm, hwH⟩ := slR_of_decHL m1 _ _ _ hd1 hb1
   rw [UInt64.ofNat_toNat, UInt64.ofNat_toNat] at hws
   rcases h2 : containsW n m1 (r1.headD 0) (r1.tail.headD 0) i with _ | b
@@ -279,11 +279,11 @@ theorem npcW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
     rw [npcK2_hit (h := hcb)] at h
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     have hnp := (decBS_some hb.dec).2.2.1
-    have hrd := iwN_rdW_at (w := p) (k := 4) hnp hS.2.2.2.1
-    have hpb : p.toNat + 4 < 2 ^ 64 := by have := hS.2.1; have := hS.2.2.2.1; omega
+    have hrd := iwN_rdW_at (w := p) (k := 4) hnp hS.iw.iwSize
+    have hpb : p.toNat + 4 < 2 ^ 64 := by have := hS.iw.iw; have := hS.iw.iwSize; omega
     have e4 : rdW (m1.arr64 IW) (p + 4) = rdW (m.arr64 IW) (p + 4) := by
       simp only [rdW]
-      rw [show (p + 4).toNat = p.toNat + 4 by rw [UInt64.toNat_add]; simp; omega, hg1.2.2.1 _ (by omega)]
+      rw [show (p + 4).toNat = p.toNat + 4 by rw [UInt64.toNat_add]; simp; omega, hg1.iwGet _ (by omega)]
     have hm : bs.memberNames.contains (decI i) = true := by rw [hcon]; exact hc
     rw [npc_mem hm]
     refine ⟨hS1, hg1, ?_, hrd.2⟩
@@ -294,7 +294,7 @@ theorem npcW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
   · rw [h3] at h; simp [npcK3] at h
   obtain ⟨r3, m3⟩ := rm3
   rw [h3] at h
-  obtain ⟨hm3, hfind, hdec⟩ := envFindW_found h3 hS1.1.env hi
+  obtain ⟨hm3, hfind, hdec⟩ := envFindW_found h3 hS1.check.env hi
   subst hm3
   have hnc : ¬ bs.memberNames.contains (decI i) = true := by rw [hcon]; exact hc
   by_cases h0 : r3.headD 0 = 0

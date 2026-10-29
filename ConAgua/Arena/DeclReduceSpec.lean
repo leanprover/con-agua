@@ -70,7 +70,7 @@ theorem selW_ok {α : Type} {dn : NIdx → Option ConLeche.Name} {vis : Word} {f
   | succ n =>
   simp only [selW] at h
   rcases h1 : pinAtW m k with _ | ⟨r1, m1⟩ <;> simp only [h1, selK, reduceCtorEq] at h
-  obtain ⟨hm1, hr1, hl1, hrun1⟩ := pinAtW_ok h1 hS.1.pins
+  obtain ⟨hm1, hr1, hl1, hrun1⟩ := pinAtW_ok h1 hS.check.pins
   have e1 : r1.headD 0 = pinW m (1 + k.toNat) := by rw [hr1]; rfl
   have hbeq : ((decI c : NIdx) == decI (pinW m (1 + k.toNat))) = decide (c = pinW m (1 + k.toNat)) :=
     decI_beq c _ hc hl1
@@ -245,7 +245,7 @@ theorem constE_stage {p : Prog} (hp : p.lookup "const_e" = some constEL)
   have hflag : pinW m 0 ≠ 0 := by intro h0; simp [pinWordW, h0] at hW1
   simp only [pinWordW, hflag, ite_false, Option.some.injEq, Prod.mk.injEq] at hW1
   obtain ⟨rfl, hm1⟩ := hW1
-  have hF := hS.1.pins.full hflag
+  have hF := hS.check.pins.full hflag
   have hz : rdW (m.arr64 PINS) 52 = pinW m 52 := by simp [rdW, pinW]
   simp only [List.headD_cons, hz, constEW.k_pin_word] at hW
   rcases h2 : callW p n "intern_const" [nm, pinW m 52] s1.mem with _ | ⟨r2, m2⟩ <;> simp only [h2, constEW.k_intern_const] at hW
@@ -361,7 +361,7 @@ theorem reduceCertVar_refines (p : Prog) (hp : RcvProg p) (n : Nat) (s₀ : St) 
   | succ n =>
   rw [rcvW_step] at h
   rcases h1 : pinAtW s₀.mem 43 with _ | ⟨r1, m1⟩ <;> simp only [h1, rcvK1, reduceCtorEq] at h
-  obtain ⟨hm1, hr1, hl1, hrun1⟩ := pinAtW_ok h1 hS.1.pins
+  obtain ⟨hm1, hr1, hl1, hrun1⟩ := pinAtW_ok h1 hS.check.pins
   subst hm1
   generalize s₀.mem = m1 at *
   have e1 : r1.headD 0 = pinW m1 (1 + (43 : Word).toNat) := by rw [hr1]; rfl
@@ -379,14 +379,14 @@ theorem reduceCertVar_refines (p : Prog) (hp : RcvProg p) (n : Nat) (s₀ : St) 
         AM NIdx).run a₀ = .ok (decI (r2.headD 0), a₀) := by
     by_cases he : c = r1.headD 0
     · rw [ite_eq_left he] at hpick
-      obtain ⟨hm, hr, hl, hrun⟩ := pinAtW_ok hpick hS.1.pins
+      obtain ⟨hm, hr, hl, hrun⟩ := pinAtW_ok hpick hS.check.pins
       rw [e1] at he
       subst hr
       refine ⟨hm, hl, ?_⟩
       simp only [he, List.headD_cons]
       simpa using hrun
     · rw [ite_eq_right he] at hpick
-      obtain ⟨hm, hr, hl, hrun⟩ := pinAtW_ok hpick hS.1.pins
+      obtain ⟨hm, hr, hl, hrun⟩ := pinAtW_ok hpick hS.check.pins
       rw [e1] at he
       subst hr
       refine ⟨hm, hl, ?_⟩

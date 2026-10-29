@@ -142,7 +142,7 @@ theorem CoreS.arena_frame {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a
   have hk := hcpl
   simp only [cpl, Prod.mk.injEq] at hk
   exact hS.arena_frameD hD hcpl hf h128 hpins henv hC128 hCenv
-    (hS.den.of_arena hS.arena.1 hD.1 hk.1 hk.2.1 hk.2.2 hf hscA hscC) hmA hmC hmWA hmWC hmLA hmLC
+    (hS.den.of_arena hS.arena.base hD.base hk.1 hk.2.1 hk.2.2 hf hscA hscC) hmA hmC hmWA hmWC hmLA hmLC
     (hS.mode.frame hf hC0 hscC.1)
 
 /-! ## Handle words of the interning functions' results
@@ -169,7 +169,7 @@ theorem mkAppW_hw (m : Mem) (a : AState) (hA : ArenaD m a) (f x r : Word) (m' : 
   | some m₂ =>
   simp only [hP, Option.some.injEq, Prod.mk.injEq] at hI
   obtain ⟨rfl, rfl⟩ := hI
-  exact ainternW_hw m a hA.1.app f x _ m₁ hI₁
+  exact ainternW_hw m a hA.base.app f x _ m₁ hI₁
 
 /-- **`mk_app_n_from`'s result is a handle word.** -/
 theorem mkAppNFromW_hw : ∀ (K : Nat) (m : Mem) (a : AState) (f o n i : Word),
@@ -569,8 +569,8 @@ theorem peelFull_ref (p : Prog) (hp : SpineProg p) (hil : InstListOK p) (n : Nat
           simp [peelFull, peelLoop, hlt, ht5, hc1, hc2, h] at hF
         rw [peelFull_step _ _ _ _ _ _ _ _ _ _ hlt (fun h => h ht5) hc1 hc2 hc3] at hF
         have hv : viewOK m t LAM := ⟨hc1, UInt64.not_le.mp hc2⟩
-        obtain ⟨-, -, hbody1⟩ := view_lam m a hS.arena.1 t ht hv ht5
-        have hvb := viewBind_lam m a hS.arena.1 t ht hv ht5
+        obtain ⟨-, -, hbody1⟩ := view_lam m a hS.arena.base t ht hv ht5
+        have hvb := viewBind_lam m a hS.arena.base t ht hv ht5
         have hlt' : i.toNat < args.size := by
           rw [har₀.size]; exact UInt64.lt_iff_toNat_lt.mp hlt
         have hit : (i.toNat).toUInt64 = i := by simp

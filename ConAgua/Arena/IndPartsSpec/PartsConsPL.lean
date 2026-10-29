@@ -48,12 +48,13 @@ theorem partsConsPL {α : Type} {f : Mem → Nat → Option α} (hf : ∀ q, OMo
   simp [hy', hm']
 
 /-- A slice result decoded below the tops (`(off, len)`, the slice below the top). -/
-def PSlR {α : Type} (f : Mem → Nat → Option α) (xs : List α) (o l : Word) (m : Mem) : Prop :=
-  DecB (fun m => decPL m (f m) o.toNat l.toNat) m xs ∧ o.toNat + l.toNat ≤ iwTop m
+structure PSlR {α : Type} (f : Mem → Nat → Option α) (xs : List α) (o l : Word) (m : Mem) : Prop where
+  dec : DecB (fun m => decPL m (f m) o.toNat l.toNat) m xs
+  bound : o.toNat + l.toNat ≤ iwTop m
 
 theorem PSlR.grow {α : Type} {f : Mem → Nat → Option α} (hf : ∀ q, OMono (fun m => f m q))
     {xs : List α} {o l : Word} {m m' : Mem} (h : PSlR f xs o l m) (hg : IWGrow m m') : PSlR f xs o l m' :=
-  ⟨h.1.grow (OMono.decPL hf _ _) hg, Nat.le_trans h.2 hg.1⟩
+  ⟨h.dec.grow (OMono.decPL hf _ _) hg, Nat.le_trans h.bound hg.iw⟩
 
 theorem PSlR.nil {α : Type} (f : Mem → Nat → Option α) (m : Mem) : PSlR f [] 0 0 m :=
   ⟨by show decPL _ _ _ _ = _; simp [decPL], by simp⟩
@@ -76,7 +77,7 @@ def SplitR (x : Option (List IConstantVal × List (IConstantVal × Nat × Nat) �
 /-- A word of the pool below the top reads the same after growth. -/
 theorem partsRdIW_grow {m m' : Mem} (hg : IWGrow m m') {w : Word} (hw : w.toNat < iwTop m) :
     rdW (m'.arr64 IW) w = rdW (m.arr64 IW) w := by
-  simp only [rdW]; rw [hg.2.2.1 _ hw]
+  simp only [rdW]; rw [hg.iwGet _ hw]
 
 /-! ## The census theorems -/
 

@@ -99,7 +99,7 @@ theorem crr_ref (hP : CrrProg p) (henv : ConLeche.EnvWF env) (visT visR : Word) 
   | succ n ih =>
   intro m a vo vl co cl cvs cs cvsP hC hG hrc hcg hcvs hcs hA hgP hcvGsP hcvsP hie
   have hS := hC.stage
-  have hsz := hS.2.2.2.1
+  have hsz := hS.iw.iwSize
   have hnil : RefE (VerdictCtxU p) (.ok ([0, 0], m))
       (Pure.pure [] : AM (List (IConstantVal × TargetMajor × List EIdx))) a
       (fun v xs a' => CrrPost dn visR feR env m a v.1 v.2 xs a') :=
@@ -170,7 +170,7 @@ theorem crr_ref (hP : CrrProg p) (henv : ConLeche.EnvWF env) (visT visR : Word) 
   -- `target_major_at`
   have hS1 := hR1.stage.stage
   have hG1 := hG.grow (decCG_mono _) hR1.grow
-  have hsz1 := hS1.2.2.2.1
+  have hsz1 := hS1.iw.iwSize
   obtain ⟨-, -, ⟨o3, l3, h3, h4, hcls⟩, -⟩ := rec2CG_parts hG1
   obtain ⟨e3, t3⟩ := rec2RdN (w := g) (k := 3) h3 hsz1
   obtain ⟨e4, t4⟩ := rec2RdN (w := g) (k := 4) h4 hsz1
@@ -178,8 +178,8 @@ theorem crr_ref (hP : CrrProg p) (henv : ConLeche.EnvWF env) (visT visR : Word) 
   rw [e3, e4]
   have hb3 : o3 + l3 < 2 ^ 64 := by
     by_cases hl : l3 = 0
-    · have := iwN_rdW h3 (by have := hS1.2.1; have := (rec2CG_parts hG1).2.1; omega); omega
-    · have := rec2DecB_PL_top hcls hl; have := hS1.2.1; omega
+    · have := iwN_rdW h3 (by have := hS1.iw.iw; have := (rec2CG_parts hG1).2.1; omega); omega
+    · have := rec2DecB_PL_top hcls hl; have := hS1.iw.iw; omega
   have hM := rec3TMA_sim dn visR feR n m1 a1 (UInt64.ofNat o3) (UInt64.ofNat l3) (UInt64.ofNat c0)
     G.cls hS1 (by rw [t3, t4]; exact hcls) (by rw [t3, t4]; exact hb3)
   rw [tc] at hM
@@ -210,9 +210,9 @@ theorem crr_ref (hP : CrrProg p) (henv : ConLeche.EnvWF env) (visT visR : Word) 
         simp only [getD_zero, Nat.zero_add, getD_one] at h; exact h)
   -- the rest
   have hg03 := hR1.grow.trans (hg2.trans hg3)
-  have hvo1 := rec2ToNat_succ (o := vo) (i := vo.toNat) (Nat.le_refl _) (by have := hS.2.1; omega)
+  have hvo1 := rec2ToNat_succ (o := vo) (i := vo.toNat) (Nat.le_refl _) (by have := hS.iw.iw; omega)
   have hco1 := rec2ToNat_succ (o := co) (i := co.toNat) (Nat.le_refl _)
-    (by have := hS.2.1; have := (rec2IwN_trunc hc0).1; omega)
+    (by have := hS.iw.iw; have := (rec2IwN_trunc hc0).1; omega)
   have hvl1 := rec2ToNat_pred hvl
   have hcl1 := rec2ToNat_pred hcl
   have ih' := ih (by omega) m3 a2 (vo + 1) (vl - 1) (co + 1) (cl - 1) cvs' cs' cvsP' hC3

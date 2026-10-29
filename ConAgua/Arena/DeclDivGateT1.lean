@@ -229,7 +229,7 @@ theorem tpgC (hD : DmProg6 p) (hcl : LeafClosed p) (hkp : CrKeep p) {nw ty : Wor
   | some q1 =>
   obtain ⟨r1, m1⟩ := q1
   rw [h1, bW_some] at hw
-  obtain ⟨hm1, hfd⟩ := envFind_call hD.toDmProg5.toMasterProg nw hn1 hC.stage.1.env h1
+  obtain ⟨hm1, hfd⟩ := envFind_call hD.toDmProg5.toMasterProg nw hn1 hC.stage.check.env h1
   subst hm1
   cases hf : fe.find? (decI nw) with
   | none =>
@@ -426,7 +426,7 @@ theorem tpsgC (hD : DmProg6 p) (hcl : LeafClosed p) (hkp : CrKeep p) :
         rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; simp; omega)]; simp
       have ho2 : (o + 2).toNat = o.toNat + 2 := L.Rom.addN (by simp; omega)
       refine L.Rom.TPinsR.keep ⟨by rw [ho2, hl1]; omega, by rw [hl1]; omega,
-        fun i hi => ?_⟩ ⟨hg1.2.1, hg1.2.2.2⟩
+        fun i hi => ?_⟩ ⟨hg1.er, hg1.erGet⟩
       have := hv (i + 1) (by simpa using hi)
       simp only [List.getElem_cons_succ] at this
       have e : o + 2 * UInt64.ofNat (i + 1) = o + 2 + 2 * UInt64.ofNat i := by
@@ -554,7 +554,7 @@ theorem cra_refT (hD : DmProg5 p) (hkp : CrKeep p) :
     cases k with
     | zero => rw [callW_zero] at hc; cases hc
     | succ k =>
-    obtain ⟨hl0, hwlt, hh, hrest⟩ := decHL_cons_iw hT.stage.2.2.2.1 hd
+    obtain ⟨hl0, hwlt, hh, hrest⟩ := decHL_cons_iw hT.stage.iw.iwSize hd
     subst hh
     have hw := callW_model (M := fun mm => craW p (realCall p) k mm vis o l)
       (cra_specW p hD.lConstsResolveAll (realCall p) (realCall_spec p) k · vis o l) hc
@@ -585,7 +585,7 @@ theorem cra_refT (hD : DmProg5 p) (hkp : CrKeep p) :
       replace hw := ntBW_some hw; obtain ⟨r2, m2, h2, hw⟩ := hw
       simp only [Option.some.injEq, Prod.mk.injEq] at hw
       obtain ⟨rfl, rfl⟩ := hw
-      have hsz := hT.stage.2.2.2.1
+      have hsz := hT.stage.iw.iwSize
       have hlpos : 0 < l.toNat := Nat.pos_of_ne_zero (fun e => hl0 (UInt64.toNat_inj.mp (by simpa using e)))
       have ho1 : (o + 1).toNat = o.toNat + 1 := by
         have hb := decHL_bnd m o l hd hsz
@@ -597,7 +597,7 @@ theorem cra_refT (hD : DmProg5 p) (hkp : CrKeep p) :
         rw [ho1, hl1'] at hrest
         rw [decHL_grow hg1 (by omega)]; exact hrest
       obtain ⟨x2, a2, hrun2, ⟨hT2, hg2, hd2⟩, hCr2⟩ := ih (o + 1) (l - 1) k m1 a1 r2 m2 hT1 hCr1.crOK
-        hrest1 (by rw [ho1, hl1']; have := hg1.1; omega) h2
+        hrest1 (by rw [ho1, hl1']; have := hg1.iw; omega) h2
       refine ⟨x2, a2, ?_, ⟨hT2, hg1.trans hg2, hd2⟩, hCr2⟩
       simp only [constsResolveAll, StateT.run_bind, hrun1, exc_ok_bind', hx1, ite_true]
       exact hrun2
@@ -750,7 +750,7 @@ theorem cgC (hD : DmProg5 p) (hcl : LeafClosed p) (hkp : CrKeep p) (hs0 : SubstC
   replace hw := ntBW_some hw; obtain ⟨r6, m6, h6, hw⟩ := hw
   have hd5' : decHL m5 ho.toNat hl.toNat = some hyps := by
     rw [decHL_grow hG5 hb]; exact hd
-  have hb5 : ho.toNat + hl.toNat ≤ iwTop m5 := Nat.le_trans hb hG5.1
+  have hb5 : ho.toNat + hl.toNat ≤ iwTop m5 := Nat.le_trans hb hG5.iw
   have hCr6 := hkp.call (im_mem _ rfl) h6 hCr5.crOK
   obtain ⟨x6, a6, hrun6, hS6, hg6, hd6⟩ :=
     sc0List_ref hD hs0 c annVal hc hann hyps ho hl k m5 a5 r6 m6 hC5.stage hd5' hb5 h6
@@ -871,16 +871,16 @@ theorem cggoC (hD : DmProg6 p) (hcl : LeafClosed p) (hkp : CrKeep p) (hs0 : Subs
       exact ⟨true, a, rfl, hC, CoreStep.refl hC.check, IWGrow.refl _, by simp [decW0B]⟩
     | cons pf pfs =>
     obtain ⟨px, pxs, hpx, hpxs, rfl⟩ := ConRon.Bridge.denoteEList_cons hpr
-    obtain ⟨hsl0, q, hq, hstm, hrest⟩ := StmtL.cons hS.2 hs
-    obtain ⟨hpl0, hpwlt, hpf, hdrest⟩ := decHL_cons_iw hS.2.2.2.1 hd
+    obtain ⟨hsl0, q, hq, hstm, hrest⟩ := StmtL.cons hS.iw hs
+    obtain ⟨hpl0, hpwlt, hpf, hdrest⟩ := decHL_cons_iw hS.iw.iwSize hd
     subst hpf
     obtain ⟨ho, hl, e, hr3, hbd, hdh, he, hst2⟩ := hstm
     obtain ⟨hp3, h0, h1, h2⟩ := hr3
     have hst2' : eqq = decE e := hst2
     subst hst2'
     rw [ite_eq_right (by simp [hsl0, hpl0])] at hw
-    have hsz := hS.2.2.2.1
-    have hI1 := hS.2.1
+    have hsz := hS.iw.iwSize
+    have hI1 := hS.iw.iw
     have r0 : rdW (m.arr64 IW) so = q := hq
     have rq1 : rdW (m.arr64 IW) q = ho := rdW_iw_of h0 rfl
     have rq2 : rdW (m.arr64 IW) (q + 1) = hl :=
@@ -916,7 +916,7 @@ theorem cggoC (hD : DmProg6 p) (hcl : LeafClosed p) (hkp : CrKeep p) (hs0 : Subs
     have hdr1 : decHL m1 (po + 1).toNat (pl - 1).toNat = some pfs := by
       rw [decHL_grow hg1 (by rw [hpo1, hpl1]; omega)]; exact hdrest
     obtain ⟨x2, a2, hrun2, hC2, c2, hg2, hd2⟩ := ih xrest pfs pxs (so + 1) (sl - 1) (po + 1) (pl - 1)
-      k m1 a1 r2 m2 hC1 (hkp.call (im_mem _ rfl) h1' hCr) (hrest.grow hg1) hdr1 (by rw [hpo1, hpl1]; have := hg1.1; omega)
+      k m1 a1 r2 m2 hC1 (hkp.call (im_mem _ rfl) h1' hCr) (hrest.grow hg1) hdr1 (by rw [hpo1, hpl1]; have := hg1.iw; omega)
       (ConRon.Bridge.denoteN_ext hn c1.ext) (ConRon.Bridge.denote_ext hv c1.ext)
       (ConRon.Bridge.StmtsDenote.mono c1.ext _ _ hsd3)
       (ConRon.Bridge.denoteEList_ext c1.ext _ _ hpxs) h2

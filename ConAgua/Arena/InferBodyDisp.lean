@@ -247,7 +247,7 @@ theorem coreRef_of_imp {α : Type} [Inhabited α] {T T' : AM α} {a₀ : AState}
     {eb : Word} {r : List Word} {ok : List Word → Prop}
     (himp : ∀ x a', T.run a₀ = .ok (x, a') → T'.run a₀ = .ok (x, a'))
     (h : CoreRef T a₀ dec dn m₀ vis fe M eb r m ok) : CoreRef T' a₀ dec dn m₀ vis fe M eb r m ok :=
-  coreRef_congr ((himp _ _ (AM.run_of_ok _ _ h.1)).trans (AM.run_of_ok _ _ h.1).symm) h
+  coreRef_congr ((himp _ _ (AM.run_of_ok _ _ h.run)).trans (AM.run_of_ok _ _ h.run).symm) h
 
 theorem getD1 (r : List Word) : r.getD 1 0 = r.tail.headD 0 := by
   rcases r with _ | ⟨x, _ | ⟨y, t⟩⟩ <;> rfl
@@ -376,7 +376,7 @@ theorem ib_ref (p : Prog) (hq : InferAllProg p) (hc : InferCallees p) (n : Nat) 
   have hm₀ : m₀ = s₀.mem := by rw [← ht₀, hts]
   subst hm₀
   subst hr0
-  obtain ⟨v, hv, hvr⟩ := L.Ind.eViewW_ok s₀.mem a₀ hS.arena.1 e hne
+  obtain ⟨v, hv, hvr⟩ := L.Ind.eViewW_ok s₀.mem a₀ hS.arena.base e hne
   have hhd := eViewW_head s₀.mem e hne
   have hsl : SlotPre ⟨s₀.mem, Locals.init []⟩ a₀ dn vis fe MM eb mode := ⟨hS, hs.mode4, hs.eb_mode⟩
   have hs : SlotPre ⟨s₀.mem, Locals.init []⟩ a₀ dn vis fe MM eb mode := ⟨hS, hs.mode4, hs.eb_mode⟩
@@ -417,8 +417,8 @@ theorem ib_ref (p : Prog) (hq : InferAllProg p) (hc : InferCallees p) (n : Nat) 
       (fun c hc => by
         simp only [LNodeView.lchildren, List.mem_cons, List.mem_nil_iff, or_false] at hc
         subst hc; exact hS.den.sort _ _ hv)
-      (fun n hn => by simp [LNodeView.nchildren] at hn) h₁.1
-    rw [h₁.2.2.1] at hd
+      (fun n hn => by simp [LNodeView.nchildren] at hn) h₁.run
+    rw [h₁.res] at hd
     refine RefE.bind_core (w := id) h₁ (fun M₁ hS₁ _ => ?_)
     rcases h2 : callW p n "intern_sort" [r₁.headD 0] m₁ with _ | ⟨r₂, m₂⟩
     · rw [liftE_none]; exact RefE.of_cls0 (by simp)
@@ -426,7 +426,7 @@ theorem ib_ref (p : Prog) (hq : InferAllProg p) (hc : InferCallees p) (n : Nat) 
     obtain ⟨s₂, hs₂, -, hso⟩ := triple_of_callW (s₀ := ⟨m₁, Locals.init []⟩)
       (internSort_spec p hq.body.sof hq.body.sop hq.body.soi n _ (r₁.headD 0)) h2
     rw [hs₂] at hso
-    obtain ⟨hrun, hP⟩ := (internSort_core hS₁ (r₁.headD 0) h₁.2.2.2 r₂ hso hd).post
+    obtain ⟨hrun, hP⟩ := (internSort_core hS₁ (r₁.headD 0) h₁.resOk r₂ hso hd).post
     exact RefE.ret hrun ⟨hP.after, hP.res, hP.valid⟩
   | const nm us =>
     obtain ⟨hg, hn1, hdn, hu2, hdu⟩ := hvr
@@ -534,7 +534,7 @@ theorem ibo_ref (p : Prog) (hq : InferAllProg p) (hc : InferCallees p) (n : Nat)
   have hm₀ : m₀ = s₀.mem := by rw [← ht₀, hts]
   subst hm₀
   subst hr0
-  obtain ⟨v, hv, hvr⟩ := L.Ind.eViewW_ok s₀.mem a₀ hS.arena.1 e hne
+  obtain ⟨v, hv, hvr⟩ := L.Ind.eViewW_ok s₀.mem a₀ hS.arena.base e hne
   have hhd := eViewW_head s₀.mem e hne
   have hsl : SlotPre ⟨s₀.mem, Locals.init []⟩ a₀ dn vis fe MM eb mode := ⟨hS, hs.mode4, hs.eb_mode⟩
   have hs : SlotPre ⟨s₀.mem, Locals.init []⟩ a₀ dn vis fe MM eb mode := ⟨hS, hs.mode4, hs.eb_mode⟩
@@ -575,8 +575,8 @@ theorem ibo_ref (p : Prog) (hq : InferAllProg p) (hc : InferCallees p) (n : Nat)
       (fun c hc => by
         simp only [LNodeView.lchildren, List.mem_cons, List.mem_nil_iff, or_false] at hc
         subst hc; exact hS.den.sort _ _ hv)
-      (fun n hn => by simp [LNodeView.nchildren] at hn) h₁.1
-    rw [h₁.2.2.1] at hd
+      (fun n hn => by simp [LNodeView.nchildren] at hn) h₁.run
+    rw [h₁.res] at hd
     refine RefE.bind_core (w := id) h₁ (fun M₁ hS₁ _ => ?_)
     rcases h2 : callW p n "intern_sort" [r₁.headD 0] m₁ with _ | ⟨r₂, m₂⟩
     · rw [liftE_none]; exact RefE.of_cls0 (by simp)
@@ -584,7 +584,7 @@ theorem ibo_ref (p : Prog) (hq : InferAllProg p) (hc : InferCallees p) (n : Nat)
     obtain ⟨s₂, hs₂, -, hso⟩ := triple_of_callW (s₀ := ⟨m₁, Locals.init []⟩)
       (internSort_spec p hq.body.sof hq.body.sop hq.body.soi n _ (r₁.headD 0)) h2
     rw [hs₂] at hso
-    obtain ⟨hrun, hP⟩ := (internSort_core hS₁ (r₁.headD 0) h₁.2.2.2 r₂ hso hd).post
+    obtain ⟨hrun, hP⟩ := (internSort_core hS₁ (r₁.headD 0) h₁.resOk r₂ hso hd).post
     exact RefE.ret hrun ⟨hP.after, hP.res, hP.valid⟩
   | const nm us =>
     obtain ⟨hg, hn1, hdn, hu2, hdu⟩ := hvr
@@ -670,9 +670,9 @@ theorem ibo_ref (p : Prog) (hq : InferAllProg p) (hc : InferCallees p) (n : Nat)
     have hs₁ : SlotPre ⟨m₁, Locals.init []⟩ _ dn vis fe M₁ eb mode := ⟨hS₁, hs.mode4, hs.eb_mode⟩
     rcases h4 : callE p n "infer_io" [mode, vis, d, r₁.headD 0] m₁ with e4 | ⟨r₄, m₄⟩
     · exact fun hG => CoreSpecE.of_callE (s₀ := ⟨m₁, Locals.init []⟩) ((hG.knot n (Nat.le_refl _)).inferIO
-        F _ _ dn vis fe M₁ eb mode d (r₁.headD 0) hF hn hs₁ h₁.2.2.2) h4
+        F _ _ dn vis fe M₁ eb mode d (r₁.headD 0) hF hn hs₁ h₁.resOk) h4
     obtain ⟨hrun, hP⟩ := (CoreSpec.of_callW ((hk n (Nat.le_refl _)).inferIO F ⟨m₁, Locals.init []⟩ _ dn
-      vis fe M₁ eb mode d (r₁.headD 0) hF hn hs₁ h₁.2.2.2) (callW_of_callE h4)).post
+      vis fe M₁ eb mode d (r₁.headD 0) hF hn hs₁ h₁.resOk) (callW_of_callE h4)).post
     exact RefE.ret hrun ⟨hP.after, hP.res, hP.valid⟩
   | proj sn i pe =>
     obtain ⟨hg, h1, hd1, h2, h3, hd3⟩ := hvr

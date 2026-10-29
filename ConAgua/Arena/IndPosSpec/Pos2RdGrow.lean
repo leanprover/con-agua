@@ -20,7 +20,7 @@ open L.Arena
 local notation "V" => ConLeche.CheckMode.verified
 
 theorem pos2_rd_grow {m m' : Mem} (hg : IWGrow m m') {x : Word} (hx : x.toNat < iwTop m) :
-    rdW (m'.arr64 IW) x = rdW (m.arr64 IW) x := by simp only [rdW]; rw [hg.2.2.1 _ hx]
+    rdW (m'.arr64 IW) x = rdW (m.arr64 IW) x := by simp only [rdW]; rw [hg.iwGet _ hx]
 
 end L.Ind
 

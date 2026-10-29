@@ -820,7 +820,7 @@ theorem DerR.grow (m m' : Mem) (hg : Grows m m') (a : AState) (hD : DerR m a) : 
 
 /-- **Appending to the pool keeps `ArenaD`.** -/
 theorem ArenaD.grow (m m' : Mem) (hg : Grows m m') (a : AState) (hA : ArenaD m a) : ArenaD m' a :=
-  ⟨ArenaR.grow m m' hg a hA.1, DerR.grow m m' hg a hA.2⟩
+  ⟨ArenaR.grow m m' hg a hA.base, DerR.grow m m' hg a hA.der⟩
 
 /-- `intern_lit` refines `internE (.lit (.natVal _))` under `ArenaD`. -/
 theorem internLit_refinesD (p : Prog) (hph : p.lookup "lit_hash" = some litHash)
@@ -837,8 +837,8 @@ theorem internLit_refinesD (p : Prog) (hph : p.lookup "lit_hash" = some litHash)
       ArenaD s'.mem (AM.st (internE (.lit (.natVal (pv (vpool s₀.mem) o.toNat l.toNat)))) a₀) ∧
       AM.res (internE (.lit (.natVal (pv (vpool s₀.mem) o.toNat l.toNat)))) a₀ =
         decE (r.headD 0); ⊤⦄ := by
-  have hps := hA.1.lit.1.cap
-  have htop := hA.1.lit.1.top
+  have hps := hA.base.lit.1.cap
+  have htop := hA.base.lit.1.top
   have hq1 := hq.le
   have hspec := internLit_spec p hph hpe hpm hpf hpp hp n s₀ o l (by omega) (by omega)
   apply M.triple_of_run

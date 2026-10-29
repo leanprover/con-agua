@@ -467,7 +467,7 @@ theorem reservedRecName_refines {p : Prog} (hP : RrnProg p) (dn : NIdx → Optio
     (rrn_spec p hP.rrn hP.rc hP.rf hP.lg hP.pr hP.pin k _ x) hc
   simp only at hm hW
   obtain ⟨hr, hiff⟩ := rrnW_iff hW
-  have hF := hS.1.pins.full (rrnW_flag hW)
+  have hF := hS.check.pins.full (rrnW_flag hW)
   obtain ⟨b, hrun, hb⟩ := reservedRecName_run hF x hx
   refine ⟨b, a, hrun, ?_⟩
   rw [hm]

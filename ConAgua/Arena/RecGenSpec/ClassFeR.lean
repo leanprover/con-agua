@@ -286,12 +286,12 @@ theorem cfrRec_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFE
     split at h1; · cases h1
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h1)
     exact ⟨rfl, by simp only [erAllocMem]; exact Mem.arr64_set64_ne _ _ _ _ _ (by decide)⟩
-  obtain ⟨-, hEtop, -, hEsz, -⟩ := hS.2
+  obtain ⟨-, hEtop, -, hEsz, -⟩ := hS.iw
   obtain ⟨hS', hg, -, htop', hget⟩ := erRec_stage h1 hS [5, rdW (m.arr64 EREC) cq,
     rdW (m.arr64 EREC) (cq + 1), rdW (m.arr64 EREC) (cq + 2), rdW (m.arr64 EREC) (cq + 3), mi, rp3, 0, 0]
     (by simp)
   have hroom : q1.toNat + 9 < 2 ^ 64 := by
-    obtain ⟨-, h2, -, h4, -⟩ := hS'.2; simp only [List.length_cons, List.length_nil] at htop'; omega
+    obtain ⟨-, h2, -, h4, -⟩ := hS'.iw; simp only [List.length_cons, List.length_nil] at htop'; omega
   rw [cfrMem_eq (by omega) hroom, hE1]
   refine ⟨hS', hg, ?_⟩
   generalize hM : wrER m1 q1 _ = M at hS' hg htop' hget
@@ -303,7 +303,7 @@ theorem cfrRec_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFE
   have hw : ∀ i, i < 4 → (erecP M)[q1.toNat + 1 + i]? = (erecP M)[cq.toNat + i]? := by
     intro i hi
     rw [show q1.toNat + 1 + i = q1.toNat + (i + 1) by omega, hP (i + 1) (by omega),
-      hget (i + 1) (by simp; omega), erecP_getE (by omega), hg.2.2.2 _ (by omega)]
+      hget (i + 1) (by simp; omega), erecP_getE (by omega), hg.erGet _ (by omega)]
     have hlt : cq.toNat + i < (m.arr64 EREC).size := by simp only [erTop] at hEtop hcq; omega
     rcases i with _ | _ | _ | _ | i
     all_goals first
@@ -386,7 +386,7 @@ theorem rec3DecPrev_stab {dn : NIdx → Option ConLeche.Name} {m : Mem} {p : Nat
     {x : NIdx × Option (Nat × IConstantInfo)} (h : decPrev dn m p = some x) (hp : p + 3 ≤ iwTop m) :
     StabD (fun m => decPrev dn m p) m x := by
   intro m' hg
-  have e : ∀ i, i < iwTop m → (iwA m')[i]? = (iwA m)[i]? := fun i hi => hg.2.2.1 i hi
+  have e : ∀ i, i < iwTop m → (iwA m')[i]? = (iwA m)[i]? := fun i hi => hg.iwGet i hi
   simp only [decPrev, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h ⊢
   obtain ⟨nm, hnm, c, hc, q, hq, pv, hpv, rfl⟩ := h
   refine ⟨nm, ?_, c, by rw [e _ (by omega)]; exact hc, q, by rw [e _ (by omega)]; exact hq, pv,
@@ -432,7 +432,7 @@ theorem ferW_ok (p : Prog) (hp : CfrProg p) (dn : NIdx → Option ConLeche.Name)
   | zero => intro m m' a vis fe cvo cvl rcl M cvs rcs r h; simp [ferW] at h
   | succ k ih =>
   intro m m' a vis fe cvo cvl rcl M cvs rcs r h hS hrecs hcvs hrcs hMb
-  have hsz := hS.2.2.2.1
+  have hsz := hS.iw.iwSize
   by_cases hz : cvl = 0 ∨ rcl = 0
   · have hz' : cvs.zip rcs = [] := by
       rcases hz with hvl | hcl
@@ -465,7 +465,7 @@ theorem ferW_ok (p : Prog) (hp : CfrProg p) (dn : NIdx → Option ConLeche.Name)
     exact UInt64.le_iff_toNat_le.mpr (by omega)
   have htag : rowTag w ≤ 2 := by rw [← tagW_toNat]; exact UInt64.le_iff_toNat_le.mp ht2
   rw [rowCW_eq m w hwH ht2, rowPW_eq m w hwH ht2] at h
-  have hprev := rec3PrevD hS.1.env hwH htag
+  have hprev := rec3PrevD hS.check.env hwH htag
   obtain ⟨hmi, hrp⟩ := rec3FerMiRp (M := M) hrecs hsz
   -- the record
   obtain ⟨⟨kq, m1⟩, h1, h⟩ := of_K h (by simp only [ferK1])
@@ -476,7 +476,7 @@ theorem ferW_ok (p : Prog) (hp : CfrProg p) (dn : NIdx → Option ConLeche.Name)
   obtain ⟨wn, hwn, hwnl, -⟩ := decCI_name hci
   have hwn' : (rdW (m1.arr64 EREC) (kq + 1)).toNat < 2 ^ 32 := by
     have hq1 : (kq + 1).toNat = kq.toNat + 1 := by
-      have := erecP_lt hwn; obtain ⟨-, h2, -, h4, -⟩ := hS1.2; rw [UInt64.toNat_add]; simp; omega
+      have := erecP_lt hwn; obtain ⟨-, h2, -, h4, -⟩ := hS1.iw; rw [UInt64.toNat_add]; simp; omega
     rw [rdW_of_get? hq1.symm (erecP_get hwn)]; exact hwnl
   obtain ⟨⟨rv, m2⟩, h2, h⟩ := of_K h (by simp only [ferK2])
   rw [ferK2_some] at h
@@ -499,7 +499,7 @@ theorem ferW_ok (p : Prog) (hp : CfrProg p) (dn : NIdx → Option ConLeche.Name)
     have := htop3; simp only [List.length_cons, List.length_nil, iwTop] at this
     rw [hre]; simp only [List.headD_cons, iwTop]; omega)
   -- the rest
-  have hcvo1 := rec2ToNat_succ (o := cvo) (i := cvo.toNat) (Nat.le_refl _) (by have := hS.2.1; omega)
+  have hcvo1 := rec2ToNat_succ (o := cvo) (i := cvo.toNat) (Nat.le_refl _) (by have := hS.iw.iw; omega)
   have hcvl1 := rec2ToNat_pred hvl
   have hrcl1 := rec2ToNat_pred hcl
   have hM1 : (M + 1).toNat = M.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
@@ -552,7 +552,7 @@ theorem classFeR_refines (p : Prog) (hp : CfrProg p) (n : Nat) (s₀ : St) (a₀
   obtain ⟨ro, rl, hro, hrl, hrecs⟩ := decAt_some hrs
   have hrsP : rs = P.recs := by rw [← hPe]
   rw [hrsP] at hrecs
-  have hsz := hS.2.2.2.1
+  have hsz := hS.iw.iwSize
   obtain ⟨e2, t2⟩ := rec2RdN (w := pp) (k := 2) (rec2IwN_trunc hro).2 hsz
   obtain ⟨e3, t3⟩ := rec2RdN (w := pp) (k := 3) (by simpa using (rec2IwN_trunc hrl).2) hsz
   simp only [show UInt64.ofNat 2 = (2 : Word) from rfl, show UInt64.ofNat 3 = (3 : Word) from rfl] at e2 e3

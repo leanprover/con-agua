@@ -170,7 +170,7 @@ theorem pinAt_ref {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
     (hp : p.lookup "pin_at" = some pinAtL) (i : Word) :
     CallRef p "pin_at" [i] (StageR dn vis fe) (pinAt i.toNat) (KeepPost dn vis fe decW0N) := by
   refine CallRef.of_triple fun n s₀ a₀ hS => ?_
-  refine triple_post (pinAt_refines p hp n s₀ a₀ hS.1.pins i) ?_
+  refine triple_post (pinAt_refines p hp n s₀ a₀ hS.check.pins i) ?_
   rintro r s' ⟨hm, hl, hlt, hrun⟩
   refine ⟨hl, decI (r.headD 0), a₀, hrun, ?_⟩
   rw [hm]
@@ -213,14 +213,14 @@ theorem pinWord52_ref {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IF
     (hp : p.lookup "pin_word" = some pinWordL) :
     CallRef p "pin_word" [52] (StageR dn vis fe) pinEmptyLevels (KeepPost dn vis fe decW0S) :=
   pinWord_ref_aux p hp 52 _ _ fun m a hS h0 => by
-    have hF := hS.1.pins.full h0
+    have hF := hS.check.pins.full h0
     exact ⟨_, pinEmptyLevels_run hF, hF.lv_lt.1, rfl⟩
 
 theorem pinWord53_ref {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (p : Prog)
     (hp : p.lookup "pin_word" = some pinWordL) :
     CallRef p "pin_word" [53] (StageR dn vis fe) pinZeroLevel (KeepPost dn vis fe decW0L) :=
   pinWord_ref_aux p hp 53 _ _ fun m a hS h0 => by
-    have hF := hS.1.pins.full h0
+    have hF := hS.check.pins.full h0
     exact ⟨_, pinZeroLevel_run hF, hF.lv_lt.2.1, rfl⟩
 
 /-! ### `iw_alloc` -/
@@ -268,7 +268,7 @@ theorem stkeep_of_frame {m m' : Mem} (hf : MemFrame [IW] [200] m m') (hg : IWGro
   obtain ⟨hI1, hE1, hsz, hEs, hct⟩ := hI
   have h129 : rdW (m'.arr64 CTL) 129 = rdW (m.arr64 CTL) 129 := hf.ctl 129 (by simp)
   have hE : m'.arr64 EREC = m.arr64 EREC := hf.arr EREC (by simp [EREC, IW]) (by decide)
-  refine ⟨hg, fun dn vis fe a hS => ⟨CheckR.frame_iw hf hS.1, htop, ?_, ?_, ?_, ?_⟩⟩
+  refine ⟨hg, fun dn vis fe a hS => ⟨CheckR.frame_iw hf hS.check, htop, ?_, ?_, ?_, ?_⟩⟩
   · simp only [erTop, h129, hE]; exact hE1
   · rw [hf.size IW]; exact hsz
   · rw [hE]; exact hEs
@@ -298,7 +298,7 @@ theorem rec2_fref (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
       (fun m m' r => RecPost m m' r [a, b]) := by
   intro n m r m' hI hc
   obtain ⟨s', rfl, hl, hm, hq, hroom⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (rec2_spec p ha hp n _ a b hI.2.2.1) hc
+    (rec2_spec p ha hp n _ a b hI.iwSize) hc
   change s'.mem = rec2Mem m a b at hm
   change r.headD 0 = _ at hq
   rw [hm, rec2Mem_eq]
@@ -312,7 +312,7 @@ theorem rec3_fref (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
       (fun m m' r => RecPost m m' r [a, b, c]) := by
   intro n m r m' hI hc
   obtain ⟨s', rfl, hl, hm, hq, hroom⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (rec3_spec p ha hp n _ a b c hI.2.2.1) hc
+    (rec3_spec p ha hp n _ a b c hI.iwSize) hc
   change s'.mem = rec3Mem m a b c at hm
   change r.headD 0 = _ at hq
   rw [hm, rec3Mem_eq]
@@ -394,7 +394,7 @@ theorem mkLamW_hw (m : Mem) (a : AState) (hA : ArenaD m a) (t b r : Word) (m' : 
   · cases hI
   simp only [Option.some.injEq, Prod.mk.injEq] at hI
   obtain ⟨rfl, rfl⟩ := hI
-  exact lainternW_hw m a hA.1.lam t b _ m₁ hI₁
+  exact lainternW_hw m a hA.base.lam t b _ m₁ hI₁
 
 theorem mkLetW_hw (m : Mem) (a : AState) (hA : ArenaD m a) (t v b r : Word) (m' : Mem)
     (hI : mkLetW m t v b = some (r, m')) : r.toNat < 2 ^ 32 := by
@@ -410,7 +410,7 @@ theorem mkLetW_hw (m : Mem) (a : AState) (hA : ArenaD m a) (t v b r : Word) (m' 
   · cases hI
   simp only [Option.some.injEq, Prod.mk.injEq] at hI
   obtain ⟨rfl, rfl⟩ := hI
-  exact leinternW_hw m a hA.1.letE t v b _ m₁ hI₁
+  exact leinternW_hw m a hA.base.letE t v b _ m₁ hI₁
 
 theorem mkForallW_hw' (m : Mem) (a : AState) (hA : ArenaD m a) (t b r : Word) (m' : Mem)
     (hI : mkForallW m t b = some (r, m')) : r.toNat < 2 ^ 32 := by
@@ -426,7 +426,7 @@ theorem mkForallW_hw' (m : Mem) (a : AState) (hA : ArenaD m a) (t b r : Word) (m
   · cases hI
   simp only [Option.some.injEq, Prod.mk.injEq] at hI
   obtain ⟨rfl, rfl⟩ := hI
-  exact fainternW_hw' m a hA.1.forallE t b _ m₁ hI₁
+  exact fainternW_hw' m a hA.base.forallE t b _ m₁ hI₁
 
 theorem mkProjW_hw' (m : Mem) (a : AState) (hA : ArenaD m a) (n i e r : Word) (m' : Mem)
     (hI : mkProjW m n i e = some (r, m')) : r.toNat < 2 ^ 32 := by
@@ -442,7 +442,7 @@ theorem mkProjW_hw' (m : Mem) (a : AState) (hA : ArenaD m a) (n i e r : Word) (m
   · cases hI
   simp only [Option.some.injEq, Prod.mk.injEq] at hI
   obtain ⟨rfl, rfl⟩ := hI
-  exact pjinternW_hw' m a hA.1.proj n i e _ m₁ hI₁
+  exact pjinternW_hw' m a hA.base.proj n i e _ m₁ hI₁
 
 theorem sinternW_hw (m : Mem) (a : AState) (hR : SuccR m a) (u : Word) (w : Word) (m' : Mem)
     (hI : sinternW m u = some (w, m')) : w.toNat < 2 ^ 32 := by
@@ -455,7 +455,7 @@ theorem internSuccN_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe 
     (hI : sinternW m u = some (r, m')) :
     ∃ a', (internLNode (.succ (decI u))).run a = .ok (decI r, a') ∧ StageR dn vis fe m' a' ∧
       IWGrow m m' := by
-  have hR := hS.1.arena.1
+  have hR := hS.check.arena.base
   obtain ⟨hok, hX, hres⟩ := sintern_correct m a hR.succ u hu _ _ hI
   have hfr := sinternW_frame m u _ _ hI
   exact stage_of_level hS (internLNode_succ_run _ a) hok
@@ -463,7 +463,7 @@ theorem internSuccN_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe 
       hfr (AM.st_proto succLens _ _ _ _ _ _ a (internLNode_succ_run _ a) hok))
     hres hfr (by simp [tier1, SREC, SSLOT, SHP]) (by simp) (fun _ => ⟨DerR.lvl, rfl⟩)
     (fun _ => ⟨DerR.lvl, rfl⟩)
-    (hS.1.mode.frame hfr (by decide) (by decide))
+    (hS.check.mode.frame hfr (by decide) (by decide))
 
 /-- The lookups of master's interners, the environment and the pin readers that the gate's
 proofs call (the real functions, not the stubs of `masterFns`). -/
@@ -521,7 +521,7 @@ theorem internConst_ref (hM : MasterProg p) (f x : Word) (hf : H f) (hx : H x) :
   refine triple_post (internConst_spec p hM.lConstFind hM.lConstPush hM.lInternConst n s₀ f x) ?_
   rintro r s' ⟨hl, hI⟩
   obtain ⟨a', hrun, hS', hg⟩ := internConst_stage hS f x hf hx hI
-  exact ⟨hl, decE (r.headD 0), a', hrun, hS', hg, ceinternW_hw' _ _ hS.1.arena.1.const f x hf hx _ _ hI, rfl⟩
+  exact ⟨hl, decE (r.headD 0), a', hrun, hS', hg, ceinternW_hw' _ _ hS.check.arena.base.const f x hf hx _ _ hI, rfl⟩
 
 theorem internFVar_ref (hM : MasterProg p) (u ty : Word) (hty : H ty) :
     CallRef p "intern_fvar" [u, ty] (StageR dn vis fe)
@@ -530,7 +530,7 @@ theorem internFVar_ref (hM : MasterProg p) (u ty : Word) (hty : H ty) :
   refine triple_post (internFVar_spec p hM.lFvarFind hM.lFvarPush hM.lInternFVar n s₀ u ty) ?_
   rintro r s' ⟨hl, hI⟩
   obtain ⟨a', hrun, hS', hg⟩ := internFVar_stage hS u ty hty hI
-  exact ⟨hl, decE (r.headD 0), a', hrun, hS', hg, fvinternW_hw _ _ hS.1.arena.1.fvar u ty _ _ hI, rfl⟩
+  exact ⟨hl, decE (r.headD 0), a', hrun, hS', hg, fvinternW_hw _ _ hS.check.arena.base.fvar u ty _ _ hI, rfl⟩
 
 theorem mkApp_ref (hM : MasterProg p) (f x : Word) :
     CallRef p "mk_app" [f, x] (StageR dn vis fe)
@@ -539,7 +539,7 @@ theorem mkApp_ref (hM : MasterProg p) (f x : Word) :
   refine triple_post (mkApp_spec p hM.lDerB hM.lAppFind hM.lAppPush hM.lInternApp hM.lMkApp n s₀ f x) ?_
   rintro r s' ⟨hl, hI⟩
   obtain ⟨a', hrun, hS', hg⟩ := mkApp_stage hS f x hI
-  exact ⟨hl, decE (r.headD 0), a', hrun, hS', hg, mkAppW_hw _ _ hS.1.arena f x _ _ hI, rfl⟩
+  exact ⟨hl, decE (r.headD 0), a', hrun, hS', hg, mkAppW_hw _ _ hS.check.arena f x _ _ hI, rfl⟩
 
 theorem mkLam_ref (hM : MasterProg p) (t b : Word) :
     CallRef p "mk_lam" [t, b] (StageR dn vis fe)
@@ -548,7 +548,7 @@ theorem mkLam_ref (hM : MasterProg p) (t b : Word) :
   refine triple_post (mkLam_spec p hM.lDerB hM.lLamFind hM.lLamPush hM.lInternLam hM.lMkLam n s₀ t b) ?_
   rintro r s' ⟨hl, hI⟩
   obtain ⟨a', hrun, hS', hg⟩ := mkLam_stage hS t b hI
-  exact ⟨hl, decE (r.headD 0), a', hrun, hS', hg, mkLamW_hw _ _ hS.1.arena t b _ _ hI, rfl⟩
+  exact ⟨hl, decE (r.headD 0), a', hrun, hS', hg, mkLamW_hw _ _ hS.check.arena t b _ _ hI, rfl⟩
 
 theorem mkForall_ref (hM : MasterProg p) (t b : Word) :
     CallRef p "mk_forall" [t, b] (StageR dn vis fe)
@@ -557,7 +557,7 @@ theorem mkForall_ref (hM : MasterProg p) (t b : Word) :
   refine triple_post (mkForall_spec p hM.lDerB hM.lForallFind hM.lForallPush hM.lInternForall hM.lMkForall n s₀ t b) ?_
   rintro r s' ⟨hl, hI⟩
   obtain ⟨a', hrun, hS', hg⟩ := mkForall_stage hS t b hI
-  exact ⟨hl, decE (r.headD 0), a', hrun, hS', hg, mkForallW_hw' _ _ hS.1.arena t b _ _ hI, rfl⟩
+  exact ⟨hl, decE (r.headD 0), a', hrun, hS', hg, mkForallW_hw' _ _ hS.check.arena t b _ _ hI, rfl⟩
 
 theorem mkLet_ref (hM : MasterProg p) (t v b : Word) :
     CallRef p "mk_let" [t, v, b] (StageR dn vis fe)
@@ -566,7 +566,7 @@ theorem mkLet_ref (hM : MasterProg p) (t v b : Word) :
   refine triple_post (mkLet_spec p hM.lDerB hM.lLetFind hM.lLetPush hM.lInternLet hM.lMkLet n s₀ t v b) ?_
   rintro r s' ⟨hl, hI⟩
   obtain ⟨a', hrun, hS', hg⟩ := mkLet_stage hS t v b hI
-  exact ⟨hl, decE (r.headD 0), a', hrun, hS', hg, mkLetW_hw _ _ hS.1.arena t v b _ _ hI, rfl⟩
+  exact ⟨hl, decE (r.headD 0), a', hrun, hS', hg, mkLetW_hw _ _ hS.check.arena t v b _ _ hI, rfl⟩
 
 theorem mkProj_ref (hM : MasterProg p) (n i e : Word) :
     CallRef p "mk_proj" [n, i, e] (StageR dn vis fe)
@@ -575,7 +575,7 @@ theorem mkProj_ref (hM : MasterProg p) (n i e : Word) :
   refine triple_post (mkProj_spec p hM.lDerB hM.lProjFind hM.lProjPush hM.lInternProj hM.lMkProj k s₀ n i e) ?_
   rintro r s' ⟨hl, hI⟩
   obtain ⟨a', hrun, hS', hg⟩ := mkProj_stage hS n i e hI
-  exact ⟨hl, decE (r.headD 0), a', hrun, hS', hg, mkProjW_hw' _ _ hS.1.arena n i e _ _ hI, rfl⟩
+  exact ⟨hl, decE (r.headD 0), a', hrun, hS', hg, mkProjW_hw' _ _ hS.check.arena n i e _ _ hI, rfl⟩
 
 theorem internSucc_ref (hM : MasterProg p) (u : Word) (hu : H u) :
     CallRef p "intern_succ" [u] (StageR dn vis fe)
@@ -584,7 +584,7 @@ theorem internSucc_ref (hM : MasterProg p) (u : Word) (hu : H u) :
   refine triple_post (internSucc_spec p hM.lSuccFind hM.lSuccPush hM.lInternSucc n s₀ u) ?_
   rintro r s' ⟨hl, hI⟩
   obtain ⟨a', hrun, hS', hg⟩ := internSuccN_stage hS u hu hI
-  exact ⟨hl, decI (r.headD 0), a', hrun, hS', hg, sinternW_hw _ _ hS.1.arena.1.succ u _ _ hI, rfl⟩
+  exact ⟨hl, decI (r.headD 0), a', hrun, hS', hg, sinternW_hw _ _ hS.check.arena.base.succ u _ _ hI, rfl⟩
 
 end interners
 
@@ -638,7 +638,7 @@ theorem eView_ref (h : Word) (hE : p.lookup "e_view" = some eView) :
     CallRef p "e_view" [h] (StageR dn vis fe) (view (decE h))
       (KeepPost dn vis fe (fun _ r v => ViewR r v)) := by
   refine CallRef.of_triple fun n s₀ a₀ hS => ?_
-  refine triple_post (eView_refines p hE n s₀ a₀ hS.1.arena.1 h) ?_
+  refine triple_post (eView_refines p hE n s₀ a₀ hS.check.arena.base h) ?_
   rintro r s' ⟨rfl, hok, hst, hv⟩
   have hrun := AM.run_of_ok _ _ hok
   rw [hst] at hrun
@@ -669,7 +669,7 @@ theorem slContains_ref {k : IdxKind} (hp : p.lookup "sl_contains" = some slConta
   refine triple_post (slContains_spec p hp n s₀ o l x) ?_
   rintro r s' ⟨hl, hm, hcw⟩
   obtain ⟨ws, hws, rfl, hlt⟩ := slR_of_decHL s₀.mem l.toNat o.toNat xs hd
-    (decHL_bnd _ o l hd hS.2.2.2.1)
+    (decHL_bnd _ o l hd hS.iw.iwSize)
   rw [UInt64.ofNat_toNat, UInt64.ofNat_toNat] at hws
   have hr := containsW_ok n _ _ _ _ _ _ hws hcw
   rw [contains_map_decI x hx ws hlt]

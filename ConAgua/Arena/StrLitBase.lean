@@ -69,7 +69,7 @@ theorem CoreS.of_ls {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : AS
     have hfl : m'.flag = m.flag := hlc.flag
     unfold ModeOK; rw [hf.top_eq hP0, hfl]; exact hS.mode
   have hD : DerR m' a' := DerR.of_tiers m' a a'
-    (DerR.frameM A C m m' hf (fun b hb => by have := hA b hb; omega) a hS.arena.2) hL.pers hL.scr
+    (DerR.frameM A C m m' hf (fun b hb => by have := hA b hb; omega) a hS.arena.der) hL.pers hL.scr
   refine ⟨⟨⟨hR, hD⟩, ?_, ?_, hS.env.frame (fun b hb => by have := hA b hb; omega)
       (fun x hx => .inl (by have := hC x hx; omega)) hf, ?_, ?_, ?_,
       hf.size EREC ▸ hS.erec, hf.size SPN ▸ hS.spn,
@@ -174,11 +174,11 @@ theorem internParam_core (hS : CoreS dn m a vis fe M eb) (u : Word) (hu : HW u)
     (rs : List Word) (hI : pinternW m u = some (rs.headD 0, m'))
     (hdn : ∃ x, denoteN a.store.ls.ns (decI u) = some x) :
     CoreRef (internLNode (.param (decI u))) a decLv dn m vis fe M eb rs m' := by
-  obtain ⟨hok, hX, hres⟩ := pintern_correct m a hS.arena.1.param u hu _ _ hI
-  have hLp := pintern_hp m a hS.arena.1.param u hu hS.arena.1.paramHp _ _ hI
+  obtain ⟨hok, hX, hres⟩ := pintern_correct m a hS.arena.base.param u hu _ _ hI
+  have hLp := pintern_hp m a hS.arena.base.param u hu hS.arena.base.paramHp _ _ hI
   have hI₂ := hI
   have hf := consInternM_frame paramCS_wf hI₂
-  have hR' := hS.arena.1.lift_param _ _ _ _ ⟨hX, hLp⟩ hf
+  have hR' := hS.arena.base.lift_param _ _ _ _ ⟨hX, hLp⟩ hf
     (AM.st_proto paramLens _ _ _ _ _ _ a (internLNode_param_run _ a) hok)
   have hL := internLNode_step _ a _ _ (AM.run_of_ok _ _ hok)
   obtain ⟨hS', hst⟩ := hS.of_level hL hR' hf
@@ -186,26 +186,26 @@ theorem internParam_core (hS : CoreS dn m a vis fe M eb) (u : Word) (hu : HW u)
                     rcases hb with rfl | rfl | rfl | rfl <;> decide)
     (fun x hx => by simp only [paramCS, List.mem_cons, List.mem_nil_iff, or_false] at hx
                     rcases hx with rfl | rfl <;> decide)
-    (lvlAll_internLNode hS.arena.1 hS.den.lvlAll
+    (lvlAll_internLNode hS.arena.base hS.den.lvlAll
       (fun c hc => by simp [LNodeView.lchildren] at hc)
       (fun n hn => by
         simp only [LNodeView.nchildren, List.mem_cons, List.mem_nil_iff, or_false] at hn
         subst hn; exact hdn) (AM.run_of_ok _ _ hok)).1
-    (lvlCnt_of_arena hS.arena.1 hR' (hf.ctl 1 (by decide))
+    (lvlCnt_of_arena hS.arena.base hR' (hf.ctl 1 (by decide))
       (LTGrow.internLNode (AM.run_of_ok _ _ hok)).1 (LTGrow.internLNode (AM.run_of_ok _ _ hok)).2
       (by simp [hL.lsp]) (by simp [hL.lss]))
-  have hw := consInternM_lt paramCS_wf hS.arena.1.param hI₂
+  have hw := consInternM_lt paramCS_wf hS.arena.base.param hI₂
   exact ⟨hok, ⟨M, hS', KeptAll.refl _ _, hst⟩, by rw [hres]; rfl, hw⟩
 
 /-- **`intern_zero` refines `internLNode .zero` under `CoreS`.** -/
 theorem internZero_core (hS : CoreS dn m a vis fe M eb)
     (rs : List Word) (hI : zinternW m = some (rs.headD 0, m')) :
     CoreRef (internLNode .zero) a decLv dn m vis fe M eb rs m' := by
-  obtain ⟨hok, hX, hres⟩ := zintern_correct m a hS.arena.1.zero _ _ hI
-  have hLp := zintern_hp m a hS.arena.1.zero hS.arena.1.zeroHp _ _ hI
+  obtain ⟨hok, hX, hres⟩ := zintern_correct m a hS.arena.base.zero _ _ hI
+  have hLp := zintern_hp m a hS.arena.base.zero hS.arena.base.zeroHp _ _ hI
   have hI₂ := hI
   have hf := consInternM_frame zeroCS_wf hI₂
-  have hR' := hS.arena.1.lift_zero _ _ _ _ ⟨hX, hLp⟩ hf
+  have hR' := hS.arena.base.lift_zero _ _ _ _ ⟨hX, hLp⟩ hf
     (AM.st_proto zeroLens _ _ _ _ _ _ a (internLNode_zero_run a) hok)
   have hL := internLNode_step _ a _ _ (AM.run_of_ok _ _ hok)
   obtain ⟨hS', hst⟩ := hS.of_level hL hR' hf
@@ -213,13 +213,13 @@ theorem internZero_core (hS : CoreS dn m a vis fe M eb)
                     rcases hb with rfl | rfl | rfl | rfl <;> decide)
     (fun x hx => by simp only [zeroCS, List.mem_cons, List.mem_nil_iff, or_false] at hx
                     rcases hx with rfl | rfl <;> decide)
-    (lvlAll_internLNode hS.arena.1 hS.den.lvlAll
+    (lvlAll_internLNode hS.arena.base hS.den.lvlAll
       (fun c hc => by simp [LNodeView.lchildren] at hc)
       (fun n hn => by simp [LNodeView.nchildren] at hn) (AM.run_of_ok _ _ hok)).1
-    (lvlCnt_of_arena hS.arena.1 hR' (hf.ctl 1 (by decide))
+    (lvlCnt_of_arena hS.arena.base hR' (hf.ctl 1 (by decide))
       (LTGrow.internLNode (AM.run_of_ok _ _ hok)).1 (LTGrow.internLNode (AM.run_of_ok _ _ hok)).2
       (by simp [hL.lsp]) (by simp [hL.lss]))
-  have hw := consInternM_lt zeroCS_wf hS.arena.1.zero hI₂
+  have hw := consInternM_lt zeroCS_wf hS.arena.base.zero hI₂
   exact ⟨hok, ⟨M, hS', KeptAll.refl _ _, hst⟩, by rw [hres]; rfl, hw⟩
 
 end leaves
@@ -243,7 +243,7 @@ theorem internW_core (hK : CoreK dn vis fe M eb m₀ m a) (o l : Word) (hq : Sli
     (AM.run_of_ok _ _ hok)
   refine ⟨hok, ⟨M, hK.1.arena_frame hD hcpl hfr ?_ ?_ ?_ ?_ ?_,
     KeptAll.refl _ _, hK.2.trans (StackKept.of_frame hfr)⟩,
-    hres, internW_hw m a hK.1.arena.1.lit o l w m' hI⟩
+    hres, internW_hw m a hK.1.arena.base.lit o l w m' hI⟩
   · intro b hb; simp only [List.mem_cons, List.mem_nil_iff, or_false] at hb
     rcases hb with rfl | rfl | rfl | rfl <;> decide
   · decide
@@ -257,7 +257,7 @@ theorem internW_core (hK : CoreK dn vis fe M eb m₀ m a) (o l : Word) (hq : Sli
 /-- **`rom_lit(c)`'s model under `CoreS`**: the twin's `Nat` literal `c`. -/
 theorem romLitW_core (hS : CoreS dn m a vis fe M eb) (c w : Word) (hI : L.Rom.romLitW m c = some (w, m')) :
     CoreRef (internE (.lit (.natVal c.toNat))) a decH dn m vis fe M eb [w] m' := by
-  have hpool : PoolOK m := hS.arena.1.lit.1
+  have hpool : PoolOK m := hS.arena.base.lit.1
   rw [L.Rom.romLitW_eq] at hI
   by_cases hlen : m.len64 (tierA POOL (m.top >>> 40)) ≤ (m.top &&& 1099511627775)
   · rw [ite_eq_left hlen] at hI; cases hI
@@ -382,7 +382,7 @@ theorem bvar_call (hS : CoreS dn m a vis fe M eb) {u : Word}
   have hfr := binternW_frame _ _ _ _ hI
   exact ⟨hok, ⟨M, hS.of_bvar hD (Keeps.run (keeps_cpl_internBVar _) (AM.run_of_ok _ _ hok)) hfr,
     KeptAll.refl _ _, StackKept.of_bvar_frame hfr⟩, by rw [hres]; rfl,
-    binternW_hw _ a hS.arena.1.bvar _ _ _ hI⟩
+    binternW_hw _ a hS.arena.base.bvar _ _ _ hI⟩
 
 theorem const_call (hS : CoreS dn m a vis fe M eb) {f x : Word} (hf : HW f) (hx : HW x)
     (h : callW p n "intern_const" [f, x] m = some (r, m'))
@@ -410,10 +410,10 @@ theorem romLit_call (hS : CoreS dn m a vis fe M eb) {c : Word}
     CoreRef (internE (.lit (.natVal c.toNat))) a decH dn m vis fe M eb r m' := by
   obtain ⟨s', hs', -, hI⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (L.Rom.romLit_spec p hp.litHash' hp.limbsEq' hp.litMatch' hp.litFind' hp.litPush' hp.internLit
-      hp.romLit n _ c ⟨hS.arena.1.lit.1.cap, hS.arena.1.lit.1.top41⟩) h
+      hp.romLit n _ c ⟨hS.arena.base.lit.1.cap, hS.arena.base.lit.1.top41⟩) h
   rw [hs'] at hI
   have h := romLitW_core hS c _ hI
-  exact ⟨h.1, h.2.1, h.2.2.1, h.2.2.2⟩
+  exact ⟨h.run, h.after, h.res, h.resOk⟩
 
 theorem ls1_call (hS : CoreS dn m a vis fe M eb) {u : Word} (hu : HW u)
     (hd : ∃ l, denoteL a.store.ls (decI u) = some l)
@@ -424,7 +424,7 @@ theorem ls1_call (hS : CoreS dn m a vis fe M eb) {u : Word} (hu : HW u)
   | succ n =>
   obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (strLs1_spec p hp.strLs1 n _ u) h
-  have hpool : PoolOK m := hS.arena.1.lit.1
+  have hpool : PoolOK m := hS.arena.base.lit.1
   unfold ls1W at hW
   by_cases hlen : m.len64 (tierA POOL (m.top >>> 40)) ≤ m.top - (m.top >>> 40) <<< 40
   · simp only [hlen, ↓reduceIte] at hW; cases hW
@@ -453,17 +453,17 @@ theorem ls1_call (hS : CoreS dn m a vis fe M eb) {u : Word} (hu : HW u)
     exact (UInt64.toNat_inj.mp (by simp; omega)).symm
   obtain ⟨s₂, hs₂, -, hI⟩ := triple_of_callW (s₀ := ⟨m₀, Locals.init []⟩)
     (internLs_spec p hp.litHash' hp.limbsEq' hp.lsMatch hp.lsFind hp.lsPush hp.internLs n _ m.top 1
-      (by show pcap m₀ < 2 ^ 64; have := hK.1.arena.1.lit.1.cap; omega)
-      (by show _ ≤ pcap m₀; have := hK.1.arena.1.lit.1.top; have := hq.1
+      (by show pcap m₀ < 2 ^ 64; have := hK.1.arena.base.lit.1.cap; omega)
+      (by show _ ≤ pcap m₀; have := hK.1.arena.base.lit.1.top; have := hq.1
           omega)) h1
   rw [hs₂] at hI
-  obtain ⟨hok, hX, hres⟩ := lsintern_correct m₀ a hK.1.arena.1.lit.1 hK.1.arena.1.ls m.top 1 hq
+  obtain ⟨hok, hX, hres⟩ := lsintern_correct m₀ a hK.1.arena.base.lit.1 hK.1.arena.base.ls m.top 1 hq
     [decI u] hk (ModeOK.slice0 hK.1.mode hq) _ _ hI
   have hf := (lsinternW_frame (hI := hI))
-  have hLp := lsintern_hp m₀ a hK.1.arena.1.lit.1 hK.1.arena.1.ls m.top 1 hq [decI u] hk
-    (ModeOK.slice0 hK.1.mode hq) hK.1.arena.1.lsHp (lsOrW_ok m₀ a hK.1.arena.1 m.top 1 hq [decI u] hk) _ _ hI
+  have hLp := lsintern_hp m₀ a hK.1.arena.base.lit.1 hK.1.arena.base.ls m.top 1 hq [decI u] hk
+    (ModeOK.slice0 hK.1.mode hq) hK.1.arena.base.lsHp (lsOrW_ok m₀ a hK.1.arena.base m.top 1 hq [decI u] hk) _ _ hI
   have hI₂ := hI
-  have hR' := hK.1.arena.1.lift_ls _ _ _ _ ⟨hX, hLp⟩ hf
+  have hR' := hK.1.arena.base.lift_ls _ _ _ _ ⟨hX, hLp⟩ hf
     (AM.st_proto lsLens _ _ _ _ _ _ a (internLsNode_run _ a) hok)
   have hL := internLsNode_step _ a _ _ (AM.run_of_ok _ _ hok)
   obtain ⟨hS', hst⟩ := hK.1.of_ls hL hR' hf
@@ -471,10 +471,10 @@ theorem ls1_call (hS : CoreS dn m a vis fe M eb) {u : Word} (hu : HW u)
                     rcases hb with rfl | rfl | rfl | rfl | rfl | rfl <;> decide)
     (fun x hx => by simp only [List.mem_cons, List.mem_nil_iff, or_false] at hx
                     rcases hx with rfl | rfl <;> decide)
-    (lsAll_internLsNode hK.1.arena.1 hK.1.den.lsAll
+    (lsAll_internLsNode hK.1.arena.base hK.1.den.lsAll
       (fun c hc => by rw [List.mem_singleton] at hc; subst hc; exact hd) (AM.run_of_ok _ _ hok)).1
-    (lvlCnt_internLsNode hK.1.arena.1 hR' (hf.ctl 1 (by decide)) (AM.run_of_ok _ _ hok))
-  have hw := consInternM_lt lsCS_wf hK.1.arena.1.ls hI₂
+    (lvlCnt_internLsNode hK.1.arena.base hR' (hf.ctl 1 (by decide)) (AM.run_of_ok _ _ hok))
+  have hw := consInternM_lt lsCS_wf hK.1.arena.base.ls hI₂
   exact ⟨hok, ⟨M, hS', KeptAll.refl _ _, hK.2.trans hst⟩, by rw [hres, decLs, hr], by
     unfold ResH; rw [← hr]; exact hw⟩
 
@@ -484,9 +484,9 @@ theorem ls1_den (hS : CoreS dn m a vis fe M eb) {u : Word} (hu : HW u)
     (hd : ∃ l, denoteL a.store.ls (decI u) = some l) :
     ∃ ls, denoteLs (AM.st (internLsNode [decI u]) a).store.lss (decI (r.headD 0)) = some ls := by
   have R := ls1_call p hp hS hu hd h
-  have hrun := AM.run_of_ok _ _ R.1
-  rw [R.2.2.1] at hrun
-  exact (denoteLs_internLsNode hS.arena.1
+  have hrun := AM.run_of_ok _ _ R.run
+  rw [R.res] at hrun
+  exact (denoteLs_internLsNode hS.arena.base
     (fun c hc => by rw [List.mem_singleton] at hc; subst hc; exact hd) hrun).1
 
 end calls
@@ -506,7 +506,7 @@ theorem lss_den {α : Type} [Inhabited α] {op op' : AM α} {a : AState} {x : Ls
     (h : ∃ ls, denoteLs a.store.lss x = some ls) (hk : Keeps cpl op)
     (hc : CoreRef op' a dec dn m₀ vis fe M eb r m ok) (hop : op = op') :
     ∃ ls, denoteLs (AM.st op a).store.lss x = some ls := by
-  subst hop; rw [lss_st hk hc.1]; exact h
+  subst hop; rw [lss_st hk hc.run]; exact h
 
 /-- A level readback carried across a step that keeps the level stores (as `lss_den`). -/
 theorem ls_den {α : Type} [Inhabited α] {op op' : AM α} {a : AState} {x : LIdx}
@@ -517,7 +517,7 @@ theorem ls_den {α : Type} [Inhabited α] {op op' : AM α} {a : AState} {x : LId
     ∃ l, denoteL (AM.st op a).store.ls x = some l := by
   subst hop
   show ∃ l, denoteL (AM.st op a).store.lss.ls x = some l
-  rw [lss_st hk hc.1]; exact h
+  rw [lss_st hk hc.run]; exact h
 
 /-- A list readback carried across a pin read, which keeps the state. -/
 theorem lss_pin {op : AM NIdx} {m : Mem} {a : AState} {x : LsIdx} {i : Nat}
@@ -537,8 +537,8 @@ theorem lnode_den {v v' : LNodeView} {dn : NIdx → Option ConLeche.Name} {m m' 
     (hc : CoreRef (internLNode v') a decLv dn m vis fe M eb r m' ok) (hv : v = v') :
     ∃ l, denoteL (AM.st (internLNode v) a).store.ls (decI (r.headD 0)) = some l := by
   subst hv
-  have h := internLNode_res_den hS hch hnch hc.1
-  rw [hc.2.2.1] at h; exact h
+  have h := internLNode_res_den hS hch hnch hc.run
+  rw [hc.res] at h; exact h
 
 /-- A level readback carried across a level interning (`internLNode_lext`). -/
 theorem lnode_lvl {v v' : LNodeView} {a : AState} {x : LIdx} {dec : List Word → LIdx}
@@ -549,7 +549,7 @@ theorem lnode_lvl {v v' : LNodeView} {a : AState} {x : LIdx} {dec : List Word �
     ∃ l, denoteL (AM.st (internLNode v) a).store.ls x = some l := by
   subst hv
   obtain ⟨l, hl⟩ := h
-  exact ⟨l, (internLNode_lext (AM.run_of_ok _ _ hc.1)).lvl _ _ hl⟩
+  exact ⟨l, (internLNode_lext (AM.run_of_ok _ _ hc.run)).lvl _ _ hl⟩
 
 theorem keeps_cpl_pinAt (i : Nat) : Keeps cpl (pinAt i) := by prim_keeps pinAt
 

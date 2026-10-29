@@ -3896,3 +3896,40 @@ Module times (`lake env lean`, user s, one run each; before = master 0a55eac3 wi
 
 `vc_flat`'s fix is neutral on §3.59's largest modules (`EqAt1` 18.7, `WhnfModels7E` 17.8,
 `DefEqModels` 19.9, `PosE1M` 8.4 s, as there); the build gate took 281 s (§3.59: 271 s).
+
+### 3.61 Frame and invariant packages as named-field structures (lane `uniform`)
+
+The rule (Prop structures with field names, not positional `∧` access; absarrays.md §9.4 did
+`MemFrame`, `Frame`, `PoolOK`, `GFr`, `HighFr`, `PFr`) applied to the conjunction packages that
+were still read positionally in many places. A scan of the 369 `def … : Prop := A ∧ B …` for
+positional reads of hypotheses typed by them ranked `StageR` (≈500 reads in 120 files), `ArenaD`
+(230), `IWGrow` (190), `viewOK` (140), `PSlR`, `AbsOK`, `CoreRef` (50–60 each) first.
+
+* **Made structures** (uses switched to the names): `StageR` (`check`, `iw`), `IWOK` (`iw`, `er`,
+  `iwSize`, `erSize`, `ctl`), `IWGrow` (`iw`, `er`, `iwGet`, `erGet`), `ArenaD` (`base`, `der`),
+  `AbsOK` (`ab`, `i1`, `cr`, `il`, `wk`), `CoreMemos` (`il`, `ab`, `walk`), `WalkMemos` (`ws`, `fl`,
+  `lsb`, `lp`), `LPMemos` (`lp`, `lpl`, `lpls`), `CoreRef` (`run`, `after`, `res`, `resOk`),
+  `PSlR` (`dec`, `bound`), `ErecGrow` and `SlotGrow` (`top`, `get`, `size`), `AFr` (`fr`, `grow`,
+  `ok`), `LowFr` (`fr`, `low`, `top`). About 3 000 positional projections became names (448 files,
+  +2581/−2557 lines). Chains through them read as paths now: `hS.2.2.2.1` is `hS.iw.iwSize`,
+  `hS.memos.2.2.2.2.1` is `hS.memos.walk.lsb`, `hA₇.2.1.2.2.1` is `hA₇.grow.iwGet`.
+* **How:** the binders and `have`s typed by a package (and the results of `CoreSpec.of_callW`, the
+  fields of other structures of that type: `.stage`, `.grow`, `.iw`, `.arena`, `.memos`) were
+  renamed by script, the rest by the build's errors: on a structure `.2.1` no longer elaborates,
+  so every deep path showed up. A `.1` (and on two-field packages a `.2`) still elaborates on a
+  structure, so those were renamed where the hypothesis' type or name (`hS…` for `StageR`, `hg…`
+  for `IWGrow`) said what it is; a few may remain where the package comes out of a conjunction
+  or a call (as after §9.4).
+* **Statements that spelled a package out:** `IWOK` was unfolded by `simp only [IWOK, …]` in six
+  transports: `IWOK_iff` (the conjunction) takes its place there. `arW_ok`'s conclusion
+  (`WhnfIotaRefine3`) was `CoreRef` written out as a conjunction; it is `CoreRef` now. `CoreRef`'s
+  two `unfold` congruence proofs became field-wise. `decRRS` (`Rec3TmdWDecB`) duplicates `PSlR`'s
+  body as a conjunction; its one use passes `⟨h.1, h.2⟩`.
+* **Left as conjunctions:** `viewOK` and `SliceOK` (unfolded into `grind [.., viewOK]` and
+  `simp only [SliceOK]`/`grind [SliceOK]`, like §9.4's loop invariants), the `Nat*` loop
+  invariants and posts (`DBitPost`, `AddInv`, …; same reason), `PW` (a two-fact predicate on one
+  word), `CtxIn`, `BSOK`, `MemoRV`, `RInv`, `DerT2`, `WkOK`, `CoreAfter`, `GrowX`, `RecGrow`, `ErW`,
+  `ArenaA/I/L` and the other packages with fewer than ~20 positional reads, mostly within one or
+  two files. `CheckR`, `CoreS`, `StackKept`, `StackGrew` were structures already.
+* The build gate: `lake build` of everything after the change, all green; no proof needed more
+  than renaming except the five places above.

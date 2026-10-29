@@ -142,8 +142,8 @@ theorem crule_ref (hp : CruleProg p) (hApd : ApdF p) {visT visR : Word} {feR : I
   · rw [liftE_none, cruleE.k_class_rule_ok_domains.none]; exact RefE.of_cls0 (by simp)
   rw [liftE_some]
   have hb4 : (r4.tail.headD 0).toNat + (r4.tail.tail.headD 0).toNat < 2 ^ 64 := by
-    have h1 : iwTop m4 ≤ (m4.arr64 IW).size := hS4.2.1
-    have h2 : (m4.arr64 IW).size < 2 ^ 64 := hS4.2.2.2.1
+    have h1 : iwTop m4 ≤ (m4.arr64 IW).size := hS4.iw.iw
+    have h2 : (m4.arr64 IW).size < 2 ^ 64 := hS4.iw.iwSize
     omega
   obtain ⟨b, a8, hdom, ⟨hS5, hg5, hb5⟩, hA5⟩ := iarW_ok dn (feR.restrictTo visT.toNat) N m4 m5 _
     visT _ _ rbs r5 h5 (hS4.restrict visT) hdl hb4 htl hA4
@@ -155,7 +155,7 @@ theorem crule_ref (hp : CruleProg p) (hApd : ApdF p) {visT visR : Word} {feR : I
   obtain ⟨p8, -⟩ := ConRon.Bridge.Inductives.allM_domains_resolve rbs rbsP _ a8 b hr6 hrbs hdom'
   have c18 := c16.trans (p8.toCore hok6)
   have hC5 : StageC dn visR feR envR m5 a8 :=
-    hC4.of_check (hS5.unrestrict hC.stage.1.env.vis) hA5 c18.ok (p8.ext)
+    hC4.of_check (hS5.unrestrict hC.stage.check.env.vis) hA5 c18.ok (p8.ext)
   refine RefE.bind_right hdom' ?_
   by_cases h50 : r5.headD 0 = 0
   · rw [cruleE.k_class_rule_ok_domains.arm1 _ _ _ _ _ _ h50]
@@ -165,7 +165,7 @@ theorem crule_ref (hp : CruleProg p) (hApd : ApdF p) {visT visR : Word} {feR : I
     rcases h6 : callE p N "unresolved_consts_error" [visR, gen, 4] m5 with e6 | ⟨r6, m6⟩
     · rw [cruleE.k_unresolved_consts_error.eq_1]
       obtain ⟨M5, hC5'⟩ := hC5.stageT.core
-      exact fun hG => uce_errClaim_hi hG.uce hG.nv hC5'.arena.1 hC5'.pins hgen (by decide) h6 _
+      exact fun hG => uce_errClaim_hi hG.uce hG.nv hC5'.arena.base hC5'.pins hgen (by decide) h6 _
     · rw [cruleE.k_unresolved_consts_error.abort1]; exact RefE.of_cls0 rfl
   rw [cruleE.k_class_rule_ok_domains.arm2 _ _ _ _ _ _ h50]
   have eb : b = true := by rw [← hb5.1]; simpa using h50
@@ -234,7 +234,7 @@ theorem cr1_ref (hp : CruleProg p) (hApd : ApdF p) {visT visR : Word} {feR : IFE
   cases N with
   | zero => rw [cr1E.eq_1]; exact RefE.of_cls0 (by simp)
   | succ N =>
-  have hsz := hC.stage.2.2.2.1
+  have hsz := hC.stage.iw.iwSize
   obtain ⟨hnP, -⟩ := rec2CG_parts hG
   obtain ⟨hsl, -⟩ := rec3CG_parts hG
   obtain ⟨hnF, -, -⟩ := rec2CC_parts (hX.get (decCC_mono _))

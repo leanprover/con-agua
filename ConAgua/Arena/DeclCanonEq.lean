@@ -763,12 +763,12 @@ theorem findIsW_ok {dn : NIdx → Option ConLeche.Name} (hdn : DnInj dn) {vis : 
   simp only at h
   by_cases h0 : rr.headD 0 = 0
   · rw [ite_eq_left h0] at h; simp only [Option.some.injEq] at h; subst h
-    obtain ⟨-, hfind⟩ := envFindW_miss h1 hS.1.env hn h0
+    obtain ⟨-, hfind⟩ := envFindW_miss h1 hS.check.env hn h0
     rw [hfind]; simp
   · rw [ite_eq_right h0] at h; simp only [Option.some.injEq] at h
-    obtain ⟨-, hptr, hfind, htag, hrc⟩ := envFindW_hit h1 hS.1.env hn h0
-    have hsz : (erA m).size < 2 ^ 64 := hS.2.2.2.2.1
-    obtain ⟨ci, hci⟩ := envR_row_dec hS.1.env nm hn htag hrc
+    obtain ⟨-, hptr, hfind, htag, hrc⟩ := envFindW_hit h1 hS.check.env hn h0
+    have hsz : (erA m).size < 2 ^ 64 := hS.iw.erSize
+    obtain ⟨ci, hci⟩ := envR_row_dec hS.check.env nm hn htag hrc
     have hci0 : decCI (erA m) dn (rowP m nm).toNat = some ci := ArrExt.decCI (erecP_ext m) hci
     have hptr' : rr.tail.headD 0 = rowP m nm := hptr
     rw [hfind, hci]

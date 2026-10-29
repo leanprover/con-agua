@@ -76,15 +76,15 @@ theorem SeedsAt.grow {m m' : Mem} {o : Nat} {seeds : List (NestKey × Nat)} (h :
     (hg : IWGrow m m') (htop : iwTop m < 2 ^ 64) : SeedsAt m' o seeds := fun i hi => by
   obtain ⟨sp, key, nPc, h1, h2, h3, h4, h5, h6, h7, h8⟩ := h i hi
   have hk4 := (pos2_nk_fields h6 htop).2.2.2.2.2.2
-  refine ⟨sp, key, nPc, by rw [hg.2.2.1 _ h2]; exact h1, by have := hg.1; omega, by have := hg.1; omega,
-    by rw [hg.2.2.1 _ (by omega)]; exact h4, by rw [hg.2.2.1 _ h3]; exact h5, h6.grow (decNK_mono _) hg, ?_, h8⟩
+  refine ⟨sp, key, nPc, by rw [hg.iwGet _ h2]; exact h1, by have := hg.iw; omega, by have := hg.iw; omega,
+    by rw [hg.iwGet _ (by omega)]; exact h4, by rw [hg.iwGet _ h3]; exact h5, h6.grow (decNK_mono _) hg, ?_, h8⟩
   have e2 := pos2_key_rd hg htop hk4 (j := 2) (by omega)
   have e3 := pos2_key_rd hg htop hk4 (j := 3) (by omega)
   simp only [NKSl] at h7 ⊢
-  have := hg.1
+  have := hg.iw
   rw [show (key + 2 : Word) = key + UInt64.ofNat 2 from rfl, show (key + 3 : Word) = key + UInt64.ofNat 3 from rfl,
     e2, e3]
-  exact Nat.le_trans h7 hg.1
+  exact Nat.le_trans h7 hg.iw
 
 theorem SeedsAt.tail {m : Mem} {o : Nat} {x : NestKey × Nat} {seeds : List (NestKey × Nat)}
     (h : SeedsAt m o (x :: seeds)) : SeedsAt m (o + 1) seeds := fun i hi => by

@@ -170,7 +170,7 @@ theorem ex_ref (p : Prog) (hc : StuckCallees p) (n : Nat)
     refine RefE.bind_core (w := id) h₂ (fun M₂ hS₂ _ => ?_)
     by_cases f2 : r₂.headD 0 ≠ 0
     · rw [ite_eq_left f2, decOptR_someS f2]
-      exact hdef _ m₂ M₂ _ _ hS₂ h₁.2.2.2.2 h₂.2.2.2.2
+      exact hdef _ m₂ M₂ _ _ hS₂ h₁.resOk.2 h₂.resOk.2
     · rw [ite_eq_right f2, decOptR_noneS (by simpa using f2)]
       exact hdef _ m₂ M₂ _ _ hS₂ ha hb
   · rw [ite_eq_right f1, decOptR_noneS (by simpa using f1)]
@@ -357,7 +357,7 @@ theorem pp_ref (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (n : Nat)
       (defeqProjPair (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b)) a₀
       (CorePost decBool dn s₀.mem vis fe M eb ResH) := by
   have hS := hs.rel
-  have hR := hS.arena.1
+  have hR := hS.arena.base
   have htag : ∀ h : Word, HW h → ((decE h).tag == ETag.proj) = decide (h >>> 28 = 9) :=
     fun h hh => tag_beq_w _ hh 9 (by decide) ETag.proj rfl 9 rfl
   have hfalse : (((decE a).tag == ETag.proj && (decE b).tag == ETag.proj) = false) →

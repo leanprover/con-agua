@@ -483,7 +483,7 @@ theorem dpConstW_ok (n : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) 
   have hA0 : ArenaR (mclearG dpSch m) a :=
     ArenaR.frame (A := []) (C := [dpSch.cs, dpSch.cs + 1]) (fun b hb => by simp at hb)
       (fun x hx => by simp [dpSch] at hx; rcases hx with rfl | rfl <;> exact not_mem_arenaCtl _ (by decide)) hf0
-      hS.1.arena.1
+      hS.check.arena.base
   rcases hg : dpGoW n (mclearG dpSch m) CWF e with _ | ⟨r1, m1⟩ <;> rw [hg] at hb; · simp [dpClrK] at hb
   by_cases h1 : rdW (m1.arr64 CTL) dpSch.cs + 2 = 0
   · simp [dpClrK, h1] at hb
@@ -551,7 +551,7 @@ theorem depthGo_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Opt
       StageR dn vis fe s'.mem a₀ ∧ IWGrow s₀.mem s'.mem; ⊤⦄ := by
   refine triple_post ((dpGo_spec p hv hf hput hgo hnode n).1 s₀ f h) ?_
   rintro r s' ⟨hl, hm⟩
-  obtain ⟨d, mp', hrun, hb, hM', hfr⟩ := dpGoOK n _ _ a₀ f h _ mp hm hS.1.arena.1 hh hM
+  obtain ⟨d, mp', hrun, hb, hM', hfr⟩ := dpGoOK n _ _ a₀ f h _ mp hm hS.check.arena.base hh hM
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
   obtain ⟨hS', hg⟩ := StageR.frame_hi hS hfr (by intro b hb; simp at hb; subst hb; decide)
     (by intro x hx; simp at hx; subst hx; decide) (by decide) (by decide)
@@ -746,7 +746,7 @@ theorem phsGoW_ok (k : Nat) : ∀ (m m' : Mem) (a : AState) (q n i : Word) (ws :
         simp only [pinWordV, hpne, ite_false, Option.some.injEq] at hpw
         rw [← hpw]; simp [pinW, rdW]
       have hpin0 : pinW m 0 ≠ 0 := by simpa [pinW, rdW] using hpne
-      have hfull := hS.1.pins.full hpin0
+      have hfull := hS.check.pins.full hpin0
       rcases hso : sointernW m z with _ | ⟨s1, m1⟩ <;> rw [hso] at h; · simp [phsK2] at h
       by_cases hsb : 4294967296 ≤ s1
       · rw [phsK2_big _ _ _ _ _ _ hsb] at h; simp at h
@@ -800,9 +800,9 @@ theorem phsW_ok (k : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis
   rcases hl : phsGoW k m1 q nn 0 with _ | m2 <;> rw [hl] at h; · simp [phsB] at h
   rw [phsB_some] at h
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-  have hsz1 : (m1.arr64 IW).size < 2 ^ 64 := hS1.2.2.2.1
+  have hsz1 : (m1.arr64 IW).size < 2 ^ 64 := hS1.iw.iwSize
   have hroom1 : q.toNat + nn.toNat ≤ (m1.arr64 IW).size := by
-    have := hS1.2.1; simp only [iwTop] at htop1 this; omega
+    have := hS1.iw.iw; simp only [iwTop] at htop1 this; omega
   obtain ⟨phs, a', hrun, hS2, hK, hdec⟩ := phsGoW_ok k m1 m2 a q nn 0 [] dn fe vis hl hS1
     (by simp) hroom1 hsz1 (by simp [decHL, hslice?])
   refine ⟨phs, a', ?_, hS2, ?_, by simpa using hdec, ?_⟩
@@ -810,13 +810,13 @@ theorem phsW_ok (k : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis
     simpa using hrun
   · obtain ⟨hK1, hK2, hK3, hK4, hK5⟩ := hK
     refine ⟨?_, ?_, fun idx hidx => ?_, fun idx hidx => ?_⟩
-    · rw [hK2]; exact hg1.1
-    · rw [hK3]; exact hg1.2.1
+    · rw [hK2]; exact hg1.iw
+    · rw [hK3]; exact hg1.er
     · have hq : idx < q.toNat := by
         have : q.toNat = iwTop m := by simp only [iwTop, hqd]
         omega
-      rw [hK1 idx (Or.inl hq)]; exact hg1.2.2.1 idx hidx
-    · rw [hK5]; exact hg1.2.2.2 idx hidx
+      rw [hK1 idx (Or.inl hq)]; exact hg1.iwGet idx hidx
+    · rw [hK5]; exact hg1.erGet idx hidx
   · show q.toNat + nn.toNat ≤ iwTop m2
     rw [hK.2.1, htop1]; exact Nat.le_refl _
 
@@ -1058,7 +1058,7 @@ theorem pccW_ok (k : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis
       have hg12 := hg1.trans hg2
       have hdec2 : decHL m2 no.toNat nl.toNat = some names := by rw [decHL_grow hg12 hit]; exact hdec
       obtain ⟨a3, hrun3, hM3, hS3, hg3⟩ := rpConstW_ok k dn fe vis m2 m3 a2 no nl us 0 nn (r2.tail.headD 0) r3
-        nn.toNat names mp0 hrc hS2 htlt hus hdec2 hno (by have := hg12.1; omega) rfl hnn
+        nn.toNat names mp0 hrc hS2 htlt hus hdec2 hno (by have := hg12.iw; omega) rfl hnn
         (by simp; omega) hM2
       refine ⟨some (decE r3), a3, ?_, hS3, hg12.trans hg3, ?_, ∅, hM3⟩
       · simp only [ConRon.Arena.nestCanonCrest, StateT.run_bind]

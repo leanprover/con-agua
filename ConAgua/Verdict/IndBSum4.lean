@@ -178,7 +178,7 @@ theorem scts_ref (hP : SumProg p)
   have hcL1 : (cL - 1).toNat = L := by rw [sumToNat_pred hl]; omega
   -- the rest
   have h4 := ih (by omega) m3 a1 (cO + 1) (cL - 1) cs restP hC3 (by rw [decHL_grow hg03 hlb]; exact hlps)
-    (by have := hg03.1; omega) (DecB.grow (OMono.decCVp _) hg03 hta)
+    (by have := hg03.iw; omega) (DecB.grow (OMono.decCVp _) hg03 hta)
     (by rw [hcO1, hcL1]; exact DecB.grow (OMono.decPL decCN_mono _ _) hg03 htail) hA3
     (ConRon.Bridge.denoteN_ext hTP x1) (ConRon.Bridge.denoteNListE_ext x1 _ _ hlpsP)
     (ConRon.Bridge.denoteL_ext hrsP x1) (ConRon.Bridge.denoteCV_ext hcvTaP x1)
@@ -201,7 +201,7 @@ theorem scts_ref (hP : SumProg p)
   obtain ⟨hS5, hg5, hd5, ht5⟩ := consW_stageN hc1 hS4 hR4.cnsB hps1
   obtain ⟨ps2, hps2t, hps2, hmap2⟩ := sumDecNL_of_decB hR4.sorts
   have hb2' : (rr.tail.tail.headD 0).toNat + (rr.tail.tail.tail.headD 0).toNat ≤ iwTop m5 := by
-    have := hg5.1; have := hR4.sortsB; omega
+    have := hg5.iw; have := hR4.sortsB; omega
   rcases hc2 : consW (j + 1) m5 (rh.headD 0) (rr.tail.tail.headD 0) (rr.tail.tail.tail.headD 0) with _ | ⟨r2, m6⟩
   · rw [liftE_none, sctsE.k_sl_cons_2.none]; exact RefE.of_cls0 (by simp)
   rw [liftE_some, sctsE.k_sl_cons_2.arm1]
@@ -216,7 +216,7 @@ theorem scts_ref (hP : SumProg p)
   have hy2 : DecB (fun m => sortsDec m (rh.headD 0).toNat) m6 sorts := by
     have h0 : DecB (fun m => sortsDec m (rh.headD 0).toNat) m3 sorts :=
       sumSortsDec_of hh0 hh1 (by rw [decHL_grow (hg2.trans hg3) hsb]; exact hsorts)
-        (by have := (hg2.trans hg3).1; omega)
+        (by have := (hg2.trans hg3).iw; omega)
     exact DecB.grow (sortsDec_mono _) ((hR4.grow.trans hg5).trans hg6) h0
   have hg46 := hg5.trans hg6
   have hA6 := consW_afr hc2 (consW_afr hc1 hR4.abs)
@@ -225,7 +225,7 @@ theorem scts_ref (hP : SumProg p)
   · simp only [List.headD_cons, List.tail_cons]
     exact DecB.grow (OMono.decPL decCN_mono _ _) hg6
       (sumDecB_cons decCN_mono hmap1 hd5 (by omega) hg5 hy1)
-  · simp only [List.headD_cons, List.tail_cons]; have := hg6.1; omega
+  · simp only [List.headD_cons, List.tail_cons]; have := hg6.iw; omega
   · simp only [List.headD_cons, List.tail_cons]
     exact sumDecB_cons sortsDec_mono hmap2 hd6 (by omega) hg46 hy2
   · simp only [List.headD_cons, List.tail_cons]; omega

@@ -74,7 +74,7 @@ theorem nrt_ref : ∀ (n : Nat), n ≤ 2 ^ 62 → ∀ (m : Mem) (a : AState) (cO
   | n + 1, hn, m, a, cO, cL, ns, oO, oL, css, NS, outss, cssP, nsP, outssP, hC, hU, hhi, hpn, hho, hhob,
       hcl, hcb, hcss, hns, hout, houtb, hP, hA, hctx, hholesP, hcssP, hnsP, houtsP, hcF => by
     have hS := hC.stage
-    have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
+    have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.iw hS.iw.iwSize
     by_cases h0 : cL = 0
     · rw [nrtE.arm1 p n m vis ctx hO hL cO cL ns oO oL h0]
       subst h0
@@ -156,7 +156,7 @@ theorem nrt_ref : ∀ (n : Nat), n ≤ 2 ^ 62 → ∀ (m : Mem) (a : AState) (cO
       ⟨hctx, rfl, hlv, hpar', hcn, hholesP, hc1, hnsP, rfl⟩ hrun1P
     simp only [List.nil_append] at hv1
     refine RefE.bind_right hrun1' ?_
-    have htop1 : iwTop m1 < 2 ^ 64 := Nat.lt_of_le_of_lt hS1.2.1 hS1.2.2.2.1
+    have htop1 : iwTop m1 < 2 ^ 64 := Nat.lt_of_le_of_lt hS1.iw.iw hS1.iw.iwSize
     -- its record, appended
     rcases hr2 : posRecW m1 [r1'.headD 0, r1'.tail.headD 0] with _ | ⟨q, m2⟩
     · rw [liftE_none, nrtE.k_rec2.none]; exact RefE.of_cls0 (by simp)
@@ -164,12 +164,12 @@ theorem nrt_ref : ∀ (n : Nat), n ≤ 2 ^ 62 → ∀ (m : Mem) (a : AState) (cO
     obtain ⟨hS2, hg2, hq2, ht2, hget2⟩ := posRecW_stage hr2 hS1 (by simp)
     simp only [List.length_cons, List.length_nil] at ht2
     have hrec := pos2_outs_rec (q := q) (by omega) hget2 (hO1.grow hg2)
-    have htop2 : iwTop m2 < 2 ^ 64 := Nat.lt_of_le_of_lt hS2.2.1 hS2.2.2.2.1
+    have htop2 : iwTop m2 < 2 ^ 64 := Nat.lt_of_le_of_lt hS2.iw.iw hS2.iw.iwSize
     rcases hsn : snocW n m2 oO oL q with _ | ⟨ro, m3⟩
     · rw [liftE_none, nrtE.k_sl_snoc.none]; exact RefE.of_cls0 (by simp)
     rw [liftE_some, nrtE.k_sl_snoc.arm1]
     have hg12 := hg1.trans hg2
-    obtain ⟨hS3, hg3, h30, h31, ht3, hw3, hx3⟩ := snocW_words hsn hS2 (by have := hg12.1; omega)
+    obtain ⟨hS3, hg3, h30, h31, ht3, hw3, hx3⟩ := snocW_words hsn hS2 (by have := hg12.iw; omega)
     have hout3 : RootOutsB m3 (ro.headD 0).toNat (ro.tail.headD 0).toNat (outss ++ [x1.1]) := by
       rw [h30, h31]
       exact pos2_decB_snoc pos2_rootOuts_mono (hout.grow hg12) hg3 (by omega) hw3 hx3
@@ -184,7 +184,7 @@ theorem nrt_ref : ∀ (n : Nat), n ≤ 2 ^ 62 → ∀ (m : Mem) (a : AState) (cO
       (r1'.tail.tail.headD 0) (ro.headD 0) (ro.tail.headD 0) css' x1.2 (outss ++ [x1.1]) cssP' v1.2
       (outssP ++ [v1.1]) hC3 (hU.grow hg13) hhi hpn
       (by rw [decHL_agree (RdS.of_grow hg13) (fun j hj => by omega)]; exact hho)
-      (by have := hg13.1; omega) hcL1 (by rw [hcO1]; have := hg13.1; omega)
+      (by have := hg13.iw; omega) hcL1 (by rw [hcO1]; have := hg13.iw; omega)
       (by rw [hcO1]; exact (hcss.grow hg13).tail)
       ((hns1.grow hg2 htop1).grow hg3 htop2) hout3 (by rw [h30, h31]; omega)
       ((hP1.fr (posRecW_mfr hr2)).fr (snocW_mfr hsn)) hA3
@@ -251,7 +251,7 @@ theorem nsd_ref : ∀ (n : Nat), n ≤ 2 ^ 62 → ∀ (m : Mem) (a : AState) (sO
   | succ n ih =>
     intro hn m a sO sL ns seeds NS seedsP nsP hC hU hhi hsl hsd hns hP hA hctx hseedsP hnsP hw
     have hS := hC.stage
-    have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
+    have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.iw hS.iw.iwSize
     by_cases h0 : sL = 0
     · rw [nsdE.arm1 p n m vis ctx sO sL ns h0]
       subst h0
@@ -308,10 +308,10 @@ theorem nsd_ref : ∀ (n : Nat), n ≤ 2 ^ 62 → ∀ (m : Mem) (a : AState) (sO
     have hkin1 := (pos2_nk_in (hkd'.grow (decNK_mono _) hg1)).2
     have hksl1 : NKSl m1 key := (hsd.grow hg1 htop) 0 (by simp) |>.elim fun _ h' => by
         obtain ⟨key', nPc', h0', -, -, h1', -, -, hksl', -⟩ := h'
-        have : (m1.arr64 IW)[sO.toNat]? = some sp := by rw [hg1.2.2.1 _ (by omega)]; exact h0w
+        have : (m1.arr64 IW)[sO.toNat]? = some sp := by rw [hg1.iwGet _ (by omega)]; exact h0w
         simp only [Nat.add_zero] at h0'
         rw [this] at h0'; cases h0'
-        rw [hg1.2.2.1 _ (by omega), h1w] at h1'; cases h1'
+        rw [hg1.iwGet _ (by omega), h1w] at h1'; cases h1'
         exact hksl'
     -- the instance's type
     have hN := nit_ref L.nb.nit hq.closed hIlpf hLC n hC1 hA1 hhi0 (hU.grow hg1) hkd1 hkin1 hksl1 hP1
@@ -328,8 +328,8 @@ theorem nsd_ref : ∀ (n : Nat), n ≤ 2 ^ 62 → ∀ (m : Mem) (a : AState) (sO
     have hC2 : StageC dn vis fe env m2 a2 := hC.of_cstep hS2 hA2 c12
     have hg12 := hg1.trans hg2
     have hksl2 : (rdW (m.arr64 IW) (key + 2)).toNat + (rdW (m.arr64 IW) (key + 3)).toNat ≤ iwTop m2 :=
-      Nat.le_trans hksl hg12.1
-    have htop2 : iwTop m2 < 2 ^ 64 := Nat.lt_of_le_of_lt hS2.2.1 hS2.2.2.2.1
+      Nat.le_trans hksl hg12.iw
+    have htop2 : iwTop m2 < 2 ^ 64 := Nat.lt_of_le_of_lt hS2.iw.iw hS2.iw.iwSize
     refine RefE.bind_right hrun2 ?_
     obtain ⟨xn, xc⟩ := x2
     -- the container instance

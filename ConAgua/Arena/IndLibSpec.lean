@@ -408,8 +408,8 @@ open L.Arena
 theorem CheckR.frame_iw {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AState} {vis : Word}
     {fe : IFEnv} (hf : MemFrame [IW] [200] m m') (h : CheckR dn m a vis fe) : CheckR dn m' a vis fe :=
   ⟨⟨ArenaR.frame (fun b hb => by simp at hb; subst hb; decide)
-      (fun x hx => by simp at hx; subst hx; exact not_mem_arenaCtl _ (by decide)) hf h.arena.1,
-    DerR.frameM _ _ m m' hf (by decide) a h.arena.2⟩,
+      (fun x hx => by simp at hx; subst hx; exact not_mem_arenaCtl _ (by decide)) hf h.arena.base,
+    DerR.frameM _ _ m m' hf (by decide) a h.arena.der⟩,
    h.core.frame (fun b hb => by simp at hb; subst hb; decide)
      (fun x hx => by simp at hx; subst hx; decide) hf,
    h.pins.frame (fun b hb => by simp at hb; subst hb; decide) hf,
@@ -431,30 +431,30 @@ open L.Arena
 theorem IWGrow.refl (m : Mem) : IWGrow m m := ⟨Nat.le_refl _, Nat.le_refl _, fun _ _ => rfl, fun _ _ => rfl⟩
 
 theorem IWGrow.trans {m₁ m₂ m₃ : Mem} (h₁ : IWGrow m₁ m₂) (h₂ : IWGrow m₂ m₃) : IWGrow m₁ m₃ :=
-  ⟨Nat.le_trans h₁.1 h₂.1, Nat.le_trans h₁.2.1 h₂.2.1,
-   fun i hi => (h₂.2.2.1 i (by have := h₁.1; omega)).trans (h₁.2.2.1 i hi),
-   fun i hi => (h₂.2.2.2 i (by have := h₁.2.1; omega)).trans (h₁.2.2.2 i hi)⟩
+  ⟨Nat.le_trans h₁.iw h₂.iw, Nat.le_trans h₁.er h₂.er,
+   fun i hi => (h₂.iwGet i (by have := h₁.iw; omega)).trans (h₁.iwGet i hi),
+   fun i hi => (h₂.erGet i (by have := h₁.er; omega)).trans (h₁.erGet i hi)⟩
 
 /-- A write to `IW` at or above the top keeps the growth. -/
 theorem IWGrow.set_iw {m m' : Mem} (h : IWGrow m m') (k v : Word) (hk : iwTop m ≤ k.toNat) :
     IWGrow m (m'.set64 IW k v) := by
   refine ⟨?_, ?_, fun i hi => ?_, fun i hi => ?_⟩
-  · simp only [iwTop, rdW_set64]; simp [show (CTL : TieredArray) ≠ IW by decide]; exact h.1
-  · simp only [erTop, rdW_set64]; simp [show (CTL : TieredArray) ≠ IW by decide]; exact h.2.1
+  · simp only [iwTop, rdW_set64]; simp [show (CTL : TieredArray) ≠ IW by decide]; exact h.iw
+  · simp only [erTop, rdW_set64]; simp [show (CTL : TieredArray) ≠ IW by decide]; exact h.er
   · rw [Mem.arr64_set64_same, Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds]
     have : ¬ (k.toNat = i) := by omega
-    simp only [this, ite_false]; exact h.2.2.1 i hi
-  · rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]; exact h.2.2.2 i hi
+    simp only [this, ite_false]; exact h.iwGet i hi
+  · rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]; exact h.erGet i hi
 
 /-- Raising the top keeps the growth. -/
 theorem IWGrow.set_top {m m' : Mem} (h : IWGrow m m') (t : Word) (ht : iwTop m' ≤ t.toNat)
     (hc : 200 < (m'.arr64 CTL).size) :
     IWGrow m (m'.set64 CTL 200 t) := by
   refine ⟨?_, ?_, fun i hi => ?_, fun i hi => ?_⟩
-  · simp only [iwTop, rdW_set64]; simp [hc]; have := h.1; simp only [iwTop] at this ht; omega
-  · simp only [erTop, rdW_set64]; simp; exact h.2.1
-  · rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]; exact h.2.2.1 i hi
-  · rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]; exact h.2.2.2 i hi
+  · simp only [iwTop, rdW_set64]; simp [hc]; have := h.iw; simp only [iwTop] at this ht; omega
+  · simp only [erTop, rdW_set64]; simp; exact h.er
+  · rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]; exact h.iwGet i hi
+  · rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]; exact h.erGet i hi
 
 end L.Ind
 
@@ -663,8 +663,8 @@ theorem StageR.of_walkM {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : 
     hf.ctl 200 (fun h => by have := hC _ h; simp at this)
   have h129 : rdW (m'.arr64 CTL) 129 = rdW (m.arr64 CTL) 129 :=
     hf.ctl 129 (fun h => by have := hC _ h; simp at this)
-  refine ⟨⟨CheckR.of_walkM hS.1 hD hf hA hC hk hmode, ?_⟩, ?_⟩
-  · simp only [IWOK, iwTop, erTop, hI, hE, h200, h129, hf.size CTL]; exact hS.2
+  refine ⟨⟨CheckR.of_walkM hS.check hD hf hA hC hk hmode, ?_⟩, ?_⟩
+  · simp only [IWOK_iff, iwTop, erTop, hI, hE, h200, h129, hf.size CTL]; exact (IWOK_iff _).1 hS.iw
   · refine ⟨?_, ?_, fun i _ => by rw [hI], fun i _ => by rw [hE]⟩
     · simp only [iwTop, h200]; exact Nat.le_refl _
     · simp only [erTop, h129]; exact Nat.le_refl _
@@ -676,6 +676,6 @@ theorem StageR.of_walk {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : I
     (hA : ∀ b ∈ A, InStoreTier b) (hC : ∀ x ∈ C, x.toNat < 64) (hk : cp a' = cp a)
     (h01 : (0 : Word) ∉ C ∧ (1 : Word) ∉ C := by decide) :
     StageR dn vis fe m' a' ∧ IWGrow m m' :=
-  StageR.of_walkM hS hD hf hA hC hk (hS.1.mode.frame hf h01.1 h01.2)
+  StageR.of_walkM hS hD hf hA hC hk (hS.check.mode.frame hf h01.1 h01.2)
 
 end L.Ind

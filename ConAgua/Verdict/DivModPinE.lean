@@ -84,8 +84,8 @@ theorem loop_ref (hD : DmProg8 p) (hq : KnotStageProg p) (hcl : LeafClosed p) (h
     | succ k =>
     have hk' : k ≤ 2 ^ 62 := by omega
     have hS := hC.stage
-    have hsz := hS.2.2.2.1
-    have hI1 := hS.2.1
+    have hsz := hS.iw.iwSize
+    have hI1 := hS.iw.iw
     obtain ⟨hb, hl, hj⟩ := hI
     have hpl0 : pl ≠ 0 := fun e => by rw [e] at hl; simp at hl
     rw [checkDivModPinLoopE.arm1 p k m vis c value po pl hpl0]
@@ -244,7 +244,7 @@ theorem cp_ref (hD : DmProg8 p) (hq : KnotStageProg p) (hcl : LeafClosed p) (hkp
   rcases h2 : callW p k "env_find" [c, vis2] m1 with _ | ⟨r2, m2⟩
   · rw [liftE_none, checkDivModPinE.k_env_find.none]; exact RefE.of_cls0 (by simp)
   rw [liftE_some]
-  obtain ⟨hm2, hfd⟩ := envFind_call hD7.toDmProg6.toDmProg5.toMasterProg c hc hS1.1.env h2
+  obtain ⟨hm2, hfd⟩ := envFind_call hD7.toDmProg6.toDmProg5.toMasterProg c hc hS1.check.env h2
   subst hm2
   cases hf : fe2.find? (decI c) with
   | none =>
@@ -254,7 +254,7 @@ theorem cp_ref (hD : DmProg8 p) (hq : KnotStageProg p) (hcl : LeafClosed p) (hkp
   | some ci =>
   rw [hf] at hfd
   obtain ⟨hr2, hci⟩ := hfd
-  have hsz := hS1.2.2.2.2.1
+  have hsz := hS1.iw.erSize
   by_cases hk1 : rdW (m2.arr64 EREC) (r2.tail.headD 0) ≠ 1
   · rw [checkDivModPinE.k_env_find.abort2 _ _ _ _ _ _ _ _ (by rw [hr2]; decide) hk1]
     exact RefE.of_cls0 rfl
@@ -312,7 +312,7 @@ theorem cp_ref (hD : DmProg8 p) (hq : KnotStageProg p) (hcl : LeafClosed p) (hkp
   rw [checkDivModPinE.k_check_div_mod_pin_loop.arm1]
   obtain ⟨x3, a3, hrun3, hR3⟩ := h3R
   have hS3' := StageR.restrict hR3.stage.stage vis2
-  rw [IFEnv.restrictTo_restrictTo, ← hS.1.env.vis, IFEnv.restrictTo_self] at hS3'
+  rw [IFEnv.restrictTo_restrictTo, ← hS.check.env.vis, IFEnv.restrictTo_self] at hS3'
   exact RefE.ret hrun3 ⟨⟨hR3.stage, c1.trans hR3.core, hg1.trans hR3.grow⟩, hS3'⟩
 
 end pin

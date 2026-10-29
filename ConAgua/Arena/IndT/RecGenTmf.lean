@@ -240,7 +240,7 @@ theorem tmo_ref {p : Prog} (hP : TmoOProg p) (hIlpf : IlpfF p) (hcore : CoreStag
   cases n with
   | zero => rw [tmoE.eq_1]; exact RefE.of_cls0 Err.cls_outOfFuel
   | succ n =>
-  have hT : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
+  have hT : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.iw hS.iw.iwSize
   rw [tmoE.arm1]
   unfold tmoOutT
   -- `pin_at`
@@ -248,7 +248,7 @@ theorem tmo_ref {p : Prog} (hP : TmoOProg p) (hIlpf : IlpfF p) (hcore : CoreStag
   · rw [liftE_none, tmoE.k_pin_at.none]; exact RefE.of_cls0 (by simp)
   rw [liftE_some]
   obtain ⟨s1, rfl, -, hW1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩) (L.Arena.pinAt_specW p hP.pin n _ 47) h1
-  obtain ⟨hm1, hr1, hqH, hrun1⟩ := L.Arena.pinAtW_ok (a := a) hW1 hS.1.pins
+  obtain ⟨hm1, hr1, hqH, hrun1⟩ := L.Arena.pinAtW_ok (a := a) hW1 hS.check.pins
   have hm1' : s1.mem = m := hm1
   simp only at hr1 hqH hrun1
   rw [hm1']
@@ -307,7 +307,7 @@ theorem tmo_ref {p : Prog} (hP : TmoOProg p) (hIlpf : IlpfF p) (hcore : CoreStag
     omega
   have hlen : (args.take nPc).length = nPc := by simp; omega
   refine RefE.ite_neg (by simp only [hlen, bne_self_eq_false, Bool.false_eq_true, not_false_eq_true]) ?_
-  have hT2 : iwTop m' < 2 ^ 64 := Nat.lt_of_le_of_lt hS2.2.1 hS2.2.2.2.1
+  have hT2 : iwTop m' < 2 ^ 64 := Nat.lt_of_le_of_lt hS2.iw.iw hS2.iw.iwSize
   have htake : DecB (fun m => decHL m ao.toNat (r.tail.headD 0).toNat) m (args.take nPc) := by
     show decHL (truncM m) _ _ = _
     rw [hnP, decHL_take hagT _ hnal]
@@ -322,7 +322,7 @@ theorem tmo_ref {p : Prog} (hP : TmoOProg p) (hIlpf : IlpfF p) (hcore : CoreStag
   obtain ⟨s3, rfl, -, hW3⟩ := triple_of_callW (s₀ := ⟨m', Locals.init []⟩)
     (tmoc_spec p hP.bvb hP.hf hP.tmoc (k' + 1 + 1) _ ao (r.tail.headD 0) (rdW (m'.arr64 IW) (pp + 4))) h3
   obtain ⟨b, a3, hrun3, hS3, hg3, hb3, -⟩ := ckc2W_ok dn fe vis (k' + 1 + 1) m' s3.mem a' _ ao _ _ r3 hW3 hS2
-    htake2 (by have := hg2.1; omega) (by have := hg2.1; omega)
+    htake2 (by have := hg2.iw; omega) (by have := hg2.iw; omega)
   rw [hnpw, UInt64.toNat_ofNat_of_lt' hnpb] at hrun3
   have hA3 : AbsOK s3.mem := ckc2W_afr _ _ _ _ _ _ _ hW3 hA2
   obtain ⟨p3, -⟩ := ConRon.Bridge.Inductives.allM_E_pstep (fun _ => True) (fun _ h => h)
@@ -348,11 +348,11 @@ theorem tmo_ref {p : Prog} (hP : TmoOProg p) (hIlpf : IlpfF p) (hcore : CoreStag
   rw [liftE_some]
   obtain ⟨s4, rfl, -, hW4⟩ := triple_of_callW (s₀ := ⟨s3.mem, Locals.init []⟩)
     (oc_spec p hP.occ (k' + 1 + 1) _ mno mnl ao (r.tail.headD 0)) h4
-  have hT3 : iwTop s3.mem < 2 ^ 64 := Nat.lt_of_le_of_lt hS3.2.1 hS3.2.2.2.1
+  have hT3 : iwTop s3.mem < 2 ^ 64 := Nat.lt_of_le_of_lt hS3.iw.iw hS3.iw.iwSize
   obtain ⟨b, a4, hrun4, hb4, hS4, hg4, hP4⟩ := ocW_sim hP.no mno mnl ws hwlt (k' + 1 + 1) s3.mem a3 ao _
     (args.take nPc) hS3 (slR_grow hg03 hT hws hwsb)
-    (fun i hi => Nat.lt_of_lt_of_le (hwsb i hi) hg03.1) (htake.stab (OMono.decHL _ _) s3.mem hg03)
-    (by have := hg03.1; omega) hP3 r4 s4.mem hW4
+    (fun i hi => Nat.lt_of_lt_of_le (hwsb i hi) hg03.iw) (htake.stab (OMono.decHL _ _) s3.mem hg03)
+    (by have := hg03.iw; omega) hP3 r4 s4.mem hW4
   have hA4 : AbsOK s4.mem := ocW_afr hP.no _ _ _ _ _ _ _ _ hW4 hA3
   have hx3 := (p2.trans p3).ext
   have hnm : Frontend.denoteNList a3.store.ns (ws.map (fun w => (decI w : NIdx))) = some pP.memberNames := by
@@ -381,8 +381,8 @@ theorem tmo_ref {p : Prog} (hP : TmoOProg p) (hIlpf : IlpfF p) (hcore : CoreStag
   have hcsd := csAt_decB hcsat hcb
   rw [← hcl] at hcsd
   have := tmt_ref hP.tmt hIlpf hcore hLC (k' + 1 + 1) (bs := bs) (pfvs := pfvs) (ds := args.take nPc)
-    (ctors := cs) hC4 hA4 (hq.grow (decBS_mono _) hg04) (by have := hg04.1; omega) hI hus
-    (htake.grow (OMono.decHL _ _) hg04) (by have := hg04.1; omega)
+    (ctors := cs) hC4 hA4 (hq.grow (decBS_mono _) hg04) (by have := hg04.iw; omega) hI hus
+    (htake.grow (OMono.decHL _ _) hg04) (by have := hg04.iw; omega)
     (hcsd.grow (OMono.decPL decCN_mono _ _) (hg3.trans hg4)) (hpf.grow (OMono.decHL _ _) hg04) hP4
     (ConRon.Bridge.denoteN_ext hIP hx4) (ConRon.Bridge.denoteLs_ext husP hx4)
     (ConRon.Bridge.Inductives.denoteEList_take (ConRon.Bridge.denoteEList_ext hx4 _ _ hargsP) nPc)
@@ -416,7 +416,7 @@ theorem tmc_ref {p : Prog} (hP : TmfProg p) (hIlpf : IlpfF p) (hcore : CoreStage
   cases n with
   | zero => rw [tmcE.eq_1]; exact RefE.of_cls0 Err.cls_outOfFuel
   | succ n =>
-  have hT : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
+  have hT : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.iw hS.iw.iwSize
   obtain ⟨hqd, hq9, hptr⟩ := partsShapeFacts hq hsrc
   rw [tmcE.arm1]
   -- `block_shape_member_names`
@@ -424,11 +424,11 @@ theorem tmc_ref {p : Prog} (hP : TmfProg p) (hIlpf : IlpfF p) (hcore : CoreStage
   · rw [liftE_none, tmcE.k_block_shape_member_names.none]; exact RefE.of_cls0 (by simp)
   rw [liftE_some, tmcE.k_block_shape_member_names.arm1]
   obtain ⟨s4, rfl, hr4, hdn, hg4, hf4, ht4⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (blockShapeMemberNames_refines p hP.tmm.alloc hP.mnc hP.bsmn n _ pp bs hqd (by omega) hS.2.2.2.1 hS.2.2.2.2.2
+    (blockShapeMemberNames_refines p hP.tmm.alloc hP.mnc hP.bsmn n _ pp bs hqd (by omega) hS.iw.iwSize hS.iw.ctl
       hsrc (fun o l j v h1 h2 h3 h4 => Nat.lt_of_succ_lt (hptr o l j v h1 h2 h3 h4))) h4
   obtain ⟨s4', hs4', -, hW4⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (blockShapeMemberNames_spec p hP.tmm.alloc hP.mnc hP.bsmn n _ pp) h4
-  have hroom := memberNamesW_room hW4 hS.2.2.2.1
+  have hroom := memberNamesW_room hW4 hS.iw.iwSize
   rw [partsShapeK hqd hq9] at hroom
   have hkb : bs.k < 2 ^ 64 := by
     obtain ⟨o, l, -, hl', hg'⟩ := decAt_some (decBS_some hqd).1
@@ -437,7 +437,7 @@ theorem tmc_ref {p : Prog} (hP : TmfProg p) (hIlpf : IlpfF p) (hcore : CoreStage
   simp only at hr4 hdn hg4 hf4 ht4
   have hS4 : StageR dn vis fe s4.mem a := stage_frame_iw hS hf4 (by
     rw [← ht4]; simp only [iwTop] at hroom ⊢; omega)
-  have hT4 : iwTop s4.mem < 2 ^ 64 := Nat.lt_of_le_of_lt hS4.2.1 hS4.2.2.2.1
+  have hT4 : iwTop s4.mem < 2 ^ 64 := Nat.lt_of_le_of_lt hS4.iw.iw hS4.iw.iwSize
   have hP4 : PosMR s4.mem := hPm.fr (MFr.of_iw hf4)
   have hA4 : AbsOK s4.mem := memberNamesW_afr (hs4' ▸ hW4) hA
   have hC4 : StageC dn vis fe env s4.mem a := hC.of_pstep hS4 hA4 (PStep.refl hC.check.state)
@@ -466,8 +466,8 @@ theorem tmc_ref {p : Prog} (hP : TmfProg p) (hIlpf : IlpfF p) (hcore : CoreStage
     have hie : (UInt64.ofNat i : Word).toNat = i := UInt64.toNat_ofNat_of_lt' (show i < 2 ^ 64 by omega)
     have := tmm_ref (p := p) (dn := dn) (vis := vis) (fe := fe) n (t := UInt64.ofNat i) (bs := bs) (css := css) hS4
       (hq.grow (decBS_mono _) hg4) (partsHsrc_grow hg4 hq9 hsrc) (hcss.grow decCNS_mono hg4)
-      (hpf.grow (OMono.decHL _ _) hg4) (hfv.grow (OMono.decHL _ _) hg4) (Nat.le_trans hfvb hg4.1)
-      (hag.grow (OMono.decHL _ _) hg4) (Nat.le_trans hagb hg4.1) hx hy hP4
+      (hpf.grow (OMono.decHL _ _) hg4) (hfv.grow (OMono.decHL _ _) hg4) (Nat.le_trans hfvb hg4.iw)
+      (hag.grow (OMono.decHL _ _) hg4) (Nat.le_trans hagb hg4.iw) hx hy hP4
     rw [hie] at this
     exact this.mono fun _ _ _ h => ⟨h.dec, h.stage, hg4.trans h.grow, h.pos, h.afr hA4⟩
   | none =>
@@ -475,8 +475,8 @@ theorem tmc_ref {p : Prog} (hP : TmfProg p) (hIlpf : IlpfF p) (hcore : CoreStage
     subst hr5
     rw [tmcE.k_sl_find.arm2 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ (by simp)]
     exact (tmo_ref hP.tmo hIlpf hcore hLC n (m := s4.mem) hS4 (hq.grow (decBS_mono _) hg4)
-      (by have := hg4.1; omega) hsl hwlt (fun j hj => by rw [UInt64.toNat_ofNat_of_lt' hkb] at hj; omega)
-      hws.symm (hag.grow (OMono.decHL _ _) hg4) (Nat.le_trans hagb hg4.1) (hpf.grow (OMono.decHL _ _) hg4)
+      (by have := hg4.iw; omega) hsl hwlt (fun j hj => by rw [UInt64.toNat_ofNat_of_lt' hkb] at hj; omega)
+      hws.symm (hag.grow (OMono.decHL _ _) hg4) (Nat.le_trans hagb hg4.iw) (hpf.grow (OMono.decHL _ _) hg4)
       hx hy hP4 hC4 hA4 hshP hIP husP hargsP).mono
       fun _ _ _ h => ⟨h.dec, h.stage, hg4.trans h.grow, h.pos, h.abs⟩
 
@@ -549,7 +549,7 @@ theorem tmf_ref {p : Prog} (hP : TmfProg p) (hIlpf : IlpfF p) (hcore : CoreStage
   obtain ⟨s3, rfl, hs3e, hne, hr3⟩ := triple_of_callW (s₀ := ⟨s2.mem, Locals.init []⟩)
     (eView_spec p hP.ev n _ (r2.headD 0)) h3
   have hm3 : s3.mem = s2.mem := by rw [hs3e]
-  obtain ⟨hrun3, hxH, hyH⟩ := viewConstW hS2.1.arena.1 (by rw [← hr3]; exact hne) hg
+  obtain ⟨hrun3, hxH, hyH⟩ := viewConstW hS2.check.arena.base (by rw [← hr3]; exact hne) hg
   rw [← hr3] at hrun3 hxH hyH
   obtain ⟨-, hvc⟩ := ConRon.Bridge.Inductives.viewConst_run hrun3
   obtain ⟨IP, usP, -, hIP, husP⟩ := ConRon.Bridge.denote_const_inv hC2.check.state.wf
@@ -560,9 +560,9 @@ theorem tmf_ref {p : Prog} (hP : TmfProg p) (hIlpf : IlpfF p) (hcore : CoreStage
   have hg12 := hg1.trans hg2
   exact (tmc_ref hP hIlpf hcore hLC n hS2 (hq.grow (decBS_mono _) hg12)
     (partsHsrc_grow hg12 (partsShapeFacts hq hsrc).2.1 hsrc) (hcss.grow decCNS_mono hg12)
-    (hpf.grow (OMono.decHL _ _) hg12) (hfv.grow (OMono.decHL _ _) hg12) (Nat.le_trans hfvb hg12.1)
-    (decHL_decB (by rw [decHL_grow hg2 hb1]; exact hd1) (Nat.le_trans hb1 hg2.1))
-    (Nat.le_trans hb1 hg2.1) hxH hyH hP2 hC2 hA2 hshP hIP husP hargsP).mono
+    (hpf.grow (OMono.decHL _ _) hg12) (hfv.grow (OMono.decHL _ _) hg12) (Nat.le_trans hfvb hg12.iw)
+    (decHL_decB (by rw [decHL_grow hg2 hb1]; exact hd1) (Nat.le_trans hb1 hg2.iw))
+    (Nat.le_trans hb1 hg2.iw) hxH hyH hP2 hC2 hA2 hshP hIP husP hargsP).mono
     fun _ _ _ h => ⟨h.dec, h.stage, hg12.trans h.grow, h.pos, h.abs⟩
 
 end L.Ind

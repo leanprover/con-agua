@@ -28,10 +28,10 @@ def PinsIW (m : Mem) (o l : Nat) (ips : List INatOpPinSet) : Prop :=
 theorem PinsIW.grow {m m' : Mem} {o l : Nat} {ips : List INatOpPinSet} (h : PinsIW m o l ips)
     (hg : IWGrow m m') : PinsIW m' o l ips := by
   obtain ⟨h1, h2, h3⟩ := h
-  refine ⟨Nat.le_trans h1 hg.1, h2, fun j hj => ?_⟩
+  refine ⟨Nat.le_trans h1 hg.iw, h2, fun j hj => ?_⟩
   obtain ⟨ps, hp, hP⟩ := h3 j hj
   refine ⟨ps, ?_, PinSetR.grow hP hg⟩
-  simp only [iwA] at hp ⊢; rw [hg.2.2.1 _ (by omega)]; exact hp
+  simp only [iwA] at hp ⊢; rw [hg.iwGet _ (by omega)]; exact hp
 
 theorem decCI_defn_value {a : Array Word} {dn : NIdx → Option ConLeche.Name} {p : Nat}
     {cv : IConstantVal} {v : EIdx} {hint : ConLeche.ReducibilityHint}

@@ -168,7 +168,7 @@ theorem tpsW_sim (p : Prog) (L : RpLook p) (n : Nat) {dn : NIdx → Option ConLe
   have hd3' : decHL s4.mem (rdW (s2.mem.arr64 CTL) 200).toNat (rac.tail.headD 0).toNat =
       some (bs.allCtors.map fun x => x.1.name) := by
     rw [decHL_grow3 hg4 (Nat.le_of_eq ht3)]; exact hd3
-  obtain ⟨ws1, hs1, hm1, hl1⟩ := slR_of_decHL s4.mem _ _ _ hd3' (by have := hg4.1; have := hT s4.mem; omega)
+  obtain ⟨ws1, hs1, hm1, hl1⟩ := slR_of_decHL s4.mem _ _ _ hd3' (by have := hg4.iw; have := hT s4.mem; omega)
   obtain ⟨ws2, hs2, hm2, hl2⟩ := slR_of_decHL s4.mem _ _ _ hd4 (by rw [ht4]; exact hT _)
   rw [ofNat_toNat_word, ofNat_toNat_word] at hs1 hs2
   have heq := eqW_ok _ _ _ _ _ _ _ ws1 ws2 hs1 hs2 hW5

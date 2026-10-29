@@ -74,9 +74,9 @@ theorem isa_ref (p : Prog) (hp : InferLeafProg p) (hkp : KnotProg p) (he : IsEag
   rcases c2 : callE p n "defeq_arg" [mode, vis, d, a, r₁.headD 0, dom] m₁ with e2 | ⟨r₂, m₂⟩
   · exact RefE.bind_left fun hG => CoreSpecE.of_callE (s₀ := ⟨m₁, Locals.init []⟩)
       (defeqArg_anyE p hp hkp he n hk hG F _ _ dn vis fe M₁ eb mode d a (r₁.headD 0) dom hF hn hs₁ ha
-        h₁.2.2.2 hdom) c2
+        h₁.resOk hdom) c2
   have h₂ := CoreSpec.of_callW (defeqArg_any p hp hkp he n hk F ⟨m₁, Locals.init []⟩ _ dn vis fe M₁ eb
-    mode d a (r₁.headD 0) dom hF hn hs₁ ha h₁.2.2.2 hdom) (callW_of_callE c2)
+    mode d a (r₁.headD 0) dom hF hn hs₁ ha h₁.resOk hdom) (callW_of_callE c2)
   refine RefE.bind_core (w := id) h₂ (fun M₂ hS₂ _ => ?_)
   simp only [isaE.k_defeq_arg]
   by_cases h0 : r₂.headD 0 = 0
@@ -200,8 +200,8 @@ theorem spLoop_ref (p : Prog) (hp : InferLeafProg p) (hkp : KnotProg p) (hq : Sp
         · rw [ite_eq_left c2]; exact RefE.of_cls0 rfl
         rw [ite_eq_right c2]
         have hv : viewOK m ty FORALL := ⟨c1, UInt64.not_le.mp c2⟩
-        obtain ⟨-, hdom, hbody⟩ := view_forall m a hS.arena.1 ty ht hv ht6
-        have hvb := viewBind_forall m a hS.arena.1 ty ht hv ht6
+        obtain ⟨-, hdom, hbody⟩ := view_forall m a hS.arena.base ty ht hv ht6
+        have hvb := viewBind_forall m a hS.arena.base ty ht hv ht6
         rcases h1 : callW p k "inst_list" [tfld m FORALL (tierW ty) (idxW ty) 0, co, cn, 0] m with
           _ | ⟨r₁, m₁⟩
         · rw [liftE_none, ispE.k_inst_list_2.eq_1]; exact RefE.of_cls0 (by simp)
@@ -286,8 +286,8 @@ theorem spLoop_ref (p : Prog) (hp : InferLeafProg p) (hkp : KnotProg p) (hq : Sp
         · rw [ite_eq_left g3]; exact RefE.of_cls0 rfl
         rw [ite_eq_right g3]
         have hv : viewOK m₂ (r₂.headD 0) FORALL := ⟨g2, UInt64.not_le.mp g3⟩
-        obtain ⟨-, hdom, hbody⟩ := view_forall m₂ _ hS₂.arena.1 (r₂.headD 0) hrw2 hv g1'
-        have hvb := viewBind_forall m₂ _ hS₂.arena.1 (r₂.headD 0) hrw2 hv g1'
+        obtain ⟨-, hdom, hbody⟩ := view_forall m₂ _ hS₂.arena.base (r₂.headD 0) hrw2 hv g1'
+        have hvb := viewBind_forall m₂ _ hS₂.arena.base (r₂.headD 0) hrw2 hv g1'
         have hfa : ((decE (r₂.headD 0)).tag == ETag.forallE) = true := by
           rw [decE_tag_forallE_beq _ hrw2]; exact decide_eq_true g1'
         simp only [hfa, ite_true]
@@ -429,7 +429,7 @@ theorem a_ref (p : Prog) (hp : InferLeafProg p) (hkp : KnotProg p) (hq : SpineFP
   · rw [liftE_none]; exact RefE.of_cls0 (by simp)
   rw [liftE_some]; simp only [aE.k_head_and_args]
   obtain ⟨t₁, ht₁, -, hf₁, hg₁, hhw, ho1, htop1, xs, hha, hxs⟩ := triple_of_callW
-    (headAndArgs_app p hsp n s₀ a₀ hS.arena.1 e hHe h4 hS.spn) hc1
+    (headAndArgs_app p hsp n s₀ a₀ hS.arena.base e hHe h4 hS.spn) hc1
   rw [ht₁] at hf₁ hg₁ htop1 hxs
   have hS₁ := hS.frame_stk hf₁ (by simp) (by simp)
   have hb1 := hxs.bound

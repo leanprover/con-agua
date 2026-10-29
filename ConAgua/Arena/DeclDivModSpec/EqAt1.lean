@@ -189,7 +189,7 @@ theorem eqAt1_ref (hD : DmProg2 p) (ty a b : Word) :
   refine Sim.ntB ((pinWord53_ref p hD.lPinWord).simG hS (.refl m)) fun r1 _ m1 a1 ⟨hS1, hg1, hl1, rfl⟩ => ?_
   refine Sim.ntB ((internSucc_ref hD.toMasterProg (r1.headD 0) hl1).simG hS1 hg1)
     fun r2 _ m2 a2 ⟨hS2, hg2, hl2, rfl⟩ => ?_
-  refine (slNew1_fref p hD.lIwAlloc hD.lSlNew1 (r2.headD 0)).simB hS2.2 fun r3 m3 ⟨hrec, hr3⟩ => ?_
+  refine (slNew1_fref p hD.lIwAlloc hD.lSlNew1 (r2.headD 0)).simB hS2.iw fun r3 m3 ⟨hrec, hr3⟩ => ?_
   refine Sim.ntB ((ilF_ok dn vis fe (r3.headD 0) (r3.tail.headD 0) [decI (r2.headD 0)]).simS
     ⟨hrec.2.1.stage hS2, slNew1_dec hrec hl2 hr3⟩) fun r4 _ m4 a4 ⟨hS4, hg4, hl4, rfl⟩ => ?_
   refine Sim.ntB ((pinSlot_ref p hD.lPinAt 0 pinEq rfl).simG hS4 (hg2.trans (hrec.2.1.1.trans hg4)))
@@ -217,9 +217,9 @@ def CertCtxR (m : Mem) (cx : Word) (c : CertCtxA) : Prop :=
 
 theorem CertCtxR.grow {m m' : Mem} {cx : Word} {c : CertCtxA} (h : CertCtxR m cx c) (hg : IWGrow m m') :
     CertCtxR m' cx c := by
-  refine ⟨Nat.le_trans h.1 hg.1, fun j hj => ?_⟩
+  refine ⟨Nat.le_trans h.1 hg.iw, fun j hj => ?_⟩
   simp only [iwA]
-  rw [hg.2.2.1 _ (by have := h.1; omega)]
+  rw [hg.iwGet _ (by have := h.1; omega)]
   exact h.2 j hj
 
 /-- A field of the context, as the word `cert_*` reads. -/
@@ -407,7 +407,7 @@ theorem certCtx_specW (p : Prog) (hp : p.lookup "cert_ctx" = some certCtxL) (n :
 
 theorem rdW_iw_grow {m m' : Mem} (hg : IWGrow m m') {i : Word} (hi : i.toNat < iwTop m) :
     rdW (m'.arr64 IW) i = rdW (m.arr64 IW) i := by
-  simp only [rdW]; rw [hg.2.2.1 i.toNat hi]
+  simp only [rdW]; rw [hg.iwGet i.toNat hi]
 
 theorem RecPost.rdGrow {m m0 mk : Mem} {r ws : List Word} (h : RecPost m m0 r ws)
     (hg : IWGrow m0 mk) (k : Word) (hk : k.toNat < ws.length) :
@@ -505,10 +505,10 @@ theorem certCtx_ref (hD : DmProg2 p) :
   refine CallRef.of_succ fun k m a r m' hS hc => ?_
   have hw := callW_model (M := fun mm => certCtxW p k mm) (certCtx_specW p hD.lCertCtx k ·) hc
   unfold certCtxW at hw
-  obtain ⟨r0, m0, ⟨h0, hrec, hPINS, hr0⟩, hw⟩ := (natOpPins_fref hD.toNatGateProg).bind_ hS.2 hw
+  obtain ⟨r0, m0, ⟨h0, hrec, hPINS, hr0⟩, hw⟩ := (natOpPins_fref hD.toNatGateProg).bind_ hS.iw hw
   have hg0 : IWGrow m m0 := hrec.2.1.1
   have hS0 := hrec.2.1.stage hS
-  have hF := hS.1.pins.full h0
+  have hF := hS.check.pins.full h0
   have hlt : ∀ j, j < 51 → (pinW m (1 + j)).toNat < 2 ^ 32 := hF.names_lt
   have rdk : ∀ mk, IWGrow m0 mk → ∀ kk : Word, kk.toNat < 21 →
       rdW (mk.arr64 IW) (r0.headD 0 + kk) = (pinRecW m).getD kk.toNat 0 :=
@@ -551,7 +551,7 @@ theorem certCtx_ref (hD : DmProg2 p) :
     (natAp1_ref hD.toNatEqProg (pinW m 4) (r4.headD 0)).bind_ ⟨hS8, hlt 3 (by decide), hl4⟩ hw
   have hg09 : IWGrow m0 m9 := hg08.trans hg89
   obtain ⟨rq, mq, ⟨hq0, hmq, hKq, hroomq, htopq⟩, hw⟩ :=
-    (iwAlloc_fref p hD.lIwAlloc 21).bind_ hS9.2 hw
+    (iwAlloc_fref p hD.lIwAlloc 21).bind_ hS9.iw hw
   have hgq : IWGrow m0 mq := hg09.trans hKq.1
   cases hpc : callW p k "cert_ctx_pins" [rq.headD 0, r0.headD 0] mq with
   | none => rw [hpc] at hw; simp at hw
@@ -592,7 +592,7 @@ theorem certCtx_ref (hD : DmProg2 p) :
   have hrp := recPost_wr2 m9 [r1.headD 0, r2.headD 0, r3.headD 0, r4.headD 0, pinW m 21, r5.headD 0,
       r6.headD 0, r7.headD 0, r8.headD 0, r9.headD 0]
     [pinW m 23, pinW m 22, pinW m 16, pinW m 18, pinW m 17, pinW m 24, pinW m 28, pinW m 29,
-      pinW m 25, pinW m 26, pinW m 27] 21 rfl hS9.2 (by simpa using hroomq)
+      pinW m 25, pinW m 26, pinW m 27] 21 rfl hS9.iw (by simpa using hroomq)
   have hrp' : RecPost m9 m' [rdW (m9.arr64 CTL) 200]
       ([r1.headD 0, r2.headD 0, r3.headD 0, r4.headD 0, pinW m 21, r5.headD 0, r6.headD 0,
         r7.headD 0, r8.headD 0, r9.headD 0] ++
@@ -786,8 +786,8 @@ variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {p : Pro
 theorem Rec3At.grow {m m' : Mem} {p a b c : Word} (h : Rec3At m p a b c) (hg : IWGrow m m') :
     Rec3At m' p a b c := by
   obtain ⟨h1, h2, h3, h4⟩ := h
-  refine ⟨Nat.le_trans h1 hg.1, ?_, ?_, ?_⟩ <;> simp only [iwA] at * <;>
-    first | (rw [hg.2.2.1 _ (by omega)]; assumption)
+  refine ⟨Nat.le_trans h1 hg.iw, ?_, ?_, ?_⟩ <;> simp only [iwA] at * <;>
+    first | (rw [hg.iwGet _ (by omega)]; assumption)
 
 theorem rec3At_of_post {m m1 : Mem} {r : List Word} {a b c : Word} (h : RecPost m m1 r [a, b, c])
     (_hI : IWOK m) : Rec3At m1 (r.headD 0) a b c := by
@@ -801,7 +801,7 @@ theorem rec3At_of_post {m m1 : Mem} {r : List Word} {a b c : Word} (h : RecPost 
 theorem StmtAt.grow {m m' : Mem} {p : Word} {st : List EIdx × EIdx} (h : StmtAt m p st)
     (hg : IWGrow m m') : StmtAt m' p st := by
   obtain ⟨ho, hl, e, hr, hb, hd, he, hs⟩ := h
-  exact ⟨ho, hl, e, hr.grow hg, Nat.le_trans hb hg.1, by rw [decHL_grow hg hb]; exact hd, he, hs⟩
+  exact ⟨ho, hl, e, hr.grow hg, Nat.le_trans hb hg.iw, by rw [decHL_grow hg hb]; exact hd, he, hs⟩
 
 def decStmt (m : Mem) (r : List Word) (st : List EIdx × EIdx) : Prop := StmtAt m (r.headD 0) st
 
@@ -876,7 +876,7 @@ theorem stmtAt_of_rec3 {m m1 : Mem} {r : List Word} {o l e : Word} {hyps : List 
     (hd : decHL m o.toNat l.toNat = some hyps) (he : H e) :
     StmtAt m1 (r.headD 0) (hyps, decE e) := by
   have hg := hR.2.1.1
-  exact ⟨o, l, e, rec3At_of_post hR hI, Nat.le_trans hb hg.1, by rw [decHL_grow hg hb]; exact hd, he, rfl⟩
+  exact ⟨o, l, e, rec3At_of_post hR hI, Nat.le_trans hb hg.iw, by rw [decHL_grow hg hb]; exact hd, he, rfl⟩
 
 theorem stmtL_of_rec2 {m m1 : Mem} {r : List Word} {s1 s2 : Word} {st1 st2 : List EIdx × EIdx}
     (hR : RecPost m m1 r [s1, s2]) (h1 : StmtAt m s1 st1) (h2 : StmtAt m s2 st2) :
@@ -936,15 +936,15 @@ theorem stmt1_ref (hD : DmProg2 p) (h e : Word) :
       (pure ([decE h], decE e) : AM (List EIdx × EIdx)) (KeepPost dn vis fe decStmt) := by
   refine CallRef.of_sim (M := fun k mq => stmt1W p (k + 1) mq h e) (fun k s₀ => stmt1_specW p hD.lStmt1 (k + 1) s₀ h e)
     fun k m s ⟨hS, hh, he⟩ => ?_
-  refine (slNew1_fref p hD.lIwAlloc hD.lSlNew1 h).simB hS.2 fun r1 m1 ⟨hrec1, hr1⟩ => ?_
+  refine (slNew1_fref p hD.lIwAlloc hD.lSlNew1 h).simB hS.iw fun r1 m1 ⟨hrec1, hr1⟩ => ?_
   have hS1 := hrec1.2.1.stage hS
-  refine (rec3_fref p hD.lIwAlloc hD.lRec3 (r1.headD 0) (r1.tail.headD 0) e).simB hS1.2 fun r2 m2 hrec2 =>
+  refine (rec3_fref p hD.lIwAlloc hD.lRec3 (r1.headD 0) (r1.tail.headD 0) e).simB hS1.iw fun r2 m2 hrec2 =>
     Sim.ret ⟨hrec2.2.1.stage hS1, hrec1.2.1.1.trans hrec2.2.1.1, ?_⟩
   have hq : (r1.headD 0).toNat = iwTop m := by rw [hrec1.1]; rfl
   have hl1 : (r1.tail.headD 0).toNat = 1 := by rw [hr1]; rfl
   have hbound : (r1.headD 0).toNat + (r1.tail.headD 0).toNat ≤ iwTop m1 := by
     have := hrec1.2.2.2.1; simp at this; omega
-  exact stmtAt_of_rec3 hrec2 hS1.2 hbound (slNew1_dec hrec1 hh hr1) he
+  exact stmtAt_of_rec3 hrec2 hS1.iw hbound (slNew1_dec hrec1 hh hr1) he
 
 /-! ## `cert_two_eqs` -/
 
@@ -969,7 +969,7 @@ theorem certTwoEqs_ref (hD : DmProg2 p) (cx c h1 h2 r1 r2 : Word) (cc : CertCtxA
     fun rb _ mb ab ⟨hSb, hgb, hlb, rfl⟩ => ?_
   refine (stmt1_ref hD h1 (ra.headD 0)).simP ⟨hSb, hh1, hla⟩ fun rs1 ms1 ⟨hSs1, hgs1, hs1⟩ => ?_
   refine (stmt1_ref hD h2 (rb.headD 0)).simP ⟨hSs1, hh2, hlb⟩ fun rs2 ms2 ⟨hSs2, hgs2, hs2⟩ => ?_
-  exact (rec2_fref p hD.lIwAlloc hD.lRec2 (rs1.headD 0) (rs2.headD 0)).simB hSs2.2 fun rq mq hrec =>
+  exact (rec2_fref p hD.lIwAlloc hD.lRec2 (rs1.headD 0) (rs2.headD 0)).simB hSs2.iw fun rq mq hrec =>
     Sim.ret ⟨hrec.2.1.stage hSs2, hgb.trans (hgs1.trans (hgs2.trans hrec.2.1.1)),
       stmtL_of_rec2 hrec (hs1.grow hgs2) hs2⟩
 
@@ -1273,19 +1273,19 @@ theorem certDivModEqs_ref (hD : DmProg2 p) (cx c h1 h2 h3 h4 recRhs baseRhs : Wo
     fun r1 _ m1 a1 ⟨hS1, hg1, hl1, rfl⟩ => ?_
   refine Sim.ntB ((certEq_ref hD cx c baseRhs cc).simG ⟨hS1, hC.grow hg1, hc, hbr⟩ hg1)
     fun r2 _ m2 a2 ⟨hS2, hg2, hl2, rfl⟩ => ?_
-  refine (rec2_fref p hD.lIwAlloc hD.lRec2 h1 h2).simB hS2.2 fun r3 m3 hrec3 => ?_
+  refine (rec2_fref p hD.lIwAlloc hD.lRec2 h1 h2).simB hS2.iw fun r3 m3 hrec3 => ?_
   have hS3 := hrec3.2.1.stage hS2
-  refine (rec3_fref p hD.lIwAlloc hD.lRec3 (r3.headD 0) 2 (r1.headD 0)).simB hS3.2 fun r4 m4 hrec4 => ?_
+  refine (rec3_fref p hD.lIwAlloc hD.lRec3 (r3.headD 0) 2 (r1.headD 0)).simB hS3.iw fun r4 m4 hrec4 => ?_
   have hS4 := hrec4.2.1.stage hS3
   refine (stmt1_ref hD h3 (r2.headD 0)).simP ⟨hS4, hh3, hl2⟩ fun r5 m5 ⟨hS5, hg5, hs5⟩ => ?_
   refine (stmt1_ref hD h4 (r2.headD 0)).simP ⟨hS5, hh4, hl2⟩ fun r6 m6 ⟨hS6, hg6, hs6⟩ => ?_
-  refine (rec3_fref p hD.lIwAlloc hD.lRec3 (r4.headD 0) (r5.headD 0) (r6.headD 0)).simB hS6.2 fun r7 m7 hrec7 => ?_
+  refine (rec3_fref p hD.lIwAlloc hD.lRec3 (r4.headD 0) (r5.headD 0) (r6.headD 0)).simB hS6.iw fun r7 m7 hrec7 => ?_
   have hq3 : (r3.headD 0).toNat = iwTop m2 := by rw [hrec3.1]; rfl
   have hbound : (r3.headD 0).toNat + (2 : Word).toNat ≤ iwTop m3 := by
     have h2w : (2 : Word).toNat = 2 := rfl
     have hl : [h1, h2].length = 2 := rfl
     have := hrec3.2.2.2.1; rw [hl] at this; rw [h2w, hq3]; omega
-  have st1 := stmtAt_of_rec3 hrec4 hS3.2 hbound (rec2_dec hrec3 hh1 hh2) hl1
+  have st1 := stmtAt_of_rec3 hrec4 hS3.iw hbound (rec2_dec hrec3 hh1 hh2) hl1
   exact Sim.ret ⟨hrec7.2.1.stage hS6, hg2.trans (hrec3.2.1.1.trans (hrec4.2.1.1.trans (hg5.trans (hg6.trans
     hrec7.2.1.1)))), stmtL_of_rec3 hrec7 (st1.grow (hg5.trans hg6)) (hs5.grow hg6) hs6⟩
 

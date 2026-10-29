@@ -240,7 +240,7 @@ theorem sctW_okR {p : Prog} (hp : ApdF p) {dn : NIdx → Option ConLeche.Name} {
     refine sumSim_map (K := sctK5) rfl (fun _ _ => rfl)
       (ih m4 s4 (bO + 1) (bL - 1) bs' hS4 (stateOK_of_sp hok he14) (names_of_sp he14 hks)
         (by rw [decHL_grow hg14 hlb]; exact hlps)
-        (by have := hg14.1; omega) (by rw [decHL_grow hg14 hb1']; exact hbs') (by have := hg14.1; omega) hA4)
+        (by have := hg14.iw; omega) (by rw [decHL_grow hg14 hb1']; exact hbs') (by have := hg14.iw; omega) hA4)
       fun r b m' a' hQ => ⟨hQ.1, hg14.trans hQ.2.1, by simpa using hQ.2.2.1, by simpa using hQ.2.2.2.1,
         hQ.2.2.2.2.1, hQ.2.2.2.2.2.trans he14⟩
   · rw [sctK4_no (h := hc)]
@@ -329,7 +329,7 @@ theorem envPushTable_stage {p : Prog} (hP : TblProg p) {dn : NIdx → Option Con
     (hc : callW p n "env_push_table" [q] m = some (r, m')) :
     StageR dn vis (fe.pushTable t) m' a ∧ IWGrow m m' ∧ MFr [] [] m m' ∧ AFr m m' := by
   obtain ⟨s', hs', -, hE'⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (envPushTable_refines p hP.htix hP.htrs hP.hept n ⟨m, Locals.init []⟩ vis q t hS.1.env ht) hc
+    (envPushTable_refines p hP.htix hP.htrs hP.hept n ⟨m, Locals.init []⟩ vis q t hS.check.env ht) hc
   obtain ⟨s'', hs'', hM, hw, -⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (envPushTable_mem p hP.htix hP.htrs hP.hept n ⟨m, Locals.init []⟩ q) hc
   rw [hs'] at hE'
@@ -346,11 +346,11 @@ theorem envPushTable_stage {p : Prog} (hP : TblProg p) {dn : NIdx → Option Con
           rcases hb with rfl | rfl | rfl | rfl | rfl | rfl | rfl <;>
             decide)
         (fun x hx => by simp at hx; subst hx; exact not_mem_arenaCtl _ (by decide)) hfr
-        hS.1.arena.1,
-      DerR.frameM _ _ m _ hfr (by decide) a hS.1.arena.2⟩,
-     hS.1.core.frame (by decide) (fun x hx => by simp at hx; subst hx; decide) hfr,
-     hS.1.pins.frame (by decide) hfr, hE', hS.1.mode.frame hfr (by decide) (by decide)⟩
-  obtain ⟨hI1, hE1, hsz, hEs, hc'⟩ := hS.2
+        hS.check.arena.base,
+      DerR.frameM _ _ m _ hfr (by decide) a hS.check.arena.der⟩,
+     hS.check.core.frame (by decide) (fun x hx => by simp at hx; subst hx; decide) hfr,
+     hS.check.pins.frame (by decide) hfr, hE', hS.check.mode.frame hfr (by decide) (by decide)⟩
+  obtain ⟨hI1, hE1, hsz, hEs, hc'⟩ := hS.iw
   have hI : m'.arr64 IW = m.arr64 IW := hfr.arr IW (by decide) (by decide)
   have hER : m'.arr64 EREC = m.arr64 EREC := hfr.arr EREC (by decide) (by decide)
   have h200 : iwTop m' = iwTop m := by simp only [iwTop, hfr.ctl 200 (by decide)]
@@ -408,7 +408,7 @@ theorem tbl_ref {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
     RefE True (tblE p (n + 2) m T C lo ll nP nF rs go gl cvCaw vis)
       (checkStructProjTable (decI T) (decI C) lps nP.toNat nF.toNat (decI rs) guards cvCa fe) a
       (fun v x a' => TblPost dn m a v.1 x v.2 a') := by
-  obtain ⟨w, hw, hwl, hwd⟩ := sumTypeWord (DecB.get (OMono.decCVp _) hcv) hS.2.2.2.2.1
+  obtain ⟨w, hw, hwl, hwd⟩ := sumTypeWord (DecB.get (OMono.decCVp _) hcv) hS.iw.erSize
   rw [tblE.arm1, hw]
   rw [← hwd] at hcty
   unfold checkStructProjTable
@@ -433,7 +433,7 @@ theorem tbl_ref {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
   obtain ⟨-, hbd, hbb⟩ := hdec1
   simp only [unwrapOr, pure_bind]
   have hlps1 : decHL m1 lo.toNat ll.toNat = some lps := by rw [decHL_grow hg1 hlb]; exact hlps
-  have hlb1 : lo.toNat + ll.toNat ≤ iwTop m1 := by have := hg1.1; omega
+  have hlb1 : lo.toNat + ll.toNat ≤ iwTop m1 := by have := hg1.iw; omega
   -- the scoping
   rcases h2 : sctW (realCall p) (n + 1) m1 vis nP lo ll (rb.tail.headD 0) (rb.tail.tail.headD 0)
     with _ | ⟨rs', m2⟩
@@ -470,7 +470,7 @@ theorem tbl_ref {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
   · rw [tblE.k_env_find.abort1 p (n + 1) T C lo ll nP nF rs go gl vis _ _ rf m3 hf0]
     exact RefE.of_cls0 rfl
   rw [tblE.k_env_find.arm1 p (n + 1) T C lo ll nP nF rs go gl vis _ _ rf m3 hf0]
-  obtain ⟨hm32, hfind0, ci0, hci0⟩ := envFindW_hit hf hS2.1.env hT hf0
+  obtain ⟨hm32, hfind0, ci0, hci0⟩ := envFindW_hit hf hS2.check.env hT hf0
   subst m3
   have hhit : (fe.find? (decI T)).isSome := by rw [hfind0, hci0]; rfl
   simp only [hhit, ite_true]
@@ -478,12 +478,12 @@ theorem tbl_ref {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
   rcases hft : callW p (n + 1) "find_table" [vis, T] m2 with _ | ⟨rt, m3⟩
   · rw [liftE_none, tblE.k_find_table.none]; exact RefE.of_cls0 (by simp)
   rw [liftE_some]
-  obtain ⟨hm32, hfind⟩ := findTable_call hP hS2.1.env hT hft
+  obtain ⟨hm32, hfind⟩ := findTable_call hP hS2.check.env hT hft
   subst m3
   by_cases ht0 : rt.headD 0 ≠ 0
   · rw [tblE.k_find_table.abort1 p (n + 1) T C lo ll nP nF rs go gl vis _ _ rt m2 ht0]
     obtain ⟨-, -, -, -, -, hsome4⟩ := triple_of_callW (s₀ := ⟨m2, Locals.init []⟩)
-      (findTable_refines p hP.hix hP.hrg hP.htix hP.htrg hP.hftab (n + 1) _ vis T hS2.1.env hT) hft
+      (findTable_refines p hP.hix hP.hrg hP.htix hP.htrg hP.hftab (n + 1) _ vis T hS2.check.env hT) hft
     have hsome : ¬ (fe.findTable? (decI T)).isNone = true := by
       rw [hfind]
       have := hsome4 ht0
@@ -505,7 +505,7 @@ theorem tbl_ref {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
     (efW_spec p hP.hea hP.hefg hP.hef n ⟨m2, Locals.init []⟩ lo ll) h5
   dsimp only at h5'
   obtain ⟨hS5, hg5, hrl1, hrl0, hsl5, ht5⟩ := efW_stage n h5' hS2
-    (by rw [decHL_grow hg12 hlb]; exact hlps) (by have := hg12.1; omega)
+    (by rw [decHL_grow hg12 hlb]; exact hlps) (by have := hg12.iw; omega)
   have hg25 := hg2.trans hg5
   rcases h6 : callW p (n + 1) "er_from_iw" [rb.tail.headD 0, rb.tail.tail.headD 0] s5.mem with _ | ⟨rb2, m6⟩
   · rw [liftE_none, tblE.k_er_from_iw_2.none]; exact RefE.of_cls0 (by simp)
@@ -514,7 +514,7 @@ theorem tbl_ref {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
     (efW_spec p hP.hea hP.hefg hP.hef n ⟨s5.mem, Locals.init []⟩ _ _) h6
   dsimp only at h6'
   obtain ⟨hS6, hg6, hrb1, hrb0, hsl6, ht6⟩ := efW_stage n h6' hS5
-    (by rw [decHL_grow hg25 hbb]; exact hbd) (by have := hg25.1; omega)
+    (by rw [decHL_grow hg25 hbb]; exact hbd) (by have := hg25.iw; omega)
   have hg06 := ((hg1.trans hg2).trans hg5).trans hg6
   rcases h7 : callW p (n + 1) "er_from_iw" [go, gl] s6.mem with _ | ⟨rg, m7⟩
   · rw [liftE_none, tblE.k_er_from_iw_3.none]; exact RefE.of_cls0 (by simp)
@@ -523,7 +523,7 @@ theorem tbl_ref {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
     (efW_spec p hP.hea hP.hefg hP.hef n ⟨s6.mem, Locals.init []⟩ go gl) h7
   dsimp only at h7'
   obtain ⟨hS7, hg7, hrg1, hrg0, hsl7, ht7⟩ := efW_stage n h7' hS6
-    (by rw [decHL_grow hg06 hgb]; exact hgs) (by have := hg06.1; omega)
+    (by rw [decHL_grow hg06 hgb]; exact hgs) (by have := hg06.iw; omega)
   -- the record
   rcases h8 : erAllocW s7.mem 13 with _ | ⟨q, m8⟩
   · rw [liftE_none, tblE.k_erec_alloc.none]; exact RefE.of_cls0 (by simp)
@@ -691,7 +691,7 @@ theorem cto_ref {p : Prog} (hP : TabsProg p) (hp : ApdF p) (n : Nat) (hn : n ≤
   have hb := nPnF_bound hg0
   rw [UInt64.toNat_ofNat_of_lt' hnpb, UInt64.toNat_ofNat_of_lt' hnFb] at hb
   obtain ⟨w, hwT, hwl, hwd⟩ := sumTypeWord (q := UInt64.ofNat cvp)
-    (by rw [UInt64.toNat_ofNat_of_lt' hcvb]; exact DecB.get (OMono.decCVp _) hcv) hS.2.2.2.2.1
+    (by rw [UInt64.toNat_ofNat_of_lt' hcvb]; exact DecB.get (OMono.decCVp _) hcv) hS.iw.erSize
   rw [hwT]
   unfold tabOne
   -- `struct_proj_guards`
@@ -754,7 +754,7 @@ theorem cto_ref {p : Prog} (hP : TabsProg p) (hp : ApdF p) (n : Nat) (hn : n ≤
     (rl.headD 0) (rl.tail.headD 0) (UInt64.ofNat bs.nP) (UInt64.ofNat nF) (rdW (s2.mem.arr64 IW) (pp + 6))
     (rg.headD 0) (rg.tail.headD 0)
     (UInt64.ofNat cvp) bs.lps guards cA hS2 hT32 hC32 hrs2
-    (by rw [UInt64.toNat_ofNat_of_lt' hnpb]; omega) hl2 hlb2 hgdT (by rw [hgt1]; exact hg2.1) hcvT2 hA2 ps1.ok
+    (by rw [UInt64.toNat_ofNat_of_lt' hnpb]; omega) hl2 hlb2 hgdT (by rw [hgt1]; exact hg2.iw) hcvT2 hA2 ps1.ok
     hks hTP hcty
   rw [hTn, hCn, hrse2, UInt64.toNat_ofNat_of_lt' hnpb, UInt64.toNat_ofNat_of_lt' hnFb] at h
   rcases h3 : tblE p (j + 2) s2.mem (rdW (s2.mem.arr64 EREC) (UInt64.ofNat cvm))

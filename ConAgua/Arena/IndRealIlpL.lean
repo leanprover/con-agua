@@ -393,7 +393,7 @@ theorem StageT.of_coreFrame {A : List TieredArray} {C : List Word} {m m' : Mem} 
   have h129' : rdW (m'.arr64 CTL) 129 = rdW (m.arr64 CTL) 129 := hfr.ctl _ h129
   have h200' : rdW (m'.arr64 CTL) 200 = rdW (m.arr64 CTL) 200 := hfr.ctl _ h200
   obtain ⟨hCR, hT⟩ := hC.checkR
-  refine ⟨⟨⟨hCR, IWOK.frame hfr hIW hE h129 h200 hS.stage.2⟩, hT, by simp only [pinW, hP']; exact hS.flag⟩, ?_⟩
+  refine ⟨⟨⟨hCR, IWOK.frame hfr hIW hE h129 h200 hS.stage.iw⟩, hT, by simp only [pinW, hP']; exact hS.flag⟩, ?_⟩
   exact ⟨by simp [iwTop, h200'], by simp [erTop, h129'], fun i _ => by rw [hI], fun i _ => by rw [hE']⟩
 
 /-- **`inst_lp_fast` refines `instLPFast` under `StageT`** (the contract
@@ -408,7 +408,7 @@ theorem ilpfF_okT (f o l us e : Word) (hu : H us) (he : H e) (ks : List NIdx) :
   obtain ⟨M, hC⟩ := hT.core
   obtain ⟨hok, ⟨M', hC', -, -⟩, hres, hrh⟩ := CoreSpec.of_callW (s₀ := ⟨m, Locals.init []⟩)
     (instLPFastI_refines ilpfP ilpfP_entry rfl rfl rfl n _ a dn vis fe M 0 f o l us e ks hC he hu hdec
-      hT.stage.2.2.2.1) hc
+      hT.stage.iw.iwSize) hc
   obtain ⟨hT', hg⟩ := StageT.of_coreFrame hfr (by decide) (by decide) (by decide) (by decide) (by decide)
     hT hC'
   exact ⟨_, _, AM.run_of_ok _ a hok, hT', hg, hrh, hres.symm⟩

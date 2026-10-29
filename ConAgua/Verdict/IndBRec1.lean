@@ -75,7 +75,7 @@ theorem kof_ref (n : Nat) {m : Mem} {a : AState} {nP po pl key : Word} {pfvs : L
   rw [liftE_some]
   obtain ⟨x1, a1, hrun1, hd1, hb1, hds1, hS1, hg1, hP1⟩ :=
     kcW_ok dn fe vis k m m1 a po pl key r1 pfvs ck h1 hS hpf hpb hk hP
-  have htop1 : iwTop m1 < 2 ^ 64 := Nat.lt_of_le_of_lt hS1.2.1 hS1.2.2.2.1
+  have htop1 : iwTop m1 < 2 ^ 64 := Nat.lt_of_le_of_lt hS1.iw.iw hS1.iw.iwSize
   obtain ⟨nk, hnk, rfl⟩ := decCK_decB_nk hd1
   obtain ⟨-, -, -, -, hds, -, -⟩ := pos2_nk_fields hnk htop1
   unfold ConRon.Arena.classKeyOf
@@ -99,11 +99,11 @@ theorem kof_ref (n : Nat) {m : Mem} {a : AState} {nP po pl key : Word} {pfvs : L
   have ek (j : Word) (hj : j.toNat < 4) :
       rdW (m2.arr64 IW) (r1.headD 0 + j) = rdW (m1.arr64 IW) (r1.headD 0 + j) := by
     simp only [rdW, word_add_toNat (show (r1.headD 0).toNat + j.toNat < 2 ^ 64 by omega)]
-    rw [hg2.2.2.1 _ (by omega)]
+    rw [hg2.iwGet _ (by omega)]
   refine RefE.ret rfl ?_
   dsimp only
-  exact ⟨hd1.grow (decCK_mono _) hg2, by have := hg2.1; omega,
-    by rw [ek 2 (by decide), ek 3 (by decide)]; have := hg2.1; omega, hS2, hg1.trans hg2,
+  exact ⟨hd1.grow (decCK_mono _) hg2, by have := hg2.iw; omega,
+    by rw [ek 2 (by decide), ek 3 (by decide)]; have := hg2.iw; omega, hS2, hg1.trans hg2,
     hP1.fr (ckc2W_mfr _ _ _ _ _ _ _ h2)⟩
 
 /-- **`class_key_of` refines `classKeyOf`** (through `replace_fvars`' and `fvar_b`'s stubs;
@@ -298,8 +298,8 @@ theorem rg_ref {p : Prog} (n : Nat) {m : Mem} {a : AState} {g k rc c : Word} {G 
   cases n with
   | zero => rw [classRecTyOkGuardsE.eq_1]; exact RefE.of_cls0 (by simp)
   | succ n =>
-  have hsz := hS.2.2.2.1
-  have htop := hS.2.1
+  have hsz := hS.iw.iwSize
+  have htop := hS.iw.iw
   obtain ⟨-, hgt, ⟨o3, l3, h3, h4, hcls⟩, -⟩ := rec2CG_parts hG
   obtain ⟨e3, t3⟩ := rec2RdN (w := g) (k := 3) h3 hsz
   obtain ⟨e4, t4⟩ := rec2RdN (w := g) (k := 4) h4 hsz
@@ -318,7 +318,7 @@ theorem rg_ref {p : Prog} (n : Nat) {m : Mem} {a : AState} {g k rc c : Word} {G 
   have hA1 : AbsOK m1 := tmaW_afr h1 hA
   unfold rgT
   refine RefE.bind_right hrun1 ?_
-  have hsz1 := hS1.2.2.2.1
+  have hsz1 := hS1.iw.iwSize
   obtain ⟨k8, hk8, hmem⟩ := decTM_member hTM
   obtain ⟨-, -, -, -, hni⟩ := rec2DecTM_parts hTM
   obtain ⟨e8, -⟩ := rec2RdN (w := r1.headD 0) (k := 8) hk8 hsz1

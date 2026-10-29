@@ -397,7 +397,7 @@ theorem pass_ref (hP : PassProg p) {fs : List FnName}
   have d7 := callW_mono c7 hle
   obtain ⟨s7, hs7, -, hok7, hS7, hg7, hsd7, hP7⟩ := triple_of_callW (s₀ := ⟨s6.mem, Locals.init []⟩)
     (classSeeds_refines hP.sds (n + 3) _ a6 dn (r1.headD 0) fe1 _ _ _ _ _ c holes ms hS6 hU6 hhi4 hho6
-      (Nat.le_trans hhob4 hg46.1) hms6 hP6) d7
+      (Nat.le_trans hhob4 hg46.iw) hms6 hP6) d7
   simp only at hs7 hS7 hg7 hsd7 hP7
   subst hs7
   have hA7 : AbsOK s7.mem := hkP _ (by simp [passKeepCalleesC, indsKeepCalleesC, posKeepCalleesC]) _ _ _ _ _ d7 hA6
@@ -490,7 +490,7 @@ theorem pass_ref (hP : PassProg p) {fs : List FnName}
     (hks6.grow decKSS_mono (hg7.trans (hg8.trans hg9)))
     (hnf6.grow decNFS_mono (hg7.trans (hg8.trans hg9)))
     (by rw [hw7, hw8]; exact hpfD.grow (OMono.decHL _ _) (hg48.trans hg9))
-    (by rw [hw7, hw8]; exact Nat.le_trans hpfb (hg48.trans hg9).1)
+    (by rw [hw7, hw8]; exact Nat.le_trans hpfb (hg48.trans hg9).iw)
     (hrd5.grow (decCR_mono _) (hg6.trans (hg7.trans (hg8.trans hg9))))
     (hms6.grow (fun q => decTM_mono q) (hg7.trans (hg8.trans hg9)))
     (htbl8.grow (fun q => decNCN_mono q) hg9)
@@ -530,7 +530,7 @@ theorem pass_ref (hP : PassProg p) {fs : List FnName}
     exact (hrb1 hrb).grow (hg12.trans (hg3.trans (hg4.trans (hg5.trans (hg6.trans (hg7.trans
       (hg8.trans hg9))))))) (by omega)
   · simp only [List.headD_cons]; rw [hr15, hr16]
-    exact classesLp_of_decPL hms9.1 hS9.2.2.1 hS9.2.2.2.1
+    exact classesLp_of_decPL hms9.1 hS9.iw.er hS9.iw.iwSize
   · simp only [List.headD_cons]; rw [hw0]
     exact StageC.of_parts hS9 ck9 hA9 (dnE i9.ext)
 

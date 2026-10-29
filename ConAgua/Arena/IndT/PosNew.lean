@@ -47,7 +47,7 @@ theorem newRef_step (L : NbLook p) (hIlpf : IlpfF p) (hLC : LvlCacheProg p) (n :
   intro m a ctx fu po pl kb nn us dO dL nPc cty ns c prog ds NS ctxP progP nP usP dsP ctyP nsP hC hW hnn hus
     hds hdsb hcty hns hP hA hc hctx hprog hnP husP hdsP hctyP hnsP hwds hni
   have hS := hC.stage
-  have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
+  have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.iw hS.iw.iwSize
   have hdsD := hds.get (OMono.decHL _ _)
   have hhi0 : c.hiAt 0 < 2 ^ 64 := by have := hW.hb; simp only [NestCtx.hiAt] at this ⊢; omega
   obtain ⟨-, -, hfind, -, -, -⟩ := ConRon.Bridge.Inductives.dCtx_fields hctx
@@ -107,7 +107,7 @@ theorem newRef_step (L : NbLook p) (hIlpf : IlpfF p) (hLC : LvlCacheProg p) (n :
   rw [hs2] at hfm
   rw [nnewE.k_nest_frame_mates.arm1]
   obtain ⟨hS2, hg2, hmd, hmb⟩ := nfmW_ok hfm hS1 hnn
-  have htop2 : iwTop m2 < 2 ^ 64 := Nat.lt_of_le_of_lt hS2.2.1 hS2.2.2.2.1
+  have htop2 : iwTop m2 < 2 ^ 64 := Nat.lt_of_le_of_lt hS2.iw.iw hS2.iw.iwSize
   have hWp2 := hWp.grow hg2
   have hhw : (nhiW m2 ctx (rw.tail.headD 0)).toNat = c.hiAt wp.length := hWp2.hi htop2
   -- the frame's first free index
@@ -160,7 +160,7 @@ theorem newRef_step (L : NbLook p) (hIlpf : IlpfF p) (hLC : LvlCacheProg p) (n :
     have e0 := hget3 0 (by simp); have e1 := hget3 1 (by simp)
     simp only [Nat.add_zero, List.getElem?_cons_zero, List.getElem?_cons_succ] at e0 e1
     refine ⟨pw, nn, cty, by simpa using hget4 0 (by simp), by omega,
-      by rw [hg4.2.2.1 _ (by omega)]; exact e0, hnn, rfl, by rw [hg4.2.2.1 _ (by omega)]; exact e1, hcty, rfl⟩
+      by rw [hg4.iwGet _ (by omega)]; exact e0, hnn, rfl, by rw [hg4.iwGet _ (by omega)]; exact e1, hcty, rfl⟩
   have hg1t : g0.tail.headD 0 = 1 := by rw [hg0]; rfl
   rw [hg1t]
   have hg24 := hg3.trans hg4
@@ -179,7 +179,7 @@ theorem newRef_step (L : NbLook p) (hIlpf : IlpfF p) (hLC : LvlCacheProg p) (n :
     (nestFrameMates fe (decI nn)) hc hctx1 (ConRon.Bridge.denoteLs_ext husP p1.ext)
     (ConRon.Bridge.denoteEList_ext p1.ext _ _ hdsP) hmates (n' + 1) m4 a1 _ _ _ 1
     (nestFrameMates fe (decI nn)) [(decI nn, decI cty)] hC4 hA4 (ConRon.Arena.Ext.refl _) (fun _ h => h)
-    (hW.u.grow hg14) hdsD4 (by have := hg14.1; omega) hmdD (fun j hj => by have := hg24.1; omega) (by simp)
+    (hW.u.grow hg14) hdsD4 (by have := hg14.iw; omega) hmdD (fun j hj => by have := hg24.iw; omega) (by simp)
     (by simp only [List.length_cons, List.length_nil]; omega) hgrp0 hP4
   have hsg := nggE_spec p L.nit R.h2 R.h4 L.nag.hsn L.hgg (n' + 1) ⟨m4, Locals.init []⟩ vis ctx
     (nhiW m2b ctx (rw.tail.headD 0)) us dO dL (rm.headD 0) (rm.tail.headD 0) (g0.headD 0) 1
@@ -206,7 +206,7 @@ theorem newRef_step (L : NbLook p) (hIlpf : IlpfF p) (hLC : LvlCacheProg p) (n :
   have c12 := c1.trans c2
   obtain ⟨hk1, hk2, hk3⟩ := ConRon.Bridge.Inductives.dState_inv (dState_ext hx05 _ _ hnsP)
   have hg15 := hg14.trans hg5
-  have htop5 : iwTop m5 < 2 ^ 64 := Nat.lt_of_le_of_lt hS5.2.1 hS5.2.2.2.1
+  have htop5 : iwTop m5 < 2 ^ 64 := Nat.lt_of_le_of_lt hS5.iw.iw hS5.iw.iwSize
   refine RefE.bind_right hrun5 ?_
   -- its keys, then the active list
   cases h6 : callE p (n' + 1) "nest_cont_new_active" [us, dO, dL, rg.headD 0, rg.tail.headD 0, 0, 0] m5 with
@@ -244,7 +244,7 @@ theorem newRef_step (L : NbLook p) (hIlpf : IlpfF p) (hLC : LvlCacheProg p) (n :
   rw [nnewE.k_sl_append.arm1]
   generalize hrap : rap7 = rap at hap ⊢
   obtain ⟨hS7, hg7, h70, h71, ht7, hw71, hw72⟩ := appendW_stage hap hS6 hkab
-    (by have := hns.b2; have := hg16.1; omega)
+    (by have := hns.b2; have := hg16.iw; omega)
   have hact7 : KsB m7 (rap.headD 0).toNat (rap.tail.headD 0).toNat
       (grp.map (fun x => (⟨x.1, decI us, ds⟩ : NestKey)) ++ NS.active) := by
     rw [h70, h71]
@@ -270,8 +270,8 @@ theorem newRef_step (L : NbLook p) (hIlpf : IlpfF p) (hLC : LvlCacheProg p) (n :
   have hg18 := hg17.trans hg8
   have hns1 := nsb_rec6 (m' := m8) (q := ns1) (keys := NS.keys.toList)
     (act := grp.map (fun x => (⟨x.1, decI us, ds⟩ : NestKey)) ++ NS.active) (nfs := NS.ctorNfs.toList) (by omega)
-    (Nat.lt_of_le_of_lt hS8.2.1 hS8.2.2.2.1) hget8 (hk0'.grow hg18) (by have := hns.b0; have := hg18.1; omega)
-    (hact7.grow hg8) (by have := hg8.1; omega) (hn0.grow hg18) (by have := hns.b4; have := hg18.1; omega)
+    (Nat.lt_of_le_of_lt hS8.iw.iw hS8.iw.iwSize) hget8 (hk0'.grow hg18) (by have := hns.b0; have := hg18.iw; omega)
+    (hact7.grow hg8) (by have := hg8.iw; omega) (hn0.grow hg18) (by have := hns.b4; have := hg18.iw; omega)
   simp only [Array.toArray_toList] at hns1
   have hA8 : AbsOK m8 := posRecW_afr hq1 (appendW_afr hap (caW_afr _ _ _ _ _ _ _ _ _ _ _ hca hA5))
   have hC8 : StageC dn vis fe env m8 a5 := hC.of_cstep hS8 hA8 c12
@@ -284,7 +284,7 @@ theorem newRef_step (L : NbLook p) (hIlpf : IlpfF p) (hLC : LvlCacheProg p) (n :
     _ ctxP _ usP dsP grpV
     ⟨nsP.keys, grpV.map (fun p => (⟨p.1, usP, dsP⟩ : ConLeche.NestKey)) ++ nsP.active, nsP.ctorNfs⟩
     hC8 (hWp2.grow ((hg24.trans hg5).trans hg58)) hhw hus (hds.grow (OMono.decHL _ _) hg18)
-    (by have := hg18.1; omega) (by simpa using hgl5) (by have := hg58.1; omega) (hgrp5.grow hgb5 hg58) hns1
+    (by have := hg18.iw; omega) (by simpa using hgl5) (by have := hg58.iw; omega) (hgrp5.grow hgb5 hg58) hns1
     (((hP5.fr (caW_mfr _ _ _ _ _ _ _ _ _ _ _ hca)).fr (appendW_mfr hap)).fr (posRecW_mfr hq1)) hA8
     hc (dCtx_ext _ hx05 _ _ hctx) (dProg_ext hx05 _ _ hwpP) (ConRon.Bridge.denoteLs_ext husP hx05)
     (ConRon.Bridge.denoteEList_ext hx05 _ _ hdsP) hgrp
@@ -324,9 +324,9 @@ theorem newRef_step (L : NbLook p) (hIlpf : IlpfF p) (hLC : LvlCacheProg p) (n :
   rw [nnewE.k_nest_cont_new_finish.arm1]
   rw [pos2_ns_rd hg19 hp6 htop 2 (by decide), pos2_ns_rd hg19 hp6 htop 3 (by decide)] at hcf
   obtain ⟨x, a', hrun10, hS10, hg10, -, hk10, hns10⟩ := cfW_ok dn vis fe hcf hC9.stage (hW.u.grow hg19) hhi0 hus
-    (hds.grow (OMono.decHL _ _) hg19) (by have := hg19.1; omega) (by simpa using hgl5)
-    (by have := (hg58.trans hg9).1; omega) (hgrp5.grow hgb5 (hg58.trans hg9)) hns9 (ha0.grow hg19)
-    (by have := hns.b2; have := hg19.1; omega)
+    (hds.grow (OMono.decHL _ _) hg19) (by have := hg19.iw; omega) (by simpa using hgl5)
+    (by have := (hg58.trans hg9).iw; omega) (hgrp5.grow hgb5 (hg58.trans hg9)) hns9 (ha0.grow hg19)
+    (by have := hns.b2; have := hg19.iw; omega)
   have p10 := cfT_pstep hrun10 hC9.check.state (ConRon.Bridge.denoteEList_ext (hx05.trans c9.ext) _ _ hdsP)
   have hA10 : AbsOK m10 := cfW_afr hcf hA9
   exact RefE.ret hrun10 ⟨hC9.of_pstep hS10 hA10 p10, hg19.trans hg10, by simpa using hk10, by simpa using hns10,

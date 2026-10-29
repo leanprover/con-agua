@@ -679,9 +679,10 @@ theorem EnvR.congr {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {vis : Word
 theorem erecP_ext (m : Mem) : ArrExt (erecP m) (m.arr64 EREC) := fun _ _ h => erecP_get h
 
 /-- **The record pool grew**: its top did not go down and nothing below the old top changed. -/
-def ErecGrow (m m' : Mem) : Prop :=
-  erecTop m ≤ erecTop m' ∧ (∀ i, i < erecTop m → (m'.arr64 EREC)[i]? = (m.arr64 EREC)[i]?) ∧
-    (m'.arr64 EREC).size = (m.arr64 EREC).size
+structure ErecGrow (m m' : Mem) : Prop where
+  top : erecTop m ≤ erecTop m'
+  get : ∀ i, i < erecTop m → (m'.arr64 EREC)[i]? = (m.arr64 EREC)[i]?
+  size : (m'.arr64 EREC).size = (m.arr64 EREC).size
 
 theorem ErecGrow.ext {m m' : Mem} (h : ErecGrow m m') : ArrExt (erecP m) (erecP m') := by
   intro i v hv
@@ -689,10 +690,10 @@ theorem ErecGrow.ext {m m' : Mem} (h : ErecGrow m m') : ArrExt (erecP m) (erecP 
   split at hv
   · rename_i hi
     have hi' : i < erecTop m := by simp at hi; omega
-    have := h.1; have := h.2.2
+    have := h.top; have := h.size
     rw [ite_eq_left (by simp at hi ⊢; omega)]
     simp only [Nat.zero_add] at hv ⊢
-    rw [h.2.1 i hi']
+    rw [h.get i hi']
     exact hv
   · simp at hv
 
@@ -700,8 +701,8 @@ theorem ErecGrow.refl (m : Mem) : ErecGrow m m := ⟨Nat.le_refl _, fun _ _ => r
 
 theorem ErecGrow.trans {m₁ m₂ m₃ : Mem} (h₁ : ErecGrow m₁ m₂) (h₂ : ErecGrow m₂ m₃) :
     ErecGrow m₁ m₃ :=
-  ⟨Nat.le_trans h₁.1 h₂.1, fun i hi => (h₂.2.1 i (by have := h₁.1; omega)).trans (h₁.2.1 i hi),
-    h₂.2.2.trans h₁.2.2⟩
+  ⟨Nat.le_trans h₁.top h₂.top, fun i hi => (h₂.get i (by have := h₁.top; omega)).trans (h₁.get i hi),
+    h₂.size.trans h₁.size⟩
 
 /-- **`EnvR` across a pool growth** (rows, constants and `CTL[128]` unchanged). -/
 theorem EnvR.grow {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {vis : Word} {fe : IFEnv}
@@ -848,8 +849,8 @@ theorem CheckR.frame_hi {dn : NIdx → Option ConLeche.Name} {A : List TieredArr
       (fun h => by have := (hC _ h).1; simp at this)⟩
   · exact ArenaR.frame_ext A C (fun b hb => by
       have := hA b hb; exact ⟨this.1, by omega⟩)
-      (fun x hx => by have := (hC x hx).1; omega) m m' hf a h.arena.1
+      (fun x hx => by have := (hC x hx).1; omega) m m' hf a h.arena.base
   · exact DerR.frameM A C m m' hf (fun b hb => by
-      have := hA b hb; omega) a h.arena.2
+      have := hA b hb; omega) a h.arena.der
 
 end L.Arena

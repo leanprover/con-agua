@@ -244,12 +244,12 @@ theorem crW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (c
       rw [e0] at hrd0
       have hp0b : p0 < 2 ^ 64 := hrd0.2
       have hrdq := iwN_rdW hq (by omega)
-      have hIW64 : (m.arr64 IW).size < 2 ^ 64 := hS.2.2.2.1
+      have hIW64 : (m.arr64 IW).size < 2 ^ 64 := hS.iw.iwSize
       have hrdm := iwN_off (k := 2) hmIq (by have := iwN_lt hmIq; omega)
       simp only [show UInt64.ofNat 2 = 2 from rfl] at hrdm
       obtain ⟨-, -, htyp⟩ := decCV_some (a := erA m) (q := q) hcv
       have hqb : q < 2 ^ 64 := hrdq.2
-      have hE64 : (m.arr64 EREC).size < 2 ^ 64 := hS.2.2.2.2.1
+      have hE64 : (m.arr64 EREC).size < 2 ^ 64 := hS.iw.erSize
       have hq3 : q + 3 < 2 ^ 64 := by
         rcases hw : (m.arr64 EREC)[q + 3]? with _ | w
         · simp [hd?, erA, hw] at htyp
@@ -309,7 +309,7 @@ theorem crW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (c
           have hmot2 : decNL m2 mo.toNat ml.toNat = some motPos := by
             rw [decNL_grow (hg1.trans hg2) hmt]; exact hmot
           have hmlb : mo.toNat + ml.toNat < 2 ^ 64 := by
-            have := hS2.2; have := hS.2.2.2.1; have := hS.2.1; omega
+            have := hS2.iw; have := hS.iw.iwSize; have := hS.iw.iw; omega
           obtain ⟨r3, hc, h⟩ := of_K h (by simp only [crK3])
           have hcm := cmvW_ok (n - 1) m2 nP mo ml (UInt64.ofNat i) r3 motPos hmot2 hmlb hc
           rw [UInt64.toNat_ofNat_of_lt' hi64] at hcm
@@ -336,7 +336,7 @@ theorem crW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (c
               rw [hr1] at this
               obtain ⟨p0', x', ys', heq, -, -, hrest''⟩ := decPL_cons this
               rw [hro1, hrl1, (List.cons.inj heq).2]; exact hrest''
-            have hmt2 : mo.toNat + ml.toNat ≤ iwTop m2 := Nat.le_trans hmt (hg1.trans hg2).1
+            have hmt2 : mo.toNat + ml.toNat ≤ iwTop m2 := Nat.le_trans hmt (hg1.trans hg2).iw
             have hb' : (ro + 1).toNat + (rl - 1).toNat < 2 ^ 64 := by rw [hro1, hrl1]; omega
             have hrest2 := hrest' m2 (IWGrow.refl m2)
             obtain ⟨res4, a4, hrun4, hS4, hg4, hres4, hJ4⟩ := ih m2 m4 a2 nP mo ml (ro + 1) (rl - 1) r4 rest
@@ -583,7 +583,7 @@ theorem ih1W_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
   rcases n with _ | n
   · exact RSim.none
   have hmb : mo.toNat + ml.toNat < 2 ^ 64 := by
-    have := hS.2.1; have := hS.2.2.2.1; omega
+    have := hS.iw.iw; have := hS.iw.iwSize; omega
   refine RSim.bind (K := ih1W.k_fvar_type_d n nP mo ml d) rfl (simFvarTypeD hS hx) ?_
   rintro ⟨r1, m1⟩ ty a1 - ⟨hS1, hg1, hb1, rfl⟩
   refine RSim.bind (K := ih1W.k_pi_result_f n nP mo ml d) rfl (simPiResult hS1 hb1) ?_
@@ -614,8 +614,8 @@ theorem ih1W_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
   simp only [Nat.zero_add, getD_zero, getD_one] at hd5 ht5
   have hg15 := hg13.trans hg5
   have hb5 : (r5.headD 0).toNat + (r5.tail.headD 0).toNat < 2 ^ 64 := by
-    have h1 : iwTop m5 ≤ (m5.arr64 IW).size := hS5.2.1
-    have h2 : (m5.arr64 IW).size < 2 ^ 64 := hS5.2.2.2.1
+    have h1 : iwTop m5 ≤ (m5.arr64 IW).size := hS5.iw.iw
+    have h2 : (m5.arr64 IW).size < 2 ^ 64 := hS5.iw.iwSize
     omega
   by_cases hz : r5.tail.headD 0 = 0
   · rw [ih1W.k_get_app_args_f.arm1 (hc1 := hz)]
@@ -686,8 +686,8 @@ theorem ihsW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
   | succ n ih =>
   intro m a fo fl fvs hS hfvs hft hmot hmt
   have hfb : fo.toNat + fl.toNat < 2 ^ 64 := by
-    have h1 : iwTop m ≤ (m.arr64 IW).size := hS.2.1
-    have h2 : (m.arr64 IW).size < 2 ^ 64 := hS.2.2.2.1
+    have h1 : iwTop m ≤ (m.arr64 IW).size := hS.iw.iw
+    have h2 : (m.arr64 IW).size < 2 ^ 64 := hS.iw.iwSize
     omega
   by_cases hfl : fl = 0
   · rw [ihsW.arm1 (hc1 := hfl)]
@@ -710,9 +710,9 @@ theorem ihsW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
   rw [ihsW.k_class_read_minor_ih1.arm1]
   have hxs1 : decHL m1 (fo + 1).toNat (fl - 1).toNat = some xs := by
     rw [hfo1, hfl1, decHL_grow hg1 (by omega)]; rw [show fl.toNat - 1 = k by omega]; exact hxs
-  have hft1 : (fo + 1).toNat + (fl - 1).toNat ≤ iwTop m1 := by have := hg1.1; omega
+  have hft1 : (fo + 1).toNat + (fl - 1).toNat ≤ iwTop m1 := by have := hg1.iw; omega
   have hmot1 : decNL m1 mo.toNat ml.toNat = some motPos := by rw [decNL_grow hg1 hmt]; exact hmot
-  have hmt1 : mo.toNat + ml.toNat ≤ iwTop m1 := Nat.le_trans hmt hg1.1
+  have hmt1 : mo.toNat + ml.toNat ≤ iwTop m1 := Nat.le_trans hmt hg1.iw
   rcases o with _ | ft
   · refine RSim.bindPure (K := ihsW.k_class_read_minor_ihs n (r1.headD 0) (r1.tail.headD 0) (r1.tail.tail.headD 0)) rfl (ih m1 a1 (fo + 1) (fl - 1) xs hS1 hxs1 hft1 hmot1 hmt1) ?_
     rintro ⟨r2, m2⟩ rest a2 - ⟨hS2, hg2, hsp⟩
@@ -826,7 +826,7 @@ theorem finW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
   have ht : (((decI hd : EIdx)).tag == ETag.const) = true := by
     have : (decE hd).tag = ETag.const := (decE_tag_const hd hH).mpr hg3
     simp only [beq_iff_eq]; exact this
-  obtain ⟨hvc, hcn, -⟩ := viewConstW hS.1.arena.1 hne hg3
+  obtain ⟨hvc, hcn, -⟩ := viewConstW hS.check.arena.base hne hg3
   simp only [minorFin]
   rw [ite_eq_left ht]
   refine RSim.tstep hvc ?_
@@ -926,8 +926,8 @@ theorem tailW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
   dsimp only at hS5 hg5 hd5 ht5
   simp only [Nat.zero_add, getD_zero, getD_one] at hd5 ht5
   have hb5 : (r5.headD 0).toNat + (r5.tail.headD 0).toNat < 2 ^ 64 := by
-    have h1 : iwTop m5 ≤ (m5.arr64 IW).size := hS5.2.1
-    have h2 : (m5.arr64 IW).size < 2 ^ 64 := hS5.2.2.2.1
+    have h1 : iwTop m5 ≤ (m5.arr64 IW).size := hS5.iw.iw
+    have h2 : (m5.arr64 IW).size < 2 ^ 64 := hS5.iw.iwSize
     omega
   by_cases hz : r5.tail.headD 0 = 0
   · rw [tailW.k_get_app_args_f.arm1 (hc1 := hz)]
@@ -943,8 +943,8 @@ theorem tailW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
   rw [tailW.k_get_app_fn_f.arm1]
   have hg56 := hg5.trans hg6
   refine RSim.bindPure (K := tailW.k_class_read_minor_finish) rfl (finW_sim dn vis fe n m6 a6 nP mo ml d fo fl (r6.headD 0) c motPos
-    fvs hS6 hb6 (by rw [decHL_grow hg56 hft]; exact hfvs) (Nat.le_trans hft hg56.1)
-    (by rw [decNL_grow hg56 hmt]; exact hmot) (Nat.le_trans hmt hg56.1)) ?_
+    fvs hS6 hb6 (by rw [decHL_grow hg56 hft]; exact hfvs) (Nat.le_trans hft hg56.iw)
+    (by rw [decNL_grow hg56 hmt]; exact hmot) (Nat.le_trans hmt hg56.iw)) ?_
   rintro ⟨r7, m7⟩ x a7 - ⟨hS7, hg7, hd7⟩
   rw [tailW.k_class_read_minor_finish.arm1]
   exact RSim.pure_some ⟨hS7, hg56.trans hg7, decSlot_pair hd7⟩
@@ -959,8 +959,8 @@ theorem minorW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv
   rcases n with _ | n
   · exact RSim.none
   have hmb : mo.toNat + ml.toNat < 2 ^ 64 := by
-    have h1 : iwTop m ≤ (m.arr64 IW).size := hS.2.1
-    have h2 : (m.arr64 IW).size < 2 ^ 64 := hS.2.2.2.1
+    have h1 : iwTop m ≤ (m.arr64 IW).size := hS.iw.iw
+    have h2 : (m.arr64 IW).size < 2 ^ 64 := hS.iw.iwSize
     omega
   rw [minorW.arm1]
   refine RSim.bind (K := minorW.k_pi_binders cR n nP mo ml d dom) rfl
@@ -1012,7 +1012,7 @@ theorem minorW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv
   simp only [List.tail_cons, List.headD_cons]
   have ht := tailW_sim dn vis fe n m3 a3 nP mo ml d (r2.tail.headD 0) (r2.tail.tail.headD 0)
     (r2.tail.tail.tail.headD 0) (UInt64.ofNat c) motPos fvs hS3 hcH
-    (by rw [decHL_grow hg3 hft]; exact hfvs) (Nat.le_trans hft hg3.1) hmot3 (Nat.le_trans hmt hg13.1)
+    (by rw [decHL_grow hg3 hft]; exact hfvs) (Nat.le_trans hft hg3.iw) hmot3 (Nat.le_trans hmt hg13.iw)
   rw [UInt64.toNat_ofNat_of_lt' hc64] at ht
   refine RSim.bindPure (K := minorW.k_class_read_minor_tail cR) rfl (RSim.withJ hO.1 ht (fun _ _ hb => tailW_afr hb) hJ3) ?_
   rintro ⟨r5, m5⟩ x a5 - ⟨⟨hS5, hg5, hd5⟩, hJ5⟩
@@ -1142,8 +1142,8 @@ theorem slotMotW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFE
   rintro ⟨r1, m1⟩ ⟨bss, e⟩ a1 - ⟨hS1, hg1, hd1, ht1⟩
   dsimp only at hS1 hg1 hd1 ht1
   have hb1 : (r1.headD 0).toNat + (r1.tail.headD 0).toNat < 2 ^ 64 := by
-    have h1 : iwTop m1 ≤ (m1.arr64 IW).size := hS1.2.1
-    have h2 : (m1.arr64 IW).size < 2 ^ 64 := hS1.2.2.2.1
+    have h1 : iwTop m1 ≤ (m1.arr64 IW).size := hS1.iw.iw
+    have h2 : (m1.arr64 IW).size < 2 ^ 64 := hS1.iw.iwSize
     omega
   by_cases hz : r1.tail.headD 0 = 0
   · rw [slotMotW.k_pi_binders.arm1 (hc1 := hz)]
@@ -1171,7 +1171,7 @@ theorem slotMotW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFE
   have hg3 : r2.headD 0 >>> 28 = 3 := by simpa using hg
   have ht : (((decI (r2.headD 0) : EIdx)).tag == ETag.const) = true :=
     (tag_beq _ hb2 _ 3 (by decide) rfl).mpr hg3
-  obtain ⟨hvc, hnH, huH⟩ := viewConstW hS2.1.arena.1 hne hg3
+  obtain ⟨hvc, hnH, huH⟩ := viewConstW hS2.check.arena.base hne hg3
   rw [ite_eq_left ht]
   refine RSim.tstep hvc ?_
   refine RSim.bind (K := slotMotW.k_get_app_args_f n p vis ((eViewW m2 (r2.headD 0)).tail.headD 0)
@@ -1290,7 +1290,7 @@ theorem slotW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
       fun e => ht ((tag_beq _ hb1 _ 2 (by decide) rfl).mp e)
     rw [ite_eq_right ht']
     refine RSim.bindPure (K := slK2) rfl (minorW_sim dn vis fe cR J hO n m1 a1 np mo ml d dom motPos hS1
-      hJ1 hH (by rw [decNL_grow hg1 hmt]; exact hmot) (Nat.le_trans hmt hg1.1)) ?_
+      hJ1 hH (by rw [decNL_grow hg1 hmt]; exact hmot) (Nat.le_trans hmt hg1.iw)) ?_
     rintro ⟨r2, m2⟩ x a2 - ⟨⟨hS2, hg2, hd2⟩, hJ2⟩
     rw [slK2_some]
     exact RSim.pure_some ⟨⟨hS2, hg1.trans hg2, decSlot_pair hd2⟩, hJ2⟩
@@ -1355,8 +1355,8 @@ theorem motSnocW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : I
     obtain ⟨⟨r3, m3⟩, h3, h2⟩ := of_K h2 rfl
     rw [motSnocW.k_sl_snoc.arm1] at h2
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h2)
-    obtain ⟨hr, hdn, hg, hf, -, htop⟩ := snocW_decN h3 hS.2.2.2.1 hS.2.2.2.2.2 hsrc hxs
-    have hroom := snocW_room h3 hS.2.2.2.1 hS.2.2.2.2.2 hsrc hxs
+    obtain ⟨hr, hdn, hg, hf, -, htop⟩ := snocW_decN h3 hS.iw.iwSize hS.iw.ctl hsrc hxs
+    have hroom := snocW_room h3 hS.iw.iwSize hS.iw.ctl hsrc hxs
     refine ⟨stage_frame_iw hS hf (by rw [← hf.size IW]; exact hroom), hg, ?_, ?_⟩
     · rw [hr]; simpa [hx] using hdn
     · rw [hr]; simpa using htop
@@ -1633,7 +1633,7 @@ theorem slotsRest_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IF
     rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simp; omega))]; simp; omega
   have hd1 : (d + 1).toNat = d.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
   have h := ih m4 a4 (n - 1) mo2 ml2 (d + 1) (r4.headD 0) motPos' hS4 hJ4 hb4 (hb.grow hg24)
-    (by rw [decNL_grow hg24 hmt]; exact hmot) (Nat.le_trans hmt hg24.1) (by rw [hn1, hd1]; omega)
+    (by rw [decNL_grow hg24 hmt]; exact hmot) (Nat.le_trans hmt hg24.iw) (by rw [hn1, hd1]; omega)
   rw [hn1, hd1] at h
   refine RSim.bind (K := ssK6 N slotw) (by rw [ssK6]) h ?_
   rintro ⟨r5, m5⟩ o a5 - ⟨⟨hS5, hg5, hd5⟩, hJ5⟩
@@ -1701,7 +1701,7 @@ theorem slots_sims (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv
     have hg6 : e >>> 28 = 6 := by simpa using hg
     have ht : (((decI e : EIdx)).tag == ETag.forallE) = true := (tag_beq _ hH _ 6 (by decide) rfl).mpr hg6
     rw [ite_eq_left ht]
-    obtain ⟨hvb, hdomH, hbodyH⟩ := viewBindW hS.1.arena.1 hH hne hg6
+    obtain ⟨hvb, hdomH, hbodyH⟩ := viewBindW hS.check.arena.base hH hne hg6
     refine RSim.tstep hvb ?_
     refine RSim.bind (K := ssK1 cR N p vis np n mo ml d ((eViewW m e).tail.headD 0)
       ((eViewW m e).tail.tail.headD 0)) (by rw [ssK1])
@@ -1715,13 +1715,13 @@ theorem slots_sims (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv
     rw [ssK1_ok (h := by rw [h11]; decide)]
     refine RSim.bindPure (K := ssK1b) (by rw [ssK1b])
       (ih2 m1 a1 n mo ml d _ _ _ motPos k slot hS1 hJ1 hdomH hbodyH (hb.grow hg1)
-        (by rw [decNL_grow hg1 hmt]; exact hmot) (Nat.le_trans hmt hg1.1) hk hd hsl) ?_
+        (by rw [decNL_grow hg1 hmt]; exact hmot) (Nat.le_trans hmt hg1.iw) hk hd hsl) ?_
     rintro ⟨r2, m2⟩ x a2 - ⟨⟨hS2, hg2, hd2⟩, hJ2⟩
     rw [ssK1b_some]
     refine RSim.pure_some ⟨⟨hS2, hg1.trans hg2, ?_⟩, hJ2⟩
     cases x <;> exact hd2
   · have htag := decCS_tag hsl.get
-    have hsz := hS.2.2.2.1
+    have hsz := hS.iw.iwSize
     have hrd := iwN_rdW htag (by have := iwN_lt htag; omega)
     rw [UInt64.ofNat_toNat] at hrd
     cases slot with
@@ -1954,14 +1954,14 @@ theorem motPosW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv
   obtain ⟨hS1, hg1, hd1, ht1⟩ := ih m m1 (j + 1) r1 h1 hS hsp (by rw [hj1]; omega)
   rw [hj1] at hd1
   obtain ⟨q, hq, hst⟩ := hsp.get j.toNat hjl
-  have hsz := hS.2.2.2.1
+  have hsz := hS.iw.iwSize
   have hb := hsp.1
   have hrd := iwN_rdW_at (w := so) (k := j.toNat) hq hsz
   rw [show so + UInt64.ofNat j.toNat = so + j by simp] at hrd
   have hrd1 : rdW (m1.arr64 IW) (so + j) = UInt64.ofNat q := by
     rw [← hrd.1]; simp only [rdW]
     rw [show (so + j).toNat = so.toNat + j.toNat by
-      rw [UInt64.toNat_add]; have := hS.2.1; exact Nat.mod_eq_of_lt (by omega), hg1.2.2.1 _ (by omega)]
+      rw [UInt64.toNat_add]; have := hS.iw.iw; exact Nat.mod_eq_of_lt (by omega), hg1.iwGet _ (by omega)]
   have htag := decCS_tag (hst.grow hg1).get
   have hrq := iwN_rdW htag (by have := iwN_lt htag; omega)
   rw [show UInt64.ofNat q = UInt64.ofNat q from rfl] at hrq
@@ -2082,8 +2082,8 @@ theorem readW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
   rcases N with _ | N
   · exact RSim.none
   have hdp := hrecs.dec (IWGrow.refl m)
-  have hsz := hS.2.2.2.1
-  have hts : iwTop m ≤ (m.arr64 IW).size := hS.2.1
+  have hsz := hS.iw.iwSize
+  have hts : iwTop m ≤ (m.arr64 IW).size := hS.iw.iw
   by_cases hrl : rl = 0
   · rw [readW_nil (h := hrl)]
     have : recs = [] := by
@@ -2110,7 +2110,7 @@ theorem readW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
   have hqb : q < 2 ^ 64 := hrdq.2
   have hq3 : (UInt64.ofNat q).toNat + 3 < 2 ^ 64 := by
     rw [UInt64.toNat_ofNat_of_lt' hqb]
-    have := hS.2.2.2.2.1
+    have := hS.iw.erSize
     obtain ⟨w, hw, -⟩ := hd?_some (decCV_type hcv)
     have := (Array.getElem?_eq_some_iff.mp hw).1
     simp only [erA] at this; omega
@@ -2134,7 +2134,7 @@ theorem readW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     rw [← h.1]; simp only [rdW]
     rw [show (UInt64.ofNat p0 + 1).toNat = p0 + 1 by
       rw [UInt64.toNat_add, UInt64.toNat_ofNat_of_lt' (by simp only [UInt64.size]; omega)]; simp; omega,
-      hg1.2.2.1 _ hp1lt]
+      hg1.iwGet _ hp1lt]
   have hrPb : rc0.rP < 2 ^ 64 := (iwN_rdW hrP (by omega)).2
   rw [hrP1]
   have hts1 : (tsubW (UInt64.ofNat rc0.rP) nP).toNat = rc0.rP - nP.toNat := by

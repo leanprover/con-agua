@@ -132,7 +132,7 @@ theorem romPinSets_ref (hD : DmProg10 p) {vis : Word} {fe : IFEnv} {ips : List I
     (romPinSets_spec' hD k _) hc
   have hmod' : erToIwW k m (rdW (m.arr64 CTL) 150) (rdW (m.arr64 CTL) 151) = some (r, s'.mem) := hmod
   obtain ⟨hlen, hbd, hrec⟩ := hP
-  obtain ⟨hI1, hE1, hsz, hEs, hct⟩ := hS.2
+  obtain ⟨hI1, hE1, hsz, hEs, hct⟩ := hS.iw
   have hEtop : erecTop m ≤ (m.arr64 EREC).size := hE1
   have hsrc : (rdW (m.arr64 CTL) 150).toNat + (rdW (m.arr64 CTL) 151).toNat ≤ (m.arr64 EREC).size := by
     omega

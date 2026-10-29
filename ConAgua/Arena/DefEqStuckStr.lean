@@ -80,7 +80,7 @@ theorem str_ref (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : StuckCall
       (stuckStrT (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b) (side != 0) l
         (decE fo)) a₀ (CorePost decBool dn s₀.mem vis fe M eb ResH) := by
   have hS := hs.rel
-  have hR := hS.arena.1
+  have hR := hS.arena.base
   have hirr : ∀ (st : AState) (m : Mem) (M' : ModeMaps), CoreS dn m st vis fe M' eb →
       RefE (StuckG p n) (strE.j1 p n mode vis d a b m)
         (stuckIrrel (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b)) st
@@ -182,11 +182,11 @@ theorem str_ref (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : StuckCall
       by_cases hsd : side = 0
       · rw [ite_eq_left hsd]
         simp only [hsd, bne_self_eq_false, Bool.false_eq_true, ↓reduceIte]
-        exact hdef _ m₄ M₄ _ _ hS₄ h₄.2.2.2 hb
+        exact hdef _ m₄ M₄ _ _ hS₄ h₄.resOk hb
       · rw [ite_eq_right hsd]
         have : (side != 0) = true := by simpa using hsd
         simp only [this, ↓reduceIte]
-        exact hdef _ m₄ M₄ _ _ hS₄ ha h₄.2.2.2
+        exact hdef _ m₄ M₄ _ _ hS₄ ha h₄.resOk
     · rw [ite_eq_right hcond]
       rw [ite_eq_right (fun h => hcond ⟨h.1, h.2.1, fun e => by
               have := h.2.2; rw [decBool_false_of e] at this; cases this⟩)]

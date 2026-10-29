@@ -109,8 +109,8 @@ theorem AbsOK.frameD {A : List TieredArray} {C : List Word} {m m' : Mem} (h : Ab
     (hf : MemFrame A C m m') (hA : memoFreeA A = true) (hC : memoFreeC C = true) : AbsOK m' :=
   let ⟨a1, a2, a3, a4, a5, a6, a7⟩ := memoFreeA_iff hA
   let ⟨c1, c2, c3, c4, c5, c6⟩ := memoFreeC_iff hC
-  ⟨h.1.frame hf a1 c1, h.2.1.frame hf a3 c3, h.2.2.1.frame hf a4 c4, h.2.2.2.1.frame hf a2 c2,
-    h.2.2.2.2.frame hf a5 a6 a7 c5 c6⟩
+  ⟨h.ab.frame hf a1 c1, h.i1.frame hf a3 c3, h.cr.frame hf a4 c4, h.il.frame hf a2 c2,
+    h.wk.frame hf a5 a6 a7 c5 c6⟩
 
 /-! ## Steps that keep it
 
@@ -361,7 +361,7 @@ theorem abF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (e
   rcases n with _ | j
   · rw [callW_zero] at hi; cases hi
   have hA : ArenaA m { a with memos := { a.memos with abs1C := mp } } :=
-    ⟨hS.1.arena.memo_irrel a.memos.instLC mp, hmp⟩
+    ⟨hS.check.arena.memo_irrel a.memos.instLC mp, hmp⟩
   obtain ⟨s'', hs'', -, hok, hA', hres, hlt⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (absEntry_refines abProg abProg_abs rfl j _ _ hA e d k he) hi
   rw [hs''] at hA'

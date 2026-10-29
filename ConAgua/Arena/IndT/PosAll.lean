@@ -37,7 +37,7 @@ theorem posRef_step (L : NbLook p) (n : Nat) (hn : n ≤ 2 ^ 62) (ih : NbRef p d
   intro m a ctx fu po pl dep kb e ns c prog NS ctxP progP eP nsP hC hW he hns hP hA hc hctx hprog heP hnsP hwe
   have R := L.ct.cr.rx
   have hS := hC.stage
-  have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
+  have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.iw hS.iw.iwSize
   by_cases hf0 : fu = 0
   · rw [npE.abort1 _ _ _ _ _ _ _ _ _ _ _ _ hf0]
     subst hf0
@@ -75,7 +75,7 @@ theorem posRef_step (L : NbLook p) (n : Nat) (hn : n ≤ 2 ^ 62) (ih : NbRef p d
   have hrun1' : (whnf V fe checkFuel dep.toNat (decI e)).run a = .ok (w, a1) := hrun1
   refine RefE.bind_right hrun1' ?_
   have hS1 := hC1.stage
-  have htop1 : iwTop m1 < 2 ^ 64 := Nat.lt_of_le_of_lt hS1.2.1 hS1.2.2.2.1
+  have htop1 : iwTop m1 < 2 ^ 64 := Nat.lt_of_le_of_lt hS1.iw.iw hS1.iw.iwSize
   have hW1 := hW.grow hg1
   obtain ⟨hn1, -, -, -, hnP1, -⟩ := ctx_fields hW1.u.dec hW1.u.inn htop1
   have hne1 := ctx_names_end hW1.u.dec hW1.u.inn hW1.u.sl htop1
@@ -99,7 +99,7 @@ theorem posRef_step (L : NbLook p) (n : Nat) (hn : n ≤ 2 ^ 62) (ih : NbRef p d
   rw [hnP1, hhi1, decE_eq, hwd] at hrun2
   refine RefE.bind_right hrun2 ?_
   have hg12 := hg1.trans hg2
-  have htop2 : iwTop m2 < 2 ^ 64 := Nat.lt_of_le_of_lt hS2.2.1 hS2.2.2.2.1
+  have htop2 : iwTop m2 < 2 ^ 64 := Nat.lt_of_le_of_lt hS2.iw.iw hS2.iw.iwSize
   have hW2 := hW.grow hg12
   have hns2 := hns.grow hg12 htop
   have hP2 : PosMR m2 := hP1.setNo hf2 ⟨∅, hM2⟩

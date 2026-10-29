@@ -306,7 +306,7 @@ theorem frontLine_ref {p : Prog} (hP : LineLookups p) {b : ByteArray}
       rw [liftE_some, frontLineE.k_apply_rec.arm1]
       obtain ⟨s5, rfl, -, hW⟩ := triple_of_callW (applyRec_spec p hP.scan hP.apply.decl.expr.front
         hP.apply_nstr hP.apply_nnum hP.apply_level hP.apply_rec hP.apply_str hP.apply.decl.expr b.data
-        n ⟨m, Locals.init []⟩ hm hA.1.lit.1.cap hA.1.lit.1.top _ _ _ _ _) h5
+        n ⟨m, Locals.init []⟩ hm hA.base.lit.1.cap hA.base.lit.1.top _ _ _ _ _) h5
       have hRec := recLine_link b h64 hsize j true 0 0 .absent Fld.none r e' hloop itemR_zero trivial
       have hfe : recN b.data j.toUInt64 (bw true) Fld.none = R.f := by
         rw [hjs, ← hF.1 hp7]; rfl
@@ -322,7 +322,7 @@ theorem frontLine_ref {p : Prog} (hP : LineLookups p) {b : ByteArray}
       obtain ⟨s5, rfl, -, hW⟩ := triple_of_callW (applyExpr_spec p hP.apply.decl.expr b.data hsize
         (hP.scan.get "byte_in") (hP.scan.get "hex_val") (hP.scan.get "hex4") (hP.scan.get "hex3")
         (hP.scan.get "esc_sur") (hP.scan.get "esc_one") (hP.scan.get "utf8_put")
-        (hP.scan.get "str_put_esc") n ⟨m, Locals.init []⟩ hm hA.1.lit.1.cap hA.1.lit.1.top
+        (hP.scan.get "str_put_esc") n ⟨m, Locals.init []⟩ hm hA.base.lit.1.cap hA.base.lit.1.top
         _ _ _ _ _) h5
       have hfe : exprLineN b.data j.toUInt64 = R.f := by rw [hjs, hF.2 hp7]
       have hX := exprLineN_link b h64 hsize j r e' hloop (by rw [hfe]; exact hpl)

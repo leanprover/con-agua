@@ -222,11 +222,8 @@ theorem arW_ok (p : Prog) (hcc : ProjCallees p) (dn : NIdx → Option ConLeche.N
       j.toNat + K = 2 → CoreS dn m a vis fe M eb →
       (∃ (h : EIdx) (c : NIdx), a.store.view h = some (.const c (decI us))) →
       iotaArW p vis ctor nP us anW k m j = some (L, m') →
-      AM.ok (andRescueSlotsGo fe (decI anW) (decI ctor) nP.toNat (decI us) K j.toNat) a ∧
-      CoreAfter dn m m' (AM.st (andRescueSlotsGo fe (decI anW) (decI ctor) nP.toNat (decI us) K
-        j.toNat) a) vis fe M eb ∧
-      AM.res (andRescueSlotsGo fe (decI anW) (decI ctor) nP.toNat (decI us) K j.toNat) a = decBool L ∧
-      HW (L.headD 0) := by
+      CoreRef (andRescueSlotsGo fe (decI anW) (decI ctor) nP.toNat (decI us) K j.toNat) a decBool
+        dn m vis fe M eb L m' := by
   intro K
   induction K with
   | zero =>
@@ -305,11 +302,8 @@ theorem arW_ok (p : Prog) (hcc : ProjCallees p) (dn : NIdx → Option ConLeche.N
     have hb' := hb
     have hfin : ((tbl.entry j.toNat).ctor == decI ctor && (tbl.entry j.toNat).numParams == nP.toNat &&
           (tbl.entry j.toNat).numFields == 2 && decBool r₂) = false → L = [0] → m' = m₂ →
-        AM.ok (andRescueSlotsGo fe (decI anW) (decI ctor) nP.toNat (decI us) (K + 1) j.toNat) a ∧
-        CoreAfter dn m m' (AM.st (andRescueSlotsGo fe (decI anW) (decI ctor) nP.toNat (decI us) (K + 1)
-          j.toNat) a) vis fe M eb ∧
-        AM.res (andRescueSlotsGo fe (decI anW) (decI ctor) nP.toNat (decI us) (K + 1) j.toNat) a =
-          decBool L ∧ HW (L.headD 0) := by
+        CoreRef (andRescueSlotsGo fe (decI anW) (decI ctor) nP.toNat (decI us) (K + 1) j.toNat) a
+          decBool dn m vis fe M eb L m' := by
       intro hcf hLe hme
       subst hLe; subst hme
       refine CoreRef.of_run (ok := ResH) (andRescueSlotsGo_stop_run fe (decI anW) (decI ctor) nP.toNat (decI us)
@@ -563,8 +557,8 @@ theorem CoreRef.of_run_eq {α : Type} [Inhabited α] {T T' : AM α} {a₀ : ASta
     {dn : NIdx → Option ConLeche.Name} {m₀ m : Mem} {vis : Word} {fe : IFEnv} {M : ModeMaps}
     {eb : Word} {r : List Word} {ok : List Word → Prop} (hT : T'.run a₀ = T.run a₀)
     (h : CoreRef T a₀ dec dn m₀ vis fe M eb r m ok) : CoreRef T' a₀ dec dn m₀ vis fe M eb r m ok := by
-  simp only [CoreRef, AM.ok, AM.st, AM.res, hT] at h ⊢
-  exact h
+  obtain ⟨h1, h2, h3, h4⟩ := h
+  refine ⟨?_, ?_, ?_, h4⟩ <;> unfold AM.ok AM.st AM.res at * <;> rw [hT] <;> assumption
 
 theorem litMajorToCtor_err_str (r : CoreFnsA) (fe : IFEnv) (d : Nat) (h : EIdx) (a a₁ a₂ : AState)
     (ht : h.tag = ETag.lit) (s : String) (hv : a.store.view h = some (.lit (.strVal s)))
@@ -588,7 +582,7 @@ theorem lmtc_ref (p : Prog) (hc : IotaCallees p)
     RefE (KnotUpToE p n) (lmtcE p (n + 1) s₀.mem mode vis d h)
       (litMajorToCtor (coreKnot (decMode mode) fe id F) fe d.toNat (decE h)) a₀
       (CorePost decH dn s₀.mem vis fe MM eb ResH) := by
-  have hR := hS.arena.1
+  have hR := hS.arena.base
   simp only [lmtcE]
   -- `lit_to_ctor_if_nat`, whenever the twin runs `litToCtorIfNat`
   have hnat : (litMajorToCtor (coreKnot (decMode mode) fe id F) fe d.toNat (decE h)).run a₀ =
@@ -697,7 +691,7 @@ theorem mkProjW_hw (m : Mem) (a : AState) (hA : ArenaD m a) (n i e r : Word) (m'
   | some m₂ =>
   simp only [hP, Option.some.injEq, Prod.mk.injEq] at hI
   obtain ⟨rfl, rfl⟩ := hI
-  exact pjinternW_hw m a hA.1.proj n i e _ m₁ hI₁
+  exact pjinternW_hw m a hA.base.proj n i e _ m₁ hI₁
 
 theorem keeps_cpl_internProj (n : NIdx) (i : Nat) (e : EIdx) :
     Keeps cpl (internE (.proj n i e)) := by

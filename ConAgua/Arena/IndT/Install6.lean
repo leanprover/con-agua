@@ -62,7 +62,7 @@ theorem iao_ref (hsum : SumProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : 
   rcases n with _ | n
   · rw [iaoE.eq_1]; exact RefE.of_cls0 Err.cls_outOfFuel
   have hS := hC.stage
-  obtain ⟨hs32, hse⟩ := installCtxWord9 hc hS.2.2.2.1
+  obtain ⟨hs32, hse⟩ := installCtxWord9 hc hS.iw.iwSize
   by_cases hov : hi + nF < hi
   · rw [iaoE.abort1 p n m vis ctx isP nF tyN hi hov]; exact RefE.of_cls0 rfl
   rw [iaoE.arm1 p n m vis ctx isP nF tyN hi hov]
@@ -181,7 +181,7 @@ theorem iac_ref (hP : AbsProg p) (ctx isP : Word) (c : NestCtx) (b : Bool) (hb :
   obtain ⟨-, -, ee, hee, -, rfl⟩ := hdoT
   obtain ⟨heelt, hee'⟩ := rec2IwH_trunc hee
   obtain ⟨ew, hew, hew32, hewe⟩ := iwH_rdW_at (w := UInt64.ofNat qo) (k := 2) (by rw [hqo']; exact hee')
-    hS.2.2.2.1
+    hS.iw.iwSize
   rw [show (UInt64.ofNat 2 : Word) = 2 from rfl] at hew
   rw [iacE.arm3 p n m vis ctx isP co cl oo ol hcl hol, hwc, hwo, hwlo, hwll, hew]
   simp only [ConRon.Arena.checkAbsCtorSorts]
@@ -225,10 +225,10 @@ theorem iac_ref (hP : AbsProg p) (ctx isP : Word) (c : NestCtx) (b : Bool) (hb :
   obtain ⟨hwnF, hnFb, -⟩ := partsIwRd hnF (w := UInt64.ofNat qc + 1) (by rw [UInt64.toNat_add, hqc']; simp; omega)
   have hwnF1 : rdW (m1.arr64 IW) (UInt64.ofNat qc + 1) = UInt64.ofNat nF := by
     rw [← hwnF]; simp only [rdW]; rw [show (UInt64.ofNat qc + 1 : Word).toNat = qc + 1 by
-      rw [UInt64.toNat_add, hqc']; simp; omega, hg1.2.2.1 _ hnFlt]
+      rw [UInt64.toNat_add, hqc']; simp; omega, hg1.iwGet _ hnFlt]
   have hwe1 : rdW (m1.arr64 IW) (UInt64.ofNat qo + 2) = ew := by
     rw [← hew]; simp only [rdW]; rw [show (UInt64.ofNat qo + 2 : Word).toNat = qo + 2 by
-      rw [UInt64.toNat_add, hqo']; simp; omega, hg1.2.2.1 _ heelt]
+      rw [UInt64.toNat_add, hqo']; simp; omega, hg1.iwGet _ heelt]
   rw [hwnF1, hwe1]
   refine RefE.of_run_eq (T' := absOneAM fe c b nF ee >>= fun _ => ConRon.Arena.checkAbsCtorSorts V fe c b cs' os')
     (by simp only [absOneAM, bind_assoc, pure_bind]; rfl) ?_

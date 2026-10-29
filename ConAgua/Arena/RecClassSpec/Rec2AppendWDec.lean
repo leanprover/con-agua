@@ -38,7 +38,7 @@ theorem rec2AppendW_dec {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : 
   have hx0 : decHL m o1.toNat l1.toNat = some xs := h1.get (OMono.decHL _ _)
   have key : ∀ o1' : Word, appendW n m o1' l1 o2 l2 = some (r, m') →
       decHL m o1'.toNat l1.toNat = some xs → o1'.toNat + l1.toNat ≤ iwTop m → _ := fun o1' h' hx hb1 => by
-    obtain ⟨hr, hd, -, -, -, htop⟩ := appendW_dec h' hS.2.2.2.1 hS.2.2.2.2.2 hb1 hb2 hx h2
+    obtain ⟨hr, hd, -, -, -, htop⟩ := appendW_dec h' hS.iw.iwSize hS.iw.ctl hb1 hb2 hx h2
     obtain ⟨hS', hg, -⟩ := appendW_stage h' hS hb1 hb2
     exact (⟨hS', hg, by rw [hr]; exact hd, by rw [hr]; simp only [List.headD_cons, List.tail_cons]; omega⟩ :
       StageR dn vis fe m' a ∧ IWGrow m m' ∧

@@ -129,7 +129,7 @@ theorem canonW_ok (n : Nat) : ∀ (dn : NIdx → Option ConLeche.Name) (fe : IFE
         simp only [pinWordV, hpne, ite_false, Option.some.injEq] at hpw
         rw [← hpw]; simp [pinW, rdW]
       have hpin0 : pinW m 0 ≠ 0 := by simpa [pinW, rdW] using hpne
-      have hfull := hS.1.pins.full hpin0
+      have hfull := hS.check.pins.full hpin0
       have hzlt : z.toNat < 2 ^ 32 := by rw [hz]; exact hfull.lv_lt.2.1
       rw [canonK1_ok _ _ _ _ (notbig_of_lt hzlt)] at h
       rcases hso : sointernW m z with _ | ⟨s1, m1⟩ <;> rw [hso] at h; · simp [canonK2] at h

@@ -29,7 +29,7 @@ theorem piBW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv
   | zero => intro m m' a fuel h rs hh; simp [piBW] at hh
   | succ n ih =>
     intro m m' a fuel h rs hpb hS hh
-    have hR := hS.1.arena.1
+    have hR := hS.check.arena.base
     by_cases hf : fuel = 0
     · rw [piBW_fuel0 n m fuel h hf] at hpb; simp at hpb
     by_cases hg : h >>> 28 ≠ 6
@@ -52,7 +52,7 @@ theorem piBW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv
     have hb2 : ((eViewW m h).getD 2 0).toNat < 2 ^ 32 := by rw [hew]; exact hb
     have hS1 := ih m m1 a (fuel - 1) _ rs1 hrec hS hb2
     obtain ⟨bs1, e1, -, -, hdec1, -, -, -, -, hle1⟩ :=
-      piBW_ok n m m1 a (fuel - 1) _ rs1 hR hrec hb2 hS.2.2.2.1 hS.2.2.2.2.2
+      piBW_ok n m m1 a (fuel - 1) _ rs1 hR hrec hb2 hS.iw.iwSize hS.iw.ctl
     exact (consW_stage hcons hS1 hle1 hty2 hdec1).1
 
 /-- `pi_binders` at `CWF` from the stage relation: the twin's run, the stage relation kept. -/
@@ -64,7 +64,7 @@ theorem piBW_cwf {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
       (rs.getD 2 0).toNat < 2 ^ 32 ∧ decE (rs.getD 2 0) = e ∧
       StageR dn vis fe m' a ∧ IWGrow m m' ∧ (rs.headD 0).toNat + (rs.getD 1 0).toNat ≤ iwTop m' := by
   obtain ⟨bs, e, hrun, -, hdec, hb1, hb2, hg, -, hle⟩ :=
-    piBW_ok n m m' a CWF h rs hS.1.arena.1 hpb hh hS.2.2.2.1 hS.2.2.2.2.2
+    piBW_ok n m m' a CWF h rs hS.check.arena.base hpb hh hS.iw.iwSize hS.iw.ctl
   rw [CWF_eq] at hrun
   exact ⟨bs, e, hrun, hdec, hb1, hb2, piBW_stage n m m' a CWF h rs hpb hS hh, hg, hle⟩
 

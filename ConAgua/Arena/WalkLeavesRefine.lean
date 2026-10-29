@@ -659,7 +659,7 @@ theorem lgW_ok (n : Nat) (m m' : Mem) (a : AState) (hD : ArenaD m a) (hM : LgMem
     (leafGuard coreWalkFuel (decE fab) (decE base)).run a = .ok (r != 0, a) ∧ LgMemoOK m' ∧ r ≤ 1 ∧
       LgFrame m m' := by
   obtain ⟨⟨sp, hsp⟩, ⟨lp, hlp⟩⟩ := hM
-  have hd := derFW_ok m a hD.1 hD.2 fab hfab
+  have hd := derFW_ok m a hD.base hD.der fab hfab
   by_cases hf : derFW m fab = 0
   · rw [lgW.arm1 n m fab base hf] at hb
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hb)

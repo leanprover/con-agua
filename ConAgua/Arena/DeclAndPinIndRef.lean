@@ -220,7 +220,7 @@ theorem decPL_growAP {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {o l : Na
   obtain ⟨v, hv, hy⟩ := hy
   refine ⟨v, ?_, ArrExt.decCI (IWGrow.erecPExt hg) hy⟩
   simp only [iwN, nat?, iwA] at hv ⊢
-  rw [hg.2.2.1 _ (by omega)]; exact hv
+  rw [hg.iwGet _ (by omega)]; exact hv
 
 /-- **`er_to_iw` of the copied block**: the `IW` slice decodes (in `erecP`) to the block. -/
 theorem erToIw_blk {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
@@ -230,7 +230,7 @@ theorem erToIw_blk {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv
     StageR dn vis fe m' a ∧ IWGrow m m' ∧ r.tail.headD 0 = l ∧
       decPL m' (fun q => decCI (erecP m') dn q) (r.headD 0).toNat l.toNat = some block ∧
       (r.headD 0).toNat + l.toNat ≤ iwTop m' := by
-  obtain ⟨hI1, hE1, hsz, hEs, hc⟩ := hS.2
+  obtain ⟨hI1, hE1, hsz, hEs, hc⟩ := hS.iw
   obtain ⟨hr, -, hg, hf, hE, htop⟩ := L.Ind.erToIwW_dec (k := .name) h hsz (by omega) hEs (by
     simp only [erTop] at hE1 hb; omega)
   have hw := L.Ind.erToIwW_wordsA h hsz (by omega) hEs (by simp only [erTop] at hE1 hb; omega)
@@ -289,7 +289,7 @@ theorem andpW_ind_ok {p : Prog} (hp : AndPinIndProg p) {dn : NIdx → Option Con
   | succ n =>
   rw [andpW_step] at h
   obtain ⟨hfl, h⟩ := of_ite_none h
-  have hF : PinsFull m a.pins := hS.1.pins.full hfl
+  have hF : PinsFull m a.pins := hS.check.pins.full hfl
   have hdecl' := hdecl
   obtain ⟨h6, hnP, t, -, hdec⟩ := hdecl'
   have h0 : dw (m.arr64 DECL) i.toNat 0 ≠ 0 := by rw [h6]; decide
@@ -362,7 +362,7 @@ theorem andpW_ind_ok {p : Prog} (hp : AndPinIndProg p) {dn : NIdx → Option Con
   rw [hl2] at h4
   obtain ⟨s4, hs4, -, hok4, ⟨⟨hS4, hg4, hd4⟩, -⟩, -⟩ := triple_of_callW (s₀ := ⟨m3, Locals.init []⟩)
     (L.Ind.canonEqList_refines p hp.canon dn vis fe _ _ _ _ block pinned n ⟨m3, Locals.init []⟩ a1
-      ⟨hS3, hd2', hp3, by show _ ≤ iwTop m3; have := hg3.1; omega, hpb3, poolSmall_of_stage hS3,
+      ⟨hS3, hd2', hp3, by show _ ≤ iwTop m3; have := hg3.iw; omega, hpb3, poolSmall_of_stage hS3,
         fun x y l hx hy => hok1.view_inj hx hy⟩) h4
   subst hs4
   have hrun4 := AM.run_of_ok _ _ hok4
@@ -425,7 +425,7 @@ theorem andPinOkOne_ok {p : Prog} (hp : AndPinIndProg p) {dn : NIdx → Option C
   have e2 : rdW (s₀.mem.arr64 DECL) (2 + 8 * i) = dw (s₀.mem.arr64 DECL) i.toNat 1 :=
     rdW_dwI hD hk.1 rfl (by decide)
   obtain ⟨hfl, hm, hr⟩ := andpW_one hW (by rw [e1]; exact hk.2)
-  have hF : PinsFull s₀.mem a₀.pins := hS.1.pins.full hfl
+  have hF : PinsFull s₀.mem a₀.pins := hS.check.pins.full hfl
   obtain ⟨hok', hst, hres⟩ := AM.of_run_ok _ _ _ _ (andPinOk_run hd hF)
   refine ⟨hl, hok', ?_⟩
   rw [hst, hres, hm, hr]

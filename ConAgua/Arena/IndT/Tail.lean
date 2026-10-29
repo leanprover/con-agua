@@ -41,8 +41,8 @@ theorem StageC.of_parts {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : 
     (hdn : ∀ (k : NIdx) (x : ConLeche.Name), dn k = some x → denoteN a.store.ns k = some x) :
     StageC dn vis fe env m a :=
   ⟨hS, hck,
-    ⟨hA.2.2.2.2.2.1, hA.2.2.2.2.2.2.1, hA.2.2.2.2.2.2.2.1, ⟨hA.2.2.2.1, hA.1, hA.2.2.2.2.1⟩, hdn⟩,
-    hA.2.2.2.2.2.2.2.2⟩
+    ⟨hA.wk.2.1, hA.wk.2.2.1, hA.wk.2.2.2.1, ⟨hA.il, hA.ab, hA.wk.1⟩, hdn⟩,
+    hA.wk.2.2.2.2⟩
 
 set_option experimental.vcgen true in
 /-- **`check_block_tail_rec`'s unified model**: the recursor stage and the tables through their runs
@@ -234,7 +234,7 @@ theorem tail_ref (hP : TailProg p) (L : CbrLook p) {fs : List FnName}
   · rw [liftE_none, ictlE.k_block_nested_bit.none]; exact RefE.of_cls0 (by simp)
   rw [liftE_some, ictlE.k_block_nested_bit.arm1]
   obtain ⟨s4, rfl, hs4, hr4⟩ := triple_of_callW (s₀ := ⟨m3, Locals.init []⟩)
-    (blockNestedBit_refines p hP.nf hP.ni hP.nm hP.nk hP.ng hP.nb n _ _ _ _ bs kinds hS3.2.2.2.1
+    (blockNestedBit_refines p hP.nf hP.ni hP.nm hP.nk hP.ng hP.nb n _ _ _ _ bs kinds hS3.iw.iwSize
       (DecB.get (decBS_mono _) (hbsD.grow (decBS_mono _) hg03)) (DecB.get (OMono.decPL hkfm _ _) hks3.1)) c4
   subst hs4
   have hnb : (r4.headD 0 != 0) = ConRon.Arena.blockNestedBit bs kinds := by
@@ -257,7 +257,7 @@ theorem tail_ref (hP : TailProg p) (L : CbrLook p) {fs : List FnName}
   have r16 : rdW (m3.arr64 IW) (q + 16) = rdW (m.arr64 IW) (q + 16) :=
     partsRdIW_grow hg03 (by rw [e 16 (by decide) (q + 16) rfl]; omega)
   have hlp3 : ClassesLp m3 (rdW (m3.arr64 IW) (q + 15)) (rdW (m3.arr64 IW) (q + 16)) := by
-    rw [r15, r16]; exact hlp.grow hcls' hg03 hk3 hS.2.2.2.1
+    rw [r15, r16]; exact hlp.grow hcls' hg03 hk3 hS.iw.iwSize
   have hpre : BSOK m3 (UInt64.ofNat pw : Word).toNat bs ∧
       decHL m3 (rdW (m3.arr64 IW) (q + 12)).toNat (rdW (m3.arr64 IW) (q + 13)).toNat = some params ∧
       (rdW (m3.arr64 IW) (q + 12)).toNat + (rdW (m3.arr64 IW) (q + 13)).toNat ≤ iwTop m3 ∧
@@ -270,7 +270,7 @@ theorem tail_ref (hP : TailProg p) (L : CbrLook p) {fs : List FnName}
       fun k hk w hw => partsRdIW_grow hg03 (by rw [e k hk w hw]; omega)
     refine ⟨hBS3, ?_, ?_, ?_, ?_, ?_, ?_, hblk.grow ?_ hg03⟩
     · rw [r 12 (by decide) (q + 12) rfl, r 13 (by decide) (q + 13) rfl]; exact (by rw [decHL_grow3 hg03 hpb]; exact hpd)
-    · rw [r 12 (by decide) (q + 12) rfl, r 13 (by decide) (q + 13) rfl]; exact Nat.le_trans hpb hg03.1
+    · rw [r 12 (by decide) (q + 12) rfl, r 13 (by decide) (q + 13) rfl]; exact Nat.le_trans hpb hg03.iw
     · rw [r 17 (by decide) (q + 17) rfl, r 18 (by decide) (q + 18) rfl]; exact htbl'.grow (fun q => decNCN_mono q) hg03
     · rw [hrd3]; exact hrdD.grow (decCR_mono _) hg03
     · rw [r 15 (by decide) (q + 15) rfl, r 16 (by decide) (q + 16) rfl]; exact hcls'.grow (fun q => decTM_mono q) hg03
@@ -334,7 +334,7 @@ theorem tail_ref (hP : TailProg p) (L : CbrLook p) {fs : List FnName}
         dd2, dd3, dd4, dd5, dd6, dd7⟩ hrun5
   have x35 := cr3.ext
   -- `cons_block_recs_tf`
-  rw [hS2.1.env.vis]
+  rw [hS2.check.env.vis]
   rcases c7 : callW p k "cons_block_recs_tf" [r2.headD 0, UInt64.ofNat pw, 0, r6.tail.headD 0,
       r6.tail.tail.headD 0, r6.headD 0] s5.mem with _ | ⟨r7, m7⟩
   · rw [liftE_none, ictrE.k_cons_block_recs_tf.none]; exact RefE.of_cls0 (by simp)
@@ -362,7 +362,7 @@ theorem tail_ref (hP : TailProg p) (L : CbrLook p) {fs : List FnName}
     (ConRon.Arena.consBlockCtors bs.nP ctorsAs fe).visibleBelow bs shP outs outP 0
     fe2b _ a5 a6 fe3 cr3.ok (ConRon.Bridge.Inductives.RC.IFEnvOK.of_find? cr3.ok.ienv hview hraw₂b)
     (Nat.le_of_eq hvis.symm) hcoh₂b hden₂b (ConRon.Bridge.Inductives.dShape_ext x05 _ _ hshP) hout hfresh
-    (by rw [hS2.1.env.vis]; exact hrun6)
+    (by rw [hS2.check.env.vis]; exact hrun6)
   have x06 : Ext a.store a6.store := x05.trans c4''.ext
   -- `check_block_tables`
   have hg06 := (hg03.trans hg5).trans hg6

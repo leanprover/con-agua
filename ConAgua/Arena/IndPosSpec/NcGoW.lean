@@ -242,7 +242,7 @@ theorem CsAt.grow {m m' : Mem} {o : Nat} {xs : List (IConstantVal × Nat)}
     (h : CsAt m o xs (· < iwTop m)) (hb : o + xs.length ≤ iwTop m) (hg : IWGrow m m') :
     CsAt m' o xs (· < iwTop m') :=
   (h.agree (RdS.of_grow hg) (GrowX.of_grow (q := 0) (n := 0) hg).erecP
-    (fun i hi => hg.2.2.1 _ (by omega))).mono fun _ hx => Nat.lt_of_lt_of_le hx hg.1
+    (fun i hi => hg.iwGet _ (by omega))).mono fun _ hx => Nat.lt_of_lt_of_le hx hg.iw
 
 theorem ncGoW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis C cs : Word) (N : Nat)
     (hC : H C) (k : Nat) :
@@ -261,7 +261,7 @@ theorem ncGoW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis C cs : W
   | zero => intro m m' a co cl ol fp ns acc r h; simp [ncGoW] at h
   | succ k ih =>
     intro m m' a co cl ol fp ns acc r h hS hns hreg hol hN hacc hfp
-    have hsz : (m.arr64 IW).size < 2 ^ 64 := hS.2.2.2.1
+    have hsz : (m.arr64 IW).size < 2 ^ 64 := hS.iw.iwSize
     by_cases hc0 : cl = 0
     · rw [ncGoW_done k m vis C co cl cs ol fp hc0] at h
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
@@ -284,9 +284,9 @@ theorem ncGoW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis C cs : W
     have hco : co.toNat < erTop m := by
       have := (Array.getElem?_eq_some_iff.mp hw).1; have := erecP_size_le m; omega
     have hco1 : (co + 1).toNat = co.toNat + 1 :=
-      word_add_toNat (show co.toNat + 1 < 2 ^ 64 by have := hS.2.2.1; have := hS.2.2.2.2.1; omega)
+      word_add_toNat (show co.toNat + 1 < 2 ^ 64 by have := hS.iw.er; have := hS.iw.erSize; omega)
     rw [hwE] at h
-    have hE := hS.1.env
+    have hE := hS.check.env
     rw [List.filterMapM_cons]
     rcases hef : envFindW m w vis with _ | ⟨r1, m1⟩ <;> rw [hef] at h; · simp [ncK1] at h
     have hm1 := envFindW_mem hef
@@ -318,11 +318,11 @@ theorem ncGoW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis C cs : W
       rw [ncK2_miss (h := rfl)] at h
       have hacc2 : CsAt m2 cs.toNat (acc.map ncProj) (OutR cs.toNat N (iwTop m)) :=
         hacc.agree ((RdS.of_grow hg2).mono fun _ hi => hi.1) hE2
-          (fun i hi => hg2.2.2.1 _ (by rw [hlen] at hi; omega))
+          (fun i hi => hg2.iwGet _ (by rw [hlen] at hi; omega))
       obtain ⟨ys, a', hrun, hS', hGX, h1, h2, h3, h4⟩ := ih m2 m' a1 (co + 1) (cl - 1) ol fp ns' acc r h hS2
         (by rw [hco1, hcl1, show cl.toNat - 1 = cl' by omega]; exact hE2.hslice? hns')
-        (by have := hg2.1; omega) hol (by omega)
-        (hacc2.mono fun _ hx => ⟨Nat.lt_of_lt_of_le hx.1 hg2.1, hx.2⟩) hfp
+        (by have := hg2.iw; omega) hol (by omega)
+        (hacc2.mono fun _ hx => ⟨Nat.lt_of_lt_of_le hx.1 hg2.iw, hx.2⟩) hfp
       refine ⟨ys, a', ?_, hS', (GrowX.of_grow hg2).trans hGX, h1, h2, h3, by simp; omega⟩
       simp only [StateT.run_bind, hrun1, except_ok_bind]
       exact hrun
@@ -344,11 +344,11 @@ theorem ncGoW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis C cs : W
       have hciqb : ciq.toNat < erTop m := by
         have := decCI_idx hci; have := erecP_size_le m; omega
       have hciq1 : (ciq + 1).toNat = ciq.toNat + 1 :=
-        word_add_toNat (show ciq.toNat + 1 < 2 ^ 64 by have := hS.2.2.1; have := hS.2.2.2.2.1; omega)
+        word_add_toNat (show ciq.toNat + 1 < 2 ^ 64 by have := hS.iw.er; have := hS.iw.erSize; omega)
       have hU : UInt64.size = 2 ^ 64 := rfl
       have hnF : (UInt64.ofNat nF).toNat = nF := UInt64.toNat_ofNat_of_lt' (by omega)
       have hnPc : (UInt64.ofNat nPc).toNat = nPc := UInt64.toNat_ofNat_of_lt' (by omega)
-      have htopb : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hsz
+      have htopb : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.iw hsz
       rcases hrec : posRecW m2 [ciq + 1, UInt64.ofNat nF] with _ | ⟨q3, m3⟩ <;> rw [hrec] at h; · simp [ncK3] at h
       obtain ⟨hS3, hg3, hq3, ht3, hget3⟩ := posRecW_stage hrec hS2 (by simp)
       simp only [List.length_cons, List.length_nil] at ht3
@@ -361,10 +361,10 @@ theorem ncGoW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis C cs : W
       have ht4 : iwTop (m3.set64 IW (cs + ol) q3) = iwTop m3 := by
         simp only [iwTop]; rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
       have hsz3 : cs.toNat + ol.toNat < (m3.arr64 IW).size := by
-        have := hS3.2.1; have := hg23.1; omega
+        have := hS3.iw.iw; have := hg23.iw; omega
       have hnew : CNOk (m3.set64 IW (cs + ol) q3) q3.toNat (cv, nF)
           (OutR cs.toNat N (iwTop (m3.set64 IW (cs + ol) q3))) := by
-        have hg2' := hg2.1
+        have hg2' := hg2.iw
         refine ⟨⟨by rw [ht4]; omega, Or.inr (by omega)⟩, ⟨by rw [ht4]; omega, Or.inr (by omega)⟩,
           (ciq + 1).toNat, ?_, by rw [hciq1]; exact hE4.decCV hcvE, ?_⟩
         · have := hget3 0 (by simp)
@@ -381,11 +381,11 @@ theorem ncGoW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis C cs : W
         by_cases hia : i < acc.length
         · obtain ⟨w', hw1, hw2⟩ := hacc i (by rw [hlen]; exact hia)
           refine ⟨w', ?_, ?_⟩
-          · rw [set64IW_get, ite_eq_right (by omega), hg23.2.2.1 _ (by omega)]; exact hw1
+          · rw [set64IW_get, ite_eq_right (by omega), hg23.iwGet _ (by omega)]; exact hw1
           · simp only [List.map_append, List.map_cons, List.map_nil]
             rw [List.getElem_append_left (by rw [hlen]; exact hia)]
             exact (hw2.agree hGX4.2.2.1 hE4).mono fun _ hx =>
-              ⟨Nat.lt_of_lt_of_le hx.1 (by rw [ht4]; exact hg23.1), hx.2⟩
+              ⟨Nat.lt_of_lt_of_le hx.1 (by rw [ht4]; exact hg23.iw), hx.2⟩
         · have hie : i = acc.length := by omega
           subst hie
           refine ⟨q3, ?_, ?_⟩
@@ -407,7 +407,7 @@ theorem ncGoW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis C cs : W
         obtain ⟨ys, a', hrun, hS', hGX, h1, h2, h3, h4⟩ := ih _ m' a1 (co + 1) (cl - 1) (ol + 1) fp' ns'
           (acc ++ [(cv, nPc, nF)]) r h' hS4
           (by rw [hco1, hcl1, show cl.toNat - 1 = cl' by omega]; exact hE4.hslice? hns')
-          (by rw [ht4]; have := hg23.1; omega) (by rw [hol1]; simp) (by simp; omega) hacc4 hfp'
+          (by rw [ht4]; have := hg23.iw; omega) (by rw [hol1]; simp) (by simp; omega) hacc4 hfp'
         refine ⟨ys, a', hrun, hS', hGX4.trans hGX, by rw [h1]; simp; omega, ?_, ?_, h4⟩
         · simpa using h2
         · simpa using h3
@@ -492,7 +492,7 @@ theorem ntW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis C : Word) 
     (h : ntW k m vis C = some (r, m')) (hS : StageR dn vis fe m a) :
     ∃ x a', (ConRon.Arena.nestContainer fe (decI C)).run a = .ok (x, a') ∧ StageR dn vis fe m' a' ∧
       IWGrow m m' ∧ NcOut m' r x := by
-  have hE := hS.1.env
+  have hE := hS.check.env
   unfold ntW at h
   rcases hef : envFindW m C vis with _ | ⟨r1, m1⟩ <;> rw [hef] at h; · simp [ntK1] at h
   have hm1 := envFindW_mem hef
@@ -522,7 +522,7 @@ theorem ntW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis C : Word) 
   have hk3 : nat? (erecP m) ciq.toNat = some 3 := by
     have : (erecP m)[ciq.toNat]? = (m.arr64 EREC)[ciq.toNat]? := erecP_getE (by omega)
     simp only [nat?, this]
-    have hb : ciq.toNat < (m.arr64 EREC).size := by have := hS.2.2.1; omega
+    have hb : ciq.toNat < (m.arr64 EREC).size := by have := hS.iw.er; omega
     have : rdW (m.arr64 EREC) ciq = 3 := by simpa using h3
     simp [rdW, hb] at this ⊢; rw [this]; rfl
   obtain ⟨cv, caps, rfl, hcaps⟩ := decCI_kind3 hci hk3
@@ -530,7 +530,7 @@ theorem ntW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis C : Word) 
   simp only [hlist?, Option.bind_eq_bind, Option.bind_eq_some_iff] at hcts
   obtain ⟨o, ho, l, hl, hns⟩ := hcts
   have hlI := nat?_idx hl
-  have hb : ciq.toNat + 5 + 13 + 1 < 2 ^ 64 := by have := hS.2.2.2.2.1; have := hS.2.2.1; omega
+  have hb : ciq.toNat + 5 + 13 + 1 < 2 ^ 64 := by have := hS.iw.erSize; have := hS.iw.er; omega
   have e13 : (ciq + 5 + 13).toNat = ciq.toNat + 5 + 13 := by
     rw [word_add_toNat (by simp; omega), word_add_toNat (by simp; omega)]; rfl
   have e14 : (ciq + 5 + 14).toNat = ciq.toNat + 5 + 13 + 1 := by
@@ -565,7 +565,7 @@ theorem ntW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis C : Word) 
     refine ⟨_, a', hrun', hS2, hg2, rfl, ?_, rfl, by simpa using h2, by simpa using h3'⟩
     have hnpI := nat?_idx hnp
     have : (m2.arr64 EREC)[ciq.toNat + 5 + 12]? = (erecP m)[ciq.toNat + 5 + 12]? := by
-      rw [hg2.2.2.2 _ (by omega), erecP_getE (by omega)]
+      rw [hg2.erGet _ (by omega), erecP_getE (by omega)]
     simp only [List.tail_cons, List.headD_cons]
     simp only [nat?, Option.map_eq_some_iff] at hnp
     obtain ⟨w, hw, hw'⟩ := hnp

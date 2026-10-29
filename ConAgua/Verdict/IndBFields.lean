@@ -71,11 +71,11 @@ theorem cfgTailE {G : Prop} {n : Nat} {m m2 m5 : Mem} {a2 : AState} {k : Word} {
         (fun v ks a' => CfgPost dn vis fe m5 v.1 v.2 ks a')) :
     RefE G (cfgE.j1 p n mo ml io il i fo fl (r5.headD 0) m5) (do let r ← opR; pure (y :: r)) a2
       (fun v ks a' => CfgPost dn vis fe m v.1 v.2 ks a') := by
-  have hc := hS2.2.2.2.2.2
-  have hsz := hS2.2.2.2.1
+  have hc := hS2.iw.ctl
+  have hsz := hS2.iw.iwSize
   obtain ⟨hr5, -, hg5, hf5, htop5, hroom5⟩ := recW_post h5 hc hsz hk
   have hS5 := stage_frame_iw hS2 hf5 (by omega)
-  have hy5 := rec2RecW_decCF_A (b := iwTop m) h5 hc hsz hk hg2.1 (by rw [hr5]; exact hy)
+  have hy5 := rec2RecW_decCF_A (b := iwTop m) h5 hc hsz hk hg2.iw (by rw [hr5]; exact hy)
   have hR := hrest hS5 hg5 (rec2NoMR_iw hf5 hM2)
   rw [cfgE.j1.arm1]
   rcases h6 : cfgE p n m5 mo ml io il (i + 1) (fo + 1) (fl - 1) with e6 | ⟨r6, m6⟩
@@ -89,10 +89,10 @@ theorem cfgTailE {G : Prop} {n : Nat} {m m2 m5 : Mem} {a2 : AState} {k : Word} {
   rw [liftE_some, cfgE.k_sl_cons.arm1]
   have hsp6 := hP6.kinds
   obtain ⟨mp6, hM6⟩ := hP6.nomr
-  obtain ⟨hS7, hg7, hsp7⟩ := SPLA.cons h7 hP6.stage (hsp6.mono (Nat.le_trans hg2.1 hg5.1))
-    (Nat.le_trans hg2.1 (Nat.le_trans hg5.1 hP6.grow.1)) (hy5.grow (AgreeA.of_grow hP6.grow))
+  obtain ⟨hS7, hg7, hsp7⟩ := SPLA.cons h7 hP6.stage (hsp6.mono (Nat.le_trans hg2.iw hg5.iw))
+    (Nat.le_trans hg2.iw (Nat.le_trans hg5.iw hP6.grow.iw)) (hy5.grow (AgreeA.of_grow hP6.grow))
   obtain ⟨-, hsb, ps, hps, -⟩ := hsp6
-  obtain ⟨-, -, -, hf7, -⟩ := consW_decN h7 hP6.stage.2.2.2.1 hP6.stage.2.2.2.2.2 hsb hps
+  obtain ⟨-, -, -, hf7, -⟩ := consW_decN h7 hP6.stage.iw.iwSize hP6.stage.iw.ctl hsb hps
   exact RefE.ret rfl ⟨hS7, hg2.trans (hg5.trans (hP6.grow.trans hg7)), by simpa using hsp7,
     ⟨mp6, rec2NoMR_iw hf7 hM6⟩, hf2.trans ((MFr.of_iw hf5).up.trans (hP6.frame.trans (MFr.of_iw hf7).up)),
     hA2.trans ((recW_afr h5).trans (hP6.afr.trans (consW_afr h7)))⟩
@@ -119,8 +119,8 @@ theorem cfg_ref (bsh : BlockShape) (ihs : List (Nat × Nat)) (n : Nat) :
     exact RefE.of_cls0 (by simp)
   | succ n ih =>
   intro m a mo ml io il i fo fl fs mp0 hS hmn hmb hih hib hfs hfb hi hM
-  have hsz := hS.2.2.2.1
-  have htop := hS.2.1
+  have hsz := hS.iw.iwSize
+  have htop := hS.iw.iw
   by_cases hfl : fl = 0
   · rw [cfgE.arm1 p n m mo ml io il i fo fl hfl]
     obtain rfl : fs = [] := by
@@ -161,7 +161,7 @@ theorem cfg_ref (bsh : BlockShape) (ihs : List (Nat × Nat)) (n : Nat) :
   rcases h3 : cfhW n m2 io il i with _ | ⟨hc, cls⟩
   · rw [liftE_none, cfgE.k_class_fields_of_hits.none]; exact RefE.of_cls0 (by simp)
   rw [liftE_some]
-  obtain ⟨hcnt, hcls⟩ := cfhW_ok n m2 io il i hc cls ihs h3 (hih m2 hg12) hib hS2.2.2.2.1
+  obtain ⟨hcnt, hcls⟩ := cfhW_ok n m2 io il i hc cls ihs h3 (hih m2 hg12) hib hS2.iw.iwSize
   have hrest : ∀ m5, StageR dn vis fe m5 a1 → IWGrow m2 m5 → noMR m5 ∅ →
       RefE (closedNV p _root_.L.Checker.nvFns = true) (cfgE p n m5 mo ml io il (i + 1) (fo + 1) (fl - 1))
         (ConRon.Arena.classFieldsOf bsh ihs (i.toNat + 1) fs') a1
@@ -169,8 +169,8 @@ theorem cfg_ref (bsh : BlockShape) (ihs : List (Nat × Nat)) (n : Nat) :
     intro m5 hS5 hg5 hM5
     have hg := hg12.trans hg5
     have := ih (m := m5) (a := a1) (i := i + 1) (fo := fo + 1) (fl := fl - 1) hS5
-      (by rw [decHL_grow hg hmb]; exact hmn) (Nat.le_trans hmb hg.1) (hih.grow hg) hib
-      (by rw [decHL_grow hg (by omega)]; exact hfs') (by have := hg.1; omega) (by omega) hM5
+      (by rw [decHL_grow hg hmb]; exact hmn) (Nat.le_trans hmb hg.iw) (hih.grow hg) hib
+      (by rw [decHL_grow hg (by omega)]; exact hfs') (by have := hg.iw; omega) (by omega) hM5
     rwa [hi1] at this
   by_cases hA : occ = 0 ∧ hc = 0
   · rw [cfgE.k_class_fields_of_hits.arm1 p n _ _ _ _ _ _ _ _ _ _ _ _ hA]
@@ -268,14 +268,14 @@ theorem cfo_ref (bsh : BlockShape) (ihs : List (Nat × Nat)) (n : Nat) {m : Mem}
   · rw [liftE_none, cfoE.k_block_shape_member_names.none]; exact RefE.of_cls0 (by simp)
   rw [liftE_some, cfoE.k_block_shape_member_names.arm1]
   have ht := hb.ptop
-  have hsz := hS.2.2.2.1
-  have hts : iwTop m ≤ (m.arr64 IW).size := hS.2.1
-  have hf1 := (memberNamesW_dec h1 hsz hS.2.2.2.2.2 hb.dec (by omega) hb.2.1 hb.2.2).2.2.2.1
+  have hsz := hS.iw.iwSize
+  have hts : iwTop m ≤ (m.arr64 IW).size := hS.iw.iw
+  have hf1 := (memberNamesW_dec h1 hsz hS.iw.ctl hb.dec (by omega) hb.2.1 hb.2.2).2.2.2.1
   obtain ⟨hS1, hg1, -, hd1, ht1⟩ := memberNamesW_stage h1 hS hb
   have hR := cfg_ref (p := p) (dn := dn) (vis := vis) (fe := fe) bsh ihs n (a := a) (mo := r1.headD 0)
     (ml := r1.tail.headD 0) (io := io) (il := il) (i := i) (fo := fo) (fl := fl) hS1 hd1
     (by omega) (hih.grow hg1) hib (by rw [decHL_grow hg1 hfb]; exact hfs)
-    (Nat.le_trans hfb hg1.1) hi (rec2NoMR_iw hf1 hM)
+    (Nat.le_trans hfb hg1.iw) hi (rec2NoMR_iw hf1 hM)
   rcases h2 : cfgE p n m1 (r1.headD 0) (r1.tail.headD 0) io il i fo fl with e2 | ⟨r2, m2⟩
   · rw [h2] at hR
     rw [cfoE.k_class_fields_of_go.none]
@@ -283,7 +283,7 @@ theorem cfo_ref (bsh : BlockShape) (ihs : List (Nat × Nat)) (n : Nat) {m : Mem}
   rw [h2] at hR
   rw [cfoE.k_class_fields_of_go.arm1]
   obtain ⟨ks, a2, run2, hP2⟩ := hR
-  exact RefE.ret run2 ⟨hP2.stage, hg1.trans hP2.grow, by simpa using hP2.kinds.mono hg1.1, hP2.nomr,
+  exact RefE.ret run2 ⟨hP2.stage, hg1.trans hP2.grow, by simpa using hP2.kinds.mono hg1.iw, hP2.nomr,
     (MFr.of_iw hf1).up.trans hP2.frame, (memberNamesW_afr h1).trans hP2.afr⟩
 
 /-- **`class_fields_of` refines `classFieldsOf`** (through the stub `fvar_type_d`; `cfo_ref`'s ok

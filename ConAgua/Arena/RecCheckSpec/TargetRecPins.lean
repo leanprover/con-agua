@@ -33,7 +33,7 @@ theorem lokW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv
     {m m' : Mem} {q : Word} {r : List Word} {bs : BlockShape} (h : lokW n m q = some (r, m'))
     (hS : StageR dn vis fe m a) (hq : DecB (fun m => decBS m q.toNat) m bs) :
     r = [if ConRon.Arena.blockRecLpsOk bs then 1 else 0] ∧ StageR dn vis fe m' a ∧ IWGrow m m' := by
-  obtain ⟨hI1, -, hsz, hEs, hc⟩ := hS.2
+  obtain ⟨hI1, -, hsz, hEs, hc⟩ := hS.iw
   obtain ⟨hr, hg, hf, hw⟩ := lokW_ok n m m' q r bs h (hq.get (decBS_mono _)) (hq.stab (decBS_mono _))
     (rpShape9 hq) hsz hc hEs
   exact ⟨hr, stage_frame_iw hS hf (by rw [← hf.size IW]; exact hw hI1), hg⟩

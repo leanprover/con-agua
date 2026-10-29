@@ -37,9 +37,9 @@ theorem StageC.of_cstep {m m' : Mem} {a a' : AState} (h : StageC dn vis fe env m
     (hS : StageR dn vis fe m' a') (hA : AbsOK m') (hs : ConRon.Bridge.CoreStep V env fe a a') :
     StageC dn vis fe env m' a' :=
   ⟨hS, hs.ok,
-    ⟨hA.2.2.2.2.2.1, hA.2.2.2.2.2.2.1, hA.2.2.2.2.2.2.2.1, ⟨hA.2.2.2.1, hA.1, hA.2.2.2.2.1⟩,
+    ⟨hA.wk.2.1, hA.wk.2.2.1, hA.wk.2.2.2.1, ⟨hA.il, hA.ab, hA.wk.1⟩,
       fun k x e => hs.ext.lss.ls.ns k x (h.mem.dnN k x e)⟩,
-    hA.2.2.2.2.2.2.2.2⟩
+    hA.wk.2.2.2.2⟩
 
 theorem slConsC_afr {p : Prog} (hP : KeysProg p) {n : Nat} {x o l : Word} {r : List Word} {m m' : Mem}
     (h : callW p n "sl_cons" [x, o, l] m = some (r, m')) : AFr m m' := by
@@ -85,7 +85,7 @@ theorem clm_ref (hP : ClmProg p) (pp cao cal pfo pfl : Word) (bs : BlockShape)
   | succ n ih =>
   intro m a ko kl ks ksP hC hA hq' hsrc hcss hpf hpfb hks hPm hsc hsh hcas hpfP hksP
   have hS := hC.stage
-  have hT : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
+  have hT : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.iw hS.iw.iwSize
   by_cases hkl : kl = 0
   · rw [clmE.arm1 p n m vis pp cao cal pfo pfl ko kl hkl]
     have : ks = [] := by
@@ -126,11 +126,11 @@ theorem clm_ref (hP : ClmProg p) (pp cao cal pfo pfl : Word) (bs : BlockShape)
   have e2 : rdW (m1.arr64 IW) (UInt64.ofNat q + 2) = rdW (m.arr64 IW) (UInt64.ofNat q + 2) := by
     have e : (UInt64.ofNat q + 2 : Word).toNat = (UInt64.ofNat q : Word).toNat + 2 :=
       word_add_toNat (by rw [show (2 : Word).toNat = 2 from rfl]; omega)
-    simp only [rdW, e]; rw [hg1.2.2.1 _ (by omega)]
+    simp only [rdW, e]; rw [hg1.iwGet _ (by omega)]
   have e3 : rdW (m1.arr64 IW) (UInt64.ofNat q + 3) = rdW (m.arr64 IW) (UInt64.ofNat q + 3) := by
     have e : (UInt64.ofNat q + 3 : Word).toNat = (UInt64.ofNat q : Word).toNat + 3 :=
       word_add_toNat (by rw [show (3 : Word).toNat = 3 from rfl]; omega)
-    simp only [rdW, e]; rw [hg1.2.2.1 _ (by omega)]
+    simp only [rdW, e]; rw [hg1.iwGet _ (by omega)]
   rw [e2, e3]
   have hds1 : decHL m1 (rdW (m.arr64 IW) (UInt64.ofNat q + 2)).toNat
       (rdW (m.arr64 IW) (UInt64.ofNat q + 3)).toNat = some nk.ds := by
@@ -157,7 +157,7 @@ theorem clm_ref (hP : ClmProg p) (pp cao cal pfo pfl : Word) (bs : BlockShape)
   have hR3 := tmf_ref hP.tmf hIlpf hq.closed hLC n hC2.stage
     (hq'.grow (decBS_mono _) hg02) (partsHsrc_grow hg02 (partsShapeFacts hq' hsrc).2.1 hsrc)
     (hcss.grow decCNS_mono hg02) (hpf.grow (OMono.decHL _ _) hg02) (hpf.grow (OMono.decHL _ _) hg02)
-    (Nat.le_trans hpfb hg02.1) hmH hP2 hC2 hA2 hshP2 hmty
+    (Nat.le_trans hpfb hg02.iw) hmH hP2 hC2 hA2 hshP2 hmty
   rcases h3 : tmfE p n m2 vis pp cao cal pfo pfl pfo pfl (r2.headD 0) with e3 | ⟨r3, m3⟩ <;> rw [h3] at hR3
   · rw [clmE.k_target_major_of.none]; exact RefE.bind_left fun hV => hR3 hV.nv
   rw [clmE.k_target_major_of.arm1]
@@ -205,7 +205,7 @@ theorem clm_ref (hP : ClmProg p) (pp cao cal pfo pfl : Word) (bs : BlockShape)
   -- the rest
   have hR5 := ih (by omega) m4 a4 (ko + 1) (kl - 1) ks' ksP' hR4.stage hR4.abs (hq'.grow (decBS_mono _) hg04)
     (partsHsrc_grow hg04 (partsShapeFacts hq' hsrc).2.1 hsrc) (hcss.grow decCNS_mono hg04)
-    (hpf.grow (OMono.decHL _ _) hg04) (Nat.le_trans hpfb hg04.1) (hks'.grow decCK_mono hg04) hP4
+    (hpf.grow (OMono.decHL _ _) hg04) (Nat.le_trans hpfb hg04.iw) (hks'.grow decCK_mono hg04) hP4
     (fun k hk' => hsc k (List.mem_cons_of_mem _ hk'))
     (ConRon.Bridge.Inductives.dShape_ext c14.ext _ _ hsh)
     (ConRon.Bridge.Inductives.dCtors_ext.list c14.ext _ _ hcas)

@@ -343,9 +343,9 @@ theorem cfW_ok {p : Prog} (hp : RrbProg p) (n : Nat) (dn : NIdx → Option ConLe
     (fe : IFEnv) (m m' : Mem) (a : AState) (hS : StageR dn vis fe m a) (c : Word) (hc : H c)
     (r : List Word) (hW : cfW p n m vis c = some (r, m')) :
     m' = m ∧ CFOut dn fe a m c r := by
-  have hR := hS.1.arena.1
-  have hE := hS.1.env
-  have hsz : (m.arr64 EREC).size < 2 ^ 64 := hS.2.2.2.2.1
+  have hR := hS.check.arena.base
+  have hE := hS.check.env
+  have hsz : (m.arr64 EREC).size < 2 ^ 64 := hS.iw.erSize
   simp only [cfW] at hW
   cases n with
   | zero => simp [callW_zero] at hW
@@ -541,7 +541,7 @@ theorem recRuleKOf_ref (c : Word) (hc : H c) :
     CallRef p "rec_rule_k_of" [vis, c] (StageR dn vis fe) (recRuleKOf fe (decI c))
       (KeepPost dn vis fe decW0B) := by
   refine CallRef.of_succ fun k m a r m' hS hcall => ?_
-  have hsz : (m.arr64 EREC).size < 2 ^ 64 := hS.2.2.2.2.1
+  have hsz : (m.arr64 EREC).size < 2 ^ 64 := hS.iw.erSize
   have hw := callW_model (M := fun mm => kofW p k mm vis c) (fun s => kof_spec p hp.kof k s vis c) hcall
   unfold kofW at hw
   cases hc1 : callW p k "ctor_family" [vis, c] m with
@@ -598,7 +598,7 @@ theorem recRuleEtaOf_ref (c : Word) (hc : H c) :
     CallRef p "rec_rule_eta_of" [vis, c] (StageR dn vis fe) (recRuleEtaOf fe (decI c))
       (KeepPost dn vis fe decW0B) := by
   refine CallRef.of_succ fun k m a r m' hS hcall => ?_
-  have hsz : (m.arr64 EREC).size < 2 ^ 64 := hS.2.2.2.2.1
+  have hsz : (m.arr64 EREC).size < 2 ^ 64 := hS.iw.erSize
   have hw := callW_model (M := fun mm => eofW p k mm vis c) (fun s => eof_spec p hp.eof k s vis c) hcall
   unfold eofW at hw
   cases hc1 : callW p k "ctor_family" [vis, c] m with

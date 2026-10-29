@@ -137,7 +137,7 @@ theorem freshCall {m₀ : Mem} {a₀ : AState} {T : Nat} {n : Nat} {m m' : Mem} 
     (memoClearG_spec rsetSch p "rset_clear" hL.rset_clear n _) h1
   have hR : s'.mem = resetMem (m.set64 CTL 131 0) := hm
   rw [hR]
-  have hcs : 200 < (m.arr64 CTL).size := hI.ok.2.2.2.2
+  have hcs : 200 < (m.arr64 CTL).size := hI.ok.ctl
   have hf : MemFrame [] [131, 132, 148, 149] m (resetMem (m.set64 CTL 131 0)) :=
     ((MemFrame.setCtl m 131 0).mono (by simp) (by simp)).trans ((resetMem_frame1 _).mono (by simp)
       (by simp))

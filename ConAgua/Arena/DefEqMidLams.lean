@@ -89,7 +89,7 @@ theorem lamsInst_refines (p : Prog) (hp : LamsProg p) (hi : Inst1OK p) (n : Nat)
   obtain ⟨r₂, m₂⟩ := q
   rw [hc2, linW.k_inst1.arm1] at hW
   have e₂ := CoreSpec.of_callW (s₀ := ⟨m₁, Locals.init []⟩)
-    (hi n _ _ dn vis fe M₁ eb body₁ (r₁.headD 0) 0 hS₁ hb₁ e₁.2.2.2) hc2
+    (hi n _ _ dn vis fe M₁ eb body₁ (r₁.headD 0) 0 hS₁ hb₁ e₁.resOk) hc2
   rw [toNat_zero_w] at e₂
   refine coreRef_bind e₂ (fun M₂ hS₂ => ?_)
   cases hc3 : callW p n "inst1" [body₂, r₁.headD 0, 0] m₂ with
@@ -99,11 +99,11 @@ theorem lamsInst_refines (p : Prog) (hp : LamsProg p) (hi : Inst1OK p) (n : Nat)
   rw [hc3, linW.k_inst1_2.arm1, Option.some.injEq, Prod.mk.injEq, Prod.mk.injEq] at hW
   obtain ⟨h1, h2, hm⟩ := hW
   have e₃ := CoreSpec.of_callW (s₀ := ⟨m₂, Locals.init []⟩)
-    (hi n _ _ dn vis fe M₂ eb body₂ (r₁.headD 0) 0 hS₂ hb₂ e₁.2.2.2) hc3
+    (hi n _ _ dn vis fe M₂ eb body₂ (r₁.headD 0) 0 hS₂ hb₂ e₁.resOk) hc3
   rw [toNat_zero_w] at e₃
   refine coreRef_bind e₃ (fun M₃ hS₃ => ?_)
   rw [← hm]
-  exact coreRef_ret hS₃ (by simp only [decPair, decH, ← h1, ← h2]) ⟨h1 ▸ e₂.2.2.2, h2 ▸ e₃.2.2.2⟩
+  exact coreRef_ret hS₃ (by simp only [decPair, decH, ← h1, ← h2]) ⟨h1 ▸ e₂.resOk, h2 ▸ e₃.resOk⟩
 
 /-! ## `lams_open` -/
 
@@ -161,7 +161,7 @@ theorem lo_ref (p : Prog) (hp : LamsProg p) (hi : Inst1OK p) (n : Nat)
     (lamsInst_refines p hp hi n' _ _ dn vis fe M₁ eb d ty₂ body₁ body₂ hS₁ h₂ hb₁ hb₂) c2
   refine RefE.bind_core (w := id) e₂ (fun M₂ hS₂ _ => ?_)
   exact RefE.ret rfl (CorePost.ret hS₂ (by simp only [decLO, decPair]; rfl)
-    ⟨hw1, e₂.2.2.2.1, e₂.2.2.2.2⟩)
+    ⟨hw1, e₂.resOk.1, e₂.resOk.2⟩)
 
 /-! ## `lam_pair` -/
 
@@ -214,7 +214,7 @@ theorem lamPair_refines (p : Prog) (hp : LamsProg p) (n : Nat) (s₀ : St) (a₀
   | some q =>
   obtain ⟨r₁, m₁⟩ := q
   rw [hc1, lpeelW.k_e_view.arm1] at hW
-  obtain ⟨rfl, ha1, ha2, hva⟩ := eView_lam_callW (a := a₀) hp.peel.eview hS.arena.1 ha h5a hc1
+  obtain ⟨rfl, ha1, ha2, hva⟩ := eView_lam_callW (a := a₀) hp.peel.eview hS.arena.base ha h5a hc1
   cases hc2 : callW p n "e_view" [b] s.mem with
   | none => rw [hc2] at hW; cases hW
   | some q =>
@@ -222,7 +222,7 @@ theorem lamPair_refines (p : Prog) (hp : LamsProg p) (n : Nat) (s₀ : St) (a₀
   rw [hc2, lpeelW.k_e_view_2.arm1, Option.some.injEq] at hW
   simp only [Prod.mk.injEq] at hW
   obtain ⟨g1, g2, g3, g4, g5, hm⟩ := hW
-  obtain ⟨rfl, hb1, hb2, hvb⟩ := eView_lam_callW (a := a₀) hp.peel.eview hS.arena.1 hb h5b hc2
+  obtain ⟨rfl, hb1, hb2, hvb⟩ := eView_lam_callW (a := a₀) hp.peel.eview hS.arena.base hb h5b hc2
   have hrun : (do
       match ← viewBind (decE a) with
       | none => failDanglingE
@@ -343,7 +343,7 @@ theorem lams_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n 
       (RefE.coreSpec (loE_spec p hp.open_ (k' + 1) ⟨m, Locals.init []⟩ mode vis d ty₁ body₁ ty₂ body₂)
         (lo_ref p hp hi k' (hk.mono (by omega)) F (by omega) (by omega) _ s dn vis fe M eb
           mode d ty₁ body₁ ty₂ body₂ ⟨hS, hmode, heb⟩ h1 hb1 h2 hb2)) (callW_of_callE hc)
-    obtain ⟨-, hr1, hr2⟩ := e₁.2.2.2
+    obtain ⟨-, hr1, hr2⟩ := e₁.resOk
     refine RefE.bind_core (w := fun (v : Word × Mem) => ([v.1], v.2)) e₁ (fun M₁ hS₁ _ => ?_)
     by_cases h0 : r.headD 0 = 0
     · rw [lamsE.k_lams_open.arm1 (hc1 := h0)]
@@ -359,7 +359,7 @@ theorem lams_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n 
     have e₂ := CoreSpec.of_callW (s₀ := ⟨m₁, Locals.init []⟩)
       (lamPair_refines p hp k' _ _ dn vis fe M₁ eb _ _ hS₁ hr1 hr2) (callW_of_callE hc2)
     refine RefE.bind_core (w := fun (v : Word × Mem) => ([v.1], v.2)) e₂ (fun M₂ hS₂ _ => ?_)
-    obtain ⟨-, hq1, hq2, hq3, hq4⟩ := e₂.2.2.2
+    obtain ⟨-, hq1, hq2, hq3, hq4⟩ := e₂.resOk
     by_cases hq : q.headD 0 = 0
     · rw [lamsE.k_lam_pair.arm1 (hc1 := hq)]
       simp only [decLP, hq, ↓reduceIte]

@@ -146,7 +146,7 @@ theorem cnCrW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
     obtain ⟨y1', hy1e, ys'', hys'e, hyeq⟩ := hys
     obtain ⟨rfl, rfl⟩ := List.cons.inj hxeq
     obtain ⟨rfl, rfl⟩ := List.cons.inj hyeq
-    have hsz : (m.arr64 EREC).size < 2 ^ 64 := hS.2.2.2.2.1
+    have hsz : (m.arr64 EREC).size < 2 ^ 64 := hS.iw.erSize
     have hx1 := ArrExt.decRule (erecP_ext m) hx1e
     have hy1 := ArrExt.decRule (erecP_ext m) hy1e
     obtain ⟨w0, w1, w2, w3, w8, w9, w10, e0, e1, e2, e3, e8, e9, e10, h0', h8, c0, c1, c2, c8, c9, c10, hf, hb⟩ :=
