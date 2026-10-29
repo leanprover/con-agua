@@ -165,7 +165,10 @@ are `CoreRef`s: the post `CorePost` (the relation after the run, the result deco
 answer word) / `tail_relist3` (three words, the decoder and validity read definitionally) for a tail
 call that re-lists the callee's results, `RefE.bind_core` (a kept-stack callee, then the rest), `RefE.bind_callE` (a knot callee read through
 its run `callE`, both outcomes, then the rest: the ok half from its `CoreSpec`, the error half from its
-claim under `G`, a `CoreSpecE` or a unified callee's `RefE.coreSpecE`). For arms that leave a
+claim under `G`, a `CoreSpecE` or a unified callee's `RefE.coreSpecE`), `RefE.bind_coreE` (a unified
+kept-stack callee's own `RefE` under its `G'`, the caller's model `K x` passing its errors on: in place
+of casing on the callee's value, `ErrClaim.bind_left`, taking the run and `RefE.bind_core`; the ok
+continuation gets the value's equation and the callee's `CoreRef`). For arms that leave a
 slice on the stack: `CoreAfterG`, `GrowRef`, `GrowPost` with `GrowPost.growRef`, `of_core`,
 `of_tail`, `GrowPost.restore` (the top put back, its bound not needed), `RefE.growRefW`,
 `RefE.bind_grow` / `bind_growK`.
@@ -3702,3 +3705,75 @@ separate error machinery is left (no `errors` model, error claim beside an ok re
   out, as they overlap): **3 782 s → 3 128 s (−17 %)**. Four landings were slower overall
   (§3.23 +11 %, §3.39 +6 %, §3.40 +5 %, §3.44 +95 %; §3.44's models were sped up again by
   §3.48a's `flat` recipe).
+
+### 3.58 Follow-ups: `RefE.bind_coreE`; the generated models in their own modules (lane `slowmods`)
+
+**Kit.** `RefE.bind_coreE` (`Arena/RefECore.lean`, §1.5): a unified kept-stack callee's own `RefE`
+(under its `G'`, `hG : G → G'`), the caller's model `K x` passing its errors on (`hK`, `fun _ => rfl`
+for a generated continuation); the ok continuation gets the value's equation and the callee's
+`CoreRef` (`.2.2.2` is the old `hP.valid`). It replaces, at 12 sites (`DefEqMidLazy` 3,
+`DefEqMidLazy2` 3, `DefEqStuckIrrel` 3, `DefEqStuckApp`, `DefEqStuckDisp`, `DefEqStuckTail`), the
+`have H := …_ref …; rcases h : xE … with e | ⟨r, m⟩; · rw [h] at H; exact fun hG =>
+ErrClaim.bind_left (H …); rw [h] at H; obtain ⟨y, a', hrun, hP⟩ := H; refine RefE.bind_core (w := id)
+(hP.coreRef hrun) …` block: sites +54 −90 lines, the lemma +22 (net −14). The modules' times are
+unchanged (within 0.1 s, table below). The other `RefE.bind_core` calls are callees read through
+`callW` (liftE) or a hand `*_core` lemma, not this shape.
+
+**Slow modules: the models moved out.** Where a generated (or hand, `RecGen28`) model sat in the
+module of its refinement, the model now has its own module (`…Models.lean`, or `DefEqModels` for
+`stuck_irrel`, `stuck_str`, `defeq_body`) that imports only the code, the generator and its callees'
+models; the refinement's module imports it. Statements, recipes and proofs are unchanged (the
+text moved; the `ixLen` word of `iota_rec_vck`'s model with it). Nothing changed in `L/ModelGen*`
+or `L/VcFlat`.
+
+Elaboration (`lean` wall seconds incl. imports, median of 3 interleaved runs per module, master
+3fe06c8c against the branch, `_tmp/slowmods/{base,base2,after}.json`):
+
+| module | master | branch |
+|---|---:|---:|
+| `Arena/DefEqStuckIrrel` | 1.21 | 0.85 |
+| `Arena/DefEqStuckStr` | 21.07 | 0.92 |
+| `Arena/DefEqBody` | 11.17 | 1.22 |
+| `Arena/DefEqModels` (new) | – | 30.49 |
+| `Arena/IndT/RecGen27` | 12.34 | 2.39 |
+| `Arena/IndT/RecGen27Models` (new) | – | 10.76 |
+| `Arena/IndT/RecGen28` | 10.82 | 2.86 |
+| `Arena/IndT/RecGen28Models` (new) | – | 8.46 |
+| `Arena/InferBodyBind` | 9.99 | 1.59 |
+| `Arena/InferBodyBindModels` (new) | – | 9.02 |
+| `Arena/InferBodyBindPi` | 19.37 | 1.33 |
+| `Arena/InferBodyBindPiModels` (new) | – | 18.12 |
+| `Arena/InferBodyDisp` | 10.79 | 1.28 |
+| `Arena/InferBodyDispModels` (new) | – | 10.51 |
+| `Arena/InferProj` | 5.95 | 1.67 |
+| `Arena/InferProjModels` (new) | – | 5.00 |
+| `Arena/InferProj2` | 11.78 | 1.25 |
+| `Arena/InferProj2Models` (new) | – | 11.91 |
+| `Arena/WhnfIotaRecRefine` | 12.25 | 8.40 |
+| `Arena/WhnfIotaRecRefineModels` (new) | – | 4.49 |
+| `Arena/InferBodySpineF` | 6.92 | 1.12 |
+| `Arena/InferBodySpineFModels` (new) | – | 6.64 |
+| `Arena/DefEqMidLazy`, `MidLazy2`, `StuckApp`, `StuckDisp`, `StuckTail` (kit sites) | 18.79 | 18.48 |
+| **sum** | **152.45** | **158.77** |
+
+The sum grows by the new modules' imports (about 0.6 s each): the same work in more modules. Not
+moved (master's time): `Verdict/WhnfModels7E` 28.1 (models only already), `Arena/IndRealSctC` 12.4,
+`IndT/Sum4` 9.6, `Front/LineRef` 9.5, `WhnfIotaRecRefine2` 5.1, `WhnfIotaRefine5` 4.5, `KnotSlot`
+3.9, `InferLeaves` 3.3: their models take callees' hand specs from modules as deep as the refinement's
+own imports (`tblE`: `spbW_spec`, `sctW_spec`; `ctlE`/`ctorE`: `checkConstantVal_specE`,
+`fsortsE_spec`), or the module is shallow (`KnotSlot`), so a split gains nothing on the path.
+`flat`, `cut` and recipe hints were not re-tried: §3.53's sweep A/B'd `flat` on every model and the
+§3.33–§3.55 landings their recipes; the reports' slow modules there are already at their best recipe.
+
+**Critical path** (estimated: `_tmp/restructure/bin/cp.py`, unlimited cores, module times from the
+last cold build `_tmp/localsnf/cold-base.log` overlaid with every queue build since and this
+branch's builds; `_tmp/slowmods/merged{,3}.log`): **368 s → 348 s**. It ran through the `defeq`
+chain `DefEqStuckIrrel → Str → App → Disp → Tail → DefEqBody` with `DefEqStuckStr` (22 s) and
+`DefEqBody` (11 s) on it; `DefEqModels` builds beside it (it needs `WhnfModels7E`, done at 140 s
+against the chain's 227 s). Now it runs through `DefEqMid* → DefEqMidLazy → MidLazy2 → DefEqBody`
+(no single module over 7 s), with `IndT/RecGen27` (344 s) and `InferProj2` (339 s) next; a further
+step would move the `DefEqMid*` family's models (each module's specs name the previous module's
+models, so the whole family at once) and is bounded by those two paths. Rebuild after a proof-only
+edit (`cp.py --touch`, the same times): `InferBodyBind` 162 → 111 s, `DefEqStuckStr` 141 → 110 s,
+`IndT/RecGen27` 66 → 56 s, `WhnfIotaRecRefine` 119 → 114 s; an edit of a refinement no longer
+re-elaborates its model at all.

@@ -366,14 +366,11 @@ theorem sm_ref (p : Prog) (hp : LazyProg p) (hc : LazyCallees p) (n : Nat)
       simp only [Bool.and_eq_true, decide_eq_true_eq, hcnd.1, hcnd.2.1, hcnd.2.2.1, true_and,
         decBool_t hcnd.2.2.2]
     simp only [hsch, ↓reduceIte]
-    have H := sp_ref p hp.spine k (hk.mono (by omega)) F (by omega) (by omega) ⟨m₁, Locals.init []⟩ _
-      dn vis fe M₁ eb mode d a b ⟨hS₁, hs.mode4, hs.eb_mode⟩ hwa hwb
-    rcases h2 : spE p (k + 1) m₁ mode vis d a b with e | ⟨r₂, m₂⟩
-    · rw [h2] at H; exact fun hG => ErrClaim.bind_left (H (hG.knot.mono (by omega)))
-    rw [h2] at H
-    obtain ⟨y, a', hrun, hP⟩ := H
+    refine RefE.bind_coreE (w := id) (fun _ => rfl) (fun hG => hG.knot.mono (by omega))
+      (sp_ref p hp.spine k (hk.mono (by omega)) F (by omega) (by omega) ⟨m₁, Locals.init []⟩ _
+        dn vis fe M₁ eb mode d a b ⟨hS₁, hs.mode4, hs.eb_mode⟩ hwa hwb)
+      (fun r₂ m₂ _ _ M₂ hS₂ _ => ?_)
     simp only [smE.k_defeq_spine]
-    refine RefE.bind_core (w := id) (hP.coreRef hrun) (fun M₂ hS₂ _ => ?_)
     by_cases h2 : r₂.headD 0 ≠ 0
     · rw [smE.j1, ite_eq_left h2, decBool_t h2]
       exact RefE.ret rfl (CorePost.ret hS₂ rfl ⟨hw1, hw0, hw0⟩)
@@ -553,18 +550,15 @@ theorem lds_ref (p : Prog) (hp : LazyProg p) (hc : LazyCallees p) (n : Nat)
   by_cases hb0 : rb.headD 0 = 0
   · have ha0 : ra.headD 0 ≠ 0 := fun h => h00 ⟨h, hb0⟩
     rw [ite_eq_left hb0, decBool_t ha0, decBool_f hb0]
-    have H := tupa_ref p hp.mid k (hk.mono (by omega)) F _ _ dn vis fe M₂ eb mode d b (by omega)
-      (by omega) hs₂ hb
-    rcases h3 : tupaE p (k + 1) m₂ mode vis d b with e | ⟨rt, m₃⟩
-    · rw [h3] at H; exact fun hG => ErrClaim.bind_left (H (hG.knot.mono (by omega)))
-    rw [h3] at H
-    obtain ⟨y, a', hrun, hP⟩ := H
+    refine RefE.bind_coreE (w := id) (fun _ => rfl) (fun hG => hG.knot.mono (by omega))
+      (tupa_ref p hp.mid k (hk.mono (by omega)) F _ _ dn vis fe M₂ eb mode d b (by omega)
+        (by omega) hs₂ hb)
+      (fun rt m₃ _ hP M₃ hS₃ _ => ?_)
     simp only [ldsE.k_try_unfold_proj_app]
-    refine RefE.bind_core (w := id) (hP.coreRef hrun) (fun M₃ hS₃ _ => ?_)
     by_cases ht : rt.headD 0 ≠ 0
     · rw [ite_eq_left ht, decOptR_some ht]
       exact dq_tail hp hc (fun _ => rfl) (fun _ => rfl) (k + 1) hk F hF hn ⟨m₃, Locals.init []⟩ _ dn
-        vis fe M₃ eb mode d a _ ⟨hS₃, hs.mode4, hs.eb_mode⟩ ha hP.valid.2 hd
+        vis fe M₃ eb mode d a _ ⟨hS₃, hs.mode4, hs.eb_mode⟩ ha hP.2.2.2.2 hd
     rw [ite_eq_right ht, decOptR_none (by simpa using ht)]
     exact RefE.tail_relist3 (fun _ => rfl) (fun _ => rfl) (fun hG => hG.mono (by omega))
       (ll_ref p hp hc k (hk.mono (by omega)) F (by omega) (by omega) ⟨m₃, Locals.init []⟩ _ dn vis fe
@@ -572,18 +566,15 @@ theorem lds_ref (p : Prog) (hp : LazyProg p) (hc : LazyCallees p) (n : Nat)
   rw [ite_eq_right hb0]
   by_cases ha0 : ra.headD 0 = 0
   · rw [ite_eq_left ha0, decBool_f ha0, decBool_t hb0]
-    have H := tupa_ref p hp.mid k (hk.mono (by omega)) F _ _ dn vis fe M₂ eb mode d a (by omega)
-      (by omega) hs₂ ha
-    rcases h3 : tupaE p (k + 1) m₂ mode vis d a with e | ⟨rt, m₃⟩
-    · rw [h3] at H; exact fun hG => ErrClaim.bind_left (H (hG.knot.mono (by omega)))
-    rw [h3] at H
-    obtain ⟨y, a', hrun, hP⟩ := H
+    refine RefE.bind_coreE (w := id) (fun _ => rfl) (fun hG => hG.knot.mono (by omega))
+      (tupa_ref p hp.mid k (hk.mono (by omega)) F _ _ dn vis fe M₂ eb mode d a (by omega)
+        (by omega) hs₂ ha)
+      (fun rt m₃ _ hP M₃ hS₃ _ => ?_)
     simp only [ldsE.k_try_unfold_proj_app_2]
-    refine RefE.bind_core (w := id) (hP.coreRef hrun) (fun M₃ hS₃ _ => ?_)
     by_cases ht : rt.headD 0 ≠ 0
     · rw [ite_eq_left ht, decOptR_some ht]
       exact dq_tail hp hc (fun _ => rfl) (fun _ => rfl) (k + 1) hk F hF hn ⟨m₃, Locals.init []⟩ _ dn
-        vis fe M₃ eb mode d _ b ⟨hS₃, hs.mode4, hs.eb_mode⟩ hP.valid.2 hb hd
+        vis fe M₃ eb mode d _ b ⟨hS₃, hs.mode4, hs.eb_mode⟩ hP.2.2.2.2 hb hd
     rw [ite_eq_right ht, decOptR_none (by simpa using ht)]
     exact RefE.tail_relist3 (fun _ => rfl) (fun _ => rfl) (fun hG => hG.mono (by omega))
       (lr_ref p hp hc k (hk.mono (by omega)) F (by omega) (by omega) ⟨m₃, Locals.init []⟩ _ dn vis fe

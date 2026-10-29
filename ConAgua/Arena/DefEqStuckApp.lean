@@ -231,14 +231,11 @@ theorem sa_ref (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : StuckCalle
   | zero => exact RefE.of_cls0 (e := .outOfFuel) rfl
   | succ k =>
   simp only [saE]
-  have H := ac_ref p hq hc k (hk.mono (by omega)) F s₀ a₀ dn vis fe M eb mode d a b (by omega)
-    (by omega) hs ha hb
-  rcases h1 : acE p (k + 1) s₀.mem mode vis d a b with e | ⟨r₁, m₁⟩
-  · rw [h1] at H; exact fun hG => ErrClaim.bind_left (H (hG.mono (by omega)))
-  rw [h1] at H
-  obtain ⟨y, a', hrun, hP⟩ := H
+  refine RefE.bind_coreE (w := id) (fun _ => rfl) (fun hG => hG.mono (by omega))
+    (ac_ref p hq hc k (hk.mono (by omega)) F s₀ a₀ dn vis fe M eb mode d a b (by omega)
+      (by omega) hs ha hb)
+    (fun r₁ m₁ _ _ M₁ hS₁ _ => ?_)
   simp only [saE.k_stuck_app_cong]
-  refine RefE.bind_core (w := id) (hP.coreRef hrun) (fun M₁ hS₁ _ => ?_)
   by_cases h0 : r₁.headD 0 ≠ 0
   · rw [ite_eq_left h0, decBool_true_of h0]; exact RefE.ret rfl (CorePost.ret hS₁ rfl hw1)
   rw [ite_eq_right h0, decBool_false_of (by simpa using h0)]

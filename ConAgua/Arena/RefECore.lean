@@ -174,6 +174,28 @@ theorem RefE.bind_callE {α β γ : Type} [Inhabited γ] {G : Prop} {p : Prog} {
   have h1 := CoreSpec.of_callW hok (callW_of_callE c)
   exact RefE.bind_right (by rw [AM.run_of_ok _ _ h1.1, h1.2.2.1]) (h r m' c h1)
 
+/-- **A unified core callee, then the rest**, both outcomes: the callee's model value `x` against
+its twin `T₁` (`h₁`, under its own `G'`), the caller's model `K x` passing the callee's errors on
+(`hK`). The ok half as `RefE.bind_core`'s, with the callee's `CoreRef` and its value's equation. -/
+theorem RefE.bind_coreE {α β γ : Type} [Inhabited γ] {G G' : Prop}
+    {x : Except Err (List Word × Mem)} {K : Except Err (List Word × Mem) → Except Err α}
+    (hK : ∀ e, K (.error e) = .error e) {T₁ : AM γ} {f : γ → AM β} {a₀ : AState}
+    {dec₁ : List Word → γ} {dec : List Word → β} {dn : NIdx → Option ConLeche.Name} {m₀ : Mem}
+    {vis : Word} {fe : IFEnv} {M : ModeMaps} {eb : Word} {ok₁ ok : List Word → Prop}
+    {w : α → List Word × Mem} (hG : G → G')
+    (h₁ : RefE G' x T₁ a₀ (CorePost dec₁ dn m₀ vis fe M eb ok₁))
+    (h₂ : ∀ r₁ m₁, x = .ok (r₁, m₁) → CoreRef T₁ a₀ dec₁ dn m₀ vis fe M eb r₁ m₁ ok₁ →
+      ∀ M', CoreS dn m₁ (AM.st T₁ a₀) vis fe M' eb → StackKept m₀ m₁ →
+      RefE G (K (.ok (r₁, m₁))) (f (dec₁ r₁)) (AM.st T₁ a₀)
+        (fun v y a' => CorePost dec dn m₁ vis fe M' eb ok (w v) y a')) :
+    RefE G (K x) (T₁ >>= f) a₀ (fun v y a' => CorePost dec dn m₀ vis fe M eb ok (w v) y a') := by
+  rcases hx : x with e | ⟨r₁, m₁⟩
+  · rw [hK]; rw [hx] at h₁; exact RefE.bind_left fun hg => h₁ (hG hg)
+  rw [hx] at h₁
+  obtain ⟨y, a', hrun, hP⟩ := h₁
+  have hc := hP.coreRef hrun
+  exact RefE.bind_core hc (h₂ r₁ m₁ hx hc)
+
 /-! ## Runs that leave their pushed slice on the stack -/
 
 /-- **After a core run that left a slice on the stack**: as `CoreAfter`, the stack below the old top

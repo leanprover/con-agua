@@ -4,6 +4,7 @@ import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
 import ConAgua.Arena.WhnfCoreApp
 import ConAgua.Arena.WhnfCoreRefine
+import ConAgua.Arena.InferBodySpineFModels
 
 /-!
 # The full-grade application spine (lane `defeq`)
@@ -37,10 +38,6 @@ def inferSpineArgT (r : CoreFnsA) (depth : Nat) (a dom : EIdx) : AM Unit := do
   if !(← defeqArg r depth a ta dom) then
     fail (.invalid "application type mismatch")
   else pure ()
-
-/-- **`infer_spine_arg`'s unified model**: the `infer` slot and `defeq_arg` through their runs. -/
-l_model isaE_spec (p : Prog) (hf : p.lookup "infer_spine_arg" = some inferSpineArgL)
-  fns [hf ↦ isaE list] grind [arena_grind] simp [] unified
 
 /-- `defeq_arg` at every L fuel up to `n + 1`. -/
 theorem defeqArg_any (p : Prog) (hp : InferLeafProg p) (hkp : KnotProg p) (he : IsEagerReduceH p) :
@@ -146,16 +143,6 @@ theorem spineArg_bind {β : Type} (r : CoreFnsA) (depth : Nat) (a dom : EIdx) (K
   simp only [inferSpineArgT, bind_assoc]
   congr; funext ta; congr; funext b
   cases b <;> simp [fail_bindAM]
-
-/-- `infer_spine`'s unified model: the `whnf` slot and `infer_spine_arg` through their runs,
-`inst_list` lifted. -/
-l_model ispE_spec (p : Prog) (hf : p.lookup "infer_spine" = some inferSpineL)
-  fns [hf ↦ ispE list]
-  specs [callW_spec p n "inst_list"]
-  grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
-  finish [tierW, idxW] heartbeats 400000 unified
-  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 /-- **The full spine's loop refines `inferSpine`, both outcomes**, by induction on the loop fuel:
 a step's argument check (`infer_spine_arg`'s errors), its `whnf` (the slot's) or its non-`∀` type
@@ -416,16 +403,6 @@ theorem inferSpine_anyE (p : Prog) (hp : InferLeafProg p) (hkp : KnotProg p) (hq
           mode d ty ao an args hs ht har hlo)
 
 /-! ## `infer_app` -/
-
-/-- `infer_app`'s unified model: the `infer` slot and `infer_spine` through their runs,
-`head_and_args` lifted. -/
-l_model aE_spec (p : Prog) (hf : p.lookup "infer_app" = some inferAppL)
-  fns [hf ↦ aE list]
-  specs [callW_spec p n "head_and_args"]
-  grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
-  heartbeats 400000 simp [tierW, idxW] unified
-  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 /-- `inferBody`'s `.app` arm is `inferApp`. -/
 @[refines_part ConRon.Arena.inferBody "app"]

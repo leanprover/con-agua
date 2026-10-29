@@ -105,14 +105,11 @@ theorem dt_ref (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : StuckCalle
       (ds_ref p hq hi hc k (hk.mono (by omega)) F ⟨m, Locals.init []⟩ st dn vis fe M' eb mode d a1 b1
         (by omega) (by omega) ⟨hS', hs.mode4, hs.eb_mode⟩ ha hb)
   simp only [dtE]
-  have H := pp_ref p hq hc k (hk.mono (by omega)) F s₀ a₀ dn vis fe M eb mode d a1 b1 (by omega)
-    (by omega) hs ha hb hd
-  rcases h1 : ppE p (k + 1) s₀.mem mode vis d a1 b1 with e | ⟨r₁, m₁⟩
-  · rw [h1] at H; exact fun hG => ErrClaim.bind_left (H (hG.toLdprG.mono (by omega)))
-  rw [h1] at H
-  obtain ⟨y, a', hrun, hP⟩ := H
+  refine RefE.bind_coreE (w := id) (fun _ => rfl) (fun hG => hG.toLdprG.mono (by omega))
+    (pp_ref p hq hc k (hk.mono (by omega)) F s₀ a₀ dn vis fe M eb mode d a1 b1 (by omega)
+      (by omega) hs ha hb hd)
+    (fun r₁ m₁ _ _ M₁ hS₁ _ => ?_)
   simp only [dtE.k_defeq_proj_pair]
-  refine RefE.bind_core (w := id) (hP.coreRef hrun) (fun M₁ hS₁ _ => ?_)
   by_cases h0 : r₁.headD 0 ≠ 0
   · rw [ite_eq_left h0, decBool_true_of h0]; exact RefE.ret rfl (CorePost.ret hS₁ rfl hw1)
   rw [ite_eq_right h0, decBool_false_of (by simpa using h0)]

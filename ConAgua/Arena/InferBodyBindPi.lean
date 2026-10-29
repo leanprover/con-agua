@@ -1,5 +1,6 @@
 import ConAgua.Arena.InferBodyBind
 import ConAgua.Arena.IndSumSpec.DecCVpGrow
+import ConAgua.Arena.InferBodyBindPiModels
 
 /-!
 # The ∀ telescope: `infer_pis_leaf`, `infer_pis`, `infer_forall` (lane `defeq`)
@@ -15,16 +16,6 @@ open scoped Lean.Order
 set_option experimental.vcgen true
 
 namespace L.Arena
-
-/-- `infer_pis_leaf`'s unified model: the `infer` slot and `ensure_sort` through their runs, the
-opening, the outward fold and the sort (`inst_list`, `intern_imax`, `intern_sort`) lifted. -/
-l_model iplE_spec (p : Prog) (hf : p.lookup "infer_pis_leaf" = some inferPisLeafL)
-  fns [hf ↦ iplE list]
-  specs [callW_spec p n "inst_list", callW_spec p n "intern_imax", callW_spec p n "intern_sort"]
-  grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
-  finish [tierW, idxW] heartbeats 400000 unified
-  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 /-! ## `infer_pis_leaf` refines `inferPisLeaf` -/
 
@@ -205,15 +196,6 @@ theorem inferPisLeaf_refines (p : Prog) (hp : InferLeafProg p) (hq : BindProg p)
   RefE.coreSpec (iplE_spec p hq.pisLeaf (n + 1) s₀ mode vis d t k fo lo)
     (ipl_ref p hp hb hil hcap n hk F hF hn s₀ a₀ dn vis fe M eb mode d t k fo lo fvs ws hs ht hf hftop
       hB hbtop hws hwl hdk)
-
-/-- `infer_pis`' unified model: the slots and the leaf through their runs, the opening and the
-binder's free variable (`inst_list`, `intern_fvar`) lifted. -/
-l_model ipsE_spec (p : Prog) (hf : p.lookup "infer_pis" = some inferPisL)
-  fns [hf ↦ ipsE list]
-  specs [callW_spec p n "inst_list", callW_spec p n "intern_fvar"]
-  grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] unified
-  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem] flat
 
 /-- `infer_pis_leaf` at every L fuel up to `n + 1`. -/
 theorem inferPisLeaf_any (p : Prog) (hp : InferLeafProg p) (hq : BindProg p) (hb : InferBodyProg p)
@@ -532,15 +514,6 @@ theorem inferPis_anyE (p : Prog) (hp : InferLeafProg p) (hq : BindProg p) (hb : 
           M eb mode d peel t k fo lo fvs ws m₀ hs ht hf htop hB hbt hws hwl hdk hb0 hsz hbb0 hbsz0 hpg0)
 
 /-! ## `infer_forall` -/
-
-/-- `infer_forall`'s unified model: the slots and `infer_pis` through their runs, the binder's free
-variable lifted. -/
-l_model ifrE_spec (p : Prog) (hf : p.lookup "infer_forall" = some inferForallL)
-  fns [hf ↦ ifrE list]
-  specs [callW_spec p n "intern_fvar"]
-  grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] unified
-  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem] flat
 
 /-- **`infer_forall` refines `inferForall`, both outcomes**, at the knot (the `.forallE` clause of
 `inferBody`): the domain's type and its `whnf` (the slots' errors), a domain type that is no sort (a

@@ -5,12 +5,12 @@ import ConAgua.Arena.RecCheckSpec.TargetMajorAt
 import ConAgua.Arena.RecGenSpec.DecTMSlices
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
-import ConAgua.L.ModelGen
+import ConAgua.Arena.IndT.RecGen27Models
 
 /-!
 # `class_ctor_of`, `class_ctors_of`, `classes_ctors`: one model, one refinement each
 
-The unified models (`cxoE`, `cosE`, `ccsE`) and their refinements for both outcomes (`cxo_ref`,
+The unified models (`cxoE`, `cosE`, `ccsE`, in `RecGen27Models.lean`) and their refinements for both outcomes (`cxo_ref`,
 `cos_ref`, `ccs_ref`; the loops `cosLoop_ref`, `ccsLoop_ref`), under `StageC` and the inputs' denotations con-ron's `classCtorOf_spec` asks; its twin side
 transcribed from that spec's proof: `targetMajorAt` (`targetMajorAt_spec`), the entries' filter and
 the minor slot (state kept), `openPisAtFvarsF` (`openPisAtFvarsF_run`), `classFieldsOf`
@@ -66,20 +66,6 @@ theorem cnfF_afr {n : Nat} {m m' : Mem} {nfo nfl nm : Word} {r : List Word}
   rw [cnfK2_some] at h
   simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨-, rfl⟩ := h
   exact (allocW_afr hal).trans (cnfW_afr _ _ _ _ _ _ _ _ _ _ hl)
-
-set_option experimental.vcgen true in
-/-- **`class_ctor_of`'s unified model**: the callees outside the verdict closure lifted,
-`class_minor_slot` by its unified model, `class_fields_of` and `class_fields_agree` through their
-runs (the ok half reads the calls' array sizes, `callW_keepW`). -/
-l_model cxoE_spec (p : Prog) (P : CxoProg p)
-  fns [P.cxo ↦ cxoE]
-  specs [callW_spec p n "target_major_at", callW_spec p n "class_ctor_of_nfs",
-    classMinorSlotE_spec p P.cms n, callW_spec p n "open_pis_at_fvars_f", callW_spec p n "target_ctor_at",
-    callW_spec p n "inst_pis_with", callW_spec p n "rec6"]
-  grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
-  heartbeats 4000000 simp [Cmp.evalW, Cmp.eval] unified
-  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 /-- What `class_ctor_of` gives besides the constructor record `x` it returns (from `m`). -/
 structure CxoPost (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (env : ConLeche.Env)
@@ -466,16 +452,6 @@ theorem classCtorOf_refinesC {p : Prog} (hq : KnotStageProg p) {env : ConLeche.E
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ run
   exact ⟨hl, hok, by rw [hst]; exact hR'.stage, hR'.grow, by rw [hres]; exact hR'.cc, hR'.rc, hR'.abs⟩
 
-set_option experimental.vcgen true in
-/-- **`class_ctors_of`' unified model**: `iw_alloc` lifted, `class_ctor_of` through its run (the
-loop's ok half reads the call's array sizes, `callW_keepW`). -/
-l_model cosE_spec (p : Prog) (P : CosProg p)
-  fns [P.cos ↦ cosE] specs [callW_spec p n "iw_alloc"]
-  grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
-  heartbeats 4000000 simp [Cmp.evalW, Cmp.eval] unified
-  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
-
 section cos
 variable {p : Prog} (hkp : KnotStageProg p) {env : ConLeche.Env} (henv : ConLeche.EnvWF env)
   (P : CosProg p) (hIlpf : IlpfF p) (hOpf : OpfF p) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv)
@@ -707,16 +683,6 @@ theorem classCtorsOf_refinesC {p : Prog} (hkp : KnotStageProg p) {env : ConLeche
   rintro r s' ⟨hl, x, a', run, hR'⟩
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ run
   exact ⟨hl, hok, by rw [hst]; exact hR'.stage, hR'.grow, by rw [hres]; exact hR'.slots, hR'.rc, hR'.abs⟩
-
-set_option experimental.vcgen true in
-/-- **`classes_ctors`' unified model**: `iw_alloc` and `rec2` lifted, `class_ctors_of` through its
-run (`callW_keepW`). -/
-l_model ccsE_spec (p : Prog) (P : CcsProg p)
-  fns [P.ccs ↦ ccsE] specs [callW_spec p n "iw_alloc", callW_spec p n "rec2"]
-  grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
-  heartbeats 4000000 simp [Cmp.evalW, Cmp.eval] unified
-  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 section ccs
 variable {p : Prog} (hkp : KnotStageProg p) {env : ConLeche.Env} (henv : ConLeche.EnvWF env)

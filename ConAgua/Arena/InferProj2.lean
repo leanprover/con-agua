@@ -4,6 +4,7 @@ import ConAgua.Arena.ProjView
 import ConAgua.Arena.WhnfCoreProj
 import ConAgua.Arena.DefEqStuckCert
 import ConAgua.Arena.WhnfProjRefine
+import ConAgua.Arena.InferProj2Models
 
 /-!
 # `inferProj`: `infer_proj` (lane `defeq2`, helper `defeq2-proj`)
@@ -32,18 +33,6 @@ set_option experimental.vcgen true
 namespace L.Arena
 
 /-! ## The model of `infer_proj` -/
-
-/-- **`infer_proj`'s unified model**: the knot's slots (`infer`, `infer_io`, `whnf`) through their
-runs, `infer_proj_at` by its unified model, the other callees (outside the verdict closure)
-lifted. -/
-l_model ipE_spec (p : Prog) (hf : p.lookup "infer_proj" = some inferProjL)
-    (hipa : p.lookup "infer_proj_at" = some inferProjAtL)
-  fns [hf ↦ ipE list]
-  specs [callE_spec p n "infer", callE_spec p n "infer_io", callE_spec p n "whnf", callW_spec p n "get_app_fn", callW_spec p n "find_proj", callW_spec p n "find_table",
-    callW_spec p n "get_app_args", callW_spec p n "env_find", ipaE_spec p hipa n]
-  grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] heartbeats 2000000 unified
-  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem] cut 1 flat
 
 /-! ## `infer_proj` refines `inferProj`, both outcomes -/
 

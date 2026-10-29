@@ -1,5 +1,6 @@
 import ConAgua.Arena.InferBodyBindPi
 import ConAgua.Arena.InferBodySpineF
+import ConAgua.Arena.InferBodyDispModels
 
 /-!
 # The bodies' dispatchers: `infer_body`, `infer_body_io` (lane `defeq`)
@@ -333,25 +334,6 @@ def InferProjOKE (p : Prog) : Prop :=
 /-- **What the bodies' errors assume**: `InferG` and `infer_proj`'s claim. -/
 structure InferBodyG (p : Prog) (n : Nat) : Prop extends InferG p n where
   proj : InferProjOKE p
-
-/-- `infer_body`'s unified model: `e_view` and the interning lifted, each arm through its run. -/
-l_model ibE_spec (p : Prog) (hf : p.lookup "infer_body" = some inferBodyL)
-  fns [hf ↦ ibE list]
-  specs [callW_spec p n "e_view", callW_spec p n "intern_succ", callW_spec p n "intern_sort"]
-  grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
-  heartbeats 400000 simp [tierW, idxW] unified
-  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
-
-/-- `infer_body_io`'s unified model. -/
-l_model iboE_spec (p : Prog) (hf : p.lookup "infer_body_io" = some inferBodyIOL)
-  fns [hf ↦ iboE list]
-  specs [callW_spec p n "e_view", callW_spec p n "intern_succ", callW_spec p n "intern_sort",
-    callW_spec p n "inst1"]
-  grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
-  heartbeats 400000 simp [tierW, idxW] unified
-  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 /-- **An arm of a body**: its callee, read through its run (`k` the model's continuation, which
 re-lists the result word), is the body's result; the callee's halves at every fuel `k + 1`. -/

@@ -268,16 +268,13 @@ theorem it_ref (p : Prog) (hp : LazyProg p) (hc : LazyCallees p) (n : Nat)
     cases n with
     | zero => exact RefE.of_cls0 (e := .outOfFuel) rfl
     | succ k =>
-    have H := lds_ref p hp hc k (hk.mono (by omega)) F (by omega) (by omega) ⟨m₃, Locals.init []⟩ a₃
-      dn vis fe M₃ eb mode d a b ⟨hS₃, hs.mode4, hs.eb_mode⟩ ha hb hd
     simp only [itE.j1]
-    rcases h4 : ldsE p (k + 1) m₃ mode vis d a b with e | ⟨rs, m₄⟩
-    · rw [h4] at H; exact fun hG => ErrClaim.bind_left (H (hG.toKnotNvG.mono (by omega)))
-    rw [h4] at H
-    obtain ⟨y, a', hrun, hP⟩ := H
+    refine RefE.bind_coreE (w := id) (fun _ => rfl) (fun hG => hG.toKnotNvG.mono (by omega))
+      (lds_ref p hp hc k (hk.mono (by omega)) F (by omega) (by omega) ⟨m₃, Locals.init []⟩ a₃
+        dn vis fe M₃ eb mode d a b ⟨hS₃, hs.mode4, hs.eb_mode⟩ ha hb hd)
+      (fun rs m₄ _ hP M₄ hS₄ _ => ?_)
     simp only [itE.k_lazy_delta_step]
-    refine RefE.bind_core (w := id) (hP.coreRef hrun) (fun M₄ hS₄ _ => ?_)
-    obtain ⟨-, hx, hy⟩ := hP.valid
+    obtain ⟨-, hx, hy⟩ := hP.2.2.2
     by_cases k0 : rs.headD 0 = 0
     · rw [ite_eq_left k0, show decDS rs = .cont (decE (rs.tail.headD 0)) (decE (rs.tail.tail.headD 0))
         by simp only [decDS, k0, ↓reduceIte]]
@@ -299,14 +296,11 @@ theorem it_ref (p : Prog) (hp : LazyProg p) (hc : LazyCallees p) (n : Nat)
   | zero => exact RefE.of_cls0 (e := .outOfFuel) rfl
   | succ k =>
   simp only [itE]
-  have H := off_ref p hp.mid hc.natPred k (hk.mono (by omega)) F s₀ a₀ dn vis fe M eb mode d a b
-    (by omega) (by omega) hs ha hb
-  rcases h1 : offE p (k + 1) s₀.mem mode vis d a b with e | ⟨ro, m₁⟩
-  · rw [h1] at H; exact fun hG => ErrClaim.bind_left (H (hG.knot.mono (by omega)))
-  rw [h1] at H
-  obtain ⟨y, a', hrun, hP⟩ := H
+  refine RefE.bind_coreE (w := id) (fun _ => rfl) (fun hG => hG.knot.mono (by omega))
+    (off_ref p hp.mid hc.natPred k (hk.mono (by omega)) F s₀ a₀ dn vis fe M eb mode d a b
+      (by omega) (by omega) hs ha hb)
+    (fun ro m₁ _ _ M₁ hS₁ _ => ?_)
   simp only [itE.k_defeq_offset]
-  refine RefE.bind_core (w := id) (hP.coreRef hrun) (fun M₁ hS₁ _ => ?_)
   by_cases h0 : ro.headD 0 ≠ 0
   · rw [ite_eq_left h0, show decOB ro = some (ro.tail.headD 0 != 0) by
       simp only [decOB, h0, ↓reduceIte]]
@@ -327,18 +321,15 @@ theorem it_ref (p : Prog) (hp : LazyProg p) (hc : LazyCallees p) (n : Nat)
   by_cases hf : rf.headD 0 ≠ 0
   · rw [ite_eq_left hf, decBool_t hf]
     simp only [↓reduceIte]
-    have H := ln_ref p hc k (hk.mono (by omega)) F (by omega) (by omega) ⟨m₂, Locals.init []⟩ _ dn vis
-      fe M₂ eb mode d a b ⟨hS₂, hs.mode4, hs.eb_mode⟩ ha hb
-    rcases h3 : lnE p (k + 1) m₂ mode vis d a b with e | ⟨rn, m₃⟩
-    · rw [h3] at H
-      exact fun hG => ErrClaim.bind_left (H ⟨hG.knot.mono (by omega), hG.reduceNat⟩)
-    rw [h3] at H
-    obtain ⟨y, a', hrun, hP⟩ := H
+    refine RefE.bind_coreE (w := id) (fun _ => rfl)
+      (fun hG => ⟨hG.knot.mono (by omega), hG.reduceNat⟩)
+      (ln_ref p hc k (hk.mono (by omega)) F (by omega) (by omega) ⟨m₂, Locals.init []⟩ _ dn vis
+        fe M₂ eb mode d a b ⟨hS₂, hs.mode4, hs.eb_mode⟩ ha hb)
+      (fun rn m₃ _ hP M₃ hS₃ _ => ?_)
     simp only [itE.k_lazy_nat]
-    refine RefE.bind_core (w := id) (hP.coreRef hrun) (fun M₃ hS₃ _ => ?_)
     by_cases h3 : rn.headD 0 ≠ 3
     · rw [ite_eq_left h3, show decNat rn = some (rn.headD 0 != 0) by simp only [decNat, h3, ↓reduceIte]]
-      rcases hP.valid with e0 | e1 | e3
+      rcases hP.2.2.2 with e0 | e1 | e3
       · rw [e0]; exact RefE.ret rfl (CorePost.ret hS₃ rfl ⟨hw0, hw0, hw0⟩)
       · rw [e1]; exact RefE.ret rfl (CorePost.ret hS₃ rfl ⟨hw1, hw0, hw0⟩)
       · exact absurd e3 h3
