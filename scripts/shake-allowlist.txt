@@ -161,3 +161,4 @@ ConAgua/Arena/InferLeaves.lean	public import ConAgua.Checker.NoVerdictTree	# the
 ConAgua/Arena/InferLeaves.lean	public import ConAgua.Arena.KnotE	# needed: the build fails without it (`KnotUpToE`, `InferSlotE` in es_ref, itc_ref, InferG); the tool names it unused
 ConAgua/Arena/InstLPEntry.lean	public import ConAgua.Arena.RecFireCore	# needed: the build fails without it (`CoreS.readCaches`, `hslice?_bound_fsz`; `CoreS.ctl136` through it); the tool names it unused
 ConAgua/Arena/WhnfM2CRefine3.lean	public import ConAgua.Arena.RecFireCore	# needed: the build fails without it (`CoreS.ctl136`, now in InferBodySpine, reached through it); the tool names it unused
+ConAgua/Arena/InferBodySpine.lean	public import ConAgua.Arena.InferBodyLet	# downstream modules reach InferBodyLet (and `ld64_rdW_spec`) through it (PropReadW fails without it); the spines themselves no longer use it
