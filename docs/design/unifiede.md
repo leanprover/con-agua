@@ -3569,3 +3569,45 @@ Recipes tried on `icfE_spec` (module 7.1 s with `simp []`): `flat` 7.4 s, the de
 8.3 s; on `irCmpE` `flat` 14.7 s against 13.0 s; on `ioE` `flat` 8.1 s against 8.4 s (kept). No
 generator or kit change was needed. Kit wish: `GrowPost.of_tail` for any decoder (it is stated at
 `decH`; the certs family's tail calls inline it at `decBool`).
+
+### 3.54 Retirement, group D: `iota_rec_vck`, `iota_rec_fire2` (lane `gen-cut`, third landing)
+
+§3.52's first bullet: the two hand `Except` models of `Verdict/WhnfModels4E` (`l_model … errors`
+failed on the index words' arithmetic), now one generated `unified` model and one refinement each.
+
+* **The generator** (§3.48a, §3.53): `vckE` generates with `simp [ixLen]` (`flat` also works since
+  `flat` passes the folded `ixLen` to `grind`, with `instances 5000`: the result lists' injectivity
+  fills the default 1000; `simp [ixLen]` is faster, 17.3 s against 21.1 s for the module); `fire2E`
+  with `flat` (`simp [rpLen, Cmp.evalW]` 7.6 s, `locals` 7.2 s, `flat` 7.1 s).
+* **`iota_rec_vck`** (`vckE`, `vck_ref`, `Arena/WhnfIotaRecRefine`): `iota_rec_cmp`, `iota_certs_full`,
+  `iota_index_ok` through their runs (`callE`), both halves from `irCmp_ref`, `icfTop_ref`,
+  `io_ref` over their specs (`RefE.coreSpec`, `RefE.run_err`); `lvls_eq_c` and `const_ty_at`
+  lifted. The level comparison out of fuel declines (`vckT_fail_lvl`, `ErrClaim.fail`).
+* **`iota_rec_fire2`** (`fire2E`, `fire2_ref`, `Arena/WhnfIotaRecRefine2`): `iota_rec_fam` through its
+  run (`fam_ref`), `rule_rhs_at`, `mk_app_n`, `mk_app_n_from` lifted.
+* **`G`**: `FamG p n` (`knot : KnotUpToE p n`, `nv : closedNV p nvFns = true`; the callees' specs'
+  error posts assume `nv`) for `iota_rec_vck`, `iota_rec_fam`, `iota_rec_fire2` and `iota_rec_fire`;
+  it moved to `WhnfIotaRecRefine` and lost its field `vck`; `FireG` (with `fire2`) is gone, `fire_ref`
+  takes `FamG`. `fam_ref` and `fire_ref` read `vck_ref`/`fire2_ref` through the runs.
+* **Gone**: `Verdict/WhnfModels4E` (`irVckE`, `irVckTailE`, `irFire2E` with their specs),
+  `Verdict/WhnfIdxE` and `WhnfCertsE` (the one-liners `iotaRecCmpE_of`, `iotaIndexOkE_of`,
+  `iotaCertsFullE_of`), the claims `IotaRecVckE`, `IotaRecFire2E`, `IotaRecCmpE`, `IotaCertsFullE`,
+  `IotaIndexOkE`, `iotaRecVck_refinesE`, `iotaRecFam_refinesE`, `iotaRecFire2_refinesE`,
+  `irFire2E_zero`, the ok models `irVckW`, `irVckTail`, `irFire2W` with their specs. Kept as
+  one-liners (statements unchanged): `iotaRecVck_refines'`, `iotaRecFire2_refines'`;
+  `Verdict/WhnfIotaRecE` keeps `iotaRecFireE_of` (`IotaRecFireE`, read by `MajorG`), now without the
+  three claim arguments.
+
+Diff of the landing against master (without this report): +327 −828 lines in 7 files.
+
+Elaboration (user seconds, `lean` on the module, median of 3 interleaved runs, base master
+132c4121 in its own worktree, `_tmp/gen-cut-times3.txt`):
+
+| module | base | new | |
+|---|---:|---:|---|
+| `Arena/WhnfIotaRecRefine` | 15.12 | **17.26** | **slower (+2.1 s)**: `vckE`'s generated spec … |
+| `Arena/WhnfIotaRecRefine2` | 4.88 | **7.42** | **slower (+2.5 s)**: `fire2E`'s … |
+| `Verdict/WhnfModels4E`, `WhnfIdxE`, `WhnfCertsE` | 4.08 | – | … against the hand models and claims here |
+| `Verdict/WhnfIotaRecE` | 1.95 | 0.57 | |
+| `Verdict/WhnfKnotE` | 0.60 | 0.63 | |
+| **sum** | **26.63** | **25.88** | **−3 %** |
