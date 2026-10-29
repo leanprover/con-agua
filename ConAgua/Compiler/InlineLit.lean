@@ -187,7 +187,7 @@ unsafe def evalProg (e : Lean.Expr) : MetaM Prog := evalExpr Prog (mkConst ``Pro
 def funDeclTy : Lean.Expr := mkConst ``FunDecl
 
 /-- Declare `name.f<i>`, `name.f<i>_eq` for `lo ≤ i < hi` (those not declared yet). -/
-unsafe def declInlFns (name : Name) (envE pE : Lean.Expr) (elems : Array Lean.Expr) (lo hi : Nat)
+unsafe def declInlFns (name : Name) (envE : Lean.Expr) (elems : Array Lean.Expr) (lo hi : Nat)
     (viaE : Lean.Expr) : MetaM Unit := do
   let hi := min hi elems.size
   let env ← getEnv
@@ -270,7 +270,7 @@ syntax (name := inlRoundFns) "inl_round_fns " ident " : " term:max term:max term
   let name := (← getCurrNamespace) ++ n.getId
   liftTermElabM <| withTheReader Core.Context (fun c => { c with maxRecDepth := max c.maxRecDepth 100000, maxHeartbeats := 0 }) do
     let (_, _, pE, envE) ← elabRoundArgs sS tS pS
-    declInlFns name envE pE (← listElemsW pE) lo.getNat hi.getNat (← elabVia pE (v?.map (·.raw)))
+    declInlFns name envE (← listElemsW pE) lo.getNat hi.getNat (← elabVia pE (v?.map (·.raw)))
 
 syntax (name := inlRoundCmd) (docComment)? "inl_round " ident " : " term:max term:max term:max (" via " term:max)? : command
 
@@ -280,7 +280,7 @@ syntax (name := inlRoundCmd) (docComment)? "inl_round " ident " : " term:max ter
   liftTermElabM <| withTheReader Core.Context (fun c => { c with maxRecDepth := max c.maxRecDepth 100000, maxHeartbeats := 0 }) do
     let (sE, tE, pE, envE) ← elabRoundArgs sS tS pS
     let elems ← listElemsW pE
-    declInlFns name envE pE elems 0 elems.size (← elabVia pE (v?.map (·.raw)))
+    declInlFns name envE elems 0 elems.size (← elabVia pE (v?.map (·.raw)))
     let elemTy := mkApp2 (mkConst ``Prod [0, 0]) (mkConst ``String) funDeclTy
     let progT := mkConst ``Prog
     let mut lit := mkApp (mkConst ``List.nil [0]) elemTy
