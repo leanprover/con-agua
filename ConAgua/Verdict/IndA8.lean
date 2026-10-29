@@ -6,7 +6,7 @@ import ConAgua.Verdict.DeclBasisE
 `verdicts-b`, helper `ia2`)
 
 From `cbdE_okT` (DeclBasisE.lean) and `ccvE_okT` (DeclValsE.lean, under `CoreStubsE`). `cid_claim3`:
-`check_ind_decl`'s claim from `classes_nfs`' claim and the `indB` callees' claims only.
+`check_ind_decl`'s claim from the `indB` callees' claims only.
 -/
 
 open ConRon.Arena
@@ -28,7 +28,7 @@ theorem checkConstantValE_of {p : Prog} (hnv : closedNV p _root_.L.Checker.nvFns
 local notation "V" => ConLeche.CheckMode.verified
 
 /-- **`check_ind_decl`'s error refinement**, every `indA` callee discharged: left are
-`classes_nfs` and the `indB` callees. -/
+the `indB` callees. -/
 theorem cid_claim3 {p : Prog} (hkp : KnotStageProg p) (hV : ValProg p)
     (hOpf : OpfF p) (hLC : LvlCacheProg p) (hLT : p.lookup "lv_leq_top" = some lvLeqTop)
     (hApd : ApdF p) (hCrk : CrKeep p) (hIlpf : IlpfF p) (hLz : LzcF p)
@@ -42,7 +42,6 @@ theorem cid_claim3 {p : Prog} (hkp : KnotStageProg p) (hV : ValProg p)
     (hkP : ∀ f ∈ passKeepCalleesC, AbsKeep p f) (hkt : ∀ f ∈ tailKeepCalleesC, AbsKeep p f)
     (hkr : AbsKeep p "block_raw_rec")
     (hnv : closedNV p _root_.L.Checker.nvFns = true) (hU : UceProg p)
-    (hNfs : ∀ dn vis fe env, ConLeche.EnvWF env → ClassesNfsE p dn vis fe env)
     (eSum : CheckSumTeleE p) (eSC : CheckSumCtorsE p) (eSF : CheckStructFieldSortsIE p)
     {n : Nat} (hn : n ≤ 2 ^ 62)
     {dn : NIdx → Option ConLeche.Name} (hdn : DnInj dn) {vis : Word} {fe : IFEnv} {m : Mem}
@@ -61,7 +60,7 @@ theorem cid_claim3 {p : Prog} (hkp : KnotStageProg p) (hV : ValProg p)
     (hlpd : BlockLpsDn dn block) :
     ErrClaim (checkDecl V pins fe (.indDecl block w.toNat)) a e :=
   cid_claim2 hkp hV hOpf hLC hLT hApd hCrk hIlpf hLz P hcl hfs hfr hcl2 hfs2 hclR hfR hclT hfT hclC hfC hkP hkt
-    hkr hnv (checkBasisDeclE_of hnv) (checkConstantValE_of hnv (hkp.toKnotTopProg.coreStubsE hnv) hU.toUceLookups) hU hNfs eSum
+    hkr hnv (checkBasisDeclE_of hnv) (checkConstantValE_of hnv (hkp.toKnotTopProg.coreStubsE hnv) hU.toUceLookups) hU eSum
     eSC eSF hn hdn he hT hfold hblk hb hden hM hfB hfRc hclH hfH hclM hfM hclMc hfMc hlpd
 
 end L.Ind

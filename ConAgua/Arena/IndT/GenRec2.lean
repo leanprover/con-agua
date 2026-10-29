@@ -15,9 +15,9 @@ import ConAgua.Arena.IndInstallSpec.PapW
 
 `grpC_ref` and `grpB_ref` refine the twin's second and third parts (`grcTwinB`, `grcTwinC`, in their
 continuation forms) for both outcomes, a `RefC`: the ok half the twin's run reaching the continuation
-with the post `GrpPost`, the error half the twin's failure with every continuation, under `GrpG`
-(the verdict context and `classes_nfs`' claim). Twin side con-ron's `genRecCheck_spec`'s proof:
-`classesNfs` (`classesNfs_refinesLpC`, `classesNfs_spec`), `classesCtors` (`classesCtors_refinesC`,
+with the post `GrpPost`, the error half the twin's failure with every continuation, under the
+verdict context (`VerdictCtxU`). Twin side con-ron's `genRecCheck_spec`'s proof:
+`classesNfs` (`cnfs_ref`, `classesNfs_spec`), `classesCtors` (`classesCtors_refinesC`,
 `classesCtors_spec`), the formers (`GR.mapM_cspecF` of `classFormerTy_spec`), `structElimLevel`
 (`structElimLevel_spec`), the generator's record (`dClassGen`), its prefix
 (`ClassGen.prefixBinders_spec`: `RSim.liftPP` of `gpbW_simF`), the recursor types
@@ -53,33 +53,6 @@ private theorem grc_mapM_mem {α β : Type} {f : α → Option β} :
     rcases List.mem_cons.mp hx with rfl | hx
     · exact ⟨y, hy⟩
     · exact grc_mapM_mem hys x hx
-
-/-- **`classes_nfs`' error claim** (`classesNfs_refinesLpC`'s hypotheses; proved in
-`Verdict/IndBNfs`). -/
-def ClassesNfsE (p : Prog) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
-    (env : ConLeche.Env) : Prop :=
-  ∀ (n : Nat), n ≤ 2 ^ 62 → ∀ (s₀ : St) (a₀ : AState) (q fto ftl tblo tbll mo ml : Word)
-    (bs : BlockShape) (formerTys : List EIdx) (tbl : List NestCtorNf) (ms : List TargetMajor)
-    {pP : ConLeche.BlockShape} {formerTysP : List ConLeche.Expr} {tblP : List ConLeche.NestCtorNf}
-    {MsP : List ConLeche.TargetMajor},
-    StageC dn vis fe env s₀.mem a₀ → AbsOK s₀.mem → BSOK s₀.mem q.toNat bs →
-    decHL s₀.mem fto.toNat ftl.toNat = some formerTys → fto.toNat + ftl.toNat ≤ iwTop s₀.mem →
-    PSlR decNCN tbl tblo tbll s₀.mem → PSlR decTM ms mo ml s₀.mem → RcMR s₀.mem →
-    ClassesLp s₀.mem mo ml →
-    dShape a₀.store bs = some pP → Frontend.denoteEList a₀.store formerTys = some formerTysP →
-    tbl.mapM (dCtorNf a₀.store) = some tblP → ms.mapM (dMajor a₀.store) = some MsP →
-    (∀ t ∈ formerTysP, ConLeche.Expr.WScoped 0 t) →
-    (∀ M ∈ MsP, ConLeche.Cached.TargetMajScoped M) →
-    CoreSpecE p n "classes_nfs" [vis, q, fto, ftl, tblo, tbll, mo, ml]
-      (ConRon.Arena.classesNfs V fe bs formerTys tbl ms) s₀ a₀
-
-/-- What the error arms of `gen_rec_check_prep` assume: the verdict context with
-`unresolved_consts_error`'s program (the recursor types' and the stream's claims) and `classes_nfs`'
-claim. -/
-structure GrpG (p : Prog) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (env : ConLeche.Env) :
-    Prop where
-  u : VerdictCtxU p
-  nfs : ClassesNfsE p dn vis fe env
 
 /-- What `gen_rec_check_prep` (and each of its parts) gives besides the generator `G` and the
 recursors' constants `cvGs` (from `m`, `a`; the result `r` the generator's record and the constants'
@@ -129,7 +102,7 @@ theorem grpC_ref (P : GrcProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {dn : NIdx → Op
     (hcvP : cvRis.mapM (Frontend.denoteCV a.store) = some cvRisP)
     (hwRis : ∀ cv ∈ cvRisP, ConLeche.Expr.WScoped 0 cv.type) {fsR : List FnName}
     (hclR : closedA p rcFreeA rcFreeC fsR = true) (hfRc : ∀ f ∈ grcRcCallees, f ∈ fsR) (hP : RcMR m) :
-    RefC (GrpG p dn vis fe env) (grpE.k_iw_alloc p n vis pp pO pL rd cRo cRl m2o m2l co cl fo fl el
+    RefC (VerdictCtxU p) (grpE.k_iw_alloc p n vis pp pO pL rd cRo cRl m2o m2l co cl fo fl el
         (liftE (callW p n "iw_alloc" [14] m)))
       (fun v => ∃ G cvGs a', (∀ {β : Type} (k : ConRon.Arena.ClassGen → List IConstantVal → AM β),
           (grcTwinC V fe bs params rdv cvRis ms2 ctors ftc elim k).run a = (k G cvGs).run a') ∧
@@ -290,7 +263,7 @@ theorem grpC_ref (P : GrcProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {dn : NIdx → Op
       rdW (m.arr64 IW) (rd + UInt64.ofNat 3)] (grpPMem s2.mem g o l) with e3 | ⟨r3, m3⟩
   · rw [grpE.k_class_rec_tys_ok.none]
     refine fun hV _ k => ?_
-    have := CoreSpecE.of_callE (classRecTysOk_claim hkp hApd hCrk hV.u.nv hV.u.core hV.u.uce henv P.rts n hn
+    have := CoreSpecE.of_callE (classRecTysOk_claim hkp hApd hCrk hV.nv hV.core hV.uce henv P.rts n hn
       ⟨grpPMem s2.mem g o l, Locals.init []⟩ a2 g (UInt64.ofNat bs.k) _ _ cRo cRl _ _ _ bs.recs cvRis rdv.recCls hCP hG
       hns hrcs (rec3RecsOK_of_decB hrcs (Nat.le_trans hrecsP.2 hgP.1)) (hcv.grow (OMono.decPL
         (fun q => OMono.decCVp q) _ _) hgP) (hrcD.grow (OMono.decNL _ _) hgP) hAP hgPd hrecs2 hcv2 hwRis) c3
@@ -362,7 +335,7 @@ theorem grpB_ref (P : GrcProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {dn : NIdx → Op
     (hcvRP : cvRis.mapM (Frontend.denoteCV a.store) = some cvRisP)
     (hwRis : ∀ cv ∈ cvRisP, ConLeche.Expr.WScoped 0 cv.type) {fsR : List FnName}
     (hclR : closedA p rcFreeA rcFreeC fsR = true) (hfRc : ∀ f ∈ grcRcCallees, f ∈ fsR) :
-    RefC (GrpG p dn vis fe env) (grpE.j1 p n vis pp pO pL tO tL rd mO mL cO cL cRo cRl m)
+    RefC (VerdictCtxU p) (grpE.j1 p n vis pp pO pL tO tL rd mO mL cO cL cRo cRl m)
       (fun v => ∃ G cvGs a', (∀ {β : Type} (k : ConRon.Arena.ClassGen → List IConstantVal → AM β),
           (grcTwinB V fe bs tbl rdv ms cvTas (fun ms2 ctors ftc elim =>
             grcTwinC V fe bs params rdv cvRis ms2 ctors ftc elim k)).run a = (k G cvGs).run a') ∧
@@ -398,29 +371,30 @@ theorem grpB_ref (P : GrcProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {dn : NIdx → Op
   have hA1 := hkeep _ (by simp [grcKeepCalleesC]) _ _ _ _ _ c1 hA
   have hC1 : StageC dn vis fe env s1.mem a := hC.of_pstep hS1 hA1 (PStep.refl hC.check.state)
   -- `classes_nfs`
+  have hT2 := cnfs_ref hkp henv P.cns n hn (dn := dn) (vis := vis) hC1 hA1 (hbs.grow hg1) hft1 hftb1
+    (htbl.grow (fun q => decNCN_mono q) hg1) (hms.grow (fun q => decTM_mono q) hg1) hP1 hsh hftP htblP hmsP
+    hformer hMsT
+  have hs2T := cnfsE_spec p P.cns.cns n ⟨s1.mem, Locals.init []⟩ vis pp (r1.headD 0) (r1.tail.headD 0) tO tL mO mL
   rcases c2 : callE p n "classes_nfs" [vis, pp, r1.headD 0, r1.tail.headD 0, tO, tL, mO, mL] s1.mem with
     e2 | ⟨r2, m2⟩
   · rw [grpE.k_classes_nfs.none]
     refine fun hG _ k => ?_
     unfold grcTwinB
-    refine ErrClaim.bind_left ?_
-    exact CoreSpecE.of_callE (hG.nfs n hn ⟨s1.mem, Locals.init []⟩ a pp _ _ tO tL mO mL bs (cvTas.map (·.type)) tbl
-      ms hC1 hA1 (hbs.grow hg1) hft1 hftb1 (htbl.grow (fun q => decNCN_mono q) hg1)
-      (hms.grow (fun q => decTM_mono q) hg1) hP1 (hlp.grow hms hg1 hk1 hsz) hsh hftP htblP hmsP hformer hMsT) c2
+    exact ErrClaim.bind_left (RefE.run_err hs2T hG.nv hG.toVerdictCtx hT2 c2)
   rw [grpE.k_classes_nfs.arm1]
-  obtain ⟨s2, hs2, -, hok2, hms2, hC2, hg2, hP2, hA2, hlp2⟩ := triple_of_callW (s₀ := ⟨s1.mem, Locals.init []⟩)
-    (classesNfs_refinesLpC hkp henv P.cns n hn _ a dn fe vis pp _ _ tO tL mO mL bs (cvTas.map (·.type)) tbl ms
-      hC1 hA1 (hbs.grow hg1) hft1 hftb1 (htbl.grow (fun q => decNCN_mono q) hg1)
-      (hms.grow (fun q => decTM_mono q) hg1) hP1 (hlp.grow hms hg1 hk1 hsz) hsh hftP htblP hmsP hformer hMsT)
-    (callW_of_callE c2)
-  simp only at hs2 hms2 hC2 hg2 hP2 hA2 hlp2; subst hs2
+  obtain ⟨s2, hs2, -, ms2, a2, hrun2, hR2⟩ := RefE.run_ok hs2T hT2 c2
+  subst hs2
+  have hms2 := hR2.slice
+  have hC2 := hR2.stage
+  have hg2 := hR2.grow
+  have hP2 := hR2.rc
+  have hA2 := hR2.abs
+  have hlp2 := hR2.lp (hlp.grow hms hg1 hk1 hsz)
+  dsimp only at hms2 hC2 hg2 hP2 hA2 hlp2
   have hk2 := callW_keepW (callW_of_callE c2)
-  have hrun2 := AM.run_of_ok _ a hok2
   obtain ⟨c4, Ms2P, ⟨hms2P, hMs2⟩, -⟩ := ConRon.Bridge.Inductives.classesNfs_spec fe
     (ConRon.Bridge.CoreSpec.of_core rfl) henv bs pP _ _ tbl tblP hformer ms MsP hMsT a _ _ hC1.check
     ⟨hsh, hftP, htblP, hmsP⟩ hrun2
-  generalize AM.res (ConRon.Arena.classesNfs V fe bs (cvTas.map (·.type)) tbl ms) a = ms2 at hrun2 hms2 hms2P
-  generalize AM.st (ConRon.Arena.classesNfs V fe bs (cvTas.map (·.type)) tbl ms) a = a2 at hrun2 hC2 hms2P c4
   have hS2 := hC2.stage
   have hg12 := hg1.trans hg2
   -- `classes_ctors`
@@ -434,7 +408,7 @@ theorem grpB_ref (P : GrcProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {dn : NIdx → Op
     refine fun hG _ k => ?_
     unfold grcTwinB
     refine ErrClaim.bind_right hrun2 (ErrClaim.bind_left ?_)
-    exact CoreSpecE.of_callE (classesCtors_claim hkp henv P.ccs hIlpf P.opf dn fe hG.u.nv hG.u.core pp (r1.headD 0)
+    exact CoreSpecE.of_callE (classesCtors_claim hkp henv P.ccs hIlpf P.opf dn fe hG.nv hG.core pp (r1.headD 0)
       (r1.tail.headD 0) rd (r2.headD 0) (r2.tail.headD 0) n hn ⟨s2.mem, Locals.init []⟩ a2 bs
       (cvTas.map (·.type)) rdv ms2 hC2 hA2 (hbs.grow hg12) (by rw [decHL_grow3 hg2 hftb1]; exact hft1)
       (Nat.le_trans hftb1 hg2.1) (hrd.grow (decCR_mono _) hg12) hms2.1 (hS2.lt64 hms2.2) (hlp2 hk2) hnpk
