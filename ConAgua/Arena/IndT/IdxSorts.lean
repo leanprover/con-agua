@@ -1,5 +1,4 @@
 import ConAgua.Arena.IndT.Sum3
-import ConAgua.Arena.IndInstallSpec.GrcProg
 import ConAgua.Arena.IndInstallSpec.InstallRec2PSl
 import ConAgua.Verdict.PosTopEMono
 import ConAgua.Arena.GrindAttr
