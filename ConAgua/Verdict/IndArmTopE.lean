@@ -1,5 +1,4 @@
 import ConAgua.Verdict.IndArmE
-import ConAgua.Verdict.IndBNfs
 import ConAgua.Verdict.TopE
 import ConAgua.Verdict.IndA8
 
@@ -22,8 +21,8 @@ namespace L.Ind
 
 open L.Arena
 
-/-- **`check_ind_decl`'s claim from program facts** and the claims of `classes_nfs`,
-`target_k53_args`, `whnf_telescope`. -/
+/-- **`check_ind_decl`'s claim from program facts** and the claims of `target_k53_args`,
+`whnf_telescope`. -/
 theorem indArmSpecE_of {p : Prog} (hkp : KnotStageProg p) (hV : ValProg p)
     (hOpf : OpfF p) (hLC : LvlCacheProg p) (hLT : p.lookup "lv_leq_top" = some lvLeqTop)
     (hApd : ApdF p) (hCrk : CrKeep p) (hIlpf : IlpfF p) (hLz : LzcF p)
@@ -42,14 +41,13 @@ theorem indArmSpecE_of {p : Prog} (hkp : KnotStageProg p) (hV : ValProg p)
     (hfM : ∀ f ∈ ["check_block_pass", "check_block_tail"], f ∈ fsM)
     (hclMc : closedA p mcFreeA mcFreeC fsMc = true) (hfMc : "check_block" ∈ fsMc)
     (hnv : closedNV p _root_.L.Checker.nvFns = true) (hU : UceProg p)
-    (hWt : WhnfTopE p)
-    (hNfs : ∀ dn vis fe env, ConLeche.EnvWF env → ClassesNfsE p dn vis fe env) :
+    (hWt : WhnfTopE p) :
     ∀ dn, DnInj dn → IndArmSpecE p dn := by
   intro dn hdn pins n hn m a vis fe env block nP o l w _ hw hdec hb _ hT _ hfold hden hlpd hM e hc
   subst hw
   have hcE : CoreStubsE p := hkp.toKnotTopProg.coreStubsE hnv
   exact cid_claim3 hkp hV hOpf hLC hLT hApd hCrk hIlpf hLz P hcl hfs hfr hcl2 hfs2 hclR hfR hclT hfT
-    hclC hfC hkP hkt hkr hnv hU hNfs
+    hclC hfC hkP hkt hkr hnv hU
     (checkSumTeleE_of ⟨⟨⟨hnv, hcE⟩, hU⟩, hWt⟩) (checkSumCtorsE_of hnv hcE hU) (checkStructFieldSortsIE_of hnv hcE)
     hn hdn hc hT hfold
     (decB_decEBlk_of_decCIs hdec) hb hden hM hfB hfRc hclH hfH hclM hfM hclMc hfMc hlpd
@@ -72,8 +70,6 @@ theorem indArmVerdict_proved : IndArmVerdict := by
     ⟨checkerProg_uceLookupsPB bs, strLitSupported_core _ hkp.knot.str⟩
   have hWt : WhnfTopE (Prog.subPB bs checkerProg) :=
     whnfTop_stageE hkp.whnfTop hkp.knotOK (fun n => L.Arena.KnotAllProg.knotE_all hkp.knot hnv n)
-  have hcE : CoreStubsE (Prog.subPB bs checkerProg) := hkp.toKnotTopProg.coreStubsE hnv
-  have hCns : CnsProg (Prog.subPB bs checkerProg) := by prog_bundle []
   exact indArmSpecE_of hkp H.v H.opf H.lc H.lt H.apd H.crk H.ilpf H.lz H.cid
     (closedW_subPB bs checkerProg_armPos) armPos_pass armPos_raw
     (closedW_subPB bs checkerProg_armHb) armHb_tail
@@ -87,8 +83,7 @@ theorem indArmVerdict_proved : IndArmVerdict := by
     (closedW_subPB bs checkerProg_armRcHb) armRcHb_tables
     (closedW_subPB bs checkerProg_armMa) armMa_pass
     (closedW_subPB bs checkerProg_armMc) armMc_block
-    hnv hU hWt
-    (fun dn vis fe _env henv => classesNfsE_of hkp henv hCns hnv hcE dn vis fe) dn hdn
+    hnv hU hWt dn hdn
 
 /-- **The sequential driver's verdict claims**, without hypotheses. -/
 theorem seqVerdicts_proved : SeqVerdicts checkerProg := seqVerdicts_of indArmVerdict_proved

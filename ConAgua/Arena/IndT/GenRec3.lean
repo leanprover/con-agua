@@ -104,7 +104,7 @@ theorem grp_ref (P : GrcProg p) {fsR : List FnName} (hclR : closedA p rcFreeA rc
     (hblkP : Frontend.denoteCIList a.store block = some blockP)
     (hT : ∀ cv ∈ cvTasP, ConLeche.Expr.WScoped 0 cv.type)
     (hMsT : ∀ M ∈ MsP, ConLeche.Cached.TargetMajScoped M) (hfRc : ∀ f ∈ grcRcCallees, f ∈ fsR) :
-    RefC (GrpG p dn vis fe env) (grpE p (n + 1) m vis pp nested pO pL tO tL rd mO mL cO cL bO bL)
+    RefC (VerdictCtxU p) (grpE p (n + 1) m vis pp nested pO pL tO tL rd mO mL cO cL bO bL)
       (fun v => ∃ G cvGs a', (∀ {β : Type} (k : ConRon.Arena.ClassGen → List IConstantVal → AM β),
           (grcTwinA V fe bs (nested != 0) ms block (fun cvRis =>
             grcTwinB V fe bs tbl rdv ms cvTas (fun ms2 ctors ftc elim =>
@@ -160,7 +160,7 @@ theorem grp_ref (P : GrcProg p) {fsR : List FnName} (hclR : closedA p rcFreeA rc
     refine fun hG _ k => ?_
     unfold grcTwinA
     exact ErrClaim.bind_left (RefE.run_err (trpE_spec p P.rp.pins n ⟨m, Locals.init []⟩ pp bO bL) trivial
-      ⟨hG.u.nv, hG.u.core⟩ (trp_ref P.rp n hS hbs.1 hblk) c1)
+      ⟨hG.nv, hG.core⟩ (trp_ref P.rp n hS hbs.1 hblk) c1)
   rw [grpE.k_target_rec_pins.arm1]
   obtain ⟨s1, hs1, -, hok1, hS1, hg1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (targetRecPins_refines P.rp n _ a pp bO bL bs block hS hbs.1 hblk)
@@ -191,7 +191,7 @@ theorem grp_ref (P : GrcProg p) {fsR : List FnName} (hclR : closedA p rcFreeA rc
     refine fun hG _ k => ?_
     unfold grcTwinA
     refine ErrClaim.bind_right hrun1 (ErrClaim.bind_left ?_)
-    exact CoreSpecE.of_callE (classStreamRecs_claim hkp henv hV hApd hCrk hG.u P.ia P.cpy P.slc P.csr n (by omega)
+    exact CoreSpecE.of_callE (classStreamRecs_claim hkp henv hV hApd hCrk hG P.ia P.cpy P.slc P.csr n (by omega)
       ⟨s1.mem, Locals.init []⟩ a1 fe vis _ _ bs.recs pP.recs hC1 hA1 (rec3RecsOK_of_decB hrecs1.1 hrecs1.2)
       hrecs1P) c2
   obtain ⟨s2, hs2, -, hok2, hC2, hg2, hcs2, hA2⟩ := triple_of_callW (s₀ := ⟨s1.mem, Locals.init []⟩)
@@ -238,7 +238,7 @@ theorem grp_ref (P : GrcProg p) {fsR : List FnName} (hclR : closedA p rcFreeA rc
       cvRis.mapM (Frontend.denoteCV a4.store) = some cvRisP →
       (∀ {β : Type} (k : List IConstantVal → AM β),
         (grcTwinA V fe bs (nested != 0) ms block k).run a = (k cvRis).run a4) →
-      RefC (GrpG p dn vis fe env)
+      RefC (VerdictCtxU p)
         (grpE.j1 p n vis pp pO pL tO tL rd mO mL cO cL (r2.headD 0) (r2.tail.headD 0) s2.mem)
         (fun v => ∃ G cvGs a', (∀ {β : Type} (k : ConRon.Arena.ClassGen → List IConstantVal → AM β),
             (grcTwinA V fe bs (nested != 0) ms block (fun cvRis =>
@@ -278,7 +278,7 @@ theorem grp_ref (P : GrcProg p) {fsR : List FnName} (hclR : closedA p rcFreeA rc
   have hsh2 := ConRon.Bridge.Inductives.dShape_ext c12.ext _ _ hsh
   have hsrc2 : ShapeSrc s2.mem pp := partsHsrc_grow hg12 (partsShapeFacts hbs.1 hbs.2.1).2.1 hbs.2.1
   have large : ∀ (nb : Word), (nb != 0) = (nested != 0 || ms.any (·.member.isNone)) →
-      RefC (GrpG p dn vis fe env)
+      RefC (VerdictCtxU p)
         (grpE.j2 p n vis pp pO pL tO tL rd mO mL cO cL (r2.headD 0) (r2.tail.headD 0) nb s2.mem)
         (fun v => ∃ G cvGs a', (∀ {β : Type} (k : ConRon.Arena.ClassGen → List IConstantVal → AM β),
             (grcTwinA V fe bs (nested != 0) ms block (fun cvRis =>
@@ -356,7 +356,7 @@ theorem gck_ref (P : GrcProg p) {fsR : List FnName} (hclR : closedA p rcFreeA rc
     (hblkP : Frontend.denoteCIList a.store block = some blockP)
     (hT : ∀ cv ∈ cvTasP, ConLeche.Expr.WScoped 0 cv.type)
     (hMsT : ∀ M ∈ MsP, ConLeche.Cached.TargetMajScoped M) (hfRc : ∀ f ∈ grcRcCallees, f ∈ fsR) :
-    RefE (GrpG p dn vis fe env) (gckE p (n + 1) m vis pp nested pO pL tO tL rd mO mL cO cL bO bL)
+    RefE (VerdictCtxU p) (gckE p (n + 1) m vis pp nested pO pL tO tL rd mO mL cO cL bO bL)
       (ConRon.Arena.genRecCheck V fe bs (nested != 0) params tbl rdv ms cvTas block) a
       (fun v x a' => GckPost dn env fe a v.1 m v.2 x a') := by
   have hS := hC.stage
@@ -451,7 +451,7 @@ theorem gck_ref (P : GrcProg p) {fsR : List FnName} (hclR : closedA p rcFreeA rc
   rcases c4 : callE p (n + 1) "class_recs_rules_ok" [vis, r2.headD 0, r1.headD 0, rdW (m.arr64 IW) (rd + 2),
       rdW (m.arr64 IW) (rd + 3), r1.tail.headD 0, r1.tail.tail.headD 0] s3.mem with e4 | ⟨r4, m4⟩
   · rw [gckE.k_class_recs_rules_ok.none]
-    exact RefE.bind_left fun hG => CoreSpecE.of_callE (classRecsRulesOk_claim hkp hApd hG.u.nv hG.u.core hG.u.uce
+    exact RefE.bind_left fun hG => CoreSpecE.of_callE (classRecsRulesOk_claim hkp hApd hG.nv hG.core hG.uce
       P.crr (n + 1) (by omega) ⟨s3.mem, Locals.init []⟩
       { a1 with caches := Caches.empty } henvR' vis (r2.headD 0) feR (r1.headD 0) _ _ _ _ G rdv.recCls cvGs hC3
       (hG1.grow (decCG_mono _) hg23) hns1 (hrcD.grow (OMono.decNL _ _) hg13) hrcb hcg3
@@ -591,7 +591,7 @@ theorem icr_ref
     (hblkP : Frontend.denoteCIList a.store block = some blockP)
     (hMs : ∀ M ∈ MsP, ConLeche.Cached.ClassMajScoped pP.nP M)
     (hT : ∀ cv ∈ cvTasP, ConLeche.Expr.WScoped 0 cv.type) (hfRc : ∀ f ∈ grcRcCallees, f ∈ fsR) :
-    RefE (GrpG p dn vis fe env) (icrE p N m vis pp nested pO pL tO tL rd mO mL bO bL cO cL)
+    RefE (VerdictCtxU p) (icrE p N m vis pp nested pO pL tO tL rd mO mL bO bL cO cL)
       (ConRon.Arena.checkBlockRec V fe ⟨bs⟩ (nested != 0) params tbl rdv ms block cvTas) a
       (fun v x a' => GckPost dn env fe a v.1 m v.2 x a') := by
   obtain ⟨hbs, hpar, hparb, htbl, hrd, hms, hcv, hblk⟩ := hpre

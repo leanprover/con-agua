@@ -1,14 +1,23 @@
 import ConAgua.Verdict.IndBTmn
+import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.IndGrindAttr
+import ConAgua.L.GrindAttr
 
 /-!
-# `classesNfs` under `StageC` (lane `indstaget`, helper `pds`)
+# `classes_nfs`' model and its loop's refinement
 
-`classes_nfs`' loop (`cnsW`, the callees through the program's `callW`), from `StageC` and the
-inputs' denotations con-ron's `classesNfs_spec` asks; its twin side transcribed from that spec's
-proof: per class `targetMajorNfs` (`tmn_ref`'s ok half, con-ron's `targetMajorNfs_spec` on its run for
-the extension), the record's copy (L only).
+`classes_nfs` has nested loops, so its model is written by hand (the generator models one loop per
+function), in the shape of a `unified` model: `cnfsE` and its loop `cnsE` (`Except`: an error of
+class `≠ 0` is the model's), `target_major_nfs` through its run (`callE`), `iw_alloc` and the
+copy loop (`ncpW`, `RecGenSpec/DecB`) outside the verdict closure (class `0` on failure, as are the
+stores out of bounds and the fuel). `cnfsE_spec` is its `unified` spec. `cns_ref` refines the loop
+against con-ron's `classesNfs` for both outcomes, from `StageC` and the inputs' denotations
+con-ron's `classesNfs_spec` asks; `cnfs_ref` (`IndT/GenRec1`) is the function's refinement.
 -/
 
+noncomputable section
+
+set_option experimental.vcgen true
 
 open ConRon.Arena
 open Std.WP
@@ -22,6 +31,194 @@ open L.Arena
 
 local notation "V" => ConLeche.CheckMode.verified
 
+/-! ## The model -/
+
+section model
+variable (p : Prog)
+
+/-- After the copy loop: the record's tail and the result slot (a store out of bounds: `oob`). -/
+def cnsEK3 (nm mw eo el qr j : Word) (rest : Mem → Except Err Mem) : Option Mem → Except Err Mem
+  | none => .error .oob
+  | some m =>
+    if (nm + 9).toNat < (m.arr64 IW).size ∧ (nm + 10).toNat < (m.arr64 IW).size ∧
+        (nm + 11).toNat < (m.arr64 IW).size ∧ (nm + 12).toNat < (m.arr64 IW).size ∧
+        (qr + j).toNat < (m.arr64 IW).size then rest (wrTail m nm mw eo el qr j)
+    else .error .oob
+
+/-- After `iw_alloc(13)` (its failure claims nothing): the copy loop. -/
+def cnsEK2 (k : Nat) (mw eo el qr j : Word) (rest : Mem → Except Err Mem) :
+    Option (List Word × Mem) → Except Err Mem
+  | none => .error .oob
+  | some (r, m) => cnsEK3 (r.headD 0) mw eo el qr j rest (ncpW (k + 1) m (r.headD 0) mw 0)
+
+/-- After `target_major_nfs`: its error passed on, else the fresh record. -/
+def cnsEK1 (k : Nat) (mw qr j : Word) (rest : Mem → Except Err Mem) :
+    Except Err (List Word × Mem) → Except Err Mem
+  | .error ε => .error ε
+  | .ok (r, m) => cnsEK2 k mw (r.headD 0) (r.tail.headD 0) qr j rest (callW p k "iw_alloc" [13] m)
+
+/-- **The model of `classes_nfs`' loop** at L fuel `k`, from cursor `j`: the memory at the exit. -/
+def cnsE : Nat → Mem → Word → Word → Word → Word → Word → Word → Word → Word → Word → Word →
+    Except Err Mem
+  | 0, _, _, _, _, _, _, _, _, _, _, _ => .error .outOfFuel
+  | k + 1, m, vis, q, fto, ftl, tblo, tbll, mo, ml, qr, j =>
+    if j < ml then
+      cnsEK1 p k (rdW (m.arr64 IW) (mo + j)) qr j
+        (fun m' => cnsE k m' vis q fto ftl tblo tbll mo ml qr (j + 1))
+        (callE p k "target_major_nfs" [vis, q, fto, ftl,
+          rdW (m.arr64 IW) (rdW (m.arr64 IW) (mo + j) + 11), rdW (m.arr64 IW) (rdW (m.arr64 IW) (mo + j) + 12),
+          rdW (m.arr64 IW) (rdW (m.arr64 IW) (mo + j) + 1), rdW (m.arr64 IW) (rdW (m.arr64 IW) (mo + j) + 2),
+          rdW (m.arr64 IW) (rdW (m.arr64 IW) (mo + j) + 3), rdW (m.arr64 IW) (rdW (m.arr64 IW) (mo + j) + 6),
+          rdW (m.arr64 IW) (rdW (m.arr64 IW) (mo + j) + 7), tblo, tbll] m)
+    else .ok m
+
+section arms
+variable (k : Nat) (m : Mem) (vis q fto ftl tblo tbll mo ml qr j nm mw eo el : Word) (r : List Word)
+  (rest : Mem → Except Err Mem) (ε : Err)
+theorem cnsEK3_none : cnsEK3 nm mw eo el qr j rest none = .error .oob := rfl
+theorem cnsEK3_ok (h : (nm + 9).toNat < (m.arr64 IW).size ∧ (nm + 10).toNat < (m.arr64 IW).size ∧
+    (nm + 11).toNat < (m.arr64 IW).size ∧ (nm + 12).toNat < (m.arr64 IW).size ∧
+    (qr + j).toNat < (m.arr64 IW).size) :
+    cnsEK3 nm mw eo el qr j rest (some m) = rest (wrTail m nm mw eo el qr j) := by
+  simp only [cnsEK3]; rw [ite_eq_left h]
+theorem cnsEK3_bad (h : ¬ ((nm + 9).toNat < (m.arr64 IW).size ∧ (nm + 10).toNat < (m.arr64 IW).size ∧
+    (nm + 11).toNat < (m.arr64 IW).size ∧ (nm + 12).toNat < (m.arr64 IW).size ∧
+    (qr + j).toNat < (m.arr64 IW).size)) :
+    cnsEK3 nm mw eo el qr j rest (some m) = .error .oob := by
+  simp only [cnsEK3]; rw [ite_eq_right h]
+theorem cnsEK2_none : cnsEK2 k mw eo el qr j rest none = .error .oob := rfl
+theorem cnsEK2_some : cnsEK2 k mw eo el qr j rest (some (r, m)) =
+    cnsEK3 (r.headD 0) mw eo el qr j rest (ncpW (k + 1) m (r.headD 0) mw 0) := rfl
+theorem cnsEK1_err : cnsEK1 p k mw qr j rest (.error ε) = .error ε := rfl
+theorem cnsEK1_ok : cnsEK1 p k mw qr j rest (.ok (r, m)) =
+    cnsEK2 k mw (r.headD 0) (r.tail.headD 0) qr j rest (callW p k "iw_alloc" [13] m) := rfl
+theorem cnsE_zero : cnsE p 0 m vis q fto ftl tblo tbll mo ml qr j = .error .outOfFuel := rfl
+theorem cnsE_exit (h : ¬ j < ml) : cnsE p (k + 1) m vis q fto ftl tblo tbll mo ml qr j = .ok m := by
+  simp only [cnsE]; rw [ite_eq_right h]
+theorem cnsE_step (h : j < ml) : cnsE p (k + 1) m vis q fto ftl tblo tbll mo ml qr j =
+    cnsEK1 p k (rdW (m.arr64 IW) (mo + j)) qr j
+      (fun m' => cnsE p k m' vis q fto ftl tblo tbll mo ml qr (j + 1))
+      (callE p k "target_major_nfs" [vis, q, fto, ftl,
+        rdW (m.arr64 IW) (rdW (m.arr64 IW) (mo + j) + 11), rdW (m.arr64 IW) (rdW (m.arr64 IW) (mo + j) + 12),
+        rdW (m.arr64 IW) (rdW (m.arr64 IW) (mo + j) + 1), rdW (m.arr64 IW) (rdW (m.arr64 IW) (mo + j) + 2),
+        rdW (m.arr64 IW) (rdW (m.arr64 IW) (mo + j) + 3), rdW (m.arr64 IW) (rdW (m.arr64 IW) (mo + j) + 6),
+        rdW (m.arr64 IW) (rdW (m.arr64 IW) (mo + j) + 7), tblo, tbll] m) := by
+  simp only [cnsE]; rw [ite_eq_left h]
+end arms
+
+/-- After the loop: the result slice. -/
+def cnfsEK2 (qr ml : Word) : Except Err Mem → Except Err (List Word × Mem)
+  | .error ε => .error ε
+  | .ok m => .ok ([qr, ml], m)
+
+/-- After the result slice's allocation: the loop. -/
+def cnfsEK1 (n : Nat) (vis q fto ftl tblo tbll mo ml : Word) :
+    Option (List Word × Mem) → Except Err (List Word × Mem)
+  | none => .error .oob
+  | some (r, m) => cnfsEK2 (r.headD 0) ml (cnsE p (n + 1) m vis q fto ftl tblo tbll mo ml (r.headD 0) 0)
+
+/-- **The model of `classes_nfs`** at exec fuel `n`. -/
+def cnfsE : Nat → Mem → Word → Word → Word → Word → Word → Word → Word → Word →
+    Except Err (List Word × Mem)
+  | 0, _, _, _, _, _, _, _, _, _ => .error .outOfFuel
+  | n + 1, m, vis, q, fto, ftl, tblo, tbll, mo, ml =>
+    cnfsEK1 p n vis q fto ftl tblo tbll mo ml (callW p n "iw_alloc" [ml] m)
+
+section arms
+variable (n : Nat) (m : Mem) (vis q fto ftl tblo tbll mo ml qr : Word) (r : List Word) (ε : Err)
+theorem cnfsEK2_err : cnfsEK2 qr ml (.error ε) = .error ε := rfl
+theorem cnfsEK2_ok : cnfsEK2 qr ml (.ok m) = .ok ([qr, ml], m) := rfl
+theorem cnfsEK1_none : cnfsEK1 p n vis q fto ftl tblo tbll mo ml none = .error .oob := rfl
+theorem cnfsEK1_some : cnfsEK1 p n vis q fto ftl tblo tbll mo ml (some (r, m)) =
+    cnfsEK2 (r.headD 0) ml (cnsE p (n + 1) m vis q fto ftl tblo tbll mo ml (r.headD 0) 0) := rfl
+theorem cnfsE_zero : cnfsE p 0 m vis q fto ftl tblo tbll mo ml = .error .outOfFuel := rfl
+theorem cnfsE_succ : cnfsE p (n + 1) m vis q fto ftl tblo tbll mo ml =
+    cnfsEK1 p n vis q fto ftl tblo tbll mo ml (callW p n "iw_alloc" [ml] m) := rfl
+end arms
+
+end model
+
+attribute [ind_grind =] cnsEK3_none cnsEK3_ok cnsEK3_bad cnsEK2_none cnsEK2_some cnsEK1_err cnsEK1_ok
+  cnsE_zero cnsE_exit cnsE_step cnfsEK2_err cnfsEK2_ok cnfsEK1_none cnfsEK1_some
+
+/-! ## The `unified` specs -/
+
+/-- `iw_alloc`'s ok model and its failures' class `0` (outside the verdict closure). -/
+theorem iwAlloc_specU (p : Prog) (k : Nat) (vs : List Word) (s₀ : St) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p k) "iw_alloc" vs
+    ⦃fun r s' => LocEq s' s₀ ∧ callW p k "iw_alloc" vs s₀.mem = some (r, s'.mem);
+     fun e => closedNV p _root_.L.Checker.nvFns = true → e.cls = 0⦄ :=
+  Triple.nv (_root_.L.Checker.nv_mem (by decide +kernel)) (callW_spec p k "iw_alloc" vs s₀)
+
+/-- The copy loop's ok model and its failures' class `0`. -/
+theorem ncpLoop_specU (p : Prog) (f : Nat) (s₀ : St) :
+    ⦃fun s => s = s₀⦄ exec p f ncpLoop
+    ⦃fun r s' => r = .normal ∧ s'.loc 0 = s₀.loc 0 ∧ s'.loc 1 = s₀.loc 1 ∧ s'.loc 2 = s₀.loc 2 ∧
+      s'.loc 3 = s₀.loc 3 ∧ s'.loc 4 = s₀.loc 4 ∧ s'.loc 5 = s₀.loc 5 ∧ s'.loc 6 = s₀.loc 6 ∧
+      s'.loc 7 = s₀.loc 7 ∧ s'.loc 8 = s₀.loc 8 ∧ s'.loc 9 = s₀.loc 9 ∧ s'.loc 10 = s₀.loc 10 ∧
+      s'.loc 11 = s₀.loc 11 ∧ s'.loc 12 = s₀.loc 12 ∧ s'.loc 13 = s₀.loc 13 ∧
+      ncpW f s₀.mem (s₀.loc 13) (s₀.loc 10) (s₀.loc 14) = some s'.mem;
+     fun e => closedNV p _root_.L.Checker.nvFns = true → e.cls = 0⦄ :=
+  Triple.and_err (ncpLoop_spec p f s₀)
+    (M.triple_of_run' (fun _ _ _ _ _ => trivial) fun _ _ _ hr hnv =>
+      M.of_run_err (P := fun _ => True) trivial hr (exec_nv p hnv f ncpLoop (by decide +kernel)))
+
+set_option maxHeartbeats 1600000 in
+/-- The loop's `unified` spec. -/
+theorem cnsLoop_specE (p : Prog) (k : Nat) (s₀ : St) :
+    ⦃fun s => s = s₀⦄ exec p k cnsLoop
+    ⦃fun r s' => r = .normal ∧ s'.loc 7 = s₀.loc 7 ∧ s'.loc 8 = s₀.loc 8 ∧
+      cnsE p k s₀.mem (s₀.loc 0) (s₀.loc 1) (s₀.loc 2) (s₀.loc 3) (s₀.loc 4) (s₀.loc 5) (s₀.loc 6)
+        (s₀.loc 7) (s₀.loc 8) (s₀.loc 9) = .ok s'.mem;
+     fun ε => closedNV p _root_.L.Checker.nvFns = true → ε.cls ≠ 0 →
+      cnsE p k s₀.mem (s₀.loc 0) (s₀.loc 1) (s₀.loc 2) (s₀.loc 3) (s₀.loc 4) (s₀.loc 5) (s₀.loc 6)
+        (s₀.loc 7) (s₀.loc 8) (s₀.loc 9) = .error ε⦄ := by
+  induction k generalizing s₀ with
+  | zero => vcgen [exec] <;> grind
+  | succ k ih =>
+    rw [exec, step_while (w := cnsLoop) rfl]
+    sym only [lang_grind, arena_grind, ind_grind] =>
+      vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64, ih,
+        callE_spec p k "target_major_nfs", iwAlloc_specU p k,
+        fun s => Triple.step_exec' (ncpLoop_specU p (k + 1) s)] <;>
+      finish (gen := 40) (instances := 20000) [rdW_eq, wrTail, Err.cls]
+
+set_option maxHeartbeats 1600000 in
+/-- **`classes_nfs`' `unified` spec**: an ok run is the model's value, an error of class `≠ 0` the
+model's error (`iw_alloc` and the copy loop outside the verdict closure). -/
+theorem cnfsE_spec (p : Prog) (hp : p.lookup "classes_nfs" = some classesNfsL) (n : Nat) (s₀ : St)
+    (vis q fto ftl tblo tbll mo ml : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "classes_nfs" [vis, q, fto, ftl, tblo, tbll, mo, ml]
+    ⦃fun r s' => LocEq s' s₀ ∧ cnfsE p n s₀.mem vis q fto ftl tblo tbll mo ml = .ok (r, s'.mem);
+     fun ε => closedNV p _root_.L.Checker.nvFns = true → ε.cls ≠ 0 →
+      cnfsE p n s₀.mem vis q fto ftl tblo tbll mo ml = .error ε⦄ := by
+  rw [invoke_eq _ hp, classesNfsL_eq]
+  simp only [callFn, classesNfsL']
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+  sym only [lang_grind, arena_grind, ind_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, iwAlloc_specU p n,
+      fun s => Triple.step_exec' (cnsLoop_specE p (n + 1) s)] <;>
+    finish (gen := 40) (instances := 20000) [cnfsE_succ, loc_init4, loc_init5, loc_init6, loc_init7]
+
+/-! ## The loop's refinement -/
+
+/-- What `classes_nfs`' loop gives besides the twin's records `rest` (from cursor `j`, the records
+`acc` before it; the classes' slice `(mo, ml)` and the inputs in `mb`, the result slots at `qr`):
+the stage, the growth from `mb`, the result slots below the top, the memos, `AbsOK`, and the
+slots' records, `acc ++ rest`. -/
+structure CnsPost (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (env : ConLeche.Env)
+    (mb : Mem) (mo ml qr : Word) (acc : List TargetMajor) (m' : Mem) (rest : List TargetMajor)
+    (a' : AState) : Prop where
+  stage : StageC dn vis fe env m' a'
+  grow : IWGrow mb m'
+  top : qr.toNat + ml.toNat ≤ iwTop m'
+  rc : RcMR m'
+  abs : AbsOK m'
+  recs : ∃ ws', decNL m' qr.toNat ml.toNat = some ws' ∧
+    FA2 (CnsRec mb (CnsSrc mb mo ml) (qr.toNat + ml.toNat) m') ws' (acc ++ rest)
+
 section loop
 variable {p : Prog} (hkp : KnotStageProg p) {env : ConLeche.Env} (henv : ConLeche.EnvWF env)
   (P : CnsProg p) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv)
@@ -30,43 +227,43 @@ variable {p : Prog} (hkp : KnotStageProg p) {env : ConLeche.Env} (henv : ConLech
   {pP : ConLeche.BlockShape} {formerTysP : List ConLeche.Expr} {tblP : List ConLeche.NestCtorNf}
 include hkp henv P
 
-/-- **`classes_nfs`' loop under `StageC`** (twin side: con-ron's `classesNfs_spec`'s list induction;
-`cnsW_ok`'s words). -/
-theorem cnsW_okC (hq : qr.toNat = iwTop mb) (hms : PSlR decTM ms mo ml mb) (htbl : PSlR decNCN tbl tblo tbll mb)
+/-- **`classes_nfs`' loop refines `classesNfs`, both outcomes** (twin side: con-ron's `classesNfs_spec`'s
+list induction): per class `target_major_nfs` (`tmn_ref` through its run; on an ok run con-ron's
+`targetMajorNfs_spec` for the extension), `iw_alloc` and the record's copy (L only, class `0` on
+failure). -/
+theorem cns_ref (hq : qr.toNat = iwTop mb) (hms : PSlR decTM ms mo ml mb) (htbl : PSlR decNCN tbl tblo tbll mb)
     (hbs : BSOK mb q.toNat bs) (hft : decHL mb fto.toNat ftl.toNat = some formerTys)
     (hftb : fto.toNat + ftl.toNat ≤ iwTop mb) (hformer : ∀ t ∈ formerTysP, ConLeche.Expr.WScoped 0 t)
     (k : Nat) (hk : k ≤ 2 ^ 62) :
-    ∀ (m m' : Mem) (a : AState) (j : Word) (acc : List TargetMajor) (ws : List Nat)
+    ∀ (m : Mem) (a : AState) (j : Word) (acc : List TargetMajor) (ws : List Nat)
       (MsP : List ConLeche.TargetMajor),
-    cnsW p k m vis q fto ftl tblo tbll mo ml qr j = some m' →
     StageC dn vis fe env m a → AbsOK m → IWGrow mb m → qr.toNat + ml.toNat ≤ iwTop m → RcMR m → j ≤ ml →
     decNL m qr.toNat j.toNat = some ws → FA2 (CnsRec mb (CnsSrc mb mo ml) (qr.toNat + ml.toNat) m) ws acc →
     dShape a.store bs = some pP → Frontend.denoteEList a.store formerTys = some formerTysP →
     tbl.mapM (dCtorNf a.store) = some tblP → (ms.drop j.toNat).mapM (dMajor a.store) = some MsP →
     (∀ M ∈ MsP, ConLeche.Cached.TargetMajScoped M) →
-    ∃ rest a', (ConRon.Arena.classesNfs V fe bs formerTys tbl (ms.drop j.toNat)).run a = .ok (rest, a') ∧
-      StageC dn vis fe env m' a' ∧ IWGrow mb m' ∧ qr.toNat + ml.toNat ≤ iwTop m' ∧ RcMR m' ∧ AbsOK m' ∧
-      ∃ ws', decNL m' qr.toNat ml.toNat = some ws' ∧ FA2 (CnsRec mb (CnsSrc mb mo ml) (qr.toNat + ml.toNat) m') ws' (acc ++ rest) := by
+    RefE (VerdictCtx p) (cnsE p k m vis q fto ftl tblo tbll mo ml qr j)
+      (ConRon.Arena.classesNfs V fe bs formerTys tbl (ms.drop j.toNat)) a
+      (fun m' rest a' => CnsPost dn vis fe env mb mo ml qr acc m' rest a') := by
   have hms0 : decPL (truncM mb) (decTM (truncM mb)) mo.toNat ml.toNat = some ms := hms.1
   have hlen := decPL_length _ hms0
   obtain ⟨tps, -, htps, hmap⟩ := sumDecNL_of_decB htbl.1
   have htpb : PtrsB mb tps tbl := ptrsB_of_mapM hmap
   induction k with
-  | zero => intro m m' a j acc ws MsP h; simp [cnsW] at h
+  | zero => intros; rw [cnsE_zero]; exact RefE.of_cls0 (by simp)
   | succ k ih =>
-  intro m m' a j acc ws MsP h hC hA hg htop hP hje hws hacc hsh hftP htblP hmsP hMs
+  intro m a j acc ws MsP hC hA hg htop hP hje hws hacc hsh hftP htblP hmsP hMs
   have hS := hC.stage
   have hsz := hS.2.2.2.1
   have hjm : j.toNat ≤ ml.toNat := UInt64.le_iff_toNat_le.mp hje
   have hT := (rdW (m.arr64 CTL) 200).toNat_lt
   by_cases hj : ¬ j < ml
-  · rw [cnsW_exit (h := hj)] at h
-    simp only [Option.some.injEq] at h; subst h
+  · rw [cnsE_exit (h := hj)]
     have h1 : ml.toNat ≤ j.toNat := by simpa [UInt64.lt_iff_toNat_lt] using hj
     have hjeq : j.toNat = ml.toNat := by omega
     have : ms.drop j.toNat = [] := List.drop_eq_nil_of_le (by omega)
     rw [this]
-    refine ⟨[], a, rfl, hC, hg, htop, hP, hA, ws, by rw [← hjeq]; exact hws, by simpa using hacc⟩
+    exact RefE.ret rfl ⟨hC, hg, htop, hP, hA, ws, by rw [← hjeq]; exact hws, by simpa using hacc⟩
   simp only [Decidable.not_not] at hj
   have hjl : j.toNat < ml.toNat := UInt64.lt_iff_toNat_lt.mp hj
   have hml := ml.toNat_lt
@@ -78,7 +275,7 @@ theorem cnsW_okC (hq : qr.toNat = iwTop mb) (hms : PSlR decTM ms mo ml mb) (htbl
     simp only [iwN, nat?, iwA] at hp0m ⊢; rw [hg.2.2.1 _ hp0t]; exact hp0m
   obtain ⟨hrd, hp0b⟩ := iwN_rdW_at (w := mo) (k := j.toNat) hp0m' hsz
   rw [show mo + UInt64.ofNat j.toNat = mo + j by simp] at hrd
-  rw [cnsW_step (h := hj), hrd] at h
+  rw [cnsE_step (h := hj), hrd]
   have hp0T : (UInt64.ofNat p0 : Word).toNat = p0 := UInt64.toNat_ofNat_of_lt' hp0b
   have hsrcmb : DecB (fun m => decTM m p0) mb (ms[j.toNat]'(by omega)) := by
     show decTM (truncM mb) p0 = _; rw [hsrc]
@@ -90,17 +287,30 @@ theorem cnsW_okC (hq : qr.toNat = iwTop mb) (hms : PSlR decTM ms mo ml mb) (htbl
   obtain ⟨-, hlvls, hdsP, -, -, hctorsP, -, -, hpfvsP⟩ := ConRon.Bridge.Inductives.dMajor_inv hmP
   obtain ⟨hscp, -⟩ := hMs MP List.mem_cons_self
   -- `target_major_nfs`
-  obtain ⟨⟨r1, m1⟩, c1, h⟩ := of_K h rfl
-  rw [cnsK1_some] at h
-  obtain ⟨s1, hs1, -, es, a1, run1, hR1⟩ := RefE.run_okW (s₀ := ⟨m, Locals.init []⟩)
-    (tmnE_spec p P.tmn k _ vis q fto ftl
+  rw [List.drop_eq_getElem_cons (by omega), ConRon.Arena.classesNfs]
+  have hsT := tmnE_spec p P.tmn k ⟨m, Locals.init []⟩ vis q fto ftl
     (rdW (m.arr64 IW) (UInt64.ofNat p0 + 11)) (rdW (m.arr64 IW) (UInt64.ofNat p0 + 12))
     (rdW (m.arr64 IW) (UInt64.ofNat p0 + 1)) (rdW (m.arr64 IW) (UInt64.ofNat p0 + 2))
     (rdW (m.arr64 IW) (UInt64.ofNat p0 + 3)) (rdW (m.arr64 IW) (UInt64.ofNat p0 + 6))
-    (rdW (m.arr64 IW) (UInt64.ofNat p0 + 7)) tblo tbll)
-    (tmn_ref hkp henv k (by omega) hC hA
-    (hbs.grow hg) hlH (by rw [decHL_grow hg hftb]; exact hft) (by dsimp only; have := hg.1; omega) hpfS hdsS
-    hctB hctb (htbl.grow (fun q => decNCN_mono q) hg) hP hsh hftP hpfvsP (by rw [hlD]; exact hlvls) hdsP hctorsP htblP hformer hscp) c1
+    (rdW (m.arr64 IW) (UInt64.ofNat p0 + 7)) tblo tbll
+  have hT := tmn_ref hkp henv k (by omega) hC hA
+    (hbs.grow hg) hlH (by rw [decHL_grow hg hftb]; exact hft) (by have := hg.1; omega) hpfS hdsS hctB hctb
+    (htbl.grow (fun q => decNCN_mono q) hg) hP hsh hftP hpfvsP (by rw [hlD]; exact hlvls) hdsP hctorsP
+    htblP hformer hscp
+  cases c1 : callE p k "target_major_nfs" [vis, q, fto, ftl,
+    (rdW (m.arr64 IW) (UInt64.ofNat p0 + 11)), (rdW (m.arr64 IW) (UInt64.ofNat p0 + 12)),
+    (rdW (m.arr64 IW) (UInt64.ofNat p0 + 1)), (rdW (m.arr64 IW) (UInt64.ofNat p0 + 2)),
+    (rdW (m.arr64 IW) (UInt64.ofNat p0 + 3)), (rdW (m.arr64 IW) (UInt64.ofNat p0 + 6)),
+    (rdW (m.arr64 IW) (UInt64.ofNat p0 + 7)), tblo, tbll] m with
+  | error e1 =>
+    rw [cnsEK1_err]
+    refine RefE.bind_left fun hG => ?_
+    have := RefE.run_err hsT hG.nv hG hT c1
+    rwa [hlD] at this
+  | ok q1 =>
+  obtain ⟨r1, m1⟩ := q1
+  rw [cnsEK1_ok]
+  obtain ⟨s1, hs1, -, es, a1, run1, hR1⟩ := RefE.run_ok hsT hT c1
   subst hs1
   obtain ⟨hes, hC1, hg1, hP1, hA1, hptrs⟩ := hR1
   obtain ⟨hfr, pse, hpse, hpseb⟩ := hptrs mb tps (by rw [decNL_grow hg htbl.2]; exact htps) htpb
@@ -111,14 +321,18 @@ theorem cnsW_okC (hq : qr.toNat = iwTop mb) (hms : PSlR decTM ms mo ml mb) (htbl
     ⟨hsh, hftP, hpfvsP, hlvls, hdsP, hctorsP, htblP⟩ run1
   have hS1 := hC1.stage
   -- `iw_alloc(13)`
-  obtain ⟨⟨r2, m2⟩, c2, h⟩ := of_K h rfl
-  rw [cnsK2_some] at h
+  refine RefE.bind_right run1 ?_
+  cases c2 : callW p k "iw_alloc" [13] s1.mem with
+  | none => rw [cnsEK2_none]; exact RefE.of_cls0 (by simp)
+  | some q2 =>
+  obtain ⟨r2, m2⟩ := q2
+  rw [cnsEK2_some]
   obtain ⟨s2, hs2, -, hw2⟩ := triple_of_callW (s₀ := ⟨s1.mem, Locals.init []⟩) (iwAlloc_specW p P.ha k _ 13) c2
   simp only at hs2 hw2; subst hs2
   obtain ⟨hS2, hg2, hnm, ht2⟩ := allocW_stage hw2 hS1
   have hP2 := hP1.fr (allocW_mfr hw2)
   have hA2 := allocW_afr hw2 hA1
-  generalize hNM : r2.headD 0 = nm at h hnm
+  generalize hNM : r2.headD 0 = nm at hnm ⊢
   have h13 : (13 : Word).toNat = 13 := rfl
   rw [h13] at ht2
   have hI2 := hS2.2.1
@@ -129,7 +343,9 @@ theorem cnsW_okC (hq : qr.toNat = iwTop mb) (hms : PSlR decTM ms mo ml mb) (htbl
     have := hg.1; have := hg1.1; omega
   have hmw : (UInt64.ofNat p0 : Word).toNat + 9 ≤ nm.toNat := by rw [hp0T]; omega
   -- the copy loop
-  obtain ⟨m3, c3, h⟩ := of_K h rfl
+  cases c3 : ncpW (k + 1) s2.mem nm (UInt64.ofNat p0) 0 with
+  | none => rw [cnsEK3_none]; exact RefE.of_cls0 (by simp)
+  | some m3 =>
   obtain ⟨g1, g2⟩ := ncpW_words nm _ (by omega) hmw (k + 1) _ _ 0 c3 (by simp)
   have hS3 := ncpW_ind nm (UInt64.ofNat p0) (by omega) (fun m'' => StageR dn vis fe m'' a1)
     (fun _ _ _ h _ => h.set_iw _ _) (k + 1) _ _ 0 c3 (by simp) hS2
@@ -145,16 +361,16 @@ theorem cnsW_okC (hq : qr.toNat = iwTop mb) (hms : PSlR decTM ms mo ml mb) (htbl
   by_cases hb : ¬ ((nm + 9).toNat < (m3.arr64 IW).size ∧ (nm + 10).toNat < (m3.arr64 IW).size ∧
       (nm + 11).toNat < (m3.arr64 IW).size ∧ (nm + 12).toNat < (m3.arr64 IW).size ∧
       (qr + j).toNat < (m3.arr64 IW).size)
-  · rw [cnsK3_bad (h := hb)] at h; cases h
+  · rw [cnsEK3_bad (h := hb)]; exact RefE.of_cls0 (by simp)
   simp only [Decidable.not_not] at hb
-  rw [cnsK3_ok (h := hb)] at h
+  rw [cnsEK3_ok (h := hb)]
   obtain ⟨b9, b10, b11, b12, bq⟩ := hb
-  simp only [wrTail] at h
-  generalize hA : m3.set64 IW (nm + 9) (r1.headD 0) = mA at h
-  generalize hB : mA.set64 IW (nm + 10) (r1.tail.headD 0) = mB at h
-  generalize hC : mB.set64 IW (nm + 11) (rdW (mB.arr64 IW) (UInt64.ofNat p0 + 11)) = mC at h
-  generalize hD : mC.set64 IW (nm + 12) (rdW (mC.arr64 IW) (UInt64.ofNat p0 + 12)) = mD at h
-  generalize hE : mD.set64 IW (qr + j) nm = m4 at h
+  simp only [wrTail]
+  generalize hA : m3.set64 IW (nm + 9) (r1.headD 0) = mA
+  generalize hB : mA.set64 IW (nm + 10) (r1.tail.headD 0) = mB
+  generalize hC : mB.set64 IW (nm + 11) (rdW (mB.arr64 IW) (UInt64.ofNat p0 + 11)) = mC
+  generalize hD : mC.set64 IW (nm + 12) (rdW (mC.arr64 IW) (UInt64.ofNat p0 + 12)) = mD
+  generalize hE : mD.set64 IW (qr + j) nm = m4
   have hqb := hS.lt64 htop
   have hqj : (qr + j).toNat = qr.toNat + j.toNat := by rw [UInt64.toNat_add]; simp; omega
   have hn9 : (nm + 9).toNat = nm.toNat + 9 := by rw [UInt64.toNat_add]; simp; omega
@@ -261,69 +477,16 @@ theorem cnsW_okC (hq : qr.toNat = iwTop mb) (hms : PSlR decTM ms mo ml mb) (htbl
       (acc ++ [{ ms[j.toNat]'(by omega) with nfs := es }]) :=
     FA2.snoc (FA2.imp (fun _ _ hr => CnsRec.frame hr hFr (by omega)) hacc) hnew
   have hje1 : j + 1 ≤ ml := UInt64.le_iff_toNat_le.mpr (by omega)
-  obtain ⟨rest, a', run', hC', hg', ht', hP', hA', ws', hws', hacc'⟩ := ih (by omega) m4 m' a1 (j + 1) _ _
-    MsP' h hC4 hA4 hg4 (by rw [ht4]; omega) hP4 hje1 hws4 hacc4
+  have := ih (by omega) m4 a1 (j + 1) _ _ MsP' hC4 hA4 hg4 (by rw [ht4]; omega) hP4 hje1 hws4 hacc4
     (ConRon.Bridge.Inductives.dShape_ext c1.ext _ _ hsh) (denoteEList_ext c1.ext _ _ hftP)
     (ConRon.Bridge.Inductives.dCtorNf_ext.list c1.ext _ _ htblP)
     (by rw [hj1]; exact ConRon.Bridge.Inductives.dMajor_ext.list c1.ext _ _ hmsP')
     (fun N hN => hMs N (List.mem_cons_of_mem _ hN))
-  refine ⟨{ ms[j.toNat]'(by omega) with nfs := es } :: rest, a', ?_, hC', hg', ht', hP', hA', ws', hws',
-    by simpa using hacc'⟩
-  rw [List.drop_eq_getElem_cons (by omega), ConRon.Arena.classesNfs]
-  rw [hj1] at run'
-  simp only [StateT.run_bind, run1, except_ok_bind, run']
-  rfl
+  rw [hj1] at this
+  exact RefE.tailMap_pure (k := id) (f := id) (fun _ => rfl) (fun _ => rfl) id
+    (fun _ _ _ hR => ⟨hR.stage, hR.grow, hR.top, hR.rc, hR.abs, by simpa using hR.recs⟩) this
 
 end loop
 
-/-- **`classes_nfs` refines `classesNfs`** under `StageC` (the knot's core calls; the inputs'
-denotations and scoping as con-ron's `classesNfs_spec` asks). -/
-@[refines ConRon.Arena.classesNfs]
-theorem classesNfs_refinesC {p : Prog} (hkp : KnotStageProg p) {env : ConLeche.Env}
-    (henv : ConLeche.EnvWF env) (P : CnsProg p) (n : Nat) (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState)
-    (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis q fto ftl tblo tbll mo ml : Word)
-    (bs : BlockShape) (formerTys : List EIdx) (tbl : List NestCtorNf) (ms : List TargetMajor)
-    (hC : StageC dn vis fe env s₀.mem a₀) (hA : AbsOK s₀.mem) (hbs : BSOK s₀.mem q.toNat bs)
-    (hft : decHL s₀.mem fto.toNat ftl.toNat = some formerTys) (hftb : fto.toNat + ftl.toNat ≤ iwTop s₀.mem)
-    (htbl : PSlR decNCN tbl tblo tbll s₀.mem) (hms : PSlR decTM ms mo ml s₀.mem) (hP : RcMR s₀.mem)
-    {pP : ConLeche.BlockShape} {formerTysP : List ConLeche.Expr} {tblP : List ConLeche.NestCtorNf}
-    {MsP : List ConLeche.TargetMajor} (hsh : dShape a₀.store bs = some pP)
-    (hftP : Frontend.denoteEList a₀.store formerTys = some formerTysP)
-    (htblP : tbl.mapM (dCtorNf a₀.store) = some tblP) (hmsP : ms.mapM (dMajor a₀.store) = some MsP)
-    (hformer : ∀ t ∈ formerTysP, ConLeche.Expr.WScoped 0 t)
-    (hMs : ∀ M ∈ MsP, ConLeche.Cached.TargetMajScoped M) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "classes_nfs" [vis, q, fto, ftl, tblo, tbll, mo, ml]
-    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.classesNfs V fe bs formerTys tbl ms) a₀ ∧
-      PSlR decTM (AM.res (ConRon.Arena.classesNfs V fe bs formerTys tbl ms) a₀) (r.headD 0) (r.tail.headD 0) s'.mem ∧
-      StageC dn vis fe env s'.mem (AM.st (ConRon.Arena.classesNfs V fe bs formerTys tbl ms) a₀) ∧
-      IWGrow s₀.mem s'.mem ∧ RcMR s'.mem ∧ AbsOK s'.mem; ⊤⦄ := by
-  rcases n with _ | n
-  · exact triple_post (invoke_exec_zero p _ _ _) (fun _ _ h => h.elim)
-  refine triple_post (cnfs_spec p P.cns n s₀ vis q fto ftl tblo tbll mo ml) ?_
-  rintro r s' ⟨hl, hm⟩
-  rw [cnfsW_eq] at hm
-  obtain ⟨⟨r0, m0⟩, c0, hm⟩ := of_K hm rfl
-  rw [cnfsK1_some] at hm
-  obtain ⟨mF, c1, hm⟩ := of_K hm rfl
-  rw [cnfsK2_some] at hm
-  simp only [Option.some.injEq, Prod.mk.injEq] at hm; obtain ⟨rfl, hmF⟩ := hm
-  obtain ⟨s0, rfl, -, hw0⟩ := triple_of_callW (s₀ := ⟨s₀.mem, Locals.init []⟩) (iwAlloc_specW p P.ha n _ ml) c0
-  obtain ⟨hS0, hg0, hq0, ht0⟩ := allocW_stage hw0 hC.stage
-  have hA0 := allocW_afr hw0 hA
-  obtain ⟨rest, a', run, hSF, hgF, htF, hPF, hAF, ws', hws', hacc'⟩ := cnsW_okC hkp henv P dn fe vis q fto ftl
-    tblo tbll mo ml (r0.headD 0) bs formerTys tbl ms s₀.mem hq0 hms htbl hbs hft hftb hformer (n + 1)
-    (by omega) s0.mem mF a₀ 0 [] [] MsP c1 (hC.of_pstep hS0 hA0 (PStep.refl hC.check.state)) hA0 hg0
-    (by omega) (hP.fr (allocW_mfr hw0)) UInt64.zero_le (by simp [decNL]) FA2.nil hsh hftP htblP
-    (by simpa using hmsP) hMs
-  simp only [UInt64.toNat_zero, List.drop_zero, List.nil_append] at run hacc'
-  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ run
-  rw [← hmF]
-  refine ⟨hl, hok, ?_, by rw [hst]; exact hSF, hgF, hPF, hAF⟩
-  rw [hres]
-  refine ⟨?_, by simpa using htF⟩
-  show decPL (truncM mF) (decTM (truncM mF)) _ _ = some rest
-  simp only [List.headD_cons, List.tail_cons]
-  rw [decPL_eq_bind, show decNL (truncM mF) (r0.headD 0).toNat ml.toNat = some ws' from decNL_decB hws' htF]
-  exact cnsRec_mapM hgF hacc'
-
 end L.Ind
+end
