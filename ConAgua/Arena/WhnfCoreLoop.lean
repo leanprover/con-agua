@@ -343,26 +343,6 @@ end loopRef
 
 /-! ## The slot: a mode memo around the body -/
 
-/-- A memo probe's run (`memoFindG`): the memory unchanged, the probe's answer. -/
-theorem callW_memoFind {S : MemoSch} {p : Prog} {f : FnName} (hf : p.lookup f = some (memoFindG S))
-    {n : Nat} {m : Mem} {k1 k2 : Word} {r : List Word} {m₁ : Mem}
-    (h : callW p n f [k1, k2] m = some (r, m₁)) : m₁ = m ∧ r ≠ [] ∧ r = mfindG S m k1 k2 := by
-  obtain ⟨s', hm, hs', hne, hr⟩ := triple_of_callW (memoFindG_spec S p f hf n ⟨m, Locals.init []⟩ k1 k2) h
-  exact ⟨by rw [← hm, hs'], hne, hr⟩
-
-/-- A probe and then a put at its slot (`memoFindG`, `memoPutG`): the memo's `set`. -/
-theorem callW_memoSet {S : MemoSch} {p : Prog} {ff fp : FnName}
-    (hf : p.lookup ff = some (memoFindG S)) (hp : p.lookup fp = some (memoPutG S)) {n : Nat}
-    {k1 k2 x : Word} {r₃ r₄ : List Word} {m₂ m₃ m₄ : Mem}
-    (h3 : callW p n ff [k1, k2] m₂ = some (r₃, m₃))
-    (h4 : callW p n fp [k1, k2, x, r₃.headD 0, r₃.tail.headD 0] m₃ = some (r₄, m₄)) :
-    msetG S m₂ k1 k2 x = some m₄ := by
-  obtain ⟨rfl, hne, hr⟩ := callW_memoFind hf h3
-  obtain ⟨s', hm, -, hput⟩ := triple_of_callW
-    (memoPutG_spec S p fp hp n ⟨m₃, Locals.init []⟩ k1 k2 x _ _) h4
-  unfold msetG
-  rw [← hr, ite_eq_right hne, hput, hm]
-
 section twin
 variable (mode : ConLeche.CheckMode) (fe : IFEnv) (F : Nat) (d : Nat) (e : EIdx) (a : AState)
 

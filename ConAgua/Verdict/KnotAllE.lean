@@ -1,7 +1,6 @@
 import ConAgua.Verdict.InferKnotE
 import ConAgua.Verdict.WhnfKnotE
 import ConAgua.Verdict.DefEqAllE
-import ConAgua.Verdict.DefEqEagerE
 import ConAgua.Checker.LoopProg
 import ConAgua.Checker.NoVerdictClosed
 
@@ -11,8 +10,7 @@ import ConAgua.Checker.NoVerdictClosed
 The three families' error halves of the knot's slots one level up, put together:
 
 * the `infer`/`infer_io` slots (`inferSlots_stepE`, `InferKnotE.lean`), over `InferCalleesE`:
-  the verdict closure, `infer_proj`'s claim (`inferProj_refinesE'`) and `defeq_arg`'s
-  (`defeqArg_refinesE` over the `defeq` slot and `defeq_e`'s `defeqE_refinesE`);
+  the verdict closure and `infer_proj`'s claim (`inferProj_refinesE'`);
 * the `whnf_core`/`whnf` slots (`whnfSlotsE_of`, `WhnfKnotE.lean`), over `defeq_list`'s claim
   (`defeqList_refinesE`, `DefEqLoopsE.lean`);
 * the `defeq` slot (`KnotAllProg.defeqSlotE_all`, `DefEqAllE.lean`), over the whnf family's two
@@ -36,27 +34,11 @@ section knot
 variable {p : Prog} (hq : KnotAllProg p) (hnv : closedNV p L.Checker.nvFns = true)
 
 include hq hnv in
-/-- `defeq_arg`'s error claim, from the error knot (`defeq`, and `defeq_e` one level up). -/
-theorem KnotAllProg.defeqArgE : DefeqArgE p := by
-  intro n hk hkE F s₀ a₀ dn vis fe M eb mode d a ta ty hF hn hs ha hta hty
-  cases n with
-  | zero => exact CoreSpecE.zero p _ _ _ s₀ a₀
-  | succ k =>
-    have hde : DefeqESlotE p k := by
-      cases k with
-      | zero => intro F s₀ a₀ _ _ _ _ _ _ _ _ _ _ _ _ _ _; exact CoreSpecE.zero p _ _ _ s₀ a₀
-      | succ j => exact defeqE_refinesE p hq.infer.knot j (hkE j (by omega)).defeq
-    exact defeqArg_refinesE p hq.infer.leaf hnv k (isEagerReduceH_of p hq.body.stuck.leaf)
-      (hkE k (by omega)).defeq hde F s₀ a₀ dn vis fe M eb mode d a ta ty (by omega) (by omega) hs ha
-      hta hty
-
-include hq hnv in
 /-- **The inference bodies' callees' error claims** (`InferCalleesE`). -/
 theorem KnotAllProg.inferCE : InferCalleesE p :=
   ⟨hnv, inferProj_refinesE' p hq.proj hq.projp
       ⟨coreDen_of, findProj_refines p hq.projp, projFound p hq.projp, erecKept_of hq.hcl, hq.instLP,
-        erecKeptProj_of hq.hcl⟩ hnv,
-    KnotAllProg.defeqArgE hq hnv⟩
+        erecKeptProj_of hq.hcl⟩ hnv⟩
 
 include hq in
 /-- **The `whnf` slots' callee's error claim** (`WhnfCalleesE`: `defeq_list`'s). -/

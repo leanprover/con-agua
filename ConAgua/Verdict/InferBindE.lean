@@ -1,4 +1,4 @@
-import ConAgua.Verdict.InferSpineE
+import ConAgua.Verdict.InferArmsE
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
@@ -20,6 +20,9 @@ open scoped Lean.Order
 set_option experimental.vcgen true
 
 namespace L.Arena
+
+theorem cls_abort0 {er : Err} (hk0 : er.cls ≠ 0) (h : Err.abort 0 = er) : False := by
+  subst h; exact hk0 rfl
 
 /-! ## The leaves -/
 

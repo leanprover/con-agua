@@ -333,11 +333,12 @@ theorem RefE.mono {α β : Type} {G : Prop} {x : Except Err α} {T : AM β} {a :
   | ok v => obtain ⟨y, a₁, hy, hr⟩ := h; exact ⟨y, a₁, hy, hR _ _ _ hr⟩
   | error e => exact h
 
-/-- A tail call whose continuation passes the callee's errors on and maps its value (`f`), against
-a twin that runs as the callee's twin `T'` from `a₁`. -/
-theorem RefE.tail {α β γ : Type} {G G' : Prop} {x : Except Err α} {k : Except Err α → Except Err α}
-    {f : α → α} {T : AM β} {T' : AM γ} {a a₁ : AState} {R : α → γ → AState → Prop}
-    {R' : α → β → AState → Prop}
+/-- **A tail call whose continuation passes the callee's errors on and maps its value** (`f`, to
+the caller's value type: a callee's `Word × Mem` to the caller's `List Word × Mem`), against a twin
+that runs as the callee's twin `T'` from `a₁`. -/
+theorem RefE.tailMap {α δ β γ : Type} {G G' : Prop} {x : Except Err α}
+    {k : Except Err α → Except Err δ} {f : α → δ} {T : AM β} {T' : AM γ} {a a₁ : AState}
+    {R : α → γ → AState → Prop} {R' : δ → β → AState → Prop}
     (hk : ∀ e, k (.error e) = .error e) (hk' : ∀ v, k (.ok v) = .ok (f v)) (hG : G → G')
     (hT : ∀ y a', T'.run a₁ = .ok (y, a') → ∃ y', T.run a = .ok (y', a') ∧ ∀ v, R v y a' → R' (f v) y' a')
     (hTe : ∀ ce, T'.run a₁ = .error ce → T.run a = .error ce) (h : RefE G' x T' a₁ R) :
@@ -350,13 +351,46 @@ theorem RefE.tail {α β γ : Type} {G G' : Prop} {x : Except Err α} {k : Excep
     obtain ⟨y', hr', hf⟩ := hT y a' hr
     exact ⟨y', a', hr', hf v hR'⟩
 
+/-- `RefE.tailMap` against a twin with the same run. -/
+theorem RefE.tailMap_eq {α δ β : Type} {G G' : Prop} {x : Except Err α}
+    {k : Except Err α → Except Err δ} {f : α → δ} {T T' : AM β} {a a₁ : AState}
+    {R : α → β → AState → Prop} {R' : δ → β → AState → Prop}
+    (hk : ∀ e, k (.error e) = .error e) (hk' : ∀ v, k (.ok v) = .ok (f v)) (hG : G → G')
+    (hT : T.run a = T'.run a₁) (hR : ∀ v y a', R v y a' → R' (f v) y a') (h : RefE G' x T' a₁ R) :
+    RefE G (k x) T a R' :=
+  RefE.tailMap hk hk' hG (fun y a' hr => ⟨y, hT.trans hr, fun v => hR v y a'⟩)
+    (fun _ he => hT.trans he) h
+
+/-- `RefE.tailMap` against the callee's twin followed by a pure map of its result (`g`): the twin's
+`do let y ← T'; pure (g y)`. -/
+theorem RefE.tailMap_pure {α δ β γ : Type} {G G' : Prop} {x : Except Err α}
+    {k : Except Err α → Except Err δ} {f : α → δ} {T' : AM γ} {g : γ → β} {a : AState}
+    {R : α → γ → AState → Prop} {R' : δ → β → AState → Prop}
+    (hk : ∀ e, k (.error e) = .error e) (hk' : ∀ v, k (.ok v) = .ok (f v)) (hG : G → G')
+    (hR : ∀ v y a', R v y a' → R' (f v) (g y) a') (h : RefE G' x T' a R) :
+    RefE G (k x) (T' >>= fun y => pure (g y)) a R' :=
+  RefE.tailMap hk hk' hG
+    (fun y a' hr => ⟨g y, by simp only [StateT.run_bind, hr]; rfl, fun v => hR v y a'⟩)
+    (fun _ he => by simp only [StateT.run_bind, he]; rfl) h
+
+/-- A tail call whose continuation passes the callee's errors on and maps its value (`f`), against
+a twin that runs as the callee's twin `T'` from `a₁` (`RefE.tailMap` at one value type). -/
+theorem RefE.tail {α β γ : Type} {G G' : Prop} {x : Except Err α} {k : Except Err α → Except Err α}
+    {f : α → α} {T : AM β} {T' : AM γ} {a a₁ : AState} {R : α → γ → AState → Prop}
+    {R' : α → β → AState → Prop}
+    (hk : ∀ e, k (.error e) = .error e) (hk' : ∀ v, k (.ok v) = .ok (f v)) (hG : G → G')
+    (hT : ∀ y a', T'.run a₁ = .ok (y, a') → ∃ y', T.run a = .ok (y', a') ∧ ∀ v, R v y a' → R' (f v) y' a')
+    (hTe : ∀ ce, T'.run a₁ = .error ce → T.run a = .error ce) (h : RefE G' x T' a₁ R) :
+    RefE G (k x) T a R' :=
+  RefE.tailMap hk hk' hG hT hTe h
+
 /-- `RefE.tail` against a twin with the same run. -/
 theorem RefE.tail_eq {α β : Type} {G G' : Prop} {x : Except Err α} {k : Except Err α → Except Err α}
     {f : α → α} {T T' : AM β} {a a₁ : AState} {R R' : α → β → AState → Prop}
     (hk : ∀ e, k (.error e) = .error e) (hk' : ∀ v, k (.ok v) = .ok (f v)) (hG : G → G')
     (hT : T.run a = T'.run a₁) (hR : ∀ v y a', R v y a' → R' (f v) y a') (h : RefE G' x T' a₁ R) :
     RefE G (k x) T a R' :=
-  RefE.tail hk hk' hG (fun y a' hr => ⟨y, hT.trans hr, fun v => hR v y a'⟩) (fun _ he => hT.trans he) h
+  RefE.tailMap_eq hk hk' hG hT hR h
 
 /-! ## An ok fact and an error claim (`RefC`)
 

@@ -73,6 +73,55 @@ theorem CorePost.ret {α : Type} {dec : List Word → α} {dn : NIdx → Option 
     CorePost dec dn m vis fe M eb ok (r, m) y a :=
   ⟨⟨M, hS, KeptAll.refl _ _, StackKept.refl _⟩, hy, hr⟩
 
+/-- **The results re-listed** (`g`; a `return` of the callee's first words): the post holds of
+`g r` when the decoder and the validity read `g r` as `r`. -/
+theorem CorePost.relistBy {α : Type} {dec : List Word → α} {dn : NIdx → Option ConLeche.Name}
+    {m₀ : Mem} {vis : Word} {fe : IFEnv} {M : ModeMaps} {eb : Word} {ok : List Word → Prop}
+    (g : List Word → List Word) (hd : ∀ r, dec (g r) = dec r) (hok : ∀ r, ok r → ok (g r))
+    (v : List Word × Mem) (y : α) (a' : AState) (h : CorePost dec dn m₀ vis fe M eb ok v y a') :
+    CorePost dec dn m₀ vis fe M eb ok (g v.1, v.2) y a' :=
+  ⟨h.after, h.res.trans (hd v.1).symm, hok _ h.valid⟩
+
+/-- **A tail call that re-lists the callee's results** (`g`), both outcomes, at the callee's twin. -/
+theorem RefE.tail_relist {α : Type} {G G' : Prop} {x : Except Err (List Word × Mem)}
+    {K : Except Err (List Word × Mem) → Except Err (List Word × Mem)} {g : List Word → List Word}
+    (hK1 : ∀ e, K (.error e) = .error e) (hK2 : ∀ v : List Word × Mem, K (.ok v) = .ok (g v.1, v.2))
+    {T : AM α} {a₀ : AState} {dec : List Word → α} {dn : NIdx → Option ConLeche.Name} {m : Mem}
+    {vis : Word} {fe : IFEnv} {M : ModeMaps} {eb : Word} {ok : List Word → Prop}
+    (hd : ∀ r, dec (g r) = dec r) (hok : ∀ r, ok r → ok (g r)) (hG : G → G')
+    (h : RefE G' x T a₀ (CorePost dec dn m vis fe M eb ok)) :
+    RefE G (K x) T a₀ (CorePost dec dn m vis fe M eb ok) :=
+  RefE.tail_eq hK1 hK2 hG rfl (CorePost.relistBy g hd hok) h
+
+/-- `RefE.tail_relist` for a `Bool` answer word (`return x` of a `decBool`/`ResH` callee). -/
+theorem RefE.tail_relist1 {G G' : Prop} {x : Except Err (List Word × Mem)}
+    {K : Except Err (List Word × Mem) → Except Err (List Word × Mem)}
+    (hK1 : ∀ e, K (.error e) = .error e)
+    (hK2 : ∀ v : List Word × Mem, K (.ok v) = .ok ([v.1.headD 0], v.2))
+    {T : AM Bool} {a₀ : AState} {dn : NIdx → Option ConLeche.Name} {m : Mem} {vis : Word}
+    {fe : IFEnv} {M : ModeMaps} {eb : Word}
+    (hG : G → G') (h : RefE G' x T a₀ (CorePost decBool dn m vis fe M eb ResH)) :
+    RefE G (K x) T a₀ (CorePost decBool dn m vis fe M eb ResH) :=
+  RefE.tail_relist (g := fun r => [r.headD 0]) hK1 hK2 (fun _ => rfl) (fun _ h => h) hG h
+
+/-- `RefE.tail_relist` at the callee's first three words (a `return (k, x, y)`), for a decoder and a
+validity that read only those (by default definitionally). -/
+theorem RefE.tail_relist3 {α : Type} {G G' : Prop} {x : Except Err (List Word × Mem)}
+    {K : Except Err (List Word × Mem) → Except Err (List Word × Mem)}
+    (hK1 : ∀ e, K (.error e) = .error e)
+    (hK2 : ∀ v : List Word × Mem,
+      K (.ok v) = .ok ([v.1.headD 0, v.1.tail.headD 0, v.1.tail.tail.headD 0], v.2))
+    {T : AM α} {a₀ : AState} {dec : List Word → α} {dn : NIdx → Option ConLeche.Name} {m : Mem}
+    {vis : Word} {fe : IFEnv} {M : ModeMaps} {eb : Word} {ok : List Word → Prop}
+    (hG : G → G') (h : RefE G' x T a₀ (CorePost dec dn m vis fe M eb ok))
+    (hd : ∀ r, dec [r.headD 0, r.tail.headD 0, r.tail.tail.headD 0] = dec r := by
+      exact fun _ => rfl)
+    (hok : ∀ r, ok r → ok [r.headD 0, r.tail.headD 0, r.tail.tail.headD 0] := by
+      exact fun _ h => h) :
+    RefE G (K x) T a₀ (CorePost dec dn m vis fe M eb ok) :=
+  RefE.tail_relist (g := fun r => [r.headD 0, r.tail.headD 0, r.tail.tail.headD 0]) hK1 hK2 hd hok
+    hG h
+
 /-- **A core callee's ok run, then the rest**, both outcomes: the rest from the callee's state,
 at any maps of the relation there, the stack kept across the callee. -/
 theorem RefE.bind_core {α β γ : Type} [Inhabited γ] {G : Prop} {x : Except Err α} {T₁ : AM γ}

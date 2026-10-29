@@ -56,20 +56,6 @@ theorem coreRef_bind {α β : Type} [Inhabited α] [Inhabited β] {T₁ : AM α}
   coreRef_then h₁ h₂ (by
     rw [StateT.run_bind, AM.run_of_ok _ _ h₁.1, h₁.2.2.1]; rfl)
 
-/-- **Every spec holds at L fuel `0`** (the run fails). -/
-theorem CoreSpec.zeroLet {α : Type} [Inhabited α] (p : Prog) (f : FnName) (args : List Word)
-    (T : AM α) (dec : List Word → α) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
-    (vis : Word) (fe : IFEnv) (M : ModeMaps) (eb : Word) (ok : List Word → Prop) :
-    CoreSpec p 0 f args T dec s₀ a₀ dn vis fe M eb ok := by
-  apply L.M.triple_of_run
-  intro s r s' _ hrun
-  rw [invoke_run_loc] at hrun
-  obtain ⟨e, he⟩ : ∃ e, (invoke p (exec p 0) f args).run ⟨s.mem, Locals.init []⟩ = .error e := by
-    simp only [invoke, lookupFn]
-    cases p.lookup f with
-    | none | some fd => exact ⟨_, rfl⟩
-  rw [he] at hrun; cases hrun
-
 /-- `ensure_sort` at every L fuel up to `n + 1` from the knot up to `n`. -/
 theorem ensureSortSpec_of_knot (p : Prog) (hp : InferLeafProg p) :
     ∀ n, KnotUpTo p n → EnsureSortSpec p n

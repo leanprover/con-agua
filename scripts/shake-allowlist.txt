@@ -159,3 +159,7 @@ ConAgua/Arena/KnotSlot.lean	public import ConAgua.Arena.SimLib	# needed: the bui
 ConAgua/Arena/InferLeaves.lean	public import ConAgua.Arena.RefECore	# the build needs it (a name the tool does not attribute: a command reads it, or an auxiliary realized in several modules)
 ConAgua/Arena/InferLeaves.lean	public import ConAgua.Checker.NoVerdictTree	# the build needs it (a name the tool does not attribute: a command reads it, or an auxiliary realized in several modules)
 ConAgua/Arena/InferLeaves.lean	public import ConAgua.Arena.KnotE	# needed: the build fails without it (`KnotUpToE`, `InferSlotE` in es_ref, itc_ref, InferG); the tool names it unused
+ConAgua/Arena/InstLPEntry.lean	public import ConAgua.Arena.RecFireCore	# needed: the build fails without it (`CoreS.readCaches`, `hslice?_bound_fsz`; `CoreS.ctl136` through it); the tool names it unused
+ConAgua/Arena/WhnfM2CRefine3.lean	public import ConAgua.Arena.RecFireCore	# needed: the build fails without it (`CoreS.ctl136`, now in InferBodySpine, reached through it); the tool names it unused
+ConAgua/Arena/InferBodySpine.lean	public import ConAgua.Arena.InferBodyLet	# downstream modules reach InferBodyLet (and `ld64_rdW_spec`) through it (PropReadW fails without it); the spines themselves no longer use it
+ConAgua/Arena/WhnfSlotRefine.lean	public import ConAgua.Arena.WhnfCoreLoop	# needed: its unified models (WhnfModelsE, l_model names) come through it, and DefEqKnot reaches whnfCoreSlot_step through it; the memo lemmas it used moved to WhnfBase
