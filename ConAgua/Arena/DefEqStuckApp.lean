@@ -163,7 +163,7 @@ theorem ac_ref (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (n : Nat)
     rw [htop1, ← hr10, addW_toNat (by omega)]
   have e2 : (spTop m₄).toNat = (r₂.headD 0).toNat + (r₂.tail.headD 0).toNat := by
     rw [htop2, ← hr20, addW_toNat (by have := hg1.size; omega)]
-  have hle12 : (spTop m₁).toNat ≤ (spTop m₄).toNat := UInt64.le_iff_toNat_le.mp hg2.iw
+  have hle12 : (spTop m₁).toNat ≤ (spTop m₄).toNat := UInt64.le_iff_toNat_le.mp hg2.1
   have h5top : spTop m₅ = spTop m₄ := hst₅.1
   have hA : SpineR m₅ (r₁.headD 0) (r₁.tail.headD 0) aa.toArray :=
     (hsp1.grew hg2 (by omega) hspn₁).keep hst₅.size hst₅.below (by omega) hspn₂

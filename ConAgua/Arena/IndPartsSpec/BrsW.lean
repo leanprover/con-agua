@@ -1230,7 +1230,7 @@ theorem bfW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
   have hg03 := hg02.trans hg3
   have hgl : (r3.tail.headD 0) = ctl := by
     apply UInt64.toNat_inj.mp
-    rw [← decPL_length _ hgs.iw, blockGroups_length hgrun, hctl]
+    rw [← decPL_length _ hgs.dec, blockGroups_length hgrun, hctl]
   rw [hgl] at hgs
   -- `block_shape_members_of` (model only)
   intro r m' e
