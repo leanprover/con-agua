@@ -1,7 +1,5 @@
-import ConAgua.Arena.IndT.CheckIndDecl
 import ConAgua.Verdict.TopE
 import ConAgua.Verdict.PosKnotE
-import ConAgua.Verdict.KnotAllE
 
 /-!
 # The inductive arm's verdict claim, proved (lane `verdicts-b`, helper `fin`)
