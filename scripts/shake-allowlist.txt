@@ -59,6 +59,9 @@ ConAgua/Arena/InferProj.lean	public import ConAgua.Arena.WhnfCoreProj	# a consta
 ConAgua/Arena/InferProj2.lean	public import ConAgua.Arena.ProjView	# a constant the module uses (an auxiliary realized in several modules: the tool names another copy)
 ConAgua/Arena/InferProj2.lean	public import ConAgua.Arena.WhnfCoreProj	# a constant the module uses (an auxiliary realized in several modules: the tool names another copy)
 ConAgua/Arena/InstLP.lean	public import ConAgua.Arena.WhnfBase	# the build needs it: the array names moved to ConAgua.Layout, its other names (L notation, the stores) still come through it
+ConAgua/Arena/KnotSlot.lean	public import ConAgua.Arena.KnotE	# the build needs it (a name the tool does not attribute: a command reads it, or an auxiliary realized in several modules)
+ConAgua/Arena/KnotSlot.lean	public import ConAgua.Arena.RefECore	# the build needs it (a name the tool does not attribute: a command reads it, or an auxiliary realized in several modules)
+ConAgua/Arena/KnotSlot.lean	public import ConAgua.Checker.NoVerdictTree	# the build needs it: `nvFns`/`nv_mem` in the `l_model`s' `nv`, named only in their generated proofs
 ConAgua/Arena/LevelInternRef.lean	public import ConAgua.Arena.Rom	# a constant the module uses (an auxiliary realized in several modules: the tool names another copy)
 ConAgua/Arena/LevelSubstLP.lean	public import ConAgua.Arena.WhnfBase	# the build needs it: the array names moved to ConAgua.Layout, its other names (L notation, the stores) still come through it
 ConAgua/Arena/NatArms.lean	public import ConAgua.Arena.Tiers	# the build needs it: the array names moved to ConAgua.Layout, its other names (L notation, the stores) still come through it
