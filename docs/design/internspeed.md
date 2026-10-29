@@ -306,6 +306,31 @@ frame lemma that separates `AREC` from `ADER` would need rework); `hsh` (no effe
   `advise_huge` leaves the first and last 2 MB of every array slot on 4 KB pages (where the small
   arrays and the start of every array live). Both are `main.c` (trusted C) decisions; reading the
   input into an anonymous, huge-page region would be the experiment. Not measured here.
+* **Page walks, measured (lane hpmeasure, master 7904aa4e, Linux 7.3, THP `madvise`, input on
+  XFS).** The input is *already* on huge pages: XFS fills the page cache with 2 MB folios, and the
+  kernel maps them by PMD even without `MADV_HUGEPAGE` (`smaps` at the end of a run:
+  `FilePmdMapped` 319–326 of 338 MB, `THPeligible 0`, cold or warm). So `madvise(MADV_HUGEPAGE)` on
+  the mapping (A) adds only the first ~10 MB (336 MB PMD-mapped); `MADV_COLLAPSE` fails with `EAGAIN`
+  on a cold file and is a no-op on a warm one; `read` into an anonymous `MADV_HUGEPAGE` region (B)
+  gets 338 MB `AnonHugePages` but pays the copy. The walks are the region's 4 KB parts: the 4 KB
+  walks have the same per-function split with B (input on huge pages) as with master, and
+  `madvise` of the whole region instead of `advise_huge` (R) takes them from 1.2–1.4 M to 0.02 M
+  in the parse (2 MB walks 0.4 → 0.7 M) and from 164 M to 0.04 M in a whole one-thread run (2 MB
+  walks 7 → 40 M), at +155 MB RSS in the parse and +416 MB whole (743 → 1160 MB; 16 threads
+  1001 → 1403 MB). The walks hardly cost: cycles −0.5 %.
+  Wall (`Init`, interleaved paired rounds, `wb.py`/`wstats.py`; median paired Δ, Wilcoxon p):
+
+  | cell | base | A | B | R | rounds, load |
+  |---|---:|---:|---:|---:|---|
+  | parse phase (46/94) | 1.90 s | −0.2 % (0.41) | **+1.5 %** (< 0.001) | **−0.6 %** (0.014) | 40, 4–13 |
+  | one thread (44/92) | 18.87 s | −0.1 % (0.99) | −0.6 % (0.58) | −1.5 % (0.33) | 40, 3–127 |
+  | ↳ rounds at load < 20 | | −0.3 % (0.08) | −0.6 % (0.25) | **−1.7 %** (0.015) | 20 |
+  | 16 threads (24–39) | 4.27 s | +1.1 % (0.20) | +2.4 % (0.06) | +0.9 % (0.22) | 40, 11–130 |
+
+  (A plus `MADV_COLLAPSE`: parse −0.5 %, p < 0.001, though it maps the same pages as A.) Peak
+  RSS of A and B equals master's (the mapped file counts in RSS too; B's copy is anonymous
+  memory next to the page cache). Verdict: no flag on the input mapping pays here; the input
+  needs no change. Scratch: `_tmp/hpmeasure/`.
 * **The hash.** `hsh` changes neither the probe counts (16.90 M against 16.87 M slot loads) nor the
   wall: the FNV multiplies are not on the miss's critical path enough to matter. The `mulhi` home
   (D36) and the multiplicative finalizer give the table its locality (half the slot loads hit L1),
