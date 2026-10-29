@@ -89,7 +89,7 @@ con-ron's own
 ([deviation D16](https://github.com/leanprover/con-agua/blob/master/docs/deviations.md#L49)).
 Internally, accept is the return word `0x414343455054`, chosen so that no
 status word or unset register reads as accept
-([`ACCEPT`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/Statement.lean#L89-L91)).
+([`ACCEPT`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/Statement.lean#L90-L92)).
 
 ## 2. What is proven, what is trusted
 
@@ -151,7 +151,7 @@ A fourth variant,
 [`checkerFile_accepts_regs`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/EndToEnd.lean#L61-L69),
 adds that the caller's callee-saved registers (System V: `rsp`, `rbp`, `rbx`,
 `r12` to `r15`) are intact on return, on every path
-([`RegsRestored`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/Statement.lean#L120-L127)).
+([`RegsRestored`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/Statement.lean#L121-L128)).
 The trampoline saves and restores them; nothing is assumed about the registers
 the compiled code uses (§8.1).
 
@@ -443,10 +443,11 @@ twin's failure condition. Functions whose call closure aborts only with class
 [`drv_outcome`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/DrvAbi.lean#L174-L184)
 is the driver on the machine: `ca_start` calls entry 1, whose setup stub builds
 the layout and enters the trampoline, so `compile_correct` gives one L run of
-`check` in mode 3; if that returns `2^63 + k`, it calls entry 2 in place, a
+`check` in mode 3 (a run of the compiled, inlined program, which is a run of
+the program, §8.6); if that returns `2^63 + k`, it calls entry 2 in place, a
 second L run in mode 2 on the memory the first left; if the machine reports
 accept, both L runs did.
-[`checkerFile_drv_accepts_regs`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/DrvFinal.lean#L90-L96)
+[`checkerFile_drv_accepts_regs`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/DrvFinal.lean#L93-L99)
 composes it with `drv_twinAccepts` for the committed file, and
 `EndToEnd.lean` states the four final theorems from it, and the threaded mode's three.
 
@@ -716,7 +717,7 @@ dropped with the scratch tier; within one declaration the pool only grows
 ### 6.4 The region
 
 At run time every array lives in one region the harness maps
-([the entry stub](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Abi.lean#L8-L39)).
+([the entry stub](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Abi.lean#L8-L41)).
 The region is a static partition into slots of `2^35` bytes: slot 0 holds the
 descriptor table (a base, a length and a length in 32-bit elements per
 descriptor position, the constant data, the globals), slot 1 the L stack (1 GiB at its bottom), then one slot per
@@ -904,7 +905,7 @@ it with `ca_start`'s arguments. It checks the region size and that
 a small region), writes
 the descriptor table for the static partition (§6.4) and the constant data by
 immediate stores, and enters the trampoline with fuel `2^62 - 1`
-([the stubs](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Abi.lean#L8-L39)).
+([the stubs](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Abi.lean#L8-L41)).
 Its proof (`sim_abiStub`, `abiLayout_ok`, `abi_memRel`) shows that it
 establishes `Layout.Ok` and `MemRel`, so the harness only maps zeros. Every
 array gets a whole slot there, so every minimum length holds; the table-relative
@@ -919,7 +920,7 @@ The final theorem is about `checker.s` itself.
 [`checkerFile`](https://github.com/leanprover/con-agua/blob/master/ConAguaAsm/Checker.lean#L17-L18)
 is the file's code as `include_asm` reads it at elaboration time; Lake rebuilds
 it when the file changes. Then
-[`checkerFile_eq`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Checker/AsmFileEq.lean#L23-L24)
+[`checkerFile_eq`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Checker/AsmFileEq.lean#L22-L23)
 proves `checkerFile = checkerStub ++ checkerAsm`, where `checkerAsm` is a
 literal that the kernel checked, function by function, to be
 `compileProg checkerTab checkerProgI "check"` (§8.6)
@@ -1010,7 +1011,7 @@ sequential driver `ca_start` runs the same two entries one after the other
 3 (the buffer's header only), then one entry-2 run over all groups `[0, k)` in
 place, on phase A's own arrays, so it needs the setup stub's region plus 16
 bytes, where it keeps its return address and the caller's `r15`
-([the driver](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Abi.lean#L216-L225)).
+([the driver](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Abi.lean#L225-L234)).
 Its machine-level theorem
 ([`drv_outcome`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/DrvAbi.lean#L174-L184))
 says that an accept means the two L runs accepted, and an error report

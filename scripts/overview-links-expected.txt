@@ -80,10 +80,10 @@
 == docs/deviations.md#L49
     49  | D16 | the abort sites (`fail R`, `ConAgua/Arena/Reasons.lean`) | each `fail` has its kind (`invalid`, `notImplemented`, `internal`, `native`) and message | an abort carries a class (reject, decline, other) and a reason: the twin's reject/decline sites are labelled with the twin's message; class 0 (exit 3) at every capacity or defensive check (an unresolved constant decides its kind as the twin does, `unresolved_consts_error`: a string literal before `String` or a use of `sorryAx` declines, anything else rejects; its two walks, `has_str_lit_go` and `ue_mentions_go`, drop the twin's memo so the error path writes nothing: the same answer, but exponential time on a heavily shared term, error path only) | completeness of the verdict only: L says `error` where the twin rejects or declines | – | by design: the classes are proved (a reject or decline is the twin's, the final theorems); the messages are not part of the theorem |
 
-== ConAgua/Final/Statement.lean#L89-L91
-    89  /-- The verdict word `check` returns first for accept. Not `0`, `1` or `2`, so that a status word
-    90  or an unset register is never read as accept. -/
-    91  def ACCEPT : Word := 0x4143_4345_5054
+== ConAgua/Final/Statement.lean#L90-L92
+    90  /-- The verdict word `check` returns first for accept. Not `0`, `1` or `2`, so that a status word
+    91  or an unset register is never read as accept. -/
+    92  def ACCEPT : Word := 0x4143_4345_5054
 
 == ConAgua/Final/EndToEnd.lean#L80-L87
     80  theorem checkerFile_accepts [Host]
@@ -195,15 +195,15 @@
     68            TwinVerdict [b] (st.data.regs.rax &&& 3)))
     69        dm (label abiStartL) :=
 
-== ConAgua/Final/Statement.lean#L120-L127
-   120  /-- **The caller's registers are intact on return**, relative to the registers `r0` at the call:
-   121  `rsp` is past the return address and the other callee-saved registers of System V, `rbp`,
-   122  `r14`, `r15`, `rbx`, `r12`, `r13`, hold their values from the call. The trampoline `ca_enter`
-   123  saves and restores them (`rbp`, `r14` on the machine stack, the others past the table), so this
-   124  holds whatever registers the compiled code uses. Together with the verdict in `rdx`/`rax` this is
-   125  all the harness relies on after the call. -/
-   126  def RegsRestored (r0 r : Reg64s) : Prop :=
-   127    r.rsp.toNat = r0.rsp.toNat + 8 ∧ r.rbp = r0.rbp ∧ r.r14 = r0.r14 ∧ r.r15 = r0.r15 ∧
+== ConAgua/Final/Statement.lean#L121-L128
+   121  /-- **The caller's registers are intact on return**, relative to the registers `r0` at the call:
+   122  `rsp` is past the return address and the other callee-saved registers of System V, `rbp`,
+   123  `r14`, `r15`, `rbx`, `r12`, `r13`, hold their values from the call. The trampoline `ca_enter`
+   124  saves and restores them (`rbp`, `r14` on the machine stack, the others past the table), so this
+   125  holds whatever registers the compiled code uses. Together with the verdict in `rdx`/`rax` this is
+   126  all the harness relies on after the call. -/
+   127  def RegsRestored (r0 r : Reg64s) : Prop :=
+   128    r.rsp.toNat = r0.rsp.toNat + 8 ∧ r.rbp = r0.rbp ∧ r.r14 = r0.r14 ∧ r.r15 = r0.r15 ∧
 
 == ConAgua/Final/EndToEnd.lean#L189-L206
    189  /-- info: 'ConAgua.Final.checkerFile_accepts' depends on axioms: [propext, Classical.choice, Quot.sound] -/
@@ -587,11 +587,11 @@
     72    closedNV_of_all nvTree.eq checkerProg_nvChk
 
 == ConAgua/Final/DrvAbi.lean#L174-L184
-   174  theorem drv_outcome [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = true) (hio : abiIO tab = true)
-   175      (hwf : Prog.wf tab p = true) (hnres : 1 ≤ tab.nres) (mode plo phi : GVar) (out hdrf ctlf : ArrId)
+   174  theorem drv_outcome [Host] (q p : Prog) (hq : Refines q p) (tab : Tab) (hok : abiTabOk tab = true) (hio : abiIO tab = true)
+   175      (hwf : Prog.wf tab q = true) (hnres : 1 ≤ tab.nres) (mode plo phi : GVar) (out hdrf ctlf : ArrId)
    176      (hw : Nat) (fz own : List TieredArray) (hngm : mode.id < tab.ng) (hngl : plo.id < tab.ng)
    177      (hngh : phi.id < tab.ng) (hp : seqParamsOk tab out hdrf ctlf hw = true) (k0 : Nat)
-   178      (hcode : Code (parStub tab mode plo phi out hdrf ctlf hw fz own ++ (abiStub tab ++ compileProg tab p "check")) k0)
+   178      (hcode : Code (parStub tab mode plo phi out hdrf ctlf hw fz own ++ (abiStub tab ++ compileProg tab q "check")) k0)
    179      (fd : FunDecl) (hentry : p.lookup "check" = some fd) (hnp : fd.nparams = 0)
    180      (b pb : ByteArray) (dm : MachineData) (ra : Word) (hc : AbiCall b pb dm ra) :
    181      Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧ RegsRestored dm.regs st.data.regs ∧
@@ -599,14 +599,14 @@
    183          (st.data.regs.rdx = 2 → DrvErr tab p mode plo phi out hdrf ctlf hw b pb st.data.regs.rax))
    184        dm (label abiStartL) := by
 
-== ConAgua/Final/DrvFinal.lean#L90-L96
-    90  theorem checkerFile_drv_accepts_regs [Host]
-    91      (k0 : Nat) (hcode : Code checkerFile k0)
-    92      (b pb : ByteArray) (h64 : System.Platform.numBits = 64) (dm : MachineData) (ra : Word)
-    93      (hc : AbiCall b pb dm ra) :
-    94      Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧ RegsRestored dm.regs st.data.regs ∧
-    95          (st.data.regs.rdx = 0 → st.data.regs.rax = ACCEPT → TwinAccepts [b]))
-    96        dm (label abiStartL) :=
+== ConAgua/Final/DrvFinal.lean#L93-L99
+    93  theorem checkerFile_drv_accepts_regs [Host]
+    94      (k0 : Nat) (hcode : Code checkerFile k0)
+    95      (b pb : ByteArray) (h64 : System.Platform.numBits = 64) (dm : MachineData) (ra : Word)
+    96      (hc : AbiCall b pb dm ra) :
+    97      Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧ RegsRestored dm.regs st.data.regs ∧
+    98          (st.data.regs.rdx = 0 → st.data.regs.rax = ACCEPT → TwinAccepts [b]))
+    99        dm (label abiStartL) :=
 
 == ConAgua/Checker/Entry.lean#L143-L150
    143  /-- `check()`: one of the parallel mode's entries, by the mode word; any other mode aborts. -/
@@ -1338,7 +1338,7 @@
     28  `grind` with multi-patterns that bind every variable (DESIGN.md, "Proof recipe").
     29  -/
 
-== ConAgua/Compiler/Abi.lean#L8-L39
+== ConAgua/Compiler/Abi.lean#L8-L41
      8  # The entry stubs (lane `abi`)
      9  
     10  The harness's whole job shrinks to: map a zero region, hand over the two input buffers, call
@@ -1366,11 +1366,13 @@
     32    gets no slot (`Tab.nslot`).
     33  * The constant data is written into the table by immediate stores (no `.rodata` read); the result
     34    area and the global variables are the region's zeros.
-    35  * The fuel is `2^62 - 1` (`compile_correct` takes any `N < 2^62`).
-    36  
-    37  Nothing here is trusted: `sim_abiStub` (`ConAgua/Compiler/AbiSim.lean`) runs the stub on the
-    38  machine, `abiLayout_ok` and `abi_memRel` (`ConAgua/Final/Abi.lean`) show that it establishes
-    39  `Layout.Ok`/`MemRel` for the partition, and `abi_harness` gives `compile_correct`'s premises at
+    35  * The fuel is `abiFuelM = 2^62 - 1 - abiInl` (`compile_correct` takes any `N < 2^62`): the run of the
+    36    inlined program it stands for is a run of the program with `abiFuel = 2^62 - 1` (`MainRef.lean`).
+    37  
+    38  Nothing here is trusted: `sim_abiStub` (`ConAgua/Compiler/AbiSim.lean`) runs the stub on the
+    39  machine, `abiLayout_ok` and `abi_memRel` (`ConAgua/Final/Abi.lean`) show that it establishes
+    40  `Layout.Ok`/`MemRel` for the partition, and `abi_harness` gives `compile_correct`'s premises at
+    41  the trampoline. -/
 
 == ConAgua/Layout.lean#L47-L53
     47  /-- **The checker's arrays.** Tiered rows are the persistent (tier 0) and scratch (tier 1) tiers
@@ -1862,7 +1864,7 @@
     84    min64 : ∀ s, G.tab.dom64 s = true → G.tab.min64 s ≤ G.s (G.tab.pos64 s)
     85    tbl64 : ∀ s c, G.tab.dom64 s = true → G.tab.tbl64 s = some c → G.b (G.tab.pos64 s) = G.T + c
 
-== ConAgua/Compiler/Abi.lean#L8-L39
+== ConAgua/Compiler/Abi.lean#L8-L41
      8  # The entry stubs (lane `abi`)
      9  
     10  The harness's whole job shrinks to: map a zero region, hand over the two input buffers, call
@@ -1890,26 +1892,28 @@
     32    gets no slot (`Tab.nslot`).
     33  * The constant data is written into the table by immediate stores (no `.rodata` read); the result
     34    area and the global variables are the region's zeros.
-    35  * The fuel is `2^62 - 1` (`compile_correct` takes any `N < 2^62`).
-    36  
-    37  Nothing here is trusted: `sim_abiStub` (`ConAgua/Compiler/AbiSim.lean`) runs the stub on the
-    38  machine, `abiLayout_ok` and `abi_memRel` (`ConAgua/Final/Abi.lean`) show that it establishes
-    39  `Layout.Ok`/`MemRel` for the partition, and `abi_harness` gives `compile_correct`'s premises at
+    35  * The fuel is `abiFuelM = 2^62 - 1 - abiInl` (`compile_correct` takes any `N < 2^62`): the run of the
+    36    inlined program it stands for is a run of the program with `abiFuel = 2^62 - 1` (`MainRef.lean`).
+    37  
+    38  Nothing here is trusted: `sim_abiStub` (`ConAgua/Compiler/AbiSim.lean`) runs the stub on the
+    39  machine, `abiLayout_ok` and `abi_memRel` (`ConAgua/Final/Abi.lean`) show that it establishes
+    40  `Layout.Ok`/`MemRel` for the partition, and `abi_harness` gives `compile_correct`'s premises at
+    41  the trampoline. -/
 
 == ConAguaAsm/Checker.lean#L17-L18
     17  /-- **The checker's code**: the `.text` section of `checker.s`. -/
     18  noncomputable def checkerFile : Program := include_asm "../checker.s"
 
-== ConAgua/Checker/AsmFileEq.lean#L23-L24
-    23  /-- **The committed file is the compiler's output**, after the entry stub `checkerStub`. -/
-    24  asm_file_eq checkerFile_eq : checkerFile = checkerStub ++ checkerAsm via checkerAsm_eq
+== ConAgua/Checker/AsmFileEq.lean#L22-L23
+    22  /-- **The committed file is the compiler's output**, after the entry stub `checkerStub`. -/
+    23  asm_file_eq checkerFile_eq : checkerFile = checkerStub ++ checkerAsm via checkerAsm_eq
 
 == ConAgua/Checker/Asm.lean#L12-L21
     12  /-!
     13  # The checker's machine code, as a kernel-checked literal (generated by `scripts/checker_prog.py`; do not edit)
     14  
     15  `checkerAsm : Program` is the compiled checker as a literal term, and
-    16  `checkerAsm_eq : compileProg checkerTab checkerProg "check" = checkerAsm` is checked by the kernel,
+    16  `checkerAsm_eq : compileProg checkerTab checkerProgI "check" = checkerAsm` is checked by the kernel,
     17  one function at a time (`asm_lit`, `ConAgua/Compiler/AsmLit.lean`; the functions' checks are in
     18  `AsmPart0` … `AsmPart9`), so running the compiler as compiled Lean code is not trusted.
     19  `checkerFile_eq` (`ConAgua/Checker/AsmFileEq.lean`) compares it with the committed file
@@ -2039,24 +2043,24 @@
    140    return 71757147230292
    141  }
 
-== ConAgua/Compiler/Abi.lean#L216-L225
-   216  * `ca_start(in, in_len, pins, pins_len, base, base_len)` (**the sequential driver**, what the
-   217    harness calls): entry 1 with the mode word `3` (`ca_start_a0`: the buffer's header only); if it
-   218    returns `rdx = 0` and `rax = 2^63 + k`, `ca_check_seq` on the same region for `[0, k)`, whose
-   219    result is the result. It needs no more memory than `ca_setup`: entry 2 runs on phase A's region,
-   220    on the arrays as phase A left them.
-   221    It keeps its return address and the caller's `r15` past `ca_setup`'s region (`drvSave`; the
-   222    driver's region is 16 bytes larger, `drvNeed`, the size `ca_region_size` names), pops its return
-   223    address off the machine stack before each `call` and holds `base` in `r15` (which `ca_enter`
-   224    restores); so each callee's machine stack is the caller's (the 32 bytes `AbiCall` names) and
-   225    the driver touches no callee-saved register but `r15`. -/
+== ConAgua/Compiler/Abi.lean#L225-L234
+   225  * `ca_start(in, in_len, pins, pins_len, base, base_len)` (**the sequential driver**, what the
+   226    harness calls): entry 1 with the mode word `3` (`ca_start_a0`: the buffer's header only); if it
+   227    returns `rdx = 0` and `rax = 2^63 + k`, `ca_check_seq` on the same region for `[0, k)`, whose
+   228    result is the result. It needs no more memory than `ca_setup`: entry 2 runs on phase A's region,
+   229    on the arrays as phase A left them.
+   230    It keeps its return address and the caller's `r15` past `ca_setup`'s region (`drvSave`; the
+   231    driver's region is 16 bytes larger, `drvNeed`, the size `ca_region_size` names), pops its return
+   232    address off the machine stack before each `call` and holds `base` in `r15` (which `ca_enter`
+   233    restores); so each callee's machine stack is the caller's (the 32 bytes `AbiCall` names) and
+   234    the driver touches no callee-saved register but `r15`. -/
 
 == ConAgua/Final/DrvAbi.lean#L174-L184
-   174  theorem drv_outcome [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = true) (hio : abiIO tab = true)
-   175      (hwf : Prog.wf tab p = true) (hnres : 1 ≤ tab.nres) (mode plo phi : GVar) (out hdrf ctlf : ArrId)
+   174  theorem drv_outcome [Host] (q p : Prog) (hq : Refines q p) (tab : Tab) (hok : abiTabOk tab = true) (hio : abiIO tab = true)
+   175      (hwf : Prog.wf tab q = true) (hnres : 1 ≤ tab.nres) (mode plo phi : GVar) (out hdrf ctlf : ArrId)
    176      (hw : Nat) (fz own : List TieredArray) (hngm : mode.id < tab.ng) (hngl : plo.id < tab.ng)
    177      (hngh : phi.id < tab.ng) (hp : seqParamsOk tab out hdrf ctlf hw = true) (k0 : Nat)
-   178      (hcode : Code (parStub tab mode plo phi out hdrf ctlf hw fz own ++ (abiStub tab ++ compileProg tab p "check")) k0)
+   178      (hcode : Code (parStub tab mode plo phi out hdrf ctlf hw fz own ++ (abiStub tab ++ compileProg tab q "check")) k0)
    179      (fd : FunDecl) (hentry : p.lookup "check" = some fd) (hnp : fd.nparams = 0)
    180      (b pb : ByteArray) (dm : MachineData) (ra : Word) (hc : AbiCall b pb dm ra) :
    181      Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧ RegsRestored dm.regs st.data.regs ∧
