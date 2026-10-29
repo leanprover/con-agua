@@ -275,6 +275,23 @@ CPU on 4 cores.
 split). A further step would make `Compiler/Compile`'s wide import fan-out (814 modules)
 narrower, which matters once rank 1 and 6 edit the compiler.
 
+**Measured after #189** (master f9355e94 against ceef3d4d; `_tmp/bt/`). Edit: rename the local
+`ln` to `cnt` in `front_run`'s `runLoop` and `frontRun` (`ConAgua/Front/Driver.lean`), which changes
+the program literal and keeps every proof; `scripts/lake build ConAgua` with the shared cache, then
+`cp.py` over Lake's `Built X (t)` times (module times under varying machine load, so +-20 %).
+
+| after a one-function L change | rebuilt modules | module-s | critical path |
+|---|---:|---:|---:|
+| ceef3d4d (before) | 88 | 1,075 | 169 s |
+| f9355e94 (#189) | 116 | 1,175 | 98 s |
+
+The critical path drops by 71 s (the split: `ProgWf` 66 s becomes four parts of 15 to 18 s, and so on).
+The inliner adds 28 modules (`ProgI*`, `ProgTree*`, `ProgIdx`: its literal checks, 247 module-s) but
+only 11 s of critical path (98 s against 86 s with them counted as free). Total CPU went up by 100
+module-s, so the CI build, which is CPU-bound, is slightly slower; the 4-core wall time of an L-changing
+landing is about 3.1 min before and 2.0 min after on a busy 96-core machine. A cold build's critical
+path was not re-measured.
+
 ### 4. The 16-thread gap: parse phase, then parallel phase
 
 **What.**
