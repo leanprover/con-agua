@@ -249,7 +249,7 @@ theorem bgoW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
       · cases e
       rw [bgoW.k_sl_cons.arm1, bgoW.j1.arm1] at e
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj e)
-      obtain ⟨hS3, hg3, hd3, ht3⟩ := partsConsPL decCN_mono h3 hS2 hgs.2 hgs.iw
+      obtain ⟨hS3, hg3, hd3, ht3⟩ := partsConsPL decCN_mono h3 hS2 hgs.bound hgs.dec
         (hc0B.grow (decCN_mono _) (hg1.trans hg2))
       exact ⟨c0 :: gs, a2, rfl, ⟨hd3, Nat.le_of_eq ht3⟩, hS3, (hg1.trans hg2).trans hg3⟩
     · have hb : optEq o mm.toNat = false := by simpa using (mt hcond.mpr hc)
@@ -343,7 +343,7 @@ theorem bggW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
     · cases e
     rw [bggW.k_sl_cons.arm1] at e
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj e)
-    obtain ⟨hS4, hg4, hd4, ht4⟩ := partsConsPL decGH_mono h4 hS3 hgss.2 hgss.iw (hdh.grow (decGH_mono _) hg3)
+    obtain ⟨hS4, hg4, hd4, ht4⟩ := partsConsPL decGH_mono h4 hS3 hgss.bound hgss.dec (hdh.grow (decGH_mono _) hg3)
     exact ⟨gs :: gss, a3, rfl, ⟨hd4, Nat.le_of_eq ht4⟩, hS4, (hg02.trans hg3).trans hg4⟩
 
 /-- **The model of `block_groups`.** -/

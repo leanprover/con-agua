@@ -342,7 +342,7 @@ theorem epW_ok (E : Array Word) (hE : E.size < 2 ^ 63) (o c so : Word) (pins : L
     · rw [epW_bad2 o c so k m j hlt h1 hgn] at hL; cases hL
     have hg := Classical.not_not.mp hgn
     rw [epW_cont o c so k m j hlt h1 hg, hval] at hL
-    obtain ⟨hfr, hsp3, hgrew, hslot, hsz3⟩ := push_step m (so + j) w hg.iw hg.2 htop (by omega)
+    obtain ⟨hfr, hsp3, hgrew, hslot, hsz3⟩ := push_step m (so + j) w hg.1 hg.2 htop (by omega)
     have hj1 : (j + 1).toNat = j.toNat + 1 := uint64_succ_toNat c j hlt
     have hEm3 : ((m.set64 SPN (so + j) w).set64 CTL 136 (so + j + 1)).arr64 EREC = E := by
       rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide), Mem.arr64_set64_ne _ _ _ _ _ (by decide), hEm]
@@ -734,7 +734,7 @@ theorem irCmp_ref (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
   have hsm3 : SpineR m3 mo mn margs := hsm.keep hgr13.size hgr13.below hsmt hspn
   have hcpm' : (rdW E (rl + 2)).toNat ≤ mn.toNat := by rw [← hcpw]; exact hcpm
   have hmt3 : mo.toNat + mn.toNat ≤ (spTop m3).toNat := by
-    have := UInt64.le_iff_toNat_le.mp hgr13.iw; omega
+    have := UInt64.le_iff_toNat_le.mp hgr13.1; omega
   have hsl := (hsm3.take _ hcpm').toN
   have hta : rdW E (rl + 2) ≠ 0 → mo.toNat + (rdW E (rl + 2)).toNat ≤ (spTop m3).toNat := fun _ => by
     omega
