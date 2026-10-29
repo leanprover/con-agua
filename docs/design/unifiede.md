@@ -3473,3 +3473,32 @@ arithmetic, and the reads of locals through the unreduced `setLoc` chains are re
 each goal; `simp_all` on a short path is a few cheap rounds over a cached simp set. Clearing the
 theorem's binder hypotheses before `grind` saved 7 % there (not kept: a binder can be a fact a side
 goal needs).
+
+**Applied, per model** (a run with only that model on `flat` against the module as it is; taken
+where the model alone gains): `checkDeclAxiom_specE` (`DeclAxQuotT`), `certLand_specW` (`EqAt1`; its
+20 siblings gain nothing alone), `dsE` (`DefEqStuckDisp`; `drE` slower), `ppE` (`DefEqStuckProj`;
+`exE`, `ldprE` slower), `phApp_spec`, `wtE`, `soa_spec` (`TpnB`; `wan_spec` slower),
+`classGenMotiveTy_spec`, `classGenRecTy_spec`, `ruleBody_spec`, `call1_spec`, `findSlotGo_spec`
+(`PrefixBinders`; the other 9 nothing), `applyDLine_specE` (`ApplyDLineRef`; `applyDecl_specE`
+slower), `sctsE`, `tmmE`, `tmnE`, `tmoE`. The other DefEq modules of §3.41–3.48 gain nothing from
+`flat` (`DefEqStuckStr`: 329 conditions at about 60 ms with either recipe; `DefEqBody`, `Mid`,
+`MidLazy`, `StuckApp`, `StuckTail` slower). With them the kit leftovers: `DefEqStuckDisp`'s
+`relist1` is `RefE.tail_relist1`, `DefEqStuckProj`'s `ldprE` tail `RefE.tailMap_eq`.
+
+Elaboration (user seconds, median of 3 interleaved runs, base master's text of the module,
+`_tmp/gen-cut-times2.txt`):
+
+| module | base | new |
+|---|---:|---:|
+| `Arena/DeclDivModSpec/EqAt1` | 46.10 | 43.63 |
+| `Arena/RecClassSpec/PrefixBinders` | 17.49 | 13.67 |
+| `Verdict/IndBTmm` | 14.26 | 6.64 |
+| `Arena/DefEqStuckProj` | 9.57 | 8.46 |
+| `Front/ApplyDLineRef` | 9.45 | 4.12 |
+| `Arena/DefEqStuckDisp` | 8.82 | 6.17 |
+| `Arena/DeclAxQuotT` | 6.11 | 4.91 |
+| `Arena/IndT/Sum1` | 5.58 | 4.09 |
+| `Arena/RecClassSpec/ClassGenMajorCi`, `ClassGenRecTy`, `RecCheckSpec/TpnB`, `IndPosSpec/NestOccGo` | 14.81 | 11.54 |
+| `Verdict/IndBSum4`, `IndBTmn`, `IndBTmo` | 8.49 | 6.84 |
+| `L/ModelGen` | 13.59 | 13.61 |
+| **sum (16 modules)** | **154.27** | **123.68** (−20 %) |
