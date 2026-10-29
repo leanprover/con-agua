@@ -89,7 +89,7 @@ con-ron's own
 ([deviation D16](https://github.com/leanprover/con-agua/blob/master/docs/deviations.md#L49)).
 Internally, accept is the return word `0x414343455054`, chosen so that no
 status word or unset register reads as accept
-([`ACCEPT`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/Statement.lean#L89-L91)).
+([`ACCEPT`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/Statement.lean#L90-L92)).
 
 ## 2. What is proven, what is trusted
 
@@ -151,7 +151,7 @@ A fourth variant,
 [`checkerFile_accepts_regs`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/EndToEnd.lean#L61-L69),
 adds that the caller's callee-saved registers (System V: `rsp`, `rbp`, `rbx`,
 `r12` to `r15`) are intact on return, on every path
-([`RegsRestored`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/Statement.lean#L120-L127)).
+([`RegsRestored`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/Statement.lean#L121-L128)).
 The trampoline saves and restores them; nothing is assumed about the registers
 the compiled code uses (§8.1).
 
@@ -361,7 +361,8 @@ Master `54018587`, 2026-10-28, `scripts/perf-overview.py`: the default run, 3 in
 ## 4. Architecture
 
 ```
-checker.s          ⊑  checkerProg (L)        the verified compiler, compile_correct, against Kraken's x64 semantics
+checker.s          ⊑  checkerProgI (L)       the verified compiler, compile_correct, against Kraken's x64 semantics
+checkerProgI       ⊑  checkerProg            the inliner, inlineProg_run (one more unit of fuel)
 checkerProg        ⊑  the twin's pipeline    drv_twinAccepts: per-function refinements, composed along both entries
 the twin           ⊑  con-leche's pure fold  con-ron's Theorem 1 (vendored)
 con-leche accepts  ⇒  a model, no False      con-leche
@@ -381,7 +382,9 @@ fixed-capacity array and a length word. Its meaning is a Lean function into
 ### 4.2 The verified compiler
 
 `compileProg` translates an L program to Kraken x64 in one pass, without
-optimisation beyond a few local ones (§8.1).
+optimisation beyond a few local ones (§8.1). Before it, one L → L pass inlines
+small leaf functions into their callers (§8.6); what the compiler compiles is
+`checkerProgI`, which refines `checkerProg`.
 [`compile_correct`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Main.lean#L774-L797)
 is a forward simulation against Kraken's semantics: from `ca_enter`, with L's
 memory `m` laid out as the layout `G` describes (`MemRel`), 32 mapped bytes
@@ -440,10 +443,11 @@ twin's failure condition. Functions whose call closure aborts only with class
 [`drv_outcome`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/DrvAbi.lean#L174-L184)
 is the driver on the machine: `ca_start` calls entry 1, whose setup stub builds
 the layout and enters the trampoline, so `compile_correct` gives one L run of
-`check` in mode 3; if that returns `2^63 + k`, it calls entry 2 in place, a
+`check` in mode 3 (a run of the compiled, inlined program, which is a run of
+the program, §8.6); if that returns `2^63 + k`, it calls entry 2 in place, a
 second L run in mode 2 on the memory the first left; if the machine reports
 accept, both L runs did.
-[`checkerFile_drv_accepts_regs`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/DrvFinal.lean#L90-L96)
+[`checkerFile_drv_accepts_regs`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/DrvFinal.lean#L93-L99)
 composes it with `drv_twinAccepts` for the committed file, and
 `EndToEnd.lean` states the four final theorems from it, and the threaded mode's three.
 
@@ -713,7 +717,7 @@ dropped with the scratch tier; within one declaration the pool only grows
 ### 6.4 The region
 
 At run time every array lives in one region the harness maps
-([the entry stub](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Abi.lean#L8-L39)).
+([the entry stub](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Abi.lean#L8-L41)).
 The region is a static partition into slots of `2^35` bytes: slot 0 holds the
 descriptor table (a base, a length and a length in 32-bit elements per
 descriptor position, the constant data, the globals), slot 1 the L stack (1 GiB at its bottom), then one slot per
@@ -901,7 +905,7 @@ it with `ca_start`'s arguments. It checks the region size and that
 a small region), writes
 the descriptor table for the static partition (§6.4) and the constant data by
 immediate stores, and enters the trampoline with fuel `2^62 - 1`
-([the stubs](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Abi.lean#L8-L39)).
+([the stubs](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Abi.lean#L8-L41)).
 Its proof (`sim_abiStub`, `abiLayout_ok`, `abi_memRel`) shows that it
 establishes `Layout.Ok` and `MemRel`, so the harness only maps zeros. Every
 array gets a whole slot there, so every minimum length holds; the table-relative
@@ -916,10 +920,10 @@ The final theorem is about `checker.s` itself.
 [`checkerFile`](https://github.com/leanprover/con-agua/blob/master/ConAguaAsm/Checker.lean#L17-L18)
 is the file's code as `include_asm` reads it at elaboration time; Lake rebuilds
 it when the file changes. Then
-[`checkerFile_eq`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Checker/AsmFileEq.lean#L23-L24)
+[`checkerFile_eq`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Checker/AsmFileEq.lean#L22-L23)
 proves `checkerFile = checkerStub ++ checkerAsm`, where `checkerAsm` is a
 literal that the kernel checked, function by function, to be
-`compileProg checkerTab checkerProg "check"`
+`compileProg checkerTab checkerProgI "check"` (§8.6)
 ([`Checker/Asm.lean`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Checker/Asm.lean#L12-L21)).
 So neither the compiler run as compiled Lean code nor the printer that wrote
 the file is trusted; a stale file fails the build, naming the first function
@@ -950,6 +954,31 @@ Regeneration is a convenience, not part of the trust: the build fails at
 `checkerFile_eq` if `checker.s` is not exactly the compiler's output (§8.4),
 and the theorem holds at every pin-data buffer.
 
+
+### 8.6 Inlining
+
+[`inlineProg`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Inline.lean)
+replaces each call of a leaf function (one whose body makes no call) of at most
+80 nodes by the callee's body: its locals shifted past the caller's (all inlined
+calls of a function share one region), the locals it may read before it assigns
+them zeroed, its parameters set from the arguments, and its exits turned into
+assignments to the call's result locals. The conversion passes the rest of the
+body as a continuation, so a `return` drops it and an `if` whose one branch
+always exits gets it in the other branch only; a body it cannot convert (an
+`if` with exits that does not always exit, a `return` in a loop) stays a call.
+On `Init` it saves 2.1 % of the instructions.
+
+[`inlineProg_run`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/InlineCorrect.lean):
+a run of the inlined program that does not run out of fuel is a run of the
+original with the same results and memory, or the same error, with one more unit
+of fuel per round (an inlined body runs at its caller's level of fuel; it is a
+leaf, so this never compounds). The entry stubs pass `abiFuel - 1` to the
+trampoline, so the final theorems still speak of `checkerProg` with `abiFuel`
+([`compile_correct_frame_ref`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/MainRef.lean)).
+The kernel does not run the pass over the whole program: the inlined program is
+a literal (`checkerProgI`), one kernel-checked equation per function
+([`inl_round_fns`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/InlineLit.lean)),
+which the whole-program checks of the compiled code then read.
 ## 9. Parallel checking
 
 con-ron checks phase B (the pending declaration bodies) on worker threads that
@@ -982,7 +1011,7 @@ sequential driver `ca_start` runs the same two entries one after the other
 3 (the buffer's header only), then one entry-2 run over all groups `[0, k)` in
 place, on phase A's own arrays, so it needs the setup stub's region plus 16
 bytes, where it keeps its return address and the caller's `r15`
-([the driver](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Abi.lean#L216-L225)).
+([the driver](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Abi.lean#L225-L234)).
 Its machine-level theorem
 ([`drv_outcome`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/DrvAbi.lean#L174-L184))
 says that an accept means the two L runs accepted, and an error report
@@ -1119,7 +1148,7 @@ files plus the patch series), `scripts/provenance.py check` and the import check
 | where | what |
 |---|---|
 | [`L/`](ConAgua/L/) | the language: syntax, semantics, notation, logic, write sets, non-interference, `l_model` |
-| [`Compiler/`](ConAgua/Compiler/) | the compiler, the entry stub, the simulation proof, `compile_correct`, well-formedness |
+| [`Compiler/`](ConAgua/Compiler/) | the inliner and its proof, the compiler, the entry stub, the simulation proof, `compile_correct`, well-formedness |
 | [`AsmFile/`](ConAgua/AsmFile/) | the assembler-file parser (`include_asm`), the cross-check, the file equation |
 | [`Scan/`](ConAgua/Scan/) | the NDJSON scanner (con-ron's `scan_fast.rs`) and its links to con-leche |
 | [`Front/`](ConAgua/Front/) | the frontend: fields, id tables, records into the stores, inductive lines |

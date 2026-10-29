@@ -147,9 +147,80 @@ syntax (name := nrtLit) "nrt_lit " ident " : " term:max : command
     addDecl (thm (name.appendAfter "_eq") (mkApp3 (mkConst ``Eq [1]) treeTy lhs (mkConst name))
       (mkApp2 (mkConst ``Eq.refl [1]) treeTy lhs) [])
 
+/-- The elements of a list expression, by `whnf`. -/
+partial def listElems (e : Lean.Expr) (acc : Array Lean.Expr := #[]) : MetaM (Array Lean.Expr) := do
+  let e ← whnfD e
+  if e.isAppOfArity ``List.cons 3 then listElems e.appArg! (acc.push e.appFn!.appArg!)
+  else if e.isAppOfArity ``List.nil 1 then return acc
+  else throwError "prog_wf: the program does not reduce to a list literal: {e}"
+
+/-- `x`'s entry in `Prog.skt`'s tree, if it skips its stack check (`skipsCheck`). -/
+def skEntry (entry : FnName) (x : FnName × FunDecl) : Option (Nat × Nat) :=
+  if skipsCheck entry x.1 x.2 then some (nameCode x.1, fnFrame x.2) else none
+
+/-- The tree of a list of entries, the last inserted first (`Prog.skTree`'s order). -/
+def insAll : List (Nat × Nat) → Option NTree
+  | [] => some .leaf
+  | (k, v) :: l => (insAll l).bind (·.insert k v)
+
+theorem skTree_eq_insAll (entry : FnName) :
+    ∀ p : Prog, Prog.skTree entry p = insAll (p.filterMap (skEntry entry))
+  | [] => rfl
+  | (f, fd) :: p => by
+    rw [Prog.skTree, skTree_eq_insAll entry p, List.filterMap_cons, skEntry]
+    by_cases h : skipsCheck entry f fd <;> simp [h, insAll]
+
+/-- `Prog.skt` from its parts: the program is the parts `cs`, whose entries are `ls`. -/
+theorem skt_of_parts {p : Prog} {entry : FnName} {t : NTree} (cs : List Prog)
+    (ls : List (List (Nat × Nat))) (hp : p = cs.flatten)
+    (hl : cs.map (List.filterMap (skEntry entry)) = ls) (ht : (insAll ls.flatten).getD .leaf = t) :
+    Prog.skt p entry = t := by
+  subst hp
+  rw [Prog.skt, skTree_eq_insAll, List.filterMap_flatten, hl, ht]
+
+theorem map_cons_of {α β : Type} {f : α → β} {a : α} {b : β} {l : List α} {r : List β}
+    (h : f a = b) (hr : l.map f = r) : (a :: l).map f = b :: r := by
+  simp [h, hr]
+
+unsafe def evalPairs (e : Lean.Expr) : MetaM (List (Nat × Nat)) :=
+  evalExpr (List (Nat × Nat)) (mkApp (mkConst ``List [0])
+    (mkApp2 (mkConst ``Prod [0, 0]) (mkConst ``Nat) (mkConst ``Nat))) e
+
+/-- `skt_part name : p entry lo hi` declares `name.part<lo> : (chunk).filterMap (skEntry entry) =
+lit`, for the functions `lo ≤ i < hi` of `p` as a list literal (`chunk`) and `lit` evaluated by
+compiled code: a part of `skt_lit name`'s kernel check, in a module of its own (Lake builds the
+parts in parallel). -/
+syntax (name := sktPart) "skt_part " ident " : " term:max term:max num num : command
+
+@[command_elab sktPart] unsafe def elabSktPart : CommandElab := fun stx => do
+  let `(skt_part $n:ident : $progS $entryS $lo $hi) := stx | throwUnsupportedSyntax
+  let name := (← getCurrNamespace) ++ n.getId
+  liftTermElabM <| withTheReader Core.Context (fun c => { c with maxRecDepth := max c.maxRecDepth 100000 }) do
+    let pE ← elabTermEnsuringType progS (mkConst ``Prog)
+    let entryE ← elabTermEnsuringType entryS (mkConst ``String)
+    synthesizeSyntheticMVarsNoPostponing
+    let pE ← instantiateMVars pE
+    let entryE ← instantiateMVars entryE
+    let elems ← listElems pE
+    let elemTy := mkApp2 (mkConst ``Prod [0, 0]) (mkConst ``String) (mkConst ``FunDecl)
+    let pairTy := mkApp2 (mkConst ``Prod [0, 0]) (mkConst ``Nat) (mkConst ``Nat)
+    let chunk ← mkListLit elemTy (elems.extract lo.getNat hi.getNat).toList
+    let lhs := mkApp4 (mkConst ``List.filterMap [0, 0]) elemTy pairTy (mkApp (mkConst ``skEntry) entryE) chunk
+    let ps ← evalPairs lhs
+    let lpTy := mkApp (mkConst ``List [0]) pairTy
+    addDecl (thm (name ++ Name.mkSimple s!"part{lo.getNat}") (mkApp3 (mkConst ``Eq [1]) lpTy lhs (natPairsToExpr ps))
+      (mkApp2 (mkConst ``Eq.refl [1]) lpTy lhs) [])
+
+/-- The length of a list literal. -/
+partial def litLength (e : Lean.Expr) : Nat :=
+  if e.isAppOfArity ``List.cons 3 then 1 + litLength e.appArg! else 0
+
 /-- `skt_lit name : p entry` declares `name : NTree`, the literal of `Prog.skt p entry` (the frames of
 `p`'s leaves without a stack check, evaluated by compiled code), and `name_eq : Prog.skt p entry =
-name`, checked by the kernel (once; the per-function checks of `asm_lit` then read the literal). -/
+name`, checked by the kernel (once; the per-function checks of `asm_lit` then read the literal).
+If parts `name.part0`, `name.part<i>`, … (`skt_part`, consecutive, covering `p`) are declared,
+`name_eq` is put together from them (`skt_of_parts`): the kernel then inserts their entries into
+the tree, without evaluating a function's frame. -/
 syntax (name := sktLit) "skt_lit " ident " : " term:max term:max : command
 
 @[command_elab sktLit] unsafe def elabSktLit : CommandElab := fun stx => do
@@ -165,8 +236,47 @@ syntax (name := sktLit) "skt_lit " ident " : " term:max term:max : command
     let t ← evalNTree lhs
     let treeTy := mkConst ``NTree
     addAndCompile (.defnDecl (mkDefinitionValEx name [] treeTy (ntreeToExpr t) .abbrev .safe []))
-    addDecl (thm (name.appendAfter "_eq") (mkApp3 (mkConst ``Eq [1]) treeTy lhs (mkConst name))
-      (mkApp2 (mkConst ``Eq.refl [1]) treeTy lhs) [])
+    let eqTy := mkApp3 (mkConst ``Eq [1]) treeTy lhs (mkConst name)
+    let partN (i : Nat) := name ++ Name.mkSimple s!"part{i}"
+    if !(← getEnv).contains (partN 0) then
+      addDecl (thm (name.appendAfter "_eq") eqTy (mkApp2 (mkConst ``Eq.refl [1]) treeTy lhs) [])
+      return
+    -- the parts, in order
+    let mut cs : Array Lean.Expr := #[]
+    let mut ls : Array Lean.Expr := #[]
+    let mut hs : Array Lean.Expr := #[]
+    let mut i := 0
+    while true do
+      let some ci := (← getEnv).find? (partN i) | break
+      let some (_, l, r) := ci.type.eq? | throwError "skt_lit: {partN i} is not an equation"
+      let c := l.appArg!
+      cs := cs.push c; ls := ls.push r; hs := hs.push (mkConst (partN i))
+      let len := litLength c
+      if len == 0 then break
+      i := i + len
+    let n := (← listElems pE).size
+    unless i == n do throwError "skt_lit: the parts cover {i} of the {n} functions"
+    let elemTy := mkApp2 (mkConst ``Prod [0, 0]) (mkConst ``String) (mkConst ``FunDecl)
+    let progTy := mkApp (mkConst ``List [0]) elemTy
+    let pairTy := mkApp2 (mkConst ``Prod [0, 0]) (mkConst ``Nat) (mkConst ``Nat)
+    let lpTy := mkApp (mkConst ``List [0]) pairTy
+    let csE ← mkListLit progTy cs.toList
+    let lsE ← mkListLit lpTy ls.toList
+    -- `p = cs.flatten`, by the kernel (the same element terms)
+    let hp := mkApp2 (mkConst ``Eq.refl [1]) progTy pE
+    -- `cs.map (filterMap (skEntry entry)) = ls`, one part at a time
+    let f := mkApp3 (mkConst ``List.filterMap [0, 0]) elemTy pairTy (mkApp (mkConst ``skEntry) entryE)
+    let mut hl := mkApp2 (mkConst ``Eq.refl [1]) (mkApp (mkConst ``List [0]) lpTy) (mkApp (mkConst ``List.nil [0]) lpTy)
+    let mut ctl := mkApp (mkConst ``List.nil [0]) progTy
+    let mut ltl := mkApp (mkConst ``List.nil [0]) lpTy
+    for j in (List.range cs.size).reverse do
+      hl := mkAppN (mkConst ``map_cons_of) #[progTy, lpTy, f, cs[j]!, ls[j]!, ctl, ltl, hs[j]!, hl]
+      ctl := mkApp3 (mkConst ``List.cons [0]) progTy cs[j]! ctl
+      ltl := mkApp3 (mkConst ``List.cons [0]) lpTy ls[j]! ltl
+    -- the tree of the entries, by the kernel (insertions of number pairs)
+    let ht := mkApp2 (mkConst ``Eq.refl [1]) treeTy (mkConst name)
+    let pf := mkAppN (mkConst ``skt_of_parts) #[pE, entryE, mkConst name, csE, lsE, hp, hl, ht]
+    addDecl (thm (name.appendAfter "_eq") eqTy pf [])
 
 register_option progWfChunk : Nat := {
   defValue := 32
@@ -185,14 +295,119 @@ def memProof (α : Lean.Expr) (xs : Array Lean.Expr) (k : Nat) : Lean.Expr := Id
     h := mkApp5 (mkConst ``List.Mem.tail [0]) α xs[k]! xs[i]! (tail (i + 1)) h
   return h
 
-/-- The elements of a list expression, by `whnf`. -/
-partial def listElems (e : Lean.Expr) (acc : Array Lean.Expr := #[]) : MetaM (Array Lean.Expr) := do
-  let e ← whnfD e
-  if e.isAppOfArity ``List.cons 3 then listElems e.appArg! (acc.push e.appFn!.appArg!)
-  else if e.isAppOfArity ``List.nil 1 then return acc
-  else throwError "prog_wf: the program does not reduce to a list literal: {e}"
+/-- `name.tree` and `name.tree_eq : progTree p = some name.tree` (the name tree as a literal,
+evaluated by compiled code; the kernel check reads the names only). -/
+unsafe def declProgTree (name : Name) (pE : Lean.Expr) : MetaM Unit := do
+  let some tree ← evalTree (mkApp (mkConst ``progTree) pE)
+    | throwError "prog_wf: two functions have the same name"
+  let treeN := name ++ `tree
+  let treeTy := mkConst ``NTree
+  addAndCompile (.defnDecl (mkDefinitionValEx treeN [] treeTy (ntreeToExpr tree) .abbrev .safe []))
+  let someTree := mkApp2 (mkConst ``Option.some [0]) treeTy (mkConst treeN)
+  let optTy := mkApp (mkConst ``Option [0]) treeTy
+  addDecl ((thm (name ++ `tree_eq)
+    (mkApp3 (mkConst ``Eq [1]) optTy (mkApp (mkConst ``progTree) pE) someTree)
+    (mkApp2 (mkConst ``Eq.refl [1]) optTy someTree) []))
 
-/-- `prog_wf name : tab p` -/
+/-- `name.c<j> : ∀ x ∈ chunk j, FunOk name.tree tab x` for the chunks `js` of `elems` (chunks of
+`k` functions), each one kernel check, after the `romOk` theorems of the byte strings they read
+(`name.rom<r>`, or `name.p<lo>.rom<r>` with `pre`), one per distinct string. -/
+unsafe def declWfChunks (name pre : Name) (tabE pE : Lean.Expr) (elems : Array Lean.Expr) (k : Nat)
+    (js : List Nat) : MetaM Unit := do
+  let treeC := mkConst (name ++ `tree)
+  let bTrue := mkConst ``Bool.true
+  let boolTy := mkConst ``Bool
+  let elemTy := mkApp2 (mkConst ``Prod [0, 0]) (mkConst ``String) (mkConst ``FunDecl)
+  let snd (x : Lean.Expr) := mkApp3 (mkConst ``Prod.snd [0, 0]) (mkConst ``String) (mkConst ``FunDecl) x
+  let bytesTy := mkApp (mkConst ``List [0]) (mkConst ``UInt8)
+  let inJs (i : Nat) := js.contains (i / k)
+  -- the constant data: one kernel check per distinct byte string the chunks read
+  let nroms ← evalNats (mkApp (mkConst ``progRomCounts) pE)
+  let mut dist : Array Lean.Expr := #[]
+  let mut romLists : Array (Array Lean.Expr) := #[]
+  for h : i in [0:elems.size] do
+    if nroms.getD i 0 == 0 || !inJs i then romLists := romLists.push #[]; continue
+    let ds ← listElems (mkApp (mkConst ``Stmt.roms) (mkApp (mkConst ``FunDecl.body) (snd elems[i])))
+    for d in ds do
+      unless dist.contains d do dist := dist.push d
+    romLists := romLists.push ds
+  let Pd ← withLocalDeclD `d bytesTy fun d => do
+    mkLambdaFVars #[d] (mkApp3 (mkConst ``Eq [1]) boolTy (mkApp2 (mkConst ``romOk) tabE d) bTrue)
+  let mut romThms : Array Lean.Expr := #[]
+  for h : r in [0:dist.size] do
+    let rN := pre ++ Name.mkSimple s!"rom{r}"
+    addDecl (thm rN (Pd.beta #[dist[r]]) (mkApp2 (mkConst ``Eq.refl [1]) boolTy bTrue) [])
+    romThms := romThms.push (mkConst rN)
+  -- `∀ d ∈ ds, romOk tab d = true`
+  let romChain (ds : Array Lean.Expr) : Lean.Expr := Id.run do
+    let mut c := mkApp2 (mkConst ``forall_mem_nil_of) bytesTy Pd
+    let mut tl := mkApp (mkConst ``List.nil [0]) bytesTy
+    for d in ds.reverse do
+      let hd := romThms[(dist.idxOf? d).getD 0]!
+      c := mkAppN (mkConst ``forall_mem_cons_of) #[bytesTy, Pd, d, tl, hd, c]
+      tl := mkApp3 (mkConst ``List.cons [0]) bytesTy d tl
+    return c
+  let P := mkApp2 (mkConst ``FunOk) treeC tabE
+  let Pr ← withLocalDeclD `x elemTy fun x => do
+    let body ← withLocalDeclD `d bytesTy fun d => do
+      let mem ← mkAppM ``Membership.mem
+        #[mkApp (mkConst ``Stmt.roms) (mkApp (mkConst ``FunDecl.body) (snd x)), d]
+      mkForallFVars #[d] (← mkArrow mem (Pd.beta #[d]))
+    mkLambdaFVars #[x] body
+  let f ← withLocalDeclD `x elemTy fun x => do
+    mkLambdaFVars #[x] (mkApp3 (mkConst ``FunDecl.wfTN) treeC tabE (snd x))
+  for j in js do
+    let i := j * k
+    let chunk := elems.extract i (i + k)
+    let lit ← mkListLit elemTy chunk.toList
+    let ty ← withLocalDeclD `x elemTy fun x => do
+      mkForallFVars #[x] (← mkArrow (← mkAppM ``Membership.mem #[lit, x]) (mkApp P x))
+    let hwf := mkAppN (mkConst ``forall_of_all) #[elemTy, f, lit,
+      mkApp2 (mkConst ``Eq.refl [1]) boolTy bTrue]
+    let mut hr := mkApp2 (mkConst ``forall_mem_nil_of) elemTy Pr
+    let mut tl := mkApp (mkConst ``List.nil [0]) elemTy
+    for jj in (List.range chunk.size).reverse do
+      hr := mkAppN (mkConst ``forall_mem_cons_of) #[elemTy, Pr, chunk[jj]!, tl, romChain romLists[i + jj]!, hr]
+      tl := mkApp3 (mkConst ``List.cons [0]) elemTy chunk[jj]! tl
+    let pf := mkAppN (mkConst ``forall_funOk) #[treeC, tabE, lit, hwf, hr]
+    addDecl ((thm (name ++ Name.mkSimple s!"c{j}") ty pf []))
+
+/-- `prog_tree name : p`: `name.tree` and `name.tree_eq` of `prog_wf name` (`declProgTree`), in
+a module of their own: they read the names only, not the table. -/
+syntax (name := progTreeCmd) "prog_tree " ident " : " term:max : command
+
+@[command_elab progTreeCmd] unsafe def elabProgTree : CommandElab := fun stx => do
+  let `(prog_tree $n:ident : $progS) := stx | throwUnsupportedSyntax
+  let name := (← getCurrNamespace) ++ n.getId
+  liftTermElabM <| withTheReader Core.Context (fun c => { c with maxRecDepth := max c.maxRecDepth 100000 }) do
+    let pE ← instantiateMVars (← elabTermEnsuringType progS (mkConst ``Prog))
+    synthesizeSyntheticMVarsNoPostponing
+    declProgTree name (← instantiateMVars pE)
+
+/-- `prog_wf_part name : tab p lo hi`: the chunk theorems `name.c<j>` of `prog_wf name` for the
+chunks `lo ≤ j < hi`, in a module of their own (Lake builds the parts in parallel; the kernel
+checks of one module run one after the other). Needs `name.tree` (`prog_tree`). -/
+syntax (name := progWfPart) "prog_wf_part " ident " : " term:max term:max num num : command
+
+@[command_elab progWfPart] unsafe def elabProgWfPart : CommandElab := fun stx => do
+  let `(prog_wf_part $n:ident : $tabS $progS $lo $hi) := stx | throwUnsupportedSyntax
+  let name := (← getCurrNamespace) ++ n.getId
+  liftTermElabM <| withTheReader Core.Context (fun c => { c with maxRecDepth := max c.maxRecDepth 100000 }) do
+    let tabE ← instantiateMVars (← elabTermEnsuringType tabS (mkConst ``Tab))
+    let pE ← instantiateMVars (← elabTermEnsuringType progS (mkConst ``Prog))
+    synthesizeSyntheticMVarsNoPostponing
+    let tabE ← instantiateMVars tabE
+    let pE ← instantiateMVars pE
+    unless (← getEnv).contains (name ++ `tree) do
+      throwError "prog_wf_part: {name ++ `tree} is not declared (`prog_tree`)"
+    let elems ← listElems pE
+    let k := progWfChunk.get (← getOptions)
+    let nch := (elems.size + k - 1) / k
+    let js := (List.range nch).filter fun j => lo.getNat ≤ j && j < hi.getNat
+    declWfChunks name (name ++ Name.mkSimple s!"p{lo.getNat}") tabE pE elems k js
+
+/-- `prog_wf name : tab p`. `name.tree` and the chunk theorems `name.c<j>` already declared (by
+`prog_tree`, `prog_wf_part` in imported modules) are used, the others declared here. -/
 syntax (name := progWf) (docComment)? "prog_wf " ident " : " term:max term:max : command
 
 @[command_elab progWf] unsafe def elabProgWf : CommandElab := fun stx => do
@@ -204,88 +419,27 @@ syntax (name := progWf) (docComment)? "prog_wf " ident " : " term:max term:max :
     synthesizeSyntheticMVarsNoPostponing
     let tabE ← instantiateMVars tabE
     let pE ← instantiateMVars pE
-    let some tree ← evalTree (mkApp (mkConst ``progTree) pE)
-      | throwError "prog_wf: two functions have the same name"
-    let elems ← listElems pE
     let treeN := name ++ `tree
-    let treeTy := mkConst ``NTree
-    addAndCompile (.defnDecl (mkDefinitionValEx treeN [] treeTy (ntreeToExpr tree) .abbrev .safe []))
+    unless (← getEnv).contains treeN do declProgTree name pE
+    let elems ← listElems pE
     let treeC := mkConst treeN
-    let someTree := mkApp2 (mkConst ``Option.some [0]) treeTy treeC
-    let optTy := mkApp (mkConst ``Option [0]) treeTy
     let treeEqN := name ++ `tree_eq
-    addDecl ((thm treeEqN
-      (mkApp3 (mkConst ``Eq [1]) optTy (mkApp (mkConst ``progTree) pE) someTree)
-      (mkApp2 (mkConst ``Eq.refl [1]) optTy someTree) []))
-    let bTrue := mkConst ``Bool.true
     let boolTy := mkConst ``Bool
     let elemTy := mkApp2 (mkConst ``Prod [0, 0]) (mkConst ``String) (mkConst ``FunDecl)
-    let snd (x : Lean.Expr) := mkApp3 (mkConst ``Prod.snd [0, 0]) (mkConst ``String) (mkConst ``FunDecl) x
-    let bytesTy := mkApp (mkConst ``List [0]) (mkConst ``UInt8)
-    -- the constant data: one kernel check per distinct byte string the program reads
-    let nroms ← evalNats (mkApp (mkConst ``progRomCounts) pE)
-    let mut dist : Array Lean.Expr := #[]
-    let mut romLists : Array (Array Lean.Expr) := #[]
-    for h : i in [0:elems.size] do
-      if nroms.getD i 0 == 0 then romLists := romLists.push #[]; continue
-      let ds ← listElems (mkApp (mkConst ``Stmt.roms) (mkApp (mkConst ``FunDecl.body) (snd elems[i])))
-      for d in ds do
-        unless dist.contains d do dist := dist.push d
-      romLists := romLists.push ds
-    let Pd ← withLocalDeclD `d bytesTy fun d => do
-      mkLambdaFVars #[d] (mkApp3 (mkConst ``Eq [1]) boolTy (mkApp2 (mkConst ``romOk) tabE d) bTrue)
-    let mut romThms : Array Lean.Expr := #[]
-    for h : k in [0:dist.size] do
-      let rN := name ++ Name.mkSimple s!"rom{k}"
-      addDecl (thm rN (Pd.beta #[dist[k]]) (mkApp2 (mkConst ``Eq.refl [1]) boolTy bTrue) [])
-      romThms := romThms.push (mkConst rN)
-    -- `∀ d ∈ ds, romOk tab d = true`
-    let romChain (ds : Array Lean.Expr) : Lean.Expr := Id.run do
-      let mut c := mkApp2 (mkConst ``forall_mem_nil_of) bytesTy Pd
-      let mut tl := mkApp (mkConst ``List.nil [0]) bytesTy
-      for d in ds.reverse do
-        let hd := romThms[(dist.idxOf? d).getD 0]!
-        c := mkAppN (mkConst ``forall_mem_cons_of) #[bytesTy, Pd, d, tl, hd, c]
-        tl := mkApp3 (mkConst ``List.cons [0]) bytesTy d tl
-      return c
-    -- one kernel check per chunk of functions
-    let P := mkApp2 (mkConst ``FunOk) treeC tabE
-    let Pr ← withLocalDeclD `x elemTy fun x => do
-      let body ← withLocalDeclD `d bytesTy fun d => do
-        let mem ← mkAppM ``Membership.mem
-          #[mkApp (mkConst ``Stmt.roms) (mkApp (mkConst ``FunDecl.body) (snd x)), d]
-        mkForallFVars #[d] (← mkArrow mem (Pd.beta #[d]))
-      mkLambdaFVars #[x] body
-    let f ← withLocalDeclD `x elemTy fun x => do
-      mkLambdaFVars #[x] (mkApp3 (mkConst ``FunDecl.wfTN) treeC tabE (snd x))
     let k := progWfChunk.get (← getOptions)
-    let mut parts : Array (Lean.Expr × Lean.Expr) := #[]
-    let mut i := 0
-    while i < elems.size do
-      let chunk := elems.extract i (i + k)
-      let lit ← mkListLit elemTy chunk.toList
-      let ty ← withLocalDeclD `x elemTy fun x => do
-        mkForallFVars #[x] (← mkArrow (← mkAppM ``Membership.mem #[lit, x]) (mkApp P x))
-      let hN := name ++ Name.mkSimple s!"c{parts.size}"
-      let hwf := mkAppN (mkConst ``forall_of_all) #[elemTy, f, lit,
-        mkApp2 (mkConst ``Eq.refl [1]) boolTy bTrue]
-      let mut hr := mkApp2 (mkConst ``forall_mem_nil_of) elemTy Pr
-      let mut tl := mkApp (mkConst ``List.nil [0]) elemTy
-      for j in (List.range chunk.size).reverse do
-        hr := mkAppN (mkConst ``forall_mem_cons_of) #[elemTy, Pr, chunk[j]!, tl, romChain romLists[i + j]!, hr]
-        tl := mkApp3 (mkConst ``List.cons [0]) elemTy chunk[j]! tl
-      let pf := mkAppN (mkConst ``forall_funOk) #[treeC, tabE, lit, hwf, hr]
-      addDecl ((thm hN ty pf []))
-      parts := parts.push (lit, mkConst hN)
-      i := i + k
+    let nch := (elems.size + k - 1) / k
+    let chN (j : Nat) := name ++ Name.mkSimple s!"c{j}"
+    let env ← getEnv
+    let todo := (List.range nch).filter fun j => !env.contains (chN j)
+    unless todo.isEmpty do declWfChunks name name tabE pE elems k todo
     -- `∀ x ∈ p, P x`: one `forall_mem_cons_of` per function, from its chunk's theorem (no `++`
     -- for the kernel to unfold)
+    let P := mkApp2 (mkConst ``FunOk) treeC tabE
     let mut chain := mkApp2 (mkConst ``forall_mem_nil_of) elemTy P
     let mut tl := mkApp (mkConst ``List.nil [0]) elemTy
     for e in (List.range elems.size).reverse do
-      let (_, hc) := parts[e / k]!
       let chunk := elems.extract (e / k * k) (e / k * k + k)
-      let he := mkApp2 hc elems[e]! (memProof elemTy chunk (e % k))
+      let he := mkApp2 (mkConst (chN (e / k))) elems[e]! (memProof elemTy chunk (e % k))
       chain := mkAppN (mkConst ``forall_mem_cons_of) #[elemTy, P, elems[e]!, tl, he, chain]
       tl := mkApp3 (mkConst ``List.cons [0]) elemTy elems[e]! tl
     let boundTy ← mkAppM ``LT.lt #[
@@ -300,10 +454,10 @@ syntax (name := progWf) (docComment)? "prog_wf " ident " : " term:max term:max :
     -- constant data with `Meta.whnf`)
     let lhs := boundTy.appFn!.appArg!
     let inst := mkApp2 (mkConst ``Nat.decLt) lhs (mkConst ``maxOff)
-    let hb := mkApp3 (mkConst ``of_decide_eq_true) boundTy inst (mkApp2 (mkConst ``Eq.refl [1]) boolTy bTrue)
+    let hb := mkApp3 (mkConst ``of_decide_eq_true) boundTy inst (mkApp2 (mkConst ``Eq.refl [1]) boolTy (mkConst ``Bool.true))
     -- no `Meta` unification here: the kernel checks that the chunks make up `p`
     let pf := mkAppN (mkConst ``Prog.wf_of_parts') #[tabE, pE, treeC, mkConst treeEqN, chain, hb]
-    let ty := mkApp3 (mkConst ``Eq [1]) boolTy (mkApp2 (mkConst ``Prog.wf) tabE pE) bTrue
+    let ty := mkApp3 (mkConst ``Eq [1]) boolTy (mkApp2 (mkConst ``Prog.wf) tabE pE) (mkConst ``Bool.true)
     let pf ← instantiateMVars pf
     addDecl ((thm name ty pf []))
     addDocString' name .missing doc?

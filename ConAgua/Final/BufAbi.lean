@@ -458,11 +458,11 @@ structure BufCall (tab : Tab) (fz own : List TieredArray) (B : Array Word) (dm :
 
 /-- **From `ca_check_b` past its length tests** (`abiB_outcome`): the run of `check` in
 `ca_check_b`'s layout, the frozen arrays at least their minimum lengths. -/
-theorem abiB_go [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = true)
-    (hwf : Prog.wf tab p = true) (mode plo phi : GVar) (out hdrf ctlf : ArrId) (hw : Nat)
+theorem abiB_go [Host] (q p : Prog) (hq : Refines q p) (tab : Tab) (hok : abiTabOk tab = true)
+    (hwf : Prog.wf tab q = true) (mode plo phi : GVar) (out hdrf ctlf : ArrId) (hw : Nat)
     (fz own : List TieredArray) (hngm : mode.id < tab.ng) (hngl : plo.id < tab.ng) (hngh : phi.id < tab.ng)
     (h12 : plo ≠ phi) (h13 : plo ≠ mode) (h23 : phi ≠ mode) (hfzl : fz.length < 2 ^ 20) (k0 : Nat)
-    (hcode : Code (parStub tab mode plo phi out hdrf ctlf hw fz own ++ (abiStub tab ++ compileProg tab p "check")) k0)
+    (hcode : Code (parStub tab mode plo phi out hdrf ctlf hw fz own ++ (abiStub tab ++ compileProg tab q "check")) k0)
     (fd : FunDecl) (hentry : p.lookup "check" = some fd) (hnp : fd.nparams = 0)
     (B : Array Word) (r : Mem) (dm : MachineData) (ra : Word) (hc : BufCall tab fz own B dm ra)
     (hr : RegionRel tab dm.regs.rcx.toNat own r dm.dmem) (hmo : bufMinOk tab fz own = true)
@@ -679,8 +679,8 @@ theorem abiB_go [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = true)
     (Nat.le_refl _) (by omega) hTE (Nat.le_refl _)
   have hcs := hc.hcs
   rw [hbase, hblen, hbuf] at hcs
-  refine eventually_weaken _ _ _ _ ?_ (compile_correct_frame p "check" _ hG hwf _ hcC fd hentry []
-    (by simp [hnp]) rfl (bufMemG fz own plo phi mode B r dm.regs.rdx) abiFuel _ ra ?_ ?_ ?_ ?_ ?_
+  refine eventually_weaken _ _ _ _ ?_ (compile_correct_frame_ref q p hq "check" _ hG hwf _ hcC fd hentry []
+    (by simp [hnp]) rfl (bufMemG fz own plo phi mode B r dm.regs.rdx) abiFuelM _ ra ?_ ?_ ?_ ?_ ?_
     (fun i h => absurd h (by simp)) ?_ ?_ ?_ ?_ ?_ ?_)
   · intro st ⟨hpc, hsp, hbp, h14, h15, ⟨hbx, hr12, hr13⟩, hfr, hout⟩
     refine ⟨hpc, ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_⟩, ?_, ?_⟩
@@ -695,8 +695,8 @@ theorem abiB_go [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = true)
       exact MemFrame.only_tab (show MemFrame _ dm.regs.rsp.toNat _ _ by rw [← esp]; exact hfr) hOall
     · rw [hbuf, hbase]; exact hout
   · show s2.regs.rcx.toNat = base; rw [e8, hbase]
-  · show (abiFuel.toUInt64).toNat = abiFuel
-    simp [abiFuel]
+  · show (abiFuelM.toUInt64).toNat = abiFuelM
+    simp [abiFuelM, abiFuel, abiInl]
   · show MemRel _ _ (wrW (wrW (wrW s2.dmem _ s2.regs.rdx.toBitVec) _ s2.regs.r9.toBitVec) _ (UInt64.toBitVec 2))
     rw [hm2, edx, e9, bufMemG_eq_setG h12 h13 h23]
     exact ((hm0.storeG hG (g := plo) hngl dm.regs.rdx).storeG hG (g := phi) hngh (dm.regs.rdx + 1)).storeG hG
@@ -747,11 +747,11 @@ theorem abiB_go [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = true)
 the run of `check` from `bufMemG … B r j` (`j` from `rdx`) in `ca_check_b`'s layout; or, if a
 frozen array is shorter than its minimum length (`bufMinChk`), a decline (`rdx = 1`, memory
 unchanged). -/
-theorem abiB_outcome [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = true)
-    (hwf : Prog.wf tab p = true) (mode plo phi : GVar) (out hdrf ctlf : ArrId) (hw : Nat)
+theorem abiB_outcome [Host] (q p : Prog) (hq : Refines q p) (tab : Tab) (hok : abiTabOk tab = true)
+    (hwf : Prog.wf tab q = true) (mode plo phi : GVar) (out hdrf ctlf : ArrId) (hw : Nat)
     (fz own : List TieredArray) (hngm : mode.id < tab.ng) (hngl : plo.id < tab.ng) (hngh : phi.id < tab.ng)
     (h12 : plo ≠ phi) (h13 : plo ≠ mode) (h23 : phi ≠ mode) (hfzl : fz.length < 2 ^ 20) (k0 : Nat)
-    (hcode : Code (parStub tab mode plo phi out hdrf ctlf hw fz own ++ (abiStub tab ++ compileProg tab p "check")) k0)
+    (hcode : Code (parStub tab mode plo phi out hdrf ctlf hw fz own ++ (abiStub tab ++ compileProg tab q "check")) k0)
     (fd : FunDecl) (hentry : p.lookup "check" = some fd) (hnp : fd.nparams = 0)
     (B : Array Word) (r : Mem) (dm : MachineData) (ra : Word) (hc : BufCall tab fz own B dm ra)
     (hr : RegionRel tab dm.regs.rcx.toNat own r dm.dmem) (hmo : bufMinOk tab fz own = true) :
@@ -787,7 +787,7 @@ theorem abiB_outcome [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = true)
   refine sim_bufMinChk hok _ dm (by simp) hBd hdecl fz 0 _ dm.status
     (fun i hi => by have := hg.hdr i hi; omega) (by omega) hX.left.right fun st hmin => ?_
   refine ev_congr (ev_jmp (Code.get (i := 0) hX.right rfl) ?_) (by simp; omega)
-  exact abiB_go p tab hok hwf mode plo phi out hdrf ctlf hw fz own hngm hngl hngh h12 h13 h23 hfzl k0 hcode
+  exact abiB_go q p hq tab hok hwf mode plo phi out hdrf ctlf hw fz own hngm hngl hngh h12 h13 h23 hfzl k0 hcode
     fd hentry hnp B r { dm with status := st } ra
     ⟨hc.geom, hc.hB, hc.hmap, hc.hra, hc.hcs, hc.hcs24, hc.hcs8⟩ hr hmo (by simpa using hmin)
 

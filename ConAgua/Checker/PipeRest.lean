@@ -2,6 +2,7 @@ import ConAgua.Checker.PreludeRef
 import ConAgua.Checker.PrepRef
 import ConAgua.Checker.TwinPins
 import ConAgua.Checker.PreLoopWSStages
+import ConAgua.Checker.PrepProgExt
 
 /-!
 # The stages after `intern_reserved_pins` (lane `pipeline`)

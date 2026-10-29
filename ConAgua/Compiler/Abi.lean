@@ -32,7 +32,8 @@ out (`L.Compiler.Tab`), then tail-jumps into the trampoline `ca_enter(T, fuel)`:
   gets no slot (`Tab.nslot`).
 * The constant data is written into the table by immediate stores (no `.rodata` read); the result
   area and the global variables are the region's zeros.
-* The fuel is `2^62 - 1` (`compile_correct` takes any `N < 2^62`).
+* The fuel is `abiFuelM = 2^62 - 1 - abiInl` (`compile_correct` takes any `N < 2^62`): the run of the
+  inlined program it stands for is a run of the program with `abiFuel = 2^62 - 1` (`MainRef.lean`).
 
 Nothing here is trusted: `sim_abiStub` (`ConAgua/Compiler/AbiSim.lean`) runs the stub on the
 machine, `abiLayout_ok` and `abi_memRel` (`ConAgua/Final/Abi.lean`) show that it establishes
@@ -45,8 +46,16 @@ namespace L.Compiler
 def abiSlot : Nat := 2 ^ 35
 /-- The L stack: `2^30` bytes (the old harness's default `CA_STACK`). -/
 def abiStack : Nat := 2 ^ 30
-/-- The fuel the stub passes to the trampoline. -/
+/-- The fuel of the L program's run that the final theorems speak of. -/
 def abiFuel : Nat := 2 ^ 62 - 1
+/-- The rounds of inlining before the code generator (`Compiler/Inline.lean`): a run of the inlined
+program with fuel `n` is a run of the program with fuel `n + abiInl`. -/
+def abiInl : Nat := 1
+/-- The fuel the stub passes to the trampoline: `abiFuel - abiInl`, so that the run of the program
+that the compiled (inlined) program's run stands for has fuel `abiFuel`. -/
+def abiFuelM : Nat := abiFuel - abiInl
+
+theorem abiFuelM_add : abiFuelM + abiInl = abiFuel := by decide
 
 /-- Every word array gets its whole slot. -/
 def abiWords : Nat := 2 ^ 32
@@ -164,7 +173,7 @@ def abiHead (tab : Tab) : Program :=
    i64 (.cmp (.reg (rr .rcx)) (oI 0)), jccL .l abiDeclineL]
 
 def abiTail : Program :=
-  [movRR .rdi .r8, movRI .rsi abiFuel.toUInt64, jmpL enterL,
+  [movRR .rdi .r8, movRI .rsi abiFuelM.toUInt64, jmpL enterL,
    .label abiDeclineL, movRI .rax 0, movRI .rdx 1, i64 .ret]
 
 /-- The stub for the table `tab`. -/
@@ -345,13 +354,13 @@ def parStub0 (tab : Tab) (mode plo phi : GVar) (out hdrf ctlf : ArrId) (hw : Nat
   immStores .rcx tab.romBase.toNat (romVals tab.rom) ++
   [movMR (mb .rcx (tab.globOff plo)) .rdx, movMR (mb .rcx (tab.globOff phi)) .r9,
    movRI .rax 2, movMR (mb .rcx (tab.globOff mode)) .rax,
-   movRR .rdi .rcx, movRI .rsi abiFuel.toUInt64, jmpL enterL,
+   movRR .rdi .rcx, movRI .rsi abiFuelM.toUInt64, jmpL enterL,
   -- entry 2 in place (the region in `r8`, the range in `rsi`, `rdx`)
    .label abiCheckSL] ++
   storesCode 0 (seqVals tab out hdrf ctlf hw) ++
   [movMR (mb .r8 (tab.globOff plo)) .rsi, movMR (mb .r8 (tab.globOff phi)) .rdx,
    movRI .rax 2, movMR (mb .r8 (tab.globOff mode)) .rax,
-   movRR .rdi .r8, movRI .rsi abiFuel.toUInt64, jmpL enterL,
+   movRR .rdi .r8, movRI .rsi abiFuelM.toUInt64, jmpL enterL,
   -- the sequential driver (its return address and the caller's `r15` in the save area, the
   -- region in `r15`; each `call` puts its return address in the caller's slot)
    .label abiStartL,

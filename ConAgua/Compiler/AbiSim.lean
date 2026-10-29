@@ -717,7 +717,7 @@ theorem toNat_lt_of_not_toInt_neg (x : UInt64) (h : ¬ x.toBitVec.toInt < (0 : U
 /-- **The stub.** From `ca_setup`, with the region's first table words mapped: if `base_len`
 (`r9`) is below `abiNeed`, or `in_len` (`rsi`) or `pins_len` (`rcx`) is `2^63` or more, the stub
 returns with `rdx = 1`; otherwise it writes the table's words (`stores … (abiVals tab)`) and jumps
-to `ca_enter` with `rdi = base`, `rsi = abiFuel`, the other registers but `rax` unchanged. -/
+to `ca_enter` with `rdi = base`, `rsi = abiFuelM`, the other registers but `rax` unchanged. -/
 theorem sim_abiStub (tab : Tab) (hok : abiTabOk tab = true) (k0 : Nat) (hc : Code (abiStub tab) k0)
     (Q : MachineState → Prop) (s : MachineData) (ra : Word)
     (hmap : abiNeed tab ≤ s.regs.r9.toNat →
@@ -731,7 +731,7 @@ theorem sim_abiStub (tab : Tab) (hok : abiTabOk tab = true) (k0 : Nat) (hc : Cod
     (hgo : abiNeed tab ≤ s.regs.r9.toNat → s.regs.rsi.toNat < 2 ^ 63 → s.regs.rcx.toNat < 2 ^ 63 →
       ∀ s' : MachineData,
       s'.dmem = stores s.regs s.regs.r8.toNat s.dmem 0 (abiVals tab) →
-      s'.regs.rdi = s.regs.r8 → s'.regs.rsi.toNat = abiFuel →
+      s'.regs.rdi = s.regs.r8 → s'.regs.rsi.toNat = abiFuelM →
       (∀ r, r ≠ .rax → r ≠ .rdi → r ≠ .rsi → s'.regs.get64 r = s.regs.get64 r) →
       Ev Q s' (label enterL)) :
     Ev Q s (label abiSetupL) := by
@@ -794,7 +794,7 @@ theorem sim_abiStub (tab : Tab) (hok : abiTabOk tab = true) (k0 : Nat) (hc : Cod
   refine hgo hge' hsi' hcx' _ (by simpa using hs1) ?_ ?_ ?_
   · have := hR1 .r8 (by decide); simp at this
     simp [Reg64s.set64_rdi, Reg64s.set64_rsi, this]
-  · simp [Reg64s.set64_rdi, Reg64s.set64_rsi, abiFuel]; rfl
+  · simp [Reg64s.set64_rdi, Reg64s.set64_rsi, abiFuelM, abiFuel, abiInl]; rfl
   · intro r h1 h2 h3
     rw [← hR1 r h1]
     cases r <;> first | exact absurd rfl h1 | exact absurd rfl h2 | exact absurd rfl h3 | rfl

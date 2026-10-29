@@ -1,5 +1,5 @@
 import ConAgua.Checker.Prog
-import ConAgua.Checker.ProgWf
+import ConAgua.Checker.ProgTree
 import ConAgua.Checker.PreludeSim
 import ConAgua.Compiler.WriteSetSplit
 import ConAgua.Compiler.WFSplit
@@ -20,7 +20,7 @@ import ConAgua.Arena.LevelSubstLP
   `0` and call shared names; numbers compared with GMP, no lookup in the program;
 * the copies' bindings by `rfl` on `checkerProg[i]?` at the binding's index, found by evaluation
   (`copy_facts`, one small kernel check per copied name), and the lookups from the program's
-  names being distinct (`checkerProg_wf.tree_eq`).
+  names being distinct (`checkerProg_wf.tree_eq`, `ProgTree.lean`).
 -/
 
 namespace L.Checker

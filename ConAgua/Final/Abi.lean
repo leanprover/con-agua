@@ -228,10 +228,10 @@ theorem abi_harness {tab : Tab} (hok : abiTabOk tab = true) {b pb : ByteArray} {
     {ra : Word} (hc : AbiCall b pb dm ra) (hneed : abiNeed tab ≤ dm.regs.r9.toNat) (d : DataMem)
     (hd : Only dm.regs.r8.toNat (dm.regs.r8.toNat + dm.regs.r9.toNat) dm.dmem d) (s1 : MachineData)
     (hs1 : s1.dmem = stores dm.regs dm.regs.r8.toNat d 0 (abiVals tab))
-    (hrdi : s1.regs.rdi = dm.regs.r8) (hrsi : s1.regs.rsi.toNat = abiFuel)
+    (hrdi : s1.regs.rdi = dm.regs.r8) (hrsi : s1.regs.rsi.toNat = abiFuelM)
     (hregs : ∀ r, r ≠ .rax → r ≠ .rdi → r ≠ .rsi → s1.regs.get64 r = dm.regs.get64 r) :
     HarnessCall (abiLayout tab dm.regs.r8.toNat dm.regs.rdi.toNat b.size dm.regs.rdx.toNat pb.size)
-      abiFuel s1 ra ∧ ∀ r, RegsRestored s1.regs r → RegsRestored dm.regs r := by
+      abiFuelM s1 ra ∧ ∀ r, RegsRestored s1.regs r → RegsRestored dm.regs r := by
   obtain ⟨hnb, htab, hneed64⟩ := abiTabOk_spec hok
   have hL := abiVals_length tab
   have hfits := hc.hfits
