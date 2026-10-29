@@ -670,7 +670,10 @@ theorem itemsN_lt (a : Array UInt8) (ha : a.size < 2 ^ 63) (i : Word) :
     rcases hx with rfl | hx
     · have := L.Scan.lt_of_lt_ofNat h1
       have hle := L.Scan.Values.numEndN_le a i.toNat (by omega)
-      apply rdNatN_lt a _ _ (by omega) _ hne
+      have hlt64 : L.Scan.Leaves.numEndN a i.toNat < 2 ^ 64 := by omega
+      apply rdNatN_lt a _ _ (by omega)
+        (by rw [UInt64.toNat_ofNat_of_lt' (by have : UInt64.size = 2 ^ 64 := rfl; omega)]
+            exact L.Scan.Values.numEndN_ge _ _) _ hne
       intro j hj1 hj2
       rw [UInt64.toNat_ofNat_of_lt' (by have : UInt64.size = 2 ^ 64 := rfl; omega)] at hj2
       exact numEndN_digits a i.toNat j hj1 hj2
