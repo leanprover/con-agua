@@ -33,7 +33,7 @@ theorem clsConsW {α : Type} {f : Mem → Nat → Option α}
     (hxs : PSlR f xs o l m) (hy : DecB (fun m => f m x.toNat) m y) :
     StageR dn vis fe m' a ∧ IWGrow m m' ∧ PSlR f (y :: xs) (r.headD 0) (r.tail.headD 0) m' ∧
       MFr [] [] m m' := by
-  obtain ⟨hS', hg, hd, htop⟩ := partsConsPL hf h hS hxs.2 hxs.1 hy
+  obtain ⟨hS', hg, hd, htop⟩ := partsConsPL hf h hS hxs.bound hxs.dec hy
   exact ⟨hS', hg, ⟨hd, Nat.le_of_eq htop⟩, consW_mfr h⟩
 
 /-- **`sl_cons` of a decoded record onto a decoded slice**, with its frame. -/

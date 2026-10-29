@@ -137,9 +137,9 @@ theorem pinFind_call (hN : NatGuardProg p) {i : Word} (hi : i.toNat < 51) {k : N
       decFd dn m rf (fe.find? (decI (r1.headD 0))) := by
   obtain ⟨hm1, h0, hr1⟩ := pinAt_call hN.lPinAt (j := 1 + i.toNat) rfl h1
   subst hm1
-  have hF := hS.1.pins.full h0
+  have hF := hS.check.pins.full h0
   have hp : H (r1.headD 0) := by rw [hr1]; exact hF.names_lt i.toNat hi
-  obtain ⟨hm2, hfd⟩ := envFind_call hN.toMasterProg (r1.headD 0) hp hS.1.env h2
+  obtain ⟨hm2, hfd⟩ := envFind_call hN.toMasterProg (r1.headD 0) hp hS.check.env h2
   refine ⟨rfl, hm2, h0, hp, hr1, ?_, hfd⟩
   have := pinAt_run hF i.toNat hi
   rw [hr1]; exact this

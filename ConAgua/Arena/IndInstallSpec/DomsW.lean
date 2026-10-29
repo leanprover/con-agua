@@ -40,7 +40,7 @@ theorem decHL_grow {k : IdxKind} {m m' : Mem} (hg : IWGrow m m') {o l : Nat}
   intro j hj
   have hj' : j < l := List.mem_range.mp hj
   simp only [hd?, iwA]
-  rw [hg.2.2.1 (o + j) (by omega)]
+  rw [hg.iwGet (o + j) (by omega)]
 
 theorem decHL_getI {k : IdxKind} {m : Mem} {o l : Nat} {xs : List (Idx k)}
     (h : decHL m o l = some xs) (j : Nat) (hj : j < l) :

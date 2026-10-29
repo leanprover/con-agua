@@ -389,7 +389,7 @@ theorem bvbW_stageW {m m' : Mem} {a : AState} (hS : StageR dn vis fe m a) (n F :
     (hF : f.toNat ≤ F ∨ n ≤ F + 1) (h x : Word) (hh : H h) (hb : bvbW n m h f = some (x, m')) :
     ∃ a', (bvarB F (decE h)).run a = .ok (x.toNat, a') ∧ StageR dn vis fe m' a' ∧ IWGrow m m' ∧
       BbFrame m m' := by
-  obtain ⟨a', hrun, hD⟩ := bvbW_okF n F m m' a hS.1.arena h f x hh hF hb
+  obtain ⟨a', hrun, hD⟩ := bvbW_okF n F m m' a hS.check.arena h f x hh hF hb
   have hfr : BbFrame m m' := by
     match n, hb with
     | n + 1, hb =>
@@ -842,7 +842,7 @@ theorem hbGo_step_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFE
   cases hvl : eViewW m1 h with
   | nil => simp only [hbK2, ite_true]; exact Sim.of_none
   | cons g vt =>
-    obtain ⟨v, hv, hvr⟩ := eViewW_ok m1 a1 hS1.1.arena.1 h (by rw [hvl]; simp)
+    obtain ⟨v, hv, hvr⟩ := eViewW_ok m1 a1 hS1.1.arena.base h (by rw [hvl]; simp)
     rw [hvl] at hvr
     cases v with
     | bvar i' =>

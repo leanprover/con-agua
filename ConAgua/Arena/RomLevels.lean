@@ -798,7 +798,7 @@ theorem romLevelsW_ok (us : List ConLeche.Level) (hus : us.all levelFits = true)
   obtain ⟨rfl, rfl, rfl⟩ := hW
   have hmo3 : ModeOK (m₂.set64 CTL 131 (stkTop m)) := by
     rw [← hm₂]
-    exact (((romLvlsW_topK hG).trans (stkPool_topK hok)).trans (setCtl_topK _ _ _)).mode hA.1.lit.1 hmo
+    exact (((romLvlsW_topK hG).trans (stkPool_topK hok)).trans (setCtl_topK _ _ _)).mode hA.base.lit.1 hmo
   obtain ⟨ok2, hR4, res2, hf4⟩ := L.Front.internLs_D _ _ hR3 w m₄ _ _ hsl3 _ hk3 (ModeOK.slice0 hmo3 hsl3) hI
   obtain ⟨okX, stX, resX⟩ := AM.bind_facts _ internLsNode a ok1 ok2
   have e : internLevels us = internLevelList us >>= internLsNode := rfl
@@ -834,7 +834,7 @@ theorem romLvlsGo_refines (rom : List UInt8) (p : Prog) (hL : LevelsProg rom p) 
   apply M.triple_of_run
   intro s r s' hs hrun
   obtain ⟨hloc, hW⟩ := M.of_run (P := fun s => s = s₀) hs hrun
-    (romLvlsGo_specW rom p hL n s₀ q k ⟨hA.1.lit.1.cap, hA.1.lit.1.top41⟩)
+    (romLvlsGo_specW rom p hL n s₀ q k ⟨hA.base.lit.1.cap, hA.base.lit.1.top41⟩)
   subst hs
   obtain ⟨a1, a2, a3, a4, a5, a6, -⟩ := romLvlsW_ok rom hr us hus n _ a₀ q rest k _ _ hA hmo hd hk ht hc hW
   exact ⟨hloc, a1, a2, a3, a4, a5, a6⟩
@@ -855,7 +855,7 @@ theorem romLevels_refines (rom : List UInt8) (p : Prog) (hL : LevelsProg rom p) 
   apply M.triple_of_run
   intro s r s' hs hrun
   obtain ⟨hloc, hW⟩ := M.of_run (P := fun s => s = s₀) hs hrun
-    (romLevels_specW rom p hL n s₀ pos ⟨hA.1.lit.1.cap, hA.1.lit.1.top41⟩)
+    (romLevels_specW rom p hL n s₀ pos ⟨hA.base.lit.1.cap, hA.base.lit.1.top41⟩)
   subst hs
   exact ⟨hloc, romLevelsW_ok rom hr us hus n _ a₀ pos rest _ _ _ hA hmo hd ht hc hW⟩
 

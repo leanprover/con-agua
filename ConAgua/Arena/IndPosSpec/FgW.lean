@@ -136,8 +136,8 @@ theorem nfmW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
   | zero => simp [nfmW] at h
   | succ n =>
   simp only [nfmW, nboW] at h
-  have hE := hS.1.env
-  obtain ⟨hI1, hE1, hsz, hEs, hc200⟩ := hS.2
+  have hE := hS.check.env
+  obtain ⟨hI1, hE1, hsz, hEs, hc200⟩ := hS.iw
   rcases hef : envFindW m c vis with _ | ⟨r1, m1⟩; · rw [hef] at h; simp [nboW.k_env_find.none, nfmK] at h
   have hm1 := envFindW_mem hef
   subst m1
@@ -165,7 +165,7 @@ theorem nfmW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   obtain ⟨h1, h2, -, h4⟩ := matesW_ok n _ _ c o l 0 0 _ [] r2 hmt hsz hc200 hEs hc hsl
     (by simp [decHL, hslice?]) (by simp) (by simp)
-  exact ⟨matesW_stage n _ _ _ _ _ _ _ _ hmt ⟨hS.1, hI1, hE1, hsz, hEs, hc200⟩, h2, by simpa [nestFrameMates] using h1,
+  exact ⟨matesW_stage n _ _ _ _ _ _ _ _ hmt ⟨hS.check, hI1, hE1, hsz, hEs, hc200⟩, h2, by simpa [nestFrameMates] using h1,
     by simpa using h4⟩
 
 end L.Ind

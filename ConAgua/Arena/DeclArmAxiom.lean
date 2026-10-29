@@ -39,7 +39,7 @@ theorem push_call {p : Prog} (hRp : RecProg p) {dn : NIdx → Option ConLeche.Na
     (hS : StageR dn vis fe m a) (hci : decCI (erecP m) dn c.toNat = some ci) :
     StageR dn (r.headD 0) (fe.push ci) m' a ∧ IWGrow m m' := by
   obtain ⟨w, hw1, hwl, -⟩ := decCI_name hci
-  have hcb : c.toNat + 1 < 2 ^ 64 := erecP_bound hw1 hS.2
+  have hcb : c.toNat + 1 < 2 ^ 64 := erecP_bound hw1 hS.iw
   have hc1 : (c + 1).toNat = c.toNat + 1 := toNat_add_small c 1 hcb
   have hw : (rdW (m.arr64 EREC) (c + 1)).toNat < 2 ^ 32 := by
     rw [rdW_of_get? hc1.symm (erecP_get hw1)]; exact hwl

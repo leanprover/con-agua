@@ -28,8 +28,8 @@ def GrpAt (m : Mem) (o : Nat) (grp : List (NIdx × EIdx)) : Prop :=
 theorem GrpAt.grow {m m' : Mem} {o : Nat} {grp : List (NIdx × EIdx)} (h : GrpAt m o grp)
     (hb : o + grp.length ≤ iwTop m) (hg : IWGrow m m') : GrpAt m' o grp := fun i hi => by
   obtain ⟨w, c, t, h1, h2, h3, h4, h5, h6, h7, h8⟩ := h i hi
-  exact ⟨w, c, t, by rw [hg.2.2.1 _ (by omega)]; exact h1, by have := hg.1; omega,
-    by rw [hg.2.2.1 _ (by omega)]; exact h3, h4, h5, by rw [hg.2.2.1 _ (by omega)]; exact h6, h7, h8⟩
+  exact ⟨w, c, t, by rw [hg.iwGet _ (by omega)]; exact h1, by have := hg.iw; omega,
+    by rw [hg.iwGet _ (by omega)]; exact h3, h4, h5, by rw [hg.iwGet _ (by omega)]; exact h6, h7, h8⟩
 
 end L.Ind
 

@@ -229,13 +229,13 @@ theorem cl_callW {n : Nat} {m m' : Mem} {a : AState} {h : Word} {r : List Word} 
     obtain ⟨re, me⟩ := q
     rw [he, bW_some, Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨rfl, rfl⟩ := hW
-    obtain ⟨rfl, hval⟩ := envFind_callW hp hS.1.env hx he
+    obtain ⟨rfl, hval⟩ := envFind_callW hp hS.check.env hx he
     rw [hxn] at hval
     exact ⟨rfl, _, rfl, hval⟩
   | lit l =>
     have hg : (eViewW m h).headD 0 = 8 := hR
     obtain ⟨h8, -, hs, hcc⟩ := eViewW_lit m h hne hg
-    obtain ⟨k, hk, hrel⟩ := view_lit_f m a hS.1.arena.1 h hh ⟨hs, UInt64.not_le.mp hcc⟩ h8
+    obtain ⟨k, hk, hrel⟩ := view_lit_f m a hS.check.arena.base h hh ⟨hs, UInt64.not_le.mp hcc⟩ h8
     rw [hv] at hk
     cases Option.some.inj hk
     rw [hg] at hW
@@ -258,7 +258,7 @@ theorem cl_callW {n : Nat} {m m' : Mem} {a : AState} {h : Word} {r : List Word} 
     rw [hl, bW_some, Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨rfl, rfl⟩ := hW
     obtain ⟨rfl, h0, hval⟩ := clp_callW hp hS hl
-    have hF := hS.1.pins.full h0
+    have hF := hS.check.pins.full h0
     refine ⟨rfl, ?_⟩
     obtain ⟨⟨N⟩ | ⟨str⟩⟩ := k
     · have hrec : tfld ml LIT (tierW h) (idxW h) 0 = 0 := hrel.1
@@ -321,7 +321,7 @@ theorem crf_step (n : Nat) (ih : CrfOK p dn vis fe n) : CrfOK p dn vis fe (n + 1
   subst hs'
   simp only at hmv hrv
   subst hmv hrv
-  obtain ⟨v, hview, hR⟩ := eViewW_ok m a hS.1.arena.1 h hne
+  obtain ⟨v, hview, hR⟩ := eViewW_ok m a hS.1.arena.base h hne
   rw [ctrW_toNat f hf, constsResolveFGo, StateT.run_bind, view_run (decE h) a v hview,
     except_ok_bind]
   cases v with

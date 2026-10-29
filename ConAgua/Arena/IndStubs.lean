@@ -72,7 +72,12 @@ memo well formed in the memory it starts from and leaves it so; `StageR` says no
 arrays, so the stage's theorems thread it as a hypothesis and a post. (The name is helper `abs`'s,
 from when it held the `abstract1` memo only.) The core's `CoreMemos` holds the first and the last
 (`IndRealAbsT.lean`). -/
-def AbsOK (m : Mem) : Prop := AbMemo m ∧ I1Memo m ∧ CrMemo m ∧ IlMemo m ∧ WkOK m
+structure AbsOK (m : Mem) : Prop where
+  ab : AbMemo m
+  i1 : I1Memo m
+  cr : CrMemo m
+  il : IlMemo m
+  wk : WkOK m
 
 /-- **The twin side of a stub**: a model run of `f(args)` from a memory satisfying `pre` against
 `a` is a successful twin run of `op` with `post` after. -/

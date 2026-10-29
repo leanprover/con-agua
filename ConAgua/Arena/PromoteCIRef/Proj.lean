@@ -493,8 +493,8 @@ namespace L.Arena
 
 theorem arenaD_ctl129 {m m' : Mem} {a : AState} {pm : PMemo} (hD : ArenaD m a) (hP : PMemoR m pm)
     (hf : MemFrame [] [129] m m') : ArenaD m' a ∧ PMemoR m' pm :=
-  ⟨⟨ArenaR.frame_ext _ _ (by simp) (by simp) m _ hf a hD.1,
-    DerR.frameM _ _ m _ hf (by simp) a hD.2⟩, hP.frame (by simp) (by simp) hf⟩
+  ⟨⟨ArenaR.frame_ext _ _ (by simp) (by simp) m _ hf a hD.base,
+    DerR.frameM _ _ m _ hf (by simp) a hD.der⟩, hP.frame (by simp) (by simp) hf⟩
 
 theorem ErecGrow.of_alloc {m m' : Mem} {k : Nat} (hE : m'.arr64 EREC = m.arr64 EREC)
     (hT : erecTop m' = erecTop m + k) : ErecGrow m m' :=
@@ -569,8 +569,8 @@ theorem proj_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f q : Word) (D :
   have hgc0 : ErecGrow m mc := hg0b.trans hgc
   have hdv : (r5.headD 0).toNat = erecTop m := hd5
   have hszc : (mc.arr64 EREC).size = (m.arr64 EREC).size := by
-    rw [hgc0.2.2]
-  have keyc : ∀ i < erecTop m, (mc.arr64 EREC)[i]? = (m.arr64 EREC)[i]? := hgc0.2.1
+    rw [hgc0.size]
+  have keyc : ∀ i < erecTop m, (mc.arr64 EREC)[i]? = (m.arr64 EREC)[i]? := hgc0.get
   -- the copy
   obtain ⟨⟨z, md⟩, hcp, hW⟩ := Option.bind_eq_some_iff.mp hW
   dsimp only at hW
@@ -622,12 +622,12 @@ theorem proj_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f q : Word) (D :
   have hq10 : (m.arr64 EREC)[q.toNat + 10]? = some wlb := by
     obtain ⟨w, hw, hwl'⟩ := nat?_get hwlb
     have h1 := erecP_get hw
-    rw [hg0b.2.1 _ (by omega)] at h1
+    rw [hg0b.get _ (by omega)] at h1
     exact (UInt64.toNat_inj.mp hwl') ▸ h1
   have hq12 : (m.arr64 EREC)[q.toNat + 12]? = some wlg := by
     obtain ⟨w, hw, hwl'⟩ := nat?_get hwlg
     have h1 := erecP_get hw
-    rw [hg0b.2.1 _ (by omega)] at h1
+    rw [hg0b.get _ (by omega)] at h1
     exact (UInt64.toNat_inj.mp hwl') ▸ h1
   have hsn' : (hd? (erecP me) ((r5.headD 0).toNat + 2) : Option NIdx) = some sn' := by
     rw [← hds, erecP_eq_preE]; exact hd?_of_pre (by omega) w5 hpws.1

@@ -325,14 +325,14 @@ theorem opfTail_ok {k : Nat} {n co b : Word} {m2 m' : Mem} {a2 : AState} {fvs : 
   obtain ⟨⟨q, m3⟩, ha, h⟩ := of_K h rfl; rw [opfTail_some] at h
   obtain ⟨r3, m4, c3, h⟩ := ntBW_some h
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-  have hsz1 : (m2.arr64 IW).size < 2 ^ 64 := hS.2.2.2.1
+  have hsz1 : (m2.arr64 IW).size < 2 ^ 64 := hS.iw.2.2.1
   obtain ⟨hq, rfl, hroom⟩ := allocW_facts ha hsz1
   have hm4 := s2iW_wr k _ _ _ _ _ _ c3
   generalize hws : spnWs (allocMem m2 n) co n.toNat = ws at hm4
   have hspn2 : (allocMem m2 n).arr64 SPN = m2.arr64 SPN :=
     (allocMem_frame m2 n).1 SPN (by simp [SPN, IW]) (by decide)
   have hlen : n.toNat = ws.length := by rw [← hws, spnWs_length]
-  have hrec := recPost_wr m2 ws n hlen hS.2 (by
+  have hrec := recPost_wr m2 ws n hlen hS.iw (by
     have : q.toNat = iwTop m2 := by rw [hq]; rfl
     rw [← hlen, ← this]; exact hroom)
   rw [← hq, ← hm4] at hrec

@@ -279,19 +279,25 @@ def erTop (m : Mem) : Nat := (rdW (m.arr64 CTL) 129).toNat
 
 /-- The pool is in bounds, and the arrays an allocation computes with have word-sized lengths
 (lane `indproofs`: a stub's post carries these, so a caller's allocation after a stub works). -/
-def IWOK (m : Mem) : Prop := iwTop m ≤ (m.arr64 IW).size ∧ erTop m ≤ (m.arr64 EREC).size ∧
-  (m.arr64 IW).size < 2 ^ 64 ∧ (m.arr64 EREC).size < 2 ^ 64 ∧ 200 < (m.arr64 CTL).size
+structure IWOK (m : Mem) : Prop where
+  iw : iwTop m ≤ (m.arr64 IW).size
+  er : erTop m ≤ (m.arr64 EREC).size
+  iwSize : (m.arr64 IW).size < 2 ^ 64
+  erSize : (m.arr64 EREC).size < 2 ^ 64
+  ctl : 200 < (m.arr64 CTL).size
 
 /-- The pool and the constant records only grew. -/
-def IWGrow (m m' : Mem) : Prop :=
-  iwTop m ≤ iwTop m' ∧ erTop m ≤ erTop m' ∧
-  (∀ i < iwTop m, (m'.arr64 IW)[i]? = (m.arr64 IW)[i]?) ∧
-  (∀ i < erTop m, (m'.arr64 EREC)[i]? = (m.arr64 EREC)[i]?)
+structure IWGrow (m m' : Mem) : Prop where
+  iw : iwTop m ≤ iwTop m'
+  er : erTop m ≤ erTop m'
+  iwGet : ∀ i < iwTop m, (m'.arr64 IW)[i]? = (m.arr64 IW)[i]?
+  erGet : ∀ i < erTop m, (m'.arr64 EREC)[i]? = (m.arr64 EREC)[i]?
 
 /-- **The stage relation**: the checker state at the view `vis` of `fe`, and the pool. -/
-def StageR (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (m : Mem) (a : AState) :
-    Prop :=
-  CheckR dn m a vis fe ∧ IWOK m
+structure StageR (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (m : Mem) (a : AState) :
+    Prop where
+  check : CheckR dn m a vis fe
+  iw : IWOK m
 
 /-- **A refinement of the twin's `op` by the L call `f(args)`**: from any memory satisfying `pre`
 against `a₀`, a returning run keeps the caller's locals, the twin's run succeeds, and `post`

@@ -214,7 +214,7 @@ theorem lamPair_refines (p : Prog) (hp : LamsProg p) (n : Nat) (s₀ : St) (a₀
   | some q =>
   obtain ⟨r₁, m₁⟩ := q
   rw [hc1, lpeelW.k_e_view.arm1] at hW
-  obtain ⟨rfl, ha1, ha2, hva⟩ := eView_lam_callW (a := a₀) hp.peel.eview hS.arena.1 ha h5a hc1
+  obtain ⟨rfl, ha1, ha2, hva⟩ := eView_lam_callW (a := a₀) hp.peel.eview hS.arena.base ha h5a hc1
   cases hc2 : callW p n "e_view" [b] s.mem with
   | none => rw [hc2] at hW; cases hW
   | some q =>
@@ -222,7 +222,7 @@ theorem lamPair_refines (p : Prog) (hp : LamsProg p) (n : Nat) (s₀ : St) (a₀
   rw [hc2, lpeelW.k_e_view_2.arm1, Option.some.injEq] at hW
   simp only [Prod.mk.injEq] at hW
   obtain ⟨g1, g2, g3, g4, g5, hm⟩ := hW
-  obtain ⟨rfl, hb1, hb2, hvb⟩ := eView_lam_callW (a := a₀) hp.peel.eview hS.arena.1 hb h5b hc2
+  obtain ⟨rfl, hb1, hb2, hvb⟩ := eView_lam_callW (a := a₀) hp.peel.eview hS.arena.base hb h5b hc2
   have hrun : (do
       match ← viewBind (decE a) with
       | none => failDanglingE

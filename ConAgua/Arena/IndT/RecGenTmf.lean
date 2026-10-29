@@ -240,7 +240,7 @@ theorem tmo_ref {p : Prog} (hP : TmoOProg p) (hIlpf : IlpfF p) (hcore : CoreStag
   cases n with
   | zero => rw [tmoE.eq_1]; exact RefE.of_cls0 Err.cls_outOfFuel
   | succ n =>
-  have hT : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
+  have hT : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.1 hS.iw.2.2.1
   rw [tmoE.arm1]
   unfold tmoOutT
   -- `pin_at`
@@ -248,7 +248,7 @@ theorem tmo_ref {p : Prog} (hP : TmoOProg p) (hIlpf : IlpfF p) (hcore : CoreStag
   · rw [liftE_none, tmoE.k_pin_at.none]; exact RefE.of_cls0 (by simp)
   rw [liftE_some]
   obtain ⟨s1, rfl, -, hW1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩) (L.Arena.pinAt_specW p hP.pin n _ 47) h1
-  obtain ⟨hm1, hr1, hqH, hrun1⟩ := L.Arena.pinAtW_ok (a := a) hW1 hS.1.pins
+  obtain ⟨hm1, hr1, hqH, hrun1⟩ := L.Arena.pinAtW_ok (a := a) hW1 hS.check.pins
   have hm1' : s1.mem = m := hm1
   simp only at hr1 hqH hrun1
   rw [hm1']
@@ -416,7 +416,7 @@ theorem tmc_ref {p : Prog} (hP : TmfProg p) (hIlpf : IlpfF p) (hcore : CoreStage
   cases n with
   | zero => rw [tmcE.eq_1]; exact RefE.of_cls0 Err.cls_outOfFuel
   | succ n =>
-  have hT : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
+  have hT : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.1 hS.iw.2.2.1
   obtain ⟨hqd, hq9, hptr⟩ := partsShapeFacts hq hsrc
   rw [tmcE.arm1]
   -- `block_shape_member_names`
@@ -424,11 +424,11 @@ theorem tmc_ref {p : Prog} (hP : TmfProg p) (hIlpf : IlpfF p) (hcore : CoreStage
   · rw [liftE_none, tmcE.k_block_shape_member_names.none]; exact RefE.of_cls0 (by simp)
   rw [liftE_some, tmcE.k_block_shape_member_names.arm1]
   obtain ⟨s4, rfl, hr4, hdn, hg4, hf4, ht4⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (blockShapeMemberNames_refines p hP.tmm.alloc hP.mnc hP.bsmn n _ pp bs hqd (by omega) hS.2.2.2.1 hS.2.2.2.2.2
+    (blockShapeMemberNames_refines p hP.tmm.alloc hP.mnc hP.bsmn n _ pp bs hqd (by omega) hS.iw.2.2.1 hS.iw.2.2.2.2
       hsrc (fun o l j v h1 h2 h3 h4 => Nat.lt_of_succ_lt (hptr o l j v h1 h2 h3 h4))) h4
   obtain ⟨s4', hs4', -, hW4⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (blockShapeMemberNames_spec p hP.tmm.alloc hP.mnc hP.bsmn n _ pp) h4
-  have hroom := memberNamesW_room hW4 hS.2.2.2.1
+  have hroom := memberNamesW_room hW4 hS.iw.2.2.1
   rw [partsShapeK hqd hq9] at hroom
   have hkb : bs.k < 2 ^ 64 := by
     obtain ⟨o, l, -, hl', hg'⟩ := decAt_some (decBS_some hqd).1
@@ -437,7 +437,7 @@ theorem tmc_ref {p : Prog} (hP : TmfProg p) (hIlpf : IlpfF p) (hcore : CoreStage
   simp only at hr4 hdn hg4 hf4 ht4
   have hS4 : StageR dn vis fe s4.mem a := stage_frame_iw hS hf4 (by
     rw [← ht4]; simp only [iwTop] at hroom ⊢; omega)
-  have hT4 : iwTop s4.mem < 2 ^ 64 := Nat.lt_of_le_of_lt hS4.2.1 hS4.2.2.2.1
+  have hT4 : iwTop s4.mem < 2 ^ 64 := Nat.lt_of_le_of_lt hS4.iw.1 hS4.iw.2.2.1
   have hP4 : PosMR s4.mem := hPm.fr (MFr.of_iw hf4)
   have hA4 : AbsOK s4.mem := memberNamesW_afr (hs4' ▸ hW4) hA
   have hC4 : StageC dn vis fe env s4.mem a := hC.of_pstep hS4 hA4 (PStep.refl hC.check.state)
@@ -549,7 +549,7 @@ theorem tmf_ref {p : Prog} (hP : TmfProg p) (hIlpf : IlpfF p) (hcore : CoreStage
   obtain ⟨s3, rfl, hs3e, hne, hr3⟩ := triple_of_callW (s₀ := ⟨s2.mem, Locals.init []⟩)
     (eView_spec p hP.ev n _ (r2.headD 0)) h3
   have hm3 : s3.mem = s2.mem := by rw [hs3e]
-  obtain ⟨hrun3, hxH, hyH⟩ := viewConstW hS2.1.arena.1 (by rw [← hr3]; exact hne) hg
+  obtain ⟨hrun3, hxH, hyH⟩ := viewConstW hS2.1.arena.base (by rw [← hr3]; exact hne) hg
   rw [← hr3] at hrun3 hxH hyH
   obtain ⟨-, hvc⟩ := ConRon.Bridge.Inductives.viewConst_run hrun3
   obtain ⟨IP, usP, -, hIP, husP⟩ := ConRon.Bridge.denote_const_inv hC2.check.state.wf

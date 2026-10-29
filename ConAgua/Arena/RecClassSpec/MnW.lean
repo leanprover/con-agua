@@ -277,7 +277,7 @@ theorem rec2SimIh (n : Nat) {m : Mem} {a : AState} (hS : StageR dn vis fe m a) {
   · exact RSim.none
   rintro ⟨r, m'⟩ h
   obtain ⟨res, a', hrun, hS', hg, hres, hA'⟩ := ihW_ok dn vis fe m m' a g t tele w d G r hS hw
-    (rec2CG_cls (hG.get (decCG_mono _))) hS.2.2.2.1 hA h
+    (rec2CG_cls (hG.get (decCG_mono _))) hS.iw.2.2.1 hA h
   exact ⟨res, a', hrun, ⟨hS', hg, hres⟩, hA'⟩
 
 /-- `class_gen_minor_ty_ih1`, in continuation form: the twin's body of `ihsGo` at one recursive
@@ -784,13 +784,13 @@ theorem mnW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
   · exact RSim.none
   rw [mnW_eq]
   unfold ConRon.Arena.ClassGen.minorTy
-  have hsz := hS.2.2.2.1
+  have hsz := hS.iw.2.2.1
   obtain ⟨-, hgt, ⟨o3, l3, h3, h4, hcls⟩, -⟩ := rec2CG_parts hG
   obtain ⟨e3, t3⟩ := rec2RdN (w := g) (k := 3) h3 hsz
   obtain ⟨e4, t4⟩ := rec2RdN (w := g) (k := 4) h4 hsz
   simp only [show UInt64.ofNat 3 = (3 : Word) from rfl, show UInt64.ofNat 4 = (4 : Word) from rfl] at e3 e4
   rw [e3, e4]
-  have htop := hS.2.1
+  have htop := hS.iw.1
   have hb3 : o3 + l3 < 2 ^ 64 := by
     by_cases hl : l3 = 0
     · have := iwN_rdW h3 (by omega); omega

@@ -750,7 +750,7 @@ theorem cgC (hD : DmProg5 p) (hcl : LeafClosed p) (hkp : CrKeep p) (hs0 : SubstC
   replace hw := ntBW_some hw; obtain ⟨r6, m6, h6, hw⟩ := hw
   have hd5' : decHL m5 ho.toNat hl.toNat = some hyps := by
     rw [decHL_grow hG5 hb]; exact hd
-  have hb5 : ho.toNat + hl.toNat ≤ iwTop m5 := Nat.le_trans hb hG5.1
+  have hb5 : ho.toNat + hl.toNat ≤ iwTop m5 := Nat.le_trans hb hG5.iw
   have hCr6 := hkp.call (im_mem _ rfl) h6 hCr5.crOK
   obtain ⟨x6, a6, hrun6, hS6, hg6, hd6⟩ :=
     sc0List_ref hD hs0 c annVal hc hann hyps ho hl k m5 a5 r6 m6 hC5.stage hd5' hb5 h6

@@ -70,7 +70,7 @@ theorem CrMemo.crOK {m : Mem} (h : CrMemo m) : L.Stubs.CrOK m := h
 theorem _root_.L.Stubs.CrOK.crMemo {m : Mem} (h : L.Stubs.CrOK m) : CrMemo m := h
 
 /-- `AbsOK` holds `CrMemo`. -/
-theorem AbsOK.crMemo {m : Mem} (h : AbsOK m) : CrMemo m := h.2.2.1
+theorem AbsOK.crMemo {m : Mem} (h : AbsOK m) : CrMemo m := h.cr
 
 /-- **A program's call of `consts_resolve_ffast` is the model's** (`realCall p`'s reading). -/
 theorem crfF_of_callW {p : Prog} (hp : CrfF p) {n : Nat} {args r : List Word} {m m' : Mem}

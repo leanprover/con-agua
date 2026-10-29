@@ -177,9 +177,9 @@ theorem ArenaD.memo {m m' : Mem} {a : AState} (hD : ArenaD m a) (S : MemoSch) (h
     (h1 : 64 ≤ S.arr) (h2 : 64 ≤ (S.cs + 1).toNat) (h r : Word) (hs : msetG S m h 0 r = some m') :
     ArenaD m' a := by
   have hf := msetG_frame S hS m m' h 0 r hs
-  exact ⟨ArenaR.frame_ext _ _ (by simpa using h1) (by simp; exact h2) m m' hf a hD.1,
+  exact ⟨ArenaR.frame_ext _ _ (by simpa using h1) (by simp; exact h2) m m' hf a hD.base,
     DerR.frameM _ _ m m' hf (fun b hb => by
-      rw [List.mem_singleton.mp hb]; simp only [ArrId] at h1 ⊢; omega) a hD.2⟩
+      rw [List.mem_singleton.mp hb]; simp only [ArrId] at h1 ⊢; omega) a hD.der⟩
 
 theorem run_bind_ok {α β : Type} {x : AM α} {f : α → AM β} {a a₁ : AState} {v : α}
     (h : x.run a = .ok (v, a₁)) : (x >>= f).run a = (f v).run a₁ := by

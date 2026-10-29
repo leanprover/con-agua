@@ -64,7 +64,7 @@ theorem CoreRef.post {α : Type} [Inhabited α] {T : AM α} {a₀ : AState}
     (h : CoreRef T a₀ dec dn m₀ vis fe M eb r m ok) :
     T.run a₀ = .ok (AM.res T a₀, AM.st T a₀) ∧
       CorePost dec dn m₀ vis fe M eb ok (r, m) (AM.res T a₀) (AM.st T a₀) :=
-  ⟨AM.run_of_ok _ _ h.1, h.2.1, h.2.2.1, h.2.2.2⟩
+  ⟨AM.run_of_ok _ _ h.run, h.after, h.res, h.post⟩
 
 /-- A leaf: the twin returns at the start's state, the relation holds there. -/
 theorem CorePost.ret {α : Type} {dec : List Word → α} {dn : NIdx → Option ConLeche.Name} {m : Mem}
@@ -133,8 +133,8 @@ theorem RefE.bind_core {α β γ : Type} [Inhabited γ] {G : Prop} {x : Except E
       RefE G x (f (dec₁ r₁)) (AM.st T₁ a₀)
         (fun v y a' => CorePost dec dn m₁ vis fe M' eb ok (w v) y a')) :
     RefE G x (T₁ >>= f) a₀ (fun v y a' => CorePost dec dn m₀ vis fe M eb ok (w v) y a') := by
-  obtain ⟨M', hS, hK, hSt⟩ := h₁.2.1
-  exact RefE.bind_right (by rw [AM.run_of_ok _ _ h₁.1, h₁.2.2.1])
+  obtain ⟨M', hS, hK, hSt⟩ := h₁.after
+  exact RefE.bind_right (by rw [AM.run_of_ok _ _ h₁.run, h₁.res])
     ((h₂ M' hS hSt).mono fun _ _ _ h => ⟨CoreAfter.comp hK hSt h.after, h.res, h.valid⟩)
 
 /-- **The ok half of a unified core function** as its `CoreSpec`, for a model whose ok value is not
@@ -295,8 +295,8 @@ theorem RefE.bind_growK {α β γ : Type} [Inhabited γ] {G : Prop} {x : Except 
       RefE G x (f (dec₁ r₁)) (AM.st T₁ a₀)
         (fun v y a' => GrowPost dec dn m₁ vis fe M' eb ok (w v) y a')) :
     RefE G x (T₁ >>= f) a₀ (fun v y a' => GrowPost dec dn m₀ vis fe M eb ok (w v) y a') := by
-  obtain ⟨M', hS, hK, hSt⟩ := h₁.2.1
-  exact RefE.bind_right (by rw [AM.run_of_ok _ _ h₁.1, h₁.2.2.1])
+  obtain ⟨M', hS, hK, hSt⟩ := h₁.after
+  exact RefE.bind_right (by rw [AM.run_of_ok _ _ h₁.run, h₁.res])
     ((h₂ M' hS hSt).mono fun _ _ _ h =>
       let ⟨M'', hS'', hK'', hSt''⟩ := h.after
       ⟨⟨M'', hS'', hK.trans hK'', hSt.toGrew.trans hSt''⟩, h.res, h.valid⟩)

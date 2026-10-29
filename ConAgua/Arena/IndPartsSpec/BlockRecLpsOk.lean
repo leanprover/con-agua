@@ -260,7 +260,7 @@ theorem iwN_lt_p {m : Mem} {i v : Nat} (h : iwN m i = some v) : i < (m.arr64 IW)
 theorem iwN_cell {m m' : Mem} {i v : Nat} (hg : IWGrow m m') (hi : i < iwTop m)
     (h : iwN m i = some v) : iwN m' i = some v := by
   simp only [iwN, nat?, iwA] at h ⊢
-  rw [hg.2.2.1 i hi]; exact h
+  rw [hg.iwGet i hi]; exact h
 
 /-- The record loop on top of a wanted list. -/
 theorem lokKey (n : Nat) (m m2 m' : Mem) (p wo wl : Word) (r : List Word) (bs : BlockShape)

@@ -247,7 +247,7 @@ theorem coreRef_of_imp {α : Type} [Inhabited α] {T T' : AM α} {a₀ : AState}
     {eb : Word} {r : List Word} {ok : List Word → Prop}
     (himp : ∀ x a', T.run a₀ = .ok (x, a') → T'.run a₀ = .ok (x, a'))
     (h : CoreRef T a₀ dec dn m₀ vis fe M eb r m ok) : CoreRef T' a₀ dec dn m₀ vis fe M eb r m ok :=
-  coreRef_congr ((himp _ _ (AM.run_of_ok _ _ h.1)).trans (AM.run_of_ok _ _ h.1).symm) h
+  coreRef_congr ((himp _ _ (AM.run_of_ok _ _ h.run)).trans (AM.run_of_ok _ _ h.run).symm) h
 
 theorem getD1 (r : List Word) : r.getD 1 0 = r.tail.headD 0 := by
   rcases r with _ | ⟨x, _ | ⟨y, t⟩⟩ <;> rfl
@@ -376,7 +376,7 @@ theorem ib_ref (p : Prog) (hq : InferAllProg p) (hc : InferCallees p) (n : Nat) 
   have hm₀ : m₀ = s₀.mem := by rw [← ht₀, hts]
   subst hm₀
   subst hr0
-  obtain ⟨v, hv, hvr⟩ := L.Ind.eViewW_ok s₀.mem a₀ hS.arena.1 e hne
+  obtain ⟨v, hv, hvr⟩ := L.Ind.eViewW_ok s₀.mem a₀ hS.arena.base e hne
   have hhd := eViewW_head s₀.mem e hne
   have hsl : SlotPre ⟨s₀.mem, Locals.init []⟩ a₀ dn vis fe MM eb mode := ⟨hS, hs.mode4, hs.eb_mode⟩
   have hs : SlotPre ⟨s₀.mem, Locals.init []⟩ a₀ dn vis fe MM eb mode := ⟨hS, hs.mode4, hs.eb_mode⟩
@@ -534,7 +534,7 @@ theorem ibo_ref (p : Prog) (hq : InferAllProg p) (hc : InferCallees p) (n : Nat)
   have hm₀ : m₀ = s₀.mem := by rw [← ht₀, hts]
   subst hm₀
   subst hr0
-  obtain ⟨v, hv, hvr⟩ := L.Ind.eViewW_ok s₀.mem a₀ hS.arena.1 e hne
+  obtain ⟨v, hv, hvr⟩ := L.Ind.eViewW_ok s₀.mem a₀ hS.arena.base e hne
   have hhd := eViewW_head s₀.mem e hne
   have hsl : SlotPre ⟨s₀.mem, Locals.init []⟩ a₀ dn vis fe MM eb mode := ⟨hS, hs.mode4, hs.eb_mode⟩
   have hs : SlotPre ⟨s₀.mem, Locals.init []⟩ a₀ dn vis fe MM eb mode := ⟨hS, hs.mode4, hs.eb_mode⟩

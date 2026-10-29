@@ -163,7 +163,7 @@ theorem isBoolTrue_refines (p : Prog) (hp : DefEqLeafProg p) (n : Nat) (s₀ : S
     CoreSpec p (n + 1) "is_bool_true" [h] (isBoolTrue (decE h)) decBool s₀ a₀ dn vis fe MM eb := by
   refine triple_post (isBoolTrue_spec p hp (n + 1) s₀ h) fun r s' ⟨hloc, hm, hW⟩ => ⟨hloc, ?_⟩
   rw [hm]
-  have hrun' := isBoolTrue_run _ _ hS.arena.1 hS.pins h hh _ hW
+  have hrun' := isBoolTrue_run _ _ hS.arena.base hS.pins h hh _ hW
   refine coreRef_pure hS hrun' rfl ?_
   unfold isBoolTrueW at hW
   unfold ResH HW
@@ -206,7 +206,7 @@ theorem headIsProj_refines (p : Prog) (hp : DefEqLeafProg p) (n : Nat) (s₀ : S
   · rw [headIsProjW.arm1, hc, headIsProjW.k_get_app_fn.none] at hW; cases hW
   rw [headIsProjW_eq p n _ _ e r₁ hc, Option.some.injEq, Prod.mk.injEq] at hW
   obtain ⟨hr, hm⟩ := hW
-  obtain ⟨rfl, hh, hgaf⟩ := getAppFn_callW hp hS.arena.1 he hc
+  obtain ⟨rfl, hh, hgaf⟩ := getAppFn_callW hp hS.arena.base he hc
   rw [← hm]
   refine coreRef_pure hS (v := decide (r₁.headD 0 >>> 28 = 9)) ?_ ?_ ?_
   · simp only [headIsProj, StateT.run_bind, hgaf, except_ok_bind]
@@ -241,7 +241,7 @@ theorem ioNeutral_refines (p : Prog) (hp : DefEqLeafProg p) (n : Nat) (s₀ : St
   · rw [ioNeutralW.arm1, hc, ioNeutralW.k_get_app_fn.none] at hW; cases hW
   rw [ioNeutralW_eq p n _ _ e r₁ hc, Option.some.injEq, Prod.mk.injEq] at hW
   obtain ⟨hr, hm⟩ := hW
-  obtain ⟨rfl, hh, hgaf⟩ := getAppFn_callW hp hS.arena.1 he hc
+  obtain ⟨rfl, hh, hgaf⟩ := getAppFn_callW hp hS.arena.base he hc
   rw [← hm]
   refine coreRef_pure hS (v := !decide (r₁.headD 0 >>> 28 = 5 ∨ r₁.headD 0 >>> 28 = 7 ∨
     r₁.headD 0 >>> 28 = 0)) ?_ ?_ ?_
@@ -330,7 +330,7 @@ theorem isEagerReduce_refines (p : Prog) (hp : DefEqLeafProg p) (n : Nat) (s₀ 
     CoreSpec p (n + 1) "is_eager_reduce" [h] (isEagerReduce (decE h)) decBool s₀ a₀ dn vis fe MM eb := by
   refine triple_post (isEagerReduce_spec p hp (n + 1) s₀ h) fun r s' ⟨hloc, hm, hW⟩ => ⟨hloc, ?_⟩
   rw [hm]
-  have hrun' := isEagerReduce_run _ _ hS.arena.1 hS.pins h hh _ hW
+  have hrun' := isEagerReduce_run _ _ hS.arena.base hS.pins h hh _ hW
   refine coreRef_pure hS hrun' rfl ?_
   unfold isEagerReduceW at hW
   unfold ResH HW
@@ -453,7 +453,7 @@ theorem isNatZero_refines (p : Prog) (hp : DefEqLeafProg p) (n : Nat) (s₀ : St
     CoreSpec p (n + 1) "is_nat_zero" [e] (isNatZero (decE e)) decBool s₀ a₀ dn vis fe MM eb := by
   refine triple_post (isNatZero_spec p hp (n + 1) s₀ e) fun r s' ⟨hloc, hm, hW⟩ => ⟨hloc, ?_⟩
   rw [hm]
-  have hrun' := isNatZero_run _ _ hS.arena.1 hS.pins e he _ hW
+  have hrun' := isNatZero_run _ _ hS.arena.base hS.pins e he _ hW
   refine coreRef_pure hS hrun' rfl ?_
   unfold isNatZeroW at hW
   unfold ResH HW
@@ -594,8 +594,8 @@ theorem headHint_refines (p : Prog) (hp : DefEqLeafProg p) (n : Nat) (s₀ : St)
   rcases hc : callW p n "get_app_fn" [e] s₀.mem with _ | ⟨r₁, m₁⟩
   · rw [headHintW.arm1, hc, headHintW.k_get_app_fn.none] at hW; cases hW
   rw [headHintW.arm1, hc] at hW
-  obtain ⟨rfl, hh, hgaf⟩ := getAppFn_callW hp hS.arena.1 he hc
-  have hR := hS.arena.1
+  obtain ⟨rfl, hh, hgaf⟩ := getAppFn_callW hp hS.arena.base he hc
+  have hR := hS.arena.base
   generalize hdef : r₁.headD 0 = h at hh hgaf
   have hres : ∀ x y : Word, some (x, y, s₀.mem) = some (r.headD 0, r.tail.headD 0, s'.mem) →
       HW x → ∀ v, (headHint fe (decE e)).run a₀ = .ok (v, a₀) → v = decHintW x y →
@@ -813,7 +813,7 @@ theorem unfoldableHead_refines (p : Prog) (hp : DefEqLeafProg p) (n : Nat) (s₀
     CoreSpec p (n + 1) "unfoldable_head" [vis, e] (unfoldableHead fe (decE e)) decBool s₀ a₀ dn vis
       fe MM eb := by
   refine triple_post (unfoldableHead_spec p hp n s₀ vis e) fun r s' ⟨hloc, hW⟩ => ⟨hloc, ?_⟩
-  have hR := hS.arena.1
+  have hR := hS.arena.base
   have hres : ∀ x : Word, some (x, s₀.mem) = some (r.headD 0, s'.mem) → HW x → ∀ v,
       (unfoldableHead fe (decE e)).run a₀ = .ok (v, a₀) → v = (x != 0) →
       CoreRef (unfoldableHead fe (decE e)) a₀ decBool dn s₀.mem vis fe MM eb r s'.mem := by
@@ -827,7 +827,7 @@ theorem unfoldableHead_refines (p : Prog) (hp : DefEqLeafProg p) (n : Nat) (s₀
   rcases hc : callW p n "get_app_fn" [e] s₀.mem with _ | ⟨r₁, m₁⟩
   · simp [hc] at hW
   rw [hc, Option.bind_some] at hW
-  obtain ⟨rfl, hh, hgaf⟩ := getAppFn_callW hp hS.arena.1 he hc
+  obtain ⟨rfl, hh, hgaf⟩ := getAppFn_callW hp hS.arena.base he hc
   unfold ufHeadF at hW
   simp only at hW
   generalize r₁.headD 0 = h at hh hgaf hW
@@ -979,7 +979,7 @@ theorem sameConstHeads_refines (p : Prog) (hp : DefEqLeafProg p) (n : Nat) (s₀
     CoreSpec p (n + 1) "same_const_heads" [a, b] (sameConstHeads (decE a) (decE b)) decBool s₀ a₀ dn
       vis fe MM eb := by
   refine triple_post (sameConstHeads_spec p hp n s₀ a b) fun r s' ⟨hloc, hW⟩ => ⟨hloc, ?_⟩
-  have hR := hS.arena.1
+  have hR := hS.arena.base
   have hres : ∀ x : Word, some (x, s₀.mem) = some (r.headD 0, s'.mem) → HW x →
       (sameConstHeads (decE a) (decE b)).run a₀ = .ok (x != 0, a₀) →
       CoreRef (sameConstHeads (decE a) (decE b)) a₀ decBool dn s₀.mem vis fe MM eb r s'.mem := by

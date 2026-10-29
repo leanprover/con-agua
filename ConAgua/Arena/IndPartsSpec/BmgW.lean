@@ -356,7 +356,7 @@ theorem NsR_three {x : Option (List Nat)} {r : List Word} {m : Mem} (h : NsR x r
     NsR x [r.headD 0, r.tail.headD 0, r.tail.tail.headD 0] m := by cases x <;> exact h
 
 theorem stageR_ptop {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m : Mem} {a : AState}
-    (hS : StageR dn vis fe m a) : PTop m := ⟨hS.2.1, hS.2.2.2.1, hS.2.2.2.2.2⟩
+    (hS : StageR dn vis fe m a) : PTop m := ⟨hS.iw.1, hS.iw.2.2.1, hS.iw.2.2.2.2⟩
 
 /-- **`block_member_counts_go`'s model refines `blockMemberCounts?` from member `idx`.** -/
 theorem bmgW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {nPd k nC no nl ro rl : Word}
@@ -413,14 +413,14 @@ theorem bmgW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
       | none =>
         intro hE; dsimp only; intro r2 m2 e
         obtain ⟨x2, hrun, hr2, hq2, hg2, hf2⟩ := bcW_ok n m1 m2 a1 nPd k nC rl (UInt64.ofNat pc) _ _ _ r2
-          cv0 none hS1.1.arena.1 e hcv1 hb3 (by subst hE; rfl) h1 h2 h3 h4 h5 h6 hS1.2.2.2.1 hS1.2.2.2.2.2
+          cv0 none hS1.1.arena.base e hcv1 hb3 (by subst hE; rfl) h1 h2 h3 h4 h5 h6 hS1.2.2.2.1 hS1.2.2.2.2.2
         have hP2 := bcW_ptop e (stageR_ptop hS1)
         exact ⟨x2, a1, hrun, rfl, hr2, hq2, stage_frame_iw hS1 hf2 (by rw [← hf2.size IW]; exact hP2.1), hg2⟩
       | some q =>
         intro hE; dsimp only; intro r2 m2 e
         obtain ⟨b1, b2⟩ := hxb q rfl
         obtain ⟨x2, hrun, hr2, hq2, hg2, hf2⟩ := bcW_ok n m1 m2 a1 nPd k nC rl (UInt64.ofNat pc) _ _ _ r2
-          cv0 (some (q.2.1, q.2.2.1)) hS1.1.arena.1 e hcv1 hb3
+          cv0 (some (q.2.1, q.2.2.1)) hS1.1.arena.base e hcv1 hb3
           (by subst hE; simp [encONN, UInt64.toNat_ofNat_of_lt' b1, UInt64.toNat_ofNat_of_lt' b2])
           h1 h2 h3 h4 h5 h6 hS1.2.2.2.1 hS1.2.2.2.2.2
         have hP2 := bcW_ptop e (stageR_ptop hS1)

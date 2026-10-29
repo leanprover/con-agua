@@ -305,7 +305,7 @@ theorem iccW_ok (p : Prog) (hp : IotaProg4 p) (hcn : CapsNeverZeroOK p) (n : Nat
     · exact h'
   have hr1' : r1 = [o1, l1] := by rw [hr1]; exact hl1
   subst hr1'
-  have hvl : a.store.lss.viewLen (decI us) = some l1.toNat := lsNodeW_viewLen hS.arena.1 hus hl1
+  have hvl : a.store.lss.viewLen (decI us) = some l1.toNat := lsNodeW_viewLen hS.arena.base hus hl1
   have hlen : cvT.levelParams.length = pc.toNat := hslice?_length hsl
   rcases c2 : callW p (n' + 1) "e_rec_get" [indP + 3] m1 with _ | ⟨lp, m2⟩ <;>
     simp only [c2, reduceCtorEq] at h
@@ -447,7 +447,7 @@ theorem iotaCtorNeverProp_refines (p : Prog) (hp : IotaProg4 p) (hcn : CapsNever
   | succ n' =>
   refine triple_post (iotaCtorNeverProp_spec p hp.iotaCtorNeverProp n' s₀ vis ctorP us) fun r s'
     ⟨hloc, hW⟩ => ⟨hloc, ?_⟩
-  have hR := hS.arena.1
+  have hR := hS.arena.base
   simp only [inpW] at hW
   cases n' with
   | zero => rw [callW_zero] at hW; cases hW

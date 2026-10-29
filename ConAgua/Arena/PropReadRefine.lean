@@ -194,7 +194,7 @@ theorem rpw_ok {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : 
     exact ⟨none, by simp [decOpt, hf, ConRon.Arena.residualPW]; rfl, RdAfter.refl hS, rfl⟩
   simp only [hf, ↓reduceIte] at hW
   have hh := hh hf
-  have hR := hS.arena.1
+  have hR := hS.arena.base
   by_cases hg : h >>> 28 = 2
   rotate_left
   · simp only [hg, ne_eq, not_false_eq_true, ↓reduceIte, Option.some.injEq, Prod.mk.injEq] at hW
@@ -365,7 +365,7 @@ theorem spa_ok {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : 
     cases ps with
     | nil => exact absurd (hnm.nil_iff.mpr rfl) hc0
     | cons x xs => exact ⟨x, xs, rfl⟩
-  have hR := hS.arena.1
+  have hR := hS.arena.base
   have hN := nameN_rel _ hS.nwf
   have hSD := hden dn m a vis fe M eb hS
   obtain ⟨ks, hk⟩ := hks

@@ -121,10 +121,10 @@ theorem iwGrow_of_copy {m0 m m1 : Mem} (hg : IWGrow m0 m) (hA : ∀ b : TieredAr
   have htop : iwTop m1 = iwTop m := by simp only [iwTop, hA CTL (by decide)]
   have hEr : erTop m1 = erTop m := by simp only [erTop, hA CTL (by decide)]
   refine ⟨?_, ?_, fun i hi => ?_, fun i hi => ?_⟩
-  · rw [htop]; exact hg.1
-  · rw [hEr]; exact hg.2.1
-  · rw [hG i (by omega)]; exact hg.2.2.1 i hi
-  · rw [hA EREC (by decide)]; exact hg.2.2.2 i hi
+  · rw [htop]; exact hg.iw
+  · rw [hEr]; exact hg.er
+  · rw [hG i (by omega)]; exact hg.iwGet i hi
+  · rw [hA EREC (by decide)]; exact hg.erGet i hi
 
 theorem iwN_eq_agree {m m0 : Mem} {q i : Nat} (hag : ∀ j, j < q → (m.arr64 IW)[j]? = (m0.arr64 IW)[j]?)
     (hi : i < q) : iwN m i = iwN m0 i := by
@@ -383,7 +383,7 @@ theorem blockShapeAllCtors_refines (p : Prog) (ha : p.lookup "iw_alloc" = some i
       (r.headD 0).toNat + (r.getD 1 0).toNat ≤ iwTop s'.mem; ⊤⦄ := by
   refine triple_post (blockShapeAllCtors_spec p ha hcp hnc hcc hg hp n s₀ q) ?_
   rintro r s' ⟨hl, hm⟩
-  obtain ⟨-, -, hsz, -, hcl⟩ := hS.2
+  obtain ⟨-, -, hsz, -, hcl⟩ := hS.iw
   obtain ⟨q', tot, hr, hdec, hgrow, hfr, htop, hroom⟩ := acW_ok n s₀.mem s'.mem q r bs hm hq hsz hcl
   subst hr
   exact ⟨hl, stage_frame_iw hS hfr (by omega), hgrow, by simpa using hdec, by simp; omega⟩

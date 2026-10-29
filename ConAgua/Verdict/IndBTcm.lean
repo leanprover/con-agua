@@ -176,7 +176,7 @@ theorem tcm_ref (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState}
   · rw [liftE_none, tcmE.k_target_holes.none]; exact RefE.of_cls0 (by simp)
   rw [liftE_some, tcmE.k_target_holes.arm1]
   obtain ⟨holes, a5, run5, hS5, hg5, hdh, hbh⟩ := thW_ok dn vis fe n m4 m5 a4 fto ftl pfl rh formerTys h5 hS4
-    (by rw [decHL_grow hg04 hftb]; exact hft) (hS.lt64 hftb) (by have := hg04.1; omega)
+    (by rw [decHL_grow hg04 hftb]; exact hft) (hS.lt64 hftb) (by have := hg04.iw; omega)
     (by rw [← hd]; exact (pfl + ftl).toNat_lt)
   have hP5 := hP4.fr (thW_mfr n h5)
   have hA5 := thW_afr n h5 hA4

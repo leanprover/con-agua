@@ -203,7 +203,7 @@ theorem peLit_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (h : Word) (r : 
   | succ n =>
   obtain ⟨s', rfl, -, hW⟩ := callW_triple (peLit_spec p hp n ⟨m, Locals.init []⟩ h) hc
   simp only at hW
-  obtain ⟨k, hk, hkr⟩ := promote_lit_rec hD.1 hh hv hg
+  obtain ⟨k, hk, hkr⟩ := promote_lit_rec hD.base hh hv hg
   rw [hk] at hl
   cases hl
   obtain ⟨⟨N⟩ | ⟨st⟩⟩ := k

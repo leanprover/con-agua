@@ -160,7 +160,7 @@ theorem m2cCtor_ref (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N �
   rw [r4]
   have hA0 : GrowPost decH dn m vis fe M eb ResH ([major], m) (decE major) a :=
     ⟨CoreAfter.toG ⟨M, hS, KeptAll.refl _ _, StackKept.refl _⟩, rfl, hmaj⟩
-  have hR := hS.arena.1
+  have hR := hS.arena.base
   rcases c1 : callW p N "pi_result" [w4] m with _ | ⟨r1, m1⟩
   · rw [liftE_none, m2cCtorE.k_pi_result.none]; exact RefE.of_cls0 (by simp)
   rw [liftE_some, m2cCtorE.k_pi_result.arm1]

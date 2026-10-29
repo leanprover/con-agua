@@ -51,8 +51,8 @@ theorem decRules_succ (a : Array Word) (off c : Nat) :
 
 theorem SlotGrow.join {m₁ m₂ m₃ : Mem} {lo mid hi : Nat} (h₁ : SlotGrow m₁ m₂ lo mid)
     (h₂ : SlotGrow m₂ m₃ mid hi) (hl : lo ≤ mid) (hm : mid ≤ hi) : SlotGrow m₁ m₃ lo hi := by
-  refine ⟨Nat.le_trans h₁.1 h₂.1, fun i hi1 hout => ?_, h₂.2.2.trans h₁.2.2⟩
-  rw [h₂.2.1 i (by have := h₁.1; omega) (by omega), h₁.2.1 i hi1 (by omega)]
+  refine ⟨Nat.le_trans h₁.top h₂.top, fun i hi1 hout => ?_, h₂.size.trans h₁.size⟩
+  rw [h₂.get i (by have := h₁.top; omega) (by omega), h₁.get i hi1 (by omega)]
 
 section rel
 variable (p : Prog) (hp : PromoteProg p)
@@ -131,8 +131,8 @@ theorem rules_rel : ∀ (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f s l d :
       intro i v hP hv
       obtain ⟨hi1, hv1⟩ := preE_get_lt (m := m₁) (T := erecTop m₁) hv
       unfold RuleP at hP
-      have := hg2'.2.1 i hi1 (by omega)
-      exact preE_of_get (m := m₂) (T := erecTop m₂) (by have := hg2'.1; omega)
+      have := hg2'.get i hi1 (by omega)
+      exact preE_of_get (m := m₂) (T := erecTop m₂) (by have := hg2'.top; omega)
         (by rw [this]; exact hv1)
     rw [e11d] at hdr2
     rw [hl1, decRules_succ, decRule_ext hext hdr hfh, Option.bind_some, hdr2]

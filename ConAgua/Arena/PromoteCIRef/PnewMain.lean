@@ -73,8 +73,8 @@ theorem cdec_length {dn : NIdx → Option ConLeche.Name} {A E : Array Word} :
 
 theorem arenaD_rows {m m' : Mem} {a : AState} {pm : PMemo} (hD : ArenaD m a) (hP : PMemoR m pm)
     (hf : MemFrame [EIXA, EIXS, EIXN, EIXA1, EIXS1, EIXN1] [] m m') : ArenaD m' a ∧ PMemoR m' pm :=
-  ⟨⟨ArenaR.frame_ext _ _ (by simp [EIXA, EIXS, EIXN, EIXA1, EIXS1, EIXN1]) (by simp) m _ hf a hD.1,
-    DerR.frameM _ _ m _ hf (by simp [EIXA, EIXS, EIXN, EIXA1, EIXS1, EIXN1]) a hD.2⟩,
+  ⟨⟨ArenaR.frame_ext _ _ (by simp [EIXA, EIXS, EIXN, EIXA1, EIXS1, EIXN1]) (by simp) m _ hf a hD.base,
+    DerR.frameM _ _ m _ hf (by simp [EIXA, EIXS, EIXN, EIXA1, EIXS1, EIXN1]) a hD.der⟩,
     hP.frame (by simp [EIXA, EIXS, EIXN, EIXA1, EIXS1, EIXN1]) (by simp) hf⟩
 
 theorem pnew_arrs : ∀ b ∈ ((EIXA : TieredArray) :: (EIXS : TieredArray) :: (EIXN : TieredArray) ::

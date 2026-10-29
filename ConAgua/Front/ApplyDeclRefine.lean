@@ -370,8 +370,8 @@ theorem cv_core (b : ByteArray) (m m' : Mem) (a₀ : AState) (st : StateD) (hA :
   · -- `ArenaD`: only `DLP` and `DECL` changed
     have hf : MemFrame [DLP, DECL] [] m m' :=
       (F2.mono (by simp) (by simp)).trans (G1.mono (by simp) (by simp))
-    exact ⟨ArenaR.frame_ext _ _ (by simp [DLP, DECL]) (by simp) _ _ hf _ hA.1,
-      DerR.frameT hf (by simp [DLP, DECL]) hA.2⟩
+    exact ⟨ArenaR.frame_ext _ _ (by simp [DLP, DECL]) (by simp) _ _ hf _ hA.base,
+      DerR.frameT hf (by simp [DLP, DECL]) hA.der⟩
   · -- `StateDR`
     have hf : MemFrame [DLP, DECL] [] m m' :=
       (F2.mono (by simp) (by simp)).trans (G1.mono (by simp) (by simp))

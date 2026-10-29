@@ -245,7 +245,7 @@ theorem SInv.reset {mem : Mem} {a : AState} (inv : SInv mem a) (hok : rclearOK m
    MemoR.fresh mem (by have := inv.ctl; omega), List.nodup_nil, by simp, by simp,
    RsetR.reset inv.rset hok, inv.ok, EMemoOK.empty _, by rw [resetMem_stk]; exact inv.stk,
    by rw [(resetMem_frame1 mem).size CTL]; have := inv.ctl; omega,
-   (memFrame_top (resetMem_frame1 mem) (by decide)).mode inv.arena.1.lit.1 inv.mode⟩
+   (memFrame_top (resetMem_frame1 mem) (by decide)).mode inv.arena.base.lit.1 inv.mode⟩
 
 theorem resetMem_EW (lo hi : Nat) (mem : Mem) : EW lo hi mem (resetMem mem) :=
   EW.frame lo hi (resetMem_frame1 mem) (by simp) (by decide) (by decide) (by decide)
@@ -847,7 +847,7 @@ theorem tpairsTo_dec : ∀ (n : Nat) (mem : Mem) (a : AState) (q o k q' : Word) 
   have inv₁ : SInv m₁ (AM.st (ConRon.Arena.internName x) a) :=
     ⟨hR1, inv.rset.frameS hf1, hstN.ok, by rw [frame_exprA_stk hf1]; exact inv.stk,
       by rw [hf1.size CTL]; exact inv.ctl, by rw [ht₁, hs₁]; exact inv.top,
-      (romNameW_topK hN).mode inv.arena.1.lit.1 inv.mode⟩
+      (romNameW_topK hN).mode inv.arena.base.lit.1 inv.mode⟩
   -- its handle
   by_cases hc' : ¬ rclearOK (m₁.set64 EREC o h)
   · simp [tpK, hc'] at hW

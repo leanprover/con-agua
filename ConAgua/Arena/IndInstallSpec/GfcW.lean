@@ -64,7 +64,7 @@ theorem gftW_ok (p : Prog) (s0 m1 : Mem) (o l q : Word) (cvTas : List IConstantV
   | zero => intro m m' j h; simp [gftW.loop1] at h
   | succ f ih =>
   intro m m' j h hS hg ht hfr hjl hacc
-  have hlen : cvTas.length = l.toNat := decPL_length _ hcv.1
+  have hlen : cvTas.length = l.toNat := decPL_length _ hcv.dec
   have hjl' : j.toNat ≤ l.toNat := UInt64.le_iff_toNat_le.mp hjl
   by_cases hj : ¬ j < l
   · rw [gftW.loop1.arm2 (hc1 := hj)] at h
@@ -78,7 +78,7 @@ theorem gftW_ok (p : Prog) (s0 m1 : Mem) (o l q : Word) (cvTas : List IConstantV
   rw [gftW.loop1.arm1 (hc1 := hj)] at h
   have hjn : j.toNat < l.toNat := UInt64.lt_iff_toNat_lt.mp hj
   obtain ⟨hI1, hE1, hsz, hEs, -⟩ := hS.2
-  have hT0 := hcv.2
+  have hT0 := hcv.bound
   have hgt : iwTop s0 ≤ iwTop m := hg.1
   -- constant `j`
   have hdm : decPL m (decCVp m) o.toNat l.toNat = some cvTas :=
@@ -167,7 +167,7 @@ theorem gfcW_ok (s0 : Mem) (co cl mo ml q : Word) (cvTas : List IConstantVal) (m
   | zero => intro m m' a j acc h; simp [gfcW.loop1] at h
   | succ k ih =>
   intro m m' a j acc h hS hJ hg ht hjl hacc
-  have hlen : ms.length = ml.toNat := decPL_length _ hms.1
+  have hlen : ms.length = ml.toNat := decPL_length _ hms.dec
   have hjl' : j.toNat ≤ ml.toNat := UInt64.le_iff_toNat_le.mp hjl
   by_cases hj : ¬ j < ml
   · rw [gfcW.loop1.arm2 (hc1 := hj)] at h

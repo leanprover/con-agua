@@ -624,8 +624,8 @@ theorem scratchDrop_refines (p : Prog) (hp : p.lookup "scratch_drop" = some scra
   refine ⟨hloc, hok, ?_⟩
   rw [hst, hm]
   have hD' : ArenaD (flushMem s.mem) a₀ :=
-    ⟨ArenaR.frame_ext [] _ (by simp) flushCtl_ge _ _ (flushMem_frame _) _ hD.1,
-      DerR.frameM [] _ _ _ (flushMem_frame _) (by simp) _ hD.2⟩
+    ⟨ArenaR.frame_ext [] _ (by simp) flushCtl_ge _ _ (flushMem_frame _) _ hD.base,
+      DerR.frameM [] _ _ _ (flushMem_frame _) (by simp) _ hD.der⟩
   obtain ⟨hR, hDer⟩ := ArenaD.reset _ _ hD' 0 hlo h62 hpt
   simp only [show ((0 : Word) != 0) = false from rfl] at hR hDer
   exact ⟨by cases hR; constructor <;> assumption, DerR.of_store _ _ _ hDer rfl⟩
@@ -774,7 +774,7 @@ theorem scratchDrop_refinesC (p : Prog) (hp : p.lookup "scratch_drop" = some scr
     have hff : MemFrame slot1Arrs (flushCtl ++ [SCB]) s.mem (preMem (flushMem s.mem)) :=
       ((flushMem_frame s.mem).mono (by simp) (fun x h => List.mem_append_left _ h)).trans
         ((preMem_frame _).mono (fun b h => h) (fun x h => List.mem_append_right _ h))
-    have hp := hC.arena.1.lit.1
+    have hp := hC.arena.base.lit.1
     refine modeOK_resetMem _ 0 (hp.frame (hff.arr POOL (by decide) (by decide))
       (hff.arr POOL1 (by decide) (by decide)) (hff.arr PT0 (by decide) (by decide)) (hff.size CTL)
       (hff.top_eq (by decide))) h62 hpt

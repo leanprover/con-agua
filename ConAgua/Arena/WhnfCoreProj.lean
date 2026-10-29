@@ -132,7 +132,7 @@ theorem plit_ref (p : Prog) (hStrSup : StrLitSupportedOK p) (hStrCtor : StrLitCt
   · rw [ite_eq_left hbd]; exact RefE.of_cls0 (by decide)
   rw [ite_eq_right hbd]
   have hvOK : viewOK s₀.mem h LIT := ⟨hsc, by simpa using hbd⟩
-  obtain ⟨hviewS, hviewN⟩ := view_lit_kind s₀.mem a₀ hS.arena.1 h hh hvOK htag8
+  obtain ⟨hviewS, hviewN⟩ := view_lit_kind s₀.mem a₀ hS.arena.base h hh hvOK htag8
   by_cases hkind : tfld s₀.mem LIT (tierW h) (idxW h) 0 ≠ 1
   · rw [ite_eq_left hkind]
     obtain ⟨l, hv, hne⟩ := hviewN hkind
@@ -345,7 +345,7 @@ theorem callW_internBVar (p : Prog) (hp : WhnfCoreProg p) (n : Nat) (s₀ : St) 
     MemFrame [BREC, BSLOT, tier1 BREC, tier1 BSLOT] [22, 23] s₀.mem m' ∧ HW (r.headD 0) := by
   obtain ⟨s', rfl, -, hm⟩ := triple_of_callW (internBVar_spec p hp.bvf hp.bvp hp.bvi n s₀ u) h
   obtain ⟨h1, h2, h3⟩ := internBVar_D s₀.mem a₀ hD u _ _ hm
-  exact ⟨h1, h2, h3, binternW_frame _ _ _ _ hm, binternW_hw _ a₀ hD.1.bvar _ _ _ hm⟩
+  exact ⟨h1, h2, h3, binternW_frame _ _ _ _ hm, binternW_hw _ a₀ hD.base.bvar _ _ _ hm⟩
 
 /-- **`CoreS` across a `bvar` interning step.** -/
 theorem CoreS.of_bvar {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : AState} {vis : Word}
@@ -707,7 +707,7 @@ theorem rpFire_refines (p : Prog) (hp : WhnfCoreProg p) (hc : ProjCallees p)
   rcases hc1 : callW p n "get_app_args" [e1] s.mem with _ | ⟨r₁, m₁⟩
     <;> simp only [hc1, reduceCtorEq] at hW
   obtain ⟨t₁, ht₁, -, hf₁, hg₁, ho₁, htop₁, xs, hxs, hsp₁⟩ := triple_of_callW
-    (getAppArgs_spec' p hp.spine n s a₀ hS.arena.1 e1 he1 hS.spn) hc1
+    (getAppArgs_spec' p hp.spine n s a₀ hS.arena.base e1 he1 hS.spn) hc1
   rw [ht₁] at hf₁ hg₁ htop₁ hsp₁
   have hS₁ := hS.frame_stk hf₁ (by simp) (by simp)
   have hE₁ : m₁.arr64 EREC = s.mem.arr64 EREC := hf₁.1 EREC (by simp [SPN, EREC]) (by decide)
@@ -723,7 +723,7 @@ theorem rpFire_refines (p : Prog) (hp : WhnfCoreProg p) (hc : ProjCallees p)
   have hr₂' : r₂ = [o₂, l₂] := by rw [hr₂]; exact hl₂
   subst hr₂'
   have hvl : a₀.store.lss.viewLen (decI us) = some l₂.toNat :=
-    lsNodeW_viewLen hS₁.arena.1 hus hl₂
+    lsNodeW_viewLen hS₁.arena.base hus hl₂
   -- fire_ok
   rcases hc3 : callW p n "fire_ok" [q, i, us] m₂ with _ | ⟨r₃, m₃⟩
     <;> simp only [hc3, reduceCtorEq] at hW
@@ -906,7 +906,7 @@ theorem rpHead_refines (p : Prog) (hp : WhnfCoreProg p) (hc : ProjCallees p)
   rcases hc1 : callW p n "get_app_fn" [e1] s.mem with _ | ⟨r₁, m₁⟩
     <;> simp only [hc1, reduceCtorEq] at hW
   obtain ⟨t₁, ht₁, hm₁, -, hhw, hrun1⟩ := triple_of_callW
-    (getAppFn_refines p hp.spine n s a₀ hS.arena.1 e1 he1) hc1
+    (getAppFn_refines p hp.spine n s a₀ hS.arena.base e1 he1) hc1
   have hm₁' : m₁ = s.mem := by rw [← ht₁]; exact hm₁
   subst hm₁'
   by_cases g : r₁.headD 0 >>> 28 ≠ 3
@@ -928,7 +928,7 @@ theorem rpHead_refines (p : Prog) (hp : WhnfCoreProg p) (hc : ProjCallees p)
   obtain ⟨hsc, hW⟩ := of_ite_none hW
   obtain ⟨hbd, hW⟩ := of_ite_none hW
   have hvOK : viewOK s.mem (r₁.headD 0) CONST := ⟨hsc, by simpa using hbd⟩
-  obtain ⟨n', us', hv, hn, hus, hhn, hhus⟩ := view_const_words s.mem a₀ hS.arena.1 (r₁.headD 0)
+  obtain ⟨n', us', hv, hn, hus, hhn, hhus⟩ := view_const_words s.mem a₀ hS.arena.base (r₁.headD 0)
     hhw hvOK g3
   cases hc2 : callW p n "reduce_proj_fire" [mode, vis, e1, q, i,
       tfld s.mem CONST (tierW (r₁.headD 0)) (idxW (r₁.headD 0)) 0,

@@ -272,7 +272,7 @@ theorem gpbW_simF (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
   rw [gpbW.arm1]
   unfold ConRon.Arena.ClassGen.prefixBinders
   rw [rec2MapM_genBinder]
-  have hsz := hS.2.2.2.1
+  have hsz := hS.iw.2.2.1
   have hG' : decCG (truncM m) g.toNat = some G := hG
   simp only [decCG, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at hG'
   obtain ⟨nP, hnP, ps, hps, cls, hcls, ft, hft, sl, hsl, cts, hcts, el, hel, pre, hpre, hGe⟩ := hG'
@@ -364,7 +364,7 @@ theorem ClassesLp.grow {m m' : Mem} {mo ml : Word} {ms : List TargetMajor} (h : 
     (hms : PSlR decTM ms mo ml m) (hg : IWGrow m m') (hk : KeepW m m') (hsz : (m.arr64 IW).size < 2 ^ 64) :
     ClassesLp m' mo ml := by
   intro c hc v o l hv ho hl
-  have hms0 : decPL (truncM m) (decTM (truncM m)) mo.toNat ml.toNat = some ms := hms.1
+  have hms0 : decPL (truncM m) (decTM (truncM m)) mo.toNat ml.toNat = some ms := hms.dec
   obtain ⟨v', hv', hsrc⟩ := decPL_getH (truncM m) hms0 c hc
   obtain ⟨hvt, hvm⟩ := rec2IwN_trunc hv'
   rw [iwN_grow hg hvt, hvm] at hv
@@ -441,7 +441,7 @@ theorem csRes_decB {m : Mem} {r : List Word} {cvs : List IConstantVal} (h : CsRe
 
 theorem decRRS.grow {m m' : Mem} {r : List Word} {xs : List (IConstantVal × TargetMajor × List EIdx)}
     (h : decRRS m r xs) (hg : IWGrow m m') : decRRS m' r xs :=
-  ⟨h.1.grow (OMono.decPL decRR_mono _ _) hg, Nat.le_trans h.2 hg.1⟩
+  ⟨h.1.grow (OMono.decPL decRR_mono _ _) hg, Nat.le_trans h.2 hg.iw⟩
 
 -- ==== S41J.lean
 

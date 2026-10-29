@@ -89,9 +89,9 @@ theorem CoreS.set_core {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AS
   have lf : LvlFree [C] := fun x hx => nC _ (by
     simp only [lvlCtlW, List.mem_cons, List.not_mem_nil, or_false] at hx
     rcases hx with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> decide)
-  refine ⟨⟨⟨ArenaR.caches_irrel _ (ArenaR.frame_ext [A] [C] gA gC m m' hf a hS.arena.1),
+  refine ⟨⟨⟨ArenaR.caches_irrel _ (ArenaR.frame_ext [A] [C] gA gC m m' hf a hS.arena.base),
       DerR.of_store _ _ _ (DerR.frameM [A] [C] m m' hf
-        (fun b hb => by have := gA b hb; simp only [InHigh] at this; omega) a hS.arena.2) rfl⟩,
+        (fun b hb => by have := gA b hb; simp only [InHigh] at this; omega) a hS.arena.der) rfl⟩,
       hcore, hS.pins.congr (hf.arr PINS (nA _ (by decide)) (by decide)),
       hS.env.frame eA eC hf,
       fun h l e => hS.readL h l (h1 ▸ e), fun h l e => hS.readLs h l (h2 ▸ e), hS.nwf,

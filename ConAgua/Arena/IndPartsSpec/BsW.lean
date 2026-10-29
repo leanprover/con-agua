@@ -135,7 +135,7 @@ theorem partsErRd {m m' : Mem} (hg : IWGrow m m') {i v : Nat} (h : nat? (erA (tr
   obtain ⟨hi, hx'⟩ := truncM_er_get hx
   simp only [erA] at hx'
   refine ⟨?_, x.toNat_lt, hi⟩
-  rw [rdW_of_get? hw.symm (by rw [hg.2.2.2 i hi]; exact hx')]
+  rw [rdW_of_get? hw.symm (by rw [hg.erGet i hi]; exact hx')]
   simp
 
 /-- **A fresh record, read back below the new top.** -/

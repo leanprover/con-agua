@@ -126,7 +126,7 @@ theorem secwtb_ref (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : StuckC
       (setWtbT (coreKnot (decMode mode) fe id F) fe d.toNat (decE b) (decI c) (decI us) cvc
         aargs.toList (decE wtb)) a₀ (GrowPost decBool dn s₀.mem vis fe M eb ResH) := by
   have hS := hs.rel
-  have hR := hS.arena.1
+  have hR := hS.arena.base
   have hl : RefE (SetG p n) (.ok ([0], s₀.mem) : Except Err (List Word × Mem)) (pure false : AM Bool)
       a₀ (GrowPost decBool dn s₀.mem vis fe M eb ResH) :=
     RefE.ret rfl (GrowPost.of_core (CorePost.ret hS rfl hw0))
@@ -279,7 +279,7 @@ theorem secw_ref (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : StuckCal
       (structEtaCertWith (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b) (decE wtb))
       a₀ (CorePost decBool dn s₀.mem vis fe M eb ResH) := by
   have hS := hs.rel
-  have hR := hS.arena.1
+  have hR := hS.arena.base
   have hl : RefE (SetG p n) (.ok ([0], s₀.mem) : Except Err (List Word × Mem)) (pure false : AM Bool)
       a₀ (CorePost decBool dn s₀.mem vis fe M eb ResH) := RefE.ret rfl (CorePost.ret hS rfl hw0)
   simp only [secwE]

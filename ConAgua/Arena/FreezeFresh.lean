@@ -438,7 +438,7 @@ theorem PhaseBStart.zeroed (hd : a.store.dropScratch = a.store) (hc : a.caches =
     (h : PhaseBStart pins dn ds fe pend (cutT m) a v) :
     PhaseBStart pins dn ds fe pend (freshMem m) { a with memos := Memos.empty } v :=
   have htop := top_tier0_of h.loop.check h.twin.off
-  have hk := envKeysIn_of h.loop.check.arena.1 h.twin
+  have hk := envKeysIn_of h.loop.check.arena.base h.twin
   ⟨h.loop.fresh hd hc htop hk, h.mem.fresh, CoreMemos.fresh h.core, h.twin.memos _, CrOK.fresh h.cr⟩
 
 /-- **What phase A leaves for phase B holds at a thread's fresh worker memory and the twin's

@@ -445,12 +445,12 @@ theorem lp_nmsR_of_hslice (ns : NStore) (m : Mem) (A : ArrId) :
 /-! ## `lv_sub_int` refines `internLevel (Level.subst ks vs l)` -/
 
 theorem arenaD_reset {m : Mem} {a : AState} (hA : ArenaD m a) : ArenaD (m.set64 CTL 192 0) a :=
-  ⟨ArenaR.frame (by decide) c192_not_arena (reset_frame m) hA.1,
-    DerR.frameM [] [192] m _ (reset_frame m) (by simp) a hA.2⟩
+  ⟨ArenaR.frame (by decide) c192_not_arena (reset_frame m) hA.base,
+    DerR.frameM [] [192] m _ (reset_frame m) (by simp) a hA.der⟩
 
 theorem arenaD_heap {m m' : Mem} {a : AState} (hA : ArenaD m a) (he : HeapExt m m') : ArenaD m' a :=
-  ⟨ArenaR.frame lh_not_arena c192_not_arena he.memFrame hA.1,
-    DerR.frameM [LH] [192] m m' he.memFrame (by simp [LH]) a hA.2⟩
+  ⟨ArenaR.frame lh_not_arena c192_not_arena he.memFrame hA.base,
+    DerR.frameM [LH] [192] m m' he.memFrame (by simp [LH]) a hA.der⟩
 
 /-- **The model of `lv_sub_int` refines `internLevel (Level.subst ks vs l)`**, `l` the readback of
 the handle `u`, the keys an `EREC` name slice, the values a `POOL` level slice (both related at
@@ -540,8 +540,8 @@ theorem ekCopyW_ok {N : Word → Name → Prop} : ∀ (ks : List Name) (n : Nat)
 theorem arenaD_frame_hi {m m' : Mem} {a : AState} {A : List TieredArray} {C : List Word}
     (hA : ArenaD m a) (hf : MemFrame A C m m') (hA' : ∀ b ∈ A, InHigh b) (hC : ∀ x ∈ C, 64 ≤ x.toNat) :
     ArenaD m' a :=
-  ⟨ArenaR.frame_ext A C hA' hC m m' hf a hA.1,
-    DerR.frameM A C m m' hf (fun b hb => by have := hA' b hb; simp only [InHigh] at this; omega) a hA.2⟩
+  ⟨ArenaR.frame_ext A C hA' hC m m' hf a hA.base,
+    DerR.frameM A C m m' hf (fun b hb => by have := hA' b hb; simp only [InHigh] at this; omega) a hA.der⟩
 
 /-- **The model of `caps_never_zero` is `(substPW ks vs pw).isNever`**, the keys an `EREC` name
 slice, the values the readback of the list `us`, the datum `pw` related at `(swd, so, sc)`; it
@@ -562,7 +562,7 @@ theorem capsNeverZeroW_ok (n : Nat) (m m' : Mem) (a : AState) (po pc us swd so s
   | succ n =>
   simp only [capsNeverZeroW] at hW
   obtain ⟨ids, hv, hdl'⟩ := denoteLs_view a (decI us) vs hdl
-  obtain ⟨e₁, t₁, s₁⟩ := lsNodeW_store hA.1 hus hv
+  obtain ⟨e₁, t₁, s₁⟩ := lsNodeW_store hA.base hus hv
   rw [e₁] at hW
   simp only [List.headD_cons, List.tail_cons, reduceCtorEq, ↓reduceIte] at hW
   cases n with
@@ -593,8 +593,8 @@ theorem capsNeverZeroW_ok (n : Nat) (m m' : Mem) (a : AState) (po pc us swd so s
   have hpool₂v := vpool_congr hpool₂ hpool₂'
   have hpool₂c := pcap_congr' hpool₂ hpool₂'
   have htop := m.top.toNat_lt
-  have h41 := hA.1.lit.1.top41
-  have hl := lvsR_of_slice hA₂.1 ids vs _ _ (by rw [hpool₂v]; exact s₁) (by omega) hdl'
+  have h41 := hA.base.lit.1.top41
+  have hl := lvsR_of_slice hA₂.base ids vs _ _ (by rw [hpool₂v]; exact s₁) (by omega) hdl'
   have hp₂ : PWR (nameN a.store.lss.ls.ns) m₂ EREC swd so sc pw := by
     rcases hp with ⟨h1, h2⟩ | ⟨h1, ps, h2, hps⟩
     · exact .inl ⟨h1, h2⟩

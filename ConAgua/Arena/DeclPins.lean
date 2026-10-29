@@ -26,12 +26,12 @@ theorem toNat_add_small' (c : Word) (k : Nat) (h : c.toNat + k < 2 ^ 64) :
 def RecGrow (m m' : Mem) : Prop :=
   erTop m ≤ erTop m' ∧ ∀ i < erTop m, (m'.arr64 EREC)[i]? = (m.arr64 EREC)[i]?
 
-theorem IWGrow.recGrow {m m' : Mem} (h : IWGrow m m') : RecGrow m m' := ⟨h.2.1, h.2.2.2⟩
+theorem IWGrow.recGrow {m m' : Mem} (h : IWGrow m m') : RecGrow m m' := ⟨h.er, h.erGet⟩
 
 /-- `ArrExt` of the record pools in use, at an in-bounds top, is a `RecGrow`. -/
 theorem RecGrow.of_ext {m m' : Mem} (hw : IWOK m) (hx : ArrExt (erecP m) (erecP m')) :
     RecGrow m m' := by
-  have hsz : erTop m ≤ (m.arr64 EREC).size := hw.2.1
+  have hsz : erTop m ≤ (m.arr64 EREC).size := hw.er
   have hk : ∀ i < erTop m, (m'.arr64 EREC)[i]? = (m.arr64 EREC)[i]? ∧ i < erTop m' := by
     intro i hi
     have h1 : (erecP m)[i]? = (m.arr64 EREC)[i]? := by

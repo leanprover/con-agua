@@ -265,7 +265,7 @@ theorem sp2_ref (p : Prog) (hp : SpineDProg p) (n : Nat) (hk : KnotUpTo p n) (F 
   obtain ⟨k, rfl⟩ := callW_succ c1
   obtain ⟨t₁, ht₁, -, hfr₁, hg₁, ho₁, htop₁, xs, hxs, hx₁⟩ := triple_of_callW
     (s₀ := ⟨s₀.mem, Locals.init []⟩)
-    (getAppArgs_refines p hp.spine (k + 1) ⟨s₀.mem, Locals.init []⟩ a₀ hS.arena.1 a ha hS.spn) c1
+    (getAppArgs_refines p hp.spine (k + 1) ⟨s₀.mem, Locals.init []⟩ a₀ hS.arena.base a ha hS.spn) c1
   rw [ht₁] at hfr₁ hg₁ htop₁ hx₁
   have hS₁ := hS.frame_stk hfr₁ (by simp) (by simp)
   rcases c2 : callW p (k + 1) "get_app_args" [b] m₁ with _ | ⟨r₂, m₂⟩
@@ -273,7 +273,7 @@ theorem sp2_ref (p : Prog) (hp : SpineDProg p) (n : Nat) (hk : KnotUpTo p n) (F 
   rw [liftE_some, sp2E.k_get_app_args_2.arm1]
   obtain ⟨t₂, ht₂, -, hfr₂, hg₂, ho₂, htop₂, ys, hys, hy₂⟩ := triple_of_callW
     (s₀ := ⟨m₁, Locals.init []⟩)
-    (getAppArgs_refines p hp.spine (k + 1) ⟨m₁, Locals.init []⟩ a₀ hS₁.arena.1 b hb hS₁.spn) c2
+    (getAppArgs_refines p hp.spine (k + 1) ⟨m₁, Locals.init []⟩ a₀ hS₁.arena.base b hb hS₁.spn) c2
   rw [ht₂] at hfr₂ hg₂ htop₂ hy₂
   have hS₂ := hS₁.frame_stk hfr₂ (by simp) (by simp)
   -- the first slice survives the second push
@@ -362,7 +362,7 @@ theorem sp_ref (p : Prog) (hp : SpineDProg p) (n : Nat) (hk : KnotUpTo p n) (F :
   · rw [liftE_none, spE.k_spine_head.none]; exact RefE.of_cls0 (by simp)
   rw [liftE_some]
   obtain ⟨k, rfl⟩ := callW_succ c1
-  obtain ⟨rfl, hra, ⟨hra0, hra1, hra2⟩, -⟩ := spineHead_run hp hS.arena.1 ha c1
+  obtain ⟨rfl, hra, ⟨hra0, hra1, hra2⟩, -⟩ := spineHead_run hp hS.arena.base ha c1
   simp only [spE.k_spine_head]
   refine RefE.bind_right hra ?_
   by_cases h0 : ra.headD 0 = 0
@@ -372,7 +372,7 @@ theorem sp_ref (p : Prog) (hp : SpineDProg p) (n : Nat) (hk : KnotUpTo p n) (F :
   rcases c2 : callW p (k + 1) "spine_head" [b] s₀.mem with _ | ⟨rb, m₂⟩
   · rw [liftE_none, spE.k_spine_head_2.none]; exact RefE.of_cls0 (by simp)
   rw [liftE_some]
-  obtain ⟨rfl, hrb, ⟨hrb0, hrb1, hrb2⟩, -⟩ := spineHead_run hp hS.arena.1 hb c2
+  obtain ⟨rfl, hrb, ⟨hrb0, hrb1, hrb2⟩, -⟩ := spineHead_run hp hS.arena.base hb c2
   simp only [spE.k_spine_head_2]
   refine RefE.bind_right hrb ?_
   by_cases h0' : rb.headD 0 = 0

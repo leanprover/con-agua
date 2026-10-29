@@ -64,9 +64,9 @@ theorem not_arenaCtl_53 : (53 : Word) ∉ arenaCtl := by
 /-- `ArenaR` and `DerR` do not read `inst1LC`. -/
 theorem ArenaD.withI1C {m : Mem} {a : AState} (hD : ArenaD m a)
     (mp : Std.HashMap (EIdx × Nat) EIdx) : ArenaD m (withI1C a mp) :=
-  ⟨hD.1.with_memos (MemFrame.refl [] [] m) (by simp) (by simp)
-    ⟨hD.1.memos.bvar, hD.1.memos.lift, hD.1.memos.inst1, hD.1.memos.fvar⟩,
-    DerR.of_store m a _ hD.2 rfl⟩
+  ⟨hD.base.with_memos (MemFrame.refl [] [] m) (by simp) (by simp)
+    ⟨hD.base.memos.bvar, hD.base.memos.lift, hD.base.memos.inst1, hD.base.memos.fvar⟩,
+    DerR.of_store m a _ hD.der rfl⟩
 
 theorem ArenaI.imemo_set (m m' : Mem) (a : AState) (hA : ArenaI m a) (h c v : Word)
     (hh : h.toNat < 2 ^ 32) (hs : msetG i1lSch m h c v = some m') :

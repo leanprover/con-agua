@@ -80,7 +80,7 @@ theorem getAppArgs_callW {p : Prog} (hp : SpineProg p) {n : Nat} {dn : NIdx → 
       ∃ xs, (getAppArgs coreWalkFuel (decE e)).run a = .ok (xs, a) ∧
         SpineR m' (r.headD 0) (r.tail.headD 0) xs.toArray := by
   obtain ⟨t, ht, -, h1, h2, h3, h4, h5⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (getAppArgs_refines p hp n ⟨m, Locals.init []⟩ a hS.arena.1 e he hS.spn) hc
+    (getAppArgs_refines p hp n ⟨m, Locals.init []⟩ a hS.arena.base e he hS.spn) hc
   subst ht
   exact ⟨h1, h2, h3, h4, h5⟩
 
@@ -232,7 +232,7 @@ theorem etaCtorShape_refines (p : Prog) (hq : StuckProg p) (n : Nat) (s₀ : St)
     (etaCtorShape_spec p hq n s₀ vis e)
   subst hs0
   refine ⟨hloc, ?_⟩
-  have hR := hS.arena.1
+  have hR := hS.arena.base
   have hres : ∀ x : Word, some (x, s.mem) = some (r.headD 0, s'.mem) → HW x → ∀ v,
       (etaCtorShape fe (decE e)).run a₀ = .ok (v, a₀) → v = (x != 0) →
       CoreRef (etaCtorShape fe (decE e)) a₀ decBool dn s.mem vis fe MM eb r s'.mem := by
@@ -243,7 +243,7 @@ theorem etaCtorShape_refines (p : Prog) (hq : StuckProg p) (n : Nat) (s₀ : St)
     · rw [hvx, decBool, ← h1]
     · unfold ResH; rw [← h1]; exact hx
   obtain ⟨r₁, m₁, hc, hW⟩ := callW_cases rfl hW
-  obtain ⟨rfl, hh, hgaf⟩ := getAppFn_callW hq.leaf hS.arena.1 he hc
+  obtain ⟨rfl, hh, hgaf⟩ := getAppFn_callW hq.leaf hS.arena.base he hc
   simp only [ecsK1] at hW
   generalize r₁.headD 0 = h at hh hgaf hW
   rcases (Classical.em (h >>> 28 = 3)).symm with h3 | h3

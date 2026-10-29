@@ -167,13 +167,13 @@ theorem prepareStage_checker (b pb : ByteArray) (sz : TieredArray → Nat) (pre 
   refine triple_post (triple_and (triple_and (preparePrelude_refines checkerProg checkerProg_prepProg
     checkerProg_prepExt checkerProg_hoistProg checkerProg_hoistExt n s₀ a pre rc.decls
     (fun x hx => ⟨h5.decls.recs x hx, h5.rok x hx⟩) (by simpa [rdW] using h5.decls.count) h5.np
-    h5.decls.room hdsz h5.arena.1 hseen hnix hI
+    h5.decls.room hdsz h5.arena.base hseen hnix hI
     ⟨fun _ => h5.pf.full⟩)
     (stage_since n (preLoop_mem "prepare_prelude" (by decide +kernel)) s₀))
     (stageFrame_prepare_prelude n s₀)) fun _ s' ⟨⟨⟨hl, hpost⟩, _, hk, hpf⟩, hsf⟩ => ⟨hl, ?_⟩
   obtain ⟨ds', a', hrun, hcnt, hrecs, hAR, hIW, -, hDLP, hDs, hpe, hse, hpins, hle⟩ := hpost
   refine ⟨ds', a', hrun, h5.since.step hk hpf,
-    ⟨hAR, L.Front.DerR.congrSt hpe hse (DerR.frameM _ _ _ _ hsf (by decide +kernel) _ h5.arena.2)⟩, ?_, ?_, hIW,
+    ⟨hAR, L.Front.DerR.congrSt hpe hse (DerR.frameM _ _ _ _ hsf (by decide +kernel) _ h5.arena.der)⟩, ?_, ?_, hIW,
     ModeOK.frame h5.mode hsf (not_mem_of_toNat (Z := [0, 1]) (by decide +kernel) _ (by decide))
       (not_mem_of_toNat (Z := [0, 1]) (by decide +kernel) _ (by decide))⟩
   · refine ⟨by rw [hDs]; have := hc.1 DECL (by decide); omega, by rw [hDLP]; exact h5.decls.psize,
@@ -255,7 +255,7 @@ theorem pinsStage_checker (b pb : ByteArray) (sz : TieredArray → Nat) (hpb : p
     exact h6.decls
   · simp only [pinW, hsf.1 PINS (by decide +kernel) (by decide)]; exact h6.pf.pin0
   · refine ⟨?_, htop, ?_, ?_, ?_⟩
-    · simp only [L.Ind.iwTop, h200, hIW]; exact h6.iw.1
+    · simp only [L.Ind.iwTop, h200, hIW]; exact h6.iw.iw
     · have := hc'.1 L.Ind.IW (by decide); omega
     · have := hc'.1 EREC (by decide); omega
     · have := hc'.2.1; simp only [ctlMin] at this; omega

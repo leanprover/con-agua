@@ -433,7 +433,7 @@ theorem plnW_stage {α : Type} {f : Mem → Nat → Option α} (cvOf : α → IC
     StageR dn vis fe m' a ∧ IWGrow m m' ∧ r = [rdW (m.arr64 CTL) 200, l] ∧
       decHL m' (rdW (m.arr64 CTL) 200).toNat l.toNat = some (xs.map fun x => (cvOf x).name) ∧
       (rdW (m.arr64 CTL) 200).toNat + l.toNat = iwTop m' := by
-  obtain ⟨-, -, hsz, -, hc⟩ := hS.2
+  obtain ⟨-, -, hsz, -, hc⟩ := hS.iw
   have hroom := ptrNamesW_room h hsz
   have hlen : xs.length = l.toNat := decPL_length _ hx.1
   by_cases hl : l = 0

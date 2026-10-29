@@ -65,11 +65,11 @@ theorem nty_ref {p : Prog} (hl : NtyLook p) {dn : NIdx → Option ConLeche.Name}
   cases k with
   | zero => rw [ntyE.eq_1]; exact RefE.of_cls0 (by simp)
   | succ k =>
-  have hE := hS.1.env
-  have hR := hS.1.arena.1
-  have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
-  have hEb : erTop m ≤ (m.arr64 EREC).size := hS.2.2.1
-  have hEs : (m.arr64 EREC).size < 2 ^ 64 := hS.2.2.2.2.1
+  have hE := hS.check.env
+  have hR := hS.check.arena.base
+  have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.1 hS.iw.2.2.1
+  have hEb : erTop m ≤ (m.arr64 EREC).size := hS.iw.2.1
+  have hEs : (m.arr64 EREC).size < 2 ^ 64 := hS.iw.2.2.2.1
   obtain ⟨hcH, hcd, hlH, hld, hds, hdsb, hk4⟩ := nk_fields hk hkin htop
   rw [ntyE.arm1]
   rcases hef : envFindW m (rdW (m.arr64 IW) key) vis with _ | ⟨r1, m1⟩

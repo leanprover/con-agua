@@ -236,14 +236,14 @@ theorem applyInd_ref {p : Prog} (hAL : IndApplyLookups p) (hFI : IndFieldLookups
   have hRoom : Room s1.mem := hfR.2
   simp only [List.headD_cons, List.tail_cons]
   have hA1 : ArenaD s1.mem a :=
-    ⟨ArenaR.frame_ext _ _ (by simp [IFR, IFL]) (by simp) _ _ hfr1 _ hA.1,
-      DerR.frameT hfr1 (by simp [IFR, IFL]) hA.2⟩
+    ⟨ArenaR.frame_ext _ _ (by simp [IFR, IFL]) (by simp) _ _ hfr1 _ hA.base,
+      DerR.frameT hfr1 (by simp [IFR, IFL]) hA.der⟩
   have hD1 : StateDR s1.mem st := hD.frame hfr1 (by decide) (by decide) (by decide) (by decide) (by decide)
   have hs1 : (s1.mem.arr64 IFR).size = (m.arr64 IFR).size := hfr1.size IFR
   have hs1' : (s1.mem.arr64 IFL).size = (m.arr64 IFL).size := hfr1.size IFL
   have hT1 : TopOK s1.mem := ⟨by have := hRoom.2.1; exact this, Nat.le_of_lt hRoom.2.2.2⟩
   have hIFR1 : topN s1.mem IFR < 2 ^ 62 := by have := hRoom.2.2.1; omega
-  have hV := validate_ref hA1.1 hD1 hok hT1 hF hIFR1 p n (st := st)
+  have hV := validate_ref hA1.base hD1 hok hT1 hF hIFR1 p n (st := st)
   have hsV := validate_specE p hAL n ⟨s1.mem, Locals.init []⟩ to tn co cn ro rn
   -- `validate_ind_d`
   cases h2 : callE p n "validate_ind_d" [to, tn, co, cn, ro, rn] s1.mem with
@@ -274,8 +274,8 @@ theorem applyInd_ref {p : Prog} (hAL : IndApplyLookups p) (hFI : IndFieldLookups
   generalize q.tail.headD 0 = np at hW3 V1 V8
   have hfr2 := V2.frame
   have hA2 : ArenaD m₂ a :=
-    ⟨ArenaR.frame_ext _ _ (by simp [IFL, LH]) (by simp) _ _ hfr2 _ hA1.1,
-      DerR.frameT hfr2 (by simp [IFL, LH]) hA1.2⟩
+    ⟨ArenaR.frame_ext _ _ (by simp [IFL, LH]) (by simp) _ _ hfr2 _ hA1.base,
+      DerR.frameT hfr2 (by simp [IFL, LH]) hA1.der⟩
   have hD2 : StateDR m₂ st := hD1.frame hfr2 (by decide) (by decide) (by decide) (by decide) (by decide)
   have hifr2 : m₂.arr64 IFR = s1.mem.arr64 IFR := V2.ifr
   have hs2'' : (m₂.arr64 IFL).size = (m.arr64 IFL).size := by rw [hfr2.size IFL, hs1']

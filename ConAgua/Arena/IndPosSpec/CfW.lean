@@ -63,12 +63,12 @@ theorem NSB.grow {m m' : Mem} {p : Word} {NS : NestState} (h : NSB m p NS) (hg :
   have e : ∀ i : Word, i.toNat < 6 → rdW (m'.arr64 IW) (p + i) = rdW (m.arr64 IW) (p + i) := by
     intro i hi
     have : (p + i).toNat = p.toNat + i.toNat := word_add_toNat (by omega)
-    simp only [rdW, this]; rw [hg.2.2.1 _ (by omega)]
+    simp only [rdW, this]; rw [hg.iwGet _ (by omega)]
   have e0 : rdW (m'.arr64 IW) p = rdW (m.arr64 IW) p := by simpa using e 0 (by decide)
   refine ⟨DecB.grow (decNS_mono _) hg h.dec, ?_, ?_, ?_⟩
-  · rw [e0, e 1 (by decide)]; have := h.b0; have := hg.1; omega
-  · rw [e 2 (by decide), e 3 (by decide)]; have := h.b2; have := hg.1; omega
-  · rw [e 4 (by decide), e 5 (by decide)]; have := h.b4; have := hg.1; omega
+  · rw [e0, e 1 (by decide)]; have := h.b0; have := hg.iw; omega
+  · rw [e 2 (by decide), e 3 (by decide)]; have := h.b2; have := hg.iw; omega
+  · rw [e 4 (by decide), e 5 (by decide)]; have := h.b4; have := hg.iw; omega
 
 /-- **A fresh `NestState` record** (`rec6` of three slices decoded below the tops). -/
 theorem nsb_rec6 {m' : Mem} {q kO kL aO aL nO nL : Word} {keys act : List NestKey} {nfs : List NestCtorNf}
@@ -160,7 +160,7 @@ theorem cfW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) {k
   | zero => simp [cfW] at h
   | succ k =>
   simp only [cfW] at h
-  have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
+  have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.1 hS.iw.2.2.1
   have hdsD := hds.get (OMono.decHL _ _)
   rcases hdc : dcWf k m ctx dO dL with _ | ⟨r1, m1⟩ <;> rw [hdc] at h; · simp [cfK1] at h
   obtain ⟨b, a1, hrun1, hS1, hg1, hr1⟩ := dcWf_ok dn fe vis k m m1 a ctx dO dL c ds r1 hdc hS hU.dec hU.inn hhi hdsD

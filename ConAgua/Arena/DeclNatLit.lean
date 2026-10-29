@@ -407,7 +407,7 @@ theorem natSuccOk_ref (hN : NatLitProg p) (found q : Word) (o : Option IConstant
             have hvok : viewOK m2 wt FORALL := ⟨hv1, by
               rw [UInt64.lt_iff_toNat_lt]
               exact Nat.lt_of_not_le (fun e => hv2 (UInt64.le_iff_toNat_le.mpr e))⟩
-            obtain ⟨hview, hdlt, hblt⟩ := view_forall m2 a2 hS2.1.arena.1 wt hlt hvok h6
+            obtain ⟨hview, hdlt, hblt⟩ := view_forall m2 a2 hS2.1.arena.base wt hlt hvok h6
             have hrun : (natSuccOk (some (.ctorInfo cv np nf))).run a =
                 .ok (decide (tfld m2 FORALL (tierW wt) (idxW wt) 0 = r2.headD 0 ∧
                   tfld m2 FORALL (tierW wt) (idxW wt) 1 = r2.headD 0), a2) := by

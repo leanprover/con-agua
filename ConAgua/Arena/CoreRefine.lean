@@ -36,7 +36,7 @@ theorem ArenaR.caches_irrel {m : Mem} {a : AState} (c : Caches) (hR : ArenaR m a
 
 theorem ArenaD.caches_irrel {m : Mem} {a : AState} (c : Caches) (hD : ArenaD m a) :
     ArenaD m { a with caches := c } :=
-  ⟨hD.1.caches_irrel c, DerR.of_store _ _ _ hD.2 rfl⟩
+  ⟨hD.base.caches_irrel c, DerR.of_store _ _ _ hD.der rfl⟩
 
 theorem flushCaches_run (a : AState) :
     flushCaches.run a = .ok ((), { a with caches := Caches.empty }) := rfl
@@ -58,8 +58,8 @@ theorem flushCaches_refinesC (p : Prog) (hp : FlushProg p) (a₀ : AState) (n : 
   refine ⟨hloc, hok', ?_⟩
   rw [hst, hm]
   have hf := flushMem_frame s.mem
-  exact ⟨ArenaD.caches_irrel _ ⟨ArenaR.frame_ext [] _ (by simp) flushCtl_ge _ _ hf _ hC.arena.1,
-      DerR.frameM [] _ _ _ hf (by simp) _ hC.arena.2⟩,
+  exact ⟨ArenaD.caches_irrel _ ⟨ArenaR.frame_ext [] _ (by simp) flushCtl_ge _ _ hf _ hC.arena.base,
+      DerR.frameM [] _ _ _ hf (by simp) _ hC.arena.der⟩,
     hC.core.flush hok,
     hC.pins.frame (.of_lt (k := 0) (by simp) (by decide)) hf,
     hC.env.frame (.of_lt (k := 0) (by simp) (by decide)) (.of_lt flushCtl_lt (by decide)) hf,

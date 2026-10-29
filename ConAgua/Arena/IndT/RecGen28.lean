@@ -75,9 +75,9 @@ theorem cns_ref (hq : qr.toNat = iwTop mb) (hms : PSlR decTM ms mo ml mb) (htbl 
     RefE (VerdictCtx p) (cnsE p k m vis q fto ftl tblo tbll mo ml qr j)
       (ConRon.Arena.classesNfs V fe bs formerTys tbl (ms.drop j.toNat)) a
       (fun m' rest a' => CnsPost dn vis fe env mb mo ml qr acc m' rest a') := by
-  have hms0 : decPL (truncM mb) (decTM (truncM mb)) mo.toNat ml.toNat = some ms := hms.1
+  have hms0 : decPL (truncM mb) (decTM (truncM mb)) mo.toNat ml.toNat = some ms := hms.dec
   have hlen := decPL_length _ hms0
-  obtain ⟨tps, -, htps, hmap⟩ := sumDecNL_of_decB htbl.1
+  obtain ⟨tps, -, htps, hmap⟩ := sumDecNL_of_decB htbl.dec
   have htpb : PtrsB mb tps tbl := ptrsB_of_mapM hmap
   induction k with
   | zero => intros; rw [cnsE_zero]; exact RefE.of_cls0 (by simp)
@@ -143,7 +143,7 @@ theorem cns_ref (hq : qr.toNat = iwTop mb) (hms : PSlR decTM ms mo ml mb) (htbl 
   obtain ⟨s1, hs1, -, es, a1, run1, hR1⟩ := RefE.run_ok hsT hT c1
   subst hs1
   obtain ⟨hes, hC1, hg1, hP1, hA1, hptrs⟩ := hR1
-  obtain ⟨hfr, pse, hpse, hpseb⟩ := hptrs mb tps (by rw [decNL_grow hg htbl.2]; exact htps) htpb
+  obtain ⟨hfr, pse, hpse, hpseb⟩ := hptrs mb tps (by rw [decNL_grow hg htbl.bound]; exact htps) htpb
   dsimp only at hes hC1 hg1 hP1 hA1 hfr hpse
   rw [hlD] at run1
   obtain ⟨c1, -⟩ := ConRon.Bridge.Inductives.targetMajorNfs_spec fe (ConRon.Bridge.CoreSpec.of_core rfl)

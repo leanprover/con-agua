@@ -525,7 +525,7 @@ theorem fvarHeadW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFE
   · rw [ite_eq_left hf] at h
     obtain ⟨hne, h⟩ := of_ite_none h
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-    obtain ⟨v, hv, hR⟩ := eViewW_ok m1 a1 hS1.1.arena.1 w hne
+    obtain ⟨v, hv, hR⟩ := eViewW_ok m1 a1 hS1.1.arena.base w hne
     have htag : (decE w).tag = ETag.fvar := by
       rw [decE_tag w hd1, hf]; rfl
     cases v

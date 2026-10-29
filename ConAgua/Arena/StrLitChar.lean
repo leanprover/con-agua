@@ -60,7 +60,7 @@ theorem pinWord_step {β : Type} [Inhabited β] {f : LIdx → AM β} {dec : List
 theorem faEq_step (hS : CoreS dn m a vis fe M eb) {ty X Y w : Word} (hty : HW ty) (hX : HW X)
     (hY : HW Y) (h : faEqW p n m ty X Y = some (w, m')) (hr : r.headD 0 = w) :
     CoreRef (faEqT (decI ty) (decE X) (decE Y)) a decBool dn m vis fe M eb r m' := by
-  obtain ⟨hrun, rfl, hw⟩ := faEqW_ok hp.eView hS.arena.1 hty hX hY h
+  obtain ⟨hrun, rfl, hw⟩ := faEqW_ok hp.eView hS.arena.base hty hX hY h
   exact cref_run hrun (coreAfter_refl hS) (by unfold decBool; rw [hr])
     (by unfold ResH; rw [hr]; exact hw)
 

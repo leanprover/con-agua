@@ -31,14 +31,14 @@ theorem pinZero_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IF
   have hpne : rdW (m.arr64 PINS) 0 ≠ 0 := by intro h0; simp [pinWordV, h0] at hz
   have hz' : z = pinW m 53 := by
     simp only [pinWordV, hpne, ite_false, Option.some.injEq] at hz; rw [← hz]; rfl
-  have hfull := hS.1.pins.full hpne
+  have hfull := hS.check.pins.full hpne
   subst hz'
   exact ⟨pinZeroLevel_run hfull, hfull.lv_lt.2.1⟩
 
 /-- A slice below the pool's top has its end below `2^64` (`IWOK`). -/
 theorem StageR.lt64 {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m : Mem}
     {a : AState} (hS : StageR dn vis fe m a) {x : Nat} (h : x ≤ iwTop m) : x < 2 ^ 64 := by
-  obtain ⟨h1, -, h3, -, -⟩ := hS.2; omega
+  obtain ⟨h1, -, h3, -, -⟩ := hS.iw; omega
 
 /-- A memory fact of the model's result, added to a `Sim`'s post. -/
 theorem _root_.L.Arena.Sim.withFr {β α : Type} {mo : Option (β × Mem)} {op : AM α} {a : AState}

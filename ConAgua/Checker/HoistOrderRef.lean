@@ -86,7 +86,7 @@ theorem hoistApply_ok (n : Nat) (m m' : Mem) (ord c tg out : Word) (T : Std.Hash
   cases n with
   | zero => simp [hApplyW.eq_1] at h
   | succ n =>
-  have hsz := hI.2.2.1
+  have hsz := hI.iwSize
   rw [hApplyW.arm1] at h
   rcases ha1 : allocW m c with _ | ⟨hd, m1⟩ <;> rw [ha1] at h
   · rw [hApplyW.k_iw_alloc.eq_1] at h; cases h
@@ -182,7 +182,7 @@ theorem hoistApply_ok (n : Nat) (m m' : Mem) (ord c tg out : Word) (T : Std.Hash
     by omega, fun j hj => ?_⟩
   · have := hFall.ctl 129 (by decide)
     simp only [erTop, this]; exact Nat.le_refl _
-  · exact getElem?_of_rd i hs8 (by have := hI.1; omega) hs (hlow8 i hi)
+  · exact getElem?_of_rd i hs8 (by have := hI.iw; omega) hs (hlow8 i hi)
   · rw [hFall.arr EREC (by decide) (by decide)]
   · rw [addrN, addrN]
     have hj' : (emitL T c.toNat 0)[j]? = some ((hoistOrder T c.toNat)[j]'(by

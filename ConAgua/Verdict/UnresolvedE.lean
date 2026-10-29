@@ -905,7 +905,7 @@ theorem uce_ref {p : Prog} {n : Nat} {m : Mem} {a : AState} {vis : Word} {fe : I
   generalize AM.st (strLitSupported fe) a = a1 at hrun hS'
   rw [StateT.run_bind, hrun, except_ok_bind]
   dsimp only
-  have hA1 : ArenaR m1 a1 := hS'.arena.1
+  have hA1 : ArenaR m1 a1 := hS'.arena.base
   by_cases hr1 : r1.headD 0 = 0
   · rw [ite_eq_left hr1] at hW
     have hd : decBool r1 = false := by show (r1.headD 0 != 0) = false; rw [hr1]; rfl
@@ -964,7 +964,7 @@ theorem uce_errClaim_lo {α : Type} {p : Prog} (hU : UceProg p)
     ErrClaim (strLitSupported fe >>= fun s => unresolvedConstsErrorL s wh (decE e) >>= fun ce =>
       (ConRon.Arena.fail ce : AM α)) a er :=
   fun hk => by
-    obtain ⟨ce, a', hrun, hcl⟩ := uce_claim hU hnv hS.arena.1 hS.pins he (fun _ => ⟨dn, M, eb, hS⟩) hc wh hk
+    obtain ⟨ce, a', hrun, hcl⟩ := uce_claim hU hnv hS.arena.base hS.pins he (fun _ => ⟨dn, M, eb, hS⟩) hc wh hk
     rw [uceT, ite_eq_left hw] at hrun
     refine ⟨ce, ?_, hcl⟩
     rw [← bind_assoc, StateT.run_bind, hrun, except_ok_bind]

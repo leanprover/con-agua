@@ -227,7 +227,7 @@ theorem pih_ref (p : Prog) (hp : IotaProg4 p) (hld : LvlDen) (n F : Nat) (hknot 
   · rw [ite_eq_left hv2]; exact RefE.of_cls0 (by simp)
   rw [ite_eq_right hv2]
   generalize ha3 : AM.st _ _ = a3 at hS3
-  obtain ⟨hvw, hn32⟩ := view_sort_f m3 a3 hS3.arena.1 (r3.headD 0) hr3
+  obtain ⟨hvw, hn32⟩ := view_sort_f m3 a3 hS3.arena.base (r3.headD 0) hr3
     ⟨hv1, UInt64.not_le.mp hv2⟩ h2'
   have htag : (decE (r3.headD 0)).tag = ETag.sort := (decE_tag_eq _ hr3 2 (by decide)).mpr h2'
   rw [beq_iff_eq.mpr htag, ite_eq_left rfl]

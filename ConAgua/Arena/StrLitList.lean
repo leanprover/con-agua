@@ -810,7 +810,7 @@ theorem listTyOk_call (hS : CoreS dn m a vis fe M eb) {found q : Word}
     fun cv ty s m₂ M₂ a₂ hty hhw hpl hso hpd₂ hS₂ hW => ?_
   rw [listK2_s, faEqA_eq] at hW
   rw [hty]
-  obtain ⟨hrun₂, hm, hres⟩ := faEqW_ok hp.eView hS₂.arena.1 hhw hso hso hW
+  obtain ⟨hrun₂, hm, hres⟩ := faEqW_ok hp.eView hS₂.arena.base hhw hso hso hW
   rw [hm]
   exact cref_run hrun₂ (coreAfter_refl hS₂) rfl hres
 
@@ -873,7 +873,7 @@ theorem listNilTyOk_call (hS : CoreS dn m a vis fe M eb) {found q : Word}
     (cref_run (ok := ResH) ?_ (coreAfter_refl hS₃) rfl hiw) (fun M₄ hS₄ => ?_)
   · rw [hi]; exact pinAt_run hS₃.pins 7 (by decide)
   rw [hty]
-  obtain ⟨hrun₄, hm, hres⟩ := nilA_ok hp.eView hS₄.arena.1 hhw hso hiw R3.2.2.2 hW
+  obtain ⟨hrun₄, hm, hres⟩ := nilA_ok hp.eView hS₄.arena.base hhw hso hiw R3.2.2.2 hW
   rw [hm]
   exact cref_run hrun₄ (coreAfter_refl hS₄) rfl hres
 
@@ -984,7 +984,7 @@ theorem listConsTyOk_call (hS : CoreS dn m a vis fe M eb) {found q : Word}
   have R10 := app_call p hp hS₉ h10
   refine coreRef_bind R10 (fun M₁₀ hS₁₀ => ?_)
   rw [hty]
-  obtain ⟨hrun₁₀, hm, hres⟩ := consA_ok hp.eView hS₁₀.arena.1 hhw hso R5.2.2.2 R9.2.2.2 R10.2.2.2 hW
+  obtain ⟨hrun₁₀, hm, hres⟩ := consA_ok hp.eView hS₁₀.arena.base hhw hso R5.2.2.2 R9.2.2.2 R10.2.2.2 hW
   rw [hm]
   exact cref_run hrun₁₀ (coreAfter_refl hS₁₀) rfl hres
 

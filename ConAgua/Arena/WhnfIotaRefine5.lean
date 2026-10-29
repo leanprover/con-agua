@@ -352,7 +352,7 @@ theorem icfForall_ref (p : Prog) (hp : IotaProg4 p) (hil : InstListOK p) (N F : 
   obtain ⟨g1, hparts⟩ := of_ite_none hparts
   obtain ⟨g2, hparts⟩ := of_ite_none hparts
   simp only [Option.some.injEq] at hparts
-  obtain ⟨hvw, hn1, hn2⟩ := view_forall s₀.mem a₀ hS.arena.1 h hh ⟨g1, UInt64.not_le.mp g2⟩ h6
+  obtain ⟨hvw, hn1, hn2⟩ := view_forall s₀.mem a₀ hS.arena.base h hh ⟨g1, UInt64.not_le.mp g2⟩ h6
   simp only [List.cons.injEq, and_true] at hparts
   obtain ⟨hp0, hp1⟩ := hparts
   rw [hp0] at hvw hn1
@@ -449,7 +449,7 @@ theorem icfFlush_ref (p : Prog) (hp : IotaProg4 p) (hil : InstListOK p) (N F : N
   obtain ⟨t0, ht0, -, hmem0, hev⟩ := triple_of_callW
     (exprViewOk_spec p hp.exprViewOk N' ⟨s₀.mem, Locals.init []⟩ h) c0
   obtain rfl : m0 = s₀.mem := by rw [← ht0]; exact hmem0
-  obtain ⟨-, hB, -, -⟩ := evo_view s₀.mem a₀ hS.arena.1 h hh _ hev
+  obtain ⟨-, hB, -, -⟩ := evo_view s₀.mem a₀ hS.arena.base h hh _ hev
   obtain ⟨x, hvx⟩ := hB h0
   have hisz : i.toNat < args.size := by rw [hargs.size]; exact hi
   by_cases hacn : acn = 0
@@ -527,7 +527,7 @@ theorem icfAux_ref (p : Prog) (hp : IotaProg4 p) (N F : Nat)
   obtain ⟨t1, ht1, -, hmem1, hev⟩ := triple_of_callW
     (exprViewOk_spec p hp.exprViewOk N' ⟨s₀.mem, Locals.init []⟩ h) c1
   obtain rfl : m1 = s₀.mem := by rw [← ht1]; exact hmem1
-  obtain ⟨⟨v, hv⟩, -, -, hD⟩ := evo_view s₀.mem a₀ hS.arena.1 h hh _ hev
+  obtain ⟨⟨v, hv⟩, -, -, hD⟩ := evo_view s₀.mem a₀ hS.arena.base h hh _ hev
   obtain ⟨hn1, hn2⟩ := hD h0 h6 v hv
   exact RefE.ret (icf_run_other _ fe d.toNat (decE h) acc args i.toNat
     (by rw [hargs.size]; exact hi) a₀ (fun ty body hc => by rw [hv] at hc; exact hn1 ty body (Option.some.inj hc))

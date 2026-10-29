@@ -52,8 +52,8 @@ theorem ilw_clears_core {dn : NIdx → Option ConLeche.Name} {m : Mem} {a : ASta
       (mclearG lplsSch (mclearG lplSch (mclearG lpSch m))) :=
     ((f1.mono (by simp) (by simp)).trans (f2.mono (by simp) (by simp))).trans (f3.mono (by simp) (by simp))
   have hD : ArenaD (mclearG lplsSch (mclearG lplSch (mclearG lpSch m))) a :=
-    ⟨hS.arena.1.frame (by simp) (by simp [arenaCtl, storeCtl, memoCtl]) hf,
-      DerR.frameM _ _ _ _ hf (by simp) a hS.arena.2⟩
+    ⟨hS.arena.base.frame (by simp) (by simp [arenaCtl, storeCtl, memoCtl]) hf,
+      DerR.frameM _ _ _ _ hf (by simp) a hS.arena.der⟩
   exact hS.of_walk hD rfl hf (by simp) (by simp)
     (hS.memos.frameLP hf hLP (by simp) (by simp)) (by simp)
     (by simp) (by simp) (by simp)
@@ -86,7 +86,7 @@ theorem ilwCore_ok (k : Nat) {m m' : Mem} {a : AState} {dn : NIdx → Option Con
   have hm₁ : m₁ = m := hs1.symm.trans hm1
   subst hm₁
   rw [hlp] at hW
-  have hd := derLW_ok m₁ a hS.arena.1 hS.arena.2 e hh
+  have hd := derLW_ok m₁ a hS.arena.base hS.arena.der e hh
   by_cases h0 : exprLPW m₁ e = 0
   · rw [ite_eq_left h0] at hW
     simp only [Option.some.injEq, Prod.mk.injEq] at hW
@@ -104,8 +104,8 @@ theorem ilwCore_ok (k : Nat) {m m' : Mem} {a : AState} {dn : NIdx → Option Con
   by_cases hne : lsNodeW m₁ us = []
   · rw [ite_eq_left hne] at hW; cases hW
   rw [ite_eq_right hne] at hW
-  obtain ⟨ids, hvw, -, -⟩ := lsNodeW_view hS.arena.1 hus hne
-  obtain ⟨hln, hvt, hsl⟩ := lsNodeW_store hS.arena.1 hus hvw
+  obtain ⟨ids, hvw, -, -⟩ := lsNodeW_view hS.arena.base hus hne
+  obtain ⟨hln, hvt, hsl⟩ := lsNodeW_store hS.arena.base hus hvw
   obtain ⟨vs, hvs⟩ := hS.den.lsAll (decI us) (by rw [hvw]; rfl)
   have hvsl : denoteLList a.store.ls ids = some vs := by
     unfold denoteLs at hvs; rw [hvw] at hvs; exact hvs
@@ -123,7 +123,7 @@ theorem ilwCore_ok (k : Nat) {m m' : Mem} {a : AState} {dn : NIdx → Option Con
     triple_of_callW (s₀ := ⟨m₁, Locals.init []⟩) (keysOk_spec p hp.keys k _ ko kc) h2
   have hm₂ : m₂ = m₁ := hs2.symm.trans hm2
   subst hm₂
-  obtain ⟨ks, hksd, hnms⟩ := keysOkW_names hS.arena.1 hS.nwf k ko kc lps hk2 hks
+  obtain ⟨ks, hksd, hnms⟩ := keysOkW_names hS.arena.base hS.nwf k ko kc lps hk2 hks
     (by have := (spTop m₂).toNat_lt; omega)
   -- the clears
   cases h3 : callW p k "ilp_clear" [] m₂ with

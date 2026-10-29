@@ -216,7 +216,7 @@ theorem CoreS.of_walk {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : 
     hf.ctl 136 (fun h => absurd (hC _ h) (by decide))
   refine ⟨⟨hD, ?_, ?_, hS.env.frame (.of_low hA (by decide)) (.of_lt hC (by decide)) hf, ?_, ?_, ?_,
     hf.size EREC ▸ hS.erec, hf.size SPN ▸ hS.spn, hmem, hf.size BSTK ▸ hS.bstk,
-    hS.den.of_arena hS.arena.1 hD.1 hc hp hl hf hscA hscC, hS.mode.frame hf hP0 hscC.1⟩,
+    hS.den.of_arena hS.arena.base hD.base hc hp hl hf hscA hscC, hS.mode.frame hf hP0 hscC.1⟩,
     StackKept.of_frame hf
       ⟨fun h => absurd (hA _ h) (by decide), fun h => absurd (hA _ h) (by decide), hP⟩
       ⟨fun h => absurd (hC _ h) (by decide), fun h => absurd (hC _ h) (by decide), hP0⟩ hLv hP1 hPT⟩
@@ -259,12 +259,12 @@ theorem ArenaD.memo_irrel {m : Mem} {a : AState} (h : ArenaD m a) (X Y : Std.Has
 theorem coreAb_frame {A : List TieredArray} {C : List Word} {m m' : Mem} (hf : MemFrame A C m m')
     (hA : (ABMEMO : TieredArray) ∉ A) (hC : (48 : Word) ∉ C) (h : CoreMemos m) :
     ∃ mp : Std.HashMap (EIdx × Nat) EIdx, MemoRG coreAbSch lfKey decE m' mp :=
-  let ⟨mp, hm⟩ := h.2.1; ⟨mp, memoRG_frame coreAbSch coreAbSch_wf lfKey decE A C hA hC m m' hf mp hm⟩
+  let ⟨mp, hm⟩ := h.ab; ⟨mp, memoRG_frame coreAbSch coreAbSch_wf lfKey decE A C hA hC m m' hf mp hm⟩
 
 theorem coreIl_frame {A : List TieredArray} {C : List Word} {m m' : Mem} (hf : MemFrame A C m m')
     (hA : (ILMEMO : TieredArray) ∉ A) (hC : (50 : Word) ∉ C) (h : CoreMemos m) :
     ∃ mp : Std.HashMap (EIdx × Nat) EIdx, MemoRG coreIlSch lfKey decE m' mp :=
-  let ⟨mp, hm⟩ := h.1; ⟨mp, memoRG_frame coreIlSch coreIlSch_wf lfKey decE A C hA hC m m' hf mp hm⟩
+  let ⟨mp, hm⟩ := h.il; ⟨mp, memoRG_frame coreIlSch coreIlSch_wf lfKey decE A C hA hC m m' hf mp hm⟩
 
 theorem lt64_of_all {C : List Word} (h : C.all (fun x => decide (x.toNat < 64)) = true) :
     ∀ x ∈ C, x.toNat < 64 := fun x hx => by
@@ -457,7 +457,7 @@ theorem fvbW_okD (n : Nat) (m m' : Mem) (a : AState) (hA : ArenaD m a)
     (h f x : Word) (hh : h.toNat < 2 ^ 32) (hb : fvbW n m h f = some (x, m')) :
     ∃ a', (fvarB f.toNat (decE h)).run a = .ok (x.toNat, a') ∧ ArenaD m' a' ∧ FrFrame m m' := by
   obtain ⟨n, rfl⟩ : ∃ j, n = j + 1 := ⟨n - 1, by cases n <;> simp_all [fvbW]⟩
-  have hd := derFW_ok m a hA.1 hA.2 h hh
+  have hd := derFW_ok m a hA.base hA.der h hh
   rw [fvarB_run, ← hd]
   by_cases hs : derFW m h = 32767
   · rw [fvbW.arm1 n m h f hs] at hb
@@ -465,11 +465,11 @@ theorem fvbW_okD (n : Nat) (m m' : Mem) (a : AState) (hA : ArenaD m a)
     rw [ite_eq_left hs']
     obtain ⟨n, rfl⟩ : ∃ j, n = j + 1 := ⟨n - 1, by cases n <;> simp_all [fvbN]⟩
     rw [fvbN_succ] at hb
-    obtain ⟨a', ha', hR'⟩ := frMemoW_correct n m m' a hA.1 h f x hh hb
+    obtain ⟨a', ha', hR'⟩ := frMemoW_correct n m m' a hA.base h f x hh hb
     have hk := (keeps_fvarRangeMemo_fsp f.toNat (decE h)).run ha'
     simp only [fsp, Prod.mk.injEq] at hk
     have hf := frMemoW_frame n m m' h f x hb
-    exact ⟨a', ha', ⟨hR', DerR.of_store m' a a' (DerR.frameM _ _ m m' hf (by decide) a hA.2) hk.1⟩, hf⟩
+    exact ⟨a', ha', ⟨hR', DerR.of_store m' a a' (DerR.frameM _ _ m m' hf (by decide) a hA.der) hk.1⟩, hf⟩
   · rw [fvbW.arm2 n m h f hs] at hb
     simp only [Option.some.injEq, Prod.mk.injEq] at hb
     obtain ⟨rfl, rfl⟩ := hb

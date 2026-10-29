@@ -37,9 +37,9 @@ theorem StageC.of_cstep {m m' : Mem} {a a' : AState} (h : StageC dn vis fe env m
     (hS : StageR dn vis fe m' a') (hA : AbsOK m') (hs : ConRon.Bridge.CoreStep V env fe a a') :
     StageC dn vis fe env m' a' :=
   ⟨hS, hs.ok,
-    ⟨hA.2.2.2.2.2.1, hA.2.2.2.2.2.2.1, hA.2.2.2.2.2.2.2.1, ⟨hA.2.2.2.1, hA.1, hA.2.2.2.2.1⟩,
+    ⟨hA.wk.2.1, hA.wk.2.2.1, hA.wk.2.2.2.1, ⟨hA.il, hA.ab, hA.wk.1⟩,
       fun k x e => hs.ext.lss.ls.ns k x (h.mem.dnN k x e)⟩,
-    hA.2.2.2.2.2.2.2.2⟩
+    hA.wk.2.2.2.2⟩
 
 theorem slConsC_afr {p : Prog} (hP : KeysProg p) {n : Nat} {x o l : Word} {r : List Word} {m m' : Mem}
     (h : callW p n "sl_cons" [x, o, l] m = some (r, m')) : AFr m m' := by

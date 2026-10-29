@@ -45,7 +45,7 @@ l_model applied_specW (p : Prog) (hp : p.lookup "div_mod_cert_applied" = some di
 
 theorem iw_rd_grow {m m' : Mem} (hg : IWGrow m m') {i : Word} (hi : i.toNat < iwTop m) :
     rdW (m'.arr64 IW) i = rdW (m.arr64 IW) i := by
-  simp only [rdW]; rw [hg.2.2.1 i.toNat hi]
+  simp only [rdW]; rw [hg.iwGet i.toNat hi]
 
 theorem word_add_one {w : Word} (h : w.toNat + 1 < 2 ^ 64) : (w + 1).toNat = w.toNat + 1 := by
   rw [UInt64.toNat_add]; simp; omega

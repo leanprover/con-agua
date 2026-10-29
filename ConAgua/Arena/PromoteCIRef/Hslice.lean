@@ -49,9 +49,9 @@ theorem SlotGrow.hslice? {m m' : Mem} {lo hi : Nat} (hg : SlotGrow m m' lo hi)
   · omega
   have hj' : o + j < erecTop m := by omega
   have hout' : o + j < lo ∨ hi ≤ o + j := by omega
-  rw [erecP_getElem m' _ (by have := hg.1; omega) hts',
+  rw [erecP_getElem m' _ (by have := hg.top; omega) hts',
     erecP_getElem m _ hj' hts]
-  exact hg.2.1 _ hj' hout'
+  exact hg.get _ hj' hout'
 
 end L.Arena
 

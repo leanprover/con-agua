@@ -112,14 +112,14 @@ theorem icprW_ok {p : Prog} (ha : p.lookup "iw_alloc" = some iwAlloc) {n : Nat}
   obtain ⟨s1, hs1, -, hal⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩) (iwAlloc_specW p ha n _ 19) c1
   simp only at hs1 hal
   subst hs1
-  obtain ⟨hq, hm1, hroom⟩ := allocW_facts hal hS.2.2.2.1
+  obtain ⟨hq, hm1, hroom⟩ := allocW_facts hal hS.iw.2.2.1
   obtain ⟨-, -, hqtop, -, htop1⟩ := StageR.alloc hS hal
-  have hc : 200 < (m.arr64 CTL).size := hS.2.2.2.2.2
+  have hc : 200 < (m.arr64 CTL).size := hS.iw.2.2.2.2
   rw [bpMem_eq, hm1, hq]
   have hk : (19 : Word).toNat = [w0, w1, w2, w3, w4, w5, w6, w7, w8, w9, w10, w11, w12, w13, w14, w15, w16,
       w17, w18].length := rfl
   obtain ⟨hget, hg, hf, htopW⟩ := recMem_post m [w0, w1, w2, w3, w4, w5, w6, w7, w8, w9, w10, w11, w12, w13,
-    w14, w15, w16, w17, w18] 19 hk hc (by rw [← hq]; simpa using hroom) hS.2.2.2.1
+    w14, w15, w16, w17, w18] 19 hk hc (by rw [← hq]; simpa using hroom) hS.iw.2.2.1
   have hqi : (rdW (m.arr64 CTL) 200).toNat = iwTop m := rfl
   refine ⟨rdW (m.arr64 CTL) 200, rfl, ?_, hg, hP.fr (MFr.of_iw hf), hqi, ?_, fun j _hj => hget j _hj⟩
   · have hS1 := (StageR.alloc hS hal).1
@@ -130,7 +130,7 @@ theorem icprW_ok {p : Prog} (ha : p.lookup "iw_alloc" = some iwAlloc) {n : Nat}
     rw [htopW, UInt64.toNat_add]
     have h19 : (19 : Word).toNat = 19 := rfl
     rw [hq] at hroom
-    have hsz := hS.2.2.2.1
+    have hsz := hS.iw.2.2.1
     rw [h19] at hroom ⊢
     rw [Nat.mod_eq_of_lt (by have : UInt64.size = 2 ^ 64 := rfl; omega)]; exact Nat.le_refl _
 
@@ -184,16 +184,16 @@ theorem bpRec_bpassR {m : Mem} {q : Word} {fe : IFEnv}
   simp only [Nat.add_zero, List.getElem_cons_zero, List.getElem_cons_succ] at h0 h1 h2 h3 h4 h5 h6 h7 h8 h9 h10 h11 h12 h13 h14 h15 h16 h17 h18
   refine ⟨?_, ⟨hq, ?_⟩, ?_, ?_⟩
   · show decBPass fe (truncM m) q.toNat = _
-    have e1 : decPL (truncM m) (decCVp (truncM m)) w1.toNat w2.toNat = some cvTas := hcv.1
+    have e1 : decPL (truncM m) (decCVp (truncM m)) w1.toNat w2.toNat = some cvTas := hcv.dec
     have e3 : decBS (truncM m) w3.toNat = some bs := hbs
-    have e4 : decPL (truncM m) (decCNS (truncM m)) w4.toNat w5.toNat = some ctorsAs := hca.1
-    have e6 : decPL (truncM m) (decISS (truncM m)) w6.toNat w7.toNat = some sss := hss.1
-    have e8 : decPL (truncM m) (decKSS (truncM m)) w8.toNat w9.toNat = some kinds := hk.1
-    have e10 : decPL (truncM m) (decNFS (truncM m)) w10.toNat w11.toNat = some nfs := hn.1
+    have e4 : decPL (truncM m) (decCNS (truncM m)) w4.toNat w5.toNat = some ctorsAs := hca.dec
+    have e6 : decPL (truncM m) (decISS (truncM m)) w6.toNat w7.toNat = some sss := hss.dec
+    have e8 : decPL (truncM m) (decKSS (truncM m)) w8.toNat w9.toNat = some kinds := hk.dec
+    have e10 : decPL (truncM m) (decNFS (truncM m)) w10.toNat w11.toNat = some nfs := hn.dec
     have e12 : (decHL (truncM m) w12.toNat w13.toNat : Option (List EIdx)) = some params := hpa
     have e14 : decCR (truncM m) w14.toNat = some rd := hrd
-    have e15 : decPL (truncM m) (decTM (truncM m)) w15.toNat w16.toNat = some cls := hcl.1
-    have e17 : decPL (truncM m) (decNCN (truncM m)) w17.toNat w18.toNat = some tbl := htb.1
+    have e15 : decPL (truncM m) (decTM (truncM m)) w15.toNat w16.toNat = some cls := hcl.dec
+    have e17 : decPL (truncM m) (decNCN (truncM m)) w17.toNat w18.toNat = some tbl := htb.dec
     simp only [decBPass, decAt, Nat.add_assoc, Nat.reduceAdd, h1, h2, h3, h4, h5, h6, h7, h8,
       h9, h10, h11, h12, h13, h14, h15, h16, h17, h18, Option.bind_eq_bind, Option.bind_some, e1, e3, e4,
       e6, e12, e14, e15, e17]
@@ -205,14 +205,14 @@ theorem bpRec_bpassR {m : Mem} {q : Word} {fe : IFEnv}
   · intro i hi o l ho hl
     simp only [List.mem_cons, List.not_mem_nil, or_false] at hi
     rcases hi with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl
-    · rw [hwm 1 (by omega)] at ho; rw [hwm 2 (by omega)] at hl; cases ho; cases hl; exact hcv.2
-    · rw [hwm 4 (by omega)] at ho; rw [hwm 5 (by omega)] at hl; cases ho; cases hl; exact hca.2
-    · rw [hwm 6 (by omega)] at ho; rw [hwm 7 (by omega)] at hl; cases ho; cases hl; exact hss.2
-    · rw [hwm 8 (by omega)] at ho; rw [hwm 9 (by omega)] at hl; cases ho; cases hl; exact hk.2
-    · rw [hwm 10 (by omega)] at ho; rw [hwm 11 (by omega)] at hl; cases ho; cases hl; exact hn.2
+    · rw [hwm 1 (by omega)] at ho; rw [hwm 2 (by omega)] at hl; cases ho; cases hl; exact hcv.bound
+    · rw [hwm 4 (by omega)] at ho; rw [hwm 5 (by omega)] at hl; cases ho; cases hl; exact hca.bound
+    · rw [hwm 6 (by omega)] at ho; rw [hwm 7 (by omega)] at hl; cases ho; cases hl; exact hss.bound
+    · rw [hwm 8 (by omega)] at ho; rw [hwm 9 (by omega)] at hl; cases ho; cases hl; exact hk.bound
+    · rw [hwm 10 (by omega)] at ho; rw [hwm 11 (by omega)] at hl; cases ho; cases hl; exact hn.bound
     · rw [hwm 12 (by omega)] at ho; rw [hwm 13 (by omega)] at hl; cases ho; cases hl; exact hpb
-    · rw [hwm 15 (by omega)] at ho; rw [hwm 16 (by omega)] at hl; cases ho; cases hl; exact hcl.2
-    · rw [hwm 17 (by omega)] at ho; rw [hwm 18 (by omega)] at hl; cases ho; cases hl; exact htb.2
+    · rw [hwm 15 (by omega)] at ho; rw [hwm 16 (by omega)] at hl; cases ho; cases hl; exact hcl.bound
+    · rw [hwm 17 (by omega)] at ho; rw [hwm 18 (by omega)] at hl; cases ho; cases hl; exact htb.bound
   · have := hget 0 (by omega)
     simp only [Nat.add_zero] at this
     simp only [rdW, this]; rfl

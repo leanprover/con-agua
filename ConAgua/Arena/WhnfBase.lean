@@ -412,9 +412,10 @@ def WalkMemos (m : Mem) : Prop :=
     (∃ mp : Std.HashMap EIdx Bool, MemoRG coreLsbSch bmKey (fun w => w != 0) m mp) ∧ LPMemos m
 
 /-- The walk memos are well formed (`MemoRG` at some map). -/
-def CoreMemos (m : Mem) : Prop :=
-  (∃ mp : Std.HashMap (EIdx × Nat) EIdx, MemoRG coreIlSch lfKey decE m mp) ∧
-    (∃ mp : Std.HashMap (EIdx × Nat) EIdx, MemoRG coreAbSch lfKey decE m mp) ∧ WalkMemos m
+structure CoreMemos (m : Mem) : Prop where
+  il : ∃ mp : Std.HashMap (EIdx × Nat) EIdx, MemoRG coreIlSch lfKey decE m mp
+  ab : ∃ mp : Std.HashMap (EIdx × Nat) EIdx, MemoRG coreAbSch lfKey decE m mp
+  walk : WalkMemos m
 
 theorem coreIlSch_wf : coreIlSch.WF := ⟨by decide, by decide⟩
 theorem coreAbSch_wf : coreAbSch.WF := ⟨by decide, by decide⟩
@@ -442,9 +443,9 @@ theorem CoreMemos.frame {A : List TieredArray} {C : List Word} {m m' : Mem} (hf 
     (hLA : (LPMEMO : TieredArray) ∉ A ∧ (LPLMEMO : TieredArray) ∉ A ∧ (LPLSMEMO : TieredArray) ∉ A := by decide)
     (hLC : (54 : Word) ∉ C ∧ (56 : Word) ∉ C ∧ (58 : Word) ∉ C := by decide) :
     CoreMemos m' :=
-  ⟨let ⟨mp, hm⟩ := h.1; ⟨mp, memoRG_frame coreIlSch coreIlSch_wf lfKey decE A C hA.1 hC.1 m m' hf mp hm⟩,
-    let ⟨mp, hm⟩ := h.2.1; ⟨mp, memoRG_frame coreAbSch coreAbSch_wf lfKey decE A C hA.2 hC.2 m m' hf mp hm⟩,
-    h.2.2.frame hf hWA hWC hLA hLC⟩
+  ⟨let ⟨mp, hm⟩ := h.il; ⟨mp, memoRG_frame coreIlSch coreIlSch_wf lfKey decE A C hA.1 hC.1 m m' hf mp hm⟩,
+    let ⟨mp, hm⟩ := h.ab; ⟨mp, memoRG_frame coreAbSch coreAbSch_wf lfKey decE A C hA.2 hC.2 m m' hf mp hm⟩,
+    h.walk.frame hf hWA hWC hLA hLC⟩
 
 /-- **`CoreMemos` across a write of the `instLP` walk's memos** (arrays 52‥54, `CTL[54‥59]`), the
 walk memos after it given. -/
@@ -452,15 +453,15 @@ theorem CoreMemos.frameLP {A : List TieredArray} {C : List Word} {m m' : Mem} (h
     (h : CoreMemos m) (hLP : LPMemos m')
     (hA : ∀ b ∈ A, 52 ≤ b.arr ∧ b.arr ≤ 54 := by decide) (hC : ∀ x ∈ C, 54 ≤ x.toNat ∧ x.toNat ≤ 59 := by simp) :
     CoreMemos m' :=
-  ⟨let ⟨mp, hm⟩ := h.1; ⟨mp, memoRG_frame coreIlSch coreIlSch_wf lfKey decE A C
+  ⟨let ⟨mp, hm⟩ := h.il; ⟨mp, memoRG_frame coreIlSch coreIlSch_wf lfKey decE A C
       (fun e => absurd (hA _ e) (by decide)) (fun e => absurd (hC _ e) (by decide)) m m' hf mp hm⟩,
-    let ⟨mp, hm⟩ := h.2.1; ⟨mp, memoRG_frame coreAbSch coreAbSch_wf lfKey decE A C
+    let ⟨mp, hm⟩ := h.ab; ⟨mp, memoRG_frame coreAbSch coreAbSch_wf lfKey decE A C
       (fun e => absurd (hA _ e) (by decide)) (fun e => absurd (hC _ e) (by decide)) m m' hf mp hm⟩,
-    let ⟨mp, hm⟩ := h.2.2.1; ⟨mp, memoRG_frame coreWsSch coreWsSch_wf lfKey _ A C
+    let ⟨mp, hm⟩ := h.walk.1; ⟨mp, memoRG_frame coreWsSch coreWsSch_wf lfKey _ A C
       (fun e => absurd (hA _ e) (by decide)) (fun e => absurd (hC _ e) (by decide)) m m' hf mp hm⟩,
-    let ⟨mp, hm⟩ := h.2.2.2.1; ⟨mp, memoRG_frame coreFlSch coreFlSch_wf bmKey _ A C
+    let ⟨mp, hm⟩ := h.walk.2.1; ⟨mp, memoRG_frame coreFlSch coreFlSch_wf bmKey _ A C
       (fun e => absurd (hA _ e) (by decide)) (fun e => absurd (hC _ e) (by decide)) m m' hf mp hm⟩,
-    let ⟨mp, hm⟩ := h.2.2.2.2.1; ⟨mp, memoRG_frame coreLsbSch coreLsbSch_wf bmKey _ A C
+    let ⟨mp, hm⟩ := h.walk.2.2.1; ⟨mp, memoRG_frame coreLsbSch coreLsbSch_wf bmKey _ A C
       (fun e => absurd (hA _ e) (by decide)) (fun e => absurd (hC _ e) (by decide)) m m' hf mp hm⟩,
     hLP⟩
 
@@ -523,9 +524,9 @@ theorem CoreS.frameSM {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : ASt
   have aC : ∀ lo hi : Nat, 96 ≤ lo → hi ≤ 137 → AvoidC lo hi C := fun lo hi h1 h2 x hx => by
     have := hC x hx; omega
   exact ⟨⟨ArenaR.frame_ext A C (fun b hb => ⟨(hA b hb).1, (hA b hb).2.1⟩) (fun x hx => (hC x hx).1) m m'
-        hf a hS.arena.1,
+        hf a hS.arena.base,
       DerR.frameM A C m m' hf (fun b hb => by have := hA b hb; omega)
-        a hS.arena.2⟩,
+        a hS.arena.der⟩,
     hS.core.frame (aA 96 128 (by decide) (by decide)) (aC 96 128 (by decide) (by decide)) hf,
     hS.pins.congr (hf.arr PINS (fun h => absurd (hA _ h) (by decide))
       (by decide)),
@@ -611,10 +612,13 @@ def ResW (r : List Word) : Prop := HW (r.headD 0) ∧ HW (r.tail.headD 0)
 
 /-- **The refinement post of a core function**: the twin run `T` from `a₀` succeeds, the relation
 holds after it, and the result words decode (`dec`) to its result. -/
-def CoreRef {α : Type} [Inhabited α] (T : AM α) (a₀ : AState) (dec : List Word → α)
+structure CoreRef {α : Type} [Inhabited α] (T : AM α) (a₀ : AState) (dec : List Word → α)
     (dn : NIdx → Option ConLeche.Name) (m₀ : Mem) (vis : Word) (fe : IFEnv) (M : ModeMaps)
-    (eb : Word) (r : List Word) (m : Mem) (ok : List Word → Prop := ResH) : Prop :=
-  AM.ok T a₀ ∧ CoreAfter dn m₀ m (AM.st T a₀) vis fe M eb ∧ AM.res T a₀ = dec r ∧ ok r
+    (eb : Word) (r : List Word) (m : Mem) (ok : List Word → Prop := ResH) : Prop where
+  run : AM.ok T a₀
+  after : CoreAfter dn m₀ m (AM.st T a₀) vis fe M eb
+  res : AM.res T a₀ = dec r
+  post : ok r
 
 /-- The spec shape: from `s₀` under `CoreS`, the call refines `T`. -/
 def CoreSpec {α : Type} [Inhabited α] (p : Prog) (n : Nat) (f : FnName) (args : List Word)

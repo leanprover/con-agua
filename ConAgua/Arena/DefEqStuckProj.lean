@@ -357,7 +357,7 @@ theorem pp_ref (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (n : Nat)
       (defeqProjPair (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b)) a₀
       (CorePost decBool dn s₀.mem vis fe M eb ResH) := by
   have hS := hs.rel
-  have hR := hS.arena.1
+  have hR := hS.arena.base
   have htag : ∀ h : Word, HW h → ((decE h).tag == ETag.proj) = decide (h >>> 28 = 9) :=
     fun h hh => tag_beq_w _ hh 9 (by decide) ETag.proj rfl 9 rfl
   have hfalse : (((decE a).tag == ETag.proj && (decE b).tag == ETag.proj) = false) →

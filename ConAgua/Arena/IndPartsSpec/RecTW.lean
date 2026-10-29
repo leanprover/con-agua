@@ -214,7 +214,7 @@ theorem decHL_grow3 {k : IdxKind} {m m' : Mem} (hg : IWGrow m m') {o l : Nat}
   intro j hj
   have hj' : j < l := List.mem_range.mp hj
   simp only [hd?, iwA]
-  rw [hg.2.2.1 (o + j) (by omega)]
+  rw [hg.iwGet (o + j) (by omega)]
 
 /-- A returning `e_view` of a `const` handle. -/
 theorem eViewW_const (m : Mem) (h : Word) (hg : h >>> 28 = 3) (hne : eViewW m h ≠ []) :
@@ -385,7 +385,7 @@ theorem recTW_ok (n : Nat) : ∀ (dn : NIdx → Option ConLeche.Name) (fe : IFEn
     have hd3 : r1.drop 3 = r1.tail.tail.tail := by
       rcases r1 with _ | ⟨_, _ | ⟨_, _ | ⟨_, _⟩⟩⟩ <;> rfl
     rw [hd3] at hbl hbe
-    have hR1 : ArenaR m1 a1 := hS1.1.arena.1
+    have hR1 : ArenaR m1 a1 := hS1.1.arena.base
     have hnamesz : names.length = nl.toNat := hnl.symm
     by_cases hg6 : r1.tail.tail.tail.headD 0 >>> 28 ≠ 6
     · rw [recTK1_some_nf n m1 no nl r1 h1ne hg6] at hrt
@@ -410,7 +410,7 @@ theorem recTW_ok (n : Nat) : ∀ (dn : NIdx → Option ConLeche.Name) (fe : IFEn
       obtain ⟨r3, m3, hra3, hrt⟩ := ipK_inv hrt (by simp [recTK3])
       obtain ⟨x3, a3, hrun3, hS3, hg3, hdl3, hdI3⟩ :=
         gafF_ok dn vis fe CWF _ hdomlt m1 m3 a1 r3 hra3 hS1
-      have hR3 : ArenaR m3 a3 := hS3.1.arena.1
+      have hR3 : ArenaR m3 a3 := hS3.1.arena.base
       have hvb := viewBind_forall m1 a1 hR1 _ hbl hvok hg6'
       have hrun3' : StateT.run (getAppFn coreWalkFuel (decE
           ((eViewW m1 (r1.tail.tail.tail.headD 0)).getD 1 0))) a1 = Except.ok (x3, a3) := by

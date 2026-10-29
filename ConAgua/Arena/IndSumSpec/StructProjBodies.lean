@@ -113,7 +113,7 @@ theorem pbW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n
     by_cases he : eViewW m h = []
     · rw [pbW.abort1 n m T k i h hk ht he]; exact Sim.of_none
     rw [pbW.arm3 n m T k i h hk ht he, hks, structProjBodiesGo, ← decE_eq, ite_eq_left (htf.mpr ht)]
-    obtain ⟨vv, hview, hVR⟩ := eViewW_ok m a hS.1.arena.1 h he
+    obtain ⟨vv, hview, hVR⟩ := eViewW_ok m a hS.1.arena.base h he
     have h6 := eViewW_head6S m h ht he
     refine Sim.bind_twin (view_run _ _ _ hview) ?_
     cases vv with

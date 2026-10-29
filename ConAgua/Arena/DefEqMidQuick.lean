@@ -277,12 +277,12 @@ theorem qs_ref (p : Prog) (hp : QuickProg p) (hsd : StoreDenotes) (n : Nat) (s�
   rcases c1 : callW p n "e_view" [a] s₀.mem with _ | ⟨ra, m₁⟩
   · rw [liftE_none, qsE.k_e_view.none]; exact RefE.of_cls0 (by simp)
   rw [liftE_some]; simp only [qsE.k_e_view]
-  obtain ⟨rfl, va, hva, hvra, hta⟩ := eView_callW_view (a := a₀) hp.lams.peel.eview hS.arena.1 c1
+  obtain ⟨rfl, va, hva, hvra, hta⟩ := eView_callW_view (a := a₀) hp.lams.peel.eview hS.arena.base c1
   obtain ⟨rfl, hwa⟩ := viewR_sort hvra (hta.trans h2a)
   rcases c2 : callW p n "e_view" [b] s₀.mem with _ | ⟨rb, m₂⟩
   · rw [liftE_none, qsE.k_e_view_2.none]; exact RefE.of_cls0 (by simp)
   rw [liftE_some]; simp only [qsE.k_e_view_2]
-  obtain ⟨rfl, vb, hvb, hvrb, htb⟩ := eView_callW_view (a := a₀) hp.lams.peel.eview hS.arena.1 c2
+  obtain ⟨rfl, vb, hvb, hvrb, htb⟩ := eView_callW_view (a := a₀) hp.lams.peel.eview hS.arena.base c2
   obtain ⟨rfl, hwb⟩ := viewR_sort hvrb (htb.trans h2b)
   refine RefE.of_run_eq (quickPairT_sort mode r depth _ _ a₀ _ _ hva hvb) ?_
   obtain ⟨lu, hdu⟩ := hsd.sort dn s₀.mem a₀ vis fe M eb hS _ _ hva
@@ -343,12 +343,12 @@ theorem qf_ref (p : Prog) (hp : QuickProg p) (hil : InstListOK p) (n : Nat)
   · rw [liftE_none, qfE.k_e_view.none]; exact RefE.of_cls0 (by simp)
   rw [liftE_some]; simp only [qfE.k_e_view]
   obtain ⟨k, rfl⟩ := callW_succ c1
-  obtain ⟨rfl, va, hva, hvra, hta⟩ := eView_callW_view (a := a₀) hp.lams.peel.eview hS.arena.1 c1
+  obtain ⟨rfl, va, hva, hvra, hta⟩ := eView_callW_view (a := a₀) hp.lams.peel.eview hS.arena.base c1
   obtain ⟨rfl, hwa1, hwa2⟩ := viewR_forall hvra (hta.trans h6a)
   rcases c2 : callW p (k + 1) "e_view" [b] s₀.mem with _ | ⟨rb, m₂⟩
   · rw [liftE_none, qfE.k_e_view_2.none]; exact RefE.of_cls0 (by simp)
   rw [liftE_some]; simp only [qfE.k_e_view_2]
-  obtain ⟨rfl, vb, hvb, hvrb, htb⟩ := eView_callW_view (a := a₀) hp.lams.peel.eview hS.arena.1 c2
+  obtain ⟨rfl, vb, hvb, hvrb, htb⟩ := eView_callW_view (a := a₀) hp.lams.peel.eview hS.arena.base c2
   obtain ⟨rfl, hwb1, hwb2⟩ := viewR_forall hvrb (htb.trans h6b)
   refine RefE.of_run_eq (quickPairT_forall _ _ _ _ _ a₀ _ _ _ _ hva hvb) ?_
   have hpf := peelFuel_lt
@@ -382,12 +382,12 @@ theorem ql_ref (p : Prog) (hp : QuickProg p) (hi : Inst1OK p) (n : Nat)
   · rw [liftE_none, qlE.k_e_view.none]; exact RefE.of_cls0 (by simp)
   rw [liftE_some]; simp only [qlE.k_e_view]
   obtain ⟨k, rfl⟩ := callW_succ c1
-  obtain ⟨rfl, va, hva, hvra, hta⟩ := eView_callW_view (a := a₀) hp.lams.peel.eview hS.arena.1 c1
+  obtain ⟨rfl, va, hva, hvra, hta⟩ := eView_callW_view (a := a₀) hp.lams.peel.eview hS.arena.base c1
   obtain ⟨rfl, hwa1, hwa2⟩ := viewR_lam hvra (hta.trans h5a)
   rcases c2 : callW p (k + 1) "e_view" [b] s₀.mem with _ | ⟨rb, m₂⟩
   · rw [liftE_none, qlE.k_e_view_2.none]; exact RefE.of_cls0 (by simp)
   rw [liftE_some]; simp only [qlE.k_e_view_2]
-  obtain ⟨rfl, vb, hvb, hvrb, htb⟩ := eView_callW_view (a := a₀) hp.lams.peel.eview hS.arena.1 c2
+  obtain ⟨rfl, vb, hvb, hvrb, htb⟩ := eView_callW_view (a := a₀) hp.lams.peel.eview hS.arena.base c2
   obtain ⟨rfl, hwb1, hwb2⟩ := viewR_lam hvrb (htb.trans h5b)
   refine RefE.of_run_eq (quickPairT_lam _ _ _ _ _ a₀ _ _ _ _ hva hvb) ?_
   have H := defeqLams_ref p hp.lams hi k (hk.mono (by omega)) F (by omega) (by omega) s₀ a₀ dn
@@ -414,7 +414,7 @@ theorem coreRef_redec {α : Type} [Inhabited α] {T : AM α} {a₀ : AState} {de
     {eb : Word} {r r' : List Word} {ok₁ ok : List Word → Prop}
     (h : CoreRef T a₀ dec₁ dn m₀ vis fe M eb r m ok₁) (hd : dec₁ r = dec r') (hok : ok r') :
     CoreRef T a₀ dec dn m₀ vis fe M eb r' m ok :=
-  ⟨h.1, h.2.1, h.2.2.1.trans hd, hok⟩
+  ⟨h.run, h.after, h.res.trans hd, hok⟩
 
 theorem tag_bne (x y : Word) (hx : HW x) (hy : HW y) :
     ((decE x).tag != (decE y).tag) = decide (x >>> 28 ≠ y >>> 28) := by
@@ -502,10 +502,10 @@ theorem qd_ref (p : Prog) (hp : QuickProg p) (hil : InstListOK p) (hi : Inst1OK 
     obtain ⟨t, ht, htm, -, hlw⟩ := triple_of_callW (s₀ := ⟨s₀.mem, Locals.init []⟩)
       (litEq_spec p hp.le hp.lq k ⟨s₀.mem, Locals.init []⟩ x y) c
     obtain ⟨vx, vy⟩ := litEqW_views hlw
-    obtain ⟨l₁, hl₁⟩ := view_lit s₀.mem a₀ hS.arena.1 x hx vx h8
-    obtain ⟨l₂, hl₂⟩ := view_lit s₀.mem a₀ hS.arena.1 y hy vy (hg' ▸ h8)
+    obtain ⟨l₁, hl₁⟩ := view_lit s₀.mem a₀ hS.arena.base x hx vx h8
+    obtain ⟨l₂, hl₂⟩ := view_lit s₀.mem a₀ hS.arena.base y hy vy (hg' ▸ h8)
     obtain ⟨t', ht', -, -, hdec, hrh⟩ := triple_of_callW (s₀ := ⟨s₀.mem, Locals.init []⟩)
-      (litEq_refines p hp.le hp.lq k ⟨s₀.mem, Locals.init []⟩ a₀ hS.arena.1 x y hx hy h8 (hg' ▸ h8)
+      (litEq_refines p hp.le hp.lq k ⟨s₀.mem, Locals.init []⟩ a₀ hS.arena.base x y hx hy h8 (hg' ▸ h8)
         l₁ l₂ hl₁ hl₂) c
     have hm₁ : m₁ = s₀.mem := by rw [← ht, htm]
     rw [hm₁]

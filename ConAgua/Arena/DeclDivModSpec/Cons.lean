@@ -59,7 +59,7 @@ theorem StmtL.cons {m : Mem} {so sl : Word} {s : List EIdx × EIdx} {ss : List (
   have hl0 : sl ≠ 0 := fun e => by rw [e] at hl; simp at hl
   have hlen : sl.toNat = ss.length + 1 := by simpa using hl
   have ho : (so + 1).toNat = so.toNat + 1 := by
-    have h1 := hI.1; have h2 := hI.2.2.1
+    have h1 := hI.iw; have h2 := hI.iwSize
     rw [UInt64.toNat_add]; simp; omega
   have hl1 : (sl - 1).toNat = ss.length := by
     rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; simp; omega)]; simp; omega

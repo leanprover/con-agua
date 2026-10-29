@@ -75,7 +75,7 @@ theorem ilwGo_succ {p : Prog} (hp : ILWAllProg p) (n : Nat) (ih : ∀ k, k ≤ n
   have hm₁ : m₁ = m := hs1.symm.trans hm1
   subst hm₁
   rw [ctrW_toNat fu hfu, instLPGo_succ]
-  have hd := derLW_ok m₁ a hS.arena.1 hS.arena.2 h hh
+  have hd := derLW_ok m₁ a hS.arena.base hS.arena.der h hh
   rw [hlp] at hW
   -- the cut-off
   by_cases h0 : exprLPW m₁ h = 0
@@ -88,7 +88,7 @@ theorem ilwGo_succ {p : Prog} (hp : ILWAllProg p) (n : Nat) (ih : ∀ k, k ≤ n
   simp only [h0, ↓reduceIte] at hW
   have hlp' : lpOfData (a.store.derived (decE h)) = true := by
     rw [hd, lpW_zero_iff] at h0; simpa using h0
-  have hR := hS.arena.1
+  have hR := hS.arena.base
   -- the twin's walk past the cut-off, at the node's view
   have hrun : ∀ (v : ENodeView), a.store.view (decE h) = some v → ∀ T : AM EIdx,
       (match v with

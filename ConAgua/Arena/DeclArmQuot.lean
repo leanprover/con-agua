@@ -88,7 +88,7 @@ end model
 /-- The pool's size bound canon's comparisons take (`LitR`'s `PoolOK`). -/
 theorem poolSmall_of_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
     {m : Mem} {a : AState} (h : StageR dn vis fe m a) : PoolSmall m := by
-  have := h.1.arena.1.lit.1.cap
+  have := h.check.arena.base.lit.1.cap
   unfold PoolSmall; omega
 
 theorem slot_lt (k : ConLeche.QuotKind) : k.slot < 5 := by cases k <;> decide

@@ -233,8 +233,8 @@ def ArmOk {α : Type} (m : Mem) (a : AState) (r : List Word) (m' : Mem) (K : Nat
 
 theorem arenaD_erec129 {m m' : Mem} {a : AState} {pm : PMemo} (hD : ArenaD m a) (hP : PMemoR m pm)
     (hf : MemFrame [EREC] [129] m m') : ArenaD m' a ∧ PMemoR m' pm :=
-  ⟨⟨ArenaR.frame_ext _ _ (by simp [EREC]) (by simp) m _ hf a hD.1,
-    DerR.frameM _ _ m _ hf (by simp [EREC]) a hD.2⟩,
+  ⟨⟨ArenaR.frame_ext _ _ (by simp [EREC]) (by simp) m _ hf a hD.base,
+    DerR.frameM _ _ m _ hf (by simp [EREC]) a hD.der⟩,
     hP.frame (by simp [EREC]) (by simp) hf⟩
 
 section rel
@@ -666,10 +666,10 @@ theorem ind_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f q : Word) (D : 
   dsimp only at hW
   obtain ⟨hDf, hPf⟩ := arenaD_erec129 hD1 hP1 b4
   have hg02 : ErecGrow m m₂ := hg1.trans b3
-  have hlow : ArrExt (preE m D) (preE m₂ D) := preE_ext (fun i hi => hg02.2.1 i (by omega))
+  have hlow : ArrExt (preE m D) (preE m₂ D) := preE_ext (fun i hi => hg02.get i (by omega))
   obtain ⟨a3, pm3, caps', hrun3, hD3, hP3, hcp3, hfr3, htk3, hgs, hts3, hdc⟩ :=
     caps_rel p hp (n + 1) m₂ a1 pm1 f (q + 5) (dl.headD 0 + 5) D dn caps z m₃ hDf hPf hsz2 b5
-      (by rw [e5]; exact hlow.decCaps hcaps) (by rw [e5]; omega) (by have := hg02.1; omega)
+      (by rw [e5]; exact hlow.decCaps hcaps) (by rw [e5]; omega) (by have := hg02.top; omega)
       (by rw [e5d]; have := hg1.1; omega) (by rw [e5d, b2]; omega) hcc
   rw [e5d] at hgs hdc
   obtain ⟨hr, hm3⟩ := Prod.mk.inj (Option.some.inj hW)
@@ -702,7 +702,7 @@ namespace L.Arena
 
 theorem SlotGrow.widen {m m' : Mem} {lo hi lo' hi' : Nat} (h : SlotGrow m m' lo hi)
     (hlo : lo' ≤ lo) (hhi : hi ≤ hi') : SlotGrow m m' lo' hi' :=
-  ⟨h.1, fun i hi1 hout => h.2.1 i hi1 (by omega), h.2.2⟩
+  ⟨h.top, fun i hi1 hout => h.get i hi1 (by omega), h.size⟩
 
 theorem rules_zero_gen {n : Nat} {f s l d : Word} {m m' : Mem} {r : List Word} (p : Prog)
     (hp : PromoteProg p) (hl : l = 0)
@@ -837,7 +837,7 @@ theorem rec_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f q : Word) (D : 
   have hg02 : ErecGrow m m₂ := hg1.trans b3
   have h01 : erecTop m ≤ erecTop m₁ := hg1.1
   have hlow : ArrExt (preE m D) (preE m₃ D) := preE_ext (fun i hi => by
-    rw [u3.2.1 i (by omega) (by omega)]; exact hg02.2.1 i (by omega))
+    rw [u3.2.1 i (by omega) (by omega)]; exact hg02.get i (by omega))
   have hgb : SlotGrow m₂ m₃ (erecTop m₁ + 5) (erecTop m₁ + 5 + 4) := u3
   by_cases hl0 : w8 = 0
   · have hm : m₃ = m₄ := (rules_zero_gen p hp hl0 hpr).symm
@@ -857,7 +857,7 @@ theorem rec_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f q : Word) (D : 
     · rw [← hr]; exact b1
     · rw [u2, b2]; omega
     · have h1 : (m₃.arr64 EREC)[erecTop m₁]? = (m₂.arr64 EREC)[erecTop m₁]? :=
-        hgb.2.1 _ (by omega) (Or.inl (by omega))
+        hgb.get _ (by omega) (Or.inl (by omega))
       rw [h1]; exact b6
     · have hts3 : erecTop m₃ ≤ (m₃.arr64 EREC).size := u5
       have N : ∀ {i : Nat} {w : Word}, i < erecTop m₃ → (m₃.arr64 EREC)[i]? = some w →
@@ -891,7 +891,7 @@ theorem rec_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f q : Word) (D : 
     · exact ((hfr1.trans (b4.mono (by simp) (by simp))).trans (u4.mono (by simp) (by simp))).trans hfr3
     · rw [← hr]; exact b1
     · have := hgs3.1; omega
-    · rw [hjoin.2.1 _ (by omega) (Or.inl (by omega))]; exact b6
+    · rw [hjoin.get _ (by omega) (Or.inl (by omega))]; exact b6
     · refine ⟨b7.2 m₄ _ hjoin b5 hts3, N (by have := hgs3.1; omega) ?_, N (by have := hgs3.1; omega) ?_,
         N (by have := hgs3.1; omega) ?_, (bl.headD 0).toNat, N (by have := hgs3.1; omega) ?_, ?_⟩
       · have := key 0 (by omega); simp only [Nat.add_zero] at this; rw [this]; simpa using u6

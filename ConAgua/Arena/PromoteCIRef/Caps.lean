@@ -243,7 +243,7 @@ theorem caps_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f s d : Word) (D
   have hgrm : SlotGrow m m₅ d.toNat (d.toNat + 15) :=
     (SlotGrow.of_grow hg03 _ _).trans hgr (Nat.le_refl _) (Nat.le_refl _)
   have hts5 : erecTop m₅ ≤ (m₅.arr64 EREC).size := by rw [hT5, hsz5]; exact hts3'
-  have hT3m : erecTop m ≤ erecTop m₃' := hg03.1
+  have hT3m : erecTop m ≤ erecTop m₃' := hg03.top
   obtain ⟨hDf, hPf⟩ := arenaD_erecFrame hD3 hP3 (k2.trans w2)
   have hwd : ∀ i, i < 15 → i ≠ 1 → i ≠ 10 → i ≠ 13 →
       (erecP m₅)[d.toNat + i]? = (preE m D)[s.toNat + i]? := by

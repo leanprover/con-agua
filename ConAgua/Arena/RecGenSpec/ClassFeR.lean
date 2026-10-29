@@ -286,7 +286,7 @@ theorem cfrRec_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFE
     split at h1; · cases h1
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h1)
     exact ⟨rfl, by simp only [erAllocMem]; exact Mem.arr64_set64_ne _ _ _ _ _ (by decide)⟩
-  obtain ⟨-, hEtop, -, hEsz, -⟩ := hS.2
+  obtain ⟨-, hEtop, -, hEsz, -⟩ := hS.iw
   obtain ⟨hS', hg, -, htop', hget⟩ := erRec_stage h1 hS [5, rdW (m.arr64 EREC) cq,
     rdW (m.arr64 EREC) (cq + 1), rdW (m.arr64 EREC) (cq + 2), rdW (m.arr64 EREC) (cq + 3), mi, rp3, 0, 0]
     (by simp)
@@ -552,7 +552,7 @@ theorem classFeR_refines (p : Prog) (hp : CfrProg p) (n : Nat) (s₀ : St) (a₀
   obtain ⟨ro, rl, hro, hrl, hrecs⟩ := decAt_some hrs
   have hrsP : rs = P.recs := by rw [← hPe]
   rw [hrsP] at hrecs
-  have hsz := hS.2.2.2.1
+  have hsz := hS.iw.2.2.1
   obtain ⟨e2, t2⟩ := rec2RdN (w := pp) (k := 2) (rec2IwN_trunc hro).2 hsz
   obtain ⟨e3, t3⟩ := rec2RdN (w := pp) (k := 3) (by simpa using (rec2IwN_trunc hrl).2) hsz
   simp only [show UInt64.ofNat 2 = (2 : Word) from rfl, show UInt64.ofNat 3 = (3 : Word) from rfl] at e2 e3

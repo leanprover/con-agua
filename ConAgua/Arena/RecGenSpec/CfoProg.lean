@@ -78,7 +78,7 @@ def AgreeA (b : Nat) (m m' : Mem) : Prop :=
     (∀ i < erTop m, (m'.arr64 EREC)[i]? = (m.arr64 EREC)[i]?)
 
 theorem AgreeA.of_grow {b : Nat} {m m' : Mem} (h : IWGrow m m') : AgreeA b m m' :=
-  ⟨h.1, h.2.1, fun i _ hi => h.2.2.1 i hi, h.2.2.2⟩
+  ⟨h.iw, h.er, fun i _ hi => h.iwGet i hi, h.erGet⟩
 
 theorem AgreeA.trans {b : Nat} {m₁ m₂ m₃ : Mem} (h₁ : AgreeA b m₁ m₂) (h₂ : AgreeA b m₂ m₃) :
     AgreeA b m₁ m₃ :=

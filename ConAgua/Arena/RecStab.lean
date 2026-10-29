@@ -36,11 +36,11 @@ theorem of_eq (h : ∀ m', IWGrow m m' → f m' = f m) (hf : f m = some x) : Sta
 end StabD
 
 theorem iwN_grow {m m' : Mem} (hg : IWGrow m m') {i : Nat} (hi : i < iwTop m) : iwN m' i = iwN m i := by
-  simp only [iwN, nat?, iwA]; rw [hg.2.2.1 i hi]
+  simp only [iwN, nat?, iwA]; rw [hg.iwGet i hi]
 
 theorem iwH_grow {k : IdxKind} {m m' : Mem} (hg : IWGrow m m') {i : Nat} (hi : i < iwTop m) :
     (iwH m' i : Option (Idx k)) = iwH m i := by
-  simp only [iwH, hd?, iwA]; rw [hg.2.2.1 i hi]
+  simp only [iwH, hd?, iwA]; rw [hg.iwGet i hi]
 
 /-! ## Stable pointer slices -/
 
@@ -72,7 +72,7 @@ theorem nil (o : Nat) (ho : o ≤ iwTop m) : SPL dec m o 0 [] :=
 
 theorem grow (h : SPL dec m o l xs) (hg : IWGrow m m') : SPL dec m' o l xs := by
   obtain ⟨hb, ps, hps, hf⟩ := h
-  refine ⟨Nat.le_trans hb hg.1, ps, by rw [decNL_grow hg hb]; exact hps, ?_⟩
+  refine ⟨Nat.le_trans hb hg.iw, ps, by rw [decNL_grow hg hb]; exact hps, ?_⟩
   exact FA2.imp (fun _ _ hq => hq.grow hg) hf
 
 theorem mapM_of_forall₂ : ∀ {ps : List Nat} {xs : List α},

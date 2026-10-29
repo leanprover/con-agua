@@ -312,7 +312,7 @@ theorem cp_ref (hD : DmProg8 p) (hq : KnotStageProg p) (hcl : LeafClosed p) (hkp
   rw [checkDivModPinE.k_check_div_mod_pin_loop.arm1]
   obtain ⟨x3, a3, hrun3, hR3⟩ := h3R
   have hS3' := StageR.restrict hR3.stage.stage vis2
-  rw [IFEnv.restrictTo_restrictTo, ← hS.1.env.vis, IFEnv.restrictTo_self] at hS3'
+  rw [IFEnv.restrictTo_restrictTo, ← hS.check.env.vis, IFEnv.restrictTo_self] at hS3'
   exact RefE.ret hrun3 ⟨⟨hR3.stage, c1.trans hR3.core, hg1.trans hR3.grow⟩, hS3'⟩
 
 end pin

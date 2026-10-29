@@ -1114,7 +1114,7 @@ theorem romName_refines (rom : List UInt8) (p : Prog) (hL : NameProg rom p) (hr 
   apply M.triple_of_run
   intro s r s' hs hrun
   obtain ⟨hloc, hW⟩ := M.of_run (P := fun s => s = s₀) hs hrun
-    (romName_specW rom p hL n s₀ pos ⟨hA.1.lit.1.cap, hA.1.lit.1.top41⟩)
+    (romName_specW rom p hL n s₀ pos ⟨hA.base.lit.1.cap, hA.base.lit.1.top41⟩)
   subst hs
   exact ⟨hloc, romNameW_ok rom hr x hx n _ a₀ pos rest _ _ _ hA hmo hd hW⟩
 
@@ -1122,8 +1122,8 @@ theorem romName_refines (rom : List UInt8) (p : Prog) (hL : NameProg rom p) (hr 
 theorem ArenaD.frameHi {A : List TieredArray} {C : List Word} {m m' : Mem} {a : AState}
     (hf : MemFrame A C m m') (hA : ∀ b ∈ A, InHigh b) (hC : ∀ x ∈ C, 64 ≤ x.toNat) (h : ArenaD m a) :
     ArenaD m' a :=
-  ⟨ArenaR.frame_ext A C hA hC m m' hf a h.1,
+  ⟨ArenaR.frame_ext A C hA hC m m' hf a h.base,
    DerR.frameM A C m m' hf (fun b hb => by
-     have := hA b hb; simp only [InHigh] at this; omega) a h.2⟩
+     have := hA b hb; simp only [InHigh] at this; omega) a h.der⟩
 
 end L.Rom

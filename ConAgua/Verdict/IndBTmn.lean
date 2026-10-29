@@ -253,7 +253,7 @@ theorem targetMajorNfs_refinesC (hL : TmnLook p) (n : Nat) (hn : n ≤ 2 ^ 62) (
         (AM.st (ConRon.Arena.targetMajorNfs V fe bs formerTys pfvs (decI us) ds ctors nfs) a₀) ∧
       IWGrow s₀.mem s'.mem ∧ RcMR s'.mem ∧ AbsOK s'.mem; ⊤⦄ := by
   refine triple_post (RefE.triple (tmnE_spec p hL n s₀ vis q fto ftl pfo pfl us dso dsl cto ctl nfo nfl)
-    (tmn_ref hq henv n hn hC hA hbs hus hft hftb hpf hds hct.1 (hC.stage.lt64 hct.2) hnf hP hsh hftP
+    (tmn_ref hq henv n hn hC hA hbs hus hft hftb hpf hds hct.dec (hC.stage.lt64 hct.bound) hnf hP hsh hftP
       hpfP husP hdsP hctP hnfP hformer hpw)) ?_
   rintro r s' ⟨hl', ys, a', run, hR⟩
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ run

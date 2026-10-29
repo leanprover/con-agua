@@ -113,7 +113,7 @@ theorem uws_ok {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : 
   rw [ht] at hW
   generalize r.headD 0 = fl at hW ⊢
   generalize r.tail.headD 0 = e' at hW ⊢
-  have hR := hS.arena.1
+  have hR := hS.arena.base
   unfold uwsW at hW
   rcases hA : acaW m e f with _ | ⟨cnt, hh⟩ <;> rw [hA] at hW
   · cases hW
@@ -362,8 +362,8 @@ theorem ppw_ok : ∀ (n : Nat) {dn : NIdx → Option ConLeche.Name} {m m' : Mem}
     · simp [hv1, hv2] at hK
     simp only [hv1, hv2, ↓reduceIte] at hK
     have hvo : idxW u < tcnt m₁ FORALL (tierW u) := UInt64.not_le.mp hv2
-    have hvb := viewBind_forall m₁ a hS₁.arena.1 u hu ⟨hv1, hvo⟩ h6
-    have h1 := (view_forall m₁ a hS₁.arena.1 u hu ⟨hv1, hvo⟩ h6).2.2
+    have hvb := viewBind_forall m₁ a hS₁.arena.base u hu ⟨hv1, hvo⟩ h6
+    have h1 := (view_forall m₁ a hS₁.arena.base u hu ⟨hv1, hvo⟩ h6).2.2
     rcases hc2 : callW p n "peel_pis_w" [vis, f, k - 1,
         tfld m₁ FORALL (tierW u) (idxW u) 1] m₁ with _ | ⟨r₂, m₂⟩
     · rw [hc2] at hK; cases hK

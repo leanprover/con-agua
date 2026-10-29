@@ -261,7 +261,7 @@ theorem m2cAnd_ref (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤
   · rw [liftE_none, m2cAndE.k_get_app_args.none]; exact RefE.of_cls0 (by simp)
   rw [liftE_some, m2cAndE.k_get_app_args.arm1]
   obtain ⟨t3, ht3, -, hfr3, hg3, htop3, htop3', xs, hargs, hsp3⟩ := triple_of_callW
-    (s₀ := ⟨m2, Locals.init []⟩) (getAppArgs_refines p hp.spine (N' + 1) _ a2 hS2.arena.1 _ htm hS2.spn) c3
+    (s₀ := ⟨m2, Locals.init []⟩) (getAppArgs_refines p hp.spine (N' + 1) _ a2 hS2.arena.base _ htm hS2.spn) c3
   rw [ht3] at hfr3 hg3 hsp3 htop3'
   have hS3 := hS2.frame_stk hfr3 (by simp) (by simp)
   have hlen : xs.length = (r3.tail.headD 0).toNat := by simpa using hsp3.size

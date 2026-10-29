@@ -29,7 +29,7 @@ theorem HSl0.grow {k : IdxKind} {m m' : Mem} {o l : Word} {xs : List (Idx k)} (h
   · have hx : xs = [] := by have := decHL_length _ hd; simpa using this
     subst hx
     exact ⟨by simp [decHL, hslice?], .inl rfl⟩
-  · exact ⟨by rw [decHL_grow hg hb]; exact hd, .inr (Nat.le_trans hb hg.1)⟩
+  · exact ⟨by rw [decHL_grow hg hb]; exact hd, .inr (Nat.le_trans hb hg.iw)⟩
 
 end L.Ind
 

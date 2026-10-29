@@ -41,8 +41,8 @@ theorem StageC.of_parts {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : 
     (hdn : ∀ (k : NIdx) (x : ConLeche.Name), dn k = some x → denoteN a.store.ns k = some x) :
     StageC dn vis fe env m a :=
   ⟨hS, hck,
-    ⟨hA.2.2.2.2.2.1, hA.2.2.2.2.2.2.1, hA.2.2.2.2.2.2.2.1, ⟨hA.2.2.2.1, hA.1, hA.2.2.2.2.1⟩, hdn⟩,
-    hA.2.2.2.2.2.2.2.2⟩
+    ⟨hA.wk.2.1, hA.wk.2.2.1, hA.wk.2.2.2.1, ⟨hA.il, hA.ab, hA.wk.1⟩, hdn⟩,
+    hA.wk.2.2.2.2⟩
 
 set_option experimental.vcgen true in
 /-- **`check_block_tail_rec`'s unified model**: the recursor stage and the tables through their runs

@@ -199,7 +199,7 @@ theorem pdmW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
     have hg6 : e >>> 28 = 6 := by rw [← hhd]; simpa using h6
     rw [pdmK_f (h := hv) (h6 := h6)] at h
     obtain ⟨hvok, hew⟩ := eViewW_forall m e hg6 hv
-    have hR := hS.1.arena.1
+    have hR := hS.1.arena.base
     obtain ⟨-, hty, hb⟩ := view_forall m a hR e he hvok hg6
     have hvb := viewBind_forall m a hR e he hvok hg6
     have htag : ((decE e).tag == ETag.forallE) = true := by
@@ -480,7 +480,7 @@ theorem blockRawRec_refines (p : Prog) (hM : MaProg p) (ha : p.lookup "iw_alloc"
   refine triple_post (brr_spec p hM ha hc hn hpd hm hg hp n s₀ q) ?_
   rintro r s' ⟨hl, hm'⟩
   have hT : iwTop s₀.mem < 2 ^ 64 := (rdW (s₀.mem.arr64 CTL) 200).toNat_lt
-  obtain ⟨hI1, hE1, hsz, hEs, hcl⟩ := hS.2
+  obtain ⟨hI1, hE1, hsz, hEs, hcl⟩ := hS.iw
   have hqt : decBS (truncM s₀.mem) q.toNat = some bs := hq
   have hq' : decBS s₀.mem q.toNat = some bs := hq.get (decBS_mono _)
   obtain ⟨hmem, -, -, -, -, -, hpr⟩ := decBS_some hqt

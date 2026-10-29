@@ -154,11 +154,11 @@ theorem block_ref (hP : CbProg p) {fs fs2 : List FnName}
   · rw [liftE_none, icbE.k_block_shape_member_names.none]; exact RefE.of_cls0 (by simp)
   rw [liftE_some, icbE.k_block_shape_member_names.arm1]
   obtain ⟨s3, hs3, hr3, hdn3, hg3, hf3, ht3⟩ := triple_of_callW (s₀ := ⟨s2.mem, Locals.init []⟩)
-    (blockShapeMemberNames_refines p hP.ha hP.mnc hP.bsmn n _ p0 bs hqd2 (by omega) hS2.2.2.2.1
-      hS2.2.2.2.2.2 hsrc2 (fun o l j v h1 h2 h3 h4 => Nat.lt_of_succ_lt (hptr2 o l j v h1 h2 h3 h4))) c3
+    (blockShapeMemberNames_refines p hP.ha hP.mnc hP.bsmn n _ p0 bs hqd2 (by omega) hS2.iw.2.2.1
+      hS2.iw.2.2.2.2 hsrc2 (fun o l j v h1 h2 h3 h4 => Nat.lt_of_succ_lt (hptr2 o l j v h1 h2 h3 h4))) c3
   obtain ⟨s3', hs3', -, hW3⟩ := triple_of_callW (s₀ := ⟨s2.mem, Locals.init []⟩)
     (blockShapeMemberNames_spec p hP.ha hP.mnc hP.bsmn n _ p0) c3
-  have hroom := memberNamesW_room hW3 hS2.2.2.2.1
+  have hroom := memberNamesW_room hW3 hS2.iw.2.2.1
   rw [partsShapeK hqd2 hq92] at hroom
   have hkb : bs.k < 2 ^ 64 := by
     obtain ⟨o, l, -, hl', hg'⟩ := decAt_some (decBS_some hqd2).1

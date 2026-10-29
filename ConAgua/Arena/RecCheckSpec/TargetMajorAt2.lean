@@ -100,7 +100,7 @@ theorem tmaW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
       have hc' : c.toNat < ml.toNat := UInt64.lt_iff_toNat_lt.mp hc
       obtain ⟨v, hv, hdec⟩ := decPL_getH m hms c.toNat hc'
       have hlen := decPL_length m hms
-      have hrd := iwN_rdW_at (w := mo) (k := c.toNat) hv hS.2.2.2.1
+      have hrd := iwN_rdW_at (w := mo) (k := c.toNat) hv hS.iw.2.2.1
       have hcw : mo + UInt64.ofNat c.toNat = mo + c := by simp
       rw [hcw] at hrd
       have hop : ConRon.Arena.targetMajorAt ms c.toNat = pure (ms[c.toNat]'(by omega)) := by

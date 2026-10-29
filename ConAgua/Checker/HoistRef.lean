@@ -65,8 +65,8 @@ theorem hNatOpGround_ok (p : Prog) (hx : HoistExt p) (n : Nat) (m m' : Mem) (a :
     ∃ res, (hoistNatOpGround ds).run a = .ok (res, a) ∧ res.1.size = cw.toNat ∧ OrdR m' r res.1 ∧
       ArenaR m' a ∧ IWOK m' ∧ IWGrow m m' ∧ r.toNat + cw.toNat ≤ iwTop m' ∧ PinsR m' a.pins ∧
       MemFrame [IW, HSEEN, HNIX] [73, 74, 75, 76, 200] m m' := by
-  have hsz := hI.2.2.1
-  have htsz : iwTop m ≤ (m.arr64 IW).size := hI.1
+  have hsz := hI.iwSize
+  have htsz : iwTop m ≤ (m.arr64 IW).size := hI.iw
   cases n with
   | zero => rw [hNatOpGroundW.eq_1] at h; cases h
   | succ n =>
@@ -183,7 +183,7 @@ theorem hNatOpGround_ok (p : Prog) (hx : HoistExt p) (n : Nat) (m m' : Mem) (a :
     have hempty : T.isEmpty = true :=
       tgt_isEmpty T _ hT₅.2 (fun j _ hj => (hav.mp hav0) j (Nat.zero_le _) hj)
     refine ⟨(ds, #[]), by rw [hrun0, hempty]; rfl, hc, hE₅.ordR, hE₅.arena, hE₅.iwok,
-      hgrow₅, by have := hgrow₅.1; omega, hP₅, hfrm₅⟩
+      hgrow₅, by have := hgrow₅.iw; omega, hP₅, hfrm₅⟩
   · rw [hNatOpGroundW.k_hoist_any.arm2 _ _ _ _ _ _ _ hav0] at h
     have hne : T.isEmpty = false := by
       cases e : T.isEmpty with
@@ -191,7 +191,7 @@ theorem hNatOpGround_ok (p : Prog) (hx : HoistExt p) (n : Nat) (m m' : Mem) (a :
       | true =>
         exfalso; apply hav0; apply hav.mpr
         exact fun j _ _ => Std.HashMap.getElem?_of_isEmpty e
-    have hord₅ : ord.toNat + cw.toNat ≤ iwTop m₅ := by have := hgrow₅.1; omega
+    have hord₅ : ord.toNat + cw.toNat ≤ iwTop m₅ := by have := hgrow₅.iw; omega
     have htg₅ : tg.toNat + cw.toNat ≤ iwTop m₅ := by have := hE₅.top; have := hE₅.rg2; omega
     obtain ⟨hI', hgrow', hf', hout, hout', hget⟩ :=
       hoistApply_ok n m₅ m' ord cw tg r T hE₅.iwok hord₅ htg₅ hT₅ hlt₅ h

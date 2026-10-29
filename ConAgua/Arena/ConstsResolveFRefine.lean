@@ -301,10 +301,10 @@ theorem pf_callW {n : Nat} {m m' : Mem} {i : Word} {r : List Word} {a : AState}
   obtain ⟨r2, m2⟩ := q
   rw [h2, bW_some, Option.some.injEq, Prod.mk.injEq] at hW
   obtain ⟨rfl, rfl⟩ := hW
-  have hF := hS.1.pins.full h0
+  have hF := hS.check.pins.full h0
   have hlt := hF.names_lt _ hi
   rw [hr1] at h2
-  obtain ⟨rfl, hv⟩ := envFind_callW hp hS.1.env hlt h2
+  obtain ⟨rfl, hv⟩ := envFind_callW hp hS.check.env hlt h2
   refine ⟨rfl, h0, hi, hv, ?_⟩
   show (r2.headD 0 == 0) = _
   rw [hv]; exact ite_beq0 _

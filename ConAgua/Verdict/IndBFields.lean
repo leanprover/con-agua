@@ -71,11 +71,11 @@ theorem cfgTailE {G : Prop} {n : Nat} {m m2 m5 : Mem} {a2 : AState} {k : Word} {
         (fun v ks a' => CfgPost dn vis fe m5 v.1 v.2 ks a')) :
     RefE G (cfgE.j1 p n mo ml io il i fo fl (r5.headD 0) m5) (do let r ← opR; pure (y :: r)) a2
       (fun v ks a' => CfgPost dn vis fe m v.1 v.2 ks a') := by
-  have hc := hS2.2.2.2.2.2
-  have hsz := hS2.2.2.2.1
+  have hc := hS2.iw.2.2.2.2
+  have hsz := hS2.iw.2.2.1
   obtain ⟨hr5, -, hg5, hf5, htop5, hroom5⟩ := recW_post h5 hc hsz hk
   have hS5 := stage_frame_iw hS2 hf5 (by omega)
-  have hy5 := rec2RecW_decCF_A (b := iwTop m) h5 hc hsz hk hg2.1 (by rw [hr5]; exact hy)
+  have hy5 := rec2RecW_decCF_A (b := iwTop m) h5 hc hsz hk hg2.iw (by rw [hr5]; exact hy)
   have hR := hrest hS5 hg5 (rec2NoMR_iw hf5 hM2)
   rw [cfgE.j1.arm1]
   rcases h6 : cfgE p n m5 mo ml io il (i + 1) (fo + 1) (fl - 1) with e6 | ⟨r6, m6⟩
@@ -89,8 +89,8 @@ theorem cfgTailE {G : Prop} {n : Nat} {m m2 m5 : Mem} {a2 : AState} {k : Word} {
   rw [liftE_some, cfgE.k_sl_cons.arm1]
   have hsp6 := hP6.kinds
   obtain ⟨mp6, hM6⟩ := hP6.nomr
-  obtain ⟨hS7, hg7, hsp7⟩ := SPLA.cons h7 hP6.stage (hsp6.mono (Nat.le_trans hg2.1 hg5.1))
-    (Nat.le_trans hg2.1 (Nat.le_trans hg5.1 hP6.grow.1)) (hy5.grow (AgreeA.of_grow hP6.grow))
+  obtain ⟨hS7, hg7, hsp7⟩ := SPLA.cons h7 hP6.stage (hsp6.mono (Nat.le_trans hg2.iw hg5.1))
+    (Nat.le_trans hg2.iw (Nat.le_trans hg5.1 hP6.grow.1)) (hy5.grow (AgreeA.of_grow hP6.grow))
   obtain ⟨-, hsb, ps, hps, -⟩ := hsp6
   obtain ⟨-, -, -, hf7, -⟩ := consW_decN h7 hP6.stage.2.2.2.1 hP6.stage.2.2.2.2.2 hsb hps
   exact RefE.ret rfl ⟨hS7, hg2.trans (hg5.trans (hP6.grow.trans hg7)), by simpa using hsp7,
@@ -268,9 +268,9 @@ theorem cfo_ref (bsh : BlockShape) (ihs : List (Nat × Nat)) (n : Nat) {m : Mem}
   · rw [liftE_none, cfoE.k_block_shape_member_names.none]; exact RefE.of_cls0 (by simp)
   rw [liftE_some, cfoE.k_block_shape_member_names.arm1]
   have ht := hb.ptop
-  have hsz := hS.2.2.2.1
-  have hts : iwTop m ≤ (m.arr64 IW).size := hS.2.1
-  have hf1 := (memberNamesW_dec h1 hsz hS.2.2.2.2.2 hb.dec (by omega) hb.2.1 hb.2.2).2.2.2.1
+  have hsz := hS.iw.2.2.1
+  have hts : iwTop m ≤ (m.arr64 IW).size := hS.iw.1
+  have hf1 := (memberNamesW_dec h1 hsz hS.iw.2.2.2.2 hb.dec (by omega) hb.2.1 hb.2.2).2.2.2.1
   obtain ⟨hS1, hg1, -, hd1, ht1⟩ := memberNamesW_stage h1 hS hb
   have hR := cfg_ref (p := p) (dn := dn) (vis := vis) (fe := fe) bsh ihs n (a := a) (mo := r1.headD 0)
     (ml := r1.tail.headD 0) (io := io) (il := il) (i := i) (fo := fo) (fl := fl) hS1 hd1

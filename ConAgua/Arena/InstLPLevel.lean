@@ -127,11 +127,11 @@ theorem liNode_core (v : LNodeView) (W : Mem → Option (Word × Mem))
   rw [res] at hrun
   have hk := internLNode_keep _ _ _ _ hrun
   have hL := internLNode_step _ _ _ _ hrun
-  obtain ⟨hall, hden⟩ := lvlAll_internLNode hS.arena.1 hS.den.lvlAll hch hnch hrun
-  have hlc := lvlCnt_of_arena hS.arena.1 hR.1 (hf.ctl 1 lvCtl_one)
+  obtain ⟨hall, hden⟩ := lvlAll_internLNode hS.arena.base hS.den.lvlAll hch hnch hrun
+  have hlc := lvlCnt_of_arena hS.arena.base hR.1 (hf.ctl 1 lvCtl_one)
     (LTGrow.internLNode hrun).1 (LTGrow.internLNode hrun).2 (by simp [hL.lsp]) (by simp [hL.lss])
   obtain ⟨hS', -⟩ := hS.of_level hL hR.1 hf lvArrs_lo lvCtl_lo hall hlc lvArrs_stk.2.2 lvCtl_stk.2.2
-  exact ⟨_, hrun, hS', hlt, hden, hf, hk, viewsKept_of hS.arena.1 hR.1 hk hf, hL,
+  exact ⟨_, hrun, hS', hlt, hden, hf, hk, viewsKept_of hS.arena.base hR.1 hk hf, hL,
     internLNode_memos _ _ _ _ hrun, hlc⟩
 
 set_option linter.constructorNameAsVariable false in
@@ -316,7 +316,7 @@ theorem lvSubIntW_core {n : Nat} {m m' : Mem} {a : AState} {u ko kc vo vc h : Wo
   simp only [lvSubIntW] at hW
   obtain ⟨hS₀, hk₀⟩ := hS.frame (reset_frame m) (by simp) (by simp)
   have hl : LvR (nameN a.store.lss.ls.ns) (m.set64 CTL 192 0) u L := by
-    have := denoteL_lvR hS₀.arena.1 (decI u) L hdu
+    have := denoteL_lvR hS₀.arena.base (decI u) L hdu
     rwa [(word_decI _ u hu).mpr rfl] at this
   have hpool₀ : (m.set64 CTL 192 0).arr64 POOL = m.arr64 POOL :=
     Mem.arr64_set64_ne _ _ _ _ _ (by decide)
@@ -325,8 +325,8 @@ theorem lvSubIntW_core {n : Nat} {m m' : Mem} {a : AState} {u ko kc vo vc h : Wo
   have hpool₀v := vpool_congr hpool₀ hpool₀'
   have hpool₀c := pcap_congr' hpool₀ hpool₀'
   have htop := m.top.toNat_lt
-  have h41 := hS.arena.1.lit.1.top41
-  have hv := lvsR_of_slice hS₀.arena.1 us vs vo vc (by rw [hpool₀v]; exact hE.vals)
+  have h41 := hS.arena.base.lit.1.top41
+  have hv := lvsR_of_slice hS₀.arena.base us vs vo vc (by rw [hpool₀v]; exact hE.vals)
     (by have := hE.vtop; omega) hE.vden
   have hk := hE.keys.of_arr (m' := m.set64 CTL 192 0) (Mem.arr64_set64_ne _ _ _ _ _ (by decide))
   cases hSb : substLW SPN POOL n (m.set64 CTL 192 0) u ko kc vo vc with

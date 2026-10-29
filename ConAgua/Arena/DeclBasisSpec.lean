@@ -144,7 +144,7 @@ theorem ofReduceOp_refines (p : Prog) (hpa : p.lookup "pin_at" = some pinAtL)
         (AM.res (ofReduceOp (decI w)) a₀); ⊤⦄ := by
   refine triple_post (oro_specW p hpa hp n s₀ w) ?_
   rintro r s' ⟨hl, hm⟩
-  obtain ⟨hmem, hrl, hrun⟩ := oroW_ok hm hS.1.pins hw
+  obtain ⟨hmem, hrl, hrun⟩ := oroW_ok hm hS.check.pins hw
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
   refine ⟨hl, hok, ?_, ?_, hrl, by rw [hres]⟩
   · rw [hst, hmem]; exact hS
@@ -197,7 +197,7 @@ theorem ibd_ref {p : Prog} (hB : BasisProg p) {dn : NIdx → Option ConLeche.Nam
     RefE True (installBasisDeclE p n m vis c) (installBasisDecl fe ci) a
       (fun v fe' a' => IbdPost dn m v.1 v.2 fe' a') := by
   obtain ⟨w, hw1, hwl, hname⟩ := decCI_name hci
-  have hcb : c.toNat + 1 < 2 ^ 64 := erecP_bound hw1 hS.2
+  have hcb : c.toNat + 1 < 2 ^ 64 := erecP_bound hw1 hS.iw
   have hc1 : (c + 1).toNat = c.toNat + 1 := toNat_add_small c 1 hcb
   have ew : rdW (m.arr64 EREC) (c + 1) = w := rdW_of_get? hc1.symm (erecP_get hw1)
   cases n with
@@ -210,12 +210,12 @@ theorem ibd_ref {p : Prog} (hB : BasisProg p) {dn : NIdx → Option ConLeche.Nam
   by_cases hb : r1.headD 0 ≠ 0
   · rw [installBasisDeclE.k_env_find.abort1 p _ _ _ _ _ hb]
     have : (fe.find? ci.name).isSome = true := by
-      rw [hname]; exact envFindW_hitSome h1 hS.1.env hwl hb
+      rw [hname]; exact envFindW_hitSome h1 hS.check.env hwl hb
     simp only [installBasisDecl, fail_bindAM]
     exact fun _ => ErrClaim.ite_neg (by simp [Option.isNone_iff_eq_none, Option.isSome_iff_ne_none] at this ⊢; exact this)
       (ErrClaim.fail _ _ rfl)
   rw [installBasisDeclE.k_env_find.arm1 p _ _ _ _ _ (by simpa using hb)]
-  obtain ⟨rfl, hfind⟩ := envFindW_miss h1 hS.1.env hwl (by simpa using hb)
+  obtain ⟨rfl, hfind⟩ := envFindW_miss h1 hS.check.env hwl (by simpa using hb)
   have hw : (rdW (m1.arr64 EREC) (c + 1)).toNat < 2 ^ 32 := by rw [ew]; exact hwl
   rcases h2 : callW p n "env_push" [vis, c] m1 with _ | ⟨r2, m2⟩
   · rw [liftE_none, installBasisDeclE.k_env_push.none]; exact RefE.of_cls0 (by simp)

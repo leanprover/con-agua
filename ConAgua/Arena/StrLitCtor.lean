@@ -313,7 +313,7 @@ theorem spine_call (cons ofNat nilE : Word) (hn : HW nilE) :
     simp only [spineW, hnle, ↓reduceIte] at hW
     wstep hW, h1 : callW p n "str_utf8_char" [k, e] m => cl, m₁
     obtain ⟨hm1, hc0, hc1⟩ := strUtf8Char_callW p hp.strUtf8Char n m k e c cs
-      (by rw [sliceL_tpool m _ _ (by have := pcap_ge m; have := pcap_eq m (by have := hS.arena.1.lit.1.cap; omega); omega)]; exact hs) hke
+      (by rw [sliceL_tpool m _ _ (by have := pcap_ge m; have := pcap_eq m (by have := hS.arena.base.lit.1.cap; omega); omega)]; exact hs) hke
       (by rw [tpool_size]; exact Nat.le_of_lt e.toNat_lt) he4 cl m₁ h1
     rw [hm1] at hW
     have hne : ¬ cl.tail.headD 0 = 0 := by
@@ -440,9 +440,9 @@ theorem ctor_call (hS : CoreS dn m a vis fe M eb) {h : Word} (hh : HW h) {s : St
     vmono_ctorPreT.run (AM.run_of_ok _ _ c1.1) hv
   have g8' : h >>> 28 = 8 := by simpa using g8
   have hvOK : viewOK m₁ h LIT := ⟨gs, by simpa using gb⟩
-  obtain ⟨htop, -, hstr⟩ := lit_rec m₁ _ hS₁.arena.1 h hh hvOK g8' _ hv₁
+  obtain ⟨htop, -, hstr⟩ := lit_rec m₁ _ hS₁.arena.base h hh hvOK g8' _ hv₁
   obtain ⟨-, hsl⟩ := hstr s rfl
-  have hpool := hS₁.arena.1.lit.1
+  have hpool := hS₁.arena.base.lit.1
   have hsize := hpool.cap
   have htop' := hpool.top
   have hoc : (tfld m₁ LIT (tierW h) (idxW h) 1 +

@@ -41,7 +41,7 @@ theorem CtxSl.grow {m m' : Mem} {p : Nat} (h : CtxSl m p) (hin : CtxIn m p (· <
   have e1 := iwN_agree (RdS.of_grow hg) (show p + i + 1 < iwTop m from by
     have := hin.1 (i + 1) (by omega); simpa [Nat.add_assoc] using this)
   rw [e0] at ho; rw [e1] at hl
-  exact Nat.le_trans (h i hi o l ho hl) hg.1
+  exact Nat.le_trans (h i hi o l ho hl) hg.iw
 
 end L.Ind
 

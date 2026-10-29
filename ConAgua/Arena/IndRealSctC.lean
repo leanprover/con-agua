@@ -329,7 +329,7 @@ theorem envPushTable_stage {p : Prog} (hP : TblProg p) {dn : NIdx → Option Con
     (hc : callW p n "env_push_table" [q] m = some (r, m')) :
     StageR dn vis (fe.pushTable t) m' a ∧ IWGrow m m' ∧ MFr [] [] m m' ∧ AFr m m' := by
   obtain ⟨s', hs', -, hE'⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (envPushTable_refines p hP.htix hP.htrs hP.hept n ⟨m, Locals.init []⟩ vis q t hS.1.env ht) hc
+    (envPushTable_refines p hP.htix hP.htrs hP.hept n ⟨m, Locals.init []⟩ vis q t hS.check.env ht) hc
   obtain ⟨s'', hs'', hM, hw, -⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (envPushTable_mem p hP.htix hP.htrs hP.hept n ⟨m, Locals.init []⟩ q) hc
   rw [hs'] at hE'
@@ -346,11 +346,11 @@ theorem envPushTable_stage {p : Prog} (hP : TblProg p) {dn : NIdx → Option Con
           rcases hb with rfl | rfl | rfl | rfl | rfl | rfl | rfl <;>
             decide)
         (fun x hx => by simp at hx; subst hx; exact not_mem_arenaCtl _ (by decide)) hfr
-        hS.1.arena.1,
-      DerR.frameM _ _ m _ hfr (by decide) a hS.1.arena.2⟩,
-     hS.1.core.frame (by decide) (fun x hx => by simp at hx; subst hx; decide) hfr,
-     hS.1.pins.frame (by decide) hfr, hE', hS.1.mode.frame hfr (by decide) (by decide)⟩
-  obtain ⟨hI1, hE1, hsz, hEs, hc'⟩ := hS.2
+        hS.check.arena.base,
+      DerR.frameM _ _ m _ hfr (by decide) a hS.check.arena.der⟩,
+     hS.check.core.frame (by decide) (fun x hx => by simp at hx; subst hx; decide) hfr,
+     hS.check.pins.frame (by decide) hfr, hE', hS.check.mode.frame hfr (by decide) (by decide)⟩
+  obtain ⟨hI1, hE1, hsz, hEs, hc'⟩ := hS.iw
   have hI : m'.arr64 IW = m.arr64 IW := hfr.arr IW (by decide) (by decide)
   have hER : m'.arr64 EREC = m.arr64 EREC := hfr.arr EREC (by decide) (by decide)
   have h200 : iwTop m' = iwTop m := by simp only [iwTop, hfr.ctl 200 (by decide)]
@@ -408,7 +408,7 @@ theorem tbl_ref {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
     RefE True (tblE p (n + 2) m T C lo ll nP nF rs go gl cvCaw vis)
       (checkStructProjTable (decI T) (decI C) lps nP.toNat nF.toNat (decI rs) guards cvCa fe) a
       (fun v x a' => TblPost dn m a v.1 x v.2 a') := by
-  obtain ⟨w, hw, hwl, hwd⟩ := sumTypeWord (DecB.get (OMono.decCVp _) hcv) hS.2.2.2.2.1
+  obtain ⟨w, hw, hwl, hwd⟩ := sumTypeWord (DecB.get (OMono.decCVp _) hcv) hS.iw.2.2.2.1
   rw [tblE.arm1, hw]
   rw [← hwd] at hcty
   unfold checkStructProjTable
@@ -691,7 +691,7 @@ theorem cto_ref {p : Prog} (hP : TabsProg p) (hp : ApdF p) (n : Nat) (hn : n ≤
   have hb := nPnF_bound hg0
   rw [UInt64.toNat_ofNat_of_lt' hnpb, UInt64.toNat_ofNat_of_lt' hnFb] at hb
   obtain ⟨w, hwT, hwl, hwd⟩ := sumTypeWord (q := UInt64.ofNat cvp)
-    (by rw [UInt64.toNat_ofNat_of_lt' hcvb]; exact DecB.get (OMono.decCVp _) hcv) hS.2.2.2.2.1
+    (by rw [UInt64.toNat_ofNat_of_lt' hcvb]; exact DecB.get (OMono.decCVp _) hcv) hS.iw.2.2.2.1
   rw [hwT]
   unfold tabOne
   -- `struct_proj_guards`

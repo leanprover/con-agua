@@ -176,7 +176,7 @@ theorem bvbW_okF (n F : Nat) (m m' : Mem) (a : AState) (hA : ArenaD m a)
     (hb : bvbW n m h f = some (x, m')) :
     ∃ a', (bvarB F (decE h)).run a = .ok (x.toNat, a') ∧ ArenaD m' a' := by
   obtain ⟨n, rfl⟩ : ∃ j, n = j + 1 := ⟨n - 1, by cases n <;> simp_all [bvbW]⟩
-  have hd := derBW_ok m a hA.1 hA.2 h hh
+  have hd := derBW_ok m a hA.base hA.der h hh
   rw [bvarB_run, ← hd]
   by_cases hs : derBW m h = 32767
   · rw [bvbW_sat n m h f hs] at hb
@@ -184,11 +184,11 @@ theorem bvbW_okF (n F : Nat) (m m' : Mem) (a : AState) (hA : ArenaD m a)
     rw [ite_eq_left hs']
     obtain ⟨n, rfl⟩ : ∃ j, n = j + 1 := ⟨n - 1, by cases n <;> simp_all [bbN]⟩
     rw [bbN_succ] at hb
-    obtain ⟨a', ha', hR'⟩ := bbMemoW_correctF n F m m' a hA.1 h f x hh (by omega) hb
+    obtain ⟨a', ha', hR'⟩ := bbMemoW_correctF n F m m' a hA.base h f x hh (by omega) hb
     have hk := (keeps_bvarBoundMemo F (decE h)).run ha'
     simp only [sp, Prod.mk.injEq] at hk
     have hf := bbMemoW_frame n m m' h f x hb
-    exact ⟨a', ha', hR', DerR.of_store m' a a' (DerR.frameM _ _ m m' hf (by decide) a hA.2) hk.1⟩
+    exact ⟨a', ha', hR', DerR.of_store m' a a' (DerR.frameM _ _ m m' hf (by decide) a hA.der) hk.1⟩
   · rw [bvbW_pk n m h f hs] at hb
     simp only [Option.some.injEq, Prod.mk.injEq] at hb
     obtain ⟨rfl, rfl⟩ := hb

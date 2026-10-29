@@ -483,7 +483,7 @@ theorem dpConstW_ok (n : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) 
   have hA0 : ArenaR (mclearG dpSch m) a :=
     ArenaR.frame (A := []) (C := [dpSch.cs, dpSch.cs + 1]) (fun b hb => by simp at hb)
       (fun x hx => by simp [dpSch] at hx; rcases hx with rfl | rfl <;> exact not_mem_arenaCtl _ (by decide)) hf0
-      hS.1.arena.1
+      hS.check.arena.base
   rcases hg : dpGoW n (mclearG dpSch m) CWF e with _ | ⟨r1, m1⟩ <;> rw [hg] at hb; · simp [dpClrK] at hb
   by_cases h1 : rdW (m1.arr64 CTL) dpSch.cs + 2 = 0
   · simp [dpClrK, h1] at hb
@@ -551,7 +551,7 @@ theorem depthGo_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Opt
       StageR dn vis fe s'.mem a₀ ∧ IWGrow s₀.mem s'.mem; ⊤⦄ := by
   refine triple_post ((dpGo_spec p hv hf hput hgo hnode n).1 s₀ f h) ?_
   rintro r s' ⟨hl, hm⟩
-  obtain ⟨d, mp', hrun, hb, hM', hfr⟩ := dpGoOK n _ _ a₀ f h _ mp hm hS.1.arena.1 hh hM
+  obtain ⟨d, mp', hrun, hb, hM', hfr⟩ := dpGoOK n _ _ a₀ f h _ mp hm hS.check.arena.base hh hM
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
   obtain ⟨hS', hg⟩ := StageR.frame_hi hS hfr (by intro b hb; simp at hb; subst hb; decide)
     (by intro x hx; simp at hx; subst hx; decide) (by decide) (by decide)

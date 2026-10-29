@@ -77,8 +77,8 @@ variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
 theorem StageR.withReadLC {m : Mem} {a : AState} (hS : StageR dn vis fe m a)
     (X : Std.HashMap LIdx ConLeche.Level) :
     StageR dn vis fe m { a with caches := { a.caches with readLC := X } } :=
-  ⟨⟨hS.1.arena.caches_irrel _, let ⟨M, hM⟩ := hS.1.core; ⟨M, hM.readLC X⟩, hS.1.pins, hS.1.env,
-    hS.1.mode⟩, hS.2⟩
+  ⟨⟨hS.check.arena.caches_irrel _, let ⟨M, hM⟩ := hS.check.core; ⟨M, hM.readLC X⟩, hS.check.pins, hS.check.env,
+    hS.check.mode⟩, hS.iw⟩
 
 /-- The stage relation across a level-heap writer. -/
 theorem StageR.of_lheap {m m' : Mem} {a : AState} (hS : StageR dn vis fe m a)
@@ -98,7 +98,7 @@ theorem lzcF_simR {m : Mem} {a : AState} (hS : StageR dn vis fe m a) (hrl : Read
         decZC (denoteN a.store.lss.ls.ns) m' r x ∧ x = lv ∧ a'.store = a.store ∧ ReadLCOK a') := by
   intro r m' h
   obtain ⟨k, hw⟩ := lzcF_lzcW h
-  have hlv := denoteL_lvR hS.1.arena.1 (decI l) lv hd
+  have hlv := denoteL_lvR hS.check.arena.base (decI l) lv hd
   rw [word_decI _ _ hl |>.mpr rfl] at hlv
   obtain ⟨X, hrun, hcX⟩ := readLevelM_run' a (decI l) lv hd hrl
   have hSX := hS.withReadLC X

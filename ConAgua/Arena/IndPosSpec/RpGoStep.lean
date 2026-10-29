@@ -50,7 +50,7 @@ theorem ahW_ok (n : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis 
       StageR dn vis fe m' a' ∧ IWGrow m m' ∧ decOE m' r x := by
   rw [ahWf.arm1] at hh
   rcases hph : phW n m b e nn with _ | r0 <;> rw [hph] at hh; · simp [ahWf.k_ph_app.none] at hh
-  obtain ⟨o, hrun, hpo⟩ := phW_ok n m a b e nn N r0 hN hph hS.1.arena.1 he hb
+  obtain ⟨o, hrun, hpo⟩ := phW_ok n m a b e nn N r0 hN hph hS.check.arena.base he hb
   by_cases hz : r0.headD 0 = 0
   · rw [ahWf.k_ph_app.arm1 n no nl us nn m r0 hz] at hh
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hh)
@@ -727,7 +727,7 @@ theorem rpGo_step_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Wo
   | nil => rw [hvl] at hb; simp [rpG1] at hb
   | cons g vt =>
     have hne : eViewW m h ≠ [] := by rw [hvl]; simp
-    obtain ⟨v, hv, hvr⟩ := eViewW_ok m a hS.1.arena.1 h hne
+    obtain ⟨v, hv, hvr⟩ := eViewW_ok m a hS.1.arena.base h hne
     rw [hvl] at hvr hb
     have leaf : ∀ (hg : (g :: vt).headD 0 = 0 ∨ (g :: vt).headD 0 = 1 ∨ (g :: vt).headD 0 = 2 ∨ (g :: vt).headD 0 = 8),
         (match v with | .bvar _ | .sort _ | .lit _ | .fvar _ _ => True | _ => False) →

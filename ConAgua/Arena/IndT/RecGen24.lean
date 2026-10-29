@@ -288,9 +288,9 @@ theorem cfaLoop_ref (k : Nat) (hk : k ≤ 2 ^ 62) : ∀ (m : Mem) (a : AState) (
     refine RefE.bind_right run5 ?_
     have := ih (by omega) m5 a5 (j + 1) (i + 1) hR5.stage hR5.abs
       (hbs.grow hg05)
-      (by rw [decHL_grow hg05 hftb]; exact hft) (by have := hg05.1; omega)
+      (by rw [decHL_grow hg05 hftb]; exact hft) (by have := hg05.iw; omega)
       (hms.grow (OMono.decPL (fun q => decTM_mono q) _ _) hg05) hmsb
-      (by rw [decHL_grow hg05 hfvb]; exact hfv) (by have := hg05.1; omega)
+      (by rw [decHL_grow hg05 hfvb]; exact hfv) (by have := hg05.iw; omega)
       (hes.grow (fun q => decNCN_mono q) hg05) (hks.grow hg05) hje1 hi' hR5.rc
       (ConRon.Bridge.Inductives.dShape_ext c06.ext _ _ hsh) (denoteEList_ext c06.ext _ _ hftP)
       (ConRon.Bridge.Inductives.dMajor_ext.list c06.ext _ _ hmsP) (denoteEList_ext c06.ext _ _ hfvP)

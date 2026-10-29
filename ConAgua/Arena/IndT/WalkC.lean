@@ -23,15 +23,15 @@ variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
 theorem absOK_apdF {m m' : Mem} {args r : List Word} {a' : AState} (h : apdF m args = some (r, m'))
     (hA : AbsOK m) (hT : StageT dn vis fe m' a') : AbsOK m' :=
   have hf := apdF_frame h
-  ⟨hT.twin.memos.2.1, hA.2.1.frame hf (by decide) (by decide),
-    hA.2.2.1.frame hf (by decide) (by decide), hT.twin.memos.1,
+  ⟨hT.twin.memos.2.1, hA.i1.frame hf (by decide) (by decide),
+    hA.cr.frame hf (by decide) (by decide), hT.twin.memos.1,
     hT.twin.memos.2.2, hT.twin.erec, hT.twin.spn, hT.twin.bstk, hT.flag⟩
 
 /-- **`AbsOK` across `consts_resolve_ffast`**, `StageT` and its memo after it. -/
 theorem absOK_crfF {m m' : Mem} {args r : List Word} {a' : AState} (h : crfF m args = some (r, m'))
     (hA : AbsOK m) (hCr : CrMemo m') (hT : StageT dn vis fe m' a') : AbsOK m' :=
   have hf := crfF_frame h
-  ⟨hT.twin.memos.2.1, hA.2.1.frame hf (by decide) (by decide), hCr, hT.twin.memos.1,
+  ⟨hT.twin.memos.2.1, hA.i1.frame hf (by decide) (by decide), hCr, hT.twin.memos.1,
     hT.twin.memos.2.2, hT.twin.erec, hT.twin.spn, hT.twin.bstk, hT.flag⟩
 
 end L.Ind

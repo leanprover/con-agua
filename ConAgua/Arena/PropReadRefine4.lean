@@ -183,7 +183,7 @@ theorem hpw_call {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a 
   generalize r.headD 0 = x₀ at hW ⊢
   generalize r.tail.headD 0 = x₁ at hW ⊢
   generalize r.tail.tail.headD 0 = x₂ at hW ⊢
-  have hR := hS.arena.1
+  have hR := hS.arena.base
   unfold hpwW at hW
   by_cases hne : L.Ind.eViewW m h = []
   · simp [hne] at hW
@@ -347,7 +347,7 @@ theorem prf_call {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a 
   generalize r.headD 0 = x₀ at hW ⊢
   generalize r.tail.headD 0 = x₁ at hW ⊢
   generalize r.tail.tail.headD 0 = x₂ at hW ⊢
-  have hR := hS.arena.1
+  have hR := hS.arena.base
   unfold prfW at hW
   rcases hL : ppLoopW m f e with _ | ⟨f', e'⟩ <;> rw [hL] at hW
   · cases hW

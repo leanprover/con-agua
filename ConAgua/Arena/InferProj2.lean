@@ -291,7 +291,7 @@ theorem ip_grade (p : Prog) (hp : InferProjProg p) (hpj : ProjProg p) (hc : Infe
   rcases hc3 : callW p n "get_app_fn" [r₂.headD 0] m₂ with _ | ⟨r₃, m₃⟩
   · rw [liftE_none]; exact RefE.of_cls0 (by simp)
   rw [liftE_some]; simp only [ipE.k_get_app_fn]
-  obtain ⟨rfl, hhw, hgaf⟩ := getAppFn_callW hp.leaf hS₂.arena.1 hrw2 hc3
+  obtain ⟨rfl, hhw, hgaf⟩ := getAppFn_callW hp.leaf hS₂.arena.base hrw2 hc3
   by_cases g1 : r₃.headD 0 >>> 28 ≠ 3
   · rw [ite_eq_left g1]
     have ht : ((decE (r₃.headD 0)).tag == ETag.const) = false := by
@@ -309,7 +309,7 @@ theorem ip_grade (p : Prog) (hp : InferProjProg p) (hpj : ProjProg p) (hc : Infe
   rw [ite_eq_right g3]
   have hvOK : viewOK m₃ (r₃.headD 0) CONST := ⟨g2, by simpa using g3⟩
   obtain ⟨cT, cu, hv, hcT, hcu, hcTw, hcuw⟩ :=
-    view_const_words m₃ _ hS₂.arena.1 (r₃.headD 0) hhw hvOK g1'
+    view_const_words m₃ _ hS₂.arena.base (r₃.headD 0) hhw hvOK g1'
   generalize tfld m₃ CONST (tierW (r₃.headD 0)) (idxW (r₃.headD 0)) 0 = wT at hcT hcTw ⊢
   generalize tfld m₃ CONST (tierW (r₃.headD 0)) (idxW (r₃.headD 0)) 1 = wu at hcu hcuw ⊢
   subst hcT hcu

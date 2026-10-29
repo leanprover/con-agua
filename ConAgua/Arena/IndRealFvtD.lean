@@ -169,7 +169,7 @@ twin state unchanged. -/
 theorem ftdF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (e : Word) (he : H e) :
     RelW ftdF [e] (StageR dn vis fe) (fvarTypeD (decI e)) (KeepPost dn vis fe decW0E) := by
   intro m m' a r h hS
-  obtain ⟨rfl, hrun, hlt⟩ := ftdW_ok m m' a hS.1.arena.1 e he r (ftdF_eq h)
+  obtain ⟨rfl, hrun, hlt⟩ := ftdW_ok m m' a hS.1.arena.base e he r (ftdF_eq h)
   exact ⟨_, a, hrun, hS, IWGrow.refl _, hlt, rfl⟩
 
 /-- `fvar_type_d` writes nothing. -/

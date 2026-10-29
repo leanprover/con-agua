@@ -46,7 +46,7 @@ theorem slR_grow {m m' : Mem} (hg : IWGrow m m') (hT : iwTop m < 2 ^ 64) :
       · exact absurd (UInt64.toNat_inj.mp (by simpa using h0)) hl
       · omega
     have ho : o.toNat < iwTop m := by have := hb 0 hl1; simpa using this
-    have e : rdW (m.arr64 IW) o = rdW (m'.arr64 IW) o := by simp only [rdW]; rw [hg.2.2.1 _ ho]
+    have e : rdW (m.arr64 IW) o = rdW (m'.arr64 IW) o := by simp only [rdW]; rw [hg.iwGet _ ho]
     rw [e]
     refine SlR.cons hl (ih fun i hi => ?_)
     have ho1 : (o + 1).toNat = o.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega

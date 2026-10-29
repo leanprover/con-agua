@@ -1075,7 +1075,7 @@ theorem romExpr_refines (rom : List UInt8) (p : Prog) (hL : ExprProg rom p) (hr 
   apply M.triple_of_run
   intro s r s' hs hrun
   obtain ⟨hloc, hW⟩ := M.of_run (P := fun s => s = s₀) hs hrun
-    ((romExpr_specsW rom p hL n).1 s₀ pos ⟨hA.1.lit.1.cap, hA.1.lit.1.top41⟩)
+    ((romExpr_specsW rom p hL n).1 s₀ pos ⟨hA.base.lit.1.cap, hA.base.lit.1.top41⟩)
   subst hs
   exact ⟨hloc, romExprW_ok rom hr e he n _ a₀ pos rest seen m _ _ _ hA hmo hM hd hst hc hW⟩
 

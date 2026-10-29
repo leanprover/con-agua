@@ -26,12 +26,12 @@ theorem flush_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEn
     StageR dn vis fe (flushMem m) { a with caches := Caches.empty } ∧ IWGrow m (flushMem m) := by
   have hf := flushMem_frame m
   have hC : CheckR dn (flushMem m) { a with caches := Caches.empty } vis fe :=
-    ⟨ArenaD.caches_irrel _ ⟨ArenaR.frame_ext [] _ (by simp) flushCtl_ge _ _ hf _ h.1.arena.1,
-      DerR.frameM [] _ _ _ hf (by simp) _ h.1.arena.2⟩,
-    h.1.core.flush hok,
-    h.1.pins.frame (.of_lt (k := 0) (by simp) (by decide)) hf,
-    h.1.env.frame (.of_lt (k := 0) (by simp) (by decide)) (.of_lt flushCtl_lt (by decide)) hf,
-    h.1.mode.frame hf (by simp [flushCtl]) (by simp [flushCtl])⟩
+    ⟨ArenaD.caches_irrel _ ⟨ArenaR.frame_ext [] _ (by simp) flushCtl_ge _ _ hf _ h.check.arena.base,
+      DerR.frameM [] _ _ _ hf (by simp) _ h.check.arena.der⟩,
+    h.check.core.flush hok,
+    h.check.pins.frame (.of_lt (k := 0) (by simp) (by decide)) hf,
+    h.check.env.frame (.of_lt (k := 0) (by simp) (by decide)) (.of_lt flushCtl_lt (by decide)) hf,
+    h.check.mode.frame hf (by simp [flushCtl]) (by simp [flushCtl])⟩
   have hIW : (flushMem m).arr64 IW = m.arr64 IW := hf.1 IW (by simp) (by decide)
   have hE : (flushMem m).arr64 EREC = m.arr64 EREC := hf.1 EREC (by simp) (by decide)
   have h200 : rdW ((flushMem m).arr64 CTL) 200 = rdW (m.arr64 CTL) 200 :=
@@ -39,7 +39,7 @@ theorem flush_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEn
   have h129 : rdW ((flushMem m).arr64 CTL) 129 = rdW (m.arr64 CTL) 129 :=
     hf.ctl 129 (by simp [flushCtl])
   refine ⟨⟨hC, ?_⟩, ?_⟩
-  · simp only [IWOK, iwTop, erTop, hIW, hE, h200, h129, hf.size CTL]; exact h.2
+  · simp only [IWOK, iwTop, erTop, hIW, hE, h200, h129, hf.size CTL]; exact h.iw
   · refine ⟨?_, ?_, fun i _ => by rw [hIW], fun i _ => by rw [hE]⟩
     · simp only [iwTop, h200]; exact Nat.le_refl _
     · simp only [erTop, h129]; exact Nat.le_refl _

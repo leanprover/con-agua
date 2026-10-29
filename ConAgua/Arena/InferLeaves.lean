@@ -103,7 +103,7 @@ theorem es_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (s₀ : St) (a₀ : AStat
   by_cases g3 : tcnt m₁ SORT (tierW (r₁.headD 0)) ≤ idxW (r₁.headD 0)
   · rw [ite_eq_left g3]; exact RefE.of_cls0 rfl
   rw [ite_eq_right g3]
-  obtain ⟨hv, hu⟩ := L.Ind.view_sort_f m₁ _ hS₁.arena.1 (r₁.headD 0) hrw ⟨g2, by simpa using g3⟩ hg
+  obtain ⟨hv, hu⟩ := L.Ind.view_sort_f m₁ _ hS₁.arena.base (r₁.headD 0) hrw ⟨g2, by simpa using g3⟩ hg
   simp only [show decH r₁ = decE (r₁.headD 0) from rfl, tag_sort_beq _ hrw hg, ↓reduceIte]
   exact RefE.bind_right (view_run _ _ _ hv)
     (RefE.ret rfl ⟨⟨M₁, hS₁, hK₁, hSt₁⟩, rfl, hu⟩)
@@ -213,7 +213,7 @@ theorem coreRef_then {α β : Type} [Inhabited α] [Inhabited β] {T₁ : AM α}
     (h₂ : ∀ M', CoreS dn m₁ (AM.st T₁ a₀) vis fe M' eb →
       CoreRef T₂ (AM.st T₁ a₀) dec dn m₁ vis fe M' eb r m ok)
     (hT : T.run a₀ = T₂.run (AM.st T₁ a₀)) : CoreRef T a₀ dec dn m₀ vis fe M eb r m ok := by
-  obtain ⟨M', hS, hK, hSt⟩ := h₁.2.1
+  obtain ⟨M', hS, hK, hSt⟩ := h₁.after
   obtain ⟨hok2, hA2, hres2, hrw2⟩ := h₂ M' hS
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ (hT.trans (AM.run_of_ok _ _ hok2))
   exact ⟨hok, hst ▸ CoreAfter.comp hK hSt hA2, hres.trans hres2, hrw2⟩
@@ -385,7 +385,7 @@ theorem mkForallW_hw (m : Mem) (a : AState) (hA : ArenaD m a) (t b r : Word) (m'
   · cases hI
   simp only [Option.some.injEq, Prod.mk.injEq] at hI
   obtain ⟨rfl, rfl⟩ := hI
-  exact fainternW_hw m a hA.1.forallE t b _ m₁ hI₁
+  exact fainternW_hw m a hA.base.forallE t b _ m₁ hI₁
 
 theorem mkForallW_frame {m m' : Mem} {t b r : Word} (hI : mkForallW m t b = some (r, m')) :
     MemFrame [FADER, FAREC, FASLOT, tier1 FADER, tier1 FAREC, tier1 FASLOT] [30, 31] m m' := by
@@ -575,7 +575,7 @@ theorem il_arm (p : Prog) (hp : InferLeafProg p) (hc : InferLitCallees p) (n : N
   rcases c2 : callW p n "pin_at" [k.toUInt64] m₁ with _ | ⟨r₂, m₂⟩
   · rw [liftE_none]; exact RefE.of_cls0 (by simp)
   rw [liftE_some]; simp only [ilE.k_pin_at]
-  obtain ⟨M', hS', hK', hSt'⟩ := h₁.2.1
+  obtain ⟨M', hS', hK', hSt'⟩ := h₁.after
   obtain ⟨s₂, hs₂, hm₂, -, hlt, hpin⟩ := triple_of_callW (s₀ := ⟨m₁, Locals.init []⟩)
     (pinAt_refines p hp.pinAt n _ (AM.st T₁ a₀) ⟨fun _ => hS'.pins⟩ k.toUInt64) c2
   have hm : m₂ = m₁ := hs₂.symm.trans hm₂
@@ -606,7 +606,7 @@ theorem il_ref (p : Prog) (hp : InferLeafProg p) (hc : InferLitCallees p) (n : N
   by_cases h2 : tcnt s₀.mem LIT (tierW e) ≤ idxW e
   · rw [ite_eq_left h2]; exact RefE.of_cls0 rfl
   rw [ite_eq_right h2]
-  obtain ⟨k, hk, hrel⟩ := view_lit_f s₀.mem a₀ hS.arena.1 e he ⟨h1, by simpa using h2⟩ hg
+  obtain ⟨k, hk, hrel⟩ := view_lit_f s₀.mem a₀ hS.arena.base e he ⟨h1, by simpa using h2⟩ hg
   rw [hv] at hk
   have hl : l = k.l := by simpa using hk
   subst hl
@@ -773,7 +773,8 @@ theorem coreRef_congr {α : Type} [Inhabited α] {T T' : AM α} {a₀ : AState} 
     {dn : NIdx → Option ConLeche.Name} {m₀ m : Mem} {vis : Word} {fe : IFEnv} {M : ModeMaps}
     {eb : Word} {r : List Word} {ok : List Word → Prop} (h : T.run a₀ = T'.run a₀)
     (h' : CoreRef T' a₀ dec dn m₀ vis fe M eb r m ok) : CoreRef T a₀ dec dn m₀ vis fe M eb r m ok := by
-  unfold CoreRef AM.ok AM.st AM.res at *; rw [h]; exact h'
+  obtain ⟨h1, h2, h3, h4⟩ := h'
+  refine ⟨?_, ?_, ?_, h4⟩ <;> unfold AM.ok AM.st AM.res at * <;> rw [h] <;> assumption
 
 /-- **`infer_const`'s unified model**: every callee (outside the verdict closure) lifted. -/
 l_model inferConstE_spec (p : Prog) (hf : p.lookup "infer_const" = some inferConstL)
@@ -843,7 +844,7 @@ theorem inferConst_ref (p : Prog) (hp : InferLeafProg p) (hct : ConstTyAtOK p) (
   · rw [ite_eq_left hne]; exact RefE.of_cls0 (by simp)
   rw [ite_eq_right hne]
   obtain ⟨hw1, hname, hw4, hty, hsl⟩ := infer_decCV_words hcv hS.erec
-  obtain ⟨ids, hv, hlen1, hlen2⟩ := lsNodeW_view hS.arena.1 hus hne
+  obtain ⟨ids, hv, hlen1, hlen2⟩ := lsNodeW_view hS.arena.base hus hne
   by_cases hl : (lsNodeW s₀.mem us).tail.headD 0 ≠ rdW (s₀.mem.arr64 EREC) (r₁.tail.headD 0 + 3)
   · rw [ite_eq_left hl]
     have hlen : (ids.length != cv.levelParams.length) = true := by

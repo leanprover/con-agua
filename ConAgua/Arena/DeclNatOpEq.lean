@@ -88,14 +88,14 @@ def NatCtxR (m : Mem) (r : List Word) (c : EIdx × EIdx × EIdx × NIdx × EIdx 
 theorem pw_of_rec {m m' : Mem} {pi : Word} (hP : PinRecAt m pi) (hI : IWOK m) (hg : IWGrow m m')
     (j : Nat) (hj : j < 21) : pw m' pi (UInt64.ofNat j) = (pinRecW m)[j]'(by simp [pinRecW]; omega) := by
   obtain ⟨-, hroom, hget⟩ := hP
-  have hsz := hI.2.2.1
+  have hsz := hI.iwSize
   have hj64 : (UInt64.ofNat j).toNat = j := UInt64.toNat_ofNat_of_lt' (show j < UInt64.size by unfold UInt64.size; omega)
   have hadd : (pi + UInt64.ofNat j).toNat = pi.toNat + j := by
-    rw [UInt64.toNat_add, hj64]; have := hI.1; omega
+    rw [UInt64.toNat_add, hj64]; have := hI.iw; omega
   have h1 := hget j hj
   simp only [pw, rdW, hadd]
   simp only [iwA] at h1
-  rw [hg.2.2.1 _ (by omega), h1]
+  rw [hg.iwGet _ (by omega), h1]
   simp
 
 theorem natEqCtx_ref (hN : NatSubProg' p) (pi d : Word) :
@@ -366,10 +366,10 @@ theorem pinRecW_pins {m m1 : Mem} (h : m1.arr64 PINS = m.arr64 PINS) : pinRecW m
 
 theorem pw_of_get {m : Mem} {cx w : Word} {j : Nat} (hI : IWOK m) (hcx : cx.toNat + 8 ≤ iwTop m)
     (hj : j < 8) (h : (iwA m)[cx.toNat + j]? = some w) : pw m cx (UInt64.ofNat j) = w := by
-  have hsz := hI.2.2.1
+  have hsz := hI.iwSize
   have hj64 : (UInt64.ofNat j).toNat = j := UInt64.toNat_ofNat_of_lt' (show j < UInt64.size by unfold UInt64.size; omega)
   have hadd : (cx + UInt64.ofNat j).toNat = cx.toNat + j := by
-    rw [UInt64.toNat_add, hj64]; have := hI.1; omega
+    rw [UInt64.toNat_add, hj64]; have := hI.iw; omega
   simp only [pw, rdW, hadd]
   simp only [iwA] at h
   rw [h]; rfl

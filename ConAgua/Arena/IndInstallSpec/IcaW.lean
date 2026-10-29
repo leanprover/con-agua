@@ -235,8 +235,8 @@ def ESl (m : Mem) (o l : Word) (xs : List NIdx) : Prop :=
 
 theorem CapsWords.grow {m m' : Mem} {q : Nat} {ws : List Word} (h : CapsWords m q ws)
     (hg : IWGrow m m') : CapsWords m' q ws :=
-  ⟨Nat.le_trans h.1 hg.1, fun i hi => by
-    simp only [iwA]; rw [hg.2.2.1 _ (by have := h.1; omega)]; exact h.2 i hi⟩
+  ⟨Nat.le_trans h.1 hg.iw, fun i hi => by
+    simp only [iwA]; rw [hg.iwGet _ (by have := h.1; omega)]; exact h.2 i hi⟩
 
 theorem installHslice_ext {a b : Array Word} {o l : Nat} {xs : List NIdx}
     (he : ∀ j < l, b[o + j]? = a[o + j]?) (h : hslice? a o l = some xs) : hslice? b o l = some xs := by
@@ -247,8 +247,8 @@ theorem installHslice_ext {a b : Array Word} {o l : Nat} {xs : List NIdx}
 
 theorem ESl.grow {m m' : Mem} {o l : Word} {xs : List NIdx} (h : ESl m o l xs) (hg : IWGrow m m') :
     ESl m' o l xs :=
-  ⟨Nat.le_trans h.1 hg.2.1, installHslice_ext (fun j hj => by
-    simp only [erA]; rw [hg.2.2.2 _ (by have := h.1; omega)]) h.2⟩
+  ⟨Nat.le_trans h.1 hg.er, installHslice_ext (fun j hj => by
+    simp only [erA]; rw [hg.erGet _ (by have := h.1; omega)]) h.2⟩
 
 /-- An `IW` handle slice copied into `EREC` words. -/
 theorem installHslice_copy {a b : Array Word} {o e l : Nat} {xs : List NIdx}
@@ -277,7 +277,7 @@ theorem installErCopy {p : Prog} (hP : CapsProg p) {n : Nat} {dn : NIdx → Opti
   obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (blockCapsAtErCopy_spec p hP.erAlloc hP.erCopyGo hP.erCopy n _ o l) h
   simp only at hW
-  obtain ⟨hI1, hE1, hsz, hEs, hcl⟩ := hS.2
+  obtain ⟨hI1, hE1, hsz, hEs, hcl⟩ := hS.iw
   obtain ⟨hr, htq, hcp, hf, hlow, htop, hroom, -⟩ := capsErCopyW_post hW hsz hEs (by omega) (by omega)
   obtain ⟨hS', hg⟩ := StageR.erec hS hf hlow (by omega) (by omega)
   refine ⟨hS', hg, ?_⟩
@@ -309,7 +309,7 @@ theorem icfW_ok {p : Prog} (hP : CapsProg p) {n : Nat} {dn : NIdx → Option Con
       CapsWords m' (r.headD 0).toNat
         [w0, w1, w2, w3, w4, w2, w6, z0, z1, z2, aq, al, UInt64.ofNat bs.nP, cq, cl] ∧
       ESl m' aq al bs.memberNames ∧ ESl m' cq cl (cs.map (·.1.name)) := by
-  obtain ⟨hI1, hE1, hsz, hEs, hcl⟩ := hS.2
+  obtain ⟨hI1, hE1, hsz, hEs, hcl⟩ := hS.iw
   have hT : iwTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 200).toNat_lt
   obtain ⟨hq', hq9, hptr1⟩ := partsShapeFacts hq hsrc
   have hptr0 : ∀ o l j v, iwN m pp.toNat = some o → iwN m (pp.toNat + 1) = some l → j < l →
@@ -827,7 +827,7 @@ theorem iirW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv
   have hlen : (iirWs m cv caps).length = 20 := by simp [iirWs]
   rw [hlen] at htop hget
   generalize hM : wrER m1 q1 (iirWs m cv caps) = M at hS' hg htop hget
-  obtain ⟨-, hEtop, -, hEsz, -⟩ := hS.2
+  obtain ⟨-, hEtop, -, hEsz, -⟩ := hS.iw
   obtain ⟨-, hEtop', -, hEsz', -⟩ := hS'.2
   have hP : ∀ j, j < 20 → (erecP M)[q1.toNat + j]? = (iirWs m cv caps)[j]? := fun j hj => by
     rw [erecP_getE (by omega)]; exact hget j hj
@@ -857,7 +857,7 @@ theorem iirW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv
     exact ArrExt.decCV (IWGrow.erecPExtR hg) hcvE
   -- the capability record's words
   have hc15 := hcp.1
-  have hIsz : iwTop m ≤ (m.arr64 IW).size := hS.2.1
+  have hIsz : iwTop m ≤ (m.arr64 IW).size := hS.iw.1
   have hcaps : decCaps (erecP M) dn (q1.toNat + 5) = some c := by
     refine hcp.2 (erecP M) (q1.toNat + 5) (fun i hi => ?_) (fun i hi => ?_)
     · rw [show q1.toNat + 5 + i = q1.toNat + (5 + i) by omega, hP (5 + i) (by omega)]

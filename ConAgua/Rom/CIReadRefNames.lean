@@ -38,11 +38,11 @@ theorem nameCall (x : ConLeche.Name) (hx : nameFits x = true) {n : Nat} {m m' : 
       (r.headD 0).toNat < 2 ^ 32 ∧ (r.tail.headD 0).toNat = pos.toNat + (encName x).length ∧
       MemFrame StoreA StoreC m m' ∧ ModeOK m' := by
   obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (romName_specW rom p hL.toNameProg n _ pos ⟨hA.1.lit.1.cap, hA.1.lit.1.top41⟩) hc
+    (romName_specW rom p hL.toNameProg n _ pos ⟨hA.base.lit.1.cap, hA.base.lit.1.top41⟩) hc
   obtain ⟨ok, hR, res, hlt, hq, hf⟩ := romNameW_ok rom hr x hx n _ a pos rest _ _ _ hA hmo hd hW
   have hrun := AM.run_of_ok _ _ ok
   rw [res] at hrun
-  exact ⟨_, hrun, hR, (keeps_internName x).run hrun, hlt, hq, hf, (romNameW_topK hW).mode hA.1.lit.1 hmo⟩
+  exact ⟨_, hrun, hR, (keeps_internName x).run hrun, hlt, hq, hf, (romNameW_topK hW).mode hA.base.lit.1 hmo⟩
 
 theorem exprCall (e : ConLeche.Expr) (he : exprFits e = true) {n : Nat} {mem mem' : Mem} {a : AState}
     {pos : Word} {rest : List UInt8} {seen : List ConLeche.Expr} {memo : EMemo} {r : List Word}
@@ -54,11 +54,11 @@ theorem exprCall (e : ConLeche.Expr) (he : exprFits e = true) {n : Nat} {mem mem
       (r.tail.headD 0).toNat = pos.toNat + (encExprM seen e).1.length ∧ MemFrame ExprA ExprC mem mem' ∧
       stkTop mem' = stkTop mem ∧ ModeOK mem' := by
   obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨mem, Locals.init []⟩)
-    ((romExpr_specsW rom p hL.toExprProg n).1 _ pos ⟨hA.1.lit.1.cap, hA.1.lit.1.top41⟩) hc
+    ((romExpr_specsW rom p hL.toExprProg n).1 _ pos ⟨hA.base.lit.1.cap, hA.base.lit.1.top41⟩) hc
   obtain ⟨memo', a', hrun, hR, hM', hlt, hq, hf, hs, -⟩ :=
     romExprW_ok rom hr e he n _ a pos rest seen memo _ _ _ hA hmo hM hd hst hcs hW
   exact ⟨memo', a', hrun, hR, (keeps_internExprGo e memo).run hrun, hM', hlt, hq, hf, hs,
-    ((romExprW_topK rom n).1 _ _ _ _ _ hW).mode hA.1.lit.1 hmo⟩
+    ((romExprW_topK rom n).1 _ _ _ _ _ hW).mode hA.base.lit.1 hmo⟩
 
 end calls
 

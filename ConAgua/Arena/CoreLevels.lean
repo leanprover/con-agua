@@ -304,7 +304,7 @@ theorem CoreS.set_lq {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : ASta
   have hspn : m'.arr64 SPN = m.arr64 SPN := hf.arr SPN (by simp [SPN, LQ]) (by decide)
   have h136 : rdW (m'.arr64 CTL) 136 = rdW (m.arr64 CTL) 136 := hf.ctl 136 (by simp)
   refine ⟨⟨⟨ArenaR.caches_irrel _ (ArenaR.frame_ext [(LQ : TieredArray)] [117] (by simp [LQ]) (by simp) m m' hf a
-        hS.arena.1), DerR.of_store _ _ _ (DerR.frameM [(LQ : TieredArray)] [117] m m' hf (by simp [LQ]) a hS.arena.2) rfl⟩,
+        hS.arena.base), DerR.of_store _ _ _ (DerR.frameM [(LQ : TieredArray)] [117] m m' hf (by simp [LQ]) a hS.arena.der) rfl⟩,
       ⟨mr (coreSch_wf _ _ (by decide) (by decide)) vh_const (by decide) (by decide) hS.core.wc,
         mr (coreSch_wf _ _ (by decide) (by decide)) vh_const (by decide) (by decide) hS.core.wk,
         mr (coreSch_wf _ _ (by decide) (by decide)) vh_const (by decide) (by decide) hS.core.wh,
@@ -383,7 +383,7 @@ theorem lvlEqCW_ok {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AState
   | succ n =>
   simp only [lvlEqW] at hl
   have hR₀ : ArenaR (m.set64 CTL 192 0) a :=
-    ArenaR.frame (by decide) c192_not_arena (reset_frame m) hS.arena.1
+    ArenaR.frame (by decide) c192_not_arena (reset_frame m) hS.arena.base
   have hwu : (decI u : LIdx).word.toUInt64 = u := (word_decI _ u hu).mpr rfl
   have hwv : (decI v : LIdx).word.toUInt64 = v := (word_decI _ v hv).mpr rfl
   have hl' := denoteL_lvR hR₀ (decI u) lu hdu
@@ -396,7 +396,7 @@ theorem lvlEqCW_ok {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AState
   obtain ⟨X, hrun, hrl⟩ := lvlEq?_miss a (decI u) (decI v) lu lv hdu hdv hS.readL miss
   -- the state after the miss, before the insert
   have hS₂ : CoreS dn m₁ { a with caches := { a.caches with readLC := X } } vis fe M eb :=
-    ⟨⟨ArenaR.caches_irrel _ hS₁.arena.1, DerR.of_store _ _ _ hS₁.arena.2 rfl⟩, hS₁.core.readLC X,
+    ⟨⟨ArenaR.caches_irrel _ hS₁.arena.base, DerR.of_store _ _ _ hS₁.arena.der rfl⟩, hS₁.core.readLC X,
       hS₁.pins,
       hS₁.env, hrl, fun h l e => hS₁.readLs h l e, hS₁.nwf, hS₁.erec, hS₁.spn, hS₁.memos, hS₁.bstk,
       hS₁.den.caches rfl rfl rfl, hS₁.mode⟩
@@ -527,7 +527,7 @@ theorem CoreS.set_lsq {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : ASt
   have hspn : m'.arr64 SPN = m.arr64 SPN := hf.arr SPN (by simp [SPN, LSQ]) (by decide)
   have h136 : rdW (m'.arr64 CTL) 136 = rdW (m.arr64 CTL) 136 := hf.ctl 136 (by simp)
   refine ⟨⟨⟨ArenaR.caches_irrel _ (ArenaR.frame_ext [(LSQ : TieredArray)] [119] (by simp [LSQ]) (by simp) m m' hf a
-        hS.arena.1), DerR.of_store _ _ _ (DerR.frameM [(LSQ : TieredArray)] [119] m m' hf (by simp [LSQ]) a hS.arena.2) rfl⟩,
+        hS.arena.base), DerR.of_store _ _ _ (DerR.frameM [(LSQ : TieredArray)] [119] m m' hf (by simp [LSQ]) a hS.arena.der) rfl⟩,
       ⟨mr (coreSch_wf _ _ (by decide) (by decide)) vh_const (by decide) (by decide) hS.core.wc,
         mr (coreSch_wf _ _ (by decide) (by decide)) vh_const (by decide) (by decide) hS.core.wk,
         mr (coreSch_wf _ _ (by decide) (by decide)) vh_const (by decide) (by decide) hS.core.wh,
@@ -582,25 +582,25 @@ theorem lvlsEqCW_ok {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AStat
   rw [ite_eq_right hn] at hl
   -- `ls_node` read both handles, so both are stored and read back (`StoreDen.lsAll`)
   obtain ⟨lu, hdu⟩ := hS.den.lsAll _ (by
-    obtain ⟨ids, e, -⟩ := lsNodeW_view hS.arena.1 hu (fun e => hn (.inl e)); rw [e]; rfl)
+    obtain ⟨ids, e, -⟩ := lsNodeW_view hS.arena.base hu (fun e => hn (.inl e)); rw [e]; rfl)
   obtain ⟨lv, hdv⟩ := hS.den.lsAll _ (by
-    obtain ⟨ids, e, -⟩ := lsNodeW_view hS.arena.1 hv (fun e => hn (.inr e)); rw [e]; rfl)
+    obtain ⟨ids, e, -⟩ := lsNodeW_view hS.arena.base hv (fun e => hn (.inr e)); rw [e]; rfl)
   have hwu : (decI us : LsIdx).word.toUInt64 = us := (word_decI _ us hu).mpr rfl
   have hwv : (decI vs : LsIdx).word.toUInt64 = vs := (word_decI _ vs hv).mpr rfl
   obtain ⟨ids₁, hv₁, hd₁⟩ := denoteLs_view a (decI us) lu hdu
   obtain ⟨ids₂, hv₂, hd₂⟩ := denoteLs_view a (decI vs) lv hdv
-  obtain ⟨e₁, t₁, s₁⟩ := lsNodeW_store hS.arena.1 hu (by exact hv₁)
-  obtain ⟨e₂, t₂, s₂⟩ := lsNodeW_store hS.arena.1 hv (by exact hv₂)
+  obtain ⟨e₁, t₁, s₁⟩ := lsNodeW_store hS.arena.base hu (by exact hv₁)
+  obtain ⟨e₂, t₂, s₂⟩ := lsNodeW_store hS.arena.base hv (by exact hv₂)
   rw [e₁, e₂] at hl
   simp only [List.headD_cons, List.tail_cons] at hl
   have hR₀ : ArenaR (m.set64 CTL 192 0) a :=
-    ArenaR.frame (by decide) c192_not_arena (reset_frame m) hS.arena.1
+    ArenaR.frame (by decide) c192_not_arena (reset_frame m) hS.arena.base
   have hpool : (m.set64 CTL 192 0).arr64 POOL = m.arr64 POOL :=
     Mem.arr64_set64_ne _ _ _ _ _ (by decide)
   have hpool1 : (m.set64 CTL 192 0).arr64 POOL1 = m.arr64 POOL1 :=
     Mem.arr64_set64_ne _ _ _ _ _ (by decide)
   have hpoolv := vpool_congr hpool hpool1
-  have htop := (hS.arena.1).lit.1.top41
+  have htop := (hS.arena.base).lit.1.top41
   have hl₁ := lvsR_of_slice hR₀ ids₁ lu _ _ (by rw [hpoolv]; exact s₁) (by omega) hd₁
   have hl₂ := lvsR_of_slice hR₀ ids₂ lv _ _ (by rw [hpoolv]; exact s₂) (by omega) hd₂
   obtain ⟨hx, hz⟩ := equivsW_ok (nameN_rel _ hS.nwf) n _ _ _ _ _ _ _ _ _ hl₁ hl₂ hl
@@ -609,7 +609,7 @@ theorem lvlsEqCW_ok {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AStat
   obtain ⟨hS₁, hK₁⟩ := hS.frame hf₁ (by simp [LH]) (by simp)
   obtain ⟨X, hrun, hrl⟩ := lvlsEq?_miss a (decI us) (decI vs) lu lv hdu hdv hS.readLs miss
   have hS₂ : CoreS dn m₁ { a with caches := { a.caches with readLsC := X } } vis fe M eb :=
-    ⟨⟨ArenaR.caches_irrel _ hS₁.arena.1, DerR.of_store _ _ _ hS₁.arena.2 rfl⟩,
+    ⟨⟨ArenaR.caches_irrel _ hS₁.arena.base, DerR.of_store _ _ _ hS₁.arena.der rfl⟩,
       hS₁.core.readLsC X, hS₁.pins, hS₁.env, fun h l e => hS₁.readL h l e, hrl, hS₁.nwf,
       hS₁.erec, hS₁.spn, hS₁.memos, hS₁.bstk,
       hS₁.den.caches rfl rfl rfl, hS₁.mode⟩

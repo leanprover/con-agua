@@ -99,7 +99,7 @@ theorem nckW_ok (n : Nat) (s₀ s' : St) (a₀ : AState)
       DecB (fun m => decCtx m (r.headD 0).toNat) s'.mem (AM.res (bs.nestCtx fvsP) a₀) ∧
       StageR dn vis fe s'.mem (AM.st (bs.nestCtx fvsP) a₀) ∧ IWGrow s₀.mem s'.mem ∧
       CtxIn s'.mem (r.headD 0).toNat (· < iwTop s'.mem) ∧ CtxSl s'.mem (r.headD 0).toNat := by
-  obtain ⟨hI1, hE1, hsz, hEs, hcl⟩ := hS.2
+  obtain ⟨hI1, hE1, hsz, hEs, hcl⟩ := hS.iw
   have hT : iwTop s₀.mem < 2 ^ 64 := (rdW (s₀.mem.arr64 CTL) 200).toNat_lt
   obtain ⟨hq', hq9, hptr1⟩ := partsShapeFacts hq hsrc
   have hptr0 : ∀ o l j v, iwN s₀.mem q.toNat = some o → iwN s₀.mem (q.toNat + 1) = some l → j < l →

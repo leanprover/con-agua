@@ -427,7 +427,7 @@ theorem slotVarW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEn
   obtain ⟨hg0, h⟩ := of_ite_none' h
   have hu32 : (pinW m 53).toNat < 2 ^ 32 := by have : ¬ (4294967296 : Nat) ≤ (pinW m 53).toNat := hu; omega
   have hz32 : z.toNat < 2 ^ 32 := by have : ¬ (4294967296 : Nat) ≤ z.toNat := hz; omega
-  have hzl : zeroLevel.run a = .ok (decI (pinW m 53), a) := pinZeroLevel_run (hS.1.pins.full hpin)
+  have hzl : zeroLevel.run a = .ok (decI (pinW m 53), a) := pinZeroLevel_run (hS.check.pins.full hpin)
   obtain ⟨a1, hrun1, hS1, hg1⟩ := internSort_stage hS _ hu32 hso
   have hrd : rdW (m1.arr64 IW) g = UInt64.ofNat G.nP := by
     have e1 := (iwN_rdW hg (by have := g.toNat_lt; omega))
@@ -947,7 +947,7 @@ theorem pdW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n
       by_cases hev : eViewW m e = []
       · rw [pdW_ev n m xo xl e hxl (by simpa using hf) hev] at h; simp at h
       rw [pdW_cons n m xo xl e hxl (by simpa using hf) hev] at h
-      obtain ⟨v, hv, hR⟩ := eViewW_ok m a hS.1.arena.1 e hev
+      obtain ⟨v, hv, hR⟩ := eViewW_ok m a hS.1.arena.base e hev
       have hhead := eViewW_head6 m e hev hf6
       have hdec : ∃ ty b : EIdx, v = .forallE ty b ∧ (eViewW m e).tail.headD 0 = (eViewW m e).getD 1 0 ∧
           (eViewW m e).tail.tail.headD 0 = (eViewW m e).getD 2 0 ∧

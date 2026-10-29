@@ -77,7 +77,7 @@ theorem sumDecPL_grow {α : Type} {m m' : Mem} {f f' : Nat → Option α} (hg : 
     obtain ⟨v, hv, x, hfx, xs', hxs, rfl⟩ := h
     refine ⟨v, ?_, x, hf v x hfx, xs', ih (o + 1) xs' (by omega) hxs, rfl⟩
     simp only [iwN, nat?, iwA] at hv ⊢
-    rw [hg.2.2.1 o (by omega)]; exact hv
+    rw [hg.iwGet o (by omega)]; exact hv
 
 /-- A handle at the head of a slice decoded below the top, as the model reads it. -/
 theorem sumRd_of_decHL_truncM {m : Mem} {o l : Word} {x : EIdx} {xs : List EIdx}

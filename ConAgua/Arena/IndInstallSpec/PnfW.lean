@@ -96,9 +96,9 @@ theorem pos3_iwN_word {m : Mem} {i v : Nat} (h : iwN (truncM m) i = some v) :
 theorem pos3_cssAt {m : Mem} {o l : Word} {css : List (List (IConstantVal × Nat))}
     (h : PSlR decCNSB css o l m) :
     l.toNat = css.length ∧ o.toNat + css.length ≤ iwTop m ∧ CssAt m o.toNat css := by
-  have hlen : css.length = l.toNat := decPL_length _ h.1
-  refine ⟨hlen.symm, by rw [hlen]; exact h.2, fun i hi => ?_⟩
-  obtain ⟨v, hv, hcs⟩ := decPL_getH (truncM m) h.1 i (by omega)
+  have hlen : css.length = l.toNat := decPL_length _ h.dec
+  refine ⟨hlen.symm, by rw [hlen]; exact h.bound, fun i hi => ?_⟩
+  obtain ⟨v, hv, hcs⟩ := decPL_getH (truncM m) h.dec i (by omega)
   obtain ⟨hdr, hhdr, rfl, hi'⟩ := pos3_iwN_word hv
   obtain ⟨o', l', ho, hl, hb, hd⟩ := decCNSB_bound (m := m) (q := hdr.toNat) hcs
   obtain ⟨ow, how, rfl, hlt0⟩ := pos3_iwN_word ho
@@ -188,7 +188,7 @@ theorem pos3_rec2H {p : Prog} (hP : NfsProg p) {n : Nat} {dn : NIdx → Option C
     StageR dn vis fe m' a ∧ IWGrow m m' ∧ MFr [] [] m m' ∧ DecB (fun m => decNFS m (r.headD 0).toNat) m' xs := by
   obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (rec2_specW p hP.alloc n hP.rec2 _ _ _) h
-  obtain ⟨-, -, -, hf, -, -⟩ := recW_post hW hS.2.2.2.2.2 hS.2.2.2.1 rfl
+  obtain ⟨-, -, -, hf, -, -⟩ := recW_post hW hS.iw.2.2.2.2 hS.iw.2.2.1 rfl
   obtain ⟨hS', hg, hr, hget, htop⟩ := recW_stage hW hS rfl
   refine ⟨hS', hg, MFr.of_iw hf, ?_⟩
   subst hr

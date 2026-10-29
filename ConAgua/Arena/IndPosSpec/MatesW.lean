@@ -109,8 +109,8 @@ theorem StageR.frame_hi {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : 
   have h200 : rdW (m'.arr64 CTL) 200 = rdW (m.arr64 CTL) 200 := hf.ctl 200 hC2
   have h129 : rdW (m'.arr64 CTL) 129 = rdW (m.arr64 CTL) 129 :=
     hf.ctl 129 (fun h => by have := (hC _ h).1; simp at this)
-  refine ⟨⟨CheckR.frame_hi hA hC hf hS.1, ?_⟩, ?_⟩
-  · simp only [IWOK, iwTop, erTop, hI, hE, h200, h129, hf.size CTL]; exact hS.2
+  refine ⟨⟨CheckR.frame_hi hA hC hf hS.check, ?_⟩, ?_⟩
+  · simp only [IWOK, iwTop, erTop, hI, hE, h200, h129, hf.size CTL]; exact hS.iw
   · refine ⟨?_, ?_, fun i _ => by rw [hI], fun i _ => by rw [hE]⟩
     · simp only [iwTop, h200]; exact Nat.le_refl _
     · simp only [erTop, h129]; exact Nat.le_refl _

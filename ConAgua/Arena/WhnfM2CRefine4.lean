@@ -234,7 +234,7 @@ theorem m2cEta_ref (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤
   · rw [liftE_none, m2cEtaE.k_get_app_args.none]; exact RefE.of_cls0 (by simp)
   rw [liftE_some, m2cEtaE.k_get_app_args.arm1]
   obtain ⟨t2, ht2, -, hfr2, hg2, htop2, htop2', xs, hargs, hsp2⟩ := triple_of_callW
-    (s₀ := ⟨m1, Locals.init []⟩) (getAppArgs_refines p hp.spine (N' + 1) _ a1 hS1.arena.1 _ htm hS1.spn) c2
+    (s₀ := ⟨m1, Locals.init []⟩) (getAppArgs_refines p hp.spine (N' + 1) _ a1 hS1.arena.base _ htm hS1.spn) c2
   rw [ht2] at hfr2 hg2 hsp2 htop2'
   have hS2 := hS1.frame_stk hfr2 (by simp) (by simp)
   have he2 : m2.arr64 EREC = m1.arr64 EREC := hfr2.1 EREC (by simp [EREC, SPN]) (by decide)

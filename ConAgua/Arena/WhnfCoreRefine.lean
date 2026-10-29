@@ -222,7 +222,7 @@ theorem projCert_refines (p : Prog) (hp : WhnfCoreProg p) (n : Nat) (s₀ : St) 
   rcases hc2 : callW p n "peel_pis" [an, rdW (s.mem.arr64 EREC) (r₁.tail.headD 0 + 4)] s.mem with _ | ⟨r₂, m₂⟩ <;> simp only [hc2, Option.some.injEq, Prod.mk.injEq, reduceCtorEq] at hW
   obtain ⟨hr, hm⟩ := hW
   obtain ⟨t₂, ht₂, hm₂, -, -, hpeel⟩ := triple_of_callW
-    (peelPis_refines p hp.spine n s a₀ hS.arena.1 an _ htw) hc2
+    (peelPis_refines p hp.spine n s a₀ hS.arena.base an _ htw) hc2
   rw [ht₂] at hm₂
   have hlen : args.toList.length = an.toNat := by simp [har.size]
   rw [decE_eq, ← hty, ← hlen] at hpeel
@@ -245,8 +245,8 @@ theorem CoreS.frame_stk {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : A
   have aC : ∀ lo hi : Nat, hi ≤ 136 → AvoidC lo hi C := fun lo hi h x hx => by
     have := hA; rw [hC x hx]; right; simpa using h
   exact ⟨⟨ArenaR.frame_ext A C (fun b hb => by rw [hA b hb]; decide)
-      (fun x hx => by rw [hC x hx]; decide) m m' hf a hS.arena.1,
-      DerR.frameM A C m m' hf (fun b hb => by rw [hA b hb]; decide) a hS.arena.2⟩,
+      (fun x hx => by rw [hC x hx]; decide) m m' hf a hS.arena.base,
+      DerR.frameM A C m m' hf (fun b hb => by rw [hA b hb]; decide) a hS.arena.der⟩,
     hS.core.frame (aA 96 128 (by decide)) (aC 96 128 (by decide)) hf,
     hS.pins.congr (hf.arr PINS (fun h => by have := hA _ h; simp [PINS, SPN] at this) (by decide)),
     hS.env.frame (aA 129 144 (by decide)) (aC 128 136 (by decide)) hf,

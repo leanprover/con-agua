@@ -162,7 +162,7 @@ theorem cArm_ok {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a :
   by_cases hne : lsNodeW m₁ us = []
   · simp [hne] at hW
   simp only [hne, ↓reduceIte] at hW
-  obtain ⟨ids, hv, hlen1, hlen2⟩ := lsNodeW_view hS.arena.1 hus hne
+  obtain ⟨ids, hv, hlen1, hlen2⟩ := lsNodeW_view hS.arena.base hus hne
   have hvl := LsStore.viewLen_of_view _ _ _ hv
   have hpre : (cArmT fe T (decI cn) (decI us)).run a =
       (if ids.length = cv.levelParams.length then do
@@ -262,7 +262,7 @@ theorem htp_call {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a 
   generalize r.headD 0 = x₀ at hW ⊢
   generalize r.tail.headD 0 = x₁ at hW ⊢
   generalize r.tail.tail.headD 0 = x₂ at hW ⊢
-  have hR := hS.arena.1
+  have hR := hS.arena.base
   unfold htpW at hW
   by_cases hne : L.Ind.eViewW m h = []
   · simp [hne] at hW
@@ -405,7 +405,7 @@ theorem tsp_call {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a 
   generalize r.headD 0 = x₀ at hW ⊢
   generalize r.tail.headD 0 = x₁ at hW ⊢
   generalize r.tail.tail.headD 0 = x₂ at hW ⊢
-  have hR := hS.arena.1
+  have hR := hS.arena.base
   unfold tspW at hW
   rcases hL : tsLoopW m f rt 0 with _ | ⟨f', rr, d⟩ <;> rw [hL] at hW
   · cases hW

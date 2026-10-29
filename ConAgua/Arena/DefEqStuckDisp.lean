@@ -345,8 +345,8 @@ theorem ds_ref (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : StuckCalle
   have hhdb := eViewW_head s₀.mem b hne₂'
   rw [← hra] at hhda
   rw [← hrb] at hhdb
-  obtain ⟨va, hva, hvra⟩ := L.Ind.eViewW_ok s₀.mem a₀ hS.arena.1 a hne₁'
-  obtain ⟨vb, hvb, hvrb⟩ := L.Ind.eViewW_ok s₀.mem a₀ hS.arena.1 b hne₂'
+  obtain ⟨va, hva, hvra⟩ := L.Ind.eViewW_ok s₀.mem a₀ hS.arena.base a hne₁'
+  obtain ⟨vb, hvb, hvrb⟩ := L.Ind.eViewW_ok s₀.mem a₀ hS.arena.base b hne₂'
   rw [← hra] at hvra
   rw [← hrb] at hvrb
   have hta := viewR_tag hvra

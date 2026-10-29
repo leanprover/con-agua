@@ -149,7 +149,7 @@ theorem suh_ref (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (n : Nat)
       (suHeadT (coreKnot (decMode mode) fe id F) fe d.toNat (decE b) (decE wta)) a₀
       (CorePost decBool dn s₀.mem vis fe M eb ResH) := by
   have hS := hs.rel
-  have hR := hS.arena.1
+  have hR := hS.arena.base
   simp only [suhE]
   rcases c1 : callW p n "get_app_fn" [wta] s₀.mem with _ | ⟨r₁, m₁⟩
   · rw [liftE_none, suhE.k_get_app_fn.none]; exact RefE.of_cls0 (by simp)
@@ -216,7 +216,7 @@ theorem suh_ref (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (n : Nat)
       us2) c4
   have em₄ : m₄ = m₃.set64 CTL 136 (rdW (s₀.mem.arr64 CTL) 136) := by rw [← ht₄, ht₄s]
   rw [hr₄] at hne
-  have hvl := defeq_lsNodeW_viewLen hS₃.arena.1 huw hne
+  have hvl := defeq_lsNodeW_viewLen hS₃.arena.base huw hne
   rw [← hr₄] at hvl
   subst em₄
   simp only [suhE.k_ls_node]

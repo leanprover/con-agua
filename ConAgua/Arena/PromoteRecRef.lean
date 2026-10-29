@@ -60,8 +60,8 @@ theorem rdW_of_hd? {a : Array Word} {i : Nat} {k : IdxKind} {x : Idx k} (h : hd?
 theorem erec_set {m : Mem} {a : AState} {pm : PMemo} (hD : ArenaD m a) (hP : PMemoR m pm)
     (q x : Word) : ArenaD (m.set64 EREC q x) a ∧ PMemoR (m.set64 EREC q x) pm := by
   have hf : MemFrame [EREC] [] m (m.set64 EREC q x) := MemFrame.set64 m EREC (by decide) q x
-  exact ⟨⟨ArenaR.frame_ext _ _ (by simp [EREC]) (by simp) m _ hf a hD.1,
-    DerR.frameM _ _ m _ hf (by simp [EREC]) a hD.2⟩,
+  exact ⟨⟨ArenaR.frame_ext _ _ (by simp [EREC]) (by simp) m _ hf a hD.base,
+    DerR.frameM _ _ m _ hf (by simp [EREC]) a hD.der⟩,
     hP.frame (by simp [EREC]) (by simp) hf⟩
 
 /-! ## The twin's lists -/
@@ -306,7 +306,7 @@ theorem slice_gen {k : IdxKind} (kw : Word) (gl : FnName)
   have hE₁ : (m.set64 CTL 129 (q.headD 0 + l)).arr64 EREC = m.arr64 EREC :=
     Mem.arr64_set64_ne _ _ _ _ _ (by decide)
   have hD₁ : ArenaD (m.set64 CTL 129 (q.headD 0 + l)) a :=
-    ⟨ArenaR.frame_ext _ _ (by simp) (by simp) m _ hf₁ a hD.1, DerR.frameM _ _ m _ hf₁ (by simp) a hD.2⟩
+    ⟨ArenaR.frame_ext _ _ (by simp) (by simp) m _ hf₁ a hD.base, DerR.frameM _ _ m _ hf₁ (by simp) a hD.der⟩
   have hP₁ := hP.frame (by simp) (by simp) hf₁
   have hqv : (q.headD 0).toNat = erecTop m := by rw [hq]; rfl
   obtain ⟨a₂, pm₂, us₂, hrun, hD₂, hP₂, hsl₂, hag, hsz₂, hcp, hfr, htk⟩ :=
@@ -645,7 +645,7 @@ theorem vg_rel (n : Nat) (m : Mem) (a : AState) (pm₀ : PMemo) (g vis : Word) (
   rw [hs₁] at hW₁
   obtain ⟨hP₁, hf₁⟩ := clear_rel hP hW₁
   have hD₁ : ArenaD m₁ a :=
-    ⟨ArenaR.frame_ext _ _ (by simp) (by simp) m _ hf₁ a hD.1, DerR.frameM _ _ m _ hf₁ (by simp) a hD.2⟩
+    ⟨ArenaR.frame_ext _ _ (by simp) (by simp) m _ hf₁ a hD.base, DerR.frameM _ _ m _ hf₁ (by simp) a hD.der⟩
   have hE₁ : m₁.arr64 EREC = m.arr64 EREC := hf₁.arr EREC (by simp) (by decide)
   have ht₁ : erecTop m₁ = erecTop m := by simp only [erecTop]; rw [hf₁.ctl 129 (by simp)]
   have hP₁r : erecP m₁ = erecP m := by simp only [erecP, hE₁, ht₁]

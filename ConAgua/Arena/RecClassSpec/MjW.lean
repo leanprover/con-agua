@@ -151,8 +151,8 @@ theorem mjW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
   rcases n with _ | n
   · exact RSim.none
   rw [mjW.arm1, rec2Major_eq]
-  have hsz := hS.2.2.2.1
-  have htop := hS.2.1
+  have hsz := hS.iw.2.2.1
+  have htop := hS.iw.1
   obtain ⟨-, hgt, ⟨o3, l3, h3, h4, hcls⟩, ⟨o5, l5, h5, h6, hft⟩, -, -⟩ := rec2CG_parts hG
   obtain ⟨e3, t3⟩ := rec2RdN (w := g) (k := 3) h3 hsz
   obtain ⟨e4, t4⟩ := rec2RdN (w := g) (k := 4) h4 hsz

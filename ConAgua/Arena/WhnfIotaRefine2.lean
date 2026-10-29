@@ -335,7 +335,7 @@ theorem io_ref (p : Prog) (hp : IotaProg' p) (hi1 : IotaInst1OK p) (n : Nat) (hk
   simp only [liftE_some, ioE.k_get_app_args]
   obtain ⟨t₂, ht₂, hloc2, hfr, hgrew, hhead, htop2, xs, hga, hsp2⟩ := triple_of_callW
     (getAppArgs_refines p hp.spine n ⟨m₁, Locals.init []⟩ (AM.st (piResidual (decE tyCtor) margs.toList) a₀)
-      hS₁.arena.1 (r₁.tail.headD 0) hh1 hS₁.spn) hc2
+      hS₁.arena.base (r₁.tail.headD 0) hh1 hS₁.spn) hc2
   rw [ht₂] at hfr hgrew htop2 hsp2
   have hS₂ : CoreS dn m₂ (AM.st (piResidual (decE tyCtor) margs.toList) a₀) vis fe M₁ eb :=
     hS₁.frame_stk hfr (fun b hb => by simpa using hb) (fun x hx => by simpa using hx)

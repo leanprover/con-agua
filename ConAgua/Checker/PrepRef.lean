@@ -89,8 +89,8 @@ theorem pPrepCore_ok (p : Prog) (hx : HoistExt p) (n : Nat) (m m' : Mem) (a : AS
       (fun _ _ h => h) idx hs⟩
   -- the checks
   generalize hdsA : pre.decls ++ ds = dsAll at hD hn hDsz
-  have hsz := hI.2.2.1
-  have htsz : iwTop m ≤ (m.arr64 IW).size := hI.1
+  have hsz := hI.iwSize
+  have htsz : iwTop m ≤ (m.arr64 IW).size := hI.iw
   cases n with
   | zero => simp [pPrepW] at h
   | succ n =>

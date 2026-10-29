@@ -297,7 +297,7 @@ theorem cch_ref {p : Prog} (hApd : ApdF p) (hCrf : CrfF p) {dn : NIdx → Option
     · rw [classConstOkHeaderE.k_unresolved_consts_error.eq_1]
       obtain ⟨M9, hC9⟩ := hS9.core
       rw [hty]
-      exact fun hG => uce_errClaim_hi hG.uce hG.nv hC9.arena.1 hC9.pins hwtl (by decide) h10 "type of"
+      exact fun hG => uce_errClaim_hi hG.uce hG.nv hC9.arena.base hC9.pins hwtl (by decide) h10 "type of"
     · rw [classConstOkHeaderE.k_unresolved_consts_error.abort1]
       exact RefE.of_cls0 rfl
   rw [classConstOkHeaderE.k_consts_resolve_ffast.arm2 _ _ _ _ _ _ hb9]

@@ -271,8 +271,8 @@ theorem emit_keep {κ : IdxKind} {dn : NIdx → Option ConLeche.Name} {vis : Wor
     (hm : m' = wrIW mq (rq.headD 0) ws) :
     KeepPost dn vis fe (decRL (fun m => (decHL m : Nat → Nat → Option (List (Idx κ)))) 0) m m' a r
       (ws.map (decI : Word → Idx κ)) := by
-  obtain ⟨hq0, hmq, hKeep, hroom, htop⟩ := iwAlloc_fref p hal N k m rq mq hS.2 hq
-  have hrec := recPost_wr m ws N hN hS.2 (by simpa [iwTop, hN] using hroom)
+  obtain ⟨hq0, hmq, hKeep, hroom, htop⟩ := iwAlloc_fref p hal N k m rq mq hS.iw hq
+  have hrec := recPost_wr m ws N hN hS.iw (by simpa [iwTop, hN] using hroom)
   subst hmq; subst hr; rw [hq0]; rw [hq0] at hm; subst hm
   exact slice_keep hS hrec hlt hN
 

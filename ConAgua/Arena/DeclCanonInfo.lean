@@ -124,7 +124,7 @@ theorem cdW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a
   rw [cdW_succ] at h
   obtain ⟨hcp, hvp, hhp⟩ := ciD_defn hp
   obtain ⟨hcq, hvq, hhq⟩ := ciD_defn hq
-  have hsz : (m.arr64 EREC).size < 2 ^ 64 := hS.2.2.2.2.1
+  have hsz : (m.arr64 EREC).size < 2 ^ 64 := hS.iw.2.2.2.1
   have hsz' : (erecP m).size < 2 ^ 64 := Nat.lt_of_le_of_lt (by simp [erecP]; exact Nat.min_le_right _ _) hsz
   obtain ⟨w1, hw1, -⟩ := decCV_name hcp
   obtain ⟨u1, hu1, -⟩ := decCV_name hcq
@@ -283,7 +283,7 @@ theorem cwW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a
   rw [cwW_succ] at h
   obtain ⟨hcp, hmp, hrp, o1, l1, ho1, hl1, hrs⟩ := ciD_rec hp
   obtain ⟨hcq, hmq, hrq, o2, l2, ho2, hl2, hrs'⟩ := ciD_rec hq
-  have hsz : (m.arr64 EREC).size < 2 ^ 64 := hS.2.2.2.2.1
+  have hsz : (m.arr64 EREC).size < 2 ^ 64 := hS.iw.2.2.2.1
   have hsz' : (erecP m).size < 2 ^ 64 := Nat.lt_of_le_of_lt (by simp [erecP]; exact Nat.min_le_right _ _) hsz
   obtain ⟨w1, hw1, -⟩ := decCV_name hcp
   obtain ⟨u1, hu1, -⟩ := decCV_name hcq
@@ -421,7 +421,7 @@ theorem cieW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
   | zero => simp [cieW] at h
   | succ k =>
   rw [cieW_succ] at h
-  have hsz : (m.arr64 EREC).size < 2 ^ 64 := hS.2.2.2.2.1
+  have hsz : (m.arr64 EREC).size < 2 ^ 64 := hS.iw.2.2.2.1
   have hsz' : (erecP m).size < 2 ^ 64 := Nat.lt_of_le_of_lt (by simp [erecP]; exact Nat.min_le_right _ _) hsz
   obtain ⟨wk, e, hx⟩ := ciD hp
   obtain ⟨wk', e', hy⟩ := ciD hq
@@ -626,7 +626,7 @@ theorem decPL_grow {α : Type} {m m' : Mem} {f f' : Nat → Option α} (hg : IWG
     obtain ⟨v, hv, x, hfx, xs', hxs, rfl⟩ := h
     refine ⟨v, ?_, x, hf v x hfx, xs', ih (o + 1) xs' (by omega) hxs, rfl⟩
     simp only [iwN, nat?, iwA] at hv ⊢
-    rw [hg.2.2.1 o (by omega)]; exact hv
+    rw [hg.iwGet o (by omega)]; exact hv
 
 
 theorem celW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (k : Nat) :

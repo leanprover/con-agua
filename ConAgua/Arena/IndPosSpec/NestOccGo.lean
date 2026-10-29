@@ -52,7 +52,7 @@ theorem maConstW_ok (n : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) 
   have hA0 : ArenaR (mclearG maSch m) a :=
     ArenaR.frame (A := []) (C := [maSch.cs, maSch.cs + 1]) (fun b hb => by simp at hb)
       (fun x hx => by simp [maSch] at hx; rcases hx with rfl | rfl <;> exact not_mem_arenaCtl _ (by decide)) hf0
-      hS.1.arena.1
+      hS.check.arena.base
   have hws0 : SlR (mclearG maSch m) no nl ws := slR_congr (hf0.arr IW (by simp) (by decide)) hws
   rcases hg : maGoW n (mclearG maSch m) no nl CWF e with _ | ⟨r1, m1⟩ <;> rw [hg] at hb; · simp [maClrK] at hb
   by_cases h1 : rdW (m1.arr64 CTL) maSch.cs + 2 = 0
@@ -133,7 +133,7 @@ theorem nestOccGo_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → O
       StageR dn vis fe s'.mem a₀ ∧ IWGrow s₀.mem s'.mem; ⊤⦄ := by
   refine triple_post ((noGo_spec p hv hc hf hput hgo hnode n).1 s₀ no nl lo hi f h) ?_
   rintro r s' ⟨hl, hm⟩
-  obtain ⟨b, mp', hrun, hb, hM', hfr⟩ := noGoOK n _ _ a₀ no nl lo hi f h _ ws mp hm hS.1.arena.1 hh hws hwlt hM
+  obtain ⟨b, mp', hrun, hb, hM', hfr⟩ := noGoOK n _ _ a₀ no nl lo hi f h _ ws mp hm hS.check.arena.base hh hws hwlt hM
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
   obtain ⟨hS', hg⟩ := StageR.frame_hi hS hfr (by intro b hb; simp at hb; subst hb; decide)
     (by intro x hx; simp at hx; subst hx; decide) (by decide) (by decide)
@@ -172,7 +172,7 @@ theorem noConstW_ok (n : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) 
   have hA0 : ArenaR (mclearG noSch m) a :=
     ArenaR.frame (A := []) (C := [noSch.cs, noSch.cs + 1]) (fun b hb => by simp at hb)
       (fun x hx => by simp [noSch] at hx; rcases hx with rfl | rfl <;> exact not_mem_arenaCtl _ (by decide)) hf0
-      hS.1.arena.1
+      hS.check.arena.base
   have hws0 : SlR (mclearG noSch m) no nl ws := slR_congr (hf0.arr IW (by simp) (by decide)) hws
   rcases hg : noGoW n (mclearG noSch m) no nl lo hi CWF e with _ | ⟨r1, m1⟩ <;> rw [hg] at hb; · simp [noClrK] at hb
   by_cases h1 : rdW (m1.arr64 CTL) noSch.cs + 2 = 0
@@ -318,7 +318,7 @@ theorem memberIdxAt_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx →
       s'.mem = s₀.mem; ⊤⦄ := by
   refine triple_post (memberIdxAt_spec p hv hf hp n s₀ no nl lvls e) ?_
   rintro r s' ⟨hl, hm⟩
-  obtain ⟨hmem, o, hrun, hout⟩ := memW_ok n _ _ a₀ no nl lvls e r ws hS.1.arena.1 he hlv hws hwlt hlen hm
+  obtain ⟨hmem, o, hrun, hout⟩ := memW_ok n _ _ a₀ no nl lvls e r ws hS.check.arena.base he hlv hws hwlt hlen hm
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
   exact ⟨hl, hok, hst, by rw [hres]; exact hout, hmem⟩
 
@@ -580,7 +580,7 @@ theorem phApp_refines (k : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Optio
       PhOut r (AM.res (ConRon.Arena.phApp? b.toNat (decI e) N) a₀); ⊤⦄ := by
   refine triple_post (phApp_spec p hv hp k s₀ b e n) ?_
   rintro r s' ⟨hl, hmem, hm⟩
-  obtain ⟨o, hrun, hout⟩ := phW_ok k _ a₀ b e n N r hN hm hS.1.arena.1 he hb
+  obtain ⟨o, hrun, hout⟩ := phW_ok k _ a₀ b e n N r hN hm hS.check.arena.base he hb
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
   exact ⟨hl, hmem, hok, hst, by rw [hres]; exact hout⟩
 

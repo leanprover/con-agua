@@ -181,7 +181,7 @@ theorem toi_ref (n : Nat) {m : Mem} {a : AState} {I us dso dsl : Word} {ds : Lis
   subst hs7e
   dsimp only at hr7 hne7 hs7
   subst hs7
-  obtain ⟨v, hv, hvr⟩ := eViewW_ok m6 a5 hS6.1.arena.1 _ (by rw [← hr7]; exact hne7)
+  obtain ⟨v, hv, hvr⟩ := eViewW_ok m6 a5 hS6.1.arena.base _ (by rw [← hr7]; exact hne7)
   rw [getD_two] at he6
   rw [he6] at hv
   rw [← hr7] at hvr

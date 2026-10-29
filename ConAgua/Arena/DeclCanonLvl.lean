@@ -38,8 +38,8 @@ theorem CtxR.grow {m m' : Mem} {po pl qo ql co cl : Word} {ps qs cs : List NIdx}
     (h : CtxR m po pl qo ql co cl ps qs cs) (hg : IWGrow m m') :
     CtxR m' po pl qo ql co cl ps qs cs :=
   ⟨by rw [decHL_grow hg h.pt]; exact h.p, by rw [decHL_grow hg h.qt]; exact h.q,
-   by rw [decHL_grow hg h.ct]; exact h.c, Nat.le_trans h.pt hg.1, Nat.le_trans h.qt hg.1,
-   Nat.le_trans h.ct hg.1⟩
+   by rw [decHL_grow hg h.ct]; exact h.c, Nat.le_trans h.pt hg.iw, Nat.le_trans h.qt hg.iw,
+   Nat.le_trans h.ct hg.iw⟩
 
 theorem iwTop_lt (m : Mem) : iwTop m < 2 ^ 64 := UInt64.toNat_lt _
 
@@ -380,7 +380,7 @@ theorem canonLevelEq_refines (p : Prog) (hp : CanonProg p) (dn : NIdx → Option
   intro n s₀ a₀ ⟨hS, hC, hu, hv⟩
   refine triple_post (canonLevelEq_spec p hp n s₀ po pl qo ql co cl fuel u v) ?_
   rintro r s' ⟨hl, hm, hr⟩
-  obtain ⟨b, hb, hrb⟩ := clW_ok n _ a₀ _ _ _ _ _ _ fuel u v _ ps qs cs hr hS.1.arena.1 hC hu hv
+  obtain ⟨b, hb, hrb⟩ := clW_ok n _ a₀ _ _ _ _ _ _ fuel u v _ ps qs cs hr hS.1.arena.base hC hu hv
   exact ⟨hl, hm, b, hb, decW0B_of' hrb⟩
 
 /-! ## `canon_level_list_eq` -/
@@ -508,7 +508,7 @@ theorem canonLevelListEq_refines (p : Prog) (hp : CanonProg p) (dn : NIdx → Op
   obtain ⟨ws2, hs2, rfl, hw2⟩ := slR_of_decHL s₀.mem bl.toNat bo.toNat ys hy (by omega)
   simp only [UInt64.ofNat_toNat] at hs1 hs2
   obtain ⟨b, hb, hrb⟩ := llW_ok n _ a₀ _ _ _ _ _ _ fuel ao al bo bl _ ws1 ws2 ps qs cs hr
-    hS.1.arena.1 hC hs1 hs2 hw1 hw2
+    hS.1.arena.base hC hs1 hs2 hw1 hw2
   exact ⟨hl, hm, b, hb, decW0B_of' hrb⟩
 
 /-! ## `canon_levels_eq` -/
@@ -599,7 +599,7 @@ theorem lsEqW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
   obtain ⟨ws2, hs2, rfl, hw2⟩ := slR_of_decHL m2 _ _ ids2 hd2u.1 (by have := hd2u.2; omega)
   simp only [UInt64.ofNat_toNat] at hs1 hs2
   obtain ⟨b, hb, hrb⟩ := llW_ok n m2 a po pl qo ql co cl fuel _ _ _ _ rr _ _ ps qs cs hll
-    hS2.1.arena.1 hC2 hs1 hs2 hw1 hw2
+    hS2.1.arena.base hC2 hs1 hs2 hw1 hw2
   refine ⟨b, ?_, hrb, hS2, hg1.trans hg2, hP2⟩
   unfold ConRon.Arena.canonLevelsEq
   rw [StateT.run_bind, hrun1, exc_ok_bind', StateT.run_bind, hrun2, exc_ok_bind']

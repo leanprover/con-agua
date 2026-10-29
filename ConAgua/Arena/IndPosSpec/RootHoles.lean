@@ -39,7 +39,7 @@ theorem posRecW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IF
   simp only [posRecW] at h
   rcases hal : allocW m (UInt64.ofNat ws.length) with _ | ⟨q1, m1⟩ <;> rw [hal] at h; · simp at h
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-  obtain ⟨h1, h2, h3, h4, h5⟩ := hS.2
+  obtain ⟨h1, h2, h3, h4, h5⟩ := hS.iw
   obtain ⟨hq, hm1, hroom⟩ := allocW_facts hal h3
   subst hm1
   have hk : (UInt64.ofNat ws.length).toNat = ws.length := UInt64.toNat_ofNat_of_lt' hl
@@ -63,7 +63,7 @@ theorem RdS.mono {m m' : Mem} {P Q : Nat → Prop} (h : RdS m m' P) (hq : ∀ i,
   fun i hi => h i (hq i hi)
 
 theorem RdS.of_grow {m m' : Mem} (h : IWGrow m m') : RdS m m' (fun i => i < iwTop m) :=
-  fun i hi => h.2.2.1 i hi
+  fun i hi => h.iwGet i hi
 
 theorem RdS.trans {m₁ m₂ m₃ : Mem} {P : Nat → Prop} (h₁ : RdS m₁ m₂ P) (h₂ : RdS m₂ m₃ P) : RdS m₁ m₃ P :=
   fun i hi => (h₂ i hi).trans (h₁ i hi)
@@ -119,7 +119,7 @@ theorem NHIn.mono {m : Mem} {P Q : Nat → Prop} {w : Nat} (h : NHIn m w P) (hq 
 theorem NHIn.grow {m m' : Mem} {w : Nat} (hw : NHIn m w (· < iwTop m)) (h : IWGrow m m') :
     decNH m' w = decNH m w ∧ NHIn m' w (· < iwTop m') :=
   let ⟨e, hw'⟩ := hw.agree (RdS.of_grow h)
-  ⟨e, hw'.mono fun _ hi => Nat.lt_of_lt_of_le hi h.1⟩
+  ⟨e, hw'.mono fun _ hi => Nat.lt_of_lt_of_le hi h.iw⟩
 
 section arms
 variable (k : Nat) (m m1 m2 : Mem) (no nl lv po pl nP q j key h : Word)
@@ -194,7 +194,7 @@ def GrowX (q n : Nat) (m m' : Mem) : Prop :=
   (∀ i < erTop m, (m'.arr64 EREC)[i]? = (m.arr64 EREC)[i]?)
 
 theorem GrowX.of_grow {q n : Nat} {m m' : Mem} (h : IWGrow m m') : GrowX q n m m' :=
-  ⟨h.1, h.2.1, (RdS.of_grow h).mono fun _ hi => hi.1, h.2.2.2⟩
+  ⟨h.iw, h.er, (RdS.of_grow h).mono fun _ hi => hi.1, h.erGet⟩
 
 theorem GrowX.trans {q n : Nat} {m₁ m₂ m₃ : Mem} (h₁ : GrowX q n m₁ m₂) (h₂ : GrowX q n m₂ m₃) :
     GrowX q n m₁ m₃ :=
@@ -214,9 +214,9 @@ theorem GrowX.grow {q n : Nat} {m m' : Mem} (h : GrowX q n m m') (hq : iwTop m �
 
 theorem GrowX.grow' {q n : Nat} {m m1 m2 : Mem} (h : GrowX q n m1 m2) (hg : IWGrow m m1)
     (hq : iwTop m ≤ q) : IWGrow m m2 :=
-  ⟨Nat.le_trans hg.1 h.1, Nat.le_trans hg.2.1 h.2.1,
-    fun i hi => (h.2.2.1 i ⟨Nat.lt_of_lt_of_le hi hg.1, Or.inl (by omega)⟩).trans (hg.2.2.1 i hi),
-    fun i hi => (h.2.2.2 i (Nat.lt_of_lt_of_le hi hg.2.1)).trans (hg.2.2.2 i hi)⟩
+  ⟨Nat.le_trans hg.iw h.1, Nat.le_trans hg.er h.2.1,
+    fun i hi => (h.2.2.1 i ⟨Nat.lt_of_lt_of_le hi hg.iw, Or.inl (by omega)⟩).trans (hg.iwGet i hi),
+    fun i hi => (h.2.2.2 i (Nat.lt_of_lt_of_le hi hg.er)).trans (hg.erGet i hi)⟩
 
 theorem HolesAt.decPL {m : Mem} {q : Nat} {hs : List NestHole} {P : Nat → Prop}
     (h : HolesAt m q hs.length hs P) : decPL m (decNH m) q hs.length = some hs :=
@@ -374,7 +374,7 @@ theorem CtxIn.mono {m : Mem} {P Q : Nat → Prop} {p : Nat} (h : CtxIn m p P) (h
 theorem CtxIn.grow {m m' : Mem} {p : Nat} (hc : CtxIn m p (· < iwTop m)) (h : IWGrow m m') :
     decCtx m' p = decCtx m p ∧ CtxIn m' p (· < iwTop m') :=
   let ⟨e, hc'⟩ := hc.agree (RdS.of_grow h)
-  ⟨e, hc'.mono fun _ hi => Nat.lt_of_lt_of_le hi h.1⟩
+  ⟨e, hc'.mono fun _ hi => Nat.lt_of_lt_of_le hi h.iw⟩
 
 theorem rhW_ok (k : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word) (a : AState)
     (m m' : Mem) (ctx : Word) (r : List Word) (c : NestCtx) (h : rhW k m ctx = some (r, m'))
@@ -382,7 +382,7 @@ theorem rhW_ok (k : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis 
     StageR dn vis fe m' a ∧ IWGrow m m' ∧ (r.tail.headD 0).toNat = c.rootHoles.length ∧
       (r.headD 0).toNat + c.rootHoles.length ≤ iwTop m' ∧
       HolesAt m' (r.headD 0).toNat c.rootHoles.length c.rootHoles (· < iwTop m') := by
-  have hsz : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
+  have hsz : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.1 hS.iw.2.2.1
   obtain ⟨hn, hn', hpa, hpa', hnP, hlvH, hlv, -, -, -⟩ := ctx_fields hc hin hsz
   unfold rhW at h
   generalize rdW (m.arr64 IW) ctx = no at h hn hn'
@@ -464,8 +464,8 @@ theorem appendW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IF
       (r.tail.headD 0).toNat = l1.toNat + l2.toNat ∧ iwTop m' = iwTop m + l1.toNat + l2.toNat ∧
       (∀ i < l1.toNat, (m'.arr64 IW)[iwTop m + i]? = (m.arr64 IW)[o1.toNat + i]?) ∧
       (∀ i < l2.toNat, (m'.arr64 IW)[iwTop m + l1.toNat + i]? = (m.arr64 IW)[o2.toNat + i]?) := by
-  have hsz := hS.2.2.2.1
-  have hc := hS.2.2.2.2.2
+  have hsz := hS.iw.2.2.1
+  have hc := hS.iw.2.2.2.2
   simp only [appendW] at h
   by_cases h0 : l1 + l2 < l1
   · simp [h0] at h
@@ -532,10 +532,10 @@ theorem appendW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IF
 theorem HSl.grow {m m' : Mem} {o l : Nat} {hs : List NestHole} (h : HSl m o l hs) (hg : IWGrow m m') :
     HSl m' o l hs := by
   obtain ⟨h1, h2, h3⟩ := h
-  refine ⟨h1, Nat.le_trans h2 hg.1, fun i hi => ?_⟩
+  refine ⟨h1, Nat.le_trans h2 hg.iw, fun i hi => ?_⟩
   obtain ⟨w, hw, hd, hn⟩ := h3 i hi
   obtain ⟨e, hn'⟩ := hn.grow hg
-  exact ⟨w, by rw [hg.2.2.1 _ (by omega)]; exact hw, by rw [e]; exact hd, hn'⟩
+  exact ⟨w, by rw [hg.iwGet _ (by omega)]; exact hw, by rw [e]; exact hd, hn'⟩
 
 /-- `nest_ctx_root_holes` at any exec fuel. -/
 def rhWf : Nat → Mem → Word → Option (List Word × Mem)
@@ -599,7 +599,7 @@ theorem haW_ok (k : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis 
     (hc : decCtx m ctx.toNat = some c) (hin : CtxIn m ctx.toNat (· < iwTop m))
     (hpr : HSl m po.toNat pl.toNat prog) :
     StageR dn vis fe m' a ∧ IWGrow m m' ∧ decONH m' r (ConRon.Arena.nestHoleAt c prog i.toNat) := by
-  have hsz : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
+  have hsz : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.1 hS.iw.2.2.1
   obtain ⟨-, -, -, -, hnP, -, -, -, -, -⟩ := ctx_fields hc hin hsz
   unfold haW at h
   by_cases hlt : i < rdW (m.arr64 IW) (ctx + 4)

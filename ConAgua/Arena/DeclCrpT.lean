@@ -239,7 +239,7 @@ theorem crp_ref {p : Prog} (hC : CrpProg p) (hq : KnotStageProg p) (hcl : LeafCl
   have hn' : n ≤ 2 ^ 62 := by omega
   rw [checkReducePinE.eq_2]
   simp only [checkReducePin]
-  have hvb : fe2.visibleBelow = vis2.toNat := hS.1.env.vis
+  have hvb : fe2.visibleBelow = vis2.toNat := hS.check.env.vis
   have hC0 : StageC dn vis (fe2.restrictTo vis.toNat) env m a := ⟨hS.restrict vis, hck, hmem, hflag⟩
   generalize hfe : fe2.restrictTo vis.toNat = fe at hC0 hck ⊢
   -- the stored constant, at `vis2`

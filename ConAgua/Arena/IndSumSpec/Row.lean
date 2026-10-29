@@ -209,7 +209,7 @@ theorem decBL_grow {m m' : Mem} (hg : IWGrow m m') {o l : Nat} (h : o + l ≤ iw
   intro j hj
   have hj' : j < l := List.mem_range.mp hj
   simp only [iwB, bool?, iwA]
-  rw [hg.2.2.1 (o + j) (by omega)]
+  rw [hg.iwGet (o + j) (by omega)]
 
 /-- `sl_getd(o, l, j, 0)` of a Boolean slice is the twin's `getD j false`. -/
 theorem getDW_bool {m : Mem} {o l : Word} {bs : List Bool} (h : decBL m o.toNat l.toNat = some bs)

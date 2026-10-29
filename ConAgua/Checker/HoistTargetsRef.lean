@@ -31,27 +31,28 @@ theorem tgtR_frameA {m m' : Mem} {tg : Word} {c : Nat} {T : Std.HashMap Nat Nat}
   rw [← hT.1 k hk]
   have hn : (tg + UInt64.ofNat k).toNat = tg.toNat + k := addW_toNat _ _ (by omega)
   simp only [rdW, hn]
-  rw [hf.2.1.2.2.1 _ (by omega)]
+  rw [hf.grow.2.2.1 _ (by omega)]
 
 /-- **What the targets pass keeps**: everything but `IW`, `HSEEN`, `CTL[73‥74, 200]`; the `IW`
 words below the targets; the pool only grows. -/
-def LowFr (tg : Word) (m m' : Mem) : Prop :=
-  MemFrame [IW, HSEEN] [73, 74, 200] m m' ∧
-    (∀ x : Nat, x < tg.toNat → (m'.arr64 IW)[x]? = (m.arr64 IW)[x]?) ∧ iwTop m ≤ iwTop m'
+structure LowFr (tg : Word) (m m' : Mem) : Prop where
+  fr : MemFrame [IW, HSEEN] [73, 74, 200] m m'
+  low : ∀ x : Nat, x < tg.toNat → (m'.arr64 IW)[x]? = (m.arr64 IW)[x]?
+  top : iwTop m ≤ iwTop m'
 
 theorem LowFr.refl (tg : Word) (m : Mem) : LowFr tg m m :=
   ⟨MemFrame.refl _ _ _, fun _ _ => rfl, Nat.le_refl _⟩
 
 theorem LowFr.trans {tg : Word} {m₁ m₂ m₃ : Mem} (h₁ : LowFr tg m₁ m₂) (h₂ : LowFr tg m₂ m₃) :
     LowFr tg m₁ m₃ :=
-  ⟨h₁.1.trans h₂.1, fun x hx => (h₂.2.1 x hx).trans (h₁.2.1 x hx), Nat.le_trans h₁.2.2 h₂.2.2⟩
+  ⟨h₁.fr.trans h₂.fr, fun x hx => (h₂.low x hx).trans (h₁.low x hx), Nat.le_trans h₁.top h₂.top⟩
 
 theorem LowFr.ofHFr {tg ws : Word} {c : Nat} {m m' : Mem} (h : HFr tg ws c m m') : LowFr tg m m' :=
   ⟨h.1.mono (by simp) (by simp), fun x hx => h.2 x (Or.inl hx),
     by simp only [iwTop]; rw [h.1.ctl 200 (by decide)]; exact Nat.le_refl _⟩
 
 theorem LowFr.ofAFr {tg : Word} {m m' : Mem} (h : AFr m m') (ht : tg.toNat ≤ iwTop m) : LowFr tg m m' :=
-  ⟨h.1.mono (by simp) (by simp), fun x hx => h.2.1.2.2.1 x (by omega), h.2.1.1⟩
+  ⟨h.fr.mono (by simp) (by simp), fun x hx => h.grow.2.2.1 x (by omega), h.grow.1⟩
 
 /-- The kind of a record decides whether it is a definition. -/
 theorem defn_of_kind {D P : Array Word} {r : Nat} {d : IDeclaration} (hD : DeclAtF D P r d) :

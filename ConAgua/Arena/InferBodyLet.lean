@@ -54,7 +54,7 @@ theorem coreRef_bind {α β : Type} [Inhabited α] [Inhabited β] {T₁ : AM α}
       CoreRef (T₂ (dec₁ r₁)) (AM.st T₁ a₀) dec dn m₁ vis fe M' eb r m ok) :
     CoreRef (T₁ >>= T₂) a₀ dec dn m₀ vis fe M eb r m ok :=
   coreRef_then h₁ h₂ (by
-    rw [StateT.run_bind, AM.run_of_ok _ _ h₁.1, h₁.2.2.1]; rfl)
+    rw [StateT.run_bind, AM.run_of_ok _ _ h₁.run, h₁.res]; rfl)
 
 /-- `ensure_sort` at every L fuel up to `n + 1` from the knot up to `n`. -/
 theorem ensureSortSpec_of_knot (p : Prog) (hp : InferLeafProg p) :
@@ -377,7 +377,7 @@ theorem ifa_ref (p : Prog) (hp : InferLeafProg p) (hb : InferBodyProg p)
   · rw [ite_eq_left g3]; exact RefE.of_cls0 rfl
   rw [ite_eq_right g3]
   have hg : r₂.headD 0 >>> 28 = 2 := by simpa using g1
-  obtain ⟨hv, hu⟩ := L.Ind.view_sort_f m₂ _ hS₂.arena.1 (r₂.headD 0) h₂.2.2.2 ⟨g2, by simpa using g3⟩ hg
+  obtain ⟨hv, hu⟩ := L.Ind.view_sort_f m₂ _ hS₂.arena.base (r₂.headD 0) h₂.2.2.2 ⟨g2, by simpa using g3⟩ hg
   have htag : ((decH r₂).tag == ETag.sort) = true := tag_sort_beq _ h₂.2.2.2 hg
   simp only [htag, ↓reduceIte]
   refine RefE.bind_right (view_run _ _ _ hv) ?_
@@ -421,7 +421,7 @@ theorem ifa_ref (p : Prog) (hp : InferLeafProg p) (hb : InferBodyProg p)
   rw [h₆.2.2.1] at hx₆
   refine RefE.bind_core (w := id) h₆ (fun M₆ hS₆ hT₆ => ?_)
   simp only [ifaE.k_ensure_sort]
-  have hdu := lvl_den_later hS₂.arena.1 hS₆.arena.1 hS₆.den
+  have hdu := lvl_den_later hS₂.arena.base hS₆.arena.base hS₆.den
     (hT₃.trans (hT₄.trans (hT₅.trans hT₆))).pool.lvl hu (hS₂.den.sort _ _ hv)
   have hdv := hS₆.den.sort _ _ hx₆
   rcases c7 : callW p n "intern_imax" [_, r₆.headD 0] m₆ with _ | ⟨r₇, m₇⟩

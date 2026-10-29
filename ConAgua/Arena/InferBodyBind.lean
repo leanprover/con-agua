@@ -476,8 +476,8 @@ theorem lamsLoop_ref (p : Prog) (hp : InferLeafProg p) (hq : BindProg p) (hb : I
       · rw [ite_eq_left hc2]; exact RefE.of_cls0 rfl
       rw [ite_eq_right hc2]
       have hv : viewOK m t LAM := ⟨hc1, UInt64.not_le.mp hc2⟩
-      obtain ⟨-, hty, hbody⟩ := view_lam m a hS.arena.1 t ht hv ht5
-      have hvb := viewBind_lam m a hS.arena.1 t ht hv ht5
+      obtain ⟨-, hty, hbody⟩ := view_lam m a hS.arena.base t ht hv ht5
+      have hvb := viewBind_lam m a hS.arena.base t ht hv ht5
       obtain ⟨p', hp'⟩ : ∃ p', peel.toNat = p' + 1 :=
         ⟨peel.toNat - 1, by have : peel.toNat ≠ 0 := fun h' => hp0 (UInt64.toNat_inj.mp (by simpa using h')); omega⟩
       have hlam : ((decE t).tag != ETag.lam) = false := by

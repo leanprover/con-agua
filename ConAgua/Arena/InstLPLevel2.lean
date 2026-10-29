@@ -68,7 +68,7 @@ theorem slsElemW_core {ko kc vo vc : Word} {ks : List Name} {us : List LIdx} {vs
     obtain ⟨L, Ls', hL, hLs, rfl⟩ := hd
     have hl0 : l ≠ 0 := fun e => by subst e; simp at hk
     have hrd : elemRd POOL m o = u.word.toUInt64 := by
-      have h41 := hS.arena.1.lit.1.top41
+      have h41 := hS.arena.base.lit.1.top41
       rw [elemRd_pool, ← vpool_getD m o (by omega)]; simpa using hsl1
     cases n with
     | zero => simp [slElemW] at hW
@@ -150,7 +150,7 @@ theorem spnLs_core (p : Prog) (hL : LsProg p) {n : Nat} {m m' : Mem} {a : AState
     ∃ a', (internLsNode hs).run a = .ok (decI (rs.headD 0), a') ∧ CoreS dn m' a' vis fe M eb ∧
       StackKept m m' ∧ HW (rs.headD 0) ∧ (∃ ls, denoteLs a'.store.lss (decI (rs.headD 0)) = some ls) ∧
       ILWGrow a a' ∧ a'.memos = a.memos ∧ MemFrame [POOL, POOL1, LSREC, LSSLOT, LSHP, tier1 LSREC, tier1 LSSLOT, tier1 LSHP] [0, 40, 41] m m' := by
-  have hp := hS.arena.1.lit.1
+  have hp := hS.arena.base.lit.1
   obtain ⟨s₄, hs₄m, -, hW⟩ := triple_of_callW (spnLs_spec p hL n ⟨m, Locals.init []⟩ b l
     (by show pcap m < 2 ^ 64; have := hp.cap; omega) hp.top41) h
   rw [hs₄m] at hW
@@ -174,9 +174,9 @@ theorem spnLs_core (p : Prog) (hL : LsProg p) {n : Nat} {m m' : Mem} {a : AState
                     rcases hb with rfl | rfl | rfl | rfl | rfl | rfl <;> decide)
     (fun x hx => by simp only [lsSch, List.mem_cons, List.mem_nil_iff, or_false] at hx
                     rcases hx with rfl | rfl <;> decide)
-    (lsAll_internLsNode hK.1.arena.1 hK.1.den.lsAll hel hrun).1
-    (lvlCnt_internLsNode hK.1.arena.1 hA₃.1 (hf₃.ctl 1 (by decide)) hrun)
-  obtain ⟨hden, hext⟩ := denoteLs_internLsNode hK.1.arena.1 hel hrun
+    (lsAll_internLsNode hK.1.arena.base hK.1.den.lsAll hel hrun).1
+    (lvlCnt_internLsNode hK.1.arena.base hA₃.1 (hf₃.ctl 1 (by decide)) hrun)
+  obtain ⟨hden, hext⟩ := denoteLs_internLsNode hK.1.arena.base hel hrun
   obtain ⟨-, -, hme⟩ := internLsNode_keep _ _ _ _ hrun
   obtain ⟨hls, -⟩ := internLsNode_ext _ _ _ _ hrun
   refine ⟨_, hrun, hS₃, hK.2.trans hk₃, UInt64.lt_iff_toNat_lt.mp (UInt64.not_le.mp hr), hden,
@@ -221,7 +221,7 @@ theorem slsMemo_ok (p : Prog) (hp : ILWLevProg p) : SlsMemoOK p := by
   have hmiss : a.memos.instLPLsC[(decI w : LsIdx)]? = none :=
     memoRV_miss lplsSch ilKey VI m _ hM.lpls w 0 ⟨hw, rfl⟩ hr hh0
   obtain ⟨ids, hv, hdl⟩ := denoteLs_view a (decI w) LS hdls
-  obtain ⟨e₁, t₁, s₁⟩ := lsNodeW_store hS.arena.1 hw hv
+  obtain ⟨e₁, t₁, s₁⟩ := lsNodeW_store hS.arena.base hw hv
   rw [e₁] at hW
   simp only [List.headD_cons, List.tail_cons] at hW
   generalize tfld m LVLS (tierW w) (idxW w) 0 = o at hW t₁ s₁

@@ -37,7 +37,7 @@ theorem IWGrow.erec_get {m m' : Mem} (h : IWGrow m m') {i : Nat} {v : Word}
   split at hv
   · rename_i hi
     have hi' : i < erTop m := by simp [erTop, erecTop] at hi ⊢; omega
-    rw [h.2.2.2 i hi']; simpa using hv
+    rw [h.erGet i hi']; simpa using hv
   · simp at hv
 
 theorem erecP_size_le' (m : Mem) : (erecP m).size ≤ erTop m := by

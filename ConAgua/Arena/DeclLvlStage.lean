@@ -43,9 +43,9 @@ eager tower). -/
 theorem StageR.coreS {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m : Mem}
     {a : AState} (hS : StageR dn vis fe m a) (hT : TwinOK dn m a fe) (hflag : pinW m 0 ≠ 0) :
     ∃ M, CoreS dn m a vis fe M 0 := by
-  obtain ⟨M, hM⟩ := hS.1.core
-  exact ⟨M, ⟨hS.1.arena, hM, hS.1.pins.full hflag, hS.1.env, hT.readL, hT.readLs, hT.nwf, hT.erec,
-    hT.spn, hT.memos, hT.bstk, hT.den, hS.1.mode⟩⟩
+  obtain ⟨M, hM⟩ := hS.check.core
+  exact ⟨M, ⟨hS.check.arena, hM, hS.check.pins.full hflag, hS.check.env, hT.readL, hT.readLs, hT.nwf, hT.erec,
+    hT.spn, hT.memos, hT.bstk, hT.den, hS.check.mode⟩⟩
 
 /-- `CoreS` (outside the eager tower) is `CheckR` and the twin invariants. -/
 theorem CoreS.checkR {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m : Mem}

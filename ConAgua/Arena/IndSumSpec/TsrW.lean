@@ -302,8 +302,8 @@ theorem rmRec_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEn
     simp only [bool?, Option.map_eq_some_iff] at h10
     obtain ⟨v, hv, -⟩ := h10
     exact erecP_lt hv
-  have hEt : erTop m ≤ (m.arr64 EREC).size := hS.2.2.1
-  have hEs : (m.arr64 EREC).size < 2 ^ 64 := hS.2.2.2.2.1
+  have hEt : erTop m ≤ (m.arr64 EREC).size := hS.iw.2.1
+  have hEs : (m.arr64 EREC).size < 2 ^ 64 := hS.iw.2.2.2.1
   have hE1 : m1.arr64 EREC = m.arr64 EREC := by rw [erAllocW_mem h]; exact erAllocMem_arr _ _ (by decide)
   have hc : ∀ k : Nat, k ≤ 10 → (old + UInt64.ofNat k).toNat = old.toNat + k := fun k hk => by
     rw [UInt64.toNat_add]; simp; omega
@@ -371,7 +371,7 @@ theorem decPL_rl_grow {m m' : Mem} (hg : IWGrow m m') {o l : Nat} {rules : List 
   · cases hd
   have hps' : decNL m' o l = some ps := by
     rw [← hps]; simp only [decNL]; apply mapM_opt_congr; intro j hj
-    simp only [iwN, nat?, iwA]; rw [hg.2.2.1 _ (by simp at hj; omega)]
+    simp only [iwN, nat?, iwA]; rw [hg.iwGet _ (by simp at hj; omega)]
   rw [hps']
   simp only [Option.bind_some] at hd ⊢
   exact ArrExt.mapM (fun _ _ hy => (IWGrow.erecPExtR hg).decRule hy) _ _ hd
@@ -501,7 +501,7 @@ theorem tsrmW_afr : ∀ (n : Nat) {m m' : Mem} {ro rl flo fll fpo fpl : Word} {r
 
 theorem rcPoolSmall {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m : Mem} {a : AState}
     (h : StageR dn vis fe m a) : PoolSmall m := by
-  have := h.1.arena.1.lit.1.cap
+  have := h.check.arena.base.lit.1.cap
   unfold PoolSmall; omega
 
 def efF : Nat → Mem → Word → Word → Option (List Word × Mem)
@@ -559,7 +559,7 @@ theorem tsrW_ok (n : Nat) {m m' : Mem} {a : AState} {cv rP M rhso rhsl : Word} {
   obtain _ | n := n
   · simp [tsrW] at h
   rw [tsrW.arm1] at h
-  have hsz := hS.2.2.2.1
+  have hsz := hS.iw.2.2.1
   have hM0 : decTM (truncM m) M.toNat = some TM := hM
   -- the constructors' slice, the parameter count, the member word
   have hT := hM0

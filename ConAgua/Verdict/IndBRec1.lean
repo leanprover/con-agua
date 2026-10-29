@@ -298,8 +298,8 @@ theorem rg_ref {p : Prog} (n : Nat) {m : Mem} {a : AState} {g k rc c : Word} {G 
   cases n with
   | zero => rw [classRecTyOkGuardsE.eq_1]; exact RefE.of_cls0 (by simp)
   | succ n =>
-  have hsz := hS.2.2.2.1
-  have htop := hS.2.1
+  have hsz := hS.iw.2.2.1
+  have htop := hS.iw.1
   obtain ⟨-, hgt, ⟨o3, l3, h3, h4, hcls⟩, -⟩ := rec2CG_parts hG
   obtain ⟨e3, t3⟩ := rec2RdN (w := g) (k := 3) h3 hsz
   obtain ⟨e4, t4⟩ := rec2RdN (w := g) (k := 4) h4 hsz

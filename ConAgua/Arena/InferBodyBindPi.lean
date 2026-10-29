@@ -54,7 +54,7 @@ theorem pisOut_ref (p : Prog) (hb : InferBodyProg p) (hcap : BStkCap) (dn : NIdx
       rw [hB.get _ hjK]; simp
     have hwj : HW (rdW (m.arr64 BSTK) (lo + (n - 1))) := hwsj ▸ hws _ hjK
     have hdu : ∃ l, denoteL a.store.ls (decI (rdW (m.arr64 BSTK) (lo + (n - 1)))) = some l := by
-      obtain ⟨vv, hvv⟩ := L.Ind.lview_of_lvNodeW hS.arena.1 hwj (hwsj ▸ hwl _ hjK)
+      obtain ⟨vv, hvv⟩ := L.Ind.lview_of_lvNodeW hS.arena.base hwj (hwsj ▸ hwl _ hjK)
       exact hS.den.lvlAll _ (by show (a.store.lss.ls.view _).isSome = true; rw [hvv]; rfl)
     have hT : inferPisOut (ws.map decI) n.toNat (decI v) =
         (internLNode (.imax (decI (rdW (m.arr64 BSTK) (lo + (n - 1)))) (decI v)) >>= fun v2 =>
@@ -284,8 +284,8 @@ theorem pisLoop_ref (p : Prog) (hp : InferLeafProg p) (hq : BindProg p) (hb : In
       · rw [ite_eq_left hc2]; exact RefE.of_cls0 rfl
       rw [ite_eq_right hc2]
       have hv : viewOK m t FORALL := ⟨hc1, UInt64.not_le.mp hc2⟩
-      obtain ⟨-, hty, hbody⟩ := view_forall m a hS.arena.1 t ht hv ht5
-      have hvb := viewBind_forall m a hS.arena.1 t ht hv ht5
+      obtain ⟨-, hty, hbody⟩ := view_forall m a hS.arena.base t ht hv ht5
+      have hvb := viewBind_forall m a hS.arena.base t ht hv ht5
       obtain ⟨p', hp'⟩ : ∃ p', peel.toNat = p' + 1 :=
         ⟨peel.toNat - 1, by have : peel.toNat ≠ 0 := fun h' => hp0 (UInt64.toNat_inj.mp (by simpa using h')); omega⟩
       have hlam : ((decE t).tag != ETag.forallE) = false := by
@@ -346,7 +346,7 @@ theorem pisLoop_ref (p : Prog) (hp : InferLeafProg p) (hq : BindProg p) (hb : In
       by_cases gs2 : tcnt m₃ SORT (tierW (r₃.headD 0)) ≤ idxW (r₃.headD 0)
       · rw [ite_eq_left gs2]; exact RefE.of_cls0 rfl
       rw [ite_eq_right gs2]
-      obtain ⟨hvs, hu⟩ := L.Ind.view_sort_f m₃ _ hS₃.arena.1 (r₃.headD 0) hrw3 ⟨gs1, UInt64.not_le.mp gs2⟩ g1'
+      obtain ⟨hvs, hu⟩ := L.Ind.view_sort_f m₃ _ hS₃.arena.base (r₃.headD 0) hrw3 ⟨gs1, UInt64.not_le.mp gs2⟩ g1'
       refine RefE.bind_right (L.Ind.viewSort_run (L.Ind.viewSort_of_view _ _ _
         ((decE_tag_eq _ hrw3 2 (by decide)).mpr g1') hvs)) ?_
       dsimp only
@@ -398,7 +398,7 @@ theorem pisLoop_ref (p : Prog) (hp : InferLeafProg p) (hq : BindProg p) (hb : In
         rw [Array.getElem_push]
         split
         · exact lvNodeW_mono ((hSt₁.trans (hSt₂.trans hSt₃)).pool.lvl.trans hl4) (hws i _) (hwl i _)
-        · exact lvNodeW_mono hl4 hu (lvNodeW_of_den hS₃.arena.1 hu (hS₃.den.sort _ _ hvs))
+        · exact lvNodeW_mono hl4 hu (lvNodeW_of_den hS₃.arena.base hu (hS₃.den.sort _ _ hvs))
       have hpeel1 : (peel - 1).toNat = peel.toNat - 1 := by
         rw [UInt64.toNat_sub_of_le]; · rfl
         rw [UInt64.le_iff_toNat_le]; simp
@@ -572,7 +572,7 @@ theorem ifr_ref (p : Prog) (hp : InferLeafProg p) (hq : BindProg p) (hb : InferB
   by_cases gs2 : tcnt m₂ SORT (tierW (r₂.headD 0)) ≤ idxW (r₂.headD 0)
   · rw [ite_eq_left gs2]; exact RefE.of_cls0 rfl
   rw [ite_eq_right gs2]
-  obtain ⟨hvs, hu⟩ := L.Ind.view_sort_f m₂ _ hS₂.arena.1 (r₂.headD 0) hrw2 ⟨gs1, UInt64.not_le.mp gs2⟩ g1'
+  obtain ⟨hvs, hu⟩ := L.Ind.view_sort_f m₂ _ hS₂.arena.base (r₂.headD 0) hrw2 ⟨gs1, UInt64.not_le.mp gs2⟩ g1'
   refine RefE.bind_right (L.Ind.viewSort_run (L.Ind.viewSort_of_view _ _ _
     ((decE_tag_eq _ hrw2 2 (by decide)).mpr g1') hvs)) ?_
   dsimp only
@@ -621,7 +621,7 @@ theorem ifr_ref (p : Prog) (hp : InferLeafProg p) (hq : BindProg p) (hb : InferB
         intro i hi
         simp at hi; subst hi
         exact lvNodeW_mono (hSt₃.pool.lvl.trans hpgT.lvl) hu
-          (lvNodeW_of_den hS₂.arena.1 hu (hS₂.den.sort _ _ hvs))) (by simp; omega) hb'
+          (lvNodeW_of_den hS₂.arena.base hu (hS₂.den.sort _ _ hvs))) (by simp; omega) hb'
       hsz' hbbT hbszT hpgT) h4
   obtain _ | n' := n
   · obtain ⟨e', he', -⟩ := callE_zero p "infer_pis" [mode, vis, d, 16777216, body, 1, so, lo]
@@ -635,7 +635,7 @@ theorem ifr_ref (p : Prog) (hp : InferLeafProg p) (hq : BindProg p) (hb : InferB
         intro i hi
         simp at hi; subst hi
         exact lvNodeW_mono (hSt₃.pool.lvl.trans hpgT.lvl) hu
-          (lvNodeW_of_den hS₂.arena.1 hu (hS₂.den.sort _ _ hvs))) (by simp; omega) hb' hsz' hbbT hbszT
+          (lvNodeW_of_den hS₂.arena.base hu (hS₂.den.sort _ _ hvs))) (by simp; omega) hb' hsz' hbbT hbszT
       hpgT) h4
   rw [ht₄] at hT
   simp only [ifrE.k_infer_pis]

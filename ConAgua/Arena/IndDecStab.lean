@@ -558,9 +558,9 @@ theorem truncM_er_eq {m : Mem} {i : Nat} (hi : i < erTop m) :
 theorem IWGrow.truncExt {m m' : Mem} (hg : IWGrow m m') : PoolExt (truncM m) m' := by
   refine ⟨fun i v h => ?_, fun i v h => ?_⟩
   · obtain ⟨hi, hv⟩ := truncM_iw_get h
-    simp only [iwA] at hv ⊢; rw [hg.2.2.1 i hi]; exact hv
+    simp only [iwA] at hv ⊢; rw [hg.iwGet i hi]; exact hv
   · obtain ⟨hi, hv⟩ := truncM_er_get h
-    simp only [erA] at hv ⊢; rw [hg.2.2.2 i hi]; exact hv
+    simp only [erA] at hv ⊢; rw [hg.erGet i hi]; exact hv
 
 /-- **Decoded below the tops**: the decoding succeeds in the cut pools. -/
 def DecB {α : Type} (f : Mem → Option α) (m : Mem) (x : α) : Prop := f (truncM m) = some x
@@ -579,11 +579,11 @@ theorem DecB.get (hf : OMono f) (h : DecB f m x) : f m = some x := h.stab hf m (
 theorem DecB.grow (hf : OMono f) (hg : IWGrow m m') (h : DecB f m x) : DecB f m' x := by
   refine hf.mono _ _ _ ⟨fun i v hv => ?_, fun i v hv => ?_⟩ h
   · obtain ⟨hi, hv'⟩ := truncM_iw_get hv
-    rw [truncM_iw_eq (Nat.lt_of_lt_of_le hi hg.1)]
-    simp only [iwA] at hv' ⊢; rw [hg.2.2.1 i hi]; exact hv'
+    rw [truncM_iw_eq (Nat.lt_of_lt_of_le hi hg.iw)]
+    simp only [iwA] at hv' ⊢; rw [hg.iwGet i hi]; exact hv'
   · obtain ⟨hi, hv'⟩ := truncM_er_get hv
-    rw [truncM_er_eq (Nat.lt_of_lt_of_le hi hg.2.1)]
-    simp only [erA] at hv' ⊢; rw [hg.2.2.2 i hi]; exact hv'
+    rw [truncM_er_eq (Nat.lt_of_lt_of_le hi hg.er)]
+    simp only [erA] at hv' ⊢; rw [hg.erGet i hi]; exact hv'
 
 end decB
 

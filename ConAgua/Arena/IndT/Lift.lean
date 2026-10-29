@@ -32,9 +32,9 @@ theorem StageC.of_pstep {m m' : Mem} {a a' : AState} (h : StageC dn vis fe env m
     (hS : StageR dn vis fe m' a') (hA : AbsOK m') (hs : PStep a a') :
     StageC dn vis fe env m' a' :=
   ⟨hS, (hs.toCore h.check).ok,
-    ⟨hA.2.2.2.2.2.1, hA.2.2.2.2.2.2.1, hA.2.2.2.2.2.2.2.1, ⟨hA.2.2.2.1, hA.1, hA.2.2.2.2.1⟩,
+    ⟨hA.wk.2.1, hA.wk.2.2.1, hA.wk.2.2.2.1, ⟨hA.il, hA.ab, hA.wk.1⟩,
       fun k x e => hs.ext.lss.ls.ns k x (h.mem.dnN k x e)⟩,
-    hA.2.2.2.2.2.2.2.2⟩
+    hA.wk.2.2.2.2⟩
 
 /-- **`StageC` after a twin step whose result con-ron's lemmas give `CheckOK` for** (a `CoreStep`,
 a flush, …), the store extended. -/
@@ -42,9 +42,9 @@ theorem StageC.of_check {m m' : Mem} {a a' : AState} (h : StageC dn vis fe env m
     (hS : StageR dn vis fe m' a') (hA : AbsOK m') (hck : ConRon.Bridge.CheckOK V env fe a')
     (hx : ConRon.Arena.Ext a.store a'.store) : StageC dn vis fe env m' a' :=
   ⟨hS, hck,
-    ⟨hA.2.2.2.2.2.1, hA.2.2.2.2.2.2.1, hA.2.2.2.2.2.2.2.1, ⟨hA.2.2.2.1, hA.1, hA.2.2.2.2.1⟩,
+    ⟨hA.wk.2.1, hA.wk.2.2.1, hA.wk.2.2.2.1, ⟨hA.il, hA.ab, hA.wk.1⟩,
       fun k x e => hx.lss.ls.ns k x (h.mem.dnN k x e)⟩,
-    hA.2.2.2.2.2.2.2.2⟩
+    hA.wk.2.2.2.2⟩
 
 /-- **A `StageR` `RSim` of a core-free callee is a `StageC` `RSim`**, by con-ron's `PSpec` of the
 twin at the inputs' denotation `P`; the post `Q` gives the stage relation and `AbsOK` after. -/

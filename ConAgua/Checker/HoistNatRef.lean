@@ -18,7 +18,7 @@ namespace L.Checker
 
 /-- The pin array survives an allocation frame. -/
 theorem AFr.pins {m m' : Mem} (hf : AFr m m') : m'.arr64 PINS = m.arr64 PINS :=
-  hf.1.1 PINS (by decide) (by decide)
+  hf.fr.1 PINS (by decide) (by decide)
 
 theorem AFr.pinW_eq {m m' : Mem} (hf : AFr m m') (i : Nat) : pinW m' i = pinW m i := by
   simp only [pinW, hf.pins]
@@ -56,7 +56,7 @@ theorem iwTop_lt_size (m : Mem) : iwTop m < UInt64.size := UInt64.toNat_lt _
 /-- A read below the old top survives pool growth. -/
 theorem rdW_grow {m m' : Mem} (hg : IWGrow m m') {x : Word} (hx : x.toNat < iwTop m) :
     rdW (m'.arr64 IW) x = rdW (m.arr64 IW) x := by
-  simp only [rdW, hg.2.2.1 _ hx]
+  simp only [rdW, hg.iwGet _ hx]
 
 /-- **`slice_has`**: `w` is among the slice's words. -/
 theorem sliceHas_ok (m : Mem) (o w : Word) : ∀ (ws : List Word) (n : Nat) (l j r : Word),
@@ -298,7 +298,7 @@ theorem depsSlice_ok {p : Prog} (hal : p.lookup "iw_alloc" = some iwAlloc) {k : 
       (r.tail.headD 0).toNat = (ws.map (decI : Word → NIdx)).length ∧
       (ws.map (decI : Word → NIdx) ≠ [] → iwTop m ≤ (r.headD 0).toNat ∧
         (r.headD 0).toNat + (ws.map (decI : Word → NIdx)).length ≤ iwTop m₂) ∧ AFr m m₂ := by
-  have hI1 : IWOK m1 := hA.2.2
+  have hI1 : IWOK m1 := hA.ok
   rcases hq : callW p k "iw_alloc" [N] m1 with _ | ⟨rq, mq⟩ <;> rw [hq] at hw
   · simp [ntBW] at hw
   rw [bW_some] at hw
@@ -315,7 +315,7 @@ theorem depsSlice_ok {p : Prog} (hal : p.lookup "iw_alloc" = some iwAlloc) {k : 
     simp only [UInt64.toNat_zero, Nat.zero_add]
     rw [e, getElem!_pos ws j hj, List.getElem_map]
     exact ⟨hlt _ (List.getElem_mem hj), rfl⟩
-  · exact hA.2.1.1
+  · exact hA.grow.1
   · rw [htop]; exact Nat.le_refl _
 
 /-- `armsW`'s answer: a fresh slice of `depsL`'s words (empty: `(0, 0)`). -/

@@ -294,7 +294,7 @@ theorem CoreS.of_natOp {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' :
   obtain ⟨hcpl, hder, hview⟩ := hL
   simp only [cpl, Prod.mk.injEq] at hcpl
   obtain ⟨hc, hp, hl⟩ := hcpl
-  have hD : DerR m' a := DerR.frameM natA natC m m' hf (by decide) a hS.arena.2
+  have hD : DerR m' a := DerR.frameM natA natC m m' hf (by decide) a hS.arena.der
   have hspn : m'.arr64 SPN = m.arr64 SPN := hf.arr SPN (by decide) (by decide)
   have h136 : rdW (m'.arr64 CTL) 136 = rdW (m.arr64 CTL) 136 := hf.ctl 136 (by decide)
   refine ⟨⟨⟨hR, hder m' hD⟩, ?_, ?_, hS.env.frame (by decide) (.of_lt natC_lt (by decide)) hf, ?_, ?_, ?_,
@@ -324,7 +324,7 @@ theorem natOpResultOK_of_agree {p : Prog} (hp : ∀ f ∈ natFns, p.lookup f = n
   apply M.triple_of_run
   intro s r s' hs hrun
   obtain ⟨hloc, hok, ⟨hR, hPG⟩, hres⟩ := M.of_run (P := fun s => s = s₀) hs hrun
-    (natOpResultL_refinesR (ArenaP s₀.mem) (natArmsR_pool s₀.mem) n s₀ a₀ ⟨hS.arena.1, PoolGrew.refl _⟩
+    (natOpResultL_refinesR (ArenaP s₀.mem) (natArmsR_pool s₀.mem) n s₀ a₀ ⟨hS.arena.base, PoolGrew.refl _⟩
       ⟨fun _ => hS.pins⟩ c oa la ob lb hc ha hb hna hnb hS.mode)
   obtain ⟨hf, -⟩ := M.of_run (P := fun s => s = s₀) hs hrun
     (invoke_memFrame natArmProg_closed n (by decide) _ s₀)

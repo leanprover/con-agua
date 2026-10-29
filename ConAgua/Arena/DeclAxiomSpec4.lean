@@ -85,7 +85,7 @@ theorem famW_ok {p : Prog} (h : StdProg p) {dn : NIdx → Option ConLeche.Name} 
   unfold famT
   -- the first clause
   rcases e1 : pinAtW m s1 with _ | ⟨r1, m1⟩ <;> simp only [e1, famW.k_pin_at, reduceCtorEq] at hW
-  obtain ⟨hm1, hr1, hl1, hrun1⟩ := pinAtW_ok e1 hS.1.pins
+  obtain ⟨hm1, hr1, hl1, hrun1⟩ := pinAtW_ok e1 hS.check.pins
   rw [hm1, hr1] at hW
   simp only [List.headD_cons] at hW
   simp only [StateT.run_bind, hrun1, exc_ok_bind']
@@ -189,7 +189,7 @@ theorem stdW_ok {p : Prog} (h : StdProg2 p) {dn : NIdx → Option ConLeche.Name}
   rw [stdW.arm1] at hW
   rw [stdAxiomOk_fam, hname]
   rcases e1 : pinAtW m 32 with _ | ⟨r1, m1⟩ <;> simp only [e1, stdW.k_pin_at, reduceCtorEq] at hW
-  obtain ⟨hm1, hr1, hl1, hrun1⟩ := pinAtW_ok e1 hS.1.pins
+  obtain ⟨hm1, hr1, hl1, hrun1⟩ := pinAtW_ok e1 hS.check.pins
   rw [hm1, ewn] at hW
   have ep : r1.headD 0 = pinW m (1 + (32 : Word).toNat) := by rw [hr1]; rfl
   have hbeq : ((decI wn : NIdx) == decI (pinW m (1 + (32 : Word).toNat))) =
@@ -201,7 +201,7 @@ theorem stdW_ok {p : Prog} (h : StdProg2 p) {dn : NIdx → Option ConLeche.Name}
     simp only [ep1, decide_true, ite_true]
     -- `propext`: the pinned `Eq`
     rcases e2 : pinAtW m 0 with _ | ⟨r2, m2⟩ <;> simp only [e2, stdW.k_pin_at_2, reduceCtorEq] at hW
-    obtain ⟨hm2, hr2, hl2, hrun2⟩ := pinAtW_ok e2 hS.1.pins
+    obtain ⟨hm2, hr2, hl2, hrun2⟩ := pinAtW_ok e2 hS.check.pins
     rw [hm2, hr2] at hW
     simp only [List.headD_cons] at hW
     simp only [StateT.run_bind, hrun2, exc_ok_bind']
@@ -239,7 +239,7 @@ theorem stdW_ok {p : Prog} (h : StdProg2 p) {dn : NIdx → Option ConLeche.Name}
     simp only [ep1, decide_false, Bool.false_eq_true, ite_false]
     -- `choice`
     rcases e2 : pinAtW m 33 with _ | ⟨r2, m2⟩ <;> simp only [e2, stdW.k_pin_at_3, reduceCtorEq] at hW
-    obtain ⟨hm2, hr2, hl2, hrun2⟩ := pinAtW_ok e2 hS.1.pins
+    obtain ⟨hm2, hr2, hl2, hrun2⟩ := pinAtW_ok e2 hS.check.pins
     rw [hm2] at hW
     have ec : r2.headD 0 = pinW m (1 + (33 : Word).toNat) := by rw [hr2]; rfl
     have hbeqc : ((decI wn : NIdx) == decI (pinW m (1 + (33 : Word).toNat))) =

@@ -242,7 +242,7 @@ theorem CsAt.grow {m m' : Mem} {o : Nat} {xs : List (IConstantVal × Nat)}
     (h : CsAt m o xs (· < iwTop m)) (hb : o + xs.length ≤ iwTop m) (hg : IWGrow m m') :
     CsAt m' o xs (· < iwTop m') :=
   (h.agree (RdS.of_grow hg) (GrowX.of_grow (q := 0) (n := 0) hg).erecP
-    (fun i hi => hg.2.2.1 _ (by omega))).mono fun _ hx => Nat.lt_of_lt_of_le hx hg.1
+    (fun i hi => hg.iwGet _ (by omega))).mono fun _ hx => Nat.lt_of_lt_of_le hx hg.iw
 
 theorem ncGoW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis C cs : Word) (N : Nat)
     (hC : H C) (k : Nat) :
@@ -492,7 +492,7 @@ theorem ntW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis C : Word) 
     (h : ntW k m vis C = some (r, m')) (hS : StageR dn vis fe m a) :
     ∃ x a', (ConRon.Arena.nestContainer fe (decI C)).run a = .ok (x, a') ∧ StageR dn vis fe m' a' ∧
       IWGrow m m' ∧ NcOut m' r x := by
-  have hE := hS.1.env
+  have hE := hS.check.env
   unfold ntW at h
   rcases hef : envFindW m C vis with _ | ⟨r1, m1⟩ <;> rw [hef] at h; · simp [ntK1] at h
   have hm1 := envFindW_mem hef
@@ -522,7 +522,7 @@ theorem ntW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis C : Word) 
   have hk3 : nat? (erecP m) ciq.toNat = some 3 := by
     have : (erecP m)[ciq.toNat]? = (m.arr64 EREC)[ciq.toNat]? := erecP_getE (by omega)
     simp only [nat?, this]
-    have hb : ciq.toNat < (m.arr64 EREC).size := by have := hS.2.2.1; omega
+    have hb : ciq.toNat < (m.arr64 EREC).size := by have := hS.iw.2.1; omega
     have : rdW (m.arr64 EREC) ciq = 3 := by simpa using h3
     simp [rdW, hb] at this ⊢; rw [this]; rfl
   obtain ⟨cv, caps, rfl, hcaps⟩ := decCI_kind3 hci hk3
@@ -530,7 +530,7 @@ theorem ntW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis C : Word) 
   simp only [hlist?, Option.bind_eq_bind, Option.bind_eq_some_iff] at hcts
   obtain ⟨o, ho, l, hl, hns⟩ := hcts
   have hlI := nat?_idx hl
-  have hb : ciq.toNat + 5 + 13 + 1 < 2 ^ 64 := by have := hS.2.2.2.2.1; have := hS.2.2.1; omega
+  have hb : ciq.toNat + 5 + 13 + 1 < 2 ^ 64 := by have := hS.iw.2.2.2.1; have := hS.iw.2.1; omega
   have e13 : (ciq + 5 + 13).toNat = ciq.toNat + 5 + 13 := by
     rw [word_add_toNat (by simp; omega), word_add_toNat (by simp; omega)]; rfl
   have e14 : (ciq + 5 + 14).toNat = ciq.toNat + 5 + 13 + 1 := by

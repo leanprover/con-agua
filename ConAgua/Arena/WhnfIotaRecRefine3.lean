@@ -179,14 +179,14 @@ theorem c_ref (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
     rcases lsNodeW_cases s₀.mem us with h | ⟨o, l, h⟩
     · rw [hr2] at hne2; exact absurd h hne2
     · exact ⟨o, l, by rw [hr2]; exact h⟩
-  have hvl := lsNodeW_viewLen hS.arena.1 hus (by rw [← hr2, hol])
+  have hvl := lsNodeW_viewLen hS.arena.base hus (by rw [← hr2, hol])
   subst hol
   simp only [irCE.k_ls_node, hE0]
   rcases c3 : callW p n "peel_pis" [sn, rdW E (recP + 4)] s₀.mem with _ | ⟨rp, m3⟩
   · rw [liftE_none, irCE.k_peel_pis.none]; exact RefE.of_cls0 (by simp)
   rw [liftE_some]
   obtain ⟨t3, ht3, hm3, -, -, hrunP⟩ := triple_of_callW
-    (peelPis_refines' p hp.spine.peel n ⟨s₀.mem, Locals.init []⟩ a₀ hS.arena.1 sn _ htyw) c3
+    (peelPis_refines' p hp.spine.peel n ⟨s₀.mem, Locals.init []⟩ a₀ hS.arena.base sn _ htyw) c3
   have hm3' : s₀.mem = m3 := hm3.symm.trans ht3
   subst hm3'
   simp only [irCE.k_peel_pis, hE0]
@@ -281,7 +281,7 @@ theorem at_ref (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
   rcases c1 : callW p n "iota_rec_head" [hd] s₀.mem with _ | ⟨rv, m1⟩
   · rw [liftE_none, irAtE.k_iota_rec_head.none]; exact RefE.of_cls0 (by simp)
   rw [liftE_some]
-  obtain ⟨hm1, hnot, hyes⟩ := irCallW_head p hp.head n s₀.mem a₀ hS.arena.1 hd hhd rv m1 c1
+  obtain ⟨hm1, hnot, hyes⟩ := irCallW_head p hp.head n s₀.mem a₀ hS.arena.base hd hhd rv m1 c1
   subst m1
   simp only [irAtE.k_iota_rec_head]
   by_cases v0 : rv.headD 0 = 0

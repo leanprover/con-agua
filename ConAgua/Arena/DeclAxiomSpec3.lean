@@ -227,14 +227,14 @@ theorem fpW_ok {p : Prog} (h : StdProg p) {dn : NIdx → Option ConLeche.Name} {
   by_cases hf : r1.headD 0 = 0
   · rw [ite_eq_left hf] at hW
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
-    obtain ⟨rfl, hfind⟩ := envFindW_miss h1 hS.1.env hnm hf
+    obtain ⟨rfl, hfind⟩ := envFindW_miss h1 hS.check.env hnm hf
     exact ⟨false, a, hS, IWGrow.refl _, by simp [decW0B], by simp [FpT, hfind]⟩
   rw [ite_eq_right hf] at hW
-  obtain ⟨rfl, hptr, hfind, htag, hrc⟩ := envFindW_hit h1 hS.1.env hnm hf
-  obtain ⟨ci, hci⟩ := envR_row_dec hS.1.env nm hnm htag hrc
+  obtain ⟨rfl, hptr, hfind, htag, hrc⟩ := envFindW_hit h1 hS.check.env hnm hf
+  obtain ⟨ci, hci⟩ := envR_row_dec hS.check.env nm hnm htag hrc
   rw [hptr] at hW
   generalize hq : rowP m1 nm = q at hW hci hfind
-  have hsz := hS.2.2.2.2.1
+  have hsz := hS.iw.2.2.2.1
   have hciA : decCI (m1.arr64 EREC) dn q.toNat = some ci := ArrExt.decCI (erecP_ext m1) hci
   have hbind : (fe.find? (decI nm)).bind (fpShape k ca cb) = fpShape k ca cb ci := by
     rw [hfind, hci]; rfl
@@ -277,7 +277,7 @@ theorem fpW_ok {p : Prog} (h : StdProg p) {dn : NIdx → Option ConLeche.Name} {
   generalize AM.st (pure pci.toConstantVal : AM IConstantVal) a2 = a3 at hrun3 hS3
   have hq1b : q.toNat + 1 < 2 ^ 64 := by
     obtain ⟨w, hw, -, -⟩ := decCV_typeW hcvP
-    have := erecP_bound hw hS.2; omega
+    have := erecP_bound hw hS.iw; omega
   have hq1 : (q + 1).toNat = q.toNat + 1 := toNat_add_small q 1 hq1b
   have hg := hg2.trans hg3
   have hcvS : decCV (erA s3.mem) (q + 1).toNat = some cvT := by

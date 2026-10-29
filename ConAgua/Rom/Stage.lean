@@ -45,7 +45,7 @@ theorem internAllPinsW_fixed (rom : List UInt8) (hr : RomOK rom) (rest : List UI
       List.append_assoc (encNames pinNames ++ encNames reservedBasisNameValues ++ romCIData), List.drop_left]
   have hA' : ArenaD (resetMem mem) a := ArenaD.frameHi (resetMem_frame1 _) (by simp) (by simp) hA
   obtain ⟨m', a', -, hrunI, hR, -, hq, hf, hs, hz⟩ := romItemsW_ok rom hr _ allPins_fits n (resetMem mem) a
-    allPinsOff rest [] ∅ q m₁ hA' ((memFrame_top (resetMem_frame1 mem) (by decide)).mode hA.1.lit.1 hmo)
+    allPinsOff rest [] ∅ q m₁ hA' ((memFrame_top (resetMem_frame1 mem) (by decide)).mode hA.base.lit.1 hmo)
     (MemoR.fresh mem hc) hd (by rw [resetMem_stk]; exact hst)
     (by rw [(resetMem_frame1 _).size]; omega) hI
   obtain ⟨v, hv⟩ := simZ_internAllPins [] ∅ a m' a' hP (by rw [runItems_reset]; exact hrunI)
@@ -57,7 +57,7 @@ theorem internAllPinsW_fixed (rom : List UInt8) (hr : RomOK rom) (rest : List UI
   subst hqd
   exact ⟨n, m₁, a', v, q', hv, hR, fun h0 => hz (h0.reset hcl), by rw [hs, resetMem_stk],
     (resetMem_frame mem).trans hf, hS,
-    ((memFrame_top (resetMem_frame1 mem) (by decide)).trans (romItemsW_topK rom _ _ _ _ _ hI)).mode hA.1.lit.1 hmo⟩
+    ((memFrame_top (resetMem_frame1 mem) (by decide)).trans (romItemsW_topK rom _ _ _ _ _ hI)).mode hA.base.lit.1 hmo⟩
 
 /-! ## The program over `PB` -/
 
@@ -215,7 +215,7 @@ theorem internAllPins_PB (P : Prog) (hno : Prog.noSt8PB P = true) (bs : List UIn
   apply M.triple_of_run
   intro s r s' hs hrun
   obtain ⟨hloc, hW⟩ := M.of_run (P := fun s => s = s₀) hs hrun
-    (internAllPinsPB_specW bs (Prog.subPB bs P) hL n s₀ ⟨hA.1.lit.1.cap, hA.1.lit.1.top41⟩)
+    (internAllPinsPB_specW bs (Prog.subPB bs P) hL n s₀ ⟨hA.base.lit.1.cap, hA.base.lit.1.top41⟩)
   subst hs
   exact ⟨hloc, internAllPinsW_dec bs hr _ hpre n _ _ a₀ hA hmo hP hok hpins hpp hoff hR hst hc hW⟩
 

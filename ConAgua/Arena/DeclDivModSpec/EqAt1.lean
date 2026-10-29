@@ -217,9 +217,9 @@ def CertCtxR (m : Mem) (cx : Word) (c : CertCtxA) : Prop :=
 
 theorem CertCtxR.grow {m m' : Mem} {cx : Word} {c : CertCtxA} (h : CertCtxR m cx c) (hg : IWGrow m m') :
     CertCtxR m' cx c := by
-  refine ⟨Nat.le_trans h.1 hg.1, fun j hj => ?_⟩
+  refine ⟨Nat.le_trans h.1 hg.iw, fun j hj => ?_⟩
   simp only [iwA]
-  rw [hg.2.2.1 _ (by have := h.1; omega)]
+  rw [hg.iwGet _ (by have := h.1; omega)]
   exact h.2 j hj
 
 /-- A field of the context, as the word `cert_*` reads. -/
@@ -407,7 +407,7 @@ theorem certCtx_specW (p : Prog) (hp : p.lookup "cert_ctx" = some certCtxL) (n :
 
 theorem rdW_iw_grow {m m' : Mem} (hg : IWGrow m m') {i : Word} (hi : i.toNat < iwTop m) :
     rdW (m'.arr64 IW) i = rdW (m.arr64 IW) i := by
-  simp only [rdW]; rw [hg.2.2.1 i.toNat hi]
+  simp only [rdW]; rw [hg.iwGet i.toNat hi]
 
 theorem RecPost.rdGrow {m m0 mk : Mem} {r ws : List Word} (h : RecPost m m0 r ws)
     (hg : IWGrow m0 mk) (k : Word) (hk : k.toNat < ws.length) :
@@ -786,8 +786,8 @@ variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {p : Pro
 theorem Rec3At.grow {m m' : Mem} {p a b c : Word} (h : Rec3At m p a b c) (hg : IWGrow m m') :
     Rec3At m' p a b c := by
   obtain ⟨h1, h2, h3, h4⟩ := h
-  refine ⟨Nat.le_trans h1 hg.1, ?_, ?_, ?_⟩ <;> simp only [iwA] at * <;>
-    first | (rw [hg.2.2.1 _ (by omega)]; assumption)
+  refine ⟨Nat.le_trans h1 hg.iw, ?_, ?_, ?_⟩ <;> simp only [iwA] at * <;>
+    first | (rw [hg.iwGet _ (by omega)]; assumption)
 
 theorem rec3At_of_post {m m1 : Mem} {r : List Word} {a b c : Word} (h : RecPost m m1 r [a, b, c])
     (_hI : IWOK m) : Rec3At m1 (r.headD 0) a b c := by
@@ -801,7 +801,7 @@ theorem rec3At_of_post {m m1 : Mem} {r : List Word} {a b c : Word} (h : RecPost 
 theorem StmtAt.grow {m m' : Mem} {p : Word} {st : List EIdx × EIdx} (h : StmtAt m p st)
     (hg : IWGrow m m') : StmtAt m' p st := by
   obtain ⟨ho, hl, e, hr, hb, hd, he, hs⟩ := h
-  exact ⟨ho, hl, e, hr.grow hg, Nat.le_trans hb hg.1, by rw [decHL_grow hg hb]; exact hd, he, hs⟩
+  exact ⟨ho, hl, e, hr.grow hg, Nat.le_trans hb hg.iw, by rw [decHL_grow hg hb]; exact hd, he, hs⟩
 
 def decStmt (m : Mem) (r : List Word) (st : List EIdx × EIdx) : Prop := StmtAt m (r.headD 0) st
 

@@ -48,12 +48,12 @@ theorem pos3_init {p : Prog} (hP : PosBlkProg p) {n : Nat} {dn : NIdx → Option
     (h : callW p n "check_block_positivity_init" [] m = some (r, m')) (hS : StageR dn vis fe m a) :
     StageR dn vis fe m' a ∧ IWGrow m m' ∧ MFr [] [] m m' ∧ NSB m' (r.headD 0) {} := by
   obtain ⟨s', rfl, -, hm, hr, hroom⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (checkBlockPositivityInit_spec p hP.nfs.alloc hP.init n _ hS.2.2.2.1) h
+    (checkBlockPositivityInit_spec p hP.nfs.alloc hP.init n _ hS.iw.2.2.1) h
   simp only at hm hr hroom
-  obtain ⟨hget, hg, hf, htop⟩ := rec6Mem_post m 0 0 0 0 0 0 hS.2.2.2.2.2 hroom hS.2.2.2.1
+  obtain ⟨hget, hg, hf, htop⟩ := rec6Mem_post m 0 0 0 0 0 0 hS.iw.2.2.2.2 hroom hS.iw.2.2.1
   rw [← hm] at hget hg hf htop
   have hT' : iwTop s'.mem = iwTop m + 6 := by
-    have hl : (rdW (m.arr64 CTL) 200).toNat + 6 < 2 ^ 64 := Nat.lt_of_le_of_lt hroom hS.2.2.2.1
+    have hl : (rdW (m.arr64 CTL) 200).toNat + 6 < 2 ^ 64 := Nat.lt_of_le_of_lt hroom hS.iw.2.2.1
     simp only [iwTop, htop, UInt64.toNat_add]; simp; omega
   have hroom' : iwTop m + 6 ≤ (m.arr64 IW).size := hroom
   refine ⟨stage_frame_iw hS hf (by omega), hg, MFr.of_iw hf, ?_⟩

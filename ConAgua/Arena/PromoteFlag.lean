@@ -74,7 +74,7 @@ theorem DerR.setCtl {m : Mem} {a : AState} (hD : DerR m a) (c w : Word) :
 /-- **Writing `CTL[1]`** under `ArenaD`. -/
 theorem ArenaD.flag {m : Mem} {a : AState} (hD : ArenaD m a) (w : Word) :
     ArenaD (m.set64 CTL 1 w) (onA (w != 0) a) :=
-  ⟨hD.1.flag w, (hD.2.setCtl 1 w).onA _⟩
+  ⟨hD.base.flag w, (hD.der.setCtl 1 w).onA _⟩
 
 /-! ## With the flag clear, an interning answers a persistent handle word
 

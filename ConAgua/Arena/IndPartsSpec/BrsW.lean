@@ -910,7 +910,7 @@ theorem bsoW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
     split at e
     · cases e
     rename_i hne
-    obtain ⟨v, hv, hvr⟩ := eViewW_ok m1 a1 hS1.1.arena.1 _ hne
+    obtain ⟨v, hv, hvr⟩ := eViewW_ok m1 a1 hS1.1.arena.base _ hne
     have hvrun := view_run _ a1 v hv
     rw [show (decE (r1.tail.tail.tail.headD 0)) = e1 from hbe] at hvrun
     simp only [StateT.run_bind, hvrun]
@@ -1050,8 +1050,8 @@ theorem partsPack {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
     have m3 := gm 3 (by omega)
     simp only [Nat.add_zero, List.getElem_cons_zero, List.getElem_cons_succ] at m0 m1 m2 m3
     refine ⟨fun o l ho hl => ?_, fun o l ho hl => ?_⟩
-    · rw [m0] at ho; rw [m1] at hl; cases ho; cases hl; exact Nat.le_trans hms.2 hg.1
-    · rw [m2] at ho; rw [m3] at hl; cases ho; cases hl; exact Nat.le_trans hrs.2 hg.1
+    · rw [m0] at ho; rw [m1] at hl; cases ho; cases hl; exact Nat.le_trans hms.bound hg.1
+    · rw [m2] at ho; rw [m3] at hl; cases ho; cases hl; exact Nat.le_trans hrs.bound hg.1
   have g : ∀ j (hj : j < 9), (iwA (truncM m'))[q.toNat + j]? = some ([mo, ml, ro, rl, nP, elim, s, lg, ip][j]'(by simpa using hj)) :=
     fun j hj => hget j (by simpa using hj)
   have g0 := g 0 (by omega); have g1 := g 1 (by omega); have g2 := g 2 (by omega); have g3 := g 3 (by omega)
@@ -1198,7 +1198,7 @@ theorem bfW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
     Sim (bfW n m nPd cto ctl cso csl rso rsl no nl io lo ll s ip)
       (finRest nPd.toNat cvTs nIdxs lps cs (r0 :: rs) r0.1 sv isProp) a
       (fun r x m' a' => ShapeR x r m' ∧ StageR dn vis fe m' a' ∧ IWGrow m m') := by
-  have hctl : cvTs.length = ctl.toNat := decPL_length _ hts.1
+  have hctl : cvTs.length = ctl.toNat := decPL_length _ hts.dec
   -- `cvR0`, read first
   have hrl : rsl ≠ 0 := by
     intro e; subst e; exact absurd (partsPSl_nil hrs) (by simp)
@@ -1372,7 +1372,7 @@ theorem bmcW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
     rw [UInt64.le_iff_toNat_le] at h; simpa using h
   have hsim := bmgW_sim (b nPd (fun h => hg (Or.inl h))) (b k (fun h => hg (Or.inr (Or.inl h))))
     (b nC (fun h => hg (Or.inr (Or.inr (Or.inl h))))) (b rl (fun h => hg (Or.inr (Or.inr (Or.inr h))))) n
-    m a cto ctl 0 cvTs hS hts hrs hnm hnb (by simp; have := hts.2; omega)
+    m a cto ctl 0 cvTs hS hts hrs hnm hnb (by simp; have := hts.bound; omega)
   rcases hb : bmgW n m nPd k nC no nl ro rl cto ctl 0 with _ | ⟨r1, m1⟩ <;> rw [hb] at hm
   · cases hm
   rw [bmfK2_some] at hm
@@ -1412,8 +1412,8 @@ theorem bbW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
   have hT : iwTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 200).toNat_lt
   obtain ⟨p0, cv0, ts', he, hw, hpb, hcv0, -⟩ := partsPSl_cons hts hctl
   simp only [List.cons.injEq] at he; obtain ⟨rfl, rfl⟩ := he
-  have hlen : (cvT0 :: cvTs).length = ctl.toNat := decPL_length _ hts.1
-  have hclen : cs.length = csl.toNat := decPL_length _ hcs.1
+  have hlen : (cvT0 :: cvTs).length = ctl.toNat := decPL_length _ hts.dec
+  have hclen : cs.length = csl.toNat := decPL_length _ hcs.dec
   intro r m' e
   unfold bbW at e
   rw [hw] at e
@@ -1486,7 +1486,7 @@ theorem bbW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
 
 theorem partsW0 {α : Type} {f : Mem → Nat → Option α} {xs : List α} {o l : Word} {m : Mem}
     (h : PSlR f xs o l m) : (l = 0) ↔ xs = [] := by
-  have := decPL_length _ h.1
+  have := decPL_length _ h.dec
   constructor
   · intro e; subst e; simpa using this
   · intro e; subst e; exact UInt64.toNat_inj.mp (by simpa using this.symm)

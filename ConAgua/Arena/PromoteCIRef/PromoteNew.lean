@@ -86,8 +86,8 @@ theorem promoteNew_rel {pins : List INatOpPinSet} (dn : NIdx → Option ConLeche
       obtain ⟨hP1, hf1⟩ := clear_rel hP0 hW1
       rw [hpm]
       have hD₁ : ArenaD m₁ a :=
-        ⟨ArenaR.frame_ext _ _ (by simp) (by simp) m _ hf1 a hR.check.arena.1,
-          DerR.frameM _ _ m _ hf1 (by simp) a hR.check.arena.2⟩
+        ⟨ArenaR.frame_ext _ _ (by simp) (by simp) m _ hf1 a hR.check.arena.base,
+          DerR.frameM _ _ m _ hf1 (by simp) a hR.check.arena.der⟩
       have hT₁ : erecTop m₁ = erecTop m := by simp only [erecTop]; rw [hf1.ctl 129 (by simp)]
       have hEE₁ : m₁.arr64 EREC = m.arr64 EREC := hf1.1 EREC (by simp) (by decide)
       obtain ⟨hiw1, hiw2, hiw3, hiw4, hiw5⟩ := hR.iw

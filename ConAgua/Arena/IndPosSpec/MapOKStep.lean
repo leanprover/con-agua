@@ -93,7 +93,7 @@ theorem posIwN_grow {m m' : Mem} (hg : IWGrow m m') {i : Nat} (hi : i < iwTop m)
   iwN_agree (RdS.of_grow hg) hi
 
 theorem FMOk.grow {m m' : Mem} {f : Nat} {fm : FvMap} (h : FMOk m f fm) (hg : IWGrow m m') : FMOk m' f fm := by
-  have ht := hg.1
+  have ht := hg.iw
   cases fm with
   | holeImg ctx prog n =>
     obtain ⟨h0, hb, ⟨c, hc, hdc, hci⟩, ⟨po, pl, hpo, hpl, hs⟩, hn, hlt⟩ := h
@@ -338,7 +338,7 @@ theorem rootOK (m m' : Mem) (a : AState) (ctx i : Word) (c : NestCtx) (prog : Li
     (hb : c.nP + c.names.length < 2 ^ 64) (hR : RfInv m M G g) :
     ∃ x a', (ConRon.Arena.nestHoleImg c prog 0 i.toNat).run a = .ok (x, a') ∧ OptE r0 r1 x ∧
       RxPost dn fe vis m m' a' M G g := by
-  have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
+  have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.1 hS.iw.2.2.1
   obtain ⟨hn, hn', hpa, hpa', hnP, hlvH, hlv, -, -, h11⟩ := ctx_fields hc hin htop
   have hlen := decHL_length m hn
   have hhi : (hiW m ctx 0).toNat = c.nP + c.names.length := by
@@ -511,7 +511,7 @@ theorem frameTail (n : Nat) (hDs : DsOK dn fe vis n) (mh m' : Mem) (a : AState) 
         let r ← mkAppN hd ds
         pure (some r) : AM (Option EIdx)).run a = .ok (x, a') ∧ OptE r0 r1 x ∧
       RxPost dn fe vis mh m' a' M G g := by
-  have htop : iwTop mh < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
+  have htop : iwTop mh < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.1 hS.iw.2.2.1
   obtain ⟨k, hk0, hkey⟩ := decNH_fields hh
   have hrk : (rdW (mh.arr64 IW) h).toNat = k := rdIW0 hk0
   have hNK := hhin.2.2 k hk0
@@ -982,7 +982,7 @@ theorem goOK_step (j : Nat) (hMap : MapOK dn fe vis j) (ih : ∀ k, k + 1 < j + 
   | nil => rw [hvl] at hgo; simp [rxG1] at hgo
   | cons g vt =>
   have hne : eViewW m h ≠ [] := by rw [hvl]; simp
-  obtain ⟨v, hv, hvr⟩ := eViewW_ok m a hS.1.arena.1 h hne
+  obtain ⟨v, hv, hvr⟩ := eViewW_ok m a hS.1.arena.base h hne
   rw [hvl] at hvr hgo
   have leaf : ∀ (hg : (g :: vt).headD 0 = 0 ∨ (g :: vt).headD 0 = 2 ∨ (g :: vt).headD 0 = 8 ∨
       (g :: vt).headD 0 = 3),

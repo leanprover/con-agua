@@ -542,7 +542,7 @@ end spec
 
 theorem rdW_grow {m m' : Mem} (hg : IWGrow m m') {x : Word} (hi : x.toNat < iwTop m) :
     rdW (m'.arr64 IW) x = rdW (m.arr64 IW) x := by
-  simp only [rdW, hg.2.2.1 _ hi]
+  simp only [rdW, hg.iwGet _ hi]
 
 theorem closeW_ok (n : Nat) : ∀ (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word)
     (m m' : Mem) (a : AState) (dO dl i body : Word) (ds : List EIdx) (r : List Word),

@@ -27,7 +27,7 @@ theorem nhW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
     Sim (nhW k m vis ctx) (ConRon.Arena.nestHoles fe c) a
       (fun r x m' a' => NhOut m' r x ∧ StageR dn vis fe m' a' ∧ IWGrow m m') := by
   intro r m' hm
-  have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
+  have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.1 hS.iw.2.2.1
   obtain ⟨hn, hnb, -⟩ := ctx_fields hc hin htop
   have hlen := decHL_length _ hn
   obtain ⟨x, a', hrun, hS', hg, hout⟩ := nhGoW_ok dn fe vis ctx c k _ _ a 0 _ _ 0 0 c.names [] _ hm hS hc hin

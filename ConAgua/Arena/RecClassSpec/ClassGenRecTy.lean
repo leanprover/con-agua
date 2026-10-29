@@ -62,9 +62,9 @@ theorem rec2SimMotVar {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IF
   rintro ⟨r, m'⟩ h
   obtain ⟨-, hgt, -⟩ := rec2CG_parts hG
   obtain ⟨hg, hsl⟩ := rec2CG_get (hG.get (decCG_mono _))
-  have := hS.2.1; have := hS.2.2.2.1
+  have := hS.iw.1; have := hS.iw.2.2.1
   obtain ⟨x, a', hrun, hS', hg', h1, h2⟩ := motVarW_ok dn vis fe n m m' a g c G r hS hg (by omega) hsl
-    hns (by omega) hS.2.2.2.1 h
+    hns (by omega) hS.iw.2.2.1 h
   exact ⟨x, a', hrun, hS', hg', h1, h2⟩
 
 l_model classGenRecTyTail_spec (p : Prog) (h : GtProg p)
@@ -182,7 +182,7 @@ theorem gtW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
   · exact RSim.none
   rw [gtW.arm1, rec2RecTy_eq]
   obtain ⟨-, hgt, -, -, -, ⟨o12, l12, h12, h13, hpre⟩⟩ := rec2CG_parts hG
-  obtain ⟨e13, t13⟩ := rec2RdN (w := g) (k := 13) h13 hS.2.2.2.1
+  obtain ⟨e13, t13⟩ := rec2RdN (w := g) (k := 13) h13 hS.iw.2.2.1
   simp only [show UInt64.ofNat 13 = (13 : Word) from rfl] at e13
   rw [e13]
   have hlen : G.pre.length = l12 := decHL_length _ (hpre.get (OMono.decHL _ _))

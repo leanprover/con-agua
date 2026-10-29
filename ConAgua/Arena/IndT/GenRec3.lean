@@ -273,8 +273,8 @@ theorem grp_ref (P : GrcProg p) {fsR : List FnName} (hclR : closedA p rcFreeA rc
       simp only [grcTwinA, StateT.run_bind, hrun1, except_ok_bind, hrun2, hkb, hl, Bool.false_eq_true, ite_false]
   have hl : bs.large = true := by rw [← hL]; simpa using h7
   have hmsD : decPL s2.mem (decTM s2.mem) mO.toNat mL.toNat = some ms :=
-    (hms.1.grow (OMono.decPL (fun q => decTM_mono q) _ _) hg12).get (OMono.decPL (fun q => decTM_mono q) _ _)
-  have hmsb : mO.toNat + mL.toNat < 2 ^ 64 := hS.lt64 hms.2
+    (hms.dec.grow (OMono.decPL (fun q => decTM_mono q) _ _) hg12).get (OMono.decPL (fun q => decTM_mono q) _ _)
+  have hmsb : mO.toNat + mL.toNat < 2 ^ 64 := hS.lt64 hms.bound
   have hsh2 := ConRon.Bridge.Inductives.dShape_ext c12.ext _ _ hsh
   have hsrc2 : ShapeSrc s2.mem pp := partsHsrc_grow hg12 (partsShapeFacts hbs.1 hbs.2.1).2.1 hbs.2.1
   have large : ∀ (nb : Word), (nb != 0) = (nested != 0 || ms.any (·.member.isNone)) →

@@ -205,14 +205,14 @@ theorem rsoW_ok {p : Prog} (h : RedProg p) {dn : NIdx → Option ConLeche.Name} 
   · -- a miss
     rw [ite_eq_left hf] at hW
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
-    obtain ⟨rfl, hfind⟩ := envFindW_miss h1 hS.1.env hc hf
+    obtain ⟨rfl, hfind⟩ := envFindW_miss h1 hS.check.env hc hf
     refine ⟨false, a, by simp [reduceStoredOk, hfind]; rfl, hS, IWGrow.refl _, by simp [decW0B]⟩
   rw [ite_eq_right hf] at hW
-  obtain ⟨rfl, hptr, hfind, htag, hrc⟩ := envFindW_hit h1 hS.1.env hc hf
-  obtain ⟨ci, hci⟩ := envR_row_dec hS.1.env c hc htag hrc
+  obtain ⟨rfl, hptr, hfind, htag, hrc⟩ := envFindW_hit h1 hS.check.env hc hf
+  obtain ⟨ci, hci⟩ := envR_row_dec hS.check.env c hc htag hrc
   rw [hptr] at hW
   generalize hq : rowP m1 c = q at hW hci hfind
-  have hsz := hS.2.2.2.2.1
+  have hsz := hS.iw.2.2.2.1
   obtain ⟨wk, hwk⟩ : ∃ wk, (erecP m1)[q.toNat]? = some wk := by
     obtain ⟨wk, e, -⟩ := ciD hci; exact ⟨wk, e⟩
   have ek : rdW (m1.arr64 EREC) q = wk := rdW_of_get? rfl (erecP_get hwk)
@@ -239,7 +239,7 @@ theorem rsoW_ok {p : Prog} (h : RedProg p) {dn : NIdx → Option ConLeche.Name} 
   have hpin := DecB.get ⟨fun _ _ _ he h => he.2.decCV h⟩ hd2
   have hq1b : q.toNat + 1 < 2 ^ 64 := by
     obtain ⟨w, hw, -, -⟩ := decCV_typeW hcvR
-    have := erecP_bound hw hS.2; omega
+    have := erecP_bound hw hS.iw; omega
   have hq1 : (q + 1).toNat = q.toNat + 1 := toNat_add_small q 1 hq1b
   have hcvR2 : decCV (erA s2.mem) (q + 1).toNat = some cvR := by
     rw [hq1]; exact ArrExt.decCV (IWGrow.erecExt hg2) hcvR
@@ -367,17 +367,17 @@ theorem reoW_ok {p : Prog} {dn : NIdx → Option ConLeche.Name} (hdn : DnInj dn)
   | succ n =>
   rw [reoW_step] at hW
   rcases h1 : pinAtW m 43 with _ | ⟨r1, m1⟩ <;> simp only [h1, reoK1, reduceCtorEq] at hW
-  obtain ⟨hm1, hr1, hl1, hrun1⟩ := pinAtW_ok h1 hS.1.pins
+  obtain ⟨hm1, hr1, hl1, hrun1⟩ := pinAtW_ok h1 hS.check.pins
   have e1 : r1.headD 0 = pinW m (1 + (43 : Word).toNat) := by rw [hr1]; rfl
   have hbeq : ((decI c : NIdx) == decI (pinW m (1 + (43 : Word).toNat))) =
       decide (c = pinW m (1 + (43 : Word).toNat)) := decI_beq c _ hc hl1
-  have hsz := hS.2.2.2.2.1
+  have hsz := hS.iw.2.2.2.1
   by_cases he : c = r1.headD 0
   · -- `reduceNat`: the pinned `Nat` basis
     rw [ite_eq_left he, hm1] at hW
     rw [e1] at he
     rcases h2 : pinAtW m 1 with _ | ⟨r2, m2⟩ <;> simp only [h2, reoN1, reduceCtorEq] at hW
-    obtain ⟨hm2, hr2, hl2, hrun2⟩ := pinAtW_ok h2 hS.1.pins
+    obtain ⟨hm2, hr2, hl2, hrun2⟩ := pinAtW_ok h2 hS.check.pins
     rw [hm2, hr2] at hW
     simp only [List.headD_cons] at hW
     rcases h3 : envFindW m (pinW m (1 + (1 : Word).toNat)) vis with _ | ⟨r3, m3⟩ <;> simp only [h3, reoN2, reduceCtorEq] at hW
@@ -397,12 +397,12 @@ theorem reoW_ok {p : Prog} {dn : NIdx → Option ConLeche.Name} (hdn : DnInj dn)
     by_cases hf : r3.headD 0 = 0
     · rw [ite_eq_left hf] at hW
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
-      obtain ⟨-, hfind⟩ := envFindW_miss h3 hS.1.env hl2 hf
+      obtain ⟨-, hfind⟩ := envFindW_miss h3 hS.check.env hl2 hf
       refine ⟨false, a4, by rw [htwin, hfind]; rfl, hS4, hg4, by simp [decW0B]⟩
     rw [ite_eq_right hf] at hW
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
-    obtain ⟨-, hptr, hfind, htag, hrc⟩ := envFindW_hit h3 hS.1.env hl2 hf
-    obtain ⟨ci, hci⟩ := envR_row_dec hS.1.env _ hl2 htag hrc
+    obtain ⟨-, hptr, hfind, htag, hrc⟩ := envFindW_hit h3 hS.check.env hl2 hf
+    obtain ⟨ci, hci⟩ := envR_row_dec hS.check.env _ hl2 htag hrc
     have hci4 : decCI (erA m4) dn (r3.tail.headD 0).toNat = some ci := by
       rw [hptr]; exact ArrExt.decCI (IWGrow.erecExt hg4) hci
     have hq := ciEqB_ok hdn hS4.2.2.2.2.1 hci4 (decRCI_get hna)
@@ -415,7 +415,7 @@ theorem reoW_ok {p : Prog} {dn : NIdx → Option ConLeche.Name} (hdn : DnInj dn)
     rw [ite_eq_right he, hm1] at hW
     rw [e1] at he
     rcases h2 : pinAtW m 29 with _ | ⟨r2, m2⟩ <;> simp only [h2, reoB1, reduceCtorEq] at hW
-    obtain ⟨hm2, hr2, hl2, hrun2⟩ := pinAtW_ok h2 hS.1.pins
+    obtain ⟨hm2, hr2, hl2, hrun2⟩ := pinAtW_ok h2 hS.check.pins
     rw [hm2, hr2] at hW
     simp only [List.headD_cons] at hW
     have hpre : (reduceElemOk fe (decI c)).run a =
@@ -431,11 +431,11 @@ theorem reoW_ok {p : Prog} {dn : NIdx → Option ConLeche.Name} (hdn : DnInj dn)
     by_cases hf : r3.headD 0 = 0
     · rw [ite_eq_left hf] at hW
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
-      obtain ⟨rfl, hfind⟩ := envFindW_miss h3 hS.1.env hl2 hf
+      obtain ⟨rfl, hfind⟩ := envFindW_miss h3 hS.check.env hl2 hf
       refine ⟨false, a, by rw [hpre, hfind]; rfl, hS, IWGrow.refl _, by simp [decW0B]⟩
     rw [ite_eq_right hf] at hW
-    obtain ⟨rfl, hptr, hfind, htag, hrc⟩ := envFindW_hit h3 hS.1.env hl2 hf
-    obtain ⟨ci, hci⟩ := envR_row_dec hS.1.env _ hl2 htag hrc
+    obtain ⟨rfl, hptr, hfind, htag, hrc⟩ := envFindW_hit h3 hS.check.env hl2 hf
+    obtain ⟨ci, hci⟩ := envR_row_dec hS.check.env _ hl2 htag hrc
     rw [hptr] at hW
     generalize hq : rowP m3 (pinW m3 (1 + (29 : Word).toNat)) = q at hW hci hfind
     obtain ⟨wk, hwk⟩ : ∃ wk, (erecP m3)[q.toNat]? = some wk := by
@@ -459,7 +459,7 @@ theorem reoW_ok {p : Prog} {dn : NIdx → Option ConLeche.Name} (hdn : DnInj dn)
     have hrun4' : boolCvA.run a = .ok (pin, a4) := hrun4
     have hq1b : q.toNat + 1 < 2 ^ 64 := by
       obtain ⟨w, hw, -, -⟩ := decCV_typeW hcvB
-      have := erecP_bound hw hS.2; omega
+      have := erecP_bound hw hS.iw; omega
     have hq1 : (q + 1).toNat = q.toNat + 1 := toNat_add_small q 1 hq1b
     have hcvB4 : decCV (erA m4) (q + 1).toNat = some cvB := by
       rw [hq1]; exact ArrExt.decCV (IWGrow.erecExt hg4) hcvB

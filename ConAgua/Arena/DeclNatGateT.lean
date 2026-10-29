@@ -240,7 +240,7 @@ theorem dnc_ref (hN : NatSubProg' p) (hq : KnotStageProg p) (hcl : LeafClosed p)
   rcases h1 : callW p k "env_find" [n, w] m with _ | ⟨r1, m1⟩
   · rw [liftE_none, defnNatCertE.k_env_find.none]; exact RefE.of_cls0 (by simp)
   rw [liftE_some]
-  obtain ⟨hm1, hfd⟩ := envFind_call hG.toMasterProg n hn hSw.1.env h1
+  obtain ⟨hm1, hfd⟩ := envFind_call hG.toMasterProg n hn hSw.check.env h1
   subst hm1
   cases hf : fe2.find? (decI n) with
   | none =>
@@ -251,7 +251,7 @@ theorem dnc_ref (hN : NatSubProg' p) (hq : KnotStageProg p) (hcl : LeafClosed p)
   rw [hf] at hfd
   obtain ⟨hf1, hci⟩ := hfd
   have hnz : ¬ r1.headD 0 = 0 := by rw [hf1]; decide
-  have hsz := hSw.2.2.2.2.1
+  have hsz := hSw.iw.2.2.2.1
   by_cases hkk' : ¬ rdW (m1.arr64 EREC) (r1.tail.headD 0) = 1
   · rw [defnNatCertE.k_env_find.abort2 p _ _ _ _ _ hnz hkk']; exact RefE.of_cls0 rfl
   have hkk : rdW (m1.arr64 EREC) (r1.tail.headD 0) = 1 := Classical.not_not.mp hkk'
@@ -368,7 +368,7 @@ theorem dng_ref (hN : NatSubProg' p) (hq : KnotStageProg p) (hcl : LeafClosed p)
   have hT := hE.toNatTyProg
   have hGd := hT.toNatGuardProg
   have hG := hGd.toNatLitProg.toNatCvProg.toNatGateProg
-  have hvb : fe2.visibleBelow = w.toNat := hSw.1.env.vis
+  have hvb : fe2.visibleBelow = w.toNat := hSw.check.env.vis
   rw [natGateT_eq]
   -- the operation names
   rcases h1 : callW p k "nat_op_names" [] m with _ | ⟨r1, m1⟩

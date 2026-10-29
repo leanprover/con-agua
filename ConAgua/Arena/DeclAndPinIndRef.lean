@@ -220,7 +220,7 @@ theorem decPL_growAP {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {o l : Na
   obtain ⟨v, hv, hy⟩ := hy
   refine ⟨v, ?_, ArrExt.decCI (IWGrow.erecPExt hg) hy⟩
   simp only [iwN, nat?, iwA] at hv ⊢
-  rw [hg.2.2.1 _ (by omega)]; exact hv
+  rw [hg.iwGet _ (by omega)]; exact hv
 
 /-- **`er_to_iw` of the copied block**: the `IW` slice decodes (in `erecP`) to the block. -/
 theorem erToIw_blk {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
@@ -230,7 +230,7 @@ theorem erToIw_blk {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv
     StageR dn vis fe m' a ∧ IWGrow m m' ∧ r.tail.headD 0 = l ∧
       decPL m' (fun q => decCI (erecP m') dn q) (r.headD 0).toNat l.toNat = some block ∧
       (r.headD 0).toNat + l.toNat ≤ iwTop m' := by
-  obtain ⟨hI1, hE1, hsz, hEs, hc⟩ := hS.2
+  obtain ⟨hI1, hE1, hsz, hEs, hc⟩ := hS.iw
   obtain ⟨hr, -, hg, hf, hE, htop⟩ := L.Ind.erToIwW_dec (k := .name) h hsz (by omega) hEs (by
     simp only [erTop] at hE1 hb; omega)
   have hw := L.Ind.erToIwW_wordsA h hsz (by omega) hEs (by simp only [erTop] at hE1 hb; omega)
@@ -289,7 +289,7 @@ theorem andpW_ind_ok {p : Prog} (hp : AndPinIndProg p) {dn : NIdx → Option Con
   | succ n =>
   rw [andpW_step] at h
   obtain ⟨hfl, h⟩ := of_ite_none h
-  have hF : PinsFull m a.pins := hS.1.pins.full hfl
+  have hF : PinsFull m a.pins := hS.check.pins.full hfl
   have hdecl' := hdecl
   obtain ⟨h6, hnP, t, -, hdec⟩ := hdecl'
   have h0 : dw (m.arr64 DECL) i.toNat 0 ≠ 0 := by rw [h6]; decide

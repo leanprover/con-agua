@@ -24,7 +24,7 @@ theorem pi_E {op opP : AM EIdx} {m m₁ : Mem} {a : AState} {r : Word} (hD : Are
     (heq : opP.run a = (op.run (onA false a)).map (fun r => (r.1, onA a.store.scratchOn r.2))) :
     ∃ a', opP.run a = .ok (decE r, a') ∧
       ArenaD (m₁.set64 CTL 1 (rdW (m.arr64 CTL) 1)) a' ∧ cp a' = cp a := by
-  have hfl : (rdW (m.arr64 CTL) 1 != 0) = a.store.scratchOn := hD.1.flag_eq
+  have hfl : (rdW (m.arr64 CTL) 1 != 0) = a.store.scratchOn := hD.base.flag_eq
   have hrun := AM.run_of_ok op _ hok
   refine ⟨onA a.store.scratchOn (AM.st op (onA false a)), ?_, ?_, ?_⟩
   · rw [heq, hrun, hres]; rfl
@@ -90,7 +90,7 @@ theorem pi_gen {g : FnName} {args : List Word} {op opP : AM EIdx} {A : List Tier
     {r : Word} {m' : Mem} (h : piW p n g args m = some (r, m')) :
     ∃ a', opP.run a = .ok (decE r, a') ∧ ArenaD m' a' ∧ PW r ∧ cp a' = cp a ∧
       MemFrame A C m m' := by
-  have hcs := ctl_size hD.1
+  have hcs := ctl_size hD.base
   rw [piW_eq _ _ _ _ _ hcs] at h
   cases hcall : callW p n g args (m.set64 CTL 1 0) with
   | none => rw [hcall] at h; cases h
@@ -105,7 +105,7 @@ theorem pi_gen {g : FnName} {args : List Word} {op opP : AM EIdx} {A : List Tier
 
 omit hp in
 theorem flag0 {m : Mem} {a : AState} (hD : ArenaD m a) : rdW ((m.set64 CTL 1 0).arr64 CTL) 1 = 0 := by
-  rw [rdW_set64]; simp [ctl_size hD.1]
+  rw [rdW_set64]; simp [ctl_size hD.base]
 
 /-- **`pi_bvar` refines `internPersistentE (.bvar u.toNat)`.** -/
 theorem piBVar_rel (m : Mem) (a : AState) (hD : ArenaD m a) (u : Word) (r : Word) (m' : Mem)
@@ -118,7 +118,7 @@ theorem piBVar_rel (m : Mem) (a : AState) (hD : ArenaD m a) (u : Word) (r : Word
     obtain ⟨hok, hD₁, hres⟩ := internBVar_D _ (onA false a) (hD.flag 0) u _ _ hI
     exact ⟨hok, hD₁, hres, consInternM_pw bvarCS_wf (hD.flag 0).1.bvar (flag0 hD) hI,
       (consInternM_frame bvarCS_wf hI).mono (by simp [ConsSch.wset, bvarCS]) (by simp [bvarCS])⟩)
-    (keeps_internE _) (internPersistentE_eq _ a hD.1.flagsEq (by exact trivial)) h
+    (keeps_internE _) (internPersistentE_eq _ a hD.base.flagsEq (by exact trivial)) h
 
 /-- **`pi_fvar` refines `internPersistentE (.fvar u.toNat (decE ty))`.** -/
 theorem piFVar_rel (m : Mem) (a : AState) (hD : ArenaD m a) (u ty : Word) (hty : PW ty) (r : Word) (m' : Mem)
@@ -131,7 +131,7 @@ theorem piFVar_rel (m : Mem) (a : AState) (hD : ArenaD m a) (u ty : Word) (hty :
     obtain ⟨hok, hD₁, hres⟩ := internFVar_D _ (onA false a) (hD.flag 0) u ty _ hty.1 _ hI
     exact ⟨hok, hD₁, hres, consInternM_pw fvarCS_wf (hD.flag 0).1.fvar (flag0 hD) hI,
       (fvinternW_frame (hI := hI)).mono (by simp) (by simp)⟩)
-    (keeps_internE _) (internPersistentE_eq _ a hD.1.flagsEq (by exact hty.pers)) h
+    (keeps_internE _) (internPersistentE_eq _ a hD.base.flagsEq (by exact hty.pers)) h
 
 /-- **`pi_sort` refines `internPersistentE (.sort (decI u))`.** -/
 theorem piSort_rel (m : Mem) (a : AState) (hD : ArenaD m a) (u : Word) (hu : PW u) (r : Word) (m' : Mem)
@@ -144,7 +144,7 @@ theorem piSort_rel (m : Mem) (a : AState) (hD : ArenaD m a) (u : Word) (hu : PW 
     obtain ⟨hok, hD₁, hres⟩ := internSort_D _ (onA false a) (hD.flag 0) u _ hu.1 _ hI
     exact ⟨hok, hD₁, hres, consInternM_pw sortCS_wf (hD.flag 0).1.sort (flag0 hD) hI,
       (sointernW_frame (hI := hI)).mono (by simp) (by simp)⟩)
-    (keeps_internE _) (internPersistentE_eq _ a hD.1.flagsEq (by exact hu.pers)) h
+    (keeps_internE _) (internPersistentE_eq _ a hD.base.flagsEq (by exact hu.pers)) h
 
 /-- **`pi_const` refines `internPersistentE (.const (decI (k := .name) x) (decI (k := .levels) us))`.** -/
 theorem piConst_rel (m : Mem) (a : AState) (hD : ArenaD m a) (x us : Word) (hx : PW x) (hus : PW us) (r : Word) (m' : Mem)
@@ -157,7 +157,7 @@ theorem piConst_rel (m : Mem) (a : AState) (hD : ArenaD m a) (x us : Word) (hx :
     obtain ⟨hok, hD₁, hres⟩ := internConst_D _ (onA false a) (hD.flag 0) x us _ hx.1 hus.1 _ hI
     exact ⟨hok, hD₁, hres, consInternM_pw constCS_wf (hD.flag 0).1.const (flag0 hD) hI,
       (ceinternW_frame (hI := hI)).mono (by simp) (by simp)⟩)
-    (keeps_internE _) (internPersistentE_eq _ a hD.1.flagsEq (by exact ⟨hx.pers, hus.pers⟩)) h
+    (keeps_internE _) (internPersistentE_eq _ a hD.base.flagsEq (by exact ⟨hx.pers, hus.pers⟩)) h
 
 /-- **`pi_app` refines `internPersistentE (.app (decE f) (decE x))`.** -/
 theorem piApp_rel (m : Mem) (a : AState) (hD : ArenaD m a) (f x : Word) (hf : PW f) (hx : PW x) (r : Word) (m' : Mem)
@@ -173,7 +173,7 @@ theorem piApp_rel (m : Mem) (a : AState) (hD : ArenaD m a) (f x : Word) (hf : PW
     exact mkK_pw (A₀ := [AREC, tier1 AREC, ASLOT, tier1 ASLOT]) (by decide) (fun _ _ hx =>
       ⟨consInternM_pw appCS_wf (hD.flag 0).1.app (flag0 hD) hx, (consInternM_frame appCS_wf hx).mono
         (by simp [ConsSch.wset, appCS]) (by simp [appCS])⟩) hI)
-    (keeps_internE _) (internPersistentE_eq _ a hD.1.flagsEq (by exact ⟨hf.pers, hx.pers⟩)) h
+    (keeps_internE _) (internPersistentE_eq _ a hD.base.flagsEq (by exact ⟨hf.pers, hx.pers⟩)) h
 
 /-- **`pi_lam` refines `internPersistentE (.lam (decE t) (decE b))`.** -/
 theorem piLam_rel (m : Mem) (a : AState) (hD : ArenaD m a) (t b : Word) (ht : PW t) (hb : PW b) (r : Word) (m' : Mem)
@@ -189,7 +189,7 @@ theorem piLam_rel (m : Mem) (a : AState) (hD : ArenaD m a) (t b : Word) (ht : PW
     exact mkK_pw (A₀ := [LAREC, tier1 LAREC, LASLOT, tier1 LASLOT]) (by decide) (fun _ _ hx =>
       ⟨consInternM_pw lamCS_wf (hD.flag 0).1.lam (flag0 hD) hx, (consInternM_frame lamCS_wf hx).mono
         (by simp [ConsSch.wset, lamCS]) (by simp [lamCS])⟩) hI)
-    (keeps_internE _) (internPersistentE_eq _ a hD.1.flagsEq (by exact ⟨ht.pers, hb.pers⟩)) h
+    (keeps_internE _) (internPersistentE_eq _ a hD.base.flagsEq (by exact ⟨ht.pers, hb.pers⟩)) h
 
 /-- **`pi_forall` refines `internPersistentE (.forallE (decE t) (decE b))`.** -/
 theorem piForall_rel (m : Mem) (a : AState) (hD : ArenaD m a) (t b : Word) (ht : PW t) (hb : PW b) (r : Word) (m' : Mem)
@@ -205,7 +205,7 @@ theorem piForall_rel (m : Mem) (a : AState) (hD : ArenaD m a) (t b : Word) (ht :
     exact mkK_pw (A₀ := [FAREC, tier1 FAREC, FASLOT, tier1 FASLOT]) (by decide) (fun _ _ hx =>
       ⟨consInternM_pw forallCS_wf (hD.flag 0).1.forallE (flag0 hD) hx, (consInternM_frame forallCS_wf hx).mono
         (by simp [ConsSch.wset, forallCS]) (by simp [forallCS])⟩) hI)
-    (keeps_internE _) (internPersistentE_eq _ a hD.1.flagsEq (by exact ⟨ht.pers, hb.pers⟩)) h
+    (keeps_internE _) (internPersistentE_eq _ a hD.base.flagsEq (by exact ⟨ht.pers, hb.pers⟩)) h
 
 /-- **`pi_let` refines `internPersistentE (.letE (decE t) (decE v) (decE b))`.** -/
 theorem piLet_rel (m : Mem) (a : AState) (hD : ArenaD m a) (t v b : Word) (ht : PW t) (hv : PW v) (hb : PW b) (r : Word) (m' : Mem)
@@ -221,7 +221,7 @@ theorem piLet_rel (m : Mem) (a : AState) (hD : ArenaD m a) (t v b : Word) (ht : 
     exact mkK_pw (A₀ := [LEREC, tier1 LEREC, LESLOT, tier1 LESLOT]) (by decide) (fun _ _ hx =>
       ⟨consInternM_pw letCS_wf (hD.flag 0).1.letE (flag0 hD) hx, (consInternM_frame letCS_wf hx).mono
         (by simp [ConsSch.wset, letCS]) (by simp [letCS])⟩) hI)
-    (keeps_internE _) (internPersistentE_eq _ a hD.1.flagsEq (by exact ⟨ht.pers, hv.pers, hb.pers⟩)) h
+    (keeps_internE _) (internPersistentE_eq _ a hD.base.flagsEq (by exact ⟨ht.pers, hv.pers, hb.pers⟩)) h
 
 /-- **`pi_proj` refines `internPersistentE (.proj (decI x) i.toNat (decE e))`.** -/
 theorem piProj_rel (m : Mem) (a : AState) (hD : ArenaD m a) (x i e : Word) (hx : PW x) (he : PW e) (r : Word) (m' : Mem)
@@ -237,7 +237,7 @@ theorem piProj_rel (m : Mem) (a : AState) (hD : ArenaD m a) (x i e : Word) (hx :
     exact mkK_pw (A₀ := [PJREC, tier1 PJREC, PJSLOT, tier1 PJSLOT]) (by decide) (fun _ _ hx =>
       ⟨consInternM_pw projCS_wf (hD.flag 0).1.proj (flag0 hD) hx, (consInternM_frame projCS_wf hx).mono
         (by simp [ConsSch.wset, projCS]) (by simp [projCS])⟩) hI)
-    (keeps_internE _) (internPersistentE_eq _ a hD.1.flagsEq (by exact ⟨hx.pers, he.pers⟩)) h
+    (keeps_internE _) (internPersistentE_eq _ a hD.base.flagsEq (by exact ⟨hx.pers, he.pers⟩)) h
 
 omit hp in
 /-- The pool slice at the cleared flag. -/
@@ -267,7 +267,7 @@ theorem piLit_rel0 (m : Mem) (a : AState) (hD : ArenaD m a) (o l : Word) (hsl : 
     rw [hpoolv] at hok hD₁ hres
     exact ⟨hok, hD₁, hres, consInternM_pw litCS_wf (hD.flag 0).1.lit.2 (flag0 hD) hI,
       (consInternM_frame litCS_wf hI).mono (by simp [ConsSch.wset, litCS, litCSk]) (by simp [litCS, litCSk])⟩)
-    (keeps_internE _) (internPersistentE_eq _ a hD.1.flagsEq (by exact trivial)) h
+    (keeps_internE _) (internPersistentE_eq _ a hD.base.flagsEq (by exact trivial)) h
 
 /-- **`pi_lit_str` refines `internPersistentE (.lit (.strVal s))`**, `s` the string the pool
 slice holds. -/
@@ -290,7 +290,7 @@ theorem piLitStr_rel0 (m : Mem) (a : AState) (hD : ArenaD m a) (o l : Word) (hsl
     exact ⟨hok, hD₁, hres, consInternM_pw litStrCS_wf (litR_str.mp (hD.flag 0).1.lit.2) (flag0 hD) hI,
       (consInternM_frame litStrCS_wf hI).mono (by simp [ConsSch.wset, litStrCS, litCSk])
         (by simp [litStrCS, litCSk])⟩)
-    (keeps_internE _) (internPersistentE_eq _ a hD.1.flagsEq (by exact trivial)) h
+    (keeps_internE _) (internPersistentE_eq _ a hD.base.flagsEq (by exact trivial)) h
 
 /-- **`pi_lit` refines `internPersistentE (.lit (.natVal _))`**, the number the pool slice
 holds; a tier-1 slice is first copied to tier 0 (lane tierpool). -/

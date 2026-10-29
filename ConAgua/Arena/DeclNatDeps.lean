@@ -180,7 +180,7 @@ theorem pw_rec {m m1 : Mem} {pi : Word} {ws : List Word} (hI : IWOK m)
   obtain ⟨hq, hKeep, hroom, htop, hget⟩ := hrec
   have h1 := hget j hj
   have hpi : pi.toNat = iwTop m := by simp only [List.headD_cons] at hq; rw [hq]; rfl
-  have hsz := hI.2.2.1
+  have hsz := hI.iwSize
   have hj64 : (UInt64.ofNat j).toNat = j := by
     rw [UInt64.toNat_ofNat_of_lt' (Nat.lt_of_lt_of_le hj (by show ws.length ≤ 2 ^ 64; omega))]
   have hadd : (pi + UInt64.ofNat j).toNat = iwTop m + j := by

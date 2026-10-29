@@ -278,7 +278,7 @@ theorem secg_ref (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : StuckCal
   have em₄ : m₄ = m₃ := by rw [← ht₄, ht₄s]
   subst em₄
   rw [hr₄] at hne
-  have hvl := defeq_lsNodeW_viewLen hS₃.arena.1 hus2 hne
+  have hvl := defeq_lsNodeW_viewLen hS₃.arena.base hus2 hne
   rw [← hr₄] at hvl
   simp only [secgE.k_ls_node]
   -- `tower_slots_all`: the effect

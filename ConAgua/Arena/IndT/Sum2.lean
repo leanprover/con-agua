@@ -220,13 +220,13 @@ theorem cts_ref (k : Nat) (hk : k ≤ 2 ^ 62)
     ?_, ?_, ?_, by simpa using hs32, by simpa using hs, hP5.abs hA4⟩)
   · simp only [List.headD]
     exact decCVp_grow hg5 (by omega) (fun lo ll e1 e2 => by have := hsl4 lo ll e1 e2; omega) hdq
-  · simp only [List.headD]; have := hg5.2.1; omega
+  · simp only [List.headD]; have := hg5.er; omega
   · intro lo ll e1 e2
     simp only [List.headD] at e1 e2 ⊢
     have hn : ∀ j, j < 4 → nat? (erA m5) (q.toNat + j) = nat? (erA m4) (q.toNat + j) := fun j hj => by
-      simp only [nat?, erA]; rw [hg5.2.2.2 _ (by omega)]
+      simp only [nat?, erA]; rw [hg5.erGet _ (by omega)]
     rw [hn 1 (by decide)] at e1; rw [hn 2 (by decide)] at e2
-    have := hsl4 lo ll e1 e2; have := hg4.2.1; have := hg5.2.1; omega
+    have := hsl4 lo ll e1 e2; have := hg4.2.1; have := hg5.er; omega
 
 include hq henv hApd hCrk hP in
 /-- **`check_sum_tele` refines `checkSumTele .verified` under `StageC`, both outcomes** (twin side:
@@ -286,7 +286,7 @@ theorem ct_ref (k : Nat) (hk : k ≤ 2 ^ 62)
     by_cases hne : eViewW m1 (r1.tail.tail.tail.headD 0) = []
     · rw [ctE.k_strip_pis.arm1 _ _ _ _ _ _ _ _ hf hne]; exact RefE.of_cls0 (by simp)
     rw [ctE.k_strip_pis.arm2 _ _ _ _ _ _ _ _ hf hne]
-    obtain ⟨vv, hview, hVR⟩ := eViewW_ok m1 a hS1.1.arena.1 _ hne
+    obtain ⟨vv, hview, hVR⟩ := eViewW_ok m1 a hS1.1.arena.base _ hne
     have h2 := eViewW_head2 m1 _ hf.2 hne
     have htag : (decE (r1.tail.tail.tail.headD 0)).tag = ETag.sort :=
       (decE_tag_sort _ (by simpa using hb32)).mpr hf.2

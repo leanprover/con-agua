@@ -273,7 +273,7 @@ theorem ec_ref (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (n : Nat)
   rw [ite_eq_right hi]
   have hi' : idxW (r₃.headD 0) < tcnt m₃ FORALL (tierW (r₃.headD 0)) := by simpa using hi
   simp only [h6', decide_true, ↓reduceIte]
-  obtain ⟨hv, hty2, hcod2⟩ := view_forall m₃ _ hS₃.arena.1 (r₃.headD 0) hh3 ⟨ht, hi'⟩ h6'
+  obtain ⟨hv, hty2, hcod2⟩ := view_forall m₃ _ hS₃.arena.base (r₃.headD 0) hh3 ⟨ht, hi'⟩ h6'
   refine RefE.bind_right (view_run _ _ _ hv) ?_
   simp only
   rcases c4 : callE p n "defeq" [mode, vis, d, tfld m₃ FORALL (tierW (r₃.headD 0)) (idxW (r₃.headD 0)) 0,

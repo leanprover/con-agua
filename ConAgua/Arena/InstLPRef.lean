@@ -75,7 +75,7 @@ theorem readNameM_run (a : AState) (h : NIdx) (x : Name) (hd : denoteN a.store.n
 
 theorem ArenaD.with_caches {m : Mem} {a : AState} (hA : ArenaD m a) (c : Caches) :
     ArenaD m { a with caches := c } :=
-  ⟨hA.1.with_caches c, DerR.of_store _ _ _ hA.2 rfl⟩
+  ⟨hA.base.with_caches c, DerR.of_store _ _ _ hA.der rfl⟩
 
 /-- A write at or past the end of a name slice keeps it. -/
 theorem NmsR.set_past {N : Word → Name → Prop} {m : Mem} {A : ArrId} {d v : Word} :
@@ -384,7 +384,7 @@ theorem slpW_ok (ks : List Name) (vs : List Level) (usIds : List LIdx) (ko kc vo
     have hstc : ac.store = a.store := by rw [← hac]
     have htop := m.top.toNat_lt
     have h41 := hA.1.lit.1.top41
-    have hv₀ := lvsR_of_slice hAc.1 usIds vs _ _ hvs (by omega) (by rw [hstc]; exact hdv)
+    have hv₀ := lvsR_of_slice hAc.base usIds vs _ _ hvs (by omega) (by rw [hstc]; exact hdv)
     obtain ⟨a₁, hrun₁, hA₁, hf₁, hkp₁⟩ := slpOne_ok ks vs n m m₁ ac ko kc vo vc w h nm hAc
       (by rw [hstc]; exact StoreWF.nwf hwf) (by rw [hstc]; exact hk) hv₀
       ⟨hw, by rw [hstc]; exact hdu⟩ hS
@@ -487,7 +487,7 @@ theorem spnLsW_ok (n : Nat) (m m' : Mem) (a : AState) (b l r : Word) (hs : List 
       Agree (vpool m') (vpool m) m.top.toNat ∧
       m.top.toNat ≤ m'.top.toNat ∧ pcap m' = pcap m ∧
       a'.caches = a.caches ∧ a'.pins = a.pins ∧ a'.memos = a.memos := by
-  obtain ⟨m₂, hg, htop₂, htl, hsl₂, hmf, -, hI, hr⟩ := spnLsW_pool n m m' b l r hA.1.lit.1 hb hW
+  obtain ⟨m₂, hg, htop₂, htl, hsl₂, hmf, -, hI, hr⟩ := spnLsW_pool n m m' b l r hA.base.lit.1 hb hW
   have hA₂ : ArenaD m₂ a := ArenaD.grow m m₂ hg a hA
   have hq : SliceOK m₂ m.top l := SliceOK.fresh hg htop₂
   have hq0 : m₂.flag = 0 → m.top.toNat < 2 ^ 40 := fun hf => by

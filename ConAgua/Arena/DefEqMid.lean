@@ -39,7 +39,7 @@ theorem coreRef_bind {α β : Type} [Inhabited α] [Inhabited β] {T₁ : AM α}
       CoreRef (f (dec₁ r₁)) (AM.st T₁ a₀) dec dn m₁ vis fe M' eb r m ok) :
     CoreRef (T₁ >>= f) a₀ dec dn m₀ vis fe M eb r m ok := by
   refine coreRef_then h₁ h₂ ?_
-  rw [StateT.run_bind, AM.run_of_ok _ _ h₁.1, h₁.2.2.1]; rfl
+  rw [StateT.run_bind, AM.run_of_ok _ _ h₁.run, h₁.res]; rfl
 
 /-- **A pure result** under the relation. -/
 theorem coreRef_ret {α : Type} [Inhabited α] {a : AState} {dec : List Word → α}

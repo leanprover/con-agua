@@ -247,7 +247,7 @@ theorem dec_child {n : Nat} (hD : DecClaim rom n) {mem : Mem} {a : AState} {pos 
   exact ⟨e, rest, m', a', hd, hfit, r,
     ⟨hR, hM, encExprM_nodup e seen inv.nodup, encExprM_comp e seen inv.comp,
       encExprM_fits e hfit seen inv.fits, hz inv.rset, hst.ok, hem, by rw [hs]; exact inv.stk,
-      by rw [hf.size]; exact inv.ctl, ((romExprW_topK rom n).1 _ _ _ _ _ hW).mode inv.arena.1.lit.1 inv.mode⟩,
+      by rw [hf.size]; exact inv.ctl, ((romExprW_topK rom n).1 _ _ _ _ _ hW).mode inv.arena.base.lit.1 inv.mode⟩,
     hden, hst.ext, hlt, hq, hf⟩
 
 include hr in
@@ -401,7 +401,7 @@ theorem romExprW_dec : ∀ n, DecClaim rom n := by
       have inv1 : DecInv m₁ (AM.st (internName nm) a) seen m :=
         ⟨hR1, inv.memo.frame (frame_romA hfn), inv.nodup, inv.comp, inv.fits, inv.rset.frameS hfn, hstn.ok,
           inv.emok.mono hstn.ext, by rw [frame_exprA_stk hfn]; exact inv.stk, by rw [hfn.size]; exact inv.ctl,
-          (romNameW_topK hN).mode inv.arena.1.lit.1 inv.mode⟩
+          (romNameW_topK hN).mode inv.arena.base.lit.1 inv.mode⟩
       obtain ⟨es, rest2, ms, a₂, hd2, fit2, r2, inv2, hden2, hx2, hlt2, hq2, hf2⟩ :=
         dec_child rom hr (ih j (by omega)) inv1 hS
       obtain ⟨ok3, -, res3⟩ := mkProj_ok m₂ a₂ inv2.arena hn (u64W rom q₁) hs h m₃ hI

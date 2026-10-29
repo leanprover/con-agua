@@ -131,12 +131,12 @@ theorem ac_ref (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (n : Nat)
   rcases c3 : callW p (k + 1) "get_app_fn" [a] m₂ with _ | ⟨r₃, m₃⟩
   · rw [liftE_none, acE.k_get_app_fn.none]; exact RefE.of_cls0 (by simp)
   rw [liftE_some]; simp only [acE.k_get_app_fn]
-  obtain ⟨hm3, hh3, hgaf3⟩ := getAppFn_callW hq.leaf hS₂.arena.1 ha c3
+  obtain ⟨hm3, hh3, hgaf3⟩ := getAppFn_callW hq.leaf hS₂.arena.base ha c3
   subst hm3
   rcases c4 : callW p (k + 1) "get_app_fn" [b] m₃ with _ | ⟨r₄, m₄⟩
   · rw [liftE_none, acE.k_get_app_fn_2.none]; exact RefE.of_cls0 (by simp)
   rw [liftE_some]; simp only [acE.k_get_app_fn_2]
-  obtain ⟨hm4, hh4, hgaf4⟩ := getAppFn_callW hq.leaf hS₂.arena.1 hb c4
+  obtain ⟨hm4, hh4, hgaf4⟩ := getAppFn_callW hq.leaf hS₂.arena.base hb c4
   subst hm4
   refine RefE.of_run_eq (appCongT_eq _ fe _ _ _ a₀ aa bb hargs1 hargs2 heq' _ _ hgaf3 hgaf4) ?_
   rcases c5 : callE p (k + 1) "defeq" [mode, vis, d, r₃.headD 0, r₄.headD 0] m₄ with e | ⟨r₅, m₅⟩

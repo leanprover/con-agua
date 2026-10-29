@@ -49,7 +49,7 @@ theorem opfV_ok {k : Nat} {m m' : Mem} {a : AState} (hS : StageR dn vis fe m a) 
   subst hs'
   simp only at hr hm
   subst hr hm
-  obtain ⟨v, hv, hvr⟩ := eViewW_ok m a hS.1.arena.1 e hne
+  obtain ⟨v, hv, hvr⟩ := eViewW_ok m a hS.check.arena.base e hne
   obtain ⟨-, hw⟩ := eViewW_forall m e hg hne
   rw [hw] at hvr ⊢
   generalize tfld m FORALL (tierW e) (idxW e) 0 = x at hvr ⊢
@@ -75,10 +75,10 @@ theorem opfIl_ok {k : Nat} {m m' : Mem} {a : AState} (hS : StageR dn vis fe m a)
       rdW (m'.arr64 CTL) 136 = rdW (m.arr64 CTL) 136 ∧ (r.headD 0).toNat < 2 ^ 32 := by
   rcases k with _ | k
   · rw [callW_zero] at hc; cases hc
-  obtain ⟨mp, hmp⟩ := hAb.2.2.2.1
-  have hA : ArenaL m (withLLC a mp) := ⟨hS.1.arena.withLLC mp, hmp⟩
+  obtain ⟨mp, hmp⟩ := hAb.il
+  have hA : ArenaL m (withLLC a mp) := ⟨hS.check.arena.withLLC mp, hmp⟩
   have hbd : o.toNat + l.toNat < 2 ^ 64 := by
-    have := hsl.bound; have := hAb.2.2.2.2.2.2.1; omega
+    have := hsl.bound; have := hAb.wk.2.2.1; omega
   obtain ⟨s', hs', -, hok, hA', hres, -, hlt⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (instList_refines opfP opfP_il rfl k _ _ hA e o l d vs hsl hbd he) hc
   rw [hs'] at hA'
@@ -92,9 +92,9 @@ theorem opfIl_ok {k : Nat} {m m' : Mem} {a : AState} (hS : StageR dn vis fe m a)
   obtain ⟨hS', hg⟩ := StageR.of_walk hS hA'.1 hfr (lt64A_of_all rfl) (lt64_of_all rfl) hk
   obtain ⟨h1, h2⟩ := spn_of_lt64 hfr (lt64A_of_all rfl) (lt64_of_all rfl)
   refine ⟨_, by rw [hrun, hres], hS', hg, ?_, h1, h2, hlt⟩
-  exact ⟨hAb.1.frame hfr (by decide) (by decide), hAb.2.1.frame hfr (by decide) (by decide),
-    hAb.2.2.1.frame hfr (by decide) (by decide), ⟨_, hA'.2⟩,
-    hAb.2.2.2.2.frame hfr (by decide) (by decide) (by decide) (by decide) (by decide)⟩
+  exact ⟨hAb.ab.frame hfr (by decide) (by decide), hAb.i1.frame hfr (by decide) (by decide),
+    hAb.cr.frame hfr (by decide) (by decide), ⟨_, hA'.2⟩,
+    hAb.wk.frame hfr (by decide) (by decide) (by decide) (by decide) (by decide)⟩
 
 /-- **`intern_fvar` under the stage relation and `AbsOK`.** -/
 theorem opfFv_ok {k : Nat} {m m' : Mem} {a : AState} (hS : StageR dn vis fe m a) (hAb : AbsOK m)
@@ -110,7 +110,7 @@ theorem opfFv_ok {k : Nat} {m m' : Mem} {a : AState} (hS : StageR dn vis fe m a)
   obtain ⟨a', hrun, hS', hg⟩ := internFVar_stage hS u ty hty hI
   obtain ⟨h1, h2⟩ := spn_of_lt64 hfr (by simp [tier1, FVREC, FVSLOT, FVLP]) (by simp)
   exact ⟨a', hrun, hS', hg, hAb.frameD hfr (by decide) (by decide), h1, h2,
-    fvinternW_hw m a hS.1.arena.1.fvar u ty _ _ hI⟩
+    fvinternW_hw m a hS.check.arena.base.fvar u ty _ _ hI⟩
 
 /-- **`inst_entry` under the stage relation and `AbsOK`.** -/
 theorem opfI1_ok {k : Nat} {m m' : Mem} {a : AState} (hS : StageR dn vis fe m a) (hAb : AbsOK m)
@@ -122,7 +122,7 @@ theorem opfI1_ok {k : Nat} {m m' : Mem} {a : AState} (hS : StageR dn vis fe m a)
   rcases k with _ | k
   · rw [callW_zero] at hc; cases hc
   obtain ⟨s', hs', -, hok, hD, hres, hlt⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (instEntry_refines opfP opfP_inst rfl k _ a hS.1.arena e v d he) hc
+    (instEntry_refines opfP opfP_inst rfl k _ a hS.check.arena e v d he) hc
   rw [hs'] at hD
   have hfr : MemFrame instA instC m m' := instEntry_frame opfP_inst rfl rfl (run_of_callW hc)
   have hrun := AM.run_of_ok _ a hok
@@ -154,10 +154,10 @@ theorem spnPushW_ok {m m' : Mem} {a : AState} (hS : StageR dn vis fe m a) (hAb :
     rw [UInt64.le_iff_toNat_le] at this
     have h2 : (((m.arr64 SPN).size : Nat).toUInt64).toNat = (m.arr64 SPN).size % 2 ^ 64 := by
       simp [Nat.toUInt64]
-    have h3 : (m.arr64 SPN).size < 2 ^ 64 := by have := hAb.2.2.2.2.2.2.1; omega
+    have h3 : (m.arr64 SPN).size < 2 ^ 64 := by have := hAb.wk.2.2.1; omega
     omega
   refine ⟨hS', hg, hAb.frameD hfr (by decide) (by decide), hsz, ?_, ?_, hfr.size SPN⟩
-  · have hc := hS.2.2.2.2.2
+  · have hc := hS.iw.2.2.2.2
     rw [rdW_set64E, Mem.arr64_set64_ne _ _ _ _ _ (by decide),
       ite_eq_left ⟨rfl, rfl, by simp; omega⟩]
   · intro w

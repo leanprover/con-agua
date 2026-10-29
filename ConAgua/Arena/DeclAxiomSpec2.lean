@@ -198,14 +198,14 @@ theorem fpcW_ok {p : Prog} (hR : L.Rom.RomRefs p) {dn : NIdx → Option ConLeche
   by_cases hf : r1.headD 0 = 0
   · rw [ite_eq_left hf] at hW
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
-    obtain ⟨rfl, hfind⟩ := envFindW_miss h1 hS.1.env hnm hf
+    obtain ⟨rfl, hfind⟩ := envFindW_miss h1 hS.check.env hnm hf
     exact ⟨false, a, hS, IWGrow.refl _, by simp [decW0B], by simp [FpcT, hfind]⟩
   rw [ite_eq_right hf] at hW
-  obtain ⟨rfl, hptr, hfind, htag, hrc⟩ := envFindW_hit h1 hS.1.env hnm hf
-  obtain ⟨ci, hci⟩ := envR_row_dec hS.1.env nm hnm htag hrc
+  obtain ⟨rfl, hptr, hfind, htag, hrc⟩ := envFindW_hit h1 hS.check.env hnm hf
+  obtain ⟨ci, hci⟩ := envR_row_dec hS.check.env nm hnm htag hrc
   rw [hptr] at hW
   generalize hq : rowP m1 nm = q at hW hci hfind
-  have hsz := hS.2.2.2.2.1
+  have hsz := hS.iw.2.2.2.1
   have hciA : decCI (m1.arr64 EREC) dn q.toNat = some ci := ArrExt.decCI (erecP_ext m1) hci
   have hbind : (fe.find? (decI nm)).bind (fpcShape k) = fpcShape k ci := by rw [hfind, hci]; rfl
   by_cases hfail : rdW (m1.arr64 EREC) q ≠ k ∨
@@ -236,7 +236,7 @@ theorem fpcW_ok {p : Prog} (hR : L.Rom.RomRefs p) {dn : NIdx → Option ConLeche
   obtain ⟨pin, a2, hrun2, hS2, hg2, hpin⟩ := hR.cv dn vis fe id hid n m1 a r2 m2 hS h2
   have hq1b : q.toNat + 1 < 2 ^ 64 := by
     obtain ⟨w, hw, -, -⟩ := decCV_typeW hcvP
-    have := erecP_bound hw hS.2; omega
+    have := erecP_bound hw hS.iw; omega
   have hq1 : (q + 1).toNat = q.toNat + 1 := toNat_add_small q 1 hq1b
   have hcv2 : decCV (erA m2) (q + 1).toNat = some cvT := by
     rw [hq1]; exact ArrExt.decCV (IWGrow.erecExt hg2) hcvP
@@ -406,7 +406,7 @@ theorem tcoW_ok {p : Prog} (h : TcoProg p) {dn : NIdx → Option ConLeche.Name} 
   rw [trustCompilerOk_eq]
   -- the `True` clause
   rcases h1 : pinAtW m 40 with _ | ⟨r1, m1⟩ <;> simp only [h1, tcoK1, reduceCtorEq] at hW
-  obtain ⟨hm1, hr1, hl1, hrun1⟩ := pinAtW_ok h1 hS.1.pins
+  obtain ⟨hm1, hr1, hl1, hrun1⟩ := pinAtW_ok h1 hS.check.pins
   rw [hm1, hr1] at hW
   simp only [List.headD_cons] at hW
   simp only [trueName, pinTrue, show PIN_TRUE = (40 : Word).toNat from rfl, StateT.run_bind, hrun1,

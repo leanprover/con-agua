@@ -40,7 +40,7 @@ theorem installConsRun {p : Prog} (hP : CstProg p) {n : Nat} {α : Type} {f : Me
     StageR dn vis fe m' a ∧ IWGrow m m' ∧ PSlR f (y :: xs) (r.headD 0) (r.tail.headD 0) m' := by
   obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (slCons_specW p hP.alloc hP.copy hP.cons n _ x o l) h
-  obtain ⟨hS', hg, hd, htop⟩ := partsConsPL hf hW hS hxs.2 hxs.1 hy
+  obtain ⟨hS', hg, hd, htop⟩ := partsConsPL hf hW hS hxs.bound hxs.dec hy
   exact ⟨hS', hg, hd, Nat.le_of_eq htop⟩
 
 /-- **`check_block_inds_cv_tas_go`'s model**: the constants of the `[cvTa, s]` records. -/
@@ -116,7 +116,7 @@ theorem RecsB.grow {m m' : Mem} {pp : Word} (h : RecsB m pp) (hg : IWGrow m m') 
   intro o l ho hl
   rw [iwN_grow hg (by omega)] at ho
   rw [iwN_grow hg h3] at hl
-  exact Nat.le_trans (h o l ho hl) hg.1
+  exact Nat.le_trans (h o l ho hl) hg.iw
 
 end L.Ind
 

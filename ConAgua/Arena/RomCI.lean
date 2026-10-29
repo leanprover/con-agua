@@ -669,11 +669,11 @@ theorem internAllPins_refines (rom : List UInt8) (off : Word) (p : Prog) (hL : I
   apply M.triple_of_run
   intro s r s' hs hrun
   obtain ⟨hloc, hc, n', q, -, hW⟩ := M.of_run (P := fun s => s = s₀) hs hrun
-    (internAllPins_specW rom off p hL hp n s₀ ⟨hA.1.lit.1.cap, hA.1.lit.1.top41⟩)
+    (internAllPins_specW rom off p hL hp n s₀ ⟨hA.base.lit.1.cap, hA.base.lit.1.top41⟩)
   subst hs
   have hA' : ArenaD (resetMem s.mem) a₀ := ArenaD.frameHi (resetMem_frame1 _) (by simp) (by simp) hA
   obtain ⟨m', a', -, hrunI, hR, -, -, hf, -⟩ := romItemsW_ok rom hr _ hfit n' (resetMem s.mem) a₀ off rest []
-    ∅ q s'.mem hA' ((memFrame_top (resetMem_frame1 s.mem) (by decide)).mode hA.1.lit.1 hmo) (MemoR.fresh s.mem hc) hd (by rw [resetMem_stk]; exact hst)
+    ∅ q s'.mem hA' ((memFrame_top (resetMem_frame1 s.mem) (by decide)).mode hA.base.lit.1 hmo) (MemoR.fresh s.mem hc) hd (by rw [resetMem_stk]; exact hst)
     (by rw [(resetMem_frame1 _).size]; omega) hW
   obtain ⟨v, hv⟩ := simZ_internAllPins pins ∅ a₀ m' a' hP (by rw [runItems_reset]; exact hrunI)
   exact ⟨hloc, v, a', hv, hR, (resetMem_frame _).trans hf⟩

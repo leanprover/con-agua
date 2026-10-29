@@ -18,8 +18,8 @@ theorem SlotGrow.hd? {m m' : Mem} {lo hi : Nat} (hg : SlotGrow m m' lo hi)
     (h : hd? (erecP m) i = some x) (hout : i < lo ∨ hi ≤ i) : hd? (erecP m') i = some x := by
   obtain ⟨w, hw, hl, rfl⟩ := hd?_some h
   obtain ⟨hi1, hw'⟩ := preE_get_lt (m := m) (T := erecTop m) hw
-  have := hg.2.1 i hi1 hout
-  have hm' := hg.1
+  have := hg.get i hi1 hout
+  have hm' := hg.top
   exact hd?_of_pre (m := m') (T := erecTop m') (by omega) (by rw [this]; exact hw') hl
 
 theorem SlotGrow.nat? {m m' : Mem} {lo hi : Nat} (hg : SlotGrow m m' lo hi)
@@ -27,7 +27,7 @@ theorem SlotGrow.nat? {m m' : Mem} {lo hi : Nat} (hg : SlotGrow m m' lo hi)
     nat? (erecP m') i = some x := by
   obtain ⟨w, hw, rfl⟩ := nat?_get h
   obtain ⟨hi1, hw'⟩ := preE_get_lt (m := m) (T := erecTop m) hw
-  have := hg.2.1 i hi1 hout
-  exact nat?_of_pre (m := m') (T := erecTop m') (by have := hg.1; omega) (by rw [this]; exact hw')
+  have := hg.get i hi1 hout
+  exact nat?_of_pre (m := m') (T := erecTop m') (by have := hg.top; omega) (by rw [this]; exact hw')
 
 end L.Arena

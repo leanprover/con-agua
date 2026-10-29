@@ -53,7 +53,7 @@ theorem adF_ok {P : Prog} {fF g : FnName} {op : Nat → EIdx → AM EIdx}
   obtain rfl : f = CWF := Decidable.not_not.mp hf
   obtain ⟨⟨r', m''⟩, c'', c'⟩ := of_K (K := (ntBW · _)) c1 rfl; rw [bW_some] at c'
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj c')
-  obtain ⟨t, ht, hm, -, hHW, hrun⟩ := triple_of_callW (href k ⟨m, Locals.init []⟩ a hS.1.arena.1 e he) c''
+  obtain ⟨t, ht, hm, -, hHW, hrun⟩ := triple_of_callW (href k ⟨m, Locals.init []⟩ a hS.1.arena.base e he) c''
   have e_m : m = m'' := by rw [← ht, hm]
   subst e_m
   exact ⟨decE (r'.headD 0), a, by rw [CWF_eq]; exact hrun, hS, IWGrow.refl _, hHW, rfl⟩

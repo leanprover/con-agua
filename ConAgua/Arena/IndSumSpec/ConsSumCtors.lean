@@ -170,7 +170,7 @@ theorem ciRec_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEn
     split at h1; · cases h1
     simp only [Option.some.injEq, Prod.mk.injEq] at h1; obtain ⟨-, rfl⟩ := h1
     simp only [erAllocMem]; exact Mem.arr64_set64_ne _ _ _ _ _ (by decide)
-  obtain ⟨-, hEtop, -, hEsz, -⟩ := hS.2
+  obtain ⟨-, hEtop, -, hEsz, -⟩ := hS.iw
   have hq1 : q1.toNat = erTop m := by
     simp only [erAllocW] at h1; split at h1; · cases h1
     split at h1; · cases h1

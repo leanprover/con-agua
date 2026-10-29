@@ -46,8 +46,8 @@ theorem indexPromotedTables_cons (tbls : Std.HashMap NIdx IProjTable) (t : IProj
 /-- A write to the table rows keeps the arena, the promotion memos. -/
 theorem arenaD_tbl {m m' : Mem} {a : AState} {pm : PMemo} (hD : ArenaD m a) (hP : PMemoR m pm)
     (hf : MemFrame tblArrs [] m m') : ArenaD m' a ∧ PMemoR m' pm :=
-  ⟨⟨ArenaR.frame (by decide) (by simp) hf hD.1,
-    DerR.frameM _ _ m _ hf (by decide) a hD.2⟩,
+  ⟨⟨ArenaR.frame (by decide) (by simp) hf hD.base,
+    DerR.frameM _ _ m _ hf (by decide) a hD.der⟩,
     hP.frame (by decide) (by simp) hf⟩
 
 section rel

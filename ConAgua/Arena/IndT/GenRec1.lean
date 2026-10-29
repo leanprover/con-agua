@@ -31,9 +31,9 @@ theorem StageC.of_checkE {dn : NIdx → Option ConLeche.Name} {vis vis' : Word} 
     (hS : StageR dn vis' fe' m' a') (hA : AbsOK m') (hck : ConRon.Bridge.CheckOK V env' fe' a')
     (hx : ConRon.Arena.Ext a.store a'.store) : StageC dn vis' fe' env' m' a' :=
   ⟨hS, hck,
-    ⟨hA.2.2.2.2.2.1, hA.2.2.2.2.2.2.1, hA.2.2.2.2.2.2.2.1, ⟨hA.2.2.2.1, hA.1, hA.2.2.2.2.1⟩,
+    ⟨hA.wk.2.1, hA.wk.2.2.1, hA.wk.2.2.2.1, ⟨hA.il, hA.ab, hA.wk.1⟩,
       fun k x e => hx.lss.ls.ns k x (h.mem.dnN k x e)⟩,
-    hA.2.2.2.2.2.2.2.2⟩
+    hA.wk.2.2.2.2⟩
 
 /-- What `classes_nfs` gives besides the twin's classes `ys` (from `m`, the classes' slice `(mo, ml)`):
 the result slice, the stage, the growth, the memos, `AbsOK`; and, when the classes' constructor

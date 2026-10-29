@@ -165,7 +165,7 @@ theorem crule_ref (hp : CruleProg p) (hApd : ApdF p) {visT visR : Word} {feR : I
     rcases h6 : callE p N "unresolved_consts_error" [visR, gen, 4] m5 with e6 | ⟨r6, m6⟩
     · rw [cruleE.k_unresolved_consts_error.eq_1]
       obtain ⟨M5, hC5'⟩ := hC5.stageT.core
-      exact fun hG => uce_errClaim_hi hG.uce hG.nv hC5'.arena.1 hC5'.pins hgen (by decide) h6 _
+      exact fun hG => uce_errClaim_hi hG.uce hG.nv hC5'.arena.base hC5'.pins hgen (by decide) h6 _
     · rw [cruleE.k_unresolved_consts_error.abort1]; exact RefE.of_cls0 rfl
   rw [cruleE.k_class_rule_ok_domains.arm2 _ _ _ _ _ _ h50]
   have eb : b = true := by rw [← hb5.1]; simpa using h50

@@ -110,7 +110,7 @@ theorem rflTail_ok (p : Prog) (hL : LsProg p) (n : Nat) (m m₁ m₂ m₃ : Mem)
     ∃ a₃, (internLsNode hs).run a₂ = .ok (decI (rs.headD 0), a₃) ∧
       RFLOk m (m₃.set64 CTL 136 b) a a₃ (rs.headD 0) := by
   obtain ⟨s₄, hs₄m, -, hW₄⟩ := triple_of_callW (spnLs_spec p hL n ⟨m₂, Locals.init []⟩ c l
-    (by show pcap m₂ < 2 ^ 64; have := hA₂.1.lit.1.cap; omega) hA₂.1.lit.1.top41) h4
+    (by show pcap m₂ < 2 ^ 64; have := hA₂.base.lit.1.cap; omega) hA₂.base.lit.1.top41) h4
   rw [hs₄m] at hW₄
   have hcl64 : c.toNat + l.toNat < 2 ^ 64 := by omega
   have hmode₂ : ModeOK m₂ :=
@@ -180,7 +180,7 @@ theorem recFireLevelsW_ok (p : Prog) (hL : LsProg p) (n : Nat) (m m' : Mem) (a :
   have hm₀ : m₀ = m := by rw [← hs₁m, hs₁]
   subst hm₀
   obtain ⟨ids, hvw, hdl'⟩ := denoteLs_view a (decI us) vs hdus
-  obtain ⟨e₁, t₁, sl₁⟩ := lsNodeW_store hA.1 hus hvw
+  obtain ⟨e₁, t₁, sl₁⟩ := lsNodeW_store hA.base hus hvw
   rw [hv', e₁] at hW
   simp only [List.headD_cons, List.tail_cons] at hW
   rcases h2 : callW p n "keys_push" [po, pc] m₀ with _ | ⟨bs, m₁⟩ <;> rw [h2] at hW
