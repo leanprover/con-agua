@@ -323,17 +323,17 @@ On `Init`, on one thread, con-agua takes **1.01× con-ron's wall time** and exec
 57 292 pending groups.
 
 <!-- perf-overview: begin threads -->
-Master `54018587`, 2026-10-28, `scripts/perf-overview.py`: `Init` at each `--jobs`, 3 interleaved rounds, the median wall time, peak RSS the largest `ru_maxrss`; load 2–5 on 96 cores:
+Master `11690fd5`, 2026-10-29, `scripts/perf-overview.py`: `Init` at each `--jobs`, 3 interleaved rounds, the median wall time, peak RSS the largest `ru_maxrss`; load 6–10 on 96 cores:
 
 | `--jobs` | con-agua wall | peak RSS | con-ron wall | peak RSS | wall ÷ |
 |---:|---:|---:|---:|---:|---:|
-| 1 | 19.62 s | 744 MB | 17.94 s | 496 MB | 1.09 |
-| 2 | 11.77 s | 1001 MB | 10.20 s | 542 MB | 1.15 |
-| 4 | 8.43 s | 1001 MB | 6.34 s | 613 MB | 1.33 |
-| 8 | 5.48 s | 1001 MB | 4.21 s | 775 MB | 1.30 |
-| 16 | 4.47 s | 1001 MB | 3.19 s | 890 MB | 1.40 |
+| 1 | 18.36 s | 744 MB | 18.04 s | 492 MB | 1.02 |
+| 2 | 10.90 s | 1001 MB | 10.27 s | 543 MB | 1.06 |
+| 4 | 7.37 s | 1001 MB | 6.37 s | 613 MB | 1.16 |
+| 8 | 4.65 s | 1001 MB | 4.26 s | 781 MB | 1.09 |
+| 16 | 3.62 s | 1001 MB | 3.24 s | 885 MB | 1.11 |
 
-con-agua's speedup over one thread is 1.7×, 2.3×, 3.6× and 4.4× at 2, 4, 8 and 16 threads (con-ron: 1.8×, 2.8×, 4.3×, 5.6×).
+con-agua's speedup over one thread is 1.7×, 2.5×, 3.9× and 5.1× at 2, 4, 8 and 16 threads (con-ron: 1.8×, 2.8×, 4.2×, 5.6×).
 <!-- perf-overview: end threads -->
 
 con-agua's threaded peak memory does not grow with the number of threads: it
