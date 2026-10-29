@@ -319,7 +319,9 @@ def tierTab : ArrTable := [{ name := "W", id := W, kind := .word, tiered := true
 the low half first; a store writes the low 32 bits and keeps the other half; an index whose word
 does not exist is out of bounds. -/
 
-/-- Writes `i * 65537 + t + 2^40 (i + 1)` (the high bits dropped) to `W⟨t⟩.u32[i]` for `i < n`, then
+/-- con-ron: none — a compiler test program
+
+Writes `i * 65537 + t + 2^40 (i + 1)` (the high bits dropped) to `W⟨t⟩.u32[i]` for `i < n`, then
 reads elements back (a loop-carried index, a computed tier, a computed index) and a whole word. -/
 def p32 : FunDecl := lfn (h, n) locals (t, i, s, x) {
   t := (h >> 27) & 1;
