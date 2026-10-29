@@ -1,6 +1,8 @@
 import ConAgua.Verdict.WhnfM2CE
 import ConAgua.Verdict.WhnfPrepE
 import ConAgua.Verdict.WhnfIotaRecE
+import ConAgua.Verdict.WhnfIotaE
+import ConAgua.Verdict.WhnfSlotE
 import ConAgua.Verdict.WhnfPirrE
 
 /-!

@@ -803,8 +803,8 @@ def ixLen (mI rP : Word) : Word := (mI - rP) * Cmp.ule.evalW rP mI
 l_model vckE_spec (p : Prog) (hp : p.lookup "iota_rec_vck" = some iotaRecVckL)
   fns [hp ↦ vckE list]
   specs [callW_spec p n "lvls_eq_c", callW_spec p n "const_ty_at"]
-  grind [arena_grind] fold [ixLen] extra [ld64_rdW_specE] instances 5000 unified
-  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem] flat
+  grind [arena_grind] fold [ixLen] extra [ld64_rdW_specE] simp [ixLen] unified
+  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 /-- `lvls_eq_c` cannot run on fuel below two. -/
 theorem lvlsEqC_small (p : Prog) (hp : p.lookup "lvls_eq_c" = some lvlsEqCL) (n : Nat) (hn : n < 2)

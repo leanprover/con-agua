@@ -1,5 +1,4 @@
-import ConAgua.Verdict.WhnfSlotE
-import ConAgua.Verdict.WhnfIotaE
+import ConAgua.Arena.WhnfIotaRecRefine2
 
 /-!
 # The fire's verdict claim: `iota_rec_fire` (lane `verdicts-b`, helper `k2`)
