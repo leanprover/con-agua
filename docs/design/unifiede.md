@@ -2178,7 +2178,7 @@ the slots, as `m2c_*` in §3.7):
   `proj_lit_to_ctor`, `core_app`, `core_app2`, `whnf_app`; claims in `WhnfProjE`, `WhnfAppE`),
   `Verdict/WhnfModelsE` (5: `whnf_core`, `whnf_core_step`, `whnf`, `whnf_loop`, `whnf_step`; claims
   in `WhnfSlotE`). Done (§3.42, §3.43a, §3.45a);
-- [ ] `is_def_eq`: `Verdict/DefEqQuickE` (4), `DefEqLamsE` (2), `DefEqEagerE` (2), `DefEqPeelE`
+- [x] `is_def_eq`: `Verdict/DefEqQuickE` (4), `DefEqLamsE` (2), `DefEqEagerE` (2), `DefEqPeelE`
   (5), `DefEqSpineE` (3), `DefEqLazyE` (8), `DefEqTailE` (9), `DefEqLoopsE` (1), `DefEqSlotE` (3:
   `defeq_slot`, `defeq_body`, `is_def_eq_core`). Done: `DefEqQuickE`, `DefEqLamsE`, `DefEqPeelE`,
   `DefEqSpineE` (and `defeq_lams_inner`; §3.41), `DefEqLazyE` (§3.43), `DefEqTailE` (§3.45, §3.46),
@@ -2193,9 +2193,10 @@ the slots, as `m2c_*` in §3.7):
   `.k_env_find_2`, `.k_infer_proj_at`) and `ipaE2–5`/`ipaEP` (`infer_proj_at`): with B's `infer`
   family;
   Done (§3.44: generated `unified` models `ipE`, `ipaE`; `ip_ref`, `ipa_ref`).
-- [ ] `Verdict/IndBNfs`: `cnsEK1–3`, `cnfsE` (`classes_nfs`, nested loops; its claim `ClassesNfsE` is
+- [x] `Verdict/IndBNfs`: `cnsEK1–3`, `cnfsE` (`classes_nfs`, nested loops; its claim `ClassesNfsE` is
   a field of `GrpG`/`TailG`): waits for nested-loop `unified` models in the generator (§3.3), or a
-  hand unified model over `tmn_ref`;
+  hand unified model over `tmn_ref`. Done (§3.51: the hand `unified` model `cnfsE`, `cnfs_ref`;
+  `ClassesNfsE`, `GrpG` and `TailG.nfs` gone);
 - [x] `Verdict/WhnfUnitE` (`suhH`), `Verdict/WhnfStuckE` (`piHE`): with B's leaves.
 
 **D. Then the machinery itself**:
@@ -3318,3 +3319,118 @@ Recipes tried: `flat` on `ipsE`/`ifrE` (module 24.4 → 22.2 s, kept), on `iplE`
 `ilsE`/`ilmE` (12.9 s, not kept) and `ibE`/`iboE` (14.5 s, worse). No generator or kit change was
 needed (the kit's `RefE.tailMap`, §1.5, landed meanwhile, would shorten `bodyArm_ref`'s uses).
 
+
+### 3.51 Retirement, group C: `classes_nfs` (a hand `unified` model)
+
+§3.30 C's `IndBNfs` bullet. `classes_nfs` has nested loops (the copy loop inside the classes' loop),
+which the generator does not model, so its model stays hand-written, now in the shape of a `unified`
+model (`Arena/IndT/RecGen28`): the former error model `cnsE` (the loop) / `cnfsE` (the function, now
+with a fuel-`0` case and its ok value `([q, ml], m)`) is the only model; `target_major_nfs` through
+its run (`callE`; `tmn_ref` read by `RefE.run_ok`/`run_err`), `iw_alloc` and the copy loop `ncpW`
+outside the verdict closure (`iwAlloc_specU` by `Triple.nv`, `ncpLoop_specU`; class `0` on
+failure). `cnsLoop_specE` and `cnfsE_spec` carry both posts, the error post under
+`closedNV p nvFns`, as a generated `unified` spec. One refinement per level: `cns_ref` (the loop,
+post `CnsPost`) and `cnfs_ref` (`Arena/IndT/GenRec1`, post `CnfsPost`, `G = VerdictCtx p`), whose
+`lp` field is the second invariant package of the old `classesNfs_refinesLpC` as an implication
+(§1.4). `classesNfs_refinesC` (`@[refines]`) is its ok half by `RefE.triple`.
+
+Gone: the hand ok model `cnsK1–3`/`cnsW`/`cnfsK1–2`/`cnfsW` with `cnsLoop_spec`, `cnfs_spec`,
+`cnfsW_eq` (`RecGenSpec/DecB`), `cnsW_okC`, `classesNfs_refinesLpC`, and all of `Verdict/IndBNfs`
+(`cnsE_claim`, `classesNfsE_of`, `cnfs_specE`, the `…NV` specs). The claim statement `ClassesNfsE`
+and the structure `GrpG` (whose other field was `VerdictCtxU`) are gone: `gen_rec_check_prep`'s
+refinements are under `VerdictCtxU p`, and its `classes_nfs` arm reads `cnfs_ref` through the run
+(`RefE.run_err` with `hG.toVerdictCtx`, `RefE.run_ok`); `TailG` loses `nfs`, and the inductive arm's
+top (`IndA8`, `IndA9`, `IndArmTopE`) its `hNfs` argument.
+
+| | before | after | change |
+|---|---:|---:|---:|
+| refinement + claims: `cnsW_okC` 241, `classesNfs_refinesC` 47, `classesNfs_refinesLpC` 50, `cnsE_claim` 248, `classesNfsE_of` 30, `ClassesNfsE` 16 | 632 | `cns_ref` 254, `CnsPost` 10, `cnfs_ref` 42, `CnfsPost` 8, `classesNfs_refinesC` 25 = 339 | **−46 %** |
+
+Diff of the landing against master: +378 −816 lines (11 files; the models and their specs:
+two hand models with four specs become one model with two).
+
+Elaboration (user seconds, median of 3 interleaved runs, base master 3c8edc9e, load ≈ 80,
+`_tmp/retire-nfs/times1.txt`):
+
+| module | base | new | |
+|---|---:|---:|---|
+| `Arena/RecGenSpec/DecB` | 7.38 | 2.41 | the ok model's loop and function specs moved out |
+| `Arena/IndT/RecGen28` | 5.15 | **13.25** | **slower (+8.1 s)**: it now holds the model's two `vcgen` specs (from `DecB` and `IndBNfs`) and the merged loop refinement |
+| `Arena/IndT/GenRec1`, `GenRec2`, `GenRec3` | 7.83 | 7.73 | |
+| `Arena/IndT/Tail` | 7.66 | 8.32 | (+9 %, under the bound) |
+| `Verdict/IndBNfs` | 10.37 | – | deleted |
+| `Verdict/IndA8`, `IndA9`, `IndArmTopE` | 2.75 | 2.20 | |
+| **sum** | **41.14** | **33.91** | **−18 %** |
+
+`RecGen28` is slower only because the specs moved in; the work is the same `vcgen … finish` as before
+on the error model (one spec per loop level instead of an ok and an error spec each), and the sum is
+lower. No generator or kit change was needed.
+
+### 3.52 §3.30 D, inventory
+
+What still uses the separate error machinery on master after §3.51 (and the deletion below), with
+what each needs before group D can remove the `errors` mode (`L/ModelGen`), `Err.code_ne_of_cls`
+(`L/ErrSpec`) and `err_stmt` (`Verdict/IndAGen`). Found by `_tmp/retire-nfs/inv/` (every `l_model`
+block's mode; `grep` for the names).
+
+**`l_model … errors`.** None outside the generator: the 509 `l_model` commands outside `L/ModelGen*`
+are 279 `unified` and 230 without error posts.
+
+- [ ] `L/ModelGenTest`: `tNestE_spec`, `tExit_spec` (`errors` mode): become `unified` tests, with
+  the generator change itself (group D).
+- [x] `Verdict/PosE3Fm` (`nfE`), `Verdict/PosE3Cm` (`nctE`): models pasted from the generator, but
+  already with `unified` posts (`fun ε => True → ε.cls ≠ 0 → …`) and read by `RefE`; nothing (their
+  module docs still say "error model", `errors`).
+
+**Hand `Except` models with posts over the code (`ε.code ≠ 0 →`), and their claims through
+`triple_of_callE_err … (Err.code_ne_of_cls hk0)`** (9 sites):
+
+- [ ] `Verdict/WhnfModels4E`: `irVckTailE`/`irVckE` (`iota_rec_vck`), `irFire2E`
+  (`iota_rec_fire2`); claims `iotaRecVck_refinesE`, `iotaRecFire2_refinesE` (`Verdict/WhnfIotaRecE`,
+  2 sites), `G` fields `IotaRecVckE`/`IotaRecFire2E` of the ι recursor's refinements
+  (`Arena/WhnfIotaRecRefine2`). Lane gen-cut's: a migration each (one model, one refinement).
+- [ ] `Verdict/WhnfModels5E`: `icfCheckE`, `icfForallE`, `icfFlushE`, `icfAuxE`, `icfTopE`
+  (`iota_certs_full` and its helpers; ok refinements in `Arena/WhnfIotaRefine5`); claims in
+  `Verdict/WhnfCertsE` (5 sites), read as `IotaCertsFullE` by `iota_rec_vck`'s claim. A migration
+  (batch: knot callees `infer`/`defeq` through their runs, as §3.32's leaves); then
+  `IotaCertsFullE` is replaced by `iota_certs_full`'s refinement in `iota_rec_vck`'s.
+- [ ] `Verdict/WhnfIdxE`: `ioE` (`iota_index_ok`), `irCmpE` (`iota_rec_cmp`); claims in the same
+  file (2 sites), read as `IotaIndexOkE`/`IotaRecCmpE` by `iota_rec_vck`'s claim; their `G` is the
+  hand claim statement `DefeqListE` (also in `Verdict/WhnfKnotE`), which `defeq_list`'s refinement
+  (§3.48) can replace. A migration each, with the certs family (one lane).
+
+**`Err.code_ne_of_cls`, other users.**
+
+- [ ] `Checker/PreludeRef` (`builtin_prelude`'s error arm): `preFrontRun_errSim`
+  (`Verdict/FrontPreSimE`) is a simulation of errors of nonzero *code* (`NoAb`, `KRelE`,
+  `bind_noAb`, `callFn_simE`, `invoke_simE_*`, `preSimE`: about 15 statements), stronger than the class.
+  Either restate it over the class (`NoAb` stays over the code, `bind_noAb` then needs
+  `Err.cls_of_code`), or keep the lemma as a fact about `Err` for this one user (it is not part of
+  the `errors` mode). A decision for group D, not a migration.
+
+**`err_stmt`** (the every-fuel claim statements of ok refinements; each is proved today from the
+function's refinement by `RefE.run_err`, so each goes when its readers list that refinement
+instead of the statement):
+
+- [ ] `Arena/IndT/Pass`: `CheckBlockIndsE`, `CheckBlockCtorsE`, `CheckBlockClassesE`,
+  `CheckBlockPositivityE`, `NestSeedsE`, the fields of `PassG` (proved in `IndsE7`, `BlkE1`,
+  `BlkE4`, `PosTopE5` from `cbi_ref`, `ict_ref`, `cbc_ref`, `cbp_ref`, `nsd_ref`). A `G` field
+  replaced by a refinement: `pass_ref` reads the five refinements through the runs, `PassG`
+  becomes their `G`s (`IndsG`, `VerdictCtx`, `NbG`, and the two below while they last); the
+  `checkBlock…E_claim` theorems and `IndA6`'s arguments go.
+- [ ] `Arena/IndT/Install7`: `CheckSumCtorsE` (`checkSumCtorsE_of`, `IndArmE`, from `scts_ref`),
+  read by `ict_ref`'s `G` (`BlkE1`) and the arm's top (`IndA8`, `IndA9`). A `G` field replaced by
+  `scts_ref`.
+- [ ] `Verdict/IndBE`: `CheckSumTeleE` (`checkSumTeleE_of` from `ct_ref`; read in `Install3`,
+  `Install4`), `CheckConstantValE` (`checkConstantValE_of` from `ccvE_okT`; read in `Install3`,
+  `Install4`), `CheckStructFieldSortsIE` (`checkStructFieldSortsIE_of`; read in `Tail` (`TailG.csf`),
+  `Install6`, `IdxSorts`, `Positivity`, `PosTopE5`). A `G` field replaced by a refinement each.
+- [x] `Verdict/IndBE`: `CheckStructProjTableE`: no reader (`TailG.tab` went with §3.30 A); deleted
+  (§3.52, this lane's second landing).
+
+**Hand claim statements of the same kind (not `err_stmt`)**: `CheckBasisDeclE`
+(`Arena/IndT/CheckIndDecl`, read by `IndA6`, `IndA8`, `IndA9`) and `DefeqListE` (above). They name
+no `errors` model and do not block group D, but go the same way.
+
+Nothing else: no `CoreSpecE.of_runs` user depends on an `errors` model (it stays, §3.30 D), and
+`triple_of_callE_err`'s other users take posts over the class.
