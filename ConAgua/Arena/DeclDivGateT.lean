@@ -66,7 +66,7 @@ l_model defnDivGate_specE (p : Prog) (hD : DmProg10 p)
   fns [hD.lDefnDivGate ↦ defnDivGateE]
   specs [callW_spec p n "nat_div_mod_names", callW_spec p n "sl_contains",
     callW_spec p n "rom_pin_sets", checkDivModPin_specE p hD.toDmProg8 n]
-  extra [ld64_rdW_specE] simp [] unified
+  grind [arena_grind] extra [ld64_rdW_specE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 /-- What the pin gate gives besides the twin's run (from `m`, `a`): the stage relation at the

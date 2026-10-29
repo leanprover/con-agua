@@ -3855,3 +3855,44 @@ hold: `WhnfModels3E` 8.5 → 6.8, `WalkLeaves` 11.4 → 11.4, `DeclDivGateT2` 6.
 `UnresolvedE` 16.2 → 17.1, `WalkScope` 5.4 → 5.9, `LevelSimp` 2.5 → 3.0. The build gate (all of
 `ConAgua` after the generator change) took 271 s wall. The shake allowlist lost four lines
 (`IndRealBph`, `ModelGenTest`: their imports now show in the proofs, no auxiliary theorems).
+
+### 3.60 The last five `simp [..]` models on the default closer (lane `uniform`)
+
+§3.59 left five models in four modules on `simp [..]`/`locals`. Each failed or was slow for its own
+reason; none needed `simp_all`, and every `l_model` now uses the default closer.
+
+* **`DeclDivGateT` (`defnDivGate_specE`), `DivModPinE` (`checkDivModPinLoop_specE`,
+  `checkDivModPin_specE`): no `grind [..]` attribute.** The generator gives the arms (`fW.armᵢ`,
+  `fW.k_g.armᵢ`) their `grind` patterns under the attributes of `grind [..]` only, so these three
+  models' arms had none, and `grind` could not unfold the model in a single condition (the open goal
+  `¬ defnDivGateE p (n + 1) … = .error a` next to the callees' runs; the multi-result `setLocs` of
+  §3.59's note were a red herring). They were the only three of the 553 `l_model`s without one.
+  Fix: `grind [arena_grind]`, and `l_model` now rejects a model without `grind [..]` (unless it
+  chooses `simp [..]`).
+* **`DivModEnvGuard` (`eg_specW`): too few e-matching rounds.** `bind ntBW` writes the code after a
+  call as an inline continuation `ntBW (call) fun ρ μ => …`, not a named one, so the `2k + 10`
+  rounds of §3.48a counted none of them: `k = 0`, 10 rounds, and the path through all ten calls
+  stopped after `egW.arm1` and nine `bW_some` instances. Fix: the rounds count the inline
+  continuations too, `2 (k + lams) + 10` (`GenState.lams`). The other 48 `bind` models had paths
+  short enough for 10 rounds.
+* **`IndBGrpM` (`grpE_spec`): `vc_flat` itself.** The profiler (`set_option profiler true` on the
+  command; `grind` per condition by a temporary timing wrapper): `grind` 12 s for all 144
+  conditions (each closed by the first, `hom`-free `grind`), `vc_flat` 6–21 s per condition and
+  238 s for two of them, 15 min in all. Its occurs checks (`s = e` with `s ∉ e`, `LocEq s t` with
+  `s ∉ t`) used `Expr.containsFVar`, which walks a term as a tree without a cache; `vcgen`'s states
+  are DAGs (each statement's state built over the previous one), and `gen_rec_check_prep`'s paths
+  (13 calls, 16 stores, 21 locals) unfold into exponentially large trees. Fix: `occursFVar`, by
+  `Expr.find?` (cached per shared subterm). The module: 15 min → 28 s (`simp [..] locals`: 70 s).
+  The `heartbeats 20000000` stays (not measured without).
+
+Module times (`lake env lean`, user s, one run each; before = master 0a55eac3 with `simp [..]`):
+
+| module | before | after |
+|---|---:|---:|
+| `DeclDivGateT` | 1.2 | 1.2 |
+| `DivModEnvGuard` | 1.3 | 1.4 |
+| `DivModPinE` | 2.5 | 2.5 |
+| `IndBGrpM` | 69.9 | **28.3** |
+
+`vc_flat`'s fix is neutral on §3.59's largest modules (`EqAt1` 18.7, `WhnfModels7E` 17.8,
+`DefEqModels` 19.9, `PosE1M` 8.4 s, as there); the build gate took 281 s (§3.59: 271 s).

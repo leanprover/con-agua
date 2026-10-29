@@ -1917,6 +1917,10 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
   let instN : Option Nat := if stx[18].getNumArgs == 0 then none else stx[18][1].isNatLit?
   let simpTs? : Option (Array Term) := if stx[19].getNumArgs == 0 then none else some ((optList 19).map (⟨·⟩))
   let doTrace := stx[20].getNumArgs != 0
+  -- the arms get their `grind` patterns under the `grind [..]` attributes only: without one, the
+  -- default closer cannot unfold the models (DeclDivGateT, DivModPinE fell back to `simp []`)
+  if attrIds.isEmpty && simpTs?.isNone then
+    throwErrorAt stx "l_model: give `grind [attr]` (the arms' patterns go there; `arena_grind` usually)"
   let preLocals := stx[21].getNumArgs != 0
   -- `defs`: only the models, continuations and arms; `nodefs`: only the specs (the same command
   -- run before with `defs`), so that facts about the models can be proved in between
@@ -2410,7 +2414,10 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
   -- most of `grind`'s time (DefEqStuckStr, 329 conditions: 20.8 s -> 10.1 s, unifiede.md §3.59);
   -- where that fails (word arithmetic: `i < 4 → i < 5`), `grind` again with all of it.
   let flatHints := String.join ((hintsTxt ++ foldIds.toList.map (·.getId.toString)).map (", " ++ ·))
-  let flatRounds := 2 * st.ks.size + 10
+  -- an inline continuation (`bind c`: `c (call) fun ρ μ => …`) takes a round as a named one does
+  -- (its `c (some (r, m)) k = k r m`): DivModEnvGuard's ten calls under `bind ntBW` stopped after
+  -- the ninth with `2k + 10 = 10` rounds
+  let flatRounds := 2 * (st.ks.size + st.lams) + 10
   let flatGen := (genN.getD flatRounds).max flatRounds
   let stepTac (attrs vcg : String) (ihs : List String) : String :=
     let clr := if ihs.isEmpty then "" else s!" <;> clear {String.intercalate " " ihs}"
