@@ -159,7 +159,7 @@ l_model liftGo_spec (p : Prog) (hp : LiftProg p)
   `le64 (m.src8 (.arr A)) i.toNat`; `x := scan!(A.u8, i, e, C)` is `UInt64.ofNat (scanN (m.src8 …) C
   i.toNat e.toNat)`; `copy!(…)` is `Mem.copy64`/`Mem.copy8w` and a byte store `A.u8[i] := e` is
   `Mem.set8` (no change out of bounds, as `set64`); a packed 32-bit element `A⟨t⟩.u32[i]` is
-  `L.Arena.p32Get (m.arr64 (tierA A t)) i` and its store `Mem.set32` (`Arena/P32.lean`); the step
+  `L.Arena.pcol m A t i` (`p32Get` of tier `t` of `A`) and its store `Mem.set32` (`Arena/P32.lean`); the step
   proofs get `L.warr`, `L.ld8x8`, `L.st8`, `L.ld32`, `L.st32` in `vcgen` as needed;
 * **nested loops**: a loop in a loop's body is a loop model of its own, applied by the enclosing
   loop's body; a `return` in it passes the signal on to the enclosing loop (or is the function's
@@ -966,10 +966,10 @@ meta partial def transE (E : Env) (ctx : Ctx) : TSyntax `lexpr → GenM MT
   | `(lexpr| $a:ident⟨$t:lexpr⟩[$i:lexpr]) => do
     pure (.rd ctx.mem (← `(L.tierA $a $(← (← transE E ctx t).render))) (← transE E ctx i))
   | `(lexpr| $a:ident⟨$t:lexpr⟩.u32[$i:lexpr]) => do
-    -- a packed 32-bit element (lane p32): `p32Get` (`Arena/P32.lean`), `0` past the end
+    -- a packed 32-bit element (lane p32): `pcol` (`Arena/P32.lean`), `0` past the end
     noteVcg #["L.ld32"]
-    let arr ← `(L.tierA $a $(← (← transE E ctx t).render))
-    pure (.raw (← `($(mkIdent `L.Arena.p32Get) (L.Mem.arr64 $(← ctx.mem.render) $arr) $(← (← transE E ctx i).render))))
+    pure (.raw (← `($(mkIdent `L.Arena.pcol) $(← ctx.mem.render) $a $(← (← transE E ctx t).render)
+      $(← (← transE E ctx i).render))))
   | `(lexpr| len($a:ident⟨$t:lexpr⟩)) => do
     pure (.raw (← `(L.Mem.len64 $(← ctx.mem.render) (L.tierA $a $(← (← transE E ctx t).render)))))
   | `(lexpr| $r:ident⟨$t:lexpr, $i:lexpr⟩.$f:ident) => do

@@ -57,7 +57,7 @@ def fvP : Word → Nat → FVarNode → UInt64 → Prop :=
 (`packBFL`; lane `exprops3` widened this from the bvar range alone, helper `whnf4-d23` added the
 bit). -/
 def cP {α : Type} (A : ArrId) (m : Mem) : Word → Nat → α → UInt64 → Prop :=
-  fun t i _ d => rdW (m.arr64 (tierA A t)) (UInt64.ofNat i) =
+  fun t i _ d => p32Get (m.arr64 (tierA A t)) (UInt64.ofNat i) =
     packBFL (bvarOfData d) (fvarOfData d) (lpW d)
 
 /-- **The derived range relation.** -/
