@@ -4,6 +4,7 @@ import ConAgua.Arena.CoreDen
 import ConAgua.Arena.InferBodySpine
 import ConAgua.Arena.WhnfCoreProj
 import ConAgua.L.ModelGen
+import ConAgua.Arena.InferProjModels
 
 /-!
 # `inferProj`: `proj_type_at` and `infer_proj_at` (lane `defeq2`, helper `defeq2-proj`)
@@ -359,15 +360,6 @@ theorem lvlEq?_store (u v : LIdx) (a a' : AState) (o : Option Bool) (lu lv : Con
     rw [hr] at h; cases h; rfl
 
 /-! ## `infer_proj_at` -/
-
-/-- **`infer_proj_at`'s unified model**: every callee (outside the verdict closure) lifted. -/
-l_model ipaE_spec (p : Prog) (hf : p.lookup "infer_proj_at" = some inferProjAtL)
-  fns [hf ↦ ipaE list]
-  specs [callW_spec p n "get_app_args", callW_spec p n "ls_node", callW_spec p n "pin_word",
-    callW_spec p n "lvl_eq_c", callW_spec p n "field_sort_zero", callW_spec p n "proj_type_at"]
-  grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] unified
-  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem] flat
 
 /-! ## `infer_proj_at` refines `projAtT` -/
 
