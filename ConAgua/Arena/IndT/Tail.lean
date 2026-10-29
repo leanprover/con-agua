@@ -66,12 +66,10 @@ l_model ictlE_spec (p : Prog) (hP : TailProg p)
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 /-- What the error arms of `check_block_tail` assume: the verdict context with
-`unresolved_consts_error`'s program and `classes_nfs`' claim at every stage (the recursor stage,
-`GrpG`) and the abstract constructors' sorts' claim (`iisr_ref`); the projection tables' errors
-(`ctb_ref`) are their own rejects. -/
+`unresolved_consts_error`'s program (the recursor stage's) and the abstract constructors' sorts'
+claim (`iisr_ref`); the projection tables' errors (`ctb_ref`) are their own rejects. -/
 structure TailG (p : Prog) : Prop where
   u : VerdictCtxU p
-  nfs : ∀ dn vis fe env, ConLeche.EnvWF env → ClassesNfsE p dn vis fe env
   csf : CheckStructFieldSortsIE p
 
 /-- What `check_block_tail` gives besides the index `x` it returns, at the view `w` (from `m`): the
@@ -319,7 +317,7 @@ theorem tail_ref (hP : TailProg p) (L : CbrLook p) {fs : List FnName}
       rdW (m3.arr64 IW) (q + 16), bO, bL, rdW (m3.arr64 IW) (q + 1), rdW (m3.arr64 IW) (q + 2)] m3 with
     e6 | ⟨r6, m6⟩
   · rw [ictrE.k_check_block_rec.none]
-    exact RefE.bind_left fun hG => RefE.run_err hT5 hG.u.nv ⟨hG.u, hG.nfs _ _ _ _ henv₂⟩ hR5 c6
+    exact RefE.bind_left fun hG => RefE.run_err hT5 hG.u.nv hG.u hR5 c6
   rw [ictrE.k_check_block_rec.arm1]
   have d6 := callW_of_callE c6
   obtain ⟨s5, hs5, -, ⟨fe2b, outs⟩, a5, hrun5, hR5'⟩ := RefE.run_ok hT5 hR5 c6

@@ -12,8 +12,8 @@ import ConAgua.L.ModelGen
 `tmnE` (`l_model … unified`): the recursive call through the model itself, `target_class_match`
 through its unified model (`tcmE`), `ctors_have_name` and `sl_cons` (outside the verdict closure)
 through their `Option` models. `tmn_ref` refines `targetMajorNfs` for both outcomes; its ok half
-is `targetMajorNfs_refinesC` and `classes_nfs`' refinement (`RecGen28`), its error half
-`classes_nfs`' error claim (`IndBNfs`).
+is `targetMajorNfs_refinesC`, and `classes_nfs`' loop's refinement (`cns_ref`, `IndT/RecGen28`)
+reads both halves from the run.
 -/
 
 noncomputable section

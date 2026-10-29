@@ -7,7 +7,8 @@ import ConAgua.L.GrindAttr
 /-!
 # DecB
 
-`ncpLoop`, `cnsLoop`, `classesNfsL'`, `classesNfsL_eq`, `ncpW`, `ncpW_exit` and the lemmas only they use.
+`ncpLoop`, `cnsLoop`, `classesNfsL'`, `classesNfsL_eq`, `ncpW` (the copy loop's model), `wrTail` and the lemmas
+only `classes_nfs`' model and refinement (`IndT/RecGen28`, `IndT/GenRec1`) use.
 -/
 
 noncomputable section
@@ -95,99 +96,9 @@ def wrTail (m : Mem) (nm mw eo el qr j : Word) : Mem :=
   let m4 := m3.set64 IW (nm + 12) (rdW (m3.arr64 IW) (mw + 12))
   m4.set64 IW (qr + j) nm
 
-section model
-variable (p : Prog)
+attribute [ind_grind] ncpW_exit ncpW_step ncpW_oob
 
-/-- After the copy loop: the record's tail and the result slot (each store in bounds). -/
-def cnsK3 (nm mw eo el qr j : Word) (rest : Mem → Option Mem) : Option Mem → Option Mem
-  | none => none
-  | some m =>
-    if (nm + 9).toNat < (m.arr64 IW).size ∧ (nm + 10).toNat < (m.arr64 IW).size ∧
-        (nm + 11).toNat < (m.arr64 IW).size ∧ (nm + 12).toNat < (m.arr64 IW).size ∧
-        (qr + j).toNat < (m.arr64 IW).size then rest (wrTail m nm mw eo el qr j)
-    else none
-
-/-- After `iw_alloc(13)`: the copy loop. -/
-def cnsK2 (k : Nat) (mw eo el qr j : Word) (rest : Mem → Option Mem) :
-    Option (List Word × Mem) → Option Mem
-  | none => none
-  | some (r, m) => cnsK3 (r.headD 0) mw eo el qr j rest (ncpW (k + 1) m (r.headD 0) mw 0)
-
-/-- After `target_major_nfs`: the fresh record. -/
-def cnsK1 (k : Nat) (mw qr j : Word) (rest : Mem → Option Mem) : Option (List Word × Mem) → Option Mem
-  | none => none
-  | some (r, m) => cnsK2 k mw (r.headD 0) (r.tail.headD 0) qr j rest (callW p k "iw_alloc" [13] m)
-
-/-- **The model of `classes_nfs`' loop** at L fuel `k`, from cursor `j`: the memory at the exit. -/
-def cnsW : Nat → Mem → Word → Word → Word → Word → Word → Word → Word → Word → Word → Word → Option Mem
-  | 0, _, _, _, _, _, _, _, _, _, _, _ => none
-  | k + 1, m, vis, q, fto, ftl, tblo, tbll, mo, ml, qr, j =>
-    if j < ml then
-      cnsK1 p k (rdW (m.arr64 IW) (mo + j)) qr j
-        (fun m' => cnsW k m' vis q fto ftl tblo tbll mo ml qr (j + 1))
-        (callW p k "target_major_nfs" [vis, q, fto, ftl,
-          rdW (m.arr64 IW) (rdW (m.arr64 IW) (mo + j) + 11), rdW (m.arr64 IW) (rdW (m.arr64 IW) (mo + j) + 12),
-          rdW (m.arr64 IW) (rdW (m.arr64 IW) (mo + j) + 1), rdW (m.arr64 IW) (rdW (m.arr64 IW) (mo + j) + 2),
-          rdW (m.arr64 IW) (rdW (m.arr64 IW) (mo + j) + 3), rdW (m.arr64 IW) (rdW (m.arr64 IW) (mo + j) + 6),
-          rdW (m.arr64 IW) (rdW (m.arr64 IW) (mo + j) + 7), tblo, tbll] m)
-    else some m
-
-section arms
-variable (k : Nat) (m : Mem) (vis q fto ftl tblo tbll mo ml qr j nm mw eo el : Word) (r : List Word)
-  (rest : Mem → Option Mem)
-theorem cnsK3_ok (h : (nm + 9).toNat < (m.arr64 IW).size ∧ (nm + 10).toNat < (m.arr64 IW).size ∧
-    (nm + 11).toNat < (m.arr64 IW).size ∧ (nm + 12).toNat < (m.arr64 IW).size ∧
-    (qr + j).toNat < (m.arr64 IW).size) :
-    cnsK3 nm mw eo el qr j rest (some m) = rest (wrTail m nm mw eo el qr j) := by
-  simp only [cnsK3]; rw [ite_eq_left h]
-theorem cnsK3_bad (h : ¬ ((nm + 9).toNat < (m.arr64 IW).size ∧ (nm + 10).toNat < (m.arr64 IW).size ∧
-    (nm + 11).toNat < (m.arr64 IW).size ∧ (nm + 12).toNat < (m.arr64 IW).size ∧
-    (qr + j).toNat < (m.arr64 IW).size)) :
-    cnsK3 nm mw eo el qr j rest (some m) = none := by
-  simp only [cnsK3]; rw [ite_eq_right h]
-theorem cnsK2_some : cnsK2 k mw eo el qr j rest (some (r, m)) =
-    cnsK3 (r.headD 0) mw eo el qr j rest (ncpW (k + 1) m (r.headD 0) mw 0) := rfl
-theorem cnsK1_some : cnsK1 p k mw qr j rest (some (r, m)) =
-    cnsK2 k mw (r.headD 0) (r.tail.headD 0) qr j rest (callW p k "iw_alloc" [13] m) := rfl
-theorem cnsW_exit (h : ¬ j < ml) : cnsW p (k + 1) m vis q fto ftl tblo tbll mo ml qr j = some m := by
-  simp only [cnsW]; rw [ite_eq_right h]
-theorem cnsW_step (h : j < ml) : cnsW p (k + 1) m vis q fto ftl tblo tbll mo ml qr j =
-    cnsK1 p k (rdW (m.arr64 IW) (mo + j)) qr j
-      (fun m' => cnsW p k m' vis q fto ftl tblo tbll mo ml qr (j + 1))
-      (callW p k "target_major_nfs" [vis, q, fto, ftl,
-        rdW (m.arr64 IW) (rdW (m.arr64 IW) (mo + j) + 11), rdW (m.arr64 IW) (rdW (m.arr64 IW) (mo + j) + 12),
-        rdW (m.arr64 IW) (rdW (m.arr64 IW) (mo + j) + 1), rdW (m.arr64 IW) (rdW (m.arr64 IW) (mo + j) + 2),
-        rdW (m.arr64 IW) (rdW (m.arr64 IW) (mo + j) + 3), rdW (m.arr64 IW) (rdW (m.arr64 IW) (mo + j) + 6),
-        rdW (m.arr64 IW) (rdW (m.arr64 IW) (mo + j) + 7), tblo, tbll] m) := by
-  simp only [cnsW]; rw [ite_eq_left h]
-end arms
-
-end model
-
-/-- After the loop. -/
-def cnfsK2 (qr ml : Word) : Option Mem → Option (List Word × Mem)
-  | none => none
-  | some m => some ([qr, ml], m)
-
-/-- After the result slice's allocation: the loop. -/
-def cnfsK1 (p : Prog) (n : Nat) (vis q fto ftl tblo tbll mo ml : Word) :
-    Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m) => cnfsK2 (r.headD 0) ml (cnsW p (n + 1) m vis q fto ftl tblo tbll mo ml (r.headD 0) 0)
-
-/-- **The model of `classes_nfs`** (exec fuel `n + 1`). -/
-def cnfsW (p : Prog) (n : Nat) (m : Mem) (vis q fto ftl tblo tbll mo ml : Word) : Option (List Word × Mem) :=
-  cnfsK1 p n vis q fto ftl tblo tbll mo ml (callW p n "iw_alloc" [ml] m)
-
-theorem cnfsK2_some (qr ml : Word) (m : Mem) : cnfsK2 qr ml (some m) = some ([qr, ml], m) := rfl
-theorem cnfsK1_some (p : Prog) (n : Nat) (vis q fto ftl tblo tbll mo ml : Word) (r : List Word) (m : Mem) :
-    cnfsK1 p n vis q fto ftl tblo tbll mo ml (some (r, m)) =
-      cnfsK2 (r.headD 0) ml (cnsW p (n + 1) m vis q fto ftl tblo tbll mo ml (r.headD 0) 0) := rfl
-
-attribute [ind_grind] ncpW_exit ncpW_step ncpW_oob cnsK3_ok cnsK3_bad cnsK2_some cnsK1_some cnsW_exit
-  cnsW_step cnfsK2_some cnfsK1_some
-
-/-! ## The `vcgen` specs -/
+/-! ## The copy loop's `vcgen` spec -/
 
 theorem ncpLoop_spec (p : Prog) (f : Nat) (s₀ : St) :
     ⦃fun s => s = s₀⦄ exec p f ncpLoop
@@ -203,37 +114,6 @@ theorem ncpLoop_spec (p : Prog) (f : Nat) (s₀ : St) :
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64, ih] <;>
       finish (gen := 40) (instances := 20000) [rdW_eq]
-
-theorem cnsLoop_spec (p : Prog) (k : Nat) (s₀ : St) :
-    ⦃fun s => s = s₀⦄ exec p k cnsLoop
-    ⦃fun r s' => r = .normal ∧ s'.loc 7 = s₀.loc 7 ∧ s'.loc 8 = s₀.loc 8 ∧
-      cnsW p k s₀.mem (s₀.loc 0) (s₀.loc 1) (s₀.loc 2) (s₀.loc 3) (s₀.loc 4) (s₀.loc 5) (s₀.loc 6)
-        (s₀.loc 7) (s₀.loc 8) (s₀.loc 9) = some s'.mem; ⊤⦄ := by
-  induction k generalizing s₀ with
-  | zero => vcgen [exec] <;> grind
-  | succ k ih =>
-    rw [exec, step_while (w := cnsLoop) rfl]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64, ih,
-        callW_spec p k "target_major_nfs", callW_spec p k "iw_alloc",
-        fun s => Triple.step_exec (ncpLoop_spec p (k + 1) s)] <;>
-      finish (gen := 40) (instances := 20000) [rdW_eq, wrTail]
-
-theorem cnfsW_eq (p : Prog) (n : Nat) (m : Mem) (vis q fto ftl tblo tbll mo ml : Word) :
-    cnfsW p n m vis q fto ftl tblo tbll mo ml = cnfsK1 p n vis q fto ftl tblo tbll mo ml (callW p n "iw_alloc" [ml] m) :=
-  rfl
-
-set_option maxHeartbeats 1600000 in
-theorem cnfs_spec (p : Prog) (hp : p.lookup "classes_nfs" = some classesNfsL) (n : Nat) (s₀ : St)
-    (vis q fto ftl tblo tbll mo ml : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "classes_nfs" [vis, q, fto, ftl, tblo, tbll, mo, ml]
-    ⦃fun r s' => LocEq s' s₀ ∧ cnfsW p n s₀.mem vis q fto ftl tblo tbll mo ml = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp, classesNfsL_eq]
-  simp only [callFn, classesNfsL']
-  sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, callW_spec p n "iw_alloc",
-      fun s => Triple.step_exec (cnsLoop_spec p (n + 1) s)] <;>
-    finish (gen := 40) (instances := 20000) [cnfsW_eq, loc_init4, loc_init5, loc_init6, loc_init7]
 
 /-! ## `target_major_nfs`' result: fresh, its pointers those of the table -/
 

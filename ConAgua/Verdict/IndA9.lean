@@ -13,7 +13,7 @@ import ConAgua.Verdict.KnotAllE
 `cid_claim2`: `cid_claim` with `check_block_inds`, `check_block_ctors`, `check_block_classes`,
 `check_block_positivity`, `nest_seeds` and the tail (`TailG`) proved
 (`IndsE*`, `BlkE*`, `PosTopE*`, the positivity walk `nbRef_all`; the core stubs and `whnf_top`
-from the error knot). Left: `classes_nfs` (`ClassesNfsE`), the `indB` callees (`IndBE.lean`,
+from the error knot). Left: the `indB` callees (`IndBE.lean`,
 `CheckStructProjTableRE`), and `check_basis_decl`/`check_constant_val` (`IndA8.lean` discharges
 them; it waits for `DeclHdrE`).
 -/
@@ -46,7 +46,6 @@ theorem cid_claim2 {p : Prog} (hkp : KnotStageProg p) (hV : ValProg p)
     (hkr : AbsKeep p "block_raw_rec")
     (hnv : closedNV p _root_.L.Checker.nvFns = true)
     (hCBD : CheckBasisDeclE p) (eCcv : CheckConstantValE p) (hU : UceProg p)
-    (hNfs : ∀ dn vis fe env, ConLeche.EnvWF env → ClassesNfsE p dn vis fe env)
     (eSum : CheckSumTeleE p) (eSC : CheckSumCtorsE p) (eSF : CheckStructFieldSortsIE p)
     {n : Nat} (hn : n ≤ 2 ^ 62)
     {dn : NIdx → Option ConLeche.Name} (hdn : DnInj dn) {vis : Word} {fe : IFEnv} {m : Mem}
@@ -67,7 +66,7 @@ theorem cid_claim2 {p : Prog} (hkp : KnotStageProg p) (hV : ValProg p)
   have hcE : CoreStubsE p := hkp.toKnotTopProg.coreStubsE hnv
   have hG := nbG_prog hkp hnv
   exact cid_claim hkp hV hOpf hLC hLT hApd hCrk hIlpf hLz P hcl hfs hfr hcl2 hfs2 hclR hfR hclT hfT hclC hfC
-    hkP hkt hkr hnv hCBD ⟨⟨⟨hnv, hcE⟩, hU⟩, hNfs, eSF⟩
+    hkP hkt hkr hnv hCBD ⟨⟨⟨hnv, hcE⟩, hU⟩, eSF⟩
     (checkBlockIndsE_claim ⟨hnv, hcE, eCcv, eSum⟩) (checkBlockCtorsE_claim hnv eSC)
     (checkBlockClassesE_claim ⟨hnv, hcE⟩) (checkBlockPositivityE_claim hG eSF)
     (nestSeedsE_claim hG) hn hdn he hT hfold hblk hb hden hM hfB hfRc hclH hfH hclM hfM hclMc hfMc hlpd
