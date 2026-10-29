@@ -4,6 +4,7 @@ import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
 import ConAgua.Arena.WhnfCoreApp
 import ConAgua.Arena.WhnfCoreRefine
+import ConAgua.Arena.InferBodyBindModels
 
 /-!
 # The binder telescopes: `infer_lams`, `infer_pis`, their leaves, `infer_lam`, `infer_forall`
@@ -97,16 +98,6 @@ def BStkCap : Prop :=
     (M : ModeMaps) (eb : Word), CoreS dn m a vis fe M eb → (m.arr64 BSTK).size < 2 ^ 63
 
 /-! ## `infer_lams_leaf` -/
-
-/-- `infer_lams_leaf`'s unified model: the `infer` slot through its run, the opening and the
-outward rebuild (`inst_list`, `ar_entry`, `mk_forall`) lifted. -/
-l_model ilfE_spec (p : Prog) (hf : p.lookup "infer_lams_leaf" = some inferLamsLeafL)
-  fns [hf ↦ ilfE list]
-  specs [callW_spec p n "inst_list", callW_spec p n "ar_entry", callW_spec p n "mk_forall"]
-  grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
-  finish [tierW, idxW] heartbeats 400000 unified
-  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 /-- What the telescope specs need of a program. -/
 structure BindProg (p : Prog) : Prop where
@@ -269,16 +260,6 @@ theorem inferLamsLeaf_refines (p : Prog) (hp : InferLeafProg p) (hq : BindProg p
       hB hbtop hws hdk)
 
 /-! ## `infer_lams`: the peel loop -/
-
-/-- `infer_lams`' unified model: the slots and the leaf through their runs, the opening and the
-binder's free variable (`inst_list`, `intern_fvar`) lifted. -/
-l_model ilsE_spec (p : Prog) (hf : p.lookup "infer_lams" = some inferLamsL)
-  fns [hf ↦ ilsE list]
-  specs [callW_spec p n "inst_list", callW_spec p n "intern_fvar"]
-  grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
-  heartbeats 400000 simp [tierW, idxW] unified
-  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 /-- The two pushes of a telescope step and the two tops. -/
 def tPush (m : Mem) (fo lo k fv x : Word) : Mem :=
@@ -700,16 +681,6 @@ theorem inferLams_anyE (p : Prog) (hp : InferLeafProg p) (hq : BindProg p) (hb :
           M eb mode d peel t k fo lo fvs ws m₀ hs ht hf htop hB hbt hws hdk hb0 hsz hbb0 hbsz0 hpg0)
 
 /-! ## `infer_lam` -/
-
-/-- `infer_lam`'s unified model: the slots and `infer_lams` through their runs, the binder's free
-variable lifted. -/
-l_model ilmE_spec (p : Prog) (hf : p.lookup "infer_lam" = some inferLamL)
-  fns [hf ↦ ilmE list]
-  specs [callW_spec p n "intern_fvar"]
-  grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
-  heartbeats 400000 simp [tierW, idxW] unified
-  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 /-- `inferBody`'s `.lam` arm is `inferLam`. -/
 @[refines_part ConRon.Arena.inferBody "lam"]
