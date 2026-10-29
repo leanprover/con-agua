@@ -3777,3 +3777,81 @@ models, so the whole family at once) and is bounded by those two paths. Rebuild 
 edit (`cp.py --touch`, the same times): `InferBodyBind` 162 → 111 s, `DefEqStuckStr` 141 → 110 s,
 `IndT/RecGen27` 66 → 56 s, `WhnfIotaRecRefine` 119 → 114 s; an edit of a refinement no longer
 re-elaborates its model at all.
+
+### 3.59 Generator: why `grind` cost 60–100 ms per short condition; `vc_flat` + `grind` the default (lane `grindcost`)
+
+**Where the time went.** `DefEqStuckStr`'s step (329 conditions, §3.53) as an `example` after the
+models (`l_model … defs`), user seconds over `vcgen` alone (2.1 s), median of 3 interleaved runs
+(`_tmp/grindcost/`, `bench.sh`, `V_*.lean`):
+
+| closer after `vcgen` | s |
+|---|---:|
+| `simp_all [base, models]`, `grind` (the module's recipe) | 19.0 |
+| `vc_flat`, `grind (ematch := 26) (gen := 26) [attrs]` (§3.48a `flat`) | 20.9 |
+| … `(hom := false)` | 13.6 |
+| … `(hom := false) (abstractProof := false)` | 12.9 |
+| … `(hom := false) [attrs, -List.cons.injEq]` | 10.8 |
+| … all three | **10.1** |
+
+The profiler (`set_option profiler true`, its categories are exclusive) on the `flat` closer:
+`grind simp` 7.5 s, `grind` (internalization, congruence, proofs) 7.5 s, `sym canon` 0.7,
+`grind mark subsingleton` 0.6, `sym typeclass inference` 0.6, `grind ematch` 0.4, `vcgen` +
+`vc_flat` 1.6, kernel 1.0. E-matching, case splits and the arithmetic solvers (`cutsat` 0.04 s)
+were never the cost. Two things were:
+
+* **`hom`** (on by default): `grind` translates every term of a type with `[grind hom]` rules —
+  every `UInt64` — into `Nat`/`BitVec` while internalizing it (`Grind/Homomorphism.lean`: a
+  `Sym.simp` pass per term, its bounds and casts asserted). The conditions are full of words (the
+  arguments, the locals, the loads), and almost none needs their arithmetic: congruence and the
+  models' arms close them. Off: `grind` 7.5 → 3.5 s, `grind simp` 7.5 → 5.5 s. A core-only
+  reproduction (`_tmp/grindcost/mwe_hom_{on,off}.lean`, `mkmwe.py`: 20 goals `g x₁₅ = g y₁₅` over
+  two chains `xᵢ₊₁ = f xᵢ aᵢ + i * aᵢ` of `UInt64`s, `x₀ = y₀`): 4.84 s against 0.91 s, about
+  200 ms of translation for 60 word terms per goal that congruence closes alone. A `grind`
+  performance issue as much as a configuration one (not reported upstream; for the coordinator).
+* **`List.cons.injEq`** in `lang_grind` (`Logic.lean`, since the multi-result calls): as an
+  E-matching lemma its pattern is the equation `a :: as = b :: bs`, which fires on every equation
+  between two lists, and the conditions have many (the argument lists of `callW`/`callE`, the
+  `Locals.init` frames, the result lists). On the slowest condition (271 ms) 225 of its ~270
+  instances were `List.cons.injEq`. `grind` injects constructors itself, so the lemma adds
+  nothing for it.
+* `abstractProof := false` (no auxiliary theorem per condition): −0.7 s.
+
+The distribution with `hom` off: median 19 ms per condition (34 ms with it), the 53 conditions over
+60 ms carry 58 % of the time. Tried and not kept: the legacy normalizer
+(`backward.grind.normalizer`, the same), `splits`/`lookahead`/`mbtc`/`ext`/`inj` off (the same),
+`lia`, `ring`, `linarith`, `ac`, `order` off on top of `hom` (−1.5 s, but they serve the arithmetic
+side goals), the `LocNF` simprocs by `simp only … at *` before `vc_flat` (19.5 s against 15.5 s: the
+`simp` pass costs more than `grind simp` saves), resolving the locals' reads in `vc_flat` by
+definitional replacement, without proofs (`reads.lean.inc`: `grind simp` 3.9 → 2.9 s, the pass
+0.8 s: −0.6 s, not worth a second tactic), clearing the theorem's `p.lookup` binders (−4 %,
+§3.53's caveat stands), `grind`'s default `ematch`/`gen` (breaks the long paths, §3.48a).
+
+**The recipe.** Each step without `simp [..]` is now `vcgen`, `vc_flat`, then
+`first | grind (hom := false) (abstractProof := false) cfg [attrs, hints, -List.cons.injEq] | grind cfg [attrs, hints]`
+(`cfg` the `2k + 10` rounds and generations of §3.48a). The second `grind` is for the conditions
+that need word arithmetic (`ModelGenTest`'s `tPre`: `i < 4 → i < 5` over `UInt64`): without it
+one module of 194 broke. This is the generator's default: `sym … => vcgen … <;> finish` (the
+recipe of the models without `simp [..]`) and the `flat` keyword are gone (`sym "…"` was unused),
+and `simp [..]`/`locals` were dropped from every `l_model` (361 blocks in 140 modules) except the
+five where the default fails or is far slower: `DeclDivGateT` (`defnDivGate_specE`),
+`DivModEnvGuard` (`eg_specW`), `DivModPinE` (`checkDivModPinLoop_specE`,
+`checkDivModPin_specE`) (open goals after the multi-result `setLocs`, as under §3.53's `flat`)
+and `IndBGrpM` (`grpE_spec`, over 15 min). `simp [..]` stays the way to choose `simp_all`.
+
+**Sweep** (master 7d61c934 against this branch, each of the 192 modules with an `l_model`, `lean`
+once on each side at the same time, two pairs in parallel, deps from the shared cache, user
+seconds, `_tmp/grindcost/sw_pair.txt`): all build both ways.
+
+| | modules | master | branch |
+|---|---:|---:|---:|
+| all | 192 | 1259.8 | **1002.1** (−20.5 %) |
+| of these > 10 % faster | 98 | | −242.8 |
+| of these > 10 % slower | 1 | | +0.5 |
+
+The largest: `DeclDivModSpec/EqAt1` 44.5 → 19.2, `WhnfModels7E` 31.5 → 18.1, `PosE1M` 21.8 → 8.4,
+`PosE2M` 17.5 → 6.0, `DefEqModels` (`strE` among them) 31.3 → 19.8, `WhnfModels2E` 26.4 → 16.1,
+`InferBodyBindPiModels` 19.7 → 11.5, `Lift` 19.9 → 12.2; §3.53's short-path losers now win or
+hold: `WhnfModels3E` 8.5 → 6.8, `WalkLeaves` 11.4 → 11.4, `DeclDivGateT2` 6.7 → 6.5. The worst:
+`UnresolvedE` 16.2 → 17.1, `WalkScope` 5.4 → 5.9, `LevelSimp` 2.5 → 3.0. The build gate (all of
+`ConAgua` after the generator change) took 271 s wall. The shake allowlist lost four lines
+(`IndRealBph`, `ModelGenTest`: their imports now show in the proofs, no auxiliary theorems).
