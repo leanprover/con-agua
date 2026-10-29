@@ -10,7 +10,7 @@ import ConAgua.Front.Preserve
 Small functions over test arrays, one per feature: pool slices (`A⦃x⦄`, `⦃x⦄.tier/.idx/.base`),
 `le64!`, `scan!`, `copy!` (words, tiered words, bytes), byte stores, sequential loops and nested
 loops (a `break` and a `return` in the inner loop, the outer loop fused or not), a loop followed
-by `abort` (fused only if it never exits normally), and `errors` mode through them. Each `l_model`
+by `abort` (fused only if it never exits normally), and `unified` mode through them. Each `l_model`
 generates the models and proves their specs; the `example`s check the models' values.
 -/
 
@@ -175,7 +175,7 @@ l_model tNestF_spec (p : Prog) (hp : p.lookup "t_nest_f" = some tNestF)
 example : tNestFW.loop1.stmt = tNestRW.loop1.stmt := rfl
 example : tNestFW.loop2.stmt = tNestRW.loop2.stmt := rfl
 
-/-- `errors` mode: the aborts' codes kept, through the nested loops and the block operations. -/
+/-- `unified` mode: the aborts' codes kept, through the nested loops and the block operations. -/
 -- con-ron: none — an `l_model` test function
 def tNestE : FunDecl := lfn (n, d) locals (i, j) {
   i := 0;
@@ -194,7 +194,7 @@ def tNestE : FunDecl := lfn (n, d) locals (i, j) {
 
 l_model tNestE_spec (p : Prog) (hp : p.lookup "t_nest_e" = some tNestE)
   fns [hp ↦ tNestEW]
-  grind [arena_grind] simp [] errors
+  grind [arena_grind] simp [] unified
 
 /-- A loop that never exits normally, then `abort`: fused (the loop's model is the function's). -/
 -- con-ron: none — an `l_model` test function
@@ -211,7 +211,7 @@ l_model tFor_spec (p : Prog) (hp : p.lookup "t_for" = some tFor)
   fns [hp ↦ tForW ro]
   grind [arena_grind] simp []
 
-/-- A loop that may exit normally, then `abort`: not fused (`errors` mode). -/
+/-- A loop that may exit normally, then `abort`: not fused (`unified` mode). -/
 -- con-ron: none — an `l_model` test function
 def tExit : FunDecl := lfn (n, d) locals (i) {
   i := 0;
@@ -225,7 +225,7 @@ def tExit : FunDecl := lfn (n, d) locals (i) {
 
 l_model tExit_spec (p : Prog) (hp : p.lookup "t_exit" = some tExit)
   fns [hp ↦ tExitE]
-  grind [arena_grind] simp [] errors
+  grind [arena_grind] simp [] unified
 
 /-- A function that only changes the memory (no `return`: the result `0`). -/
 -- con-ron: none — an `l_model` test function

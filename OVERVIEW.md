@@ -423,14 +423,14 @@ These are **partial-correctness** statements: an L run that runs out of fuel
 or returns anything else claims nothing. That is what makes the approach
 practical: L may abort wherever it likes (a full table, an unusual input), and
 only the accept path has to agree with the twin. An abort of class `1` or `2`
-is the one exception: beside each refinement sits an **error refinement**, a
-failing call with such a class claims the twin function's failure with the same
-class from the related state
-([`ErrClaim`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Arena/Verdict.lean#L50-L51)). It is
-proved from an error-carrying word model (`l_model … errors`: `Except` instead
-of `Option`, every callee through its whole run `callE`) by the ok proof's case
-chain: a callee's failure passes through the twin's `bind`, an ok prefix comes
-from the ok refinements, and at a reject or decline site the L guard is the
+is the one exception: a failing call with such a class claims the twin
+function's failure with the same class from the related state
+([`ErrClaim`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Arena/Verdict.lean#L50-L51)).
+For these functions one refinement covers both outcomes
+([`RefE`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Arena/Verdict.lean#L218-L222)):
+it is proved from a word model that keeps the errors (`l_model … unified`:
+`Except` instead of `Option`) by one case chain, where a callee's failure passes
+through the twin's `bind` and at a reject or decline site the L guard is the
 twin's failure condition. Functions whose call closure aborts only with class
 `0` (1537 of 1838) claim nothing, by a check of the program text
 ([`checkerProg_nv`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Checker/NoVerdictClosed.lean#L71-L72)).

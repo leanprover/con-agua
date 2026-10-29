@@ -2201,12 +2201,13 @@ the slots, as `m2c_*` in §3.7):
 
 **D. Then the machinery itself**:
 
-- [ ] `L/ModelGen`: drop the `errors` keyword and its path (the `exc` models without the class,
+- [x] `L/ModelGen`: drop the `errors` keyword and its path (the `exc` models without the class,
   `callE_spec` as the default spec, the `errors`-only error messages); make `unified` the default
   for functions outside `nvFns`. `L/ModelGenTest`'s two `errors` tests (`tNestE_spec`,
-  `tExit_spec`) become `unified` ones.
-- [ ] `L/ErrSpec`: `Err.code_ne_of_cls` loses its users (none left after §3.54 and §3.55; the
-  lemma itself is still there). `triple_of_callE_err` stays (`RefE.run_err`
+  `tExit_spec`) become `unified` ones. Done (§3.56; `unified` stays an explicit keyword, and
+  `callE_spec` stays the default spec of `unified` mode).
+- [x] `L/ErrSpec`: `Err.code_ne_of_cls` loses its users (none left after §3.54 and §3.55; the
+  lemma itself is still there). Deleted (§3.56). `triple_of_callE_err` stays (`RefE.run_err`
   is built on it), as do `ErrClaim`, `CoreSpecE`, `CoreSpecE.of_runs` (`RefE.coreSpecE`) and
   `callE_spec` (callees without a spec).
 - [x] `err_stmt` (every-fuel claim statements, now only as `G` fields: `Arena/IndT/Pass` 5,
@@ -3377,8 +3378,8 @@ block's mode; `grep` for the names).
 **`l_model … errors`.** None outside the generator: the 509 `l_model` commands outside `L/ModelGen*`
 are 279 `unified` and 230 without error posts.
 
-- [ ] `L/ModelGenTest`: `tNestE_spec`, `tExit_spec` (`errors` mode): become `unified` tests, with
-  the generator change itself (group D).
+- [x] `L/ModelGenTest`: `tNestE_spec`, `tExit_spec` (`errors` mode): become `unified` tests, with
+  the generator change itself (group D). Done (§3.56).
 - [x] `Verdict/PosE3Fm` (`nfE`), `Verdict/PosE3Cm` (`nctE`): models pasted from the generator, but
   already with `unified` posts (`fun ε => True → ε.cls ≠ 0 → …`) and read by `RefE`; nothing (their
   module docs still say "error model", `errors`).
@@ -3386,10 +3387,11 @@ are 279 `unified` and 230 without error posts.
 **Hand `Except` models with posts over the code (`ε.code ≠ 0 →`), and their claims through
 `triple_of_callE_err … (Err.code_ne_of_cls hk0)`** (9 sites):
 
-- [ ] `Verdict/WhnfModels4E`: `irVckTailE`/`irVckE` (`iota_rec_vck`), `irFire2E`
+- [x] `Verdict/WhnfModels4E`: `irVckTailE`/`irVckE` (`iota_rec_vck`), `irFire2E`
   (`iota_rec_fire2`); claims `iotaRecVck_refinesE`, `iotaRecFire2_refinesE` (`Verdict/WhnfIotaRecE`,
   2 sites), `G` fields `IotaRecVckE`/`IotaRecFire2E` of the ι recursor's refinements
   (`Arena/WhnfIotaRecRefine2`). Lane gen-cut's: a migration each (one model, one refinement).
+  Done (§3.54).
 - [x] `Verdict/WhnfModels5E`: `icfCheckE`, `icfForallE`, `icfFlushE`, `icfAuxE`, `icfTopE`
   (`iota_certs_full` and its helpers; ok refinements in `Arena/WhnfIotaRefine5`); claims in
   `Verdict/WhnfCertsE` (5 sites), read as `IotaCertsFullE` by `iota_rec_vck`'s claim. A migration
@@ -3656,3 +3658,47 @@ tests (`L/ModelGenTest`: `tNestE_spec`, `tExit_spec`, the only `errors` models),
 `CoreSpecE.of_callE`, `RefE.run_err`, `RefC.run_err`, `L/ErrSpec`, `Verdict/ThreadsE`) take posts over
 the class. No `err_stmt` user, no hand claim statement of this kind.
 
+
+### 3.56 Retirement, group D: the generator's `errors` mode, `Err.code_ne_of_cls` (last item)
+
+§3.30 D's two remaining items; with them the separate error machinery is gone.
+
+* **`L/ModelGen`**: the `errors` keyword and its path are gone: the posts over the code
+  (`ε.code ≠ 0 → …`, three sites: function, loop and join-point specs), the `uni` flag (`exc` is
+  `unified` now), and the `errors`-only checks and messages (a total or `Option` callee spec
+  without an error post). The module docstring describes `unified` alone.
+* **`callE_spec` stays the default spec** for a callee without one: `unified` models use it (the
+  knot's callees through their runs, e.g. `iota_rec_vck`'s, §3.54), so it was never `errors`-only.
+* **`unified` stays an explicit keyword**, not the default outside `nvFns`. Making it the default
+  would remove the word at 284 call sites and nothing else (the `Option` mode stays for the 155
+  models of `nvFns` functions and the others without error posts), and it would make the
+  generator read `Checker/NoVerdictFns` (regenerated from `checkerProg`), so that every module
+  with an `l_model` would rebuild whenever the list changes. Inventory
+  (`_tmp/retire-final/inv2.py`): of the `l_model`s whose functions can be read off the text, all
+  155 without `unified` are of `nvFns` functions, all 174 with it have a function outside.
+* **`L/ModelGenTest`**: `tNestE_spec`, `tExit_spec` are `unified` tests (unchanged otherwise).
+* **`L/ErrSpec`**: `Err.code_ne_of_cls` deleted, and `Err.eq_abort_of_cls`, which had no user
+  either. `triple_of_callE_err`, `ErrClaim`, `CoreSpecE`, `CoreSpecE.of_runs`, `callE_spec` stay.
+* Docs: OVERVIEW §4.4 describes the one refinement (`RefE`) instead of an error refinement beside
+  each ok one; `Verdict/PosE3Fm`, `PosE3Cm` and `ld64_rdW_specE`'s docstrings say `unified`.
+
+Lines: +61 −84 in the Lean files (6 files). Elaboration (user seconds, `lean` on the module, median of 3
+interleaved runs, base master 4498a43f, `_tmp/retire-final/times1.txt`): `L/ErrSpec` 2.08 → 2.08,
+`L/ModelGen` 13.51 → 13.29, `L/ModelGenTest` 17.63 → 17.72; sum 33.22 → 33.09 (±0 %).
+
+### 3.57 The migration and the retirement, in sum
+
+From the pilot (§2, master 63762a3f) to here, 64 landings: every function of the verdict closure
+has one refinement for both outcomes (`RefE`/`RefC`) over one `unified` model, and none of the
+separate error machinery is left (no `errors` model, error claim beside an ok refinement,
+`err_stmt`, hand claim statement or hand `Except` model over the code).
+
+* **Lines** (`git diff --numstat` of each landing's merge against its first parent, the Lean
+  files only, `_tmp/retire-final/merges.txt`): +38 832 −87 460, **−48 628 lines**. The landings'
+  own pair tables (§2.1 onwards, ok side + error side against the refinement) show the same: about
+  half of each function's lines went (−25 % to −60 % per landing).
+* **Elaboration**: the sum of the 52 landings' own measurements (each on the modules it touched, at
+  its time; the generator and kit re-measurements §3.11, §3.26, §3.48a and §3.53's sweep left
+  out, as they overlap): **3 782 s → 3 128 s (−17 %)**. Four landings were slower overall
+  (§3.23 +11 %, §3.39 +6 %, §3.40 +5 %, §3.44 +95 %; §3.44's models were sped up again by
+  §3.48a's `flat` recipe).

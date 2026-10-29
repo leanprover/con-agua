@@ -575,6 +575,13 @@
     50  def ErrClaim {α : Type} (T : AM α) (a : AState) (e : Err) : Prop :=
     51    e.cls ≠ 0 → ∃ ce, T.run a = .error ce ∧ twinCls ce = e.cls
 
+== ConAgua/Arena/Verdict.lean#L218-L222
+   218  def RefE {α β : Type} (G : Prop) (x : Except Err α) (T : AM β) (a : AState)
+   219      (R : α → β → AState → Prop) : Prop :=
+   220    match x with
+   221    | .ok v => ∃ y a', T.run a = .ok (y, a') ∧ R v y a'
+   222    | .error e => G → ErrClaim T a e
+
 == ConAgua/Checker/NoVerdictClosed.lean#L71-L72
     71  theorem checkerProg_nv : closedNV checkerProg nvFns = true :=
     72    closedNV_of_all nvTree.eq checkerProg_nvChk

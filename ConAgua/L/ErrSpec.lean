@@ -53,14 +53,6 @@ def Err.cls (e : Err) : Word := e.code &&& 3
 @[grind →, lang_grind →] theorem Err.cls_of_code {e : Err} (h : e.code = 0) : e.cls = 0 := by
   simp [Err.cls, h]
 
-/-- An error of class other than `0` is an abort. -/
-theorem Err.eq_abort_of_cls {e : Err} (h : e.cls ≠ 0) : e = .abort e.code := by
-  cases e <;> simp_all
-
-/-- An error of class other than `0` has a code other than `0`. -/
-theorem Err.code_ne_of_cls {e : Err} (h : e.cls ≠ 0) : e.code ≠ 0 := by
-  intro h0; apply h; simp [Err.cls, h0]
-
 /-! ## Triples with an exceptional post -/
 
 /-- From a triple with an exceptional post to an erroring run. -/

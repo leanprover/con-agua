@@ -135,8 +135,8 @@ theorem ErrClaim.of_callE_nv {α : Type} {T : AM α} {a : AState} {p : Prog} {fs
     {e : Err} (h : callE p n f vs m = .error e) : ErrClaim T a e :=
   ErrClaim.of_cls0 (callE_nv hp hf n vs m h)
 
-/-- A word load, error-precise: its value as `rdW`, or `oob` (the loads of the `errors` and
-`unified` models, `l_model … extra [ld64_rdW_specE]`). The error is exact: with a post over its
+/-- A word load, error-precise: its value as `rdW`, or `oob` (the loads of the `unified` models,
+`l_model … extra [ld64_rdW_specE]`). The error is exact: with a post over its
 code, the generated steps of a `unified` model, whose error posts are over the class, fell
 through to slow `simp_all` rounds and `grind` at every load (`checkValueGroupE` 8.6 s → 2.9 s). -/
 theorem ld64_rdW_specE (a : ArrId) (i : Word) (s₀ : St) :
