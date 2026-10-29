@@ -55,6 +55,7 @@ def Expr.pval (s : St) : Expr → Word
   | .len64t a t => s.mem.len64 (tierA a (Expr.pval s t))
   | .ld8x8 b i => le64 (s.mem.src8 b) (Expr.pval s i).toNat
   | .ld32t a t i => rd32 s.mem (tierA a (Expr.pval s t)) (Expr.pval s i)
+  | .ld32h a t i hi => half32b hi (rd64 s.mem (tierA a (Expr.pval s t)) (Expr.pval s i))
 
 /-- A condition's value in `s` (short-circuit makes no difference: nothing is written). -/
 def Cond.pval (s : St) : Cond → Bool
@@ -82,6 +83,7 @@ theorem evalE_spec (e : Expr) (s₀ : St) :
   | ld32t a t i iht ihi =>
     vcgen [evalE, ld32, iht, ihi]
     all_goals (subst_vars; rename_i h; simp only [Expr.pval, rd32, Array.getD, h, ↓reduceDIte]; trivial)
+  | ld32h a t i hi iht ihi => vcgen [evalE, ld64, iht, ihi] <;> simp_all [Expr.pval, rd64, Array.getD]
 
 theorem evalC_spec (c : Cond) (s₀ : St) :
     ⦃fun s => s = s₀⦄ evalC c ⦃fun b s' => s' = s₀ ∧ b = Cond.pval s₀ c; ⊤⦄ := by

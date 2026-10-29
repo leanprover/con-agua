@@ -191,6 +191,9 @@ theorem evalE_keepsG : ∀ (e : Expr), KeepsG G (evalE e) := by
   | ld8x8 b i ih => rw [evalE]; exact KeepsG.bind ih fun _ => ld8x8_keepsG b _
   | ld32t a t i iht ihi =>
     rw [evalE]; exact KeepsG.bind iht fun _ => KeepsG.bind ihi fun _ => ld32_keepsG _ _
+  | ld32h a t i hi iht ihi =>
+    rw [evalE]; exact KeepsG.bind iht fun _ => KeepsG.bind ihi fun _ =>
+      KeepsG.bind (ld64_keepsG _ _) fun _ => KeepsG.pure _
 
 theorem evalC_keepsG : ∀ (c : Cond), KeepsG G (evalC c) := by
   intro c

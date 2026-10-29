@@ -91,6 +91,7 @@ def _root_.L.Expr.noPB : L.Expr → Bool
   | .len64t _ t => t.noPB
   | .ld8x8 b i => b.noPB && i.noPB
   | .ld32t _ t i => t.noPB && i.noPB
+  | .ld32h _ t i _ => t.noPB && i.noPB
   | _ => true
 
 def _root_.L.WArr.noPB : L.WArr → Bool

@@ -20,7 +20,8 @@ partial def parArrsE : Expr → List TieredArray
   | .len64 a => [↑a]
   | .ld64t a t i => ↑a :: (tier1 a) :: parArrsE t ++ parArrsE i
   | .len64t a t => ↑a :: (tier1 a) :: parArrsE t
-  | .ld32t a t i => ↑a :: (tier1 a) :: parArrsE t ++ parArrsE i
+  | .ld32t a t i => (if t = .const 0 then [↑a] else [↑a, tier1 a]) ++ parArrsE t ++ parArrsE i
+  | .ld32h a t i _ => ↑a :: (tier1 a) :: parArrsE t ++ parArrsE i
   | _ => []
 
 partial def parArrsC : Cond → List TieredArray
@@ -44,7 +45,7 @@ partial def parArrsS : Stmt → List TieredArray
   | .copy64 d di s si n => parWArr d ++ parWArr s ++ parArrsE di ++ parArrsE si ++ parArrsE n
   | .copy8w d di _ si n => parWArr d ++ parArrsE di ++ parArrsE si ++ parArrsE n
   | .scan8 _ _ i e _ => parArrsE i ++ parArrsE e
-  | .st32t a t i e => ↑a :: (tier1 a) :: parArrsE t ++ parArrsE i ++ parArrsE e
+  | .st32t a t i e => (if t = .const 0 then [↑a] else [↑a, tier1 a]) ++ parArrsE t ++ parArrsE i ++ parArrsE e
   | _ => []
 
 partial def parCalls : Stmt → List FnName

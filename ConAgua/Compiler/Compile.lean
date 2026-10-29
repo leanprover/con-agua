@@ -457,6 +457,7 @@ def Expr.roms : Expr → List (List UInt8)
   | .len64t _ t => Expr.roms t
   | .ld8x8 s i => BSrc.roms s ++ Expr.roms i
   | .ld32t _ t i => Expr.roms t ++ Expr.roms i
+  | .ld32h _ t i _ => Expr.roms t ++ Expr.roms i
   | _ => []
 
 def WArr.roms : WArr → List (List UInt8)
@@ -565,6 +566,7 @@ def Expr.nglob : Expr → Nat
   | .len64t _ t => Expr.nglob t
   | .ld8x8 _ i => Expr.nglob i
   | .ld32t _ t i => max (Expr.nglob t) (Expr.nglob i)
+  | .ld32h _ t i _ => max (Expr.nglob t) (Expr.nglob i)
   | _ => 0
 
 def WArr.nglob : WArr → Nat
@@ -611,6 +613,7 @@ def Expr.arrU : Expr → List (Nat × Nat)
   | .len64t a t => (a, 2) :: Expr.arrU t
   | .ld8x8 s i => BSrc.arrU s ++ Expr.arrU i
   | .ld32t a t i => (a, 2) :: (Expr.arrU t ++ Expr.arrU i)
+  | .ld32h a t i _ => (a, 2) :: (Expr.arrU t ++ Expr.arrU i)
   | _ => []
 
 def WArr.arrU : WArr → List (Nat × Nat)
@@ -684,6 +687,9 @@ abbrev movRM (d : Reg64) (a : AddrExpr) : Directive := i64 (.mov (.reg (rr d)) (
 abbrev movMR (a : AddrExpr) (s : Reg64) : Directive := i64 (.mov (.mem a) (oR s))
 /-- `movl d32, [b + 4 i]`: a 4-byte load, zero-extended into `d` (lane p32). -/
 abbrev ld32X (d b i : Reg64) : Directive := i32 (.mov (.reg (.low d .W32)) (oM (mbi b i .W32)))
+/-- `movl d32, [b + 8 i + 4 hi]`: one half of word `i` (lane p32use). -/
+abbrev ld32H (d b i : Reg64) (hi : Bool) : Directive :=
+  i32 (.mov (.reg (.low d .W32)) (oM ⟨some (.reg b), some ⟨i, .W64⟩, .int64 (Int64.ofInt (if hi then 4 else 0))⟩))
 /-- `movl [b + 4 i], v32`: a 4-byte store of the low half of `v` (lane p32). -/
 abbrev st32X (b i v : Reg64) : Directive := i32 (.mov (.mem (mbi b i .W32)) (.regOrMem (.reg (.low v .W32))))
 abbrev jmpL (l : Label) : Directive := i64 (.jmp (.rel (.sub (.label l) .after_current_instruction)))
@@ -717,6 +723,7 @@ def tempsE : Expr → Nat
   | .len64t _ t => tempsE t
   | .ld8x8 _ i => tempsE i
   | .ld32t _ t i => if Expr.isSimple t then tempsE i else max (tempsE t) (1 + tempsE i)
+  | .ld32h _ t i _ => if Expr.isSimple t then tempsE i else max (tempsE t) (1 + tempsE i)
   | _ => 0
 
 def tempsC : Cond → Nat
@@ -936,6 +943,19 @@ of array `a` is at the position after tier `0`'s, its descriptor words 8 bytes a
 `Tab.pos64_tierA`). -/
 def tierDesc (r : Reg64) : Program :=
   [i64 (.and (.reg (rr r)) (.imm (.int64 (1 : Word).toInt64)))]
+
+/-- A constant tier expression's value (lane p32use): a 32-bit access with a constant tier reads
+that tier's descriptor words at fixed offsets, and may name an untiered array with tier `0`. -/
+def Expr.constTier? : Expr → Option Word
+  | .const c => some c
+  | _ => none
+
+/-- The array of a 32-bit access `a⟨t⟩.u32[i]` exists: tier `c` of `a` for a constant tier `c`,
+else both tiers (`a` tiered). -/
+def Tab.tier32Ok (tab : Tab) (a : ArrId) (t : Expr) : Bool :=
+  match t.constTier? with
+  | some c => tab.dom64 (tierA a c)
+  | none => tab.dom64 (tier1 a)
 
 /-- `[r15 + 8 r + d]`: a descriptor word of tier `r` (`tierDesc`). -/
 abbrev tdesc (r : Reg64) (d : Int) : AddrExpr := ⟨some (.reg .r15), some ⟨r, .W64⟩, .int64 (Int64.ofInt d)⟩
@@ -1194,6 +1214,23 @@ and `[bs]` its base: the bounds check `x < len32`, the base into the scratch reg
 def ld32Code (x t d : Reg64) (ln bs : AddrExpr) : Program :=
   [i64 (.cmp (.reg (rr x)) (oM ln)), jccL .nc errorL, movRM t bs, ld32X d t x]
 
+/-- `d := A[x]`'s half `hi` (lane p32use), where `[ln]` is `A`'s length in words and `[bs]` its
+base: the bounds check `x < len` (as for a word load), the base into the scratch register `t`,
+the 4-byte load at `t + 8 x + 4 hi` (zero-extended). -/
+def ld32hCode (x t d : Reg64) (ln bs : AddrExpr) (hi : Bool) : Program :=
+  [i64 (.cmp (.reg (rr x)) (oM ln)), jccL .nc errorL, movRM t bs, ld32H d t x hi]
+
+/-- `d := A[i]`'s half `hi` through the register stack: the index a local's register or computed
+into `d`, then `ld32hCode` with the first scratch register. -/
+def genLd32h (ctx : Ctx) (ln bs : AddrExpr) (hi : Bool) (i : Expr) (gi : GenF) (d : Reg64)
+    (fr : List Reg64) : Option Program :=
+  match fr with
+  | t :: _ =>
+    match regOf ctx i with
+    | some r => some (ld32hCode r t d ln bs hi)
+    | none => (gi d fr).map fun ci => ci ++ ld32hCode d t d ln bs hi
+  | [] => none
+
 /-- `d := A.u32[i]` through the register stack: the index a local's register or computed into `d`,
 then `ld32Code` with the first scratch register. -/
 def genLd32 (ctx : Ctx) (ln bs : AddrExpr) (i : Expr) (gi : GenF) (d : Reg64) (fr : List Reg64) :
@@ -1273,9 +1310,22 @@ def gen (ctx : Ctx) : Expr → Reg64 → List Reg64 → Option Program
     if ctx.isT t then
       genLd32 ctx (tdesc .rsi (ctx.tab.len32 a)) (tdesc .rsi (ctx.tab.base64 a)) i (gen ctx i) d fr
     else
+    match t.constTier? with
+    | some c =>
+      genLd32 ctx (mb .r15 (ctx.tab.len32 (tierA a c))) (mb .r15 (ctx.tab.base64 (tierA a c))) i (gen ctx i) d fr
+    | none =>
       match fr with
       | s :: fr' => (gen ctx t s fr').bind fun ct =>
           (genLd32 ctx (tdesc s (ctx.tab.len32 a)) (tdesc s (ctx.tab.base64 a)) i (gen ctx i) d fr').map
+            fun c => ct ++ tierDesc s ++ c
+      | [] => none
+  | .ld32h a t i hi, d, fr =>
+    if ctx.isT t then
+      genLd32h ctx (tdesc .rsi (ctx.tab.len64 a)) (tdesc .rsi (ctx.tab.base64 a)) hi i (gen ctx i) d fr
+    else
+      match fr with
+      | s :: fr' => (gen ctx t s fr').bind fun ct =>
+          (genLd32h ctx (tdesc s (ctx.tab.len64 a)) (tdesc s (ctx.tab.base64 a)) hi i (gen ctx i) d fr').map
             fun c => ct ++ tierDesc s ++ c
       | [] => none
 
@@ -1353,11 +1403,25 @@ def compileE (ctx : Ctx) : Expr → Nat → Program
     if ctx.isT t then
       compileE ctx i k ++ ld32Code .rax .rcx .rax (tdesc .rsi (ctx.tab.len32 a)) (tdesc .rsi (ctx.tab.base64 a))
     else
+    match t.constTier? with
+    | some c =>
+      compileE ctx i k ++
+        ld32Code .rax .rcx .rax (mb .r15 (ctx.tab.len32 (tierA a c))) (mb .r15 (ctx.tab.base64 (tierA a c)))
+    | none =>
     (match loadInto ctx .rdx t with
      | some ld => compileE ctx i k ++ ld
      | none => compileE ctx t k ++ [movMR (ctx.tmp k) .rax] ++ compileE ctx i (k + 1) ++
          [movRM .rdx (ctx.tmp k)]) ++ tierDesc .rdx ++
       ld32Code .rax .rcx .rax (tdesc .rdx (ctx.tab.len32 a)) (tdesc .rdx (ctx.tab.base64 a))
+  | .ld32h a t i hi, k =>
+    if ctx.isT t then
+      compileE ctx i k ++ ld32hCode .rax .rcx .rax (tdesc .rsi (ctx.tab.len64 a)) (tdesc .rsi (ctx.tab.base64 a)) hi
+    else
+    (match loadInto ctx .rdx t with
+     | some ld => compileE ctx i k ++ ld
+     | none => compileE ctx t k ++ [movMR (ctx.tmp k) .rax] ++ compileE ctx i (k + 1) ++
+         [movRM .rdx (ctx.tmp k)]) ++ tierDesc .rdx ++
+      ld32hCode .rax .rcx .rax (tdesc .rdx (ctx.tab.len64 a)) (tdesc .rdx (ctx.tab.base64 a)) hi
 
 /-- The negation of a condition code. -/
 def CondCode.neg : CondCode → CondCode
@@ -1401,6 +1465,7 @@ def Expr.readsReg (al : List (Var × Reg64)) (r : Reg64) : Expr → Bool
   | .len64t _ t => Expr.readsReg al r t
   | .ld8x8 _ i => Expr.readsReg al r i
   | .ld32t _ t i => Expr.readsReg al r t || Expr.readsReg al r i
+  | .ld32h _ t i _ => Expr.readsReg al r t || Expr.readsReg al r i
   | _ => false
 
 /-- `r := e` through the register stack (`r` not in the scratch registers `fr`): straight into
@@ -1771,6 +1836,9 @@ def compileS (ctx : Ctx) (path : Path) : Stmt → Program
       [movRR .rdx .rax, movRM .rax (ctx.tmp 0)]) ++
       (if ctx.isT t then st32Code (tdesc .rsi (ctx.tab.len32 a)) (tdesc .rsi (ctx.tab.base64 a))
       else
+      match t.constTier? with
+      | some c => st32Code (mb .r15 (ctx.tab.len32 (tierA a c))) (mb .r15 (ctx.tab.base64 (tierA a c)))
+      | none =>
       (loadInto ctx .rcx t).getD [jmpL errorL] ++ tierDesc .rcx ++
         st32Code (tdesc .rcx (ctx.tab.len32 a)) (tdesc .rcx (ctx.tab.base64 a)))
 
@@ -1831,6 +1899,7 @@ def Expr.uses (w : Nat) (acc : Array Nat) : Expr → Array Nat
   | .len64t _ t => Expr.uses w acc t
   | .ld8x8 _ i => Expr.uses w acc i
   | .ld32t _ t i => Expr.uses w (Expr.uses w acc t) i
+  | .ld32h _ t i _ => Expr.uses w (Expr.uses w acc t) i
   | _ => acc
 
 def WArr.uses (w : Nat) (acc : Array Nat) : WArr → Array Nat
@@ -1873,6 +1942,7 @@ def Expr.tierUses (w : Nat) (acc : Array Nat) : Expr → Array Nat
   | .ld64t _ t i => Expr.tierUses w (tierUse w acc t) i
   | .len64t _ t => tierUse w acc t
   | .ld32t _ t i => Expr.tierUses w (tierUse w acc t) i
+  | .ld32h _ t i _ => Expr.tierUses w (tierUse w acc t) i
   | _ => acc
 
 def Cond.tierUses (w : Nat) (acc : Array Nat) : Cond → Array Nat

@@ -191,7 +191,8 @@ def expr : Expr → List Use
   | .len64 a => [.word a]
   | .ld64t a t i => .tier a :: (expr t ++ expr i)
   | .len64t a t => .tier a :: expr t
-  | .ld32t a t i => .tier a :: (expr t ++ expr i)
+  | .ld32t a t i => (if t = .const 0 then .word a else .tier a) :: (expr t ++ expr i)
+  | .ld32h a t i _ => .tier a :: (expr t ++ expr i)
 
 def cond : Cond → List Use
   | .cmp _ a b => expr a ++ expr b
@@ -220,7 +221,7 @@ def stmt : Stmt → List Use
   | .copy64 d di s si n => warr d ++ warrT d ++ warr s ++ warrT s ++ expr di ++ expr si ++ expr n
   | .copy8w d di s si n => warr d ++ warrT d ++ bsrc s ++ expr di ++ expr si ++ expr n
   | .scan8 _ s i e _ => bsrc s ++ expr i ++ expr e
-  | .st32t a t i e => .tier a :: (expr t ++ expr i ++ expr e)
+  | .st32t a t i e => (if t = .const 0 then .word a else .tier a) :: (expr t ++ expr i ++ expr e)
 
 end Uses
 

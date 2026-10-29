@@ -138,6 +138,7 @@ def shiftE (o : Nat) : Expr → Expr
   | .len64t a t => .len64t a (shiftE o t)
   | .ld8x8 b i => .ld8x8 b (shiftE o i)
   | .ld32t a t i => .ld32t a (shiftE o t) (shiftE o i)
+  | .ld32h a t i hi => .ld32h a (shiftE o t) (shiftE o i) hi
   | e => e
 
 /-- A block operand with its tier expression renamed. -/

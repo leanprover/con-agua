@@ -275,6 +275,7 @@ theorem evalE_nv (e : Expr) : ⦃fun _ => True⦄ evalE e ⦃fun _ _ => True; NV
   | len64t a t ih => vcgen [evalE, ih] <;> grind
   | ld8x8 s i ih => vcgen [evalE, ih, ld8x8] <;> grind
   | ld32t a t i iht ihi => vcgen [evalE, iht, ihi, ld32] <;> grind
+  | ld32h a t i hi iht ihi => vcgen [evalE, iht, ihi, ld64] <;> grind
 
 theorem evalC_nv (c : Cond) : ⦃fun _ => True⦄ evalC c ⦃fun _ _ => True; NVE⦄ := by
   induction c with

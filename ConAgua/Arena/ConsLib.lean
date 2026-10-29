@@ -51,6 +51,7 @@ def mapE (f : Var → Var) : Expr → Expr
   | .len64t a t => .len64t a (mapE f t)
   | .ld8x8 b i => .ld8x8 b (mapE f i)
   | .ld32t a t i => .ld32t a (mapE f t) (mapE f i)
+  | .ld32h a t i hi => .ld32h a (mapE f t) (mapE f i) hi
   | e => e
 
 /-- A block operand with its tier expression renamed. -/
@@ -87,7 +88,7 @@ theorem mapE_exE (f : Var → Var) (R : TRec) (g : Word) (e : Expr) :
 
 theorem mapE_tld (f : Var → Var) (R : TRec) (t i : Expr) (g : Word) :
     mapE f (R.ld t i g) = R.ld (mapE f t) (mapE f i) g := by
-  simp only [TRec.ld, mapE_exE, mapE, mapE_tierX, TRec.adE]; split <;> split <;> simp [mapE]
+  simp only [TRec.ld, mapE, mapE_tierX, TRec.adE]; split <;> split <;> split <;> simp [mapE]
 
 theorem mapE_cntE (f : Var → Var) (R : TRec) (t : Expr) :
     mapE f (R.cntE t) = R.cntE (mapE f t) := by simp [TRec.cntE, mapE]

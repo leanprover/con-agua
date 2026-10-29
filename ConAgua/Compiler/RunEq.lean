@@ -337,6 +337,15 @@ theorem evalP_error {σ : St} {e : Expr} {x : Err} (h : evalP σ e = .error x) :
       · split at h
         · cases h
         · cases h; rfl
+  | ld32h _ t i _ iht ihi =>
+    simp only [evalP, bind, Except.bind] at h
+    split at h
+    · rename_i he; cases h; exact iht he
+    · split at h
+      · rename_i he; cases h; exact ihi he
+      · split at h
+        · cases h
+        · cases h; rfl
   | len64t _ t ih =>
     simp only [evalP, bind, Except.bind] at h
     split at h

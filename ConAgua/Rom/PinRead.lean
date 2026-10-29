@@ -49,6 +49,7 @@ def Expr.toPB : Expr → Expr
   | .len64t a t => .len64t a t.toPB
   | .ld8x8 b i => .ld8x8 b.toPB i.toPB
   | .ld32t a t i => .ld32t a t.toPB i.toPB
+  | .ld32h a t i hi => .ld32h a t.toPB i.toPB hi
 
 def WArr.toPB : WArr → WArr
   | .plain a => .plain a

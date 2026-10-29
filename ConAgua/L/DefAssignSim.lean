@@ -333,6 +333,10 @@ theorem evalE_rsim : ∀ (e : Expr), DaRd N D e.rv → DaSim (DaAg N D) (fun _ =
   | ld32t a t i iht ihi =>
     intro hr; simp only [Expr.rv] at hr; rw [evalE]
     exact DaSim.bind (iht hr.left) fun _ => DaSim.bind (ihi hr.right) fun _ => ld32_rsim _ _
+  | ld32h a t i hi iht ihi =>
+    intro hr; simp only [Expr.rv] at hr; rw [evalE]
+    exact DaSim.bind (iht hr.left) fun _ => DaSim.bind (ihi hr.right) fun _ =>
+      DaSim.bind (ld64_rsim _ _) fun _ => DaSim.pure _ fun _ _ h => h
 
 theorem evalC_rsim : ∀ (c : Cond), DaRd N D c.rv → DaSim (DaAg N D) (fun _ => DaAg N D) (evalC c) := by
   intro c

@@ -64,6 +64,7 @@ partial def serE : Expr → SerM String
   | .len64t a t => return s!"(n64t {a} {← serE t})"
   | .ld8x8 b i => return s!"(l8x8 {← serB b} {← serE i})"
   | .ld32t a t i => return s!"(l32t {a} {← serE t} {← serE i})"
+  | .ld32h a t i hi => return s!"(l32h {a} {← serE t} {← serE i} {if hi then 1 else 0})"
 
 partial def serW : WArr → SerM String
   | .plain a => pure s!"(wp {a})"
@@ -184,6 +185,7 @@ partial def parseE : P Expr := do
     | "l64" => do let a ← nat; pure (.ld64 a (← parseE))
     | "l64t" => do let a ← nat; let t ← parseE; pure (.ld64t a t (← parseE))
     | "l32t" => do let a ← nat; let t ← parseE; pure (.ld32t a t (← parseE))
+    | "l32h" => do let a ← nat; let t ← parseE; let i ← parseE; pure (.ld32h a t i ((← nat) == 1))
     | "n64t" => do let a ← nat; pure (.len64t a (← parseE))
     | "n8" => do let x ← nat; pure (.len8 x)
     | "n64" => do let x ← nat; pure (.len64 x)

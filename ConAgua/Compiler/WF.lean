@@ -41,7 +41,8 @@ def Expr.wf (nl : Nat) (tab : Tab) : Expr → Bool
   | .ld64t a t i => tab.dom64 (tier1 a) && Expr.wf nl tab t && Expr.wf nl tab i
   | .len64t a t => tab.dom64 (tier1 a) && Expr.wf nl tab t
   | .ld8x8 s i => BSrc.wf tab s && Expr.wf nl tab i
-  | .ld32t a t i => tab.dom64 (tier1 a) && Expr.wf nl tab t && Expr.wf nl tab i
+  | .ld32t a t i => tab.tier32Ok a t && Expr.wf nl tab t && Expr.wf nl tab i
+  | .ld32h a t i _ => tab.dom64 (tier1 a) && Expr.wf nl tab t && Expr.wf nl tab i
 
 def Cond.wf (nl : Nat) (tab : Tab) : Cond → Bool
   | .cmp _ a b => Expr.wf nl tab a && Expr.wf nl tab b
@@ -80,7 +81,7 @@ def Stmt.wf (p : Prog) (nl : Nat) (tab : Tab) : Stmt → Bool
       Expr.opndWf nl tab si && Expr.opndWf nl tab n
   | .scan8 x s i e c => x < nl && BSrc.wf tab s && Expr.opndWf nl tab i && Expr.opndWf nl tab e &&
       c.length == 256 && c.isPrefixOf (tab.rom.drop (romIdx c tab.rom))
-  | .st32t a t i e => tab.dom64 (tier1 a) && Expr.isSimple t && Expr.wf nl tab t &&
+  | .st32t a t i e => tab.tier32Ok a t && Expr.isSimple t && Expr.wf nl tab t &&
       Expr.wf nl tab i && Expr.wf nl tab e
 
 /-! ## The checks, guarded against kernel evaluation

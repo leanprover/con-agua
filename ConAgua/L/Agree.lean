@@ -58,6 +58,7 @@ def Expr.rdOk (S : TieredArray → Bool) (S8 : ArrId → Bool) : Expr → Bool
   | .len64t a t => tierOk S a && t.rdOk S S8
   | .ld8x8 s i => s.rdOk S8 && i.rdOk S S8
   | .ld32t a t i => tierOk S a && t.rdOk S S8 && i.rdOk S S8
+  | .ld32h a t i _ => tierOk S a && t.rdOk S S8 && i.rdOk S S8
 
 /-- A block operand names only word arrays of `S` (a tiered one: both tiers). -/
 def WArr.rdOk (S : TieredArray → Bool) (S8 : ArrId → Bool) : WArr → Bool
@@ -377,6 +378,10 @@ theorem evalE_sim : ∀ (e : Expr), e.rdOk S S8 = true → Sim S S8 (evalE e) :=
   | ld32t a t i iht ihi =>
     intro hr; simp only [Expr.rdOk, Bool.and_eq_true] at hr; rw [evalE]
     exact Sim.bind (iht hr.1.2) fun _ => Sim.bind (ihi hr.2) fun _ => ld32_sim (tierA_mem hr.1.1 _) _
+  | ld32h a t i hi iht ihi =>
+    intro hr; simp only [Expr.rdOk, Bool.and_eq_true] at hr; rw [evalE]
+    exact Sim.bind (iht hr.1.2) fun _ => Sim.bind (ihi hr.2) fun _ =>
+      Sim.bind (ld64_sim (tierA_mem hr.1.1 _) _) fun _ => Sim.pure _
 
 theorem evalC_sim : ∀ (c : Cond), c.rdOk S S8 = true → Sim S S8 (evalC c) := by
   intro c

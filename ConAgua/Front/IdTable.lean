@@ -72,9 +72,9 @@ def dSh (i : Word) : Word := (i &&& 1) <<< 5
 /-- Dense entry `i` of word array `a`: the 32-bit half `i & 1` of word `i >> 1`. -/
 def dnW (a : Array Word) (i : Word) : Word := (rdW a (i >>> 1) >>> dSh i) &&& (0xFFFFFFFF : Word)
 
-/-- Word `w` with the half of entry `i` replaced by `h` (a 32-bit word). -/
+/-- Word `w` with the half of entry `i` replaced by the low 32 bits of `h`. -/
 def dnSet (w i h : Word) : Word :=
-  (w &&& ((0xFFFFFFFF00000000 : Word) >>> dSh i)) ||| (h <<< dSh i)
+  (w &&& ((0xFFFFFFFF00000000 : Word) >>> dSh i)) ||| ((h &&& 0xFFFFFFFF) <<< dSh i)
 
 /-- Id `i` of table `b` is bound (the L code returns rather than aborts). -/
 def tblOK (m : Mem) (b : ArrId) (i : Word) : Bool :=
@@ -117,7 +117,7 @@ con-leche: ConLeche/Frontend/Scan/Types.lean:334-336 ConLeche.Frontend.IdTable.g
 def tblGetG (b : ArrId) (fnd : FnName) : FunDecl :=
   let _sa : ArrId := spArr b
   lfn (i) locals (fd, j, d) {
-    if i < CTL.u64[⟪szC b⟫] { return (b.u64[i >> 1] >> ((i & 1) << 5)) & 0xFFFFFFFF };
+    if i < CTL.u64[⟪szC b⟫] { return b⟨0⟩.u32[i] };
     if i == ⟪TOMB⟫ { abort };
     ⟪.call [1, 2, 3] fnd [.var 0, .const 0]⟫;
     if fd == 0 { abort };
@@ -139,14 +139,12 @@ con-leche: ConLeche/Frontend/Scan/Types.lean:338-345 ConLeche.Frontend.IdTable.i
 def tblPutG (b : ArrId) (fnd pt : FnName) : FunDecl := lfn (i, h) locals (s, fd, j, d, z) {
   s := CTL.u64[⟪szC b⟫];
   if i == s && i >> 1 < len(b.u64) {
-    z := (i & 1) << 5;
-    b.u64[i >> 1] := (b.u64[i >> 1] & (0xFFFFFFFF00000000 >> z)) | (h << z);
+    b⟨0⟩.u32[i] := h;
     CTL.u64[⟪szC b⟫] := i + 1;
     return 0
   };
   if i < s {
-    z := (i & 1) << 5;
-    b.u64[i >> 1] := (b.u64[i >> 1] & (0xFFFFFFFF00000000 >> z)) | (h << z);
+    b⟨0⟩.u32[i] := h;
     return 0
   };
   if i == ⟪TOMB⟫ { abort };
@@ -157,58 +155,6 @@ def tblPutG (b : ArrId) (fnd pt : FnName) : FunDecl := lfn (i, h) locals (s, fd,
 
 /-! ## The specs -/
 
-section specs
-variable (p : Prog) (b : ArrId) (fnd pt : FnName)
-  (hf : p.lookup fnd = some (memoFindG (spS b)))
-
-include hf
-
-theorem tblGetG_spec (f : FnName) (hp : p.lookup f = some (tblGetG b fnd)) (n : Nat) (s₀ : St)
-    (i : Word) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p n) f [i]
-    ⦃fun r s' => s' = s₀ ∧ tblOK s₀.mem b i = true ∧ r = [tblW s₀.mem b i]; ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, tblGetG]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        memoFindG_spec (spS b) p fnd hf n] <;>
-      finish [tblOK, tblW, szW, spF, mvG, spS, dnW, dSh, BinOp.eval]
-
-theorem tblFreshG_spec (f : FnName) (hp : p.lookup f = some (tblFreshG b fnd)) (n : Nat)
-    (s₀ : St) (i : Word) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p n) f [i]
-    ⦃fun _ s' => s' = s₀ ∧ tblFresh s₀.mem b i = true; ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, tblFreshG]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        memoFindG_spec (spS b) p fnd hf n] <;>
-      finish [tblFresh, szW, spF]
-
-theorem tblPutG_spec (hpt : p.lookup pt = some (memoPutG (spS b))) (f : FnName)
-    (hp : p.lookup f = some (tblPutG b fnd pt)) (n : Nat) (s₀ : St) (i h : Word) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p n) f [i, h]
-    ⦃fun _ s' => LocEq s' s₀ ∧ tblPutW s₀.mem b i h = some s'.mem; ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, tblPutG]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-        memoFindG_spec (spS b) p fnd hf n, memoPutG_spec (spS b) p pt hpt n] <;>
-      finish [tblPutW, szW, msetG, dnSet, dSh, BinOp.eval]
-
-end specs
 
 /-! ## The relation: table `b` represents an `IdTable` -/
 
@@ -345,7 +291,11 @@ theorem dnSet_get (w i j h : Word) (hh : h < 0x100000000) (hj : j >>> 1 = i >>> 
     (dnSet w i h >>> dSh j) &&& (0xFFFFFFFF : Word) =
       if j = i then h else (w >>> dSh j) &&& (0xFFFFFFFF : Word) := by
   unfold dnSet
-  rw [half_core w h hh _ _ (dSh_cases i) (dSh_cases j)]
+  have hm : h &&& (0xFFFFFFFF : Word) = h := by
+    apply UInt64.toNat_inj.mp
+    rw [mask32_toNat]
+    exact Nat.mod_eq_of_lt (UInt64.lt_iff_toNat_lt.mp hh)
+  rw [hm, half_core w h hh _ _ (dSh_cases i) (dSh_cases j)]
   simp only [eq_iff_dSh i j hj]
 
 /-- Distinct entries in distinct words, or distinct halves. -/
@@ -622,5 +572,152 @@ theorem TblR.put {m m' : Mem} {b : ArrId} {t t' : ConLeche.Frontend.IdTable (Idx
       · rw [ite_eq_right hji, ite_eq_right (Ne.symm hji)]; exact hg j hj
 
 end tbl
+
+/-! ### The dense entries as 32-bit elements
+
+The L code reads and writes a dense entry with the 32-bit primitives (`b⟨0⟩.u32[i]`, the
+untiered table's tier 0): element `i` is half `i % 2` of word `i / 2`, which is `dnW`'s half
+`i & 1` of word `i >> 1`. -/
+
+theorem shr1_eq_div2 (i : Word) : i >>> 1 = i / 2 := by
+  apply UInt64.toNat_inj.mp; rw [shr1_toNat, UInt64.toNat_div]; rfl
+
+theorem lo_half_toNat (z : Word) : ((z >>> 0) &&& (0xFFFFFFFF : Word)).toNat = z.toNat % 2 ^ 32 := by
+  rw [show z >>> 0 = z by apply UInt64.toNat_inj.mp; simp [UInt64.toNat_shiftRight]]
+  exact mask32_toNat z
+
+theorem hi_half_toNat (z : Word) : ((z >>> 32) &&& (0xFFFFFFFF : Word)).toNat = z.toNat / 2 ^ 32 := by
+  rw [mask32_toNat, UInt64.toNat_shiftRight]
+  have := z.toNat_lt
+  simp only [Nat.shiftRight_eq_div_pow]
+  show z.toNat / 2 ^ (32 % 64) % 2 ^ 32 = _
+  rw [show (32 : Nat) % 64 = 32 from rfl]
+  exact Nat.mod_eq_of_lt (by omega)
+
+/-- A dense entry is the 32-bit element of the same index. -/
+theorem dnW_eq_half32 (a : Array Word) (i : Word) (h : (i / 2).toNat < a.size) :
+    dnW a i = half32 a[(i / 2).toNat] i := by
+  have hr : rdW a (i >>> 1) = a[(i / 2).toNat] := by rw [shr1_eq_div2]; exact rdW_eq _ _ _ rfl h
+  unfold dnW
+  rw [hr]
+  apply UInt64.toNat_inj.mp
+  rw [half32_toNat]
+  rw [dSh_eq]
+  split
+  · rename_i h0; rw [lo_half_toNat]
+  · rename_i h0; rw [hi_half_toNat]
+
+/-- `dnSet` reads back as the two halves it is built from. -/
+theorem dnSet_half (w i h sj : Word) (hj : sj = 0 ∨ sj = 32) :
+    (dnSet w i h >>> sj) &&& (0xFFFFFFFF : Word) =
+      if sj = dSh i then h &&& 0xFFFFFFFF else (w >>> sj) &&& (0xFFFFFFFF : Word) := by
+  unfold dnSet
+  have hm : h &&& (0xFFFFFFFF : Word) < 0x100000000 := by
+    have := mask_lt h; exact UInt64.lt_iff_toNat_lt.mpr (by simpa using this)
+  rw [half_core w _ hm _ _ (dSh_cases i) hj]
+
+/-- **The 32-bit store is `dnSet`**: the word with the half of entry `i` replaced. -/
+theorem setHalf32_eq_dnSet (w i h : Word) : setHalf32 w i h = dnSet w i h := by
+  have a := congrArg UInt64.toNat (dnSet_half w i h 0 (.inl rfl))
+  have b := congrArg UInt64.toNat (dnSet_half w i h 32 (.inr rfl))
+  rw [lo_half_toNat] at a
+  rw [hi_half_toNat] at b
+  have hx := (dnSet w i h).toNat_lt
+  have hw := w.toNat_lt
+  apply UInt64.toNat_inj.mp
+  rw [setHalf32_toNat]
+  rw [dSh_eq] at a b
+  split
+  · rename_i h0
+    simp only [h0, ite_true, ite_false, show (32 : Word) ≠ 0 by decide] at a b
+    rw [mask32_toNat] at a
+    rw [hi_half_toNat] at b
+    omega
+  · rename_i h0
+    simp only [h0, ite_true, ite_false, show (0 : Word) ≠ 32 by decide] at a b
+    rw [lo_half_toNat] at a
+    rw [mask32_toNat] at b
+    omega
+
+/-- The 32-bit load of dense entry `i` (tier 0 of the untiered table), as `dnW`. -/
+theorem ld32_dn (b : ArrId) (i : Word) :
+    L.ld32 (tierA b 0) i = (do
+      let m := (← get).mem
+      if (i >>> 1).toNat < (m.arr64 b).size then return dnW (m.arr64 b) i else throw .oob) := by
+  have e : tierA b 0 = (b : TieredArray) := rfl
+  simp only [L.ld32, e, shr1_eq_div2]
+  congr 1; funext s
+  split
+  · rename_i h; rw [ite_eq_left h, dnW_eq_half32 _ _ h]
+  · rename_i h; rw [ite_eq_right h]
+
+/-- The 32-bit store of dense entry `i`, as the word store of `dnSet`. -/
+theorem st32_dn (b : ArrId) (i v : Word) :
+    L.st32 (tierA b 0) i v = (do
+      let s ← get
+      if (i >>> 1).toNat < (s.mem.arr64 b).size then
+        set { s with mem := s.mem.set64 b (i >>> 1) (dnSet (rdW (s.mem.arr64 b) (i >>> 1)) i v) }
+      else throw .oob) := by
+  have e : tierA b 0 = (b : TieredArray) := rfl
+  simp only [L.st32, e, shr1_eq_div2]
+  congr 1; funext s
+  split
+  · rename_i h
+    rw [Mem.set32_eq _ _ _ _ h, setHalf32_eq_dnSet, rdW_eq _ _ _ rfl h]
+  · rfl
+
+
+section specs
+variable (p : Prog) (b : ArrId) (fnd pt : FnName)
+  (hf : p.lookup fnd = some (memoFindG (spS b)))
+
+include hf
+
+theorem tblGetG_spec (f : FnName) (hp : p.lookup f = some (tblGetG b fnd)) (n : Nat) (s₀ : St)
+    (i : Word) :
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p n) f [i]
+    ⦃fun r s' => s' = s₀ ∧ tblOK s₀.mem b i = true ∧ r = [tblW s₀.mem b i]; ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, tblGetG]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind, arena_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ld32_dn,
+        memoFindG_spec (spS b) p fnd hf n] <;>
+      finish [tblOK, tblW, szW, spF, mvG, spS, BinOp.eval]
+
+theorem tblFreshG_spec (f : FnName) (hp : p.lookup f = some (tblFreshG b fnd)) (n : Nat)
+    (s₀ : St) (i : Word) :
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p n) f [i]
+    ⦃fun _ s' => s' = s₀ ∧ tblFresh s₀.mem b i = true; ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, tblFreshG]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind, arena_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+        memoFindG_spec (spS b) p fnd hf n] <;>
+      finish [tblFresh, szW, spF]
+
+theorem tblPutG_spec (hpt : p.lookup pt = some (memoPutG (spS b))) (f : FnName)
+    (hp : p.lookup f = some (tblPutG b fnd pt)) (n : Nat) (s₀ : St) (i h : Word) :
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p n) f [i, h]
+    ⦃fun _ s' => LocEq s' s₀ ∧ tblPutW s₀.mem b i h = some s'.mem; ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, tblPutG]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind, arena_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64, st32_dn,
+        memoFindG_spec (spS b) p fnd hf n, memoPutG_spec (spS b) p pt hpt n] <;>
+      finish [tblPutW, szW, msetG, BinOp.eval]
+
+end specs
 
 end L.Front

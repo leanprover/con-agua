@@ -50,6 +50,7 @@ def _root_.L.Expr.noIn : Expr → Bool
   | .len64t _ t => t.noIn
   | .ld8x8 b i => b.noIn && i.noIn
   | .ld32t _ t i => t.noIn && i.noIn
+  | .ld32h _ t i _ => t.noIn && i.noIn
   | _ => true
 
 def _root_.L.WArr.noIn : WArr → Bool
@@ -332,6 +333,18 @@ theorem erel_ld64t {a : ArrId} {ct ot ci oi : Expr} (ht : ERel ct ot) (hi : ERel
   obtain ⟨rfl, h4'⟩ := ld64_sim _ s j v s1 h4
   exact ⟨rfl, run_bind_of h1' (run_bind_of h3' h4')⟩
 
+theorem erel_ld32h {a : ArrId} {hb : Bool} {ct ot ci oi : Expr} (ht : ERel ct ot) (hi : ERel ci oi) :
+    ERel (.ld32h a ct ci hb) (.ld32h a ot oi hb) := by
+  intro s v s1 h
+  simp only [evalE] at h ⊢
+  obtain ⟨u, s2, h1, h2⟩ := run_bind_ok h
+  obtain ⟨rfl, h1'⟩ := ht s u s2 h1
+  obtain ⟨j, s3, h3, h4⟩ := run_bind_ok h2
+  obtain ⟨rfl, h3'⟩ := hi s j s3 h3
+  obtain ⟨w, s4, h5, h6⟩ := run_bind_ok h4
+  obtain ⟨rfl, h5'⟩ := ld64_sim _ s j w s4 h5
+  exact ⟨rfl, run_bind_of h1' (run_bind_of h3' (run_bind_of h5' h6))⟩
+
 theorem erel_ld32t {a : ArrId} {ct ot ci oi : Expr} (ht : ERel ct ot) (hi : ERel ci oi) :
     ERel (.ld32t a ct ci) (.ld32t a ot oi) := by
   intro s v s1 h
@@ -400,6 +413,7 @@ theorem erel_preE : ∀ e, ERel (preE e) e
   | .len64t a t => erel_len64t (erel_preE t)
   | .ld8x8 b i => erel_ld8x8 (brel_preB b) (erel_preE i)
   | .ld32t a t i => erel_ld32t (erel_preE t) (erel_preE i)
+  | .ld32h a t i _ => erel_ld32h (erel_preE t) (erel_preE i)
   | .ld8 a i => by
     by_cases ha : a = IN
     · subst ha; simp only [preE, ite_true]; exact erel_ld8_zero (erel_preE i)
@@ -437,6 +451,9 @@ theorem erel_noIn : ∀ e, e.noIn = true → ERel e e
   | .ld32t a t i, h => by
     simp only [Expr.noIn, Bool.and_eq_true] at h
     exact erel_ld32t (erel_noIn t h.1) (erel_noIn i h.2)
+  | .ld32h a t i _, h => by
+    simp only [Expr.noIn, Bool.and_eq_true] at h
+    exact erel_ld32h (erel_noIn t h.1) (erel_noIn i h.2)
   | .ld8 a i, h => by
     simp only [Expr.noIn, Bool.and_eq_true, bne_iff_ne] at h
     exact erel_ld8_ne h.1 (erel_noIn i h.2)

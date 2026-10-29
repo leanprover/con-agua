@@ -214,7 +214,7 @@ def Stmt.wfT (t : NTree) (nl : Nat) (tab : Tab) : Stmt → Bool
       Expr.opndWf nl tab si && Expr.opndWf nl tab n
   | .scan8 x s i e c => x < nl && BSrc.wf tab s && Expr.opndWf nl tab i && Expr.opndWf nl tab e &&
       c.length == 256 && c.isPrefixOf (tab.rom.drop (romIdx c tab.rom))
-  | .st32t a tt i e => tab.dom64 (tier1 a) && Expr.isSimple tt && Expr.wf nl tab tt &&
+  | .st32t a tt i e => tab.tier32Ok a tt && Expr.isSimple tt && Expr.wf nl tab tt &&
       Expr.wf nl tab i && Expr.wf nl tab e
 
 theorem Stmt.wfT_eq {t : NTree} {p : Prog}
@@ -261,7 +261,8 @@ def Expr.wfN (nl : Nat) (tab : Tab) : Expr → Bool
   | .ld64t a t i => tab.dom64 (tier1 a) && Expr.wfN nl tab t && Expr.wfN nl tab i
   | .len64t a t => tab.dom64 (tier1 a) && Expr.wfN nl tab t
   | .ld8x8 s i => BSrc.wfN tab s && Expr.wfN nl tab i
-  | .ld32t a t i => tab.dom64 (tier1 a) && Expr.wfN nl tab t && Expr.wfN nl tab i
+  | .ld32t a t i => tab.tier32Ok a t && Expr.wfN nl tab t && Expr.wfN nl tab i
+  | .ld32h a t i _ => tab.dom64 (tier1 a) && Expr.wfN nl tab t && Expr.wfN nl tab i
 
 def WArr.wfN (nl : Nat) (tab : Tab) : WArr → Bool
   | .plain a => tab.dom64 a
@@ -298,7 +299,7 @@ def Stmt.wfTN (t : NTree) (nl : Nat) (tab : Tab) : Stmt → Bool
       Expr.opndWfN nl tab si && Expr.opndWfN nl tab n
   | .scan8 x s i e c => x < nl && BSrc.wfN tab s && Expr.opndWfN nl tab i && Expr.opndWfN nl tab e &&
       c.length == 256
-  | .st32t a tt i e => tab.dom64 (tier1 a) && Expr.isSimple tt && Expr.wfN nl tab tt &&
+  | .st32t a tt i e => tab.tier32Ok a tt && Expr.isSimple tt && Expr.wfN nl tab tt &&
       Expr.wfN nl tab i && Expr.wfN nl tab e
 
 def FunDecl.wfTN (t : NTree) (tab : Tab) (fd : FunDecl) : Bool :=
@@ -334,6 +335,10 @@ theorem Expr.wf_of_wfN {nl : Nat} {tab : Tab} : ∀ {e : Expr}, Expr.wfN nl tab 
     simp only [Expr.wfN, Expr.wf, Bool.and_eq_true, Expr.roms, List.mem_append] at h hr ⊢
     exact ⟨BSrc.wf_of_wfN h.1 fun d hd => hr d (.inl hd), Expr.wf_of_wfN h.2 fun d hd => hr d (.inr hd)⟩
   | .ld32t _ t i, h, hr => by
+    simp only [Expr.wfN, Expr.wf, Bool.and_eq_true, Expr.roms, List.mem_append] at h hr ⊢
+    exact ⟨⟨h.1.1, Expr.wf_of_wfN h.1.2 fun d hd => hr d (.inl hd)⟩,
+      Expr.wf_of_wfN h.2 fun d hd => hr d (.inr hd)⟩
+  | .ld32h _ t i _, h, hr => by
     simp only [Expr.wfN, Expr.wf, Bool.and_eq_true, Expr.roms, List.mem_append] at h hr ⊢
     exact ⟨⟨h.1.1, Expr.wf_of_wfN h.1.2 fun d hd => hr d (.inl hd)⟩,
       Expr.wf_of_wfN h.2 fun d hd => hr d (.inr hd)⟩

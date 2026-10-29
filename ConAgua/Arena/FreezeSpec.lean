@@ -64,7 +64,7 @@ theorem pval_fz : ∀ (e : Expr), e.fzOk = true → ∀ s : St, Expr.pval s e = 
     simp only [Expr.fzOk, Bool.and_eq_true] at h
     simp only [Expr.pval, fzEv_ld64, pval_fz i h.2 s]
   | .var _, h, _ | .ld8 _ _, h, _ | .len8 _, h, _ | .len64 _, h, _ | .cmpw _ _ _, h, _
-  | .ldc _ _, h, _ | .glob _, h, _ | .ld64t _ _ _, h, _ | .len64t _ _, h, _ | .ld8x8 _ _, h, _ | .ld32t _ _ _, h, _ =>
+  | .ldc _ _, h, _ | .glob _, h, _ | .ld64t _ _ _, h, _ | .len64t _ _, h, _ | .ld8x8 _ _, h, _ | .ld32t _ _ _, h, _ | .ld32h _ _ _ _, h, _ =>
     by simp [Expr.fzOk] at h
 
 /-- Memories that agree on every array but `OUT` give extents the same values. -/
@@ -81,7 +81,7 @@ theorem fzEv_congr {m m' : Mem} (h : ∀ a : TieredArray, a ≠ OUT → m'.arr64
     obtain ⟨h1, h2⟩ := fzEv_congr h i he.2
     simp [fzEv_ld64, Expr.ldOk, rd64, h1, h2, h a (TieredArray.t0_ne he.1)]
   | .var _, h | .ld8 _ _, h | .len8 _, h | .len64 _, h | .cmpw _ _ _, h
-  | .ldc _ _, h | .glob _, h | .ld64t _ _ _, h | .len64t _ _, h | .ld8x8 _ _, h | .ld32t _ _ _, h =>
+  | .ldc _ _, h | .glob _, h | .ld64t _ _ _, h | .len64t _ _, h | .ld8x8 _ _, h | .ld32t _ _ _, h | .ld32h _ _ _ _, h =>
     by simp [Expr.fzOk] at h
 
 /-- **Evaluating an extent**: its value, or `oob` (a load out of bounds). -/
@@ -110,7 +110,7 @@ theorem evalE_fz : ∀ (e : Expr), e.fzOk = true → ∀ s : St,
       · simp [ld64, h2]; rfl
     · simp [h1]; rfl
   | .var _, h, _ | .ld8 _ _, h, _ | .len8 _, h, _ | .len64 _, h, _ | .cmpw _ _ _, h, _
-  | .ldc _ _, h, _ | .glob _, h, _ | .ld64t _ _ _, h, _ | .len64t _ _, h, _ | .ld8x8 _ _, h, _ | .ld32t _ _ _, h, _ =>
+  | .ldc _ _, h, _ | .glob _, h, _ | .ld64t _ _ _, h, _ | .len64t _ _, h, _ | .ld8x8 _ _, h, _ | .ld32t _ _ _, h, _ | .ld32h _ _ _ _, h, _ =>
     by simp [Expr.fzOk] at h
 
 /-! ## Stores and copies -/

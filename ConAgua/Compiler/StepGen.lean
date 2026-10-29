@@ -284,6 +284,24 @@ theorem ev_ld32X {d b i : Reg64} (hk : Host.prog[k]? = some (ld32X d b i))
   simp
   omega
 
+/-- `movl d32, [b + 8 i + 4 hi]` (`ld32H`): the 4 bytes zero-extended into `d`. -/
+theorem ev_ld32H {d b i : Reg64} {hi : Bool} (hk : Host.prog[k]? = some (ld32H d b i hi))
+    {v : Nat} (hv : _root_.Mem.loadInt s.dmem
+      (A ((s.regs.get64 b).toNat + 8 * (s.regs.get64 i).toNat + (if hi then 4 else 0))) 4 = some (v : Int))
+    (hv32 : v < 2 ^ 32)
+    (h : Ev Q { s with regs := s.regs.set64 d (UInt64.ofNat v).toBitVec } (at_ (k + 1))) :
+    Ev Q s (at_ k) := by
+  run_instr
+  rw [AddrExpr.zeroExtend_interp_sib, addr_tdesc _ _ _ (by split <;> decide) (by split <;> decide)]
+  rw [show (if hi then (4 : Int) else 0).toNat = (if hi then 4 else 0) by split <;> rfl]
+  simp only [hv, Effects.All]
+  refine ev_of_regs h ?_
+  simp only [Reg64s.set]
+  congr 1
+  apply BitVec.eq_of_toNat_eq
+  simp
+  omega
+
 /-- `movl [b + 4 i], v32`. -/
 theorem ev_st32X {b i v : Reg64} (hk : Host.prog[k]? = some (st32X b i v))
     (hm : (_root_.Mem.loadInt s.dmem (s.regs.get64 b + s.regs.get64 i * 4) 4).isSome)
