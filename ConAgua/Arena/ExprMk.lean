@@ -163,8 +163,7 @@ theorem derTail_spec (p : Prog) (n : Nat) (s₁ : St) (hL : DerLocs s₁) :
   all_goals subst_vars
   all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, Cmp.eval, BinOp.eval,
       Nat.reduceEqDiff, reduceIte, beq_iff_eq, decide_eq_true_eq, bne_iff_ne, ne_eq, h1, h2, h3] at *)
-  all_goals (try simp_all [derBW, derFW, exprLPW, BVAR, APP, APP_DER, LAM, LAM_DER, FORALL, FORALL_DER, LET,
-    LET_DER, PROJ, PROJ_DER, FVAR, FVAR_LP, SORT, SORT_LP, CONST, CONST_LP, Sig.retVal, Sig.retOr])
+  all_goals (try simp_all [derBW, derFW, exprLPW, BVAR, APP, LAM, FORALL, LET, PROJ, FVAR, FVAR_LP, SORT, SORT_LP, CONST, CONST_LP, Sig.retVal, Sig.retOr])
   all_goals grind [lang_grind, arena_grind, derBW, derFW, exprLPW, tierW, idxW, satSuccW]
 
 /-- **`der_b`**: the three decodes, then the dispatch (`derTail_spec`, over the named locals:
@@ -287,7 +286,7 @@ theorem pushZ_der (hT : BinTbl R S D k) (ht : t ≤ 1) (x : Word) :
       else p32Get (m.arr64 (tierA D t)) x := by
   rcases hT with ⟨rfl, rfl, rfl, rfl⟩ | ⟨rfl, rfl, rfl, rfl⟩ | ⟨rfl, rfl, rfl, rfl⟩ <;>
   rcases h01 t ht with rfl | rfl <;>
-  simp [pushZ, p32Get_set32, Mem.arr64_set64_ne, rdW_set64E, CTL, ADER, AREC, LADER, LAREC,
+  simp [pushZ, p32Get_set32, Mem.arr64_set64_ne, CTL, ADER, AREC, LADER, LAREC,
     FADER, FAREC]
 
 /-- A field of a store other than the pushed table's records and range column is unchanged. -/
