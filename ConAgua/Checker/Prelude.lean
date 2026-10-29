@@ -100,6 +100,7 @@ def preE : Expr → Expr
   | .ld64t a t i => .ld64t a (preE t) (preE i)
   | .len64t a t => .len64t a (preE t)
   | .ld8x8 b i => .ld8x8 (preB b) (preE i)
+  | .ld32t a t i => .ld32t a (preE t) (preE i)
   | e => e
 
 def preW : WArr → WArr
@@ -132,6 +133,7 @@ def preS (t : NTree) : Stmt → Stmt
   | .copy64 d di s si n => .copy64 (preW d) (preE di) (preW s) (preE si) (preE n)
   | .copy8w d di s si n => .copy8w (preW d) (preE di) (preB s) (preE si) (preE n)
   | .scan8 x s i e c => .scan8 x (preB s) (preE i) (preE e) c
+  | .st32t a t i e => .st32t a (preE t) (preE i) (preE e)
   | s => s
 
 /-- **A frontend function, reading the prelude's bytes** (`t`: the copied functions). -/

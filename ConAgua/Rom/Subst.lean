@@ -38,6 +38,7 @@ def Expr.subPB (bs : List UInt8) : Expr → Expr
   | .ld64t a t i => .ld64t a (subPB bs t) (subPB bs i)
   | .len64t a t => .len64t a (subPB bs t)
   | .ld8x8 b i => .ld8x8 (b.subPB bs) (subPB bs i)
+  | .ld32t a t i => .ld32t a (subPB bs t) (subPB bs i)
 
 def WArr.subPB (bs : List UInt8) : WArr → WArr
   | .plain a => .plain a
@@ -66,6 +67,7 @@ def Stmt.subPB (bs : List UInt8) : Stmt → Stmt
   | .copy64 d di s si n => .copy64 (d.subPB bs) (di.subPB bs) (s.subPB bs) (si.subPB bs) (n.subPB bs)
   | .copy8w d di s si n => .copy8w (d.subPB bs) (di.subPB bs) (s.subPB bs) (si.subPB bs) (n.subPB bs)
   | .scan8 x s i e c => .scan8 x (s.subPB bs) (i.subPB bs) (e.subPB bs) c
+  | .st32t a t i e => .st32t a (t.subPB bs) (i.subPB bs) (e.subPB bs)
 
 -- con-ron: none — a proof device (the pin data as constant data), no twin
 def FunDecl.subPB (bs : List UInt8) (fd : FunDecl) : FunDecl := { fd with body := fd.body.subPB bs }
@@ -144,6 +146,9 @@ theorem Agree.ld8 (a : ArrId) (v : Word) : Agree bs (L.ld8 a v) (L.ld8 a v) :=
 theorem Agree.ld64 (a : TieredArray) (v : Word) : Agree bs (L.ld64 a v) (L.ld64 a v) :=
   Agree.get_bind fun _ _ => Agree.dite (fun _ => Agree.pure _) (fun _ => Agree.throw _)
 
+theorem Agree.ld32 (a : TieredArray) (v : Word) : Agree bs (L.ld32 a v) (L.ld32 a v) :=
+  Agree.get_bind fun _ _ => Agree.dite (fun _ => Agree.pure _) (fun _ => Agree.throw _)
+
 theorem Agree.ldc (d : List UInt8) (v : Word) : Agree bs (L.ldc d v) (L.ldc d v) :=
   Agree.dite (fun _ => Agree.pure _) (fun _ => Agree.throw _)
 
@@ -207,6 +212,8 @@ theorem evalE_subPB (e : Expr) : Agree bs (evalE (e.subPB bs)) (evalE e) := by
   | len64t a t ih =>
     exact Agree.bind ih fun _ => Agree.get_bind fun _ _ => Agree.pure _
   | ld8x8 b i ih => exact Agree.bind ih fun v => Agree.ld8x8 b v
+  | ld32t a t i iht ihi =>
+    exact Agree.bind iht fun u => Agree.bind ihi fun v => Agree.ld32 (tierA a u) v
 
 theorem warr_subPB (w : WArr) : Agree bs (warr (w.subPB bs)) (warr w) := by
   cases w with
@@ -329,6 +336,13 @@ theorem step_agree {p : Prog} (hp : Prog.noSt8PB p = true) {k k' : Stmt → M Si
         split
         · exact Agree.bind (Agree.modify fun _ h => h) fun _ => Agree.pure _
         · exact Agree.throw _
+  | st32t a t i e =>
+    exact Agree.bind (evalE_subPB t) fun _ => Agree.bind (evalE_subPB i) fun _ =>
+      Agree.bind (evalE_subPB e) fun _ =>
+      Agree.bind (Agree.get_bind fun t ht => by
+        split
+        · exact Agree.set ht
+        · exact Agree.throw _) fun _ => Agree.pure _
   | seq s t ihs iht =>
     simp only [Stmt.noSt8PB, Bool.and_eq_true] at hst
     exact Agree.bind (ihs hst.1) fun r => by

@@ -69,7 +69,7 @@ def _root_.L.Stmt.okWB (ctl : ArrId) (pa : TieredArray → Bool) (pc : Word → 
   | .st64 a i _ =>
     if a = ctl then (match ctlIdx i with | some ws => ws.all pc | none => false)
     else pa a
-  | .st64t a _ _ _ => a ≠ ctl && pa a && pa (tier1 a)
+  | .st64t a _ _ _ | .st32t a _ _ _ => a ≠ ctl && pa a && pa (tier1 a)
   | .copy64 d .. | .copy8w d .. => d.okWB ctl pa
   | .seq s u => s.okWB ctl pa pc t && u.okWB ctl pa pc t
   | .ite _ s u => s.okWB ctl pa pc t && u.okWB ctl pa pc t
@@ -95,7 +95,7 @@ theorem _root_.L.Stmt.okW_of_okWB {ctl : ArrId} {pa : TieredArray → Bool} {pc 
     · simp only [Stmt.okWB, hc, ite_false] at h
       simp only [Stmt.okW, hc, ite_false]
       exact decide_eq_true (hpa _ h)
-  | st64t a _ _ _ =>
+  | st64t a _ _ _ | st32t a _ _ _ =>
     simp only [Stmt.okWB, Bool.and_eq_true, decide_eq_true_eq] at h
     simp only [Stmt.okW, Bool.and_eq_true, decide_eq_true_eq]
     exact ⟨⟨h.1.1, hpa _ h.1.2⟩, hpa _ h.2⟩
