@@ -243,7 +243,7 @@ theorem cns_ref (hq : qr.toNat = iwTop mb) (hms : PSlR decTM ms mo ml mb) (htbl 
       rdW (s2.mem.arr64 IW) (UInt64.ofNat p0 + UInt64.ofNat t) = v := by
     intro t ht v hv
     obtain ⟨hlt, hv'⟩ := truncM_iw_get hv
-    have e : (s2.mem.arr64 IW)[p0 + t]? = (mb.arr64 IW)[p0 + t]? := ((hg.trans hg1).trans hg2).2.2.1 _ hlt
+    have e : (s2.mem.arr64 IW)[p0 + t]? = (mb.arr64 IW)[p0 + t]? := ((hg.trans hg1).trans hg2).iwGet _ hlt
     simp only [rdW, hmt t ht, e]; simp only [iwA] at hv'; rw [hv']; rfl
   have hlow : ∀ i, i < nm.toNat → (mC.arr64 IW)[i]? = (s2.mem.arr64 IW)[i]? := by
     intro i hi

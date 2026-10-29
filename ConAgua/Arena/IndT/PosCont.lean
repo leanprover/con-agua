@@ -158,11 +158,11 @@ theorem contRef_step (L : NbLook p) (hq : KnotStageProg p) (hIlpf : IlpfF p) (hL
   obtain ⟨hS3, hg3, hkq, ht3, hget3⟩ := posRecW_stage hk4 hS2 (by simp)
   simp only [List.length_cons, List.length_nil] at ht3
   have hg13 := hg1.trans (hg2.trans hg3)
-  have hab3 : aO.toNat + aL.toNat ≤ iwTop m3 := by have := (hg2.trans hg3).1; omega
+  have hab3 : aO.toNat + aL.toNat ≤ iwTop m3 := by have := (hg2.trans hg3).iw; omega
   have htop3 : iwTop m3 < 2 ^ 64 := Nat.lt_of_le_of_lt hS3.iw.iw hS3.iw.iwSize
   have hdsB : DecB (fun m => (decHL m aO.toNat nPcW.toNat : Option (List EIdx))) m3 (args.take nPcW.toNat) :=
     decHL_decB (by rw [decHL_agree (RdS.of_grow (hg2.trans hg3)) (fun j hj => by omega)]; exact hds)
-      (by have := (hg2.trans hg3).1; omega)
+      (by have := (hg2.trans hg3).iw; omega)
   have hK : DecB (fun m => decNK m key.toNat) m3 ⟨decI nn, decI us, args.take nPcW.toNat⟩ :=
     pos2_key_rec hnn hus (by omega) hget3 hdsB
   obtain ⟨hKd, hKin⟩ := pos2_nk_in hK
@@ -170,7 +170,7 @@ theorem contRef_step (L : NbLook p) (hq : KnotStageProg p) (hIlpf : IlpfF p) (hL
     unfold NKSl
     rw [pos2_rd_get (by simpa using hget3 2 (by simp)) (by simp; omega),
       pos2_rd_get (by simpa using hget3 3 (by simp)) (by simp; omega)]
-    have := (hg2.trans hg3).1; omega
+    have := (hg2.trans hg3).iw; omega
   have hA3 : AbsOK m3 := posRecW_afr hk4 hA2
   have hC3 : StageC dn vis fe env m3 a2 := hC.of_pstep hS3 hA3 p12
   have hx02 := p12.ext

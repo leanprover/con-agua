@@ -216,7 +216,7 @@ theorem scts_ref (hP : SumProg p)
   have hy2 : DecB (fun m => sortsDec m (rh.headD 0).toNat) m6 sorts := by
     have h0 : DecB (fun m => sortsDec m (rh.headD 0).toNat) m3 sorts :=
       sumSortsDec_of hh0 hh1 (by rw [decHL_grow (hg2.trans hg3) hsb]; exact hsorts)
-        (by have := (hg2.trans hg3).1; omega)
+        (by have := (hg2.trans hg3).iw; omega)
     exact DecB.grow (sortsDec_mono _) ((hR4.grow.trans hg5).trans hg6) h0
   have hg46 := hg5.trans hg6
   have hA6 := consW_afr hc2 (consW_afr hc1 hR4.abs)

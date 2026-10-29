@@ -1476,8 +1476,8 @@ theorem bbW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
   rw [hil] at hd2 hb2 ⊢
   refine Sim.k3 (btW_sim c n hS4 (hts.grow (fun _ => OMono.decCVp _) hg04) (hcs.grow decSC_mono hg04)
     (hrs.grow decSR_mono hg04) ((decHL_decB hd1 hb1).grow (OMono.decHL _ _) (hg2.trans (hg3.trans hg4)))
-    (Nat.le_trans hb1 (hg2.trans (hg3.trans hg4)).1) (hd2.grow (OMono.decNL _ _) (hg3.trans hg4))
-    (Nat.le_trans hb2 (hg3.trans hg4).1) (by rw [decHL_grow3 hg4 (Nat.le_of_eq ht3)]; exact hd3)
+    (Nat.le_trans hb1 (hg2.trans (hg3.trans hg4)).iw) (hd2.grow (OMono.decNL _ _) (hg3.trans hg4))
+    (Nat.le_trans hb2 (hg3.trans hg4).iw) (by rw [decHL_grow3 hg4 (Nat.le_of_eq ht3)]; exact hd3)
     (Nat.le_trans (Nat.le_of_eq ht3) hg4.1)
     (hc.mono ((bsnW_afr _ _ _ _ _ _ h1).trans ((bmcW_afr he2).trans ((erToIwW_afr h3).trans (bpoW_afr h4))))
       (fun sv a1 h => ⟨nIdxs, a2, _, a2, hrun2, hRrun, h⟩))) ?_

@@ -185,16 +185,16 @@ theorem nckW_ok (n : Nat) (s₀ s' : St) (a₀ : AState)
       simp only [Option.some.injEq, List.getElem_cons_zero, List.getElem_cons_succ] at ho hl'
       subst ho hl'
       rw [UInt64.toNat_ofNat_of_lt' hkb]
-      have := (hg2.trans (hg3.trans (hg4.trans hg6))).1; omega
+      have := (hg2.trans (hg3.trans (hg4.trans hg6))).iw; omega
     · rw [gi 2 (by omega)] at ho; rw [gi 3 (by omega)] at hl'
       simp only [Option.some.injEq, List.getElem_cons_zero, List.getElem_cons_succ] at ho hl'
       subst ho hl'
-      have := (hg3.trans (hg4.trans hg6)).1; omega
+      have := (hg3.trans (hg4.trans hg6)).iw; omega
     · rw [gi 5 (by omega)] at ho; rw [gi 6 (by omega)] at hl'
       simp only [Option.some.injEq, List.getElem_cons_zero, List.getElem_cons_succ] at ho hl'
       subst ho hl'
       rw [UInt64.toNat_ofNat_of_lt' hkb]
-      have := (hg4.trans hg6).1; omega
+      have := (hg4.trans hg6).iw; omega
     · rw [gi 7 (by omega)] at ho; rw [gi 8 (by omega)] at hl'
       simp only [Option.some.injEq, List.getElem_cons_zero, List.getElem_cons_succ] at ho hl'
       subst ho hl'

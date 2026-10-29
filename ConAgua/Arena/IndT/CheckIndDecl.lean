@@ -296,7 +296,7 @@ theorem cid_ref (P : CidProg p) {fs fs2 fsR fsT fsC : List FnName}
     have z4 : r4.headD 0 = 0 := hR4
     rw [cidE.k_block_parts.arm2 _ _ _ _ _ _ _ z4]
     have h5 := csl_ref hkp hApd hCrk n (by omega) s4.mem a4 hC4.stageT
-      (hblk1.grow (decEBlk_mono _ _ _) hg4) hIM4.cr hlpd (Nat.le_trans hb (hg1.trans hg4).2.1)
+      (hblk1.grow (decEBlk_mono _ _ _) hg4) hIM4.cr hlpd (Nat.le_trans hb (hg1.trans hg4).er)
     rcases c5 : cslE p n s4.mem vis o l with e5 | ⟨r5, m5⟩ <;> rw [c5] at h5
     · rw [cidE.k_check_shapeless.none]
       exact fun hG => h5 hG.toVerdictCtxU

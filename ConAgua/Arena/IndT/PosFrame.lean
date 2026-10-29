@@ -281,7 +281,7 @@ theorem frameRef_step (L : NbLook p) (n : Nat) (hn : n ≤ 2 ^ 62) (ih : NbRef p
   have g0 : r7.headD 0 = rh.headD 0 := by rw [← hrh]; rfl
   have g1 : r7.tail.headD 0 = rh.tail.headD 0 := by rw [← hrh]; rfl
   obtain ⟨holes, a7, hrun7, hS7, hg7, hH7, hHb7⟩ := fhW_ok dn vis fe n m6 m7 a6 hi gO gL 0 0 grp [] rh hfh hS6 hgl
-    (by have := (hg14.trans hg46).1; omega) (hgrp.grow hgb (hg14.trans hg46)) (by simp [decHL, hslice?]) (by simp)
+    (by have := (hg14.trans hg46).iw; omega) (hgrp.grow hgb (hg14.trans hg46)) (by simp [decHL, hslice?]) (by simp)
   simp only [List.nil_append] at hH7
   have hz : (grp.zipIdx.mapM fun ((_, ty), i) => internFVarE (hi.toNat + i) ty) = pos2FhT hi.toNat grp := by
     simpa using pos2_zipIdx_holes hi.toNat grp 0
@@ -342,7 +342,7 @@ theorem frameRef_step (L : NbLook p) (n : Nat) (hn : n ≤ 2 ^ 62) (ih : NbRef p
       have := (hi + gL).toNat_lt; omega⟩
     ⟨hus, hds.grow (OMono.decHL _ _) hg17, by have := hg17.1; omega,
       by rw [decHL_agree (RdS.of_grow (hg6.trans hg7)) (fun j hj => by omega)]; exact hN5,
-      by have := (hg6.trans hg7).1; omega, by simp only [List.length_map]; rw [← hgl, ← hdg]; exact (dL + gL).toNat_lt,
+      by have := (hg6.trans hg7).iw; omega, by simp only [List.length_map]; rw [← hgl, ← hdg]; exact (dL + gL).toNat_lt,
       hH7, hHb7⟩
     hcl6 (by have := hg7.1; omega) (hcs6.grow hcb6 hg7) (hns.grow hg17 htop) (OutsB.nil _ _) (by simp)
     ((((((hP.fr hf1).fr (ceinternW_mfr hic)).fr (MFr.ofMknF hma)).fr (coreF_mfr hq (by decide) hit)).fr

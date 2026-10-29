@@ -490,7 +490,7 @@ theorem pass_ref (hP : PassProg p) {fs : List FnName}
     (hks6.grow decKSS_mono (hg7.trans (hg8.trans hg9)))
     (hnf6.grow decNFS_mono (hg7.trans (hg8.trans hg9)))
     (by rw [hw7, hw8]; exact hpfD.grow (OMono.decHL _ _) (hg48.trans hg9))
-    (by rw [hw7, hw8]; exact Nat.le_trans hpfb (hg48.trans hg9).1)
+    (by rw [hw7, hw8]; exact Nat.le_trans hpfb (hg48.trans hg9).iw)
     (hrd5.grow (decCR_mono _) (hg6.trans (hg7.trans (hg8.trans hg9))))
     (hms6.grow (fun q => decTM_mono q) (hg7.trans (hg8.trans hg9)))
     (htbl8.grow (fun q => decNCN_mono q) hg9)

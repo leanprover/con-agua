@@ -325,7 +325,7 @@ theorem newRef_step (L : NbLook p) (hIlpf : IlpfF p) (hLC : LvlCacheProg p) (n :
   rw [pos2_ns_rd hg19 hp6 htop 2 (by decide), pos2_ns_rd hg19 hp6 htop 3 (by decide)] at hcf
   obtain ⟨x, a', hrun10, hS10, hg10, -, hk10, hns10⟩ := cfW_ok dn vis fe hcf hC9.stage (hW.u.grow hg19) hhi0 hus
     (hds.grow (OMono.decHL _ _) hg19) (by have := hg19.1; omega) (by simpa using hgl5)
-    (by have := (hg58.trans hg9).1; omega) (hgrp5.grow hgb5 (hg58.trans hg9)) hns9 (ha0.grow hg19)
+    (by have := (hg58.trans hg9).iw; omega) (hgrp5.grow hgb5 (hg58.trans hg9)) hns9 (ha0.grow hg19)
     (by have := hns.b2; have := hg19.1; omega)
   have p10 := cfT_pstep hrun10 hC9.check.state (ConRon.Bridge.denoteEList_ext (hx05.trans c9.ext) _ _ hdsP)
   have hA10 : AbsOK m10 := cfW_afr hcf hA9

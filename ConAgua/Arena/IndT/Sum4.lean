@@ -659,7 +659,7 @@ theorem ctor_ref (hP : SumProg p) (m : Nat) (hn : m + 1 ≤ 2 ^ 62) (m0 : Mem) (
   rcases m with _ | m'
   · rw [ctlE.eq_1, ctorE.k_check_sum_ctor_tail.none]; exact RefE.of_cls0 Err.cls_outOfFuel
   have h8R := ctl_ref hq henv hOpf hLC hLT hP m' (by omega) m7 a7 vis0 T lo ll nP nIdx rs isP lg nF _ _ _ lps cl cvC
-    hC7 hT (by rw [decHL_grow (hg06.trans hg7) hlb]; exact hlps) (by have := (hg06.trans hg7).1; omega)
+    hC7 hT (by rw [decHL_grow (hg06.trans hg7) hlb]; exact hlps) (by have := (hg06.trans hg7).iw; omega)
     (by rw [decHL_grow hg7 hclb6]; exact hcl6) (by have := hg7.1; omega) hcqB hrs hni hnf hA7
     (ConRon.Bridge.denoteN_ext hTP hx07) (ConRon.Bridge.denoteNListE_ext hx07 _ _ hlpsP)
     (ConRon.Bridge.denoteL_ext hrsP hx07)

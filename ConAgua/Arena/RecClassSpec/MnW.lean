@@ -762,7 +762,7 @@ theorem cW_sim (n : Nat) (m : Mem) (a : AState) (g c x d lvls ds0 dl0 nPc fo fl 
   refine RSim.bindPure (K := cW.k_class_gen_minor_ty_concl2) rfl (c2W_sim n m4 a4 g c d nPc fo fl ihso ihsl _ _ _ G NPC fvs ihs ra hS4
     (hG.grow (decCG_mono _) hg14) hns hnpc (by rw [decHL_grow hg14 hfb]; exact hfvs) (Nat.le_trans hfb hg14.1)
     (by rw [decHL_grow hg14 hib]; exact hihs) (Nat.le_trans hib hg14.1)
-    (by rw [decHL_grow (hg2.trans (hg3.trans hg4)) hrb]; exact hra) (Nat.le_trans hrb (hg2.trans (hg3.trans hg4)).1)
+    (by rw [decHL_grow (hg2.trans (hg3.trans hg4)) hrb]; exact hra) (Nat.le_trans hrb (hg2.trans (hg3.trans hg4)).iw)
     hcH (hf4 (appendW_afr h3 hA2))) ?_
   rintro ⟨r5, m5⟩ o a5 - ⟨⟨hS5, hg5, ho⟩, hA5⟩
   rw [cW.k_class_gen_minor_ty_concl2.arm1]
@@ -881,7 +881,7 @@ theorem mnW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
   have hc := cW_sim (dn := dn) (vis := vis) (fe := fe) n m4 a4 g c x d vl _ _ _ _ _ _ _ _ G X tm.lvls tm.nPc
     tm.ds fvs ihs hS4 (hG.grow (decCG_mono _) hg14) hns (hX.grow (decCC_mono _) hg14) hrH hvl dvl
     (hds1.grow (OMono.decHL _ _) (hg2.trans (hg3.trans hg4))) tn (by rw [decHL_grow (hg3.trans hg4) hfb]; exact hfvs)
-    (Nat.le_trans hfb (hg3.trans hg4).1) hihs hib hA4
+    (Nat.le_trans hfb (hg3.trans hg4).iw) hihs hib hA4
   rw [hrd] at hc
   refine RSim.bindPure (K := fun o => cK4 (bW.k_class_gen_minor_ty_concl o)) rfl hc ?_
   rintro ⟨r5, m5⟩ o5 a5 - ⟨⟨hS5, hg5, ho5⟩, hA5⟩

@@ -336,7 +336,7 @@ theorem crW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (c
               rw [hr1] at this
               obtain ⟨p0', x', ys', heq, -, -, hrest''⟩ := decPL_cons this
               rw [hro1, hrl1, (List.cons.inj heq).2]; exact hrest''
-            have hmt2 : mo.toNat + ml.toNat ≤ iwTop m2 := Nat.le_trans hmt (hg1.trans hg2).1
+            have hmt2 : mo.toNat + ml.toNat ≤ iwTop m2 := Nat.le_trans hmt (hg1.trans hg2).iw
             have hb' : (ro + 1).toNat + (rl - 1).toNat < 2 ^ 64 := by rw [hro1, hrl1]; omega
             have hrest2 := hrest' m2 (IWGrow.refl m2)
             obtain ⟨res4, a4, hrun4, hS4, hg4, hres4, hJ4⟩ := ih m2 m4 a2 nP mo ml (ro + 1) (rl - 1) r4 rest

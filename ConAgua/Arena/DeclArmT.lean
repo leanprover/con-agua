@@ -382,7 +382,7 @@ theorem ivc_ref {p : Prog} (hRp : RecProg p) (hC : CvgProg p) (hap : ApdF p) (hk
     rw [liftE_some, installValueE.k_erec_vg.arm1]
     have hx4 : ArrExt (erecP m1) (erecP s4.mem) := IWGrow.erecPExt (hg3.trans hg4)
     have htop4 : q.toNat + 8 ≤ erTop s4.mem := by
-      have := (hg3.trans hg4).2.1; omega
+      have := (hg3.trans hg4).er; omega
     obtain ⟨hS5, hg5, hvg⟩ := erecVgW_ok h5 hS4 (ArrExt.decCV hx4 hcv1) (ArrExt.hd? hx4 hval1)
       htop4 hk
     have hM5 : CoreMemos m5 := hM4.frame (erecVgW_frame h5)

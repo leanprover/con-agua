@@ -325,7 +325,7 @@ theorem gpbW_simF (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     appendW_afr h3 hA2⟩, fun _ _ => ?_⟩
   rw [hr3]
   simp only [List.tail_cons, List.headD_cons]
-  exact Nat.le_trans (hg1.trans hg2).1 (Nat.le_refl _)
+  exact Nat.le_trans (hg1.trans hg2).iw (Nat.le_refl _)
 
 /-! ## The record's stores, as one write -/
 

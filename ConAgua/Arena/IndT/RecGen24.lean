@@ -259,7 +259,7 @@ theorem cfaLoop_ref (k : Nat) (hk : k ≤ 2 ^ 62) : ∀ (m : Mem) (a : AState) (
       (k' + 1) (by omega) s4.mem a4 es hC4 hA4
       (hbs.grow hg04) (by rw [decHL_grow hg04 hftb]; exact hft) (Nat.le_trans hftb hg04.1)
       (hTM.grow (decTM_mono _) hg4) (HSl0.of (by rw [decHL_grow (hg3.trans hg4) hbl]; exact hdl)
-        (Nat.le_trans hbl (hg3.trans hg4).1)) hlwH
+        (Nat.le_trans hbl (hg3.trans hg4).iw)) hlwH
       (by rw [decHL_grow hg04 hfvb]; exact hfv) (Nat.le_trans hfvb hg04.1)
       (hes.grow (fun q => decNCN_mono q) hg04) hP4
       (ConRon.Bridge.Inductives.dShape_ext q04.ext _ _ hsh) (denoteEList_ext q04.ext _ _ hftP)
