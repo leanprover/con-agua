@@ -509,8 +509,8 @@ The twin fails on a dangling handle; L aborts at the same point.
 ### 5.2 Syntax and semantics
 
 The abstract syntax
-([`Expr`](https://github.com/leanprover/con-agua/blob/master/ConAgua/L/Syntax.lean#L118-L144),
-[`Stmt`](https://github.com/leanprover/con-agua/blob/master/ConAgua/L/Syntax.lean#L166-L202),
+([`Expr`](https://github.com/leanprover/con-agua/blob/master/ConAgua/L/Syntax.lean#L118-L148),
+[`Stmt`](https://github.com/leanprover/con-agua/blob/master/ConAgua/L/Syntax.lean#L170-L209),
 [`FunDecl`, `Prog`](https://github.com/leanprover/con-agua/blob/master/ConAgua/L/Syntax.lean#L204-L214)):
 expressions have no side effects and make no calls, and only an array read can
 fail; conditions are a separate type with short-circuit `&&`/`||`, so a guard
@@ -519,7 +519,7 @@ and can bind several results. Arithmetic wraps; there is no division (Kraken
 has no `div`), only `mulhi`, the high word of the 128-bit product.
 
 The concrete syntax is a set of Lean macros that produce these terms
-([the rules](https://github.com/leanprover/con-agua/blob/master/ConAgua/L/Notation.lean#L80-L169),
+([the rules](https://github.com/leanprover/con-agua/blob/master/ConAgua/L/Notation.lean#L80-L171),
 [`lfn`](https://github.com/leanprover/con-agua/blob/master/ConAgua/L/Notation.lean#L466-L467),
 [summary](https://github.com/leanprover/con-agua/blob/master/ConAgua/L/Notation.lean#L11-L68)).
 Informally (`A` an array, `R` a store, `f` a function, `x` a local or a global,
@@ -530,6 +530,7 @@ fun    ::= lfn (x, …) locals (x, …) { stmt; … }            -- params, then
 stmt   ::= x := e  |  x += e  |  x -= e
          | x := call f(e, …)  |  (x, x, …) := call f(e, …)  -- callee's results, 0 if fewer
          | A.u8[e] := e  |  A.u64[e] := e  |  A⟨t⟩[e] := e   -- stores; t a tier word
+         | A⟨t⟩.u32[e] := e                                 -- low 32 bits, packed (§5.3)
          | R[e].fld := e  |  R⟨t, e⟩.fld := e               -- record fields
          | if c { … } [else { … }]  |  while c { … }  |  break
          | return e  |  return (e, e, …)  |  abort  |  abort R  |  fail R  |  skip
@@ -540,6 +541,7 @@ stmt   ::= x := e  |  x += e  |  x -= e
          | for x < x { … }                                  -- counted loop (sugar)
 e      ::= n  |  'c'  |  x  |  (e)  |  e op e  |  mulhi(e, e)  |  u64(c)
          | A.u8[e]  |  A.u64[e]  |  A⟨t⟩[e]  |  D.c8[e]        -- loads; D constant bytes
+         | A⟨t⟩.u32[e]                                      -- packed 32-bit element (§5.3)
          | len(A.u8)  |  len(A.u64)  |  len(A⟨t⟩)
          | R[e].fld  |  R⟨t, e⟩.fld  |  R⟦h⟧.fld  |  R⟨t⟩.count -- store records, by handle h
          | ⟦h⟧.tier  |  ⟦h⟧.idx  |  A⦃a⦄  |  ⦃a⦄.tier         -- handle and pool-address parts
@@ -604,6 +606,16 @@ descriptor right after tier 0's, so a tiered access costs one indexed load more
 than a plain one (§8.1). The node stores are accessed through
 [record accessors](https://github.com/leanprover/con-agua/blob/master/ConAgua/L/TRec.lean#L7-L31)
 (`R⟨t, i⟩.f`, `R⟦h⟧.f`, `R⟨t⟩.count`), which fix the layout in one place.
+
+A tiered word array also holds 32-bit elements, two per word: `A⟨t⟩.u32[i]`
+reads element `i`, half `i % 2` of word `i / 2` (the low half first, the
+machine's little-endian layout), and `A⟨t⟩.u32[i] := e` writes the low 32 bits
+of `e` there and keeps the other half. The memory stays words: in the semantics
+the store is a word store of the word with one half replaced. The compiler emits
+one 4-byte move for each (`movl`, at byte `4 i` of the array), and its proof
+rests on one lemma about Kraken's byte memory: the 4 bytes at `X + 4h` of the
+word at `X` are its half `h`, and a 4-byte store there leaves the memory an
+8-byte store of the word with that half replaced leaves.
 
 ### 5.4 Block primitives
 

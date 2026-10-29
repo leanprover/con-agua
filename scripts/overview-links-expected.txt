@@ -2396,3 +2396,172 @@
 >>> README.md
 
 
+== ConAgua/L/Syntax.lean#L118-L148
+   118  /-- Word expressions. Reading an array can fail (out of bounds); nothing else can. -/
+   119  inductive Expr where
+   120    | const (w : Word)
+   121    | var (x : Var)
+   122    | bin (op : BinOp) (a b : Expr)
+   123    /-- Byte `i` of byte array `a`, zero-extended. -/
+   124    | ld8 (a : ArrId) (i : Expr)
+   125    /-- Word `i` of word array `a`. -/
+   126    | ld64 (a : ArrId) (i : Expr)
+   127    /-- The length (in elements) of byte array `a`. -/
+   128    | len8 (a : ArrId)
+   129    /-- The length (in elements) of word array `a`. -/
+   130    | len64 (a : ArrId)
+   131    /-- A comparison as a word: `1` if it holds, else `0`. -/
+   132    | cmpw (c : Cmp) (a b : Expr)
+   133    /-- Byte `i` of the constant byte string `d` (read-only data, part of the program). -/
+   134    | ldc (d : List UInt8) (i : Expr)
+   135    /-- The global variable `g`. -/
+   136    | glob (g : GVar)
+   137    /-- Word `i` of tier `t` of the tiered array `a`: word array `tierA a t` (`↑a` for `t & 1 = 0`,
+   138    `tier1 a` for `t & 1 = 1`). -/
+   139    | ld64t (a : ArrId) (t i : Expr)
+   140    /-- The length of tier `t` of the tiered array `a`. -/
+   141    | len64t (a : ArrId) (t : Expr)
+   142    /-- The little-endian word of the bytes `i, …, i + 7` of `s` (lane blkcopy). -/
+   143    | ld8x8 (s : BSrc) (i : Expr)
+   144    /-- 32-bit element `i` of tier `t` of the tiered array `a`, zero-extended: half `i % 2` of word
+   145    `i / 2` (the low half first, as the machine's little-endian 4-byte load at byte `4 i` reads it;
+   146    lane p32). -/
+   147    | ld32t (a : ArrId) (t i : Expr)
+   148    deriving Repr, DecidableEq, Inhabited
+
+== ConAgua/L/Syntax.lean#L170-L209
+   170  /-- Statements. -/
+   171  inductive Stmt where
+   172    | skip
+   173    /-- `x := e` -/
+   174    | set (x : Var) (e : Expr)
+   175    /-- `a.u8[i] := e` (the low byte of `e`) -/
+   176    | st8 (a : ArrId) (i e : Expr)
+   177    /-- `a.u64[i] := e` -/
+   178    | st64 (a : ArrId) (i e : Expr)
+   179    | seq (s t : Stmt)
+   180    | ite (c : Cond) (s t : Stmt)
+   181    /-- `while c { s }`. Each iteration costs one unit of fuel. -/
+   182    | while (c : Cond) (s : Stmt)
+   183    /-- Leave the innermost loop. -/
+   184    | brk
+   185    /-- Return from the function with the values `es` (usually one). -/
+   186    | ret (es : List Expr)
+   187    /-- `(x₀, x₁, …) := f(args)`: `xᵢ` gets the callee's `i`-th result, `0` if it returned fewer.
+   188    A call costs one unit of fuel. -/
+   189    | call (xs : List Var) (f : FnName) (args : List Expr)
+   190    /-- Stop the whole program with an error (Rust's `panic!`, an overflow check, …) whose code is
+   191    the value of `e` (`Err.abort`): the low two bits are the class (`0` other, `1` reject, `2`
+   192    decline), the rest a reason. A bare `abort` is `abort 0`. -/
+   193    | abort (e : Expr)
+   194    /-- `g := e` for a global variable `g`. -/
+   195    | gset (g : GVar) (e : Expr)
+   196    /-- `a⟨t⟩.u64[i] := e`: word `i` of tier `t` of the tiered array `a`. -/
+   197    | st64t (a : ArrId) (t i e : Expr)
+   198    /-- `copy D[di ..] := S[si ..] for n`: words `si, …, si + n - 1` of `S` to `di, …` of `D`, in
+   199    ascending order; bounds checked once, before anything is written (lane blkcopy). -/
+   200    | copy64 (d : WArr) (di : Expr) (s : WArr) (si n : Expr)
+   201    /-- `copy D[di ..] := S.u8[si ..] for n`: the bytes zero-extended into words. -/
+   202    | copy8w (d : WArr) (di : Expr) (s : BSrc) (si n : Expr)
+   203    /-- `x := scan S.u8[i .. e] until c`: the first `j` in `[i, e)` with `c[S[j]] ≠ 0`, else `e`
+   204    (`c`: a 256-byte class table, constant data). -/
+   205    | scan8 (x : Var) (s : BSrc) (i e : Expr) (c : List UInt8)
+   206    /-- `a⟨t⟩.u32[i] := e`: the low 32 bits of `e` into 32-bit element `i` of tier `t` of the tiered
+   207    array `a` (half `i % 2` of word `i / 2`; the other half keeps its value; lane p32). -/
+   208    | st32t (a : ArrId) (t i e : Expr)
+   209    deriving Repr, Inhabited
+
+== ConAgua/L/Notation.lean#L80-L171
+    80  declare_syntax_cat lexpr
+    81  declare_syntax_cat lcond
+    82  declare_syntax_cat lstmt (behavior := both)
+    83  declare_syntax_cat lblock
+    84  
+    85  syntax num : lexpr
+    86  syntax char : lexpr
+    87  syntax "⟪" term "⟫" : lexpr
+    88  syntax ident : lexpr
+    89  syntax ident noWs "[" lexpr "]" : lexpr
+    90  syntax ident noWs "[" lexpr "]" noWs "." noWs ident : lexpr
+    91  syntax ident noWs "⟨" lexpr "⟩" noWs "[" lexpr "]" : lexpr
+    92  syntax ident noWs "⟨" lexpr "⟩" noWs "." noWs &"u32" noWs "[" lexpr "]" : lexpr
+    93  syntax ident noWs "⟨" lexpr "⟩" noWs "[" lexpr "]" noWs "." noWs ident : lexpr
+    94  syntax ident noWs "⟨" lexpr ", " lexpr "⟩" noWs "." noWs ident : lexpr
+    95  syntax ident noWs "⟨" lexpr ", " lexpr "⟩" : lexpr
+    96  syntax ident noWs "⟨" lexpr "⟩" noWs "." noWs ident : lexpr
+    97  syntax ident noWs "⟦" lexpr "⟧" noWs "." noWs ident : lexpr
+    98  syntax ident noWs "⟦" lexpr "⟧" : lexpr
+    99  syntax "⟦" lexpr "⟧" noWs "." noWs ident : lexpr
+   100  syntax "len" "(" ident ")" : lexpr
+   101  syntax "len" "(" ident noWs "⟨" lexpr "⟩" ")" : lexpr
+   102  syntax "mulhi" "(" lexpr ", " lexpr ")" : lexpr
+   103  /-- `le64!(A.u8, i)`: the little-endian word of the bytes `i … i + 7` (`D.c8` for constant bytes). -/
+   104  syntax "le64!" "(" ident ", " lexpr ")" : lexpr
+   105  syntax "u64" "(" lcond ")" : lexpr
+   106  syntax ident noWs "⦃" lexpr "⦄" : lexpr
+   107  syntax "⦃" lexpr "⦄" noWs "." noWs ident : lexpr
+   108  syntax "(" lexpr ")" : lexpr
+   109  syntax:70 lexpr:70 " * " lexpr:71 : lexpr
+   110  syntax:65 lexpr:65 " + " lexpr:66 : lexpr
+   111  syntax:65 lexpr:65 " - " lexpr:66 : lexpr
+   112  syntax:60 lexpr:60 " << " lexpr:61 : lexpr
+   113  syntax:60 lexpr:60 " >> " lexpr:61 : lexpr
+   114  syntax:58 lexpr:58 " & " lexpr:59 : lexpr
+   115  syntax:57 lexpr:57 " ^ " lexpr:58 : lexpr
+   116  syntax:56 lexpr:56 " | " lexpr:57 : lexpr
+   117  
+   118  syntax:50 lexpr:51 " == " lexpr:51 : lcond
+   119  syntax:50 lexpr:51 " != " lexpr:51 : lcond
+   120  syntax:50 lexpr:51 " < " lexpr:51 : lcond
+   121  syntax:50 lexpr:51 " <= " lexpr:51 : lcond
+   122  syntax:50 lexpr:51 " > " lexpr:51 : lcond
+   123  syntax:50 lexpr:51 " >= " lexpr:51 : lcond
+   124  syntax:50 lexpr:51 " <ₛ " lexpr:51 : lcond
+   125  syntax:50 lexpr:51 " ≤ₛ " lexpr:51 : lcond
+   126  syntax:35 lcond:36 " && " lcond:35 : lcond
+   127  syntax:30 lcond:31 " || " lcond:30 : lcond
+   128  syntax:max "!" lcond:max : lcond
+   129  syntax "(" lcond ")" : lcond
+   130  
+   131  syntax "{" sepBy(lstmt, "; ", "; ", allowTrailingSep) "}" : lblock
+   132  
+   133  syntax ident " := " "call " ident "(" lexpr,* ")" : lstmt
+   134  syntax "(" ident ", " ident,+ ")" " := " "call " ident "(" lexpr,* ")" : lstmt
+   135  syntax ident " := " lexpr : lstmt
+   136  syntax ident " += " lexpr : lstmt
+   137  syntax ident " -= " lexpr : lstmt
+   138  syntax ident noWs "[" lexpr "]" " := " lexpr : lstmt
+   139  syntax ident noWs "[" lexpr "]" noWs "." noWs ident " := " lexpr : lstmt
+   140  syntax ident noWs "⟨" lexpr ", " lexpr "⟩" noWs "." noWs ident " := " lexpr : lstmt
+   141  syntax ident noWs "⟨" lexpr "⟩" noWs "[" lexpr "]" " := " lexpr : lstmt
+   142  syntax ident noWs "⟨" lexpr "⟩" noWs "." noWs &"u32" noWs "[" lexpr "]" " := " lexpr : lstmt
+   143  syntax ident noWs "⟨" lexpr "⟩" noWs "[" lexpr "]" noWs "." noWs ident " := " lexpr : lstmt
+   144  syntax "if " lcond lblock : lstmt
+   145  syntax "if " lcond lblock " else " lblock : lstmt
+   146  syntax "if " lcond lblock " else " lstmt : lstmt
+   147  syntax "while " lcond lblock : lstmt
+   148  syntax "break" : lstmt
+   149  syntax "return " lexpr : lstmt
+   150  syntax "return " "(" lexpr ", " lexpr,+ ")" : lstmt
+   151  syntax "abort" : lstmt
+   152  /-- `abort R`: abort with the code `R` (a Lean constant of type `L.Word`, `Arena/Reasons.lean`). -/
+   153  syntax "abort " ident : lstmt
+   154  /-- `fail R`: a reject or decline site, the twin's `fail`: abort with the code `R` (as `abort R`). -/
+   155  syntax (name := lfail) &"fail" ident : lstmt
+   156  /-- `x := scan!(A.u8, i, e, C)`: the first `j ∈ [i, e)` whose byte is in the class `C` (a Lean
+   157  constant: a 256-byte table), else `e` (`D.c8` for constant bytes; lane blkcopy). -/
+   158  syntax ident " := " "scan!" "(" ident ", " lexpr ", " lexpr ", " ident ")" : lstmt
+   159  /-- `copy!(D, di, S, si, n)`: `D[di + j] := S[si + j]` for `j < n` (`S` a word array `B.u64` or bytes
+   160  `B.u8`/`B.c8`; `D⟨t⟩`, `S⟨t⟩` for tiered word arrays; lane blkcopy). -/
+   161  syntax "copy!" "(" ident (noWs "⟨" lexpr "⟩")? ", " lexpr ", " ident (noWs "⟨" lexpr "⟩")? ", " lexpr ", "
+   162    lexpr ")" : lstmt
+   163  syntax "skip" : lstmt
+   164  syntax "⟪" term "⟫" : lstmt
+   165  /-- `(t, i) := node R⟦h⟧`: the tier and index of the node that the handle word `h` names in the
+   166  store `R`, checked (sugar, `desugar`): abort on a scratch-tier handle while the scratch tier is
+   167  closed, and on an index at or past the tier's node count. -/
+   168  syntax "(" ident ", " ident ")" " := " &"node" ident noWs "⟦" lexpr "⟧" : lstmt
+   169  /-- `for j < n { body }`: the counted loop `while j < n { body; j += 1 }` (sugar, `desugar`);
+   170  `body` assigns neither `j` nor `n`. -/
+   171  syntax "for " ident " < " ident lblock : lstmt
+

@@ -59,7 +59,7 @@ def scan(x):
         if h in ('l8', 'n8', 's8'): nb = max(nb, int(x[1]) + 1)
         if h in ('l64', 'n64', 's64'): nw = max(nw, int(x[1]) + 1)
         if h in ('g', 'gset'): ng = max(ng, int(x[1]) + 1)
-        if h in ('l64t', 'n64t', 's64t'): nw = max(nw, int(x[1]) + 257)
+        if h in ('l64t', 'n64t', 's64t', 'l32t', 's32t'): nw = max(nw, int(x[1]) + 257)
         for y in x[1:]:
             scan(y)
 for f in fns:
@@ -97,6 +97,7 @@ def E(e):
     if h == 'l8': return 'LD8(%s, %s)' % (e[1], E(e[2]))
     if h == 'l64': return 'LD64(%s, %s)' % (e[1], E(e[2]))
     if h == 'l64t': return 'LD64(%s + 256 * (%s & 1), %s)' % (e[1], E(e[2]), E(e[3]))
+    if h == 'l32t': return 'LD32(%s + 256 * (%s & 1), %s)' % (e[1], E(e[2]), E(e[3]))
     if h == 'n64t': return 'L64[%s + 256 * (%s & 1)]' % (e[1], E(e[2]))
     if h == 'l8x8': return 'LD8X8(%s, %s, %s)' % (BP(e[1]), BL(e[1]), E(e[2]))
     if h == 'ldc': return 'LDC(D%s, %d, %s)' % (e[1], len(data[int(e[1])]), E(e[2]))
@@ -145,6 +146,8 @@ def S(s, fn, ind, inloop):
         return p + '{ const uint8_t *_b = %s; u64 _bl = %s; u64 _i = %s; u64 _e = %s; CHK(_i <= _e && _e <= _bl); while (_i < _e && !D%s[_b[_i]]) _i++; v%s = _i; }\n' % (BP(s[2]), BL(s[2]), E(s[3]), E(s[4]), s[5], s[1])
     if h == 's64t':
         return p + '{ u64 _t = %s; u64 _i = %s; u64 _e = %s; ST64(%s + 256 * (_t & 1), _i, _e); }\n' % (E(s[2]), E(s[3]), E(s[4]), s[1])
+    if h == 's32t':
+        return p + '{ u64 _t = %s; u64 _i = %s; u64 _e = %s; ST32(%s + 256 * (_t & 1), _i, _e); }\n' % (E(s[2]), E(s[3]), E(s[4]), s[1])
     if h in ('s8', 's64'):
         return p + '{ u64 _i = %s; u64 _e = %s; ST%s(%s, _i, _e); }\n' % (E(s[2]), E(s[3]), h[1:], s[1])
     if h == 'seq': return S(s[1], fn, ind, inloop) + S(s[2], fn, ind, inloop)
@@ -197,6 +200,8 @@ else:
 o.append('''static inline __attribute__((always_inline)) u64 LD64(u64 a, u64 i) { CHK(i < L64[a]); return B64[a][i]; }
 static inline __attribute__((always_inline)) u64 LD8(int a, u64 i) { CHK(i < L8[a]); return B8[a][i]; }
 static inline __attribute__((always_inline)) void ST64(u64 a, u64 i, u64 e) { CHK(i < L64[a]); B64[a][i] = e; }
+static inline __attribute__((always_inline)) u64 LD32(u64 a, u64 i) { CHK(i / 2 < L64[a]); return ((const uint32_t *)B64[a])[i]; }
+static inline __attribute__((always_inline)) void ST32(u64 a, u64 i, u64 e) { CHK(i / 2 < L64[a]); ((uint32_t *)B64[a])[i] = (uint32_t)e; }
 static inline __attribute__((always_inline)) void ST8(int a, u64 i, u64 e) { CHK(i < L8[a]); B8[a][i] = (uint8_t)e; }
 static inline __attribute__((always_inline)) u64 LD8X8(const uint8_t *b, u64 n, u64 i) { CHK(i + 8 <= n && i + 8 > i); u64 r; __builtin_memcpy(&r, b + i, 8); return r; }
 static inline __attribute__((always_inline)) u64 LDC(const uint8_t *d, u64 n, u64 i) { CHK(i < n); return d[i]; }
