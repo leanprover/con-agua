@@ -6,11 +6,11 @@ import ConAgua.L.ModelGen
 /-!
 # `defeq_body` refines `defeqBody`; the knot's `defeq` slot one level up (lane `defeq`)
 
-The callW pattern (`DefEqStuckTail.lean`): a word model of `defeq_body` with its callees through
-their runs (`dbW`), the L spec by `vcgen` + `simp_all`, the refinement from the callees' specs
-(`is_bool_true`, `has_fvar`, `bool_true_shortcut`, `quick_defeq` twice, `prop_irrel`, the cheap
-`whnf_core` slot twice, `lazy_delta_reduction`, `defeq_tail`), threaded through the twin's `do`
-block by `coreRef_bind`. `DefeqBodySpec p n` (`KnotSlot.lean`) is then a theorem
+The callW pattern (`DefEqStuckTail.lean`): a word model of `defeq_body` (`DefEqModels.lean`) with
+its callees through their runs (`dbW`), the L spec by `vcgen` + `simp_all`, the refinement from the
+callees' specs (`is_bool_true`, `has_fvar`, `bool_true_shortcut`, `quick_defeq` twice, `prop_irrel`,
+the cheap `whnf_core` slot twice, `lazy_delta_reduction`, `defeq_tail`), threaded through the twin's
+`do` block by `coreRef_bind`. `DefeqBodySpec p n` (`KnotSlot.lean`) is then a theorem
 (`defeqBody_refines`), and with `defeq_refines` the slot step `defeqSlot_step`.
 -/
 
@@ -34,17 +34,6 @@ structure DefeqBodyProg (p : Prog) : Prop where
 structure DefeqBodyCallees (p : Prog) : Prop where
   stuck : StuckCallees p
   lazy : LazyCallees p
-
-/-! ## The model -/
-
-/-- **`defeq_body`'s model, both outcomes** (generated; `is_bool_true` and `has_fvar` lifted, the
-other callees through their runs). -/
-l_model bodyE_spec (p : Prog) (hf : p.lookup "defeq_body" = some defeqBodyL)
-  fns [hf ↦ bodyE list]
-  specs [callW_spec p n "is_bool_true", callW_spec p n "has_fvar"]
-  grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] unified
-  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 /-- **What `defeq_body`'s errors claim from**: the knot's slots, the verdict closure, and the whnf
 family's claims its callees' refinements take (`reduce_nat`, `proof_irrel`, `defeq_lst`,

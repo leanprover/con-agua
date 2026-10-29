@@ -1,4 +1,5 @@
 import ConAgua.Arena.DefEqStuckUnit
+import ConAgua.Arena.DefEqModels
 
 /-!
 # `stuck_irrel` refines `stuckIrrel` (lane `defeq`, helper `defeq-top`)
@@ -35,23 +36,6 @@ theorem StuckG.mono {p : Prog} {n n' : Nat} (h : StuckG p n) (hn : n' ≤ n) : S
   ⟨h.knot.mono hn, h.pirr, h.lst⟩
 
 theorem StuckG.set {p : Prog} {n : Nat} (h : StuckG p n) : SetG p n := ⟨h.knot, h.lst⟩
-
-/-- **`stuck_irrel`'s model, both outcomes** (generated; `struct_eta_cert` and `struct_unit_cert`
-by their unified models, `proof_irrel` through its run). -/
-l_model siE_spec (p : Prog) (hf : p.lookup "stuck_irrel" = some stuckIrrelL)
-    (hc : p.lookup "struct_eta_cert" = some structEtaCertL)
-    (hw : p.lookup "struct_eta_cert_with" = some structEtaCertWithL)
-    (hb : p.lookup "struct_eta_cert_wtb" = some structEtaCertWtbL)
-    (hg : p.lookup "struct_eta_cert_go" = some structEtaCertGoL)
-    (ht : p.lookup "struct_eta_cert_tail" = some structEtaCertTailL)
-    (hu : p.lookup "struct_unit_cert" = some structUnitCertL)
-    (hh : p.lookup "struct_unit_head" = some structUnitHeadL)
-    (hut : p.lookup "struct_unit_tail" = some structUnitTailL)
-  fns [hf ↦ siE list]
-  specs [secE_spec p hc hw hb hg ht n, sucE_spec p hu hh hut n]
-  grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] unified
-  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 /-- **`stuck_irrel` refines `stuckIrrel`, both outcomes**: structural η both ways, unit-likeness,
 then proof irrelevance; the errors are theirs. -/

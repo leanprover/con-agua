@@ -4,7 +4,8 @@ import ConAgua.Arena.DefEqStuckIrrel
 # `stuck_str` refines `defeqStuck`'s string-literal arms (lane `defeq`, helper `defeq-top`)
 
 A string literal against an application headed by `String.ofList` at the empty levels:
-`strLitToConstructor`, then the knot's `defeq`; every other case `stuckIrrel` (`stuckStrT`).
+`strLitToConstructor`, then the knot's `defeq`; every other case `stuckIrrel` (`stuckStrT`). The model `strE` is in
+`DefEqModels.lean`.
 -/
 
 open ConRon.Arena
@@ -47,28 +48,6 @@ theorem stuckStrT_run (r : CoreFnsA) (fe : IFEnv) (depth : Nat) (a b : EIdx) (si
         else stuckIrrel r fe depth a b).run s := by
   simp only [stuckStrT, ht, ↓reduceIte, StateT.run_bind, view_run _ _ _ hv, except_ok_bind,
     emptyLevels, pinEmptyLevels_run hP, pinStringOfList, PIN_STRING_OF_LIST, pinAt_run hP 6 (by decide)]
-
-/-! ## The model of `stuck_str` -/
-
-/-- **`stuck_str`'s model, both outcomes** (generated; the pins and the string-literal callees
-lifted, `stuck_irrel` by its unified model, the `defeq` slot through its run). -/
-l_model strE_spec (p : Prog) (hf : p.lookup "stuck_str" = some stuckStrL)
-    (hi : p.lookup "stuck_irrel" = some stuckIrrelL)
-    (hc : p.lookup "struct_eta_cert" = some structEtaCertL)
-    (hw : p.lookup "struct_eta_cert_with" = some structEtaCertWithL)
-    (hb : p.lookup "struct_eta_cert_wtb" = some structEtaCertWtbL)
-    (hg : p.lookup "struct_eta_cert_go" = some structEtaCertGoL)
-    (ht : p.lookup "struct_eta_cert_tail" = some structEtaCertTailL)
-    (hu : p.lookup "struct_unit_cert" = some structUnitCertL)
-    (hh : p.lookup "struct_unit_head" = some structUnitHeadL)
-    (hut : p.lookup "struct_unit_tail" = some structUnitTailL)
-  fns [hf ↦ strE list]
-  specs [callW_spec p n "pin_word", callW_spec p n "pin_at", callW_spec p n "str_lit_supported",
-    callW_spec p n "str_lit_ctor", siE_spec p hi hc hw hb hg ht hu hh hut n]
-  grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] heartbeats 1000000
-  simp [] unified
-  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 /-- A `stuck_irrel` tail, both outcomes (`si_ref`, its answer re-listed). -/
 theorem si_tail {p : Prog} (hq : StuckProg p) (hi : IotaProg' p) (hc : StuckCallees p)
