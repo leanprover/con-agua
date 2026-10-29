@@ -110,6 +110,7 @@ import ConAgua.Arena.WhnfSpineArgs
 import ConAgua.Arena.WhnfSpineRefine
 import ConAgua.Arena.ZeroStore
 import ConAgua.Checker.Hoist
+import ConAgua.Checker.Presize
 import ConAgua.Front.Apply
 import ConAgua.Front.ApplyDecl
 import ConAgua.Front.ApplyExpr
@@ -145,7 +146,7 @@ to the `FunDecl` of the lanes' modules: the one body every non-stub binding of t
 (`L.Checker.entryProg` first). `checkerStubs` are the called functions with no L code yet: they
 abort (the checker declines). DESIGN.md, "The checker as one program (lane `integrate`)".
 
-1811 functions, 0 of them stubs.
+1816 functions, 0 of them stubs.
 -/
 
 namespace L.Checker
@@ -452,6 +453,7 @@ def checkerProg : Prog := [
   ("app_fill_n", L.Arena.appFillNL),
   ("app_find", L.Arena.appFind),
   ("app_hole", L.Ind.appHole),
+  ("app_presize", L.Checker.appPresizeL),
   ("app_push", L.Arena.appPush),
   ("apply_decl", L.Front.applyDecl),
   ("apply_dline", L.Front.applyDLine),
@@ -944,6 +946,7 @@ def checkerProg : Prog := [
   ("fm_find", L.Arena.memoFindG L.Arena.frSch),
   ("fm_put", L.Arena.memoPutG L.Arena.frSch),
   ("forall_find", L.Arena.forallFind),
+  ("forall_presize", L.Checker.forallPresizeL),
   ("forall_push", L.Arena.forallPush),
   ("fr_go", L.Arena.frGo),
   ("fr_memo", L.Arena.frMemo),
@@ -1300,6 +1303,7 @@ def checkerProg : Prog := [
   ("keys_push_iw", L.Arena.keysPushIW),
   ("lam_find", L.Arena.lamFind),
   ("lam_pair", L.Arena.lamPairL),
+  ("lam_presize", L.Checker.lamPresizeL),
   ("lam_proj", L.Arena.lamProjL),
   ("lam_push", L.Arena.lamPush),
   ("lams_inst", L.Arena.lamsInstL),
@@ -1732,6 +1736,7 @@ def checkerProg : Prog := [
   ("pool_copy", L.Ind.poolCopy),
   ("pool_copy0", L.Arena.poolCopy0),
   ("pool_room", L.Stubs.poolRoom),
+  ("pow2_at_least", L.Checker.pow2AtLeastL),
   ("prep_back", L.Checker.prepBackL),
   ("prep_back_rec", L.Checker.prepBackRecL),
   ("prep_copy", L.Checker.prepCopyL),
@@ -1741,6 +1746,7 @@ def checkerProg : Prog := [
   ("prep_rest", L.Checker.prepRestL),
   ("prepare_major", L.Arena.prepareMajorL),
   ("prepare_prelude", L.Checker.preparePreludeL),
+  ("presize_tables", L.Checker.presizeTablesL),
   ("proj_a", L.Arena.projA),
   ("proj_b", L.Arena.projB),
   ("proj_cert", L.Arena.projCertL),

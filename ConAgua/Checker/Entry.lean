@@ -1,13 +1,15 @@
 import ConAgua.Arena.Freeze
 import ConAgua.Arena.Globals
 import ConAgua.Arena.RomPins
+import ConAgua.Checker.Presize
 
 /-!
 # The checker's entry `check()` and the integration glue (lane `integrate`)
 
 `check()` is the compiled program's entry: no parameters, the input is byte array 0, the
 pin-data buffer byte array 1. It dispatches on the mode word the entry stubs write (below):
-entry 1 (`check_a`) runs `TwinAccepts`' stages in order (`pb_check`, `internReservedPins`,
+entry 1 (`check_a`) runs `TwinAccepts`' stages in order (`pb_check`, the tables' presize
+`presize_tables` (`Checker/Presize.lean`), `internReservedPins`,
 `builtinPreludeE`, `parseChunks [b]`, `preparePrelude`, `internAllPins`) and phase A
 (`installFold`); entry 2 (`check_b`) runs phase B's pending checks. Every twin error is an L
 `abort` inside its stage, and only `check_b` returns `ACCEPT`. `front_run` returns the number of
@@ -108,6 +110,7 @@ entry 1) is `check_a(0)`, the same with the buffer's header only; `2` (`ca_check
 def checkAL : FunDecl := lfn (c) locals (r, z, cnt, v) {
   z := call cap_check();
   z := call pb_check();
+  z := call presize_tables();
   z := call intern_reserved_pins();
   z := call builtin_prelude();
   r := call front_run();
@@ -250,6 +253,9 @@ def entryProg : Prog :=
    ("fz_55", fzF 55), ("fz_56", fzF 56), ("fz_57", fzF 57), ("fz_58", fzF 58),
    ("fz_59", fzF 59), ("fz_60", fzF 60),
    ("cap_check", capCheckL),
+   -- the parse's large cons tables sized from the input length (`Checker/Presize.lean`)
+   ("presize_tables", presizeTablesL), ("pow2_at_least", pow2AtLeastL),
+   ("app_presize", appPresizeL), ("lam_presize", lamPresizeL), ("forall_presize", forallPresizeL),
    -- the reserved pins at their ROM offset (lane `decls` binds it only parametrically, `IrpProg rom
    -- off p`; its readers read the pin-data buffer, `L.Rom.romProgPB`)
    ("intern_reserved_pins", L.Rom.internReservedPinsL),

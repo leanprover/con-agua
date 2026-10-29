@@ -4,6 +4,7 @@ import ConAgua.Arena.PhaseAEntry
 import ConAgua.Checker.LoopStage
 import ConAgua.Checker.PipeFinal
 import ConAgua.Checker.TwinShapeQuot
+import ConAgua.Checker.PresizeStage
 
 /-!
 # Entry 1 at the checker's program: `checkA_run` (lane parmode)
@@ -19,9 +20,10 @@ hand it) that returns anything but `1` (a line that did not scan):
 * the result is `2^63 + |pend|`.
 
 The stages are `stageSpecs_of_rels` at `checkerRels`, except the
-first three, which start from the loaded memory with the mode word set: no relation reads a global
-(`R1`‥`R3` name the loaded memory only through its arrays), so their proofs are those of
-`capStage_checker`, `pbStage_checker`, `irpStage_checker` at `loadMemM`. The fold at the
+first four, which start from the loaded memory with the mode word set: no relation reads a global
+(`R1`‥`R3` name the loaded memory only through its arrays), so the proofs of `cap_check` and
+`pb_check` are those of `capStage_checker`, `pbStage_checker` at `loadMemM`; the tables' presize
+and `intern_reserved_pins` after it are `presizeStage` and `irpStage_ps` (`PresizeStage.lean`). The fold at the
 substituted program (`triple_subPB`: the ROM readers read the pin-data buffer), from
 `installFoldGo_start`.
 -/
@@ -36,7 +38,7 @@ namespace L.Checker
 
 open L L.Arena L.Front L.Rom L.Compiler ConAgua.Final
 
-/-! ## The first three stages from the loaded memory with the mode word set -/
+/-! ## The first two stages from the loaded memory with the mode word set -/
 
 theorem capStage_setG (b pb : ByteArray) (sz : TieredArray → Nat) (hs : ∀ s, sz s < 2 ^ 64) (w : Word) :
     RelSpec checkerProg "cap_check" (· = loadMemM b pb sz w)
@@ -54,44 +56,6 @@ theorem pbStage_setG (b pb : ByteArray) (sz : TieredArray → Nat) (hpb : pb.siz
   refine triple_post (checkerProg_pbCheck_PB pb.data.toList (by simpa [RomOK] using hpb) n s₀
     (by rw [hm]; exact loadMem_pb b pb sz)) fun _ s' ⟨h1, h2, h3⟩ => ⟨h1, ?_, hc, h3⟩
   rw [h2, hm]
-
-theorem irpStage_setG (b pb : ByteArray) (sz : TieredArray → Nat) (hpb : pb.size < 2 ^ 63) (w : Word) :
-    RelSpec checkerProg "intern_reserved_pins"
-      (fun m => m = loadMemM b pb sz w ∧ CapsOK (loadMem b pb sz) ∧ PbPre pb)
-      fun _ m => ∃ a', internReservedPins (AState.init EStore.empty) = .ok ((), a') ∧
-        R3 (loadMem b pb sz) m pb a' := by
-  intro n _hn s₀ ⟨hm, hc, hpre⟩
-  have hirp := checkerProg_internReservedPins_PB pb.data.toList (by simpa [RomOK] using hpb) hpre n
-    s₀ (AState.init EStore.empty) (by rw [hm]; exact loadMem_pb b pb sz)
-    (by rw [hm, loadMemM]; exact ArenaD.frameHi (memFrame_setG _ MODE w) (by simp) (by simp) (arenaD_loadMem b pb sz hc))
-    (by rw [hm]; exact Or.inr (by show (rdW ((loadMem b pb sz).arr64 CTL) 0).toNat < 2 ^ 40
-                                  rw [loadMem_rd]; decide))
-  refine triple_post (triple_and hirp (stage_since n (preLoop_mem "intern_reserved_pins"
-    (by decide +kernel)) s₀)) fun _ s' ⟨⟨hl, hok, hA, hfull, hp0, hfr, hmo⟩, _, hk, hpf⟩ => ⟨hl, ?_⟩
-  have hrun := AM.run_of_ok _ _ hok
-  have hrun' : internReservedPins (AState.init EStore.empty) =
-      .ok ((), AM.st internReservedPins (AState.init EStore.empty)) := hrun
-  obtain ⟨hokA, -, hpinsA, hppA, hoffA, -, hcachesA⟩ :=
-    ConRon.Bridge.internReservedPins_run ⟨EStore.empty_wf⟩ rfl hrun'
-  refine ⟨_, hrun', ?_⟩
-  rw [hm] at hk hpf hfr
-  have hk' : L.Keep (loadMem b pb sz) s'.mem := hk
-  have hpf' : MemFrame preLoopA preLoopC (loadMem b pb sz) s'.mem := ⟨hpf.arr, hpf.ctl, hpf.size⟩
-  have hfr' : MemFrame PinA StoreC (loadMem b pb sz) s'.mem := ⟨hfr.arr, hfr.ctl, hfr.size⟩
-  refine ⟨⟨hk', hc, by simpa [PbPre] using hpre, hpf'⟩, hA, ?_, ?_, ?_, hfull, hp0,
-    ⟨hokA, hoffA, hpinsA, hppA, hfull.names_size⟩, hcachesA, ?_, hmo⟩
-  · exact (stateDR_loadMem b pb sz hc).frame hfr' (pinA_not (by decide) (by decide))
-      (pinA_not (by decide) (by decide)) (pinA_not (by decide) (by decide))
-      (pinA_not (by decide) (by decide)) (pinA_not (by decide) (by decide)) pinA_idArrs storeC_idCtl
-  · exact (rsetR_loadMem b pb sz hc).frame hfr' (pinA_not (by decide) (by decide))
-      (pinA_not (by decide) (by decide)) (not_mem_storeC _ (by decide)) (not_mem_storeC _ (by decide))
-  · have := hfr'.ctl 131 (not_mem_storeC _ (by decide))
-    simp only [stkTop] at this ⊢
-    rw [this]; exact stkTop_loadMem b pb sz
-  · have z := loadMem_rd b pb sz
-    exact HZ.frame ⟨z _ _, z _ _, z _ _, z _ _, z _, z _⟩ hfr' (pinA_not (by decide) (by decide))
-      (pinA_not (by decide) (by decide)) (not_mem_storeC _ (by decide)) (not_mem_storeC _ (by decide))
-      (not_mem_storeC _ (by decide)) (not_mem_storeC _ (by decide))
 
 /-! ## Phase A's fold at the checker's program -/
 
@@ -288,10 +252,11 @@ theorem checkA_run (b pb : ByteArray) (sz : TieredArray → Nat) (hin : InputsOK
     (fun _ => capStage_setG b pb sz hin.2.2.2 w) fun m hm => ⟨(), hm, fun _ _ h => h⟩
   have s2 := StageSpec.of_rel (X := Unit) (fun _ => _) (fun _ => _)
     (fun _ => pbStage_setG b pb sz hin.2.2.1 w) fun m hm => ⟨(), hm, fun _ _ h => h⟩
-  have s3 : StageSpec checkerProg "intern_reserved_pins"
-      (fun m => m = loadMemM b pb sz w ∧ CapsOK (loadMem b pb sz) ∧ PbPre pb)
+  have s2p := presizeStage b pb sz w (p := checkerProg) (by chk_lk) (by chk_lk) (by chk_lk)
+    (by chk_lk) (by chk_lk)
+  have s3 : StageSpec checkerProg "intern_reserved_pins" (PsPre b pb sz w)
       (fun _ => Q3 b r) := StageSpec.of_rel (X := Unit) (fun _ => _) (fun _ => _)
-    (fun _ => irpStage_setG b pb sz hin.2.2.1 w) fun m hm => ⟨(), hm, fun _ _ h => h⟩
+    (fun _ => irpStage_ps b pb sz w hin.2.2.1) fun m hm => ⟨(), hm, fun _ _ h => h⟩
   have hla : checkerProg.lookup "check_a" = some checkAL := by chk_lk
   have hlc : checkerProg.lookup "check" = some checkL := by chk_lk
   have hpc : checkerProg.lookup "par_compact" = some parCompactL := by chk_lk
@@ -313,7 +278,7 @@ theorem checkA_run (b pb : ByteArray) (sz : TieredArray → Nat) (hin : InputsOK
         ⦃fun r s' => s₁.mem = s₀.mem → c = modeFlag (s₀.mem.glob MODE) → P (r.headD 0) s'.mem; ⊤⦄ := by
       intro s₁ c
       refine triple_post (checkA_of_stages (Q0 := (· = loadMemM b pb sz w)) hla hpc checkerProg_fz
-        s1 s2 s3 s4 s5 s6 s7 (foldSpec_checker b pb sz hin) c n hn s₁) ?_
+        s1 s2 s2p s3 s4 s5 s6 s7 (foldSpec_checker b pb sz hin) c n hn s₁) ?_
       intro x s' h e ec
       have ec' : c = modeFlag w := by rw [ec, hmode]
       subst ec'

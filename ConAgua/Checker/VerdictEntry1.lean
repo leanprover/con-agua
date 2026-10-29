@@ -43,12 +43,14 @@ theorem nv_at {p : Prog} {fs : List FnName} (hp : closedNV p fs = true) {f : FnN
 /-- **`check_a(c)`'s error from its stages.** -/
 theorem checkA_err_of_stages {p : Prog} (hp : p.lookup "check_a" = some checkAL)
     {fs : List FnName} (hnv : closedNV p fs = true)
-    (hm1 : "cap_check" ∈ fs) (hm2 : "pb_check" ∈ fs) (hm3 : "intern_reserved_pins" ∈ fs)
+    (hm1 : "cap_check" ∈ fs) (hm2 : "pb_check" ∈ fs) (hm2p : "presize_tables" ∈ fs)
+    (hm3 : "intern_reserved_pins" ∈ fs)
     (hm6 : "prepare_prelude" ∈ fs) (hm7 : "intern_all_pins" ∈ fs) (hm8 : "par_compact" ∈ fs)
-    {Q0 Q1 Q2 Q3 Q4 Q5 Q6 Q7 : Mem → Prop} {V : Word → Prop}
+    {Q0 Q1 Q2 Q2p Q3 Q4 Q5 Q6 Q7 : Mem → Prop} {V : Word → Prop}
     (h1 : StageSpec p "cap_check" Q0 fun _ => Q1)
     (h2 : StageSpec p "pb_check" Q1 fun _ => Q2)
-    (h3 : StageSpec p "intern_reserved_pins" Q2 fun _ => Q3)
+    (h2p : StageSpec p "presize_tables" Q2 fun _ => Q2p)
+    (h3 : StageSpec p "intern_reserved_pins" Q2p fun _ => Q3)
     (h4 : StageSpec p "builtin_prelude" Q3 fun _ => Q4)
     (h5 : StageSpec p "front_run" Q4 fun r m => r.headD 0 = 0 → Q5 m)
     (h6 : StageSpec p "prepare_prelude" Q5 fun _ => Q6)
@@ -72,6 +74,7 @@ theorem checkA_err_of_stages {p : Prog} (hp : p.lookup "check_a" = some checkAL)
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       (fun s => Triple.and_err (h1 n hn' s) (nv_at hnv hm1 n [] s)),
       (fun s => Triple.and_err (h2 n hn' s) (nv_at hnv hm2 n [] s)),
+      (fun s => Triple.and_err (h2p n hn' s) (nv_at hnv hm2p n [] s)),
       (fun s => Triple.and_err (h3 n hn' s) (nv_at hnv hm3 n [] s)),
       (fun s => Triple.and_err (h4 n hn' s) (e4 n hn' s)),
       (fun s => Triple.and_err (h5 n hn' s) (e5 n hn' s)),
@@ -81,7 +84,7 @@ theorem checkA_err_of_stages {p : Prog} (hp : p.lookup "check_a" = some checkAL)
     all_goals (try simp only [St.setLoc_mem,
       St.setLocs_cons, St.setLocs_nil, St.setLoc_loc, Cmp.eval, ite_true, ite_false, Nat.reduceEqDiff,
       UInt64.toNat_zero, bne_iff_ne, ne_eq, Decidable.not_not] at *)
-    all_goals clear h1 h2 h3 h4 h5 h6 h7 e4 e5 e8 hp
+    all_goals clear h1 h2 h2p h3 h4 h5 h6 h7 e4 e5 e8 hp
     all_goals grind (gen := 30) (ematch := 40) [lang_grind, Locals.init_cons_zero]
 
 /-- **`check` with the mode word `1` or `3` fails only as `check_a` does.** -/
@@ -130,10 +133,11 @@ theorem entry1Verdict_of (h : Entry1StagesE) : Entry1Verdict checkerProg := by
     (fun _ => capStage_setG b pb sz hin.2.2.2 w) fun m hm => ⟨(), hm, fun _ _ h => h⟩
   have s2 := StageSpec.of_rel (X := Unit) (fun _ => _) (fun _ => _)
     (fun _ => pbStage_setG b pb sz hin.2.2.1 w) fun m hm => ⟨(), hm, fun _ _ h => h⟩
-  have s3 : StageSpec checkerProg "intern_reserved_pins"
-      (fun m => m = loadMemM b pb sz w ∧ CapsOK (loadMem b pb sz) ∧ PbPre pb)
+  have s2p := presizeStage b pb sz w (p := checkerProg) (by chk_lk) (by chk_lk) (by chk_lk)
+    (by chk_lk) (by chk_lk)
+  have s3 : StageSpec checkerProg "intern_reserved_pins" (PsPre b pb sz w)
       (fun _ => Q3 b (checkerRels b pb sz)) := StageSpec.of_rel (X := Unit) (fun _ => _) (fun _ => _)
-    (fun _ => irpStage_setG b pb sz hin.2.2.1 w) fun m hm => ⟨(), hm, fun _ _ h => h⟩
+    (fun _ => irpStage_ps b pb sz w hin.2.2.1) fun m hm => ⟨(), hm, fun _ _ h => h⟩
   have hla : checkerProg.lookup "check_a" = some checkAL := by chk_lk
   have hlc : checkerProg.lookup "check" = some checkL := by chk_lk
   have hmode : (loadMemM b pb sz w).glob MODE = w := by simp [loadMemM, Mem.setG]
@@ -152,8 +156,8 @@ theorem entry1Verdict_of (h : Entry1StagesE) : Entry1Verdict checkerProg := by
       intro s₁ c
       have := checkA_err_of_stages (Q0 := (· = loadMemM b pb sz w)) hla checkerProg_nv
         (by decide +kernel) (by decide +kernel) (by decide +kernel) (by decide +kernel)
-        (by decide +kernel) (by decide +kernel)
-        s1 s2 s3 s4 s5 s6 s7 (h.prelude b pb sz hin) (h.front b pb sz hin)
+        (by decide +kernel) (by decide +kernel) (by decide +kernel)
+        s1 s2 s2p s3 s4 s5 s6 s7 (h.prelude b pb sz hin) (h.front b pb sz hin)
         (h.fold b pb sz hin) c n hn s₁
       exact M.triple_of_run' (fun _ _ _ _ _ => trivial) fun s e hs hr' => by
         subst hs
