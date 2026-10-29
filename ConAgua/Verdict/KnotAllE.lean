@@ -95,7 +95,7 @@ end knot
 family's hypothesis), from the error knot. -/
 theorem KnotTopProg.coreStubsE {p : Prog} (hq : KnotTopProg p)
     (hnv : closedNV p L.Checker.nvFns = true) : CoreStubsE p where
-  inferTypeCore := inferTypeCore_refinesE p hq.entry (KnotAllProg.knotE_all hq.knot hnv)
+  inferTypeCore := inferTypeCore_refinesE p hq.entry (knot_all hq.knot) (KnotAllProg.knotE_all hq.knot hnv)
   ensureSortCore := ensureSortCore_refinesE p hq.entry hq.knot.infer.leaf (knot_all hq.knot)
     (KnotAllProg.knotE_all hq.knot hnv)
   isDefEqCore := L.Ind.isDefEqCore_stageE hq.entry (fun n => (knot_all hq.knot n).defeq)

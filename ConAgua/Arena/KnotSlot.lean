@@ -659,59 +659,9 @@ l_model iceE_spec (p : Prog) (hf : p.lookup "is_def_eq_core" = some isDefEqCoreL
 section entry
 variable (p : Prog) (hp : KnotEntryProg p)
 
-include hp in
-theorem inferTypeCore_spec (n : Nat) (s₀ : St) (vis dep e : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "infer_type_core" [vis, dep, e]
-    ⦃fun r s' => LocEq s' s₀ ∧
-      call1W p n "infer" [0, vis, dep, e] s₀.mem = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp.inferTypeCore]
-  simp only [callFn, inferTypeCoreL]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, callW_spec p n "infer"] <;>
-    finish [call1W_some]
-
-include hp in
-theorem isDefEqCore_spec (n : Nat) (s₀ : St) (vis dep a b : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "is_def_eq_core" [vis, dep, a, b]
-    ⦃fun r s' => LocEq s' s₀ ∧
-      call1W p n "defeq" [0, vis, dep, a, b] s₀.mem = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp.isDefEqCore]
-  simp only [callFn, isDefEqCoreL]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, callW_spec p n "defeq"] <;>
-    finish [call1W_some]
-
-include hp in
-theorem ensureSortCore_spec (n : Nat) (s₀ : St) (vis dep t : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "ensure_sort_core" [vis, dep, t]
-    ⦃fun r s' => LocEq s' s₀ ∧
-      call1W p n "ensure_sort" [0, vis, dep, t] s₀.mem = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp.ensureSortCore]
-  simp only [callFn, ensureSortCoreL]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, callW_spec p n "ensure_sort"] <;>
-    finish [call1W_some]
-
 theorem slotPre_zero {s₀ : St} {a₀ : AState} {dn : NIdx → Option ConLeche.Name} {vis : Word}
     {fe : IFEnv} {M : ModeMaps} (hS : CoreS dn s₀.mem a₀ vis fe M 0) :
     SlotPre s₀ a₀ dn vis fe M 0 0 := ⟨hS, by decide, by decide⟩
-
-include hp in
-/-- **`infer_type_core` refines `inferTypeCore`** at the verified mode and every fuel `F ≥ n`
-(`checkFuel` among them), from the `infer` slot at L-fuel `n`. -/
-@[refines_part ConRon.Arena.inferTypeCore "from InferSlot"]
-theorem inferTypeCore_refines (n : Nat) (hi : InferSlot p n) (F : Nat) (s₀ : St) (a₀ : AState)
-    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps) (dep e : Word)
-    (hF : n ≤ F) (hn : n ≤ 2 ^ 62) (hS : CoreS dn s₀.mem a₀ vis fe M 0) (he : HW e) :
-    CoreSpec p (n + 1) "infer_type_core" [vis, dep, e]
-      (inferTypeCore .verified fe F dep.toNat (decE e)) decH s₀ a₀ dn vis fe M 0 := by
-  apply L.M.triple_of_run
-  intro s r s' hs0 hrun
-  obtain ⟨hloc, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun
-    (inferTypeCore_spec p hp n s₀ vis dep e)
-  subst hs0
-  exact ⟨hloc, CoreSpec.of_call1W (hi F s a₀ dn vis fe M 0 0 dep e hF hn (slotPre_zero hS) he)
-    (fun r r' h => by simp only [decH, h]) hW⟩
 
 omit hp in
 /-- **`is_def_eq_core` refines `isDefEqCore`, both outcomes**, at the verified mode, from the
@@ -741,22 +691,6 @@ theorem isDefEqCore_refines (n : Nat) (hd : DefeqSlot p n) (F : Nat) (s₀ : St)
       (isDefEqCore .verified fe F dep.toNat (decE x) (decE y)) decBool s₀ a₀ dn vis fe M 0 :=
   RefE.coreSpec (iceE_spec p hp.isDefEqCore (n + 1) s₀ vis dep x y)
     (ice_ref p n hd F s₀ a₀ dn vis fe M dep x y hF hn hS hx hy)
-
-include hp in
-/-- `ensure_sort_core` refines `ensureSortCore` at the verified mode, from `ensure_sort`'s spec
-(`ensureSortCore_refines`, `InferLeaves.lean`, discharges it from the knot). -/
-theorem ensureSortCore_of_spec (n : Nat) (hs : EnsureSortSpec p n) (F : Nat) (s₀ : St)
-    (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps)
-    (dep t : Word) (hF : n ≤ F) (hn : n ≤ 2 ^ 62) (hS : CoreS dn s₀.mem a₀ vis fe M 0) (ht : HW t) :
-    CoreSpec p (n + 1) "ensure_sort_core" [vis, dep, t]
-      (ensureSortCore .verified fe F dep.toNat (decE t)) decLv s₀ a₀ dn vis fe M 0 := by
-  apply L.M.triple_of_run
-  intro s r s' hs0 hrun
-  obtain ⟨hloc, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun
-    (ensureSortCore_spec p hp n s₀ vis dep t)
-  subst hs0
-  exact ⟨hloc, CoreSpec.of_call1W (hs F s a₀ dn vis fe M 0 0 dep t hF hn (slotPre_zero hS) ht)
-    (fun r r' h => by simp only [decLv, h]) hW⟩
 
 end entry
 

@@ -67,11 +67,9 @@ theorem spineArg_run {β : Type} (r : CoreFnsA) (depth : Nat) (a dom : EIdx) (K 
     simp only [pure, StateT.pure, StateT.run] at h
     cases h; rfl
 
-/-- **`infer_spine_arg` is its model `inferSpineArgW`** (generated). -/
-l_model inferSpineArg_spec (p : Prog) (hq : SpineFProg p)
-  fns [hq.arg ↦ inferSpineArgW]
-  specs [callW_spec p n "infer", callW_spec p n "defeq_arg"]
-  grind [arena_grind] simp []
+/-- **`infer_spine_arg`'s unified model**: the `infer` slot and `defeq_arg` through their runs. -/
+l_model isaE_spec (p : Prog) (hf : p.lookup "infer_spine_arg" = some inferSpineArgL)
+  fns [hf ↦ isaE list] grind [arena_grind] simp [] unified
 
 /-- `defeq_arg` at every L fuel up to `n + 1`. -/
 theorem defeqArg_any (p : Prog) (hp : InferLeafProg p) (hkp : KnotProg p) (he : IsEagerReduceH p) :
@@ -92,7 +90,44 @@ theorem defeqArg_any (p : Prog) (hp : InferLeafProg p) (hkp : KnotProg p) (he : 
       exact defeqArg_refines p hp k he (hk k (by omega)).defeq hde F s₀ a₀ dn vis fe M eb mode d a ta ty
         (by omega) (by omega) hs ha hta hty
 
-/-- **`infer_spine_arg` refines the argument check** (`inferSpineArgT`) at the knot. -/
+/-- **`infer_spine_arg` refines the argument check** (`inferSpineArgT`) at the knot, both
+outcomes: the argument's type (the `infer` slot), `defeq_arg`'s, a mismatch rejects. -/
+theorem isa_ref (p : Prog) (hp : InferLeafProg p) (hkp : KnotProg p) (he : IsEagerReduceH p)
+    (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState)
+    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps)
+    (eb mode d a dom : Word) (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (ha : HW a) (hdom : HW dom) :
+    RefE (InferArgG p n) (isaE p (n + 1) s₀.mem mode vis d a dom)
+      (inferSpineArgT (coreKnot (decMode mode) fe id F) d.toNat (decE a) (decE dom)) a₀
+      (CorePost (fun _ => ()) dn s₀.mem vis fe M eb ResH) := by
+  simp only [isaE, inferSpineArgT]
+  rcases c1 : callE p n "infer" [mode, vis, d, a] s₀.mem with e1 | ⟨r₁, m₁⟩
+  · exact RefE.bind_left fun hG => CoreSpecE.of_callE ((hG.knot n (Nat.le_refl _)).infer F s₀ a₀ dn
+      vis fe M eb mode d a hF hn hs ha) c1
+  have h₁ := CoreSpec.of_callW ((hk n (Nat.le_refl _)).infer F s₀ a₀ dn vis fe M eb mode d a hF hn hs
+    ha) (callW_of_callE c1)
+  refine RefE.bind_core (w := id) h₁ (fun M₁ hS₁ _ => ?_)
+  simp only [isaE.k_infer]
+  have hs₁ : SlotPre ⟨m₁, Locals.init []⟩ _ dn vis fe M₁ eb mode := ⟨hS₁, hs.mode4, hs.eb_mode⟩
+  rcases c2 : callE p n "defeq_arg" [mode, vis, d, a, r₁.headD 0, dom] m₁ with e2 | ⟨r₂, m₂⟩
+  · exact RefE.bind_left fun hG => CoreSpecE.of_callE (s₀ := ⟨m₁, Locals.init []⟩)
+      (hG.defeqArg n hk hG.knot F _ _ dn vis fe M₁ eb mode d a (r₁.headD 0) dom hF hn hs₁ ha h₁.2.2.2
+        hdom) c2
+  have h₂ := CoreSpec.of_callW (defeqArg_any p hp hkp he n hk F ⟨m₁, Locals.init []⟩ _ dn vis fe M₁ eb
+    mode d a (r₁.headD 0) dom hF hn hs₁ ha h₁.2.2.2 hdom) (callW_of_callE c2)
+  refine RefE.bind_core (w := id) h₂ (fun M₂ hS₂ _ => ?_)
+  simp only [isaE.k_defeq_arg]
+  by_cases h0 : r₂.headD 0 = 0
+  · rw [ite_eq_left h0]
+    have hdb : decBool r₂ = false := by simp only [decBool, h0]; rfl
+    simp only [hdb, Bool.not_false, ↓reduceIte]
+    exact fun _ => ErrClaim.fail _ _ rfl
+  rw [ite_eq_right h0]
+  have hbt : decBool r₂ = true := by simp only [decBool, bne_iff_ne]; exact h0
+  simp only [hbt, Bool.not_true, Bool.false_eq_true, ↓reduceIte]
+  exact RefE.ret rfl (CorePost.ret hS₂ rfl (by unfold ResH HW; decide))
+
+/-- **`infer_spine_arg` refines the argument check** (`inferSpineArgT`) at the knot (`isa_ref`'s ok
+half). -/
 @[refines_part ConRon.Arena.inferSpine "argument check"]
 theorem inferSpineArg_refines (p : Prog) (hp : InferLeafProg p) (hkp : KnotProg p)
     (hq : SpineFProg p) (he : IsEagerReduceH p) (n : Nat) (hk : KnotUpTo p n) (F : Nat)
@@ -101,30 +136,9 @@ theorem inferSpineArg_refines (p : Prog) (hp : InferLeafProg p) (hkp : KnotProg 
     (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (ha : HW a) (hdom : HW dom) :
     CoreSpec p (n + 1) "infer_spine_arg" [mode, vis, d, a, dom]
       (inferSpineArgT (coreKnot (decMode mode) fe id F) d.toNat (decE a) (decE dom)) (fun _ => ())
-      s₀ a₀ dn vis fe M eb := by
-  apply L.M.triple_of_run
-  intro s r s' hs0 hrun
-  obtain ⟨hloc, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun
-    (inferSpineArg_spec p hq (n + 1) s₀ mode vis d a dom)
-  subst hs0
-  refine ⟨hloc, ?_⟩
-  rw [inferSpineArgW.arm1] at hW
-  obtain ⟨r₁, m₁, hc1, hW⟩ := callW_cases rfl hW
-  rw [inferSpineArgW.k_infer.arm1] at hW
-  obtain ⟨r₂, m₂, hc2, hW⟩ := callW_cases rfl hW
-  have h0 : r₂.headD 0 ≠ 0 := fun h => by rw [inferSpineArgW.k_defeq_arg.abort1 (hc1 := h)] at hW; cases hW
-  rw [inferSpineArgW.k_defeq_arg.arm1 (hc1 := h0)] at hW
-  obtain ⟨hr, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
-  have h₁ := CoreSpec.of_callW ((hk n (Nat.le_refl _)).infer F s a₀ dn vis fe M eb mode d a hF hn hs ha) hc1
-  refine coreRef_bind h₁ (fun M₁ hS₁ => ?_)
-  have h₂ := CoreSpec.of_callW (defeqArg_any p hp hkp he n hk F ⟨m₁, Locals.init []⟩ _ dn vis fe M₁ eb
-    mode d a (r₁.headD 0) dom hF hn ⟨hS₁, hs.mode4, hs.eb_mode⟩ ha h₁.2.2.2 hdom) hc2
-  refine coreRef_bind h₂ (fun M₂ hS₂ => ?_)
-  have hbt : decBool r₂ = true := by simp only [decBool, bne_iff_ne]; exact h0
-  rw [hbt]
-  simp only [Bool.not_true, Bool.false_eq_true, ↓reduceIte]
-  exact ⟨trivial, ⟨M₂, hS₂, KeptAll.refl _ _, StackKept.refl _⟩, rfl, by
-    unfold ResH HW; rw [← hr]; decide⟩
+      s₀ a₀ dn vis fe M eb :=
+  RefE.coreSpec (isaE_spec p hq.arg (n + 1) s₀ mode vis d a dom)
+    (isa_ref p hp hkp he n hk F hF hn s₀ a₀ dn vis fe M eb mode d a dom hs ha hdom)
 
 /-! ## `infer_spine`: the loop as a named block -/
 
