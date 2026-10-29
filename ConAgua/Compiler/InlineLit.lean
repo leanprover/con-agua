@@ -12,8 +12,10 @@ what it evaluated (≈ 9 MB per function; all of `checkerProg` at once went past
 modules that read the compiled program (`nrt_lit`, `skt_lit`, `asm_lit`, `prog_wf`) would each
 evaluate it again. So the inliner's output is a literal, checked one function at a time:
 
-* `idx_lit name : p` declares `name : NTree`, the literal of `Prog.idxTree p`, and
-  `name_eq : Prog.idxTree p = some name` (one check, names only).
+* `idx_lit name : p` declares `name : NTree`, the literal of `Prog.idxTree p` (computed by
+  compiled code); `idx_lit_eq name : p`, where the correctness theorem needs it,
+  `name_eq : Prog.idxTree p = some name` (one kernel check over the names). The literals below
+  hold for any tree.
 * `inl_round_fns name : S t p lo hi` declares, for the functions `lo ≤ i < hi` of `p`,
   `name.f<i> : FunDecl`, the literal of `inlFn (envOf S t p) fdᵢ` (computed by compiled code; the
   function's own declaration term if inlining does not change it), and
@@ -54,10 +56,22 @@ syntax (name := idxLit) "idx_lit " ident " : " term:max : command
     let pE ← elabTermEnsuringType progS (mkConst ``Prog)
     synthesizeSyntheticMVarsNoPostponing
     let pE ← instantiateMVars pE
+    let some t ← evalOptNTree (mkApp (mkConst ``Prog.idxTree) pE) | throwError "idx_lit: a name occurs twice"
+    addAndCompile (.defnDecl (mkDefinitionValEx name [] (mkConst ``NTree) (ntreeToExpr t) .abbrev .safe []))
+
+/-- `idx_lit_eq name : p` (after `idx_lit name : p`): `name_eq : Prog.idxTree p = some name`, one
+kernel check over the names. Only the correctness theorem needs it, not the literals. -/
+syntax (name := idxLitEq) "idx_lit_eq " ident " : " term:max : command
+
+@[command_elab idxLitEq] unsafe def elabIdxLitEq : CommandElab := fun stx => do
+  let `(idx_lit_eq $n:ident : $progS) := stx | throwUnsupportedSyntax
+  let name := (← getCurrNamespace) ++ n.getId
+  liftTermElabM <| withTheReader Core.Context (fun c => { c with maxRecDepth := max c.maxRecDepth 100000 }) do
+    let pE ← elabTermEnsuringType progS (mkConst ``Prog)
+    synthesizeSyntheticMVarsNoPostponing
+    let pE ← instantiateMVars pE
     let lhs := mkApp (mkConst ``Prog.idxTree) pE
-    let some t ← evalOptNTree lhs | throwError "idx_lit: a name occurs twice"
     let treeTy := mkConst ``NTree
-    addAndCompile (.defnDecl (mkDefinitionValEx name [] treeTy (ntreeToExpr t) .abbrev .safe []))
     let optTy := mkApp (mkConst ``Option [0]) treeTy
     let rhs := mkApp2 (mkConst ``Option.some [0]) treeTy (mkConst name)
     addDecl (thm (name.appendAfter "_eq") (mkApp3 (mkConst ``Eq [1]) optTy lhs rhs)
