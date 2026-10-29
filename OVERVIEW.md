@@ -306,34 +306,34 @@ the checker with `make`, runs both checkers in interleaved rounds and
 replaces them in this section.
 
 <!-- perf-overview: begin init -->
-On `Init`, on one thread, con-agua takes **1.06× con-ron's wall time** and executes **1.40× its instructions** (3.03 instructions per cycle against con-ron's 2.32).
+On `Init`, on one thread, con-agua takes **1.01× con-ron's wall time** and executes **1.31× its instructions** (2.96 instructions per cycle against con-ron's 2.31).
 
 | on `Init`, one thread | con-agua | con-ron | con-agua ÷ con-ron |
 |---|---:|---:|---:|
-| instructions (`perf stat`) | 257.7 G | 184.5 G | 1.40 |
-| instructions per cycle | 3.03 | 2.32 |  |
-| cycles (user + kernel) | 84.2–86.2 G | 79.3–80.5 G | 1.06 |
-| wall | 19.0–19.5 s | 17.9–18.1 s | 1.06 |
-| peak RSS | 743–744 MB | 491–496 MB | 1.51 |
+| instructions (`perf stat`) | 241.2 G | 184.5 G | 1.31 |
+| instructions per cycle | 2.96 | 2.31 |  |
+| cycles (user + kernel) | 80.3–83.2 G | 79.6–80.2 G | 1.01 |
+| wall | 18.2–18.8 s | 18.0–18.1 s | 1.01 |
+| peak RSS | 741–744 MB | 490–492 MB | 1.51 |
 
-(Master `54018587`, 2026-10-28, `scripts/perf-overview.py`: 4 interleaved rounds of each checker under `perf stat`; the ranges are over the rounds; the ratios compare the minima, for instructions the medians; load 2–2 on 96 cores.)
+(Master `11690fd5`, 2026-10-29, `scripts/perf-overview.py`: 4 interleaved rounds of each checker under `perf stat`; the ranges are over the rounds; the ratios compare the minima, for instructions the medians; load 2–6 on 96 cores.)
 <!-- perf-overview: end init -->
 
 **Threads** (§9): `--jobs=N` checks phase B on `N` threads; `Init` has
 57 292 pending groups.
 
 <!-- perf-overview: begin threads -->
-Master `54018587`, 2026-10-28, `scripts/perf-overview.py`: `Init` at each `--jobs`, 3 interleaved rounds, the median wall time, peak RSS the largest `ru_maxrss`; load 2–5 on 96 cores:
+Master `11690fd5`, 2026-10-29, `scripts/perf-overview.py`: `Init` at each `--jobs`, 3 interleaved rounds, the median wall time, peak RSS the largest `ru_maxrss`; load 6–10 on 96 cores:
 
 | `--jobs` | con-agua wall | peak RSS | con-ron wall | peak RSS | wall ÷ |
 |---:|---:|---:|---:|---:|---:|
-| 1 | 19.62 s | 744 MB | 17.94 s | 496 MB | 1.09 |
-| 2 | 11.77 s | 1001 MB | 10.20 s | 542 MB | 1.15 |
-| 4 | 8.43 s | 1001 MB | 6.34 s | 613 MB | 1.33 |
-| 8 | 5.48 s | 1001 MB | 4.21 s | 775 MB | 1.30 |
-| 16 | 4.47 s | 1001 MB | 3.19 s | 890 MB | 1.40 |
+| 1 | 18.36 s | 744 MB | 18.04 s | 492 MB | 1.02 |
+| 2 | 10.90 s | 1001 MB | 10.27 s | 543 MB | 1.06 |
+| 4 | 7.37 s | 1001 MB | 6.37 s | 613 MB | 1.16 |
+| 8 | 4.65 s | 1001 MB | 4.26 s | 781 MB | 1.09 |
+| 16 | 3.62 s | 1001 MB | 3.24 s | 885 MB | 1.11 |
 
-con-agua's speedup over one thread is 1.7×, 2.3×, 3.6× and 4.4× at 2, 4, 8 and 16 threads (con-ron: 1.8×, 2.8×, 4.3×, 5.6×).
+con-agua's speedup over one thread is 1.7×, 2.5×, 3.9× and 5.1× at 2, 4, 8 and 16 threads (con-ron: 1.8×, 2.8×, 4.2×, 5.6×).
 <!-- perf-overview: end threads -->
 
 con-agua's threaded peak memory does not grow with the number of threads: it
