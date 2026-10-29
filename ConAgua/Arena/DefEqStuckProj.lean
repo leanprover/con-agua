@@ -323,7 +323,7 @@ l_model ppE_spec (p : Prog) (hf : p.lookup "defeq_proj_pair" = some defeqProjPai
   fns [hf ↦ ppE list]
   specs [ldpr_specE p hl n]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] unified
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] unified flat
 
 section ppRuns
 variable (mode : ConLeche.CheckMode) (r : CoreFnsA) (fe : IFEnv) (depth : Nat) (a b : EIdx)
@@ -423,10 +423,8 @@ theorem pp_ref (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (n : Nat)
   | succ k =>
   have H := ldpr_refC p hq hc k (hk.mono (by omega)) F defeqLoopFuel (by omega)
     (by unfold defeqLoopFuel; omega) (by omega) s₀ a₀ dn vis fe M eb mode d x1 x2 x3 y3 hs hx1 hx3 hy3 hd
-  simp only [ppE.k_lazy_delta_proj_reduction]
-  rcases h : ldprE p (k + 1) s₀.mem mode vis d x1 x2 x3 y3 with e | ⟨r₁, m₁⟩
-  · rw [h] at H; exact fun hG => H (hG.mono (by omega))
-  rw [h] at H; exact H
+  exact RefE.tailMap_eq (fun _ => rfl) (fun _ => rfl) (fun hG => hG.mono (by omega)) rfl
+    (fun _ _ _ h => h) H
 
 /-- **`defeq_proj_pair` refines `defeqProjPair`** at the knot (`pp_ref`'s ok half). -/
 @[refines ConRon.Arena.defeqProjPair]

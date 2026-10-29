@@ -76,8 +76,8 @@ l_model checkDeclAxiom_specE (p : Prog) (hX : AxProg p)
     callW_spec p n "of_reduce_ax_ok"]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
-  heartbeats 400000 simp [] unified
-  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
+  heartbeats 400000 unified
+  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem] flat
 
 /-- What the axiom arm gives besides the twin's environment `fe'` (from `m`): the stage relation
 over the result word, the core's memos, the growth. -/

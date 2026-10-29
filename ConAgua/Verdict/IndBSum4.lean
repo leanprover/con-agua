@@ -33,8 +33,8 @@ l_model sctsE_spec (p : Prog) (hP : SumProg p) (hV : ValProg p)
   specs [ctorE_spec p hP hV n, rec2_specW p hP.ha n hP.hrec2, slCons_specW p hP.ha hP.hc hP.hsc n]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
-  heartbeats 4000000 simp [Cmp.evalW, Cmp.eval] unified
-  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
+  heartbeats 4000000 unified
+  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem] flat
 
 /-- What `check_sum_ctors` gives besides the twin's constructors and sorts `x` (from `m`): the
 stage invariant, the growth, the two slices `r = [cO, cL, sO, sL]` decoded below the top,

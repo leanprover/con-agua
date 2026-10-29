@@ -12,8 +12,7 @@ The three families' error halves of the knot's slots one level up, put together:
 
 * the `infer`/`infer_io` slots (`inferSlots_stepE`, `InferKnotE.lean`), over `InferCalleesE`:
   the verdict closure and `infer_proj`'s claim (`inferProj_refinesE'`);
-* the `whnf_core`/`whnf` slots (`whnfSlotsE_of`, `WhnfKnotE.lean`), over `defeq_list`'s claim
-  (`defeqList_refinesE`, `DefEqLoopsE.lean`);
+* the `whnf_core`/`whnf` slots (`whnfSlotsE_of`, `WhnfKnotE.lean`);
 * the `defeq` slot (`KnotAllProg.defeqSlotE_all`, `DefEqAllE.lean`), over the whnf family's two
   claims (`DefeqWhnfE`), each from its `Whnf*E.lean` proof.
 
@@ -41,11 +40,6 @@ theorem KnotAllProg.inferCE : InferCalleesE p :=
       ⟨coreDen_of, findProj_refines p hq.projp, projFound p hq.projp, erecKept_of hq.hcl, hq.instLP,
         erecKeptProj_of hq.hcl⟩ hnv⟩
 
-include hq in
-/-- **The `whnf` slots' callee's error claim** (`WhnfCalleesE`: `defeq_list`'s). -/
-theorem KnotAllProg.whnfCE : WhnfCalleesE p :=
-  ⟨defeqList_refinesE p hq.iotaRec.toIotaProg'⟩
-
 include hq hnv in
 /-- **The whnf family's two error claims the `defeq` family takes** (`DefeqWhnfE`). -/
 theorem KnotAllProg.defeqWhnfE : DefeqWhnfE p where
@@ -61,7 +55,7 @@ include hq hnv in
 error knot up to `n`. -/
 @[refines_part ConRon.Arena.coreKnot "the five slots (step, verdicts)"]
 theorem KnotAllProg.knotStepE : KnotStepE p := fun n hk hkE =>
-  have hW := whnfSlotsE_of hq hnv (KnotAllProg.whnfCE hq) n hk hkE
+  have hW := whnfSlotsE_of hq hnv n hk hkE
   have hI := inferSlots_stepE p hq.infer (KnotAllProg.inferC hq) (KnotAllProg.inferCE hq hnv) n hk hkE
   ⟨hW.1, hW.2, hI.1, hI.2,
     KnotAllProg.defeqSlotE_all hq (KnotAllProg.defeqWhnfE hq hnv) hnv n hk hkE⟩

@@ -42,7 +42,7 @@ l_model soa_spec (p : Prog) (hP : IndPartsProg p)
     (hp : p.lookup "block_rec_split_own_aux" = some blockRecSplitOwnAux)
   fns [hp ↦ soaW]
   specs [slCons_specW p hP.alloc hP.copy hP.cons n]
-  grind [arena_grind] simp [rdW_eq]
+  grind [arena_grind] flat
 
 /-! ## `block_rec_want_aux_names` -/
 
