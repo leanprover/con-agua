@@ -318,19 +318,6 @@ theorem ite_ite_neg {α : Type} {c d : Prop} [Decidable c] [Decidable d] {x y : 
   · rw [ite_eq_left hc, ite_eq_right (fun hd => h ⟨hc, hd⟩)]
   · rw [ite_eq_right hc]
 
-/-- A tail call that re-lists the callee's answer word, both outcomes. -/
-theorem relist1 {G G' : Prop} {x : Except Err (List Word × Mem)}
-    {K : Except Err (List Word × Mem) → Except Err (List Word × Mem)}
-    (hK1 : ∀ e, K (.error e) = .error e)
-    (hK2 : ∀ v : List Word × Mem, K (.ok v) = .ok ([v.1.headD 0], v.2))
-    {T : AM Bool} {a₀ : AState} {dn : NIdx → Option ConLeche.Name} {m : Mem} {vis : Word}
-    {fe : IFEnv} {M : ModeMaps} {eb : Word}
-    (hG : G → G') (h : RefE G' x T a₀ (CorePost decBool dn m vis fe M eb ResH)) :
-    RefE G (K x) T a₀ (CorePost decBool dn m vis fe M eb ResH) :=
-  RefE.tail_eq hK1 hK2 hG rfl
-    (fun v y a' (h : CorePost decBool dn m vis fe M eb ResH v y a') =>
-      ⟨h.after, h.res.trans (by simp only [decBool, List.headD_cons]), h.valid⟩) h
-
 /-- **`defeq_stuck` refines `defeqStuck`, both outcomes**: the errors are the arms'. -/
 theorem ds_ref (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : StuckCallees p)
     (n : Nat) (hk : KnotUpTo p n) (F : Nat) (s₀ : St) (a₀ : AState)
@@ -381,7 +368,7 @@ theorem ds_ref (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : StuckCalle
       a b 0 a (rb.tail.headD 0) l (by omega) (by omega) hs ha hb ha hfw
       (by rw [← hhda]; exact c1.1) hva
     rw [hfo, show ((0 : Word) != 0) = false from rfl] at H
-    exact relist1 (fun _ => rfl) (fun _ => rfl) (fun hG => hG.mono (by omega)) H
+    exact RefE.tail_relist1 (fun _ => rfl) (fun _ => rfl) (fun hG => hG.mono (by omega)) H
   have e1 := ite_ite_neg (x := dsE.k_stuck_rest p (strE p n s₀.mem mode vis d a b 0 a (rb.tail.headD 0)))
     (y := dsE.j1 p n mode vis d a b (ra.headD 0) (ra.tail.headD 0) (ra.tail.tail.headD 0) (rb.headD 0)
       (rb.tail.headD 0) (rb.tail.tail.headD 0) s₀.mem) c1
@@ -401,7 +388,7 @@ theorem ds_ref (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : StuckCalle
       a b 1 b (ra.tail.headD 0) l (by omega) (by omega) hs ha hb hb hfw
       (by rw [← hhdb]; exact c2.2) hvb
     rw [hfo, show ((1 : Word) != 0) = true from rfl] at H
-    exact relist1 (fun _ => rfl) (fun _ => rfl) (fun hG => hG.mono (by omega)) H
+    exact RefE.tail_relist1 (fun _ => rfl) (fun _ => rfl) (fun hG => hG.mono (by omega)) H
   by_cases c3 : ra.headD 0 = 4 ∧ rb.headD 0 = 4
   · rw [ite_eq_left c3.1, ite_eq_right (fun h => c2 ⟨c3.1, h⟩), ite_eq_left c3.2]
     obtain ⟨f, x, rfl⟩ := tagV_app (hta ▸ c3.1)
@@ -410,7 +397,7 @@ theorem ds_ref (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : StuckCalle
     cases n with
     | zero => exact RefE.of_cls0 (e := .outOfFuel) rfl
     | succ k =>
-    exact relist1 (fun _ => rfl) (fun _ => rfl) (fun hG => hG.mono (by omega))
+    exact RefE.tail_relist1 (fun _ => rfl) (fun _ => rfl) (fun hG => hG.mono (by omega))
       (sa_ref p hq hi hc k (hk.mono (by omega)) F s₀ a₀ dn vis fe M eb mode d a b
         (by omega) (by omega) hs ha hb)
   generalize hJ : dsE.j2 p n mode vis d a b (ra.headD 0) (ra.tail.headD 0) (ra.tail.tail.headD 0)
@@ -426,7 +413,7 @@ theorem ds_ref (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : StuckCalle
   cases n with
   | zero => exact RefE.of_cls0 (e := .outOfFuel) rfl
   | succ k =>
-  exact relist1 (fun _ => rfl) (fun _ => rfl) (fun hG => hG.mono (by omega))
+  exact RefE.tail_relist1 (fun _ => rfl) (fun _ => rfl) (fun hG => hG.mono (by omega))
     (dr_ref p hq hi hc k (hk.mono (by omega)) F s₀ a₀ dn vis fe M eb mode d a b _ _ _
       _ _ _ va vb (by omega) (by omega) hs ha hb hva hvb (viewW_of hvra) (viewW_of hvrb) c1 c2 c3)
 
