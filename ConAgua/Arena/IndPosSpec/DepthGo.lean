@@ -810,13 +810,13 @@ theorem phsW_ok (k : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis
     simpa using hrun
   · obtain ⟨hK1, hK2, hK3, hK4, hK5⟩ := hK
     refine ⟨?_, ?_, fun idx hidx => ?_, fun idx hidx => ?_⟩
-    · rw [hK2]; exact hg1.1
-    · rw [hK3]; exact hg1.2.1
+    · rw [hK2]; exact hg1.iw
+    · rw [hK3]; exact hg1.er
     · have hq : idx < q.toNat := by
         have : q.toNat = iwTop m := by simp only [iwTop, hqd]
         omega
-      rw [hK1 idx (Or.inl hq)]; exact hg1.2.2.1 idx hidx
-    · rw [hK5]; exact hg1.2.2.2 idx hidx
+      rw [hK1 idx (Or.inl hq)]; exact hg1.iwGet idx hidx
+    · rw [hK5]; exact hg1.erGet idx hidx
   · show q.toNat + nn.toNat ≤ iwTop m2
     rw [hK.2.1, htop1]; exact Nat.le_refl _
 
@@ -1058,7 +1058,7 @@ theorem pccW_ok (k : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis
       have hg12 := hg1.trans hg2
       have hdec2 : decHL m2 no.toNat nl.toNat = some names := by rw [decHL_grow hg12 hit]; exact hdec
       obtain ⟨a3, hrun3, hM3, hS3, hg3⟩ := rpConstW_ok k dn fe vis m2 m3 a2 no nl us 0 nn (r2.tail.headD 0) r3
-        nn.toNat names mp0 hrc hS2 htlt hus hdec2 hno (by have := hg12.1; omega) rfl hnn
+        nn.toNat names mp0 hrc hS2 htlt hus hdec2 hno (by have := hg12.iw; omega) rfl hnn
         (by simp; omega) hM2
       refine ⟨some (decE r3), a3, ?_, hS3, hg12.trans hg3, ?_, ∅, hM3⟩
       · simp only [ConRon.Arena.nestCanonCrest, StateT.run_bind]

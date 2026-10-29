@@ -205,14 +205,14 @@ theorem natOpRec_ok (p : Prog) (hx : HoistExt p) (n : Nat) (m m₁ : Mem) (a : A
   rcases h2 : callW p k "nat_op_names" [] ma with _ | ⟨r2, mb⟩ <;> rw [h2] at h
   · simp [hNatOpRecW.k_nat_op_names] at h
   rw [hNatOpRecW.k_nat_op_names.arm1] at h
-  obtain ⟨_, hS2⟩ := natOpNames_call hx k ma r2 mb hS1.1.2.2 h2
+  obtain ⟨_, hS2⟩ := natOpNames_call hx k ma r2 mb hS1.1.ok h2
   cases ha : hSliceHasW k mb (r1.headD 0) (r1.tail.headD 0) w 0 with
   | none => rw [ha] at h; simp [hNatOpRecW.k_slice_has] at h
   | some av =>
   rw [ha, hNatOpRecW.k_slice_has.arm1] at h
   rcases hb : hSliceHasW k mb (r2.headD 0) (r2.tail.headD 0) w 0 with _ | bv <;> rw [hb] at h
   · simp [hNatOpRecW.k_slice_has_2] at h
-  have ha' := hS1.has hS2.1.2.1 ha
+  have ha' := hS1.has hS2.1.grow ha
   have hb' := hS2.has (IWGrow.refl mb) hb
   simp only [hS1.1.pinW_eq] at hb'
   have hc1 := contains_map_decI_iff (k := .name) (hx := hw) (ws := [pinW m 22, pinW m 23, pinW m 24, pinW m 25,

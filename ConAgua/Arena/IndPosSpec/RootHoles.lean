@@ -277,7 +277,7 @@ theorem rhGoW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word) 
     have hg12 := hg1.trans hg2
     -- the new hole, in `m2`
     have hgk : ∀ i < 4, (m2.arr64 IW)[key.toNat + i]? = [w, lv, po, pl][i]? := fun i hi => by
-      rw [hg2.2.2.1 _ (by omega)]; exact hget1 i (by simpa using hi)
+      rw [hg2.iwGet _ (by omega)]; exact hget1 i (by simpa using hi)
     have hdk : decNK m2 key.toNat = some ⟨names[j.toNat], decI lv, params⟩ := by
       rw [← hwd]
       refine decNK_of_words (hgk 0 (by omega)) hwH (hgk 1 (by omega)) hlv (hgk 2 (by omega))
@@ -322,7 +322,7 @@ theorem rhGoW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word) 
         · exact (hin.agree hset).2
       · obtain ⟨wi, hwi, hdi, hini⟩ := hH i (by omega)
         refine ⟨wi, ?_, ?_, ?_⟩
-        · rw [set64IW_get, ite_eq_right (by omega), hg12.2.2.1 _ (by omega)]; exact hwi
+        · rw [set64IW_get, ite_eq_right (by omega), hg12.iwGet _ (by omega)]; exact hwi
         · rw [(hini.agree hRm).1]; exact hdi
         · exact (hini.agree hRm).2.mono fun x hx => ⟨Nat.lt_of_lt_of_le hx.1 (by omega), hx.2⟩
     have hOut : ∀ {o l : Nat}, (∀ j < l, o + j < q.toNat) → ∀ j < l, OutR q.toNat nl.toNat (iwTop m) (o + j) :=
@@ -626,7 +626,7 @@ theorem haW_ok (k : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis 
   obtain ⟨hplen, hpb, hpH⟩ := hpr
   rcases hap : appendW (k + 1) m1 (r1.headD 0) (r1.tail.headD 0) po pl with _ | ⟨r2, m2⟩ <;> rw [hap] at h; · simp [haK2] at h
   obtain ⟨hS2, hg2, hr20, hr21, ht2, hw1, hw2⟩ := appendW_stage hap hS1 (by rw [hl1]; exact hb1)
-    (by have := hg1.1; omega)
+    (by have := hg1.iw; omega)
   rw [hl1] at hr21 hw1 ht2 hw2
   have hsz2 : iwTop m2 < 2 ^ 64 := Nat.lt_of_le_of_lt hS2.iw.iw hS2.iw.iwSize
   have hlen := c.rootHoles.length
@@ -652,7 +652,7 @@ theorem haW_ok (k : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis 
         have := hw2 (idx.toNat - c.rootHoles.length) (by omega)
         rw [show iwTop m1 + c.rootHoles.length + (idx.toNat - c.rootHoles.length) = iwTop m1 + idx.toNat by omega]
           at this
-        rw [this, hg1.2.2.1 _ (by omega)]; exact hw
+        rw [this, hg1.iwGet _ (by omega)]; exact hw
       obtain ⟨e, hni'⟩ := hni.grow (hg1.trans hg2)
       have hr' : idx.toNat - c.rootHoles.length < prog.length := by omega
       rw [rdW_of_get' hx hw', ← hidx, List.getElem?_append_right (by omega), List.getElem?_eq_getElem hr']

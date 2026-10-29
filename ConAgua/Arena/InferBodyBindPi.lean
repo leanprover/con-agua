@@ -79,18 +79,18 @@ theorem pisOut_ref (p : Prog) (hb : InferBodyProg p) (hcap : BStkCap) (dn : NIdx
           rcases hc with rfl | rfl
           · exact hdu
           · exact hdv)
-        (fun n hn => by simp [LNodeView.nchildren] at hn) h₁.1
-      rw [h₁.2.2.1] at hd; exact hd
+        (fun n hn => by simp [LNodeView.nchildren] at hn) h₁.run
+      rw [h₁.res] at hd; exact hd
     have hK₁ := BKept.of_imax him
     have hsz := hcap _ _ _ _ _ _ _ hS
     have hB₁ : BStkR m₁ lo K ws := hB.keep hK₁ htop hsz
     have hwl₁ : ∀ (i : Nat) (h : i < ws.size), lvNodeW m₁ ws[i] ≠ [] := by
-      obtain ⟨_, _, _, hT₁⟩ := h₁.2.1
+      obtain ⟨_, _, _, hT₁⟩ := h₁.after
       exact fun i hi => lvNodeW_mono hT₁.pool.lvl (hws i hi) (hwl i hi)
     have htop₁ : lo.toNat + K.toNat ≤ (bTop m₁).toNat := by rw [hK₁.1]; exact htop
-    obtain ⟨M₁, hS₁, hK₁', hSt₁⟩ := h₁.2.1
-    refine RefE.bind_right (by rw [AM.run_of_ok _ _ h₁.1, h₁.2.2.1]) ?_
-    exact (ih m₁ _ M₁ (n - 1) (r₁.headD 0) hS₁ h₁.2.2.2 hdv₁ hwl₁ hB₁ (by omega) htop₁).mono
+    obtain ⟨M₁, hS₁, hK₁', hSt₁⟩ := h₁.after
+    refine RefE.bind_right (by rw [AM.run_of_ok _ _ h₁.run, h₁.res]) ?_
+    exact (ih m₁ _ M₁ (n - 1) (r₁.headD 0) hS₁ h₁.resOk hdv₁ hwl₁ hB₁ (by omega) htop₁).mono
       fun _ _ _ h => ⟨⟨CoreAfter.comp hK₁' hSt₁ h.1.after, h.1.res, h.1.valid⟩, h.2⟩
 
 /-- **`infer_pis_leaf` refines `inferPisLeaf`, both outcomes**, at the knot: the residual

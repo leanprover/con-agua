@@ -292,10 +292,10 @@ theorem rule_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f s d : Word) (D
   obtain ⟨a2, pm2, fire', hrun2, hD2, hP2, hcp2, hfr2, htk2, hg2, hts2, hfw, hlo⟩ :=
     fire_rel p hp n m₁ a1 pm1 f s D rl.fire u m₂ hD1 hP1 hsz1 hts1 hsrc hsD (by rw [hT1]; exact hDt) hcb
   rw [hT1] at hlo
-  have hsz2 : (m₂.arr64 EREC).size = (m.arr64 EREC).size := by rw [hg2.2.2, hE1]
-  have hT12 : erecTop m ≤ erecTop m₂ := by rw [← hT1]; exact hg2.1
+  have hsz2 : (m₂.arr64 EREC).size = (m.arr64 EREC).size := by rw [hg2.size, hE1]
+  have hT12 : erecTop m ≤ erecTop m₂ := by rw [← hT1]; exact hg2.top
   have key2 : ∀ i < erecTop m, (m₂.arr64 EREC)[i]? = (m.arr64 EREC)[i]? := fun i hi => by
-    rw [hg2.2.1 i (by rw [hT1]; exact hi), hE1]
+    rw [hg2.get i (by rw [hT1]; exact hi), hE1]
   -- the right-hand side
   have hd8 : hd? (erecP m₂) (s + 8).toNat = some rl.rhs := by
     have e8' : (s + 8).toNat = s.toNat + 8 := by rw [UInt64.toNat_add]; simp; omega

@@ -89,7 +89,7 @@ theorem lamsInst_refines (p : Prog) (hp : LamsProg p) (hi : Inst1OK p) (n : Nat)
   obtain ⟨r₂, m₂⟩ := q
   rw [hc2, linW.k_inst1.arm1] at hW
   have e₂ := CoreSpec.of_callW (s₀ := ⟨m₁, Locals.init []⟩)
-    (hi n _ _ dn vis fe M₁ eb body₁ (r₁.headD 0) 0 hS₁ hb₁ e₁.2.2.2) hc2
+    (hi n _ _ dn vis fe M₁ eb body₁ (r₁.headD 0) 0 hS₁ hb₁ e₁.resOk) hc2
   rw [toNat_zero_w] at e₂
   refine coreRef_bind e₂ (fun M₂ hS₂ => ?_)
   cases hc3 : callW p n "inst1" [body₂, r₁.headD 0, 0] m₂ with
@@ -99,7 +99,7 @@ theorem lamsInst_refines (p : Prog) (hp : LamsProg p) (hi : Inst1OK p) (n : Nat)
   rw [hc3, linW.k_inst1_2.arm1, Option.some.injEq, Prod.mk.injEq, Prod.mk.injEq] at hW
   obtain ⟨h1, h2, hm⟩ := hW
   have e₃ := CoreSpec.of_callW (s₀ := ⟨m₂, Locals.init []⟩)
-    (hi n _ _ dn vis fe M₂ eb body₂ (r₁.headD 0) 0 hS₂ hb₂ e₁.2.2.2) hc3
+    (hi n _ _ dn vis fe M₂ eb body₂ (r₁.headD 0) 0 hS₂ hb₂ e₁.resOk) hc3
   rw [toNat_zero_w] at e₃
   refine coreRef_bind e₃ (fun M₃ hS₃ => ?_)
   rw [← hm]

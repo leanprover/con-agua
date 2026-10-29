@@ -178,7 +178,7 @@ theorem ecb_ref (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (n : Nat)
   · rw [liftE_none, ecbE.k_inst1.none]; exact RefE.of_cls0 (by simp)
   rw [liftE_some]
   have h₂ := CoreSpec.of_callW (hc.inst1 n ⟨m₁, Locals.init []⟩ _ dn vis fe M₁ eb body1 (r₁.headD 0) 0
-    hS₁ hbody h₁.2.2.2) c2
+    hS₁ hbody h₁.resOk) c2
   refine RefE.bind_core (w := id) h₂ (fun M₂ hS₂ _ => ?_)
   simp only [ecbE.k_inst1]
   rcases c3 : callW p n "mk_app" [b, r₁.headD 0] m₂ with _ | ⟨r₃, m₃⟩
@@ -188,12 +188,12 @@ theorem ecb_ref (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (n : Nat)
   refine RefE.bind_core (w := id) h₃ (fun M₃ hS₃ _ => ?_)
   simp only [ecbE.k_mk_app]
   have hD := hK.defeq F ⟨m₃, Locals.init []⟩ _ dn vis fe M₃ eb mode (d + 1) (r₂.headD 0) (r₃.headD 0)
-    hF hn ⟨hS₃, hs.mode4, hs.eb_mode⟩ h₂.resOk h₃.2.2.2
+    hF hn ⟨hS₃, hs.mode4, hs.eb_mode⟩ h₂.resOk h₃.resOk
   rw [hd1] at hD
   rcases c4 : callE p n "defeq" [mode, vis, d + 1, r₂.headD 0, r₃.headD 0] m₃ with e4 | ⟨r₄, m₄⟩
   · intro hkE
     have h := CoreSpecE.of_callE ((hkE n (Nat.le_refl _)).defeq F ⟨m₃, Locals.init []⟩ _ dn vis fe
-      M₃ eb mode (d + 1) _ _ hF hn ⟨hS₃, hs.mode4, hs.eb_mode⟩ h₂.resOk h₃.2.2.2) c4
+      M₃ eb mode (d + 1) _ _ hF hn ⟨hS₃, hs.mode4, hs.eb_mode⟩ h₂.resOk h₃.resOk) c4
     rw [hd1] at h
     exact ErrClaim.bind_left h
   have h₄ := CoreSpec.of_callW hD (callW_of_callE c4)
@@ -214,7 +214,7 @@ theorem ecb_ref (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (n : Nat)
       (fun _ _ _ h => ⟨h.after, h.res, h.valid⟩)
       (ect_ref p hc N (hk.mono (Nat.le_succ N)) F ⟨m₄, Locals.init []⟩ _ dn vis fe M₄ eb mode d
         (r₂.headD 0) cod2 (r₁.headD 0) (by omega) (by omega) ⟨hS₄, hs.mode4, hs.eb_mode⟩ hd h₂.resOk
-        hcod h₁.2.2.2)
+        hcod h₁.resOk)
   · rw [ite_eq_right hm]
     simp only [hm, decide_false, Bool.false_eq_true, ↓reduceIte]
     exact RefE.ret rfl (CorePost.ret hS₄ rfl hw1)

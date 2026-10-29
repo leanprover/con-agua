@@ -476,7 +476,7 @@ theorem pmTail_ref (N : Nat) (hk : KnotUpTo p (N + 1)) (F : Nat) (hnF : N + 1 �
       (hG.knot.mono (Nat.le_succ N)) (lmtc_ref p hc hw hsup N (hk.mono (Nat.le_succ N)) F (by omega)
         (by omega) _ _ dn vis fe M5 eb mode d _ hS5 hm4 hebm h5.resOk)) (fun r6 m6 c6 h6 => ?_)
   have e6 : m6.arr64 EREC = m5.arr64 EREC := hE _ _ _ _ _ _ (by simp) (callW_of_callE c6)
-  obtain ⟨M6, hS6, hK6, hSt6⟩ := h6.2.1
+  obtain ⟨M6, hS6, hK6, hSt6⟩ := h6.after
   simp only [pmE.k_lit_major_to_ctor_2]
   refine RefE.mono (R := CorePost decH dn m6 vis fe M6 eb ResH) ?_
     (fun _ _ _ h => ⟨CoreAfter.comp hK6 hSt6 h.after, h.res, h.valid⟩)
@@ -484,9 +484,9 @@ theorem pmTail_ref (N : Nat) (hk : KnotUpTo p (N + 1)) (F : Nat) (hnF : N + 1 �
   have hr6 : decRules (m6.arr64 EREC) ro.toNat rc.toNat = some rules := by rw [e6, e5, e4]; exact hrules
   refine RefE.bind_callE (s₀ := ⟨m6, Locals.init []⟩) (fun _ => rfl)
     (hmtc N (hk.mono (Nat.le_succ N)) F (by omega) _ _ dn vis fe M6 eb mode d rec ro rc _ rules
-      (by omega) hS6 hm4 hebm h6.2.2.2 hr6)
+      (by omega) hS6 hm4 hebm h6.resOk hr6)
     (fun hG => hG.m2c N (hk.mono (Nat.le_succ N)) (hG.knot.mono (Nat.le_succ N)) F (by omega) _ _
-      dn vis fe M6 eb mode d rec ro rc _ rules (by omega) hS6 hm4 hebm h6.2.2.2 hr6) (fun r7 m7 c7 h7 => ?_)
+      dn vis fe M6 eb mode d rec ro rc _ rules (by omega) hS6 hm4 hebm h6.resOk hr6) (fun r7 m7 c7 h7 => ?_)
   obtain ⟨-, hP⟩ := h7.post
   exact RefE.ret rfl ⟨hP.after, rfl, hP.valid⟩
 
