@@ -38,7 +38,9 @@ once (`ConAgua.Front.LineRec`, proved equal on the lines that scan in
 `idx` is the value of the line's index key (`in`/`il`/`ie`). A number is read by `read_nat` (`rdNatN`),
 con-leche's `readNat64` (`readNatAt` for at most 18 digits); a longer one reads as `NONE`
 (`2^64 - 1`), which the caller refuses: no export index or name component has 19 digits, and
-refusing is a defined failure.
+refusing is a defined failure. Up to 16 digits it converts eight digits per 8-byte load (`rdW1`,
+`rdW2`, `swar8`); on a run of digits that is the byte loop's value (`rdNatN_digits`), which is all
+the links to con-leche use.
 
 The model trusts the validator: it checks no `seen` mask, no comma alternation, no key set (a
 member that is not a name/level key ends it with `pl = 0`), and it reads a string's body as the
