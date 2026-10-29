@@ -198,6 +198,12 @@ unsafe def declInlFns (name : Name) (envE pE : Lean.Expr) (elems : Array Lean.Ex
     let same := reprStr v == reprStr p[i]!.2
     let lit := if same then fdE else funDeclE rom v
     addDecl (.defnDecl (mkDefinitionValEx n [] funDeclTy lit .abbrev .safe []))
+    -- compiled code runs `n` as the inlining itself (the literal is not compiled)
+    addAndCompile (.defnDecl (mkDefinitionValEx (n ++ `impl) [] funDeclTy (mkApp2 (mkConst ``inlFn) envE fdE)
+      .opaque .safe []))
+    match Compiler.implementedByAttr.setParam (← getEnv) n (n ++ `impl) with
+    | .ok env => setEnv env
+    | .error msg => throwError "inl_round_fns: {msg}"
     batch := batch.push (n, mkApp2 (mkConst ``inlFn) envE fdE)
     if batch.size ≥ b then
       declEqBatchTy funDeclTy (n.appendAfter "_batch") batch
