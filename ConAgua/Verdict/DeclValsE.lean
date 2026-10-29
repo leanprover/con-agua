@@ -5,8 +5,8 @@ import ConAgua.L.ModelGen
 /-!
 # `check_constant_val`'s refinement; the verdict claims of `check_defn_val`, `check_opaque_val`
 
-`check_constant_val`: one unified model and one refinement for both outcomes (`ccv_ref`), its error
-claim `ccvE_okT` from it. `check_defn_val`, `check_opaque_val`: error claims under the hypotheses
+`check_constant_val`: one unified model and one refinement for both outcomes (`ccv_ref`).
+`check_defn_val`, `check_opaque_val`: error claims under the hypotheses
 of the ok refinements (`checkDefnVal_refinesT`, `checkOpaqueVal_refinesT`) and the callees' error
 claims (`CoreStubsE`, `IvgE`).
 -/
@@ -111,20 +111,6 @@ theorem ccv_ref {p : Prog} (hq : KnotStageProg p) (hap : ApdF p) (hkp : CrKeep p
   intro hA
   exact absOK_core hq.closed (by decide) h3w
     (absOK_core hq.closed (by decide) h2w (hP1.afr hA) hS2) hS3
-
-/-- **`check_constant_val`'s error claim under `StageT`** (`ccv_ref`'s error half). -/
-theorem ccvE_okT {p : Prog} (hq : KnotStageProg p) (hp : ValProg p) (hap : ApdF p)
-    (hkp : CrKeep p) (hnv : closedNV p L.Checker.nvFns = true) (hcE : CoreStubsE p)
-    (hUL : UceLookups p)
-    {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
-    {n : Nat} (hn : n ≤ 2 ^ 62) {m : Mem} {q : Word} {cv : IConstantVal} {e : Err}
-    (hc : callE p n "check_constant_val" [vis, q] m = .error e) (hS : StageT dn vis fe m a)
-    (hqd : decCV (erecP m) q.toNat = some cv) (hqb : q.toNat + 3 < 2 ^ 64)
-    (hlps : ∃ ks, cv.levelParams.mapM (denoteN a.store.ns) = some ks) (hCr : L.Stubs.CrOK m) :
-    ErrClaim (checkConstantVal V fe cv) a e :=
-  RefE.run_err (s₀ := ⟨m, Locals.init []⟩) (checkConstantVal_specE p hp n _ vis q) hnv
-    ⟨⟨hnv, hcE⟩, ⟨hUL, strLitSupported_core p hq.knot.str⟩⟩
-    (ccv_ref hq hap hkp hn hS hqd hqb hlps hCr) hc
 
 /-- What `check_defn_val`'s and `check_opaque_val`'s error arms assume: `env_push` outside the
 verdict closure, the core stubs' and `install_value_guards`' claims. -/

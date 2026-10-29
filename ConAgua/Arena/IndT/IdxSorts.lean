@@ -1,5 +1,6 @@
 import ConAgua.Arena.IndT.Sum3
-import ConAgua.Verdict.IndBE
+import ConAgua.Arena.IndT.Sum2
+import ConAgua.Arena.IndT.RecGen19
 import ConAgua.Verdict.PosTopEMono
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
