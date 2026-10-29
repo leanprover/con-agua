@@ -110,22 +110,6 @@ def ldsOneT (mode : ConLeche.CheckMode) (r : CoreFnsA) (fe : IFEnv) (depth : Nat
       deltaQuick mode r depth a b₃
     | none => pure .unknown
 
-theorem res3_eq {r r' : List Word} (h1 : r'.headD 0 = r.headD 0) (h2 : r'.tail.headD 0 = r.tail.headD 0)
-    (h3 : r'.tail.tail.headD 0 = r.tail.tail.headD 0) (h : Res3 r') : Res3 r :=
-  ⟨h1 ▸ h.1, h2 ▸ h.2.1, h3 ▸ h.2.2⟩
-
-theorem decDS_eq {r r' : List Word} (h1 : r'.headD 0 = r.headD 0) (h2 : r'.tail.headD 0 = r.tail.headD 0)
-    (h3 : r'.tail.tail.headD 0 = r.tail.tail.headD 0) : decDS r' = decDS r := by
-  simp only [decDS, h1, h2, h3]
-
-/-- A step's answer re-listed as its three words (the arms' `return (k, x, y)`). -/
-theorem CorePost.relist3 {dn : NIdx → Option ConLeche.Name} {m₀ : Mem} {vis : Word} {fe : IFEnv}
-    {M : ModeMaps} {eb : Word} (v : List Word × Mem) (y : DeltaStepA) (a' : AState)
-    (h : CorePost decDS dn m₀ vis fe M eb Res3 v y a') :
-    CorePost decDS dn m₀ vis fe M eb Res3
-      ([v.1.headD 0, v.1.tail.headD 0, v.1.tail.tail.headD 0], v.2) y a' :=
-  ⟨h.after, h.res.trans (decDS_eq rfl rfl rfl), res3_eq rfl rfl rfl h.valid⟩
-
 /-- **`delta_quick` as a tail call, both outcomes** (`dq_ref` with `quick_defeq` from the knot). -/
 theorem dq_tail {p : Prog} (hp : LazyProg p) (hc : LazyCallees p)
     {K : Except Err (List Word × Mem) → Except Err (List Word × Mem)}
@@ -143,8 +127,7 @@ theorem dq_tail {p : Prog} (hp : LazyProg p) (hc : LazyCallees p)
     rw [show dqE p 0 s₀.mem mode vis d a b = .error .outOfFuel from rfl, hK1]
     exact RefE.of_cls0 rfl
   | succ j =>
-  exact RefE.tail_eq hK1 hK2 (fun hG => quickWEUpTo hp hc hk hG j (by omega)) rfl
-    (fun v y a' h => CorePost.relist3 v y a' h)
+  exact RefE.tail_relist3 hK1 hK2 (fun hG => quickWEUpTo hp hc hk hG j (by omega))
     (dq_ref p j (quickUpTo hp hc hk j (by omega)) F s₀ a₀ dn vis fe M eb mode d a b (by omega)
       (by omega) hs ha hb hd)
 
@@ -374,8 +357,7 @@ theorem sm_ref (p : Prog) (hp : LazyProg p) (hc : LazyCallees p) (n : Nat)
         (CorePost decDS dn m₂ vis fe M₂ eb Res3) := by
     intro m₂ M₂ a₂ hS₂
     rw [smE.j1, ite_eq_right (fun h => h rfl)]
-    exact RefE.tail_eq (fun _ => rfl) (fun _ => rfl) (fun hG => hG.mono (by omega)) rfl
-      (fun v y a' h => CorePost.relist3 v y a' h)
+    exact RefE.tail_relist3 (fun _ => rfl) (fun _ => rfl) (fun hG => hG.mono (by omega))
       (u2_ref p hp hc k (hk.mono (by omega)) F (by omega) (by omega) ⟨m₂, Locals.init []⟩ a₂ dn vis
         fe M₂ eb mode d a b ⟨hS₂, hs.mode4, hs.eb_mode⟩ hwa hwb hd)
   by_cases hcnd : 2 ≤ ka ∧ 2 ≤ kb ∧ ha = hb ∧ r₁.headD 0 ≠ 0
@@ -471,8 +453,7 @@ theorem bo_ref (p : Prog) (hp : LazyProg p) (hc : LazyCallees p) (n : Nat)
     have hl : ConLeche.ReducibilityHint.lt (decHintW (rb.headD 0) (rb.tail.headD 0))
         (decHintW (ra.headD 0) (ra.tail.headD 0)) = true := by rw [← hlt₁]; exact decBool_t h1
     simp only [hl, ↓reduceIte]
-    exact RefE.tail_eq (fun _ => rfl) (fun _ => rfl) (fun hG => hG.mono (by omega)) rfl
-      (fun v y a' h => CorePost.relist3 v y a' h)
+    exact RefE.tail_relist3 (fun _ => rfl) (fun _ => rfl) (fun hG => hG.mono (by omega))
       (ll_ref p hp hc k (hk.mono (by omega)) F (by omega) (by omega) ⟨m₃, Locals.init []⟩ _ dn vis fe
         M₂ eb mode d a b ⟨hS₂, hs.mode4, hs.eb_mode⟩ ha hb hd)
   rw [ite_eq_right h1]
@@ -493,8 +474,7 @@ theorem bo_ref (p : Prog) (hp : LazyProg p) (hc : LazyCallees p) (n : Nat)
     have hl2 : ConLeche.ReducibilityHint.lt (decHintW (ra.headD 0) (ra.tail.headD 0))
         (decHintW (rb.headD 0) (rb.tail.headD 0)) = true := by rw [← hlt₂]; exact decBool_t h2
     simp only [hl2, ↓reduceIte]
-    exact RefE.tail_eq (fun _ => rfl) (fun _ => rfl) (fun hG => hG.mono (by omega)) rfl
-      (fun v y a' h => CorePost.relist3 v y a' h)
+    exact RefE.tail_relist3 (fun _ => rfl) (fun _ => rfl) (fun hG => hG.mono (by omega))
       (lr_ref p hp hc k (hk.mono (by omega)) F (by omega) (by omega) ⟨m₅, Locals.init []⟩ _ dn vis fe
         M₂ eb mode d a b ⟨hS₂, hs.mode4, hs.eb_mode⟩ ha hb hd)
   rw [ite_eq_right h2]
@@ -502,8 +482,7 @@ theorem bo_ref (p : Prog) (hp : LazyProg p) (hc : LazyCallees p) (n : Nat)
   have hl2 : ConLeche.ReducibilityHint.lt (decHintW (ra.headD 0) (ra.tail.headD 0))
       (decHintW (rb.headD 0) (rb.tail.headD 0)) = false := by rw [← hlt₂]; exact decBool_f h2'
   simp only [hl2, Bool.false_eq_true, ↓reduceIte]
-  exact RefE.tail_eq (fun _ => rfl) (fun _ => rfl) (fun hG => hG.mono (by omega)) rfl
-    (fun v y a' h => CorePost.relist3 v y a' h)
+  exact RefE.tail_relist3 (fun _ => rfl) (fun _ => rfl) (fun hG => hG.mono (by omega))
     (sm_ref p hp hc k (hk.mono (by omega)) F (by omega) (by omega) ⟨m₅, Locals.init []⟩ _ dn vis fe
       M₂ eb mode d a b _ _ _ _ ⟨hS₂, hs.mode4, hs.eb_mode⟩ ha hb hd)
 
@@ -587,8 +566,7 @@ theorem lds_ref (p : Prog) (hp : LazyProg p) (hc : LazyCallees p) (n : Nat)
       exact dq_tail hp hc (fun _ => rfl) (fun _ => rfl) (k + 1) hk F hF hn ⟨m₃, Locals.init []⟩ _ dn
         vis fe M₃ eb mode d a _ ⟨hS₃, hs.mode4, hs.eb_mode⟩ ha hP.valid.2 hd
     rw [ite_eq_right ht, decOptR_none (by simpa using ht)]
-    exact RefE.tail_eq (fun _ => rfl) (fun _ => rfl) (fun hG => hG.mono (by omega)) rfl
-      (fun v y a' h => CorePost.relist3 v y a' h)
+    exact RefE.tail_relist3 (fun _ => rfl) (fun _ => rfl) (fun hG => hG.mono (by omega))
       (ll_ref p hp hc k (hk.mono (by omega)) F (by omega) (by omega) ⟨m₃, Locals.init []⟩ _ dn vis fe
         M₃ eb mode d a b ⟨hS₃, hs.mode4, hs.eb_mode⟩ ha hb hd)
   rw [ite_eq_right hb0]
@@ -607,13 +585,11 @@ theorem lds_ref (p : Prog) (hp : LazyProg p) (hc : LazyCallees p) (n : Nat)
       exact dq_tail hp hc (fun _ => rfl) (fun _ => rfl) (k + 1) hk F hF hn ⟨m₃, Locals.init []⟩ _ dn
         vis fe M₃ eb mode d _ b ⟨hS₃, hs.mode4, hs.eb_mode⟩ hP.valid.2 hb hd
     rw [ite_eq_right ht, decOptR_none (by simpa using ht)]
-    exact RefE.tail_eq (fun _ => rfl) (fun _ => rfl) (fun hG => hG.mono (by omega)) rfl
-      (fun v y a' h => CorePost.relist3 v y a' h)
+    exact RefE.tail_relist3 (fun _ => rfl) (fun _ => rfl) (fun hG => hG.mono (by omega))
       (lr_ref p hp hc k (hk.mono (by omega)) F (by omega) (by omega) ⟨m₃, Locals.init []⟩ _ dn vis fe
         M₃ eb mode d a b ⟨hS₃, hs.mode4, hs.eb_mode⟩ ha hb hd)
   rw [ite_eq_right ha0, decBool_t ha0, decBool_t hb0]
-  exact RefE.tail_eq (fun _ => rfl) (fun _ => rfl) (fun hG => hG.mono (by omega)) rfl
-    (fun v y a' h => CorePost.relist3 v y a' h)
+  exact RefE.tail_relist3 (fun _ => rfl) (fun _ => rfl) (fun hG => hG.mono (by omega))
     (bo_ref p hp hc k (hk.mono (by omega)) F (by omega) (by omega) ⟨m₂, Locals.init []⟩ _ dn vis fe
       M₂ eb mode d a b hs₂ ha hb hd)
 

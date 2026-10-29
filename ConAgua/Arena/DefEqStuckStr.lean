@@ -85,9 +85,7 @@ theorem si_tail {p : Prog} (hq : StuckProg p) (hi : IotaProg' p) (hc : StuckCall
   cases n with
   | zero => rw [show siE p 0 m mode vis d a b = .error .outOfFuel from rfl, hK1]; exact RefE.of_cls0 rfl
   | succ k =>
-  exact RefE.tail_eq hK1 hK2 (fun hG => hG.mono (by omega)) rfl
-    (fun v y a' (h : CorePost decBool dn m vis fe M eb ResH v y a') =>
-      ⟨h.after, h.res.trans (by simp only [decBool, List.headD_cons]), h.valid⟩)
+  exact RefE.tail_relist1 hK1 hK2 (fun hG => hG.mono (by omega))
     (si_ref p hq hi hc k (hk.mono (by omega)) F ⟨m, Locals.init []⟩ a₀ dn vis fe M eb mode d a b
       (by omega) (by omega) ⟨hS, hmode, heb⟩ ha hb)
 
