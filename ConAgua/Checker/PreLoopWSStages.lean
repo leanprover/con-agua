@@ -237,7 +237,7 @@ def stageA_builtin_prelude : List TieredArray :=
   POOL, REC, SLOT, AREC, ASLOT, SREC, SSLOT, ZREC, ZSLOT, MREC, MSLOT, IREC, ISLOT, PREC, PSLOT,
   SOREC, SOSLOT, CREC, CSLOT, LEREC, LESLOT, BREC, BSLOT, LAREC, LASLOT, FAREC, FASLOT, PJREC,
   PJSLOT, NAREC, NASLOT, NSREC, NSSLOT, NNREC, NNSLOT, LSREC, LSSLOT, ADER, LADER, FADER, LEDER,
-  PJDER, SHP, MHP, IHP, LSHP, SOLP, CLP]
+  PJDER, SHP, MHP, IHP, LSHP, SOLP, CLP, Front.NID, Front.LID, Front.EID]
 
 /-- The `CTL` words the functions of `stageFns_builtin_prelude` store into. -/
 def stageC_builtin_prelude : List Word := [
@@ -328,7 +328,7 @@ def stageA_front_run : List TieredArray :=
   POOL, REC, SLOT, AREC, ASLOT, SREC, SSLOT, ZREC, ZSLOT, MREC, MSLOT, IREC, ISLOT, PREC, PSLOT,
   SOREC, SOSLOT, CREC, CSLOT, LEREC, LESLOT, BREC, BSLOT, LAREC, LASLOT, FAREC, FASLOT, PJREC,
   PJSLOT, NAREC, NASLOT, NSREC, NSSLOT, NNREC, NNSLOT, LSREC, LSSLOT, ADER, LADER, FADER, LEDER,
-  PJDER, SHP, MHP, IHP, LSHP, SOLP, CLP]
+  PJDER, SHP, MHP, IHP, LSHP, SOLP, CLP, Front.NID, Front.LID, Front.EID]
 
 /-- The `CTL` words the functions of `stageFns_front_run` store into. -/
 def stageC_front_run : List Word := [

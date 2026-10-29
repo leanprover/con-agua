@@ -101,6 +101,7 @@ def preE : Expr → Expr
   | .len64t a t => .len64t a (preE t)
   | .ld8x8 b i => .ld8x8 (preB b) (preE i)
   | .ld32t a t i => .ld32t a (preE t) (preE i)
+  | .ld32h a t i hi => .ld32h a (preE t) (preE i) hi
   | e => e
 
 def preW : WArr → WArr

@@ -102,6 +102,66 @@ theorem ld32Code_spec {x t d : Reg64} {ln bs : AddrExpr} {arr : Array Word} {k :
       intro r hr1 hr2
       simp only [rget_set, ite_eq_right hr1, ite_eq_right hr2]
 
+omit [Host] in
+/-- One half of a word as `half32` reads it: the low half is element `0`, the high half element `1`. -/
+theorem half32b_eq (hi : Bool) (w : Word) : half32b hi w = half32 w (if hi then 1 else 0) := by
+  apply UInt64.toNat_inj.mp
+  rw [half32_toNat]
+  cases hi
+  · simp only [half32b, Bool.false_eq_true, ite_false, UInt64.toNat_and]
+    show w.toNat &&& 4294967295 = _
+    rw [show (4294967295 : Nat) = 2 ^ 32 - 1 from rfl, Nat.and_two_pow_sub_one_eq_mod]; simp
+  · simp only [half32b, ite_true, UInt64.toNat_shiftRight]
+    simp [Nat.shiftRight_eq_div_pow]
+
+omit [Host] in
+theorem half32b_lt (hi : Bool) (w : Word) : (half32b hi w).toNat < 2 ^ 32 := by
+  rw [half32b_eq, half32_toNat]
+  have := w.toNat_lt
+  cases hi <;> simp <;> omega
+
+/-- **`d := A[x]`'s half `hi`** (`ld32hCode`): from `x` = the index `j`, the value `half32b hi` of
+word `j` in `d`, the scratch `t` and the flags clobbered; or `ca_error` when word `j` does not
+exist. The bounds check is a word load's. -/
+theorem ld32hCode_spec {x t d : Reg64} {ln bs : AddrExpr} {hi : Bool} {arr : Array Word} {k : Nat}
+    {s : MachineData} {Q : MachineState → Prop} (hc : Code (ld32hCode x t d ln bs hi) k) (htx : t ≠ x) {j : Word}
+    (hx : s.regs.get64 x = j.toBitVec)
+    (hA : ∀ s', s'.dmem = s.dmem → (∀ r, r ≠ t → s'.regs.get64 r = s.regs.get64 r) → ArrW s' ln bs arr)
+    (hv : ∀ (h : j.toNat < arr.size) s', s'.regs.get64 d = (half32b hi arr[j.toNat]).toBitVec →
+      s'.dmem = s.dmem → (∀ r, r ≠ t → r ≠ d → s'.regs.get64 r = s.regs.get64 r) → Ev Q s' (at_ (k + 4)))
+    (herr : ∀ s', ¬ j.toNat < arr.size → s'.dmem = s.dmem →
+      (∀ r, r ≠ t → s'.regs.get64 r = s.regs.get64 r) → Ev Q s' (label errorL)) :
+    Ev Q s (at_ k) := by
+  simp only [ld32hCode] at hc
+  obtain ⟨hlen, B, hB, hBs, hget⟩ := hA s rfl (fun _ _ => rfl)
+  have hsz : arr.size < 2 ^ 64 := by omega
+  refine ev_cmpRA hc.head hlen ?_
+  have hcmp : ∀ b, CondCode.nc.interp (cmpFlags (s.regs.get64 x) (UInt64.ofNat arr.size).toBitVec) = b →
+      (b = true ↔ ¬ j.toNat < arr.size) := by
+    intro b hb
+    rw [hx, interp_nc] at hb
+    subst hb
+    simp only [decide_eq_true_eq, UInt64.le_iff_toNat_le, UInt64.toNat_ofNat_of_lt' hsz]
+    omega
+  refine ev_jcc hc.tail.head (fun hcc => ?_) (fun hcc => ?_)
+  · exact herr _ ((hcmp _ hcc).mp rfl) rfl (fun _ _ => rfl)
+  · have hj : j.toNat < arr.size := by
+      have := hcmp _ hcc; simp at this; omega
+    refine ev_movRA hc.tail.tail.head hB ?_
+    refine ev_ld32H hc.tail.tail.tail.head (v := (half32b hi arr[j.toNat]).toNat) ?_
+      (half32b_lt hi _) ?_
+    · simp only [rget_set, ite_true, ite_eq_right htx.symm, hx, UInt64.toNat_toBitVec]
+      have hBn : (UInt64.ofNat B).toNat = B := UInt64.toNat_ofNat_of_lt' (by simp only [UInt64.size]; omega)
+      rw [hBn]
+      have := load32_of_rdW (hget _ hj) (if hi then 1 else 0)
+      rw [half32b_eq]
+      rw [show B + 8 * j.toNat + 4 * ((if hi then (1 : Word) else 0).toNat % 2) =
+        B + 8 * j.toNat + (if hi then 4 else 0) by cases hi <;> rfl] at this
+      exact this
+    · refine ev_congr (hv hj _ (by simp [rget_set]) rfl ?_) (by simp)
+      intro r hr1 hr2
+      simp only [rget_set, ite_eq_right hr1, ite_eq_right hr2]
+
 /-- **`A.u32[rax] := v`** (`st32Code`): from `rax` = the index `j` and the value `v` in temporary
 `0`, with the array's base `B` and length in its descriptor words: the memory with word `j / 2`
 of the array replaced by `setHalf32` of it (the 4-byte store, `store32_eq`), `rcx`, `rdx` and the

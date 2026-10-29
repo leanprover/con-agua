@@ -39,6 +39,7 @@ def Expr.subPB (bs : List UInt8) : Expr → Expr
   | .len64t a t => .len64t a (subPB bs t)
   | .ld8x8 b i => .ld8x8 (b.subPB bs) (subPB bs i)
   | .ld32t a t i => .ld32t a (subPB bs t) (subPB bs i)
+  | .ld32h a t i hi => .ld32h a (subPB bs t) (subPB bs i) hi
 
 def WArr.subPB (bs : List UInt8) : WArr → WArr
   | .plain a => .plain a
@@ -214,6 +215,9 @@ theorem evalE_subPB (e : Expr) : Agree bs (evalE (e.subPB bs)) (evalE e) := by
   | ld8x8 b i ih => exact Agree.bind ih fun v => Agree.ld8x8 b v
   | ld32t a t i iht ihi =>
     exact Agree.bind iht fun u => Agree.bind ihi fun v => Agree.ld32 (tierA a u) v
+  | ld32h a t i hi iht ihi =>
+    exact Agree.bind iht fun u => Agree.bind ihi fun v => Agree.bind (Agree.ld64 (tierA a u) v) fun _ =>
+      Agree.pure _
 
 theorem warr_subPB (w : WArr) : Agree bs (warr (w.subPB bs)) (warr w) := by
   cases w with

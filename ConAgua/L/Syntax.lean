@@ -145,6 +145,10 @@ inductive Expr where
   `i / 2` (the low half first, as the machine's little-endian 4-byte load at byte `4 i` reads it;
   lane p32). -/
   | ld32t (a : ArrId) (t i : Expr)
+  /-- One 32-bit half of word `i` of tier `t` of the tiered array `a`, zero-extended: the high half
+  if `hi`, else the low half (a field of a packed record, `TRec`: the 4-byte load at byte
+  `8 i + 4 hi`; lane p32use). -/
+  | ld32h (a : ArrId) (t i : Expr) (hi : Bool)
   deriving Repr, DecidableEq, Inhabited
 
 /-- A word array as the destination or source of a block copy: array `a`, or tier `t` of the

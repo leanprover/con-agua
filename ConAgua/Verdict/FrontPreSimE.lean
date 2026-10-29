@@ -113,6 +113,7 @@ theorem noAb_evalE : ∀ e : Expr, NoAb (evalE e)
   | .len64t a t => by have := noAb_evalE t; simp only [evalE]; noab
   | .ld8x8 s i => by have := noAb_evalE i; simp only [evalE]; noab
   | .ld32t a t i => by have := noAb_evalE t; have := noAb_evalE i; simp only [evalE]; noab
+  | .ld32h a t i _ => by have := noAb_evalE t; have := noAb_evalE i; simp only [evalE]; noab
 
 theorem noAb_evalC : ∀ c : Cond, NoAb (evalC c)
   | .cmp c a b => by have := noAb_evalE a; have := noAb_evalE b; simp only [evalC]; noab

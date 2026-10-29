@@ -299,9 +299,41 @@ theorem pval_tierX (s : St) (t : Expr) (a : ArrId) :
   · simp only [Expr.pval, BinOp.eval, tierA_and_one]
   · rfl
 
+/-- A packed field's half (`Expr.ld32h`) is its extraction `TRec.ex`. -/
+theorem TRec.half32b_ex (R : TRec) (f w : Word) (h : R.packed f) : half32b (decide (f = R.hi)) w = R.ex f w := by
+  obtain ⟨h1, h2 | h2⟩ := h
+  · subst h2
+    have : (0 : Word) ≠ R.hi := fun e => h1 e.symm
+    simp [half32b, TRec.ex, h1, this]
+  · subst h2
+    by_cases h0 : R.hi = 0
+    · exact absurd h0 h1
+    · simp [half32b, TRec.ex, h0]
+
+/-- Any other field is its word. -/
+theorem TRec.ex_of_not_packed (R : TRec) (f w : Word) (h : ¬ R.packed f) : R.ex f w = w := by
+  unfold TRec.ex TRec.packed at *
+  by_cases h1 : R.hi = 0
+  · simp [h1]
+  · have : ¬ (f = 0 ∨ f = R.hi) := fun h' => h ⟨h1, h'⟩
+    simp only [not_or] at this
+    simp [h1, this.1, this.2]
+
+/-- The load of a field, as the word load and the extraction (`TRec.ex`). -/
+theorem evalE_ld_ex (R : TRec) (t i : Expr) (f : Word) :
+    evalE (R.ld t i f) = evalE (R.exE f (.ld64t R.arr (TRec.tierX t) (R.adE i f))) := by
+  rw [evalE_exE]
+  unfold TRec.ld
+  split
+  · rename_i hp
+    simp only [evalE, bind_assoc, TRec.half32b_ex R f _ hp]
+  · rename_i hp
+    simp only [TRec.ex_of_not_packed R f _ hp, bind_pure]
+
 theorem evalE_tld (R : TRec) (t i : Expr) (f : Word) :
     evalE (R.ld t i f) = (do let tv ← evalE t; let j ← evalE i; tld R tv j f) := by
-  simp only [TRec.ld, evalE_exE, evalE, bind_assoc]
+  rw [evalE_ld_ex]
+  simp only [evalE_exE, evalE, bind_assoc]
   rw [evalE_tierX_bind t R.arr (fun A => do let j ← evalE (R.adE i f); let x ← ld64 A j; pure (R.ex f x))]
   simp only [evalE_adE, bind_assoc, pure_bind, tld_eq]
 
@@ -319,9 +351,18 @@ theorem evalE_tierE (h : Expr) : evalE (tierE h) = (do let x ← evalE h; pure (
 theorem evalE_idxE (h : Expr) : evalE (idxE h) = (do let x ← evalE h; pure (idxW x)) := by
   simp [idxE, evalE, BinOp.eval, idxW, bind_pure_comp]
 
+theorem pval_ld_ex (s : St) (R : TRec) (t i : Expr) (f : Word) :
+    Expr.pval s (R.ld t i f) = Expr.pval s (R.exE f (.ld64t R.arr (TRec.tierX t) (R.adE i f))) := by
+  rw [pval_exE]
+  unfold TRec.ld
+  split
+  · rename_i hp; simp only [Expr.pval, TRec.half32b_ex R f _ hp]
+  · rename_i hp; simp only [TRec.ex_of_not_packed R f _ hp]
+
 @[lang_grind =] theorem Expr.pval_tld (s : St) (R : TRec) (t i : Expr) (f : Word) :
     Expr.pval s (R.ld t i f) = tfld s.mem R (Expr.pval s t) (Expr.pval s i) f := by
-  simp only [TRec.ld, pval_exE, Expr.pval, tfld, rd64, rdW, Array.getD_eq_getD_getElem?, pval_tierX]
+  rw [pval_ld_ex]
+  simp only [pval_exE, Expr.pval, tfld, rd64, rdW, Array.getD_eq_getD_getElem?, pval_tierX]
   congr 3
   simp only [TRec.adE, TRec.ad]
   split <;> split <;> simp_all [Expr.pval, BinOp.eval]

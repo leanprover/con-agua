@@ -172,6 +172,9 @@ theorem setHalf32_toNat (w i v : Word) :
     simp [this, h2, UInt64.toNat_add, UInt64.toNat_mul]
     omega
 
+/-- One half of the word `w`: the high half if `hi`, else the low half (`Expr.ld32h`). -/
+def half32b (hi : Bool) (w : Word) : Word := if hi then w >>> 32 else w &&& 4294967295
+
 /-- Word array `s` with 32-bit element `i` set to the low 32 bits of `v` (no change out of
 bounds). -/
 def Mem.set32 (m : Mem) (s : TieredArray) (i v : Word) : Mem :=
@@ -293,6 +296,10 @@ def evalE : Expr → M Word
   | .ld32t a t i => do
     let u ← evalE t
     ld32 (tierA a u) (← evalE i)
+  | .ld32h a t i hi => do
+    let u ← evalE t
+    let w ← ld64 (tierA a u) (← evalE i)
+    return half32b hi w
 
 /-- The array a block operand names. -/
 def warr : WArr → M TieredArray

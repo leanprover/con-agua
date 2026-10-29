@@ -59,7 +59,7 @@ def scan(x):
         if h in ('l8', 'n8', 's8'): nb = max(nb, int(x[1]) + 1)
         if h in ('l64', 'n64', 's64'): nw = max(nw, int(x[1]) + 1)
         if h in ('g', 'gset'): ng = max(ng, int(x[1]) + 1)
-        if h in ('l64t', 'n64t', 's64t', 'l32t', 's32t'): nw = max(nw, int(x[1]) + 257)
+        if h in ('l64t', 'n64t', 's64t', 'l32t', 's32t', 'l32h'): nw = max(nw, int(x[1]) + 257)
         for y in x[1:]:
             scan(y)
 for f in fns:
@@ -98,6 +98,7 @@ def E(e):
     if h == 'l64': return 'LD64(%s, %s)' % (e[1], E(e[2]))
     if h == 'l64t': return 'LD64(%s + 256 * (%s & 1), %s)' % (e[1], E(e[2]), E(e[3]))
     if h == 'l32t': return 'LD32(%s + 256 * (%s & 1), %s)' % (e[1], E(e[2]), E(e[3]))
+    if h == 'l32h': return 'LD32H(%s + 256 * (%s & 1), %s, %s)' % (e[1], E(e[2]), E(e[3]), e[4])
     if h == 'n64t': return 'L64[%s + 256 * (%s & 1)]' % (e[1], E(e[2]))
     if h == 'l8x8': return 'LD8X8(%s, %s, %s)' % (BP(e[1]), BL(e[1]), E(e[2]))
     if h == 'ldc': return 'LDC(D%s, %d, %s)' % (e[1], len(data[int(e[1])]), E(e[2]))
@@ -201,6 +202,7 @@ o.append('''static inline __attribute__((always_inline)) u64 LD64(u64 a, u64 i) 
 static inline __attribute__((always_inline)) u64 LD8(int a, u64 i) { CHK(i < L8[a]); return B8[a][i]; }
 static inline __attribute__((always_inline)) void ST64(u64 a, u64 i, u64 e) { CHK(i < L64[a]); B64[a][i] = e; }
 static inline __attribute__((always_inline)) u64 LD32(u64 a, u64 i) { CHK(i / 2 < L64[a]); return ((const uint32_t *)B64[a])[i]; }
+static inline __attribute__((always_inline)) u64 LD32H(u64 a, u64 i, u64 h) { CHK(i < L64[a]); return ((const uint32_t *)B64[a])[2 * i + h]; }
 static inline __attribute__((always_inline)) void ST32(u64 a, u64 i, u64 e) { CHK(i / 2 < L64[a]); ((uint32_t *)B64[a])[i] = (uint32_t)e; }
 static inline __attribute__((always_inline)) void ST8(int a, u64 i, u64 e) { CHK(i < L8[a]); B8[a][i] = (uint8_t)e; }
 static inline __attribute__((always_inline)) u64 LD8X8(const uint8_t *b, u64 n, u64 i) { CHK(i + 8 <= n && i + 8 > i); u64 r; __builtin_memcpy(&r, b + i, 8); return r; }

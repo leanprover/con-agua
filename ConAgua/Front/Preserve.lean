@@ -110,6 +110,7 @@ theorem evalE_same (e : Expr) (s₀ : St) : ⦃fun s => s = s₀⦄ evalE e ⦃f
   | len64t a t ih => vcgen [evalE, ih] <;> grind
   | ld8x8 b i ih => vcgen [evalE, ih, ld8x8] <;> grind
   | ld32t a t i iht ihi => vcgen [evalE, iht, ihi, ld32] <;> grind
+  | ld32h a t i hi iht ihi => vcgen [evalE, iht, ihi, ld64] <;> grind
 
 theorem warr_same (w : WArr) (s₀ : St) : ⦃fun s => s = s₀⦄ warr w ⦃fun _ s => s = s₀; ⊤⦄ := by
   cases w with

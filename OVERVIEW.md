@@ -86,7 +86,7 @@ the same point (`fail R`). The labels are proved: an exit 1 or 2 means the
 twin's pipeline fails on the input with `invalid` resp. `notImplemented`
 (§2.1). The messages are not part of the theorem; on the test corpus they are
 con-ron's own
-([deviation D16](https://github.com/leanprover/con-agua/blob/master/docs/deviations.md#L49-L49)).
+([deviation D16](https://github.com/leanprover/con-agua/blob/master/docs/deviations.md#L49)).
 Internally, accept is the return word `0x414343455054`, chosen so that no
 status word or unset register reads as accept
 ([`ACCEPT`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/Statement.lean#L89-L91)).
@@ -272,7 +272,7 @@ pin-data generator, the layout of memory, the capacities.
 ### 2.5 Building the proof
 
 One Lean toolchain,
-[`nightly-2026-10-20`](https://github.com/leanprover/con-agua/blob/master/lean-toolchain#L1-L1)
+[`nightly-2026-10-20`](https://github.com/leanprover/con-agua/blob/master/lean-toolchain#L1)
 (from `elan`), for everything: the proofs, Kraken (a Lake dependency, pinned by
 [rev](https://github.com/leanprover/con-agua/blob/master/lakefile.toml#L9-L12)),
 and the vendored con-ron and con-leche.
@@ -510,8 +510,8 @@ The twin fails on a dangling handle; L aborts at the same point.
 
 The abstract syntax
 ([`Expr`](https://github.com/leanprover/con-agua/blob/master/ConAgua/L/Syntax.lean#L118-L148),
-[`Stmt`](https://github.com/leanprover/con-agua/blob/master/ConAgua/L/Syntax.lean#L170-L209),
-[`FunDecl`, `Prog`](https://github.com/leanprover/con-agua/blob/master/ConAgua/L/Syntax.lean#L211-L221)):
+[`Stmt`](https://github.com/leanprover/con-agua/blob/master/ConAgua/L/Syntax.lean#L174-L213),
+[`FunDecl`, `Prog`](https://github.com/leanprover/con-agua/blob/master/ConAgua/L/Syntax.lean#L215-L225)):
 expressions have no side effects and make no calls, and only an array read can
 fail; conditions are a separate type with short-circuit `&&`/`||`, so a guard
 like `i < len && b[i] == c` cannot read out of bounds; a call is a statement
@@ -577,7 +577,7 @@ result, so no failure can be
 read as accept. Fuel is Kleene iteration: `exec p n` is the `n`-th iterate of
 the one-step interpreter, and fuel bounds the nesting of loop iterations and
 calls along a path
-([`exec`, `run`](https://github.com/leanprover/con-agua/blob/master/ConAgua/L/Semantics.lean#L441-L448)).
+([`exec`, `run`](https://github.com/leanprover/con-agua/blob/master/ConAgua/L/Semantics.lean#L448-L455)).
 A partial-correctness triple has exception postcondition `⊤` and is proved by
 induction on the fuel, without ever mentioning it.
 
@@ -617,7 +617,11 @@ of `i` with the array's length in 32-bit elements, which the descriptor table
 keeps beside its length in words (§6.4), and its proof
 rests on one lemma about Kraken's byte memory: the 4 bytes at `X + 4h` of the
 word at `X` are its half `h`, and a 4-byte store there leaves the memory an
-8-byte store of the word with that half replaced leaves.
+8-byte store of the word with that half replaced leaves. With a constant tier
+(`A⟨0⟩.u32[i]`) the access may name an untiered array: the id tables keep their
+dense entries so. A packed record's field, one half of a word, is read alone too
+(`Expr.ld32h`, emitted by the record accessors): the word load's bounds check,
+then the 4-byte load of the low or the high half.
 
 ### 5.4 Block primitives
 
@@ -633,11 +637,11 @@ the bounds checked once
 * `le64!(A.u8, i)`: the little-endian word of eight bytes.
 
 Their semantics are ordinary Lean functions
-([`le64`, `Mem.copy64`, `scanN`](https://github.com/leanprover/con-agua/blob/master/ConAgua/L/Semantics.lean#L204-L223)),
+([`le64`, `Mem.copy64`, `scanN`](https://github.com/leanprover/con-agua/blob/master/ConAgua/L/Semantics.lean#L207-L226)),
 and the compiler emits a tight loop for each: six instructions per copied word,
 seven per scanned byte
-([`copy64Code`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Compile.lean#L1005-L1016),
-[`scanLoop`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Compile.lean#L1038-L1045)).
+([`copy64Code`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Compile.lean#L1025-L1036),
+[`scanLoop`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Compile.lean#L1058-L1065)).
 
 ## 6. Data structures and memory layout
 
@@ -650,7 +654,7 @@ says how (§7).
 
 A handle is con-ron's 32-bit word, held in a 64-bit word: the constructor tag in
 bits 31–28, the tier in bit 27, the node index in bits 26–0
-([`tierE`, `idxE`](https://github.com/leanprover/con-agua/blob/master/ConAgua/L/TRec.lean#L93-L97)).
+([`tierE`, `idxE`](https://github.com/leanprover/con-agua/blob/master/ConAgua/L/TRec.lean#L101-L105)).
 Equal terms have equal handles (hash-consing), so comparing two terms is
 comparing two words.
 
@@ -665,12 +669,12 @@ A store whose two key fields are handles packs them into one record word.
 Each store's **cons table**, the hash map from a node's fields to its handle,
 is con-ron's `HashMap2`: open addressing, linear probing, one table per tier in
 its own word array, growth at load 3/4
-([the layout](https://github.com/leanprover/con-agua/blob/master/ConAgua/Arena/ConsLib.lean#L208-L217),
-[the growth test](https://github.com/leanprover/con-agua/blob/master/ConAgua/Arena/ConsLib.lean#L487-L492)).
+([the layout](https://github.com/leanprover/con-agua/blob/master/ConAgua/Arena/ConsLib.lean#L209-L218),
+[the growth test](https://github.com/leanprover/con-agua/blob/master/ConAgua/Arena/ConsLib.lean#L488-L493)).
 Where con-ron allocates a table of twice the size and frees the old one, L
 doubles the table **in place** (absl's in-place rehash: zero the upper half,
 mark the live slots, re-insert each marked entry)
-([`kgrowB`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Arena/ConsLib.lean#L464-L470)),
+([`kgrowB`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Arena/ConsLib.lean#L465-L471)),
 since L cannot free memory. The home slot is `mulhi(mix(h), n)` rather than
 con-ron's mask
 ([`homeW`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Arena/SlotGrow.lean#L41-L44)).
@@ -733,7 +737,7 @@ layout. `Checker/ArrCheck.lean` checks it against the program and the compiler
 the numbers are distinct; a byte access names a byte array of the
 table, a tiered access a tiered array, and a plain word access a word array of
 the table
-([the surface check](https://github.com/leanprover/con-agua/blob/master/ConAgua/L/Arrays.lean#L227-L230));
+([the surface check](https://github.com/leanprover/con-agua/blob/master/ConAgua/L/Arrays.lean#L228-L231));
 the compiler's layout has a position for every array of the table; and the
 parallel mode's frozen and owned arrays are arrays of the table.
 
@@ -806,7 +810,7 @@ stale.
 
 The dual, for reads: if a function set names only arrays in a set `S`, two runs
 from memories that agree on `S` end the same way
-([`run_agree`](https://github.com/leanprover/con-agua/blob/master/ConAgua/L/Agree.lean#L595-L599),
+([`run_agree`](https://github.com/leanprover/con-agua/blob/master/ConAgua/L/Agree.lean#L600-L604),
 [the idea](https://github.com/leanprover/con-agua/blob/master/ConAgua/L/Agree.lean#L7-L31)).
 The parallel mode uses it to run phase B on a memory that has only the frozen
 arrays and the worker's own (§9).
@@ -846,17 +850,17 @@ array access loads the base and length from the table and branches to
 (`rbp`, `r14` and the table address on the machine stack; `r15`, `rbx`, `r12`,
 `r13` in the 32 bytes past the table), restores them on every exit, and maps
 the outcomes to `rdx`, so the code generator may use any register
-([`trampoline`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Compile.lean#L2040-L2061)).
+([`trampoline`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Compile.lean#L2110-L2131)).
 
 The local optimisations, all inside the proof: a comparison of two simple
 operands (a register, a memory word, a constant) is one `cmp`, its operands
 swapped when the left one is a constant; `x := x op e` updates `x` in place; a
 local is zeroed on entry only if it may be read before it is assigned; a leaf
 function keeps its locals in nine registers
-([`allocRegs`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Compile.lean#L793));
+([`allocRegs`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Compile.lean#L800));
 the tier local of a leaf stays in `rsi`; a leaf with a frame, other than the
 entry, checks no stack limit: its callers' checks leave room for its frame
-([`compileFn`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Compile.lean#L2011-L2023)); a tiered access finds tier 1's
+([`compileFn`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Compile.lean#L2081-L2093)); a tiered access finds tier 1's
 descriptor at a fixed offset after tier 0's.
 
 **The layout map.** Only the compiler knows where arrays live. Byte and word

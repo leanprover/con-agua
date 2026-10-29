@@ -25,9 +25,10 @@ which fix the **layout** in one place: one tiered word array per store (lane tie
 **Packed records** (lane memlay, `hi ≠ 0`): field `0` and field `hi` (two handle words, below
 `2^32`) share word `0` of the record, field `0` in bits 0–31 and field `hi` in bits 32–63; the
 other fields `f` follow in words `1 ‥` (`f`, or `f - 1` above `hi`), whole. A field's word is
-`TRec.wd`, its address `TRec.ad`; a load extracts the half (`TRec.ex`: `x & 0xFFFFFFFF`,
-`x >> 32`). Records are written once, whole, by the store library's pushes (the combined word
-`f₀ | f_hi << 32`); `TRec.st` stores a whole word (unpacked fields only).
+`TRec.wd`, its address `TRec.ad`; a load of a packed field reads its half alone (`Expr.ld32h`, a
+4-byte load), whose value is the word's `TRec.ex` (`x & 0xFFFFFFFF`, `x >> 32`). Records are
+written once, whole, by the store library's pushes (the combined word `f₀ | f_hi << 32`);
+`TRec.st` stores a whole word (unpacked fields only).
 -/
 
 namespace L
@@ -78,9 +79,16 @@ without `j * 1` and `+ 0` (as the address expression `adE` computes it). -/
   | .bin .and (.bin .shr h (.const 27)) (.const 1) => .bin .shr h (.const 27)
   | t => t
 
-/-- `R⟨t, i⟩.f`: the load of field `f` of node `i` of tier `t` (tier `t` of the record array). -/
+/-- Is field `f` one half of word `0` (a packed record's field `0` or `hi`)? -/
+@[expose] def TRec.packed (R : TRec) (f : Word) : Prop := R.hi ≠ 0 ∧ (f = 0 ∨ f = R.hi)
+
+instance (R : TRec) (f : Word) : Decidable (R.packed f) := inferInstanceAs (Decidable (_ ∧ _))
+
+/-- `R⟨t, i⟩.f`: the load of field `f` of node `i` of tier `t` (tier `t` of the record array): the
+32-bit load of its half for a packed field, else the word. -/
 @[expose] def TRec.ld (R : TRec) (t i : Expr) (f : Word) : Expr :=
-  R.exE f (.ld64t R.arr (TRec.tierX t) (R.adE i f))
+  if R.packed f then .ld32h R.arr (TRec.tierX t) (R.adE i f) (decide (f = R.hi))
+  else .ld64t R.arr (TRec.tierX t) (R.adE i f)
 
 /-- `R⟨t, i⟩.f := e`: the store of field `f` of node `i` of tier `t` (`t` simple; a whole
 word: unpacked fields only). -/

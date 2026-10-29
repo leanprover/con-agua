@@ -85,6 +85,11 @@ def evalE (fr : Frame) : Expr → TM Word
     let j ← evalE fr i
     let arr := (← get).mem.arr64 (tierA a u)
     if h : (j / 2).toNat < arr.size then return half32 arr[(j / 2).toNat] j else stop .oob
+  | .ld32h a t i hi => do
+    let u ← evalE fr t
+    let j ← evalE fr i
+    let arr := (← get).mem.arr64 (tierA a u)
+    if h : j.toNat < arr.size then return half32b hi arr[j.toNat] else stop .oob
 
 def warrT (fr : Frame) : WArr → TM TieredArray
   | .plain a => pure a

@@ -632,6 +632,7 @@ theorem mapE_shiftE (f : Var → Var) (o o' : Nat) (hf : ∀ x, f (x + o) = x + 
   | .len64t a t => by simp [mapE, shiftE, mapE_shiftE f o o' hf t]
   | .ld8x8 b i => by simp [mapE, shiftE, mapE_shiftE f o o' hf i]
   | .ld32t a t i => by simp [mapE, shiftE, mapE_shiftE f o o' hf t, mapE_shiftE f o o' hf i]
+  | .ld32h a t i _ => by simp [mapE, shiftE, mapE_shiftE f o o' hf t, mapE_shiftE f o o' hf i]
 
 theorem mapW_shiftW (f : Var → Var) (o o' : Nat) (hf : ∀ x, f (x + o) = x + o') :
     ∀ w, mapW f (shiftW o w) = shiftW o' w

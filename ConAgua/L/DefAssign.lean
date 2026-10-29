@@ -35,6 +35,7 @@ def Expr.rv : Expr → List Var
   | .len64t _ t => Expr.rv t
   | .ld8x8 _ i => Expr.rv i
   | .ld32t _ t i => Expr.rv t ++ Expr.rv i
+  | .ld32h _ t i _ => Expr.rv t ++ Expr.rv i
 
 /-- The locals a block operand reads. -/
 def WArr.rv : WArr → List Var
