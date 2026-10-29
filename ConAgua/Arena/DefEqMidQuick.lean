@@ -354,13 +354,8 @@ theorem qf_ref (p : Prog) (hp : QuickProg p) (hil : InstListOK p) (n : Nat)
   have hpf := peelFuel_lt
   have H := db_ref p hp.lams.peel hil k (hk.mono (by omega)) F (by omega) (by omega) s₀ a₀ dn
     vis fe M eb mode d _ _ _ _ hs hwa1 hwa2 hwb1 hwb2 (by omega)
-  simp only [qfE.k_defeq_binders]
-  rcases h3 : dbE p (k + 1) s₀.mem mode vis d (ra.tail.headD 0) (ra.tail.tail.headD 0)
-      (rb.tail.headD 0) (rb.tail.tail.headD 0) with e | ⟨r₃, m₃⟩
-  · rw [h3] at H; exact fun hG => ErrClaim.bind_left (H (hG.mono (by omega)))
-  rw [h3] at H
-  obtain ⟨y, a', hrun, hP⟩ := H
-  exact RefE.bind_right hrun (RefE.ret rfl ⟨hP.after, by rw [hP.res]; rfl, hP.valid⟩)
+  exact RefE.tailMap_pure (fun _ => rfl) (fun _ => rfl) (fun hG => hG.mono (by omega))
+    (fun _ _ _ hP => ⟨hP.after, by rw [hP.res]; rfl, hP.valid⟩) H
 
 /-- **`quick_lam`'s model, both outcomes** (generated; `e_view` lifted, `defeq_lams` by its unified
 model). -/
@@ -397,13 +392,8 @@ theorem ql_ref (p : Prog) (hp : QuickProg p) (hi : Inst1OK p) (n : Nat)
   refine RefE.of_run_eq (quickPairT_lam _ _ _ _ _ a₀ _ _ _ _ hva hvb) ?_
   have H := defeqLams_ref p hp.lams hi k (hk.mono (by omega)) F (by omega) (by omega) s₀ a₀ dn
     vis fe M eb mode d _ _ _ _ hs hwa1 hwa2 hwb1 hwb2 hd
-  simp only [qlE.k_defeq_lams]
-  rcases h3 : lamsE p (k + 1) s₀.mem mode vis d (ra.tail.headD 0) (ra.tail.tail.headD 0)
-      (rb.tail.headD 0) (rb.tail.tail.headD 0) with e | ⟨r₃, m₃⟩
-  · rw [h3] at H; exact fun hG => ErrClaim.bind_left (H (hG.mono (by omega)))
-  rw [h3] at H
-  obtain ⟨y, a', hrun, hP⟩ := H
-  exact RefE.bind_right hrun (RefE.ret rfl ⟨hP.after, by rw [hP.res], hP.valid⟩)
+  exact RefE.tailMap_pure (fun _ => rfl) (fun _ => rfl) (fun hG => hG.mono (by omega))
+    (fun _ _ _ hP => ⟨hP.after, by rw [hP.res], hP.valid⟩) H
 
 /-! ## `quick_defeq`: the dispatch -/
 

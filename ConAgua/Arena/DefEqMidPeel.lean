@@ -391,13 +391,8 @@ theorem ps2_ref (p : Prog) (hp : PeelProg p) (hil : InstListOK p) (n : Nat)
   refine RefE.of_run_eq hT ?_
   have H := pd_ref p hil k' (hk.mono (by omega)) F (by omega) (by omega) s₀ a₀ dn vis fe M eb
     mode d da _ k fo hs hda hw1 fvs hx hdk
-  simp only [ps2E.k_peel_dom]
-  rcases h2 : pdE p (k' + 1) s₀.mem mode vis d da (r₁.tail.headD 0) k fo with e | ⟨r₂, m₂⟩
-  · rw [h2] at H; exact fun hkE => ErrClaim.bind_left (H (hkE.mono (by omega)))
-  rw [h2] at H
-  obtain ⟨y, a', hrun, hP⟩ := H
-  exact RefE.bind_right hrun (RefE.ret rfl ⟨hP.after, by rw [hP.res]; rfl,
-    ⟨hP.valid.1, hP.valid.2, hw2⟩⟩)
+  exact RefE.tailMap_pure (fun _ => rfl) (fun _ => rfl) (fun hkE => hkE.mono (by omega))
+    (fun _ _ _ hP => ⟨hP.after, by rw [hP.res]; rfl, ⟨hP.valid.1, hP.valid.2, hw2⟩⟩) H
 
 /-- **`peel_step`'s model, both outcomes** (generated; `e_view` lifted, `peel_step2` by its unified
 model). -/
@@ -433,13 +428,8 @@ theorem ps_ref (p : Prog) (hp : PeelProg p) (hil : InstListOK p) (n : Nat)
   refine RefE.of_run_eq hT ?_
   have H := ps2_ref p hp hil k' (hk.mono (by omega)) F (by omega) (by omega) s₀ a₀ dn vis fe M eb
     mode d _ b k fo hs hw1 hb hgb fvs hx hdk
-  simp only [psE.k_peel_step2]
-  rcases h2 : ps2E p (k' + 1) s₀.mem mode vis d (r₁.tail.headD 0) b k fo with e | ⟨r₂, m₂⟩
-  · rw [h2] at H; exact fun hkE => ErrClaim.bind_left (H (hkE.mono (by omega)))
-  rw [h2] at H
-  obtain ⟨y, a', hrun, hP⟩ := H
-  exact RefE.bind_right hrun (RefE.ret rfl ⟨hP.after, by rw [hP.res]; rfl,
-    ⟨hP.valid.1, hP.valid.2.1, hw2, hP.valid.2.2⟩⟩)
+  exact RefE.tailMap_pure (fun _ => rfl) (fun _ => rfl) (fun hkE => hkE.mono (by omega))
+    (fun _ _ _ hP => ⟨hP.after, by rw [hP.res]; rfl, ⟨hP.valid.1, hP.valid.2.1, hw2, hP.valid.2.2⟩⟩) H
 
 /-- **`peel_step` refines `peelStepT`** at two `∀` handles (`ps_ref`'s ok half). -/
 theorem peelStep_refines (p : Prog) (hp : PeelProg p) (hil : InstListOK p) (n : Nat)

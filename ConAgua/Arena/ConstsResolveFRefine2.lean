@@ -294,11 +294,7 @@ theorem crfT_callW {n : Nat} {m m' : Mem} {memo : Std.HashMap EIdx Bool} {h w : 
   unfold crfT at hc
   rcases hf : callW p n "crm_find" [h, 0] m with _ | ⟨rf, mf⟩
     <;> simp only [hf, reduceCtorEq, crfT1] at hc
-  obtain ⟨s', hmf, hs', hne, hrf⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (memoFindG_spec crSch p "crm_find" hp.find n _ h 0) hf
-  subst hs'
-  simp only at hmf hrf
-  subst hmf hrf
+  obtain ⟨hmf, -, rfl⟩ := callW_memoFind hp.find hf; subst mf
   cases hp' : callW p n "crm_put" [h, 0, w, (mfindG crSch m h 0).headD 0,
       (mfindG crSch m h 0).tail.headD 0] m with
   | none => rw [hp'] at hc; cases hc
@@ -306,13 +302,7 @@ theorem crfT_callW {n : Nat} {m m' : Mem} {memo : Std.HashMap EIdx Bool} {h w : 
   obtain ⟨rp, mp⟩ := q
   rw [hp', crfT2, Option.some.injEq, Prod.mk.injEq] at hc
   obtain ⟨rfl, rfl⟩ := hc
-  obtain ⟨s'', hmp, -, hput⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (memoPutG_spec crSch p "crm_put" hp.put n _ h 0 w _ _) hp'
-  simp only at hput
-  subst hmp
-  have hr : ¬ mfindG crSch m h 0 = [] := hne
-  have hs : msetG crSch m h 0 w = some s''.mem := by
-    rw [msetG, ite_eq_right hr]; exact hput
+  have hs := callW_memoSet hp.find hp.put hf hp'
   refine ⟨rfl, ?_, ?_⟩
   · exact memoRV_set crSch crSch_wf bmKey CrV crV_stable m memo hM h 0 w ⟨hh, rfl⟩ b hw _ hs
   · exact (msetG_frame crSch crSch_wf m _ h 0 w hs).mono (by simp [CRM]) (by simp)
@@ -350,11 +340,7 @@ theorem crf_step (n : Nat) (ih : CrfOK p dn vis fe n) : CrfOK p dn vis fe (n + 1
     rw [ite_eq_right (by rw [hg]; decide)] at hW
     rcases hfd : callW p n "crm_find" [h, 0] m with _ | ⟨rf, mf⟩
       <;> simp only [hfd, reduceCtorEq, crfM] at hW
-    obtain ⟨s', hmf, hs', hne', hrf⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-      (memoFindG_spec crSch p "crm_find" hp.find n _ h 0) hfd
-    subst hs'
-    simp only at hmf hrf
-    subst hmf hrf
+    obtain ⟨hmf, hne', rfl⟩ := callW_memoFind hp.find hfd; subst mf
     by_cases hhit : (mfindG crSch m h 0).headD 0 ≠ 0
     · rw [ite_eq_left hhit, Option.some.injEq, Prod.mk.injEq] at hW
       obtain ⟨rfl, rfl⟩ := hW
@@ -380,11 +366,7 @@ theorem crf_step (n : Nat) (ih : CrfOK p dn vis fe n) : CrfOK p dn vis fe (n + 1
     rw [ite_eq_right (by rw [hg]; decide)] at hW
     rcases hfd : callW p n "crm_find" [h, 0] m with _ | ⟨rf, mf⟩
       <;> simp only [hfd, reduceCtorEq, crfM] at hW
-    obtain ⟨s', hmf, hs', hne', hrf⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-      (memoFindG_spec crSch p "crm_find" hp.find n _ h 0) hfd
-    subst hs'
-    simp only at hmf hrf
-    subst hmf hrf
+    obtain ⟨hmf, hne', rfl⟩ := callW_memoFind hp.find hfd; subst mf
     by_cases hhit : (mfindG crSch m h 0).headD 0 ≠ 0
     · rw [ite_eq_left hhit, Option.some.injEq, Prod.mk.injEq] at hW
       obtain ⟨rfl, rfl⟩ := hW
@@ -416,11 +398,7 @@ theorem crf_step (n : Nat) (ih : CrfOK p dn vis fe n) : CrfOK p dn vis fe (n + 1
     rw [ite_eq_right (by rw [hg]; decide)] at hW
     rcases hfd : callW p n "crm_find" [h, 0] m with _ | ⟨rf, mf⟩
       <;> simp only [hfd, reduceCtorEq, crfM] at hW
-    obtain ⟨s', hmf, hs', hne', hrf⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-      (memoFindG_spec crSch p "crm_find" hp.find n _ h 0) hfd
-    subst hs'
-    simp only at hmf hrf
-    subst hmf hrf
+    obtain ⟨hmf, hne', rfl⟩ := callW_memoFind hp.find hfd; subst mf
     by_cases hhit : (mfindG crSch m h 0).headD 0 ≠ 0
     · rw [ite_eq_left hhit, Option.some.injEq, Prod.mk.injEq] at hW
       obtain ⟨rfl, rfl⟩ := hW
@@ -458,11 +436,7 @@ theorem crf_step (n : Nat) (ih : CrfOK p dn vis fe n) : CrfOK p dn vis fe (n + 1
     rw [ite_eq_right (by rw [hg]; decide)] at hW
     rcases hfd : callW p n "crm_find" [h, 0] m with _ | ⟨rf, mf⟩
       <;> simp only [hfd, reduceCtorEq, crfM] at hW
-    obtain ⟨s', hmf, hs', hne', hrf⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-      (memoFindG_spec crSch p "crm_find" hp.find n _ h 0) hfd
-    subst hs'
-    simp only at hmf hrf
-    subst hmf hrf
+    obtain ⟨hmf, hne', rfl⟩ := callW_memoFind hp.find hfd; subst mf
     by_cases hhit : (mfindG crSch m h 0).headD 0 ≠ 0
     · rw [ite_eq_left hhit, Option.some.injEq, Prod.mk.injEq] at hW
       obtain ⟨rfl, rfl⟩ := hW

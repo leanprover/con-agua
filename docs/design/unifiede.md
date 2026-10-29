@@ -123,7 +123,10 @@ missing shape is a kit change, reported, not a local helper).
   claim), `RefE.bind_right` (the twin's step ran ok; the rest decides), `RefE.ite_pos`/`ite_neg`;
 * `RefE.mono` (a weaker post: a recursive call's post is from its own start), `RefE.of_run_eq`
   (another twin with the same run), `RefE.tail` / `RefE.tail_eq` (a tail call whose continuation
-  re-lists the callee's value, against a twin that runs as the callee's);
+  re-lists the callee's value, against a twin that runs as the callee's); `RefE.tailMap` /
+  `tailMap_eq` / `tailMap_pure` for a callee whose model value has another type than the caller's
+  (`Word × Mem` against `List Word × Mem`; `_pure`: the caller's twin is the callee's followed by
+  `pure (g y)`);
 * the halves from the call's run, through the model's spec: `RefE.run_ok` / `run_okW` (the ok
   half from `callE`/`callW … = ok`), `RefE.run_err` (the `ErrClaim` of a failing run),
   `RefE.coreSpecE` (as `CoreSpecE`), `RefE.triple` (the ok triple, the `@[refines]` shape);
@@ -137,6 +140,10 @@ There is no lemma from a unified model's ok value back to the call's run: the mo
 model bounds (a load is `rdW`) or fuel failures of class `0`, so an ok model value does not make
 the run ok. An arm that needs the run (a callee's write-set frame, `run_memFrame`) calls the
 callee through `callE` and reads both halves (`RefE.run_ok`, `RefE.run_err`).
+
+**Memo probes** (`Arena/WhnfBase.lean`, beside `callW`): `callW_memoFind` (a `memoFindG` run: the
+memory unchanged, the answer `mfindG`) and `callW_memoSet` (a probe, then a put at its slot: the
+memo's `msetG`), instead of `triple_of_callW` over `memoFindG_spec`/`memoPutG_spec`.
 
 **`RefC` (`Arena/Verdict.lean`)**, a model value whose ok half is a fact, not a twin run:
 `RefC G x Ok C` says an ok value satisfies `Ok v` and an error `e` the claim `C e` under `G`.
@@ -154,7 +161,9 @@ the `@[refines]` shape; ascribe `(RefC.triple hs h :)` when the goal's post woul
 **Core functions (`Arena/RefECore.lean`)**, the functions the knot's slots call, whose ok halves
 are `CoreRef`s: the post `CorePost` (the relation after the run, the result decoded and valid),
 `RefE.coreSpec` / `CoreSpec.of_refE` (the knot's `CoreSpec` from the refinement), `CoreRef.post`,
-`CorePost.ret`, `RefE.bind_core` (a kept-stack callee, then the rest), `RefE.bind_callE` (a knot callee read through
+`CorePost.ret`, `CorePost.relistBy` and `RefE.tail_relist` / `tail_relist1` (a `decBool`/`ResH`
+answer word) / `tail_relist3` (three words, the decoder and validity read definitionally) for a tail
+call that re-lists the callee's results, `RefE.bind_core` (a kept-stack callee, then the rest), `RefE.bind_callE` (a knot callee read through
 its run `callE`, both outcomes, then the rest: the ok half from its `CoreSpec`, the error half from its
 claim under `G`, a `CoreSpecE` or a unified callee's `RefE.coreSpecE`). For arms that leave a
 slice on the stack: `CoreAfterG`, `GrowRef`, `GrowPost` with `GrowPost.growRef`, `of_core`,
@@ -178,7 +187,7 @@ refinement:
 `CoreStubsE` and `VerdictCtx` sit below `Verdict/DeclValE.lean` (in `VCtx`), so the `Decl` files
 can use them.
 
-**The generator's `flat` recipe (`L/ModelGen.lean`, `L/VcFlat.lean`; §3.48).** `l_model … unified
+**The generator's `flat` recipe (`L/ModelGen.lean`, `L/VcFlat.lean`; §3.48a).** `l_model … unified
 … flat` (in place of `simp [..]` or the default `finish`) proves each step by `vcgen`, then
 `vc_flat`, then `grind (ematch := 2k + 10) (gen := 2k + 10) [attrs]` for a model with `k`
 continuations. `vc_flat` takes the intermediate states out of every verification condition: a
@@ -2148,12 +2157,12 @@ is one model and one refinement by §3.2 unless it says otherwise.
   then inline its unified model. Done (§3.31: `cpd_ref`; `cp_ref`'s `G` is `CpG`, `check_pending`
   still through its run).
 - [x] `Verdict/FrontE` (`decl_kind`, `apply_decl`), `Verdict/FrontRunE` (`apply_d_line`): `RefC`s over
-  the line's record verdict (`VerdictClaimR`), as `apply_ind` (§3.28). Done (§3.32: `declKind_ref`,
+  the line's record verdict (`VerdictClaimR`), as `apply_ind` (§3.28). Done (§3.33a: `declKind_ref`,
   `applyDecl_ref`, `applyDLine_ref`).
 - [x] `Verdict/FrontStageE` (`builtin_prelude`), `Verdict/FrontRunE` (`front_line`, `front_run`):
   their ok sides are not per-function refinements but the generic driver (`Front/Driver`'s `runW`/
   `runI` over a line model `lineKW`, `DriverRefine`, the invariant steps of `FrontRun`/`FrontPreOK`)
-  and the stage composition (`builtin_of_parts`, `preSim`); see §3.32. Done (§3.38‥§3.40:
+  and the stage composition (`builtin_of_parts`, `preSim`); see §3.33a. Done (§3.38‥§3.40:
   `frontLine_ref`, `frontRun_ref`, `builtinPrelude_ref`; the generic driver is gone).
 
 **B. The knot's own functions** (ok halves the knot's `CoreSpec` slots, outside §3.1's
@@ -2168,7 +2177,7 @@ the slots, as `m2c_*` in §3.7):
 - [x] `whnf` itself: `Verdict/WhnfModels2E` (6: `core_step_proj`, `reduce_proj_core`,
   `proj_lit_to_ctor`, `core_app`, `core_app2`, `whnf_app`; claims in `WhnfProjE`, `WhnfAppE`),
   `Verdict/WhnfModelsE` (5: `whnf_core`, `whnf_core_step`, `whnf`, `whnf_loop`, `whnf_step`; claims
-  in `WhnfSlotE`). Done (§3.42, §3.43, §3.45);
+  in `WhnfSlotE`). Done (§3.42, §3.43a, §3.45a);
 - [ ] `is_def_eq`: `Verdict/DefEqQuickE` (4), `DefEqLamsE` (2), `DefEqEagerE` (2), `DefEqPeelE`
   (5), `DefEqSpineE` (3), `DefEqLazyE` (8), `DefEqTailE` (9), `DefEqLoopsE` (1), `DefEqSlotE` (3:
   `defeq_slot`, `defeq_body`, `is_def_eq_core`). Done: `DefEqQuickE`, `DefEqLamsE`, `DefEqPeelE`,
@@ -2368,7 +2377,7 @@ Both flagged modules are the new homes of a model whose old module got faster by
 generator change was needed.
 
 
-### 3.32 Retirement, group A: a declaration line (`decl_kind`, `apply_decl`, `apply_dline`)
+### 3.33a Retirement, group A: a declaration line (`decl_kind`, `apply_decl`, `apply_dline`)
 
 Three of the front's items (§3.30), each one `unified` model and one `RefC` refinement whose error
 half is the line's record verdict (`VerdictClaimR`), as `apply_ind`'s (§3.28); all three in
@@ -2584,7 +2593,7 @@ claim, then the rest: `pm_m2c`, `pm_lmtc`) recurs at every non-migrated knot cal
 
 ### 3.38 Retirement, group A: the frontend's driver, design (`front_line`, `front_run`, `builtin_prelude`)
 
-§3.32 skipped these three because their ok halves are not refinements of the functions but of
+§3.33a skipped these three because their ok halves are not refinements of the functions but of
 generic models: `front_line`'s hand model `frontLineW` (the validator's `lineFwdN` with the record
 passes, `frontLineW_eq` to the code, refined by `frontLineW_refines` and, for the records' words,
 `frontLineW_grow`); `front_run`'s generic loop model `runW`/`runK`/`runI` over a line model
@@ -2859,7 +2868,7 @@ Elaboration (user seconds, median of 3 interleaved runs, base master 7d656c31,
 (the ok models they replace were cheaper, with the callees as `callW` runs); the default recipe was
 tried (above). No generator or kit change was needed.
 
-### 3.43 Retirement, group B, `whnf` itself, second landing (`whnf_core_step`, `whnf_core`)
+### 3.43a Retirement, group B, `whnf` itself, second landing (`whnf_core_step`, `whnf_core`)
 
 `step_ref` and `core_ref` (`Arena/WhnfCoreLoop`), over the unified models `whnfCoreStepE`
 (`whnf_core_app`'s and `whnf_core_step_proj`'s unified specs listed, `inst1` lifted) and
@@ -2983,7 +2992,7 @@ Elaboration (user seconds, median of 3 interleaved runs, base master f6ca221b,
 refinements (`strE`'s generation alone is about 20 s, as was the `errors` model's in `DefEqTailE`);
 the default recipe fails on `strE` (88 s). No generator or kit change was needed.
 
-### 3.45 Retirement, group B, `whnf` itself, third landing (`whnf_step`, `whnf_loop`, `whnf`)
+### 3.45a Retirement, group B, `whnf` itself, third landing (`whnf_step`, `whnf_loop`, `whnf`)
 
 `wstep_ref`, `wloop_ref`, `whnf_ref` (new `Arena/WhnfSlotRefine`, after `reduce_nat`'s refinement in
 `Verdict/WhnfNatE`), over unified models that list their callees' unified specs: `whnf_step` lists
@@ -3001,7 +3010,7 @@ interfaces stay, as one-liners: `whnfStep_refines'` (now over `NatOpResultOK` in
 |---|---:|---:|---:|
 | `whnf_step`, `whnf_loop`, `whnf` | 475 | 203 | **−57 %** |
 
-With §3.42 and §3.43 the bullet is done: 11 functions, no `errors` model left in `WhnfModels2E`
+With §3.42 and §3.43a the bullet is done: 11 functions, no `errors` model left in `WhnfModels2E`
 and `WhnfModelsE`.
 
 Elaboration (user seconds, median of 3 interleaved runs, base master 4f05df22): `Arena/WhnfDeltaSlot`
@@ -3133,7 +3142,8 @@ Diff of the landing against master: +461 −998 lines in 9 files. Elaboration (u
 0.50 → 0.45, `KnotAllE` 3.06 → 3.07; sum 36.96 → 28.55 (−23 %). `DefEqBody` and `KnotSlot` are
 slower for the same reason as in §3.45 (the generated unified models moved in with the
 refinements). No generator or kit change was needed.
-### 3.48 Generator: the `flat` recipe (lane `gen-cut`)
+
+### 3.48a Generator: the `flat` recipe (lane `gen-cut`)
 
 **Why the whole-body proofs were slow** (profiled on `ipE`, `infer_proj`, §3.44: 76 s for its
 generated spec). Not `vcgen` (0.3 s) and not the kernel (the profiler's 67 s "type checking" is
