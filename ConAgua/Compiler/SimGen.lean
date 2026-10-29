@@ -103,6 +103,9 @@ theorem evalP_ghost {al : List (Var × Reg64)} {W : List Reg64} {R : Reg64s} {σ
     simp only [evalP, iht fun r hr => (h r hr).1, ihi fun r hr => (h r hr).2]; rfl
   | len64t a t ih => intro h; simp only [Expr.readsReg] at h; simp only [evalP, ih h]; rfl
   | ld8x8 b i ih => intro h; simp only [Expr.readsReg] at h; simp only [evalP, ih h]; rfl
+  | ld32t a t i iht ihi =>
+    intro h; simp only [Expr.readsReg, Bool.or_eq_false_iff] at h
+    simp only [evalP, iht fun r hr => (h r hr).1, ihi fun r hr => (h r hr).2]; rfl
   | _ => intro _; rfl
 
 
@@ -136,7 +139,8 @@ theorem readsReg_free {al : List (Var × Reg64)} {r : Reg64} (h : ∀ x, al.look
   intro e
   induction e with
   | var x => simp only [Expr.readsReg, beq_eq_false_iff_ne, ne_eq]; exact h x
-  | bin _ _ _ iha ihb | cmpw _ _ _ iha ihb | ld64t _ _ _ iha ihb => simp [Expr.readsReg, iha, ihb]
+  | bin _ _ _ iha ihb | cmpw _ _ _ iha ihb | ld64t _ _ _ iha ihb | ld32t _ _ _ iha ihb =>
+    simp [Expr.readsReg, iha, ihb]
   | ld8 _ _ ih | ld64 _ _ ih | ldc _ _ ih | len64t _ _ ih | ld8x8 _ _ ih => simp [Expr.readsReg, ih]
   | _ => rfl
 
@@ -552,13 +556,6 @@ end
 
 /-! ## Array loads -/
 
-/-- `[ln]` holds the length of the word array `arr`, `[bs]` its base `B`, from which it lies in
-memory. -/
-structure ArrW (s : MachineData) (ln bs : AddrExpr) (arr : Array Word) : Prop where
-  len : MemW s ln (UInt64.ofNat arr.size)
-  base : ∃ B : Nat, MemW s bs (UInt64.ofNat B) ∧ B + 8 * arr.size < 2 ^ 64 ∧
-    ∀ j (h : j < arr.size), rdW s.dmem (A (B + 8 * j)) = some arr[j]
-
 /-- The same for a byte array. -/
 structure ArrB (s : MachineData) (ln bs : AddrExpr) (arr : Array UInt8) : Prop where
   len : MemW s ln (UInt64.ofNat arr.size)
@@ -706,6 +703,55 @@ theorem genLdW_spec (_hF : 8 * F + 8 < maxOff) {ln bs : AddrExpr} {mn : Nat} {i 
           omega
         · refine ev_congr (hv _ hjs _ hj (by simp [rget_set]) ?_) (by simp; omega)
           exact ((hX1.flags _).set ht _ _).set hd _ _
+
+/-- `d := A.u32[i]` (`genLd32`, lane p32): the index a local's register or computed into `d`, then
+`ld32Code_spec`. -/
+theorem genLd32W_spec (_hF : 8 * F + 8 < maxOff) {ln bs : AddrExpr} {i : Expr} {gi : GenF}
+    (hi : GenSpec G ctx F i gi) {d : Reg64} {fr : List Reg64} {code : Program} {k : Nat}
+    (hg : genLd32 ctx ln bs i gi d fr = some code) (hc : Code code k) (hok : GOk ctx i d fr)
+    (hwf : Expr.wf ctx.nl G.tab i = true) {arr : Array Word}
+    {σ : St} {s : MachineData} {Q : MachineState → Prop} (hI : Inv G ctx F σ s)
+    (hA : ∀ s', XPost (d :: fr) s s' → ArrW s' ln bs arr)
+    (hv : ∀ j (h : (j / 2).toNat < arr.size) s', evalP σ i = .ok j →
+      s'.regs.get64 d = (half32 arr[(j / 2).toNat] j).toBitVec →
+      XPost (d :: fr) s s' → Ev Q s' (at_ (k + code.length)))
+    (herr : ∀ s', ((∃ x, evalP σ i = .error x) ∨ ∃ j, evalP σ i = .ok j ∧ ¬ (j / 2).toNat < arr.size) →
+      XPost (d :: fr) s s' → Ev Q s' (label errorL)) : Ev Q s (at_ k) := by
+  have hd : d ∈ d :: fr := List.mem_cons_self
+  unfold genLd32 at hg
+  split at hg
+  case h_2 => cases hg
+  rename_i t rest
+  have htd : t ≠ d := fun e => (List.nodup_cons.mp hok.nd).1 (e ▸ List.mem_cons_self)
+  have ht : t ∈ d :: t :: rest := List.mem_cons_of_mem _ List.mem_cons_self
+  -- what `ld32Code` changes (`t`, `d`, the flags), as an `XPost` from `s0`
+  have hX : ∀ {s0 s' : MachineData}, XPost (d :: t :: rest) s s0 → s'.dmem = s0.dmem →
+      (∀ r, r ≠ t → r ≠ d → s'.regs.get64 r = s0.regs.get64 r) → XPost (d :: t :: rest) s s' :=
+    fun {s0 s'} hX0 hm hk => ⟨fun r hr => by
+      rw [hk r (fun e => hr (e ▸ ht)) (fun e => hr (e ▸ hd)), hX0.keep r hr], hm.trans hX0.mem⟩
+  have hX' : ∀ {s0 s' : MachineData}, XPost (d :: t :: rest) s s0 → s'.dmem = s0.dmem →
+      (∀ r, r ≠ t → s'.regs.get64 r = s0.regs.get64 r) → XPost (d :: t :: rest) s s' :=
+    fun hX0 hm hk => hX hX0 hm fun r h1 _ => hk r h1
+  split at hg
+  · -- the index in a local's register
+    rename_i r hr
+    cases hg
+    obtain ⟨x, rfl, hx⟩ : ∃ x, i = .var x ∧ ctx.alloc.lookup x = some r := by
+      cases i <;> simp_all [regOf]
+    have hxl : x < ctx.nl := by simpa [Expr.wf] using hwf
+    have hrt : r ≠ t := lookup_ne_of_readsReg hx (hok.rd t ht)
+    refine ld32Code_spec hc (Ne.symm hrt) (j := σ.loc x) (hI.reg x hxl r hx)
+      (fun s' hm hk => hA s' (hX' (XPost.refl _ s) hm hk))
+      (fun hj s' hv' hm hk => ?_) (fun s' hj hm hk => herr s' (.inr ⟨σ.loc x, rfl, hj⟩) (hX' (XPost.refl _ s) hm hk))
+    exact ev_congr (hv _ hj s' rfl hv' (hX (XPost.refl _ s) hm hk)) (by simp [ld32Code])
+  · -- the index into `d`
+    obtain ⟨ci, hci, rfl⟩ := Option.map_eq_some_iff.mp hg
+    refine hi d (t :: rest) ci k hci hc.left hok hwf σ s Q hI ?_ (fun s1 he hX1 => herr s1 (.inl he) hX1)
+    intro j s1 hj hd1 hX1
+    refine ld32Code_spec hc.right htd (j := j) hd1
+      (fun s' hm hk => hA s' (hX' hX1 hm hk))
+      (fun hjs s' hv' hm hk => ?_) (fun s' hjs hm hk => herr s' (.inr ⟨j, hj, hjs⟩) (hX' hX1 hm hk))
+    exact ev_congr (hv _ hjs s' hj hv' (hX hX1 hm hk)) (by simp [ld32Code]; omega)
 
 /-- `d := A[i]` for the table-relative word array `A` at `T + c` (`genLdT`), `mn` a minimum length of
 `A`. -/
@@ -966,32 +1012,6 @@ theorem arrB_plain {a : ArrId} (ha : G.tab.dom8 a = true) {σ : St} {s : Machine
     by rw [hsz]; exact hend, fun j hj => hI.mem.get8 a ha j hj⟩
   · rw [Reg64s.get64_r15, UInt64.toNat_toBitVec, hI.r15, hT, hsz]; exact hI.mem.len8A ha
   · rw [Reg64s.get64_r15, UInt64.toNat_toBitVec, hI.r15, hT]; exact hI.mem.base8A ha
-
-omit [Host] in
-/-- A tiered word array's descriptor, the tier `u & 1` in register `R`. -/
-theorem arrW_tier {a : ArrId} (ha : G.tab.dom64 (tier1 a) = true) {σ : St} {s : MachineData} (hI : Inv G ctx F σ s)
-    {R : Reg64} {u : Word} (hR : s.regs.get64 R = (u &&& 1).toBitVec) :
-    ArrW s (tdesc R (ctx.tab.len64 a)) (tdesc R (ctx.tab.base64 a)) (σ.mem.arr64 (tierA a u)) := by
-  simp only [maxOff] at hTab
-  have hta := G.tab.dom64_tierA ha u
-  have htap := G.tab.pos64_lt hta
-  have hw := G.tab.pos64_lt (G.tab.dom64_t0 ha)
-  have hb := tier_bit u
-  have hoff := tier_off G.tab ha u
-  have hD : ∀ d : Int, s.regs.r15.toNat + 8 * (s.regs.get64 R).toNat + d.toNat =
-      G.T + 8 * (u &&& 1).toNat + d.toNat := by
-    intro d; rw [hR, UInt64.toNat_toBitVec, hI.r15]
-  have hsz := hI.mem.size64 _ hta
-  have hend := hG.end64 _ htap
-  refine ⟨.inr ⟨_, _, rfl, ⟨by simp [Tab.len64, Tab.dlen]; lomega, by simp [hT, Tab.len64, Tab.dlen]; lomega⟩, ?_⟩,
-    G.b (G.tab.pos64 (tierA a u)), .inr ⟨_, _, rfl, ⟨by simp [Tab.base64, Tab.dbase]; lomega, by simp [hT, Tab.base64, Tab.dbase]; lomega⟩, ?_⟩,
-    by rw [hsz]; exact hend, fun j hj => hI.mem.get64 _ hta j hj⟩
-  · rw [hD, show G.T + 8 * (u &&& 1).toNat + (ctx.tab.len64 a).toNat =
-      G.T + (G.tab.len64 (tierA a u)).toNat by rw [hT]; omega, hsz]
-    exact hI.mem.len64A hta
-  · rw [hD, show G.T + 8 * (u &&& 1).toNat + (ctx.tab.base64 a).toNat =
-      G.T + (G.tab.base64 (tierA a u)).toNat by rw [hT]; omega]
-    exact hI.mem.base64A hta
 
 end
 
@@ -1261,6 +1281,99 @@ theorem gen_ld64t (a : ArrId) {t i : Expr} (ht : GenSpec G ctx F t (gen ctx t))
       · exact ⟨.oob, by simp [evalP, hu, hj, hn, bind, Except.bind]⟩
 
 
+/-- `d := a⟨t⟩.u32[i]` (lane p32): as `gen_ld64t`, with `genLd32W_spec`. -/
+theorem gen_ld32t (a : ArrId) {t i : Expr} (ht : GenSpec G ctx F t (gen ctx t))
+    (hi : GenSpec G ctx F i (gen ctx i)) :
+    GenSpec G ctx F (.ld32t a t i) (gen ctx (.ld32t a t i)) := by
+  intro d fr code k hg hc hok hwf σ s Q hI hv herr
+  simp only [gen] at hg
+  simp only [Expr.wf, Bool.and_eq_true] at hwf
+  obtain ⟨⟨ha, hwt⟩, hwi⟩ := hwf
+  have hrt : ∀ r, Expr.readsReg ctx.alloc r (.ld32t a t i) = false → Expr.readsReg ctx.alloc r t = false :=
+    fun r h => by simp only [Expr.readsReg, Bool.or_eq_false_iff] at h; exact h.1
+  have hri : ∀ r, Expr.readsReg ctx.alloc r (.ld32t a t i) = false → Expr.readsReg ctx.alloc r i = false :=
+    fun r h => by simp only [Expr.readsReg, Bool.or_eq_false_iff] at h; exact h.2
+  split at hg
+  · -- the tier local: its tier in `rsi`
+    rename_i hTt
+    obtain ⟨x, rfl, hx⟩ : ∃ x, t = .var x ∧ ctx.treg = some x := by
+      cases t <;> simp_all [Ctx.isT]
+    have hrsi : ∀ s', XPost (d :: fr) s s' → s'.regs.get64 .rsi = (σ.loc x &&& 1).toBitVec := by
+      intro s' hX
+      rw [hX.keep .rsi fun h => (hok.dr _ h).rsi (by simp [hx]) rfl]
+      simp [Reg64s.get64, hI.tr x hx]
+    refine genLd32W_spec hF hi hg hc (hok.sub hok.nd (fun r h => h) hri) hwi hI
+      (arr := σ.mem.arr64 (tierA a (σ.loc x)))
+      (fun s' hX => by have := arrW_tier hG hT hTab ha (hI.ghost hX hok.dr) (hrsi s' hX); exact this) ?_ ?_
+    · intro j hj s' hji hd hX
+      exact hv _ s' (by simp only [evalP, hji, bind, Except.bind]; rw [dite_eq_left hj]) hd hX
+    · intro s' he hX
+      refine herr s' ?_ hX
+      rcases he with ⟨y, hy⟩ | ⟨j, hj, hn⟩
+      · exact ⟨y, by simp [evalP, hy]; rfl⟩
+      · exact ⟨.oob, by simp only [evalP, hj, bind, Except.bind]; rw [dite_eq_right hn]⟩
+  · -- the tier into a scratch register
+    split at hg
+    case h_2 => cases hg
+    rename_i s0 fr'
+    obtain ⟨ct, hct, hg⟩ := Option.bind_eq_some_iff.mp hg
+    obtain ⟨c, hcg, rfl⟩ := Option.map_eq_some_iff.mp hg
+    have hnd := hok.nd
+    have hds : d ∉ s0 :: fr' := (List.nodup_cons.mp hnd).1
+    have hs0 : s0 ∉ fr' := (List.nodup_cons.mp (List.nodup_cons.mp hnd).2).1
+    have hokt : GOk ctx t s0 fr' :=
+      hok.sub (List.nodup_cons.mp hnd).2 (fun r h => List.mem_cons_of_mem _ h) hrt
+    have hW1 : ∀ r ∈ s0 :: fr', r ∈ d :: s0 :: fr' := fun r h => List.mem_cons_of_mem _ h
+    refine ht s0 fr' ct k hct hc.left.left hokt hwt σ s Q hI ?_
+      (fun s1 he hX => herr s1 (by obtain ⟨y, hy⟩ := he; exact ⟨y, by simp [evalP, hy]; rfl⟩) (hX.mono hW1))
+    intro u s1 hu hs1 hX1
+    refine sim_tierDesc hc.left.right hs1 fun st => ?_
+    have hX2 : XPost (s0 :: fr') s _ := hX1.set List.mem_cons_self (u &&& 1).toBitVec st
+    have hI2 := hI.ghost hX2 hokt.dr
+    have hoki : GOk ctx i d fr' :=
+      hok.sub (List.nodup_cons.mpr ⟨fun h => hds (List.mem_cons_of_mem _ h),
+        (List.nodup_cons.mp (List.nodup_cons.mp hnd).2).2⟩)
+        (fun r h => by
+          rcases List.mem_cons.mp h with rfl | h
+          · exact List.mem_cons_self
+          · exact List.mem_cons_of_mem _ (List.mem_cons_of_mem _ h)) hri
+    have hcc : Code c (k + ct.length + 1) := by
+      have := hc.right; simpa [tierDesc, Nat.add_assoc] using this
+    have hev : ∀ (R : Reg64s) e', (∀ r, Expr.readsReg ctx.alloc r (.ld32t a t i) = false →
+        Expr.readsReg ctx.alloc r e' = false) → evalP (σ.ghost ctx.alloc (s0 :: fr') R) e' = evalP σ e' :=
+      fun R e' h => evalP_ghost e' fun r hr => h r (hok.rd r (hW1 r hr))
+    refine genLd32W_spec hF hi hcg hcc hoki hwi hI2 (arr := σ.mem.arr64 (tierA a u)) ?_ ?_ ?_
+    · intro s' hX
+      have hs0' : s'.regs.get64 s0 = (u &&& 1).toBitVec := by
+        rw [hX.keep s0 (fun h => by
+          rcases List.mem_cons.mp h with e | h
+          · exact hds (e ▸ List.mem_cons_self)
+          · exact hs0 h)]
+        simp [rget_set]
+      have := arrW_tier hG hT hTab ha (hI2.ghost hX hoki.dr) hs0'
+      exact this
+    · intro j hj s' hji hd hX
+      rw [hev _ i hri] at hji
+      refine ev_congr (hv _ s' (by simp only [evalP, hu, hji, bind, Except.bind]; rw [dite_eq_left hj]) hd ?_) (by simp [tierDesc]; omega)
+      exact (hX2.mono hW1).trans hX |>.mono fun r h => by
+        rcases List.mem_append.mp h with h | h
+        · exact h
+        · rcases List.mem_cons.mp h with rfl | h
+          · exact List.mem_cons_self
+          · exact List.mem_cons_of_mem _ (List.mem_cons_of_mem _ h)
+    · intro s' he hX
+      rw [hev _ i hri] at he
+      refine herr s' ?_ ((hX2.mono hW1).trans hX |>.mono fun r h => by
+        rcases List.mem_append.mp h with h | h
+        · exact h
+        · rcases List.mem_cons.mp h with rfl | h
+          · exact List.mem_cons_self
+          · exact List.mem_cons_of_mem _ (List.mem_cons_of_mem _ h))
+      rcases he with ⟨y, hy⟩ | ⟨j, hj, hn⟩
+      · exact ⟨y, by simp [evalP, hu, hy]; rfl⟩
+      · exact ⟨.oob, by simp only [evalP, hu, hj, bind, Except.bind]; rw [dite_eq_right hn]⟩
+
+
 omit hF in
 theorem gen_len64t (a : ArrId) {t : Expr} (ht : GenSpec G ctx F t (gen ctx t)) :
     GenSpec G ctx F (.len64t a t) (gen ctx (.len64t a t)) := by
@@ -1400,6 +1513,7 @@ theorem sim_gen : ∀ e, GenSpec G ctx F e (gen ctx e) := by
   | ld8 a i ih => exact gen_ld8 hG hT hTab hF a ih
   | ld64 a i ih => exact gen_ld64 hG hT hTab hF a ih
   | ld64t a t i iht ihi => exact gen_ld64t hG hT hTab hF a iht ihi
+  | ld32t a t i iht ihi => exact gen_ld32t hG hT hTab hF a iht ihi
   | len64t a t ih => exact gen_len64t hG hT hTab a ih
   | ldc dd i ih => exact gen_ldc hG hT hTab dd ih
   | cmpw op a b iha ihb => exact gen_cmpw hT hTab hF op iha ihb
