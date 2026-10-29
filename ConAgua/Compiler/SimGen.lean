@@ -1,7 +1,6 @@
 module
 
 public import ConAgua.Compiler.SimExpr
-public import ConAgua.Compiler.StepGen
 import Kraken.X64.Registers
 
 @[expose] public section

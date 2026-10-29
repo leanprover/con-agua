@@ -2,7 +2,7 @@ module
 
 public import ConAgua.Arena.SlotGrow
 public import ConAgua.Arena.Pool
-public import ConAgua.L.PureEval
+public import ConAgua.L.Logic
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import Std.WP.Tactic
