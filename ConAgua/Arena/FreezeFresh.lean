@@ -356,7 +356,7 @@ theorem ModeOK.fresh (h : ModeOK (cutT m)) : ModeOK (freshMem m) :=
 
 theorem IWOK.fresh (h : L.Ind.IWOK (cutT m)) : L.Ind.IWOK (freshMem m) := by
   obtain ⟨h1, h2, h3, h4, h5⟩ := h
-  simp only [L.Ind.IWOK, L.Ind.iwTop, L.Ind.erTop, fresh_ctl, fresh_size] at *
+  simp only [L.Ind.IWOK_iff, L.Ind.iwTop, L.Ind.erTop, fresh_ctl, fresh_size] at *
   exact ⟨h1, h2, h3, h4, h5⟩
 
 section loop

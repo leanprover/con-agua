@@ -39,7 +39,7 @@ theorem flush_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEn
   have h129 : rdW ((flushMem m).arr64 CTL) 129 = rdW (m.arr64 CTL) 129 :=
     hf.ctl 129 (by simp [flushCtl])
   refine ⟨⟨hC, ?_⟩, ?_⟩
-  · simp only [IWOK, iwTop, erTop, hIW, hE, h200, h129, hf.size CTL]; exact h.iw
+  · simp only [IWOK_iff, iwTop, erTop, hIW, hE, h200, h129, hf.size CTL]; exact (IWOK_iff _).1 h.iw
   · refine ⟨?_, ?_, fun i _ => by rw [hIW], fun i _ => by rw [hE]⟩
     · simp only [iwTop, h200]; exact Nat.le_refl _
     · simp only [erTop, h129]; exact Nat.le_refl _

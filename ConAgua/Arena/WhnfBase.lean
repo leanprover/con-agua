@@ -385,10 +385,10 @@ def VI {k : IdxKind} (_ : Mem) (w : Word) (v : Idx k) : Prop := v = decI w ∧ w
 
 /-- **The `instLP` walk's memos are well formed** (at some maps): `inst_lp_core` clears them on
 entry (an epoch bump, sound on a well-formed memo; the twin starts from `∅`). -/
-def LPMemos (m : Mem) : Prop :=
-  (∃ mp : Std.HashMap (EIdx × Nat) EIdx, MemoRV coreLpSch lfKey VH m mp) ∧
-  (∃ mp : Std.HashMap LIdx LIdx, MemoRV coreLplSch ilKey VI m mp) ∧
-  (∃ mp : Std.HashMap LsIdx LsIdx, MemoRV coreLplsSch ilKey VI m mp)
+structure LPMemos (m : Mem) : Prop where
+  lp : ∃ mp : Std.HashMap (EIdx × Nat) EIdx, MemoRV coreLpSch lfKey VH m mp
+  lpl : ∃ mp : Std.HashMap LIdx LIdx, MemoRV coreLplSch ilKey VI m mp
+  lpls : ∃ mp : Std.HashMap LsIdx LsIdx, MemoRV coreLplsSch ilKey VI m mp
 
 theorem coreLpSch_wf : coreLpSch.WF := ⟨by decide, by decide⟩
 theorem coreLplSch_wf : coreLplSch.WF := ⟨by decide, by decide⟩
@@ -398,18 +398,19 @@ theorem coreLplsSch_wf : coreLplsSch.WF := ⟨by decide, by decide⟩
 theorem LPMemos.frame {A : List TieredArray} {C : List Word} {m m' : Mem} (hf : MemFrame A C m m')
     (hA : (LPMEMO : TieredArray) ∉ A ∧ (LPLMEMO : TieredArray) ∉ A ∧ (LPLSMEMO : TieredArray) ∉ A)
     (hC : (54 : Word) ∉ C ∧ (56 : Word) ∉ C ∧ (58 : Word) ∉ C) (h : LPMemos m) : LPMemos m' :=
-  ⟨let ⟨mp, hm⟩ := h.1;
+  ⟨let ⟨mp, hm⟩ := h.lp;
     ⟨mp, memoRV_frame coreLpSch coreLpSch_wf lfKey VH A C hA.1 hC.1 m m' hf (fun _ _ h => h) mp hm⟩,
-    let ⟨mp, hm⟩ := h.2.1;
+    let ⟨mp, hm⟩ := h.lpl;
     ⟨mp, memoRV_frame coreLplSch coreLplSch_wf ilKey VI A C hA.2.1 hC.2.1 m m' hf (fun _ _ h => h) mp hm⟩,
-    let ⟨mp, hm⟩ := h.2.2;
+    let ⟨mp, hm⟩ := h.lpls;
     ⟨mp, memoRV_frame coreLplsSch coreLplsSch_wf ilKey VI A C hA.2.2 hC.2.2 m m' hf (fun _ _ h => h) mp hm⟩⟩
 
 /-- The walk-local memos are well formed (lane `whnf3`'s three, and the `instLP` walk's). -/
-def WalkMemos (m : Mem) : Prop :=
-  (∃ mp : Std.HashMap (EIdx × Nat) Bool, MemoRG coreWsSch lfKey (fun w => w != 0) m mp) ∧
-    (∃ mp : Std.HashMap EIdx Unit, MemoRG coreFlSch bmKey (fun _ => ()) m mp) ∧
-    (∃ mp : Std.HashMap EIdx Bool, MemoRG coreLsbSch bmKey (fun w => w != 0) m mp) ∧ LPMemos m
+structure WalkMemos (m : Mem) : Prop where
+  ws : ∃ mp : Std.HashMap (EIdx × Nat) Bool, MemoRG coreWsSch lfKey (fun w => w != 0) m mp
+  fl : ∃ mp : Std.HashMap EIdx Unit, MemoRG coreFlSch bmKey (fun _ => ()) m mp
+  lsb : ∃ mp : Std.HashMap EIdx Bool, MemoRG coreLsbSch bmKey (fun w => w != 0) m mp
+  lp : LPMemos m
 
 /-- The walk memos are well formed (`MemoRG` at some map). -/
 structure CoreMemos (m : Mem) : Prop where
@@ -429,10 +430,10 @@ theorem WalkMemos.frame {A : List TieredArray} {C : List Word} {m m' : Mem} (hf 
     (hC : (152 : Word) ∉ C ∧ (154 : Word) ∉ C ∧ (156 : Word) ∉ C) (h : WalkMemos m)
     (hLA : (LPMEMO : TieredArray) ∉ A ∧ (LPLMEMO : TieredArray) ∉ A ∧ (LPLSMEMO : TieredArray) ∉ A := by decide)
     (hLC : (54 : Word) ∉ C ∧ (56 : Word) ∉ C ∧ (58 : Word) ∉ C := by decide) : WalkMemos m' :=
-  ⟨let ⟨mp, hm⟩ := h.1; ⟨mp, memoRG_frame coreWsSch coreWsSch_wf lfKey _ A C hA.1 hC.1 m m' hf mp hm⟩,
-    let ⟨mp, hm⟩ := h.2.1; ⟨mp, memoRG_frame coreFlSch coreFlSch_wf bmKey _ A C hA.2.1 hC.2.1 m m' hf mp hm⟩,
-    let ⟨mp, hm⟩ := h.2.2.1; ⟨mp, memoRG_frame coreLsbSch coreLsbSch_wf bmKey _ A C hA.2.2 hC.2.2 m m' hf mp hm⟩,
-    h.2.2.2.frame hf hLA hLC⟩
+  ⟨let ⟨mp, hm⟩ := h.ws; ⟨mp, memoRG_frame coreWsSch coreWsSch_wf lfKey _ A C hA.1 hC.1 m m' hf mp hm⟩,
+    let ⟨mp, hm⟩ := h.fl; ⟨mp, memoRG_frame coreFlSch coreFlSch_wf bmKey _ A C hA.2.1 hC.2.1 m m' hf mp hm⟩,
+    let ⟨mp, hm⟩ := h.lsb; ⟨mp, memoRG_frame coreLsbSch coreLsbSch_wf bmKey _ A C hA.2.2 hC.2.2 m m' hf mp hm⟩,
+    h.lp.frame hf hLA hLC⟩
 
 /-- **`CoreMemos` across a writer** that avoids arrays 49, 50, 151‥153 and `CTL` words 48, 50, 152,
 154, 156 (the last two avoidances are auto-params: `decide` on concrete lists). -/
@@ -457,11 +458,11 @@ theorem CoreMemos.frameLP {A : List TieredArray} {C : List Word} {m m' : Mem} (h
       (fun e => absurd (hA _ e) (by decide)) (fun e => absurd (hC _ e) (by decide)) m m' hf mp hm⟩,
     let ⟨mp, hm⟩ := h.ab; ⟨mp, memoRG_frame coreAbSch coreAbSch_wf lfKey decE A C
       (fun e => absurd (hA _ e) (by decide)) (fun e => absurd (hC _ e) (by decide)) m m' hf mp hm⟩,
-    let ⟨mp, hm⟩ := h.walk.1; ⟨mp, memoRG_frame coreWsSch coreWsSch_wf lfKey _ A C
+    let ⟨mp, hm⟩ := h.walk.ws; ⟨mp, memoRG_frame coreWsSch coreWsSch_wf lfKey _ A C
       (fun e => absurd (hA _ e) (by decide)) (fun e => absurd (hC _ e) (by decide)) m m' hf mp hm⟩,
-    let ⟨mp, hm⟩ := h.walk.2.1; ⟨mp, memoRG_frame coreFlSch coreFlSch_wf bmKey _ A C
+    let ⟨mp, hm⟩ := h.walk.fl; ⟨mp, memoRG_frame coreFlSch coreFlSch_wf bmKey _ A C
       (fun e => absurd (hA _ e) (by decide)) (fun e => absurd (hC _ e) (by decide)) m m' hf mp hm⟩,
-    let ⟨mp, hm⟩ := h.walk.2.2.1; ⟨mp, memoRG_frame coreLsbSch coreLsbSch_wf bmKey _ A C
+    let ⟨mp, hm⟩ := h.walk.lsb; ⟨mp, memoRG_frame coreLsbSch coreLsbSch_wf bmKey _ A C
       (fun e => absurd (hA _ e) (by decide)) (fun e => absurd (hC _ e) (by decide)) m m' hf mp hm⟩,
     hLP⟩
 

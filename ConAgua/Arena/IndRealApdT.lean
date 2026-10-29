@@ -75,7 +75,7 @@ theorem apdMR_ws {m : Mem} {mp : Std.HashMap EIdx Bool} (h : apdMR m mp) :
 /-- The entry's clear of the core's memo is the walk's empty memo. -/
 theorem apdMR_clear {m : Mem} (h : WalkMemos m) (h0 : rdW (m.arr64 CTL) apdSch.cs + 2 ≠ 0) :
     apdMR (mclearG apdSch m) ∅ :=
-  let ⟨mp, hm⟩ := h.1
+  let ⟨mp, hm⟩ := h.ws
   memoRV_empty_rekey apdSch lfKey bmKey _ apdVR
     (memoRV_clear coreWsSch coreWsSch_wf lfKey _ m mp hm h0)
 
@@ -115,7 +115,7 @@ theorem apdF_okT (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
   subst hs'
   obtain ⟨b, hrun, hr, hS', hg, mp, hM⟩ := apdEntry_ok n hT.stage
     (ApdEnv.of_den hT.twin.den hT.twin.nwf) o l e _ lps ks hks hdec he
-    (apdMR_clear hT.twin.memos.2.2) hm
+    (apdMR_clear hT.twin.memos.walk) hm
   have hf := apdF_frame h
   refine ⟨b, a, ?_, ⟨hS', hT.twin.apd hf hM, ?_⟩, hg, apd_decW0B hr⟩
   · exact hrun

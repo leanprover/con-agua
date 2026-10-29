@@ -288,7 +288,7 @@ theorem instListOK_core (hp : InstListProg p) (he : p.lookup "inst_list" = some 
   cases n with
   | zero => exact CoreSpec.zeroW he _ _ _ _ _ _ _ _ _ _ _
   | succ n =>
-  obtain ⟨mp, hmp⟩ := hS.memos.1
+  obtain ⟨mp, hmp⟩ := hS.memos.il
   have hrun : (instantiateListFast coreWalkFuel (decE e) xs d.toNat).run a₀ =
       (instantiateListFast coreWalkFuel (decE e) xs d.toNat).run
         { a₀ with memos := { a₀.memos with instLC := mp } } := rfl
@@ -307,7 +307,7 @@ theorem instListOK_core (hp : InstListProg p) (he : p.lookup "inst_list" = some 
   rw [← e2] at hA'; rw [← e3] at hres
   have hk := Keeps.run (keepsW_instListFast coreWalkFuel (decE e) xs d.toNat) (AM.run_of_ok _ _ hok)
   obtain ⟨hS', hSt⟩ := hS.of_walk hA'.1 hk hf (lt64A_of_all rfl) (lt64_of_all rfl)
-    ⟨⟨_, hA'.2⟩, coreAb_frame hf (by decide) (by decide) hS.memos, hS.memos.2.2.frame hf (by decide) (by decide)⟩
+    ⟨⟨_, hA'.2⟩, coreAb_frame hf (by decide) (by decide) hS.memos, hS.memos.walk.frame hf (by decide) (by decide)⟩
   exact ⟨hloc, hok, ⟨M, hS', KeptAll.refl _ _, hSt⟩, hres, hw⟩
 
 /-- **`inst_entry` refines `instantiate1Fast coreWalkFuel` under `CoreS`** at either of its names
@@ -348,7 +348,7 @@ theorem abs1_core (hp : AbsProg p) (he : p.lookup "abs_entry" = some absEntry) :
   cases n with
   | zero => exact CoreSpec.zeroW he _ _ _ _ _ _ _ _ _ _ _
   | succ n =>
-  obtain ⟨mp, hmp⟩ := hS.memos.2.1
+  obtain ⟨mp, hmp⟩ := hS.memos.ab
   have hrun : (abstract1Fast coreWalkFuel (decE e) d.toNat k.toNat).run a₀ =
       (abstract1Fast coreWalkFuel (decE e) d.toNat k.toNat).run
         { a₀ with memos := { a₀.memos with abs1C := mp } } := rfl
@@ -366,7 +366,7 @@ theorem abs1_core (hp : AbsProg p) (he : p.lookup "abs_entry" = some absEntry) :
   rw [← e2] at hA'; rw [← e3] at hres
   have hk := Keeps.run (keepsW_abs1Fast coreWalkFuel (decE e) d.toNat k.toNat) (AM.run_of_ok _ _ hok)
   obtain ⟨hS', hSt⟩ := hS.of_walk hA'.1 hk hf (lt64A_of_all rfl) (lt64_of_all rfl)
-    ⟨coreIl_frame hf (by decide) (by decide) hS.memos, ⟨_, hA'.2⟩, hS.memos.2.2.frame hf (by decide) (by decide)⟩
+    ⟨coreIl_frame hf (by decide) (by decide) hS.memos, ⟨_, hA'.2⟩, hS.memos.walk.frame hf (by decide) (by decide)⟩
   exact ⟨hloc, hok, ⟨M, hS', KeptAll.refl _ _, hSt⟩, hres, hw⟩
 
 /-- `ar_entry` under `CoreS` (lane `defeq`'s `AbstractRangeOK`). -/
@@ -379,7 +379,7 @@ theorem absRange_core (hp : ArProg p) (he : p.lookup "ar_entry" = some arEntry) 
   cases n with
   | zero => exact CoreSpec.zeroW he _ _ _ _ _ _ _ _ _ _ _
   | succ n =>
-  obtain ⟨mp, hmp⟩ := hS.memos.2.1
+  obtain ⟨mp, hmp⟩ := hS.memos.ab
   by_cases hk0 : k.toNat = 0
   · -- `k = 0`: the twin returns `e` and changes nothing
     have hA : ArenaA s₀.mem { a₀ with memos := { a₀.memos with abs1C := mp } } :=
@@ -403,7 +403,7 @@ theorem absRange_core (hp : ArProg p) (he : p.lookup "ar_entry" = some arEntry) 
     rw [st1] at hA'; rw [res1] at hres
     have hD0 : ArenaD s'.mem a₀ := hA'.1.memo_irrel a₀.memos.instLC a₀.memos.abs1C
     obtain ⟨hS', hSt⟩ := hS.of_walk hD0 rfl hf (lt64A_of_all rfl) (lt64_of_all rfl)
-      ⟨coreIl_frame hf (by decide) (by decide) hS.memos, ⟨_, hA'.2⟩, hS.memos.2.2.frame hf (by decide) (by decide)⟩
+      ⟨coreIl_frame hf (by decide) (by decide) hS.memos, ⟨_, hA'.2⟩, hS.memos.walk.frame hf (by decide) (by decide)⟩
     refine ⟨hloc, ok0, ⟨M, ?_, KeptAll.refl _ _, hSt⟩, by rw [res0]; exact hres, hw⟩
     rw [st0]; exact hS'
   have hrun : (abstractRangeFast coreWalkFuel (decE e) d.toNat k.toNat c.toNat).run a₀ =
@@ -425,7 +425,7 @@ theorem absRange_core (hp : ArProg p) (he : p.lookup "ar_entry" = some arEntry) 
   have hk := Keeps.run (keepsW_arFast coreWalkFuel (decE e) d.toNat k.toNat c.toNat)
     (AM.run_of_ok _ _ hok)
   obtain ⟨hS', hSt⟩ := hS.of_walk hA'.1 hk hf (lt64A_of_all rfl) (lt64_of_all rfl)
-    ⟨coreIl_frame hf (by decide) (by decide) hS.memos, ⟨_, hA'.2⟩, hS.memos.2.2.frame hf (by decide) (by decide)⟩
+    ⟨coreIl_frame hf (by decide) (by decide) hS.memos, ⟨_, hA'.2⟩, hS.memos.walk.frame hf (by decide) (by decide)⟩
   exact ⟨hloc, hok, ⟨M, hS', KeptAll.refl _ _, hSt⟩, hres, hw⟩
 
 /-- `loose_bvars_bounded_fast(4·10⁹, c, e)` under `CoreS` (`IotaCallees`' `LooseBVarsBoundedFastOK`). -/

@@ -286,6 +286,11 @@ structure IWOK (m : Mem) : Prop where
   erSize : (m.arr64 EREC).size < 2 ^ 64
   ctl : 200 < (m.arr64 CTL).size
 
+/-- `IWOK` as its conjunction, for `simp` (a memory changed only where `IWOK` does not read). -/
+theorem IWOK_iff (m : Mem) : IWOK m ↔ iwTop m ≤ (m.arr64 IW).size ∧ erTop m ≤ (m.arr64 EREC).size ∧
+    (m.arr64 IW).size < 2 ^ 64 ∧ (m.arr64 EREC).size < 2 ^ 64 ∧ 200 < (m.arr64 CTL).size :=
+  ⟨fun h => ⟨h.iw, h.er, h.iwSize, h.erSize, h.ctl⟩, fun ⟨a, b, c, d, e⟩ => ⟨a, b, c, d, e⟩⟩
+
 /-- The pool and the constant records only grew. -/
 structure IWGrow (m m' : Mem) : Prop where
   iw : iwTop m ≤ iwTop m'

@@ -92,9 +92,9 @@ theorem KeepNF.coreR {c : Caches} (h : CoreR m c) : CoreR m' c := by
     hk.memoRG (by decide) h.lsq⟩
 
 theorem KeepNF.lpMemos (h : LPMemos m) : LPMemos m' :=
-  ⟨let ⟨mp, hm⟩ := h.1; ⟨mp, hk.memoRV (by decide) (fun _ _ h => h) hm⟩,
-    let ⟨mp, hm⟩ := h.2.1; ⟨mp, hk.memoRV (by decide) (fun _ _ h => h) hm⟩,
-    let ⟨mp, hm⟩ := h.2.2; ⟨mp, hk.memoRV (by decide) (fun _ _ h => h) hm⟩⟩
+  ⟨let ⟨mp, hm⟩ := h.lp; ⟨mp, hk.memoRV (by decide) (fun _ _ h => h) hm⟩,
+    let ⟨mp, hm⟩ := h.lpl; ⟨mp, hk.memoRV (by decide) (fun _ _ h => h) hm⟩,
+    let ⟨mp, hm⟩ := h.lpls; ⟨mp, hk.memoRV (by decide) (fun _ _ h => h) hm⟩⟩
 
 theorem KeepNF.coreMemos (h : CoreMemos m) : CoreMemos m' := by
   obtain ⟨⟨mp1, h1⟩, ⟨mp2, h2⟩, ⟨mp3, h3⟩, ⟨mp4, h4⟩, ⟨mp5, h5⟩, h6⟩ := h

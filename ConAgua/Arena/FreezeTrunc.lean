@@ -66,7 +66,7 @@ theorem IWOK.trunc {m : Mem} (h : L.Ind.IWOK m) : L.Ind.IWOK (truncFrozen m) := 
   have he : ((truncFrozen m).arr64 EREC).size = min (erecTop m) (m.arr64 EREC).size := by
     rw [truncFrozen_erec, size_extract0]
   have ht : L.Ind.erTop m = erecTop m := rfl
-  simp only [L.Ind.IWOK, L.Ind.iwTop, L.Ind.erTop, hI, truncFrozen_ctl, he] at *
+  simp only [L.Ind.IWOK_iff, L.Ind.iwTop, L.Ind.erTop, hI, truncFrozen_ctl, he] at *
   refine ⟨h1, ?_, h3, by omega, h5⟩
   simp only [erecTop] at he ⊢; omega
 

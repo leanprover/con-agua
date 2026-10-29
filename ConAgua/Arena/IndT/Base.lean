@@ -43,9 +43,9 @@ theorem absOK_core {p : Prog} (hcl : CoreStageClosed p) {f : FnName} (hf : f ∈
     {vis : Word} {fe : IFEnv} {a' : AState} (h : callW p n f vs m = some (r, m'))
     (hA : AbsOK m) (hT : StageT dn vis fe m' a') : AbsOK m' := by
   obtain ⟨hfr, -⟩ := run_memFrame hcl hf (run_of_callW h)
-  exact ⟨hT.twin.memos.2.1, hA.i1.frame hfr coreStageA_51 coreStageC_52,
-    hA.cr.frame hfr coreStageA_155 coreStageC_158, hT.twin.memos.1,
-    hT.twin.memos.2.2, hT.twin.erec, hT.twin.spn, hT.twin.bstk, hT.flag⟩
+  exact ⟨hT.twin.memos.ab, hA.i1.frame hfr coreStageA_51 coreStageC_52,
+    hA.cr.frame hfr coreStageA_155 coreStageC_158, hT.twin.memos.il,
+    hT.twin.memos.walk, hT.twin.erec, hT.twin.spn, hT.twin.bstk, hT.flag⟩
 
 /-- A core call's `RSim` with `AbsOK` added to its post. -/
 theorem RSim.coreAbs {α : Type} {p : Prog} (hcl : CoreStageClosed p) {f : FnName}

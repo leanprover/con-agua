@@ -303,7 +303,7 @@ it (`CoreMemos`). -/
 theorem CoreS.ctl136 {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {M : ModeMaps}
     {eb : Word} {m : Mem} {a : AState} (hS : CoreS dn m a vis fe M eb) :
     136 < (m.arr64 CTL).size := by
-  obtain ⟨mp, h⟩ := hS.memos.2.2.2.2.1
+  obtain ⟨mp, h⟩ := hS.memos.walk.lsb
   unfold MemoRG MemoRV at h
   have := h.1
   simp only at this

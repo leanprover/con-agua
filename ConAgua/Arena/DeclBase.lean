@@ -75,7 +75,7 @@ theorem IWOK.frame {m m' : Mem} {A : List TieredArray} {C : List Word} (hf : Mem
   have hR : m'.arr64 EREC = m.arr64 EREC := hf.arr _ hE (by decide)
   have hc : (m'.arr64 CTL).size = (m.arr64 CTL).size := hf.size CTL
   obtain ⟨h1, h2, h3, h4, h5⟩ := h
-  simp only [L.Ind.IWOK, L.Ind.iwTop, L.Ind.erTop, hI, hR, hc, hf.ctl _ h129, hf.ctl _ h200]
+  simp only [L.Ind.IWOK_iff, L.Ind.iwTop, L.Ind.erTop, hI, hR, hc, hf.ctl _ h129, hf.ctl _ h200]
   exact ⟨h1, h2, h3, h4, h5⟩
 
 /-- Declaration record `i` (a plain function, so that congruence sees through it). -/

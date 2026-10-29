@@ -156,7 +156,7 @@ theorem ilwCore_ok (k : Nat) {m m' : Mem} {a : AState} {dn : NIdx → Option Con
       (by rw [show ({ a.caches with readNC := c1.readNC } : Caches) = c1 by rw [e1]]; exact hrc1)
     rwa [show ({ a.caches with readNC := c1.readNC, readLsC := c2.readLsC } : Caches) = c2 by
       rw [e2, e1]] at this
-  have hM₃ := ilw_clears hS₂.memos.2.2.2.2.2 hw3 hw4 hw5 { a with caches := c2 }
+  have hM₃ := ilw_clears hS₂.memos.walk.lp hw3 hw4 hw5 { a with caches := c2 }
   obtain ⟨hS₃', hSt₃⟩ := ilw_clears_core hS₂ hM₃.lpMemos
   have hS₃ := hS₃'.lpMemos ∅ ∅ ∅
   have hE₂ : ILWEnv m₂ a ko kc vo vc ks ids vs := ⟨hnms, hkt, hsl, hvt, hvsl⟩
