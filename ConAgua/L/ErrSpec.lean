@@ -274,6 +274,7 @@ theorem evalE_nv (e : Expr) : ⦃fun _ => True⦄ evalE e ⦃fun _ _ => True; NV
   | ld64t a t i iht ihi => vcgen [evalE, iht, ihi, ld64] <;> grind
   | len64t a t ih => vcgen [evalE, ih] <;> grind
   | ld8x8 s i ih => vcgen [evalE, ih, ld8x8] <;> grind
+  | ld32t a t i iht ihi => vcgen [evalE, iht, ihi, ld32] <;> grind
 
 theorem evalC_nv (c : Cond) : ⦃fun _ => True⦄ evalC c ⦃fun _ _ => True; NVE⦄ := by
   induction c with
@@ -323,6 +324,7 @@ theorem step_nv (p : Prog) (hp : closedNV p fs = true) (k : Stmt → M Sig) (hk 
     vcgen [step, warr_nv d, warr_nv s, evalE_nv di, evalE_nv si, evalE_nv n] <;> grind
   | copy8w d di s si n => vcgen [step, warr_nv d, evalE_nv di, evalE_nv si, evalE_nv n] <;> grind
   | scan8 x s i e c => vcgen [step, setLoc, evalE_nv i, evalE_nv e] <;> grind
+  | st32t a t i e => vcgen [step, evalE_nv t, evalE_nv i, evalE_nv e, st32] <;> grind
   | seq s t ihs iht =>
     simp only [Stmt.noV, Bool.and_eq_true] at hst
     vcgen [step, ihs hst.1, iht hst.2] <;> grind

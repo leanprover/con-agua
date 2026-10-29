@@ -135,6 +135,48 @@ def Mem.set64 (m : Mem) (s : TieredArray) (i v : Word) : Mem :=
   let w := (m.arr64 s).set! i.toNat v
   { m with words := fun s' => if s' = s then w else m.words s' }
 
+/-! ## 32-bit elements (lane p32)
+
+A word array also holds 32-bit elements, two per word: element `i` is half `i % 2` of word `i / 2`,
+the low half first (the machine's little-endian layout: element `i` is the 4 bytes at byte `4 i`).
+The memory stays words; a 32-bit store is a word store of the word with one half replaced. -/
+
+/-- Half `i % 2` of the word `w`: the low half for an even `i` (`(w >>> 32 (i % 2)) & 0xFFFFFFFF`,
+written arithmetically so that `omega` reads it after a split on `i % 2`). -/
+def half32 (w i : Word) : Word := if i % 2 = 0 then w % 4294967296 else w / 4294967296
+
+/-- The word `w` with half `i % 2` replaced by the low 32 bits of `v`. -/
+def setHalf32 (w i v : Word) : Word :=
+  if i % 2 = 0 then w / 4294967296 * 4294967296 + v % 4294967296
+  else v % 4294967296 * 4294967296 + w % 4294967296
+
+theorem half32_toNat (w i : Word) :
+    (half32 w i).toNat = if i.toNat % 2 = 0 then w.toNat % 4294967296 else w.toNat / 4294967296 := by
+  unfold half32
+  rcases Nat.mod_two_eq_zero_or_one i.toNat with h2 | h2
+  · have : i % 2 = 0 := by apply UInt64.toNat_inj.mp; simp [h2]
+    simp [this, h2]
+  · have : ¬ i % 2 = 0 := fun e => by have := congrArg UInt64.toNat e; simp at this; omega
+    simp [this, h2]
+
+theorem setHalf32_toNat (w i v : Word) :
+    (setHalf32 w i v).toNat = if i.toNat % 2 = 0 then w.toNat / 4294967296 * 4294967296 + v.toNat % 4294967296
+      else v.toNat % 4294967296 * 4294967296 + w.toNat % 4294967296 := by
+  unfold setHalf32
+  have := w.toNat_lt
+  rcases Nat.mod_two_eq_zero_or_one i.toNat with h2 | h2
+  · have : i % 2 = 0 := by apply UInt64.toNat_inj.mp; simp [h2]
+    simp [this, h2, UInt64.toNat_add, UInt64.toNat_mul]
+    omega
+  · have : ¬ i % 2 = 0 := fun e => by have := congrArg UInt64.toNat e; simp at this; omega
+    simp [this, h2, UInt64.toNat_add, UInt64.toNat_mul]
+    omega
+
+/-- Word array `s` with 32-bit element `i` set to the low 32 bits of `v` (no change out of
+bounds). -/
+def Mem.set32 (m : Mem) (s : TieredArray) (i v : Word) : Mem :=
+  m.set64 s (i / 2) (setHalf32 ((m.arr64 s).getD (i / 2).toNat 0) i v)
+
 /-- Global `g` set to `v`. -/
 def Mem.setG (m : Mem) (g : GVar) (v : Word) : Mem :=
   { m with glob := fun h => if h = g then v else m.glob h }
@@ -189,6 +231,18 @@ def ld8x8 (s : BSrc) (i : Word) : M Word := do
   let b := (← get).mem.src8 s
   if i.toNat + 8 ≤ b.size then return le64 b i.toNat else throw .oob
 
+/-- 32-bit element `i` of word array `a`, zero-extended; `oob` unless word `i / 2` exists. -/
+def ld32 (a : TieredArray) (i : Word) : M Word := do
+  let m := (← get).mem
+  if h : (i / 2).toNat < (m.arr64 a).size then return half32 (m.arr64 a)[(i / 2).toNat] i
+  else throw .oob
+
+/-- Store the low 32 bits of `v` at 32-bit element `i` of word array `a`; `oob` unless word
+`i / 2` exists. -/
+def st32 (a : TieredArray) (i v : Word) : M Unit := do
+  let s ← get
+  if (i / 2).toNat < (s.mem.arr64 a).size then set { s with mem := s.mem.set32 a i v } else throw .oob
+
 /-- Store the low byte of `v` at byte `i` of byte array `a`; `oob` out of bounds. -/
 def st8 (a : ArrId) (i v : Word) : M Unit := do
   let s ← get
@@ -223,6 +277,9 @@ def evalE : Expr → M Word
     let u ← evalE t
     return (← get).mem.len64 (tierA a u)
   | .ld8x8 s i => do ld8x8 s (← evalE i)
+  | .ld32t a t i => do
+    let u ← evalE t
+    ld32 (tierA a u) (← evalE i)
 
 /-- The array a block operand names. -/
 def warr : WArr → M TieredArray
@@ -361,6 +418,12 @@ def step (p : Prog) (k : Stmt → M Sig) : Stmt → M Sig
       setLoc x (UInt64.ofNat (scanN b c vi.toNat ve.toNat))
       return .normal
     else throw .oob
+  | .st32t a t i e => do
+    let u ← evalE t
+    let j ← evalE i
+    let v ← evalE e
+    st32 (tierA a u) j v
+    return .normal
 
 /-- The interpreter with `n` units of fuel. -/
 def exec (p : Prog) : Nat → Stmt → M Sig

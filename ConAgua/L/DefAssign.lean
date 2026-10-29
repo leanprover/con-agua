@@ -34,6 +34,7 @@ def Expr.rv : Expr → List Var
   | .ld64t _ t i => Expr.rv t ++ Expr.rv i
   | .len64t _ t => Expr.rv t
   | .ld8x8 _ i => Expr.rv i
+  | .ld32t _ t i => Expr.rv t ++ Expr.rv i
 
 /-- The locals a block operand reads. -/
 def WArr.rv : WArr → List Var
@@ -87,6 +88,7 @@ def Stmt.da : Stmt → Option (List Var) → List Var → Option (List Var) × L
     (some D, rdA D (d.rv ++ di.rv ++ s.rv ++ si.rv ++ n.rv) R)
   | .copy8w d di _ si n, some D, R => (some D, rdA D (d.rv ++ di.rv ++ si.rv ++ n.rv) R)
   | .scan8 x _ i e _, some D, R => (some (insV x D), rdA D (i.rv ++ e.rv) R)
+  | .st32t _ t i e, some D, R => (some D, rdA D (t.rv ++ i.rv ++ e.rv) R)
 
 /-- The locals of a function body that may be read before they are assigned (the parameters
 `0, …, np - 1` are assigned on entry). -/

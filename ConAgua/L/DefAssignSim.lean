@@ -167,6 +167,7 @@ theorem da_R : ∀ (s : Stmt) (D : Option (List Var)) (R : List Var), ∀ x ∈ 
   | .copy64 .., some _, _, _, hx => mem_rdA.mpr (.inl hx)
   | .copy8w .., some _, _, _, hx => mem_rdA.mpr (.inl hx)
   | .scan8 .., some _, _, _, hx => mem_rdA.mpr (.inl hx)
+  | .st32t .., some _, _, _, hx => mem_rdA.mpr (.inl hx)
 
 /-- The defined locals only grow. -/
 theorem da_D : ∀ (s : Stmt) (D : List Var) (R : List Var) (D' : List Var),
@@ -207,6 +208,7 @@ theorem da_D : ∀ (s : Stmt) (D : List Var) (R : List Var) (D' : List Var),
     cases h; unfold insV; split
     · exact hx
     · exact List.mem_cons_of_mem _ hx
+  | .st32t .., _, _, _, h, _, hx => by cases h; exact hx
 
 /-- The reads of `vs` are allowed. -/
 def DaRd (N : Var → Prop) (D vs : List Var) : Prop := ∀ x ∈ vs, x ∈ D ∨ N x
@@ -236,6 +238,23 @@ theorem ld64_rsim (a : TieredArray) (i : Word) : DaSim (DaAg N D) (fun _ => DaAg
   dsimp only
   rw [h.1]
   exact DaSim.dite_pure s₁ s₂ h
+
+theorem ld32_rsim (a : TieredArray) (i : Word) : DaSim (DaAg N D) (fun _ => DaAg N D) (ld32 a i) := by
+  unfold ld32
+  refine DaSim.get_bind fun s₁ s₂ h => ?_
+  dsimp only
+  rw [h.1]
+  exact DaSim.dite_pure s₁ s₂ h
+
+theorem st32_rsim (a : TieredArray) (i v : Word) : DaSim (DaAg N D) (fun _ => DaAg N D) (st32 a i v) := by
+  unfold st32
+  refine DaSim.get_bind fun s₁ s₂ h => ?_
+  rw [h.1]
+  by_cases hc : (i / 2).toNat < (s₂.mem.arr64 a).size
+  · simp only [hc, ↓reduceIte]
+    exact ⟨rfl, ⟨by simp only, h.2⟩⟩
+  · simp only [hc, ↓reduceIte]
+    exact DaSim.throw _ s₁ s₂ h
 
 theorem ld8_rsim (a : ArrId) (i : Word) : DaSim (DaAg N D) (fun _ => DaAg N D) (ld8 a i) := by
   unfold ld8
@@ -311,6 +330,9 @@ theorem evalE_rsim : ∀ (e : Expr), DaRd N D e.rv → DaSim (DaAg N D) (fun _ =
   | ld8x8 b i ih =>
     intro hr; simp only [Expr.rv] at hr; rw [evalE]
     exact DaSim.bind (ih hr) fun _ => ld8x8_rsim b _
+  | ld32t a t i iht ihi =>
+    intro hr; simp only [Expr.rv] at hr; rw [evalE]
+    exact DaSim.bind (iht hr.left) fun _ => DaSim.bind (ihi hr.right) fun _ => ld32_rsim _ _
 
 theorem evalC_rsim : ∀ (c : Cond), DaRd N D c.rv → DaSim (DaAg N D) (fun _ => DaAg N D) (evalC c) := by
   intro c
@@ -570,6 +592,12 @@ theorem step_rsim {k : Stmt → M Sig} (hk : DaKSim N k) : DaKSim N (step p k) :
         fun _ => DaSim.pure _ fun _ _ h =>
           ⟨h.mono fun y hy => da_D (.scan8 x b i e c) D R _ rfl y hy, fun _ => ⟨_, rfl, h⟩⟩)
       (fun _ => DaSim.throw _) s₁ s₂ h
+  | st32t a t i e =>
+    intro D R hR; simp only [Stmt.da] at hR ⊢; rw [step]
+    have hr := (rdA_ok hR).1
+    exact DaSim.bind (evalE_rsim t hr.left.left) fun u => DaSim.bind (evalE_rsim i hr.left.right) fun _ =>
+      DaSim.bind (evalE_rsim e hr.right) fun _ =>
+        DaSim.bind (st32_rsim _ _ _) fun _ => DaSim.pure _ fun _ _ h => ⟨h, fun _ => ⟨_, rfl, h⟩⟩
 
 theorem exec_rsim : ∀ n, DaKSim N (exec p n)
   | 0 => fun _ _ _ _ => by

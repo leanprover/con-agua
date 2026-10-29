@@ -89,6 +89,7 @@ syntax ident : lexpr
 syntax ident noWs "[" lexpr "]" : lexpr
 syntax ident noWs "[" lexpr "]" noWs "." noWs ident : lexpr
 syntax ident noWs "⟨" lexpr "⟩" noWs "[" lexpr "]" : lexpr
+syntax ident noWs "⟨" lexpr "⟩" noWs "." noWs &"u32" noWs "[" lexpr "]" : lexpr
 syntax ident noWs "⟨" lexpr "⟩" noWs "[" lexpr "]" noWs "." noWs ident : lexpr
 syntax ident noWs "⟨" lexpr ", " lexpr "⟩" noWs "." noWs ident : lexpr
 syntax ident noWs "⟨" lexpr ", " lexpr "⟩" : lexpr
@@ -138,6 +139,7 @@ syntax ident noWs "[" lexpr "]" " := " lexpr : lstmt
 syntax ident noWs "[" lexpr "]" noWs "." noWs ident " := " lexpr : lstmt
 syntax ident noWs "⟨" lexpr ", " lexpr "⟩" noWs "." noWs ident " := " lexpr : lstmt
 syntax ident noWs "⟨" lexpr "⟩" noWs "[" lexpr "]" " := " lexpr : lstmt
+syntax ident noWs "⟨" lexpr "⟩" noWs "." noWs &"u32" noWs "[" lexpr "]" " := " lexpr : lstmt
 syntax ident noWs "⟨" lexpr "⟩" noWs "[" lexpr "]" noWs "." noWs ident " := " lexpr : lstmt
 syntax "if " lcond lblock : lstmt
 syntax "if " lcond lblock " else " lblock : lstmt
@@ -234,6 +236,8 @@ meta partial def transExpr (env : Array Name) : TSyntax `lexpr → MacroM Term
     `(L.Expr.ld64t (L.Record.arr $R) $(← transExpr env t) (L.Record.at $R $(← transExpr env i) $F))
   | `(lexpr| $a:ident⟨$t:lexpr⟩[$i:lexpr]) => do
     `(L.Expr.ld64t $a $(← transExpr env t) $(← transExpr env i))
+  | `(lexpr| $a:ident⟨$t:lexpr⟩.u32[$i:lexpr]) => do
+    `(L.Expr.ld32t $a $(← transExpr env t) $(← transExpr env i))
   | `(lexpr| len($a:ident⟨$t:lexpr⟩)) => do
     `(L.Expr.len64t $a $(← transExpr env t))
   | `(lexpr| $r:ident⟨$t:lexpr, $i:lexpr⟩.$f:ident) => do
@@ -390,6 +394,8 @@ meta partial def transStmt (env : Array Name) : TSyntax `lstmt → MacroM Term
       $(← transExpr env e))
   | `(lstmt| $a:ident⟨$t:lexpr⟩[$i:lexpr] := $e:lexpr) => do
     `(L.Stmt.st64t $a $(← transExpr env t) $(← transExpr env i) $(← transExpr env e))
+  | `(lstmt| $a:ident⟨$t:lexpr⟩.u32[$i:lexpr] := $e:lexpr) => do
+    `(L.Stmt.st32t $a $(← transExpr env t) $(← transExpr env i) $(← transExpr env e))
   | `(lstmt| $r:ident⟨$t:lexpr, $i:lexpr⟩.$f:ident := $e:lexpr) => do
     `(L.TRec.st $r $(← transExpr env t) $(← transExpr env i) $(trecField r f) $(← transExpr env e))
   | `(lstmt| $a:ident[$i:lexpr] := $e:lexpr) => do

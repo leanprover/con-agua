@@ -55,7 +55,7 @@ def Stmt.okW (ctl : ArrId) (A : List TieredArray) (C : List Word) (fs : List FnN
   | .st64 a i _ =>
     if a = ctl then (match ctlIdx i with | some ws => ws.all (· ∈ C) | none => false)
     else (a : TieredArray) ∈ A
-  | .st64t a _ _ _ => a ≠ ctl && (a : TieredArray) ∈ A && tier1 a ∈ A
+  | .st64t a _ _ _ | .st32t a _ _ _ => a ≠ ctl && (a : TieredArray) ∈ A && tier1 a ∈ A
   | .copy64 d .. | .copy8w d .. => d.okW ctl A
   | .seq s t => s.okW ctl A C fs && t.okW ctl A C fs
   | .ite _ s t => s.okW ctl A C fs && t.okW ctl A C fs
@@ -152,6 +152,16 @@ theorem st64_fr (hW : WFrame ctl A C Fr) (m₀ : Mem) (a : TieredArray) (j v : W
   have := hW.st64
   vcgen [L.st64] <;> grind
 
+theorem WFrame.set32 (hW : WFrame ctl A C Fr) (m₀ m : Mem) (a : TieredArray) (i v : Word)
+    (h : Fr m₀ m) (ha : a ≠ ctl ∧ a ∈ A) : Fr m₀ (m.set32 a i v) :=
+  hW.st64 _ _ _ _ _ h (.inl ha)
+
+theorem st32_fr (hW : WFrame ctl A C Fr) (m₀ : Mem) (a : TieredArray) (j v : Word) :
+    ⦃fun s => Fr m₀ s.mem ∧ a ≠ ctl ∧ a ∈ A⦄ L.st32 a j v
+    ⦃fun _ s => Fr m₀ s.mem; ⊤⦄ := by
+  have := hW.set32
+  vcgen [L.st32] <;> grind
+
 theorem WFrame.copy64 (hW : WFrame ctl A C Fr) {m₀ m : Mem} (h : Fr m₀ m) {a : TieredArray}
     (ha : a ≠ ctl ∧ a ∈ A) (di : Word) (s : TieredArray) (si : Word) (n : Nat) :
     Fr m₀ (m.copy64 a di s si n) := by
@@ -210,6 +220,10 @@ theorem step_fr (p : Prog) (hp : closedW ctl p A C fs = true) (hW : WFrame ctl A
       fun _ _ _ _ _ _ h ha => hW.copy8w h ha _ _ _ _
     vcgen [step, warr_okW d hst, evalE_same di, evalE_same si, evalE_same n] <;> grind
   | scan8 x s i e c => vcgen [step, setLoc, evalE_same i, evalE_same e] <;> grind [St.setLoc_mem]
+  | st32t a t i e =>
+    simp only [Stmt.okW, Bool.and_eq_true, decide_eq_true_eq] at hst
+    have := tierA_eq_or a
+    vcgen [step, evalE_same t, evalE_same i, evalE_same e, st32_fr hW m₀] <;> grind
   | seq s t ihs iht =>
     simp only [Stmt.okW, Bool.and_eq_true] at hst
     vcgen [step, ihs hst.1, iht hst.2] <;> grind
@@ -311,6 +325,9 @@ theorem GFrame.refl (G : List GVar) (m : Mem) : GFrame G m m := fun _ _ => rfl
 theorem GFrame.set64 {G : List GVar} {m₀ m : Mem} (h : GFrame G m₀ m) (a : TieredArray) (i v : Word) :
     GFrame G m₀ (m.set64 a i v) := h
 
+theorem GFrame.set32 {G : List GVar} {m₀ m : Mem} (h : GFrame G m₀ m) (a : TieredArray) (i v : Word) :
+    GFrame G m₀ (m.set32 a i v) := GFrame.set64 h _ _ _
+
 theorem GFrame.set8 {G : List GVar} {m₀ m : Mem} (h : GFrame G m₀ m) (a : ArrId) (i v : Word) :
     GFrame G m₀ (m.set8 a i v) := h
 
@@ -378,6 +395,8 @@ theorem step_g (p : Prog) (hp : closedG p G fs = true) (k : Stmt → M Sig) (hk 
   | copy8w d di s si n =>
     vcgen [step, warr_same d, evalE_same di, evalE_same si, evalE_same n] <;> grind [GFrame.copy8w]
   | scan8 x s i e c => vcgen [step, setLoc, evalE_same i, evalE_same e] <;> grind [St.setLoc_mem]
+  | st32t a t i e =>
+    vcgen [step, L.st32, evalE_same t, evalE_same i, evalE_same e] <;> grind [GFrame.set32]
   | seq s t ihs iht =>
     simp only [Stmt.okG, Bool.and_eq_true] at hst
     vcgen [step, ihs hst.1, iht hst.2] <;> grind

@@ -63,6 +63,7 @@ theorem step_mono (p : Prog) {k k' : Stmt → M Sig} (hk : KExt k k') :
   | copy64 d di s si n => intro s r h; exact h
   | copy8w d di s si n => intro s r h; exact h
   | scan8 x s i e c => intro s r h; exact h
+  | st32t a t i e => intro s r h; exact h
   | seq c₁ c₂ ih₁ ih₂ =>
     intro s r h
     obtain ⟨a, s', h1, h2⟩ := run_bind_ok h

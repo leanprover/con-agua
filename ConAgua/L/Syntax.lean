@@ -141,6 +141,10 @@ inductive Expr where
   | len64t (a : ArrId) (t : Expr)
   /-- The little-endian word of the bytes `i, …, i + 7` of `s` (lane blkcopy). -/
   | ld8x8 (s : BSrc) (i : Expr)
+  /-- 32-bit element `i` of tier `t` of the tiered array `a`, zero-extended: half `i % 2` of word
+  `i / 2` (the low half first, as the machine's little-endian 4-byte load at byte `4 i` reads it;
+  lane p32). -/
+  | ld32t (a : ArrId) (t i : Expr)
   deriving Repr, DecidableEq, Inhabited
 
 /-- A word array as the destination or source of a block copy: array `a`, or tier `t` of the
@@ -199,6 +203,9 @@ inductive Stmt where
   /-- `x := scan S.u8[i .. e] until c`: the first `j` in `[i, e)` with `c[S[j]] ≠ 0`, else `e`
   (`c`: a 256-byte class table, constant data). -/
   | scan8 (x : Var) (s : BSrc) (i e : Expr) (c : List UInt8)
+  /-- `a⟨t⟩.u32[i] := e`: the low 32 bits of `e` into 32-bit element `i` of tier `t` of the tiered
+  array `a` (half `i % 2` of word `i / 2`; the other half keeps its value; lane p32). -/
+  | st32t (a : ArrId) (t i e : Expr)
   deriving Repr, Inhabited
 
 /-- A function: `nparams` parameters, `nlocals ≥ nparams` locals (params first, the rest start

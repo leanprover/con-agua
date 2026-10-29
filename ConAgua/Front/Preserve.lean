@@ -61,6 +61,9 @@ theorem Keep.set64 {m m' : Mem} (h : Keep m m') (a : TieredArray) (i v : Word) :
   simp only [Mem.set64, Mem.arr64]
   split <;> simp_all
 
+theorem Keep.set32 {m m' : Mem} (h : Keep m m') (a : TieredArray) (i v : Word) : Keep m (m'.set32 a i v) :=
+  h.set64 a _ _
+
 theorem Keep.copy64 {m m' : Mem} (h : Keep m m') (d : TieredArray) (di : Word) (s : TieredArray) (si : Word)
     (n : Nat) : Keep m (m'.copy64 d di s si n) := by
   induction n generalizing m' di si with
@@ -106,6 +109,7 @@ theorem evalE_same (e : Expr) (s₀ : St) : ⦃fun s => s = s₀⦄ evalE e ⦃f
   | ld64t a t i iht ihi => vcgen [evalE, iht, ihi, ld64] <;> grind
   | len64t a t ih => vcgen [evalE, ih] <;> grind
   | ld8x8 b i ih => vcgen [evalE, ih, ld8x8] <;> grind
+  | ld32t a t i iht ihi => vcgen [evalE, iht, ihi, ld32] <;> grind
 
 theorem warr_same (w : WArr) (s₀ : St) : ⦃fun s => s = s₀⦄ warr w ⦃fun _ s => s = s₀; ⊤⦄ := by
   cases w with
@@ -173,6 +177,8 @@ theorem step_keep (p : Prog) (hp : p.noSt8 = true) (k : Stmt → M Sig) (hk : Ke
   | copy8w d di s si n =>
     vcgen [step, warr_same d, evalE_same di, evalE_same si, evalE_same n] <;> grind [Keep.copy8w]
   | scan8 x s i e c => vcgen [step, setLoc, evalE_same i, evalE_same e] <;> grind [St.setLoc_mem]
+  | st32t a t i e =>
+    vcgen [step, st32, evalE_same t, evalE_same i, evalE_same e] <;> grind [Keep.set32]
 
 theorem exec_keep (p : Prog) (hp : p.noSt8 = true) (n : Nat) : KeepK (exec p n) := by
   induction n with
