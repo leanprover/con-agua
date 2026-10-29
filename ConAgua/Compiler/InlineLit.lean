@@ -19,8 +19,10 @@ evaluate it again. So the inliner's output is a literal, checked one function at
   function's own declaration term if inlining does not change it), and
   `name.f<i>_eq : inlFn (envOf S t p) fdᵢ = name.f<i>`, checked by the kernel (`inlLitBatch`
   functions per check), so that a large program's checks are spread over modules.
-* `inl_round name : S t p` declares the rest, `name : Prog := [(f₀, name.f0), …]` and
-  `name_eq : inlRound S t p = name`, from the per-function equations by congruence
+* `inl_round name : S t p` declares the rest and `name : Prog := [(f₀, name.f0), …]` (compiled
+  code runs it as `inlRound S t p`, `name.impl`);
+* `inl_round_eq name : S t p`, in a module of its own (the modules that compile the literal do not
+  wait for it), `name_eq : inlRound S t p = name`, from the per-function equations by congruence
   (`inlRound_cons`), without evaluation.
 
 The constant byte strings of the literal (`ldc`, `rom` sources, `scan8` class tables) are the
@@ -261,7 +263,33 @@ syntax (name := inlRoundCmd) (docComment)? "inl_round " ident " : " term:max ter
     declInlFns name envE pE elems 0 elems.size (← elabVia pE (v?.map (·.raw)))
     let elemTy := mkApp2 (mkConst ``Prod [0, 0]) (mkConst ``String) funDeclTy
     let progT := mkConst ``Prog
-    -- the literal and the proof, from the end
+    let mut lit := mkApp (mkConst ``List.nil [0]) elemTy
+    for i in (List.range elems.size).reverse do
+      let (_, fE, _) ← progElem i elems[i]!
+      let fi := mkConst (name ++ Name.mkSimple s!"f{i}")
+      lit := mkApp3 (mkConst ``List.cons [0]) elemTy (mkApp4 (mkConst ``Prod.mk [0, 0]) (mkConst ``String) funDeclTy fE fi) lit
+    addDecl (.defnDecl (mkDefinitionValEx name [] progT lit .abbrev .safe []))
+    addDocString' name .missing doc?
+    -- compiled code runs `name` as the round itself (the literal's functions are not compiled)
+    let implN := name ++ `impl
+    addAndCompile (.defnDecl (mkDefinitionValEx implN [] progT
+      (mkApp3 (mkConst ``inlRound) sE tE (← elabVia pE (v?.map (·.raw)))) .opaque .safe []))
+    match Compiler.implementedByAttr.setParam (← getEnv) name implN with
+    | .ok env => setEnv env
+    | .error msg => throwError "inl_round: {msg}"
+
+/-- `inl_round_eq name : S t p` (after `inl_round name : S t p`): `name_eq : inlRound S t p = name`,
+from the per-function equations by congruence (`inlRound_cons`), without evaluation. -/
+syntax (name := inlRoundEqCmd) "inl_round_eq " ident " : " term:max term:max term:max : command
+
+@[command_elab inlRoundEqCmd] unsafe def elabInlRoundEq : CommandElab := fun stx => do
+  let `(inl_round_eq $n:ident : $sS $tS $pS) := stx | throwUnsupportedSyntax
+  let name := (← getCurrNamespace) ++ n.getId
+  liftTermElabM <| withTheReader Core.Context (fun c => { c with maxRecDepth := max c.maxRecDepth 100000, maxHeartbeats := 0 }) do
+    let (sE, tE, pE, envE) ← elabRoundArgs sS tS pS
+    let elems ← listElemsW pE
+    let elemTy := mkApp2 (mkConst ``Prod [0, 0]) (mkConst ``String) funDeclTy
+    let progT := mkConst ``Prog
     let mut lit := mkApp (mkConst ``List.nil [0]) elemTy
     let mut tl := mkApp (mkConst ``List.nil [0]) elemTy
     let mut pf := mkApp (mkConst ``inlRound_nil) envE
@@ -272,15 +300,6 @@ syntax (name := inlRoundCmd) (docComment)? "inl_round " ident " : " term:max ter
       pf := mkAppN (mkConst ``inlRound_cons) #[envE, fE, fdE, fi, tl, lit, hi, pf]
       lit := mkApp3 (mkConst ``List.cons [0]) elemTy (mkApp4 (mkConst ``Prod.mk [0, 0]) (mkConst ``String) funDeclTy fE fi) lit
       tl := mkApp3 (mkConst ``List.cons [0]) elemTy elems[i]! tl
-    addDecl (.defnDecl (mkDefinitionValEx name [] progT lit .abbrev .safe []))
-    addDocString' name .missing doc?
-    -- compiled code runs `name` as the round itself (the literal's functions are not compiled)
-    let implN := name ++ `impl
-    addAndCompile (.defnDecl (mkDefinitionValEx implN [] progT
-      (mkApp3 (mkConst ``inlRound) sE tE (← elabVia pE (v?.map (·.raw)))) .opaque .safe []))
-    match Compiler.implementedByAttr.setParam (← getEnv) name implN with
-    | .ok env => setEnv env
-    | .error msg => throwError "inl_round: {msg}"
     let lhs := mkApp3 (mkConst ``inlRound) sE tE pE
     addDecl (.thmDecl { name := name.appendAfter "_eq", levelParams := [], type := mkApp3 (mkConst ``Eq [1]) progT lhs (mkConst name),
                         value := pf })

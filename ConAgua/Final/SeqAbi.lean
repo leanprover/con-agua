@@ -32,11 +32,11 @@ structure SeqCall (tab : Tab) (base blen : Nat) (dm : MachineData) (ra : Word) :
 
 /-- **From `ca_check_seq`**: on a region that holds `m` in the partition layout, the run of
 `check` from `seqMem m … lo hi` (`lo`, `hi` from `rsi`, `rdx`) in `ca_check_seq`'s layout. -/
-theorem abiS_outcome [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = true)
-    (hwf : Prog.wf tab p = true) (mode plo phi : GVar) (out hdrf ctlf : ArrId) (hw : Nat)
+theorem abiS_outcome [Host] (q p : Prog) (hq : Refines q p) (tab : Tab) (hok : abiTabOk tab = true)
+    (hwf : Prog.wf tab q = true) (mode plo phi : GVar) (out hdrf ctlf : ArrId) (hw : Nat)
     (fz own : List TieredArray) (hngm : mode.id < tab.ng) (hngl : plo.id < tab.ng) (hngh : phi.id < tab.ng)
     (hp : seqParamsOk tab out hdrf ctlf hw = true) (k0 : Nat)
-    (hcode : Code (parStub tab mode plo phi out hdrf ctlf hw fz own ++ (abiStub tab ++ compileProg tab p "check")) k0)
+    (hcode : Code (parStub tab mode plo phi out hdrf ctlf hw fz own ++ (abiStub tab ++ compileProg tab q "check")) k0)
     (fd : FunDecl) (hentry : p.lookup "check" = some fd) (hnp : fd.nparams = 0)
     {base blen inp n pins np : Nat} (m : Mem) (dm : MachineData) (ra : Word)
     (hc : SeqCall tab base blen dm ra) (hm : MemRel (abiLayout tab base inp n pins np) m dm.dmem) :
@@ -130,8 +130,8 @@ theorem abiS_outcome [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = true)
     (Nat.le_refl _) (by omega) hSE (Nat.le_refl _)
   have hm0 := seq_memRel (out := out) (hdrf := hdrf) (ctlf := ctlf) (hw := hw) hok hp hfit dm.regs hc.hbase m dm.dmem hm
   have hcs := hc.hcs
-  refine eventually_weaken _ _ _ _ ?_ (compile_correct_frame p "check" _ hG hwf _ hcC fd hentry []
-    (by simp [hnp]) rfl (seqMem m mode plo phi out hdrf ctlf hw dm.regs.rsi dm.regs.rdx) abiFuel _ ra ?_ ?_ ?_ ?_ ?_
+  refine eventually_weaken _ _ _ _ ?_ (compile_correct_frame_ref q p hq "check" _ hG hwf _ hcC fd hentry []
+    (by simp [hnp]) rfl (seqMem m mode plo phi out hdrf ctlf hw dm.regs.rsi dm.regs.rdx) abiFuelM _ ra ?_ ?_ ?_ ?_ ?_
     (fun i h => absurd h (by simp)) ?_ ?_ ?_ ?_ ?_ ?_)
   · intro st ⟨hpc, hsp, hbp, h14, h15, ⟨hbx, h12, h13⟩, hfr, hout⟩
     refine ⟨hpc, ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_⟩, MemFrame.only_tab (show MemFrame _ dm.regs.rsp.toNat _ _ by rw [← hRsp]; exact hfr) hOall, hout⟩
@@ -143,8 +143,8 @@ theorem abiS_outcome [Host] (p : Prog) (tab : Tab) (hok : abiTabOk tab = true)
     · rw [h12]; exact UInt64.toBitVec_inj.mp (by simpa using hR1 .r12 (by decide))
     · rw [h13]; exact UInt64.toBitVec_inj.mp (by simpa using hR1 .r13 (by decide))
   · exact e8r
-  · show (abiFuel.toUInt64).toNat = abiFuel
-    simp [abiFuel]
+  · show (abiFuelM.toUInt64).toNat = abiFuelM
+    simp [abiFuelM, abiFuel, abiInl]
   · show MemRel _ _ (wrW (wrW (wrW s1.dmem _ s1.regs.rsi.toBitVec) _ s1.regs.rdx.toBitVec) _ (UInt64.toBitVec 2))
     rw [hs1, hRsi, hRdx]
     exact ((hm0.storeG hG (g := plo) hngl dm.regs.rsi).storeG hG (g := phi) hngh dm.regs.rdx).storeG hG

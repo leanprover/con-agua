@@ -8,7 +8,7 @@ public import ConAgua.Compiler.WFFast
 
 set_option linter.unusedSimpArgs false
 
-namespace L.Compiler
+namespace L.Compiler.Inl
 
 open L
 
@@ -1547,4 +1547,4 @@ theorem inlineProg_lookup {S : Nat} {t : NTree} : ∀ (R : Nat) (p : Prog) (f : 
     obtain ⟨fd', h1, h2⟩ := inlineProg_lookup R (inlRound S t p) f _ (by rw [lookup_inlRound, h]; rfl)
     exact ⟨fd', h1, h2.trans hnp⟩
 
-end L.Compiler
+end L.Compiler.Inl
