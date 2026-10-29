@@ -79,7 +79,7 @@ l_model classGenRecTy_spec (p : Prog) (h : GtProg p)
   fns [h.rt ↦ gtW list]
   specs [classGenMajor_spec p h.toMjProg n, internFVar_spec p h.fvf h.fvp h.ifv n,
     classGenRecTyTail_spec p h n]
-  grind [arena_grind] simp [rdW_eq]
+  grind [arena_grind] flat
 
 /-! ## `class_gen_rec_ty` refines `classGenRecTy` -/
 

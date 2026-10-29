@@ -3434,3 +3434,42 @@ no `errors` model and do not block group D, but go the same way.
 
 Nothing else: no `CoreSpecE.of_runs` user depends on an `errors` model (it stays, §3.30 D), and
 `triple_of_callE_err`'s other users take posts over the class.
+
+### 3.53 Generator: `flat` as the default? (lane `gen-cut`, second landing)
+
+**The sweep.** Each of the 193 modules with an `l_model` (master 98de7807's text), `lean` once as
+it is and once with every `l_model` switched to `flat` (`simp [..]`/`locals` dropped; user
+seconds, 4 runs in parallel, `_tmp/gen-cut/abres.txt`). Two full builds without the cache were
+tried first and dropped: their per-module wall times measure the contention (`L/ModelGen` 195 s
+against 18 s).
+
+| | modules | as is | `flat` |
+|---|---:|---:|---:|
+| build both ways | 173 | 1154 s | 1247 s (+8 %) |
+| of these > 10 % faster | 17 | | −37 s |
+| of these > 10 % slower | 69 | | +123 s |
+| break under `flat` | 20 | 200 s | |
+
+The 20 that break: `Verdict/IndBGrpM` (`simp [..] locals`; over 15 min against 69 s), the
+`Verdict/PosE1M`, `PosE2M`, `PosE3Cm`, `Arena/IndT/Pass`, `RecGen27` group (`grind` open goals, and
+3–9 times slower: 17.7 → 160 s for `PosE2M`), `Arena/DefEqBody` (not `unified`: a `simp [] locals`
+ok model), the nat-division gates (`DivModPinE`, `DeclDivGateT`, `DivModEnvGuard`),
+`WhnfIotaRecRefine2`, and nine of `IndInstallSpec`/`IndPartsSpec`/`IndPosSpec` (`Icvg`, `PapW`,
+`Pos3MapMProj`, `BlockRecNameSetOk`, `BlockShapeAllCtorsGo`, `BmgW`, `Bsp`, `IndPartsProg2`,
+`FgW2`): open `grind` goals. Since the sweep, `flat` passes the `finish` hints and the `fold`
+definitions to `grind` (what `iota_rec_vck` needed: the model's `ixLen` against the code's
+arithmetic); some of the fold-related breakages may pass with it (not re-swept).
+
+**So `flat` stays an option**, chosen per model by an A/B run: it wins on long paths (many
+continuations: `grind` walks one arm per round, `simp_all` re-simplifies the whole unfolded tree in
+each round) and loses on functions with many short paths, where `grind` costs about 60–100 ms per
+condition and `simp_all` less (`WhnfModels3E` 10.2 → 19.2 s, `WalkLeaves` 11.5 → 17.2 s).
+
+**A hypothesis for that cost** (not chased): `grind`'s preprocessing per goal, not its e-matching.
+On `DefEqStuckStr` (329 conditions) `grind` takes 7.2 s, of which its normalizer (`grind simp`)
+7.5 s cumulative and e-matching 0.3 s: every hypothesis is normalized and internalized, each word
+`x` brings `x.toBitVec.toNat ≤ 2^64 - 1` atoms for cutsat, each bound fact `i.toNat < size` its
+arithmetic, and the reads of locals through the unreduced `setLoc` chains are resolved again in
+each goal; `simp_all` on a short path is a few cheap rounds over a cached simp set. Clearing the
+theorem's binder hypotheses before `grind` saved 7 % there (not kept: a binder can be a fact a side
+goal needs).

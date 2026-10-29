@@ -39,7 +39,7 @@ l_model tmnE_spec (p : Prog) (hL : TmnLook p)
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
   heartbeats 4000000 unified
-  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
+  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem] flat
 
 /-- What `target_major_nfs` gives besides the twin's result `ys` (from `m`, the table `nfs` at
 `nfo`, `nfl`): the kept entries' slice, the stage invariant, the growth; and, when the table's
