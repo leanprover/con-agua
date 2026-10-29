@@ -52,13 +52,8 @@ theorem defeqArg_any (p : Prog) (hp : InferLeafProg p) (hkp : KnotProg p) (he : 
       s₀ a₀ dn vis fe M eb
   | 0, _, _, s₀, a₀, dn, vis, fe, M, eb, _, _, _, _, _, _, _, _, _, _, _ =>
       CoreSpec.zeroLet p _ _ _ _ s₀ a₀ dn vis fe M eb _
-  | k + 1, hk, F, s₀, a₀, dn, vis, fe, M, eb, mode, d, a, ta, ty, hF, hn, hs, ha, hta, hty => by
-      have hde : DefeqESlot p k := by
-        cases k with
-        | zero => intro F s₀ a₀ dn vis fe M eb mode d x y _ _ _ _ _
-                  exact CoreSpec.zeroLet p _ _ _ _ s₀ a₀ dn vis fe M eb _
-        | succ j => exact defeqE_refines p hkp j (hk j (by omega)).defeq
-      exact defeqArg_refines p hp k he (hk k (by omega)).defeq hde F s₀ a₀ dn vis fe M eb mode d a ta ty
+  | k + 1, hk, F, s₀, a₀, dn, vis, fe, M, eb, mode, d, a, ta, ty, hF, hn, hs, ha, hta, hty =>
+      defeqArg_refines p hp hkp k he (hk.mono (by omega)) F s₀ a₀ dn vis fe M eb mode d a ta ty
         (by omega) (by omega) hs ha hta hty
 
 /-- **`infer_spine_arg` refines the argument check** (`inferSpineArgT`) at the knot, both
@@ -67,7 +62,7 @@ theorem isa_ref (p : Prog) (hp : InferLeafProg p) (hkp : KnotProg p) (he : IsEag
     (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps)
     (eb mode d a dom : Word) (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (ha : HW a) (hdom : HW dom) :
-    RefE (InferArgG p n) (isaE p (n + 1) s₀.mem mode vis d a dom)
+    RefE (InferG p n) (isaE p (n + 1) s₀.mem mode vis d a dom)
       (inferSpineArgT (coreKnot (decMode mode) fe id F) d.toNat (decE a) (decE dom)) a₀
       (CorePost (fun _ => ()) dn s₀.mem vis fe M eb ResH) := by
   simp only [isaE, inferSpineArgT]
@@ -81,8 +76,8 @@ theorem isa_ref (p : Prog) (hp : InferLeafProg p) (hkp : KnotProg p) (he : IsEag
   have hs₁ : SlotPre ⟨m₁, Locals.init []⟩ _ dn vis fe M₁ eb mode := ⟨hS₁, hs.mode4, hs.eb_mode⟩
   rcases c2 : callE p n "defeq_arg" [mode, vis, d, a, r₁.headD 0, dom] m₁ with e2 | ⟨r₂, m₂⟩
   · exact RefE.bind_left fun hG => CoreSpecE.of_callE (s₀ := ⟨m₁, Locals.init []⟩)
-      (hG.defeqArg n hk hG.knot F _ _ dn vis fe M₁ eb mode d a (r₁.headD 0) dom hF hn hs₁ ha h₁.2.2.2
-        hdom) c2
+      (defeqArg_anyE p hp hkp he n hk hG F _ _ dn vis fe M₁ eb mode d a (r₁.headD 0) dom hF hn hs₁ ha
+        h₁.2.2.2 hdom) c2
   have h₂ := CoreSpec.of_callW (defeqArg_any p hp hkp he n hk F ⟨m₁, Locals.init []⟩ _ dn vis fe M₁ eb
     mode d a (r₁.headD 0) dom hF hn hs₁ ha h₁.2.2.2 hdom) (callW_of_callE c2)
   refine RefE.bind_core (w := id) h₂ (fun M₂ hS₂ _ => ?_)
@@ -131,7 +126,7 @@ theorem inferSpineArg_any (p : Prog) (hp : InferLeafProg p) (hkp : KnotProg p) (
 /-- `infer_spine_arg`'s error claim at every L fuel up to `n + 1` (`isa_ref`'s error half). -/
 theorem inferSpineArg_anyE (p : Prog) (hp : InferLeafProg p) (hkp : KnotProg p) (hq : SpineFProg p)
     (he : IsEagerReduceH p) :
-    ∀ n, KnotUpTo p n → InferArgG p n → ∀ (F : Nat), n ≤ F → n ≤ 2 ^ 62 → ∀ (s₀ : St) (a₀ : AState)
+    ∀ n, KnotUpTo p n → InferG p n → ∀ (F : Nat), n ≤ F → n ≤ 2 ^ 62 → ∀ (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps)
     (eb mode d a dom : Word), SlotPre s₀ a₀ dn vis fe M eb mode → HW a → HW dom →
     CoreSpecE p n "infer_spine_arg" [mode, vis, d, a, dom]
@@ -175,7 +170,7 @@ theorem spLoop_ref (p : Prog) (hp : InferLeafProg p) (hkp : KnotProg p) (hq : Sp
       CoreS dn m a vis fe M eb → HW ty → SpineR m co cn acc → spTop m = co + cn →
       (∀ j, j < co → spW m j = spW m₀ j) → (m.arr64 SPN).size = (m₀.arr64 SPN).size →
       BKept m₀ m → PoolGrew m₀ m →
-      RefE (InferArgG p N) (ispE.k_loop1 p N co (ispE.loop1 p k m mode vis d ty ao an co cn i))
+      RefE (InferG p N) (ispE.k_loop1 p N co (ispE.loop1 p k m mode vis d ty ao an co cn i))
         (inferSpine (coreKnot (decMode mode) fe id F) fe d.toNat (decE ty) acc args i.toNat) a
         (CorePost decH dn m₀ vis fe M eb ResH) := by
   intro k
@@ -361,7 +356,7 @@ theorem isp_ref (p : Prog) (hp : InferLeafProg p) (hkp : KnotProg p) (hq : Spine
     (eb mode d ty ao an : Word) (args : Array EIdx) (hs : SlotPre s₀ a₀ dn vis fe M eb mode)
     (ht : HW ty) (har : SpineR s₀.mem ao an args)
     (hlo : ao.toNat + an.toNat ≤ (spTop s₀.mem).toNat) :
-    RefE (InferArgG p n) (ispE p (n + 1) s₀.mem mode vis d ty ao an)
+    RefE (InferG p n) (ispE p (n + 1) s₀.mem mode vis d ty ao an)
       (inferSpine (coreKnot (decMode mode) fe id F) fe d.toNat (decE ty) #[] args 0) a₀
       (CorePost decH dn s₀.mem vis fe M eb ResH) := by
   have hS := hs.rel
@@ -408,7 +403,7 @@ theorem inferSpine_any (p : Prog) (hp : InferLeafProg p) (hkp : KnotProg p) (hq 
 /-- `infer_spine`'s error claim at every L fuel up to `n + 1` (`isp_ref`'s error half). -/
 theorem inferSpine_anyE (p : Prog) (hp : InferLeafProg p) (hkp : KnotProg p) (hq : SpineFProg p)
     (he : IsEagerReduceH p) (hil : InstListOK p) :
-    ∀ n, KnotUpTo p n → InferArgG p n → ∀ (F : Nat), n ≤ F → n ≤ 2 ^ 62 → ∀ (s₀ : St) (a₀ : AState)
+    ∀ n, KnotUpTo p n → InferG p n → ∀ (F : Nat), n ≤ F → n ≤ 2 ^ 62 → ∀ (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps)
     (eb mode d ty ao an : Word) (args : Array EIdx), SlotPre s₀ a₀ dn vis fe M eb mode →
     HW ty → SpineR s₀.mem ao an args → ao.toNat + an.toNat ≤ (spTop s₀.mem).toNat →
@@ -447,7 +442,7 @@ theorem a_ref (p : Prog) (hp : InferLeafProg p) (hkp : KnotProg p) (hq : SpineFP
     (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (M : ModeMaps) (eb mode d e : Word) (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (hHe : HW e)
     (h4 : e >>> 28 = 4) :
-    RefE (InferArgG p n) (aE p (n + 1) s₀.mem mode vis d e)
+    RefE (InferG p n) (aE p (n + 1) s₀.mem mode vis d e)
       (inferApp (coreKnot (decMode mode) fe id F) fe d.toNat (decE e)) a₀
       (CorePost decH dn s₀.mem vis fe M eb ResH) := by
   have hS := hs.rel

@@ -6,7 +6,7 @@ import ConAgua.Arena.IndTwin
 The error halves of the unified refinements of `ensure_sort` (`es_ref`), the stage entries
 `infer_type_core` and `ensure_sort_core` (`itc_ref`, `esc_ref`, in `CoreStubsE`'s shape) and the
 straight-line arms of the inference bodies `infer_lit`, `infer_let`, `infer_lam_io`,
-`infer_forall_io`, `infer_spine_arg` (`il_ref`, `ilet_ref`, `ilam_ref`, `ifa_ref`, `isa_ref`), as the
+`infer_forall_io` (`il_ref`, `ilet_ref`, `ilam_ref`, `ifa_ref`), as the
 error claims (`CoreSpecE`) their non-migrated readers take.
 -/
 
@@ -76,11 +76,10 @@ theorem inferArmsE_nv : ∀ f ∈ ["nat_lit_supported", "str_lit_supported", "pi
 
 /-- **The callees' error claims the inference bodies take** (the error half of `InferCallees`):
 every callee outside the verdict closure claims nothing (`nv`), `infer_proj`'s
-(`inferProj_refinesE'`, `InferLeavesE.lean`), `defeq_arg`'s. -/
+(`inferProj_refinesE'`, `InferLeavesE.lean`). -/
 structure InferCalleesE (p : Prog) : Prop where
   nv : closedNV p L.Checker.nvFns = true
   proj : InferProjOKE p
-  defeqArg : DefeqArgE p
 
 /-! ## The arms -/
 
@@ -93,19 +92,6 @@ theorem inferLit_refinesE (p : Prog) (hp : InferLeafProg p) (hc : InferLitCallee
     CoreSpecE p (n + 1) "infer_lit" [vis, e] (inferLitT fe l) s₀ a₀ :=
   RefE.coreSpecE (ilE_spec p hp.inferLit (n + 1) s₀ vis e) hnv hnv
     (il_ref p hp hc n s₀ a₀ dn vis fe M eb e l hS he hg hv)
-
-/-- **`infer_spine_arg`'s verdicts** (`isa_ref`'s error half). -/
-theorem inferSpineArg_refinesE (p : Prog) (hp : InferLeafProg p) (hkp : KnotProg p)
-    (hq : SpineFProg p) (he : IsEagerReduceH p) (hda : DefeqArgE p)
-    (hnv : closedNV p L.Checker.nvFns = true) (n : Nat) (hk : KnotUpTo p n)
-    (hkE : KnotUpToE p n) (F : Nat)
-    (hF : n ≤ F) (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
-    (vis : Word) (fe : IFEnv) (M : ModeMaps) (eb mode d a dom : Word)
-    (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (ha : HW a) (hdom : HW dom) :
-    CoreSpecE p (n + 1) "infer_spine_arg" [mode, vis, d, a, dom]
-      (inferSpineArgT (coreKnot (decMode mode) fe id F) d.toNat (decE a) (decE dom)) s₀ a₀ :=
-  RefE.coreSpecE (isaE_spec p hq.arg (n + 1) s₀ mode vis d a dom) trivial ⟨⟨hkE, hnv⟩, hda⟩
-    (isa_ref p hp hkp he n hk F hF hn s₀ a₀ dn vis fe M eb mode d a dom hs ha hdom)
 
 /-- **`infer_lam_io`'s verdicts** (`ilam_ref`'s error half). -/
 theorem inferLamIO_refinesE (p : Prog) (hp : InferLeafProg p) (hb : InferBodyProg p)
