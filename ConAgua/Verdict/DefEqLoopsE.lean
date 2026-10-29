@@ -1,9 +1,7 @@
-import ConAgua.Verdict.DefEqBaseE
 import ConAgua.Arena.DefEqMidLoops
 import ConAgua.Arena.DefEqStuckWith
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
-import ConAgua.L.ModelGen
 
 /-!
 # The `defeq` loops' error claims: `defeq_lst`, `defeq_list_rev`, `defeq_list`

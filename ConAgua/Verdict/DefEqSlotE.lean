@@ -1,5 +1,5 @@
 import ConAgua.Verdict.DefEqBaseE
-import ConAgua.Arena.DefEqKnot
+import ConAgua.Arena.DefEqBody
 import ConAgua.Arena.IndTwin
 
 /-!

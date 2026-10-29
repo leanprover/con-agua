@@ -1,4 +1,5 @@
 import ConAgua.Verdict.DefEqLoopsE
+import ConAgua.Arena.DefEqKnot
 import ConAgua.Verdict.DefEqSlotE
 
 /-!
