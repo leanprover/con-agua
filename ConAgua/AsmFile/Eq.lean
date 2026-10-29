@@ -11,7 +11,8 @@ import Std.Do.Triple.SpecLemmas
 `code` a constant built by `asm_lit` (e.g. `checkerAsm`) and `code_eq : rhs = code` (e.g.
 `checkerAsm_eq : compileProg … = checkerAsm`), declares
 
-* `stub : Program := S`, the file's code before the trampoline, as a literal;
+* `stub : Program := S`, the file's code before the trampoline, as a literal (unless `asm_stub stub :
+  file` declared it already, in an imported module);
 * `name.lit : file = stub ++ code`, by `Eq.refl`: the file's remaining segments and `code` are the
   same terms (`include_asm` and `asm_lit` build them with the same functions,
   `ConAgua/AsmFile/Term.lean`), so the kernel compares them structurally, without evaluating;
@@ -51,6 +52,21 @@ def segName (e : Lean.Expr) : String :=
   | some x => match x.appArg! with | .lit (.strVal g) => g | _ => "?"
   | none => "the trampoline"
 
+/-- `asm_stub stub : file` declares `stub : Program`, the code of `file` (`include_asm`'s `S ++ R`)
+before the trampoline (`S`), as `asm_file_eq` does, in a module of its own: what is checked about
+the stub (`checkerStub_eq`) then does not wait for the compiled code (`checkerAsm`). -/
+syntax (name := asmStub) (docComment)? "asm_stub " ident " : " ident : command
+
+@[command_elab asmStub] def elabAsmStub : CommandElab := fun stx => do
+  let `($[$doc?:docComment]? asm_stub $stubS:ident : $fileS:ident) := stx | throwUnsupportedSyntax
+  let stubN := (← getCurrNamespace) ++ stubS.getId
+  liftTermElabM do
+    let fileN ← realizeGlobalConstNoOverload fileS
+    let some fileV := (← getConstInfo fileN).value? | throwError "asm_stub: {fileN} has no value"
+    let some (sLit, _) := appendArgs? fileV | throwError "asm_stub: {fileN} is not `stub ++ code`"
+    addDecl (.defnDecl (mkDefinitionValEx stubN [] progTy sLit .abbrev .safe []))
+    addDocString' stubN .missing doc?
+
 syntax (name := asmFileEq) (docComment)? "asm_file_eq " ident " : " ident " = " ident " ++ " ident
   " via " ident : command
 
@@ -76,7 +92,12 @@ syntax (name := asmFileEq) (docComment)? "asm_file_eq " ident " : " ident " = " 
     unless fs.size == cs.size do
       throwError "asm_file_eq: the file has {fs.size} segments after the stub, {codeN} {cs.size}; \
         regenerate it"
-    addDecl (.defnDecl (mkDefinitionValEx stubN [] progTy sLit .abbrev .safe []))
+    -- the stub, unless `asm_stub` declared it (then it must be the file's)
+    match (← getEnv).find? stubN with
+    | some ci =>
+      unless ci.value? == some sLit do
+        throwError "asm_file_eq: {stubN} is not the stub of {fileN} (rebuild its `asm_stub` module)"
+    | none => addDecl (.defnDecl (mkDefinitionValEx stubN [] progTy sLit .abbrev .safe []))
     let eqTy (a b : Lean.Expr) := mkApp3 (mkConst ``Eq [1]) progTy a b
     let appC := mkApp4 (mkConst ``HAppend.hAppend [0, 0, 0]) progTy progTy progTy
       (mkApp2 (mkConst ``instHAppendOfAppend [0]) progTy (mkApp (mkConst ``List.instAppend [0]) dirTy))

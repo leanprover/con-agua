@@ -2,8 +2,9 @@ import ConAgua.Final.DrvAbi
 import ConAgua.Checker.ParDriverTwin
 import ConAgua.Checker.AsmFinal
 import ConAgua.Checker.AsmStubEq
+import ConAgua.Checker.AsmFileEq
 import ConAgua.Checker.ProgIRef
-import ConAgua.Checker.ProgWfI
+import ConAgua.Checker.ProgWf
 
 /-!
 # The final theorem for the sequential driver of the committed file (lane parmode)

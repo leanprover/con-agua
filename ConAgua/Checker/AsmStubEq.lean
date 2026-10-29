@@ -1,4 +1,5 @@
-import ConAgua.Checker.AsmFileEq
+import ConAgua.Checker.AsmStub
+import ConAgua.Checker.ProgTab
 import ConAgua.Compiler.Abi
 import ConAgua.AsmFile.ListEq
 
@@ -6,7 +7,7 @@ import ConAgua.AsmFile.ListEq
 # The committed file's stub is the entry stub
 
 `checkerStub_eq : checkerStub = parStub … ++ abiStub checkerTab`: the code of `checker.s`
-before the trampoline (`checkerStub`, `ConAgua/Checker/AsmFileEq.lean`) is lane parmode's three
+before the trampoline (`checkerStub`, `ConAgua/Checker/AsmStub.lean`) is lane parmode's three
 parallel-mode entries and lane `abi`'s entry stub for the checker's table
 (`ConAgua/Compiler/Abi.lean`). Kernel-checked in pieces (`list_eq`,
 `ConAgua/AsmFile/ListEq.lean`; 10 383 directives, ~10 s): the stub's words, ROM included, are
