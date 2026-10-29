@@ -1,7 +1,6 @@
 import ConAgua.Verdict.WhnfM2CE
 import ConAgua.Verdict.WhnfPrepE
-import ConAgua.Verdict.WhnfCertsE
-import ConAgua.Verdict.WhnfIdxE
+import ConAgua.Verdict.WhnfIotaRecE
 import ConAgua.Verdict.WhnfPirrE
 
 /-!
@@ -12,7 +11,7 @@ program hypotheses (`KnotAllProg`) and the verdict closure (`closedNV`); `defeq_
 callee outside the family the slot bodies reach, by its refinement (`defeqList_ref`). Every function of the slot bodies' call tree is proved: `whnf_core`/`_loop`/`_step`
 (`WhnfSlotE`), `whnf`/`_loop`/`_step` (`WhnfSlotE`), the `reduce_nat` family (`WhnfNatE`), the `proj`
 arm (`stepProj_ref`, `Arena/WhnfCoreProj`), the `app` arm and `whnf_app` (`capp_ref`,
-`Arena/WhnfCoreStep`), the ι family (`WhnfIotaE`, `WhnfIotaRecE`, `WhnfPrepE`, `WhnfCertsE`, `WhnfIdxE`), `major_to_ctor` (`WhnfM2CE`), `proof_irrel`
+`Arena/WhnfCoreStep`), the ι family (`WhnfIotaE`, `WhnfIotaRecE`, `WhnfPrepE`), `major_to_ctor` (`WhnfM2CE`), `proof_irrel`
 (`WhnfPirrE`).
 -/
 
@@ -39,10 +38,6 @@ include hq hnv in
 theorem KnotAllProg.iotaRecFireE : IotaRecFireE p :=
   iotaRecFireE_of p hq.iotaRec (KnotAllProg.iotaC hq) (KnotAllProg.whnfC hq)
     (ErecKeptInst.of_closed hq.hcl) (ErecKeptRec.of_closed hq.hcl) (ErecKeptKnot.of_closed hq.hcl) hnv
-    (iotaRecCmpE_of p hq.iotaRec (KnotAllProg.iotaC hq) (KnotAllProg.whnfC hq)
-      (ErecKeptInst.of_closed hq.hcl) (ErecKeptRec.of_closed hq.hcl) hnv)
-    (iotaCertsFullE_of p hq.iotaRec.toIotaProg4 (KnotAllProg.whnfC hq).instList hnv)
-    (iotaIndexOkE_of p hq.iotaRec.toIotaProg' (KnotAllProg.iotaC hq).inst1 hnv)
 
 include hq hnv in
 theorem KnotAllProg.iotaRecAtE : IotaRecAtE p :=
