@@ -1,7 +1,6 @@
 import ConAgua.Arena.CrOKFrame
 import ConAgua.Arena.DeclValSpec
 import ConAgua.Arena.IndRealApdT
-import ConAgua.Arena.IndSumSpec.TblProg
 import ConAgua.Arena.KnotEntry
 import ConRon.Bridge.Inductives.ClassRead
 import ConAgua.Verdict.IndAGen
@@ -17,7 +16,7 @@ helper `ia2`)
 
 Statements only (generated `err_stmt`s of the ok refinements), hypotheses of the `indA` proofs,
 discharged by the `indB` helper: `check_sum_tele`, `check_constant_val`, `check_sum_ctors`,
-`check_struct_field_sorts_i`, `check_struct_proj_table`, `class_key_of`, `class_majors`.
+`check_struct_field_sorts_i`, `class_key_of`, `class_majors`.
 -/
 
 namespace L.Ind
@@ -28,6 +27,5 @@ err_stmt CheckSumTeleE := checkSumTele_refinesC fuel k
 -- `check_constant_val`'s error claim, in the shape of `checkConstantVal_refinesT`
 err_stmt CheckConstantValE := checkConstantVal_refinesT fuel n
 err_stmt CheckStructFieldSortsIE := checkStructFieldSortsI_refinesC fuel n
-err_stmt CheckStructProjTableE := checkStructProjTable_refinesC fuel n
 
 end L.Ind
