@@ -96,11 +96,11 @@ declare_arrays checkerArrays
   | /-- The slots of `liftLooseBVars`' memo (`liftC`, keys `(handle, cutoff)`). -/
     Arena.LMEMO : word := 41
   -- the derived columns (`Arena/LpCol.lean`, `Arena/DerRel.lean`): one word per node
-  | /-- The derived word of the `app` nodes (loose bvar range, `lp` bit). -/ Arena.ADER : word tiered := 42
-  | /-- The derived word of the `lam` nodes. -/ Arena.LADER : word tiered := 43
-  | /-- The derived word of the `forallE` nodes. -/ Arena.FADER : word tiered := 44
-  | /-- The derived word of the `letE` nodes. -/ Arena.LEDER : word tiered := 45
-  | /-- The derived word of the `proj` nodes. -/ Arena.PJDER : word tiered := 46
+  | /-- The derived words of the `app` nodes (loose bvar range, `lp` bit), packed 32-bit (`Arena/P32.lean`). -/ Arena.ADER : word tiered := 42
+  | /-- The derived words of the `lam` nodes (packed 32-bit). -/ Arena.LADER : word tiered := 43
+  | /-- The derived words of the `forallE` nodes (packed 32-bit). -/ Arena.FADER : word tiered := 44
+  | /-- The derived words of the `letE` nodes (packed 32-bit). -/ Arena.LEDER : word tiered := 45
+  | /-- The derived words of the `proj` nodes (packed 32-bit). -/ Arena.PJDER : word tiered := 46
   | /-- The slots of `instantiate1`'s memo (`inst1C`, keys `(handle, depth)`). -/
     Arena.IMEMO : word min 3 := 47
   | /-- The slots of `fvarRange`'s memo (`fvarBC`, one-word keys). -/ Arena.FRMEMO : word min 3 := 48
