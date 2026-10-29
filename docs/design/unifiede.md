@@ -165,7 +165,10 @@ are `CoreRef`s: the post `CorePost` (the relation after the run, the result deco
 answer word) / `tail_relist3` (three words, the decoder and validity read definitionally) for a tail
 call that re-lists the callee's results, `RefE.bind_core` (a kept-stack callee, then the rest), `RefE.bind_callE` (a knot callee read through
 its run `callE`, both outcomes, then the rest: the ok half from its `CoreSpec`, the error half from its
-claim under `G`, a `CoreSpecE` or a unified callee's `RefE.coreSpecE`). For arms that leave a
+claim under `G`, a `CoreSpecE` or a unified callee's `RefE.coreSpecE`), `RefE.bind_coreE` (a unified
+kept-stack callee's own `RefE` under its `G'`, the caller's model `K x` passing its errors on: in place
+of casing on the callee's value, `ErrClaim.bind_left`, taking the run and `RefE.bind_core`; the ok
+continuation gets the value's equation and the callee's `CoreRef`). For arms that leave a
 slice on the stack: `CoreAfterG`, `GrowRef`, `GrowPost` with `GrowPost.growRef`, `of_core`,
 `of_tail`, `GrowPost.restore` (the top put back, its bound not needed), `RefE.growRefW`,
 `RefE.bind_grow` / `bind_growK`.

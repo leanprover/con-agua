@@ -251,15 +251,12 @@ theorem dr_ref (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : StuckCalle
     cases n with
     | zero => exact RefE.of_cls0 (e := .outOfFuel) rfl
     | succ k =>
-    have H := ec_ref p hq hc k (hk.mono (by omega)) F s₀ a₀ dn vis fe M eb mode d w1 w2 x (by omega)
-      (by omega) hs hw1 hw2 hx
-    rw [hd1, hd2] at H
-    rcases h : ecE p (k + 1) s₀.mem mode vis d w1 w2 x with e | ⟨r₁, m₁⟩
-    · rw [h] at H; exact fun hG => ErrClaim.bind_left (H (hG.knot.mono (by omega)))
-    rw [h] at H
-    obtain ⟨y, a', hrun, hP⟩ := H
+    subst hd1 hd2
+    refine RefE.bind_coreE (w := id) (fun _ => rfl) (fun hG => hG.knot.mono (by omega))
+      (ec_ref p hq hc k (hk.mono (by omega)) F s₀ a₀ dn vis fe M eb mode d w1 w2 x (by omega)
+        (by omega) hs hw1 hw2 hx)
+      (fun r₁ m₁ _ _ M₁ hS₁ _ => ?_)
     simp only [drE.k_eta_cert]
-    refine RefE.bind_core (w := id) (hP.coreRef hrun) (fun M₁ hS₁ _ => ?_)
     by_cases e0 : r₁.headD 0 ≠ 0
     · rw [ite_eq_left e0, decBool_true_of e0]; exact RefE.ret rfl (CorePost.ret hS₁ rfl L.Arena.hw1)
     · rw [ite_eq_right e0, decBool_false_of (by simpa using e0)]
