@@ -1,4 +1,5 @@
 import ConAgua.Verdict.InferKnotE
+import ConAgua.Verdict.InferLeavesE
 import ConAgua.Verdict.WhnfKnotE
 import ConAgua.Verdict.DefEqAllE
 import ConAgua.Checker.LoopProg
