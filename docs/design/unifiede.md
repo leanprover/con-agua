@@ -3833,7 +3833,7 @@ that need word arithmetic (`ModelGenTest`'s `tPre`: `i < 4 → i < 5` over `UInt
 one module of 194 broke. This is the generator's default: `sym … => vcgen … <;> finish` (the
 recipe of the models without `simp [..]`) and the `flat` keyword are gone (`sym "…"` was unused),
 and `simp [..]`/`locals` were dropped from every `l_model` (361 blocks in 140 modules) except the
-five where the default fails or is far slower: `DeclDivGateT` (`defnDivGate_specE`),
+five (in four modules) where the default fails or is far slower: `DeclDivGateT` (`defnDivGate_specE`),
 `DivModEnvGuard` (`eg_specW`), `DivModPinE` (`checkDivModPinLoop_specE`,
 `checkDivModPin_specE`) (open goals after the multi-result `setLocs`, as under §3.53's `flat`)
 and `IndBGrpM` (`grpE_spec`, over 15 min). `simp [..]` stays the way to choose `simp_all`.
