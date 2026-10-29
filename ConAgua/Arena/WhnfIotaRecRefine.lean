@@ -5,6 +5,7 @@ import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConRon.Bridge.Grind
 import ConRon.Bridge.Specs
+import ConAgua.Arena.WhnfIotaRecRefineModels
 
 /-!
 # `iota_rec_at`'s pieces: the twin split the same way, and the inner pieces' proofs
@@ -252,7 +253,6 @@ theorem erecPushLoop_spec (p : Prog) (k : Nat) (s₀ : St) :
     sym only [lang_grind, arena_grind] =>
       vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64, ih] <;>
       finish [epW_end, epW_cont, epW_bad1, epW_bad2]
-
 
 /-- Model of `erec_push`. -/
 def epTop (k : Nat) (m : Mem) (o c kd : Word) : Option (List Word × Mem) :=
@@ -566,7 +566,6 @@ theorem decRule_rd {b : Array Word} {q : Word} {rl : IRecRule} (hsz : b.size < 2
   · rw [hk] at h
     simp at h
 
-
 theorem callW_erecPush_no (p : Prog) (hp : p.lookup "erec_push" = some erecPushL) (n : Nat) (m : Mem)
     (o c kd : Word) (hk : kd ≠ 1) (r : List Word) (m' : Mem)
     (h : callW p n "erec_push" [o, c, kd] m = some (r, m')) : r.headD 0 = 0 ∧ m' = m := by
@@ -630,15 +629,6 @@ theorem callW_stackCover (p : Prog) (hp : p.lookup "stack_cover" = some stackCov
     exact ⟨MemFrame.refl _ _ _, (StackKept.refl _).toGrew, UInt64.not_lt.mp hlt⟩
 
 /-! ## `iota_rec_cmp(mode, vis, d, us, recP, so, rl, mo)` -/
-
-/-- **`iota_rec_cmp`'s model, both outcomes** (generated; `defeq_list` through its run: the record
-pool's frame, `callW_iotaRecCmp_erec`, needs it). -/
-l_model irCmpE_spec (p : Prog) (hf : p.lookup "iota_rec_cmp" = some iotaRecCmpL)
-  fns [hf ↦ irCmpE list]
-  specs [callW_spec p n "erec_push", callW_spec p n "rec_fire_args", callW_spec p n "stack_cover"]
-  grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] unified
-  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 /-- **`iota_rec_cmp` refines the parameter comparison, both outcomes**: the errors are
 `defeq_list`'s (the `defeq` slot's). -/
@@ -794,17 +784,6 @@ theorem iotaRecCmp_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p
         lps rule args margs hS hm4 hebm hus hlps hrule hsa hsat hmI hsm hsmt hcpm)
 
 /-! ## `iota_rec_vck(mode, vis, d, us, recP, so, usj, ctorP, rl, mo, mn, cmpL)` -/
-
-/-- The index slice's length word of `iota_rec_vck`. -/
-def ixLen (mI rP : Word) : Word := (mI - rP) * Cmp.ule.evalW rP mI
-
-/-- **`iota_rec_vck`'s model, both outcomes** (generated; `iota_rec_cmp`, `iota_certs_full` and
-`iota_index_ok` through their runs, `lvls_eq_c` and `const_ty_at` lifted). -/
-l_model vckE_spec (p : Prog) (hp : p.lookup "iota_rec_vck" = some iotaRecVckL)
-  fns [hp ↦ vckE list]
-  specs [callW_spec p n "lvls_eq_c", callW_spec p n "const_ty_at"]
-  grind [arena_grind] fold [ixLen] extra [ld64_rdW_specE] simp [ixLen] unified
-  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 /-- `lvls_eq_c` cannot run on fuel below two. -/
 theorem lvlsEqC_small (p : Prog) (hp : p.lookup "lvls_eq_c" = some lvlsEqCL) (n : Nat) (hn : n < 2)
