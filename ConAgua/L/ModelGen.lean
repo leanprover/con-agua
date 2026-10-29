@@ -50,7 +50,7 @@ public section
   fW n s₀.mem args = some (r.headD 0, s'.mem); ⊤⦄` of every member (`some (r, s'.mem)` for a list
   model, `some (r.headD 0, r.tail.headD 0, …, s'.mem)` for a tuple model), as one conjunction
   over the group (`name`), a step theorem per member (`name.stepᵢ`: `vcgen` with the specs of the
-  callees and loops that member calls, then `finish`) and the induction on the fuel.
+  callees and loops that member calls, then `vc_flat` and `grind`, below) and the induction on the fuel.
 
 The definitions come in dependency order: each strongly connected component of the reference
 graph is one definition or one `mutual` block, well-founded on `(fuel, depth)` if it has a
@@ -90,10 +90,10 @@ l_model liftGo_spec (p : Prog) (hp : LiftProg p)
 * `bind c`: the code after a call with several results is an inline continuation
   `c (call) fun ρᵢ μᵢ => …` instead of a named one (`bind ntBW`: the hand models of `Decl*`).
 * `extra`: more lemmas for `vcgen` (the default is `exec, step, evalE, evalC, evalArgs, setLoc,
-  setLocs, ld64, st64, setG`); `finish`, `gen`, `instances`: the hints and configuration of
-  `finish`; `sym "…"`: options of `sym`; `simp [lemmas]`: prove each step by `vcgen` and
+  setLocs, ld64, st64, setG`); `finish`, `gen`, `instances`: more lemmas for the steps' `grind`
+  and its configuration; `simp [lemmas]`: prove each step by `vcgen` and
   `simp_all` over the models' equations, the locals' lemmas and `lemmas` instead of
-  `sym … finish` (cheaper for many paths and small functions); `locals` (with `simp`): evaluate the
+  the default (where that is cheaper or the default fails); `locals` (with `simp`): evaluate the
   locals by `simp only` before `simp_all` (cheaper for long functions with many calls and stores,
   IndBGrpM); `heartbeats`: per step theorem; `trace`: log the
   generated commands.
@@ -104,12 +104,13 @@ l_model liftGo_spec (p : Prog) (hp : LiftProg p)
   takes the body as `L.seqTake k F.body name.tailS` and the tail by that theorem, so the paths
   through the first statements are not multiplied by the paths after them (`target_k53_args`'s two
   index slices: 21.5 s → 4.9 s).
-* `flat` (a recipe of its own, not with `simp`): each step is `vcgen`, then `vc_flat`
+* the steps (without `simp`): each is `vcgen`, then `vc_flat`
   (`VcFlat.lean`: the intermediate states out of every condition, a callee's post as its memory
   over the caller's locals), then `grind` over the models' guarded equations, with `2k + 10`
   e-matching rounds and generations for `k` continuations (a path through `d` continuations
-  instantiates their arms one after the other). No `simp_all` over the unfolded models, which
-  re-simplifies the whole model tree in each round: `infer_proj`'s steps 76 s → 11 s.
+  instantiates their arms one after the other), first without `hom`, `abstractProof` and
+  `List.cons.injEq`, then, where that fails, with them. No `simp_all` over the unfolded models,
+  which re-simplifies the whole model tree in each round: `infer_proj`'s steps 76 s → 11 s.
 * `pre [P]`: a precondition over the initial state `s₀` and the arguments (by their L names),
   e.g. `pre [pcap s₀.mem < 2 ^ 63 ∧ s₀.mem.top.toNat < 2 ^ 41]`: every member's spec becomes
   `∀ s₀ args, P → ⦃…⦄`; a callee spec with a hypothesis (or the induction hypothesis) leaves it
@@ -1848,7 +1849,6 @@ syntax (name := lmodel) (docComment)? "l_model " ident bracketedBinder*
   (&" gen " num)?
   (&" heartbeats " num)?
   (&" noguard " "[" str,* "]")?
-  (&" sym " str)?
   (&" bind " ident)?
   (&" instances " num)?
   (&" simp " "[" term,* "]")?
@@ -1858,8 +1858,7 @@ syntax (name := lmodel) (docComment)? "l_model " ident bracketedBinder*
   (&" nodefs")?
   (&" unified")?
   (&" nv " "[" term "," term "]")?
-  (&" cut " num)?
-  (&" flat")? : command
+  (&" cut " num)? : command
 
 meta structure FnInfo where
   lname : String
@@ -1897,7 +1896,7 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
   elabCommand cmd
 
 @[command_elab lmodel] meta def elabLModel : CommandElab := fun stx => do
-  -- `l_model name binders* fns [..] specs? grind? fold? extra? finish? gen? trace?`
+  -- `l_model name binders* fns [..] specs? grind? fold? extra? finish? gen? …`
   let doc? : Option (TSyntax `Lean.Parser.Command.docComment) :=
     if stx[0].getNumArgs == 0 then none else some ⟨stx[0][0]⟩
   let stx' := stx
@@ -1914,30 +1913,25 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
   let genN : Option Nat := if stx[14].getNumArgs == 0 then none else stx[14][1].isNatLit?
   let hbN : Option Nat := if stx[15].getNumArgs == 0 then none else stx[15][1].isNatLit?
   let noguard : Array String := (optList 16).filterMap (·.isStrLit?)
-  let symCfg : String := if stx[17].getNumArgs == 0 then "" else (stx[17][1].isStrLit?.getD "") ++ " "
-  let bindC : Option Name := if stx[18].getNumArgs == 0 then none else some stx[18][1].getId
-  let instN : Option Nat := if stx[19].getNumArgs == 0 then none else stx[19][1].isNatLit?
-  let simpTs? : Option (Array Term) := if stx[20].getNumArgs == 0 then none else some ((optList 20).map (⟨·⟩))
-  let doTrace := stx[21].getNumArgs != 0
-  let preLocals := stx[22].getNumArgs != 0
+  let bindC : Option Name := if stx[17].getNumArgs == 0 then none else some stx[17][1].getId
+  let instN : Option Nat := if stx[18].getNumArgs == 0 then none else stx[18][1].isNatLit?
+  let simpTs? : Option (Array Term) := if stx[19].getNumArgs == 0 then none else some ((optList 19).map (⟨·⟩))
+  let doTrace := stx[20].getNumArgs != 0
+  let preLocals := stx[21].getNumArgs != 0
   -- `defs`: only the models, continuations and arms; `nodefs`: only the specs (the same command
   -- run before with `defs`), so that facts about the models can be proved in between
-  let defsOnly := stx[23].getNumArgs != 0
-  let noDefs := stx[24].getNumArgs != 0
+  let defsOnly := stx[22].getNumArgs != 0
+  let noDefs := stx[23].getNumArgs != 0
   -- `unified`: the models are `Except L.Err`, the error posts over the class, `Option` callees
   -- lifted (`nv [G, mem]`: `G` the closedness `closedNV p fs = true`, an assumption of the error
   -- posts; `mem` proves `f ∈ fs` from a `decide`-able fact)
-  let exc := stx[25].getNumArgs != 0
-  let nvT? : Option (Term × Term) := if stx[26].getNumArgs == 0 then none else some (⟨stx[26][2]⟩, ⟨stx[26][4]⟩)
+  let exc := stx[24].getNumArgs != 0
+  let nvT? : Option (Term × Term) := if stx[25].getNumArgs == 0 then none else some (⟨stx[25][2]⟩, ⟨stx[25][4]⟩)
   -- `cut k`: the code after the first `k` statements of the (single) function's body, which
   -- must be the join point after an `if` both of whose branches fall through, gets its own
   -- step theorem (`name.tail`), used by the function's step: the paths through the code before
   -- it are not multiplied by the paths after it
-  let cutK? : Option Nat := if stx[27].getNumArgs == 0 then none else stx[27][1].isNatLit?
-  -- `flat`: the verification conditions without their intermediate states, closed by `grind`
-  -- (see `stepTac`)
-  let flat := stx[28].getNumArgs != 0
-  if flat && simpTs?.isSome then throwError "l_model: `flat` is a recipe of its own, without `simp [..]`"
+  let cutK? : Option Nat := if stx[26].getNumArgs == 0 then none else stx[26][1].isNatLit?
   let preT? : Option Term := if stx[8].getNumArgs == 0 then none else some ⟨stx[8][2]⟩
   let keepT? : Option Term := if stx[9].getNumArgs == 0 then none else some ⟨stx[9][2]⟩
   let stx := stx'
@@ -2373,11 +2367,8 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
   let specsTxt ← specTs.toList.mapM (pp ·.raw)
   let extraTxt ← extraTs.toList.mapM (pp ·.raw)
   let hintsTxt ← hintTs.toList.mapM (pp ·.raw)
-  let genTxt := (match genN with | some g => s!"(gen := {g}) " | none => "") ++
-    (match instN with | some i => s!"(instances := {i}) " | none => "")
-  let hintsT := if hintsTxt.isEmpty then "" else s!"[{String.intercalate ", " hintsTxt}]"
-  -- `simp [..]`: the steps by `vcgen` then `simp_all` over the models' equations (PLAN.md, "no
-  -- `sym … finish` on a function with many paths"), instead of `sym … => vcgen … <;> finish`
+  -- `simp [..]`: the steps by `vcgen` then `simp_all` over the models' equations, instead of the
+  -- default (`vc_flat`, `grind`, below)
   let simpBase := ["L.LocEq", "L.St.setLoc_loc", "L.St.setLoc_mem", "L.St.setLocs_nil",
       "L.St.setLocs_cons", "L.Locals.init_nil", "L.Locals.init_cons_zero", "L.Locals.init_cons_succ",
       "L.Sig.retVal", "L.Sig.retOr", "L.BinOp.eval", "L.Cmp.eval", "List.headD_cons", "List.headD_nil",
@@ -2401,7 +2392,7 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
   -- Not the default: on small functions the extra pass costs more than it saves (WhnfModels7E runs
   -- out of heartbeats, ClassFeR 35 s -> 48 s), and where `simp_all` fails, `grind` needs the
   -- `LocEq`s folded (CkcW).
-  -- `flat`: `vc_flat` takes the intermediate states out of each condition (the callees' posts
+  -- The default: `vc_flat` takes the intermediate states out of each condition (the callees' posts
   -- become memories over the caller's locals), and `grind` closes it with the models' guarded
   -- equations (`fW.armᵢ`, `fW.k_g.armᵢ`, …). A path through `d` continuations instantiates `d`
   -- arms one after the other, one e-matching round each, so the rounds and the generations are
@@ -2411,20 +2402,28 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
   -- result-list steps between two arms take generations too: `k + 5` stopped `infer_proj_at`'s
   -- paths at generation 13, `2k + 10` does not.
   -- the `finish` hints and the folded definitions (the model's `ixLen` against the code's
-  -- arithmetic) go to `grind` as well
+  -- arithmetic) go to `grind` as well.
+  -- `grind` first without `hom` (the `UInt64` -> `Nat`/`BitVec` translation of every word term,
+  -- its bounds for `lia`), `abstractProof` and the lemma `List.cons.injEq` (`lang_grind`; `grind`
+  -- injects constructors itself, and as an E-matching lemma it fires on every equation between
+  -- lists): most conditions need only congruence and the models' arms, and on them those cost
+  -- most of `grind`'s time (DefEqStuckStr, 329 conditions: 20.8 s -> 10.1 s, unifiede.md §3.59);
+  -- where that fails (word arithmetic: `i < 4 → i < 5`), `grind` again with all of it.
   let flatHints := String.join ((hintsTxt ++ foldIds.toList.map (·.getId.toString)).map (", " ++ ·))
   let flatRounds := 2 * st.ks.size + 10
   let flatGen := (genN.getD flatRounds).max flatRounds
   let stepTac (attrs vcg : String) (ihs : List String) : String :=
     let clr := if ihs.isEmpty then "" else s!" <;> clear {String.intercalate " " ihs}"
-    if flat then
-      s!"(vcgen [{vcg}]{clr} <;> vc_flat <;> grind (ematch := {flatRounds}) (gen := {flatGen}) " ++
-        s!"{(match instN with | some i => s!"(instances := {i}) " | none => "")}[{attrs}{flatHints}])"
-    else match simpTxt? with
+    match simpTxt? with
     | some l =>
       let pre := if preLocals then s!" <;> (try simp only [{String.intercalate ", " simpBase}] at *)" else ""
       s!"(vcgen [{vcg}]{clr}{pre} <;> (try simp_all [{l}]) <;> grind [{attrs}])"
-    | none => s!"sym {symCfg}only [{attrs}] => (vcgen [{vcg}] <;> finish {genTxt}{hintsT})"
+    | none =>
+      let cfg := s!"(ematch := {flatRounds}) (gen := {flatGen}) " ++
+        (match instN with | some i => s!"(instances := {i}) " | none => "")
+      s!"(vcgen [{vcg}]{clr} <;> vc_flat <;> first " ++
+        s!"| (grind (hom := false) (abstractProof := false) {cfg}[{attrs}{flatHints}, -List.cons.injEq]) " ++
+        s!"| (grind {cfg}[{attrs}{flatHints}]))"
   let parseTac (txt : String) : CommandElabM Syntax := do
     -- the library's names root-qualified, so that a binder `L` does not capture them
     let txt := rootL txt

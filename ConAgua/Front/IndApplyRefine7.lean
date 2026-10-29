@@ -35,19 +35,19 @@ l_model viNparams_specE (p : Prog) (hL : IndApplyLookups p)
 l_model rec_specE (p : Prog) (hL : IndApplyLookups p)
   fns [hL.vi_rec ↦ recE]
   specs [nameGetL_spec p hL n, nrp_spec p hL n, recIdx_specE p hL n]
-  grind [arena_grind] extra [L.Arena.ld64_rdW_specE] simp []
+  grind [arena_grind] extra [L.Arena.ld64_rdW_specE]
   unified nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 l_model recsGo_specE (p : Prog) (hL : IndApplyLookups p)
   fns [hL.vi_recs_go ↦ recsGoE]
   specs [rec_specE p hL n]
-  grind [arena_grind] extra [L.Arena.ld64_rdW_specE] simp []
+  grind [arena_grind] extra [L.Arena.ld64_rdW_specE]
   unified nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 l_model recs_specE (p : Prog) (hL : IndApplyLookups p)
   fns [hL.vi_recs ↦ recsE]
   specs [nested_spec p hL n, recsGo_specE p hL n]
-  grind [arena_grind] extra [L.Arena.ld64_rdW_specE] simp []
+  grind [arena_grind] extra [L.Arena.ld64_rdW_specE]
   unified nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 

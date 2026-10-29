@@ -56,7 +56,7 @@ def decSH (r : List Word) : Option (NIdx × LsIdx) :=
 l_model spineHead_spec (p : Prog) (hp : SpineDProg p)
   fns [hp.head ↦ shW tuple]
   specs [callW_spec p n "get_app_fn", callW_spec p n "e_view"]
-  grind [arena_grind] simp [St.setLocs_mem']
+  grind [arena_grind]
 
 theorem viewR_const {r : List Word} {v : ENodeView} (hr : L.Ind.ViewR r v) (h3 : r.headD 0 = 3) :
     v = .const (decI (r.tail.headD 0)) (decI (r.tail.tail.headD 0)) ∧ HW (r.tail.headD 0) ∧
@@ -133,7 +133,7 @@ l_model spcE_spec (p : Prog) (hf : p.lookup "spine_cmp" = some spineCmpL)
   fns [hf ↦ spcE list]
   specs [callW_spec p n "lvls_eq_c", defeqListRev_specE p hr n]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] unified
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 /-- `lvls_eq_c` does not return at fuel `1`. -/
@@ -244,7 +244,7 @@ l_model sp2E_spec (p : Prog) (hf : p.lookup "defeq_spine2" = some defeqSpine2L)
   fns [hf ↦ sp2E list]
   specs [callW_spec p n "get_app_args", spcE_spec p hc hr n]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] unified
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 /-- **`defeq_spine2` refines `spine2T`, both outcomes**: the two argument slices pushed, compared,
@@ -345,7 +345,7 @@ l_model spE_spec (p : Prog) (hf : p.lookup "defeq_spine" = some defeqSpineL)
   fns [hf ↦ spE list]
   specs [callW_spec p n "spine_head", sp2E_spec p h2 hc hr n]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] unified
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 /-- **`defeq_spine` refines `defeqSpine`, both outcomes**: the errors are `defeq_spine2`'s. -/
 theorem sp_ref (p : Prog) (hp : SpineDProg p) (n : Nat) (hk : KnotUpTo p n) (F : Nat)

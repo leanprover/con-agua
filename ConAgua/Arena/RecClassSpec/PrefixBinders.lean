@@ -37,12 +37,12 @@ attribute [ind_grind] fcK_some
 
 l_model findCtorGo_spec (p : Prog) (h : PbProg p)
   fns [h.fcg ↦ fcgW list]
-  grind [arena_grind] simp [rdW_eq]
+  grind [arena_grind]
 
 l_model findCtor_spec (p : Prog) (h : PbProg p)
   fns [h.fc ↦ fcW list]
   specs [findCtorGo_spec p h n]
-  grind [arena_grind] simp [rdW_eq]
+  grind [arena_grind]
 
 /-- **The slot walk is its models `psW`, `smW`, `snW`** (generated; fuel `n`). -/
 l_model slots_spec (p : Prog) (h : PbProg p)
@@ -54,7 +54,7 @@ l_model slots_spec (p : Prog) (h : PbProg p)
 l_model prefixBinders_spec (p : Prog) (h : PbProg p)
   fns [h.pb ↦ gpbW list]
   specs [ftdsF_spec p h.ad n, (slots_spec p h n).1, slAppend_specW p h.alloc h.copy h.app n]
-  grind [arena_grind] simp [rdW_eq]
+  grind [arena_grind]
 
 /-! ## Finding the constructor -/
 
@@ -446,7 +446,7 @@ theorem loc_init15 (x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 : Word
 
 l_model findSlotGo_spec (p : Prog) (h : RuProg p)
   fns [h.fsg ↦ fsgW list]
-  grind [arena_grind] flat
+  grind [arena_grind]
 
 l_model pvarsGo_spec (p : Prog) (h : RuProg p)
   fns [h.pv ↦ pvW list]
@@ -459,21 +459,21 @@ l_model pvarsGo_spec (p : Prog) (h : RuProg p)
 l_model call1Close_spec (p : Prog) (h : RuProg p)
   fns [h.c1c ↦ c1cW list]
   specs [ftdsF_spec p h.ad n, closeLams_spec p h.db h.lf h.lp h.il h.mkl h.cl h.ab n]
-  grind [arena_grind] simp []
+  grind [arena_grind]
 
 l_model call1Tail_spec (p : Prog) (h : RuProg p)
   fns [h.c1t ↦ c1tW list]
   specs [rec2ExprGetD_specF p h.bf h.bp h.ib h.egd n, mknF_spec p h.ad n,
     internConst_spec p h.cf h.cp h.ic n, slAppend_specW p h.alloc h.copy h.app n,
     slSnoc_specW p h.alloc h.copy h.snoc n, call1Close_spec p h n]
-  grind [arena_grind] simp []
+  grind [arena_grind]
 
 /-- **`class_gen_rule_call1` is its model `c1W`** (generated). -/
 l_model call1_spec (p : Prog) (h : RuProg p)
   fns [h.c1 ↦ c1W list]
   specs [rec2ExprGetD_specF p h.bf h.bp h.ib h.egd n, rec2IhParts_specF p h.ihp h.ad h.opf n,
     classRecOf_spec p h.cro n, call1Tail_spec p h n]
-  grind [arena_grind] finish [] gen 20 trace flat
+  grind [arena_grind] finish [] gen 20 trace
 
 theorem c1W_tail_eq : c1W.k_class_gen_rule_call1_tail = fcK := by
   funext o; cases o <;> rfl
@@ -484,7 +484,7 @@ theorem c1W_tail_eq : c1W.k_class_gen_rule_call1_tail = fcK := by
 l_model callsGo_spec (p : Prog) (h : RuProg p)
   fns [h.cg ↦ cgW list]
   specs [call1_spec p h n, slCons_specW p h.alloc h.copy h.cons n]
-  grind [arena_grind] extra [ld64_rd_spec] simp []
+  grind [arena_grind] extra [ld64_rd_spec]
 
 section cgArms
 variable (n : Nat) (m : Mem) (g x wso wsl fvso fvsl pvo pvl rlvls rco rcl cgo cgl e nn i : Word)
@@ -519,13 +519,13 @@ l_model ruleClose_spec (p : Prog) (h : RuProg p)
   specs [slotVar_spec p h.pw h.sf h.sp h.isort h.fvf h.fvp h.ifv h.sv n,
     slAppend_specW p h.alloc h.copy h.app n, mknF_spec p h.ad n, ftdsF_spec p h.ad n,
     closeLams_spec p h.db h.lf h.lp h.il h.mkl h.cl h.ab n]
-  grind [arena_grind] simp [rdW_eq]
+  grind [arena_grind]
 
 l_model ruleBody_spec (p : Prog) (h : RuProg p)
   fns [h.rb ↦ rbW list]
   specs [targetPiDomsWith_spec p h.ev h.copy h.alloc h.cons h.tpd h.hi1 n, pvarsGo_spec p h n,
     callsGo_spec p h n, ruleClose_spec p h n]
-  grind [arena_grind] flat
+  grind [arena_grind]
 
 def ruK2 (n : Nat) (g rco rcl cgo cgl rlvls x rP s : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none

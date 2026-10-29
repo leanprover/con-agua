@@ -24,7 +24,7 @@ namespace L.Arena
 
 /-- **`infer_spine_arg`'s unified model**: the `infer` slot and `defeq_arg` through their runs. -/
 l_model isaE_spec (p : Prog) (hf : p.lookup "infer_spine_arg" = some inferSpineArgL)
-  fns [hf ↦ isaE list] grind [arena_grind] simp [] unified
+  fns [hf ↦ isaE list] grind [arena_grind] unified
 
 /-- `infer_spine`'s unified model: the `whnf` slot and `infer_spine_arg` through their runs,
 `inst_list` lifted. -/
@@ -43,7 +43,7 @@ l_model aE_spec (p : Prog) (hf : p.lookup "infer_app" = some inferAppL)
   specs [callW_spec p n "head_and_args"]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
-  heartbeats 400000 simp [tierW, idxW] unified
+  heartbeats 400000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 end L.Arena

@@ -243,7 +243,7 @@ theorem classFeRGo_spec (p : Prog) (h : CfrProg p) (n : Nat) :
 l_model classFeR_spec (p : Prog) (h : CfrProg p)
   fns [h.top ↦ ferAW]
   specs [classFeRGo_spec p h n]
-  grind [arena_grind] simp [getElem_rdW']
+  grind [arena_grind]
 
 /-! ## `class_fe_r_rec` under the stage relation -/
 

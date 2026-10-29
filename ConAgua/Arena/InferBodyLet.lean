@@ -88,7 +88,7 @@ theorem inferBody_let (r : CoreFnsA) (fe : IFEnv) (d : Nat) (e : EIdx) (a : ASta
 l_model iletE_spec (p : Prog) (hf : p.lookup "infer_let" = some inferLetL)
   fns [hf ↦ iletE list]
   specs [callW_spec p n "inst1"]
-  grind [arena_grind] simp [] unified
+  grind [arena_grind] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 /-- Peel one call off a model: the run exists, and the model is the continuation's. -/
@@ -201,7 +201,7 @@ theorem inferBodyIO_lam (r : CoreFnsA) (fe : IFEnv) (d : Nat) (e : EIdx) (a : AS
 l_model ilamE_spec (p : Prog) (hf : p.lookup "infer_lam_io" = some inferLamIOL)
   fns [hf ↦ ilamE list]
   specs [callW_spec p n "intern_fvar", callW_spec p n "inst1", callW_spec p n "infer_lam_result"]
-  grind [arena_grind] simp [] unified
+  grind [arena_grind] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 /-- `infer_lam_result` at every L fuel. -/
@@ -318,7 +318,7 @@ l_model ifaE_spec (p : Prog) (hf : p.lookup "infer_forall_io" = some inferForall
     callW_spec p n "intern_sort"]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
-  simp [tierW, idxW] unified
+  unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 /-- **A forwarded run meets its callee's spec.** -/

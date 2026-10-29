@@ -253,7 +253,7 @@ l_model qsE_spec (p : Prog) (hf : p.lookup "quick_sort" = some quickSortL)
   fns [hf ↦ qsE list]
   specs [callW_spec p n "e_view", callW_spec p n "lvl_eq_c"]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] unified
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 theorem decO_ne_zero {w : Word} (h : w ≠ 0) : decO w = some ((w - 1) != 0) := by
@@ -324,7 +324,7 @@ l_model qfE_spec (p : Prog) (hf : p.lookup "quick_forall" = some quickForallL)
   fns [hf ↦ qfE list]
   specs [callW_spec p n "e_view", dbE_spec p hb n]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] unified
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 /-- **`quick_forall` refines `quickDefEq`'s `∀` arm, both outcomes**: the errors are
@@ -364,7 +364,7 @@ l_model qlE_spec (p : Prog) (hf : p.lookup "quick_lam" = some quickLamL)
   fns [hf ↦ qlE list]
   specs [callW_spec p n "e_view", defeqLams_specE p hl n]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] unified
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 /-- **`quick_lam` refines `quickDefEq`'s `λ` arm, both outcomes**: the errors are `defeq_lams`'. -/
@@ -406,7 +406,7 @@ l_model qdE_spec (p : Prog) (hf : p.lookup "quick_defeq" = some quickDefeqL)
   fns [hf ↦ qdE list]
   specs [callW_spec p n "lit_eq", qsE_spec p hs n, qfE_spec p hfa hb n, qlE_spec p hla hl n]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] unified
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 theorem coreRef_redec {α : Type} [Inhabited α] {T : AM α} {a₀ : AState} {dec₁ dec : List Word → α}

@@ -345,7 +345,7 @@ l_model fire2E_spec (p : Prog) (hp : p.lookup "iota_rec_fire2" = some iotaRecFir
   fns [hp ↦ fire2E list]
   specs [callW_spec p n "rule_rhs_at", callW_spec p n "mk_app_n", callW_spec p n "mk_app_n_from"]
   grind [arena_grind] fold [rpLen] extra [ld64_rdW_specE] unified
-  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem] flat
+  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 section fire2Run
 variable (mode : ConLeche.CheckMode) (r : CoreFnsA) (fe : IFEnv) (depth : Nat) (c : NIdx)
@@ -735,7 +735,7 @@ theorem irCallW_internBVar (p : Prog) (hp : IotaRecProg' p) (n : Nat)
 l_model iotaRecHead_spec (p : Prog) (hp : p.lookup "iota_rec_head" = some iotaRecHeadL)
   fns [hp ↦ irHeadW ro list]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rd_spec, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp []
+  extra [ld64_rd_spec, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
 
 /-- **`iota_rec_head` as a run**: the memory unchanged; another tag, or the `const` view. -/
 theorem irCallW_head (p : Prog) (hp : p.lookup "iota_rec_head" = some iotaRecHeadL) (n : Nat)

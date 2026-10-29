@@ -56,7 +56,7 @@ l_model ckkE_spec (p : Prog) (hP : KeysProg p)
   fns [hP.keys ↦ ckkE]
   specs [classKeyOfE_spec p hP.toKofProg n, slCons_specW p hP.rx.ha hP.copy hP.cons n]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [rdW] unified
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 /-- What `check_block_classes_keys` gives besides the twin's keys `ks` (from `m`): the keys'

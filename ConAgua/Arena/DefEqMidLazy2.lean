@@ -233,7 +233,7 @@ l_model itE_spec (p : Prog) (hf : p.lookup "lazy_iter" = some lazyIterL)
   specs [offE_spec p ho n, callW_spec p n "lazy_fold_ok", lnE_spec p hna n,
     ldsE_spec p hst hbo ht hl hr' hs hu hq h1 h2 hc hr n]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] unified
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 /-- **What the lazy-delta loop's errors claim from**: the knot's slots and the verdict closure
@@ -360,7 +360,7 @@ run per iteration, `callE`). -/
 l_model lazyDeltaReduction_specE (p : Prog)
     (hf : p.lookup "lazy_delta_reduction" = some lazyDeltaReductionL)
   fns [hf ↦ ldrE list] grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] unified
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] unified
 
 theorem decIter_done {r : List Word} (h : r.headD 0 ≠ 3) : decIter r = .inl (decLR r) := by
   unfold decIter decLR

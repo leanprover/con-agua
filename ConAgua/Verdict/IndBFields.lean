@@ -38,7 +38,7 @@ l_model cfgE_spec (p : Prog) (hP : CfoProg p)
     rec3_specW p hP.alloc n hP.r3, slCons_specW p hP.alloc hP.copy hP.cons n]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
-  heartbeats 4000000 simp [Cmp.evalW, Cmp.eval] unified
+  heartbeats 4000000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 /-- What `class_fields_of_go` gives besides the twin's kinds `ks` (from `m`): the stage relation,
@@ -243,7 +243,7 @@ l_model cfoE_spec (p : Prog) (hP : CfoProg p)
   specs [blockShapeMemberNames_spec p hP.alloc hP.mnc hP.mn n, cfgE_spec p hP n]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
-  heartbeats 4000000 simp [] unified
+  heartbeats 4000000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 section cfo

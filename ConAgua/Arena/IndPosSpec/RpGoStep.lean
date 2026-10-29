@@ -38,7 +38,7 @@ l_model appHole_spec (p : Prog) (hv : p.lookup "e_view" = some eView)
     (hp : p.lookup "app_hole" = some appHole)
   fns [hp ↦ ahWf]
   specs [phApp_spec p hv hph n, nestCanonSub_spec p hf hpw hsf hsp his hff hfp hif hcs n]
-  grind [ind_grind] simp [St.setLocs_mem']
+  grind [ind_grind]
 
 theorem ahW_ok (n : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word)
     (m m' : Mem) (a : AState) (no nl us b nn e : Word) (N : Nat) (names : List NIdx) (r : List Word)

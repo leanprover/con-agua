@@ -34,7 +34,7 @@ theorem psum_congr {m m' : Mem} (h : m'.arr64 IFR = m.arr64 IFR) (to : Word) (i 
 l_model viOrder_specE (p : Prog) (hL : IndApplyLookups p)
   fns [hL.vi_order ↦ viOrderE]
   specs [iflAlloc_spec p hL.ifl_alloc n, viOrderGo_specE p hL n]
-  grind [arena_grind] extra [L.Arena.ld64_rdW_specE] simp []
+  grind [arena_grind] extra [L.Arena.ld64_rdW_specE]
   unified nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 /-- **`vi_order`'s ok half**: the slice is allocated above the pool's top (`IExt`), `cts.length`

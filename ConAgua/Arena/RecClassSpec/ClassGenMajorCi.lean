@@ -53,12 +53,12 @@ theorem rec2SimExprGetD {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : 
 l_model classGenMajorTail_spec (p : Prog) (h : MjProg p)
   fns [h.mjt ↦ mjtW list]
   specs [internConst_spec p h.cf h.cp h.ic n, slAppend_specW p h.alloc h.copy h.app n, mknF_spec p h.ad n]
-  grind [arena_grind] simp []
+  grind [arena_grind]
 
 l_model classGenMajorOpen_spec (p : Prog) (h : MjProg p)
   fns [h.mjo ↦ mjoW list]
   specs [opfF_spec p h.opf n, classGenMajorTail_spec p h n]
-  grind [arena_grind] simp []
+  grind [arena_grind]
 
 theorem classGenMajorCi_spec (p : Prog) (h : MjProg p) (n : Nat) (s₀ : St) (ci : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "class_gen_major_ci" [ci]
@@ -120,7 +120,7 @@ l_model classGenMotiveTy_spec (p : Prog) (h : MtProg p)
   specs [classGenMajor_spec p h.toMjProg n, internSort_spec p h.sf h.sp h.isort n,
     mkForall_spec p h.db h.ff h.fp h.ifa h.mkf n, ftdsF_spec p h.ad n,
     closeTelescope_spec p h.db h.ff h.fp h.ifa h.mkf h.ct h.ab n]
-  grind [arena_grind] flat
+  grind [arena_grind]
 
 end L.Ind
 

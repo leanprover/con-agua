@@ -191,7 +191,7 @@ l_model checkDeclThm_specE (p : Prog) (hV : ValProg p)
   specs [erecCi_specW p hV.rcp n, checkConstantVal_specE p hV n, checkThmVal_specE p hV n]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
-  heartbeats 400000 simp [] unified
+  heartbeats 400000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 /-- What the theorem arm's error arms assume: `check_constant_val`'s (`VerdictCtxU`), and
@@ -285,7 +285,7 @@ l_model installValue_specE (p : Prog) (hP : IvProg p)
   specs [erecCi_specW p hP.recP n, installHeader_specE p hP.ih n, erecVg_specW p hP.recP n]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
-  heartbeats 400000 simp [] unified
+  heartbeats 400000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 /-- What `install_value`'s error arms assume: `install_header`'s (`IhCtx`) and

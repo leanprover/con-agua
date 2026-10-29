@@ -37,7 +37,7 @@ l_model checkBasisDecl_specE (p : Prog) (hB : BasisProg p) (hpa : p.lookup "pin_
     callW_spec p n "rom_basis_decls_a", installBasisDecls_specE p hB n]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
-  heartbeats 400000 simp [] unified
+  heartbeats 400000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 local notation "V" => ConLeche.CheckMode.verified

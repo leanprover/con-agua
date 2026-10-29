@@ -38,7 +38,7 @@ l_model toiE_spec (p : Prog) (P : ToiProg p)
     piBinders_spec p P.alloc P.icopy P.v P.sc P.pb n]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
-  heartbeats 4000000 simp [Cmp.evalW, Cmp.eval] unified
+  heartbeats 4000000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 /-- What `target_outside_inst` gives besides the twin's `(index count, sort)` `x` (from `m`): the

@@ -38,7 +38,7 @@ l_model tmmE_spec (p : Prog) (hP : TmmProg p)
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
   heartbeats 4000000 unified
-  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem] flat
+  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 /-- The parameter prefixes' lengths after `param_levels` (the two `min`s of the L code). -/
 theorem tmmE_kpl (p : Prog) (n : Nat) (pfo pfl fvo fvl ao al I us t nidx co cl nP : Word)

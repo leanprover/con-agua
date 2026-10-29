@@ -49,7 +49,7 @@ l_model iaaE_spec (p : Prog) (h1 : p.lookup "check_abs_ctor_sorts_one" = some ch
 l_model nuE_spec (p : Prog) (hL : NuLook p) (hc : p.lookup "nest_uniform_cs" = some nestUniformCsL)
   (hf : p.lookup "nest_uniform" = some nestUniformL)
   fns [hf ↦ nuE list] specs [nestUniformCs_spec p hL hc (realCall p) (realCall_spec p) n] grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] unified
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 l_model nrtE_spec (p : Prog) (hL : RsLook p)
@@ -57,7 +57,7 @@ l_model nrtE_spec (p : Prog) (hL : RsLook p)
   specs [nestCtxHiAt_specE p hL.nb.ct.cr.rx.hi n, posRec2_specW p hL.nb.ct.cr.rx.ha hL.nb.ct.cr.rx.h2 n,
     slSnoc_specW p hL.nb.ct.cr.rx.ha hL.nb.nit.hc2 hL.nb.nag.hsn n]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] unified
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 end L.Ind

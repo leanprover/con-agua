@@ -188,7 +188,7 @@ theorem getAppFn_callW {p : Prog} (hp : DefEqLeafProg p) {n : Nat} {m m' : Mem} 
 l_model headIsProj_spec (p : Prog) (hp : DefEqLeafProg p)
   fns [hp.hproj ↦ headIsProjW]
   specs [callW_spec p n "get_app_fn"]
-  grind [arena_grind] simp []
+  grind [arena_grind]
 
 theorem headIsProjW_eq (p : Prog) (n : Nat) (m m₁ : Mem) (e : Word) (r : List Word)
     (h : callW p n "get_app_fn" [e] m = some (r, m₁)) :
@@ -219,7 +219,7 @@ theorem headIsProj_refines (p : Prog) (hp : DefEqLeafProg p) (n : Nat) (s₀ : S
 l_model ioNeutral_spec (p : Prog) (hp : DefEqLeafProg p)
   fns [hp.ion ↦ ioNeutralW]
   specs [callW_spec p n "get_app_fn"]
-  grind [arena_grind] simp []
+  grind [arena_grind]
 
 theorem ioNeutralW_eq (p : Prog) (n : Nat) (m m₁ : Mem) (e : Word) (r : List Word)
     (h : callW p n "get_app_fn" [e] m = some (r, m₁)) :
@@ -559,7 +559,7 @@ l_model headHint_spec (p : Prog) (hp : DefEqLeafProg p)
   fns [hp.hhint ↦ headHintW tuple]
   specs [callW_spec p n "get_app_fn", callW_spec p n "env_find"]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rd_spec, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp []
+  extra [ld64_rd_spec, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
 
 /-- The hint the twin reads off a lookup. -/
 def hintOf : Option IConstantInfo → ConLeche.ReducibilityHint

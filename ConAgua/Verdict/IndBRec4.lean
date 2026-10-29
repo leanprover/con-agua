@@ -38,7 +38,7 @@ l_model cruleE_spec (p : Prog) (hp : CruleProg p)
     classRuleOkDomains_spec p hp.dom hp.hcr n]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
-  heartbeats 4000000 simp [Cmp.evalW, Cmp.eval] unified
+  heartbeats 4000000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 /-- What `class_rule_ok` gives besides the twin's rule `y` (from `m`, `a`): the stage invariant
@@ -208,7 +208,7 @@ l_model cr1E_spec (p : Prog) (hP : CrsProg p)
   fns [hP.one ↦ cr1E] specs [cruleE_spec p hP.cr n]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
-  heartbeats 4000000 simp [Cmp.evalW, Cmp.eval] unified
+  heartbeats 4000000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 section cr1

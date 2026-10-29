@@ -47,7 +47,7 @@ local notation "V" => ConLeche.CheckMode.verified
 l_model gft_spec (p : Prog) (hp : p.lookup "gen_rec_check_former_tys" = some genRecCheckFormerTys)
   fns [hp ↦ gftW list]
   specs [callW_spec p n "iw_alloc"]
-  grind [arena_grind] extra [ld64_rd_spec] simp []
+  grind [arena_grind] extra [ld64_rd_spec]
 
 section rel
 variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
@@ -138,7 +138,7 @@ theorem genRecCheckFormerTys_refines {p : Prog} (ha : p.lookup "iw_alloc" = some
 l_model gfc_spec (p : Prog) (hp : p.lookup "gen_rec_check_former_tys_c" = some genRecCheckFormerTysC)
   fns [hp ↦ gfcW list]
   specs [callW_spec p n "iw_alloc", callW_spec p n "class_former_ty"]
-  grind [arena_grind] extra [ld64_rd_spec] simp []
+  grind [arena_grind] extra [ld64_rd_spec]
 
 section rel
 variable {p : Prog} (P : CftProg p) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
@@ -286,7 +286,7 @@ theorem classSlotIsMinor_val (p : Prog) (hp : p.lookup "class_slot_is_minor" = s
 l_model mk_spec (p : Prog) (hp : p.lookup "gen_rec_check_minor_ok" = some genRecCheckMinorOk)
   fns [hp ↦ mkW list]
   specs [callW_spec p n "class_slot_is_minor"]
-  grind [arena_grind] extra [ld64_rd_spec] simp []
+  grind [arena_grind] extra [ld64_rd_spec]
 
 /-- **The slot loop counts the minor premises.** -/
 theorem mkW_loop1_ok {p : Prog} (hm : p.lookup "class_slot_is_minor" = some classSlotIsMinor) (so sl : Word)

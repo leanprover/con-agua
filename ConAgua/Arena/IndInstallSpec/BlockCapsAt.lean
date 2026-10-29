@@ -385,7 +385,7 @@ l_model blockCapsAtErCopy_spec (p : Prog) (ha : p.lookup "erec_alloc" = some ere
     (hp : p.lookup "block_caps_at_er_copy" = some blockCapsAtErCopy)
   fns [hp ↦ capsErCopyW]
   specs [erecAlloc_specW p ha n, ieCopy_spec p hc n]
-  grind [ind_grind] simp []
+  grind [ind_grind]
 
 /-- **What `block_caps_at_er_copy` builds**: a fresh `EREC` slice at the old `EREC` top holding the
 `IW` slice `(o, l)`; the hypotheses `StageR.erec` asks for: `EREC` and `CTL[129]` the only changes,

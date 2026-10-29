@@ -35,7 +35,7 @@ model. -/
 l_model csfE_spec (p : Prog) (hV : ValProg p)
     (hf : p.lookup "check_shapeless_formers" = some checkShapelessFormers)
   fns [hf ↦ csfE] specs [checkConstantVal_specE p hV n] grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [rdW] unified
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 /-- **The model of `check_shapeless`, both outcomes** (only errors): the formers by their unified
@@ -44,7 +44,7 @@ l_model cslE_spec (p : Prog) (hV : ValProg p)
     (hcsf : p.lookup "check_shapeless_formers" = some checkShapelessFormers)
     (hf : p.lookup "check_shapeless" = some checkShapeless)
   fns [hf ↦ cslE] specs [csfE_spec p hV hcsf n] grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [rdW] unified
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 theorem erA_truncM_a5 (m : Mem) : erA (truncM m) = erecP m := by

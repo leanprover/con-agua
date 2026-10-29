@@ -73,13 +73,13 @@ l_model classGenRecTyTail_spec (p : Prog) (h : GtProg p)
     slSnoc_specW p h.alloc h.copy h.snoc n,
     rec2MotVar_specF p h.toMtProg h.fvf h.fvp h.ifv h.sv h.ms h.mv n,
     mknF_spec p h.ad n, closeTelescope_spec p h.db h.ff h.fp h.ifa h.mkf h.ct h.ab n]
-  grind [arena_grind] simp [rdW_eq]
+  grind [arena_grind]
 
 l_model classGenRecTy_spec (p : Prog) (h : GtProg p)
   fns [h.rt ↦ gtW list]
   specs [classGenMajor_spec p h.toMjProg n, internFVar_spec p h.fvf h.fvp h.ifv n,
     classGenRecTyTail_spec p h n]
-  grind [arena_grind] flat
+  grind [arena_grind]
 
 /-! ## `class_gen_rec_ty` refines `classGenRecTy` -/
 

@@ -62,14 +62,14 @@ theorem iext_of_heap {m m' : Mem} (h : MemFrame [LH] [192] m m') : IExt m m' := 
 l_model viTail_specE (p : Prog) (hL : IndApplyLookups p)
   fns [hL.vi_tail ↦ viTailE]
   specs [storeFuel_spec p hL n, viOrder_specE p hL n, kExp_spec p hL n, recs_specE p hL n]
-  grind [arena_grind] extra [L.Arena.ld64_rdW_specE] simp []
+  grind [arena_grind] extra [L.Arena.ld64_rdW_specE]
   unified nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 l_model validate_specE (p : Prog) (hL : IndApplyLookups p)
   fns [hL.validate_ind_d ↦ validateE]
   specs [viUnsafe_specE p hL.vi_unsafe n, viNparams_specE p hL n, map_spec p hL n, listed_spec p hL n,
     nodup_spec p hL n, viTail_specE p hL n]
-  grind [arena_grind] extra [L.Arena.ld64_rdW_specE] simp []
+  grind [arena_grind] extra [L.Arena.ld64_rdW_specE]
   unified nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 

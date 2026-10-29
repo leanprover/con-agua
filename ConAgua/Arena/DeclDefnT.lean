@@ -52,7 +52,7 @@ set_option experimental.vcgen true in
 l_model checkDeclDefn_specE (p : Prog) (hf : p.lookup "check_decl_defn" = some checkDeclDefn)
   fns [hf ↦ checkDeclDefnE] grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
-  heartbeats 400000 simp [] unified
+  heartbeats 400000 unified
 
 /-- What the definition arm's error arms assume: `check_constant_val`'s (`VerdictCtxU`),
 `install_value_guards`' claim (`check_defn_val`), the pin gate's claim. -/

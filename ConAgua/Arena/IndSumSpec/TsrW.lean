@@ -240,7 +240,7 @@ theorem trn_spec (p : Prog) (L : TsrLook p) (n : Nat) (s₀ : St) (old flo fll f
 l_model tsrm_spec (p : Prog) (hL : TsrLook p)
   fns [hL.tsrm ↦ tsrmW]
   specs [trn_spec p hL n, slCons_specW p hL.rc.rx.ha hL.ic hL.sc n]
-  grind [arena_grind] simp [getElem_rdW']
+  grind [arena_grind]
 
 /-! ## The rebuilt record under the stage relation -/
 
@@ -529,7 +529,7 @@ theorem efF_spec (p : Prog) (L : TsrLook p) (n : Nat) (s₀ : St) (o l : Word) :
 l_model tsr_spec (p : Prog) (hL : TsrLook p)
   fns [hL.tsr ↦ tsrW]
   specs [rulesF_spec p hL n, auxRuleFire_spec p hL.arf n, efF_spec p hL n, tsrm_spec p hL n]
-  grind [arena_grind] simp [getElem_rdW']
+  grind [arena_grind]
 
 /-- A pointer-slice field `(off, len)` of a record decoded in the cut pools, at its word addresses. -/
 theorem truncPl {α : Type} {f : Mem → Nat → Option α} {m : Mem} {w : Word} {i o l : Nat} {xs : List α}

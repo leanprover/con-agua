@@ -46,7 +46,7 @@ l_model checkDivModCerts_specE (p : Prog)
     callW_spec p n "subst_const0"]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
-  heartbeats 400000 simp [] unified
+  heartbeats 400000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 /-- What the `Nat.div`-family pin gate's checks give besides the twin's answer `x` (from `m`,
@@ -313,7 +313,7 @@ l_model checkTypePins_specE (p : Prog) (hf : p.lookup "check_type_pins" = some c
   specs [callW_spec p n "type_pin_stored"]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
-  heartbeats 400000 simp [] unified
+  heartbeats 400000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 section typePins
@@ -447,7 +447,7 @@ l_model checkDivModPinValue_specE (p : Prog)
     callW_spec p n "div_mod_cert_proofs", checkDivModCerts_specE p hc n]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
-  heartbeats 400000 simp [] unified
+  heartbeats 400000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 section pinValue
@@ -568,7 +568,7 @@ l_model checkDivModPinAt_specE (p : Prog)
     checkDivModPinValue_specE p hv hc n]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
-  heartbeats 400000 simp [] unified
+  heartbeats 400000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 section pinAt

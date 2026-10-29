@@ -132,7 +132,7 @@ l_model abstractPrefixList_spec (p : Prog) (hap : p.lookup "abstract_prefix" = s
     (hp : p.lookup "abstract_prefix_list" = some abstractPrefixList) (hab : AbF p)
   fns [hp ↦ aplW]
   specs [abstractPrefix_spec p hap hab n, slCons_specW p ha hc hsc n]
-  grind [arena_grind] extra [ld64_rd_spec] simp []
+  grind [arena_grind] extra [ld64_rd_spec]
 
 /-- **One step of a handle slice** `(o, l)`, `l ≠ 0`: the head read at `o`, the rest at
 `(o + 1, l - 1)`. -/

@@ -153,7 +153,7 @@ l_model bseal_spec (p : Prog) (hna : NaF p) (ha : p.lookup "iw_alloc" = some iwA
     (hp : p.lookup "block_shape_seal" = some blockShapeSeal)
   fns [hp ↦ bsealW list]
   specs [naF_spec p hna n, bsp_spec p ha hpk n]
-  grind [ind_grind] simp []
+  grind [ind_grind]
 
 /-- After `block_shape_large`. -/
 def bbK13' (mo ml ro2 rl2 nPd s ip : Word) : Option (List Word × Mem) → Option (List Word × Mem)

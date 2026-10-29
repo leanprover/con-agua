@@ -28,7 +28,7 @@ namespace L.Arena
 l_model recFireArgs_spec (p : Prog) (hp : p.lookup "rec_fire_args" = some recFireArgsL)
   fns [hp ↦ rfaW list]
   specs [callW_spec p n "inst_spine_pins"]
-  grind [arena_grind] simp []
+  grind [arena_grind]
 
 theorem recFireArgs_nested_eq (rl : IRecRule) (lps : List NIdx) (us : LsIdx) (args : List EIdx)
     (rP : Nat) (lv : List LIdx) (pins : List EIdx) (h : rl.fire = .nested lv pins) :
@@ -430,7 +430,7 @@ l_model fabScopeOk_spec (p : Prog) (hp : p.lookup "fab_scope_ok" = some fabScope
   fns [hp ↦ fsW list]
   specs [callW_spec p n "wscoped_bfast", callW_spec p n "loose_bvars_bounded_fast",
     callW_spec p n "leaf_guard"]
-  grind [arena_grind] simp []
+  grind [arena_grind]
 
 theorem fabScopeOk_stop1 (d : Nat) (fab major : EIdx) (a a₁ : AState)
     (h : (wscopedBFast coreWalkFuel d fab).run a = .ok (false, a₁)) :
@@ -1066,7 +1066,7 @@ theorem SpineR.append {m : Mem} {off a b : Word} {xs ys : Array EIdx} (hx : Spin
 l_model etaFabArgs_spec (p : Prog) (hp : p.lookup "eta_fab_args" = some etaFabArgsL)
   fns [hp ↦ efaW list]
   specs [callW_spec p n "eta_projs"]
-  grind [arena_grind] simp []
+  grind [arena_grind]
 
 theorem etaFabArgsE_run (T : NIdx) (targs : List EIdx) (major : EIdx) (nF : Nat) (a a₁ : AState)
     (ps : List EIdx) (h : (etaProjs T major nF).run a = .ok (ps, a₁)) :

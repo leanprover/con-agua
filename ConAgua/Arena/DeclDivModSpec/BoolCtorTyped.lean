@@ -198,7 +198,7 @@ l_model pg_specW (p : Prog) (hp : p.lookup "div_mod_pin_guard" = some divModPinG
   fns [hp ↦ dmPgW list]
   specs [callW_spec p n "div_mod_decl_pin", callW_spec p n "ground_guards",
     callW_spec p n "div_mod_type_pins", callW_spec p n "type_pins_guard"]
-  grind [arena_grind] heartbeats 1600000 bind ntBW simp [ntBW]
+  grind [arena_grind] heartbeats 1600000 bind ntBW
 
 theorem word_add_two {w : Word} (h : w.toNat + 2 < 2 ^ 64) : (w + 2).toNat = w.toNat + 2 := by
   rw [UInt64.toNat_add]; simp; omega
@@ -215,7 +215,7 @@ l_model cggo_specW (p : Prog) (hp : p.lookup "div_mod_certs_guard_go" = some div
 l_model cgs_specW (p : Prog) (hp : p.lookup "div_mod_certs_guard" = some divModCertsGuardL)
   fns [hp ↦ cgsW list]
   specs [callW_spec p n "div_mod_cert_stmts", callW_spec p n "div_mod_cert_proofs", callW_spec p n "div_mod_certs_guard_go"]
-  grind [arena_grind] heartbeats 1600000 bind ntBW simp [ntBW]
+  grind [arena_grind] heartbeats 1600000 bind ntBW
 
 end guards
 

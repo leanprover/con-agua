@@ -31,7 +31,7 @@ l_model clmE_spec (p : Prog) (P : ClmProg p)
     mknF_spec p P.tmp.ad n, slCons_specW p P.keys.rx.ha P.keys.copy P.keys.cons n]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
-  heartbeats 4000000 simp [Cmp.evalW, Cmp.eval] unified
+  heartbeats 4000000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 end L.Ind

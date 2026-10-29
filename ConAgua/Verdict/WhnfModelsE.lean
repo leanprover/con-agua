@@ -22,7 +22,7 @@ l_model whnfCoreE_spec (p : Prog) (hf : p.lookup "whnf_core" = some whnfCoreL)
   specs [callW_spec p n "wk_find", callW_spec p n "wk_put", callW_spec p n "wc_find",
     callW_spec p n "wc_put"]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] unified
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 l_model whnfCoreStepE_spec (p : Prog) (hp : WhnfCoreProg p)
@@ -30,7 +30,7 @@ l_model whnfCoreStepE_spec (p : Prog) (hp : WhnfCoreProg p)
   specs [coreAppE_spec p hp.capp hp.capp2 hp.app n, coreStepProjE_spec p hp.sproj hp.rproj hp.plit n,
     callW_spec p n "inst1"]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] unified
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 l_model whnfStepE_spec (p : Prog) (hp : WhnfDeltaProg p)

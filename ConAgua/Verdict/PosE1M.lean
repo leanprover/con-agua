@@ -25,26 +25,26 @@ open L.Arena
 
 l_model npE_spec (p : Prog) (hf : p.lookup "nest_pos" = some nestPosL)
   fns [hf ↦ npE] grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [rdW] unified
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] unified
 
 l_model npbE_spec (p : Prog) (hf : p.lookup "nest_pos_bind" = some nestPosBindL)
   fns [hf ↦ npbE] grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [rdW] unified
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] unified
 
 l_model npaE_spec (p : Prog) (hf : p.lookup "nest_pos_app" = some nestPosAppL)
   fns [hf ↦ npaE] grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [rdW] unified
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] unified
 
 l_model ncE_spec (p : Prog) (hf : p.lookup "nest_cont" = some nestContL)
   fns [hf ↦ ncE] grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [rdW] unified
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] unified
 
 l_model pfvE_spec (p : Prog) (hL : PfLook p)
   fns [hL.hp ↦ pfvE]
   specs [nestHoleAt_spec' p hL n, nestOccAny_spec p hL.no hL.hoa n, nestArity_spec' p hL.na n,
     nestPosHoleKind_spec p hL.hh hL.hk n]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] unified
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 l_model nccE_spec (p : Prog) (hL : NbLook p)
@@ -52,7 +52,7 @@ l_model nccE_spec (p : Prog) (hL : NbLook p)
   specs [nestOccAny_spec p hL.nit.no hL.nit.hoa n, pos2Pin_spec p hL.hpa n,
     nestContParamsClosed_spec p hL.usl.hbp hL.dc.hf hL.hpc n]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] unified
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 noncomputable section
@@ -64,7 +64,7 @@ l_model ntyE_spec (p : Prog) (hL : NtyLook p)
     instPisWith_spec p hL.hv hL.hip hL.hi1 n]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
-  heartbeats 4000000 simp [] unified
+  heartbeats 4000000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 l_model nitE_spec (p : Prog) (hL : NitLook p)

@@ -94,7 +94,7 @@ theorem dl_exit (r : CoreFnsA) (fe : IFEnv) (d : Nat) (an bn i : Word) (aas bs :
 through its run). -/
 l_model defeqList_specE (p : Prog) (hp : p.lookup "defeq_list" = some defeqListL)
   fns [hp ↦ dlE] grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] unified
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] unified
 
 /-- **The `defeq_list` loop refines `defEqList`, both outcomes**, on the spines from index `i`: the
 errors are the `defeq` slot's. -/
@@ -228,7 +228,7 @@ l_model ioE_spec (p : Prog) (hp : p.lookup "iota_index_ok" = some iotaIndexOkL)
   specs [callW_spec p n "pi_residual", callW_spec p n "get_app_args", defeqList_specE p hd n]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] unified
-  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem] flat
+  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 /-- The slice after the first `c` words, as `iota_index_ok` computes it. -/
 theorem spine_drop (m : Mem) (off cnt c : Word) (xs : Array EIdx) (h : SpineR m off cnt xs)
@@ -409,7 +409,7 @@ theorem iotaIndexOk_refines' (p : Prog) (hp : IotaProg' p) (hi1 : IotaInst1OK p)
 l_model towerSlotsAll_spec (p : Prog) (hp : p.lookup "tower_slots_all" = some towerSlotsAllL)
   fns [hp ↦ tsW list]
   specs [callW_spec p n "find_proj"]
-  grind [arena_grind] simp []
+  grind [arena_grind]
 
 theorem towerSlotsAllGo_stop (fe : IFEnv) (T : NIdx) (n j : Nat) (h : fe.findProj? T j = none) :
     towerSlotsAllGo fe T (n + 1) j = false := by
@@ -498,7 +498,7 @@ theorem towerSlotsAll_refines' (p : Prog) (hp : IotaProg' p) (hfp : FindProjOK p
 l_model instSpine_spec (p : Prog) (hp : p.lookup "inst_spine" = some instSpineL)
   fns [hp ↦ isW]
   specs [callW_spec p n "inst_entry"]
-  grind [arena_grind] simp []
+  grind [arena_grind]
 
 theorem instSpine_nil_run (fuel : Nat) (t : Nat) (e : EIdx) (a : AState) :
     (instSpine fuel [] t e).run a = .ok (e, a) := by

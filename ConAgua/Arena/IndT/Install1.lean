@@ -76,7 +76,7 @@ set_option experimental.vcgen true in
 lifted, `is_def_eq_core` through its run. -/
 l_model cbdaE_spec (p : Prog) (hf : p.lookup "check_block_doms_at" = some checkBlockDomsAt)
   fns [hf ↦ cbdaE] specs [callW_spec p n "fvar_type_d"] grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [rdW] unified
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 set_option experimental.vcgen true in
@@ -85,7 +85,7 @@ verdict closure) lifted, `is_def_eq_core` through its run. -/
 l_model sdomsE_spec (p : Prog) (hf : p.lookup "check_struct_doms_at" = some checkStructDomsAtL)
   fns [hf ↦ sdomsE] specs [callW_spec p n "sl_get", callW_spec p n "fvar_type_d"]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] unified
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 /-- What the binder-domain walks leave: the stage relation, the growth, no stale records. -/

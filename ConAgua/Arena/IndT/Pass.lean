@@ -56,7 +56,7 @@ l_model icpE_spec (p : Prog) (hP : PassProg p)
   specs [callW_spec p n "flush_caches", callW_spec p n "block_nest_ctx", callW_spec p n "class_seeds",
     callW_spec p n "check_block_pass_rec"]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [rdW] unified
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 /-- What `check_block_pass` gives besides the pass `x` it returns, a record at `w` (from `m`, `a`):

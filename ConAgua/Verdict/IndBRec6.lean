@@ -36,14 +36,14 @@ l_model crrE_spec (p : Prog) (hP : CrrProg p)
     rec4_specW p hP.crs.alloc n hP.rec4, slCons_specW p hP.crs.alloc hP.crs.copy hP.crs.cons n]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
-  heartbeats 4000000 simp [Cmp.evalW, Cmp.eval] unified
+  heartbeats 4000000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 l_model crraE_spec (p : Prog) (hP : CrrProg p)
   fns [hP.top ↦ crraE] specs [crrE_spec p hP n]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
-  heartbeats 4000000 simp [Cmp.evalW, Cmp.eval] unified
+  heartbeats 4000000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 /-- What `class_recs_rules_ok(_go)` gives besides the twin's records `xs` (from `m`, `a`): the stage

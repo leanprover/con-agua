@@ -37,7 +37,7 @@ l_model cbcE_spec (p : Prog) (hP : CbcProg p)
   specs [callW_spec p n "class_read", callW_spec p n "class_read_classes", clmE_spec p hP.clm n,
     callW_spec p n "check_block_classes_one_per_member"]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] heartbeats 1000000 simp [rdW] unified
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] heartbeats 1000000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 /-- What `check_block_classes` gives besides the class reading and the majors `x` it returns (from

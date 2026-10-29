@@ -400,7 +400,7 @@ l_model classReadMinorIh1_spec (p : Prog) (hfh : p.lookup "fvar_head" = some fva
   fns [hi1 ↦ ih1W list]
   specs [ftdF_spec p had n, pirF_spec p had n, gaaF_spec p had n,
     fvarHead_spec p hfh hv had n, classOfMotiveVar_spec p hf hcm n]
-  grind [arena_grind] simp [rdW_eq, getElem_rdW']
+  grind [arena_grind]
 
 l_model classReadMinorIhs_spec (p : Prog) (hfh : p.lookup "fvar_head" = some fvarHead)
     (hv : p.lookup "e_view" = some eView) (hf : p.lookup "sl_find" = some slFind)
@@ -412,7 +412,7 @@ l_model classReadMinorIhs_spec (p : Prog) (hfh : p.lookup "fvar_head" = some fva
   fns [his ↦ ihsW list]
   specs [classReadMinorIh1_spec p hfh hv hf hcm hi1 had n, rec2_specW p ha n h2,
     slCons_specW p ha hc hsc n]
-  grind [arena_grind] simp [rdW_eq, getElem_rdW']
+  grind [arena_grind]
 
 l_model classReadMinorFinish_spec (p : Prog) (hfh : p.lookup "fvar_head" = some fvarHead)
     (hv : p.lookup "e_view" = some eView) (hf : p.lookup "sl_find" = some slFind)
@@ -426,7 +426,7 @@ l_model classReadMinorFinish_spec (p : Prog) (hfh : p.lookup "fvar_head" = some 
   fns [hfin ↦ finW list]
   specs [eView_spec p hv n, classReadMinorIhs_spec p hfh hv hf hcm hc ha hsc h2 hi1 his had n,
     rec5_specW p ha n h5]
-  grind [arena_grind] simp [rdW_eq]
+  grind [arena_grind]
 
 l_model classReadMinorTail_spec (p : Prog) (hfh : p.lookup "fvar_head" = some fvarHead)
     (hv : p.lookup "e_view" = some eView) (hf : p.lookup "sl_find" = some slFind)
@@ -441,7 +441,7 @@ l_model classReadMinorTail_spec (p : Prog) (hfh : p.lookup "fvar_head" = some fv
   fns [htl ↦ tailW list]
   specs [gaaF_spec p had n, gafF_spec p had n,
     classReadMinorFinish_spec p hfh hv hf hcm hc ha hsc h2 h5 hi1 his hfin had n]
-  grind [arena_grind] extra [ld64_rd_spec] simp []
+  grind [arena_grind] extra [ld64_rd_spec]
 
 l_model classReadMinor_spec (p : Prog) (hfh : p.lookup "fvar_head" = some fvarHead)
     (hv : p.lookup "e_view" = some eView) (hf : p.lookup "sl_find" = some slFind)
@@ -460,7 +460,7 @@ l_model classReadMinor_spec (p : Prog) (hfh : p.lookup "fvar_head" = some fvarHe
   specs [piBinders_spec p ha hc hv hsc hpb n, hcR n "open_pis_at_fvars_f",
     fvarHead_spec p hfh hv had n, classOfMotiveVar_spec p hf hcm n,
     classReadMinorTail_spec p hfh hv hf hcm hc ha hsc h2 h5 hi1 his hfin htl had n]
-  grind [arena_grind] extra [ld64_rd_spec] simp []
+  grind [arena_grind] extra [ld64_rd_spec]
 
 end L.Ind
 
@@ -1045,7 +1045,7 @@ l_model classReadSlotMotive_spec (p : Prog) (hP : SlotProg p)
     gaaF_spec p hP.ad n, eView_spec p hP.v n,
     classNPcOf_spec p hP.a hP.mc hP.mn hP.ct hP.x hP.g hP.ef hP.npc n,
     rec4_specW p hP.a n hP.r4, rec2_specW p hP.a n hP.r2]
-  grind [arena_grind] simp [rdW_eq, getElem_rdW']
+  grind [arena_grind]
 
 /-- After `class_n_pc_of`: the join point of `cnt := min n al`. -/
 theorem slotMotW_npc_some (iName us ao al : Word) (r : List Word) (m : Mem) :
@@ -1322,7 +1322,7 @@ l_model classReadSlotsSnoc_spec (p : Prog) (ha : p.lookup "iw_alloc" = some iwAl
     (hp : p.lookup "class_read_slots_snoc" = some classReadSlotsSnoc)
   fns [hp ↦ motSnocW list]
   specs [slSnoc_specW p ha hc hsn n]
-  grind [arena_grind] simp []
+  grind [arena_grind]
 
 theorem snocW_room {n : Nat} {m m' : Mem} {o l x : Word} {r : List Word}
     (h : snocW n m o l x = some (r, m')) (hsz : (m.arr64 IW).size < 2 ^ 64)
@@ -1762,7 +1762,7 @@ open L.Arena
 l_model classReadMotPos_spec (p : Prog) (hP : ReadProg p)
   fns [hP.mp ↦ motPosW list]
   specs [slCons_specW p hP.a hP.c hP.sc n]
-  grind [arena_grind] simp [rdW_eq, getElem_rdW']
+  grind [arena_grind]
 
 def frK3 : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none

@@ -395,7 +395,7 @@ l_model instLPCore_spec (p : Prog) (hp : ILWProg p)
     callW_spec p n "der_b", lsNode_spec p hp.lsn n, callW_spec p n "lp_go"]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rd_spec, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
-  heartbeats 1000000 simp [tierW, idxW] locals
+  heartbeats 1000000
 
 l_model instLP_spec (p : Prog) (hp : ILWProg p)
   fns [hp.lp ↦ ilwLPW]

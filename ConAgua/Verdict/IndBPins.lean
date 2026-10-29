@@ -35,7 +35,7 @@ local notation "V" => ConLeche.CheckMode.verified
 l_model tptE_spec (p : Prog) (hf : p.lookup "target_pin_tys" = some targetPinTys)
   fns [hf ↦ tptE] grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
-  heartbeats 4000000 simp [Cmp.evalW, Cmp.eval] unified
+  heartbeats 4000000 unified
 
 l_model tmpE_spec (p : Prog) (P : TmpProg p)
   fns [P.tmp ↦ tmpE]

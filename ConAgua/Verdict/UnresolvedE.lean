@@ -61,7 +61,7 @@ l_model unresolvedConstsErr_specE (p : Prog)
     callW_spec p n "ue_mentions_go"]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
-  heartbeats 400000 simp [] unified
+  heartbeats 400000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 /-! ## The pure memo-free walks on the twin's store -/

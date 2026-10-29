@@ -429,7 +429,7 @@ l_model aioE_spec (p : Prog) (hf : p.lookup "infer_app_io" = some inferAppIOL)
   specs [callW_spec p n "head_and_args"]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
-  heartbeats 400000 simp [tierW, idxW] unified
+  heartbeats 400000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 
