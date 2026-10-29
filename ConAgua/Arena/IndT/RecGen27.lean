@@ -5,7 +5,6 @@ import ConAgua.Arena.RecCheckSpec.TargetMajorAt
 import ConAgua.Arena.RecGenSpec.DecTMSlices
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
-import ConAgua.L.ModelGen
 import ConAgua.Arena.IndT.RecGen27Models
 
 /-!

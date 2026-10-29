@@ -1,6 +1,4 @@
 import ConAgua.Arena.RecGenSpec.DecB
-import ConAgua.Arena.RecSim
-import ConAgua.Arena.WhnfBase
 import ConAgua.Checker.NoVerdictTree
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr

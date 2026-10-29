@@ -3,7 +3,6 @@ import ConAgua.Arena.DefEqLeaves2
 import ConAgua.Arena.CoreDen
 import ConAgua.Arena.InferBodySpine
 import ConAgua.Arena.WhnfCoreProj
-import ConAgua.L.ModelGen
 import ConAgua.Arena.InferProjModels
 
 /-!
