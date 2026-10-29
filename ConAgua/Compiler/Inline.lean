@@ -243,7 +243,8 @@ def regS (env : Env) : Stmt → Nat
   | _ => 0
 
 /-- A function with its calls to the callees of `env` inlined, past its own locals; unchanged if
-its frame would get too large for the compiler. -/
+its frame would get too large for the compiler.
+con-ron: none — a compiler pass over L declarations, not checker code -/
 def inlFn (env : Env) (fd : FunDecl) : FunDecl :=
   let o := max fd.nlocals (Stmt.vb fd.body)
   let fd' : FunDecl := { nparams := fd.nparams, nlocals := o + regS env fd.body, body := inlS env o fd.body }
