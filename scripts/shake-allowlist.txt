@@ -155,3 +155,11 @@ ConAgua/Arena/InstLPEntry.lean	public import ConAgua.Arena.RecFireCore	# needed:
 ConAgua/Arena/WhnfM2CRefine3.lean	public import ConAgua.Arena.RecFireCore	# needed: the build fails without it (`CoreS.ctl136`, now in InferBodySpine, reached through it); the tool names it unused
 ConAgua/Arena/InferBodySpine.lean	public import ConAgua.Arena.InferBodyLet	# downstream modules reach InferBodyLet (and `ld64_rdW_spec`) through it (PropReadW fails without it); the spines themselves no longer use it
 ConAgua/Arena/WhnfSlotRefine.lean	public import ConAgua.Arena.WhnfCoreLoop	# needed: its unified models (WhnfModelsE, l_model names) come through it, and DefEqKnot reaches whnfCoreSlot_step through it; the memo lemmas it used moved to WhnfBase
+ConAgua/Checker/ProgIdx.lean	public import ConAgua.Checker.Prog	# the build needs it: `idx_lit` evaluates `checkerProg` at elaboration time; the literal it declares names nothing from it
+ConAgua/Checker/ProgTreeI.lean	public import ConAgua.Compiler.WFSplit	# the build needs it: the command `prog_tree`
+ConAgua/Checker/ProgSktPart0.lean	public import ConAgua.Checker.ProgI	# the build needs it: `skt_part` reads the list `checkerProgI` at elaboration time; its theorem names only the functions' literals (ProgIPart<k>)
+ConAgua/Checker/ProgSktPart1.lean	public import ConAgua.Checker.ProgI	# the build needs it: `skt_part` reads the list `checkerProgI` at elaboration time; its theorem names only the functions' literals (ProgIPart<k>)
+ConAgua/Checker/ProgSktPart2.lean	public import ConAgua.Checker.ProgI	# the build needs it: `skt_part` reads the list `checkerProgI` at elaboration time; its theorem names only the functions' literals (ProgIPart<k>)
+ConAgua/Checker/ProgSktPart3.lean	public import ConAgua.Checker.ProgI	# the build needs it: `skt_part` reads the list `checkerProgI` at elaboration time; its theorem names only the functions' literals (ProgIPart<k>)
+ConAgua/Checker/ProgSktPart4.lean	public import ConAgua.Checker.ProgI	# the build needs it: `skt_part` reads the list `checkerProgI` at elaboration time; its theorem names only the functions' literals (ProgIPart<k>)
+ConAgua/Checker/ProgSktPart5.lean	public import ConAgua.Checker.ProgI	# the build needs it: `skt_part` reads the list `checkerProgI` at elaboration time; its theorem names only the functions' literals (ProgIPart<k>)
