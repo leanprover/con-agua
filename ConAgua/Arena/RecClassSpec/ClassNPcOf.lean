@@ -283,7 +283,7 @@ theorem npcW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
     have hpb : p.toNat + 4 < 2 ^ 64 := by have := hS.iw.iw; have := hS.iw.iwSize; omega
     have e4 : rdW (m1.arr64 IW) (p + 4) = rdW (m.arr64 IW) (p + 4) := by
       simp only [rdW]
-      rw [show (p + 4).toNat = p.toNat + 4 by rw [UInt64.toNat_add]; simp; omega, hg1.2.2.1 _ (by omega)]
+      rw [show (p + 4).toNat = p.toNat + 4 by rw [UInt64.toNat_add]; simp; omega, hg1.iwGet _ (by omega)]
     have hm : bs.memberNames.contains (decI i) = true := by rw [hcon]; exact hc
     rw [npc_mem hm]
     refine ⟨hS1, hg1, ?_, hrd.2⟩

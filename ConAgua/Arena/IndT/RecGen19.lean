@@ -126,11 +126,11 @@ theorem clm_ref (hP : ClmProg p) (pp cao cal pfo pfl : Word) (bs : BlockShape)
   have e2 : rdW (m1.arr64 IW) (UInt64.ofNat q + 2) = rdW (m.arr64 IW) (UInt64.ofNat q + 2) := by
     have e : (UInt64.ofNat q + 2 : Word).toNat = (UInt64.ofNat q : Word).toNat + 2 :=
       word_add_toNat (by rw [show (2 : Word).toNat = 2 from rfl]; omega)
-    simp only [rdW, e]; rw [hg1.2.2.1 _ (by omega)]
+    simp only [rdW, e]; rw [hg1.iwGet _ (by omega)]
   have e3 : rdW (m1.arr64 IW) (UInt64.ofNat q + 3) = rdW (m.arr64 IW) (UInt64.ofNat q + 3) := by
     have e : (UInt64.ofNat q + 3 : Word).toNat = (UInt64.ofNat q : Word).toNat + 3 :=
       word_add_toNat (by rw [show (3 : Word).toNat = 3 from rfl]; omega)
-    simp only [rdW, e]; rw [hg1.2.2.1 _ (by omega)]
+    simp only [rdW, e]; rw [hg1.iwGet _ (by omega)]
   rw [e2, e3]
   have hds1 : decHL m1 (rdW (m.arr64 IW) (UInt64.ofNat q + 2)).toNat
       (rdW (m.arr64 IW) (UInt64.ofNat q + 3)).toNat = some nk.ds := by

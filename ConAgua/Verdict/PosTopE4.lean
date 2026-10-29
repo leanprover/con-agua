@@ -308,10 +308,10 @@ theorem nsd_ref : ∀ (n : Nat), n ≤ 2 ^ 62 → ∀ (m : Mem) (a : AState) (sO
     have hkin1 := (pos2_nk_in (hkd'.grow (decNK_mono _) hg1)).2
     have hksl1 : NKSl m1 key := (hsd.grow hg1 htop) 0 (by simp) |>.elim fun _ h' => by
         obtain ⟨key', nPc', h0', -, -, h1', -, -, hksl', -⟩ := h'
-        have : (m1.arr64 IW)[sO.toNat]? = some sp := by rw [hg1.2.2.1 _ (by omega)]; exact h0w
+        have : (m1.arr64 IW)[sO.toNat]? = some sp := by rw [hg1.iwGet _ (by omega)]; exact h0w
         simp only [Nat.add_zero] at h0'
         rw [this] at h0'; cases h0'
-        rw [hg1.2.2.1 _ (by omega), h1w] at h1'; cases h1'
+        rw [hg1.iwGet _ (by omega), h1w] at h1'; cases h1'
         exact hksl'
     -- the instance's type
     have hN := nit_ref L.nb.nit hq.closed hIlpf hLC n hC1 hA1 hhi0 (hU.grow hg1) hkd1 hkin1 hksl1 hP1

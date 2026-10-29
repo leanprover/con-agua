@@ -508,7 +508,7 @@ theorem u4W_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     have hrd : rdW (m.arr64 IW) (ko + i) = w := by
       have e : (ko + i).toNat = ko.toNat + i.toNat := word_add_toNat (by
         have := hS.iw.iw; have := hS.iw.iwSize; have := hg0.1; omega)
-      simp only [rdW, e]; simp only [iwA] at hw'; rw [hg0.2.2.1 _ hwi, hw']; rfl
+      simp only [rdW, e]; simp only [iwA] at hw'; rw [hg0.iwGet _ hwi, hw']; rfl
     have hi1 : (i + 1).toNat = i.toNat + 1 := word_add_toNat (by have := nF.toNat_lt; simp; omega)
     have hrange : List.range' i.toNat (nF.toNat - i.toNat) =
         i.toNat :: List.range' (i + 1).toNat (nF.toNat - (i + 1).toNat) := by

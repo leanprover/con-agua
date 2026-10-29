@@ -318,7 +318,7 @@ theorem ncGoW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis C cs : W
       rw [ncK2_miss (h := rfl)] at h
       have hacc2 : CsAt m2 cs.toNat (acc.map ncProj) (OutR cs.toNat N (iwTop m)) :=
         hacc.agree ((RdS.of_grow hg2).mono fun _ hi => hi.1) hE2
-          (fun i hi => hg2.2.2.1 _ (by rw [hlen] at hi; omega))
+          (fun i hi => hg2.iwGet _ (by rw [hlen] at hi; omega))
       obtain ⟨ys, a', hrun, hS', hGX, h1, h2, h3, h4⟩ := ih m2 m' a1 (co + 1) (cl - 1) ol fp ns' acc r h hS2
         (by rw [hco1, hcl1, show cl.toNat - 1 = cl' by omega]; exact hE2.hslice? hns')
         (by have := hg2.1; omega) hol (by omega)
@@ -381,10 +381,10 @@ theorem ncGoW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis C cs : W
         by_cases hia : i < acc.length
         · obtain ⟨w', hw1, hw2⟩ := hacc i (by rw [hlen]; exact hia)
           refine ⟨w', ?_, ?_⟩
-          · rw [set64IW_get, ite_eq_right (by omega), hg23.2.2.1 _ (by omega)]; exact hw1
+          · rw [set64IW_get, ite_eq_right (by omega), hg23.iwGet _ (by omega)]; exact hw1
           · simp only [List.map_append, List.map_cons, List.map_nil]
             rw [List.getElem_append_left (by rw [hlen]; exact hia)]
-            exact (hw2.agree hGX4.2.2.1 hE4).mono fun _ hx =>
+            exact (hw2.agree hGX4.iwGet hE4).mono fun _ hx =>
               ⟨Nat.lt_of_lt_of_le hx.1 (by rw [ht4]; exact hg23.1), hx.2⟩
         · have hie : i = acc.length := by omega
           subst hie
@@ -565,7 +565,7 @@ theorem ntW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis C : Word) 
     refine ⟨_, a', hrun', hS2, hg2, rfl, ?_, rfl, by simpa using h2, by simpa using h3'⟩
     have hnpI := nat?_idx hnp
     have : (m2.arr64 EREC)[ciq.toNat + 5 + 12]? = (erecP m)[ciq.toNat + 5 + 12]? := by
-      rw [hg2.2.2.2 _ (by omega), erecP_getE (by omega)]
+      rw [hg2.erGet _ (by omega), erecP_getE (by omega)]
     simp only [List.tail_cons, List.headD_cons]
     simp only [nat?, Option.map_eq_some_iff] at hnp
     obtain ⟨w, hw, hw'⟩ := hnp

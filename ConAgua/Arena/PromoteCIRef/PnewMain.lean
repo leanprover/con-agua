@@ -224,7 +224,7 @@ theorem pnew_main {pins : List INatOpPinSet} (dn : NIdx → Option ConLeche.Name
         rcases tixArr_mem (rowTag w) with e | e | e <;> rw [e] at h' <;> revert h' <;> decide)
         (tblArr_ne_t0 w (by decide) (by decide) (by decide)))
       hg₂₃ (Lc' ++ B) tables hEnv₃c hTab₃
-  have hsz₃ : (m₃.arr64 EREC).size < 2 ^ 64 := by rw [hg₂₃.2.2]; exact hsz₂
+  have hsz₃ : (m₃.arr64 EREC).size < 2 ^ 64 := by rw [hg₂₃.size]; exact hsz₂
   -- index
   cases hcd : callW p n "index_promoted" [vis, n0 - 1, c] m₃ with
   | none => rw [hcd] at hW; cases hW

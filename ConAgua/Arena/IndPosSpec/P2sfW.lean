@@ -75,7 +75,7 @@ theorem p2sfW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     have hg0t := hg0.1
     have hrd : rdW (m.arr64 IW) (dO + k) = w := by
       have e : (dO + k).toNat = dO.toNat + k.toNat := word_add_toNat (by omega)
-      simp only [rdW, e]; rw [hg0.2.2.1 _ (by omega), hw]; rfl
+      simp only [rdW, e]; rw [hg0.iwGet _ (by omega), hw]; rfl
     rw [hrd] at h
     rcases hwf : wfWf n m w with _ | ⟨rw, m1⟩ <;> rw [hwf] at h; · simp [p2sfK] at h
     rw [p2sfK_some] at h

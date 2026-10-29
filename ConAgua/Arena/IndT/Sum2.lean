@@ -184,13 +184,13 @@ theorem cts_ref (k : Nat) (hk : k ≤ 2 ^ 62)
   · rw [liftE_none, ctsE.k_cv_new.none]; exact RefE.of_cls0 (by simp)
   rw [liftE_some, ctsE.k_cv_new.arm1]
   have hnat : ∀ j, j < 4 → nat? (erA m3) (cv.toNat + j) = nat? (erA m) (cv.toNat + j) := fun j hj => by
-    simp only [nat?, erA]; rw [hg13.2.2.2 _ (by omega)]
+    simp only [nat?, erA]; rw [hg13.erGet _ (by omega)]
   obtain ⟨hS4, hg4, hqe, htop4, hsl4, hdq⟩ := cvNew_stage h4 hS3 (decCVp_grow hg13 hcvb hsl hcv)
-    (by have := hg13.2.1; omega)
+    (by have := hg13.er; omega)
     (fun lo ll e1 e2 => by
       rw [show cv.toNat + 1 = cv.toNat + 1 from rfl, hnat 1 (by decide)] at e1
       rw [hnat 2 (by decide)] at e2
-      have := hsl lo ll e1 e2; have := hg13.2.1; omega)
+      have := hsl lo ll e1 e2; have := hg13.er; omega)
     hty32
   have hA4 := cvNewW_afr h4 hA3
   have hC4 : StageC dn vis fe env m4 a3 := hC3.of_pstep hS4 hA4 (PStep.refl hC3.check.state)
@@ -226,7 +226,7 @@ theorem cts_ref (k : Nat) (hk : k ≤ 2 ^ 62)
     have hn : ∀ j, j < 4 → nat? (erA m5) (q.toNat + j) = nat? (erA m4) (q.toNat + j) := fun j hj => by
       simp only [nat?, erA]; rw [hg5.erGet _ (by omega)]
     rw [hn 1 (by decide)] at e1; rw [hn 2 (by decide)] at e2
-    have := hsl4 lo ll e1 e2; have := hg4.2.1; have := hg5.er; omega
+    have := hsl4 lo ll e1 e2; have := hg4.er; have := hg5.er; omega
 
 include hq henv hApd hCrk hP in
 /-- **`check_sum_tele` refines `checkSumTele .verified` under `StageC`, both outcomes** (twin side:
@@ -271,7 +271,7 @@ theorem ct_ref (k : Nat) (hk : k ≤ 2 ^ 62)
   have hta1 := decCVp_grow hg1 hta4 hslTa hta
   have hnat : ∀ q : Word, q.toNat + 4 ≤ erTop m → ∀ j, j < 4 →
       nat? (erA m1) (q.toNat + j) = nat? (erA m) (q.toNat + j) := fun q hq j hj => by
-    simp only [nat?, erA]; rw [hg1.2.2.2 _ (by omega)]
+    simp only [nat?, erA]; rw [hg1.erGet _ (by omega)]
   unfold checkSumTele
   rw [← hwd]
   refine RefE.bind_right hrun1 ?_
@@ -303,21 +303,21 @@ theorem ct_ref (k : Nat) (hk : k ≤ 2 ^ 62)
       rw [← hbe, ← decE_eq, htag]
       simp only [beq_self_eq_true, ite_true]
       refine RefE.bind_right (viewSort_run hvs) (RefE.ret rfl ⟨hC1, hg1, by simpa using hta1,
-        by simp only [List.headD]; have := hg1.2.1; omega,
+        by simp only [List.headD]; have := hg1.er; omega,
         fun lo ll e1 e2 => by
           simp only [List.headD] at e1 e2 ⊢
           rw [hnat cvTa0 hta4 1 (by decide)] at e1; rw [hnat cvTa0 hta4 2 (by decide)] at e2
-          have := hslTa lo ll e1 e2; have := hg1.2.1; omega,
+          have := hslTa lo ll e1 e2; have := hg1.er; omega,
         by simpa [hx1] using hu32, by simpa [hx1] using hu, hA1⟩)
     | _ => simp only [ViewR] at hVR <;> (rw [h2] at hVR) <;> simp at hVR
   rw [ctE.k_strip_pis.arm3 _ _ _ _ _ _ _ _ hf]
   -- the slow arm
   have hR := cts_ref hq henv hApd hCrk hP k (by omega) m1 a cv n cvTa0 cvv cvTa hC1 hcv1
-    (by have := hg1.2.1; omega)
+    (by have := hg1.er; omega)
     (fun lo ll e1 e2 => by
       rw [hnat cv hcvb 1 (by decide)] at e1; rw [hnat cv hcvb 2 (by decide)] at e2
-      have := hsl lo ll e1 e2; have := hg1.2.1; omega)
-    hta1 (by have := hg1.2.1; omega) hA1 hcvP hcvTaP hws hfe
+      have := hsl lo ll e1 e2; have := hg1.er; omega)
+    hta1 (by have := hg1.er; omega) hA1 hcvP hcvTaP hws hfe
   suffices hS' : RefE (CtsG p) (ctE.k_check_sum_tele_slow p (ctsE p k m1 vis cv n cvTa0))
       (checkSumTele.checkSumTeleSlow V fe cvv n.toNat cvTa) a
       (fun w res a' => CtsPost dn vis fe env m w res a') by

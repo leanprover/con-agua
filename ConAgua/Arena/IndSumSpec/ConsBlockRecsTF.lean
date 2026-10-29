@@ -695,7 +695,7 @@ theorem riRec_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEn
   have hw : ∀ i, i < 4 → (erecP M)[q1.toNat + 1 + i]? = (erecP M)[cq.toNat + i]? := by
     intro i hi
     rw [show q1.toNat + 1 + i = q1.toNat + (i + 1) by omega, hP (i + 1) (by omega),
-      hget (i + 1) (by simp; omega), erecP_getE (by omega), hg.2.2.2 _ (by omega)]
+      hget (i + 1) (by simp; omega), erecP_getE (by omega), hg.erGet _ (by omega)]
     have hlt : cq.toNat + i < (m.arr64 EREC).size := by simp only [erTop] at hEtop hcq; omega
     rcases i with _ | _ | _ | _ | i
     all_goals first

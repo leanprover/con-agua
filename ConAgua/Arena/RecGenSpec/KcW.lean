@@ -319,10 +319,10 @@ theorem kcW_ok (k : Nat) (m m' : Mem) (a : AState) (po pl key : Word) (r : List 
     (hP.fr (allocW_mfr hal))
   simp only [kcK] at h
   have e0 : rdW (m2.arr64 IW) key = rdW (m.arr64 IW) key := by
-    simp only [rdW]; rw [hg12.2.2.1 _ (by omega)]
+    simp only [rdW]; rw [hg12.iwGet _ (by omega)]
   have e1 : rdW (m2.arr64 IW) (key + 1) = rdW (m.arr64 IW) (key + 1) := by
     have e : (key + 1).toNat = key.toNat + 1 := word_add_toNat (by simp; omega)
-    simp only [rdW]; rw [e, hg12.2.2.1 _ (by omega)]
+    simp only [rdW]; rw [e, hg12.iwGet _ (by omega)]
   rw [e0, e1] at h
   rcases hr4 : posRecW m2 [rdW (m.arr64 IW) key, rdW (m.arr64 IW) (key + 1), q, rdW (m.arr64 IW) (key + 3)]
     with _ | ⟨nkw, m3⟩ <;> simp only [hr4, reduceCtorEq] at h

@@ -177,7 +177,7 @@ theorem csf_ref (hq : KnotStageProg p) (hap : ApdF p) (hkp : CrKeep p)
             (ConRon.Arena.checkShapelessFormers V fe rest) a1
             (fun v _ a' => CsfPost dn vis fe m v.2 a') := fun m1 a1 hT1 hg1 hCr1 =>
         (ih F hF' m1 a1 (off + 1) (cnt - 1) hT1 hCr1 (hrest.grow (decEBlk_mono _ _ _) hg1) hlenr
-          (by rw [hoff, hlenr]; have := hg1.2.1; omega) hlpsr).mono
+          (by rw [hoff, hlenr]; have := hg1.er; omega) hlpsr).mono
           fun _ _ _ h => ⟨h.stage, hg1.trans h.grow, h.crOK⟩
       by_cases h3 : ∃ cv caps, ci = IConstantInfo.indInfo cv caps
       · obtain ⟨cv, caps, rfl⟩ := h3

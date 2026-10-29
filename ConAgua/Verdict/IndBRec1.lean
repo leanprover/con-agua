@@ -99,7 +99,7 @@ theorem kof_ref (n : Nat) {m : Mem} {a : AState} {nP po pl key : Word} {pfvs : L
   have ek (j : Word) (hj : j.toNat < 4) :
       rdW (m2.arr64 IW) (r1.headD 0 + j) = rdW (m1.arr64 IW) (r1.headD 0 + j) := by
     simp only [rdW, word_add_toNat (show (r1.headD 0).toNat + j.toNat < 2 ^ 64 by omega)]
-    rw [hg2.2.2.1 _ (by omega)]
+    rw [hg2.iwGet _ (by omega)]
   refine RefE.ret rfl ?_
   dsimp only
   exact ⟨hd1.grow (decCK_mono _) hg2, by have := hg2.1; omega,

@@ -413,7 +413,7 @@ theorem romLit_call (hS : CoreS dn m a vis fe M eb) {c : Word}
       hp.romLit n _ c ⟨hS.arena.base.lit.1.cap, hS.arena.base.lit.1.top41⟩) h
   rw [hs'] at hI
   have h := romLitW_core hS c _ hI
-  exact ⟨h.1, h.2.1, h.2.2.1, h.2.2.2⟩
+  exact ⟨h.run, h.after, h.res, h.resOk⟩
 
 theorem ls1_call (hS : CoreS dn m a vis fe M eb) {u : Word} (hu : HW u)
     (hd : ∃ l, denoteL a.store.ls (decI u) = some l)
@@ -484,8 +484,8 @@ theorem ls1_den (hS : CoreS dn m a vis fe M eb) {u : Word} (hu : HW u)
     (hd : ∃ l, denoteL a.store.ls (decI u) = some l) :
     ∃ ls, denoteLs (AM.st (internLsNode [decI u]) a).store.lss (decI (r.headD 0)) = some ls := by
   have R := ls1_call p hp hS hu hd h
-  have hrun := AM.run_of_ok _ _ R.1
-  rw [R.2.2.1] at hrun
+  have hrun := AM.run_of_ok _ _ R.run
+  rw [R.res] at hrun
   exact (denoteLs_internLsNode hS.arena.base
     (fun c hc => by rw [List.mem_singleton] at hc; subst hc; exact hd) hrun).1
 

@@ -426,7 +426,7 @@ theorem tpsgC (hD : DmProg6 p) (hcl : LeafClosed p) (hkp : CrKeep p) :
         rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; simp; omega)]; simp
       have ho2 : (o + 2).toNat = o.toNat + 2 := L.Rom.addN (by simp; omega)
       refine L.Rom.TPinsR.keep ⟨by rw [ho2, hl1]; omega, by rw [hl1]; omega,
-        fun i hi => ?_⟩ ⟨hg1.2.1, hg1.2.2.2⟩
+        fun i hi => ?_⟩ ⟨hg1.er, hg1.erGet⟩
       have := hv (i + 1) (by simpa using hi)
       simp only [List.getElem_cons_succ] at this
       have e : o + 2 * UInt64.ofNat (i + 1) = o + 2 + 2 * UInt64.ofNat i := by

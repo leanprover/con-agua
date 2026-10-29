@@ -1961,7 +1961,7 @@ theorem motPosW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv
   have hrd1 : rdW (m1.arr64 IW) (so + j) = UInt64.ofNat q := by
     rw [← hrd.1]; simp only [rdW]
     rw [show (so + j).toNat = so.toNat + j.toNat by
-      rw [UInt64.toNat_add]; have := hS.iw.iw; exact Nat.mod_eq_of_lt (by omega), hg1.2.2.1 _ (by omega)]
+      rw [UInt64.toNat_add]; have := hS.iw.iw; exact Nat.mod_eq_of_lt (by omega), hg1.iwGet _ (by omega)]
   have htag := decCS_tag (hst.grow hg1).get
   have hrq := iwN_rdW htag (by have := iwN_lt htag; omega)
   rw [show UInt64.ofNat q = UInt64.ofNat q from rfl] at hrq
@@ -2134,7 +2134,7 @@ theorem readW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     rw [← h.1]; simp only [rdW]
     rw [show (UInt64.ofNat p0 + 1).toNat = p0 + 1 by
       rw [UInt64.toNat_add, UInt64.toNat_ofNat_of_lt' (by simp only [UInt64.size]; omega)]; simp; omega,
-      hg1.2.2.1 _ hp1lt]
+      hg1.iwGet _ hp1lt]
   have hrPb : rc0.rP < 2 ^ 64 := (iwN_rdW hrP (by omega)).2
   rw [hrP1]
   have hts1 : (tsubW (UInt64.ofNat rc0.rP) nP).toNat = rc0.rP - nP.toNat := by

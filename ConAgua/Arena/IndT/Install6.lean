@@ -225,10 +225,10 @@ theorem iac_ref (hP : AbsProg p) (ctx isP : Word) (c : NestCtx) (b : Bool) (hb :
   obtain ⟨hwnF, hnFb, -⟩ := partsIwRd hnF (w := UInt64.ofNat qc + 1) (by rw [UInt64.toNat_add, hqc']; simp; omega)
   have hwnF1 : rdW (m1.arr64 IW) (UInt64.ofNat qc + 1) = UInt64.ofNat nF := by
     rw [← hwnF]; simp only [rdW]; rw [show (UInt64.ofNat qc + 1 : Word).toNat = qc + 1 by
-      rw [UInt64.toNat_add, hqc']; simp; omega, hg1.2.2.1 _ hnFlt]
+      rw [UInt64.toNat_add, hqc']; simp; omega, hg1.iwGet _ hnFlt]
   have hwe1 : rdW (m1.arr64 IW) (UInt64.ofNat qo + 2) = ew := by
     rw [← hew]; simp only [rdW]; rw [show (UInt64.ofNat qo + 2 : Word).toNat = qo + 2 by
-      rw [UInt64.toNat_add, hqo']; simp; omega, hg1.2.2.1 _ heelt]
+      rw [UInt64.toNat_add, hqo']; simp; omega, hg1.iwGet _ heelt]
   rw [hwnF1, hwe1]
   refine RefE.of_run_eq (T' := absOneAM fe c b nF ee >>= fun _ => ConRon.Arena.checkAbsCtorSorts V fe c b cs' os')
     (by simp only [absOneAM, bind_assoc, pure_bind]; rfl) ?_

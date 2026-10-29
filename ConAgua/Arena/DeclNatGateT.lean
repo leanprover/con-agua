@@ -295,7 +295,7 @@ theorem dnc_ref (hN : NatSubProg' p) (hq : KnotStageProg p) (hcl : LeafClosed p)
     hst2 hx2 hc2 hp2
   have hE2 := decEqRL_headD hd2
   have e5' : rdW (m2.arr64 EREC) (q + 5) = wv := by
-    simp only [rdW, hq5]; rw [hg2.2.2.2 _ hqlt, erecP_get hk5]; rfl
+    simp only [rdW, hq5]; rw [hg2.erGet _ hqlt, erecP_get hk5]; rfl
   rw [e5']
   refine RefE.bind_right hrun2' ?_
   -- their substitution

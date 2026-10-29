@@ -172,7 +172,7 @@ theorem pnmW_ok {p : Prog} (hP : NfsProg p) {dn : NIdx → Option ConLeche.Name}
     rw [UInt64.toNat_add, hq']; simp only [UInt64.reduceToNat]; omega
   have hew1 : rdW (m1.arr64 IW) (UInt64.ofNat q + 2) = ew := by
     rw [← hew]; simp only [rdW]
-    rw [hq2, hg1.2.2.1 _ heelt]
+    rw [hq2, hg1.iwGet _ heelt]
   rw [hew1] at h
   obtain ⟨⟨r2, m2⟩, h2, h⟩ := of_K h rfl; rw [pnmW.k_sl_cons.arm1] at h
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)

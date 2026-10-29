@@ -558,7 +558,7 @@ theorem lds_ref (p : Prog) (hp : LazyProg p) (hc : LazyCallees p) (n : Nat)
     by_cases ht : rt.headD 0 ≠ 0
     · rw [ite_eq_left ht, decOptR_some ht]
       exact dq_tail hp hc (fun _ => rfl) (fun _ => rfl) (k + 1) hk F hF hn ⟨m₃, Locals.init []⟩ _ dn
-        vis fe M₃ eb mode d a _ ⟨hS₃, hs.mode4, hs.eb_mode⟩ ha hP.2.2.2.2 hd
+        vis fe M₃ eb mode d a _ ⟨hS₃, hs.mode4, hs.eb_mode⟩ ha hP.resOk.2 hd
     rw [ite_eq_right ht, decOptR_none (by simpa using ht)]
     exact RefE.tail_relist3 (fun _ => rfl) (fun _ => rfl) (fun hG => hG.mono (by omega))
       (ll_ref p hp hc k (hk.mono (by omega)) F (by omega) (by omega) ⟨m₃, Locals.init []⟩ _ dn vis fe
@@ -574,7 +574,7 @@ theorem lds_ref (p : Prog) (hp : LazyProg p) (hc : LazyCallees p) (n : Nat)
     by_cases ht : rt.headD 0 ≠ 0
     · rw [ite_eq_left ht, decOptR_some ht]
       exact dq_tail hp hc (fun _ => rfl) (fun _ => rfl) (k + 1) hk F hF hn ⟨m₃, Locals.init []⟩ _ dn
-        vis fe M₃ eb mode d _ b ⟨hS₃, hs.mode4, hs.eb_mode⟩ hP.2.2.2.2 hb hd
+        vis fe M₃ eb mode d _ b ⟨hS₃, hs.mode4, hs.eb_mode⟩ hP.resOk.2 hb hd
     rw [ite_eq_right ht, decOptR_none (by simpa using ht)]
     exact RefE.tail_relist3 (fun _ => rfl) (fun _ => rfl) (fun hG => hG.mono (by omega))
       (lr_ref p hp hc k (hk.mono (by omega)) F (by omega) (by omega) ⟨m₃, Locals.init []⟩ _ dn vis fe

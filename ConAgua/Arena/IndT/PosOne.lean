@@ -236,7 +236,7 @@ theorem oneRef_step (n : Nat) (hn : n + 1 ≤ 2 ^ 62) (ih : NbRef p dn vis fe en
       rdW (m5.arr64 IW) (rw.tail.tail.tail.tail.headD 0 + i) := fun i hi => by
     have e : (rw.tail.tail.tail.tail.headD 0 + i).toNat = (rw.tail.tail.tail.tail.headD 0).toNat + i.toNat :=
       word_add_toNat (by omega)
-    simp only [rdW, e]; rw [hg6.2.2.1 _ (by omega)]
+    simp only [rdW, e]; rw [hg6.iwGet _ (by omega)]
   have hrd0 : rdW (m6.arr64 IW) (rw.tail.tail.tail.tail.headD 0) =
       rdW (m5.arr64 IW) (rw.tail.tail.tail.tail.headD 0) := by
     simpa using hrd 0 (by decide)

@@ -133,7 +133,7 @@ theorem rto_ref (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState} {g k rc cvR
   obtain ⟨hS3, hg3, hqe, htop3, hsl3, hdec3⟩ := cvNew_stage (cq := UInt64.ofNat q0) h3 hS2
     (by rw [trc]; exact hcv2) (by rw [trc]; exact hext2.1) (by rw [trc]; exact hext2.2) hgH
   have hext3 : CVExt m3 q.toNat :=
-    ⟨by omega, fun o l ho hl => (hsl3 o l ho hl).imp_left fun h => Nat.le_trans h hg3.2.1⟩
+    ⟨by omega, fun o l ho hl => (hsl3 o l ho hl).imp_left fun h => Nat.le_trans h hg3.er⟩
   have hqb : q.toNat + 3 < 2 ^ 64 := by
     obtain ⟨-, hE1, -, hEs, -⟩ := hS3.2
     omega

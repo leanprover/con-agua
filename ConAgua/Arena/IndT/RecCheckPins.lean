@@ -166,10 +166,10 @@ theorem tmp_ref (N : Nat) (hN : N ≤ 2 ^ 62) {m : Mem} {a : AState} {rP Mp : Wo
   have hts : iwTop m ≤ (m.arr64 IW).size := hS.iw.iw
   have e2 : rdW (m2.arr64 IW) (Mp + 2) = UInt64.ofNat o := by
     rw [← ro.1]; simp only [rdW]
-    rw [show (Mp + 2).toNat = Mp.toNat + 2 by rw [UInt64.toNat_add]; simp; omega, hg12.2.2.1 _ hoi]
+    rw [show (Mp + 2).toNat = Mp.toNat + 2 by rw [UInt64.toNat_add]; simp; omega, hg12.iwGet _ hoi]
   have e3 : rdW (m2.arr64 IW) (Mp + 3) = UInt64.ofNat l := by
     rw [← rl.1]; simp only [rdW]
-    rw [show (Mp + 3).toNat = Mp.toNat + 3 by rw [UInt64.toNat_add]; simp; omega, hg12.2.2.1 _ hli]
+    rw [show (Mp + 3).toNat = Mp.toNat + 3 by rw [UInt64.toNat_add]; simp; omega, hg12.iwGet _ hli]
   rw [e2, e3]
   rcases h3 : mknF m2 [hd, UInt64.ofNat o, UInt64.ofNat l] with _ | ⟨r3, m3⟩
   · rw [liftE_none, tmpE.k_mk_app_n_f.none]; exact RefE.of_cls0 (by simp)

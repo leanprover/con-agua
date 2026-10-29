@@ -432,7 +432,7 @@ theorem slotVarW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEn
   have hrd : rdW (m1.arr64 IW) g = UInt64.ofNat G.nP := by
     have e1 := (iwN_rdW hg (by have := g.toNat_lt; omega))
     rw [UInt64.ofNat_toNat] at e1
-    have : (m1.arr64 IW)[g.toNat]? = (m.arr64 IW)[g.toNat]? := hg1.2.2.1 g.toNat hgt
+    have : (m1.arr64 IW)[g.toNat]? = (m.arr64 IW)[g.toNat]? := hg1.iwGet g.toNat hgt
     simp only [rdW] at e1 ⊢; rw [this]; exact e1.1
   rw [hrd] at h
   split at h

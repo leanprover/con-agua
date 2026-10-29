@@ -223,7 +223,7 @@ theorem grpC_ref (P : GrcProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {dn : NIdx → Op
     rw [ite_eq_right (by omega)]
     by_cases j12 : j = 12
     · subst j12; rw [ite_eq_left ⟨e12.symm, by omega⟩]; rfl
-    rw [ite_eq_right (by omega), hg2.2.2.1 _ (by omega), hget j (by rw [hwl]; omega), ← hws]
+    rw [ite_eq_right (by omega), hg2.iwGet _ (by omega), hget j (by rw [hwl]; omega), ← hws]
     rcases j with _ | _ | _ | _ | _ | _ | _ | _ | _ | _ | _ | _ | j <;> first | rfl | omega
   have hpreP' : DecB (fun x => (decHL x o.toNat l.toNat : Option (List EIdx))) (grpPMem s2.mem g o l) pre := by
     refine decHL_decB ?_ (by rw [htP]; exact hpreb)

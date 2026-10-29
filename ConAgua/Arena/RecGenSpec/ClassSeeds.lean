@@ -180,15 +180,15 @@ theorem sdCons {p : Prog} (hP : KeysProg p) {n : Nat} {dn : NIdx → Option ConL
     have hgt := hg.1
     have hx1' : x.toNat + 1 < iwTop s'.mem := Nat.lt_of_lt_of_le hx1 hgt
     have hb0 : (r.headD 0).toNat + 0 < iwTop s'.mem := by rw [← htop']; omega
-    refine ⟨x, key, nPc, hw0, hb0, hx1', by rw [hg.2.2.1 x.toNat (Nat.lt_of_succ_lt hx1)]; exact hx0,
-      by rw [hg.2.2.1 _ hx1]; exact hxk, hk.grow (decNK_mono _) hg, hksl.grow' hk hg htop, by simpa using hn⟩
+    refine ⟨x, key, nPc, hw0, hb0, hx1', by rw [hg.iwGet x.toNat (Nat.lt_of_succ_lt hx1)]; exact hx0,
+      by rw [hg.iwGet _ hx1]; exact hxk, hk.grow (decNK_mono _) hg, hksl.grow' hk hg htop, by simpa using hn⟩
   have hi' : i < l.toNat := by simp only [List.length_cons] at hi; omega
   obtain ⟨sp, key', nPc', h1, h2, rest⟩ := hat' i (by rw [← hlen]; exact hi')
   obtain ⟨w, hwi, hwe⟩ := hw (i + 1) (by omega)
   have hold := decNL_at hps i hi'
   rw [show o.toNat + i = o.toNat + i from rfl] at hold
   have hsp : (m.arr64 IW)[o.toNat + i]? = some sp := by
-    rw [← hg.2.2.1 (o.toNat + i) (Nat.lt_of_lt_of_le (Nat.add_lt_add_left hi' _) hb)]; exact h1
+    rw [← hg.iwGet (o.toNat + i) (Nat.lt_of_lt_of_le (Nat.add_lt_add_left hi' _) hb)]; exact h1
   have e1 : sp.toNat = ps[i]'(by have := decNL_length m hps; omega) := by
     have := iwN_of_get hsp; rw [hold] at this; exact (Option.some.inj this).symm
   have : w = sp := UInt64.toNat_inj.mp (by rw [hwe, e1]; simp)
@@ -297,8 +297,8 @@ theorem csdW_sim {p : Prog} (hP : SdProg p) (dn : NIdx → Option ConLeche.Name)
     have ht2' : iwTop s2.mem = iwTop m1 + 2 := ht2
     have hg3t := hg3.1
     obtain ⟨hS4, hg4, hd4, hf4⟩ := sdCons hP.toKeysProg h4 hS3 hd3 (key := r1.headD 0) (nPc := r1.tail.headD 0)
-      (sd := sd) (by omega) (by rw [hg3.2.2.1 (r2.headD 0).toNat (by omega)]; exact g0)
-      (by rw [hg3.2.2.1 ((r2.headD 0).toNat + 1) (by omega)]; exact g1)
+      (sd := sd) (by omega) (by rw [hg3.iwGet (r2.headD 0).toNat (by omega)]; exact g0)
+      (by rw [hg3.iwGet ((r2.headD 0).toNat + 1) (by omega)]; exact g1)
       ((hk1.grow (decNK_mono _) hg2).grow (decNK_mono _) hg3)
       ((hksl1.grow' hk1 hg2 htop1).grow' (hk1.grow (decNK_mono _) hg2) hg3 htop2) hn1
     exact Sim.ret ⟨hS4, ((hg1.trans hg2).trans hg3).trans hg4, by simpa using hd4, hP3.fr hf4⟩

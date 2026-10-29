@@ -450,7 +450,7 @@ theorem rcW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (a
       have hsp64 : sp < 2 ^ 64 := hrd0.2
       have htag := decCS_tag hcs
       have htag' := iwN_rdW htag (by omega)
-      have hiw1 : ∀ i, i < iwTop m → (m1.arr64 IW)[i]? = (m.arr64 IW)[i]? := hg1.2.2.1
+      have hiw1 : ∀ i, i < iwTop m → (m1.arr64 IW)[i]? = (m.arr64 IW)[i]? := hg1.iwGet
       have hspw : rdW (m1.arr64 IW) (UInt64.ofNat sp) = UInt64.ofNat (if cs.isMinor then 1 else 0) := by
         rw [← htag'.1]
         simp only [rdW]

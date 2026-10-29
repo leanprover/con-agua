@@ -85,7 +85,7 @@ theorem ciList_rel (dn : NIdx → Option ConLeche.Name) : ∀ (n : Nat) (m : Mem
     obtain ⟨a1, pm1, ci', hrun1, hD1, hP1, hcp1, hfr1, htk1, hg1, hts1, hlo, hhi, hdec1⟩ :=
       ci_rel p hp n m a pm f ptr D dn ci dl m1 hD hP hsz hts hdec hDt hca
     have hE1 : m1.arr64 ECON = m.arr64 ECON := hfr1.1 ECON (by decide) (by decide)
-    have hsz1 : (m1.arr64 EREC).size < 2 ^ 64 := by rw [hg1.2.2]; exact hsz
+    have hsz1 : (m1.arr64 EREC).size < 2 ^ 64 := by rw [hg1.size]; exact hsz
     rw [ite_eq_right (by rw [hE1]; omega)] at hW
     cases hcb : callW p n "promote_ci_list" [f, j - 1, k - 1] (m1.set64 ECON j (dl.headD 0)) with
     | none => rw [hcb] at hW; cases hW
@@ -136,11 +136,11 @@ theorem ciList_rel (dn : NIdx → Option ConLeche.Name) : ∀ (n : Nat) (m : Mem
         refine ConstsAt.mono (A := preE m D) ?_ cs (j.toNat - 1) (by have := toNat_pred j h; omega)
           (fun i hi1 hi2 => hEcon i (by have := toNat_pred j h; omega)) hrest
         exact preE_ext (fun i hi => by
-          rw [hEE]; exact hg1.2.1 i (by omega))
+          rw [hEE]; exact hg1.get i (by omega))
     obtain ⟨a3, pm3, cs', hrun3, hD3, hP3, hcp3, hfr3, htk3, hg3, hts3, hlen3, hcons3, hout3, hsz3E⟩ :=
       ih (m1.set64 ECON j (dl.headD 0)) a1 pm1 f (j - 1) (k - 1) D cs z m3 hDf hPf
         (by rw [hEE]; exact hsz1) (by rw [hEE, hT2]; exact hts1) hlenk hj1 hcon'
-        (by rw [hT2]; have := hg1.1; omega) hcb
+        (by rw [hT2]; have := hg1.top; omega) hcb
     have hext : ErecGrow m1 m3 := hg12.trans hg3
     refine ⟨a3, pm3, ci' :: cs', ?_, hD3, hP3, hcp3.trans hcp1, ?_,
       htk1.trans ((TierKeep.of_frame hfs (by simp)).trans htk3), hg1.trans hext, hts3, ?_, ?_, ?_, ?_⟩

@@ -166,18 +166,18 @@ theorem ngg_ref {p : Prog} (L : NbLook p) (hIlpf : IlpfF p) (hcl : CoreStageClos
       simp only [List.length_append, List.length_cons, List.length_nil] at hi
       by_cases hio : i < grp.length
       · obtain ⟨w, c1, t1, h1, h2, h3, h4, h5, h6, h7, h8⟩ := hgrp i hio
-        refine ⟨w, c1, t1, ?_, by have := hg14.1; omega, by rw [hg14.2.2.1 _ (by omega)]; exact h3, h4,
-          by rw [List.getElem_append_left hio]; exact h5, by rw [hg14.2.2.1 _ (by omega)]; exact h6, h7,
+        refine ⟨w, c1, t1, ?_, by have := hg14.1; omega, by rw [hg14.iwGet _ (by omega)]; exact h3, h4,
+          by rw [List.getElem_append_left hio]; exact h5, by rw [hg14.iwGet _ (by omega)]; exact h6, h7,
           by rw [List.getElem_append_left hio]; exact h8⟩
-        rw [hw4 i (by omega), hg13.2.2.1 _ (by omega)]; exact h1
+        rw [hw4 i (by omega), hg13.iwGet _ (by omega)]; exact h1
       · have hie : i = grp.length := by omega
         subst hie
         refine ⟨pw, cw, r2.tail.headD 0, ?_, ?_, ?_, hcH, ?_, ?_, htH, ?_⟩
         · rw [← hgl]; exact hx4
         · have := hg4.1; omega
-        · rw [hg4.2.2.1 _ (by omega)]; simpa using hget3 0 (by simp)
+        · rw [hg4.iwGet _ (by omega)]; simpa using hget3 0 (by simp)
         · simp [hcd]
-        · rw [hg4.2.2.1 _ (by omega)]; simpa using hget3 1 (by simp)
+        · rw [hg4.iwGet _ (by omega)]; simpa using hget3 1 (by simp)
         · simpa using htd
     have ih' := ih m4 a2 (cO + 1) (cL - 1) _ _ cs' (grp ++ [(n0, x2)]) hC4 hA4 hx2
       (fun n hn => hcsA n (List.mem_cons_of_mem _ hn)) (hU.grow hg14)

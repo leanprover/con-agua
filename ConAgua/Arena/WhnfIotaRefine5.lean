@@ -304,15 +304,15 @@ theorem icfCheck_ref (p : Prog) (hil : InstListOK p) (K F : Nat) (hk : KnotUpTo 
       ⟨hS1, hm4, hebm⟩ harg) fun r2 m2 _ h2 => ?_
   have hr1 : HW (r1.headD 0) := h1.resOk
   rw [icfCheckE.k_infer.eq_2]
-  have hS2 := h2.2.1
+  have hS2 := h2.after
   obtain ⟨M2, hS2, hK2, hSt2⟩ := hS2
   rcases c3 : callE p K "defeq" [mode, vis, d, r2.headD 0, r1.headD 0] m2 with e3 | ⟨r3, m3⟩
   · rw [icfCheckE.k_defeq.eq_1]
     exact fun hG => CoreSpecE.of_callE ((hG K (Nat.le_refl _)).defeq F ⟨m2, Locals.init []⟩ _ dn vis
-      fe M2 eb mode d _ _ hnF hn62 ⟨hS2, hm4, hebm⟩ h2.2.2.2 hr1) c3
+      fe M2 eb mode d _ _ hnF hn62 ⟨hS2, hm4, hebm⟩ h2.resOk hr1) c3
   rw [icfCheckE.k_defeq.eq_2]
   have h3 := CoreSpec.of_callW ((hk K (Nat.le_refl _)).defeq F ⟨m2, Locals.init []⟩ _ dn vis fe M2 eb
-    mode d _ _ hnF hn62 ⟨hS2, hm4, hebm⟩ h2.2.2.2 hr1) (callW_of_callE c3)
+    mode d _ _ hnF hn62 ⟨hS2, hm4, hebm⟩ h2.resOk hr1) (callW_of_callE c3)
   obtain ⟨hrun3, hP3⟩ := CoreRef.post h3
   exact RefE.ret hrun3 ⟨CoreAfter.comp hK2 hSt2 hP3.after, hP3.res, hP3.valid⟩
 

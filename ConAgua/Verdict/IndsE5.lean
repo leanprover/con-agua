@@ -123,7 +123,7 @@ theorem cbag_ref (hP : AgreeProg p) (nP c0 s0 : Word) (cv0 : IConstantVal) {cv0P
       · exact h0
     omega
   have hw1 : rdW (m1.arr64 IW) o = UInt64.ofNat q := by
-    rw [← hw]; simp only [rdW]; rw [hg1.2.2.1 _ hol]
+    rw [← hw]; simp only [rdW]; rw [hg1.iwGet _ hol]
   rw [hw1]
   obtain ⟨hwc, hcb, -⟩ := partsIwRd hc (w := UInt64.ofNat q) hq'
   obtain ⟨-, hsv'⟩ := rec2IwH_trunc hsv

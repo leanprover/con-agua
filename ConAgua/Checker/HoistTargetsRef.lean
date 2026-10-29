@@ -170,15 +170,15 @@ theorem targets_ok {p : Prog} (hx : HoistExt p) {a : AState} {ds : Array IDeclar
       · simp [hTargetsGoW.k_hoist_deps.eq_1] at h
       rw [hTargetsGoW.k_hoist_deps.arm1, hTargetsGoW.j1.arm1] at h
       rw [hiw'] at hdp
-      have hsz2 : iwTop m₂ ≤ (m₂.arr64 IW).size := hf₂.2.2.1
+      have hsz2 : iwTop m₂ ≤ (m₂.arr64 IW).size := hf₂.ok.iw
       obtain ⟨T₃, hrun₃, hE₃, hT₃, hTv₃, hTi₃, hfr₃, hlt₃⟩ :=
         deps_ok hi (rs.headD 0) (rs.tail.headD 0) gs n m₂ m₃ T 0 z hE₂ hT₂ hTv
           (fun k t h => Nat.le_of_lt (hTi k t h)) hlt hG (by rw [hl]; simp)
-          (fun hne => by have := (habove hne).1; have := hE.top; have := hf₁.2.1.1; omega)
+          (fun hne => by have := (habove hne).1; have := hE.top; have := hf₁.grow.iw; omega)
           (by
             by_cases hne : gs = []
             · subst hne; simp only [List.length_nil] at hl; rw [hl]; have := (rs.headD 0).toNat_lt; omega
-            · have := (habove hne).2; rw [← hl] at this; have := hE₂.isz; have := hf₂.2.2.1; omega)
+            · have := (habove hne).2; rw [← hl] at this; have := hE₂.isz; have := hf₂.ok.iw; omega)
           hdp
       rw [HoistTwin.run_bind, hrun₃]
       simp only

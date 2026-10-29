@@ -303,7 +303,7 @@ theorem cfrRec_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFE
   have hw : ∀ i, i < 4 → (erecP M)[q1.toNat + 1 + i]? = (erecP M)[cq.toNat + i]? := by
     intro i hi
     rw [show q1.toNat + 1 + i = q1.toNat + (i + 1) by omega, hP (i + 1) (by omega),
-      hget (i + 1) (by simp; omega), erecP_getE (by omega), hg.2.2.2 _ (by omega)]
+      hget (i + 1) (by simp; omega), erecP_getE (by omega), hg.erGet _ (by omega)]
     have hlt : cq.toNat + i < (m.arr64 EREC).size := by simp only [erTop] at hEtop hcq; omega
     rcases i with _ | _ | _ | _ | i
     all_goals first
@@ -386,7 +386,7 @@ theorem rec3DecPrev_stab {dn : NIdx → Option ConLeche.Name} {m : Mem} {p : Nat
     {x : NIdx × Option (Nat × IConstantInfo)} (h : decPrev dn m p = some x) (hp : p + 3 ≤ iwTop m) :
     StabD (fun m => decPrev dn m p) m x := by
   intro m' hg
-  have e : ∀ i, i < iwTop m → (iwA m')[i]? = (iwA m)[i]? := fun i hi => hg.2.2.1 i hi
+  have e : ∀ i, i < iwTop m → (iwA m')[i]? = (iwA m)[i]? := fun i hi => hg.iwGet i hi
   simp only [decPrev, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h ⊢
   obtain ⟨nm, hnm, c, hc, q, hq, pv, hpv, rfl⟩ := h
   refine ⟨nm, ?_, c, by rw [e _ (by omega)]; exact hc, q, by rw [e _ (by omega)]; exact hq, pv,

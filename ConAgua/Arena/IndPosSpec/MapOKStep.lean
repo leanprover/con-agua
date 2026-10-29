@@ -608,7 +608,7 @@ theorem frOK_step (n : Nat) (hDs : DsOK dn fe vis n) : FrOK dn fe vis (n + 1) :=
     obtain ⟨hS2, hg2, hk2, ht2, hget2⟩ := posRecW_stage hr2 hS1 (by simp)
     simp only [List.length_cons, List.length_nil] at ht1 ht2
     have hkw : ∀ j < 4, (m2.arr64 IW)[k.toNat + j]? = some 0 := fun j hj => by
-      rw [hg2.2.2.1 _ (by omega), hget1 j (by simpa using hj)]
+      rw [hg2.iwGet _ (by omega), hget1 j (by simpa using hj)]
       rcases (show j = 0 ∨ j = 1 ∨ j = 2 ∨ j = 3 by omega) with rfl | rfl | rfl | rfl <;> rfl
     have hdk : decNK m2 k.toNat = some ⟨decI 0, decI 0, []⟩ := by
       have := decNK_of_words (m := m2) (k := k.toNat) (c := 0) (u := 0) (o := 0) (l := 0) (ds := [])

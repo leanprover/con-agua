@@ -164,7 +164,7 @@ theorem leafAtW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv
     obtain ⟨wi, hwi1, hwi2, hwi3⟩ := iwH_rdW (decTM_ind hM) (by have := Mp.toNat_lt; omega)
     rw [UInt64.ofNat_toNat] at hwi1
     have hwi1' : rdW (m1.arr64 IW) Mp = wi := by
-      have := hg1.2.2.1 Mp.toNat hMt
+      have := hg1.iwGet Mp.toNat hMt
       simp only [rdW] at hwi1 ⊢
       rw [show (m1.arr64 IW)[Mp.toNat]? = (m.arr64 IW)[Mp.toNat]? from this]; exact hwi1
     rw [ht1, hwi1']

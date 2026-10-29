@@ -483,7 +483,7 @@ theorem installCapsTail {p : Prog} (hP : CapsProg p) (n : Nat) {dn : NIdx → Op
     icfW_ok hP hW hS1 (hq.grow (decBS_mono _) hg1) (partsHsrc_grow hg1 hq9 hsrc) hcs
   refine ⟨hS2, hg1.trans hg2, by have := hcw.1; simpa using this, fun a e ha he => ?_⟩
   have hag : ∀ i < erTop m1, a[i]? = (erA m1)[i]? := fun i hi => by
-    rw [he i (Nat.lt_of_lt_of_le hi hg2.2.1)]; simp only [erA]; rw [hg2.2.2.2 i hi]
+    rw [he i (Nat.lt_of_lt_of_le hi hg2.er)]; simp only [erA]; rw [hg2.erGet i hi]
   have hd := installDecCaps (dn := dn) (e := e) (a := a)
     (w0 := w0) (w1 := w1) (w2 := w2) (w3 := w3) (w4 := w4) (w5 := w2) (w6 := w6)
     (z0 := r1.headD 0) (z1 := r1.tail.headD 0) (z2 := r1.tail.tail.headD 0) (aq := aq) (al := al)
@@ -843,7 +843,7 @@ theorem iirW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv
   have hw : ∀ i, i < 4 → (erecP M)[q1.toNat + 1 + i]? = (erecP M)[cv.toNat + i]? := by
     intro i hi
     rw [show q1.toNat + 1 + i = q1.toNat + (i + 1) by omega, hP (i + 1) (by omega),
-      erecP_getE (by omega), hg.2.2.2 _ (by omega)]
+      erecP_getE (by omega), hg.erGet _ (by omega)]
     have hlt : cv.toNat + i < (m.arr64 EREC).size := by simp only [erTop] at hEtop hcq; omega
     rcases i with _ | _ | _ | _ | i
     all_goals first
@@ -871,7 +871,7 @@ theorem iirW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv
         | omega
         | exact gen _ rfl rfl
         | exact gen _ (by rw [UInt64.toNat_add]; simp; omega) rfl
-    · rw [erecP_getE (by omega)]; simp only [erA]; exact hg.2.2.2 i hi
+    · rw [erecP_getE (by omega)]; simp only [erA]; exact hg.erGet i hi
   have n0 : nat? (erecP M) q1.toNat = some 3 := by
     have := hP 0 (by decide); simp only [Nat.add_zero] at this
     simp [nat?, this, iirWs]
@@ -942,7 +942,7 @@ theorem icbiW_simG {p : Prog} (hP : ConsIndsProg p) (dn : NIdx → Option ConLec
   have hlpos : 0 < l.toNat := Nat.pos_of_ne_zero fun h0 => hl (UInt64.toNat_inj.mp (by simpa using h0))
   have hol : o.toNat < iwTop m := by have := hcvs.2; omega
   have hw1 : rdW (m1.arr64 IW) o = UInt64.ofNat q := by
-    rw [← hw]; simp only [rdW]; rw [hg1.2.2.1 _ hol]
+    rw [← hw]; simp only [rdW]; rw [hg1.iwGet _ hol]
   rw [hw1] at h2
   obtain ⟨q2, rfl, hW2⟩ := installIirRun hP h2
   have hq' : (UInt64.ofNat q : Word).toNat = q := UInt64.toNat_ofNat_of_lt' hqb

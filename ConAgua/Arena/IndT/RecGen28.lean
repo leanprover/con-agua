@@ -102,7 +102,7 @@ theorem cns_ref (hq : qr.toNat = iwTop mb) (hms : PSlR decTM ms mo ml mb) (htbl 
   obtain ⟨p0, hp0, hsrc⟩ := decPL_getH (truncM mb) hms0 j.toNat hjl
   obtain ⟨hp0t, hp0m⟩ := rec2IwN_trunc hp0
   have hp0m' : iwN m (mo.toNat + j.toNat) = some p0 := by
-    simp only [iwN, nat?, iwA] at hp0m ⊢; rw [hg.2.2.1 _ hp0t]; exact hp0m
+    simp only [iwN, nat?, iwA] at hp0m ⊢; rw [hg.iwGet _ hp0t]; exact hp0m
   obtain ⟨hrd, hp0b⟩ := iwN_rdW_at (w := mo) (k := j.toNat) hp0m' hsz
   rw [show mo + UInt64.ofNat j.toNat = mo + j by simp] at hrd
   rw [cnsE_step (h := hj), hrd]

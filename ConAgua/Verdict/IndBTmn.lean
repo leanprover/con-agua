@@ -125,7 +125,7 @@ theorem tmn_ref (n : Nat) (hn : n ≤ 2 ^ 62) : ∀ {m : Mem} {a : AState}
   have hS1 := hC1.stage
   have hnfo : nfo.toNat < iwTop m := by have := hnf.2; omega
   have he : rdW (m1.arr64 IW) nfo = rdW (m.arr64 IW) nfo := by
-    simp only [rdW]; rw [hg1.2.2.1 _ hnfo]
+    simp only [rdW]; rw [hg1.iwGet _ hnfo]
   rw [he]
   -- the table's head pointer: the entry `nf`, and its place in a pointer list
   have hptr0 : ∀ ps, decNL m nfo.toNat nfl.toNat = some ps → ∃ v ps', ps = v :: ps' ∧

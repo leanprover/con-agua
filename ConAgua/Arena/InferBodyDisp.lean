@@ -417,8 +417,8 @@ theorem ib_ref (p : Prog) (hq : InferAllProg p) (hc : InferCallees p) (n : Nat) 
       (fun c hc => by
         simp only [LNodeView.lchildren, List.mem_cons, List.mem_nil_iff, or_false] at hc
         subst hc; exact hS.den.sort _ _ hv)
-      (fun n hn => by simp [LNodeView.nchildren] at hn) h₁.1
-    rw [h₁.2.2.1] at hd
+      (fun n hn => by simp [LNodeView.nchildren] at hn) h₁.run
+    rw [h₁.res] at hd
     refine RefE.bind_core (w := id) h₁ (fun M₁ hS₁ _ => ?_)
     rcases h2 : callW p n "intern_sort" [r₁.headD 0] m₁ with _ | ⟨r₂, m₂⟩
     · rw [liftE_none]; exact RefE.of_cls0 (by simp)
@@ -426,7 +426,7 @@ theorem ib_ref (p : Prog) (hq : InferAllProg p) (hc : InferCallees p) (n : Nat) 
     obtain ⟨s₂, hs₂, -, hso⟩ := triple_of_callW (s₀ := ⟨m₁, Locals.init []⟩)
       (internSort_spec p hq.body.sof hq.body.sop hq.body.soi n _ (r₁.headD 0)) h2
     rw [hs₂] at hso
-    obtain ⟨hrun, hP⟩ := (internSort_core hS₁ (r₁.headD 0) h₁.2.2.2 r₂ hso hd).post
+    obtain ⟨hrun, hP⟩ := (internSort_core hS₁ (r₁.headD 0) h₁.resOk r₂ hso hd).post
     exact RefE.ret hrun ⟨hP.after, hP.res, hP.valid⟩
   | const nm us =>
     obtain ⟨hg, hn1, hdn, hu2, hdu⟩ := hvr

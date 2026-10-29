@@ -72,7 +72,7 @@ theorem icvgW_ok {p : Prog} (hP : CstProg p) {dn : NIdx → Option ConLeche.Name
   have hT : iwTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 200).toNat_lt
   have hlpos : 0 < l.toNat := Nat.pos_of_ne_zero fun h0 => hl (UInt64.toNat_inj.mp (by simpa using h0))
   have hsl : s.toNat < iwTop m := by have := hxs.2; omega
-  have hw1 : rdW (m1.arr64 IW) s = UInt64.ofNat q := by rw [← hw]; simp only [rdW]; rw [hg1.2.2.1 _ hsl]
+  have hw1 : rdW (m1.arr64 IW) s = UInt64.ofNat q := by rw [← hw]; simp only [rdW]; rw [hg1.iwGet _ hsl]
   have hq' : (UInt64.ofNat q : Word).toNat = q := UInt64.toNat_ofNat_of_lt' hqb
   have hdx' : decTele (truncM m) q = some x := hdx
   simp only [decTele, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at hdx'
@@ -80,7 +80,7 @@ theorem icvgW_ok {p : Prog} (hP : CstProg p) {dn : NIdx → Option ConLeche.Name
   obtain ⟨hwc, hcb, hclt⟩ := partsIwRd hc (w := UInt64.ofNat q) hq'
   have hqlt : q < iwTop m := partsIwLt hc
   have hwc1 : rdW (m1.arr64 IW) (UInt64.ofNat q) = UInt64.ofNat c := by
-    rw [← hwc]; simp only [rdW, hq']; rw [hg1.2.2.1 _ hqlt]
+    rw [← hwc]; simp only [rdW, hq']; rw [hg1.iwGet _ hqlt]
   rw [hw1, hwc1] at h2
   have hc' : (UInt64.ofNat c : Word).toNat = c := UInt64.toNat_ofNat_of_lt' hcb
   obtain ⟨hS2, hg2, hd2⟩ := installConsRun hP (fun q => OMono.decCVp q) h2 hS1 hd1

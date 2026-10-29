@@ -145,7 +145,7 @@ theorem bncC_simA (cR : CallM) {dn : NIdx → Option ConLeche.Name} {vis : Word}
   have hTm : iwTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 200).toNat_lt
   have hk1 : rdW (m1.arr64 IW) (q + 1) = UInt64.ofNat bs.k := by
     rw [← hkw]; simp only [rdW]
-    rw [show (q + 1 : Word).toNat = q.toNat + 1 by rw [UInt64.toNat_add]; simp; omega, hg1.2.2.1 _ (by omega)]
+    rw [show (q + 1 : Word).toNat = q.toNat + 1 by rw [UInt64.toNat_add]; simp; omega, hg1.iwGet _ (by omega)]
   have hpk : fvs.length + bs.k < 2 ^ 64 := by
     have := partsAddNoOv hov2
     rw [hk1, UInt64.toNat_ofNat_of_lt' hkb] at this

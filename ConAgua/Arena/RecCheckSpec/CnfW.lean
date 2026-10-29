@@ -286,7 +286,7 @@ theorem cnfW_ok (hnfs : DecB (fun m => decPL m (decNCN m) nfo.toNat nfl.toNat) m
   obtain ⟨v, hv, hdv⟩ := decPL_getH (truncM m0) hnfs0 j.toNat hjl
   obtain ⟨hvt, hv0⟩ := rec2IwN_trunc hv
   have hvm : iwN m (nfo.toNat + j.toNat) = some v := by
-    simp only [iwN, nat?, iwA] at hv0 ⊢; rw [hg.2.2.1 _ hvt]; exact hv0
+    simp only [iwN, nat?, iwA] at hv0 ⊢; rw [hg.iwGet _ hvt]; exact hv0
   have hrd := iwN_rdW_at (w := nfo) (k := j.toNat) hvm hsz
   have hnj : nfo + UInt64.ofNat j.toNat = nfo + j := by simp
   rw [hnj] at hrd

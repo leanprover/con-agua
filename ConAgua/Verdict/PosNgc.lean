@@ -121,7 +121,7 @@ theorem ngc_ref {p : Prog} (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vi
       by_cases hio : i < out.length
       · obtain ⟨w, hw, hc'⟩ := hout i hio
         refine ⟨w, ?_, ?_⟩
-        · rw [hw1 i (by omega), hg1.2.2.1 _ (by omega)]; exact hw
+        · rw [hw1 i (by omega), hg1.iwGet _ (by omega)]; exact hw
         · rw [List.getElem_append_left hio]; exact (hc'.grow hg1).grow hg2
       · simp only [List.length_append] at hi
         obtain ⟨w, hw, hc'⟩ := hcs3 (i - out.length) (by omega)

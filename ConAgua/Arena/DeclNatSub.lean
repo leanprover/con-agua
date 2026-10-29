@@ -278,7 +278,7 @@ theorem pairs_ref (hN : NatSubProg p) (nm r : Word) (hn : H nm) (hr : H r) :
     have heb' : ∀ m1, IWGrow m m1 → rdW (m1.arr64 IW) (pp + 1) = eb := by
       intro m1 hg
       obtain ⟨h1, -, h3⟩ := hrec
-      simp only [iwA] at h3; simp only [rdW, hpb]; rw [hg.2.2.1 _ (by omega)]; simp [h3]
+      simp only [iwA] at h3; simp only [rdW, hpb]; rw [hg.iwGet _ (by omega)]; simp [h3]
     rw [hpp', hea'] at hw
     replace hw := ntBW_some hw; obtain ⟨r1, m1, h1, hw⟩ := hw
     obtain ⟨x1, a1, hrun1, hK1⟩ := sc0_ref hN nm r _ 4000000000 fuelW ea k m a r1 m1 hS hn hr hea h1

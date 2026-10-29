@@ -308,7 +308,7 @@ theorem rhGoW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word) 
       simp only [iwTop]; rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
     have hGX : GrowX q.toNat nl.toNat m (m2.set64 IW (q + j) hh) :=
       (GrowX.of_grow hg12).trans (GrowX.set m2 (q + j) hh (by omega))
-    have hRm : RdS m (m2.set64 IW (q + j) hh) (OutR q.toNat nl.toNat (iwTop m)) := hGX.2.2.1
+    have hRm : RdS m (m2.set64 IW (q + j) hh) (OutR q.toNat nl.toNat (iwTop m)) := hGX.iwGet
     have hH3 : HolesAt (m2.set64 IW (q + j) hh) q.toNat (j + 1).toNat
         (rhList names (decI lv) params nP.toNat) (OutR q.toNat nl.toNat (iwTop (m2.set64 IW (q + j) hh))) := by
       rw [hj1, ht3]

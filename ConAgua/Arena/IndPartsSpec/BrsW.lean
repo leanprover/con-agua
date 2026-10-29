@@ -569,7 +569,7 @@ theorem brhW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
     obtain ⟨hS1, hg1, hd1, hb1⟩ := ih m m1 a (ro + 11) (rl - 1) rs' r1 h1 hS hrest
     have hrd : rdW (m1.arr64 EREC) (ro + 8) = w := by
       refine rdW_of_get? hro8.symm ?_
-      rw [hg1.2.2.2 _ hwlt]; exact hw'
+      rw [hg1.erGet _ hwlt]; exact hw'
     rw [hrd] at h
     rcases h2 : consW n m1 w (r1.headD 0) (r1.tail.headD 0) with _ | ⟨r2, m2⟩ <;> rw [h2] at h
     · cases h

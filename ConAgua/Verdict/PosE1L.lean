@@ -206,7 +206,7 @@ theorem cpW_okW (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis hp : Word
     rw [cpK1_ok (h := hbb)] at h
     have hbb0 : (bb.toNat != 0) = false := by simp at hbb; simp [hbb]
     have hrd1 : rdW (m1.arr64 IW) dO = rdW (m.arr64 IW) dO := by
-      simp only [rdW]; rw [hg1.2.2.1 _ (by simpa using hin 0 (by omega))]
+      simp only [rdW]; rw [hg1.iwGet _ (by simpa using hin 0 (by omega))]
     rw [hrd1] at h
     rcases hst : fvbF m1 [CWF, rdW (m.arr64 IW) dO] with _ | ⟨r2, m2⟩ <;> rw [hst] at h; · simp [cpK2] at h
     obtain ⟨k, a2, hrun2, hS2, hg2, hk⟩ := fvbF_ok dn vis fe CWF _ hxH _ _ a1 r2 hst hS1

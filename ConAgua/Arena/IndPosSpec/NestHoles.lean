@@ -179,7 +179,7 @@ theorem nhGoW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis ctx : Wo
     have hnP2 : (rdW (m2.arr64 IW) (ctx + 4)).toNat = c.nP := by
       have : rdW (m2.arr64 IW) (ctx + 4) = rdW (m.arr64 IW) (ctx + 4) := by
         have e : (ctx + 4).toNat = ctx.toNat + 4 := word_add_toNat (by simp; omega)
-        simp only [rdW, e]; rw [hg2.2.2.1 _ (by omega)]
+        simp only [rdW, e]; rw [hg2.iwGet _ (by omega)]
       rw [this, hnP]
     have hu : (rdW (m2.arr64 IW) (ctx + 4) + mm).toNat = c.nP + mm.toNat := by
       rw [word_add_toNat (by rw [hnP2]; omega), hnP2]
