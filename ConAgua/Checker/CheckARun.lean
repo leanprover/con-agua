@@ -36,14 +36,7 @@ namespace L.Checker
 
 open L L.Arena L.Front L.Rom L.Compiler ConAgua.Final
 
-/-- The memory an entry-1 stub hands to `check`: the loaded memory with the mode word `w`. -/
-def loadMemM (b pb : ByteArray) (sz : TieredArray → Nat) (w : Word) : Mem := (loadMem b pb sz).setG MODE w
-
 /-! ## The first three stages from the loaded memory with the mode word set -/
-
-/-- A global write is a frame with no array write. -/
-theorem memFrame_setG (m : Mem) (g : GVar) (w : Word) : MemFrame [] [] m (m.setG g w) :=
-  ⟨fun _ _ _ => rfl, fun _ _ => rfl, fun _ => rfl⟩
 
 theorem capStage_setG (b pb : ByteArray) (sz : TieredArray → Nat) (hs : ∀ s, sz s < 2 ^ 64) (w : Word) :
     RelSpec checkerProg "cap_check" (· = loadMemM b pb sz w)
