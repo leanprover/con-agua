@@ -212,9 +212,8 @@ l_model ipsE_spec (p : Prog) (hf : p.lookup "infer_pis" = some inferPisL)
   fns [hf ↦ ipsE list]
   specs [callW_spec p n "inst_list", callW_spec p n "intern_fvar"]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
-  heartbeats 400000 simp [tierW, idxW] unified
-  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] unified
+  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem] flat
 
 /-- `infer_pis_leaf` at every L fuel up to `n + 1`. -/
 theorem inferPisLeaf_any (p : Prog) (hp : InferLeafProg p) (hq : BindProg p) (hb : InferBodyProg p)
@@ -540,9 +539,8 @@ l_model ifrE_spec (p : Prog) (hf : p.lookup "infer_forall" = some inferForallL)
   fns [hf ↦ ifrE list]
   specs [callW_spec p n "intern_fvar"]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
-  heartbeats 400000 simp [tierW, idxW] unified
-  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] unified
+  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem] flat
 
 /-- **`infer_forall` refines `inferForall`, both outcomes**, at the knot (the `.forallE` clause of
 `inferBody`): the domain's type and its `whnf` (the slots' errors), a domain type that is no sort (a

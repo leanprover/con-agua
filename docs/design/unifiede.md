@@ -2183,9 +2183,9 @@ the slots, as `m2c_*` in §3.7):
   `defeq_slot`, `defeq_body`, `is_def_eq_core`). Done: `DefEqQuickE`, `DefEqLamsE`, `DefEqPeelE`,
   `DefEqSpineE` (and `defeq_lams_inner`; §3.41), `DefEqLazyE` (§3.43), `DefEqTailE` (§3.45, §3.46),
   `DefEqLoopsE`, `DefEqSlotE` (§3.48), `DefEqEagerE` (§3.49);
-- [ ] `infer`: `Verdict/InferLeavesE` (`infer_const`; done, §3.44), `InferBindE` (6: `infer_lams`/`infer_pis` and
+- [x] `infer`: `Verdict/InferLeavesE` (`infer_const`; done, §3.44), `InferBindE` (6: `infer_lams`/`infer_pis` and
   their leaves), `InferSpineE` (4; done, §3.49), `InferArmsE` (8; done, §3.47), `InferKnotE` (4: `infer_body(_io)`,
-  `infer`, `infer_io`).
+  `infer`, `infer_io`). Done (§3.44, §3.47, §3.49, §3.50).
 
 **C. Hand `Except` models**:
 
@@ -3260,4 +3260,61 @@ Elaboration (user seconds, median of 3 interleaved runs, base master 544d949f,
 
 Recipes tried on `spioE` (the module at 5.88 s with the default `finish [tierW, idxW]`): `flat` 6.95 s,
 `simp [tierW, idxW]` 6.83 s. No generator or kit change was needed.
+
+### 3.50 Retirement, group B, `infer`, fourth landing (the binder telescopes, the bodies, the `infer` slots)
+
+The six functions of `Verdict/InferBindE` and the four of `Verdict/InferKnotE`, the end of §3.30 B's
+`infer` bullet. One `unified` model and one refinement each: `ilfE`/`ilf_ref` (`infer_lams_leaf`,
+its outward loop `lamsOut_ref`), `ilsE`/`ils_ref` over `lamsLoop_ref` (`infer_lams`), `ilmE`/`ilm_ref`
+(`infer_lam`; `Arena/InferBodyBind`), `iplE`/`ipl_ref` (`infer_pis_leaf`, `pisOut_ref`),
+`ipsE`/`ips_ref` over `pisLoop_ref` (`infer_pis`), `ifrE`/`ifr_ref` (`infer_forall`;
+`InferBodyBindPi`), `ibE`/`ib_ref`, `iboE`/`ibo_ref` (`infer_body(_io)`; `InferBodyDisp`),
+`islE`/`isl_ref`, `isloE`/`islo_ref` (the `infer`/`infer_io` slots, as `defeq`'s `dsl_ref`;
+`KnotSlot`). The ok statements are one-liners (`inferLamsLeaf_refines`, `inferLams_tel` by
+`RefE.triple`, `inferLam_refines`, the pis ones, `inferBody(IO)_refines`, `infer(IO)_refines`), as are
+the error halves read up the chain (`inferLamsLeaf_anyE`, `inferLams_anyE`, the pis ones,
+`inferBody(IO)_refinesE`, and `InferKnotE`'s `inferSlot_stepE`/`inferIOSlot_stepE`).
+`Verdict/InferBindE` and `Verdict/InferSpineE` are gone (no reader left), `InferKnotE` keeps the two
+steps, `InferArmsE` the stage entries' claims and `InferCalleesE`. Gone also: the loops as named
+blocks with their models and specs (`lamsOutW`, `lamsLoop`, `lamsFull`, `inferLamsW`, the generated
+`inferPisLeafW`/`inferPisW`/`inferForallW`), `lamK`, `bodyK`/`bodyIOK` with their arms and specs,
+`infer_spec`/`inferIO_spec`, `TelPost` (now the named-field post `TelP`), the ten `errors` models and
+claims with their helpers (`lamsOutE_cls0`, `pisOutE_cls0`, `kisE_err`, `pis_ctl137`, …).
+
+| functions | before: ok side + error side (files) | after | change |
+|---|---:|---:|---:|
+| the telescopes (6) | 927 + 652 + 1 001 = 2 580 | 873 + 697 = 1 570 | −39 % |
+| the bodies and slots (4) | 667 + 717 + 587 + 40 + 134 + 50 = 2 195 | 766 + 801 + 43 + 65 + 38 = 1 713 | −22 % |
+| **all** | **4 775** | **3 283** | **−31 %** |
+
+(Whole files, shared infrastructure included: `BStkR`, `tPush_step`, the memo relation lemmas.)
+Diff of the landing against master: +1 510 −3 001 lines.
+
+* **`G`**: `InferG p n` for the telescopes; `InferBodyG p n` (`InferG` and `infer_proj`'s claim
+  `InferProjOKE`, which moves to `InferBodyDisp`: `ip_ref` lives above the bodies) for the bodies;
+  `InferSlotBodyG`/`InferIOSlotBodyG` (the body's claim and the knot) for the slots, as `SlotBodyG`.
+* **Callees**: each arm of a body through its run; `bodyArm_ref` reads a tail arm (the model's
+  continuation re-lists the result word) from its ok `CoreSpec` and error claim at fuel `k + 1`. The
+  io `.const` arm keeps its own twin (`inferConstIOT`, `ErrClaim.constIO` moved from `InferKnotE`).
+* `TelP`: a telescope's post (the result, the relation at maps kept, both stacks below the slices
+  kept from the entry memory, the pool grown) as a named-field structure; `TelP.keep` composes the
+  maps.
+
+Elaboration (user seconds, median of 3 interleaved runs, base master ce3c2c0c,
+`_tmp/retire-infer2/times3.txt`):
+
+| module | base | new | |
+|---|---:|---:|---|
+| `Arena/InferBodyBind` | 6.61 | **12.64** | **slower (+6.0 s)**: `ilfE`, `ilsE`, `ilmE` … |
+| `Arena/InferBodyBindPi` | 13.37 | **24.36** | **slower (+11.0 s)**: `iplE`, `ipsE`, `ifrE` (22.2 s with `flat` on `ipsE`/`ifrE`, kept) … |
+| `Arena/InferBodyDisp` | 7.77 | **12.40** | **slower (+4.6 s)**: `ibE`, `iboE` … |
+| `Arena/KnotSlot` | 5.53 | **6.69** | **slower (+1.2 s)**: `islE`, `isloE` … |
+| `Verdict/InferBindE` | 35.96 | – | … against the `errors` models and claims here |
+| `Verdict/InferKnotE` | 14.89 | 0.45 | |
+| `Verdict/InferSpineE`, `InferArmsE`, `InferLeavesE`, `KnotAllE` | 4.72 | 4.19 | |
+| **sum** | **88.85** | **60.73** | **−32 %** |
+
+Recipes tried: `flat` on `ipsE`/`ifrE` (module 24.4 → 22.2 s, kept), on `iplE` (no change), on
+`ilsE`/`ilmE` (12.9 s, not kept) and `ibE`/`iboE` (14.5 s, worse). No generator or kit change was
+needed (the kit's `RefE.tailMap`, §1.5, landed meanwhile, would shorten `bodyArm_ref`'s uses).
 
