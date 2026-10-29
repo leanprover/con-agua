@@ -312,3 +312,42 @@ frame lemma that separates `AREC` from `ADER` would need rework); `hsh` (no effe
   and so does con-ron's.
 * **No hits in the parse.** Every `app` intern of the parse is new. A parse-specific "push without
   probing" would be unsound (the export may repeat a node), and con-ron probes too; the probe stays.
+
+## 7. Landed: `szall` (lane presize)
+
+`check_a` calls `presize_tables()` (`Checker/Presize.lean`) between `pb_check` and
+`intern_reserved_pins`: `pow2_at_least(len(IN0) >> 6)`, `>> 9`, `>> 10` slots for the persistent
+`app`, `lam`, `forallE` tables, through the cons library's `X_presize(n)` (`consPresizeG`,
+`Arena/ConsPresize.lean`; con-ron's `HashMap2::with_capacity`), which writes tier 0's count word
+only if the table is the fresh one and `n` is a layout (a multiple of 8, at least `SN0`, room for
+`2 n + 2` words). Deviation **D42** (Deliberate): con-ron's tables start empty.
+
+* **Proof** (~470 new lines, no `sorry`): `consPresize_spec` (the template's memory, `psMem`);
+  `consR_initN`/`consR_initM` (an all-zero table whose count word is a layout of `n` slots is an
+  empty table: `consR_init` with the zero hypotheses local to the table's arrays);
+  `presizeTables_spec`; `arenaR_ps` (the loaded memory after the presize is still `ArenaR` of the
+  twin's initial state: the three tables by `consR_initM`, the rest by `arena_build`'s frames);
+  `irpStage_ps` (`irpStage_setG`'s proof from the presized memory, its frames composed with the
+  presize's, which writes only store-tier slot arrays); `checkA_of_stages`/`checkA_err_of_stages`
+  take the eighth stage. The table's internals stay behind `ConsR`; the start state's zeros come
+  from `loadMem` as planned (§5).
+* **Instructions** (parse-only, `Init`): 23.316 G → 21.650 G (−7.1 %, as the prototype's `szall`).
+* **Wall** (40 paired rounds unless noted; `Init`; bases: the program without the call for the parse
+  phase, master's `checker.s` for whole runs):
+
+  | cell | base | Δ (median paired) | Wilcoxon p | 95 % CI | load |
+  |---|---:|---:|---:|---:|---|
+  | parse phase (46/94) | 2.12 s | **−6.4 %** | < 0.001 | [−6.9, −6.1] | 4–6 |
+  | 16 threads (24–39) | 4.00 s | **−1.9 %** | < 0.001 | [−3.5, −0.6] | 4–12 |
+  | one thread (44/92, 25 rounds) | 18.35 s | −0.1 % | 0.958 | [−6.8, +5.4] | 3–92 (median 12) |
+
+  Smaller than the prototype's −9.3 % / −4.2 %, measured at load 4–54 (median 12) and 10–49: on a
+  quiet machine the growth's zeroing and rehash (memory traffic) costs less wall time; the
+  instruction count is the same.
+* **Peak RSS** unchanged on `Init` (743.4 MB sequential, 1000.8 MB at 16 threads, 645.6 MB
+  parse-only, both binaries) and on all 634 fixtures (`diff-e2e --log`, ±3 MB, sum 25 730 →
+  25 735 MB). The table is sized by the input, not by its nodes, so an input that is long but has
+  few nodes reserves more: `long_line_5mib` (5 MB) +1.2 MB sequential, +1.8 MB at 16 threads (the
+  frozen image copies the whole persistent table), `complete_c04a_restart_70` (9 MB) +2.3 / +4.3 MB;
+  the bound is the three tables' `16 n` bytes, about 0.3 × the input length.
+* **Verdicts:** `diff-e2e --refs --parallel 16`: 634 agree, 0 UNSOUND/INCOMPLETE/CRASH/TIMEOUT/REFDIFF.

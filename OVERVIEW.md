@@ -412,7 +412,7 @@ related state with a related result
 the shape most refinements have). The relations say how L's arrays represent
 the twin's state (§6, §7). The refinements compose along entry 1's stages
 ([the stage specs](https://github.com/leanprover/con-agua/blob/master/ConAgua/Checker/Pipeline.lean#L92-L125)) and phase A into
-[`checkA_run`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Checker/CheckARun.lean#L281-L289),
+[`checkA_run`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Checker/CheckARun.lean#L238-L246),
 and with entry 2's phase B into
 [`drv_twinAccepts`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Checker/ParDriverTwin.lean#L23-L32):
 an entry-1 run of `check` from the loaded memory followed by an entry-2 run on
@@ -448,7 +448,7 @@ composes it with `drv_twinAccepts` for the committed file, and
 `EndToEnd.lean` states the four final theorems from it, and the threaded mode's three.
 
 The runs of `check` are the twin's binary in miniature: `check` dispatches on
-the mode word ([`checkL`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Checker/Entry.lean#L140-L147)),
+the mode word ([`checkL`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Checker/Entry.lean#L143-L150)),
 entry 1 runs the stages and phase A (quoted in §5.1), entry 2 phase B.
 
 ## 5. L in detail
@@ -456,13 +456,14 @@ entry 1 runs the stages and phase A (quoted in §5.1), entry 2 phase B.
 ### 5.1 An example
 
 Entry 1's function, beside the twin function it cites
-([L](https://github.com/leanprover/con-agua/blob/master/ConAgua/Checker/Entry.lean#L105-L121),
+([L](https://github.com/leanprover/con-agua/blob/master/ConAgua/Checker/Entry.lean#L108-L124),
 [the twin](https://github.com/leanprover/con-agua/blob/master/vendor/con-ron/ConRon/Arena/Main.lean#L154-L190)):
 
 ```
 def checkAL : FunDecl := lfn (c) locals (r, z, cnt, v) {
   z := call cap_check();
   z := call pb_check();
+  z := call presize_tables();
   z := call intern_reserved_pins();
   z := call builtin_prelude();
   r := call front_run();
@@ -477,7 +478,8 @@ def checkAL : FunDecl := lfn (c) locals (r, z, cnt, v) {
 ```
 
 `cap_check` aborts unless the capacities meet the relations' minimums;
-`pb_check` compares the pin buffer's startup data with the program's own copy.
+`pb_check` compares the pin buffer's startup data with the program's own copy;
+`presize_tables` sizes three cons tables from the input length (§6.2).
 The rest is the twin's pipeline (`runPipelineHead`, then `runPipelineTail` up
 to its fold), then phase A's fold (`install_fold_go`), then `par_compact`, which writes the frozen buffer's
 header (with `c ≠ 0` also its images, §9.1). Every callee either returns into
@@ -658,7 +660,13 @@ mark the live slots, re-insert each marked entry)
 since L cannot free memory. The home slot is `mulhi(mix(h), n)` rather than
 con-ron's mask
 ([`homeW`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Arena/SlotGrow.lean#L41-L44)).
-Both are deliberate deviations, verdict-neutral (D36, D38).
+Both are deliberate deviations, verdict-neutral (D36, D38). The persistent
+tiers of the three tables the parse fills most (`app`, `lam`, `forallE`) start
+at a slot count computed from the input length
+([`presize_tables`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Checker/Presize.lean#L44-L55)),
+so the parse does not double them; the memory is all zero there, so the
+larger table costs nothing until it is used. con-ron's tables start empty
+(D42, also verdict-neutral).
 
 The **scratch tier** holds what one declaration's check creates. It is emptied
 in O(1) per table: a scratch slot holds `B + i + 1` for node `i`, and reads as
@@ -797,7 +805,7 @@ from memory related to the twin's state before the stage, a returning call ends
 in memory related to the state after the twin's stage. The stages are proved at
 the checker's program and chained into entry 1's run; the last one, the
 fold, is
-[`foldStage_checker`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Checker/CheckARun.lean#L135-L144).
+[`foldStage_checker`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Checker/CheckARun.lean#L92-L101).
 The twin's mutual recursion (whnf, defeq, infer) runs on fuel; the L side
 proves its refinement at every twin fuel at least the L fuel
 ([`InputsOK`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Checker/Pipeline.lean#L69-L72) bounds only the sizes; the fuel is free).
@@ -931,7 +939,7 @@ share the persistent tier read-only
 ([con-ron's pool, as the twin states it](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/TwinPooled.lean#L3-L13)).
 con-agua does the same with two entry points and a frozen buffer; the
 sequential driver `ca_start` runs the same two entries one after the other
-([`check` and its entries](https://github.com/leanprover/con-agua/blob/master/ConAgua/Checker/Entry.lean#L97-L102)).
+([`check` and its entries](https://github.com/leanprover/con-agua/blob/master/ConAgua/Checker/Entry.lean#L99-L104)).
 
 ### 9.1 The two entries
 
@@ -940,13 +948,13 @@ sequential driver `ca_start` runs the same two entries one after the other
   and a prefix image of every array phase B reads (the stores' persistent
   tiers, their slot tables and columns, the environment index, the pins, the
   pending records); it returns `2^63 + k` for `k` pending groups
-  ([`check_a`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Checker/Entry.lean#L105-L121)).
+  ([`check_a`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Checker/Entry.lean#L108-L124)).
 * **Entry 2** (`ca_check_b(buf, len, j, region, region_len)`, mode 2): a stub
   gives each frozen array a descriptor into the buffer, each array phase B
   writes a slot of the worker's own region, and every other array length 0;
   it declines (`rdx = 1`) if a frozen array in the buffer is shorter than its
   minimum length; then `check_b` checks group `j`
-  ([`check_b`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Checker/Entry.lean#L123-L138)).
+  ([`check_b`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Checker/Entry.lean#L126-L141)).
   Later calls on the same region continue from the state the previous call
   left, as con-ron's worker state is threaded through its claims.
 
