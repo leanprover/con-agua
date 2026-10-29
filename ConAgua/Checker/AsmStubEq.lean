@@ -17,6 +17,7 @@ namespace L.Checker
 
 open L.Compiler
 
+set_option maxRecDepth 100000 in
 /-- **The file's stub is the parallel mode's entries, then `abiStub checkerTab`.** -/
 list_eq checkerStub_eq : checkerStub = parStub checkerTab L.Arena.MODE L.Arena.PLO L.Arena.PHI L.Arena.OUT L.Arena.HDRF L.Arena.CTLF 132 L.Arena.frozenIdsL L.Arena.parOwnedL ++ abiStub checkerTab
 

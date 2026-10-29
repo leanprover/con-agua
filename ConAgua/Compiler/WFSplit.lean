@@ -290,7 +290,7 @@ syntax (name := progWf) (docComment)? "prog_wf " ident " : " term:max term:max :
       tl := mkApp3 (mkConst ``List.cons [0]) elemTy elems[e]! tl
     let boundTy ← mkAppM ``LT.lt #[
       ← mkAppM ``HAdd.hAdd #[← mkAppM ``HAdd.hAdd #[← mkAppM ``HAdd.hAdd #[← mkAppM ``HAdd.hAdd #[
-        mkNatLit 16, ← mkAppM ``HMul.hMul #[mkNatLit 16, ← mkAppM ``HAdd.hAdd #[
+        mkNatLit 16, ← mkAppM ``HMul.hMul #[mkNatLit 24, ← mkAppM ``HAdd.hAdd #[
           mkApp (mkConst ``Tab.nb) tabE, mkApp (mkConst ``Tab.nw) tabE]]],
         ← mkAppM ``HMul.hMul #[mkNatLit 8, mkApp (mkConst ``Tab.romWords) tabE]],
         ← mkAppM ``HMul.hMul #[mkNatLit 8, mkApp (mkConst ``Tab.nxres) tabE]],

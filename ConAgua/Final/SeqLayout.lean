@@ -402,18 +402,18 @@ theorem seqLen_val {tab : Tab} {out hdrf ctlf : ArrId} {hw : Nat} (R : Reg64s) (
     · simp only [h2, ite_false, SVal.val] <;> rfl
 
 theorem seqLen32_val {tab : Tab} {out hdrf ctlf : ArrId} {hw : Nat} (R : Reg64s) (base p : Nat)
-    (hp : tab.nb ≤ p) (hlt : 2 * (seqLayout tab base out hdrf ctlf hw).s p < 2 ^ 64) :
+    (hp : tab.nb ≤ p) :
     UInt64.ofBitVec ((seqLen32 tab out hdrf ctlf hw p).val R) =
       UInt64.ofNat (2 * (seqLayout tab base out hdrf ctlf hw).s p) := by
   unfold seqLen32
-  rw [seqLayout_s64 _ _ _ _ _ _ hp] at hlt ⊢
+  rw [seqLayout_s64 _ _ _ _ _ _ hp]
   simp only [show ¬ p < tab.nb by omega, ite_false]
   by_cases h1 : tab.wAt p = TieredArray.t0 out ∨ tab.wAt p = TieredArray.t0 ctlf
   · simp only [h1, ite_true, SVal.val] <;> rfl
-  · simp only [h1, ite_false] at hlt ⊢
+  · simp only [h1, ite_false]
     by_cases h2 : tab.wAt p = TieredArray.t0 hdrf
-    · simp only [h2, ite_true, SVal.val] at hlt ⊢
-    · simp only [h2, ite_false, SVal.val] at hlt ⊢
+    · simp only [h2, ite_true, SVal.val]
+    · simp only [h2, ite_false, SVal.val]
 
 /-- **The stores of `ca_check_seq`**, on a region that holds `m` in the partition layout, relate
 it to `seqMem0 m` in `ca_check_seq`'s layout. -/
@@ -546,19 +546,11 @@ theorem seq_memRel {tab : Tab} {out hdrf ctlf : ArrId} {hw : Nat} (hok : abiTabO
   · intro p hp1 hp'
     simp only [seqLayout_tab] at hp' hp1
     have := hW (2 + 2 * (tab.nb + tab.nw) + p) _ (gw p hp').2.2
-    rw [seqLen32_val (tab := tab) R base p hp1 ?_] at this
-    · simp only [seqLayout_T, seqLayout_tab, Tab.dlen32]
-      rw [show (16 + 16 * ((tab.nb : Int) + (tab.nw : Int)) + 8 * (p : Int)).toNat =
-        8 * (2 + 2 * (tab.nb + tab.nw) + p) by omega]
-      exact this
-    · have hhw := (seqParamsOk_spec hp).2.2.2.2
-      simp only [abiWords] at hhw
-      rw [seqLayout_s64 _ _ _ _ _ _ hp1]
-      split
-      · omega
-      · split
-        · omega
-        · have := (hoff p hp1 hp').1; omega
+    rw [seqLen32_val (tab := tab) R base p hp1] at this
+    simp only [seqLayout_T, seqLayout_tab, Tab.dlen32]
+    rw [show (16 + 16 * ((tab.nb : Int) + (tab.nw : Int)) + 8 * (p : Int)).toNat =
+      8 * (2 + 2 * (tab.nb + tab.nw) + p) by omega]
+    exact this
   · intro i hi
     simp only [seqLayout_T, seqLayout_tab]
     obtain ⟨w, hw1, hw2⟩ := romVals_byte tab.rom i hi
