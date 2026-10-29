@@ -263,16 +263,34 @@ theorem ColT2.trunc {α δ : Type} {k : IdxKind} [BEq α] [Hashable α] [Inhabit
       simp only [tierA_zero]; exact rdcol_trunc m hB (by rw [hc]; exact hi)),
     colT_mono h.2 (fun _ _ => by simp only [tierA_one', truncFrozen_other m _ h1])⟩
 
+theorem rdpcol_trunc (m : Mem) {c : ArrId} {ca : Nat} (hB : (c, ca) ∈ fzPCols) {i : Nat}
+    (hi : i < (rdW (m.arr64 CTL) (UInt64.ofNat ca)).toNat)
+    (hn : (rdW (m.arr64 CTL) (UInt64.ofNat ca)).toNat < 2 ^ 63) :
+    p32Get ((truncFrozen m).arr64 c) (UInt64.ofNat i) = p32Get (m.arr64 c) (UInt64.ofNat i) := by
+  rw [truncFrozen_pcol m hB]
+  have hn := (rdW (m.arr64 CTL) (UInt64.ofNat ca)).toNat_lt
+  have hi64 : i < 2 ^ 64 := by omega
+  have he : ((rdW (m.arr64 CTL) (UInt64.ofNat ca) + 1) >>> 1).toNat =
+      ((rdW (m.arr64 CTL) (UInt64.ofNat ca)).toNat + 1) % 2 ^ 64 / 2 := by
+    simp [UInt64.toNat_shiftRight, UInt64.toNat_add, Nat.shiftRight_eq_div_pow]
+  simp only [p32Get]
+  congr 1
+  apply rdW_extract
+  rw [he, UInt64.toNat_div, UInt64.toNat_ofNat_of_lt' (by simp only [UInt64.size]; omega)]
+  simp only [show (2 : Word).toNat = 2 from rfl]
+  omega
+
 theorem DerT2.trunc {α : Type} [BEq α] [Hashable α] {g : ETables → Tbl α EIdx UInt64}
-    {c : ArrId} {ca : Nat} {m : Mem} {a : AState} (hB : (c, ca) ∈ fzCols) (h1 : tier1 c ∉ fzSrcs)
+    {c : ArrId} {ca : Nat} {m : Mem} {a : AState} (hB : (c, ca) ∈ fzPCols) (h1 : tier1 c ∉ fzSrcs)
     (hc : (rdW (m.arr64 CTL) (UInt64.ofNat ca)).toNat = (g a.store.pers).nodes.size)
+    (hcap : (g a.store.pers).nodes.size ≤ 134217728)
     (h : DerT2 a g (cP c m)) : DerT2 a g (cP c (truncFrozen m)) := by
   obtain ⟨⟨s0, h0⟩, ⟨s1, h1'⟩⟩ := h
   refine ⟨⟨s0, fun i x hx => ?_⟩, ⟨s1, fun i x hx => ?_⟩⟩
   · have hi := (Array.getElem?_eq_some_iff.mp hx).1
     have := h0 i x hx
     simp only [cP, tierA_zero] at this ⊢
-    rw [rdcol_trunc m hB (by rw [hc]; exact hi)]; exact this
+    rw [rdpcol_trunc m hB (by rw [hc]; exact hi) (by rw [hc]; omega)]; exact this
   · have := h1' i x hx
     simp only [cP, tierA_one'] at this ⊢
     rw [truncFrozen_other m _ h1]; exact this
@@ -318,10 +336,15 @@ theorem ArenaD.trunc (h : ArenaD m a) : ArenaD (truncFrozen m) a := by
   obtain ⟨hA, hD⟩ := h
   refine ⟨hA.trunc htop, ⟨hD.bvar, hD.fvar, hD.sort, hD.const, hD.lit, ?_, ?_, ?_, ?_, ?_⟩⟩
   · exact hD.app.trunc (ca := 4) (by decide) (by decide) (ConsR.cnt0 hA.app (by decide))
+      (by simpa using ConsR.cap hA.app 0 (by decide))
   · exact hD.lam.trunc (ca := 28) (by decide) (by decide) (ConsR.cnt0 hA.lam (by decide))
+      (by simpa using ConsR.cap hA.lam 0 (by decide))
   · exact hD.forallE.trunc (ca := 30) (by decide) (by decide) (ConsR.cnt0 hA.forallE (by decide))
+      (by simpa using ConsR.cap hA.forallE 0 (by decide))
   · exact hD.letE.trunc (ca := 20) (by decide) (by decide) (ConsR.cnt0 hA.letE (by decide))
+      (by simpa using ConsR.cap hA.letE 0 (by decide))
   · exact hD.proj.trunc (ca := 32) (by decide) (by decide) (ConsR.cnt0 hA.proj (by decide))
+      (by simpa using ConsR.cap hA.proj 0 (by decide))
 
 end arena
 
