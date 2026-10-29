@@ -350,4 +350,31 @@ def p32Prog : Prog := [("p32", p32)]
 #guard (run p32Prog 1000 "p32" [0, 2] tierMem).toOption.map (fun (_, m) => (m.arr64 W)[0]!) ==
   some ((65537 + 4294967295) % 4294967296 * 4294967296)
 
+/-! One half of a word (`Expr.ld32h`, lane p32use, the packed records' fields): the bounds check of
+a word load, then the 4-byte load of the low or the high half. -/
+
+/-- con-ron: none — a compiler test program
+
+`lo + 1000 hi` of word `i` of tier `t` of `W`, each half by its own 32-bit load (the register
+stack's code and, under a call's argument, the fallback's). -/
+def p32h : FunDecl :=
+  { nparams := 2, nlocals := 3,
+    body := .seq (.set 2 (.bin .add (.ld32h W (.var 0) (.var 1) false)
+        (.bin .mul (.ld32h W (.var 0) (.var 1) true) (.const 1000))))
+      (.ret [.var 2]) }
+
+def p32hProg : Prog := [("p32h", p32h)]
+
+/-- Words with distinct halves. -/
+def halfMem : Mem :=
+  Mem.ofWords [(W, #[0x0000000500000003, 0x00000011FFFFFFFF]), (tier1 W, #[0x0000000700000002])]
+
+#guard Prog.wf (Prog.tab p32hProg) p32hProg
+#guard agrees p32hProg "p32h" [0, 0] halfMem
+#guard agrees p32hProg "p32h" [0, 1] halfMem
+#guard agrees p32hProg "p32h" [1, 0] halfMem
+-- word 1 exists in tier 0 only
+#guard agrees p32hProg "p32h" [1, 1] halfMem
+#guard (run p32hProg 1000 "p32h" [0, 0] halfMem).toOption.map (·.1) == some [5003]
+
 end L.Compiler.Tests

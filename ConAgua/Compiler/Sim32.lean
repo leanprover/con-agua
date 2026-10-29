@@ -102,6 +102,7 @@ theorem ld32Code_spec {x t d : Reg64} {ln bs : AddrExpr} {arr : Array Word} {k :
       intro r hr1 hr2
       simp only [rget_set, ite_eq_right hr1, ite_eq_right hr2]
 
+omit [Host] in
 /-- One half of a word as `half32` reads it: the low half is element `0`, the high half element `1`. -/
 theorem half32b_eq (hi : Bool) (w : Word) : half32b hi w = half32 w (if hi then 1 else 0) := by
   apply UInt64.toNat_inj.mp
@@ -112,6 +113,12 @@ theorem half32b_eq (hi : Bool) (w : Word) : half32b hi w = half32 w (if hi then 
     rw [show (4294967295 : Nat) = 2 ^ 32 - 1 from rfl, Nat.and_two_pow_sub_one_eq_mod]; simp
   · simp only [half32b, ite_true, UInt64.toNat_shiftRight]
     simp [Nat.shiftRight_eq_div_pow]
+
+omit [Host] in
+theorem half32b_lt (hi : Bool) (w : Word) : (half32b hi w).toNat < 2 ^ 32 := by
+  rw [half32b_eq, half32_toNat]
+  have := w.toNat_lt
+  cases hi <;> simp <;> omega
 
 /-- **`d := A[x]`'s half `hi`** (`ld32hCode`): from `x` = the index `j`, the value `half32b hi` of
 word `j` in `d`, the scratch `t` and the flags clobbered; or `ca_error` when word `j` does not
@@ -142,9 +149,9 @@ theorem ld32hCode_spec {x t d : Reg64} {ln bs : AddrExpr} {hi : Bool} {arr : Arr
       have := hcmp _ hcc; simp at this; omega
     refine ev_movRA hc.tail.tail.head hB ?_
     refine ev_ld32H hc.tail.tail.tail.head (v := (half32b hi arr[j.toNat]).toNat) ?_
-      (by have := (arr[j.toNat]).toNat_lt; rw [half32b_eq, half32_toNat]; split <;> omega) ?_
+      (half32b_lt hi _) ?_
     · simp only [rget_set, ite_true, ite_eq_right htx.symm, hx, UInt64.toNat_toBitVec]
-      have hBn : (UInt64.ofNat B).toNat = B := UInt64.toNat_ofNat_of_lt' (by omega)
+      have hBn : (UInt64.ofNat B).toNat = B := UInt64.toNat_ofNat_of_lt' (by simp only [UInt64.size]; omega)
       rw [hBn]
       have := load32_of_rdW (hget _ hj) (if hi then 1 else 0)
       rw [half32b_eq]

@@ -88,7 +88,7 @@ theorem mapE_exE (f : Var → Var) (R : TRec) (g : Word) (e : Expr) :
 
 theorem mapE_tld (f : Var → Var) (R : TRec) (t i : Expr) (g : Word) :
     mapE f (R.ld t i g) = R.ld (mapE f t) (mapE f i) g := by
-  simp only [TRec.ld, mapE, mapE_tierX, TRec.adE]; split <;> split <;> split <;> simp [mapE]
+  simp only [TRec.ld, TRec.adE]; split <;> split <;> split <;> simp [mapE, mapE_tierX]
 
 theorem mapE_cntE (f : Var → Var) (R : TRec) (t : Expr) :
     mapE f (R.cntE t) = R.cntE (mapE f t) := by simp [TRec.cntE, mapE]

@@ -343,7 +343,9 @@ theorem erel_ld32h {a : ArrId} {hb : Bool} {ct ot ci oi : Expr} (ht : ERel ct ot
   obtain ⟨rfl, h3'⟩ := hi s j s3 h3
   obtain ⟨w, s4, h5, h6⟩ := run_bind_ok h4
   obtain ⟨rfl, h5'⟩ := ld64_sim _ s j w s4 h5
-  exact ⟨rfl, run_bind_of h1' (run_bind_of h3' (run_bind_of h5' h6))⟩
+  simp only [StateT.run_pure] at h6
+  obtain ⟨rfl, rfl⟩ := h6
+  exact ⟨rfl, run_bind_of h1' (run_bind_of h3' (run_bind_of h5' rfl))⟩
 
 theorem erel_ld32t {a : ArrId} {ct ot ci oi : Expr} (ht : ERel ct ot) (hi : ERel ci oi) :
     ERel (.ld32t a ct ci) (.ld32t a ot oi) := by

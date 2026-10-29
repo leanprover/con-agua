@@ -583,7 +583,7 @@ theorem shr1_eq_div2 (i : Word) : i >>> 1 = i / 2 := by
   apply UInt64.toNat_inj.mp; rw [shr1_toNat, UInt64.toNat_div]; rfl
 
 theorem lo_half_toNat (z : Word) : ((z >>> 0) &&& (0xFFFFFFFF : Word)).toNat = z.toNat % 2 ^ 32 := by
-  rw [show z >>> 0 = z by apply UInt64.toNat_inj.mp; simp [UInt64.toNat_shiftRight]]
+  rw [show z >>> 0 = z by apply UInt64.toNat_inj.mp; simp]
   exact mask32_toNat z
 
 theorem hi_half_toNat (z : Word) : ((z >>> 32) &&& (0xFFFFFFFF : Word)).toNat = z.toNat / 2 ^ 32 := by
@@ -648,8 +648,8 @@ theorem ld32_dn (b : ArrId) (i : Word) :
   simp only [L.ld32, e, shr1_eq_div2]
   congr 1; funext s
   split
-  · rename_i h; rw [ite_eq_left h, dnW_eq_half32 _ _ h]
-  · rename_i h; rw [ite_eq_right h]
+  · rename_i h; rw [dnW_eq_half32 _ _ h]
+  · rfl
 
 /-- The 32-bit store of dense entry `i`, as the word store of `dnSet`. -/
 theorem st32_dn (b : ArrId) (i v : Word) :

@@ -1534,7 +1534,7 @@ theorem sim_st32t (a : ArrId) (t i e : Expr) : SimS p G sk (stepRun p K) P (.st3
       have hcT := hc1.right
       rw [hlen] at hcT
       exact fin _ vi ve _ hvi hve (hE1.trans (EPost.regs' (r := .rdx) (by simp) _) (Nat.le_refl _))
-        (by rw [← hrax1]; rfl) rfl _ hcT rfl _ hK (by rw [hlen]; simp only [List.length_append]; omega)
+        (by rw [← hrax1]; rfl) rfl _ hcT rfl _ hK (by rw [hlen]; omega)
     · intro s1 herr1 hE1
       obtain ⟨x, hx⟩ := herr1
       refine hK.err s1 ⟨x, ?_, by rw [evalP_error hx]; simp⟩ (hE1.spost (G := G) hI.lo).gpost
@@ -1575,7 +1575,7 @@ theorem sim_st32t (a : ArrId) (t i e : Expr) : SimS p G sk (stepRun p K) P (.st3
       exact fin _ vi ve _ hvi hve
         (hE13.of_eq rfl (by simp) (by simp) (by simp) (by simp) (by simp) (by keep_tac)) (by simp)
         (by simp [hrax3]) _ hcR.tail.tail rfl _ hK
-        (by simp only [List.length_append, List.length_cons]; omega)
+        (by simp only [List.length_append, List.length_cons, Nat.zero_add]; omega)
     · intro s3 herr3 hE3
       obtain ⟨x, hx⟩ := herr3
       refine hK.err s3 ⟨x, ?_, by rw [evalP_error hx]; simp⟩

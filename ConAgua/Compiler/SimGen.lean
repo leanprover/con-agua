@@ -758,14 +758,14 @@ theorem genLd32W_spec (_hF : 8 * F + 8 < maxOff) {ln bs : AddrExpr} {i : Expr} {
 
 /-- `d := A[i]`'s half `hi` (`genLd32h`, lane p32use): the index a local's register or computed into
 `d`, then `ld32hCode_spec`. -/
-theorem genLd32hW_spec (_hF : 8 * F + 8 < maxOff) {ln bs : AddrExpr} {hi : Bool} {i : Expr} {gi : GenF}
+theorem genLd32hW_spec (_hF : 8 * F + 8 < maxOff) {ln bs : AddrExpr} {hb : Bool} {i : Expr} {gi : GenF}
     (hi : GenSpec G ctx F i gi) {d : Reg64} {fr : List Reg64} {code : Program} {k : Nat}
-    (hg : genLd32h ctx ln bs hi i gi d fr = some code) (hc : Code code k) (hok : GOk ctx i d fr)
+    (hg : genLd32h ctx ln bs hb i gi d fr = some code) (hc : Code code k) (hok : GOk ctx i d fr)
     (hwf : Expr.wf ctx.nl G.tab i = true) {arr : Array Word}
     {σ : St} {s : MachineData} {Q : MachineState → Prop} (hI : Inv G ctx F σ s)
     (hA : ∀ s', XPost (d :: fr) s s' → ArrW s' ln bs arr)
     (hv : ∀ j (h : j.toNat < arr.size) s', evalP σ i = .ok j →
-      s'.regs.get64 d = (half32b hi arr[j.toNat]).toBitVec →
+      s'.regs.get64 d = (half32b hb arr[j.toNat]).toBitVec →
       XPost (d :: fr) s s' → Ev Q s' (at_ (k + code.length)))
     (herr : ∀ s', ((∃ x, evalP σ i = .error x) ∨ ∃ j, evalP σ i = .ok j ∧ ¬ j.toNat < arr.size) →
       XPost (d :: fr) s s' → Ev Q s' (label errorL)) : Ev Q s (at_ k) := by
@@ -1375,7 +1375,7 @@ theorem gen_ld32t (a : ArrId) {t i : Expr} (ht : GenSpec G ctx F t (gen ctx t))
       have ha' : G.tab.dom64 (tierA a c) = true := by simpa [Tab.tier32Ok, Expr.constTier?] using ha
       refine genLd32W_spec hF hi hg hc (hok.sub hok.nd (fun r h => h) hri) hwi hI
         (arr := σ.mem.arr64 (tierA a c))
-        (fun s' hX => arrW32_plain hG hT hTab ha' (hI.ghost hX hok.dr)) ?_ ?_
+        (fun s' hX => by have := arrW32_plain hG hT hTab ha' (hI.ghost hX hok.dr); exact this) ?_ ?_
       · intro j hj s' hji hd hX
         exact hv _ s' (by simp only [evalP, hji, bind, Except.bind]; rw [dite_eq_left hj]) hd hX
       · intro s' he hX

@@ -1505,11 +1505,12 @@ theorem sim_expr (ctx : Ctx) (hT : ctx.tab = G.tab) (hTab : 16 + 24 * (G.tab.nb 
         have hI1 : Inv G ctx F σ s1 := hI.ofE hG hE1
         refine ld32Code_spec (arr := σ.mem.arr64 (tierA a c)) hc.right (by decide) (j := j)
           (by rw [← hrax1]; rfl) (fun s' hm hk => ?_) (fun hjb s' hv hm hk => ?_) (fun s' hjb hm hk => ?_)
-        · exact arrW32_plain hG hT hTab0 ha' (hI1.ofE hG (EPost.ofKeep (fun r _ h2 _ => hk r h2) hm))
+        · exact arrW32_plain hG hT hTab0 ha' (hI1.ofE hG (EPost.ofKeep (t := t) (fun r _ h2 _ => hk r h2) hm))
         · refine ev_congr (hok _ s' ?_ (UInt64.toBitVec_inj.mp (by simpa [Reg64s.get64] using hv))
             (hE1.trans (EPost.ofKeep (fun r h1 h2 _ => hk r h2 h1) hm) (Nat.le_refl _))) ?_
           · simp only [evalP, hj, bind, Except.bind]
             rw [dite_eq_left hjb]
+            all_goals simp [UInt64.toNat_div]
           · simp only [List.length_append, List.length_cons, List.length_nil, ld32Code]; omega
         · refine herr s' ⟨.oob, ?_⟩ (hE1.trans (EPost.ofKeep (fun r _ h2 _ => hk r h2) hm) (Nat.le_refl _))
           simp only [evalP, hj, bind, Except.bind]

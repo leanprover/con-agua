@@ -26,8 +26,9 @@ which fix the **layout** in one place: one tiered word array per store (lane tie
 `2^32`) share word `0` of the record, field `0` in bits 0–31 and field `hi` in bits 32–63; the
 other fields `f` follow in words `1 ‥` (`f`, or `f - 1` above `hi`), whole. A field's word is
 `TRec.wd`, its address `TRec.ad`; a load of a packed field reads its half alone (`Expr.ld32h`, a
-4-byte load), whose value is the word's `TRec.ex` (`x & 0xFFFFFFFF`, `x >> 32`). Records are written once, whole, by the store library's pushes (the combined word
-`f₀ | f_hi << 32`); `TRec.st` stores a whole word (unpacked fields only).
+4-byte load), whose value is the word's `TRec.ex` (`x & 0xFFFFFFFF`, `x >> 32`). Records are
+written once, whole, by the store library's pushes (the combined word `f₀ | f_hi << 32`);
+`TRec.st` stores a whole word (unpacked fields only).
 -/
 
 namespace L

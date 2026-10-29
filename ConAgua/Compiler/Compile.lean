@@ -946,7 +946,7 @@ def tierDesc (r : Reg64) : Program :=
 
 /-- A constant tier expression's value (lane p32use): a 32-bit access with a constant tier reads
 that tier's descriptor words at fixed offsets, and may name an untiered array with tier `0`. -/
-def Expr.constTier? : Expr → Option Word
+def _root_.L.Expr.constTier? : Expr → Option Word
   | .const c => some c
   | _ => none
 
