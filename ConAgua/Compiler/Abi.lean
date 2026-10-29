@@ -93,9 +93,9 @@ def drvNeed (tab : Tab) : Nat := abiNeed tab + 16
 
 The stub's body writes the table's first words in order, word `i` at `[r8 + 8i]` (`storesCode`):
 a register, an immediate (through `rax`), or `r8 + off` (an address in the region, through
-`rax`). The table's layout (`Tab`) puts the stack top and limit, then the bases and the lengths of
-every position, then the constant data at consecutive words, so the stores are one run from
-`T`. -/
+`rax`). The table's layout (`Tab`) puts the stack top and limit, then the bases, the lengths and
+the 32-bit lengths of every position, then the constant data at consecutive words, so the stores
+are one run from `T`. -/
 
 inductive SVal where
   /-- the register `r` -/
@@ -138,12 +138,18 @@ def abiLen (tab : Tab) (p : Nat) : SVal :=
   if p < tab.nbuf then (if p = 0 then .reg .rsi else .reg .rcx)
   else if p < tab.nb then .imm abiSlot.toUInt64 else .imm (abiSz tab (tab.wAt p)).toUInt64
 
+/-- The length in 32-bit elements `ca_setup` gives position `p` (`Tab.dlen32`): twice `abiSz` at a
+word position, `0` at a byte position. -/
+def abiLen32 (tab : Tab) (p : Nat) : SVal :=
+  if p < tab.nb then .imm 0 else .imm (2 * abiSz tab (tab.wAt p)).toUInt64
+
 /-- The table's words, in order: the stack top and limit, the bases of the positions, their
-lengths, the constant data. -/
+lengths, their lengths in 32-bit elements, the constant data. -/
 def abiVals (tab : Tab) : List SVal :=
   [.addr (abiSlot + abiStack), .addr abiSlot] ++
   (List.range (tab.nb + tab.nw)).map (abiBase tab) ++
   (List.range (tab.nb + tab.nw)).map (abiLen tab) ++
+  (List.range (tab.nb + tab.nw)).map (abiLen32 tab) ++
   romVals tab.rom
 
 def abiDeclineL : Label := "ca_abi_decline"
@@ -243,19 +249,23 @@ def ownOff (tab : Tab) (s : TieredArray) (k : Nat) : Nat :=
 /-- `ca_check_b`'s descriptor words at position `p`, for the array `tab.wAt p` there (`rdi` the
 buffer, `rcx` the table): a byte position gets no memory. -/
 def parDescB (tab : Tab) (fz own : List TieredArray) (p : Nat) : Program :=
-  if p < tab.nb then [movRI .rax 0, movMR (mb .rcx (tab.dbase p)) .rax, movMR (mb .rcx (tab.dlen p)) .rax] else
+  if p < tab.nb then [movRI .rax 0, movMR (mb .rcx (tab.dbase p)) .rax, movMR (mb .rcx (tab.dlen p)) .rax,
+    movMR (mb .rcx (tab.dlen32 p)) .rax] else
   match fz.idxOf? (tab.wAt p) with
   | some i =>
     [movRM .rax (mb .rdi (8 * (8 + 2 * i))), i64 (.shl (.reg (rr .rax)) (.imm8 (.int64 (Int64.ofInt 3)))),
      i64 (.add (.reg (rr .rax)) (oR .rdi)), movMR (mb .rcx (tab.dbase p)) .rax,
-     movRM .rax (mb .rdi (8 * (9 + 2 * i))), movMR (mb .rcx (tab.dlen p)) .rax]
+     movRM .rax (mb .rdi (8 * (9 + 2 * i))), movMR (mb .rcx (tab.dlen p)) .rax,
+     i64 (.add (.reg (rr .rax)) (oR .rax)), movMR (mb .rcx (tab.dlen32 p)) .rax]
   | none =>
     match own.idxOf? (tab.wAt p) with
     | some k =>
       [movRI .rax (ownOff tab (tab.wAt p) k).toUInt64, i64 (.add (.reg (rr .rax)) (oR .rcx)),
        movMR (mb .rcx (tab.dbase p)) .rax, movRI .rax (abiSz tab (tab.wAt p)).toUInt64,
-       movMR (mb .rcx (tab.dlen p)) .rax]
-    | none => [movRI .rax 0, movMR (mb .rcx (tab.dbase p)) .rax, movMR (mb .rcx (tab.dlen p)) .rax]
+       movMR (mb .rcx (tab.dlen p)) .rax, movRI .rax (2 * abiSz tab (tab.wAt p)).toUInt64,
+       movMR (mb .rcx (tab.dlen32 p)) .rax]
+    | none => [movRI .rax 0, movMR (mb .rcx (tab.dbase p)) .rax, movMR (mb .rcx (tab.dlen p)) .rax,
+      movMR (mb .rcx (tab.dlen32 p)) .rax]
 
 /-- `ca_check_seq`'s base at position `p` (`seqVals`). -/
 def seqBase (tab : Tab) (out hdrf ctlf : ArrId) (p : Nat) : SVal :=
@@ -273,6 +283,14 @@ def seqLen (tab : Tab) (out hdrf ctlf : ArrId) (hw : Nat) (p : Nat) : SVal :=
   else if a = ↑hdrf then .imm hw.toUInt64
   else .imm (abiSz tab (tab.wAt p)).toUInt64
 
+/-- `ca_check_seq`'s length in 32-bit elements at position `p`: twice `seqLen`'s. -/
+def seqLen32 (tab : Tab) (out hdrf ctlf : ArrId) (hw : Nat) (p : Nat) : SVal :=
+  if p < tab.nb then .imm 0 else
+  let a := tab.wAt p
+  if a = ↑out ∨ a = ↑ctlf then .imm 0
+  else if a = ↑hdrf then .imm (2 * hw).toUInt64
+  else .imm (2 * abiSz tab (tab.wAt p)).toUInt64
+
 /-- `ca_check_seq`'s table words, in `abiVals`' order: `ca_setup`'s layout of the region, except
 that `out`, the seed `ctlf` and the byte arrays get no memory and the header `hdrf` is the first
 `hw` words of `out`'s slot. Static values only (`storesCode`, as `abiStub`). -/
@@ -280,6 +298,7 @@ def seqVals (tab : Tab) (out hdrf ctlf : ArrId) (hw : Nat) : List SVal :=
   [.addr (abiSlot + abiStack), .addr abiSlot] ++
   (List.range (tab.nb + tab.nw)).map (seqBase tab out hdrf ctlf) ++
   (List.range (tab.nb + tab.nw)).map (seqLen tab out hdrf ctlf hw) ++
+  (List.range (tab.nb + tab.nw)).map (seqLen32 tab out hdrf ctlf hw) ++
   romVals tab.rom
 
 /-- `[r + d] := v₀`, `[r + d + 8] := v₁`, … for immediate words. -/

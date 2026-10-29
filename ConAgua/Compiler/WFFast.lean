@@ -448,7 +448,7 @@ evaluation sees every body at once), and the table bound. -/
 
 theorem Prog.wf_of_parts {tab : Tab} {p : Prog} {t : NTree} (ht : progTree p = some t)
     (hf : ∀ x ∈ p, FunDecl.wfT t tab x.2 = true)
-    (htab : 16 + 16 * (tab.nb + tab.nw) + 8 * tab.romWords + 8 * tab.nxres + 8 * tab.ng < maxOff) :
+    (htab : 16 + 24 * (tab.nb + tab.nw) + 8 * tab.romWords + 8 * tab.nxres + 8 * tab.ng < maxOff) :
     Prog.wf tab p = true := by
   obtain ⟨hnd, hfind⟩ := progTree_spec ht
   have hfd : ∀ fd, FunDecl.wfT t tab fd = FunDecl.wf p tab fd := fun fd => by
@@ -458,7 +458,7 @@ theorem Prog.wf_of_parts {tab : Tab} {p : Prog} {t : NTree} (ht : progTree p = s
 
 theorem Prog.wf_of_parts' {tab : Tab} {p : Prog} {t : NTree} (ht : progTree p = some t)
     (hf : ∀ x ∈ p, FunOk t tab x)
-    (htab : 16 + 16 * (tab.nb + tab.nw) + 8 * tab.romWords + 8 * tab.nxres + 8 * tab.ng < maxOff) :
+    (htab : 16 + 24 * (tab.nb + tab.nw) + 8 * tab.romWords + 8 * tab.nxres + 8 * tab.ng < maxOff) :
     Prog.wf tab p = true :=
   Prog.wf_of_parts ht (fun x hx => FunDecl.wfT_of_wfTN (hf x hx).1 (hf x hx).2) htab
 

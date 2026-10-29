@@ -275,7 +275,7 @@ theorem buf_in64 (hok : abiTabOk tab = true) (_hg : BufGeom tab fz own B buf bas
 
 theorem buf_inTab (hok : abiTabOk tab = true) {x : Nat}
     (h : (bufLayout tab buf B base fz own).InTab x) : InSlot base 0 x ∧
-      x < base + (16 + 16 * (tab.nb + tab.nw) + 8 * tab.romWords + 8 * tab.nxres + 8 * tab.ng) := by
+      x < base + (16 + 24 * (tab.nb + tab.nw) + 8 * tab.romWords + 8 * tab.nxres + 8 * tab.ng) := by
   obtain ⟨-, htab, -⟩ := abiTabOk_spec hok
   unfold Layout.InTab Layout.tabEnd at h
   simp only [bufLayout_T, bufLayout_tab, bufLayout_nargs] at h
@@ -518,10 +518,10 @@ def romBits (rom : List UInt8) (i : Nat) : BitVec 64 :=
   | _ => 0
 
 /-- The number of table words the stub writes. -/
-def bufN (tab : Tab) : Nat := 2 + 2 * (tab.nb + tab.nw) + tab.romWords
+def bufN (tab : Tab) : Nat := 2 + 3 * (tab.nb + tab.nw) + tab.romWords
 
-/-- **Table word `q` as `ca_check_b` writes it**: the stack top and limit, the bases and the
-lengths of `bufLayout`'s positions, the constant data. -/
+/-- **Table word `q` as `ca_check_b` writes it**: the stack top and limit, the bases, the
+lengths and the lengths in 32-bit elements of `bufLayout`'s positions, the constant data. -/
 def bufVal (tab : Tab) (buf : Nat) (B : Array Word) (base : Nat) (fz own : List TieredArray) (q : Nat) :
     BitVec 64 :=
   if q = 0 then (UInt64.ofNat (base + abiSlot + abiStack)).toBitVec
@@ -529,7 +529,9 @@ def bufVal (tab : Tab) (buf : Nat) (B : Array Word) (base : Nat) (fz own : List 
   else if q < 2 + (tab.nb + tab.nw) then (UInt64.ofNat ((bufLayout tab buf B base fz own).b (q - 2))).toBitVec
   else if q < 2 + 2 * (tab.nb + tab.nw) then
     (UInt64.ofNat ((bufLayout tab buf B base fz own).s (q - 2 - (tab.nb + tab.nw)))).toBitVec
-  else romBits tab.rom (q - 2 - 2 * (tab.nb + tab.nw))
+  else if q < 2 + 3 * (tab.nb + tab.nw) then
+    (UInt64.ofNat (2 * (bufLayout tab buf B base fz own).s (q - 2 - 2 * (tab.nb + tab.nw)))).toBitVec
+  else romBits tab.rom (q - 2 - 3 * (tab.nb + tab.nw))
 
 theorem bufMem0_arr8 (fz own : List TieredArray) (B : Array Word) (r : Mem) (a : Nat) :
     (bufMem0 fz own B r).arr8 a = #[] := rfl
@@ -640,20 +642,33 @@ theorem buf_memRel (hok : abiTabOk tab = true) (hg : BufGeom tab fz own B buf ba
       show ¬ 2 + (tab.nb + tab.nw) + p < 2 + (tab.nb + tab.nw) by omega,
       show 2 + (tab.nb + tab.nw) + p < 2 + 2 * (tab.nb + tab.nw) by omega, ite_false, ite_true,
       show 2 + (tab.nb + tab.nw) + p - 2 - (tab.nb + tab.nw) = p by omega, UInt64.ofBitVec_toBitVec]
+  · intro p _ hp
+    simp only [bufLayout_tab] at hp
+    have := hW (2 + 2 * (tab.nb + tab.nw) + p) (by simp only [bufN]; omega)
+    simp only [bufLayout_T, bufLayout_tab, Tab.dlen32]
+    rw [show (16 + 16 * ((tab.nb : Int) + (tab.nw : Int)) + 8 * (p : Int)).toNat =
+      8 * (2 + 2 * (tab.nb + tab.nw) + p) by omega, this]
+    simp only [bufVal, show 2 + 2 * (tab.nb + tab.nw) + p ≠ 0 by omega,
+      show 2 + 2 * (tab.nb + tab.nw) + p ≠ 1 by omega,
+      show ¬ 2 + 2 * (tab.nb + tab.nw) + p < 2 + (tab.nb + tab.nw) by omega,
+      show ¬ 2 + 2 * (tab.nb + tab.nw) + p < 2 + 2 * (tab.nb + tab.nw) by omega,
+      show 2 + 2 * (tab.nb + tab.nw) + p < 2 + 3 * (tab.nb + tab.nw) by omega, ite_false, ite_true,
+      show 2 + 2 * (tab.nb + tab.nw) + p - 2 - 2 * (tab.nb + tab.nw) = p by omega, UInt64.ofBitVec_toBitVec]
   · intro i hi
     simp only [bufLayout_tab] at hi
     simp only [bufLayout_T, bufLayout_tab]
     obtain ⟨w, hw1, hw2⟩ := romVals_byte tab.rom i hi
     have hlt : i / 8 < tab.romWords := by
       have := tab.rom_length_le; simp only [Tab.romWords] at this ⊢; omega
-    have hq0 : 2 + 2 * (tab.nb + tab.nw) + i / 8 < bufN tab := by simp only [bufN]; omega
-    rw [show base + 16 + 16 * (tab.nb + tab.nw) + i = base + 8 * (2 + 2 * (tab.nb + tab.nw) + i / 8) + i % 8 by omega,
+    have hq0 : 2 + 3 * (tab.nb + tab.nw) + i / 8 < bufN tab := by simp only [bufN]; omega
+    rw [show base + 16 + 24 * (tab.nb + tab.nw) + i = base + 8 * (2 + 3 * (tab.nb + tab.nw) + i / 8) + i % 8 by omega,
       qwrs_byte qs d _ _ (hq _ hq0) (Nat.mod_lt _ (by omega)) hfit]
-    simp only [bufVal, show 2 + 2 * (tab.nb + tab.nw) + i / 8 ≠ 0 by omega,
-      show 2 + 2 * (tab.nb + tab.nw) + i / 8 ≠ 1 by omega,
-      show ¬ 2 + 2 * (tab.nb + tab.nw) + i / 8 < 2 + (tab.nb + tab.nw) by omega,
-      show ¬ 2 + 2 * (tab.nb + tab.nw) + i / 8 < 2 + 2 * (tab.nb + tab.nw) by omega, ite_false,
-      show 2 + 2 * (tab.nb + tab.nw) + i / 8 - 2 - 2 * (tab.nb + tab.nw) = i / 8 by omega, romBits, hw1,
+    simp only [bufVal, show 2 + 3 * (tab.nb + tab.nw) + i / 8 ≠ 0 by omega,
+      show 2 + 3 * (tab.nb + tab.nw) + i / 8 ≠ 1 by omega,
+      show ¬ 2 + 3 * (tab.nb + tab.nw) + i / 8 < 2 + (tab.nb + tab.nw) by omega,
+      show ¬ 2 + 3 * (tab.nb + tab.nw) + i / 8 < 2 + 2 * (tab.nb + tab.nw) by omega,
+      show ¬ 2 + 3 * (tab.nb + tab.nw) + i / 8 < 2 + 3 * (tab.nb + tab.nw) by omega, ite_false,
+      show 2 + 3 * (tab.nb + tab.nw) + i / 8 - 2 - 3 * (tab.nb + tab.nw) = i / 8 by omega, romBits, hw1,
       UInt64.ofBitVec_toBitVec]
     exact hw2
   · intro x hx

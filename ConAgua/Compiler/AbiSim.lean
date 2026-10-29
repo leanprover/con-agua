@@ -63,7 +63,7 @@ no slot, `Tab.nslot`). -/
 def abiTblOk (tab : Tab) : Bool :=
   match tab.tbl with
   | none => true
-  | some (a, c) => (decide (16 + 16 * (tab.nb + tab.nw) + 8 * tab.romWords + 8 * tab.nxres + 8 * tab.ng + 32 ≤ c) &&
+  | some (a, c) => (decide (16 + 24 * (tab.nb + tab.nw) + 8 * tab.romWords + 8 * tab.nxres + 8 * tab.ng + 32 ≤ c) &&
       decide (c + 8 * tab.min64 (TieredArray.t0 a) ≤ 2 ^ 31)) &&
       (tab.lmap.find (TieredArray.t0 a).code == some (tab.nb + tab.nw - 1) && decide (tab.nb < tab.nb + tab.nw))
 
@@ -72,11 +72,11 @@ def abiTblOk (tab : Tab) : Bool :=
 (`Tab.min64`) below `2^31` (a slot has `abiWords`; `ca_check_b` compares with a 32-bit
 immediate). -/
 def abiTabOk (tab : Tab) : Bool :=
-  (tab.nb == 2 && decide (16 + 16 * (tab.nb + tab.nw) + 8 * tab.romWords + 8 * tab.nxres + 8 * tab.ng + 32 ≤ 2 ^ 31) &&
+  (tab.nb == 2 && decide (16 + 24 * (tab.nb + tab.nw) + 8 * tab.romWords + 8 * tab.nxres + 8 * tab.ng + 32 ≤ 2 ^ 31) &&
     decide (abiNeed tab < 2 ^ 64)) && tab.mins.all (fun x => decide (x.2 < 2 ^ 31)) && abiTblOk tab
 
 theorem abiVals_length (tab : Tab) :
-    (abiVals tab).length = 2 + 2 * (tab.nb + tab.nw) + tab.romWords := by
+    (abiVals tab).length = 2 + 3 * (tab.nb + tab.nw) + tab.romWords := by
   simp only [abiVals, List.length_append, List.length_cons, List.length_nil, romVals_length,
     Tab.romWords, ← tab.romLen_eq, List.length_map, List.length_range]
   omega
@@ -165,7 +165,7 @@ theorem stores_byte (R : Reg64s) (base : Nat) :
       simpa using this
 
 theorem abiTabOk_spec {tab : Tab} (h : abiTabOk tab = true) :
-    tab.nb = 2 ∧ 16 + 16 * (tab.nb + tab.nw) + 8 * tab.romWords + 8 * tab.nxres + 8 * tab.ng + 32 ≤ 2 ^ 31 ∧
+    tab.nb = 2 ∧ 16 + 24 * (tab.nb + tab.nw) + 8 * tab.romWords + 8 * tab.nxres + 8 * tab.ng + 32 ≤ 2 ^ 31 ∧
       abiNeed tab < 2 ^ 64 := by
   have h' := ((Bool.and_eq_true _ _).mp ((Bool.and_eq_true _ _).mp h).1).1
   simpa [Bool.and_eq_true, decide_eq_true_eq, and_assoc] using h'
@@ -190,7 +190,7 @@ theorem Tab.tbl64_some {tab : Tab} {s : TieredArray} {c : Nat} (h : tab.tbl64 s 
 /-- The table-relative array (`Tab.tbl64 s = some c`) lies past the table and the save area, its
 words within the first `2^31` bytes. -/
 theorem abiTabOk_tbl {tab : Tab} (h : abiTabOk tab = true) {s : TieredArray} {c : Nat} (hc : tab.tbl64 s = some c) :
-    16 + 16 * (tab.nb + tab.nw) + 8 * tab.romWords + 8 * tab.nxres + 8 * tab.ng + 32 ≤ c ∧
+    16 + 24 * (tab.nb + tab.nw) + 8 * tab.romWords + 8 * tab.nxres + 8 * tab.ng + 32 ≤ c ∧
       c + 8 * tab.min64 s ≤ 2 ^ 31 := by
   have h2 := ((Bool.and_eq_true _ _).mp h).2
   obtain ⟨a, ht, rfl⟩ := Tab.tbl64_some hc
@@ -226,7 +226,7 @@ theorem abiVals_noRax (tab : Tab) : ∀ v ∈ abiVals tab, v.noRax := by
       rw [romVals.eq_3 bs h1 h2] at hv
       simp only [List.mem_cons, List.not_mem_nil, or_false] at hv
       subst hv; trivial
-  rcases hv with (((h | h) | h) | h) | h
+  rcases hv with ((((h | h) | h) | h) | h) | h
   · subst h; trivial
   · subst h; trivial
   · obtain ⟨p, _, rfl⟩ := h
@@ -237,6 +237,8 @@ theorem abiVals_noRax (tab : Tab) : ∀ v ∈ abiVals tab, v.noRax := by
     simp only [abiLen]; split
     · split <;> simp [SVal.noRax]
     · split <;> trivial
+  · obtain ⟨p, _, rfl⟩ := h
+    simp only [abiLen32]; split <;> trivial
   · exact hrom _ v h
 
 theorem flatMap_pair_getElem? {α : Type} (f g : Nat → α) :
@@ -260,22 +262,30 @@ theorem flatMap_pair_length {α : Type} (f g : Nat → α) (n : Nat) :
   simp [List.length_flatMap, List.map_const']; omega
 
 /-- The table words, by descriptor position: position `p`'s base at `2 + p`, its length at
-`2 + (nb + nw) + p`, then the constant data. -/
+`2 + (nb + nw) + p`, its length in 32-bit elements at `2 + 2 (nb + nw) + p`, then the constant
+data. -/
 theorem abiVals_getElem? (tab : Tab) :
     (abiVals tab)[0]? = some (.addr (abiSlot + abiStack)) ∧ (abiVals tab)[1]? = some (.addr abiSlot) ∧
     (∀ p < tab.nb + tab.nw, (abiVals tab)[2 + p]? = some (abiBase tab p) ∧
-      (abiVals tab)[2 + (tab.nb + tab.nw) + p]? = some (abiLen tab p)) ∧
-    (∀ i, (abiVals tab)[2 + 2 * (tab.nb + tab.nw) + i]? = (romVals tab.rom)[i]?) := by
-  refine ⟨rfl, rfl, fun p hp => ⟨?_, ?_⟩, fun i => ?_⟩
+      (abiVals tab)[2 + (tab.nb + tab.nw) + p]? = some (abiLen tab p) ∧
+      (abiVals tab)[2 + 2 * (tab.nb + tab.nw) + p]? = some (abiLen32 tab p)) ∧
+    (∀ i, (abiVals tab)[2 + 3 * (tab.nb + tab.nw) + i]? = (romVals tab.rom)[i]?) := by
+  refine ⟨rfl, rfl, fun p hp => ⟨?_, ?_, ?_⟩, fun i => ?_⟩
   · simp only [abiVals]
     rw [List.getElem?_append_left (by simp; omega), List.getElem?_append_left (by simp; omega),
-      List.getElem?_append_right (by simp)]
+      List.getElem?_append_left (by simp; omega), List.getElem?_append_right (by simp)]
     simp only [List.length_cons, List.length_nil, show 2 + p - (0 + 1 + 1) = p by omega,
+      List.getElem?_map, List.getElem?_range hp, Option.map_some]
+  · simp only [abiVals]
+    rw [List.getElem?_append_left (by simp; omega), List.getElem?_append_left (by simp; omega),
+      List.getElem?_append_right (by simp; omega)]
+    simp only [List.length_append, List.length_cons, List.length_nil, List.length_map, List.length_range,
+      show 2 + (tab.nb + tab.nw) + p - (0 + 1 + 1 + (tab.nb + tab.nw)) = p by omega,
       List.getElem?_map, List.getElem?_range hp, Option.map_some]
   · simp only [abiVals]
     rw [List.getElem?_append_left (by simp; omega), List.getElem?_append_right (by simp; omega)]
     simp only [List.length_append, List.length_cons, List.length_nil, List.length_map, List.length_range,
-      show 2 + (tab.nb + tab.nw) + p - (0 + 1 + 1 + (tab.nb + tab.nw)) = p by omega,
+      show 2 + 2 * (tab.nb + tab.nw) + p - (0 + 1 + 1 + (tab.nb + tab.nw) + (tab.nb + tab.nw)) = p by omega,
       List.getElem?_map, List.getElem?_range hp, Option.map_some]
   · simp only [abiVals]
     rw [List.getElem?_append_right (by simp; omega)]
@@ -364,7 +374,7 @@ theorem InSlot.ge {base j x : Nat} (h : InSlot base j x) {n : Nat} (hj : n ≤ j
 /-- Byte `x` is past the table of the region at `base` and its save area (the table without entry
 arguments), within the first `2^31` bytes of slot `0`: where the table-relative array lies. -/
 def InTbl (tab : Tab) (base x : Nat) : Prop :=
-  base + (16 + 16 * (tab.nb + tab.nw) + 8 * tab.romWords + 8 * tab.nxres + 8 * tab.ng + 32) ≤ x ∧
+  base + (16 + 24 * (tab.nb + tab.nw) + 8 * tab.romWords + 8 * tab.nxres + 8 * tab.ng + 32) ≤ x ∧
     x < base + 2 ^ 31
 
 theorem InTbl.slot0 {tab : Tab} {base x : Nat} (h : InTbl tab base x) : InSlot base 0 x := by
@@ -474,7 +484,7 @@ theorem abiLayout_in64 {tab : Tab} (hok : abiTabOk tab = true) {base inp n pins 
 the region the stub needs (`abiNeed`). -/
 theorem abiLayout_in64_bounds {tab : Tab} (hok : abiTabOk tab = true) {base inp n pins np p x : Nat}
     (hp2 : 2 ≤ p) (hp : p < tab.nb + tab.nw) (h : (abiLayout tab base inp n pins np).In64 p x) :
-    base + (16 + 16 * (tab.nb + tab.nw) + 8 * tab.romWords + 8 * tab.nxres + 8 * tab.ng + 32) ≤ x ∧
+    base + (16 + 24 * (tab.nb + tab.nw) + 8 * tab.romWords + 8 * tab.nxres + 8 * tab.ng + 32) ≤ x ∧
       x < base + abiNeed tab := by
   obtain ⟨hnb, htab, -⟩ := abiTabOk_spec hok
   rcases abiLayout_in64 hok hp2 hp h with ⟨-, hs, hx⟩ | ⟨h1, h2⟩
@@ -525,7 +535,7 @@ theorem abiLayout_ok {tab : Tab} (hok : abiTabOk tab = true) {base blen inp n pi
   -- every array byte: a buffer (outside the region), or past the table, inside the region
   have hreg : ∀ p < tab.nb + tab.nw, ∀ x, (abiLayout tab base inp n pins np).In p x →
       (p < 2 ∧ (x < base ∨ base + blen ≤ x)) ∨
-      (2 ≤ p ∧ base + (16 + 16 * (tab.nb + tab.nw) + 8 * tab.romWords + 8 * tab.nxres + 8 * tab.ng + 32) ≤ x ∧
+      (2 ≤ p ∧ base + (16 + 24 * (tab.nb + tab.nw) + 8 * tab.romWords + 8 * tab.nxres + 8 * tab.ng + 32) ≤ x ∧
         x < base + blen ∧ (InTbl tab base x ∨ base + abiSlot * 2 ≤ x)) := by
     intro p hp x hx
     rcases abiLayout_in hok hp hx with ⟨rfl, h1, h2⟩ | ⟨rfl, h1, h2⟩ | ⟨h2, ⟨-, hs, hsl⟩ | ht⟩

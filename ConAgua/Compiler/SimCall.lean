@@ -110,7 +110,7 @@ theorem rres_eq_get64 (R : Reg64s) {i : Nat} (hi : i < maxRes) :
   rcases hi' with rfl | rfl | rfl | rfl | rfl | rfl <;> rfl
 
 theorem resOff_toNat (t : Tab) (i : Nat) :
-    (t.resOff i).toNat = 16 + 16 * (t.nb + t.nw) + 8 * t.romWords + 8 * (i - maxRes) := by
+    (t.resOff i).toNat = 16 + 24 * (t.nb + t.nw) + 8 * t.romWords + 8 * (i - maxRes) := by
   simp only [Tab.resOff, Tab.resBase]; omega
 
 /-- The address of result slot `i`, as the code computes it from `r15`. -/
@@ -133,7 +133,7 @@ variable [Host]
 which agrees with `vs` from `i` on (the trampoline: the entry's results below `i`, zeroes). -/
 theorem sim_loadRes {G : Layout} (hG : G.Ok) (ctx : Ctx) (hT : ctx.tab = G.tab) (vs ws : List Word)
     (Q : MachineState → Prop)
-    (hres : 16 + 16 * (G.tab.nb + G.tab.nw) + 8 * G.tab.romWords + 8 * G.tab.nxres < 2 ^ 31) :
+    (hres : 16 + 24 * (G.tab.nb + G.tab.nw) + 8 * G.tab.romWords + 8 * G.tab.nxres < 2 ^ 31) :
     ∀ (n i k : Nat) (s : MachineData), Code (loadRes ctx vs.length i n) k → i + n ≤ G.tab.nres →
     (0 < vs.length → 8 * (ctx.nl + vs.length) < 2 ^ 31) → s.regs.r15.toNat = G.T → G.lo ≤ s.regs.rsp.toNat →
     (0 < vs.length → s.regs.rsp.toNat + 8 * (ctx.nl + vs.length) ≤ G.hi) →
@@ -252,7 +252,7 @@ theorem sim_loadRes {G : Layout} (hG : G.Ok) (ctx : Ctx) (hT : ctx.tab = G.tab) 
 
 /-- Storing results `i, i + 1, …` into the locals `xs`. -/
 theorem sim_storeRes {G : Layout} (hG : G.Ok) (ctx : Ctx) (hal : ctx.alloc = []) (htn : ctx.treg = none) (F : Nat) (Q : MachineState → Prop)
-    (hres : 16 + 16 * (G.tab.nb + G.tab.nw) + 8 * G.tab.romWords + 8 * G.tab.nxres < 2 ^ 31) :
+    (hres : 16 + 24 * (G.tab.nb + G.tab.nw) + 8 * G.tab.romWords + 8 * G.tab.nxres < 2 ^ 31) :
     ∀ (xs : List Var) (i k : Nat) (σ : St) (rs : List Word) (s : MachineData),
     Code (storeRes G.tab xs i) k → xs.all (· < ctx.nl) = true → i + xs.length ≤ G.tab.nres → 8 * ctx.nl < 2 ^ 31 →
     Inv G ctx F σ s → (∀ j < xs.length, i + j < maxRes → rres s.regs (i + j) = rs.getD j 0) →
@@ -405,7 +405,7 @@ theorem zeroRes_length (i n : Nat) : (zeroRes i n).length = n := by
   | succ n ih => simp [zeroRes, ih]
 
 section
-variable [Host] {G : Layout} (hG : G.Ok) (hTab : 16 + 16 * (G.tab.nb + G.tab.nw) + 8 * G.tab.romWords + 8 * G.tab.nxres + 8 * G.tab.ng < maxOff) (p : Prog) {sk : NTree}
+variable [Host] {G : Layout} (hG : G.Ok) (hTab : 16 + 24 * (G.tab.nb + G.tab.nw) + 8 * G.tab.romWords + 8 * G.tab.nxres + 8 * G.tab.ng < maxOff) (p : Prog) {sk : NTree}
 include hG hTab
 
 omit hG hTab in

@@ -266,7 +266,7 @@ include hG
 omit hG in
 /-- `r := len(s)`. -/
 theorem sim_srcLen {ctx : Ctx} (hT : ctx.tab = G.tab)
-    (hTab : 16 + 16 * (G.tab.nb + G.tab.nw) + 8 * G.tab.romWords + 8 * G.tab.nxres + 8 * G.tab.ng < maxOff) {F : Nat} {σ : St} {s : MachineData}
+    (hTab : 16 + 24 * (G.tab.nb + G.tab.nw) + 8 * G.tab.romWords + 8 * G.tab.nxres + 8 * G.tab.ng < maxOff) {F : Nat} {σ : St} {s : MachineData}
     (hI : Inv G ctx F σ s) {b : BSrc} (hw : BSrc.wf G.tab b = true) {r : Reg64} {k : Nat}
     (hc : Host.prog[k]? = some (srcLen ctx r b)) {Q : MachineState → Prop}
     (h : Ev Q { s with regs := s.regs.set64 r (UInt64.ofNat (σ.mem.src8 b).size).toBitVec } (at_ (k + 1))) :
@@ -287,7 +287,7 @@ theorem sim_srcLen {ctx : Ctx} (hT : ctx.tab = G.tab)
 
 /-- `rcx :=` the address of the source's byte `0`. -/
 theorem sim_srcBase {ctx : Ctx} (hT : ctx.tab = G.tab)
-    (hTab : 16 + 16 * (G.tab.nb + G.tab.nw) + 8 * G.tab.romWords + 8 * G.tab.nxres + 8 * G.tab.ng < maxOff) {F : Nat} {σ : St} {s : MachineData}
+    (hTab : 16 + 24 * (G.tab.nb + G.tab.nw) + 8 * G.tab.romWords + 8 * G.tab.nxres + 8 * G.tab.ng < maxOff) {F : Nat} {σ : St} {s : MachineData}
     (hI : Inv G ctx F σ s) {b : BSrc} (hw : BSrc.wf G.tab b = true) {k : Nat}
     (hc : Host.prog[k]? = some (srcBase ctx b)) {Q : MachineState → Prop}
     (h : ∀ B, SrcAt G (σ.mem.src8 b) s.dmem B →
@@ -327,15 +327,15 @@ theorem sim_srcBase {ctx : Ctx} (hT : ctx.tab = G.tab)
       simp only [Tab.romBase] at *; omega
     rw [hT] at hc
     refine ev_lea hc hoff ?_
-    have := h (G.T + 16 + 16 * (G.tab.nb + G.tab.nw) + romIdx d G.tab.rom)
+    have := h (G.T + 16 + 24 * (G.tab.nb + G.tab.nw) + romIdx d G.tab.rom)
       ⟨by simp only [Mem.src8, List.size_toArray]; omega, fun x hx => by
         simp only [Mem.src8, List.size_toArray] at hx ⊢
         have hb := hI.mem.rom (romIdx d G.tab.rom + x) (by omega)
         have hd : G.tab.rom[romIdx d G.tab.rom + x]'(by omega) = d[x] := by
           rw [(List.isPrefixOf_iff_prefix.mp hw.1).getElem hx, List.getElem_drop]
         rw [hd] at hb
-        rw [show G.T + 16 + 16 * (G.tab.nb + G.tab.nw) + romIdx d G.tab.rom + x =
-          G.T + 16 + 16 * (G.tab.nb + G.tab.nw) + (romIdx d G.tab.rom + x) by omega, hb]
+        rw [show G.T + 16 + 24 * (G.tab.nb + G.tab.nw) + romIdx d G.tab.rom + x =
+          G.T + 16 + 24 * (G.tab.nb + G.tab.nw) + (romIdx d G.tab.rom + x) by omega, hb]
         simp [hx], fun x hx b hb h64 => by
         simp only [Mem.src8, List.size_toArray] at hx
         exact hG.tab_arr _ ⟨by omega, by simp only [Layout.tabEnd]; omega⟩ (Layout.InArr.of64 hb (h64)),
@@ -343,7 +343,7 @@ theorem sim_srcBase {ctx : Ctx} (hT : ctx.tab = G.tab)
         simp only [Mem.src8, List.size_toArray] at hx
         exact hG.tab_stack _ ⟨by omega, by simp only [Layout.tabEnd]; omega⟩ hst⟩
     have e : (s.regs.get64 .r15).toNat + (G.tab.romBase + (romIdx d G.tab.rom : Int)).toNat =
-        G.T + 16 + 16 * (G.tab.nb + G.tab.nw) + romIdx d G.tab.rom := by
+        G.T + 16 + 24 * (G.tab.nb + G.tab.nw) + romIdx d G.tab.rom := by
       simp only [Reg64s.get64_r15, UInt64.toNat_toBitVec, hI.r15, Tab.romBase]; omega
     rw [e]; exact this
 
@@ -368,7 +368,7 @@ variable [Host] {G : Layout}
 omit [Host] in
 /-- A simple operand reads the value of its expression. -/
 theorem simpleOp_reads {ctx : Ctx} (hT : ctx.tab = G.tab)
-    (hTab : 16 + 16 * (G.tab.nb + G.tab.nw) + 8 * G.tab.romWords + 8 * G.tab.nxres + 8 * G.tab.ng < maxOff)
+    (hTab : 16 + 24 * (G.tab.nb + G.tab.nw) + 8 * G.tab.romWords + 8 * G.tab.nxres + 8 * G.tab.ng < maxOff)
     {F : Nat} (hF : 8 * F + 8 < maxOff) {σ : St} {s : MachineData} (hI : Inv G ctx F σ s)
     {b : Expr} (hwf : Expr.wf ctx.nl G.tab b = true) {o : Operand .W64} (h : simpleOp ctx b = some o) :
     ∃ v, evalP σ b = .ok v ∧ OpReads s o v := by
@@ -416,7 +416,7 @@ theorem simpleOp_reads {ctx : Ctx} (hT : ctx.tab = G.tab)
 
 /-- `r := b` in one instruction, for a simple `b`. -/
 theorem sim_loadInto {ctx : Ctx} (hT : ctx.tab = G.tab)
-    (hTab : 16 + 16 * (G.tab.nb + G.tab.nw) + 8 * G.tab.romWords + 8 * G.tab.nxres + 8 * G.tab.ng < maxOff)
+    (hTab : 16 + 24 * (G.tab.nb + G.tab.nw) + 8 * G.tab.romWords + 8 * G.tab.nxres + 8 * G.tab.ng < maxOff)
     {F : Nat} (hF : 8 * F + 8 < maxOff) {σ : St} {s : MachineData} (hI : Inv G ctx F σ s)
     {r : Reg64} {b : Expr} (hwf : Expr.wf ctx.nl G.tab b = true) {code : Program} {k : Nat}
     (h : loadInto ctx r b = some code) (hc : Code code k) :
@@ -476,7 +476,7 @@ theorem sim_binCode {op : BinOp} {k : Nat} (hc : Code (binCode op) k) {nl F t : 
 
 /-- `rax := rax op b` for a simple `b` (`binSimple`). -/
 theorem sim_binSimple {ctx : Ctx} (hT : ctx.tab = G.tab)
-    (hTab : 16 + 16 * (G.tab.nb + G.tab.nw) + 8 * G.tab.romWords + 8 * G.tab.nxres + 8 * G.tab.ng < maxOff)
+    (hTab : 16 + 24 * (G.tab.nb + G.tab.nw) + 8 * G.tab.romWords + 8 * G.tab.nxres + 8 * G.tab.ng < maxOff)
     {F : Nat} (hF : 8 * F + 8 < maxOff) {σ : St} {s : MachineData} (hI : Inv G ctx F σ s)
     {op : BinOp} {b : Expr} (hwf : Expr.wf ctx.nl G.tab b = true) {code : Program} {k : Nat}
     (h : binSimple ctx op b = some code) (hc : Code code k) :
@@ -525,7 +525,7 @@ theorem sim_binSimple {ctx : Ctx} (hT : ctx.tab = G.tab)
 
 /-- `cmp rax, b` for a simple `b` (`cmpSimple`). -/
 theorem sim_cmpSimple {ctx : Ctx} (hT : ctx.tab = G.tab)
-    (hTab : 16 + 16 * (G.tab.nb + G.tab.nw) + 8 * G.tab.romWords + 8 * G.tab.nxres + 8 * G.tab.ng < maxOff)
+    (hTab : 16 + 24 * (G.tab.nb + G.tab.nw) + 8 * G.tab.romWords + 8 * G.tab.nxres + 8 * G.tab.ng < maxOff)
     {F : Nat} (hF : 8 * F + 8 < maxOff) {σ : St} {s : MachineData} (hI : Inv G ctx F σ s)
     {b : Expr} (hwf : Expr.wf ctx.nl G.tab b = true) {code : Program} {k : Nat}
     (h : cmpSimple ctx b = some code) (hc : Code code k) :
@@ -608,7 +608,7 @@ theorem tempsE_bin_left (_op : BinOp) (a b : Expr) :
 
 /-- `a op b` compared in place (`cmpIn`): the flags make `cc` the comparison. -/
 theorem sim_cmpIn {ctx : Ctx} (hT : ctx.tab = G.tab)
-    (hTab : 16 + 16 * (G.tab.nb + G.tab.nw) + 8 * G.tab.romWords + 8 * G.tab.nxres + 8 * G.tab.ng < maxOff)
+    (hTab : 16 + 24 * (G.tab.nb + G.tab.nw) + 8 * G.tab.romWords + 8 * G.tab.nxres + 8 * G.tab.ng < maxOff)
     {F : Nat} (hF : 8 * F + 8 < maxOff) {σ : St} {s : MachineData} (hI : Inv G ctx F σ s)
     {op : Cmp} {a b : Expr} (hwa : Expr.wf ctx.nl G.tab a = true) (hwb : Expr.wf ctx.nl G.tab b = true)
     {cc : CondCode} {d : Directive} (h : cmpIn ctx op a b = some (cc, d)) {k : Nat}
@@ -659,6 +659,13 @@ theorem tier_off (tab : Tab) {a : ArrId} (ha : tab.dom64 (tier1 a) = true) (u : 
   simp only [Tab.len64, Tab.dlen, Tab.base64, Tab.dbase]
   rw [tab.pos64_tierA ha]; omega
 
+omit [Host] in
+theorem tier_off32 (tab : Tab) {a : ArrId} (ha : tab.dom64 (tier1 a) = true) (u : Word) :
+    (tab.len32 (tierA a u)).toNat = (tab.len32 a).toNat + 8 * (u &&& 1).toNat := by
+  have := tier_bit u
+  simp only [Tab.len32, Tab.dlen32]
+  rw [tab.pos64_tierA ha]; omega
+
 theorem sim_tierDesc {r : Reg64} {k : Nat} {s : MachineData}
     {Q : MachineState → Prop} (hc : Code (tierDesc r) k) {u : Word} (hu : s.regs.get64 r = u.toBitVec)
     (h : ∀ st, Ev Q { s with regs := s.regs.set64 r (u &&& 1).toBitVec, status := st } (at_ (k + 1))) :
@@ -692,7 +699,7 @@ theorem tier_T {a : ArrId} (ha : G.tab.dom64 (tier1 a) = true) :
 omit [Host] in
 /-- A tiered word array's descriptor, the tier `u & 1` in register `R`. -/
 theorem arrW_tier {ctx : Ctx} {F : Nat} (hT : ctx.tab = G.tab)
-    (hTab : 16 + 16 * (G.tab.nb + G.tab.nw) + 8 * G.tab.romWords + 8 * G.tab.nxres + 8 * G.tab.ng < maxOff)
+    (hTab : 16 + 24 * (G.tab.nb + G.tab.nw) + 8 * G.tab.romWords + 8 * G.tab.nxres + 8 * G.tab.ng < maxOff)
     {a : ArrId} (ha : G.tab.dom64 (tier1 a) = true) {σ : St} {s : MachineData} (hI : Inv G ctx F σ s)
     {R : Reg64} {u : Word} (hR : s.regs.get64 R = (u &&& 1).toBitVec) :
     ArrW s (tdesc R (ctx.tab.len64 a)) (tdesc R (ctx.tab.base64 a)) (σ.mem.arr64 (tierA a u)) := by
@@ -717,11 +724,41 @@ theorem arrW_tier {ctx : Ctx} {F : Nat} (hT : ctx.tab = G.tab)
       G.T + (G.tab.base64 (tierA a u)).toNat by rw [hT]; omega]
     exact hI.mem.base64A hta
 
+omit [Host] in
+/-- A tiered word array's descriptor for a 32-bit access (its length in 32-bit elements), the tier
+`u & 1` in register `R`. -/
+theorem arrW32_tier {ctx : Ctx} {F : Nat} (hT : ctx.tab = G.tab)
+    (hTab : 16 + 24 * (G.tab.nb + G.tab.nw) + 8 * G.tab.romWords + 8 * G.tab.nxres + 8 * G.tab.ng < maxOff)
+    {a : ArrId} (ha : G.tab.dom64 (tier1 a) = true) {σ : St} {s : MachineData} (hI : Inv G ctx F σ s)
+    {R : Reg64} {u : Word} (hR : s.regs.get64 R = (u &&& 1).toBitVec) :
+    ArrW32 s (tdesc R (ctx.tab.len32 a)) (tdesc R (ctx.tab.base64 a)) (σ.mem.arr64 (tierA a u)) := by
+  simp only [maxOff] at hTab
+  have hta := G.tab.dom64_tierA ha u
+  have htap := G.tab.pos64_lt hta
+  have hw := G.tab.pos64_lt (G.tab.dom64_t0 ha)
+  have hb := tier_bit u
+  have hoff := tier_off G.tab ha u
+  have hoff32 := tier_off32 G.tab ha u
+  have hD : ∀ d : Int, s.regs.r15.toNat + 8 * (s.regs.get64 R).toNat + d.toNat =
+      G.T + 8 * (u &&& 1).toNat + d.toNat := by
+    intro d; rw [hR, UInt64.toNat_toBitVec, hI.r15]
+  have hsz := hI.mem.size64 _ hta
+  have hend := hG.end64 _ htap
+  refine ⟨.inr ⟨_, _, rfl, ⟨by simp [Tab.len32, Tab.dlen32]; lomega, by simp [hT, Tab.len32, Tab.dlen32]; lomega⟩, ?_⟩,
+    G.b (G.tab.pos64 (tierA a u)), .inr ⟨_, _, rfl, ⟨by simp [Tab.base64, Tab.dbase]; lomega, by simp [hT, Tab.base64, Tab.dbase]; lomega⟩, ?_⟩,
+    by rw [hsz]; exact hend, fun j hj => hI.mem.get64 _ hta j hj⟩
+  · rw [hD, show G.T + 8 * (u &&& 1).toNat + (ctx.tab.len32 a).toNat =
+      G.T + (G.tab.len32 (tierA a u)).toNat by rw [hT]; omega, hsz]
+    exact hI.mem.len32A hta
+  · rw [hD, show G.T + 8 * (u &&& 1).toNat + (ctx.tab.base64 a).toNat =
+      G.T + (G.tab.base64 (tierA a u)).toNat by rw [hT]; omega]
+    exact hI.mem.base64A hta
+
 
 /-- From `R` = the tier `u & 1` and `rax` = the index `j`: the bounds check and the load of
 `a⟨u⟩.u64[j]`. -/
 theorem sim_ld64t_core {ctx : Ctx} (hT : ctx.tab = G.tab)
-    (hTab : 16 + 16 * (G.tab.nb + G.tab.nw) + 8 * G.tab.romWords + 8 * G.tab.nxres + 8 * G.tab.ng < maxOff)
+    (hTab : 16 + 24 * (G.tab.nb + G.tab.nw) + 8 * G.tab.romWords + 8 * G.tab.nxres + 8 * G.tab.ng < maxOff)
     {F t : Nat} {a : ArrId} (ha : G.tab.dom64 (tier1 a) = true) {σ : St} {s : MachineData}
     (hI : Inv G ctx F σ s) {R : Reg64} (_hRc : R ≠ .rcx) {u j : Word} {k : Nat} {Q : MachineState → Prop}
     (hc : Code [i64 (.cmp (.reg (rr .rax)) (oM (tdesc R (ctx.tab.len64 a)))), jccL .nc errorL,
@@ -779,7 +816,7 @@ theorem sim_ld64t_core {ctx : Ctx} (hT : ctx.tab = G.tab)
 /-- From `rdx` = the tier word `u` and `rax` = the index `j`: the tier, the bounds check and the
 load of `a⟨u⟩.u64[j]`. -/
 theorem sim_ld64t_tail {ctx : Ctx} (hT : ctx.tab = G.tab)
-    (hTab : 16 + 16 * (G.tab.nb + G.tab.nw) + 8 * G.tab.romWords + 8 * G.tab.nxres + 8 * G.tab.ng < maxOff)
+    (hTab : 16 + 24 * (G.tab.nb + G.tab.nw) + 8 * G.tab.romWords + 8 * G.tab.nxres + 8 * G.tab.ng < maxOff)
     {F t : Nat} {a : ArrId} (ha : G.tab.dom64 (tier1 a) = true) {σ : St} {s : MachineData}
     (hI : Inv G ctx F σ s) {u j : Word} {k : Nat} {Q : MachineState → Prop}
     (hc : Code (tierDesc .rdx ++ [i64 (.cmp (.reg (rr .rax)) (oM (tdesc .rdx (ctx.tab.len64 a)))), jccL .nc errorL,
@@ -815,14 +852,14 @@ theorem EPost.ofKeep {nl F t : Nat} {s s' : MachineData}
 /-- From `R` = the tier `u & 1` and `rax` = the index `j`: the bounds check and the load of
 `a⟨u⟩.u32[j]` (lane p32, `ld32Code_spec`). -/
 theorem sim_ld32t_core {ctx : Ctx} (hT : ctx.tab = G.tab)
-    (hTab : 16 + 16 * (G.tab.nb + G.tab.nw) + 8 * G.tab.romWords + 8 * G.tab.nxres + 8 * G.tab.ng < maxOff)
+    (hTab : 16 + 24 * (G.tab.nb + G.tab.nw) + 8 * G.tab.romWords + 8 * G.tab.nxres + 8 * G.tab.ng < maxOff)
     {F t : Nat} {a : ArrId} (ha : G.tab.dom64 (tier1 a) = true) {σ : St} {s : MachineData}
     (hI : Inv G ctx F σ s) {R : Reg64} (hRc : R ≠ .rcx) {u j : Word} {k : Nat} {Q : MachineState → Prop}
-    (hc : Code (ld32Code .rax .rcx .rax (tdesc R (ctx.tab.len64 a)) (tdesc R (ctx.tab.base64 a))) k)
+    (hc : Code (ld32Code .rax .rcx .rax (tdesc R (ctx.tab.len32 a)) (tdesc R (ctx.tab.base64 a))) k)
     (hR : s.regs.get64 R = (u &&& 1).toBitVec) (hrax : s.regs.rax = j)
     (hok : ∀ (h : (j / 2).toNat < (σ.mem.arr64 (tierA a u)).size) s',
       s'.regs.rax = half32 (σ.mem.arr64 (tierA a u))[(j / 2).toNat] j → EPost ctx.nl F t s s' →
-        Ev Q s' (at_ (k + 6)))
+        Ev Q s' (at_ (k + 4)))
     (herr : ∀ s', ¬ (j / 2).toNat < (σ.mem.arr64 (tierA a u)).size → EPost ctx.nl F t s s' →
       Ev Q s' (label errorL)) :
     Ev Q s (at_ k) := by
@@ -830,21 +867,21 @@ theorem sim_ld32t_core {ctx : Ctx} (hT : ctx.tab = G.tab)
     (fun hj s' hv hm hk => ?_) (fun s' hj hm hk => ?_)
   · have hE : EPost ctx.nl F t s s' :=
       EPost.ofKeep (fun r _ h2 _ => hk r h2) hm
-    exact arrW_tier hG hT hTab ha (hI.ofE hG hE) (by rw [hk R hRc, hR])
+    exact arrW32_tier hG hT hTab ha (hI.ofE hG hE) (by rw [hk R hRc, hR])
   · refine hok hj s' (UInt64.toBitVec_inj.mp (by simpa [Reg64s.get64] using hv)) (EPost.ofKeep (fun r h1 h2 _ => hk r h2 h1) hm)
   · exact herr s' hj (EPost.ofKeep (fun r _ h2 _ => hk r h2) hm)
 
 /-- From `rdx` = the tier word `u` and `rax` = the index `j`: the tier, the bounds check and the
 load of `a⟨u⟩.u32[j]` (lane p32). -/
 theorem sim_ld32t_tail {ctx : Ctx} (hT : ctx.tab = G.tab)
-    (hTab : 16 + 16 * (G.tab.nb + G.tab.nw) + 8 * G.tab.romWords + 8 * G.tab.nxres + 8 * G.tab.ng < maxOff)
+    (hTab : 16 + 24 * (G.tab.nb + G.tab.nw) + 8 * G.tab.romWords + 8 * G.tab.nxres + 8 * G.tab.ng < maxOff)
     {F t : Nat} {a : ArrId} (ha : G.tab.dom64 (tier1 a) = true) {σ : St} {s : MachineData}
     (hI : Inv G ctx F σ s) {u j : Word} {k : Nat} {Q : MachineState → Prop}
-    (hc : Code (tierDesc .rdx ++ ld32Code .rax .rcx .rax (tdesc .rdx (ctx.tab.len64 a)) (tdesc .rdx (ctx.tab.base64 a))) k)
+    (hc : Code (tierDesc .rdx ++ ld32Code .rax .rcx .rax (tdesc .rdx (ctx.tab.len32 a)) (tdesc .rdx (ctx.tab.base64 a))) k)
     (hrdx : s.regs.get64 .rdx = u.toBitVec) (hrax : s.regs.rax = j)
     (hok : ∀ (h : (j / 2).toNat < (σ.mem.arr64 (tierA a u)).size) s',
       s'.regs.rax = half32 (σ.mem.arr64 (tierA a u))[(j / 2).toNat] j → EPost ctx.nl F t s s' →
-        Ev Q s' (at_ (k + 7)))
+        Ev Q s' (at_ (k + 5)))
     (herr : ∀ s', ¬ (j / 2).toNat < (σ.mem.arr64 (tierA a u)).size → EPost ctx.nl F t s s' →
       Ev Q s' (label errorL)) :
     Ev Q s (at_ k) := by
@@ -856,7 +893,7 @@ theorem sim_ld32t_tail {ctx : Ctx} (hT : ctx.tab = G.tab)
     (fun hj s' hv hE => ev_congr (hok hj s' hv (hE1.trans hE (Nat.le_refl _))) (by simp))
     (fun s' hj hE => herr s' hj (hE1.trans hE (Nat.le_refl _)))
 
-theorem sim_expr (ctx : Ctx) (hT : ctx.tab = G.tab) (hTab : 16 + 16 * (G.tab.nb + G.tab.nw) + 8 * G.tab.romWords + 8 * G.tab.nxres + 8 * G.tab.ng < maxOff)
+theorem sim_expr (ctx : Ctx) (hT : ctx.tab = G.tab) (hTab : 16 + 24 * (G.tab.nb + G.tab.nw) + 8 * G.tab.romWords + 8 * G.tab.nxres + 8 * G.tab.ng < maxOff)
     (F : Nat) (hF : 8 * F + 8 < maxOff) :
     ∀ (e : Expr) (t k : Nat), Code (compileE ctx e t) k → Expr.wf ctx.nl G.tab e = true →
     TmpFit ctx.nl F t (tempsE e) →
@@ -1122,7 +1159,7 @@ theorem sim_expr (ctx : Ctx) (hT : ctx.tab = G.tab) (hTab : 16 + 16 * (G.tab.nb 
         refine ev_movzx hcR.tail.tail.tail.head (b := d[j.toNat]) ?_ ?_
         · simp only [Reg64s.set64_rcx, Reg64s.get64_r15, UInt64.toNat_toBitVec, hI1.r15]
           rw [show A (G.T + (G.tab.romBase + (romIdx d G.tab.rom : Int)).toNat) + s1.regs.rax.toBitVec =
-              A (G.T + 16 + 16 * (G.tab.nb + G.tab.nw) + (romIdx d G.tab.rom + j.toNat)) from ?_]
+              A (G.T + 16 + 24 * (G.tab.nb + G.tab.nw) + (romIdx d G.tab.rom + j.toNat)) from ?_]
           · exact hb
           apply BitVec.eq_of_toNat_eq
           simp only [Tab.romBase, A, BitVec.toNat_add, BitVec.toNat_ofNat, UInt64.toNat_toBitVec, hrax1]

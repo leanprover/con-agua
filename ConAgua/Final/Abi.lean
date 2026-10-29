@@ -175,7 +175,7 @@ theorem abi_memRel (tab : Tab) (hok : abiTabOk tab = true) (hio : abiIO tab = tr
       rw [abiLayout_b64 _ _ _ _ _ _ h2]; exact this
   · intro p hp
     simp only [abiLayout_tab] at hp
-    have := hW (2 + (tab.nb + tab.nw) + p) _ (gw p hp).2
+    have := hW (2 + (tab.nb + tab.nw) + p) _ (gw p hp).2.1
     simp only [abiLayout_T, abiLayout_tab, Tab.dlen]
     rw [show (16 + 8 * ((tab.nb : Int) + (tab.nw : Int)) + 8 * (p : Int)).toNat =
       8 * (2 + (tab.nb + tab.nw) + p) by omega]
@@ -184,16 +184,24 @@ theorem abi_memRel (tab : Tab) (hok : abiTabOk tab = true) (hio : abiIO tab = tr
     · simpa [abiLen, hnbuf, SVal.val, ← hc.hnp] using this
     · simp only [abiLen, hnbuf, show ¬ p < 2 by omega, hnb, ite_false, SVal.val] at this
       rw [abiLayout_s64 _ _ _ _ _ _ h2]; simpa [hnb] using this
+  · intro p hp1 hp
+    simp only [abiLayout_tab] at hp hp1
+    have := hW (2 + 2 * (tab.nb + tab.nw) + p) _ (gw p hp).2.2
+    simp only [abiLayout_T, abiLayout_tab, Tab.dlen32]
+    rw [show (16 + 16 * ((tab.nb : Int) + (tab.nw : Int)) + 8 * (p : Int)).toNat =
+      8 * (2 + 2 * (tab.nb + tab.nw) + p) by omega]
+    simp only [abiLen32, show ¬ p < tab.nb by omega, ite_false, SVal.val] at this
+    rw [abiLayout_s64 _ _ _ _ _ _ (by omega)]; simpa [hnb] using this
   · intro i hi
     simp only [abiLayout_T, abiLayout_tab]
     obtain ⟨w, hw1, hw2⟩ := romVals_byte tab.rom i hi
-    have hv : (abiVals tab)[2 + 2 * (tab.nb + tab.nw) + i / 8]? = some (.imm w) := by rw [grom]; exact hw1
+    have hv : (abiVals tab)[2 + 3 * (tab.nb + tab.nw) + i / 8]? = some (.imm w) := by rw [grom]; exact hw1
     obtain ⟨hlt, hv'⟩ := List.getElem?_eq_some_iff.mp hv
-    have := stores_byte dm.regs base (abiVals tab) dm.dmem 0 (2 + 2 * (tab.nb + tab.nw) + i / 8) (i % 8) hlt
+    have := stores_byte dm.regs base (abiVals tab) dm.dmem 0 (2 + 3 * (tab.nb + tab.nw) + i / 8) (i % 8) hlt
       (Nat.mod_lt _ (by omega)) (by simpa using hend)
     rw [hv'] at this
     simp only [SVal.val, UInt64.ofBitVec_toBitVec, hw2] at this
-    rw [show base + 16 + 16 * (tab.nb + tab.nw) + i = base + 0 + 8 * (2 + 2 * (tab.nb + tab.nw) + i / 8) + i % 8 by omega]
+    rw [show base + 16 + 24 * (tab.nb + tab.nw) + i = base + 0 + 8 * (2 + 3 * (tab.nb + tab.nw) + i / 8) + i % 8 by omega]
     exact this
   · intro x ⟨h1, h2'⟩
     simp only [abiLayout_lo, abiLayout_hi, abiSlot, abiStack] at h1 h2'

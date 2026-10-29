@@ -114,7 +114,8 @@ def maxRes : Nat := 6
 * `[T]` the initial stack pointer (top of the stack region), `[T + 8]` its lower limit;
 * `[T + 16 + 8p]` the base of the array at descriptor position `p < nb + nw` (`Tab.dbase`), then
   `[T + 16 + 8 (nb + nw) + 8p]` its length (`Tab.dlen`), in bytes for a byte position (`p < nb`),
-  in words for a word position;
+  in words for a word position, then `[T + 16 + 16 (nb + nw) + 8p]` a word position's length in
+  32-bit elements (`Tab.dlen32`, twice its length in words: the bound of a 32-bit access);
 * then the constant data `rom` (the byte strings of the program's `ldc` reads), padded to whole
   words;
 * then the result area: results `maxRes, maxRes + 1, …, nres - 1` of a call, one word each (empty
@@ -352,12 +353,16 @@ attribute [irreducible] Tab.pos64 Tab.dom64 Tab.pos8 Tab.dom8
 /-- The descriptor words of position `p`: its base and its length. -/
 def Tab.dbase (_ : Tab) (p : Nat) : Int := 16 + 8 * p
 def Tab.dlen (t : Tab) (p : Nat) : Int := 16 + 8 * (t.nb + t.nw) + 8 * p
+/-- The third descriptor word of position `p`: a word position's length in 32-bit elements
+(twice its length in words), the bound of a 32-bit access (`ld32Code`, `st32Code`). -/
+def Tab.dlen32 (t : Tab) (p : Nat) : Int := 16 + 16 * (t.nb + t.nw) + 8 * p
 
 /-- The descriptor words of byte array `a` and of word array `s`, through the layout map. -/
 def Tab.base8 (t : Tab) (a : ArrId) : Int := t.dbase (t.pos8 a)
 def Tab.len8 (t : Tab) (a : ArrId) : Int := t.dlen (t.pos8 a)
 def Tab.base64 (t : Tab) (s : TieredArray) : Int := t.dbase (t.pos64 s)
 def Tab.len64 (t : Tab) (s : TieredArray) : Int := t.dlen (t.pos64 s)
+def Tab.len32 (t : Tab) (s : TieredArray) : Int := t.dlen32 (t.pos64 s)
 
 /-- The positions of the byte arrays `bs` and the word arrays `ws` (each with its tiered flag), in
 order: the byte arrays, then each word array, tier 1 of a tiered one right after its tier 0. -/
@@ -416,22 +421,22 @@ def Tab.romWords (t : Tab) : Nat := (t.romLen + 7) / 8
 
 theorem Tab.rom_length_le (t : Tab) : t.rom.length ≤ 8 * t.romWords := by
   simp only [Tab.romWords, t.romLen_eq]; omega
-def Tab.romBase (t : Tab) : Int := 16 + 16 * (t.nb + t.nw)
+def Tab.romBase (t : Tab) : Int := 16 + 24 * (t.nb + t.nw)
 /-- The results past the registers. -/
 def Tab.nxres (t : Tab) : Nat := t.nres - maxRes
 /-- The result area: result `i ≥ maxRes` is the word at `resOff i`. -/
-def Tab.resBase (t : Tab) : Int := 16 + 16 * (t.nb + t.nw) + 8 * t.romWords
+def Tab.resBase (t : Tab) : Int := 16 + 24 * (t.nb + t.nw) + 8 * t.romWords
 def Tab.resOff (t : Tab) (i : Nat) : Int := t.resBase + 8 * ((i - maxRes : Nat) : Int)
 /-- Where the table-relative array starts (`Tab.tbl`): past the table's descriptors, constant
 data, result area and globals (an entry without arguments) and the trampoline's 32-byte save area,
 rounded up to 64 bytes. -/
 def Tab.tblBase (t : Tab) : Nat :=
-  64 * ((16 + 16 * (t.nb + t.nw) + 8 * t.romWords + 8 * t.nxres + 8 * t.ng + 32 + 63) / 64)
+  64 * ((16 + 24 * (t.nb + t.nw) + 8 * t.romWords + 8 * t.nxres + 8 * t.ng + 32 + 63) / 64)
 
 /-- The global variables: global `g` is the word at `globOff g`. -/
-def Tab.globBase (t : Tab) : Int := 16 + 16 * (t.nb + t.nw) + 8 * t.romWords + 8 * t.nxres
+def Tab.globBase (t : Tab) : Int := 16 + 24 * (t.nb + t.nw) + 8 * t.romWords + 8 * t.nxres
 def Tab.globOff (t : Tab) (g : GVar) : Int := t.globBase + 8 * (g.id : Int)
-def Tab.args (t : Tab) : Int := 16 + 16 * (t.nb + t.nw) + 8 * t.romWords + 8 * t.nxres + 8 * t.ng
+def Tab.args (t : Tab) : Int := 16 + 24 * (t.nb + t.nw) + 8 * t.romWords + 8 * t.nxres + 8 * t.ng
 
 /-- The first position of `d` in `rom` (`0` if there is none; `WF` checks that it is one). -/
 def romIdx (d : List UInt8) : List UInt8 → Nat
@@ -743,7 +748,7 @@ def tempsSB : Stmt → Nat
   | .st64t _ _ i e => if Expr.isSimple e then tempsE i else max (tempsE i) (1 + tempsE e)
   | .copy64 .. | .copy8w .. => 1
   | .scan8 .. => 0
-  | .st32t _ _ i e => max 1 (if Expr.isSimple e then tempsE i else max (tempsE i) (1 + tempsE e))
+  | .st32t _ _ i e => if Expr.isSimple e then tempsE i else max (tempsE i) (1 + tempsE e)
 
 /-- A bound on the number of words in the frame of `fd` (`Prog.wf` checks that it is small). -/
 def frameWords (fd : FunDecl) : Nat := fd.nlocals + tempsSB fd.body
@@ -1183,12 +1188,11 @@ def genLdT (ctx : Ctx) (ln : AddrExpr) (c mn : Nat) (i : Expr) (gi : GenF) (d : 
           ci ++ [i64 (.cmp (.reg (rr d)) (oM ln)), jccL .nc errorL, movRM d (tdesc d c)]
     else none
 
-/-- `d := A.u32[x]` (lane p32), where `[ln]` is `A`'s length in words and `[bs]` its base: the
-bounds check `x >> 1 < len` in the scratch register `t`, the base into `t`, the 4-byte load at
-`t + 4 x` (zero-extended). -/
+/-- `d := A.u32[x]` (lane p32), where `[ln]` is `A`'s length in 32-bit elements (`Tab.len32`)
+and `[bs]` its base: the bounds check `x < len32`, the base into the scratch register `t`, the
+4-byte load at `t + 4 x` (zero-extended). -/
 def ld32Code (x t d : Reg64) (ln bs : AddrExpr) : Program :=
-  [movRR t x, i64 (.shr (.reg (rr t)) (.imm8 (.int64 (Int64.ofInt 1)))), i64 (.cmp (.reg (rr t)) (oM ln)),
-   jccL .nc errorL, movRM t bs, ld32X d t x]
+  [i64 (.cmp (.reg (rr x)) (oM ln)), jccL .nc errorL, movRM t bs, ld32X d t x]
 
 /-- `d := A.u32[i]` through the register stack: the index a local's register or computed into `d`,
 then `ld32Code` with the first scratch register. -/
@@ -1267,11 +1271,11 @@ def gen (ctx : Ctx) : Expr → Reg64 → List Reg64 → Option Program
   | .ld8x8 _ _, _, _ => none
   | .ld32t a t i, d, fr =>
     if ctx.isT t then
-      genLd32 ctx (tdesc .rsi (ctx.tab.len64 a)) (tdesc .rsi (ctx.tab.base64 a)) i (gen ctx i) d fr
+      genLd32 ctx (tdesc .rsi (ctx.tab.len32 a)) (tdesc .rsi (ctx.tab.base64 a)) i (gen ctx i) d fr
     else
       match fr with
       | s :: fr' => (gen ctx t s fr').bind fun ct =>
-          (genLd32 ctx (tdesc s (ctx.tab.len64 a)) (tdesc s (ctx.tab.base64 a)) i (gen ctx i) d fr').map
+          (genLd32 ctx (tdesc s (ctx.tab.len32 a)) (tdesc s (ctx.tab.base64 a)) i (gen ctx i) d fr').map
             fun c => ct ++ tierDesc s ++ c
       | [] => none
 
@@ -1347,13 +1351,13 @@ def compileE (ctx : Ctx) : Expr → Nat → Program
        srcBase ctx s, movRM .rax (mbi .rcx .rax .W8)]
   | .ld32t a t i, k =>
     if ctx.isT t then
-      compileE ctx i k ++ ld32Code .rax .rcx .rax (tdesc .rsi (ctx.tab.len64 a)) (tdesc .rsi (ctx.tab.base64 a))
+      compileE ctx i k ++ ld32Code .rax .rcx .rax (tdesc .rsi (ctx.tab.len32 a)) (tdesc .rsi (ctx.tab.base64 a))
     else
     (match loadInto ctx .rdx t with
      | some ld => compileE ctx i k ++ ld
      | none => compileE ctx t k ++ [movMR (ctx.tmp k) .rax] ++ compileE ctx i (k + 1) ++
          [movRM .rdx (ctx.tmp k)]) ++ tierDesc .rdx ++
-      ld32Code .rax .rcx .rax (tdesc .rdx (ctx.tab.len64 a)) (tdesc .rdx (ctx.tab.base64 a))
+      ld32Code .rax .rcx .rax (tdesc .rdx (ctx.tab.len32 a)) (tdesc .rdx (ctx.tab.base64 a))
 
 /-- The negation of a condition code. -/
 def CondCode.neg : CondCode → CondCode
@@ -1656,12 +1660,11 @@ def tailCode (ctx : Ctx) : Stmt → Stmt → Option Program
     | none => none
   | _, _ => none
 
-/-- `A.u32[rax] := edx` (lane p32), where `[ln]` is `A`'s length in words and `[bs]` its base:
-the value to temporary `0`, the bounds check `rax >> 1 < len` in `rdx`, the base into `rcx`, the
-value back into `rdx`, the 4-byte store at `rcx + 4 rax`. -/
-def st32Code (ctx : Ctx) (ln bs : AddrExpr) : Program :=
-  [movRR .rdx .rax, i64 (.shr (.reg (rr .rdx)) (.imm8 (.int64 (Int64.ofInt 1)))), i64 (.cmp (.reg (rr .rdx)) (oM ln)),
-   jccL .nc errorL, movRM .rcx bs, movRM .rdx (ctx.tmp 0), st32X .rcx .rax .rdx]
+/-- `A.u32[rax] := edx` (lane p32), where `[ln]` is `A`'s length in 32-bit elements
+(`Tab.len32`) and `[bs]` its base: the bounds check `rax < len32`, the base into `rcx`, the 4-byte
+store at `rcx + 4 rax`. -/
+def st32Code (ln bs : AddrExpr) : Program :=
+  [i64 (.cmp (.reg (rr .rax)) (oM ln)), jccL .nc errorL, movRM .rcx bs, st32X .rcx .rax .rdx]
 
 def compileS (ctx : Ctx) (path : Path) : Stmt → Program
   | .skip => []
@@ -1765,11 +1768,11 @@ def compileS (ctx : Ctx) (path : Path) : Stmt → Program
     (match loadInto ctx .rdx e with
      | some code => compileE ctx i 0 ++ code
      | none => compileE ctx i 0 ++ [movMR (ctx.tmp 0) .rax] ++ compileE ctx e 1 ++
-      [movRR .rdx .rax, movRM .rax (ctx.tmp 0)]) ++ [movMR (ctx.tmp 0) .rdx] ++
-      (if ctx.isT t then st32Code ctx (tdesc .rsi (ctx.tab.len64 a)) (tdesc .rsi (ctx.tab.base64 a))
+      [movRR .rdx .rax, movRM .rax (ctx.tmp 0)]) ++
+      (if ctx.isT t then st32Code (tdesc .rsi (ctx.tab.len32 a)) (tdesc .rsi (ctx.tab.base64 a))
       else
       (loadInto ctx .rcx t).getD [jmpL errorL] ++ tierDesc .rcx ++
-        st32Code ctx (tdesc .rcx (ctx.tab.len64 a)) (tdesc .rcx (ctx.tab.base64 a)))
+        st32Code (tdesc .rcx (ctx.tab.len32 a)) (tdesc .rcx (ctx.tab.base64 a)))
 
 /-- The temporaries of a statement's code (`compileS`). -/
 def tempsS (al : List (Var × Reg64)) (nr : Nat) : Stmt → Nat
@@ -1785,7 +1788,7 @@ def tempsS (al : List (Var × Reg64)) (nr : Nat) : Stmt → Nat
   | .st64t _ _ i e => if Expr.isSimple e then tempsE i else max (tempsE i) (1 + tempsE e)
   | .copy64 .. | .copy8w .. => 1
   | .scan8 .. => 0
-  | .st32t _ _ i e => max 1 (if Expr.isSimple e then tempsE i else max (tempsE i) (1 + tempsE e))
+  | .st32t _ _ i e => if Expr.isSimple e then tempsE i else max (tempsE i) (1 + tempsE e)
 
 /-- Copy `n` parameters from `[rsi + 8i]` to the frame slots `i, i+1, …`. -/
 def copyParams : Nat → Nat → Program
