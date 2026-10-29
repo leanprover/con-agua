@@ -298,6 +298,18 @@ theorem StackKept.restoreG {m m₁ : Mem} (hg : StackGrew m m₁)
     StackKept m (m₁.set64 CTL 136 (rdW (m.arr64 CTL) 136)) :=
   StackKept.restore hg.below hg.size hg.bstk hg.pool h136
 
+/-- `CTL[136]` (the stack top) is a word of the control array: the walk memos' counters sit above
+it (`CoreMemos`). -/
+theorem CoreS.ctl136 {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {M : ModeMaps}
+    {eb : Word} {m : Mem} {a : AState} (hS : CoreS dn m a vis fe M eb) :
+    136 < (m.arr64 CTL).size := by
+  obtain ⟨mp, h⟩ := hS.memos.2.2.2.2.1
+  unfold MemoRG MemoRV at h
+  have := h.1
+  simp only at this
+  have e : (156 : Word).toNat = 156 := rfl
+  omega
+
 /-- `StackKept.restoreG` without the bound: out of bounds the top reads `0`, so the old top was
 `0` too. -/
 theorem StackKept.restoreG' {m m₁ : Mem} (hg : StackGrew m m₁) :

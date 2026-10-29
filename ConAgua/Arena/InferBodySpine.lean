@@ -77,22 +77,6 @@ theorem len64_not_lt {m : Mem} {co : Word} (hspn : (m.arr64 SPN).size < 2 ^ 63)
   rw [UInt64.le_iff_toNat_le, Mem.len64, UInt64.toNat_ofNat', Nat.mod_eq_of_lt (by omega)] at h'
   exact h'
 
-section lev
-variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {M : ModeMaps} {eb : Word}
-
-/-- `CTL[136]` (the stack top) is a word of the control array: the walk memos' counters sit above
-it (`CoreMemos`). -/
-theorem CoreS.ctl136 {m : Mem} {a : AState} (hS : CoreS dn m a vis fe M eb) :
-    136 < (m.arr64 CTL).size := by
-  obtain ⟨mp, h⟩ := hS.memos.2.2.2.2.1
-  unfold MemoRG MemoRV at h
-  have := h.1
-  simp only at this
-  have e : (156 : Word).toNat = 156 := rfl
-  omega
-
-end lev
-
 /-! ## Pushing onto the accumulator -/
 
 theorem SpineR.empty (m : Mem) (co : Word) (h : co.toNat ≤ (m.arr64 SPN).size) : SpineR m co 0 #[] :=

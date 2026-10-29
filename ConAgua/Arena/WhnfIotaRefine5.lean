@@ -1,4 +1,5 @@
 import ConAgua.Arena.WhnfIotaRefine4
+import ConAgua.L.ModelGen
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import Std.Tactic.BVDecide.Normalize.BitVec
@@ -21,32 +22,6 @@ set_option experimental.vcgen true
 namespace L.Arena
 
 /-! ## `iota_certs_full_aux`, `iota_certs_full_forall`, `iota_certs_full` -/
-
-/-- Model of `iota_certs_full_check` (callees at fuel `n`). -/
-def icfCheckW (p : Prog) (n : Nat) (m : Mem) (mode vis d ty aco acn arg : Word) :
-    Option (List Word × Mem) :=
-  match callW p n "inst_list" [ty, aco, acn, 0] m with
-  | none => none
-  | some (ty2, m1) =>
-  match callW p n "infer" [mode, vis, d, arg] m1 with
-  | none => none
-  | some (ta, m2) =>
-  match callW p n "defeq" [mode, vis, d, ta.headD 0, ty2.headD 0] m2 with
-  | none => none
-  | some (ok, m3) => some ([ok.headD 0], m3)
-
-theorem icfCheck_spec (p : Prog) (hp : p.lookup "iota_certs_full_check" = some iotaCertsFullCheckL)
-    (n : Nat) (s₀ : St) (mode vis d ty aco acn arg : Word) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p (n + 1)) "iota_certs_full_check" [mode, vis, d, ty, aco, acn, arg]
-    ⦃fun r s' => LocEq s' s₀ ∧
-      icfCheckW p n s₀.mem mode vis d ty aco acn arg = some ([r.headD 0], s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, iotaCertsFullCheckL]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      callW_spec p n "inst_list", callW_spec p n "infer", callW_spec p n "defeq"] <;>
-    finish [icfCheckW]
 
 /-- Model of `iota_certs_full_parts`. -/
 def icfPartsW (m : Mem) (h : Word) : Option (List Word) :=
@@ -82,42 +57,6 @@ theorem spnGet_spec (p : Prog) (hp : p.lookup "spn_get" = some spnGetL) (n : Nat
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64] <;>
     finish [spnGetW, rdW]
 
-/-- Model of `iota_certs_full_forall` (callees at fuel `n`). -/
-def icfForallW (p : Prog) (n : Nat) (m : Mem) (mode vis d h aco acn ao an i : Word) :
-    Option (List Word × Mem) :=
-  match callW p n "iota_certs_full_parts" [h] m with
-  | none => none
-  | some (pr, m0) =>
-  match callW p n "spn_get" [ao + i] m0 with
-  | none => none
-  | some (ra, m00) =>
-  match callW p n "iota_certs_full_check"
-      [mode, vis, d, pr.headD 0, aco, acn, ra.headD 0] m00 with
-  | none => none
-  | some (ok, m3) =>
-  if ok.headD 0 = 0 then some ([0], m3)
-  else if (aco + acn).toNat < (m3.arr64 SPN).size ∧ (136 : Word).toNat < (m3.arr64 CTL).size then
-    match callW p n "iota_certs_full_aux"
-        [mode, vis, d, pr.tail.headD 0, aco, acn + 1, ao, an, i + 1]
-        ((m3.set64 SPN (aco + acn) (ra.headD 0)).set64 CTL 136 (aco + acn + 1)) with
-    | none => none
-    | some (r, m4) => some ([r.headD 0], m4)
-  else none
-
-theorem icfForall_spec (p : Prog) (hp : p.lookup "iota_certs_full_forall" = some iotaCertsFullForallL)
-    (n : Nat) (s₀ : St) (mode vis d h aco acn ao an i : Word) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p (n + 1)) "iota_certs_full_forall" [mode, vis, d, h, aco, acn, ao, an, i]
-    ⦃fun r s' => LocEq s' s₀ ∧
-      icfForallW p n s₀.mem mode vis d h aco acn ao an i = some ([r.headD 0], s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, iotaCertsFullForallL]
-  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-    callW_spec p n "iota_certs_full_parts", callW_spec p n "spn_get",
-    callW_spec p n "iota_certs_full_check", callW_spec p n "iota_certs_full_aux"] <;>
-  simp_all [icfForallW, Cmp.eval, BinOp.eval, Mem.len64, LocEq, St.setLocs_cons,
-    St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Locals.init_cons_zero, Locals.init_cons_succ,
-    Sig.retVal, Sig.retOr, CTL, size_set64]
 
 /-- The count index of a tag's table (`CTL[c + tier]`), `none` past the last tag. -/
 def evoCnt (g : Word) : Option TRec :=
@@ -144,191 +83,20 @@ theorem exprViewOk_spec (p : Prog) (hp : p.lookup "expr_view_ok" = some exprView
       tcntM, evalE_tierE, evalE_idxE] <;>
     finish [evoW, evoCnt, tierW, idxW]
 
-/-- Model of `iota_certs_full_flush` (callees at fuel `n`). -/
-def icfFlushW (p : Prog) (n : Nat) (m : Mem) (mode vis d h aco acn ao an i : Word) :
-    Option (List Word × Mem) :=
-  match callW p n "expr_view_ok" [h] m with
-  | none => none
-  | some (_, m0) =>
-  if acn = 0 then some ([0], m0)
-  else match callW p n "inst_list" [h, aco, acn, 0] m0 with
-    | none => none
-    | some (ty2, m1) =>
-      match callW p n "iota_certs_full_aux" [mode, vis, d, ty2.headD 0, aco + acn, 0, ao, an, i] m1 with
-      | none => none
-      | some (r, m') => some ([r.headD 0], m')
 
-theorem icfFlush_spec (p : Prog) (hp : p.lookup "iota_certs_full_flush" = some iotaCertsFullFlushL)
-    (n : Nat) (s₀ : St) (mode vis d h aco acn ao an i : Word) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p (n + 1)) "iota_certs_full_flush" [mode, vis, d, h, aco, acn, ao, an, i]
-    ⦃fun r s' => LocEq s' s₀ ∧
-      icfFlushW p n s₀.mem mode vis d h aco acn ao an i = some ([r.headD 0], s'.mem); ⊤⦄ := by
+/-- Model of `ctl_get`. -/
+def ctlGetW (m : Mem) (k : Word) : Option Word :=
+  if k.toNat < (m.arr64 CTL).size then some (rdW (m.arr64 CTL) k) else none
+
+theorem ctlGet_spec (p : Prog) (hp : p.lookup "ctl_get" = some ctlGetL) (n : Nat) (s₀ : St)
+    (k : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "ctl_get" [k]
+    ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧ ctlGetW s₀.mem k = some (r.headD 0); ⊤⦄ := by
   rw [invoke_eq _ hp]
-  simp only [callFn, iotaCertsFullFlushL]
-  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-    callW_spec p n "inst_list", callW_spec p n "iota_certs_full_aux",
-    callW_spec p n "expr_view_ok"] <;>
-  simp_all [icfFlushW, Cmp.eval, BinOp.eval, LocEq, St.setLocs_cons,
-    St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Locals.init_cons_zero, Locals.init_cons_succ,
-    Sig.retVal, Sig.retOr]
-
-/-- Model of `iota_certs_full_aux` (callees at fuel `n`). -/
-def icfAuxW (p : Prog) (n : Nat) (m : Mem) (mode vis d h aco acn ao an i : Word) :
-    Option (List Word × Mem) :=
-  if i < an then
-    if h >>> 28 = 6 then
-      match callW p n "iota_certs_full_forall" [mode, vis, d, h, aco, acn, ao, an, i] m with
-      | none => none
-      | some (r, m') => some ([r.headD 0], m')
-    else if h >>> 28 = 0 then
-      match callW p n "iota_certs_full_flush" [mode, vis, d, h, aco, acn, ao, an, i] m with
-      | none => none
-      | some (r, m') => some ([r.headD 0], m')
-    else match callW p n "expr_view_ok" [h] m with
-      | none => none
-      | some (_, m') => some ([0], m')
-  else some ([1], m)
-
-theorem icfAux_spec (p : Prog) (hp : p.lookup "iota_certs_full_aux" = some iotaCertsFullAuxL)
-    (n : Nat) (s₀ : St) (mode vis d h aco acn ao an i : Word) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p (n + 1)) "iota_certs_full_aux" [mode, vis, d, h, aco, acn, ao, an, i]
-    ⦃fun r s' => LocEq s' s₀ ∧
-      icfAuxW p n s₀.mem mode vis d h aco acn ao an i = some ([r.headD 0], s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, iotaCertsFullAuxL]
+  simp only [callFn, ctlGetL]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      callW_spec p n "iota_certs_full_forall", callW_spec p n "iota_certs_full_flush",
-      callW_spec p n "expr_view_ok"] <;>
-    finish [icfAuxW, Locals.init_cons_zero]
-
-
-section icfRun
-variable (r : CoreFnsA) (fe : IFEnv) (d : Nat) (h : EIdx) (acc args : Array EIdx) (i : Nat)
-
-theorem icf_run_done (hi : ¬ i < args.size) (a : AState) :
-    (iotaCertsFullAux r fe d h acc args i).run a = .ok (true, a) := by
-  rw [iotaCertsFullAux]; simp [hi]; rfl
-
-theorem icf_run_stop (hi : i < args.size) (a a1 a2 a3 : AState) (ty body ty2 ta : EIdx)
-    (hv : a.store.view h = some (.forallE ty body))
-    (h1 : (instantiateListFast coreWalkFuel ty acc 0).run a = .ok (ty2, a1))
-    (h2 : (r.infer d args[i]).run a1 = .ok (ta, a2))
-    (h3 : (r.defeq d ta ty2).run a2 = .ok (false, a3)) :
-    (iotaCertsFullAux r fe d h acc args i).run a = .ok (false, a3) := by
-  have hv' : (view h).run a = .ok (.forallE ty body, a) := by
-    simp [view, hv, StateT.run_bind, StateT.run_get]; rfl
-  rw [iotaCertsFullAux]
-  simp only [hi, ↓reduceDIte, StateT.run_bind, hv', except_ok_bind, h1, h2, h3]
-  simp; rfl
-
-theorem icf_run_cont (hi : i < args.size) (a a1 a2 a3 a4 : AState) (ty body ty2 ta : EIdx) (b : Bool)
-    (hv : a.store.view h = some (.forallE ty body))
-    (h1 : (instantiateListFast coreWalkFuel ty acc 0).run a = .ok (ty2, a1))
-    (h2 : (r.infer d args[i]).run a1 = .ok (ta, a2))
-    (h3 : (r.defeq d ta ty2).run a2 = .ok (true, a3))
-    (h4 : (iotaCertsFullAux r fe d body (acc.push args[i]) args (i + 1)).run a3 = .ok (b, a4)) :
-    (iotaCertsFullAux r fe d h acc args i).run a = .ok (b, a4) := by
-  have hv' : (view h).run a = .ok (.forallE ty body, a) := by
-    simp [view, hv, StateT.run_bind, StateT.run_get]; rfl
-  rw [iotaCertsFullAux]
-  simp only [hi, ↓reduceDIte, StateT.run_bind, hv', except_ok_bind, h1, h2, h3]
-  simp [h4]
-
-theorem icf_run_other (hi : i < args.size) (a : AState)
-    (hn1 : ∀ ty body, a.store.view h ≠ some (.forallE ty body))
-    (hn2 : ∀ x, a.store.view h ≠ some (.bvar x)) (v : ENodeView) (hv : a.store.view h = some v) :
-    (iotaCertsFullAux r fe d h acc args i).run a = .ok (false, a) := by
-  have hv' : (view h).run a = .ok (v, a) := by
-    simp [view, hv, StateT.run_bind, StateT.run_get]; rfl
-  rw [iotaCertsFullAux]
-  simp only [hi, ↓reduceDIte, StateT.run_bind, hv', except_ok_bind]
-  cases v with
-  | forallE ty body => exact absurd hv (hn1 _ _)
-  | bvar x => exact absurd hv (hn2 _)
-  | _ => simp; rfl
-
-theorem icf_run_nil (hi : i < args.size) (a : AState) (x : Nat) (hv : a.store.view h = some (.bvar x))
-    (h0 : acc.size = 0) :
-    (iotaCertsFullAux r fe d h acc args i).run a = .ok (false, a) := by
-  have hv' : (view h).run a = .ok (.bvar x, a) := by
-    simp [view, hv, StateT.run_bind, StateT.run_get]; rfl
-  rw [iotaCertsFullAux]
-  simp only [hi, ↓reduceDIte, StateT.run_bind, hv', except_ok_bind, h0, ↓reduceIte]
-  rfl
-
-theorem icf_run_flush (hi : i < args.size) (a a1 a2 : AState) (x : Nat) (ty2 : EIdx) (b : Bool)
-    (hv : a.store.view h = some (.bvar x)) (h0 : acc.size ≠ 0)
-    (h1 : (instantiateListFast coreWalkFuel h acc 0).run a = .ok (ty2, a1))
-    (h2 : (iotaCertsFullAux r fe d ty2 #[] args i).run a1 = .ok (b, a2)) :
-    (iotaCertsFullAux r fe d h acc args i).run a = .ok (b, a2) := by
-  have hv' : (view h).run a = .ok (.bvar x, a) := by
-    simp [view, hv, StateT.run_bind, StateT.run_get]; rfl
-  rw [iotaCertsFullAux]
-  simp only [hi, ↓reduceDIte, StateT.run_bind, hv', except_ok_bind, h0, h1, h2, ↓reduceIte]
-
-end icfRun
-
-
-/-! ### The refinement of the three functions -/
-
-/-- The three functions' common statement (`cond` is the case the helper handles). -/
-def ICFSpec (p : Prog) (f : FnName) (cond : Word → Word → Word → Prop) (N : Nat) : Prop :=
-  ∀ (F : Nat), N ≤ F → N ≤ 2 ^ 62 → KnotUpTo p N →
-  ∀ (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
-    (MM : ModeMaps) (eb mode d h aco acn ao an i : Word) (acc args : Array EIdx),
-    CoreS dn s₀.mem a₀ vis fe MM eb → mode < 4 → eb = (mode >>> 1) &&& 1 → HW h → cond h an i →
-    SpineR s₀.mem aco acn acc → SpineR s₀.mem ao an args → aco + acn = spTop s₀.mem →
-    ao.toNat + an.toNat ≤ aco.toNat →
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p (N + 1)) f [mode, vis, d, h, aco, acn, ao, an, i]
-    ⦃fun r s' => LocEq s' s₀ ∧
-      AM.ok (iotaCertsFullAux (coreKnot (decMode mode) fe id F) fe d.toNat (decE h) acc args
-        i.toNat) a₀ ∧
-      CoreAfterG dn s₀.mem s'.mem (AM.st (iotaCertsFullAux (coreKnot (decMode mode) fe id F) fe
-        d.toNat (decE h) acc args i.toNat) a₀) vis fe MM eb ∧
-      AM.res (iotaCertsFullAux (coreKnot (decMode mode) fe id F) fe d.toNat (decE h) acc args
-        i.toNat) a₀ = decBool r ∧ ResH r; ⊤⦄
-
-/-- **The domain check refines its three twin steps.** -/
-theorem icfCheck_ok (p : Prog) (hil : InstListOK p) (K F : Nat) (hk : KnotUpTo p K) (hnF : K ≤ F)
-    (hn62 : K ≤ 2 ^ 62) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
-    (eb mode d ty aco acn arg : Word) (hm4 : mode < 4) (hebm : eb = (mode >>> 1) &&& 1)
-    (hty : HW ty) (harg : HW arg) (acc : Array EIdx) (m : Mem) (a : AState) (M : ModeMaps)
-    (hS : CoreS dn m a vis fe M eb) (hacc : SpineR m aco acn acc)
-    (htop : aco.toNat + acn.toNat ≤ (spTop m).toNat) (rr : List Word) (m3 : Mem)
-    (h : icfCheckW p K m mode vis d ty aco acn arg = some (rr, m3)) :
-    ∃ (ty2 ta : EIdx) (a1 a2 a3 : AState) (b : Bool),
-      (instantiateListFast coreWalkFuel (decE ty) acc 0).run a = .ok (ty2, a1) ∧
-      ((coreKnot (decMode mode) fe id F).infer d.toNat (decE arg)).run a1 = .ok (ta, a2) ∧
-      ((coreKnot (decMode mode) fe id F).defeq d.toNat ta ty2).run a2 = .ok (b, a3) ∧
-      CoreAfter dn m m3 a3 vis fe M eb ∧ (rr.headD 0 != 0) = b ∧ HW (rr.headD 0) := by
-  simp only [icfCheckW] at h
-  rcases c1 : callW p K "inst_list" [ty, aco, acn, 0] m with _ | ⟨r1, m1⟩ <;>
-    simp only [c1, reduceCtorEq] at h
-  obtain ⟨ok1, ⟨M1, hS1, hK1, hSt1⟩, res1, hr1⟩ := CoreSpec.of_callW
-    (hil K ⟨m, Locals.init []⟩ a dn vis fe M eb ty aco acn 0 acc hS hty hacc htop) c1
-  rcases c2 : callW p K "infer" [mode, vis, d, arg] m1 with _ | ⟨r2, m2⟩ <;>
-    simp only [c2, reduceCtorEq] at h
-  obtain ⟨ok2, ⟨M2, hS2, hK2, hSt2⟩, res2, hr2⟩ := CoreSpec.of_callW
-    ((hk K (Nat.le_refl _)).infer F ⟨m1, Locals.init []⟩ _ dn vis fe M1 eb mode d arg hnF hn62
-      ⟨hS1, hm4, hebm⟩ harg) c2
-  rcases c3 : callW p K "defeq" [mode, vis, d, r2.headD 0, r1.headD 0] m2 with _ | ⟨r3, m3'⟩ <;>
-    simp only [c3, reduceCtorEq] at h
-  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-  obtain ⟨ok3, ⟨M3, hS3, hK3, hSt3⟩, res3, hr3⟩ := CoreSpec.of_callW
-    ((hk K (Nat.le_refl _)).defeq F ⟨m2, Locals.init []⟩ _ dn vis fe M2 eb mode d _ _ hnF hn62
-      ⟨hS2, hm4, hebm⟩ hr2 hr1) c3
-  have hrun1 := AM.run_of_ok _ _ ok1
-  have hrun2 := AM.run_of_ok _ _ ok2
-  have hrun3 := AM.run_of_ok _ _ ok3
-  rw [res1] at hrun1
-  rw [res2] at hrun2
-  rw [res3] at hrun3
-  exact ⟨_, _, _, _, _, _, hrun1, hrun2, hrun3, ⟨M3, hS3, hK1.trans (hK2.trans hK3),
-    hSt1.trans (hSt2.trans hSt3)⟩, rfl, hr3⟩
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64] <;>
+    finish [ctlGetW, rdW]
 
 
 /-- Reading the stack: the entry at `ao + i` is `args[i]`'s handle word. -/
@@ -346,131 +114,6 @@ theorem spine_entry (m : Mem) (ao an i : Word) (args : Array EIdx) (hargs : Spin
   · have := hargs.get i.toNat hsz
     rw [e] at this
     exact this
-
-theorem icfForall_ok (p : Prog) (hp : IotaProg4 p) (hil : InstListOK p) (N : Nat)
-    (hA : ∀ N', N = N' + 1 → ICFSpec p "iota_certs_full_aux" (fun _ _ _ => True) N') :
-    ICFSpec p "iota_certs_full_forall" (fun h an i => h >>> 28 = 6 ∧ i < an) N := by
-  intro F hnF hn62 hk s₀ a₀ dn vis fe MM eb mode d h aco acn ao an i acc args hS hm4 hebm hh
-    ⟨h6, hi⟩ hacc hargs htop hao
-  refine triple_post (icfForall_spec p hp.iotaCertsFullForall N s₀ mode vis d h aco acn ao an i)
-    fun r s' ⟨hloc, hW⟩ => ⟨hloc, ?_⟩
-  simp only [icfForallW] at hW
-  cases N with
-  | zero => rw [callW_zero] at hW; cases hW
-  | succ N' =>
-  have hA' := hA N' rfl
-  have hk' : KnotUpTo p N' := hk.mono (by omega)
-  rcases c1 : callW p (N' + 1) "iota_certs_full_parts" [h] s₀.mem with _ | ⟨pr, m0⟩ <;>
-    simp only [c1, reduceCtorEq] at hW
-  obtain ⟨t1, ht1, -, hmem1, hparts⟩ := triple_of_callW
-    (icfParts_spec p hp.iotaCertsFullParts N' ⟨s₀.mem, Locals.init []⟩ h) c1
-  obtain rfl : m0 = s₀.mem := by rw [← ht1]; exact hmem1
-  -- the stored node
-  simp only [icfPartsW] at hparts
-  obtain ⟨g1, hparts⟩ := of_ite_none hparts
-  obtain ⟨g2, hparts⟩ := of_ite_none hparts
-  simp only [Option.some.injEq] at hparts
-  obtain ⟨hvw, hn1, hn2⟩ := view_forall s₀.mem a₀ hS.arena.1 h hh ⟨g1, UInt64.not_le.mp g2⟩ h6
-  simp only [List.cons.injEq, and_true] at hparts
-  obtain ⟨hp0, hp1⟩ := hparts
-  rw [hp0] at hvw hn1
-  rw [hp1] at hvw hn2
-  -- the argument
-  rcases c2 : callW p (N' + 1) "spn_get" [ao + i] s₀.mem with _ | ⟨ra, m00⟩ <;>
-    simp only [c2, reduceCtorEq] at hW
-  obtain ⟨t2, ht2, -, hmem2, hget⟩ := triple_of_callW
-    (spnGet_spec p hp.spnGet N' ⟨s₀.mem, Locals.init []⟩ (ao + i)) c2
-  obtain rfl : m00 = s₀.mem := by rw [← ht2]; exact hmem2
-  obtain ⟨hisz, hargw, hargget⟩ := spine_entry s₀.mem ao an i args hargs hi
-  have hra : ra.headD 0 = spW s₀.mem (ao + i) := by
-    simp only [spnGetW] at hget
-    split at hget
-    · simp only [Option.some.injEq] at hget; rw [← hget]; rfl
-    · cases hget
-  rw [← hra] at hargw hargget
-  -- the check
-  rcases c3 : callW p (N' + 1) "iota_certs_full_check"
-      [mode, vis, d, pr.headD 0, aco, acn, ra.headD 0] s₀.mem with _ | ⟨ok, m3⟩ <;>
-    simp only [c3, reduceCtorEq] at hW
-  obtain ⟨t3, ht3, -, hchk⟩ := triple_of_callW
-    (icfCheck_spec p hp.iotaCertsFullCheck N' ⟨s₀.mem, Locals.init []⟩ mode vis d (pr.headD 0) aco acn
-      (ra.headD 0)) c3
-  rw [ht3] at hchk
-  have hbd := hacc.bound
-  have hspn := hS.spn
-  have h263 : (2 : Nat) ^ 63 < 2 ^ 64 := by decide
-  have htopc : aco.toNat + acn.toNat ≤ (spTop s₀.mem).toNat := by
-    rw [← htop, UInt64.toNat_add, Nat.mod_eq_of_lt (by omega)]; exact Nat.le_refl _
-  have hty : HW (pr.headD 0) := hn1
-  obtain ⟨ty2, ta, a1, a2, a3, b, hr1, hr2, hr3, hCA3, hbk, hwok⟩ := icfCheck_ok p hil N' F hk'
-    (by omega) (by omega) dn vis fe eb mode d (pr.headD 0) aco acn (ra.headD 0) hm4 hebm hty hargw
-    acc s₀.mem a₀ MM hS hacc htopc [ok.headD 0] m3 hchk
-  rw [← hargget] at hr2
-  have hbody : args.size = an.toNat := hargs.size
-  have hr1' : (instantiateListFast coreWalkFuel (decE (pr.headD 0)) acc 0).run a₀ = .ok (ty2, a1) := hr1
-  by_cases hok0 : ok.headD 0 = 0
-  · rw [ite_eq_left (by simpa using hok0)] at hW
-    obtain ⟨hr, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
-    have hb : b = false := by rw [← hbk, hok0]; rfl
-    subst hb
-    have hrun := icf_run_stop (coreKnot (decMode mode) fe id F) fe d.toNat (decE h) acc args i.toNat
-      hisz a₀ a1 a2 a3 _ _ ty2 ta hvw hr1' hr2 hr3
-    obtain ⟨hokF, hstF, hresF⟩ := AM.of_run_ok _ _ _ _ hrun
-    have hr0 : r.headD 0 = 0 := by simpa using hr.symm
-    refine ⟨hokF, ?_, ?_, ?_⟩
-    · rw [hstF]; exact hCA3.toG
-    · rw [hresF]; show false = (r.headD 0 != 0); rw [hr0]; rfl
-    · unfold ResH HW; rw [hr0]; decide
-  · rw [ite_eq_right (by simpa using hok0)] at hW
-    obtain ⟨hg, hW⟩ := of_ite_none' hW
-    rcases c4 : callW p (N' + 1) "iota_certs_full_aux"
-        [mode, vis, d, pr.tail.headD 0, aco, acn + 1, ao, an, i + 1]
-        ((m3.set64 SPN (aco + acn) (ra.headD 0)).set64 CTL 136 (aco + acn + 1)) with _ | ⟨r4, m4⟩ <;>
-      simp only [c4, reduceCtorEq] at hW
-    obtain ⟨hr, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
-    obtain ⟨M3, hS3, hK3, hSt3⟩ := hCA3
-    have hb : b = true := by
-      rw [← hbk]; simpa using hok0
-    subst hb
-    have htop3 : spTop m3 = aco + acn := by rw [hSt3.1, ← htop]
-    have hq1 : (aco + acn).toNat + 1 < 2 ^ 64 := by
-      have : (aco + acn).toNat < (m3.arr64 SPN).size := hg.1
-      have hsz3 : (m3.arr64 SPN).size = (s₀.mem.arr64 SPN).size := hSt3.size
-      omega
-    obtain ⟨hfr, hsp', hgrew, hslot, hsz⟩ := push_step m3 (aco + acn) (ra.headD 0) hg.1 hg.2 htop3 hq1
-    have hS3p := hS3.frame_stk hfr (fun b hb => by simpa using hb) (fun x hx => by simpa using hx)
-    have hacc3 : SpineR m3 aco acn acc := hacc.keep hSt3.size hSt3.below htopc hS.spn
-    have htop3' : aco.toNat + acn.toNat ≤ (spTop m3).toNat := by rw [htop3]; exact (by
-      rw [UInt64.toNat_add, Nat.mod_eq_of_lt (by omega)]; exact Nat.le_refl _)
-    have hsum : (aco + acn).toNat = aco.toNat + acn.toNat := by
-      rw [UInt64.toNat_add, Nat.mod_eq_of_lt (by omega)]
-    have hpush := (SpineR.push hacc3 hS3.spn (by rw [← hsum]; exact hg.1) (ra.headD 0) hargw).setCtl 136
-      (aco + acn + 1)
-    have hargs3 : SpineR m3 ao an args := hargs.keep hSt3.size hSt3.below (by omega) hS.spn
-    have hargs3p : SpineR _ ao an args := hargs3.keep hgrew.size hgrew.below (by omega) hS3.spn
-    have htopp : aco + (acn + 1) = spTop ((m3.set64 SPN (aco + acn) (ra.headD 0)).set64 CTL 136 (aco + acn + 1)) := by
-      rw [hsp', UInt64.add_assoc]
-    generalize (m3.set64 SPN (aco + acn) (ra.headD 0)).set64 CTL 136 (aco + acn + 1) = m3p at *
-    have hi1 : (i + 1).toNat = i.toNat + 1 := uint64_succ_toNat an i hi
-    obtain ⟨t4, ht4, -, hok4, hCAG4, hres4, hr4⟩ := triple_of_callW
-      (hA' F (by omega) (by omega) hk' ⟨m3p, Locals.init []⟩ a3 dn vis fe M3 eb mode d (pr.tail.headD 0) aco (acn + 1) ao an
-        (i + 1) (acc.push (decE (ra.headD 0))) args hS3p hm4 hebm hn2 trivial hpush hargs3p htopp hao) c4
-    rw [hi1] at hok4 hCAG4 hres4
-    rw [ht4] at hCAG4
-    have hrun4 := AM.run_of_ok _ _ hok4
-    rw [hres4] at hrun4
-    have hrun := icf_run_cont (coreKnot (decMode mode) fe id F) fe d.toNat (decE h) acc args i.toNat
-      hisz a₀ a1 a2 a3 _ _ _ _ _ (decBool r4) hvw hr1' hr2 hr3 (by rw [hargget]; exact hrun4)
-    obtain ⟨hokF, hstF, hresF⟩ := AM.of_run_ok _ _ _ _ hrun
-    obtain ⟨M4, hS4, hK4, hGr4⟩ := hCAG4
-    refine ⟨hokF, ?_, ?_, ?_⟩
-    · rw [hstF]
-      exact ⟨M4, hS4, hK3.trans hK4, hSt3.toGrew.trans (hgrew.trans hGr4)⟩
-    · rw [hresF]; have hr' : r4.headD 0 = r.headD 0 := by simpa using hr
-      simp only [decBool, hr']
-    · have hr' : r4.headD 0 = r.headD 0 := by simpa using hr
-      unfold ResH HW at hr4 ⊢; rw [← hr']; exact hr4
-
 
 /-- **A handle that passes `expr_view_ok` views.** -/
 theorem evo_view (m : Mem) (a : AState) (hR : ArenaR m a) (h : Word) (hh : HW h) (w : Word)
@@ -559,41 +202,176 @@ theorem evo_view (m : Mem) (a : AState) (hR : ArenaR m a) (h : Word) (hh : HW h)
   simp [t0, t1, t2, t3, t4, t5, t6, t7, t8, t9] at hc
 
 
-theorem icfFlush_ok (p : Prog) (hp : IotaProg4 p) (hil : InstListOK p) (N : Nat)
-    (hA : ∀ N', N = N' + 1 → ICFSpec p "iota_certs_full_aux" (fun _ _ _ => True) N') :
-    ICFSpec p "iota_certs_full_flush" (fun h an i => h >>> 28 = 0 ∧ i < an) N := by
-  intro F hnF hn62 hk s₀ a₀ dn vis fe MM eb mode d h aco acn ao an i acc args hS hm4 hebm hh
-    ⟨h0, hi⟩ hacc hargs htop hao
-  refine triple_post (icfFlush_spec p hp.iotaCertsFullFlush N s₀ mode vis d h aco acn ao an i) fun
-    r s' ⟨hloc, hW⟩ => ⟨hloc, ?_⟩
-  simp only [icfFlushW] at hW
+/-! ### The models, both outcomes -/
+
+/-- **The family's models, both outcomes** (generated; `infer`, `defeq` through their runs, the
+readers and `inst_list` lifted). -/
+l_model icfE_spec (p : Prog) (hp : IotaProg4 p)
+  fns [hp.iotaCertsFullCheck ↦ icfCheckE list, hp.iotaCertsFullAux ↦ icfAuxE list,
+    hp.iotaCertsFullForall ↦ icfForallE list, hp.iotaCertsFullFlush ↦ icfFlushE list,
+    hp.iotaCertsFull ↦ icfTopE list]
+  specs [callW_spec p n "inst_list", callW_spec p n "iota_certs_full_parts", callW_spec p n "spn_get",
+    callW_spec p n "expr_view_ok", callW_spec p n "ctl_get"]
+  grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] unified
+  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
+
+/-! ### The twin, by arms -/
+
+/-- The domain check of the `forallE` arm (the twin's three steps, `iota_certs_full_check`). -/
+def icfChkT (r : CoreFnsA) (d : Nat) (ty : EIdx) (acc : Array EIdx) (arg : EIdx) : AM Bool := do
+  let ty2 ← instantiateListFast coreWalkFuel ty acc 0
+  let ta ← r.infer d arg
+  r.defeq d ta ty2
+
+section icfRun
+variable (r : CoreFnsA) (fe : IFEnv) (d : Nat) (h : EIdx) (acc args : Array EIdx) (i : Nat)
+
+theorem icf_run_done (hi : ¬ i < args.size) (a : AState) :
+    (iotaCertsFullAux r fe d h acc args i).run a = .ok (true, a) := by
+  rw [iotaCertsFullAux]; simp [hi]; rfl
+
+/-- The `forallE` arm: the check, then the body on the pushed accumulator. -/
+theorem icf_eq_forall (hi : i < args.size) (a : AState) (ty body : EIdx)
+    (hv : a.store.view h = some (.forallE ty body)) :
+    (iotaCertsFullAux r fe d h acc args i).run a =
+      (icfChkT r d ty acc args[i] >>= fun b =>
+        if b then iotaCertsFullAux r fe d body (acc.push args[i]) args (i + 1) else pure false).run a := by
+  have hv' : (view h).run a = .ok (.forallE ty body, a) := by
+    simp [view, hv, StateT.run_bind, StateT.run_get]; rfl
+  rw [iotaCertsFullAux]
+  simp only [hi, ↓reduceDIte, StateT.run_bind, hv', except_ok_bind, icfChkT, bind_assoc]
+
+/-- The `bvar` arm with a pending accumulator: flush it, then look again. -/
+theorem icf_eq_flush (hi : i < args.size) (a : AState) (x : Nat)
+    (hv : a.store.view h = some (.bvar x)) (h0 : acc.size ≠ 0) :
+    (iotaCertsFullAux r fe d h acc args i).run a =
+      (instantiateListFast coreWalkFuel h acc 0 >>= fun ty2 =>
+        iotaCertsFullAux r fe d ty2 #[] args i).run a := by
+  have hv' : (view h).run a = .ok (.bvar x, a) := by
+    simp [view, hv, StateT.run_bind, StateT.run_get]; rfl
+  rw [iotaCertsFullAux]
+  simp only [hi, ↓reduceDIte, StateT.run_bind, hv', except_ok_bind, h0, ↓reduceIte]
+
+theorem icf_run_other (hi : i < args.size) (a : AState)
+    (hn1 : ∀ ty body, a.store.view h ≠ some (.forallE ty body))
+    (hn2 : ∀ x, a.store.view h ≠ some (.bvar x)) (v : ENodeView) (hv : a.store.view h = some v) :
+    (iotaCertsFullAux r fe d h acc args i).run a = .ok (false, a) := by
+  have hv' : (view h).run a = .ok (v, a) := by
+    simp [view, hv, StateT.run_bind, StateT.run_get]; rfl
+  rw [iotaCertsFullAux]
+  simp only [hi, ↓reduceDIte, StateT.run_bind, hv', except_ok_bind]
+  cases v with
+  | forallE ty body => exact absurd hv (hn1 _ _)
+  | bvar x => exact absurd hv (hn2 _)
+  | _ => simp; rfl
+
+theorem icf_run_nil (hi : i < args.size) (a : AState) (x : Nat) (hv : a.store.view h = some (.bvar x))
+    (h0 : acc.size = 0) :
+    (iotaCertsFullAux r fe d h acc args i).run a = .ok (false, a) := by
+  have hv' : (view h).run a = .ok (.bvar x, a) := by
+    simp [view, hv, StateT.run_bind, StateT.run_get]; rfl
+  rw [iotaCertsFullAux]
+  simp only [hi, ↓reduceDIte, StateT.run_bind, hv', except_ok_bind, h0, ↓reduceIte]
+  rfl
+
+end icfRun
+
+/-! ### The refinements -/
+
+/-- **The domain check refines its three twin steps, both outcomes**: the errors are the `infer`
+and `defeq` slots'. -/
+theorem icfCheck_ref (p : Prog) (hil : InstListOK p) (K F : Nat) (hk : KnotUpTo p K) (hnF : K ≤ F)
+    (hn62 : K ≤ 2 ^ 62) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
+    (eb mode d ty aco acn arg : Word) (hm4 : mode < 4) (hebm : eb = (mode >>> 1) &&& 1)
+    (hty : HW ty) (harg : HW arg) (acc : Array EIdx) (m : Mem) (a : AState) (M : ModeMaps)
+    (hS : CoreS dn m a vis fe M eb) (hacc : SpineR m aco acn acc)
+    (htop : aco.toNat + acn.toNat ≤ (spTop m).toNat) :
+    RefE (KnotUpToE p K) (icfCheckE p (K + 1) m mode vis d ty aco acn arg)
+      (icfChkT (coreKnot (decMode mode) fe id F) d.toNat (decE ty) acc (decE arg)) a
+      (CorePost decBool dn m vis fe M eb ResH) := by
+  rw [icfCheckE.eq_2]
+  rcases c1 : callW p K "inst_list" [ty, aco, acn, 0] m with _ | ⟨r1, m1⟩
+  · rw [liftE_none, icfCheckE.k_inst_list.eq_1]; exact RefE.of_cls0 rfl
+  rw [liftE_some, icfCheckE.k_inst_list.eq_2]
+  have h1 := CoreSpec.of_callW (hil K ⟨m, Locals.init []⟩ a dn vis fe M eb ty aco acn 0 acc hS hty hacc
+    htop) c1
+  refine RefE.bind_core (w := id) h1 fun M1 hS1 _ => ?_
+  refine RefE.bind_callE (x := icfCheckE.k_infer p K mode vis d (r1.headD 0)) (fun _ => rfl)
+    ((hk K (Nat.le_refl _)).infer F ⟨m1, Locals.init []⟩ _ dn vis fe M1 eb mode d arg hnF hn62
+      ⟨hS1, hm4, hebm⟩ harg)
+    (fun hG => (hG K (Nat.le_refl _)).infer F ⟨m1, Locals.init []⟩ _ dn vis fe M1 eb mode d arg hnF hn62
+      ⟨hS1, hm4, hebm⟩ harg) fun r2 m2 _ h2 => ?_
+  have hr1 : HW (r1.headD 0) := h1.2.2.2
+  rw [icfCheckE.k_infer.eq_2]
+  have hS2 := h2.2.1
+  obtain ⟨M2, hS2, hK2, hSt2⟩ := hS2
+  rcases c3 : callE p K "defeq" [mode, vis, d, r2.headD 0, r1.headD 0] m2 with e3 | ⟨r3, m3⟩
+  · rw [icfCheckE.k_defeq.eq_1]
+    exact fun hG => CoreSpecE.of_callE ((hG K (Nat.le_refl _)).defeq F ⟨m2, Locals.init []⟩ _ dn vis
+      fe M2 eb mode d _ _ hnF hn62 ⟨hS2, hm4, hebm⟩ h2.2.2.2 hr1) c3
+  rw [icfCheckE.k_defeq.eq_2]
+  have h3 := CoreSpec.of_callW ((hk K (Nat.le_refl _)).defeq F ⟨m2, Locals.init []⟩ _ dn vis fe M2 eb
+    mode d _ _ hnF hn62 ⟨hS2, hm4, hebm⟩ h2.2.2.2 hr1) (callW_of_callE c3)
+  obtain ⟨hrun3, hP3⟩ := CoreRef.post h3
+  exact RefE.ret hrun3 ⟨CoreAfter.comp hK2 hSt2 hP3.after, hP3.res, hP3.valid⟩
+
+/-- **The three functions' refinement, both outcomes** (`cond` is the case the helper handles; the
+model `fE` at fuel `N + 1`). The errors are the slots'. -/
+def ICFRef (p : Prog) (fE : Prog → Nat → Mem → Word → Word → Word → Word → Word → Word → Word →
+    Word → Word → Except Err (List Word × Mem)) (cond : Word → Word → Word → Prop) (N F : Nat) : Prop :=
+  KnotUpTo p N → N ≤ F → N ≤ 2 ^ 62 →
+  ∀ (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
+    (MM : ModeMaps) (eb mode d h aco acn ao an i : Word) (acc args : Array EIdx),
+    CoreS dn s₀.mem a₀ vis fe MM eb → mode < 4 → eb = (mode >>> 1) &&& 1 → HW h → cond h an i →
+    SpineR s₀.mem aco acn acc → SpineR s₀.mem ao an args → aco + acn = spTop s₀.mem →
+    ao.toNat + an.toNat ≤ aco.toNat →
+    RefE (KnotUpToE p N) (fE p (N + 1) s₀.mem mode vis d h aco acn ao an i)
+      (iotaCertsFullAux (coreKnot (decMode mode) fe id F) fe d.toNat (decE h) acc args i.toNat) a₀
+      (GrowPost decBool dn s₀.mem vis fe MM eb ResH)
+
+theorem icfForall_ref (p : Prog) (hp : IotaProg4 p) (hil : InstListOK p) (N F : Nat)
+    (hA : ∀ N', N = N' + 1 → ICFRef p icfAuxE (fun _ _ _ => True) N' F) :
+    ICFRef p icfForallE (fun h an i => h >>> 28 = 6 ∧ i < an) N F := by
+  intro hk hnF hn62 s₀ a₀ dn vis fe MM eb mode d h aco acn ao an i acc args hS hm4 hebm hh
+    ⟨h6, hi⟩ hacc hargs htop hao
+  rw [icfForallE.eq_2]
   cases N with
-  | zero => rw [callW_zero] at hW; cases hW
+  | zero =>
+    rw [callW_zero, liftE_none, icfForallE.k_iota_certs_full_parts.eq_1]; exact RefE.of_cls0 rfl
   | succ N' =>
-  have hA' := hA N' rfl
   have hk' : KnotUpTo p N' := hk.mono (by omega)
-  rcases c0 : callW p (N' + 1) "expr_view_ok" [h] s₀.mem with _ | ⟨rv, m0⟩ <;>
-    simp only [c0, reduceCtorEq] at hW
-  obtain ⟨t0, ht0, -, hmem0, hev⟩ := triple_of_callW
-    (exprViewOk_spec p hp.exprViewOk N' ⟨s₀.mem, Locals.init []⟩ h) c0
-  obtain rfl : m0 = s₀.mem := by rw [← ht0]; exact hmem0
-  obtain ⟨-, hB, -, -⟩ := evo_view s₀.mem a₀ hS.arena.1 h hh _ hev
-  obtain ⟨x, hvx⟩ := hB h0
-  by_cases hacn : acn = 0
-  · rw [ite_eq_left hacn] at hW
-    obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
-    have hsz : acc.size = 0 := by rw [hacc.size, hacn]; rfl
-    have hrun := icf_run_nil (coreKnot (decMode mode) fe id F) fe d.toNat (decE h) acc args i.toNat
-      (by rw [hargs.size]; exact hi) a₀ x hvx hsz
-    obtain ⟨hokF, hstF, hresF⟩ := AM.of_run_ok _ _ _ _ hrun
-    have hr0 : r.headD 0 = 0 := by simpa using hr.symm
-    refine ⟨hokF, ?_, ?_, ?_⟩
-    · rw [hstF, ← hm]; exact ⟨MM, hS, KeptAll.refl _ _, (StackKept.refl _).toGrew⟩
-    · rw [hresF]; show false = (r.headD 0 != 0); rw [hr0]; rfl
-    · unfold ResH HW; rw [hr0]; decide
-  rw [ite_eq_right hacn] at hW
-  rcases c1 : callW p (N' + 1) "inst_list" [h, aco, acn, 0] s₀.mem with _ | ⟨r1, m1⟩ <;>
-    simp only [c1, reduceCtorEq] at hW
+  rcases c1 : callW p (N' + 1) "iota_certs_full_parts" [h] s₀.mem with _ | ⟨pr, m0⟩
+  · rw [liftE_none, icfForallE.k_iota_certs_full_parts.eq_1]; exact RefE.of_cls0 rfl
+  rw [liftE_some, icfForallE.k_iota_certs_full_parts.eq_2]
+  obtain ⟨t1, ht1, -, hmem1, hparts⟩ := triple_of_callW
+    (icfParts_spec p hp.iotaCertsFullParts N' ⟨s₀.mem, Locals.init []⟩ h) c1
+  obtain rfl : m0 = s₀.mem := by rw [← ht1]; exact hmem1
+  -- the stored node
+  simp only [icfPartsW] at hparts
+  obtain ⟨g1, hparts⟩ := of_ite_none hparts
+  obtain ⟨g2, hparts⟩ := of_ite_none hparts
+  simp only [Option.some.injEq] at hparts
+  obtain ⟨hvw, hn1, hn2⟩ := view_forall s₀.mem a₀ hS.arena.1 h hh ⟨g1, UInt64.not_le.mp g2⟩ h6
+  simp only [List.cons.injEq, and_true] at hparts
+  obtain ⟨hp0, hp1⟩ := hparts
+  rw [hp0] at hvw hn1
+  rw [hp1] at hvw hn2
+  -- the argument
+  rcases c2 : callW p (N' + 1) "spn_get" [ao + i] s₀.mem with _ | ⟨ra, m00⟩
+  · rw [liftE_none, icfForallE.k_spn_get.eq_1]; exact RefE.of_cls0 rfl
+  rw [liftE_some, icfForallE.k_spn_get.eq_2]
+  obtain ⟨t2, ht2, -, hmem2, hget⟩ := triple_of_callW
+    (spnGet_spec p hp.spnGet N' ⟨s₀.mem, Locals.init []⟩ (ao + i)) c2
+  obtain rfl : m00 = s₀.mem := by rw [← ht2]; exact hmem2
+  obtain ⟨hisz, hargw, hargget⟩ := spine_entry s₀.mem ao an i args hargs hi
+  have hra : ra.headD 0 = spW s₀.mem (ao + i) := by
+    simp only [spnGetW] at hget
+    split at hget
+    · simp only [Option.some.injEq] at hget; rw [← hget]; rfl
+    · cases hget
+  rw [← hra] at hargw hargget
+  -- the check
   have hbd := hacc.bound
   have hspn := hS.spn
   have h263 : (2 : Nat) ^ 63 < 2 ^ 64 := by decide
@@ -601,199 +379,193 @@ theorem icfFlush_ok (p : Prog) (hp : IotaProg4 p) (hil : InstListOK p) (N : Nat)
     rw [UInt64.toNat_add, Nat.mod_eq_of_lt (by omega)]
   have htopc : aco.toNat + acn.toNat ≤ (spTop s₀.mem).toNat := by
     rw [← htop, hsum]; exact Nat.le_refl _
-  obtain ⟨hrun1, ⟨M1, hS1, hK1, hSt1⟩, hr1⟩ := CoreSpec.run
-    (hil (N' + 1) ⟨s₀.mem, Locals.init []⟩ a₀ dn vis fe MM eb h aco acn 0 acc hS hh hacc htopc) c1
-  rcases c2 : callW p (N' + 1) "iota_certs_full_aux"
-      [mode, vis, d, r1.headD 0, aco + acn, 0, ao, an, i] m1 with _ | ⟨r2, m2⟩ <;>
-    simp only [c2, reduceCtorEq] at hW
-  obtain ⟨hr, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
-  have hsp1 : spTop m1 = aco + acn := by rw [hSt1.1, ← htop]
-  have hsz1 : (m1.arr64 SPN).size = (s₀.mem.arr64 SPN).size := hSt1.size
-  have hnil : SpineR m1 (aco + acn) 0 #[] := SpineR.nil_at m1 _ (by rw [hsum]; omega)
-  have hargs1 : SpineR m1 ao an args := hargs.keep hSt1.size hSt1.below (by omega) hS.spn
-  obtain ⟨t2, ht2, -, hok2, hCAG2, hres2, hr2⟩ := triple_of_callW
-    (hA' F (by omega) (by omega) hk' ⟨m1, Locals.init []⟩ _ dn vis fe M1 eb mode d (r1.headD 0)
-      (aco + acn) 0 ao an i #[] args hS1 hm4 hebm hr1 trivial hnil hargs1
-      (by rw [UInt64.add_zero]; exact hsp1.symm) (by omega)) c2
-  rw [ht2] at hCAG2
-  have hrun2 := AM.run_of_ok _ _ hok2
-  rw [hres2] at hrun2
-  have hrun := icf_run_flush (coreKnot (decMode mode) fe id F) fe d.toNat (decE h) acc args i.toNat
-    (by rw [hargs.size]; exact hi) a₀ _ _ x _ (decBool r2) hvx
-    (by rw [hacc.size]; intro h0; exact hacn (UInt64.toNat_inj.mp (by simpa using h0))) hrun1 hrun2
-  obtain ⟨hokF, hstF, hresF⟩ := AM.of_run_ok _ _ _ _ hrun
-  obtain ⟨M2, hS2, hK2, hGr2⟩ := hCAG2
-  have hr' : r2.headD 0 = r.headD 0 := by simpa using hr
-  refine ⟨hokF, ?_, ?_, ?_⟩
-  · rw [hstF]; exact ⟨M2, hS2, hK1.trans hK2, hSt1.toGrew.trans hGr2⟩
-  · rw [hresF]; simp only [decBool, hr']
-  · unfold ResH HW at hr2 ⊢; rw [← hr']; exact hr2
+  have hchk := icfCheck_ref p hil N' F hk' (by omega) (by omega) dn vis fe eb mode d (pr.headD 0) aco acn
+    (ra.headD 0) hm4 hebm hn1 hargw acc s₀.mem a₀ MM hS hacc htopc
+  rw [← hargget] at hchk
+  refine RefE.of_run_eq (icf_eq_forall _ fe d.toNat (decE h) acc args i.toNat hisz a₀ _ _ hvw) ?_
+  rcases hcv : icfCheckE p (N' + 1) s₀.mem mode vis d (pr.headD 0) aco acn (ra.headD 0) with e3 | ⟨rr, m3⟩
+  · rw [icfForallE.k_iota_certs_full_check.eq_1]
+    rw [hcv] at hchk
+    exact RefE.bind_left fun hG => hchk (hG.mono (Nat.le_succ N'))
+  rw [hcv] at hchk
+  obtain ⟨b, a3, hrun3, hP3⟩ := hchk
+  rw [icfForallE.k_iota_certs_full_check.eq_2]
+  refine RefE.bind_right hrun3 ?_
+  obtain ⟨⟨M3, hS3, hK3, hSt3⟩, hb, hwok⟩ := hP3
+  by_cases hok0 : rr.headD 0 = 0
+  · rw [ite_eq_left hok0]
+    have hb' : b = false := by rw [hb]; simp only [decBool, hok0]; rfl
+    subst hb'
+    exact RefE.ret rfl ⟨⟨M3, hS3, hK3, hSt3.toGrew⟩, rfl, by show HW (0 : Word); unfold HW; decide⟩
+  rw [ite_eq_right hok0]
+  have hb' : b = true := by rw [hb]; simpa [decBool] using hok0
+  subst hb'
+  refine RefE.ite_pos rfl ?_
+  by_cases hlen : m3.len64 SPN ≤ aco + acn
+  · rw [ite_eq_left hlen]; exact RefE.of_cls0 rfl
+  rw [ite_eq_right hlen]
+  have hsz3 : (m3.arr64 SPN).size = (s₀.mem.arr64 SPN).size := hSt3.size
+  have hg1 : (aco + acn).toNat < (m3.arr64 SPN).size := by
+    have h' := UInt64.not_le.mp hlen
+    rw [UInt64.lt_iff_toNat_lt, Mem.len64, UInt64.toNat_ofNat', Nat.mod_eq_of_lt (by omega)] at h'
+    exact h'
+  have hg2 : (136 : Word).toNat < (m3.arr64 CTL).size := hS3.ctl136
+  have htop3 : spTop m3 = aco + acn := by rw [hSt3.1, ← htop]
+  have hq1 : (aco + acn).toNat + 1 < 2 ^ 64 := by omega
+  obtain ⟨hfr, hsp', hgrew, hslot, hsz⟩ := push_step m3 (aco + acn) (ra.headD 0) hg1 hg2 htop3 hq1
+  have hS3p := hS3.frame_stk hfr (fun b hb => by simpa using hb) (fun x hx => by simpa using hx)
+  have hacc3 : SpineR m3 aco acn acc := hacc.keep hSt3.size hSt3.below htopc hS.spn
+  have hpush := (SpineR.push hacc3 hS3.spn (by rw [← hsum]; exact hg1) (ra.headD 0) hargw).setCtl 136
+    (aco + acn + 1)
+  have hargs3 : SpineR m3 ao an args := hargs.keep hSt3.size hSt3.below (by omega) hS.spn
+  have htop3' : aco.toNat + acn.toNat ≤ (spTop m3).toNat := by rw [htop3, hsum]; exact Nat.le_refl _
+  have hargs3p : SpineR _ ao an args := hargs3.keep hgrew.size hgrew.below (by omega) hS3.spn
+  have htopp : aco + (acn + 1) =
+      spTop ((m3.set64 SPN (aco + acn) (ra.headD 0)).set64 CTL 136 (aco + acn + 1)) := by
+    rw [hsp', UInt64.add_assoc]
+  have hgr := hSt3.toGrew.trans hgrew
+  generalize (m3.set64 SPN (aco + acn) (ra.headD 0)).set64 CTL 136 (aco + acn + 1) = m3p at *
+  have hi1 : (i + 1).toNat = i.toNat + 1 := uint64_succ_toNat an i hi
+  have hE4 := hA N' rfl hk' (by omega) (by omega) ⟨m3p, Locals.init []⟩ a3 dn vis fe M3 eb mode d
+    (pr.tail.headD 0) aco (acn + 1) ao an (i + 1) (acc.push (decE (ra.headD 0))) args hS3p hm4 hebm hn2
+    trivial hpush hargs3p htopp hao
+  rw [hi1] at hE4
+  exact RefE.tail_eq (fun _ => rfl) (fun _ => rfl) (fun hG => hG.mono (Nat.le_succ N'))
+    (by rw [hargget]) (fun _ _ _ h => ⟨CoreAfterG.compK hK3 hgr h.after, h.res, h.valid⟩) hE4
 
-
-theorem icfAux_ok (p : Prog) (hp : IotaProg4 p) (N : Nat)
-    (hFo : ∀ N', N = N' + 1 →
-      ICFSpec p "iota_certs_full_forall" (fun h an i => h >>> 28 = 6 ∧ i < an) N')
-    (hFl : ∀ N', N = N' + 1 →
-      ICFSpec p "iota_certs_full_flush" (fun h an i => h >>> 28 = 0 ∧ i < an) N') :
-    ICFSpec p "iota_certs_full_aux" (fun _ _ _ => True) N := by
-  intro F hnF hn62 hk s₀ a₀ dn vis fe MM eb mode d h aco acn ao an i acc args hS hm4 hebm hh
-    _ hacc hargs htop hao
-  refine triple_post (icfAux_spec p hp.iotaCertsFullAux N s₀ mode vis d h aco acn ao an i) fun r s'
-    ⟨hloc, hW⟩ => ⟨hloc, ?_⟩
-  simp only [icfAuxW] at hW
-  by_cases hni : ¬ i < an
-  · rw [ite_eq_right hni] at hW
-    obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
-    have hi' : ¬ i.toNat < args.size := by rw [hargs.size]; exact hni
-    have hrun := icf_run_done (coreKnot (decMode mode) fe id F) fe d.toNat (decE h) acc args i.toNat
-      hi' a₀
-    obtain ⟨hokF, hstF, hresF⟩ := AM.of_run_ok _ _ _ _ hrun
-    have hr0 : r.headD 0 = 1 := by simpa using hr.symm
-    refine ⟨hokF, ?_, ?_, ?_⟩
-    · rw [hstF, ← hm]; exact ⟨MM, hS, KeptAll.refl _ _, (StackKept.refl _).toGrew⟩
-    · rw [hresF]; show true = (r.headD 0 != 0); rw [hr0]; rfl
-    · unfold ResH HW; rw [hr0]; decide
-  have hi := Classical.not_not.mp hni
-  rw [ite_eq_left hi] at hW
-  by_cases h6 : h >>> 28 = 6
-  · rw [ite_eq_left h6] at hW
-    cases N with
-    | zero => rw [callW_zero] at hW; cases hW
-    | succ N' =>
-    rcases c1 : callW p (N' + 1) "iota_certs_full_forall" [mode, vis, d, h, aco, acn, ao, an, i]
-        s₀.mem with _ | ⟨r1, m1⟩ <;> simp only [c1, reduceCtorEq] at hW
-    obtain ⟨hr, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
-    obtain ⟨t1, ht1, -, hok1, hCAG1, hres1, hr1⟩ := triple_of_callW
-      (hFo N' rfl F (by omega) (by omega) (hk.mono (by omega)) ⟨s₀.mem, Locals.init []⟩ a₀ dn vis fe MM
-        eb mode d h aco acn ao an i acc args hS hm4 hebm hh ⟨h6, hi⟩ hacc hargs htop hao) c1
-    rw [ht1] at hCAG1
-    have hr' : r1.headD 0 = r.headD 0 := by simpa using hr
-    refine ⟨hok1, hCAG1, ?_, ?_⟩
-    · rw [hres1]; simp only [decBool, hr']
-    · unfold ResH HW at hr1 ⊢; rw [← hr']; exact hr1
-  rw [ite_eq_right h6] at hW
-  by_cases h0 : h >>> 28 = 0
-  · rw [ite_eq_left h0] at hW
-    cases N with
-    | zero => rw [callW_zero] at hW; cases hW
-    | succ N' =>
-    rcases c1 : callW p (N' + 1) "iota_certs_full_flush" [mode, vis, d, h, aco, acn, ao, an, i]
-        s₀.mem with _ | ⟨r1, m1⟩ <;> simp only [c1, reduceCtorEq] at hW
-    obtain ⟨hr, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
-    obtain ⟨t1, ht1, -, hok1, hCAG1, hres1, hr1⟩ := triple_of_callW
-      (hFl N' rfl F (by omega) (by omega) (hk.mono (by omega)) ⟨s₀.mem, Locals.init []⟩ a₀ dn vis fe MM
-        eb mode d h aco acn ao an i acc args hS hm4 hebm hh ⟨h0, hi⟩ hacc hargs htop hao) c1
-    rw [ht1] at hCAG1
-    have hr' : r1.headD 0 = r.headD 0 := by simpa using hr
-    refine ⟨hok1, hCAG1, ?_, ?_⟩
-    · rw [hres1]; simp only [decBool, hr']
-    · unfold ResH HW at hr1 ⊢; rw [← hr']; exact hr1
-  rw [ite_eq_right h0] at hW
+theorem icfFlush_ref (p : Prog) (hp : IotaProg4 p) (hil : InstListOK p) (N F : Nat)
+    (hA : ∀ N', N = N' + 1 → ICFRef p icfAuxE (fun _ _ _ => True) N' F) :
+    ICFRef p icfFlushE (fun h an i => h >>> 28 = 0 ∧ i < an) N F := by
+  intro hk hnF hn62 s₀ a₀ dn vis fe MM eb mode d h aco acn ao an i acc args hS hm4 hebm hh
+    ⟨h0, hi⟩ hacc hargs htop hao
+  rw [icfFlushE.eq_2]
   cases N with
-  | zero => rw [callW_zero] at hW; cases hW
+  | zero => rw [callW_zero, liftE_none, icfFlushE.k_expr_view_ok.eq_1]; exact RefE.of_cls0 rfl
   | succ N' =>
-  rcases c1 : callW p (N' + 1) "expr_view_ok" [h] s₀.mem with _ | ⟨rv, m1⟩ <;>
-    simp only [c1, reduceCtorEq] at hW
-  obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
+  have hk' : KnotUpTo p N' := hk.mono (by omega)
+  rcases c0 : callW p (N' + 1) "expr_view_ok" [h] s₀.mem with _ | ⟨rv, m0⟩
+  · rw [liftE_none, icfFlushE.k_expr_view_ok.eq_1]; exact RefE.of_cls0 rfl
+  rw [liftE_some, icfFlushE.k_expr_view_ok.eq_2]
+  obtain ⟨t0, ht0, -, hmem0, hev⟩ := triple_of_callW
+    (exprViewOk_spec p hp.exprViewOk N' ⟨s₀.mem, Locals.init []⟩ h) c0
+  obtain rfl : m0 = s₀.mem := by rw [← ht0]; exact hmem0
+  obtain ⟨-, hB, -, -⟩ := evo_view s₀.mem a₀ hS.arena.1 h hh _ hev
+  obtain ⟨x, hvx⟩ := hB h0
+  have hisz : i.toNat < args.size := by rw [hargs.size]; exact hi
+  by_cases hacn : acn = 0
+  · rw [ite_eq_left hacn]
+    have hsz : acc.size = 0 := by rw [hacc.size, hacn]; rfl
+    exact RefE.ret (icf_run_nil _ fe d.toNat (decE h) acc args i.toNat hisz a₀ x hvx hsz)
+      (GrowPost.of_core (CorePost.ret hS rfl (by unfold ResH HW; decide)))
+  rw [ite_eq_right hacn]
+  have hbd := hacc.bound
+  have hspn := hS.spn
+  have h263 : (2 : Nat) ^ 63 < 2 ^ 64 := by decide
+  have hsum : (aco + acn).toNat = aco.toNat + acn.toNat := by
+    rw [UInt64.toNat_add, Nat.mod_eq_of_lt (by omega)]
+  have htopc : aco.toNat + acn.toNat ≤ (spTop s₀.mem).toNat := by
+    rw [← htop, hsum]; exact Nat.le_refl _
+  rcases c1 : callW p (N' + 1) "inst_list" [h, aco, acn, 0] s₀.mem with _ | ⟨r1, m1⟩
+  · rw [liftE_none, icfFlushE.k_inst_list.eq_1]; exact RefE.of_cls0 rfl
+  rw [liftE_some, icfFlushE.k_inst_list.eq_2]
+  have h1 := CoreSpec.of_callW
+    (hil (N' + 1) ⟨s₀.mem, Locals.init []⟩ a₀ dn vis fe MM eb h aco acn 0 acc hS hh hacc htopc) c1
+  refine RefE.of_run_eq (icf_eq_flush _ fe d.toNat (decE h) acc args i.toNat hisz a₀ x hvx
+    (by rw [hacc.size]; intro h0; exact hacn (UInt64.toNat_inj.mp (by simpa using h0)))) ?_
+  refine RefE.bind_growK (w := id) h1 fun M1 hS1 hSt1 => ?_
+  have hr1 : HW (r1.headD 0) := h1.2.2.2
+  have hsp1 : spTop m1 = aco + acn := by rw [hSt1.1, ← htop]
+  have hnil : SpineR m1 (aco + acn) 0 #[] := SpineR.nil_at m1 _ (by rw [hsum, hSt1.size]; omega)
+  have hargs1 : SpineR m1 ao an args := hargs.keep hSt1.size hSt1.below
+    (by show ao.toNat + an.toNat ≤ (spTop s₀.mem).toNat; omega) hS.spn
+  have hE := hA N' rfl hk' (by omega) (by omega) ⟨m1, Locals.init []⟩ _ dn vis fe M1 eb mode d
+    (r1.headD 0) (aco + acn) 0 ao an i #[] args hS1 hm4 hebm hr1 trivial hnil hargs1
+    (by rw [UInt64.add_zero]; exact hsp1.symm) (by omega)
+  exact RefE.tail_eq (fun _ => rfl) (fun _ => rfl) (fun hG => hG.mono (Nat.le_succ N')) rfl
+    (fun _ _ _ h => ⟨h.after, h.res, h.valid⟩) hE
+
+theorem icfAux_ref (p : Prog) (hp : IotaProg4 p) (N F : Nat)
+    (hFo : ∀ N', N = N' + 1 → ICFRef p icfForallE (fun h an i => h >>> 28 = 6 ∧ i < an) N' F)
+    (hFl : ∀ N', N = N' + 1 → ICFRef p icfFlushE (fun h an i => h >>> 28 = 0 ∧ i < an) N' F) :
+    ICFRef p icfAuxE (fun _ _ _ => True) N F := by
+  intro hk hnF hn62 s₀ a₀ dn vis fe MM eb mode d h aco acn ao an i acc args hS hm4 hebm hh
+    _ hacc hargs htop hao
+  rw [icfAuxE.eq_2]
+  by_cases hi : ¬ i < an
+  · rw [ite_eq_right hi]
+    have hi' : ¬ i.toNat < args.size := by rw [hargs.size]; exact hi
+    exact RefE.ret (icf_run_done _ fe d.toNat (decE h) acc args i.toNat hi' a₀)
+      (GrowPost.of_core (CorePost.ret hS rfl (by unfold ResH HW; decide)))
+  have hi := Classical.not_not.mp hi
+  rw [ite_eq_left hi]
+  by_cases h6 : h >>> 28 = 6
+  · rw [ite_eq_left h6]
+    cases N with
+    | zero => rw [icfForallE.eq_1, icfCheckE.k_defeq.eq_1]; exact RefE.of_cls0 rfl
+    | succ N' =>
+    exact RefE.tail_eq (fun _ => rfl) (fun _ => rfl) (fun hG => hG.mono (Nat.le_succ N')) rfl
+      (fun _ _ _ h => ⟨h.after, h.res, h.valid⟩)
+      (hFo N' rfl (hk.mono (by omega)) (by omega) (by omega) s₀ a₀ dn vis fe MM eb mode d h aco acn ao
+        an i acc args hS hm4 hebm hh ⟨h6, hi⟩ hacc hargs htop hao)
+  rw [ite_eq_right h6]
+  by_cases h0 : h >>> 28 = 0
+  · rw [ite_eq_left h0]
+    cases N with
+    | zero => rw [icfFlushE.eq_1, icfCheckE.k_defeq.eq_1]; exact RefE.of_cls0 rfl
+    | succ N' =>
+    exact RefE.tail_eq (fun _ => rfl) (fun _ => rfl) (fun hG => hG.mono (Nat.le_succ N')) rfl
+      (fun _ _ _ h => ⟨h.after, h.res, h.valid⟩)
+      (hFl N' rfl (hk.mono (by omega)) (by omega) (by omega) s₀ a₀ dn vis fe MM eb mode d h aco acn ao
+        an i acc args hS hm4 hebm hh ⟨h0, hi⟩ hacc hargs htop hao)
+  rw [ite_eq_right h0]
+  cases N with
+  | zero => rw [callW_zero, liftE_none, icfAuxE.k_expr_view_ok.eq_1]; exact RefE.of_cls0 rfl
+  | succ N' =>
+  rcases c1 : callW p (N' + 1) "expr_view_ok" [h] s₀.mem with _ | ⟨rv, m1⟩
+  · rw [liftE_none, icfAuxE.k_expr_view_ok.eq_1]; exact RefE.of_cls0 rfl
+  rw [liftE_some, icfAuxE.k_expr_view_ok.eq_2]
   obtain ⟨t1, ht1, -, hmem1, hev⟩ := triple_of_callW
     (exprViewOk_spec p hp.exprViewOk N' ⟨s₀.mem, Locals.init []⟩ h) c1
   obtain rfl : m1 = s₀.mem := by rw [← ht1]; exact hmem1
   obtain ⟨⟨v, hv⟩, -, -, hD⟩ := evo_view s₀.mem a₀ hS.arena.1 h hh _ hev
   obtain ⟨hn1, hn2⟩ := hD h0 h6 v hv
-  have hrun := icf_run_other (coreKnot (decMode mode) fe id F) fe d.toNat (decE h) acc args i.toNat
+  exact RefE.ret (icf_run_other _ fe d.toNat (decE h) acc args i.toNat
     (by rw [hargs.size]; exact hi) a₀ (fun ty body hc => by rw [hv] at hc; exact hn1 ty body (Option.some.inj hc))
-    (fun x hc => by rw [hv] at hc; exact hn2 x (Option.some.inj hc)) v hv
-  obtain ⟨hokF, hstF, hresF⟩ := AM.of_run_ok _ _ _ _ hrun
-  have hr0 : r.headD 0 = 0 := by simpa using hr.symm
-  refine ⟨hokF, ?_, ?_, ?_⟩
-  · rw [hstF, ← hm]; exact ⟨MM, hS, KeptAll.refl _ _, (StackKept.refl _).toGrew⟩
-  · rw [hresF]; show false = (r.headD 0 != 0); rw [hr0]; rfl
-  · unfold ResH HW; rw [hr0]; decide
+    (fun x hc => by rw [hv] at hc; exact hn2 x (Option.some.inj hc)) v hv)
+    (GrowPost.of_core (CorePost.ret hS rfl (by unfold ResH HW; decide)))
 
-
-theorem icf_all (p : Prog) (hp : IotaProg4 p) (hil : InstListOK p) (N : Nat) :
-    ICFSpec p "iota_certs_full_aux" (fun _ _ _ => True) N ∧
-    ICFSpec p "iota_certs_full_forall" (fun h an i => h >>> 28 = 6 ∧ i < an) N ∧
-    ICFSpec p "iota_certs_full_flush" (fun h an i => h >>> 28 = 0 ∧ i < an) N := by
+theorem icf_all (p : Prog) (hp : IotaProg4 p) (hil : InstListOK p) (F N : Nat) :
+    ICFRef p icfAuxE (fun _ _ _ => True) N F ∧
+    ICFRef p icfForallE (fun h an i => h >>> 28 = 6 ∧ i < an) N F ∧
+    ICFRef p icfFlushE (fun h an i => h >>> 28 = 0 ∧ i < an) N F := by
   induction N with
   | zero =>
-    exact ⟨icfAux_ok p hp 0 (fun _ h => absurd h (by simp)) (fun _ h => absurd h (by simp)),
-      icfForall_ok p hp hil 0 (fun _ h => absurd h (by simp)),
-      icfFlush_ok p hp hil 0 (fun _ h => absurd h (by simp))⟩
+    exact ⟨icfAux_ref p hp 0 F (fun _ h => absurd h (by simp)) (fun _ h => absurd h (by simp)),
+      icfForall_ref p hp hil 0 F (fun _ h => absurd h (by simp)),
+      icfFlush_ref p hp hil 0 F (fun _ h => absurd h (by simp))⟩
   | succ N ih =>
-    exact ⟨icfAux_ok p hp (N + 1) (fun N' h => by cases Nat.succ.inj h; exact ih.2.1)
+    exact ⟨icfAux_ref p hp (N + 1) F (fun N' h => by cases Nat.succ.inj h; exact ih.2.1)
         (fun N' h => by cases Nat.succ.inj h; exact ih.2.2),
-      icfForall_ok p hp hil (N + 1) (fun N' h => by cases Nat.succ.inj h; exact ih.1),
-      icfFlush_ok p hp hil (N + 1) (fun N' h => by cases Nat.succ.inj h; exact ih.1)⟩
+      icfForall_ref p hp hil (N + 1) F (fun N' h => by cases Nat.succ.inj h; exact ih.1),
+      icfFlush_ref p hp hil (N + 1) F (fun N' h => by cases Nat.succ.inj h; exact ih.1)⟩
 
-/-- **`iota_certs_full_aux` refines `iotaCertsFullAux`.** Statement changes: the shape of
-`rec_fire_args`' (a triple with `CoreAfterG`: the accumulator pushes leave the stack top raised,
-`CoreSpec` requires it kept); `n ≤ 2 ^ 62`, the eager bit, `ao + an ≤ aco`. The L function is split
-(`iota_certs_full_forall`/`_flush`/`_check`/`_parts`, `spn_get`, `expr_view_ok`: `vcgen` fuel, and
-the twin's `view` of a handle needs the L side to check it). -/
-theorem iotaCertsFullAux_refines' (p : Prog) (hp : IotaProg4 p) (hil : InstListOK p) (n : Nat) :
-    ICFSpec p "iota_certs_full_aux" (fun _ _ _ => True) n := (icf_all p hp hil n).1
-
-/-- Model of `ctl_get`. -/
-def ctlGetW (m : Mem) (k : Word) : Option Word :=
-  if k.toNat < (m.arr64 CTL).size then some (rdW (m.arr64 CTL) k) else none
-
-theorem ctlGet_spec (p : Prog) (hp : p.lookup "ctl_get" = some ctlGetL) (n : Nat) (s₀ : St)
-    (k : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "ctl_get" [k]
-    ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧ ctlGetW s₀.mem k = some (r.headD 0); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, ctlGetL]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64] <;>
-    finish [ctlGetW, rdW]
-
-/-- Model of `iota_certs_full`. -/
-def icfTopW (p : Prog) (n : Nat) (m : Mem) (mode vis d h ao an : Word) :
-    Option (List Word × Mem) :=
-  match callW p n "ctl_get" [136] m with
-  | none => none
-  | some (t, m0) =>
-  match callW p n "iota_certs_full_aux" [mode, vis, d, h, t.headD 0, 0, ao, an, 0] m0 with
-  | none => none
-  | some (r, m') =>
-    if (136 : Word).toNat < (m'.arr64 CTL).size then
-      some ([r.headD 0], m'.set64 CTL 136 (t.headD 0))
-    else none
-
-theorem iotaCertsFull_spec (p : Prog) (hp : p.lookup "iota_certs_full" = some iotaCertsFullL)
-    (n : Nat) (s₀ : St) (mode vis d h ao an : Word) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p (n + 1)) "iota_certs_full" [mode, vis, d, h, ao, an]
-    ⦃fun r s' => LocEq s' s₀ ∧ icfTopW p n s₀.mem mode vis d h ao an = some ([r.headD 0], s'.mem);
-      ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, iotaCertsFullL]
-  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-    callW_spec p n "ctl_get", callW_spec p n "iota_certs_full_aux"] <;>
-  simp_all [icfTopW, LocEq, St.setLocs_cons,
-    St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Locals.init_cons_zero, Locals.init_cons_succ,
-    Sig.retVal, Sig.retOr, CTL]
-
-/-- **`iota_certs_full` refines `iotaCertsFull`.** Statement changes: `n ≤ 2 ^ 62`, the eager bit. -/
-theorem iotaCertsFull_refines' (p : Prog) (hp : IotaProg4 p) (hil : InstListOK p) :
-    ∀ (n : Nat), KnotUpTo p n → ∀ (F : Nat), n ≤ F → n ≤ 2 ^ 62 →
-    ∀ (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
-    (MM : ModeMaps) (eb mode d h ao an : Word) (args : Array EIdx),
-    CoreS dn s₀.mem a₀ vis fe MM eb → mode < 4 → eb = (mode >>> 1) &&& 1 → HW h →
-    SpineR s₀.mem ao an args → ao + an = spTop s₀.mem →
-    CoreSpec p (n + 1) "iota_certs_full" [mode, vis, d, h, ao, an]
-      (iotaCertsFull (coreKnot (decMode mode) fe id F) fe d.toNat (decE h) args.toList) decBool s₀
-      a₀ dn vis fe MM eb := by
-  intro n hk F hnF hn62 s₀ a₀ dn vis fe MM eb mode d h ao an args hS hm4 hebm hh hargs htop
-  refine triple_post (iotaCertsFull_spec p hp.iotaCertsFull n s₀ mode vis d h ao an) fun r s'
-    ⟨hloc, hW⟩ => ⟨hloc, ?_⟩
-  simp only [icfTopW] at hW
+/-- **`iota_certs_full` refines `iotaCertsFull`, both outcomes**: the errors are the slots'. -/
+theorem icfTop_ref (p : Prog) (hp : IotaProg4 p) (hil : InstListOK p) (n : Nat) (hk : KnotUpTo p n)
+    (F : Nat) (hnF : n ≤ F) (hn62 : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState)
+    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (MM : ModeMaps)
+    (eb mode d h ao an : Word) (args : Array EIdx) (hS : CoreS dn s₀.mem a₀ vis fe MM eb)
+    (hm4 : mode < 4) (hebm : eb = (mode >>> 1) &&& 1) (hh : HW h) (hargs : SpineR s₀.mem ao an args)
+    (htop : ao + an = spTop s₀.mem) :
+    RefE (KnotUpToE p n) (icfTopE p (n + 1) s₀.mem mode vis d h ao an)
+      (iotaCertsFull (coreKnot (decMode mode) fe id F) fe d.toNat (decE h) args.toList) a₀
+      (CorePost decBool dn s₀.mem vis fe MM eb ResH) := by
+  rw [icfTopE.eq_2]
   cases n with
-  | zero => rw [callW_zero] at hW; cases hW
+  | zero => rw [callW_zero, liftE_none, icfTopE.k_ctl_get]; exact RefE.of_cls0 rfl
   | succ n' =>
-  rcases c0 : callW p (n' + 1) "ctl_get" [136] s₀.mem with _ | ⟨t, m0⟩ <;>
-    simp only [c0, reduceCtorEq] at hW
+  rcases c0 : callW p (n' + 1) "ctl_get" [136] s₀.mem with _ | ⟨t, m0⟩
+  · rw [liftE_none, icfTopE.k_ctl_get]; exact RefE.of_cls0 rfl
+  rw [liftE_some, icfTopE.k_ctl_get]
   obtain ⟨t0, ht0, -, hmem0, hget⟩ := triple_of_callW
     (ctlGet_spec p hp.ctlGet n' ⟨s₀.mem, Locals.init []⟩ 136) c0
   obtain rfl : m0 = s₀.mem := by rw [← ht0]; exact hmem0
@@ -803,11 +575,6 @@ theorem iotaCertsFull_refines' (p : Prog) (hp : IotaProg4 p) (hil : InstListOK p
     · simp only [Option.some.injEq] at hget; rw [← hget]
     · cases hget
   have htop' : t.headD 0 = ao + an := by rw [ht]; exact htop.symm
-  rcases c1 : callW p (n' + 1) "iota_certs_full_aux"
-      [mode, vis, d, h, t.headD 0, 0, ao, an, 0] s₀.mem with _ | ⟨r1, m1⟩ <;>
-    simp only [c1, reduceCtorEq] at hW
-  obtain ⟨g136', hW⟩ := of_ite_none' hW
-  obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
   have hbd := hargs.bound
   have hspn := hS.spn
   have h263 : (2 : Nat) ^ 63 < 2 ^ 64 := by decide
@@ -815,26 +582,67 @@ theorem iotaCertsFull_refines' (p : Prog) (hp : IotaProg4 p) (hil : InstListOK p
     rw [UInt64.toNat_add, Nat.mod_eq_of_lt (by omega)]
   have hnil : SpineR s₀.mem (t.headD 0) 0 #[] :=
     SpineR.nil_at s₀.mem _ (by rw [htop', hsum]; omega)
-  obtain ⟨t1, ht1, -, hok1, hCAG1, hres1, hr1⟩ := triple_of_callW
-    ((icf_all p hp hil n').1 F (by omega) (by omega) (hk.mono (by omega)) ⟨s₀.mem, Locals.init []⟩ a₀
-      dn vis fe MM eb mode d h (t.headD 0) 0 ao an 0 #[] args hS hm4 hebm hh trivial
-      hnil hargs (by rw [UInt64.add_zero, htop']; exact htop) (by rw [htop', hsum]; omega)) c1
-  rw [ht1] at hCAG1
-  obtain ⟨M1, hS1, hK1, hGr1⟩ := hCAG1
+  have hE := (icf_all p hp hil F n').1 (hk.mono (by omega)) (by omega) (by omega) ⟨s₀.mem, Locals.init []⟩
+    a₀ dn vis fe MM eb mode d h (t.headD 0) 0 ao an 0 #[] args hS hm4 hebm hh trivial
+    hnil hargs (by rw [UInt64.add_zero, htop']; exact htop) (by rw [htop', hsum]; omega)
   have hT : iotaCertsFull (coreKnot (decMode mode) fe id F) fe d.toNat (decE h) args.toList =
       iotaCertsFullAux (coreKnot (decMode mode) fe id F) fe d.toNat (decE h) #[] args
         (0 : Word).toNat := by
     simp only [iotaCertsFull, Array.toArray_toList]; rfl
-  rw [hT, ← hm]
-  have hrest : StackKept s₀.mem (m1.set64 CTL 136 (rdW (s₀.mem.arr64 CTL) 136)) :=
-    StackKept.restoreG hGr1 g136'
-  rw [← ht] at hrest
-  refine ⟨hok1, ⟨M1, ?_, hK1, hrest⟩, ?_, ?_⟩
-  · exact hS1.frame_stk (MemFrame.setCtl m1 136 _) (by simp) (by simp)
-  · rw [hres1]
-    have hr' : r1.headD 0 = r.headD 0 := by simpa using hr
-    simp only [decBool, hr']
-  · have hr' : r1.headD 0 = r.headD 0 := by simpa using hr
-    unfold ResH HW at hr1 ⊢; rw [← hr']; exact hr1
+  rw [hT]
+  refine RefE.tailMap_eq (fun _ => rfl) (fun _ => rfl) (fun hG => hG.mono (Nat.le_succ n')) rfl
+    (fun v y a' hv => ?_) hE
+  rw [ht]
+  exact GrowPost.restore hv [v.1.headD 0] rfl hv.valid
+
+/-! ### The ok halves (`@[refines]` shapes) -/
+
+/-- The three functions' common statement (`cond` is the case the helper handles). -/
+def ICFSpec (p : Prog) (f : FnName) (cond : Word → Word → Word → Prop) (N : Nat) : Prop :=
+  ∀ (F : Nat), N ≤ F → N ≤ 2 ^ 62 → KnotUpTo p N →
+  ∀ (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
+    (MM : ModeMaps) (eb mode d h aco acn ao an i : Word) (acc args : Array EIdx),
+    CoreS dn s₀.mem a₀ vis fe MM eb → mode < 4 → eb = (mode >>> 1) &&& 1 → HW h → cond h an i →
+    SpineR s₀.mem aco acn acc → SpineR s₀.mem ao an args → aco + acn = spTop s₀.mem →
+    ao.toNat + an.toNat ≤ aco.toNat →
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p (N + 1)) f [mode, vis, d, h, aco, acn, ao, an, i]
+    ⦃fun r s' => LocEq s' s₀ ∧
+      AM.ok (iotaCertsFullAux (coreKnot (decMode mode) fe id F) fe d.toNat (decE h) acc args
+        i.toNat) a₀ ∧
+      CoreAfterG dn s₀.mem s'.mem (AM.st (iotaCertsFullAux (coreKnot (decMode mode) fe id F) fe
+        d.toNat (decE h) acc args i.toNat) a₀) vis fe MM eb ∧
+      AM.res (iotaCertsFullAux (coreKnot (decMode mode) fe id F) fe d.toNat (decE h) acc args
+        i.toNat) a₀ = decBool r ∧ ResH r; ⊤⦄
+
+/-- **`iota_certs_full_aux` refines `iotaCertsFullAux`** (`icf_all`'s ok half). Statement changes:
+the shape of `rec_fire_args`' (a triple with `CoreAfterG`: the accumulator pushes leave the stack
+top raised, `CoreSpec` requires it kept); `n ≤ 2 ^ 62`, the eager bit, `ao + an ≤ aco`. The L
+function is split (`iota_certs_full_forall`/`_flush`/`_check`/`_parts`, `spn_get`, `expr_view_ok`:
+`vcgen` fuel, and the twin's `view` of a handle needs the L side to check it). -/
+theorem iotaCertsFullAux_refines' (p : Prog) (hp : IotaProg4 p) (hil : InstListOK p) (n : Nat) :
+    ICFSpec p "iota_certs_full_aux" (fun _ _ _ => True) n :=
+  fun F hnF hn62 hk s₀ a₀ dn vis fe MM eb mode d h aco acn ao an i acc args hS hm4 hebm hh hc hacc
+      hargs htop hao =>
+    triple_post (RefE.triple ((icfE_spec p hp (n + 1)).2.1 s₀ mode vis d h aco acn ao an i)
+      ((icf_all p hp hil F n).1 hk hnF hn62 s₀ a₀ dn vis fe MM eb mode d h aco acn ao an i acc args hS
+        hm4 hebm hh hc hacc hargs htop hao))
+      fun _ _ ⟨hl, _, _, hT, hR⟩ => ⟨hl, hR.growRef hT⟩
+
+/-- **`iota_certs_full` refines `iotaCertsFull`** (`icfTop_ref`'s ok half). Statement changes:
+`n ≤ 2 ^ 62`, the eager bit. -/
+theorem iotaCertsFull_refines' (p : Prog) (hp : IotaProg4 p) (hil : InstListOK p) :
+    ∀ (n : Nat), KnotUpTo p n → ∀ (F : Nat), n ≤ F → n ≤ 2 ^ 62 →
+    ∀ (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
+    (MM : ModeMaps) (eb mode d h ao an : Word) (args : Array EIdx),
+    CoreS dn s₀.mem a₀ vis fe MM eb → mode < 4 → eb = (mode >>> 1) &&& 1 → HW h →
+    SpineR s₀.mem ao an args → ao + an = spTop s₀.mem →
+    CoreSpec p (n + 1) "iota_certs_full" [mode, vis, d, h, ao, an]
+      (iotaCertsFull (coreKnot (decMode mode) fe id F) fe d.toNat (decE h) args.toList) decBool s₀
+      a₀ dn vis fe MM eb :=
+  fun n hk F hnF hn62 s₀ a₀ dn vis fe MM eb mode d h ao an args hS hm4 hebm hh hargs htop =>
+    RefE.coreSpec ((icfE_spec p hp (n + 1)).2.2.2.2 s₀ mode vis d h ao an)
+      (icfTop_ref p hp hil n hk F hnF hn62 s₀ a₀ dn vis fe MM eb mode d h ao an args hS hm4 hebm hh
+        hargs htop)
 
 end L.Arena

@@ -631,71 +631,38 @@ theorem callW_stackCover (p : Prog) (hp : p.lookup "stack_cover" = some stackCov
 
 /-! ## `iota_rec_cmp(mode, vis, d, us, recP, so, rl, mo)` -/
 
-/-- Model of `iota_rec_cmp`. -/
-def irCmpW (p : Prog) (n : Nat) (m : Mem) (mode vis d us recP so rl mo : Word) :
-    Option (Word × Mem) :=
-  match callW p n "erec_push" [rdW (m.arr64 EREC) (rl + 6), rdW (m.arr64 EREC) (rl + 7),
-      rdW (m.arr64 EREC) (rl + 3)] m with
-  | none => none
-  | some (rp, m1) =>
-  match callW p n "rec_fire_args" [rdW (m1.arr64 EREC) (rl + 3), rp.headD 0,
-      rdW (m1.arr64 EREC) (rl + 7), rdW (m1.arr64 EREC) (recP + 2), rdW (m1.arr64 EREC) (recP + 3),
-      us, so, rdW (m1.arr64 EREC) (recP + 5) + 1, rdW (m1.arr64 EREC) (recP + 6),
-      rdW (m1.arr64 EREC) (rl + 2)] m1 with
-  | none => none
-  | some (ra, m2) =>
-  match callW p n "stack_cover" [ra.headD 0 + ra.tail.headD 0] m2 with
-  | none => none
-  | some (_rx, m3) =>
-  match callW p n "defeq_list" [mode, vis, d, mo, rdW (m3.arr64 EREC) (rl + 2), ra.headD 0,
-      ra.tail.headD 0] m3 with
-  | none => none
-  | some (rd, m4) =>
-    if (136 : Word).toNat < (m4.arr64 CTL).size then
-      some (rd.headD 0, m4.set64 CTL 136 (rdW (m.arr64 CTL) 136))
-    else none
+/-- **`iota_rec_cmp`'s model, both outcomes** (generated; `defeq_list` through its run: the record
+pool's frame, `callW_iotaRecCmp_erec`, needs it). -/
+l_model irCmpE_spec (p : Prog) (hf : p.lookup "iota_rec_cmp" = some iotaRecCmpL)
+  fns [hf ↦ irCmpE list]
+  specs [callW_spec p n "erec_push", callW_spec p n "rec_fire_args", callW_spec p n "stack_cover"]
+  grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] unified
+  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
-theorem iotaRecCmp_spec (p : Prog) (hp : p.lookup "iota_rec_cmp" = some iotaRecCmpL) (n : Nat)
-    (s₀ : St) (mode vis d us recP so rl mo : Word) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p (n + 1)) "iota_rec_cmp" [mode, vis, d, us, recP, so, rl, mo]
-    ⦃fun r s' => LocEq s' s₀ ∧ irCmpW p n s₀.mem mode vis d us recP so rl mo = some (r.headD 0, s'.mem);
-      ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, iotaRecCmpL]
-  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-    callW_spec p n "erec_push", callW_spec p n "rec_fire_args", callW_spec p n "stack_cover",
-    callW_spec p n "defeq_list"] <;>
-  simp_all [-UInt64.toNat_add, irCmpW, EREC, CTL, BinOp.eval, getElem_rdW', LocEq,
-    St.setLocs_cons, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Locals.init_cons_zero,
-    Locals.init_cons_succ, Sig.retVal, Sig.retOr] <;>
-  (congr 1; apply rdW_eq; simp_all)
-
-/-- **`iota_rec_cmp` refines the parameter comparison.** -/
-theorem iotaRecCmp_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
-    (hw : WhnfCallees p) (hEI : ErecKeptInst p) (hER : ErecKeptRec p) :
-    ∀ (n : Nat), KnotUpTo p n → ∀ (F : Nat), n ≤ F → n ≤ 2 ^ 62 →
-    ∀ (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
-    (MM : ModeMaps) (eb mode d us recP so rl mo mn sn : Word) (lps : List NIdx) (rule : IRecRule)
-    (args margs : Array EIdx),
-    CoreS dn s₀.mem a₀ vis fe MM eb → mode < 4 → eb = (mode >>> 1) &&& 1 → HW us →
-    hslice? (s₀.mem.arr64 EREC) (rdW (s₀.mem.arr64 EREC) (recP + 2)).toNat
-      (rdW (s₀.mem.arr64 EREC) (recP + 3)).toNat = some lps →
-    decRule (s₀.mem.arr64 EREC) rl.toNat = some rule →
-    SpineR s₀.mem so sn args → so.toNat + sn.toNat ≤ (spTop s₀.mem).toNat →
-    (rdW (s₀.mem.arr64 EREC) (recP + 5)).toNat + 1 = sn.toNat →
-    SpineR s₀.mem mo mn margs → mo.toNat + mn.toNat ≤ (spTop s₀.mem).toNat →
-    rule.ctorParams ≤ mn.toNat →
-    CoreSpec p (n + 1) "iota_rec_cmp" [mode, vis, d, us, recP, so, rl, mo]
+/-- **`iota_rec_cmp` refines the parameter comparison, both outcomes**: the errors are
+`defeq_list`'s (the `defeq` slot's). -/
+theorem irCmp_ref (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
+    (hw : WhnfCallees p) (hEI : ErecKeptInst p) (hER : ErecKeptRec p) (n : Nat) (hk : KnotUpTo p n)
+    (F : Nat) (hnF : n ≤ F) (hn62 : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState)
+    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (MM : ModeMaps)
+    (eb mode d us recP so rl mo mn sn : Word) (lps : List NIdx) (rule : IRecRule)
+    (args margs : Array EIdx) (hS : CoreS dn s₀.mem a₀ vis fe MM eb) (hm4 : mode < 4)
+    (hebm : eb = (mode >>> 1) &&& 1) (hus : HW us)
+    (hlps : hslice? (s₀.mem.arr64 EREC) (rdW (s₀.mem.arr64 EREC) (recP + 2)).toNat
+      (rdW (s₀.mem.arr64 EREC) (recP + 3)).toNat = some lps)
+    (hrule : decRule (s₀.mem.arr64 EREC) rl.toNat = some rule)
+    (hsa : SpineR s₀.mem so sn args) (hsat : so.toNat + sn.toNat ≤ (spTop s₀.mem).toNat)
+    (hmI : (rdW (s₀.mem.arr64 EREC) (recP + 5)).toNat + 1 = sn.toNat)
+    (hsm : SpineR s₀.mem mo mn margs) (hsmt : mo.toNat + mn.toNat ≤ (spTop s₀.mem).toNat)
+    (hcpm : rule.ctorParams ≤ mn.toNat) :
+    RefE (KnotUpToE p n) (irCmpE p (n + 1) s₀.mem mode vis d us recP so rl mo)
       (iotaRecCmpT (coreKnot (decMode mode) fe id F) fe d.toNat rule lps (decI us) args.toList
-        (rdW (s₀.mem.arr64 EREC) (recP + 6)).toNat margs.toList) decBool s₀ a₀ dn vis fe MM eb := by
-  intro n hk F hnF hn62 s₀ a₀ dn vis fe MM eb mode d us recP so rl mo mn sn lps rule args margs hS hm4
-    hebm hus hlps hrule hsa hsat hmI hsm hsmt hcpm
-  refine triple_post (iotaRecCmp_spec p hp.cmp n s₀ mode vis d us recP so rl mo) fun r s' ⟨hloc,
-    hW⟩ => ⟨hloc, ?_⟩
-  simp only [irCmpW] at hW
+        (rdW (s₀.mem.arr64 EREC) (recP + 6)).toNat margs.toList) a₀
+      (CorePost decBool dn s₀.mem vis fe MM eb ResH) := by
+  simp only [irCmpE]
   cases n with
-  | zero => rw [callW_zero] at hW; cases hW
+  | zero => rw [callW_zero, liftE_none]; exact RefE.of_cls0 rfl
   | succ N =>
   have hk' : KnotUpTo p N := hk.mono (Nat.le_succ N)
   have hspn := hS.spn
@@ -703,8 +670,10 @@ theorem iotaRecCmp_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p
   obtain ⟨-, -, -, hcpw, hfpl, hfne, -, -, -⟩ := decRule_rd herec hrule
   generalize hE0 : s₀.mem.arr64 EREC = E at *
   -- the pins
-  rcases c1 : callW p (N + 1) "erec_push" [rdW E (rl + 6), rdW E (rl + 7), rdW E (rl + 3)] s₀.mem with _ | ⟨rp, m1⟩ <;>
-    simp only [c1, reduceCtorEq] at hW
+  rcases c1 : callW p (N + 1) "erec_push" [rdW E (rl + 6), rdW E (rl + 7), rdW E (rl + 3)] s₀.mem with
+    _ | ⟨rp, m1⟩
+  · simp only [liftE_none, irCmpE.k_erec_push]; exact RefE.of_cls0 rfl
+  simp only [liftE_some, irCmpE.k_erec_push]
   have P1 : MemFrame [SPN] [136] s₀.mem m1 ∧ StackGrew s₀.mem m1 ∧
       (rdW E (rl + 3) = 1 → rp.headD 0 = spTop s₀.mem ∧
         ∃ lv pins, rule.fire = .nested lv pins ∧ SpineR m1 (rp.headD 0) (rdW E (rl + 7)) pins.toArray ∧
@@ -724,7 +693,7 @@ theorem iotaRecCmp_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p
   obtain ⟨fr1, gr1, hpush⟩ := P1
   have hS1 : CoreS dn m1 a₀ vis fe MM eb := hS.frame_stk fr1 (by simp) (by simp)
   have e1 : m1.arr64 EREC = E := by rw [← hE0]; exact fr1.1 EREC (by simp [SPN, EREC]) (by decide)
-  rw [e1] at hW
+  rw [e1]
   -- the comparands
   have hsa1 : SpineR m1 so sn args := hsa.keep gr1.size gr1.below hsat hspn
   have hsn : rdW E (recP + 5) + 1 = sn := by
@@ -733,7 +702,9 @@ theorem iotaRecCmp_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p
     rw [UInt64.toNat_add]; simp; omega
   rcases c2 : callW p (N + 1) "rec_fire_args" [rdW E (rl + 3), rp.headD 0, rdW E (rl + 7),
       rdW E (recP + 2), rdW E (recP + 3), us, so, rdW E (recP + 5) + 1, rdW E (recP + 6),
-      rdW E (rl + 2)] m1 with _ | ⟨ra, m2⟩ <;> simp only [c2, reduceCtorEq] at hW
+      rdW E (rl + 2)] m1 with _ | ⟨ra, m2⟩
+  · simp only [liftE_none, irCmpE.k_rec_fire_args]; exact RefE.of_cls0 rfl
+  simp only [liftE_some, irCmpE.k_rec_fire_args]
   have htop1 : (spTop s₀.mem).toNat ≤ (spTop m1).toNat := gr1.1
   obtain ⟨t2, ht2, -, ok2, ⟨M2, hS2, hK2, gr2⟩, xs, res2, hxs⟩ := triple_of_callW
     (recFireArgs_refines' p hp.toIotaProg' hc hw hEI (N + 1) ⟨m1, Locals.init []⟩ a₀ dn vis fe MM eb
@@ -747,13 +718,18 @@ theorem iotaRecCmp_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p
   rw [ht2] at hS2 gr2 hxs
   have e2 : m2.arr64 EREC = E := by
     rw [hER _ _ _ _ _ _ (by simp) c2, e1]
+  have hrunA := AM.run_of_ok _ _ ok2
+  rw [res2] at hrunA
+  refine RefE.bind_right hrunA ?_
+  rw [hcpw]
   -- the cover
-  rcases c3 : callW p (N + 1) "stack_cover" [ra.headD 0 + ra.tail.headD 0] m2 with _ | ⟨rx, m3⟩ <;>
-    simp only [c3, reduceCtorEq] at hW
+  rcases c3 : callW p (N + 1) "stack_cover" [ra.headD 0 + ra.tail.headD 0] m2 with _ | ⟨rx, m3⟩
+  · simp only [liftE_none, irCmpE.k_stack_cover]; exact RefE.of_cls0 rfl
+  simp only [liftE_some, irCmpE.k_stack_cover]
   obtain ⟨fr3, gr3, hcov⟩ := callW_stackCover p hp.stackCover (N + 1) m2 _ rx m3 c3
   have hS3 : CoreS dn m3 _ vis fe M2 eb := hS2.frame_stk fr3 (by simp) (by simp)
   have e3 : m3.arr64 EREC = E := by rw [fr3.1 EREC (by simp) (by decide), e2]
-  rw [e3] at hW
+  rw [e3]
   have hxs3 : SpineR m3 (ra.headD 0) (ra.tail.headD 0) xs.toArray := SpineR.of_spn_core hxs
     (by rw [fr3.1 SPN (by simp) (by decide)])
   have hxb := hxs.bound
@@ -769,38 +745,53 @@ theorem iotaRecCmp_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p
   have hcpm' : (rdW E (rl + 2)).toNat ≤ mn.toNat := by rw [← hcpw]; exact hcpm
   have hmt3 : mo.toNat + mn.toNat ≤ (spTop m3).toNat := by
     have := UInt64.le_iff_toNat_le.mp hgr13.1; omega
-  rcases c4 : callW p (N + 1) "defeq_list" [mode, vis, d, mo, rdW E (rl + 2), ra.headD 0,
-      ra.tail.headD 0] m3 with _ | ⟨rd, m4⟩ <;> simp only [c4, reduceCtorEq] at hW
+  have hsl := (hsm3.take _ hcpm').toN
+  have hta : rdW E (rl + 2) ≠ 0 → mo.toNat + (rdW E (rl + 2)).toNat ≤ (spTop m3).toNat := fun _ => by
+    omega
+  have hD := defeqList_ref p N hk' F (by omega) (by omega) ⟨m3, Locals.init []⟩ _ dn vis fe M2 eb mode d
+    mo (rdW E (rl + 2)) (ra.headD 0) (ra.tail.headD 0)
+    (margs.toList.take (rdW E (rl + 2)).toNat).toArray xs.toArray hS3 hm4 hebm hsl hxs3.toN hta
+    (fun _ => hxt)
+  simp only at hD
+  rcases c4 : callE p (N + 1) "defeq_list" [mode, vis, d, mo, rdW E (rl + 2), ra.headD 0,
+      ra.tail.headD 0] m3 with e4 | ⟨rd, m4⟩
+  · simp only [irCmpE.k_defeq_list]
+    exact fun hG => RefE.run_err (defeqList_specE p hp.defeqList (N + 1) ⟨m3, Locals.init []⟩ mode vis d
+      mo (rdW E (rl + 2)) (ra.headD 0) (ra.tail.headD 0)) trivial (hG.mono (Nat.le_succ N)) hD c4
+  simp only [irCmpE.k_defeq_list]
   obtain ⟨hrunD, ⟨M4, hS4, hK4, hSt4⟩, hr4⟩ := CoreSpec.run
     (defeqList_refines p hp.toIotaProg' N hk' F (by omega) (by omega) ⟨m3, Locals.init []⟩ _ dn vis fe
       M2 eb mode d mo (rdW E (rl + 2)) (ra.headD 0) (ra.tail.headD 0)
-      (margs.toList.take (rdW E (rl + 2)).toNat).toArray xs.toArray hS3 hm4 hebm
-      (hsm3.take _ hcpm').toN hxs3.toN
-      (fun _ => by show mo.toNat + (rdW E (rl + 2)).toNat ≤ (spTop m3).toNat; omega)
-      (fun _ => hxt)) c4
-  by_cases g136 : ¬ (136 : Word).toNat < (m4.arr64 CTL).size
-  · rw [ite_eq_right g136] at hW; cases hW
-  rw [ite_eq_left (Classical.not_not.mp g136)] at hW
-  obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
-  -- the twin
-  have hrunA := AM.run_of_ok _ _ ok2
-  rw [res2] at hrunA
+      (margs.toList.take (rdW E (rl + 2)).toNat).toArray xs.toArray hS3 hm4 hebm hsl hxs3.toN hta
+      (fun _ => hxt)) (callW_of_callE c4)
   simp only at hrunD
-  have hrunF : (iotaRecCmpT (coreKnot (decMode mode) fe id F) fe d.toNat rule lps (decI us)
-      args.toList (rdW E (recP + 6)).toNat margs.toList).run a₀ =
-      .ok (decBool rd, AM.st (defEqList (coreKnot (decMode mode) fe id F) fe d.toNat
-        (margs.toList.take (rdW E (rl + 2)).toNat) xs)
-        (AM.st (recFireArgs rule lps (decI us) args.toList (rdW E (recP + 6)).toNat) a₀)) := by
-    simp only [iotaRecCmpT, StateT.run_bind, hrunA, except_ok_bind]
-    rw [hcpw]
-    exact hrunD
-  obtain ⟨hokF, hstF, hresF⟩ := AM.of_run_ok _ _ _ _ hrunF
-  have hgr14 : StackGrew s₀.mem m4 := hgr13.trans hSt4.toGrew
-  refine ⟨hokF, ⟨M4, ?_, hK2.trans hK4, ?_⟩, ?_, ?_⟩
-  · rw [hstF, ← hm]; exact hS4.frame_stk (MemFrame.setCtl m4 136 _) (by simp) (by simp)
-  · rw [← hm]; exact StackKept.restoreG hgr14 (Classical.not_not.mp g136)
-  · rw [hresF]; simp only [decBool, hr]
-  · unfold ResH; rw [← hr]; exact hr4
+  refine RefE.ret hrunD ⟨⟨M4, hS4.frame_stk (MemFrame.setCtl m4 136 _) (by simp) (by simp),
+    hK2.trans hK4, ?_⟩, rfl, hr4⟩
+  exact StackKept.restoreG' (hgr13.trans hSt4.toGrew)
+
+/-- **`iota_rec_cmp` refines the parameter comparison** (`irCmp_ref`'s ok half). -/
+theorem iotaRecCmp_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
+    (hw : WhnfCallees p) (hEI : ErecKeptInst p) (hER : ErecKeptRec p) :
+    ∀ (n : Nat), KnotUpTo p n → ∀ (F : Nat), n ≤ F → n ≤ 2 ^ 62 →
+    ∀ (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
+    (MM : ModeMaps) (eb mode d us recP so rl mo mn sn : Word) (lps : List NIdx) (rule : IRecRule)
+    (args margs : Array EIdx),
+    CoreS dn s₀.mem a₀ vis fe MM eb → mode < 4 → eb = (mode >>> 1) &&& 1 → HW us →
+    hslice? (s₀.mem.arr64 EREC) (rdW (s₀.mem.arr64 EREC) (recP + 2)).toNat
+      (rdW (s₀.mem.arr64 EREC) (recP + 3)).toNat = some lps →
+    decRule (s₀.mem.arr64 EREC) rl.toNat = some rule →
+    SpineR s₀.mem so sn args → so.toNat + sn.toNat ≤ (spTop s₀.mem).toNat →
+    (rdW (s₀.mem.arr64 EREC) (recP + 5)).toNat + 1 = sn.toNat →
+    SpineR s₀.mem mo mn margs → mo.toNat + mn.toNat ≤ (spTop s₀.mem).toNat →
+    rule.ctorParams ≤ mn.toNat →
+    CoreSpec p (n + 1) "iota_rec_cmp" [mode, vis, d, us, recP, so, rl, mo]
+      (iotaRecCmpT (coreKnot (decMode mode) fe id F) fe d.toNat rule lps (decI us) args.toList
+        (rdW (s₀.mem.arr64 EREC) (recP + 6)).toNat margs.toList) decBool s₀ a₀ dn vis fe MM eb :=
+  fun n hk F hnF hn62 s₀ a₀ dn vis fe MM eb mode d us recP so rl mo mn sn lps rule args margs hS hm4
+      hebm hus hlps hrule hsa hsat hmI hsm hsmt hcpm =>
+    RefE.coreSpec (irCmpE_spec p hp.cmp (n + 1) s₀ mode vis d us recP so rl mo)
+      (irCmp_ref p hp hc hw hEI hER n hk F hnF hn62 s₀ a₀ dn vis fe MM eb mode d us recP so rl mo mn sn
+        lps rule args margs hS hm4 hebm hus hlps hrule hsa hsat hmI hsm hsmt hcpm)
 
 /-! ## `iota_rec_vck(mode, vis, d, us, recP, so, usj, ctorP, rl, mo, mn, cmpL)` -/
 
@@ -1033,15 +1024,16 @@ theorem callW_iotaRecCmp_erec (p : Prog) (hp : IotaRecProg' p) (hER : ErecKeptRe
     (hEK : ErecKeptKnot p) (n : Nat) (m : Mem) (vs : List Word) (r : List Word) (m' : Mem)
     (hvs : vs.length = 8) (h : callW p n "iota_rec_cmp" vs m = some (r, m')) :
     m'.arr64 EREC = m.arr64 EREC := by
-  cases n with
-  | zero => rw [callW_zero] at h; cases h
-  | succ n =>
   match vs, hvs with
   | [mode, vis, d, us, recP, so, rl, mo], _ =>
-  obtain ⟨t, ht, -, hW⟩ := triple_of_callW
-    (iotaRecCmp_spec p hp.cmp n ⟨m, Locals.init []⟩ mode vis d us recP so rl mo) h
+  obtain ⟨t, ht, -, hW⟩ := triple_of_callE
+    (irCmpE_spec p hp.cmp n ⟨m, Locals.init []⟩ mode vis d us recP so rl mo) (callE_of_callW h)
   rw [ht] at hW
-  simp only [irCmpW] at hW
+  cases n with
+  | zero => simp [irCmpE] at hW
+  | succ n =>
+  simp only [irCmpE, irCmpE.k_erec_push, irCmpE.k_rec_fire_args, irCmpE.k_stack_cover,
+    irCmpE.k_defeq_list] at hW
   split at hW
   · cases hW
   rename_i rp m1 c1
@@ -1054,13 +1046,16 @@ theorem callW_iotaRecCmp_erec (p : Prog) (hp : IotaRecProg' p) (hER : ErecKeptRe
   split at hW
   · cases hW
   rename_i rd m4 c4
-  split at hW
-  · simp only [Option.some.injEq, Prod.mk.injEq] at hW
-    rw [← hW.2, Mem.arr64_set64_ne _ _ _ _ _ (by decide), hEK _ _ _ _ _ _ (by simp) c4,
-      (callW_stackCover p hp.stackCover n m2 _ rx m3 c3).1.1 EREC (by simp) (by decide),
-      hER _ _ _ _ _ _ (by simp) c2,
-      (callW_erecPush_frame p hp.erecPush n m _ _ _ rp m1 c1).1 EREC (by simp [SPN, EREC]) (by decide)]
-  · cases hW
+  simp only [Except.ok.injEq, Prod.mk.injEq] at hW
+  have o : ∀ {x : Option (List Word × Mem)} {v}, liftE x = .ok v → x = some v := by
+    intro x v h; cases x <;> cases h; rfl
+  replace c1 := o c1
+  replace c2 := o c2
+  replace c3 := o c3
+  rw [← hW.2, Mem.arr64_set64_ne _ _ _ _ _ (by decide), hEK _ _ _ _ _ _ (by simp) (callW_of_callE c4),
+    (callW_stackCover p hp.stackCover n m2 _ rx m3 c3).1.1 EREC (by simp) (by decide),
+    hER _ _ _ _ _ _ (by simp) c2,
+    (callW_erecPush_frame p hp.erecPush n m _ _ _ rp m1 c1).1 EREC (by simp [SPN, EREC]) (by decide)]
 
 /-- **`iota_rec_vck` refines the checks past `iotaCase3`.** -/
 theorem iotaRecVck_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
