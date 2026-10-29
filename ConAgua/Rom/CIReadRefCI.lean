@@ -115,7 +115,7 @@ theorem ciPre {m₀ : Mem} {a₀ : AState} {T : Nat} (seen : List ConLeche.Expr)
   · rw [hq3, hq8]
   · rw [hek3.2 i (by omega) (by omega), er_set_ne _ _ _ _ (by omega), hE1']
   · rw [hek3.2 _ (by omega) (by omega)]
-    exact er_set_get m1 _ _ (by have := hI1.ok.2.1; omega)
+    exact er_set_get m1 _ _ (by have := hI1.ok.er; omega)
   · rw [hp1] at hH3
     exact hH3.mono (fun i hi => by omega) (fun _ h => h)
 
@@ -207,7 +207,7 @@ theorem ci_ctor {m₀ : Mem} {a₀ : AState} {T : Nat} (dn : NIdx → Option Con
     rw [UInt64.toNat_add, show (6 : Word).toNat = 6 from rfl]; exact Nat.mod_eq_of_lt (by omega)
   obtain ⟨hI3, hM3, hs3, ht3, hIW3⟩ := setER_facts hI2 hM2 (pp + 5) (UInt64.ofNat nP) (by omega)
   obtain ⟨hI4, hM4, hs4, ht4, hIW4⟩ := setER_facts hI3 hM3 (pp + 6) (UInt64.ofNat nF) (by omega)
-  have hsz2 : erTop m2 ≤ (m2.arr64 EREC).size := hI2.ok.2.1
+  have hsz2 : erTop m2 ≤ (m2.arr64 EREC).size := hI2.ok.er
   have hlen := drop_len rom _ (u64B nP ++ u64B nF) _ (by rw [hd2]) (by simp [u64B])
   simp only [List.length_append, u64B, List.length_cons, List.length_nil] at hlen
   have hrom := hr; simp only [RomOK] at hrom
@@ -337,10 +337,10 @@ theorem ci_rec {m₀ : Mem} {a₀ : AState} {T : Nat} (dn : NIdx → Option ConL
     intro i h5 h6; rw [← hm4, er_set_ne _ _ _ _ (by omega), er_set_ne _ _ _ _ (by omega)]
   have hw5 : (erA m4)[pp.toNat + 5]? = some (UInt64.ofNat mI) := by
     rw [← hm4, er_set_ne _ _ _ _ (by omega), ← hp5]
-    exact er_set_get _ _ _ (by have := hI2.ok.2.1; omega)
+    exact er_set_get _ _ _ (by have := hI2.ok.er; omega)
   have hw6 : (erA m4)[pp.toNat + 6]? = some (UInt64.ofNat rP) := by
     rw [← hm4, ← hp6]
-    exact er_set_get _ _ _ (by rw [size_set64]; have := hI2.ok.2.1; omega)
+    exact er_set_get _ _ _ (by rw [size_set64]; have := hI2.ok.er; omega)
   have h11 : (11 * UInt64.ofNat rs.length).toNat = 11 * rs.length := by
     rw [UInt64.toNat_mul, ofNat_toNat_lt (by omega)]; simp; omega
   cases h4 : callW p (k' + 1) "erec_alloc" [11 * UInt64.ofNat rs.length] m4 with
@@ -364,7 +364,7 @@ theorem ci_rec {m₀ : Mem} {a₀ : AState} {T : Nat} (dn : NIdx → Option ConL
   have hE57 : ∀ i, i ≠ pp.toNat + 7 → i ≠ pp.toNat + 8 → (erA m7)[i]? = (erA m5)[i]? := by
     intro i h7 h8; rw [← hm7, er_set_ne _ _ _ _ (by omega), er_set_ne _ _ _ _ (by omega)]
   have hE5' : ∀ i : Nat, (erA m5)[i]? = (erA m4)[i]? := fun i => by unfold erA; rw [hE5]
-  have hsz5 : erTop m5 ≤ (m5.arr64 EREC).size := hI5.ok.2.1
+  have hsz5 : erTop m5 ≤ (m5.arr64 EREC).size := hI5.ok.er
   have hw7 : (erA m7)[pp.toNat + 7]? = some (r4.headD 0) := by
     rw [← hm7, er_set_ne _ _ _ _ (by omega), ← hp7]
     exact er_set_get _ _ _ (by omega)

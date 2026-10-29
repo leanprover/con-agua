@@ -176,10 +176,10 @@ theorem rule_rel {m₀ : Mem} {a₀ : AState} {T : Nat} (seen : List ConLeche.Ex
     rw [hq40, ← List.drop_drop, hd1]; simp [u64B]
   obtain ⟨memo', a3, hrun3, hA3, hk3, hM3, hlt3, hq3, hf3, hs3, hmo3⟩ :=
     exprCall hL hr rl.rhs hfe hI2.arena hI2.mode hM2 hd3 (by rw [hs2, hs1, hst]; decide)
-      (by have := hI2.ok.2.2.2.2; omega) h3
+      (by have := hI2.ok.ctl; omega) h3
   obtain ⟨hI4, hE4, hIW4, ht4, -⟩ := hI2.expr hA3 hmo3 hf3 hk3
   obtain ⟨hI5, hM5, hs5, ht5, hIW5⟩ := setER_facts hI4 hM3 (rr + 8) (r3.headD 0) (by omega)
-  have hsz : erTop m ≤ (m.arr64 EREC).size := hI.ok.2.1
+  have hsz : erTop m ≤ (m.arr64 EREC).size := hI.ok.er
   have hE1' : ∀ i : Nat, (erA m1)[i]? = (erA m)[i]? := fun i => by unfold erA; rw [hE1]
   have hE4' : ∀ i : Nat, (erA m3)[i]? = (erA (setERs m1 ws))[i]? := fun i => by unfold erA; rw [hE4]
   have hword : ∀ (j w : Word) (i : Nat), (j, w) ∈ ws → j.toNat = rr.toNat + i → i < 11 → i ≠ 8 →

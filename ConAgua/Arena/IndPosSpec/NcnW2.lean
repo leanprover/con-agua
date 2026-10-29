@@ -77,7 +77,7 @@ theorem ncnW_ok (k : Nat) (m m' : Mem) (a : AState) (ctx po pl us dO dL cv close
   obtain ⟨wn, hwn, hwnH, hwnd⟩ := decCV_name hcv
   have hcvb : cv.toNat < erTop m := by have := (Array.getElem?_eq_some_iff.mp hwn).1; have := erecP_size_le m; omega
   have hrdn : rdW (m3.arr64 EREC) cv = wn := by
-    have e1 : (m3.arr64 EREC)[cv.toNat]? = (m.arr64 EREC)[cv.toNat]? := hg13.2.2.2 _ hcvb
+    have e1 : (m3.arr64 EREC)[cv.toNat]? = (m.arr64 EREC)[cv.toNat]? := hg13.erGet _ hcvb
     simp [rdW, e1, erecP_get hwn]
   rw [hrdn] at hget4
   refine ⟨⟨cvv.name, decI us, ys, decE ty⟩, a3, ?_, ?_, by omega,

@@ -160,7 +160,7 @@ theorem newRef_step (L : NbLook p) (hIlpf : IlpfF p) (hLC : LvlCacheProg p) (n :
     have e0 := hget3 0 (by simp); have e1 := hget3 1 (by simp)
     simp only [Nat.add_zero, List.getElem?_cons_zero, List.getElem?_cons_succ] at e0 e1
     refine ⟨pw, nn, cty, by simpa using hget4 0 (by simp), by omega,
-      by rw [hg4.2.2.1 _ (by omega)]; exact e0, hnn, rfl, by rw [hg4.2.2.1 _ (by omega)]; exact e1, hcty, rfl⟩
+      by rw [hg4.iwGet _ (by omega)]; exact e0, hnn, rfl, by rw [hg4.iwGet _ (by omega)]; exact e1, hcty, rfl⟩
   have hg1t : g0.tail.headD 0 = 1 := by rw [hg0]; rfl
   rw [hg1t]
   have hg24 := hg3.trans hg4

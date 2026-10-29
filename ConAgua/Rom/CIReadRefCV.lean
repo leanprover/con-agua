@@ -97,7 +97,7 @@ theorem cv_rel {m₀ : Mem} {a₀ : AState} {T : Nat} (seen : List ConLeche.Expr
   have hgo := hI.grow.er
   -- the name word
   obtain ⟨hI2, hM2, hs2, ht2, hIW2⟩ := setER_facts hI1 hM1 pp (r1.headD 0) hp0
-  have hsz1 : erTop m1 ≤ (m1.arr64 EREC).size := hI1.ok.2.1
+  have hsz1 : erTop m1 ≤ (m1.arr64 EREC).size := hI1.ok.er
   -- the level parameters
   cases k with
   | zero => rw [callW_zero] at hw; simp at hw
@@ -119,7 +119,7 @@ theorem cv_rel {m₀ : Mem} {a₀ : AState} {T : Nat} (seen : List ConLeche.Expr
     drop_shift rom _ (encNameL cv.levelParams) _ _ (by rw [hdl, List.append_assoc]) _ (by rw [hq3, hq1])
   obtain ⟨memo', a4, hrun4, hA4, hk4, hM4, hlt4, hq4, hf4, hs4, hmo4⟩ :=
     exprCall hL hr cv.type hfe hI3.arena hI3.mode hM3 hdt (by rw [hs3, hs2, hs1, hst]; decide)
-      (by have := hI3.ok.2.2.2.2; omega) h4
+      (by have := hI3.ok.ctl; omega) h4
   obtain ⟨hI4, hE4, hIW4, ht4, -⟩ := hI3.expr hA4 hmo4 hf4 hk4
   obtain ⟨hI5, hM5, hs5, ht5, hIW5⟩ := setER_facts hI4 hM4 (pp + 3) (r4.headD 0) (by omega)
   refine ⟨memo', ⟨decI (r1.headD 0), ws.map decI, decI (r4.headD 0)⟩, a4, ?_, hI5, hM5,
@@ -144,7 +144,7 @@ theorem cv_rel {m₀ : Mem} {a₀ : AState} {T : Nat} (seen : List ConLeche.Expr
         hek3.2 pp.toNat (by omega) (by omega)]
       exact hw0
     have hw3 : (erA (m4.set64 EREC (pp + 3) (r4.headD 0)))[pp.toNat + 3]? = some (r4.headD 0) := by
-      rw [← hp3]; exact er_set_get m4 _ _ (by have := hI4.ok.2.1; omega)
+      rw [← hp3]; exact er_set_get m4 _ _ (by have := hI4.ok.er; omega)
     have hL3 : Holds (fun i => (pp.toNat + 1 ≤ i ∧ i < pp.toNat + 1 + 2) ∨
         (erTop (m1.set64 EREC pp (r1.headD 0)) ≤ i ∧ i < erTop m3)) (fun _ => False)
         (fun m => (hlist? (erA m) (pp.toNat + 1) : Option (List NIdx)))

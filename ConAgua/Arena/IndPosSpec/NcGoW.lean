@@ -384,7 +384,7 @@ theorem ncGoW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis C cs : W
           · rw [set64IW_get, ite_eq_right (by omega), hg23.iwGet _ (by omega)]; exact hw1
           · simp only [List.map_append, List.map_cons, List.map_nil]
             rw [List.getElem_append_left (by rw [hlen]; exact hia)]
-            exact (hw2.agree hGX4.iwGet hE4).mono fun _ hx =>
+            exact (hw2.agree hGX4.2.2.1 hE4).mono fun _ hx =>
               ⟨Nat.lt_of_lt_of_le hx.1 (by rw [ht4]; exact hg23.1), hx.2⟩
         · have hie : i = acc.length := by omega
           subst hie
