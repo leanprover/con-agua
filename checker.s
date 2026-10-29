@@ -66422,7 +66422,7 @@ ret
 ca_f_d_member:
 movq %rsp, %rax
 subq 8(%r15), %rax
-cmpq $216, %rax
+cmpq $248, %rax
 jb ca_exhausted
 subq $176, %rsp
 movq (%rsi), %rax
@@ -87050,7 +87050,7 @@ ret
 ca_f_hints_val:
 movq %rsp, %rax
 subq 8(%r15), %rax
-cmpq $88, %rax
+cmpq $120, %rax
 jb ca_exhausted
 subq $48, %rsp
 movq %rdi, (%rsp)
@@ -92320,7 +92320,7 @@ ret
 ca_f_ifl_ids:
 movq %rsp, %rax
 subq 8(%r15), %rax
-cmpq $96, %rax
+cmpq $128, %rax
 jb ca_exhausted
 subq $56, %rsp
 movq %rdi, (%rsp)
@@ -97896,7 +97896,7 @@ ret
 ca_f_ind_num:
 movq %rsp, %rax
 subq 8(%r15), %rax
-cmpq $112, %rax
+cmpq $144, %rax
 jb ca_exhausted
 subq $72, %rsp
 movq %rdi, (%rsp)
@@ -115953,7 +115953,7 @@ ret
 ca_f_line_rec:
 movq %rsp, %rax
 subq 8(%r15), %rax
-cmpq $200, %rax
+cmpq $232, %rax
 jb ca_exhausted
 subq $160, %rsp
 movq %rdi, (%rsp)
@@ -120116,7 +120116,7 @@ ret
 ca_f_lp_put:
 movq %rsp, %rax
 subq 8(%r15), %rax
-cmpq $112, %rax
+cmpq $144, %rax
 jb ca_exhausted
 subq $72, %rsp
 movq %rdi, (%rsp)
@@ -121723,7 +121723,7 @@ ret
 ca_f_ls_put:
 movq %rsp, %rax
 subq 8(%r15), %rax
-cmpq $128, %rax
+cmpq $160, %rax
 jb ca_exhausted
 subq $88, %rsp
 movq %rdi, (%rsp)
@@ -158348,7 +158348,7 @@ movq $0, %rax
 addq $24, %rsp
 ret
 ca_f_read_nat:
-subq $32, %rsp
+subq $64, %rsp
 movq $0, %r13
 lea 18(%rdi), %rax
 cmpq %r8, %rax
@@ -158358,17 +158358,147 @@ jmp .Lca_read_nat_0R
 jmp .Lca_read_nat_1X
 .Lca_read_nat_1E:
 .Lca_read_nat_1X:
-.Lca_read_nat_21H:
+movq %r8, %rsi
+subq %rdi, %rsi
+subq $1, %rsi
+cmpq $8, %r8
+jb .Lca_read_nat_221E
+cmpq 1480(%r15), %r8
+ja .Lca_read_nat_221E
+cmpq $8, %rsi
+jae .Lca_read_nat_22141E
+movq %r8, %rax
+subq $8, %rax
+movq 1480(%r15), %rdx
+cmpq $8, %rdx
+jb ca_error
+subq $8, %rdx
+cmpq %rdx, %rax
+ja ca_error
+movq 16(%r15), %rcx
+movq (%rcx,%rax,1), %rax
+movq %rax, 48(%rsp)
+movq $1085102592571150095, %rax
+movq %rax, 56(%rsp)
+movq $7, %rax
+subq %rsi, %rax
+shlq $3, %rax
+movq %rax, %rcx
+movq 56(%rsp), %rax
+shlq %cl, %rax
+movq %rax, %rcx
+movq 48(%rsp), %rax
+andq %rcx, %rax
+movq %rax, %r12
+movq %r12, %rax
+imulq $2561, %rax
+shrq $8, %rax
+movq $71777214294589695, %rcx
+andq %rcx, %rax
+movq %rax, %r12
+movq %r12, %rax
+imulq $6553601, %rax
+shrq $16, %rax
+movq $281470681808895, %rcx
+andq %rcx, %rax
+movq %rax, %r12
+movq $42949672960001, %rax
+imulq %r12, %rax
+shrq $32, %rax
+jmp .Lca_read_nat_0R
+jmp .Lca_read_nat_22141X
+.Lca_read_nat_22141E:
+.Lca_read_nat_22141X:
+cmpq $16, %rsi
+jae .Lca_read_nat_22142E
+cmpq $16, %r8
+jb .Lca_read_nat_22142E
+movq %r8, %rax
+subq $16, %rax
+movq 1480(%r15), %rdx
+cmpq $8, %rdx
+jb ca_error
+subq $8, %rdx
+cmpq %rdx, %rax
+ja ca_error
+movq 16(%r15), %rcx
+movq (%rcx,%rax,1), %rax
+movq %rax, 48(%rsp)
+movq $1085102592571150095, %rax
+movq %rax, 56(%rsp)
+movq $15, %rax
+subq %rsi, %rax
+shlq $3, %rax
+movq %rax, %rcx
+movq 56(%rsp), %rax
+shlq %cl, %rax
+movq %rax, %rcx
+movq 48(%rsp), %rax
+andq %rcx, %rax
+movq %rax, %r12
+movq %r12, %rax
+imulq $2561, %rax
+shrq $8, %rax
+movq $71777214294589695, %rcx
+andq %rcx, %rax
+movq %rax, %r12
+movq %r12, %rax
+imulq $6553601, %rax
+shrq $16, %rax
+movq $281470681808895, %rcx
+andq %rcx, %rax
+movq %rax, %r12
+movq %r8, %rax
+subq $8, %rax
+movq 1480(%r15), %rdx
+cmpq $8, %rdx
+jb ca_error
+subq $8, %rdx
+cmpq %rdx, %rax
+ja ca_error
+movq 16(%r15), %rcx
+movq (%rcx,%rax,1), %rax
+movq $1085102592571150095, %rcx
+andq %rcx, %rax
+movq %rax, %rbx
+movq %rbx, %rax
+imulq $2561, %rax
+shrq $8, %rax
+movq $71777214294589695, %rcx
+andq %rcx, %rax
+movq %rax, %rbx
+movq %rbx, %rax
+imulq $6553601, %rax
+shrq $16, %rax
+movq $281470681808895, %rcx
+andq %rcx, %rax
+movq %rax, %rbx
+movq $42949672960001, %rax
+imulq %r12, %rax
+shrq $32, %rax
+imulq $100000000, %rax
+movq $42949672960001, %rcx
+imulq %rbx, %rcx
+shrq $32, %rcx
+addq %rcx, %rax
+jmp .Lca_read_nat_0R
+jmp .Lca_read_nat_22142X
+.Lca_read_nat_22142E:
+.Lca_read_nat_22142X:
+jmp .Lca_read_nat_221X
+.Lca_read_nat_221E:
+.Lca_read_nat_221X:
+.Lca_read_nat_2221H:
 movq $0, %rax
 cmpq $0, %rax
-jne .Lca_read_nat_21X
+jne .Lca_read_nat_2221X
 cmpq %rdi, %r8
-ja .Lca_read_nat_2161E
+ja .Lca_read_nat_222161E
 movq %r13, %rax
 jmp .Lca_read_nat_0R
-jmp .Lca_read_nat_2161X
-.Lca_read_nat_2161E:
-.Lca_read_nat_2161X:
+jmp .Lca_read_nat_222161X
+.Lca_read_nat_222161E:
+.Lca_read_nat_222161X:
 movq %r13, %rax
 imulq $10, %rax
 cmpq 1480(%r15), %rdi
@@ -158382,14 +158512,14 @@ movq %rax, %r13
 addq $1, %rdi
 subq $1, %r14
 jb ca_exhausted
-jmp .Lca_read_nat_21H
-.Lca_read_nat_21X:
+jmp .Lca_read_nat_2221H
+.Lca_read_nat_2221X:
 movq $0, %rax
 jmp .Lca_read_nat_0R
 .Lca_read_nat_0Z:
 movq $0, %rax
 .Lca_read_nat_0R:
-addq $32, %rsp
+addq $64, %rsp
 ret
 ca_f_rec2:
 movq %rsp, %rax
@@ -159383,7 +159513,7 @@ ret
 ca_f_rec_nat_list:
 movq %rsp, %rax
 subq 8(%r15), %rax
-cmpq $96, %rax
+cmpq $128, %rax
 jb ca_exhausted
 subq $56, %rsp
 movq %rdi, (%rsp)
@@ -178146,7 +178276,7 @@ ret
 ca_f_sub_rec:
 movq %rsp, %rax
 subq 8(%r15), %rax
-cmpq $176, %rax
+cmpq $208, %rax
 jb ca_exhausted
 subq $136, %rsp
 movq %rdi, (%rsp)
@@ -191790,7 +191920,7 @@ ret
 ca_f_pre_d_member:
 movq %rsp, %rax
 subq 8(%r15), %rax
-cmpq $216, %rax
+cmpq $248, %rax
 jb ca_exhausted
 subq $176, %rsp
 movq (%rsi), %rax
@@ -193341,7 +193471,7 @@ ret
 ca_f_pre_hints_val:
 movq %rsp, %rax
 subq 8(%r15), %rax
-cmpq $88, %rax
+cmpq $120, %rax
 jb ca_exhausted
 subq $48, %rsp
 movq %rdi, (%rsp)
@@ -193443,7 +193573,7 @@ ret
 ca_f_pre_ifl_ids:
 movq %rsp, %rax
 subq 8(%r15), %rax
-cmpq $96, %rax
+cmpq $128, %rax
 jb ca_exhausted
 subq $56, %rsp
 movq %rdi, (%rsp)
@@ -194063,7 +194193,7 @@ ret
 ca_f_pre_ind_num:
 movq %rsp, %rax
 subq 8(%r15), %rax
-cmpq $112, %rax
+cmpq $144, %rax
 jb ca_exhausted
 subq $72, %rsp
 movq %rdi, (%rsp)
@@ -197467,7 +197597,7 @@ ret
 ca_f_pre_line_rec:
 movq %rsp, %rax
 subq 8(%r15), %rax
-cmpq $200, %rax
+cmpq $232, %rax
 jb ca_exhausted
 subq $160, %rsp
 movq %rdi, (%rsp)
@@ -198365,7 +198495,7 @@ ret
 ca_f_pre_lp_put:
 movq %rsp, %rax
 subq 8(%r15), %rax
-cmpq $112, %rax
+cmpq $144, %rax
 jb ca_exhausted
 subq $72, %rsp
 movq %rdi, (%rsp)
@@ -198493,7 +198623,7 @@ ret
 ca_f_pre_ls_put:
 movq %rsp, %rax
 subq 8(%r15), %rax
-cmpq $128, %rax
+cmpq $160, %rax
 jb ca_exhausted
 subq $88, %rsp
 movq %rdi, (%rsp)
@@ -199167,7 +199297,7 @@ movq $0, %rax
 addq $24, %rsp
 ret
 ca_f_pre_read_nat:
-subq $32, %rsp
+subq $64, %rsp
 movq $0, %r13
 lea 18(%rdi), %rax
 cmpq %r8, %rax
@@ -199177,17 +199307,147 @@ jmp .Lca_pre_read_nat_0R
 jmp .Lca_pre_read_nat_1X
 .Lca_pre_read_nat_1E:
 .Lca_pre_read_nat_1X:
-.Lca_pre_read_nat_21H:
+movq %r8, %rsi
+subq %rdi, %rsi
+subq $1, %rsi
+cmpq $8, %r8
+jb .Lca_pre_read_nat_221E
+cmpq $15700, %r8
+ja .Lca_pre_read_nat_221E
+cmpq $8, %rsi
+jae .Lca_pre_read_nat_22141E
+movq %r8, %rax
+subq $8, %rax
+movq $15700, %rdx
+cmpq $8, %rdx
+jb ca_error
+subq $8, %rdx
+cmpq %rdx, %rax
+ja ca_error
+lea 4311(%r15), %rcx
+movq (%rcx,%rax,1), %rax
+movq %rax, 48(%rsp)
+movq $1085102592571150095, %rax
+movq %rax, 56(%rsp)
+movq $7, %rax
+subq %rsi, %rax
+shlq $3, %rax
+movq %rax, %rcx
+movq 56(%rsp), %rax
+shlq %cl, %rax
+movq %rax, %rcx
+movq 48(%rsp), %rax
+andq %rcx, %rax
+movq %rax, %r12
+movq %r12, %rax
+imulq $2561, %rax
+shrq $8, %rax
+movq $71777214294589695, %rcx
+andq %rcx, %rax
+movq %rax, %r12
+movq %r12, %rax
+imulq $6553601, %rax
+shrq $16, %rax
+movq $281470681808895, %rcx
+andq %rcx, %rax
+movq %rax, %r12
+movq $42949672960001, %rax
+imulq %r12, %rax
+shrq $32, %rax
+jmp .Lca_pre_read_nat_0R
+jmp .Lca_pre_read_nat_22141X
+.Lca_pre_read_nat_22141E:
+.Lca_pre_read_nat_22141X:
+cmpq $16, %rsi
+jae .Lca_pre_read_nat_22142E
+cmpq $16, %r8
+jb .Lca_pre_read_nat_22142E
+movq %r8, %rax
+subq $16, %rax
+movq $15700, %rdx
+cmpq $8, %rdx
+jb ca_error
+subq $8, %rdx
+cmpq %rdx, %rax
+ja ca_error
+lea 4311(%r15), %rcx
+movq (%rcx,%rax,1), %rax
+movq %rax, 48(%rsp)
+movq $1085102592571150095, %rax
+movq %rax, 56(%rsp)
+movq $15, %rax
+subq %rsi, %rax
+shlq $3, %rax
+movq %rax, %rcx
+movq 56(%rsp), %rax
+shlq %cl, %rax
+movq %rax, %rcx
+movq 48(%rsp), %rax
+andq %rcx, %rax
+movq %rax, %r12
+movq %r12, %rax
+imulq $2561, %rax
+shrq $8, %rax
+movq $71777214294589695, %rcx
+andq %rcx, %rax
+movq %rax, %r12
+movq %r12, %rax
+imulq $6553601, %rax
+shrq $16, %rax
+movq $281470681808895, %rcx
+andq %rcx, %rax
+movq %rax, %r12
+movq %r8, %rax
+subq $8, %rax
+movq $15700, %rdx
+cmpq $8, %rdx
+jb ca_error
+subq $8, %rdx
+cmpq %rdx, %rax
+ja ca_error
+lea 4311(%r15), %rcx
+movq (%rcx,%rax,1), %rax
+movq $1085102592571150095, %rcx
+andq %rcx, %rax
+movq %rax, %rbx
+movq %rbx, %rax
+imulq $2561, %rax
+shrq $8, %rax
+movq $71777214294589695, %rcx
+andq %rcx, %rax
+movq %rax, %rbx
+movq %rbx, %rax
+imulq $6553601, %rax
+shrq $16, %rax
+movq $281470681808895, %rcx
+andq %rcx, %rax
+movq %rax, %rbx
+movq $42949672960001, %rax
+imulq %r12, %rax
+shrq $32, %rax
+imulq $100000000, %rax
+movq $42949672960001, %rcx
+imulq %rbx, %rcx
+shrq $32, %rcx
+addq %rcx, %rax
+jmp .Lca_pre_read_nat_0R
+jmp .Lca_pre_read_nat_22142X
+.Lca_pre_read_nat_22142E:
+.Lca_pre_read_nat_22142X:
+jmp .Lca_pre_read_nat_221X
+.Lca_pre_read_nat_221E:
+.Lca_pre_read_nat_221X:
+.Lca_pre_read_nat_2221H:
 movq $0, %rax
 cmpq $0, %rax
-jne .Lca_pre_read_nat_21X
+jne .Lca_pre_read_nat_2221X
 cmpq %rdi, %r8
-ja .Lca_pre_read_nat_2161E
+ja .Lca_pre_read_nat_222161E
 movq %r13, %rax
 jmp .Lca_pre_read_nat_0R
-jmp .Lca_pre_read_nat_2161X
-.Lca_pre_read_nat_2161E:
-.Lca_pre_read_nat_2161X:
+jmp .Lca_pre_read_nat_222161X
+.Lca_pre_read_nat_222161E:
+.Lca_pre_read_nat_222161X:
 movq %r13, %rax
 imulq $10, %rax
 movq %rdi, %rcx
@@ -199202,14 +199462,14 @@ movq %rax, %r13
 addq $1, %rdi
 subq $1, %r14
 jb ca_exhausted
-jmp .Lca_pre_read_nat_21H
-.Lca_pre_read_nat_21X:
+jmp .Lca_pre_read_nat_2221H
+.Lca_pre_read_nat_2221X:
 movq $0, %rax
 jmp .Lca_pre_read_nat_0R
 .Lca_pre_read_nat_0Z:
 movq $0, %rax
 .Lca_pre_read_nat_0R:
-addq $32, %rsp
+addq $64, %rsp
 ret
 ca_f_pre_rec_decl_line:
 movq %rsp, %rax
@@ -199633,7 +199893,7 @@ ret
 ca_f_pre_rec_nat_list:
 movq %rsp, %rax
 subq 8(%r15), %rax
-cmpq $96, %rax
+cmpq $128, %rax
 jb ca_exhausted
 subq $56, %rsp
 movq %rdi, (%rsp)
@@ -204165,7 +204425,7 @@ ret
 ca_f_pre_sub_rec:
 movq %rsp, %rax
 subq 8(%r15), %rax
-cmpq $176, %rax
+cmpq $208, %rax
 jb ca_exhausted
 subq $136, %rsp
 movq %rdi, (%rsp)
