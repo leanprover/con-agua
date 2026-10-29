@@ -379,10 +379,8 @@ theorem sp_ref (p : Prog) (hp : SpineDProg p) (n : Nat) (hk : KnotUpTo p n) (F :
   · rw [ite_eq_left h0', decSH_none h0']
     exact RefE.ret rfl (CorePost.ret hS rfl resH_zero)
   rw [ite_eq_right h0', decSH_some h0']
-  exact RefE.tail_eq (k := spE.k_defeq_spine2 p) (fun _ => rfl) (fun _ => rfl)
-    (fun hkE => hkE.mono (by omega)) rfl
-    (fun v y a' (h : CorePost decBool dn s₀.mem vis fe M eb ResH v y a') => ⟨h.after, h.res.trans (by simp only [decBool, List.headD_cons]),
-      by unfold ResH; exact h.valid⟩)
+  exact RefE.tail_relist1 (K := spE.k_defeq_spine2 p) (fun _ => rfl) (fun _ => rfl)
+    (fun hkE => hkE.mono (by omega))
     (sp2_ref p hp k (hk.mono (by omega)) F (by omega) (by omega) s₀ a₀ dn vis fe M eb mode d a b _ _ _ _
       hs ha hb hra1 hrb1 hra2 hrb2)
 
