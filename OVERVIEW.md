@@ -306,17 +306,17 @@ the checker with `make`, runs both checkers in interleaved rounds and
 replaces them in this section.
 
 <!-- perf-overview: begin init -->
-On `Init`, on one thread, con-agua takes **1.06× con-ron's wall time** and executes **1.40× its instructions** (3.03 instructions per cycle against con-ron's 2.32).
+On `Init`, on one thread, con-agua takes **1.01× con-ron's wall time** and executes **1.31× its instructions** (2.96 instructions per cycle against con-ron's 2.31).
 
 | on `Init`, one thread | con-agua | con-ron | con-agua ÷ con-ron |
 |---|---:|---:|---:|
-| instructions (`perf stat`) | 257.7 G | 184.5 G | 1.40 |
-| instructions per cycle | 3.03 | 2.32 |  |
-| cycles (user + kernel) | 84.2–86.2 G | 79.3–80.5 G | 1.06 |
-| wall | 19.0–19.5 s | 17.9–18.1 s | 1.06 |
-| peak RSS | 743–744 MB | 491–496 MB | 1.51 |
+| instructions (`perf stat`) | 241.2 G | 184.5 G | 1.31 |
+| instructions per cycle | 2.96 | 2.31 |  |
+| cycles (user + kernel) | 80.3–83.2 G | 79.6–80.2 G | 1.01 |
+| wall | 18.2–18.8 s | 18.0–18.1 s | 1.01 |
+| peak RSS | 741–744 MB | 490–492 MB | 1.51 |
 
-(Master `54018587`, 2026-10-28, `scripts/perf-overview.py`: 4 interleaved rounds of each checker under `perf stat`; the ranges are over the rounds; the ratios compare the minima, for instructions the medians; load 2–2 on 96 cores.)
+(Master `11690fd5`, 2026-10-29, `scripts/perf-overview.py`: 4 interleaved rounds of each checker under `perf stat`; the ranges are over the rounds; the ratios compare the minima, for instructions the medians; load 2–6 on 96 cores.)
 <!-- perf-overview: end init -->
 
 **Threads** (§9): `--jobs=N` checks phase B on `N` threads; `Init` has
