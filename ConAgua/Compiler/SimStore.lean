@@ -1328,7 +1328,7 @@ theorem sim_st32t_core {ctx : Ctx} {F : Nat} (hT : ctx.tab = G.tab) (hF : 8 * F 
     refine ev_congr (hK.normal { σ with mem := σ.mem.set32 (tierA a u) vi ve } _ ?_
       ?_ ⟨by rw [hsp', hE.rsp], by rw [hbp', hE.rbp], by rw [h15', hE.r15], by rw [h14', hE.r14]; exact Nat.le_refl _, ?_⟩) ?_
     · rw [step_st32t_run, hvt]; simp only [hvi, hve]
-      rw [if_pos hj]
+      rw [ite_eq_left hj]
     · rw [Mem.set32_eq _ _ _ _ hj]
       exact hIs.of_regs hm hsp' h15' (fun r hr => hfield r (allocRegs_ne hr).2.1 (allocRegs_ne hr).2.2.1)
         (fun _ => hsi')

@@ -144,7 +144,7 @@ theorem st32Code_spec {ctx : Ctx} {ln bs : AddrExpr} {arr : Array Word} {B : Nat
       (UInt64.ofNat arr.size).toBitVec) = b → (b = true ↔ ¬ (j / 2).toNat < arr.size) := by
     intro b hb
     have e : ((s.regs.set64 .rdx (s.regs.get64 .rax)).set64 .rdx v2).get64 .rdx = (UInt64.ofBitVec v2).toBitVec := by
-      rw [rget_set, if_pos rfl]
+      rw [rget_set, ite_eq_left rfl]
     rw [e, interp_nc] at hb
     subst hb
     simp only [decide_eq_true_eq, UInt64.le_iff_toNat_le, UInt64.toNat_ofNat_of_lt' hsz, hj2,
@@ -157,7 +157,7 @@ theorem st32Code_spec {ctx : Ctx} {ln bs : AddrExpr} {arr : Array Word} {B : Nat
   refine ev_movRA hc.tail.tail.tail.tail.head hbase ?_
   refine ev_movRM hc.tail.tail.tail.tail.tail.head hoff (v := v) ?_ ?_
   · rw [slot_addr _ (ctx.nl + 0) _ (by omega)]
-    simp only [rget_set, show Reg64.rsp ≠ .rcx by decide, show Reg64.rsp ≠ .rdx by decide, ite_false]
+    simp only
     exact hslot
   have hw := (arr[(j / 2).toNat]).toNat_lt
   have hX : B + 8 * (j.toNat / 2) + 8 ≤ 2 ^ 64 := by omega
