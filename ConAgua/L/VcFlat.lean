@@ -32,6 +32,14 @@ namespace L.VcFlat
 
 open Lean Meta
 
+/-- Whether the free variable `x` occurs in `e`, visiting each shared subterm once
+(`Expr.find?`'s cache). `Expr.containsFVar` walks `e` as a tree: the states `vcgen` builds are
+DAGs (each `setLoc` over the previous state), and on `gen_rec_check_prep`'s paths (13 calls,
+16 stores) `vc_flat` took 6–240 s per condition, the module 15 min; with this 29 s (IndBGrpM,
+unifiede.md §3.60). -/
+meta def occursFVar (e : Lean.Expr) (x : FVarId) : Bool :=
+  e.hasFVar && (e.find? fun t => t.isFVar && t.fvarId! == x).isSome
+
 /-- One step of `vc_flat` on the first hypothesis at or after position `start` it applies to;
 the new goal and the position to continue from. -/
 meta def step (g : MVarId) (start : Nat) : MetaM (Option (MVarId × Nat)) := g.withContext do
@@ -47,14 +55,14 @@ meta def step (g : MVarId) (start : Nat) : MetaM (Option (MVarId × Nat)) := g.w
       return some (sub.mvarId, i)
     if let some (α, lhs, rhs) := ty.eq? then
       if α.isConstOf ``L.St then
-        if lhs.isFVar && !(rhs.containsFVar lhs.fvarId!) then
+        if lhs.isFVar && !(occursFVar rhs lhs.fvarId!) then
           return some ((← substCore g d.fvarId (symm := false) (tryToSkip := true)).2, idx lhs)
-        if rhs.isFVar && !(lhs.containsFVar rhs.fvarId!) then
+        if rhs.isFVar && !(occursFVar lhs rhs.fvarId!) then
           return some ((← substCore g d.fvarId (symm := true) (tryToSkip := true)).2, idx rhs)
     if ty.isAppOfArity ``L.LocEq 2 then
       let a := ty.appFn!.appArg!
       let b := ty.appArg!
-      if a.isFVar && !(b.containsFVar a.fvarId!) then
+      if a.isFVar && !(occursFVar b a.fvarId!) then
         let #[sub] ← g.cases a.fvarId! | throwError "vc_flat: cases on a state"
         let some (.fvar h) := sub.subst.find? d.fvarId | throwError "vc_flat: lost the hypothesis"
         let l := sub.fields[1]!

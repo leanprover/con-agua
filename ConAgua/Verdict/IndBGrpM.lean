@@ -34,7 +34,7 @@ l_model grpE_spec (p : Prog) (hf : p.lookup "gen_rec_check_prep" = some genRecCh
     callW_spec p n "iw_alloc", callW_spec p n "struct_elim_level"]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
-  heartbeats 20000000 simp [Cmp.evalW, Cmp.eval] locals unified
+  heartbeats 20000000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 end L.Ind

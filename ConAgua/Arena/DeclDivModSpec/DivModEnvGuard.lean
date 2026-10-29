@@ -33,7 +33,7 @@ variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {p : Pro
 l_model eg_specW (p : Prog) (hp : p.lookup "div_mod_env_guard" = some divModEnvGuardL)
   fns [hp ↦ egW list]
   specs [callW_spec p n "nat_op_guard", callW_spec p n "nat_op_deps", callW_spec p n "nat_op_stored_ok_all", callW_spec p n "pin_at", callW_spec p n "rom_ci", callW_spec p n "find_is", callW_spec p n "bool_ctor_typed"]
-  grind [arena_grind] heartbeats 3200000 bind ntBW simp [ntBW]
+  grind [arena_grind] heartbeats 3200000 bind ntBW
 
 theorem DmProg7.ty (hD : DmProg7 p) : NatTyProg p := hD.toDmProg6.toDmProg5.toDmProg2.toNatEqProg.toNatTyProg
 

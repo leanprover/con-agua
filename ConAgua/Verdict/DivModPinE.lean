@@ -32,7 +32,7 @@ l_model checkDivModPinLoop_specE (p : Prog) (hD : DmProg8 p)
   specs [callW_spec p n "div_mod_pin_guard", callW_spec p n "div_mod_certs_guard",
     checkDivModPinAt_specE p hD.lCheckDivModPinAt hD.lCheckTypePins hD.lCheckDivModPinValue
       hD.lCheckDivModCerts n]
-  extra [ld64_rdW_specE] simp [] unified
+  grind [arena_grind] extra [ld64_rdW_specE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 /-- What the variant loop and the gate give besides the twin's run (from `m`, `a`): `StageC`
@@ -182,7 +182,7 @@ l_model checkDivModPin_specE (p : Prog) (hD : DmProg8 p)
   fns [hD.lCheckDivModPin ↦ checkDivModPinE]
   specs [callW_spec p n "div_mod_env_guard", callW_spec p n "env_find",
     checkDivModPinLoop_specE p hD n]
-  extra [ld64_rdW_specE] simp [] unified
+  grind [arena_grind] extra [ld64_rdW_specE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 /-- What the gate gives besides the twin's run: `PinPost` at the pre-insertion view, and the
