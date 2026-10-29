@@ -1,5 +1,6 @@
 import ConAgua.Verdict.InferBindE
 import ConAgua.Verdict.InferSpineE
+import ConAgua.Verdict.InferArmsE
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
@@ -234,7 +235,7 @@ theorem inferBody_refinesE (p : Prog) (hq : InferAllProg p) (hc : InferCallees p
     rw [← hd1, ← hd2] at hv
     exact ErrClaim.of_run_err (fun ce h => (inferBody_lam _ fe d.toNat (decE e) a₀ _ _ hv).trans h)
       (CoreSpecE.of_callE (s₀ := ⟨s₀.mem, Locals.init []⟩)
-        (inferLam_refinesE p hq.leaf hq.bind hq.body hc.instList hnv hc.bcap k (hk.mono (by omega))
+        (inferLam_refinesE p hq.leaf hq.bind hq.body hc.instList hc.absRange hnv hc.bcap k (hk.mono (by omega))
           (hkE.mono (by omega)) F (by omega) (by omega) _ a₀ dn vis fe MM eb mode d _ _ hsl h1' h2') h1)
   | app f x =>
     obtain ⟨hg, -⟩ := hvr
