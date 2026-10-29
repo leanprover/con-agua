@@ -2,6 +2,7 @@ module
 
 meta import ConAgua.L.Semantics
 public import ConAgua.Arena.ViewL
+public import ConAgua.Arena.P32
 public import ConAgua.L.Notation
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
@@ -126,19 +127,19 @@ def exprLPW (m : Mem) (h : Word) : Word :=
     (if idxW h < tcnt m CONST (tierW h) then tfld m CONST_LP (tierW h) (idxW h) 0
      else 0)
   else if h >>> 28 = 4 then
-    (if idxW h < tcnt m APP (tierW h) then tfld m APP_DER (tierW h) (idxW h) 0 >>> 30
+    (if idxW h < tcnt m APP (tierW h) then pcol m ADER (tierW h) (idxW h) >>> 30
      else 0)
   else if h >>> 28 = 5 then
-    (if idxW h < tcnt m LAM (tierW h) then tfld m LAM_DER (tierW h) (idxW h) 0 >>> 30
+    (if idxW h < tcnt m LAM (tierW h) then pcol m LADER (tierW h) (idxW h) >>> 30
      else 0)
   else if h >>> 28 = 6 then
-    (if idxW h < tcnt m FORALL (tierW h) then tfld m FORALL_DER (tierW h) (idxW h) 0 >>> 30
+    (if idxW h < tcnt m FORALL (tierW h) then pcol m FADER (tierW h) (idxW h) >>> 30
      else 0)
   else if h >>> 28 = 7 then
-    (if idxW h < tcnt m LET (tierW h) then tfld m LET_DER (tierW h) (idxW h) 0 >>> 30
+    (if idxW h < tcnt m LET (tierW h) then pcol m LEDER (tierW h) (idxW h) >>> 30
      else 0)
   else if h >>> 28 = 9 then
-    (if idxW h < tcnt m PROJ (tierW h) then tfld m PROJ_DER (tierW h) (idxW h) 0 >>> 30
+    (if idxW h < tcnt m PROJ (tierW h) then pcol m PJDER (tierW h) (idxW h) >>> 30
      else 0)
   else 0
 
@@ -182,6 +183,18 @@ theorem packBFL_lp (b f l : Word) (hb : b.toNat < 32768) (_hf : f.toNat < 32768)
   have e2 : (32768 : Word).toNat = 2 ^ 15 := rfl
   have e3 : (1073741824 : Word).toNat = 2 ^ 30 := rfl
   rw [e30, e2, e3]
+  omega
+
+/-- A packed word fits a 32-bit element. -/
+theorem packBFL_mod32 (b f l : Word) (hb : b.toNat < 32768) (hf : f.toNat < 32768) (hl : l ≤ 1) :
+    packBFL b f l % 4294967296 = packBFL b f l := by
+  have hl' : l.toNat ≤ 1 := hl
+  apply UInt64.toNat_inj.mp
+  simp only [packBFL, packBF, UInt64.toNat_mod, UInt64.toNat_add, UInt64.toNat_mul]
+  have e2 : (32768 : Word).toNat = 2 ^ 15 := rfl
+  have e3 : (1073741824 : Word).toNat = 2 ^ 30 := rfl
+  have e4 : (4294967296 : Word).toNat = 2 ^ 32 := rfl
+  rw [e2, e3, e4]
   omega
 
 /-! ## The inline blocks that compute a bit, and their specs
@@ -253,11 +266,11 @@ def lpBlkF : Stmt := lblk (t, u, ty, j, c, k, x, g, ti, ix) {
     if g == 1 { if ix < FVAR⟨ti⟩.count { x := FVAR_LP⟨ti, ix⟩ } }
     else if g == 2 { if ix < SORT⟨ti⟩.count { x := SORT_LP⟨ti, ix⟩ } }
     else if g == 3 { if ix < CONST⟨ti⟩.count { x := CONST_LP⟨ti, ix⟩ } }
-    else if g == 4 { if ix < APP⟨ti⟩.count { x := APP_DER⟨ti, ix⟩ >> 30 } }
-    else if g == 5 { if ix < LAM⟨ti⟩.count { x := LAM_DER⟨ti, ix⟩ >> 30 } }
-    else if g == 6 { if ix < FORALL⟨ti⟩.count { x := FORALL_DER⟨ti, ix⟩ >> 30 } }
-    else if g == 7 { if ix < LET⟨ti⟩.count { x := LET_DER⟨ti, ix⟩ >> 30 } }
-    else if g == 9 { if ix < PROJ⟨ti⟩.count { x := PROJ_DER⟨ti, ix⟩ >> 30 } }
+    else if g == 4 { if ix < APP⟨ti⟩.count { x := ADER⟨ti⟩.u32[ix] >> 30 } }
+    else if g == 5 { if ix < LAM⟨ti⟩.count { x := LADER⟨ti⟩.u32[ix] >> 30 } }
+    else if g == 6 { if ix < FORALL⟨ti⟩.count { x := FADER⟨ti⟩.u32[ix] >> 30 } }
+    else if g == 7 { if ix < LET⟨ti⟩.count { x := LEDER⟨ti⟩.u32[ix] >> 30 } }
+    else if g == 9 { if ix < PROJ⟨ti⟩.count { x := PJDER⟨ti⟩.u32[ix] >> 30 } }
   }
 }
 
@@ -341,7 +354,7 @@ theorem lpBlkF_spec (s₀ : St) :
       s'.loc 6 = exprLPW s₀.mem (s₀.loc 2); ⊤⦄ := by
   simp only [lpBlkF, L.Notation.blk]
   sym only [lang_grind, arena_grind] =>
-    vcgen [step, evalE, evalC, evalArgs, setLoc, ld64, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] <;>
+    vcgen [step, evalE, evalC, evalArgs, setLoc, ld64, ld32_pcol_spec, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] <;>
     finish [exprLPW, tierW, idxW]
 
 /-- One more element of the slice (`k' = q + 1`, as words: `q < l`). -/
@@ -384,8 +397,8 @@ def cnt2 (m : Mem) (c : Word) : Word := rdW (m.arr64 CTL) c + rdW (m.arr64 CTL) 
 write the range `d` at `A[idx * 2 + tier]` of `r` (an `abort` past the array). -/
 def derPutW (A : ArrId) (c : Word) (m₁ : Mem) (s r d : Word) : Option Mem :=
   if cnt2 m₁ c = s then some m₁
-  else if m₁.len64 (tierA A (tierW r)) ≤ idxW r then none
-  else some (m₁.set64 (tierA A (tierW r)) (idxW r) d)
+  else if p32Len (m₁.len64 (tierA A (tierW r))) ≤ idxW r then none
+  else some (m₁.set32 (tierA A (tierW r)) (idxW r) d)
 
 /-- The result of a `mk_*`: `r` and the memory after the tail, or `none`. -/
 def mkK (A : ArrId) (c s d : Word) : Option (Word × Mem) → Option (Word × Mem)

@@ -38,6 +38,16 @@ namespace L.Arena
 /-- **Element `i` of the packed column `a`**: half `i % 2` of word `i / 2`, `0` past the end. -/
 def p32Get (a : Array Word) (i : Word) : Word := half32 (rdW a (i / 2)) i
 
+/-- **Element `i` of tier `t` of the packed column `A`** (the accessor proofs use, as `tfld` for a
+store's word columns). -/
+def pcol (m : Mem) (A : ArrId) (t i : Word) : Word := p32Get (m.arr64 (tierA A t)) i
+
+/-- A packed column's elements depend only on its two tiers. -/
+theorem pcol_arr_eq {m m' : Mem} {A : ArrId} (h : m.arr64 A = m'.arr64 A)
+    (h' : m.arr64 (tier1 A) = m'.arr64 (tier1 A)) (t i : Word) : pcol m A t i = pcol m' A t i := by
+  simp only [pcol]
+  rcases tierA_eq_or A t with e | e <;> rw [e] <;> simp only [h, h']
+
 /-- The number of elements of a packed column of `n` words. -/
 def p32Len (n : Word) : Word := n * 2
 
@@ -58,6 +68,13 @@ theorem p32Get_eq (a : Array Word) (i : Word) (k : Nat) (hk : k = (i / 2).toNat)
   have h' : i.toNat / 2 < a.size := by simpa [UInt64.toNat_div] using h
   simp [p32Get, rdW, h']
 grind_pattern [arena_grind] p32Get_eq => half32 a[k] i
+
+/-- Past the end, an element is `0`. -/
+theorem p32Get_oob (a : Array Word) (i : Word) (h : ¬ (i / 2).toNat < a.size) : p32Get a i = 0 := by
+  have h' : ¬ i.toNat / 2 < a.size := by simpa [UInt64.toNat_div] using h
+  simp only [p32Get, rdW, UInt64.toNat_div, show (2 : Word).toNat = 2 from rfl]
+  rw [Array.getElem?_eq_none (by omega)]
+  simp [half32]
 
 /-- The words of a column other than `A` are unchanged by a store into `A`. -/
 @[arena_grind =] theorem Mem.arr64_set32_ne (m : Mem) (A B : TieredArray) (i v : Word) (h : B ≠ A) :
@@ -138,5 +155,11 @@ theorem ld32_p32_spec (a : TieredArray) (i : Word) (s₀ : St) :
     exact ⟨rfl, p32Get_eq _ _ _ rfl h, h⟩
   · simp [throw, throwThe, MonadExceptOf.throw, StateT.run, StateT.lift] at hrun
     cases hrun
+
+/-- The load of tier `t` of a packed column as `pcol` (for `vcgen` on `A⟨t⟩.u32[i]`). -/
+theorem ld32_pcol_spec (A : ArrId) (t i : Word) (s₀ : St) :
+    ⦃fun s => s = s₀⦄ ld32 (tierA A t) i
+    ⦃fun r s' => s' = s₀ ∧ r = pcol s₀.mem A t i ∧ (i / 2).toNat < (s₀.mem.arr64 (tierA A t)).size; ⊤⦄ :=
+  ld32_p32_spec (tierA A t) i s₀
 
 end L.Arena

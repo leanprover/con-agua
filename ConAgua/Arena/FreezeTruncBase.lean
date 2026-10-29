@@ -110,6 +110,7 @@ theorem frozen_drop1 : frozen.drop 1 =
     [(POOL, ⟨POOL, fzCtl 0⟩)] ++
     fzStores.flatMap (fun (ra, sa, w, ca) =>
       [(ra, ⟨ra, .bin .mul (fzCtl ca) (fzC w)⟩), (sa, ⟨sa, fzSlotExt sa⟩)]) ++
+    fzPCols.map (fun (c, ca) => (c, ⟨c, fzPExt ca⟩)) ++
     fzCols.map (fun (c, ca) => (c, ⟨c, fzCtl ca⟩)) ++
     [(PINS, ⟨PINS, fzC 71⟩),
      (EIXA, ⟨EIXA, .bin .mul (fzC 2) (fzCtl nanonCS.ca.toNat)⟩),
@@ -128,6 +129,11 @@ theorem frozen_drop1 : frozen.drop 1 =
 theorem fzExt_ctl (m : Mem) (b : ArrId) (k : Nat) :
     fzExt m ⟨b, fzCtl k⟩ = (rdW (m.arr64 CTL) (UInt64.ofNat k)).toNat := by
   simp only [fzExt, fzCtl, Expr.pval, rd64, rdW, Array.getD_eq_getD_getElem?]
+
+theorem fzExt_pext (m : Mem) (b : ArrId) (k : Nat) :
+    fzExt m ⟨b, fzPExt k⟩ = ((rdW (m.arr64 CTL) (UInt64.ofNat k) + 1) >>> 1).toNat := by
+  simp only [fzExt, fzPExt, fzCtl, fzC, Expr.pval, BinOp.eval, rd64, rdW, Array.getD_eq_getD_getElem?]
+  rfl
 
 theorem fzExt_mulC (m : Mem) (b : ArrId) (k w : Nat) :
     fzExt m ⟨b, .bin .mul (fzCtl k) (fzC w)⟩ =
@@ -157,7 +163,7 @@ theorem truncFrozen_ra (m : Mem) {ra sa : ArrId} {w ca : Nat} (h : (ra, sa, w, c
   have := truncFrozen_mem m (x := ra) (z := ⟨ra, .bin .mul (fzCtl ca) (fzC w)⟩) (by
     rw [frozen_drop1]
     simp only [List.mem_append, List.mem_flatMap]
-    exact .inl (.inl (.inr ⟨_, h, by simp⟩)))
+    exact .inl (.inl (.inl (.inr ⟨_, h, by simp⟩))))
   rw [this, fzExt_mulC]
 
 theorem truncFrozen_sa (m : Mem) {ra sa : ArrId} {w ca : Nat} (h : (ra, sa, w, ca) ∈ fzStores) :
@@ -165,7 +171,7 @@ theorem truncFrozen_sa (m : Mem) {ra sa : ArrId} {w ca : Nat} (h : (ra, sa, w, c
   have := truncFrozen_mem m (x := sa) (z := ⟨sa, fzSlotExt sa⟩) (by
     rw [frozen_drop1]
     simp only [List.mem_append, List.mem_flatMap]
-    exact .inl (.inl (.inr ⟨_, h, by simp⟩)))
+    exact .inl (.inl (.inl (.inr ⟨_, h, by simp⟩))))
   rw [this, fzExt_slot]
 
 theorem truncFrozen_col (m : Mem) {c : ArrId} {ca : Nat} (h : (c, ca) ∈ fzCols) :
@@ -175,6 +181,15 @@ theorem truncFrozen_col (m : Mem) {c : ArrId} {ca : Nat} (h : (c, ca) ∈ fzCols
     simp only [List.mem_append, List.mem_map]
     exact .inl (.inr ⟨_, h, rfl⟩))
   rw [this, fzExt_ctl]
+
+theorem truncFrozen_pcol (m : Mem) {c : ArrId} {ca : Nat} (h : (c, ca) ∈ fzPCols) :
+    (truncFrozen m).arr64 c =
+      (m.arr64 c).extract 0 ((rdW (m.arr64 CTL) (UInt64.ofNat ca) + 1) >>> 1).toNat := by
+  have := truncFrozen_mem m (x := c) (z := ⟨c, fzPExt ca⟩) (by
+    rw [frozen_drop1]
+    simp only [List.mem_append, List.mem_map]
+    exact .inl (.inl (.inr ⟨_, h, rfl⟩)))
+  rw [this, fzExt_pext]
 
 theorem truncFrozen_pins (m : Mem) : (truncFrozen m).arr64 PINS = (m.arr64 PINS).extract 0 71 := by
   have := truncFrozen_mem m (x := PINS) (z := ⟨PINS, fzC 71⟩) (by rw [frozen_drop1]; simp)

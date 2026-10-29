@@ -43,11 +43,14 @@ def fzStores : List (ArrId × ArrId × Nat × Nat) :=
     lamCS, forallCS, projCS, nanonCS, nstrCS, nnumCS, lsCS] : List ConsSch).map
     fun C => (C.ra, C.sa, C.w.toNat, C.ca.toNat)
 
-/-- The one-word columns (derived columns `ADER`‥`PJDER`, hash/level columns `SHP`‥`FVLP`) and the
-count slot of their store. -/
+/-- The packed 32-bit columns (the derived columns `ADER`‥`PJDER`, `Arena/P32.lean`) and the count
+slot of their store. -/
+def fzPCols : List (ArrId × Nat) :=
+  [(ADER, 4), (LADER, 28), (FADER, 30), (LEDER, 20), (PJDER, 32)]
+
+/-- The one-word columns (hash/level columns `SHP`‥`FVLP`) and the count slot of their store. -/
 def fzCols : List (ArrId × Nat) :=
-  [(ADER, 4), (LADER, 28), (FADER, 30), (LEDER, 20), (PJDER, 32),
-   (SHP, 6), (MHP, 10), (IHP, 12), (LSHP, 40), (SOLP, 16), (CLP, 18), (FVLP, 26)]
+  [(SHP, 6), (MHP, 10), (IHP, 12), (LSHP, 40), (SOLP, 16), (CLP, 18), (FVLP, 26)]
 
 /-- A frozen array's image: the prefix of `src` with extent `e`. -/
 structure Fz where
@@ -58,6 +61,9 @@ structure Fz where
 def fzCtl (k : Nat) : Expr := .ld64 CTL (.const k.toUInt64)
 def fzC (k : Nat) : Expr := .const k.toUInt64
 
+/-- The tier-0 extent of a packed column of `CTL[k]` elements, in words: `(CTL[k] + 1) >> 1`. -/
+def fzPExt (k : Nat) : Expr := .bin .shr (.bin .add (fzCtl k) (fzC 1)) (fzC 1)
+
 /-- The tier-0 extent of the slot array `sa`: `2 + 2 (sa[0] + SN0)`. -/
 def fzSlotExt (sa : ArrId) : Expr :=
   .bin .add (fzC 2) (.bin .mul (fzC 2) (.bin .add (.ld64 sa (fzC 0)) (.const SN0)))
@@ -67,6 +73,7 @@ def frozen : List (ArrId × Fz) :=
   [(CTLF, ⟨CTL, fzC 256⟩), (POOL, ⟨POOL, fzCtl 0⟩)] ++
   fzStores.flatMap (fun (ra, sa, w, ca) =>
     [(ra, ⟨ra, .bin .mul (fzCtl ca) (fzC w)⟩), (sa, ⟨sa, fzSlotExt sa⟩)]) ++
+  fzPCols.map (fun (c, ca) => (c, ⟨c, fzPExt ca⟩)) ++
   fzCols.map (fun (c, ca) => (c, ⟨c, fzCtl ca⟩)) ++
   [(PINS, ⟨PINS, fzC 71⟩),
    (EIXA, ⟨EIXA, .bin .mul (fzC 2) (fzCtl nanonCS.ca.toNat)⟩),
@@ -91,6 +98,7 @@ def parOwned : List TieredArray :=
     INM, IOM, DEM, CTM, CV, RRM, LQ, LSQ, EIXA1, EIXS1, EIXN1, SPN, BSTK, WSM, FLM, LSM, LVS,
     Stubs.CRM, LH, Ind.IW] ++ tier1s [POOL, TIXA, TIXS, TIXN] ++
   ((fzStores.flatMap (fun (x : ArrId × ArrId × Nat × Nat) => [tier1 x.1, tier1 x.2.1]) ++
+    fzPCols.map (fun (x : ArrId × Nat) => tier1 x.1) ++
     fzCols.map (fun (x : ArrId × Nat) => tier1 x.1)).mergeSort (fun a b => a.code ≤ b.code))
 
 /-- The header's length. -/
