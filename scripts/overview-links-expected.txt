@@ -1445,61 +1445,61 @@
    148        pure (some r)
    149      | none => pure none
 
-== ConAgua/L/ModelGen.lean#L11-L64
-    11  /-!
-    12  # Generated word models and specs (`l_model`)
-    13  
-    14  `l_model` reads the `lfn` text of a group of L functions and generates, for each function `f`,
-    15  
-    16  * its **word model** `fW : Nat → Mem → Word → … → Option (Word × Mem)` (`Option Word` for a
-    17    read-only function, `ro`; no fuel argument for a single function that needs none): the L code
-    18    with every local inlined, `abort` as `none`, a load as `rdW`, a store as `Mem.set64`, a call to a
-    19    group member as that member's model at fuel `n`, a call to another function as the model its
-    20    spec states (`specs`), and the code after an effectful call as a first-order continuation
-    21    `fW.k_g` (`| none => none | some (x, m₁) => …`) over the locals it reads, named after the
-    22    callee `g` (`fW.k_g_2`, … for its later calls, in source order; after a loop `fW.k_loopᵢ`), so
-    23    that a change elsewhere in the code does not rename it. The code after an `if`
-    24    whose branches both fall through is a join point `fW.jᵢ` over the locals and the memory (no
-    25    copy of it). Equal continuations of the group are shared;
-    26  * a function with **several results** (`return (a, b, …)`) gets a list model
-    27    `Option (List Word × Mem)` (`return e` is `some ([e], m)`, the end of the body `some ([], m)`;
-    28    `↦ fW list` forces it), or with `↦ fW tuple` a tuple model `Option (Word × … × Mem)` (the
-    29    longest `return`'s arity, shorter ones padded with `0`); a function **without results**
-    30    (`↦ fW void`, its returned values ignored) gets `Option Mem`, read-only `Option Unit`, and the
-    31    spec states `fW n s₀.mem args = some s'.mem` (`= some ()` with the memory unchanged);
-    32  * a **loop** (`while c { … }` in the `lfn`, or a spliced named block `⟪X⟫` that is one `while`)
-    33    is a model of its own, `fW.loopᵢ n m x₁ …` (`exec p n` on the loop: `| 0 => none | n + 1 =>
-    34    if c then … fW.loopᵢ n … else exit`; the enclosing code applies it at `n + 1`), over the locals
-    35    live at its head. Its result is `(signal, outs…, memory)`: the signal (`Sig.normal`,
-    36    `Sig.ret vs`) if the body has a `return`, the locals it assigns that the code after it reads,
-    37    the memory unless read-only; the code after it is a continuation of that result. A loop with a
-    38    `return` followed by the function's last statement (`return …`, `abort`) is **fused**: its model
-    39    returns the function's result. Its spec `fW.loopᵢ.spec` (`⦃s = s₀⦄ exec p n X ⦃…⦄`, by
-    40    induction, the model is the loop's meaning) is generated, and a `while` written in the `lfn`
-    41    becomes the named block `fW.loopᵢ.stmt` (with `fW.lfn_eq : F = lfn … ⟪fW.loopᵢ.stmt⟫ …`).
-    42    Named blocks without a loop are inlined;
-    43  * one **guarded equation** `fW.armᵢ` per non-`none` leaf of the `if` tree of each model, loop and
-    44    continuation (the path's conditions as hypotheses, in order; on the negative side in their
-    45    natural form: `a = b` for `¬ a ≠ b`, `a ≠ b` for `¬ a = b`, `p` for `¬ ¬ p`), each with a `grind_pattern` in the
-    46    `grind` attributes; `fW.abortᵢ` for each `none` leaf, `fW.k_g.none` for each continuation (no
-    47    patterns);
-    48  * the **spec** `⦃s = s₀⦄ invoke p (exec p n) "f" args ⦃LocEq s' s₀ ∧
-    49    fW n s₀.mem args = some (r.headD 0, s'.mem); ⊤⦄` of every member (`some (r, s'.mem)` for a list
-    50    model, `some (r.headD 0, r.tail.headD 0, …, s'.mem)` for a tuple model), as one conjunction
-    51    over the group (`name`), a step theorem per member (`name.stepᵢ`: `vcgen` with the specs of the
-    52    callees and loops that member calls, then `finish`) and the induction on the fuel.
-    53  
-    54  The definitions come in dependency order: each strongly connected component of the reference
-    55  graph is one definition or one `mutual` block, well-founded on `(fuel, depth)` if it has a
-    56  continuation or a loop (models `(n, D)`, continuations `(n + 1, d)`, loops `(n, d)`; `LevelLeq.lean`
-    57  does this by hand), structural on the fuel if it has only models.
-    58  
-    59  ```
-    60  l_model liftGo_spec (p : Prog) (hp : LiftProg p)
-    61    fns [(hp.get "lift_go") ↦ liftW, (hp.get "lift_app") ↦ liftAppW]
-    62    specs [derB_spec p (hp.get "der_b") n, memoFindG_spec lfSch p _ (hp.get "lf_find") n]
-    63    grind [arena_grind] fold [tierW, idxW] finish [tierW, idxW] gen 20 heartbeats 1000000
-    64  ```
+== ConAgua/L/ModelGen.lean#L12-L65
+    12  /-!
+    13  # Generated word models and specs (`l_model`)
+    14  
+    15  `l_model` reads the `lfn` text of a group of L functions and generates, for each function `f`,
+    16  
+    17  * its **word model** `fW : Nat → Mem → Word → … → Option (Word × Mem)` (`Option Word` for a
+    18    read-only function, `ro`; no fuel argument for a single function that needs none): the L code
+    19    with every local inlined, `abort` as `none`, a load as `rdW`, a store as `Mem.set64`, a call to a
+    20    group member as that member's model at fuel `n`, a call to another function as the model its
+    21    spec states (`specs`), and the code after an effectful call as a first-order continuation
+    22    `fW.k_g` (`| none => none | some (x, m₁) => …`) over the locals it reads, named after the
+    23    callee `g` (`fW.k_g_2`, … for its later calls, in source order; after a loop `fW.k_loopᵢ`), so
+    24    that a change elsewhere in the code does not rename it. The code after an `if`
+    25    whose branches both fall through is a join point `fW.jᵢ` over the locals and the memory (no
+    26    copy of it). Equal continuations of the group are shared;
+    27  * a function with **several results** (`return (a, b, …)`) gets a list model
+    28    `Option (List Word × Mem)` (`return e` is `some ([e], m)`, the end of the body `some ([], m)`;
+    29    `↦ fW list` forces it), or with `↦ fW tuple` a tuple model `Option (Word × … × Mem)` (the
+    30    longest `return`'s arity, shorter ones padded with `0`); a function **without results**
+    31    (`↦ fW void`, its returned values ignored) gets `Option Mem`, read-only `Option Unit`, and the
+    32    spec states `fW n s₀.mem args = some s'.mem` (`= some ()` with the memory unchanged);
+    33  * a **loop** (`while c { … }` in the `lfn`, or a spliced named block `⟪X⟫` that is one `while`)
+    34    is a model of its own, `fW.loopᵢ n m x₁ …` (`exec p n` on the loop: `| 0 => none | n + 1 =>
+    35    if c then … fW.loopᵢ n … else exit`; the enclosing code applies it at `n + 1`), over the locals
+    36    live at its head. Its result is `(signal, outs…, memory)`: the signal (`Sig.normal`,
+    37    `Sig.ret vs`) if the body has a `return`, the locals it assigns that the code after it reads,
+    38    the memory unless read-only; the code after it is a continuation of that result. A loop with a
+    39    `return` followed by the function's last statement (`return …`, `abort`) is **fused**: its model
+    40    returns the function's result. Its spec `fW.loopᵢ.spec` (`⦃s = s₀⦄ exec p n X ⦃…⦄`, by
+    41    induction, the model is the loop's meaning) is generated, and a `while` written in the `lfn`
+    42    becomes the named block `fW.loopᵢ.stmt` (with `fW.lfn_eq : F = lfn … ⟪fW.loopᵢ.stmt⟫ …`).
+    43    Named blocks without a loop are inlined;
+    44  * one **guarded equation** `fW.armᵢ` per non-`none` leaf of the `if` tree of each model, loop and
+    45    continuation (the path's conditions as hypotheses, in order; on the negative side in their
+    46    natural form: `a = b` for `¬ a ≠ b`, `a ≠ b` for `¬ a = b`, `p` for `¬ ¬ p`), each with a `grind_pattern` in the
+    47    `grind` attributes; `fW.abortᵢ` for each `none` leaf, `fW.k_g.none` for each continuation (no
+    48    patterns);
+    49  * the **spec** `⦃s = s₀⦄ invoke p (exec p n) "f" args ⦃LocEq s' s₀ ∧
+    50    fW n s₀.mem args = some (r.headD 0, s'.mem); ⊤⦄` of every member (`some (r, s'.mem)` for a list
+    51    model, `some (r.headD 0, r.tail.headD 0, …, s'.mem)` for a tuple model), as one conjunction
+    52    over the group (`name`), a step theorem per member (`name.stepᵢ`: `vcgen` with the specs of the
+    53    callees and loops that member calls, then `finish`) and the induction on the fuel.
+    54  
+    55  The definitions come in dependency order: each strongly connected component of the reference
+    56  graph is one definition or one `mutual` block, well-founded on `(fuel, depth)` if it has a
+    57  continuation or a loop (models `(n, D)`, continuations `(n + 1, d)`, loops `(n, d)`; `LevelLeq.lean`
+    58  does this by hand), structural on the fuel if it has only models.
+    59  
+    60  ```
+    61  l_model liftGo_spec (p : Prog) (hp : LiftProg p)
+    62    fns [(hp.get "lift_go") ↦ liftW, (hp.get "lift_app") ↦ liftAppW]
+    63    specs [derB_spec p (hp.get "der_b") n, memoFindG_spec lfSch p _ (hp.get "lf_find") n]
+    64    grind [arena_grind] fold [tierW, idxW] finish [tierW, idxW] gen 20 heartbeats 1000000
+    65  ```
 
 == ConAgua/Arena/ArenaRel.lean#L281-L304
    281  /-- **The arena relation**: every represented table and the pool (the store tier, over
