@@ -2,6 +2,7 @@ module
 
 public import ConAgua.Compiler.Inline
 public import ConAgua.L.DefAssignSim
+public import ConAgua.Compiler.WFFast
 
 @[expose] public section
 
@@ -133,6 +134,10 @@ theorem warr_run (w : WArr) (s : St) : (warr w).run s = (WArr.ev s w).map (·, s
   | tier a t => exact run_bind_ev (evalE_run t s) fun x => run_pure_ev _ _
 
 /-! ## Shifted expressions -/
+
+theorem WArr.sh_zero_aux (h : ∀ e : Expr, Expr.sh 0 e = e) : ∀ w : WArr, WArr.sh 0 w = w
+  | .plain _ => rfl
+  | .tier _ t => by simp only [WArr.sh, h t]
 
 theorem Expr.sh_zero : ∀ e : Expr, Expr.sh 0 e = e
   | .const _ | .var _ | .len8 _ | .len64 _ | .glob _ => rfl
@@ -1216,5 +1221,330 @@ theorem inl_call {p p' : Prog} {n o : Nat} {fd : FunDecl} {xs : List Var} {g : F
         obtain ⟨s1', hA, e1⟩ := H
         rw [e1]
         exact Ref.ok (fin (.ret ws) v1 s1' t2 hA hmem)
+
+theorem Cond.sh_zero : ∀ c : Cond, Cond.sh 0 c = c
+  | .cmp _ a b => by simp only [Cond.sh, Expr.sh_zero]
+  | .and p q | .or p q => by simp only [Cond.sh, Cond.sh_zero p, Cond.sh_zero q]
+  | .not p => by simp only [Cond.sh, Cond.sh_zero p]
+
+theorem Stmt.sh_zero_simple {b : Bool} : ∀ t : Stmt, Stmt.simple t = true → Stmt.sh 0 b t = some t
+  | .skip, _ => rfl
+  | .set .., _ | .st8 .., _ | .st64 .., _ | .abort _, _ | .gset .., _ | .st64t .., _ | .st32t .., _
+  | .scan8 .., _ => by simp [Stmt.sh, Expr.sh_zero]
+  | .copy64 .., _ | .copy8w .., _ => by simp [Stmt.sh, Expr.sh_zero, WArr.sh_zero_aux Expr.sh_zero]
+  | .seq .., h | .ite .., h | .while .., h | .brk, h | .ret _, h | .call .., h => by simp [Stmt.simple] at h
+
+theorem CR.ar {o : Nat} {v s' : St} (h : CR o v s') : AR 0 o s'.loc v s' :=
+  ⟨h.mem, fun x hx => h.loc x hx, fun _ hy => absurd hy (Nat.not_lt_zero _)⟩
+
+theorem AR.cr {o : Nat} {c : Locals} {v s' : St} (h : AR 0 o c v s') : CR o v s' :=
+  ⟨h.mem, fun x hx => h.loc x hx⟩
+
+theorem CR.setLocs {o : Nat} {v s' : St} (h : CR o v s') (xs : List Var) (vs : List Word) :
+    CR o (v.setLocs xs vs) (s'.setLocs xs vs) :=
+  ⟨by rw [St.setLocs_mem, St.setLocs_mem, h.mem], St.setLocs_agree _ _ xs vs h.loc⟩
+
+theorem inlS_none (o : Nat) : ∀ t : Stmt, inlS (fun _ => none) o t = t
+  | .seq a b | .ite _ a b => by simp only [inlS, inlS_none o a, inlS_none o b]
+  | .while _ a => by simp only [inlS, inlS_none o a]
+  | .call .. => rfl
+  | .skip | .set .. | .st8 .. | .st64 .. | .brk | .ret _ | .abort _ | .gset .. | .st64t .. | .copy64 ..
+  | .copy8w .. | .scan8 .. | .st32t .. => rfl
+
+/-- A callee in the two programs: both missing, or bodies whose runs correspond, one unit of fuel
+apart. -/
+def CallRel (p p' : Prog) (n : Nat) (g : FnName) : Prop :=
+  match p.lookup g with
+  | none => p'.lookup g = none
+  | some fd => ∃ fd', p'.lookup g = some fd' ∧ fd'.nparams = fd.nparams ∧ ∀ st,
+      Ref (fun _ v1 s1' => v1.mem = s1'.mem) ((exec p' n fd'.body).run st) ((exec p (n + 1) fd.body).run st)
+
+section caller
+variable {p p' : Prog} {n : Nat}
+
+theorem ref_seq {a' b' a b : Stmt} {k' k : Stmt → M Sig} {Q : St → St → Prop} {v s' : St}
+    (ha : Ref (fun _ => Q) ((step p' k' a').run s') ((step p k a).run v))
+    (hb : ∀ v1 s1', Q v1 s1' → Ref (fun _ => Q) ((step p' k' b').run s1') ((step p k b).run v1)) :
+    Ref (fun _ => Q) ((step p' k' (.seq a' b')).run s') ((step p k (.seq a b)).run v) := by
+  rw [step_seq_run, step_seq_run]
+  revert ha
+  rcases (step p' k' a').run s' with e | ⟨r, s1'⟩
+  · cases e <;> first | exact fun _ => trivial | (intro ha; rw [ha]; rfl)
+  · rintro ⟨v1, e1, hQ⟩
+    rw [e1]
+    cases r with
+    | normal => exact hb v1 s1' hQ
+    | brk => exact Ref.ok hQ
+    | ret vs => exact Ref.ok hQ
+
+theorem caller_step (E : Env) (hE : ∀ g fd, E g = some fd → p.lookup g = some fd)
+    (hK1 : ∀ cnd a o, Cond.vb cnd ≤ o → Stmt.vb a ≤ o → ∀ v s', CR o v s' →
+      Ref (fun _ => CR o) ((exec p' n (.while cnd (inlS E o a))).run s') ((exec p (n + 1) (.while cnd a)).run v))
+    (hK2 : ∀ g, CallRel p p' n g) :
+    ∀ t o, Stmt.vb t ≤ o → ∀ v s', CR o v s' →
+      Ref (fun _ => CR o) ((step p' (exec p' n) (inlS E o t)).run s') ((step p (exec p (n + 1)) t).run v) := by
+  intro t
+  induction t with
+  | seq a b iha ihb =>
+    intro o hb v s' h
+    simp only [Stmt.vb] at hb
+    exact ref_seq (iha o (by omega) v s' h) fun v1 s1' h1 => ihb o (by omega) v1 s1' h1
+  | ite cnd a b iha ihb =>
+    intro o hb v s' h
+    simp only [Stmt.vb] at hb
+    simp only [inlS]
+    rw [step_ite_run, step_ite_run]
+    have hc := Cond.ev_sh (o := 0) h.mem cnd (fun x hx => h.loc x (by omega))
+    rw [Cond.sh_zero] at hc
+    rw [hc]
+    rcases Cond.ev v cnd with e | (_ | _)
+    · exact Ref.err e
+    · exact ihb o (by omega) v s' h
+    · exact iha o (by omega) v s' h
+  | «while» cnd a ih =>
+    intro o hb v s' h
+    simp only [Stmt.vb] at hb
+    simp only [inlS]
+    rw [step_while_run, step_while_run]
+    have hc := Cond.ev_sh (o := 0) h.mem cnd (fun x hx => h.loc x (by omega))
+    rw [Cond.sh_zero] at hc
+    rw [hc]
+    rcases Cond.ev v cnd with e | (_ | _)
+    · exact Ref.err e
+    · exact Ref.ok h
+    · have H := ih o (by omega) v s' h
+      revert H
+      rcases (step p' (exec p' n) (inlS E o a)).run s' with e | ⟨r, s1'⟩
+      · cases e <;> first | exact fun _ => trivial | (intro H; rw [H]; rfl)
+      · rintro ⟨v1, e1, hQ⟩
+        rw [e1]
+        cases r with
+        | normal => exact hK1 cnd a o (by omega) (by omega) v1 s1' hQ
+        | brk => exact Ref.ok hQ
+        | ret vs => exact Ref.ok hQ
+  | brk => intro o _ v s' h; exact Ref.ok h
+  | ret es =>
+    intro o hb v s' h
+    simp only [Stmt.vb] at hb
+    simp only [inlS]
+    rw [step_ret_run, step_ret_run]
+    have he := Exprs.ev_sh (o := 0) h.mem es (fun x hx => h.loc x (by omega))
+    rw [show Expr.sh 0 = id from funext Expr.sh_zero, List.map_id] at he
+    rw [he]
+    cases Exprs.ev v es with
+    | error e => exact Ref.err e
+    | ok vs => exact Ref.ok h
+  | call xs g args =>
+    intro o hb v s' h
+    have plain : Ref (fun _ => CR o) ((step p' (exec p' n) (.call xs g args)).run s')
+        ((step p (exec p (n + 1)) (.call xs g args)).run v) := by
+      simp only [Stmt.vb] at hb
+      rw [step_call_run, step_call_run]
+      have he := Exprs.ev_sh (o := 0) h.mem args (fun x hx => h.loc x (by omega))
+      rw [show Expr.sh 0 = id from funext Expr.sh_zero, List.map_id] at he
+      rw [he]
+      cases Exprs.ev v args with
+      | error e => exact Ref.err e
+      | ok vs =>
+        dsimp only
+        have hg := hK2 g
+        unfold CallRel at hg
+        revert hg
+        cases p.lookup g with
+        | none => intro hg; rw [hg]; exact Ref.err _
+        | some fd =>
+          rintro ⟨fd', hl', -, hr⟩
+          rw [hl']
+          dsimp only
+          have H := hr { v with loc := Locals.init vs }
+          rw [show ({ s' with loc := Locals.init vs } : St) = { v with loc := Locals.init vs } by
+            rw [← h.mem]]
+          revert H
+          rcases (exec p' n fd'.body).run { v with loc := Locals.init vs } with e | ⟨r, s1'⟩
+          · cases e <;> first | exact fun _ => trivial | (intro H; rw [H]; rfl)
+          · rintro ⟨v1, e1, hm⟩
+            rw [e1]
+            exact Ref.ok (CR.setLocs (v := { v1 with loc := v.loc }) (s' := { s1' with loc := s'.loc })
+              ⟨hm, fun y hy => h.loc y hy⟩ xs r.retVal)
+    simp only [inlS]
+    cases hEg : E g with
+    | none => exact plain
+    | some fd =>
+      dsimp only
+      cases hi : inlBody o fd xs args with
+      | none => exact plain
+      | some t' => exact inl_call (hE g fd hEg) hi hb h
+  | _ =>
+    intro o hb v s' h
+    simp only [inlS]
+    rw [step_simple p (exec p (n + 1)) v _ rfl, step_simple p' (exec p' n) s' _ rfl]
+    have H := sstep_sh (b := false) h.ar _ _ rfl (Stmt.sh_zero_simple _ rfl) hb
+    revert H
+    generalize sstep v _ = r
+    rcases r with e | ⟨r, v1⟩
+    · intro H; rw [H]; exact Ref.err e
+    · rintro ⟨s1', e1, hQ, -⟩; rw [e1]; exact Ref.ok hQ.cr
+
+end caller
+
+/-! ## A round, and the pass -/
+
+section round
+variable {p p' : Prog} {env : Env}
+
+theorem lookup_map_snd (F : FunDecl → FunDecl) (g : FnName) :
+    ∀ p : Prog, (p.map fun x => (x.1, F x.2)).lookup g = (p.lookup g).map F
+  | [] => rfl
+  | (f, fd) :: p => by
+    simp only [List.map_cons, List.lookup_cons]
+    split <;> simp [lookup_map_snd F g p]
+
+theorem inlFn_body (env : Env) (fd : FunDecl) : ∃ E o, (∀ g fd', E g = some fd' → env g = some fd') ∧
+    Stmt.vb fd.body ≤ o ∧ (inlFn env fd).body = inlS E o fd.body ∧ (inlFn env fd).nparams = fd.nparams := by
+  unfold inlFn
+  dsimp only
+  split
+  · exact ⟨env, _, fun _ _ h => h, Nat.le_max_right _ _, rfl, rfl⟩
+  · exact ⟨fun _ => none, Stmt.vb fd.body, (fun _ _ h => by cases h), Nat.le_refl _,
+      (inlS_none _ fd.body).symm, rfl⟩
+
+/-- **One round, one unit of fuel apart**, for every statement of the original with its calls
+inlined (by `env` or by nothing). -/
+theorem round_exec (hE : ∀ g fd, env g = some fd → p.lookup g = some fd)
+    (hp' : ∀ g, p'.lookup g = (p.lookup g).map (inlFn env)) :
+    ∀ n, (∀ E : Env, (∀ g fd, E g = some fd → env g = some fd) → ∀ t o, Stmt.vb t ≤ o → ∀ v s', CR o v s' →
+      Ref (fun _ => CR o) ((exec p' n (inlS E o t)).run s') ((exec p (n + 1) t).run v))
+  | 0 => fun _ _ _ _ _ _ _ _ => trivial
+  | n + 1 => fun E hE' t o hb v s' h => by
+    have IH := round_exec hE hp' n
+    have hK2 : ∀ g, CallRel p p' n g := fun g => by
+      unfold CallRel
+      rw [hp' g]
+      cases p.lookup g with
+      | none => rfl
+      | some fd =>
+        obtain ⟨E', o', hE'', hb', hbody, hnp⟩ := inlFn_body env fd
+        refine ⟨_, rfl, hnp, fun st => ?_⟩
+        rw [hbody]
+        have H := IH E' hE'' fd.body o' hb' st st ⟨rfl, fun _ _ => rfl⟩
+        revert H
+        rcases (exec p' n (inlS E' o' fd.body)).run st with e | ⟨r, s1'⟩
+        · cases e <;> first | exact fun _ => trivial | exact id
+        · rintro ⟨v1, e1, hQ⟩; exact ⟨v1, e1, hQ.mem⟩
+    exact caller_step E (fun g fd h => hE g fd (hE' g fd h))
+      (fun cnd a o hc ha v s' h => IH E hE' (.while cnd a) o (by simp only [Stmt.vb]; omega) v s' h)
+      hK2 t o hb v s' h
+
+theorem run_eq (p : Prog) (N : Nat) (f : FnName) (vs : List Word) (m : Mem) :
+    L.run p N f vs m = match p.lookup f with
+      | none => .error (.noFun f)
+      | some fd => ((exec p N fd.body).run ⟨m, Locals.init vs⟩).map fun q => (q.1.retVal, q.2.mem) := by
+  unfold L.run invoke lookupFn
+  rw [StateT.run_bind]
+  cases p.lookup f with
+  | none => rfl
+  | some fd =>
+    show ((callFn _ fd vs).run _).map _ = _
+    rw [callFn_run]
+    dsimp only
+    rcases (exec p N fd.body).run ⟨m, Locals.init vs⟩ with e | ⟨r, s1⟩ <;> rfl
+
+/-- **A run of one round's program is a run of the original**, with one more unit of fuel. -/
+theorem round_run (hE : ∀ g fd, env g = some fd → p.lookup g = some fd)
+    (hp' : ∀ g, p'.lookup g = (p.lookup g).map (inlFn env)) (N : Nat) (f : FnName) (vs : List Word) (m : Mem)
+    (r : Except Err (List Word × Mem)) (h : L.run p' N f vs m = r) (hr : r ≠ .error .outOfFuel) :
+    L.run p (N + 1) f vs m = r := by
+  subst h
+  rw [run_eq] at hr ⊢
+  rw [run_eq, hp' f]
+  rw [hp' f] at hr
+  cases hl : p.lookup f with
+  | none => rfl
+  | some fd =>
+    simp only [hl, Option.map_some] at hr ⊢
+    obtain ⟨E', o', hE'', hb', hbody, -⟩ := inlFn_body env fd
+    rw [hbody] at hr ⊢
+    have H := round_exec hE hp' N E' hE'' fd.body o' hb' ⟨m, Locals.init vs⟩ ⟨m, Locals.init vs⟩ ⟨rfl, fun _ _ => rfl⟩
+    revert H hr
+    rcases (exec p' N (inlS E' o' fd.body)).run ⟨m, Locals.init vs⟩ with e | ⟨r, s1'⟩
+    · cases e <;> first | exact fun hr _ => absurd rfl hr | (intro _ H; rw [H])
+    · rintro - ⟨v1, e1, hQ⟩
+      rw [e1]
+      simp [Except.map, hQ.mem]
+
+end round
+
+/-! ## The callees, through the name tree -/
+
+theorem idxTreeFrom_spec : ∀ (i : Nat) (p : Prog) (t : NTree), Prog.idxTreeFrom i p = some t →
+    ∀ g j, t.find (nameCode g) = some j → i ≤ j ∧ ∃ fd, p[j - i]? = some (g, fd) ∧ p.lookup g = some fd
+  | i, [], t, h, g, j, hj => by
+    simp only [Prog.idxTreeFrom, Option.some.injEq] at h; subst h; simp [NTree.find] at hj
+  | i, (f, fd) :: p, t, h, g, j, hj => by
+    simp only [Prog.idxTreeFrom, Option.bind_eq_bind, Option.bind_eq_some_iff] at h
+    obtain ⟨t0, h0, hi⟩ := h
+    obtain ⟨-, hf⟩ := NTree.find_insert hi
+    rw [hf] at hj
+    by_cases e : nameCode g = nameCode f
+    · simp only [e, ↓reduceIte] at hj
+      cases hj
+      have := nameCode_inj e
+      subst this
+      exact ⟨Nat.le_refl _, fd, by simp, by simp⟩
+    · simp only [e, ↓reduceIte] at hj
+      obtain ⟨hle, fd', h1, h2⟩ := idxTreeFrom_spec (i + 1) p t0 h0 g j hj
+      have hgf : g ≠ f := fun h => e (by rw [h])
+      refine ⟨by omega, fd', ?_, ?_⟩
+      · rw [show j - i = (j - (i + 1)) + 1 by omega]; simpa using h1
+      · have : (g == f) = false := by simpa using hgf
+        simp [List.lookup_cons, this, h2]
+
+theorem envOf_sound {S : Nat} {t : NTree} {p : Prog} (ht : Prog.idxTree p = some t) :
+    ∀ g fd, envOf S t p g = some fd → p.lookup g = some fd := by
+  intro g fd h
+  unfold envOf at h
+  split at h
+  · rename_i j hj
+    obtain ⟨-, fd', h1, h2⟩ := idxTreeFrom_spec 0 p t ht g j hj
+    rw [Nat.sub_zero] at h1
+    rw [h1] at h
+    simp only at h
+    split at h
+    · cases h; exact h2
+    · cases h
+  · cases h
+
+theorem idxTreeFrom_map (F : FunDecl → FunDecl) : ∀ (i : Nat) (p : Prog),
+    Prog.idxTreeFrom i (p.map fun x => (x.1, F x.2)) = Prog.idxTreeFrom i p
+  | _, [] => rfl
+  | i, (f, fd) :: p => by simp only [List.map_cons, Prog.idxTreeFrom, idxTreeFrom_map F (i + 1) p]
+
+theorem idxTree_inlRound (S : Nat) (t : NTree) (p : Prog) : Prog.idxTree (inlRound S t p) = Prog.idxTree p :=
+  idxTreeFrom_map _ 0 p
+
+theorem lookup_inlRound (S : Nat) (t : NTree) (p : Prog) (g : FnName) :
+    (inlRound S t p).lookup g = (p.lookup g).map (inlFn (envOf S t p)) :=
+  lookup_map_snd _ g p
+
+/-- **The inliner is correct**: a run of `inlineProg S t R p` (`t` the name tree of `p`) that does not
+run out of fuel is a run of `p`, with `R` more units of fuel: the same results and the same
+memory, or the same error. -/
+theorem inlineProg_run {S : Nat} {t : NTree} : ∀ (R : Nat) (p : Prog), Prog.idxTree p = some t →
+    ∀ (N : Nat) (f : FnName) (vs : List Word) (m : Mem) (r : Except Err (List Word × Mem)),
+    L.run (inlineProg S t R p) N f vs m = r → r ≠ .error .outOfFuel → L.run p (N + R) f vs m = r
+  | 0, _, _, _, _, _, _, _, h, _ => h
+  | R + 1, p, ht, N, f, vs, m, r, h, hr => by
+    have h1 := inlineProg_run R (inlRound S t p) (by rw [idxTree_inlRound, ht]) N f vs m r h hr
+    rw [show N + (R + 1) = (N + R) + 1 by omega]
+    exact round_run (envOf_sound ht) (lookup_inlRound S t p) (N + R) f vs m r h1 hr
+
+/-- The inlined program has the original's functions, with the same parameter counts. -/
+theorem inlineProg_lookup {S : Nat} {t : NTree} : ∀ (R : Nat) (p : Prog) (f : FnName) (fd : FunDecl),
+    p.lookup f = some fd → ∃ fd', (inlineProg S t R p).lookup f = some fd' ∧ fd'.nparams = fd.nparams
+  | 0, _, _, fd, h => ⟨fd, h, rfl⟩
+  | R + 1, p, f, fd, h => by
+    obtain ⟨E, o, -, -, -, hnp⟩ := inlFn_body (envOf S t p) fd
+    obtain ⟨fd', h1, h2⟩ := inlineProg_lookup R (inlRound S t p) f _ (by rw [lookup_inlRound, h]; rfl)
+    exact ⟨fd', h1, h2.trans hnp⟩
 
 end L.Compiler
