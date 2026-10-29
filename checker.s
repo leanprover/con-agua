@@ -34606,6 +34606,53 @@ movq $0, %rdi
 .Lca_app_hole_0R:
 addq $88, %rsp
 ret
+ca_f_app_presize:
+subq $16, %rsp
+movq %rdi, %rax
+andq $7, %rax
+cmpq $0, %rax
+jne .Lca_app_presize_1E
+cmpq $8, %rdi
+jb .Lca_app_presize_1E
+movq $1152921504606846976, %rax
+cmpq %rdi, %rax
+jb .Lca_app_presize_1E
+movq %rdi, %rax
+shlq $1, %rax
+addq $2, %rax
+movq $0, %rcx
+andq $1, %rcx
+movq 1560(%r15,%rcx,8), %rcx
+cmpq %rcx, %rax
+ja .Lca_app_presize_1E
+movq $0, %rcx
+andq $1, %rcx
+movq 96(%r15,%rcx,8), %rax
+movq (%rax), %rax
+cmpq $0, %rax
+jne .Lca_app_presize_1E
+movq $0, %rax
+movq %rax, 8(%rsp)
+movq %rdi, %rax
+subq $8, %rax
+movq %rax, %rdx
+movq 8(%rsp), %rax
+movq $0, %rcx
+andq $1, %rcx
+cmpq 1560(%r15,%rcx,8), %rax
+jae ca_error
+movq 96(%r15,%rcx,8), %rcx
+movq %rdx, (%rcx,%rax,8)
+jmp .Lca_app_presize_1X
+.Lca_app_presize_1E:
+.Lca_app_presize_1X:
+movq $0, %rax
+jmp .Lca_app_presize_0R
+.Lca_app_presize_0Z:
+movq $0, %rax
+.Lca_app_presize_0R:
+addq $16, %rsp
+ret
 ca_f_app_push:
 subq $200, %rsp
 movq %rdi, %rsi
@@ -47776,6 +47823,10 @@ call ca_f_pb_check
 movq %rax, 16(%rsp)
 subq $1, %r14
 jb ca_exhausted
+call ca_f_presize_tables
+movq %rax, 16(%rsp)
+subq $1, %r14
+jb ca_exhausted
 call ca_f_intern_reserved_pins
 movq %rax, 16(%rsp)
 subq $1, %r14
@@ -47787,12 +47838,12 @@ jb ca_exhausted
 call ca_f_front_run
 movq %rax, 8(%rsp)
 cmpq $0, 8(%rsp)
-je .Lca_check_a_222221E
+je .Lca_check_a_2222221E
 movq $1, %rax
 jmp .Lca_check_a_0R
-jmp .Lca_check_a_222221X
-.Lca_check_a_222221E:
-.Lca_check_a_222221X:
+jmp .Lca_check_a_2222221X
+.Lca_check_a_2222221E:
+.Lca_check_a_2222221X:
 subq $1, %r14
 jb ca_exhausted
 call ca_f_prepare_prelude
@@ -77894,6 +77945,53 @@ movq $0, %r8
 movq $0, %r9
 .Lca_forall_find_0R:
 addq $104, %rsp
+ret
+ca_f_forall_presize:
+subq $16, %rsp
+movq %rdi, %rax
+andq $7, %rax
+cmpq $0, %rax
+jne .Lca_forall_presize_1E
+cmpq $8, %rdi
+jb .Lca_forall_presize_1E
+movq $1152921504606846976, %rax
+cmpq %rdi, %rax
+jb .Lca_forall_presize_1E
+movq %rdi, %rax
+shlq $1, %rax
+addq $2, %rax
+movq $0, %rcx
+andq $1, %rcx
+movq 1952(%r15,%rcx,8), %rcx
+cmpq %rcx, %rax
+ja .Lca_forall_presize_1E
+movq $0, %rcx
+andq $1, %rcx
+movq 488(%r15,%rcx,8), %rax
+movq (%rax), %rax
+cmpq $0, %rax
+jne .Lca_forall_presize_1E
+movq $0, %rax
+movq %rax, 8(%rsp)
+movq %rdi, %rax
+subq $8, %rax
+movq %rax, %rdx
+movq 8(%rsp), %rax
+movq $0, %rcx
+andq $1, %rcx
+cmpq 1952(%r15,%rcx,8), %rax
+jae ca_error
+movq 488(%r15,%rcx,8), %rcx
+movq %rdx, (%rcx,%rax,8)
+jmp .Lca_forall_presize_1X
+.Lca_forall_presize_1E:
+.Lca_forall_presize_1X:
+movq $0, %rax
+jmp .Lca_forall_presize_0R
+.Lca_forall_presize_0Z:
+movq $0, %rax
+.Lca_forall_presize_0R:
+addq $16, %rsp
 ret
 ca_f_forall_push:
 subq $200, %rsp
@@ -112008,6 +112106,53 @@ movq $0, %r9
 movq $0, %r10
 .Lca_lam_pair_0R:
 addq $64, %rsp
+ret
+ca_f_lam_presize:
+subq $16, %rsp
+movq %rdi, %rax
+andq $7, %rax
+cmpq $0, %rax
+jne .Lca_lam_presize_1E
+cmpq $8, %rdi
+jb .Lca_lam_presize_1E
+movq $1152921504606846976, %rax
+cmpq %rdi, %rax
+jb .Lca_lam_presize_1E
+movq %rdi, %rax
+shlq $1, %rax
+addq $2, %rax
+movq $0, %rcx
+andq $1, %rcx
+movq 1920(%r15,%rcx,8), %rcx
+cmpq %rcx, %rax
+ja .Lca_lam_presize_1E
+movq $0, %rcx
+andq $1, %rcx
+movq 456(%r15,%rcx,8), %rax
+movq (%rax), %rax
+cmpq $0, %rax
+jne .Lca_lam_presize_1E
+movq $0, %rax
+movq %rax, 8(%rsp)
+movq %rdi, %rax
+subq $8, %rax
+movq %rax, %rdx
+movq 8(%rsp), %rax
+movq $0, %rcx
+andq $1, %rcx
+cmpq 1920(%r15,%rcx,8), %rax
+jae ca_error
+movq 456(%r15,%rcx,8), %rcx
+movq %rdx, (%rcx,%rax,8)
+jmp .Lca_lam_presize_1X
+.Lca_lam_presize_1E:
+.Lca_lam_presize_1X:
+movq $0, %rax
+jmp .Lca_lam_presize_0R
+.Lca_lam_presize_0Z:
+movq $0, %rax
+.Lca_lam_presize_0R:
+addq $16, %rsp
 ret
 ca_f_lam_proj:
 .Lca_lam_proj_1H:
@@ -152842,6 +152987,34 @@ movq $0, %rax
 .Lca_pool_room_0R:
 addq $24, %rsp
 ret
+ca_f_pow2_at_least:
+subq $24, %rsp
+lea -1(%rdi), %r13
+movq %r13, %rax
+shrq $1, %rax
+orq %rax, %r13
+movq %r13, %rax
+shrq $2, %rax
+orq %rax, %r13
+movq %r13, %rax
+shrq $4, %rax
+orq %rax, %r13
+movq %r13, %rax
+shrq $8, %rax
+orq %rax, %r13
+movq %r13, %rax
+shrq $16, %rax
+orq %rax, %r13
+movq %r13, %rax
+shrq $32, %rax
+orq %rax, %r13
+lea 1(%r13), %rax
+jmp .Lca_pow2_at_least_0R
+.Lca_pow2_at_least_0Z:
+movq $0, %rax
+.Lca_pow2_at_least_0R:
+addq $24, %rsp
+ret
 ca_f_prep_back:
 movq %rsp, %rax
 subq 8(%r15), %rax
@@ -153449,6 +153622,52 @@ jmp .Lca_prepare_prelude_0R
 movq $0, %rax
 .Lca_prepare_prelude_0R:
 addq $56, %rsp
+ret
+ca_f_presize_tables:
+movq %rsp, %rax
+subq 8(%r15), %rax
+cmpq $48, %rax
+jb ca_exhausted
+subq $16, %rsp
+movq 1480(%r15), %rdi
+shrq $6, %rdi
+subq $1, %r14
+jb ca_exhausted
+call ca_f_pow2_at_least
+movq %rax, (%rsp)
+movq (%rsp), %rdi
+subq $1, %r14
+jb ca_exhausted
+call ca_f_app_presize
+movq %rax, 8(%rsp)
+movq 1480(%r15), %rdi
+shrq $9, %rdi
+subq $1, %r14
+jb ca_exhausted
+call ca_f_pow2_at_least
+movq %rax, (%rsp)
+movq (%rsp), %rdi
+subq $1, %r14
+jb ca_exhausted
+call ca_f_lam_presize
+movq %rax, 8(%rsp)
+movq 1480(%r15), %rdi
+shrq $10, %rdi
+subq $1, %r14
+jb ca_exhausted
+call ca_f_pow2_at_least
+movq %rax, (%rsp)
+movq (%rsp), %rdi
+subq $1, %r14
+jb ca_exhausted
+call ca_f_forall_presize
+movq %rax, 8(%rsp)
+movq $0, %rax
+jmp .Lca_presize_tables_0R
+.Lca_presize_tables_0Z:
+movq $0, %rax
+.Lca_presize_tables_0R:
+addq $16, %rsp
 ret
 ca_f_proj_a:
 movq %rsp, %rax

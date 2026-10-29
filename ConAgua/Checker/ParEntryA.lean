@@ -10,7 +10,7 @@ docs/design/parmode.md, "Step 4" (a). `check` with the global `MODE = 1` runs `c
 `install_fold_go(0, DECL[0], 0)` and `par_compact(v, c)`, returning `2^63 + CTL[130]`.
 
 * `check_dispatchA`: `check` with `MODE = 1` (`3`) is `check_a(1)` (`check_a(0)`).
-* `checkA_of_stages`: `check_a(c)` composed from the seven stage specs, a spec of the fold and
+* `checkA_of_stages`: `check_a(c)` composed from the eight stage specs, a spec of the fold and
   `par_compact`'s run (`parCompact_spec`, `Arena/FreezeSpec.lean`): on a result other than `1`
   (a line that did not scan), the final memory is `parCompactMem m v c` for a memory `m` after
   the fold with result `v` (`F v m`), and the result is `2^63 + CTL[130]`.
@@ -62,17 +62,19 @@ theorem parCompact_stage {p : Prog} (hpc : p.lookup "par_compact" = some parComp
   triple_post (parCompact_spec hpc hfz n s₀ v c) fun _ _ ⟨hl, hok, hm, _⟩ =>
     ⟨hl, fun hF => ⟨_, _, hF, hok, hm⟩⟩
 
-/-- **`check_a(c)` from its stages**: the seven stage specs, the fold's spec from the stages'
+/-- **`check_a(c)` from its stages**: the eight stage specs (the twin's seven and the tables'
+presize), the fold's spec from the stages'
 end (`Q7`, with its count `DECL[0]`) and `par_compact`; on a result other than `1` (a line that did
 not scan), the final memory is the frozen buffer's after a fold that ended in `F`, and the result
 is `2^63 + CTL[130]`. -/
 theorem checkA_of_stages {p : Prog} (hp : p.lookup "check_a" = some checkAL)
     (hpc : p.lookup "par_compact" = some parCompactL)
     (hfz : ∀ i < frozen.length, p.lookup (fzName i) = some (fzF i))
-    {Q0 Q1 Q2 Q3 Q4 Q5 Q6 Q7 : Mem → Prop} {F : Word → Mem → Prop}
+    {Q0 Q1 Q2 Q2p Q3 Q4 Q5 Q6 Q7 : Mem → Prop} {F : Word → Mem → Prop}
     (h1 : StageSpec p "cap_check" Q0 fun _ => Q1)
     (h2 : StageSpec p "pb_check" Q1 fun _ => Q2)
-    (h3 : StageSpec p "intern_reserved_pins" Q2 fun _ => Q3)
+    (h2p : StageSpec p "presize_tables" Q2 fun _ => Q2p)
+    (h3 : StageSpec p "intern_reserved_pins" Q2p fun _ => Q3)
     (h4 : StageSpec p "builtin_prelude" Q3 fun _ => Q4)
     (h5 : StageSpec p "front_run" Q4 fun r m => r.headD 0 = 0 → Q5 m)
     (h6 : StageSpec p "prepare_prelude" Q5 fun _ => Q6)
@@ -94,12 +96,12 @@ theorem checkA_of_stages {p : Prog} (hp : p.lookup "check_a" = some checkAL)
   | succ n =>
     have hn' : n ≤ 2 ^ 62 := by omega
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      (h1 n hn' ·), (h2 n hn' ·), (h3 n hn' ·), (h4 n hn' ·), (h5 n hn' ·), (h6 n hn' ·),
+      (h1 n hn' ·), (h2 n hn' ·), (h2p n hn' ·), (h3 n hn' ·), (h4 n hn' ·), (h5 n hn' ·), (h6 n hn' ·),
       (h7 n hn' ·), (h8 n hn' · ·), (parCompact_stage hpc hfz · F n · ·)]
     all_goals (try simp only [Sig.retVal, Sig.retOr, St.setLoc_mem, List.headD_cons,
       St.setLocs_cons, St.setLocs_nil, St.setLoc_loc, Cmp.eval, BinOp.eval, ite_true, ite_false, Nat.reduceEqDiff,
       UInt64.toNat_zero, bne_iff_ne, ne_eq, Decidable.not_not] at *)
-    all_goals clear h1 h2 h3 h4 h5 h6 h7 h8 hfz hp hpc
+    all_goals clear h1 h2 h2p h3 h4 h5 h6 h7 h8 hfz hp hpc
     -- gen/ematch raised: the flag `c` reaches `par_compact` through eight calls' `LocEq`s (depth)
     all_goals grind (gen := 30) (ematch := 40) [lang_grind, Locals.init_cons_zero]
 
