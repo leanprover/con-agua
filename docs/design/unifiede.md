@@ -2161,7 +2161,8 @@ the slots, as `m2c_*` in §3.7):
 - [ ] `is_def_eq`: `Verdict/DefEqQuickE` (4), `DefEqLamsE` (2), `DefEqEagerE` (2), `DefEqPeelE`
   (5), `DefEqSpineE` (3), `DefEqLazyE` (8), `DefEqTailE` (9), `DefEqLoopsE` (1), `DefEqSlotE` (3:
   `defeq_slot`, `defeq_body`, `is_def_eq_core`). Done: `DefEqQuickE`, `DefEqLamsE`, `DefEqPeelE`,
-  `DefEqSpineE` (and `defeq_lams_inner`; §3.41), `DefEqLazyE` (§3.43), `DefEqTailE` (§3.45, §3.46);
+  `DefEqSpineE` (and `defeq_lams_inner`; §3.41), `DefEqLazyE` (§3.43), `DefEqTailE` (§3.45, §3.46),
+  `DefEqLoopsE`, `DefEqSlotE` (§3.48). Left: `DefEqEagerE` (`defeq_e`, `defeq_arg`; see §3.48);
 - [ ] `infer`: `Verdict/InferLeavesE` (`infer_const`; done, §3.44), `InferBindE` (6: `infer_lams`/`infer_pis` and
   their leaves), `InferSpineE` (4), `InferArmsE` (8; done, §3.47), `InferKnotE` (4: `infer_body(_io)`,
   `infer`, `infer_io`).
@@ -3088,3 +3089,36 @@ Recipes tried for `InferBodyLet`: the default `finish` fails on `iletE` and `ifa
 idxW]` on `ifaE` too) and is slower on `ilamE` (4.83 s for the module); `simp []` it is, as for the old
 ok models. No generator or kit change was needed.
 
+### 3.48 Retirement, group B, `is_def_eq`, fifth landing (`defeq_list`, the slot, `defeq_body`, `is_def_eq_core`)
+
+`defeq_list` (`dl_ref`, `Arena/WhnfIotaRefine2`; `defeqList_refines` and `DefEqLoopsE`'s
+`defeqList_refinesE` are one-liners), `defeq_slot` (`dsl_ref`, `KnotSlot`; `defeq_refines` a
+one-liner), `defeq_body` (`body_ref`, `DefEqBody`; `defeqBody_refines` a one-liner),
+`is_def_eq_core` (`ice_ref`, `KnotSlot`; `isDefEqCore_refines` a one-liner). `Verdict/DefEqSlotE`
+keeps `defeqSlotE_step` (the slot's error half from `body_ref`) and the stub claims
+`isDefEqCore_refinesE`/`isDefEqCore_stageE` (now read off `ice_ref`); `Verdict/DefEqTailE` is
+gone; `DefEqAllE`'s `DefeqWhnfE` is down to `reduceProjCore` and `proofIrrel`. Gone: the `errors`
+models and claims of the four, the ok models `dlW*`, `defeqList_spec`, `memoSlotD*`, `defeq_spec`,
+`isDefEqCore_spec`, the old `defeqBody_spec` with its word model, `evalW_ne_*`.
+
+| functions | before: ok refinements, models, specs + claims | after | change |
+|---|---:|---:|---:|
+| the 4 above | 438 + 753 = 1191 | 467 + 167 = 634 | **−47 %** |
+
+* **`G`**: `DefeqSlotE p n` (the slot's own error half at the callee fuel) for `is_def_eq_core`;
+  `SlotBodyG` (the knot and `defeq_body`'s claim `DefeqBodySpecE`) for `defeq_slot`; `BodyG p n`
+  {knot, nv, reduceNat, pirr, lst, rpc} for `defeq_body`; `defeq_list` needs none.
+* **Callees**: the memo lookups go through `callE` with `callW_memoFind`/`callW_memoSet`'s steps
+  inlined (they live in `WhnfCoreLoop`, not in the memo library).
+* **`DefEqEagerE` not migrated**: `defeq_arg`'s claim `DefeqArgE` is a field of the inference
+  functions' `InferArgG` (§3.47), whose readers (`InferSpineE`, `InferBodySpineF`) were being
+  migrated concurrently; `defeq_e` alone would leave the file half done. Both belong with the
+  remaining `infer` items.
+
+Diff of the landing against master: +461 −998 lines in 9 files. Elaboration (user seconds, median of
+3 interleaved runs, base master 94916e7d, `_tmp/retire-defeq/times5.txt`): `Arena/DefEqBody` 6.00
+→ 10.87 (+81 %), `KnotSlot` 4.66 → 5.55 (+19 %), `WhnfIotaRefine2` 8.13 → 7.63,
+`Verdict/DefEqSlotE` 12.61 → 0.50, `DefEqLoopsE` 1.54 → 0.48, `DefEqTailE` 0.46 → 0, `DefEqAllE`
+0.50 → 0.45, `KnotAllE` 3.06 → 3.07; sum 36.96 → 28.55 (−23 %). `DefEqBody` and `KnotSlot` are
+slower for the same reason as in §3.45 (the generated unified models moved in with the
+refinements). No generator or kit change was needed.
