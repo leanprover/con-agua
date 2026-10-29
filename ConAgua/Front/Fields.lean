@@ -6,6 +6,7 @@ public import ConAgua.Scan.Member
 public import ConAgua.Scan.Str
 public import ConAgua.Scan.Values
 import ConAgua.Front.Preserve
+public import ConAgua.Front.ReadNatSwar
 import ConAgua.L.GrindAttr
 import ConAgua.Scan.Common
 import Std.Tactic.BVDecide.Normalize.Prop
@@ -73,8 +74,26 @@ def readNatLoop : Stmt := lblk (v, e, x) {
 
 /-- con-leche: ConLeche/Frontend/Scan/Fast.lean:493-497 ConLeche.Frontend.readNatAt -/
 @[l_impl ConLeche.Frontend.readNatAt]
-def readNat : FunDecl := lfn (v, e) locals (x) {
+def readNat : FunDecl := lfn (v, e) locals (x, w, h, y) {
   if v + 18 < e { return 0xFFFFFFFFFFFFFFFF };
+  w := e - v - 1;
+  if 8 <= e && e <= len(IN.u8) {
+    if w < 8 {
+      h := le64!(IN.u8, e - 8) & (0x0F0F0F0F0F0F0F0F << ((7 - w) << 3));
+      h := ((h * 2561) >> 8) & 0x00FF00FF00FF00FF;
+      h := ((h * 6553601) >> 16) & 0x0000FFFF0000FFFF;
+      return (h * 42949672960001) >> 32
+    };
+    if w < 16 && 16 <= e {
+      h := le64!(IN.u8, e - 16) & (0x0F0F0F0F0F0F0F0F << ((15 - w) << 3));
+      h := ((h * 2561) >> 8) & 0x00FF00FF00FF00FF;
+      h := ((h * 6553601) >> 16) & 0x0000FFFF0000FFFF;
+      y := le64!(IN.u8, e - 8) & 0x0F0F0F0F0F0F0F0F;
+      y := ((y * 2561) >> 8) & 0x00FF00FF00FF00FF;
+      y := ((y * 6553601) >> 16) & 0x0000FFFF0000FFFF;
+      return ((h * 42949672960001) >> 32) * 100000000 + ((y * 42949672960001) >> 32)
+    }
+  };
   ⟪readNatLoop⟫;
   return 0
 }
@@ -89,8 +108,43 @@ decreasing_by
     rw [UInt64.toNat_add]; simp; have := e.toNat_lt; omega
   omega
 
-/-- `read_nat(v, e)`. -/
-def rdNatN (b : Array UInt8) (v e : Word) : Word := if v + 18 < e then NONE else rdLoopN b v e 0
+/-- `read_nat` on 1‥8 digits ending at `e` (`w` their count minus one): the word of the 8 bytes
+before `e`, masked to the digits' low nibbles, through `swar8`. -/
+def rdW1 (b : Array UInt8) (e w : Word) : Word :=
+  swar8 (le64 b (e - 8).toNat &&& ((0x0F0F0F0F0F0F0F0F : Word) <<< ((7 - w) <<< 3)))
+
+/-- `read_nat` on 9‥16 digits: the first `w - 7` digits from the word before `e - 8`, the last
+eight from the word before `e`. -/
+def rdW2 (b : Array UInt8) (e w : Word) : Word :=
+  swar8 (le64 b (e - 16).toNat &&& ((0x0F0F0F0F0F0F0F0F : Word) <<< ((15 - w) <<< 3))) * 100000000 +
+    swar8 (le64 b (e - 8).toNat &&& 0x0F0F0F0F0F0F0F0F)
+
+/-- `read_nat`'s dispatch after the 18-digit test (`w = e - v - 1`): a word or two inside the
+input, else the byte loop. -/
+def rdNatF (b : Array UInt8) (v e w : Word) : Word :=
+  if 8 ≤ e ∧ e ≤ UInt64.ofNat b.size then
+    if w < 8 then rdW1 b e w
+    else if w < 16 ∧ 16 ≤ e then rdW2 b e w
+    else rdLoopN b v e 0
+  else rdLoopN b v e 0
+
+/-- `read_nat(v, e)`. On digits it is `rdLoopN b v e 0` (`rdNatN_digits`). -/
+def rdNatN (b : Array UInt8) (v e : Word) : Word := if v + 18 < e then NONE else rdNatF b v e (e - v - 1)
+
+section
+variable (b : Array UInt8) (v e w : Word)
+theorem rdNatN_short (h : ¬ v + 18 < e) : rdNatN b v e = rdNatF b v e (e - v - 1) := by
+  rw [rdNatN, ite_eq_right_iff.mpr (fun h' => absurd h' h)]
+theorem rdNatF_out (h : ¬ (8 ≤ e ∧ e ≤ UInt64.ofNat b.size)) : rdNatF b v e w = rdLoopN b v e 0 := by
+  rw [rdNatF, ite_eq_right_iff.mpr (fun h' => absurd h' h)]
+theorem rdNatF_far (h : 8 ≤ e ∧ e ≤ UInt64.ofNat b.size) (h1 : ¬ w < 8) (h2 : ¬ (w < 16 ∧ 16 ≤ e)) :
+    rdNatF b v e w = rdLoopN b v e 0 := by
+  simp only [rdNatF, h, h1, h2, and_self, ↓reduceIte]
+end
+
+theorem retVal_of_retOr (r : Sig) (h1 : r ≠ .normal) (h2 : r ≠ .brk) (d : List Word) :
+    r.retVal = r.retOr d := by
+  cases r <;> simp_all [Sig.retVal, Sig.retOr]
 
 section
 variable (b : Array UInt8) (v e x : Word)
@@ -101,6 +155,126 @@ theorem rdLoopN_step (h : v < e) :
 end
 grind_pattern [lang_grind] rdLoopN_stop => rdLoopN b v e x
 grind_pattern [lang_grind] rdLoopN_step => rdLoopN b v e x, b[v.toNat]
+
+/-! ### `read_nat` on digits: the word steps are the byte loop -/
+
+theorem digit_bang (b : Array UInt8) (a z : Nat)
+    (hd : ∀ j, a ≤ j → j < z → ∃ h : j < b.size, 48 ≤ b[j] ∧ b[j] ≤ 57) :
+    ∀ j, a ≤ j → j < z → 48 ≤ b[j]!.toNat ∧ b[j]!.toNat ≤ 57 := by
+  intro j h1 h2
+  obtain ⟨h, d1, d2⟩ := hd j h1 h2
+  rw [getElem!_pos b j h]
+  exact ⟨d1, d2⟩
+
+theorem ofNat_ten_pow (n : Nat) : UInt64.ofNat (10 ^ n) = 10 ^ n := by
+  induction n with
+  | zero => rfl
+  | succ n ih => rw [Nat.pow_succ, UInt64.ofNat_mul, ih, UInt64.pow_succ]; rfl
+
+theorem rdLoopN_dval (b : Array UInt8) (n : Nat) : ∀ (v e x : Word), e.toNat = v.toNat + n →
+    (∀ j, v.toNat ≤ j → j < e.toNat → 48 ≤ b[j]!.toNat ∧ b[j]!.toNat ≤ 57) →
+    rdLoopN b v e x = x * 10 ^ n + UInt64.ofNat (dval b v.toNat n) := by
+  induction n with
+  | zero =>
+    intro v e x he _
+    rw [rdLoopN_stop _ _ _ _ (by rw [UInt64.lt_iff_toNat_lt]; omega)]
+    simp [dval]
+  | succ n ih =>
+    intro v e x he hd
+    have hlt : v < e := by rw [UInt64.lt_iff_toNat_lt]; omega
+    have hv1 : (v + 1).toNat = v.toNat + 1 := by
+      rw [UInt64.toNat_add]; simp; have := e.toNat_lt; omega
+    obtain ⟨d1, d2⟩ := hd v.toNat (Nat.le_refl _) (by omega)
+    have hdig : (byteW b v - 48) &&& 255 = UInt64.ofNat (b[v.toNat]!.toNat - 48) := by
+      apply UInt64.toNat_inj.mp
+      have hbw : byteW b v = (b[v.toNat]!).toUInt64 := by
+        simp only [byteW, Array.getD_eq_getD_getElem?, getElem!_def]
+        cases b[v.toNat]? <;> rfl
+      rw [hbw, UInt64.toNat_and, UInt64.toNat_sub_of_le _ _ (by
+        rw [UInt64.le_iff_toNat_le]; simp; omega)]
+      simp only [UInt8.toNat_toUInt64, UInt64.reduceToNat, UInt64.toNat_ofNat']
+      rw [show (255 : Nat) = 2 ^ 8 - 1 from rfl, Nat.and_two_pow_sub_one_eq_mod]
+      omega
+    rw [rdLoopN_step _ _ _ _ hlt, hdig, ih (v + 1) e _ (by omega) (fun j h1 h2 => hd j (by omega) h2),
+      hv1, dval]
+    simp only [UInt64.ofNat_add, UInt64.ofNat_mul, ofNat_ten_pow, UInt64.pow_succ]
+    grind
+
+theorem w8_mask_seven : ((0x0F0F0F0F0F0F0F0F : Word) <<< ((7 - UInt64.ofNat (8 - 1)) <<< 3)) =
+    0x0F0F0F0F0F0F0F0F := by decide
+
+/-- On a run of digits (`v ≤ e`), `read_nat` is the byte loop: the word steps compute the same. -/
+theorem rdNatN_digits (b : Array UInt8) (v e : Word) (hve : v.toNat ≤ e.toNat)
+    (hd : ∀ j, v.toNat ≤ j → j < e.toNat → ∃ h : j < b.size, 48 ≤ b[j] ∧ b[j] ≤ 57) :
+    rdNatN b v e = if v + 18 < e then NONE else rdLoopN b v e 0 := by
+  have hd' := digit_bang b _ _ hd
+  unfold rdNatN
+  split
+  · rfl
+  rename_i h18
+  have h18' : e.toNat ≤ v.toNat + 18 := by
+    rw [UInt64.lt_iff_toNat_lt, UInt64.toNat_add] at h18; simp at h18; omega
+  have hloop := rdLoopN_dval b (e.toNat - v.toNat) v e 0 (by omega) hd'
+  rw [UInt64.zero_mul, UInt64.zero_add] at hloop
+  unfold rdNatF
+  by_cases hL0 : e.toNat = v.toNat
+  · have : e = v := UInt64.toNat_inj.mp hL0
+    subst this
+    have h1 : ¬ e - e - 1 < 8 := by simp only [UInt64.sub_self]; decide
+    have h2 : ¬ (e - e - 1 < 16 ∧ 16 ≤ e) := fun h => absurd h.1 (by simp only [UInt64.sub_self]; decide)
+    simp only [h1, h2, ↓reduceIte, ite_self]
+  have hw : e - v - 1 = UInt64.ofNat (e.toNat - v.toNat - 1) := by
+    apply UInt64.toNat_inj.mp
+    rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le, UInt64.toNat_sub_of_le _ _
+      (UInt64.le_iff_toNat_le.mpr hve)]; simp; omega), UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr hve)]
+    simp only [UInt64.reduceToNat, UInt64.toNat_ofNat']
+    have := e.toNat_lt; rw [Nat.mod_eq_of_lt (by omega)]
+  rw [hw]
+  split
+  · rename_i hin
+    have h8 : (e - 8).toNat = e.toNat - 8 := by
+      rw [UInt64.toNat_sub_of_le _ _ hin.1]; rfl
+    split
+    · rename_i hlt
+      have hL : e.toNat - v.toNat ≤ 8 := by
+        rw [UInt64.lt_iff_toNat_lt, UInt64.toNat_ofNat'] at hlt
+        simp only [UInt64.reduceToNat] at hlt; rw [Nat.mod_eq_of_lt (by have := e.toNat_lt; omega)] at hlt
+        omega
+      have h8' : 8 ≤ e.toNat := UInt64.le_iff_toNat_le.mp hin.1
+      rw [rdW1, h8, w1_digits b (e.toNat - 8) (e.toNat - v.toNat) (by omega) hL
+        (fun k h1 h2 => hd' _ (by omega) (by omega)), hloop,
+        show e.toNat - 8 + (8 - (e.toNat - v.toNat)) = v.toNat by omega]
+    split
+    · rename_i hge hlt
+      have hL : 9 ≤ e.toNat - v.toNat ∧ e.toNat - v.toNat ≤ 16 := by
+        rw [UInt64.lt_iff_toNat_lt, UInt64.toNat_ofNat'] at hge hlt
+        simp only [UInt64.reduceToNat] at hge hlt
+        rw [Nat.mod_eq_of_lt (by have := e.toNat_lt; omega)] at hge hlt
+        omega
+      have h16' : 16 ≤ e.toNat := UInt64.le_iff_toNat_le.mp hlt.2
+      have h16 : (e - 16).toNat = e.toNat - 16 := by
+        rw [UInt64.toNat_sub_of_le _ _ hlt.2]; rfl
+      have hsh : (15 : Word) - UInt64.ofNat (e.toNat - v.toNat - 1) =
+          7 - UInt64.ofNat (e.toNat - v.toNat - 8 - 1) := by
+        apply UInt64.toNat_inj.mp
+        rw [UInt64.toNat_sub_of_le _ _ (by
+              rw [UInt64.le_iff_toNat_le, UInt64.toNat_ofNat', Nat.mod_eq_of_lt (by omega)]; simp; omega),
+            UInt64.toNat_sub_of_le _ _ (by
+              rw [UInt64.le_iff_toNat_le, UInt64.toNat_ofNat', Nat.mod_eq_of_lt (by omega)]; simp; omega)]
+        simp only [UInt64.toNat_ofNat', UInt64.reduceToNat]
+        rw [Nat.mod_eq_of_lt (by omega), Nat.mod_eq_of_lt (by omega)]
+        omega
+      rw [rdW2, h16, h8, hsh, w1_digits b (e.toNat - 16) (e.toNat - v.toNat - 8) (by omega) (by omega)
+        (fun k h1 h2 => hd' _ (by omega) (by omega)), ← w8_mask_seven,
+        w1_digits b (e.toNat - 8) 8 (by omega) (by omega) (fun k h1 h2 => hd' _ (by omega) (by omega)),
+        hloop, show dval b v.toNat (e.toNat - v.toNat) = dval b v.toNat ((e.toNat - v.toNat - 8) + 8) by
+          rw [show (e.toNat - v.toNat - 8) + 8 = e.toNat - v.toNat by omega], dval_add,
+        show e.toNat - 16 + (8 - (e.toNat - v.toNat - 8)) = v.toNat by omega,
+        show e.toNat - 8 + (8 - 8) = v.toNat + (e.toNat - v.toNat - 8) by omega,
+        UInt64.ofNat_add, UInt64.ofNat_mul]
+      rfl
+    · rfl
+  · rfl
 
 /-! ## `rec_nat_list`: the first two items of a `[…]` -/
 
@@ -472,7 +646,6 @@ theorem readNatLoop_step_spec (n : Nat) (s₀ : St) :
 
 omit hb in
 include hprn in
-attribute [local lang_grind] rdNatN NONE in
 theorem readNat_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (v e : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "read_nat" [v, e]
@@ -482,8 +655,20 @@ theorem readNat_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (v e : Wo
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
-    sym only [lang_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, readNatLoop_step_spec p b n] <;> finish
+    vcgen [exec, step, L.evalC_spec, L.evalE_spec, evalArgs, setLoc, readNatLoop_step_spec p b n]
+    all_goals simp only [Cond.pval, Expr.pval, St.setLoc_loc, St.setLoc_mem, Locals.init,
+      List.getD_cons_zero, List.getD_cons_succ, List.getD_nil, Cmp.eval, BinOp.eval, Mem.src8, Mem.len8, hm,
+      Bool.and_eq_true, decide_eq_true_eq, Nat.reduceEqDiff, ↓reduceIte] at *
+    all_goals subst_vars
+    all_goals (try rw [rdNatN_short _ _ _ ‹¬v + 18 < e›])
+    all_goals (try rw [rdNatF_out _ _ _ _ ‹_›])
+    all_goals (try rw [rdNatF_far _ _ _ _ ‹_› ‹_› ‹_›])
+    all_goals first
+      | (simp only [rdNatN, rdNatF, rdW1, rdW2, swar8, NONE, Sig.retVal, Sig.retOr, *, ↓reduceIte,
+          and_self]; done)
+      | grind [Sig.retVal, Sig.retOr]
+      | (obtain ⟨-, hb, hr⟩ := ‹_ ∧ ¬_ = Sig.brk ∧ _›
+         rw [retVal_of_retOr _ ‹_› hb [0]]; exact hr)
 
 include hpd hpn hprn in
 theorem pairLoop_spec (n : Nat) (s₀ : St) :
