@@ -333,10 +333,10 @@ theorem cid_ref (P : CidProg p) {fs fs2 fsR fsT fsC : List FnName}
   subst hs5
   have hmc5 := mcMR.ofClosed hclMc hfMc (callW_of_callE c5) hIM4.stage.mc
   have hA5 := hR5'.abs
-  have hCM5 : CoreMemos s5.mem := ⟨hA5.2.2.2.1, hA5.1, hA5.2.2.2.2.1⟩
+  have hCM5 : CoreMemos s5.mem := ⟨hA5.il, hA5.ab, hA5.wk.1⟩
   obtain ⟨mp5, hma5⟩ := hR5'.ma
   exact RefE.ret hrun5 ⟨hR5'.stage, hCM5, hg1.trans (hg4.trans hR5'.grow),
-    ⟨⟨hR5'.rc.pos, ⟨mp5, hma5⟩, hmc5, hR5'.rc.ta⟩, hA5.2.1, hA5.2.2.1.crOK⟩⟩
+    ⟨⟨hR5'.rc.pos, ⟨mp5, hma5⟩, hmc5, hR5'.rc.ta⟩, hA5.i1, hA5.cr.crOK⟩⟩
 
 include hkp hV hOpf hLC hLT hApd hCrk hIlpf hLz in
 /-- **`check_ind_decl` refines the `.indDecl` arm of `checkDecl`** under `StageT` and the twin's
