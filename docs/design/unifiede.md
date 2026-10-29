@@ -2205,13 +2205,14 @@ the slots, as `m2c_*` in §3.7):
   `callE_spec` as the default spec, the `errors`-only error messages); make `unified` the default
   for functions outside `nvFns`. `L/ModelGenTest`'s two `errors` tests (`tNestE_spec`,
   `tExit_spec`) become `unified` ones.
-- [ ] `L/ErrSpec`: `Err.code_ne_of_cls` loses its users. `triple_of_callE_err` stays (`RefE.run_err`
+- [ ] `L/ErrSpec`: `Err.code_ne_of_cls` loses its users (none left after §3.54 and §3.55; the
+  lemma itself is still there). `triple_of_callE_err` stays (`RefE.run_err`
   is built on it), as do `ErrClaim`, `CoreSpecE`, `CoreSpecE.of_runs` (`RefE.coreSpecE`) and
   `callE_spec` (callees without a spec).
-- [ ] `err_stmt` (every-fuel claim statements, now only as `G` fields: `Arena/IndT/Pass` 5,
+- [x] `err_stmt` (every-fuel claim statements, now only as `G` fields: `Arena/IndT/Pass` 5,
   `Arena/IndT/Install7` 1, `Verdict/IndBE` 4): kept while a `G` names a callee's claim; each goes
   when its function's refinement can be listed as a unified callee instead (§3.28's `PassG` reads
-  five).
+  five). Done (§3.55; the elaborator `Verdict/IndAGen` is gone too).
 
 ### 3.31 Retirement, group A: the declaration pipeline (`install_step`, `install_decl_step`, `install_fold_go`/`_next`, `check_pending`)
 
@@ -3402,7 +3403,7 @@ are 279 `unified` and 230 without error posts.
 
 **`Err.code_ne_of_cls`, other users.**
 
-- [ ] `Checker/PreludeRef` (`builtin_prelude`'s error arm): `preFrontRun_errSim`
+- [x] `Checker/PreludeRef` (`builtin_prelude`'s error arm): `preFrontRun_errSim`
   (`Verdict/FrontPreSimE`) is a simulation of errors of nonzero *code* (`NoAb`, `KRelE`,
   `bind_noAb`, `callFn_simE`, `invoke_simE_*`, `preSimE`: about 15 statements), stronger than the class.
   Either restate it over the class (`NoAb` stays over the code, `bind_noAb` then needs
@@ -3413,16 +3414,16 @@ are 279 `unified` and 230 without error posts.
 function's refinement by `RefE.run_err`, so each goes when its readers list that refinement
 instead of the statement):
 
-- [ ] `Arena/IndT/Pass`: `CheckBlockIndsE`, `CheckBlockCtorsE`, `CheckBlockClassesE`,
+- [x] `Arena/IndT/Pass`: `CheckBlockIndsE`, `CheckBlockCtorsE`, `CheckBlockClassesE`,
   `CheckBlockPositivityE`, `NestSeedsE`, the fields of `PassG` (proved in `IndsE7`, `BlkE1`,
   `BlkE4`, `PosTopE5` from `cbi_ref`, `ict_ref`, `cbc_ref`, `cbp_ref`, `nsd_ref`). A `G` field
   replaced by a refinement: `pass_ref` reads the five refinements through the runs, `PassG`
   becomes their `G`s (`IndsG`, `VerdictCtx`, `NbG`, and the two below while they last); the
   `checkBlock…E_claim` theorems and `IndA6`'s arguments go.
-- [ ] `Arena/IndT/Install7`: `CheckSumCtorsE` (`checkSumCtorsE_of`, `IndArmE`, from `scts_ref`),
+- [x] `Arena/IndT/Install7`: `CheckSumCtorsE` (`checkSumCtorsE_of`, `IndArmE`, from `scts_ref`),
   read by `ict_ref`'s `G` (`BlkE1`) and the arm's top (`IndA8`, `IndA9`). A `G` field replaced by
   `scts_ref`.
-- [ ] `Verdict/IndBE`: `CheckSumTeleE` (`checkSumTeleE_of` from `ct_ref`; read in `Install3`,
+- [x] `Verdict/IndBE`: `CheckSumTeleE` (`checkSumTeleE_of` from `ct_ref`; read in `Install3`,
   `Install4`), `CheckConstantValE` (`checkConstantValE_of` from `ccvE_okT`; read in `Install3`,
   `Install4`), `CheckStructFieldSortsIE` (`checkStructFieldSortsIE_of`; read in `Tail` (`TailG.csf`),
   `Install6`, `IdxSorts`, `Positivity`, `PosTopE5`). A `G` field replaced by a refinement each.
@@ -3430,7 +3431,7 @@ instead of the statement):
   (§3.52, this lane's second landing).
 
 **Hand claim statements of the same kind (not `err_stmt`)**: `CheckBasisDeclE`
-(`Arena/IndT/CheckIndDecl`, read by `IndA6`, `IndA8`, `IndA9`) and `DefeqListE` (above; gone,
+(`Arena/IndT/CheckIndDecl`, read by `IndA6`, `IndA8`, `IndA9`; gone, §3.55) and `DefeqListE` (above; gone,
 §3.53). They name
 no `errors` model and do not block group D, but go the same way.
 
@@ -3611,3 +3612,47 @@ Elaboration (user seconds, `lean` on the module, median of 3 interleaved runs, b
 | `Verdict/WhnfIotaRecE` | 1.95 | 0.57 | |
 | `Verdict/WhnfKnotE` | 0.60 | 0.63 | |
 | **sum** | **26.63** | **25.88** | **−3 %** |
+
+### 3.55 Retirement, group D: the prelude's error simulation over the class; the `err_stmt`s
+
+§3.52's `Checker/PreludeRef` item, its `err_stmt` items and `CheckBasisDeclE`.
+
+* **The prelude** (`Verdict/FrontPreSimE`): `KRelE`, `bind_noAb`, `callFn_simE`, `invoke_simE_copy`/
+  `_shared`, `step_simE`, `ksimE`, `preSimE` and `preFrontRun_errSim` take errors of nonzero class,
+  like every other claim. `NoAb` stays over the code (its proofs are `rfl`); `NoAb.cls` gives the class
+  (`Err.cls_of_code`). `builtinPrelude_ref` passes its `hk` directly; `Err.code_ne_of_cls` has no user
+  left anywhere on master (with §3.54's `iota_rec_vck`/`iota_rec_fire2`).
+* **The `err_stmt`s**: each reader now reads the function's refinement on the failing run
+  (`RefE.run_err`), and the `G` that named the statement becomes the refinement's own:
+  * `check_struct_field_sorts_i` (`fsorts_ref`, `G` `VerdictCtx`): in `iis_ref`, `iao_ref` the call is at
+    fuel `n` where the refinement is at `n + 1`, raised by `callE_err_mono` (`Verdict/PosTopEMono`, now
+    imported by `IdxSorts`, `Install6`, `Pass`). `iis_ref`/`iisr_ref`, `iao/iac/iaa_ref` are under
+    `VerdictCtx`; `CbpG` is `NbG` (it covers `VerdictCtx`); `TailG` is `VerdictCtxU`.
+  * `check_constant_val` (`ccv_ref`, `VerdictCtxU`) and `check_sum_tele` (`ct_ref`, `CtsG`):
+    `TeleG` and `IndsG` are `CtsG`. `CstProg.ctProg` (`Install3`) builds `ct_ref`'s lookups.
+  * `check_sum_ctors` (`scts_ref`, `VerdictCtxU`): `CtorsG` is `VerdictCtxU`.
+  * the pass's five checks (`cbi_ref`, `ict_ref`, `cbc_ref`, `cbp_ref`, `nsd_ref`): the failing run at
+    fuel `F` raised to the ok side's `n + 3` (`callE_err_mono hle`), `nsd_ref` at `F`; `PassG` is `CtsG`.
+  * `check_basis_decl` (`cbd_ref`, `G` `True`) in `cid_ref`: `CheckBasisDeclE` gone.
+  * Up the spine `BlockG` and `CidG` collapse to `CtsG` too (`VerdictCtxU` and `whnf_top`'s claim:
+    every callee's `G` is implied by it). So `indArmSpecE_of` (`Verdict/IndArmTopE`) is one
+    `RefE.run_err` over `cid_ref`, and the claim chain `cid_claim`, `cid_claim2`, `cid_claim3` goes.
+* Gone: the `err_stmt` elaborator (`Verdict/IndAGen`) and all nine statements; the modules
+  `Verdict/IndBE`, `IndsE7`, `BlkE1`, `BlkE4`, `PosTopE5`, `IndArmE`, `IndBSum1`
+  (`checkStructFieldSortsI_claim`), `DeclBasisE` (`cbdE_okT`), `IndA6`, `IndA8`, `IndA9` (with
+  `nbG_prog`); `ccvE_okT`; the structures `TeleG`, `IndsG`, `CtorsG`, `CbpG`, `TailG`, `PassG`,
+  `BlockG`, `CidG`. No generator or kit change.
+
+Lines: +161 −856 in 28 files (12 modules deleted); the readers' error arms grow by a few lines each
+(the refinement's spec and arguments), the statements, their proofs and the claim chain go.
+
+Elaboration (user seconds, `lean` on the module, median of 3 interleaved runs, base master 07422017,
+`_tmp/retire-d1/times1.txt`): the 14 kept modules 50.74 → 50.74 (each within ±1.5 %); the 12 deleted
+modules 6.84 s. **Sum 57.58 → 50.74 (−12 %)**.
+
+What is left of the separate error machinery on master: the generator's `errors` path with its two
+tests (`L/ModelGenTest`: `tNestE_spec`, `tExit_spec`, the only `errors` models), and
+`Err.code_ne_of_cls` itself (no users). `triple_of_callE_err`'s users (`Arena/Verdict`'s
+`CoreSpecE.of_callE`, `RefE.run_err`, `RefC.run_err`, `L/ErrSpec`, `Verdict/ThreadsE`) take posts over
+the class. No `err_stmt` user, no hand claim statement of this kind.
+

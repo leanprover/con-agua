@@ -7,9 +7,10 @@ import ConAgua.Arena.LevelSubstLP
 
 `preSim` (`Checker/PreludeSim.lean`) relates the ok runs of a copied function `pre_f` to the ok
 runs of `f` on the memory whose input is the prelude's bytes. Here the error runs: a run of
-`pre_f` that fails with an error of nonzero code fails the same way as `f` on the renamed state
-(`preSimE`). Only an `abort` has a nonzero code (`Err.code`); evaluation and the memory
-operations fail only with `oob` (`NoAb`), so such an error comes from an `abort` statement (whose
+`pre_f` that fails with an error of nonzero class (`Err.cls`, as every error claim) fails the same
+way as `f` on the renamed state (`preSimE`). Only an `abort` has a nonzero code (`Err.code`), so
+only it has a nonzero class; evaluation and the memory operations fail only with `oob` (`NoAb`,
+`NoAb.cls`), so such an error comes from an `abort` statement (whose
 value the copy computes as the original does, `ERel`) or from a callee (by induction on the fuel),
 and every ok run before it is related by the ok simulation (`step_sim`, `invoke_sim_*`).
 -/
@@ -22,6 +23,11 @@ open L L.Compiler
 
 /-- Every error of `x` has code `0`. -/
 def NoAb {α : Type} (x : M α) : Prop := ∀ s e, x.run s = .error e → e.code = 0
+
+/-- An error of a computation that never aborts has class `0`. -/
+theorem NoAb.cls {α : Type} {x : M α} {s : St} {e : Err} (h : NoAb x) (he : x.run s = .error e) :
+    e.cls = 0 :=
+  Err.cls_of_code (h s e he)
 
 theorem NoAb.pure {α : Type} (a : α) : NoAb (Pure.pure a : M α) := by
   intro s e h; cases h
@@ -127,9 +133,9 @@ macro "noabS" : tactic => `(tactic| repeat (first
 
 /-! ## Error runs -/
 
-/-- `k` fails on the copy `c` with a nonzero code only as on the original `o`. -/
+/-- `k` fails on the copy `c` with a nonzero class only as on the original `o`. -/
 def KRelE (k : Stmt → M Sig) (c o : Stmt) : Prop := ∀ (s : St) (e : Err),
-  (k c).run s = .error e → e.code ≠ 0 → (k o).run (s.setIn preIn) = .error e
+  (k c).run s = .error e → e.cls ≠ 0 → (k o).run (s.setIn preIn) = .error e
 
 theorem run_bind_error {α β : Type} {x : M α} {g : α → M β} {s : St} {e : Err}
     (h : (x >>= g).run s = .error e) :
@@ -147,17 +153,17 @@ theorem run_bind_error_left {α β : Type} {x : M α} {g : α → M β} {s : St}
     (hx : x.run s = .error e) : (x >>= g).run s = .error e := by
   rw [StateT.run_bind, hx]; rfl
 
-/-- The first step of a `>>=` that never aborts: an error of nonzero code comes from the rest. -/
+/-- The first step of a `>>=` that never aborts: an error of nonzero class comes from the rest. -/
 theorem bind_noAb {α β : Type} {x : M α} {g : α → M β} {s : St} {e : Err} (hx : NoAb x)
-    (h : (x >>= g).run s = .error e) (hk : e.code ≠ 0) :
+    (h : (x >>= g).run s = .error e) (hk : e.cls ≠ 0) :
     ∃ a s', x.run s = .ok (a, s') ∧ (g a).run s' = .error e := by
   rcases run_bind_error h with h1 | h1
-  · exact absurd (hx s e h1) hk
+  · exact absurd (hx.cls h1) hk
   · exact h1
 
 theorem callFn_simE {k : Stmt → M Sig} {dc dd : FunDecl} (hk : KRelE k dc.body dd.body)
     (vs : List Word) (s : St) (e : Err)
-    (h : (callFn k dc vs).run s = .error e) (hc : e.code ≠ 0) :
+    (h : (callFn k dc vs).run s = .error e) (hc : e.cls ≠ 0) :
     (callFn k dd vs).run (s.setIn preIn) = .error e := by
   unfold callFn at h ⊢
   obtain ⟨s2, s3, h3, h4⟩ := bind_noAb NoAb.get h hc
@@ -173,7 +179,7 @@ theorem callFn_simE {k : Stmt → M Sig} {dc dd : FunDecl} (hk : KRelE k dc.body
   · have : NoAb ((fun r => do
         modify fun s' : St => { s' with loc := s.loc }
         Pure.pure r.retVal) rr : M (List Word)) := by noab
-    exact absurd (this s5 e h8) hc
+    exact absurd (this.cls h8) hc
 
 /-! ## Abort values that do not read the input -/
 
@@ -213,7 +219,7 @@ theorem noAb_lookupFn (p : Prog) (f : FnName) : NoAb (lookupFn p f) :=
 theorem invoke_simE_copy {p : Prog} {t : NTree} {S : FnName → Bool} (hP : PreSimProg p t S)
     (hA : AbNoIn p) (n : Nat) (ih : KSimE p t S n) (g : FnName) (hg : isCopied t g = true)
     (vs : List Word) (s : St) (e : Err)
-    (h : (invoke p (exec p n) ("pre_" ++ g) vs).run s = .error e) (hc : e.code ≠ 0) :
+    (h : (invoke p (exec p n) ("pre_" ++ g) vs).run s = .error e) (hc : e.cls ≠ 0) :
     (invoke p (exec p n) g vs).run (s.setIn preIn) = .error e := by
   unfold invoke at h ⊢
   obtain ⟨fd', s2, h1, h2⟩ := bind_noAb (noAb_lookupFn _ _) h hc
@@ -229,7 +235,7 @@ theorem invoke_simE_copy {p : Prog} {t : NTree} {S : FnName → Bool} (hP : PreS
 theorem invoke_simE_shared {p : Prog} {t : NTree} {S : FnName → Bool} (hP : PreSimProg p t S)
     (hA : AbNoIn p) (n : Nat) (ih : KSimE p t S n) (g : FnName) (hg : S g = true) (vs : List Word)
     (s : St) (e : Err)
-    (h : (invoke p (exec p n) g vs).run s = .error e) (hc : e.code ≠ 0) :
+    (h : (invoke p (exec p n) g vs).run s = .error e) (hc : e.cls ≠ 0) :
     (invoke p (exec p n) g vs).run (s.setIn preIn) = .error e := by
   unfold invoke at h ⊢
   obtain ⟨fd, s2, h1, h2⟩ := bind_noAb (noAb_lookupFn _ _) h hc
@@ -240,7 +246,7 @@ theorem invoke_simE_shared {p : Prog} {t : NTree} {S : FnName → Bool} (hP : Pr
 
 /-- A statement whose step never aborts (no `abort`, call or compound statement inside). -/
 theorem krelE_of_noAb {k : Stmt → M Sig} {c o : Stmt} (h : NoAb (k c)) : KRelE k c o :=
-  fun s e he hc => absurd (h s e he) hc
+  fun _ _ he hc => absurd (h.cls he) hc
 
 theorem setLocs_noAb (xs : List Var) (rs : List Word) :
     NoAb (do setLocs xs rs; return Sig.normal : M Sig) := by
@@ -319,7 +325,7 @@ theorem step_simE {p : Prog} {t : NTree} {S : FnName → Bool} (hP : PreSimProg 
     refine run_bind_error_of h1' ?_
     rcases run_bind_error h2 with h3 | ⟨rs, s3, h3, h4⟩
     · exact run_bind_error_left (invoke_simE_copy hP hA n ihn _ hg vs s e h3 hc)
-    · exact absurd (setLocs_noAb xs rs s3 e h4) hc
+    · exact absurd ((setLocs_noAb xs rs).cls h4) hc
   | callS xs hg ha =>
     intro _ s e h hc
     simp only [step] at h ⊢
@@ -328,18 +334,18 @@ theorem step_simE {p : Prog} {t : NTree} {S : FnName → Bool} (hP : PreSimProg 
     refine run_bind_error_of h1' ?_
     rcases run_bind_error h2 with h3 | ⟨rs, s3, h3, h4⟩
     · exact run_bind_error_left (invoke_simE_shared hP hA n ihn _ hg vs s e h3 hc)
-    · exact absurd (setLocs_noAb xs rs s3 e h4) hc
+    · exact absurd ((setLocs_noAb xs rs).cls h4) hc
 
 theorem ksimE {p : Prog} {t : NTree} {S : FnName → Bool} (hP : PreSimProg p t S) (hA : AbNoIn p) :
     ∀ n, KSimE p t S n
-  | 0 => fun _ _ _ _ s e h hc => by cases h; exact absurd rfl hc
+  | 0 => fun _ _ _ _ s e h hc => by cases h; exact absurd Err.cls_outOfFuel hc
   | n + 1 => fun _ _ hs ha => step_simE hP hA n (ksimE hP hA n) hs ha
 
-/-- **The simulation, for errors**: a run of the copy `pre_f` that fails with a nonzero code
+/-- **The simulation, for errors**: a run of the copy `pre_f` that fails with a nonzero class
 fails the same way as `f` on the state whose input is the prelude's bytes. -/
 theorem preSimE {p : Prog} {t : NTree} {S : FnName → Bool} (hP : PreSimProg p t S) (hA : AbNoIn p)
     (n : Nat) (f : FnName) (hf : isCopied t f = true) (vs : List Word) (s : St) (e : Err)
-    (h : (invoke p (exec p n) ("pre_" ++ f) vs).run s = .error e) (hk : e.code ≠ 0) :
+    (h : (invoke p (exec p n) ("pre_" ++ f) vs).run s = .error e) (hk : e.cls ≠ 0) :
     (invoke p (exec p n) f vs).run (s.setIn preIn) = .error e :=
   invoke_simE_copy hP hA n (ksimE hP hA n) f hf vs s e h hk
 
@@ -351,10 +357,10 @@ prog_all checkerProg_abNoInAll : checkerProg (fun x => x.2.body.abNoIn)
 theorem checkerProg_abNoIn : AbNoIn checkerProg :=
   fun _ _ hl => checkerProg_abNoInAll _ (mem_of_lookup hl)
 
-/-- **`pre_front_run` fails as `front_run` on the prelude's bytes** (errors of nonzero code). -/
+/-- **`pre_front_run` fails as `front_run` on the prelude's bytes** (errors of nonzero class). -/
 theorem preFrontRun_errSim (n : Nat) (s : St) (e : Err)
     (h : (invoke checkerProg (exec checkerProg n) "pre_front_run" []).run s = .error e)
-    (hk : e.code ≠ 0) :
+    (hk : e.cls ≠ 0) :
     (invoke checkerProg (exec checkerProg n) "front_run" []).run (s.setIn preIn) = .error e :=
   preSimE checkerProg_preSim checkerProg_abNoIn n "front_run" isCopied_front_run [] s e h hk
 

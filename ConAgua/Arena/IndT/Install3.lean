@@ -1,7 +1,7 @@
 import ConAgua.Arena.IndT.Sum2
 import ConAgua.Arena.IndInstallSpec.InstallSimCall
 import ConAgua.Arena.IndInstallSpec.Cons
-import ConAgua.Verdict.IndBE
+import ConAgua.Arena.DeclArmT
 import ConAgua.L.ModelGen
 
 /-!
@@ -14,7 +14,7 @@ import ConAgua.L.ModelGen
 `checkSumTele_spec` on its run for the answer's denotation), `stripPis` (`stripPis_pstep`), the
 sort's intern (`internSortE_run`). `check_block_teles` walks the members (`dMember_ext`). Both have one model
 (`cbtE`, `cbtsE`: `l_model … unified`) and one refinement (`cbt_ref`, `cbts_ref`: `RefE` under
-`TeleG`, the claims of `check_constant_val` and `check_sum_tele`) for both outcomes.
+`CtsG`, what `check_constant_val`'s and `check_sum_tele`'s refinements assume) for both outcomes.
 -/
 
 
@@ -59,11 +59,11 @@ l_model cbtsE_spec (p : Prog) (h1 : p.lookup "check_block_tele" = some checkBloc
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
-/-- What the error arms of `check_block_tele`/`_teles` assume: the claims of `check_constant_val`
-and `check_sum_tele` (read through their runs). -/
-structure TeleG (p : Prog) : Prop where
-  ccv : CheckConstantValE p
-  sum : CheckSumTeleE p
+/-- `check_sum_tele`'s lookups, as its model takes them. -/
+theorem CstProg.ctProg {p : Prog} (hP : CstProg p) : CtProg p :=
+  ⟨⟨⟨hP.alloc, hP.copy, hP.cons, hP.view, hP.fvarFind, hP.fvarPush, hP.internFVar, hP.wt, hP.i1⟩,
+    hP.sortFind, hP.sortPush, hP.internSort, hP.derB, hP.forallFind, hP.forallPush, hP.internForall,
+    hP.mkForall, hP.closeTele, hP.erAlloc, hP.cvNew, hP.slow, hP.ab⟩, hP.strip, hP.tele⟩
 
 /-- What `check_block_tele` gives besides the checked former and its sort `x` (from `m`, `a`): the
 former's layout (`TeleOutC`), `AbsOK`, the core step. -/
@@ -110,14 +110,14 @@ theorem installCstSimC (hP : CstProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} 
 include hq henv hV hApd hCrk in
 /-- **`check_block_tele` refines `checkBlockTele`, both outcomes** under `StageC` (twin side:
 con-ron's `checkBlockTele_specF`'s proof): `check_constant_val` and `check_sum_tele` through their
-runs (their claims in `TeleG`), `strip_pis` and `intern_sort` (outside the verdict closure)
+runs (their refinements `ccv_ref`, `ct_ref`), `strip_pis` and `intern_sort` (outside the verdict closure)
 lifted. -/
 theorem cbt_ref (hP : CstProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState}
     {nP ms : Word} {msh : MemberShape}
     (hC : StageC dn vis fe env m a) (hms : MemOK m ms.toNat msh) (hA : AbsOK m)
     {msP : ConLeche.MemberShape} (hmsP : ConRon.Bridge.Inductives.dMember a.store msh = some msP)
     (hfe : ConRon.Bridge.denoteFEnv a.store fe = some env) :
-    RefE (TeleG p) (cbtE p (n + 1) m vis nP ms) (ConRon.Arena.checkBlockTele V fe nP.toNat msh) a
+    RefE (CtsG p) (cbtE p (n + 1) m vis nP ms) (ConRon.Arena.checkBlockTele V fe nP.toNat msh) a
       (fun v x a' => TelePost dn vis fe env m a v.1 x v.2 a') := by
   have hS := hC.stage
   obtain ⟨hcvP, -, -⟩ := ConRon.Bridge.Inductives.dMember_inv hmsP
@@ -141,8 +141,9 @@ theorem cbt_ref (hP : CstProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AS
   cases h1 : callE p n "check_constant_val" [vis, UInt64.ofNat c] m with
   | error e1 =>
     rw [cbtE.k_check_constant_val.none]
-    exact RefE.bind_left fun hG => hG.ccv hV hq hApd hCrk ⟨m, Locals.init []⟩ a dn fe vis _ msh.cvT hC.stageT
-      (rec2DecCV_erecP hcvm hcvx) (rec3CVExt_lt hS hcvx) (denoteCV_lps hcvP) hA.crMemo.crOK n hn e1 h1
+    exact RefE.bind_left fun hG => RefE.run_err (s₀ := ⟨m, Locals.init []⟩)
+      (checkConstantVal_specE p hV n _ vis _) hG.nv hG.toVerdictCtxU (ccv_ref hq hApd hCrk hn hC.stageT
+        (rec2DecCV_erecP hcvm hcvx) (rec3CVExt_lt hS hcvx) (denoteCV_lps hcvP) hA.crMemo.crOK) h1
   | ok q1 =>
   obtain ⟨r1, m1⟩ := q1
   rw [cbtE.k_check_constant_val.arm1]
@@ -169,11 +170,9 @@ theorem cbt_ref (hP : CstProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AS
   | error e2 =>
     rw [cbtE.k_check_sum_tele.none]
     refine RefE.bind_left fun hG => ?_
-    have hcl := hG.sum hq henv hV hApd hCrk hP.alloc hP.copy hP.cons hP.view hP.fvarFind hP.fvarPush
-      hP.internFVar hP.wt hP.sortFind hP.sortPush hP.internSort hP.derB hP.forallFind hP.forallPush
-      hP.internForall hP.mkForall hP.closeTele hP.erAlloc hP.cvNew hP.slow hP.i1 hP.ab hP.tele hP.strip
-      ⟨s1.mem, Locals.init []⟩ a1 _ _ _ msh.cvT msh.cvT hC1 hcvm1 hx1.1 hx1.2 hcvm1 hx1.1 hx1.2 hA1 hcA hcA hw1'
-      (ConRon.Bridge.denoteFEnv_mono c1.ext hfe) n hn e2 h2
+    have hcl := RefE.run_err (ctE_spec p hV hP.ctProg n ⟨s1.mem, Locals.init []⟩ vis _ _ _) hG.nv hG
+      (ct_ref hq henv hApd hCrk hP.ctProg.toWtProg n hn s1.mem a1 _ _ _ msh.cvT msh.cvT hC1 hcvm1 hx1.1 hx1.2
+        hcvm1 hx1.1 hx1.2 hA1 hcA hcA hw1' (ConRon.Bridge.denoteFEnv_mono c1.ext hfe)) h2
     rw [hk] at hcl
     exact hcl
   | ok q2 =>
@@ -270,7 +269,7 @@ theorem cbts_ref (hP : InstProg p) (nP : Word) (n : Nat) (hn : n ≤ 2 ^ 62) :
     StageC dn vis fe env m a → MemsOK m o l mss → AbsOK m →
     mss.mapM (ConRon.Bridge.Inductives.dMember a.store) = some mssP →
     ConRon.Bridge.denoteFEnv a.store fe = some env →
-    RefE (TeleG p) (cbtsE p n m vis nP o l) (ConRon.Arena.checkBlockTeles V fe nP.toNat mss) a
+    RefE (CtsG p) (cbtsE p n m vis nP o l) (ConRon.Arena.checkBlockTeles V fe nP.toNat mss) a
       (fun v x a' => TelesPost dn vis fe env m a v.1 x v.2 a') := by
   induction n with
   | zero => intros; rw [cbtsE.eq_1]; exact RefE.of_cls0 Err.cls_outOfFuel

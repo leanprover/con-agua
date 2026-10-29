@@ -1,12 +1,11 @@
-import ConAgua.Verdict.IndArmE
 import ConAgua.Verdict.TopE
-import ConAgua.Verdict.IndA8
+import ConAgua.Verdict.PosKnotE
 
 /-!
 # The inductive arm's verdict claim, proved (lane `verdicts-b`, helper `fin`)
 
-`check_ind_decl`'s claim (`IndArmSpecE`) from `cid_claim3` with part B's claims in its shapes
-(`IndArmE.lean`), at the programs phase A runs (`IndArmVerdict`, mirroring the ok side's
+`check_ind_decl`'s claim (`IndArmSpecE`): the error half of its refinement `cid_ref` (`RefE.run_err`,
+under `CtsG`, built from the program facts), at the programs phase A runs (`IndArmVerdict`, mirroring the ok side's
 `indArmSpec_checker`); hence the driver's verdict obligations `SeqVerdicts checkerProg` and
 `ThreadVerdicts` without hypotheses.
 -/
@@ -21,8 +20,8 @@ namespace L.Ind
 
 open L.Arena
 
-/-- **`check_ind_decl`'s claim from program facts** and the claims of `target_k53_args`,
-`whnf_telescope`. -/
+/-- **`check_ind_decl`'s claim from program facts** and `whnf_top`'s claim: `cid_ref`'s error
+half. -/
 theorem indArmSpecE_of {p : Prog} (hkp : KnotStageProg p) (hV : ValProg p)
     (hOpf : OpfF p) (hLC : LvlCacheProg p) (hLT : p.lookup "lv_leq_top" = some lvLeqTop)
     (hApd : ApdF p) (hCrk : CrKeep p) (hIlpf : IlpfF p) (hLz : LzcF p)
@@ -45,12 +44,11 @@ theorem indArmSpecE_of {p : Prog} (hkp : KnotStageProg p) (hV : ValProg p)
     ∀ dn, DnInj dn → IndArmSpecE p dn := by
   intro dn hdn pins n hn m a vis fe env block nP o l w _ hw hdec hb _ hT _ hfold hden hlpd hM e hc
   subst hw
-  have hcE : CoreStubsE p := hkp.toKnotTopProg.coreStubsE hnv
-  exact cid_claim3 hkp hV hOpf hLC hLT hApd hCrk hIlpf hLz P hcl hfs hfr hcl2 hfs2 hclR hfR hclT hfT
-    hclC hfC hkP hkt hkr hnv hU
-    (checkSumTeleE_of ⟨⟨⟨hnv, hcE⟩, hU⟩, hWt⟩) (checkSumCtorsE_of hnv hcE hU) (checkStructFieldSortsIE_of hnv hcE)
-    hn hdn hc hT hfold
-    (decB_decEBlk_of_decCIs hdec) hb hden hM hfB hfRc hclH hfH hclM hfM hclMc hfMc hlpd
+  exact RefE.run_err (cidE_spec p hV P n ⟨m, Locals.init []⟩ vis o l w) hnv
+    ⟨⟨⟨hnv, hkp.toKnotTopProg.coreStubsE hnv⟩, hU⟩, hWt⟩
+    (cid_ref hkp hV hOpf hLC hLT hApd hCrk hIlpf hLz P hcl hfs hfr hcl2 hfs2 hclR hfR hclT hfT hclC hfC hkP hkt hkr
+      (N := n) (by omega) hdn hT hfold (decB_decEBlk_of_decCIs hdec) hb hden hM hfB hfRc hclH hfH hclM hfM hclMc
+      hfMc hlpd) hc
 
 end L.Ind
 

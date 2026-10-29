@@ -110,14 +110,6 @@ l_model cbiE_spec (p : Prog) (hP : IndsProg p)
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [rdW] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
-/-- What the error arms of `check_block_inds` assume: the verdict context (the agreements' core
-calls) and the claims of `check_constant_val` and `check_sum_tele` (the formers', `TeleG`). -/
-structure IndsG (p : Prog) : Prop where
-  nv : closedNV p L.Checker.nvFns = true
-  core : CoreStubsE p
-  ccv : CheckConstantValE p
-  sum : CheckSumTeleE p
-
 /-- What `check_block_inds` gives besides the environment, the formers' constants and the shape `x`
 it returns (from `m`, `a`): their layout at the returned view (`IndsOut`), `AbsOK`, the recursors'
 bound carried to the new shape, the core step at the entry index. -/
@@ -147,7 +139,7 @@ theorem cbi_ref (hP : IndsProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : A
     (hbsP : ConRon.Bridge.Inductives.dShape a.store bs = some bsP)
     (hfe : ConRon.Bridge.denoteFEnv a.store fe = some env) (hcoh : ConRon.Bridge.IFEnvCoh fe)
     (hlpsDn : ∀ ms ∈ bs.members, ∀ k ∈ ms.cvT.levelParams, (dn k).isSome) :
-    RefE (IndsG p) (cbiE p (n + 1) m vis pp isRec) (ConRon.Arena.checkBlockInds V fe ⟨bs⟩ b) a
+    RefE (CtsG p) (cbiE p (n + 1) m vis pp isRec) (ConRon.Arena.checkBlockInds V fe ⟨bs⟩ b) a
       (fun v x a' => IndsPost dn env fe pp m a v.1 x v.2 a') := by
   have hS := hC.stage
   have hT : iwTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 200).toNat_lt
@@ -186,7 +178,7 @@ theorem cbi_ref (hP : IndsProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : A
     (nP := UInt64.ofNat bs.nP)
   rw [hnp] at hR1
   rcases h1 : cbtE p (k + 1) m vis (UInt64.ofNat bs.nP) (UInt64.ofNat q0) with e1 | ⟨r1, m1⟩ <;> rw [h1] at hR1
-  · rw [cbiE.k_check_block_tele.none]; exact RefE.bind_left fun hG => hR1 ⟨hG.ccv, hG.sum⟩
+  · rw [cbiE.k_check_block_tele.none]; exact RefE.bind_left hR1
   rw [cbiE.k_check_block_tele.arm1]
   obtain ⟨⟨cvTa0, s0⟩, a1, hr1, hT1⟩ := hR1
   obtain ⟨hC1, hg1, hcv1, hcx1, hs32, hsd⟩ := hT1.out
@@ -205,7 +197,7 @@ theorem cbi_ref (hP : IndsProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : A
   rw [hnp] at hR2
   rcases h2 : cbtsE p (k + 1) m1 vis (UInt64.ofNat bs.nP) (o + 1) (l - 1) with e2 | ⟨r2, m2⟩ <;>
     rw [h2] at hR2
-  · rw [cbiE.k_check_block_teles.none]; exact RefE.bind_left fun hG => hR2 ⟨hG.ccv, hG.sum⟩
+  · rw [cbiE.k_check_block_teles.none]; exact RefE.bind_left hR2
   rw [cbiE.k_check_block_teles.arm1]
   obtain ⟨cvs, a2, hr2, hT2⟩ := hR2
   have hC2 := hT2.stage
@@ -228,7 +220,7 @@ theorem cbi_ref (hP : IndsProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : A
   rw [hnp] at hR3
   rcases h3 : cbagE p (k + 1) m2 vis (UInt64.ofNat bs.nP) (r1.headD 0) (r1.tail.headD 0) (r2.headD 0)
     (r2.tail.headD 0) with e3 | ⟨u3, m3⟩ <;> rw [h3] at hR3
-  · rw [cbiE.k_check_block_agree.none]; exact RefE.bind_left fun hG => hR3 ⟨hG.nv, hG.core⟩
+  · rw [cbiE.k_check_block_agree.none]; exact RefE.bind_left fun hG => hR3 hG.toVerdictCtx
   rw [cbiE.k_check_block_agree.arm1]
   obtain ⟨_, a3, hr3, hT3⟩ := hR3
   have hC3 := hT3.stage

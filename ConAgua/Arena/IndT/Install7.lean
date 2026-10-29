@@ -2,7 +2,6 @@ import ConAgua.Verdict.IndBSum4
 import ConAgua.Arena.IndInstallSpec.InstallRec2PSl
 import ConAgua.Arena.IndInstallSpec.ConsBlockCtors
 import ConAgua.Arena.IndInstallSpec.NestCtx
-import ConAgua.Verdict.IndAGen
 import ConAgua.L.ModelGen
 
 /-!
@@ -17,7 +16,7 @@ closed, the environment denotes and its index spec holds — one environment, `v
 
 `check_block_ctors_one` and `check_block_ctors_go` have one model each for both outcomes
 (`icboE`, `icbgE`: `l_model … unified`) and one refinement each (`icbo_ref`, `icbg_ref`: `RefE`
-under `CtorsG`, the no-verdict closure and `check_sum_ctors`' claim `CheckSumCtorsE`).
+under `VerdictCtxU`, what `check_sum_ctors`' refinement `scts_ref` assumes).
 -/
 
 
@@ -33,8 +32,6 @@ namespace L.Ind
 open L.Arena
 
 local notation "V" => ConLeche.CheckMode.verified
-
-err_stmt CheckSumCtorsE := checkSumCtors_refinesC fuel k
 
 /-- **`check_block_ctors_one`'s unified model**: `check_sum_ctors` through its run (not migrated),
 the `rec2`s (outside the verdict closure) lifted. -/
@@ -62,11 +59,6 @@ l_model ictE_spec (p : Prog) (hP : CtorsProg p)
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
-/-- What the error arms of `check_block_ctors_one`/`_go` assume: the no-verdict closure (the
-`rec2`s, the `sl_cons`) and `check_sum_ctors`' claim (not migrated). -/
-structure CtorsG (p : Prog) : Prop where
-  nv : closedNV p _root_.L.Checker.nvFns = true
-  sc : CheckSumCtorsE p
 
 /-- What `check_block_ctors_one` gives besides the twin's constructors and their sorts `x` (from
 `m`, `a`): the stage invariant, the growth, the two records `r₀` (constructors, also with the
@@ -137,8 +129,8 @@ theorem installSimSumCtorsC (hP : SumProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : 
 
 include hq henv hV hOpf hLC hLT hApd hCrk in
 /-- **`check_block_ctors_one` refines `checkSumCtors`, both outcomes** (twin side: one member of
-con-ron's `checkBlockCtors_specF`'s proof): `check_sum_ctors` by its ok refinement and its claim
-`CheckSumCtorsE`, the two `rec2`s (outside the verdict closure) claim nothing. -/
+con-ron's `checkBlockCtors_specF`'s proof): `check_sum_ctors` through its run (`installSimSumCtorsC`,
+`scts_ref`), the two `rec2`s (outside the verdict closure) claim nothing. -/
 theorem icbo_ref (hP : CtorsProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState}
     {pp lo ll ms cv : Word} {bs : BlockShape} {msh : MemberShape} {cvv : IConstantVal}
     (hC : StageC dn vis fe env m a) (hqd : DecB (fun m => decBS m pp.toNat) m bs) (hsrc : ShapeSrc m pp)
@@ -151,7 +143,7 @@ theorem icbo_ref (hP : CtorsProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a :
     (hcvP : Frontend.denoteCV a.store cvv = some cvP) (hws : ConLeche.Expr.WScoped 0 cvP.type)
     (hok₀ : ConRon.Bridge.Inductives.IFEnvOKS env fe a.store)
     (hfe : ConRon.Bridge.denoteFEnv a.store fe = some env) :
-    RefE (CtorsG p) (icboE p (n + 1) m vis vis pp lo ll ms cv)
+    RefE (VerdictCtxU p) (icboE p (n + 1) m vis vis pp lo ll ms cv)
       (checkSumCtors V fe fe msh.cvT.name bs.lps bs.nP msh.nIdx bs.resSort bs.isProp bs.large cvv msh.ctors) a
       (fun v x a' => IcboPost dn vis fe env m a v.1 v.2 x a') := by
   have hS := hC.stage
@@ -190,11 +182,13 @@ theorem icbo_ref (hP : CtorsProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a :
       rdW (m.arr64 IW) (pp + 7), cv, co, cl] m with e1 | ⟨r1, m1⟩
   · rw [icboE.k_check_sum_ctors.none]
     intro hG
-    have h := hG.sc hq henv hV hOpf hLC hLT hApd hCrk hP.sum ⟨m, Locals.init []⟩ a vis
+    have h := RefE.run_err (sctsE_spec p hP.sum hV n ⟨m, Locals.init []⟩ vis vis
       (rdW (m.arr64 EREC) (UInt64.ofNat cvp)) lo ll (UInt64.ofNat bs.nP) (UInt64.ofNat msh.nIdx)
-      (rdW (m.arr64 IW) (pp + 6)) (rdW (m.arr64 IW) (pp + 8)) (rdW (m.arr64 IW) (pp + 7)) cv co cl
-      bs.lps cvv msh.ctors hC hn32 hrs32 hlps hlb hcv hcd hA hTP hlpsP
-      (by rw [hrse]; exact hsP) hcvP hws hcsP' (by rw [hfev]; exact hok₀) hfe n hn _ h1
+      (rdW (m.arr64 IW) (pp + 6)) (rdW (m.arr64 IW) (pp + 8)) (rdW (m.arr64 IW) (pp + 7)) cv co cl) hG.nv hG
+      (scts_ref hq henv hOpf hLC hLT hApd hCrk hP.sum vis (rdW (m.arr64 EREC) (UInt64.ofNat cvp)) lo ll
+        (UInt64.ofNat bs.nP) (UInt64.ofNat msh.nIdx) (rdW (m.arr64 IW) (pp + 6)) (rdW (m.arr64 IW) (pp + 8))
+        (rdW (m.arr64 IW) (pp + 7)) cv bs.lps cvv hn32 hrs32 hws n hn m a co cl msh.ctors _ hC hlps hlb hcv hcd hA
+        hTP hlpsP (by rw [hrse]; exact hsP) hcvP hcsP' (by rw [hfev]; exact hok₀) hfe) h1
     rw [hfev, hnm, hrse, h8, h7, UInt64.toNat_ofNat_of_lt' hnpb, UInt64.toNat_ofNat_of_lt' hnib] at h
     exact h
   rw [icboE.k_check_sum_ctors.arm1]
@@ -236,7 +230,7 @@ theorem icbg_ref (hP : CtorsProg p) (pp lo ll : Word) (bs : BlockShape) {bsP : C
     cvs.mapM (Frontend.denoteCV a.store) = some cvsP → (∀ cv ∈ cvsP, ConLeche.Expr.WScoped 0 cv.type) →
     ConRon.Bridge.Inductives.IFEnvOKS env fe a.store →
     ConRon.Bridge.denoteFEnv a.store fe = some env →
-    RefE (CtorsG p) (icbgE p n m vis vis pp lo ll mo ml co cl) (ConRon.Arena.checkBlockCtors V fe fe bs mss cvs) a
+    RefE (VerdictCtxU p) (icbgE p n m vis vis pp lo ll mo ml co cl) (ConRon.Arena.checkBlockCtors V fe fe bs mss cvs) a
       (fun v x a' => IcbgPost dn vis fe env m v.1 v.2 x a') := by
   induction n with
   | zero => intros; rw [icbgE.eq_1]; exact RefE.of_cls0 (by simp)
@@ -344,7 +338,7 @@ theorem ict_ref (hP : CtorsProg p) (n : Nat) (hn : n ≤ 2 ^ 62) (m : Mem) (a₀
     (hws : ∀ cv ∈ cvsP, ConLeche.Expr.WScoped 0 cv.type)
     (hok₀ : ConRon.Bridge.Inductives.IFEnvOKS env fe a₀.store)
     (hfe : ConRon.Bridge.denoteFEnv a₀.store fe = some env) :
-    RefE (CtorsG p) (ictE p (n + 1) m vis vis pp mo ml co cl) (ConRon.Arena.checkBlockCtors V fe fe bs mss cvs)
+    RefE (VerdictCtxU p) (ictE p (n + 1) m vis vis pp mo ml co cl) (ConRon.Arena.checkBlockCtors V fe fe bs mss cvs)
       a₀ (fun v x a' => IcbgPost dn vis fe env m v.1 v.2 x a') := by
   rw [ictE.arm1]
   rcases h1 : lpsW n m pp with _ | ⟨r1, m1⟩

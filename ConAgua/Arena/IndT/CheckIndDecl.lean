@@ -14,7 +14,7 @@ import ConAgua.L.ModelGen
 `check_ind_decl`'s unified model `cidE` and its refinement `cid_ref` (both outcomes) from `StageT`
 and the twin's fold invariant (`FoldOK`: `CheckOK`, the environment's coherence and denotation);
 `checkIndDecl_refinesC` is its ok half (`IndArm.lean` composes it into `IndArmSpec`), the error
-half the inductive arm's claim (`cid_claim`, `Verdict/IndA6.lean`).
+half the inductive arm's claim (`indArmSpecE_of`, `Verdict/IndArmTopE.lean`). Its `G` is `CtsG`.
 -/
 
 
@@ -142,23 +142,6 @@ theorem BlockLpsDn.members {dn : NIdx → Option ConLeche.Name} {block : List IC
   obtain ⟨caps, hm⟩ := blockParts?_members_mem h ms hms
   exact hl ms.cvT caps hm
 
-/-- **`check_basis_decl`'s error claim**, in the shape of `checkBasisDecl_refines`. -/
-def CheckBasisDeclE (p : Prog) : Prop :=
-  ∀ (_ : BasisProg p) (_ : CanonProg p) (_ : L.Rom.RomRefs p)
-    (_ : p.lookup "pin_at" = some pinAtL)
-    (_ : p.lookup "check_basis_decl" = some checkBasisDeclL) (n : Nat) (m : Mem) (a : AState)
-    (dn : NIdx → Option ConLeche.Name) (_ : DnInj dn) (fe : IFEnv) (vis k : Word),
-    k.toNat < 5 → StageR dn vis fe m a →
-    (k = 4 → ConRon.Bridge.StateOK a ∧ L.Rom.NamesDn dn a L.Rom.quotNames) →
-    ∀ e, callE p n "check_basis_decl" [vis, k] m = .error e →
-      ErrClaim (checkBasisDecl fe (basisOfW k.toNat)) a e
-
-/-- What the error arms of `check_ind_decl` assume: the claims of `check_basis_decl` and of
-`check_block`'s callees (`BlockG`; `check_shapeless`'s, `csl_ref`, need its `VerdictCtxU`). -/
-structure CidG (p : Prog) : Prop where
-  basis : CheckBasisDeclE p
-  block : BlockG p
-
 /-- What `check_ind_decl` gives besides the twin's run, a view `w` and the memory `m'` (from `m`):
 the stage, the core's memos, the growth, the inductive arm's memos. -/
 structure CidPost (dn : NIdx → Option ConLeche.Name) (m : Mem) (w : Word) (x : IFEnv) (m' : Mem)
@@ -176,8 +159,8 @@ variable {p : Prog} (hkp : KnotStageProg p) (hV : ValProg p)
 include hkp hV hOpf hLC hLT hApd hCrk hIlpf hLz in
 /-- **`check_ind_decl` refines the `.indDecl` arm of `checkDecl`, both outcomes** under `StageT` and
 the twin's fold invariant (`FoldOK`; the inner stages under `StageC`): `basis_pin_hit` (con-ron's
-`basisPinHit_run`: a `PStep`), `check_basis_decl` (its refinement on the run, its claim from
-`CidG`), `ind_params_ok` and `block_parts` (con-ron's `indParamsOk_spec`, `blockParts?_spec`:
+`basisPinHit_run`: a `PStep`), `check_basis_decl` (its refinement `cbd_ref` on the run, both
+outcomes), `ind_params_ok` and `block_parts` (con-ron's `indParamsOk_spec`, `blockParts?_spec`:
 `CheckOK` at `block_parts`' state, the shape's denotation), then `check_shapeless` (`csl_ref`: it
 never returns) or `check_block` (`block_ref` on the run). -/
 theorem cid_ref (P : CidProg p) {fs fs2 fsR fsT fsC : List FnName}
@@ -204,7 +187,7 @@ theorem cid_ref (P : CidProg p) {fs fs2 fsR fsT fsC : List FnName}
     (hfM : ∀ f ∈ ["check_block_pass", "check_block_tail"], f ∈ fsM)
     (hclMc : closedA p mcFreeA mcFreeC fsMc = true) (hfMc : "check_block" ∈ fsMc)
     (hlpd : BlockLpsDn dn block) :
-    RefE (CidG p) (cidE p N m vis o l w) (checkDecl V pins fe (.indDecl block w.toNat)) a
+    RefE (CtsG p) (cidE p N m vis o l w) (checkDecl V pins fe (.indDecl block w.toNat)) a
       (fun v x a' => CidPost dn m v.1 x v.2 a') := by
   have hS := hT.stage
   have hIM := hM
@@ -244,8 +227,9 @@ theorem cid_ref (P : CidProg p) {fs fs2 fsR fsT fsC : List FnName}
     rw [← hkind]
     rcases c2 : callE p n "check_basis_decl" [vis, r1.tail.headD 0] m1 with e2 | ⟨r2, m2⟩
     · rw [cidE.k_check_basis_decl.none]
-      exact fun hG => hG.basis P.basis P.canon P.rom P.pa P.cbd n m1 a1 dn hdn fe vis (r1.tail.headD 0)
-        (by omega) hS1 (fun e => absurd hk4 (by rw [e]; decide)) _ c2
+      exact fun hG => RefE.run_err (s₀ := ⟨m1, Locals.init []⟩) (checkBasisDecl_specE p P.basis P.pa P.cbd n _ vis _)
+        hG.nv trivial (cbd_ref P.basis P.canon P.rom hdn n (by omega) hS1
+          (fun e => absurd hk4 (by rw [e]; decide))) c2
     rw [cidE.k_check_basis_decl.arm1]
     have d2 := callW_of_callE c2
     obtain ⟨s2, hs2, -, hok2, hS2, hg2⟩ := triple_of_callW (s₀ := ⟨m1, Locals.init []⟩)
@@ -315,7 +299,7 @@ theorem cid_ref (P : CidProg p) {fs fs2 fsR fsT fsC : List FnName}
       (hblk1.grow (decEBlk_mono _ _ _) hg4) hIM4.cr hlpd (Nat.le_trans hb (hg1.trans hg4).2.1)
     rcases c5 : cslE p n s4.mem vis o l with e5 | ⟨r5, m5⟩ <;> rw [c5] at h5
     · rw [cidE.k_check_shapeless.none]
-      exact fun hG => h5 hG.block.tail.u
+      exact fun hG => h5 hG.toVerdictCtxU
     obtain ⟨_, _, _, ⟨⟩⟩ := h5
   | some bp =>
   obtain ⟨hr41, hd4, hsl4⟩ := hR4
@@ -343,7 +327,7 @@ theorem cid_ref (P : CidProg p) {fs fs2 fsR fsT fsC : List FnName}
     (ConRon.Bridge.denoteCIList_mono (x01.trans k4.ext) _ _ hbP) hfRc hclH hfH hclM hfM (hlpd.members hrun4)
   rcases c5 : callE p n "check_block" [vis, o, l, r4.tail.headD 0] s4.mem with e5 | ⟨r5, m5⟩
   · rw [cidE.k_check_basis_decl.none]
-    exact fun hG => RefE.run_err hT5 hG.block.tail.u.nv hG.block hR5 c5
+    exact fun hG => RefE.run_err hT5 hG.nv hG hR5 c5
   rw [cidE.k_check_basis_decl.arm1]
   obtain ⟨s5, hs5, -, x5, a5, hrun5, hR5'⟩ := RefE.run_ok hT5 hR5 c5
   subst hs5

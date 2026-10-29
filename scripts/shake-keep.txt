@@ -72,4 +72,3 @@ ConAgua.L.Notation
 ConAgua.Scan.RecordsLink
 ConAgua.Verdict.FrontPreSimE
 ConAgua.Verdict.FrontRecsE
-ConAgua.Verdict.IndAGen
