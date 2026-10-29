@@ -693,7 +693,7 @@
    496    | some v => pure v
    497    | none => fail (.internal "arena: dangling level-list handle")
 
-== ConAgua/L/Syntax.lean#L118-L144
+== ConAgua/L/Syntax.lean#L118-L148
    118  /-- Word expressions. Reading an array can fail (out of bounds); nothing else can. -/
    119  inductive Expr where
    120    | const (w : Word)
@@ -720,61 +720,68 @@
    141    | len64t (a : ArrId) (t : Expr)
    142    /-- The little-endian word of the bytes `i, …, i + 7` of `s` (lane blkcopy). -/
    143    | ld8x8 (s : BSrc) (i : Expr)
-   144    deriving Repr, DecidableEq, Inhabited
+   144    /-- 32-bit element `i` of tier `t` of the tiered array `a`, zero-extended: half `i % 2` of word
+   145    `i / 2` (the low half first, as the machine's little-endian 4-byte load at byte `4 i` reads it;
+   146    lane p32). -/
+   147    | ld32t (a : ArrId) (t i : Expr)
+   148    deriving Repr, DecidableEq, Inhabited
 
-== ConAgua/L/Syntax.lean#L166-L202
-   166  /-- Statements. -/
-   167  inductive Stmt where
-   168    | skip
-   169    /-- `x := e` -/
-   170    | set (x : Var) (e : Expr)
-   171    /-- `a.u8[i] := e` (the low byte of `e`) -/
-   172    | st8 (a : ArrId) (i e : Expr)
-   173    /-- `a.u64[i] := e` -/
-   174    | st64 (a : ArrId) (i e : Expr)
-   175    | seq (s t : Stmt)
-   176    | ite (c : Cond) (s t : Stmt)
-   177    /-- `while c { s }`. Each iteration costs one unit of fuel. -/
-   178    | while (c : Cond) (s : Stmt)
-   179    /-- Leave the innermost loop. -/
-   180    | brk
-   181    /-- Return from the function with the values `es` (usually one). -/
-   182    | ret (es : List Expr)
-   183    /-- `(x₀, x₁, …) := f(args)`: `xᵢ` gets the callee's `i`-th result, `0` if it returned fewer.
-   184    A call costs one unit of fuel. -/
-   185    | call (xs : List Var) (f : FnName) (args : List Expr)
-   186    /-- Stop the whole program with an error (Rust's `panic!`, an overflow check, …) whose code is
-   187    the value of `e` (`Err.abort`): the low two bits are the class (`0` other, `1` reject, `2`
-   188    decline), the rest a reason. A bare `abort` is `abort 0`. -/
-   189    | abort (e : Expr)
-   190    /-- `g := e` for a global variable `g`. -/
-   191    | gset (g : GVar) (e : Expr)
-   192    /-- `a⟨t⟩.u64[i] := e`: word `i` of tier `t` of the tiered array `a`. -/
-   193    | st64t (a : ArrId) (t i e : Expr)
-   194    /-- `copy D[di ..] := S[si ..] for n`: words `si, …, si + n - 1` of `S` to `di, …` of `D`, in
-   195    ascending order; bounds checked once, before anything is written (lane blkcopy). -/
-   196    | copy64 (d : WArr) (di : Expr) (s : WArr) (si n : Expr)
-   197    /-- `copy D[di ..] := S.u8[si ..] for n`: the bytes zero-extended into words. -/
-   198    | copy8w (d : WArr) (di : Expr) (s : BSrc) (si n : Expr)
-   199    /-- `x := scan S.u8[i .. e] until c`: the first `j` in `[i, e)` with `c[S[j]] ≠ 0`, else `e`
-   200    (`c`: a 256-byte class table, constant data). -/
-   201    | scan8 (x : Var) (s : BSrc) (i e : Expr) (c : List UInt8)
-   202    deriving Repr, Inhabited
+== ConAgua/L/Syntax.lean#L170-L209
+   170  /-- Statements. -/
+   171  inductive Stmt where
+   172    | skip
+   173    /-- `x := e` -/
+   174    | set (x : Var) (e : Expr)
+   175    /-- `a.u8[i] := e` (the low byte of `e`) -/
+   176    | st8 (a : ArrId) (i e : Expr)
+   177    /-- `a.u64[i] := e` -/
+   178    | st64 (a : ArrId) (i e : Expr)
+   179    | seq (s t : Stmt)
+   180    | ite (c : Cond) (s t : Stmt)
+   181    /-- `while c { s }`. Each iteration costs one unit of fuel. -/
+   182    | while (c : Cond) (s : Stmt)
+   183    /-- Leave the innermost loop. -/
+   184    | brk
+   185    /-- Return from the function with the values `es` (usually one). -/
+   186    | ret (es : List Expr)
+   187    /-- `(x₀, x₁, …) := f(args)`: `xᵢ` gets the callee's `i`-th result, `0` if it returned fewer.
+   188    A call costs one unit of fuel. -/
+   189    | call (xs : List Var) (f : FnName) (args : List Expr)
+   190    /-- Stop the whole program with an error (Rust's `panic!`, an overflow check, …) whose code is
+   191    the value of `e` (`Err.abort`): the low two bits are the class (`0` other, `1` reject, `2`
+   192    decline), the rest a reason. A bare `abort` is `abort 0`. -/
+   193    | abort (e : Expr)
+   194    /-- `g := e` for a global variable `g`. -/
+   195    | gset (g : GVar) (e : Expr)
+   196    /-- `a⟨t⟩.u64[i] := e`: word `i` of tier `t` of the tiered array `a`. -/
+   197    | st64t (a : ArrId) (t i e : Expr)
+   198    /-- `copy D[di ..] := S[si ..] for n`: words `si, …, si + n - 1` of `S` to `di, …` of `D`, in
+   199    ascending order; bounds checked once, before anything is written (lane blkcopy). -/
+   200    | copy64 (d : WArr) (di : Expr) (s : WArr) (si n : Expr)
+   201    /-- `copy D[di ..] := S.u8[si ..] for n`: the bytes zero-extended into words. -/
+   202    | copy8w (d : WArr) (di : Expr) (s : BSrc) (si n : Expr)
+   203    /-- `x := scan S.u8[i .. e] until c`: the first `j` in `[i, e)` with `c[S[j]] ≠ 0`, else `e`
+   204    (`c`: a 256-byte class table, constant data). -/
+   205    | scan8 (x : Var) (s : BSrc) (i e : Expr) (c : List UInt8)
+   206    /-- `a⟨t⟩.u32[i] := e`: the low 32 bits of `e` into 32-bit element `i` of tier `t` of the tiered
+   207    array `a` (half `i % 2` of word `i / 2`; the other half keeps its value; lane p32). -/
+   208    | st32t (a : ArrId) (t i e : Expr)
+   209    deriving Repr, Inhabited
 
-== ConAgua/L/Syntax.lean#L204-L214
-   204  /-- A function: `nparams` parameters, `nlocals ≥ nparams` locals (params first, the rest start
-   205  at `0`), and a body. Falling off the end of the body (or a `break` outside a loop) returns no
-   206  values (so every result the caller reads is `0`). -/
-   207  structure FunDecl where
-   208    nparams : Nat
-   209    nlocals : Nat
-   210    body : Stmt
-   211    deriving Repr, Inhabited
-   212  
-   213  /-- A program: its functions, by name. The first binding of a name wins. -/
-   214  abbrev Prog := List (FnName × FunDecl)
+== ConAgua/L/Syntax.lean#L211-L221
+   211  /-- A function: `nparams` parameters, `nlocals ≥ nparams` locals (params first, the rest start
+   212  at `0`), and a body. Falling off the end of the body (or a `break` outside a loop) returns no
+   213  values (so every result the caller reads is `0`). -/
+   214  structure FunDecl where
+   215    nparams : Nat
+   216    nlocals : Nat
+   217    body : Stmt
+   218    deriving Repr, Inhabited
+   219  
+   220  /-- A program: its functions, by name. The first binding of a name wins. -/
+   221  abbrev Prog := List (FnName × FunDecl)
 
-== ConAgua/L/Notation.lean#L80-L169
+== ConAgua/L/Notation.lean#L80-L171
     80  declare_syntax_cat lexpr
     81  declare_syntax_cat lcond
     82  declare_syntax_cat lstmt (behavior := both)
@@ -787,88 +794,90 @@
     89  syntax ident noWs "[" lexpr "]" : lexpr
     90  syntax ident noWs "[" lexpr "]" noWs "." noWs ident : lexpr
     91  syntax ident noWs "⟨" lexpr "⟩" noWs "[" lexpr "]" : lexpr
-    92  syntax ident noWs "⟨" lexpr "⟩" noWs "[" lexpr "]" noWs "." noWs ident : lexpr
-    93  syntax ident noWs "⟨" lexpr ", " lexpr "⟩" noWs "." noWs ident : lexpr
-    94  syntax ident noWs "⟨" lexpr ", " lexpr "⟩" : lexpr
-    95  syntax ident noWs "⟨" lexpr "⟩" noWs "." noWs ident : lexpr
-    96  syntax ident noWs "⟦" lexpr "⟧" noWs "." noWs ident : lexpr
-    97  syntax ident noWs "⟦" lexpr "⟧" : lexpr
-    98  syntax "⟦" lexpr "⟧" noWs "." noWs ident : lexpr
-    99  syntax "len" "(" ident ")" : lexpr
-   100  syntax "len" "(" ident noWs "⟨" lexpr "⟩" ")" : lexpr
-   101  syntax "mulhi" "(" lexpr ", " lexpr ")" : lexpr
-   102  /-- `le64!(A.u8, i)`: the little-endian word of the bytes `i … i + 7` (`D.c8` for constant bytes). -/
-   103  syntax "le64!" "(" ident ", " lexpr ")" : lexpr
-   104  syntax "u64" "(" lcond ")" : lexpr
-   105  syntax ident noWs "⦃" lexpr "⦄" : lexpr
-   106  syntax "⦃" lexpr "⦄" noWs "." noWs ident : lexpr
-   107  syntax "(" lexpr ")" : lexpr
-   108  syntax:70 lexpr:70 " * " lexpr:71 : lexpr
-   109  syntax:65 lexpr:65 " + " lexpr:66 : lexpr
-   110  syntax:65 lexpr:65 " - " lexpr:66 : lexpr
-   111  syntax:60 lexpr:60 " << " lexpr:61 : lexpr
-   112  syntax:60 lexpr:60 " >> " lexpr:61 : lexpr
-   113  syntax:58 lexpr:58 " & " lexpr:59 : lexpr
-   114  syntax:57 lexpr:57 " ^ " lexpr:58 : lexpr
-   115  syntax:56 lexpr:56 " | " lexpr:57 : lexpr
-   116  
-   117  syntax:50 lexpr:51 " == " lexpr:51 : lcond
-   118  syntax:50 lexpr:51 " != " lexpr:51 : lcond
-   119  syntax:50 lexpr:51 " < " lexpr:51 : lcond
-   120  syntax:50 lexpr:51 " <= " lexpr:51 : lcond
-   121  syntax:50 lexpr:51 " > " lexpr:51 : lcond
-   122  syntax:50 lexpr:51 " >= " lexpr:51 : lcond
-   123  syntax:50 lexpr:51 " <ₛ " lexpr:51 : lcond
-   124  syntax:50 lexpr:51 " ≤ₛ " lexpr:51 : lcond
-   125  syntax:35 lcond:36 " && " lcond:35 : lcond
-   126  syntax:30 lcond:31 " || " lcond:30 : lcond
-   127  syntax:max "!" lcond:max : lcond
-   128  syntax "(" lcond ")" : lcond
-   129  
-   130  syntax "{" sepBy(lstmt, "; ", "; ", allowTrailingSep) "}" : lblock
-   131  
-   132  syntax ident " := " "call " ident "(" lexpr,* ")" : lstmt
-   133  syntax "(" ident ", " ident,+ ")" " := " "call " ident "(" lexpr,* ")" : lstmt
-   134  syntax ident " := " lexpr : lstmt
-   135  syntax ident " += " lexpr : lstmt
-   136  syntax ident " -= " lexpr : lstmt
-   137  syntax ident noWs "[" lexpr "]" " := " lexpr : lstmt
-   138  syntax ident noWs "[" lexpr "]" noWs "." noWs ident " := " lexpr : lstmt
-   139  syntax ident noWs "⟨" lexpr ", " lexpr "⟩" noWs "." noWs ident " := " lexpr : lstmt
-   140  syntax ident noWs "⟨" lexpr "⟩" noWs "[" lexpr "]" " := " lexpr : lstmt
-   141  syntax ident noWs "⟨" lexpr "⟩" noWs "[" lexpr "]" noWs "." noWs ident " := " lexpr : lstmt
-   142  syntax "if " lcond lblock : lstmt
-   143  syntax "if " lcond lblock " else " lblock : lstmt
-   144  syntax "if " lcond lblock " else " lstmt : lstmt
-   145  syntax "while " lcond lblock : lstmt
-   146  syntax "break" : lstmt
-   147  syntax "return " lexpr : lstmt
-   148  syntax "return " "(" lexpr ", " lexpr,+ ")" : lstmt
-   149  syntax "abort" : lstmt
-   150  /-- `abort R`: abort with the code `R` (a Lean constant of type `L.Word`, `Arena/Reasons.lean`). -/
-   151  syntax "abort " ident : lstmt
-   152  /-- `fail R`: a reject or decline site, the twin's `fail`: abort with the code `R` (as `abort R`). -/
-   153  syntax (name := lfail) &"fail" ident : lstmt
-   154  /-- `x := scan!(A.u8, i, e, C)`: the first `j ∈ [i, e)` whose byte is in the class `C` (a Lean
-   155  constant: a 256-byte table), else `e` (`D.c8` for constant bytes; lane blkcopy). -/
-   156  syntax ident " := " "scan!" "(" ident ", " lexpr ", " lexpr ", " ident ")" : lstmt
-   157  /-- `copy!(D, di, S, si, n)`: `D[di + j] := S[si + j]` for `j < n` (`S` a word array `B.u64` or bytes
-   158  `B.u8`/`B.c8`; `D⟨t⟩`, `S⟨t⟩` for tiered word arrays; lane blkcopy). -/
-   159  syntax "copy!" "(" ident (noWs "⟨" lexpr "⟩")? ", " lexpr ", " ident (noWs "⟨" lexpr "⟩")? ", " lexpr ", "
-   160    lexpr ")" : lstmt
-   161  syntax "skip" : lstmt
-   162  syntax "⟪" term "⟫" : lstmt
-   163  /-- `(t, i) := node R⟦h⟧`: the tier and index of the node that the handle word `h` names in the
-   164  store `R`, checked (sugar, `desugar`): abort on a scratch-tier handle while the scratch tier is
-   165  closed, and on an index at or past the tier's node count. -/
-   166  syntax "(" ident ", " ident ")" " := " &"node" ident noWs "⟦" lexpr "⟧" : lstmt
-   167  /-- `for j < n { body }`: the counted loop `while j < n { body; j += 1 }` (sugar, `desugar`);
-   168  `body` assigns neither `j` nor `n`. -/
-   169  syntax "for " ident " < " ident lblock : lstmt
+    92  syntax ident noWs "⟨" lexpr "⟩" noWs "." noWs &"u32" noWs "[" lexpr "]" : lexpr
+    93  syntax ident noWs "⟨" lexpr "⟩" noWs "[" lexpr "]" noWs "." noWs ident : lexpr
+    94  syntax ident noWs "⟨" lexpr ", " lexpr "⟩" noWs "." noWs ident : lexpr
+    95  syntax ident noWs "⟨" lexpr ", " lexpr "⟩" : lexpr
+    96  syntax ident noWs "⟨" lexpr "⟩" noWs "." noWs ident : lexpr
+    97  syntax ident noWs "⟦" lexpr "⟧" noWs "." noWs ident : lexpr
+    98  syntax ident noWs "⟦" lexpr "⟧" : lexpr
+    99  syntax "⟦" lexpr "⟧" noWs "." noWs ident : lexpr
+   100  syntax "len" "(" ident ")" : lexpr
+   101  syntax "len" "(" ident noWs "⟨" lexpr "⟩" ")" : lexpr
+   102  syntax "mulhi" "(" lexpr ", " lexpr ")" : lexpr
+   103  /-- `le64!(A.u8, i)`: the little-endian word of the bytes `i … i + 7` (`D.c8` for constant bytes). -/
+   104  syntax "le64!" "(" ident ", " lexpr ")" : lexpr
+   105  syntax "u64" "(" lcond ")" : lexpr
+   106  syntax ident noWs "⦃" lexpr "⦄" : lexpr
+   107  syntax "⦃" lexpr "⦄" noWs "." noWs ident : lexpr
+   108  syntax "(" lexpr ")" : lexpr
+   109  syntax:70 lexpr:70 " * " lexpr:71 : lexpr
+   110  syntax:65 lexpr:65 " + " lexpr:66 : lexpr
+   111  syntax:65 lexpr:65 " - " lexpr:66 : lexpr
+   112  syntax:60 lexpr:60 " << " lexpr:61 : lexpr
+   113  syntax:60 lexpr:60 " >> " lexpr:61 : lexpr
+   114  syntax:58 lexpr:58 " & " lexpr:59 : lexpr
+   115  syntax:57 lexpr:57 " ^ " lexpr:58 : lexpr
+   116  syntax:56 lexpr:56 " | " lexpr:57 : lexpr
+   117  
+   118  syntax:50 lexpr:51 " == " lexpr:51 : lcond
+   119  syntax:50 lexpr:51 " != " lexpr:51 : lcond
+   120  syntax:50 lexpr:51 " < " lexpr:51 : lcond
+   121  syntax:50 lexpr:51 " <= " lexpr:51 : lcond
+   122  syntax:50 lexpr:51 " > " lexpr:51 : lcond
+   123  syntax:50 lexpr:51 " >= " lexpr:51 : lcond
+   124  syntax:50 lexpr:51 " <ₛ " lexpr:51 : lcond
+   125  syntax:50 lexpr:51 " ≤ₛ " lexpr:51 : lcond
+   126  syntax:35 lcond:36 " && " lcond:35 : lcond
+   127  syntax:30 lcond:31 " || " lcond:30 : lcond
+   128  syntax:max "!" lcond:max : lcond
+   129  syntax "(" lcond ")" : lcond
+   130  
+   131  syntax "{" sepBy(lstmt, "; ", "; ", allowTrailingSep) "}" : lblock
+   132  
+   133  syntax ident " := " "call " ident "(" lexpr,* ")" : lstmt
+   134  syntax "(" ident ", " ident,+ ")" " := " "call " ident "(" lexpr,* ")" : lstmt
+   135  syntax ident " := " lexpr : lstmt
+   136  syntax ident " += " lexpr : lstmt
+   137  syntax ident " -= " lexpr : lstmt
+   138  syntax ident noWs "[" lexpr "]" " := " lexpr : lstmt
+   139  syntax ident noWs "[" lexpr "]" noWs "." noWs ident " := " lexpr : lstmt
+   140  syntax ident noWs "⟨" lexpr ", " lexpr "⟩" noWs "." noWs ident " := " lexpr : lstmt
+   141  syntax ident noWs "⟨" lexpr "⟩" noWs "[" lexpr "]" " := " lexpr : lstmt
+   142  syntax ident noWs "⟨" lexpr "⟩" noWs "." noWs &"u32" noWs "[" lexpr "]" " := " lexpr : lstmt
+   143  syntax ident noWs "⟨" lexpr "⟩" noWs "[" lexpr "]" noWs "." noWs ident " := " lexpr : lstmt
+   144  syntax "if " lcond lblock : lstmt
+   145  syntax "if " lcond lblock " else " lblock : lstmt
+   146  syntax "if " lcond lblock " else " lstmt : lstmt
+   147  syntax "while " lcond lblock : lstmt
+   148  syntax "break" : lstmt
+   149  syntax "return " lexpr : lstmt
+   150  syntax "return " "(" lexpr ", " lexpr,+ ")" : lstmt
+   151  syntax "abort" : lstmt
+   152  /-- `abort R`: abort with the code `R` (a Lean constant of type `L.Word`, `Arena/Reasons.lean`). -/
+   153  syntax "abort " ident : lstmt
+   154  /-- `fail R`: a reject or decline site, the twin's `fail`: abort with the code `R` (as `abort R`). -/
+   155  syntax (name := lfail) &"fail" ident : lstmt
+   156  /-- `x := scan!(A.u8, i, e, C)`: the first `j ∈ [i, e)` whose byte is in the class `C` (a Lean
+   157  constant: a 256-byte table), else `e` (`D.c8` for constant bytes; lane blkcopy). -/
+   158  syntax ident " := " "scan!" "(" ident ", " lexpr ", " lexpr ", " ident ")" : lstmt
+   159  /-- `copy!(D, di, S, si, n)`: `D[di + j] := S[si + j]` for `j < n` (`S` a word array `B.u64` or bytes
+   160  `B.u8`/`B.c8`; `D⟨t⟩`, `S⟨t⟩` for tiered word arrays; lane blkcopy). -/
+   161  syntax "copy!" "(" ident (noWs "⟨" lexpr "⟩")? ", " lexpr ", " ident (noWs "⟨" lexpr "⟩")? ", " lexpr ", "
+   162    lexpr ")" : lstmt
+   163  syntax "skip" : lstmt
+   164  syntax "⟪" term "⟫" : lstmt
+   165  /-- `(t, i) := node R⟦h⟧`: the tier and index of the node that the handle word `h` names in the
+   166  store `R`, checked (sugar, `desugar`): abort on a scratch-tier handle while the scratch tier is
+   167  closed, and on an index at or past the tier's node count. -/
+   168  syntax "(" ident ", " ident ")" " := " &"node" ident noWs "⟦" lexpr "⟧" : lstmt
+   169  /-- `for j < n { body }`: the counted loop `while j < n { body; j += 1 }` (sugar, `desugar`);
+   170  `body` assigns neither `j` nor `n`. -/
+   171  syntax "for " ident " < " ident lblock : lstmt
 
-== ConAgua/L/Notation.lean#L466-L467
-   466  syntax "lfn " "(" ident,* ")" (" locals " "(" ident,* ")")? lblock : term
-   467  
+== ConAgua/L/Notation.lean#L472-L473
+   472  syntax "lfn " "(" ident,* ")" (" locals " "(" ident,* ")")? lblock : term
+   473  
 
 == ConAgua/L/Notation.lean#L11-L68
     11  # L: concrete syntax
@@ -930,33 +939,33 @@
     67    loop rule).
     68  -/
 
-== ConAgua/L/Notation.lean#L325-L350
-   325  /-- **The sugar statements**, as the plain statements they stand for, at the syntax level: the
-   326  notation (`transBlock`) and the model generator (`l_model`, `desugarAll`) both expand them with
-   327  this function, so a function written with them is the term, and has the models, of the function
-   328  written without them.
-   329  
-   330  * `(t, i) := node R⟦h⟧` is `t := ⟦h⟧.tier; i := ⟦h⟧.idx; if t != 0 && CTL.u64[1] == 0 { abort };
-   331    if R⟨t⟩.count <= i { abort }`;
-   332  * `for j < n { body }` is `while j < n { body; j += 1 }`.
+== ConAgua/L/Notation.lean#L329-L354
+   329  /-- **The sugar statements**, as the plain statements they stand for, at the syntax level: the
+   330  notation (`transBlock`) and the model generator (`l_model`, `desugarAll`) both expand them with
+   331  this function, so a function written with them is the term, and has the models, of the function
+   332  written without them.
    333  
-   334  Other statements are returned unchanged. -/
-   335  meta def desugar (s : TSyntax `lstmt) : MacroM (Array (TSyntax `lstmt)) := withRef s do
-   336    match s with
-   337    | `(lstmt| ($t:ident, $i:ident) := node $r:ident⟦$h:lexpr⟧) =>
-   338      -- built with `mkIdent`: hygiene would rename them, and the accessors compare names
-   339      let (ctl, tier, idx, cnt) := (mkIdent `CTL.u64, mkIdent `tier, mkIdent `idx, mkIdent `count)
-   340      return #[← `(lstmt| $t:ident := ⟦$h⟧.$tier:ident), ← `(lstmt| $i:ident := ⟦$h⟧.$idx:ident),
-   341        ← `(lstmt| if $t:ident != 0 && $ctl:ident[1] == 0 { abort }),
-   342        ← `(lstmt| if $r:ident⟨$t:ident⟩.$cnt:ident <= $i:ident { abort })]
-   343    | `(lstmt| for $j:ident < $n:ident { $ss;* }) => do
-   344      for x in ss.getElems do
-   345        let a := assigned x
-   346        if a.contains j.getId || a.contains n.getId then
-   347          Macro.throwErrorAt x s!"the body of `for {j.getId} < {n.getId}` assigns `{j.getId}` or `{n.getId}`"
-   348      let body : Syntax.TSepArray `lstmt "; " := .ofElems (ss.getElems.push (← `(lstmt| $j:ident += 1)))
-   349      return #[← `(lstmt| while $j:ident < $n:ident { $body;* })]
-   350    | _ => return #[s]
+   334  * `(t, i) := node R⟦h⟧` is `t := ⟦h⟧.tier; i := ⟦h⟧.idx; if t != 0 && CTL.u64[1] == 0 { abort };
+   335    if R⟨t⟩.count <= i { abort }`;
+   336  * `for j < n { body }` is `while j < n { body; j += 1 }`.
+   337  
+   338  Other statements are returned unchanged. -/
+   339  meta def desugar (s : TSyntax `lstmt) : MacroM (Array (TSyntax `lstmt)) := withRef s do
+   340    match s with
+   341    | `(lstmt| ($t:ident, $i:ident) := node $r:ident⟦$h:lexpr⟧) =>
+   342      -- built with `mkIdent`: hygiene would rename them, and the accessors compare names
+   343      let (ctl, tier, idx, cnt) := (mkIdent `CTL.u64, mkIdent `tier, mkIdent `idx, mkIdent `count)
+   344      return #[← `(lstmt| $t:ident := ⟦$h⟧.$tier:ident), ← `(lstmt| $i:ident := ⟦$h⟧.$idx:ident),
+   345        ← `(lstmt| if $t:ident != 0 && $ctl:ident[1] == 0 { abort }),
+   346        ← `(lstmt| if $r:ident⟨$t:ident⟩.$cnt:ident <= $i:ident { abort })]
+   347    | `(lstmt| for $j:ident < $n:ident { $ss;* }) => do
+   348      for x in ss.getElems do
+   349        let a := assigned x
+   350        if a.contains j.getId || a.contains n.getId then
+   351          Macro.throwErrorAt x s!"the body of `for {j.getId} < {n.getId}` assigns `{j.getId}` or `{n.getId}`"
+   352      let body : Syntax.TSepArray `lstmt "; " := .ofElems (ss.getElems.push (← `(lstmt| $j:ident += 1)))
+   353      return #[← `(lstmt| while $j:ident < $n:ident { $body;* })]
+   354    | _ => return #[s]
 
 == ConAgua/L/For.lean#L69-L85
     69  /-- **The counted-loop rule.** An invariant `I` that the body keeps (with `j += 1` after it)
@@ -1007,15 +1016,15 @@
     56    | abort (k : Word)
     57    deriving Repr, DecidableEq, Inhabited
 
-== ConAgua/L/Semantics.lean#L365-L372
-   365  /-- The interpreter with `n` units of fuel. -/
-   366  def exec (p : Prog) : Nat → Stmt → M Sig
-   367    | 0, _ => throw .outOfFuel
-   368    | n + 1, s => step p (exec p n) s
-   369  
-   370  /-- Run function `f` of `p` on memory `m`: its results and the final memory. -/
-   371  def run (p : Prog) (fuel : Nat) (f : FnName) (vs : List Word) (m : Mem) : Except Err (List Word × Mem) :=
-   372    ((invoke p (exec p fuel) f vs).run { mem := m, loc := Locals.init [] }).map fun (r, s) => (r, s.mem)
+== ConAgua/L/Semantics.lean#L441-L448
+   441  /-- The interpreter with `n` units of fuel. -/
+   442  def exec (p : Prog) : Nat → Stmt → M Sig
+   443    | 0, _ => throw .outOfFuel
+   444    | n + 1, s => step p (exec p n) s
+   445  
+   446  /-- Run function `f` of `p` on memory `m`: its results and the final memory. -/
+   447  def run (p : Prog) (fuel : Nat) (f : FnName) (vs : List Word) (m : Mem) : Except Err (List Word × Mem) :=
+   448    ((invoke p (exec p fuel) f vs).run { mem := m, loc := Locals.init [] }).map fun (r, s) => (r, s.mem)
 
 == ConAgua/L/Semantics.lean#L25-L34
     25  /-- The memory: byte arrays by name (`ArrId`), word arrays by (array, tier) (`TieredArray`), and the
@@ -1114,64 +1123,64 @@
     30  `f₀ | f_hi << 32`); `TRec.st` stores a whole word (unpacked fields only).
     31  -/
 
-== ConAgua/L/Notation.lean#L102-L103
-   102  /-- `le64!(A.u8, i)`: the little-endian word of the bytes `i … i + 7` (`D.c8` for constant bytes). -/
-   103  syntax "le64!" "(" ident ", " lexpr ")" : lexpr
+== ConAgua/L/Notation.lean#L103-L104
+   103  /-- `le64!(A.u8, i)`: the little-endian word of the bytes `i … i + 7` (`D.c8` for constant bytes). -/
+   104  syntax "le64!" "(" ident ", " lexpr ")" : lexpr
 
-== ConAgua/L/Notation.lean#L154-L160
-   154  /-- `x := scan!(A.u8, i, e, C)`: the first `j ∈ [i, e)` whose byte is in the class `C` (a Lean
-   155  constant: a 256-byte table), else `e` (`D.c8` for constant bytes; lane blkcopy). -/
-   156  syntax ident " := " "scan!" "(" ident ", " lexpr ", " lexpr ", " ident ")" : lstmt
-   157  /-- `copy!(D, di, S, si, n)`: `D[di + j] := S[si + j]` for `j < n` (`S` a word array `B.u64` or bytes
-   158  `B.u8`/`B.c8`; `D⟨t⟩`, `S⟨t⟩` for tiered word arrays; lane blkcopy). -/
-   159  syntax "copy!" "(" ident (noWs "⟨" lexpr "⟩")? ", " lexpr ", " ident (noWs "⟨" lexpr "⟩")? ", " lexpr ", "
-   160    lexpr ")" : lstmt
+== ConAgua/L/Notation.lean#L156-L162
+   156  /-- `x := scan!(A.u8, i, e, C)`: the first `j ∈ [i, e)` whose byte is in the class `C` (a Lean
+   157  constant: a 256-byte table), else `e` (`D.c8` for constant bytes; lane blkcopy). -/
+   158  syntax ident " := " "scan!" "(" ident ", " lexpr ", " lexpr ", " ident ")" : lstmt
+   159  /-- `copy!(D, di, S, si, n)`: `D[di + j] := S[si + j]` for `j < n` (`S` a word array `B.u64` or bytes
+   160  `B.u8`/`B.c8`; `D⟨t⟩`, `S⟨t⟩` for tiered word arrays; lane blkcopy). -/
+   161  syntax "copy!" "(" ident (noWs "⟨" lexpr "⟩")? ", " lexpr ", " ident (noWs "⟨" lexpr "⟩")? ", " lexpr ", "
+   162    lexpr ")" : lstmt
 
-== ConAgua/L/Semantics.lean#L149-L168
-   149  /-- The little-endian word of the bytes `k, …, k + 7` of `b` (as the machine's 8-byte load
-   150  reads them: Kraken's `Nat.ofBytes`). -/
-   151  def le64 (b : Array UInt8) (k : Nat) : Word :=
-   152    UInt64.ofNat (((List.range 8).map fun j => b[k + j]!).foldr (fun x acc => acc * 256 + x.toNat) 0)
-   153  
-   154  /-- `D[di + j] := S[si + j]` for `j < n`, ascending (each word read after the writes before it). -/
-   155  def Mem.copy64 (m : Mem) (d : TieredArray) (di : Word) (s : TieredArray) (si : Word) : Nat → Mem
-   156    | 0 => m
-   157    | n + 1 => (m.set64 d di ((m.arr64 s)[si.toNat]!)).copy64 d (di + 1) s (si + 1) n
-   158  
-   159  /-- `D[di + j] := b[si + j]` (zero-extended) for `j < n`, ascending. -/
-   160  def Mem.copy8w (m : Mem) (d : TieredArray) (di : Word) (b : Array UInt8) (si : Word) : Nat → Mem
-   161    | 0 => m
-   162    | n + 1 => (m.set64 d di (b[si.toNat]!).toUInt64).copy8w d (di + 1) b (si + 1) n
-   163  
-   164  /-- The first `j` in `[i, e)` with `c[b[j]] ≠ 0`, else `e` (for `i ≤ e`). -/
-   165  def scanN (b : Array UInt8) (c : List UInt8) (i e : Nat) : Nat :=
-   166    if i < e then (if c[(b[i]!).toNat]! ≠ 0 then i else scanN b c (i + 1) e) else i
-   167  termination_by e - i
-   168  
+== ConAgua/L/Semantics.lean#L204-L223
+   204  /-- The little-endian word of the bytes `k, …, k + 7` of `b` (as the machine's 8-byte load
+   205  reads them: Kraken's `Nat.ofBytes`). -/
+   206  def le64 (b : Array UInt8) (k : Nat) : Word :=
+   207    UInt64.ofNat (((List.range 8).map fun j => b[k + j]!).foldr (fun x acc => acc * 256 + x.toNat) 0)
+   208  
+   209  /-- `D[di + j] := S[si + j]` for `j < n`, ascending (each word read after the writes before it). -/
+   210  def Mem.copy64 (m : Mem) (d : TieredArray) (di : Word) (s : TieredArray) (si : Word) : Nat → Mem
+   211    | 0 => m
+   212    | n + 1 => (m.set64 d di ((m.arr64 s)[si.toNat]!)).copy64 d (di + 1) s (si + 1) n
+   213  
+   214  /-- `D[di + j] := b[si + j]` (zero-extended) for `j < n`, ascending. -/
+   215  def Mem.copy8w (m : Mem) (d : TieredArray) (di : Word) (b : Array UInt8) (si : Word) : Nat → Mem
+   216    | 0 => m
+   217    | n + 1 => (m.set64 d di (b[si.toNat]!).toUInt64).copy8w d (di + 1) b (si + 1) n
+   218  
+   219  /-- The first `j` in `[i, e)` with `c[b[j]] ≠ 0`, else `e` (for `i ≤ e`). -/
+   220  def scanN (b : Array UInt8) (c : List UInt8) (i e : Nat) : Nat :=
+   221    if i < e then (if c[(b[i]!).toNat]! ≠ 0 then i else scanN b c (i + 1) e) else i
+   222  termination_by e - i
+   223  
 
-== ConAgua/Compiler/Compile.lean#L986-L997
-   986  /-- `copy D[di ..] := S[si ..] for n`: the source checked and pointed at by `rcx`, the
-   987  destination by `rdx`, the end of the source in temporary `0`, then 6 instructions per word. -/
-   988  def copy64Code (ctx : Ctx) (path : Path) (d : WArr) (di : Expr) (s : WArr) (si n : Expr) : Program :=
-   989    (warrDesc ctx .rcx s).1 ++ [movRM .rax (mb (warrDesc ctx .rcx s).2 (ctx.tab.len64 s.arr))] ++
-   990    lenChk ctx si n ++ wordPtr ctx .rcx (warrDesc ctx .rcx s).2 s.arr si ++
-   991    (warrDesc ctx .rdx d).1 ++ [movRM .rax (mb (warrDesc ctx .rdx d).2 (ctx.tab.len64 d.arr))] ++
-   992    lenChk ctx di n ++ wordPtr ctx .rdx (warrDesc ctx .rdx d).2 d.arr di ++
-   993    [i64 (.mov (.reg (rr .rax)) (opnd ctx n)),
-   994     i64 (.shl (.reg (rr .rax)) (.imm8 (.int64 (Int64.ofInt 3)))),
-   995     i64 (.add (.reg (rr .rax)) (oR .rcx)), movMR (ctx.tmp 0) .rax,
-   996     i64 (.cmp (.reg (rr .rcx)) (oM (ctx.tmp 0))), jccL .nc (ctx.lbl path "X")] ++
-   997    copy64Loop (ctx.lbl path "L") (ctx.tmp 0) ++ [.label (ctx.lbl path "X")]
+== ConAgua/Compiler/Compile.lean#L1000-L1011
+  1000  /-- `copy D[di ..] := S[si ..] for n`: the source checked and pointed at by `rcx`, the
+  1001  destination by `rdx`, the end of the source in temporary `0`, then 6 instructions per word. -/
+  1002  def copy64Code (ctx : Ctx) (path : Path) (d : WArr) (di : Expr) (s : WArr) (si n : Expr) : Program :=
+  1003    (warrDesc ctx .rcx s).1 ++ [movRM .rax (mb (warrDesc ctx .rcx s).2 (ctx.tab.len64 s.arr))] ++
+  1004    lenChk ctx si n ++ wordPtr ctx .rcx (warrDesc ctx .rcx s).2 s.arr si ++
+  1005    (warrDesc ctx .rdx d).1 ++ [movRM .rax (mb (warrDesc ctx .rdx d).2 (ctx.tab.len64 d.arr))] ++
+  1006    lenChk ctx di n ++ wordPtr ctx .rdx (warrDesc ctx .rdx d).2 d.arr di ++
+  1007    [i64 (.mov (.reg (rr .rax)) (opnd ctx n)),
+  1008     i64 (.shl (.reg (rr .rax)) (.imm8 (.int64 (Int64.ofInt 3)))),
+  1009     i64 (.add (.reg (rr .rax)) (oR .rcx)), movMR (ctx.tmp 0) .rax,
+  1010     i64 (.cmp (.reg (rr .rcx)) (oM (ctx.tmp 0))), jccL .nc (ctx.lbl path "X")] ++
+  1011    copy64Loop (ctx.lbl path "L") (ctx.tmp 0) ++ [.label (ctx.lbl path "X")]
 
-== ConAgua/Compiler/Compile.lean#L1019-L1026
-  1019  /-- The loop of `scan8`: per byte the byte, its class (constant data at `[r15 + off]`) and the
-  1020  tests, 7 instructions. -/
-  1021  def scanLoop (Lb Xb : Label) (off : Int) (eo : Operand .W64) : Program :=
-  1022    [.label Lb,
-  1023     i64 (.movzx (.reg (rr .rdx)) (w' := .W8) (.mem (mbi .rcx .rax .W8))),
-  1024     i64 (.movzx (.reg (rr .rdx)) (w' := .W8) (.mem (tblAddr off))),
-  1025     i64 (.cmp (.reg (rr .rdx)) (oI 0)), jccL .nz Xb,
-  1026     i64 (.add (.reg (rr .rax)) (oI 1)), i64 (.cmp (.reg (rr .rax)) eo), jccL .c Lb]
+== ConAgua/Compiler/Compile.lean#L1033-L1040
+  1033  /-- The loop of `scan8`: per byte the byte, its class (constant data at `[r15 + off]`) and the
+  1034  tests, 7 instructions. -/
+  1035  def scanLoop (Lb Xb : Label) (off : Int) (eo : Operand .W64) : Program :=
+  1036    [.label Lb,
+  1037     i64 (.movzx (.reg (rr .rdx)) (w' := .W8) (.mem (mbi .rcx .rax .W8))),
+  1038     i64 (.movzx (.reg (rr .rdx)) (w' := .W8) (.mem (tblAddr off))),
+  1039     i64 (.cmp (.reg (rr .rdx)) (oI 0)), jccL .nz Xb,
+  1040     i64 (.add (.reg (rr .rax)) (oI 1)), i64 (.cmp (.reg (rr .rax)) eo), jccL .c Lb]
 
 == ConAgua/L/TRec.lean#L93-L97
     93  /-- The tier of a handle word: bit 27. -/
@@ -1206,34 +1215,34 @@
     33  The array and control-word ids below are the memory map's (`AREC` = `APP.arr`, …): each store
     34  file's `abbrev` must agree, `StoreFieldsCheck.lean` checks it.
 
-== ConAgua/Arena/ConsLib.lean#L206-L215
-   206  /-! ## The slot layout (KSTP)
-   207  
-   208  Each tier has its own slot array `sa⟨t⟩` (lane tierswitch; con-ron's per-tier tables). Its words
-   209  `0` and `1` hold `n - SN0` (`n` the slot count, a multiple of 8) and `o`, the table's offset (`0`:
-   210  nothing writes it); the table starts at word `r = 2 + o`. Slot `j` is the two words `r + 2 j` (the
-   211  value: `0` free, `B t + i + 1` node `i`) and `r + 2 j + 1` (the key word). The table grows at load
-   212  3/4 (con-ron's `HashMap2`) and **in place** (lane memlay): it doubles where it is (`kgrowB`), so no
-   213  old copy of it stays resident, and the growth aborts if the array cannot hold the doubled table.
-   214  A fresh array (all zero) is a table of `SN0` slots at offset `0`: a small run touches only the
-   215  array's first words.
+== ConAgua/Arena/ConsLib.lean#L208-L217
+   208  /-! ## The slot layout (KSTP)
+   209  
+   210  Each tier has its own slot array `sa⟨t⟩` (lane tierswitch; con-ron's per-tier tables). Its words
+   211  `0` and `1` hold `n - SN0` (`n` the slot count, a multiple of 8) and `o`, the table's offset (`0`:
+   212  nothing writes it); the table starts at word `r = 2 + o`. Slot `j` is the two words `r + 2 j` (the
+   213  value: `0` free, `B t + i + 1` node `i`) and `r + 2 j + 1` (the key word). The table grows at load
+   214  3/4 (con-ron's `HashMap2`) and **in place** (lane memlay): it doubles where it is (`kgrowB`), so no
+   215  old copy of it stays resident, and the growth aborts if the array cannot hold the doubled table.
+   216  A fresh array (all zero) is a table of `SN0` slots at offset `0`: a small run touches only the
+   217  array's first words.
 
-== ConAgua/Arena/ConsLib.lean#L485-L490
-   485  /-- The growth test: the tier grows when its node count `c + 1` passes 3/4 of its slot count
-   486  `g + SN0` (`(g + SN0) * 3 < (c + 1) * 4`; con-ron's `HashMap2` load factor `LOAD_NUM/LOAD_DEN`). -/
-   487  def cpGrowIf (C : ConsSch) : Stmt :=
-   488    .ite (.cmp .ult (.bin .mul (.bin .add (.var (gO C + 1)) (.const SN0)) (.const 3))
-   489        (.bin .mul (.bin .add (.var (2 + C.np)) (.const 1)) (.const 4)))
-   490      (kgrowBlk C) .skip
+== ConAgua/Arena/ConsLib.lean#L487-L492
+   487  /-- The growth test: the tier grows when its node count `c + 1` passes 3/4 of its slot count
+   488  `g + SN0` (`(g + SN0) * 3 < (c + 1) * 4`; con-ron's `HashMap2` load factor `LOAD_NUM/LOAD_DEN`). -/
+   489  def cpGrowIf (C : ConsSch) : Stmt :=
+   490    .ite (.cmp .ult (.bin .mul (.bin .add (.var (gO C + 1)) (.const SN0)) (.const 3))
+   491        (.bin .mul (.bin .add (.var (2 + C.np)) (.const 1)) (.const 4)))
+   492      (kgrowBlk C) .skip
 
-== ConAgua/Arena/ConsLib.lean#L462-L468
-   462  /-- **The growth of tier `t`, in place** (con-ron's `HashMap2::try_resize` doubles into a new
-   463  table and frees the old one; here the table doubles where it is, so no old copy stays resident):
-   464  the slot count doubles, the new upper half is zeroed, every live slot of the old half is marked,
-   465  then each marked entry is re-inserted from its home in the doubled table (linear probing past
-   466  the live unmarked slots; a marked slot met on the way is swapped and re-inserted next: absl's
-   467  in-place rehash). Aborts if the array cannot hold the doubled table. Template variables
-   468  `t n2 n H Q ob nb x e v q h j d bt` (`t` the push's tier, the others from `gO`). -/
+== ConAgua/Arena/ConsLib.lean#L464-L470
+   464  /-- **The growth of tier `t`, in place** (con-ron's `HashMap2::try_resize` doubles into a new
+   465  table and frees the old one; here the table doubles where it is, so no old copy stays resident):
+   466  the slot count doubles, the new upper half is zeroed, every live slot of the old half is marked,
+   467  then each marked entry is re-inserted from its home in the doubled table (linear probing past
+   468  the live unmarked slots; a marked slot met on the way is swapped and re-inserted next: absl's
+   469  in-place rehash). Aborts if the array cannot hold the doubled table. Template variables
+   470  `t n2 n H Q ob nb x e v q h j d bt` (`t` the push's tier, the others from `gO`). -/
 
 == ConAgua/Arena/SlotGrow.lean#L41-L44
     41  /-- The home slot of hash `h` among `n`: con-ron's multiply-xor finaliser, then the high word
@@ -1384,11 +1393,11 @@
     33  #guard memoArrs.all checkerArrays.wordSlots.contains
     34  #guard slotArrs.all checkerArrays.wordSlots.contains
 
-== ConAgua/L/Arrays.lean#L225-L228
-   225  /-- **The surface check**: every array operand of every function of `p` is allowed by `T`
-   226  (`useOK`). -/
-   227  def ArrTable.progOK (T : ArrTable) (p : Prog) : Bool :=
-   228    p.all fun (_, fd) => (Uses.stmt fd.body).all T.useOK
+== ConAgua/L/Arrays.lean#L227-L230
+   227  /-- **The surface check**: every array operand of every function of `p` is allowed by `T`
+   228  (`useOK`). -/
+   229  def ArrTable.progOK (T : ArrTable) (p : Prog) : Bool :=
+   230    p.all fun (_, fd) => (Uses.stmt fd.body).all T.useOK
 
 == ConAgua/Checker/ProgTab.lean#L12-L23
     12  /-- The checker's word arrays in layout order: the table's rows, the table-relative one last (its
@@ -1591,12 +1600,12 @@
     29  every run of `f ∈ fs` keeps the globals outside `G` (`GFrame`), and `Triple.gframe` adds that to a
     30  callee's spec for its caller's `vcgen`.
 
-== ConAgua/L/Agree.lean#L563-L567
-   563  /-- **Non-interference for `L.run`.** -/
-   564  theorem run_agree {p : Prog} {S : TieredArray → Bool} {S8 : ArrId → Bool} {fs : List FnName}
-   565      (hp : readsIn p S S8 fs = true) {f : FnName} (hf : f ∈ fs) (n : Nat) (vs : List Word)
-   566      {m₁ m₂ : Mem} (hm : Agree S S8 m₁ m₂) :
-   567      RunAgree S S8 (run p n f vs m₁) (run p n f vs m₂) := by
+== ConAgua/L/Agree.lean#L595-L599
+   595  /-- **Non-interference for `L.run`.** -/
+   596  theorem run_agree {p : Prog} {S : TieredArray → Bool} {S8 : ArrId → Bool} {fs : List FnName}
+   597      (hp : readsIn p S S8 fs = true) {f : FnName} (hf : f ∈ fs) (n : Nat) (vs : List Word)
+   598      {m₁ m₂ : Mem} (hm : Agree S S8 m₁ m₂) :
+   599      RunAgree S S8 (run p n f vs m₁) (run p n f vs m₂) := by
 
 == ConAgua/L/Agree.lean#L7-L31
      7  /-!
@@ -1678,47 +1687,47 @@
     32  normal return has `rdx` = 0 and the result in `rax`.
     33  -/
 
-== ConAgua/Compiler/Compile.lean#L1965-L1986
-  1965  def trampoline (tab : Tab) (entry : FnName) (c np : Nat) : Program :=
-  1966    [.label enterL,
-  1967     movMR (mb .rdi (tab.save np)) .r15, movMR (mb .rdi (tab.save np + 8)) .rbx,
-  1968     movMR (mb .rdi (tab.save np + 16)) .r12, movMR (mb .rdi (tab.save np + 24)) .r13,
-  1969     i64 (.push (oR .rbp)), i64 (.push (oR .r14)), i64 (.push (oR .rdi)),
-  1970     movRR .rbp .rsp, movRR .r15 .rdi, movRR .r14 .rsi,
-  1971     movRM .rsp (mb .r15 Tab.stackTop),
-  1972     i64 (.lea (rr .rsi) (mb .r15 tab.args))] ++
-  1973    (if np ≤ argRegs.length then loadArgs tab 0 (argRegs.take np) else []) ++ burnFuel ++
-  1974    [i64 (.call (.rel (.sub (.label (fnL entry)) .after_current_instruction))),
-  1975     jmpL okL,
-  1976     .label exhaustedL, movRI .rdx 1, jmpL finishL,
-  1977     .label errorL, movRI .rbx 0,
-  1978     .label abortL, movRR .rax .rbx, movRI .rdx 2,
-  1979     .label finishL, movRR .rsp .rbp,
-  1980     i64 (.pop (.reg (rr .r15))),
-  1981     movRM .rbx (mb .r15 (tab.save np + 8)), movRM .r12 (mb .r15 (tab.save np + 16)),
-  1982     movRM .r13 (mb .r15 (tab.save np + 24)), movRM .r15 (mb .r15 (tab.save np)),
-  1983     i64 (.pop (.reg (rr .r14))), i64 (.pop (.reg (rr .rbp))),
-  1984     i64 .ret,
-  1985     .label okL] ++ loadRes { tab, fn := entry, nl := 0, brk := okL } 0 c (tab.nres - c) ++
-  1986    [movRI .rdx 0, jmpL finishL]
+== ConAgua/Compiler/Compile.lean#L2037-L2058
+  2037  def trampoline (tab : Tab) (entry : FnName) (c np : Nat) : Program :=
+  2038    [.label enterL,
+  2039     movMR (mb .rdi (tab.save np)) .r15, movMR (mb .rdi (tab.save np + 8)) .rbx,
+  2040     movMR (mb .rdi (tab.save np + 16)) .r12, movMR (mb .rdi (tab.save np + 24)) .r13,
+  2041     i64 (.push (oR .rbp)), i64 (.push (oR .r14)), i64 (.push (oR .rdi)),
+  2042     movRR .rbp .rsp, movRR .r15 .rdi, movRR .r14 .rsi,
+  2043     movRM .rsp (mb .r15 Tab.stackTop),
+  2044     i64 (.lea (rr .rsi) (mb .r15 tab.args))] ++
+  2045    (if np ≤ argRegs.length then loadArgs tab 0 (argRegs.take np) else []) ++ burnFuel ++
+  2046    [i64 (.call (.rel (.sub (.label (fnL entry)) .after_current_instruction))),
+  2047     jmpL okL,
+  2048     .label exhaustedL, movRI .rdx 1, jmpL finishL,
+  2049     .label errorL, movRI .rbx 0,
+  2050     .label abortL, movRR .rax .rbx, movRI .rdx 2,
+  2051     .label finishL, movRR .rsp .rbp,
+  2052     i64 (.pop (.reg (rr .r15))),
+  2053     movRM .rbx (mb .r15 (tab.save np + 8)), movRM .r12 (mb .r15 (tab.save np + 16)),
+  2054     movRM .r13 (mb .r15 (tab.save np + 24)), movRM .r15 (mb .r15 (tab.save np)),
+  2055     i64 (.pop (.reg (rr .r14))), i64 (.pop (.reg (rr .rbp))),
+  2056     i64 .ret,
+  2057     .label okL] ++ loadRes { tab, fn := entry, nl := 0, brk := okL } 0 c (tab.nres - c) ++
+  2058    [movRI .rdx 0, jmpL finishL]
 
-== ConAgua/Compiler/Compile.lean#L774
-   774  def allocRegs : List Reg64 := [.rdi, .r8, .r9, .r10, .r11, .rsi, .rbx, .r12, .r13]
+== ConAgua/Compiler/Compile.lean#L788
+   788  def allocRegs : List Reg64 := [.rdi, .r8, .r9, .r10, .r11, .rsi, .rbx, .r12, .r13]
 
-== ConAgua/Compiler/Compile.lean#L1936-L1948
-  1936  def compileFn (tab : Tab) (t sk : NTree) (f : FnName) (fd : FunDecl) : Program :=
-  1937    let ctx := fnCtx tab t sk f fd
-  1938    let F := fd.nlocals + tempsS ctx.alloc ctx.nr fd.body
-  1939    if frameless fd then [.label (fnL f)] ++ fnBody ctx fd ++ [i64 .ret]
-  1940    else if ctx.leaf && sk.find (nameCode f) == some F then
-  1941    [.label (fnL f), i64 (.sub (.reg (rr .rsp)) (oI (8 * F)))] ++ fnBody ctx fd ++
-  1942    [i64 (.add (.reg (rr .rsp)) (oI (8 * F))), i64 .ret]
-  1943    else
-  1944    [.label (fnL f),
-  1945     movRR .rax .rsp, i64 (.sub (.reg (rr .rax)) (oM (mb .r15 Tab.stackLimit))),
-  1946     i64 (.cmp (.reg (rr .rax)) (oI (8 * F + 8 + 8 * ctx.need))), jccL .c exhaustedL,
-  1947     i64 (.sub (.reg (rr .rsp)) (oI (8 * F)))] ++ fnBody ctx fd ++
-  1948    [i64 (.add (.reg (rr .rsp)) (oI (8 * F))), i64 .ret]
+== ConAgua/Compiler/Compile.lean#L2008-L2020
+  2008  def compileFn (tab : Tab) (t sk : NTree) (f : FnName) (fd : FunDecl) : Program :=
+  2009    let ctx := fnCtx tab t sk f fd
+  2010    let F := fd.nlocals + tempsS ctx.alloc ctx.nr fd.body
+  2011    if frameless fd then [.label (fnL f)] ++ fnBody ctx fd ++ [i64 .ret]
+  2012    else if ctx.leaf && sk.find (nameCode f) == some F then
+  2013    [.label (fnL f), i64 (.sub (.reg (rr .rsp)) (oI (8 * F)))] ++ fnBody ctx fd ++
+  2014    [i64 (.add (.reg (rr .rsp)) (oI (8 * F))), i64 .ret]
+  2015    else
+  2016    [.label (fnL f),
+  2017     movRR .rax .rsp, i64 (.sub (.reg (rr .rax)) (oM (mb .r15 Tab.stackLimit))),
+  2018     i64 (.cmp (.reg (rr .rax)) (oI (8 * F + 8 + 8 * ctx.need))), jccL .c exhaustedL,
+  2019     i64 (.sub (.reg (rr .rsp)) (oI (8 * F)))] ++ fnBody ctx fd ++
+  2020    [i64 (.add (.reg (rr .rsp)) (oI (8 * F))), i64 .ret]
 
 == ConAgua/Compiler/Compile.lean#L98-L157
     98  /-- **The layout check**: `l` lists the array at each of the `nb + nw` positions, `m` maps each of

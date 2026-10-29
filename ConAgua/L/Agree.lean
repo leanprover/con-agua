@@ -57,6 +57,7 @@ def Expr.rdOk (S : TieredArray → Bool) (S8 : ArrId → Bool) : Expr → Bool
   | .ld64t a t i => tierOk S a && t.rdOk S S8 && i.rdOk S S8
   | .len64t a t => tierOk S a && t.rdOk S S8
   | .ld8x8 s i => s.rdOk S8 && i.rdOk S S8
+  | .ld32t a t i => tierOk S a && t.rdOk S S8 && i.rdOk S S8
 
 /-- A block operand names only word arrays of `S` (a tiered one: both tiers). -/
 def WArr.rdOk (S : TieredArray → Bool) (S8 : ArrId → Bool) : WArr → Bool
@@ -90,6 +91,7 @@ def Stmt.rdOk (S : TieredArray → Bool) (S8 : ArrId → Bool) (cf : FnName → 
   | .copy8w d di s si n =>
     d.rdOk S S8 && di.rdOk S S8 && s.rdOk S8 && si.rdOk S S8 && n.rdOk S S8
   | .scan8 _ s i e _ => s.rdOk S8 && i.rdOk S S8 && e.rdOk S S8
+  | .st32t a t i e => tierOk S a && t.rdOk S S8 && i.rdOk S S8 && e.rdOk S S8
 
 /-- **The read set of a call-closed function set**: every function of `fs` that `p` defines
 names only arrays of `S` (words) and `S8` (bytes) and calls only into `fs`. -/
@@ -303,6 +305,28 @@ theorem st64_sim {a : TieredArray} (ha : S a = true) (i v : Word) : Sim S S8 (st
   · simp only [hc, ↓reduceIte]
     exact Sim.throw _ s₁ s₂ h
 
+theorem ld32_sim {a : TieredArray} (ha : S a = true) (i : Word) : Sim S S8 (ld32 a i) := by
+  unfold ld32
+  refine Sim.get_bind fun s₁ s₂ h => ?_
+  have e := h.1.1 a ha
+  dsimp only
+  revert e
+  generalize s₁.mem.arr64 a = A₁
+  generalize s₂.mem.arr64 a = A₂
+  intro e; subst e
+  exact Sim.dite_pure s₁ s₂ h
+
+theorem st32_sim {a : TieredArray} (ha : S a = true) (i v : Word) : Sim S S8 (st32 a i v) := by
+  unfold st32
+  refine Sim.get_bind fun s₁ s₂ h => ?_
+  have e := h.1.1 a ha
+  simp only [Mem.set32, e]
+  by_cases hc : (i / 2).toNat < (s₂.mem.arr64 a).size
+  · simp only [hc, ↓reduceIte]
+    exact ResAgree.set ⟨h.1.set64 ha _ _, h.2⟩
+  · simp only [hc, ↓reduceIte]
+    exact Sim.throw _ s₁ s₂ h
+
 theorem st8_sim {a : ArrId} (ha : S8 a = true) (i v : Word) : Sim S S8 (st8 a i v) := by
   unfold st8
   refine Sim.get_bind fun s₁ s₂ h => ?_
@@ -350,6 +374,9 @@ theorem evalE_sim : ∀ (e : Expr), e.rdOk S S8 = true → Sim S S8 (evalE e) :=
   | ld8x8 b i ih =>
     intro hr; simp only [Expr.rdOk, Bool.and_eq_true] at hr; rw [evalE]
     exact Sim.bind (ih hr.2) fun _ => ld8x8_sim hr.1 _
+  | ld32t a t i iht ihi =>
+    intro hr; simp only [Expr.rdOk, Bool.and_eq_true] at hr; rw [evalE]
+    exact Sim.bind (iht hr.1.2) fun _ => Sim.bind (ihi hr.2) fun _ => ld32_sim (tierA_mem hr.1.1 _) _
 
 theorem evalC_sim : ∀ (c : Cond), c.rdOk S S8 = true → Sim S S8 (evalC c) := by
   intro c
@@ -515,6 +542,11 @@ theorem step_sim (hp : readsIn p S S8 fs = true) {k : Stmt → M Sig} (hk : KSim
     generalize s₂.mem.src8 b = B
     exact Sim.ite (fun _ => Sim.bind (Sim.modify fun _ _ h => h.setLoc x _) fun _ => Sim.pure _)
       (fun _ => Sim.throw _) s₁ s₂ h
+  | st32t a t i e =>
+    intro hr; simp only [Stmt.rdOk, Bool.and_eq_true] at hr; rw [step]
+    exact Sim.bind (evalE_sim t hr.1.1.2) fun u => Sim.bind (evalE_sim i hr.1.2) fun _ =>
+      Sim.bind (evalE_sim e hr.2) fun _ =>
+        Sim.bind (st32_sim (tierA_mem hr.1.1.1 u) _ _) fun _ => Sim.pure _
 
 theorem exec_sim (hp : readsIn p S S8 fs = true) : ∀ n, KSim S S8 fs (exec p n)
   | 0 => fun _ _ => by rw [show exec p 0 = fun _ => throw .outOfFuel from funext fun _ => rfl]; exact Sim.throw _

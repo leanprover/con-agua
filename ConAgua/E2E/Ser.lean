@@ -63,6 +63,7 @@ partial def serE : Expr → SerM String
   | .ld64t a t i => return s!"(l64t {a} {← serE t} {← serE i})"
   | .len64t a t => return s!"(n64t {a} {← serE t})"
   | .ld8x8 b i => return s!"(l8x8 {← serB b} {← serE i})"
+  | .ld32t a t i => return s!"(l32t {a} {← serE t} {← serE i})"
 
 partial def serW : WArr → SerM String
   | .plain a => pure s!"(wp {a})"
@@ -94,6 +95,7 @@ partial def serS : Stmt → SerM String
   | .copy64 d di s si n => return s!"(cp64 {← serW d} {← serE di} {← serW s} {← serE si} {← serE n})"
   | .copy8w d di s si n => return s!"(cp8w {← serW d} {← serE di} {← serB s} {← serE si} {← serE n})"
   | .scan8 x s i e c => return s!"(scan {x} {← serB s} {← serE i} {← serE e} {← dataIdx c})"
+  | .st32t a t i e => return s!"(s32t {a} {← serE t} {← serE i} {← serE e})"
 
 /-! ## Reading it back -/
 
@@ -181,6 +183,7 @@ partial def parseE : P Expr := do
     | "l8" => do let a ← nat; pure (.ld8 a (← parseE))
     | "l64" => do let a ← nat; pure (.ld64 a (← parseE))
     | "l64t" => do let a ← nat; let t ← parseE; pure (.ld64t a t (← parseE))
+    | "l32t" => do let a ← nat; let t ← parseE; pure (.ld32t a t (← parseE))
     | "n64t" => do let a ← nat; pure (.len64t a (← parseE))
     | "n8" => do let x ← nat; pure (.len8 x)
     | "n64" => do let x ← nat; pure (.len64 x)
@@ -244,6 +247,7 @@ partial def parseS : P Stmt := do
       | "s8" => do let a ← nat; let i ← parseE; let e ← parseE; pure (.st8 a i e)
       | "s64" => do let a ← nat; let i ← parseE; let e ← parseE; pure (.st64 a i e)
       | "s64t" => do let a ← nat; let t ← parseE; let i ← parseE; let e ← parseE; pure (.st64t a t i e)
+      | "s32t" => do let a ← nat; let t ← parseE; let i ← parseE; let e ← parseE; pure (.st32t a t i e)
       | "seq" => do let s ← parseS; let t ← parseS; pure (.seq s t)
       | "if" => do let c ← parseC; let s ← parseS; let t ← parseS; pure (.ite c s t)
       | "while" => do let c ← parseC; pure (.while c (← parseS))

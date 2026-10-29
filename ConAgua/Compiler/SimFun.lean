@@ -299,7 +299,8 @@ theorem tempsEs_le : ∀ (es : List Expr) (i : Nat), tempsEs es ≤ tempsArgs i 
 
 theorem tempsS_le (al : List (Var × Reg64)) (nr : Nat) : ∀ s, tempsS al nr s ≤ tempsSB s
   | .skip | .brk => Nat.le_refl _
-  | .set _ _ | .abort _ | .st8 .. | .st64 .. | .gset .. | .st64t .. | .copy64 .. | .copy8w .. | .scan8 .. => by
+  | .set _ _ | .abort _ | .st8 .. | .st64 .. | .gset .. | .st64t .. | .copy64 .. | .copy8w .. | .scan8 ..
+  | .st32t .. => by
     simp [tempsS, tempsSB]
   | .seq s t | .ite _ s t => by
     have := tempsS_le al nr s; have := tempsS_le al nr t; simp only [tempsS, tempsSB]; omega
@@ -313,7 +314,7 @@ theorem tempsS_le (al : List (Var × Reg64)) (nr : Nat) : ∀ s, tempsS al nr s 
 theorem Stmt.nret_le_of_wf {p : Prog} {nl : Nat} {tab : Tab} :
     ∀ {s : Stmt}, Stmt.wf p nl tab s = true → Stmt.nret s ≤ tab.nres
   | .skip, _ | .brk, _ | .abort _, _ | .set .., _ | .st8 .., _ | .st64 .., _ | .call .., _ | .gset .., _
-  | .st64t .., _ | .copy64 .., _ | .copy8w .., _ | .scan8 .., _ =>
+  | .st64t .., _ | .copy64 .., _ | .copy8w .., _ | .scan8 .., _ | .st32t .., _ =>
     Nat.zero_le _
   | .seq s u, h => by
     simp only [Stmt.wf, Bool.and_eq_true] at h

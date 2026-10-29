@@ -37,6 +37,9 @@ theorem KeepW.set64 {m m' : Mem} (h : KeepW m m') (a : TieredArray) (i v : Word)
   · subst b; simp
   · rfl
 
+theorem KeepW.set32 {m m' : Mem} (h : KeepW m m') (a : TieredArray) (i v : Word) :
+    KeepW m (m'.set32 a i v) := h.set64 a _ _
+
 /-- After the loop. -/
 def cnfK2 (q : Word) : Option (Word × Mem) → Option (List Word × Mem)
   | none => none

@@ -242,4 +242,69 @@ theorem ev_stXI {b i : Reg64} {w : Word}
 
 end
 
+/-! ### 32-bit moves (lane p32) -/
+
+omit [Host] in
+theorem addr_sib4 [Labels] (b i : Reg64) (regs : Reg64s) (rng : Std.Rco Int64) :
+    ((AddrExpr.interp (address_size := .mk .W64) (a := mbi b i .W32) regs rng).zeroExtend 64)
+      = regs.get64 b + regs.get64 i * 4 := by
+  simp only [AddrExpr.interp, ConstExpr.interp, BitVec.toAddressSize, Reg64s.get64]
+  have htake : ∀ x : BitVec 64, x.take Width.W64.bits = x := by
+    intro x; simp [BitVec.take, BitVec.extractLsb']
+  rw [htake, htake]
+  have hsigned : ∀ x : BitVec 64, x.signed = x.toInt := fun _ => rfl
+  rw [hsigned, hsigned,
+    show ∀ y : BitVec Width.W64.bits, BitVec.zeroExtend 64 y = y from fun _ => rfl]
+  apply BitVec.eq_of_toInt_eq
+  simp [BitVec.toInt_add, BitVec.toInt_mul, BitVec.toInt_ofInt, Width.bytes]
+
+section
+variable {k : Nat} {s : MachineData} {Q : MachineState → Prop}
+
+local macro "run_instr" : tactic =>
+  `(tactic| (refine ev_instr (by assumption) (by rintro ⟨⟩) ?_;
+             simp only [Instr.interp, Operation.interp, Operand.interp, RegOrMem.interp,
+               RelRegOrMem.interp, ConstExpr.interp, MachineData.load, MachineData.store,
+               MachineData.set, MachineData.setReg, Reg64s.set_low_W64, Reg64s.get_low_W64,
+               AddrExpr.zeroExtend_interp_base_disp, Width.bytes, Effects.All]))
+
+/-- `movl d32, [b + 4 i]`: the 4 bytes zero-extended into `d`. -/
+theorem ev_ld32X {d b i : Reg64} (hk : Host.prog[k]? = some (ld32X d b i))
+    {v : Nat} (hv : _root_.Mem.loadInt s.dmem (s.regs.get64 b + s.regs.get64 i * 4) 4 = some (v : Int))
+    (hv32 : v < 2 ^ 32)
+    (h : Ev Q { s with regs := s.regs.set64 d (UInt64.ofNat v).toBitVec } (at_ (k + 1))) :
+    Ev Q s (at_ k) := by
+  run_instr
+  rw [addr_sib4]
+  simp only [hv, Effects.All]
+  refine ev_of_regs h ?_
+  simp only [Reg64s.set]
+  congr 1
+  apply BitVec.eq_of_toNat_eq
+  simp
+  omega
+
+/-- `movl [b + 4 i], v32`. -/
+theorem ev_st32X {b i v : Reg64} (hk : Host.prog[k]? = some (st32X b i v))
+    (hm : (_root_.Mem.loadInt s.dmem (s.regs.get64 b + s.regs.get64 i * 4) 4).isSome)
+    (h : Ev Q { s with dmem := _root_.Mem.storeInt s.dmem (s.regs.get64 b + s.regs.get64 i * 4) 4 (s.regs.get (Reg.low v .W32)).toInt }
+      (at_ (k + 1))) :
+    Ev Q s (at_ k) := by
+  run_instr
+  rw [addr_sib4]
+  obtain ⟨j, hj⟩ := Option.isSome_iff_exists.mp hm
+  simp only [hj, Effects.All]
+  exact h
+
+end
+
+omit [Host] in
+/-- The low half of a register, as `movl` stores it: modulo `2^32`, the register's value. -/
+theorem low32_toInt (R : Reg64s) (v : Reg64) :
+    ((R.get (Reg.low v .W32)).toInt % 4294967296).toNat = (R.get64 v).toNat % 4294967296 := by
+  simp only [Reg64s.get, Reg.base, Reg.offset, BitVec.drop, BitVec.take, Width.bits]
+  rw [BitVec.toInt_eq_toNat_cond]
+  simp
+  split <;> omega
+
 end L.Compiler

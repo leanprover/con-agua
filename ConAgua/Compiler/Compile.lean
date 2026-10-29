@@ -451,6 +451,7 @@ def Expr.roms : Expr → List (List UInt8)
   | .ld64t _ t i => Expr.roms t ++ Expr.roms i
   | .len64t _ t => Expr.roms t
   | .ld8x8 s i => BSrc.roms s ++ Expr.roms i
+  | .ld32t _ t i => Expr.roms t ++ Expr.roms i
   | _ => []
 
 def WArr.roms : WArr → List (List UInt8)
@@ -476,6 +477,7 @@ def Stmt.roms : Stmt → List (List UInt8)
   | .copy64 d di s si n => WArr.roms d ++ Expr.roms di ++ WArr.roms s ++ Expr.roms si ++ Expr.roms n
   | .copy8w d di s si n => WArr.roms d ++ Expr.roms di ++ BSrc.roms s ++ Expr.roms si ++ Expr.roms n
   | .scan8 _ s i e c => BSrc.roms s ++ Expr.roms i ++ Expr.roms e ++ [c]
+  | .st32t _ t i e => Expr.roms t ++ Expr.roms i ++ Expr.roms e
 
 /-- Insert `d` before the first longer string (structural, so the kernel evaluates it). -/
 def romInsert (d : List UInt8) : List (List UInt8) → List (List UInt8)
@@ -557,6 +559,7 @@ def Expr.nglob : Expr → Nat
   | .ld64t _ t i => max (Expr.nglob t) (Expr.nglob i)
   | .len64t _ t => Expr.nglob t
   | .ld8x8 _ i => Expr.nglob i
+  | .ld32t _ t i => max (Expr.nglob t) (Expr.nglob i)
   | _ => 0
 
 def WArr.nglob : WArr → Nat
@@ -582,6 +585,7 @@ def Stmt.nglob : Stmt → Nat
       (max (Expr.nglob si) (Expr.nglob n))))
   | .copy8w d di _ si n => max (WArr.nglob d) (max (Expr.nglob di) (max (Expr.nglob si) (Expr.nglob n)))
   | .scan8 _ _ i e _ => max (Expr.nglob i) (Expr.nglob e)
+  | .st32t _ t i e => max (Expr.nglob t) (max (Expr.nglob i) (Expr.nglob e))
 
 /-! ## The arrays a program names -/
 
@@ -601,6 +605,7 @@ def Expr.arrU : Expr → List (Nat × Nat)
   | .ld64t a t i => (a, 2) :: (Expr.arrU t ++ Expr.arrU i)
   | .len64t a t => (a, 2) :: Expr.arrU t
   | .ld8x8 s i => BSrc.arrU s ++ Expr.arrU i
+  | .ld32t a t i => (a, 2) :: (Expr.arrU t ++ Expr.arrU i)
   | _ => []
 
 def WArr.arrU : WArr → List (Nat × Nat)
@@ -625,6 +630,7 @@ def Stmt.arrU : Stmt → List (Nat × Nat)
   | .copy64 d di s si n => WArr.arrU d ++ Expr.arrU di ++ WArr.arrU s ++ Expr.arrU si ++ Expr.arrU n
   | .copy8w d di s si n => WArr.arrU d ++ Expr.arrU di ++ BSrc.arrU s ++ Expr.arrU si ++ Expr.arrU n
   | .scan8 _ s i e _ => BSrc.arrU s ++ Expr.arrU i ++ Expr.arrU e
+  | .st32t a t i e => (a, 2) :: (Expr.arrU t ++ Expr.arrU i ++ Expr.arrU e)
 
 def Prog.arrU (p : Prog) : List (Nat × Nat) := p.flatMap fun (_, fd) => Stmt.arrU fd.body
 
@@ -654,6 +660,8 @@ def Prog.tab (p : Prog) : Tab :=
 abbrev i64 (op : Operation .W64) : Directive := .instr (.regular .W64 .W64 op)
 /-- An 8-bit instruction. -/
 abbrev i8 (op : Operation .W8) : Directive := .instr (.regular .W64 .W8 op)
+/-- A 32-bit instruction (lane p32). -/
+abbrev i32 (op : Operation .W32) : Directive := .instr (.regular .W64 .W32 op)
 
 /-- `[b + d]` -/
 abbrev mb (b : Reg64) (d : Int) : AddrExpr := ⟨some (.reg b), none, .int64 (Int64.ofInt d)⟩
@@ -669,6 +677,10 @@ abbrev movRI (r : Reg64) (w : Word) : Directive := i64 (.mov (.reg (rr r)) (.imm
 abbrev movRR (d s : Reg64) : Directive := i64 (.mov (.reg (rr d)) (oR s))
 abbrev movRM (d : Reg64) (a : AddrExpr) : Directive := i64 (.mov (.reg (rr d)) (oM a))
 abbrev movMR (a : AddrExpr) (s : Reg64) : Directive := i64 (.mov (.mem a) (oR s))
+/-- `movl d32, [b + 4 i]`: a 4-byte load, zero-extended into `d` (lane p32). -/
+abbrev ld32X (d b i : Reg64) : Directive := i32 (.mov (.reg (.low d .W32)) (oM (mbi b i .W32)))
+/-- `movl [b + 4 i], v32`: a 4-byte store of the low half of `v` (lane p32). -/
+abbrev st32X (b i v : Reg64) : Directive := i32 (.mov (.mem (mbi b i .W32)) (.regOrMem (.reg (.low v .W32))))
 abbrev jmpL (l : Label) : Directive := i64 (.jmp (.rel (.sub (.label l) .after_current_instruction)))
 abbrev jccL (cc : CondCode) (l : Label) : Directive := i64 (.jcc cc l)
 
@@ -699,6 +711,7 @@ def tempsE : Expr → Nat
   | .ld64t _ t i => if Expr.isSimple t then tempsE i else max (tempsE t) (1 + tempsE i)
   | .len64t _ t => tempsE t
   | .ld8x8 _ i => tempsE i
+  | .ld32t _ t i => if Expr.isSimple t then tempsE i else max (tempsE t) (1 + tempsE i)
   | _ => 0
 
 def tempsC : Cond → Nat
@@ -730,6 +743,7 @@ def tempsSB : Stmt → Nat
   | .st64t _ _ i e => if Expr.isSimple e then tempsE i else max (tempsE i) (1 + tempsE e)
   | .copy64 .. | .copy8w .. => 1
   | .scan8 .. => 0
+  | .st32t _ _ i e => max 1 (if Expr.isSimple e then tempsE i else max (tempsE i) (1 + tempsE e))
 
 /-- A bound on the number of words in the frame of `fd` (`Prog.wf` checks that it is small). -/
 def frameWords (fd : FunDecl) : Nat := fd.nlocals + tempsSB fd.body
@@ -1169,6 +1183,24 @@ def genLdT (ctx : Ctx) (ln : AddrExpr) (c mn : Nat) (i : Expr) (gi : GenF) (d : 
           ci ++ [i64 (.cmp (.reg (rr d)) (oM ln)), jccL .nc errorL, movRM d (tdesc d c)]
     else none
 
+/-- `d := A.u32[x]` (lane p32), where `[ln]` is `A`'s length in words and `[bs]` its base: the
+bounds check `x >> 1 < len` in the scratch register `t`, the base into `t`, the 4-byte load at
+`t + 4 x` (zero-extended). -/
+def ld32Code (x t d : Reg64) (ln bs : AddrExpr) : Program :=
+  [movRR t x, i64 (.shr (.reg (rr t)) (.imm8 (.int64 (Int64.ofInt 1)))), i64 (.cmp (.reg (rr t)) (oM ln)),
+   jccL .nc errorL, movRM t bs, ld32X d t x]
+
+/-- `d := A.u32[i]` through the register stack: the index a local's register or computed into `d`,
+then `ld32Code` with the first scratch register. -/
+def genLd32 (ctx : Ctx) (ln bs : AddrExpr) (i : Expr) (gi : GenF) (d : Reg64) (fr : List Reg64) :
+    Option Program :=
+  match fr with
+  | t :: _ =>
+    match regOf ctx i with
+    | some r => some (ld32Code r t d ln bs)
+    | none => (gi d fr).map fun ci => ci ++ ld32Code d t d ln bs
+  | [] => none
+
 /-- Flags for `a op b` and the condition code under which it holds: in place (`cmpIn`), else
 the operand that is not simple into a scratch register, else both. -/
 def genCmp (ctx : Ctx) (op : Cmp) (a b : Expr) (ga gb : GenF) (fr : List Reg64) :
@@ -1233,6 +1265,15 @@ def gen (ctx : Ctx) : Expr → Reg64 → List Reg64 → Option Program
         code ++ [movRI d 0, movRI t 1, i64 (.cmovcc cc (rr d) (.reg (rr t)))]
     | [] => none
   | .ld8x8 _ _, _, _ => none
+  | .ld32t a t i, d, fr =>
+    if ctx.isT t then
+      genLd32 ctx (tdesc .rsi (ctx.tab.len64 a)) (tdesc .rsi (ctx.tab.base64 a)) i (gen ctx i) d fr
+    else
+      match fr with
+      | s :: fr' => (gen ctx t s fr').bind fun ct =>
+          (genLd32 ctx (tdesc s (ctx.tab.len64 a)) (tdesc s (ctx.tab.base64 a)) i (gen ctx i) d fr').map
+            fun c => ct ++ tierDesc s ++ c
+      | [] => none
 
 /-- `x := rax`. -/
 def storeRax (ctx : Ctx) (x : Var) : Directive :=
@@ -1304,6 +1345,15 @@ def compileE (ctx : Ctx) : Expr → Nat → Program
       [srcLen ctx .rdx s, i64 (.cmp (.reg (rr .rdx)) (oI 8)), jccL .c errorL,
        i64 (.sub (.reg (rr .rdx)) (oI 8)), i64 (.cmp (.reg (rr .rax)) (oR .rdx)), jccL .a errorL,
        srcBase ctx s, movRM .rax (mbi .rcx .rax .W8)]
+  | .ld32t a t i, k =>
+    if ctx.isT t then
+      compileE ctx i k ++ ld32Code .rax .rcx .rax (tdesc .rsi (ctx.tab.len64 a)) (tdesc .rsi (ctx.tab.base64 a))
+    else
+    (match loadInto ctx .rdx t with
+     | some ld => compileE ctx i k ++ ld
+     | none => compileE ctx t k ++ [movMR (ctx.tmp k) .rax] ++ compileE ctx i (k + 1) ++
+         [movRM .rdx (ctx.tmp k)]) ++ tierDesc .rdx ++
+      ld32Code .rax .rcx .rax (tdesc .rdx (ctx.tab.len64 a)) (tdesc .rdx (ctx.tab.base64 a))
 
 /-- The negation of a condition code. -/
 def CondCode.neg : CondCode → CondCode
@@ -1346,6 +1396,7 @@ def Expr.readsReg (al : List (Var × Reg64)) (r : Reg64) : Expr → Bool
   | .ld64t _ t i => Expr.readsReg al r t || Expr.readsReg al r i
   | .len64t _ t => Expr.readsReg al r t
   | .ld8x8 _ i => Expr.readsReg al r i
+  | .ld32t _ t i => Expr.readsReg al r t || Expr.readsReg al r i
   | _ => false
 
 /-- `r := e` through the register stack (`r` not in the scratch registers `fr`): straight into
@@ -1605,6 +1656,13 @@ def tailCode (ctx : Ctx) : Stmt → Stmt → Option Program
     | none => none
   | _, _ => none
 
+/-- `A.u32[rax] := edx` (lane p32), where `[ln]` is `A`'s length in words and `[bs]` its base:
+the value to temporary `0`, the bounds check `rax >> 1 < len` in `rdx`, the base into `rcx`, the
+value back into `rdx`, the 4-byte store at `rcx + 4 rax`. -/
+def st32Code (ctx : Ctx) (ln bs : AddrExpr) : Program :=
+  [movRR .rdx .rax, i64 (.shr (.reg (rr .rdx)) (.imm8 (.int64 (Int64.ofInt 1)))), i64 (.cmp (.reg (rr .rdx)) (oM ln)),
+   jccL .nc errorL, movRM .rcx bs, movRM .rdx (ctx.tmp 0), st32X .rcx .rax .rdx]
+
 def compileS (ctx : Ctx) (path : Path) : Stmt → Program
   | .skip => []
   | .set x e =>
@@ -1703,6 +1761,15 @@ def compileS (ctx : Ctx) (path : Path) : Stmt → Program
   | .copy8w d di s si n => copy8wCode ctx path d di s si n
   | .scan8 x s i e c =>
     scan8Code ctx path s i e c ++ (if ctx.treg == some x then tregSet else []) ++ [storeRax ctx x]
+  | .st32t a t i e =>
+    (match loadInto ctx .rdx e with
+     | some code => compileE ctx i 0 ++ code
+     | none => compileE ctx i 0 ++ [movMR (ctx.tmp 0) .rax] ++ compileE ctx e 1 ++
+      [movRR .rdx .rax, movRM .rax (ctx.tmp 0)]) ++ [movMR (ctx.tmp 0) .rdx] ++
+      (if ctx.isT t then st32Code ctx (tdesc .rsi (ctx.tab.len64 a)) (tdesc .rsi (ctx.tab.base64 a))
+      else
+      (loadInto ctx .rcx t).getD [jmpL errorL] ++ tierDesc .rcx ++
+        st32Code ctx (tdesc .rcx (ctx.tab.len64 a)) (tdesc .rcx (ctx.tab.base64 a)))
 
 /-- The temporaries of a statement's code (`compileS`). -/
 def tempsS (al : List (Var × Reg64)) (nr : Nat) : Stmt → Nat
@@ -1718,6 +1785,7 @@ def tempsS (al : List (Var × Reg64)) (nr : Nat) : Stmt → Nat
   | .st64t _ _ i e => if Expr.isSimple e then tempsE i else max (tempsE i) (1 + tempsE e)
   | .copy64 .. | .copy8w .. => 1
   | .scan8 .. => 0
+  | .st32t _ _ i e => max 1 (if Expr.isSimple e then tempsE i else max (tempsE i) (1 + tempsE e))
 
 /-- Copy `n` parameters from `[rsi + 8i]` to the frame slots `i, i+1, …`. -/
 def copyParams : Nat → Nat → Program
@@ -1759,6 +1827,7 @@ def Expr.uses (w : Nat) (acc : Array Nat) : Expr → Array Nat
   | .ld64t _ t i => Expr.uses w (Expr.uses w acc t) i
   | .len64t _ t => Expr.uses w acc t
   | .ld8x8 _ i => Expr.uses w acc i
+  | .ld32t _ t i => Expr.uses w (Expr.uses w acc t) i
   | _ => acc
 
 def WArr.uses (w : Nat) (acc : Array Nat) : WArr → Array Nat
@@ -1784,6 +1853,7 @@ def Stmt.uses (w : Nat) (acc : Array Nat) : Stmt → Array Nat
     Expr.uses w (Expr.uses w (WArr.uses w (Expr.uses w (WArr.uses w acc d) di) s) si) n
   | .copy8w d di _ si n => Expr.uses w (Expr.uses w (Expr.uses w (WArr.uses w acc d) di) si) n
   | .scan8 x _ i e _ => Expr.uses w (Expr.uses w (acc.modify x (· + w)) i) e
+  | .st32t _ t i e => Expr.uses w (Expr.uses w (Expr.uses w acc t) i) e
   | _ => acc
 
 /-! ### The tier local (lane tiercost) -/
@@ -1799,6 +1869,7 @@ def Expr.tierUses (w : Nat) (acc : Array Nat) : Expr → Array Nat
   | .ld8 _ i | .ld64 _ i | .ldc _ i | .ld8x8 _ i => Expr.tierUses w acc i
   | .ld64t _ t i => Expr.tierUses w (tierUse w acc t) i
   | .len64t _ t => tierUse w acc t
+  | .ld32t _ t i => Expr.tierUses w (tierUse w acc t) i
   | _ => acc
 
 def Cond.tierUses (w : Nat) (acc : Array Nat) : Cond → Array Nat
@@ -1815,6 +1886,7 @@ def Stmt.tierUses (w : Nat) (acc : Array Nat) : Stmt → Array Nat
   | .ret es | .call _ _ es => es.foldl (Expr.tierUses w) acc
   | .st64t _ t i e => Expr.tierUses w (Expr.tierUses w (tierUse w acc t) i) e
   | .scan8 _ _ i e _ => Expr.tierUses w (Expr.tierUses w acc i) e
+  | .st32t _ t i e => Expr.tierUses w (Expr.tierUses w (tierUse w acc t) i) e
   | _ => acc
 
 /-- Local `i` is used as a tier at least twice (weighted), and at least as often as `b`. -/

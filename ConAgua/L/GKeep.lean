@@ -144,6 +144,17 @@ theorem ld8x8_keepsG (b : BSrc) (i : Word) : KeepsG G (ld8x8 b i) := by
   unfold ld8x8
   exact KeepsG.get_bind fun s => KeepsG.ite (KeepsG.pure _) (KeepsG.throw _) s
 
+theorem ld32_keepsG (a : TieredArray) (i : Word) : KeepsG G (ld32 a i) := by
+  unfold ld32
+  exact KeepsG.get_bind fun s => KeepsG.dite_pure s
+
+theorem st32_keepsG (a : TieredArray) (i v : Word) : KeepsG G (st32 a i v) := by
+  unfold st32 Mem.set32
+  refine KeepsG.get_bind fun s r s' h g _ => ?_
+  split at h
+  · cases h; rfl
+  · cases h
+
 theorem st64_keepsG (a : TieredArray) (i v : Word) : KeepsG G (st64 a i v) := by
   unfold st64
   refine KeepsG.get_bind fun s r s' h g _ => ?_
@@ -178,6 +189,8 @@ theorem evalE_keepsG : ∀ (e : Expr), KeepsG G (evalE e) := by
   | len64t a t ih =>
     rw [evalE]; exact KeepsG.bind ih fun _ => KeepsG.get_bind fun s => KeepsG.pure _ s
   | ld8x8 b i ih => rw [evalE]; exact KeepsG.bind ih fun _ => ld8x8_keepsG b _
+  | ld32t a t i iht ihi =>
+    rw [evalE]; exact KeepsG.bind iht fun _ => KeepsG.bind ihi fun _ => ld32_keepsG _ _
 
 theorem evalC_keepsG : ∀ (c : Cond), KeepsG G (evalC c) := by
   intro c
@@ -320,6 +333,10 @@ theorem step_keepsG (hp : globsIn p G fs = true) {k : Stmt → M Sig} (hk : KKee
         dsimp only
         refine KeepsG.ite ?_ (KeepsG.throw _) s
         exact KeepsG.bind (KeepsG.modify fun _ _ _ => rfl) fun _ => KeepsG.pure _
+  | st32t a t i e =>
+    intro _; rw [step]
+    exact KeepsG.bind (evalE_keepsG t) fun _ => KeepsG.bind (evalE_keepsG i) fun _ =>
+      KeepsG.bind (evalE_keepsG e) fun _ => KeepsG.bind (st32_keepsG _ _ _) fun _ => KeepsG.pure _
 
 theorem exec_keepsG (hp : globsIn p G fs = true) : ∀ n, KKeepsG G fs (exec p n)
   | 0 => fun _ _ s r s' h => by cases h

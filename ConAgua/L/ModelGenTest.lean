@@ -1,4 +1,5 @@
 import ConAgua.Arena.LdRd
+import ConAgua.Arena.P32
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
@@ -118,6 +119,28 @@ def tNestR2 : FunDecl := lfn (n) locals (i, j, r) {
   r := i + 1;
   return r
 }
+
+/-- Packed 32-bit elements (lane p32): a store, then loads of it and of its neighbour. -/
+-- con-ron: none — an `l_model` test function
+def tP32 : FunDecl := lfn (t, i, v) locals (x) {
+  TP⟨t⟩.u32[i] := v;
+  x := TP⟨t⟩.u32[i + 1];
+  return TP⟨t⟩.u32[i] + x
+}
+
+l_model tP32_spec (p : Prog) (hp : p.lookup "t_p32" = some tP32)
+  fns [hp ↦ tP32W]
+  grind [arena_grind] extra [ld64_rd_spec, ld32_p32_spec]
+
+/-- The model reads the element it stored (truncated to 32 bits) back. -/
+example (m : Mem) (t i v : Word) (r : Word) (m' : Mem)
+    (h : tP32W m t i v = some (r, m')) (hb : (i / 2).toNat < (m.arr64 (tierA TP t)).size) :
+    m' = m.set32 (tierA TP t) i v ∧
+      r = v % 4294967296 + p32Get ((m.set32 (tierA TP t) i v).arr64 (tierA TP t)) (i + 1) := by
+  simp only [tP32W] at h
+  obtain ⟨rfl, rfl⟩ := h
+  refine ⟨rfl, ?_⟩
+  rw [p32Get_set32, ite_eq_left ⟨rfl, rfl, hb⟩]
 
 l_model tPool_spec (p : Prog) (hp : p.lookup "t_pool" = some tPool)
   fns [hp ↦ tPoolW ro]

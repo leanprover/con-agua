@@ -315,4 +315,39 @@ def tierTab : ArrTable := [{ name := "W", id := W, kind := .word, tiered := true
 #guard !ArrTable.progOK [{ name := "W", id := W, kind := .word, tiered := false }] tierProg
 #guard !ArrTable.wf (tierTab ++ [{ name := "V", id := W, kind := .word, tiered := false }])
 
+/-! Packed 32-bit elements (lane p32): element `i` of a word array is half `i % 2` of word `i / 2`,
+the low half first; a store writes the low 32 bits and keeps the other half; an index whose word
+does not exist is out of bounds. -/
+
+/-- con-ron: none — a compiler test program
+
+Writes `i * 65537 + t + 2^40 (i + 1)` (the high bits dropped) to `W⟨t⟩.u32[i]` for `i < n`, then
+reads elements back (a loop-carried index, a computed tier, a computed index) and a whole word. -/
+def p32 : FunDecl := lfn (h, n) locals (t, i, s, x) {
+  t := (h >> 27) & 1;
+  i := 0;
+  while i < n {
+    W⟨t⟩.u32[i] := i * 65537 + t + (i + 1) * 1099511627776;
+    i := i + 1
+  };
+  W⟨0⟩.u32[1] := W⟨0⟩.u32[1] + 4294967295;
+  x := W⟨h >> 27⟩.u32[n - 1];
+  s := x + W⟨t⟩.u32[n >> 1] * 1000 + W⟨t⟩[0] * 7 + W⟨1 - t⟩.u32[(n + 1) & 3];
+  return s
+}
+
+def p32Prog : Prog := [("p32", p32)]
+
+#guard Prog.wf (Prog.tab p32Prog) p32Prog
+#guard agrees p32Prog "p32" [0, 3] tierMem
+#guard agrees p32Prog "p32" [0, 8] tierMem
+#guard agrees p32Prog "p32" [0x08000000, 12] tierMem
+-- element 8 needs word 4: out of bounds in tier 0 (4 words), not in tier 1 (6 words)
+#guard agrees p32Prog "p32" [0, 9] tierMem
+#guard (run p32Prog 1000 "p32" [0, 9] tierMem).toOption.isNone
+#guard (run p32Prog 1000 "p32" [0x08000000, 9] tierMem).toOption.isSome
+-- the halves of word 0 of tier 0 after `n = 2`: element 0 low, element 1 high
+#guard (run p32Prog 1000 "p32" [0, 2] tierMem).toOption.map (fun (_, m) => (m.arr64 W)[0]!) ==
+  some ((65537 + 4294967295) % 4294967296 * 4294967296)
+
 end L.Compiler.Tests

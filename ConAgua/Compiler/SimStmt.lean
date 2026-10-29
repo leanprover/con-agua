@@ -424,6 +424,9 @@ theorem evalP_setReg {al : List (Var × Reg64)} {r : Reg64} {v : Word} {σ : St}
     simp only [evalP, iht h.1, ihi h.2]; rfl
   | len64t a t ih => intro h; simp only [Expr.readsReg] at h; simp only [evalP, ih h]; rfl
   | ld8x8 b i ih => intro h; simp only [Expr.readsReg] at h; simp only [evalP, ih h]; rfl
+  | ld32t a t i iht ihi =>
+    intro h; simp only [Expr.readsReg, Bool.or_eq_false_iff] at h
+    simp only [evalP, iht h.1, ihi h.2]; rfl
   | _ => intro _; rfl
 
 /-- The ghost state of a write of `r` (and of registers holding no local) is `St.setReg`. -/

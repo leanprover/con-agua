@@ -158,8 +158,9 @@ l_model liftGo_spec (p : Prog) (hp : LiftProg p)
   at `x &&& (2^40 - 1)` (`⦃x⦄.tier`, `.idx`, `.base` the same words); `le64!(A.u8, i)` is
   `le64 (m.src8 (.arr A)) i.toNat`; `x := scan!(A.u8, i, e, C)` is `UInt64.ofNat (scanN (m.src8 …) C
   i.toNat e.toNat)`; `copy!(…)` is `Mem.copy64`/`Mem.copy8w` and a byte store `A.u8[i] := e` is
-  `Mem.set8` (no change out of bounds, as `set64`); the step proofs get `L.warr`, `L.ld8x8`,
-  `L.st8` in `vcgen` as needed;
+  `Mem.set8` (no change out of bounds, as `set64`); a packed 32-bit element `A⟨t⟩.u32[i]` is
+  `L.Arena.p32Get (m.arr64 (tierA A t)) i` and its store `Mem.set32` (`Arena/P32.lean`); the step
+  proofs get `L.warr`, `L.ld8x8`, `L.st8`, `L.ld32`, `L.st32` in `vcgen` as needed;
 * **nested loops**: a loop in a loop's body is a loop model of its own, applied by the enclosing
   loop's body; a `return` in it passes the signal on to the enclosing loop (or is the function's
   result if that loop is fused); the enclosing loop's spec uses the inner loop's spec. A `while`
@@ -964,6 +965,11 @@ meta partial def transE (E : Env) (ctx : Ctx) : TSyntax `lexpr → GenM MT
     pure (.rd ctx.mem (← `(L.tierA (L.Record.arr $r) $(← (← transE E ctx t).render))) (.raw ad))
   | `(lexpr| $a:ident⟨$t:lexpr⟩[$i:lexpr]) => do
     pure (.rd ctx.mem (← `(L.tierA $a $(← (← transE E ctx t).render))) (← transE E ctx i))
+  | `(lexpr| $a:ident⟨$t:lexpr⟩.u32[$i:lexpr]) => do
+    -- a packed 32-bit element (lane p32): `p32Get` (`Arena/P32.lean`), `0` past the end
+    noteVcg #["L.ld32"]
+    let arr ← `(L.tierA $a $(← (← transE E ctx t).render))
+    pure (.raw (← `($(mkIdent `L.Arena.p32Get) (L.Mem.arr64 $(← ctx.mem.render) $arr) $(← (← transE E ctx i).render))))
   | `(lexpr| len($a:ident⟨$t:lexpr⟩)) => do
     pure (.raw (← `(L.Mem.len64 $(← ctx.mem.render) (L.tierA $a $(← (← transE E ctx t).render)))))
   | `(lexpr| $r:ident⟨$t:lexpr, $i:lexpr⟩.$f:ident) => do
@@ -1322,6 +1328,14 @@ meta partial def transS (E : Env) (ctx : Ctx) : List (TSyntax `lstmt) → GenM M
       store (← `(L.tierA (L.Record.arr $r) $(← (← transE E ctx t).render))) (.raw ad) e
     | `(lstmt| $a:ident⟨$t:lexpr⟩[$i:lexpr] := $e:lexpr) => do
       store (← `(L.tierA $a $(← (← transE E ctx t).render))) (← transE E ctx i) e
+    | `(lstmt| $a:ident⟨$t:lexpr⟩.u32[$i:lexpr] := $e:lexpr) => do
+      -- a packed 32-bit element (lane p32): `Mem.set32` (no change out of bounds)
+      if ctx.ro then throwErrorAt s "l_model: a read-only model cannot write"
+      noteVcg #["L.st32"]
+      let arr ← `(L.tierA $a $(← (← transE E ctx t).render))
+      let i ← (← transE E ctx i).render
+      let v ← (← transE E ctx e).render
+      transS E { ctx with mem := .raw (← `(L.Mem.set32 $(← ctx.mem.render) $arr $i $v)) } rest
     | `(lstmt| $a:ident[$i:lexpr] := $e:lexpr) => do
       let (arr, k) ← splitArr a
       match k with

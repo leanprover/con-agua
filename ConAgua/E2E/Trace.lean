@@ -80,6 +80,11 @@ def evalE (fr : Frame) : Expr → TM Word
     let j ← evalE fr i
     let bs := (← get).mem.src8 b
     if j.toNat + 8 ≤ bs.size then return le64 bs j.toNat else stop .oob
+  | .ld32t a t i => do
+    let u ← evalE fr t
+    let j ← evalE fr i
+    let arr := (← get).mem.arr64 (tierA a u)
+    if h : (j / 2).toNat < arr.size then return half32 arr[(j / 2).toNat] j else stop .oob
 
 def warrT (fr : Frame) : WArr → TM TieredArray
   | .plain a => pure a
@@ -127,6 +132,14 @@ partial def exec (P : Std.HashMap String FunDecl) (fr : Frame) (base : Nat) : St
     let v ← evalE fr e
     if j.toNat < ((← get).mem.arr64 (tierA a u)).size then
       modify fun s => { s with mem := s.mem.set64 (tierA a u) j v }
+    else stop .oob
+    return (.normal, fr)
+  | .st32t a t i e => do
+    let u ← evalE fr t
+    let j ← evalE fr i
+    let v ← evalE fr e
+    if (j / 2).toNat < ((← get).mem.arr64 (tierA a u)).size then
+      modify fun s => { s with mem := s.mem.set32 (tierA a u) j v }
     else stop .oob
     return (.normal, fr)
   | .copy64 d di s si n => do

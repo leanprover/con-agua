@@ -1291,6 +1291,197 @@ theorem sim_st64t (a : ArrId) (t i e : Expr) : SimS p G sk (stepRun p K) P (.st6
     refine hK.err s1 ⟨x, ?_, by rw [evalP_error hx]; simp⟩ (hE1.spost (G := G) hI.lo).gpost
     rw [step_st64t_run, hu0]; simp only [hx]
 
+/-- The bounds check and the store of `a⟨t⟩.u32[i] := e` (lane p32, `st32Code_spec`), from
+`R` = the tier `u & 1`, `rax = i` and `e` in temporary `0`. -/
+theorem sim_st32t_core {ctx : Ctx} {F : Nat} (hT : ctx.tab = G.tab) (hF : 8 * F + 8 < maxOff)
+    {a : ArrId} (ha : G.tab.dom64 (tier1 a) = true) {t i e : Expr} {σ : St} {d s4 : MachineData}
+    {u vi ve : Word} {kT kend : Nat} {Q : MachineState → Prop}
+    {R : Reg64} (hRd : R ≠ .rdx)
+    (hcT : Code (st32Code ctx (tdesc R (ctx.tab.len64 a)) (tdesc R (ctx.tab.base64 a))) kT)
+    (hkend : kend = kT + 7) (hvt : evalP σ t = .ok u) (hvi : evalP σ i = .ok vi) (hve : evalP σ e = .ok ve)
+    (hI : Inv G ctx F σ d) (hE : EPost ctx.nl F 0 d s4) (hR : s4.regs.get64 R = (u &&& 1).toBitVec)
+    (hrax : s4.regs.rax = vi) (hslot : rdW s4.dmem (A (s4.regs.rsp.toNat + 8 * ctx.nl)) = some ve)
+    (hnl : ctx.nl + 1 ≤ F)
+    (hK : Conts G ctx F d (stepRun p K (.st32t a t i e) σ) kend Q) :
+    Ev Q s4 (at_ kT) := by
+  have hF' := hF; simp only [maxOff] at hF'
+  have hsp := hI.hi
+  have hhi := hG.hi_le
+  have hI4 := hI.ofE hG hE
+  have hta := G.tab.dom64_tierA ha u
+  have htap := G.tab.pos64_lt hta
+  have hsz := hI4.mem.size64 _ hta
+  have hend := hG.end64 _ htap
+  refine st32Code_spec (arr := σ.mem.arr64 (tierA a u)) (B := G.b (G.tab.pos64 (tierA a u))) hcT hrax
+    ⟨by omega, by omega⟩ hslot (fun s' hm hk => ?_) (by rw [hsz]; exact hend)
+    (fun j hj => hI4.mem.get64 _ hta j hj) (fun hj s' hm hk => ?_) (fun s' hj hm hk => ?_)
+  · have hE' : EPost ctx.nl F 0 d s' := hE.trans (EPost.ofKeep (fun r _ _ h3 => hk r h3) hm) (Nat.le_refl _)
+    exact descW_tier hTab hT ha (hI.ofE hG hE') (by rw [hk R hRd, hR])
+  · have hvi' : (vi / 2).toNat < G.s (G.tab.pos64 (tierA a u)) := by rw [← hsz]; exact hj
+    have hIs := hI4.store64 hG hta hj (setHalf32 (σ.mem.arr64 (tierA a u))[(vi / 2).toNat] vi ve)
+    have hfield : ∀ r, r ≠ .rcx → r ≠ .rdx → s'.regs.get64 r = s4.regs.get64 r := hk
+    have hsp' : s'.regs.rsp = s4.regs.rsp := UInt64.toBitVec_inj.mp (hfield .rsp (by decide) (by decide))
+    have hbp' : s'.regs.rbp = s4.regs.rbp := UInt64.toBitVec_inj.mp (hfield .rbp (by decide) (by decide))
+    have h15' : s'.regs.r15 = s4.regs.r15 := UInt64.toBitVec_inj.mp (hfield .r15 (by decide) (by decide))
+    have h14' : s'.regs.r14 = s4.regs.r14 := UInt64.toBitVec_inj.mp (hfield .r14 (by decide) (by decide))
+    have hsi' : s'.regs.rsi = s4.regs.rsi := UInt64.toBitVec_inj.mp (hfield .rsi (by decide) (by decide))
+    refine ev_congr (hK.normal { σ with mem := σ.mem.set32 (tierA a u) vi ve } _ ?_
+      ?_ ⟨by rw [hsp', hE.rsp], by rw [hbp', hE.rbp], by rw [h15', hE.r15], by rw [h14', hE.r14]; exact Nat.le_refl _, ?_⟩) ?_
+    · rw [step_st32t_run, hvt]; simp only [hvi, hve]
+      rw [ite_eq_left hj]
+    · rw [Mem.set32_eq _ _ _ _ hj]
+      exact hIs.of_regs hm hsp' h15' (fun r hr => hfield r (allocRegs_ne hr).2.1 (allocRegs_ne hr).2.2.1)
+        (fun _ => hsi')
+    · rw [hm]
+      exact (Pres.of_only hE.mem (by have := hI.lo; omega) (by simp only [top]; omega)).trans
+        (Pres.store64 hG hta hvi' _)
+    · omega
+  · have hE' : EPost ctx.nl F 0 d s' := hE.trans (EPost.ofKeep (fun r _ _ h3 => hk r h3) hm) (Nat.le_refl _)
+    refine hK.err _ ⟨.oob, ?_, by simp⟩ (hE'.spost (G := G) hI.lo).gpost
+    rw [step_st32t_run, hvt]; simp only [hvi, hve]
+    rw [ite_eq_right hj]
+
+/-- The tier, the bounds check and the store of `a⟨t⟩.u32[i] := e`, from `rcx = t`, `rax = i`
+and `e` in temporary `0`. -/
+theorem sim_st32t_tail {ctx : Ctx} {F : Nat} (hT : ctx.tab = G.tab) (hF : 8 * F + 8 < maxOff)
+    {a : ArrId} (ha : G.tab.dom64 (tier1 a) = true) {t i e : Expr} {σ : St} {d s4 : MachineData}
+    {u vi ve : Word} {kT kend : Nat} {Q : MachineState → Prop}
+    (hcR : Code (tierDesc .rcx ++ st32Code ctx (tdesc .rcx (ctx.tab.len64 a)) (tdesc .rcx (ctx.tab.base64 a))) kT)
+    (hkend : kend = kT + 8) (hvt : evalP σ t = .ok u) (hvi : evalP σ i = .ok vi) (hve : evalP σ e = .ok ve)
+    (hI : Inv G ctx F σ d) (hE : EPost ctx.nl F 0 d s4) (hrcx : s4.regs.get64 .rcx = u.toBitVec)
+    (hrax : s4.regs.rax = vi) (hslot : rdW s4.dmem (A (s4.regs.rsp.toNat + 8 * ctx.nl)) = some ve)
+    (hnl : ctx.nl + 1 ≤ F)
+    (hK : Conts G ctx F d (stepRun p K (.st32t a t i e) σ) kend Q) :
+    Ev Q s4 (at_ kT) := by
+  refine sim_tierDesc (r := .rcx) hcR.left hrcx fun st => ?_
+  exact sim_st32t_core hG hTab p K hT hF ha (R := .rcx) (by decide) hcR.right
+    (by first | omega | (simp [tierDesc]; omega)) hvt hvi hve hI
+    (hE.trans (EPost.regs (by simp) _ _) (Nat.le_refl _)) (by rw [rget_set, ite_eq_left rfl])
+    (by rw [← hrax]; rfl) hslot hnl hK
+
+theorem sim_st32t (a : ArrId) (t i e : Expr) : SimS p G sk (stepRun p K) P (.st32t a t i e) := by
+  intro ctx F path k hT hF hc hwf hN htmp σ d Q hI hP hK
+  simp only [Stmt.wf, Bool.and_eq_true] at hwf
+  obtain ⟨⟨⟨⟨ha, hst⟩, hwt⟩, hwi⟩, hwe⟩ := hwf
+  obtain ⟨ld, hld⟩ := Option.isSome_iff_exists.mp (loadInto_isSome (ctx := ctx) (r := .rcx) hst)
+  obtain ⟨u0, hu0⟩ := evalP_simple hst σ
+  have hldl : ld.length = 1 := by
+    unfold loadInto at hld
+    split at hld
+    · cases hld; rfl
+    · obtain ⟨o, -, rfl⟩ := Option.map_eq_some_iff.mp hld; rfl
+  simp only [tempsS] at htmp
+  have hnl : ctx.nl + 1 ≤ F := by have := htmp.le (by omega); omega
+  simp only [compileS] at hc hK
+  simp only [hld, Option.getD_some, List.append_assoc, List.cons_append, List.nil_append] at hc hK
+  have hF' := hF; simp only [maxOff] at hF'
+  have hTab' := hTab; simp only [maxOff] at hTab'
+  have hsp := hI.hi
+  have hhi := hG.hi_le
+  have hoff : SmallOff (8 * ((ctx.nl : Int) + ((0 : Nat) : Int))) := ⟨by omega, by omega⟩
+  -- from `rax = vi`, `rdx = ve` at `s3`: `e` to temporary `0`, the tier, then the tail
+  have fin : ∀ (s3 : MachineData) (vi ve : Word) (kT : Nat), evalP σ i = .ok vi → evalP σ e = .ok ve →
+      EPost ctx.nl F 0 d s3 → s3.regs.rax = vi → s3.regs.rdx = ve →
+      Code (movMR (ctx.tmp 0) .rdx :: (if ctx.isT t = true then
+        st32Code ctx (tdesc .rsi (ctx.tab.len64 a)) (tdesc .rsi (ctx.tab.base64 a))
+       else ld ++ (tierDesc .rcx ++ st32Code ctx (tdesc .rcx (ctx.tab.len64 a)) (tdesc .rcx (ctx.tab.base64 a))))) kT →
+      ∀ kend, Conts G ctx F d (stepRun p K (.st32t a t i e) σ) kend Q →
+      kend = kT + 1 + (if ctx.isT t = true then 7 else 9) →
+      Ev Q s3 (at_ kT) := by
+    intro s3 vi ve kT hvi hve hE3 hrax3 hrdx3 hcT kend hKk hkend
+    have hI3 := hI.ofE hG hE3
+    refine ev_movMR hcT.head hoff ?_ ?_
+    · rw [slot_addr _ (ctx.nl + 0) _ (by omega)]; exact hI3.mapped (by omega)
+    rw [slot_addr _ (ctx.nl + 0) _ (by omega)]
+    have hE4 := hE3.trans (EPost.store (v := s3.regs.get64 .rdx) (j := ctx.nl + 0) (s := s3)
+      (by omega) (by omega) (by rw [hE3.rsp]; omega)) (Nat.le_refl _)
+    have hslot : rdW (wrW s3.dmem (A (s3.regs.rsp.toNat + 8 * (ctx.nl + 0))) (s3.regs.get64 .rdx))
+        (A (s3.regs.rsp.toNat + 8 * ctx.nl)) = some ve := by
+      rw [show ctx.nl + 0 = ctx.nl from rfl, rdW_wrW_same]
+      simp [Reg64s.get64, hrdx3]
+    have hcT2 := hcT.tail
+    by_cases hTt : ctx.isT t = true
+    · simp only [hTt, ite_true] at hcT2 hkend
+      cases t with
+      | var x =>
+        have hx : ctx.treg = some x := by simpa [Ctx.isT] using hTt
+        exact sim_st32t_core hG hTab p K hT hF ha (R := .rsi) (u := σ.loc x) (by decide) hcT2
+          (by omega) rfl hvi hve hI hE4 (by simp [Reg64s.get64, hI3.tr x hx]) (by simpa using hrax3)
+          hslot hnl hKk
+      | _ => simp [Ctx.isT] at hTt
+    simp only [hTt, Bool.false_eq_true, ite_false] at hcT2 hkend
+    have hI4 := hI.ofE hG hE4
+    obtain ⟨u, hu, hlen, hldr⟩ := sim_loadInto (r := .rcx) hT hTab hF hI4 hwt hld hcT2.left
+    refine hldr Q ?_
+    have hcT3 := hcT2.right
+    rw [hlen] at hcT3
+    exact sim_st32t_tail hG hTab p K hT hF ha hcT3 (by omega) hu hvi hve hI
+      (hE4.trans (EPost.regs' (r := .rcx) (by simp) _) (Nat.le_refl _)) (by rw [rget_set, ite_eq_left rfl])
+      (by simpa using hrax3) (by simpa using hslot) hnl hKk
+  cases hl : loadInto ctx .rdx e
+  case some code =>
+    simp only [hl, List.append_assoc, List.length_append] at hc hK
+    refine sim_expr hG ctx hT hTab F hF i 0 k hc.left hwi
+      (htmp.mono (Nat.le_trans (tempsE_bin_left .add i e) (Nat.le_max_right _ _))) σ d Q hI ?_ ?_
+    · intro vi s1 hvi hrax1 hE1
+      have hI1 : Inv G ctx F σ s1 := hI.ofE hG hE1
+      have hc1 := hc.right
+      obtain ⟨ve, hve, hlen, hlde⟩ := sim_loadInto (r := .rdx) hT hTab hF hI1 hwe hl hc1.left
+      refine hlde Q ?_
+      have hcT := hc1.right
+      rw [hlen] at hcT
+      exact fin _ vi ve _ hvi hve (hE1.trans (EPost.regs' (r := .rdx) (by simp) _) (Nat.le_refl _))
+        (by rw [← hrax1]; rfl) rfl hcT _ hK (by rw [hlen]; split <;> simp_all [tierDesc, st32Code] <;> omega)
+    · intro s1 herr1 hE1
+      obtain ⟨x, hx⟩ := herr1
+      refine hK.err s1 ⟨x, ?_, by rw [evalP_error hx]; simp⟩ (hE1.spost (G := G) hI.lo).gpost
+      rw [step_st32t_run, hu0]; simp only [hx]
+  simp only [hl, List.append_assoc, List.cons_append, List.nil_append] at hc hK
+  have hc1 := hc.right
+  have hns : Expr.isSimple e = false := by
+    cases hs : Expr.isSimple e
+    · rfl
+    · have := loadInto_isSome (ctx := ctx) (r := .rdx) hs; simp [hl] at this
+  simp only [hns, Bool.false_eq_true, ite_false] at htmp
+  replace htmp := htmp.le (by omega)
+  refine sim_expr hG ctx hT hTab F hF i 0 k hc.left hwi (.inr (by omega)) σ d Q hI ?_ ?_
+  · intro vi s1 hvi hrax1 hE1
+    have hI1 : Inv G ctx F σ s1 :=
+      hI.ofE hG hE1
+    refine ev_movMR hc1.head hoff ?_ ?_
+    · rw [slot_addr _ (ctx.nl + 0) _ (by omega)]; exact hI1.mapped (by omega)
+    rw [slot_addr _ (ctx.nl + 0) _ (by omega)]
+    have hE2 := hE1.trans (EPost.store (v := s1.regs.get64 .rax) (j := ctx.nl + 0) (s := s1)
+      (by omega) (by omega) (by rw [hE1.rsp]; omega)) (Nat.le_refl _)
+    have hI2 := hI.ofE hG hE2
+    have hc2 := hc1.tail
+    refine sim_expr hG ctx hT hTab F hF e (0 + 1) _ hc2.left hwe (.inr (by omega)) σ _ Q hI2 ?_ ?_
+    · intro ve s3 hve hrax3 hE3
+      have h1rsp := congrArg UInt64.toNat hE1.rsp
+      have h2rsp := congrArg UInt64.toNat hE2.rsp
+      have h3rsp := congrArg UInt64.toNat hE3.rsp
+      have hE13 := hE2.trans hE3 (by omega)
+      have hcR := hc2.right
+      refine ev_movRR hcR.head ?_
+      refine ev_movRM hcR.tail.head hoff (v := vi) ?_ ?_
+      · rw [slot_addr _ (ctx.nl + 0) _ (by omega)]
+        simp only [Reg64s.set64_rdx]
+        rw [hE3.rsp, hE3.mem.rdW_eq (by omega) (by omega)]
+        simp only [hE1.rsp, rdW_wrW_same, Reg64s.get64_rax, hrax1, UInt64.ofBitVec_toBitVec]
+      exact fin _ vi ve _ hvi hve
+        (hE13.of_eq rfl (by simp) (by simp) (by simp) (by simp) (by simp) (by keep_tac)) (by simp)
+        (by simp [hrax3]) hcR.tail.tail _ hK
+        (by split <;> simp_all [tierDesc, st32Code] <;> omega)
+    · intro s3 herr3 hE3
+      obtain ⟨x, hx⟩ := herr3
+      refine hK.err s3 ⟨x, ?_, by rw [evalP_error hx]; simp⟩
+        (((hE2.trans hE3 (by omega)).spost (G := G) hI.lo).gpost)
+      rw [step_st32t_run, hu0, hvi]; simp only [hx]
+  · intro s1 herr1 hE1
+    obtain ⟨x, hx⟩ := herr1
+    refine hK.err s1 ⟨x, ?_, by rw [evalP_error hx]; simp⟩ (hE1.spost (G := G) hI.lo).gpost
+    rw [step_st32t_run, hu0]; simp only [hx]
+
 /-- The bounds check and the store of `A.u8[i] := e`, from `rax = i`, `rdx = e`. -/
 theorem sim_st8_tail {ctx : Ctx} {F : Nat} (hT : ctx.tab = G.tab) (hF : 8 * F + 8 < maxOff)
     {a : ArrId} (ha : G.tab.dom8 a = true) {i e : Expr} {σ : St} {d s3 : MachineData} {vi ve : Word}

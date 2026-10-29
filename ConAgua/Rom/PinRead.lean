@@ -48,6 +48,7 @@ def Expr.toPB : Expr → Expr
   | .ld64t a t i => .ld64t a t.toPB i.toPB
   | .len64t a t => .len64t a t.toPB
   | .ld8x8 b i => .ld8x8 b.toPB i.toPB
+  | .ld32t a t i => .ld32t a t.toPB i.toPB
 
 def WArr.toPB : WArr → WArr
   | .plain a => .plain a
@@ -76,6 +77,7 @@ def Stmt.toPB : Stmt → Stmt
   | .copy64 d di s si n => .copy64 d.toPB di.toPB s.toPB si.toPB n.toPB
   | .copy8w d di s si n => .copy8w d.toPB di.toPB s.toPB si.toPB n.toPB
   | .scan8 x s i e c => .scan8 x s.toPB i.toPB e.toPB c
+  | .st32t a t i e => .st32t a t.toPB i.toPB e.toPB
 
 -- con-ron: none — the transform of a ROM reader into a pin-data reader (no twin)
 def FunDecl.toPB (fd : FunDecl) : FunDecl := { fd with body := fd.body.toPB }

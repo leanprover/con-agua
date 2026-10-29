@@ -74,6 +74,12 @@ theorem NoAb.ldc (d : List UInt8) (j : Word) : NoAb (ldc d j) := by
 theorem NoAb.ld8x8 (b : BSrc) (j : Word) : NoAb (ld8x8 b j) := by
   intro s e h; rw [ld8x8_run] at h; split at h <;> cases h; rfl
 
+theorem NoAb.ld32 (a : TieredArray) (j : Word) : NoAb (ld32 a j) := by
+  intro s e h; rw [ld32_run] at h; split at h <;> cases h; rfl
+
+theorem NoAb.st32 (a : TieredArray) (j v : Word) : NoAb (st32 a j v) := by
+  intro s e h; rw [st32_run] at h; split at h <;> cases h; rfl
+
 theorem NoAb.st8 (a : ArrId) (j v : Word) : NoAb (st8 a j v) := by
   intro s e h; rw [st8_run] at h; split at h <;> cases h; rfl
 
@@ -86,6 +92,7 @@ macro "noab" : tactic => `(tactic| repeat (first
   | with_reducible exact NoAb.set _ | with_reducible exact NoAb.modify _
   | with_reducible exact NoAb.oob
   | exact NoAb.ld8 _ _ | exact NoAb.ld64 _ _ | exact NoAb.ldc _ _ | exact NoAb.ld8x8 _ _
+  | exact NoAb.ld32 _ _
   | exact NoAb.st8 _ _ _ | exact NoAb.st64 _ _ _
   | with_reducible refine NoAb.bind ?_ fun _ => ?_
   | with_reducible refine NoAb.dite (fun _ => ?_) (fun _ => ?_)
@@ -105,6 +112,7 @@ theorem noAb_evalE : ∀ e : Expr, NoAb (evalE e)
   | .ld64t a t i => by have := noAb_evalE t; have := noAb_evalE i; simp only [evalE]; noab
   | .len64t a t => by have := noAb_evalE t; simp only [evalE]; noab
   | .ld8x8 s i => by have := noAb_evalE i; simp only [evalE]; noab
+  | .ld32t a t i => by have := noAb_evalE t; have := noAb_evalE i; simp only [evalE]; noab
 
 theorem noAb_evalC : ∀ c : Cond, NoAb (evalC c)
   | .cmp c a b => by have := noAb_evalE a; have := noAb_evalE b; simp only [evalC]; noab
@@ -126,7 +134,7 @@ macro "noabS" : tactic => `(tactic| repeat (first
   | with_reducible exact NoAb.pure _ | with_reducible exact NoAb.get
   | with_reducible exact NoAb.set _ | with_reducible exact NoAb.modify _
   | with_reducible exact NoAb.oob
-  | exact NoAb.st8 _ _ _ | exact NoAb.st64 _ _ _
+  | exact NoAb.st8 _ _ _ | exact NoAb.st64 _ _ _ | exact NoAb.st32 _ _ _
   | with_reducible refine NoAb.bind ?_ fun _ => ?_
   | with_reducible refine NoAb.dite (fun _ => ?_) (fun _ => ?_)
   | with_reducible refine NoAb.ite ?_ ?_))
@@ -197,7 +205,7 @@ theorem abNoIn_preS (t : NTree) : ∀ s : Stmt, (preS t s).abNoIn = s.abNoIn
   | .ite c s u => by simp only [preS, Stmt.abNoIn, abNoIn_preS t s, abNoIn_preS t u]
   | .while c s => by simp only [preS, Stmt.abNoIn, abNoIn_preS t s]
   | .skip | .brk | .abort _ | .set .. | .gset .. | .st8 .. | .st64 .. | .ret _ | .call .. | .st64t ..
-  | .copy64 .. | .copy8w .. | .scan8 .. => rfl
+  | .copy64 .. | .copy8w .. | .scan8 .. | .st32t .. => rfl
 
 /-- Every function body of `p` aborts only with values that do not read the input. -/
 def AbNoIn (p : Prog) : Prop := ∀ f fd, p.lookup f = some fd → fd.body.abNoIn = true
@@ -270,6 +278,7 @@ theorem step_simE {p : Prog} {t : NTree} {S : FnName → Bool} (hP : PreSimProg 
   | st8 _ _ _ => exact fun _ => krelE_of_noAb (by simp only [step]; noabS)
   | st64 _ _ _ => exact fun _ => krelE_of_noAb (by simp only [step]; noabS)
   | st64t _ _ _ _ => exact fun _ => krelE_of_noAb (by simp only [step]; noabS)
+  | st32t _ _ _ _ => exact fun _ => krelE_of_noAb (by simp only [step]; noabS)
   | copy64 _ _ _ _ _ => exact fun _ => krelE_of_noAb (by
       simp only [step]; noabS)
   | copy8w _ _ _ _ _ => exact fun _ => krelE_of_noAb (by

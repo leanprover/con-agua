@@ -34,6 +34,8 @@ not throw). -/
 def rd8 (m : Mem) (a : ArrId) (i : Word) : Word := ((m.arr8 a).getD i.toNat 0).toUInt64
 /-- Word `i` of word array `a`, `0` out of bounds. -/
 def rd64 (m : Mem) (a : TieredArray) (i : Word) : Word := (m.arr64 a).getD i.toNat 0
+/-- 32-bit element `i` of word array `a` (half `i % 2` of word `i / 2`), `0` out of bounds. -/
+def rd32 (m : Mem) (a : TieredArray) (i : Word) : Word := half32 ((m.arr64 a).getD (i / 2).toNat 0) i
 /-- Byte `i` of a constant byte string, `0` out of bounds. -/
 def rdc (d : List UInt8) (i : Word) : Word := (d.getD i.toNat 0).toUInt64
 
@@ -52,6 +54,7 @@ def Expr.pval (s : St) : Expr → Word
   | .ld64t a t i => rd64 s.mem (tierA a (Expr.pval s t)) (Expr.pval s i)
   | .len64t a t => s.mem.len64 (tierA a (Expr.pval s t))
   | .ld8x8 b i => le64 (s.mem.src8 b) (Expr.pval s i).toNat
+  | .ld32t a t i => rd32 s.mem (tierA a (Expr.pval s t)) (Expr.pval s i)
 
 /-- A condition's value in `s` (short-circuit makes no difference: nothing is written). -/
 def Cond.pval (s : St) : Cond → Bool
@@ -76,6 +79,9 @@ theorem evalE_spec (e : Expr) (s₀ : St) :
   | ld64t a t i iht ihi => vcgen [evalE, ld64, iht, ihi] <;> simp_all [Expr.pval, rd64, Array.getD]
   | len64t a t ih => vcgen [evalE, ih] <;> grind [Expr.pval]
   | ld8x8 b i ih => vcgen [evalE, ld8x8, ih] <;> simp_all [Expr.pval]
+  | ld32t a t i iht ihi =>
+    vcgen [evalE, ld32, iht, ihi]
+    all_goals (subst_vars; rename_i h; simp only [Expr.pval, rd32, Array.getD, h, ↓reduceDIte]; trivial)
 
 theorem evalC_spec (c : Cond) (s₀ : St) :
     ⦃fun s => s = s₀⦄ evalC c ⦃fun b s' => s' = s₀ ∧ b = Cond.pval s₀ c; ⊤⦄ := by

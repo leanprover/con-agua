@@ -133,6 +133,8 @@ theorem step_keepW (p : Prog) (k : Stmt → M Sig) (hk : KeepWK k) : KeepWK (ste
   | copy8w d di s si n =>
     vcgen [step, warr_same d, evalE_same di, evalE_same si, evalE_same n] <;> grind [KeepW.copy8w]
   | scan8 x s i e c => vcgen [step, setLoc, evalE_same i, evalE_same e] <;> grind [St.setLoc_mem]
+  | st32t a t i e =>
+    vcgen [step, st32, evalE_same t, evalE_same i, evalE_same e] <;> grind [KeepW.set32]
 
 theorem exec_keepW (p : Prog) (n : Nat) : KeepWK (exec p n) := by
   induction n with

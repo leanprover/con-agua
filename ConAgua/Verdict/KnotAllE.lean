@@ -94,7 +94,7 @@ theorem Stmt.noV_subPB (bs : List UInt8) (fs : List FnName) :
   | .abort e, h => by
     cases e <;> simp_all [Stmt.noV, Stmt.subPB, Expr.cls0, Expr.subPB]
   | .skip, _ | .set .., _ | .st8 .., _ | .st64 .., _ | .brk, _ | .ret _, _ | .gset .., _
-  | .st64t .., _ | .copy64 .., _ | .copy8w .., _ | .scan8 .., _ => rfl
+  | .st64t .., _ | .copy64 .., _ | .copy8w .., _ | .scan8 .., _ | .st32t .., _ => rfl
 
 /-- **The verdict closure carries over to the substituted program.** -/
 theorem closedNV_subPB (bs : List UInt8) {p : Prog} {fs : List FnName}
