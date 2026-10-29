@@ -23,8 +23,10 @@ The subset, one item per line (no leading or trailing blanks, no comments):
 * In `.note.GNU-stack`: nothing.
 * Empty lines.
 
-Instructions (operation size 64 bits, except the byte source of `movzbq`; 64-bit addresses):
-`movq addq subq andq orq xorq` (`SRC, DST`), `cmpq B, A`, `imulq B, A` (two operands),
+Instructions (operation size 64 bits, except the byte source of `movzbq` and `movl`; 64-bit
+addresses): `movq addq subq andq orq xorq` (`SRC, DST`), `cmpq B, A`, `imulq B, A` (two operands),
+`movl MEM, %R32` and `movl %R32, MEM` (a 4-byte load, zero-extended into the 64-bit register, and a
+4-byte store of the register's low half; `%R32` one of the sixteen 32-bit register names),
 `mulq X`, `shlq shrq sarq` (`$INT` or `%cl`, then `DST`), `lea MEM, %R`, `cmovCC X, %R`,
 `movzbq MEM, %R`, `pushq X`, `popq X`, `jCC NAME`, `jmp NAME`, `call NAME`, `ret`.
 Operands: `%R` (the sixteen 64-bit registers), `$INT`, `NAME` (branch targets only), and memory
@@ -81,6 +83,18 @@ def reg64 : String → P Reg64
   | s => throw s!"bad register '{s}'"
 
 def reg (s : String) : P (Reg .W64) := do return .low (← reg64 s) .W64
+
+/-- A 32-bit register name: the low half of a 64-bit register (`%eax`, …, `%r15d`). -/
+def reg32 : String → P (Reg .W32)
+  | "%eax" => pure (.low .rax .W32) | "%ebx" => pure (.low .rbx .W32)
+  | "%ecx" => pure (.low .rcx .W32) | "%edx" => pure (.low .rdx .W32)
+  | "%esi" => pure (.low .rsi .W32) | "%edi" => pure (.low .rdi .W32)
+  | "%esp" => pure (.low .rsp .W32) | "%ebp" => pure (.low .rbp .W32)
+  | "%r8d" => pure (.low .r8 .W32) | "%r9d" => pure (.low .r9 .W32)
+  | "%r10d" => pure (.low .r10 .W32) | "%r11d" => pure (.low .r11 .W32)
+  | "%r12d" => pure (.low .r12 .W32) | "%r13d" => pure (.low .r13 .W32)
+  | "%r14d" => pure (.low .r14 .W32) | "%r15d" => pure (.low .r15 .W32)
+  | s => throw s!"bad 32-bit register '{s}'"
 
 /-- A memory operand: `[INT](%B[,%I,S])`. -/
 def mem (s : String) : P AddrExpr := do
@@ -161,6 +175,15 @@ def instr (line : String) : P Instr := do
   | "shrq" => let (a, b) ← two args; return i64 (.shr (← rm b) (← count a))
   | "sarq" => let (a, b) ← two args; return i64 (.sar (← rm b) (← count a))
   | "lea" => let (a, b) ← two args; return i64 (.lea (← reg b) (← mem a))
+  | "movl" =>
+    -- one register and one memory operand (the 32-bit forms the code generator emits)
+    match args with
+    | [a, b] =>
+      if a.startsWith "%" then
+        return .regular .W64 .W32 (.mov (.mem (← mem b)) (.regOrMem (.reg (← reg32 a))))
+      else
+        return .regular .W64 .W32 (.mov (.reg (← reg32 b)) (.regOrMem (.mem (← mem a))))
+    | _ => throw s!"expected two operands, got {args.length}"
   | "movzbq" =>
     let (a, b) ← two args
     return i64 (@Operation.movzx .W64 .W8 (.reg (← reg b)) (.mem (← mem a)))
