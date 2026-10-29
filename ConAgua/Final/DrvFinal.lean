@@ -2,6 +2,8 @@ import ConAgua.Final.DrvAbi
 import ConAgua.Checker.ParDriverTwin
 import ConAgua.Checker.AsmFinal
 import ConAgua.Checker.AsmStubEq
+import ConAgua.Checker.ProgIRef
+import ConAgua.Checker.ProgWfI
 
 /-!
 # The final theorem for the sequential driver of the committed file (lane parmode)
@@ -23,7 +25,7 @@ universe w
 output. -/
 theorem code_of_checkerFile_par [Host] {k0 : Nat} (hcode : Code checkerFile k0) :
     Code (parStub checkerTab MODE PLO PHI OUT HDRF CTLF 132 frozenIdsL parOwnedL ++
-      (abiStub checkerTab ++ compileProg checkerTab checkerProg "check")) k0 := by
+      (abiStub checkerTab ++ compileProg checkerTab checkerProgI "check")) k0 := by
   rw [checkerFile_eq, checkerStub_eq, List.append_assoc] at hcode
   exact hcode
 
@@ -95,7 +97,7 @@ theorem checkerFile_drv_accepts_regs [Host]
         (st.data.regs.rdx = 0 → st.data.regs.rax = ACCEPT → TwinAccepts [b]))
       dm (label abiStartL) :=
   eventually_weaken _ _ _ _ (fun _ ⟨hpc, hr, h, _⟩ => ⟨hpc, hr, fun h0 h1 => drvAccepts_twin b pb h64 (h h0 h1)⟩)
-    (drv_outcome checkerProg checkerTab checkerTab_abiOk checkerTab_abiIO checkerProg_wf (by decide) MODE PLO PHI OUT
+    (drv_outcome checkerProgI checkerProg checkerProgI_refines checkerTab checkerTab_abiOk checkerTab_abiIO checkerProgI_wf (by decide) MODE PLO PHI OUT
       HDRF CTLF 132 frozenIdsL parOwnedL (by decide) (by decide) (by decide) checker_seqParamsOk k0
       (code_of_checkerFile_par hcode) L.Checker.checkL checkerProg_lookup_check (by decide) b pb dm ra hc)
 

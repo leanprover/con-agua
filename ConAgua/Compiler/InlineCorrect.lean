@@ -6,7 +6,34 @@ public import ConAgua.Compiler.WFFast
 
 @[expose] public section
 
-set_option linter.unusedSimpArgs false
+/-!
+# The inliner is correct
+
+`inlineProg_run`: a run of `inlineProg S t R p` (`Compiler/Inline.lean`; `t` the name tree of `p`)
+that does not run out of fuel is a run of `p` with `R` more units of fuel: the same results and
+memory, or the same error. One round is one unit: an inlined body runs at its caller's level of
+fuel, one above where the call ran it, and it is a leaf, so it never goes deeper.
+
+The proof, bottom up:
+* **Values** (`Expr.ev`, `Cond.ev`, `sstep`): evaluation and the simple statements as functions of
+  the state (`evalE_run`, `step_simple`), so that two runs are compared by their values.
+* **Shifted statements** (`AR o B c`: the callee's frame is the caller's from `o` on, the caller's
+  locals below `o` are `c`): a shifted call-free statement does what the statement does on the
+  callee's frame (`shift_step`), and shifted loops run as the loops, at the same fuel
+  (`shift_exec`, by induction on the fuel).
+* **The converted body** (`conv_step`): a normal end continues with the continuation, an exit
+  sets `xs` (`retAssign_run`); an `if` whose one branch always exits never ends normally there
+  (`allExit_ne`).
+* **The inlined call** (`inl_call`): the zeroed locals and the parameters (`zeroS_run`,
+  `paramS_run`) give the callee's frame up to the locals it assigns before it reads them, which
+  do not matter (`exec_da`, `L/DefAssignSim.lean`).
+* **The caller** (`CR o`: equal memories, equal locals below `o`; `Ref`: a run of the inlined
+  program refines one of the original): `caller_step` by induction on the statement,
+  `round_exec` by induction on the fuel, `round_run` for whole runs; the callees through the name
+  tree (`envOf_sound`), and `R` rounds by induction (`inlineProg_run`).
+-/
+
+
 
 namespace L.Compiler.Inl
 
@@ -148,6 +175,7 @@ theorem Expr.sh_zero : ∀ e : Expr, Expr.sh 0 e = e
 section shift
 variable {o : Nat} {v s' : St}
 
+set_option linter.unusedSimpArgs false in
 theorem Expr.ev_sh (hm : v.mem = s'.mem) : ∀ (e : Expr), (∀ x < Expr.vb e, v.loc x = s'.loc (x + o)) →
     Expr.ev s' (Expr.sh o e) = Expr.ev v e := by
   intro e
@@ -161,6 +189,7 @@ theorem Expr.ev_sh (hm : v.mem = s'.mem) : ∀ (e : Expr), (∀ x < Expr.vb e, v
     simp only [Expr.ev, Expr.sh, hm, ih fun x h => hl x (by simpa [Expr.vb] using h)]
   | _ => intro _; simp [Expr.ev, Expr.sh, hm]
 
+set_option linter.unusedSimpArgs false in
 theorem Cond.ev_sh (hm : v.mem = s'.mem) : ∀ (c : Cond), (∀ x < Cond.vb c, v.loc x = s'.loc (x + o)) →
     Cond.ev s' (Cond.sh o c) = Cond.ev v c := by
   intro c
@@ -173,6 +202,7 @@ theorem Cond.ev_sh (hm : v.mem = s'.mem) : ∀ (c : Cond), (∀ x < Cond.vb c, v
     simp only [Cond.ev, Cond.sh, ihp fun x h => hl x (by simp only [Expr.vb, Cond.vb, Exprs.vb]; omega), ihq fun x h => hl x (by simp only [Expr.vb, Cond.vb, Exprs.vb]; omega)]
   | not p ih => intro hl; simp only [Cond.ev, Cond.sh, ih fun x h => hl x (by simpa [Cond.vb] using h)]
 
+set_option linter.unusedSimpArgs false in
 theorem Exprs.ev_sh (hm : v.mem = s'.mem) : ∀ (es : List Expr), (∀ x < Exprs.vb es, v.loc x = s'.loc (x + o)) →
     Exprs.ev s' (es.map (Expr.sh o)) = Exprs.ev v es := by
   intro es
@@ -268,6 +298,7 @@ theorem st32_run' (a : TieredArray) (j w : Word) (s : St) : (L.st32 a j w).run s
   show (if (j / 2).toNat < (s.mem.arr64 a).size then (set { s with mem := s.mem.set32 a j w } : M Unit) else throw .oob).run s = _
   split <;> rfl
 
+set_option linter.unusedSimpArgs false in
 theorem step_simple (p : Prog) (k : Stmt → M Sig) (s : St) :
     ∀ u : Stmt, Stmt.simple u = true → (step p k u).run s = sstep s u
   | .skip, _ => rfl
@@ -327,6 +358,7 @@ structure AR (o B : Nat) (c : Locals) (v s' : St) : Prop where
 theorem AR.sub {o B : Nat} {c : Locals} {v s' : St} (h : AR o B c v s') {n : Nat} (hn : n ≤ B) :
     ∀ x < n, v.loc x = s'.loc (x + o) := fun x hx => h.loc x (by omega)
 
+set_option linter.unusedSimpArgs false in
 theorem AR.setLoc {o B : Nat} {c : Locals} {v s' : St} (h : AR o B c v s') (x : Var) (w : Word) :
     AR o B c (v.setLoc x w) (s'.setLoc (x + o) w) where
   mem := h.mem
@@ -357,6 +389,7 @@ theorem Ex.err {α : Type} {Q : α → St → St → Prop} (e : Err) : Ex Q (.er
 section sstep
 variable {o B : Nat} {c : Locals} {v s' : St} {b : Bool}
 
+set_option linter.unusedSimpArgs false in
 /-- **A shifted simple statement does what the statement does on the callee's frame.** -/
 theorem sstep_sh (h : AR o B c v s') :
     ∀ (u u' : Stmt), Stmt.simple u = true → Stmt.sh o b u = some u' → Stmt.vb u ≤ B →
@@ -1072,6 +1105,7 @@ theorem paramS_run (p' : Prog) (k' : Stmt → M Sig) (o : Nat) {v : St} : ∀ (a
         show x + (i + 1) + o = x.succ + i + o
         simp only [Nat.succ_eq_add_one]; ac_rfl
 
+set_option linter.unusedSimpArgs false in
 theorem setLocs_range : ∀ (vs : List Word) (i : Nat) (s : St) (y : Nat),
     (s.setLocs ((List.range vs.length).map (· + i)) vs).loc y =
       if i ≤ y ∧ y < i + vs.length then vs.getD (y - i) 0 else s.loc y
@@ -1476,6 +1510,7 @@ end round
 
 /-! ## The callees, through the name tree -/
 
+set_option linter.unusedSimpArgs false in
 theorem idxTreeFrom_spec : ∀ (i : Nat) (p : Prog) (t : NTree), Prog.idxTreeFrom i p = some t →
     ∀ g j, t.find (nameCode g) = some j → i ≤ j ∧ ∃ fd, p[j - i]? = some (g, fd) ∧ p.lookup g = some fd
   | i, [], t, h, g, j, hj => by
