@@ -185,6 +185,18 @@ theorem packBFL_lp (b f l : Word) (hb : b.toNat < 32768) (_hf : f.toNat < 32768)
   rw [e30, e2, e3]
   omega
 
+/-- A packed word fits a 32-bit element. -/
+theorem packBFL_mod32 (b f l : Word) (hb : b.toNat < 32768) (hf : f.toNat < 32768) (hl : l ≤ 1) :
+    packBFL b f l % 4294967296 = packBFL b f l := by
+  have hl' : l.toNat ≤ 1 := hl
+  apply UInt64.toNat_inj.mp
+  simp only [packBFL, packBF, UInt64.toNat_mod, UInt64.toNat_add, UInt64.toNat_mul]
+  have e2 : (32768 : Word).toNat = 2 ^ 15 := rfl
+  have e3 : (1073741824 : Word).toNat = 2 ^ 30 := rfl
+  have e4 : (4294967296 : Word).toNat = 2 ^ 32 := rfl
+  rw [e2, e3, e4]
+  omega
+
 /-! ## The inline blocks that compute a bit, and their specs
 
 Each `*_push` computes the new node's bit on the memory before the push (the twin's `derOfView`

@@ -126,8 +126,8 @@ theorem derT_push {tb : Tbl α EIdx UInt64} {P : Nat → α → UInt64 → Prop}
 /-- `cP` across a memory change that keeps the entries' words. -/
 theorem derT_cP {tb : Tbl α EIdx UInt64} {A : ArrId} {m m' : Mem} {t : Word}
     (hD : DerT tb (cP A m t))
-    (h : ∀ i, i < tb.nodes.size → rdW (m'.arr64 (tierA A t)) (UInt64.ofNat i) =
-      rdW (m.arr64 (tierA A t)) (UInt64.ofNat i)) : DerT tb (cP A m' t) :=
+    (h : ∀ i, i < tb.nodes.size → p32Get (m'.arr64 (tierA A t)) (UInt64.ofNat i) =
+      p32Get (m.arr64 (tierA A t)) (UInt64.ofNat i)) : DerT tb (cP A m' t) :=
   derT_mono hD fun i _ _ hi hP => by simp only [cP] at hP ⊢; rw [h i hi]; exact hP
 
 end derT
@@ -322,8 +322,8 @@ theorem derMk (A : ArrId) (m m₁ m' : Mem) (a a' : AState) (key : α) (d : UInt
     (hres : decE r = y) (hdd : dd = packBFL (bvarOfData d) (fvarOfData d) (lpW d))
     (hput : derPutW A C.ca m₁ (cnt2 m C.ca) r dd = some m') :
     DerT2 a' g (cP A m') := by
-  have hfrA : ∀ i t, rdW (m₁.arr64 (tierA A t)) (UInt64.ofNat i) =
-      rdW (m.arr64 (tierA A t)) (UInt64.ofNat i) :=
+  have hfrA : ∀ i t, p32Get (m₁.arr64 (tierA A t)) (UInt64.ofNat i) =
+      p32Get (m.arr64 (tierA A t)) (UInt64.ofNat i) :=
     fun i t => by rw [hfr]
 
   have c0 := ConsR.cnt hT 0 (by decide)
@@ -361,26 +361,34 @@ theorem derMk (A : ArrId) (m m₁ m' : Mem) (a a' : AState) (key : α) (d : UInt
     rename_i hlen
     simp only [Option.some.injEq] at hput
     subst hput
-    have hq : (UInt64.ofNat (g a.store.pers).nodes.size).toNat < (m₁.arr64 (tierA A 0)).size := by
+    have hq : (UInt64.ofNat (g a.store.pers).nodes.size / 2).toNat < (m₁.arr64 (tierA A 0)).size := by
       have h1 := UInt64.not_le.mp hlen
-      rw [UInt64.lt_iff_toNat_lt, len64_eq, UInt64.toNat_ofNat'] at h1
-      exact Nat.lt_of_lt_of_le h1 (Nat.mod_le _ _)
+      rw [UInt64.lt_iff_toNat_lt, p32Len, UInt64.toNat_mul, len64_eq, UInt64.toNat_ofNat'] at h1
+      have hs := (m₁.arr64 (tierA A 0)).size
+      rw [UInt64.toNat_div, UInt64.toNat_ofNat']
+      have e2 : (2 : Word).toNat = 2 := rfl
+      rw [e2] at h1 ⊢
+      have := Nat.mod_le (m₁.arr64 (tierA A 0)).size (2 ^ 64)
+      have := Nat.mod_le ((m₁.arr64 (tierA A 0)).size % 2 ^ 64 * 2) (2 ^ 64)
+      simp only [UInt64.toNat_ofNat'] at h1 ⊢
+      omega
     have rd : ∀ i, i < 2 ^ 27 → i ≠ (g a.store.pers).nodes.size →
-        rdW ((m₁.set64 (tierA A 0) (UInt64.ofNat (g a.store.pers).nodes.size) dd).arr64 (tierA A 0))
-          (UInt64.ofNat i) = rdW (m.arr64 (tierA A 0)) (UInt64.ofNat i) := by
+        p32Get ((m₁.set32 (tierA A 0) (UInt64.ofNat (g a.store.pers).nodes.size) dd).arr64 (tierA A 0))
+          (UInt64.ofNat i) = p32Get (m.arr64 (tierA A 0)) (UInt64.ofNat i) := by
       intro i hi hne
-      rw [rdW_set64, ite_eq_right (fun h => hne (by
+      rw [p32Get_set32, ite_eq_right (fun h => hne (by
         have := congrArg UInt64.toNat h.2.1
         simp only [UInt64.toNat_ofNat'] at this
         omega)), hfrA]
-    have ro : (m₁.set64 (tierA A 0) (UInt64.ofNat (g a.store.pers).nodes.size) dd).arr64 (tierA A 1) =
+    have ro : (m₁.set32 (tierA A 0) (UInt64.ofNat (g a.store.pers).nodes.size) dd).arr64 (tierA A 1) =
         m.arr64 (tierA A 1) := by
-      rw [Mem.arr64_set64_ne _ _ _ _ _ (tierA_ne_tier A (by decide) (by decide) (by decide)), hfr]
+      rw [Mem.arr64_set32_ne _ _ _ _ _ (tierA_ne_tier A (by decide) (by decide) (by decide)), hfr]
     refine ⟨?_, ?_⟩
     · rw [hPP, hgP]
       refine derT_push (derT_cP hd.1 (fun i hi => rd i (by omega) (by omega))) key d y ?_
       simp only [cP]
-      rw [rdW_set64, ite_eq_left ⟨rfl, rfl, hq⟩, hdd]
+      rw [p32Get_set32, ite_eq_left ⟨rfl, rfl, hq⟩, hdd,
+        packBFL_mod32 (bvarOfData d) (fvarOfData d) (lpW d) (bvarOfData_lt _) (fvarOfData_lt _) (b2w_le _)]
     · rw [hPS]
       exact derT_cP hd.2 (fun i hi => by rw [ro])
   · -- an append to the scratch tier
@@ -402,28 +410,36 @@ theorem derMk (A : ArrId) (m m₁ m' : Mem) (a a' : AState) (key : α) (d : UInt
     rename_i hlen
     simp only [Option.some.injEq] at hput
     subst hput
-    have hq : (UInt64.ofNat (g a.store.scr).nodes.size).toNat < (m₁.arr64 (tierA A 1)).size := by
+    have hq : (UInt64.ofNat (g a.store.scr).nodes.size / 2).toNat < (m₁.arr64 (tierA A 1)).size := by
       have h1 := UInt64.not_le.mp hlen
-      rw [UInt64.lt_iff_toNat_lt, len64_eq, UInt64.toNat_ofNat'] at h1
-      exact Nat.lt_of_lt_of_le h1 (Nat.mod_le _ _)
+      rw [UInt64.lt_iff_toNat_lt, p32Len, UInt64.toNat_mul, len64_eq, UInt64.toNat_ofNat'] at h1
+      have hs := (m₁.arr64 (tierA A 1)).size
+      rw [UInt64.toNat_div, UInt64.toNat_ofNat']
+      have e2 : (2 : Word).toNat = 2 := rfl
+      rw [e2] at h1 ⊢
+      have := Nat.mod_le (m₁.arr64 (tierA A 1)).size (2 ^ 64)
+      have := Nat.mod_le ((m₁.arr64 (tierA A 1)).size % 2 ^ 64 * 2) (2 ^ 64)
+      simp only [UInt64.toNat_ofNat'] at h1 ⊢
+      omega
     have rd : ∀ i, i < 2 ^ 27 → i ≠ (g a.store.scr).nodes.size →
-        rdW ((m₁.set64 (tierA A 1) (UInt64.ofNat (g a.store.scr).nodes.size) dd).arr64 (tierA A 1))
-          (UInt64.ofNat i) = rdW (m.arr64 (tierA A 1)) (UInt64.ofNat i) := by
+        p32Get ((m₁.set32 (tierA A 1) (UInt64.ofNat (g a.store.scr).nodes.size) dd).arr64 (tierA A 1))
+          (UInt64.ofNat i) = p32Get (m.arr64 (tierA A 1)) (UInt64.ofNat i) := by
       intro i hi hne
-      rw [rdW_set64, ite_eq_right (fun h => hne (by
+      rw [p32Get_set32, ite_eq_right (fun h => hne (by
         have := congrArg UInt64.toNat h.2.1
         simp only [UInt64.toNat_ofNat'] at this
         omega)), hfrA]
-    have ro : (m₁.set64 (tierA A 1) (UInt64.ofNat (g a.store.scr).nodes.size) dd).arr64 (tierA A 0) =
+    have ro : (m₁.set32 (tierA A 1) (UInt64.ofNat (g a.store.scr).nodes.size) dd).arr64 (tierA A 0) =
         m.arr64 (tierA A 0) := by
-      rw [Mem.arr64_set64_ne _ _ _ _ _ (tierA_ne_tier A (by decide) (by decide) (by decide)), hfr]
+      rw [Mem.arr64_set32_ne _ _ _ _ _ (tierA_ne_tier A (by decide) (by decide) (by decide)), hfr]
     refine ⟨?_, ?_⟩
     · rw [hSP]
       exact derT_cP hd.1 (fun i hi => by rw [ro])
     · rw [hSS, hgS]
       refine derT_push (derT_cP hd.2 (fun i hi => rd i (by omega) (by omega))) key d y ?_
       simp only [cP]
-      rw [rdW_set64, ite_eq_left ⟨rfl, rfl, hq⟩, hdd]
+      rw [p32Get_set32, ite_eq_left ⟨rfl, rfl, hq⟩, hdd,
+        packBFL_mod32 (bvarOfData d) (fvarOfData d) (lpW d) (bvarOfData_lt _) (fvarOfData_lt _) (b2w_le _)]
 
 end derMk
 
