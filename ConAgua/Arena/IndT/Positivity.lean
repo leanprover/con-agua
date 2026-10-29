@@ -15,7 +15,7 @@ import ConAgua.L.ModelGen
 # `check_block_positivity` under `StageC` (lane `indstaget`, helper `indstaget-cbpos`)
 
 `check_block_positivity`'s unified model `cbpE` and its refinement for both outcomes `cbp_ref`
-under `StageC` (`CbpG`: the walk's `NbG`, `check_struct_field_sorts_i`'s claim), its twin side
+under `StageC` (`G` the walk's `NbG`, which also covers `check_struct_field_sorts_i`), its twin side
 transcribed from con-ron's `checkBlockPositivity_spec`: the walk's context (`bncW_sim`, con-ron's
 `blockNestCtx_spec` on its run for the `CoreStep` and the context's denotation), `nest_uniform`
 (`nu_ref`), the fresh state (an L-only step), `nest_root` (`nrt_ref`; con-ron's `nestRoot_spec` on
@@ -231,12 +231,6 @@ l_model cbpE_spec (p : Prog) (hP : PosBlkProg p)
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
-/-- What the error arms of `check_block_positivity` assume: the walk's (`NbG`: `nest_root`, the
-no-verdict closure) and `check_struct_field_sorts_i`'s claim (`check_abs_ctor_sorts_all`'s). -/
-structure CbpG (p : Prog) : Prop where
-  nb : NbG p
-  csf : CheckStructFieldSortsIE p
-
 /-- What `check_block_positivity` gives besides the twin's kinds, normal forms and walk state `x`
 (from `m`, `a`): the stage, the growth, the walk memos, `AbsOK`, the three results' layout, the core
 step. -/
@@ -275,7 +269,7 @@ theorem cbp_ref (hP : PosBlkProg p) {fs : List FnName} (hclP : closedA p posFree
     (hfe : ConRon.Bridge.denoteFEnv a.store fe = some env)
     (hT : ∀ cv ∈ cvsP, ConLeche.Expr.WScoped 0 cv.type)
     (hct : ∀ cs ∈ cssP, ∀ c ∈ cs, ConLeche.Expr.WScoped 0 c.1.type) :
-    RefE (CbpG p) (cbpE p (n + 3) m vis q cvO cvL caO caL) (ConRon.Arena.checkBlockPositivity V fe P cvTas css) a
+    RefE (NbG p) (cbpE p (n + 3) m vis q cvO cvL caO caL) (ConRon.Arena.checkBlockPositivity V fe P cvTas css) a
       (fun v x a' => CbpPost dn vis fe env m a v.1 v.2 x a') := by
   have hS := hC.stage
   have hpP0 := hpP
@@ -334,7 +328,7 @@ theorem cbp_ref (hP : PosBlkProg p) {fs : List FnName} (hclP : closedA p posFree
       exact ⟨hCm.of_cstep hS' hAm' c3, hAm', hxm.trans c3.ext⟩)
     (n + 2) hS1 ⟨hC1, hA1, ConRon.Arena.Ext.refl _⟩ hPc hU1 hlen hcss1 hP1
   rcases h2 : nuE p (n + 2) s1.mem (r1.headD 0) caO caL with e2 | ⟨r2, m2⟩ <;> rw [h2] at hnu
-  · rw [cbpE.k_nest_uniform.none]; exact RefE.bind_left fun hG => hnu hG.nb.nv
+  · rw [cbpE.k_nest_uniform.none]; exact RefE.bind_left fun hG => hnu hG.nv
   rw [cbpE.k_nest_uniform.arm1]
   obtain ⟨_, a2, hrun2, hS2, hg2, hP2, hJ2⟩ := hnu
   obtain ⟨c2, -, -, -⟩ := ConRon.Bridge.Inductives.nestUniform_spec (μ := V) (env := env) (fe := fe)
@@ -366,7 +360,7 @@ theorem cbp_ref (hP : PosBlkProg p) {fs : List FnName} (hclP : closedA p posFree
     (hP2.fr hf3) hA3 hctx2 hholes2 hcssP2 (by simp [dState]) rfl hcl
   rcases h4 : nrtE p (n + 2) m3 vis (r1.headD 0) (r1.tail.headD 0) (r1.tail.tail.headD 0) caO caL
       (r3.headD 0) 0 0 with e4 | ⟨r4, m4⟩ <;> rw [h4] at hnrt
-  · rw [cbpE.k_nest_root.none]; exact RefE.bind_left fun hG => hnrt hG.nb
+  · rw [cbpE.k_nest_root.none]; exact RefE.bind_left fun hG => hnrt hG
   rw [cbpE.k_nest_root.arm1]
   obtain ⟨⟨outs, ns⟩, a4, hrun4, hC4, hg4, hO4, hOb4, hns4, hP4, hA4, c3⟩ := hnrt
   obtain ⟨-, ⟨outsP, nsP⟩, ⟨houts, -, hwN⟩, -⟩ := ConRon.Bridge.Inductives.nestRoot_spec coreSpecV henv
@@ -437,7 +431,7 @@ theorem cbp_ref (hP : PosBlkProg p) {fs : List FnName} (hclP : closedA p posFree
       r4.tail.headD 0] s6.mem with
   | error e7 =>
     rw [cbpE.k_check_abs_ctor_sorts_all.none]
-    exact RefE.bind_left fun hG => RefE.run_err hsI hG.nb.nv hG.csf hiaa h7
+    exact RefE.bind_left fun hG => RefE.run_err hsI hG.nv ⟨hG.nv, hG.core⟩ hiaa h7
   | ok q7 =>
   obtain ⟨r7, m7⟩ := q7
   rw [cbpE.k_check_abs_ctor_sorts_all.arm1]

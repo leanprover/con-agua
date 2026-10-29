@@ -65,13 +65,6 @@ l_model ictlE_spec (p : Prog) (hP : TailProg p)
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [rdW] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
-/-- What the error arms of `check_block_tail` assume: the verdict context with
-`unresolved_consts_error`'s program (the recursor stage's) and the abstract constructors' sorts'
-claim (`iisr_ref`); the projection tables' errors (`ctb_ref`) are their own rejects. -/
-structure TailG (p : Prog) : Prop where
-  u : VerdictCtxU p
-  csf : CheckStructFieldSortsIE p
-
 /-- What `check_block_tail` gives besides the index `x` it returns, at the view `w` (from `m`): the
 stage, the growth, the `hb` memo, `AbsOK`, the recursor stage's memos. -/
 structure TailPost (dn : NIdx → Option ConLeche.Name) (m : Mem) (w : Word) (x : IFEnv) (m' : Mem)
@@ -113,7 +106,7 @@ theorem tail_ref (hP : TailProg p) (L : CbrLook p) {fs : List FnName}
     (hMs : ∀ M ∈ qP.cls, ConLeche.Cached.ClassMajScoped qP.p.nP M)
     (hfRc : ∀ f ∈ grcRcCallees ++ ["cons_block_recs_tf"], f ∈ fsR) {fsH : List FnName}
     (hclH : closedA p rcHbFreeA rcHbFreeC fsH = true) (hfH : "check_block_tables" ∈ fsH) :
-    RefE (TailG p) (ictlE p N m bO bL q) (ConRon.Arena.checkBlockTail V block bp) a
+    RefE (VerdictCtxU p) (ictlE p N m bO bL q) (ConRon.Arena.checkBlockTail V block bp) a
       (fun v x a' => TailPost dn m v.1 x v.2 a') := by
   have hS := hC.stage
   obtain ⟨hdq, hB, hw0, hsrc⟩ := hq
@@ -178,7 +171,7 @@ theorem tail_ref (hP : TailProg p) (L : CbrLook p) {fs : List FnName}
     e1 | ⟨r1, m1⟩
   · rw [ictlE.k_check_block_idx_sorts.none]
     exact RefE.bind_left fun hG => RefE.run_err (iisrE_spec p hP.idx hOpf n ⟨m, Locals.init []⟩ vis _ _ _ _ _)
-      hG.u.nv hG.csf (iisr_ref hkp henv₁ hLC hLT hP.idx (UInt64.ofNat pw) bs n hn hC hA hbsD hsrc hmss hcvs hshP hcvP hTw
+      hG.nv hG.toVerdictCtx (iisr_ref hkp henv₁ hLC hLT hP.idx (UInt64.ofNat pw) bs n hn hC hA hbsD hsrc hmss hcvs hshP hcvP hTw
         hden) c1
   rw [ictlE.k_check_block_idx_sorts.arm1]
   have d1 := callW_of_callE c1
@@ -317,7 +310,7 @@ theorem tail_ref (hP : TailProg p) (L : CbrLook p) {fs : List FnName}
       rdW (m3.arr64 IW) (q + 16), bO, bL, rdW (m3.arr64 IW) (q + 1), rdW (m3.arr64 IW) (q + 2)] m3 with
     e6 | ⟨r6, m6⟩
   · rw [ictrE.k_check_block_rec.none]
-    exact RefE.bind_left fun hG => RefE.run_err hT5 hG.u.nv hG.u hR5 c6
+    exact RefE.bind_left fun hG => RefE.run_err hT5 hG.nv hG hR5 c6
   rw [ictrE.k_check_block_rec.arm1]
   have d6 := callW_of_callE c6
   obtain ⟨s5, hs5, -, ⟨fe2b, outs⟩, a5, hrun5, hR5'⟩ := RefE.run_ok hT5 hR5 c6
@@ -395,7 +388,7 @@ theorem tail_ref (hP : TailProg p) (L : CbrLook p) {fs : List FnName}
       rdW (m.arr64 IW) (UInt64.ofNat pw + 1), rdW (m.arr64 IW) (q + 4), rdW (m.arr64 IW) (q + 5),
       rdW (m.arr64 IW) (q + 6), rdW (m.arr64 IW) (q + 7), r7.headD 0] m7 with e8 | ⟨r8, m8⟩
   · rw [ictrE.k_check_block_tables.none]
-    exact fun hG => RefE.run_err hT8 hG.u.nv trivial hR8 c8
+    exact fun hG => RefE.run_err hT8 hG.nv trivial hR8 c8
   rw [ictrE.k_check_block_tables.arm1]
   obtain ⟨s8, hs8, -, x, a', h1, h2⟩ := RefE.run_ok hT8 hR8 c8
   subst hs8

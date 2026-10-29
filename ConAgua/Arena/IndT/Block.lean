@@ -40,10 +40,10 @@ l_model icbE_spec (p : Prog) (hP : CbProg p)
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 /-- What the error arms of `check_block` assume: the claims of the pass's checks (`PassG`) and of
-the tail's callees (`TailG`). -/
+the tail's callees (`VerdictCtxU`). -/
 structure BlockG (p : Prog) : Prop where
   pass : PassG p
-  tail : TailG p
+  tail : VerdictCtxU p
 
 /-- What `check_block` gives besides the twin's run, a view `w` and the memory `m'` (from `m`): the
 stage, the growth, the memos of the tail, `AbsOK`, the recursors' memo, the main-arg memo. -/
@@ -254,7 +254,7 @@ theorem block_ref (hP : CbProg p) {fs fs2 : List FnName}
   have hsrc6 := partsHsrc_grow hg16 hq9 hsrc
   rcases c7 : callE p n "block_raw_rec" [p0] s6.mem with e7 | ⟨r7, m7⟩
   · rw [icbE.k_block_raw_rec.none]
-    exact fun hG => ErrClaim.of_callE_nv hG.tail.u.nv (_root_.L.Checker.nv_mem (by decide +kernel)) c7
+    exact fun hG => ErrClaim.of_callE_nv hG.tail.nv (_root_.L.Checker.nv_mem (by decide +kernel)) c7
   rw [icbE.k_block_raw_rec.arm1]
   have d7 := callW_of_callE c7
   rcases n with _ | k
@@ -286,7 +286,7 @@ theorem block_ref (hP : CbProg p) {fs fs2 : List FnName}
   rcases c8 : callE p (k + 1) "check_block_pass" [vis, p0, [if raw then (1 : Word) else 0].headD 0] s7.mem with
     e8 | ⟨r8, m8⟩
   · rw [icbE.k_check_block_pass.none]
-    exact RefE.bind_left fun hG => RefE.run_err hT8 hG.tail.u.nv hG.pass hR8 c8
+    exact RefE.bind_left fun hG => RefE.run_err hT8 hG.tail.nv hG.pass hR8 c8
   rw [icbE.k_check_block_pass.arm1]
   have d8 := callW_of_callE c8
   obtain ⟨s8, hs8, -, x8, a8, hrun8, hR8'⟩ := RefE.run_ok hT8 hR8 c8
@@ -304,7 +304,7 @@ theorem block_ref (hP : CbProg p) {fs fs2 : List FnName}
     hrb8 hR8'.classes hcoh8 hden8 hqP (ConRon.Bridge.denoteCIList_mono i8.ext _ _ hbP) hTw henv₂ hMs hfRc hclH hfH
   rcases c9 : callE p (k + 1) "check_block_tail" [bO, bL, r8.headD 0] s8.mem with e9 | ⟨r9, m9⟩
   · rw [icbE.k_check_block_tail.none]
-    exact fun hG => RefE.run_err hT9 hG.tail.u.nv hG.tail hR9 c9
+    exact fun hG => RefE.run_err hT9 hG.tail.nv hG.tail hR9 c9
   rw [icbE.k_check_block_tail.arm1]
   obtain ⟨s9, hs9, -, x9, a9, hrun9, hR9'⟩ := RefE.run_ok hT9 hR9 c9
   subst hs9

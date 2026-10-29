@@ -3,6 +3,7 @@ import ConAgua.Arena.IndRealSctC
 import ConAgua.Arena.IndInstallSpec.PnfW
 import ConAgua.Verdict.PosTopE1
 import ConAgua.Verdict.IndBE
+import ConAgua.Verdict.PosTopEMono
 import ConAgua.Arena.IndT.Install1
 
 /-!
@@ -17,7 +18,7 @@ fields opened at the holes (`openPisAtFvarsF_run`), their sorts (`installSimFsor
 `checkStructFieldSortsI_spec` on its run for the `CoreStep`). `check_abs_ctor_sorts_one`,
 `check_abs_ctor_sorts` and `check_abs_ctor_sorts_all` have one refinement each for both outcomes
 over their unified models (`iao_ref`, `iac_ref`, `iaa_ref`; their errors:
-`check_struct_field_sorts_i`'s claim).
+`check_struct_field_sorts_i`'s, by `fsorts_ref`).
 -/
 
 
@@ -49,7 +50,7 @@ structure IacPost (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
 include hq henv hOpf hLC hLT in
 /-- **`check_abs_ctor_sorts_one` refines one constructor of `checkAbsCtorSorts`, both outcomes**
 (twin side: one constructor of con-ron's `checkAbsCtorSorts_specF`'s proof, after the level test;
-the errors: `check_struct_field_sorts_i`'s claim). -/
+the errors: `check_struct_field_sorts_i`'s, by `fsorts_ref`). -/
 theorem iao_ref (hsum : SumProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState}
     {ctx isP nF tyN hi : Word} {c : NestCtx} {b : Bool}
     (hC : StageC dn vis fe env m a) (hA : AbsOK m) (hc : DecB (fun m => decCtx m ctx.toNat) m c)
@@ -57,7 +58,7 @@ theorem iao_ref (hsum : SumProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : 
     {tyNP : ConLeche.Expr} {sortP : ConLeche.Level}
     (htyP : denoteE a.store (decI tyN) = some tyNP) (hW : ConLeche.Expr.WScoped (c.hiAt 0) tyNP)
     (hsP : denoteL a.store.ls c.sort = some sortP) (hfe : ConRon.Bridge.denoteFEnv a.store fe = some env) :
-    RefE (CheckStructFieldSortsIE p) (iaoE p n m vis ctx isP nF tyN hi) (absOneAM fe c b nF.toNat (decI tyN)) a
+    RefE (VerdictCtx p) (iaoE p n m vis ctx isP nF tyN hi) (absOneAM fe c b nF.toNat (decI tyN)) a
       (fun v _ a' => IacPost dn vis fe env m v.2 a a') := by
   rcases n with _ | n
   · rw [iaoE.eq_1]; exact RefE.of_cls0 Err.cls_outOfFuel
@@ -96,15 +97,16 @@ theorem iao_ref (hsum : SumProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : 
   rcases h2 : callE p n "check_struct_field_sorts_i" [vis, isP, 0, rdW (m.arr64 IW) (ctx + 9), hi,
       r1.tail.headD 0, r1.tail.tail.headD 0, 0, 0, nF] m1 with e2 | ⟨r2, m2⟩
   · rw [iaoE.k_check_struct_field_sorts_i.none]
-    refine RefE.bind_left fun eCsf => ?_
-    have h := eCsf hq henv hLC hLT hsum.hg hsum.hpw hsum.het hsum.hcn hsum.hfsb hsum.hcfg hsum.ha hsum.hcfs
-      hsum.ad.ftd ⟨m1, Locals.init []⟩ a1 isP 0 (rdW (m.arr64 IW) (ctx + 9)) hi _ _ 0 0 nF fvs [] hC1 hA1 hfd hfb
-      (by simp [decHL, hslice?]) (by simp) hs32
-      (by rw [hse]; exact ConRon.Bridge.denoteL_ext hsP p1.ext)
-      (by rw [← partsAddNoOv hov]; exact UInt64.toNat_lt _) hxs
-      (fun i _ x hx => by rw [hhi]; exact hfvsc i x hx) n (by omega) _ h2
+    refine RefE.bind_left fun hG hk0 => ?_
+    have h := RefE.run_err (fsortsE_spec p hsum.hcfs hsum.hcfg hsum.ha hsum.ad.ftd hsum.hfsb (n + 1)
+      ⟨m1, Locals.init []⟩ vis isP 0 (rdW (m.arr64 IW) (ctx + 9)) hi _ _ 0 0 nF) hG.nv hG
+      (fsorts_ref hq henv hLC hLT hsum.hg hsum.hpw hsum.het hsum.hcn n (by omega) m1 a1 isP 0
+        (rdW (m.arr64 IW) (ctx + 9)) hi _ _ 0 0 nF fvs [] hC1 hA1 hfd hfb (by simp [decHL, hslice?]) (by simp) hs32
+        (by rw [hse]; exact ConRon.Bridge.denoteL_ext hsP p1.ext)
+        (by rw [← partsAddNoOv hov]; exact UInt64.toNat_lt _) hxs
+        (fun i _ x hx => by rw [hhi]; exact hfvsc i x hx)) (callE_err_mono n.le_succ h2 hk0)
     rw [hse, hhi, hb, show ((0 : Word) != 0) = false from rfl] at h
-    exact h
+    exact h hk0
   rw [iaoE.k_check_struct_field_sorts_i.arm1]
   have h := installSimFsortsC (dn := dn) (fe := fe) hq henv hLC hLT hsum n (by omega) isP 0
     (rdW (m.arr64 IW) (ctx + 9)) hi _ _ 0 0 nF hs32 fvs [] hC1 hA1
@@ -136,7 +138,7 @@ theorem iac_ref (hP : AbsProg p) (ctx isP : Word) (c : NestCtx) (b : Bool) (hb :
     os.mapM (ConRon.Bridge.Inductives.dOut a.store) = some osP →
     (∀ o ∈ osP, ConLeche.Expr.WScoped (ctxP.hiAt 0) o.2) →
     ConRon.Bridge.denoteFEnv a.store fe = some env →
-    RefE (CheckStructFieldSortsIE p) (iacE p n m vis ctx isP co cl oo ol)
+    RefE (VerdictCtx p) (iacE p n m vis ctx isP co cl oo ol)
       (ConRon.Arena.checkAbsCtorSorts V fe c b cs os) a (fun v _ a' => IacPost dn vis fe env m v.2 a a') := by
   induction n with
   | zero => intros; rw [iacE.eq_1]; exact RefE.of_cls0 Err.cls_outOfFuel
@@ -307,7 +309,7 @@ theorem iaa_ref (hP : AbsProg p) (ctx isP : Word) (c : NestCtx) (b : Bool) (hb :
     ConRon.Bridge.Inductives.dOutss a.store oss = some ossP →
     (∀ os ∈ ossP, ∀ o ∈ os, ConLeche.Expr.WScoped (ctxP.hiAt 0) o.2) →
     ConRon.Bridge.denoteFEnv a.store fe = some env →
-    RefE (CheckStructFieldSortsIE p) (iaaE p n m vis ctx isP so sl oo ol)
+    RefE (VerdictCtx p) (iaaE p n m vis ctx isP so sl oo ol)
       (ConRon.Arena.checkAbsCtorSortsAll V fe c b css oss) a (fun v _ a' => IacPost dn vis fe env m v.2 a a') := by
   induction n with
   | zero => intros; rw [iaaE.eq_1]; exact RefE.of_cls0 Err.cls_outOfFuel

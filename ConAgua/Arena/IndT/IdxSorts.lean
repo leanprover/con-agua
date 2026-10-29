@@ -1,5 +1,6 @@
 import ConAgua.Arena.IndT.Sum3
 import ConAgua.Verdict.IndBE
+import ConAgua.Verdict.PosTopEMono
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
@@ -11,7 +12,7 @@ import ConAgua.Arena.IndT.Install1
 `iisE` (`check_block_idx_sorts_one`) and `iisrE` (`check_block_idx_sorts`), `l_model … unified`:
 `open_pis_at_fvars_f`, `rec2` and `sl_cons` (outside the verdict closure) through their `Option`
 models, `check_struct_field_sorts_i` through its run (`callE`; its ok half by its `Option` spec
-and `fsorts_ref` from the run, its error half by its claim `CheckStructFieldSortsIE`), the member check
+and `fsorts_ref` from the run, its error half by `fsorts_ref` and `RefE.run_err`), the member check
 through its unified model. `iis_ref` and `iisr_ref` refine `idxOneAM` and `checkBlockIdxSorts`
 for both outcomes; `checkBlockIdxSorts_refinesC` is the ok half.
 -/
@@ -93,7 +94,7 @@ theorem iis_ref (hP : IdxProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AS
     (hbsP : ConRon.Bridge.Inductives.dShape a.store bs = some bsP)
     (hcvP : Frontend.denoteCV a.store cvv = some cvP) (hw : ConLeche.Expr.WScoped 0 cvP.type)
     (hfe : ConRon.Bridge.denoteFEnv a.store fe = some env) :
-    RefE (CheckStructFieldSortsIE p) (iisE p n m vis pp ms cv) (idxOneAM fe bs msh cvv) a
+    RefE (VerdictCtx p) (iisE p n m vis pp ms cv) (idxOneAM fe bs msh cvv) a
       (fun v x a' => IisPost dn vis fe env m a v.1 v.2 x a') := by
   rcases n with _ | n
   · rw [iisE.eq_1]; exact RefE.of_cls0 Err.cls_outOfFuel
@@ -158,15 +159,16 @@ theorem iis_ref (hP : IdxProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AS
       (idxTail (UInt64.ofNat bs.nP) (r1.tail.headD 0) (r1.tail.tail.headD 0)).2, 0, 0,
       UInt64.ofNat msh.nIdx] m1 with e2 | ⟨r2, m2⟩
   · rw [iisE.k_check_struct_field_sorts_i.none]
-    intro eSF
-    have h := eSF hq henv hLC hLT hP.sum.hg hP.sum.hpw hP.sum.het hP.sum.hcn hP.sum.hfsb hP.sum.hcfg hP.sum.ha
-      hP.sum.hcfs hP.sum.ad.ftd ⟨m1, Locals.init []⟩ a1 1 0 (rdW (m.arr64 IW) (pp + 6)) (UInt64.ofNat bs.nP) _ _ 0 0
-      (UInt64.ofNat msh.nIdx) (fvs.drop bs.nP) [] hC1 hA1 hdT hbT (by simp [decHL, hslice?]) (by simp) hrs32
-      (by rw [hrse]; exact hsP1)
-      (by rw [← partsAddNoOv hov]; exact UInt64.toNat_lt _) hxsd hxPos n (by omega) _ h2
+    intro hG hk0
+    have h := RefE.run_err (fsortsE_spec p hP.sum.hcfs hP.sum.hcfg hP.sum.ha hP.sum.ad.ftd hP.sum.hfsb (n + 1)
+      ⟨m1, Locals.init []⟩ vis 1 0 (rdW (m.arr64 IW) (pp + 6)) (UInt64.ofNat bs.nP) _ _ 0 0 (UInt64.ofNat msh.nIdx))
+      hG.nv hG (fsorts_ref hq henv hLC hLT hP.sum.hg hP.sum.hpw hP.sum.het hP.sum.hcn n (by omega) m1 a1 1 0
+        (rdW (m.arr64 IW) (pp + 6)) (UInt64.ofNat bs.nP) _ _ 0 0 (UInt64.ofNat msh.nIdx) (fvs.drop bs.nP) [] hC1
+        hA1 hdT hbT (by simp [decHL, hslice?]) (by simp) hrs32 (by rw [hrse]; exact hsP1)
+        (by rw [← partsAddNoOv hov]; exact UInt64.toNat_lt _) hxsd hxPos) (callE_err_mono n.le_succ h2 hk0)
     rw [hrse, UInt64.toNat_ofNat_of_lt' hnpb, UInt64.toNat_ofNat_of_lt' hnib,
       show ((1 : Word) != 0) = true from rfl, show ((0 : Word) != 0) = false from rfl] at h
-    exact h
+    exact h hk0
   rw [iisE.k_check_struct_field_sorts_i.arm1]
   have hsim := installSimFsortsC (dn := dn) (fe := fe) hq henv hLC hLT hP.sum n (by omega) 1 0
     (rdW (m.arr64 IW) (pp + 6)) (UInt64.ofNat bs.nP) _ _ 0 0 (UInt64.ofNat msh.nIdx) hrs32
@@ -217,7 +219,7 @@ theorem iisr_ref (hP : IdxProg p) (pp : Word) (bs : BlockShape) {bsP : ConLeche.
     ConRon.Bridge.Inductives.dShape a.store bs = some bsP →
     cvs.mapM (Frontend.denoteCV a.store) = some cvsP → (∀ cv ∈ cvsP, ConLeche.Expr.WScoped 0 cv.type) →
     ConRon.Bridge.denoteFEnv a.store fe = some env →
-    RefE (CheckStructFieldSortsIE p) (iisrE p n m vis pp mo ml co cl)
+    RefE (VerdictCtx p) (iisrE p n m vis pp mo ml co cl)
       (ConRon.Arena.checkBlockIdxSorts V fe bs mss cvs) a
       (fun v xs a' => IisrPost dn vis fe env m a v.1 v.2 xs a') := by
   induction n with

@@ -315,7 +315,7 @@ theorem cid_ref (P : CidProg p) {fs fs2 fsR fsT fsC : List FnName}
       (hblk1.grow (decEBlk_mono _ _ _) hg4) hIM4.cr hlpd (Nat.le_trans hb (hg1.trans hg4).2.1)
     rcases c5 : cslE p n s4.mem vis o l with e5 | ⟨r5, m5⟩ <;> rw [c5] at h5
     · rw [cidE.k_check_shapeless.none]
-      exact fun hG => h5 hG.block.tail.u
+      exact fun hG => h5 hG.block.tail
     obtain ⟨_, _, _, ⟨⟩⟩ := h5
   | some bp =>
   obtain ⟨hr41, hd4, hsl4⟩ := hR4
@@ -343,7 +343,7 @@ theorem cid_ref (P : CidProg p) {fs fs2 fsR fsT fsC : List FnName}
     (ConRon.Bridge.denoteCIList_mono (x01.trans k4.ext) _ _ hbP) hfRc hclH hfH hclM hfM (hlpd.members hrun4)
   rcases c5 : callE p n "check_block" [vis, o, l, r4.tail.headD 0] s4.mem with e5 | ⟨r5, m5⟩
   · rw [cidE.k_check_basis_decl.none]
-    exact fun hG => RefE.run_err hT5 hG.block.tail.u.nv hG.block hR5 c5
+    exact fun hG => RefE.run_err hT5 hG.block.tail.nv hG.block hR5 c5
   rw [cidE.k_check_basis_decl.arm1]
   obtain ⟨s5, hs5, -, x5, a5, hrun5, hR5'⟩ := RefE.run_ok hT5 hR5 c5
   subst hs5
