@@ -83,7 +83,7 @@ theorem builtinPrelude_ref (h64 : System.Platform.numBits = 64) (a : AState) (n 
     rw [builtinPreludeLE.k_pre_front_run.none]
     intro _ hk
     have hsim := preFrontRun_errSim n ⟨m, Locals.init []⟩ e1 (run_of_callE_err h1)
-      (Err.code_ne_of_cls hk)
+      hk
     have hc := L.Front.callE_of_run_err hsim
     simp only [St.setIn_mem] at hc
     exact builtinPreludeE_fails (frontRun_errClaim #[] preludeText h64 preludeText_size
