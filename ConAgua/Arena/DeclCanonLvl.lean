@@ -595,7 +595,7 @@ theorem lsEqW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
   have hd1' : decHL m2 (r1.headD 0).toNat (r1.tail.headD 0).toNat = some ids1 := by
     rw [decHL_grow hg2 hd1u.2]; exact hd1u.1
   have hC2 := (hC.grow hg1).grow hg2
-  obtain ⟨ws1, hs1, rfl, hw1⟩ := slR_of_decHL m2 _ _ ids1 hd1' (by have := hd1u.2; have := hg2.1; omega)
+  obtain ⟨ws1, hs1, rfl, hw1⟩ := slR_of_decHL m2 _ _ ids1 hd1' (by have := hd1u.2; have := hg2.iw; omega)
   obtain ⟨ws2, hs2, rfl, hw2⟩ := slR_of_decHL m2 _ _ ids2 hd2u.1 (by have := hd2u.2; omega)
   simp only [UInt64.ofNat_toNat] at hs1 hs2
   obtain ⟨b, hb, hrb⟩ := llW_ok n m2 a po pl qo ql co cl fuel _ _ _ _ rr _ _ ps qs cs hll

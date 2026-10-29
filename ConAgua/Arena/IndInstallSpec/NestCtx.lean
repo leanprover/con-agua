@@ -133,8 +133,8 @@ theorem nckW_ok (n : Nat) (s₀ s' : St) (a₀ : AState)
   rw [h3] at hm; simp only at hm
   have hqg := hq.grow (decBS_mono _) hg02
   obtain ⟨hq'2, hq92, hptr2⟩ := partsShapeFacts hqg (partsHsrc_grow hg02 hq9 hsrc)
-  obtain ⟨hI2, hE2, hsz2, hEs2, hcl2⟩ := hS2.2
-  obtain ⟨hr3, hd3, hg3, hf3, ht3⟩ := nIdxsW_dec h3 hsz2 hcl2 hq'2 (by have := hg02.1; omega)
+  obtain ⟨hI2, hE2, hsz2, hEs2, hcl2⟩ := hS2.iw
+  obtain ⟨hr3, hd3, hg3, hf3, ht3⟩ := nIdxsW_dec h3 hsz2 hcl2 hq'2 (by have := hg02.iw; omega)
     (partsHsrc_grow hg02 hq9 hsrc) hptr2
   have hkw2 := partsShapeK hq'2 hq92
   have hS3 : StageR dn vis fe m3 a₀ := stage_frame_iw hS2 hf3 (by
@@ -144,7 +144,7 @@ theorem nckW_ok (n : Nat) (s₀ s' : St) (a₀ : AState)
   -- `param_levels`
   obtain ⟨⟨r4, m4⟩, h4, hm⟩ := of_K hm rfl
   obtain ⟨lv, a4, hrun4, hl4, hle4, hS4, hg4⟩ := plW_sim hS3 (by rw [decHL_grow3 hg3 hb2]; exact hd2)
-    (Nat.le_trans hb2 hg3.1) r4 m4 h4
+    (Nat.le_trans hb2 hg3.iw) r4 m4 h4
   have hg04 := hg03.trans hg4
   -- the record
   simp only [nckRec] at hm
@@ -198,7 +198,7 @@ theorem nckW_ok (n : Nat) (s₀ s' : St) (a₀ : AState)
     · rw [gi 7 (by omega)] at ho; rw [gi 8 (by omega)] at hl'
       simp only [Option.some.injEq, List.getElem_cons_zero, List.getElem_cons_succ] at ho hl'
       subst ho hl'
-      have := hg6'.1; omega
+      have := hg6'.iw; omega
   have hin4 : CtxIn s'.mem qq.toNat (· < iwTop s'.mem) :=
     ⟨fun j hj => by omega, fun i hi o l ho hl' j hj => by have := hsl4 i hi o l ho hl'; omega⟩
   refine ⟨hok, ?_, by rw [hst]; exact hS6, hg04.trans hg6, hin4, hsl4⟩

@@ -257,10 +257,10 @@ theorem cfaLoop_ref (k : Nat) (hk : k ≤ 2 ^ 62) : ∀ (m : Mem) (a : AState) (
     have h5 := cna_ref hq henv P.toCnaProg vis q fto ftl (r3.headD 0) (r2.tail.headD 0)
       (r2.tail.tail.headD 0) (r2.tail.tail.tail.headD 0) fvo fvl i eo el bs formerTys tm teleB fvs
       (k' + 1) (by omega) s4.mem a4 es hC4 hA4
-      (hbs.grow hg04) (by rw [decHL_grow hg04 hftb]; exact hft) (Nat.le_trans hftb hg04.1)
+      (hbs.grow hg04) (by rw [decHL_grow hg04 hftb]; exact hft) (Nat.le_trans hftb hg04.iw)
       (hTM.grow (decTM_mono _) hg4) (HSl0.of (by rw [decHL_grow (hg3.trans hg4) hbl]; exact hdl)
         (Nat.le_trans hbl (hg3.trans hg4).iw)) hlwH
-      (by rw [decHL_grow hg04 hfvb]; exact hfv) (Nat.le_trans hfvb hg04.1)
+      (by rw [decHL_grow hg04 hfvb]; exact hfv) (Nat.le_trans hfvb hg04.iw)
       (hes.grow (fun q => decNCN_mono q) hg04) hP4
       (ConRon.Bridge.Inductives.dShape_ext q04.ext _ _ hsh) (denoteEList_ext q04.ext _ _ hftP)
       (ConRon.Bridge.Inductives.dMajor_ext q4.ext _ _ hmt) (denoteEList_ext q34.ext _ _ hteleB)

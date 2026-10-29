@@ -135,7 +135,7 @@ theorem appRef_step (L : NbLook p) (n : Nat) (ih : NbRef p dn vis fe env n) : Ap
     dsimp only
     rw [← hi1, pfK_eq]
     have hhi0 : c.hiAt 0 < 2 ^ 64 := by have := hW.hb; simp only [NestCtx.hiAt] at this ⊢; omega
-    have hab2 : (ra.headD 0).toNat + (ra.tail.headD 0).toNat ≤ iwTop m2 := by have := hg2.1; omega
+    have hab2 : (ra.headD 0).toNat + (ra.tail.headD 0).toNat ≤ iwTop m2 := by have := hg2.iw; omega
     have hs := pfvE_spec p L.pf n ⟨m2, Locals.init []⟩ vis ctx po pl kb hi ((eViewW m2 (rh.headD 0)).tail.headD 0)
       (ra.headD 0) (ra.tail.headD 0)
     have hR := pfv_ref (p := p) (k := n) (kb := kb) (hi := hi) (i := (eViewW m2 (rh.headD 0)).tail.headD 0) dn vis fe hS2 (hW.grow hg12).u (hW.grow hg12).hs hhi0 hargs2 hab2 hP2
@@ -205,7 +205,7 @@ theorem appRef_step (L : NbLook p) (n : Nat) (ih : NbRef p dn vis fe env n) : Ap
     have hs := ncE_spec p L.pcont n ⟨m2, Locals.init []⟩ vis ctx fu po pl kb ((eViewW m2 (rh.headD 0)).tail.headD 0)
       ((eViewW m2 (rh.headD 0)).tail.tail.headD 0) (ra.headD 0) (ra.tail.headD 0) ns
     have hR := ih.cont m2 a2 ctx fu po pl kb _ _ _ _ ns c prog args NS ctxP progP nm ls wP.getAppArgs nsP dep hC2
-      (hW.grow hg12) hnH husH hargs2 (by have := hg2.1; omega) (hns.grow hg12 htop) hP2 hA2 hc hctx hprog
+      (hW.grow hg12) hnH husH hargs2 (by have := hg2.iw; omega) (hns.grow hg12 htop) hP2 hA2 hc hctx hprog
       (by rw [hnd]; exact hnmP) (by rw [husd]; exact hlsP) hargsP hnsP (ConLeche.Expr.WScoped.getAppArgs hww)
     rw [hnd, husd] at hR
     cases h5 : callE p n "nest_cont" [vis, ctx, fu, po, pl, kb, (eViewW m2 (rh.headD 0)).tail.headD 0,

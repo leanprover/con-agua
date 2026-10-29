@@ -326,7 +326,7 @@ theorem ulW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (k
       rw [ulK0_some] at h
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       obtain ⟨hS1, hg1, hq, htop⟩ := allocW_stage hal hS
-      obtain ⟨hI1, hE1, hsz, hEs, hc200⟩ := hS.2
+      obtain ⟨hI1, hE1, hsz, hEs, hc200⟩ := hS.iw
       obtain ⟨rfl, rfl, -⟩ := allocW_facts hal hsz
       have hM1 : hbMR (allocMem m 0) mp :=
         memoRV_frame hbSch hbSch_wf lfKey hbVR [IW] [200] (by simp [IW, HBM, hbSch]) (by simp [hbSch])
@@ -363,7 +363,7 @@ theorem ulW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (k
         obtain ⟨rc, m3, hcw, h⟩ := kSome_inv h rfl (fun _ _ => rfl)
         rw [ulK3_some] at h
         obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-        obtain ⟨hI2, hE2, hsz2, hEs2, hc2⟩ := hS2.2
+        obtain ⟨hI2, hE2, hsz2, hEs2, hc2⟩ := hS2.iw
         have hlen' : (rr.tail.headD 0).toNat = n.toNat - 1 := by rw [hlen, hn1]
         have hsrc : (rr.headD 0).toNat + (rr.tail.headD 0).toNat ≤ iwTop m2 := by
           rw [hlen', ← hn1]; exact Nat.le_of_eq htop

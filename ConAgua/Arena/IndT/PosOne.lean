@@ -203,7 +203,7 @@ theorem oneRef_step (n : Nat) (hn : n + 1 ≤ 2 ^ 62) (ih : NbRef p dn vis fe en
     (r5.headD 0) c prog ds cvv M G g hnf hS4 hW4.u.dec hW4.u.inn hW4.hs
     (by have := hW.hb; simp [NestCtx.hiAt] at this; omega) hCc.hus
     ((hCc.hds.grow (OMono.decHL _ _) hg14).get (OMono.decHL _ _))
-    (fun j hj => by have := hCc.hdsb; have := hg14.1; omega)
+    (fun j hj => by have := hCc.hdsb; have := hg14.iw; omega)
     hclH ((GrowX.of_grow (q := 0) (n := 0) hg14).erecP.decCV hcv) hR
   have hr8 : (ConRon.Arena.nestCtorNf c prog (decI us) ds cvv closed).run a7 = .ok (x, a8) := by
     rw [← hcld]; simpa [decE_eq] using hrun8
@@ -255,8 +255,8 @@ theorem oneRef_step (n : Nat) (hn : n + 1 ≤ 2 ^ 62) (ih : NbRef p dn vis fe en
   have hg67 := hg6.trans hg7
   have hNS3 := nsb_rec6 (m' := m7) (q := r7.headD 0) (keys := ns2.keys.toList) (act := ns2.active)
     (nfs := ns2.ctorNfs.toList ++ [x]) (by omega) (Nat.lt_of_le_of_lt hS7.iw.iw hS7.iw.iwSize) hget7 (hk5.grow hg67)
-    (by have := hns5.b0; have := hg67.1; omega) (ha5.grow hg67) (by have := hns5.b2; have := hg67.1; omega)
-    (hnfs6.grow hg7) (by rw [h60, h61]; have := hg7.1; omega)
+    (by have := hns5.b0; have := hg67.iw; omega) (ha5.grow hg67) (by have := hns5.b2; have := hg67.iw; omega)
+    (hnfs6.grow hg7) (by rw [h60, h61]; have := hg7.iw; omega)
   have hgall := (hg14.trans hg5).trans hg67
   have hA7 : AbsOK m7 := posRecW_afr hq' (snocW_afr hsn (ncnW_afr hnf hA4))
   have hx58 := p6.ext.trans (p7.ext.trans p8.ext)
@@ -270,7 +270,7 @@ theorem oneRef_step (n : Nat) (hn : n + 1 ≤ 2 ^ 62) (ih : NbRef p dn vis fe en
       ⟨_, ConRon.Bridge.Inductives.dState_push (dState_ext hx58 _ _ hns2P) hnfP⟩⟩
   · exact hks.grow ((((hg3.trans hg4).trans hg5).trans hg6).trans hg7)
   · simp only [List.headD_cons, List.tail_cons]
-    have := hg3.1; have := hg4.1; have := hg5.1; have := hg6.1; have := hg7.1; omega
+    have := hg3.iw; have := hg4.iw; have := hg5.iw; have := hg6.iw; have := hg7.iw; omega
   · simp only [List.headD_cons, List.tail_cons]
     have e : (ns2.ctorNfs.toList ++ [x]).toArray = ns2.ctorNfs.push x := Array.ext' (by simp)
     simpa [e] using hNS3

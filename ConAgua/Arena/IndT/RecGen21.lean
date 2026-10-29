@@ -147,7 +147,7 @@ theorem cbc_ref (hP : CbcProg p) {fs : List FnName}
   obtain ⟨hnp2, -, -, -⟩ := partsShapeWords hg02 hbsD hq9
   rw [hnp2]
   have hR3 := ckk_ref (p := p) dn vis fe (UInt64.ofNat bs.nP) po pl pfvs n s2.mem a1 _ _ _ hS2
-    (hpf.grow (OMono.decHL _ _) hg02) (Nat.le_trans hpfb hg02.1) (ccRes_pslR hcc) hP2
+    (hpf.grow (OMono.decHL _ _) hg02) (Nat.le_trans hpfb hg02.iw) (ccRes_pslR hcc) hP2
   have hsT := ckkE_spec p hP.clm.keys n ⟨s2.mem, Locals.init []⟩ (UInt64.ofNat bs.nP) po pl (r2.headD 0)
     (r2.tail.headD 0)
   rcases c3 : callE p n "check_block_classes_keys" [UInt64.ofNat bs.nP, po, pl, r2.headD 0, r2.tail.headD 0]
@@ -173,7 +173,7 @@ theorem cbc_ref (hP : CbcProg p) {fs : List FnName}
   -- the majors
   have hR4 := clm_ref hq hIlpf hLC henv hP.clm pp co cl po pl bs css pfvs pP cssP pfvsP hpw n hn s3.mem a3 _ _ keys
       keysP hC3 hA3 (hbsD.grow (decBS_mono _) hg03) (partsHsrc_grow hg03 hq9 hsrc)
-      (hcss.grow decCNS_mono hg03) (hpf.grow (OMono.decHL _ _) hg03) (Nat.le_trans hpfb hg03.1) hks
+      (hcss.grow decCNS_mono hg03) (hpf.grow (OMono.decHL _ _) hg03) (Nat.le_trans hpfb hg03.iw) hks
       hP3 (fun k hk x hx => ⟨pP.nP, hnPP ▸ hwk k hk x hx⟩)
       (ConRon.Bridge.Inductives.dShape_ext c12.ext _ _ hshP)
       (ConRon.Bridge.Inductives.dCtors_ext.list c12.ext _ _ hcssP)

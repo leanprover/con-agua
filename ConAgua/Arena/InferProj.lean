@@ -585,7 +585,7 @@ theorem ipa_ref (p : Prog) (hp : InferProjProg p) (hc : InferProjCallees p) (n :
     have hsp' : SpineR m' (r₁.headD 0) (r₁.tail.headD 0) xs.toArray :=
       hsp₁.keep hSt'.size hSt'.below htopv hspn₁
     have h₅ := CoreSpec.of_callW (projTypeAt_refines p hp hc.instLP (N + 1) ⟨m', Locals.init []⟩ _ dn
-      vis fe M' eb q i us _ _ pe tbl xs hS' hq' hus hpe hsp' (by rw [hSt'.1, htop₂])) hc5
+      vis fe M' eb q i us _ _ pe tbl xs hS' hq' hus hpe hsp' (by rw [hSt'.check, htop₂])) hc5
     have hrun5 := ipRun_of_ref h₅
     obtain ⟨-, ⟨M₅, hS₅, hK₅, hSt₅⟩, -, hrw5⟩ := h₅
     have hgK := hg₁.trans (hSt'.trans hSt₅).toGrew

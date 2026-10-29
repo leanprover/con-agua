@@ -275,7 +275,7 @@ theorem ftdsF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
   have hlen' : l.toNat = ws.length := by simpa using hlen.symm
   have e0 : q + (0 : Word) = q := by simp
   rw [e0, hq] at hm'
-  have hrec := recPost_wr m ws l hlen' hS.2 (by rw [← hlen', ← hqt]; exact hroom)
+  have hrec := recPost_wr m ws l hlen' hS.iw (by rw [← hlen', ← hqt]; exact hroom)
   rw [← hm'] at hrec
   rw [← hq] at hrec
   have hK := slice_keep (κ := .expr) hS hrec hws hlen'
@@ -601,7 +601,7 @@ theorem gaaF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
   have hspn2 : (allocMem m1 cnt).arr64 SPN = m1.arr64 SPN :=
     (allocMem_frame m1 cnt).1 SPN (by simp [SPN, IW]) (by decide)
   have hlen : cnt.toNat = ws.length := by rw [← hws, spnWs_length]
-  have hrec := recPost_wr m1 ws cnt hlen hS1.2 (by
+  have hrec := recPost_wr m1 ws cnt hlen hS1.iw (by
     have : q.toNat = iwTop m1 := by rw [hq]; rfl
     rw [← hlen, ← this]; exact hroom)
   rw [← hq, ← hm3] at hrec

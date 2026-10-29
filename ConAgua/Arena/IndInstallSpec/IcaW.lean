@@ -341,7 +341,7 @@ theorem icfW_ok {p : Prog} (hP : CapsProg p) {n : Nat} {dn : NIdx → Option Con
     (by rw [UInt64.toNat_ofNat_of_lt' hkb]; omega)
   -- the ctor names
   have hcs2 := hcs.grow decCN_mono (hg1.trans hg2)
-  obtain ⟨hI2, hE2', hsz2, hEs2, hcl2⟩ := hS2.2
+  obtain ⟨hI2, hE2', hsz2, hEs2, hcl2⟩ := hS2.iw
   obtain ⟨⟨r3, m3⟩, h3, h⟩ := of_K h rfl; rw [icaK4_some] at h
   obtain ⟨s3, hs3, -, hW3⟩ := triple_of_callW (s₀ := ⟨m2, Locals.init []⟩)
     (blockCapsCtorNames_spec p hP.alloc hP.namesCopy hP.ctorNames n _ coff clen) h3
@@ -828,7 +828,7 @@ theorem iirW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv
   rw [hlen] at htop hget
   generalize hM : wrER m1 q1 (iirWs m cv caps) = M at hS' hg htop hget
   obtain ⟨-, hEtop, -, hEsz, -⟩ := hS.iw
-  obtain ⟨-, hEtop', -, hEsz', -⟩ := hS'.2
+  obtain ⟨-, hEtop', -, hEsz', -⟩ := hS'.iw
   have hP : ∀ j, j < 20 → (erecP M)[q1.toNat + j]? = (iirWs m cv caps)[j]? := fun j hj => by
     rw [erecP_getE (by omega)]; exact hget j hj
   -- the constant's words

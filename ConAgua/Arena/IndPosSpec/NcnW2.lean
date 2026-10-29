@@ -65,7 +65,7 @@ theorem ncnW_ok (k : Nat) (m m' : Mem) (a : AState) (ctx po pl us dO dL cv close
   rw [ncnK2_some] at h
   obtain ⟨ys, a2, hrun2, hdec2, hq2, M2, G2, hS2, hg2, hR2, hk2, hG2⟩ := (rxOK_all dn fe vis k).2.2.2.1 m1 m2 a f dO dL
     q l _ ds M G g hd hS1 hfm (by rw [decHL_agree (RdS.of_grow hg1) hdsb]; exact hds)
-    (fun j hj => Nat.lt_of_lt_of_le (hdsb j hj) hg1.1) hR1
+    (fun j hj => Nat.lt_of_lt_of_le (hdsb j hj) hg1.iw) hR1
   rcases hrx : rxW k m2 f closed with _ | ⟨ty, m3⟩ <;> rw [hrx] at h; · simp [ncnK3] at h
   rw [ncnK3_some] at h
   obtain ⟨a3, hrun3, hty, M3, G3, hS3, hg3, hR3, hk3, hG3⟩ := (rxOK_all dn fe vis k).2.2.2.2.2.2 m2 m3 a2 f closed _
@@ -94,7 +94,7 @@ theorem ncnW_ok (k : Nat) (m m' : Mem) (a : AState) (ctx po pl us dO dL cv close
     simp only [List.getElem?_cons_zero, List.getElem?_cons_succ, Nat.add_zero] at hn0 hn1 hn2 hn3 hn4
     have hql : decHL m' q.toNat l.toNat = some ys := by rw [decHL_grow (hg3.trans hg4) hq2]; exact hdec2
     have hqlT : decHL (truncM m') q.toNat l.toNat = some ys := by
-      rw [decHL_truncM (by have := hg3.1; have := hg4.1; omega)]; exact hql
+      rw [decHL_truncM (by have := hg3.iw; have := hg4.iw; omega)]; exact hql
     have t : ∀ i < 5, (iwA (truncM m'))[nf.toNat + i]? = (m'.arr64 IW)[nf.toNat + i]? := fun i hi => by
       rw [truncM_iw_eq (by omega)]; rfl
     have hn0' := t 0 (by omega); have hn1' := t 1 (by omega); have hn2' := t 2 (by omega)

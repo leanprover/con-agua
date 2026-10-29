@@ -71,10 +71,10 @@ theorem noaW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis no nl lo 
       have : c1 = false := by rw [← hc1]; simpa using hb
       subst this
       obtain ⟨b, hrun, hS', hg', hr, hP'⟩ := ih m1 m' a (off + 1) (l - 1) xs' r h hS1
-        (by rw [decHL_agree (RdS.of_grow hg1) (fun j hj => by omega)]; exact hn) (by have := hg1.1; omega)
+        (by rw [decHL_agree (RdS.of_grow hg1) (fun j hj => by omega)]; exact hn) (by have := hg1.iw; omega)
         (by rw [hoff1, hl1, decHL_agree (RdS.of_grow hg1) (fun j hj => by have := hxb (j + 1) (by omega); omega)]
             simpa [decHL] using hxs')
-        (fun j hj => by rw [hoff1, hl1] at *; have := hxb (j + 1) (by omega); have := hg1.1; omega) hP1
+        (fun j hj => by rw [hoff1, hl1] at *; have := hxb (j + 1) (by omega); have := hg1.iw; omega) hP1
       refine ⟨b, ?_, hS', hg1.trans hg', hr, hP'⟩
       simp only [StateT.run_bind, hrun1, except_ok_bind, Bool.false_eq_true, ite_false]
       exact hrun

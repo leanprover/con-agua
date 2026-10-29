@@ -287,7 +287,7 @@ theorem appLoop_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn :
       rw [ite_eq_right hlen]
       -- the stack top is in bounds (it is `vo + vn ≠ 0`)
       have hc136 : (136 : Word).toNat < (m₁.arr64 CTL).size := by
-        have ht1 : spTop m₁ = vo + vn := hSt₁.1.trans htop
+        have ht1 : spTop m₁ = vo + vn := hSt₁.check.trans htop
         refine Classical.byContradiction fun hc => ?_
         have : spTop m₁ = 0 := by
           unfold spTop rdW
@@ -363,7 +363,7 @@ theorem appLoop_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn :
         obtain ⟨-, ⟨M', hS₃, hK₃, hSt₃⟩, hresI, hrwI⟩ := hI
         have hva₃ : SpineR m₃ vo (vn + 1) (va.push (decE (rdW (m.arr64 SPN) (ao + i)))) :=
           hva₂.keep hSt₃.size hSt₃.below (by rw [htop₂, hadd2]; omega) (hsz₂ ▸ hspn0)
-        have htop₃ : spTop m₃ = vo + (vn + 1) := hSt₃.1.trans htop₂
+        have htop₃ : spTop m₃ = vo + (vn + 1) := hSt₃.check.trans htop₂
         have hb₃ : ∀ j : Word, j < spTop m₀ → spW m₃ j = spW m₀ j := fun j hj => by
           rw [hSt₃.below j (by rw [htop₂, UInt64.lt_iff_toNat_lt, hadd2]
                                have := UInt64.lt_iff_toNat_lt.mp hj; omega)]

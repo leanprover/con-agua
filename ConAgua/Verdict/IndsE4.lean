@@ -124,7 +124,7 @@ theorem cbao_ref (hP : AgreeProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a :
   have hrb : ftdsF m1 [fvs0O, fvs0L] = some (rd, m2) := by
     obtain ⟨s', hs', -, hW⟩ := triple_of_callW (s₀ := ⟨m1, Locals.init []⟩) (ftdsF_spec p hP.ad n _ _) h2
     rw [← hs']; exact hW
-  have hbound1 : fvs0O.toNat + fvs0L.toNat ≤ iwTop m1 := by have := hg1.1; omega
+  have hbound1 : fvs0O.toNat + fvs0L.toNat ≤ iwTop m1 := by have := hg1.iw; omega
   obtain ⟨x2, a2, hrun2, hSt2, hg2, hdec2⟩ :=
     ftdsF_ok dn vis fe fvs0O fvs0L fvs0 m1 m2 a1 rd hrb
       ⟨hSt1, by rw [decHL_grow hg1 (by omega)]; exact hfvs0, fun _ => hbound1⟩
@@ -162,7 +162,7 @@ theorem cbao_ref (hP : AgreeProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a :
   -- `check_block_doms_at`
   have hR3 := cbda_ref hq henv hP.ad.ftd n (by omega) m2 a2 0 (ra.tail.headD 0) (ra.tail.tail.headD 0)
     (rd.headD 0) (rd.tail.headD 0) nP fvs x2 xs1 (xs0.map ConLeche.Expr.fvarTypeD)
-    hC2 hA2 hfv2 hdm2 (by omega) (by omega) (by have := hg2.1; omega) (by omega)
+    hC2 hA2 hfv2 hdm2 (by omega) (by omega) (by have := hg2.iw; omega) (by omega)
     (by simp only [UInt64.toNat_zero, Nat.zero_add]; exact hlt2)
     hxs1' hdoms (fun i _ x y hx hy => ⟨hc i x hx, ht i y hy⟩)
   have hs3 := cbdaE_spec p hP.doms n ⟨m2, Locals.init []⟩ vis 0 (ra.tail.headD 0) (ra.tail.tail.headD 0)

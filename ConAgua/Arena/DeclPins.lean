@@ -84,14 +84,14 @@ theorem SliceR.grow {m m' : Mem} {o l : Word} {hs : List EIdx} (h : SliceR m o l
 
 theorem PinSetR.grow {m m' : Mem} {r : Word} {ip : INatOpPinSet} (h : PinSetR m r ip)
     (hg : RecGrow m m') : PinSetR m' r ip :=
-  L.Rom.PinSetR.keep h ⟨hg.1, hg.2⟩
+  L.Rom.PinSetR.keep h ⟨hg.iw, hg.2⟩
 
 /-- **The variant list survives a run that grows the pools and leaves `CTL[150]`, `CTL[151]`.** -/
 theorem PinSetsR.grow {m m' : Mem} {ips : List INatOpPinSet} (h : PinSetsR m ips)
     (hg : RecGrow m m') (h150 : rdW (m'.arr64 CTL) 150 = rdW (m.arr64 CTL) 150)
     (h151 : rdW (m'.arr64 CTL) 151 = rdW (m.arr64 CTL) 151) : PinSetsR m' ips := by
   obtain ⟨hc, hb, hr⟩ := h
-  have het : erecTop m ≤ erecTop m' := hg.1
+  have het : erecTop m ≤ erecTop m' := hg.iw
   have hek := hg.2
   have e0 : erTop m = erecTop m := rfl
   have htop : erecTop m < 2 ^ 64 := UInt64.toNat_lt_size _

@@ -304,7 +304,7 @@ theorem dnc_ref (hN : NatSubProg' p) (hq : KnotStageProg p) (hcl : LeafClosed p)
   · rw [liftE_none, defnNatCertE.k_subst_const0_pairs.none]; exact RefE.of_cls0 (by simp)
   rw [liftE_some, defnNatCertE.k_subst_const0_pairs.arm1]
   obtain ⟨x3, a3, hrun3, hS3, hg3, hd3⟩ := pairs_ref hN.toNatSubProg n wv hn hwl x2 (r2.headD 0)
-    (r2.tail.headD 0) k m2 a2 r3 m3 hS2 hE2 (EqL.lt64 hE2 hS2.2) h3
+    (r2.tail.headD 0) k m2 a2 r3 m3 hS2 hE2 (EqL.lt64 hE2 hS2.iw) h3
   have hvP2 : denoteE a2.store (decE wv) = some vP := by
     rw [hv]; exact ConRon.Bridge.denote_ext hjv hx2
   obtain ⟨hst3, hx3, hc3, hp3, hdps⟩ := ConRon.Bridge.substConst0Pairs_run hst2 hC2.check.pins
@@ -320,9 +320,9 @@ theorem dnc_ref (hN : NatSubProg' p) (hq : KnotStageProg p) (hcl : LeafClosed p)
   · rw [defnNatCertE.k_certify_nat_eqs.none]
     exact RefE.bind_left fun hcE => RefE.run_err (s₀ := ⟨m3, Locals.init []⟩)
       (certifyNatEqs_specE p hE.lNatCertify k _ vis (r3.headD 0) (r3.tail.headD 0)) trivial hcE
-      (cert_ref hq _ _ x3 k hk' m3 a3 hC3.stageT hE3 (EqL.lt64 hE3 hS3.2)) h4
+      (cert_ref hq _ _ x3 k hk' m3 a3 hC3.stageT hE3 (EqL.lt64 hE3 hS3.iw)) h4
   obtain ⟨x4, a4, hrun4, hC4, hg4, hd4, hx4⟩ := certW_okC hE hq henv hk' hC3 hE3
-    (EqL.lt64 hE3 hS3.2) hdps (ConRon.Bridge.natOpEqs_wscoped hie.envWF hfindP) (callW_of_callE h4)
+    (EqL.lt64 hE3 hS3.iw) hdps (ConRon.Bridge.natOpEqs_wscoped hie.envWF hfindP) (callW_of_callE h4)
   refine RefE.bind_right hrun4 ?_
   by_cases e4 : r4.headD 0 = 0
   · rw [defnNatCertE.k_certify_nat_eqs.abort1 p r4 m4 e4]

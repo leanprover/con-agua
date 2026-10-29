@@ -220,7 +220,7 @@ theorem cfb_ref {p : Prog} (hcl : CoreStageClosed p) (hLC : LvlCacheProg p)
   rw [liftE_some]
   obtain ⟨s3, hs3, -, hm3, hW3⟩ := triple_of_callW (slContains_spec p hc (n' + 1) ⟨mq, Locals.init []⟩ io il fv) h3
   simp only at hW3 hm3
-  obtain ⟨ws, hws, hwsd, hwlt⟩ := slR_of_decHL mq _ _ idxArgs hidx1 (hS1.lt64 (by have := hg1.1; omega))
+  obtain ⟨ws, hws, hwsd, hwlt⟩ := slR_of_decHL mq _ _ idxArgs hidx1 (hS1.lt64 (by have := hg1.iw; omega))
   simp only [UInt64.ofNat_toNat] at hws
   have hct := containsW_ok (n' + 1) _ _ _ _ _ _ hws hW3
   have hm3' : m3 = mq := by rw [← hs3, hm3]
@@ -228,7 +228,7 @@ theorem cfb_ref {p : Prog} (hcl : CoreStageClosed p) (hLC : LvlCacheProg p)
   by_cases hg : (rq.headD 0) = 0 ∧ r3.headD 0 = 0
   · rw [cfbE.k_sl_contains.abort1 p _ r3 m3 hg]
     have hr1 : r1.headD 0 ≠ 2 := by
-      intro h2; rw [ite_eq_left h2] at hreq; rw [hg.1] at hreq; exact absurd hreq (by decide)
+      intro h2; rw [ite_eq_left h2] at hreq; rw [hg.iw] at hreq; exact absurd hreq (by decide)
     have hxn : x ≠ some true := by
       intro hxt; subst hxt; simp only [decLvlEq] at hx; exact hr1 hx
     have hnin : ws.contains fv = false := by
@@ -364,7 +364,7 @@ theorem csfGo_ref (hg : p.lookup "sl_get" = some slGet) (hpw : p.lookup "pin_wor
     have : ¬ fl.toNat ≤ (j - 1).toNat := fun e => hl (UInt64.le_iff_toNat_le.mpr e)
     omega
   have hT := hS.lt64 (x := iwTop m) (Nat.le_refl _)
-  have hgT := hg0.1
+  have hgT := hg0.iw
   have hfvs' : decHL m fo.toNat fl.toNat = some fvs := by rw [decHL_grow hg0 hfb]; exact hfvs
   obtain ⟨w, hw, hwl, hwd⟩ := decHL_get' hfvs' J hJl (by omega)
   have efo : fo + (j - 1) = UInt64.ofNat (fo.toNat + J) := by
@@ -424,7 +424,7 @@ theorem csfGo_ref (hg : p.lookup "sl_get" = some slGet) (hpw : p.lookup "pin_wor
   rw [← hu] at hdu
   -- `check_field_sort_bound`
   have h4' := cfb_ref hq.closed hLC hLT hpw het hc n m3 a3 isProp large s io il w (ru.headD 0) idxArgs hC3 hA3
-    hu1 hs hwl hidx3 (by have := hg03.1; omega) hdu (ConRon.Bridge.denoteL_ext hsP0 (c2.ext.trans c3.ext))
+    hu1 hs hwl hidx3 (by have := hg03.iw; omega) hdu (ConRon.Bridge.denoteL_ext hsP0 (c2.ext.trans c3.ext))
   rw [hu] at h4'
   rcases h5 : cfbE p n m3 isProp large s io il w (ru.headD 0) with e5 | ⟨r5, m4⟩
   · rw [csfGoE.k_check_field_sort_bound.none]
@@ -441,7 +441,7 @@ theorem csfGo_ref (hg : p.lookup "sl_get" = some slGet) (hpw : p.lookup "pin_wor
   have hg14 := ((hg1.trans hg2).trans hg3).trans hg4
   have hres1 : (res + (j - 1)).toNat = res.toNat + J := by rw [sum_toNat_add (by omega), hJ]
   have hsz4 : res.toNat + J < (m4.arr64 IW).size := by
-    obtain ⟨h1, -, -, -, -⟩ := hS4.2; have := hg14.1; omega
+    obtain ⟨h1, -, -, -, -⟩ := hS4.iw; have := hg14.iw; omega
   have hacc4 : decHL m4 (res.toNat + J + 1) k = some acc := by
     rw [decHL_grow hg14 (by omega)]; rw [show res.toNat + J + 1 = res.toNat + j.toNat by omega]; exact hacc
   have hacc' := sumDecHL_write_front m4 _ k _ (ru.headD 0) acc hres1 hsz4 hu1 hacc4
@@ -455,7 +455,7 @@ theorem csfGo_ref (hg : p.lookup "sl_get" = some slGet) (hpw : p.lookup "pin_wor
   -- the fields below
   have hrec := ih (by omega) (m4.set64 IW (res + (j - 1)) (ru.headD 0)) a4 isProp large s nP fo fl io il
     res (j - 1) m0 (k + 1) (u :: acc) fvs idxArgs fvsP hCw hAw
-    ((hg03.trans hg4).set_iw _ _ (by omega)) hr0 (by rw [htop', hJ]; have := hg14.1; omega)
+    ((hg03.trans hg4).set_iw _ _ (by omega)) hr0 (by rw [htop', hJ]; have := hg14.iw; omega)
     (by rw [hJ]; exact hacc') hfvs hfb hidx hib hs ⟨sP, ConRon.Bridge.denoteL_ext hsP0 hx14⟩ (by omega)
     (ConRon.Bridge.denoteEList_ext hx14 _ _ hfP) (fun i hi => hws i (by omega))
   rw [hJ] at hrec

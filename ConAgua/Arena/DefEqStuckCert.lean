@@ -200,7 +200,7 @@ theorem secwtb_ref (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : StuckC
       b us c pc k (r₂.tail.headD 0) us2 ao an (r₃.headD 0) (r₃.tail.headD 0) aargs targs.toArray
       cvc np nf cvT caps (by omega) (by omega) ⟨hS₃, hs.mode4, hs.eb_mode⟩ hb hus hcw hnw huw
       hvus ⟨_, _, hv⟩ (by rw [hep]; exact hcvc) (by rw [hep]; exact hci) (ha.grew hg3 hat hspn) hsp
-      (Nat.le_trans hat (UInt64.le_iff_toNat_le.mp hg3.1)) htt)
+      (Nat.le_trans hat (UInt64.le_iff_toNat_le.mp hg3.iw)) htt)
 
 /-! ## `struct_eta_cert_with` -/
 

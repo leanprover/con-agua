@@ -175,9 +175,9 @@ theorem dl_ref (p : Prog) (n F : Nat) (hknot : KnotUpTo p n) (hnF : n ≤ F) (hn
     have hsa₁ : SpineN m₁ ao an aas := hsa'.toN.keep hSt₁.size hSt₁.below (hta hna) hS.spn
     have hsb₁ : SpineN m₁ bo bn bs := hsb'.toN.keep hSt₁.size hSt₁.below (htb hnb) hS.spn
     have hta₁ : an ≠ 0 → ao.toNat + an.toNat ≤ (spTop m₁).toNat := fun h => by
-      rw [hSt₁.1]; exact hta h
+      rw [hSt₁.check]; exact hta h
     have htb₁ : bn ≠ 0 → bo.toNat + bn.toNat ≤ (spTop m₁).toNat := fun h => by
-      rw [hSt₁.1]; exact htb h
+      rw [hSt₁.check]; exact htb h
     have h1 : (i + 1).toNat = i.toNat + 1 := uint64_succ_toNat an i hn.1
     have := ih m₁ _ M₁ (i + 1) (by omega) (by omega) (by omega) hS₁ hsa₁ hsb₁ hta₁ htb₁
     rw [h1] at this
@@ -340,10 +340,10 @@ theorem io_ref (p : Prog) (hp : IotaProg' p) (hi1 : IotaInst1OK p) (n : Nat) (hk
   have hS₂ : CoreS dn m₂ (AM.st (piResidual (decE tyCtor) margs.toList) a₀) vis fe M₁ eb :=
     hS₁.frame_stk hfr (fun b hb => by simpa using hb) (fun x hx => by simpa using hx)
   have hsx₁ : SpineR m₁ xo xn idx := hsx.keep hSt₁.size hSt₁.below htx hS.spn
-  have htx₁ : xo.toNat + xn.toNat ≤ (spTop m₁).toNat := by rw [hSt₁.1]; exact htx
+  have htx₁ : xo.toNat + xn.toNat ≤ (spTop m₁).toNat := by rw [hSt₁.check]; exact htx
   have hsx₂ : SpineR m₂ xo xn idx := hsx₁.keep hgrew.size hgrew.below htx₁ hS₁.spn
   have htx₂ : xo.toNat + xn.toNat ≤ (spTop m₂).toNat :=
-    Nat.le_trans htx₁ (by have := hgrew.1; exact this)
+    Nat.le_trans htx₁ (by have := hgrew.iw; exact this)
   cases n with
   | zero => simp only [dlE, ioE.k_defeq_list]; exact RefE.of_cls0 rfl
   | succ n' =>
@@ -562,7 +562,7 @@ theorem isW_ok (p : Prog) (hinst : IotaInst1OK p) (dn : NIdx → Option ConLeche
     obtain ⟨hrunT, ⟨M₁, hS₁, hK₁, hSt₁⟩, hr₁⟩ := CoreSpec.run
       (hinst k ⟨m, Locals.init []⟩ a dn vis fe M eb e (rdW (m.arr64 SPN) (ao + i)) t hS he) hc
     have hsp₁ : SpineR m₁ ao an args := hsp.keep hSt₁.size hSt₁.below htop hS.spn
-    have htop₁ : ao.toNat + an.toNat ≤ (spTop m₁).toNat := by rw [hSt₁.1]; exact htop
+    have htop₁ : ao.toNat + an.toNat ≤ (spTop m₁).toNat := by rw [hSt₁.check]; exact htop
     have h1 : (i + 1).toNat = i.toNat + 1 := uint64_succ_toNat an i hlt
     have ht1 : (an.toNat - (i.toNat + 1) ≠ 0 → tN - 1 = (t - 1).toNat) := by
       intro hne
@@ -935,7 +935,7 @@ theorem ispW_ok (p : Prog) (hp : IotaProg' p) (hc : IotaCallees p) (hw : WhnfCal
     have htopm : (so.toNat + j.toNat) ≤ (spTop m).toNat := by rw [htop, hsoj]; exact Nat.le_refl _
     have hsa₁ : SpineR m₁ ao an args := hsa.keep hSt₁.size hSt₁.below (by omega) hspn
     have hat₁ : ao.toNat + an.toNat ≤ (spTop m₁).toNat := by
-      rw [hSt₁.1]; omega
+      rw [hSt₁.check]; omega
     rcases hc2 : callW p k "inst_spine" [ao, an, rP - 1, r₁.headD 0] m₁ with _ | ⟨r₂, m₂⟩
     · simp only [ispW, hlt, ↓reduceIte, hc1, hc2] at hL; cases hL
     have hrP : an.toNat ≤ (rP - 1).toNat + 1 := by
@@ -954,11 +954,11 @@ theorem ispW_ok (p : Prog) (hp : IotaProg' p) (hc : IotaCallees p) (hw : WhnfCal
     have hg := Classical.not_not.mp hgn
     rw [ispW_cont p po pl us ao an rP pvo pvc so k m m₁ m₂ j r₁ r₂ hlt hc1 hc2 hg] at hL
     have hv32 : HW (r₂.headD 0) := hr₂
-    have htop₂ : spTop m₂ = so + j := by rw [hSt₂.1, hSt₁.1]; exact htop
+    have htop₂ : spTop m₂ = so + j := by rw [hSt₂.check, hSt₁.check]; exact htop
     have hsz1 : (m₁.arr64 SPN).size = (m.arr64 SPN).size := hSt₁.size
     have hsz2 : (m₂.arr64 SPN).size = (m.arr64 SPN).size := hSt₂.size.trans hsz1
     have hjpv : (so + j).toNat + 1 < 2 ^ 64 := by omega
-    obtain ⟨hfr, hsp3, hgrew, hslot, hsz3⟩ := push_step m₂ (so + j) (r₂.headD 0) hg.1 hg.2 htop₂ hjpv
+    obtain ⟨hfr, hsp3, hgrew, hslot, hsz3⟩ := push_step m₂ (so + j) (r₂.headD 0) hg.iw hg.2 htop₂ hjpv
     have hS₃ := hS₂.frame_stk hfr (by simp) (by simp)
     have hEr3 : ((m₂.set64 SPN (so + j) (r₂.headD 0)).set64 CTL 136 (so + j + 1)).arr64 EREC =
         m.arr64 EREC := by
@@ -969,7 +969,7 @@ theorem ispW_ok (p : Prog) (hp : IotaProg' p) (hc : IotaCallees p) (hw : WhnfCal
     have hspn₂ : (m₂.arr64 SPN).size < 2 ^ 63 := by rw [hsz2]; exact hS.spn
     have hsa₂ : SpineR m₂ ao an args := hsa₁.keep hSt₂.size hSt₂.below hat₁ hS₁.spn
     have hsp₁ : SpineR m₁ pvo pvc pins := hsp.keep hSt₁.size hSt₁.below (by omega) hspn
-    have hsp₂ : SpineR m₂ pvo pvc pins := hsp₁.keep hSt₂.size hSt₂.below (by rw [hSt₁.1]; omega) hS₁.spn
+    have hsp₂ : SpineR m₂ pvo pvc pins := hsp₁.keep hSt₂.size hSt₂.below (by rw [hSt₁.check]; omega) hS₁.spn
     have hsa₃ := hsa₂.keep hgrew.size hgrew.below hat₂ hspn₂
     have hsp₃ := hsp₂.keep hgrew.size hgrew.below hpt₂ hspn₂
     have h1 : (j + 1).toNat = j.toNat + 1 := uint64_succ_toNat pvc j hlt

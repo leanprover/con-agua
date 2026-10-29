@@ -270,7 +270,7 @@ theorem tail_ref (hP : TailProg p) (L : CbrLook p) {fs : List FnName}
       fun k hk w hw => partsRdIW_grow hg03 (by rw [e k hk w hw]; omega)
     refine ⟨hBS3, ?_, ?_, ?_, ?_, ?_, ?_, hblk.grow ?_ hg03⟩
     · rw [r 12 (by decide) (q + 12) rfl, r 13 (by decide) (q + 13) rfl]; exact (by rw [decHL_grow3 hg03 hpb]; exact hpd)
-    · rw [r 12 (by decide) (q + 12) rfl, r 13 (by decide) (q + 13) rfl]; exact Nat.le_trans hpb hg03.1
+    · rw [r 12 (by decide) (q + 12) rfl, r 13 (by decide) (q + 13) rfl]; exact Nat.le_trans hpb hg03.iw
     · rw [r 17 (by decide) (q + 17) rfl, r 18 (by decide) (q + 18) rfl]; exact htbl'.grow (fun q => decNCN_mono q) hg03
     · rw [hrd3]; exact hrdD.grow (decCR_mono _) hg03
     · rw [r 15 (by decide) (q + 15) rfl, r 16 (by decide) (q + 16) rfl]; exact hcls'.grow (fun q => decTM_mono q) hg03

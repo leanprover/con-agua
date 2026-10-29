@@ -173,7 +173,7 @@ theorem tmn_ref (n : Nat) (hn : n ≤ 2 ^ 62) : ∀ {m : Mem} {a : AState}
     (ConRon.Bridge.Inductives.dCtorNf_ext c1.ext _ _ hnfP1)
   -- `target_class_match`
   have h3 := tcm_ref hq henv n (by omega) hC1 hR1.abs (hbs.grow hg1) hus hlH
-    (by rw [decHL_grow hg1 hftb]; exact hft) (by have := hg1.1; omega)
+    (by rw [decHL_grow hg1 hftb]; exact hft) (by have := hg1.iw; omega)
     (hpf.grow hg1) (hds.grow hg1) hdsl hR1.rc
     (ConRon.Bridge.Inductives.dShape_ext c1.ext _ _ hsh) (denoteEList_ext c1.ext _ _ hftP)
     (denoteEList_ext c1.ext _ _ hpfP) (ConRon.Bridge.denoteLs_ext husP c1.ext)
@@ -217,7 +217,7 @@ theorem tmn_ref (n : Nat) (hn : n ≤ 2 ^ 62) : ∀ {m : Mem} {a : AState}
     (by rw [decNL_grow hg2 hR1.slice.bound]; exact hpr)
   subst hr
   refine ⟨?_, e.toNat :: pr, by simpa using hd, ?_⟩
-  · right; simp only [List.headD_cons]; exact hg12.1
+  · right; simp only [List.headD_cons]; exact hg12.iw
   · rw [heT]; exact FA2.cons hpv hprb
 
 include hq henv in

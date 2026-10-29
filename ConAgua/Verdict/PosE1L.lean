@@ -96,7 +96,7 @@ theorem pfv_ref {p : Prog} (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe
   rw [liftE_some]
   obtain ⟨b, hrunoa, hS2, hg2, hr2, hP2⟩ := noaW_ok dn fe vis _ _ _ _ c.names (k + 1) m1 m2 a aO aL args _ hoa hS1
     hn1 hne1 (by rw [decHL_agree (RdS.of_grow hg1) (fun j hj => by omega)]; exact hargs)
-    (fun j hj => by have := hg1.1; omega) (hP.fr (haW_mfr hha'))
+    (fun j hj => by have := hg1.iw; omega) (hP.fr (haW_mfr hha'))
   rw [hnP1] at hrunoa
   refine RefE.bind_right hrunoa ?_
   cases b with
@@ -228,7 +228,7 @@ theorem cpW_okW (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis hp : Word
     obtain ⟨b, a', hrun, hS', hg', hr⟩ := ih m2 m' a2 (dO + 1) (dL - 1) xs r h hS2
       (by rw [hdO1, hl1, ← hxs, decHL]; exact decHL_agree (RdS.of_grow hg12) (fun j hj => by
             have := hin (j + 1) (by omega); simp only [decHL] at *; omega))
-      (fun j hj => by rw [hdO1, hl1] at *; have := hin (j + 1) (by omega); have := hg12.1; omega)
+      (fun j hj => by rw [hdO1, hl1] at *; have := hin (j + 1) (by omega); have := hg12.iw; omega)
     refine ⟨b, a', ?_, hS', hg12.trans hg', hr⟩
     simp only [pcF, StateT.run_bind, hrun1, except_ok_bind, hbb0, Bool.false_eq_true, ite_false,
       hrun2, hle, decide_true]
@@ -316,7 +316,7 @@ theorem ncc_ref {p : Prog} (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe
   rw [liftE_some]
   obtain ⟨b3, a3, hrun3, hS3, hg3, hr3⟩ := cpW_okW dn fe vis hp k m2 m3 a dO dL ds r3 hcp hS1
     (by rw [decHL_agree (RdS.of_grow hg1) (fun j hj => hdsb j hj)]; exact hds)
-    (fun j hj => by have := hdsb j hj; have := hg1.1; omega)
+    (fun j hj => by have := hdsb j hj; have := hg1.iw; omega)
   refine RefE.bind_right hrun3 ?_
   cases b3 with
   | false =>

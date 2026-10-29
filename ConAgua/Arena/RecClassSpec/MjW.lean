@@ -91,7 +91,7 @@ theorem mjtW_sim (n : Nat) (m : Mem) (a : AState) (ind lvls ds0 dl0 fo fl : Word
     simp at this; exact this
   refine RSim.lstep (K := mjtW.k_sl_append fo fl hd) rfl fun ⟨r2, m2⟩ h2 => ?_
   obtain ⟨hS2, hg2, hd2, hb2⟩ := rec2AppendW_dec h2 hS1 (hds.grow (OMono.decHL _ _) hg1)
-    (by rw [decHL_grow hg1 hfb]; exact hifs) (Nat.le_trans hfb hg1.1)
+    (by rw [decHL_grow hg1 hfb]; exact hifs) (Nat.le_trans hfb hg1.iw)
   rw [mjtW.k_sl_append.arm1]
   refine RSim.bind (K := mjtW.k_mk_app_n_f fo fl) rfl
     ((mknF_ok dn vis fe hd (r2.headD 0) (r2.tail.headD 0) hH (ds ++ ifs)).sim ⟨hS2, hd2⟩) ?_
@@ -102,7 +102,7 @@ theorem mjtW_sim (n : Nat) (m : Mem) (a : AState) (ind lvls ds0 dl0 fo fl : Word
   · show decHL m3 fo.toNat fl.toNat = some ifs
     rw [decHL_grow hg hfb]; exact hifs
   · show fo.toNat + fl.toNat ≤ iwTop m3
-    exact Nat.le_trans hfb hg.1
+    exact Nat.le_trans hfb hg.iw
   · exact hmaj
 
 theorem mjtW_afr {n : Nat} {m m' : Mem} {ind lvls ds0 dl0 fo fl : Word} {r : List Word}

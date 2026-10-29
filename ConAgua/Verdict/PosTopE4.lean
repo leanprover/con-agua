@@ -169,7 +169,7 @@ theorem nrt_ref : ∀ (n : Nat), n ≤ 2 ^ 62 → ∀ (m : Mem) (a : AState) (cO
     · rw [liftE_none, nrtE.k_sl_snoc.none]; exact RefE.of_cls0 (by simp)
     rw [liftE_some, nrtE.k_sl_snoc.arm1]
     have hg12 := hg1.trans hg2
-    obtain ⟨hS3, hg3, h30, h31, ht3, hw3, hx3⟩ := snocW_words hsn hS2 (by have := hg12.1; omega)
+    obtain ⟨hS3, hg3, h30, h31, ht3, hw3, hx3⟩ := snocW_words hsn hS2 (by have := hg12.iw; omega)
     have hout3 : RootOutsB m3 (ro.headD 0).toNat (ro.tail.headD 0).toNat (outss ++ [x1.1]) := by
       rw [h30, h31]
       exact pos2_decB_snoc pos2_rootOuts_mono (hout.grow hg12) hg3 (by omega) hw3 hx3
@@ -184,7 +184,7 @@ theorem nrt_ref : ∀ (n : Nat), n ≤ 2 ^ 62 → ∀ (m : Mem) (a : AState) (cO
       (r1'.tail.tail.headD 0) (ro.headD 0) (ro.tail.headD 0) css' x1.2 (outss ++ [x1.1]) cssP' v1.2
       (outssP ++ [v1.1]) hC3 (hU.grow hg13) hhi hpn
       (by rw [decHL_agree (RdS.of_grow hg13) (fun j hj => by omega)]; exact hho)
-      (by have := hg13.1; omega) hcL1 (by rw [hcO1]; have := hg13.1; omega)
+      (by have := hg13.iw; omega) hcL1 (by rw [hcO1]; have := hg13.iw; omega)
       (by rw [hcO1]; exact (hcss.grow hg13).tail)
       ((hns1.grow hg2 htop1).grow hg3 htop2) hout3 (by rw [h30, h31]; omega)
       ((hP1.fr (posRecW_mfr hr2)).fr (snocW_mfr hsn)) hA3
@@ -328,7 +328,7 @@ theorem nsd_ref : ∀ (n : Nat), n ≤ 2 ^ 62 → ∀ (m : Mem) (a : AState) (sO
     have hC2 : StageC dn vis fe env m2 a2 := hC.of_cstep hS2 hA2 c12
     have hg12 := hg1.trans hg2
     have hksl2 : (rdW (m.arr64 IW) (key + 2)).toNat + (rdW (m.arr64 IW) (key + 3)).toNat ≤ iwTop m2 :=
-      Nat.le_trans hksl hg12.1
+      Nat.le_trans hksl hg12.iw
     have htop2 : iwTop m2 < 2 ^ 64 := Nat.lt_of_le_of_lt hS2.iw.iw hS2.iw.iwSize
     refine RefE.bind_right hrun2 ?_
     obtain ⟨xn, xc⟩ := x2

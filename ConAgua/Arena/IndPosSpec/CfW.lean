@@ -180,7 +180,7 @@ theorem cfW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) {k
       rw [cfK1_acc (h := by rw [hr1]; decide)]
       rcases hag : nagW k m1 us dO dL gO gL (rdW (m1.arr64 IW) ns2) (rdW (m1.arr64 IW) (ns2 + 1)) with _ | ⟨rk, mk⟩; · rw [cfK1_acc (h := by rw [hr1]; decide), hag] at h; simp [cfK2] at h
       obtain ⟨h1, h2, h3, h4⟩ := nagW_ok dn vis fe us dO dL ds hus k m1 mk a1 gO gL _ _ grp NS2.keys rk hag hS1
-        (DecB.grow (OMono.decHL _ _) hg1 hds) hgl (by have := hg1.1; omega) (hgrp.grow hgb hg1) hk1 hkb1
+        (DecB.grow (OMono.decHL _ _) hg1 hds) hgl (by have := hg1.iw; omega) (hgrp.grow hgb hg1) hk1 hkb1
       exact ⟨rk, mk, rfl, h1, h2, by simpa using h3, h4⟩
     | false =>
       rw [cfK1_open (h := by rw [hr1]; decide)]
@@ -202,8 +202,8 @@ theorem cfW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) {k
   · simp only [cfT, StateT.run_bind, hrun1, except_ok_bind]; rfl
   · have := nsb_rec6 (m' := m3) (q := q) (keys := (if b then nestAcceptGroup (decI us) ds grp NS2.keys
         else NS2.keys).toList) (act := act) (nfs := NS2.ctorNfs.toList) (by omega) htop3 hget3
-      (hksk.grow hg3) (by have := hg3.1; omega) ((hact.grow hg1).grow (hgk.trans hg3))
-      (by have := hg13.1; omega) (hnk'.grow hg3) (by have := hnk.b4; have := hg3.1; omega)
+      (hksk.grow hg3) (by have := hg3.iw; omega) ((hact.grow hg1).grow (hgk.trans hg3))
+      (by have := hg13.iw; omega) (hnk'.grow hg3) (by have := hnk.b4; have := hg3.iw; omega)
     simpa using this
 
 end L.Ind

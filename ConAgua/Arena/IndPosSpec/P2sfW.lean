@@ -72,7 +72,7 @@ theorem p2sfW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     have hkl : k.toNat < dL.toNat := by
       have := UInt64.lt_iff_toNat_lt.mp (UInt64.not_le.mp hd); omega
     obtain ⟨w, hw, hH, hdj⟩ := hel k.toNat hkl
-    have hg0t := hg0.1
+    have hg0t := hg0.iw
     have hrd : rdW (m.arr64 IW) (dO + k) = w := by
       have e : (dO + k).toNat = dO.toNat + k.toNat := word_add_toNat (by omega)
       simp only [rdW, e]; rw [hg0.iwGet _ (by omega), hw]; rfl

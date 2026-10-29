@@ -131,7 +131,7 @@ theorem installRec2PSlB {α : Type} {f : Mem → Nat → Option α}
   have hd := hx.dec.grow (OMono.decPL hf _ _) hg
   show decAt (truncM m') _ _ = some xs
   simp only [decAt, List.headD_cons, w0, w1, Option.bind_eq_bind, Option.bind_some, decPLB]
-  rw [ite_eq_left (le_iwA_truncM_size (Nat.le_trans hx.bound hg.1) hS'.2.1)]
+  rw [ite_eq_left (le_iwA_truncM_size (Nat.le_trans hx.bound hg.iw) hS'.iw.1)]
   exact hd
 
 theorem lpsW_afr {n : Nat} {m m' : Mem} {q : Word} {r : List Word} (h : lpsW n m q = some (r, m')) :

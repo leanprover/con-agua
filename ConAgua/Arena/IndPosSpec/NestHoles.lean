@@ -195,7 +195,7 @@ theorem nhGoW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis ctx : Wo
     rcases hsn : snocW k m3 oo ol v with _ | ⟨r4, m4⟩ <;> rw [hsn] at h; · simp [nhK4] at h
     rw [nhK4_some] at h
     obtain ⟨hr4, hdec4, hg4, -, hol1, ht4⟩ := snocW_dec hsn hS3.iw.iwSize hS3.iw.ctl
-      (by have := hg23.1; omega) hvlt hout3
+      (by have := hg23.iw; omega) hvlt hout3
     have hS4 := snocW_stage hsn hS3
     subst hr4
     simp only [List.headD_cons, List.tail_cons] at h
@@ -204,7 +204,7 @@ theorem nhGoW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis ctx : Wo
       hS4 (by rw [(CtxIn.grow hin hg24).1]; exact hc) (CtxIn.grow hin hg24).2 (hsl.grow hin hg24)
       (by rw [hoff1, hl1, decHL_agree (RdS.of_grow hg24) (fun j hj => by
             have := hnb (j + 1) (by omega); omega)]; simpa [decHL] using hns')
-      (fun j hj => by rw [hoff1, hl1] at *; have := hnb (j + 1) (by omega); have := hg24.1; omega)
+      (fun j hj => by rw [hoff1, hl1] at *; have := hnb (j + 1) (by omega); have := hg24.iw; omega)
       hdec4 (by omega) (by rw [hmm1, hl1]; omega)
     refine ⟨xr, a', ?_, hS', hg24.trans hg', hout'⟩
     simp only [StateT.run_bind, hrun2, except_ok_bind]

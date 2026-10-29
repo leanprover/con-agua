@@ -135,7 +135,7 @@ theorem rto_ref (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState} {g k rc cvR
   have hext3 : CVExt m3 q.toNat :=
     ⟨by omega, fun o l ho hl => (hsl3 o l ho hl).imp_left fun h => Nat.le_trans h hg3.er⟩
   have hqb : q.toNat + 3 < 2 ^ 64 := by
-    obtain ⟨-, hE1, -, hEs, -⟩ := hS3.2
+    obtain ⟨-, hE1, -, hEs, -⟩ := hS3.iw
     omega
   have hA3 := cvNewW_afr h3 hA2
   have hC3 : StageC dn vis fe env m3 a2 := hC2.of_pstep hS3 hA3 (PStep.refl hC2.check.state)

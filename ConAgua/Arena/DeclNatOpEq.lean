@@ -106,7 +106,7 @@ theorem natEqCtx_ref (hN : NatSubProg' p) (pi d : Word) :
   have hw := callW_model (M := fun mm => natEqCtxW p (k + 1) mm pi d) (natEqCtx_specW p hN.lNatEqCtx (k + 1) · pi d) hc
   rw [natEqCtxW.arm1] at hw; simp only [pw_fold] at hw
   have hF := hS.check.pins.full hP.1
-  have hI := hS.2
+  have hI := hS.iw
   -- pin words at any later memory
   have pwr : ∀ m2, IWGrow m m2 → ∀ j (hj : j < 21), pw m2 pi (UInt64.ofNat j) = (pinRecW m)[j]'(by simp [pinRecW]; omega) :=
     fun m2 hg j hj => pw_of_rec hP hI hg j hj
@@ -165,7 +165,7 @@ theorem natEqCtx_ref (hN : NatSubProg' p) (pi d : Word) :
   replace hw := ntBW_some hw; obtain ⟨rq, mq, hq, hw⟩ := hw
   simp only [Option.some.injEq, Prod.mk.injEq] at hw
   obtain ⟨hr, hm⟩ := hw
-  obtain ⟨hq0, hmq, hKeep, hroom, htop⟩ := iwAlloc_fref p hN.toNatSubProg.toNatEqProg.toNatTyProg.toNatGuardProg.toNatLitProg.toNatCvProg.toNatGateProg.lIwAlloc 8 k m8 rq mq hS8.2 hq
+  obtain ⟨hq0, hmq, hKeep, hroom, htop⟩ := iwAlloc_fref p hN.toNatSubProg.toNatEqProg.toNatTyProg.toNatGuardProg.toNatLitProg.toNatCvProg.toNatGateProg.lIwAlloc 8 k m8 rq mq hS8.iw hq
   have hlt : ∀ w ∈ [r2.headD 0, r3.headD 0, r4.headD 0, pinW m 4, r5.headD 0, r6.headD 0, r7.headD 0, r8.headD 0],
       w.toNat < 2 ^ 32 := by
     intro w hw
@@ -179,7 +179,7 @@ theorem natEqCtx_ref (hN : NatSubProg' p) (pi d : Word) :
     · exact hl6
     · exact hl7
     · exact hl8
-  have hrec := recPost_wr m8 [r2.headD 0, r3.headD 0, r4.headD 0, pinW m 4, r5.headD 0, r6.headD 0, r7.headD 0, r8.headD 0] 8 rfl hS8.2 (by simpa [iwTop] using hroom)
+  have hrec := recPost_wr m8 [r2.headD 0, r3.headD 0, r4.headD 0, pinW m 4, r5.headD 0, r6.headD 0, r7.headD 0, r8.headD 0] 8 rfl hS8.iw (by simpa [iwTop] using hroom)
   have echain : (((((((((allocMem m8 8).set64 IW (rdW (m8.arr64 CTL) 200) (r2.headD 0)).set64 IW (rdW (m8.arr64 CTL) 200 + 1) (r3.headD 0)).set64 IW (rdW (m8.arr64 CTL) 200 + 2) (r4.headD 0)).set64 IW (rdW (m8.arr64 CTL) 200 + 3) (pinW m 4)).set64 IW (rdW (m8.arr64 CTL) 200 + 4) (r5.headD 0)).set64 IW (rdW (m8.arr64 CTL) 200 + 5) (r6.headD 0)).set64 IW (rdW (m8.arr64 CTL) 200 + 6) (r7.headD 0)).set64 IW (rdW (m8.arr64 CTL) 200 + 7) (r8.headD 0)) =
       wrIW (allocMem m8 8) (rdW (m8.arr64 CTL) 200) [r2.headD 0, r3.headD 0, r4.headD 0, pinW m 4, r5.headD 0, r6.headD 0, r7.headD 0, r8.headD 0] := by
     simp [wrIW, UInt64.add_assoc]
@@ -384,7 +384,7 @@ theorem natOpEquations_ref (hN : NatSubProg' p) (d c : Word) :
   have hF := hS.check.pins.full
   have hGate := hN.toNatSubProg.toNatEqProg.toNatTyProg.toNatGuardProg.toNatLitProg.toNatCvProg.toNatGateProg
   replace hw := ntBW_some hw; obtain ⟨rp, m1, h1, hw⟩ := hw
-  obtain ⟨h0, hrec, hpins, hrp⟩ := natOpPins_fref hGate k m rp m1 hS.2 h1
+  obtain ⟨h0, hrec, hpins, hrp⟩ := natOpPins_fref hGate k m rp m1 hS.iw h1
   have hK1 := hrec.2.1
   have hS1 := hK1.stage hS
   have hpi : (rp.headD 0).toNat = iwTop m := by rw [hrec.1]; rfl
@@ -409,10 +409,10 @@ theorem natOpEquations_ref (hN : NatSubProg' p) (d c : Word) :
   have hnm : ∀ j (hj : j < 51), H (pinW m (1 + j)) := fun j hj => hF0.names_lt j hj
   have pwr : ∀ j (hj : j < 21), pw m2 (rp.headD 0) (UInt64.ofNat j) = (pinRecW m)[j]'(by simp [pinRecW]; omega) := by
     intro j hj
-    have := pw_of_rec hP hS1.2 hg2 j hj
+    have := pw_of_rec hP hS1.iw hg2 j hj
     rw [this]; simp only [pinRecW_pins hpins]
   have cxr : ∀ j (hj : j < 8), pw m2 (rc.headD 0) (UInt64.ofNat j) = [wx, wy, wz, wn, wsx, wsy, wt, wf][j] :=
-    fun j hj => pw_of_get hS2.2 hroom hj (hget j hj)
+    fun j hj => pw_of_get hS2.iw hroom hj (hget j hj)
   have hnr : ∀ j (hj : j < 15), H (pinW m (15 + j)) := fun j hj => by
     have := hnm (14 + j) (by omega); rwa [show 1 + (14 + j) = 15 + j by omega] at this
   replace hw := ntBW_some hw; obtain ⟨rr, m3, h3, hw⟩ := hw

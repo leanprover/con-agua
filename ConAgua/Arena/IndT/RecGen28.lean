@@ -124,7 +124,7 @@ theorem cns_ref (hq : qr.toNat = iwTop mb) (hms : PSlR decTM ms mo ml mb) (htbl 
     (rdW (m.arr64 IW) (UInt64.ofNat p0 + 3)) (rdW (m.arr64 IW) (UInt64.ofNat p0 + 6))
     (rdW (m.arr64 IW) (UInt64.ofNat p0 + 7)) tblo tbll
   have hT := tmn_ref hkp henv k (by omega) hC hA
-    (hbs.grow hg) hlH (by rw [decHL_grow hg hftb]; exact hft) (by have := hg.1; omega) hpfS hdsS hctB hctb
+    (hbs.grow hg) hlH (by rw [decHL_grow hg hftb]; exact hft) (by have := hg.iw; omega) hpfS hdsS hctB hctb
     (htbl.grow (fun q => decNCN_mono q) hg) hP hsh hftP hpfvsP (by rw [hlD]; exact hlvls) hdsP hctorsP
     htblP hformer hscp
   cases c1 : callE p k "target_major_nfs" [vis, q, fto, ftl,
@@ -170,7 +170,7 @@ theorem cns_ref (hq : qr.toNat = iwTop mb) (hms : PSlR decTM ms mo ml mb) (htbl 
   have hp13 : p0 + 13 ≤ nm.toNat := by
     obtain ⟨_, hw12⟩ := decTM_get hsrc 12 (by omega)
     have := (truncM_iw_get hw12).1
-    have := hg.1; have := hg1.1; omega
+    have := hg.iw; have := hg1.iw; omega
   have hmw : (UInt64.ofNat p0 : Word).toNat + 9 ≤ nm.toNat := by rw [hp0T]; omega
   -- the copy loop
   cases c3 : ncpW (k + 1) s2.mem nm (UInt64.ofNat p0) 0 with
@@ -209,7 +209,7 @@ theorem cns_ref (hq : qr.toNat = iwTop mb) (hms : PSlR decTM ms mo ml mb) (htbl 
   have hn12 : (nm + 12).toNat = nm.toNat + 12 := by rw [UInt64.toNat_add]; simp; omega
   have hmt : ∀ t, t < 13 → (UInt64.ofNat p0 + UInt64.ofNat t : Word).toNat = p0 + t := fun t ht => by
     rw [UInt64.toNat_add, hp0T]; simp; omega
-  have hgm1 : iwTop m ≤ iwTop s1.mem := hg1.1
+  have hgm1 : iwTop m ≤ iwTop s1.mem := hg1.iw
   have hqnm : qr.toNat + ml.toNat ≤ nm.toNat := by omega
   -- sizes
   have szA : (mA.arr64 IW).size = (m3.arr64 IW).size := by rw [← hA, size_set64]

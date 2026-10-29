@@ -154,7 +154,7 @@ theorem cnaLoop_ref (k : Nat) (hk : k ≤ 2 ^ 62) : ∀ (m : Mem) (a : AState) (
   simp only [Option.getD_some, hget]
   -- `target_k53`
   have hR := tk_ref hq henv k (by omega) hC1 hA1 (hbs.grow hg1)
-    (by rw [decHL_grow hg1 hftb]; exact hft) (by have := hg1.1; omega) (hMc.grow (decTM_mono _) hg1)
+    (by rw [decHL_grow hg1 hftb]; exact hft) (by have := hg1.iw; omega) (hMc.grow (decTM_mono _) hg1)
     (htl.grow hg1) hl hwH hP1
     (ConRon.Bridge.Inductives.dShape_ext q1.ext _ _ hsh) (denoteEList_ext q1.ext _ _ hftP)
     (ConRon.Bridge.Inductives.dMajor_ext q1.ext _ _ hMcP) (denoteEList_ext q1.ext _ _ htlP)
@@ -193,8 +193,8 @@ theorem cnaLoop_ref (k : Nat) (hk : k ≤ 2 ^ 62) : ∀ (m : Mem) (a : AState) (
     exact hes'.grow (fun q => decNCN_mono q) hg12
   exact RefE.mono (ih (by omega) m2 a2 (j + 1) es' esP' hC2 hA2
     (hbs.grow hg12)
-    (by rw [decHL_grow hg12 hftb]; exact hft) (by have := hg12.1; omega) (hMc.grow (decTM_mono _) hg12)
-    (htl.grow hg12) hl (by rw [decHL_grow hg12 hfvb]; exact hfv) (by have := hg12.1; omega) hj1 hes2 hP2
+    (by rw [decHL_grow hg12 hftb]; exact hft) (by have := hg12.iw; omega) (hMc.grow (decTM_mono _) hg12)
+    (htl.grow hg12) hl (by rw [decHL_grow hg12 hfvb]; exact hfv) (by have := hg12.iw; omega) hj1 hes2 hP2
     (ConRon.Bridge.Inductives.dShape_ext c12.ext _ _ hsh) (denoteEList_ext c12.ext _ _ hftP)
     (ConRon.Bridge.Inductives.dMajor_ext c12.ext _ _ hMcP) (denoteEList_ext c12.ext _ _ htlP)
     (denote_ext hlP c12.ext) (denoteEList_ext c12.ext _ _ hfvP)

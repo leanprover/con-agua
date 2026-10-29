@@ -214,7 +214,7 @@ theorem cbda_ref (hftd : FtdF p) (n : Nat) (hn : n ≤ 2 ^ 62) : ∀ (m : Mem) (
     have hg12 := hg1.trans hg2
     have hrec := ih (by omega) m2 a2 off fo fl dO dl (j - 1) fvs doms fvsP domsP hC2 hA2
       (by rw [decHL_grow hg12]; exact hfvs; omega) (by rw [decHL_grow hg12]; exact hdoms; omega)
-      hfob hdob (by have := hg12.1; omega) (by have := hg12.1; omega) hoob
+      hfob hdob (by have := hg12.iw; omega) (by have := hg12.iw; omega) hoob
       (ConRon.Bridge.denoteEList_ext hcs2.ext _ _ hfP) (ConRon.Bridge.denoteEList_ext hcs2.ext _ _ hdP)
       (fun i hi => hws i (by omega))
     rw [hj1] at hrec
@@ -339,7 +339,7 @@ theorem sds_ref (hg : p.lookup "sl_get" = some slGet) (hftd : FtdF p) (n : Nat) 
   have hg12 := hg1.trans hg2
   have hrec := ih (by omega) m4 a2 off fo fl dO dl (j - 1) fvs doms fvsP domsP hC2 hA2
     (by rw [decHL_grow hg12 (by omega)]; exact hfvs) (by rw [decHL_grow hg12 (by omega)]; exact hdoms)
-    hfob hdob (by have := hg12.1; omega) (by have := hg12.1; omega) hoob
+    hfob hdob (by have := hg12.iw; omega) (by have := hg12.iw; omega) hoob
     (ConRon.Bridge.denoteEList_ext hcs2.ext _ _ hfP) (ConRon.Bridge.denoteEList_ext hcs2.ext _ _ hdP)
     (fun i hi => hws i (by omega))
   rw [hj1] at hrec

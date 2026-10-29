@@ -228,7 +228,7 @@ theorem bgoW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
     rintro r1 o m1 a1 ⟨hout, hlt, hS1, hg1⟩
     refine Sim.bindK (bgoW.k_block_groups_one.none ..) (fun _ _ => rfl)
       (ih m1 a1 (co + 1) (cl - 1) cs' hS1 (hrest.grow decCN_mono hg1) (hnm.grow (OMono.decHL _ _) hg1)
-        (Nat.le_trans hnb hg1.1)) ?_
+        (Nat.le_trans hnb hg1.iw)) ?_
     rintro r2 gs m2 a2 ⟨hgs, hS2, hg2⟩
     have hcond : (r1.headD 0 ≠ 0 ∧ r1.tail.headD 0 = mm) ↔
         (optEq o mm.toNat = true) := by
@@ -249,7 +249,7 @@ theorem bgoW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
       · cases e
       rw [bgoW.k_sl_cons.arm1, bgoW.j1.arm1] at e
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj e)
-      obtain ⟨hS3, hg3, hd3, ht3⟩ := partsConsPL decCN_mono h3 hS2 hgs.2 hgs.1
+      obtain ⟨hS3, hg3, hd3, ht3⟩ := partsConsPL decCN_mono h3 hS2 hgs.2 hgs.iw
         (hc0B.grow (decCN_mono _) (hg1.trans hg2))
       exact ⟨c0 :: gs, a2, rfl, ⟨hd3, Nat.le_of_eq ht3⟩, hS3, (hg1.trans hg2).trans hg3⟩
     · have hb : optEq o mm.toNat = false := by simpa using (mt hcond.mpr hc)
@@ -333,7 +333,7 @@ theorem bggW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
     obtain ⟨hS2, hg2, hdh⟩ := partsGH h2 hS1 hgs
     have hg02 := hg1.trans hg2
     have hrec := ih m2 a1 (mm + 1) hS2 (hcs.grow decCN_mono hg02) (hnm.grow (OMono.decHL _ _) hg02)
-      (Nat.le_trans hnb hg02.1)
+      (Nat.le_trans hnb hg02.iw)
     rw [hmm1, show k.toNat - (mm.toNat + 1) = L by omega, show mm.toNat + 1 = mm.toNat + 1 from rfl] at hrec
     revert r m' e
     refine Sim.bindK (bggW.k_block_groups_go.none ..) (fun _ _ => bggW.k_block_groups_go.arm1 ..) hrec ?_
@@ -343,7 +343,7 @@ theorem bggW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
     · cases e
     rw [bggW.k_sl_cons.arm1] at e
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj e)
-    obtain ⟨hS4, hg4, hd4, ht4⟩ := partsConsPL decGH_mono h4 hS3 hgss.2 hgss.1 (hdh.grow (decGH_mono _) hg3)
+    obtain ⟨hS4, hg4, hd4, ht4⟩ := partsConsPL decGH_mono h4 hS3 hgss.2 hgss.iw (hdh.grow (decGH_mono _) hg3)
     exact ⟨gs :: gss, a3, rfl, ⟨hd4, Nat.le_of_eq ht4⟩, hS4, (hg02.trans hg3).trans hg4⟩
 
 /-- **The model of `block_groups`.** -/
@@ -719,7 +719,7 @@ theorem blockRecNameSetOk_refines (p : Prog) (hP : IndPartsProg3 p) (n : Nat) (s
     have hd1' : decHL m2 (r1.headD 0).toNat (r1.tail.headD 0).toNat = some want := by
       rw [decHL_grow3 hg2 hb1]; exact hd1
     obtain ⟨gws, hgs, hgm, hgl⟩ := slR_of_decHL m2 _ _ _ hd2 (by omega)
-    obtain ⟨wws, hws, hwm, hwl⟩ := slR_of_decHL m2 _ _ _ hd1' (by have := hg2.1; omega)
+    obtain ⟨wws, hws, hwm, hwl⟩ := slR_of_decHL m2 _ _ _ hd1' (by have := hg2.iw; omega)
     rw [ofNat_toNat_word, ofNat_toNat_word] at hgs hws
     have hb := setEqW_ok hgs hws h3
     refine ⟨_, a1, rfl, ?_, hS2, hg1.trans hg2⟩

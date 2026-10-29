@@ -313,7 +313,7 @@ theorem m2cAnd_ref (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤
     ⟨by rw [g2'], by rw [hlen, g3'], by rw [g4'], decBool_t_m2c g5⟩
   have hspn3 : (m3.arr64 SPN).size < 2 ^ 63 := hS3.spn
   have htop4 : r3.headD 0 + r3.tail.headD 0 = spTop m4 := by
-    rw [hSt4.1, htop3', htop3]
+    rw [hSt4.check, htop3', htop3]
   have hsp4 : SpineR m4 (r3.headD 0) (r3.tail.headD 0) xs.toArray :=
     hsp3.ofKept hSt4 (by
       have hb := hsp3.bound

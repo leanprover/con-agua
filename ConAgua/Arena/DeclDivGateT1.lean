@@ -597,7 +597,7 @@ theorem cra_refT (hD : DmProg5 p) (hkp : CrKeep p) :
         rw [ho1, hl1'] at hrest
         rw [decHL_grow hg1 (by omega)]; exact hrest
       obtain ⟨x2, a2, hrun2, ⟨hT2, hg2, hd2⟩, hCr2⟩ := ih (o + 1) (l - 1) k m1 a1 r2 m2 hT1 hCr1.crOK
-        hrest1 (by rw [ho1, hl1']; have := hg1.1; omega) h2
+        hrest1 (by rw [ho1, hl1']; have := hg1.iw; omega) h2
       refine ⟨x2, a2, ?_, ⟨hT2, hg1.trans hg2, hd2⟩, hCr2⟩
       simp only [constsResolveAll, StateT.run_bind, hrun1, exc_ok_bind', hx1, ite_true]
       exact hrun2
@@ -871,7 +871,7 @@ theorem cggoC (hD : DmProg6 p) (hcl : LeafClosed p) (hkp : CrKeep p) (hs0 : Subs
       exact ⟨true, a, rfl, hC, CoreStep.refl hC.check, IWGrow.refl _, by simp [decW0B]⟩
     | cons pf pfs =>
     obtain ⟨px, pxs, hpx, hpxs, rfl⟩ := ConRon.Bridge.denoteEList_cons hpr
-    obtain ⟨hsl0, q, hq, hstm, hrest⟩ := StmtL.cons hS.2 hs
+    obtain ⟨hsl0, q, hq, hstm, hrest⟩ := StmtL.cons hS.iw hs
     obtain ⟨hpl0, hpwlt, hpf, hdrest⟩ := decHL_cons_iw hS.iw.iwSize hd
     subst hpf
     obtain ⟨ho, hl, e, hr3, hbd, hdh, he, hst2⟩ := hstm
@@ -916,7 +916,7 @@ theorem cggoC (hD : DmProg6 p) (hcl : LeafClosed p) (hkp : CrKeep p) (hs0 : Subs
     have hdr1 : decHL m1 (po + 1).toNat (pl - 1).toNat = some pfs := by
       rw [decHL_grow hg1 (by rw [hpo1, hpl1]; omega)]; exact hdrest
     obtain ⟨x2, a2, hrun2, hC2, c2, hg2, hd2⟩ := ih xrest pfs pxs (so + 1) (sl - 1) (po + 1) (pl - 1)
-      k m1 a1 r2 m2 hC1 (hkp.call (im_mem _ rfl) h1' hCr) (hrest.grow hg1) hdr1 (by rw [hpo1, hpl1]; have := hg1.1; omega)
+      k m1 a1 r2 m2 hC1 (hkp.call (im_mem _ rfl) h1' hCr) (hrest.grow hg1) hdr1 (by rw [hpo1, hpl1]; have := hg1.iw; omega)
       (ConRon.Bridge.denoteN_ext hn c1.ext) (ConRon.Bridge.denote_ext hv c1.ext)
       (ConRon.Bridge.StmtsDenote.mono c1.ext _ _ hsd3)
       (ConRon.Bridge.denoteEList_ext c1.ext _ _ hpxs) h2

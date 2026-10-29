@@ -683,7 +683,7 @@ theorem riRec_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEn
     rdW (m.arr64 EREC) (cq + 1), rdW (m.arr64 EREC) (cq + 2), rdW (m.arr64 EREC) (cq + 3), mi, rp3, reo, rel]
     (by simp)
   have hroom : q1.toNat + 9 < 2 ^ 64 := by
-    obtain ⟨-, h2, -, h4, -⟩ := hS'.2; simp only [List.length_cons, List.length_nil] at htop'; omega
+    obtain ⟨-, h2, -, h4, -⟩ := hS'.iw; simp only [List.length_cons, List.length_nil] at htop'; omega
   rw [riMem_eq (by omega) hroom, hE1]
   refine ⟨hS', hg, by rw [← hE1]; exact erRec_mfr h1 _, ?_⟩
   generalize hM : wrER m1 q1 _ = M at hS' hg htop' hget
@@ -774,7 +774,7 @@ theorem rteW_ok (n : Nat) {m m' : Mem} {a : AState} {ro rl : Word} {r : List Wor
   obtain ⟨hS1, hg1, hq1, htop1, hget1⟩ := erRec_stage ha hS (ruleWords m1 ro rl.toNat)
     (by rw [ruleWords_length, hk])
   have hroom : b.toNat + 11 * rl.toNat ≤ (m1.arr64 EREC).size := by
-    obtain ⟨-, h2, -, h4, -⟩ := hS1.2
+    obtain ⟨-, h2, -, h4, -⟩ := hS1.iw
     have hs := (wrER_frame (ruleWords m1 ro rl.toNat) m1 b).size EREC
     rw [ruleWords_length] at htop1; omega
   have hm2 := rteGoW_mem n m1 m2 b ro rl r1 h1 hold hroom (by rw [hE1]; exact hS.iw.erSize)
@@ -911,7 +911,7 @@ theorem cbpW_ok (p : Prog) (L : CbrLook p) (n : Nat) {m m' : Mem} {a : AState} {
   obtain ⟨wn, hwn, hwnl, -⟩ := decCI_name hci
   have hwn' : (rdW (m2.arr64 EREC) (rq.headD 0 + 1)).toNat < 2 ^ 32 := by
     have hq1 : (rq.headD 0 + 1).toNat = (rq.headD 0).toNat + 1 := by
-      have := erecP_lt hwn; obtain ⟨-, h2', -, h4, -⟩ := hS2.2
+      have := erecP_lt hwn; obtain ⟨-, h2', -, h4, -⟩ := hS2.iw
       rw [UInt64.toNat_add, show (1 : Word).toNat = 1 from rfl]; exact Nat.mod_eq_of_lt (by omega)
     rw [rdW_of_get? hq1.symm (erecP_get hwn)]; exact hwnl
   rcases h3 : callW p n "env_push" [vis, rq.headD 0] m2 with _ | ⟨rv, m3⟩ <;> simp only [h3, cbpK3, reduceCtorEq] at h

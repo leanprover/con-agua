@@ -101,7 +101,7 @@ theorem contRef_step (L : NbLook p) (hq : KnotStageProg p) (hIlpf : IlpfF p) (hL
     rw [decHL_agree (RdS.of_grow hg1) (fun j hj => by omega)]; exact hargs
   obtain ⟨hds, hidx⟩ := pos2_decHL_split hargs1 (show nPcW.toNat ≤ aL.toNat by omega)
   have hPle : nPcW.toNat ≤ aL.toNat := by omega
-  have hab1 : aO.toNat + aL.toNat ≤ iwTop m1 := by have := hg1.1; omega
+  have hab1 : aO.toNat + aL.toNat ≤ iwTop m1 := by have := hg1.iw; omega
   have hiO : (aO + nPcW).toNat = aO.toNat + nPcW.toNat := word_add_toNat (by omega)
   have hiL : (aL - nPcW).toNat = aL.toNat - nPcW.toNat := by
     rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by omega))]
@@ -216,7 +216,7 @@ theorem contRef_step (L : NbLook p) (hq : KnotStageProg p) (hIlpf : IlpfF p) (hL
     (r4.tail.headD 0) ns
   have hR6 := ih.key m4 a4 ctx fu po pl kb nn us aO nPcW nPcW (r4.tail.headD 0) ns c prog (args.take nPcW.toNat) NS
     ctxP progP nP usP (argsP.take nPcW.toNat) niP.2 nsP
-    hC4 (hW.grow hg14) hnn hus (hdsB.grow (OMono.decHL _ _) hg4) (by have := hg14.1; omega) hctyH
+    hC4 (hW.grow hg14) hnn hus (hdsB.grow (OMono.decHL _ _) hg4) (by have := hg14.iw; omega) hctyH
     (hns.grow hg14 htop) hP4 hA4 hc (dCtx_ext _ hx04 _ _ hctx) (dProg_ext hx04 _ _ hprog)
     (ConRon.Bridge.denoteN_ext hnP hx04) (ConRon.Bridge.denoteLs_ext husP hx04)
     (ConRon.Bridge.Inductives.denoteEList_take (ConRon.Bridge.denoteEList_ext hx04 _ _ hargsP) nPcW.toNat)

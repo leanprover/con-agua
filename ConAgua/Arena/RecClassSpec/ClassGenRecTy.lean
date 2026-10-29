@@ -143,7 +143,7 @@ theorem grtW_sim (n : Nat) (m : Mem) (a : AState) (g c rP fo fl maj t : Word) (G
   rw [grtW.k_class_gen_mot_var.arm1]
   have hg14 := hg13.trans hg4
   refine RSim.lstep (K := grtW.k_sl_snoc_2 n (r3.headD 0) (r3.tail.headD 0) (r4.headD 0)) rfl fun ⟨r5, m5⟩ h5 => ?_
-  obtain ⟨hr5, hd5, hg5, -, -, ht5⟩ := snocW_dec h5 hS4.iw.iwSize hS4.iw.ctl (Nat.le_trans hfb hg14.1) ht
+  obtain ⟨hr5, hd5, hg5, -, -, ht5⟩ := snocW_dec h5 hS4.iw.iwSize hS4.iw.ctl (Nat.le_trans hfb hg14.iw) ht
     (by rw [decHL_grow hg14 hfb]; exact hifs)
   have hS5 := snocW_stage h5 hS4
   have hA5 := snocW_afr h5 (hf4 hA3)
@@ -163,7 +163,7 @@ theorem grtW_sim (n : Nat) (m : Mem) (a : AState) (g c rP fo fl maj t : Word) (G
     decW0E b.2 b.1 x ∧ AbsOK b.2) ?_ ?_
   · rintro ⟨r7, m7⟩ h7
     obtain ⟨x, a', hrun, hS', hg, hx, hA7⟩ := closeW_ok n dn fe vis m6 m7 a6 _ _ 0 _ _ r7 h7 hS6 hbH hd3'
-      (hS6.lt64 (Nat.le_trans hb3 hg36.1)) (Nat.le_trans hb3 hg36.1) (by simp only [UInt64.toNat_zero, Nat.zero_add]; exact UInt64.toNat_lt _)
+      (hS6.lt64 (Nat.le_trans hb3 hg36.iw)) (Nat.le_trans hb3 hg36.iw) (by simp only [UInt64.toNat_zero, Nat.zero_add]; exact UInt64.toNat_lt _)
       (hf6 hA5)
     refine ⟨x, a', ?_, hS', hg, hx, hA7⟩
     rw [← hbd]; simpa using hrun
@@ -226,7 +226,7 @@ theorem gtW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
   have hr := grtW_sim (dn := dn) (vis := vis) (fe := fe) n m2 a2 g c (UInt64.ofNat l12) _ _ _ t G ifs o12 hS2
     (hG.grow (decCG_mono _) hg12) hns (by rw [iwN_grow hg12 (by omega)]; exact h12)
     (by rw [t13]; exact hpre.grow (OMono.decHL _ _) hg12) (by rw [decHL_grow hg2 hfb]; exact hifs)
-    (Nat.le_trans hfb hg2.1) hmH htH (hf2 hA1)
+    (Nat.le_trans hfb hg2.iw) hmH htH (hf2 hA1)
   rw [hmd] at hr
   refine RSim.bindPure (K := gtW.k_class_gen_rec_ty_tail) rfl hr ?_
   rintro ⟨r5, m5⟩ y a5 - ⟨⟨hS5, hg5, hy⟩, hA5⟩

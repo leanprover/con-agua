@@ -297,10 +297,10 @@ theorem pairs_ref (hN : NatSubProg p) (nm r : Word) (hn : H nm) (hr : H r) :
     obtain ⟨x3, a3, hrun3, hK3⟩ := ih (o + 1) (l - 1) k m2 a2 r3 m3 hS2 hrest2 (by omega) h3
     obtain ⟨hS3, hg3, hd3⟩ := hK3
     replace hw := ntBW_some hw; obtain ⟨r4, m4, h4, hw⟩ := hw
-    have hR4 := rec2_fref p hN.lIwAlloc hN.lRec2 (r1.headD 0) (r2.headD 0) k m3 r4 m4 hS3.2 h4
+    have hR4 := rec2_fref p hN.lIwAlloc hN.lRec2 (r1.headD 0) (r2.headD 0) k m3 r4 m4 hS3.iw h4
     have hK4 := hR4.2.1
     have hS4 := hK4.stage hS3
-    have rec4 := recAt_of_post hR4 hS3.2
+    have rec4 := recAt_of_post hR4 hS3.iw
     replace hw := ntBW_some hw; obtain ⟨r5, m5, h5, hw⟩ := hw
     simp only [Option.some.injEq, Prod.mk.injEq] at hw
     obtain ⟨hr5, rfl⟩ := hw

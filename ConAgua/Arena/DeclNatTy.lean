@@ -562,7 +562,7 @@ theorem okAll_ref (hN : NatTyProg p) (o l : Word) (ns : List NIdx) :
         rw [decHL_grow hg1 (by rw [ho1]; omega)]; exact hrest
       have hb1 : (o + 1).toNat + (l - 1).toNat ≤ iwTop m1 := by
         obtain ⟨ho1, hl1⟩ := slice_succ hl0 (decHL_bnd m o l hd hS.iw.iwSize)
-        have := hg1.1; rw [ho1]; omega
+        have := hg1.iw; rw [ho1]; omega
       obtain ⟨x, a2, hrun2, hK⟩ := ih (o + 1) (l - 1) k m1 a1 r2 m2 hS1 hrest1 hb1 h2
       refine ⟨x, a2, ?_, hK.1, hg1.trans hK.2.1, by simpa [decW0B] using hK.2.2⟩
       simp only [natOpStoredOkAll, StateT.run_bind, hrun1, exc_ok_bind', hx, ite_true]

@@ -285,7 +285,7 @@ theorem sp2_ref (p : Prog) (hp : SpineDProg p) (n : Nat) (hk : KnotUpTo p n) (F 
   have htop₂' : (spTop m₂).toNat = (r₂.headD 0).toNat + (r₂.tail.headD 0).toNat := by
     have hsz₂ : (m₂.arr64 SPN).size = (m₁.arr64 SPN).size := hg₂.size
     rw [htop₂, UInt64.toNat_add, ← ho₂]; omega
-  have hle : (spTop m₁).toNat ≤ (spTop m₂).toNat := UInt64.le_iff_toNat_le.mp hg₂.1
+  have hle : (spTop m₁).toNat ≤ (spTop m₂).toNat := UInt64.le_iff_toNat_le.mp hg₂.iw
   have hx₂ := hx₁.keep hg₂.size hg₂.below (by omega) hsp₁
   have hT : (spine2T (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b) (decI nm)
       (decI us) (decI nm₂) (decI us₂)).run a₀ = (spineCmpT (coreKnot (decMode mode) fe id F) fe

@@ -160,9 +160,9 @@ theorem capp_ref (N : Nat) (hk : KnotUpTo p N) (F : Nat) (hF : N ≤ F) (hn : N 
   have h4 := capp2_ref p hp hwc hcc n' (hk.mono (by omega)) F (by omega) (by omega)
     ⟨m₂, Locals.init []⟩ _ dn vis fe M' eb mode d (r₂.headD 0) (r₁.headD 0) (r₁.tail.headD 0)
     (r₁.tail.tail.headD 0) xs ns ⟨hS₂, hs.mode4, hs.eb_mode⟩ hrw₂ hhw hxs₂ hns₂
-    (by have h22 := hSt₂.1; simp only at h22 ⊢; rw [h22]; omega)
+    (by have h22 := hSt₂.check; simp only at h22 ⊢; rw [h22]; omega)
     (by show (spTop m₂).toNat ≤ (m₂.arr64 SPN).size
-        have a := hSt₂.1; have b := hSt₂.size; simp only at a b; rw [a, b]; omega)
+        have a := hSt₂.check; have b := hSt₂.size; simp only at a b; rw [a, b]; omega)
   rcases c4 : coreApp2E p (n' + 2) m₂ mode vis d (r₂.headD 0) (r₁.headD 0) (r₁.tail.headD 0)
     (r₁.tail.tail.headD 0) with e4 | ⟨r₄, m₄⟩
   · rw [c4] at h4; exact fun hG => h4 (hG.mono (by omega))

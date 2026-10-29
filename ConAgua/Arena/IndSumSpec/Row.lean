@@ -92,7 +92,7 @@ theorem plgW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
       obtain ⟨r2, m2, h2, h⟩ := kSome_inv h rfl (fun _ _ => rfl)
       rw [plK2_some] at h
       obtain ⟨us, a2, hrun2, hS2, hg2, hd2, ht2⟩ := ih m1 m2 a1 (o + 1) (l - 1) lps' r2 h2 hS1
-        (by rw [decHL_grow hg1 (by omega)]; exact hd') (by omega) (by have := hg1.1; omega)
+        (by rw [decHL_grow hg1 (by omega)]; exact hd') (by omega) (by have := hg1.iw; omega)
       obtain ⟨r3, m3, h3, h⟩ := kSome_inv h rfl (fun _ _ => rfl)
       rw [plK3_some] at h
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
@@ -298,7 +298,7 @@ theorem colW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       obtain ⟨x, a2, hrun2, hS2, hg2, hH, hx⟩ := ih m1 m2 a1 uo ul so sl z (j + 1) (k - 1) mx r2
         used sorts h2 hS1 (by rw [decBL_grow hg1 hut]; exact hu) (by rw [decHL_grow hg1 hst]; exact hs)
-        hub hsb (by have := hg1.1; omega) (by have := hg1.1; omega) hz hmx32 (by omega)
+        hub hsb (by have := hg1.iw; omega) (by have := hg1.iw; omega) hz hmx32 (by omega)
       refine ⟨x, a2, ?_, hS2, hg1.trans hg2, by simpa using hH, by simpa using hx⟩
       rw [hks]
       simp only [structProjGuards.col, hU.mp hd, ite_true]
@@ -438,7 +438,7 @@ theorem rowW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
     rw [rowK2_some] at h
     obtain ⟨gs, a2, hrun2, hS2, hg2, hd2, ht2⟩ := ih m1 m2 a1 uo ul so sl z (i + 1) (k - 1) rr
       used sorts h2 hS1 (by rw [decBL_grow hg1 hut]; exact hu) (by rw [decHL_grow hg1 hst]; exact hs)
-      hub hsb (by have := hg1.1; omega) (by have := hg1.1; omega) hz (by omega)
+      hub hsb (by have := hg1.iw; omega) (by have := hg1.iw; omega) hz (by omega)
     obtain ⟨r3, m3, h3, h⟩ := kSome_inv h rfl (fun _ _ => rfl)
     rw [plK3_some] at h
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)

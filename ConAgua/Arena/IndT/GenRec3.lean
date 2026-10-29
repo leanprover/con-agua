@@ -252,7 +252,7 @@ theorem grp_ref (P : GrcProg p) {fsR : List FnName} (hclR : closedA p rcFreeA rc
     intro a4 hC4 c4 hcvRis4 hrunA
     have hk4 := hk1.trans hk2
     refine RefC.mono (grpB_ref hkp henv hApd hCrk hIlpf P n (by omega) hC4 (hbs.grow hg12)
-      (hrb.grow hg12 (by have := hbs.ptop; omega)) (decHL_grow' hg12 hparb hpar) (Nat.le_trans hparb hg12.1)
+      (hrb.grow hg12 (by have := hbs.ptop; omega)) (decHL_grow' hg12 hparb hpar) (Nat.le_trans hparb hg12.iw)
       (htbl.grow (fun q => decNCN_mono q) hg12) (hrd.grow (decCR_mono _) hg12) (hms.grow (fun q => decTM_mono q) hg12)
       (hcv.grow (fun q => OMono.decCVp q) hg12) (hlp.grow hms hg12 hk4 hS.iw.iwSize) (csRes_decB hcs2) hns hnpk
       (by rw [hk4 IW]; exact hsz5) hP2 hA2 hkeep

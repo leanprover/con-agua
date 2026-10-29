@@ -281,7 +281,7 @@ theorem icbg_ref (hP : CtorsProg p) (pp lo ll : Word) (bs : BlockShape) {bsP : C
   -- the rest
   have h2 := ih (by omega) m1 a1 (mo + 1) (ml - 1) (co + 1) (cl - 1) rest cvs' restP cvsP' hR1.stage
     (hqd.grow (decBS_mono _) hg1)
-    (partsHsrc_grow hg1 hq9 hsrc) (by rw [decHL_grow3 hg1 hlb]; exact hlps) (Nat.le_trans hlb hg1.1)
+    (partsHsrc_grow hg1 hq9 hsrc) (by rw [decHL_grow3 hg1 hlb]; exact hlps) (Nat.le_trans hlb hg1.iw)
     (hrest.grow decMS_mono hg1) (hcvs'.grow (fun q => OMono.decCVp q) hg1) hR1.abs
     (ConRon.Bridge.Inductives.dShape_ext x1 _ _ hbsP)
     (ConRon.Bridge.Inductives.dMember_ext.list x1 _ _ hrestP)
@@ -311,7 +311,7 @@ theorem icbg_ref (hP : CtorsProg p) (pp lo ll : Word) (bs : BlockShape) {bsP : C
     _ | ⟨r4, m4⟩
   · rw [liftE_none, icbgE.k_sl_cons_2.none]; exact RefE.of_cls0 (by simp)
   rw [liftE_some, icbgE.k_sl_cons_2.arm1]
-  obtain ⟨hS4, hg4, hd4, ht4⟩ := partsConsPL decISS_mono h4 hS3 (by have := hR2.iss.bound; have := hg3.1; omega)
+  obtain ⟨hS4, hg4, hd4, ht4⟩ := partsConsPL decISS_mono h4 hS3 (by have := hR2.iss.bound; have := hg3.iw; omega)
     (hR2.iss.dec.grow (OMono.decPL decISS_mono _ _) hg3) (hR1.iss.grow (decISS_mono _) (hR2.grow.trans hg3))
   have hA4 := consW_afr h4 hA3
   exact RefE.ret rfl ⟨hR2.stage.of_pstep hS4 hA4 (PStep.refl hR2.stage.check.state),

@@ -201,7 +201,7 @@ theorem nty_ref {p : Prog} (hl : NtyLook p) {dn : NIdx → Option ConLeche.Name}
   rw [liftE_some]
   obtain ⟨x6, a5, hrun5, hS6, hg6, hx6⟩ := instW_ok k dn fe vis m5 m6 a4 _ _ _ kk.ds r6 hiw hS5 htlH
     (by rw [decHL_agree (RdS.of_grow hg35) (fun j hj => hdsb j hj)]; exact hds) (by unfold NKSl at hksl; omega)
-    (by have := hg35.1; exact Nat.le_trans hksl this)
+    (by have := hg35.iw; exact Nat.le_trans hksl this)
   rw [htld] at hrun5
   refine RefE.bind_right hrun5 ?_
   cases x6 with

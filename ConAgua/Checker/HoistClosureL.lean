@@ -251,9 +251,9 @@ theorem note_ok {m m' : Mem} {a : AState} {ds : Array IDeclaration} {idx : Std.H
       left
       -- the stack is shorter than `c`
       have hjS : j ∉ stk m ws sp := fun hm => by
-        have := (hS.2 j hm).2; rw [h3] at this; cases this
+        have := (hS.iw j hm).2; rw [h3] at this; cases this
       have hlen : sp.toNat < c := by
-        have := nodup_len_lt hS.1 (fun x hx => (hS.2 x hx).1) hjc hjS
+        have := nodup_len_lt hS.check (fun x hx => (hS.iw x hx).1) hjc hjS
         rwa [stk_length] at this
       have hspw : ws + sp = ws + UInt64.ofNat sp.toNat := by simp
       rw [htgj, hj1, hspw]
@@ -358,17 +358,17 @@ theorem notes_ok {a : AState} {ds : Array IDeclaration} {idx : Std.HashMap NIdx 
       have hS₁ : StkOK m₁ ws sp₁ c (T.insert j i) := by
         rw [StkOK, hstk]
         refine ⟨?_, ?_⟩
-        · refine List.nodup_append.mpr ⟨hS.1, by simp, ?_⟩
+        · refine List.nodup_append.mpr ⟨hS.check, by simp, ?_⟩
           intro x hx y hy e
           simp at hy; subst hy; subst e
-          have := (hS.2 x hx).2; rw [hTj] at this; cases this
+          have := (hS.iw x hx).2; rw [hTj] at this; cases this
         · intro x hx
           rcases List.mem_append.mp hx with hx | hx
-          · refine ⟨(hS.2 x hx).1, ?_⟩
+          · refine ⟨(hS.iw x hx).1, ?_⟩
             rw [Std.HashMap.getElem?_insert]
             split
             · rfl
-            · exact (hS.2 x hx).2
+            · exact (hS.iw x hx).2
           · simp at hx; subst hx
             exact ⟨hE.nixlt _ _ hj, by simp⟩
       obtain ⟨T', new, hT', hTv', hmf', hfr', hstk', hS', hget, hnew, hall⟩ :=
@@ -480,7 +480,7 @@ theorem closeGo_ok {a : AState} {ds : Array IDeclaration} {idx : Std.HashMap NId
   have hpop := stk_pop m ws sp h0
   generalize hkw : rdW (m.arr64 IW) (ws + sp - 1) = kw at hpop h
   have hkS : kw.toNat ∈ stk m ws sp := by rw [hpop]; simp
-  have hkc : kw.toNat < c := (hS.2 _ hkS).1
+  have hkc : kw.toNat < c := (hS.iw _ hkS).1
   have hkw' : kw = UInt64.ofNat kw.toNat := by simp
   have hks : kw.toNat < ds.size := hE.size ▸ hkc
   obtain ⟨hr59, hD, hok⟩ := hE.ordR kw.toNat hks
@@ -495,7 +495,7 @@ theorem closeGo_ok {a : AState} {ds : Array IDeclaration} {idx : Std.HashMap NId
   -- the stack below the top
   have hS₀ : StkOK m ws (sp - 1) c T := by
     rw [StkOK, hpop] at hS
-    exact ⟨(List.nodup_append.mp hS.1).1, fun x hx => hS.2 x (List.mem_append_left _ hx)⟩
+    exact ⟨(List.nodup_append.mp hS.check).1, fun x hx => hS.iw x (List.mem_append_left _ hx)⟩
   rw [hkw'] at hnotes
   obtain ⟨T', new, hT', hTv', hmf', hfr', hstk', hS', hget, hnew, hall⟩ :=
     notes_ok hi hkc ns m mn T (sp - 1) sp₁ hE hT hTv hS₀ hns hnotes
@@ -558,7 +558,7 @@ theorem closeGo_ok {a : AState} {ds : Array IDeclaration} {idx : Std.HashMap NId
       intro x hx0 hxs
       by_cases hxn : x ∈ new
       · obtain ⟨-, hsx⟩ := hnew x hxn
-        have hkT : (T[kw.toNat]?).isSome := (hS.2 _ hkS).2
+        have hkT : (T[kw.toNat]?).isSome := (hS.iw _ hkS).2
         have hk0 : T₀[kw.toNat]? = none := hI.stkNew _ hkS
         refine .step ((hI.reach _ hk0 hkT).mono hmono) ?_ ⟨hx0, hxs⟩
         obtain ⟨n', hn', h1⟩ := hsx

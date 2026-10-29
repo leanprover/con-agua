@@ -309,7 +309,7 @@ theorem crW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (c
           have hmot2 : decNL m2 mo.toNat ml.toNat = some motPos := by
             rw [decNL_grow (hg1.trans hg2) hmt]; exact hmot
           have hmlb : mo.toNat + ml.toNat < 2 ^ 64 := by
-            have := hS2.2; have := hS.iw.iwSize; have := hS.iw.iw; omega
+            have := hS2.iw; have := hS.iw.iwSize; have := hS.iw.iw; omega
           obtain ⟨r3, hc, h⟩ := of_K h (by simp only [crK3])
           have hcm := cmvW_ok (n - 1) m2 nP mo ml (UInt64.ofNat i) r3 motPos hmot2 hmlb hc
           rw [UInt64.toNat_ofNat_of_lt' hi64] at hcm
@@ -710,9 +710,9 @@ theorem ihsW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
   rw [ihsW.k_class_read_minor_ih1.arm1]
   have hxs1 : decHL m1 (fo + 1).toNat (fl - 1).toNat = some xs := by
     rw [hfo1, hfl1, decHL_grow hg1 (by omega)]; rw [show fl.toNat - 1 = k by omega]; exact hxs
-  have hft1 : (fo + 1).toNat + (fl - 1).toNat ≤ iwTop m1 := by have := hg1.1; omega
+  have hft1 : (fo + 1).toNat + (fl - 1).toNat ≤ iwTop m1 := by have := hg1.iw; omega
   have hmot1 : decNL m1 mo.toNat ml.toNat = some motPos := by rw [decNL_grow hg1 hmt]; exact hmot
-  have hmt1 : mo.toNat + ml.toNat ≤ iwTop m1 := Nat.le_trans hmt hg1.1
+  have hmt1 : mo.toNat + ml.toNat ≤ iwTop m1 := Nat.le_trans hmt hg1.iw
   rcases o with _ | ft
   · refine RSim.bindPure (K := ihsW.k_class_read_minor_ihs n (r1.headD 0) (r1.tail.headD 0) (r1.tail.tail.headD 0)) rfl (ih m1 a1 (fo + 1) (fl - 1) xs hS1 hxs1 hft1 hmot1 hmt1) ?_
     rintro ⟨r2, m2⟩ rest a2 - ⟨hS2, hg2, hsp⟩
@@ -943,8 +943,8 @@ theorem tailW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
   rw [tailW.k_get_app_fn_f.arm1]
   have hg56 := hg5.trans hg6
   refine RSim.bindPure (K := tailW.k_class_read_minor_finish) rfl (finW_sim dn vis fe n m6 a6 nP mo ml d fo fl (r6.headD 0) c motPos
-    fvs hS6 hb6 (by rw [decHL_grow hg56 hft]; exact hfvs) (Nat.le_trans hft hg56.1)
-    (by rw [decNL_grow hg56 hmt]; exact hmot) (Nat.le_trans hmt hg56.1)) ?_
+    fvs hS6 hb6 (by rw [decHL_grow hg56 hft]; exact hfvs) (Nat.le_trans hft hg56.iw)
+    (by rw [decNL_grow hg56 hmt]; exact hmot) (Nat.le_trans hmt hg56.iw)) ?_
   rintro ⟨r7, m7⟩ x a7 - ⟨hS7, hg7, hd7⟩
   rw [tailW.k_class_read_minor_finish.arm1]
   exact RSim.pure_some ⟨hS7, hg56.trans hg7, decSlot_pair hd7⟩
@@ -1012,7 +1012,7 @@ theorem minorW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv
   simp only [List.tail_cons, List.headD_cons]
   have ht := tailW_sim dn vis fe n m3 a3 nP mo ml d (r2.tail.headD 0) (r2.tail.tail.headD 0)
     (r2.tail.tail.tail.headD 0) (UInt64.ofNat c) motPos fvs hS3 hcH
-    (by rw [decHL_grow hg3 hft]; exact hfvs) (Nat.le_trans hft hg3.1) hmot3 (Nat.le_trans hmt hg13.1)
+    (by rw [decHL_grow hg3 hft]; exact hfvs) (Nat.le_trans hft hg3.iw) hmot3 (Nat.le_trans hmt hg13.iw)
   rw [UInt64.toNat_ofNat_of_lt' hc64] at ht
   refine RSim.bindPure (K := minorW.k_class_read_minor_tail cR) rfl (RSim.withJ hO.1 ht (fun _ _ hb => tailW_afr hb) hJ3) ?_
   rintro ⟨r5, m5⟩ x a5 - ⟨⟨hS5, hg5, hd5⟩, hJ5⟩
@@ -1290,7 +1290,7 @@ theorem slotW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
       fun e => ht ((tag_beq _ hb1 _ 2 (by decide) rfl).mp e)
     rw [ite_eq_right ht']
     refine RSim.bindPure (K := slK2) rfl (minorW_sim dn vis fe cR J hO n m1 a1 np mo ml d dom motPos hS1
-      hJ1 hH (by rw [decNL_grow hg1 hmt]; exact hmot) (Nat.le_trans hmt hg1.1)) ?_
+      hJ1 hH (by rw [decNL_grow hg1 hmt]; exact hmot) (Nat.le_trans hmt hg1.iw)) ?_
     rintro ⟨r2, m2⟩ x a2 - ⟨⟨hS2, hg2, hd2⟩, hJ2⟩
     rw [slK2_some]
     exact RSim.pure_some ⟨⟨hS2, hg1.trans hg2, decSlot_pair hd2⟩, hJ2⟩
@@ -1633,7 +1633,7 @@ theorem slotsRest_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IF
     rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simp; omega))]; simp; omega
   have hd1 : (d + 1).toNat = d.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
   have h := ih m4 a4 (n - 1) mo2 ml2 (d + 1) (r4.headD 0) motPos' hS4 hJ4 hb4 (hb.grow hg24)
-    (by rw [decNL_grow hg24 hmt]; exact hmot) (Nat.le_trans hmt hg24.1) (by rw [hn1, hd1]; omega)
+    (by rw [decNL_grow hg24 hmt]; exact hmot) (Nat.le_trans hmt hg24.iw) (by rw [hn1, hd1]; omega)
   rw [hn1, hd1] at h
   refine RSim.bind (K := ssK6 N slotw) (by rw [ssK6]) h ?_
   rintro ⟨r5, m5⟩ o a5 - ⟨⟨hS5, hg5, hd5⟩, hJ5⟩
@@ -1715,7 +1715,7 @@ theorem slots_sims (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv
     rw [ssK1_ok (h := by rw [h11]; decide)]
     refine RSim.bindPure (K := ssK1b) (by rw [ssK1b])
       (ih2 m1 a1 n mo ml d _ _ _ motPos k slot hS1 hJ1 hdomH hbodyH (hb.grow hg1)
-        (by rw [decNL_grow hg1 hmt]; exact hmot) (Nat.le_trans hmt hg1.1) hk hd hsl) ?_
+        (by rw [decNL_grow hg1 hmt]; exact hmot) (Nat.le_trans hmt hg1.iw) hk hd hsl) ?_
     rintro ⟨r2, m2⟩ x a2 - ⟨⟨hS2, hg2, hd2⟩, hJ2⟩
     rw [ssK1b_some]
     refine RSim.pure_some ⟨⟨hS2, hg1.trans hg2, ?_⟩, hJ2⟩

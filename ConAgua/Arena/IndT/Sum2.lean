@@ -120,7 +120,7 @@ theorem cts_ref (k : Nat) (hk : k ≤ 2 ^ 62)
     RefE (CtsG p) (ctsE p k m vis cv n cvTa0) (checkSumTele.checkSumTeleSlow V fe cvv n.toNat cvTa) a
       (fun w res a' => CtsPost dn vis fe env m w res a') := by
   have hS := hC.stage
-  obtain ⟨hI1, hE1, hsz, hEs, hc⟩ := hS.2
+  obtain ⟨hI1, hE1, hsz, hEs, hc⟩ := hS.iw
   cases k with
   | zero => rw [ctsE.eq_1]; exact RefE.of_cls0 rfl
   | succ k =>
@@ -164,12 +164,12 @@ theorem cts_ref (k : Nat) (hk : k ≤ 2 ^ 62)
   refine RefE.bind_right hrun2 ?_
   -- `close_telescope` (outside the verdict closure)
   have hb1 : (r1.headD 0).toNat + (r1.tail.headD 0).toNat < 2 ^ 64 := by
-    obtain ⟨hI, -, hsz1, -⟩ := hS1.2; simp only [iwTop] at hI ht1 ⊢; omega
+    obtain ⟨hI, -, hsz1, -⟩ := hS1.iw; simp only [iwTop] at hI ht1 ⊢; omega
   rcases h3 : closeW k m2 (r1.headD 0) (r1.tail.headD 0) 0 ss with _ | ⟨rt, m3⟩
   · rw [liftE_none, ctsE.k_close_telescope.none]; exact RefE.of_cls0 (by simp)
   rw [liftE_some, ctsE.k_close_telescope.arm1]
   obtain ⟨ty, a3, hrun3, hS3, hg3, ⟨hty32, htyd⟩, hA3⟩ := closeW_ok k dn fe vis m2 m3 a2 _ _ 0 ss bs rt h3
-    hS2 hss32 (by rw [decHL_grow hg2 ht1]; exact hd1) hb1 (by have := hg2.1; omega)
+    hS2 hss32 (by rw [decHL_grow hg2 ht1]; exact hd1) hb1 (by have := hg2.iw; omega)
     (by rw [show (0 : Word).toNat = 0 from rfl]; omega) hA2
   rw [show (0 : Word).toNat = 0 from rfl] at hrun3
   obtain ⟨p3, hty⟩ := ConRon.Bridge.Inductives.closeTelescope_spec bs bsP 0 (decI ss) (.sort sP) a2 a3 ty
@@ -247,7 +247,7 @@ theorem ct_ref (k : Nat) (hk : k ≤ 2 ^ 62)
     RefE (CtsG p) (ctE p k m vis cv n cvTa0) (checkSumTele V fe cvv n.toNat cvTa) a
       (fun w res a' => CtsPost dn vis fe env m w res a') := by
   have hS := hC.stage
-  obtain ⟨hI1, hE1, hsz, hEs, hc⟩ := hS.2
+  obtain ⟨hI1, hE1, hsz, hEs, hc⟩ := hS.iw
   cases k with
   | zero => rw [ctE.eq_1]; exact RefE.of_cls0 rfl
   | succ k =>

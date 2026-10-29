@@ -102,8 +102,8 @@ theorem kof_ref (n : Nat) {m : Mem} {a : AState} {nP po pl key : Word} {pfvs : L
     rw [hg2.iwGet _ (by omega)]
   refine RefE.ret rfl ?_
   dsimp only
-  exact ⟨hd1.grow (decCK_mono _) hg2, by have := hg2.1; omega,
-    by rw [ek 2 (by decide), ek 3 (by decide)]; have := hg2.1; omega, hS2, hg1.trans hg2,
+  exact ⟨hd1.grow (decCK_mono _) hg2, by have := hg2.iw; omega,
+    by rw [ek 2 (by decide), ek 3 (by decide)]; have := hg2.iw; omega, hS2, hg1.trans hg2,
     hP1.fr (ckc2W_mfr _ _ _ _ _ _ _ h2)⟩
 
 /-- **`class_key_of` refines `classKeyOf`** (through `replace_fvars`' and `fvar_b`'s stubs;

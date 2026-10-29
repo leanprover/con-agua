@@ -354,7 +354,7 @@ theorem ucW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis ctx : Word
       have hb1 : o.toNat + 1 + cs'.length ≤ iwTop m := by simp at hob; omega
       obtain ⟨b, a', hrun, hS', hg', hr, hP', hJ'⟩ := ih m1 m' a1 (o + 1) (l - 1) cs' r h hS1 hJ1
         (fun y hy => hPc y (List.mem_cons_of_mem _ hy)) (hU.grow hg1)
-        (by rw [hl1, hl]; simp) (by rw [ho1]; have := hg1.1; omega)
+        (by rw [hl1, hl]; simp) (by rw [ho1]; have := hg1.iw; omega)
         (by rw [ho1]; exact hcs1.grow hb1 hg1) hP1
       refine ⟨b, a', ?_, hS', hg1.trans hg', hr, hP', hJ'⟩
       simp only [StateT.run_bind, hrun1, except_ok_bind, ite_true]

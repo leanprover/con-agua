@@ -243,7 +243,7 @@ theorem dcGoW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis hi : Wor
       obtain ⟨b, a', hrun, hS', hg', hr⟩ := ih m1 m' a1 (off + 1) (l - 1) xs r h hS1
         (by rw [hoff1, hl1, ← hxs, decHL]; exact decHL_agree hRd (fun j hj => by
               have := hin (j + 1) (by omega); simp only [decHL] at *; omega))
-        (fun j hj => by rw [hoff1, hl1] at *; have := hin (j + 1) (by omega); have := hg1.1; omega)
+        (fun j hj => by rw [hoff1, hl1] at *; have := hin (j + 1) (by omega); have := hg1.iw; omega)
       refine ⟨b, a', ?_, hS', hg1.trans hg', hr⟩
       simp only [dsF, StateT.run_bind, hrun1, except_ok_bind, hle, decide_true]
       exact hrun
@@ -455,7 +455,7 @@ theorem pdoW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis no nl lo 
         UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simp; omega))
       obtain ⟨b', a', mp', hrun, hS', hg', hr', hM', hf'⟩ := ih m1 m' a (n - 1) b r ∅ h hS1 hb
         (by rw [decHL_agree (RdS.of_grow hg1) hnb]; exact hn)
-        (fun j hj => Nat.lt_of_lt_of_le (hnb j hj) hg1.1) hM1
+        (fun j hj => Nat.lt_of_lt_of_le (hnb j hj) hg1.iw) hM1
       refine ⟨b', a', mp', ?_, hS', hg1.trans hg', hr', hM', hf1.trans hf'⟩
       rw [hpre]; simp only [StateT.run_bind, hrun1, except_ok_bind]
       rw [← hn1]; exact hrun

@@ -91,7 +91,7 @@ theorem walkRef_step (n : Nat) (ih : NbRef p dn vis fe env n) : WalkRef p dn vis
     obtain ⟨p3, hclP⟩ := ConRon.Bridge.Inductives.closeTelescope_spec nds vf.2.1 hi.toNat cur vf.2.2.1
       a2 a3 cl hC2.check.state ⟨hnds, hcur⟩ hrun3
     refine RefE.bind_right hrun3 (RefE.ret rfl ⟨hC2.of_pstep hS3 hA3 p3, hg1.trans (hg2.trans hg3), hK.grow hg3,
-      by simp only [List.headD_cons, List.tail_cons]; have := hg3.1; omega, by simpa using hl1, hcH, hcd, hclH,
+      by simp only [List.headD_cons, List.tail_cons]; have := hg3.iw; omega, by simpa using hl1, hcH, hcd, hclH,
       hcld, hns2.grow hg3 htop2,
       hP2.fr (closeW_mfr _ _ _ _ _ _ _ _ hcl), hA3, (c1.trans c2).trans (p3.toCore hC2.check),
       vf.2.1, vf.2.2.1, vf.2.2.2, ConRon.Bridge.denoteEList_ext p3.ext _ _ hnds,

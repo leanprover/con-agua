@@ -185,7 +185,7 @@ theorem tpnB_sim (p : Prog) (L : RpLook p) (n : Nat) {dn : NIdx → Option ConLe
   rw [hm3]
   have hd1' : decHL s2.mem (rw.headD 0).toNat (rw.tail.headD 0).toNat = some want := by
     rw [decHL_grow3 hg2 hb1]; exact hd1
-  obtain ⟨wws, hws, hwm, hwl⟩ := slR_of_decHL s2.mem _ _ _ hd1' (by have := hg2.1; have := hT s2.mem; omega)
+  obtain ⟨wws, hws, hwm, hwl⟩ := slR_of_decHL s2.mem _ _ _ hd1' (by have := hg2.iw; have := hT s2.mem; omega)
   obtain ⟨gws, hgs, hgm, hgl⟩ := slR_of_decHL s2.mem _ _ _ hd2 (by rw [ht2]; exact hT _)
   rw [ofNat_toNat_word, ofNat_toNat_word] at hws hgs
   have hset := setEqW_ok hws hgs hW3

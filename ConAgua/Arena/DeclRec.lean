@@ -423,7 +423,7 @@ theorem erecVgW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv
   obtain ⟨hS', hG, hg, htop, hget⟩ := erRec_stage h1 hS [vk, rdW (m1.arr64 EREC) (p + 1),
     rdW (m1.arr64 EREC) (p + 2), rdW (m1.arr64 EREC) (p + 3), rdW (m1.arr64 EREC) (p + 4),
     rdW (m1.arr64 EREC) (p + 5)] rfl
-  obtain ⟨-, hE', -, hEs', -⟩ := hS'.2
+  obtain ⟨-, hE', -, hEs', -⟩ := hS'.iw
   have hsz : ((wrER m1 g [vk, rdW (m1.arr64 EREC) (p + 1), rdW (m1.arr64 EREC) (p + 2),
       rdW (m1.arr64 EREC) (p + 3), rdW (m1.arr64 EREC) (p + 4),
       rdW (m1.arr64 EREC) (p + 5)]).arr64 EREC).size = (m.arr64 EREC).size :=

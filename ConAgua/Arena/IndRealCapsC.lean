@@ -123,7 +123,7 @@ theorem lzcF_simR {m : Mem} {a : AState} (hS : StageR dn vis fe m a) (hrl : Read
   -- `ifAllZero ps`: the names copied to a fresh record slice
   simp only [lzcK1, ne_eq, not_true_eq_false, ↓reduceIte] at hw
   obtain ⟨hS1, hg1⟩ := hSX.of_lheap he.memFrame
-  obtain ⟨hI1, hE1, hsz, hEs, hc⟩ := hS1.2
+  obtain ⟨hI1, hE1, hsz, hEs, hc⟩ := hS1.iw
   generalize hkk : htop m1 - htop m = kk at hw hnm
   have htop1 := he.top
   have hkkN : kk.toNat = (htop m1).toNat - (htop m).toNat := by

@@ -308,7 +308,7 @@ theorem rgoW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
     have := hcs0; simp only [DecB, hL] at this; exact decPL_tail this
   obtain ⟨⟨cqN, hcq, hcv⟩, hnF⟩ := decCN_some hc
   obtain ⟨w, hw, hwv, hcO⟩ := rdW_of_iwN_truncM hpv
-  obtain ⟨hI1, hE1, hIsz, -, -⟩ := hS.2
+  obtain ⟨hI1, hE1, hIsz, -, -⟩ := hS.iw
   have hcq' : iwN (truncM m) w.toNat = some cqN := by rw [hwv]; exact hcq
   obtain ⟨w2, hw2, hw2v, hpvlt⟩ := rdW_of_iwN_truncM hcq'
   have hw1 : (w + 1).toNat = pv + 1 := by rw [UInt64.toNat_add, hwv]; simp; omega
@@ -352,7 +352,7 @@ theorem rgoW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
   have hgm1M := hg1.trans hgM
   have hoT : o.toNat < iwTop m := by simp only [Nat.min_def] at hroom; split at hroom <;> omega
   have hoS : o.toNat < (M.arr64 IW).size := by
-    obtain ⟨h1, -, -, -, -⟩ := hSM.2; have := hgm1M.1; omega
+    obtain ⟨h1, -, -, -, -⟩ := hSM.iw; have := hgm1M.iw; omega
   have haccM : decPL M (rlDec M) q0.toNat j = some acc :=
     sumDecPL_grow hgm1M (fun q x h => ArrExt.decRule (IWGrow.erecPExtR hgm1M) h) _ _ _
       (by omega) hacc
@@ -370,7 +370,7 @@ theorem rgoW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
   refine Sim.bindK (K := rgoK3) rfl (fun _ _ => rfl)
     (ih (M.set64 IW o q) a1 nP (cO + 1) (cL - 1) (rO + 1) (rL - 1) (o + 1) m0 q0 (j + 1) _ cs rhss hS' hg0'
       hq0 (by rw [sumToNat_succ hlt]; omega)
-      (by rw [sumToNat_succ hlt, hcL1, hrL1, htop']; have := hgm1M.1; simp only [Nat.min_def] at hroom ⊢
+      (by rw [sumToNat_succ hlt, hcL1, hrL1, htop']; have := hgm1M.iw; simp only [Nat.min_def] at hroom ⊢
           split at hroom <;> split <;> omega)
       hacc'
       (by rw [hcO1, hcL1]; exact htail) (by rw [hrO1, hrL1]; exact hrtail))

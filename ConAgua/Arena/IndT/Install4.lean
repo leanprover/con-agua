@@ -84,7 +84,7 @@ theorem installWithSortSimC {p : Prog} (hcl : CoreStageClosed p) (hLC : LvlCache
     have g2 : iwN s'.mem (q.toNat + 2) = iwN s'.mem (pp.toNat + 2) := by simp only [iwN, nat?, iwA, e2]
     have g3 : iwN s'.mem (q.toNat + 3) = iwN s'.mem (pp.toNat + 3) := by simp only [iwN, nat?, iwA, e3]
     rw [g2, hp2] at h1; rw [g3, hp3] at h2
-    exact Nat.le_trans (hrb o l h1 h2) hg.1
+    exact Nat.le_trans (hrb o l h1 h2) hg.iw
   intro o l h1 h2
   simp only [List.headD_cons] at h1 h2
   have e0 := hcell 0 (by decide) (by decide) (by decide)
@@ -95,7 +95,7 @@ theorem installWithSortSimC {p : Prog} (hcl : CoreStageClosed p) (hLC : LvlCache
   have g0 : iwN s'.mem q.toNat = iwN s'.mem pp.toNat := by simp only [iwN, nat?, iwA, e0]
   have g1 : iwN s'.mem (q.toNat + 1) = iwN s'.mem (pp.toNat + 1) := by simp only [iwN, nat?, iwA, e1]
   rw [g0, hp0] at h1; rw [g1, hp1] at h2
-  exact Nat.le_trans (hsrc o l h1 h2) hg.1
+  exact Nat.le_trans (hsrc o l h1 h2) hg.iw
 
 set_option experimental.vcgen true in
 /-- **`check_block_inds`' unified model**: the formers and the agreements by their unified models

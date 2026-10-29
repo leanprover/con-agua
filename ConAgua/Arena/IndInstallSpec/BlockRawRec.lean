@@ -235,7 +235,7 @@ theorem pdmW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     have hf1 : (f - 1).toNat = F := partsPred_of hF
     obtain ⟨b2, a2, hr2, hR2, ha2, hM2, hS2, hg2⟩ := ih m1 a (f - 1) _ ∅ hS1 hb (hns.grow (OMono.decHL _ _) hg1)
-      (Nat.le_trans hnb hg1.1) hM1 r2 m2 h2
+      (Nat.le_trans hnb hg1.iw) hM1 r2 m2 h2
     rw [hf1, ha2, hnm'] at hr2
     exact ⟨b2, a, hr2, by rw [hR2]; rfl, rfl, hM2, hS2, hg1.trans hg2⟩
 
@@ -389,7 +389,7 @@ theorem brmW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
     rw [CWF_eq, show decE (rdW (m.arr64 EREC) (UInt64.ofNat cvp + 3)) = cv.type from htye] at h1
     exact brrK_sim h1 fun m1 mp1 hS1 hg1 hM1 => ih m1 a (coff + 1) (clen - 1) cs' mp1 hS1
       (hcs'.grow decCN_mono hg1).1 (Or.inr (hcs'.grow decCN_mono hg1).2) (hns.grow (OMono.decHL _ _) hg1)
-      (Nat.le_trans hnb hg1.1) hM1
+      (Nat.le_trans hnb hg1.iw) hM1
 
 /-- **`block_raw_rec_go`'s model refines the members' `anyM`.** -/
 theorem brgoW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {no nl : Word}
@@ -429,7 +429,7 @@ theorem brgoW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
     rw [hw, how, hlw, ofNat_toNat_word, ofNat_toNat_word, partsAnyM_cons]
     exact brrK_sim (brmW_sim n m a o l ctors mp hS hdc hcb hns hnb hM) fun m1 mp1 hS1 hg1 hM1 =>
       ih m1 a (moff + 1) (mlen - 1) ms' mp1 hS1 (hms'.grow decMS_mono hg1).1
-        (Or.inr (hms'.grow decMS_mono hg1).2) (hns.grow (OMono.decHL _ _) hg1) (Nat.le_trans hnb hg1.1) hM1
+        (Or.inr (hms'.grow decMS_mono hg1).2) (hns.grow (OMono.decHL _ _) hg1) (Nat.le_trans hnb hg1.iw) hM1
 
 /-- **The model of `block_raw_rec`** (at exec fuel `n + 1`). -/
 def brrW (n : Nat) (m : Mem) (p : Word) : Option (List Word × Mem) :=
@@ -524,7 +524,7 @@ theorem blockRawRec_refines (p : Prog) (hM : MaProg p) (ha : p.lookup "iw_alloc"
   have hsim := brgoW_sim (no := rdW (s₀.mem.arr64 CTL) 200) (nl := UInt64.ofNat bs.k) (names := bs.memberNames) n m1 a₀ o l bs.members mp hS1
     ((show DecB (fun m => decPL m (decMS m) o.toNat l.toNat) s₀.mem bs.members from hdm).grow
       (OMono.decPL decMS_mono _ _) hg1)
-    (hob0.imp_right fun h => Nat.le_trans h hg1.1)
+    (hob0.imp_right fun h => Nat.le_trans h hg1.iw)
     (by rw [hkW]; exact decHL_decB hd1 (Nat.le_of_eq ht1)) (by rw [hkW]; omega)
     (memoRG_frame maSch maSch_wf bmKey (fun w : Word => w != 0) [IW] [200] (by decide) (by simp [maSch])
       s₀.mem m1 hf1 mp hmp)

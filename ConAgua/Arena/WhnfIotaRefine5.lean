@@ -410,7 +410,7 @@ theorem icfForall_ref (p : Prog) (hp : IotaProg4 p) (hil : InstListOK p) (N F : 
     rw [UInt64.lt_iff_toNat_lt, Mem.len64, UInt64.toNat_ofNat', Nat.mod_eq_of_lt (by omega)] at h'
     exact h'
   have hg2 : (136 : Word).toNat < (m3.arr64 CTL).size := hS3.ctl136
-  have htop3 : spTop m3 = aco + acn := by rw [hSt3.1, ← htop]
+  have htop3 : spTop m3 = aco + acn := by rw [hSt3.check, ← htop]
   have hq1 : (aco + acn).toNat + 1 < 2 ^ 64 := by omega
   obtain ⟨hfr, hsp', hgrew, hslot, hsz⟩ := push_step m3 (aco + acn) (ra.headD 0) hg1 hg2 htop3 hq1
   have hS3p := hS3.frame_stk hfr (fun b hb => by simpa using hb) (fun x hx => by simpa using hx)
@@ -474,7 +474,7 @@ theorem icfFlush_ref (p : Prog) (hp : IotaProg4 p) (hil : InstListOK p) (N F : N
     (by rw [hacc.size]; intro h0; exact hacn (UInt64.toNat_inj.mp (by simpa using h0)))) ?_
   refine RefE.bind_growK (w := id) h1 fun M1 hS1 hSt1 => ?_
   have hr1 : HW (r1.headD 0) := h1.resOk
-  have hsp1 : spTop m1 = aco + acn := by rw [hSt1.1, ← htop]
+  have hsp1 : spTop m1 = aco + acn := by rw [hSt1.check, ← htop]
   have hnil : SpineR m1 (aco + acn) 0 #[] := SpineR.nil_at m1 _ (by rw [hsum, hSt1.size]; omega)
   have hargs1 : SpineR m1 ao an args := hargs.keep hSt1.size hSt1.below
     (by show ao.toNat + an.toNat ≤ (spTop s₀.mem).toNat; omega) hS.spn

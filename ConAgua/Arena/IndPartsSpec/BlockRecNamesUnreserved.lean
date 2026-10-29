@@ -500,7 +500,7 @@ theorem wsC_ok (cR : CallM) (n : Nat) (dn : NIdx → Option ConLeche.Name) (fe :
   · simp at h
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   have hg12 : IWGrow m m2 := hg2
-  obtain ⟨hI2, hE2, hIsz2, hEsz2, hCsz2⟩ := hS2.2
+  obtain ⟨hI2, hE2, hIsz2, hEsz2, hCsz2⟩ := hS2.iw
   obtain ⟨hq, hm3, hroom⟩ := allocW_facts hal hIsz2
   subst hm3
   have hIW3 : (allocMem m2 9).arr64 IW = m2.arr64 IW := allocMem_IW m2 9

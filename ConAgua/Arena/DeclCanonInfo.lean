@@ -714,7 +714,7 @@ theorem celW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
           (o2.toNat + 1) ys'' (by omega) hys'
         obtain ⟨b2, a2, hb2, hr2', hq2⟩ := ih m1 m' a1 (o1 + 1) (l1 - 1) (o2 + 1) (l2 - 1) x xs'' ys'' h hS1
           (by rw [o1e, l1p]; exact hx2) (by rw [o2e, l2p]; exact hy2)
-          (by rw [o1e, l1p]; have := hg1.1; omega) (by rw [o2e, l2p]; have := hg1.1; omega) hP1 hL1
+          (by rw [o1e, l1p]; have := hg1.iw; omega) (by rw [o2e, l2p]; have := hg1.iw; omega) hP1 hL1
         exact ⟨b2, a2, hb2, hr2', hq2.1, hg1.trans hq2.2.1, hq2.2.2.1, hq2.2.2.2⟩)
       (fun h0 => by
         rw [ite_eq_left h0] at h

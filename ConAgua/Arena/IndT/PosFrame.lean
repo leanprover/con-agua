@@ -241,7 +241,7 @@ theorem frameRef_step (L : NbLook p) (n : Nat) (hn : n ≤ 2 ^ 62) (ih : NbRef p
   have e3 : r5.tail.tail.tail.headD 0 = rp.tail.tail.tail.headD 0 := by rw [← hrp]; rfl
   rw [e0, e1, e2', e3]
   obtain ⟨hS5, hg5, hP5, hN5, hNb5⟩ := fgW_ok dn vis fe hi us dO dL ds hus n m4 m5 a4 gO gL po pl 0 0 grp prog [] rp
-    hfg hS4 (hds.grow (OMono.decHL _ _) hg14) hgl (by have := hg14.1; omega) (hgrp.grow hgb hg14)
+    hfg hS4 (hds.grow (OMono.decHL _ _) hg14) hgl (by have := hg14.iw; omega) (hgrp.grow hgb hg14)
     (hW.hs.grow hg14) (by simp [decHL, hslice?]) (by simp)
   simp only [List.nil_append] at hP5 hN5
   have hx04 := c3.ext.trans c4.ext
@@ -340,11 +340,11 @@ theorem frameRef_step (L : NbLook p) (n : Nat) (hn : n ≤ 2 ^ 62) (ih : NbRef p
     hC7 ⟨hW.u.grow hg17, hP7, by
       have := hW.hb; rw [hW.len] at hhi; simp only [NestCtx.hiAt] at this hhi ⊢; rw [hpl2]
       have := (hi + gL).toNat_lt; omega⟩
-    ⟨hus, hds.grow (OMono.decHL _ _) hg17, by have := hg17.1; omega,
+    ⟨hus, hds.grow (OMono.decHL _ _) hg17, by have := hg17.iw; omega,
       by rw [decHL_agree (RdS.of_grow (hg6.trans hg7)) (fun j hj => by omega)]; exact hN5,
       by have := (hg6.trans hg7).iw; omega, by simp only [List.length_map]; rw [← hgl, ← hdg]; exact (dL + gL).toNat_lt,
       hH7, hHb7⟩
-    hcl6 (by have := hg7.1; omega) (hcs6.grow hcb6 hg7) (hns.grow hg17 htop) (OutsB.nil _ _) (by simp)
+    hcl6 (by have := hg7.iw; omega) (hcs6.grow hcb6 hg7) (hns.grow hg17 htop) (OutsB.nil _ _) (by simp)
     ((((((hP.fr hf1).fr (ceinternW_mfr hic)).fr (MFr.ofMknF hma)).fr (coreF_mfr hq (by decide) hit)).fr
       (fgW_mfr _ _ _ _ _ _ _ _ _ _ _ _ _ _ hfg)).fr hM6 |>.fr
       (fhW_mfr _ _ _ _ _ _ _ _ _ hfh)) hA7

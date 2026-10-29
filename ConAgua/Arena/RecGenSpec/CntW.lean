@@ -106,7 +106,7 @@ theorem ckk_ref {p : Prog} (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe
   have hg1 := hR1.grow
   -- the rest
   have h2 := ih m1 a1 (ko + 1) (kl - 1) ks' hR1.stage (hpf.grow (OMono.decHL _ _) hg1)
-    (Nat.le_trans hpb hg1.1) (hks'.grow decCK_mono hg1) hR1.pos
+    (Nat.le_trans hpb hg1.iw) (hks'.grow decCK_mono hg1) hR1.pos
   rcases h2' : ckkE p n m1 nP po pl (ko + 1) (kl - 1) with e2 | ⟨r2, m2⟩
   · rw [h2'] at h2
     rw [ckkE.k_check_block_classes_keys.none]; exact RefE.bind_left h2

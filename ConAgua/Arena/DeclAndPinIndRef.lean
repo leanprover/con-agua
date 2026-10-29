@@ -362,7 +362,7 @@ theorem andpW_ind_ok {p : Prog} (hp : AndPinIndProg p) {dn : NIdx → Option Con
   rw [hl2] at h4
   obtain ⟨s4, hs4, -, hok4, ⟨⟨hS4, hg4, hd4⟩, -⟩, -⟩ := triple_of_callW (s₀ := ⟨m3, Locals.init []⟩)
     (L.Ind.canonEqList_refines p hp.canon dn vis fe _ _ _ _ block pinned n ⟨m3, Locals.init []⟩ a1
-      ⟨hS3, hd2', hp3, by show _ ≤ iwTop m3; have := hg3.1; omega, hpb3, poolSmall_of_stage hS3,
+      ⟨hS3, hd2', hp3, by show _ ≤ iwTop m3; have := hg3.iw; omega, hpb3, poolSmall_of_stage hS3,
         fun x y l hx hy => hok1.view_inj hx hy⟩) h4
   subst hs4
   have hrun4 := AM.run_of_ok _ _ hok4

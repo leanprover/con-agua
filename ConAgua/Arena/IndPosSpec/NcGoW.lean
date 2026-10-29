@@ -321,8 +321,8 @@ theorem ncGoW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis C cs : W
           (fun i hi => hg2.iwGet _ (by rw [hlen] at hi; omega))
       obtain ⟨ys, a', hrun, hS', hGX, h1, h2, h3, h4⟩ := ih m2 m' a1 (co + 1) (cl - 1) ol fp ns' acc r h hS2
         (by rw [hco1, hcl1, show cl.toNat - 1 = cl' by omega]; exact hE2.hslice? hns')
-        (by have := hg2.1; omega) hol (by omega)
-        (hacc2.mono fun _ hx => ⟨Nat.lt_of_lt_of_le hx.1 hg2.1, hx.2⟩) hfp
+        (by have := hg2.iw; omega) hol (by omega)
+        (hacc2.mono fun _ hx => ⟨Nat.lt_of_lt_of_le hx.1 hg2.iw, hx.2⟩) hfp
       refine ⟨ys, a', ?_, hS', (GrowX.of_grow hg2).trans hGX, h1, h2, h3, by simp; omega⟩
       simp only [StateT.run_bind, hrun1, except_ok_bind]
       exact hrun
@@ -361,10 +361,10 @@ theorem ncGoW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis C cs : W
       have ht4 : iwTop (m3.set64 IW (cs + ol) q3) = iwTop m3 := by
         simp only [iwTop]; rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
       have hsz3 : cs.toNat + ol.toNat < (m3.arr64 IW).size := by
-        have := hS3.iw.iw; have := hg23.1; omega
+        have := hS3.iw.iw; have := hg23.iw; omega
       have hnew : CNOk (m3.set64 IW (cs + ol) q3) q3.toNat (cv, nF)
           (OutR cs.toNat N (iwTop (m3.set64 IW (cs + ol) q3))) := by
-        have hg2' := hg2.1
+        have hg2' := hg2.iw
         refine ⟨⟨by rw [ht4]; omega, Or.inr (by omega)⟩, ⟨by rw [ht4]; omega, Or.inr (by omega)⟩,
           (ciq + 1).toNat, ?_, by rw [hciq1]; exact hE4.decCV hcvE, ?_⟩
         · have := hget3 0 (by simp)
@@ -385,7 +385,7 @@ theorem ncGoW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis C cs : W
           · simp only [List.map_append, List.map_cons, List.map_nil]
             rw [List.getElem_append_left (by rw [hlen]; exact hia)]
             exact (hw2.agree hGX4.2.2.1 hE4).mono fun _ hx =>
-              ⟨Nat.lt_of_lt_of_le hx.1 (by rw [ht4]; exact hg23.1), hx.2⟩
+              ⟨Nat.lt_of_lt_of_le hx.1 (by rw [ht4]; exact hg23.iw), hx.2⟩
         · have hie : i = acc.length := by omega
           subst hie
           refine ⟨q3, ?_, ?_⟩
@@ -407,7 +407,7 @@ theorem ncGoW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis C cs : W
         obtain ⟨ys, a', hrun, hS', hGX, h1, h2, h3, h4⟩ := ih _ m' a1 (co + 1) (cl - 1) (ol + 1) fp' ns'
           (acc ++ [(cv, nPc, nF)]) r h' hS4
           (by rw [hco1, hcl1, show cl.toNat - 1 = cl' by omega]; exact hE4.hslice? hns')
-          (by rw [ht4]; have := hg23.1; omega) (by rw [hol1]; simp) (by simp; omega) hacc4 hfp'
+          (by rw [ht4]; have := hg23.iw; omega) (by rw [hol1]; simp) (by simp; omega) hacc4 hfp'
         refine ⟨ys, a', hrun, hS', hGX4.trans hGX, by rw [h1]; simp; omega, ?_, ?_, h4⟩
         · simpa using h2
         · simpa using h3

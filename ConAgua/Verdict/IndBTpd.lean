@@ -213,8 +213,8 @@ theorem pds_ref (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState}
   · rw [pdsE.k_target_abs.abort1 _ _ _ _ _ _ _ _ _ _ _ _ _ _ hb6]; exact RefE.of_cls0 rfl
   rw [pdsE.k_target_abs.arm1 _ _ _ _ _ _ _ _ _ _ _ _ _ _ hb6]
   obtain ⟨a6, run6, hS6, hg6, hP6⟩ := taF_ok dn fe vis n h6 hS5 hH5 hlv
-    (by rw [decHL_grow hg45 hnob]; exact hno) (by have := hg45.1; omega)
-    (by rw [decHL_grow hg45 hhob]; exact hho) (by have := hg45.1; omega) hP5
+    (by rw [decHL_grow hg45 hnob]; exact hno) (by have := hg45.iw; omega)
+    (by rw [decHL_grow hg45 hhob]; exact hho) (by have := hg45.iw; omega) hP5
   have hA6 := taF_afr h6 hA5
   obtain ⟨q6, hR6⟩ := ConRon.Bridge.Inductives.targetAbs_spec names (decI lvls) holes namesP lvlsP
     holesP (decE (r5.headD 0)) _ a5 a6 _ hC5.check.state ⟨(hTA.ext q.ext).ext q5.ext, hR5⟩ run6
@@ -242,8 +242,8 @@ theorem pds_ref (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState}
   by_cases hb8 : 4294967296 ≤ bv
   · rw [pdsE.k_target_abs_2.abort1 _ _ _ _ _ _ _ hb8]; exact RefE.of_cls0 rfl
   obtain ⟨a8, run8, hS8, hg8, hP8⟩ := taF_ok dn fe vis n h8 hS7 hH7 hlv
-    (by rw [decHL_grow hg47 hnob]; exact hno) (by have := hg47.1; omega)
-    (by rw [decHL_grow hg47 hhob]; exact hho) (by have := hg47.1; omega) hP7
+    (by rw [decHL_grow hg47 hnob]; exact hno) (by have := hg47.iw; omega)
+    (by rw [decHL_grow hg47 hhob]; exact hho) (by have := hg47.iw; omega) hP7
   have hA8 := taF_afr h8 hA7
   obtain ⟨q8, hR8⟩ := ConRon.Bridge.Inductives.targetAbs_spec names (decI lvls) holes namesP lvlsP
     holesP (decE (r7.headD 0)) _ a7 a8 _ hC7.check.state
@@ -379,7 +379,7 @@ theorem pde_ref (n : Nat) (hn : n ≤ 2 ^ 62) :
   subst this
   refine RefE.ite_pos rfl ?_
   have hg1 := hR1.grow
-  have hgo := hg1.1
+  have hgo := hg1.iw
   have h2 := ih (by omega) (m := m1) (ao := ao + 1) (al := al - 1) (bo := bo + 1) (bl := bl - 1)
     hR1.stage hR1.abs hlv
     (by rw [decHL_grow hg1 hnob]; exact hno) (by omega)

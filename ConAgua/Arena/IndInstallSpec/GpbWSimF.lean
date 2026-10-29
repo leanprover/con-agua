@@ -318,7 +318,7 @@ theorem gpbW_simF (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
   rw [gpbW.k_class_gen_prefix_binders_slots_go.arm2 (hc1 := by rw [h21]; decide)]
   refine RSim.lstep (K := gpbW.k_sl_append) rfl fun ⟨r3, m3⟩ h3 => ?_
   obtain ⟨hS3, hg3, hd3, hb3⟩ := rec2AppendW_dec h3 hS2 ((decHL_decB hpbs hpbb).grow (OMono.decHL _ _) hg2) hsb hsbb
-  obtain ⟨hr3, -⟩ := appendW_dec h3 hS2.iw.iwSize hS2.iw.ctl (Nat.le_trans hpbb hg2.1) hsbb
+  obtain ⟨hr3, -⟩ := appendW_dec h3 hS2.iw.iwSize hS2.iw.ctl (Nat.le_trans hpbb hg2.iw) hsbb
     ((decHL_decB hpbs hpbb).get (OMono.decHL _ _) |> fun h => by rw [decHL_grow hg2 hpbb]; exact h) hsb
   rw [gpbW.k_sl_append.arm1]
   refine RSim.pure_some ⟨⟨⟨hS3, hg1.trans (hg2.trans hg3), rfl, by simpa using hd3, by simpa using hb3⟩,

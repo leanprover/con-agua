@@ -123,7 +123,7 @@ theorem m2cEta2_ok (N : Nat) (dn : NIdx → Option ConLeche.Name) (vis : Word) (
   obtain ⟨t4, ht4, -, ok4, ⟨M4, hS4, hK4, hg4⟩, xs, res4, hsp4⟩ := triple_of_callW
     (s₀ := ⟨m3, Locals.init []⟩)
     (etaFabArgs_refines p hp.toIotaProg' N _ _ dn vis fe M3 eb T to tn major ef targs.toArray hS3 hT hmaj
-      hsp3 (htop.trans hSt3.1.symm)) c4
+      hsp3 (htop.trans hSt3.check.symm)) c4
   rw [ht4] at hS4 hg4 hsp4
   have ok4' : AM.ok (etaFabArgsE (decI T) targs (decE major) ef.toNat)
       (AM.st (pure (towerSlotsAll fe (decI T) ef.toNat) : AM Bool) a) := ok4
@@ -295,7 +295,7 @@ theorem m2cEta_ref (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤
   rw [liftE_some, m2cEtaE.k_m2c_eta2.arm1]
   have hspn2 : (m2.arr64 SPN).size < 2 ^ 63 := hS2.spn
   have htop3 : r2'.headD 0 + r2'.tail.headD 0 = spTop m3 := by
-    rw [hSt3.1, htop2', htop2]
+    rw [hSt3.check, htop2', htop2]
   have hsp3 : SpineR m3 (r2'.headD 0) (r2'.tail.headD 0) xs.toArray :=
     hsp2.ofKept hSt3 (by
       have hb := hsp2.bound

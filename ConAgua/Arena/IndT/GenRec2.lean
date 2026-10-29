@@ -233,7 +233,7 @@ theorem grpC_ref (P : GrcProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {dn : NIdx → Op
   obtain ⟨dP, dM, dF, dS, dC⟩ := hcomp _ hgP
   have hG : DecB (fun x => decCG x g.toNat) (grpPMem s2.mem g o l)
       (⟨bs.nP, params, ms2, ftc, rdv.slots, ctors, elim, pre⟩ : ConRon.Arena.ClassGen) :=
-    cgRec_decB hgetP (by rw [htP]; have := hg2.1; rw [htG] at this; omega) (UInt64.toNat_ofNat_of_lt' hnP) dP dM dF dS dC hel hel'
+    cgRec_decB hgetP (by rw [htP]; have := hg2.iw; rw [htG] at this; omega) (UInt64.toNat_ofNat_of_lt' hnP) dP dM dF dS dC hel hel'
       hpreP'
   have hgPd : dClassGen a2.store (⟨bs.nP, params, ms2, ftc, rdv.slots, ctors, elim, pre⟩ : ConRon.Arena.ClassGen) =
       some { gP0 with pre := preP } :=
@@ -411,12 +411,12 @@ theorem grpB_ref (P : GrcProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {dn : NIdx → Op
     exact CoreSpecE.of_callE (classesCtors_claim hkp henv P.ccs hIlpf P.opf dn fe hG.nv hG.core pp (r1.headD 0)
       (r1.tail.headD 0) rd (r2.headD 0) (r2.tail.headD 0) n hn ⟨s2.mem, Locals.init []⟩ a2 bs
       (cvTas.map (·.type)) rdv ms2 hC2 hA2 (hbs.grow hg12) (by rw [decHL_grow3 hg2 hftb1]; exact hft1)
-      (Nat.le_trans hftb1 hg2.1) (hrd.grow (decCR_mono _) hg12) hms2.1 (hS2.lt64 hms2.2) (hlp2 hk2) hnpk
+      (Nat.le_trans hftb1 hg2.iw) (hrd.grow (decCR_mono _) hg12) hms2.1 (hS2.lt64 hms2.2) (hlp2 hk2) hnpk
       (by rw [hsz2]; exact hsz5) hP2 hsh2 hftP2 hrdP2 hms2P hformer hMs2) c3
   rw [grpE.k_classes_ctors.arm1]
   obtain ⟨s3, hs3, -, hok3, hC3, hg3, hsp3, hP3, hA3⟩ := triple_of_callW (s₀ := ⟨s2.mem, Locals.init []⟩)
     (classesCtors_refinesC hkp henv P.ccs hIlpf P.opf n hn _ a2 dn fe vis pp _ _ rd _ _ bs (cvTas.map (·.type)) rdv ms2
-      hC2 hA2 (hbs.grow hg12) (by rw [decHL_grow3 hg2 hftb1]; exact hft1) (Nat.le_trans hftb1 hg2.1)
+      hC2 hA2 (hbs.grow hg12) (by rw [decHL_grow3 hg2 hftb1]; exact hft1) (Nat.le_trans hftb1 hg2.iw)
       (hrd.grow (decCR_mono _) hg12) hms2.1 (hS2.lt64 hms2.2) (hlp2 hk2) hnpk (by rw [hsz2]; exact hsz5) hP2
       hsh2 hftP2 hrdP2 hms2P hformer hMs2) (callW_of_callE c3)
   simp only at hs3 hC3 hg3 hsp3 hP3 hA3; subst hs3
@@ -538,10 +538,10 @@ theorem grpB_ref (P : GrcProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {dn : NIdx → Op
       Option.bind_some, Option.pure_def]
   -- part C
   refine RefC.mono (grpC_ref hkp henv hApd hCrk P n hn hC6 (hbs.grow hg16)
-    (hrb.grow hg16 (by omega)) (decHL_grow' hg16 hparb hpar) (Nat.le_trans hparb hg16.1)
+    (hrb.grow hg16 (by omega)) (decHL_grow' hg16 hparb hpar) (Nat.le_trans hparb hg16.iw)
     (hrd.grow (decCR_mono _) hg16) (hms2.grow (fun q => decTM_mono q) (hg3.trans (hg5.trans hg6)))
     (hctD.grow (OMono.decPL decCC_lh_mono _ _) (hg5.trans hg6))
-    (decHL_grow' hg6 hftcb5 hftc5) (Nat.le_trans hftcb5 hg6.1) hel6 rfl
+    (decHL_grow' hg6 hftcb5 hftc5) (Nat.le_trans hftcb5 hg6.iw) hel6 rfl
     (hcvR.grow (OMono.decPL (fun q => OMono.decCVp q) _ _) hg16) hns hA6
     (ConRon.Bridge.Inductives.dShape_ext c18.ext _ _ hsh) hg0
     (ConRon.Bridge.Inductives.dExt_denoteCV.list c18.ext _ _ hcvRP) hwRis hclR hfRc hP6) ?_ ?_

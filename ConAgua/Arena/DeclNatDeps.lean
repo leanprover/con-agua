@@ -301,10 +301,10 @@ theorem natOpDeps_ref (hN : NatGateProg p) (c : Word) :
   | some qp =>
   obtain ⟨rp, m1⟩ := qp
   rw [hp, bW_some] at hw
-  obtain ⟨h0, hrec, -, hr⟩ := natOpPins_fref hN k m rp m1 hS.2 hp
+  obtain ⟨h0, hrec, -, hr⟩ := natOpPins_fref hN k m rp m1 hS.iw hp
   have hrec' : RecPost m m1 [rp.headD 0] (pinRecW m) := by rw [← hr]; exact hrec
   rw [depsArmW_eq (f := pinW m) fun j hj => by
-    have := pw_rec hS.2 hrec' j.toNat (by simp [pinRecW]; omega)
+    have := pw_rec hS.iw hrec' j.toNat (by simp [pinRecW]; omega)
     rw [UInt64.ofNat_toNat] at this
     rw [this, pinRecW_get m _ _ hj]] at hw
   exact ⟨_, a, natOpDeps_run (hS.check.pins.full ‹_›) hc,

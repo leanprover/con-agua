@@ -86,8 +86,8 @@ theorem sgW_nksl (k : Nat)
   have g3 := iwN_of_get (by simpa using hget1 3 (by simp))
   have g4 := iwN_of_get (by simpa using hget1 4 (by simp))
   have hfm : FMOk m1 f.toNat (.keyMap c.params holes) :=
-    ⟨by simpa using g0, by omega, ⟨_, _, g1, g2, by rw [decHL_grow hg1 hpsum]; exact hpa, by have := hg1.1; omega⟩,
-      ⟨_, _, g3, g4, by rw [decHL_grow hg1 hhob]; exact hho, by have := hg1.1; omega⟩⟩
+    ⟨by simpa using g0, by omega, ⟨_, _, g1, g2, by rw [decHL_grow hg1 hpsum]; exact hpa, by have := hg1.iw; omega⟩,
+      ⟨_, _, g3, g4, by rw [decHL_grow hg1 hhob]; exact hho, by have := hg1.iw; omega⟩⟩
   obtain ⟨ec1, hci1⟩ := hin.grow hg1
   have hsl1 := hsl.grow hin hg1
   have hR1 := hR.frame (posRecW_fr hr1)
@@ -101,7 +101,7 @@ theorem sgW_nksl (k : Nat)
   simp only at h
   obtain ⟨ys, a3, -, -, hS3, hg13, ht3, -, -⟩ := sgGoW_ok dn fe vis k m1 m2 m3 a ctx f
     dO dL q 0 c holes ds [] M G g hgo hS2 hg2 (by omega) (by omega) (by rw [ec1]; exact hc) hci1 hsl1 hb hfm
-    (by rw [decHL_agree (RdS.of_grow hg1) hdsb]; exact hds) (fun j hj => Nat.lt_of_lt_of_le (hdsb j hj) hg1.1)
+    (by rw [decHL_agree (RdS.of_grow hg1) hdsb]; exact hds) (fun j hj => Nat.lt_of_lt_of_le (hdsb j hj) hg1.iw)
     (by simp) (by simp [decHL, hslice?]) (hR1.frame (allocW_fr hal))
     ((hP.fr (posRecW_mfr hr1)).fr (allocW_mfr hal))
   obtain ⟨⟨key, m4⟩, hr4, h⟩ := of_K h rfl
@@ -120,7 +120,7 @@ theorem sgW_nksl (k : Nat)
     simp only [rdW, e]; simp at this; rw [this]; rfl
   simp only [NKSl, List.headD_cons]
   rw [r2, r3]
-  have := hg4.1; omega
+  have := hg4.iw; omega
 
 end sgw
 
@@ -177,7 +177,7 @@ theorem sdCons {p : Prog} (hP : KeysProg p) {n : Nat} {dn : NIdx → Option ConL
   · obtain ⟨w, hw0, hwe⟩ := hw 0 (by omega)
     have hwx : w = x := UInt64.toNat_inj.mp (by simpa using hwe)
     rw [hwx] at hw0
-    have hgt := hg.1
+    have hgt := hg.iw
     have hx1' : x.toNat + 1 < iwTop s'.mem := Nat.lt_of_lt_of_le hx1 hgt
     have hb0 : (r.headD 0).toNat + 0 < iwTop s'.mem := by rw [← htop']; omega
     refine ⟨x, key, nPc, hw0, hb0, hx1', by rw [hg.iwGet x.toNat (Nat.lt_of_succ_lt hx1)]; exact hx0,
@@ -286,7 +286,7 @@ theorem csdW_sim {p : Prog} (hP : SdProg p) (dn : NIdx → Option ConLeche.Name)
     refine Sim.bindK (K := csdW.k_class_seeds_2 p n (r2.headD 0)) (body := fun r3 m3 => csdW.k_class_seeds p (callW p n "sl_cons"
         [r2.headD 0, r3.headD 0, r3.tail.headD 0] m3)) rfl (fun _ _ => rfl)
       (ih s2.mem a1 (mo + 1) (ml - 1) ms' hS2 (hU.grow hg12) (by rw [decHL_grow hg12 hhob]; exact hho)
-        (Nat.le_trans hhob hg12.1) (hms'.grow decTM_mono hg12) (hP1.fr hf2)) ?_
+        (Nat.le_trans hhob hg12.iw) (hms'.grow decTM_mono hg12) (hP1.fr hf2)) ?_
     rintro r3 xs m3 a3 ⟨hS3, hg3, hd3, hP3⟩
     refine Sim.mstep (K := csdW.k_class_seeds p) rfl (fun _ _ => rfl) fun r4 m4 h4 => ?_
     have htop2 : iwTop s2.mem < 2 ^ 64 := Nat.lt_of_le_of_lt hS2.iw.iw hS2.iw.iwSize
@@ -295,7 +295,7 @@ theorem csdW_sim {p : Prog} (hP : SdProg p) (dn : NIdx → Option ConLeche.Name)
     simp only [Nat.add_zero, List.getElem?_cons_zero, List.getElem?_cons_succ] at g0 g1
     have hp2' : (r2.headD 0).toNat = iwTop m1 := hp2
     have ht2' : iwTop s2.mem = iwTop m1 + 2 := ht2
-    have hg3t := hg3.1
+    have hg3t := hg3.iw
     obtain ⟨hS4, hg4, hd4, hf4⟩ := sdCons hP.toKeysProg h4 hS3 hd3 (key := r1.headD 0) (nPc := r1.tail.headD 0)
       (sd := sd) (by omega) (by rw [hg3.iwGet (r2.headD 0).toNat (by omega)]; exact g0)
       (by rw [hg3.iwGet ((r2.headD 0).toNat + 1) (by omega)]; exact g1)

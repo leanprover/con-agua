@@ -154,7 +154,7 @@ theorem fieldsRef_step (n : Nat) (ih : NbRef p dn vis fe env n) : FieldsRef p dn
   simp only at hs1
   rw [hs5] at hs1
   rw [nfE.k_sl_snoc.arm1]
-  obtain ⟨hS4, hg4, hk40, hk41, ht4, hw4, hx4⟩ := snocW_words hs1 hS3 (by have := hg13.1; omega)
+  obtain ⟨hS4, hg4, hk40, hk41, ht4, hw4, hx4⟩ := snocW_words hs1 hS3 (by have := hg13.iw; omega)
   have hks4 : KlB m4 (rk.headD 0).toNat (rk.tail.headD 0).toNat (ks ++ [x1.1]) := by
     rw [hk40, hk41]
     exact KlB.snoc ((hks.grow hg13)) hg4 (by omega) hw4 hx4 hk1
@@ -167,7 +167,7 @@ theorem fieldsRef_step (n : Nat) (ih : NbRef p dn vis fe env n) : FieldsRef p dn
   rw [hs6] at hs2'
   rw [nfE.k_sl_snoc_2.arm1]
   have hg14 := hg13.trans hg4
-  obtain ⟨hrd, hnd5, hg5, -, hl5, ht5⟩ := snocW_decK hs2' hS4.iw.iwSize hS4.iw.ctl (by have := hg14.1; omega)
+  obtain ⟨hrd, hnd5, hg5, -, hl5, ht5⟩ := snocW_decK hs2' hS4.iw.iwSize hS4.iw.ctl (by have := hg14.iw; omega)
     hnd1H (by rw [decHL_agree (RdS.of_grow hg14) (fun i hi => by omega)]; exact hnd)
   have hS5 := snocW_stage hs2' hS4
   have hg15 := hg14.trans hg5
@@ -192,7 +192,7 @@ theorem fieldsRef_step (n : Nat) (ih : NbRef p dn vis fe env n) : FieldsRef p dn
       ctxP progP _ v1.2.2 (ndsP ++ [v1.2.1]) hC5 (hW.grow (hg15.trans (IWGrow.refl _))) (by simpa using hb2H)
       ((hns1.grow (hg2.trans hg3) (Nat.lt_of_le_of_lt hS1.iw.iw hS1.iw.iwSize)).grow (hg4.trans hg5)
         (Nat.lt_of_le_of_lt hS3.iw.iw hS3.iw.iwSize))
-      (hks4.grow hg5) (by rw [hk40, hk41]; have := hg5.1; omega)
+      (hks4.grow hg5) (by rw [hk40, hk41]; have := hg5.iw; omega)
       (by rw [hrd]; simpa using hnd5) (by rw [hrd]; simp only [List.headD_cons, List.tail_cons]; omega)
       ((((hP1.fr (fvinternW_mfr hfv)).fr (MFr.ofI1F hin)).fr (snocW_mfr hs1)).fr (snocW_mfr hs2')) hA5
       hc (dCtx_ext _ hx13 _ _ hctx) (dProg_ext hx13 _ _ hprog) hb2P'

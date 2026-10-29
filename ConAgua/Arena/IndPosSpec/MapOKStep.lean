@@ -536,19 +536,19 @@ theorem frameTail (n : Nat) (hDs : DsOK dn fe vis n) (mh m' : Mem) (a : AState) 
   obtain ⟨hcn, hlv, hds⟩ := decNK_fields ekey
   obtain ⟨o, l, ho, hl, hdsl⟩ := decAt_some hds
   have htop2 : iwTop m2 < 2 ^ 64 := Nat.lt_of_le_of_lt hS2.iw.iw hS2.iw.iwSize
-  have hkb : k + 4 ≤ iwTop m2 := by have := hNK2.1 3 (by omega); have := hg2.1; omega
+  have hkb : k + 4 ≤ iwTop m2 := by have := hNK2.1 3 (by omega); have := hg2.iw; omega
   have ro := rdIW (m := m2) (f := rdW (mh.arr64 IW) h) (i := 2) (by rw [hrk]; exact ho) (by omega) (by decide)
   have rl := rdIW (m := m2) (f := rdW (mh.arr64 IW) h) (i := 3) (by rw [hrk]; simpa using hl) (by omega) (by decide)
   simp only [show UInt64.ofNat 2 = (2 : Word) from rfl, show UInt64.ofNat 3 = (3 : Word) from rfl] at ro rl
   have hsl : ∀ j < l, o + j < iwTop m2 := fun j hj =>
-    Nat.lt_of_lt_of_le (hNK2.2 o l ho (by simpa using hl) j hj) hg2.1
+    Nat.lt_of_lt_of_le (hNK2.2 o l ho (by simpa using hl) j hj) hg2.iw
   rcases hdsr : rxDsW n m2 f (rdW (m2.arr64 IW) (rdW (mh.arr64 IW) h + 2)) (rdW (m2.arr64 IW) (rdW (mh.arr64 IW) h + 3)) with _ | ⟨q, l3, m3⟩ <;> rw [hdsr] at hk; · simp [pfrK3] at hk
   rw [pfrK3_some] at hk
   obtain ⟨ys, a3, hrun3, hdec3, hq3, hpost3⟩ := hDs m2 m3 a f _ _ q l3 _ H0.key.ds M G g hdsr hS2 hfm
     (by rw [ro, rl]; exact hdsl) (by rw [ro, rl]; exact hsl) hR2
   obtain ⟨M3, G3, hS3, hg3, hR3, hk3, hG3⟩ := hpost3
   have htop3 : iwTop m3 < 2 ^ 64 := Nat.lt_of_le_of_lt hS3.iw.iw hS3.iw.iwSize
-  have := hg3.1
+  have := hg3.iw
   -- the container's head, in `m3`
   have hg23 := hg3
   obtain ⟨hcnH, hcnd⟩ := rd_iwH (m := m3) (p := rdW (mh.arr64 IW) h) (i := 0)
@@ -676,15 +676,15 @@ theorem dsGoOK_step (n : Nat) (hRf : RfOK dn fe vis n) (hDg : DsGoOK dn fe vis n
   have hj1 : (j + 1).toNat = j.toNat + 1 := word_add_toNat (show j.toNat + 1 < 2 ^ 64 by have := l.toNat_lt; omega)
   have hacc1 : decHL m1 q.toNat j.toNat = some acc := by rw [decHL_grow hg1 (by omega)]; exact hacc
   have hsz1 : (m1.arr64 IW).size < 2 ^ 64 := hS1.iw.iwSize
-  have hdec2 := decHL_write m1 q j r acc hrH hsz1 (by have := hS1.iw.iw; have := hg1.1; omega) hacc1
+  have hdec2 := decHL_write m1 q j r acc hrH hsz1 (by have := hS1.iw.iw; have := hg1.iw; omega) hacc1
   have hS2 := hS1.set_iw (q + j) r
   have hg02 : IWGrow m0 (m1.set64 IW (q + j) r) := (hg0.trans hg1).set_iw (q + j) r (by omega)
   have ht2 : iwTop (m1.set64 IW (q + j) r) = iwTop m1 := by
     simp only [iwTop]; rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
   obtain ⟨ys, a', hrun, hdec', hS', hg', ht', M', G', hR', hk', hG'⟩ := hDg m0 _ m' a1 f o l q (j + 1) fm xs
-    (acc ++ [decE r]) M1 G1 g h hS2 hg02 hq0 (by rw [ht2]; have := hg1.1; omega) hfm hxs hsl
+    (acc ++ [decE r]) M1 G1 g h hS2 hg02 hq0 (by rw [ht2]; have := hg1.iw; omega) hfm hxs hsl
     (by rw [hj1]; omega) (by rw [hj1]; exact hdec2) (hR1.frame (RfFr.set_iw _ _ _))
-  refine ⟨decE r :: ys, a', ?_, by simpa using hdec', hS', hg', by have := hg1.1; omega, M', G', hR',
+  refine ⟨decE r :: ys, a', ?_, by simpa using hdec', hS', hg', by have := hg1.iw; omega, M', G', hR',
     hk1.trans hk' hG1, UInt64.le_trans hG1 hG'⟩
   simp only [List.drop_eq_getElem_cons (show j.toNat < xs.length by omega), List.mapM_cons, StateT.run_bind, ← hxd, show (decI x : EIdx) = decE x from rfl, hr1, except_ok_bind]
   rw [hj1] at hrun

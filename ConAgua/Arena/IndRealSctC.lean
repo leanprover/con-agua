@@ -240,7 +240,7 @@ theorem sctW_okR {p : Prog} (hp : ApdF p) {dn : NIdx → Option ConLeche.Name} {
     refine sumSim_map (K := sctK5) rfl (fun _ _ => rfl)
       (ih m4 s4 (bO + 1) (bL - 1) bs' hS4 (stateOK_of_sp hok he14) (names_of_sp he14 hks)
         (by rw [decHL_grow hg14 hlb]; exact hlps)
-        (by have := hg14.1; omega) (by rw [decHL_grow hg14 hb1']; exact hbs') (by have := hg14.1; omega) hA4)
+        (by have := hg14.iw; omega) (by rw [decHL_grow hg14 hb1']; exact hbs') (by have := hg14.iw; omega) hA4)
       fun r b m' a' hQ => ⟨hQ.1, hg14.trans hQ.2.1, by simpa using hQ.2.2.1, by simpa using hQ.2.2.2.1,
         hQ.2.2.2.2.1, hQ.2.2.2.2.2.trans he14⟩
   · rw [sctK4_no (h := hc)]
@@ -433,7 +433,7 @@ theorem tbl_ref {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
   obtain ⟨-, hbd, hbb⟩ := hdec1
   simp only [unwrapOr, pure_bind]
   have hlps1 : decHL m1 lo.toNat ll.toNat = some lps := by rw [decHL_grow hg1 hlb]; exact hlps
-  have hlb1 : lo.toNat + ll.toNat ≤ iwTop m1 := by have := hg1.1; omega
+  have hlb1 : lo.toNat + ll.toNat ≤ iwTop m1 := by have := hg1.iw; omega
   -- the scoping
   rcases h2 : sctW (realCall p) (n + 1) m1 vis nP lo ll (rb.tail.headD 0) (rb.tail.tail.headD 0)
     with _ | ⟨rs', m2⟩
@@ -505,7 +505,7 @@ theorem tbl_ref {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
     (efW_spec p hP.hea hP.hefg hP.hef n ⟨m2, Locals.init []⟩ lo ll) h5
   dsimp only at h5'
   obtain ⟨hS5, hg5, hrl1, hrl0, hsl5, ht5⟩ := efW_stage n h5' hS2
-    (by rw [decHL_grow hg12 hlb]; exact hlps) (by have := hg12.1; omega)
+    (by rw [decHL_grow hg12 hlb]; exact hlps) (by have := hg12.iw; omega)
   have hg25 := hg2.trans hg5
   rcases h6 : callW p (n + 1) "er_from_iw" [rb.tail.headD 0, rb.tail.tail.headD 0] s5.mem with _ | ⟨rb2, m6⟩
   · rw [liftE_none, tblE.k_er_from_iw_2.none]; exact RefE.of_cls0 (by simp)
@@ -514,7 +514,7 @@ theorem tbl_ref {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
     (efW_spec p hP.hea hP.hefg hP.hef n ⟨s5.mem, Locals.init []⟩ _ _) h6
   dsimp only at h6'
   obtain ⟨hS6, hg6, hrb1, hrb0, hsl6, ht6⟩ := efW_stage n h6' hS5
-    (by rw [decHL_grow hg25 hbb]; exact hbd) (by have := hg25.1; omega)
+    (by rw [decHL_grow hg25 hbb]; exact hbd) (by have := hg25.iw; omega)
   have hg06 := ((hg1.trans hg2).trans hg5).trans hg6
   rcases h7 : callW p (n + 1) "er_from_iw" [go, gl] s6.mem with _ | ⟨rg, m7⟩
   · rw [liftE_none, tblE.k_er_from_iw_3.none]; exact RefE.of_cls0 (by simp)
@@ -523,7 +523,7 @@ theorem tbl_ref {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
     (efW_spec p hP.hea hP.hefg hP.hef n ⟨s6.mem, Locals.init []⟩ go gl) h7
   dsimp only at h7'
   obtain ⟨hS7, hg7, hrg1, hrg0, hsl7, ht7⟩ := efW_stage n h7' hS6
-    (by rw [decHL_grow hg06 hgb]; exact hgs) (by have := hg06.1; omega)
+    (by rw [decHL_grow hg06 hgb]; exact hgs) (by have := hg06.iw; omega)
   -- the record
   rcases h8 : erAllocW s7.mem 13 with _ | ⟨q, m8⟩
   · rw [liftE_none, tblE.k_erec_alloc.none]; exact RefE.of_cls0 (by simp)
@@ -754,7 +754,7 @@ theorem cto_ref {p : Prog} (hP : TabsProg p) (hp : ApdF p) (n : Nat) (hn : n ≤
     (rl.headD 0) (rl.tail.headD 0) (UInt64.ofNat bs.nP) (UInt64.ofNat nF) (rdW (s2.mem.arr64 IW) (pp + 6))
     (rg.headD 0) (rg.tail.headD 0)
     (UInt64.ofNat cvp) bs.lps guards cA hS2 hT32 hC32 hrs2
-    (by rw [UInt64.toNat_ofNat_of_lt' hnpb]; omega) hl2 hlb2 hgdT (by rw [hgt1]; exact hg2.1) hcvT2 hA2 ps1.ok
+    (by rw [UInt64.toNat_ofNat_of_lt' hnpb]; omega) hl2 hlb2 hgdT (by rw [hgt1]; exact hg2.iw) hcvT2 hA2 ps1.ok
     hks hTP hcty
   rw [hTn, hCn, hrse2, UInt64.toNat_ofNat_of_lt' hnpb, UInt64.toNat_ofNat_of_lt' hnFb] at h
   rcases h3 : tblE p (j + 2) s2.mem (rdW (s2.mem.arr64 EREC) (UInt64.ofNat cvm))

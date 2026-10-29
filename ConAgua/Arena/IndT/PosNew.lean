@@ -179,7 +179,7 @@ theorem newRef_step (L : NbLook p) (hIlpf : IlpfF p) (hLC : LvlCacheProg p) (n :
     (nestFrameMates fe (decI nn)) hc hctx1 (ConRon.Bridge.denoteLs_ext husP p1.ext)
     (ConRon.Bridge.denoteEList_ext p1.ext _ _ hdsP) hmates (n' + 1) m4 a1 _ _ _ 1
     (nestFrameMates fe (decI nn)) [(decI nn, decI cty)] hC4 hA4 (ConRon.Arena.Ext.refl _) (fun _ h => h)
-    (hW.u.grow hg14) hdsD4 (by have := hg14.1; omega) hmdD (fun j hj => by have := hg24.1; omega) (by simp)
+    (hW.u.grow hg14) hdsD4 (by have := hg14.iw; omega) hmdD (fun j hj => by have := hg24.iw; omega) (by simp)
     (by simp only [List.length_cons, List.length_nil]; omega) hgrp0 hP4
   have hsg := nggE_spec p L.nit R.h2 R.h4 L.nag.hsn L.hgg (n' + 1) ⟨m4, Locals.init []⟩ vis ctx
     (nhiW m2b ctx (rw.tail.headD 0)) us dO dL (rm.headD 0) (rm.tail.headD 0) (g0.headD 0) 1
@@ -244,7 +244,7 @@ theorem newRef_step (L : NbLook p) (hIlpf : IlpfF p) (hLC : LvlCacheProg p) (n :
   rw [nnewE.k_sl_append.arm1]
   generalize hrap : rap7 = rap at hap ⊢
   obtain ⟨hS7, hg7, h70, h71, ht7, hw71, hw72⟩ := appendW_stage hap hS6 hkab
-    (by have := hns.b2; have := hg16.1; omega)
+    (by have := hns.b2; have := hg16.iw; omega)
   have hact7 : KsB m7 (rap.headD 0).toNat (rap.tail.headD 0).toNat
       (grp.map (fun x => (⟨x.1, decI us, ds⟩ : NestKey)) ++ NS.active) := by
     rw [h70, h71]
@@ -270,8 +270,8 @@ theorem newRef_step (L : NbLook p) (hIlpf : IlpfF p) (hLC : LvlCacheProg p) (n :
   have hg18 := hg17.trans hg8
   have hns1 := nsb_rec6 (m' := m8) (q := ns1) (keys := NS.keys.toList)
     (act := grp.map (fun x => (⟨x.1, decI us, ds⟩ : NestKey)) ++ NS.active) (nfs := NS.ctorNfs.toList) (by omega)
-    (Nat.lt_of_le_of_lt hS8.iw.iw hS8.iw.iwSize) hget8 (hk0'.grow hg18) (by have := hns.b0; have := hg18.1; omega)
-    (hact7.grow hg8) (by have := hg8.1; omega) (hn0.grow hg18) (by have := hns.b4; have := hg18.1; omega)
+    (Nat.lt_of_le_of_lt hS8.iw.iw hS8.iw.iwSize) hget8 (hk0'.grow hg18) (by have := hns.b0; have := hg18.iw; omega)
+    (hact7.grow hg8) (by have := hg8.iw; omega) (hn0.grow hg18) (by have := hns.b4; have := hg18.iw; omega)
   simp only [Array.toArray_toList] at hns1
   have hA8 : AbsOK m8 := posRecW_afr hq1 (appendW_afr hap (caW_afr _ _ _ _ _ _ _ _ _ _ _ hca hA5))
   have hC8 : StageC dn vis fe env m8 a5 := hC.of_cstep hS8 hA8 c12
@@ -284,7 +284,7 @@ theorem newRef_step (L : NbLook p) (hIlpf : IlpfF p) (hLC : LvlCacheProg p) (n :
     _ ctxP _ usP dsP grpV
     ⟨nsP.keys, grpV.map (fun p => (⟨p.1, usP, dsP⟩ : ConLeche.NestKey)) ++ nsP.active, nsP.ctorNfs⟩
     hC8 (hWp2.grow ((hg24.trans hg5).trans hg58)) hhw hus (hds.grow (OMono.decHL _ _) hg18)
-    (by have := hg18.1; omega) (by simpa using hgl5) (by have := hg58.1; omega) (hgrp5.grow hgb5 hg58) hns1
+    (by have := hg18.iw; omega) (by simpa using hgl5) (by have := hg58.iw; omega) (hgrp5.grow hgb5 hg58) hns1
     (((hP5.fr (caW_mfr _ _ _ _ _ _ _ _ _ _ _ hca)).fr (appendW_mfr hap)).fr (posRecW_mfr hq1)) hA8
     hc (dCtx_ext _ hx05 _ _ hctx) (dProg_ext hx05 _ _ hwpP) (ConRon.Bridge.denoteLs_ext husP hx05)
     (ConRon.Bridge.denoteEList_ext hx05 _ _ hdsP) hgrp
@@ -324,9 +324,9 @@ theorem newRef_step (L : NbLook p) (hIlpf : IlpfF p) (hLC : LvlCacheProg p) (n :
   rw [nnewE.k_nest_cont_new_finish.arm1]
   rw [pos2_ns_rd hg19 hp6 htop 2 (by decide), pos2_ns_rd hg19 hp6 htop 3 (by decide)] at hcf
   obtain ⟨x, a', hrun10, hS10, hg10, -, hk10, hns10⟩ := cfW_ok dn vis fe hcf hC9.stage (hW.u.grow hg19) hhi0 hus
-    (hds.grow (OMono.decHL _ _) hg19) (by have := hg19.1; omega) (by simpa using hgl5)
+    (hds.grow (OMono.decHL _ _) hg19) (by have := hg19.iw; omega) (by simpa using hgl5)
     (by have := (hg58.trans hg9).iw; omega) (hgrp5.grow hgb5 (hg58.trans hg9)) hns9 (ha0.grow hg19)
-    (by have := hns.b2; have := hg19.1; omega)
+    (by have := hns.b2; have := hg19.iw; omega)
   have p10 := cfT_pstep hrun10 hC9.check.state (ConRon.Bridge.denoteEList_ext (hx05.trans c9.ext) _ _ hdsP)
   have hA10 : AbsOK m10 := cfW_afr hcf hA9
   exact RefE.ret hrun10 ⟨hC9.of_pstep hS10 hA10 p10, hg19.trans hg10, by simpa using hk10, by simpa using hns10,

@@ -397,7 +397,7 @@ theorem pass_ref (hP : PassProg p) {fs : List FnName}
   have d7 := callW_mono c7 hle
   obtain ⟨s7, hs7, -, hok7, hS7, hg7, hsd7, hP7⟩ := triple_of_callW (s₀ := ⟨s6.mem, Locals.init []⟩)
     (classSeeds_refines hP.sds (n + 3) _ a6 dn (r1.headD 0) fe1 _ _ _ _ _ c holes ms hS6 hU6 hhi4 hho6
-      (Nat.le_trans hhob4 hg46.1) hms6 hP6) d7
+      (Nat.le_trans hhob4 hg46.iw) hms6 hP6) d7
   simp only at hs7 hS7 hg7 hsd7 hP7
   subst hs7
   have hA7 : AbsOK s7.mem := hkP _ (by simp [passKeepCalleesC, indsKeepCalleesC, posKeepCalleesC]) _ _ _ _ _ d7 hA6

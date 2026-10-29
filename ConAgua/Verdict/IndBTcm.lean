@@ -200,7 +200,7 @@ theorem tcm_ref (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState}
   rw [← hdb] at hbl4
   have hdn5 : decHL m5 (rn.headD 0).toNat (rn.tail.headD 0).toNat = some bs.memberNames := by
     rw [decHL_grow hg25 (by omega)]; exact hdn
-  have hnb5 : (rn.headD 0).toNat + (rn.tail.headD 0).toNat ≤ iwTop m5 := by have := hg25.1; omega
+  have hnb5 : (rn.headD 0).toNat + (rn.tail.headD 0).toNat ≤ iwTop m5 := by have := hg25.iw; omega
   have hTA : TAArgs bs.memberNames (decI (rb.headD 0)) holes pP.memberNames
       (pP.lps.map ConLeche.Level.param) (ConLeche.targetHoles formerTysP pfvsP.length) a5.store :=
     ⟨ConRon.Bridge.denoteNListE_ext c15.ext _ _

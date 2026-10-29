@@ -137,7 +137,7 @@ theorem sc0List_ref (hD : DmProg5 p) (hs0 : SubstC0 p dn vis fe) (nm r : Word) (
       rw [ho1, hl1'] at hrest
       rw [decHL_grow hg1 (by omega)]; exact hrest
     obtain ⟨x2, a2, hrun2, hS2, hg2, hd2⟩ := ih (o + 1) (l - 1) k m1 a1 r2 m2 hS1 hrest1
-      (by rw [ho1, hl1']; have := hg1.1; omega) h2
+      (by rw [ho1, hl1']; have := hg1.iw; omega) h2
     replace hw := ntBW_some hw; obtain ⟨r3, m3, h3, hw⟩ := hw
     simp only [Option.some.injEq, Prod.mk.injEq] at hw
     obtain ⟨rfl, rfl⟩ := hw

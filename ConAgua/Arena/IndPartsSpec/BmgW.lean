@@ -263,7 +263,7 @@ theorem bmfW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
       refine Sim.congr (op := List.findM? (bmfPred names mm.toNat) rs' >>= pure) ?_ (bind_pure _)
       refine Sim.bindK rfl (fun _ _ => by rw [bmfW.k_block_member_counts_find])
         (ih m1 a1 (ro + 1) (rl - 1) rs' hS1 (hrs'.grow decSR_mono hg1) (hnm.grow (OMono.decHL _ _) hg1)
-          (Nat.le_trans hnb hg1.1)) ?_
+          (Nat.le_trans hnb hg1.iw)) ?_
       rintro r x m' a' ⟨rfl, hxb, hS', hg'⟩
       refine Sim.ret ⟨?_, hxb, hS', hg1.trans hg'⟩
       cases x <;> rfl
@@ -443,8 +443,8 @@ theorem bmgW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
     have hctl1 : (ctl - 1).toNat = ctl.toNat - 1 := by
       rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; simp; omega)]; simp
     have hrec := ih m2 _ (cto + 1) (ctl - 1) (idx + 1) ts' hS2 (hts'.grow (fun _ => OMono.decCVp _) hg02)
-      (hrs.grow decSR_mono hg02) (hnm.grow (OMono.decHL _ _) hg02) (Nat.le_trans hnb hg02.1)
-      (by rw [hidx1, hctl1]; have := hg02.1; omega)
+      (hrs.grow decSR_mono hg02) (hnm.grow (OMono.decHL _ _) hg02) (Nat.le_trans hnb hg02.iw)
+      (by rw [hidx1, hctl1]; have := hg02.iw; omega)
     rw [hidx1] at hrec
     refine Sim.bindK (by simp [bmgK3]) (fun _ _ => by rw [bmgK3]) hrec ?_
     rintro r3 x3 m3 a3 ⟨hR3, hS3, hg3⟩

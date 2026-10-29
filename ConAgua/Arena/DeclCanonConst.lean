@@ -200,7 +200,7 @@ theorem ctxW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
   · unfold PoolSmall at hP1 ⊢; rw [pcap_congr (hz3 POOL) (hz3 POOL1), pcap_congr (hz2 POOL) (hz2 POOL1)]; exact hP1
   · exact hL.of_view hv1
   · exact ⟨by rw [decHL_grow hg3 hu2.2]; exact hu2.1, hu3.1,
-      by rw [decHL_grow hgg' hu1.2]; exact hu1.1, Nat.le_trans hu2.2 hg3.1, hu3.2,
+      by rw [decHL_grow hgg' hu1.2]; exact hu1.1, Nat.le_trans hu2.2 hg3.iw, hu3.2,
       Nat.le_trans hu1.2 hgg'.iw⟩
 
 

@@ -291,7 +291,7 @@ theorem cfrRec_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFE
     rdW (m.arr64 EREC) (cq + 1), rdW (m.arr64 EREC) (cq + 2), rdW (m.arr64 EREC) (cq + 3), mi, rp3, 0, 0]
     (by simp)
   have hroom : q1.toNat + 9 < 2 ^ 64 := by
-    obtain ⟨-, h2, -, h4, -⟩ := hS'.2; simp only [List.length_cons, List.length_nil] at htop'; omega
+    obtain ⟨-, h2, -, h4, -⟩ := hS'.iw; simp only [List.length_cons, List.length_nil] at htop'; omega
   rw [cfrMem_eq (by omega) hroom, hE1]
   refine ⟨hS', hg, ?_⟩
   generalize hM : wrER m1 q1 _ = M at hS' hg htop' hget
@@ -476,7 +476,7 @@ theorem ferW_ok (p : Prog) (hp : CfrProg p) (dn : NIdx → Option ConLeche.Name)
   obtain ⟨wn, hwn, hwnl, -⟩ := decCI_name hci
   have hwn' : (rdW (m1.arr64 EREC) (kq + 1)).toNat < 2 ^ 32 := by
     have hq1 : (kq + 1).toNat = kq.toNat + 1 := by
-      have := erecP_lt hwn; obtain ⟨-, h2, -, h4, -⟩ := hS1.2; rw [UInt64.toNat_add]; simp; omega
+      have := erecP_lt hwn; obtain ⟨-, h2, -, h4, -⟩ := hS1.iw; rw [UInt64.toNat_add]; simp; omega
     rw [rdW_of_get? hq1.symm (erecP_get hwn)]; exact hwnl
   obtain ⟨⟨rv, m2⟩, h2, h⟩ := of_K h (by simp only [ferK2])
   rw [ferK2_some] at h

@@ -323,7 +323,7 @@ theorem bphW_loop1_ok {p : Prog} (P : BphProg p) (dn : NIdx → Option ConLeche.
   rw [hl2] at h3
   obtain ⟨s3, hs3, -, hok3, ⟨⟨hS3, hg3, hd3⟩, -⟩, -⟩ := triple_of_callW (s₀ := ⟨s2.mem, Locals.init []⟩)
     (canonEqList_refines p P.canon dn vis fe _ _ _ _ blk pinned f ⟨s2.mem, Locals.init []⟩ a1
-      ⟨hS2, hd2, hp2, hb2, by show _ ≤ iwTop s2.mem; have := hg2.1; dsimp only at this; omega, poolSmall_of_stage hS2,
+      ⟨hS2, hd2, hp2, hb2, by show _ ≤ iwTop s2.mem; have := hg2.iw; dsimp only at this; omega, poolSmall_of_stage hS2,
         fun x y l hx hy => hok1.view_inj hx hy⟩) h3
   subst hs3
   have hrun3 := AM.run_of_ok _ _ hok3

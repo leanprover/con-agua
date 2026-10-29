@@ -157,7 +157,7 @@ theorem clm_ref (hP : ClmProg p) (pp cao cal pfo pfl : Word) (bs : BlockShape)
   have hR3 := tmf_ref hP.tmf hIlpf hq.closed hLC n hC2.stage
     (hq'.grow (decBS_mono _) hg02) (partsHsrc_grow hg02 (partsShapeFacts hq' hsrc).2.1 hsrc)
     (hcss.grow decCNS_mono hg02) (hpf.grow (OMono.decHL _ _) hg02) (hpf.grow (OMono.decHL _ _) hg02)
-    (Nat.le_trans hpfb hg02.1) hmH hP2 hC2 hA2 hshP2 hmty
+    (Nat.le_trans hpfb hg02.iw) hmH hP2 hC2 hA2 hshP2 hmty
   rcases h3 : tmfE p n m2 vis pp cao cal pfo pfl pfo pfl (r2.headD 0) with e3 | ⟨r3, m3⟩ <;> rw [h3] at hR3
   · rw [clmE.k_target_major_of.none]; exact RefE.bind_left fun hV => hR3 hV.nv
   rw [clmE.k_target_major_of.arm1]
@@ -205,7 +205,7 @@ theorem clm_ref (hP : ClmProg p) (pp cao cal pfo pfl : Word) (bs : BlockShape)
   -- the rest
   have hR5 := ih (by omega) m4 a4 (ko + 1) (kl - 1) ks' ksP' hR4.stage hR4.abs (hq'.grow (decBS_mono _) hg04)
     (partsHsrc_grow hg04 (partsShapeFacts hq' hsrc).2.1 hsrc) (hcss.grow decCNS_mono hg04)
-    (hpf.grow (OMono.decHL _ _) hg04) (Nat.le_trans hpfb hg04.1) (hks'.grow decCK_mono hg04) hP4
+    (hpf.grow (OMono.decHL _ _) hg04) (Nat.le_trans hpfb hg04.iw) (hks'.grow decCK_mono hg04) hP4
     (fun k hk' => hsc k (List.mem_cons_of_mem _ hk'))
     (ConRon.Bridge.Inductives.dShape_ext c14.ext _ _ hsh)
     (ConRon.Bridge.Inductives.dCtors_ext.list c14.ext _ _ hcas)

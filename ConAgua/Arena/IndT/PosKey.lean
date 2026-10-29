@@ -100,7 +100,7 @@ theorem keyRef_step (L : NbLook p) (n : Nat) (ih : NbRef p dn vis fe env n) : Ke
   have hhi0 : c.hiAt 0 < 2 ^ 64 := by have := hW.hb; simp only [NestCtx.hiAt] at this ⊢; omega
   obtain ⟨bc, a2, hrun2, hS2, hg2, hr2⟩ := dcWf_ok dn fe vis (n' + 1) m1 m3 a ctx dO dL c ds [r3.headD 0] hW3 hS1
     (hW.grow hg1).u.dec (hW.grow hg1).u.inn hhi0 ((hds.grow (OMono.decHL _ _) hg1).get (OMono.decHL _ _))
-    (fun j hj => by have := hg1.1; omega)
+    (fun j hj => by have := hg1.iw; omega)
   have hg12 := hg1.trans hg2
   have hP2 : PosMR m3 := (hP.fr (posRecW_mfr hk)).fr (dcWf_mfr hW3)
   have hA2 : AbsOK m3 := dcWf_afr hW3 (posRecW_afr hk hA)
@@ -117,7 +117,7 @@ theorem keyRef_step (L : NbLook p) (n : Nat) (ih : NbRef p dn vis fe env n) : Ke
       (nestContNew V fe c fu.toNat prog kb.toNat (decI nn) (decI us) ds nPc.toNat (decI cty) NS) a2
       (fun v x a' => KindPost dn vis fe env a m v.1 v.2 x a') := by
     have hR := ih.new m3 a2 ctx fu po pl kb nn us dO dL nPc cty ns c prog ds NS ctxP progP nP usP dsP ctyP nsP hC2
-      (hW.grow hg12) hnn hus (hds.grow (OMono.decHL _ _) hg12) (by have := hg12.1; omega) hcty
+      (hW.grow hg12) hnn hus (hds.grow (OMono.decHL _ _) hg12) (by have := hg12.iw; omega) hcty
       (hns.grow hg12 htop) hP2 hA2 hc (dCtx_ext _ p2.ext _ _ hctx) (dProg_ext p2.ext _ _ hprog)
       (ConRon.Bridge.denoteN_ext hnP p2.ext) (ConRon.Bridge.denoteLs_ext husP p2.ext)
       (ConRon.Bridge.denoteEList_ext p2.ext _ _ hdsP) (ConRon.Bridge.denote_ext hctyP p2.ext)

@@ -77,9 +77,9 @@ theorem gftW_ok (p : Prog) (s0 m1 : Mem) (o l q : Word) (cvTas : List IConstantV
   simp only [Decidable.not_not] at hj
   rw [gftW.loop1.arm1 (hc1 := hj)] at h
   have hjn : j.toNat < l.toNat := UInt64.lt_iff_toNat_lt.mp hj
-  obtain ⟨hI1, hE1, hsz, hEs, -⟩ := hS.2
+  obtain ⟨hI1, hE1, hsz, hEs, -⟩ := hS.iw
   have hT0 := hcv.bound
-  have hgt : iwTop s0 ≤ iwTop m := hg.1
+  have hgt : iwTop s0 ≤ iwTop m := hg.iw
   -- constant `j`
   have hdm : decPL m (decCVp m) o.toNat l.toNat = some cvTas :=
     (hcv.grow (fun q => OMono.decCVp q) hg).1.get (OMono.decPL (fun q => OMono.decCVp q) _ _)
@@ -180,9 +180,9 @@ theorem gfcW_ok (s0 : Mem) (co cl mo ml q : Word) (cvTas : List IConstantVal) (m
   simp only [Decidable.not_not] at hj
   rw [gfcW.loop1.arm1 (hc1 := hj)] at h
   have hjn : j.toNat < ml.toNat := UInt64.lt_iff_toNat_lt.mp hj
-  obtain ⟨hI1, hE1, hsz, hEs, -⟩ := hS.2
+  obtain ⟨hI1, hE1, hsz, hEs, -⟩ := hS.iw
   have hT : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hI1 hsz
-  have hgt : iwTop s0 ≤ iwTop m := hg.1
+  have hgt : iwTop s0 ≤ iwTop m := hg.iw
   -- class `j`
   have hmsm := hms.grow (fun q => decTM_mono q) hg
   obtain ⟨v, hv, hdv⟩ := decPL_getH (truncM m) hmsm.1 j.toNat hjn
@@ -198,16 +198,16 @@ theorem gfcW_ok (s0 : Mem) (co cl mo ml q : Word) (cvTas : List IConstantVal) (m
   rw [c1, gfcW.k_class_former_ty.arm1] at h
   obtain ⟨x, a1, hrun1, hS1, hg1, ⟨hr1, he1⟩, hJ1⟩ := hcft k m m1 a _ _ r1 hJ hS (List.getElem_mem _) hM hdcv
     (by have := hcvm.2; omega) c1
-  obtain ⟨hS1', hI1', hsz1, -, -⟩ := hS1.2
+  obtain ⟨hS1', hI1', hsz1, -, -⟩ := hS1.iw
   have hacc1 : decHL m1 q.toNat j.toNat = some acc := by
     rw [decHL_grow hg1 (by omega)]; exact hacc
-  have hqj : q.toNat + j.toNat < (m1.arr64 IW).size := by have := hg1.1; omega
+  have hqj : q.toNat + j.toNat < (m1.arr64 IW).size := by have := hg1.iw; omega
   have hdec := decHL_write m1 q j (r1.headD 0) acc hr1 hsz1 hqj hacc1
   have hj1 : (j + 1).toNat = j.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
   have hqj' : (q + j).toNat = q.toNat + j.toNat := by rw [UInt64.toNat_add]; simp; omega
   obtain ⟨rest, a', hrun, hS', hg', ht', hdec', hJ'⟩ := ih _ m' a1 (j + 1) (acc ++ [x]) h (hS1.set_iw _ _)
     (hJiw _ _ _ hJ1 ((MemFrame.set64 _ IW (by decide) _ _).mono (by simp) (by simp)) (hS1.set_iw _ _))
-    ((hg.trans hg1).set_iw _ _ (by rw [hqj']; omega)) (by rw [cnsTop_set]; have := hg1.1; omega)
+    ((hg.trans hg1).set_iw _ _ (by rw [hqj']; omega)) (by rw [cnsTop_set]; have := hg1.iw; omega)
     (UInt64.le_iff_toNat_le.mpr (by rw [hj1]; omega)) (by rw [hj1, hdec, he1])
   refine ⟨x :: rest, a', ?_, hS', hg', ht', by simpa using hdec', hJ'⟩
   rw [List.drop_eq_getElem_cons (by omega), List.mapM_cons]
