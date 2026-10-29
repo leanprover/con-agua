@@ -134,6 +134,12 @@ theorem warr_run (w : WArr) (s : St) : (warr w).run s = (WArr.ev s w).map (·, s
 
 /-! ## Shifted expressions -/
 
+theorem Expr.sh_zero : ∀ e : Expr, Expr.sh 0 e = e
+  | .const _ | .var _ | .len8 _ | .len64 _ | .glob _ => rfl
+  | .bin _ a b | .cmpw _ a b | .ld64t _ a b | .ld32t _ a b | .ld32h _ a b _ => by
+    simp only [Expr.sh, Expr.sh_zero a, Expr.sh_zero b]
+  | .ld8 _ i | .ld64 _ i | .ldc _ i | .len64t _ i | .ld8x8 _ i => by simp only [Expr.sh, Expr.sh_zero i]
+
 section shift
 variable {o : Nat} {v s' : St}
 
@@ -721,6 +727,21 @@ theorem Expr.safe_sh (o : Nat) : ∀ (e : Expr), Expr.safe (Expr.sh o e) = Expr.
   | .const _ | .var _ | .len8 _ | .len64 _ | .glob _ | .ld8 .. | .ld64 .. | .ldc .. | .ld64t .. | .len64t ..
   | .ld8x8 .. | .ld32t .. | .ld32h .. => rfl
 
+theorem Exprs.ev_length {s : St} : ∀ {es : List Expr} {vs : List Word}, Exprs.ev s es = .ok vs → vs.length = es.length
+  | [], vs, h => by simp only [Exprs.ev, pure, Except.pure, Except.ok.injEq] at h; subst h; rfl
+  | e :: es, vs, h => by
+    simp only [Exprs.ev] at h
+    cases he : Expr.ev s e with
+    | error => rw [he] at h; cases h
+    | ok w =>
+      rw [he] at h
+      cases hes : Exprs.ev s es with
+      | error => simp [hes, bind, Except.bind] at h
+      | ok ws =>
+        simp only [hes, bind, Except.bind, pure, Except.pure, Except.ok.injEq] at h
+        subst h
+        simp [Exprs.ev_length hes]
+
 theorem Exprs.ev_safe (s : St) : ∀ (es : List Expr), es.all Expr.safe = true → ∃ ws, Exprs.ev s es = .ok ws
   | [], _ => ⟨_, rfl⟩
   | e :: es, h => by
@@ -948,5 +969,252 @@ theorem conv_step {k' kk : Stmt → M Sig} (hK : KSh o B c k' kk) (hxs : ∀ x �
     exact conv_seq_sh hK hsh hb h
 
 end conv
+
+/-! ## The inlined call -/
+
+theorem callFn_run (k : Stmt → M Sig) (fd : FunDecl) (vs : List Word) (s : St) :
+    (callFn k fd vs).run s =
+      match (k fd.body).run { s with loc := Locals.init vs } with
+      | .error e => .error e
+      | .ok (r, s1) => .ok (r.retVal, { s1 with loc := s.loc }) := by
+  show ((k fd.body >>= fun r => modify (fun s' : St => { s' with loc := s.loc }) >>= fun _ => pure r.retVal) : M _).run
+    { s with loc := Locals.init vs } = _
+  rw [StateT.run_bind]
+  rcases (k fd.body).run { s with loc := Locals.init vs } with e | ⟨r, s1⟩ <;> rfl
+
+theorem step_call_run (p : Prog) (k : Stmt → M Sig) (s : St) (xs : List Var) (g : FnName) (args : List Expr) :
+    (step p k (.call xs g args)).run s =
+      match Exprs.ev s args with
+      | .error e => .error e
+      | .ok vs =>
+        match p.lookup g with
+        | none => .error (.noFun g)
+        | some fd =>
+          match (k fd.body).run { s with loc := Locals.init vs } with
+          | .error e => .error e
+          | .ok (r, s1) => .ok (.normal, ({ s1 with loc := s.loc } : St).setLocs xs r.retVal) := by
+  simp only [step]
+  rw [run_bind_st (evalArgs_run args s)]
+  cases Exprs.ev s args with
+  | error e => rfl
+  | ok vs =>
+    simp only [Except.bind, invoke, lookupFn]
+    rw [StateT.run_bind, StateT.run_bind]
+    cases p.lookup g with
+    | none => rfl
+    | some fd =>
+      show (do let q ← (callFn k fd vs).run s; _) = _
+      rw [callFn_run]
+      dsimp only
+      rcases (k fd.body).run { s with loc := Locals.init vs } with e | ⟨r, s1⟩ <;> rfl
+
+theorem St.setLocs_agree {o : Nat} : ∀ (a b : St) (xs : List Var) (vs : List Word), (∀ y < o, a.loc y = b.loc y) →
+    ∀ y < o, (a.setLocs xs vs).loc y = (b.setLocs xs vs).loc y
+  | _, _, [], _, h => h
+  | a, b, x :: xs, vs, h => St.setLocs_agree (a.setLoc x _) (b.setLoc x _) xs vs.tail fun y hy => by
+      simp only [St.setLoc]; split <;> simp [h y hy]
+
+/-- `zeroS`: the callee's zeroed locals. -/
+theorem zeroS_run (p' : Prog) (k' : Stmt → M Sig) (o : Nat) : ∀ (zs : List Var) (s' : St), ∃ sz,
+    (step p' k' (zeroS o zs)).run s' = .ok (.normal, sz) ∧ sz.mem = s'.mem ∧
+    (∀ y, (∀ x ∈ zs, y ≠ x + o) → sz.loc y = s'.loc y) ∧ (∀ x ∈ zs, sz.loc (x + o) = 0)
+  | [], s' => ⟨s', rfl, rfl, fun _ _ => rfl, fun _ h => by simp at h⟩
+  | x :: zs, s' => by
+    obtain ⟨sz, h1, h2, h3, h4⟩ := zeroS_run p' k' o zs (s'.setLoc (x + o) 0)
+    refine ⟨sz, ?_, h2, fun y hy => ?_, fun z hz => ?_⟩
+    · rw [zeroS, step_seq_run, step_simple p' k' s' _ rfl]
+      exact h1
+    · rw [h3 y fun z hz => hy z (by simp [hz])]
+      simp [St.setLoc, hy x (by simp)]
+    · simp only [List.mem_cons] at hz
+      by_cases hin : ∃ z' ∈ zs, z + o = z' + o
+      · obtain ⟨z', hz', e⟩ := hin
+        rw [e]; exact h4 z' hz'
+      · rcases hz with rfl | hz
+        · rw [h3 _ fun z' hz' e => hin ⟨z', hz', e⟩]; simp [St.setLoc]
+        · exact absurd ⟨z, hz, rfl⟩ hin
+
+theorem low_ne {o y x : Nat} (hy : y < o) : y ≠ x + o := fun e => absurd (e ▸ Nat.le_add_left o x) (Nat.not_le.mpr hy)
+
+/-- `paramS`: the callee's parameters from the arguments, evaluated in the caller's frame. -/
+theorem paramS_run (p' : Prog) (k' : Stmt → M Sig) (o : Nat) {v : St} : ∀ (args : List Expr) (i : Nat) (s' : St),
+    v.mem = s'.mem → (∀ y < Exprs.vb args, v.loc y = s'.loc y) → Exprs.vb args ≤ o →
+    (step p' k' (paramS o i args)).run s' =
+      (Exprs.ev v args).map fun vs => (.normal, s'.setLocs ((List.range vs.length).map (· + i + o)) vs)
+  | [], i, s', _, _, _ => rfl
+  | a :: as, i, s', hm, hl, hb => by
+    simp only [Exprs.vb] at hb hl
+    rw [paramS, step_seq_run, step_simple p' k' s' _ rfl]
+    simp only [sstep, Exprs.ev]
+    have ha : Expr.ev s' a = Expr.ev v a := by
+      have := Expr.ev_sh (o := 0) hm a (fun x hx => hl x (by omega))
+      rwa [show Expr.sh 0 a = a from Expr.sh_zero a] at this
+    rw [ha]
+    cases Expr.ev v a with
+    | error => rfl
+    | ok w =>
+      simp only [bind, Except.bind, pure, Except.pure]
+      rw [paramS_run p' k' o as (i + 1) (s'.setLoc (i + o) w) hm (fun y hy => by
+        rw [hl y (by omega)]; simp [St.setLoc, low_ne (x := i) (show y < o by omega)]) (by omega)]
+      cases Exprs.ev v as with
+      | error => rfl
+      | ok ws =>
+        simp only [Except.map, List.length_cons, List.range_succ_eq_map, List.map_cons, List.map_map]
+        show _ = Except.ok (_, (s'.setLoc (0 + i + o) w).setLocs _ ws)
+        rw [Nat.zero_add]
+        congr 4
+        funext x
+        show x + (i + 1) + o = x.succ + i + o
+        simp only [Nat.succ_eq_add_one]; ac_rfl
+
+theorem setLocs_range : ∀ (vs : List Word) (i : Nat) (s : St) (y : Nat),
+    (s.setLocs ((List.range vs.length).map (· + i)) vs).loc y =
+      if i ≤ y ∧ y < i + vs.length then vs.getD (y - i) 0 else s.loc y
+  | [], i, s, y => by simp only [St.setLocs, List.length_nil, Nat.add_zero]; split <;> first | rfl | omega
+  | w :: ws, i, s, y => by
+    simp only [List.length_cons, List.range_succ_eq_map, List.map_cons, List.map_map, St.setLocs, List.headD,
+      List.tail, Nat.zero_add]
+    have := setLocs_range ws (i + 1) (s.setLoc i w) y
+    rw [show ((fun x => x + i) ∘ Nat.succ) = (· + (i + 1)) from funext fun x => by
+      simp only [Function.comp_apply, Nat.succ_eq_add_one]; ac_rfl, this]
+    simp only [St.setLoc]
+    by_cases h1 : i + 1 ≤ y ∧ y < i + 1 + ws.length
+    · have h1' : i ≤ y ∧ y < i + (ws.length + 1) := by omega
+      simp only [h1, h1', ↓reduceIte]
+      obtain ⟨d, rfl⟩ : ∃ d, y = i + 1 + d := ⟨y - (i + 1), by omega⟩
+      rw [show i + 1 + d - i = d + 1 by omega, show i + 1 + d - (i + 1) = d by omega]
+      simp
+    · simp only [h1, ↓reduceIte]
+      by_cases h2 : y = i
+      · subst h2; simp
+      · have h3 : ¬ (i ≤ y ∧ y < i + (ws.length + 1)) := by omega
+        simp only [h2, h3, ↓reduceIte]
+
+theorem Vars.lt_vb : ∀ {xs : List Nat} {x : Nat}, x ∈ xs → x < Vars.vb xs
+  | y :: ys, x, h => by
+    simp only [List.mem_cons] at h
+    simp only [Vars.vb]
+    rcases h with rfl | h
+    · exact Nat.lt_of_lt_of_le (Nat.lt_succ_self _) (Nat.le_max_left _ _)
+    · exact Nat.lt_of_lt_of_le (Vars.lt_vb h) (Nat.le_max_right _ _)
+
+theorem DaAg.symm' {N : Var → Prop} {D : List Var} {a b : St} (h : DaAg N D a b) : DaAg N D b a :=
+  ⟨h.1.symm, fun x hx => (h.2 x hx).symm⟩
+
+/-! ## The caller's frame -/
+
+/-- The caller's frame in the original and in the inlined program: equal memories, equal locals
+below `o`. -/
+structure CR (o : Nat) (v s' : St) : Prop where
+  mem : v.mem = s'.mem
+  loc : ∀ y < o, v.loc y = s'.loc y
+
+/-- **A run of the inlined program refines one of the original**: running out of fuel refines
+anything, an error the same error, a value the same value from `Q`-related states. -/
+def Ref {α : Type} (Q : α → St → St → Prop) (r' r : Except Err (α × St)) : Prop :=
+  match r' with
+  | .error .outOfFuel => True
+  | .error e => r = .error e
+  | .ok (a, s1') => ∃ v1, r = .ok (a, v1) ∧ Q a v1 s1'
+
+theorem Ref.err {α : Type} {Q : α → St → St → Prop} (e : Err) : Ref Q (.error e) (.error e) := by
+  cases e <;> trivial
+
+theorem Ref.ok {α : Type} {Q : α → St → St → Prop} {a : α} {v1 s1' : St} (h : Q a v1 s1') :
+    Ref Q (.ok (a, s1')) (.ok (a, v1)) := ⟨v1, rfl, h⟩
+
+/-- **The inlined call does what the call does.** -/
+theorem inl_call {p p' : Prog} {n o : Nat} {fd : FunDecl} {xs : List Var} {g : FnName} {args : List Expr}
+    {t' : Stmt} (hlk : p.lookup g = some fd) (hi : inlBody o fd xs args = some t')
+    (hb : Stmt.vb (.call xs g args) ≤ o) {v s' : St} (h : CR o v s') :
+    Ref (fun _ => CR o) ((step p' (exec p' n) t').run s') ((step p (exec p (n + 1)) (.call xs g args)).run v) := by
+  simp only [inlBody] at hi
+  split at hi
+  case isFalse => cases hi
+  rename_i hlen
+  simp only [Option.bind_eq_bind, Option.bind_eq_some_iff, Option.some.injEq] at hi
+  obtain ⟨en, hen, b, hbody, rfl⟩ := hi
+  simp only [Stmt.vb] at hb
+  have hxs : ∀ x ∈ xs, x < o := fun x hx =>
+    Nat.lt_of_lt_of_le (Vars.lt_vb hx) (Nat.le_trans (Nat.le_max_left _ _) hb)
+  obtain ⟨sz, hz1, hz2, hz3, hz4⟩ := zeroS_run p' (exec p' n) o (needZero fd.nparams fd.body) s'
+  rw [step_seq_run, hz1]
+  dsimp only
+  rw [step_seq_run, paramS_run p' (exec p' n) o (v := v) args 0 sz (h.mem.trans hz2.symm)
+    (fun y hy => by rw [h.loc y (by omega), hz3 y fun x _ => low_ne (by omega)]) (by omega)]
+  rw [step_call_run]
+  cases hev : Exprs.ev v args with
+  | error e => exact Ref.err e
+  | ok vs =>
+    simp only [Except.map, hlk]
+    have hvl : vs.length = fd.nparams := by
+      rw [← hlen]; exact Exprs.ev_length hev
+    -- the callee's frame in the caller's, and the run from it
+    let sp : St := sz.setLocs ((List.range vs.length).map (· + 0 + o)) vs
+    let vw : St := ⟨sp.mem, fun x => sp.loc (x + o)⟩
+    have hsp : ∀ x : Nat, sp.loc (x + o) = if x < vs.length then vs.getD x 0 else sz.loc (x + o) := fun x => by
+      have := setLocs_range vs o sz (x + o)
+      show (sz.setLocs (List.map (fun x => x + 0 + o) _) vs).loc (x + o) = _
+      rw [show (fun x => x + 0 + o) = (· + o) from funext fun _ => by simp, this]
+      by_cases hx : x < vs.length
+      · have hc : o ≤ x + o ∧ x + o < o + vs.length := by omega
+        simp only [hx, hc, ↓reduceIte, Nat.add_sub_cancel, and_self]
+      · have hc : ¬ (o ≤ x + o ∧ x + o < o + vs.length) := by omega
+        simp only [hx, hc, ↓reduceIte]
+    have hda : DaAg (fun x => x ∈ needZero fd.nparams fd.body) (List.range fd.nparams) vw
+        { v with loc := Locals.init vs } := by
+      refine ⟨?_, fun x hx => ?_⟩
+      · show (sz.setLocs _ vs).mem = v.mem
+        rw [St.setLocs_mem, hz2, h.mem]
+      · show sp.loc (x + o) = Locals.init vs x
+        rw [hsp x]
+        simp only [Locals.init]
+        by_cases hxl : x < vs.length
+        · simp [hxl]
+        · rcases hx with hx | hx
+          · exact absurd (hvl ▸ List.mem_range.mp hx) hxl
+          · simp only [hxl, ↓reduceIte, hz4 x hx]
+            rw [List.getD_eq_getElem?_getD, List.getElem?_eq_none (Nat.le_of_not_lt hxl)]; rfl
+    have hK := shift_exec (p := p) (p' := p') (o := o) (B := Stmt.vb fd.body) (c := sp.loc) n
+    have H := conv_step (p := p) (p' := p') (xs := xs) hK hxs fd.body en b hbody (Nat.le_refl _) vw sp
+      ⟨rfl, fun _ _ => rfl, fun _ _ => rfl⟩
+    have hR : ∀ x ∈ (Stmt.da fd.body (some (List.range fd.nparams)) []).2, x ∈ needZero fd.nparams fd.body :=
+      fun x hx => hx
+    change ConvPost p' (exec p' n) o (Stmt.vb fd.body) sp.loc xs en _ ((exec p (n + 1) fd.body).run vw) at H
+    show Ref _ ((step p' (exec p' n) b).run sp) _
+    -- the caller's locals below `o` are untouched
+    have hlow : ∀ y < o, sp.loc y = v.loc y := fun y hy => by
+      show (sz.setLocs _ vs).loc y = _
+      rw [St.setLocs_low _ _ _ y (by
+        simp only [List.mem_map, List.mem_range, not_exists, not_and]
+        intro i _ e; exact low_ne (x := i + 0) hy e.symm), hz3 y fun x _ => low_ne hy, ← h.loc y hy]
+    have fin : ∀ (r : Sig) (v1 s1' t2 : St), AR o (Stmt.vb fd.body) sp.loc v1 s1' → v1.mem = t2.mem →
+        CR o (({ t2 with loc := v.loc } : St).setLocs xs r.retVal) (s1'.setLocs xs r.retVal) := by
+      intro r v1 s1' t2 hA hm
+      refine ⟨by rw [St.setLocs_mem, St.setLocs_mem, ← hm, hA.mem], ?_⟩
+      exact St.setLocs_agree _ _ xs r.retVal fun y hy => by
+        show v.loc y = s1'.loc y
+        rw [hA.low y hy, hlow y hy]
+    generalize hr : (exec p (n + 1) fd.body).run vw = r at H
+    rcases r with e | ⟨sig, v1⟩
+    · rw [exec_da_error hR hda hr]
+      rw [H]; exact Ref.err e
+    · obtain ⟨t2, ht2, hmem⟩ := exec_da_ok hR hda hr
+      rw [ht2]
+      dsimp only
+      cases sig with
+      | normal =>
+        obtain ⟨s1', hA, e1⟩ := H
+        rw [e1, retAssign_run p' (exec p' n) (v := v1) xs [] en s1' (by simpa using hen) hxs hA.mem
+          (fun z hz => by simp [Exprs.vb] at hz)]
+        exact Ref.ok (fin .normal v1 s1' t2 hA hmem)
+      | brk =>
+        obtain ⟨s1', hA, e1⟩ := H
+        rw [e1]
+        exact Ref.ok (fin .brk v1 s1' t2 hA hmem)
+      | ret ws =>
+        obtain ⟨s1', hA, e1⟩ := H
+        rw [e1]
+        exact Ref.ok (fin (.ret ws) v1 s1' t2 hA hmem)
 
 end L.Compiler
