@@ -6,10 +6,10 @@ import Std.WP.Tactic
 import ConAgua.Arena.Verdict
 
 /-!
-# `nest_fields`' error model (lane `verdicts-b`, helper `ia2`, fork `kn2b`)
+# `nest_fields`' unified model (lane `verdicts-b`, helper `ia2`, fork `kn2b`)
 
-The generator's `errors` model of `nest_fields` with its recursive call through `callE`
-(`l_model … specs [callE_spec p n "nest_fields"] … errors trace`, the generated definitions and
+The generator's `unified` model of `nest_fields` with its recursive call through `callE`
+(`l_model … specs [callE_spec p n "nest_fields"] … unified trace`, the generated definitions and
 equations below); its spec by hand (the generator's step proof, without the induction: the
 recursive call is a `callE`).
 -/

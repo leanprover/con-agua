@@ -6,9 +6,9 @@ import ConAgua.L.ModelGen
 import Std.WP.Tactic
 
 /-!
-# `nest_ctors`' error model (lane `verdicts-b`, helper `ia2`, fork `kn2b`)
+# `nest_ctors`' unified model (lane `verdicts-b`, helper `ia2`, fork `kn2b`)
 
-The generator's `errors` model with the recursive call through `callE` (as `PosE3Fm.lean`); its
+The generator's `unified` model with the recursive call through `callE` (as `PosE3Fm.lean`); its
 spec by hand.
 -/
 
