@@ -288,8 +288,8 @@ the program literal and keeps every proof; `scripts/lake build ConAgua` with the
 The critical path drops by 71 s (the split: `ProgWf` 66 s becomes four parts of 15 to 18 s, and so on).
 The inliner adds 28 modules (`ProgI*`, `ProgTree*`, `ProgIdx`: its literal checks, 247 module-s) but
 only 11 s of critical path (98 s against 86 s with them counted as free). Total CPU went up by 100
-module-s, so the CI build, which is CPU-bound, is slightly slower; the 4-core wall time of an L-changing
-landing is about 3.1 min before and 2.0 min after on a busy 96-core machine. A cold build's critical
+module-s, so the CI build, which is CPU-bound, is slightly slower; the wall time of an L-changing
+landing is about 3.1 min before and 2.0 min after on the shared 96-core machine (load 12–90, module times ±20 %). A cold build's critical
 path was not re-measured.
 
 ### 4. The 16-thread gap: parse phase, then parallel phase
