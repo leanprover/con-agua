@@ -27,18 +27,6 @@ theorem inferConst_refinesE (p : Prog) (hp : InferLeafProg p) (hct : ConstTyAtOK
   RefE.coreSpecE (inferConstE_spec p hp.inferConst hp.lsNode (n + 1) s₀ vis nm us) hnv hnv
     (inferConst_ref p hp hct n s₀ a₀ dn vis fe M eb nm us hS hnm hus)
 
-/-- **`infer_proj`'s error claim at both grades** (the error half of `InferProjOK`). -/
-def InferProjOKE (p : Prog) : Prop :=
-  ∀ n, KnotUpTo p n → KnotUpToE p n → ∀ (F : Nat) (s₀ : St) (a₀ : AState)
-    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps)
-    (eb mode d sn i pe : Word), n ≤ F → n ≤ 2 ^ 62 → SlotPre s₀ a₀ dn vis fe M eb mode → HW sn →
-    HW pe →
-    CoreSpecE p (n + 1) "infer_proj" [mode, 0, vis, d, sn, i, pe]
-      (inferProj (coreKnot (decMode mode) fe id F) fe d.toNat (decI sn) i.toNat (decE pe)) s₀ a₀ ∧
-    CoreSpecE p (n + 1) "infer_proj" [mode, 1, vis, d, sn, i, pe]
-      (inferProj (CoreFnsA.ioView (coreKnot (decMode mode) fe id F)) fe d.toNat (decI sn) i.toNat
-        (decE pe)) s₀ a₀
-
 /-- **`infer_proj`'s verdicts at both grades** (`ip_ref`'s error half). -/
 theorem inferProj_refinesE' (p : Prog) (hp : InferProjProg p) (hpj : ProjProg p)
     (hc : InferProjCallees p) (hnv : closedNV p L.Checker.nvFns = true) : InferProjOKE p :=
