@@ -407,7 +407,7 @@ theorem ctor_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f q : Word) (D :
   obtain ⟨b1, b2, b3, b4, b5, b6, b7⟩ := mk_decode p hp (n := n) hCV (ArrExt.refl _) (Nat.le_refl _)
     hts1 hsz1 hkw1 (by simp only [show ((7 : Word)).toNat = 7 from rfl]; omega) hmk
   simp only [show ((7 : Word)).toNat = 7 from rfl] at b2
-  have hsz2 : (m₂.arr64 EREC).size < 2 ^ 64 := by rw [b3.2.2]; exact hsz1
+  have hsz2 : (m₂.arr64 EREC).size < 2 ^ 64 := by rw [b3.size]; exact hsz1
   have e5d : (dl.headD 0 + 5).toNat = erecTop m₁ + 5 := by
     rw [toNat_add5 _ (by omega)]; omega
   obtain ⟨⟨z, m₃⟩, hwr, hW⟩ := Option.bind_eq_some_iff.mp hW
@@ -543,7 +543,7 @@ theorem defn_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f q : Word) (D :
   obtain ⟨b1, b2, b3, b4, b5, b6, b7⟩ := mk_decode p hp (n := n) hCV (by rw [hP2e]; exact ArrExt.refl _)
     (by rw [hT2]; exact Nat.le_refl _) hts2 hsz2 hkw2 (by simp only [show ((8 : Word)).toNat = 8 from rfl]; omega) hmk
   simp only [show ((8 : Word)).toNat = 8 from rfl] at b2
-  have hsz3 : (m₃.arr64 EREC).size < 2 ^ 64 := by rw [b3.2.2]; exact hsz2
+  have hsz3 : (m₃.arr64 EREC).size < 2 ^ 64 := by rw [b3.size]; exact hsz2
   have e5d : (dl.headD 0 + 5).toNat = erecTop m₂ + 5 := by
     rw [toNat_add5 _ (by omega)]; omega
   obtain ⟨⟨z, m₄⟩, hwr, hW⟩ := Option.bind_eq_some_iff.mp hW
@@ -659,7 +659,7 @@ theorem ind_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f q : Word) (D : 
   obtain ⟨b1, b2, b3, b4, b5, b6, b7⟩ := mk_decode p hp (n := n) hCV (ArrExt.refl _) (Nat.le_refl _)
     hts1 hsz1 hkw1 (by simp only [show ((20 : Word)).toNat = 20 from rfl]; omega) hmk
   simp only [show ((20 : Word)).toNat = 20 from rfl] at b2
-  have hsz2 : (m₂.arr64 EREC).size < 2 ^ 64 := by rw [b3.2.2]; exact hsz1
+  have hsz2 : (m₂.arr64 EREC).size < 2 ^ 64 := by rw [b3.size]; exact hsz1
   have e5d : (dl.headD 0 + 5).toNat = erecTop m₁ + 5 := by
     rw [toNat_add5 _ (by omega)]; omega
   obtain ⟨⟨z, m₃⟩, hcc, hW⟩ := Option.bind_eq_some_iff.mp hW
@@ -819,7 +819,7 @@ theorem rec_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f q : Word) (D : 
   obtain ⟨b1, b2, b3, b4, b5, b6, b7⟩ := mk_decode p hp (n := n) hCV (ArrExt.refl _) (Nat.le_refl _)
     hts1 hsz1 hkw1 (by simp only [show ((9 : Word)).toNat = 9 from rfl]; omega) hmk
   simp only [show ((9 : Word)).toNat = 9 from rfl] at b2
-  have hsz2 : (m₂.arr64 EREC).size < 2 ^ 64 := by rw [b3.2.2]; exact hsz1
+  have hsz2 : (m₂.arr64 EREC).size < 2 ^ 64 := by rw [b3.size]; exact hsz1
   have e5d : (dl.headD 0 + 5).toNat = erecTop m₁ + 5 := by
     rw [toNat_add5 _ (by omega)]; omega
   obtain ⟨⟨bl, m₃⟩, hbl, hW⟩ := Option.bind_eq_some_iff.mp hW
@@ -827,7 +827,7 @@ theorem rec_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f q : Word) (D : 
   obtain ⟨c60, u1, u2, u3, u4, u5, u6, u7, u8, u9⟩ := recBlock_rel p hp (d5 := dl.headD 0 + 5)
     hsz2 (by rw [e5d, b2]; omega) b5 hbl
   rw [e5d] at u3 u6 u7 u8 u9
-  have hsz3 : (m₃.arr64 EREC).size < 2 ^ 64 := by rw [u3.2.2]; exact hsz2
+  have hsz3 : (m₃.arr64 EREC).size < 2 ^ 64 := by rw [u3.size]; exact hsz2
   obtain ⟨⟨z, m₄⟩, hpr, hW⟩ := Option.bind_eq_some_iff.mp hW
   dsimp only at hW
   obtain ⟨hr, hm4⟩ := Prod.mk.inj (Option.some.inj hW)
@@ -837,7 +837,7 @@ theorem rec_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f q : Word) (D : 
   have hg02 : ErecGrow m m₂ := hg1.trans b3
   have h01 : erecTop m ≤ erecTop m₁ := hg1.top
   have hlow : ArrExt (preE m D) (preE m₃ D) := preE_ext (fun i hi => by
-    rw [u3.2.1 i (by omega) (by omega)]; exact hg02.get i (by omega))
+    rw [u3.get i (by omega) (by omega)]; exact hg02.get i (by omega))
   have hgb : SlotGrow m₂ m₃ (erecTop m₁ + 5) (erecTop m₁ + 5 + 4) := u3
   by_cases hl0 : w8 = 0
   · have hm : m₃ = m₄ := (rules_zero_gen p hp hl0 hpr).symm

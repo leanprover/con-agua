@@ -97,10 +97,10 @@ theorem iw_set_get (m : Mem) (i w : Word) (hi : i.toNat < (m.arr64 IW).size) :
   simp [hi]
 
 theorem RInv.er_lt {m₀ m : Mem} {a₀ a : AState} {T : Nat} (h : RInv m₀ a₀ T m a) : erTop m < 2 ^ 64 := by
-  have := h.ok.2.1; have := h.ok.2.2.2.1; omega
+  have := h.ok.er; have := h.ok.erSize; omega
 
 theorem RInv.iw_lt {m₀ m : Mem} {a₀ a : AState} {T : Nat} (h : RInv m₀ a₀ T m a) : iwTop m < 2 ^ 64 := by
-  have := h.ok.1; have := h.ok.2.2.1; omega
+  have := h.ok.iw; have := h.ok.iwSize; omega
 
 section names
 variable {rom : List UInt8} {p : Prog} (hL : RomCIProg rom p) (hr : RomOK rom)
@@ -152,7 +152,7 @@ theorem namesTo_rel {m₀ : Mem} {a₀ : AState} {T : Nat} (seen : List ConLeche
     have hs1 : stkTop m1 = stkTop m := hf1.ctl 131 (by decide)
     have hlen : xs.length + 1 = kw.toNat := by simp [hk]
     have hoE : o.toNat < (m1.arr64 EREC).size := by
-      have := hI1.ok.2.1; rw [ht1] at this; simp at hot; omega
+      have := hI1.ok.er; rw [ht1] at this; simp at hot; omega
     have hI2 := hI1.setER o (r1.headD 0) ho
     have hf2 := MemFrame.set64 m1 EREC (by decide) o (r1.headD 0)
     have hM2 := hM1.frameG hf2 (by decide) (by simp)
@@ -308,7 +308,7 @@ theorem nameSl_rel {m₀ : Mem} {a₀ : AState} {T : Nat} (seen : List ConLeche.
       erTop m1 := by simp only [erTop, hC2]
   have hs2 : stkTop ((m1.set64 EREC d (r1.headD 0)).set64 EREC (d + 1) (UInt64.ofNat ns.length)) =
       stkTop m1 := by simp only [stkTop, hC2]
-  have hsz1 : erTop m1 ≤ (m1.arr64 EREC).size := hI1.ok.2.1
+  have hsz1 : erTop m1 ≤ (m1.arr64 EREC).size := hI1.ok.er
   have hget2 : ∀ i, (erA ((m1.set64 EREC d (r1.headD 0)).set64 EREC (d + 1) (UInt64.ofNat ns.length)))[i]? =
       if i = d.toNat + 1 then some (UInt64.ofNat ns.length) else if i = d.toNat then some (r1.headD 0)
       else (erA m1)[i]? := by

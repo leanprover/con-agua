@@ -104,9 +104,9 @@ theorem hNatOpGround_ok (p : Prog) (hx : HoistExt p) (n : Nat) (m m' : Mem) (a :
   rcases ha₂ : allocW m₂ cw with _ | ⟨ws, m₃⟩ <;> rw [ha₂] at h
   · simp [hNatOpGroundW.k_iw_alloc_2.eq_1] at h
   rw [hNatOpGroundW.k_iw_alloc_2.arm1] at h
-  obtain ⟨hA₃, hws, htop₃, hroom₃⟩ := allocW_afr ha₂ hA₂.2.2
-  have hsz₂ : (m₂.arr64 IW).size = (m.arr64 IW).size := by rw [hA₂.1.size IW, hIW₁]
-  have hsz₃ : (m₃.arr64 IW).size = (m.arr64 IW).size := by rw [hA₃.1.size IW, hsz₂]
+  obtain ⟨hA₃, hws, htop₃, hroom₃⟩ := allocW_afr ha₂ hA₂.ok
+  have hsz₂ : (m₂.arr64 IW).size = (m.arr64 IW).size := by rw [hA₂.fr.size IW, hIW₁]
+  have hsz₃ : (m₃.arr64 IW).size = (m.arr64 IW).size := by rw [hA₃.fr.size IW, hsz₂]
   rcases hz : hZeroW n m₃ tg cw 0 with _ | ⟨z₄, m₄⟩ <;> rw [hz] at h
   · simp [hNatOpGroundW.k_hoist_zero.eq_1] at h
   rw [hNatOpGroundW.k_hoist_zero.arm1] at h
@@ -118,14 +118,14 @@ theorem hNatOpGround_ok (p : Prog) (hx : HoistExt p) (n : Nat) (m m' : Mem) (a :
     intro x hx
     have e4 : (m₄.arr64 IW)[x]? = (m₃.arr64 IW)[x]? :=
       getElem?_of_rd2 (by rw [hsz₄, hsz₃]) (by omega) (by rw [hrd₄ x (by omega), ite_eq_right (by simp; omega)])
-    rw [e4, hA₃.2.1.2.2.1 x (by omega), hA₂.2.1.2.2.1 x (by omega), hIW₁]
+    rw [e4, hA₃.grow.iwGet x (by omega), hA₂.grow.iwGet x (by omega), hIW₁]
   have hfA : MemFrame [IW, HNIX] [75, 76, 200] m m₄ :=
-    ((hf₀₁.mono (by simp) (by simp)).trans ((hA₂.1.trans hA₃.1).mono (by simp) (by simp))).trans
+    ((hf₀₁.mono (by simp) (by simp)).trans ((hA₂.fr.trans hA₃.fr).mono (by simp) (by simp))).trans
       (hf₄.mono (by simp) (by simp))
   have hD₄ : m₄.arr64 DECL = m.arr64 DECL := hfA.arr DECL (by decide) (by decide)
   have hDLP₄ : m₄.arr64 DLP = m.arr64 DLP := hfA.arr DLP (by decide) (by decide)
   have hI₄ : IWOK m₄ := by
-    obtain ⟨h1, h2, h3, h4, h5⟩ := hA₃.2.2
+    obtain ⟨h1, h2, h3, h4, h5⟩ := hA₃.ok
     have hER : m₄.arr64 EREC = m₃.arr64 EREC := hf₄.1 EREC (by decide) (by decide)
     have h129 : erTop m₄ = erTop m₃ := by simp only [erTop]; rw [hf₄.ctl 129 (by simp)]
     exact ⟨by rw [htop₄, hf₄.size IW]; exact h1, by rw [h129, hER]; exact h2,
@@ -138,7 +138,7 @@ theorem hNatOpGround_ok (p : Prog) (hx : HoistExt p) (n : Nat) (m m' : Mem) (a :
       ⟨s, memoRG_frame hsSch hsSch_wf bmKey _ _ _ (by decide) (by decide) m m₄ hfA _ hs⟩,
       ordR_low tg.toNat hO (by omega) (by omega) hlow hD₄ hDLP₄, hc, hc60,
       memoRV_frame hnSch hnSch_wf nmKey _ [IW] [200] (by decide) (by decide) m₁ m₄
-        ((hA₂.1.trans hA₃.1).trans (hf₄.mono (by simp) (by simp))) (fun _ _ h => h) _ hR₁,
+        ((hA₂.fr.trans hA₃.fr).trans (hf₄.mono (by simp) (by simp))) (fun _ _ h => h) _ hR₁,
       fun n j hj => by
         have := nameIndex_lt ds ∅ 0 (by intro n j h; simp at h) n j hj; omega,
       by omega, by omega, by rw [hsz₄]; omega, by rw [hsz₄]; exact hsz, by omega, hI₄⟩
@@ -163,15 +163,15 @@ theorem hNatOpGround_ok (p : Prog) (hx : HoistExt p) (n : Nat) (m m' : Mem) (a :
   subst m₆
   simp only [UInt64.toNat_zero] at hav
   have hfrm₅ : MemFrame [IW, HSEEN, HNIX] [73, 74, 75, 76, 200] m m₅ :=
-    (hfA.mono (by simp) (by simp)).trans (hlow₅.1.mono (by simp) (by simp))
+    (hfA.mono (by simp) (by simp)).trans (hlow₅.fr.mono (by simp) (by simp))
   -- the pool only grew up to here
   have hgrow₅ : IWGrow m m₅ := by
     have hER : m₅.arr64 EREC = m.arr64 EREC := by
-      rw [hlow₅.1.1 EREC (by decide) (by decide), hfA.arr EREC (by decide) (by decide)]
+      rw [hlow₅.fr.1 EREC (by decide) (by decide), hfA.arr EREC (by decide) (by decide)]
     have h129 : erTop m₅ = erTop m := by
-      simp only [erTop]; rw [hlow₅.1.ctl 129 (by decide), hfA.ctl 129 (by decide)]
-    refine ⟨by have := hlow₅.2.2; omega, by rw [h129]; exact Nat.le_refl _, fun x hx => ?_, fun x _ => by rw [hER]⟩
-    rw [hlow₅.2.1 x (by omega), hlow x (by omega)]
+      simp only [erTop]; rw [hlow₅.fr.ctl 129 (by decide), hfA.ctl 129 (by decide)]
+    refine ⟨by have := hlow₅.top; omega, by rw [h129]; exact Nat.le_refl _, fun x hx => ?_, fun x _ => by rw [hER]⟩
+    rw [hlow₅.low x (by omega), hlow x (by omega)]
   have hrun0 : (hoistNatOpGround ds).run a =
       ((if T.isEmpty then pure (ds, #[]) else pure (applyHoist ds T) :
         AM (Array IDeclaration × Array NIdx)).run a) := by

@@ -169,9 +169,9 @@ theorem cnTail_ref (hS : CoreS dn m a vis fe M eb) {ty w : Word} (hty : HW ty)
   | some q₄ =>
   obtain ⟨cc, m₄⟩ := q₄
   rw [h4, cnW_faEq] at h
-  have hnc := (constE_call p hp hS hnt' h2).2.2.2
+  have hnc := (constE_call p hp hS hnt' h2).resOk
   refine pin_step p hp hS₂ h3 (coreRef_bind (constE_call p hp hS₂ hch' h4) fun M₄ hS₄ => ?_)
-  have hcc := (constE_call p hp hS₂ hch' h4).2.2.2
+  have hcc := (constE_call p hp hS₂ hch' h4).resOk
   exact faEq_step p hp hS₄ hty hnc hcc h hr
 
 /-- The twins' common prefix: the constant's value, no level parameters; then the tail `T`. -/
@@ -260,7 +260,7 @@ theorem slTail_ref (hS : CoreS dn m a vis fe M eb) {ty w : Word} (hty : HW ty)
   | some q₂ =>
   obtain ⟨zs, m₂⟩ := q₂
   rw [h2, solW.k_str_ls1.arm1] at h
-  have hzs := (ls1_call p hp hS hzl' (zero_den hS hzl) h2).2.2.2
+  have hzs := (ls1_call p hp hS hzl' (zero_den hS hzl) h2).resOk
   refine pinWord_step p hp hS h1 (coreRef_bind (ls1_call p hp hS hzl' (zero_den hS hzl) h2) fun M₂ hS₂ => ?_)
   cases h3 : callW p n "pin_at" [7] m₂ with
   | none => rw [h3] at h; cases h
@@ -296,7 +296,7 @@ theorem slTail_ref (hS : CoreS dn m a vis fe M eb) {ty w : Word} (hty : HW ty)
   | some q₇ =>
   obtain ⟨dom, m₇⟩ := q₇
   rw [h7, solW.k_mk_app.arm1] at h
-  have hdom := (app_call p hp hS₆ h7).2.2.2
+  have hdom := (app_call p hp hS₆ h7).resOk
   refine coreRef_bind (app_call p hp hS₆ h7) fun M₇ hS₇ => ?_
   cases h8 : callW p n "pin_at" [5] m₇ with
   | none => rw [h8] at h; cases h
@@ -312,7 +312,7 @@ theorem slTail_ref (hS : CoreS dn m a vis fe M eb) {ty w : Word} (hty : HW ty)
   obtain ⟨sc, m₉⟩ := q₉
   rw [h9, solW_faEq] at h
   refine pin_step p hp hS₇ h8 (coreRef_bind (constE_call p hp hS₇ hst' h9) fun M₉ hS₉ => ?_)
-  have hsc := (constE_call p hp hS₇ hst' h9).2.2.2
+  have hsc := (constE_call p hp hS₇ hst' h9).resOk
   exact faEq_step p hp hS₉ hty hdom hsc h hr
 
 /-- **`string_of_list_ty_ok` refines `stringOfListTyOk`.** -/

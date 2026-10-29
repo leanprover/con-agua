@@ -725,18 +725,18 @@ theorem paramSort_run (hS : CoreS dn m a vis fe M eb) {pn : Word} (hpn : HW pn)
       simp only [LNodeView.nchildren, List.mem_cons, List.mem_nil_iff, or_false] at hn
       subst hn; exact hpd) R1 rfl
   refine coreRef_bind R1 (fun M₁ hS₁ => ?_)
-  have R2 := succ_call p hp hS₁ R1.2.2.2 h2 hd1
+  have R2 := succ_call p hp hS₁ R1.resOk h2 hd1
   have hd2 := lnode_den (v := .succ (decLv x)) hS₁
     (fun c hc => by
       simp only [LNodeView.lchildren, List.mem_cons, List.mem_nil_iff, or_false] at hc
       subst hc; exact hd1)
     (fun n hn => by simp [LNodeView.nchildren] at hn) R2 rfl
   refine coreRef_bind R2 (fun M₂ hS₂ => ?_)
-  have R3 := sort_call p hp hS₂ R2.2.2.2 h3 hd2
+  have R3 := sort_call p hp hS₂ R2.resOk h3 hd2
   have hp3 := ls_den (op := internE (.sort (decLv y))) (lnode_lvl (v := .succ (decLv x)) hd1 R2 rfl)
     (keeps_cpl_internSort _) R3 rfl
   refine coreRef_bind R3 (fun M₃ hS₃ => ?_)
-  exact hk M₃ _ R1.2.2.2 R3.2.2.2 hp3 hS₃
+  exact hk M₃ _ R1.resOk R3.resOk hp3 hS₃
 
 /-- **The common prefix of the three tests refines the twins'**, given the tail `k` from the
 sort on. -/
@@ -873,7 +873,7 @@ theorem listNilTyOk_call (hS : CoreS dn m a vis fe M eb) {found q : Word}
     (cref_run (ok := ResH) ?_ (coreAfter_refl hS₃) rfl hiw) (fun M₄ hS₄ => ?_)
   · rw [hi]; exact pinAt_run hS₃.pins 7 (by decide)
   rw [hty]
-  obtain ⟨hrun₄, hm, hres⟩ := nilA_ok hp.eView hS₄.arena.base hhw hso hiw R3.2.2.2 hW
+  obtain ⟨hrun₄, hm, hres⟩ := nilA_ok hp.eView hS₄.arena.base hhw hso hiw R3.resOk hW
   rw [hm]
   exact cref_run hrun₄ (coreAfter_refl hS₄) rfl hres
 
@@ -967,7 +967,7 @@ theorem listConsTyOk_call (hS : CoreS dn m a vis fe M eb) {found q : Word}
   have hl7 := lss_den (op := internE (.bvar 2)) (lss_den (op := internE (.bvar 1))
     (lss_den (op := internE (.bvar 0)) (lss_pin (op := pinList) hl3 hS₃.pins (i := 7) (by decide) rfl)
       (keeps_cpl_internBVar _) R5 rfl) (keeps_cpl_internBVar _) R6 rfl) (keeps_cpl_internBVar _) R7 rfl
-  have R8 := const_call p hp hS₇ hiw R3.2.2.2 h8 hl7
+  have R8 := const_call p hp hS₇ hiw R3.resOk h8 hl7
   refine coreRef_bind R8 (fun M₈ hS₈ => ?_)
   cases h9 : callW p n "mk_app" [y1.headD 0, x1.headD 0] m₈ with
   | none => rw [h9] at hW; cases hW
@@ -984,7 +984,7 @@ theorem listConsTyOk_call (hS : CoreS dn m a vis fe M eb) {found q : Word}
   have R10 := app_call p hp hS₉ h10
   refine coreRef_bind R10 (fun M₁₀ hS₁₀ => ?_)
   rw [hty]
-  obtain ⟨hrun₁₀, hm, hres⟩ := consA_ok hp.eView hS₁₀.arena.base hhw hso R5.2.2.2 R9.2.2.2 R10.2.2.2 hW
+  obtain ⟨hrun₁₀, hm, hres⟩ := consA_ok hp.eView hS₁₀.arena.base hhw hso R5.resOk R9.resOk R10.resOk hW
   rw [hm]
   exact cref_run hrun₁₀ (coreAfter_refl hS₁₀) rfl hres
 
