@@ -1,5 +1,4 @@
 import ConAgua.Checker.Prog
-import ConAgua.Arena.Frame
 import ConAgua.Compiler.WriteSetSplit
 
 /-!

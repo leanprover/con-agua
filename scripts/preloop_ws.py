@@ -184,7 +184,6 @@ theorem stageC_{g}_off :
         parts[g].append(f"""-- Of the `CTL` words {", ".join(map(str, WATCH))}, `{g}` writes all.
 """)
 baseSrc = """import ConAgua.Checker.Prog
-import ConAgua.Arena.Frame
 import ConAgua.Compiler.WriteSetSplit
 
 /-!
