@@ -88,8 +88,8 @@ theorem nhGoW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis ctx : Wo
   | zero => intro m m' a mm off l oo ol ns out r h; simp [nhGoW] at h
   | succ k ih =>
     intro m m' a mm off l oo ol ns out r h hS hc hin hsl hns hnb hout hob hmm
-    have hsz := hS.2.2.2.1
-    have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hsz
+    have hsz := hS.iw.iwSize
+    have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.iw hsz
     have hE := hS.check.env
     by_cases hl0 : l = 0
     · rw [nhGoW_nil (h := hl0)] at h
@@ -141,7 +141,7 @@ theorem nhGoW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis ctx : Wo
     have hk3 : nat? (erecP m) ciq.toNat = some 3 := by
       have : (erecP m)[ciq.toNat]? = (m.arr64 EREC)[ciq.toNat]? := erecP_getE (by omega)
       simp only [nat?, this]
-      have hb : ciq.toNat < (m.arr64 EREC).size := by have := hS.2.2.1; omega
+      have hb : ciq.toNat < (m.arr64 EREC).size := by have := hS.iw.er; omega
       have : rdW (m.arr64 EREC) ciq = 3 := by simpa using h3
       simp [rdW, hb] at this ⊢; rw [this]; rfl
     obtain ⟨cv, caps, rfl, hcaps⟩ := decCI_kind3 hci hk3
@@ -155,7 +155,7 @@ theorem nhGoW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis ctx : Wo
       cases h2; exact h1
     obtain ⟨w, hw, hwH', hwd'⟩ := hd?_some (decCV_type hcv)
     have e4 : (ciq + 4).toNat = ciq.toNat + 1 + 3 := by
-      rw [word_add_toNat (by have := hS.2.2.1; have := hS.2.2.2.2.1; simp; omega)]; rfl
+      rw [word_add_toNat (by have := hS.iw.er; have := hS.iw.erSize; simp; omega)]; rfl
     have hrw : rdW (m.arr64 EREC) (ciq + 4) = w := by simp [rdW, e4, erecP_get hw]
     rw [hrw] at h
     simp only [hfind]
@@ -194,7 +194,7 @@ theorem nhGoW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis ctx : Wo
       rw [decHL_agree (RdS.of_grow hg23) (fun j hj => by omega)]; exact hout
     rcases hsn : snocW k m3 oo ol v with _ | ⟨r4, m4⟩ <;> rw [hsn] at h; · simp [nhK4] at h
     rw [nhK4_some] at h
-    obtain ⟨hr4, hdec4, hg4, -, hol1, ht4⟩ := snocW_dec hsn hS3.2.2.2.1 hS3.2.2.2.2.2
+    obtain ⟨hr4, hdec4, hg4, -, hol1, ht4⟩ := snocW_dec hsn hS3.iw.iwSize hS3.iw.ctl
       (by have := hg23.1; omega) hvlt hout3
     have hS4 := snocW_stage hsn hS3
     subst hr4

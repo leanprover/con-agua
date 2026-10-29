@@ -103,7 +103,7 @@ theorem ocW_sim {p : Prog} (hN : NoProg p) {dn : NIdx → Option ConLeche.Name} 
   | zero => intro m a o l ds _ _ _ _ _ _; rw [ocW_zero]; exact Sim.of_none
   | succ n ih =>
   intro m a o l ds hS hws hwsb hds hdsb hP
-  have hT : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
+  have hT : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.iw hS.iw.iwSize
   by_cases hl : l = 0
   · rw [ocW_nil p n m no nl o l hl]
     have : ds = [] := by rw [hl] at hds; simpa [decHL, hslice?] using hds.symm

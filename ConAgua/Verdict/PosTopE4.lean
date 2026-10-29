@@ -74,7 +74,7 @@ theorem nrt_ref : ∀ (n : Nat), n ≤ 2 ^ 62 → ∀ (m : Mem) (a : AState) (cO
   | n + 1, hn, m, a, cO, cL, ns, oO, oL, css, NS, outss, cssP, nsP, outssP, hC, hU, hhi, hpn, hho, hhob,
       hcl, hcb, hcss, hns, hout, houtb, hP, hA, hctx, hholesP, hcssP, hnsP, houtsP, hcF => by
     have hS := hC.stage
-    have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
+    have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.iw hS.iw.iwSize
     by_cases h0 : cL = 0
     · rw [nrtE.arm1 p n m vis ctx hO hL cO cL ns oO oL h0]
       subst h0
@@ -156,7 +156,7 @@ theorem nrt_ref : ∀ (n : Nat), n ≤ 2 ^ 62 → ∀ (m : Mem) (a : AState) (cO
       ⟨hctx, rfl, hlv, hpar', hcn, hholesP, hc1, hnsP, rfl⟩ hrun1P
     simp only [List.nil_append] at hv1
     refine RefE.bind_right hrun1' ?_
-    have htop1 : iwTop m1 < 2 ^ 64 := Nat.lt_of_le_of_lt hS1.2.1 hS1.2.2.2.1
+    have htop1 : iwTop m1 < 2 ^ 64 := Nat.lt_of_le_of_lt hS1.iw.iw hS1.iw.iwSize
     -- its record, appended
     rcases hr2 : posRecW m1 [r1'.headD 0, r1'.tail.headD 0] with _ | ⟨q, m2⟩
     · rw [liftE_none, nrtE.k_rec2.none]; exact RefE.of_cls0 (by simp)
@@ -164,7 +164,7 @@ theorem nrt_ref : ∀ (n : Nat), n ≤ 2 ^ 62 → ∀ (m : Mem) (a : AState) (cO
     obtain ⟨hS2, hg2, hq2, ht2, hget2⟩ := posRecW_stage hr2 hS1 (by simp)
     simp only [List.length_cons, List.length_nil] at ht2
     have hrec := pos2_outs_rec (q := q) (by omega) hget2 (hO1.grow hg2)
-    have htop2 : iwTop m2 < 2 ^ 64 := Nat.lt_of_le_of_lt hS2.2.1 hS2.2.2.2.1
+    have htop2 : iwTop m2 < 2 ^ 64 := Nat.lt_of_le_of_lt hS2.iw.iw hS2.iw.iwSize
     rcases hsn : snocW n m2 oO oL q with _ | ⟨ro, m3⟩
     · rw [liftE_none, nrtE.k_sl_snoc.none]; exact RefE.of_cls0 (by simp)
     rw [liftE_some, nrtE.k_sl_snoc.arm1]
@@ -251,7 +251,7 @@ theorem nsd_ref : ∀ (n : Nat), n ≤ 2 ^ 62 → ∀ (m : Mem) (a : AState) (sO
   | succ n ih =>
     intro hn m a sO sL ns seeds NS seedsP nsP hC hU hhi hsl hsd hns hP hA hctx hseedsP hnsP hw
     have hS := hC.stage
-    have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
+    have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.iw hS.iw.iwSize
     by_cases h0 : sL = 0
     · rw [nsdE.arm1 p n m vis ctx sO sL ns h0]
       subst h0
@@ -329,7 +329,7 @@ theorem nsd_ref : ∀ (n : Nat), n ≤ 2 ^ 62 → ∀ (m : Mem) (a : AState) (sO
     have hg12 := hg1.trans hg2
     have hksl2 : (rdW (m.arr64 IW) (key + 2)).toNat + (rdW (m.arr64 IW) (key + 3)).toNat ≤ iwTop m2 :=
       Nat.le_trans hksl hg12.1
-    have htop2 : iwTop m2 < 2 ^ 64 := Nat.lt_of_le_of_lt hS2.2.1 hS2.2.2.2.1
+    have htop2 : iwTop m2 < 2 ^ 64 := Nat.lt_of_le_of_lt hS2.iw.iw hS2.iw.iwSize
     refine RefE.bind_right hrun2 ?_
     obtain ⟨xn, xc⟩ := x2
     -- the container instance

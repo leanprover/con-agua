@@ -355,8 +355,8 @@ theorem projA_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f q : Word) (sn
   obtain ⟨h0, hrest⟩ := List.cons.inj hlist
   obtain ⟨h1, -⟩ := List.cons.inj hrest
   have hg03 : ErecGrow m m₃ :=
-    ⟨by rw [← hT1]; exact hg3.1, fun i hi => by
-      rw [hg3.2.1 i (by rw [hT1]; exact hi), hE1], by rw [hg3.2.2, hE1]⟩
+    ⟨by rw [← hT1]; exact hg3.top, fun i hi => by
+      rw [hg3.get i (by rw [hT1]; exact hi), hE1], by rw [hg3.size, hE1]⟩
   refine ⟨a1, pm1, a3, pm3, decI (c6.headD 0), lps', wl, hrun1,
     hrun3, hD3, hP3, hcp3.trans hcp1,
     (eFrame_cons hfr1).trans hfr3, htk1.trans htk3, hg03, hts3,
@@ -443,7 +443,7 @@ theorem projB_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f q : Word) (ct
   obtain ⟨wo3, wl3, hn3, hn3', hsl3, a3, pm3, bs', hrun3, hD3, hP3, hcp3, hfr3, hq3, hg3, hT3, hts3,
     hsl3', htk3⟩ := psAt2_rel p hp n m₂ a2 pm2 f (q + 9) bodies c11 m₃ hD2 hP2 hsz2
       (by rw [hP2', hP1', e9]; exact hbs) hcc
-  have hsz3 : (m₃.arr64 EREC).size < 2 ^ 64 := by rw [hg3.2.2]; exact hsz2
+  have hsz3 : (m₃.arr64 EREC).size < 2 ^ 64 := by rw [hg3.size]; exact hsz2
   obtain ⟨⟨c12, m₄⟩, hcd, hW⟩ := Option.bind_eq_some_iff.mp hW
   dsimp only at hW
   obtain ⟨wo4, wl4, hn4, hn4', hsl4, a4, pm4, gs', hrun4, hD4, hP4, hcp4, hfr4, hq4, hg4, hT4, hts4,
@@ -457,9 +457,9 @@ theorem projB_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f q : Word) (ct
   rw [e11] at hn4'
   have hcgw : cg = wl4.toNat := Option.some.inj (hcg3.symm.trans hn4')
   have hg04 : ErecGrow m m₄ :=
-    ⟨by rw [← hT1, ← hT2]; exact Nat.le_trans hg3.1 hg4.1, fun i hi => by
-      rw [hg4.2.1 i (by rw [hT3, hT2, hT1]; omega), hg3.2.1 i (by rw [hT2, hT1]; exact hi), hE2, hE1],
-      by rw [hg4.2.2, hg3.2.2, hE2, hE1]⟩
+    ⟨by rw [← hT1, ← hT2]; exact Nat.le_trans hg3.top hg4.top, fun i hi => by
+      rw [hg4.get i (by rw [hT3, hT2, hT1]; omega), hg3.get i (by rw [hT2, hT1]; exact hi), hE2, hE1],
+      by rw [hg4.size, hg3.size, hE2, hE1]⟩
   refine ⟨a1, pm1, a2, pm2, a3, pm3, a4, pm4, decI (c9.headD 0), decI (c10.headD 0), bs', gs',
     wl3, wl4, hrun1, hrun2, hrun3, hrun4, hD4, hP4, hcp4.trans (hcp3.trans (hcp2.trans hcp1)),
     (((eFrame_cons hfr1).trans (eFrame_cons hfr2)).trans hfr3).trans hfr4,
@@ -554,7 +554,7 @@ theorem proj_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f q : Word) (D :
     hgb, htsb, hpws, hds, hwl, hptr, hTb, hslb⟩ :=
     projA_rel p hp (n + 1) ma a pm f q tbl.structName tbl.levelParams ra mb hDa hPa
       hsza (by rw [hEa]; exact hqb) (h4 _ _ hsn) (h4l _ _ hlp) hpa
-  have hszb : (mb.arr64 EREC).size < 2 ^ 64 := by rw [hgb.2.2]; exact hsza
+  have hszb : (mb.arr64 EREC).size < 2 ^ 64 := by rw [hgb.size]; exact hsza
   -- proj_b
   obtain ⟨⟨rb, mc⟩, hpb, hW⟩ := Option.bind_eq_some_iff.mp hW
   dsimp only at hW
@@ -563,7 +563,7 @@ theorem proj_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f q : Word) (D :
     hDc, hPc, hcpc, hfc, htkc, hgc, htsc, hpwc, hdc, hpwss, hdss, hwlb, hwlg, hptrb, hptrg, hTc, hslbs,
     hslgs⟩ :=
     projB_rel p hp (n + 1) mb a3 pm3 f q tbl.ctor tbl.structSort tbl.bodies.toList tbl.guards rb mc
-      hDb hPb hszb (by rw [hgb.2.2, hEa]; exact hqb)
+      hDb hPb hszb (by rw [hgb.size, hEa]; exact hqb)
       (hgb.ext.hd? (h4 _ _ hct)) (hgb.ext.hd? (h4 _ _ hss)) (hgb.ext.hlist? (h4l _ _ hbs))
       (hgb.ext.hlist? (h4l _ _ hgs)) hpb
   have hgc0 : ErecGrow m mc := hg0b.trans hgc

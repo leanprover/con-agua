@@ -175,7 +175,7 @@ theorem ipalGoW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv
     have hlen := hxl m hdec
     by_cases hk : k < l
     · have hk' : k.toNat < l.toNat := UInt64.lt_iff_toNat_lt.mp hk
-      obtain ⟨w, hw, hwlt, hwx⟩ := decHL_word hdec hS.2.2.2.1 k.toNat hk'
+      obtain ⟨w, hw, hwlt, hwx⟩ := decHL_word hdec hS.iw.iwSize k.toNat hk'
       rw [word_ofNat_toNat] at hw
       have hdrop : xs.drop k.toNat = xs[k.toNat] :: xs.drop (k.toNat + 1) :=
         List.drop_eq_getElem_cons (by omega)

@@ -83,7 +83,7 @@ theorem oneRef_step (n : Nat) (hn : n + 1 ≤ 2 ^ 62) (ih : NbRef p dn vis fe en
   intro m a ctx root fu po pl hi us dO dL no nl hO hL cv nF ns c prog ds names holes cvv NS ctxP progP
     usP dsP namesP holesP cvP nsP hC hW hCc hcv hcv3 hns hP hA hc hctx hprog hpre hcvP hcl hnsP
   have hS := hC.stage
-  have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
+  have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.iw hS.iw.iwSize
   rw [noE.arm1]
   unfold oneT
   rw [oneK_eq]
@@ -198,7 +198,7 @@ theorem oneRef_step (n : Nat) (hn : n + 1 ≤ 2 ^ 62) (ih : NbRef p dn vis fe en
   rw [hm5] at hnf2
   replace hnf := hnf2
   obtain ⟨M, G, g, hR⟩ := hP4.rf
-  have htop4 : iwTop m4 < 2 ^ 64 := Nat.lt_of_le_of_lt hS4.2.1 hS4.2.2.2.1
+  have htop4 : iwTop m4 < 2 ^ 64 := Nat.lt_of_le_of_lt hS4.iw.iw hS4.iw.iwSize
   obtain ⟨x, a8, hrun8, hnfd, hnfb, M', G', hS5, hg5, hR5, -⟩ := ncnW_ok dn fe vis n' m4 m5 a7 ctx po pl us dO dL cv _
     (r5.headD 0) c prog ds cvv M G g hnf hS4 hW4.u.dec hW4.u.inn hW4.hs
     (by have := hW.hb; simp [NestCtx.hiAt] at this; omega) hCc.hus
@@ -215,8 +215,8 @@ theorem oneRef_step (n : Nat) (hn : n + 1 ≤ 2 ^ 62) (ih : NbRef p dn vis fe en
       ConRon.Bridge.denoteEList_ext hx07 _ _ hpre.hds, ConRon.Bridge.Inductives.dExt_denoteCV hx07 _ _ hcvP,
       ConRon.Bridge.denote_ext hclP (p6.ext.trans p7.ext)⟩ hr8
   refine RefE.bind_right hr8 ?_
-  have htop5 : iwTop m5 < 2 ^ 64 := Nat.lt_of_le_of_lt hS5.2.1 hS5.2.2.2.1
-  have hns5 := hns2.grow ((hg3.trans hg4).trans hg5) (Nat.lt_of_le_of_lt hS2.2.1 hS2.2.2.2.1)
+  have htop5 : iwTop m5 < 2 ^ 64 := Nat.lt_of_le_of_lt hS5.iw.iw hS5.iw.iwSize
+  have hns5 := hns2.grow ((hg3.trans hg4).trans hg5) (Nat.lt_of_le_of_lt hS2.iw.iw hS2.iw.iwSize)
   obtain ⟨hp6, hk5, ha5, hn5⟩ := nsb_words hns5 htop5
   -- the record appended to the state's constructor list
   rcases c6 : callE p (n' + 1) "sl_snoc" [rdW (m5.arr64 IW) (rw.tail.tail.tail.tail.headD 0 + 4),
@@ -254,7 +254,7 @@ theorem oneRef_step (n : Nat) (hn : n + 1 ≤ 2 ^ 62) (ih : NbRef p dn vis fe en
   simp only [List.length_cons, List.length_nil] at ht7
   have hg67 := hg6.trans hg7
   have hNS3 := nsb_rec6 (m' := m7) (q := r7.headD 0) (keys := ns2.keys.toList) (act := ns2.active)
-    (nfs := ns2.ctorNfs.toList ++ [x]) (by omega) (Nat.lt_of_le_of_lt hS7.2.1 hS7.2.2.2.1) hget7 (hk5.grow hg67)
+    (nfs := ns2.ctorNfs.toList ++ [x]) (by omega) (Nat.lt_of_le_of_lt hS7.iw.iw hS7.iw.iwSize) hget7 (hk5.grow hg67)
     (by have := hns5.b0; have := hg67.1; omega) (ha5.grow hg67) (by have := hns5.b2; have := hg67.1; omega)
     (hnfs6.grow hg7) (by rw [h60, h61]; have := hg7.1; omega)
   have hgall := (hg14.trans hg5).trans hg67

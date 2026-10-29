@@ -100,7 +100,7 @@ theorem cfaLoop_ref (k : Nat) (hk : k ≤ 2 ^ 62) : ∀ (m : Mem) (a : AState) (
   intro m a j i hC hA hbs hft hftb hms hmsb hfv hfvb hes hks hje hi hP hsh hftP hmsP hfvP hesP
     hformer hMs
   have hS := hC.stage
-  have hsz := hS.2.2.2.1
+  have hsz := hS.iw.iwSize
   have hkl := hks.length
   have hjk : j.toNat ≤ kl.toNat := UInt64.le_iff_toNat_le.mp hje
   by_cases hj : j < kl

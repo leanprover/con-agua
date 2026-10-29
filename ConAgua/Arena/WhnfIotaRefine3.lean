@@ -302,11 +302,8 @@ theorem arW_ok (p : Prog) (hcc : ProjCallees p) (dn : NIdx → Option ConLeche.N
     have hb' := hb
     have hfin : ((tbl.entry j.toNat).ctor == decI ctor && (tbl.entry j.toNat).numParams == nP.toNat &&
           (tbl.entry j.toNat).numFields == 2 && decBool r₂) = false → L = [0] → m' = m₂ →
-        AM.ok (andRescueSlotsGo fe (decI anW) (decI ctor) nP.toNat (decI us) (K + 1) j.toNat) a ∧
-        CoreAfter dn m m' (AM.st (andRescueSlotsGo fe (decI anW) (decI ctor) nP.toNat (decI us) (K + 1)
-          j.toNat) a) vis fe M eb ∧
-        AM.res (andRescueSlotsGo fe (decI anW) (decI ctor) nP.toNat (decI us) (K + 1) j.toNat) a =
-          decBool L ∧ HW (L.headD 0) := by
+        CoreRef (andRescueSlotsGo fe (decI anW) (decI ctor) nP.toNat (decI us) (K + 1) j.toNat) a
+          decBool dn m vis fe M eb L m' := by
       intro hcf hLe hme
       subst hLe; subst hme
       refine CoreRef.of_run (ok := ResH) (andRescueSlotsGo_stop_run fe (decI anW) (decI ctor) nP.toNat (decI us)

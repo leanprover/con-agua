@@ -84,7 +84,7 @@ theorem cns_ref (hq : qr.toNat = iwTop mb) (hms : PSlR decTM ms mo ml mb) (htbl 
   | succ k ih =>
   intro m a j acc ws MsP hC hA hg htop hP hje hws hacc hsh hftP htblP hmsP hMs
   have hS := hC.stage
-  have hsz := hS.2.2.2.1
+  have hsz := hS.iw.iwSize
   have hjm : j.toNat ≤ ml.toNat := UInt64.le_iff_toNat_le.mp hje
   have hT := (rdW (m.arr64 CTL) 200).toNat_lt
   by_cases hj : ¬ j < ml
@@ -165,8 +165,8 @@ theorem cns_ref (hq : qr.toNat = iwTop mb) (hms : PSlR decTM ms mo ml mb) (htbl 
   generalize hNM : r2.headD 0 = nm at hnm ⊢
   have h13 : (13 : Word).toNat = 13 := rfl
   rw [h13] at ht2
-  have hI2 := hS2.2.1
-  have hnmb : nm.toNat + 13 < 2 ^ 64 := by have := hS2.2.2.2.1; omega
+  have hI2 := hS2.iw.iw
+  have hnmb : nm.toNat + 13 < 2 ^ 64 := by have := hS2.iw.iwSize; omega
   have hp13 : p0 + 13 ≤ nm.toNat := by
     obtain ⟨_, hw12⟩ := decTM_get hsrc 12 (by omega)
     have := (truncM_iw_get hw12).1

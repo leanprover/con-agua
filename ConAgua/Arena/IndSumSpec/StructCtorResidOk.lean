@@ -201,8 +201,8 @@ theorem srW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (k
     cases ra with | nil => rfl | cons _ t => cases t <;> rfl
   try simp only [eP1] at hpl
   try simp only [eR1] at hal
-  have hsz5 := hS5.2.2.2.1
-  have hit5 := hS5.2.1
+  have hsz5 := hS5.iw.iwSize
+  have hit5 := hS5.iw.iw
   -- the twin's run up to the final `pure`
   have hrun : ∀ v, (structCtorResidOk (decI T) lps nP.toNat o.toNat nIdx.toNat (decI cbody)).run a =
       .ok (v, a5) ↔ v = (fnv == decI hd' && args.length == nP.toNat + nIdx.toNat &&

@@ -78,7 +78,7 @@ theorem bct_ref (hD : DmProg6 p) (nm : Word) :
       (constE_ref hD.toDmProg5.toMasterProg (r3.headD 0)).bind_ ⟨hS3, hl3⟩ hw
     simp only [Option.some.injEq, Prod.mk.injEq] at hw
     obtain ⟨rfl, rfl⟩ := hw
-    obtain ⟨wt, -, hrd, hwt, hty, hst⟩ := cvWordsAt hS2.2.2.2.2.1 hcv2
+    obtain ⟨wt, -, hrd, hwt, hty, hst⟩ := cvWordsAt hS2.iw.erSize hcv2
     have hrd4 := (hst m4 (hg3.trans hg4)).2
     refine ⟨decide (wt = r4.headD 0), a4, ?_, hS4, hg2.trans (hg3.trans hg4), ?_⟩
     · have hb := decI_beq (k := IdxKind.expr) _ _ hwt hl4
@@ -149,7 +149,7 @@ theorem tps_ref (hD : DmProg6 p) (nm : Word) :
       (ciToCv_ref hD.toDmProg5.cvProg (rf.tail.headD 0) ci).bind_ ⟨hS, hci⟩ hw
     simp only [Option.some.injEq, Prod.mk.injEq] at hw
     obtain ⟨rfl, rfl⟩ := hw
-    obtain ⟨wt, -, hrd, hwt, hty, -⟩ := cvWordsAt hS2.2.2.2.2.1 hcv2
+    obtain ⟨wt, -, hrd, hwt, hty, -⟩ := cvWordsAt hS2.iw.erSize hcv2
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Except.ok.inj hrun2)
     refine ⟨ci.toConstantVal.type, a, ?_, hS2, hg2, ?_⟩
     · simp only [typePinStored, hf]; rfl

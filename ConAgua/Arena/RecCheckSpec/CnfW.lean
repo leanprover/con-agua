@@ -268,7 +268,7 @@ theorem cnfW_ok (hnfs : DecB (fun m => decPL m (decNCN m) nfo.toNat nfl.toNat) m
   | zero => intro m m' j rp rp' h; simp [cnfW] at h
   | succ k ih =>
   intro m m' j rp rp' h hS hg htop hjn hrj hacc
-  have hsz := hS.2.2.2.1
+  have hsz := hS.iw.iwSize
   have hjn' : j.toNat ≤ nfl.toNat := UInt64.le_iff_toNat_le.mp hjn
   have hrj' : rp.toNat ≤ j.toNat := UInt64.le_iff_toNat_le.mp hrj
   by_cases hj : j < nfl
@@ -302,8 +302,8 @@ theorem cnfW_ok (hnfs : DecB (fun m => decPL m (decNCN m) nfo.toNat nfl.toNat) m
   have hfil := filter_take_succ (fun e : NestCtorNf => e.ctor == decI nm) nfs j.toNat (by omega)
   by_cases hhit : rdW (m.arr64 IW) (UInt64.ofNat v) = nm
   · have hqr : (q + rp).toNat = q.toNat + rp.toNat := by
-      rw [UInt64.toNat_add]; have := hS.2.1; simp <;> omega
-    have hqb : (q + rp).toNat < (m.arr64 IW).size := by have := hS.2.1; omega
+      rw [UInt64.toNat_add]; have := hS.iw.iw; simp <;> omega
+    have hqb : (q + rp).toNat < (m.arr64 IW).size := by have := hS.iw.iw; omega
     rw [cnfW_hit (h := hj) (h1 := by rw [hkf]; exact hhit) (h2 := hqb), hkf] at h
     have hr1 : (rp + 1).toNat = rp.toNat + 1 := by rw [UInt64.toNat_add]; simp <;> omega
     have hS1 := hS.set_iw (q + rp) (UInt64.ofNat v)

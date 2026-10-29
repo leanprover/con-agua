@@ -123,14 +123,14 @@ theorem grtW_sim (n : Nat) (m : Mem) (a : AState) (g c rP fo fl maj t : Word) (G
   simp only [getD_zero, Nat.zero_add, getD_one] at hibs hib
   rw [grtW.k_fvar_type_ds.arm1]
   have hpo1 : iwN m1 (g.toNat + 12) = some po := by rw [iwN_grow hg1 (by omega)]; exact hpo
-  obtain ⟨e12, t12⟩ := rec2RdN (w := g) (k := 12) hpo1 hS1.2.2.2.1
+  obtain ⟨e12, t12⟩ := rec2RdN (w := g) (k := 12) hpo1 hS1.iw.iwSize
   simp only [show UInt64.ofNat 12 = (12 : Word) from rfl] at e12
   rw [e12]
   refine RSim.lstep (K := grtW.k_sl_append n g c fo fl maj t) rfl fun ⟨r2, m2⟩ h2 => ?_
   obtain ⟨hS2, hg2, hd2, hb2⟩ := rec2AppendW_dec h2 hS1 (by rw [t12]; exact hpre.grow (OMono.decHL _ _) hg1) hibs hib
   rw [grtW.k_sl_append.arm1]
   refine RSim.lstep (K := grtW.k_sl_snoc n g c fo fl t) rfl fun ⟨r3, m3⟩ h3 => ?_
-  obtain ⟨hr3, hd3, hg3, -, -, ht3⟩ := snocW_dec h3 hS2.2.2.2.1 hS2.2.2.2.2.2 hb2 hmaj hd2
+  obtain ⟨hr3, hd3, hg3, -, -, ht3⟩ := snocW_dec h3 hS2.iw.iwSize hS2.iw.ctl hb2 hmaj hd2
   have hS3 := snocW_stage h3 hS2
   have hA3 := snocW_afr h3 (appendW_afr h2 (hf1 hA))
   rw [grtW.k_sl_snoc.arm1]
@@ -143,7 +143,7 @@ theorem grtW_sim (n : Nat) (m : Mem) (a : AState) (g c rP fo fl maj t : Word) (G
   rw [grtW.k_class_gen_mot_var.arm1]
   have hg14 := hg13.trans hg4
   refine RSim.lstep (K := grtW.k_sl_snoc_2 n (r3.headD 0) (r3.tail.headD 0) (r4.headD 0)) rfl fun ⟨r5, m5⟩ h5 => ?_
-  obtain ⟨hr5, hd5, hg5, -, -, ht5⟩ := snocW_dec h5 hS4.2.2.2.1 hS4.2.2.2.2.2 (Nat.le_trans hfb hg14.1) ht
+  obtain ⟨hr5, hd5, hg5, -, -, ht5⟩ := snocW_dec h5 hS4.iw.iwSize hS4.iw.ctl (Nat.le_trans hfb hg14.1) ht
     (by rw [decHL_grow hg14 hfb]; exact hifs)
   have hS5 := snocW_stage h5 hS4
   have hA5 := snocW_afr h5 (hf4 hA3)

@@ -244,7 +244,7 @@ theorem cid_ref (P : CidProg p) {fs fs2 fsR fsT fsC : List FnName}
   rw [cidE.k_basis_pin_hit.arm2 _ _ _ _ _ _ _ _ hx]
   dsimp only
   have hbE : o.toNat + l.toNat < 2 ^ 64 := by
-    have := hS.2.2.1; have := hS.2.2.2.2.1; omega
+    have := hS.iw.er; have := hS.iw.erSize; omega
   -- `ind_params_ok`
   rcases c3 : callW p n "ind_params_ok" [w, o, l] m1 with _ | ⟨r3, m3⟩
   · rw [liftE_none, cidE.k_ind_params_ok.none]; exact RefE.of_cls0 (by simp)

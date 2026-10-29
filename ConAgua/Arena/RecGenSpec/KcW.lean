@@ -252,7 +252,7 @@ theorem ckgW_ok (k : Nat) :
   | zero => intro m0 m m' a po pl dO dL q j pfvs ds acc h; simp [ckgW] at h
   | succ k ih =>
   intro m0 m m' a po pl dO dL q j pfvs ds acc h hS hg0 hq0 hql hpf hpb hds hdsb hj hacc hP
-  have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
+  have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.iw hS.iw.iwSize
   have hxl := decHL_length m0 hds
   by_cases hd : dL ≤ j
   · rw [ckgW_done (h := hd)] at h
@@ -279,7 +279,7 @@ theorem ckgW_ok (k : Nat) :
   have hqj : (q + j).toNat = q.toNat + j.toNat := word_add_toNat (by omega)
   have hj1 : (j + 1).toNat = j.toNat + 1 := word_add_toNat (show j.toNat + 1 < 2 ^ 64 by have := dL.toNat_lt; omega)
   have hacc2 : decHL m2 q.toNat j.toNat = some acc := by rw [decHL_grow hg2 (by omega)]; exact hacc
-  have hdec3 := decHL_write m2 q j z acc hzH hS2.2.2.2.1 (by have := hS2.2.1; have := hg2.1; omega) hacc2
+  have hdec3 := decHL_write m2 q j z acc hzH hS2.iw.iwSize (by have := hS2.iw.iw; have := hg2.1; omega) hacc2
   have hS3 := hS2.set_iw (q + j) z
   have hg03 : IWGrow m0 (m2.set64 IW (q + j) z) := (hg0.trans hg2).set_iw (q + j) z (by omega)
   have ht3 : iwTop (m2.set64 IW (q + j) z) = iwTop m2 := by
@@ -340,7 +340,7 @@ theorem kcW_ok (k : Nat) (m m' : Mem) (a : AState) (po pl key : Word) (r : List 
     rw [e2] at ho; rw [e3] at hl
     cases ho; cases hl
     have := hg3.1; omega
-  have htop3 : iwTop m3 < 2 ^ 64 := Nat.lt_of_le_of_lt hS3.2.1 hS3.2.2.2.1
+  have htop3 : iwTop m3 < 2 ^ 64 := Nat.lt_of_le_of_lt hS3.iw.iw hS3.iw.iwSize
   have rk (j : Nat) (hj : j < 4) : rdW (m3.arr64 IW) (nkw + UInt64.ofNat j) =
       [rdW (m.arr64 IW) key, rdW (m.arr64 IW) (key + 1), q, rdW (m.arr64 IW) (key + 3)][j]'(by simpa using hj) := by
     have := hget3 j (by simpa using hj)

@@ -554,7 +554,7 @@ theorem ilF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (o
   have htier₁ : m₁.arr64 (tierA POOL (m.top >>> 40)) = m.arr64 (tierA POOL (m.top >>> 40)) := by
     rw [hm₁, Mem.arr64_set64_ne _ _ _ _ _ hne]
   obtain ⟨hsl, hb⟩ := hslice_lsWords l.toNat o.toNat us hd
-  have hIW := hS.2.2.2.1
+  have hIW := hS.iw.iwSize
   have hol : o.toNat + l.toNat < 2 ^ 64 := by
     rcases Nat.eq_zero_or_pos l.toNat with h0 | h0
     · rw [h0]; exact Nat.lt_of_lt_of_le (UInt64.toNat_lt o) (by omega)

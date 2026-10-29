@@ -338,7 +338,7 @@ theorem divModCertProofs_ref {dn : NIdx → Option ConLeche.Name} {vis : Word} {
   simp only [Option.some.injEq, Prod.mk.injEq] at he
   obtain ⟨rfl, rfl⟩ := he
   have hsl := PinSetR.hdr hP (j := dmSlotW m c) (slotW_lt m c)
-  have hsz : erecTop m ≤ (m.arr64 EREC).size := hS.2.2.1
+  have hsz : erecTop m ≤ (m.arr64 EREC).size := hS.iw.er
   obtain ⟨hS2, hg2, hdec, htop, -⟩ := erToIwW_stage (k := IdxKind.expr) he2 hS (Or.inr (by
     have := hsl.1; omega))
   have hd2 : decHL m2 (r2.headD 0).toNat (r2.tail.headD 0).toNat =

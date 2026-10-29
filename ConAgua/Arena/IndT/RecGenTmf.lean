@@ -307,7 +307,7 @@ theorem tmo_ref {p : Prog} (hP : TmoOProg p) (hIlpf : IlpfF p) (hcore : CoreStag
     omega
   have hlen : (args.take nPc).length = nPc := by simp; omega
   refine RefE.ite_neg (by simp only [hlen, bne_self_eq_false, Bool.false_eq_true, not_false_eq_true]) ?_
-  have hT2 : iwTop m' < 2 ^ 64 := Nat.lt_of_le_of_lt hS2.2.1 hS2.2.2.2.1
+  have hT2 : iwTop m' < 2 ^ 64 := Nat.lt_of_le_of_lt hS2.iw.iw hS2.iw.iwSize
   have htake : DecB (fun m => decHL m ao.toNat (r.tail.headD 0).toNat) m (args.take nPc) := by
     show decHL (truncM m) _ _ = _
     rw [hnP, decHL_take hagT _ hnal]
@@ -348,7 +348,7 @@ theorem tmo_ref {p : Prog} (hP : TmoOProg p) (hIlpf : IlpfF p) (hcore : CoreStag
   rw [liftE_some]
   obtain ⟨s4, rfl, -, hW4⟩ := triple_of_callW (s₀ := ⟨s3.mem, Locals.init []⟩)
     (oc_spec p hP.occ (k' + 1 + 1) _ mno mnl ao (r.tail.headD 0)) h4
-  have hT3 : iwTop s3.mem < 2 ^ 64 := Nat.lt_of_le_of_lt hS3.2.1 hS3.2.2.2.1
+  have hT3 : iwTop s3.mem < 2 ^ 64 := Nat.lt_of_le_of_lt hS3.iw.iw hS3.iw.iwSize
   obtain ⟨b, a4, hrun4, hb4, hS4, hg4, hP4⟩ := ocW_sim hP.no mno mnl ws hwlt (k' + 1 + 1) s3.mem a3 ao _
     (args.take nPc) hS3 (slR_grow hg03 hT hws hwsb)
     (fun i hi => Nat.lt_of_lt_of_le (hwsb i hi) hg03.1) (htake.stab (OMono.decHL _ _) s3.mem hg03)

@@ -152,7 +152,7 @@ theorem gnW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (k
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     have hd3u := decRL_unpack hd3
     obtain ⟨hSc, hgc, hdc, htc⟩ := consW_stage hcons hS3 hd3u.2 hh1 hd3u.1
-    obtain ⟨-, -, -, hfr, -, -⟩ := consW_dec hcons hS3.2.2.2.1 hS3.2.2.2.2.2 hd3u.2 hh1 hd3u.1
+    obtain ⟨-, -, -, hfr, -, -⟩ := consW_dec hcons hS3.iw.iwSize hS3.iw.ctl hd3u.2 hh1 hd3u.1
     refine ⟨decI h1 :: hs3, a3, ?_, hSc, (hg1.trans hg2).trans (hg3.trans hgc), ⟨?_, ?_⟩, ?_⟩
     · rw [hn1]
       simp only [ConRon.Arena.canonNamesGo, StateT.run_bind, hr1, exc_ok_bind', hr2, StateT.run_pure]

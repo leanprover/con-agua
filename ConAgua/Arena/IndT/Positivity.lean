@@ -383,7 +383,7 @@ theorem cbp_ref (hP : PosBlkProg p) {fs : List FnName} (hclP : closedA p posFree
   obtain ⟨-, hz⟩ := ConRon.Bridge.Inductives.zeroLevel_run hC4.check.pins hrunz
   refine RefE.bind_right hrunz ?_
   -- `lvl_eq_true`
-  obtain ⟨huH, hue⟩ := installCtxWord9 (hc1.grow (decCtx_mono _) hg14) hS4.2.2.2.1
+  obtain ⟨huH, hue⟩ := installCtxWord9 (hc1.grow (decCtx_mono _) hg14) hS4.iw.iwSize
   rcases h6 : callW p (n + 2) "lvl_eq_true" [rdW (m4.arr64 IW) (r1.headD 0 + 9), r5.headD 0] m4 with _ | ⟨r6, m6⟩
   · rw [liftE_none, cbpE.k_lvl_eq_true.none]; exact RefE.of_cls0 (by simp)
   rw [liftE_some, cbpE.k_lvl_eq_true.arm1]
@@ -466,7 +466,7 @@ theorem cbp_ref (hP : PosBlkProg p) {fs : List FnName} (hclP : closedA p posFree
   · exact pos3_kinds (hO4.grow hg48)
   · simp only [List.headD_cons, List.tail_cons]; exact Nat.le_trans hOb7 hg8.1
   · simpa using hd8
-  · simpa using hns4.grow hg48 (Nat.lt_of_le_of_lt hS4.2.1 hS4.2.2.2.1)
+  · simpa using hns4.grow hg48 (Nat.lt_of_le_of_lt hS4.iw.iw hS4.iw.iwSize)
 
 end sim
 

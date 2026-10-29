@@ -128,7 +128,7 @@ theorem cbag_ref (hP : AgreeProg p) (nP c0 s0 : Word) (cv0 : IConstantVal) {cv0P
   obtain ⟨hwc, hcb, -⟩ := partsIwRd hc (w := UInt64.ofNat q) hq'
   obtain ⟨-, hsv'⟩ := rec2IwH_trunc hsv
   obtain ⟨v, hv, hv32, hve⟩ := iwH_rdW_at (w := UInt64.ofNat q) (k := 1) (by rw [hq']; exact hsv')
-    hS1.2.2.2.1
+    hS1.iw.iwSize
   rw [show (UInt64.ofNat 1 : Word) = 1 from rfl] at hv
   rw [hwc, hv]
   have hc' : (UInt64.ofNat c : Word).toNat = c := UInt64.toNat_ofNat_of_lt' hcb

@@ -47,7 +47,7 @@ theorem newRef_step (L : NbLook p) (hIlpf : IlpfF p) (hLC : LvlCacheProg p) (n :
   intro m a ctx fu po pl kb nn us dO dL nPc cty ns c prog ds NS ctxP progP nP usP dsP ctyP nsP hC hW hnn hus
     hds hdsb hcty hns hP hA hc hctx hprog hnP husP hdsP hctyP hnsP hwds hni
   have hS := hC.stage
-  have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
+  have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.iw hS.iw.iwSize
   have hdsD := hds.get (OMono.decHL _ _)
   have hhi0 : c.hiAt 0 < 2 ^ 64 := by have := hW.hb; simp only [NestCtx.hiAt] at this ⊢; omega
   obtain ⟨-, -, hfind, -, -, -⟩ := ConRon.Bridge.Inductives.dCtx_fields hctx
@@ -107,7 +107,7 @@ theorem newRef_step (L : NbLook p) (hIlpf : IlpfF p) (hLC : LvlCacheProg p) (n :
   rw [hs2] at hfm
   rw [nnewE.k_nest_frame_mates.arm1]
   obtain ⟨hS2, hg2, hmd, hmb⟩ := nfmW_ok hfm hS1 hnn
-  have htop2 : iwTop m2 < 2 ^ 64 := Nat.lt_of_le_of_lt hS2.2.1 hS2.2.2.2.1
+  have htop2 : iwTop m2 < 2 ^ 64 := Nat.lt_of_le_of_lt hS2.iw.iw hS2.iw.iwSize
   have hWp2 := hWp.grow hg2
   have hhw : (nhiW m2 ctx (rw.tail.headD 0)).toNat = c.hiAt wp.length := hWp2.hi htop2
   -- the frame's first free index
@@ -206,7 +206,7 @@ theorem newRef_step (L : NbLook p) (hIlpf : IlpfF p) (hLC : LvlCacheProg p) (n :
   have c12 := c1.trans c2
   obtain ⟨hk1, hk2, hk3⟩ := ConRon.Bridge.Inductives.dState_inv (dState_ext hx05 _ _ hnsP)
   have hg15 := hg14.trans hg5
-  have htop5 : iwTop m5 < 2 ^ 64 := Nat.lt_of_le_of_lt hS5.2.1 hS5.2.2.2.1
+  have htop5 : iwTop m5 < 2 ^ 64 := Nat.lt_of_le_of_lt hS5.iw.iw hS5.iw.iwSize
   refine RefE.bind_right hrun5 ?_
   -- its keys, then the active list
   cases h6 : callE p (n' + 1) "nest_cont_new_active" [us, dO, dL, rg.headD 0, rg.tail.headD 0, 0, 0] m5 with
@@ -270,7 +270,7 @@ theorem newRef_step (L : NbLook p) (hIlpf : IlpfF p) (hLC : LvlCacheProg p) (n :
   have hg18 := hg17.trans hg8
   have hns1 := nsb_rec6 (m' := m8) (q := ns1) (keys := NS.keys.toList)
     (act := grp.map (fun x => (⟨x.1, decI us, ds⟩ : NestKey)) ++ NS.active) (nfs := NS.ctorNfs.toList) (by omega)
-    (Nat.lt_of_le_of_lt hS8.2.1 hS8.2.2.2.1) hget8 (hk0'.grow hg18) (by have := hns.b0; have := hg18.1; omega)
+    (Nat.lt_of_le_of_lt hS8.iw.iw hS8.iw.iwSize) hget8 (hk0'.grow hg18) (by have := hns.b0; have := hg18.1; omega)
     (hact7.grow hg8) (by have := hg8.1; omega) (hn0.grow hg18) (by have := hns.b4; have := hg18.1; omega)
   simp only [Array.toArray_toList] at hns1
   have hA8 : AbsOK m8 := posRecW_afr hq1 (appendW_afr hap (caW_afr _ _ _ _ _ _ _ _ _ _ _ hca hA5))

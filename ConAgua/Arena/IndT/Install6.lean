@@ -62,7 +62,7 @@ theorem iao_ref (hsum : SumProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : 
   rcases n with _ | n
   · rw [iaoE.eq_1]; exact RefE.of_cls0 Err.cls_outOfFuel
   have hS := hC.stage
-  obtain ⟨hs32, hse⟩ := installCtxWord9 hc hS.2.2.2.1
+  obtain ⟨hs32, hse⟩ := installCtxWord9 hc hS.iw.iwSize
   by_cases hov : hi + nF < hi
   · rw [iaoE.abort1 p n m vis ctx isP nF tyN hi hov]; exact RefE.of_cls0 rfl
   rw [iaoE.arm1 p n m vis ctx isP nF tyN hi hov]
@@ -181,7 +181,7 @@ theorem iac_ref (hP : AbsProg p) (ctx isP : Word) (c : NestCtx) (b : Bool) (hb :
   obtain ⟨-, -, ee, hee, -, rfl⟩ := hdoT
   obtain ⟨heelt, hee'⟩ := rec2IwH_trunc hee
   obtain ⟨ew, hew, hew32, hewe⟩ := iwH_rdW_at (w := UInt64.ofNat qo) (k := 2) (by rw [hqo']; exact hee')
-    hS.2.2.2.1
+    hS.iw.iwSize
   rw [show (UInt64.ofNat 2 : Word) = 2 from rfl] at hew
   rw [iacE.arm3 p n m vis ctx isP co cl oo ol hcl hol, hwc, hwo, hwlo, hwll, hew]
   simp only [ConRon.Arena.checkAbsCtorSorts]

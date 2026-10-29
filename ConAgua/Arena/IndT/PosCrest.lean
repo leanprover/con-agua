@@ -123,7 +123,7 @@ theorem crest_ref {k : Nat} (hn : k ≤ 2 ^ 62) {m : Mem} {a : AState}
   | zero => rw [ncrE.eq_1]; exact RefE.of_cls0 (by simp)
   | succ k =>
   rw [ncrE.arm1]
-  have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
+  have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.iw hS.iw.iwSize
   obtain ⟨hcvn, hcvl, hcvt⟩ := ConRon.Bridge.Core.denoteCV_inv hcvP
   -- the level parameters
   rcases hlp : cvLpsW k m cv with _ | ⟨r1, m1⟩
@@ -131,7 +131,7 @@ theorem crest_ref {k : Nat} (hn : k ≤ 2 ^ 62) {m : Mem} {a : AState}
   rw [liftE_some, ncrE.k_cv_lps.arm1]
   obtain ⟨hS1, hg1, hE1, hdec1, ht1⟩ := pos2_cvLpsW_stage hlp hS hcv hcv3
   have hA1 : AbsOK m1 := erToIwW_afr (show erToIwW _ m _ _ = some (r1, m1) from hlp) hA
-  have htop1 : iwTop m1 < 2 ^ 64 := Nat.lt_of_le_of_lt hS1.2.1 hS1.2.2.2.1
+  have htop1 : iwTop m1 < 2 ^ 64 := Nat.lt_of_le_of_lt hS1.iw.iw hS1.iw.iwSize
   obtain ⟨ws, hws, hwsd, hwH⟩ := slR_of_decHL m1 _ _ _ hdec1 (by omega)
   simp only [UInt64.ofNat_toNat] at hws
   -- the duplicate check

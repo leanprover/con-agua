@@ -154,7 +154,7 @@ theorem natIndOk_ref (hN : NatLitProg p) (found q : Word) (o : Option IConstantI
   have hw := callW_model (M := fun mm => natIndOkW p k mm found q) (natIndOk_specW p hN.lNatIndOk k · found q) hc
   unfold natIndOkW at hw
   have hF := hS.check.pins.full h0
-  have hsz := hS.2.2.2.2.1
+  have hsz := hS.iw.erSize
   cases o with
   | none =>
     simp only [FoundR, decFd] at hfd
@@ -250,7 +250,7 @@ theorem natZeroOk_ref (hN : NatLitProg p) (found q : Word) (o : Option IConstant
   have hw := callW_model (M := fun mm => natZeroOkW p k mm found q) (natZeroOk_specW p hN.lNatZeroOk k · found q) hc
   unfold natZeroOkW at hw
   have hF := hS.check.pins.full h0
-  have hsz := hS.2.2.2.2.1
+  have hsz := hS.iw.erSize
   cases o with
   | none =>
     simp only [FoundR, decFd] at hfd
@@ -359,7 +359,7 @@ theorem natSuccOk_ref (hN : NatLitProg p) (found q : Word) (o : Option IConstant
   have hw := callW_model (M := fun mm => natSuccOkW p k mm found q) (natSuccOk_specW p hN.lNatSuccOk k · found q) hc
   unfold natSuccOkW at hw
   have hF := hS.check.pins.full h0
-  have hsz := hS.2.2.2.2.1
+  have hsz := hS.iw.erSize
   cases o with
   | none =>
     simp only [FoundR, decFd] at hfd

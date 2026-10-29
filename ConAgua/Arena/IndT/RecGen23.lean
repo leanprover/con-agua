@@ -93,7 +93,7 @@ theorem cnaLoop_ref (k : Nat) (hk : k ≤ 2 ^ 62) : ∀ (m : Mem) (a : AState) (
     subst this
     exact RefE.ret rfl ⟨hC, IWGrow.refl _, hP, hA⟩
   rw [cnaE.loop1.arm1 p k m vis q fto ftl mc teo tel leaf fvo fvl i eo el j hj]
-  have hsz := hS.2.2.2.1
+  have hsz := hS.iw.iwSize
   have hne : el - j ≠ 0 := by
     intro h0
     have h1 : j.toNat < el.toNat := UInt64.lt_iff_toNat_lt.mp hj

@@ -119,8 +119,8 @@ theorem cfg_ref (bsh : BlockShape) (ihs : List (Nat × Nat)) (n : Nat) :
     exact RefE.of_cls0 (by simp)
   | succ n ih =>
   intro m a mo ml io il i fo fl fs mp0 hS hmn hmb hih hib hfs hfb hi hM
-  have hsz := hS.2.2.2.1
-  have htop := hS.2.1
+  have hsz := hS.iw.iwSize
+  have htop := hS.iw.iw
   by_cases hfl : fl = 0
   · rw [cfgE.arm1 p n m mo ml io il i fo fl hfl]
     obtain rfl : fs = [] := by
@@ -161,7 +161,7 @@ theorem cfg_ref (bsh : BlockShape) (ihs : List (Nat × Nat)) (n : Nat) :
   rcases h3 : cfhW n m2 io il i with _ | ⟨hc, cls⟩
   · rw [liftE_none, cfgE.k_class_fields_of_hits.none]; exact RefE.of_cls0 (by simp)
   rw [liftE_some]
-  obtain ⟨hcnt, hcls⟩ := cfhW_ok n m2 io il i hc cls ihs h3 (hih m2 hg12) hib hS2.2.2.2.1
+  obtain ⟨hcnt, hcls⟩ := cfhW_ok n m2 io il i hc cls ihs h3 (hih m2 hg12) hib hS2.iw.iwSize
   have hrest : ∀ m5, StageR dn vis fe m5 a1 → IWGrow m2 m5 → noMR m5 ∅ →
       RefE (closedNV p _root_.L.Checker.nvFns = true) (cfgE p n m5 mo ml io il (i + 1) (fo + 1) (fl - 1))
         (ConRon.Arena.classFieldsOf bsh ihs (i.toNat + 1) fs') a1

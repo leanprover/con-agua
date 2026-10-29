@@ -75,7 +75,7 @@ theorem kof_ref (n : Nat) {m : Mem} {a : AState} {nP po pl key : Word} {pfvs : L
   rw [liftE_some]
   obtain ⟨x1, a1, hrun1, hd1, hb1, hds1, hS1, hg1, hP1⟩ :=
     kcW_ok dn fe vis k m m1 a po pl key r1 pfvs ck h1 hS hpf hpb hk hP
-  have htop1 : iwTop m1 < 2 ^ 64 := Nat.lt_of_le_of_lt hS1.2.1 hS1.2.2.2.1
+  have htop1 : iwTop m1 < 2 ^ 64 := Nat.lt_of_le_of_lt hS1.iw.iw hS1.iw.iwSize
   obtain ⟨nk, hnk, rfl⟩ := decCK_decB_nk hd1
   obtain ⟨-, -, -, -, hds, -, -⟩ := pos2_nk_fields hnk htop1
   unfold ConRon.Arena.classKeyOf
@@ -318,7 +318,7 @@ theorem rg_ref {p : Prog} (n : Nat) {m : Mem} {a : AState} {g k rc c : Word} {G 
   have hA1 : AbsOK m1 := tmaW_afr h1 hA
   unfold rgT
   refine RefE.bind_right hrun1 ?_
-  have hsz1 := hS1.2.2.2.1
+  have hsz1 := hS1.iw.iwSize
   obtain ⟨k8, hk8, hmem⟩ := decTM_member hTM
   obtain ⟨-, -, -, -, hni⟩ := rec2DecTM_parts hTM
   obtain ⟨e8, -⟩ := rec2RdN (w := r1.headD 0) (k := 8) hk8 hsz1

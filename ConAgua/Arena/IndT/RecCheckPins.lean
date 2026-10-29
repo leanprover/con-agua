@@ -85,7 +85,7 @@ theorem tmp_ref (N : Nat) (hN : N ≤ 2 ^ 62) {m : Mem} {a : AState} {rP Mp : Wo
   obtain _ | N := N
   · rw [tmpE.eq_1]; exact RefE.of_cls0 Err.cls_outOfFuel
   have hS := hC.stage
-  have hsz := hS.2.2.2.1
+  have hsz := hS.iw.iwSize
   have hM0 := hM.get (decTM_mono _)
   obtain ⟨k, hk, hmem⟩ := decTM_member hM0
   obtain ⟨hind, hlv, hdsd, -, -, -, hmemP, -, -⟩ := ConRon.Bridge.Inductives.dMajor_inv hMP
@@ -138,8 +138,8 @@ theorem tmp_ref (N : Nat) (hN : N ≤ 2 ^ 62) {m : Mem} {a : AState} {rP Mp : Wo
   refine RefE.bind_right hrun1 ?_
   have hS1 := hC1.stage
   have hM1 : decTM m1 Mp.toNat = some M := hM.stab (decTM_mono _) m1 hg1
-  obtain ⟨wi, hwi, hwiH, hwiE⟩ := iwH_rdW_at (w := Mp) (k := 0) (by simpa using decTM_ind hM1) hS1.2.2.2.1
-  obtain ⟨wu, hwu, hwuH, hwuE⟩ := iwH_rdW_at (w := Mp) (k := 1) (decTM_lvls' hM1) hS1.2.2.2.1
+  obtain ⟨wi, hwi, hwiH, hwiE⟩ := iwH_rdW_at (w := Mp) (k := 0) (by simpa using decTM_ind hM1) hS1.iw.iwSize
+  obtain ⟨wu, hwu, hwuH, hwuE⟩ := iwH_rdW_at (w := Mp) (k := 1) (decTM_lvls' hM1) hS1.iw.iwSize
   rw [show Mp + UInt64.ofNat 0 = Mp by simp] at hwi
   rw [show UInt64.ofNat 1 = (1 : Word) from rfl] at hwu
   rw [hwi, hwu]
@@ -163,7 +163,7 @@ theorem tmp_ref (N : Nat) (hN : N ≤ 2 ^ 62) {m : Mem} {a : AState} {rP Mp : Wo
       Nat.lt_of_not_le fun x => hbig (UInt64.le_iff_toNat_le.mpr x)
     simpa [H] using this
   have hg12 := hg1.trans hg2
-  have hts : iwTop m ≤ (m.arr64 IW).size := hS.2.1
+  have hts : iwTop m ≤ (m.arr64 IW).size := hS.iw.iw
   have e2 : rdW (m2.arr64 IW) (Mp + 2) = UInt64.ofNat o := by
     rw [← ro.1]; simp only [rdW]
     rw [show (Mp + 2).toNat = Mp.toNat + 2 by rw [UInt64.toNat_add]; simp; omega, hg12.2.2.1 _ hoi]

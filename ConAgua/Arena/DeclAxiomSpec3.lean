@@ -282,7 +282,7 @@ theorem fpW_ok {p : Prog} (h : StdProg p) {dn : NIdx → Option ConLeche.Name} {
   have hg := hg2.trans hg3
   have hcvS : decCV (erA s3.mem) (q + 1).toNat = some cvT := by
     rw [hq1]; exact ArrExt.decCV (IWGrow.erecExt hg) hcvP
-  obtain ⟨hm4, hrun4, hd4⟩ := mpW_ok (a := a3) hW hS3.2.2.2.2.1 hcvS
+  obtain ⟨hm4, hrun4, hd4⟩ := mpW_ok (a := a3) hW hS3.iw.erSize hcvS
     (ArrExt.decCV (erecP_ext s3.mem) hcv3)
   subst hm4
   refine ⟨_, a3, hS3, hg, hd4, ?_⟩

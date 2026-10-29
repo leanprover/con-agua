@@ -85,7 +85,7 @@ theorem clm_ref (hP : ClmProg p) (pp cao cal pfo pfl : Word) (bs : BlockShape)
   | succ n ih =>
   intro m a ko kl ks ksP hC hA hq' hsrc hcss hpf hpfb hks hPm hsc hsh hcas hpfP hksP
   have hS := hC.stage
-  have hT : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
+  have hT : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.iw hS.iw.iwSize
   by_cases hkl : kl = 0
   · rw [clmE.arm1 p n m vis pp cao cal pfo pfl ko kl hkl]
     have : ks = [] := by

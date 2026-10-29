@@ -122,7 +122,7 @@ theorem rto_ref (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState} {g k rc cvR
   obtain ⟨q0', hq0', hcv2, -⟩ := rec2DecRS_parts (hrc.stab (decRS_mono _) m2 hg12)
   rw [hq2] at hq0'; cases hq0'
   have hext2 := CVExt_grow hg12 (hcvR q0 hq0m)
-  obtain ⟨erc, trc⟩ := rec2RdN (w := rc) (k := 0) (by simpa using hq2) hS2.2.2.2.1
+  obtain ⟨erc, trc⟩ := rec2RdN (w := rc) (k := 0) (by simpa using hq2) hS2.iw.iwSize
   simp only [show UInt64.ofNat 0 = (0 : Word) from rfl, UInt64.add_zero] at erc
   rw [erc]
   -- `cv_new(…)` (twin side none)

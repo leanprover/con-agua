@@ -32,7 +32,7 @@ theorem keyRef_step (L : NbLook p) (n : Nat) (ih : NbRef p dn vis fe env n) : Ke
     hds hdsb hcty hns hP hA hc hctx hprog hnP husP hdsP hctyP hnsP hwds hni
   have R := L.ct.cr.rx
   have hS := hC.stage
-  have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
+  have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.iw hS.iw.iwSize
   rw [nckE.arm1]
   -- the key
   cases h1 : callE p n "rec4" [nn, us, dO, dL] m with
@@ -50,7 +50,7 @@ theorem keyRef_step (L : NbLook p) (n : Nat) (ih : NbRef p dn vis fe env n) : Ke
   simp only [List.length_cons, List.length_nil] at ht1
   have hK : DecB (fun m => decNK m (rk.headD 0).toNat) m1 ⟨decI nn, decI us, ds⟩ :=
     pos2_key_rec hnn hus (by omega) hget1 (hds.grow (OMono.decHL _ _) hg1)
-  have htop1 : iwTop m1 < 2 ^ 64 := Nat.lt_of_le_of_lt hS1.2.1 hS1.2.2.2.1
+  have htop1 : iwTop m1 < 2 ^ 64 := Nat.lt_of_le_of_lt hS1.iw.iw hS1.iw.iwSize
   obtain ⟨hp6, hk0', ha0, -⟩ := nsb_words hns htop
   -- not in progress
   cases h2 : callE p n "nest_keys_contains" [rdW (m1.arr64 IW) (ns + 2), rdW (m1.arr64 IW) (ns + 3), rk.headD 0] m1 with
@@ -154,7 +154,7 @@ theorem keyRef_step (L : NbLook p) (n : Nat) (ih : NbRef p dn vis fe env n) : Ke
     obtain rfl := hm4.symm
     rw [pos2_rd_grow hg12 (by omega), pos2_ns_rd hg12 hp6 htop 1 (by decide)] at hW4
     have hb2 := nkcW_ok (rk.headD 0) _ (n' + 1) m3 _ _ _ NS.keys.toList hW4 (hk0'.grow hg12)
-      (hK.grow (decNK_mono _) hg2) (Nat.lt_of_le_of_lt hS2.2.1 hS2.2.2.2.1)
+      (hK.grow (decNK_mono _) hg2) (Nat.lt_of_le_of_lt hS2.iw.iw hS2.iw.iwSize)
     by_cases hb2n : r4.headD 0 ≠ 0
     · rw [nckE.k_nest_keys_contains_2.arm1 p (n' + 1) vis ctx fu po pl kb nn us dO dL nPc cty ns r4 m3 hb2n]
       have hin : NS.keys.contains ⟨decI nn, decI us, ds⟩ = true := by

@@ -264,7 +264,7 @@ theorem npcW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
   rw [npcK1_some] at h
   obtain ⟨hS1, hg1, hr1, hd1, ht1⟩ := memberNamesW_stage h1 hS hb
   have hb1 : (r1.headD 0).toNat + (r1.tail.headD 0).toNat < 2 ^ 64 := by
-    have := hS1.2.1; have := hS1.2.2.2.1; omega
+    have := hS1.iw.iw; have := hS1.iw.iwSize; omega
   obtain ⟨ws, hws, hnm, hwH⟩ := slR_of_decHL m1 _ _ _ hd1 hb1
   rw [UInt64.ofNat_toNat, UInt64.ofNat_toNat] at hws
   rcases h2 : containsW n m1 (r1.headD 0) (r1.tail.headD 0) i with _ | b

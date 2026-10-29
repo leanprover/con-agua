@@ -432,7 +432,7 @@ theorem ferW_ok (p : Prog) (hp : CfrProg p) (dn : NIdx → Option ConLeche.Name)
   | zero => intro m m' a vis fe cvo cvl rcl M cvs rcs r h; simp [ferW] at h
   | succ k ih =>
   intro m m' a vis fe cvo cvl rcl M cvs rcs r h hS hrecs hcvs hrcs hMb
-  have hsz := hS.2.2.2.1
+  have hsz := hS.iw.iwSize
   by_cases hz : cvl = 0 ∨ rcl = 0
   · have hz' : cvs.zip rcs = [] := by
       rcases hz with hvl | hcl
@@ -499,7 +499,7 @@ theorem ferW_ok (p : Prog) (hp : CfrProg p) (dn : NIdx → Option ConLeche.Name)
     have := htop3; simp only [List.length_cons, List.length_nil, iwTop] at this
     rw [hre]; simp only [List.headD_cons, iwTop]; omega)
   -- the rest
-  have hcvo1 := rec2ToNat_succ (o := cvo) (i := cvo.toNat) (Nat.le_refl _) (by have := hS.2.1; omega)
+  have hcvo1 := rec2ToNat_succ (o := cvo) (i := cvo.toNat) (Nat.le_refl _) (by have := hS.iw.iw; omega)
   have hcvl1 := rec2ToNat_pred hvl
   have hrcl1 := rec2ToNat_pred hcl
   have hM1 : (M + 1).toNat = M.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega

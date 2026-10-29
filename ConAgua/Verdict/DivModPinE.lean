@@ -84,8 +84,8 @@ theorem loop_ref (hD : DmProg8 p) (hq : KnotStageProg p) (hcl : LeafClosed p) (h
     | succ k =>
     have hk' : k ≤ 2 ^ 62 := by omega
     have hS := hC.stage
-    have hsz := hS.2.2.2.1
-    have hI1 := hS.2.1
+    have hsz := hS.iw.iwSize
+    have hI1 := hS.iw.iw
     obtain ⟨hb, hl, hj⟩ := hI
     have hpl0 : pl ≠ 0 := fun e => by rw [e] at hl; simp at hl
     rw [checkDivModPinLoopE.arm1 p k m vis c value po pl hpl0]
@@ -254,7 +254,7 @@ theorem cp_ref (hD : DmProg8 p) (hq : KnotStageProg p) (hcl : LeafClosed p) (hkp
   | some ci =>
   rw [hf] at hfd
   obtain ⟨hr2, hci⟩ := hfd
-  have hsz := hS1.2.2.2.2.1
+  have hsz := hS1.iw.erSize
   by_cases hk1 : rdW (m2.arr64 EREC) (r2.tail.headD 0) ≠ 1
   · rw [checkDivModPinE.k_env_find.abort2 _ _ _ _ _ _ _ _ (by rw [hr2]; decide) hk1]
     exact RefE.of_cls0 rfl

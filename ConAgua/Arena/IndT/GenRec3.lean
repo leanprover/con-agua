@@ -117,7 +117,7 @@ theorem grp_ref (P : GrcProg p) {fsR : List FnName} (hclR : closedA p rcFreeA rc
   have hS := hC.stage
   have hT64 : iwTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 200).toNat_lt
   have hp8 := hbs.ptop
-  have hsz : (m.arr64 IW).size < 2 ^ 64 := hS.2.2.2.1
+  have hsz : (m.arr64 IW).size < 2 ^ 64 := hS.iw.iwSize
   have hbsD : decBS (truncM m) pp.toNat = some bs := hbs.1
   obtain ⟨-, hrecs, -, -, -, hlarge, -⟩ := decBS_some hbsD
   have hrecsP0 := (ConRon.Bridge.Inductives.dShape_inv hsh).2.1
@@ -254,7 +254,7 @@ theorem grp_ref (P : GrcProg p) {fsR : List FnName} (hclR : closedA p rcFreeA rc
     refine RefC.mono (grpB_ref hkp henv hApd hCrk hIlpf P n (by omega) hC4 (hbs.grow hg12)
       (hrb.grow hg12 (by have := hbs.ptop; omega)) (decHL_grow' hg12 hparb hpar) (Nat.le_trans hparb hg12.1)
       (htbl.grow (fun q => decNCN_mono q) hg12) (hrd.grow (decCR_mono _) hg12) (hms.grow (fun q => decTM_mono q) hg12)
-      (hcv.grow (fun q => OMono.decCVp q) hg12) (hlp.grow hms hg12 hk4 hS.2.2.2.1) (csRes_decB hcs2) hns hnpk
+      (hcv.grow (fun q => OMono.decCVp q) hg12) (hlp.grow hms hg12 hk4 hS.iw.iwSize) (csRes_decB hcs2) hns hnpk
       (by rw [hk4 IW]; exact hsz5) hP2 hA2 hkeep
       (ConRon.Bridge.Inductives.dShape_ext c4.ext _ _ hsh) (ConRon.Bridge.denoteEList_ext c4.ext _ _ hparP)
       (ConRon.Bridge.Inductives.dCtorNf_ext.list c4.ext _ _ htblP)
@@ -322,7 +322,7 @@ theorem grp_ref (P : GrcProg p) {fsR : List FnName} (hclR : closedA p rcFreeA rc
     · rw [liftE_none, grpE.k_gen_rec_check_any_no_member.none]; exact fun _ _ _ => ErrClaim.of_cls0 (by simp)
     rw [liftE_some, grpE.k_gen_rec_check_any_no_member.arm1]
     obtain ⟨s3, rfl, -, hm3, hany, -⟩ := triple_of_callW (s₀ := ⟨s2.mem, Locals.init []⟩)
-      (genRecCheckAnyNoMember_refines p P.anm n _ mO mL ms hmsD hmsb hS2.2.2.2.1) c3
+      (genRecCheckAnyNoMember_refines p P.anm n _ mO mL ms hmsD hmsb hS2.iw.iwSize) c3
     rw [hm3]
     exact large _ (by rw [hany, hn0]; rfl)
   · rw [grpE.k_class_stream_recs.arm2 p n vis pp nested pO pL tO tL rd mO mL cO cL r2 _ hk0' h7 hn0]

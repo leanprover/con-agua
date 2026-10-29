@@ -61,15 +61,15 @@ theorem applied_ref (hD : DmProg5 p) (pr ho hl : Word) (hyps : List EIdx) :
     have hn2 : hl ≠ 2 := fun e => by rw [e] at hlen; simp at hlen
     rw [ite_eq_right hn1, ite_eq_right hn2]; exact Sim.ret ⟨hS4, hG4, hl4, rfl⟩
   · obtain rfl : hl = 1 := UInt64.toNat_inj.mp (by simp at hlen ⊢; omega)
-    obtain ⟨-, hwlt, rfl, -⟩ := decHL_cons_iw hS.2.2.2.1 hd
+    obtain ⟨-, hwlt, rfl, -⟩ := decHL_cons_iw hS.iw.iwSize hd
     rw [ite_eq_left rfl, iw_rd_grow hG4 (by simp only [h1w] at hb; omega)]
     refine Sim.ntB ((internFVar_ref hM 2 _ hwlt).simG hS4 hG4) fun r5 _ m5 a5 ⟨hS5, hg5, hl5, rfl⟩ => ?_
     exact Sim.ntRet ((mkApp_ref hM (r4.headD 0) (r5.headD 0)).simG hS5 hg5) fun _ _ _ _ _ h => h
   · obtain rfl : hl = 2 := UInt64.toNat_inj.mp (by simp at hlen ⊢; omega)
-    obtain ⟨-, hwlt, rfl, hrest⟩ := decHL_cons_iw hS.2.2.2.1 hd
-    obtain ⟨-, hwlt2, rfl, -⟩ := decHL_cons_iw hS.2.2.2.1 hrest
+    obtain ⟨-, hwlt, rfl, hrest⟩ := decHL_cons_iw hS.iw.iwSize hd
+    obtain ⟨-, hwlt2, rfl, -⟩ := decHL_cons_iw hS.iw.iwSize hrest
     have hlt2 : (ho + 1).toNat < iwTop m := by
-      have h1 := hS.2.1; have h2 := hS.2.2.2.1; simp only [h2w] at hb; have e := word_add_one (w := ho) (by omega); omega
+      have h1 := hS.iw.iw; have h2 := hS.iw.iwSize; simp only [h2w] at hb; have e := word_add_one (w := ho) (by omega); omega
     rw [ite_eq_right (by decide), ite_eq_left rfl, iw_rd_grow hG4 (by simp only [h2w] at hb; omega)]
     refine Sim.ntB ((internFVar_ref hM 2 _ hwlt).simG hS4 hG4) fun r5 _ m5 a5 ⟨hS5, hg5, hl5, rfl⟩ => ?_
     refine Sim.ntB ((mkApp_ref hM (r4.headD 0) (r5.headD 0)).simG hS5 hg5) fun r6 _ m6 a6 ⟨hS6, hg6, hl6, rfl⟩ => ?_
@@ -116,7 +116,7 @@ theorem sc0List_ref (hD : DmProg5 p) (hs0 : SubstC0 p dn vis fe) (nm r : Word) (
     cases k with
     | zero => rw [callW_zero] at hc; cases hc
     | succ k =>
-    obtain ⟨hl0, hwlt, hh, hrest⟩ := decHL_cons_iw hS.2.2.2.1 hd
+    obtain ⟨hl0, hwlt, hh, hrest⟩ := decHL_cons_iw hS.iw.iwSize hd
     subst hh
     have hw := callW_model (M := fun mm => sc0ListW p (k + 1) mm nm r o l)
       (sc0List_specW p hD.lSubstConst0List (k + 1) · nm r o l) hc
@@ -126,8 +126,8 @@ theorem sc0List_ref (hD : DmProg5 p) (hs0 : SubstC0 p dn vis fe) (nm r : Word) (
     obtain ⟨x1, a1, hrun1, hS1, hg1, hl1, hx1⟩ := hs0 nm r _ hn hr hwlt k m a r1 m1 hS h1
     replace hw := ntBW_some hw; obtain ⟨r2, m2, h2, hw⟩ := hw
     have hlpos : 0 < l.toNat := Nat.pos_of_ne_zero (fun e => hl0 (UInt64.toNat_inj.mp (by simpa using e)))
-    have hsz := hS.2.2.2.1
-    have hI1 := hS.2.1
+    have hsz := hS.iw.iwSize
+    have hI1 := hS.iw.iw
     have ho1 : (o + 1).toNat = o.toNat + 1 := by
       rw [UInt64.toNat_add]; simp; omega
     have hl1' : (l - 1).toNat = l.toNat - 1 := by

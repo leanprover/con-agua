@@ -167,7 +167,7 @@ theorem mjW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
   rintro ⟨r1, m1⟩ tm a1 - ⟨⟨hS1, hg1, hTM, hds⟩, hf1⟩
   dsimp only at hS1 hg1 hTM hds
   rw [mjW.k_target_major_at.arm1]
-  have hsz1 := hS1.2.2.2.1
+  have hsz1 := hS1.iw.iwSize
   obtain ⟨hind, hlv, ⟨o, l, ho, hl, -⟩, -, hni⟩ := rec2DecTM_parts hTM
   have hds1 := hds o l ho hl
   obtain ⟨vi, evi, hvi, dvi⟩ := iwH_rdW_at (w := r1.headD 0) (k := 0) (by simpa using hind) hsz1
@@ -249,7 +249,7 @@ theorem motW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
   simp only [drop3_headD] at hmH hmd
   rw [motW.k_class_gen_major.arm2 (hc1 := by rw [h11]; decide)]
   obtain ⟨-, hgt, -, -, hel, -⟩ := rec2CG_parts hG
-  obtain ⟨ve, eve, hve, dve⟩ := iwH_rdW_at (w := g) (k := 11) (by rw [iwH_grow hg1 (show g.toNat + 11 < iwTop m by omega)]; exact hel) hS1.2.2.2.1
+  obtain ⟨ve, eve, hve, dve⟩ := iwH_rdW_at (w := g) (k := 11) (by rw [iwH_grow hg1 (show g.toNat + 11 < iwTop m by omega)]; exact hel) hS1.iw.iwSize
   simp only [show UInt64.ofNat 11 = (11 : Word) from rfl] at eve
   rw [eve]
   refine RSim.bind (K := motW.k_intern_sort n d _ _ _) rfl (Q1 := fun b a' x => StageR dn vis fe b.2 a' ∧

@@ -467,7 +467,7 @@ theorem ctor_ref (hP : SumProg p) (m : Nat) (hn : m + 1 ≤ 2 ^ 62) (m0 : Mem) (
   have hwsA : ConLeche.Expr.WScoped 0 cvCP.type :=
     ConLeche.Expr.WScoped.of_not_hasFvar (ConLeche.checkConstantVal_typeWF hF₁).1
   -- `strip_pis`
-  obtain ⟨w1, hw1, hw1l, hw1d⟩ := sumTypeWord (hcv.stab (OMono.decCVp _) m1 hg1) hS1.2.2.2.2.1
+  obtain ⟨w1, hw1, hw1l, hw1d⟩ := sumTypeWord (hcv.stab (OMono.decCVp _) m1 hg1) hS1.iw.erSize
   rw [hw1]
   have h2 := stripF_pis_ok dn vis fe (nP + nF) w1 hw1l
   rw [sum_toNat_add hnf, hw1d] at h2
@@ -534,7 +534,7 @@ theorem ctor_ref (hP : SumProg p) (m : Nat) (hn : m + 1 ≤ 2 ^ 62) (m0 : Mem) (
   subst hb3'
   simp only [ite_true]
   -- the constructor's opened telescope
-  obtain ⟨w3, hw3, hw3l, hw3d⟩ := sumTypeWord (hcv.stab (OMono.decCVp _) s3.mem hg03) hS3.2.2.2.2.1
+  obtain ⟨w3, hw3, hw3l, hw3d⟩ := sumTypeWord (hcv.stab (OMono.decCVp _) s3.mem hg03) hS3.iw.erSize
   rw [hw3]
   have h4 := opfSimRA (n := m) (k := nP) (i := 0) hOpf hw3l hS3 hA3
   rw [hw3d, show (0 : Word).toNat = 0 from rfl] at h4
@@ -568,7 +568,7 @@ theorem ctor_ref (hP : SumProg p) (m : Nat) (hn : m + 1 ≤ 2 ^ 62) (m0 : Mem) (
   subst hcqBd
   have hg04 := hg03.trans hg4
   -- the type former's opened telescope
-  obtain ⟨w5, hw5, hw5l, hw5d⟩ := sumTypeWord (hta.stab (OMono.decCVp _) m4 hg04) hS4.2.2.2.2.1
+  obtain ⟨w5, hw5, hw5l, hw5d⟩ := sumTypeWord (hta.stab (OMono.decCVp _) m4 hg04) hS4.iw.erSize
   rw [hw5]
   have h5 := opfSimRA (n := m) (k := nP) (i := 0) hOpf hw5l hS4 hA4
   rw [hw5d, show (0 : Word).toNat = 0 from rfl] at h5

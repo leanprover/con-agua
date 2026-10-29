@@ -133,14 +133,14 @@ theorem tcm_ref (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState}
     · rfl
   subst ho1
   simp only []
-  have hsz := hS1.2.2.2.1
+  have hsz := hS1.iw.iwSize
   have hbs1 := hbs.grow hg1
   -- `block_shape_member_names`
   rcases h2 : memberNamesW n m1 q with _ | ⟨rn, m2⟩
   · rw [liftE_none, tcmE.k_block_shape_member_names.none]; exact RefE.of_cls0 (by simp)
   rw [liftE_some, tcmE.k_block_shape_member_names.arm1]
   obtain ⟨hS2, hg2, -, hdn, htn⟩ := memberNamesW_stage h2 hS1 hbs1
-  have hf2 := (memberNamesW_dec h2 hsz hS1.2.2.2.2.2 hbs1.dec
+  have hf2 := (memberNamesW_dec h2 hsz hS1.iw.ctl hbs1.dec
     (by have := hbs1.ptop; have := hS1.lt64 (Nat.le_refl _); omega) hbs1.2.1 hbs1.2.2).2.2.2.1
   have hP2 := hP1.fr (MFr.of_iw hf2)
   have hA2 := AFr.iw hf2 hA1

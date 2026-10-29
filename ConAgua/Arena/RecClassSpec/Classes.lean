@@ -436,7 +436,7 @@ theorem rcW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (a
       obtain ⟨hhead, hextt⟩ := SlotsExt_cons hext
       obtain ⟨hs5, hkext⟩ := hhead sp hsp
       have hso64 : so.toNat < 2 ^ 64 := so.toNat_lt
-      have hIW64 : (m.arr64 IW).size < 2 ^ 64 := hS.2.2.2.1
+      have hIW64 : (m.arr64 IW).size < 2 ^ 64 := hS.iw.iwSize
       have hso1 : (so + 1).toNat = so.toNat + 1 := by
         rw [UInt64.toNat_add]; simp; have := iwN_lt hsp; omega
       have e0 : UInt64.ofNat so.toNat = so := UInt64.ofNat_toNat

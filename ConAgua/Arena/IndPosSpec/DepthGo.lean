@@ -800,9 +800,9 @@ theorem phsW_ok (k : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis
   rcases hl : phsGoW k m1 q nn 0 with _ | m2 <;> rw [hl] at h; · simp [phsB] at h
   rw [phsB_some] at h
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-  have hsz1 : (m1.arr64 IW).size < 2 ^ 64 := hS1.2.2.2.1
+  have hsz1 : (m1.arr64 IW).size < 2 ^ 64 := hS1.iw.iwSize
   have hroom1 : q.toNat + nn.toNat ≤ (m1.arr64 IW).size := by
-    have := hS1.2.1; simp only [iwTop] at htop1 this; omega
+    have := hS1.iw.iw; simp only [iwTop] at htop1 this; omega
   obtain ⟨phs, a', hrun, hS2, hK, hdec⟩ := phsGoW_ok k m1 m2 a q nn 0 [] dn fe vis hl hS1
     (by simp) hroom1 hsz1 (by simp [decHL, hslice?])
   refine ⟨phs, a', ?_, hS2, ?_, by simpa using hdec, ?_⟩

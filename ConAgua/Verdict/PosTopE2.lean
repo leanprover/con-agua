@@ -65,7 +65,7 @@ theorem nu_ref {p : Prog} (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis
     have r1 : rdW (m.arr64 IW) off = hdr := by simp [rdW, h1]
     have r2 : rdW (m.arr64 IW) hdr = o := by simp [rdW, h2]
     have hh1 : (hdr + 1).toNat = hdr.toNat + 1 := word_add_toNat (by
-      have := hS.2.1; have := hS.2.2.2.1; simp; omega)
+      have := hS.iw.iw; have := hS.iw.iwSize; simp; omega)
     have r3 : rdW (m.arr64 IW) (hdr + 1) = ll := by simp [rdW, hh1, h3]
     rw [r1, r2, r3, ConRon.Arena.nestUniform.eq_2]
     rcases huc' : ucW (realCall p) k m ctx o ll with _ | ⟨r, m1⟩
@@ -82,7 +82,7 @@ theorem nu_ref {p : Prog} (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis
       rw [nuE.k_nest_uniform_cs.arm1 p k ctx off l r m1 (by rw [hr]; decide)]
       refine RefE.ite_pos rfl ?_
       have ho1 : (off + 1).toNat = off.toNat + 1 := word_add_toNat (by
-        have := hS.2.1; have := hS.2.2.2.1; simp; omega)
+        have := hS.iw.iw; have := hS.iw.iwSize; simp; omega)
       have hl1 : (l - 1).toNat = l.toNat - 1 :=
         UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simp; omega))
       have ih' := ih (m := m1) (a := a1) (off := off + 1) (l := l - 1) (css := css') hS1 hJ1

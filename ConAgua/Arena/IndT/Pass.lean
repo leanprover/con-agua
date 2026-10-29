@@ -530,7 +530,7 @@ theorem pass_ref (hP : PassProg p) {fs : List FnName}
     exact (hrb1 hrb).grow (hg12.trans (hg3.trans (hg4.trans (hg5.trans (hg6.trans (hg7.trans
       (hg8.trans hg9))))))) (by omega)
   · simp only [List.headD_cons]; rw [hr15, hr16]
-    exact classesLp_of_decPL hms9.1 hS9.2.2.1 hS9.2.2.2.1
+    exact classesLp_of_decPL hms9.1 hS9.iw.er hS9.iw.iwSize
   · simp only [List.headD_cons]; rw [hw0]
     exact StageC.of_parts hS9 ck9 hA9 (dnE i9.ext)
 

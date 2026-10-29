@@ -393,7 +393,7 @@ theorem opfF_ok (k e i : Word) (he : H e) :
   have c' := callW_model (M := fun mm => opfTopK opfP K mm k e i)
     (fun s => opfTopK_spec opfP rfl rfl rfl K s k e i) hc
   have hw63 : (m.arr64 SPN).size < 2 ^ 63 := hAb.2.2.2.2.2.2.1
-  have hctl : 200 < (m.arr64 CTL).size := hS.2.2.2.2.2
+  have hctl : 200 < (m.arr64 CTL).size := hS.iw.ctl
   simp only [opfTopK] at c'
   obtain ⟨hsh, c'⟩ := of_ite_none c'
   have hi : i.toNat < 2 ^ 63 := by
@@ -430,7 +430,7 @@ theorem opfF_ok (k e i : Word) (he : H e) :
     obtain ⟨hS1', hg1'⟩ := stageR_hi hS1 (MemFrame.setCtl m1 136 co) (by simp) (by simp) (by decide)
       (by decide)
     have hAb1' := hAb1.frameD (MemFrame.setCtl m1 136 co) (by decide) (by decide)
-    have hctl1 : 200 < (m1.arr64 CTL).size := hS1.2.2.2.2.2
+    have hctl1 : 200 < (m1.arr64 CTL).size := hS1.iw.ctl
     have htop1 : rdW ((m1.set64 CTL 136 co).arr64 CTL) 136 = co := by
       rw [rdW_set64E, ite_eq_left ⟨rfl, rfl, by simp; omega⟩]
     have hsz1' : ((m1.set64 CTL 136 co).arr64 SPN).size = (m.arr64 SPN).size := by

@@ -109,7 +109,7 @@ theorem sgW_nksl (k : Nat)
   obtain ⟨rfl, rfl⟩ := h
   obtain ⟨hS4, hg4, hk4, ht4, hget4⟩ := posRecW_stage hr4 hS3 (by simp)
   simp only [List.length_cons, List.length_nil] at ht4
-  have htop4 : iwTop m4 < 2 ^ 64 := Nat.lt_of_le_of_lt hS4.2.1 hS4.2.2.2.1
+  have htop4 : iwTop m4 < 2 ^ 64 := Nat.lt_of_le_of_lt hS4.iw.iw hS4.iw.iwSize
   have r2 : rdW (m4.arr64 IW) (key + 2) = q := by
     have := hget4 2 (by simp)
     have e : (key + 2).toNat = key.toNat + 2 := word_add_toNat (by simp; omega)
@@ -158,7 +158,7 @@ theorem sdCons {p : Prog} (hP : KeysProg p) {n : Nat} {dn : NIdx → Option ConL
   obtain ⟨hb, hlen, ⟨ps, hps⟩, hat⟩ := hsd
   obtain ⟨hS', hg, hdn, htop'⟩ := consW_stageN hW hS hb hps
   have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.iw hS.iw.iwSize
-  have htop1 : iwTop s'.mem < 2 ^ 64 := Nat.lt_of_le_of_lt hS'.2.1 hS'.2.2.2.1
+  have htop1 : iwTop s'.mem < 2 ^ 64 := Nat.lt_of_le_of_lt hS'.iw.iw hS'.iw.iwSize
   have hl1 : (r.tail.headD 0).toNat = l.toNat + 1 := by
     have h1 := decNL_length _ hdn; have h2 := decNL_length _ hps
     simp only [List.length_cons] at h1; omega
@@ -234,7 +234,7 @@ theorem sgCall_sim {p : Prog} (L : SgLook p) {dn : NIdx → Option ConLeche.Name
   have hsl := sgW_nksl dn fe vis k m s'.mem a ctx hO hL _ _ _ _ _ r c holes tm.ds M G g hW hS hU.dec hU.inn hU.sl hb
     hho hhob hds hdsb hR hP
   rw [hcd, hud, h4] at hrun
-  have htop' : iwTop s'.mem < 2 ^ 64 := Nat.lt_of_le_of_lt hS'.2.1 hS'.2.2.2.1
+  have htop' : iwTop s'.mem < 2 ^ 64 := Nat.lt_of_le_of_lt hS'.iw.iw hS'.iw.iwSize
   exact ⟨x, a', hrun, decNK_decB_of_in h1 h3, hsl, h2, hS', hg, hP'⟩
 
 /-- **`class_seeds`' model simulates `classSeeds`**: the classes a slice of records decoded below
@@ -251,7 +251,7 @@ theorem csdW_sim {p : Prog} (hP : SdProg p) (dn : NIdx → Option ConLeche.Name)
   | zero => intro m a mo ml ms _ _ _ _ _ _; rw [csdW.eq_1]; exact Sim.of_none
   | succ n ih =>
   intro m a mo ml ms hS hU hho hhob hms hPm
-  have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
+  have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.iw hS.iw.iwSize
   by_cases hml : ml = 0
   · rw [csdW.arm1 p n m ctx hO hL mo ml hml]
     have : ms = [] := by
@@ -281,7 +281,7 @@ theorem csdW_sim {p : Prog} (hP : SdProg p) (dn : NIdx → Option ConLeche.Name)
     obtain ⟨hS2, hg2, hp2, ht2, hget2⟩ := posRecW_stage hW2 hS1 (by simp)
     simp only [List.length_cons, List.length_nil] at ht2
     have hf2 := posRecW_mfr hW2
-    have htop1 : iwTop m1 < 2 ^ 64 := Nat.lt_of_le_of_lt hS1.2.1 hS1.2.2.2.1
+    have htop1 : iwTop m1 < 2 ^ 64 := Nat.lt_of_le_of_lt hS1.iw.iw hS1.iw.iwSize
     have hg12 := hg1.trans hg2
     refine Sim.bindK (K := csdW.k_class_seeds_2 p n (r2.headD 0)) (body := fun r3 m3 => csdW.k_class_seeds p (callW p n "sl_cons"
         [r2.headD 0, r3.headD 0, r3.tail.headD 0] m3)) rfl (fun _ _ => rfl)
@@ -289,7 +289,7 @@ theorem csdW_sim {p : Prog} (hP : SdProg p) (dn : NIdx → Option ConLeche.Name)
         (Nat.le_trans hhob hg12.1) (hms'.grow decTM_mono hg12) (hP1.fr hf2)) ?_
     rintro r3 xs m3 a3 ⟨hS3, hg3, hd3, hP3⟩
     refine Sim.mstep (K := csdW.k_class_seeds p) rfl (fun _ _ => rfl) fun r4 m4 h4 => ?_
-    have htop2 : iwTop s2.mem < 2 ^ 64 := Nat.lt_of_le_of_lt hS2.2.1 hS2.2.2.2.1
+    have htop2 : iwTop s2.mem < 2 ^ 64 := Nat.lt_of_le_of_lt hS2.iw.iw hS2.iw.iwSize
     have g0 := hget2 0 (by simp)
     have g1 := hget2 1 (by simp)
     simp only [Nat.add_zero, List.getElem?_cons_zero, List.getElem?_cons_succ] at g0 g1

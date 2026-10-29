@@ -235,7 +235,7 @@ theorem psW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
   intro m a s mc hS hG hsl hmc hA
   rcases n with _ | n
   · intro b hb; simp [psW] at hb
-  have hsz := hS.2.2.2.1
+  have hsz := hS.iw.iwSize
   obtain ⟨hnP, hslots⟩ := rec2CG_get (hG.get (decCG_mono _))
   obtain ⟨so, sl, hso, hsl', hsls⟩ := decAt_some hslots
   have hlen := decPL_length m hsls

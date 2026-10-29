@@ -291,8 +291,8 @@ theorem bphW_loop1_ok {p : Prog} (P : BphProg p) (dn : NIdx → Option ConLeche.
   | some jm =>
   obtain ⟨j, m1'⟩ := jm
   rw [hn] at h
-  have hI1 := hS1.2.2.2.1
-  have hE1 := hS1.2.2.2.2.1
+  have hI1 := hS1.iw.iwSize
+  have hE1 := hS1.iw.erSize
   have hB1' : decEBlk dn (truncM m1) bo.toNat (r1.tail.headD 0).toNat = some blk := by
     rw [hl]; exact hB1
   obtain ⟨hm1, hiff⟩ := bphW_loop2_iff p m1 bo (r1.headD 0) (r1.tail.headD 0) (f + 1) 0 j m1' hn

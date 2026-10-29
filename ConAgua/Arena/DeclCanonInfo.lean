@@ -168,7 +168,7 @@ theorem cdW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a
           ctxW_ok k hx hS1 hcp1 hcq1 hP1 hL1
         subst hrc
         simp only [List.headD_cons, List.tail_cons] at h
-        have hsz2 : (m2.arr64 EREC).size < 2 ^ 64 := hS2.2.2.2.2.1
+        have hsz2 : (m2.arr64 EREC).size < 2 ^ 64 := hS2.iw.erSize
         have hgg : IWGrow m m2 := hg1.trans hg2
         obtain ⟨wv, ev, hv32, hvd⟩ := hdW_ (a := erA m2) (q := p) (k := 5) (kn := 5) hsz2 rfl
           (ArrExt.hd? (IWGrow.erecExt hgg) hvp)
@@ -344,7 +344,7 @@ theorem cwW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a
           ctxW_ok k hx hS1 hcp1 hcq1 hP1 hL1
         subst hrc
         simp only [List.headD_cons, List.tail_cons] at h
-        have hsz2 : (m2.arr64 EREC).size < 2 ^ 64 := hS2.2.2.2.2.1
+        have hsz2 : (m2.arr64 EREC).size < 2 ^ 64 := hS2.iw.erSize
         have hgg : IWGrow m m2 := hg1.trans hg2
         obtain ⟨wa, ea, rfl⟩ := natW_ (a := erA m2) (q := p) (k := 7) (kn := 7) hsz2 rfl
           (ArrExt.nat? (IWGrow.erecExt hgg) ho1)

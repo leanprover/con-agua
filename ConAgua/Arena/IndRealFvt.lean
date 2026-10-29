@@ -207,7 +207,7 @@ theorem ftdsGoW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv
       rw [hx] at h1
       obtain ⟨hm1, hrun1, hlt1⟩ := ftdW_ok m m1 a hS.check.arena.base w hw32 r1 (ftdF_eq h1)
       rw [hm1] at h
-      have hsz : (m.arr64 IW).size < 2 ^ 64 := hS.2.2.2.1
+      have hsz : (m.arr64 IW).size < 2 ^ 64 := hS.iw.iwSize
       have hk1 : (k + 1).toNat = k.toNat + 1 := by
         rw [UInt64.toNat_add]; simp; omega
       have hqk : (q + k).toNat = q.toNat + k.toNat := by
@@ -264,7 +264,7 @@ theorem ftdsF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
   rcases ha : allocW m l with _ | ⟨q, m1⟩
   · rw [ftdsW_none k m o l ha] at c'; cases c'
   rw [ftdsW_some k m m1 o l q ha] at c'
-  have hsz : (m.arr64 IW).size < 2 ^ 64 := hS.2.2.2.1
+  have hsz : (m.arr64 IW).size < 2 ^ 64 := hS.iw.iwSize
   obtain ⟨hq, rfl, hroom⟩ := allocW_facts ha hsz
   obtain ⟨hS1, -, -, -⟩ := allocW_stage ha hS
   have hqt : q.toNat = iwTop m := by rw [hq]; rfl
@@ -592,7 +592,7 @@ theorem gaaF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
   rw [ht1] at hfr1 hsp
   obtain ⟨hS1, hg1⟩ := stageR_hi hS hfr1 (by simp [SPN]) (by simp) (by decide) (by decide)
   -- the fresh slice
-  have hsz1 : (m1.arr64 IW).size < 2 ^ 64 := hS1.2.2.2.1
+  have hsz1 : (m1.arr64 IW).size < 2 ^ 64 := hS1.iw.iwSize
   obtain ⟨hq, rfl, hroom⟩ := allocW_facts ha hsz1
   generalize hn : r1.tail.headD 0 = cnt at hsp hb64 ha c3 hroom
   generalize ho : r1.headD 0 = o at hsp hb64 c3

@@ -34,7 +34,7 @@ theorem noaW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis no nl lo 
   | zero => intro m m' a off l xs r h; simp [noaW] at h
   | succ k ih =>
     intro m m' a off l xs r h hS hn hnb hxs hxb hP
-    have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
+    have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.iw hS.iw.iwSize
     by_cases hl0 : l = 0
     · rw [noaW_nil (h := hl0)] at h
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)

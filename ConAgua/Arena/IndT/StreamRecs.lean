@@ -96,7 +96,7 @@ theorem csr_ref (fe : IFEnv) (n : Nat) (hn : n ≤ 2 ^ 62) :
   rw [hl1] at hOK
   obtain ⟨⟨p0, q, hp0, hp1, hq', hcv, hext⟩, hOKt⟩ := RecsOK_cons (by simpa using hOK)
   have e0 : UInt64.ofNat rcso.toNat = rcso := UInt64.ofNat_toNat
-  have hIW64 : (m.arr64 IW).size < 2 ^ 64 := hS.2.2.2.1
+  have hIW64 : (m.arr64 IW).size < 2 ^ 64 := hS.iw.iwSize
   have hrd0 := iwN_rdW hp0 (by have := iwN_lt hp0; omega)
   rw [e0] at hrd0
   have hrdq := iwN_rdW hq' (by omega)
@@ -121,7 +121,7 @@ theorem csr_ref (fe : IFEnv) (n : Nat) (hn : n ≤ 2 ^ 62) :
   have hg1 := hP1.grow
   refine RefE.bind_right hrun1 ?_
   have hOK1 : RecsOK m1 (rcso + 1).toNat (rcsl - 1).toNat (rest.map (·.cvR)) := by
-    have htopsz : iwTop m ≤ (m.arr64 IW).size := hS.2.1
+    have htopsz : iwTop m ≤ (m.arr64 IW).size := hS.iw.iw
     have hOKb := hOK.1
     have hro1 : (rcso + 1).toNat = rcso.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
     have hrl1 : (rcsl - 1).toNat = l1 := by

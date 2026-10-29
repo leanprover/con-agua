@@ -244,12 +244,12 @@ theorem crW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (c
       rw [e0] at hrd0
       have hp0b : p0 < 2 ^ 64 := hrd0.2
       have hrdq := iwN_rdW hq (by omega)
-      have hIW64 : (m.arr64 IW).size < 2 ^ 64 := hS.2.2.2.1
+      have hIW64 : (m.arr64 IW).size < 2 ^ 64 := hS.iw.iwSize
       have hrdm := iwN_off (k := 2) hmIq (by have := iwN_lt hmIq; omega)
       simp only [show UInt64.ofNat 2 = 2 from rfl] at hrdm
       obtain ⟨-, -, htyp⟩ := decCV_some (a := erA m) (q := q) hcv
       have hqb : q < 2 ^ 64 := hrdq.2
-      have hE64 : (m.arr64 EREC).size < 2 ^ 64 := hS.2.2.2.2.1
+      have hE64 : (m.arr64 EREC).size < 2 ^ 64 := hS.iw.erSize
       have hq3 : q + 3 < 2 ^ 64 := by
         rcases hw : (m.arr64 EREC)[q + 3]? with _ | w
         · simp [hd?, erA, hw] at htyp
@@ -309,7 +309,7 @@ theorem crW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (c
           have hmot2 : decNL m2 mo.toNat ml.toNat = some motPos := by
             rw [decNL_grow (hg1.trans hg2) hmt]; exact hmot
           have hmlb : mo.toNat + ml.toNat < 2 ^ 64 := by
-            have := hS2.2; have := hS.2.2.2.1; have := hS.2.1; omega
+            have := hS2.2; have := hS.iw.iwSize; have := hS.iw.iw; omega
           obtain ⟨r3, hc, h⟩ := of_K h (by simp only [crK3])
           have hcm := cmvW_ok (n - 1) m2 nP mo ml (UInt64.ofNat i) r3 motPos hmot2 hmlb hc
           rw [UInt64.toNat_ofNat_of_lt' hi64] at hcm
@@ -614,8 +614,8 @@ theorem ih1W_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
   simp only [Nat.zero_add, getD_zero, getD_one] at hd5 ht5
   have hg15 := hg13.trans hg5
   have hb5 : (r5.headD 0).toNat + (r5.tail.headD 0).toNat < 2 ^ 64 := by
-    have h1 : iwTop m5 ≤ (m5.arr64 IW).size := hS5.2.1
-    have h2 : (m5.arr64 IW).size < 2 ^ 64 := hS5.2.2.2.1
+    have h1 : iwTop m5 ≤ (m5.arr64 IW).size := hS5.iw.iw
+    have h2 : (m5.arr64 IW).size < 2 ^ 64 := hS5.iw.iwSize
     omega
   by_cases hz : r5.tail.headD 0 = 0
   · rw [ih1W.k_get_app_args_f.arm1 (hc1 := hz)]
@@ -686,8 +686,8 @@ theorem ihsW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
   | succ n ih =>
   intro m a fo fl fvs hS hfvs hft hmot hmt
   have hfb : fo.toNat + fl.toNat < 2 ^ 64 := by
-    have h1 : iwTop m ≤ (m.arr64 IW).size := hS.2.1
-    have h2 : (m.arr64 IW).size < 2 ^ 64 := hS.2.2.2.1
+    have h1 : iwTop m ≤ (m.arr64 IW).size := hS.iw.iw
+    have h2 : (m.arr64 IW).size < 2 ^ 64 := hS.iw.iwSize
     omega
   by_cases hfl : fl = 0
   · rw [ihsW.arm1 (hc1 := hfl)]
@@ -926,8 +926,8 @@ theorem tailW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
   dsimp only at hS5 hg5 hd5 ht5
   simp only [Nat.zero_add, getD_zero, getD_one] at hd5 ht5
   have hb5 : (r5.headD 0).toNat + (r5.tail.headD 0).toNat < 2 ^ 64 := by
-    have h1 : iwTop m5 ≤ (m5.arr64 IW).size := hS5.2.1
-    have h2 : (m5.arr64 IW).size < 2 ^ 64 := hS5.2.2.2.1
+    have h1 : iwTop m5 ≤ (m5.arr64 IW).size := hS5.iw.iw
+    have h2 : (m5.arr64 IW).size < 2 ^ 64 := hS5.iw.iwSize
     omega
   by_cases hz : r5.tail.headD 0 = 0
   · rw [tailW.k_get_app_args_f.arm1 (hc1 := hz)]
@@ -1142,8 +1142,8 @@ theorem slotMotW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFE
   rintro ⟨r1, m1⟩ ⟨bss, e⟩ a1 - ⟨hS1, hg1, hd1, ht1⟩
   dsimp only at hS1 hg1 hd1 ht1
   have hb1 : (r1.headD 0).toNat + (r1.tail.headD 0).toNat < 2 ^ 64 := by
-    have h1 : iwTop m1 ≤ (m1.arr64 IW).size := hS1.2.1
-    have h2 : (m1.arr64 IW).size < 2 ^ 64 := hS1.2.2.2.1
+    have h1 : iwTop m1 ≤ (m1.arr64 IW).size := hS1.iw.iw
+    have h2 : (m1.arr64 IW).size < 2 ^ 64 := hS1.iw.iwSize
     omega
   by_cases hz : r1.tail.headD 0 = 0
   · rw [slotMotW.k_pi_binders.arm1 (hc1 := hz)]
@@ -1721,7 +1721,7 @@ theorem slots_sims (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv
     refine RSim.pure_some ⟨⟨hS2, hg1.trans hg2, ?_⟩, hJ2⟩
     cases x <;> exact hd2
   · have htag := decCS_tag hsl.get
-    have hsz := hS.2.2.2.1
+    have hsz := hS.iw.iwSize
     have hrd := iwN_rdW htag (by have := iwN_lt htag; omega)
     rw [UInt64.ofNat_toNat] at hrd
     cases slot with
@@ -1954,14 +1954,14 @@ theorem motPosW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv
   obtain ⟨hS1, hg1, hd1, ht1⟩ := ih m m1 (j + 1) r1 h1 hS hsp (by rw [hj1]; omega)
   rw [hj1] at hd1
   obtain ⟨q, hq, hst⟩ := hsp.get j.toNat hjl
-  have hsz := hS.2.2.2.1
+  have hsz := hS.iw.iwSize
   have hb := hsp.1
   have hrd := iwN_rdW_at (w := so) (k := j.toNat) hq hsz
   rw [show so + UInt64.ofNat j.toNat = so + j by simp] at hrd
   have hrd1 : rdW (m1.arr64 IW) (so + j) = UInt64.ofNat q := by
     rw [← hrd.1]; simp only [rdW]
     rw [show (so + j).toNat = so.toNat + j.toNat by
-      rw [UInt64.toNat_add]; have := hS.2.1; exact Nat.mod_eq_of_lt (by omega), hg1.2.2.1 _ (by omega)]
+      rw [UInt64.toNat_add]; have := hS.iw.iw; exact Nat.mod_eq_of_lt (by omega), hg1.2.2.1 _ (by omega)]
   have htag := decCS_tag (hst.grow hg1).get
   have hrq := iwN_rdW htag (by have := iwN_lt htag; omega)
   rw [show UInt64.ofNat q = UInt64.ofNat q from rfl] at hrq

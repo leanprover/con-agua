@@ -60,7 +60,7 @@ theorem ngc_ref {p : Prog} (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vi
       Option.some.injEq] at hcs2
     obtain ⟨c, hc, cs', hcs'', rfl⟩ := hcs2
     obtain ⟨hcH, hcd⟩ := rd_iwH0E (m := m) (o := off) (k := IdxKind.name) (by simpa [iwH, iwA] using hc)
-    have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
+    have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.iw hS.iw.iwSize
     have hoff1 : (off + 1).toNat = off.toNat + 1 :=
       word_add_toNat (show off.toNat + 1 < 2 ^ 64 by have := hcb 0 (by omega); omega)
     have hl1 : (l - 1).toNat = l' := by

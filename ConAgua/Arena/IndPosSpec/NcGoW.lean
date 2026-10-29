@@ -261,7 +261,7 @@ theorem ncGoW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis C cs : W
   | zero => intro m m' a co cl ol fp ns acc r h; simp [ncGoW] at h
   | succ k ih =>
     intro m m' a co cl ol fp ns acc r h hS hns hreg hol hN hacc hfp
-    have hsz : (m.arr64 IW).size < 2 ^ 64 := hS.2.2.2.1
+    have hsz : (m.arr64 IW).size < 2 ^ 64 := hS.iw.iwSize
     by_cases hc0 : cl = 0
     · rw [ncGoW_done k m vis C co cl cs ol fp hc0] at h
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
@@ -284,7 +284,7 @@ theorem ncGoW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis C cs : W
     have hco : co.toNat < erTop m := by
       have := (Array.getElem?_eq_some_iff.mp hw).1; have := erecP_size_le m; omega
     have hco1 : (co + 1).toNat = co.toNat + 1 :=
-      word_add_toNat (show co.toNat + 1 < 2 ^ 64 by have := hS.2.2.1; have := hS.2.2.2.2.1; omega)
+      word_add_toNat (show co.toNat + 1 < 2 ^ 64 by have := hS.iw.er; have := hS.iw.erSize; omega)
     rw [hwE] at h
     have hE := hS.check.env
     rw [List.filterMapM_cons]
@@ -344,11 +344,11 @@ theorem ncGoW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis C cs : W
       have hciqb : ciq.toNat < erTop m := by
         have := decCI_idx hci; have := erecP_size_le m; omega
       have hciq1 : (ciq + 1).toNat = ciq.toNat + 1 :=
-        word_add_toNat (show ciq.toNat + 1 < 2 ^ 64 by have := hS.2.2.1; have := hS.2.2.2.2.1; omega)
+        word_add_toNat (show ciq.toNat + 1 < 2 ^ 64 by have := hS.iw.er; have := hS.iw.erSize; omega)
       have hU : UInt64.size = 2 ^ 64 := rfl
       have hnF : (UInt64.ofNat nF).toNat = nF := UInt64.toNat_ofNat_of_lt' (by omega)
       have hnPc : (UInt64.ofNat nPc).toNat = nPc := UInt64.toNat_ofNat_of_lt' (by omega)
-      have htopb : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hsz
+      have htopb : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.iw hsz
       rcases hrec : posRecW m2 [ciq + 1, UInt64.ofNat nF] with _ | ⟨q3, m3⟩ <;> rw [hrec] at h; · simp [ncK3] at h
       obtain ⟨hS3, hg3, hq3, ht3, hget3⟩ := posRecW_stage hrec hS2 (by simp)
       simp only [List.length_cons, List.length_nil] at ht3
@@ -361,7 +361,7 @@ theorem ncGoW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis C cs : W
       have ht4 : iwTop (m3.set64 IW (cs + ol) q3) = iwTop m3 := by
         simp only [iwTop]; rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
       have hsz3 : cs.toNat + ol.toNat < (m3.arr64 IW).size := by
-        have := hS3.2.1; have := hg23.1; omega
+        have := hS3.iw.iw; have := hg23.1; omega
       have hnew : CNOk (m3.set64 IW (cs + ol) q3) q3.toNat (cv, nF)
           (OutR cs.toNat N (iwTop (m3.set64 IW (cs + ol) q3))) := by
         have hg2' := hg2.1

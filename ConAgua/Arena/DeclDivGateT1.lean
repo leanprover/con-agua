@@ -872,15 +872,15 @@ theorem cggoC (hD : DmProg6 p) (hcl : LeafClosed p) (hkp : CrKeep p) (hs0 : Subs
     | cons pf pfs =>
     obtain ⟨px, pxs, hpx, hpxs, rfl⟩ := ConRon.Bridge.denoteEList_cons hpr
     obtain ⟨hsl0, q, hq, hstm, hrest⟩ := StmtL.cons hS.2 hs
-    obtain ⟨hpl0, hpwlt, hpf, hdrest⟩ := decHL_cons_iw hS.2.2.2.1 hd
+    obtain ⟨hpl0, hpwlt, hpf, hdrest⟩ := decHL_cons_iw hS.iw.iwSize hd
     subst hpf
     obtain ⟨ho, hl, e, hr3, hbd, hdh, he, hst2⟩ := hstm
     obtain ⟨hp3, h0, h1, h2⟩ := hr3
     have hst2' : eqq = decE e := hst2
     subst hst2'
     rw [ite_eq_right (by simp [hsl0, hpl0])] at hw
-    have hsz := hS.2.2.2.1
-    have hI1 := hS.2.1
+    have hsz := hS.iw.iwSize
+    have hI1 := hS.iw.iw
     have r0 : rdW (m.arr64 IW) so = q := hq
     have rq1 : rdW (m.arr64 IW) q = ho := rdW_iw_of h0 rfl
     have rq2 : rdW (m.arr64 IW) (q + 1) = hl :=

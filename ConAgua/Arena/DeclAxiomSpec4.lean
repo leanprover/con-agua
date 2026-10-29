@@ -141,7 +141,7 @@ theorem famW_ok {p : Prog} (h : StdProg p) {dn : NIdx → Option ConLeche.Name} 
   have hq7 : decCV (erA m7) q.toNat = some cv := ArrExt.decCV (IWGrow.erecExt hg) hq
   have hW' : mpW m7 q (r7.headD 0) = some (r, m') := by
     unfold mpW at hW ⊢; simpa [famW.k_matches_pin] using hW
-  obtain ⟨hm8, hrun8, hd8⟩ := mpW_ok (a := a7) hW' hS7.2.2.2.2.1 hq7
+  obtain ⟨hm8, hrun8, hd8⟩ := mpW_ok (a := a7) hW' hS7.iw.erSize hq7
     (DecB.get ⟨fun _ _ _ he h => he.2.decCV h⟩ hpin)
   subst hm8
   refine ⟨_, a7, ?_, hS7, hg, hd8⟩

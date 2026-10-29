@@ -72,7 +72,7 @@ theorem matchesPin_refines (p : Prog) (hC : CanonProg p)
   intro n s₀ a₀ ⟨hS, h1, h2⟩
   refine triple_post (mp_specW p hC hp n s₀ q pin) ?_
   rintro r s' ⟨hl, hm⟩
-  obtain ⟨hmem, hrun, hd⟩ := mpW_ok (a := a₀) hm hS.2.2.2.2.1 h1 h2
+  obtain ⟨hmem, hrun, hd⟩ := mpW_ok (a := a₀) hm hS.iw.erSize h1 h2
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
   refine ⟨hl, hok, ?_⟩
   rw [hst, hres, hmem]
@@ -243,7 +243,7 @@ theorem rsoW_ok {p : Prog} (h : RedProg p) {dn : NIdx → Option ConLeche.Name} 
   have hq1 : (q + 1).toNat = q.toNat + 1 := toNat_add_small q 1 hq1b
   have hcvR2 : decCV (erA s2.mem) (q + 1).toNat = some cvR := by
     rw [hq1]; exact ArrExt.decCV (IWGrow.erecExt hg2) hcvR
-  obtain ⟨hm3, hrun3, hd3⟩ := mpW_ok (a := AM.st (reduceOpCvA (decI c)) a) hW hS2.2.2.2.2.1 hcvR2 hpin
+  obtain ⟨hm3, hrun3, hd3⟩ := mpW_ok (a := AM.st (reduceOpCvA (decI c)) a) hW hS2.iw.erSize hcvR2 hpin
   subst hm3
   refine ⟨_, _, ?_, hS2, hg2, hd3⟩
   simp only [reduceStoredOk, hfind, hci, StateT.run_bind, hrun2, exc_ok_bind']
@@ -405,7 +405,7 @@ theorem reoW_ok {p : Prog} {dn : NIdx → Option ConLeche.Name} (hdn : DnInj dn)
     obtain ⟨ci, hci⟩ := envR_row_dec hS.check.env _ hl2 htag hrc
     have hci4 : decCI (erA m4) dn (r3.tail.headD 0).toNat = some ci := by
       rw [hptr]; exact ArrExt.decCI (IWGrow.erecExt hg4) hci
-    have hq := ciEqB_ok hdn hS4.2.2.2.2.1 hci4 (decRCI_get hna)
+    have hq := ciEqB_ok hdn hS4.iw.erSize hci4 (decRCI_get hna)
     rw [hq]
     refine ⟨decide (ci = na), a4, ?_, hS4, hg4, ?_⟩
     · rw [htwin, hfind, hci]
@@ -463,7 +463,7 @@ theorem reoW_ok {p : Prog} {dn : NIdx → Option ConLeche.Name} (hdn : DnInj dn)
     have hq1 : (q + 1).toNat = q.toNat + 1 := toNat_add_small q 1 hq1b
     have hcvB4 : decCV (erA m4) (q + 1).toNat = some cvB := by
       rw [hq1]; exact ArrExt.decCV (IWGrow.erecExt hg4) hcvB
-    obtain ⟨hm5, hrun5, hd5⟩ := mpW_ok (a := a4) hW hS4.2.2.2.2.1 hcvB4
+    obtain ⟨hm5, hrun5, hd5⟩ := mpW_ok (a := a4) hW hS4.iw.erSize hcvB4
       (DecB.get ⟨fun _ _ _ he h => he.2.decCV h⟩ hpin)
     subst hm5
     refine ⟨_, _, ?_, hS4, hg4, hd5⟩

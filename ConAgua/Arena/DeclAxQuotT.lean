@@ -133,7 +133,7 @@ theorem cda_ref {p : Prog} (hX : AxProg p) (hq : KnotStageProg p) (hcl : LeafClo
   have hM1 : CoreMemos m1 := hT1.twin.memos
   generalize hq0 : r1.headD 0 = q at hci1 hcv1 htop1
   have hqb : q.toNat + 8 < 2 ^ 64 := by
-    have := hS1.2.2.1; have := hS1.2.2.2.2.1; omega
+    have := hS1.iw.er; have := hS1.iw.erSize; omega
   have hq1 : (q + 1).toNat = q.toNat + 1 := toNat_add_small q 1 (by omega)
   obtain ⟨wn, hwn, hwnl, hname0⟩ := decCI_name hci1
   have hname : cv.name = decI wn := hname0
@@ -184,7 +184,7 @@ theorem cda_ref {p : Prog} (hX : AxProg p) (hq : KnotStageProg p) (hcl : LeafClo
     obtain ⟨w, hw, rfl⟩ : ∃ w, (iwA m3)[o3.toNat + 4]? = some w ∧ w.toNat = v := by
       simp only [iwN, nat?, Option.map_eq_some_iff] at hvm; exact hvm
     have hob : o3.toNat + 4 < 2 ^ 64 := by
-      have := (Array.getElem?_eq_some_iff.mp hw).1; have := hS3.2.2.2.1; simp only [iwA] at *; omega
+      have := (Array.getElem?_eq_some_iff.mp hw).1; have := hS3.iw.iwSize; simp only [iwA] at *; omega
     have ew : rdW (m3.arr64 IW) (o3 + 4) = w := by
       have : (o3 + 4).toNat = o3.toNat + 4 := by
         rw [UInt64.toNat_add]; simp; omega

@@ -251,7 +251,7 @@ theorem ilam_ref (p : Prog) (hp : InferLeafProg p) (hb : InferBodyProg p)
   · rw [liftE_none]; exact RefE.of_cls0 (by simp)
   rw [liftE_some]
   have h₂ := CoreSpec.of_callW (hi1 n ⟨m₁, Locals.init []⟩ _ dn vis fe M₁ eb body (r₁.headD 0) 0 hS₁
-    hbody (internFVar_core hs.rel d ty hty r₁ hfv).2.2.2) c2
+    hbody (internFVar_core hs.rel d ty hty r₁ hfv).resOk) c2
   refine RefE.bind_core (w := id) h₂ (fun M₂ hS₂ _ => ?_)
   simp only [ilamE.k_inst1]
   have hs₂ : SlotPre ⟨m₂, Locals.init []⟩ _ dn vis fe M₂ eb mode := ⟨hS₂, hs.mode4, hs.eb_mode⟩
@@ -394,7 +394,7 @@ theorem ifa_ref (p : Prog) (hp : InferLeafProg p) (hb : InferBodyProg p)
   · rw [liftE_none]; exact RefE.of_cls0 (by simp)
   rw [liftE_some]
   have h₄ := CoreSpec.of_callW (hi1 n ⟨m₃, Locals.init []⟩ _ dn vis fe M₃ eb body (r₃.headD 0) 0 hS₃
-    hbody h₃.2.2.2) c4
+    hbody h₃.resOk) c4
   refine RefE.bind_core (w := id) h₄ (fun M₄ hS₄ hT₄ => ?_)
   simp only [ifaE.k_inst1]
   have hs₄ : SlotPre ⟨m₄, Locals.init []⟩ _ dn vis fe M₄ eb mode := ⟨hS₄, hs.mode4, hs.eb_mode⟩
@@ -436,8 +436,8 @@ theorem ifa_ref (p : Prog) (hp : InferLeafProg p) (hb : InferBodyProg p)
       simp only [LNodeView.lchildren, List.mem_cons, List.mem_nil_iff, or_false] at hc; rcases hc with rfl | rfl
       · exact hdu
       · exact hdv)
-    (fun n hn => by simp [LNodeView.nchildren] at hn) h₇.1
-  rw [h₇.2.2.1] at hd7
+    (fun n hn => by simp [LNodeView.nchildren] at hn) h₇.run
+  rw [h₇.res] at hd7
   refine RefE.bind_core (w := id) h₇ (fun M₇ hS₇ _ => ?_)
   simp only [ifaE.k_intern_imax]
   rcases c8 : callW p n "intern_sort" [r₇.headD 0] m₇ with _ | ⟨r₈, m₈⟩
@@ -446,7 +446,7 @@ theorem ifa_ref (p : Prog) (hp : InferLeafProg p) (hb : InferBodyProg p)
   obtain ⟨s₈, hs₈, -, hso⟩ := triple_of_callW
     (internSort_spec p hb.sof hb.sop hb.soi n ⟨m₇, Locals.init []⟩ (r₇.headD 0)) c8
   rw [hs₈] at hso
-  obtain ⟨hrun, hP⟩ := (internSort_core hS₇ (r₇.headD 0) h₇.2.2.2 r₈ hso hd7).post
+  obtain ⟨hrun, hP⟩ := (internSort_core hS₇ (r₇.headD 0) h₇.resOk r₈ hso hd7).post
   exact RefE.ret hrun ⟨hP.after, hP.res, hP.valid⟩
 
 /-- **`infer_forall_io` refines the io body's `.forallE` clause** (`inferForallIOT`) at the io

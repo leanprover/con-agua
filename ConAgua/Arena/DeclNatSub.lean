@@ -273,7 +273,7 @@ theorem pairs_ref (hN : NatSubProg p) (nm r : Word) (hn : H nm) (hr : H r) :
       obtain ⟨-, h2, -⟩ := hrec; simp only [iwA] at h2; simp [rdW, h2]
     have hpb : (pp + 1).toNat = pp.toNat + 1 := by
       obtain ⟨h1, -, -⟩ := hrec
-      have e1 := hS.2.1; have e2 := hS.2.2.2.1; have e3 : pp.toNat + 1 < 2 ^ 64 := by omega
+      have e1 := hS.iw.iw; have e2 := hS.iw.iwSize; have e3 : pp.toNat + 1 < 2 ^ 64 := by omega
       rw [UInt64.toNat_add]; simp only [UInt64.toNat_one]; exact Nat.mod_eq_of_lt e3
     have heb' : ∀ m1, IWGrow m m1 → rdW (m1.arr64 IW) (pp + 1) = eb := by
       intro m1 hg

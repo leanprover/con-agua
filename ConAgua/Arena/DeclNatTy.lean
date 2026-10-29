@@ -140,7 +140,7 @@ theorem natOpCod_ref (hN : NatTyProg p) (c e : Word) :
         obtain ⟨hm7, h07, hr7⟩ := callW_pinWord' hN.lPinWord h7
         rw [hm7] at hw
         have hF6 := hS6.check.pins.full h07
-        obtain ⟨wt, hiff, hrd, hlt, hty, -⟩ := cvWordsAt hS6.2.2.2.2.1 hcv
+        obtain ⟨wt, hiff, hrd, hlt, hty, -⟩ := cvWordsAt hS6.iw.erSize hcv
         have hp54 : (pinW m6 54).toNat < 2 ^ 32 := hF6.lv_lt.2.2
         have hr7' : r7.headD 0 = pinW m6 54 := by rw [hr7]; rfl
         by_cases hl : rdW (m6.arr64 EREC) (r6.headD 0 + 2) = 0
@@ -447,7 +447,7 @@ theorem natOpStoredOk_ref (hN : NatTyProg p) (w : Word) :
     rw [hf] at hfd
     obtain ⟨hf1, hci⟩ := hfd
     rw [ite_eq_right (by rw [hf1]; decide)] at hW
-    have hsz := hS.2.2.2.2.1
+    have hsz := hS.iw.erSize
     rcases defnMono_words hsz hci with ⟨hne, hdm⟩ | ⟨hk1, hiff⟩
     · rw [ite_eq_left hne] at hW
       simp only [Option.some.injEq, Prod.mk.injEq] at hW
@@ -534,7 +534,7 @@ theorem okAll_ref (hN : NatTyProg p) (o l : Word) (ns : List NIdx) :
     cases k with
     | zero => rw [callW_zero] at hc; cases hc
     | succ k =>
-    obtain ⟨hl0, hwlt, hn, hrest⟩ := decHL_cons_iw hS.2.2.2.1 hd
+    obtain ⟨hl0, hwlt, hn, hrest⟩ := decHL_cons_iw hS.iw.iwSize hd
     have hw := callW_model (M := fun mm => okAllW p (k + 1) mm vis o l) (okAll_specW p hN.lNatOpStoredOkAll (k + 1) · vis o l) hc
     rw [okAllW.eq_2] at hw
     rw [ite_eq_right hl0] at hw
@@ -558,10 +558,10 @@ theorem okAll_ref (hN : NatTyProg p) (o l : Word) (ns : List NIdx) :
       simp only [Option.some.injEq, Prod.mk.injEq] at hw
       obtain ⟨rfl, rfl⟩ := hw
       have hrest1 : decHL m1 (o + 1).toNat (l - 1).toNat = some ns := by
-        obtain ⟨ho1, hl1⟩ := slice_succ hl0 (decHL_bnd m o l hd hS.2.2.2.1)
+        obtain ⟨ho1, hl1⟩ := slice_succ hl0 (decHL_bnd m o l hd hS.iw.iwSize)
         rw [decHL_grow hg1 (by rw [ho1]; omega)]; exact hrest
       have hb1 : (o + 1).toNat + (l - 1).toNat ≤ iwTop m1 := by
-        obtain ⟨ho1, hl1⟩ := slice_succ hl0 (decHL_bnd m o l hd hS.2.2.2.1)
+        obtain ⟨ho1, hl1⟩ := slice_succ hl0 (decHL_bnd m o l hd hS.iw.iwSize)
         have := hg1.1; rw [ho1]; omega
       obtain ⟨x, a2, hrun2, hK⟩ := ih (o + 1) (l - 1) k m1 a1 r2 m2 hS1 hrest1 hb1 h2
       refine ⟨x, a2, ?_, hK.1, hg1.trans hK.2.1, by simpa [decW0B] using hK.2.2⟩

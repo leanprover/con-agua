@@ -174,13 +174,13 @@ theorem cftW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
     rw [hr3t] at h
     have hdecL : decHL m3 (r3.headD 0).toNat w2.toNat = some cv.levelParams := by rw [hdec3]; exact hsl
     have hM3 : decTM m3 mp.toNat = some M := hM.stab (decTM_mono _) m3 hg3
-    obtain ⟨wu, hwu, hwuH, hwuE⟩ := iwH_rdW_at (w := mp) (k := 1) (decTM_lvls' hM3) hS3.2.2.2.1
+    obtain ⟨wu, hwu, hwuH, hwuE⟩ := iwH_rdW_at (w := mp) (k := 1) (decTM_lvls' hM3) hS3.iw.iwSize
     rw [show UInt64.ofNat 1 = (1 : Word) from rfl] at hwu
     have hcv3 : decCV (erA m3) ((r2.tail.headD 0).toNat + 1) = some cv :=
       ArrExt.decCV (IWGrow.erecExt hg3) hcvP
     obtain ⟨wt, hwt, hwtH, hwtE⟩ := decCV_typeW hcv3
     have hqE3 := (Array.getElem?_eq_some_iff.mp hwt).1
-    have hE364 := hS3.2.2.2.2.1
+    have hE364 := hS3.iw.erSize
     have et : rdW (m3.arr64 EREC) (r2.tail.headD 0 + 4) = wt :=
       rdW_of_get? (by rw [UInt64.toNat_add]; simp [erA] at hqE3 ⊢; omega) hwt
     rw [hwu, et] at h

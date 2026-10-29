@@ -225,7 +225,7 @@ theorem oraW_ok {p : Prog} (h : OraProg p) {dn : NIdx → Option ConLeche.Name} 
   have hg := hg3.trans (hg4.trans (hg5.trans (hg6.trans hg7)))
   have hq7 : decCV (erA s7.mem) q.toNat = some cv := ArrExt.decCV (IWGrow.erecExt hg) hq
   obtain ⟨hm8, hrun8, hd8⟩ := mpW_ok (a := AM.st (ofReducePinA (decI wn)) a6) hW
-    hS7.2.2.2.2.1 hq7 (DecB.get ⟨fun _ _ _ he h => he.2.decCV h⟩ hpin)
+    hS7.iw.erSize hq7 (DecB.get ⟨fun _ _ _ he h => he.2.decCV h⟩ hpin)
   subst hm8
   refine ⟨_, _, ?_, hS7, hg, hd8⟩
   rw [hname]

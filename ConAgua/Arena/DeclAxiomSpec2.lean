@@ -240,7 +240,7 @@ theorem fpcW_ok {p : Prog} (hR : L.Rom.RomRefs p) {dn : NIdx → Option ConLeche
   have hq1 : (q + 1).toNat = q.toNat + 1 := toNat_add_small q 1 hq1b
   have hcv2 : decCV (erA m2) (q + 1).toNat = some cvT := by
     rw [hq1]; exact ArrExt.decCV (IWGrow.erecExt hg2) hcvP
-  obtain ⟨hm3, hrun3, hd3⟩ := mpW_ok (a := a2) hW hS2.2.2.2.2.1 hcv2
+  obtain ⟨hm3, hrun3, hd3⟩ := mpW_ok (a := a2) hW hS2.iw.erSize hcv2
     (DecB.get ⟨fun _ _ _ he h => he.2.decCV h⟩ hpin)
   subst hm3
   refine ⟨_, a2, hS2, hg2, hd3, ?_⟩
@@ -450,7 +450,7 @@ theorem tcoW_ok {p : Prog} (h : TcoProg p) {dn : NIdx → Option ConLeche.Name} 
   have hrun5' : trustCompilerA.run a4 = .ok (pin, a5) := hrun5
   have hg := hg2.trans (hg4.trans hg5)
   have hq5 : decCV (erA m5) q.toNat = some cv := ArrExt.decCV (IWGrow.erecExt hg) hq
-  obtain ⟨hm6, hrun6, hd6⟩ := mpW_ok (a := a5) hW hS5.2.2.2.2.1 hq5
+  obtain ⟨hm6, hrun6, hd6⟩ := mpW_ok (a := a5) hW hS5.iw.erSize hq5
     (DecB.get ⟨fun _ _ _ he h => he.2.decCV h⟩ hpin)
   subst hm6
   refine ⟨_, a5, ?_, hS5, hg, hd6⟩

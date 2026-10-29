@@ -318,7 +318,7 @@ theorem cvceW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
       ArrExt.decCV (IWGrow.erecExt hg1) hcv
     have hcvm' : decCV (erA m1) r.toNat = some cv' :=
       ArrExt.decCV (IWGrow.erecExt hg1) hcv'
-    have hsz1 : (m1.arr64 EREC).size < 2 ^ 64 := hS1.2.2.2.2.1
+    have hsz1 : (m1.arr64 EREC).size < 2 ^ 64 := hS1.iw.erSize
     obtain ⟨-, -, wt1, -, -, g3, -, ht1, -, htm1, -⟩ := cvWords hsz1 hcvm
     obtain ⟨-, -, vt1, -, -, f3', -, gt1, -, gtm1, -⟩ := cvWords hsz1 hcvm'
     rw [g3, f3'] at h

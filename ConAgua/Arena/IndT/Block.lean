@@ -102,7 +102,7 @@ theorem block_ref (hP : CbProg p) {fs fs2 : List FnName}
     (blockShapeAllCtors_spec p hP.ha hP.cp hP.nco hP.acc hP.acg hP.ac n _ p0) c1
   simp only at hs1 hW1
   subst hs1
-  obtain ⟨cq, tot, rfl, hdc, hg1, hf1, htop1, hroom1⟩ := acW_ok _ _ _ p0 _ bs hW1 hq hS.2.2.2.1 hS.2.2.2.2.2
+  obtain ⟨cq, tot, rfl, hdc, hg1, hf1, htop1, hroom1⟩ := acW_ok _ _ _ p0 _ bs hW1 hq hS.iw.iwSize hS.iw.ctl
   have hS1 := stage_frame_iw hS hf1 (by omega)
   have hP1 := hPm.fr (MFr.of_iw hf1)
   obtain ⟨mp0, hmp0⟩ := hma
@@ -124,7 +124,7 @@ theorem block_ref (hP : CbProg p) {fs fs2 : List FnName}
   subst hs2
   have hcsd : decPL (truncM s1.mem) (decCN (truncM s1.mem)) cq.toNat tot.toNat = some bs.allCtors := hdc
   have hlen := decPL_length _ hcsd
-  obtain ⟨hr2, hd2, hg2, hf2, ht2⟩ := ctorNamesW_dec hW2 hS1.2.2.2.1 hS1.2.2.2.2.2 (Nat.le_of_eq htop1)
+  obtain ⟨hr2, hd2, hg2, hf2, ht2⟩ := ctorNamesW_dec hW2 hS1.iw.iwSize hS1.iw.ctl (Nat.le_of_eq htop1)
     (bs.allCtors.map (·.1)) (by simp [hlen]) (fun j hj => by
       obtain ⟨v, y, hv, hy, hget⟩ := decPL_get tot.toNat cq.toNat bs.allCtors hcsd j hj
       obtain ⟨⟨a', hva, hcv⟩, -⟩ := decCN_some hy
@@ -136,7 +136,7 @@ theorem block_ref (hP : CbProg p) {fs fs2 : List FnName}
       simp only [List.getElem_map, hy']
       exact DecB.get (f := fun m => decCVp m a') (OMono.decCVp _) hcv)
   have hS2 : StageR dn vis fe s2.mem a := stage_frame_iw hS1 hf2 (by
-    have := ctorNamesW_room hW2 hS1.2.2.2.1; simp only [iwTop] at this ht2 ⊢; omega)
+    have := ctorNamesW_room hW2 hS1.iw.iwSize; simp only [iwTop] at this ht2 ⊢; omega)
   subst hr2
   simp only [List.map_map] at hd2
   have hP2 := hP1.fr (MFr.of_iw hf2)

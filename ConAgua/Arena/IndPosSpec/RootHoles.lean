@@ -249,8 +249,8 @@ theorem rhGoW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word) 
   | zero => intro m m' j h; simp [rhGoW] at h
   | succ k ih =>
     intro m m' j h hS hn hp hlv hno hpo hq hj hH
-    have hsz := hS.2.2.2.1
-    have htop := hS.2.1
+    have hsz := hS.iw.iwSize
+    have htop := hS.iw.iw
     by_cases hd : nl ≤ j
     · rw [rhGoW_done k m no nl lv po pl nP q j hd] at h
       cases h
@@ -316,7 +316,7 @@ theorem rhGoW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word) 
       by_cases hij : i = j.toNat
       · subst hij
         refine ⟨hh, ?_, ?_, ?_⟩
-        · rw [set64IW_get, ite_eq_left ⟨hqj.symm, by have := hS2.2.1; omega⟩]
+        · rw [set64IW_get, ite_eq_left ⟨hqj.symm, by have := hS2.iw.iw; omega⟩]
         · rw [(hin.agree hset).1, hdh]
           simp [rhList, List.getElem?_map, List.getElem?_eq_getElem (show j.toNat < names.length by omega)]
         · exact (hin.agree hset).2
@@ -628,7 +628,7 @@ theorem haW_ok (k : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis 
   obtain ⟨hS2, hg2, hr20, hr21, ht2, hw1, hw2⟩ := appendW_stage hap hS1 (by rw [hl1]; exact hb1)
     (by have := hg1.1; omega)
   rw [hl1] at hr21 hw1 ht2 hw2
-  have hsz2 : iwTop m2 < 2 ^ 64 := Nat.lt_of_le_of_lt hS2.2.1 hS2.2.2.2.1
+  have hsz2 : iwTop m2 < 2 ^ 64 := Nat.lt_of_le_of_lt hS2.iw.iw hS2.iw.iwSize
   have hlen := c.rootHoles.length
   by_cases hh : idx < r2.tail.headD 0
   · rw [haK2_hit (h := hh)] at h

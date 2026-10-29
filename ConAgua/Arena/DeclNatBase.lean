@@ -268,7 +268,7 @@ theorem stkeep_of_frame {m m' : Mem} (hf : MemFrame [IW] [200] m m') (hg : IWGro
   obtain ⟨hI1, hE1, hsz, hEs, hct⟩ := hI
   have h129 : rdW (m'.arr64 CTL) 129 = rdW (m.arr64 CTL) 129 := hf.ctl 129 (by simp)
   have hE : m'.arr64 EREC = m.arr64 EREC := hf.arr EREC (by simp [EREC, IW]) (by decide)
-  refine ⟨hg, fun dn vis fe a hS => ⟨CheckR.frame_iw hf hS.1, htop, ?_, ?_, ?_, ?_⟩⟩
+  refine ⟨hg, fun dn vis fe a hS => ⟨CheckR.frame_iw hf hS.check, htop, ?_, ?_, ?_, ?_⟩⟩
   · simp only [erTop, h129, hE]; exact hE1
   · rw [hf.size IW]; exact hsz
   · rw [hE]; exact hEs
@@ -298,7 +298,7 @@ theorem rec2_fref (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
       (fun m m' r => RecPost m m' r [a, b]) := by
   intro n m r m' hI hc
   obtain ⟨s', rfl, hl, hm, hq, hroom⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (rec2_spec p ha hp n _ a b hI.2.2.1) hc
+    (rec2_spec p ha hp n _ a b hI.iwSize) hc
   change s'.mem = rec2Mem m a b at hm
   change r.headD 0 = _ at hq
   rw [hm, rec2Mem_eq]
@@ -312,7 +312,7 @@ theorem rec3_fref (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
       (fun m m' r => RecPost m m' r [a, b, c]) := by
   intro n m r m' hI hc
   obtain ⟨s', rfl, hl, hm, hq, hroom⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (rec3_spec p ha hp n _ a b c hI.2.2.1) hc
+    (rec3_spec p ha hp n _ a b c hI.iwSize) hc
   change s'.mem = rec3Mem m a b c at hm
   change r.headD 0 = _ at hq
   rw [hm, rec3Mem_eq]
@@ -669,7 +669,7 @@ theorem slContains_ref {k : IdxKind} (hp : p.lookup "sl_contains" = some slConta
   refine triple_post (slContains_spec p hp n s₀ o l x) ?_
   rintro r s' ⟨hl, hm, hcw⟩
   obtain ⟨ws, hws, rfl, hlt⟩ := slR_of_decHL s₀.mem l.toNat o.toNat xs hd
-    (decHL_bnd _ o l hd hS.2.2.2.1)
+    (decHL_bnd _ o l hd hS.iw.iwSize)
   rw [UInt64.ofNat_toNat, UInt64.ofNat_toNat] at hws
   have hr := containsW_ok n _ _ _ _ _ _ hws hcw
   rw [contains_map_decI x hx ws hlt]

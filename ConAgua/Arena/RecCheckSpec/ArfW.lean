@@ -97,7 +97,7 @@ theorem arfW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
   obtain ⟨-, -, ⟨o', l', ho', hl', hds'⟩, -⟩ := rec2DecTM_parts h'
   obtain ⟨-, ho'm⟩ := rec2IwN_trunc ho'
   obtain ⟨-, hl'm⟩ := rec2IwN_trunc hl'
-  have hsz1 := hS1.2.2.2.1
+  have hsz1 := hS1.iw.iwSize
   obtain ⟨eo, to⟩ := rec2RdN (w := M) (k := 2) (by rw [iwN_grow hg1 (rec2IwN_trunc ho').1]; exact ho'm) hsz1
   obtain ⟨el, tl⟩ := rec2RdN (w := M) (k := 3) (by
     rw [iwN_grow hg1 (by have := (rec2IwN_trunc hl').1; simpa using this)]; simpa using hl'm) hsz1

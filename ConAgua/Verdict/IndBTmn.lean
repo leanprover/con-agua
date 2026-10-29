@@ -102,7 +102,7 @@ theorem tmn_ref (n : Nat) (hn : n ≤ 2 ^ 62) : ∀ {m : Mem} {a : AState}
     exact RefE.ret rfl ⟨PSlR.nil _ _, hC, IWGrow.refl _, hP, hA,
       fun _ _ _ _ => ⟨.inl rfl, [], by simp [decNL], FA2.nil⟩⟩
   rw [tmnE.arm2 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hl]
-  have hsz := hS.2.2.2.1
+  have hsz := hS.iw.iwSize
   obtain ⟨nf, nfs', rfl, hnf0, hnf'⟩ := hnf.uncons hl hsz
   obtain ⟨nfP, nfsP', rfl, hnfP1, hnfsP'⟩ := ConRon.Bridge.Inductives.mapM_option_cons_inv hnfP
   have hb64 := hS.lt64 hnf.2
@@ -140,7 +140,7 @@ theorem tmn_ref (n : Nat) (hn : n ≤ 2 ^ 62) : ∀ {m : Mem} {a : AState}
     exact ⟨v, ps', rfl, this, (iwN_rdW hv (by omega)).2, by rw [e1, e2, hLL]; simpa using hps'⟩
   generalize hE : rdW (m.arr64 IW) nfo = e at hnf0 hptr0 ⊢
   have hnf1 : DecB (fun m' => decNCN m' e.toNat) m1 nf := hnf0.grow (decNCN_mono _) hg1
-  have hsz1 := hS1.2.2.2.1
+  have hsz1 := hS1.iw.iwSize
   obtain ⟨hcH, hcD, hlH, hlD, hdsl⟩ := decNCN_fields hnf1 hsz1
   have hct1 := hct.grow (OMono.decPL decCN_mono _ _) hg1
   -- the tail's pointers, from the table's

@@ -291,7 +291,7 @@ theorem ibds_ref {p : Prog} (hB : BasisProg p) (dn : NIdx → Option ConLeche.Na
   refine RefE.bind_right hrun1 ?_
   have hob : o.toNat + 1 < 2 ^ 64 := by
     have := (Array.getElem?_eq_some_iff.mp hw0).1
-    have := hS.2.2.2.1; simp only [iwA] at *; omega
+    have := hS.iw.iwSize; simp only [iwA] at *; omega
   have ho1 : (o + 1).toNat = o.toNat + 1 := toNat_add_small o 1 hob
   have hl1 : (l - 1).toNat = k := by
     rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simp; omega))]; simp; omega

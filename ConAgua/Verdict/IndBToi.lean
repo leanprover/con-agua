@@ -110,7 +110,7 @@ theorem toi_ref (n : Nat) {m : Mem} {a : AState} {I us dso dsl : Word} {ds : Lis
     ArrExt.decCV (IWGrow.erecExt (IWGrow.refl m)) hcvP
   obtain ⟨w1, w2, hw1, hw2, hsl⟩ := decCV_slice hcvA
   have hqE := (Array.getElem?_eq_some_iff.mp hw2).1
-  have hE64 := hS.2.2.2.2.1
+  have hE64 := hS.iw.erSize
   have e1 : rdW (m.arr64 EREC) (r2.tail.headD 0 + 2) = w1 :=
     rdW_of_get? (by rw [UInt64.toNat_add]; simp [erA] at hqE ⊢; omega) hw1
   have e2 : rdW (m.arr64 EREC) (r2.tail.headD 0 + 3) = w2 :=
@@ -131,7 +131,7 @@ theorem toi_ref (n : Nat) {m : Mem} {a : AState} {I us dso dsl : Word} {ds : Lis
     ArrExt.decCV (IWGrow.erecExt hg3) hcvP
   obtain ⟨wt, hwt, hwtH, hwtE⟩ := decCV_typeW hcv3
   have hqE3 := (Array.getElem?_eq_some_iff.mp hwt).1
-  have hE364 := hS3.2.2.2.2.1
+  have hE364 := hS3.iw.erSize
   have et : rdW (m3.arr64 EREC) (r2.tail.headD 0 + 4) = wt :=
     rdW_of_get? (by rw [UInt64.toNat_add]; simp [erA] at hqE3 ⊢; omega) hwt
   rw [et]

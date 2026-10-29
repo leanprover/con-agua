@@ -66,7 +66,7 @@ theorem appRef_step (L : NbLook p) (n : Nat) (ih : NbRef p dn vis fe env n) : Ap
   intro m a ctx fu po pl kb hi w ns c prog NS ctxP progP wP nsP dep hC hW hhi hw hns hP hA hc hctx hprog
     hwP hnsP hww
   have hS := hC.stage
-  have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
+  have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.iw hS.iw.iwSize
   rw [npaE.arm1]
   -- the arguments
   cases h1 : callE p n "get_app_args_f" [CWF, w] m with
@@ -166,7 +166,7 @@ theorem appRef_step (L : NbLook p) (n : Nat) (ih : NbRef p dn vis fe env n) : Ap
     rw [pos2_getD2] at husH husd
     obtain ⟨nm, ls, -, hnmP, hlsP⟩ := ConRon.Bridge.denote_const_inv hC.check.state.wf
       (by rw [← hhdd, ← decE_eq]; exact hview) hhdP
-    have htop2 : iwTop m2 < 2 ^ 64 := Nat.lt_of_le_of_lt hS2.2.1 hS2.2.2.2.1
+    have htop2 : iwTop m2 < 2 ^ 64 := Nat.lt_of_le_of_lt hS2.iw.iw hS2.iw.iwSize
     obtain ⟨hn2, hnb2, -, -, -, -⟩ := ctx_fields (hW.grow hg12).u.dec (hW.grow hg12).u.inn htop2
     have hne2 := ctx_names_end (hW.grow hg12).u.dec (hW.grow hg12).u.inn (hW.grow hg12).u.sl htop2
     obtain ⟨ws, hws, hwsd, hwsH⟩ := slR_of_decHL m2 _ _ _ hn2 (by omega)

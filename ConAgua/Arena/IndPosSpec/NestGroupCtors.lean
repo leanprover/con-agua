@@ -218,9 +218,9 @@ theorem dcGoW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis hi : Wor
     simp only [decHL, hl', hslice?_succ, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def, Option.some.injEq] at hds'
     obtain ⟨x, hx, xs, hxs, rfl⟩ := hds'
     obtain ⟨hxH, hxd⟩ := rd_iwH0E (m := m) (o := off) (k := IdxKind.expr) (by simpa [iwH, iwA] using hx)
-    have hsz := hS.2.2.2.1
+    have hsz := hS.iw.iwSize
     have hoff1 : (off + 1).toNat = off.toNat + 1 :=
-      word_add_toNat (show off.toNat + 1 < 2 ^ 64 by have := hin 0 (by omega); have := hS.2.1; omega)
+      word_add_toNat (show off.toNat + 1 < 2 ^ 64 by have := hin 0 (by omega); have := hS.iw.iw; omega)
     have hl1 : (l - 1).toNat = l' := by
       rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simp; omega))]; simp; omega
     rcases hst : fvbF m [CWF, rdW (m.arr64 IW) off] with _ | ⟨r1, m1⟩ <;> rw [hst] at h; · simp [dcK] at h
@@ -429,7 +429,7 @@ theorem pdoW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis no nl lo 
     have hnb' : no.toNat + nl.toNat < 2 ^ 64 := by
       rcases Nat.eq_zero_or_pos nl.toNat with hz | hz
       · rw [hz]; simpa using no.toNat_lt
-      · have := hnb (nl.toNat - 1) (by omega); have := hS.2.1; have := hS.2.2.2.1; omega
+      · have := hnb (nl.toNat - 1) (by omega); have := hS.iw.iw; have := hS.iw.iwSize; omega
     obtain ⟨c, hrun1, hc, hM1, hS1, hg1, hf1⟩ := noConstWf_ok k dn fe vis m m1 a no nl lo hi d r1 names mp hnc
       hS hty hn hnb' hM
     have hpre : (ConRon.Arena.piDomsOcc names lo.toNat hi.toNat n.toNat (decE e)).run a =

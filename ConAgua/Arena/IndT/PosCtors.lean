@@ -42,7 +42,7 @@ theorem ctorsRef_step (n : Nat) (ih : NbRef p dn vis fe env n) : CtorsRef p dn v
     progP usP dsP namesP holesP csP nsP outsP hC hW hCc hcl hcb hcs hns hout houtb hP hA hc hctx hprog hpre
     hcsP hcsF hnsP houtsP
   have hS := hC.stage
-  have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
+  have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.iw hS.iw.iwSize
   by_cases h0 : cL = 0
   · rw [nctE.arm1 p n m vis ctx root fu po pl hi us dO dL no nl hO hL cO cL ns oO oL h0]
     subst h0
@@ -132,7 +132,7 @@ theorem ctorsRef_step (n : Nat) (ih : NbRef p dn vis fe env n) : CtorsRef p dn v
       by rw [decHL_agree (RdS.of_grow hg13) (fun j hj => by have := hCc.hholesb; omega)]; exact hCc.hholes,
       by have := hCc.hholesb; have := hg13.1; omega⟩
     hcL1 (by rw [hcO1]; have := hg13.1; omega) (by rw [hcO1]; exact (hcs.grow (by simpa using hcb) hg13).tail)
-    ((hns3.grow hg2 (Nat.lt_of_le_of_lt hS1.2.1 hS1.2.2.2.1)).grow hg3 (Nat.lt_of_le_of_lt hS2.2.1 hS2.2.2.2.1))
+    ((hns3.grow hg2 (Nat.lt_of_le_of_lt hS1.iw.iw hS1.iw.iwSize)).grow hg3 (Nat.lt_of_le_of_lt hS2.iw.iw hS2.iw.iwSize))
     hout3 (by rw [h30, h31]; omega) ((hP1.fr (posRecW_mfr hr3)).fr (snocW_mfr hsn)) hA3
     hc (dCtx_ext _ c1'.ext _ _ hctx) (dProg_ext c1'.ext _ _ hprog) (hpre.ext c1'.ext)
     (ConRon.Bridge.Inductives.dCtors_ext c1'.ext _ _ hcsP') (fun x hx => hcsF x (List.mem_cons_of_mem _ hx))

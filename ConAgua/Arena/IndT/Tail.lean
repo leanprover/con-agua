@@ -234,7 +234,7 @@ theorem tail_ref (hP : TailProg p) (L : CbrLook p) {fs : List FnName}
   · rw [liftE_none, ictlE.k_block_nested_bit.none]; exact RefE.of_cls0 (by simp)
   rw [liftE_some, ictlE.k_block_nested_bit.arm1]
   obtain ⟨s4, rfl, hs4, hr4⟩ := triple_of_callW (s₀ := ⟨m3, Locals.init []⟩)
-    (blockNestedBit_refines p hP.nf hP.ni hP.nm hP.nk hP.ng hP.nb n _ _ _ _ bs kinds hS3.2.2.2.1
+    (blockNestedBit_refines p hP.nf hP.ni hP.nm hP.nk hP.ng hP.nb n _ _ _ _ bs kinds hS3.iw.iwSize
       (DecB.get (decBS_mono _) (hbsD.grow (decBS_mono _) hg03)) (DecB.get (OMono.decPL hkfm _ _) hks3.1)) c4
   subst hs4
   have hnb : (r4.headD 0 != 0) = ConRon.Arena.blockNestedBit bs kinds := by
@@ -257,7 +257,7 @@ theorem tail_ref (hP : TailProg p) (L : CbrLook p) {fs : List FnName}
   have r16 : rdW (m3.arr64 IW) (q + 16) = rdW (m.arr64 IW) (q + 16) :=
     partsRdIW_grow hg03 (by rw [e 16 (by decide) (q + 16) rfl]; omega)
   have hlp3 : ClassesLp m3 (rdW (m3.arr64 IW) (q + 15)) (rdW (m3.arr64 IW) (q + 16)) := by
-    rw [r15, r16]; exact hlp.grow hcls' hg03 hk3 hS.2.2.2.1
+    rw [r15, r16]; exact hlp.grow hcls' hg03 hk3 hS.iw.iwSize
   have hpre : BSOK m3 (UInt64.ofNat pw : Word).toNat bs ∧
       decHL m3 (rdW (m3.arr64 IW) (q + 12)).toNat (rdW (m3.arr64 IW) (q + 13)).toNat = some params ∧
       (rdW (m3.arr64 IW) (q + 12)).toNat + (rdW (m3.arr64 IW) (q + 13)).toNat ≤ iwTop m3 ∧

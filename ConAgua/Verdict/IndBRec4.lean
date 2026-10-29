@@ -142,8 +142,8 @@ theorem crule_ref (hp : CruleProg p) (hApd : ApdF p) {visT visR : Word} {feR : I
   · rw [liftE_none, cruleE.k_class_rule_ok_domains.none]; exact RefE.of_cls0 (by simp)
   rw [liftE_some]
   have hb4 : (r4.tail.headD 0).toNat + (r4.tail.tail.headD 0).toNat < 2 ^ 64 := by
-    have h1 : iwTop m4 ≤ (m4.arr64 IW).size := hS4.2.1
-    have h2 : (m4.arr64 IW).size < 2 ^ 64 := hS4.2.2.2.1
+    have h1 : iwTop m4 ≤ (m4.arr64 IW).size := hS4.iw.iw
+    have h2 : (m4.arr64 IW).size < 2 ^ 64 := hS4.iw.iwSize
     omega
   obtain ⟨b, a8, hdom, ⟨hS5, hg5, hb5⟩, hA5⟩ := iarW_ok dn (feR.restrictTo visT.toNat) N m4 m5 _
     visT _ _ rbs r5 h5 (hS4.restrict visT) hdl hb4 htl hA4

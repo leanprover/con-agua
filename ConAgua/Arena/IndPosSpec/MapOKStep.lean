@@ -255,7 +255,7 @@ variable (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word)
 
 theorem mapOK_step (n : Nat) (hImg : ImgOK dn fe vis n) : MapOK dn fe vis (n + 1) := by
   intro m m' a f i fm r0 r1 M G g h hS hfm hR
-  have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
+  have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.iw hS.iw.iwSize
   cases fm with
   | holeImg ctx prog nn =>
     obtain ⟨h0, hb, ⟨c, hc, hdc, hci⟩, ⟨po, pl, hpo, hpl, hs⟩, hn, hlt⟩ := hfm
@@ -388,7 +388,7 @@ theorem rootOK (m m' : Mem) (a : AState) (ctx i : Word) (c : NestCtx) (prog : Li
 
 theorem imgOK_step (n : Nat) (hImg : ImgOK dn fe vis n) (hFr : FrOK dn fe vis n) : ImgOK dn fe vis (n + 1) := by
   intro m m' a ctx po pl nn i c prog r0 r1 M G g h hS hc hin hs hb hR
-  have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
+  have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.iw hS.iw.iwSize
   obtain ⟨hn, -, -, -, hnP, -, -, -, -, h11⟩ := ctx_fields hc hin htop
   have hlen := decHL_length m hn
   by_cases h0 : nn = 0
@@ -535,7 +535,7 @@ theorem frameTail (n : Nat) (hDs : DsOK dn fe vis n) (mh m' : Mem) (a : AState) 
   rw [hkey] at ekey
   obtain ⟨hcn, hlv, hds⟩ := decNK_fields ekey
   obtain ⟨o, l, ho, hl, hdsl⟩ := decAt_some hds
-  have htop2 : iwTop m2 < 2 ^ 64 := Nat.lt_of_le_of_lt hS2.2.1 hS2.2.2.2.1
+  have htop2 : iwTop m2 < 2 ^ 64 := Nat.lt_of_le_of_lt hS2.iw.iw hS2.iw.iwSize
   have hkb : k + 4 ≤ iwTop m2 := by have := hNK2.1 3 (by omega); have := hg2.1; omega
   have ro := rdIW (m := m2) (f := rdW (mh.arr64 IW) h) (i := 2) (by rw [hrk]; exact ho) (by omega) (by decide)
   have rl := rdIW (m := m2) (f := rdW (mh.arr64 IW) h) (i := 3) (by rw [hrk]; simpa using hl) (by omega) (by decide)
@@ -547,7 +547,7 @@ theorem frameTail (n : Nat) (hDs : DsOK dn fe vis n) (mh m' : Mem) (a : AState) 
   obtain ⟨ys, a3, hrun3, hdec3, hq3, hpost3⟩ := hDs m2 m3 a f _ _ q l3 _ H0.key.ds M G g hdsr hS2 hfm
     (by rw [ro, rl]; exact hdsl) (by rw [ro, rl]; exact hsl) hR2
   obtain ⟨M3, G3, hS3, hg3, hR3, hk3, hG3⟩ := hpost3
-  have htop3 : iwTop m3 < 2 ^ 64 := Nat.lt_of_le_of_lt hS3.2.1 hS3.2.2.2.1
+  have htop3 : iwTop m3 < 2 ^ 64 := Nat.lt_of_le_of_lt hS3.iw.iw hS3.iw.iwSize
   have := hg3.1
   -- the container's head, in `m3`
   have hg23 := hg3
@@ -579,7 +579,7 @@ theorem default_hole : (default : NestHole) = ⟨⟨decI 0, decI 0, []⟩, 0⟩ 
 
 theorem frOK_step (n : Nat) (hDs : DsOK dn fe vis n) : FrOK dn fe vis (n + 1) := by
   intro m m' a ctx po pl n1 i c prog r0 r1 M G g h hS hc hin hs hb hR
-  have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
+  have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.iw hS.iw.iwSize
   obtain ⟨hpl, hpb, hH⟩ := hs
   unfold frameTwin
   by_cases hn : n1 < pl
@@ -651,7 +651,7 @@ theorem dsOK_step (n : Nat) (hDg : DsGoOK dn fe vis n) : DsOK dn fe vis (n + 1) 
 theorem dsGoOK_step (n : Nat) (hRf : RfOK dn fe vis n) (hDg : DsGoOK dn fe vis n) :
     DsGoOK dn fe vis (n + 1) := by
   intro m0 m m' a f o l q j fm xs acc M G g h hS hg0 hq0 hql hfm hxs hsl hj hacc hR
-  have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
+  have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.iw hS.iw.iwSize
   have hxl := decHL_length m0 hxs
   have hal := decHL_length m hacc
   by_cases hd : l ≤ j
@@ -675,8 +675,8 @@ theorem dsGoOK_step (n : Nat) (hRf : RfOK dn fe vis n) (hDg : DsGoOK dn fe vis n
   have hqj : (q + j).toNat = q.toNat + j.toNat := word_add_toNat (by omega)
   have hj1 : (j + 1).toNat = j.toNat + 1 := word_add_toNat (show j.toNat + 1 < 2 ^ 64 by have := l.toNat_lt; omega)
   have hacc1 : decHL m1 q.toNat j.toNat = some acc := by rw [decHL_grow hg1 (by omega)]; exact hacc
-  have hsz1 : (m1.arr64 IW).size < 2 ^ 64 := hS1.2.2.2.1
-  have hdec2 := decHL_write m1 q j r acc hrH hsz1 (by have := hS1.2.1; have := hg1.1; omega) hacc1
+  have hsz1 : (m1.arr64 IW).size < 2 ^ 64 := hS1.iw.iwSize
+  have hdec2 := decHL_write m1 q j r acc hrH hsz1 (by have := hS1.iw.iw; have := hg1.1; omega) hacc1
   have hS2 := hS1.set_iw (q + j) r
   have hg02 : IWGrow m0 (m1.set64 IW (q + j) r) := (hg0.trans hg1).set_iw (q + j) r (by omega)
   have ht2 : iwTop (m1.set64 IW (q + j) r) = iwTop m1 := by

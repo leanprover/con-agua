@@ -165,7 +165,7 @@ theorem cfW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) {k
   rcases hdc : dcWf k m ctx dO dL with _ | ⟨r1, m1⟩ <;> rw [hdc] at h; · simp [cfK1] at h
   obtain ⟨b, a1, hrun1, hS1, hg1, hr1⟩ := dcWf_ok dn fe vis k m m1 a ctx dO dL c ds r1 hdc hS hU.dec hU.inn hhi hdsD
     (fun j hj => by omega)
-  have htop1 : iwTop m1 < 2 ^ 64 := Nat.lt_of_le_of_lt hS1.2.1 hS1.2.2.2.1
+  have htop1 : iwTop m1 < 2 ^ 64 := Nat.lt_of_le_of_lt hS1.iw.iw hS1.iw.iwSize
   have hns1 := hns.grow hg1 htop
   obtain ⟨hp6, hk1, -, hn1⟩ := nsb_words hns1 htop1
   have hkb1 := hns1.b0
@@ -194,9 +194,9 @@ theorem cfW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) {k
   obtain ⟨hS3, hg3, hqq, ht3, hget3⟩ := posRecW_stage hq hSk (by simp)
   simp only [List.length_cons, List.length_nil] at ht3
   have hg13 := hg1.trans (hgk.trans hg3)
-  have htop3 : iwTop m3 < 2 ^ 64 := Nat.lt_of_le_of_lt hS3.2.1 hS3.2.2.2.1
+  have htop3 : iwTop m3 < 2 ^ 64 := Nat.lt_of_le_of_lt hS3.iw.iw hS3.iw.iwSize
   have hnk := (hns1.grow hgk htop1)
-  obtain ⟨-, -, -, hnk'⟩ := nsb_words hnk (Nat.lt_of_le_of_lt hSk.2.1 hSk.2.2.2.1)
+  obtain ⟨-, -, -, hnk'⟩ := nsb_words hnk (Nat.lt_of_le_of_lt hSk.iw.iw hSk.iw.iwSize)
   refine ⟨(.nested (kb.toNat != 0), (NestState.mk (if b then nestAcceptGroup (decI us) ds grp NS2.keys
     else NS2.keys) act NS2.ctorNfs)), a1, ?_, hS3, hg13, rfl, by simpa using decNFK_nestedW kb, ?_⟩
   · simp only [cfT, StateT.run_bind, hrun1, except_ok_bind]; rfl

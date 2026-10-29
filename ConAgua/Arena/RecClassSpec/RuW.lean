@@ -206,7 +206,7 @@ theorem pvW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
   | zero => intros; intro b hb; simp [pvW] at hb
   | succ n ih =>
   intro m a i hS hG hi
-  have hsz := hS.2.2.2.1
+  have hsz := hS.iw.iwSize
   by_cases hend : rP ≤ i
   · rw [pvW.arm1 (hc1 := hend)]
     have : rP.toNat - i.toNat = 0 := by have := UInt64.le_iff_toNat_le.mp hend; omega
@@ -243,7 +243,7 @@ theorem pvW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
       have hpdB : DecB (fun m => (decHL m o1 l1 : Option (List EIdx))) m G.params := by rw [← hGe]; exact hpd
       have o1lt := (iwN_rdW h1m (by have := iwN_lt h1m; omega)).2
       exact rec2SimExprGetD n hS (by rw [t1, t2]; exact hpdB.get (OMono.decHL _ _))
-        (by rw [t1, t2]; exact rec2DecB_HL_bound hpdB hsz hS.2.1 o1lt)
+        (by rw [t1, t2]; exact rec2DecB_HL_bound hpdB hsz hS.iw.iw o1lt)
     · have hw : ¬ i < UInt64.ofNat G.nP := fun x => hp (by have := UInt64.lt_iff_toNat_lt.mp x; rwa [t0] at this)
       rw [ite_eq_right hw, ite_eq_right hp]
       have hsub : (i - UInt64.ofNat G.nP).toNat = i.toNat - G.nP := by
@@ -383,7 +383,7 @@ theorem c1W_sim {β γ : Type} (n : Nat) (m : Mem) (a : AState)
     (by rw [decHL_grow hg26 hidb]; exact hidx) (Nat.le_trans hidb hg26.1)
   rw [c1tW.k_sl_append.arm1]
   refine RSim.lstep (K := fun o => K (fcK (c1tW.k_sl_snoc n _ _ e rc o))) hK fun ⟨r8, m8⟩ h8 => ?_
-  obtain ⟨hr8, hd8, hg8, -, -, ht8⟩ := snocW_dec h8 hS7.2.2.2.1 hS7.2.2.2.2.2 hb7 hfxH hd7
+  obtain ⟨hr8, hd8, hg8, -, -, ht8⟩ := snocW_dec h8 hS7.iw.iwSize hS7.iw.ctl hb7 hfxH hd7
   have hS8 := snocW_stage h8 hS7
   have hA8 := snocW_afr h8 (appendW_afr h7 hA6)
   rw [c1tW.k_sl_snoc.arm1, hr8]
@@ -448,7 +448,7 @@ theorem cgW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
   | zero => intros; intro b hb; simp [cgW] at hb
   | succ n ih =>
   intro m a nn i hS hG hX hws hwb hfvs hfb hpv hpb hrc hcg hin hA
-  have hsz := hS.2.2.2.1
+  have hsz := hS.iw.iwSize
   by_cases h0 : nn = 0
   · rw [cgW.arm1 (hc1 := h0)]
     subst h0
@@ -558,8 +558,8 @@ theorem grcW_sim (n : Nat) (m : Mem) (a : AState) (g s fo fl ihso ihsl : Word) (
   rw [grcW.k_fvar_type_ds.arm1]
   have hg14 := hg13.trans hg4
   obtain ⟨-, -, -, -, -, ⟨o12, l12, h12, h13, hpre⟩⟩ := rec2CG_parts (hG.grow (decCG_mono _) (hg14))
-  obtain ⟨e12, t12⟩ := rec2RdN (w := g) (k := 12) h12 hS4.2.2.2.1
-  obtain ⟨e13, t13⟩ := rec2RdN (w := g) (k := 13) h13 hS4.2.2.2.1
+  obtain ⟨e12, t12⟩ := rec2RdN (w := g) (k := 12) h12 hS4.iw.iwSize
+  obtain ⟨e13, t13⟩ := rec2RdN (w := g) (k := 13) h13 hS4.iw.iwSize
   simp only [show UInt64.ofNat 12 = (12 : Word) from rfl, show UInt64.ofNat 13 = (13 : Word) from rfl] at e12 e13
   rw [e12, e13]
   refine RSim.lstep (K := grcW.k_sl_append_2 n (r3.headD 0)) rfl fun ⟨r5, m5⟩ h5 => ?_
@@ -658,7 +658,7 @@ theorem ruW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
   rw [ruK2_ok (h := by rw [h21]; decide), rbW.arm1]
   have hX2 := hX.stab (decCC_mono _) m2 hg2
   obtain ⟨-, -, htyN2⟩ := rec2CC_parts hX2
-  obtain ⟨vN, evN, hvN, dvN⟩ := iwH_rdW_at (w := x) (k := 5) htyN2 hS2.2.2.2.1
+  obtain ⟨vN, evN, hvN, dvN⟩ := iwH_rdW_at (w := x) (k := 5) htyN2 hS2.iw.iwSize
   simp only [show UInt64.ofNat 5 = (5 : Word) from rfl] at evN
   rw [evN]
   refine RSim.bind (K := fun o => fcK (rbW.k_target_pi_doms_with n g rco rcl cgo cgl rlvls x _ _ _ _ o)) rfl (Q1 := fun b a' x =>
@@ -688,7 +688,7 @@ theorem ruW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
   have hm24 := hg3.trans hg4
   have hX4 := hX.stab (decCC_mono _) m4 hg24
   obtain ⟨hnF4, -, -⟩ := rec2CC_parts hX4
-  obtain ⟨enF4, -⟩ := rec2RdN (w := x) (k := 1) hnF4 hS4.2.2.2.1
+  obtain ⟨enF4, -⟩ := rec2RdN (w := x) (k := 1) hnF4 hS4.iw.iwSize
   simp only [show UInt64.ofNat 1 = (1 : Word) from rfl] at enF4
   by_cases hov : UInt64.ofNat l12 + rdW (m4.arr64 IW) (x + 1) < UInt64.ofNat l12
   · rw [rbW.k_class_gen_rule_pvars_go.abort1 (hc1 := hov)]; exact RSim.none

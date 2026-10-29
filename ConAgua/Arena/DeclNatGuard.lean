@@ -78,7 +78,7 @@ theorem boolCtorOk_ref (hN : NatGuardProg p) (c : Word) (ci : IConstantInfo) :
   obtain ⟨cv, a1, hrun1, hS1, hg1, hcv⟩ := ciToCv_ref (dn := dn) (vis := vis) (fe := fe) hN.toNatCvProg
     c ci k m a r1 m1 ⟨hS, hci⟩ h1
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Except.ok.inj hrun1)
-  have hsz1 := hS1.2.2.2.2.1
+  have hsz1 := hS1.iw.erSize
   obtain ⟨wt, hiff, hrd, hlt, hty, hstay⟩ := cvWordsAt hsz1 hcv
   by_cases hl : rdW (m1.arr64 EREC) (r1.headD 0 + 2) = 0
   · rw [ite_eq_right (by simpa using hl)] at hw

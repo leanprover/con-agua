@@ -111,8 +111,8 @@ theorem grpC_ref (P : GrcProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {dn : NIdx → Op
         ErrClaim (grcTwinC V fe bs params rdv cvRis ms2 ctors ftc elim k) a e) := by
   have hS := hC.stage
   have hT : iwTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 200).toNat_lt
-  have hsz : (m.arr64 IW).size < 2 ^ 64 := hS.2.2.2.1
-  have hc : 200 < (m.arr64 CTL).size := hS.2.2.2.2.2
+  have hsz : (m.arr64 IW).size < 2 ^ 64 := hS.iw.iwSize
+  have hc : 200 < (m.arr64 CTL).size := hS.iw.ctl
   have hp8 := hbs.ptop
   have hrecsP0 := (ConRon.Bridge.Inductives.dShape_inv hsh).2.1
   obtain ⟨hrd3, hslD, hrcD, hrcb, -⟩ := crWords hrd
@@ -345,7 +345,7 @@ theorem grpB_ref (P : GrcProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {dn : NIdx → Op
           grcTwinC V fe bs params rdv cvRis ms2 ctors ftc elim k)) a e) := by
   have hS := hC.stage
   have hT64 : iwTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 200).toNat_lt
-  have hsz : (m.arr64 IW).size < 2 ^ 64 := hS.2.2.2.1
+  have hsz : (m.arr64 IW).size < 2 ^ 64 := hS.iw.iwSize
   have hp8 := hbs.ptop
   obtain ⟨hrd3, hslD, -, -, hslb⟩ := crWords hrd
   obtain ⟨-, -, hnPe, -, -, hlargeP, -⟩ := ConRon.Bridge.Inductives.dShape_inv hsh
@@ -442,7 +442,7 @@ theorem grpB_ref (P : GrcProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {dn : NIdx → Op
   obtain ⟨s4, rfl, -, hm4, hmo⟩ := triple_of_callW (s₀ := ⟨s3.mem, Locals.init []⟩)
     (genRecCheckMinorOk_refines P.csm P.gmo n _ _ _ _ _ rdv.slots ctors
       ((hslD.grow (OMono.decPL decCS_mono _ _) hg13).get (OMono.decPL decCS_mono _ _)) hslb
-      (hctD.get (OMono.decPL decCC_lh_mono _ _)) (hS3.lt64 hsp3.2.1) hS3.2.2.2.1) c4'
+      (hctD.get (OMono.decPL decCC_lh_mono _ _)) (hS3.lt64 hsp3.2.1) hS3.iw.iwSize) c4'
   by_cases h0 : r4.headD 0 = 0
   · rw [grpE.k_gen_rec_check_minor_ok.abort1 p n vis pp pO pL rd cO cL cRo cRl _ _ _ _ r4 _ h0]
     have hcount : ((rdv.slots.filter ConRon.Arena.ClassSlot.isMinor).length == (ctors.map List.length).sum) = false := by

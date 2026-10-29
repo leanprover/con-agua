@@ -1144,7 +1144,7 @@ theorem cbrW_ok (p : Prog) (L : CbrLook p) (n : Nat) : ∀ {m m' : Mem} {a : ASt
     subst this
     exact ⟨fe, a, rfl, hS, IWGrow.refl _, hA⟩
   rw [cbrW_cons (h := hl)] at h
-  have hsz := hS.2.2.2.1
+  have hsz := hS.iw.iwSize
   obtain ⟨x, ys, rfl, hx, hys⟩ := hxs.uncons hl hsz
   obtain ⟨cvv, TM, rhss⟩ := x
   generalize hT : rdW (m.arr64 IW) lo = trip at h hx

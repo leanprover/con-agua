@@ -161,7 +161,7 @@ theorem pnmW_ok {p : Prog} (hP : NfsProg p) {dn : NIdx → Option ConLeche.Name}
   obtain ⟨-, -, ee, hee, -, rfl⟩ := hdqT
   obtain ⟨heelt, hee'⟩ := rec2IwH_trunc hee
   obtain ⟨ew, hew, hew32, hewe⟩ := iwH_rdW_at (w := UInt64.ofNat q) (k := 2) (by rw [hq']; exact hee')
-    hS.2.2.2.1
+    hS.iw.iwSize
   rw [show (UInt64.ofNat 2 : Word) = 2 from rfl] at hew
   -- the rest
   obtain ⟨⟨r1, m1⟩, h1, h⟩ := of_K h (pnmW.k_check_block_positivity_nfs_member.none ..)

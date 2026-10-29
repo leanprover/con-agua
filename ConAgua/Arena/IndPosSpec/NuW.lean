@@ -62,7 +62,7 @@ theorem nrcW_ok (k : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis
   -- the instantiation's arguments
   obtain ⟨cin1, cin1'⟩ := CtxIn.grow hin hg1
   rw [hc] at cin1
-  have htop1 : iwTop m1 < 2 ^ 64 := Nat.lt_of_le_of_lt hS1.2.1 hS1.2.2.2.1
+  have htop1 : iwTop m1 < 2 ^ 64 := Nat.lt_of_le_of_lt hS1.iw.iw hS1.iw.iwSize
   obtain ⟨-, -, -, -, -, hlvH, hlvd, -⟩ := ctx_fields cin1 cin1' htop1
   have e3 : (cv + 3).toNat = cv.toNat + 3 := word_add_toNat (by simp; omega)
   have hrd3 : rdW (m1.arr64 EREC) (cv + 3) = wt := by
@@ -79,7 +79,7 @@ theorem nrcW_ok (k : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis
   obtain ⟨cin2, cin2'⟩ := CtxIn.grow hin hg12
   rw [hc] at cin2
   have hsl2 := hsl.grow hin hg12
-  have htop2 : iwTop m2 < 2 ^ 64 := Nat.lt_of_le_of_lt hS2.2.1 hS2.2.2.2.1
+  have htop2 : iwTop m2 < 2 ^ 64 := Nat.lt_of_le_of_lt hS2.iw.iw hS2.iw.iwSize
   obtain ⟨hn2, -, -, -, hnP2, hlvH2, hlvd2, -⟩ := ctx_fields cin2 cin2' htop2
   have hne2 := ctx_names_end cin2 cin2' hsl2 htop2
   rcases hpc : pccW k m2 (rdW (m2.arr64 IW) ctx) (rdW (m2.arr64 IW) (ctx + 1)) (rdW (m2.arr64 IW) (ctx + 10))
@@ -178,7 +178,7 @@ theorem nuW_ok (k : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis 
   have hg12 := hg1.trans hg2
   obtain ⟨cin2, cin2'⟩ := CtxIn.grow hin hg12
   rw [hc] at cin2
-  have htop2 : iwTop m2 < 2 ^ 64 := Nat.lt_of_le_of_lt hS2.2.1 hS2.2.2.2.1
+  have htop2 : iwTop m2 < 2 ^ 64 := Nat.lt_of_le_of_lt hS2.iw.iw hS2.iw.iwSize
   obtain ⟨hn2, -⟩ := ctx_fields cin2 cin2' htop2
   have hne2 := ctx_names_end cin2 cin2' (hsl.grow hin hg12) htop2
   obtain ⟨mp2, hM2⟩ := hP2.no
@@ -347,7 +347,7 @@ theorem ucW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis ctx : Word
       subst hr1
       rw [ucK_yes (h := by simp)] at h
       have ho1 : (o + 1).toNat = o.toNat + 1 := word_add_toNat (by
-        have := hS.2.1; have := hS.2.2.2.1; simp at hob; simp; omega)
+        have := hS.iw.iw; have := hS.iw.iwSize; simp at hob; simp; omega)
       have hl1 : (l - 1).toNat = l.toNat - 1 :=
         UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simp; omega))
       have hcs1 := hcs.tail

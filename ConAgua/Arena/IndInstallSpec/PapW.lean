@@ -189,7 +189,7 @@ theorem papW_ok {p : Prog} (hx : p.lookup "env_ix" = some envIxL)
   have hlen := decNL_length m hps
   have hplen : prevs.length = pl.toNat := by rw [← hfa.length_eq, hlen]
   have hT : iwTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 200).toNat_lt
-  have hsz := hS.2.2.2.1
+  have hsz := hS.iw.iwSize
   obtain ⟨i, hi⟩ : ∃ i, i = j.toNat - 1 := ⟨_, rfl⟩
   have hil : i < ps.length := by omega
   have hj1 : (j - 1).toNat = i := by

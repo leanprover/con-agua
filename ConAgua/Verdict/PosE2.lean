@@ -69,7 +69,7 @@ theorem ngg_ref {p : Prog} (L : NbLook p) (hIlpf : IlpfF p) (hcl : CoreStageClos
   | succ k ih =>
     intro m a cO cL gO gL cs grp hC hA hx0 hcsA hU hds hdb hcs hcb hgl hgb hgrp hP
     have hS := hC.stage
-    have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
+    have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.iw hS.iw.iwSize
     by_cases hc0 : cL = 0
     · rw [nggE.arm1 p k m vis ctx hi us dO dL cO cL gO gL hc0]
       subst hc0
@@ -116,7 +116,7 @@ theorem ngg_ref {p : Prog} (L : NbLook p) (hIlpf : IlpfF p) (hcl : CoreStageClos
         rw [this] at hl; exact (Option.some.inj hl).symm
       subst e2 e3; omega
     have hksl : NKSl m1 key := by
-      have htop1 : iwTop m1 < 2 ^ 64 := Nat.lt_of_le_of_lt hS1.2.1 hS1.2.2.2.1
+      have htop1 : iwTop m1 < 2 ^ 64 := Nat.lt_of_le_of_lt hS1.iw.iw hS1.iw.iwSize
       have e2 : (key + 2).toNat = key.toNat + 2 := word_add_toNat (by simp; omega)
       have e3 : (key + 3).toNat = key.toNat + 3 := word_add_toNat (by simp; omega)
       unfold NKSl

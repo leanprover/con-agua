@@ -61,7 +61,7 @@ theorem p2sfW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
       StageR dn vis fe m' a' ∧ IWGrow m m' ∧ PosMR m'
   | 0, m, m', a, k, f, r, h, _, _, _, _ => by simp [p2sfW] at h
   | n + 1, m, m', a, k, f, r, h, hS, hg0, hk, hP => by
-    have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
+    have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.iw hS.iw.iwSize
     by_cases hd : dL ≤ k
     · rw [p2sfW_done (h := hd)] at h
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)

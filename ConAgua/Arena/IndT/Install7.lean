@@ -148,7 +148,7 @@ theorem icbo_ref (hP : CtorsProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a :
       (fun v x a' => IcboPost dn vis fe env m a v.1 v.2 x a') := by
   have hS := hC.stage
   have hT : iwTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 200).toNat_lt
-  have hsz := hS.2.2.2.1
+  have hsz := hS.iw.iwSize
   obtain ⟨-, hq9, -⟩ := partsShapeFacts hqd hsrc
   obtain ⟨hnpw, hnpb, hrs32, hrse⟩ := partsShapeWords (IWGrow.refl m) hqd hq9
   have hqt : decBS (truncM m) pp.toNat = some bs := hqd

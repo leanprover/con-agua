@@ -242,7 +242,7 @@ theorem fgW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (h
   | zero => intro m m' a gO gL pO pL nO nL grp accP accN r h; simp [fgW] at h
   | succ n ih =>
     intro m m' a gO gL pO pL nO nL grp accP accN r h hS hds hgl hgb hgrp hP hN hNb
-    have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
+    have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.iw hS.iw.iwSize
     by_cases hg0 : gL = 0
     · rw [fgW_nil (h := hg0)] at h
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
@@ -286,7 +286,7 @@ theorem fgW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (h
     rcases hs2 : snocW n m3 nO nL cw with _ | ⟨r4, m4⟩ <;> rw [hs2] at h; · simp [fgK4] at h
     rw [fgK4_some] at h
     have hg13 := hg12.trans hg3
-    obtain ⟨hr4, hN4, hg4, -, hl4, ht4⟩ := snocW_decK hs2 hS3.2.2.2.1 hS3.2.2.2.2.2 (by have := hg13.1; omega)
+    obtain ⟨hr4, hN4, hg4, -, hl4, ht4⟩ := snocW_decK hs2 hS3.iw.iwSize hS3.iw.ctl (by have := hg13.1; omega)
       hcH (by rw [decHL_agree (RdS.of_grow hg13) (fun j hj => by omega)]; exact hN)
     have hS4 := snocW_stage hs2 hS3
     have hgO1 : (gO + 1).toNat = gO.toNat + 1 := word_add_toNat (by simp; omega)
@@ -341,7 +341,7 @@ theorem fhW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) : 
   | zero => intro m m' a hi gO gL aO aL grp acc r h; simp [fhW] at h
   | succ n ih =>
     intro m m' a hi gO gL aO aL grp acc r h hS hgl hgb hgrp hA hAb
-    have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
+    have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.iw hS.iw.iwSize
     by_cases hg0 : gL = 0
     · rw [fhW_nil (h := hg0)] at h
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
@@ -370,7 +370,7 @@ theorem fhW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) : 
     have hvH : H v := by
       have : ¬ (4294967296 : Word).toNat ≤ v.toNat := fun h' => hvb (UInt64.le_iff_toNat_le.mpr h')
       simp only [H]; simpa using this
-    obtain ⟨hr2, hA2, hg2, -, -, ht2⟩ := snocW_decK hs hS1.2.2.2.1 hS1.2.2.2.2.2 (by have := hg1.1; omega)
+    obtain ⟨hr2, hA2, hg2, -, -, ht2⟩ := snocW_decK hs hS1.iw.iwSize hS1.iw.ctl (by have := hg1.1; omega)
       hvH (by rw [decHL_agree (RdS.of_grow hg1) (fun j hj => by omega)]; exact hA)
     have hS2 := snocW_stage hs hS1
     have hgO1 : (gO + 1).toNat = gO.toNat + 1 := word_add_toNat (by simp; omega)
@@ -421,7 +421,7 @@ theorem caW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (u
   | zero => intro m m' a gO gL aO aL grp acc r h; simp [caW] at h
   | succ n ih =>
     intro m m' a gO gL aO aL grp acc r h hS hds hgl hgb hgrp hA hAb
-    have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
+    have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.iw hS.iw.iwSize
     by_cases hg0 : gL = 0
     · rw [caW_nil (h := hg0)] at h
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
