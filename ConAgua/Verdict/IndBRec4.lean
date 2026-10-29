@@ -155,7 +155,7 @@ theorem crule_ref (hp : CruleProg p) (hApd : ApdF p) {visT visR : Word} {feR : I
   obtain ⟨p8, -⟩ := ConRon.Bridge.Inductives.allM_domains_resolve rbs rbsP _ a8 b hr6 hrbs hdom'
   have c18 := c16.trans (p8.toCore hok6)
   have hC5 : StageC dn visR feR envR m5 a8 :=
-    hC4.of_check (hS5.unrestrict hC.stage.1.env.vis) hA5 c18.ok (p8.ext)
+    hC4.of_check (hS5.unrestrict hC.stage.check.env.vis) hA5 c18.ok (p8.ext)
   refine RefE.bind_right hdom' ?_
   by_cases h50 : r5.headD 0 = 0
   · rw [cruleE.k_class_rule_ok_domains.arm1 _ _ _ _ _ _ h50]
@@ -234,7 +234,7 @@ theorem cr1_ref (hp : CruleProg p) (hApd : ApdF p) {visT visR : Word} {feR : IFE
   cases N with
   | zero => rw [cr1E.eq_1]; exact RefE.of_cls0 (by simp)
   | succ N =>
-  have hsz := hC.stage.2.2.2.1
+  have hsz := hC.stage.iw.2.2.1
   obtain ⟨hnP, -⟩ := rec2CG_parts hG
   obtain ⟨hsl, -⟩ := rec3CG_parts hG
   obtain ⟨hnF, -, -⟩ := rec2CC_parts (hX.get (decCC_mono _))

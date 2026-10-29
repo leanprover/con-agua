@@ -527,7 +527,7 @@ theorem grcW_sim (n : Nat) (m : Mem) (a : AState) (g s fo fl ihso ihsl : Word) (
       let r ← ConRon.Arena.closeLams (G.pre ++ fbs) 0 body
       pure (some r)) a (fun b a' x => KP dn vis fe m decOE b a' x ∧ AbsOK b.2) := by
   rw [grcW.arm1]
-  have hsz := hS.iw.2.2.1
+  have hsz := hS.iw.iwSize
   obtain ⟨hnP, -⟩ := rec2CG_get (hG.get (decCG_mono _))
   have hgt : g.toNat < iwTop m := by have := (rec2CG_parts hG).2.1; omega
   refine RSim.bind (K := grcW.k_class_gen_slot_var n g fo fl ihso ihsl) rfl (Q1 := fun b a' x =>
@@ -595,7 +595,7 @@ theorem ruW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
   rw [ruW_eq]
   unfold ConRon.Arena.classGenRule
   dsimp only
-  have hsz := hS.iw.2.2.1
+  have hsz := hS.iw.iwSize
   obtain ⟨-, hgt, -, -, -, ⟨o12, l12, h12, h13, hpre⟩⟩ := rec2CG_parts hG
   obtain ⟨e13, t13⟩ := rec2RdN (w := g) (k := 13) h13 hsz
   simp only [show UInt64.ofNat 13 = (13 : Word) from rfl] at e13

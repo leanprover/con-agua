@@ -229,7 +229,7 @@ theorem tpgC (hD : DmProg6 p) (hcl : LeafClosed p) (hkp : CrKeep p) {nw ty : Wor
   | some q1 =>
   obtain ⟨r1, m1⟩ := q1
   rw [h1, bW_some] at hw
-  obtain ⟨hm1, hfd⟩ := envFind_call hD.toDmProg5.toMasterProg nw hn1 hC.stage.1.env h1
+  obtain ⟨hm1, hfd⟩ := envFind_call hD.toDmProg5.toMasterProg nw hn1 hC.stage.check.env h1
   subst hm1
   cases hf : fe.find? (decI nw) with
   | none =>
@@ -554,7 +554,7 @@ theorem cra_refT (hD : DmProg5 p) (hkp : CrKeep p) :
     cases k with
     | zero => rw [callW_zero] at hc; cases hc
     | succ k =>
-    obtain ⟨hl0, hwlt, hh, hrest⟩ := decHL_cons_iw hT.stage.2.2.2.1 hd
+    obtain ⟨hl0, hwlt, hh, hrest⟩ := decHL_cons_iw hT.stage.iw.2.2.1 hd
     subst hh
     have hw := callW_model (M := fun mm => craW p (realCall p) k mm vis o l)
       (cra_specW p hD.lConstsResolveAll (realCall p) (realCall_spec p) k · vis o l) hc
@@ -585,7 +585,7 @@ theorem cra_refT (hD : DmProg5 p) (hkp : CrKeep p) :
       replace hw := ntBW_some hw; obtain ⟨r2, m2, h2, hw⟩ := hw
       simp only [Option.some.injEq, Prod.mk.injEq] at hw
       obtain ⟨rfl, rfl⟩ := hw
-      have hsz := hT.stage.2.2.2.1
+      have hsz := hT.stage.iw.2.2.1
       have hlpos : 0 < l.toNat := Nat.pos_of_ne_zero (fun e => hl0 (UInt64.toNat_inj.mp (by simpa using e)))
       have ho1 : (o + 1).toNat = o.toNat + 1 := by
         have hb := decHL_bnd m o l hd hsz

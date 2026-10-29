@@ -93,7 +93,7 @@ theorem naW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis C : Word) 
   have hk3 : nat? (erecP m) ciq.toNat = some 3 := by
     have : (erecP m)[ciq.toNat]? = (m.arr64 EREC)[ciq.toNat]? := erecP_getE (by omega)
     simp only [nat?, this]
-    have hb : ciq.toNat < (m.arr64 EREC).size := by have := hS.iw.2.1; omega
+    have hb : ciq.toNat < (m.arr64 EREC).size := by have := hS.iw.er; omega
     have : rdW (m.arr64 EREC) ciq = 3 := by simpa using h3
     simp [rdW, hb] at this ⊢; rw [this]; rfl
   obtain ⟨cv, caps, rfl, hcaps⟩ := decCI_kind3 hci hk3
@@ -107,7 +107,7 @@ theorem naW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis C : Word) 
     cases h2; exact h1
   obtain ⟨w, hw, hwH, hwd⟩ := hd?_some (decCV_type hcv)
   have e4 : (ciq + 4).toNat = ciq.toNat + 1 + 3 := by
-    rw [word_add_toNat (by have := hS.iw.2.1; have := hS.iw.2.2.2.1; simp; omega)]; rfl
+    rw [word_add_toNat (by have := hS.iw.er; have := hS.iw.erSize; simp; omega)]; rfl
   have hrw : rdW (m.arr64 EREC) (ciq + 4) = w := by simp [rdW, e4, erecP_get hw]
   rw [hrw] at h
   rcases hpb : piBW n m CWF w with _ | ⟨rs, m2⟩ <;> rw [hpb] at h; · simp [naK2] at h
@@ -269,7 +269,7 @@ theorem dcWf_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word) (
   cases n with
   | zero => simp [dcWf] at h
   | succ n =>
-    have hsz : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.1 hS.iw.2.2.1
+    have hsz : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.iw hS.iw.iwSize
     exact dcGoW_ok dn fe vis _ _ (by simpa using nhiW_toNat (nf := 0) hc hin hsz (by simpa using hhi)) n
       m m' a off l ds r h hS hds hdi
 

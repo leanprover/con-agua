@@ -616,7 +616,7 @@ theorem apdEntry_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEn
       (fun x hx => by
         simp at hx; rcases hx with rfl | rfl <;> exact not_mem_arenaCtl _ (by decide)) hf0
       hS.check.arena.base
-  have hsz := hS.iw.2.2.1
+  have hsz := hS.iw.iwSize
   have hps0 : NmsR (nameN a.store.lss.ls.ns) m IW o l ks :=
     nmsR_of_slice hsz _ o l lps ks rfl hdec hks
   have hps : NmsR (nameN a.store.lss.ls.ns) (mclearG apdSch m) IW o l ks :=

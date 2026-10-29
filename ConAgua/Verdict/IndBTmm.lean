@@ -78,7 +78,7 @@ theorem tmm_ref (n : Nat) {m : Mem} {a : AState} {pp cao cal pfo pfl fvo fvl ao 
   cases n with
   | zero => rw [tmmE.eq_1]; exact RefE.of_cls0 (by simp)
   | succ n =>
-  have hT : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.1 hS.iw.2.2.1
+  have hT : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.iw hS.iw.iwSize
   obtain ⟨-, hq9, -⟩ := partsShapeFacts hq hsrc
   have hqt : decBS (truncM m) pp.toNat = some bs := hq
   obtain ⟨hmem, -, -, -, -, -, -⟩ := decBS_some hqt

@@ -112,14 +112,14 @@ theorem icprW_ok {p : Prog} (ha : p.lookup "iw_alloc" = some iwAlloc) {n : Nat}
   obtain ⟨s1, hs1, -, hal⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩) (iwAlloc_specW p ha n _ 19) c1
   simp only at hs1 hal
   subst hs1
-  obtain ⟨hq, hm1, hroom⟩ := allocW_facts hal hS.iw.2.2.1
+  obtain ⟨hq, hm1, hroom⟩ := allocW_facts hal hS.iw.iwSize
   obtain ⟨-, -, hqtop, -, htop1⟩ := StageR.alloc hS hal
-  have hc : 200 < (m.arr64 CTL).size := hS.iw.2.2.2.2
+  have hc : 200 < (m.arr64 CTL).size := hS.iw.ctl
   rw [bpMem_eq, hm1, hq]
   have hk : (19 : Word).toNat = [w0, w1, w2, w3, w4, w5, w6, w7, w8, w9, w10, w11, w12, w13, w14, w15, w16,
       w17, w18].length := rfl
   obtain ⟨hget, hg, hf, htopW⟩ := recMem_post m [w0, w1, w2, w3, w4, w5, w6, w7, w8, w9, w10, w11, w12, w13,
-    w14, w15, w16, w17, w18] 19 hk hc (by rw [← hq]; simpa using hroom) hS.iw.2.2.1
+    w14, w15, w16, w17, w18] 19 hk hc (by rw [← hq]; simpa using hroom) hS.iw.iwSize
   have hqi : (rdW (m.arr64 CTL) 200).toNat = iwTop m := rfl
   refine ⟨rdW (m.arr64 CTL) 200, rfl, ?_, hg, hP.fr (MFr.of_iw hf), hqi, ?_, fun j _hj => hget j _hj⟩
   · have hS1 := (StageR.alloc hS hal).1
@@ -130,7 +130,7 @@ theorem icprW_ok {p : Prog} (ha : p.lookup "iw_alloc" = some iwAlloc) {n : Nat}
     rw [htopW, UInt64.toNat_add]
     have h19 : (19 : Word).toNat = 19 := rfl
     rw [hq] at hroom
-    have hsz := hS.iw.2.2.1
+    have hsz := hS.iw.iwSize
     rw [h19] at hroom ⊢
     rw [Nat.mod_eq_of_lt (by have : UInt64.size = 2 ^ 64 := rfl; omega)]; exact Nat.le_refl _
 

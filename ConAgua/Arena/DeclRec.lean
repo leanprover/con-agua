@@ -428,7 +428,7 @@ theorem erecVgW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv
       rdW (m1.arr64 EREC) (p + 3), rdW (m1.arr64 EREC) (p + 4),
       rdW (m1.arr64 EREC) (p + 5)]).arr64 EREC).size = (m.arr64 EREC).size :=
     ((wrER_frame _ _ _).size EREC).trans (by rw [hE1])
-  have hEs := hS.iw.2.2.2.1
+  have hEs := hS.iw.erSize
   have hg6 : g.toNat + 6 < 2 ^ 64 := by
     simp only [List.length_cons, List.length_nil] at htop; omega
   rw [← vgMem_eq m1 g p vk (by omega) hg6] at hS' hG htop hget hE' hsz

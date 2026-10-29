@@ -619,7 +619,7 @@ structure CoreRef {α : Type} [Inhabited α] (T : AM α) (a₀ : AState) (dec : 
   run : AM.ok T a₀
   after : CoreAfter dn m₀ m (AM.st T a₀) vis fe M eb
   res : AM.res T a₀ = dec r
-  post : ok r
+  resOk : ok r
 
 /-- The spec shape: from `s₀` under `CoreS`, the call refines `T`. -/
 def CoreSpec {α : Type} [Inhabited α] (p : Prog) (n : Nat) (f : FnName) (args : List Word)

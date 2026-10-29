@@ -360,7 +360,7 @@ theorem indParamsOk_refines (p : Prog)
   | none => rw [hw] at hR; cases hR
   | some sg =>
   rw [hw] at hR
-  have hrun := ipoW_ok dn hS.check.arena.base np o l blk hdec hb hS.iw.2.2.2.1 (k + 1) 0 sg hw (by simp)
+  have hrun := ipoW_ok dn hS.check.arena.base np o l blk hdec hb hS.iw.erSize (k + 1) 0 sg hw (by simp)
   simp only [UInt64.toNat_zero, List.drop_zero] at hrun
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
   refine ⟨hl, hm, hok, hst, ?_⟩

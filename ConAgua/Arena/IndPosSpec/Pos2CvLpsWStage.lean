@@ -63,7 +63,7 @@ theorem pos2_cvLpsW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe 
       simp only [nat?, erA, Option.map_eq_some_iff] at ho
       obtain ⟨w, hw, rfl⟩ := ho
       simp [rdW, hq1, hw]
-    have hEs := hS.iw.2.2.2.1
+    have hEs := hS.iw.erSize
     have hob : o' < 2 ^ 64 := by simp [erA] at hb; omega
     have hlb : l' < 2 ^ 64 := by simp [erA] at hb; omega
     have hlp : (rdW (m.arr64 EREC) (q + 1)).toNat + (rdW (m.arr64 EREC) (q + 2)).toNat ≤ (m.arr64 EREC).size := by

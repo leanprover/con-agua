@@ -78,7 +78,7 @@ theorem cftW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
   cases N with
   | zero => simp [cftW] at h
   | succ N =>
-  have hsz := hS.iw.2.2.1
+  have hsz := hS.iw.iwSize
   have hM0 := hM.get (decTM_mono _)
   obtain ⟨k, hk, hmem⟩ := decTM_member hM0
   have hrk := iwN_rdW_at (w := mp) (k := 8) hk hsz
@@ -106,7 +106,7 @@ theorem cftW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
       have hty := decCVp_type (q := UInt64.ofNat v) (by rw [UInt64.toNat_ofNat_of_lt' hv64]; exact hcvv)
         (by
           rw [UInt64.toNat_ofNat_of_lt' hv64]
-          have := hS.iw.2.2.2.1
+          have := hS.iw.erSize
           simp only [decCVp, decCV, bind, Option.bind_eq_some_iff] at hcvv
           obtain ⟨_, _, _, _, _, hty, -⟩ := hcvv
           obtain ⟨w, hw, -⟩ := hd?_some hty
@@ -158,7 +158,7 @@ theorem cftW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
       ArrExt.decCV (IWGrow.erecExt (IWGrow.refl m)) hcvP
     obtain ⟨w1, w2, hw1, hw2, hsl⟩ := decCV_slice hcvA
     have hqE := (Array.getElem?_eq_some_iff.mp hw2).1
-    have hE64 := hS.iw.2.2.2.1
+    have hE64 := hS.iw.erSize
     have e1 : rdW (m.arr64 EREC) (r2.tail.headD 0 + 2) = w1 :=
       rdW_of_get? (by rw [UInt64.toNat_add]; simp [erA] at hqE ⊢; omega) hw1
     have e2 : rdW (m.arr64 EREC) (r2.tail.headD 0 + 3) = w2 :=

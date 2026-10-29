@@ -552,7 +552,7 @@ theorem classFeR_refines (p : Prog) (hp : CfrProg p) (n : Nat) (s₀ : St) (a₀
   obtain ⟨ro, rl, hro, hrl, hrecs⟩ := decAt_some hrs
   have hrsP : rs = P.recs := by rw [← hPe]
   rw [hrsP] at hrecs
-  have hsz := hS.iw.2.2.1
+  have hsz := hS.iw.iwSize
   obtain ⟨e2, t2⟩ := rec2RdN (w := pp) (k := 2) (rec2IwN_trunc hro).2 hsz
   obtain ⟨e3, t3⟩ := rec2RdN (w := pp) (k := 3) (by simpa using (rec2IwN_trunc hrl).2) hsz
   simp only [show UInt64.ofNat 2 = (2 : Word) from rfl, show UInt64.ofNat 3 = (3 : Word) from rfl] at e2 e3

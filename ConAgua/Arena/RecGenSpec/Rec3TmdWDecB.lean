@@ -181,7 +181,7 @@ theorem rec3TMA_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEn
     have hc' : c.toNat < ml.toNat := UInt64.lt_iff_toNat_lt.mp hcl
     obtain ⟨v, hv, hdv⟩ := decPL_getH (truncM m) hms c.toNat hc'
     obtain ⟨-, hv'⟩ := rec2IwN_trunc hv
-    have hrd := iwN_rdW_at (w := mo) (k := c.toNat) hv' hS.iw.2.2.1
+    have hrd := iwN_rdW_at (w := mo) (k := c.toNat) hv' hS.iw.iwSize
     have hcw : mo + UInt64.ofNat c.toNat = mo + c := by simp
     rw [hcw] at hrd
     have hrun' : ConRon.Arena.targetMajorAt ms c.toNat = pure (ms[c.toNat]'(by omega)) := by
@@ -282,7 +282,7 @@ structure CrrProg (p : Prog) : Prop where
 theorem rec3CtorsAt {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m : Mem} {a : AState}
     {g c : Word} {G : ClassGen} (hS : StageR dn vis fe m a) (hG : DecB (fun m => decCG m g.toNat) m G) :
     DecB (fun m' => decPL m' (decCC m') (crrXs m g c).1.toNat (crrXs m g c).2.toNat) m (G.ctors.getD c.toNat []) := by
-  have hsz := hS.iw.2.2.1
+  have hsz := hS.iw.iwSize
   obtain ⟨-, o9, l9, h9, h10, hct⟩ := rec3CG_parts hG
   obtain ⟨e9, t9⟩ := rec2RdN (w := g) (k := 9) h9 hsz
   obtain ⟨e10, t10⟩ := rec2RdN (w := g) (k := 10) h10 hsz

@@ -160,7 +160,7 @@ theorem cfW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) {k
   | zero => simp [cfW] at h
   | succ k =>
   simp only [cfW] at h
-  have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.1 hS.iw.2.2.1
+  have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.iw hS.iw.iwSize
   have hdsD := hds.get (OMono.decHL _ _)
   rcases hdc : dcWf k m ctx dO dL with _ | ⟨r1, m1⟩ <;> rw [hdc] at h; · simp [cfK1] at h
   obtain ⟨b, a1, hrun1, hS1, hg1, hr1⟩ := dcWf_ok dn fe vis k m m1 a ctx dO dL c ds r1 hdc hS hU.dec hU.inn hhi hdsD

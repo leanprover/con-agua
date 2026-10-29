@@ -212,7 +212,7 @@ theorem rsoW_ok {p : Prog} (h : RedProg p) {dn : NIdx → Option ConLeche.Name} 
   obtain ⟨ci, hci⟩ := envR_row_dec hS.check.env c hc htag hrc
   rw [hptr] at hW
   generalize hq : rowP m1 c = q at hW hci hfind
-  have hsz := hS.iw.2.2.2.1
+  have hsz := hS.iw.erSize
   obtain ⟨wk, hwk⟩ : ∃ wk, (erecP m1)[q.toNat]? = some wk := by
     obtain ⟨wk, e, -⟩ := ciD hci; exact ⟨wk, e⟩
   have ek : rdW (m1.arr64 EREC) q = wk := rdW_of_get? rfl (erecP_get hwk)
@@ -371,7 +371,7 @@ theorem reoW_ok {p : Prog} {dn : NIdx → Option ConLeche.Name} (hdn : DnInj dn)
   have e1 : r1.headD 0 = pinW m (1 + (43 : Word).toNat) := by rw [hr1]; rfl
   have hbeq : ((decI c : NIdx) == decI (pinW m (1 + (43 : Word).toNat))) =
       decide (c = pinW m (1 + (43 : Word).toNat)) := decI_beq c _ hc hl1
-  have hsz := hS.iw.2.2.2.1
+  have hsz := hS.iw.erSize
   by_cases he : c = r1.headD 0
   · -- `reduceNat`: the pinned `Nat` basis
     rw [ite_eq_left he, hm1] at hW

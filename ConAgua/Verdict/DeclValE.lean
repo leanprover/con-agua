@@ -247,7 +247,7 @@ theorem tv_ref {p : Prog} (hq : KnotStageProg p) (hV : ValProg p) (hap : ApdF p)
   have hcv := decCI_cvTA hci (.inl rfl)
   obtain ⟨wv, hwv, hwvl, rfl⟩ := hd?_some hv
   obtain ⟨wt, hwt, hwtl, hty⟩ := decCV_typeW hcv
-  have hcb : c.toNat + 5 < 2 ^ 64 := erecP_bound hwv hS.stage.2
+  have hcb : c.toNat + 5 < 2 ^ 64 := erecP_bound hwv hS.stage.iw
   have ev : rdW (m.arr64 EREC) (c + 5) = wv :=
     rdW_of_get? (toNat_add_small c 5 (by omega)).symm (erecP_get hwv)
   have et : rdW (m.arr64 EREC) (c + 4) = wt :=
@@ -290,7 +290,7 @@ theorem tv_ref {p : Prog} (hq : KnotStageProg p) (hV : ValProg p) (hap : ApdF p)
   refine RefE.bind_right hrun2' ?_
   -- the zero level
   have hflag : pinW m2 0 ≠ 0 := hS2.flag
-  have hF := hS2.stage.1.pins.full hflag
+  have hF := hS2.stage.check.pins.full hflag
   have hz : rdW (m2.arr64 PINS) 53 = pinW m2 53 := by simp [rdW, pinW]
   have h3 : pinWordW m2 53 = some ([pinW m2 53], m2) := by
     simp only [pinWordW, hflag, ite_false, hz]
@@ -460,7 +460,7 @@ theorem cvg_ref {p : Prog} (hq : KnotStageProg p) (hP : CvgProg p) (hL : LvlCach
   have hP0 : erecP (m.set64 CTL 200 0) = erecP m := erecP_reset m
   generalize hm0 : m.set64 CTL 200 0 = m0 at hCr0 hS0 hP0
   rw [← hP0] at hg
-  have hEs := hS0.stage.2.2.2.2.1
+  have hEs := hS0.stage.iw.2.2.2.1
   obtain ⟨⟨wk, hwk, hvk⟩, hcv, wj, hwj, hwjl, hjv⟩ := decVG_words hg
   obtain ⟨wt, hwt, hwtl, hty⟩ := decCV_typeW hcv
   have hb5 : g.toNat + 5 < (m0.arr64 EREC).size := by
@@ -557,7 +557,7 @@ theorem cvg_ref {p : Prog} (hq : KnotStageProg p) (hP : CvgProg p) (hL : LvlCach
     have hz : rdW (m2.arr64 PINS) 53 = pinW m2 53 := by simp [rdW, pinW]
     simp only [pinWordW, hflag, ite_false, liftE_some, checkValueGroupE.k_pin_word.arm1,
       List.headD_cons, hz]
-    have hF := hS2.stage.1.pins.full hflag
+    have hF := hS2.stage.check.pins.full hflag
     refine RefE.bind_right (pinZeroLevel_run hF) ?_
     -- the two levels read back: the sort's level, the pinned zero
     obtain ⟨xs, hxs⟩ := ensureSort_view (r := pureFnsA V fe checkFuel) (fe := fe) (d := 0)

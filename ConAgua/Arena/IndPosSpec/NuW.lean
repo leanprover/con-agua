@@ -48,13 +48,13 @@ theorem nrcW_ok (k : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis
     (hnn : c.nP + c.names.length < 2 ^ 64) (hP : PosMR m) :
     ∃ x a', (ConRon.Arena.nestRootCanon c cvv).run a = .ok (x, a') ∧ StageR dn vis fe m' a' ∧
       IWGrow m m' ∧ decOE m' r x ∧ PosMR m' ∧ (PccAfr → AFr m m') := by
-  have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.1 hS.iw.2.2.1
+  have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.iw hS.iw.iwSize
   obtain ⟨-, -, hty⟩ := decCV_some hcv
   obtain ⟨wt, hwt, hwtH, hwtd⟩ := hd?_some hty
   have hcv3 : cv.toNat + 3 < erTop m := by
     have := (Array.getElem?_eq_some_iff.mp hwt).1; have := erecP_size_le m; omega
-  have hEb : erTop m ≤ (m.arr64 EREC).size := hS.iw.2.1
-  have hEs : (m.arr64 EREC).size < 2 ^ 64 := hS.iw.2.2.2.1
+  have hEb : erTop m ≤ (m.arr64 EREC).size := hS.iw.er
+  have hEs : (m.arr64 EREC).size < 2 ^ 64 := hS.iw.erSize
   unfold nrcW at h
   rcases hlp : cvLpsW (k + 2) m cv with _ | ⟨r1, m1⟩ <;> rw [hlp] at h; · simp [nrcK1] at h
   rw [nrcK1_some] at h
@@ -120,14 +120,14 @@ theorem nuW_ok (k : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis 
     (hcv : decCV (erecP m) cv.toNat = some cvv) (hhi : c.hiAt 0 < 2 ^ 64) (hP : PosMR m) :
     ∃ x a', (ConRon.Arena.nestUniformOk c cvv).run a = .ok (x, a') ∧ StageR dn vis fe m' a' ∧
       IWGrow m m' ∧ r = [if x then 1 else 0] ∧ PosMR m' ∧ (NuAfr → AFr m m') := by
-  have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.1 hS.iw.2.2.1
+  have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.iw hS.iw.iwSize
   obtain ⟨hn, hnb, -, -, hnP, -⟩ := ctx_fields hc hin htop
   have hhiW := nhiW_toNat (nf := 0) hc hin htop (by simpa using hhi)
   obtain ⟨-, -, hty⟩ := decCV_some hcv
   obtain ⟨wt, hwt, hwtH, hwtd⟩ := hd?_some hty
   have hcv3 : cv.toNat + 3 < erTop m := by
     have := (Array.getElem?_eq_some_iff.mp hwt).1; have := erecP_size_le m; omega
-  have e3 : (cv + 3).toNat = cv.toNat + 3 := word_add_toNat (by have := hS.iw.2.1; have := hS.iw.2.2.2.1; simp; omega)
+  have e3 : (cv + 3).toNat = cv.toNat + 3 := word_add_toNat (by have := hS.iw.er; have := hS.iw.erSize; simp; omega)
   have hrd3 : rdW (m.arr64 EREC) (cv + 3) = wt := by simp [rdW, e3, erecP_get hwt]
   unfold nuW at h
   rw [hrd3] at h

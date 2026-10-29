@@ -356,7 +356,7 @@ theorem NsR_three {x : Option (List Nat)} {r : List Word} {m : Mem} (h : NsR x r
     NsR x [r.headD 0, r.tail.headD 0, r.tail.tail.headD 0] m := by cases x <;> exact h
 
 theorem stageR_ptop {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m : Mem} {a : AState}
-    (hS : StageR dn vis fe m a) : PTop m := ⟨hS.iw.1, hS.iw.2.2.1, hS.iw.2.2.2.2⟩
+    (hS : StageR dn vis fe m a) : PTop m := ⟨hS.iw.iw, hS.iw.iwSize, hS.iw.ctl⟩
 
 /-- **`block_member_counts_go`'s model refines `blockMemberCounts?` from member `idx`.** -/
 theorem bmgW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {nPd k nC no nl ro rl : Word}

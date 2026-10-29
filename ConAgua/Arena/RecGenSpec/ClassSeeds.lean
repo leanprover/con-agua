@@ -67,7 +67,7 @@ theorem sgW_nksl (k : Nat)
     (hhob : hO.toNat + hL.toNat ≤ iwTop m) (hds : decHL m dO.toNat dL.toNat = some ds)
     (hdsb : ∀ j < dL.toNat, dO.toNat + j < iwTop m) (hR : RfInv m M G g) (hP : PosMR m) :
     NKSl m' (r.headD 0) := by
-  have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.1 hS.iw.2.2.1
+  have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.iw hS.iw.iwSize
   obtain ⟨-, -, hpa, hpa', -, -, -, -, -, h11⟩ := ctx_fields hc hin htop
   have hpsum : (rdW (m.arr64 IW) (ctx + 7)).toNat + (rdW (m.arr64 IW) (ctx + 8)).toNat ≤ iwTop m := by
     obtain ⟨-, -, -, -, hpm, -⟩ := decCtx_some hc
@@ -157,7 +157,7 @@ theorem sdCons {p : Prog} (hP : KeysProg p) {n : Nat} {dn : NIdx → Option ConL
     (slCons_specW p hP.rx.ha hP.copy hP.cons n _ x o l) h
   obtain ⟨hb, hlen, ⟨ps, hps⟩, hat⟩ := hsd
   obtain ⟨hS', hg, hdn, htop'⟩ := consW_stageN hW hS hb hps
-  have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.1 hS.iw.2.2.1
+  have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.iw hS.iw.iwSize
   have htop1 : iwTop s'.mem < 2 ^ 64 := Nat.lt_of_le_of_lt hS'.2.1 hS'.2.2.2.1
   have hl1 : (r.tail.headD 0).toNat = l.toNat + 1 := by
     have h1 := decNL_length _ hdn; have h2 := decNL_length _ hps
@@ -220,7 +220,7 @@ theorem sgCall_sim {p : Prog} (L : SgLook p) {dn : NIdx → Option ConLeche.Name
       (fun r x m' a' => DecB (fun m => decNK m (r.headD 0).toNat) m' x.1 ∧ NKSl m' (r.headD 0) ∧
         (r.tail.headD 0).toNat = x.2 ∧ StageR dn vis fe m' a' ∧ IWGrow m m' ∧ PosMR m') := by
   intro r m' e
-  have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.1 hS.iw.2.2.1
+  have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.iw hS.iw.iwSize
   rcases n with _ | k
   · rw [callW_zero] at e; cases e
   obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)

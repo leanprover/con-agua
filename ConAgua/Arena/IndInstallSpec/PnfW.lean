@@ -188,7 +188,7 @@ theorem pos3_rec2H {p : Prog} (hP : NfsProg p) {n : Nat} {dn : NIdx → Option C
     StageR dn vis fe m' a ∧ IWGrow m m' ∧ MFr [] [] m m' ∧ DecB (fun m => decNFS m (r.headD 0).toNat) m' xs := by
   obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (rec2_specW p hP.alloc n hP.rec2 _ _ _) h
-  obtain ⟨-, -, -, hf, -, -⟩ := recW_post hW hS.iw.2.2.2.2 hS.iw.2.2.1 rfl
+  obtain ⟨-, -, -, hf, -, -⟩ := recW_post hW hS.iw.ctl hS.iw.iwSize rfl
   obtain ⟨hS', hg, hr, hget, htop⟩ := recW_stage hW hS rfl
   refine ⟨hS', hg, MFr.of_iw hf, ?_⟩
   subst hr

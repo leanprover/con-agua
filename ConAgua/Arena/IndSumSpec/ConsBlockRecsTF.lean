@@ -761,7 +761,7 @@ theorem rteW_ok (n : Nat) {m m' : Mem} {a : AState} {ro rl : Word} {r : List Wor
     simp only [bool?, Option.map_eq_some_iff] at h10
     obtain ⟨w, hw, -⟩ := h10
     have := erecP_lt hw; omega
-  have hsz := hS.iw.2.2.1
+  have hsz := hS.iw.iwSize
   have hrdv : ∀ j < rl.toNat, ∀ v, iwN m (ro.toNat + j) = some v →
       rdW (m.arr64 IW) (ro + UInt64.ofNat j) = UInt64.ofNat v ∧ v < 2 ^ 64 := by
     intro j hj v hv'
@@ -777,7 +777,7 @@ theorem rteW_ok (n : Nat) {m m' : Mem} {a : AState} {ro rl : Word} {r : List Wor
     obtain ⟨-, h2, -, h4, -⟩ := hS1.2
     have hs := (wrER_frame (ruleWords m1 ro rl.toNat) m1 b).size EREC
     rw [ruleWords_length] at htop1; omega
-  have hm2 := rteGoW_mem n m1 m2 b ro rl r1 h1 hold hroom (by rw [hE1]; exact hS.iw.2.2.2.1)
+  have hm2 := rteGoW_mem n m1 m2 b ro rl r1 h1 hold hroom (by rw [hE1]; exact hS.iw.erSize)
   subst hm2
   refine ⟨hS1, hg1, rfl, ?_, erRec_mfr ha _⟩
   simp only [List.headD_cons]
@@ -797,11 +797,11 @@ theorem rteW_ok (n : Nat) {m m' : Mem} {a : AState} {ro rl : Word} {r : List Wor
     rw [List.getElem?_eq_getElem (by omega)] at hgj; exact Option.some.inj hgj
   rw [hrj]
   refine decRule_copy hfj hext (fun i hi => ?_)
-  have hEt : erTop m ≤ (m.arr64 EREC).size := hS.iw.2.1
+  have hEt : erTop m ≤ (m.arr64 EREC).size := hS.iw.er
   rw [show b.toNat + 11 * j + i = b.toNat + (11 * j + i) by omega,
     erecP_getE (by rw [htop1, hrw]; omega), hget1 (11 * j + i) (by rw [hrw]; omega),
     ruleWords_get m1 ro rl.toNat j i hj hi, hI1, e, hE1, erecP_getE (by omega)]
-  have hEs : (m.arr64 EREC).size < 2 ^ 64 := hS.iw.2.2.2.1
+  have hEs : (m.arr64 EREC).size < 2 ^ 64 := hS.iw.erSize
   refine (rdW_some ?_ (by omega)).symm
   rw [UInt64.toNat_add]; simp; omega
 

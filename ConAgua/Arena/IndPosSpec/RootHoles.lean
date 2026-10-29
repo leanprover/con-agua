@@ -382,7 +382,7 @@ theorem rhW_ok (k : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis 
     StageR dn vis fe m' a ∧ IWGrow m m' ∧ (r.tail.headD 0).toNat = c.rootHoles.length ∧
       (r.headD 0).toNat + c.rootHoles.length ≤ iwTop m' ∧
       HolesAt m' (r.headD 0).toNat c.rootHoles.length c.rootHoles (· < iwTop m') := by
-  have hsz : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.1 hS.iw.2.2.1
+  have hsz : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.iw hS.iw.iwSize
   obtain ⟨hn, hn', hpa, hpa', hnP, hlvH, hlv, -, -, -⟩ := ctx_fields hc hin hsz
   unfold rhW at h
   generalize rdW (m.arr64 IW) ctx = no at h hn hn'
@@ -464,8 +464,8 @@ theorem appendW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IF
       (r.tail.headD 0).toNat = l1.toNat + l2.toNat ∧ iwTop m' = iwTop m + l1.toNat + l2.toNat ∧
       (∀ i < l1.toNat, (m'.arr64 IW)[iwTop m + i]? = (m.arr64 IW)[o1.toNat + i]?) ∧
       (∀ i < l2.toNat, (m'.arr64 IW)[iwTop m + l1.toNat + i]? = (m.arr64 IW)[o2.toNat + i]?) := by
-  have hsz := hS.iw.2.2.1
-  have hc := hS.iw.2.2.2.2
+  have hsz := hS.iw.iwSize
+  have hc := hS.iw.ctl
   simp only [appendW] at h
   by_cases h0 : l1 + l2 < l1
   · simp [h0] at h
@@ -599,7 +599,7 @@ theorem haW_ok (k : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis 
     (hc : decCtx m ctx.toNat = some c) (hin : CtxIn m ctx.toNat (· < iwTop m))
     (hpr : HSl m po.toNat pl.toNat prog) :
     StageR dn vis fe m' a ∧ IWGrow m m' ∧ decONH m' r (ConRon.Arena.nestHoleAt c prog i.toNat) := by
-  have hsz : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.1 hS.iw.2.2.1
+  have hsz : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.iw hS.iw.iwSize
   obtain ⟨-, -, -, -, hnP, -, -, -, -, -⟩ := ctx_fields hc hin hsz
   unfold haW at h
   by_cases hlt : i < rdW (m.arr64 IW) (ctx + 4)

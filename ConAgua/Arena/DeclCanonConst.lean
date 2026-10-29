@@ -69,7 +69,7 @@ theorem cvLpsW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
   rw [L.Arena.cvLpsW_step] at h
   have hq0 : decCV (erA m) q.toNat = some cv := ArrExt.decCV (erecP_ext m) hq
   obtain ⟨w1, w2, hw1, hw2, hsl⟩ := decCV_slice hq0
-  have hsz : (m.arr64 EREC).size < 2 ^ 64 := hS.iw.2.2.2.1
+  have hsz : (m.arr64 EREC).size < 2 ^ 64 := hS.iw.erSize
   have e1 : rdW (m.arr64 EREC) (q + 1) = w1 := by
     have := rdW_off (a := erA m) (q := q) (k := 1) hsz (w := w1) (by simpa using hw1)
     simpa [erA] using this
@@ -162,7 +162,7 @@ theorem ctxW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
   rw [ctxW_succ] at h
   have hcv0 : decCV (erA m) cp.toNat = some cv := ArrExt.decCV (erecP_ext m) hcv
   obtain ⟨w1, w2, hw1, hw2, hsl⟩ := decCV_slice hcv0
-  have hsz : (m.arr64 EREC).size < 2 ^ 64 := hS.iw.2.2.2.1
+  have hsz : (m.arr64 EREC).size < 2 ^ 64 := hS.iw.erSize
   have e2 : rdW (m.arr64 EREC) (cp + 2) = w2 := by
     have := rdW_off (a := erA m) (q := cp) (k := 2) hsz (w := w2) (by simpa using hw2)
     simpa [erA] using this
@@ -279,7 +279,7 @@ theorem cvceW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
   | zero => simp [cvceW] at h
   | succ k =>
   rw [cvceW_succ] at h
-  have hsz : (m.arr64 EREC).size < 2 ^ 64 := hS.iw.2.2.2.1
+  have hsz : (m.arr64 EREC).size < 2 ^ 64 := hS.iw.erSize
   obtain ⟨wn, w2, wt, e0, e2, e3, hn32, ht32, hnm, htm, hlen⟩ :=
     cvWords hsz (ArrExt.decCV (erecP_ext m) hcv)
   obtain ⟨vn, v2, vt, f0, f2, f3, gn32, gt32, gnm, gtm, glen⟩ :=

@@ -382,7 +382,7 @@ theorem crp_ref {p : Prog} (hC : CrpProg p) (hq : KnotStageProg p) (hcl : LeafCl
   · rw [liftE_none, checkReducePinE.k_mk_app.none]; exact RefE.of_cls0 (by simp)
   rw [liftE_some, checkReducePinE.k_mk_app.arm1]
   obtain ⟨a7, hrun7, hS7, hg7⟩ := mkApp_stage hC6.stage v (r6.headD 0) h7
-  have haxl := mkAppW_hw s6.mem a6 hC6.stage.1.arena v (r6.headD 0) ax m7 h7
+  have haxl := mkAppW_hw s6.mem a6 hC6.stage.check.arena v (r6.headD 0) ax m7 h7
   obtain ⟨hi7, hax⟩ := ConRon.Bridge.Frontend.internE_sstep hC6.check.state
     (ConRon.Bridge.viewOK_app (by rw [hv6]; rfl) (by rw [hxv]; rfl)) hrun7
   have hax' : denoteE a7.store (decE ax) = some (.app x (ConLeche.reduceCertVar nm)) := by
@@ -472,7 +472,7 @@ theorem cdo_ref {p : Prog} (hV : ValProg p) (hC : CrpProg p) (hq : KnotStageProg
   simp only [stepCV, stepVal] at hcv1 hval1
   generalize hq0 : r1.headD 0 = q at hci1 hcv1 hval1 htop1 ⊢
   have hqb : q.toNat + 8 < 2 ^ 64 := by
-    have := hS1.stage.2.2.1; have := hS1.stage.2.2.2.2.1; omega
+    have := hS1.stage.iw.2.1; have := hS1.stage.iw.2.2.2.1; omega
   have hq1 : (q + 1).toNat = q.toNat + 1 := toNat_add_small q 1 (by omega)
   have hq5 : (q + 5).toNat = q.toNat + 5 := toNat_add_small q 5 (by omega)
   -- the name and value words
@@ -524,7 +524,7 @@ theorem cdo_ref {p : Prog} (hV : ValProg p) (hC : CrpProg p) (hq : KnotStageProg
     rw [← hname]
     exact ConRon.Bridge.denoteN_ext (ConRon.Bridge.denoteCV_inv hcA).1 hstep2.ext
   have hv3 := ConRon.Bridge.denote_ext hv1 hstep2.ext
-  have hvis : fe.visibleBelow = vis.toNat := hS.stage.1.env.vis
+  have hvis : fe.visibleBelow = vis.toNat := hS.stage.check.env.vis
   have hpre := ConRon.Bridge.restrict_pushed_find (fe2 := fe.push (.axiomInfo cv)) rfl
     (hok3.check.ienv.find?_none
       (show denoteN a3.store.ns cv.name = some c.name by rw [hname]; exact hnm3)

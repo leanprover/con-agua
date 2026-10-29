@@ -118,7 +118,7 @@ theorem installSimSumCtorsC (hP : SumProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : 
         PSlR decIS x.2 (r.tail.tail.headD 0) (r.tail.tail.tail.headD 0) m' ∧ AbsOK m' ∧
         ConRon.Bridge.CoreStep V env fe a a') := by
   intro r m' e
-  have hfev : fe.restrictTo vis.toNat = fe := by rw [← hC.stage.1.env.vis]; rfl
+  have hfev : fe.restrictTo vis.toNat = fe := by rw [← hC.stage.check.env.vis]; rfl
   have h := RefE.run_okW (sctsE_spec p hP hV n ⟨m, Locals.init []⟩ vis vis T lo ll nP nIdx rs isP lg cvTa co cl)
     (scts_ref (dn := dn) (vis := vis) (fe := fe) hq henv hOpf hLC hLT hApd hCrk hP vis T lo ll nP nIdx rs isP
       lg cvTa lps cvv hT hrs hws n hn m a co cl cs csP hC hl hlb hcv hcs hA hTP hlpsP hrsP hcvTaP hcsP
@@ -174,7 +174,7 @@ theorem icbo_ref (hP : CtorsProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a :
     rw [← ConRon.Bridge.Inductives.dCtors_eq_denoteCtors]; exact hcsP
   have hTP : denoteN a.store.ns (decI (rdW (m.arr64 EREC) (UInt64.ofNat cvp))) = some msP.cvT.name := by
     rw [hnm]; exact ConRon.Bridge.denoteCV_name hcvTP
-  have hfev : fe.restrictTo vis.toNat = fe := by rw [← hC.stage.1.env.vis]; rfl
+  have hfev : fe.restrictTo vis.toNat = fe := by rw [← hC.stage.check.env.vis]; rfl
   rw [icboE.arm1, hw0, hw1, hw2, hw3, hnpw]
   -- `check_sum_ctors`
   rcases h1 : callE p n "check_sum_ctors" [vis, vis, rdW (m.arr64 EREC) (UInt64.ofNat cvp), lo, ll,
@@ -302,17 +302,17 @@ theorem icbg_ref (hP : CtorsProg p) (pp lo ll : Word) (bs : BlockShape) {bsP : C
   rcases h3 : consW (k + 1) m2 (r1.headD 0) (r2.headD 0) (r2.tail.headD 0) with _ | ⟨r3, m3⟩
   · rw [liftE_none, icbgE.k_sl_cons.none]; exact RefE.of_cls0 (by simp)
   rw [liftE_some, icbgE.k_sl_cons.arm1]
-  obtain ⟨hS3, hg3, hd3, ht3⟩ := partsConsPL decCNS_mono h3 hS2 hR2.cns.2 hR2.cns.1
+  obtain ⟨hS3, hg3, hd3, ht3⟩ := partsConsPL decCNS_mono h3 hS2 hR2.cns.bound hR2.cns.dec
     (hR1.cns.grow (decCNS_mono _) hR2.grow)
-  obtain ⟨-, -, hb3, hbt3⟩ := partsConsPL decCNSB_mono h3 hS2 hR2.cnsB.2 hR2.cnsB.1
+  obtain ⟨-, -, hb3, hbt3⟩ := partsConsPL decCNSB_mono h3 hS2 hR2.cnsB.bound hR2.cnsB.dec
     (hR1.cnsB.grow (decCNSB_mono _) hR2.grow)
   have hA3 := consW_afr h3 hR2.abs
   rcases h4 : consW (k + 1) m3 (r1.tail.headD 0) (r2.tail.tail.headD 0) (r2.tail.tail.tail.headD 0) with
     _ | ⟨r4, m4⟩
   · rw [liftE_none, icbgE.k_sl_cons_2.none]; exact RefE.of_cls0 (by simp)
   rw [liftE_some, icbgE.k_sl_cons_2.arm1]
-  obtain ⟨hS4, hg4, hd4, ht4⟩ := partsConsPL decISS_mono h4 hS3 (by have := hR2.iss.2; have := hg3.1; omega)
-    (hR2.iss.1.grow (OMono.decPL decISS_mono _ _) hg3) (hR1.iss.grow (decISS_mono _) (hR2.grow.trans hg3))
+  obtain ⟨hS4, hg4, hd4, ht4⟩ := partsConsPL decISS_mono h4 hS3 (by have := hR2.iss.bound; have := hg3.1; omega)
+    (hR2.iss.dec.grow (OMono.decPL decISS_mono _ _) hg3) (hR1.iss.grow (decISS_mono _) (hR2.grow.trans hg3))
   have hA4 := consW_afr h4 hA3
   exact RefE.ret rfl ⟨hR2.stage.of_pstep hS4 hA4 (PStep.refl hR2.stage.check.state),
     ((hg1.trans hR2.grow).trans hg3).trans hg4,

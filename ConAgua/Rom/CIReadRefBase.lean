@@ -83,7 +83,7 @@ theorem RInv.stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv
   have hc : a.caches = a₀.caches := congrArg Prod.fst h.hcp
   have hp : a.pins = a₀.pins := congrArg Prod.snd h.hcp
   have hf := h.frame
-  have hg : ErecGrow m₀ m := ⟨h.grow.2.1, h.grow.2.2.2, hf.size EREC⟩
+  have hg : ErecGrow m₀ m := ⟨h.grow.er, h.grow.erGet, hf.size EREC⟩
   refine ⟨⟨h.arena, ?_, ?_, ?_, h.mode⟩, h.ok⟩
   · rw [hc]; exact hS.check.core.frame rciA_core rciC_core hf
   · rw [hp]; exact hS.check.pins.frame rciA_pins hf

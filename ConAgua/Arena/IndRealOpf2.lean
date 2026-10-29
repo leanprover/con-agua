@@ -157,7 +157,7 @@ theorem spnPushW_ok {m m' : Mem} {a : AState} (hS : StageR dn vis fe m a) (hAb :
     have h3 : (m.arr64 SPN).size < 2 ^ 64 := by have := hAb.wk.2.2.1; omega
     omega
   refine ⟨hS', hg, hAb.frameD hfr (by decide) (by decide), hsz, ?_, ?_, hfr.size SPN⟩
-  · have hc := hS.iw.2.2.2.2
+  · have hc := hS.iw.ctl
     rw [rdW_set64E, Mem.arr64_set64_ne _ _ _ _ _ (by decide),
       ite_eq_left ⟨rfl, rfl, by simp; omega⟩]
   · intro w

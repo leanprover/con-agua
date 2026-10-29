@@ -240,7 +240,7 @@ theorem tmo_ref {p : Prog} (hP : TmoOProg p) (hIlpf : IlpfF p) (hcore : CoreStag
   cases n with
   | zero => rw [tmoE.eq_1]; exact RefE.of_cls0 Err.cls_outOfFuel
   | succ n =>
-  have hT : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.1 hS.iw.2.2.1
+  have hT : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.iw hS.iw.iwSize
   rw [tmoE.arm1]
   unfold tmoOutT
   -- `pin_at`
@@ -416,7 +416,7 @@ theorem tmc_ref {p : Prog} (hP : TmfProg p) (hIlpf : IlpfF p) (hcore : CoreStage
   cases n with
   | zero => rw [tmcE.eq_1]; exact RefE.of_cls0 Err.cls_outOfFuel
   | succ n =>
-  have hT : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.1 hS.iw.2.2.1
+  have hT : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.iw hS.iw.iwSize
   obtain ⟨hqd, hq9, hptr⟩ := partsShapeFacts hq hsrc
   rw [tmcE.arm1]
   -- `block_shape_member_names`
@@ -424,11 +424,11 @@ theorem tmc_ref {p : Prog} (hP : TmfProg p) (hIlpf : IlpfF p) (hcore : CoreStage
   · rw [liftE_none, tmcE.k_block_shape_member_names.none]; exact RefE.of_cls0 (by simp)
   rw [liftE_some, tmcE.k_block_shape_member_names.arm1]
   obtain ⟨s4, rfl, hr4, hdn, hg4, hf4, ht4⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (blockShapeMemberNames_refines p hP.tmm.alloc hP.mnc hP.bsmn n _ pp bs hqd (by omega) hS.iw.2.2.1 hS.iw.2.2.2.2
+    (blockShapeMemberNames_refines p hP.tmm.alloc hP.mnc hP.bsmn n _ pp bs hqd (by omega) hS.iw.iwSize hS.iw.ctl
       hsrc (fun o l j v h1 h2 h3 h4 => Nat.lt_of_succ_lt (hptr o l j v h1 h2 h3 h4))) h4
   obtain ⟨s4', hs4', -, hW4⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (blockShapeMemberNames_spec p hP.tmm.alloc hP.mnc hP.bsmn n _ pp) h4
-  have hroom := memberNamesW_room hW4 hS.iw.2.2.1
+  have hroom := memberNamesW_room hW4 hS.iw.iwSize
   rw [partsShapeK hqd hq9] at hroom
   have hkb : bs.k < 2 ^ 64 := by
     obtain ⟨o, l, -, hl', hg'⟩ := decAt_some (decBS_some hqd).1
@@ -437,7 +437,7 @@ theorem tmc_ref {p : Prog} (hP : TmfProg p) (hIlpf : IlpfF p) (hcore : CoreStage
   simp only at hr4 hdn hg4 hf4 ht4
   have hS4 : StageR dn vis fe s4.mem a := stage_frame_iw hS hf4 (by
     rw [← ht4]; simp only [iwTop] at hroom ⊢; omega)
-  have hT4 : iwTop s4.mem < 2 ^ 64 := Nat.lt_of_le_of_lt hS4.iw.1 hS4.iw.2.2.1
+  have hT4 : iwTop s4.mem < 2 ^ 64 := Nat.lt_of_le_of_lt hS4.iw.iw hS4.iw.iwSize
   have hP4 : PosMR s4.mem := hPm.fr (MFr.of_iw hf4)
   have hA4 : AbsOK s4.mem := memberNamesW_afr (hs4' ▸ hW4) hA
   have hC4 : StageC dn vis fe env s4.mem a := hC.of_pstep hS4 hA4 (PStep.refl hC.check.state)

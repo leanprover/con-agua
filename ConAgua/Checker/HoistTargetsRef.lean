@@ -31,7 +31,7 @@ theorem tgtR_frameA {m m' : Mem} {tg : Word} {c : Nat} {T : Std.HashMap Nat Nat}
   rw [← hT.1 k hk]
   have hn : (tg + UInt64.ofNat k).toNat = tg.toNat + k := addW_toNat _ _ (by omega)
   simp only [rdW, hn]
-  rw [hf.grow.2.2.1 _ (by omega)]
+  rw [hf.grow.iwGet _ (by omega)]
 
 /-- **What the targets pass keeps**: everything but `IW`, `HSEEN`, `CTL[73‥74, 200]`; the `IW`
 words below the targets; the pool only grows. -/
@@ -52,7 +52,7 @@ theorem LowFr.ofHFr {tg ws : Word} {c : Nat} {m m' : Mem} (h : HFr tg ws c m m')
     by simp only [iwTop]; rw [h.1.ctl 200 (by decide)]; exact Nat.le_refl _⟩
 
 theorem LowFr.ofAFr {tg : Word} {m m' : Mem} (h : AFr m m') (ht : tg.toNat ≤ iwTop m) : LowFr tg m m' :=
-  ⟨h.fr.mono (by simp) (by simp), fun x hx => h.grow.2.2.1 x (by omega), h.grow.1⟩
+  ⟨h.fr.mono (by simp) (by simp), fun x hx => h.grow.iwGet x (by omega), h.grow.iw⟩
 
 /-- The kind of a record decides whether it is a definition. -/
 theorem defn_of_kind {D P : Array Word} {r : Nat} {d : IDeclaration} (hD : DeclAtF D P r d) :
@@ -138,7 +138,7 @@ theorem targets_ok {p : Prog} (hx : HoistExt p) {a : AState} {ds : Array IDeclar
     obtain ⟨hPF, L₁, L₂, hL₁, hL₂, hop, hf₁⟩ :=
       natOpRec_ok p hx n m m₁ a _ op hE.iwok hP.full hw hrec
     have hE₁ := hE.frameA hf₁
-    have hT₁ := tgtR_frameA hT (by omega) (by have := hE.iwok.1; omega) hf₁
+    have hT₁ := tgtR_frameA hT (by omega) (by have := hE.iwok.iw; omega) hf₁
     have hP₁ : PinsR m₁ a.pins := hP.congr (hf₁.1.1 PINS (by decide) (by decide))
     have hPF₁ : PinsFull m₁ a.pins := hPF.congr (hf₁.1.1 PINS (by decide) (by decide))
     -- the twin's test
@@ -163,7 +163,7 @@ theorem targets_ok {p : Prog} (hx : HoistExt p) {a : AState} {ds : Array IDeclar
       obtain ⟨gs, hgs, hG, hl, habove, hf₂⟩ :=
         natOpDepsCall_ok p hx n m₁ m₂ a _ rs hE₁.iwok hPF₁ hw hdc
       have hE₂ := hE₁.frameA hf₂
-      have hT₂ := tgtR_frameA hT₁ (by have := hE₁.top; omega) (by have := hE₁.iwok.1; have := hE₁.isz; omega) hf₂
+      have hT₂ := tgtR_frameA hT₁ (by have := hE₁.top; omega) (by have := hE₁.iwok.iw; have := hE₁.isz; omega) hf₂
       rw [HoistTwin.run_bind, hgs]
       simp only
       rcases hdp : hDepsW n m₂ iw (rs.headD 0) (rs.tail.headD 0) 0 ord tg ws with _ | ⟨z, m₃⟩ <;> rw [hdp] at h

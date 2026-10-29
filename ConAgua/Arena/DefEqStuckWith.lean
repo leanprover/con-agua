@@ -24,7 +24,7 @@ theorem GrowRef.of_core {α : Type} [Inhabited α] {T : AM α} {a₀ : AState} {
     {dn : NIdx → Option ConLeche.Name} {m₀ m : Mem} {vis : Word} {fe : IFEnv} {M : ModeMaps}
     {eb : Word} {r : List Word} {ok : List Word → Prop}
     (h : CoreRef T a₀ dec dn m₀ vis fe M eb r m ok) : GrowRef T a₀ dec dn m₀ vis fe M eb r m ok :=
-  ⟨h.run, h.after.toG, h.res, h.post⟩
+  ⟨h.run, h.after.toG, h.res, h.resOk⟩
 
 /-- **A run that grew the stack, then one from its state.** -/
 theorem growRef_then {α β : Type} [Inhabited α] [Inhabited β] {T₁ : AM α} {T₂ T : AM β}

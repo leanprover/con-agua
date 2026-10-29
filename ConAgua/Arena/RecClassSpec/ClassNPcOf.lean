@@ -63,12 +63,12 @@ theorem memberNamesW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe
     decHL m' (r.headD 0).toNat (r.tail.headD 0).toNat = some bs.memberNames ∧
     (r.headD 0).toNat + (r.tail.headD 0).toNat = iwTop m' := by
   have ht := hb.ptop
-  have hsz := hS.iw.2.2.1
-  have hts : iwTop m ≤ (m.arr64 IW).size := hS.iw.1
+  have hsz := hS.iw.iwSize
+  have hts : iwTop m ≤ (m.arr64 IW).size := hS.iw.iw
   have hk : bs.k < 2 ^ 64 := by
     obtain ⟨o, l, ho, hl, hg⟩ := decAt_some (decBS_some hb.dec).1
     have := decPL_length m hg; simp only [BlockShape.k, this]; exact (iwN_rdW hl (by omega)).2
-  obtain ⟨hr, hd, hg, hf, htop⟩ := memberNamesW_dec h hsz hS.iw.2.2.2.2 hb.dec (by omega) hb.2.1 hb.2.2
+  obtain ⟨hr, hd, hg, hf, htop⟩ := memberNamesW_dec h hsz hS.iw.ctl hb.dec (by omega) hb.2.1 hb.2.2
   have hroom : iwTop m' ≤ (m'.arr64 IW).size := by
     simp only [memberNamesW] at h
     rcases hal : allocW m (rdW (m.arr64 IW) (p + 1)) with _ | qm
@@ -279,8 +279,8 @@ theorem npcW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
     rw [npcK2_hit (h := hcb)] at h
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     have hnp := (decBS_some hb.dec).2.2.1
-    have hrd := iwN_rdW_at (w := p) (k := 4) hnp hS.iw.2.2.1
-    have hpb : p.toNat + 4 < 2 ^ 64 := by have := hS.iw.1; have := hS.iw.2.2.1; omega
+    have hrd := iwN_rdW_at (w := p) (k := 4) hnp hS.iw.iwSize
+    have hpb : p.toNat + 4 < 2 ^ 64 := by have := hS.iw.iw; have := hS.iw.iwSize; omega
     have e4 : rdW (m1.arr64 IW) (p + 4) = rdW (m.arr64 IW) (p + 4) := by
       simp only [rdW]
       rw [show (p + 4).toNat = p.toNat + 4 by rw [UInt64.toNat_add]; simp; omega, hg1.2.2.1 _ (by omega)]

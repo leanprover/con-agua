@@ -77,7 +77,7 @@ theorem rec2SimTMA (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv
       | succ n =>
         rw [tmaW_hit n m mo ml c hcl] at hb'
         cases hb'
-        have hrd := iwN_rdW_at (w := mo) (k := c.toNat) hv' hS.iw.2.2.1
+        have hrd := iwN_rdW_at (w := mo) (k := c.toNat) hv' hS.iw.iwSize
         have hcw : mo + UInt64.ofNat c.toNat = mo + c := by simp
         rw [hcw] at hrd
         simp only [List.headD_cons]; rw [hrd.1, UInt64.toNat_ofNat_of_lt' hrd.2]

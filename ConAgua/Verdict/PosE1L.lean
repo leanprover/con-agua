@@ -66,7 +66,7 @@ theorem pfv_ref {p : Prog} (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe
   | zero => rw [pfvE.eq_1]; exact RefE.of_cls0 (by simp)
   | succ k =>
   rw [pfvE.arm1]
-  have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.1 hS.iw.2.2.1
+  have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.iw hS.iw.iwSize
   rcases hha : haWf k m ctx po pl i with _ | ⟨r1, m1⟩
   · rw [liftE_none, pfvE.k_nest_hole_at.none]; exact RefE.of_cls0 (by simp)
   rw [liftE_some]
@@ -278,7 +278,7 @@ theorem ncc_ref {p : Prog} (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe
   | zero => rw [nccE.eq_1]; exact RefE.of_cls0 (by simp)
   | succ k =>
   rw [nccE.arm1]
-  have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.1 hS.iw.2.2.1
+  have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.iw hS.iw.iwSize
   obtain ⟨hn, -, -, -, hnP, -⟩ := ctx_fields hU.dec hU.inn htop
   have hne := ctx_names_end hU.dec hU.inn hU.sl htop
   rcases hoa : noaW k m (rdW (m.arr64 IW) ctx) (rdW (m.arr64 IW) (ctx + 1)) (rdW (m.arr64 IW) (ctx + 4)) hp

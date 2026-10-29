@@ -857,7 +857,7 @@ theorem iirW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv
     exact ArrExt.decCV (IWGrow.erecPExtR hg) hcvE
   -- the capability record's words
   have hc15 := hcp.1
-  have hIsz : iwTop m ≤ (m.arr64 IW).size := hS.iw.1
+  have hIsz : iwTop m ≤ (m.arr64 IW).size := hS.iw.iw
   have hcaps : decCaps (erecP M) dn (q1.toNat + 5) = some c := by
     refine hcp.2 (erecP M) (q1.toNat + 5) (fun i hi => ?_) (fun i hi => ?_)
     · rw [show q1.toNat + 5 + i = q1.toNat + (5 + i) by omega, hP (5 + i) (by omega)]

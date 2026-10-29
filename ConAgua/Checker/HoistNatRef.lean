@@ -315,7 +315,7 @@ theorem depsSlice_ok {p : Prog} (hal : p.lookup "iw_alloc" = some iwAlloc) {k : 
     simp only [UInt64.toNat_zero, Nat.zero_add]
     rw [e, getElem!_pos ws j hj, List.getElem_map]
     exact ⟨hlt _ (List.getElem_mem hj), rfl⟩
-  · exact hA.grow.1
+  · exact hA.grow.iw
   · rw [htop]; exact Nat.le_refl _
 
 /-- `armsW`'s answer: a fresh slice of `depsL`'s words (empty: `(0, 0)`). -/

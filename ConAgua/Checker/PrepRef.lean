@@ -180,12 +180,12 @@ theorem pPrepCore_ok (p : Prog) (hx : HoistExt p) (n : Nat) (m m' : Mem) (a : AS
   rw [hrs, pPrepW.k_prep_rest.arm1] at h
   have hsz₄ : (m₄.arr64 IW).size = (m.arr64 IW).size := by rw [hpf₄.size IW, hsz₃]
   obtain ⟨hc, hrestW, hmf₅', hkeep₅⟩ := pRest_ok nw ord mk n m₄ m₅ np np c hE₄.rg1
-    (by have := hE₄.rg2; have := hE₄.iwok.1; omega) (by rw [hsz₄]; exact hsz) (Nat.le_refl _) hnpn hrs
+    (by have := hE₄.rg2; have := hE₄.iwok.iw; omega) (by rw [hsz₄]; exact hsz) (Nat.le_refl _) hnpn hrs
   have hmf₅ : MemFrame A C m m₅ := (hmf₃.trans (pfr_mf hpf₄)).trans (iw_mf0 hmf₅')
   have hDECL₅ : m₅.arr64 DECL = m.arr64 DECL := hmf₅.arr DECL (by decide) (by decide)
   have hDLP₅ : m₅.arr64 DLP = m.arr64 DLP := hmf₅.arr DLP (by decide) (by decide)
   have hsz₅ : (m₅.arr64 IW).size = (m.arr64 IW).size := by rw [hmf₅.size IW]
-  have hrg2 := hE₄.rg2; have hrg1 := hE₄.rg1; have hiw4 := hE₄.iwok.1
+  have hrg2 := hE₄.rg2; have hrg1 := hE₄.rg1; have hiw4 := hE₄.iwok.iw
   generalize hU : unm m₄ mk np.toNat nw.toNat = U at hrest hc hrestW
   have hUlt : ∀ x ∈ U, np.toNat ≤ x ∧ x < nw.toNat := by
     intro x hx; rw [← hU] at hx; have := mem_unm.mp hx; omega

@@ -231,7 +231,7 @@ theorem nestHoles_refines (k : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → O
       NhOut s'.mem r (AM.res (ConRon.Arena.nestHoles fe c) a₀); ⊤⦄ := by
   refine triple_post (nestHoles_spec p hl k s₀ vis ctx) ?_
   rintro r s' ⟨hlc, hm⟩
-  have htop : iwTop s₀.mem < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.1 hS.iw.2.2.1
+  have htop : iwTop s₀.mem < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.iw hS.iw.iwSize
   obtain ⟨hn, hnb, -⟩ := ctx_fields hc hin htop
   have hlen := decHL_length _ hn
   obtain ⟨x, a', hrun, hS', hg, hout⟩ := nhGoW_ok dn fe vis ctx c k _ _ a₀ 0 _ _ 0 0 c.names [] _ hm hS hc hin

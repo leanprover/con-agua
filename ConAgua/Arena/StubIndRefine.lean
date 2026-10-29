@@ -345,7 +345,7 @@ theorem cfW_ok {p : Prog} (hp : RrbProg p) (n : Nat) (dn : NIdx → Option ConLe
     m' = m ∧ CFOut dn fe a m c r := by
   have hR := hS.check.arena.base
   have hE := hS.check.env
-  have hsz : (m.arr64 EREC).size < 2 ^ 64 := hS.iw.2.2.2.1
+  have hsz : (m.arr64 EREC).size < 2 ^ 64 := hS.iw.erSize
   simp only [cfW] at hW
   cases n with
   | zero => simp [callW_zero] at hW

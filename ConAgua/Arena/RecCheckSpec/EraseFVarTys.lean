@@ -66,7 +66,7 @@ theorem rcFresh {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
     r = [rdW (m.arr64 CTL) 200] ∧ (rdW (m.arr64 CTL) 200).toNat = iwTop m ∧
     (∀ j < ws.length, (m1.arr64 IW)[iwTop m + j]? = ws[j]?) ∧
     StageR dn vis fe m1 a ∧ IWGrow m m1 ∧ MemFrame [IW] [200] m m1 ∧ iwTop m1 = iwTop m + ws.length := by
-  obtain ⟨hr, hget, hg, hf, ht, -⟩ := recW_post h hS.iw.2.2.2.2 hS.iw.2.2.1 hk
+  obtain ⟨hr, hget, hg, hf, ht, -⟩ := recW_post h hS.iw.ctl hS.iw.iwSize hk
   refine ⟨hr, rfl, hget, ?_, hg, hf, ht⟩
   simp only [recW] at h
   rcases hal : allocW m k with _ | ⟨q, m0⟩ <;> rw [hal] at h

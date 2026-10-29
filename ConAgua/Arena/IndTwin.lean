@@ -120,7 +120,7 @@ theorem StageT.of_core {p : Prog} (hcl : CoreStageClosed p) {f : FnName} (hf : f
   have h200 : rdW (m'.arr64 CTL) 200 = rdW (m.arr64 CTL) 200 := hfr.ctl _ coreStageC_200
   obtain ⟨hCR, hT⟩ := hC.checkR
   refine ⟨⟨⟨hCR, IWOK.frame hfr coreStageA_iw coreStageA_erec coreStageC_129 coreStageC_200
-    hS.stage.2⟩, hT, by simp only [pinW, hP]; exact hS.flag⟩, ?_⟩
+    hS.stage.iw⟩, hT, by simp only [pinW, hP]; exact hS.flag⟩, ?_⟩
   exact ⟨by simp [iwTop, h200], by simp [erTop, h129], fun i _ => by rw [hI], fun i _ => by rw [hE]⟩
 
 /-- **A core entry point's refinement as a `Sim` under `StageT`**: a `CoreSpec` at every state in
@@ -314,7 +314,7 @@ theorem StageT.of_heap {m m' : Mem} {a a' : AState} {M : ModeMaps} (hT : StageT 
   have h129 : rdW (m'.arr64 CTL) 129 = rdW (m.arr64 CTL) 129 := hf.ctl 129 (by decide)
   have h200 : rdW (m'.arr64 CTL) 200 = rdW (m.arr64 CTL) 200 := hf.ctl 200 (by decide)
   obtain ⟨hCR, hTw⟩ := hC'.checkR
-  refine ⟨⟨⟨hCR, IWOK.frame hf (by decide) (by decide) (by decide) (by decide) hT.stage.2⟩, hTw,
+  refine ⟨⟨⟨hCR, IWOK.frame hf (by decide) (by decide) (by decide) (by decide) hT.stage.iw⟩, hTw,
     by simp only [pinW, hP]; exact hT.flag⟩, ?_⟩
   exact ⟨by simp [iwTop, h200], by simp [erTop, h129], fun i _ => by rw [hI], fun i _ => by rw [hE]⟩
 

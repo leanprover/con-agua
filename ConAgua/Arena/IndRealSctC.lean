@@ -408,7 +408,7 @@ theorem tbl_ref {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
     RefE True (tblE p (n + 2) m T C lo ll nP nF rs go gl cvCaw vis)
       (checkStructProjTable (decI T) (decI C) lps nP.toNat nF.toNat (decI rs) guards cvCa fe) a
       (fun v x a' => TblPost dn m a v.1 x v.2 a') := by
-  obtain ⟨w, hw, hwl, hwd⟩ := sumTypeWord (DecB.get (OMono.decCVp _) hcv) hS.iw.2.2.2.1
+  obtain ⟨w, hw, hwl, hwd⟩ := sumTypeWord (DecB.get (OMono.decCVp _) hcv) hS.iw.erSize
   rw [tblE.arm1, hw]
   rw [← hwd] at hcty
   unfold checkStructProjTable
@@ -691,7 +691,7 @@ theorem cto_ref {p : Prog} (hP : TabsProg p) (hp : ApdF p) (n : Nat) (hn : n ≤
   have hb := nPnF_bound hg0
   rw [UInt64.toNat_ofNat_of_lt' hnpb, UInt64.toNat_ofNat_of_lt' hnFb] at hb
   obtain ⟨w, hwT, hwl, hwd⟩ := sumTypeWord (q := UInt64.ofNat cvp)
-    (by rw [UInt64.toNat_ofNat_of_lt' hcvb]; exact DecB.get (OMono.decCVp _) hcv) hS.iw.2.2.2.1
+    (by rw [UInt64.toNat_ofNat_of_lt' hcvb]; exact DecB.get (OMono.decCVp _) hcv) hS.iw.erSize
   rw [hwT]
   unfold tabOne
   -- `struct_proj_guards`

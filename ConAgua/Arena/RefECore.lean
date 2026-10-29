@@ -64,7 +64,7 @@ theorem CoreRef.post {α : Type} [Inhabited α] {T : AM α} {a₀ : AState}
     (h : CoreRef T a₀ dec dn m₀ vis fe M eb r m ok) :
     T.run a₀ = .ok (AM.res T a₀, AM.st T a₀) ∧
       CorePost dec dn m₀ vis fe M eb ok (r, m) (AM.res T a₀) (AM.st T a₀) :=
-  ⟨AM.run_of_ok _ _ h.run, h.after, h.res, h.post⟩
+  ⟨AM.run_of_ok _ _ h.run, h.after, h.res, h.resOk⟩
 
 /-- A leaf: the twin returns at the start's state, the relation holds there. -/
 theorem CorePost.ret {α : Type} {dec : List Word → α} {dn : NIdx → Option ConLeche.Name} {m : Mem}
@@ -172,7 +172,7 @@ theorem RefE.bind_callE {α β γ : Type} [Inhabited γ] {G : Prop} {p : Prog} {
   · rw [hx]
     exact RefE.bind_left fun hG => CoreSpecE.of_callE (herr hG) c
   have h1 := CoreSpec.of_callW hok (callW_of_callE c)
-  exact RefE.bind_right (by rw [AM.run_of_ok _ _ h1.1, h1.2.2.1]) (h r m' c h1)
+  exact RefE.bind_right (by rw [AM.run_of_ok _ _ h1.run, h1.res]) (h r m' c h1)
 
 /-- **A unified core callee, then the rest**, both outcomes: the callee's model value `x` against
 its twin `T₁` (`h₁`, under its own `G'`), the caller's model `K x` passing the callee's errors on

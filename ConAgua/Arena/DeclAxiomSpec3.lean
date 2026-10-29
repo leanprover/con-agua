@@ -234,7 +234,7 @@ theorem fpW_ok {p : Prog} (h : StdProg p) {dn : NIdx → Option ConLeche.Name} {
   obtain ⟨ci, hci⟩ := envR_row_dec hS.check.env nm hnm htag hrc
   rw [hptr] at hW
   generalize hq : rowP m1 nm = q at hW hci hfind
-  have hsz := hS.iw.2.2.2.1
+  have hsz := hS.iw.erSize
   have hciA : decCI (m1.arr64 EREC) dn q.toNat = some ci := ArrExt.decCI (erecP_ext m1) hci
   have hbind : (fe.find? (decI nm)).bind (fpShape k ca cb) = fpShape k ca cb ci := by
     rw [hfind, hci]; rfl

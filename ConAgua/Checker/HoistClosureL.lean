@@ -140,14 +140,14 @@ theorem HEnv.frameA {m m' : Mem} {a : AState} {ds : Array IDeclaration} {idx : S
   refine ⟨ArenaR.frame_ext [IW] [200] hA hC m m' hf.fr a hE.arena,
     ⟨s, memoRG_frame hsSch hsSch_wf bmKey _ [IW] [200] (by decide) (by decide) m m' hf.fr _ hs⟩,
     ?_, hE.size, hE.c60, ?_, hE.nixlt, hE.rg1, hE.rg2, by rw [hsz]; exact hE.rg3,
-    by rw [hsz]; exact hE.isz, Nat.le_trans hE.top hf.grow.1, hf.ok⟩
+    by rw [hsz]; exact hE.isz, Nat.le_trans hE.top hf.grow.iw, hf.ok⟩
   · intro k hk
     have hk' : k < c := hE.size ▸ hk
     have hn : (ord + UInt64.ofNat k).toNat = ord.toNat + k :=
       addW_toNat ord k (by have := hE.rg1; have := hE.rg2; have := hE.rg3; have := hE.isz; omega)
     have hr : rdW (m'.arr64 IW) (ord + UInt64.ofNat k) = rdW (m.arr64 IW) (ord + UInt64.ofNat k) := by
       simp only [rdW, hn]
-      rw [hf.grow.2.2.1 _ (by have := hE.rg1; have := hE.rg2; have := hE.top; omega)]
+      rw [hf.grow.iwGet _ (by have := hE.rg1; have := hE.rg2; have := hE.top; omega)]
     rw [hr, hDECL, hDLP]
     exact hE.ordR k hk
   · exact memoRV_frame hnSch hnSch_wf nmKey _ [IW] [200] (by decide) (by decide) m m' hf.fr

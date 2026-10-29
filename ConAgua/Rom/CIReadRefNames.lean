@@ -292,7 +292,7 @@ theorem nameSl_rel {m₀ : Mem} {a₀ : AState} {T : Nat} (seen : List ConLeche.
   have hM1 := hM.frameG hf1 (by simp) (by decide)
   have hs1 : stkTop m1 = stkTop m := hf1.ctl 131 (by decide)
   have hlt := hI.er_lt
-  have hgo := hI.grow.2.1
+  have hgo := hI.grow.er
   have hd1 : (d + 1).toNat = d.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
   have hI2 := (hI1.setER d (r1.headD 0) hd0).setER (d + 1) (UInt64.ofNat ns.length) (by omega)
   have hfA := (MemFrame.set64 m1 EREC (by decide) d (r1.headD 0)).trans

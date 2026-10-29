@@ -522,7 +522,7 @@ theorem ntW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis C : Word) 
   have hk3 : nat? (erecP m) ciq.toNat = some 3 := by
     have : (erecP m)[ciq.toNat]? = (m.arr64 EREC)[ciq.toNat]? := erecP_getE (by omega)
     simp only [nat?, this]
-    have hb : ciq.toNat < (m.arr64 EREC).size := by have := hS.iw.2.1; omega
+    have hb : ciq.toNat < (m.arr64 EREC).size := by have := hS.iw.er; omega
     have : rdW (m.arr64 EREC) ciq = 3 := by simpa using h3
     simp [rdW, hb] at this ⊢; rw [this]; rfl
   obtain ⟨cv, caps, rfl, hcaps⟩ := decCI_kind3 hci hk3
@@ -530,7 +530,7 @@ theorem ntW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis C : Word) 
   simp only [hlist?, Option.bind_eq_bind, Option.bind_eq_some_iff] at hcts
   obtain ⟨o, ho, l, hl, hns⟩ := hcts
   have hlI := nat?_idx hl
-  have hb : ciq.toNat + 5 + 13 + 1 < 2 ^ 64 := by have := hS.iw.2.2.2.1; have := hS.iw.2.1; omega
+  have hb : ciq.toNat + 5 + 13 + 1 < 2 ^ 64 := by have := hS.iw.erSize; have := hS.iw.er; omega
   have e13 : (ciq + 5 + 13).toNat = ciq.toNat + 5 + 13 := by
     rw [word_add_toNat (by simp; omega), word_add_toNat (by simp; omega)]; rfl
   have e14 : (ciq + 5 + 14).toNat = ciq.toNat + 5 + 13 + 1 := by

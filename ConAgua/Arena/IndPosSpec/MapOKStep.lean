@@ -338,7 +338,7 @@ theorem rootOK (m m' : Mem) (a : AState) (ctx i : Word) (c : NestCtx) (prog : Li
     (hb : c.nP + c.names.length < 2 ^ 64) (hR : RfInv m M G g) :
     ∃ x a', (ConRon.Arena.nestHoleImg c prog 0 i.toNat).run a = .ok (x, a') ∧ OptE r0 r1 x ∧
       RxPost dn fe vis m m' a' M G g := by
-  have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.1 hS.iw.2.2.1
+  have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.iw hS.iw.iwSize
   obtain ⟨hn, hn', hpa, hpa', hnP, hlvH, hlv, -, -, h11⟩ := ctx_fields hc hin htop
   have hlen := decHL_length m hn
   have hhi : (hiW m ctx 0).toNat = c.nP + c.names.length := by
@@ -511,7 +511,7 @@ theorem frameTail (n : Nat) (hDs : DsOK dn fe vis n) (mh m' : Mem) (a : AState) 
         let r ← mkAppN hd ds
         pure (some r) : AM (Option EIdx)).run a = .ok (x, a') ∧ OptE r0 r1 x ∧
       RxPost dn fe vis mh m' a' M G g := by
-  have htop : iwTop mh < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.1 hS.iw.2.2.1
+  have htop : iwTop mh < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.iw hS.iw.iwSize
   obtain ⟨k, hk0, hkey⟩ := decNH_fields hh
   have hrk : (rdW (mh.arr64 IW) h).toNat = k := rdIW0 hk0
   have hNK := hhin.2.2 k hk0

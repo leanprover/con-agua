@@ -554,7 +554,7 @@ theorem cvNew_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEn
   have hc2 : (cq + 2).toNat = cq.toNat + 2 := by rw [UInt64.toNat_add]; simp; omega
   have hlow : ∀ i < erTop m, ((wrER m1 q1 [rdW (m.arr64 EREC) cq,
       rdW (m.arr64 EREC) (cq + 1), rdW (m.arr64 EREC) (cq + 2), ty]).arr64 EREC)[i]? =
-      (m.arr64 EREC)[i]? := fun i hi => hg.2.2.2 i hi
+      (m.arr64 EREC)[i]? := fun i hi => hg.erGet i hi
   refine decCV_copy (erTop m) hcv ?_ ?_ ?_ ?_ hty hlow hsl
   · have := hget 0 (by simp); simp only [Nat.add_zero] at this
     simp only [erA]; rw [this]; have := hw 0 cq (by decide) (by simp); simp only [Nat.add_zero] at this

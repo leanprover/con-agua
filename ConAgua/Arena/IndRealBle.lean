@@ -150,7 +150,7 @@ theorem bleW_ok {p : Prog} (P : BleProg p) {n : Nat} {m m' : Mem} {a : AState} {
   have hT : iwTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 200).toNat_lt
   obtain ⟨hdec, hq9, -⟩ := partsShapeFacts hq hsrc
   obtain ⟨-, -, hrs32, hrse⟩ := partsShapeWords (IWGrow.refl m) hq hq9
-  have hsz : (m.arr64 IW).size < 2 ^ 64 := hS.iw.2.2.1
+  have hsz : (m.arr64 IW).size < 2 ^ 64 := hS.iw.iwSize
   unfold bleW at h
   obtain ⟨⟨r1, m1⟩, c1, h⟩ := of_K h rfl
   obtain ⟨s1, hs1, -, hm1, hnz⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)

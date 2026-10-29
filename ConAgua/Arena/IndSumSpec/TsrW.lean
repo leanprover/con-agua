@@ -302,8 +302,8 @@ theorem rmRec_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEn
     simp only [bool?, Option.map_eq_some_iff] at h10
     obtain ⟨v, hv, -⟩ := h10
     exact erecP_lt hv
-  have hEt : erTop m ≤ (m.arr64 EREC).size := hS.iw.2.1
-  have hEs : (m.arr64 EREC).size < 2 ^ 64 := hS.iw.2.2.2.1
+  have hEt : erTop m ≤ (m.arr64 EREC).size := hS.iw.er
+  have hEs : (m.arr64 EREC).size < 2 ^ 64 := hS.iw.erSize
   have hE1 : m1.arr64 EREC = m.arr64 EREC := by rw [erAllocW_mem h]; exact erAllocMem_arr _ _ (by decide)
   have hc : ∀ k : Nat, k ≤ 10 → (old + UInt64.ofNat k).toNat = old.toNat + k := fun k hk => by
     rw [UInt64.toNat_add]; simp; omega
@@ -559,7 +559,7 @@ theorem tsrW_ok (n : Nat) {m m' : Mem} {a : AState} {cv rP M rhso rhsl : Word} {
   obtain _ | n := n
   · simp [tsrW] at h
   rw [tsrW.arm1] at h
-  have hsz := hS.iw.2.2.1
+  have hsz := hS.iw.iwSize
   have hM0 : decTM (truncM m) M.toNat = some TM := hM
   -- the constructors' slice, the parameter count, the member word
   have hT := hM0

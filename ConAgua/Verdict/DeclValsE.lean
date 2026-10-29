@@ -142,7 +142,7 @@ theorem dv_ref {p : Prog} (hq : KnotStageProg p) (hp : ValProg p) (hap : ApdF p)
       (fun w y a' => DvPost dn m (fe.push ci) w y a') := by
   obtain ⟨wv, hwv, hwvl, rfl⟩ := hd?_some hv
   obtain ⟨wt, hwt, hwtl, hty⟩ := decCV_typeW hcv
-  have hcb : c.toNat + 5 < 2 ^ 64 := erecP_bound hwv hS.stage.2
+  have hcb : c.toNat + 5 < 2 ^ 64 := erecP_bound hwv hS.stage.iw
   have ev : rdW (m.arr64 EREC) (c + 5) = wv :=
     rdW_of_get? (toNat_add_small c 5 (by omega)).symm (erecP_get hwv)
   have et : rdW (m.arr64 EREC) (c + 4) = wt :=
@@ -230,7 +230,7 @@ theorem ov_ref {p : Prog} (hq : KnotStageProg p) (hp : ValProg p) (hap : ApdF p)
       (fun w y a' => DvPost dn m (fe.push ci) w y a') := by
   obtain ⟨wv, hwv, hwvl, rfl⟩ := hd?_some hv
   obtain ⟨wt, hwt, hwtl, hty⟩ := decCV_typeW hcv
-  have hcb : c.toNat + 5 < 2 ^ 64 := erecP_bound hwv hS.stage.2
+  have hcb : c.toNat + 5 < 2 ^ 64 := erecP_bound hwv hS.stage.iw
   have ev : rdW (m.arr64 EREC) (c + 5) = wv :=
     rdW_of_get? (toNat_add_small c 5 (by omega)).symm (erecP_get hwv)
   have et : rdW (m.arr64 EREC) (c + 4) = wt :=

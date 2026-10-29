@@ -279,7 +279,7 @@ theorem iisr_ref (hP : IdxProg p) (pp : Word) (bs : BlockShape) {bsP : ConLeche.
   rcases h3 : consW n m2 w1 (r2.headD 0) (r2.tail.headD 0) with _ | ⟨r3, m3⟩
   · rw [liftE_none, iisrE.k_sl_cons.none]; exact RefE.of_cls0 (by simp)
   rw [liftE_some, iisrE.k_sl_cons.arm1]
-  obtain ⟨hS3, hg3, hd3, htop3⟩ := partsConsPL decIS_mono h3 hR2.stage.stage hR2.sorts.2 hR2.sorts.1
+  obtain ⟨hS3, hg3, hd3, htop3⟩ := partsConsPL decIS_mono h3 hR2.stage.stage hR2.sorts.bound hR2.sorts.dec
     (hR1.sorts.grow (decIS_mono _) hR2.grow)
   have hA3 : AbsOK m3 := consW_afr h3 hR2.abs
   exact RefE.ret rfl ⟨hR2.stage.of_pstep hS3 hA3 (PStep.refl hR2.stage.check.state),

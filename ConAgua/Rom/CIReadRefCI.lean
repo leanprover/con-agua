@@ -81,7 +81,7 @@ theorem ciPre {m₀ : Mem} {a₀ : AState} {T : Nat} (seen : List ConLeche.Expr)
   rw [e0, hsz] at hw
   simp only at hw
   have hlt := hI.er_lt
-  have hgo := hI.grow.2.1
+  have hgo := hI.grow.er
   have hrom := hr; simp only [RomOK] at hrom
   obtain ⟨r1, m1, h1, hw⟩ := ntBW_inv hw
   obtain ⟨hI1, ho1, ht1, hE1, hIW1, -⟩ := hI.erAlloc (erAllocCall hL h1)
@@ -200,7 +200,7 @@ theorem ci_ctor {m₀ : Mem} {a₀ : AState} {T : Nat} (dn : NIdx → Option Con
   simp only [bW_some, Option.some.injEq, Prod.mk.injEq] at hw
   obtain ⟨rfl, rfl⟩ := hw
   have hlt := hI2.er_lt
-  have hgo := hI.grow.2.1
+  have hgo := hI.grow.er
   have hp5 : (pp + 5).toNat = pp.toNat + 5 := by
     rw [UInt64.toNat_add, show (5 : Word).toNat = 5 from rfl]; exact Nat.mod_eq_of_lt (by omega)
   have hp6 : (pp + 6).toNat = pp.toNat + 6 := by
@@ -260,7 +260,7 @@ theorem ci_ind {m₀ : Mem} {a₀ : AState} {T : Nat} (dn : NIdx → Option ConL
   simp only [Option.some.injEq, Prod.mk.injEq] at hw
   obtain ⟨rfl, rfl⟩ := hw
   have hlt := hI2.er_lt
-  have hgo := hI.grow.2.1
+  have hgo := hI.grow.er
   have hp5 : (pp + 5).toNat = pp.toNat + 5 := by
     rw [UInt64.toNat_add, show (5 : Word).toNat = 5 from rfl]; exact Nat.mod_eq_of_lt (by omega)
   obtain ⟨ic, a3, hrun3, hI3, hM3, hs3, hq3, hek3, ht3, hIW3, hH3⟩ :=
@@ -320,7 +320,7 @@ theorem ci_rec {m₀ : Mem} {a₀ : AState} {T : Nat} (dn : NIdx → Option ConL
     (by rw [hd2]; repeat rw [List.append_assoc]) (by simp [u64B]) (by omega)
   rw [e1, e2, e3] at hw
   have hlt := hI2.er_lt
-  have hgo := hI.grow.2.1
+  have hgo := hI.grow.er
   have hrom := hr; simp only [RomOK] at hrom
   have hpk : ∀ j : Nat, j < 9 → (pp + UInt64.ofNat j).toNat = pp.toNat + j := fun j hj => by
     rw [UInt64.toNat_add, UInt64.toNat_ofNat', Nat.mod_eq_of_lt (a := j) (by omega)]

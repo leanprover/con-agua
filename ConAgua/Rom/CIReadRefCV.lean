@@ -94,7 +94,7 @@ theorem cv_rel {m₀ : Mem} {a₀ : AState} {T : Nat} (seen : List ConLeche.Expr
   have hM1 := hM.frameG hf1 (by decide) (by decide)
   have hs1 : stkTop m1 = stkTop m := hf1.ctl 131 (by decide)
   have hlt := hI.er_lt
-  have hgo := hI.grow.2.1
+  have hgo := hI.grow.er
   -- the name word
   obtain ⟨hI2, hM2, hs2, ht2, hIW2⟩ := setER_facts hI1 hM1 pp (r1.headD 0) hp0
   have hsz1 : erTop m1 ≤ (m1.arr64 EREC).size := hI1.ok.2.1

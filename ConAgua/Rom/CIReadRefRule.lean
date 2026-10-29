@@ -98,7 +98,7 @@ theorem rule_rel {m₀ : Mem} {a₀ : AState} {T : Nat} (seen : List ConLeche.Ex
   obtain ⟨hdeq, hseen⟩ := encRule_eq seen rl hp rest
   have hd' := hd.trans hdeq
   have hlt := hI.er_lt
-  have hgo := hI.grow.2.1
+  have hgo := hI.grow.er
   have hrom := hr; simp only [RomOK] at hrom
   have hc1 : (rr + 1).toNat = rr.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
   have hc2 : (rr + 2).toNat = rr.toNat + 2 := by rw [UInt64.toNat_add]; simp; omega

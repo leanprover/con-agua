@@ -251,7 +251,7 @@ theorem caps_rel {m₀ : Mem} {a₀ : AState} {T : Nat} (dn : NIdx → Option Co
   have hd' := hd.trans (encCaps_eq caps rest)
   simp only [bw] at hd'
   have hlt := hI.er_lt
-  have hgo := hI.grow.2.1
+  have hgo := hI.grow.er
   have hrom := hr; simp only [RomOK] at hrom
   have hlen := drop_len rom q.toNat (u64B (if caps.eta then 1 else 0)) _ hd' (by simp [u64B])
   simp only [u64B, List.length_cons, List.length_nil] at hlen

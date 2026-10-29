@@ -64,7 +64,7 @@ theorem piBW_cwf {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
       (rs.getD 2 0).toNat < 2 ^ 32 ∧ decE (rs.getD 2 0) = e ∧
       StageR dn vis fe m' a ∧ IWGrow m m' ∧ (rs.headD 0).toNat + (rs.getD 1 0).toNat ≤ iwTop m' := by
   obtain ⟨bs, e, hrun, -, hdec, hb1, hb2, hg, -, hle⟩ :=
-    piBW_ok n m m' a CWF h rs hS.check.arena.base hpb hh hS.iw.2.2.1 hS.iw.2.2.2.2
+    piBW_ok n m m' a CWF h rs hS.check.arena.base hpb hh hS.iw.iwSize hS.iw.ctl
   rw [CWF_eq] at hrun
   exact ⟨bs, e, hrun, hdec, hb1, hb2, piBW_stage n m m' a CWF h rs hpb hS hh, hg, hle⟩
 
