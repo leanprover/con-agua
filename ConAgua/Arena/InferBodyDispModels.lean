@@ -1,3 +1,4 @@
+import ConAgua.Arena.Verdict
 import ConAgua.Arena.Infer
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr

@@ -46,6 +46,7 @@ ConAgua/Arena/IndT/KeepC.lean	public import ConAgua.Arena.Reasons	# a constant t
 ConAgua/Arena/Infer.lean	public import ConAgua.Arena.WhnfBase	# the build needs it: the array names moved to ConAgua.Layout, its other names (L notation, the stores) still come through it
 ConAgua/Arena/InferBodyBind.lean	public import ConAgua.Arena.WhnfCoreApp	# a constant the module uses (an auxiliary realized in several modules: the tool names another copy)
 ConAgua/Arena/InferBodyBind.lean	public import ConAgua.Arena.WhnfCoreRefine	# a constant the module uses (an auxiliary realized in several modules: the tool names another copy)
+ConAgua/Arena/InferBodyDispModels.lean	public import ConAgua.Arena.Verdict	# the build needs it: `ld64_rdW_specE` in the `l_model`s' `extra`, named only in their generated proofs
 ConAgua/Arena/InferBodyIntern.lean	public import ConAgua.Arena.WhnfCoreApp	# the build needs it (a name the tool does not attribute: a command reads it, or an auxiliary realized in several modules)
 ConAgua/Arena/InferBodySpine.lean	public import ConAgua.Arena.WhnfCoreApp	# a constant the module uses (an auxiliary realized in several modules: the tool names another copy)
 ConAgua/Arena/InferBodySpine.lean	public import ConAgua.Arena.WhnfCoreRefine	# a constant the module uses (an auxiliary realized in several modules: the tool names another copy)
