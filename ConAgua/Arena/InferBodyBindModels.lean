@@ -39,7 +39,7 @@ l_model ilsE_spec (p : Prog) (hf : p.lookup "infer_lams" = some inferLamsL)
   specs [callW_spec p n "inst_list", callW_spec p n "intern_fvar"]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
-  heartbeats 400000 simp [tierW, idxW] unified
+  heartbeats 400000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 /-- `infer_lam`'s unified model: the slots and `infer_lams` through their runs, the binder's free
@@ -49,7 +49,7 @@ l_model ilmE_spec (p : Prog) (hf : p.lookup "infer_lam" = some inferLamL)
   specs [callW_spec p n "intern_fvar"]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
-  heartbeats 400000 simp [tierW, idxW] unified
+  heartbeats 400000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 end L.Arena

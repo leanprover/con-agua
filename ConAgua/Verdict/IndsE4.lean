@@ -34,7 +34,7 @@ l_model cbaoE_spec (p : Prog) (hf : p.lookup "check_block_agree_one" = some chec
   fns [hf ↦ cbaoE]
   specs [callW_spec p n "open_pis_at_fvars_f", callW_spec p n "fvar_type_ds", lefE_spec p hl n]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [rdW] unified
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 /-- What the agreements leave: the stage relation, the growth, the absence of stale records, the

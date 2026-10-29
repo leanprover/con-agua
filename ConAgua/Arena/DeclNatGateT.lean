@@ -73,7 +73,7 @@ run. -/
 l_model certifyNatEqs_specE (p : Prog) (hf : p.lookup "certify_nat_eqs" = some certifyNatEqsL)
   fns [hf ↦ certifyNatEqsE] grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
-  heartbeats 400000 simp [] unified
+  heartbeats 400000 unified
 
 /-- What `certify_nat_eqs` gives besides the twin's answer `x` (from `m`): `StageT` after, the
 growth, the result word decoding `x`. -/
@@ -191,7 +191,7 @@ l_model defnNatCert_specE (p : Prog) (hf : p.lookup "defn_nat_cert" = some defnN
     callW_spec p n "subst_const0_pairs"]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
-  heartbeats 400000 simp [] unified
+  heartbeats 400000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 /-- **The model of `defn_nat_gate`, both outcomes**: the leaves through their `Option` models,
@@ -203,7 +203,7 @@ l_model defnNatGate_specE (p : Prog) (hf : p.lookup "defn_nat_gate" = some defnN
     callW_spec p n "nat_op_deps", callW_spec p n "nat_op_stored_ok_all", defnNatCert_specE p hc n]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
-  heartbeats 400000 simp [] unified
+  heartbeats 400000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 section gate

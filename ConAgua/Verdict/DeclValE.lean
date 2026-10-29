@@ -59,7 +59,7 @@ l_model installValueGuards_specE (p : Prog) (hP : CvgProg p)
   specs [cvLps_specW p hP.alloc hP.copy hP.eti hP.lps n, lbbF_spec p hP.bvb n, hffF_spec p hP.hf n]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
-  heartbeats 400000 simp [] locals unified
+  heartbeats 400000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 /-- What `install_value_guards` gives besides the twin's run: the stage, the growth, the memo. -/
@@ -209,7 +209,7 @@ l_model checkThmVal_specE (p : Prog) (hV : ValProg p)
   specs [pinWord_specW p hV.cvg.pin n, callW_spec p n "env_push"]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
-  heartbeats 400000 simp [] unified
+  heartbeats 400000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 /-- What `check_thm_val`'s error arms assume: the core stubs' and `install_value_guards`' claims,
@@ -418,7 +418,7 @@ l_model checkValueGroup_specE (p : Prog) (hP : CvgProg p)
   specs [iwReset_specW p hP.reset n, pinWord_specW p hP.pin n, callW_spec p n "lvl_eq_c"]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
-  simp [] locals unified
+  unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 /-- What `check_value_group`'s error claims assume: the core stubs' and `install_value_guards`'

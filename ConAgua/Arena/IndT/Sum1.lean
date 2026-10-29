@@ -49,7 +49,7 @@ l_model wtE_spec (p : Prog) (hP : WtProg p)
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
   heartbeats 4000000 unified
-  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem] flat
+  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 /-- What `whnf_telescope`'s error arms assume: the no-verdict callees closed, `whnf_top`'s claim
 (`WhnfTopE`, from the error knot). -/

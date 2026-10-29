@@ -50,7 +50,7 @@ l_model viNpGo_specE (p : Prog) (hf : p.lookup "vi_np_go" = some viNpGo)
 l_model viCtor_specE (p : Prog) (hL : IndApplyLookups p)
   fns [hL.vi_ctor ↦ viCtorE]
   specs [findLast_spec p hL n, nameGetL_spec p hL n, exprGetL_spec p hL n, tele_spec p hL n]
-  grind [arena_grind] extra [L.Arena.ld64_rdW_specE] simp []
+  grind [arena_grind] extra [L.Arena.ld64_rdW_specE]
   unified nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 l_model recIdx_specE (p : Prog) (hL : IndApplyLookups p)

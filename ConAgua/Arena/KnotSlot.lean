@@ -677,7 +677,7 @@ theorem knot_defeqE_plainE (mode : ConLeche.CheckMode) (fe : IFEnv) (F d : Nat) 
 /-- **`defeq_e`'s unified model**: the `defeq` slot at the mode word with bit 1 set, through its
 run. -/
 l_model deE_spec (p : Prog) (hf : p.lookup "defeq_e" = some defeqESlotL)
-  fns [hf ↦ deE list] grind [arena_grind] simp [] unified
+  fns [hf ↦ deE list] grind [arena_grind] unified
 
 section eager
 variable (p : Prog) (hp : KnotProg p)

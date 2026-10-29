@@ -37,7 +37,7 @@ l_model csrE_spec (p : Prog) (hV : ValProg p) (ha : p.lookup "iw_alloc" = some i
   specs [checkConstantVal_specE p hV n, slCons_specW p ha hc hsc n]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
-  heartbeats 4000000 simp [Cmp.evalW, Cmp.eval] unified
+  heartbeats 4000000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 /-- What `class_stream_recs` gives besides the twin's run: the stage, the growth, the result slice

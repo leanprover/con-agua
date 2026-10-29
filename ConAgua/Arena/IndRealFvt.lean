@@ -531,7 +531,7 @@ l_model gaaAd_spec (p : Prog) (hp : p.lookup "get_app_args_f" = some getAppArgsF
     (ha : p.lookup "iw_alloc" = some iwAlloc) (hs : p.lookup "spn_to_iw" = some spnToIwL)
   fns [hp ↦ gaaAdW]
   specs [callW_spec p n "get_app_args", iwAlloc_specW p ha n, s2i_spec p hs n]
-  grind [arena_grind] bind ntBW simp [CWF]
+  grind [arena_grind] bind ntBW
 
 /-- `get_app_args_f` and its callees. -/
 def gaaProg : Prog :=

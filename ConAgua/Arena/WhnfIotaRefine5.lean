@@ -213,7 +213,7 @@ l_model icfE_spec (p : Prog) (hp : IotaProg4 p)
   specs [callW_spec p n "inst_list", callW_spec p n "iota_certs_full_parts", callW_spec p n "spn_get",
     callW_spec p n "expr_view_ok", callW_spec p n "ctl_get"]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] unified
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 /-! ### The twin, by arms -/

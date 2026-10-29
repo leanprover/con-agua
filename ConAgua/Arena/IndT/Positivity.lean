@@ -228,7 +228,7 @@ l_model cbpE_spec (p : Prog) (hP : PosBlkProg p)
     callW_spec p n "check_block_positivity_init", nrtE_spec p hP.rs n, callW_spec p n "pin_word",
     callW_spec p n "lvl_eq_true", callW_spec p n "check_block_positivity_nfs"]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] unified
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 /-- What `check_block_positivity` gives besides the twin's kinds, normal forms and walk state `x`

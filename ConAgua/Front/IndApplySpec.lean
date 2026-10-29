@@ -78,7 +78,7 @@ def addK (x : Word) : Option Word → Option Word
 
 l_model ctlSum_spec (p : Prog) (hL : IndApplyLookups p)
   fns [hL.ctl_sum ↦ ctlSumW ro]
-  grind [arena_grind] extra [ld64_rd_spec] simp []
+  grind [arena_grind] extra [ld64_rd_spec]
 
 /-- After the three sums. -/
 def sfK (a b c : Option Word) : Option Word :=
@@ -114,7 +114,7 @@ end
 l_model piRes_spec (p : Prog) (hL : IndApplyLookups p)
   fns [hL.pi_result_d ↦ piResW ro]
   specs [eView_spec p hL.e_view n]
-  grind [arena_grind] extra [ld64_rd_spec] simp []
+  grind [arena_grind] extra [ld64_rd_spec]
 
 /-- After `ind_pi_tele_len`'s recursive call. -/
 def teleK : Option Word → Option Word
@@ -396,7 +396,7 @@ theorem nameGetL_spec (p : Prog) (hL : IndApplyLookups p) (n : Nat) (s₀ : St) 
 l_model idsGo_spec (p : Prog) (hL : IndApplyLookups p)
   fns [hL.vi_ids_go ↦ idsGoW void]
   specs [nameGetL_spec p hL n, iflPush_spec p hL.ifl_alloc hL.ifl_push n]
-  grind [arena_grind] simp []
+  grind [arena_grind]
 
 /-- After a call that returns only its memory: the rest. -/
 def mK {α : Type} (rest : Mem → Option α) : Option Mem → Option α
@@ -410,7 +410,7 @@ def mK {α : Type} (rest : Mem → Option α) : Option Mem → Option α
 l_model listedGo_spec (p : Prog) (hL : IndApplyLookups p)
   fns [hL.vi_listed_go ↦ listedGoW void]
   specs [idsGo_spec p hL n]
-  grind [arena_grind] simp []
+  grind [arena_grind]
 
 /-- After `vi_listed_go`: the slice from `lo` to the top. -/
 def listedK (lo : Word) : Option Mem → Option ((Word × Word) × Mem)

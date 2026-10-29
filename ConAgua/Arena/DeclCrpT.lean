@@ -428,7 +428,7 @@ l_model checkDeclOpaque_specE (p : Prog)
   (hf : p.lookup "check_decl_opaque" = some checkDeclOpaque)
   fns [hf ↦ checkDeclOpaqueE] grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
-  heartbeats 400000 simp [] unified
+  heartbeats 400000 unified
 
 /-- **The opaque arm refines `checkDecl`, both outcomes**, under `StageT` (con-ron's
 `checkDecl_bridge_opaque`): the constant check and the value check (`ccv_ref`, `ov_ref`), then for

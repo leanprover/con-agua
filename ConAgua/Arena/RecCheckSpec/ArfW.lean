@@ -42,7 +42,7 @@ l_model auxRuleFire_spec (p : Prog) (h : ArfLook p)
   fns [h.arf ↦ arfW]
   specs [viewLs_specW p h.ln h.alloc h.pc h.vl n,
     abstractPrefixList_spec p h.ap h.copy h.alloc h.cons h.apl h.ab n]
-  grind [arena_grind] simp [rdW_eq]
+  grind [arena_grind]
 
 theorem poolCopyW_iwFrame : ∀ (n : Nat) (m m' : Mem) (d s l : Word), poolCopyW n m d s l = some m' →
     MemFrame [IW] [200] m m'

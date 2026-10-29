@@ -169,7 +169,7 @@ l_model installBasisDecl_specE (p : Prog) (hB : BasisProg p)
   specs [envFind_specW p hB.ih.ix hB.ih.rowGet hB.ih.find n, callW_spec p n "env_push"]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
-  heartbeats 400000 simp [] unified
+  heartbeats 400000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 end models
@@ -244,7 +244,7 @@ l_model installBasisDecls_specE (p : Prog) (hB : BasisProg p)
   specs [installBasisDecl_specE p hB n]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
-  heartbeats 400000 simp [] unified
+  heartbeats 400000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 /-- **`install_basis_decls` refines `installBasisDecls`, both outcomes**, by induction on the

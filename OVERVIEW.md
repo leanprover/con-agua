@@ -760,9 +760,9 @@ command reads a group of `lfn`s and produces the models, one guarded equation
 per arm for `grind`, and the specs with their proofs
 ([`ConAgua/L/ModelGen.lean`](https://github.com/leanprover/con-agua/blob/master/ConAgua/L/ModelGen.lean#L12-L65);
 204 uses). Two habits keep the proofs fast: facts are guarded equations about
-named functions (no `∃`, disjunction or `fun` in a postcondition), and a
-function with many paths is proved by plain `vcgen` followed by `simp_all` or
-`grind`, not by `finish` on every path.
+named functions (no `∃`, disjunction or `fun` in a postcondition), and each
+path is proved by plain `vcgen`, then `vc_flat` (the intermediate states out of
+the condition) and `grind`, not by `finish` on every path.
 
 ### 7.2 Relations and encapsulation
 

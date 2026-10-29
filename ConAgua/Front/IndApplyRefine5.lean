@@ -102,13 +102,13 @@ theorem ptr_rec (cts : List IndCtorRec) (co : Word) (k : Nat) (hk : k < cts.leng
 l_model viOrderIn_specE (p : Prog) (hL : IndApplyLookups p)
   fns [hL.vi_order_in ↦ viOrderInE]
   specs [viCtor_specE p hL n]
-  grind [arena_grind] extra [L.Arena.ld64_rdW_specE] simp []
+  grind [arena_grind] extra [L.Arena.ld64_rdW_specE]
   unified nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 l_model viOrderGo_specE (p : Prog) (hL : IndApplyLookups p)
   fns [hL.vi_order_go ↦ viOrderGoE]
   specs [viOrderIn_specE p hL n]
-  grind [arena_grind] extra [L.Arena.ld64_rdW_specE] simp []
+  grind [arena_grind] extra [L.Arena.ld64_rdW_specE]
   unified nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 

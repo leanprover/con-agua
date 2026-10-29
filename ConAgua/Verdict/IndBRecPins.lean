@@ -26,7 +26,7 @@ open L.Arena
 l_model trpE_spec (p : Prog) (hf : p.lookup "target_rec_pins" = some targetRecPins)
   fns [hf ↦ trpE] grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
-  heartbeats 4000000 simp [Cmp.evalW, Cmp.eval] unified
+  heartbeats 4000000 unified
 
 /-! ## The twin's four failing tests -/
 

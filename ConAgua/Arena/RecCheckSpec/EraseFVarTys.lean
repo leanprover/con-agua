@@ -195,7 +195,7 @@ end census
 l_model targetCtorsOf_spec (p : Prog) (hL : RcLook p)
   fns [hL.tco ↦ tcoW]
   specs [nt_spec' p hL.nt n]
-  grind [arena_grind] simp []
+  grind [arena_grind]
 
 theorem NcOut.tco {m : Mem} {r : List Word} {x : Option (Nat × List (IConstantVal × Nat))} (h : NcOut m r x) :
     NcOut m [r.headD 0, r.tail.headD 0, r.tail.tail.headD 0, r.tail.tail.tail.headD 0] x := by

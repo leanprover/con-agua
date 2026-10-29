@@ -25,7 +25,7 @@ open L.Arena
 l_model findSlot_spec (p : Prog) (h : RuProg p)
   fns [h.fs ↦ gfsW list]
   specs [findSlotGo_spec p h n]
-  grind [arena_grind] simp [rdW_eq]
+  grind [arena_grind]
 
 /-- **The model of `class_gen_rule`.** -/
 def ruW : Nat → Mem → Word → Word → Word → Word → Word → Word → Word → Word → Option (List Word × Mem)

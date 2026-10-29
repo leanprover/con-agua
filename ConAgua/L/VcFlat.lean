@@ -23,7 +23,7 @@ hypothesis, in every round.
 
 What is left are the memories, the callees' results, their equations and the path conditions;
 reads of locals of `⟨m, t.loc⟩` are reads of `t`, which `grind`'s normalizer resolves
-(`L.reduceLoc`, `LocNF.lean`). `l_model`'s `flat` recipe (`ModelGen.lean`) is `vcgen`, `vc_flat`,
+(`L.reduceLoc`, `LocNF.lean`). `l_model`'s steps (`ModelGen.lean`, without `simp [..]`) are `vcgen`, `vc_flat`,
 `grind`. (`simp only [L.reduceLoc, …] at *` after `vc_flat` costs several times more than before
 it: the substitutions unshare the nested states `vcgen` built.)
 -/

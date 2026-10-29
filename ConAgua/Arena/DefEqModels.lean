@@ -31,7 +31,7 @@ l_model siE_spec (p : Prog) (hf : p.lookup "stuck_irrel" = some stuckIrrelL)
   fns [hf ↦ siE list]
   specs [secE_spec p hc hw hb hg ht n, sucE_spec p hu hh hut n]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] unified
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 /-- **`stuck_str`'s model, both outcomes** (generated; the pins and the string-literal callees
@@ -51,7 +51,7 @@ l_model strE_spec (p : Prog) (hf : p.lookup "stuck_str" = some stuckStrL)
     callW_spec p n "str_lit_ctor", siE_spec p hi hc hw hb hg ht hu hh hut n]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] heartbeats 1000000
-  simp [] unified
+  unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 /-- **`defeq_body`'s model, both outcomes** (generated; `is_bool_true` and `has_fvar` lifted, the
@@ -60,7 +60,7 @@ l_model bodyE_spec (p : Prog) (hf : p.lookup "defeq_body" = some defeqBodyL)
   fns [hf ↦ bodyE list]
   specs [callW_spec p n "is_bool_true", callW_spec p n "has_fvar"]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] unified
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 end L.Arena

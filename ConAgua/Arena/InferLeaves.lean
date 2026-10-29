@@ -138,11 +138,11 @@ theorem ensureSortSpecE_of_knot (p : Prog) (hp : InferLeafProg p) :
 
 /-- **`infer_type_core`'s model, both outcomes**: the `infer` slot through its run. -/
 l_model itcE_spec (p : Prog) (hf : p.lookup "infer_type_core" = some inferTypeCoreL)
-  fns [hf ↦ itcE list] grind [arena_grind] simp [] unified
+  fns [hf ↦ itcE list] grind [arena_grind] unified
 
 /-- **`ensure_sort_core`'s model, both outcomes**: `ensure_sort` through its run. -/
 l_model escE_spec (p : Prog) (hf : p.lookup "ensure_sort_core" = some ensureSortCoreL)
-  fns [hf ↦ escE list] grind [arena_grind] simp [] unified
+  fns [hf ↦ escE list] grind [arena_grind] unified
 
 section entry
 variable (p : Prog) (hp : KnotEntryProg p)
@@ -237,7 +237,7 @@ through their runs. -/
 l_model daE_spec (p : Prog) (hf : p.lookup "defeq_arg" = some defeqArgL)
   fns [hf ↦ daE list]
   specs [callW_spec p n "is_eager_reduce"]
-  grind [arena_grind] simp [] unified
+  grind [arena_grind] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 /-- What the inference functions' error arms assume: the knot's error half at the callees' fuel

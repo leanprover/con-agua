@@ -46,20 +46,20 @@ theorem rec2IhParts_specF (p : Prog) (hp : p.lookup "class_gen_ih_parts" = some 
 l_model classGenMinorTyIh1Close_spec (p : Prog) (h : MnProg p)
   fns [h.icl ↦ iclW list]
   specs [ftdsF_spec p h.ad n, closeTelescope_spec p h.db h.ff h.fp h.ifa h.mkf h.ct h.ab n]
-  grind [arena_grind] simp []
+  grind [arena_grind]
 
 l_model classGenMinorTyIh1Tail_spec (p : Prog) (h : MnProg p)
   fns [h.it ↦ itW list]
   specs [rec2ExprGetD_specF p h.bf h.bp h.ib h.egd n, mknF_spec p h.ad n,
     rec2MotVar_specF p h.toMtProg h.fvf h.fvp h.ifv h.sv h.ms h.mv n,
     slSnoc_specW p h.alloc h.copy h.snoc n, classGenMinorTyIh1Close_spec p h n]
-  grind [arena_grind] simp []
+  grind [arena_grind]
 
 l_model classGenMinorTyIh1_spec (p : Prog) (h : MnProg p)
   fns [h.i1 ↦ i1W list]
   specs [rec2ExprGetD_specF p h.bf h.bp h.ib h.egd n, rec2IhParts_specF p h.ihp h.ad h.opf n,
     classGenMinorTyIh1Tail_spec p h n]
-  grind [arena_grind] simp []
+  grind [arena_grind]
 
 /-! ## `class_gen_minor_ty_ihs_go` -/
 
@@ -176,19 +176,19 @@ l_model classGenMinorTyClose_spec (p : Prog) (h : MnProg p)
   fns [h.mcl ↦ mcW list]
   specs [ftdsF_spec p h.ad n, slAppend_specW p h.alloc h.copy h.app n,
     closeTelescope_spec p h.db h.ff h.fp h.ifa h.mkf h.ct h.ab n]
-  grind [arena_grind] simp []
+  grind [arena_grind]
 
 l_model classGenMinorTyConcl2_spec (p : Prog) (h : MnProg p)
   fns [h.c2 ↦ c2W list]
   specs [rec2MotVar_specF p h.toMtProg h.fvf h.fvp h.ifv h.sv h.ms h.mv n,
     slSnoc_specW p h.alloc h.copy h.snoc n, mknF_spec p h.ad n, classGenMinorTyClose_spec p h n]
-  grind [arena_grind] simp []
+  grind [arena_grind]
 
 l_model classGenMinorTyConcl_spec (p : Prog) (h : MnProg p)
   fns [h.cc ↦ cW list]
   specs [gaaF_spec p h.ad n, internConst_spec p h.cf h.cp h.ic n,
     slAppend_specW p h.alloc h.copy h.app n, mknF_spec p h.ad n, classGenMinorTyConcl2_spec p h n]
-  grind [arena_grind] simp [rdW_eq]
+  grind [arena_grind]
 
 l_model classGenMinorTyBody_spec (p : Prog) (h : MnProg p)
   fns [h.bd ↦ bW list]

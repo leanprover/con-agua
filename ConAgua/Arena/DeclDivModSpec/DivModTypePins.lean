@@ -226,7 +226,7 @@ theorem decTP.grow {m m' : Mem} {r : List Word} {tps : List (NIdx × EIdx)} (h :
 l_model divModDeclPin_specW (p : Prog) (hp : p.lookup "div_mod_decl_pin" = some divModDeclPinL)
   fns [hp ↦ divModDeclPinW list]
   specs [callW_spec p n "div_mod_slot"]
-  grind [arena_grind] heartbeats 1600000 bind ntBW simp [ntBW, rdW_eq]
+  grind [arena_grind] heartbeats 1600000 bind ntBW
 
 theorem divModDeclPin_ref {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {p : Prog}
     (hD : DmProg1 p) (ps c : Word) (ip : INatOpPinSet) :
@@ -254,7 +254,7 @@ theorem divModDeclPin_ref {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe 
 l_model divModTypePins_specW (p : Prog) (hp : p.lookup "div_mod_type_pins" = some divModTypePinsL)
   fns [hp ↦ divModTypePinsW list]
   specs [callW_spec p n "div_mod_slot"]
-  grind [arena_grind] heartbeats 1600000 bind ntBW simp [ntBW, rdW_eq]
+  grind [arena_grind] heartbeats 1600000 bind ntBW
 
 theorem divModTypePins_ref {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {p : Prog}
     (hD : DmProg1 p) (ps c : Word) (ip : INatOpPinSet) :
@@ -316,7 +316,7 @@ theorem sliceR_hslice {m : Mem} {o l : Word} {hs : List EIdx} (h : SliceR m o l 
 l_model divModCertProofs_specW (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc) (hc : p.lookup "er_copy" = some erCopy) (he : p.lookup "er_to_iw" = some erToIw) (hp : p.lookup "div_mod_cert_proofs" = some divModCertProofsL)
   fns [hp ↦ divModCertProofsW list]
   specs [callW_spec p n "div_mod_slot", erToIw_specW p ha hc he n]
-  grind [arena_grind] heartbeats 1600000 bind ntBW simp [ntBW, rdW_eq]
+  grind [arena_grind] heartbeats 1600000 bind ntBW
 
 theorem divModCertProofs_ref {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {p : Prog}
     (hD : DmProg1 p) (ps c : Word) (ip : INatOpPinSet) :

@@ -67,7 +67,7 @@ def keyClosedTest (nP : Nat) (x : EIdx) : AM Bool := do
 l_model classFieldsOfHits_spec (p : Prog)
     (hp : p.lookup "class_fields_of_hits" = some classFieldsOfHits)
   fns [hp ↦ cfhW ro tuple]
-  grind [arena_grind] extra [ld64_rd_spec] simp []
+  grind [arena_grind] extra [ld64_rd_spec]
 
 /-- What `class_fields_of_hits` returns about the twin's `hits`: their count, and, when there is
 exactly one, its class. -/

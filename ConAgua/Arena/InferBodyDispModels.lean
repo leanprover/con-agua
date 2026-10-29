@@ -28,7 +28,7 @@ l_model ibE_spec (p : Prog) (hf : p.lookup "infer_body" = some inferBodyL)
   specs [callW_spec p n "e_view", callW_spec p n "intern_succ", callW_spec p n "intern_sort"]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
-  heartbeats 400000 simp [tierW, idxW] unified
+  heartbeats 400000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 /-- `infer_body_io`'s unified model. -/
@@ -38,7 +38,7 @@ l_model iboE_spec (p : Prog) (hf : p.lookup "infer_body_io" = some inferBodyIOL)
     callW_spec p n "inst1"]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
-  heartbeats 400000 simp [tierW, idxW] unified
+  heartbeats 400000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 end L.Arena

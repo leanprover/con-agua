@@ -213,7 +213,7 @@ theorem natOpCod_refines (hN : NatTyProg p) (c e : Word) :
 l_model natOpTyPinned_specW (p : Prog) (hp : p.lookup "nat_op_ty_pinned" = some natOpTyPinnedL)
   fns [hp ↦ natOpTyPinnedW list]
   specs [callW_spec p n "pin_at", callW_spec p n "const_e", callW_spec p n "e_view", callW_spec p n "nat_op_cod"]
-  grind [arena_grind] heartbeats 3200000 bind ntBW simp [ntBW]
+  grind [arena_grind] heartbeats 3200000 bind ntBW
 
 theorem getD2 (r : List Word) : r.getD 2 0 = r.tail.tail.headD 0 := by
   cases r with

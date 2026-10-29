@@ -59,7 +59,7 @@ def decPair (r : List Word) : EIdx × EIdx := (decE (r.headD 0), decE (r.tail.he
 l_model lamsInst_spec (p : Prog) (hp : LamsProg p)
   fns [hp.inst ↦ linW tuple]
   specs [callW_spec p n "intern_fvar", callW_spec p n "inst1"]
-  grind [arena_grind] simp []
+  grind [arena_grind]
 
 /-- **`lams_inst` refines `lamsInstT`.** -/
 theorem lamsInst_refines (p : Prog) (hp : LamsProg p) (hi : Inst1OK p) (n : Nat) (s₀ : St)
@@ -125,7 +125,7 @@ l_model loE_spec (p : Prog) (hf : p.lookup "lams_open" = some lamsOpenL)
   fns [hf ↦ loE list]
   specs [callW_spec p n "lams_inst"]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] unified
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 /-- **`lams_open` refines `lamsOpenT`, both outcomes**: the errors are the domains' `defeq` slot
@@ -169,7 +169,7 @@ theorem lo_ref (p : Prog) (hp : LamsProg p) (hi : Inst1OK p) (n : Nat)
 l_model lamPair_spec (p : Prog) (hp : LamsProg p)
   fns [hp.pair ↦ lpeelW tuple]
   specs [callW_spec p n "e_view"]
-  grind [arena_grind] simp [St.setLocs_mem']
+  grind [arena_grind]
 
 /-- `(f, ty1, body1, ty2, body2)`. -/
 def decLP (r : List Word) : Option (EIdx × EIdx × EIdx × EIdx) :=
@@ -296,7 +296,7 @@ theorem lamsLvl_succ (mode : ConLeche.CheckMode) (r : CoreFnsA) (f : Nat)
 `defeq_lams_inner` through their runs, `callE`). -/
 l_model defeqLams_specE (p : Prog) (hf : p.lookup "defeq_lams" = some defeqLamsL)
   fns [hf ↦ lamsE] grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] unified
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] unified
 
 /-! ## The loop refines `defeqLams` -/
 

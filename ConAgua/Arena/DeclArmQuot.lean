@@ -204,7 +204,7 @@ l_model checkDeclQuot_specE (p : Prog) (hQ : QuotProg p) (hRp : RecProg p)
   specs [erecCi_specW p hRp n, qph_specW p hQ.qph n, checkBasisDecl_specE p hQ.basis hQ.pa hQ.cbd n]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
-  heartbeats 400000 simp [] unified
+  heartbeats 400000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 theorem checkDecl_quot_shape (pins : List INatOpPinSet) (fe : IFEnv) (k : ConLeche.QuotKind)

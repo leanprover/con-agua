@@ -226,19 +226,19 @@ theorem nctE_spec (p : Prog) (hf : p.lookup "nest_ctors" = some nestCtorsL) (n :
 
 l_model nwE_spec (p : Prog) (hf : p.lookup "nest_ctors_walk" = some nestCtorsWalkL)
   fns [hf ↦ nwE list] grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] unified
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] unified
 
 l_model ncrE_spec (p : Prog) (hL : CtLook p)
   fns [hL.hp ↦ ncrE]
   specs [cvLps_spec p hL.ha hL.hc hL.he hL.hcv n, slNodup_spec p hL.hsc hL.hnd n,
     callW_spec p n "inst_lp_fast", nestCrest_spec' p hL.cr n]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] unified
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 l_model noE_spec (p : Prog) (hf : p.lookup "nest_ctors_one" = some nestCtorsOneL)
   fns [hf ↦ noE list] grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] unified
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] unified
 
 end L.Ind
 

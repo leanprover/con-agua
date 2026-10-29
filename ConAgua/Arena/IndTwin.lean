@@ -167,7 +167,7 @@ end
 /-- **`whnf_top`'s model, both outcomes**: the `whnf` slot (verified mode) through its run. -/
 l_model wtopE_spec (p : Prog) (hf : p.lookup "whnf_top" = some whnfTopL)
   fns [hf ↦ wtopE list] grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] unified
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] unified
 
 
 section entry

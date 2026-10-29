@@ -32,6 +32,6 @@ open L.Arena
 l_model bph_specW (p : Prog) (hp : p.lookup "basis_pin_hit" = some L.Checker.basisPinHitL)
   fns [hp ↦ bphW list]
   specs [callW_spec p n "rom_basis_decls", callW_spec p n "er_to_iw", callW_spec p n "canon_eq_list"]
-  grind [arena_grind] extra [ld64_rd_spec] simp []
+  grind [arena_grind] extra [ld64_rd_spec]
 
 end L.Ind

@@ -40,7 +40,7 @@ l_model pbW_spec (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
   fns [hp ↦ pbW]
   specs [eView_spec p hv n, spaW_spec p hd hpf hpp hib hjf hjp hji hmp hap n,
     i1lF_spec p hi1 n, slCons_specW p ha hc hsc n]
-  grind [ind_grind] simp []
+  grind [ind_grind]
 
 /-! ## The relational lemma -/
 

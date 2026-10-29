@@ -121,7 +121,7 @@ l_model plE_spec (p : Prog) (hf : p.lookup "peel_leaf" = some peelLeafL)
   fns [hf ↦ plE list]
   specs [callW_spec p n "inst_list"]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] unified
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 /-- The common hypotheses on the slice `fvs = (fo, k)` at the top of the stack. -/
@@ -215,7 +215,7 @@ l_model pdE_spec (p : Prog) (hf : p.lookup "peel_dom" = some peelDomL)
   fns [hf ↦ pdE list]
   specs [callW_spec p n "inst_list"]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] unified
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 /-- **`peel_dom` refines `peelDomT` (one level's domains), both outcomes**: the errors are the
@@ -364,7 +364,7 @@ l_model ps2E_spec (p : Prog) (hf : p.lookup "peel_step2" = some peelStep2L)
   fns [hf ↦ ps2E list]
   specs [callW_spec p n "e_view", pdE_spec p hd n]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] unified
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 /-- **`peel_step2` refines `peelStep2T`, both outcomes**, at a `∀` handle `b`: the errors are
@@ -401,7 +401,7 @@ l_model psE_spec (p : Prog) (hf : p.lookup "peel_step" = some peelStepL)
   fns [hf ↦ psE list]
   specs [callW_spec p n "e_view", ps2E_spec p h2 hd n]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] unified
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 /-- **`peel_step` refines `peelStepT`, both outcomes**, at two `∀` handles: the errors are
@@ -624,7 +624,7 @@ theorem peelLvl_step_run (r : CoreFnsA) (d peel : Nat) (cont : EIdx → EIdx →
 `peel_push` through their runs, `callE`). -/
 l_model defeqPeel_specE (p : Prog) (hf : p.lookup "defeq_peel" = some defeqPeelL)
   fns [hf ↦ peelE] grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] unified
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] unified
 
 /-! ## The loop refines `defeqPeel` -/
 
@@ -797,7 +797,7 @@ l_model dbE_spec (p : Prog) (hf : p.lookup "defeq_binders" = some defeqBindersL)
   fns [hf ↦ dbE list]
   specs [callW_spec p n "peel_push"]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] simp [] unified
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 /-- A run of `peel_push` wrote inside the stack array. -/

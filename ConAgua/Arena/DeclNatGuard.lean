@@ -65,7 +65,7 @@ variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {p : Pro
 l_model boolCtorOk_specW (p : Prog) (hp : p.lookup "bool_ctor_ok" = some boolCtorOkL)
   fns [hp ↦ boolCtorOkW list]
   specs [callW_spec p n "ci_to_cv", callW_spec p n "pin_at", callW_spec p n "const_e"]
-  grind [arena_grind] bind ntBW simp [ntBW]
+  grind [arena_grind] bind ntBW
 
 theorem boolCtorOk_ref (hN : NatGuardProg p) (c : Word) (ci : IConstantInfo) :
     CallRef p "bool_ctor_ok" [c]
@@ -151,7 +151,7 @@ theorem pinFind_call (hN : NatGuardProg p) {i : Word} (hi : i.toNat < 51) {k : N
 l_model boolCtors_specW (p : Prog) (hp : p.lookup "nat_op_bool_ctors" = some natOpBoolCtorsL)
   fns [hp ↦ boolCtorsW list]
   specs [callW_spec p n "pin_at", callW_spec p n "env_find", callW_spec p n "bool_ctor_ok"]
-  grind [arena_grind] bind ntBW simp [ntBW]
+  grind [arena_grind] bind ntBW
 
 /-! ### `nat_op_guard` -/
 
@@ -159,7 +159,7 @@ l_model boolCtors_specW (p : Prog) (hp : p.lookup "nat_op_bool_ctors" = some nat
 l_model natOpGuard_specW (p : Prog) (hp : p.lookup "nat_op_guard" = some natOpGuardL)
   fns [hp ↦ natOpGuardW list]
   specs [callW_spec p n "nat_lit_supported", callW_spec p n "nat_op_deps", callW_spec p n "nat_op_deps_stored", callW_spec p n "pin_at", callW_spec p n "nat_div_mod_names", callW_spec p n "sl_contains", callW_spec p n "nat_op_bool_ctors"]
-  grind [arena_grind] heartbeats 3200000 bind ntBW simp [ntBW]
+  grind [arena_grind] heartbeats 3200000 bind ntBW
 
 /-- The `Bool` constructors' conjunct of `natOpGuard`, as a twin value. -/
 def natBoolCtorsT (fe : IFEnv) : AM Bool := do

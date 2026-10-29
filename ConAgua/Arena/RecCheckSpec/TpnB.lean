@@ -42,7 +42,7 @@ l_model soa_spec (p : Prog) (hP : IndPartsProg p)
     (hp : p.lookup "block_rec_split_own_aux" = some blockRecSplitOwnAux)
   fns [hp ↦ soaW]
   specs [slCons_specW p hP.alloc hP.copy hP.cons n]
-  grind [arena_grind] flat
+  grind [arena_grind]
 
 /-! ## `block_rec_want_aux_names` -/
 
@@ -50,7 +50,7 @@ l_model wan_spec (p : Prog) (hP : IndPartsProg p) (hNri : NriF p)
     (hp : p.lookup "block_rec_want_aux_names" = some blockRecWantAuxNames)
   fns [hp ↦ wanW]
   specs [nriF_spec p hNri n, slCons_specW p hP.alloc hP.copy hP.cons n]
-  grind [arena_grind] simp []
+  grind [arena_grind]
 
 /-- The wanted auxiliary names from index `j` on. -/
 def wantAuxFrom (n0 : NIdx) (j k : Nat) : AM (List NIdx) :=

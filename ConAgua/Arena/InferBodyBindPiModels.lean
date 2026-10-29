@@ -39,7 +39,7 @@ l_model ipsE_spec (p : Prog) (hf : p.lookup "infer_pis" = some inferPisL)
   specs [callW_spec p n "inst_list", callW_spec p n "intern_fvar"]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] unified
-  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem] flat
+  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 /-- `infer_forall`'s unified model: the slots and `infer_pis` through their runs, the binder's free
 variable lifted. -/
@@ -48,6 +48,6 @@ l_model ifrE_spec (p : Prog) (hf : p.lookup "infer_forall" = some inferForallL)
   specs [callW_spec p n "intern_fvar"]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] unified
-  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem] flat
+  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 end L.Arena

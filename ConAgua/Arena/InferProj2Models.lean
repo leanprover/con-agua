@@ -25,6 +25,6 @@ l_model ipE_spec (p : Prog) (hf : p.lookup "infer_proj" = some inferProjL)
     callW_spec p n "get_app_args", callW_spec p n "env_find", ipaE_spec p hipa n]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] heartbeats 2000000 unified
-  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem] cut 1 flat
+  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem] cut 1
 
 end L.Arena

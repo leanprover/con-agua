@@ -426,7 +426,7 @@ theorem rteGo_spec (p : Prog) (L : CbrLook p) (n : Nat) :
 l_model rte_spec (p : Prog) (hL : CbrLook p)
   fns [hL.rte ↦ rteW]
   specs [erecAlloc_specW p hL.tsr.ea n, rteGo_spec p hL n]
-  grind [arena_grind] simp []
+  grind [arena_grind]
 
 /-! ## `rules_to_erec`: the copied run decodes as the rules -/
 

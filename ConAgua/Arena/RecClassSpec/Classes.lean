@@ -375,7 +375,7 @@ l_model classReadClasses_spec (p : Prog) (hc : p.lookup "iw_copy" = some iwCopy)
     (hp : p.lookup "class_read_classes" = some classReadClasses)
   fns [hp ↦ rcW list]
   specs [slCons_specW p ha hc hsc n]
-  grind [arena_grind] simp [rdW_eq]
+  grind [arena_grind]
 
 theorem decCS_motive_key {m : Mem} {p : Nat} {key : ClassKey} (h : decCS m p = some (.motive key)) :
     ∃ kp, iwN m (p + 1) = some kp ∧ decCK m kp = some key := by
