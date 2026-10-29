@@ -482,7 +482,7 @@ theorem aio_ref (p : Prog) (hq : SpineInferProg p) (hsp : SpineProg p)
     hxs.keep hSt₂.size hSt₂.below (by rw [htopN]; exact Nat.le_refl _) hspn₁
   have hs₂ : SlotPre ⟨m₂, Locals.init []⟩ _ dn vis fe M₂ eb mode := ⟨hS₂, hs.mode4, hs.eb_mode⟩
   have hlo₂ : (r₁.tail.headD 0).toNat + (r₁.tail.tail.headD 0).toNat ≤ (spTop m₂).toNat := by
-    rw [hSt₂.check, htopN]; exact Nat.le_refl _
+    rw [hSt₂.1, htopN]; exact Nat.le_refl _
   rcases hc3 : callE p n "infer_spine_io" [mode, vis, d, r₂.headD 0, r₁.tail.headD 0,
       r₁.tail.tail.headD 0] m₂ with e3 | ⟨r₃, m₃⟩
   · exact fun hG => CoreSpecE.of_callE (s₀ := ⟨m₂, Locals.init []⟩) (inferSpineIO_anyE p hq hil n hk hG

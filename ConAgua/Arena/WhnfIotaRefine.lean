@@ -998,7 +998,7 @@ theorem pirW_ok (p : Prog) (hinst : IotaInst1OK p) (dn : NIdx → Option ConLech
         have := (view_forall m a hS.arena.base e he ⟨hv1, UInt64.not_le.mp hv2⟩ h6').2.2
         exact this)) hc
     have hsp₁ : SpineR m₁ ao an args := hsp.keep hSt₁.size hSt₁.below htop hS.spn
-    have htop₁ : ao.toNat + an.toNat ≤ (spTop m₁).toNat := by rw [hSt₁.check]; exact htop
+    have htop₁ : ao.toNat + an.toNat ≤ (spTop m₁).toNat := by rw [hSt₁.1]; exact htop
     have h1 : (i + 1).toNat = i.toNat + 1 := uint64_succ_toNat an i hlt
     obtain ⟨hok2, ⟨M₂, hS₂, hK₂, hSt₂⟩, hres2, hL1, hL2⟩ :=
       ih k m₁ (AM.st (instantiate1Fast coreWalkFuel (decE (tfld m FORALL (tierW e) (idxW e) 1))

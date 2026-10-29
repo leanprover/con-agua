@@ -336,12 +336,12 @@ theorem reduceNatWf_ref (n F : Nat) (hF : n ≤ F) (hn2 : n ≤ 2 ^ 62)
         rw [this]; simp
     exact RefE.ret (redWf_run_skip _ fe d.toNat (decI c) (decE a) (decE b) a₀ a₁ _ hwf _ hsup hskip)
       ⟨⟨MM, hS2, KeptAll.refl _ _, StackKept.of_const_frame hfr2⟩, rfl, resW_zero⟩
-  rw [reduceNatWfE.k_nat_lit_supported.arm1 _ _ _ _ _ _ _ _ _ _ hgo.iw hgo.2]
+  rw [reduceNatWfE.k_nat_lit_supported.arm1 _ _ _ _ _ _ _ _ _ _ hgo.1 hgo.2]
   have hbool : (([decI (pinW s₀.mem 22), decI (pinW s₀.mem 23),
       decI (pinW s₀.mem 24), decI (pinW s₀.mem 25), decI (pinW s₀.mem 26), decI (pinW s₀.mem 27),
       decI (pinW s₀.mem 28), decI (pinW s₀.mem 29)] : List NIdx).contains (decI c) && decBool r₂) = true := by
     rw [hcont]
-    have h1 : natOpWfSel (pinW s₀.mem) c = true := by rw [← hwfsel]; simpa using hgo.iw
+    have h1 : natOpWfSel (pinW s₀.mem) c = true := by rw [← hwfsel]; simpa using hgo.1
     have h2 : decBool r₂ = true := by simp only [decBool, bne_iff_ne, ne_eq]; exact hgo.2
     rw [h1, h2]; rfl
   have hSP1 : SlotPre ⟨m₂, Locals.init []⟩ a₁ dn vis fe MM eb mode := ⟨hS2, hS.mode4, hS.eb_mode⟩
