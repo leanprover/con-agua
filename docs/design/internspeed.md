@@ -351,3 +351,36 @@ only if the table is the fresh one and `n` is a layout (a multiple of 8, at leas
   frozen image copies the whole persistent table), `complete_c04a_restart_70` (9 MB) +2.3 / +4.3 MB;
   the bound is the three tables' `16 n` bytes, about 0.3 × the input length.
 * **Verdicts:** `diff-e2e --refs --parallel 16`: 634 agree, 0 UNSOUND/INCOMPLETE/CRASH/TIMEOUT/REFDIFF.
+
+## 8. Landed: `rnat` (lane rnat)
+
+`read_nat` (`Front/Fields.lean`) converts 1‥8 digits with one load of the 8 bytes ending at `e`,
+masked to the digits' low nibbles (`0x0F…0F << 8 (8 − L)`), and three multiply-shift-mask steps;
+9‥16 digits with two such loads (the words ending at `e − 8` and `e`); 17‥18 digits, `e < 8`
+(resp. `e < 16`) or `e` past the input take the byte loop. Loading the word *before* `e` (not at
+`v`) keeps both loads inside `[0, len)` with only `8 ≤ e ≤ len(IN)`, and needs no `L == 0` test
+(`w = e − v − 1` wraps). No `bv_decide`.
+
+* **Proof** (~330 new lines, no `sorry`): `ReadNatSwar.lean` (168 lines, ~2 s): `swar8_toNat`
+  (eight digit values `≤ 9` in the bytes ⇒ `swar8` is `Σ xₖ·10^(7−k)`), lane by lane over `Nat`:
+  `mul_shr` (a product whose lanes do not overflow, shifted, is the next lanes), `w8_and` (a mask
+  acts byte by byte, from `Nat.and_div_two_pow`/`and_mod_two_pow`), `omega` for the lane sums;
+  `w1_digits` (the masked word of `L` digits is `dval`, their value; 8 cases of `L`). In
+  `Fields.lean`: the model `rdNatN` mirrors the code (`rdNatF`, `rdW1`, `rdW2`), `readNat_spec`
+  keeps its statement (`r = [rdNatN b v e]`, plain `vcgen` + `simp`, ~3 s), and `rdNatN_digits`:
+  on a digit run `v ≤ e` it is the old definition (`rdLoopN_dval`, `dval_add`). The precondition
+  lives in the links, not in the callers' specs: `rdNat_link` and `rdNatN_lt` take the digit run,
+  which their six call sites get from `numEnd_digits`/`numEndN_digits`/`skipDigitsN_digits`; none
+  of the five L callers' proofs changed.
+* **Deviation:** none (same value on every digit run, which is every call the links use).
+* **Instructions** (`Init`): parse-only 21.652 G → 20.141 G (−7.0 %); whole run 241.21 G →
+  239.70 G (−0.6 %).
+* **Wall** (`Init`; bases: the program with the byte-loop `read_nat` for the parse phase, master's
+  `checker.s` for whole runs):
+
+  | cell | base | Δ (median paired) | Wilcoxon p | 95 % CI | load |
+  |---|---:|---:|---:|---:|---|
+  | parse phase (46/94, 40 rounds) | 2.00 s | **−7.6 %** | < 0.001 | [−7.8, −7.5] | 5–18 |
+  | 16 threads (24–39, 40 rounds) | 3.82 s | **−3.6 %** | < 0.001 | [−4.1, −3.1] | 5–9 |
+  | one thread (44/92, 25 rounds) | 18.31 s | **−1.1 %** | < 0.001 | [−2.6, +1.7] (mean) | 2–17 |
+* **Verdicts:** `diff-e2e --refs --parallel 16`: 634 agree, 0 UNSOUND/INCOMPLETE/CRASH/TIMEOUT/REFDIFF.
