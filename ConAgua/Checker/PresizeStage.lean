@@ -1,10 +1,4 @@
-import ConAgua.Checker.ParEntryA
-import ConAgua.Checker.IndArm
-import ConAgua.Arena.PhaseAEntry
-import ConAgua.Checker.LoopStage
-import ConAgua.Checker.PipeFinal
-import ConAgua.Checker.TwinShapeQuot
-import ConAgua.Checker.Presize
+import ConAgua.Checker.PipeStages
 
 /-!
 # The presize stage of entry 1 (lane presize)
