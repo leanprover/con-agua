@@ -3389,15 +3389,16 @@ are 279 `unified` and 230 without error posts.
   (`iota_rec_fire2`); claims `iotaRecVck_refinesE`, `iotaRecFire2_refinesE` (`Verdict/WhnfIotaRecE`,
   2 sites), `G` fields `IotaRecVckE`/`IotaRecFire2E` of the ι recursor's refinements
   (`Arena/WhnfIotaRecRefine2`). Lane gen-cut's: a migration each (one model, one refinement).
-- [ ] `Verdict/WhnfModels5E`: `icfCheckE`, `icfForallE`, `icfFlushE`, `icfAuxE`, `icfTopE`
+- [x] `Verdict/WhnfModels5E`: `icfCheckE`, `icfForallE`, `icfFlushE`, `icfAuxE`, `icfTopE`
   (`iota_certs_full` and its helpers; ok refinements in `Arena/WhnfIotaRefine5`); claims in
   `Verdict/WhnfCertsE` (5 sites), read as `IotaCertsFullE` by `iota_rec_vck`'s claim. A migration
   (batch: knot callees `infer`/`defeq` through their runs, as §3.32's leaves); then
   `IotaCertsFullE` is replaced by `iota_certs_full`'s refinement in `iota_rec_vck`'s.
-- [ ] `Verdict/WhnfIdxE`: `ioE` (`iota_index_ok`), `irCmpE` (`iota_rec_cmp`); claims in the same
+- [x] `Verdict/WhnfIdxE`: `ioE` (`iota_index_ok`), `irCmpE` (`iota_rec_cmp`); claims in the same
   file (2 sites), read as `IotaIndexOkE`/`IotaRecCmpE` by `iota_rec_vck`'s claim; their `G` is the
   hand claim statement `DefeqListE` (also in `Verdict/WhnfKnotE`), which `defeq_list`'s refinement
-  (§3.48) can replace. A migration each, with the certs family (one lane).
+  (§3.48) can replace. A migration each, with the certs family (one lane). Done with the certs
+  family (§3.53: `icfE_spec`, `ioE_spec`, `irCmpE_spec`; `DefeqListE` gone).
 
 **`Err.code_ne_of_cls`, other users.**
 
@@ -3429,8 +3430,74 @@ instead of the statement):
   (§3.52, this lane's second landing).
 
 **Hand claim statements of the same kind (not `err_stmt`)**: `CheckBasisDeclE`
-(`Arena/IndT/CheckIndDecl`, read by `IndA6`, `IndA8`, `IndA9`) and `DefeqListE` (above). They name
+(`Arena/IndT/CheckIndDecl`, read by `IndA6`, `IndA8`, `IndA9`) and `DefeqListE` (above; gone,
+§3.53). They name
 no `errors` model and do not block group D, but go the same way.
 
 Nothing else: no `CoreSpecE.of_runs` user depends on an `errors` model (it stays, §3.30 D), and
 `triple_of_callE_err`'s other users take posts over the class.
+
+### 3.53 Retirement, group D's hand models below `iota_rec_vck` (`iota_certs_full`, `iota_index_ok`, `iota_rec_cmp`)
+
+§3.52's `WhnfModels5E` and `WhnfIdxE` items: seven functions, each with one generated `unified`
+model and one refinement; no claim of theirs uses `Err.code_ne_of_cls` any more (the remaining sites
+are `iota_rec_vck`'s and `iota_rec_fire2`'s, §3.52's first bullet, and `Checker/PreludeRef`).
+
+* **`iota_certs_full`** (`Arena/WhnfIotaRefine5`): one `l_model icfE_spec` over the group
+  `_check`, `_aux`, `_forall`, `_flush` and the entry (the generator makes the three mutually
+  recursive members one `mutual` block); `infer`/`defeq` through their runs, the four readers and
+  `inst_list` lifted. `icfCheck_ref` (the check against its three twin steps `icfChkT`, `CorePost`),
+  `icf_all` (one induction over the three members' `ICFRef`, post `GrowPost`: the pushes leave the
+  stack raised), `icfTop_ref` (`GrowPost.restore` for the top put back). The twin's arms are two run
+  equations (`icf_eq_forall`, `icf_eq_flush`: the check, then the rest), which replace the six
+  ok/error run lemmas. The model's pushes carry no `CTL` bound: `CoreS.ctl136` gives it (moved down
+  from `InferBodySpine` to `WhnfCoreRefine`).
+* **`iota_index_ok`** (`ioE`, `io_ref`, `Arena/WhnfIotaRefine2`): `defeq_list` by its unified model
+  (`dlE`, `defeqList_ref`), `pi_residual`/`get_app_args` lifted; the top restored without its bound
+  (`StackKept.restoreG'`).
+* **`iota_rec_cmp`** (`irCmpE`, `irCmp_ref`, `Arena/WhnfIotaRecRefine`): `defeq_list` through its run
+  (`callE`): `callW_iotaRecCmp_erec` needs its record-pool frame (`ErecKeptKnot`), which the model
+  value does not give; its halves from `defeqList_refines` and `RefE.run_err` over `defeqList_ref`.
+* **`G`** is `KnotUpToE p n` for all seven: lifted callees fail with class `0` in the model itself, and
+  `defeq_list`'s errors are the `defeq` slot's. So `DefeqListE` (the hand claim statement), the
+  structure `WhnfCalleesE` (its only field), `KnotAllProg.whnfCE` and `defeqList_refinesE` are gone,
+  and `whnfSlotsE_of` loses its argument.
+* **Kept as one-liners** for `iota_rec_vck`'s ok refinement and hand error model (lane gen-cut's):
+  `iotaCertsFullAux_refines'`, `iotaCertsFull_refines'`, `iotaIndexOk_refines'`,
+  `iotaRecCmp_refines'` (`RefE.triple`/`RefE.coreSpec`, statements unchanged), and the claims
+  `IotaCertsFullE`, `IotaIndexOkE`, `IotaRecCmpE` (`RefE.coreSpecE`, `Verdict/WhnfCertsE`,
+  `WhnfIdxE`). When `iota_rec_vck` is migrated it lists `icfE_spec`/`ioE_spec` (or reads the
+  refinements through the runs) and the three claims go.
+* Gone: the hand ok models `icfCheckW`, `icfForallW`, `icfFlushW`, `icfAuxW`, `icfTopW`, `ioW`,
+  `irCmpW` with their specs, the hand `Except` models of `Verdict/WhnfModels5E` (deleted) and
+  `WhnfIdxE`, the error claims (`icfForallE_ok`, `icfFlushE_ok`, `icfAuxE_ok`, `icf_allE`,
+  `ICFSpecE`, the `icf_err_*` and `icf_run_stop/cont/flush` run lemmas, `whnfCertsE_nv`,
+  `whnfIdxE_nv`).
+
+| functions | before: ok side + error side | after | change |
+|---|---:|---:|---:|
+| `iota_certs_full` (5) | 574 + 604 (`WhnfModels5E`, `WhnfCertsE`) = 1 178 | 381 + 22 = 403 | −66 % |
+| `iota_index_ok` | 151 + 126 = 277 | 131 | −53 % |
+| `iota_rec_cmp` | 203 + 157 = 360 | 203 | −44 % |
+| `DefeqListE`, `WhnfCalleesE`, `defeqList_refinesE`, `whnfCE` | 41 | – | |
+| **all** | **1 856** | **737** | **−60 %** |
+
+Diff of the landing against master (without this report): +632 −1 780 lines in 11 files.
+
+Elaboration (user seconds, `lean` on the module, median of 3 interleaved runs, base master 16c65e9f,
+`_tmp/retire-iota/times1.txt`):
+
+| module | base | new | |
+|---|---:|---:|---|
+| `Arena/WhnfIotaRefine5` | 5.61 | **7.10** | **slower (+1.5 s)**: the group's generated steps and the merged refinements … |
+| `Verdict/WhnfModels5E`, `WhnfCertsE` | 2.88 | 0.45 | … against the hand `Except` models and claims here |
+| `Arena/WhnfIotaRefine2` | 7.58 | 8.1 | `ioE` (`flat`; +7 %) |
+| `Arena/WhnfIotaRecRefine` | 12.02 | 12.98 | `irCmpE` (+8 %) |
+| `Verdict/WhnfIdxE` | 1.91 | 0.46 | |
+| the other 5 (`WhnfCoreRefine`, `InferBodySpine`, `WhnfKnotE`, `KnotAllE`, `DefEqLoopsE`) | 12.19 | 12.39 | |
+| **sum** | **42.19** | **≈ 41.5** | **−2 %** |
+
+Recipes tried on `icfE_spec` (module 7.1 s with `simp []`): `flat` 7.4 s, the default `finish`
+8.3 s; on `irCmpE` `flat` 14.7 s against 13.0 s; on `ioE` `flat` 8.1 s against 8.4 s (kept). No
+generator or kit change was needed. Kit wish: `GrowPost.of_tail` for any decoder (it is stated at
+`decH`; the certs family's tail calls inline it at `decBool`).
