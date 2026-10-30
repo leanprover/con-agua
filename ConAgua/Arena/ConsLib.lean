@@ -440,13 +440,16 @@ def ktopB (C : ConsSch) : Stmt := lblk (t, n2, n, H, Q, ob, nb, x, e, v, q, h, j
   ⟪ktopQ C⟫
 }
 
+/-- The sweep's step: the next slot down, `H - 1`, handled if live. -/
+def ktopBody (C : ConsSch) : Stmt := lblk (t, n2, n, H, Q, ob, nb, x, e, v, q, h, j, d, bt, y15, y16, y17, a0, a1, b0, b1) {
+  H -= 1;
+  v := C.sa⟨t⟩[ob + H * 2];
+  if bt < v { ⟪ktopB C⟫ }
+}
+
 /-- The top-down sweep over the old half, `H = n - 1 ‥ 0`. -/
 def ktopL (C : ConsSch) : Stmt := lblk (t, n2, n, H, Q, ob, nb, x, e, v, q, h, j, d, bt, y15, y16, y17, a0, a1, b0, b1) {
-  while H != 0 {
-    H -= 1;
-    v := C.sa⟨t⟩[ob + H * 2];
-    if bt < v { ⟪ktopB C⟫ }
-  }
+  while H != 0 { ⟪ktopBody C⟫ }
 }
 
 /-- The first range's re-insertion start: slot `H = a0`, the budget `e = n` of re-insertions
