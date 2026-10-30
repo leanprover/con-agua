@@ -744,6 +744,12 @@ theorem zero_eq_gO (C : ConsSch) : (0 = gO C) = False := by
 theorem gO_eq_zero (C : ConsSch) : (gO C = 0) = False := by
   simp only [gO, eq_iff_iff, iff_false]; omega
 
+/-- A triple with a fact about the start state in its precondition, used at an equation pre. -/
+theorem triple_pre_and' {p : Prog} {k : Stmt → M Sig} {a : Stmt} {s₀ : St} {K : Prop}
+    {Q : Sig → St → Prop} (h : ⦃fun s => s = s₀ ∧ K⦄ step p k a ⦃Q; ⊤⦄) (hK : K) :
+    ⦃fun s => s = s₀⦄ step p k a ⦃Q; ⊤⦄ :=
+  ⟨fun s hs => h.le_wp s ⟨hs, hK⟩⟩
+
 /-- Sequential composition, with the intermediate assertion `R`. -/
 theorem triple_seq {p : Prog} {k : Stmt → M Sig} {a b : Stmt} {s₀ : St} {Q : Sig → St → Prop}
     (R : St → Prop)
@@ -1079,7 +1085,13 @@ theorem ktopQ_spec (p : Prog) (C : ConsSch) (n : Nat) (s₀ : St) :
       mkOf C s' = (ktopQW (tierA C.sa (s₀.loc 0)) (s₀.loc (gO C + 1)) (s₀.loc (gO C + 4))
         (s₀.loc (gO C + 13)) (s₀.loc (gO C + 2)) (s₀.loc (gO C + 11)) (s₀.loc (gO C + 6))
         (s₀.loc (gO C + 8)) (s₀.loc (gO C + 9)) (mkOf C s₀) s₀.mem).2; ⊤⦄ := by
-  sorry -- WIPSORRY
+  unfold ktopQ
+  simp (disch := decide) only [mapS, mapE, mapC, gmap_lit, gmap_zero, Nat.reduceSub]
+  vcgen [step, evalE_spec, evalC_spec, setLoc, st64, kdefB_spec p C n]
+  all_goals (simp (disch := decide) only [St.setLoc_loc, St.setLoc_mem, BinOp.eval, Cmp.eval,
+    Expr.pval, Cond.pval, decide_eq_true_eq, Nat.add_left_cancel_iff, Nat.reduceEqDiff,
+    bne_iff_ne, ne_eq, rd64_rdWC, zero_eq_addlit, ↓reduceIte] at *)
+  all_goals grind [lang_grind, arena_grind, KeepMk, mkOf, ktopQW]
 
 /-- **The sweep's step at a live slot** (`ktopB`): `ktopBW`. -/
 theorem ktopB_spec (p : Prog) (C : ConsSch) (hO : ConsOK p C) (n : Nat) (s₀ : St) :
@@ -1093,7 +1105,32 @@ theorem ktopB_spec (p : Prog) (C : ConsSch) (hO : ConsOK p C) (n : Nat) (s₀ : 
         (s₀.loc (gO C + 4)) (s₀.loc (gO C + 13)) (s₀.loc (gO C + 2)) (mkOf C s₀) s₀.mem).1 ∧
       mkOf C s' = (ktopBW (tierA C.sa (s₀.loc 0)) (ghC C) (s₀.loc (gO C)) (s₀.loc (gO C + 1))
         (s₀.loc (gO C + 4)) (s₀.loc (gO C + 13)) (s₀.loc (gO C + 2)) (mkOf C s₀) s₀.mem).2; ⊤⦄ := by
-  sorry -- WIPSORRY
+  apply triple_pre_and; intro hv
+  unfold ktopB
+  simp only [mapS]
+  refine triple_seq _ (triple_pre_and' (ktopP_spec p C hO n s₀) hv) (fun s₁ h₁ => ?_)
+  obtain ⟨m1, k1, q1, j1, x1⟩ := h₁
+  refine triple_weaken (ktopQ_spec p C n s₁) (fun r s' ⟨hr, k2, m2, mk2⟩ => ?_)
+  have kk : ∀ z, z ≠ gO C + 6 → z ≠ gO C + 9 → z ≠ gO C + 10 → z ≠ gO C + 11 →
+      (z < gO C + 14 ∨ gO C + 17 ≤ z) → s₁.loc z = s₀.loc z := k1
+  have e0 : s₁.loc 0 = s₀.loc 0 := by
+    have := zero_lt_gO C; exact kk 0 (by omega) (by omega) (by omega) (by omega) (.inl (by omega))
+  have ek : ∀ i : Nat, i = 0 ∨ i = 1 ∨ i = 2 ∨ i = 4 ∨ i = 8 ∨ i = 13 ∨ (17 ≤ i) →
+      s₁.loc (gO C + i) = s₀.loc (gO C + i) := fun i hi => by
+    rcases hi with h | h | h | h | h | h | h <;>
+      refine kk (gO C + i) ?_ ?_ ?_ ?_ ?_ <;> omega
+  have mk1 : mkOf C s₁ = mkOf C s₀ := by
+    simp only [mkOf, ek 17 (by simp), ek 18 (by simp), ek 19 (by simp), ek 20 (by simp)]
+  have hB : ktopBW (tierA C.sa (s₀.loc 0)) (ghC C) (s₀.loc (gO C)) (s₀.loc (gO C + 1))
+      (s₀.loc (gO C + 4)) (s₀.loc (gO C + 13)) (s₀.loc (gO C + 2)) (mkOf C s₀) s₀.mem =
+      ktopQW (tierA C.sa (s₁.loc 0)) (s₁.loc (gO C + 1)) (s₁.loc (gO C + 4))
+        (s₁.loc (gO C + 13)) (s₁.loc (gO C + 2)) (s₁.loc (gO C + 11)) (s₁.loc (gO C + 6))
+        (s₁.loc (gO C + 8)) (s₁.loc (gO C + 9)) (mkOf C s₁) s₁.mem := by
+    rw [ktopBW, j1, x1, q1, mk1, m1, e0, ek 1 (by simp), ek 4 (by simp), ek 13 (by simp),
+      ek 2 (by simp), ek 8 (by simp), hv]
+  refine ⟨hr, fun z h6 h9 h10 h11 hz => ?_, by rw [hB]; exact m2, by rw [hB]; exact mk2⟩
+  rw [k2 z (by omega)]
+  exact kk z h6 h9 h10 h11 (by omega)
 
 theorem ktopW_zero (sa : TieredArray) (G : Mem → Word → Word) (N n ob bt H : Word) (k : MkR) (m : Mem)
     (h : H = 0) : ktopW sa G N n ob bt H k m = (m, k) := by
