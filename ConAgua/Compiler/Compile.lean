@@ -1198,7 +1198,7 @@ def genLd (ctx : Ctx) (ln bs : AddrExpr) (byte : Bool) (mn : Nat) (ck : Bool) (i
     | none =>
       match fr with
       | t :: _ => (gi d fr).map fun ci =>
-          ci ++ chkR ck d ln ++ [movRM t bs, ldA byte d (mbx t d byte)]
+          ci ++ (chkR ck d ln ++ [movRM t bs, ldA byte d (mbx t d byte)])
       | [] => none
 
 /-- `d := A[i]` for the table-relative array `A` at `T + c` (`Tab.tbl64`), `[ln]` its length: the
@@ -1217,7 +1217,7 @@ def genLdT (ctx : Ctx) (ln : AddrExpr) (c mn : Nat) (ck : Bool) (i : Expr) (gi :
       match regOf ctx i with
       | some r => some (chkR ck r ln ++ [movRM d (tdesc r c)])
       | none => (gi d fr).map fun ci =>
-          ci ++ chkR ck d ln ++ [movRM d (tdesc d c)]
+          ci ++ (chkR ck d ln ++ [movRM d (tdesc d c)])
     else none
 
 /-- `d := A.u32[x]` (lane p32), where `[ln]` is `A`'s length in 32-bit elements (`Tab.len32`)
@@ -1626,12 +1626,12 @@ def genSt (ctx : Ctx) (ln bs : AddrExpr) (mn : Nat) (ck : Bool) (i e : Expr) (fr
       match regOf ctx i with
       | some r =>
         match fr1 with
-        | t :: _ => some (cv ++ chkR ck r ln ++ [movRM t bs, i64 (.mov (.mem (mbi t r .W64)) src)])
+        | t :: _ => some (cv ++ (chkR ck r ln ++ [movRM t bs, i64 (.mov (.mem (mbi t r .W64)) src)]))
         | [] => none
       | none =>
         match fr1 with
         | x :: t :: fr2 => (gen ctx i x (t :: fr2)).map fun ci =>
-            cv ++ ci ++ chkR ck x ln ++ [movRM t bs, i64 (.mov (.mem (mbi t x .W64)) src)]
+            cv ++ ci ++ (chkR ck x ln ++ [movRM t bs, i64 (.mov (.mem (mbi t x .W64)) src)])
         | _ => none
 
 /-- `A.u64[i] := e` for the table-relative array `A` at `T + c` (`Tab.tbl64`), `[ln]` its length:
@@ -1652,11 +1652,11 @@ def genStT (ctx : Ctx) (ln : AddrExpr) (c mn : Nat) (ck : Bool) (i e : Expr) (fr
     | i =>
       if c < 2 ^ 31 then
         match regOf ctx i with
-        | some r => some (cv ++ chkR ck r ln ++ [i64 (.mov (.mem (tdesc r c)) src)])
+        | some r => some (cv ++ (chkR ck r ln ++ [i64 (.mov (.mem (tdesc r c)) src)]))
         | none =>
           match fr1 with
           | x :: fr2 => (gen ctx i x fr2).map fun ci =>
-              cv ++ ci ++ chkR ck x ln ++ [i64 (.mov (.mem (tdesc x c)) src)]
+              cv ++ ci ++ (chkR ck x ln ++ [i64 (.mov (.mem (tdesc x c)) src)])
           | [] => none
       else none
 

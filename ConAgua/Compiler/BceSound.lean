@@ -399,20 +399,20 @@ theorem Facts.Holds.condAll {fa : Facts} {σ : St} (h : fa.Holds σ) {c : Cond} 
 
 /-! ## Bounds of values -/
 
-theorem lookup_mem : ∀ {l : List (Var × Nat)} {x : Var} {n : Nat}, l.lookup x = some n → (x, n) ∈ l
+theorem hiLookup_mem : ∀ {l : List (Var × Nat)} {x : Var} {n : Nat}, l.lookup x = some n → (x, n) ∈ l
   | [], _, _, h => by simp at h
   | (y, m) :: l, x, n, h => by
     simp only [List.lookup_cons] at h
     split at h
     · rename_i hxy; cases h; simp only [beq_iff_eq] at hxy; subst hxy; exact List.mem_cons_self
-    · exact List.mem_cons_of_mem _ (lookup_mem h)
+    · exact List.mem_cons_of_mem _ (hiLookup_mem h)
 
 theorem hiE_sound {σ : St} {hi : List (Var × Nat)} (hh : ∀ f ∈ hi, (σ.loc f.1).toNat < f.2) :
     ∀ {e : Expr} {n : Nat} {v : Word}, hiE hi e = some n → evalP σ e = .ok v → v.toNat < n
   | .const k, n, v, h, he => by
     simp only [hiE, Option.some.injEq] at h; cases he; omega
   | .var x, n, v, h, he => by
-    simp only [hiE] at h; cases he; exact hh _ (lookup_mem h)
+    simp only [hiE] at h; cases he; exact hh _ (hiLookup_mem h)
   | .bin op a b, n, v, h, he => by
     obtain ⟨va, ha, he⟩ := bind_ok he
     obtain ⟨vb, hb, he⟩ := bind_ok he
@@ -553,10 +553,59 @@ theorem fholds_join {a b : Option Facts} {σ : St} (h : FHolds a σ ∨ FHolds b
           subst this; exact h.lt x hy
         · obtain ⟨⟨y, n⟩, hy, hxy⟩ := List.mem_filterMap.mp hx
           obtain ⟨m, hm, rfl⟩ := Option.map_eq_some_iff.mp hxy
-          have := h.hi _ (lookup_mem hm)
+          have := h.hi _ (hiLookup_mem hm)
           simp only at this ⊢; omega
 
 /-! ## At an access -/
+
+/-- Local `y` occurs in `e`. -/
+def Expr.readsV (y : Var) : Expr → Bool
+  | .var x => x == y
+  | .bin _ a b | .cmpw _ a b => Expr.readsV y a || Expr.readsV y b
+  | .ld8 _ i | .ld64 _ i | .ldc _ i | .ld8x8 _ i => Expr.readsV y i
+  | .ld64t _ t i | .ld32t _ t i | .ld32h _ t i _ => Expr.readsV y t || Expr.readsV y i
+  | .len64t _ t => Expr.readsV y t
+  | _ => false
+
+/-- An expression reads only the memory and the locals in it. -/
+theorem evalP_congr {σ σ' : St} (hm : σ'.mem = σ.mem) :
+    ∀ {e : Expr}, (∀ y, Expr.readsV y e = true → σ'.loc y = σ.loc y) → evalP σ' e = evalP σ e
+  | .const _, _ => rfl
+  | .var x, h => by simp only [evalP]; rw [h x (by simp [Expr.readsV])]
+  | .glob _, _ | .len8 _, _ | .len64 _, _ => by simp only [evalP, hm]
+  | .bin _ a b, h | .cmpw _ a b, h => by
+    simp only [evalP]
+    rw [evalP_congr hm (e := a) (fun y hy => h y (by simp [Expr.readsV, hy])),
+      evalP_congr hm (e := b) (fun y hy => h y (by simp [Expr.readsV, hy]))]
+  | .ld8 _ i, h | .ld64 _ i, h | .ldc _ i, h | .ld8x8 _ i, h => by
+    simp only [evalP, hm]
+    rw [evalP_congr hm (e := i) (fun y hy => h y (by simp [Expr.readsV, hy]))]
+  | .len64t _ t, h => by
+    simp only [evalP, hm]
+    rw [evalP_congr hm (e := t) (fun y hy => h y (by simp [Expr.readsV, hy]))]
+  | .ld64t _ t i, h | .ld32t _ t i, h | .ld32h _ t i _, h => by
+    simp only [evalP, hm]
+    rw [evalP_congr hm (e := t) (fun y hy => h y (by simp [Expr.readsV, hy])),
+      evalP_congr hm (e := i) (fun y hy => h y (by simp [Expr.readsV, hy]))]
+
+/-- **The facts at an expression**: they hold in a state `σ0` with `σ`'s memory that agrees with
+`σ` on the locals `e` reads. (`σ` may be a ghost state of the expression code's proof, whose
+locals in clobbered registers changed, `Inv.ghost`; `σ0` is the statement's state.) -/
+def FactsFor (ctx : Ctx) (σ : St) (e : Expr) : Prop :=
+  ∃ σ0 : St, FHolds ctx.fa σ0 ∧ σ0.mem = σ.mem ∧ ∀ y, Expr.readsV y e = true → σ0.loc y = σ.loc y
+
+theorem FactsFor.of {ctx : Ctx} {σ : St} (h : FHolds ctx.fa σ) (e : Expr) : FactsFor ctx σ e :=
+  ⟨σ, h, rfl, fun _ _ => rfl⟩
+
+theorem FactsFor.sub {ctx : Ctx} {σ : St} {e : Expr} (h : FactsFor ctx σ e) {e' : Expr}
+    (hs : ∀ y, Expr.readsV y e' = true → Expr.readsV y e = true) : FactsFor ctx σ e' :=
+  let ⟨σ0, h1, h2, h3⟩ := h
+  ⟨σ0, h1, h2, fun y hy => h3 y (hs y hy)⟩
+
+/-- The facts at `e` for a context with the same facts. -/
+theorem FactsFor.ctx {ctx ctx' : Ctx} {σ : St} {e : Expr} (h : FactsFor ctx σ e) (hf : ctx'.fa = ctx.fa) :
+    FactsFor ctx' σ e := by
+  unfold FactsFor; rw [hf]; exact h
 
 /-- **What an unchecked access uses**: where `safeIdx` holds and the facts do, the index is below
 the length `L` of the accessed array, given that `L` is at least the minimum length `mn` and the
@@ -585,5 +634,19 @@ theorem safeIdx_sound {fa : Option Facts} {k : Option AKey} {i : Expr} {mn : Nat
         rw [h1] at this
         exact Nat.lt_of_lt_of_le this (hk key rfl)
       · cases h
+
+/-- **The check of an access dropped by the code generator** (`Ctx.ck` false) is not needed: the
+index `i` (a part of `e`) is below the array's length `L`, which is at least the minimum `mn` and
+the key's length in the states that agree with `σ` on `e`. -/
+theorem ck_sound {ctx : Ctx} {σ : St} {e i : Expr} (hfa : FactsFor ctx σ e)
+    (hsub : ∀ y, Expr.readsV y i = true → Expr.readsV y e = true)
+    {k : Option AKey} {mn L : Nat} (hck : ctx.ck k i mn = false) (hmn : mn ≤ L)
+    (hk : ∀ σ0 : St, σ0.mem = σ.mem → (∀ y, Expr.readsV y e = true → σ0.loc y = σ.loc y) →
+      ∀ key, k = some key → key.len σ0 ≤ L)
+    {j : Word} (hj : evalP σ i = .ok j) : j.toNat < L := by
+  obtain ⟨σ0, h1, h2, h3⟩ := hfa
+  have hs : safeIdx ctx.fa k i mn = true := by simpa [Ctx.ck] using hck
+  exact safeIdx_sound hs h1 hmn (hk σ0 h2 h3)
+    (by rw [evalP_congr h2 (fun y hy => h3 y (hsub y hy))]; exact hj)
 
 end L.Compiler
