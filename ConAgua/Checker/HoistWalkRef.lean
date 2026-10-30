@@ -2,6 +2,7 @@ import ConAgua.Checker.HoistDecode
 import ConAgua.Arena.IndView
 import ConAgua.Checker.HoistRefBase
 import ConRon.Arena.Frontend.NatOpGround
+import ConAgua.L.WordOff
 
 /-!
 # The hoist's walk refines `usedConsts` (lane `front4`)
@@ -613,9 +614,7 @@ theorem blockGo_ok' (n : Nat) :
     obtain ⟨cv, kw, w, htc, hkw, hw4, hwl, hty, hrec⟩ := decCI_walk hci
     obtain ⟨hPk, -⟩ := trunc_get hkw hpN
     obtain ⟨hP4, h4t⟩ := trunc_get hw4 (by omega)
-    have hp4 : (pw + 4).toNat = pw.toNat + 4 := by
-      rw [UInt64.toNat_add]; exact Nat.mod_eq_of_lt (by simp; omega)
-    rw [hBlockGoW.arm2 n m k i tg ws sp o c q hc, hpd, rdW_of hp4 hP4, hBlockGoW.k_hoist_walk.eq_def] at hb
+    rw [hBlockGoW.arm2 n m k i tg ws sp o c q hc, hpd, rdW_of (off_toNat (by omega)) hP4, hBlockGoW.k_hoist_walk.eq_def] at hb
     rcases h1 : hWalkW n m w i k tg ws sp 4000000000 with _ | ⟨sp₁, m₁⟩ <;> rw [h1] at hb
     · cases hb
     simp only at hb
@@ -641,11 +640,7 @@ theorem blockGo_ok' (n : Nat) :
     · rw [ite_eq_left h5] at hb
       obtain ⟨hP7, h7t⟩ := trunc_get h7 (by omega)
       obtain ⟨hP8, h8t⟩ := trunc_get h8 (by omega)
-      have hp7 : (pw + 7).toNat = pw.toNat + 7 := by
-        rw [UInt64.toNat_add, show (7 : Word).toNat = 7 from rfl]; exact Nat.mod_eq_of_lt (by omega)
-      have hp8 : (pw + 8).toNat = pw.toNat + 8 := by
-        rw [UInt64.toNat_add, show (8 : Word).toNat = 8 from rfl]; exact Nat.mod_eq_of_lt (by omega)
-      rw [rdW_of hp7 hP7, rdW_of hp8 hP8, hBlockGoW.k_hoist_rules_go.eq_def] at hb
+      rw [rdW_of (off_toNat (by omega)) hP7, rdW_of (off_toNat (by omega)) hP8, hBlockGoW.k_hoist_rules_go.eq_def] at hb
       obtain ⟨hlen, hrr⟩ := decRules_facts hr
       have hRA : RulesAt m₁ ow 0 rules := by
         intro q hq

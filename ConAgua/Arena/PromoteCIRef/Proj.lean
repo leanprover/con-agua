@@ -5,6 +5,7 @@ import ConAgua.Arena.PromoteCIRef.NatMove
 import ConAgua.Arena.PromoteCIRef.PreECongr
 import ConAgua.Arena.PromoteCIRef.PmDecRuleWords
 import ConRon.Bridge.Grind
+import ConAgua.L.WordOff
 
 /-!
 # Proj
@@ -418,14 +419,10 @@ theorem projB_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f q : Word) (ct
   simp only at hW
   rw [hs'] at hW
   simp only [projBW] at hW
-  have e6 : (q + 6).toNat = q.toNat + 6 := by rw [UInt64.toNat_add]; simp; omega
-  have e8 : (q + 8).toNat = q.toNat + 8 := by rw [UInt64.toNat_add]; simp; omega
-  have e9 : (q + 9).toNat = q.toNat + 9 := by rw [UInt64.toNat_add]; simp; omega
-  have e11 : (q + 11).toNat = q.toNat + 11 := by rw [UInt64.toNat_add]; simp; omega
   obtain ⟨⟨c9, m₁⟩, hca, hW⟩ := Option.bind_eq_some_iff.mp hW
   dsimp only at hW
   obtain ⟨a1, pm1, hrun1, hD1, hP1, hpw1, hcp1, hfr1, htk1⟩ :=
-    pnAt_rel p hp n m a pm f (q + 6) ct c9 m₁ hD hP hsz (by rw [e6]; exact hct) hca
+    pnAt_rel p hp n m a pm f (q + 6) ct c9 m₁ hD hP hsz (by rw [off_toNat (by omega)]; exact hct) hca
   obtain ⟨hE1, hT1⟩ := eFrame_erec hfr1
   have hsz1 : (m₁.arr64 EREC).size < 2 ^ 64 := by rw [hE1]; exact hsz
   have hP1' : erecP m₁ = erecP m := by
@@ -433,7 +430,7 @@ theorem projB_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f q : Word) (ct
   obtain ⟨⟨c10, m₂⟩, hcb, hW⟩ := Option.bind_eq_some_iff.mp hW
   dsimp only at hW
   obtain ⟨a2, pm2, hrun2, hD2, hP2, hpw2, hcp2, hfr2, htk2⟩ :=
-    plAt_rel p hp n m₁ a1 pm1 f (q + 8) ss c10 m₂ hD1 hP1 hsz1 (by rw [hP1', e8]; exact hss) hcb
+    plAt_rel p hp n m₁ a1 pm1 f (q + 8) ss c10 m₂ hD1 hP1 hsz1 (by rw [hP1', off_toNat (by omega)]; exact hss) hcb
   obtain ⟨hE2, hT2⟩ := eFrame_erec hfr2
   have hsz2 : (m₂.arr64 EREC).size < 2 ^ 64 := by rw [hE2]; exact hsz1
   have hP2' : erecP m₂ = erecP m₁ := by
@@ -442,19 +439,19 @@ theorem projB_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f q : Word) (ct
   dsimp only at hW
   obtain ⟨wo3, wl3, hn3, hn3', hsl3, a3, pm3, bs', hrun3, hD3, hP3, hcp3, hfr3, hq3, hg3, hT3, hts3,
     hsl3', htk3⟩ := psAt2_rel p hp n m₂ a2 pm2 f (q + 9) bodies c11 m₃ hD2 hP2 hsz2
-      (by rw [hP2', hP1', e9]; exact hbs) hcc
+      (by rw [hP2', hP1', off_toNat (by omega)]; exact hbs) hcc
   have hsz3 : (m₃.arr64 EREC).size < 2 ^ 64 := by rw [hg3.size]; exact hsz2
   obtain ⟨⟨c12, m₄⟩, hcd, hW⟩ := Option.bind_eq_some_iff.mp hW
   dsimp only at hW
   obtain ⟨wo4, wl4, hn4, hn4', hsl4, a4, pm4, gs', hrun4, hD4, hP4, hcp4, hfr4, hq4, hg4, hT4, hts4,
     hsl4', htk4⟩ := psAt1_rel p hp n m₃ a3 pm3 f (q + 11) guards c12 m₄ hD3 hP3 hsz3
-      (by rw [e11]; exact hg3.ext.hlist? (by rw [hP2', hP1']; exact hgs)) hcd
+      (by rw [off_toNat (by omega)]; exact hg3.ext.hlist? (by rw [hP2', hP1']; exact hgs)) hcd
   obtain ⟨hlist, hm4⟩ := Prod.mk.inj (Option.some.inj hW)
   subst hm4
   -- the length word of the guards, read in the original pool
   obtain ⟨og, cg, hog, hcg, -⟩ := hlist?_unfold hgs
   have hcg3 : nat? (erecP m₃) (q.toNat + 11 + 1) = some cg := hg3.ext.nat? (by rw [hP2', hP1']; exact hcg)
-  rw [e11] at hn4'
+  rw [off_toNat (by omega)] at hn4'
   have hcgw : cg = wl4.toNat := Option.some.inj (hcg3.symm.trans hn4')
   have hg04 : ErecGrow m m₄ :=
     ⟨by rw [← hT1, ← hT2]; exact Nat.le_trans hg3.top hg4.top, fun i hi => by
@@ -469,7 +466,7 @@ theorem projB_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f q : Word) (ct
   · rw [← hlist] <;> rfl
   · rw [← hlist]; exact hpw2
   · rw [← hlist] <;> rfl
-  · rw [e9, hP2', hP1'] at hn3'; exact hn3'
+  · rw [off_toNat (by omega), hP2', hP1'] at hn3'; exact hn3'
   · rw [← hcgw]; exact hcg
   · rw [← hlist]; simp only [g2, List.headD_cons, List.tail_cons]; rw [hq3, hT2, hT1]
   · rw [← hlist]; simp only [g3, List.headD_cons, List.tail_cons]; rw [hq4, hT3, hT2, hT1]
