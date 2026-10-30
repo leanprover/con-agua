@@ -1,6 +1,7 @@
 module
 
 public import ConAgua.L.DefAssign
+public import ConAgua.Compiler.Bce
 public import Kraken.X64.Syntax
 
 @[expose] public section
@@ -791,6 +792,9 @@ structure Ctx where
   /-- The largest frame (in words) of the leaves without a stack check that the function calls
   (`Stmt.need`): its own stack check leaves room for that frame below the return address. -/
   need : Nat := 0
+  /-- The facts of the bounds-check analysis at the current statement (`Bce.lean`): an access
+  whose index they prove in range has no bounds check (`Ctx.ck`). `none`: unreachable. -/
+  fa : Option Facts := some {}
   deriving Repr
 
 /-- The registers a leaf keeps locals in: the argument registers (`argRegs`), then `rbx`, `r12`,
@@ -830,6 +834,14 @@ def Ctx.tmp (ctx : Ctx) (t : Nat) : AddrExpr := mb .rsp (8 * (ctx.nl + t))
 
 /-- No local lives in `rbx`: `if c abort k` may carry its code there. -/
 def Ctx.rbxFree (ctx : Ctx) : Bool := !(ctx.alloc.any (·.2 == .rbx))
+
+/-- An access with key `k` and index `i` to an array of minimum length `mn` needs its bounds check:
+the facts do not prove `i` in range (`safeIdx`). -/
+def Ctx.ck (ctx : Ctx) (k : Option AKey) (i : Expr) (mn : Nat) : Bool := !safeIdx ctx.fa k i mn
+
+/-- The bounds check of index register `r` against the length at `ln`, if `ck`. -/
+def chkR (ck : Bool) (r : Reg64) (ln : AddrExpr) : Program :=
+  if ck then [i64 (.cmp (.reg (rr r)) (oM ln)), jccL .nc errorL] else []
 
 def binInstr : BinOp → Directive
   | .add => i64 (.add (.reg (rr .rax)) (oR .rcx))
@@ -1169,12 +1181,12 @@ def mbx (b i : Reg64) (byte : Bool) : AddrExpr := ⟨some (.reg b), some ⟨i, i
 /-- `d := A[i]`, where `[ln]` is `A`'s length and `[bs]` its base: the bounds check, then the load,
 with a constant index folded into the displacement and a local's register as the index. A
 constant index below `mn`, a minimum length of `A` (`Tab.min64`), needs no check. -/
-def genLd (ctx : Ctx) (ln bs : AddrExpr) (byte : Bool) (mn : Nat) (i : Expr) (gi : GenF) (d : Reg64)
-    (fr : List Reg64) : Option Program :=
+def genLd (ctx : Ctx) (ln bs : AddrExpr) (byte : Bool) (mn : Nat) (ck : Bool) (i : Expr) (gi : GenF)
+    (d : Reg64) (fr : List Reg64) : Option Program :=
   match i with
   | .const k =>
     if k.toNat < 2 ^ 28 then
-      if k.toNat < mn then
+      if k.toNat < mn || !ck then
         some [movRM d bs, ldA byte d (mb d (if byte then k.toNat else 8 * k.toNat))]
       else
       some [i64 (.cmp (.mem ln) (oI k.toNat)), jccL .be errorL, movRM d bs,
@@ -1182,64 +1194,64 @@ def genLd (ctx : Ctx) (ln bs : AddrExpr) (byte : Bool) (mn : Nat) (i : Expr) (gi
     else none
   | i =>
     match regOf ctx i with
-    | some r => some [i64 (.cmp (.reg (rr r)) (oM ln)), jccL .nc errorL, movRM d bs, ldA byte d (mbx d r byte)]
+    | some r => some (chkR ck r ln ++ [movRM d bs, ldA byte d (mbx d r byte)])
     | none =>
       match fr with
       | t :: _ => (gi d fr).map fun ci =>
-          ci ++ [i64 (.cmp (.reg (rr d)) (oM ln)), jccL .nc errorL, movRM t bs, ldA byte d (mbx t d byte)]
+          ci ++ chkR ck d ln ++ [movRM t bs, ldA byte d (mbx t d byte)]
       | [] => none
 
 /-- `d := A[i]` for the table-relative array `A` at `T + c` (`Tab.tbl64`), `[ln]` its length: the
 bounds check (none for a constant index below the minimum length `mn`), then one load addressed
 from `r15`, `[r15 + c + 8k]` or `[r15 + 8 i + c]`. -/
-def genLdT (ctx : Ctx) (ln : AddrExpr) (c mn : Nat) (i : Expr) (gi : GenF) (d : Reg64) (fr : List Reg64) :
-    Option Program :=
+def genLdT (ctx : Ctx) (ln : AddrExpr) (c mn : Nat) (ck : Bool) (i : Expr) (gi : GenF) (d : Reg64)
+    (fr : List Reg64) : Option Program :=
   match i with
   | .const k =>
     if c + 8 * k.toNat < 2 ^ 31 then
-      if k.toNat < mn then some [movRM d (mb .r15 (c + 8 * k.toNat : Nat))]
+      if k.toNat < mn || !ck then some [movRM d (mb .r15 (c + 8 * k.toNat : Nat))]
       else some [i64 (.cmp (.mem ln) (oI k.toNat)), jccL .be errorL, movRM d (mb .r15 (c + 8 * k.toNat : Nat))]
     else none
   | i =>
     if c < 2 ^ 31 then
       match regOf ctx i with
-      | some r => some [i64 (.cmp (.reg (rr r)) (oM ln)), jccL .nc errorL, movRM d (tdesc r c)]
+      | some r => some (chkR ck r ln ++ [movRM d (tdesc r c)])
       | none => (gi d fr).map fun ci =>
-          ci ++ [i64 (.cmp (.reg (rr d)) (oM ln)), jccL .nc errorL, movRM d (tdesc d c)]
+          ci ++ chkR ck d ln ++ [movRM d (tdesc d c)]
     else none
 
 /-- `d := A.u32[x]` (lane p32), where `[ln]` is `A`'s length in 32-bit elements (`Tab.len32`)
 and `[bs]` its base: the bounds check `x < len32`, the base into the scratch register `t`, the
 4-byte load at `t + 4 x` (zero-extended). -/
-def ld32Code (x t d : Reg64) (ln bs : AddrExpr) : Program :=
-  [i64 (.cmp (.reg (rr x)) (oM ln)), jccL .nc errorL, movRM t bs, ld32X d t x]
+def ld32Code (ck : Bool) (x t d : Reg64) (ln bs : AddrExpr) : Program :=
+  chkR ck x ln ++ [movRM t bs, ld32X d t x]
 
 /-- `d := A[x]`'s half `hi` (lane p32use), where `[ln]` is `A`'s length in words and `[bs]` its
 base: the bounds check `x < len` (as for a word load), the base into the scratch register `t`,
 the 4-byte load at `t + 8 x + 4 hi` (zero-extended). -/
-def ld32hCode (x t d : Reg64) (ln bs : AddrExpr) (hi : Bool) : Program :=
-  [i64 (.cmp (.reg (rr x)) (oM ln)), jccL .nc errorL, movRM t bs, ld32H d t x hi]
+def ld32hCode (ck : Bool) (x t d : Reg64) (ln bs : AddrExpr) (hi : Bool) : Program :=
+  chkR ck x ln ++ [movRM t bs, ld32H d t x hi]
 
 /-- `d := A[i]`'s half `hi` through the register stack: the index a local's register or computed
 into `d`, then `ld32hCode` with the first scratch register. -/
-def genLd32h (ctx : Ctx) (ln bs : AddrExpr) (hi : Bool) (i : Expr) (gi : GenF) (d : Reg64)
+def genLd32h (ctx : Ctx) (ln bs : AddrExpr) (hi : Bool) (ck : Bool) (i : Expr) (gi : GenF) (d : Reg64)
     (fr : List Reg64) : Option Program :=
   match fr with
   | t :: _ =>
     match regOf ctx i with
-    | some r => some (ld32hCode r t d ln bs hi)
-    | none => (gi d fr).map fun ci => ci ++ ld32hCode d t d ln bs hi
+    | some r => some (ld32hCode ck r t d ln bs hi)
+    | none => (gi d fr).map fun ci => ci ++ ld32hCode ck d t d ln bs hi
   | [] => none
 
 /-- `d := A.u32[i]` through the register stack: the index a local's register or computed into `d`,
 then `ld32Code` with the first scratch register. -/
-def genLd32 (ctx : Ctx) (ln bs : AddrExpr) (i : Expr) (gi : GenF) (d : Reg64) (fr : List Reg64) :
+def genLd32 (ctx : Ctx) (ln bs : AddrExpr) (ck : Bool) (i : Expr) (gi : GenF) (d : Reg64) (fr : List Reg64) :
     Option Program :=
   match fr with
   | t :: _ =>
     match regOf ctx i with
-    | some r => some (ld32Code r t d ln bs)
-    | none => (gi d fr).map fun ci => ci ++ ld32Code d t d ln bs
+    | some r => some (ld32Code ck r t d ln bs)
+    | none => (gi d fr).map fun ci => ci ++ ld32Code ck d t d ln bs
   | [] => none
 
 /-- Flags for `a op b` and the condition code under which it holds: in place (`cmpIn`), else
@@ -1273,21 +1285,25 @@ def gen (ctx : Ctx) : Expr → Reg64 → List Reg64 → Option Program
   | .len8 a, d, _ => some [movRM d (mb .r15 (ctx.tab.len8 a))]
   | .len64 a, d, _ => some [movRM d (mb .r15 (ctx.tab.len64 a))]
   | .bin op a b, d, fr => genBin ctx op a b (gen ctx a) (gen ctx b) d fr
-  | .ld8 a i, d, fr => genLd ctx (mb .r15 (ctx.tab.len8 a)) (mb .r15 (ctx.tab.base8 a)) true 0 i (gen ctx i) d fr
+  | .ld8 a i, d, fr =>
+    genLd ctx (mb .r15 (ctx.tab.len8 a)) (mb .r15 (ctx.tab.base8 a)) true 0 (ctx.ck (some (.b a)) i 0) i
+      (gen ctx i) d fr
   | .ld64 a i, d, fr =>
     match ctx.tab.tbl64 a with
-    | some c => genLdT ctx (mb .r15 (ctx.tab.len64 a)) c (ctx.tab.min64 a) i (gen ctx i) d fr
+    | some c => genLdT ctx (mb .r15 (ctx.tab.len64 a)) c (ctx.tab.min64 a)
+      (ctx.ck (some (.w a)) i (ctx.tab.min64 a)) i (gen ctx i) d fr
     | none =>
-    genLd ctx (mb .r15 (ctx.tab.len64 a)) (mb .r15 (ctx.tab.base64 a)) false (ctx.tab.min64 a) i (gen ctx i) d fr
+    genLd ctx (mb .r15 (ctx.tab.len64 a)) (mb .r15 (ctx.tab.base64 a)) false (ctx.tab.min64 a)
+      (ctx.ck (some (.w a)) i (ctx.tab.min64 a)) i (gen ctx i) d fr
   | .ld64t a t i, d, fr =>
     if ctx.isT t then
-      genLd ctx (tdesc .rsi (ctx.tab.len64 a)) (tdesc .rsi (ctx.tab.base64 a)) false (ctx.tab.min64t a) i
-        (gen ctx i) d fr
+      genLd ctx (tdesc .rsi (ctx.tab.len64 a)) (tdesc .rsi (ctx.tab.base64 a)) false (ctx.tab.min64t a)
+        (ctx.ck (keyT a t) i (ctx.tab.min64t a)) i (gen ctx i) d fr
     else
       match fr with
       | s :: fr' => (gen ctx t s fr').bind fun ct =>
-          (genLd ctx (tdesc s (ctx.tab.len64 a)) (tdesc s (ctx.tab.base64 a)) false (ctx.tab.min64t a) i
-            (gen ctx i) d fr').map
+          (genLd ctx (tdesc s (ctx.tab.len64 a)) (tdesc s (ctx.tab.base64 a)) false (ctx.tab.min64t a)
+            (ctx.ck (keyT a t) i (ctx.tab.min64t a)) i (gen ctx i) d fr').map
             fun c => ct ++ tierDesc s ++ c
       | [] => none
   | .len64t a t, d, fr =>
@@ -1308,24 +1324,29 @@ def gen (ctx : Ctx) : Expr → Reg64 → List Reg64 → Option Program
   | .ld8x8 _ _, _, _ => none
   | .ld32t a t i, d, fr =>
     if ctx.isT t then
-      genLd32 ctx (tdesc .rsi (ctx.tab.len32 a)) (tdesc .rsi (ctx.tab.base64 a)) i (gen ctx i) d fr
+      genLd32 ctx (tdesc .rsi (ctx.tab.len32 a)) (tdesc .rsi (ctx.tab.base64 a))
+        (ctx.ck (key32 a t) i (2 * ctx.tab.min64t a)) i (gen ctx i) d fr
     else
     match t.constTier? with
     | some c =>
-      genLd32 ctx (mb .r15 (ctx.tab.len32 (tierA a c))) (mb .r15 (ctx.tab.base64 (tierA a c))) i (gen ctx i) d fr
+      genLd32 ctx (mb .r15 (ctx.tab.len32 (tierA a c))) (mb .r15 (ctx.tab.base64 (tierA a c)))
+        (ctx.ck (key32 a t) i (2 * ctx.tab.min64 (tierA a c))) i (gen ctx i) d fr
     | none =>
       match fr with
       | s :: fr' => (gen ctx t s fr').bind fun ct =>
-          (genLd32 ctx (tdesc s (ctx.tab.len32 a)) (tdesc s (ctx.tab.base64 a)) i (gen ctx i) d fr').map
+          (genLd32 ctx (tdesc s (ctx.tab.len32 a)) (tdesc s (ctx.tab.base64 a))
+            (ctx.ck (key32 a t) i (2 * ctx.tab.min64t a)) i (gen ctx i) d fr').map
             fun c => ct ++ tierDesc s ++ c
       | [] => none
   | .ld32h a t i hi, d, fr =>
     if ctx.isT t then
-      genLd32h ctx (tdesc .rsi (ctx.tab.len64 a)) (tdesc .rsi (ctx.tab.base64 a)) hi i (gen ctx i) d fr
+      genLd32h ctx (tdesc .rsi (ctx.tab.len64 a)) (tdesc .rsi (ctx.tab.base64 a)) hi
+        (ctx.ck (keyT a t) i (ctx.tab.min64t a)) i (gen ctx i) d fr
     else
       match fr with
       | s :: fr' => (gen ctx t s fr').bind fun ct =>
-          (genLd32h ctx (tdesc s (ctx.tab.len64 a)) (tdesc s (ctx.tab.base64 a)) hi i (gen ctx i) d fr').map
+          (genLd32h ctx (tdesc s (ctx.tab.len64 a)) (tdesc s (ctx.tab.base64 a)) hi
+            (ctx.ck (keyT a t) i (ctx.tab.min64t a)) i (gen ctx i) d fr').map
             fun c => ct ++ tierDesc s ++ c
       | [] => none
 
@@ -1401,27 +1422,27 @@ def compileE (ctx : Ctx) : Expr → Nat → Program
        srcBase ctx s, movRM .rax (mbi .rcx .rax .W8)]
   | .ld32t a t i, k =>
     if ctx.isT t then
-      compileE ctx i k ++ ld32Code .rax .rcx .rax (tdesc .rsi (ctx.tab.len32 a)) (tdesc .rsi (ctx.tab.base64 a))
+      compileE ctx i k ++ ld32Code true .rax .rcx .rax (tdesc .rsi (ctx.tab.len32 a)) (tdesc .rsi (ctx.tab.base64 a))
     else
     match t.constTier? with
     | some c =>
       compileE ctx i k ++
-        ld32Code .rax .rcx .rax (mb .r15 (ctx.tab.len32 (tierA a c))) (mb .r15 (ctx.tab.base64 (tierA a c)))
+        ld32Code true .rax .rcx .rax (mb .r15 (ctx.tab.len32 (tierA a c))) (mb .r15 (ctx.tab.base64 (tierA a c)))
     | none =>
     (match loadInto ctx .rdx t with
      | some ld => compileE ctx i k ++ ld
      | none => compileE ctx t k ++ [movMR (ctx.tmp k) .rax] ++ compileE ctx i (k + 1) ++
          [movRM .rdx (ctx.tmp k)]) ++ tierDesc .rdx ++
-      ld32Code .rax .rcx .rax (tdesc .rdx (ctx.tab.len32 a)) (tdesc .rdx (ctx.tab.base64 a))
+      ld32Code true .rax .rcx .rax (tdesc .rdx (ctx.tab.len32 a)) (tdesc .rdx (ctx.tab.base64 a))
   | .ld32h a t i hi, k =>
     if ctx.isT t then
-      compileE ctx i k ++ ld32hCode .rax .rcx .rax (tdesc .rsi (ctx.tab.len64 a)) (tdesc .rsi (ctx.tab.base64 a)) hi
+      compileE ctx i k ++ ld32hCode true .rax .rcx .rax (tdesc .rsi (ctx.tab.len64 a)) (tdesc .rsi (ctx.tab.base64 a)) hi
     else
     (match loadInto ctx .rdx t with
      | some ld => compileE ctx i k ++ ld
      | none => compileE ctx t k ++ [movMR (ctx.tmp k) .rax] ++ compileE ctx i (k + 1) ++
          [movRM .rdx (ctx.tmp k)]) ++ tierDesc .rdx ++
-      ld32hCode .rax .rcx .rax (tdesc .rdx (ctx.tab.len64 a)) (tdesc .rdx (ctx.tab.base64 a)) hi
+      ld32hCode true .rax .rcx .rax (tdesc .rdx (ctx.tab.len64 a)) (tdesc .rdx (ctx.tab.base64 a)) hi
 
 /-- The negation of a condition code. -/
 def CondCode.neg : CondCode → CondCode
@@ -1587,7 +1608,7 @@ def genStV (ctx : Ctx) (e : Expr) (fr : List Reg64) : Option (Program × Operand
 the value (`genStV`), the index (a constant folded into the displacement, a local's register, or
 evaluated into a scratch register), the bounds check (none for a constant index below the minimum
 length `mn`), the base into a scratch register, the store. -/
-def genSt (ctx : Ctx) (ln bs : AddrExpr) (mn : Nat) (i e : Expr) (fr : List Reg64) : Option Program :=
+def genSt (ctx : Ctx) (ln bs : AddrExpr) (mn : Nat) (ck : Bool) (i e : Expr) (fr : List Reg64) : Option Program :=
   match genStV ctx e fr with
   | none => none
   | some (cv, src, fr1) =>
@@ -1596,7 +1617,7 @@ def genSt (ctx : Ctx) (ln bs : AddrExpr) (mn : Nat) (i e : Expr) (fr : List Reg6
       if k.toNat < 2 ^ 28 then
         match fr1 with
         | t :: _ =>
-          if k.toNat < mn then some (cv ++ [movRM t bs, i64 (.mov (.mem (mb t (8 * k.toNat))) src)])
+          if k.toNat < mn || !ck then some (cv ++ [movRM t bs, i64 (.mov (.mem (mb t (8 * k.toNat))) src)])
           else some (cv ++ [i64 (.cmp (.mem ln) (oI k.toNat)), jccL .be errorL, movRM t bs,
             i64 (.mov (.mem (mb t (8 * k.toNat))) src)])
         | [] => none
@@ -1605,40 +1626,37 @@ def genSt (ctx : Ctx) (ln bs : AddrExpr) (mn : Nat) (i e : Expr) (fr : List Reg6
       match regOf ctx i with
       | some r =>
         match fr1 with
-        | t :: _ => some (cv ++ [i64 (.cmp (.reg (rr r)) (oM ln)), jccL .nc errorL, movRM t bs,
-            i64 (.mov (.mem (mbi t r .W64)) src)])
+        | t :: _ => some (cv ++ chkR ck r ln ++ [movRM t bs, i64 (.mov (.mem (mbi t r .W64)) src)])
         | [] => none
       | none =>
         match fr1 with
         | x :: t :: fr2 => (gen ctx i x (t :: fr2)).map fun ci =>
-            cv ++ ci ++ [i64 (.cmp (.reg (rr x)) (oM ln)), jccL .nc errorL, movRM t bs,
-              i64 (.mov (.mem (mbi t x .W64)) src)]
+            cv ++ ci ++ chkR ck x ln ++ [movRM t bs, i64 (.mov (.mem (mbi t x .W64)) src)]
         | _ => none
 
 /-- `A.u64[i] := e` for the table-relative array `A` at `T + c` (`Tab.tbl64`), `[ln]` its length:
 the value (`genStV`), the index (a constant folded into the displacement, a local's register, or
 evaluated into a scratch register), the bounds check (none for a constant index below `mn`), one
 store addressed from `r15`. -/
-def genStT (ctx : Ctx) (ln : AddrExpr) (c mn : Nat) (i e : Expr) (fr : List Reg64) : Option Program :=
+def genStT (ctx : Ctx) (ln : AddrExpr) (c mn : Nat) (ck : Bool) (i e : Expr) (fr : List Reg64) : Option Program :=
   match genStV ctx e fr with
   | none => none
   | some (cv, src, fr1) =>
     match i with
     | .const k =>
       if c + 8 * k.toNat < 2 ^ 31 then
-        if k.toNat < mn then some (cv ++ [i64 (.mov (.mem (mb .r15 (c + 8 * k.toNat : Nat))) src)])
+        if k.toNat < mn || !ck then some (cv ++ [i64 (.mov (.mem (mb .r15 (c + 8 * k.toNat : Nat))) src)])
         else some (cv ++ [i64 (.cmp (.mem ln) (oI k.toNat)), jccL .be errorL,
           i64 (.mov (.mem (mb .r15 (c + 8 * k.toNat : Nat))) src)])
       else none
     | i =>
       if c < 2 ^ 31 then
         match regOf ctx i with
-        | some r => some (cv ++ [i64 (.cmp (.reg (rr r)) (oM ln)), jccL .nc errorL,
-            i64 (.mov (.mem (tdesc r c)) src)])
+        | some r => some (cv ++ chkR ck r ln ++ [i64 (.mov (.mem (tdesc r c)) src)])
         | none =>
           match fr1 with
           | x :: fr2 => (gen ctx i x fr2).map fun ci =>
-              cv ++ ci ++ [i64 (.cmp (.reg (rr x)) (oM ln)), jccL .nc errorL, i64 (.mov (.mem (tdesc x c)) src)]
+              cv ++ ci ++ chkR ck x ln ++ [i64 (.mov (.mem (tdesc x c)) src)]
           | [] => none
       else none
 
@@ -1646,8 +1664,10 @@ def genStT (ctx : Ctx) (ln : AddrExpr) (c mn : Nat) (i e : Expr) (fr : List Reg6
 table-relative array, else `genSt`. -/
 def genSt64 (ctx : Ctx) (a : ArrId) (i e : Expr) : Option Program :=
   match ctx.tab.tbl64 a with
-  | some c => genStT ctx (mb .r15 (ctx.tab.len64 a)) c (ctx.tab.min64 a) i e ctx.pool
-  | none => genSt ctx (mb .r15 (ctx.tab.len64 a)) (mb .r15 (ctx.tab.base64 a)) (ctx.tab.min64 a) i e ctx.pool
+  | some c => genStT ctx (mb .r15 (ctx.tab.len64 a)) c (ctx.tab.min64 a) (ctx.ck (some (.w a)) i (ctx.tab.min64 a))
+    i e ctx.pool
+  | none => genSt ctx (mb .r15 (ctx.tab.len64 a)) (mb .r15 (ctx.tab.base64 a)) (ctx.tab.min64 a)
+    (ctx.ck (some (.w a)) i (ctx.tab.min64 a)) i e ctx.pool
 
 /-- `x := x op b` in place (lane leafgen, step G2): `op r, b` on the local's register `r` (`b` an
 operand in place or evaluated into a scratch register; shifts by a constant), or `op [slot], b`
@@ -1774,7 +1794,7 @@ def compileS (ctx : Ctx) (path : Path) : Stmt → Program
   | .seq s t =>
     match tailCode ctx s t with
     | some code => code
-    | none => compileS ctx (path.ch 1) s ++ compileS ctx (path.ch 2) t
+    | none => compileS ctx (path.ch 1) s ++ compileS { ctx with fa := postF ctx.fa s } (path.ch 2) t
   | .ite c (.abort (.const k)) .skip =>
     -- `if c abort k`: one conditional jump to an error exit (`ca_abort` with the code in `rbx`)
     if k = 0 then compileC ctx (path.ch 3) c true errorL 0
@@ -1782,17 +1802,20 @@ def compileS (ctx : Ctx) (path : Path) : Stmt → Program
     else
       -- a leaf keeps a local in `rbx`: the general `if`
       compileC ctx (path.ch 3) c false (ctx.lbl path "E") 0 ++
-        compileS ctx (path.ch 4) (.abort (.const k)) ++
-        [jmpL (ctx.lbl path "X"), .label (ctx.lbl path "E")] ++ compileS ctx (path.ch 5) .skip ++
+        compileS { ctx with fa := ctx.fa.map (·.condAll c true) } (path.ch 4) (.abort (.const k)) ++
+        [jmpL (ctx.lbl path "X"), .label (ctx.lbl path "E")] ++
+        compileS { ctx with fa := ctx.fa.map (·.condAll c false) } (path.ch 5) .skip ++
         [.label (ctx.lbl path "X")]
   | .ite c s t =>
-    compileC ctx (path.ch 3) c false (ctx.lbl path "E") 0 ++ compileS ctx (path.ch 4) s ++
-      [jmpL (ctx.lbl path "X"), .label (ctx.lbl path "E")] ++ compileS ctx (path.ch 5) t ++
+    compileC ctx (path.ch 3) c false (ctx.lbl path "E") 0 ++
+      compileS { ctx with fa := ctx.fa.map (·.condAll c true) } (path.ch 4) s ++
+      [jmpL (ctx.lbl path "X"), .label (ctx.lbl path "E")] ++
+      compileS { ctx with fa := ctx.fa.map (·.condAll c false) } (path.ch 5) t ++
       [.label (ctx.lbl path "X")]
   | .while c s =>
-    [.label (ctx.lbl path "H")] ++ compileC ctx (path.ch 3) c false (ctx.lbl path "X") 0 ++
-      compileS { ctx with brk := ctx.lbl path "X" } (path.ch 6) s ++ burnFuel ++
-      [jmpL (ctx.lbl path "H"), .label (ctx.lbl path "X")]
+    [.label (ctx.lbl path "H")] ++ compileC { ctx with fa := headF ctx.fa s } (path.ch 3) c false (ctx.lbl path "X") 0 ++
+      compileS { ctx with brk := ctx.lbl path "X", fa := (headF ctx.fa s).map (·.condAll c true) } (path.ch 6) s ++
+      burnFuel ++ [jmpL (ctx.lbl path "H"), .label (ctx.lbl path "X")]
   | .brk => [jmpL ctx.brk]
   | .ret es =>
     match retDirect ctx es ctx.nr with
@@ -1808,7 +1831,8 @@ def compileS (ctx : Ctx) (path : Path) : Stmt → Program
   | .gset g e => compileE ctx e 0 ++ [movMR (mb .r15 (ctx.tab.globOff g)) .rax]
   | .st64t a t i e =>
     match (if ctx.isT t then
-        genSt ctx (tdesc .rsi (ctx.tab.len64 a)) (tdesc .rsi (ctx.tab.base64 a)) (ctx.tab.min64t a) i e ctx.pool
+        genSt ctx (tdesc .rsi (ctx.tab.len64 a)) (tdesc .rsi (ctx.tab.base64 a)) (ctx.tab.min64t a)
+          (ctx.ck (keyT a t) i (ctx.tab.min64t a)) i e ctx.pool
       else none) with
     | some code => code
     | none =>
