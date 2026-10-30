@@ -52,11 +52,71 @@ def kzeroW (sa : TieredArray) : Word → Nat → Mem → Mem
   | _, 0, m => m
   | x, e + 1, m => kzeroW sa (x + 8) e (zero8 sa x m)
 
-/-- The mark loop: `e` slots from word `x`; a live one (value word above `bt`) gets `MARK`. -/
-def kmarkW (sa : TieredArray) (bt : Word) : Nat → Word → Mem → Mem
-  | 0, _, m => m
-  | e + 1, x, m => kmarkW sa bt e (x + 2)
-      (if bt < rdW (m.arr64 sa) x then m.set64 sa x (rdW (m.arr64 sa) x + MARK) else m)
+/-- The two mark ranges of the sweep, `[a0, a1)` and `[b0, b1)`. -/
+structure MkR where
+  a0 : Word
+  a1 : Word
+  b0 : Word
+  b1 : Word
+
+/-- A deferred entry at slot `i` joins a range (`kdefB`): the first below `n / 2`, the second
+from it on. -/
+def kdefR (n i : Word) (k : MkR) : MkR :=
+  if i * 2 < n then { k with a1 := if k.a1 = 0 then i + 1 else k.a1, a0 := i }
+  else { k with b1 := if k.b1 = 0 then i + 1 else k.b1, b0 := i }
+
+/-- The sweep's probe (`kupL`, `N` slots from word `ob`): from slot `j` upward past the live
+unmarked slots, without wrapping: the first slot that is not live unmarked, or the top one (`j <
+N` holds on every call from the sweep, it only makes the model terminate). -/
+def kupW (sl : Array Word) (ob N bt j : Word) : Word :=
+  if j < N ∧ bt < rdW sl (ob + j * 2) ∧ rdW sl (ob + j * 2) < MARK ∧ j + 1 < N then
+    kupW sl ob N bt (j + 1)
+  else j
+termination_by N.toNat - j.toNat
+decreasing_by
+  have h1 : j.toNat < N.toNat := UInt64.lt_iff_toNat_lt.mp ‹j < N ∧ _›.1
+  have h2 := N.toNat_lt
+  have : (j + 1).toNat = j.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
+  omega
+
+/-- The new home of slot `i`'s entry: the home of `G` of its key word in the doubled table. -/
+def kjW (sa : TieredArray) (G : Mem → Word → Word) (N ob i : Word) (m : Mem) : Word :=
+  homeW (G m (rdW (m.arr64 sa) (ob + i * 2 + 1))) N
+
+/-- Where the sweep's step at slot `i` ends: above `i`, the probe's slot; else the home. -/
+def ktgW (sa : TieredArray) (G : Mem → Word → Word) (N ob bt i : Word) (m : Mem) : Word :=
+  if i < kjW sa G N ob i m then kupW (m.arr64 sa) ob N bt (kjW sa G N ob i m) else kjW sa G N ob i m
+
+/-- The value word the step tests (`x`): the probe's slot's, or slot `i`'s own. -/
+def kxW (sa : TieredArray) (G : Mem → Word → Word) (N ob bt i : Word) (m : Mem) : Word :=
+  if i < kjW sa G N ob i m then rdW (m.arr64 sa) (ob + ktgW sa G N ob bt i m * 2)
+  else rdW (m.arr64 sa) (ob + i * 2)
+
+/-- The step at the live slot `i` (`ktopB`): moved to a free slot found above `i`, kept at its
+home `i`, or marked and recorded in a range. -/
+def ktopBW (sa : TieredArray) (G : Mem → Word → Word) (N n ob bt i : Word) (k : MkR) (m : Mem) :
+    Mem × MkR :=
+  if kxW sa G N ob bt i m ≤ bt then
+    (((m.set64 sa (ob + ktgW sa G N ob bt i m * 2) (rdW (m.arr64 sa) (ob + i * 2))).set64 sa
+      (ob + ktgW sa G N ob bt i m * 2 + 1) (rdW (m.arr64 sa) (ob + i * 2 + 1))).set64 sa (ob + i * 2) 0, k)
+  else if ktgW sa G N ob bt i m = i then (m, k)
+  else (m.set64 sa (ob + i * 2) (rdW (m.arr64 sa) (ob + i * 2) + MARK), kdefR n i k)
+
+/-- The sweep's step at slot `i`: only a live slot is touched. -/
+def ktopS (sa : TieredArray) (G : Mem → Word → Word) (N n ob bt i : Word) (k : MkR) (m : Mem) :
+    Mem × MkR :=
+  if bt < rdW (m.arr64 sa) (ob + i * 2) then ktopBW sa G N n ob bt i k m else (m, k)
+
+/-- **The top-down sweep** (`ktopL`) over the slots `H - 1 ‥ 0`. -/
+def ktopW (sa : TieredArray) (G : Mem → Word → Word) (N n ob bt H : Word) (k : MkR) (m : Mem) :
+    Mem × MkR :=
+  if H = 0 then (m, k)
+  else ktopW sa G N n ob bt (H - 1) (ktopS sa G N n ob bt (H - 1) k m).2
+    (ktopS sa G N n ob bt (H - 1) k m).1
+termination_by H.toNat
+decreasing_by
+  have : H.toNat ≠ 0 := fun h => ‹¬ H = 0› (UInt64.toNat_inj.mp (by simpa using h))
+  rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simp; omega))]; simp; omega
 
 /-- The probe of the re-insertion of slot `i`'s entry (`N` slots from word `ob`): from slot `j`
 after `d` steps, past the live unmarked slots, the first slot that is `i`, free or marked
@@ -120,18 +180,28 @@ decreasing_by
   have : (i + 1).toNat = i.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
   omega
 
+/-- The memory after the growth's head and zero loop: the count word, the upper half zeroed
+(`2 n` words from `ob + 2 n`). -/
+def kzM (sa : ArrId) (t : Word) (m : Mem) : Mem :=
+  kzeroW (tierA sa t) (koW sa m t + 2 + knW sa m t * 2) (knW sa m t >>> 2).toNat
+    (m.set64 (tierA sa t) 0 (knW sa m t * 2 - SN0))
+
+/-- The sweep of the growth, from the memory `kzM`. -/
+def ktopM (sa : ArrId) (G : Mem → Word → Word) (t : Word) (m : Mem) : Mem × MkR :=
+  ktopW (tierA sa t) G (knW sa m t * 2) (knW sa m t) (koW sa m t + 2) (rdW (m.arr64 CTL) SCB * t)
+    (knW sa m t) ⟨0, 0, 0, 0⟩ (kzM sa t m)
+
 /-- **The growth of tier `t`** (`kgrowB`, in place): the memory after it, `none` where it
 aborts. The table (`n` slots from word `ob = o + 2`) doubles where it is: the count word, the
-upper half zeroed (`2 n` words from `ob + 2 n`), the old half's live slots marked, the marked
-entries re-inserted. -/
+upper half zeroed, the top-down sweep, then the marked entries re-inserted over the two mark
+ranges. -/
 def kgrowM (sa : ArrId) (G : Mem → Word → Word) (t : Word) (m : Mem) : Option Mem :=
   if m.len64 (tierA sa t) - 2 < koW sa m t + knW sa m t * 2 * 2 then none
   else
-    krehashW (tierA sa t) G (knW sa m t * 2) (knW sa m t) (koW sa m t + 2)
-      (rdW (m.arr64 CTL) SCB * t) 0 (knW sa m t)
-      (kmarkW (tierA sa t) (rdW (m.arr64 CTL) SCB * t) (knW sa m t).toNat (koW sa m t + 2)
-        (kzeroW (tierA sa t) (koW sa m t + 2 + knW sa m t * 2) (knW sa m t >>> 2).toNat
-          (m.set64 (tierA sa t) 0 (knW sa m t * 2 - SN0))))
+    (krehashW (tierA sa t) G (knW sa m t * 2) (ktopM sa G t m).2.a1 (koW sa m t + 2)
+      (rdW (m.arr64 CTL) SCB * t) (ktopM sa G t m).2.a0 (knW sa m t) (ktopM sa G t m).1).bind
+    (krehashW (tierA sa t) G (knW sa m t * 2) (ktopM sa G t m).2.b1 (koW sa m t + 2)
+      (rdW (m.arr64 CTL) SCB * t) (ktopM sa G t m).2.b0 (knW sa m t))
 
 /-! ## The frame of the growth -/
 
@@ -162,14 +232,27 @@ theorem kzeroW_fr (sa : TieredArray) : ∀ (e : Nat) (x : Word) (m : Mem), GFr s
   | 0, _, m => GFr.refl _ m
   | e + 1, x, m => (GFr.zero8 sa x m).trans (kzeroW_fr sa e (x + 8) _)
 
-theorem kmarkW_fr (sa : TieredArray) (bt : Word) :
-    ∀ (e : Nat) (x : Word) (m : Mem), GFr sa m (kmarkW sa bt e x m)
-  | 0, _, m => GFr.refl _ m
-  | e + 1, x, m => by
-    simp only [kmarkW]
-    split
-    · exact (GFr.set64 _ _ _ _).trans (kmarkW_fr sa bt e _ _)
-    · exact kmarkW_fr sa bt e _ _
+theorem ktopBW_fr (sa : TieredArray) (G : Mem → Word → Word) (N n ob bt i : Word) (k : MkR)
+    (m : Mem) : GFr sa m (ktopBW sa G N n ob bt i k m).1 := by
+  unfold ktopBW
+  split
+  · exact ((GFr.set64 _ _ _ _).trans (GFr.set64 _ _ _ _)).trans (GFr.set64 _ _ _ _)
+  split
+  · exact GFr.refl _ _
+  · exact GFr.set64 _ _ _ _
+
+theorem ktopS_fr (sa : TieredArray) (G : Mem → Word → Word) (N n ob bt i : Word) (k : MkR)
+    (m : Mem) : GFr sa m (ktopS sa G N n ob bt i k m).1 := by
+  unfold ktopS
+  split
+  · exact ktopBW_fr _ _ _ _ _ _ _ _ _
+  · exact GFr.refl _ _
+
+theorem ktopW_fr (sa : TieredArray) (G : Mem → Word → Word) (N n ob bt H : Word) (k : MkR)
+    (m : Mem) : GFr sa m (ktopW sa G N n ob bt H k m).1 := by
+  fun_induction ktopW sa G N n ob bt H k m with
+  | case1 => exact GFr.refl _ _
+  | case2 H k m hH ih => exact (ktopS_fr _ _ _ _ _ _ _ _ _).trans ih
 
 theorem kplaceW_fr (sa : TieredArray) (ob i j v q : Word) (m : Mem) : GFr sa m (kplaceW sa ob i j v q m).1 := by
   unfold kplaceW
@@ -205,8 +288,10 @@ theorem krehashW_fr (sa : TieredArray) (G : Mem → Word → Word) (N n ob bt i 
 theorem kgrowM_fr (sa : ArrId) (G : Mem → Word → Word) (t : Word) (m m' : Mem)
     (h : kgrowM sa G t m = some m') : GFr (tierA sa t) m m' := by
   simp only [kgrowM] at h
-  exact (((GFr.set64 _ _ _ _).trans (kzeroW_fr _ _ _ _)).trans (kmarkW_fr _ _ _ _ _)).trans
-    (krehashW_fr _ _ _ _ _ _ _ _ _ _ (ite_none_some h))
+  have h' := ite_none_some h
+  obtain ⟨m4, h4, h5⟩ := Option.bind_eq_some_iff.mp h'
+  exact ((((GFr.set64 _ _ _ _).trans (kzeroW_fr _ _ _ _)).trans (ktopW_fr _ _ _ _ _ _ _ _ _)).trans
+    (krehashW_fr _ _ _ _ _ _ _ _ _ _ h4)).trans (krehashW_fr _ _ _ _ _ _ _ _ _ _ h5)
 
 /-- Word stores to two different arrays commute. -/
 theorem Mem.set64_comm (m : Mem) (a b : TieredArray) (i j v w : Word) (h : a ≠ b) :
