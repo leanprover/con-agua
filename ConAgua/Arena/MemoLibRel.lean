@@ -47,7 +47,7 @@ def mk2G (S : MemoSch) (m : Mem) (j : Word) : Word := rdW (m.arr64 S.arr) (j * 4
 def mvG (S : MemoSch) (m : Mem) (j : Word) : Word := rdW (m.arr64 S.arr) (j * 4 + 3)
 
 /-- Slot `e` of the run of key `(k1, k2)` in the region from slot `b` of `n` slots. -/
-def runAt (b n k1 k2 : Word) (e : Nat) : Word := b + walkW n (homeW (kh k1 k2) n) e
+def runAt (b n k1 k2 : Word) (e : Nat) : Word := b + walkW n (mhome k1 k2 n) e
 
 /-- Slot `j` lies in the region from slot `b` of `n` slots. -/
 def InReg (b n j : Word) : Prop := b.toNat ≤ j.toNat ∧ j.toNat < b.toNat + n.toNat
@@ -119,10 +119,10 @@ theorem slotsG_lt (S : MemoSch) (m : Mem) : slotsG S m < 2 ^ 62 := by
 
 theorem runAt_reg (b n k1 k2 : Word) (d : Nat) (hn : 0 < n) (hb : b.toNat + n.toNat < 2 ^ 64) :
     InReg b n (runAt b n k1 k2 d) ∧
-      (runAt b n k1 k2 d).toNat = b.toNat + (walkW n (homeW (kh k1 k2) n) d).toNat := by
-  have hw := walkW_lt n (homeW (kh k1 k2) n) d (homeW_lt _ _ hn)
-  have hw' : (walkW n (homeW (kh k1 k2) n) d).toNat < n.toNat := hw
-  have e : (runAt b n k1 k2 d).toNat = b.toNat + (walkW n (homeW (kh k1 k2) n) d).toNat := by
+      (runAt b n k1 k2 d).toNat = b.toNat + (walkW n (mhome k1 k2 n) d).toNat := by
+  have hw := walkW_lt n (mhome k1 k2 n) d (mhome_lt _ _ _ hn)
+  have hw' : (walkW n (mhome k1 k2 n) d).toNat < n.toNat := hw
+  have e : (runAt b n k1 k2 d).toNat = b.toNat + (walkW n (mhome k1 k2 n) d).toNat := by
     simp only [runAt, UInt64.toNat_add]; omega
   exact ⟨⟨by omega, by omega⟩, e⟩
 
@@ -142,12 +142,12 @@ def MProbeOKAt (S : MemoSch) (m : Mem) (e b n k1 k2 : Word) (rs : List Word) : P
       mstG S m (rs.tail.headD 0) ≠ e ∧ MNoMatchAt S m e b n k1 k2 (rs.tail.tail.headD 0).toNat)
 
 theorem mprobeG_okAt (S : MemoSch) (m : Mem) (e b n k1 k2 : Word)
-    (hx : homeW (kh k1 k2) n < n) :
+    (hx : mhome k1 k2 n < n) :
     ∀ (k : Nat) (d : Word), n.toNat - d.toNat = k → MNoMatchAt S m e b n k1 k2 d.toNat →
       MProbeOKAt S m e b n k1 k2
-        (mprobeG (m.arr64 S.arr) k1 k2 e b n (walkW n (homeW (kh k1 k2) n) d.toNat) d) := by
+        (mprobeG (m.arr64 S.arr) k1 k2 e b n (walkW n (mhome k1 k2 n) d.toNat) d) := by
   have hn : 0 < n := by
-    have : (homeW (kh k1 k2) n).toNat < n.toNat := hx
+    have : (mhome k1 k2 n).toNat < n.toNat := hx
     exact UInt64.lt_iff_toNat_lt.mpr (by simp; omega)
   intro k
   induction k with
@@ -162,14 +162,14 @@ theorem mprobeG_okAt (S : MemoSch) (m : Mem) (e b n k1 k2 : Word)
     specialize this (by grind)
     rw [hd1, walkW_succ] at this
     rw [mprobeG]
-    have hrun : b + walkW n (homeW (kh k1 k2) n) d.toNat = runAt b n k1 k2 d.toNat := rfl
-    by_cases h0 : rdW (m.arr64 S.arr) ((b + walkW n (homeW (kh k1 k2) n) d.toNat) * 4) ≠ e
+    have hrun : b + walkW n (mhome k1 k2 n) d.toNat = runAt b n k1 k2 d.toNat := rfl
+    by_cases h0 : rdW (m.arr64 S.arr) ((b + walkW n (mhome k1 k2 n) d.toNat) * 4) ≠ e
     · simp only [hd, h0, ↓reduceIte, ne_eq, not_false_eq_true]
       refine fun _ => ⟨hn, fun h => by simp at h, fun _ => ?_⟩
       simp only [List.tail_cons, List.headD_cons, ← hrun]
       exact ⟨trivial, h0, hnm⟩
-    by_cases hm : rdW (m.arr64 S.arr) ((b + walkW n (homeW (kh k1 k2) n) d.toNat) * 4 + 1) = k1 ∧
-        rdW (m.arr64 S.arr) ((b + walkW n (homeW (kh k1 k2) n) d.toNat) * 4 + 2) = k2
+    by_cases hm : rdW (m.arr64 S.arr) ((b + walkW n (mhome k1 k2 n) d.toNat) * 4 + 1) = k1 ∧
+        rdW (m.arr64 S.arr) ((b + walkW n (mhome k1 k2 n) d.toNat) * 4 + 2) = k2
     · simp only [hd, h0, hm, ↓reduceIte, and_self]
       refine fun _ => ⟨hn, fun _ => ?_, fun h => by simp at h⟩
       simp only [List.tail_cons, List.headD_cons]
@@ -184,10 +184,10 @@ theorem mprobeG_okAt (S : MemoSch) (m : Mem) (e b n k1 k2 : Word)
 
 /-- The probe from the home slot. -/
 theorem mprobeG_home_ok (S : MemoSch) (m : Mem) (e b n k1 k2 : Word) :
-    MProbeOKAt S m e b n k1 k2 (mprobeG (m.arr64 S.arr) k1 k2 e b n (homeW (kh k1 k2) n) 0) := by
+    MProbeOKAt S m e b n k1 k2 (mprobeG (m.arr64 S.arr) k1 k2 e b n (mhome k1 k2 n) 0) := by
   by_cases hn : n = 0
   · subst hn; rw [mprobeG]; simp [MProbeOKAt]
-  · have := mprobeG_okAt S m e b n k1 k2 (homeW_lt _ _ (by grind)) _ 0 rfl
+  · have := mprobeG_okAt S m e b n k1 k2 (mhome_lt _ _ _ (by grind)) _ 0 rfl
       (by simp [MNoMatchAt])
     simpa [walkW] using this
 
