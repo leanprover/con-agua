@@ -5,7 +5,7 @@ public import ConAgua.Arena.CoreCaches
 import ConAgua.Census.Attr
 public import ConAgua.Arena.ConsLib
 public import ConAgua.Arena.SlotGrowSpec
-import ConAgua.Arena.ConsLibSpecBase
+import ConAgua.Arena.ConsLibSpecGrow
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import Std.Tactic.BVDecide.Normalize.BitVec
