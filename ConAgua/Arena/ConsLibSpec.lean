@@ -1000,8 +1000,7 @@ theorem kupLoop_spec (p : Prog) (C : ConsSch) (n : Nat) (s₀ : St) :
     Nat.reduceSub, Nat.add_zero]
   vcgen [step, evalE_spec, evalC_spec, setLoc, ld64, ih]
   all_goals (simp (disch := decide) only [St.setLoc_loc, St.setLoc_mem, BinOp.eval, Cmp.eval,
-    Expr.pval, Cond.pval, decide_eq_true_eq, Nat.add_left_cancel_iff, Nat.reduceEqDiff,
-    bne_iff_ne, ne_eq, rd64_rdWC, self_eq_addlit, addlit_eq_self, zero_eq_addlit,
+    Expr.pval, Cond.pval, Nat.add_left_cancel_iff, Nat.reduceEqDiff, rd64_rdWC, self_eq_addlit, zero_eq_addlit,
     Bool.and_eq_true, ↓reduceIte] at *)
   all_goals grind [lang_grind, arena_grind, Keep2, kupW_stop, kupW_next]
 
@@ -1029,8 +1028,7 @@ theorem kupL_spec (p : Prog) (C : ConsSch) (n : Nat) (s₀ : St) :
   simp (disch := decide) only [mapS, mapE, gmap_lit, gmap_zero, Nat.reduceSub]
   vcgen [step, evalE_spec, evalC_spec, setLoc, ld64, kupLoop_step_spec p C n]
   all_goals (simp (disch := decide) only [St.setLoc_loc, St.setLoc_mem, BinOp.eval,
-    Expr.pval, Nat.add_left_cancel_iff, Nat.reduceEqDiff, rd64_rdWC, self_eq_addlit,
-    addlit_eq_self, zero_eq_addlit, ↓reduceIte] at *)
+    Expr.pval, Nat.add_left_cancel_iff, Nat.reduceEqDiff, rd64_rdWC, self_eq_addlit, zero_eq_addlit, ↓reduceIte] at *)
   all_goals grind [lang_grind, Keep2]
 
 /-- **A deferral's range** (`kdefB`): the mark ranges become `kdefR` of `n` and the slot `H`. -/
@@ -1040,10 +1038,10 @@ theorem kdefB_spec (p : Prog) (C : ConsSch) (n : Nat) (s₀ : St) :
     ⦃fun r s' => r = .normal ∧ s'.mem = s₀.mem ∧ KeepMk C s₀ s' ∧
       mkOf C s' = kdefR (s₀.loc (gO C + 1)) (s₀.loc (gO C + 2)) (mkOf C s₀); ⊤⦄ := by
   unfold kdefB
-  simp (disch := decide) only [mapS, mapE, mapC, gmap_lit, gmap_zero, Nat.reduceSub]
+  simp (disch := decide) only [mapS, mapE, mapC, gmap_lit, Nat.reduceSub]
   vcgen [step, evalE_spec, evalC_spec, setLoc]
   all_goals (simp (disch := decide) only [St.setLoc_loc, St.setLoc_mem, BinOp.eval, Cmp.eval,
-    Expr.pval, Cond.pval, decide_eq_true_eq, Nat.add_left_cancel_iff, Nat.reduceEqDiff,
+    Expr.pval, Cond.pval, Nat.add_left_cancel_iff, Nat.reduceEqDiff,
     beq_iff_eq, ↓reduceIte] at *)
   all_goals grind [lang_grind, KeepMk, mkOf, kdefR]
 
@@ -1097,9 +1095,9 @@ theorem ktopQ_spec (p : Prog) (C : ConsSch) (n : Nat) (s₀ : St) :
   unfold ktopQ
   simp (disch := decide) only [mapS, mapE, mapC, gmap_lit, gmap_zero, Nat.reduceSub]
   vcgen [step, evalE_spec, evalC_spec, setLoc, st64, kdefB_spec p C n]
-  all_goals (simp (disch := decide) only [St.setLoc_loc, St.setLoc_mem, BinOp.eval, Cmp.eval,
-    Expr.pval, Cond.pval, decide_eq_true_eq, Nat.add_left_cancel_iff, Nat.reduceEqDiff,
-    bne_iff_ne, ne_eq, rd64_rdWC, zero_eq_addlit, ↓reduceIte] at *)
+  all_goals (simp (disch := decide) only [BinOp.eval, Cmp.eval,
+    Expr.pval, Cond.pval,
+    bne_iff_ne, ne_eq] at *)
   all_goals grind [lang_grind, arena_grind, KeepMk, mkOf, ktopQW]
 
 /-- **The sweep's step at a live slot** (`ktopB`): `ktopBW`. -/
@@ -1171,7 +1169,7 @@ theorem keepT_of (C : ConsSch) (s₀ s : St) (A B : Word)
     KeepT C s₀ s := by
   have g : ∀ z : Nat, (z < gO C ∨ z = gO C ∨ z = gO C + 1 ∨ z = gO C + 4 ∨ z = gO C + 13) →
       s.loc z = s₀.loc z := fun z hz => by
-    rw [h z (by omega) (by omega) (by omega) (by omega) (by omega), if_neg (by omega), if_neg (by omega)]
+    rw [h z (by omega) (by omega) (by omega) (by omega) (by omega), ite_eq_right (by omega), ite_eq_right (by omega)]
   exact ⟨fun z hz => g z (.inl hz), g _ (.inr (.inl rfl)), g _ (.inr (.inr (.inl rfl))),
     g _ (.inr (.inr (.inr (.inl rfl)))), g _ (.inr (.inr (.inr (.inr rfl))))⟩
 
@@ -1188,7 +1186,7 @@ theorem ktopBody_spec (p : Prog) (C : ConsSch) (hO : ConsOK p C) (n : Nat) (s₀
   simp (disch := decide) only [mapS, mapE, mapC, gmap_lit, gmap_zero, Nat.reduceSub]
   vcgen [step, evalE_spec, evalC_spec, setLoc, ld64, ktopB_spec p C hO n]
   all_goals (try simp (disch := omega) only [St.setLoc_mem, BinOp.eval, Cmp.eval,
-    Expr.pval, Cond.pval, decide_eq_true_eq, rd64_rdWC, ↓reduceIte, mkOf_setLoc] at *)
+    Expr.pval, Cond.pval, decide_eq_true_eq, rd64_rdWC, mkOf_setLoc] at *)
   all_goals (try simp (disch := decide) only [St.setLoc_loc, Nat.add_left_cancel_iff, Nat.reduceEqDiff,
     self_eq_addlit, zero_eq_addlit, ↓reduceIte] at *)
   case vc2 =>
@@ -1253,10 +1251,9 @@ theorem ktopL_spec (p : Prog) (C : ConsSch) (hO : ConsOK p C) (n : Nat) (s₀ : 
   | zero => vcgen [exec] <;> grind
   | succ n ih =>
   rw [exec, step_while (w := mapS (gmap C) (ktopL C)) rfl]
-  simp (disch := decide) only [mapS, mapE, mapC, gmap_lit, gmap_zero, Nat.reduceSub]
+  simp (disch := decide) only [mapE, mapC, gmap_lit, Nat.reduceSub]
   vcgen [step, evalE_spec, evalC_spec, ktopBody_spec p C hO n, ih]
-  all_goals (try simp (disch := decide) only [Cmp.eval, Expr.pval, Cond.pval, bne_iff_ne, ne_eq,
-    decide_eq_true_eq] at *)
+  all_goals (try simp (disch := decide) only [Cmp.eval, Expr.pval, Cond.pval, bne_iff_ne, ne_eq] at *)
   case vc1 =>
     obtain ⟨k1, h1, m1, r1⟩ := ‹KeepT C s₀ _ ∧ _›
     obtain ⟨k2, m2, r2⟩ := ‹KeepT C _ _ ∧ _›
