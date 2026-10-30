@@ -758,7 +758,9 @@ def mkApp : FunDecl := lfn (f, a) locals (x, y, s, r, q, xf, yf, xl, yl, tr) {
     ADER⟨tr⟩.u32[q] := 0;
     (x, xf, xl) := call der_b(f);
     (y, yf, yl) := call der_b(a);
-    ADER⟨tr⟩.u32[q] := x + (y - x) * u64(x < y) + (xf + (yf - xf) * u64(xf < yf)) * 32768 + (xl | yl) * 1073741824
+    if x < y { x := y };
+    if xf < yf { xf := yf };
+    ADER⟨tr⟩.u32[q] := x + xf * 32768 + (xl | yl) * 1073741824
   };
   return r
 }
@@ -787,7 +789,9 @@ def mkLam : FunDecl := lfn (t, b) locals (x, y, s, r, q, xf, yf, xl, yl, tr) {
     (x, xf, xl) := call der_b(t);
     (y, yf, yl) := call der_b(b);
     y := y - u64(0 < y) + u64(y == 32767);
-    LADER⟨tr⟩.u32[q] := x + (y - x) * u64(x < y) + (xf + (yf - xf) * u64(xf < yf)) * 32768 + (xl | yl) * 1073741824
+    if x < y { x := y };
+    if xf < yf { xf := yf };
+    LADER⟨tr⟩.u32[q] := x + xf * 32768 + (xl | yl) * 1073741824
   };
   return r
 }
@@ -813,7 +817,9 @@ def mkForall : FunDecl := lfn (t, b) locals (x, y, s, r, q, xf, yf, xl, yl, tr) 
     (x, xf, xl) := call der_b(t);
     (y, yf, yl) := call der_b(b);
     y := y - u64(0 < y) + u64(y == 32767);
-    FADER⟨tr⟩.u32[q] := x + (y - x) * u64(x < y) + (xf + (yf - xf) * u64(xf < yf)) * 32768 + (xl | yl) * 1073741824
+    if x < y { x := y };
+    if xf < yf { xf := yf };
+    FADER⟨tr⟩.u32[q] := x + xf * 32768 + (xl | yl) * 1073741824
   };
   return r
 }
@@ -841,10 +847,12 @@ def mkLet : FunDecl := lfn (t, v, b) locals (x, y, z, s, r, q, xf, yf, zf, xl, y
     tr := ⟦r⟧.tier;
     q := ⟦r⟧.idx;
     if len(LEDER⟨tr⟩) * 2 <= q { abort };
-    x := x + (y - x) * u64(x < y);
+    if x < y { x := y };
     z := z - u64(0 < z) + u64(z == 32767);
-    xf := xf + (yf - xf) * u64(xf < yf);
-    LEDER⟨tr⟩.u32[q] := x + (z - x) * u64(x < z) + (xf + (zf - xf) * u64(xf < zf)) * 32768 + (xl | yl | zl) * 1073741824
+    if x < z { x := z };
+    if xf < yf { xf := yf };
+    if xf < zf { xf := zf };
+    LEDER⟨tr⟩.u32[q] := x + xf * 32768 + (xl | yl | zl) * 1073741824
   };
   return r
 }
