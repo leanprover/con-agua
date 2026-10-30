@@ -881,13 +881,25 @@ def mkProj : FunDecl := lfn (n, i, e) locals (x, s, r, q, xf, xl, tr) {
 
 /-! ## The store arithmetic as named functions
 
-The `mk_*` stores compute `maxW`, `satPredW` and `packBF` inline; these equations name the evaluated
+The `mk_*` stores compute `satPredW` and `packBF` inline; these equations name the evaluated
 L expressions, so `finish` matches them instead of unfolding the arithmetic (and case-splitting on
-its comparisons) inside every spec (lane `exprops4`: `mkLet_spec` went from > 10 min to seconds). -/
+its comparisons) inside every spec (lane `exprops4`: `mkLet_spec` went from > 10 min to seconds).
+Each `maxW` is a branch, which `step_maxIf_spec` names. -/
 
-theorem maxW_L (x y : Word) :
-    BinOp.add.eval x (BinOp.mul.eval (BinOp.sub.eval y x) (Cmp.ult.evalW x y)) = maxW x y := by
-  simp [BinOp.eval, Cmp.evalW, Cmp.eval, maxW]
+/-- **A `max` by a branch**, `if x < y { x := y }` (the `mk_*` writers; cheaper than the `u64`
+product form `x + (y - x) * u64(x < y)`): it sets `x` to `maxW x y`. Stated over any post, so that
+`vcgen` applies it at the `if` (an explicit spec outranks `step`'s equations) instead of splitting
+the writer's proof at the comparison. -/
+theorem step_maxIf_spec (p : Prog) (k : Stmt → M Sig) (x y : Var) (Q : Sig → St → Prop) E :
+    ⦃fun s => Q .normal (s.setLoc x (maxW (s.loc x) (s.loc y)))⦄
+    step p k (.ite (.cmp .ult (.var x) (.var y)) (.set x (.var y)) .skip)
+    ⦃Q; E⦄ := by
+  vcgen [step, evalC, evalE, setLoc] <;> rename_i s hq hc <;> obtain ⟨m, l⟩ := s
+  · have e : maxW (l x) (l y) = l y := by grind [maxW, Cmp.eval]
+    rwa [e] at hq
+  · have e : (St.setLoc ⟨m, l⟩ x (maxW (l x) (l y))) = ⟨m, l⟩ := by
+      simp only [St.setLoc, St.mk.injEq, true_and]; funext z; grind [maxW, Cmp.eval]
+    rwa [e] at hq
 
 theorem satPredW_L (y : Word) :
     BinOp.add.eval (BinOp.sub.eval y (Cmp.ult.evalW 0 y)) (Cmp.eq.evalW y 32767) = satPredW y := by
@@ -917,9 +929,9 @@ theorem mkApp_spec (hpf : p.lookup "app_find" = some appFind)
   | succ n =>
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, st64, st32,
-        derB_spec p hd n, internApp_spec p hpf hpp hpi n] <;>
+        derB_spec p hd n, internApp_spec p hpf hpp hpi n, step_maxIf_spec p] <;>
       -- gen 20: the chain of three `der_b` results through `setLocs` is deeper than the default
-      finish (gen := 20) [Mem.set64_set64_same, Mem.set32_set32_same, p32Len, mkAppW, maxW_L, satPredW_L, packBF_L, packBFL_L, derPutW, cnt2, tierW, idxW]
+      finish (gen := 20) [Mem.set64_set64_same, Mem.set32_set32_same, p32Len, mkAppW, satPredW_L, packBF_L, packBFL_L, derPutW, cnt2, tierW, idxW]
 
 include hd in
 theorem mkLam_spec (hpf : p.lookup "lam_find" = some lamFind)
@@ -935,9 +947,9 @@ theorem mkLam_spec (hpf : p.lookup "lam_find" = some lamFind)
   | succ n =>
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, st64, st32,
-        derB_spec p hd n, internLamL_spec p hpf hpp hpi n] <;>
+        derB_spec p hd n, internLamL_spec p hpf hpp hpi n, step_maxIf_spec p] <;>
       -- gen 20: the chain of three `der_b` results through `setLocs` is deeper than the default
-      finish (gen := 20) [Mem.set64_set64_same, Mem.set32_set32_same, p32Len, mkLamW, maxW_L, satPredW_L, packBF_L, packBFL_L, derPutW, cnt2, tierW, idxW]
+      finish (gen := 20) [Mem.set64_set64_same, Mem.set32_set32_same, p32Len, mkLamW, satPredW_L, packBF_L, packBFL_L, derPutW, cnt2, tierW, idxW]
 
 include hd in
 theorem mkForall_spec (hpf : p.lookup "forall_find" = some forallFind)
@@ -953,9 +965,9 @@ theorem mkForall_spec (hpf : p.lookup "forall_find" = some forallFind)
   | succ n =>
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, st64, st32,
-        derB_spec p hd n, internForallL_spec p hpf hpp hpi n] <;>
+        derB_spec p hd n, internForallL_spec p hpf hpp hpi n, step_maxIf_spec p] <;>
       -- gen 20: the chain of three `der_b` results through `setLocs` is deeper than the default
-      finish (gen := 20) [Mem.set64_set64_same, Mem.set32_set32_same, p32Len, mkForallW, maxW_L, satPredW_L, packBF_L, packBFL_L, derPutW, cnt2, tierW, idxW]
+      finish (gen := 20) [Mem.set64_set64_same, Mem.set32_set32_same, p32Len, mkForallW, satPredW_L, packBF_L, packBFL_L, derPutW, cnt2, tierW, idxW]
 
 include hd in
 theorem mkLet_spec (hpf : p.lookup "letE_find" = some letFind)
@@ -971,9 +983,9 @@ theorem mkLet_spec (hpf : p.lookup "letE_find" = some letFind)
   | succ n =>
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, st64, st32,
-        derB_spec p hd n, internLet_spec p hpf hpp hpi n] <;>
+        derB_spec p hd n, internLet_spec p hpf hpp hpi n, step_maxIf_spec p] <;>
       -- gen 20: the chain of three `der_b` results through `setLocs` is deeper than the default
-      finish (gen := 20) [p32Len, mkLetW, maxW_L, satPredW_L, packBF_L, packBFL_L, derPutW, cnt2, tierW, idxW]
+      finish (gen := 20) [p32Len, mkLetW, satPredW_L, packBF_L, packBFL_L, derPutW, cnt2, tierW, idxW]
 
 include hd in
 theorem mkProj_spec (hpf : p.lookup "proj_find" = some projFind)
@@ -991,7 +1003,7 @@ theorem mkProj_spec (hpf : p.lookup "proj_find" = some projFind)
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, st64, st32,
         derB_spec p hd n, internProj_spec p hpf hpp hpi n] <;>
       -- gen 20: the chain of three `der_b` results through `setLocs` is deeper than the default
-      finish (gen := 20) [p32Len, mkProjW, maxW_L, satPredW_L, packBF_L, packBFL_L, derPutW, cnt2, tierW, idxW]
+      finish (gen := 20) [p32Len, mkProjW, satPredW_L, packBF_L, packBFL_L, derPutW, cnt2, tierW, idxW]
 
 end specs
 
