@@ -172,7 +172,7 @@ The second one-thread batch ran at load up to 32.6, which widens its intervals (
 −1.0 %, p 0.46); the 16-thread rounds after landing alone give −1.8 % (p < 0.001, n 40).
 cgproto measured its prototype (the larger analysis) at −2.5 % (one thread) and −1.4 %
 (16 threads) at a lower load (2.0–9.1). As there, wall time moves by less than the instruction
-count: the checks left out sit off the critical path, except the `CTL[k + t]` count reads.
+count (§5).
 
 ## 7. Verdicts
 
