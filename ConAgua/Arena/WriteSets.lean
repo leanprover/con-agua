@@ -26,7 +26,7 @@ namespace L.Arena
 
 /-- The functions of `liftProg`: the walk, its memo, the `mk_*` and their stores. -/
 def liftFns : List FnName :=
-  ["der_b", "lf_find", "lf_put", "lf_clear", "lift_go", "lift_app", "lift_lam", "lift_forall",
+  ["der_b", "der_bv", "lf_find", "lf_put", "lf_clear", "lift_go", "lift_app", "lift_lam", "lift_forall",
     "lift_let", "lift_proj", "lift_entry", "mk_app", "mk_lam", "mk_forall", "mk_let", "mk_proj",
     "bvar_find", "bvar_push", "intern_bvar", "app_find", "app_push", "intern_app",
     "lam_find", "lam_push", "intern_lam", "forall_find", "forall_push", "intern_forall",
@@ -50,7 +50,7 @@ theorem LiftProg.closed {p : Prog} (hp : LiftProg p)
   closedW_of_agree liftProg_closed (by
     simp only [liftFns, List.forall_mem_cons,
       List.not_mem_nil, false_imp_iff, implies_true, and_true]
-    exact ⟨(hp.get "der_b").trans rfl, (hp.get "lf_find").trans rfl, (hp.get "lf_put").trans rfl, (hp.get "lf_clear").trans rfl, (hp.get "lift_go").trans
+    exact ⟨(hp.get "der_b").trans rfl, (hp.get "der_bv").trans rfl, (hp.get "lf_find").trans rfl, (hp.get "lf_put").trans rfl, (hp.get "lf_clear").trans rfl, (hp.get "lift_go").trans
       rfl, (hp.get "lift_app").trans rfl, (hp.get "lift_lam").trans rfl, (hp.get "lift_forall").trans rfl, (hp.get "lift_let").trans rfl, (hp.get "lift_proj").trans
       rfl, he.trans rfl, (hp.get "mk_app").trans rfl, (hp.get "mk_lam").trans rfl, (hp.get "mk_forall").trans rfl,
       (hp.get "mk_let").trans rfl, (hp.get "mk_proj").trans rfl, (hp.get "bvar_find").trans rfl, (hp.get "bvar_push").trans rfl, (hp.get "intern_bvar").trans
@@ -79,7 +79,7 @@ theorem InstProg.closed {p : Prog} (hp : InstProg p) (he : p.lookup "inst_entry"
       List.not_mem_nil, false_imp_iff, implies_true, and_true]
     exact ⟨hp.iff.trans rfl, hp.ifp.trans rfl, hp.ifc.trans rfl, hp.go.trans rfl, hp.app.trans
       rfl, hp.lam.trans rfl, hp.fa.trans rfl, hp.le.trans rfl, hp.pj.trans rfl, he.trans rfl,
-      (hp.base.get "der_b").trans rfl, (hp.base.get "lf_find").trans rfl, (hp.base.get "lf_put").trans rfl, (hp.base.get "lf_clear").trans
+      (hp.base.get "der_b").trans rfl, (hp.base.get "der_bv").trans rfl, (hp.base.get "lf_find").trans rfl, (hp.base.get "lf_put").trans rfl, (hp.base.get "lf_clear").trans
       rfl, (hp.base.get "lift_go").trans rfl, (hp.base.get "lift_app").trans rfl, (hp.base.get "lift_lam").trans rfl, (hp.base.get "lift_forall").trans
       rfl, (hp.base.get "lift_let").trans rfl, (hp.base.get "lift_proj").trans rfl, hle.trans rfl, (hp.base.get "mk_app").trans rfl,
       (hp.base.get "mk_lam").trans rfl, (hp.base.get "mk_forall").trans rfl, (hp.base.get "mk_let").trans rfl,
@@ -115,7 +115,7 @@ def frC : List Word := [46, 47]
 
 /-! ## `bvar_b`, `loose_bvars_bounded_fast` -/
 
-def bvbFns : List FnName := ["bvar_b", "loose_bvars_bounded_fast", "der_b"] ++ walkFns
+def bvbFns : List FnName := ["bvar_b", "loose_bvars_bounded_fast", "der_b", "der_bv"] ++ walkFns
 
 theorem bvbProg_closed : closedA bvbProg walkA walkC bvbFns = true := by decide +kernel
 
@@ -181,7 +181,7 @@ theorem ArProg.closed {p : Prog} (hp : ArProg p) (he : p.lookup "ar_entry" = som
 /-! ## `inst_list` -/
 
 def instListFns : List FnName :=
-  ["ilm_find", "ilm_put", "ilm_clear", "il_go", "il_app", "il_lam", "il_forall", "il_let",
+  ["ilm_find", "ilm_put", "ilm_clear", "der_bv", "il_go", "il_app", "il_lam", "il_forall", "il_let",
     "il_proj", "il_bvar", "ilg_go", "ilg_app", "ilg_lam", "ilg_forall", "ilg_let", "ilg_proj",
     "inst_list"] ++ mkFns
 
