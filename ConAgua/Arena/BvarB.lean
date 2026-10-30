@@ -17,7 +17,7 @@ import Std.WP.Triple.SpecLemmas
 /-!
 # `bvarB` and `looseBVarsBoundedFast`: the loose-bvar field read
 
-con-ron's `bvarB fuel e` (`fvarB`'s sibling): the packed bvar range (`der_b`), or, on the
+con-ron's `bvarB fuel e` (`fvarB`'s sibling): the packed bvar range (`der_bv`), or, on the
 saturated branch alone, the exact memoized `bvarBoundMemo` (`bb_memo`, `Walk.lean`); and
 `looseBVarsBoundedFast fuel k e = (bvarB fuel e ≤ k)`. `bvar_b(f, e)` and
 `loose_bvars_bounded_fast(f, k, e)` are the stub interfaces' names (lanes `decls`, `indproofs`);
@@ -75,9 +75,9 @@ def lbbFastL : FunDecl := lfn (f, k, e) locals (x) {
   return u64(x <= k)
 }
 
-/-- The two reads, `der_b` and the bvar-bound walk, as one program. -/
+/-- The two reads, `der_bv` and the bvar-bound walk, as one program. -/
 def bvbProg : Prog :=
-  [("bvar_b", bvarBL), ("loose_bvars_bounded_fast", lbbFastL), ("der_b", derB), ("der_bv", derBv)] ++ walkProg
+  [("bvar_b", bvarBL), ("loose_bvars_bounded_fast", lbbFastL), ("der_bv", derBv)] ++ walkProg
 
 /-- What the specs need of the program: `bvbProg`'s functions. -/
 def BvbProg (p : Prog) : Prop := ProgHas p bvbProg

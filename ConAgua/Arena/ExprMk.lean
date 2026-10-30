@@ -43,7 +43,9 @@ helper `whnf4-d23` added the bit, deviation D23; the leaves' bits are in their o
 
 A leaf's range is a function of its record (`bvar i`: `satSucc i`; the others `0`), so it is not
 stored. `der_b(h)` returns the range field of `derived h` as the arena computes it, including its
-`0` for a handle that does not view (scratch tier closed, index past the count, unknown tag).
+`0` for a handle that does not view (scratch tier closed, index past the count, unknown tag), with
+the fvar range and the level-parameter bit; `der_bv(h)` returns the range field alone, for the
+walks' cut-offs.
 
 **Writers.** `mk_app(f, a)`, `mk_lam`, `mk_forall`, `mk_let`, `mk_proj` are the expression
 constructors walks call: `intern_*` first, then, **if the table grew** (its two counts changed),

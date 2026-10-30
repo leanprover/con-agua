@@ -115,7 +115,7 @@ def frC : List Word := [46, 47]
 
 /-! ## `bvar_b`, `loose_bvars_bounded_fast` -/
 
-def bvbFns : List FnName := ["bvar_b", "loose_bvars_bounded_fast", "der_b", "der_bv"] ++ walkFns
+def bvbFns : List FnName := ["bvar_b", "loose_bvars_bounded_fast", "der_bv"] ++ walkFns
 
 theorem bvbProg_closed : closedA bvbProg walkA walkC bvbFns = true := by decide +kernel
 
