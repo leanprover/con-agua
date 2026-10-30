@@ -154,21 +154,25 @@ Exact counts (`scripts/asmprof.py`), master (b4747f1d) against this branch; `Ini
 
 ## 6. Wall time
 
-Interleaved paired rounds, master's binary and this branch's back to back in random order per
-fixture (`_tmp/bce/wb2.py`, `wstats.py`, from cgproto); median paired change, Wilcoxon p, mean with
-95 % CI. One thread on CPUs 44,92, 16 rounds, load 2.8–19.1 (median 6.0); 16 threads on CPUs
-24–39, 30 rounds, load up to 20.
+Interleaved paired rounds, master's binary (b4747f1d) and this change's (the landed `checker.s`,
+deaaa833, byte-identical to the measured one) back to back in random order per fixture
+(`_tmp/bce/wb2.py`, `wstats.py`, from cgproto); median paired change, Wilcoxon p, mean with 95 %
+CI. One thread on CPUs 44,92; 16 threads on CPUs 24–39. The machine was shared: load 2.8–32.6.
 
-| cell | master | bce |
-|---|---:|---:|
-| `Init`, one thread | 17.62 s | **−1.6 %** (p 0.018; mean −1.2 % [−2.4, +0.0]) |
-| `Init`, `--jobs=16` | 3.58 s | −0.5 % (p 0.92; [−1.5, +2.9]) |
-| parse phase | 1.84 s | −1.3 % (p 0.25; [−6.2, +3.1]) |
-| app-lam | 8.47 s | **−1.4 %** (p < 0.001; [−3.4, −0.4]) |
-| c05b | 1.38 s | +0.3 % (p 0.67; [−2.8, +2.2]) |
+| cell | master | bce | n, load |
+|---|---:|---:|---|
+| `Init`, one thread, first batch | 17.62 s | **−1.6 %** (p 0.018; mean −1.2 % [−2.4, +0.0]) | 16, median 6.0 |
+| `Init`, one thread, both batches | 17.73 s | −1.5 % (p 0.065; [−6.1, +1.2]) | 32, median 7.1 |
+| `Init`, `--jobs=16` | 3.56 s | **−1.0 %** (p 0.003; [−2.0, +0.4]) | 70, median 9.4 |
+| parse phase | 1.81 s | **−1.5 %** (p 0.001; [−4.6, +0.1]) | 32 |
+| app-lam | 8.63 s | **−1.1 %** (p 0.017; [−3.7, +1.5]) | 32 |
+| c05b | 1.37 s | +0.2 % (p 0.91; [−1.8, +4.3]) | 32 |
 
+The second one-thread batch ran at load up to 32.6, which widens its intervals (`Init` alone:
+−1.0 %, p 0.46); the 16-thread rounds after landing alone give −1.8 % (p < 0.001, n 40).
 cgproto measured its prototype (the larger analysis) at −2.5 % (one thread) and −1.4 %
-(16 threads) at a lower load (2.0–9.1).
+(16 threads) at a lower load (2.0–9.1). As there, wall time moves by less than the instruction
+count: the checks left out sit off the critical path, except the `CTL[k + t]` count reads.
 
 ## 7. Verdicts
 
