@@ -53,7 +53,10 @@ appended, inlined at S, compiled):
 | the same, S = 200 (inlined at the six sites) | 227.18 G | −0.93 % |
 | master at S = 200 (no `der_bv`) | 229.27 G | −0.01 % |
 | **`der_bv` with the branch saturation, S = 80** | **225.24 G** | **−1.78 %** |
-| the branch, landed build (`checker.s` of this lane) | 225.29 G | −1.75 % |
+| the branch, this lane's `checker.s` before merging memosplit | 225.29 G | −1.75 % |
+
+After merging master 8d9e49b5 (memosplit's put split): master 224.42 G, this lane 220.38 G,
+**−1.80 %**.
 
 * **Inlining does not pay here.** All six callers have calls themselves, so their locals live in
   the frame; the inlined body's decodes and loads go through the frame (`movq …(%rsp)`), where the
