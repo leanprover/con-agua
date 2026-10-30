@@ -2,6 +2,7 @@ module
 
 public import ConAgua.Compiler.RunEq
 public import ConAgua.Compiler.SimGen
+public import ConAgua.Compiler.BcePost
 import Kraken.X64.Registers
 
 @[expose] public section
@@ -168,6 +169,11 @@ theorem NrOk.sub {p : Prog} {G : Layout} {sk : NTree} {ctx : Ctx} {s : Stmt} (h 
     · rfl
     · have := h.leaf hl; rw [hc h'] at this; cases this), Nat.le_trans hn h.need⟩
 
+/-- `NrOk` for the context with other facts. -/
+theorem NrOk.fa {p : Prog} {G : Layout} {sk : NTree} {ctx : Ctx} {s : Stmt} (h : NrOk p G sk ctx s)
+    (x : Option Facts) : NrOk p G sk { ctx with fa := x } s :=
+  ⟨h.ret, h.le, h.callee, h.leaf, h.need⟩
+
 /-- The simulation of a statement `s`, for a run function `run` and a condition `P` on the fuel
 counter. -/
 def SimS [Host] (p : Prog) (G : Layout) (sk : NTree) (run : Stmt → St → Except Err (Sig × St)) (P : Nat → Prop)
@@ -175,8 +181,8 @@ def SimS [Host] (p : Prog) (G : Layout) (sk : NTree) (run : Stmt → St → Exce
   ∀ (ctx : Ctx) (F : Nat) (path : Path) (k : Nat), ctx.tab = G.tab → 8 * F + 8 < maxOff →
     Code (compileS ctx path s) k → Stmt.wf p ctx.nl G.tab s = true → NrOk p G sk ctx s →
     TmpFit ctx.nl F 0 (tempsS ctx.alloc ctx.nr s) →
-    ∀ (σ : St) (d : MachineData) (Q : MachineState → Prop), Inv G ctx F σ d → P d.regs.r14.toNat →
-    Conts G ctx F d (run s σ) (k + (compileS ctx path s).length) Q → Ev Q d (at_ k)
+    ∀ (σ : St) (d : MachineData) (Q : MachineState → Prop), Inv G ctx F σ d → FHolds ctx.fa σ →
+    P d.regs.r14.toNat → Conts G ctx F d (run s σ) (k + (compileS ctx path s).length) Q → Ev Q d (at_ k)
 
 /-- `SimS` at one context and position. -/
 def SimSAt [Host] (p : Prog) (G : Layout) (sk : NTree) (run : Stmt → St → Except Err (Sig × St)) (P : Nat → Prop)
@@ -184,8 +190,8 @@ def SimSAt [Host] (p : Prog) (G : Layout) (sk : NTree) (run : Stmt → St → Ex
   ∀ (F : Nat) (k : Nat), ctx.tab = G.tab → 8 * F + 8 < maxOff →
     Code (compileS ctx path s) k → Stmt.wf p ctx.nl G.tab s = true → NrOk p G sk ctx s →
     TmpFit ctx.nl F 0 (tempsS ctx.alloc ctx.nr s) →
-    ∀ (σ : St) (d : MachineData) (Q : MachineState → Prop), Inv G ctx F σ d → P d.regs.r14.toNat →
-    Conts G ctx F d (run s σ) (k + (compileS ctx path s).length) Q → Ev Q d (at_ k)
+    ∀ (σ : St) (d : MachineData) (Q : MachineState → Prop), Inv G ctx F σ d → FHolds ctx.fa σ →
+    P d.regs.r14.toNat → Conts G ctx F d (run s σ) (k + (compileS ctx path s).length) Q → Ev Q d (at_ k)
 
 theorem SimS.at [Host] {p : Prog} {G : Layout} {sk : NTree} {run : Stmt → St → Except Err (Sig × St)}
     {P : Nat → Prop} {s : Stmt} (h : SimS p G sk run P s) (ctx : Ctx) (path : Path) :
@@ -201,8 +207,8 @@ def SimSTail [Host] (p : Prog) (G : Layout) (sk : NTree) (run : Stmt → St → 
   ∀ (ctx : Ctx) (F : Nat) (k : Nat) (code : Program), ctx.tab = G.tab → 8 * F + 8 < maxOff →
     tailCode ctx s t = some code → Code code k → Stmt.wf p ctx.nl G.tab (.seq s t) = true →
     NrOk p G sk ctx (.seq s t) → TmpFit ctx.nl F 0 (tempsS ctx.alloc ctx.nr (.seq s t)) →
-    ∀ (σ : St) (d : MachineData) (Q : MachineState → Prop), Inv G ctx F σ d → P d.regs.r14.toNat →
-    Conts G ctx F d (run (.seq s t) σ) (k + code.length) Q → Ev Q d (at_ k)
+    ∀ (σ : St) (d : MachineData) (Q : MachineState → Prop), Inv G ctx F σ d → FHolds ctx.fa σ →
+    P d.regs.r14.toNat → Conts G ctx F d (run (.seq s t) σ) (k + code.length) Q → Ev Q d (at_ k)
 
 /-- `exec p n` on statement `s` from state `σ`. -/
 def execRun (p : Prog) (n : Nat) (s : Stmt) (σ : St) : Except Err (Sig × St) := (exec p n s).run σ
@@ -216,11 +222,11 @@ abbrev ExecSim [Host] (p : Prog) (G : Layout) (sk : NTree) (n : Nat) : Prop :=
   ∀ s, SimS p G sk (execRun p n) (· < n) s
 
 theorem execSim_zero [Host] (p : Prog) (G : Layout) (sk : NTree) : ExecSim p G sk 0 :=
-  fun _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hP _ => absurd hP (Nat.not_lt_zero _)
+  fun _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hP _ => absurd hP (Nat.not_lt_zero _)
 
 theorem execSim_succ [Host] {p : Prog} {G : Layout} {sk : NTree} {n : Nat} (h : StepSim p G sk n) : ExecSim p G sk (n + 1) :=
-  fun s ctx F path k hT hF hc hwf hN htmp σ d Q hI hP hK =>
-    h s ctx F path k hT hF hc hwf hN htmp σ d Q hI (Nat.lt_succ_iff.mp hP) hK
+  fun s ctx F path k hT hF hc hwf hN htmp σ d Q hI hfa hP hK =>
+    h s ctx F path k hT hF hc hwf hN htmp σ d Q hI hfa (Nat.lt_succ_iff.mp hP) hK
 
 
 theorem SPost.store {G : Layout} {F : Nat} {d : MachineData} {a : Nat} {v : BitVec 64}
@@ -518,7 +524,7 @@ theorem sim_cond (ctx : Ctx) (hT : ctx.tab = G.tab) (hTab : 16 + 24 * (G.tab.nb 
     ∀ (c : Cond) (path : Path) (pol : Bool) (l : Label) (t k : Nat),
     Code (compileC ctx path c pol l t) k → Cond.wf ctx.nl G.tab c = true →
     TmpFit ctx.nl F t (tempsC c) →
-    ∀ (σ : St) (s : MachineData) (Q : MachineState → Prop), Inv G ctx F σ s →
+    ∀ (σ : St) (s : MachineData) (Q : MachineState → Prop), Inv G ctx F σ s → FHolds ctx.fa σ →
     (∀ s', evalCP σ c = .ok pol → CPost G ctx F σ s s' → Ev Q s' (label l)) →
     (∀ s', evalCP σ c = .ok (!pol) → CPost G ctx F σ s s' →
       Ev Q s' (at_ (k + (compileC ctx path c pol l t).length))) →
@@ -527,7 +533,7 @@ theorem sim_cond (ctx : Ctx) (hT : ctx.tab = G.tab) (hTab : 16 + 24 * (G.tab.nb 
   intro c
   induction c with
   | cmp op a b =>
-    intro path pol l t k hc hwf htmp σ s Q hI hjmp hfall herr
+    intro path pol l t k hc hwf htmp σ s Q hI hfa hjmp hfall herr
     have hF' := hF
     simp only [maxOff] at hF'
     simp only [Cond.wf, Bool.and_eq_true] at hwf
@@ -539,7 +545,7 @@ theorem sim_cond (ctx : Ctx) (hT : ctx.tab = G.tab) (hTab : 16 + 24 * (G.tab.nb 
       simp only [hgc] at hc hfall
       refine genCmp_spec hT hTab hF op (sim_gen hG hT hTab hF a) (sim_gen hG hT hTab hF b) ctx.pool cc code k
         hgc hc.left ⟨pool_nodup ctx, fun r h => pool_dreg h, fun r h => readsReg_free (pool_free hI.al h) _⟩
-        hwf.1 hwf.2 σ s Q hI ?_ ?_
+        hwf.1 hwf.2 σ s Q hI (FactsFor.of hfa _) ?_ ?_
       · intro va vb s1 hva hvb hcc hX
         have hC := CPost.ofX hI hX (fun r h => h)
         have hev : evalCP σ (.cmp op a b) = .ok (op.eval va vb) := by simp [evalCP, hva, hvb]; rfl
@@ -636,17 +642,17 @@ theorem sim_cond (ctx : Ctx) (hT : ctx.tab = G.tab) (hTab : 16 + 24 * (G.tab.nb 
       obtain ⟨x, hx⟩ := herra
       exact ⟨x, by simp [evalCP, hx]; rfl⟩
   | and p q ihp ihq =>
-    intro path pol l t k hc hwf htmp σ s Q hI hjmp hfall herr
+    intro path pol l t k hc hwf htmp σ s Q hI hfa hjmp hfall herr
     simp only [Cond.wf, Bool.and_eq_true] at hwf
     simp only [tempsC] at htmp
     cases pol with
     | false =>
       simp only [compileC] at hc hfall
-      refine ihp _ false l t k hc.left hwf.1 (htmp.mono (by omega)) σ s Q hI ?_ ?_ ?_
+      refine ihp _ false l t k hc.left hwf.1 (htmp.mono (by omega)) σ s Q hI hfa ?_ ?_ ?_
       · intro s1 hp hE1; exact hjmp s1 (by simp [evalCP, hp]; rfl) hE1
       · intro s1 hp hE1
         have hI1 := hE1.1
-        refine ihq _ false l t _ hc.right hwf.2 (htmp.mono (by omega)) σ s1 Q hI1 ?_ ?_ ?_
+        refine ihq _ false l t _ hc.right hwf.2 (htmp.mono (by omega)) σ s1 Q hI1 hfa ?_ ?_ ?_
         · intro s2 hq hE2; exact hjmp s2 (by simp [evalCP, hp, hq]; rfl) (hE1.trans hE2)
         · intro s2 hq hE2
           refine ev_congr (hfall s2 (by simp [evalCP, hp, hq]; rfl) (hE1.trans hE2)) ?_
@@ -661,7 +667,7 @@ theorem sim_cond (ctx : Ctx) (hT : ctx.tab = G.tab) (hTab : 16 + 24 * (G.tab.nb 
       simp only [compileC, List.append_assoc] at hc hfall
       have hS := hc.right.right
       have hlS := Code.label (i := 0) hS rfl
-      refine ihp _ false _ t k hc.left hwf.1 (htmp.mono (by omega)) σ s Q hI ?_ ?_ ?_
+      refine ihp _ false _ t k hc.left hwf.1 (htmp.mono (by omega)) σ s Q hI hfa ?_ ?_ ?_
       · intro s1 hp hE1
         rw [hlS]
         refine ev_label hS.head ?_
@@ -669,7 +675,7 @@ theorem sim_cond (ctx : Ctx) (hT : ctx.tab = G.tab) (hTab : 16 + 24 * (G.tab.nb 
         simp only [List.length_append, List.length_cons, List.length_nil]; omega
       · intro s1 hp hE1
         have hI1 := hE1.1
-        refine ihq _ true l t _ hc.right.left hwf.2 (htmp.mono (by omega)) σ s1 Q hI1 ?_ ?_ ?_
+        refine ihq _ true l t _ hc.right.left hwf.2 (htmp.mono (by omega)) σ s1 Q hI1 hfa ?_ ?_ ?_
         · intro s2 hq hE2; exact hjmp s2 (by simp [evalCP, hp, hq]; rfl) (hE1.trans hE2)
         · intro s2 hq hE2
           refine ev_label hS.head ?_
@@ -682,17 +688,17 @@ theorem sim_cond (ctx : Ctx) (hT : ctx.tab = G.tab) (hTab : 16 + 24 * (G.tab.nb 
         obtain ⟨x, hx⟩ := hp
         exact herr s1 ⟨x, by simp [evalCP, hx]; rfl⟩ hE1
   | or p q ihp ihq =>
-    intro path pol l t k hc hwf htmp σ s Q hI hjmp hfall herr
+    intro path pol l t k hc hwf htmp σ s Q hI hfa hjmp hfall herr
     simp only [Cond.wf, Bool.and_eq_true] at hwf
     simp only [tempsC] at htmp
     cases pol with
     | true =>
       simp only [compileC] at hc hfall
-      refine ihp _ true l t k hc.left hwf.1 (htmp.mono (by omega)) σ s Q hI ?_ ?_ ?_
+      refine ihp _ true l t k hc.left hwf.1 (htmp.mono (by omega)) σ s Q hI hfa ?_ ?_ ?_
       · intro s1 hp hE1; exact hjmp s1 (by simp [evalCP, hp]; rfl) hE1
       · intro s1 hp hE1
         have hI1 := hE1.1
-        refine ihq _ true l t _ hc.right hwf.2 (htmp.mono (by omega)) σ s1 Q hI1 ?_ ?_ ?_
+        refine ihq _ true l t _ hc.right hwf.2 (htmp.mono (by omega)) σ s1 Q hI1 hfa ?_ ?_ ?_
         · intro s2 hq hE2; exact hjmp s2 (by simp [evalCP, hp, hq]; rfl) (hE1.trans hE2)
         · intro s2 hq hE2
           refine ev_congr (hfall s2 (by simp [evalCP, hp, hq]; rfl) (hE1.trans hE2)) ?_
@@ -707,7 +713,7 @@ theorem sim_cond (ctx : Ctx) (hT : ctx.tab = G.tab) (hTab : 16 + 24 * (G.tab.nb 
       simp only [compileC, List.append_assoc] at hc hfall
       have hS := hc.right.right
       have hlS := Code.label (i := 0) hS rfl
-      refine ihp _ true _ t k hc.left hwf.1 (htmp.mono (by omega)) σ s Q hI ?_ ?_ ?_
+      refine ihp _ true _ t k hc.left hwf.1 (htmp.mono (by omega)) σ s Q hI hfa ?_ ?_ ?_
       · intro s1 hp hE1
         rw [hlS]
         refine ev_label hS.head ?_
@@ -715,7 +721,7 @@ theorem sim_cond (ctx : Ctx) (hT : ctx.tab = G.tab) (hTab : 16 + 24 * (G.tab.nb 
         simp only [List.length_append, List.length_cons, List.length_nil]; omega
       · intro s1 hp hE1
         have hI1 := hE1.1
-        refine ihq _ false l t _ hc.right.left hwf.2 (htmp.mono (by omega)) σ s1 Q hI1 ?_ ?_ ?_
+        refine ihq _ false l t _ hc.right.left hwf.2 (htmp.mono (by omega)) σ s1 Q hI1 hfa ?_ ?_ ?_
         · intro s2 hq hE2; exact hjmp s2 (by simp [evalCP, hp, hq]; rfl) (hE1.trans hE2)
         · intro s2 hq hE2
           refine ev_label hS.head ?_
@@ -728,11 +734,11 @@ theorem sim_cond (ctx : Ctx) (hT : ctx.tab = G.tab) (hTab : 16 + 24 * (G.tab.nb 
         obtain ⟨x, hx⟩ := hp
         exact herr s1 ⟨x, by simp [evalCP, hx]; rfl⟩ hE1
   | not p ih =>
-    intro path pol l t k hc hwf htmp σ s Q hI hjmp hfall herr
+    intro path pol l t k hc hwf htmp σ s Q hI hfa hjmp hfall herr
     simp only [Cond.wf] at hwf
     simp only [tempsC] at htmp
     simp only [compileC] at hc hfall
-    refine ih _ (!pol) l t k hc hwf htmp σ s Q hI ?_ ?_ ?_
+    refine ih _ (!pol) l t k hc hwf htmp σ s Q hI hfa ?_ ?_ ?_
     · intro s1 hp hE1; exact hjmp s1 (by rw [evalCP, hp]; cases pol <;> rfl) hE1
     · intro s1 hp hE1; exact hfall s1 (by rw [evalCP, hp]; cases pol <;> rfl) hE1
     · intro s1 hp hE1
@@ -748,12 +754,12 @@ include hG hTab
 
 omit hG hTab in
 theorem sim_skip : SimS p G sk (stepRun p K) P .skip := by
-  intro ctx F path k hT hF hc hwf hN htmp σ d Q hI hP hK
+  intro ctx F path k hT hF hc hwf hN htmp σ d Q hI hfa hP hK
   exact ev_congr (hK.normal σ d (step_skip_run p K σ) hI (SPost.refl d)) (by simp [compileS])
 
 omit hG hTab in
 theorem sim_brk : SimS p G sk (stepRun p K) P .brk := by
-  intro ctx F path k hT hF hc hwf hN htmp σ d Q hI hP hK
+  intro ctx F path k hT hF hc hwf hN htmp σ d Q hI hfa hP hK
   simp only [compileS] at hc
   exact ev_jmp hc.head (hK.brk σ d (step_brk_run p K σ) hI (SPost.refl d))
 
@@ -766,7 +772,7 @@ theorem compileS_abort {ctx : Ctx} {path : Path} {e : Expr} (h : e ≠ .const 0)
 /-- `abort 0`: a jump to `ca_error`; `abort e`: `e` into `rax` and `rbx`, then a jump to
 `ca_abort`. -/
 theorem sim_abort (e : Expr) : SimS p G sk (stepRun p K) P (.abort e) := by
-  intro ctx F path k hT hF hc hwf hN htmp σ d Q hI hP hK
+  intro ctx F path k hT hF hc hwf hN htmp σ d Q hI hfa hP hK
   by_cases h0 : e = .const 0
   · subst h0
     simp only [compileS] at hc
@@ -815,7 +821,7 @@ theorem sim_valInto (ctx : Ctx) (hT : ctx.tab = G.tab) (F : Nat) (hF : 8 * F + 8
     (hfr : ∀ r' ∈ fr, r' ∈ ctx.pool) (hfn : fr.Nodup) (hrf : r ∉ fr) (e : Expr) (k : Nat)
     (hc : Code (valInto ctx r fr e) k)
     (hwf : Expr.wf ctx.nl G.tab e = true) (htmp : TmpFit ctx.nl F 0 (tempsE e))
-    (σ : St) (s : MachineData) (Q : MachineState → Prop) (hI : Inv G ctx F σ s)
+    (σ : St) (s : MachineData) (Q : MachineState → Prop) (hI : Inv G ctx F σ s) (hfa : FactsFor ctx σ e)
     (hok : ∀ v s', evalP σ e = .ok v → s'.regs.get64 r = v.toBitVec →
       RPost ctx.nl F (fun r' => r' = r ∨ r' ∈ fr) s s' →
       Inv G ctx F (σ.setReg ctx.alloc r v) s' → Ev Q s' (at_ (k + (valInto ctx r fr e).length)))
@@ -850,7 +856,7 @@ theorem sim_valInto (ctx : Ctx) (hT : ctx.tab = G.tab) (F : Nat) (hF : 8 * F + 8
         rcases List.mem_cons.mp h with rfl | h
         · exact hrax'
         · exact mem_filter_sub r' h
-      refine sim_gen hG hT hTab hF e .rax _ c k hcg hc.left hok' hwf σ s Q hI ?_ ?_
+      refine sim_gen hG hT hTab hF e .rax _ c k hcg hc.left hok' hwf σ s Q hI hfa ?_ ?_
       · intro v s1 hv hr1 hX1
         have hI1 := hI.ghost hX1 hok'.dr
         rw [St.ghost_free (fun r' h => hfree r' (hW r' h))] at hI1
@@ -871,7 +877,7 @@ theorem sim_valInto (ctx : Ctx) (hT : ctx.tab = G.tab) (F : Nat) (hF : 8 * F + 8
            rcases List.mem_cons.mp h with rfl | h
            · simpa using hrd
            · exact readsReg_free (hfree r' h) e⟩
-      refine sim_gen hG hT hTab hF e r fr code k hgi hc hok' hwf σ s Q hI ?_ ?_
+      refine sim_gen hG hT hTab hF e r fr code k hgi hc hok' hwf σ s Q hI hfa ?_ ?_
       · intro v s1 hv hr1 hX1
         have hI1 := hI.ghost hX1 hok'.dr
         rw [St.ghost_setReg hfree hr1] at hI1
@@ -920,7 +926,7 @@ theorem pool_gok {ctx : Ctx} (hal : AllocOk ctx) (e : Expr) {t : Reg64} {fr : Li
 theorem sim_inPlace (x : Var) (e : Expr) (ctx : Ctx) (F k : Nat) (hT : ctx.tab = G.tab)
     (hF : 8 * F + 8 < maxOff) {code : Program} (hip : genInPlace ctx x e = some code) (hc : Code code k)
     (hx : x < ctx.nl) (hwf : Expr.wf ctx.nl G.tab e = true) (htx : ctx.treg ≠ some x)
-    (σ : St) (d : MachineData) (Q : MachineState → Prop) (hI : Inv G ctx F σ d)
+    (σ : St) (d : MachineData) (Q : MachineState → Prop) (hI : Inv G ctx F σ d) (hfa : FHolds ctx.fa σ)
     (hK : Conts G ctx F d (stepRun p K (.set x e) σ) (k + code.length) Q)
     (hset : ∀ v, evalP σ e = .ok v → stepRun p K (.set x e) σ = .ok (.normal, σ.setLoc x v))
     (herrK : ∀ s1, (∃ y, evalP σ e = .error y) → GPost G (top d F) d s1 → Ev Q s1 (label errorL)) :
@@ -979,7 +985,7 @@ theorem sim_inPlace (x : Var) (e : Expr) (ctx : Ctx) (F k : Nat) (hT : ctx.tab =
         obtain ⟨cb, hcb, hip⟩ := Option.bind_eq_some_iff.mp hip
         obtain ⟨i, hi, rfl⟩ := Option.map_eq_some_iff.mp hip
         have hpt : ∀ r' ∈ t :: fr, r' ∈ ctx.pool := fun r' h => hpool ▸ h
-        refine sim_gen hG hT hTab hF b t fr cb k hcb hc.left (pool_gok hI.al b hpool) hwb σ d Q hI ?_
+        refine sim_gen hG hT hTab hF b t fr cb k hcb hc.left (pool_gok hI.al b hpool) hwb σ d Q hI (FactsFor.of hfa b) ?_
           (fun s1 he hX => herrK s1 (evalP_bin_errB hevx he) (CPost.ofX hI hX hpt).2.1.gpost)
         intro vb s1 hvb ht1 hX1
         have hC := CPost.ofX hI hX1 hpt
@@ -1031,7 +1037,7 @@ theorem sim_inPlace (x : Var) (e : Expr) (ctx : Ctx) (F k : Nat) (hT : ctx.tab =
       obtain ⟨cb, hcb, hip⟩ := Option.bind_eq_some_iff.mp hip
       obtain ⟨i, hi, rfl⟩ := Option.map_eq_some_iff.mp hip
       have hpt : ∀ r' ∈ t :: fr, r' ∈ ctx.pool := fun r' h => hpool ▸ h
-      refine sim_gen hG hT hTab hF b t fr cb k hcb hc.left (pool_gok hI.al b hpool) hwb σ d Q hI ?_
+      refine sim_gen hG hT hTab hF b t fr cb k hcb hc.left (pool_gok hI.al b hpool) hwb σ d Q hI (FactsFor.of hfa b) ?_
         (fun s1 he hX => herrK s1 (evalP_bin_errB hevx he) (CPost.ofX hI hX hpt).2.1.gpost)
       intro vb s1 hvb ht1 hX1
       have hC := CPost.ofX hI hX1 hpt
@@ -1047,7 +1053,7 @@ theorem sim_genSet (x : Var) (e : Expr) (ctx : Ctx) (F k : Nat) (hT : ctx.tab = 
     (hF : 8 * F + 8 < maxOff) {code : Program} (hgs : genSet ctx x e = some code) (hc : Code code k)
     (hx : x < ctx.nl) (hwf : Expr.wf ctx.nl G.tab e = true) (htx : ctx.treg ≠ some x)
     (htmp : TmpFit ctx.nl F 0 (tempsE e))
-    (σ : St) (d : MachineData) (Q : MachineState → Prop) (hI : Inv G ctx F σ d)
+    (σ : St) (d : MachineData) (Q : MachineState → Prop) (hI : Inv G ctx F σ d) (hfa : FHolds ctx.fa σ)
     (hK : Conts G ctx F d (stepRun p K (.set x e) σ) (k + code.length) Q)
     (hset : ∀ v, evalP σ e = .ok v → stepRun p K (.set x e) σ = .ok (.normal, σ.setLoc x v))
     (herrK : ∀ s1, (∃ y, evalP σ e = .error y) → GPost G (top d F) d s1 → Ev Q s1 (label errorL)) :
@@ -1057,13 +1063,14 @@ theorem sim_genSet (x : Var) (e : Expr) (ctx : Ctx) (F k : Nat) (hT : ctx.tab = 
   split at hgs
   · rename_i c hip
     cases hgs
-    exact sim_inPlace hG hTab p K x e ctx F k hT hF hip hc hx hwf htx σ d Q hI hK hset herrK
+    exact sim_inPlace hG hTab p K x e ctx F k hT hF hip hc hx hwf htx σ d Q hI hfa hK hset herrK
   split at hgs
   · rename_i r hr
     have hv : valInto ctx r ctx.pool e = code := by simp [valInto, hgs]
     rw [← hv] at hc hK
     refine sim_valInto hG hTab ctx hT F hF (hI.al.reg x r hr) (fun h e' => hI.al.trsi h x (e' ▸ hr))
-      (fun r h => h) (pool_nodup ctx) (fun h => pool_free hI.al h x hr) e k hc hwf htmp σ d Q hI ?_ ?_
+      (fun r h => h) (pool_nodup ctx) (fun h => pool_free hI.al h x hr) e k hc hwf htmp σ d Q hI
+      (FactsFor.of hfa e) ?_ ?_
     · intro v s' hv hr' hR hI'
       rw [St.setReg_setLoc hI.al hr] at hI'
       exact hK.normal (σ.setLoc x v) s' (hset v hv) hI' (hR.spost hI.lo)
@@ -1094,7 +1101,7 @@ theorem sim_genSet (x : Var) (e : Expr) (ctx : Ctx) (F k : Nat) (hT : ctx.tab = 
     have hok : GOk ctx e .rax (ctx.pool.filter (· != .rax)) :=
       ⟨List.nodup_cons.mpr ⟨by simp, List.Nodup.sublist List.filter_sublist (pool_nodup ctx)⟩,
        fun r' h => pool_dreg (hW r' h), fun r' h => readsReg_free (pool_free hI.al (hW r' h)) e⟩
-    refine sim_gen hG hT hTab hF e .rax _ c k hcg hc.left hok hwf σ d Q hI ?_
+    refine sim_gen hG hT hTab hF e .rax _ c k hcg hc.left hok hwf σ d Q hI (FactsFor.of hfa e) ?_
       (fun s1 he hX => herrK s1 he (CPost.ofX hI hX hW).2.1.gpost)
     intro v s1 hv hr1 hX1
     have hC := CPost.ofX hI hX1 hW
@@ -1111,7 +1118,7 @@ theorem sim_genSet (x : Var) (e : Expr) (ctx : Ctx) (F k : Nat) (hT : ctx.tab = 
     · simp only [List.length_append, List.length_cons, List.length_nil]; omega
 
 theorem sim_set (x : Var) (e : Expr) : SimS p G sk (stepRun p K) P (.set x e) := by
-  intro ctx F path k hT hF hc hwf hN htmp σ d Q hI hP hK
+  intro ctx F path k hT hF hc hwf hN htmp σ d Q hI hfa hP hK
   simp only [Stmt.wf, Bool.and_eq_true, decide_eq_true_eq] at hwf
   simp only [compileS] at hc hK
   simp only [tempsS] at htmp
@@ -1158,7 +1165,7 @@ theorem sim_set (x : Var) (e : Expr) : SimS p G sk (stepRun p K) P (.set x e) :=
   cases hgs : genSet ctx x e
   case some code =>
     simp only [hgs] at hc hK
-    exact sim_genSet hG hTab p K x e ctx F k hT hF hgs hc hx hwf.2 htx htmp σ d Q hI hK hset
+    exact sim_genSet hG hTab p K x e ctx F k hT hF hgs hc hx hwf.2 htx htmp σ d Q hI hfa hK hset
       fun s1 ⟨y, hy⟩ hG1 => hK.err s1 ⟨y, by simp [step_set_run, hy]; rfl, by rw [evalP_error hy]; simp⟩ hG1
   simp only [hgs] at hc hK
   cases hsp : setInPlace ctx x e
@@ -1257,26 +1264,30 @@ theorem sim_set (x : Var) (e : Expr) : SimS p G sk (stepRun p K) P (.set x e) :=
       exact sim_set_mem hG hTab p K x e ctx F k hT hF hc hx hwf.2 hl htmp htx σ d Q hI hK hset herrK
 
 omit hG hTab in
-theorem sim_seq (hPm : ∀ a b, a ≤ b → P b → P a) (s t : Stmt)
+theorem sim_seq (hPm : ∀ a b, a ≤ b → P b → P a) (hKs : FSound (stepRun p K)) (s t : Stmt)
     (hs : SimS p G sk (stepRun p K) P s) (ht : SimS p G sk (stepRun p K) P t)
     (htail : SimSTail p G sk (stepRun p K) P s t) :
     SimS p G sk (stepRun p K) P (.seq s t) := by
-  intro ctx F path k hT hF hc hwf hN htmp σ d Q hI hP hK
+  intro ctx F path k hT hF hc hwf hN htmp σ d Q hI hfa hP hK
   simp only [compileS] at hc hK
   cases htc : tailCode ctx s t
   case some code =>
     simp only [htc] at hc hK
-    exact htail ctx F k code hT hF htc hc hwf hN htmp σ d Q hI hP hK
+    exact htail ctx F k code hT hF htc hc hwf hN htmp σ d Q hI hfa hP hK
   simp only [htc] at hc hK
   simp only [Stmt.wf, Bool.and_eq_true] at hwf
   simp only [tempsS] at htmp
-  refine hs ctx F _ k hT hF hc.left hwf.1 (hN.sub (Nat.le_max_left _ _) (by intro h; simp_all [Stmt.calls]) (by simp only [Stmt.need]; omega)) (htmp.mono (by omega)) σ d Q hI hP ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+  refine hs ctx F _ k hT hF hc.left hwf.1 (hN.sub (Nat.le_max_left _ _) (by intro h; simp_all [Stmt.calls]) (by simp only [Stmt.need]; omega)) (htmp.mono (by omega)) σ d Q hI hfa hP ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
   · intro σ1 d1 hr1 hI1 hS1
-    refine ht ctx F _ _ hT hF hc.right hwf.2 (hN.sub (Nat.le_max_right _ _) (by intro h; simp_all [Stmt.calls]) (by simp only [Stmt.need]; omega)) (htmp.mono (by omega)) σ1 d1 Q hI1 (hPm _ _ hS1.r14 hP) ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+    refine ht { ctx with fa := postF ctx.fa s } F _ _ hT hF hc.right hwf.2
+      ((hN.sub (Nat.le_max_right _ _) (by intro h; simp_all [Stmt.calls]) (by simp only [Stmt.need]; omega)).fa _)
+      (htmp.mono (m := tempsS ctx.alloc ctx.nr t) (by omega)) σ1 d1 Q (hI1.ctx rfl rfl rfl) (hKs.post hfa hr1) (hPm _ _ hS1.r14 hP)
+      ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
     · intro σ2 d2 hr2 hI2 hS2
-      refine ev_congr (hK.normal σ2 d2 (by rw [step_seq_run, hr1]; exact hr2) hI2 (hS1.trans hS2)) ?_
+      refine ev_congr (hK.normal σ2 d2 (by rw [step_seq_run, hr1]; exact hr2) (hI2.ctx rfl rfl rfl) (hS1.trans hS2)) ?_
       simp only [List.length_append]; omega
-    · exact fun σ2 d2 hr2 hI2 hS2 => hK.brk σ2 d2 (by rw [step_seq_run, hr1]; exact hr2) hI2 (hS1.trans hS2)
+    · exact fun σ2 d2 hr2 hI2 hS2 => hK.brk σ2 d2 (by rw [step_seq_run, hr1]; exact hr2) (hI2.ctx rfl rfl rfl)
+        (hS1.trans hS2)
     · intro v σ2 d2 hr2 hI2 hS2 hv
       exact hK.ret v σ2 d2 (by rw [step_seq_run, hr1]; exact hr2) hI2 (hS1.trans hS2) hv
     · intro d2 ⟨e, hr2, hne⟩ hG2
@@ -1300,18 +1311,20 @@ omit hG hTab in
 theorem compileS_ite {ctx : Ctx} {path : Path} {c : Cond} {s t : Stmt}
     (h : ∀ w, ¬ (s = .abort (.const w) ∧ t = .skip)) :
     compileS ctx path (.ite c s t) =
-      compileC ctx (path.ch 3) c false (ctx.lbl path "E") 0 ++ compileS ctx (path.ch 4) s ++
-      [jmpL (ctx.lbl path "X"), .label (ctx.lbl path "E")] ++ compileS ctx (path.ch 5) t ++
+      compileC ctx (path.ch 3) c false (ctx.lbl path "E") 0 ++
+      compileS { ctx with fa := ctx.fa.map (·.condAll c true) } (path.ch 4) s ++
+      [jmpL (ctx.lbl path "X"), .label (ctx.lbl path "E")] ++
+      compileS { ctx with fa := ctx.fa.map (·.condAll c false) } (path.ch 5) t ++
       [.label (ctx.lbl path "X")] := by
   exact compileS.eq_7 ctx path c s t fun w h1 h2 => h w ⟨h1, h2⟩
 
 /-- `if c abort`: one conditional jump to `ca_error`. -/
 theorem sim_ifAbort (c : Cond) : SimS p G sk (stepRun p K) P (.ite c (.abort (.const 0)) .skip) := by
-  intro ctx F path k hT hF hc hwf hN htmp σ d Q hI hP hK
+  intro ctx F path k hT hF hc hwf hN htmp σ d Q hI hfa hP hK
   simp only [Stmt.wf, Bool.and_eq_true] at hwf
   simp only [compileS, ite_true] at hc hK
   simp only [tempsS] at htmp
-  refine sim_cond hG ctx hT hTab F hF c _ true _ 0 k hc hwf.1.1 (htmp.mono (by omega)) σ d Q hI ?_ ?_ ?_
+  refine sim_cond hG ctx hT hTab F hF c _ true _ 0 k hc hwf.1.1 (htmp.mono (by omega)) σ d Q hI hfa ?_ ?_ ?_
   · intro d1 hcv hE1
     exact hK.err d1 ⟨.abort 0, by rw [step_ite_run, hcv]; rfl, by simp⟩ hE1.2.1.gpost
   · exact fun d1 hcv hE1 => hK.normal σ d1 (by rw [step_ite_run, hcv]; rfl) hE1.1 hE1.2.1
@@ -1335,7 +1348,7 @@ to `ca_abort`. -/
 theorem sim_ifAbortK (c : Cond) (w : Word) (hw : w ≠ 0) (ctx : Ctx) (path : Path)
     (hfr : ctx.rbxFree = true) :
     SimSAt p G sk (stepRun p K) P (.ite c (.abort (.const w)) .skip) ctx path := by
-  intro F k hT hF hc hwf hN htmp σ d Q hI hP hK
+  intro F k hT hF hc hwf hN htmp σ d Q hI hfa hP hK
   simp only [Stmt.wf, Bool.and_eq_true] at hwf
   simp only [compileS, hw, hfr, ite_false, ite_true, List.singleton_append] at hc hK
   simp only [tempsS] at htmp
@@ -1353,7 +1366,7 @@ theorem sim_ifAbortK (c : Cond) (w : Word) (hw : w ≠ 0) (ctx : Ctx) (path : Pa
     SPost.regs (st := d.status) (by simp [Reg64s.set64]) (by simp [Reg64s.set64]) (by simp [Reg64s.set64])
       (by simp [Reg64s.set64])
   refine sim_cond hG ctx hT hTab F hF c _ true _ 0 (k + 1) hc.tail hwf.1.1 (htmp.mono (by omega)) σ _ Q hI0
-    ?_ ?_ ?_
+    hfa ?_ ?_ ?_
   · intro d1 hcv hE1
     refine hK.abrt d1 w (by rw [step_ite_run, hcv]; rfl) (hS0.trans_g hE1.2.1.gpost) ?_
     rw [hE1.2.2.2]; simp [Reg64s.set64_rbx]
@@ -1368,11 +1381,13 @@ theorem sim_ifAbortK (c : Cond) (w : Word) (hw : w ≠ 0) (ctx : Ctx) (path : Pa
 theorem sim_ite_gen (c : Cond) (s t : Stmt)
     (hs : SimS p G sk (stepRun p K) P s) (ht : SimS p G sk (stepRun p K) P t) (ctx : Ctx) (path : Path)
     (hgen : compileS ctx path (.ite c s t) =
-      compileC ctx (path.ch 3) c false (ctx.lbl path "E") 0 ++ compileS ctx (path.ch 4) s ++
-      [jmpL (ctx.lbl path "X"), .label (ctx.lbl path "E")] ++ compileS ctx (path.ch 5) t ++
+      compileC ctx (path.ch 3) c false (ctx.lbl path "E") 0 ++
+      compileS { ctx with fa := ctx.fa.map (·.condAll c true) } (path.ch 4) s ++
+      [jmpL (ctx.lbl path "X"), .label (ctx.lbl path "E")] ++
+      compileS { ctx with fa := ctx.fa.map (·.condAll c false) } (path.ch 5) t ++
       [.label (ctx.lbl path "X")]) :
     SimSAt p G sk (stepRun p K) P (.ite c s t) ctx path := by
-  intro F k hT hF hc hwf hN htmp σ d Q hI hP hK
+  intro F k hT hF hc hwf hN htmp σ d Q hI hfa hP hK
   simp only [Stmt.wf, Bool.and_eq_true] at hwf
   simp only [hgen, List.append_assoc, List.cons_append, List.nil_append] at hc hK
   simp only [tempsS] at htmp
@@ -1381,20 +1396,23 @@ theorem sim_ite_gen (c : Cond) (s t : Stmt)
   have hE := Code.label (i := 1) hc2 rfl
   have hc3 := hc2.tail.tail
   have hX := Code.label (i := 0) hc3.right rfl
-  refine sim_cond hG ctx hT hTab F hF c _ false _ 0 k hc.left hwf.1.1 (htmp.mono (by omega)) σ d Q hI ?_ ?_ ?_
+  refine sim_cond hG ctx hT hTab F hF c _ false _ 0 k hc.left hwf.1.1 (htmp.mono (by omega)) σ d Q hI hfa ?_ ?_ ?_
   · -- the condition is false: the else branch
     intro d1 hc1v hE1
     have hI1 := hE1.1
     have hS1 := hE1.2.1
     rw [hE]
     refine ev_label hc2.tail.head ?_
-    refine ht ctx F _ _ hT hF hc3.left hwf.2 (hN.sub (Nat.le_max_right _ _) (by intro h; simp_all [Stmt.calls]) (by simp only [Stmt.need]; omega)) (htmp.mono (by omega)) σ d1 Q hI1 (by rw [hE1.2.2.1]; exact hP)
-      ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+    refine ht { ctx with fa := ctx.fa.map (·.condAll c false) } F _ _ hT hF hc3.left hwf.2
+      ((hN.sub (Nat.le_max_right _ _) (by intro h; simp_all [Stmt.calls]) (by simp only [Stmt.need]; omega)).fa _)
+      (htmp.mono (m := tempsS ctx.alloc ctx.nr t) (by omega)) σ d1 Q (hI1.ctx rfl rfl rfl) (fholds_condAll hfa hc1v)
+      (by rw [hE1.2.2.1]; exact hP) ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
     · intro σ2 d2 hr2 hI2 hS2
       refine ev_label hc3.right.head ?_
-      refine ev_congr (hK.normal σ2 d2 (by rw [step_ite_run, hc1v]; exact hr2) hI2 (hS1.trans hS2)) ?_
+      refine ev_congr (hK.normal σ2 d2 (by rw [step_ite_run, hc1v]; exact hr2) (hI2.ctx rfl rfl rfl) (hS1.trans hS2)) ?_
       simp only [List.length_append, List.length_cons, List.length_nil]; omega
-    · exact fun σ2 d2 hr2 hI2 hS2 => hK.brk σ2 d2 (by rw [step_ite_run, hc1v]; exact hr2) hI2 (hS1.trans hS2)
+    · exact fun σ2 d2 hr2 hI2 hS2 => hK.brk σ2 d2 (by rw [step_ite_run, hc1v]; exact hr2) (hI2.ctx rfl rfl rfl)
+        (hS1.trans hS2)
     · intro v σ2 d2 hr2 hI2 hS2 hv
       exact hK.ret v σ2 d2 (by rw [step_ite_run, hc1v]; exact hr2) hI2 (hS1.trans hS2) hv
     · intro d2 ⟨e, hr2, hne⟩ hG2
@@ -1407,15 +1425,18 @@ theorem sim_ite_gen (c : Cond) (s t : Stmt)
     intro d1 hc1v hE1
     have hI1 := hE1.1
     have hS1 := hE1.2.1
-    refine hs ctx F _ _ hT hF hc1.left hwf.1.2 (hN.sub (Nat.le_max_left _ _) (by intro h; simp_all [Stmt.calls]) (by simp only [Stmt.need]; omega)) (htmp.mono (by omega)) σ d1 Q hI1 (by rw [hE1.2.2.1]; exact hP)
-      ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+    refine hs { ctx with fa := ctx.fa.map (·.condAll c true) } F _ _ hT hF hc1.left hwf.1.2
+      ((hN.sub (Nat.le_max_left _ _) (by intro h; simp_all [Stmt.calls]) (by simp only [Stmt.need]; omega)).fa _)
+      (htmp.mono (m := tempsS ctx.alloc ctx.nr s) (by omega)) σ d1 Q (hI1.ctx rfl rfl rfl) (fholds_condAll hfa hc1v)
+      (by rw [hE1.2.2.1]; exact hP) ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
     · intro σ2 d2 hr2 hI2 hS2
       refine ev_jmp hc2.head ?_
       rw [hX]
       refine ev_label hc3.right.head ?_
-      refine ev_congr (hK.normal σ2 d2 (by rw [step_ite_run, hc1v]; exact hr2) hI2 (hS1.trans hS2)) ?_
+      refine ev_congr (hK.normal σ2 d2 (by rw [step_ite_run, hc1v]; exact hr2) (hI2.ctx rfl rfl rfl) (hS1.trans hS2)) ?_
       simp only [List.length_append, List.length_cons, List.length_nil]; omega
-    · exact fun σ2 d2 hr2 hI2 hS2 => hK.brk σ2 d2 (by rw [step_ite_run, hc1v]; exact hr2) hI2 (hS1.trans hS2)
+    · exact fun σ2 d2 hr2 hI2 hS2 => hK.brk σ2 d2 (by rw [step_ite_run, hc1v]; exact hr2) (hI2.ctx rfl rfl rfl)
+        (hS1.trans hS2)
     · intro v σ2 d2 hr2 hI2 hS2 hv
       exact hK.ret v σ2 d2 (by rw [step_ite_run, hc1v]; exact hr2) hI2 (hS1.trans hS2) hv
     · intro d2 ⟨e, hr2, hne⟩ hG2
@@ -1443,10 +1464,16 @@ theorem sim_ite (c : Cond) (s t : Stmt)
   · exact sim_ite_gen hG hTab p K P c s t hs ht ctx path
       (compileS_ite fun w h => hab' ⟨w, h⟩)
 
+omit [Host] hG hTab in
+/-- A loop's code depends only on its head facts. -/
+theorem compileS_while_head {ctx : Ctx} {path : Path} {c : Cond} {s : Stmt} :
+    compileS { ctx with fa := headF ctx.fa s } path (.while c s) = compileS ctx path (.while c s) := by
+  simp only [compileS, headF_idem, Ctx.lbl]
+
 theorem sim_while (n : Nat) (hE : ExecSim p G sk n) (c : Cond) (s : Stmt)
     (hs : SimS p G sk (stepRun p (exec p n)) (· ≤ n) s) :
     SimS p G sk (stepRun p (exec p n)) (· ≤ n) (.while c s) := by
-  intro ctx F path k hT hF hc hwf hN htmp σ d Q hI hP hK
+  intro ctx F path k hT hF hc hwf hN htmp σ d Q hI hfa hP hK
   have hc0 := hc
   simp only [Stmt.wf, Bool.and_eq_true] at hwf
   simp only [compileS, burnFuel, List.append_assoc, List.cons_append, List.nil_append] at hc hK
@@ -1456,21 +1483,25 @@ theorem sim_while (n : Nat) (hE : ExecSim p G sk n) (c : Cond) (s : Stmt)
   have hc2 := hc1.right
   have hc3 := hc2.right
   have hX := Code.label (i := 3) hc3 rfl
+  have hfh : FHolds (headF ctx.fa s) σ := fholds_head hfa s
   refine ev_label hc.head ?_
-  refine sim_cond hG ctx hT hTab F hF c _ false _ 0 _ hc1.left hwf.1 (htmp.mono (by omega)) σ d Q hI ?_ ?_ ?_
+  refine sim_cond hG { ctx with fa := headF ctx.fa s } hT hTab F hF c _ false _ 0 _ hc1.left hwf.1
+    (htmp.mono (by omega)) σ d Q (hI.ctx rfl rfl rfl) hfh ?_ ?_ ?_
   · -- the condition is false: leave the loop
     intro d1 hcv hE1
     have hI1 := hE1.1
     rw [hX]
     refine ev_label hc3.tail.tail.tail.head ?_
-    refine ev_congr (hK.normal σ d1 (by rw [step_while_run, hcv]) hI1 hE1.2.1) ?_
+    refine ev_congr (hK.normal σ d1 (by rw [step_while_run, hcv]) (hI1.ctx rfl rfl rfl) hE1.2.1) ?_
     simp only [List.length_append, List.length_cons, List.length_nil]; omega
   · -- the condition is true: the body
     intro d1 hcv hE1
     have hI1 := hE1.1
     have hS1 := hE1.2.1
-    refine hs { ctx with brk := ctx.lbl path "X" } F _ _ hT hF hc2.left hwf.2 ⟨hN.ret, hN.le, hN.callee, fun hl => by have := hN.leaf hl; simp_all [Stmt.calls], by have := hN.need; simpa [Stmt.need] using this⟩ (htmp.mono (Nat.le_max_right _ _)) σ d1 Q
-      (hI1.ctx (ctx' := { ctx with brk := ctx.lbl path "X" }) rfl rfl rfl) (by rw [hE1.2.2.1]; exact hP) ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+    refine hs { ctx with brk := ctx.lbl path "X", fa := (headF ctx.fa s).map (·.condAll c true) } F _ _ hT hF
+      hc2.left hwf.2 ⟨hN.ret, hN.le, hN.callee, fun hl => by have := hN.leaf hl; simp_all [Stmt.calls], by have := hN.need; simpa [Stmt.need] using this⟩
+      (htmp.mono (Nat.le_max_right _ _)) σ d1 Q
+      (hI1.ctx rfl rfl rfl) (fholds_condAll hfh hcv) (by rw [hE1.2.2.1]; exact hP) ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
     · -- the body ends normally: burn fuel and go round
       intro σ1 d2 hr1 hI2 hS2
       have hS12 := hS1.trans hS2
@@ -1490,18 +1521,21 @@ theorem sim_while (n : Nat) (hE : ExecSim p G sk n) (c : Cond) (s : Stmt)
         have hS3 : SPost G F d2 { d2 with regs := d2.regs.set64 .r14 (d2.regs.get64 .r14 - 1), status := st } :=
           SPost.regs (by simp) (by simp) (by simp) (by simp [Reg64s.set64_r14, u64_sub_one_toNat hpos])
         have hS13 := hS12.trans hS3
-        refine hE (.while c s) ctx F path k hT hF hc0 (by simp [Stmt.wf, hwf.1, hwf.2]) hN (by simpa only [tempsS] using htmp) σ1 _ Q
-          ((hI2.ctx (ctx' := ctx) rfl rfl rfl).of_regs rfl (by simp) (by simp) (fun r hr => by rw [rget_set, ite_eq_right (allocRegs_ne hr).2.2.2.2.2.1]) (fun _ => rfl)) ?_ ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+        refine hE (.while c s) { ctx with fa := headF ctx.fa s } F path k hT hF (by rw [compileS_while_head]; exact hc0)
+          (by simp [Stmt.wf, hwf.1, hwf.2]) (hN.fa _) (by simpa only [tempsS] using htmp) σ1 _ Q
+          ((hI2.ctx (ctx' := { ctx with fa := headF ctx.fa s }) rfl rfl rfl).of_regs rfl (by simp) (by simp) (fun r hr => by rw [rget_set, ite_eq_right (allocRegs_ne hr).2.2.2.2.2.1]) (fun _ => rfl))
+          (fholds_head_after (fsound_stepExec p n) hfh hr1) ?_ ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
         · show _ < n
           have := hS12.r14
           simp [Reg64s.set64_r14, u64_sub_one_toNat hpos]
           omega
         · intro σ2 d4 hr2 hI4 hS4
           refine ev_congr (hK.normal σ2 d4 (by rw [step_while_run, hcv]; simp only [Bool.not_false, hr1]; exact hr2)
-            hI4 (hS13.trans hS4)) ?_
-          simp [compileS, burnFuel]
+            (hI4.ctx rfl rfl rfl) (hS13.trans hS4)) ?_
+          rw [compileS_while_head]; simp [compileS, burnFuel]
         · intro σ2 d4 hr2 hI4 hS4
-          exact hK.brk σ2 d4 (by rw [step_while_run, hcv]; simp only [Bool.not_false, hr1]; exact hr2) hI4 (hS13.trans hS4)
+          exact hK.brk σ2 d4 (by rw [step_while_run, hcv]; simp only [Bool.not_false, hr1]; exact hr2)
+            (hI4.ctx rfl rfl rfl) (hS13.trans hS4)
         · intro v σ2 d4 hr2 hI4 hS4 hv
           exact hK.ret v σ2 d4 (by rw [step_while_run, hcv]; simp only [Bool.not_false, hr1]; exact hr2) hI4 (hS13.trans hS4) hv
         · intro d4 ⟨e, hr2, hne⟩ hG4

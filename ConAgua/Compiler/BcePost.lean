@@ -445,4 +445,38 @@ theorem fsound_exec (p : Prog) : ∀ n, FSound fun s σ => (exec p n s).run σ
 theorem fsound_stepExec (p : Prog) (n : Nat) : FSound (stepRun p (exec p n)) :=
   fsound_step p (exec p n) (fsound_exec p n)
 
+/-! ## For the statement simulation -/
+
+/-- The facts after `s`, at the end of a normal run of `s`. -/
+theorem FSound.post {run : Stmt → St → Except Err (Sig × St)} (h : FSound run) {fa : Option Facts}
+    {s : Stmt} {σ σ1 : St} (hf : FHolds fa σ) (hr : run s σ = .ok (.normal, σ1)) : FHolds (postF fa s) σ1 := by
+  cases fa with
+  | none => exact absurd hf id
+  | some f => exact (h s σ f _ σ1 hr hf).post rfl
+
+/-- The facts in the branch where `c` came out `pol`. -/
+theorem fholds_condAll {fa : Option Facts} {σ : St} (hf : FHolds fa σ) {c : Cond} {pol : Bool}
+    (hc : evalCP σ c = .ok pol) : FHolds (fa.map (·.condAll c pol)) σ := by
+  cases fa with
+  | none => exact absurd hf id
+  | some f => exact hf.condAll hc
+
+/-- The facts at the head of `while c s`, when it is entered. -/
+theorem fholds_head {fa : Option Facts} {σ : St} (hf : FHolds fa σ) (s : Stmt) : FHolds (headF fa s) σ := by
+  cases fa with
+  | none => exact absurd hf id
+  | some f => exact hf.killAll _ (fun _ _ => rfl) (SameSizes.refl _)
+
+/-- The facts at the head of `while c s` hold again after a run of its body. -/
+theorem fholds_head_after {run : Stmt → St → Except Err (Sig × St)} (h : FSound run) {fa : Option Facts}
+    {s : Stmt} {σ σ1 : St} {r : Sig} (hf : FHolds (headF fa s) σ) (hr : run s σ = .ok (r, σ1)) :
+    FHolds (headF fa s) σ1 := by
+  cases fa with
+  | none => exact absurd hf id
+  | some f =>
+    have P := h s σ _ r σ1 hr hf
+    simp only [headF, Option.map_some, fholds_some] at hf ⊢
+    rw [← Facts.killAll_idem]
+    exact hf.killAll _ P.loc P.size
+
 end L.Compiler
