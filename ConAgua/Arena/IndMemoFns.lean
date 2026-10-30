@@ -65,7 +65,7 @@ def imFns : List FnName :=
    "de_find", "de_put", "defeq", "defeq_arg", "defeq_binders", "defeq_body", "defeq_e",
    "defeq_lams", "defeq_lams_inner", "defeq_list", "defeq_list_rev", "defeq_lst", "defeq_no_fvars",
    "defeq_offset", "defeq_peel", "defeq_proj_pair", "defeq_spine", "defeq_spine2", "defeq_stuck",
-   "defeq_tail", "defn_div_gate", "defn_nat_cert", "defn_nat_gate", "delta_quick", "der_b",
+   "defeq_tail", "defn_div_gate", "defn_nat_cert", "defn_nat_gate", "delta_quick", "der_b", "der_bv",
    "dind_copy", "div_add", "div_mod_cert_applied", "div_mod_cert_guard", "div_mod_cert_proofs",
    "div_mod_cert_stmts", "div_mod_cert_stmts_at", "div_mod_certs_guard", "div_mod_certs_guard_go",
    "div_mod_decl_pin", "div_mod_env_guard", "div_mod_pin_guard", "div_mod_slot",

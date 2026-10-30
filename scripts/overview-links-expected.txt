@@ -1573,7 +1573,7 @@
     60  ```
     61  l_model liftGo_spec (p : Prog) (hp : LiftProg p)
     62    fns [(hp.get "lift_go") ↦ liftW, (hp.get "lift_app") ↦ liftAppW]
-    63    specs [derB_spec p (hp.get "der_b") n, memoFindG_spec lfSch p _ (hp.get "lf_find") n]
+    63    specs [derBv_spec p (hp.get "der_bv") n, memoFindG_spec lfSch p _ (hp.get "lf_find") n]
     64    grind [arena_grind] fold [tierW, idxW] finish [tierW, idxW] gen 20 heartbeats 1000000
     65  ```
 

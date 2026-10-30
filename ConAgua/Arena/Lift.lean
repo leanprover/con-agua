@@ -24,7 +24,7 @@ entry `lift_loose_bvars_fast` (`liftLooseBVarsFast`): bump every loose bound var
 `lift_go(h, c, k, fu)` (`k` the amount, `fu` the twin's `fuel` as a counter), as
 the twin's dispatcher:
 * `abort` at `fu = 0` (the twin throws), the arms called at `fu - 1`;
-* the **cutoff**: `der_b(h)` (the range field of the derived word, `ExprMk.lean`); if it is below
+* the **cutoff**: `der_bv(h)` (the range field of the derived word, `ExprMk.lean`); if it is below
   `satRange` and at most `c`, return `h`;
 * the **view** checks (scratch tier, the tier's count; the twin's `view` fails there), then per tag:
   `bvar i`: `i < c` returns `h`, else `intern_bvar(i + k)` (an `abort` where `i + k` wraps);
@@ -55,7 +55,7 @@ namespace L.Arena
 l_model liftGo_spec (p : Prog) (hp : LiftProg p)
   fns [(hp.get "lift_go") ↦ liftW, (hp.get "lift_app") ↦ liftAppW, (hp.get "lift_lam") ↦ liftLamW, (hp.get "lift_forall") ↦ liftForallW,
     (hp.get "lift_let") ↦ liftLetW, (hp.get "lift_proj") ↦ liftProjW]
-  specs [derB_spec p (hp.get "der_b") n, internBVar_spec p (hp.get "bvar_find") (hp.get "bvar_push") (hp.get "intern_bvar") n,
+  specs [derBv_spec p (hp.get "der_bv") n, internBVar_spec p (hp.get "bvar_find") (hp.get "bvar_push") (hp.get "intern_bvar") n,
     memoFindG_spec lfSch p _ (hp.get "lf_find") n, memoPutG_spec lfSch p _ (hp.get "lf_put") n,
     mkApp_spec p (hp.get "der_b") (hp.get "app_find") (hp.get "app_push") (hp.get "intern_app") (hp.get "mk_app") n,
     mkLam_spec p (hp.get "der_b") (hp.get "lam_find") (hp.get "lam_push") (hp.get "intern_lam") (hp.get "mk_lam") n,

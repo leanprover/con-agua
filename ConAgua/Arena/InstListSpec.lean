@@ -123,7 +123,7 @@ theorem ilBVar_step (n : Nat) (ih : IlGoSpec p n) (s₀ : St) (h d o l fu : Word
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt,
       tcntM, evalE_tierE, evalE_idxE,
       ih,
-      derB_spec p (hp.get "der_b") n, internBVar_spec p (hp.get "bvar_find") (hp.get "bvar_push")
+      derBv_spec p (hp.get "der_bv") n, internBVar_spec p (hp.get "bvar_find") (hp.get "bvar_push")
           (hp.get "intern_bvar") n] <;>
     finish (gen := 20) [viewOK, tierW, idxW, slW]
 
