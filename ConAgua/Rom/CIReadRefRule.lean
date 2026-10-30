@@ -1,4 +1,5 @@
 import ConAgua.Rom.CIReadRefCaps
+import ConAgua.L.WordOff
 
 /-!
 # The ROM constant readers: recursor rules (helper `decls4-rom`)
@@ -100,16 +101,6 @@ theorem rule_rel {m₀ : Mem} {a₀ : AState} {T : Nat} (seen : List ConLeche.Ex
   have hlt := hI.er_lt
   have hgo := hI.grow.er
   have hrom := hr; simp only [RomOK] at hrom
-  have hc1 : (rr + 1).toNat = rr.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
-  have hc2 : (rr + 2).toNat = rr.toNat + 2 := by rw [UInt64.toNat_add]; simp; omega
-  have hc3 : (rr + 3).toNat = rr.toNat + 3 := by rw [UInt64.toNat_add]; simp; omega
-  have hc4 : (rr + 4).toNat = rr.toNat + 4 := by rw [UInt64.toNat_add]; simp; omega
-  have hc5 : (rr + 5).toNat = rr.toNat + 5 := by rw [UInt64.toNat_add]; simp; omega
-  have hc6 : (rr + 6).toNat = rr.toNat + 6 := by rw [UInt64.toNat_add]; simp; omega
-  have hc7 : (rr + 7).toNat = rr.toNat + 7 := by rw [UInt64.toNat_add]; simp; omega
-  have hc8 : (rr + 8).toNat = rr.toNat + 8 := by rw [UInt64.toNat_add]; simp; omega
-  have hc9 : (rr + 9).toNat = rr.toNat + 9 := by rw [UInt64.toNat_add]; simp; omega
-  have hc10 : (rr + 10).toNat = rr.toNat + 10 := by rw [UInt64.toNat_add]; simp; omega
   have hw := callW_model (M := fun mq => ruleW p k mq q rr) (rule_specW rom p hL k · q rr) hc
   unfold ruleW at hw
   obtain ⟨r1, m1, h1, hw⟩ := ntBW_inv hw
@@ -151,15 +142,15 @@ theorem rule_rel {m₀ : Mem} {a₀ : AState} {T : Nat} (seen : List ConLeche.Ex
     simp only [List.mem_cons, List.mem_nil_iff, or_false] at hjw
     rcases hjw with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl
     · exact ⟨0, by omega, by omega, by simp⟩
-    · exact ⟨1, by omega, by omega, hc1⟩
-    · exact ⟨2, by omega, by omega, hc2⟩
-    · exact ⟨9, by omega, by omega, hc9⟩
-    · exact ⟨10, by omega, by omega, hc10⟩
-    · exact ⟨3, by omega, by omega, hc3⟩
-    · exact ⟨4, by omega, by omega, hc4⟩
-    · exact ⟨5, by omega, by omega, hc5⟩
-    · exact ⟨6, by omega, by omega, hc6⟩
-    · exact ⟨7, by omega, by omega, hc7⟩
+    · exact ⟨1, by omega, by omega, off_toNat (by omega)⟩
+    · exact ⟨2, by omega, by omega, off_toNat (by omega)⟩
+    · exact ⟨9, by omega, by omega, off_toNat (by omega)⟩
+    · exact ⟨10, by omega, by omega, off_toNat (by omega)⟩
+    · exact ⟨3, by omega, by omega, off_toNat (by omega)⟩
+    · exact ⟨4, by omega, by omega, off_toNat (by omega)⟩
+    · exact ⟨5, by omega, by omega, off_toNat (by omega)⟩
+    · exact ⟨6, by omega, by omega, off_toNat (by omega)⟩
+    · exact ⟨7, by omega, by omega, off_toNat (by omega)⟩
   obtain ⟨hI2, hM2, hs2, ht2, hIW2, -, hsz2⟩ := setERs_facts ws m1 hI1 hM1 (fun jw hjw => by
     obtain ⟨i, -, -, h⟩ := hmemws jw hjw; omega)
   unfold ruleW.ruleTailW at hw
@@ -178,25 +169,26 @@ theorem rule_rel {m₀ : Mem} {a₀ : AState} {T : Nat} (seen : List ConLeche.Ex
     exprCall hL hr rl.rhs hfe hI2.arena hI2.mode hM2 hd3 (by rw [hs2, hs1, hst]; decide)
       (by have := hI2.ok.ctl; omega) h3
   obtain ⟨hI4, hE4, hIW4, ht4, -⟩ := hI2.expr hA3 hmo3 hf3 hk3
-  obtain ⟨hI5, hM5, hs5, ht5, hIW5⟩ := setER_facts hI4 hM3 (rr + 8) (r3.headD 0) (by omega)
+  obtain ⟨hI5, hM5, hs5, ht5, hIW5⟩ := setER_facts hI4 hM3 (rr + 8) (r3.headD 0)
+    (by simp (disch := omega) only [off_toNat]; omega)
   have hsz : erTop m ≤ (m.arr64 EREC).size := hI.ok.er
   have hE1' : ∀ i : Nat, (erA m1)[i]? = (erA m)[i]? := fun i => by unfold erA; rw [hE1]
   have hE4' : ∀ i : Nat, (erA m3)[i]? = (erA (setERs m1 ws))[i]? := fun i => by unfold erA; rw [hE4]
   have hword : ∀ (j w : Word) (i : Nat), (j, w) ∈ ws → j.toNat = rr.toNat + i → i < 11 → i ≠ 8 →
       (erA (m3.set64 EREC (rr + 8) (r3.headD 0)))[rr.toNat + i]? = some w := by
     intro j w i hjw hj h11 h8
-    rw [er_set_ne _ _ _ _ (by rw [hc8]; omega), hE4', ← hj]
+    rw [er_set_ne _ _ _ _ (by rw [off_toNat (by omega)]; omega), hE4', ← hj]
     refine setERs_get ws m1 j w ?_ hjw (by rw [hE1]; omega)
-    rw [← hws]; simp [hc1, hc2, hc3, hc4, hc5, hc6, hc7, hc9, hc10]
+    rw [← hws]; simp (disch := omega) only [off_toNat, List.map_cons, List.map_nil]; simp
   have hW0 := hword rr (r1.headD 0) 0 (by rw [← hws]; simp) (by simp) (by omega) (by omega)
-  have hW1 := hword (rr + 1) (UInt64.ofNat rl.nfields) 1 (by rw [← hws]; simp) hc1 (by omega) (by omega)
-  have hW2 := hword (rr + 2) (UInt64.ofNat rl.ctorParams) 2 (by rw [← hws]; simp) hc2 (by omega) (by omega)
-  have hW3 := hword (rr + 3) (UInt64.ofNat 0) 3 (by rw [← hws]; simp) hc3 (by omega) (by omega)
-  have hW9 := hword (rr + 9) vk 9 (by rw [← hws]; simp) hc9 (by omega) (by omega)
-  have hW10 := hword (rr + 10) ve 10 (by rw [← hws]; simp) hc10 (by omega) (by omega)
+  have hW1 := hword (rr + 1) (UInt64.ofNat rl.nfields) 1 (by rw [← hws]; simp) (off_toNat (by omega)) (by omega) (by omega)
+  have hW2 := hword (rr + 2) (UInt64.ofNat rl.ctorParams) 2 (by rw [← hws]; simp) (off_toNat (by omega)) (by omega) (by omega)
+  have hW3 := hword (rr + 3) (UInt64.ofNat 0) 3 (by rw [← hws]; simp) (off_toNat (by omega)) (by omega) (by omega)
+  have hW9 := hword (rr + 9) vk 9 (by rw [← hws]; simp) (off_toNat (by omega)) (by omega) (by omega)
+  have hW10 := hword (rr + 10) ve 10 (by rw [← hws]; simp) (off_toNat (by omega)) (by omega) (by omega)
   simp only [Nat.add_zero] at hW0
   have hW8 : (erA (m3.set64 EREC (rr + 8) (r3.headD 0)))[rr.toNat + 8]? = some (r3.headD 0) := by
-    rw [← hc8]; exact er_set_get m3 _ _ (by rw [hE4, hsz2, hE1]; omega)
+    rw [← off_toNat (by omega)]; exact er_set_get m3 _ _ (by rw [hE4, hsz2, hE1, off_toNat (by omega)]; omega)
   have hlenR := congrArg List.length hdeq
   simp only [List.length_append, u64B, List.length_cons, List.length_nil] at hlenR
   refine ⟨memo', ⟨decI (r1.headD 0), rl.nfields, rl.ctorParams, .plain, decI (r3.headD 0), rl.k, rl.eta⟩,
@@ -208,7 +200,7 @@ theorem rule_rel {m₀ : Mem} {a₀ : AState} {T : Nat} (seen : List ConLeche.Ex
     rw [run_bind_of _ _ _ _ _ hrun3]
     rfl
   · simp only [List.headD_cons]; rw [hq3, hq40, hq1]; omega
-  · rw [er_set_ne _ _ _ _ (by rw [hc8]; omega), hE4', setERs_ne ws m1 i (fun jw hjw => by
+  · rw [er_set_ne _ _ _ _ (by rw [off_toNat (by omega)]; omega), hE4', setERs_ne ws m1 i (fun jw hjw => by
       obtain ⟨i', h1, -, h2⟩ := hmemws jw hjw; omega), hE1']
   · refine holds_decRule _ _ _ _ _ _ _ _ hW0 hW1 hW2 hW3 hW8 hW9 hW10 hlt1 hlt3 (by simp) rfl
       (ofNat_toNat_lt hnf).symm (ofNat_toNat_lt hcp).symm rfl rfl ?_ ?_

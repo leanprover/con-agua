@@ -453,7 +453,7 @@ theorem cpMem_eq {m : Mem} {b old : Word} (hlt : old.toNat + 11 ≤ b.toNat) (hb
     show b + 3 + 1 = b + 4 by ac_rfl, show b + 4 + 1 = b + 5 by ac_rfl,
     show b + 5 + 1 = b + 6 by ac_rfl, show b + 6 + 1 = b + 7 by ac_rfl, show b + 7 + 1 = b + 8 by ac_rfl,
     show b + 8 + 1 = b + 9 by ac_rfl, show b + 9 + 1 = b + 10 by ac_rfl]
-  simp (disch := ((try simp (disch := omega) only [off_toNat]); omega)) only [rdW_set64_ne_er]
+  simp (disch := off_omega) only [rdW_set64_ne_er]
 
 theorem rdW_agree {a a' : Array Word} {B : Nat} (hE : ∀ i < B, a'[i]? = a[i]?) {y : Word} (hy : y.toNat < B) :
     rdW a' y = rdW a y := by
@@ -614,17 +614,11 @@ theorem ri_spec (p : Prog) (L : CbrLook p) (n : Nat) (s₀ : St) (cv mi rp3 reo 
 theorem riMem_eq {m1 : Mem} {q cq mi rp3 reo rel : Word} (hlt : cq.toNat + 4 ≤ q.toNat) (hq : q.toNat + 9 < 2 ^ 64) :
     riMem m1 q cq mi rp3 reo rel = wrER m1 q [5, rdW (m1.arr64 EREC) cq, rdW (m1.arr64 EREC) (cq + 1),
       rdW (m1.arr64 EREC) (cq + 2), rdW (m1.arr64 EREC) (cq + 3), mi, rp3, reo, rel] := by
-  have t1 : (q + 1).toNat = q.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
-  have t2 : (q + 2).toNat = q.toNat + 2 := by rw [UInt64.toNat_add]; simp; omega
-  have t3 : (q + 3).toNat = q.toNat + 3 := by rw [UInt64.toNat_add]; simp; omega
-  have c1 : (cq + 1).toNat = cq.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
-  have c2 : (cq + 2).toNat = cq.toNat + 2 := by rw [UInt64.toNat_add]; simp; omega
-  have c3 : (cq + 3).toNat = cq.toNat + 3 := by rw [UInt64.toNat_add]; simp; omega
   simp only [riMem, wrER]
   rw [show q + 1 + 1 = q + 2 by ac_rfl, show q + 2 + 1 = q + 3 by ac_rfl,
     show q + 3 + 1 = q + 4 by ac_rfl, show q + 4 + 1 = q + 5 by ac_rfl,
     show q + 5 + 1 = q + 6 by ac_rfl, show q + 6 + 1 = q + 7 by ac_rfl, show q + 7 + 1 = q + 8 by ac_rfl]
-  simp (disch := ((try simp only [t1, t2, t3, c1, c2, c3]); omega)) only [rdW_set64_ne_er]
+  simp (disch := off_omega) only [rdW_set64_ne_er]
 
 /-- **`class_fe_r_rec` under the stage relation**: a fresh rule-less `.recInfo` record of the constant
 at `cq`. -/

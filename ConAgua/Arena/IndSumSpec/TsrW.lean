@@ -256,7 +256,7 @@ theorem rmMem_eq {m1 : Mem} {q old flo fll fpo fpl : Word} (hlt : old.toNat + 11
     show q + 3 + 1 = q + 4 by ac_rfl, show q + 4 + 1 = q + 5 by ac_rfl,
     show q + 5 + 1 = q + 6 by ac_rfl, show q + 6 + 1 = q + 7 by ac_rfl, show q + 7 + 1 = q + 8 by ac_rfl,
     show q + 8 + 1 = q + 9 by ac_rfl, show q + 9 + 1 = q + 10 by ac_rfl]
-  simp (disch := ((try simp (disch := omega) only [off_toNat]); omega)) only [rdW_set64_ne_er]
+  simp (disch := off_omega) only [rdW_set64_ne_er]
 
 theorem erRec_mfr {m m1 : Mem} {k q : Word} (h : erAllocW m k = some (q, m1)) (ws : List Word) :
     MFr [] [] m (wrER m1 q ws) := by
