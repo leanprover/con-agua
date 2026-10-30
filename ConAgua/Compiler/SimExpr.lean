@@ -906,7 +906,7 @@ theorem sim_ld32t_core {ctx : Ctx} (hT : ctx.tab = G.tab)
       EPost.ofKeep (fun r _ h2 _ => hk r h2) hm
     exact arrW32_tier hG hT hTab ha (hI.ofE hG hE) (by rw [hk R hRc, hR])
   · exact ev_congr (hok hj s' (UInt64.toBitVec_inj.mp (by simpa [Reg64s.get64] using hv))
-      (EPost.ofKeep (fun r h1 h2 _ => hk r h2 h1) hm)) (by simp [ld32Code, ld32hCode, chkR])
+      (EPost.ofKeep (fun r h1 h2 _ => hk r h2 h1) hm)) (by simp [ld32Code, chkR])
   · exact herr s' hj (EPost.ofKeep (fun r _ h2 _ => hk r h2) hm)
 
 /-- From `rdx` = the tier word `u` and `rax` = the index `j`: the tier, the bounds check and the
@@ -951,7 +951,7 @@ theorem sim_ld32h_core {ctx : Ctx} (hT : ctx.tab = G.tab)
       EPost.ofKeep (fun r _ h2 _ => hk r h2) hm
     exact arrW_tier hG hT hTab ha (hI.ofE hG hE) (by rw [hk R hRc, hR])
   · exact ev_congr (hok hj s' (UInt64.toBitVec_inj.mp (by simpa [Reg64s.get64] using hv))
-      (EPost.ofKeep (fun r h1 h2 _ => hk r h2 h1) hm)) (by simp [ld32Code, ld32hCode, chkR])
+      (EPost.ofKeep (fun r h1 h2 _ => hk r h2 h1) hm)) (by simp [ld32hCode, chkR])
   · exact herr s' hj (EPost.ofKeep (fun r _ h2 _ => hk r h2) hm)
 
 /-- From `rdx` = the tier word `u` and `rax` = the index `j`: the tier, the bounds check and the

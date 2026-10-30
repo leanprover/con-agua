@@ -59,18 +59,21 @@ def Expr.beqP : Expr → Expr → Bool
   | .bin o a b, .bin o' a' b' => o == o' && Expr.beqP a a' && Expr.beqP b b'
   | _, _ => false
 
-/-- The pure expression `e` reads local `x`. -/
-def Expr.mentions (x : Var) : Expr → Bool
-  | .var y => x == y
-  | .bin _ a b => Expr.mentions x a || Expr.mentions x b
+/-- Local `y` occurs in `e`. -/
+def Expr.readsV (y : Var) : Expr → Bool
+  | .var x => x == y
+  | .bin _ a b | .cmpw _ a b => Expr.readsV y a || Expr.readsV y b
+  | .ld8 _ i | .ld64 _ i | .ldc _ i | .ld8x8 _ i => Expr.readsV y i
+  | .ld64t _ t i | .ld32t _ t i | .ld32h _ t i _ => Expr.readsV y t || Expr.readsV y i
+  | .len64t _ t => Expr.readsV y t
   | _ => false
 
 def AKey.pure : AKey → Bool
   | .t _ tv | .u _ tv => Expr.pure tv
   | _ => true
 
-def AKey.mentions (x : Var) : AKey → Bool
-  | .t _ tv | .u _ tv => Expr.mentions x tv
+def AKey.readsV (x : Var) : AKey → Bool
+  | .t _ tv | .u _ tv => Expr.readsV x tv
   | _ => false
 
 def AKey.beq : AKey → AKey → Bool
@@ -169,7 +172,7 @@ def addLoads (fa : Facts) : List (AKey × Expr) → Facts
 
 /-- Forget what mentions local `x`. -/
 def kill (fa : Facts) (x : Var) : Facts :=
-  { lt := fa.lt.filter fun f => !AKey.mentions x f.1 && !Expr.mentions x f.2
+  { lt := fa.lt.filter fun f => !AKey.readsV x f.1 && !Expr.readsV x f.2
     hi := fa.hi.filter fun f => f.1 != x }
 
 def killAll (fa : Facts) : List Var → Facts

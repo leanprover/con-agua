@@ -110,20 +110,20 @@ theorem pure_ok {σ : St} : ∀ {e : Expr}, Expr.pure e = true → ∃ v, evalP 
 
 /-- A pure expression reads only the locals it mentions. -/
 theorem pure_frame {σ σ' : St} : ∀ {e : Expr}, Expr.pure e = true →
-    (∀ y, Expr.mentions y e = true → σ'.loc y = σ.loc y) → evalP σ' e = evalP σ e
+    (∀ y, Expr.readsV y e = true → σ'.loc y = σ.loc y) → evalP σ' e = evalP σ e
   | .const _, _, _ => rfl
-  | .var x, _, h => by simp only [evalP]; rw [h x (by simp [Expr.mentions])]
+  | .var x, _, h => by simp only [evalP]; rw [h x (by simp [Expr.readsV])]
   | .bin op a b, hp, h => by
     simp only [Expr.pure, Bool.and_eq_true] at hp
     simp only [evalP]
-    rw [pure_frame hp.1 (fun y hy => h y (by simp [Expr.mentions, hy])),
-      pure_frame hp.2 (fun y hy => h y (by simp [Expr.mentions, hy]))]
+    rw [pure_frame hp.1 (fun y hy => h y (by simp [Expr.readsV, hy])),
+      pure_frame hp.2 (fun y hy => h y (by simp [Expr.readsV, hy]))]
   | .ld8 .., h, _ | .ld64 .., h, _ | .len8 _, h, _ | .len64 _, h, _ | .cmpw .., h, _ | .ldc .., h, _
   | .glob _, h, _ | .ld64t .., h, _ | .len64t .., h, _ | .ld8x8 .., h, _ | .ld32t .., h, _
   | .ld32h .., h, _ => by simp [Expr.pure] at h
 
 theorem AKey.len_frame {σ σ' : St} {k : AKey} (hp : AKey.pure k = true)
-    (h : ∀ y, AKey.mentions y k = true → σ'.loc y = σ.loc y) (hs : SameSizes σ σ') :
+    (h : ∀ y, AKey.readsV y k = true → σ'.loc y = σ.loc y) (hs : SameSizes σ σ') :
     k.len σ' = k.len σ := by
   cases k with
   | b a => exact hs.1 a
@@ -143,7 +143,7 @@ theorem AKey.len_frame {σ σ' : St} {k : AKey} (hp : AKey.pure k = true)
 /-- The facts hold in `σ'` if they do in `σ`, the locals they mention are unchanged and the arrays
 keep their sizes. -/
 theorem Facts.Holds.frame {fa : Facts} {σ σ' : St} (h : fa.Holds σ)
-    (hlt : ∀ f ∈ fa.lt, ∀ y, (AKey.mentions y f.1 || Expr.mentions y f.2) = true → σ'.loc y = σ.loc y)
+    (hlt : ∀ f ∈ fa.lt, ∀ y, (AKey.readsV y f.1 || Expr.readsV y f.2) = true → σ'.loc y = σ.loc y)
     (hhi : ∀ f ∈ fa.hi, σ'.loc f.1 = σ.loc f.1) (hs : SameSizes σ σ') : fa.Holds σ' := by
   refine ⟨fun f hf => ?_, fun f hf => by rw [hhi f hf]; exact h.hi f hf⟩
   obtain ⟨hpe, hpk, hv⟩ := h.lt f hf
@@ -333,14 +333,14 @@ theorem lenKey_sound {σ : St} {b : Expr} {k : AKey} {y : Word} (hk : lenKey b =
     (hb : evalP σ b = .ok y) : y.toNat ≤ k.len σ := by
   cases b <;> simp only [lenKey, reduceCtorEq] at hk
   · cases hk; simp only [evalP] at hb; cases hb
-    simp only [Mem.len8, AKey.len, UInt64.toNat_ofNat]; exact Nat.mod_le _ _
+    simp only [Mem.len8, AKey.len]; exact Nat.mod_le _ _
   · cases hk; simp only [evalP] at hb; cases hb
-    simp only [Mem.len64, AKey.len, UInt64.toNat_ofNat]; exact Nat.mod_le _ _
+    simp only [Mem.len64, AKey.len]; exact Nat.mod_le _ _
   · rename_i a t
     obtain ⟨u, hu, hb⟩ := bind_ok hb
     cases hb
     rw [keyT_len hk hu]
-    simp only [Mem.len64, UInt64.toNat_ofNat]; exact Nat.mod_le _ _
+    simp only [Mem.len64]; exact Nat.mod_le _ _
 
 theorem Facts.Holds.cmpF {fa : Facts} {σ : St} (h : fa.Holds σ) {op : Cmp} {a b : Expr} {pol : Bool}
     (hc : evalCP σ (.cmp op a b) = .ok pol) : (fa.cmpF op a b pol).Holds σ := by
@@ -468,7 +468,7 @@ theorem hiE_sound {σ : St} {hi : List (Var × Nat)} (hh : ∀ f ∈ hi, (σ.loc
 /-! ## Assignments and kills -/
 
 theorem Facts.mem_kill_lt {fa : Facts} {x : Var} {f : AKey × Expr} (h : f ∈ (fa.kill x).lt) :
-    f ∈ fa.lt ∧ AKey.mentions x f.1 = false ∧ Expr.mentions x f.2 = false := by
+    f ∈ fa.lt ∧ AKey.readsV x f.1 = false ∧ Expr.readsV x f.2 = false := by
   simp only [Facts.kill, List.mem_filter, Bool.and_eq_true, Bool.not_eq_true'] at h
   exact ⟨h.1, h.2.1, h.2.2⟩
 
@@ -479,7 +479,7 @@ theorem Facts.mem_kill_hi {fa : Facts} {x : Var} {f : Var × Nat} (h : f ∈ (fa
 
 /-- `killAll` is one filter. -/
 theorem Facts.killAll_eq : ∀ (fa : Facts) (xs : List Var), fa.killAll xs =
-    { lt := fa.lt.filter fun f => xs.all fun x => !AKey.mentions x f.1 && !Expr.mentions x f.2
+    { lt := fa.lt.filter fun f => xs.all fun x => !AKey.readsV x f.1 && !Expr.readsV x f.2
       hi := fa.hi.filter fun f => xs.all fun x => f.1 != x }
   | fa, [] => by
     cases fa; simp only [Facts.killAll, List.all_nil, Facts.mk.injEq]
@@ -557,15 +557,6 @@ theorem fholds_join {a b : Option Facts} {σ : St} (h : FHolds a σ ∨ FHolds b
           simp only at this ⊢; omega
 
 /-! ## At an access -/
-
-/-- Local `y` occurs in `e`. -/
-def Expr.readsV (y : Var) : Expr → Bool
-  | .var x => x == y
-  | .bin _ a b | .cmpw _ a b => Expr.readsV y a || Expr.readsV y b
-  | .ld8 _ i | .ld64 _ i | .ldc _ i | .ld8x8 _ i => Expr.readsV y i
-  | .ld64t _ t i | .ld32t _ t i | .ld32h _ t i _ => Expr.readsV y t || Expr.readsV y i
-  | .len64t _ t => Expr.readsV y t
-  | _ => false
 
 /-- An expression reads only the memory and the locals in it. -/
 theorem evalP_congr {σ σ' : St} (hm : σ'.mem = σ.mem) :

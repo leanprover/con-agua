@@ -32,11 +32,11 @@ theorem Mem.size_set64 (m : Mem) (a s : TieredArray) (i v : Word) :
 
 theorem SameSizes.set64 (σ : St) (a : TieredArray) (i v : Word) :
     SameSizes σ { σ with mem := σ.mem.set64 a i v } :=
-  ⟨fun _ => rfl, fun s => Mem.size_set64 _ _ _ _ _⟩
+  ⟨fun _ => rfl, fun _s => Mem.size_set64 _ _ _ _ _⟩
 
 theorem SameSizes.set32 (σ : St) (a : TieredArray) (i v : Word) :
     SameSizes σ { σ with mem := σ.mem.set32 a i v } :=
-  ⟨fun _ => rfl, fun s => Mem.size_set64 _ _ _ _ _⟩
+  ⟨fun _ => rfl, fun _s => Mem.size_set64 _ _ _ _ _⟩
 
 theorem SameSizes.setG (σ : St) (g : GVar) (v : Word) : SameSizes σ (σ.setG g v) :=
   ⟨fun _ => rfl, fun _ => rfl⟩
@@ -114,14 +114,15 @@ def FSound (run : Stmt → St → Except Err (Sig × St)) : Prop :=
 
 /-- A statement that keeps the locals and the sizes and has no facts of its own. -/
 theorem PostOk.same {fa : Facts} {s : Stmt} {σ σ' : St} (hf : fa.Holds σ) (hl : σ'.loc = σ.loc)
-    (hs : SameSizes σ σ') (hp : postF (some fa) s = some fa) (hb : Stmt.hasBrk s = false) :
+    (hs : SameSizes σ σ') (hp : postF (some fa) s = some fa) :
     PostOk fa s .normal σ σ' :=
   ⟨hs, fun y _ => by rw [hl], fun _ => by rw [hp]; exact hf.memOnly hl hs, fun h => by cases h⟩
 
-/-- A store: `l` the accesses that ran, then the store's own fact. -/
-theorem PostOk.store {fa : Facts} {s : Stmt} {σ σ' : St} (hf : fa.Holds σ) (hl : σ'.loc = σ.loc)
-    (hs : SameSizes σ σ') {f : Facts} (hp : postF (some fa) s = some f) (hfh : f.Holds σ)
-    (hb : Stmt.hasBrk s = false) : PostOk fa s .normal σ σ' :=
+/-- A statement that changes only the memory and keeps the sizes: the facts `f` after it, true
+before it, stay true. -/
+theorem PostOk.store {fa : Facts} {s : Stmt} {σ σ' : St} (hl : σ'.loc = σ.loc)
+    (hs : SameSizes σ σ') {f : Facts} (hp : postF (some fa) s = some f) (hfh : f.Holds σ) :
+    PostOk fa s .normal σ σ' :=
   ⟨hs, fun y _ => by rw [hl], fun _ => by rw [hp]; exact hfh.memOnly hl hs, fun h => by cases h⟩
 
 theorem invoke_sizes {p : Prog} {K : Stmt → M Sig} (hK : FSound fun s σ => (K s).run σ) {f : FnName}
@@ -130,7 +131,7 @@ theorem invoke_sizes {p : Prog} {K : Stmt → M Sig} (hK : FSound fun s σ => (K
   simp only [invoke, lookupFn, StateT.run_bind] at h
   split at h
   · rename_i fd _
-    simp only [pure, StateT.pure, bind, Except.bind] at h
+    simp only [pure, bind, Except.bind] at h
     have hcall : (callFn K fd vs).run σ = .ok (rs, σ') := h
     simp only [callFn, pure, Except.pure, bind, Except.bind, StateT.bind, StateT.run, StateT.pure, modify,
       modifyGet, MonadStateOf.modifyGet, StateT.modifyGet, get, getThe, MonadStateOf.get, StateT.get, set,
@@ -143,7 +144,7 @@ theorem invoke_sizes {p : Prog} {K : Stmt → M Sig} (hK : FSound fun s σ => (K
       cases hcall
       have := (hK fd.body { σ with loc := Locals.init vs } {} r1 σ1 hr (holds_empty _)).size
       exact ⟨rfl, this⟩
-  · simp [throw, throwThe, MonadExceptOf.throw, StateT.lift, bind, Except.bind] at h
+  · simp [throw, throwThe, MonadExceptOf.throw, bind, Except.bind] at h
 
 theorem warrP_ok_or {σ : St} (w : WArr) : (∃ a, warrP σ w = .ok a) ∨ ∃ e, warrP σ w = .error e := by
   cases warrP σ w with
@@ -158,7 +159,7 @@ theorem fsound_step (p : Prog) (K : Stmt → M Sig) (hK : FSound fun s σ => (K 
   | skip =>
     intro σ fa r σ' h hf
     rw [step_skip_run] at h; cases h
-    exact PostOk.same hf rfl (SameSizes.refl _) rfl rfl
+    exact PostOk.same hf rfl (SameSizes.refl _) rfl
   | set x e =>
     intro σ fa r σ' h hf
     rw [step_set_run] at h
@@ -182,7 +183,7 @@ theorem fsound_step (p : Prog) (K : Stmt → M Sig) (hK : FSound fun s σ => (K 
         split at h
         · rename_i hj
           cases h
-          refine PostOk.store hf rfl (SameSizes.set8 _ _ _ _) rfl ?_ rfl
+          refine PostOk.store rfl (SameSizes.set8 _ _ _ _) rfl ?_
           refine ((hf.addLoads ((loads_sound hi).append (loads_sound he))).addLt fun _ _ v' hv' => ?_)
           rw [hi] at hv'; cases hv'; exact hj
         · cases h
@@ -200,7 +201,7 @@ theorem fsound_step (p : Prog) (K : Stmt → M Sig) (hK : FSound fun s σ => (K 
         split at h
         · rename_i hj
           cases h
-          refine PostOk.store hf rfl (SameSizes.set64 _ _ _ _) rfl ?_ rfl
+          refine PostOk.store rfl (SameSizes.set64 _ _ _ _) rfl ?_
           refine ((hf.addLoads ((loads_sound hi).append (loads_sound he))).addLt fun _ _ v' hv' => ?_)
           rw [hi] at hv'; cases hv'; exact hj
         · cases h
@@ -221,7 +222,7 @@ theorem fsound_step (p : Prog) (K : Stmt → M Sig) (hK : FSound fun s σ => (K 
           split at h
           · rename_i hj
             cases h
-            refine PostOk.store hf rfl (SameSizes.set64 _ _ _ _) rfl ?_ rfl
+            refine PostOk.store rfl (SameSizes.set64 _ _ _ _) rfl ?_
             have h1 := hf.addLoads (((loads_sound ht).append (loads_sound hi)).append (loads_sound he))
             cases hk : keyT a t with
             | none => exact h1
@@ -246,7 +247,7 @@ theorem fsound_step (p : Prog) (K : Stmt → M Sig) (hK : FSound fun s σ => (K 
           split at h
           · rename_i hj
             cases h
-            refine PostOk.store hf rfl (SameSizes.set32 _ _ _ _) rfl ?_ rfl
+            refine PostOk.store rfl (SameSizes.set32 _ _ _ _) rfl ?_
             have h1 := hf.addLoads (((loads_sound ht).append (loads_sound hi)).append (loads_sound he))
             cases hk : key32 a t with
             | none => exact h1
@@ -392,7 +393,7 @@ theorem fsound_step (p : Prog) (K : Stmt → M Sig) (hK : FSound fun s σ => (K 
     | error x => rw [he] at h; cases h
     | ok v =>
       rw [he] at h; cases h
-      exact PostOk.store hf rfl (SameSizes.setG _ _ _) rfl (hf.addLoads (loads_sound he)) rfl
+      exact PostOk.store rfl (SameSizes.setG _ _ _) rfl (hf.addLoads (loads_sound he))
   | copy64 d di s si n =>
     intro σ fa r σ' h hf
     rcases warrP_ok_or (σ := σ) d with ⟨da, hd⟩ | ⟨e, hd⟩ <;>
@@ -403,10 +404,10 @@ theorem fsound_step (p : Prog) (K : Stmt → M Sig) (hK : FSound fun s σ => (K 
        split at h
        · cases h
          exact PostOk.same hf rfl ⟨fun a => Mem.size8_copy64 _ _ _ _ _ _ a, fun b => Mem.size_copy64 _ _ _ _ _ _ b⟩
-           rfl rfl
+           rfl
        · cases h)
-    | (simp only [stepRun, step, StateT.run_bind, warr_run, evalE_run, hd, hs, hi, hj, hn] at h
-       simp [Except.map, bind, Except.bind, hd, hs, hi, hj, hn] at h)
+    | (simp only [stepRun, step, StateT.run_bind, warr_run, evalE_run, hd] at h
+       simp [Except.map, bind, Except.bind, hs, hi, hj, hn] at h)
   | copy8w d di s si n =>
     intro σ fa r σ' h hf
     rcases warrP_ok_or (σ := σ) d with ⟨da, hd⟩ | ⟨e, hd⟩ <;>
@@ -416,10 +417,10 @@ theorem fsound_step (p : Prog) (K : Stmt → M Sig) (hK : FSound fun s σ => (K 
        split at h
        · cases h
          exact PostOk.same hf rfl ⟨fun a => Mem.size8_copy8w _ _ _ _ _ _ a, fun b => Mem.size_copy8w _ _ _ _ _ _ b⟩
-           rfl rfl
+           rfl
        · cases h)
-    | (simp only [stepRun, step, StateT.run_bind, warr_run, evalE_run, hd, hi, hj, hn] at h
-       simp [Except.map, bind, Except.bind, hd, hi, hj, hn] at h)
+    | (simp only [stepRun, step, StateT.run_bind, warr_run, evalE_run, hd] at h
+       simp [Except.map, bind, Except.bind, hi, hj, hn] at h)
   | scan8 x s i e c =>
     intro σ fa r σ' h hf
     cases hi : evalP σ i <;> cases he : evalP σ e <;>
@@ -432,8 +433,8 @@ theorem fsound_step (p : Prog) (K : Stmt → M Sig) (hK : FSound fun s σ => (K 
          simp only [postF, fholds_some]
          exact hf.kill x (fun y hy => by simp [St.setLoc, hy]) (SameSizes.of_mem rfl)
        · cases h)
-    | (simp only [stepRun, step, StateT.run_bind, evalE_run, hi, he] at h
-       simp [Except.map, bind, Except.bind, hi, he] at h)
+    | (simp only [stepRun, step, StateT.run_bind, evalE_run, hi] at h
+       simp [Except.map, bind, Except.bind, he] at h)
 
 /-- **Every run of `exec p n` keeps the facts.** -/
 theorem fsound_exec (p : Prog) : ∀ n, FSound fun s σ => (exec p n s).run σ
