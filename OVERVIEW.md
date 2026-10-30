@@ -704,6 +704,10 @@ The **memos** (con-ron's per-call maps) are one generic library: a schema names
 the array and the stamp word, four words per slot, epoch stamps, growth at load
 3/4
 ([`MemoLib`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Arena/MemoLib.lean#L19-L46)).
+The put is one leaf function whose growth reuses its locals, so that the leaf
+register allocation keeps the common case, an insertion without growth, in
+registers
+([`memoPutG`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Arena/MemoLib.lean#L419-L446)).
 
 ### 6.3 The limb pool
 
