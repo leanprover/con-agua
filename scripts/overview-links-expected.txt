@@ -1300,7 +1300,7 @@
     36  
     37  The refinement (`enterScratch`/`dropScratch` under `ArenaD`) is `ScratchRefine.lean`.
 
-== ConAgua/Arena/MemoLib.lean#L19-L46
+== ConAgua/Arena/MemoLib.lean#L19-L47
     19  /-!
     20  # The memo library: per-call memo tables with two-word keys and epoch stamps
     21  
@@ -1320,45 +1320,46 @@
     35  `CTL.u64[⟪S.cs⟫]`), and their `vcgen` specs are proved once, for a variable schema. An instance is
     36  three entries of the program (`("bm_find", memoFindG bmSch)`, …) and no proof.
     37  
-    38  * `X_find(k1, k2)`: the probe from `homeW (k1 ^ (k2 << 32) ^ (k2 >> 32) * golden)`, returning
-    39    `(found, slot, steps)`. Both halves of `k2` enter the hash: banked memos (`MemoBank.genW`), the
-    40    eager bit and `rrSch` keep a second component in `k2`'s high half (lane `rfhash`: with only
-    41    `k2 << 32` it was shifted out, and all banks' entries for one `k1` shared one probe cluster).
-    42  * `X_put(k1, k2, v, fd, j)`: given the probe's `fd`, `j` **on the current memory**, write the
-    43    value (and on a miss, the stamp and the key, growing the table past 3/4 load, con-ron's `HashMap2` load factor). Callers probe right
-    44    before (`set` = `find; put`); a walk that recursed since its first probe probes again.
-    45  * `X_clear()`: `CTL[cs] += 1`, `CTL[cs + 1] := 0`, aborting where the stamp would wrap.
-    46  -/
+    38  * `X_find(k1, k2)`: the probe from `mhome k1 k2 n`, the high word of `((k1 + k2 * golden) * golden) * n`
+    39    (a multiplicative hash), returning `(found, slot, steps)`. Both halves of `k2` enter the hash:
+    40    banked memos (`MemoBank.genW`), the eager bit and `rrSch` keep a second component in `k2`'s high
+    41    half (lane `rfhash`: with only `k2 << 32` it was shifted out, and all banks' entries for one `k1`
+    42    shared one probe cluster).
+    43  * `X_put(k1, k2, v, fd, j)`: given the probe's `fd`, `j` **on the current memory**, write the
+    44    value (and on a miss, the stamp and the key, growing the table past 3/4 load, con-ron's `HashMap2` load factor). Callers probe right
+    45    before (`set` = `find; put`); a walk that recursed since its first probe probes again.
+    46  * `X_clear()`: `CTL[cs] += 1`, `CTL[cs + 1] := 0`, aborting where the stamp would wrap.
+    47  -/
 
-== ConAgua/Arena/MemoLib.lean#L419-L446
-   419  /-- con-ron: none — the memo library (open addressing over fixed arrays; the twin's `Std.HashMap` caches)
-   420  
-   421  A leaf with 13 locals: the growth reuses `fd`, `j` and the region's `b`, `n`, so that the leaf
-   422  register allocation keeps the common path (no growth) in registers; `fd` also holds `4 j` for the
-   423  key's three stores. -/
-   424  def memoPutG (S : MemoSch) : FunDecl :=
-   425    lfn (k1, k2, v, fd, j) locals (c, e, b, n, d, x, y, w) {
-   426    if fd == 0 {
-   427      c := CTL.u64[⟪S.cs + 1⟫];
-   428      e := CTL.u64[⟪S.cs⟫] + 1;
-   429      if S.arr.u64[0] == e {
-   430        b := S.arr.u64[1];
-   431        n := S.arr.u64[2]
-   432      } else {
-   433        b := 1;
-   434        n := len(S.arr.u64) >> 2;
-   435        if n > ⟪MN0⟫ { n := ⟪MN0⟫ } else { n := n - u64(n > 0) }
-   436      };
-   437      if n * 3 < (c + 1) * 4 { ⟪mgrowBlkG S⟫ };
-   438      fd := j * 4;
-   439      S.arr.u64[fd] := e;
-   440      S.arr.u64[fd + 1] := k1;
-   441      S.arr.u64[fd + 2] := k2;
-   442      CTL.u64[⟪S.cs + 1⟫] := c + 1
-   443    };
-   444    S.arr.u64[j * 4 + 3] := v;
-   445    return 0
-   446  }
+== ConAgua/Arena/MemoLib.lean#L432-L459
+   432  /-- con-ron: none — the memo library (open addressing over fixed arrays; the twin's `Std.HashMap` caches)
+   433  
+   434  A leaf with 13 locals: the growth reuses `fd`, `j` and the region's `b`, `n`, so that the leaf
+   435  register allocation keeps the common path (no growth) in registers; `fd` also holds `4 j` for the
+   436  key's three stores. -/
+   437  def memoPutG (S : MemoSch) : FunDecl :=
+   438    lfn (k1, k2, v, fd, j) locals (c, e, b, n, d, x, y, w) {
+   439    if fd == 0 {
+   440      c := CTL.u64[⟪S.cs + 1⟫];
+   441      e := CTL.u64[⟪S.cs⟫] + 1;
+   442      if S.arr.u64[0] == e {
+   443        b := S.arr.u64[1];
+   444        n := S.arr.u64[2]
+   445      } else {
+   446        b := 1;
+   447        n := len(S.arr.u64) >> 2;
+   448        if n > ⟪MN0⟫ { n := ⟪MN0⟫ } else { n := n - u64(n > 0) }
+   449      };
+   450      if n * 3 < (c + 1) * 4 { ⟪mgrowBlkG S⟫ };
+   451      fd := j * 4;
+   452      S.arr.u64[fd] := e;
+   453      S.arr.u64[fd + 1] := k1;
+   454      S.arr.u64[fd + 2] := k2;
+   455      CTL.u64[⟪S.cs + 1⟫] := c + 1
+   456    };
+   457    S.arr.u64[j * 4 + 3] := v;
+   458    return 0
+   459  }
 
 == ConAgua/Arena/Pool.lean#L10-L29
     10  /-!

@@ -35,10 +35,11 @@ functions producing L functions with the schema's array and `CTL` words spliced 
 `CTL.u64[⟪S.cs⟫]`), and their `vcgen` specs are proved once, for a variable schema. An instance is
 three entries of the program (`("bm_find", memoFindG bmSch)`, …) and no proof.
 
-* `X_find(k1, k2)`: the probe from `homeW (k1 ^ (k2 << 32) ^ (k2 >> 32) * golden)`, returning
-  `(found, slot, steps)`. Both halves of `k2` enter the hash: banked memos (`MemoBank.genW`), the
-  eager bit and `rrSch` keep a second component in `k2`'s high half (lane `rfhash`: with only
-  `k2 << 32` it was shifted out, and all banks' entries for one `k1` shared one probe cluster).
+* `X_find(k1, k2)`: the probe from `mhome k1 k2 n`, the high word of `((k1 + k2 * golden) * golden) * n`
+  (a multiplicative hash), returning `(found, slot, steps)`. Both halves of `k2` enter the hash:
+  banked memos (`MemoBank.genW`), the eager bit and `rrSch` keep a second component in `k2`'s high
+  half (lane `rfhash`: with only `k2 << 32` it was shifted out, and all banks' entries for one `k1`
+  shared one probe cluster).
 * `X_put(k1, k2, v, fd, j)`: given the probe's `fd`, `j` **on the current memory**, write the
   value (and on a miss, the stamp and the key, growing the table past 3/4 load, con-ron's `HashMap2` load factor). Callers probe right
   before (`set` = `find; put`); a walk that recursed since its first probe probes again.
@@ -107,8 +108,20 @@ def nG (S : MemoSch) (m : Mem) : Word :=
 /-- The live count, `CTL[cs + 1]` (only the load limit reads it). -/
 def cntG (S : MemoSch) (m : Mem) : Word := rdW (m.arr64 CTL) (S.cs + 1)
 
-/-- The hash input of a two-word key. -/
-def kh (k1 k2 : Word) : Word := (k1 ^^^ (k2 <<< 32)) ^^^ ((k2 >>> 32) * golden)
+/-- The hash of a two-word key: every bit of `k2` reaches the high bits of `k2 * golden`, and the
+second multiplication spreads `k1` (and that sum) into the high bits, which `mhome` reads. -/
+def kh (k1 k2 : Word) : Word := (k1 + k2 * golden) * golden
+
+/-- The home slot of key `(k1, k2)` in a region of `n` slots: the high word of `kh k1 k2 * n`. -/
+def mhome (k1 k2 n : Word) : Word := UInt64.ofNat ((kh k1 k2).toNat * n.toNat / 2 ^ 64)
+
+theorem mhome_lt (k1 k2 n : Word) (hn : 0 < n) : mhome k1 k2 n < n := by
+  simp only [mhome]
+  have hx := (kh k1 k2).toNat_lt
+  have hn' := n.toNat_lt
+  have : (kh k1 k2).toNat * n.toNat / 2 ^ 64 < n.toNat :=
+    Nat.div_lt_of_lt_mul (Nat.mul_lt_mul_of_pos_right hx (by grind))
+  rw [UInt64.lt_iff_toNat_lt, UInt64.toNat_ofNat', Nat.mod_eq_of_lt (by omega)]; exact this
 
 /-! ## `X_find(k1, k2)`: the probe -/
 
@@ -191,9 +204,9 @@ def memoFindG (S : MemoSch) : FunDecl := lfn (k1, k2) locals (n, e, j, d, b) {
     n := len(S.arr.u64) >> 2;
     if n > ⟪MN0⟫ { n := ⟪MN0⟫ } else { n := n - u64(n > 0) }
   };
-  j := (k1 ^ (k2 << 32)) ^ ((k2 >> 32) * ⟪golden⟫);
-  j := j * ⟪golden⟫;
-  j := mulhi(j ^ (j >> 32), n);
+  j := k2 * ⟪golden⟫;
+  j := (j + k1) * ⟪golden⟫;
+  j := mulhi(j, n);
   ⟪mfindLoopG S⟫;
   abort
 }
@@ -228,7 +241,7 @@ theorem mfindLoopG_step_spec (n : Nat) (s₀ : St) :
 
 /-- The probe of the memo for key `(k1, k2)`. -/
 def mfindG (m : Mem) (k1 k2 : Word) : List Word :=
-  mprobeG (m.arr64 S.arr) k1 k2 (epG S m) (mbG S m) (nG S m) (homeW (kh k1 k2) (nG S m)) 0
+  mprobeG (m.arr64 S.arr) k1 k2 (epG S m) (mbG S m) (nG S m) (mhome k1 k2 (nG S m)) 0
 
 /-- The probe reads the memo's array and its stamp only. -/
 theorem mfindG_eq_of {m₁ m₂ : Mem} (ha : m₂.arr64 S.arr = m₁.arr64 S.arr)
@@ -252,7 +265,7 @@ theorem memoFindG_spec (f : FnName) (hp : p.lookup f = some (memoFindG S)) (n : 
     all_goals subst_vars
     all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, Locals.init_cons_zero, Locals.init_cons_succ,
       Cmp.eval, BinOp.eval, Nat.reduceEqDiff, reduceIte, beq_iff_eq, decide_eq_true_eq] at *)
-    all_goals grind [lang_grind, arena_grind, mfindG, nG, mbG, hdG, epG, dfltN_alt, homeW, kh, Mem.len64]
+    all_goals grind [lang_grind, arena_grind, mfindG, nG, mbG, hdG, epG, dfltN_alt, mhome, kh, Mem.len64]
 
 end find
 
@@ -275,7 +288,7 @@ def mput4 (S : MemoSch) (m : Mem) (s e x y w : Word) : Mem :=
 
 /-- The probe for a free slot for key `(x, y)` in the region from slot `b` of `n` slots. -/
 def mslotG (mm : Array Word) (x y e b n : Word) : List Word :=
-  mprobeG mm x y e b n (homeW (kh x y) n) 0
+  mprobeG mm x y e b n (mhome x y n) 0
 
 /-- The model of the rehash loop: from old slot `i`, moved count `c`; `none` where L aborts. -/
 def mrehashG (S : MemoSch) (e nb nn : Word) (i c : Word) (m : Mem) : Option (Mem × Word) :=
@@ -358,9 +371,9 @@ def mslotLoopG (S : MemoSch) : Stmt :=
 /-- A free slot for key `(x, y)` in the region `b`, `n`, into `j`; aborts if there is none. -/
 def mslotBlkG (S : MemoSch) : Stmt :=
   lblk (k1, k2, v, fd, j, c, e, b, n, d, x, y, w) {
-  j := (x ^ (y << 32)) ^ ((y >> 32) * ⟪golden⟫);
-  j := j * ⟪golden⟫;
-  j := mulhi(j ^ (j >> 32), n);
+  j := y * ⟪golden⟫;
+  j := (j + x) * ⟪golden⟫;
+  j := mulhi(j, n);
   d := 0;
   ⟪mslotLoopG S⟫;
   if d >= n { abort };
@@ -483,7 +496,7 @@ theorem mslotBlkG_step_spec (n : Nat) (s₀ : St) :
   simp only [mslotBlkG]
   sym only [lang_grind, arena_grind] =>
     vcgen [step, evalE, evalC, evalArgs, setLoc, mslotLoopG_step_spec S p] <;>
-    finish [mslotG, homeW, kh]
+    finish [mslotG, mhome, kh]
 
 section rehashArms
 variable (S : MemoSch) (e nb nn i c : Word) (m : Mem)

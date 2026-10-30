@@ -97,3 +97,105 @@ Master 70e23c1d against this branch (`checker.s` from `scripts/asm_file.py`); bi
 * `Q`/`nine2` (another 0.3–0.5 %, §1);
 * the find's header and default count kept in globals (parprof rank 3 proper). That changes the
   memo representation (`nG`, `mbG`), and with it `MemoLibRel`.
+
+## 4. Lane memoglob: the region in globals (not landed), a cheaper hash (landed)
+
+The task: the rest of parprof §3 rank 3. Keep each memo's slot count and base in named globals
+(lfeat), set at `clear` and at the growth, so that the find no longer compares the header's stamp
+and recomputes the default count; let bce facts cover the probe's bounds checks; look at `Q` and
+`nine2` again under the new representation. Go only at ≥ 0.5 % instructions and with the proof
+change generic in `MemoLib`/`MemoLibRel`.
+
+**Result.** The globals pay (−1.7 to −1.9 %) but cannot be proved inside `MemoLib`/`MemoLibRel`
+(§4.2), so they are not landed. Landed instead, generic in the two files: the memo's hash becomes
+`(k1 + k2 * golden) * golden`, and the home slot is its high word times `n` (`mhome`), without the
+fold `j ^ (j >> 32)`. On `Init`: **−1.21 % instructions**; wall time not resolved.
+
+### 4.1 Prototypes
+
+`_tmp/memoglob/Proto.lean` (memosplit's method: variants of `checkerProg`, compiled with the real
+inliner and code generator, unproved; its `base` variant reproduces master's `checker.s` byte for
+byte). Exact counts, `perf stat -e instructions:u`, `Init`, `--jobs=4`, master 3b3c479c 219.76 G
+(repeat runs within ±0.01 %):
+
+| variant | instructions | Δ |
+|---|---:|---:|
+| `G`: region in two globals per memo (`0` = the default region); `clear` writes the default; put as master's (13 locals) | 216.09 G | −1.68 % |
+| `GL`: as `G`, `clear` only zeroes the count global (the default recomputed at the next find) | 220.46 G | +0.32 % |
+| `G11`: as `G`, the growth reads the new region from the globals (11 locals) | 215.52 G | −1.94 % |
+| `GN`: as `G` without the zero fallback | aborts | |
+| `H`: no globals; the header always names the region (`clear` writes words 1, 2; `0` = default) | 217.63 G | −0.98 % |
+| `Ka`: hash `(k1 + k2 * golden) * golden`, fold kept | 217.94 G | −0.83 % |
+| `K` (**landed**, as proved): hash `(k1 + k2 * golden) * golden`, no fold | 217.10 G | −1.21 % |
+| `KG`: `K` + `G11` | 212.86 G | −3.15 % |
+
+* **Where the globals gain.** Profile of master (`scripts/asmprof.py`, `Init`): 434 M memo finds
+  (22.1 G instructions, 10.1 %), 189 M puts (11.3 G). `ilm_find` (238 M calls, 49 instructions)
+  takes the default region in 99.9 % of its calls; its prologue is 8 instructions of stamp and
+  header test plus 7 of default count. With globals it is 2 loads and a zero test.
+* **Why the zero fallback.** `GN` aborts: a worker region starts with its globals at zero (entry 2
+  copies `CTL`, not the globals), and some memos are used before their first `clear`.
+* **`GL`** recomputes the default on every find of a fresh table (`inst_list` clears `ilm` 26 M
+  times for 238 M finds): worse than master.
+* **`Q`/`nine2` under globals** (`G11`: the growth reads `b`, `n` from the globals, so the put needs
+  11 locals instead of 13): another −0.26 %. Without the globals they stay as in §1.
+* **bce.** Nothing to take. 97 % of `ilm`'s probes end at the first slot with one checked access
+  (2 instructions). The analysis keeps facts only for the exact index expression, so the three
+  words of a slot need three facts, and the loop head drops every fact about `j`.
+
+### 4.2 Why the globals are not landed
+
+`MemoRV` would read the region from the globals, and `memoRV_frame` moves it across any writer with
+a `MemFrame`. `MemFrame` (`Arena/Frame.lean`) says nothing about globals, and the write-set check
+lets any function write any global (`L/WriteSet.lean`). The 154 uses of
+`memoRV_frame`/`memoRG_frame` in 53 files would each need a "the memo's globals are kept" fact.
+The alternative is ctlglobals §3: globals inside `MemFrame`, keyed by the `CTL` words of `C`
+(e.g. global `16 + x` kept unless `x ∈ C`, so that every frame list `[S.cs, S.cs + 1]` covers its
+memo's globals unchanged), `closedW` restricted for `g := e`, and each model frame showing the
+globals kept. That is a `--wide` change to `Frame.lean`, `WriteSet.lean` and the model frame
+lemmas. It is outside this lane's limit, and it is worth −1.9 % on top of `K` (`KG`).
+
+`H` needs no globals, but `clear` then writes the array: `mclearG_frame` becomes
+`MemFrame [S.arr] [S.cs, S.cs + 1]`. That touches about 20 call sites outside the two files and the
+clear chains of `CoreCaches`, for −0.98 %. Not done; `K` is cheaper and confined.
+
+### 4.3 The change
+
+`MemoLib.lean`:
+* `kh k1 k2 := (k1 + k2 * golden) * golden`.
+* New `mhome k1 k2 n := ⌊kh k1 k2 · n / 2^64⌋` (the code's `mulhi`), with `mhome_lt`.
+* `mfindG` and `mslotG` probe from `mhome` instead of `homeW (kh …)`.
+* The code: `j := k2 * golden; j := (j + k1) * golden; j := mulhi(j, n)` in `memoFindG` and
+  `mslotBlkG`.
+
+`MemoLibRel.lean`: `homeW (kh k1 k2) n` → `mhome k1 k2 n` (`runAt`, the probe lemmas). The cons
+tables keep `homeW`.
+
+**Why the hash is still sound.** Every bit of `k2` reaches the high half of `k2 * golden`, so
+rfhash's concern (a bank's generation in `k2`'s high half) still holds. The fold only changed the
+low 32 bits, which move `mulhi(·, n)` by at most 1 for `n < 2^32`. One-word keys get Fibonacci
+hashing (`k1 * golden`, high bits).
+
+**Proof delta.** `MemoLib.lean` +29 −16, `MemoLibRel.lean` ±14 (renames). Every spec statement,
+`mprobeG`/`mputG`/`MemoRV`, and every caller are unchanged. Elaboration: `MemoLib` 3.9 s,
+`MemoLibRel` 1.8 s.
+
+### 4.4 Measurements
+
+Master 3b3c479c against this branch's `checker.s`; binaries `_tmp/memoglob/ca-{base,new}`.
+
+* **Instructions**, `--jobs=4`: `Init` 219.76 G → 217.10 G (**−1.21 %**);
+  `complete_c04a_restart_70` 16.70 G → 16.47 G (−1.42 %); arena `cedar` 55.52 G → 55.27 G
+  (−0.46 %).
+* **16 threads on CPUs 24–39**, 8 interleaved rounds of `ws.py`, ratios new ÷ base:
+  * worker instructions −1.29 % (lower in 8 of 8);
+  * worker cycles +0.18 % (lower in 4 of 8);
+  * span −2.68 % (lower in 5 of 8).
+* **Wall** (`wb2.py`, 20 interleaved rounds, CPUs 24–39, load 4.3–7.3, `wstats.py`):
+  * `Init` one thread: 16.56 s, −0.2 % (p = 0.35; mean [−0.4, +0.3]);
+  * `--jobs=16`: 3.43 s, +0.1 % (p = 0.93).
+
+  Not resolved. The removed instructions (a shift, an xor and a multiply per probe start) were
+  off the critical path of the dependent loads.
+* **Verdicts**: `diff-e2e --refs --parallel 16` agrees on 634 of 634 (406 accepted, 228 not);
+  UNSOUND, INCOMPLETE, CRASH, TIMEOUT and REFDIFF are all 0.

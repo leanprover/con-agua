@@ -32874,19 +32874,13 @@ cmova %rcx, %rax
 subq %rax, %rsi
 .Lca_ab_find_21522X:
 .Lca_ab_find_21X:
-movq %r8, %r13
-shlq $32, %r13
-xorq %rdi, %r13
-movq %r8, %rax
-shrq $32, %rax
+movq $-7046029254386353131, %r13
+imulq %r8, %r13
+lea (%r13,%rdi,1), %rax
 movq $-7046029254386353131, %rcx
 imulq %rcx, %rax
-xorq %rax, %r13
-movq $-7046029254386353131, %rax
-imulq %rax, %r13
+movq %rax, %r13
 movq %r13, %rax
-shrq $32, %rax
-xorq %r13, %rax
 movq %rsi, %rcx
 mulq %rcx
 movq %rdx, %rax
@@ -33189,18 +33183,18 @@ movq 768(%r15), %rcx
 movq (%rcx,%rax,8), %rax
 cmpq $-1, %rax
 je .Lca_ab_put_1422214222222161E
-movq %r10, %r9
-shlq $2, %r9
-addq $1, %r9
-movq 768(%r15), %rax
-movq (%rax,%r9,8), %r9
 movq %r10, %rsi
 shlq $2, %rsi
-addq $2, %rsi
-cmpq 2232(%r15), %rsi
-jae ca_error
+addq $1, %rsi
 movq 768(%r15), %rax
 movq (%rax,%rsi,8), %rsi
+movq %r10, %r9
+shlq $2, %r9
+addq $2, %r9
+cmpq 2232(%r15), %r9
+jae ca_error
+movq 768(%r15), %rax
+movq (%rax,%r9,8), %r9
 movq %r10, %rax
 shlq $2, %rax
 addq $3, %rax
@@ -33209,19 +33203,13 @@ jae ca_error
 movq 768(%r15), %rcx
 movq (%rcx,%rax,8), %rax
 movq %rax, 96(%rsp)
-movq %rsi, %r11
-shlq $32, %r11
-xorq %r9, %r11
-movq %rsi, %rax
-shrq $32, %rax
+movq $-7046029254386353131, %r11
+imulq %r9, %r11
+lea (%r11,%rsi,1), %rax
 movq $-7046029254386353131, %rcx
 imulq %rcx, %rax
-xorq %rax, %r11
-movq $-7046029254386353131, %rax
-imulq %rax, %r11
+movq %rax, %r11
 movq %r11, %rax
-shrq $32, %rax
-xorq %r11, %rax
 movq %rbx, %rcx
 mulq %rcx
 movq %rdx, %rax
@@ -33245,7 +33233,7 @@ cmpq 2232(%r15), %rax
 jae ca_error
 movq 768(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %r9, %rax
+cmpq %rsi, %rax
 jne .Lca_ab_put_14222142222221614222122221613S
 lea (%r13,%r11,1), %rax
 shlq $2, %rax
@@ -33254,7 +33242,7 @@ cmpq 2232(%r15), %rax
 jae ca_error
 movq 768(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %rsi, %rax
+cmpq %r9, %rax
 je ca_error
 .Lca_ab_put_14222142222221614222122221613S:
 lea 1(%r11), %rax
@@ -33286,14 +33274,14 @@ addq $1, %rax
 cmpq 2232(%r15), %rax
 jae ca_error
 movq 768(%r15), %rcx
-movq %r9, (%rcx,%rax,8)
+movq %rsi, (%rcx,%rax,8)
 movq %r11, %rax
 shlq $2, %rax
 addq $2, %rax
 cmpq 2232(%r15), %rax
 jae ca_error
 movq 768(%r15), %rcx
-movq %rsi, (%rcx,%rax,8)
+movq %r9, (%rcx,%rax,8)
 movq 96(%rsp), %rax
 movq %r11, %rcx
 shlq $2, %rcx
@@ -33318,21 +33306,15 @@ movq %r13, 8(%rax)
 movq 768(%r15), %rax
 movq %rbx, 16(%rax)
 movq %rdi, 43400(%r15)
-movq (%rsp), %r9
-movq 8(%rsp), %rsi
-movq %rsi, %r11
-shlq $32, %r11
-xorq %r9, %r11
-movq %rsi, %rax
-shrq $32, %rax
+movq (%rsp), %rsi
+movq 8(%rsp), %r9
+movq $-7046029254386353131, %r11
+imulq %r9, %r11
+lea (%r11,%rsi,1), %rax
 movq $-7046029254386353131, %rcx
 imulq %rcx, %rax
-xorq %rax, %r11
-movq $-7046029254386353131, %rax
-imulq %rax, %r11
+movq %rax, %r11
 movq %r11, %rax
-shrq $32, %rax
-xorq %r11, %rax
 movq %rbx, %rcx
 mulq %rcx
 movq %rdx, %rax
@@ -33356,7 +33338,7 @@ cmpq 2232(%r15), %rax
 jae ca_error
 movq 768(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %r9, %rax
+cmpq %rsi, %rax
 jne .Lca_ab_put_1422214222222222222222221613S
 lea (%r13,%r11,1), %rax
 shlq $2, %rax
@@ -33365,7 +33347,7 @@ cmpq 2232(%r15), %rax
 jae ca_error
 movq 768(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %rsi, %rax
+cmpq %r9, %rax
 je ca_error
 .Lca_ab_put_1422214222222222222222221613S:
 lea 1(%r11), %rax
@@ -34986,19 +34968,13 @@ cmova %rcx, %rax
 subq %rax, %rsi
 .Lca_apd_find_21522X:
 .Lca_apd_find_21X:
-movq %r8, %r13
-shlq $32, %r13
-xorq %rdi, %r13
-movq %r8, %rax
-shrq $32, %rax
+movq $-7046029254386353131, %r13
+imulq %r8, %r13
+lea (%r13,%rdi,1), %rax
 movq $-7046029254386353131, %rcx
 imulq %rcx, %rax
-xorq %rax, %r13
-movq $-7046029254386353131, %rax
-imulq %rax, %r13
+movq %rax, %r13
 movq %r13, %rax
-shrq $32, %rax
-xorq %r13, %rax
 movq %rsi, %rcx
 mulq %rcx
 movq %rdx, %rax
@@ -35139,18 +35115,18 @@ movq 1328(%r15), %rcx
 movq (%rcx,%rax,8), %rax
 cmpq $-1, %rax
 je .Lca_apd_put_1422214222222161E
-movq %r10, %r9
-shlq $2, %r9
-addq $1, %r9
-movq 1328(%r15), %rax
-movq (%rax,%r9,8), %r9
 movq %r10, %rsi
 shlq $2, %rsi
-addq $2, %rsi
-cmpq 2792(%r15), %rsi
-jae ca_error
+addq $1, %rsi
 movq 1328(%r15), %rax
 movq (%rax,%rsi,8), %rsi
+movq %r10, %r9
+shlq $2, %r9
+addq $2, %r9
+cmpq 2792(%r15), %r9
+jae ca_error
+movq 1328(%r15), %rax
+movq (%rax,%r9,8), %r9
 movq %r10, %rax
 shlq $2, %rax
 addq $3, %rax
@@ -35159,19 +35135,13 @@ jae ca_error
 movq 1328(%r15), %rcx
 movq (%rcx,%rax,8), %rax
 movq %rax, 96(%rsp)
-movq %rsi, %r11
-shlq $32, %r11
-xorq %r9, %r11
-movq %rsi, %rax
-shrq $32, %rax
+movq $-7046029254386353131, %r11
+imulq %r9, %r11
+lea (%r11,%rsi,1), %rax
 movq $-7046029254386353131, %rcx
 imulq %rcx, %rax
-xorq %rax, %r11
-movq $-7046029254386353131, %rax
-imulq %rax, %r11
+movq %rax, %r11
 movq %r11, %rax
-shrq $32, %rax
-xorq %r11, %rax
 movq %rbx, %rcx
 mulq %rcx
 movq %rdx, %rax
@@ -35195,7 +35165,7 @@ cmpq 2792(%r15), %rax
 jae ca_error
 movq 1328(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %r9, %rax
+cmpq %rsi, %rax
 jne .Lca_apd_put_14222142222221614222122221613S
 lea (%r13,%r11,1), %rax
 shlq $2, %rax
@@ -35204,7 +35174,7 @@ cmpq 2792(%r15), %rax
 jae ca_error
 movq 1328(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %rsi, %rax
+cmpq %r9, %rax
 je ca_error
 .Lca_apd_put_14222142222221614222122221613S:
 lea 1(%r11), %rax
@@ -35236,14 +35206,14 @@ addq $1, %rax
 cmpq 2792(%r15), %rax
 jae ca_error
 movq 1328(%r15), %rcx
-movq %r9, (%rcx,%rax,8)
+movq %rsi, (%rcx,%rax,8)
 movq %r11, %rax
 shlq $2, %rax
 addq $2, %rax
 cmpq 2792(%r15), %rax
 jae ca_error
 movq 1328(%r15), %rcx
-movq %rsi, (%rcx,%rax,8)
+movq %r9, (%rcx,%rax,8)
 movq 96(%rsp), %rax
 movq %r11, %rcx
 shlq $2, %rcx
@@ -35268,21 +35238,15 @@ movq %r13, 8(%rax)
 movq 1328(%r15), %rax
 movq %rbx, 16(%rax)
 movq %rdi, 44232(%r15)
-movq (%rsp), %r9
-movq 8(%rsp), %rsi
-movq %rsi, %r11
-shlq $32, %r11
-xorq %r9, %r11
-movq %rsi, %rax
-shrq $32, %rax
+movq (%rsp), %rsi
+movq 8(%rsp), %r9
+movq $-7046029254386353131, %r11
+imulq %r9, %r11
+lea (%r11,%rsi,1), %rax
 movq $-7046029254386353131, %rcx
 imulq %rcx, %rax
-xorq %rax, %r11
-movq $-7046029254386353131, %rax
-imulq %rax, %r11
+movq %rax, %r11
 movq %r11, %rax
-shrq $32, %rax
-xorq %r11, %rax
 movq %rbx, %rcx
 mulq %rcx
 movq %rdx, %rax
@@ -35306,7 +35270,7 @@ cmpq 2792(%r15), %rax
 jae ca_error
 movq 1328(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %r9, %rax
+cmpq %rsi, %rax
 jne .Lca_apd_put_1422214222222222222222221613S
 lea (%r13,%r11,1), %rax
 shlq $2, %rax
@@ -35315,7 +35279,7 @@ cmpq 2792(%r15), %rax
 jae ca_error
 movq 1328(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %rsi, %rax
+cmpq %r9, %rax
 je ca_error
 .Lca_apd_put_1422214222222222222222221613S:
 lea 1(%r11), %rax
@@ -43869,19 +43833,13 @@ cmova %rcx, %rax
 subq %rax, %rsi
 .Lca_bm_find_21522X:
 .Lca_bm_find_21X:
-movq %r8, %r13
-shlq $32, %r13
-xorq %rdi, %r13
-movq %r8, %rax
-shrq $32, %rax
+movq $-7046029254386353131, %r13
+imulq %r8, %r13
+lea (%r13,%rdi,1), %rax
 movq $-7046029254386353131, %rcx
 imulq %rcx, %rax
-xorq %rax, %r13
-movq $-7046029254386353131, %rax
-imulq %rax, %r13
+movq %rax, %r13
 movq %r13, %rax
-shrq $32, %rax
-xorq %r13, %rax
 movq %rsi, %rcx
 mulq %rcx
 movq %rdx, %rax
@@ -44022,18 +43980,18 @@ movq 400(%r15), %rcx
 movq (%rcx,%rax,8), %rax
 cmpq $-1, %rax
 je .Lca_bm_put_1422214222222161E
-movq %r10, %r9
-shlq $2, %r9
-addq $1, %r9
-movq 400(%r15), %rax
-movq (%rax,%r9,8), %r9
 movq %r10, %rsi
 shlq $2, %rsi
-addq $2, %rsi
-cmpq 1864(%r15), %rsi
-jae ca_error
+addq $1, %rsi
 movq 400(%r15), %rax
 movq (%rax,%rsi,8), %rsi
+movq %r10, %r9
+shlq $2, %r9
+addq $2, %r9
+cmpq 1864(%r15), %r9
+jae ca_error
+movq 400(%r15), %rax
+movq (%rax,%r9,8), %r9
 movq %r10, %rax
 shlq $2, %rax
 addq $3, %rax
@@ -44042,19 +44000,13 @@ jae ca_error
 movq 400(%r15), %rcx
 movq (%rcx,%rax,8), %rax
 movq %rax, 96(%rsp)
-movq %rsi, %r11
-shlq $32, %r11
-xorq %r9, %r11
-movq %rsi, %rax
-shrq $32, %rax
+movq $-7046029254386353131, %r11
+imulq %r9, %r11
+lea (%r11,%rsi,1), %rax
 movq $-7046029254386353131, %rcx
 imulq %rcx, %rax
-xorq %rax, %r11
-movq $-7046029254386353131, %rax
-imulq %rax, %r11
+movq %rax, %r11
 movq %r11, %rax
-shrq $32, %rax
-xorq %r11, %rax
 movq %rbx, %rcx
 mulq %rcx
 movq %rdx, %rax
@@ -44078,7 +44030,7 @@ cmpq 1864(%r15), %rax
 jae ca_error
 movq 400(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %r9, %rax
+cmpq %rsi, %rax
 jne .Lca_bm_put_14222142222221614222122221613S
 lea (%r13,%r11,1), %rax
 shlq $2, %rax
@@ -44087,7 +44039,7 @@ cmpq 1864(%r15), %rax
 jae ca_error
 movq 400(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %rsi, %rax
+cmpq %r9, %rax
 je ca_error
 .Lca_bm_put_14222142222221614222122221613S:
 lea 1(%r11), %rax
@@ -44119,14 +44071,14 @@ addq $1, %rax
 cmpq 1864(%r15), %rax
 jae ca_error
 movq 400(%r15), %rcx
-movq %r9, (%rcx,%rax,8)
+movq %rsi, (%rcx,%rax,8)
 movq %r11, %rax
 shlq $2, %rax
 addq $2, %rax
 cmpq 1864(%r15), %rax
 jae ca_error
 movq 400(%r15), %rcx
-movq %rsi, (%rcx,%rax,8)
+movq %r9, (%rcx,%rax,8)
 movq 96(%rsp), %rax
 movq %r11, %rcx
 shlq $2, %rcx
@@ -44151,21 +44103,15 @@ movq %r13, 8(%rax)
 movq 400(%r15), %rax
 movq %rbx, 16(%rax)
 movq %rdi, 43208(%r15)
-movq (%rsp), %r9
-movq 8(%rsp), %rsi
-movq %rsi, %r11
-shlq $32, %r11
-xorq %r9, %r11
-movq %rsi, %rax
-shrq $32, %rax
+movq (%rsp), %rsi
+movq 8(%rsp), %r9
+movq $-7046029254386353131, %r11
+imulq %r9, %r11
+lea (%r11,%rsi,1), %rax
 movq $-7046029254386353131, %rcx
 imulq %rcx, %rax
-xorq %rax, %r11
-movq $-7046029254386353131, %rax
-imulq %rax, %r11
+movq %rax, %r11
 movq %r11, %rax
-shrq $32, %rax
-xorq %r11, %rax
 movq %rbx, %rcx
 mulq %rcx
 movq %rdx, %rax
@@ -44189,7 +44135,7 @@ cmpq 1864(%r15), %rax
 jae ca_error
 movq 400(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %r9, %rax
+cmpq %rsi, %rax
 jne .Lca_bm_put_1422214222222222222222221613S
 lea (%r13,%r11,1), %rax
 shlq $2, %rax
@@ -44198,7 +44144,7 @@ cmpq 1864(%r15), %rax
 jae ca_error
 movq 400(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %rsi, %rax
+cmpq %r9, %rax
 je ca_error
 .Lca_bm_put_1422214222222222222222221613S:
 lea 1(%r11), %rax
@@ -67425,19 +67371,13 @@ cmova %rcx, %rax
 subq %rax, %rsi
 .Lca_crm_find_21522X:
 .Lca_crm_find_21X:
-movq %r8, %r13
-shlq $32, %r13
-xorq %rdi, %r13
-movq %r8, %rax
-shrq $32, %rax
+movq $-7046029254386353131, %r13
+imulq %r8, %r13
+lea (%r13,%rdi,1), %rax
 movq $-7046029254386353131, %rcx
 imulq %rcx, %rax
-xorq %rax, %r13
-movq $-7046029254386353131, %rax
-imulq %rax, %r13
+movq %rax, %r13
 movq %r13, %rax
-shrq $32, %rax
-xorq %r13, %rax
 movq %rsi, %rcx
 mulq %rcx
 movq %rdx, %rax
@@ -67578,18 +67518,18 @@ movq 1360(%r15), %rcx
 movq (%rcx,%rax,8), %rax
 cmpq $-1, %rax
 je .Lca_crm_put_1422214222222161E
-movq %r10, %r9
-shlq $2, %r9
-addq $1, %r9
-movq 1360(%r15), %rax
-movq (%rax,%r9,8), %r9
 movq %r10, %rsi
 shlq $2, %rsi
-addq $2, %rsi
-cmpq 2824(%r15), %rsi
-jae ca_error
+addq $1, %rsi
 movq 1360(%r15), %rax
 movq (%rax,%rsi,8), %rsi
+movq %r10, %r9
+shlq $2, %r9
+addq $2, %r9
+cmpq 2824(%r15), %r9
+jae ca_error
+movq 1360(%r15), %rax
+movq (%rax,%r9,8), %r9
 movq %r10, %rax
 shlq $2, %rax
 addq $3, %rax
@@ -67598,19 +67538,13 @@ jae ca_error
 movq 1360(%r15), %rcx
 movq (%rcx,%rax,8), %rax
 movq %rax, 96(%rsp)
-movq %rsi, %r11
-shlq $32, %r11
-xorq %r9, %r11
-movq %rsi, %rax
-shrq $32, %rax
+movq $-7046029254386353131, %r11
+imulq %r9, %r11
+lea (%r11,%rsi,1), %rax
 movq $-7046029254386353131, %rcx
 imulq %rcx, %rax
-xorq %rax, %r11
-movq $-7046029254386353131, %rax
-imulq %rax, %r11
+movq %rax, %r11
 movq %r11, %rax
-shrq $32, %rax
-xorq %r11, %rax
 movq %rbx, %rcx
 mulq %rcx
 movq %rdx, %rax
@@ -67634,7 +67568,7 @@ cmpq 2824(%r15), %rax
 jae ca_error
 movq 1360(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %r9, %rax
+cmpq %rsi, %rax
 jne .Lca_crm_put_14222142222221614222122221613S
 lea (%r13,%r11,1), %rax
 shlq $2, %rax
@@ -67643,7 +67577,7 @@ cmpq 2824(%r15), %rax
 jae ca_error
 movq 1360(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %rsi, %rax
+cmpq %r9, %rax
 je ca_error
 .Lca_crm_put_14222142222221614222122221613S:
 lea 1(%r11), %rax
@@ -67675,14 +67609,14 @@ addq $1, %rax
 cmpq 2824(%r15), %rax
 jae ca_error
 movq 1360(%r15), %rcx
-movq %r9, (%rcx,%rax,8)
+movq %rsi, (%rcx,%rax,8)
 movq %r11, %rax
 shlq $2, %rax
 addq $2, %rax
 cmpq 2824(%r15), %rax
 jae ca_error
 movq 1360(%r15), %rcx
-movq %rsi, (%rcx,%rax,8)
+movq %r9, (%rcx,%rax,8)
 movq 96(%rsp), %rax
 movq %r11, %rcx
 shlq $2, %rcx
@@ -67707,21 +67641,15 @@ movq %r13, 8(%rax)
 movq 1360(%r15), %rax
 movq %rbx, 16(%rax)
 movq %rdi, 44280(%r15)
-movq (%rsp), %r9
-movq 8(%rsp), %rsi
-movq %rsi, %r11
-shlq $32, %r11
-xorq %r9, %r11
-movq %rsi, %rax
-shrq $32, %rax
+movq (%rsp), %rsi
+movq 8(%rsp), %r9
+movq $-7046029254386353131, %r11
+imulq %r9, %r11
+lea (%r11,%rsi,1), %rax
 movq $-7046029254386353131, %rcx
 imulq %rcx, %rax
-xorq %rax, %r11
-movq $-7046029254386353131, %rax
-imulq %rax, %r11
+movq %rax, %r11
 movq %r11, %rax
-shrq $32, %rax
-xorq %r11, %rax
 movq %rbx, %rcx
 mulq %rcx
 movq %rdx, %rax
@@ -67745,7 +67673,7 @@ cmpq 2824(%r15), %rax
 jae ca_error
 movq 1360(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %r9, %rax
+cmpq %rsi, %rax
 jne .Lca_crm_put_1422214222222222222222221613S
 lea (%r13,%r11,1), %rax
 shlq $2, %rax
@@ -67754,7 +67682,7 @@ cmpq 2824(%r15), %rax
 jae ca_error
 movq 1360(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %rsi, %rax
+cmpq %r9, %rax
 je ca_error
 .Lca_crm_put_1422214222222222222222221613S:
 lea 1(%r11), %rax
@@ -67862,19 +67790,13 @@ cmova %rcx, %rax
 subq %rax, %rsi
 .Lca_ct_find_21522X:
 .Lca_ct_find_21X:
-movq %r8, %r13
-shlq $32, %r13
-xorq %rdi, %r13
-movq %r8, %rax
-shrq $32, %rax
+movq $-7046029254386353131, %r13
+imulq %r8, %r13
+lea (%r13,%rdi,1), %rax
 movq $-7046029254386353131, %rcx
 imulq %rcx, %rax
-xorq %rax, %r13
-movq $-7046029254386353131, %rax
-imulq %rax, %r13
+movq %rax, %r13
 movq %r13, %rax
-shrq $32, %rax
-xorq %r13, %rax
 movq %rsi, %rcx
 mulq %rcx
 movq %rdx, %rax
@@ -68015,18 +67937,18 @@ movq 1080(%r15), %rcx
 movq (%rcx,%rax,8), %rax
 cmpq $-1, %rax
 je .Lca_ct_put_1422214222222161E
-movq %r10, %r9
-shlq $2, %r9
-addq $1, %r9
-movq 1080(%r15), %rax
-movq (%rax,%r9,8), %r9
 movq %r10, %rsi
 shlq $2, %rsi
-addq $2, %rsi
-cmpq 2544(%r15), %rsi
-jae ca_error
+addq $1, %rsi
 movq 1080(%r15), %rax
 movq (%rax,%rsi,8), %rsi
+movq %r10, %r9
+shlq $2, %r9
+addq $2, %r9
+cmpq 2544(%r15), %r9
+jae ca_error
+movq 1080(%r15), %rax
+movq (%rax,%r9,8), %r9
 movq %r10, %rax
 shlq $2, %rax
 addq $3, %rax
@@ -68035,19 +67957,13 @@ jae ca_error
 movq 1080(%r15), %rcx
 movq (%rcx,%rax,8), %rax
 movq %rax, 96(%rsp)
-movq %rsi, %r11
-shlq $32, %r11
-xorq %r9, %r11
-movq %rsi, %rax
-shrq $32, %rax
+movq $-7046029254386353131, %r11
+imulq %r9, %r11
+lea (%r11,%rsi,1), %rax
 movq $-7046029254386353131, %rcx
 imulq %rcx, %rax
-xorq %rax, %r11
-movq $-7046029254386353131, %rax
-imulq %rax, %r11
+movq %rax, %r11
 movq %r11, %rax
-shrq $32, %rax
-xorq %r11, %rax
 movq %rbx, %rcx
 mulq %rcx
 movq %rdx, %rax
@@ -68071,7 +67987,7 @@ cmpq 2544(%r15), %rax
 jae ca_error
 movq 1080(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %r9, %rax
+cmpq %rsi, %rax
 jne .Lca_ct_put_14222142222221614222122221613S
 lea (%r13,%r11,1), %rax
 shlq $2, %rax
@@ -68080,7 +67996,7 @@ cmpq 2544(%r15), %rax
 jae ca_error
 movq 1080(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %rsi, %rax
+cmpq %r9, %rax
 je ca_error
 .Lca_ct_put_14222142222221614222122221613S:
 lea 1(%r11), %rax
@@ -68112,14 +68028,14 @@ addq $1, %rax
 cmpq 2544(%r15), %rax
 jae ca_error
 movq 1080(%r15), %rcx
-movq %r9, (%rcx,%rax,8)
+movq %rsi, (%rcx,%rax,8)
 movq %r11, %rax
 shlq $2, %rax
 addq $2, %rax
 cmpq 2544(%r15), %rax
 jae ca_error
 movq 1080(%r15), %rcx
-movq %rsi, (%rcx,%rax,8)
+movq %r9, (%rcx,%rax,8)
 movq 96(%rsp), %rax
 movq %r11, %rcx
 shlq $2, %rcx
@@ -68144,21 +68060,15 @@ movq %r13, 8(%rax)
 movq 1080(%r15), %rax
 movq %rbx, 16(%rax)
 movq %rdi, 43880(%r15)
-movq (%rsp), %r9
-movq 8(%rsp), %rsi
-movq %rsi, %r11
-shlq $32, %r11
-xorq %r9, %r11
-movq %rsi, %rax
-shrq $32, %rax
+movq (%rsp), %rsi
+movq 8(%rsp), %r9
+movq $-7046029254386353131, %r11
+imulq %r9, %r11
+lea (%r11,%rsi,1), %rax
 movq $-7046029254386353131, %rcx
 imulq %rcx, %rax
-xorq %rax, %r11
-movq $-7046029254386353131, %rax
-imulq %rax, %r11
+movq %rax, %r11
 movq %r11, %rax
-shrq $32, %rax
-xorq %r11, %rax
 movq %rbx, %rcx
 mulq %rcx
 movq %rdx, %rax
@@ -68182,7 +68092,7 @@ cmpq 2544(%r15), %rax
 jae ca_error
 movq 1080(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %r9, %rax
+cmpq %rsi, %rax
 jne .Lca_ct_put_1422214222222222222222221613S
 lea (%r13,%r11,1), %rax
 shlq $2, %rax
@@ -68191,7 +68101,7 @@ cmpq 2544(%r15), %rax
 jae ca_error
 movq 1080(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %rsi, %rax
+cmpq %r9, %rax
 je ca_error
 .Lca_ct_put_1422214222222222222222221613S:
 lea 1(%r11), %rax
@@ -68879,19 +68789,13 @@ cmova %rcx, %rax
 subq %rax, %rsi
 .Lca_cv_find_21522X:
 .Lca_cv_find_21X:
-movq %r8, %r13
-shlq $32, %r13
-xorq %rdi, %r13
-movq %r8, %rax
-shrq $32, %rax
+movq $-7046029254386353131, %r13
+imulq %r8, %r13
+lea (%r13,%rdi,1), %rax
 movq $-7046029254386353131, %rcx
 imulq %rcx, %rax
-xorq %rax, %r13
-movq $-7046029254386353131, %rax
-imulq %rax, %r13
+movq %rax, %r13
 movq %r13, %rax
-shrq $32, %rax
-xorq %r13, %rax
 movq %rsi, %rcx
 mulq %rcx
 movq %rdx, %rax
@@ -69108,18 +69012,18 @@ movq 1088(%r15), %rcx
 movq (%rcx,%rax,8), %rax
 cmpq $-1, %rax
 je .Lca_cv_put_1422214222222161E
-movq %r10, %r9
-shlq $2, %r9
-addq $1, %r9
-movq 1088(%r15), %rax
-movq (%rax,%r9,8), %r9
 movq %r10, %rsi
 shlq $2, %rsi
-addq $2, %rsi
-cmpq 2552(%r15), %rsi
-jae ca_error
+addq $1, %rsi
 movq 1088(%r15), %rax
 movq (%rax,%rsi,8), %rsi
+movq %r10, %r9
+shlq $2, %r9
+addq $2, %r9
+cmpq 2552(%r15), %r9
+jae ca_error
+movq 1088(%r15), %rax
+movq (%rax,%r9,8), %r9
 movq %r10, %rax
 shlq $2, %rax
 addq $3, %rax
@@ -69128,19 +69032,13 @@ jae ca_error
 movq 1088(%r15), %rcx
 movq (%rcx,%rax,8), %rax
 movq %rax, 96(%rsp)
-movq %rsi, %r11
-shlq $32, %r11
-xorq %r9, %r11
-movq %rsi, %rax
-shrq $32, %rax
+movq $-7046029254386353131, %r11
+imulq %r9, %r11
+lea (%r11,%rsi,1), %rax
 movq $-7046029254386353131, %rcx
 imulq %rcx, %rax
-xorq %rax, %r11
-movq $-7046029254386353131, %rax
-imulq %rax, %r11
+movq %rax, %r11
 movq %r11, %rax
-shrq $32, %rax
-xorq %r11, %rax
 movq %rbx, %rcx
 mulq %rcx
 movq %rdx, %rax
@@ -69164,7 +69062,7 @@ cmpq 2552(%r15), %rax
 jae ca_error
 movq 1088(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %r9, %rax
+cmpq %rsi, %rax
 jne .Lca_cv_put_14222142222221614222122221613S
 lea (%r13,%r11,1), %rax
 shlq $2, %rax
@@ -69173,7 +69071,7 @@ cmpq 2552(%r15), %rax
 jae ca_error
 movq 1088(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %rsi, %rax
+cmpq %r9, %rax
 je ca_error
 .Lca_cv_put_14222142222221614222122221613S:
 lea 1(%r11), %rax
@@ -69205,14 +69103,14 @@ addq $1, %rax
 cmpq 2552(%r15), %rax
 jae ca_error
 movq 1088(%r15), %rcx
-movq %r9, (%rcx,%rax,8)
+movq %rsi, (%rcx,%rax,8)
 movq %r11, %rax
 shlq $2, %rax
 addq $2, %rax
 cmpq 2552(%r15), %rax
 jae ca_error
 movq 1088(%r15), %rcx
-movq %rsi, (%rcx,%rax,8)
+movq %r9, (%rcx,%rax,8)
 movq 96(%rsp), %rax
 movq %r11, %rcx
 shlq $2, %rcx
@@ -69237,21 +69135,15 @@ movq %r13, 8(%rax)
 movq 1088(%r15), %rax
 movq %rbx, 16(%rax)
 movq %rdi, 43896(%r15)
-movq (%rsp), %r9
-movq 8(%rsp), %rsi
-movq %rsi, %r11
-shlq $32, %r11
-xorq %r9, %r11
-movq %rsi, %rax
-shrq $32, %rax
+movq (%rsp), %rsi
+movq 8(%rsp), %r9
+movq $-7046029254386353131, %r11
+imulq %r9, %r11
+lea (%r11,%rsi,1), %rax
 movq $-7046029254386353131, %rcx
 imulq %rcx, %rax
-xorq %rax, %r11
-movq $-7046029254386353131, %rax
-imulq %rax, %r11
+movq %rax, %r11
 movq %r11, %rax
-shrq $32, %rax
-xorq %r11, %rax
 movq %rbx, %rcx
 mulq %rcx
 movq %rdx, %rax
@@ -69275,7 +69167,7 @@ cmpq 2552(%r15), %rax
 jae ca_error
 movq 1088(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %r9, %rax
+cmpq %rsi, %rax
 jne .Lca_cv_put_1422214222222222222222221613S
 lea (%r13,%r11,1), %rax
 shlq $2, %rax
@@ -69284,7 +69176,7 @@ cmpq 2552(%r15), %rax
 jae ca_error
 movq 1088(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %rsi, %rax
+cmpq %r9, %rax
 je ca_error
 .Lca_cv_put_1422214222222222222222221613S:
 lea 1(%r11), %rax
@@ -69849,19 +69741,13 @@ cmova %rcx, %rax
 subq %rax, %rsi
 .Lca_de_find_21522X:
 .Lca_de_find_21X:
-movq %r8, %r13
-shlq $32, %r13
-xorq %rdi, %r13
-movq %r8, %rax
-shrq $32, %rax
+movq $-7046029254386353131, %r13
+imulq %r8, %r13
+lea (%r13,%rdi,1), %rax
 movq $-7046029254386353131, %rcx
 imulq %rcx, %rax
-xorq %rax, %r13
-movq $-7046029254386353131, %rax
-imulq %rax, %r13
+movq %rax, %r13
 movq %r13, %rax
-shrq $32, %rax
-xorq %r13, %rax
 movq %rsi, %rcx
 mulq %rcx
 movq %rdx, %rax
@@ -70002,18 +69888,18 @@ movq 1072(%r15), %rcx
 movq (%rcx,%rax,8), %rax
 cmpq $-1, %rax
 je .Lca_de_put_1422214222222161E
-movq %r10, %r9
-shlq $2, %r9
-addq $1, %r9
-movq 1072(%r15), %rax
-movq (%rax,%r9,8), %r9
 movq %r10, %rsi
 shlq $2, %rsi
-addq $2, %rsi
-cmpq 2536(%r15), %rsi
-jae ca_error
+addq $1, %rsi
 movq 1072(%r15), %rax
 movq (%rax,%rsi,8), %rsi
+movq %r10, %r9
+shlq $2, %r9
+addq $2, %r9
+cmpq 2536(%r15), %r9
+jae ca_error
+movq 1072(%r15), %rax
+movq (%rax,%r9,8), %r9
 movq %r10, %rax
 shlq $2, %rax
 addq $3, %rax
@@ -70022,19 +69908,13 @@ jae ca_error
 movq 1072(%r15), %rcx
 movq (%rcx,%rax,8), %rax
 movq %rax, 96(%rsp)
-movq %rsi, %r11
-shlq $32, %r11
-xorq %r9, %r11
-movq %rsi, %rax
-shrq $32, %rax
+movq $-7046029254386353131, %r11
+imulq %r9, %r11
+lea (%r11,%rsi,1), %rax
 movq $-7046029254386353131, %rcx
 imulq %rcx, %rax
-xorq %rax, %r11
-movq $-7046029254386353131, %rax
-imulq %rax, %r11
+movq %rax, %r11
 movq %r11, %rax
-shrq $32, %rax
-xorq %r11, %rax
 movq %rbx, %rcx
 mulq %rcx
 movq %rdx, %rax
@@ -70058,7 +69938,7 @@ cmpq 2536(%r15), %rax
 jae ca_error
 movq 1072(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %r9, %rax
+cmpq %rsi, %rax
 jne .Lca_de_put_14222142222221614222122221613S
 lea (%r13,%r11,1), %rax
 shlq $2, %rax
@@ -70067,7 +69947,7 @@ cmpq 2536(%r15), %rax
 jae ca_error
 movq 1072(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %rsi, %rax
+cmpq %r9, %rax
 je ca_error
 .Lca_de_put_14222142222221614222122221613S:
 lea 1(%r11), %rax
@@ -70099,14 +69979,14 @@ addq $1, %rax
 cmpq 2536(%r15), %rax
 jae ca_error
 movq 1072(%r15), %rcx
-movq %r9, (%rcx,%rax,8)
+movq %rsi, (%rcx,%rax,8)
 movq %r11, %rax
 shlq $2, %rax
 addq $2, %rax
 cmpq 2536(%r15), %rax
 jae ca_error
 movq 1072(%r15), %rcx
-movq %rsi, (%rcx,%rax,8)
+movq %r9, (%rcx,%rax,8)
 movq 96(%rsp), %rax
 movq %r11, %rcx
 shlq $2, %rcx
@@ -70131,21 +70011,15 @@ movq %r13, 8(%rax)
 movq 1072(%r15), %rax
 movq %rbx, 16(%rax)
 movq %rdi, 43864(%r15)
-movq (%rsp), %r9
-movq 8(%rsp), %rsi
-movq %rsi, %r11
-shlq $32, %r11
-xorq %r9, %r11
-movq %rsi, %rax
-shrq $32, %rax
+movq (%rsp), %rsi
+movq 8(%rsp), %r9
+movq $-7046029254386353131, %r11
+imulq %r9, %r11
+lea (%r11,%rsi,1), %rax
 movq $-7046029254386353131, %rcx
 imulq %rcx, %rax
-xorq %rax, %r11
-movq $-7046029254386353131, %rax
-imulq %rax, %r11
+movq %rax, %r11
 movq %r11, %rax
-shrq $32, %rax
-xorq %r11, %rax
 movq %rbx, %rcx
 mulq %rcx
 movq %rdx, %rax
@@ -70169,7 +70043,7 @@ cmpq 2536(%r15), %rax
 jae ca_error
 movq 1072(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %r9, %rax
+cmpq %rsi, %rax
 jne .Lca_de_put_1422214222222222222222221613S
 lea (%r13,%r11,1), %rax
 shlq $2, %rax
@@ -70178,7 +70052,7 @@ cmpq 2536(%r15), %rax
 jae ca_error
 movq 1072(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %rsi, %rax
+cmpq %r9, %rax
 je ca_error
 .Lca_de_put_1422214222222222222222221613S:
 lea 1(%r11), %rax
@@ -75019,19 +74893,13 @@ cmova %rcx, %rax
 subq %rax, %rsi
 .Lca_dp_find_21522X:
 .Lca_dp_find_21X:
-movq %r8, %r13
-shlq $32, %r13
-xorq %rdi, %r13
-movq %r8, %rax
-shrq $32, %rax
+movq $-7046029254386353131, %r13
+imulq %r8, %r13
+lea (%r13,%rdi,1), %rax
 movq $-7046029254386353131, %rcx
 imulq %rcx, %rax
-xorq %rax, %r13
-movq $-7046029254386353131, %rax
-imulq %rax, %r13
+movq %rax, %r13
 movq %r13, %rax
-shrq $32, %rax
-xorq %r13, %rax
 movq %rsi, %rcx
 mulq %rcx
 movq %rdx, %rax
@@ -75178,18 +75046,18 @@ movq 1400(%r15), %rcx
 movq (%rcx,%rax,8), %rax
 cmpq $-1, %rax
 je .Lca_dp_put_1422214222222161E
-movq %r10, %r9
-shlq $2, %r9
-addq $1, %r9
-movq 1400(%r15), %rax
-movq (%rax,%r9,8), %r9
 movq %r10, %rsi
 shlq $2, %rsi
-addq $2, %rsi
-cmpq 2864(%r15), %rsi
-jae ca_error
+addq $1, %rsi
 movq 1400(%r15), %rax
 movq (%rax,%rsi,8), %rsi
+movq %r10, %r9
+shlq $2, %r9
+addq $2, %r9
+cmpq 2864(%r15), %r9
+jae ca_error
+movq 1400(%r15), %rax
+movq (%rax,%r9,8), %r9
 movq %r10, %rax
 shlq $2, %rax
 addq $3, %rax
@@ -75198,19 +75066,13 @@ jae ca_error
 movq 1400(%r15), %rcx
 movq (%rcx,%rax,8), %rax
 movq %rax, 96(%rsp)
-movq %rsi, %r11
-shlq $32, %r11
-xorq %r9, %r11
-movq %rsi, %rax
-shrq $32, %rax
+movq $-7046029254386353131, %r11
+imulq %r9, %r11
+lea (%r11,%rsi,1), %rax
 movq $-7046029254386353131, %rcx
 imulq %rcx, %rax
-xorq %rax, %r11
-movq $-7046029254386353131, %rax
-imulq %rax, %r11
+movq %rax, %r11
 movq %r11, %rax
-shrq $32, %rax
-xorq %r11, %rax
 movq %rbx, %rcx
 mulq %rcx
 movq %rdx, %rax
@@ -75234,7 +75096,7 @@ cmpq 2864(%r15), %rax
 jae ca_error
 movq 1400(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %r9, %rax
+cmpq %rsi, %rax
 jne .Lca_dp_put_14222142222221614222122221613S
 lea (%r13,%r11,1), %rax
 shlq $2, %rax
@@ -75243,7 +75105,7 @@ cmpq 2864(%r15), %rax
 jae ca_error
 movq 1400(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %rsi, %rax
+cmpq %r9, %rax
 je ca_error
 .Lca_dp_put_14222142222221614222122221613S:
 lea 1(%r11), %rax
@@ -75275,14 +75137,14 @@ addq $1, %rax
 cmpq 2864(%r15), %rax
 jae ca_error
 movq 1400(%r15), %rcx
-movq %r9, (%rcx,%rax,8)
+movq %rsi, (%rcx,%rax,8)
 movq %r11, %rax
 shlq $2, %rax
 addq $2, %rax
 cmpq 2864(%r15), %rax
 jae ca_error
 movq 1400(%r15), %rcx
-movq %rsi, (%rcx,%rax,8)
+movq %r9, (%rcx,%rax,8)
 movq 96(%rsp), %rax
 movq %r11, %rcx
 shlq $2, %rcx
@@ -75311,21 +75173,15 @@ jbe ca_error
 movq 1400(%r15), %rax
 movq %rbx, 16(%rax)
 movq %rdi, 44664(%r15)
-movq (%rsp), %r9
-movq 8(%rsp), %rsi
-movq %rsi, %r11
-shlq $32, %r11
-xorq %r9, %r11
-movq %rsi, %rax
-shrq $32, %rax
+movq (%rsp), %rsi
+movq 8(%rsp), %r9
+movq $-7046029254386353131, %r11
+imulq %r9, %r11
+lea (%r11,%rsi,1), %rax
 movq $-7046029254386353131, %rcx
 imulq %rcx, %rax
-xorq %rax, %r11
-movq $-7046029254386353131, %rax
-imulq %rax, %r11
+movq %rax, %r11
 movq %r11, %rax
-shrq $32, %rax
-xorq %r11, %rax
 movq %rbx, %rcx
 mulq %rcx
 movq %rdx, %rax
@@ -75349,7 +75205,7 @@ cmpq 2864(%r15), %rax
 jae ca_error
 movq 1400(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %r9, %rax
+cmpq %rsi, %rax
 jne .Lca_dp_put_1422214222222222222222221613S
 lea (%r13,%r11,1), %rax
 shlq $2, %rax
@@ -75358,7 +75214,7 @@ cmpq 2864(%r15), %rax
 jae ca_error
 movq 1400(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %rsi, %rax
+cmpq %r9, %rax
 je ca_error
 .Lca_dp_put_1422214222222222222222221613S:
 lea 1(%r11), %rax
@@ -77897,19 +77753,13 @@ cmova %rcx, %rax
 subq %rax, %rsi
 .Lca_esp_find_21522X:
 .Lca_esp_find_21X:
-movq %r8, %r13
-shlq $32, %r13
-xorq %rdi, %r13
-movq %r8, %rax
-shrq $32, %rax
+movq $-7046029254386353131, %r13
+imulq %r8, %r13
+lea (%r13,%rdi,1), %rax
 movq $-7046029254386353131, %rcx
 imulq %rcx, %rax
-xorq %rax, %r13
-movq $-7046029254386353131, %rax
-imulq %rax, %r13
+movq %rax, %r13
 movq %r13, %rax
-shrq $32, %rax
-xorq %r13, %rax
 movq %rsi, %rcx
 mulq %rcx
 movq %rdx, %rax
@@ -78056,18 +77906,18 @@ movq 1008(%r15), %rcx
 movq (%rcx,%rax,8), %rax
 cmpq $-1, %rax
 je .Lca_esp_put_1422214222222161E
-movq %r10, %r9
-shlq $2, %r9
-addq $1, %r9
-movq 1008(%r15), %rax
-movq (%rax,%r9,8), %r9
 movq %r10, %rsi
 shlq $2, %rsi
-addq $2, %rsi
-cmpq 2472(%r15), %rsi
-jae ca_error
+addq $1, %rsi
 movq 1008(%r15), %rax
 movq (%rax,%rsi,8), %rsi
+movq %r10, %r9
+shlq $2, %r9
+addq $2, %r9
+cmpq 2472(%r15), %r9
+jae ca_error
+movq 1008(%r15), %rax
+movq (%rax,%r9,8), %r9
 movq %r10, %rax
 shlq $2, %rax
 addq $3, %rax
@@ -78076,19 +77926,13 @@ jae ca_error
 movq 1008(%r15), %rcx
 movq (%rcx,%rax,8), %rax
 movq %rax, 96(%rsp)
-movq %rsi, %r11
-shlq $32, %r11
-xorq %r9, %r11
-movq %rsi, %rax
-shrq $32, %rax
+movq $-7046029254386353131, %r11
+imulq %r9, %r11
+lea (%r11,%rsi,1), %rax
 movq $-7046029254386353131, %rcx
 imulq %rcx, %rax
-xorq %rax, %r11
-movq $-7046029254386353131, %rax
-imulq %rax, %r11
+movq %rax, %r11
 movq %r11, %rax
-shrq $32, %rax
-xorq %r11, %rax
 movq %rbx, %rcx
 mulq %rcx
 movq %rdx, %rax
@@ -78112,7 +77956,7 @@ cmpq 2472(%r15), %rax
 jae ca_error
 movq 1008(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %r9, %rax
+cmpq %rsi, %rax
 jne .Lca_esp_put_14222142222221614222122221613S
 lea (%r13,%r11,1), %rax
 shlq $2, %rax
@@ -78121,7 +77965,7 @@ cmpq 2472(%r15), %rax
 jae ca_error
 movq 1008(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %rsi, %rax
+cmpq %r9, %rax
 je ca_error
 .Lca_esp_put_14222142222221614222122221613S:
 lea 1(%r11), %rax
@@ -78153,14 +77997,14 @@ addq $1, %rax
 cmpq 2472(%r15), %rax
 jae ca_error
 movq 1008(%r15), %rcx
-movq %r9, (%rcx,%rax,8)
+movq %rsi, (%rcx,%rax,8)
 movq %r11, %rax
 shlq $2, %rax
 addq $2, %rax
 cmpq 2472(%r15), %rax
 jae ca_error
 movq 1008(%r15), %rcx
-movq %rsi, (%rcx,%rax,8)
+movq %r9, (%rcx,%rax,8)
 movq 96(%rsp), %rax
 movq %r11, %rcx
 shlq $2, %rcx
@@ -78189,21 +78033,15 @@ jbe ca_error
 movq 1008(%r15), %rax
 movq %rbx, 16(%rax)
 movq %rdi, 43560(%r15)
-movq (%rsp), %r9
-movq 8(%rsp), %rsi
-movq %rsi, %r11
-shlq $32, %r11
-xorq %r9, %r11
-movq %rsi, %rax
-shrq $32, %rax
+movq (%rsp), %rsi
+movq 8(%rsp), %r9
+movq $-7046029254386353131, %r11
+imulq %r9, %r11
+lea (%r11,%rsi,1), %rax
 movq $-7046029254386353131, %rcx
 imulq %rcx, %rax
-xorq %rax, %r11
-movq $-7046029254386353131, %rax
-imulq %rax, %r11
+movq %rax, %r11
 movq %r11, %rax
-shrq $32, %rax
-xorq %r11, %rax
 movq %rbx, %rcx
 mulq %rcx
 movq %rdx, %rax
@@ -78227,7 +78065,7 @@ cmpq 2472(%r15), %rax
 jae ca_error
 movq 1008(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %r9, %rax
+cmpq %rsi, %rax
 jne .Lca_esp_put_1422214222222222222222221613S
 lea (%r13,%r11,1), %rax
 shlq $2, %rax
@@ -78236,7 +78074,7 @@ cmpq 2472(%r15), %rax
 jae ca_error
 movq 1008(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %rsi, %rax
+cmpq %r9, %rax
 je ca_error
 .Lca_esp_put_1422214222222222222222221613S:
 lea 1(%r11), %rax
@@ -79890,19 +79728,13 @@ cmova %rcx, %rax
 subq %rax, %rsi
 .Lca_fl_find_21522X:
 .Lca_fl_find_21X:
-movq %r8, %r13
-shlq $32, %r13
-xorq %rdi, %r13
-movq %r8, %rax
-shrq $32, %rax
+movq $-7046029254386353131, %r13
+imulq %r8, %r13
+lea (%r13,%rdi,1), %rax
 movq $-7046029254386353131, %rcx
 imulq %rcx, %rax
-xorq %rax, %r13
-movq $-7046029254386353131, %rax
-imulq %rax, %r13
+movq %rax, %r13
 movq %r13, %rax
-shrq $32, %rax
-xorq %r13, %rax
 movq %rsi, %rcx
 mulq %rcx
 movq %rdx, %rax
@@ -80436,18 +80268,18 @@ movq 1336(%r15), %rcx
 movq (%rcx,%rax,8), %rax
 cmpq $-1, %rax
 je .Lca_fl_put_1422214222222161E
-movq %r10, %r9
-shlq $2, %r9
-addq $1, %r9
-movq 1336(%r15), %rax
-movq (%rax,%r9,8), %r9
 movq %r10, %rsi
 shlq $2, %rsi
-addq $2, %rsi
-cmpq 2800(%r15), %rsi
-jae ca_error
+addq $1, %rsi
 movq 1336(%r15), %rax
 movq (%rax,%rsi,8), %rsi
+movq %r10, %r9
+shlq $2, %r9
+addq $2, %r9
+cmpq 2800(%r15), %r9
+jae ca_error
+movq 1336(%r15), %rax
+movq (%rax,%r9,8), %r9
 movq %r10, %rax
 shlq $2, %rax
 addq $3, %rax
@@ -80456,19 +80288,13 @@ jae ca_error
 movq 1336(%r15), %rcx
 movq (%rcx,%rax,8), %rax
 movq %rax, 96(%rsp)
-movq %rsi, %r11
-shlq $32, %r11
-xorq %r9, %r11
-movq %rsi, %rax
-shrq $32, %rax
+movq $-7046029254386353131, %r11
+imulq %r9, %r11
+lea (%r11,%rsi,1), %rax
 movq $-7046029254386353131, %rcx
 imulq %rcx, %rax
-xorq %rax, %r11
-movq $-7046029254386353131, %rax
-imulq %rax, %r11
+movq %rax, %r11
 movq %r11, %rax
-shrq $32, %rax
-xorq %r11, %rax
 movq %rbx, %rcx
 mulq %rcx
 movq %rdx, %rax
@@ -80492,7 +80318,7 @@ cmpq 2800(%r15), %rax
 jae ca_error
 movq 1336(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %r9, %rax
+cmpq %rsi, %rax
 jne .Lca_fl_put_14222142222221614222122221613S
 lea (%r13,%r11,1), %rax
 shlq $2, %rax
@@ -80501,7 +80327,7 @@ cmpq 2800(%r15), %rax
 jae ca_error
 movq 1336(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %rsi, %rax
+cmpq %r9, %rax
 je ca_error
 .Lca_fl_put_14222142222221614222122221613S:
 lea 1(%r11), %rax
@@ -80533,14 +80359,14 @@ addq $1, %rax
 cmpq 2800(%r15), %rax
 jae ca_error
 movq 1336(%r15), %rcx
-movq %r9, (%rcx,%rax,8)
+movq %rsi, (%rcx,%rax,8)
 movq %r11, %rax
 shlq $2, %rax
 addq $2, %rax
 cmpq 2800(%r15), %rax
 jae ca_error
 movq 1336(%r15), %rcx
-movq %rsi, (%rcx,%rax,8)
+movq %r9, (%rcx,%rax,8)
 movq 96(%rsp), %rax
 movq %r11, %rcx
 shlq $2, %rcx
@@ -80565,21 +80391,15 @@ movq %r13, 8(%rax)
 movq 1336(%r15), %rax
 movq %rbx, 16(%rax)
 movq %rdi, 44248(%r15)
-movq (%rsp), %r9
-movq 8(%rsp), %rsi
-movq %rsi, %r11
-shlq $32, %r11
-xorq %r9, %r11
-movq %rsi, %rax
-shrq $32, %rax
+movq (%rsp), %rsi
+movq 8(%rsp), %r9
+movq $-7046029254386353131, %r11
+imulq %r9, %r11
+lea (%r11,%rsi,1), %rax
 movq $-7046029254386353131, %rcx
 imulq %rcx, %rax
-xorq %rax, %r11
-movq $-7046029254386353131, %rax
-imulq %rax, %r11
+movq %rax, %r11
 movq %r11, %rax
-shrq $32, %rax
-xorq %r11, %rax
 movq %rbx, %rcx
 mulq %rcx
 movq %rdx, %rax
@@ -80603,7 +80423,7 @@ cmpq 2800(%r15), %rax
 jae ca_error
 movq 1336(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %r9, %rax
+cmpq %rsi, %rax
 jne .Lca_fl_put_1422214222222222222222221613S
 lea (%r13,%r11,1), %rax
 shlq $2, %rax
@@ -80612,7 +80432,7 @@ cmpq 2800(%r15), %rax
 jae ca_error
 movq 1336(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %rsi, %rax
+cmpq %r9, %rax
 je ca_error
 .Lca_fl_put_1422214222222222222222221613S:
 lea 1(%r11), %rax
@@ -80982,19 +80802,13 @@ cmova %rcx, %rax
 subq %rax, %rsi
 .Lca_fm_find_21522X:
 .Lca_fm_find_21X:
-movq %r8, %r13
-shlq $32, %r13
-xorq %rdi, %r13
-movq %r8, %rax
-shrq $32, %rax
+movq $-7046029254386353131, %r13
+imulq %r8, %r13
+lea (%r13,%rdi,1), %rax
 movq $-7046029254386353131, %rcx
 imulq %rcx, %rax
-xorq %rax, %r13
-movq $-7046029254386353131, %rax
-imulq %rax, %r13
+movq %rax, %r13
 movq %r13, %rax
-shrq $32, %rax
-xorq %r13, %rax
 movq %rsi, %rcx
 mulq %rcx
 movq %rdx, %rax
@@ -81135,18 +80949,18 @@ movq 760(%r15), %rcx
 movq (%rcx,%rax,8), %rax
 cmpq $-1, %rax
 je .Lca_fm_put_1422214222222161E
-movq %r10, %r9
-shlq $2, %r9
-addq $1, %r9
-movq 760(%r15), %rax
-movq (%rax,%r9,8), %r9
 movq %r10, %rsi
 shlq $2, %rsi
-addq $2, %rsi
-cmpq 2224(%r15), %rsi
-jae ca_error
+addq $1, %rsi
 movq 760(%r15), %rax
 movq (%rax,%rsi,8), %rsi
+movq %r10, %r9
+shlq $2, %r9
+addq $2, %r9
+cmpq 2224(%r15), %r9
+jae ca_error
+movq 760(%r15), %rax
+movq (%rax,%r9,8), %r9
 movq %r10, %rax
 shlq $2, %rax
 addq $3, %rax
@@ -81155,19 +80969,13 @@ jae ca_error
 movq 760(%r15), %rcx
 movq (%rcx,%rax,8), %rax
 movq %rax, 96(%rsp)
-movq %rsi, %r11
-shlq $32, %r11
-xorq %r9, %r11
-movq %rsi, %rax
-shrq $32, %rax
+movq $-7046029254386353131, %r11
+imulq %r9, %r11
+lea (%r11,%rsi,1), %rax
 movq $-7046029254386353131, %rcx
 imulq %rcx, %rax
-xorq %rax, %r11
-movq $-7046029254386353131, %rax
-imulq %rax, %r11
+movq %rax, %r11
 movq %r11, %rax
-shrq $32, %rax
-xorq %r11, %rax
 movq %rbx, %rcx
 mulq %rcx
 movq %rdx, %rax
@@ -81191,7 +80999,7 @@ cmpq 2224(%r15), %rax
 jae ca_error
 movq 760(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %r9, %rax
+cmpq %rsi, %rax
 jne .Lca_fm_put_14222142222221614222122221613S
 lea (%r13,%r11,1), %rax
 shlq $2, %rax
@@ -81200,7 +81008,7 @@ cmpq 2224(%r15), %rax
 jae ca_error
 movq 760(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %rsi, %rax
+cmpq %r9, %rax
 je ca_error
 .Lca_fm_put_14222142222221614222122221613S:
 lea 1(%r11), %rax
@@ -81232,14 +81040,14 @@ addq $1, %rax
 cmpq 2224(%r15), %rax
 jae ca_error
 movq 760(%r15), %rcx
-movq %r9, (%rcx,%rax,8)
+movq %rsi, (%rcx,%rax,8)
 movq %r11, %rax
 shlq $2, %rax
 addq $2, %rax
 cmpq 2224(%r15), %rax
 jae ca_error
 movq 760(%r15), %rcx
-movq %rsi, (%rcx,%rax,8)
+movq %r9, (%rcx,%rax,8)
 movq 96(%rsp), %rax
 movq %r11, %rcx
 shlq $2, %rcx
@@ -81264,21 +81072,15 @@ movq %r13, 8(%rax)
 movq 760(%r15), %rax
 movq %rbx, 16(%rax)
 movq %rdi, 43384(%r15)
-movq (%rsp), %r9
-movq 8(%rsp), %rsi
-movq %rsi, %r11
-shlq $32, %r11
-xorq %r9, %r11
-movq %rsi, %rax
-shrq $32, %rax
+movq (%rsp), %rsi
+movq 8(%rsp), %r9
+movq $-7046029254386353131, %r11
+imulq %r9, %r11
+lea (%r11,%rsi,1), %rax
 movq $-7046029254386353131, %rcx
 imulq %rcx, %rax
-xorq %rax, %r11
-movq $-7046029254386353131, %rax
-imulq %rax, %r11
+movq %rax, %r11
 movq %r11, %rax
-shrq $32, %rax
-xorq %r11, %rax
 movq %rbx, %rcx
 mulq %rcx
 movq %rdx, %rax
@@ -81302,7 +81104,7 @@ cmpq 2224(%r15), %rax
 jae ca_error
 movq 760(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %r9, %rax
+cmpq %rsi, %rax
 jne .Lca_fm_put_1422214222222222222222221613S
 lea (%r13,%r11,1), %rax
 shlq $2, %rax
@@ -81311,7 +81113,7 @@ cmpq 2224(%r15), %rax
 jae ca_error
 movq 760(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %rsi, %rax
+cmpq %r9, %rax
 je ca_error
 .Lca_fm_put_1422214222222222222222221613S:
 lea 1(%r11), %rax
@@ -89890,19 +89692,13 @@ cmova %rcx, %rax
 subq %rax, %rsi
 .Lca_hb_find_21522X:
 .Lca_hb_find_21X:
-movq %r8, %r13
-shlq $32, %r13
-xorq %rdi, %r13
-movq %r8, %rax
-shrq $32, %rax
+movq $-7046029254386353131, %r13
+imulq %r8, %r13
+lea (%r13,%rdi,1), %rax
 movq $-7046029254386353131, %rcx
 imulq %rcx, %rax
-xorq %rax, %r13
-movq $-7046029254386353131, %rax
-imulq %rax, %r13
+movq %rax, %r13
 movq %r13, %rax
-shrq $32, %rax
-xorq %r13, %rax
 movq %rsi, %rcx
 mulq %rcx
 movq %rdx, %rax
@@ -90049,18 +89845,18 @@ movq 1432(%r15), %rcx
 movq (%rcx,%rax,8), %rax
 cmpq $-1, %rax
 je .Lca_hb_put_1422214222222161E
-movq %r10, %r9
-shlq $2, %r9
-addq $1, %r9
-movq 1432(%r15), %rax
-movq (%rax,%r9,8), %r9
 movq %r10, %rsi
 shlq $2, %rsi
-addq $2, %rsi
-cmpq 2896(%r15), %rsi
-jae ca_error
+addq $1, %rsi
 movq 1432(%r15), %rax
 movq (%rax,%rsi,8), %rsi
+movq %r10, %r9
+shlq $2, %r9
+addq $2, %r9
+cmpq 2896(%r15), %r9
+jae ca_error
+movq 1432(%r15), %rax
+movq (%rax,%r9,8), %r9
 movq %r10, %rax
 shlq $2, %rax
 addq $3, %rax
@@ -90069,19 +89865,13 @@ jae ca_error
 movq 1432(%r15), %rcx
 movq (%rcx,%rax,8), %rax
 movq %rax, 96(%rsp)
-movq %rsi, %r11
-shlq $32, %r11
-xorq %r9, %r11
-movq %rsi, %rax
-shrq $32, %rax
+movq $-7046029254386353131, %r11
+imulq %r9, %r11
+lea (%r11,%rsi,1), %rax
 movq $-7046029254386353131, %rcx
 imulq %rcx, %rax
-xorq %rax, %r11
-movq $-7046029254386353131, %rax
-imulq %rax, %r11
+movq %rax, %r11
 movq %r11, %rax
-shrq $32, %rax
-xorq %r11, %rax
 movq %rbx, %rcx
 mulq %rcx
 movq %rdx, %rax
@@ -90105,7 +89895,7 @@ cmpq 2896(%r15), %rax
 jae ca_error
 movq 1432(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %r9, %rax
+cmpq %rsi, %rax
 jne .Lca_hb_put_14222142222221614222122221613S
 lea (%r13,%r11,1), %rax
 shlq $2, %rax
@@ -90114,7 +89904,7 @@ cmpq 2896(%r15), %rax
 jae ca_error
 movq 1432(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %rsi, %rax
+cmpq %r9, %rax
 je ca_error
 .Lca_hb_put_14222142222221614222122221613S:
 lea 1(%r11), %rax
@@ -90146,14 +89936,14 @@ addq $1, %rax
 cmpq 2896(%r15), %rax
 jae ca_error
 movq 1432(%r15), %rcx
-movq %r9, (%rcx,%rax,8)
+movq %rsi, (%rcx,%rax,8)
 movq %r11, %rax
 shlq $2, %rax
 addq $2, %rax
 cmpq 2896(%r15), %rax
 jae ca_error
 movq 1432(%r15), %rcx
-movq %rsi, (%rcx,%rax,8)
+movq %r9, (%rcx,%rax,8)
 movq 96(%rsp), %rax
 movq %r11, %rcx
 shlq $2, %rcx
@@ -90182,21 +89972,15 @@ jbe ca_error
 movq 1432(%r15), %rax
 movq %rbx, 16(%rax)
 movq %rdi, 44728(%r15)
-movq (%rsp), %r9
-movq 8(%rsp), %rsi
-movq %rsi, %r11
-shlq $32, %r11
-xorq %r9, %r11
-movq %rsi, %rax
-shrq $32, %rax
+movq (%rsp), %rsi
+movq 8(%rsp), %r9
+movq $-7046029254386353131, %r11
+imulq %r9, %r11
+lea (%r11,%rsi,1), %rax
 movq $-7046029254386353131, %rcx
 imulq %rcx, %rax
-xorq %rax, %r11
-movq $-7046029254386353131, %rax
-imulq %rax, %r11
+movq %rax, %r11
 movq %r11, %rax
-shrq $32, %rax
-xorq %r11, %rax
 movq %rbx, %rcx
 mulq %rcx
 movq %rdx, %rax
@@ -90220,7 +90004,7 @@ cmpq 2896(%r15), %rax
 jae ca_error
 movq 1432(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %r9, %rax
+cmpq %rsi, %rax
 jne .Lca_hb_put_1422214222222222222222221613S
 lea (%r13,%r11,1), %rax
 shlq $2, %rax
@@ -90229,7 +90013,7 @@ cmpq 2896(%r15), %rax
 jae ca_error
 movq 1432(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %rsi, %rax
+cmpq %r9, %rax
 je ca_error
 .Lca_hb_put_1422214222222222222222221613S:
 lea 1(%r11), %rax
@@ -91997,19 +91781,13 @@ cmova %rcx, %rax
 subq %rax, %rsi
 .Lca_hn_find_21522X:
 .Lca_hn_find_21X:
-movq %r8, %r13
-shlq $32, %r13
-xorq %rdi, %r13
-movq %r8, %rax
-shrq $32, %rax
+movq $-7046029254386353131, %r13
+imulq %r8, %r13
+lea (%r13,%rdi,1), %rax
 movq $-7046029254386353131, %rcx
 imulq %rcx, %rax
-xorq %rax, %r13
-movq $-7046029254386353131, %rax
-imulq %rax, %r13
+movq %rax, %r13
 movq %r13, %rax
-shrq $32, %rax
-xorq %r13, %rax
 movq %rsi, %rcx
 mulq %rcx
 movq %rdx, %rax
@@ -92156,18 +91934,18 @@ movq 1024(%r15), %rcx
 movq (%rcx,%rax,8), %rax
 cmpq $-1, %rax
 je .Lca_hn_put_1422214222222161E
-movq %r10, %r9
-shlq $2, %r9
-addq $1, %r9
-movq 1024(%r15), %rax
-movq (%rax,%r9,8), %r9
 movq %r10, %rsi
 shlq $2, %rsi
-addq $2, %rsi
-cmpq 2488(%r15), %rsi
-jae ca_error
+addq $1, %rsi
 movq 1024(%r15), %rax
 movq (%rax,%rsi,8), %rsi
+movq %r10, %r9
+shlq $2, %r9
+addq $2, %r9
+cmpq 2488(%r15), %r9
+jae ca_error
+movq 1024(%r15), %rax
+movq (%rax,%r9,8), %r9
 movq %r10, %rax
 shlq $2, %rax
 addq $3, %rax
@@ -92176,19 +91954,13 @@ jae ca_error
 movq 1024(%r15), %rcx
 movq (%rcx,%rax,8), %rax
 movq %rax, 96(%rsp)
-movq %rsi, %r11
-shlq $32, %r11
-xorq %r9, %r11
-movq %rsi, %rax
-shrq $32, %rax
+movq $-7046029254386353131, %r11
+imulq %r9, %r11
+lea (%r11,%rsi,1), %rax
 movq $-7046029254386353131, %rcx
 imulq %rcx, %rax
-xorq %rax, %r11
-movq $-7046029254386353131, %rax
-imulq %rax, %r11
+movq %rax, %r11
 movq %r11, %rax
-shrq $32, %rax
-xorq %r11, %rax
 movq %rbx, %rcx
 mulq %rcx
 movq %rdx, %rax
@@ -92212,7 +91984,7 @@ cmpq 2488(%r15), %rax
 jae ca_error
 movq 1024(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %r9, %rax
+cmpq %rsi, %rax
 jne .Lca_hn_put_14222142222221614222122221613S
 lea (%r13,%r11,1), %rax
 shlq $2, %rax
@@ -92221,7 +91993,7 @@ cmpq 2488(%r15), %rax
 jae ca_error
 movq 1024(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %rsi, %rax
+cmpq %r9, %rax
 je ca_error
 .Lca_hn_put_14222142222221614222122221613S:
 lea 1(%r11), %rax
@@ -92253,14 +92025,14 @@ addq $1, %rax
 cmpq 2488(%r15), %rax
 jae ca_error
 movq 1024(%r15), %rcx
-movq %r9, (%rcx,%rax,8)
+movq %rsi, (%rcx,%rax,8)
 movq %r11, %rax
 shlq $2, %rax
 addq $2, %rax
 cmpq 2488(%r15), %rax
 jae ca_error
 movq 1024(%r15), %rcx
-movq %rsi, (%rcx,%rax,8)
+movq %r9, (%rcx,%rax,8)
 movq 96(%rsp), %rax
 movq %r11, %rcx
 shlq $2, %rcx
@@ -92289,21 +92061,15 @@ jbe ca_error
 movq 1024(%r15), %rax
 movq %rbx, 16(%rax)
 movq %rdi, 43616(%r15)
-movq (%rsp), %r9
-movq 8(%rsp), %rsi
-movq %rsi, %r11
-shlq $32, %r11
-xorq %r9, %r11
-movq %rsi, %rax
-shrq $32, %rax
+movq (%rsp), %rsi
+movq 8(%rsp), %r9
+movq $-7046029254386353131, %r11
+imulq %r9, %r11
+lea (%r11,%rsi,1), %rax
 movq $-7046029254386353131, %rcx
 imulq %rcx, %rax
-xorq %rax, %r11
-movq $-7046029254386353131, %rax
-imulq %rax, %r11
+movq %rax, %r11
 movq %r11, %rax
-shrq $32, %rax
-xorq %r11, %rax
 movq %rbx, %rcx
 mulq %rcx
 movq %rdx, %rax
@@ -92327,7 +92093,7 @@ cmpq 2488(%r15), %rax
 jae ca_error
 movq 1024(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %r9, %rax
+cmpq %rsi, %rax
 jne .Lca_hn_put_1422214222222222222222221613S
 lea (%r13,%r11,1), %rax
 shlq $2, %rax
@@ -92336,7 +92102,7 @@ cmpq 2488(%r15), %rax
 jae ca_error
 movq 1024(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %rsi, %rax
+cmpq %r9, %rax
 je ca_error
 .Lca_hn_put_1422214222222222222222221613S:
 lea 1(%r11), %rax
@@ -94828,19 +94594,13 @@ cmova %rcx, %rax
 subq %rax, %rsi
 .Lca_hs_find_21522X:
 .Lca_hs_find_21X:
-movq %r8, %r13
-shlq $32, %r13
-xorq %rdi, %r13
-movq %r8, %rax
-shrq $32, %rax
+movq $-7046029254386353131, %r13
+imulq %r8, %r13
+lea (%r13,%rdi,1), %rax
 movq $-7046029254386353131, %rcx
 imulq %rcx, %rax
-xorq %rax, %r13
-movq $-7046029254386353131, %rax
-imulq %rax, %r13
+movq %rax, %r13
 movq %r13, %rax
-shrq $32, %rax
-xorq %r13, %rax
 movq %rsi, %rcx
 mulq %rcx
 movq %rdx, %rax
@@ -94987,18 +94747,18 @@ movq 1016(%r15), %rcx
 movq (%rcx,%rax,8), %rax
 cmpq $-1, %rax
 je .Lca_hs_put_1422214222222161E
-movq %r10, %r9
-shlq $2, %r9
-addq $1, %r9
-movq 1016(%r15), %rax
-movq (%rax,%r9,8), %r9
 movq %r10, %rsi
 shlq $2, %rsi
-addq $2, %rsi
-cmpq 2480(%r15), %rsi
-jae ca_error
+addq $1, %rsi
 movq 1016(%r15), %rax
 movq (%rax,%rsi,8), %rsi
+movq %r10, %r9
+shlq $2, %r9
+addq $2, %r9
+cmpq 2480(%r15), %r9
+jae ca_error
+movq 1016(%r15), %rax
+movq (%rax,%r9,8), %r9
 movq %r10, %rax
 shlq $2, %rax
 addq $3, %rax
@@ -95007,19 +94767,13 @@ jae ca_error
 movq 1016(%r15), %rcx
 movq (%rcx,%rax,8), %rax
 movq %rax, 96(%rsp)
-movq %rsi, %r11
-shlq $32, %r11
-xorq %r9, %r11
-movq %rsi, %rax
-shrq $32, %rax
+movq $-7046029254386353131, %r11
+imulq %r9, %r11
+lea (%r11,%rsi,1), %rax
 movq $-7046029254386353131, %rcx
 imulq %rcx, %rax
-xorq %rax, %r11
-movq $-7046029254386353131, %rax
-imulq %rax, %r11
+movq %rax, %r11
 movq %r11, %rax
-shrq $32, %rax
-xorq %r11, %rax
 movq %rbx, %rcx
 mulq %rcx
 movq %rdx, %rax
@@ -95043,7 +94797,7 @@ cmpq 2480(%r15), %rax
 jae ca_error
 movq 1016(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %r9, %rax
+cmpq %rsi, %rax
 jne .Lca_hs_put_14222142222221614222122221613S
 lea (%r13,%r11,1), %rax
 shlq $2, %rax
@@ -95052,7 +94806,7 @@ cmpq 2480(%r15), %rax
 jae ca_error
 movq 1016(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %rsi, %rax
+cmpq %r9, %rax
 je ca_error
 .Lca_hs_put_14222142222221614222122221613S:
 lea 1(%r11), %rax
@@ -95084,14 +94838,14 @@ addq $1, %rax
 cmpq 2480(%r15), %rax
 jae ca_error
 movq 1016(%r15), %rcx
-movq %r9, (%rcx,%rax,8)
+movq %rsi, (%rcx,%rax,8)
 movq %r11, %rax
 shlq $2, %rax
 addq $2, %rax
 cmpq 2480(%r15), %rax
 jae ca_error
 movq 1016(%r15), %rcx
-movq %rsi, (%rcx,%rax,8)
+movq %r9, (%rcx,%rax,8)
 movq 96(%rsp), %rax
 movq %r11, %rcx
 shlq $2, %rcx
@@ -95120,21 +94874,15 @@ jbe ca_error
 movq 1016(%r15), %rax
 movq %rbx, 16(%rax)
 movq %rdi, 43600(%r15)
-movq (%rsp), %r9
-movq 8(%rsp), %rsi
-movq %rsi, %r11
-shlq $32, %r11
-xorq %r9, %r11
-movq %rsi, %rax
-shrq $32, %rax
+movq (%rsp), %rsi
+movq 8(%rsp), %r9
+movq $-7046029254386353131, %r11
+imulq %r9, %r11
+lea (%r11,%rsi,1), %rax
 movq $-7046029254386353131, %rcx
 imulq %rcx, %rax
-xorq %rax, %r11
-movq $-7046029254386353131, %rax
-imulq %rax, %r11
+movq %rax, %r11
 movq %r11, %rax
-shrq $32, %rax
-xorq %r11, %rax
 movq %rbx, %rcx
 mulq %rcx
 movq %rdx, %rax
@@ -95158,7 +94906,7 @@ cmpq 2480(%r15), %rax
 jae ca_error
 movq 1016(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %r9, %rax
+cmpq %rsi, %rax
 jne .Lca_hs_put_1422214222222222222222221613S
 lea (%r13,%r11,1), %rax
 shlq $2, %rax
@@ -95167,7 +94915,7 @@ cmpq 2480(%r15), %rax
 jae ca_error
 movq 1016(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %rsi, %rax
+cmpq %r9, %rax
 je ca_error
 .Lca_hs_put_1422214222222222222222221613S:
 lea 1(%r11), %rax
@@ -95379,19 +95127,13 @@ cmova %rcx, %rax
 subq %rax, %rsi
 .Lca_i1l_find_21522X:
 .Lca_i1l_find_21X:
-movq %r8, %r13
-shlq $32, %r13
-xorq %rdi, %r13
-movq %r8, %rax
-shrq $32, %rax
+movq $-7046029254386353131, %r13
+imulq %r8, %r13
+lea (%r13,%rdi,1), %rax
 movq $-7046029254386353131, %rcx
 imulq %rcx, %rax
-xorq %rax, %r13
-movq $-7046029254386353131, %rax
-imulq %rax, %r13
+movq %rax, %r13
 movq %r13, %rax
-shrq $32, %rax
-xorq %r13, %rax
 movq %rsi, %rcx
 mulq %rcx
 movq %rdx, %rax
@@ -96210,18 +95952,18 @@ movq 784(%r15), %rcx
 movq (%rcx,%rax,8), %rax
 cmpq $-1, %rax
 je .Lca_i1l_put_1422214222222161E
-movq %r10, %r9
-shlq $2, %r9
-addq $1, %r9
-movq 784(%r15), %rax
-movq (%rax,%r9,8), %r9
 movq %r10, %rsi
 shlq $2, %rsi
-addq $2, %rsi
-cmpq 2248(%r15), %rsi
-jae ca_error
+addq $1, %rsi
 movq 784(%r15), %rax
 movq (%rax,%rsi,8), %rsi
+movq %r10, %r9
+shlq $2, %r9
+addq $2, %r9
+cmpq 2248(%r15), %r9
+jae ca_error
+movq 784(%r15), %rax
+movq (%rax,%r9,8), %r9
 movq %r10, %rax
 shlq $2, %rax
 addq $3, %rax
@@ -96230,19 +95972,13 @@ jae ca_error
 movq 784(%r15), %rcx
 movq (%rcx,%rax,8), %rax
 movq %rax, 96(%rsp)
-movq %rsi, %r11
-shlq $32, %r11
-xorq %r9, %r11
-movq %rsi, %rax
-shrq $32, %rax
+movq $-7046029254386353131, %r11
+imulq %r9, %r11
+lea (%r11,%rsi,1), %rax
 movq $-7046029254386353131, %rcx
 imulq %rcx, %rax
-xorq %rax, %r11
-movq $-7046029254386353131, %rax
-imulq %rax, %r11
+movq %rax, %r11
 movq %r11, %rax
-shrq $32, %rax
-xorq %r11, %rax
 movq %rbx, %rcx
 mulq %rcx
 movq %rdx, %rax
@@ -96266,7 +96002,7 @@ cmpq 2248(%r15), %rax
 jae ca_error
 movq 784(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %r9, %rax
+cmpq %rsi, %rax
 jne .Lca_i1l_put_14222142222221614222122221613S
 lea (%r13,%r11,1), %rax
 shlq $2, %rax
@@ -96275,7 +96011,7 @@ cmpq 2248(%r15), %rax
 jae ca_error
 movq 784(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %rsi, %rax
+cmpq %r9, %rax
 je ca_error
 .Lca_i1l_put_14222142222221614222122221613S:
 lea 1(%r11), %rax
@@ -96307,14 +96043,14 @@ addq $1, %rax
 cmpq 2248(%r15), %rax
 jae ca_error
 movq 784(%r15), %rcx
-movq %r9, (%rcx,%rax,8)
+movq %rsi, (%rcx,%rax,8)
 movq %r11, %rax
 shlq $2, %rax
 addq $2, %rax
 cmpq 2248(%r15), %rax
 jae ca_error
 movq 784(%r15), %rcx
-movq %rsi, (%rcx,%rax,8)
+movq %r9, (%rcx,%rax,8)
 movq 96(%rsp), %rax
 movq %r11, %rcx
 shlq $2, %rcx
@@ -96343,21 +96079,15 @@ jbe ca_error
 movq 784(%r15), %rax
 movq %rbx, 16(%rax)
 movq %rdi, 43432(%r15)
-movq (%rsp), %r9
-movq 8(%rsp), %rsi
-movq %rsi, %r11
-shlq $32, %r11
-xorq %r9, %r11
-movq %rsi, %rax
-shrq $32, %rax
+movq (%rsp), %rsi
+movq 8(%rsp), %r9
+movq $-7046029254386353131, %r11
+imulq %r9, %r11
+lea (%r11,%rsi,1), %rax
 movq $-7046029254386353131, %rcx
 imulq %rcx, %rax
-xorq %rax, %r11
-movq $-7046029254386353131, %rax
-imulq %rax, %r11
+movq %rax, %r11
 movq %r11, %rax
-shrq $32, %rax
-xorq %r11, %rax
 movq %rbx, %rcx
 mulq %rcx
 movq %rdx, %rax
@@ -96381,7 +96111,7 @@ cmpq 2248(%r15), %rax
 jae ca_error
 movq 784(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %r9, %rax
+cmpq %rsi, %rax
 jne .Lca_i1l_put_1422214222222222222222221613S
 lea (%r13,%r11,1), %rax
 shlq $2, %rax
@@ -96390,7 +96120,7 @@ cmpq 2248(%r15), %rax
 jae ca_error
 movq 784(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %rsi, %rax
+cmpq %r9, %rax
 je ca_error
 .Lca_i1l_put_1422214222222222222222221613S:
 lea 1(%r11), %rax
@@ -96545,19 +96275,13 @@ cmova %rcx, %rax
 subq %rax, %rsi
 .Lca_if_find_21522X:
 .Lca_if_find_21X:
-movq %r8, %r13
-shlq $32, %r13
-xorq %rdi, %r13
-movq %r8, %rax
-shrq $32, %rax
+movq $-7046029254386353131, %r13
+imulq %r8, %r13
+lea (%r13,%rdi,1), %rax
 movq $-7046029254386353131, %rcx
 imulq %rcx, %rax
-xorq %rax, %r13
-movq $-7046029254386353131, %rax
-imulq %rax, %r13
+movq %rax, %r13
 movq %r13, %rax
-shrq $32, %rax
-xorq %r13, %rax
 movq %rsi, %rcx
 mulq %rcx
 movq %rdx, %rax
@@ -96698,18 +96422,18 @@ movq 752(%r15), %rcx
 movq (%rcx,%rax,8), %rax
 cmpq $-1, %rax
 je .Lca_if_put_1422214222222161E
-movq %r10, %r9
-shlq $2, %r9
-addq $1, %r9
-movq 752(%r15), %rax
-movq (%rax,%r9,8), %r9
 movq %r10, %rsi
 shlq $2, %rsi
-addq $2, %rsi
-cmpq 2216(%r15), %rsi
-jae ca_error
+addq $1, %rsi
 movq 752(%r15), %rax
 movq (%rax,%rsi,8), %rsi
+movq %r10, %r9
+shlq $2, %r9
+addq $2, %r9
+cmpq 2216(%r15), %r9
+jae ca_error
+movq 752(%r15), %rax
+movq (%rax,%r9,8), %r9
 movq %r10, %rax
 shlq $2, %rax
 addq $3, %rax
@@ -96718,19 +96442,13 @@ jae ca_error
 movq 752(%r15), %rcx
 movq (%rcx,%rax,8), %rax
 movq %rax, 96(%rsp)
-movq %rsi, %r11
-shlq $32, %r11
-xorq %r9, %r11
-movq %rsi, %rax
-shrq $32, %rax
+movq $-7046029254386353131, %r11
+imulq %r9, %r11
+lea (%r11,%rsi,1), %rax
 movq $-7046029254386353131, %rcx
 imulq %rcx, %rax
-xorq %rax, %r11
-movq $-7046029254386353131, %rax
-imulq %rax, %r11
+movq %rax, %r11
 movq %r11, %rax
-shrq $32, %rax
-xorq %r11, %rax
 movq %rbx, %rcx
 mulq %rcx
 movq %rdx, %rax
@@ -96754,7 +96472,7 @@ cmpq 2216(%r15), %rax
 jae ca_error
 movq 752(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %r9, %rax
+cmpq %rsi, %rax
 jne .Lca_if_put_14222142222221614222122221613S
 lea (%r13,%r11,1), %rax
 shlq $2, %rax
@@ -96763,7 +96481,7 @@ cmpq 2216(%r15), %rax
 jae ca_error
 movq 752(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %rsi, %rax
+cmpq %r9, %rax
 je ca_error
 .Lca_if_put_14222142222221614222122221613S:
 lea 1(%r11), %rax
@@ -96795,14 +96513,14 @@ addq $1, %rax
 cmpq 2216(%r15), %rax
 jae ca_error
 movq 752(%r15), %rcx
-movq %r9, (%rcx,%rax,8)
+movq %rsi, (%rcx,%rax,8)
 movq %r11, %rax
 shlq $2, %rax
 addq $2, %rax
 cmpq 2216(%r15), %rax
 jae ca_error
 movq 752(%r15), %rcx
-movq %rsi, (%rcx,%rax,8)
+movq %r9, (%rcx,%rax,8)
 movq 96(%rsp), %rax
 movq %r11, %rcx
 shlq $2, %rcx
@@ -96827,21 +96545,15 @@ movq %r13, 8(%rax)
 movq 752(%r15), %rax
 movq %rbx, 16(%rax)
 movq %rdi, 43368(%r15)
-movq (%rsp), %r9
-movq 8(%rsp), %rsi
-movq %rsi, %r11
-shlq $32, %r11
-xorq %r9, %r11
-movq %rsi, %rax
-shrq $32, %rax
+movq (%rsp), %rsi
+movq 8(%rsp), %r9
+movq $-7046029254386353131, %r11
+imulq %r9, %r11
+lea (%r11,%rsi,1), %rax
 movq $-7046029254386353131, %rcx
 imulq %rcx, %rax
-xorq %rax, %r11
-movq $-7046029254386353131, %rax
-imulq %rax, %r11
+movq %rax, %r11
 movq %r11, %rax
-shrq $32, %rax
-xorq %r11, %rax
 movq %rbx, %rcx
 mulq %rcx
 movq %rdx, %rax
@@ -96865,7 +96577,7 @@ cmpq 2216(%r15), %rax
 jae ca_error
 movq 752(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %r9, %rax
+cmpq %rsi, %rax
 jne .Lca_if_put_1422214222222222222222221613S
 lea (%r13,%r11,1), %rax
 shlq $2, %rax
@@ -96874,7 +96586,7 @@ cmpq 2216(%r15), %rax
 jae ca_error
 movq 752(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %rsi, %rax
+cmpq %r9, %rax
 je ca_error
 .Lca_if_put_1422214222222222222222221613S:
 lea 1(%r11), %rax
@@ -98768,19 +98480,13 @@ cmova %rcx, %rax
 subq %rax, %rsi
 .Lca_ilm_find_21522X:
 .Lca_ilm_find_21X:
-movq %r8, %r13
-shlq $32, %r13
-xorq %rdi, %r13
-movq %r8, %rax
-shrq $32, %rax
+movq $-7046029254386353131, %r13
+imulq %r8, %r13
+lea (%r13,%rdi,1), %rax
 movq $-7046029254386353131, %rcx
 imulq %rcx, %rax
-xorq %rax, %r13
-movq $-7046029254386353131, %rax
-imulq %rax, %r13
+movq %rax, %r13
 movq %r13, %rax
-shrq $32, %rax
-xorq %r13, %rax
 movq %rsi, %rcx
 mulq %rcx
 movq %rdx, %rax
@@ -98921,18 +98627,18 @@ movq 776(%r15), %rcx
 movq (%rcx,%rax,8), %rax
 cmpq $-1, %rax
 je .Lca_ilm_put_1422214222222161E
-movq %r10, %r9
-shlq $2, %r9
-addq $1, %r9
-movq 776(%r15), %rax
-movq (%rax,%r9,8), %r9
 movq %r10, %rsi
 shlq $2, %rsi
-addq $2, %rsi
-cmpq 2240(%r15), %rsi
-jae ca_error
+addq $1, %rsi
 movq 776(%r15), %rax
 movq (%rax,%rsi,8), %rsi
+movq %r10, %r9
+shlq $2, %r9
+addq $2, %r9
+cmpq 2240(%r15), %r9
+jae ca_error
+movq 776(%r15), %rax
+movq (%rax,%r9,8), %r9
 movq %r10, %rax
 shlq $2, %rax
 addq $3, %rax
@@ -98941,19 +98647,13 @@ jae ca_error
 movq 776(%r15), %rcx
 movq (%rcx,%rax,8), %rax
 movq %rax, 96(%rsp)
-movq %rsi, %r11
-shlq $32, %r11
-xorq %r9, %r11
-movq %rsi, %rax
-shrq $32, %rax
+movq $-7046029254386353131, %r11
+imulq %r9, %r11
+lea (%r11,%rsi,1), %rax
 movq $-7046029254386353131, %rcx
 imulq %rcx, %rax
-xorq %rax, %r11
-movq $-7046029254386353131, %rax
-imulq %rax, %r11
+movq %rax, %r11
 movq %r11, %rax
-shrq $32, %rax
-xorq %r11, %rax
 movq %rbx, %rcx
 mulq %rcx
 movq %rdx, %rax
@@ -98977,7 +98677,7 @@ cmpq 2240(%r15), %rax
 jae ca_error
 movq 776(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %r9, %rax
+cmpq %rsi, %rax
 jne .Lca_ilm_put_14222142222221614222122221613S
 lea (%r13,%r11,1), %rax
 shlq $2, %rax
@@ -98986,7 +98686,7 @@ cmpq 2240(%r15), %rax
 jae ca_error
 movq 776(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %rsi, %rax
+cmpq %r9, %rax
 je ca_error
 .Lca_ilm_put_14222142222221614222122221613S:
 lea 1(%r11), %rax
@@ -99018,14 +98718,14 @@ addq $1, %rax
 cmpq 2240(%r15), %rax
 jae ca_error
 movq 776(%r15), %rcx
-movq %r9, (%rcx,%rax,8)
+movq %rsi, (%rcx,%rax,8)
 movq %r11, %rax
 shlq $2, %rax
 addq $2, %rax
 cmpq 2240(%r15), %rax
 jae ca_error
 movq 776(%r15), %rcx
-movq %rsi, (%rcx,%rax,8)
+movq %r9, (%rcx,%rax,8)
 movq 96(%rsp), %rax
 movq %r11, %rcx
 shlq $2, %rcx
@@ -99050,21 +98750,15 @@ movq %r13, 8(%rax)
 movq 776(%r15), %rax
 movq %rbx, 16(%rax)
 movq %rdi, 43416(%r15)
-movq (%rsp), %r9
-movq 8(%rsp), %rsi
-movq %rsi, %r11
-shlq $32, %r11
-xorq %r9, %r11
-movq %rsi, %rax
-shrq $32, %rax
+movq (%rsp), %rsi
+movq 8(%rsp), %r9
+movq $-7046029254386353131, %r11
+imulq %r9, %r11
+lea (%r11,%rsi,1), %rax
 movq $-7046029254386353131, %rcx
 imulq %rcx, %rax
-xorq %rax, %r11
-movq $-7046029254386353131, %rax
-imulq %rax, %r11
+movq %rax, %r11
 movq %r11, %rax
-shrq $32, %rax
-xorq %r11, %rax
 movq %rbx, %rcx
 mulq %rcx
 movq %rdx, %rax
@@ -99088,7 +98782,7 @@ cmpq 2240(%r15), %rax
 jae ca_error
 movq 776(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %r9, %rax
+cmpq %rsi, %rax
 jne .Lca_ilm_put_1422214222222222222222221613S
 lea (%r13,%r11,1), %rax
 shlq $2, %rax
@@ -99097,7 +98791,7 @@ cmpq 2240(%r15), %rax
 jae ca_error
 movq 776(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %rsi, %rax
+cmpq %r9, %rax
 je ca_error
 .Lca_ilm_put_1422214222222222222222221613S:
 lea 1(%r11), %rax
@@ -99205,19 +98899,13 @@ cmova %rcx, %rax
 subq %rax, %rsi
 .Lca_ilp_find_21522X:
 .Lca_ilp_find_21X:
-movq %r8, %r13
-shlq $32, %r13
-xorq %rdi, %r13
-movq %r8, %rax
-shrq $32, %rax
+movq $-7046029254386353131, %r13
+imulq %r8, %r13
+lea (%r13,%rdi,1), %rax
 movq $-7046029254386353131, %rcx
 imulq %rcx, %rax
-xorq %rax, %r13
-movq $-7046029254386353131, %rax
-imulq %rax, %r13
+movq %rax, %r13
 movq %r13, %rax
-shrq $32, %rax
-xorq %r13, %rax
 movq %rsi, %rcx
 mulq %rcx
 movq %rdx, %rax
@@ -99358,18 +99046,18 @@ movq 792(%r15), %rcx
 movq (%rcx,%rax,8), %rax
 cmpq $-1, %rax
 je .Lca_ilp_put_1422214222222161E
-movq %r10, %r9
-shlq $2, %r9
-addq $1, %r9
-movq 792(%r15), %rax
-movq (%rax,%r9,8), %r9
 movq %r10, %rsi
 shlq $2, %rsi
-addq $2, %rsi
-cmpq 2256(%r15), %rsi
-jae ca_error
+addq $1, %rsi
 movq 792(%r15), %rax
 movq (%rax,%rsi,8), %rsi
+movq %r10, %r9
+shlq $2, %r9
+addq $2, %r9
+cmpq 2256(%r15), %r9
+jae ca_error
+movq 792(%r15), %rax
+movq (%rax,%r9,8), %r9
 movq %r10, %rax
 shlq $2, %rax
 addq $3, %rax
@@ -99378,19 +99066,13 @@ jae ca_error
 movq 792(%r15), %rcx
 movq (%rcx,%rax,8), %rax
 movq %rax, 96(%rsp)
-movq %rsi, %r11
-shlq $32, %r11
-xorq %r9, %r11
-movq %rsi, %rax
-shrq $32, %rax
+movq $-7046029254386353131, %r11
+imulq %r9, %r11
+lea (%r11,%rsi,1), %rax
 movq $-7046029254386353131, %rcx
 imulq %rcx, %rax
-xorq %rax, %r11
-movq $-7046029254386353131, %rax
-imulq %rax, %r11
+movq %rax, %r11
 movq %r11, %rax
-shrq $32, %rax
-xorq %r11, %rax
 movq %rbx, %rcx
 mulq %rcx
 movq %rdx, %rax
@@ -99414,7 +99096,7 @@ cmpq 2256(%r15), %rax
 jae ca_error
 movq 792(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %r9, %rax
+cmpq %rsi, %rax
 jne .Lca_ilp_put_14222142222221614222122221613S
 lea (%r13,%r11,1), %rax
 shlq $2, %rax
@@ -99423,7 +99105,7 @@ cmpq 2256(%r15), %rax
 jae ca_error
 movq 792(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %rsi, %rax
+cmpq %r9, %rax
 je ca_error
 .Lca_ilp_put_14222142222221614222122221613S:
 lea 1(%r11), %rax
@@ -99455,14 +99137,14 @@ addq $1, %rax
 cmpq 2256(%r15), %rax
 jae ca_error
 movq 792(%r15), %rcx
-movq %r9, (%rcx,%rax,8)
+movq %rsi, (%rcx,%rax,8)
 movq %r11, %rax
 shlq $2, %rax
 addq $2, %rax
 cmpq 2256(%r15), %rax
 jae ca_error
 movq 792(%r15), %rcx
-movq %rsi, (%rcx,%rax,8)
+movq %r9, (%rcx,%rax,8)
 movq 96(%rsp), %rax
 movq %r11, %rcx
 shlq $2, %rcx
@@ -99487,21 +99169,15 @@ movq %r13, 8(%rax)
 movq 792(%r15), %rax
 movq %rbx, 16(%rax)
 movq %rdi, 43448(%r15)
-movq (%rsp), %r9
-movq 8(%rsp), %rsi
-movq %rsi, %r11
-shlq $32, %r11
-xorq %r9, %r11
-movq %rsi, %rax
-shrq $32, %rax
+movq (%rsp), %rsi
+movq 8(%rsp), %r9
+movq $-7046029254386353131, %r11
+imulq %r9, %r11
+lea (%r11,%rsi,1), %rax
 movq $-7046029254386353131, %rcx
 imulq %rcx, %rax
-xorq %rax, %r11
-movq $-7046029254386353131, %rax
-imulq %rax, %r11
+movq %rax, %r11
 movq %r11, %rax
-shrq $32, %rax
-xorq %r11, %rax
 movq %rbx, %rcx
 mulq %rcx
 movq %rdx, %rax
@@ -99525,7 +99201,7 @@ cmpq 2256(%r15), %rax
 jae ca_error
 movq 792(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %r9, %rax
+cmpq %rsi, %rax
 jne .Lca_ilp_put_1422214222222222222222221613S
 lea (%r13,%r11,1), %rax
 shlq $2, %rax
@@ -99534,7 +99210,7 @@ cmpq 2256(%r15), %rax
 jae ca_error
 movq 792(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %rsi, %rax
+cmpq %r9, %rax
 je ca_error
 .Lca_ilp_put_1422214222222222222222221613S:
 lea 1(%r11), %rax
@@ -99642,19 +99318,13 @@ cmova %rcx, %rax
 subq %rax, %rsi
 .Lca_ilpl_find_21522X:
 .Lca_ilpl_find_21X:
-movq %r8, %r13
-shlq $32, %r13
-xorq %rdi, %r13
-movq %r8, %rax
-shrq $32, %rax
+movq $-7046029254386353131, %r13
+imulq %r8, %r13
+lea (%r13,%rdi,1), %rax
 movq $-7046029254386353131, %rcx
 imulq %rcx, %rax
-xorq %rax, %r13
-movq $-7046029254386353131, %rax
-imulq %rax, %r13
+movq %rax, %r13
 movq %r13, %rax
-shrq $32, %rax
-xorq %r13, %rax
 movq %rsi, %rcx
 mulq %rcx
 movq %rdx, %rax
@@ -99795,18 +99465,18 @@ movq 800(%r15), %rcx
 movq (%rcx,%rax,8), %rax
 cmpq $-1, %rax
 je .Lca_ilpl_put_1422214222222161E
-movq %r10, %r9
-shlq $2, %r9
-addq $1, %r9
-movq 800(%r15), %rax
-movq (%rax,%r9,8), %r9
 movq %r10, %rsi
 shlq $2, %rsi
-addq $2, %rsi
-cmpq 2264(%r15), %rsi
-jae ca_error
+addq $1, %rsi
 movq 800(%r15), %rax
 movq (%rax,%rsi,8), %rsi
+movq %r10, %r9
+shlq $2, %r9
+addq $2, %r9
+cmpq 2264(%r15), %r9
+jae ca_error
+movq 800(%r15), %rax
+movq (%rax,%r9,8), %r9
 movq %r10, %rax
 shlq $2, %rax
 addq $3, %rax
@@ -99815,19 +99485,13 @@ jae ca_error
 movq 800(%r15), %rcx
 movq (%rcx,%rax,8), %rax
 movq %rax, 96(%rsp)
-movq %rsi, %r11
-shlq $32, %r11
-xorq %r9, %r11
-movq %rsi, %rax
-shrq $32, %rax
+movq $-7046029254386353131, %r11
+imulq %r9, %r11
+lea (%r11,%rsi,1), %rax
 movq $-7046029254386353131, %rcx
 imulq %rcx, %rax
-xorq %rax, %r11
-movq $-7046029254386353131, %rax
-imulq %rax, %r11
+movq %rax, %r11
 movq %r11, %rax
-shrq $32, %rax
-xorq %r11, %rax
 movq %rbx, %rcx
 mulq %rcx
 movq %rdx, %rax
@@ -99851,7 +99515,7 @@ cmpq 2264(%r15), %rax
 jae ca_error
 movq 800(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %r9, %rax
+cmpq %rsi, %rax
 jne .Lca_ilpl_put_14222142222221614222122221613S
 lea (%r13,%r11,1), %rax
 shlq $2, %rax
@@ -99860,7 +99524,7 @@ cmpq 2264(%r15), %rax
 jae ca_error
 movq 800(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %rsi, %rax
+cmpq %r9, %rax
 je ca_error
 .Lca_ilpl_put_14222142222221614222122221613S:
 lea 1(%r11), %rax
@@ -99892,14 +99556,14 @@ addq $1, %rax
 cmpq 2264(%r15), %rax
 jae ca_error
 movq 800(%r15), %rcx
-movq %r9, (%rcx,%rax,8)
+movq %rsi, (%rcx,%rax,8)
 movq %r11, %rax
 shlq $2, %rax
 addq $2, %rax
 cmpq 2264(%r15), %rax
 jae ca_error
 movq 800(%r15), %rcx
-movq %rsi, (%rcx,%rax,8)
+movq %r9, (%rcx,%rax,8)
 movq 96(%rsp), %rax
 movq %r11, %rcx
 shlq $2, %rcx
@@ -99924,21 +99588,15 @@ movq %r13, 8(%rax)
 movq 800(%r15), %rax
 movq %rbx, 16(%rax)
 movq %rdi, 43464(%r15)
-movq (%rsp), %r9
-movq 8(%rsp), %rsi
-movq %rsi, %r11
-shlq $32, %r11
-xorq %r9, %r11
-movq %rsi, %rax
-shrq $32, %rax
+movq (%rsp), %rsi
+movq 8(%rsp), %r9
+movq $-7046029254386353131, %r11
+imulq %r9, %r11
+lea (%r11,%rsi,1), %rax
 movq $-7046029254386353131, %rcx
 imulq %rcx, %rax
-xorq %rax, %r11
-movq $-7046029254386353131, %rax
-imulq %rax, %r11
+movq %rax, %r11
 movq %r11, %rax
-shrq $32, %rax
-xorq %r11, %rax
 movq %rbx, %rcx
 mulq %rcx
 movq %rdx, %rax
@@ -99962,7 +99620,7 @@ cmpq 2264(%r15), %rax
 jae ca_error
 movq 800(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %r9, %rax
+cmpq %rsi, %rax
 jne .Lca_ilpl_put_1422214222222222222222221613S
 lea (%r13,%r11,1), %rax
 shlq $2, %rax
@@ -99971,7 +99629,7 @@ cmpq 2264(%r15), %rax
 jae ca_error
 movq 800(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %rsi, %rax
+cmpq %r9, %rax
 je ca_error
 .Lca_ilpl_put_1422214222222222222222221613S:
 lea 1(%r11), %rax
@@ -100079,19 +99737,13 @@ cmova %rcx, %rax
 subq %rax, %rsi
 .Lca_ilpls_find_21522X:
 .Lca_ilpls_find_21X:
-movq %r8, %r13
-shlq $32, %r13
-xorq %rdi, %r13
-movq %r8, %rax
-shrq $32, %rax
+movq $-7046029254386353131, %r13
+imulq %r8, %r13
+lea (%r13,%rdi,1), %rax
 movq $-7046029254386353131, %rcx
 imulq %rcx, %rax
-xorq %rax, %r13
-movq $-7046029254386353131, %rax
-imulq %rax, %r13
+movq %rax, %r13
 movq %r13, %rax
-shrq $32, %rax
-xorq %r13, %rax
 movq %rsi, %rcx
 mulq %rcx
 movq %rdx, %rax
@@ -100232,18 +99884,18 @@ movq 808(%r15), %rcx
 movq (%rcx,%rax,8), %rax
 cmpq $-1, %rax
 je .Lca_ilpls_put_1422214222222161E
-movq %r10, %r9
-shlq $2, %r9
-addq $1, %r9
-movq 808(%r15), %rax
-movq (%rax,%r9,8), %r9
 movq %r10, %rsi
 shlq $2, %rsi
-addq $2, %rsi
-cmpq 2272(%r15), %rsi
-jae ca_error
+addq $1, %rsi
 movq 808(%r15), %rax
 movq (%rax,%rsi,8), %rsi
+movq %r10, %r9
+shlq $2, %r9
+addq $2, %r9
+cmpq 2272(%r15), %r9
+jae ca_error
+movq 808(%r15), %rax
+movq (%rax,%r9,8), %r9
 movq %r10, %rax
 shlq $2, %rax
 addq $3, %rax
@@ -100252,19 +99904,13 @@ jae ca_error
 movq 808(%r15), %rcx
 movq (%rcx,%rax,8), %rax
 movq %rax, 96(%rsp)
-movq %rsi, %r11
-shlq $32, %r11
-xorq %r9, %r11
-movq %rsi, %rax
-shrq $32, %rax
+movq $-7046029254386353131, %r11
+imulq %r9, %r11
+lea (%r11,%rsi,1), %rax
 movq $-7046029254386353131, %rcx
 imulq %rcx, %rax
-xorq %rax, %r11
-movq $-7046029254386353131, %rax
-imulq %rax, %r11
+movq %rax, %r11
 movq %r11, %rax
-shrq $32, %rax
-xorq %r11, %rax
 movq %rbx, %rcx
 mulq %rcx
 movq %rdx, %rax
@@ -100288,7 +99934,7 @@ cmpq 2272(%r15), %rax
 jae ca_error
 movq 808(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %r9, %rax
+cmpq %rsi, %rax
 jne .Lca_ilpls_put_14222142222221614222122221613S
 lea (%r13,%r11,1), %rax
 shlq $2, %rax
@@ -100297,7 +99943,7 @@ cmpq 2272(%r15), %rax
 jae ca_error
 movq 808(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %rsi, %rax
+cmpq %r9, %rax
 je ca_error
 .Lca_ilpls_put_14222142222221614222122221613S:
 lea 1(%r11), %rax
@@ -100329,14 +99975,14 @@ addq $1, %rax
 cmpq 2272(%r15), %rax
 jae ca_error
 movq 808(%r15), %rcx
-movq %r9, (%rcx,%rax,8)
+movq %rsi, (%rcx,%rax,8)
 movq %r11, %rax
 shlq $2, %rax
 addq $2, %rax
 cmpq 2272(%r15), %rax
 jae ca_error
 movq 808(%r15), %rcx
-movq %rsi, (%rcx,%rax,8)
+movq %r9, (%rcx,%rax,8)
 movq 96(%rsp), %rax
 movq %r11, %rcx
 shlq $2, %rcx
@@ -100361,21 +100007,15 @@ movq %r13, 8(%rax)
 movq 808(%r15), %rax
 movq %rbx, 16(%rax)
 movq %rdi, 43480(%r15)
-movq (%rsp), %r9
-movq 8(%rsp), %rsi
-movq %rsi, %r11
-shlq $32, %r11
-xorq %r9, %r11
-movq %rsi, %rax
-shrq $32, %rax
+movq (%rsp), %rsi
+movq 8(%rsp), %r9
+movq $-7046029254386353131, %r11
+imulq %r9, %r11
+lea (%r11,%rsi,1), %rax
 movq $-7046029254386353131, %rcx
 imulq %rcx, %rax
-xorq %rax, %r11
-movq $-7046029254386353131, %rax
-imulq %rax, %r11
+movq %rax, %r11
 movq %r11, %rax
-shrq $32, %rax
-xorq %r11, %rax
 movq %rbx, %rcx
 mulq %rcx
 movq %rdx, %rax
@@ -100399,7 +100039,7 @@ cmpq 2272(%r15), %rax
 jae ca_error
 movq 808(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %r9, %rax
+cmpq %rsi, %rax
 jne .Lca_ilpls_put_1422214222222222222222221613S
 lea (%r13,%r11,1), %rax
 shlq $2, %rax
@@ -100408,7 +100048,7 @@ cmpq 2272(%r15), %rax
 jae ca_error
 movq 808(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %rsi, %rax
+cmpq %r9, %rax
 je ca_error
 .Lca_ilpls_put_1422214222222222222222221613S:
 lea 1(%r11), %rax
@@ -101463,19 +101103,13 @@ cmova %rcx, %rax
 subq %rax, %rsi
 .Lca_in_find_21522X:
 .Lca_in_find_21X:
-movq %r8, %r13
-shlq $32, %r13
-xorq %rdi, %r13
-movq %r8, %rax
-shrq $32, %rax
+movq $-7046029254386353131, %r13
+imulq %r8, %r13
+lea (%r13,%rdi,1), %rax
 movq $-7046029254386353131, %rcx
 imulq %rcx, %rax
-xorq %rax, %r13
-movq $-7046029254386353131, %rax
-imulq %rax, %r13
+movq %rax, %r13
 movq %r13, %rax
-shrq $32, %rax
-xorq %r13, %rax
 movq %rsi, %rcx
 mulq %rcx
 movq %rdx, %rax
@@ -101616,18 +101250,18 @@ movq 1056(%r15), %rcx
 movq (%rcx,%rax,8), %rax
 cmpq $-1, %rax
 je .Lca_in_put_1422214222222161E
-movq %r10, %r9
-shlq $2, %r9
-addq $1, %r9
-movq 1056(%r15), %rax
-movq (%rax,%r9,8), %r9
 movq %r10, %rsi
 shlq $2, %rsi
-addq $2, %rsi
-cmpq 2520(%r15), %rsi
-jae ca_error
+addq $1, %rsi
 movq 1056(%r15), %rax
 movq (%rax,%rsi,8), %rsi
+movq %r10, %r9
+shlq $2, %r9
+addq $2, %r9
+cmpq 2520(%r15), %r9
+jae ca_error
+movq 1056(%r15), %rax
+movq (%rax,%r9,8), %r9
 movq %r10, %rax
 shlq $2, %rax
 addq $3, %rax
@@ -101636,19 +101270,13 @@ jae ca_error
 movq 1056(%r15), %rcx
 movq (%rcx,%rax,8), %rax
 movq %rax, 96(%rsp)
-movq %rsi, %r11
-shlq $32, %r11
-xorq %r9, %r11
-movq %rsi, %rax
-shrq $32, %rax
+movq $-7046029254386353131, %r11
+imulq %r9, %r11
+lea (%r11,%rsi,1), %rax
 movq $-7046029254386353131, %rcx
 imulq %rcx, %rax
-xorq %rax, %r11
-movq $-7046029254386353131, %rax
-imulq %rax, %r11
+movq %rax, %r11
 movq %r11, %rax
-shrq $32, %rax
-xorq %r11, %rax
 movq %rbx, %rcx
 mulq %rcx
 movq %rdx, %rax
@@ -101672,7 +101300,7 @@ cmpq 2520(%r15), %rax
 jae ca_error
 movq 1056(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %r9, %rax
+cmpq %rsi, %rax
 jne .Lca_in_put_14222142222221614222122221613S
 lea (%r13,%r11,1), %rax
 shlq $2, %rax
@@ -101681,7 +101309,7 @@ cmpq 2520(%r15), %rax
 jae ca_error
 movq 1056(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %rsi, %rax
+cmpq %r9, %rax
 je ca_error
 .Lca_in_put_14222142222221614222122221613S:
 lea 1(%r11), %rax
@@ -101713,14 +101341,14 @@ addq $1, %rax
 cmpq 2520(%r15), %rax
 jae ca_error
 movq 1056(%r15), %rcx
-movq %r9, (%rcx,%rax,8)
+movq %rsi, (%rcx,%rax,8)
 movq %r11, %rax
 shlq $2, %rax
 addq $2, %rax
 cmpq 2520(%r15), %rax
 jae ca_error
 movq 1056(%r15), %rcx
-movq %rsi, (%rcx,%rax,8)
+movq %r9, (%rcx,%rax,8)
 movq 96(%rsp), %rax
 movq %r11, %rcx
 shlq $2, %rcx
@@ -101745,21 +101373,15 @@ movq %r13, 8(%rax)
 movq 1056(%r15), %rax
 movq %rbx, 16(%rax)
 movq %rdi, 43832(%r15)
-movq (%rsp), %r9
-movq 8(%rsp), %rsi
-movq %rsi, %r11
-shlq $32, %r11
-xorq %r9, %r11
-movq %rsi, %rax
-shrq $32, %rax
+movq (%rsp), %rsi
+movq 8(%rsp), %r9
+movq $-7046029254386353131, %r11
+imulq %r9, %r11
+lea (%r11,%rsi,1), %rax
 movq $-7046029254386353131, %rcx
 imulq %rcx, %rax
-xorq %rax, %r11
-movq $-7046029254386353131, %rax
-imulq %rax, %r11
+movq %rax, %r11
 movq %r11, %rax
-shrq $32, %rax
-xorq %r11, %rax
 movq %rbx, %rcx
 mulq %rcx
 movq %rdx, %rax
@@ -101783,7 +101405,7 @@ cmpq 2520(%r15), %rax
 jae ca_error
 movq 1056(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %r9, %rax
+cmpq %rsi, %rax
 jne .Lca_in_put_1422214222222222222222221613S
 lea (%r13,%r11,1), %rax
 shlq $2, %rax
@@ -101792,7 +101414,7 @@ cmpq 2520(%r15), %rax
 jae ca_error
 movq 1056(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %rsi, %rax
+cmpq %r9, %rax
 je ca_error
 .Lca_in_put_1422214222222222222222221613S:
 lea 1(%r11), %rax
@@ -111992,19 +111614,13 @@ cmova %rcx, %rax
 subq %rax, %rsi
 .Lca_io_find_21522X:
 .Lca_io_find_21X:
-movq %r8, %r13
-shlq $32, %r13
-xorq %rdi, %r13
-movq %r8, %rax
-shrq $32, %rax
+movq $-7046029254386353131, %r13
+imulq %r8, %r13
+lea (%r13,%rdi,1), %rax
 movq $-7046029254386353131, %rcx
 imulq %rcx, %rax
-xorq %rax, %r13
-movq $-7046029254386353131, %rax
-imulq %rax, %r13
+movq %rax, %r13
 movq %r13, %rax
-shrq $32, %rax
-xorq %r13, %rax
 movq %rsi, %rcx
 mulq %rcx
 movq %rdx, %rax
@@ -112210,18 +111826,18 @@ movq 1064(%r15), %rcx
 movq (%rcx,%rax,8), %rax
 cmpq $-1, %rax
 je .Lca_io_put_1422214222222161E
-movq %r10, %r9
-shlq $2, %r9
-addq $1, %r9
-movq 1064(%r15), %rax
-movq (%rax,%r9,8), %r9
 movq %r10, %rsi
 shlq $2, %rsi
-addq $2, %rsi
-cmpq 2528(%r15), %rsi
-jae ca_error
+addq $1, %rsi
 movq 1064(%r15), %rax
 movq (%rax,%rsi,8), %rsi
+movq %r10, %r9
+shlq $2, %r9
+addq $2, %r9
+cmpq 2528(%r15), %r9
+jae ca_error
+movq 1064(%r15), %rax
+movq (%rax,%r9,8), %r9
 movq %r10, %rax
 shlq $2, %rax
 addq $3, %rax
@@ -112230,19 +111846,13 @@ jae ca_error
 movq 1064(%r15), %rcx
 movq (%rcx,%rax,8), %rax
 movq %rax, 96(%rsp)
-movq %rsi, %r11
-shlq $32, %r11
-xorq %r9, %r11
-movq %rsi, %rax
-shrq $32, %rax
+movq $-7046029254386353131, %r11
+imulq %r9, %r11
+lea (%r11,%rsi,1), %rax
 movq $-7046029254386353131, %rcx
 imulq %rcx, %rax
-xorq %rax, %r11
-movq $-7046029254386353131, %rax
-imulq %rax, %r11
+movq %rax, %r11
 movq %r11, %rax
-shrq $32, %rax
-xorq %r11, %rax
 movq %rbx, %rcx
 mulq %rcx
 movq %rdx, %rax
@@ -112266,7 +111876,7 @@ cmpq 2528(%r15), %rax
 jae ca_error
 movq 1064(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %r9, %rax
+cmpq %rsi, %rax
 jne .Lca_io_put_14222142222221614222122221613S
 lea (%r13,%r11,1), %rax
 shlq $2, %rax
@@ -112275,7 +111885,7 @@ cmpq 2528(%r15), %rax
 jae ca_error
 movq 1064(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %rsi, %rax
+cmpq %r9, %rax
 je ca_error
 .Lca_io_put_14222142222221614222122221613S:
 lea 1(%r11), %rax
@@ -112307,14 +111917,14 @@ addq $1, %rax
 cmpq 2528(%r15), %rax
 jae ca_error
 movq 1064(%r15), %rcx
-movq %r9, (%rcx,%rax,8)
+movq %rsi, (%rcx,%rax,8)
 movq %r11, %rax
 shlq $2, %rax
 addq $2, %rax
 cmpq 2528(%r15), %rax
 jae ca_error
 movq 1064(%r15), %rcx
-movq %rsi, (%rcx,%rax,8)
+movq %r9, (%rcx,%rax,8)
 movq 96(%rsp), %rax
 movq %r11, %rcx
 shlq $2, %rcx
@@ -112339,21 +111949,15 @@ movq %r13, 8(%rax)
 movq 1064(%r15), %rax
 movq %rbx, 16(%rax)
 movq %rdi, 43848(%r15)
-movq (%rsp), %r9
-movq 8(%rsp), %rsi
-movq %rsi, %r11
-shlq $32, %r11
-xorq %r9, %r11
-movq %rsi, %rax
-shrq $32, %rax
+movq (%rsp), %rsi
+movq 8(%rsp), %r9
+movq $-7046029254386353131, %r11
+imulq %r9, %r11
+lea (%r11,%rsi,1), %rax
 movq $-7046029254386353131, %rcx
 imulq %rcx, %rax
-xorq %rax, %r11
-movq $-7046029254386353131, %rax
-imulq %rax, %r11
+movq %rax, %r11
 movq %r11, %rax
-shrq $32, %rax
-xorq %r11, %rax
 movq %rbx, %rcx
 mulq %rcx
 movq %rdx, %rax
@@ -112377,7 +111981,7 @@ cmpq 2528(%r15), %rax
 jae ca_error
 movq 1064(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %r9, %rax
+cmpq %rsi, %rax
 jne .Lca_io_put_1422214222222222222222221613S
 lea (%r13,%r11,1), %rax
 shlq $2, %rax
@@ -112386,7 +111990,7 @@ cmpq 2528(%r15), %rax
 jae ca_error
 movq 1064(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %rsi, %rax
+cmpq %r9, %rax
 je ca_error
 .Lca_io_put_1422214222222222222222221613S:
 lea 1(%r11), %rax
@@ -121617,19 +121221,13 @@ cmova %rcx, %rax
 subq %rax, %rsi
 .Lca_lf_find_21522X:
 .Lca_lf_find_21X:
-movq %r8, %r13
-shlq $32, %r13
-xorq %rdi, %r13
-movq %r8, %rax
-shrq $32, %rax
+movq $-7046029254386353131, %r13
+imulq %r8, %r13
+lea (%r13,%rdi,1), %rax
 movq $-7046029254386353131, %rcx
 imulq %rcx, %rax
-xorq %rax, %r13
-movq $-7046029254386353131, %rax
-imulq %rax, %r13
+movq %rax, %r13
 movq %r13, %rax
-shrq $32, %rax
-xorq %r13, %rax
 movq %rsi, %rcx
 mulq %rcx
 movq %rdx, %rax
@@ -121776,18 +121374,18 @@ movq 664(%r15), %rcx
 movq (%rcx,%rax,8), %rax
 cmpq $-1, %rax
 je .Lca_lf_put_1422214222222161E
-movq %r10, %r9
-shlq $2, %r9
-addq $1, %r9
-movq 664(%r15), %rax
-movq (%rax,%r9,8), %r9
 movq %r10, %rsi
 shlq $2, %rsi
-addq $2, %rsi
-cmpq 2128(%r15), %rsi
-jae ca_error
+addq $1, %rsi
 movq 664(%r15), %rax
 movq (%rax,%rsi,8), %rsi
+movq %r10, %r9
+shlq $2, %r9
+addq $2, %r9
+cmpq 2128(%r15), %r9
+jae ca_error
+movq 664(%r15), %rax
+movq (%rax,%r9,8), %r9
 movq %r10, %rax
 shlq $2, %rax
 addq $3, %rax
@@ -121796,19 +121394,13 @@ jae ca_error
 movq 664(%r15), %rcx
 movq (%rcx,%rax,8), %rax
 movq %rax, 96(%rsp)
-movq %rsi, %r11
-shlq $32, %r11
-xorq %r9, %r11
-movq %rsi, %rax
-shrq $32, %rax
+movq $-7046029254386353131, %r11
+imulq %r9, %r11
+lea (%r11,%rsi,1), %rax
 movq $-7046029254386353131, %rcx
 imulq %rcx, %rax
-xorq %rax, %r11
-movq $-7046029254386353131, %rax
-imulq %rax, %r11
+movq %rax, %r11
 movq %r11, %rax
-shrq $32, %rax
-xorq %r11, %rax
 movq %rbx, %rcx
 mulq %rcx
 movq %rdx, %rax
@@ -121832,7 +121424,7 @@ cmpq 2128(%r15), %rax
 jae ca_error
 movq 664(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %r9, %rax
+cmpq %rsi, %rax
 jne .Lca_lf_put_14222142222221614222122221613S
 lea (%r13,%r11,1), %rax
 shlq $2, %rax
@@ -121841,7 +121433,7 @@ cmpq 2128(%r15), %rax
 jae ca_error
 movq 664(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %rsi, %rax
+cmpq %r9, %rax
 je ca_error
 .Lca_lf_put_14222142222221614222122221613S:
 lea 1(%r11), %rax
@@ -121873,14 +121465,14 @@ addq $1, %rax
 cmpq 2128(%r15), %rax
 jae ca_error
 movq 664(%r15), %rcx
-movq %r9, (%rcx,%rax,8)
+movq %rsi, (%rcx,%rax,8)
 movq %r11, %rax
 shlq $2, %rax
 addq $2, %rax
 cmpq 2128(%r15), %rax
 jae ca_error
 movq 664(%r15), %rcx
-movq %rsi, (%rcx,%rax,8)
+movq %r9, (%rcx,%rax,8)
 movq 96(%rsp), %rax
 movq %r11, %rcx
 shlq $2, %rcx
@@ -121909,21 +121501,15 @@ jbe ca_error
 movq 664(%r15), %rax
 movq %rbx, 16(%rax)
 movq %rdi, 43352(%r15)
-movq (%rsp), %r9
-movq 8(%rsp), %rsi
-movq %rsi, %r11
-shlq $32, %r11
-xorq %r9, %r11
-movq %rsi, %rax
-shrq $32, %rax
+movq (%rsp), %rsi
+movq 8(%rsp), %r9
+movq $-7046029254386353131, %r11
+imulq %r9, %r11
+lea (%r11,%rsi,1), %rax
 movq $-7046029254386353131, %rcx
 imulq %rcx, %rax
-xorq %rax, %r11
-movq $-7046029254386353131, %rax
-imulq %rax, %r11
+movq %rax, %r11
 movq %r11, %rax
-shrq $32, %rax
-xorq %r11, %rax
 movq %rbx, %rcx
 mulq %rcx
 movq %rdx, %rax
@@ -121947,7 +121533,7 @@ cmpq 2128(%r15), %rax
 jae ca_error
 movq 664(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %r9, %rax
+cmpq %rsi, %rax
 jne .Lca_lf_put_1422214222222222222222221613S
 lea (%r13,%r11,1), %rax
 shlq $2, %rax
@@ -121956,7 +121542,7 @@ cmpq 2128(%r15), %rax
 jae ca_error
 movq 664(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %rsi, %rax
+cmpq %r9, %rax
 je ca_error
 .Lca_lf_put_1422214222222222222222221613S:
 lea 1(%r11), %rax
@@ -128331,19 +127917,13 @@ cmova %rcx, %rax
 subq %rax, %rsi
 .Lca_lq_find_21522X:
 .Lca_lq_find_21X:
-movq %r8, %r13
-shlq $32, %r13
-xorq %rdi, %r13
-movq %r8, %rax
-shrq $32, %rax
+movq $-7046029254386353131, %r13
+imulq %r8, %r13
+lea (%r13,%rdi,1), %rax
 movq $-7046029254386353131, %rcx
 imulq %rcx, %rax
-xorq %rax, %r13
-movq $-7046029254386353131, %rax
-imulq %rax, %r13
+movq %rax, %r13
 movq %r13, %rax
-shrq $32, %rax
-xorq %r13, %rax
 movq %rsi, %rcx
 mulq %rcx
 movq %rdx, %rax
@@ -128484,18 +128064,18 @@ movq 1104(%r15), %rcx
 movq (%rcx,%rax,8), %rax
 cmpq $-1, %rax
 je .Lca_lq_put_1422214222222161E
-movq %r10, %r9
-shlq $2, %r9
-addq $1, %r9
-movq 1104(%r15), %rax
-movq (%rax,%r9,8), %r9
 movq %r10, %rsi
 shlq $2, %rsi
-addq $2, %rsi
-cmpq 2568(%r15), %rsi
-jae ca_error
+addq $1, %rsi
 movq 1104(%r15), %rax
 movq (%rax,%rsi,8), %rsi
+movq %r10, %r9
+shlq $2, %r9
+addq $2, %r9
+cmpq 2568(%r15), %r9
+jae ca_error
+movq 1104(%r15), %rax
+movq (%rax,%r9,8), %r9
 movq %r10, %rax
 shlq $2, %rax
 addq $3, %rax
@@ -128504,19 +128084,13 @@ jae ca_error
 movq 1104(%r15), %rcx
 movq (%rcx,%rax,8), %rax
 movq %rax, 96(%rsp)
-movq %rsi, %r11
-shlq $32, %r11
-xorq %r9, %r11
-movq %rsi, %rax
-shrq $32, %rax
+movq $-7046029254386353131, %r11
+imulq %r9, %r11
+lea (%r11,%rsi,1), %rax
 movq $-7046029254386353131, %rcx
 imulq %rcx, %rax
-xorq %rax, %r11
-movq $-7046029254386353131, %rax
-imulq %rax, %r11
+movq %rax, %r11
 movq %r11, %rax
-shrq $32, %rax
-xorq %r11, %rax
 movq %rbx, %rcx
 mulq %rcx
 movq %rdx, %rax
@@ -128540,7 +128114,7 @@ cmpq 2568(%r15), %rax
 jae ca_error
 movq 1104(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %r9, %rax
+cmpq %rsi, %rax
 jne .Lca_lq_put_14222142222221614222122221613S
 lea (%r13,%r11,1), %rax
 shlq $2, %rax
@@ -128549,7 +128123,7 @@ cmpq 2568(%r15), %rax
 jae ca_error
 movq 1104(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %rsi, %rax
+cmpq %r9, %rax
 je ca_error
 .Lca_lq_put_14222142222221614222122221613S:
 lea 1(%r11), %rax
@@ -128581,14 +128155,14 @@ addq $1, %rax
 cmpq 2568(%r15), %rax
 jae ca_error
 movq 1104(%r15), %rcx
-movq %r9, (%rcx,%rax,8)
+movq %rsi, (%rcx,%rax,8)
 movq %r11, %rax
 shlq $2, %rax
 addq $2, %rax
 cmpq 2568(%r15), %rax
 jae ca_error
 movq 1104(%r15), %rcx
-movq %rsi, (%rcx,%rax,8)
+movq %r9, (%rcx,%rax,8)
 movq 96(%rsp), %rax
 movq %r11, %rcx
 shlq $2, %rcx
@@ -128613,21 +128187,15 @@ movq %r13, 8(%rax)
 movq 1104(%r15), %rax
 movq %rbx, 16(%rax)
 movq %rdi, 43944(%r15)
-movq (%rsp), %r9
-movq 8(%rsp), %rsi
-movq %rsi, %r11
-shlq $32, %r11
-xorq %r9, %r11
-movq %rsi, %rax
-shrq $32, %rax
+movq (%rsp), %rsi
+movq 8(%rsp), %r9
+movq $-7046029254386353131, %r11
+imulq %r9, %r11
+lea (%r11,%rsi,1), %rax
 movq $-7046029254386353131, %rcx
 imulq %rcx, %rax
-xorq %rax, %r11
-movq $-7046029254386353131, %rax
-imulq %rax, %r11
+movq %rax, %r11
 movq %r11, %rax
-shrq $32, %rax
-xorq %r11, %rax
 movq %rbx, %rcx
 mulq %rcx
 movq %rdx, %rax
@@ -128651,7 +128219,7 @@ cmpq 2568(%r15), %rax
 jae ca_error
 movq 1104(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %r9, %rax
+cmpq %rsi, %rax
 jne .Lca_lq_put_1422214222222222222222221613S
 lea (%r13,%r11,1), %rax
 shlq $2, %rax
@@ -128660,7 +128228,7 @@ cmpq 2568(%r15), %rax
 jae ca_error
 movq 1104(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %rsi, %rax
+cmpq %r9, %rax
 je ca_error
 .Lca_lq_put_1422214222222222222222221613S:
 lea 1(%r11), %rax
@@ -129887,19 +129455,13 @@ cmova %rcx, %rax
 subq %rax, %rsi
 .Lca_lsb_find_21522X:
 .Lca_lsb_find_21X:
-movq %r8, %r13
-shlq $32, %r13
-xorq %rdi, %r13
-movq %r8, %rax
-shrq $32, %rax
+movq $-7046029254386353131, %r13
+imulq %r8, %r13
+lea (%r13,%rdi,1), %rax
 movq $-7046029254386353131, %rcx
 imulq %rcx, %rax
-xorq %rax, %r13
-movq $-7046029254386353131, %rax
-imulq %rax, %r13
+movq %rax, %r13
 movq %r13, %rax
-shrq $32, %rax
-xorq %r13, %rax
 movq %rsi, %rcx
 mulq %rcx
 movq %rdx, %rax
@@ -130487,18 +130049,18 @@ movq 1344(%r15), %rcx
 movq (%rcx,%rax,8), %rax
 cmpq $-1, %rax
 je .Lca_lsb_put_1422214222222161E
-movq %r10, %r9
-shlq $2, %r9
-addq $1, %r9
-movq 1344(%r15), %rax
-movq (%rax,%r9,8), %r9
 movq %r10, %rsi
 shlq $2, %rsi
-addq $2, %rsi
-cmpq 2808(%r15), %rsi
-jae ca_error
+addq $1, %rsi
 movq 1344(%r15), %rax
 movq (%rax,%rsi,8), %rsi
+movq %r10, %r9
+shlq $2, %r9
+addq $2, %r9
+cmpq 2808(%r15), %r9
+jae ca_error
+movq 1344(%r15), %rax
+movq (%rax,%r9,8), %r9
 movq %r10, %rax
 shlq $2, %rax
 addq $3, %rax
@@ -130507,19 +130069,13 @@ jae ca_error
 movq 1344(%r15), %rcx
 movq (%rcx,%rax,8), %rax
 movq %rax, 96(%rsp)
-movq %rsi, %r11
-shlq $32, %r11
-xorq %r9, %r11
-movq %rsi, %rax
-shrq $32, %rax
+movq $-7046029254386353131, %r11
+imulq %r9, %r11
+lea (%r11,%rsi,1), %rax
 movq $-7046029254386353131, %rcx
 imulq %rcx, %rax
-xorq %rax, %r11
-movq $-7046029254386353131, %rax
-imulq %rax, %r11
+movq %rax, %r11
 movq %r11, %rax
-shrq $32, %rax
-xorq %r11, %rax
 movq %rbx, %rcx
 mulq %rcx
 movq %rdx, %rax
@@ -130543,7 +130099,7 @@ cmpq 2808(%r15), %rax
 jae ca_error
 movq 1344(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %r9, %rax
+cmpq %rsi, %rax
 jne .Lca_lsb_put_14222142222221614222122221613S
 lea (%r13,%r11,1), %rax
 shlq $2, %rax
@@ -130552,7 +130108,7 @@ cmpq 2808(%r15), %rax
 jae ca_error
 movq 1344(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %rsi, %rax
+cmpq %r9, %rax
 je ca_error
 .Lca_lsb_put_14222142222221614222122221613S:
 lea 1(%r11), %rax
@@ -130584,14 +130140,14 @@ addq $1, %rax
 cmpq 2808(%r15), %rax
 jae ca_error
 movq 1344(%r15), %rcx
-movq %r9, (%rcx,%rax,8)
+movq %rsi, (%rcx,%rax,8)
 movq %r11, %rax
 shlq $2, %rax
 addq $2, %rax
 cmpq 2808(%r15), %rax
 jae ca_error
 movq 1344(%r15), %rcx
-movq %rsi, (%rcx,%rax,8)
+movq %r9, (%rcx,%rax,8)
 movq 96(%rsp), %rax
 movq %r11, %rcx
 shlq $2, %rcx
@@ -130616,21 +130172,15 @@ movq %r13, 8(%rax)
 movq 1344(%r15), %rax
 movq %rbx, 16(%rax)
 movq %rdi, 44264(%r15)
-movq (%rsp), %r9
-movq 8(%rsp), %rsi
-movq %rsi, %r11
-shlq $32, %r11
-xorq %r9, %r11
-movq %rsi, %rax
-shrq $32, %rax
+movq (%rsp), %rsi
+movq 8(%rsp), %r9
+movq $-7046029254386353131, %r11
+imulq %r9, %r11
+lea (%r11,%rsi,1), %rax
 movq $-7046029254386353131, %rcx
 imulq %rcx, %rax
-xorq %rax, %r11
-movq $-7046029254386353131, %rax
-imulq %rax, %r11
+movq %rax, %r11
 movq %r11, %rax
-shrq $32, %rax
-xorq %r11, %rax
 movq %rbx, %rcx
 mulq %rcx
 movq %rdx, %rax
@@ -130654,7 +130204,7 @@ cmpq 2808(%r15), %rax
 jae ca_error
 movq 1344(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %r9, %rax
+cmpq %rsi, %rax
 jne .Lca_lsb_put_1422214222222222222222221613S
 lea (%r13,%r11,1), %rax
 shlq $2, %rax
@@ -130663,7 +130213,7 @@ cmpq 2808(%r15), %rax
 jae ca_error
 movq 1344(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %rsi, %rax
+cmpq %r9, %rax
 je ca_error
 .Lca_lsb_put_1422214222222222222222221613S:
 lea 1(%r11), %rax
@@ -130760,19 +130310,13 @@ cmova %rcx, %rax
 subq %rax, %rsi
 .Lca_lsp_find_21522X:
 .Lca_lsp_find_21X:
-movq %r8, %r13
-shlq $32, %r13
-xorq %rdi, %r13
-movq %r8, %rax
-shrq $32, %rax
+movq $-7046029254386353131, %r13
+imulq %r8, %r13
+lea (%r13,%rdi,1), %rax
 movq $-7046029254386353131, %rcx
 imulq %rcx, %rax
-xorq %rax, %r13
-movq $-7046029254386353131, %rax
-imulq %rax, %r13
+movq %rax, %r13
 movq %r13, %rax
-shrq $32, %rax
-xorq %r13, %rax
 movq %rsi, %rcx
 mulq %rcx
 movq %rdx, %rax
@@ -130919,18 +130463,18 @@ movq 1000(%r15), %rcx
 movq (%rcx,%rax,8), %rax
 cmpq $-1, %rax
 je .Lca_lsp_put_1422214222222161E
-movq %r10, %r9
-shlq $2, %r9
-addq $1, %r9
-movq 1000(%r15), %rax
-movq (%rax,%r9,8), %r9
 movq %r10, %rsi
 shlq $2, %rsi
-addq $2, %rsi
-cmpq 2464(%r15), %rsi
-jae ca_error
+addq $1, %rsi
 movq 1000(%r15), %rax
 movq (%rax,%rsi,8), %rsi
+movq %r10, %r9
+shlq $2, %r9
+addq $2, %r9
+cmpq 2464(%r15), %r9
+jae ca_error
+movq 1000(%r15), %rax
+movq (%rax,%r9,8), %r9
 movq %r10, %rax
 shlq $2, %rax
 addq $3, %rax
@@ -130939,19 +130483,13 @@ jae ca_error
 movq 1000(%r15), %rcx
 movq (%rcx,%rax,8), %rax
 movq %rax, 96(%rsp)
-movq %rsi, %r11
-shlq $32, %r11
-xorq %r9, %r11
-movq %rsi, %rax
-shrq $32, %rax
+movq $-7046029254386353131, %r11
+imulq %r9, %r11
+lea (%r11,%rsi,1), %rax
 movq $-7046029254386353131, %rcx
 imulq %rcx, %rax
-xorq %rax, %r11
-movq $-7046029254386353131, %rax
-imulq %rax, %r11
+movq %rax, %r11
 movq %r11, %rax
-shrq $32, %rax
-xorq %r11, %rax
 movq %rbx, %rcx
 mulq %rcx
 movq %rdx, %rax
@@ -130975,7 +130513,7 @@ cmpq 2464(%r15), %rax
 jae ca_error
 movq 1000(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %r9, %rax
+cmpq %rsi, %rax
 jne .Lca_lsp_put_14222142222221614222122221613S
 lea (%r13,%r11,1), %rax
 shlq $2, %rax
@@ -130984,7 +130522,7 @@ cmpq 2464(%r15), %rax
 jae ca_error
 movq 1000(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %rsi, %rax
+cmpq %r9, %rax
 je ca_error
 .Lca_lsp_put_14222142222221614222122221613S:
 lea 1(%r11), %rax
@@ -131016,14 +130554,14 @@ addq $1, %rax
 cmpq 2464(%r15), %rax
 jae ca_error
 movq 1000(%r15), %rcx
-movq %r9, (%rcx,%rax,8)
+movq %rsi, (%rcx,%rax,8)
 movq %r11, %rax
 shlq $2, %rax
 addq $2, %rax
 cmpq 2464(%r15), %rax
 jae ca_error
 movq 1000(%r15), %rcx
-movq %rsi, (%rcx,%rax,8)
+movq %r9, (%rcx,%rax,8)
 movq 96(%rsp), %rax
 movq %r11, %rcx
 shlq $2, %rcx
@@ -131052,21 +130590,15 @@ jbe ca_error
 movq 1000(%r15), %rax
 movq %rbx, 16(%rax)
 movq %rdi, 43544(%r15)
-movq (%rsp), %r9
-movq 8(%rsp), %rsi
-movq %rsi, %r11
-shlq $32, %r11
-xorq %r9, %r11
-movq %rsi, %rax
-shrq $32, %rax
+movq (%rsp), %rsi
+movq 8(%rsp), %r9
+movq $-7046029254386353131, %r11
+imulq %r9, %r11
+lea (%r11,%rsi,1), %rax
 movq $-7046029254386353131, %rcx
 imulq %rcx, %rax
-xorq %rax, %r11
-movq $-7046029254386353131, %rax
-imulq %rax, %r11
+movq %rax, %r11
 movq %r11, %rax
-shrq $32, %rax
-xorq %r11, %rax
 movq %rbx, %rcx
 mulq %rcx
 movq %rdx, %rax
@@ -131090,7 +130622,7 @@ cmpq 2464(%r15), %rax
 jae ca_error
 movq 1000(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %r9, %rax
+cmpq %rsi, %rax
 jne .Lca_lsp_put_1422214222222222222222221613S
 lea (%r13,%r11,1), %rax
 shlq $2, %rax
@@ -131099,7 +130631,7 @@ cmpq 2464(%r15), %rax
 jae ca_error
 movq 1000(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %rsi, %rax
+cmpq %r9, %rax
 je ca_error
 .Lca_lsp_put_1422214222222222222222221613S:
 lea 1(%r11), %rax
@@ -131207,19 +130739,13 @@ cmova %rcx, %rax
 subq %rax, %rsi
 .Lca_lsq_find_21522X:
 .Lca_lsq_find_21X:
-movq %r8, %r13
-shlq $32, %r13
-xorq %rdi, %r13
-movq %r8, %rax
-shrq $32, %rax
+movq $-7046029254386353131, %r13
+imulq %r8, %r13
+lea (%r13,%rdi,1), %rax
 movq $-7046029254386353131, %rcx
 imulq %rcx, %rax
-xorq %rax, %r13
-movq $-7046029254386353131, %rax
-imulq %rax, %r13
+movq %rax, %r13
 movq %r13, %rax
-shrq $32, %rax
-xorq %r13, %rax
 movq %rsi, %rcx
 mulq %rcx
 movq %rdx, %rax
@@ -131360,18 +130886,18 @@ movq 1112(%r15), %rcx
 movq (%rcx,%rax,8), %rax
 cmpq $-1, %rax
 je .Lca_lsq_put_1422214222222161E
-movq %r10, %r9
-shlq $2, %r9
-addq $1, %r9
-movq 1112(%r15), %rax
-movq (%rax,%r9,8), %r9
 movq %r10, %rsi
 shlq $2, %rsi
-addq $2, %rsi
-cmpq 2576(%r15), %rsi
-jae ca_error
+addq $1, %rsi
 movq 1112(%r15), %rax
 movq (%rax,%rsi,8), %rsi
+movq %r10, %r9
+shlq $2, %r9
+addq $2, %r9
+cmpq 2576(%r15), %r9
+jae ca_error
+movq 1112(%r15), %rax
+movq (%rax,%r9,8), %r9
 movq %r10, %rax
 shlq $2, %rax
 addq $3, %rax
@@ -131380,19 +130906,13 @@ jae ca_error
 movq 1112(%r15), %rcx
 movq (%rcx,%rax,8), %rax
 movq %rax, 96(%rsp)
-movq %rsi, %r11
-shlq $32, %r11
-xorq %r9, %r11
-movq %rsi, %rax
-shrq $32, %rax
+movq $-7046029254386353131, %r11
+imulq %r9, %r11
+lea (%r11,%rsi,1), %rax
 movq $-7046029254386353131, %rcx
 imulq %rcx, %rax
-xorq %rax, %r11
-movq $-7046029254386353131, %rax
-imulq %rax, %r11
+movq %rax, %r11
 movq %r11, %rax
-shrq $32, %rax
-xorq %r11, %rax
 movq %rbx, %rcx
 mulq %rcx
 movq %rdx, %rax
@@ -131416,7 +130936,7 @@ cmpq 2576(%r15), %rax
 jae ca_error
 movq 1112(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %r9, %rax
+cmpq %rsi, %rax
 jne .Lca_lsq_put_14222142222221614222122221613S
 lea (%r13,%r11,1), %rax
 shlq $2, %rax
@@ -131425,7 +130945,7 @@ cmpq 2576(%r15), %rax
 jae ca_error
 movq 1112(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %rsi, %rax
+cmpq %r9, %rax
 je ca_error
 .Lca_lsq_put_14222142222221614222122221613S:
 lea 1(%r11), %rax
@@ -131457,14 +130977,14 @@ addq $1, %rax
 cmpq 2576(%r15), %rax
 jae ca_error
 movq 1112(%r15), %rcx
-movq %r9, (%rcx,%rax,8)
+movq %rsi, (%rcx,%rax,8)
 movq %r11, %rax
 shlq $2, %rax
 addq $2, %rax
 cmpq 2576(%r15), %rax
 jae ca_error
 movq 1112(%r15), %rcx
-movq %rsi, (%rcx,%rax,8)
+movq %r9, (%rcx,%rax,8)
 movq 96(%rsp), %rax
 movq %r11, %rcx
 shlq $2, %rcx
@@ -131489,21 +131009,15 @@ movq %r13, 8(%rax)
 movq 1112(%r15), %rax
 movq %rbx, 16(%rax)
 movq %rdi, 43960(%r15)
-movq (%rsp), %r9
-movq 8(%rsp), %rsi
-movq %rsi, %r11
-shlq $32, %r11
-xorq %r9, %r11
-movq %rsi, %rax
-shrq $32, %rax
+movq (%rsp), %rsi
+movq 8(%rsp), %r9
+movq $-7046029254386353131, %r11
+imulq %r9, %r11
+lea (%r11,%rsi,1), %rax
 movq $-7046029254386353131, %rcx
 imulq %rcx, %rax
-xorq %rax, %r11
-movq $-7046029254386353131, %rax
-imulq %rax, %r11
+movq %rax, %r11
 movq %r11, %rax
-shrq $32, %rax
-xorq %r11, %rax
 movq %rbx, %rcx
 mulq %rcx
 movq %rdx, %rax
@@ -131527,7 +131041,7 @@ cmpq 2576(%r15), %rax
 jae ca_error
 movq 1112(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %r9, %rax
+cmpq %rsi, %rax
 jne .Lca_lsq_put_1422214222222222222222221613S
 lea (%r13,%r11,1), %rax
 shlq $2, %rax
@@ -131536,7 +131050,7 @@ cmpq 2576(%r15), %rax
 jae ca_error
 movq 1112(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %rsi, %rax
+cmpq %r9, %rax
 je ca_error
 .Lca_lsq_put_1422214222222222222222221613S:
 lea 1(%r11), %rax
@@ -136113,19 +135627,13 @@ cmova %rcx, %rax
 subq %rax, %rsi
 .Lca_ma_find_21522X:
 .Lca_ma_find_21X:
-movq %r8, %r13
-shlq $32, %r13
-xorq %rdi, %r13
-movq %r8, %rax
-shrq $32, %rax
+movq $-7046029254386353131, %r13
+imulq %r8, %r13
+lea (%r13,%rdi,1), %rax
 movq $-7046029254386353131, %rcx
 imulq %rcx, %rax
-xorq %rax, %r13
-movq $-7046029254386353131, %rax
-imulq %rax, %r13
+movq %rax, %r13
 movq %r13, %rax
-shrq $32, %rax
-xorq %r13, %rax
 movq %rsi, %rcx
 mulq %rcx
 movq %rdx, %rax
@@ -136272,18 +135780,18 @@ movq 1384(%r15), %rcx
 movq (%rcx,%rax,8), %rax
 cmpq $-1, %rax
 je .Lca_ma_put_1422214222222161E
-movq %r10, %r9
-shlq $2, %r9
-addq $1, %r9
-movq 1384(%r15), %rax
-movq (%rax,%r9,8), %r9
 movq %r10, %rsi
 shlq $2, %rsi
-addq $2, %rsi
-cmpq 2848(%r15), %rsi
-jae ca_error
+addq $1, %rsi
 movq 1384(%r15), %rax
 movq (%rax,%rsi,8), %rsi
+movq %r10, %r9
+shlq $2, %r9
+addq $2, %r9
+cmpq 2848(%r15), %r9
+jae ca_error
+movq 1384(%r15), %rax
+movq (%rax,%r9,8), %r9
 movq %r10, %rax
 shlq $2, %rax
 addq $3, %rax
@@ -136292,19 +135800,13 @@ jae ca_error
 movq 1384(%r15), %rcx
 movq (%rcx,%rax,8), %rax
 movq %rax, 96(%rsp)
-movq %rsi, %r11
-shlq $32, %r11
-xorq %r9, %r11
-movq %rsi, %rax
-shrq $32, %rax
+movq $-7046029254386353131, %r11
+imulq %r9, %r11
+lea (%r11,%rsi,1), %rax
 movq $-7046029254386353131, %rcx
 imulq %rcx, %rax
-xorq %rax, %r11
-movq $-7046029254386353131, %rax
-imulq %rax, %r11
+movq %rax, %r11
 movq %r11, %rax
-shrq $32, %rax
-xorq %r11, %rax
 movq %rbx, %rcx
 mulq %rcx
 movq %rdx, %rax
@@ -136328,7 +135830,7 @@ cmpq 2848(%r15), %rax
 jae ca_error
 movq 1384(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %r9, %rax
+cmpq %rsi, %rax
 jne .Lca_ma_put_14222142222221614222122221613S
 lea (%r13,%r11,1), %rax
 shlq $2, %rax
@@ -136337,7 +135839,7 @@ cmpq 2848(%r15), %rax
 jae ca_error
 movq 1384(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %rsi, %rax
+cmpq %r9, %rax
 je ca_error
 .Lca_ma_put_14222142222221614222122221613S:
 lea 1(%r11), %rax
@@ -136369,14 +135871,14 @@ addq $1, %rax
 cmpq 2848(%r15), %rax
 jae ca_error
 movq 1384(%r15), %rcx
-movq %r9, (%rcx,%rax,8)
+movq %rsi, (%rcx,%rax,8)
 movq %r11, %rax
 shlq $2, %rax
 addq $2, %rax
 cmpq 2848(%r15), %rax
 jae ca_error
 movq 1384(%r15), %rcx
-movq %rsi, (%rcx,%rax,8)
+movq %r9, (%rcx,%rax,8)
 movq 96(%rsp), %rax
 movq %r11, %rcx
 shlq $2, %rcx
@@ -136405,21 +135907,15 @@ jbe ca_error
 movq 1384(%r15), %rax
 movq %rbx, 16(%rax)
 movq %rdi, 44632(%r15)
-movq (%rsp), %r9
-movq 8(%rsp), %rsi
-movq %rsi, %r11
-shlq $32, %r11
-xorq %r9, %r11
-movq %rsi, %rax
-shrq $32, %rax
+movq (%rsp), %rsi
+movq 8(%rsp), %r9
+movq $-7046029254386353131, %r11
+imulq %r9, %r11
+lea (%r11,%rsi,1), %rax
 movq $-7046029254386353131, %rcx
 imulq %rcx, %rax
-xorq %rax, %r11
-movq $-7046029254386353131, %rax
-imulq %rax, %r11
+movq %rax, %r11
 movq %r11, %rax
-shrq $32, %rax
-xorq %r11, %rax
 movq %rbx, %rcx
 mulq %rcx
 movq %rdx, %rax
@@ -136443,7 +135939,7 @@ cmpq 2848(%r15), %rax
 jae ca_error
 movq 1384(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %r9, %rax
+cmpq %rsi, %rax
 jne .Lca_ma_put_1422214222222222222222221613S
 lea (%r13,%r11,1), %rax
 shlq $2, %rax
@@ -136452,7 +135948,7 @@ cmpq 2848(%r15), %rax
 jae ca_error
 movq 1384(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %rsi, %rax
+cmpq %r9, %rax
 je ca_error
 .Lca_ma_put_1422214222222222222222221613S:
 lea 1(%r11), %rax
@@ -155978,19 +155474,13 @@ cmova %rcx, %rax
 subq %rax, %rsi
 .Lca_no_find_21522X:
 .Lca_no_find_21X:
-movq %r8, %r13
-shlq $32, %r13
-xorq %rdi, %r13
-movq %r8, %rax
-shrq $32, %rax
+movq $-7046029254386353131, %r13
+imulq %r8, %r13
+lea (%r13,%rdi,1), %rax
 movq $-7046029254386353131, %rcx
 imulq %rcx, %rax
-xorq %rax, %r13
-movq $-7046029254386353131, %rax
-imulq %rax, %r13
+movq %rax, %r13
 movq %r13, %rax
-shrq $32, %rax
-xorq %r13, %rax
 movq %rsi, %rcx
 mulq %rcx
 movq %rdx, %rax
@@ -156137,18 +155627,18 @@ movq 1392(%r15), %rcx
 movq (%rcx,%rax,8), %rax
 cmpq $-1, %rax
 je .Lca_no_put_1422214222222161E
-movq %r10, %r9
-shlq $2, %r9
-addq $1, %r9
-movq 1392(%r15), %rax
-movq (%rax,%r9,8), %r9
 movq %r10, %rsi
 shlq $2, %rsi
-addq $2, %rsi
-cmpq 2856(%r15), %rsi
-jae ca_error
+addq $1, %rsi
 movq 1392(%r15), %rax
 movq (%rax,%rsi,8), %rsi
+movq %r10, %r9
+shlq $2, %r9
+addq $2, %r9
+cmpq 2856(%r15), %r9
+jae ca_error
+movq 1392(%r15), %rax
+movq (%rax,%r9,8), %r9
 movq %r10, %rax
 shlq $2, %rax
 addq $3, %rax
@@ -156157,19 +155647,13 @@ jae ca_error
 movq 1392(%r15), %rcx
 movq (%rcx,%rax,8), %rax
 movq %rax, 96(%rsp)
-movq %rsi, %r11
-shlq $32, %r11
-xorq %r9, %r11
-movq %rsi, %rax
-shrq $32, %rax
+movq $-7046029254386353131, %r11
+imulq %r9, %r11
+lea (%r11,%rsi,1), %rax
 movq $-7046029254386353131, %rcx
 imulq %rcx, %rax
-xorq %rax, %r11
-movq $-7046029254386353131, %rax
-imulq %rax, %r11
+movq %rax, %r11
 movq %r11, %rax
-shrq $32, %rax
-xorq %r11, %rax
 movq %rbx, %rcx
 mulq %rcx
 movq %rdx, %rax
@@ -156193,7 +155677,7 @@ cmpq 2856(%r15), %rax
 jae ca_error
 movq 1392(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %r9, %rax
+cmpq %rsi, %rax
 jne .Lca_no_put_14222142222221614222122221613S
 lea (%r13,%r11,1), %rax
 shlq $2, %rax
@@ -156202,7 +155686,7 @@ cmpq 2856(%r15), %rax
 jae ca_error
 movq 1392(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %rsi, %rax
+cmpq %r9, %rax
 je ca_error
 .Lca_no_put_14222142222221614222122221613S:
 lea 1(%r11), %rax
@@ -156234,14 +155718,14 @@ addq $1, %rax
 cmpq 2856(%r15), %rax
 jae ca_error
 movq 1392(%r15), %rcx
-movq %r9, (%rcx,%rax,8)
+movq %rsi, (%rcx,%rax,8)
 movq %r11, %rax
 shlq $2, %rax
 addq $2, %rax
 cmpq 2856(%r15), %rax
 jae ca_error
 movq 1392(%r15), %rcx
-movq %rsi, (%rcx,%rax,8)
+movq %r9, (%rcx,%rax,8)
 movq 96(%rsp), %rax
 movq %r11, %rcx
 shlq $2, %rcx
@@ -156270,21 +155754,15 @@ jbe ca_error
 movq 1392(%r15), %rax
 movq %rbx, 16(%rax)
 movq %rdi, 44648(%r15)
-movq (%rsp), %r9
-movq 8(%rsp), %rsi
-movq %rsi, %r11
-shlq $32, %r11
-xorq %r9, %r11
-movq %rsi, %rax
-shrq $32, %rax
+movq (%rsp), %rsi
+movq 8(%rsp), %r9
+movq $-7046029254386353131, %r11
+imulq %r9, %r11
+lea (%r11,%rsi,1), %rax
 movq $-7046029254386353131, %rcx
 imulq %rcx, %rax
-xorq %rax, %r11
-movq $-7046029254386353131, %rax
-imulq %rax, %r11
+movq %rax, %r11
 movq %r11, %rax
-shrq $32, %rax
-xorq %r11, %rax
 movq %rbx, %rcx
 mulq %rcx
 movq %rdx, %rax
@@ -156308,7 +155786,7 @@ cmpq 2856(%r15), %rax
 jae ca_error
 movq 1392(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %r9, %rax
+cmpq %rsi, %rax
 jne .Lca_no_put_1422214222222222222222221613S
 lea (%r13,%r11,1), %rax
 shlq $2, %rax
@@ -156317,7 +155795,7 @@ cmpq 2856(%r15), %rax
 jae ca_error
 movq 1392(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %rsi, %rax
+cmpq %r9, %rax
 je ca_error
 .Lca_no_put_1422214222222222222222221613S:
 lea 1(%r11), %rax
@@ -156718,19 +156196,13 @@ cmova %rcx, %rax
 subq %rax, %rsi
 .Lca_nsp_find_21522X:
 .Lca_nsp_find_21X:
-movq %r8, %r13
-shlq $32, %r13
-xorq %rdi, %r13
-movq %r8, %rax
-shrq $32, %rax
+movq $-7046029254386353131, %r13
+imulq %r8, %r13
+lea (%r13,%rdi,1), %rax
 movq $-7046029254386353131, %rcx
 imulq %rcx, %rax
-xorq %rax, %r13
-movq $-7046029254386353131, %rax
-imulq %rax, %r13
+movq %rax, %r13
 movq %r13, %rax
-shrq $32, %rax
-xorq %r13, %rax
 movq %rsi, %rcx
 mulq %rcx
 movq %rdx, %rax
@@ -156877,18 +156349,18 @@ movq 992(%r15), %rcx
 movq (%rcx,%rax,8), %rax
 cmpq $-1, %rax
 je .Lca_nsp_put_1422214222222161E
-movq %r10, %r9
-shlq $2, %r9
-addq $1, %r9
-movq 992(%r15), %rax
-movq (%rax,%r9,8), %r9
 movq %r10, %rsi
 shlq $2, %rsi
-addq $2, %rsi
-cmpq 2456(%r15), %rsi
-jae ca_error
+addq $1, %rsi
 movq 992(%r15), %rax
 movq (%rax,%rsi,8), %rsi
+movq %r10, %r9
+shlq $2, %r9
+addq $2, %r9
+cmpq 2456(%r15), %r9
+jae ca_error
+movq 992(%r15), %rax
+movq (%rax,%r9,8), %r9
 movq %r10, %rax
 shlq $2, %rax
 addq $3, %rax
@@ -156897,19 +156369,13 @@ jae ca_error
 movq 992(%r15), %rcx
 movq (%rcx,%rax,8), %rax
 movq %rax, 96(%rsp)
-movq %rsi, %r11
-shlq $32, %r11
-xorq %r9, %r11
-movq %rsi, %rax
-shrq $32, %rax
+movq $-7046029254386353131, %r11
+imulq %r9, %r11
+lea (%r11,%rsi,1), %rax
 movq $-7046029254386353131, %rcx
 imulq %rcx, %rax
-xorq %rax, %r11
-movq $-7046029254386353131, %rax
-imulq %rax, %r11
+movq %rax, %r11
 movq %r11, %rax
-shrq $32, %rax
-xorq %r11, %rax
 movq %rbx, %rcx
 mulq %rcx
 movq %rdx, %rax
@@ -156933,7 +156399,7 @@ cmpq 2456(%r15), %rax
 jae ca_error
 movq 992(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %r9, %rax
+cmpq %rsi, %rax
 jne .Lca_nsp_put_14222142222221614222122221613S
 lea (%r13,%r11,1), %rax
 shlq $2, %rax
@@ -156942,7 +156408,7 @@ cmpq 2456(%r15), %rax
 jae ca_error
 movq 992(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %rsi, %rax
+cmpq %r9, %rax
 je ca_error
 .Lca_nsp_put_14222142222221614222122221613S:
 lea 1(%r11), %rax
@@ -156974,14 +156440,14 @@ addq $1, %rax
 cmpq 2456(%r15), %rax
 jae ca_error
 movq 992(%r15), %rcx
-movq %r9, (%rcx,%rax,8)
+movq %rsi, (%rcx,%rax,8)
 movq %r11, %rax
 shlq $2, %rax
 addq $2, %rax
 cmpq 2456(%r15), %rax
 jae ca_error
 movq 992(%r15), %rcx
-movq %rsi, (%rcx,%rax,8)
+movq %r9, (%rcx,%rax,8)
 movq 96(%rsp), %rax
 movq %r11, %rcx
 shlq $2, %rcx
@@ -157010,21 +156476,15 @@ jbe ca_error
 movq 992(%r15), %rax
 movq %rbx, 16(%rax)
 movq %rdi, 43528(%r15)
-movq (%rsp), %r9
-movq 8(%rsp), %rsi
-movq %rsi, %r11
-shlq $32, %r11
-xorq %r9, %r11
-movq %rsi, %rax
-shrq $32, %rax
+movq (%rsp), %rsi
+movq 8(%rsp), %r9
+movq $-7046029254386353131, %r11
+imulq %r9, %r11
+lea (%r11,%rsi,1), %rax
 movq $-7046029254386353131, %rcx
 imulq %rcx, %rax
-xorq %rax, %r11
-movq $-7046029254386353131, %rax
-imulq %rax, %r11
+movq %rax, %r11
 movq %r11, %rax
-shrq $32, %rax
-xorq %r11, %rax
 movq %rbx, %rcx
 mulq %rcx
 movq %rdx, %rax
@@ -157048,7 +156508,7 @@ cmpq 2456(%r15), %rax
 jae ca_error
 movq 992(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %r9, %rax
+cmpq %rsi, %rax
 jne .Lca_nsp_put_1422214222222222222222221613S
 lea (%r13,%r11,1), %rax
 shlq $2, %rax
@@ -157057,7 +156517,7 @@ cmpq 2456(%r15), %rax
 jae ca_error
 movq 992(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %rsi, %rax
+cmpq %r9, %rax
 je ca_error
 .Lca_nsp_put_1422214222222222222222221613S:
 lea 1(%r11), %rax
@@ -163844,19 +163304,13 @@ cmova %rcx, %rax
 subq %rax, %rsi
 .Lca_pe_find_21522X:
 .Lca_pe_find_21X:
-movq %r8, %r13
-shlq $32, %r13
-xorq %rdi, %r13
-movq %r8, %rax
-shrq $32, %rax
+movq $-7046029254386353131, %r13
+imulq %r8, %r13
+lea (%r13,%rdi,1), %rax
 movq $-7046029254386353131, %rcx
 imulq %rcx, %rax
-xorq %rax, %r13
-movq $-7046029254386353131, %rax
-imulq %rax, %r13
+movq %rax, %r13
 movq %r13, %rax
-shrq $32, %rax
-xorq %r13, %rax
 movq %rsi, %rcx
 mulq %rcx
 movq %rdx, %rax
@@ -164205,18 +163659,18 @@ movq 1312(%r15), %rcx
 movq (%rcx,%rax,8), %rax
 cmpq $-1, %rax
 je .Lca_pe_put_1422214222222161E
-movq %r10, %r9
-shlq $2, %r9
-addq $1, %r9
-movq 1312(%r15), %rax
-movq (%rax,%r9,8), %r9
 movq %r10, %rsi
 shlq $2, %rsi
-addq $2, %rsi
-cmpq 2776(%r15), %rsi
-jae ca_error
+addq $1, %rsi
 movq 1312(%r15), %rax
 movq (%rax,%rsi,8), %rsi
+movq %r10, %r9
+shlq $2, %r9
+addq $2, %r9
+cmpq 2776(%r15), %r9
+jae ca_error
+movq 1312(%r15), %rax
+movq (%rax,%r9,8), %r9
 movq %r10, %rax
 shlq $2, %rax
 addq $3, %rax
@@ -164225,19 +163679,13 @@ jae ca_error
 movq 1312(%r15), %rcx
 movq (%rcx,%rax,8), %rax
 movq %rax, 96(%rsp)
-movq %rsi, %r11
-shlq $32, %r11
-xorq %r9, %r11
-movq %rsi, %rax
-shrq $32, %rax
+movq $-7046029254386353131, %r11
+imulq %r9, %r11
+lea (%r11,%rsi,1), %rax
 movq $-7046029254386353131, %rcx
 imulq %rcx, %rax
-xorq %rax, %r11
-movq $-7046029254386353131, %rax
-imulq %rax, %r11
+movq %rax, %r11
 movq %r11, %rax
-shrq $32, %rax
-xorq %r11, %rax
 movq %rbx, %rcx
 mulq %rcx
 movq %rdx, %rax
@@ -164261,7 +163709,7 @@ cmpq 2776(%r15), %rax
 jae ca_error
 movq 1312(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %r9, %rax
+cmpq %rsi, %rax
 jne .Lca_pe_put_14222142222221614222122221613S
 lea (%r13,%r11,1), %rax
 shlq $2, %rax
@@ -164270,7 +163718,7 @@ cmpq 2776(%r15), %rax
 jae ca_error
 movq 1312(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %rsi, %rax
+cmpq %r9, %rax
 je ca_error
 .Lca_pe_put_14222142222221614222122221613S:
 lea 1(%r11), %rax
@@ -164302,14 +163750,14 @@ addq $1, %rax
 cmpq 2776(%r15), %rax
 jae ca_error
 movq 1312(%r15), %rcx
-movq %r9, (%rcx,%rax,8)
+movq %rsi, (%rcx,%rax,8)
 movq %r11, %rax
 shlq $2, %rax
 addq $2, %rax
 cmpq 2776(%r15), %rax
 jae ca_error
 movq 1312(%r15), %rcx
-movq %rsi, (%rcx,%rax,8)
+movq %r9, (%rcx,%rax,8)
 movq 96(%rsp), %rax
 movq %r11, %rcx
 shlq $2, %rcx
@@ -164338,21 +163786,15 @@ jbe ca_error
 movq 1312(%r15), %rax
 movq %rbx, 16(%rax)
 movq %rdi, 44184(%r15)
-movq (%rsp), %r9
-movq 8(%rsp), %rsi
-movq %rsi, %r11
-shlq $32, %r11
-xorq %r9, %r11
-movq %rsi, %rax
-shrq $32, %rax
+movq (%rsp), %rsi
+movq 8(%rsp), %r9
+movq $-7046029254386353131, %r11
+imulq %r9, %r11
+lea (%r11,%rsi,1), %rax
 movq $-7046029254386353131, %rcx
 imulq %rcx, %rax
-xorq %rax, %r11
-movq $-7046029254386353131, %rax
-imulq %rax, %r11
+movq %rax, %r11
 movq %r11, %rax
-shrq $32, %rax
-xorq %r11, %rax
 movq %rbx, %rcx
 mulq %rcx
 movq %rdx, %rax
@@ -164376,7 +163818,7 @@ cmpq 2776(%r15), %rax
 jae ca_error
 movq 1312(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %r9, %rax
+cmpq %rsi, %rax
 jne .Lca_pe_put_1422214222222222222222221613S
 lea (%r13,%r11,1), %rax
 shlq $2, %rax
@@ -164385,7 +163827,7 @@ cmpq 2776(%r15), %rax
 jae ca_error
 movq 1312(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %rsi, %rax
+cmpq %r9, %rax
 je ca_error
 .Lca_pe_put_1422214222222222222222221613S:
 lea 1(%r11), %rax
@@ -166387,19 +165829,13 @@ cmova %rcx, %rax
 subq %rax, %rsi
 .Lca_pl_find_21522X:
 .Lca_pl_find_21X:
-movq %r8, %r13
-shlq $32, %r13
-xorq %rdi, %r13
-movq %r8, %rax
-shrq $32, %rax
+movq $-7046029254386353131, %r13
+imulq %r8, %r13
+lea (%r13,%rdi,1), %rax
 movq $-7046029254386353131, %rcx
 imulq %rcx, %rax
-xorq %rax, %r13
-movq $-7046029254386353131, %rax
-imulq %rax, %r13
+movq %rax, %r13
 movq %r13, %rax
-shrq $32, %rax
-xorq %r13, %rax
 movq %rsi, %rcx
 mulq %rcx
 movq %rdx, %rax
@@ -166546,18 +165982,18 @@ movq 1296(%r15), %rcx
 movq (%rcx,%rax,8), %rax
 cmpq $-1, %rax
 je .Lca_pl_put_1422214222222161E
-movq %r10, %r9
-shlq $2, %r9
-addq $1, %r9
-movq 1296(%r15), %rax
-movq (%rax,%r9,8), %r9
 movq %r10, %rsi
 shlq $2, %rsi
-addq $2, %rsi
-cmpq 2760(%r15), %rsi
-jae ca_error
+addq $1, %rsi
 movq 1296(%r15), %rax
 movq (%rax,%rsi,8), %rsi
+movq %r10, %r9
+shlq $2, %r9
+addq $2, %r9
+cmpq 2760(%r15), %r9
+jae ca_error
+movq 1296(%r15), %rax
+movq (%rax,%r9,8), %r9
 movq %r10, %rax
 shlq $2, %rax
 addq $3, %rax
@@ -166566,19 +166002,13 @@ jae ca_error
 movq 1296(%r15), %rcx
 movq (%rcx,%rax,8), %rax
 movq %rax, 96(%rsp)
-movq %rsi, %r11
-shlq $32, %r11
-xorq %r9, %r11
-movq %rsi, %rax
-shrq $32, %rax
+movq $-7046029254386353131, %r11
+imulq %r9, %r11
+lea (%r11,%rsi,1), %rax
 movq $-7046029254386353131, %rcx
 imulq %rcx, %rax
-xorq %rax, %r11
-movq $-7046029254386353131, %rax
-imulq %rax, %r11
+movq %rax, %r11
 movq %r11, %rax
-shrq $32, %rax
-xorq %r11, %rax
 movq %rbx, %rcx
 mulq %rcx
 movq %rdx, %rax
@@ -166602,7 +166032,7 @@ cmpq 2760(%r15), %rax
 jae ca_error
 movq 1296(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %r9, %rax
+cmpq %rsi, %rax
 jne .Lca_pl_put_14222142222221614222122221613S
 lea (%r13,%r11,1), %rax
 shlq $2, %rax
@@ -166611,7 +166041,7 @@ cmpq 2760(%r15), %rax
 jae ca_error
 movq 1296(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %rsi, %rax
+cmpq %r9, %rax
 je ca_error
 .Lca_pl_put_14222142222221614222122221613S:
 lea 1(%r11), %rax
@@ -166643,14 +166073,14 @@ addq $1, %rax
 cmpq 2760(%r15), %rax
 jae ca_error
 movq 1296(%r15), %rcx
-movq %r9, (%rcx,%rax,8)
+movq %rsi, (%rcx,%rax,8)
 movq %r11, %rax
 shlq $2, %rax
 addq $2, %rax
 cmpq 2760(%r15), %rax
 jae ca_error
 movq 1296(%r15), %rcx
-movq %rsi, (%rcx,%rax,8)
+movq %r9, (%rcx,%rax,8)
 movq 96(%rsp), %rax
 movq %r11, %rcx
 shlq $2, %rcx
@@ -166679,21 +166109,15 @@ jbe ca_error
 movq 1296(%r15), %rax
 movq %rbx, 16(%rax)
 movq %rdi, 44152(%r15)
-movq (%rsp), %r9
-movq 8(%rsp), %rsi
-movq %rsi, %r11
-shlq $32, %r11
-xorq %r9, %r11
-movq %rsi, %rax
-shrq $32, %rax
+movq (%rsp), %rsi
+movq 8(%rsp), %r9
+movq $-7046029254386353131, %r11
+imulq %r9, %r11
+lea (%r11,%rsi,1), %rax
 movq $-7046029254386353131, %rcx
 imulq %rcx, %rax
-xorq %rax, %r11
-movq $-7046029254386353131, %rax
-imulq %rax, %r11
+movq %rax, %r11
 movq %r11, %rax
-shrq $32, %rax
-xorq %r11, %rax
 movq %rbx, %rcx
 mulq %rcx
 movq %rdx, %rax
@@ -166717,7 +166141,7 @@ cmpq 2760(%r15), %rax
 jae ca_error
 movq 1296(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %r9, %rax
+cmpq %rsi, %rax
 jne .Lca_pl_put_1422214222222222222222221613S
 lea (%r13,%r11,1), %rax
 shlq $2, %rax
@@ -166726,7 +166150,7 @@ cmpq 2760(%r15), %rax
 jae ca_error
 movq 1296(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %rsi, %rax
+cmpq %r9, %rax
 je ca_error
 .Lca_pl_put_1422214222222222222222221613S:
 lea 1(%r11), %rax
@@ -166946,19 +166370,13 @@ cmova %rcx, %rax
 subq %rax, %rsi
 .Lca_pls_find_21522X:
 .Lca_pls_find_21X:
-movq %r8, %r13
-shlq $32, %r13
-xorq %rdi, %r13
-movq %r8, %rax
-shrq $32, %rax
+movq $-7046029254386353131, %r13
+imulq %r8, %r13
+lea (%r13,%rdi,1), %rax
 movq $-7046029254386353131, %rcx
 imulq %rcx, %rax
-xorq %rax, %r13
-movq $-7046029254386353131, %rax
-imulq %rax, %r13
+movq %rax, %r13
 movq %r13, %rax
-shrq $32, %rax
-xorq %r13, %rax
 movq %rsi, %rcx
 mulq %rcx
 movq %rdx, %rax
@@ -167105,18 +166523,18 @@ movq 1304(%r15), %rcx
 movq (%rcx,%rax,8), %rax
 cmpq $-1, %rax
 je .Lca_pls_put_1422214222222161E
-movq %r10, %r9
-shlq $2, %r9
-addq $1, %r9
-movq 1304(%r15), %rax
-movq (%rax,%r9,8), %r9
 movq %r10, %rsi
 shlq $2, %rsi
-addq $2, %rsi
-cmpq 2768(%r15), %rsi
-jae ca_error
+addq $1, %rsi
 movq 1304(%r15), %rax
 movq (%rax,%rsi,8), %rsi
+movq %r10, %r9
+shlq $2, %r9
+addq $2, %r9
+cmpq 2768(%r15), %r9
+jae ca_error
+movq 1304(%r15), %rax
+movq (%rax,%r9,8), %r9
 movq %r10, %rax
 shlq $2, %rax
 addq $3, %rax
@@ -167125,19 +166543,13 @@ jae ca_error
 movq 1304(%r15), %rcx
 movq (%rcx,%rax,8), %rax
 movq %rax, 96(%rsp)
-movq %rsi, %r11
-shlq $32, %r11
-xorq %r9, %r11
-movq %rsi, %rax
-shrq $32, %rax
+movq $-7046029254386353131, %r11
+imulq %r9, %r11
+lea (%r11,%rsi,1), %rax
 movq $-7046029254386353131, %rcx
 imulq %rcx, %rax
-xorq %rax, %r11
-movq $-7046029254386353131, %rax
-imulq %rax, %r11
+movq %rax, %r11
 movq %r11, %rax
-shrq $32, %rax
-xorq %r11, %rax
 movq %rbx, %rcx
 mulq %rcx
 movq %rdx, %rax
@@ -167161,7 +166573,7 @@ cmpq 2768(%r15), %rax
 jae ca_error
 movq 1304(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %r9, %rax
+cmpq %rsi, %rax
 jne .Lca_pls_put_14222142222221614222122221613S
 lea (%r13,%r11,1), %rax
 shlq $2, %rax
@@ -167170,7 +166582,7 @@ cmpq 2768(%r15), %rax
 jae ca_error
 movq 1304(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %rsi, %rax
+cmpq %r9, %rax
 je ca_error
 .Lca_pls_put_14222142222221614222122221613S:
 lea 1(%r11), %rax
@@ -167202,14 +166614,14 @@ addq $1, %rax
 cmpq 2768(%r15), %rax
 jae ca_error
 movq 1304(%r15), %rcx
-movq %r9, (%rcx,%rax,8)
+movq %rsi, (%rcx,%rax,8)
 movq %r11, %rax
 shlq $2, %rax
 addq $2, %rax
 cmpq 2768(%r15), %rax
 jae ca_error
 movq 1304(%r15), %rcx
-movq %rsi, (%rcx,%rax,8)
+movq %r9, (%rcx,%rax,8)
 movq 96(%rsp), %rax
 movq %r11, %rcx
 shlq $2, %rcx
@@ -167238,21 +166650,15 @@ jbe ca_error
 movq 1304(%r15), %rax
 movq %rbx, 16(%rax)
 movq %rdi, 44168(%r15)
-movq (%rsp), %r9
-movq 8(%rsp), %rsi
-movq %rsi, %r11
-shlq $32, %r11
-xorq %r9, %r11
-movq %rsi, %rax
-shrq $32, %rax
+movq (%rsp), %rsi
+movq 8(%rsp), %r9
+movq $-7046029254386353131, %r11
+imulq %r9, %r11
+lea (%r11,%rsi,1), %rax
 movq $-7046029254386353131, %rcx
 imulq %rcx, %rax
-xorq %rax, %r11
-movq $-7046029254386353131, %rax
-imulq %rax, %r11
+movq %rax, %r11
 movq %r11, %rax
-shrq $32, %rax
-xorq %r11, %rax
 movq %rbx, %rcx
 mulq %rcx
 movq %rdx, %rax
@@ -167276,7 +166682,7 @@ cmpq 2768(%r15), %rax
 jae ca_error
 movq 1304(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %r9, %rax
+cmpq %rsi, %rax
 jne .Lca_pls_put_1422214222222222222222221613S
 lea (%r13,%r11,1), %rax
 shlq $2, %rax
@@ -167285,7 +166691,7 @@ cmpq 2768(%r15), %rax
 jae ca_error
 movq 1304(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %rsi, %rax
+cmpq %r9, %rax
 je ca_error
 .Lca_pls_put_1422214222222222222222221613S:
 lea 1(%r11), %rax
@@ -167566,19 +166972,13 @@ cmova %rcx, %rax
 subq %rax, %rsi
 .Lca_pn_find_21522X:
 .Lca_pn_find_21X:
-movq %r8, %r13
-shlq $32, %r13
-xorq %rdi, %r13
-movq %r8, %rax
-shrq $32, %rax
+movq $-7046029254386353131, %r13
+imulq %r8, %r13
+lea (%r13,%rdi,1), %rax
 movq $-7046029254386353131, %rcx
 imulq %rcx, %rax
-xorq %rax, %r13
-movq $-7046029254386353131, %rax
-imulq %rax, %r13
+movq %rax, %r13
 movq %r13, %rax
-shrq $32, %rax
-xorq %r13, %rax
 movq %rsi, %rcx
 mulq %rcx
 movq %rdx, %rax
@@ -167725,18 +167125,18 @@ movq 1288(%r15), %rcx
 movq (%rcx,%rax,8), %rax
 cmpq $-1, %rax
 je .Lca_pn_put_1422214222222161E
-movq %r10, %r9
-shlq $2, %r9
-addq $1, %r9
-movq 1288(%r15), %rax
-movq (%rax,%r9,8), %r9
 movq %r10, %rsi
 shlq $2, %rsi
-addq $2, %rsi
-cmpq 2752(%r15), %rsi
-jae ca_error
+addq $1, %rsi
 movq 1288(%r15), %rax
 movq (%rax,%rsi,8), %rsi
+movq %r10, %r9
+shlq $2, %r9
+addq $2, %r9
+cmpq 2752(%r15), %r9
+jae ca_error
+movq 1288(%r15), %rax
+movq (%rax,%r9,8), %r9
 movq %r10, %rax
 shlq $2, %rax
 addq $3, %rax
@@ -167745,19 +167145,13 @@ jae ca_error
 movq 1288(%r15), %rcx
 movq (%rcx,%rax,8), %rax
 movq %rax, 96(%rsp)
-movq %rsi, %r11
-shlq $32, %r11
-xorq %r9, %r11
-movq %rsi, %rax
-shrq $32, %rax
+movq $-7046029254386353131, %r11
+imulq %r9, %r11
+lea (%r11,%rsi,1), %rax
 movq $-7046029254386353131, %rcx
 imulq %rcx, %rax
-xorq %rax, %r11
-movq $-7046029254386353131, %rax
-imulq %rax, %r11
+movq %rax, %r11
 movq %r11, %rax
-shrq $32, %rax
-xorq %r11, %rax
 movq %rbx, %rcx
 mulq %rcx
 movq %rdx, %rax
@@ -167781,7 +167175,7 @@ cmpq 2752(%r15), %rax
 jae ca_error
 movq 1288(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %r9, %rax
+cmpq %rsi, %rax
 jne .Lca_pn_put_14222142222221614222122221613S
 lea (%r13,%r11,1), %rax
 shlq $2, %rax
@@ -167790,7 +167184,7 @@ cmpq 2752(%r15), %rax
 jae ca_error
 movq 1288(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %rsi, %rax
+cmpq %r9, %rax
 je ca_error
 .Lca_pn_put_14222142222221614222122221613S:
 lea 1(%r11), %rax
@@ -167822,14 +167216,14 @@ addq $1, %rax
 cmpq 2752(%r15), %rax
 jae ca_error
 movq 1288(%r15), %rcx
-movq %r9, (%rcx,%rax,8)
+movq %rsi, (%rcx,%rax,8)
 movq %r11, %rax
 shlq $2, %rax
 addq $2, %rax
 cmpq 2752(%r15), %rax
 jae ca_error
 movq 1288(%r15), %rcx
-movq %rsi, (%rcx,%rax,8)
+movq %r9, (%rcx,%rax,8)
 movq 96(%rsp), %rax
 movq %r11, %rcx
 shlq $2, %rcx
@@ -167858,21 +167252,15 @@ jbe ca_error
 movq 1288(%r15), %rax
 movq %rbx, 16(%rax)
 movq %rdi, 44136(%r15)
-movq (%rsp), %r9
-movq 8(%rsp), %rsi
-movq %rsi, %r11
-shlq $32, %r11
-xorq %r9, %r11
-movq %rsi, %rax
-shrq $32, %rax
+movq (%rsp), %rsi
+movq 8(%rsp), %r9
+movq $-7046029254386353131, %r11
+imulq %r9, %r11
+lea (%r11,%rsi,1), %rax
 movq $-7046029254386353131, %rcx
 imulq %rcx, %rax
-xorq %rax, %r11
-movq $-7046029254386353131, %rax
-imulq %rax, %r11
+movq %rax, %r11
 movq %r11, %rax
-shrq $32, %rax
-xorq %r11, %rax
 movq %rbx, %rcx
 mulq %rcx
 movq %rdx, %rax
@@ -167896,7 +167284,7 @@ cmpq 2752(%r15), %rax
 jae ca_error
 movq 1288(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %r9, %rax
+cmpq %rsi, %rax
 jne .Lca_pn_put_1422214222222222222222221613S
 lea (%r13,%r11,1), %rax
 shlq $2, %rax
@@ -167905,7 +167293,7 @@ cmpq 2752(%r15), %rax
 jae ca_error
 movq 1288(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %rsi, %rax
+cmpq %r9, %rax
 je ca_error
 .Lca_pn_put_1422214222222222222222221613S:
 lea 1(%r11), %rax
@@ -172729,19 +172117,13 @@ cmova %rcx, %rax
 subq %rax, %rsi
 .Lca_ra_find_21522X:
 .Lca_ra_find_21X:
-movq %r8, %r13
-shlq $32, %r13
-xorq %rdi, %r13
-movq %r8, %rax
-shrq $32, %rax
+movq $-7046029254386353131, %r13
+imulq %r8, %r13
+lea (%r13,%rdi,1), %rax
 movq $-7046029254386353131, %rcx
 imulq %rcx, %rax
-xorq %rax, %r13
-movq $-7046029254386353131, %rax
-imulq %rax, %r13
+movq %rax, %r13
 movq %r13, %rax
-shrq $32, %rax
-xorq %r13, %rax
 movq %rsi, %rcx
 mulq %rcx
 movq %rdx, %rax
@@ -172888,18 +172270,18 @@ movq 1416(%r15), %rcx
 movq (%rcx,%rax,8), %rax
 cmpq $-1, %rax
 je .Lca_ra_put_1422214222222161E
-movq %r10, %r9
-shlq $2, %r9
-addq $1, %r9
-movq 1416(%r15), %rax
-movq (%rax,%r9,8), %r9
 movq %r10, %rsi
 shlq $2, %rsi
-addq $2, %rsi
-cmpq 2880(%r15), %rsi
-jae ca_error
+addq $1, %rsi
 movq 1416(%r15), %rax
 movq (%rax,%rsi,8), %rsi
+movq %r10, %r9
+shlq $2, %r9
+addq $2, %r9
+cmpq 2880(%r15), %r9
+jae ca_error
+movq 1416(%r15), %rax
+movq (%rax,%r9,8), %r9
 movq %r10, %rax
 shlq $2, %rax
 addq $3, %rax
@@ -172908,19 +172290,13 @@ jae ca_error
 movq 1416(%r15), %rcx
 movq (%rcx,%rax,8), %rax
 movq %rax, 96(%rsp)
-movq %rsi, %r11
-shlq $32, %r11
-xorq %r9, %r11
-movq %rsi, %rax
-shrq $32, %rax
+movq $-7046029254386353131, %r11
+imulq %r9, %r11
+lea (%r11,%rsi,1), %rax
 movq $-7046029254386353131, %rcx
 imulq %rcx, %rax
-xorq %rax, %r11
-movq $-7046029254386353131, %rax
-imulq %rax, %r11
+movq %rax, %r11
 movq %r11, %rax
-shrq $32, %rax
-xorq %r11, %rax
 movq %rbx, %rcx
 mulq %rcx
 movq %rdx, %rax
@@ -172944,7 +172320,7 @@ cmpq 2880(%r15), %rax
 jae ca_error
 movq 1416(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %r9, %rax
+cmpq %rsi, %rax
 jne .Lca_ra_put_14222142222221614222122221613S
 lea (%r13,%r11,1), %rax
 shlq $2, %rax
@@ -172953,7 +172329,7 @@ cmpq 2880(%r15), %rax
 jae ca_error
 movq 1416(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %rsi, %rax
+cmpq %r9, %rax
 je ca_error
 .Lca_ra_put_14222142222221614222122221613S:
 lea 1(%r11), %rax
@@ -172985,14 +172361,14 @@ addq $1, %rax
 cmpq 2880(%r15), %rax
 jae ca_error
 movq 1416(%r15), %rcx
-movq %r9, (%rcx,%rax,8)
+movq %rsi, (%rcx,%rax,8)
 movq %r11, %rax
 shlq $2, %rax
 addq $2, %rax
 cmpq 2880(%r15), %rax
 jae ca_error
 movq 1416(%r15), %rcx
-movq %rsi, (%rcx,%rax,8)
+movq %r9, (%rcx,%rax,8)
 movq 96(%rsp), %rax
 movq %r11, %rcx
 shlq $2, %rcx
@@ -173021,21 +172397,15 @@ jbe ca_error
 movq 1416(%r15), %rax
 movq %rbx, 16(%rax)
 movq %rdi, 44696(%r15)
-movq (%rsp), %r9
-movq 8(%rsp), %rsi
-movq %rsi, %r11
-shlq $32, %r11
-xorq %r9, %r11
-movq %rsi, %rax
-shrq $32, %rax
+movq (%rsp), %rsi
+movq 8(%rsp), %r9
+movq $-7046029254386353131, %r11
+imulq %r9, %r11
+lea (%r11,%rsi,1), %rax
 movq $-7046029254386353131, %rcx
 imulq %rcx, %rax
-xorq %rax, %r11
-movq $-7046029254386353131, %rax
-imulq %rax, %r11
+movq %rax, %r11
 movq %r11, %rax
-shrq $32, %rax
-xorq %r11, %rax
 movq %rbx, %rcx
 mulq %rcx
 movq %rdx, %rax
@@ -173059,7 +172429,7 @@ cmpq 2880(%r15), %rax
 jae ca_error
 movq 1416(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %r9, %rax
+cmpq %rsi, %rax
 jne .Lca_ra_put_1422214222222222222222221613S
 lea (%r13,%r11,1), %rax
 shlq $2, %rax
@@ -173068,7 +172438,7 @@ cmpq 2880(%r15), %rax
 jae ca_error
 movq 1416(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %rsi, %rax
+cmpq %r9, %rax
 je ca_error
 .Lca_ra_put_1422214222222222222222221613S:
 lea 1(%r11), %rax
@@ -179275,19 +178645,13 @@ cmova %rcx, %rax
 subq %rax, %rsi
 .Lca_rf_find_21522X:
 .Lca_rf_find_21X:
-movq %r8, %r13
-shlq $32, %r13
-xorq %rdi, %r13
-movq %r8, %rax
-shrq $32, %rax
+movq $-7046029254386353131, %r13
+imulq %r8, %r13
+lea (%r13,%rdi,1), %rax
 movq $-7046029254386353131, %rcx
 imulq %rcx, %rax
-xorq %rax, %r13
-movq $-7046029254386353131, %rax
-imulq %rax, %r13
+movq %rax, %r13
 movq %r13, %rax
-shrq $32, %rax
-xorq %r13, %rax
 movq %rsi, %rcx
 mulq %rcx
 movq %rdx, %rax
@@ -179434,18 +178798,18 @@ movq 1408(%r15), %rcx
 movq (%rcx,%rax,8), %rax
 cmpq $-1, %rax
 je .Lca_rf_put_1422214222222161E
-movq %r10, %r9
-shlq $2, %r9
-addq $1, %r9
-movq 1408(%r15), %rax
-movq (%rax,%r9,8), %r9
 movq %r10, %rsi
 shlq $2, %rsi
-addq $2, %rsi
-cmpq 2872(%r15), %rsi
-jae ca_error
+addq $1, %rsi
 movq 1408(%r15), %rax
 movq (%rax,%rsi,8), %rsi
+movq %r10, %r9
+shlq $2, %r9
+addq $2, %r9
+cmpq 2872(%r15), %r9
+jae ca_error
+movq 1408(%r15), %rax
+movq (%rax,%r9,8), %r9
 movq %r10, %rax
 shlq $2, %rax
 addq $3, %rax
@@ -179454,19 +178818,13 @@ jae ca_error
 movq 1408(%r15), %rcx
 movq (%rcx,%rax,8), %rax
 movq %rax, 96(%rsp)
-movq %rsi, %r11
-shlq $32, %r11
-xorq %r9, %r11
-movq %rsi, %rax
-shrq $32, %rax
+movq $-7046029254386353131, %r11
+imulq %r9, %r11
+lea (%r11,%rsi,1), %rax
 movq $-7046029254386353131, %rcx
 imulq %rcx, %rax
-xorq %rax, %r11
-movq $-7046029254386353131, %rax
-imulq %rax, %r11
+movq %rax, %r11
 movq %r11, %rax
-shrq $32, %rax
-xorq %r11, %rax
 movq %rbx, %rcx
 mulq %rcx
 movq %rdx, %rax
@@ -179490,7 +178848,7 @@ cmpq 2872(%r15), %rax
 jae ca_error
 movq 1408(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %r9, %rax
+cmpq %rsi, %rax
 jne .Lca_rf_put_14222142222221614222122221613S
 lea (%r13,%r11,1), %rax
 shlq $2, %rax
@@ -179499,7 +178857,7 @@ cmpq 2872(%r15), %rax
 jae ca_error
 movq 1408(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %rsi, %rax
+cmpq %r9, %rax
 je ca_error
 .Lca_rf_put_14222142222221614222122221613S:
 lea 1(%r11), %rax
@@ -179531,14 +178889,14 @@ addq $1, %rax
 cmpq 2872(%r15), %rax
 jae ca_error
 movq 1408(%r15), %rcx
-movq %r9, (%rcx,%rax,8)
+movq %rsi, (%rcx,%rax,8)
 movq %r11, %rax
 shlq $2, %rax
 addq $2, %rax
 cmpq 2872(%r15), %rax
 jae ca_error
 movq 1408(%r15), %rcx
-movq %rsi, (%rcx,%rax,8)
+movq %r9, (%rcx,%rax,8)
 movq 96(%rsp), %rax
 movq %r11, %rcx
 shlq $2, %rcx
@@ -179567,21 +178925,15 @@ jbe ca_error
 movq 1408(%r15), %rax
 movq %rbx, 16(%rax)
 movq %rdi, 44680(%r15)
-movq (%rsp), %r9
-movq 8(%rsp), %rsi
-movq %rsi, %r11
-shlq $32, %r11
-xorq %r9, %r11
-movq %rsi, %rax
-shrq $32, %rax
+movq (%rsp), %rsi
+movq 8(%rsp), %r9
+movq $-7046029254386353131, %r11
+imulq %r9, %r11
+lea (%r11,%rsi,1), %rax
 movq $-7046029254386353131, %rcx
 imulq %rcx, %rax
-xorq %rax, %r11
-movq $-7046029254386353131, %rax
-imulq %rax, %r11
+movq %rax, %r11
 movq %r11, %rax
-shrq $32, %rax
-xorq %r11, %rax
 movq %rbx, %rcx
 mulq %rcx
 movq %rdx, %rax
@@ -179605,7 +178957,7 @@ cmpq 2872(%r15), %rax
 jae ca_error
 movq 1408(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %r9, %rax
+cmpq %rsi, %rax
 jne .Lca_rf_put_1422214222222222222222221613S
 lea (%r13,%r11,1), %rax
 shlq $2, %rax
@@ -179614,7 +178966,7 @@ cmpq 2872(%r15), %rax
 jae ca_error
 movq 1408(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %rsi, %rax
+cmpq %r9, %rax
 je ca_error
 .Lca_rf_put_1422214222222222222222221613S:
 lea 1(%r11), %rax
@@ -181756,19 +181108,13 @@ cmova %rcx, %rax
 subq %rax, %rsi
 .Lca_rr_find_21522X:
 .Lca_rr_find_21X:
-movq %r8, %r13
-shlq $32, %r13
-xorq %rdi, %r13
-movq %r8, %rax
-shrq $32, %rax
+movq $-7046029254386353131, %r13
+imulq %r8, %r13
+lea (%r13,%rdi,1), %rax
 movq $-7046029254386353131, %rcx
 imulq %rcx, %rax
-xorq %rax, %r13
-movq $-7046029254386353131, %rax
-imulq %rax, %r13
+movq %rax, %r13
 movq %r13, %rax
-shrq $32, %rax
-xorq %r13, %rax
 movq %rsi, %rcx
 mulq %rcx
 movq %rdx, %rax
@@ -181909,18 +181255,18 @@ movq 1096(%r15), %rcx
 movq (%rcx,%rax,8), %rax
 cmpq $-1, %rax
 je .Lca_rr_put_1422214222222161E
-movq %r10, %r9
-shlq $2, %r9
-addq $1, %r9
-movq 1096(%r15), %rax
-movq (%rax,%r9,8), %r9
 movq %r10, %rsi
 shlq $2, %rsi
-addq $2, %rsi
-cmpq 2560(%r15), %rsi
-jae ca_error
+addq $1, %rsi
 movq 1096(%r15), %rax
 movq (%rax,%rsi,8), %rsi
+movq %r10, %r9
+shlq $2, %r9
+addq $2, %r9
+cmpq 2560(%r15), %r9
+jae ca_error
+movq 1096(%r15), %rax
+movq (%rax,%r9,8), %r9
 movq %r10, %rax
 shlq $2, %rax
 addq $3, %rax
@@ -181929,19 +181275,13 @@ jae ca_error
 movq 1096(%r15), %rcx
 movq (%rcx,%rax,8), %rax
 movq %rax, 96(%rsp)
-movq %rsi, %r11
-shlq $32, %r11
-xorq %r9, %r11
-movq %rsi, %rax
-shrq $32, %rax
+movq $-7046029254386353131, %r11
+imulq %r9, %r11
+lea (%r11,%rsi,1), %rax
 movq $-7046029254386353131, %rcx
 imulq %rcx, %rax
-xorq %rax, %r11
-movq $-7046029254386353131, %rax
-imulq %rax, %r11
+movq %rax, %r11
 movq %r11, %rax
-shrq $32, %rax
-xorq %r11, %rax
 movq %rbx, %rcx
 mulq %rcx
 movq %rdx, %rax
@@ -181965,7 +181305,7 @@ cmpq 2560(%r15), %rax
 jae ca_error
 movq 1096(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %r9, %rax
+cmpq %rsi, %rax
 jne .Lca_rr_put_14222142222221614222122221613S
 lea (%r13,%r11,1), %rax
 shlq $2, %rax
@@ -181974,7 +181314,7 @@ cmpq 2560(%r15), %rax
 jae ca_error
 movq 1096(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %rsi, %rax
+cmpq %r9, %rax
 je ca_error
 .Lca_rr_put_14222142222221614222122221613S:
 lea 1(%r11), %rax
@@ -182006,14 +181346,14 @@ addq $1, %rax
 cmpq 2560(%r15), %rax
 jae ca_error
 movq 1096(%r15), %rcx
-movq %r9, (%rcx,%rax,8)
+movq %rsi, (%rcx,%rax,8)
 movq %r11, %rax
 shlq $2, %rax
 addq $2, %rax
 cmpq 2560(%r15), %rax
 jae ca_error
 movq 1096(%r15), %rcx
-movq %rsi, (%rcx,%rax,8)
+movq %r9, (%rcx,%rax,8)
 movq 96(%rsp), %rax
 movq %r11, %rcx
 shlq $2, %rcx
@@ -182038,21 +181378,15 @@ movq %r13, 8(%rax)
 movq 1096(%r15), %rax
 movq %rbx, 16(%rax)
 movq %rdi, 43912(%r15)
-movq (%rsp), %r9
-movq 8(%rsp), %rsi
-movq %rsi, %r11
-shlq $32, %r11
-xorq %r9, %r11
-movq %rsi, %rax
-shrq $32, %rax
+movq (%rsp), %rsi
+movq 8(%rsp), %r9
+movq $-7046029254386353131, %r11
+imulq %r9, %r11
+lea (%r11,%rsi,1), %rax
 movq $-7046029254386353131, %rcx
 imulq %rcx, %rax
-xorq %rax, %r11
-movq $-7046029254386353131, %rax
-imulq %rax, %r11
+movq %rax, %r11
 movq %r11, %rax
-shrq $32, %rax
-xorq %r11, %rax
 movq %rbx, %rcx
 mulq %rcx
 movq %rdx, %rax
@@ -182076,7 +181410,7 @@ cmpq 2560(%r15), %rax
 jae ca_error
 movq 1096(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %r9, %rax
+cmpq %rsi, %rax
 jne .Lca_rr_put_1422214222222222222222221613S
 lea (%r13,%r11,1), %rax
 shlq $2, %rax
@@ -182085,7 +181419,7 @@ cmpq 2560(%r15), %rax
 jae ca_error
 movq 1096(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %rsi, %rax
+cmpq %r9, %rax
 je ca_error
 .Lca_rr_put_1422214222222222222222221613S:
 lea 1(%r11), %rax
@@ -182199,19 +181533,13 @@ cmova %rcx, %rax
 subq %rax, %rsi
 .Lca_rset_find_21522X:
 .Lca_rset_find_21X:
-movq %r8, %r13
-shlq $32, %r13
-xorq %rdi, %r13
-movq %r8, %rax
-shrq $32, %rax
+movq $-7046029254386353131, %r13
+imulq %r8, %r13
+lea (%r13,%rdi,1), %rax
 movq $-7046029254386353131, %rcx
 imulq %rcx, %rax
-xorq %rax, %r13
-movq $-7046029254386353131, %rax
-imulq %rax, %r13
+movq %rax, %r13
 movq %r13, %rax
-shrq $32, %rax
-xorq %r13, %rax
 movq %rsi, %rcx
 mulq %rcx
 movq %rdx, %rax
@@ -182358,18 +181686,18 @@ movq 1320(%r15), %rcx
 movq (%rcx,%rax,8), %rax
 cmpq $-1, %rax
 je .Lca_rset_put_1422214222222161E
-movq %r10, %r9
-shlq $2, %r9
-addq $1, %r9
-movq 1320(%r15), %rax
-movq (%rax,%r9,8), %r9
 movq %r10, %rsi
 shlq $2, %rsi
-addq $2, %rsi
-cmpq 2784(%r15), %rsi
-jae ca_error
+addq $1, %rsi
 movq 1320(%r15), %rax
 movq (%rax,%rsi,8), %rsi
+movq %r10, %r9
+shlq $2, %r9
+addq $2, %r9
+cmpq 2784(%r15), %r9
+jae ca_error
+movq 1320(%r15), %rax
+movq (%rax,%r9,8), %r9
 movq %r10, %rax
 shlq $2, %rax
 addq $3, %rax
@@ -182378,19 +181706,13 @@ jae ca_error
 movq 1320(%r15), %rcx
 movq (%rcx,%rax,8), %rax
 movq %rax, 96(%rsp)
-movq %rsi, %r11
-shlq $32, %r11
-xorq %r9, %r11
-movq %rsi, %rax
-shrq $32, %rax
+movq $-7046029254386353131, %r11
+imulq %r9, %r11
+lea (%r11,%rsi,1), %rax
 movq $-7046029254386353131, %rcx
 imulq %rcx, %rax
-xorq %rax, %r11
-movq $-7046029254386353131, %rax
-imulq %rax, %r11
+movq %rax, %r11
 movq %r11, %rax
-shrq $32, %rax
-xorq %r11, %rax
 movq %rbx, %rcx
 mulq %rcx
 movq %rdx, %rax
@@ -182414,7 +181736,7 @@ cmpq 2784(%r15), %rax
 jae ca_error
 movq 1320(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %r9, %rax
+cmpq %rsi, %rax
 jne .Lca_rset_put_14222142222221614222122221613S
 lea (%r13,%r11,1), %rax
 shlq $2, %rax
@@ -182423,7 +181745,7 @@ cmpq 2784(%r15), %rax
 jae ca_error
 movq 1320(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %rsi, %rax
+cmpq %r9, %rax
 je ca_error
 .Lca_rset_put_14222142222221614222122221613S:
 lea 1(%r11), %rax
@@ -182455,14 +181777,14 @@ addq $1, %rax
 cmpq 2784(%r15), %rax
 jae ca_error
 movq 1320(%r15), %rcx
-movq %r9, (%rcx,%rax,8)
+movq %rsi, (%rcx,%rax,8)
 movq %r11, %rax
 shlq $2, %rax
 addq $2, %rax
 cmpq 2784(%r15), %rax
 jae ca_error
 movq 1320(%r15), %rcx
-movq %rsi, (%rcx,%rax,8)
+movq %r9, (%rcx,%rax,8)
 movq 96(%rsp), %rax
 movq %r11, %rcx
 shlq $2, %rcx
@@ -182491,21 +181813,15 @@ jbe ca_error
 movq 1320(%r15), %rax
 movq %rbx, 16(%rax)
 movq %rdi, 44200(%r15)
-movq (%rsp), %r9
-movq 8(%rsp), %rsi
-movq %rsi, %r11
-shlq $32, %r11
-xorq %r9, %r11
-movq %rsi, %rax
-shrq $32, %rax
+movq (%rsp), %rsi
+movq 8(%rsp), %r9
+movq $-7046029254386353131, %r11
+imulq %r9, %r11
+lea (%r11,%rsi,1), %rax
 movq $-7046029254386353131, %rcx
 imulq %rcx, %rax
-xorq %rax, %r11
-movq $-7046029254386353131, %rax
-imulq %rax, %r11
+movq %rax, %r11
 movq %r11, %rax
-shrq $32, %rax
-xorq %r11, %rax
 movq %rbx, %rcx
 mulq %rcx
 movq %rdx, %rax
@@ -182529,7 +181845,7 @@ cmpq 2784(%r15), %rax
 jae ca_error
 movq 1320(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %r9, %rax
+cmpq %rsi, %rax
 jne .Lca_rset_put_1422214222222222222222221613S
 lea (%r13,%r11,1), %rax
 shlq $2, %rax
@@ -182538,7 +181854,7 @@ cmpq 2784(%r15), %rax
 jae ca_error
 movq 1320(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %rsi, %rax
+cmpq %r9, %rax
 je ca_error
 .Lca_rset_put_1422214222222222222222221613S:
 lea 1(%r11), %rax
@@ -199214,19 +198530,13 @@ cmova %rcx, %rax
 subq %rax, %rsi
 .Lca_ta_find_21522X:
 .Lca_ta_find_21X:
-movq %r8, %r13
-shlq $32, %r13
-xorq %rdi, %r13
-movq %r8, %rax
-shrq $32, %rax
+movq $-7046029254386353131, %r13
+imulq %r8, %r13
+lea (%r13,%rdi,1), %rax
 movq $-7046029254386353131, %rcx
 imulq %rcx, %rax
-xorq %rax, %r13
-movq $-7046029254386353131, %rax
-imulq %rax, %r13
+movq %rax, %r13
 movq %r13, %rax
-shrq $32, %rax
-xorq %r13, %rax
 movq %rsi, %rcx
 mulq %rcx
 movq %rdx, %rax
@@ -199373,18 +198683,18 @@ movq 1424(%r15), %rcx
 movq (%rcx,%rax,8), %rax
 cmpq $-1, %rax
 je .Lca_ta_put_1422214222222161E
-movq %r10, %r9
-shlq $2, %r9
-addq $1, %r9
-movq 1424(%r15), %rax
-movq (%rax,%r9,8), %r9
 movq %r10, %rsi
 shlq $2, %rsi
-addq $2, %rsi
-cmpq 2888(%r15), %rsi
-jae ca_error
+addq $1, %rsi
 movq 1424(%r15), %rax
 movq (%rax,%rsi,8), %rsi
+movq %r10, %r9
+shlq $2, %r9
+addq $2, %r9
+cmpq 2888(%r15), %r9
+jae ca_error
+movq 1424(%r15), %rax
+movq (%rax,%r9,8), %r9
 movq %r10, %rax
 shlq $2, %rax
 addq $3, %rax
@@ -199393,19 +198703,13 @@ jae ca_error
 movq 1424(%r15), %rcx
 movq (%rcx,%rax,8), %rax
 movq %rax, 96(%rsp)
-movq %rsi, %r11
-shlq $32, %r11
-xorq %r9, %r11
-movq %rsi, %rax
-shrq $32, %rax
+movq $-7046029254386353131, %r11
+imulq %r9, %r11
+lea (%r11,%rsi,1), %rax
 movq $-7046029254386353131, %rcx
 imulq %rcx, %rax
-xorq %rax, %r11
-movq $-7046029254386353131, %rax
-imulq %rax, %r11
+movq %rax, %r11
 movq %r11, %rax
-shrq $32, %rax
-xorq %r11, %rax
 movq %rbx, %rcx
 mulq %rcx
 movq %rdx, %rax
@@ -199429,7 +198733,7 @@ cmpq 2888(%r15), %rax
 jae ca_error
 movq 1424(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %r9, %rax
+cmpq %rsi, %rax
 jne .Lca_ta_put_14222142222221614222122221613S
 lea (%r13,%r11,1), %rax
 shlq $2, %rax
@@ -199438,7 +198742,7 @@ cmpq 2888(%r15), %rax
 jae ca_error
 movq 1424(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %rsi, %rax
+cmpq %r9, %rax
 je ca_error
 .Lca_ta_put_14222142222221614222122221613S:
 lea 1(%r11), %rax
@@ -199470,14 +198774,14 @@ addq $1, %rax
 cmpq 2888(%r15), %rax
 jae ca_error
 movq 1424(%r15), %rcx
-movq %r9, (%rcx,%rax,8)
+movq %rsi, (%rcx,%rax,8)
 movq %r11, %rax
 shlq $2, %rax
 addq $2, %rax
 cmpq 2888(%r15), %rax
 jae ca_error
 movq 1424(%r15), %rcx
-movq %rsi, (%rcx,%rax,8)
+movq %r9, (%rcx,%rax,8)
 movq 96(%rsp), %rax
 movq %r11, %rcx
 shlq $2, %rcx
@@ -199506,21 +198810,15 @@ jbe ca_error
 movq 1424(%r15), %rax
 movq %rbx, 16(%rax)
 movq %rdi, 44712(%r15)
-movq (%rsp), %r9
-movq 8(%rsp), %rsi
-movq %rsi, %r11
-shlq $32, %r11
-xorq %r9, %r11
-movq %rsi, %rax
-shrq $32, %rax
+movq (%rsp), %rsi
+movq 8(%rsp), %r9
+movq $-7046029254386353131, %r11
+imulq %r9, %r11
+lea (%r11,%rsi,1), %rax
 movq $-7046029254386353131, %rcx
 imulq %rcx, %rax
-xorq %rax, %r11
-movq $-7046029254386353131, %rax
-imulq %rax, %r11
+movq %rax, %r11
 movq %r11, %rax
-shrq $32, %rax
-xorq %r11, %rax
 movq %rbx, %rcx
 mulq %rcx
 movq %rdx, %rax
@@ -199544,7 +198842,7 @@ cmpq 2888(%r15), %rax
 jae ca_error
 movq 1424(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %r9, %rax
+cmpq %rsi, %rax
 jne .Lca_ta_put_1422214222222222222222221613S
 lea (%r13,%r11,1), %rax
 shlq $2, %rax
@@ -199553,7 +198851,7 @@ cmpq 2888(%r15), %rax
 jae ca_error
 movq 1424(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %rsi, %rax
+cmpq %r9, %rax
 je ca_error
 .Lca_ta_put_1422214222222222222222221613S:
 lea 1(%r11), %rax
@@ -207416,19 +206714,13 @@ cmova %rcx, %rax
 subq %rax, %rsi
 .Lca_wc_find_21522X:
 .Lca_wc_find_21X:
-movq %r8, %r13
-shlq $32, %r13
-xorq %rdi, %r13
-movq %r8, %rax
-shrq $32, %rax
+movq $-7046029254386353131, %r13
+imulq %r8, %r13
+lea (%r13,%rdi,1), %rax
 movq $-7046029254386353131, %rcx
 imulq %rcx, %rax
-xorq %rax, %r13
-movq $-7046029254386353131, %rax
-imulq %rax, %r13
+movq %rax, %r13
 movq %r13, %rax
-shrq $32, %rax
-xorq %r13, %rax
 movq %rsi, %rcx
 mulq %rcx
 movq %rdx, %rax
@@ -207569,18 +206861,18 @@ movq 1032(%r15), %rcx
 movq (%rcx,%rax,8), %rax
 cmpq $-1, %rax
 je .Lca_wc_put_1422214222222161E
-movq %r10, %r9
-shlq $2, %r9
-addq $1, %r9
-movq 1032(%r15), %rax
-movq (%rax,%r9,8), %r9
 movq %r10, %rsi
 shlq $2, %rsi
-addq $2, %rsi
-cmpq 2496(%r15), %rsi
-jae ca_error
+addq $1, %rsi
 movq 1032(%r15), %rax
 movq (%rax,%rsi,8), %rsi
+movq %r10, %r9
+shlq $2, %r9
+addq $2, %r9
+cmpq 2496(%r15), %r9
+jae ca_error
+movq 1032(%r15), %rax
+movq (%rax,%r9,8), %r9
 movq %r10, %rax
 shlq $2, %rax
 addq $3, %rax
@@ -207589,19 +206881,13 @@ jae ca_error
 movq 1032(%r15), %rcx
 movq (%rcx,%rax,8), %rax
 movq %rax, 96(%rsp)
-movq %rsi, %r11
-shlq $32, %r11
-xorq %r9, %r11
-movq %rsi, %rax
-shrq $32, %rax
+movq $-7046029254386353131, %r11
+imulq %r9, %r11
+lea (%r11,%rsi,1), %rax
 movq $-7046029254386353131, %rcx
 imulq %rcx, %rax
-xorq %rax, %r11
-movq $-7046029254386353131, %rax
-imulq %rax, %r11
+movq %rax, %r11
 movq %r11, %rax
-shrq $32, %rax
-xorq %r11, %rax
 movq %rbx, %rcx
 mulq %rcx
 movq %rdx, %rax
@@ -207625,7 +206911,7 @@ cmpq 2496(%r15), %rax
 jae ca_error
 movq 1032(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %r9, %rax
+cmpq %rsi, %rax
 jne .Lca_wc_put_14222142222221614222122221613S
 lea (%r13,%r11,1), %rax
 shlq $2, %rax
@@ -207634,7 +206920,7 @@ cmpq 2496(%r15), %rax
 jae ca_error
 movq 1032(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %rsi, %rax
+cmpq %r9, %rax
 je ca_error
 .Lca_wc_put_14222142222221614222122221613S:
 lea 1(%r11), %rax
@@ -207666,14 +206952,14 @@ addq $1, %rax
 cmpq 2496(%r15), %rax
 jae ca_error
 movq 1032(%r15), %rcx
-movq %r9, (%rcx,%rax,8)
+movq %rsi, (%rcx,%rax,8)
 movq %r11, %rax
 shlq $2, %rax
 addq $2, %rax
 cmpq 2496(%r15), %rax
 jae ca_error
 movq 1032(%r15), %rcx
-movq %rsi, (%rcx,%rax,8)
+movq %r9, (%rcx,%rax,8)
 movq 96(%rsp), %rax
 movq %r11, %rcx
 shlq $2, %rcx
@@ -207698,21 +206984,15 @@ movq %r13, 8(%rax)
 movq 1032(%r15), %rax
 movq %rbx, 16(%rax)
 movq %rdi, 43784(%r15)
-movq (%rsp), %r9
-movq 8(%rsp), %rsi
-movq %rsi, %r11
-shlq $32, %r11
-xorq %r9, %r11
-movq %rsi, %rax
-shrq $32, %rax
+movq (%rsp), %rsi
+movq 8(%rsp), %r9
+movq $-7046029254386353131, %r11
+imulq %r9, %r11
+lea (%r11,%rsi,1), %rax
 movq $-7046029254386353131, %rcx
 imulq %rcx, %rax
-xorq %rax, %r11
-movq $-7046029254386353131, %rax
-imulq %rax, %r11
+movq %rax, %r11
 movq %r11, %rax
-shrq $32, %rax
-xorq %r11, %rax
 movq %rbx, %rcx
 mulq %rcx
 movq %rdx, %rax
@@ -207736,7 +207016,7 @@ cmpq 2496(%r15), %rax
 jae ca_error
 movq 1032(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %r9, %rax
+cmpq %rsi, %rax
 jne .Lca_wc_put_1422214222222222222222221613S
 lea (%r13,%r11,1), %rax
 shlq $2, %rax
@@ -207745,7 +207025,7 @@ cmpq 2496(%r15), %rax
 jae ca_error
 movq 1032(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %rsi, %rax
+cmpq %r9, %rax
 je ca_error
 .Lca_wc_put_1422214222222222222222221613S:
 lea 1(%r11), %rax
@@ -207853,19 +207133,13 @@ cmova %rcx, %rax
 subq %rax, %rsi
 .Lca_wh_find_21522X:
 .Lca_wh_find_21X:
-movq %r8, %r13
-shlq $32, %r13
-xorq %rdi, %r13
-movq %r8, %rax
-shrq $32, %rax
+movq $-7046029254386353131, %r13
+imulq %r8, %r13
+lea (%r13,%rdi,1), %rax
 movq $-7046029254386353131, %rcx
 imulq %rcx, %rax
-xorq %rax, %r13
-movq $-7046029254386353131, %rax
-imulq %rax, %r13
+movq %rax, %r13
 movq %r13, %rax
-shrq $32, %rax
-xorq %r13, %rax
 movq %rsi, %rcx
 mulq %rcx
 movq %rdx, %rax
@@ -208006,18 +207280,18 @@ movq 1048(%r15), %rcx
 movq (%rcx,%rax,8), %rax
 cmpq $-1, %rax
 je .Lca_wh_put_1422214222222161E
-movq %r10, %r9
-shlq $2, %r9
-addq $1, %r9
-movq 1048(%r15), %rax
-movq (%rax,%r9,8), %r9
 movq %r10, %rsi
 shlq $2, %rsi
-addq $2, %rsi
-cmpq 2512(%r15), %rsi
-jae ca_error
+addq $1, %rsi
 movq 1048(%r15), %rax
 movq (%rax,%rsi,8), %rsi
+movq %r10, %r9
+shlq $2, %r9
+addq $2, %r9
+cmpq 2512(%r15), %r9
+jae ca_error
+movq 1048(%r15), %rax
+movq (%rax,%r9,8), %r9
 movq %r10, %rax
 shlq $2, %rax
 addq $3, %rax
@@ -208026,19 +207300,13 @@ jae ca_error
 movq 1048(%r15), %rcx
 movq (%rcx,%rax,8), %rax
 movq %rax, 96(%rsp)
-movq %rsi, %r11
-shlq $32, %r11
-xorq %r9, %r11
-movq %rsi, %rax
-shrq $32, %rax
+movq $-7046029254386353131, %r11
+imulq %r9, %r11
+lea (%r11,%rsi,1), %rax
 movq $-7046029254386353131, %rcx
 imulq %rcx, %rax
-xorq %rax, %r11
-movq $-7046029254386353131, %rax
-imulq %rax, %r11
+movq %rax, %r11
 movq %r11, %rax
-shrq $32, %rax
-xorq %r11, %rax
 movq %rbx, %rcx
 mulq %rcx
 movq %rdx, %rax
@@ -208062,7 +207330,7 @@ cmpq 2512(%r15), %rax
 jae ca_error
 movq 1048(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %r9, %rax
+cmpq %rsi, %rax
 jne .Lca_wh_put_14222142222221614222122221613S
 lea (%r13,%r11,1), %rax
 shlq $2, %rax
@@ -208071,7 +207339,7 @@ cmpq 2512(%r15), %rax
 jae ca_error
 movq 1048(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %rsi, %rax
+cmpq %r9, %rax
 je ca_error
 .Lca_wh_put_14222142222221614222122221613S:
 lea 1(%r11), %rax
@@ -208103,14 +207371,14 @@ addq $1, %rax
 cmpq 2512(%r15), %rax
 jae ca_error
 movq 1048(%r15), %rcx
-movq %r9, (%rcx,%rax,8)
+movq %rsi, (%rcx,%rax,8)
 movq %r11, %rax
 shlq $2, %rax
 addq $2, %rax
 cmpq 2512(%r15), %rax
 jae ca_error
 movq 1048(%r15), %rcx
-movq %rsi, (%rcx,%rax,8)
+movq %r9, (%rcx,%rax,8)
 movq 96(%rsp), %rax
 movq %r11, %rcx
 shlq $2, %rcx
@@ -208135,21 +207403,15 @@ movq %r13, 8(%rax)
 movq 1048(%r15), %rax
 movq %rbx, 16(%rax)
 movq %rdi, 43816(%r15)
-movq (%rsp), %r9
-movq 8(%rsp), %rsi
-movq %rsi, %r11
-shlq $32, %r11
-xorq %r9, %r11
-movq %rsi, %rax
-shrq $32, %rax
+movq (%rsp), %rsi
+movq 8(%rsp), %r9
+movq $-7046029254386353131, %r11
+imulq %r9, %r11
+lea (%r11,%rsi,1), %rax
 movq $-7046029254386353131, %rcx
 imulq %rcx, %rax
-xorq %rax, %r11
-movq $-7046029254386353131, %rax
-imulq %rax, %r11
+movq %rax, %r11
 movq %r11, %rax
-shrq $32, %rax
-xorq %r11, %rax
 movq %rbx, %rcx
 mulq %rcx
 movq %rdx, %rax
@@ -208173,7 +207435,7 @@ cmpq 2512(%r15), %rax
 jae ca_error
 movq 1048(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %r9, %rax
+cmpq %rsi, %rax
 jne .Lca_wh_put_1422214222222222222222221613S
 lea (%r13,%r11,1), %rax
 shlq $2, %rax
@@ -208182,7 +207444,7 @@ cmpq 2512(%r15), %rax
 jae ca_error
 movq 1048(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %rsi, %rax
+cmpq %r9, %rax
 je ca_error
 .Lca_wh_put_1422214222222222222222221613S:
 lea 1(%r11), %rax
@@ -209445,19 +208707,13 @@ cmova %rcx, %rax
 subq %rax, %rsi
 .Lca_wk_find_21522X:
 .Lca_wk_find_21X:
-movq %r8, %r13
-shlq $32, %r13
-xorq %rdi, %r13
-movq %r8, %rax
-shrq $32, %rax
+movq $-7046029254386353131, %r13
+imulq %r8, %r13
+lea (%r13,%rdi,1), %rax
 movq $-7046029254386353131, %rcx
 imulq %rcx, %rax
-xorq %rax, %r13
-movq $-7046029254386353131, %rax
-imulq %rax, %r13
+movq %rax, %r13
 movq %r13, %rax
-shrq $32, %rax
-xorq %r13, %rax
 movq %rsi, %rcx
 mulq %rcx
 movq %rdx, %rax
@@ -209598,18 +208854,18 @@ movq 1040(%r15), %rcx
 movq (%rcx,%rax,8), %rax
 cmpq $-1, %rax
 je .Lca_wk_put_1422214222222161E
-movq %r10, %r9
-shlq $2, %r9
-addq $1, %r9
-movq 1040(%r15), %rax
-movq (%rax,%r9,8), %r9
 movq %r10, %rsi
 shlq $2, %rsi
-addq $2, %rsi
-cmpq 2504(%r15), %rsi
-jae ca_error
+addq $1, %rsi
 movq 1040(%r15), %rax
 movq (%rax,%rsi,8), %rsi
+movq %r10, %r9
+shlq $2, %r9
+addq $2, %r9
+cmpq 2504(%r15), %r9
+jae ca_error
+movq 1040(%r15), %rax
+movq (%rax,%r9,8), %r9
 movq %r10, %rax
 shlq $2, %rax
 addq $3, %rax
@@ -209618,19 +208874,13 @@ jae ca_error
 movq 1040(%r15), %rcx
 movq (%rcx,%rax,8), %rax
 movq %rax, 96(%rsp)
-movq %rsi, %r11
-shlq $32, %r11
-xorq %r9, %r11
-movq %rsi, %rax
-shrq $32, %rax
+movq $-7046029254386353131, %r11
+imulq %r9, %r11
+lea (%r11,%rsi,1), %rax
 movq $-7046029254386353131, %rcx
 imulq %rcx, %rax
-xorq %rax, %r11
-movq $-7046029254386353131, %rax
-imulq %rax, %r11
+movq %rax, %r11
 movq %r11, %rax
-shrq $32, %rax
-xorq %r11, %rax
 movq %rbx, %rcx
 mulq %rcx
 movq %rdx, %rax
@@ -209654,7 +208904,7 @@ cmpq 2504(%r15), %rax
 jae ca_error
 movq 1040(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %r9, %rax
+cmpq %rsi, %rax
 jne .Lca_wk_put_14222142222221614222122221613S
 lea (%r13,%r11,1), %rax
 shlq $2, %rax
@@ -209663,7 +208913,7 @@ cmpq 2504(%r15), %rax
 jae ca_error
 movq 1040(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %rsi, %rax
+cmpq %r9, %rax
 je ca_error
 .Lca_wk_put_14222142222221614222122221613S:
 lea 1(%r11), %rax
@@ -209695,14 +208945,14 @@ addq $1, %rax
 cmpq 2504(%r15), %rax
 jae ca_error
 movq 1040(%r15), %rcx
-movq %r9, (%rcx,%rax,8)
+movq %rsi, (%rcx,%rax,8)
 movq %r11, %rax
 shlq $2, %rax
 addq $2, %rax
 cmpq 2504(%r15), %rax
 jae ca_error
 movq 1040(%r15), %rcx
-movq %rsi, (%rcx,%rax,8)
+movq %r9, (%rcx,%rax,8)
 movq 96(%rsp), %rax
 movq %r11, %rcx
 shlq $2, %rcx
@@ -209727,21 +208977,15 @@ movq %r13, 8(%rax)
 movq 1040(%r15), %rax
 movq %rbx, 16(%rax)
 movq %rdi, 43800(%r15)
-movq (%rsp), %r9
-movq 8(%rsp), %rsi
-movq %rsi, %r11
-shlq $32, %r11
-xorq %r9, %r11
-movq %rsi, %rax
-shrq $32, %rax
+movq (%rsp), %rsi
+movq 8(%rsp), %r9
+movq $-7046029254386353131, %r11
+imulq %r9, %r11
+lea (%r11,%rsi,1), %rax
 movq $-7046029254386353131, %rcx
 imulq %rcx, %rax
-xorq %rax, %r11
-movq $-7046029254386353131, %rax
-imulq %rax, %r11
+movq %rax, %r11
 movq %r11, %rax
-shrq $32, %rax
-xorq %r11, %rax
 movq %rbx, %rcx
 mulq %rcx
 movq %rdx, %rax
@@ -209765,7 +209009,7 @@ cmpq 2504(%r15), %rax
 jae ca_error
 movq 1040(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %r9, %rax
+cmpq %rsi, %rax
 jne .Lca_wk_put_1422214222222222222222221613S
 lea (%r13,%r11,1), %rax
 shlq $2, %rax
@@ -209774,7 +209018,7 @@ cmpq 2504(%r15), %rax
 jae ca_error
 movq 1040(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %rsi, %rax
+cmpq %r9, %rax
 je ca_error
 .Lca_wk_put_1422214222222222222222221613S:
 lea 1(%r11), %rax
@@ -209882,19 +209126,13 @@ cmova %rcx, %rax
 subq %rax, %rsi
 .Lca_ws_find_21522X:
 .Lca_ws_find_21X:
-movq %r8, %r13
-shlq $32, %r13
-xorq %rdi, %r13
-movq %r8, %rax
-shrq $32, %rax
+movq $-7046029254386353131, %r13
+imulq %r8, %r13
+lea (%r13,%rdi,1), %rax
 movq $-7046029254386353131, %rcx
 imulq %rcx, %rax
-xorq %rax, %r13
-movq $-7046029254386353131, %rax
-imulq %rax, %r13
+movq %rax, %r13
 movq %r13, %rax
-shrq $32, %rax
-xorq %r13, %rax
 movq %rsi, %rcx
 mulq %rcx
 movq %rdx, %rax
@@ -210476,18 +209714,18 @@ movq 1328(%r15), %rcx
 movq (%rcx,%rax,8), %rax
 cmpq $-1, %rax
 je .Lca_ws_put_1422214222222161E
-movq %r10, %r9
-shlq $2, %r9
-addq $1, %r9
-movq 1328(%r15), %rax
-movq (%rax,%r9,8), %r9
 movq %r10, %rsi
 shlq $2, %rsi
-addq $2, %rsi
-cmpq 2792(%r15), %rsi
-jae ca_error
+addq $1, %rsi
 movq 1328(%r15), %rax
 movq (%rax,%rsi,8), %rsi
+movq %r10, %r9
+shlq $2, %r9
+addq $2, %r9
+cmpq 2792(%r15), %r9
+jae ca_error
+movq 1328(%r15), %rax
+movq (%rax,%r9,8), %r9
 movq %r10, %rax
 shlq $2, %rax
 addq $3, %rax
@@ -210496,19 +209734,13 @@ jae ca_error
 movq 1328(%r15), %rcx
 movq (%rcx,%rax,8), %rax
 movq %rax, 96(%rsp)
-movq %rsi, %r11
-shlq $32, %r11
-xorq %r9, %r11
-movq %rsi, %rax
-shrq $32, %rax
+movq $-7046029254386353131, %r11
+imulq %r9, %r11
+lea (%r11,%rsi,1), %rax
 movq $-7046029254386353131, %rcx
 imulq %rcx, %rax
-xorq %rax, %r11
-movq $-7046029254386353131, %rax
-imulq %rax, %r11
+movq %rax, %r11
 movq %r11, %rax
-shrq $32, %rax
-xorq %r11, %rax
 movq %rbx, %rcx
 mulq %rcx
 movq %rdx, %rax
@@ -210532,7 +209764,7 @@ cmpq 2792(%r15), %rax
 jae ca_error
 movq 1328(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %r9, %rax
+cmpq %rsi, %rax
 jne .Lca_ws_put_14222142222221614222122221613S
 lea (%r13,%r11,1), %rax
 shlq $2, %rax
@@ -210541,7 +209773,7 @@ cmpq 2792(%r15), %rax
 jae ca_error
 movq 1328(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %rsi, %rax
+cmpq %r9, %rax
 je ca_error
 .Lca_ws_put_14222142222221614222122221613S:
 lea 1(%r11), %rax
@@ -210573,14 +209805,14 @@ addq $1, %rax
 cmpq 2792(%r15), %rax
 jae ca_error
 movq 1328(%r15), %rcx
-movq %r9, (%rcx,%rax,8)
+movq %rsi, (%rcx,%rax,8)
 movq %r11, %rax
 shlq $2, %rax
 addq $2, %rax
 cmpq 2792(%r15), %rax
 jae ca_error
 movq 1328(%r15), %rcx
-movq %rsi, (%rcx,%rax,8)
+movq %r9, (%rcx,%rax,8)
 movq 96(%rsp), %rax
 movq %r11, %rcx
 shlq $2, %rcx
@@ -210605,21 +209837,15 @@ movq %r13, 8(%rax)
 movq 1328(%r15), %rax
 movq %rbx, 16(%rax)
 movq %rdi, 44232(%r15)
-movq (%rsp), %r9
-movq 8(%rsp), %rsi
-movq %rsi, %r11
-shlq $32, %r11
-xorq %r9, %r11
-movq %rsi, %rax
-shrq $32, %rax
+movq (%rsp), %rsi
+movq 8(%rsp), %r9
+movq $-7046029254386353131, %r11
+imulq %r9, %r11
+lea (%r11,%rsi,1), %rax
 movq $-7046029254386353131, %rcx
 imulq %rcx, %rax
-xorq %rax, %r11
-movq $-7046029254386353131, %rax
-imulq %rax, %r11
+movq %rax, %r11
 movq %r11, %rax
-shrq $32, %rax
-xorq %r11, %rax
 movq %rbx, %rcx
 mulq %rcx
 movq %rdx, %rax
@@ -210643,7 +209869,7 @@ cmpq 2792(%r15), %rax
 jae ca_error
 movq 1328(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %r9, %rax
+cmpq %rsi, %rax
 jne .Lca_ws_put_1422214222222222222222221613S
 lea (%r13,%r11,1), %rax
 shlq $2, %rax
@@ -210652,7 +209878,7 @@ cmpq 2792(%r15), %rax
 jae ca_error
 movq 1328(%r15), %rcx
 movq (%rcx,%rax,8), %rax
-cmpq %rsi, %rax
+cmpq %r9, %rax
 je ca_error
 .Lca_ws_put_1422214222222222222222221613S:
 lea 1(%r11), %rax
