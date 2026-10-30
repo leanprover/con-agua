@@ -892,7 +892,7 @@ theorem sim_ld32t_core {ctx : Ctx} (hT : ctx.tab = G.tab)
     (hTab : 16 + 24 * (G.tab.nb + G.tab.nw) + 8 * G.tab.romWords + 8 * G.tab.nxres + 8 * G.tab.ng < maxOff)
     {F t : Nat} {a : ArrId} (ha : G.tab.dom64 (tier1 a) = true) {σ : St} {s : MachineData}
     (hI : Inv G ctx F σ s) {R : Reg64} (hRc : R ≠ .rcx) {u j : Word} {k : Nat} {Q : MachineState → Prop}
-    (hc : Code (ld32Code .rax .rcx .rax (tdesc R (ctx.tab.len32 a)) (tdesc R (ctx.tab.base64 a))) k)
+    (hc : Code (ld32Code true .rax .rcx .rax (tdesc R (ctx.tab.len32 a)) (tdesc R (ctx.tab.base64 a))) k)
     (hR : s.regs.get64 R = (u &&& 1).toBitVec) (hrax : s.regs.rax = j)
     (hok : ∀ (h : (j / 2).toNat < (σ.mem.arr64 (tierA a u)).size) s',
       s'.regs.rax = half32 (σ.mem.arr64 (tierA a u))[(j / 2).toNat] j → EPost ctx.nl F t s s' →
@@ -900,12 +900,13 @@ theorem sim_ld32t_core {ctx : Ctx} (hT : ctx.tab = G.tab)
     (herr : ∀ s', ¬ (j / 2).toNat < (σ.mem.arr64 (tierA a u)).size → EPost ctx.nl F t s s' →
       Ev Q s' (label errorL)) :
     Ev Q s (at_ k) := by
-  refine ld32Code_spec (arr := σ.mem.arr64 (tierA a u)) hc (by decide) (j := j) (by rw [← hrax]; rfl) (fun s' hm hk => ?_)
+  refine ld32Code_spec (arr := σ.mem.arr64 (tierA a u)) hc (by decide) (j := j) (by rw [← hrax]; rfl) (fun s' hm hk => ?_) (fun h => absurd h (by decide))
     (fun hj s' hv hm hk => ?_) (fun s' hj hm hk => ?_)
   · have hE : EPost ctx.nl F t s s' :=
       EPost.ofKeep (fun r _ h2 _ => hk r h2) hm
     exact arrW32_tier hG hT hTab ha (hI.ofE hG hE) (by rw [hk R hRc, hR])
-  · refine hok hj s' (UInt64.toBitVec_inj.mp (by simpa [Reg64s.get64] using hv)) (EPost.ofKeep (fun r h1 h2 _ => hk r h2 h1) hm)
+  · exact ev_congr (hok hj s' (UInt64.toBitVec_inj.mp (by simpa [Reg64s.get64] using hv))
+      (EPost.ofKeep (fun r h1 h2 _ => hk r h2 h1) hm)) (by simp [ld32Code, chkR])
   · exact herr s' hj (EPost.ofKeep (fun r _ h2 _ => hk r h2) hm)
 
 /-- From `rdx` = the tier word `u` and `rax` = the index `j`: the tier, the bounds check and the
@@ -914,7 +915,7 @@ theorem sim_ld32t_tail {ctx : Ctx} (hT : ctx.tab = G.tab)
     (hTab : 16 + 24 * (G.tab.nb + G.tab.nw) + 8 * G.tab.romWords + 8 * G.tab.nxres + 8 * G.tab.ng < maxOff)
     {F t : Nat} {a : ArrId} (ha : G.tab.dom64 (tier1 a) = true) {σ : St} {s : MachineData}
     (hI : Inv G ctx F σ s) {u j : Word} {k : Nat} {Q : MachineState → Prop}
-    (hc : Code (tierDesc .rdx ++ ld32Code .rax .rcx .rax (tdesc .rdx (ctx.tab.len32 a)) (tdesc .rdx (ctx.tab.base64 a))) k)
+    (hc : Code (tierDesc .rdx ++ ld32Code true .rax .rcx .rax (tdesc .rdx (ctx.tab.len32 a)) (tdesc .rdx (ctx.tab.base64 a))) k)
     (hrdx : s.regs.get64 .rdx = u.toBitVec) (hrax : s.regs.rax = j)
     (hok : ∀ (h : (j / 2).toNat < (σ.mem.arr64 (tierA a u)).size) s',
       s'.regs.rax = half32 (σ.mem.arr64 (tierA a u))[(j / 2).toNat] j → EPost ctx.nl F t s s' →
@@ -936,7 +937,7 @@ theorem sim_ld32h_core {ctx : Ctx} (hT : ctx.tab = G.tab)
     (hTab : 16 + 24 * (G.tab.nb + G.tab.nw) + 8 * G.tab.romWords + 8 * G.tab.nxres + 8 * G.tab.ng < maxOff)
     {F t : Nat} {a : ArrId} {hi : Bool} (ha : G.tab.dom64 (tier1 a) = true) {σ : St} {s : MachineData}
     (hI : Inv G ctx F σ s) {R : Reg64} (hRc : R ≠ .rcx) {u j : Word} {k : Nat} {Q : MachineState → Prop}
-    (hc : Code (ld32hCode .rax .rcx .rax (tdesc R (ctx.tab.len64 a)) (tdesc R (ctx.tab.base64 a)) hi) k)
+    (hc : Code (ld32hCode true .rax .rcx .rax (tdesc R (ctx.tab.len64 a)) (tdesc R (ctx.tab.base64 a)) hi) k)
     (hR : s.regs.get64 R = (u &&& 1).toBitVec) (hrax : s.regs.rax = j)
     (hok : ∀ (h : j.toNat < (σ.mem.arr64 (tierA a u)).size) s',
       s'.regs.rax = half32b hi (σ.mem.arr64 (tierA a u))[j.toNat] → EPost ctx.nl F t s s' →
@@ -944,12 +945,13 @@ theorem sim_ld32h_core {ctx : Ctx} (hT : ctx.tab = G.tab)
     (herr : ∀ s', ¬ j.toNat < (σ.mem.arr64 (tierA a u)).size → EPost ctx.nl F t s s' →
       Ev Q s' (label errorL)) :
     Ev Q s (at_ k) := by
-  refine ld32hCode_spec (arr := σ.mem.arr64 (tierA a u)) hc (by decide) (j := j) (by rw [← hrax]; rfl) (fun s' hm hk => ?_)
+  refine ld32hCode_spec (arr := σ.mem.arr64 (tierA a u)) hc (by decide) (j := j) (by rw [← hrax]; rfl) (fun s' hm hk => ?_) (fun h => absurd h (by decide))
     (fun hj s' hv hm hk => ?_) (fun s' hj hm hk => ?_)
   · have hE : EPost ctx.nl F t s s' :=
       EPost.ofKeep (fun r _ h2 _ => hk r h2) hm
     exact arrW_tier hG hT hTab ha (hI.ofE hG hE) (by rw [hk R hRc, hR])
-  · refine hok hj s' (UInt64.toBitVec_inj.mp (by simpa [Reg64s.get64] using hv)) (EPost.ofKeep (fun r h1 h2 _ => hk r h2 h1) hm)
+  · exact ev_congr (hok hj s' (UInt64.toBitVec_inj.mp (by simpa [Reg64s.get64] using hv))
+      (EPost.ofKeep (fun r h1 h2 _ => hk r h2 h1) hm)) (by simp [ld32hCode, chkR])
   · exact herr s' hj (EPost.ofKeep (fun r _ h2 _ => hk r h2) hm)
 
 /-- From `rdx` = the tier word `u` and `rax` = the index `j`: the tier, the bounds check and the
@@ -958,7 +960,7 @@ theorem sim_ld32h_tail {ctx : Ctx} (hT : ctx.tab = G.tab)
     (hTab : 16 + 24 * (G.tab.nb + G.tab.nw) + 8 * G.tab.romWords + 8 * G.tab.nxres + 8 * G.tab.ng < maxOff)
     {F t : Nat} {a : ArrId} {hi : Bool} (ha : G.tab.dom64 (tier1 a) = true) {σ : St} {s : MachineData}
     (hI : Inv G ctx F σ s) {u j : Word} {k : Nat} {Q : MachineState → Prop}
-    (hc : Code (tierDesc .rdx ++ ld32hCode .rax .rcx .rax (tdesc .rdx (ctx.tab.len64 a)) (tdesc .rdx (ctx.tab.base64 a)) hi) k)
+    (hc : Code (tierDesc .rdx ++ ld32hCode true .rax .rcx .rax (tdesc .rdx (ctx.tab.len64 a)) (tdesc .rdx (ctx.tab.base64 a)) hi) k)
     (hrdx : s.regs.get64 .rdx = u.toBitVec) (hrax : s.regs.rax = j)
     (hok : ∀ (h : j.toNat < (σ.mem.arr64 (tierA a u)).size) s',
       s'.regs.rax = half32b hi (σ.mem.arr64 (tierA a u))[j.toNat] → EPost ctx.nl F t s s' →
@@ -1482,7 +1484,7 @@ theorem sim_expr (ctx : Ctx) (hT : ctx.tab = G.tab) (hTab : 16 + 24 * (G.tab.nb 
           · refine ev_congr (hok _ s' ?_ hv (hE1.trans hE3 (Nat.le_refl _))) ?_
             · simp only [evalP, hj, bind, Except.bind]
               rw [dite_eq_left hjb]
-            · simp only [List.length_append, List.length_cons, List.length_nil, ld32Code]; omega
+            · simp only [List.length_append, List.length_cons, List.length_nil, ld32Code, chkR, ite_true]; omega
           · refine herr s' ⟨.oob, ?_⟩ (hE1.trans hE3 (Nat.le_refl _))
             simp only [evalP, hj, bind, Except.bind]
             rw [dite_eq_right hjb]
@@ -1504,14 +1506,14 @@ theorem sim_expr (ctx : Ctx) (hT : ctx.tab = G.tab) (hTab : 16 + 24 * (G.tab.nb 
       · intro j s1 hj hrax1 hE1
         have hI1 : Inv G ctx F σ s1 := hI.ofE hG hE1
         refine ld32Code_spec (arr := σ.mem.arr64 (tierA a c)) hc.right (by decide) (j := j)
-          (by rw [← hrax1]; rfl) (fun s' hm hk => ?_) (fun hjb s' hv hm hk => ?_) (fun s' hjb hm hk => ?_)
+          (by rw [← hrax1]; rfl) (fun s' hm hk => ?_) (fun h => absurd h (by decide)) (fun hjb s' hv hm hk => ?_) (fun s' hjb hm hk => ?_)
         · exact arrW32_plain hG hT hTab0 ha' (hI1.ofE hG (EPost.ofKeep (t := t) (fun r _ h2 _ => hk r h2) hm))
         · refine ev_congr (hok _ s' ?_ (UInt64.toBitVec_inj.mp (by simpa [Reg64s.get64] using hv))
             (hE1.trans (EPost.ofKeep (fun r h1 h2 _ => hk r h2 h1) hm) (Nat.le_refl _))) ?_
           · simp only [evalP, hj, bind, Except.bind]
             rw [dite_eq_left hjb]
             all_goals simp [UInt64.toNat_div]
-          · simp only [List.length_append, List.length_cons, List.length_nil, ld32Code]; omega
+          · simp only [List.length_append, List.length_cons, List.length_nil, ld32Code, chkR, ite_true]; omega
         · refine herr s' ⟨.oob, ?_⟩ (hE1.trans (EPost.ofKeep (fun r _ h2 _ => hk r h2) hm) (Nat.le_refl _))
           simp only [evalP, hj, bind, Except.bind]
           rw [dite_eq_right hjb]
@@ -1544,7 +1546,7 @@ theorem sim_expr (ctx : Ctx) (hT : ctx.tab = G.tab) (hTab : 16 + 24 * (G.tab.nb 
         · refine ev_congr (hok _ s' ?_ hv (hE2.trans hE3 (Nat.le_refl _))) ?_
           · simp only [evalP, hu, hj, bind, Except.bind]
             rw [dite_eq_left hjb]
-          · simp only [List.length_append, List.length_cons, List.length_nil, tierDesc, ld32Code]; omega
+          · simp only [List.length_append, List.length_cons, List.length_nil, tierDesc, ld32Code, chkR, ite_true]; omega
         · refine herr s' ⟨.oob, ?_⟩ (hE2.trans hE3 (Nat.le_refl _))
           simp only [evalP, hu, hj, bind, Except.bind]
           rw [dite_eq_right hjb]
@@ -1590,7 +1592,7 @@ theorem sim_expr (ctx : Ctx) (hT : ctx.tab = G.tab) (hTab : 16 + 24 * (G.tab.nb 
         · refine ev_congr (hok _ s' ?_ hv (hE4.trans hE5 (Nat.le_refl _))) ?_
           · simp only [evalP, hu, hj, bind, Except.bind]
             rw [dite_eq_left hjb]
-          · simp only [List.length_append, List.length_cons, List.length_nil, tierDesc, ld32Code]; omega
+          · simp only [List.length_append, List.length_cons, List.length_nil, tierDesc, ld32Code, chkR, ite_true]; omega
         · refine herr s' ⟨.oob, ?_⟩ (hE4.trans hE5 (Nat.le_refl _))
           simp only [evalP, hu, hj, bind, Except.bind]
           rw [dite_eq_right hjb]
@@ -1624,7 +1626,7 @@ theorem sim_expr (ctx : Ctx) (hT : ctx.tab = G.tab) (hTab : 16 + 24 * (G.tab.nb 
           · refine ev_congr (hok _ s' ?_ hv (hE1.trans hE3 (Nat.le_refl _))) ?_
             · simp only [evalP, hj, bind, Except.bind]
               rw [dite_eq_left hjb]
-            · simp only [List.length_append, List.length_cons, List.length_nil, ld32hCode]; omega
+            · simp only [List.length_append, List.length_cons, List.length_nil, ld32hCode, chkR, ite_true]; omega
           · refine herr s' ⟨.oob, ?_⟩ (hE1.trans hE3 (Nat.le_refl _))
             simp only [evalP, hj, bind, Except.bind]
             rw [dite_eq_right hjb]
@@ -1653,7 +1655,7 @@ theorem sim_expr (ctx : Ctx) (hT : ctx.tab = G.tab) (hTab : 16 + 24 * (G.tab.nb 
         · refine ev_congr (hok _ s' ?_ hv (hE2.trans hE3 (Nat.le_refl _))) ?_
           · simp only [evalP, hu, hj, bind, Except.bind]
             rw [dite_eq_left hjb]
-          · simp only [List.length_append, List.length_cons, List.length_nil, tierDesc, ld32hCode]; omega
+          · simp only [List.length_append, List.length_cons, List.length_nil, tierDesc, ld32hCode, chkR, ite_true]; omega
         · refine herr s' ⟨.oob, ?_⟩ (hE2.trans hE3 (Nat.le_refl _))
           simp only [evalP, hu, hj, bind, Except.bind]
           rw [dite_eq_right hjb]
@@ -1699,7 +1701,7 @@ theorem sim_expr (ctx : Ctx) (hT : ctx.tab = G.tab) (hTab : 16 + 24 * (G.tab.nb 
         · refine ev_congr (hok _ s' ?_ hv (hE4.trans hE5 (Nat.le_refl _))) ?_
           · simp only [evalP, hu, hj, bind, Except.bind]
             rw [dite_eq_left hjb]
-          · simp only [List.length_append, List.length_cons, List.length_nil, tierDesc, ld32hCode]; omega
+          · simp only [List.length_append, List.length_cons, List.length_nil, tierDesc, ld32hCode, chkR, ite_true]; omega
         · refine herr s' ⟨.oob, ?_⟩ (hE4.trans hE5 (Nat.le_refl _))
           simp only [evalP, hu, hj, bind, Except.bind]
           rw [dite_eq_right hjb]

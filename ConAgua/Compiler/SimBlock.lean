@@ -680,7 +680,7 @@ theorem copy8w_loop {ctx : Ctx} {F : Nat} {Lb : Label} {eoff : Int} {kL : Nat} {
 
 theorem sim_scan8 (x : Var) (s : BSrc) (i e : Expr) (c : List UInt8) :
     SimS p G sk (stepRun p K) P (.scan8 x s i e c) := by
-  intro ctx F path k hT hF hc hwf hN htmp σ d Q hI hP hK
+  intro ctx F path k hT hF hc hwf hN htmp σ d Q hI hfa hP hK
   simp only [Stmt.wf, Bool.and_eq_true, decide_eq_true_eq, beq_iff_eq] at hwf
   obtain ⟨⟨⟨⟨⟨hx, hws⟩, hwi⟩, hwe⟩, hc256⟩, hcpre⟩ := hwf
   simp only [compileS, List.append_assoc] at hc hK
@@ -851,7 +851,7 @@ theorem warrP_ok {σ : St} {nl : Nat} {tab : Tab} {w : WArr} (hw : WArr.wf nl ta
 
 theorem sim_copy64 (d : WArr) (di : Expr) (s : WArr) (si n : Expr) :
     SimS p G sk (stepRun p K) P (.copy64 d di s si n) := by
-  intro ctx F path k hT hF hc hwf hN htmp σ d0 Q hI hP hK
+  intro ctx F path k hT hF hc hwf hN htmp σ d0 Q hI hfa hP hK
   simp only [Stmt.wf, Bool.and_eq_true] at hwf
   obtain ⟨⟨⟨⟨hwd, hwdi⟩, hws⟩, hwsi⟩, hwn⟩ := hwf
   simp only [tempsS] at htmp
@@ -1016,7 +1016,7 @@ theorem sim_copy64 (d : WArr) (di : Expr) (s : WArr) (si n : Expr) :
 
 theorem sim_copy8w (d : WArr) (di : Expr) (s : BSrc) (si n : Expr) :
     SimS p G sk (stepRun p K) P (.copy8w d di s si n) := by
-  intro ctx F path k hT hF hc hwf hN htmp σ d0 Q hI hP hK
+  intro ctx F path k hT hF hc hwf hN htmp σ d0 Q hI hfa hP hK
   simp only [Stmt.wf, Bool.and_eq_true] at hwf
   obtain ⟨⟨⟨⟨hwd, hwdi⟩, hws⟩, hwsi⟩, hwn⟩ := hwf
   simp only [tempsS] at htmp

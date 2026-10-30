@@ -61,44 +61,58 @@ theorem slot_addr (s : MachineData) (j : Nat) (off : Int) (h : off = 8 * (j : In
 
 variable [Host]
 
+/-- **The optional bounds check** `chkR ck r ln`: with the index `j` in `r` and the length `n` at
+`[ln]`, it falls through (the flags changed) when `j < n` and goes to `ca_error` otherwise. Without
+the check (`ck = false`, the bounds-check analysis) `j < n` must be known. -/
+theorem chkR_spec {ck : Bool} {r : Reg64} {ln : AddrExpr} {k : Nat} {s : MachineData}
+    {Q : MachineState → Prop} (hc : Code (chkR ck r ln) k) {j : Word} {n : Nat} (hn : n < 2 ^ 64)
+    (hx : s.regs.get64 r = j.toBitVec) (hlen : MemW s ln (UInt64.ofNat n))
+    (hck : ck = false → j.toNat < n)
+    (hok : j.toNat < n → ∀ st, Ev Q { s with status := st } (at_ (k + (chkR ck r ln).length)))
+    (herr : ¬ j.toNat < n → ∀ st, Ev Q { s with status := st } (label errorL)) : Ev Q s (at_ k) := by
+  cases ck
+  · exact ev_congr (hok (hck rfl) s.status) (by simp [chkR])
+  · simp only [chkR, ite_true] at hc ⊢
+    refine ev_cmpRA hc.head hlen ?_
+    rw [hx]
+    refine ev_jcc hc.tail.head (fun hcc => ?_) (fun hcc => ?_)
+    · rw [interp_nc] at hcc
+      simp only [decide_eq_true_eq, UInt64.le_iff_toNat_le, UInt64.toNat_ofNat_of_lt' hn] at hcc
+      exact herr (by omega) _
+    · rw [interp_nc] at hcc
+      simp only [decide_eq_false_iff_not, UInt64.le_iff_toNat_le, UInt64.toNat_ofNat_of_lt' hn] at hcc
+      exact ev_congr (hok (by omega) _) (by simp [chkR])
+
 /-- **`d := A.u32[x]`** (`ld32Code`): from `x` = the index `j`, the value `half32` of word `j / 2`
 in `d`, the scratch `t` and the flags clobbered; or `ca_error` when word `j / 2` does not exist. -/
-theorem ld32Code_spec {x t d : Reg64} {ln bs : AddrExpr} {arr : Array Word} {k : Nat} {s : MachineData}
-    {Q : MachineState → Prop} (hc : Code (ld32Code x t d ln bs) k) (htx : t ≠ x) {j : Word}
+theorem ld32Code_spec {ck : Bool} {x t d : Reg64} {ln bs : AddrExpr} {arr : Array Word} {k : Nat} {s : MachineData}
+    {Q : MachineState → Prop} (hc : Code (ld32Code ck x t d ln bs) k) (htx : t ≠ x) {j : Word}
     (hx : s.regs.get64 x = j.toBitVec)
     (hA : ∀ s', s'.dmem = s.dmem → (∀ r, r ≠ t → s'.regs.get64 r = s.regs.get64 r) → ArrW32 s' ln bs arr)
+    (hck : ck = false → (j / 2).toNat < arr.size)
     (hv : ∀ (h : (j / 2).toNat < arr.size) s', s'.regs.get64 d = (half32 arr[(j / 2).toNat] j).toBitVec →
-      s'.dmem = s.dmem → (∀ r, r ≠ t → r ≠ d → s'.regs.get64 r = s.regs.get64 r) → Ev Q s' (at_ (k + 4)))
+      s'.dmem = s.dmem → (∀ r, r ≠ t → r ≠ d → s'.regs.get64 r = s.regs.get64 r) →
+      Ev Q s' (at_ (k + (ld32Code ck x t d ln bs).length)))
     (herr : ∀ s', ¬ (j / 2).toNat < arr.size → s'.dmem = s.dmem →
       (∀ r, r ≠ t → s'.regs.get64 r = s.regs.get64 r) → Ev Q s' (label errorL)) :
     Ev Q s (at_ k) := by
-  simp only [ld32Code] at hc
+  simp only [ld32Code] at hc hv
   obtain ⟨hlen, B, hB, hBs, hget⟩ := hA s rfl (fun _ _ => rfl)
   have hsz : 2 * arr.size < 2 ^ 64 := by omega
   have hj2 : (j / 2).toNat = j.toNat / 2 := by simp [UInt64.toNat_div]
-  refine ev_cmpRA hc.head hlen ?_
-  have hcmp : ∀ b, CondCode.nc.interp (cmpFlags (s.regs.get64 x) (UInt64.ofNat (2 * arr.size)).toBitVec) = b →
-      (b = true ↔ ¬ (j / 2).toNat < arr.size) := by
-    intro b hb
-    rw [hx, interp_nc] at hb
-    subst hb
-    simp only [decide_eq_true_eq, UInt64.le_iff_toNat_le, UInt64.toNat_ofNat_of_lt' hsz, hj2]
-    omega
-  refine ev_jcc hc.tail.head (fun hcc => ?_) (fun hcc => ?_)
-  · exact herr _ ((hcmp _ hcc).mp rfl) rfl (fun _ _ => rfl)
-  · have hj : (j / 2).toNat < arr.size := by
-      have := hcmp _ hcc; simp at this; omega
-    obtain ⟨_, hB2, -, -⟩ := (hA { s with status := cmpFlags (s.regs.get64 x) (UInt64.ofNat (2 * arr.size)).toBitVec }
-      rfl (fun _ _ => rfl)).base
-    refine ev_movRA hc.tail.tail.head hB ?_
-    refine ev_ld32X hc.tail.tail.tail.head (v := (half32 arr[(j / 2).toNat] j).toNat) ?_
+  refine chkR_spec hc.left hsz hx hlen (fun h => by have := hck h; omega) (fun hjn st => ?_)
+    (fun hjn st => herr _ (by omega) rfl (fun _ _ => rfl))
+  have hc' := hc.right
+  · have hj : (j / 2).toNat < arr.size := by omega
+    refine ev_movRA hc'.head hB ?_
+    refine ev_ld32X hc'.tail.head (v := (half32 arr[(j / 2).toNat] j).toNat) ?_
       (by have := (arr[(j / 2).toNat]).toNat_lt; rw [half32_toNat]; split <;> omega) ?_
     · simp only [rget_set, ite_true, ite_eq_right htx.symm, hx]
       rw [addr32 B j (by rw [← hj2]; omega)]
       have := load32_of_rdW (hget _ hj) j
       rw [show B + 8 * (j / 2).toNat = B + 8 * (j.toNat / 2) by rw [hj2]] at this
       exact this
-    · refine ev_congr (hv hj _ (by simp [rget_set]) rfl ?_) (by simp)
+    · refine ev_congr (hv hj _ (by simp [rget_set]) rfl ?_) (by simp; omega)
       intro r hr1 hr2
       simp only [rget_set, ite_eq_right hr1, ite_eq_right hr2]
 
@@ -123,32 +137,24 @@ theorem half32b_lt (hi : Bool) (w : Word) : (half32b hi w).toNat < 2 ^ 32 := by
 /-- **`d := A[x]`'s half `hi`** (`ld32hCode`): from `x` = the index `j`, the value `half32b hi` of
 word `j` in `d`, the scratch `t` and the flags clobbered; or `ca_error` when word `j` does not
 exist. The bounds check is a word load's. -/
-theorem ld32hCode_spec {x t d : Reg64} {ln bs : AddrExpr} {hi : Bool} {arr : Array Word} {k : Nat}
-    {s : MachineData} {Q : MachineState → Prop} (hc : Code (ld32hCode x t d ln bs hi) k) (htx : t ≠ x) {j : Word}
+theorem ld32hCode_spec {ck : Bool} {x t d : Reg64} {ln bs : AddrExpr} {hi : Bool} {arr : Array Word} {k : Nat}
+    {s : MachineData} {Q : MachineState → Prop} (hc : Code (ld32hCode ck x t d ln bs hi) k) (htx : t ≠ x) {j : Word}
     (hx : s.regs.get64 x = j.toBitVec)
     (hA : ∀ s', s'.dmem = s.dmem → (∀ r, r ≠ t → s'.regs.get64 r = s.regs.get64 r) → ArrW s' ln bs arr)
+    (hck : ck = false → j.toNat < arr.size)
     (hv : ∀ (h : j.toNat < arr.size) s', s'.regs.get64 d = (half32b hi arr[j.toNat]).toBitVec →
-      s'.dmem = s.dmem → (∀ r, r ≠ t → r ≠ d → s'.regs.get64 r = s.regs.get64 r) → Ev Q s' (at_ (k + 4)))
+      s'.dmem = s.dmem → (∀ r, r ≠ t → r ≠ d → s'.regs.get64 r = s.regs.get64 r) →
+      Ev Q s' (at_ (k + (ld32hCode ck x t d ln bs hi).length)))
     (herr : ∀ s', ¬ j.toNat < arr.size → s'.dmem = s.dmem →
       (∀ r, r ≠ t → s'.regs.get64 r = s.regs.get64 r) → Ev Q s' (label errorL)) :
     Ev Q s (at_ k) := by
-  simp only [ld32hCode] at hc
+  simp only [ld32hCode] at hc hv
   obtain ⟨hlen, B, hB, hBs, hget⟩ := hA s rfl (fun _ _ => rfl)
   have hsz : arr.size < 2 ^ 64 := by omega
-  refine ev_cmpRA hc.head hlen ?_
-  have hcmp : ∀ b, CondCode.nc.interp (cmpFlags (s.regs.get64 x) (UInt64.ofNat arr.size).toBitVec) = b →
-      (b = true ↔ ¬ j.toNat < arr.size) := by
-    intro b hb
-    rw [hx, interp_nc] at hb
-    subst hb
-    simp only [decide_eq_true_eq, UInt64.le_iff_toNat_le, UInt64.toNat_ofNat_of_lt' hsz]
-    omega
-  refine ev_jcc hc.tail.head (fun hcc => ?_) (fun hcc => ?_)
-  · exact herr _ ((hcmp _ hcc).mp rfl) rfl (fun _ _ => rfl)
-  · have hj : j.toNat < arr.size := by
-      have := hcmp _ hcc; simp at this; omega
-    refine ev_movRA hc.tail.tail.head hB ?_
-    refine ev_ld32H hc.tail.tail.tail.head (v := (half32b hi arr[j.toNat]).toNat) ?_
+  refine chkR_spec hc.left hsz hx hlen hck (fun hj st => ?_) (fun hjn st => herr _ hjn rfl (fun _ _ => rfl))
+  have hc' := hc.right
+  · refine ev_movRA hc'.head hB ?_
+    refine ev_ld32H hc'.tail.head (v := (half32b hi arr[j.toNat]).toNat) ?_
       (half32b_lt hi _) ?_
     · simp only [rget_set, ite_true, ite_eq_right htx.symm, hx, UInt64.toNat_toBitVec]
       have hBn : (UInt64.ofNat B).toNat = B := UInt64.toNat_ofNat_of_lt' (by simp only [UInt64.size]; omega)
@@ -158,7 +164,7 @@ theorem ld32hCode_spec {x t d : Reg64} {ln bs : AddrExpr} {hi : Bool} {arr : Arr
       rw [show B + 8 * j.toNat + 4 * ((if hi then (1 : Word) else 0).toNat % 2) =
         B + 8 * j.toNat + (if hi then 4 else 0) by cases hi <;> rfl] at this
       exact this
-    · refine ev_congr (hv hj _ (by simp [rget_set]) rfl ?_) (by simp)
+    · refine ev_congr (hv hj _ (by simp [rget_set]) rfl ?_) (by simp; omega)
       intro r hr1 hr2
       simp only [rget_set, ite_eq_right hr1, ite_eq_right hr2]
 

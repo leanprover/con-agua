@@ -382,7 +382,7 @@ fixed-capacity array and a length word. Its meaning is a Lean function into
 ### 4.2 The verified compiler
 
 `compileProg` translates an L program to Kraken x64 in one pass, without
-optimisation beyond a few local ones (§8.1). Before it, one L → L pass inlines
+optimisation beyond a few local ones (§8.1) and a bounds-check analysis (§8.7). Before it, one L → L pass inlines
 small leaf functions into their callers (§8.6); what the compiler compiles is
 `checkerProgI`, which refines `checkerProg`.
 [`compile_correct`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Main.lean#L774-L797)
@@ -644,8 +644,8 @@ Their semantics are ordinary Lean functions
 ([`le64`, `Mem.copy64`, `scanN`](https://github.com/leanprover/con-agua/blob/master/ConAgua/L/Semantics.lean#L207-L226)),
 and the compiler emits a tight loop for each: six instructions per copied word,
 seven per scanned byte
-([`copy64Code`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Compile.lean#L1025-L1036),
-[`scanLoop`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Compile.lean#L1058-L1065)).
+([`copy64Code`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Compile.lean#L1037-L1048),
+[`scanLoop`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Compile.lean#L1070-L1077)).
 
 ## 6. Data structures and memory layout
 
@@ -839,7 +839,7 @@ proves its refinement at every twin fuel at least the L fuel
 ### 8.1 Code generation
 
 One pass, no register allocation for non-leaf functions
-([conventions](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Compile.lean#L8-L33)):
+([conventions](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Compile.lean#L9-L34)):
 `r15` holds the descriptor table, `r14` the fuel (decremented at every loop
 back-edge and call), `rsp` the frame (locals and temporaries), `rbp` the
 trampoline's saved stack pointer. An expression is evaluated straight into its
@@ -851,22 +851,23 @@ the address. Expressions this does not cover go through `rax` with their
 intermediate values in frame temporaries. An
 array access loads the base and length from the table and branches to
 `ca_error` when out of bounds; a constant index below the array's minimum length
-(a hint in the array table, `min k`) needs no bounds check, and the array marked
+(a hint in the array table, `min k`) needs no bounds check, nor does an index that the
+bounds-check analysis proves in range (§8.7), and the array marked
 `at table` is addressed from `r15` at a fixed offset, with no load of its base. The trampoline saves the callee-saved registers
 (`rbp`, `r14` and the table address on the machine stack; `r15`, `rbx`, `r12`,
 `r13` in the 32 bytes past the table), restores them on every exit, and maps
 the outcomes to `rdx`, so the code generator may use any register
-([`trampoline`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Compile.lean#L2110-L2131)).
+([`trampoline`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Compile.lean#L2134-L2155)).
 
 The local optimisations, all inside the proof: a comparison of two simple
 operands (a register, a memory word, a constant) is one `cmp`, its operands
 swapped when the left one is a constant; `x := x op e` updates `x` in place; a
 local is zeroed on entry only if it may be read before it is assigned; a leaf
 function keeps its locals in nine registers
-([`allocRegs`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Compile.lean#L800));
+([`allocRegs`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Compile.lean#L804));
 the tier local of a leaf stays in `rsi`; a leaf with a frame, other than the
 entry, checks no stack limit: its callers' checks leave room for its frame
-([`compileFn`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Compile.lean#L2081-L2093)); a tiered access finds tier 1's
+([`compileFn`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Compile.lean#L2105-L2117)); a tiered access finds tier 1's
 descriptor at a fixed offset after tier 0's.
 
 **The layout map.** Only the compiler knows where arrays live. Byte and word
@@ -876,8 +877,8 @@ tree from an array's name to its position, stored in the table with its inverse
 (the array at each position), and the table carries a `Bool` check that the two
 agree, that the kinds are right and that tier 1 of a tiered array sits right
 after its tier 0
-([`layOkB`, `Tab`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Compile.lean#L98-L159),
-[`dom8`, `pos8`, `dom64`, `pos64`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Compile.lean#L169-L181)).
+([`layOkB`, `Tab`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Compile.lean#L99-L160),
+[`dom8`, `pos8`, `dom64`, `pos64`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Compile.lean#L170-L182)).
 The definitions are irreducible past their lemmas, so no simulation proof
 reads a position. `Prog.wf` checks every operand against `dom8`/`dom64`, which
 also checks its kind.
@@ -981,6 +982,37 @@ The kernel does not run the pass over the whole program: the inlined program is
 a literal (`checkerProgI`), one kernel-checked equation per function
 ([`inl_round_fns`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/InlineLit.lean)),
 which the whole-program checks of the compiled code then read.
+
+### 8.7 Bounds-check elimination
+
+A forward analysis of each function body, with no knowledge of other functions,
+computes at each statement facts about its locals: `i < len(A)` for an index
+expression `i` built from locals, constants and operators, and upper bounds
+`x < n` of locals
+([`postF`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Bce.lean#L234-L258)).
+A fact comes from a condition, in the branch where it holds; from an access
+that ran (it passed its check); and from an assignment of a bounded expression
+(constants, `&`, `>>` by a constant, `+` that cannot wrap). A write to a local
+removes the facts that read it; a loop's condition and body see only the facts
+that read no local the body writes. An access whose fact holds, or whose index
+is bounded by the array's minimum length, is emitted without its bounds check
+([`Ctx.ck`, `chkR`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Compile.lean#L838-L844)).
+This covers the loads and stores of the register-stack code generator; the
+other accesses keep their checks.
+
+The proof is part of the compiler's: every run of `exec p n` keeps the arrays'
+sizes and the locals a statement does not write, and ends a statement normally
+only with the facts after it true
+([`fsound_exec`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/BcePost.lean#L439-L444));
+the statement simulation carries the facts of the current statement, the
+expression simulation those of the statement's state on the locals the
+expression reads
+([`FactsFor`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/BceSound.lean#L582-L586)),
+and an access without its check takes the index bound from them
+([`ck_sound`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/BceSound.lean#L629-L641)).
+Measured on `Init` (2026-10-30, exact counts): the analysis removes 1,244 of the
+7,986 bounds checks from `checker.s`, 28.5 % of the checks executed and 1.9 % of
+the instructions.
 ## 9. Parallel checking
 
 con-ron checks phase B (the pending declaration bodies) on worker threads that
@@ -1150,7 +1182,7 @@ files plus the patch series), `scripts/provenance.py check` and the import check
 | where | what |
 |---|---|
 | [`L/`](ConAgua/L/) | the language: syntax, semantics, notation, logic, write sets, non-interference, `l_model` |
-| [`Compiler/`](ConAgua/Compiler/) | the inliner and its proof, the compiler, the entry stub, the simulation proof, `compile_correct`, well-formedness |
+| [`Compiler/`](ConAgua/Compiler/) | the inliner and its proof, the compiler, the bounds-check analysis and its proof, the entry stub, the simulation proof, `compile_correct`, well-formedness |
 | [`AsmFile/`](ConAgua/AsmFile/) | the assembler-file parser (`include_asm`), the cross-check, the file equation |
 | [`Scan/`](ConAgua/Scan/) | the NDJSON scanner (con-ron's `scan_fast.rs`) and its links to con-leche |
 | [`Front/`](ConAgua/Front/) | the frontend: fields, id tables, records into the stores, inductive lines |

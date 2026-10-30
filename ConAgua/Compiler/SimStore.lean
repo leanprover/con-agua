@@ -282,62 +282,55 @@ theorem CPost.setPool {ctx : Ctx} {F : Nat} {σ : St} {s : MachineData} (hI : In
   CPost.ofX hI ((XPost.refl [t] s).set (List.mem_singleton_self t) v st) (by simpa using ht)
 
 omit hTab in
-/-- The bounds check, the base and the store of a word (`genSt`), the index `j` in register `X`. -/
+/-- The bounds check (if `ck`), the base and the store of a word (`genSt`), the index `j` in
+register `X`. -/
 theorem genSt_tailWX {ctx : Ctx} {F : Nat} {a' : TieredArray} (ha : G.tab.dom64 a' = true)
     {ln bs : AddrExpr} {σ : St} {d s2 : MachineData} {X t : Reg64} {src : Operand .W64} {j vb : Word}
-    {kT : Nat} {Q : MachineState → Prop}
-    (hcR : Code [i64 (.cmp (.reg (rr X)) (oM ln)), jccL .nc errorL, movRM t bs,
-      i64 (.mov (.mem (mbi t X .W64)) src)] kT)
+    {ck : Bool} {kT : Nat} {Q : MachineState → Prop}
+    (hcR : Code (chkR ck X ln ++ [movRM t bs, i64 (.mov (.mem (mbi t X .W64)) src)]) kT)
     (hI2 : Inv G ctx F σ s2) (hS2 : SPost G F d s2) (htP : t ∈ ctx.pool) (htX : t ≠ X)
     (hX : s2.regs.get64 X = j.toBitVec)
     (hsrc : src = .imm (.int64 vb.toInt64) ∨ ∃ r, src = oR r ∧ r ≠ t ∧ s2.regs.get64 r = vb.toBitVec)
     (hln : MemW s2 ln (UInt64.ofNat (σ.mem.arr64 a').size))
     (hbs : ∀ st, MemW { s2 with status := st } bs (UInt64.ofNat (G.b (G.tab.pos64 a'))))
+    (hck : ck = false → j.toNat < (σ.mem.arr64 a').size)
     (hok : ∀ s', j.toNat < (σ.mem.arr64 a').size → Inv G ctx F { σ with mem := σ.mem.set64 a' j vb } s' →
-      SPost G F d s' → Ev Q s' (at_ (kT + 4)))
+      SPost G F d s' → Ev Q s' (at_ (kT + (chkR ck X ln).length + 2)))
     (hoob : ∀ s', ¬ j.toNat < (σ.mem.arr64 a').size → GPost G (top d F) d s' → Ev Q s' (label errorL)) :
     Ev Q s2 (at_ kT) := by
   have hsz := hI2.mem.size64 a' ha
   have hendp := G.tab.pos64_lt ha
   have hend := hG.end64 _ hendp
   have hlt : (σ.mem.arr64 a').size < 2 ^ 64 := by omega
-  refine ev_cmpRA hcR.head hln ?_
-  rw [hX]
-  refine ev_jcc hcR.tail.head (fun hcc => ?_) (fun hcc => ?_)
-  · rw [interp_nc] at hcc
-    simp only [decide_eq_true_eq, UInt64.le_iff_toNat_le, UInt64.toNat_ofNat_of_lt' hlt] at hcc
-    exact hoob _ (by omega) (hS2.trans (SPost.regs rfl rfl rfl (Nat.le_refl _))).gpost
-  · rw [interp_nc] at hcc
-    simp only [decide_eq_false_iff_not, UInt64.le_iff_toNat_le, UInt64.toNat_ofNat_of_lt' hlt] at hcc
-    have hj : j.toNat < (σ.mem.arr64 a').size := by omega
-    have hI2' : Inv G ctx F σ { s2 with status := cmpFlags j.toBitVec (UInt64.ofNat (σ.mem.arr64 a').size).toBitVec } :=
-      hI2.of_regs rfl rfl rfl (fun _ _ => rfl) (fun _ => rfl)
-    refine ev_movRA hcR.tail.tail.head (hbs _) ?_
-    have hC := CPost.setPool hI2' htP (UInt64.ofNat (G.b (G.tab.pos64 a'))).toBitVec
-      (cmpFlags j.toBitVec (UInt64.ofNat (σ.mem.arr64 a').size).toBitVec)
-    have haddr : (s2.regs.set64 t (UInt64.ofNat (G.b (G.tab.pos64 a'))).toBitVec).get64 t +
-        (s2.regs.set64 t (UInt64.ofNat (G.b (G.tab.pos64 a'))).toBitVec).get64 X * 8 = A (G.b (G.tab.pos64 a') + 8 * j.toNat) := by
-      rw [rget_set, rget_set, ite_eq_left rfl, ite_eq_right (Ne.symm htX), hX]
-      apply BitVec.eq_of_toNat_eq
-      simp [A, BitVec.toNat_add, BitVec.toNat_mul, UInt64.toNat_ofNat_of_lt' (show G.b (G.tab.pos64 a') < 2 ^ 64 by omega)]
-      omega
-    have hmap : (rdW s2.dmem (A (G.b (G.tab.pos64 a') + 8 * j.toNat))).isSome := by
-      rw [hI2.mem.get64 a' ha j.toNat hj]; rfl
-    have hfin : ∀ (s3 : MachineData), Inv G ctx F σ s3 → SPost G F d s3 →
-        Ev Q { s3 with dmem := wrW s3.dmem (A (G.b (G.tab.pos64 a') + 8 * j.toNat)) vb.toBitVec } (at_ (kT + 3 + 1)) := by
-      intro s3 hI3 hS3
-      refine hok _ hj (hI3.store64 hG ha hj vb) ?_
-      exact hS3.trans ⟨rfl, rfl, rfl, Nat.le_refl _, Pres.store64 hG ha (by omega) _⟩
-    rcases hsrc with rfl | ⟨r, rfl, hrt, hr⟩
-    · refine ev_stXI hcR.tail.tail.tail.head ?_ ?_
-      · simp only; rw [haddr]; exact hmap
-      · simp only; rw [haddr]
-        exact hfin _ hC.1 ((hS2.trans (SPost.regs rfl rfl rfl (Nat.le_refl _))).trans hC.2.1)
-    · refine ev_stX hcR.tail.tail.tail.head ?_ ?_
-      · simp only; rw [haddr]; exact hmap
-      · simp only; rw [haddr, rget_set, ite_eq_right hrt, hr]
-        exact hfin _ hC.1 ((hS2.trans (SPost.regs rfl rfl rfl (Nat.le_refl _))).trans hC.2.1)
-
+  refine chkR_spec hcR.left hlt hX hln hck (fun hj st => ?_)
+    (fun hj st => hoob _ hj (hS2.trans (SPost.regs rfl rfl rfl (Nat.le_refl _))).gpost)
+  have hcR' := hcR.right
+  have hI2' : Inv G ctx F σ { s2 with status := st } := hI2.of_regs rfl rfl rfl (fun _ _ => rfl) (fun _ => rfl)
+  refine ev_movRA hcR'.head (hbs _) ?_
+  have hC := CPost.setPool hI2' htP (UInt64.ofNat (G.b (G.tab.pos64 a'))).toBitVec st
+  have haddr : (s2.regs.set64 t (UInt64.ofNat (G.b (G.tab.pos64 a'))).toBitVec).get64 t +
+      (s2.regs.set64 t (UInt64.ofNat (G.b (G.tab.pos64 a'))).toBitVec).get64 X * 8 = A (G.b (G.tab.pos64 a') + 8 * j.toNat) := by
+    rw [rget_set, rget_set, ite_eq_left rfl, ite_eq_right (Ne.symm htX), hX]
+    apply BitVec.eq_of_toNat_eq
+    simp [A, BitVec.toNat_add, BitVec.toNat_mul, UInt64.toNat_ofNat_of_lt' (show G.b (G.tab.pos64 a') < 2 ^ 64 by omega)]
+    omega
+  have hmap : (rdW s2.dmem (A (G.b (G.tab.pos64 a') + 8 * j.toNat))).isSome := by
+    rw [hI2.mem.get64 a' ha j.toNat hj]; rfl
+  have hfin : ∀ (s3 : MachineData), Inv G ctx F σ s3 → SPost G F d s3 →
+      Ev Q { s3 with dmem := wrW s3.dmem (A (G.b (G.tab.pos64 a') + 8 * j.toNat)) vb.toBitVec }
+        (at_ (kT + (chkR ck X ln).length + 1 + 1)) := by
+    intro s3 hI3 hS3
+    refine hok _ hj (hI3.store64 hG ha hj vb) ?_
+    exact hS3.trans ⟨rfl, rfl, rfl, Nat.le_refl _, Pres.store64 hG ha (by omega) _⟩
+  rcases hsrc with rfl | ⟨r, rfl, hrt, hr⟩
+  · refine ev_stXI hcR'.tail.head ?_ ?_
+    · simp only; rw [haddr]; exact hmap
+    · simp only; rw [haddr]
+      exact hfin _ hC.1 ((hS2.trans (SPost.regs rfl rfl rfl (Nat.le_refl _))).trans hC.2.1)
+  · refine ev_stX hcR'.tail.head ?_ ?_
+    · simp only; rw [haddr]; exact hmap
+    · simp only; rw [haddr, rget_set, ite_eq_right hrt, hr]
+      exact hfin _ hC.1 ((hS2.trans (SPost.regs rfl rfl rfl (Nat.le_refl _))).trans hC.2.1)
 
 omit hTab in
 /-- The bounds check, the base and the store of a word (`genSt`), a constant index `k`. -/
@@ -538,7 +531,7 @@ theorem sim_genStV {ctx : Ctx} {F : Nat} (hT : ctx.tab = G.tab) (hF : 8 * F + 8 
     {e : Expr} {fr : List Reg64} {cv : Program} {src : Operand .W64} {fr1 : List Reg64}
     (h : genStV ctx e fr = some (cv, src, fr1)) {k : Nat} (hc : Code cv k)
     (hfr : ∀ r ∈ fr, r ∈ ctx.pool) (hfn : fr.Nodup) (hwf : Expr.wf ctx.nl G.tab e = true)
-    {σ : St} {s : MachineData} {Q : MachineState → Prop} (hI : Inv G ctx F σ s)
+    {σ : St} {s : MachineData} {Q : MachineState → Prop} (hI : Inv G ctx F σ s) (hfa : FactsFor ctx σ e)
     (hok : ∀ vb s1, evalP σ e = .ok vb → XPost fr s s1 → (∀ r ∈ fr1, r ∈ fr) → fr1.Nodup →
       (src = .imm (.int64 vb.toInt64) ∨
         ∃ r, src = oR r ∧ r ∉ fr1 ∧ s1.regs.get64 r = vb.toBitVec) →
@@ -582,7 +575,7 @@ theorem sim_genStV {ctx : Ctx} {F : Nat} (hT : ctx.tab = G.tab) (hF : 8 * F + 8 
     subst hcv hfr1 hsrc
     have hok' : GOk ctx e v fr' :=
       ⟨hfn, fun r h => pool_dreg (hfr r h), fun r h => readsReg_free (pool_free hI.al (hfr r h)) e⟩
-    refine sim_gen hG hT hTab hF e v fr' c k hcg hc hok' hwf σ s Q hI ?_ herr
+    refine sim_gen hG hT hTab hF e v fr' c k hcg hc hok' hwf σ s Q hI hfa ?_ herr
     intro vb s1 hvb hv1 hX1
     exact hok vb s1 hvb hX1 (fun r h => List.mem_cons_of_mem _ h) (List.nodup_cons.mp hfn).2
       (.inr ⟨v, rfl, (List.nodup_cons.mp hfn).1, hv1⟩)
@@ -591,10 +584,10 @@ theorem sim_genStV {ctx : Ctx} {F : Nat} (hT : ctx.tab = G.tab) (hF : 8 * F + 8 
 descriptor words `[ln]`, `[bs]` the code does not change. -/
 theorem sim_genStW {ctx : Ctx} {F : Nat} (hT : ctx.tab = G.tab) (hF : 8 * F + 8 < maxOff)
     {ln bs : AddrExpr} {a' : TieredArray} (ha : G.tab.dom64 a' = true) {i e : Expr} {code : Program}
-    {mn : Nat} (hg : genSt ctx ln bs mn i e ctx.pool = some code) {k : Nat} (hc : Code code k)
+    {mn : Nat} {ck : Bool} (hg : genSt ctx ln bs mn ck i e ctx.pool = some code) {k : Nat} (hc : Code code k)
     (hwi : Expr.wf ctx.nl G.tab i = true) (hwe : Expr.wf ctx.nl G.tab e = true)
-    {σ : St} {d : MachineData} {Q : MachineState → Prop} (hI : Inv G ctx F σ d)
-    (hmn : mn ≤ (σ.mem.arr64 a').size)
+    {σ : St} {d : MachineData} {Q : MachineState → Prop} (hI : Inv G ctx F σ d) (hfa : FHolds ctx.fa σ)
+    (hmn : mn ≤ (σ.mem.arr64 a').size) (hck : ck = false → ∀ j, evalP σ i = .ok j → j.toNat < (σ.mem.arr64 a').size)
     (hD : ∀ s', XPost ctx.pool d s' → MemW s' ln (UInt64.ofNat (σ.mem.arr64 a').size) ∧
       MemW s' bs (UInt64.ofNat (G.b (G.tab.pos64 a'))))
     (hok : ∀ j vb s', evalP σ i = .ok j → evalP σ e = .ok vb → j.toNat < (σ.mem.arr64 a').size →
@@ -614,7 +607,7 @@ theorem sim_genStW {ctx : Ctx} {F : Nat} (hT : ctx.tab = G.tab) (hF : 8 * F + 8 
       Code rest (k + cv.length) → Ev Q s1 (at_ (k + cv.length))) → Ev Q d (at_ k) := by
     intro rest hcode cont
     subst hcode
-    exact sim_genStV hG hTab hT hF hv hc.left hpool (pool_nodup ctx) hwe hI
+    exact sim_genStV hG hTab hT hF hv hc.left hpool (pool_nodup ctx) hwe hI (FactsFor.of hfa e)
       (fun vb s1 hvb hX1 hfr1 hfn1 hsrc => cont vb s1 hvb hX1 hfr1 hfn1 hsrc hc.right)
       (fun s1 he hX => herr s1 (.inr (.inl he)) (CPost.ofX hI hX hpool).2.1.gpost)
   split at hg
@@ -627,14 +620,18 @@ theorem sim_genStW {ctx : Ctx} {F : Nat} (hT : ctx.tab = G.tab) (hF : 8 * F + 8 
     case h_2 => cases hg
     rename_i t rest
     split at hg
-    · -- below the minimum length: no bounds check
+    · -- below the minimum length, or known in range: no bounds check
       rename_i hkm
       cases hg
       refine step1 _ rfl ?_
       intro vb s1 hvb hX1 hfr1 hfn1 hsrc hc2
       have hC1 := CPost.ofX hI hX1 hpool
       have ht : t ∈ ctx.pool := hfr1 t List.mem_cons_self
-      have hj : kk.toNat < (σ.mem.arr64 a').size := Nat.lt_of_lt_of_le hkm hmn
+      have hj : kk.toNat < (σ.mem.arr64 a').size := by
+        simp only [Bool.or_eq_true, decide_eq_true_eq, Bool.not_eq_true'] at hkm
+        rcases hkm with h | h
+        · exact Nat.lt_of_lt_of_le h hmn
+        · exact hck h kk rfl
       refine genSt_tailWKm hG ha hk hc2 hC1.1 hC1.2.1 ht ?_ (hD s1 hX1).2 hj
         (fun s' hI' hS' => ev_congr (hok kk vb s' rfl hvb hj hI' hS') (by simp; omega))
       rcases hsrc with h1 | ⟨r, h1, h2, h3⟩
@@ -695,6 +692,7 @@ theorem sim_genStW {ctx : Ctx} {F : Nat} (hT : ctx.tab = G.tab) (hF : 8 * F + 8 
       refine genSt_tailWX hG ha hc2 hC1.1 hC1.2.1 ht htr hr1
         (hsrc' s1 [] (XPost.refl _ s1) (fun r h => by simp at h) t List.mem_cons_self)
         (hDX s1 [] (XPost.refl _ s1) (fun r h => by simp at h)).1 (hDX s1 [] (XPost.refl _ s1) (fun r h => by simp at h)).2
+        (fun h => hck h _ rfl)
         (fun s' hj hI' hS' => ev_congr (hok _ vb s' rfl hvb hj hI' hS') (by simp; omega))
         (fun s' hj hG' => herr s' (.inr (.inr ⟨_, rfl, hj⟩)) hG')
     · -- the index into a scratch register
@@ -723,14 +721,14 @@ theorem sim_genStW {ctx : Ctx} {F : Nat} (hT : ctx.tab = G.tab) (hF : 8 * F + 8 
         ⟨hfn1, fun r h => pool_dreg (hxP r h), fun r h => readsReg_free (pool_free hI.al (hxP r h)) i⟩
       have ht : t ∈ ctx.pool := hxP t (List.mem_cons_of_mem _ List.mem_cons_self)
       have htx : t ≠ xr := fun e => (List.nodup_cons.mp hfn1).1 (e ▸ List.mem_cons_self)
-      refine sim_gen hG hT hTab hF i xr (t :: fr2) ci _ hci hc2.left hoki hwi σ s1 Q hC1.1 ?_
+      refine sim_gen hG hT hTab hF i xr (t :: fr2) ci _ hci hc2.left hoki hwi σ s1 Q hC1.1 (FactsFor.of hfa i) ?_
         (fun s2 he hX2 => herr s2 (.inl he) (hC1.2.1.trans (CPost.ofX hC1.1 hX2 hxP).2.1).gpost)
       intro j s2 hj hx2 hX2
       have hC2 := CPost.ofX hC1.1 hX2 hxP
       have hc3 := hc2.right
       refine genSt_tailWX hG ha hc3 hC2.1 (hC1.2.1.trans hC2.2.1) ht htx hx2
         (hsrc' s2 _ hX2 (fun r h => h) t (List.mem_cons_of_mem _ List.mem_cons_self))
-        (hDX s2 _ hX2 (fun r h => h)).1 (hDX s2 _ hX2 (fun r h => h)).2
+        (hDX s2 _ hX2 (fun r h => h)).1 (hDX s2 _ hX2 (fun r h => h)).2 (fun h => hck h j hj)
         (fun s' hj' hI' hS' => ev_congr (hok j vb s' hj hvb hj' hI' hS') (by simp; omega))
         (fun s' hj' hG' => herr s' (.inr (.inr ⟨j, hj, hj'⟩)) hG')
 
@@ -800,10 +798,10 @@ theorem stT_idx {ctx : Ctx} {F : Nat} {a' : TieredArray} (ha : G.tab.dom64 a' = 
 theorem sim_genStT {ctx : Ctx} {F : Nat} (hT : ctx.tab = G.tab) (hF : 8 * F + 8 < maxOff)
     {ln : AddrExpr} {a' : TieredArray} (ha : G.tab.dom64 a' = true) {c : Nat}
     (hb : G.b (G.tab.pos64 a') = G.T + c) {i e : Expr} {code : Program}
-    {mn : Nat} (hg : genStT ctx ln c mn i e ctx.pool = some code) {k : Nat} (hc : Code code k)
+    {mn : Nat} {ck : Bool} (hg : genStT ctx ln c mn ck i e ctx.pool = some code) {k : Nat} (hc : Code code k)
     (hwi : Expr.wf ctx.nl G.tab i = true) (hwe : Expr.wf ctx.nl G.tab e = true)
-    {σ : St} {d : MachineData} {Q : MachineState → Prop} (hI : Inv G ctx F σ d)
-    (hmn : mn ≤ (σ.mem.arr64 a').size)
+    {σ : St} {d : MachineData} {Q : MachineState → Prop} (hI : Inv G ctx F σ d) (hfa : FHolds ctx.fa σ)
+    (hmn : mn ≤ (σ.mem.arr64 a').size) (hck : ck = false → ∀ j, evalP σ i = .ok j → j.toNat < (σ.mem.arr64 a').size)
     (hD : ∀ s', XPost ctx.pool d s' → MemW s' ln (UInt64.ofNat (σ.mem.arr64 a').size))
     (hok : ∀ j vb s', evalP σ i = .ok j → evalP σ e = .ok vb → j.toNat < (σ.mem.arr64 a').size →
       Inv G ctx F { σ with mem := σ.mem.set64 a' j vb } s' → SPost G F d s' → Ev Q s' (at_ (k + code.length)))
@@ -822,7 +820,7 @@ theorem sim_genStT {ctx : Ctx} {F : Nat} (hT : ctx.tab = G.tab) (hF : 8 * F + 8 
       Code rest (k + cv.length) → Ev Q s1 (at_ (k + cv.length))) → Ev Q d (at_ k) := by
     intro rest hcode cont
     subst hcode
-    exact sim_genStV hG hTab hT hF hv hc.left hpool (pool_nodup ctx) hwe hI
+    exact sim_genStV hG hTab hT hF hv hc.left hpool (pool_nodup ctx) hwe hI (FactsFor.of hfa e)
       (fun vb s1 hvb hX1 hfr1 hfn1 hsrc => cont vb s1 hvb hX1 hfr1 hfn1 hsrc hc.right)
       (fun s1 he hX => herr s1 (.inr (.inl he)) (CPost.ofX hI hX hpool).2.1.gpost)
   have hsrcK : ∀ (vb : Word) (s1 : MachineData), (src = .imm (.int64 vb.toInt64) ∨
@@ -837,17 +835,21 @@ theorem sim_genStT {ctx : Ctx} {F : Nat} (hT : ctx.tab = G.tab) (hF : 8 * F + 8 
     rename_i kk
     split at hg
     case isFalse => cases hg
-    rename_i hck
+    rename_i hck31
     have hk28 : kk.toNat < 2 ^ 28 := by omega
     split at hg
-    · -- below the minimum length: no bounds check
+    · -- below the minimum length, or known in range: no bounds check
       rename_i hkm
       cases hg
       refine step1 _ rfl ?_
       intro vb s1 hvb hX1 hfr1 hfn1 hsrc hc2
       have hC1 := CPost.ofX hI hX1 hpool
-      have hj : kk.toNat < (σ.mem.arr64 a').size := Nat.lt_of_lt_of_le hkm hmn
-      exact stT_disp hG ha hb hck (Code.get (i := 0) hc2 rfl) hC1.1 hC1.2.1 hj (hsrcK vb s1 hsrc)
+      have hj : kk.toNat < (σ.mem.arr64 a').size := by
+        simp only [Bool.or_eq_true, decide_eq_true_eq, Bool.not_eq_true'] at hkm
+        rcases hkm with h | h
+        · exact Nat.lt_of_lt_of_le h hmn
+        · exact hck h kk rfl
+      exact stT_disp hG ha hb hck31 (Code.get (i := 0) hc2 rfl) hC1.1 hC1.2.1 hj (hsrcK vb s1 hsrc)
         (fun s' hI' hS' => ev_congr (hok kk vb s' rfl hvb hj hI' hS') (by simp; omega))
     cases hg
     refine step1 _ rfl ?_
@@ -866,7 +868,7 @@ theorem sim_genStT {ctx : Ctx} {F : Nat} (hT : ctx.tab = G.tab) (hF : 8 * F + 8 
     · rw [interp_be] at hcc
       simp only [decide_eq_false_iff_not, UInt64.le_iff_toNat_le, UInt64.toNat_ofNat_of_lt' hlt] at hcc
       have hj : kk.toNat < (σ.mem.arr64 a').size := by omega
-      exact stT_disp hG ha hb hck (Code.get (i := 2) hc2 rfl)
+      exact stT_disp hG ha hb hck31 (Code.get (i := 2) hc2 rfl)
         (hC1.1.of_regs rfl rfl rfl (fun _ _ => rfl) (fun _ => rfl))
         (hC1.2.1.trans (SPost.regs rfl rfl rfl (Nat.le_refl _))) hj (hsrcK vb s1 hsrc)
         (fun s' hI' hS' => ev_congr (hok kk vb s' rfl hvb hj hI' hS') (by simp; omega))
@@ -878,24 +880,17 @@ theorem sim_genStT {ctx : Ctx} {F : Nat} (hT : ctx.tab = G.tab) (hF : 8 * F + 8 
         evalP σ i = .ok j → evalP σ e = .ok vb → Inv G ctx F σ s2 → SPost G F d s2 →
         s2.regs.get64 X = j.toBitVec → MemW s2 ln (UInt64.ofNat (σ.mem.arr64 a').size) →
         (src = .imm (.int64 vb.toInt64) ∨ ∃ r, src = oR r ∧ s2.regs.get64 r = vb.toBitVec) →
-        Code [i64 (.cmp (.reg (rr X)) (oM ln)), jccL .nc errorL, i64 (.mov (.mem (tdesc X c)) src)] kT →
-        kT + 3 = k + code.length → Ev Q s2 (at_ kT) := by
+        Code (chkR ck X ln ++ [i64 (.mov (.mem (tdesc X c)) src)]) kT →
+        kT + (chkR ck X ln).length + 1 = k + code.length → Ev Q s2 (at_ kT) := by
       intro s2 X j vb kT hj hvb hI2 hS2 hX hln hsrc2 hcR hkT
       have hsz := hI2.mem.size64 a' ha
       have hend := hG.end64 _ (G.tab.pos64_lt ha)
       have hlt : (σ.mem.arr64 a').size < 2 ^ 64 := by omega
-      refine ev_cmpRA hcR.head hln ?_
-      rw [hX]
-      refine ev_jcc hcR.tail.head (fun hcc => ?_) (fun hcc => ?_)
-      · rw [interp_nc] at hcc
-        simp only [decide_eq_true_eq, UInt64.le_iff_toNat_le, UInt64.toNat_ofNat_of_lt' hlt] at hcc
-        exact herr _ (.inr (.inr ⟨j, hj, by omega⟩)) (hS2.trans (SPost.regs rfl rfl rfl (Nat.le_refl _))).gpost
-      · rw [interp_nc] at hcc
-        simp only [decide_eq_false_iff_not, UInt64.le_iff_toNat_le, UInt64.toNat_ofNat_of_lt' hlt] at hcc
-        have hjs : j.toNat < (σ.mem.arr64 a').size := by omega
-        exact stT_idx hG ha hb hc31 hcR.tail.tail.head (hI2.of_regs rfl rfl rfl (fun _ _ => rfl) (fun _ => rfl))
-          (hS2.trans (SPost.regs rfl rfl rfl (Nat.le_refl _))) hX hjs hsrc2
-          (fun s' hI' hS' => ev_congr (hok j vb s' hj hvb hjs hI' hS') (by omega))
+      refine chkR_spec hcR.left hlt hX hln (fun h => hck h j hj) (fun hjs st => ?_)
+        (fun hjs st => herr _ (.inr (.inr ⟨j, hj, hjs⟩)) (hS2.trans (SPost.regs rfl rfl rfl (Nat.le_refl _))).gpost)
+      exact stT_idx hG ha hb hc31 hcR.right.head (hI2.of_regs rfl rfl rfl (fun _ _ => rfl) (fun _ => rfl))
+        (hS2.trans (SPost.regs rfl rfl rfl (Nat.le_refl _))) hX hjs hsrc2
+        (fun s' hI' hS' => ev_congr (hok j vb s' hj hvb hjs hI' hS') (by omega))
     split at hg
     · -- the index in a local's register
       rename_i r hr
@@ -922,7 +917,7 @@ theorem sim_genStT {ctx : Ctx} {F : Nat} (hT : ctx.tab = G.tab) (hF : 8 * F + 8 
       have hxP : ∀ r ∈ xr :: fr2, r ∈ ctx.pool := fun r h => hfr1 r h
       have hoki : GOk ctx i xr fr2 :=
         ⟨hfn1, fun r h => pool_dreg (hxP r h), fun r h => readsReg_free (pool_free hI.al (hxP r h)) i⟩
-      refine sim_gen hG hT hTab hF i xr fr2 ci _ hci hc2.left hoki hwi σ s1 Q hC1.1 ?_
+      refine sim_gen hG hT hTab hF i xr fr2 ci _ hci hc2.left hoki hwi σ s1 Q hC1.1 (FactsFor.of hfa i) ?_
         (fun s2 he hX2 => herr s2 (.inl he) (hC1.2.1.trans (CPost.ofX hC1.1 hX2 hxP).2.1).gpost)
       intro j s2 hj hx2 hX2
       have hC2 := CPost.ofX hC1.1 hX2 hxP
@@ -993,7 +988,7 @@ theorem sim_st64_tail {ctx : Ctx} {F : Nat} (hT : ctx.tab = G.tab) (hF : 8 * F +
     · omega
 
 theorem sim_st64 (a : ArrId) (i e : Expr) : SimS p G sk (stepRun p K) P (.st64 a i e) := by
-  intro ctx F path k hT hF hc hwf hN htmp σ d Q hI hP hK
+  intro ctx F path k hT hF hc hwf hN htmp σ d Q hI hfa hP hK
   simp only [Stmt.wf, Bool.and_eq_true] at hwf
   obtain ⟨⟨ha, hwi⟩, hwe⟩ := hwf
   simp only [tempsS] at htmp
@@ -1006,6 +1001,10 @@ theorem sim_st64 (a : ArrId) (i e : Expr) : SimS p G sk (stepRun p K) P (.st64 a
   case some code =>
     simp only [hgs] at hc hK
     have hmn : ctx.tab.min64 a ≤ (σ.mem.arr64 a).size := by rw [hT, hI.mem.size64 _ ha]; exact hG.min64 _ ha
+    have hck : ctx.ck (some (.w a)) i (ctx.tab.min64 a) = false → ∀ j, evalP σ i = .ok j →
+        j.toNat < (σ.mem.arr64 a).size := fun h j hj =>
+      ck_sound (FactsFor.of hfa i) (fun _ h => h) h hmn
+        (fun σ0 hm _ key hk => by cases hk; simp only [AKey.len, hm, Nat.le_refl]) hj
     have hok : ∀ j vb s', evalP σ i = .ok j → evalP σ e = .ok vb → j.toNat < (σ.mem.arr64 a).size →
         Inv G ctx F { σ with mem := σ.mem.set64 a j vb } s' → SPost G F d s' → Ev Q s' (at_ (k + code.length)) := by
       intro j vb s' hj hvb hjs hI' hS'
@@ -1027,9 +1026,9 @@ theorem sim_st64 (a : ArrId) (i e : Expr) : SimS p G sk (stepRun p K) P (.st64 a
     split at hgs
     · -- the table-relative array
       rename_i c hcT
-      exact sim_genStT hG hTab hT hF ha (hG.tbl64 _ c ha (by rw [← hT]; exact hcT)) hgs hc hwi hwe hI hmn
+      exact sim_genStT hG hTab hT hF ha (hG.tbl64 _ c ha (by rw [← hT]; exact hcT)) hgs hc hwi hwe hI hfa hmn hck
         (fun s' hX => (descW_plain hTab hT ha (CPost.ofX hI hX (fun r h => h)).1).1) hok herr
-    · exact sim_genStW hG hTab hT hF ha hgs hc hwi hwe hI hmn
+    · exact sim_genStW hG hTab hT hF ha hgs hc hwi hwe hI hfa hmn hck
         (fun s' hX => descW_plain hTab hT ha (CPost.ofX hI hX (fun r h => h)).1) hok herr
   simp only [hgs] at hc hK
   cases hl : loadInto ctx .rdx e
@@ -1194,7 +1193,7 @@ theorem sim_st64t_tail {ctx : Ctx} {F : Nat} (hT : ctx.tab = G.tab) (hF : 8 * F 
     (by rw [← hrax]; rfl) (by simp [Reg64s.set64, hrdx]) hK
 
 theorem sim_st64t (a : ArrId) (t i e : Expr) : SimS p G sk (stepRun p K) P (.st64t a t i e) := by
-  intro ctx F path k hT hF hc hwf hN htmp σ d Q hI hP hK
+  intro ctx F path k hT hF hc hwf hN htmp σ d Q hI hfa hP hK
   simp only [Stmt.wf, Bool.and_eq_true] at hwf
   obtain ⟨⟨⟨⟨ha, hst⟩, hwt⟩, hwi⟩, hwe⟩ := hwf
   obtain ⟨ld, hld⟩ := Option.isSome_iff_exists.mp (loadInto_isSome (ctx := ctx) (r := .rcx) hst)
@@ -1207,7 +1206,8 @@ theorem sim_st64t (a : ArrId) (t i e : Expr) : SimS p G sk (stepRun p K) P (.st6
   simp only [tempsS] at htmp
   simp only [compileS] at hc hK
   cases hgs : (if ctx.isT t then
-      genSt ctx (tdesc .rsi (ctx.tab.len64 a)) (tdesc .rsi (ctx.tab.base64 a)) (ctx.tab.min64t a) i e ctx.pool
+      genSt ctx (tdesc .rsi (ctx.tab.len64 a)) (tdesc .rsi (ctx.tab.base64 a)) (ctx.tab.min64t a)
+        (ctx.ck (keyT a t) i (ctx.tab.min64t a)) i e ctx.pool
       else none)
   case some code =>
     simp only [hgs] at hc hK
@@ -1220,9 +1220,14 @@ theorem sim_st64t (a : ArrId) (t i e : Expr) : SimS p G sk (stepRun p K) P (.st6
       intro s' hX
       rw [hX.keep .rsi fun h => (pool_dreg h).rsi (by simp [hx]) rfl]
       simp [Reg64s.get64, hI.tr x hx]
-    refine sim_genStW hG hTab hT hF (G.tab.dom64_tierA ha _) hgs hc hwi hwe hI
-      (by rw [hT, hI.mem.size64 _ (G.tab.dom64_tierA ha _)]
-          exact Nat.le_trans (G.tab.min64t_le a _) (hG.min64 _ (G.tab.dom64_tierA ha _)))
+    have hmn : ctx.tab.min64t a ≤ (σ.mem.arr64 (tierA a (σ.loc x))).size := by
+      rw [hT, hI.mem.size64 _ (G.tab.dom64_tierA ha _)]
+      exact Nat.le_trans (G.tab.min64t_le a _) (hG.min64 _ (G.tab.dom64_tierA ha _))
+    refine sim_genStW hG hTab hT hF (G.tab.dom64_tierA ha _) hgs hc hwi hwe hI hfa hmn
+      (fun h j hj => ck_sound (e := .ld64t a (.var x) i) (FactsFor.of hfa _) (fun y hy => by simp [Expr.readsV, hy]) h hmn
+        (fun σ0 hm hl key hk => by
+          simp only [keyT_len hk (u := σ.loc x) (by simp only [evalP]; rw [hl x (by simp [Expr.readsV])]), hm,
+            Nat.le_refl]) hj)
       (fun s' hX => descW_tier hTab hT ha (CPost.ofX hI hX (fun r h => h)).1 (hrsi s' hX)) ?_ ?_
     · intro j vb s' hj hvb hjs hI' hS'
       exact hK.normal _ s' (by rw [step_st64t_run]; simp only [evalP, hj, hvb]; rw [ite_eq_left hjs]) hI' hS'
@@ -1452,7 +1457,7 @@ theorem sim_st32t_tail {ctx : Ctx} {F : Nat} (hT : ctx.tab = G.tab) (hF : 8 * F 
     (by rw [← hrax]; rfl) (by simp [Reg64s.set64, hrdx]) hK
 
 theorem sim_st32t (a : ArrId) (t i e : Expr) : SimS p G sk (stepRun p K) P (.st32t a t i e) := by
-  intro ctx F path k hT hF hc hwf hN htmp σ d Q hI hP hK
+  intro ctx F path k hT hF hc hwf hN htmp σ d Q hI hfa hP hK
   simp only [Stmt.wf, Bool.and_eq_true] at hwf
   obtain ⟨⟨⟨⟨ha, hst⟩, hwt⟩, hwi⟩, hwe⟩ := hwf
   have hT1 : t.constTier? = none → G.tab.dom64 (tier1 a) = true := fun h => by
@@ -1647,7 +1652,7 @@ theorem sim_st8_tail {ctx : Ctx} {F : Nat} (hT : ctx.tab = G.tab) (hF : 8 * F + 
     · omega
 
 theorem sim_st8 (a : ArrId) (i e : Expr) : SimS p G sk (stepRun p K) P (.st8 a i e) := by
-  intro ctx F path k hT hF hc hwf hN htmp σ d Q hI hP hK
+  intro ctx F path k hT hF hc hwf hN htmp σ d Q hI hfa hP hK
   simp only [Stmt.wf, Bool.and_eq_true] at hwf
   obtain ⟨⟨ha, hwi⟩, hwe⟩ := hwf
   simp only [tempsS] at htmp
@@ -1721,7 +1726,7 @@ theorem sim_st8 (a : ArrId) (i e : Expr) : SimS p G sk (stepRun p K) P (.st8 a i
     rw [step_st8_run]; simp only [hx]
 
 theorem sim_gset (g : GVar) (e : Expr) : SimS p G sk (stepRun p K) P (.gset g e) := by
-  intro ctx F path k hT hF hc hwf hN htmp σ d Q hI hP hK
+  intro ctx F path k hT hF hc hwf hN htmp σ d Q hI hfa hP hK
   simp only [Stmt.wf, Bool.and_eq_true, decide_eq_true_eq] at hwf
   simp only [compileS] at hc hK
   simp only [tempsS] at htmp

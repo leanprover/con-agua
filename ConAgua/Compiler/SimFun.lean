@@ -454,6 +454,7 @@ theorem sim_fnBody0 (t : NTree)
   have hnrt : ctx.nrt = t := by rw [hctx]; rfl
   have hleaf : ctx.leaf = !Stmt.calls fd.body := by rw [hctx]; rfl
   have hneed : ctx.need = Stmt.need sk fd.body := by rw [hctx]; rfl
+  have hfa0 : ctx.fa = some {} := by rw [hctx]; rfl
   have hhi2 := hG.hi_le
   simp only [maxOff] at hF'off
   have hTab' := hTab; simp only [maxOff] at hTab'
@@ -517,7 +518,7 @@ theorem sim_fnBody0 (t : NTree)
     refine hE fd.body ctx F' 0 _ hT (by simp only [maxOff]; omega) c2.left (by rw [hnl]; exact hbody)
       ⟨by rw [hnr]; exact Nat.le_refl _, by rw [hnr]; exact hnr', by rw [hnrt]; exact hTree,
         fun hl => by rw [hleaf] at hl; simpa using hl, by rw [hneed]; exact Nat.le_refl _⟩
-      (by rw [hnl, hnr]; exact htmp) _ s6 Q hI6 (by rw [r3]; exact hfuel) ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+      (by rw [hnl, hnr]; exact htmp) _ s6 Q hI6 (by rw [hfa0]; exact holds_empty _) (by rw [r3]; exact hfuel) ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
     · intro σ2 d2 hr hI2 hS2
       have := hZ σ2 d2 (.inl hr) hI2 hS2
       rw [Code.label (i := 0) c3 rfl, Nat.add_zero] at this
