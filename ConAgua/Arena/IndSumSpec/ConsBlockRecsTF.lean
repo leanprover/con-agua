@@ -444,40 +444,14 @@ theorem ruleWords_length (m : Mem) : ∀ (ro : Word) (k : Nat), (ruleWords m ro 
   | _, 0 => rfl
   | ro, k + 1 => by simp [ruleWords, recWords, ruleWords_length m (ro + 1) k]; omega
 
-set_option maxHeartbeats 2000000 in
 theorem cpMem_eq {m : Mem} {b old : Word} (hlt : old.toNat + 11 ≤ b.toNat) (hb : b.toNat + 11 < 2 ^ 64) :
     cpMem m b old = wrER m b (recWords (m.arr64 EREC) old) := by
-  have t1 : (b + 1).toNat = b.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
-  have t2 : (b + 2).toNat = b.toNat + 2 := by rw [UInt64.toNat_add]; simp; omega
-  have t3 : (b + 3).toNat = b.toNat + 3 := by rw [UInt64.toNat_add]; simp; omega
-  have t4 : (b + 4).toNat = b.toNat + 4 := by rw [UInt64.toNat_add]; simp; omega
-  have t5 : (b + 5).toNat = b.toNat + 5 := by rw [UInt64.toNat_add]; simp; omega
-  have t6 : (b + 6).toNat = b.toNat + 6 := by rw [UInt64.toNat_add]; simp; omega
-  have t7 : (b + 7).toNat = b.toNat + 7 := by rw [UInt64.toNat_add]; simp; omega
-  have t8 : (b + 8).toNat = b.toNat + 8 := by rw [UInt64.toNat_add]; simp; omega
-  have t9 : (b + 9).toNat = b.toNat + 9 := by rw [UInt64.toNat_add]; simp; omega
-  have t10 : (b + 10).toNat = b.toNat + 10 := by rw [UInt64.toNat_add]; simp; omega
-  have c1 : (old + 1).toNat = old.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
-  have c2 : (old + 2).toNat = old.toNat + 2 := by rw [UInt64.toNat_add]; simp; omega
-  have c3 : (old + 3).toNat = old.toNat + 3 := by rw [UInt64.toNat_add]; simp; omega
-  have c4 : (old + 4).toNat = old.toNat + 4 := by rw [UInt64.toNat_add]; simp; omega
-  have c5 : (old + 5).toNat = old.toNat + 5 := by rw [UInt64.toNat_add]; simp; omega
-  have c6 : (old + 6).toNat = old.toNat + 6 := by rw [UInt64.toNat_add]; simp; omega
-  have c7 : (old + 7).toNat = old.toNat + 7 := by rw [UInt64.toNat_add]; simp; omega
-  have c8 : (old + 8).toNat = old.toNat + 8 := by rw [UInt64.toNat_add]; simp; omega
-  have c9 : (old + 9).toNat = old.toNat + 9 := by rw [UInt64.toNat_add]; simp; omega
-  have c10 : (old + 10).toNat = old.toNat + 10 := by rw [UInt64.toNat_add]; simp; omega
   simp only [cpMem, wrER, recWords]
   rw [show b + 1 + 1 = b + 2 by ac_rfl, show b + 2 + 1 = b + 3 by ac_rfl,
     show b + 3 + 1 = b + 4 by ac_rfl, show b + 4 + 1 = b + 5 by ac_rfl,
     show b + 5 + 1 = b + 6 by ac_rfl, show b + 6 + 1 = b + 7 by ac_rfl, show b + 7 + 1 = b + 8 by ac_rfl,
     show b + 8 + 1 = b + 9 by ac_rfl, show b + 9 + 1 = b + 10 by ac_rfl]
-  -- The discharger rewrites with `t1 … c10` and clears them before `omega`: twenty chained
-  -- `(x + k).toNat` facts in context make each `omega` slow and the module peak at ~10 GB.
-  simp (disch := (
-    (try simp only [t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, c1, c2, c3, c4, c5, c6, c7, c8, c9, c10])
-    clear t1 t2 t3 t4 t5 t6 t7 t8 t9 t10 c1 c2 c3 c4 c5 c6 c7 c8 c9 c10
-    omega)) only [rdW_set64_ne_er]
+  simp (disch := off_omega) only [rdW_set64_ne_er]
 
 theorem rdW_agree {a a' : Array Word} {B : Nat} (hE : ∀ i < B, a'[i]? = a[i]?) {y : Word} (hy : y.toNat < B) :
     rdW a' y = rdW a y := by
@@ -638,17 +612,11 @@ theorem ri_spec (p : Prog) (L : CbrLook p) (n : Nat) (s₀ : St) (cv mi rp3 reo 
 theorem riMem_eq {m1 : Mem} {q cq mi rp3 reo rel : Word} (hlt : cq.toNat + 4 ≤ q.toNat) (hq : q.toNat + 9 < 2 ^ 64) :
     riMem m1 q cq mi rp3 reo rel = wrER m1 q [5, rdW (m1.arr64 EREC) cq, rdW (m1.arr64 EREC) (cq + 1),
       rdW (m1.arr64 EREC) (cq + 2), rdW (m1.arr64 EREC) (cq + 3), mi, rp3, reo, rel] := by
-  have t1 : (q + 1).toNat = q.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
-  have t2 : (q + 2).toNat = q.toNat + 2 := by rw [UInt64.toNat_add]; simp; omega
-  have t3 : (q + 3).toNat = q.toNat + 3 := by rw [UInt64.toNat_add]; simp; omega
-  have c1 : (cq + 1).toNat = cq.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
-  have c2 : (cq + 2).toNat = cq.toNat + 2 := by rw [UInt64.toNat_add]; simp; omega
-  have c3 : (cq + 3).toNat = cq.toNat + 3 := by rw [UInt64.toNat_add]; simp; omega
   simp only [riMem, wrER]
   rw [show q + 1 + 1 = q + 2 by ac_rfl, show q + 2 + 1 = q + 3 by ac_rfl,
     show q + 3 + 1 = q + 4 by ac_rfl, show q + 4 + 1 = q + 5 by ac_rfl,
     show q + 5 + 1 = q + 6 by ac_rfl, show q + 6 + 1 = q + 7 by ac_rfl, show q + 7 + 1 = q + 8 by ac_rfl]
-  simp (disch := ((try simp only [t1, t2, t3, c1, c2, c3]); omega)) only [rdW_set64_ne_er]
+  simp (disch := off_omega) only [rdW_set64_ne_er]
 
 /-- **`class_fe_r_rec` under the stage relation**: a fresh rule-less `.recInfo` record of the constant
 at `cq`. -/

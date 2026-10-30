@@ -244,34 +244,17 @@ l_model tsrm_spec (p : Prog) (hL : TsrLook p)
 
 /-! ## The rebuilt record under the stage relation -/
 
-set_option maxHeartbeats 2000000 in
 theorem rmMem_eq {m1 : Mem} {q old flo fll fpo fpl : Word} (hlt : old.toNat + 11 ≤ q.toNat)
     (hq : q.toNat + 11 < 2 ^ 64) :
     rmMem m1 q old flo fll fpo fpl = wrER m1 q [rdW (m1.arr64 EREC) old, rdW (m1.arr64 EREC) (old + 1),
       rdW (m1.arr64 EREC) (old + 2), 1, flo, fll, fpo, fpl, rdW (m1.arr64 EREC) (old + 8),
       rdW (m1.arr64 EREC) (old + 9), rdW (m1.arr64 EREC) (old + 10)] := by
-  have t1 : (q + 1).toNat = q.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
-  have t2 : (q + 2).toNat = q.toNat + 2 := by rw [UInt64.toNat_add]; simp; omega
-  have t3 : (q + 3).toNat = q.toNat + 3 := by rw [UInt64.toNat_add]; simp; omega
-  have t4 : (q + 4).toNat = q.toNat + 4 := by rw [UInt64.toNat_add]; simp; omega
-  have t5 : (q + 5).toNat = q.toNat + 5 := by rw [UInt64.toNat_add]; simp; omega
-  have t6 : (q + 6).toNat = q.toNat + 6 := by rw [UInt64.toNat_add]; simp; omega
-  have t7 : (q + 7).toNat = q.toNat + 7 := by rw [UInt64.toNat_add]; simp; omega
-  have t8 : (q + 8).toNat = q.toNat + 8 := by rw [UInt64.toNat_add]; simp; omega
-  have t9 : (q + 9).toNat = q.toNat + 9 := by rw [UInt64.toNat_add]; simp; omega
-  have t10 : (q + 10).toNat = q.toNat + 10 := by rw [UInt64.toNat_add]; simp; omega
-  have c1 : (old + 1).toNat = old.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
-  have c2 : (old + 2).toNat = old.toNat + 2 := by rw [UInt64.toNat_add]; simp; omega
-  have c8 : (old + 8).toNat = old.toNat + 8 := by rw [UInt64.toNat_add]; simp; omega
-  have c9 : (old + 9).toNat = old.toNat + 9 := by rw [UInt64.toNat_add]; simp; omega
-  have c10 : (old + 10).toNat = old.toNat + 10 := by rw [UInt64.toNat_add]; simp; omega
   simp only [rmMem, wrER]
   rw [show q + 1 + 1 = q + 2 by ac_rfl, show q + 2 + 1 = q + 3 by ac_rfl,
     show q + 3 + 1 = q + 4 by ac_rfl, show q + 4 + 1 = q + 5 by ac_rfl,
     show q + 5 + 1 = q + 6 by ac_rfl, show q + 6 + 1 = q + 7 by ac_rfl, show q + 7 + 1 = q + 8 by ac_rfl,
     show q + 8 + 1 = q + 9 by ac_rfl, show q + 9 + 1 = q + 10 by ac_rfl]
-  simp (disch := ((try simp only [t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, c1, c2, c8, c9, c10]); omega)) only
-    [rdW_set64_ne_er]
+  simp (disch := off_omega) only [rdW_set64_ne_er]
 
 theorem erRec_mfr {m m1 : Mem} {k q : Word} (h : erAllocW m k = some (q, m1)) (ws : List Word) :
     MFr [] [] m (wrER m1 q ws) := by

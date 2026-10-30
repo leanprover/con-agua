@@ -266,3 +266,70 @@ offset facts; its line gain is in the hundreds. Larger reductions of the refinem
 have to come from its shape (refgen.md: the walk kit when touching a file), not from word ↔ `Nat`.
 
 No proof, L code, `checker.s` or statement changed on master.
+
+## 4. Rollout of rank 1 (lane offkit)
+
+**The kit** is `ConAgua/L/WordOff.lean` (a `module`, imports only `L.Syntax`): `off_toNat` as
+in §2.2, and `off_omega`, a macro for `(try simp (disch := omega) only [off_toNat]) <;> omega`
+(`omega` after the goal's literal offsets are rewritten). Both are in namespace `L`. The variable-offset
+sibling and the `set64`-at-offset read lemma of §2.2 were not needed by any site below and are not
+added.
+
+**Sites** (the 19 densest theorems by literal offset `have`s, `_tmp/offkit/dense2.py`, the six
+dischargers among them; 615 such `have`s in 397 theorems, 13 with five or more, 19 with four or more):
+
+| theorem | what changed |
+|---|---|
+| `caps_rel` (`Rom/CIReadRefCaps`) | 12 offset facts and the `comega` macro gone; `off_omega` everywhere |
+| `cpMem_eq`, `riMem_eq` (`IndSumSpec/ConsBlockRecsTF`), `rmMem_eq` (`TsrW`), `ciRecMem_eq` (`ConsSumCtors`), `cfrMem_eq` (`ClassFeR`) | the rewrite-and-clear dischargers become `simp (disch := off_omega) only [rdW_set64_ne_er]`; 20 + 6 + 15 + 6 + 6 facts gone |
+| `rule_rel` (`Rom/CIReadRefRule`) | 10 facts gone; uses as `off_toNat (by omega)` |
+| `ci_rec`, `ci_ctor` (`Rom/CIReadRefCI`) | the `hpk` `∀` fact and 6 offset facts gone; the `omega`s that needed them are `off_omega` |
+| `recRW_twin` (`Front/IndInstallRefine3`) | 4 facts gone (`hq1` stays: a hypothesis of a callee's statement mentions `(q1 + 1).toNat`) |
+| `iccW_ok` (`WhnfIotaRefine6`), `projB_rel` (`PromoteCIRef/Proj`), `blockGo_ok'` (`Checker/HoistWalkRef`), `iirW_stage` (`IndInstallSpec/IcaW`) | 5, 4, 3, 4 facts gone |
+| `rd2W_of`, `rd4W_of`, `rd5W_of` (`PromoteCIInfra`) | 8 facts gone (the family kept uniform) |
+| `infer_decCV_words` (`InferLeaves`) | 4 facts and the helper `infer_toNat_add_small` (no other user) gone |
+| `nty_ref` (`Verdict/PosNty`) | the 3 `key + k` facts gone; the nested `q + 1 + k` facts stay (`off_toNat`'s bound for `(q + 1) + 3` names `(q + 1).toNat`, which `omega` cannot bound) |
+
+The `set_option maxHeartbeats` raises of `cpMem_eq` (2 M), `rmMem_eq` (2 M), `ci_rec` (4 M) and
+`rule_rel` (8 M) are no longer needed and are removed.
+
+**Skipped, measured:**
+
+* `cns_ref` (`IndT/RecGen28`, 5 facts): without the four `nm + k` facts, 22 `omega`s needed
+  `off_omega` and two still failed (the facts are reused inside `set64IW_get` chains, §2.2). Kept.
+* `vgStore_facts` (`PromoteRecRef`, 5 facts): `−5` lines, but `simp (disch := omega)` over its
+  ten goals took the theorem from 0.39 to 1.66 s (`pair.py`, 3 rounds). Kept.
+* `cieW_ok` (`DeclCanonInfo`, 8 facts): its facts come from array reads (`toNat_add_of_get`), with no
+  room bound `p.toNat + 1 < 2 ^ 64` in context for `omega`; the kit has nothing to discharge with.
+
+**Measured** (`_tmp/offkit/measure.py`: each changed module's master text and branch text elaborated
+in alternation, `lake env lean`, 3 rounds, medians, 4 modules at a time, load 17–24; dependencies are
+the branch's oleans for both; lines are code lines without blanks and comments):
+
+| module | lines | wall s | CPU s | peak RSS MB |
+|---|---:|---:|---:|---:|
+| `Arena/IndInstallSpec/IcaW` | 840 → 836 | 7.7 → 8.0 | 17.3 → 19.8 | 2529 → 2509 |
+| `Arena/IndSumSpec/ConsBlockRecsTF` | 1014 → 984 | 12.7 → 10.4 | 23.5 → 16.8 | 3025 → 2486 |
+| `Arena/IndSumSpec/ConsSumCtors` | 265 → 259 | 5.2 → 5.0 | 7.1 → 7.1 | 2252 → 2249 |
+| `Arena/IndSumSpec/TsrW` | 554 → 537 | 18.2 → 3.1 | 24.4 → 6.1 | 3906 → 2382 |
+| `Arena/InferLeaves` | 733 → 727 | 4.5 → 4.5 | 8.2 → 8.1 | 1954 → 1957 |
+| `Arena/PromoteCIInfra` | 227 → 220 | 1.4 → 1.4 | 2.2 → 2.2 | 1796 → 1792 |
+| `Arena/PromoteCIRef/Proj` | 613 → 609 | 3.0 → 2.9 | 5.7 → 5.4 | 2066 → 2066 |
+| `Arena/RecGenSpec/ClassFeR` | 482 → 476 | 6.7 → 6.6 | 9.4 → 9.1 | 2358 → 2357 |
+| `Arena/WhnfIotaRefine6` | 564 → 560 | 1.4 → 1.3 | 3.3 → 3.2 | 2217 → 2208 |
+| `Checker/HoistWalkRef` | 722 → 717 | 1.4 → 1.4 | 2.6 → 2.6 | 2012 → 2019 |
+| `Front/IndInstallRefine3` | 350 → 347 | 5.3 → 3.2 | 9.2 → 5.1 | 2713 → 2079 |
+| `Rom/CIReadRefCI` | 416 → 404 | 3.0 → 2.6 | 5.6 → 5.0 | 2449 → 2364 |
+| `Rom/CIReadRefCaps` | 378 → 358 | 6.3 → 3.3 | 7.8 → 5.1 | 2484 → 2368 |
+| `Rom/CIReadRefRule` | 281 → 271 | 6.8 → 2.1 | 7.9 → 3.2 | 3079 → 2302 |
+| `Verdict/PosNty` | 194 → 191 | 1.4 → 1.3 | 1.6 → 1.5 | 2580 → 2576 |
+| **total (15 modules)** | **7633 → 7496 (−137)** | **84.8 → 57.1 (−27.7, −33 %)** | **135.8 → 100.4 (−35.4, −26 %)** | max **3906 → 2576** |
+
+With the kit module (11 code lines) the net is −126 lines. `IcaW`'s +2.5 CPU-s is noise:
+`iirW_stage` itself is 1.02 → 1.05 s (`pair.py`), the file 8.97 → 7.87 s wall in that run. The
+gain is where §2.2 put it: the modules whose `omega`s met many chained offset facts (`TsrW`
+−15 s, `CIReadRefRule` −4.7 s, `CIReadRefCaps` −3 s, `ConsBlockRecsTF` −2.3 s,
+`IndInstallRefine3` −2.1 s) and their peak memory (−0.5 to −1.5 GB); elsewhere the change is lines only.
+Line savings are at the low end of §2.2's estimate for the densest sites; the remaining 300-odd theorems
+with one to three facts are left for "on touch" (`off_toNat (by omega)` in place of a `have`, or
+`off_omega` in place of an `omega` that needed one).

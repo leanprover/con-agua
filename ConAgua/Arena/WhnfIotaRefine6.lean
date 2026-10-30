@@ -2,6 +2,7 @@ import ConAgua.Arena.WhnfIotaRefine4
 import ConAgua.Arena.IndPosSpec.NestBlockOfKey
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
+import ConAgua.L.WordOff
 
 /-!
 # ι-reduction: proofs of `WhnfIota.lean`'s specs, part 6 (`iota_ctor_never_prop`, `iota_case3`)
@@ -269,18 +270,13 @@ theorem iccW_ok (p : Prog) (hp : IotaProg4 p) (hcn : CapsNeverZeroOK p) (n : Nat
   obtain ⟨wk, hwk, hwk3⟩ := nat?_some (L.Ind.decCI_indInfo_kind hci)
   have hbnd := L.Ind.decCI_indInfo_bound hci
   have hspn := hS.erec
-  have a2 : (indP + 2).toNat = indP.toNat + 2 := by rw [UInt64.toNat_add]; simp; omega
-  have a3 : (indP + 3).toNat = indP.toNat + 3 := by rw [UInt64.toNat_add]; simp; omega
-  have a12 : (indP + 12).toNat = indP.toNat + 12 := by rw [UInt64.toNat_add]; simp; omega
-  have a13 : (indP + 13).toNat = indP.toNat + 13 := by rw [UInt64.toNat_add]; simp; omega
-  have a14 : (indP + 14).toNat = indP.toNat + 14 := by rw [UInt64.toNat_add]; simp; omega
   have rk : rdW (m.arr64 EREC) indP = 3 := by
     rw [rdW_get _ _ wk hwk]; exact UInt64.toNat_inj.mp (by rw [hwk3]; rfl)
-  have r2 : rdW (m.arr64 EREC) (indP + 2) = po := rdW_get _ _ _ (by rw [a2]; exact hpo)
-  have r3 : rdW (m.arr64 EREC) (indP + 3) = pc := rdW_get _ _ _ (by rw [a3]; exact hpc)
-  have r12 : rdW (m.arr64 EREC) (indP + 12) = swd := rdW_get _ _ _ (by rw [a12]; exact hswd)
-  have r13 : rdW (m.arr64 EREC) (indP + 13) = so := rdW_get _ _ _ (by rw [a13]; exact hso)
-  have r14 : rdW (m.arr64 EREC) (indP + 14) = sc := rdW_get _ _ _ (by rw [a14]; exact hsc)
+  have r2 : rdW (m.arr64 EREC) (indP + 2) = po := rdW_get _ _ _ (by rw [off_toNat (by omega)]; exact hpo)
+  have r3 : rdW (m.arr64 EREC) (indP + 3) = pc := rdW_get _ _ _ (by rw [off_toNat (by omega)]; exact hpc)
+  have r12 : rdW (m.arr64 EREC) (indP + 12) = swd := rdW_get _ _ _ (by rw [off_toNat (by omega)]; exact hswd)
+  have r13 : rdW (m.arr64 EREC) (indP + 13) = so := rdW_get _ _ _ (by rw [off_toNat (by omega)]; exact hso)
+  have r14 : rdW (m.arr64 EREC) (indP + 14) = sc := rdW_get _ _ _ (by rw [off_toNat (by omega)]; exact hsc)
   simp only [iccW] at h
   cases n with
   | zero => rw [callW_zero] at h; cases h

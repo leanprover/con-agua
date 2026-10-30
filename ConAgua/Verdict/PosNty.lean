@@ -169,8 +169,7 @@ theorem nty_ref {p : Prog} (hl : NtyLook p) {dn : NIdx → Option ConLeche.Name}
   obtain ⟨hS4, hg4, hE4, hdec4, -⟩ := pos2_cvLpsW_stage hlp hS3 hcv3 (by rw [e1]; have := hg3.er; omega)
   have hg34 := hg3.trans hg4
   have hlv4 : rdW (m4.arr64 IW) (key + 1) = rdW (m1.arr64 IW) (key + 1) := by
-    have e : (key + 1).toNat = key.toNat + 1 := word_add_toNat (by simp; omega)
-    simp only [rdW, e]; rw [hg34.iwGet _ (by omega)]
+    simp (disch := omega) only [rdW, off_toNat]; rw [hg34.iwGet _ (by omega)]
   have hwt4 : rdW (m4.arr64 EREC) (q + 1 + 3) = wt := by
     rw [hE4]
     have : (m3.arr64 EREC)[(q + 1 + 3).toNat]? = (m1.arr64 EREC)[(q + 1 + 3).toNat]? := by
@@ -189,11 +188,9 @@ theorem nty_ref {p : Prog} (hl : NtyLook p) {dn : NIdx → Option ConLeche.Name}
   refine RefE.bind_right hrun4 ?_
   have hg35 := hg34.trans hg5
   have hrd2 : rdW (m5.arr64 IW) (key + 2) = rdW (m1.arr64 IW) (key + 2) := by
-    have e : (key + 2).toNat = key.toNat + 2 := word_add_toNat (by simp; omega)
-    simp only [rdW, e]; rw [hg35.iwGet _ (by omega)]
+    simp (disch := omega) only [rdW, off_toNat]; rw [hg35.iwGet _ (by omega)]
   have hrd3 : rdW (m5.arr64 IW) (key + 3) = rdW (m1.arr64 IW) (key + 3) := by
-    have e : (key + 3).toNat = key.toNat + 3 := word_add_toNat (by simp; omega)
-    simp only [rdW, e]; rw [hg35.iwGet _ (by omega)]
+    simp (disch := omega) only [rdW, off_toNat]; rw [hg35.iwGet _ (by omega)]
   rw [hrd2, hrd3]
   -- `inst_pis_with`
   rcases hiw : instW k m5 (rdW (m1.arr64 IW) (key + 2)) (rdW (m1.arr64 IW) (key + 3)) (r5.headD 0) with _ | ⟨r6, m6⟩

@@ -14,6 +14,7 @@ import ConAgua.Arena.RefECore
 import ConAgua.Arena.KnotE
 import ConAgua.L.ModelGen
 import ConAgua.Checker.NoVerdictTree
+import ConAgua.L.WordOff
 
 /-!
 # The leaf inference functions of `Infer.lean` (lane `defeq`)
@@ -720,10 +721,6 @@ theorem hslice?_length {k : IdxKind} {b : Array Word} {o c : Nat} {xs : List (Id
     (h : hslice? b o c = some xs) : xs.length = c := by
   unfold hslice? at h; simpa using mapM_len _ _ _ h
 
-theorem infer_toNat_add_small (q : Word) (k : Nat) (hk : k < 8) (hq : q.toNat < 2 ^ 63) :
-    (q + k.toUInt64).toNat = q.toNat + k := by
-  rw [UInt64.toNat_add]; simp; omega
-
 /-- The words of a decoded `ConstantVal` at `q + 1`: name, level-parameter slice, type. -/
 theorem infer_decCV_words {b : Array Word} {q : Word} {cv : IConstantVal}
     (h : decCV b (q.toNat + 1) = some cv) (hsz : b.size < 2 ^ 63) :
@@ -740,19 +737,15 @@ theorem infer_decCV_words {b : Array Word} {q : Word} {cv : IConstantVal}
     · exact h'
     · simp [Array.getElem?_eq_none h'] at hw4
   have hq : q.toNat < 2 ^ 63 := by omega
-  have e1 : (q + 1).toNat = q.toNat + 1 := infer_toNat_add_small q 1 (by decide) hq
-  have e2 : (q + 2).toNat = q.toNat + 2 := infer_toNat_add_small q 2 (by decide) hq
-  have e3 : (q + 3).toNat = q.toNat + 3 := infer_toNat_add_small q 3 (by decide) hq
-  have e4 : (q + 4).toNat = q.toNat + 4 := infer_toNat_add_small q 4 (by decide) hq
-  have r1 : rdW b (q + 1) = w1 := by simp [rdW, e1, hw1]
+  have r1 : rdW b (q + 1) = w1 := by simp (disch := omega) only [rdW, off_toNat, hw1]; rfl
   have r4 : rdW b (q + 4) = w4 := by
-    simp only [rdW, e4]; rw [show q.toNat + 4 = q.toNat + 1 + 3 by omega, hw4]; rfl
+    simp (disch := omega) only [rdW, off_toNat]; rw [show q.toNat + 4 = q.toNat + 1 + 3 by omega, hw4]; rfl
   simp only [hlist?, nat?, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.map_eq_some_iff] at hl
   obtain ⟨o, ⟨wo, hwo, rfl⟩, c, ⟨wc, hwc, rfl⟩, hs⟩ := hl
   have r2 : rdW b (q + 2) = wo := by
-    simp only [rdW, e2]; rw [show q.toNat + 2 = q.toNat + 1 + 1 by omega, hwo]; rfl
+    simp (disch := omega) only [rdW, off_toNat]; rw [show q.toNat + 2 = q.toNat + 1 + 1 by omega, hwo]; rfl
   have r3 : rdW b (q + 3) = wc := by
-    simp only [rdW, e3]; rw [show q.toNat + 3 = q.toNat + 1 + 1 + 1 by omega, hwc]; rfl
+    simp (disch := omega) only [rdW, off_toNat]; rw [show q.toNat + 3 = q.toNat + 1 + 1 + 1 by omega, hwc]; rfl
   rw [r1, r2, r3, r4]
   exact ⟨hl1, rfl, hl4, rfl, hs⟩
 
