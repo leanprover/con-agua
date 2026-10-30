@@ -394,24 +394,34 @@ def kdefB : Stmt := lblk (t, n2, n, H, Q, ob, nb, x, e, v, q, h, j, d, bt, y15, 
   }
 }
 
-/-- The sweep's probe: from slot `j` upward past the live unmarked slots, without wrapping (it
-stops at the top slot `n2 - 1`); `x` the value word of the slot it stops at. -/
-def kupL (C : ConsSch) : Stmt := lblk (t, n2, n, H, Q, ob, nb, x, e, v, q, h, j, d, bt, y15, y16, y17, a0, a1, b0, b1) {
-  x := C.sa⟨t⟩[ob + j * 2];
+/-- The sweep's probe loop: from slot `j` (`x` its value word) upward past the live unmarked
+slots, without wrapping (it stops at the top slot `n2 - 1`). -/
+def kupLoop (C : ConsSch) : Stmt := lblk (t, n2, n, H, Q, ob, nb, x, e, v, q, h, j, d, bt, y15, y16, y17, a0, a1, b0, b1) {
   while bt < x && x < ⟪MARK⟫ && j + 1 < n2 {
     j += 1;
     x := C.sa⟨t⟩[ob + j * 2]
   }
 }
 
-/-- The live entry of slot `H` (value word `v`): its new home `j`; above `H`, the probe; a free
-slot there takes the entry and `H` is cleared; at `H` it stays; otherwise (home below `H`, or the
-probe met a marked slot or the top) `H` gets the mark and joins a range. -/
-def ktopB (C : ConsSch) : Stmt := lblk (t, n2, n, H, Q, ob, nb, x, e, v, q, h, j, d, bt, y15, y16, y17, a0, a1, b0, b1) {
+/-- The sweep's probe from slot `j`; `x` the value word of the slot it stops at. -/
+def kupL (C : ConsSch) : Stmt := lblk (t, n2, n, H, Q, ob, nb, x, e, v, q, h, j, d, bt, y15, y16, y17, a0, a1, b0, b1) {
+  x := C.sa⟨t⟩[ob + j * 2];
+  ⟪kupLoop C⟫
+}
+
+/-- The live entry of slot `H` (value word `v`): its key word `q`, its new home `j`; above `H`,
+the probe from there (`x` the value word it stops at); otherwise `x = v`. -/
+def ktopP (C : ConsSch) : Stmt := lblk (t, n2, n, H, Q, ob, nb, x, e, v, q, h, j, d, bt, y15, y16, y17, a0, a1, b0, b1) {
   q := C.sa⟨t⟩[ob + H * 2 + 1];
   ⟪khashB C⟫;
   j := mulhi((h * ⟪golden⟫) ^ ((h * ⟪golden⟫) >> 32), n2);
-  if H < j { ⟪kupL C⟫ } else { x := v };
+  if H < j { ⟪kupL C⟫ } else { x := v }
+}
+
+/-- Its placement: a free slot `j` (found above `H`) takes the entry and `H` is cleared; at
+`j = H` it stays; otherwise (home below `H`, or the probe met a marked slot or the top) `H` gets
+the mark and joins a range. -/
+def ktopQ (C : ConsSch) : Stmt := lblk (t, n2, n, H, Q, ob, nb, x, e, v, q, h, j, d, bt, y15, y16, y17, a0, a1, b0, b1) {
   if x <= bt {
     C.sa⟨t⟩[ob + j * 2] := v;
     C.sa⟨t⟩[ob + j * 2 + 1] := q;
@@ -422,6 +432,12 @@ def ktopB (C : ConsSch) : Stmt := lblk (t, n2, n, H, Q, ob, nb, x, e, v, q, h, j
       ⟪kdefB⟫
     }
   }
+}
+
+/-- The sweep's step at the live slot `H`. -/
+def ktopB (C : ConsSch) : Stmt := lblk (t, n2, n, H, Q, ob, nb, x, e, v, q, h, j, d, bt, y15, y16, y17, a0, a1, b0, b1) {
+  ⟪ktopP C⟫;
+  ⟪ktopQ C⟫
 }
 
 /-- The top-down sweep over the old half, `H = n - 1 ‥ 0`. -/

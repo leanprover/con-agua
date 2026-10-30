@@ -484,7 +484,7 @@ theorem ktopS_inv (G : Mem → Word → Word)
       simp only [kjW]; rw [← hG]; rfl
     have hh0N := homeW_lt (hsm (VW sa ob mi i - bt - 1)) N hN0
     generalize hh0 : homeW (hsm (VW sa ob mi i - bt - 1)) N = h0 at hj hh0N
-    unfold ktopBW
+    unfold ktopBW ktopQW
     by_cases hih : i < h0
     · obtain ⟨D, hD, hk, hp, -⟩ := kupW_res (mi.arr64 sa) ob N bt h0 hh0N
       have htg : ktgW sa G N ob bt i mi = walkW N h0 D := by

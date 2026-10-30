@@ -92,15 +92,19 @@ def kxW (sa : TieredArray) (G : Mem → Word → Word) (N ob bt i : Word) (m : M
   if i < kjW sa G N ob i m then rdW (m.arr64 sa) (ob + ktgW sa G N ob bt i m * 2)
   else rdW (m.arr64 sa) (ob + i * 2)
 
-/-- The step at the live slot `i` (`ktopB`): moved to a free slot found above `i`, kept at its
-home `i`, or marked and recorded in a range. -/
+/-- The placement (`ktopQ`) of slot `i`'s entry (value word `v`, key word `q`) after the probe
+ended at slot `j` with value word `x`: moved to the free slot `j`, kept at `j = i`, or marked
+and recorded in a range. -/
+def ktopQW (sa : TieredArray) (n ob bt i j x v q : Word) (k : MkR) (m : Mem) : Mem × MkR :=
+  if x ≤ bt then (((m.set64 sa (ob + j * 2) v).set64 sa (ob + j * 2 + 1) q).set64 sa (ob + i * 2) 0, k)
+  else if j = i then (m, k)
+  else (m.set64 sa (ob + i * 2) (v + MARK), kdefR n i k)
+
+/-- The step at the live slot `i` (`ktopB`). -/
 def ktopBW (sa : TieredArray) (G : Mem → Word → Word) (N n ob bt i : Word) (k : MkR) (m : Mem) :
     Mem × MkR :=
-  if kxW sa G N ob bt i m ≤ bt then
-    (((m.set64 sa (ob + ktgW sa G N ob bt i m * 2) (rdW (m.arr64 sa) (ob + i * 2))).set64 sa
-      (ob + ktgW sa G N ob bt i m * 2 + 1) (rdW (m.arr64 sa) (ob + i * 2 + 1))).set64 sa (ob + i * 2) 0, k)
-  else if ktgW sa G N ob bt i m = i then (m, k)
-  else (m.set64 sa (ob + i * 2) (rdW (m.arr64 sa) (ob + i * 2) + MARK), kdefR n i k)
+  ktopQW sa n ob bt i (ktgW sa G N ob bt i m) (kxW sa G N ob bt i m) (rdW (m.arr64 sa) (ob + i * 2))
+    (rdW (m.arr64 sa) (ob + i * 2 + 1)) k m
 
 /-- The sweep's step at slot `i`: only a live slot is touched. -/
 def ktopS (sa : TieredArray) (G : Mem → Word → Word) (N n ob bt i : Word) (k : MkR) (m : Mem) :
@@ -234,7 +238,7 @@ theorem kzeroW_fr (sa : TieredArray) : ∀ (e : Nat) (x : Word) (m : Mem), GFr s
 
 theorem ktopBW_fr (sa : TieredArray) (G : Mem → Word → Word) (N n ob bt i : Word) (k : MkR)
     (m : Mem) : GFr sa m (ktopBW sa G N n ob bt i k m).1 := by
-  unfold ktopBW
+  unfold ktopBW ktopQW
   split
   · exact ((GFr.set64 _ _ _ _).trans (GFr.set64 _ _ _ _)).trans (GFr.set64 _ _ _ _)
   split
