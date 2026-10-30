@@ -2,8 +2,6 @@ module
 
 meta import ConAgua.L.Semantics
 meta import ConAgua.Arena.SlotGrow
-public import ConAgua.Arena.SlotGrowSpec
-public import ConAgua.L.PureEval
 public import ConAgua.Arena.ConsLibSpecFind
 public import ConAgua.Arena.ConsLibSpecGrow
 import ConAgua.Arena.GrindAttr
