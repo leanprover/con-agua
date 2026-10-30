@@ -7,7 +7,7 @@ import ConAgua.Arena.LevelSubstLP
 # Phase B's read set in the checker's program (lane parmode)
 
 `phaseBFns`: every function `check_pending_go` (phase B's loop) reaches in `checkerProg`, as a
-literal computed from the program's call graph (580 names; `scripts/phaseb_fns.py` regenerates
+literal computed from the program's call graph (581 names; `scripts/phaseb_fns.py` regenerates
 it, and the check below fails if a callee is missing). None of them names the frozen buffer's
 arrays `OUT`, `HDRF`, `CTLF` (`Arena/Freeze.lean`) or any byte array: `checkerProg_phaseBReads`,
 so by `L.invoke_agree` (`L/Agree.lean`) a worker's run of `check_pending_go` is the run on any
@@ -37,8 +37,8 @@ def phaseBFns : List FnName :=
    "defeq_arg", "defeq_binders", "defeq_body", "defeq_e", "defeq_lams", "defeq_lams_inner",
    "defeq_list", "defeq_list_rev", "defeq_lst", "defeq_no_fvars", "defeq_offset", "defeq_peel",
    "defeq_proj_pair", "defeq_spine", "defeq_spine2", "defeq_stuck", "defeq_tail", "delta_quick",
-   "der_b", "div_add", "div_shl1", "div_step", "div_sub", "e_rec_get", "e_view", "ek_copy",
-   "ensure_sort", "ensure_sort_core", "env_find", "env_ix", "env_row_get", "er_copy",
+   "der_b", "der_bv", "div_add", "div_shl1", "div_step", "div_sub", "e_rec_get", "e_view",
+   "ek_copy", "ensure_sort", "ensure_sort_core", "env_find", "env_ix", "env_row_get", "er_copy",
    "er_slice_eq", "er_to_iw", "erec_push", "eta_cert", "eta_cert_body", "eta_cert_ty",
    "eta_ctor_shape", "eta_fab_args", "eta_projs", "expr_view_ok", "fab_scope_ok",
    "field_sort_zero", "find_proj", "find_rule", "find_table", "fire_ok", "fl_clear", "fl_find",

@@ -8,7 +8,7 @@ import ConRon.Bridge.Promote.Pers
 
 `loopFns`: every function phase A's fold (`install_fold_go`) and phase B (`check_pending_go`)
 reach in the checker's program (the bracket, the arms, the core, the stage), as a literal computed from
-`checkerProg`'s call graph (1421 names; the decided check in `ConAgua/Checker/LoopAll.lean`
+`checkerProg`'s call graph (1422 names; the decided check in `ConAgua/Checker/LoopAll.lean`
 fails if a callee is missing, then recompute it). No function of it writes the pin table or a
 byte array, and every `CTL` word it writes is below 1024 (`LoopClosed`): a step of the loop keeps
 the pin table, so the pin flag, and every array's size.
@@ -116,7 +116,7 @@ def loopFns : List FnName :=
    "defeq_lams_inner", "defeq_list", "defeq_list_rev", "defeq_lst", "defeq_no_fvars",
    "defeq_offset", "defeq_peel", "defeq_proj_pair", "defeq_spine", "defeq_spine2", "defeq_stuck",
    "defeq_tail", "defn_div_gate", "defn_nat_cert", "defn_nat_gate", "delta_quick", "depth",
-   "depth_go", "depth_node", "der_b", "dind_copy", "div_add", "div_mod_cert_applied",
+   "depth_go", "depth_node", "der_b", "der_bv", "dind_copy", "div_add", "div_mod_cert_applied",
    "div_mod_cert_guard", "div_mod_cert_proofs", "div_mod_cert_stmts", "div_mod_cert_stmts_at",
    "div_mod_certs_guard", "div_mod_certs_guard_go", "div_mod_decl_pin", "div_mod_env_guard",
    "div_mod_pin_guard", "div_mod_slot", "div_mod_type_pins", "div_shl1", "div_step", "div_sub",
