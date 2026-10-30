@@ -1,4 +1,5 @@
 import ConAgua.Front.IndInstallRefine2
+import ConAgua.L.WordOff
 
 /-!
 # `install_ind_d` refines `installIndD`, III: the recursor records
@@ -343,35 +344,31 @@ theorem recRW_twin {n : Nat} {b : ByteArray} {m m' : Mem} {st : StateD} (a : ASt
         some (rc.rules.map fun ru => resOf (ConRon.Arena.Frontend.parseRuleD st ru) a) :=
       Q7 P (fun i h1 h2 => by
         rw [hP.get (by omega) (by omega), hc0 i (by omega), C5 i (by omega) (by omega)])
-    have e5 : (q1 + 5).toNat = q1.toNat + 5 := widx2 _ _ (by simp; omega)
-    have e6 : (q1 + 6).toNat = q1.toNat + 6 := widx2 _ _ (by simp; omega)
-    have e7 : (q1 + 7).toNat = q1.toNat + 7 := widx2 _ _ (by simp; omega)
-    have e8 : (q1 + 8).toNat = q1.toNat + 8 := widx2 _ _ (by simp; omega)
     have hs4' : q1.toNat + 8 < (m₄.arr64 DLP).size := by omega
     have g5 : P[q1.toNat + 5]? = some (wd m IFR (r.toNat + 8) + wd m IFR (r.toNat + 7) +
         wd m IFR (r.toNat + 6) + wd m IFR (r.toNat + 5)) := by
       rw [hP.get (by omega) (by omega)]
       unfold recTailM
-      rw [wd_set_ne _ _ _ _ _ (by omega), wd_set_ne _ _ _ _ _ (by omega), wd_set_ne _ _ _ _ _ (by omega),
-        wd_set_eq _ _ _ _ _ e5 (by omega), hifr4, rdW_wdI _ _ _ _ (by simp; omega),
+      rw [wd_set_ne _ _ _ _ _ (by off_omega), wd_set_ne _ _ _ _ _ (by off_omega), wd_set_ne _ _ _ _ _ (by off_omega),
+        wd_set_eq _ _ _ _ _ (off_toNat (by omega)) (by omega), hifr4, rdW_wdI _ _ _ _ (by simp; omega),
         rdW_wdI _ _ _ _ (by simp; omega), rdW_wdI _ _ _ _ (by simp; omega), rdW_wdI _ _ _ _ (by simp; omega)]
       rfl
     have g6 : P[q1.toNat + 6]? = some (wd m IFR (r.toNat + 8) + wd m IFR (r.toNat + 7) +
         wd m IFR (r.toNat + 6)) := by
       rw [hP.get (by omega) (by omega)]
       unfold recTailM
-      rw [wd_set_ne _ _ _ _ _ (by omega), wd_set_ne _ _ _ _ _ (by omega),
-        wd_set_eq _ _ _ _ _ e6 (by simp only [size_set64]; omega), hifr4, rdW_wdI _ _ _ _ (by simp; omega),
+      rw [wd_set_ne _ _ _ _ _ (by off_omega), wd_set_ne _ _ _ _ _ (by off_omega),
+        wd_set_eq _ _ _ _ _ (off_toNat (by omega)) (by simp only [size_set64]; omega), hifr4, rdW_wdI _ _ _ _ (by simp; omega),
         rdW_wdI _ _ _ _ (by simp; omega), rdW_wdI _ _ _ _ (by simp; omega)]
       rfl
     have g7 : P[q1.toNat + 7]? = some lo := by
       rw [hP.get (by omega) (by omega)]
       unfold recTailM
-      rw [wd_set_ne _ _ _ _ _ (by omega), wd_set_eq _ _ _ _ _ e7 (by simp only [size_set64]; omega)]
+      rw [wd_set_ne _ _ _ _ _ (by off_omega), wd_set_eq _ _ _ _ _ (off_toNat (by omega)) (by simp only [size_set64]; omega)]
     have g8 : P[q1.toNat + 8]? = some (wd m IFR (r.toNat + 10)) := by
       rw [hP.get (by omega) (by omega)]
       unfold recTailM
-      rw [wd_set_eq _ _ _ _ _ e8 (by simp only [size_set64]; omega)]
+      rw [wd_set_eq _ _ _ _ _ (off_toNat (by omega)) (by simp only [size_set64]; omega)]
     have a3 : (wd m IFR (r.toNat + 8) + wd m IFR (r.toNat + 7) + wd m IFR (r.toNat + 6)).toNat =
         rc.numParams + rc.numMotives + rc.numMinors := by
       rw [UInt64.toNat_add, UInt64.toNat_add, fP.1, fMo.1, fMi.1]
