@@ -1331,22 +1331,36 @@ theorem kgrowH3_spec (p : Prog) (C : ConsSch) (n : Nat) (s₂ : St) :
 theorem kgrowH4_spec (p : Prog) (C : ConsSch) (n : Nat) (s₂ : St) :
     ⦃fun s => s = s₂⦄
     step p (exec p n) (mapS (gmap C) kgrowH4)
-    ⦃fun r s' => r = .normal ∧ s'.mem = s₂.mem ∧ Keep3 (gO C + 6) (gO C + 7) (gO C + 13) s₂ s' ∧
+    ⦃fun r s' => r = .normal ∧ s'.mem = s₂.mem ∧
+      (∀ z : Nat, z ≠ gO C + 2 → z ≠ gO C + 13 → (z < gO C + 17 ∨ gO C + 21 ≤ z) →
+        s'.loc z = s₂.loc z) ∧
       s'.loc (gO C + 13) = rdW (s₂.mem.arr64 CTL) SCB * s₂.loc 0 ∧
-      s'.loc (gO C + 6) = s₂.loc (gO C + 4) ∧ s'.loc (gO C + 7) = s₂.loc (gO C + 1); ⊤⦄ := by
+      s'.loc (gO C + 2) = s₂.loc (gO C + 1) ∧ mkOf C s' = ⟨0, 0, 0, 0⟩; ⊤⦄ := by
   unfold kgrowH4
   simp (disch := decide) only [mapS, mapE, gmap_lit, gmap_zero, Nat.reduceSub]
   vcgen [step, evalE_spec, evalC_spec, setLoc, ld64]
   all_goals (simp (disch := decide) only [St.setLoc_loc, St.setLoc_mem, BinOp.eval,
     Expr.pval, Nat.add_left_cancel_iff, Nat.reduceEqDiff, rd64_rdWC, ↓reduceIte] at *)
-  all_goals grind [lang_grind, Keep3]
+  all_goals grind [lang_grind, mkOf]
 
 theorem kgrowH5_spec (p : Prog) (C : ConsSch) (n : Nat) (s₂ : St) :
     ⦃fun s => s = s₂⦄
     step p (exec p n) (mapS (gmap C) kgrowH5)
     ⦃fun r s' => r = .normal ∧ s'.mem = s₂.mem ∧ Keep2 (gO C + 2) (gO C + 7) s₂ s' ∧
-      s'.loc (gO C + 2) = 0 ∧ s'.loc (gO C + 7) = s₂.loc (gO C + 1); ⊤⦄ := by
+      s'.loc (gO C + 2) = s₂.loc (gO C + 17) ∧ s'.loc (gO C + 7) = s₂.loc (gO C + 1); ⊤⦄ := by
   unfold kgrowH5
+  simp (disch := decide) only [mapS, mapE, gmap_lit, Nat.reduceSub]
+  vcgen [step, evalE_spec, evalC_spec, setLoc]
+  all_goals (simp (disch := decide) only [St.setLoc_loc, St.setLoc_mem,
+    Expr.pval, Nat.add_left_cancel_iff, Nat.reduceEqDiff, ↓reduceIte] at *)
+  all_goals grind [lang_grind, Keep2]
+
+theorem kgrowH6_spec (p : Prog) (C : ConsSch) (n : Nat) (s₂ : St) :
+    ⦃fun s => s = s₂⦄
+    step p (exec p n) (mapS (gmap C) kgrowH6)
+    ⦃fun r s' => r = .normal ∧ s'.mem = s₂.mem ∧ Keep2 (gO C + 2) (gO C + 7) s₂ s' ∧
+      s'.loc (gO C + 2) = s₂.loc (gO C + 19) ∧ s'.loc (gO C + 7) = s₂.loc (gO C + 1); ⊤⦄ := by
+  unfold kgrowH6
   simp (disch := decide) only [mapS, mapE, gmap_lit, Nat.reduceSub]
   vcgen [step, evalE_spec, evalC_spec, setLoc]
   all_goals (simp (disch := decide) only [St.setLoc_loc, St.setLoc_mem,
@@ -1401,6 +1415,7 @@ theorem kgrowBlk_spec (p : Prog) (C : ConsSch) (hO : ConsOK p C) (n : Nat) (s₀
       kgrowM C.sa (ghC C) (s₀.loc 0) s₀.mem = some s'.mem; ⊤⦄ := by
   have hsc : ∀ t, tierA C.sa t ≠ CTL := fun t =>
     (ne_tierA (Ne.symm hO.arrs.2.1) t).symm
+  have h0 := zero_lt_gO C
   unfold kgrowBlk kgrowB
   simp only [mapS]
   refine triple_seq _ (kgrowH_spec p C n s₀) (fun s₃ h₃ => ?_)
@@ -1408,62 +1423,83 @@ theorem kgrowBlk_spec (p : Prog) (C : ConsSch) (hO : ConsOK p C) (n : Nat) (s₀
   refine triple_seq _ (kzeroL_step_spec p C n s₃) (fun s₄ h₄ => ?_)
   obtain ⟨k4, m4⟩ := h₄
   refine triple_seq _ (kgrowH4_spec p C n s₄) (fun s₅ h₅ => ?_)
-  obtain ⟨m5, k5, c13, c6, c7⟩ := h₅
-  refine triple_seq _ (kmarkL_step_spec p C n s₅) (fun s₆ h₆ => ?_)
-  obtain ⟨k6, m6⟩ := h₆
+  obtain ⟨m5, k5, c13, c2, mk5⟩ := h₅
+  refine triple_seq _ (ktopL_step_spec p C hO n s₅) (fun s₆ h₆ => ?_)
+  obtain ⟨⟨k6, e6, f6, o6, t6⟩, m6, mk6⟩ := h₆
   refine triple_seq _ (kgrowH5_spec p C n s₆) (fun s₇ h₇ => ?_)
   obtain ⟨m7, k7, d2, d7⟩ := h₇
-  refine triple_weaken (krehashL_step_spec p C hO n s₇) (fun r s ⟨hr, k8, hw⟩ => ?_)
-  -- the variables, back to `s₀`
-  have t0 : ∀ z, z < gO C → s₇.loc z = s₀.loc z := fun z hz => by
-    have h1 := lt_ne_addlit z (gO C) 6 hz; have h2 := lt_ne_addlit z (gO C) 7 hz
-    have h3 := lt_ne_addlit z (gO C) 8 hz; have h4 := lt_ne_addlit z (gO C) 13 hz
-    have h5 := lt_ne_addlit z (gO C) 2 hz
-    rw [k7 z h5 h2, k6 z h1 h2 h3, k5 z h1 h2 h4, k4 z h1 h2, k3 z hz]
-  have e0 := t0 0 (zero_lt_gO C)
-  refine ⟨hr, fun z hz => by rw [k8 z hz, t0 z hz], ?_⟩
-  have kk : ∀ z, z = gO C ∨ z = gO C + 1 ∨ z = gO C + 4 → s₇.loc z = s₃.loc z := fun z hz => by
-    rcases hz with rfl | rfl | rfl
-    · rw [k7 _ (self_ne_addlit _ _ (by decide)) (self_ne_addlit _ _ (by decide)),
-        k6 _ (self_ne_addlit _ _ (by decide)) (self_ne_addlit _ _ (by decide)) (self_ne_addlit _ _ (by decide)),
-        k5 _ (self_ne_addlit _ _ (by decide)) (self_ne_addlit _ _ (by decide)) (self_ne_addlit _ _ (by decide)),
-        k4 _ (self_ne_addlit _ _ (by decide)) (self_ne_addlit _ _ (by decide))]
-    all_goals rw [k7 _ (addlit_ne_addlit _ _ _ (by decide)) (addlit_ne_addlit _ _ _ (by decide)),
-        k6 _ (addlit_ne_addlit _ _ _ (by decide)) (addlit_ne_addlit _ _ _ (by decide)) (addlit_ne_addlit _ _ _ (by decide)),
-        k5 _ (addlit_ne_addlit _ _ _ (by decide)) (addlit_ne_addlit _ _ _ (by decide)) (addlit_ne_addlit _ _ _ (by decide)),
-        k4 _ (addlit_ne_addlit _ _ _ (by decide)) (addlit_ne_addlit _ _ _ (by decide))]
-  have v0 : s₇.loc (gO C) = knW C.sa s₀.mem (s₀.loc 0) * 2 := by rw [kk _ (.inl rfl), a0]
-  have v1 : s₇.loc (gO C + 1) = knW C.sa s₀.mem (s₀.loc 0) := by rw [kk _ (.inr (.inl rfl)), a1]
-  have v4 : s₇.loc (gO C + 4) = koW C.sa s₀.mem (s₀.loc 0) + 2 := by rw [kk _ (.inr (.inr rfl)), a4]
-  have s40 : s₄.loc 0 = s₀.loc 0 := by
-    rw [k4 0 (lt_ne_addlit _ _ _ (zero_lt_gO C)) (lt_ne_addlit _ _ _ (zero_lt_gO C)),
-      k3 0 (zero_lt_gO C)]
-  have v13 : s₇.loc (gO C + 13) = rdW (s₀.mem.arr64 CTL) SCB * s₀.loc 0 := by
-    rw [k7 _ (addlit_ne_addlit _ _ _ (by decide)) (addlit_ne_addlit _ _ _ (by decide)),
-      k6 _ (addlit_ne_addlit _ _ _ (by decide)) (addlit_ne_addlit _ _ _ (by decide)) (addlit_ne_addlit _ _ _ (by decide)),
-      c13, m4, kzeroW_arr _ _ _ _ _ (Ne.symm (hsc _)), m3,
-      Mem.arr64_set64_ne _ _ _ _ _ (Ne.symm (hsc _)), s40]
-  have s50 : s₅.loc 0 = s₀.loc 0 := by
-    rw [k5 0 (lt_ne_addlit _ _ _ (zero_lt_gO C)) (lt_ne_addlit _ _ _ (zero_lt_gO C))
-      (lt_ne_addlit _ _ _ (zero_lt_gO C)), s40]
-  have s30 : s₃.loc 0 = s₀.loc 0 := k3 0 (zero_lt_gO C)
-  have n4 : s₄.loc (gO C + 1) = knW C.sa s₀.mem (s₀.loc 0) := by
-    rw [k4 _ (addlit_ne_addlit _ _ _ (by decide)) (addlit_ne_addlit _ _ _ (by decide)), a1]
-  have o4 : s₄.loc (gO C + 4) = koW C.sa s₀.mem (s₀.loc 0) + 2 := by
-    rw [k4 _ (addlit_ne_addlit _ _ _ (by decide)) (addlit_ne_addlit _ _ _ (by decide)), a4]
-  have n6 : s₆.loc (gO C + 1) = knW C.sa s₀.mem (s₀.loc 0) := by
-    rw [k6 _ (addlit_ne_addlit _ _ _ (by decide)) (addlit_ne_addlit _ _ _ (by decide))
-      (addlit_ne_addlit _ _ _ (by decide)),
-      k5 _ (addlit_ne_addlit _ _ _ (by decide)) (addlit_ne_addlit _ _ _ (by decide))
-      (addlit_ne_addlit _ _ _ (by decide)), n4]
-  have bt5 : s₅.loc (gO C + 13) = rdW (s₀.mem.arr64 CTL) SCB * s₀.loc 0 := by
+  refine triple_seq _ (krehashL_step_spec p C hO 19 (by simp [gmap]) n s₇) (fun s₈ h₈ => ?_)
+  obtain ⟨⟨k8, e8, f8, o8, t8, h8⟩, w8⟩ := h₈
+  refine triple_seq _ (kgrowH6_spec p C n s₈) (fun s₉ h₉ => ?_)
+  obtain ⟨m9, k9, g2, g7⟩ := h₉
+  refine triple_weaken (krehashL_step_spec p C hO 21 (by simp [gmap]) n s₉)
+    (fun r s ⟨hr, ⟨k10, _, _, _, _, _⟩, w10⟩ => ?_)
+  -- the keeps, as `Nat` facts
+  have K4 : ∀ z : Nat, z ≠ gO C + 6 → z ≠ gO C + 7 → s₄.loc z = s₃.loc z := fun z h1 h2 => k4 z h1 h2
+  have K7 : ∀ z : Nat, z ≠ gO C + 2 → z ≠ gO C + 7 → s₇.loc z = s₆.loc z := fun z h1 h2 => k7 z h1 h2
+  have K9 : ∀ z : Nat, z ≠ gO C + 2 → z ≠ gO C + 7 → s₉.loc z = s₈.loc z := fun z h1 h2 => k9 z h1 h2
+  have H8 : ∀ z : Nat, gO C + 17 ≤ z → s₈.loc z = s₇.loc z := h8
+  -- back to `s₀`
+  have l0 : ∀ z : Nat, z < gO C → s₉.loc z = s₀.loc z := fun z hz => by
+    rw [K9 z (by omega) (by omega), k8 z hz, K7 z (by omega) (by omega), k6 z hz,
+      k5 z (by omega) (by omega) (.inl (by omega)), K4 z (by omega) (by omega), k3 z hz]
+  have t0 : s₉.loc 0 = s₀.loc 0 := l0 0 h0
+  refine ⟨hr, fun z hz => by rw [k10 z hz, l0 z hz], ?_⟩
+  have s3_0 : s₃.loc 0 = s₀.loc 0 := k3 0 h0
+  have s4_0 : s₄.loc 0 = s₀.loc 0 := by rw [K4 0 (by omega) (by omega), s3_0]
+  have s5_0 : s₅.loc 0 = s₀.loc 0 := by rw [k5 0 (by omega) (by omega) (.inl (by omega)), s4_0]
+  have s6_0 : s₆.loc 0 = s₀.loc 0 := by rw [k6 0 h0, s5_0]
+  have s7_0 : s₇.loc 0 = s₀.loc 0 := by rw [K7 0 (by omega) (by omega), s6_0]
+  have s8_0 : s₈.loc 0 = s₀.loc 0 := by rw [k8 0 h0, s7_0]
+  -- `n2 n ob` (`gO`, `gO + 1`, `gO + 4`) at `s₅`
+  have v5 : ∀ i : Nat, i = 0 ∨ i = 1 ∨ i = 4 → s₅.loc (gO C + i) = s₃.loc (gO C + i) := fun i hi => by
+    rcases hi with rfl | rfl | rfl <;>
+      rw [k5 _ (by omega) (by omega) (.inl (by omega)), K4 _ (by omega) (by omega)]
+  have s5N : s₅.loc (gO C) = knW C.sa s₀.mem (s₀.loc 0) * 2 := by
+    have := v5 0 (.inl rfl); simp only [Nat.add_zero] at this; rw [this, a0]
+  have s5n : s₅.loc (gO C + 1) = knW C.sa s₀.mem (s₀.loc 0) := by rw [v5 1 (by simp), a1]
+  have s5o : s₅.loc (gO C + 4) = koW C.sa s₀.mem (s₀.loc 0) + 2 := by rw [v5 4 (by simp), a4]
+  have s5b : s₅.loc (gO C + 13) = rdW (s₀.mem.arr64 CTL) SCB * s₀.loc 0 := by
     rw [c13, m4, kzeroW_arr _ _ _ _ _ (Ne.symm (hsc _)), m3,
-      Mem.arr64_set64_ne _ _ _ _ _ (Ne.symm (hsc _)), s40]
-  rw [d2, d7, n6, v0, v1, v4, v13, e0, m7, m6, s50, bt5, c6, c7, o4, n4, m5, m4, s30, b6, b7, m3] at hw
-  rw [kgrowM, ite_eq_right hc]
-  exact hw
-
-
+      Mem.arr64_set64_ne _ _ _ _ _ (Ne.symm (hsc _)), s4_0]
+  have s5H : s₅.loc (gO C + 2) = knW C.sa s₀.mem (s₀.loc 0) := by
+    rw [c2, K4 _ (by omega) (by omega), a1]
+  have s5m : s₅.mem = kzM C.sa (s₀.loc 0) s₀.mem := by
+    rw [m5, m4, s3_0, b6, b7, m3]; rfl
+  -- the sweep
+  have hT : ktopM C.sa (ghC C) (s₀.loc 0) s₀.mem = (s₆.mem, mkOf C s₆) := by
+    rw [m6, mk6, s5_0, s5N, s5n, s5o, s5b, s5H, mk5, s5m]; rfl
+  -- the first range
+  have s7v : ∀ i : Nat, i = 0 ∨ i = 1 ∨ i = 4 ∨ i = 13 ∨ i = 18 ∨ i = 19 ∨ i = 20 →
+      s₇.loc (gO C + i) = s₆.loc (gO C + i) := fun i hi => by
+    rcases hi with rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> exact K7 _ (by omega) (by omega)
+  have s6v : ∀ i : Nat, i = 0 ∨ i = 1 ∨ i = 4 ∨ i = 13 → s₆.loc (gO C + i) = s₅.loc (gO C + i) :=
+    fun i hi => by
+      rcases hi with rfl | rfl | rfl | rfl
+      · exact e6
+      · exact f6
+      · exact o6
+      · exact t6
+  have s7v0 : s₇.loc (gO C) = s₆.loc (gO C) := by simpa using s7v 0 (by simp)
+  have s6v0 : s₆.loc (gO C) = s₅.loc (gO C) := e6
+  have g19 : gmap C 19 = gO C + 18 := by simp [gmap]
+  have g21 : gmap C 21 = gO C + 20 := by simp [gmap]
+  simp only [g19, d2, d7, s7v0, s7v 1 (by simp), s7v 4 (by simp), s7v 13 (by simp),
+    s7v 18 (by simp), s7_0, m7, s6v0, s6v 1 (by simp), s6v 4 (by simp),
+    s6v 13 (by simp)] at w8
+  -- the second range
+  have s9v : ∀ i : Nat, i = 0 ∨ i = 1 ∨ i = 4 ∨ i = 13 ∨ i = 20 →
+      s₉.loc (gO C + i) = s₈.loc (gO C + i) := fun i hi => by
+    rcases hi with rfl | rfl | rfl | rfl | rfl <;> exact K9 _ (by omega) (by omega)
+  have s9v0 : s₉.loc (gO C) = s₈.loc (gO C) := by simpa using s9v 0 (by simp)
+  simp only [g21, g2, g7, s9v0, s9v 1 (by simp), s9v 4 (by simp), s9v 13 (by simp),
+    s9v 20 (by simp), t0, m9, H8 (gO C + 19) (by omega), H8 (gO C + 20) (by omega), e8, f8, o8, t8, s7v0,
+    s7v 1 (by simp), s7v 4 (by simp), s7v 13 (by simp), s7v 19 (by simp), s7v 20 (by simp),
+    s6v0, s6v 1 (by simp), s6v 4 (by simp), s6v 13 (by simp)] at w10
+  rw [kgrowM, ite_eq_right hc, hT]
+  simp only [mkOf]
+  rw [← s5N, ← s5n, ← s5o, ← s5b, w8, Option.bind_some]
+  exact w10
 
 /-! ## `X_push`: the append -/
 
