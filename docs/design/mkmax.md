@@ -49,3 +49,33 @@ INCOMPLETE / REFDIFF / CRASH / TIMEOUT.
 The same product form remains in the walks' `max` (`Arena/Walk.lean`, `Arena/FVarRange.lean`,
 `Arena/IndPos.lean`). Those return or assign it inside proved `l_model` functions; whether
 `step_maxIf_spec` drops in there as easily is untested.
+
+## 5. Follow-up (lane walkmax): the walks and the probe wrap, not done
+
+Measured against master 8f29d88d, `Init` as in §3, `--jobs=4`, exact instructions, two interleaved
+runs each. The bar was −0.2 %; neither change reaches it, so neither landed.
+
+**The walks' `max`** (`bb_node`, `depth_node`; `fr_node` would be the same shape). Prototyped and
+proved: `step_maxIf_spec` moved to `ViewL.lean` (next to `maxW`), `bb_node` and `depth_node` take
+each `max` by `if x < y { x := y }` (`depth_node` loses its local `m`), and their step proofs add
+`step_maxIf_spec p` to the `vcgen` list and drop `maxW` from `finish` (two lines each; the
+hand-written models `bbNodeW`, `dpNodeW` and their refinements unchanged). Result: 215.15/215.14 G
+on master, 215.14/215.12 G on the branch, **−0.007 %**. The walks are cold: `perf record` on the
+same run attributes no sample to `bb_node`, `bb_go`, `fr_node`, `fr_go` or `depth_node` (all
+below 0.01 %; `mk_app` alone is 2.1 %). `fr_node` was not finished: its model is generated
+(`l_model frGo_spec`), and the generator turns each `if x < y { x := y }` into a join point
+(a branching model), which the kernel rejects with "deep recursion" at the `l_model`. Taking it
+would need `l_model` to read that statement as `x := maxW x y` (and use `step_maxIf_spec` in the
+steps), a generator change not worth a cold function.
+
+**The probe wrap** `j := (j + 1) * u64(j + 1 < n)` (`ConsLib`'s `cfAdv`, `kprobeL`; `MemoLib`'s
+two probe loops) is the hot select left: it runs at every probe step of every `*_find`/`*_put`
+(`app_find` is 16.8 % of `Init`), 8 instructions (two `lea`, `cmp`, two `mov`, `cmov`, `imul`,
+`mov`). Not proved, estimated by patching `checker.s` by hand: all 185 copies of that sequence
+replaced by what the compiler emits for `j := j + 1; if n <= j { j := 0 }` (`lea`, `mov`, `cmp`,
+`jb`, then the rarely taken `mov $0`), verdict output identical. Result: 215.14/215.14 G against
+214.84/214.88 G, **−0.13 %**, below the bar; it would also need a sibling triple and a change to
+the shared probe proofs of both libraries.
+
+The remaining `u64` products (`WhnfIota`, `WhnfIotaRec`, `IndPos2`) run once per call of cold
+functions.
