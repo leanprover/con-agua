@@ -76,5 +76,5 @@ Wilcoxon p 0.26, mean −1.8 % [−5.0, +1.5] (base 4.10 s). Not resolved at thi
 
 ## 4. Verdicts
 
-`diff-e2e --parallel 16`: 634 of 634 agree (406 accepted, 228 not), 0 UNSOUND / INCOMPLETE /
+`diff-e2e --refs --parallel 16` (after the merge): 634 of 634 agree (406 accepted, 228 not), 0 UNSOUND / INCOMPLETE / REFDIFF /
 CRASH / TIMEOUT.
