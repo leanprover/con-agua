@@ -152,7 +152,7 @@ def derB : FunDecl := lfn (h) locals (g, t, i, x) {
 /-- con-ron: none — `der_b`'s first result alone (`derBW`), for the expression walks that read only
 the bvar range (`il_go`, `ilg_go`, `il_bvar`, `inst_go`, `lift_go`, `bvar_b`): one result
 register, and the `const`, `fvar` and `sort` arms fall through to the final `0` without a read.
-The `bvar` arm saturates by a branch, not by `u64` products. -/
+The `bvar` arm saturates by a branch, as `der_b`'s does. -/
 def derBv : FunDecl := lfn (h) locals (g, t, i, x) {
   g := h >> 28;
   t := ⟦h⟧.tier;

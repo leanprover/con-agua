@@ -78,3 +78,22 @@ Wilcoxon p 0.26, mean −1.8 % [−5.0, +1.5] (base 4.10 s). Not resolved at thi
 
 `diff-e2e --refs --parallel 16` (after the merge): 634 of 634 agree (406 accepted, 228 not), 0 UNSOUND / INCOMPLETE / REFDIFF /
 CRASH / TIMEOUT.
+
+## 5. Follow-up (lane `derbr`): `der_b`'s saturating arms branch too
+
+`der_b`'s `bvar` arm, and its `fvar` arm (the second result, the same `u64` product form, the only
+other such arm in `der_b`/`der_bv`), now saturate by a branch as `der_bv` does:
+`if x < 32767 { return (x + 1, 0, 0) }; return (32767, 0, 0)`, and likewise `(0, x + 1, FVAR_LP⟨t, i⟩)`.
+The proofs are unchanged: `derTail_spec`'s `vcgen` splits the new `if`, and the existing
+`simp_all`/`grind` steps close the extra goals against `satSuccW` (ExprMk.lean 8 s). No twin
+deviation, no list changes (`der_b`'s callees are unchanged; the generated function lists
+regenerate identical). `der_b` also loses its 56-byte frame (the products needed a spill).
+
+`Init` exact instructions (`perf stat -e instructions:u`, `--jobs=4`, two runs each, agree to
+0.01 %): master be807249 220.37 G, this change 219.75 G, **−0.28 %** (the remaining `der_b`
+callers: the `mk_*`, `abstract1`, `lp_go`). Verdicts: `diff-e2e --refs --parallel 16`: 634 of 634
+agree (406 accepted, 228 not), 0 UNSOUND / INCOMPLETE / REFDIFF / CRASH / TIMEOUT.
+
+The `max` forms `x + (y - x) * u64(x < y)` in the `mk_*` writers (ExprMk.lean, the `ADER`/`LADER`/
+`FADER`/`LEDER` packing) are the same kind of pattern, but on the write side and two or three per
+store; not changed here (each would split the writer's proof per comparison).
