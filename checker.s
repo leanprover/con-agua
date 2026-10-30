@@ -32958,7 +32958,7 @@ ret
 ca_f_ab_fvb:
 movq %rsp, %rax
 subq 8(%r15), %rax
-cmpq $104, %rax
+cmpq $48, %rax
 jb ca_exhausted
 subq $40, %rsp
 movq %rdi, (%rsp)
@@ -73017,7 +73017,6 @@ movq $0, %rax
 addq $88, %rsp
 ret
 ca_f_der_b:
-subq $56, %rsp
 movq %rdi, %rsi
 shrq $28, %rsi
 movq %rdi, %r12
@@ -73088,20 +73087,18 @@ cmpq 1832(%r15,%rax,8), %rbx
 jae ca_error
 movq 368(%r15,%rax,8), %r13
 movq (%r13,%rbx,8), %r13
+cmpq $32767, %r13
+jae .Lca_der_b_2222214221E
 movq $0, %rdi
 movq $0, %r8
 lea 1(%r13), %rax
-cmpq $32767, %r13
-movq $0, %rcx
-movq $1, %rdx
-cmovb %rdx, %rcx
-imulq %rcx, %rax
-cmpq $32767, %r13
-movq $0, %rcx
-movq $1, %rdx
-cmovae %rdx, %rcx
-imulq $32767, %rcx
-addq %rcx, %rax
+jmp .Lca_der_b_0R
+jmp .Lca_der_b_2222214221X
+.Lca_der_b_2222214221E:
+.Lca_der_b_2222214221X:
+movq $0, %rdi
+movq $0, %r8
+movq $32767, %rax
 jmp .Lca_der_b_0R
 jmp .Lca_der_b_222221X
 .Lca_der_b_222221E:
@@ -73185,18 +73182,21 @@ cmpq 1872(%r15,%rax,8), %r13
 jae ca_error
 movq 408(%r15,%rax,8), %rcx
 movq (%rcx,%r13,8), %r13
+cmpq $32767, %r13
+jae .Lca_der_b_2222222214221E
 lea 1(%r13), %rdi
-cmpq $32767, %r13
+movq %r12, %rax
+andq $1, %rax
+cmpq 2376(%r15,%rax,8), %rbx
+jae ca_error
+movq 912(%r15,%rax,8), %r8
+movq (%r8,%rbx,8), %r8
 movq $0, %rax
-movq $1, %rcx
-cmovb %rcx, %rax
-imulq %rax, %rdi
-cmpq $32767, %r13
-movq $0, %rax
-movq $1, %rcx
-cmovae %rcx, %rax
-imulq $32767, %rax
-addq %rax, %rdi
+jmp .Lca_der_b_0R
+jmp .Lca_der_b_2222222214221X
+.Lca_der_b_2222222214221E:
+.Lca_der_b_2222222214221X:
+movq $32767, %rdi
 movq %r12, %rax
 andq $1, %rax
 cmpq 2376(%r15,%rax,8), %rbx
@@ -73336,7 +73336,6 @@ movq $0, %rax
 movq $0, %rdi
 movq $0, %r8
 .Lca_der_b_0R:
-addq $56, %rsp
 ret
 ca_f_der_bv:
 movq %rdi, %rsi
@@ -108079,7 +108078,7 @@ ret
 ca_f_inst_lp_core:
 movq %rsp, %rax
 subq 8(%r15), %rax
-cmpq $160, %rax
+cmpq $104, %rax
 jb ca_exhausted
 subq $96, %rsp
 movq %rdi, (%rsp)
@@ -120562,7 +120561,7 @@ ret
 ca_f_leaf_guard:
 movq %rsp, %rax
 subq 8(%r15), %rax
-cmpq $128, %rax
+cmpq $72, %rax
 jb ca_exhausted
 subq $64, %rsp
 movq %rdi, (%rsp)
@@ -127013,7 +127012,7 @@ ret
 ca_f_lp_go:
 movq %rsp, %rax
 subq 8(%r15), %rax
-cmpq $160, %rax
+cmpq $104, %rax
 jb ca_exhausted
 subq $96, %rsp
 movq %rdi, (%rsp)
@@ -138149,7 +138148,7 @@ ret
 ca_f_mk_app:
 movq %rsp, %rax
 subq 8(%r15), %rax
-cmpq $192, %rax
+cmpq $136, %rax
 jb ca_exhausted
 subq $128, %rsp
 movq %rdi, (%rsp)
@@ -138394,7 +138393,7 @@ ret
 ca_f_mk_forall:
 movq %rsp, %rax
 subq 8(%r15), %rax
-cmpq $192, %rax
+cmpq $136, %rax
 jb ca_exhausted
 subq $128, %rsp
 movq %rdi, (%rsp)
@@ -138533,7 +138532,7 @@ ret
 ca_f_mk_lam:
 movq %rsp, %rax
 subq 8(%r15), %rax
-cmpq $192, %rax
+cmpq $136, %rax
 jb ca_exhausted
 subq $128, %rsp
 movq %rdi, (%rsp)
@@ -138672,7 +138671,7 @@ ret
 ca_f_mk_let:
 movq %rsp, %rax
 subq 8(%r15), %rax
-cmpq $224, %rax
+cmpq $168, %rax
 jb ca_exhausted
 subq $160, %rsp
 movq %rdi, (%rsp)
@@ -138832,7 +138831,7 @@ ret
 ca_f_mk_proj:
 movq %rsp, %rax
 subq 8(%r15), %rax
-cmpq $160, %rax
+cmpq $104, %rax
 jb ca_exhausted
 subq $96, %rsp
 movq %rdi, (%rsp)
