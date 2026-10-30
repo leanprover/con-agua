@@ -1227,22 +1227,36 @@
    217  A fresh array (all zero) is a table of `SN0` slots at offset `0`: a small run touches only the
    218  array's first words.
 
-== ConAgua/Arena/ConsLib.lean#L488-L493
-   488  /-- The growth test: the tier grows when its node count `c + 1` passes 3/4 of its slot count
-   489  `g + SN0` (`(g + SN0) * 3 < (c + 1) * 4`; con-ron's `HashMap2` load factor `LOAD_NUM/LOAD_DEN`). -/
-   490  def cpGrowIf (C : ConsSch) : Stmt :=
-   491    .ite (.cmp .ult (.bin .mul (.bin .add (.var (gO C + 1)) (.const SN0)) (.const 3))
-   492        (.bin .mul (.bin .add (.var (2 + C.np)) (.const 1)) (.const 4)))
-   493      (kgrowBlk C) .skip
+== ConAgua/Arena/ConsLib.lean#L567-L572
+   567  /-- The growth test: the tier grows when its node count `c + 1` passes 3/4 of its slot count
+   568  `g + SN0` (`(g + SN0) * 3 < (c + 1) * 4`; con-ron's `HashMap2` load factor `LOAD_NUM/LOAD_DEN`). -/
+   569  def cpGrowIf (C : ConsSch) : Stmt :=
+   570    .ite (.cmp .ult (.bin .mul (.bin .add (.var (gO C + 1)) (.const SN0)) (.const 3))
+   571        (.bin .mul (.bin .add (.var (2 + C.np)) (.const 1)) (.const 4)))
+   572      (kgrowBlk C) .skip
 
-== ConAgua/Arena/ConsLib.lean#L465-L471
-   465  /-- **The growth of tier `t`, in place** (con-ron's `HashMap2::try_resize` doubles into a new
-   466  table and frees the old one; here the table doubles where it is, so no old copy stays resident):
-   467  the slot count doubles, the new upper half is zeroed, every live slot of the old half is marked,
-   468  then each marked entry is re-inserted from its home in the doubled table (linear probing past
-   469  the live unmarked slots; a marked slot met on the way is swapped and re-inserted next: absl's
-   470  in-place rehash). Aborts if the array cannot hold the doubled table. Template variables
-   471  `t n2 n H Q ob nb x e v q h j d bt` (`t` the push's tier, the others from `gO`). -/
+== ConAgua/Arena/ConsLib.lean#L538-L558
+   538  /-- **The growth of tier `t`, in place** (con-ron's `HashMap2::try_resize` doubles into a new
+   539  table and frees the old one; here the table doubles where it is, so no old copy stays resident):
+   540  the slot count doubles and the new upper half is zeroed. Then one top-down sweep over the old
+   541  half re-inserts each live entry from its home in the doubled table with a probe that runs above
+   542  the sweep (so it meets no unmoved entry) and does not wrap. The few entries it cannot place
+   543  that way get the mark (`MARK` added to the value word): those whose home is below their slot,
+   544  and those whose probe meets a marked slot or the top one. They lie in two ranges, which absl's
+   545  in-place re-insertion then scans (linear probing past the live unmarked slots; a marked slot
+   546  met on the way is swapped and re-inserted next). Aborts if the array cannot hold the doubled
+   547  table. Template variables `t n2 n H Q ob nb x e v q h j d bt` (`t` the push's tier, the others
+   548  from `gO`), the `ihash` block, and the ranges `a0 a1 b0 b1`. -/
+   549  def kgrowB (C : ConsSch) : Stmt := lblk (t, n2, n, H, Q, ob, nb, x, e, v, q, h, j, d, bt, y15, y16, y17, a0, a1, b0, b1) {
+   550    ⟪kgrowH C⟫;
+   551    ⟪kzeroL C⟫;
+   552    ⟪kgrowH4⟫;
+   553    ⟪ktopL C⟫;
+   554    ⟪kgrowH5⟫;
+   555    ⟪krehashL C 19⟫;
+   556    ⟪kgrowH6⟫;
+   557    ⟪krehashL C 21⟫
+   558  }
 
 == ConAgua/Arena/SlotGrow.lean#L41-L44
     41  /-- The home slot of hash `h` among `n`: con-ron's multiply-xor finaliser, then the high word
@@ -2188,7 +2202,7 @@
     58  | D33 | `Arena/StubInd.lean` `open_pis_at_fvars_f` | `openPisAtFvarsF n e i` names its free variables `i, i + 1, …` (`Nat`s) | aborts when the first index `i` is `≥ 2^63` (a capacity guard: with at most the spine stack's `< 2^63` binders opened, the word indices `i + j` cannot wrap) | none: never accepts more; cannot trigger on real inputs (`i` is a binder depth) | indproofs4 | by design: discharges `opfF_ok`'s premise `i < 2^63` inside, so no depth bound reaches its callers |
     59  | D34 | `Arena/ConsLib.lean` `ciChk` (in `consInternG`): `intern_app`, `intern_lam`, `intern_forall`, `intern_const`, `intern_fvar`, `intern_max`, `intern_imax` | `internE`/`internL` hash-cons any key | aborts unless both key words are below `2^32` (an exact table's slot keeps the key packed in one word, `k₁ \| k₂ << 32`, and a probe compares it without reading the record) | none: `mk_app`/`mk_lam`/`mk_forall` already abort on larger words; a `const`/`fvar`/`max`/`imax` key is made of handle words (name, level list, level, expression; below `2^32` by construction, `consInternM_lt`) and an fvar index | kstp-proof | by design: the packed key word (lane kstp, `docs/design/conslib.md` step 4) |
     60  | D36 | `Arena/ConsLib.lean` `kfHead`, `kpickB`; `Arena/MemoLib.lean` `memoFindG`, `mslotBlkG` (`homeW`) | `ron/hashmap2.rs` `home_index`: `mix(h) & (n - 1)` | `mulhi(mix(h), n)` (the top bits of the mixed hash) | none (the home is verdict-neutral; hashmap2.rs says so) | memlay | stays: with our key hashes the mask clusters (lane memlay, phase 1: let-ladder's scratch tier probes 3.30 slots per find with the mask, 1.82 with `mulhi`, both at load 3/4) |
-    61  | D38 | `Arena/ConsLib.lean` `kgrowB` (`kmarkL`, `krehashL`: in-place growth) | `ron/hashmap2.rs` `try_resize`: a new table of twice the capacity, the live slots moved into it, the old `Vec` freed | the table doubles where it is: the upper half zeroed, the live slots marked, each marked entry re-inserted (absl's in-place rehash for linear probing) | none (representation only; no old copy stays resident, which L could not free) | memlay | stays: L has no allocator to give the old table back |
+    61  | D38 | `Arena/ConsLib.lean` `kgrowB` (`ktopL`, `krehashL`: in-place growth) | `ron/hashmap2.rs` `try_resize`: a new table of twice the capacity, `move_slots` re-inserting the live slots in ascending slot order, the old `Vec` freed | the table doubles where it is: the upper half is zeroed, then one top-down sweep over the old half re-inserts each live entry from its new home with con-ron's probe, which runs above the sweep (so it meets no unmoved entry) and does not wrap; the few entries it cannot place that way (new home below their slot, or a probe that meets a marked slot or the top slot: about 1–2 per growth) get a mark, and absl's in-place swap loop re-inserts them, scanning only the two ranges that hold marks | none (representation only: entries are inserted in descending slot order, so within a cluster of the new table they can be ordered differently than con-ron's; lookups and verdicts are the same; no old copy stays resident, which L could not free) | memlay, growtop | stays: L has no allocator to give the old table back |
     62  | D42 | `Checker/Presize.lean` `presize_tables` (called by `check_a` before the first intern), `pow2_at_least`; `Arena/ConsPresize.lean` `consPresizeG` (`app_presize`, `lam_presize`, `forall_presize`) | con-ron's `HashMap2` tables start empty (`HashMap2::new`, 32 slots at the first insert) and double as they fill; `HashMap2::with_capacity` exists, but no store calls it | the persistent tiers of the `app`, `lam` and `forallE` tables start at the least power of two `≥ len(input) / 64`, `/ 512`, `/ 1024` slots (8 M, 1 M, 512 K on `Init`), so the parse never doubles them in place (D38); the memory is all zero there, so nothing is zeroed or touched up front | performance only, verdict-neutral (the cons maps are the same; `consR_initM`). Measured 2026-10-29 (Init, 40 paired rounds, load 4–12): parse phase −6.4 % wall (p < 0.001), −7.1 % instructions; `Init` at 16 threads −1.9 % (p < 0.001); one thread −0.1 % (not resolved); peak RSS unchanged on `Init` (743 MB sequential, 1001 MB at 16 threads) and on the 634 fixtures (±3 MB); a large input with few nodes reserves more: `long_line_5mib` (5 MB) +1.2 MB, +1.8 MB at 16 threads (the frozen image copies the whole table), at most about a quarter of the input length | presize | stays: the in-place doubling was 12 % of the parse phase's cycles on `Init` (5 % of its instructions; docs/design/internspeed.md §2.2). Keeping the twins equal instead: con-ron sizes its persistent `app`, `lam`, `forallE` tables the same way (`HashMap2::with_capacity`) |
 
 == docs/deviations.md#L64-L91

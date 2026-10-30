@@ -370,27 +370,98 @@ def kgrowH3 : Stmt := lblk (t, n2, n, H, Q, ob, nb, x, e, v, q, h, j, d, bt) {
   e := n >> 2
 }
 
-/-- The mark loop's start and count, and the slot base `bt`. -/
-def kgrowH4 : Stmt := lblk (t, n2, n, H, Q, ob, nb, x, e, v, q, h, j, d, bt) {
+/-- The sweep's start: the slot base `bt`, the two mark ranges empty, the cursor `H = n` (the
+old half). The ranges' variables `a0 a1 b0 b1` follow the `ihash` block (`15 ‥ 17`). -/
+def kgrowH4 : Stmt := lblk (t, n2, n, H, Q, ob, nb, x, e, v, q, h, j, d, bt, y15, y16, y17, a0, a1, b0, b1) {
   bt := CTL.u64[62] * t;
-  x := ob;
-  e := n
+  a0 := 0;
+  a1 := 0;
+  b0 := 0;
+  b1 := 0;
+  H := n
 }
 
-/-- The mark loop: each live slot of the old half (`e` slots from word `x`) gets the mark. -/
-def kmarkL (C : ConsSch) : Stmt := lblk (t, n2, n, H, Q, ob, nb, x, e, v, q, h, j, d, bt) {
-  while e != 0 {
-    v := C.sa⟨t⟩[x];
-    if bt < v { C.sa⟨t⟩[x] := v + ⟪MARK⟫ };
-    x += 2;
-    e -= 1
+/-- A deferred entry's slot `H` joins a mark range: `[a0, a1)` below `n / 2`, `[b0, b1)` from
+`n / 2` on (the sweep is top-down, so the first mark of a range sets its end, every mark its
+start). -/
+def kdefB : Stmt := lblk (t, n2, n, H, Q, ob, nb, x, e, v, q, h, j, d, bt, y15, y16, y17, a0, a1, b0, b1) {
+  if H * 2 < n {
+    if a1 == 0 { a1 := H + 1 };
+    a0 := H
+  } else {
+    if b1 == 0 { b1 := H + 1 };
+    b0 := H
   }
 }
 
-/-- The re-insertion's start: slot `H = 0`, and the budget `e = n` of re-insertions (each one
-unmarks a slot, and only the `n` old slots carry marks). -/
-def kgrowH5 : Stmt := lblk (t, n2, n, H, Q, ob, nb, x, e, v, q, h, j, d, bt) {
-  H := 0;
+/-- The sweep's probe loop: from slot `j` (`x` its value word) upward past the live unmarked
+slots, without wrapping (it stops at the top slot `n2 - 1`). -/
+def kupLoop (C : ConsSch) : Stmt := lblk (t, n2, n, H, Q, ob, nb, x, e, v, q, h, j, d, bt, y15, y16, y17, a0, a1, b0, b1) {
+  while bt < x && x < ⟪MARK⟫ && j + 1 < n2 {
+    j += 1;
+    x := C.sa⟨t⟩[ob + j * 2]
+  }
+}
+
+/-- The sweep's probe from slot `j`; `x` the value word of the slot it stops at. -/
+def kupL (C : ConsSch) : Stmt := lblk (t, n2, n, H, Q, ob, nb, x, e, v, q, h, j, d, bt, y15, y16, y17, a0, a1, b0, b1) {
+  x := C.sa⟨t⟩[ob + j * 2];
+  ⟪kupLoop C⟫
+}
+
+/-- The live entry of slot `H` (value word `v`): its key word `q`, its new home `j`; above `H`,
+the probe from there (`x` the value word it stops at); otherwise `x = v`. -/
+def ktopP (C : ConsSch) : Stmt := lblk (t, n2, n, H, Q, ob, nb, x, e, v, q, h, j, d, bt, y15, y16, y17, a0, a1, b0, b1) {
+  q := C.sa⟨t⟩[ob + H * 2 + 1];
+  ⟪khashB C⟫;
+  j := mulhi((h * ⟪golden⟫) ^ ((h * ⟪golden⟫) >> 32), n2);
+  if H < j { ⟪kupL C⟫ } else { x := v }
+}
+
+/-- Its placement: a free slot `j` (found above `H`) takes the entry and `H` is cleared; at
+`j = H` it stays; otherwise (home below `H`, or the probe met a marked slot or the top) `H` gets
+the mark and joins a range. -/
+def ktopQ (C : ConsSch) : Stmt := lblk (t, n2, n, H, Q, ob, nb, x, e, v, q, h, j, d, bt, y15, y16, y17, a0, a1, b0, b1) {
+  if x <= bt {
+    C.sa⟨t⟩[ob + j * 2] := v;
+    C.sa⟨t⟩[ob + j * 2 + 1] := q;
+    C.sa⟨t⟩[ob + H * 2] := 0
+  } else {
+    if j != H {
+      C.sa⟨t⟩[ob + H * 2] := v + ⟪MARK⟫;
+      ⟪kdefB⟫
+    }
+  }
+}
+
+/-- The sweep's step at the live slot `H`. -/
+def ktopB (C : ConsSch) : Stmt := lblk (t, n2, n, H, Q, ob, nb, x, e, v, q, h, j, d, bt, y15, y16, y17, a0, a1, b0, b1) {
+  ⟪ktopP C⟫;
+  ⟪ktopQ C⟫
+}
+
+/-- The sweep's step: the next slot down, `H - 1`, handled if live. -/
+def ktopBody (C : ConsSch) : Stmt := lblk (t, n2, n, H, Q, ob, nb, x, e, v, q, h, j, d, bt, y15, y16, y17, a0, a1, b0, b1) {
+  H -= 1;
+  v := C.sa⟨t⟩[ob + H * 2];
+  if bt < v { ⟪ktopB C⟫ }
+}
+
+/-- The top-down sweep over the old half, `H = n - 1 ‥ 0`. -/
+def ktopL (C : ConsSch) : Stmt := lblk (t, n2, n, H, Q, ob, nb, x, e, v, q, h, j, d, bt, y15, y16, y17, a0, a1, b0, b1) {
+  while H != 0 { ⟪ktopBody C⟫ }
+}
+
+/-- The first range's re-insertion start: slot `H = a0`, the budget `e = n` of re-insertions
+(each one unmarks a slot, and only the `n` old slots carry marks). -/
+def kgrowH5 : Stmt := lblk (t, n2, n, H, Q, ob, nb, x, e, v, q, h, j, d, bt, y15, y16, y17, a0, a1, b0, b1) {
+  H := a0;
+  e := n
+}
+
+/-- The second range's start, `H = b0`, the budget `e = n`. -/
+def kgrowH6 : Stmt := lblk (t, n2, n, H, Q, ob, nb, x, e, v, q, h, j, d, bt, y15, y16, y17, a0, a1, b0, b1) {
+  H := b0;
   e := n
 }
 
@@ -447,13 +518,15 @@ def kinnerL (C : ConsSch) : Stmt := lblk (t, n2, n, H, Q, ob, nb, x, e, v, q, h,
   }
 }
 
-/-- The re-insertion loop over the old half's slots `H = 0 ‥ n - 1`. -/
-def krehashL (C : ConsSch) : Stmt := lblk (t, n2, n, H, Q, ob, nb, x, e, v, q, h, j, d, bt) {
-  for H < n {
-    v := C.sa⟨t⟩[ob + H * 2];
-    ⟪kinnerL C⟫
-  }
+/-- The re-insertion of one slot `H`. -/
+def krehashS (C : ConsSch) : Stmt := lblk (t, n2, n, H, Q, ob, nb, x, e, v, q, h, j, d, bt) {
+  v := C.sa⟨t⟩[ob + H * 2];
+  ⟪kinnerL C⟫
 }
+
+/-- The re-insertion loop over the slots `H ‥ u - 1` (`u` a template variable: `a1` or `b1`). -/
+def krehashL (C : ConsSch) (u : Var) : Stmt :=
+  .while (.cmp .ult (.var 3) (.var u)) (.seq (krehashS C) (.set 3 (.bin .add (.var 3) (.const 1))))
 
 /-- The growth's head. -/
 def kgrowH (C : ConsSch) : Stmt := lblk (t, n2, n, H, Q, ob, nb, x, e, v, q, h, j, d, bt) {
@@ -464,18 +537,24 @@ def kgrowH (C : ConsSch) : Stmt := lblk (t, n2, n, H, Q, ob, nb, x, e, v, q, h, 
 
 /-- **The growth of tier `t`, in place** (con-ron's `HashMap2::try_resize` doubles into a new
 table and frees the old one; here the table doubles where it is, so no old copy stays resident):
-the slot count doubles, the new upper half is zeroed, every live slot of the old half is marked,
-then each marked entry is re-inserted from its home in the doubled table (linear probing past
-the live unmarked slots; a marked slot met on the way is swapped and re-inserted next: absl's
-in-place rehash). Aborts if the array cannot hold the doubled table. Template variables
-`t n2 n H Q ob nb x e v q h j d bt` (`t` the push's tier, the others from `gO`). -/
-def kgrowB (C : ConsSch) : Stmt := lblk (t, n2, n, H, Q, ob, nb, x, e, v, q, h, j, d, bt) {
+the slot count doubles and the new upper half is zeroed. Then one top-down sweep over the old
+half re-inserts each live entry from its home in the doubled table with a probe that runs above
+the sweep (so it meets no unmoved entry) and does not wrap. The few entries it cannot place
+that way get the mark (`MARK` added to the value word): those whose home is below their slot,
+and those whose probe meets a marked slot or the top one. They lie in two ranges, which absl's
+in-place re-insertion then scans (linear probing past the live unmarked slots; a marked slot
+met on the way is swapped and re-inserted next). Aborts if the array cannot hold the doubled
+table. Template variables `t n2 n H Q ob nb x e v q h j d bt` (`t` the push's tier, the others
+from `gO`), the `ihash` block, and the ranges `a0 a1 b0 b1`. -/
+def kgrowB (C : ConsSch) : Stmt := lblk (t, n2, n, H, Q, ob, nb, x, e, v, q, h, j, d, bt, y15, y16, y17, a0, a1, b0, b1) {
   ⟪kgrowH C⟫;
   ⟪kzeroL C⟫;
   ⟪kgrowH4⟫;
-  ⟪kmarkL C⟫;
+  ⟪ktopL C⟫;
   ⟪kgrowH5⟫;
-  ⟪krehashL C⟫
+  ⟪krehashL C 19⟫;
+  ⟪kgrowH6⟫;
+  ⟪krehashL C 21⟫
 }
 
 /-- The renaming of the growth's template variables into the push's: `t` stays, the others
@@ -503,7 +582,7 @@ def cpRest (C : ConsSch) : Stmt :=
 
 /-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
 def consPushG (C : ConsSch) : FunDecl :=
-  { nparams := 2 + C.np, nlocals := gO C + 15 + C.nk,
+  { nparams := 2 + C.np, nlocals := gO C + 21 + C.nk,
     body := seqO C.pre (seqs ((cpHead C).map (mapS (lvF C.np)))
       (.seq (.ite C.room (.abort (.const R_CAP_STORE)) .skip)
         (seqs (cpMid C) (cpWr C 0 C.recW (cpRest C))))) }

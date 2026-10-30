@@ -344,18 +344,18 @@ the workers stay below it.
 few pending groups), and `--jobs` costs con-agua nothing there.
 
 <!-- perf-overview: begin others -->
-Master `54018587`, 2026-10-28, `scripts/perf-overview.py`: the default run, 3 interleaved rounds, the median wall time and the largest peak RSS; load 2–4 on 96 cores:
+Master `75c5fabb`, 2026-10-30, `scripts/perf-overview.py`: the default run, 3 interleaved rounds, the median wall time and the largest peak RSS; load 1–2 on 96 cores:
 
 | input | con-agua | con-ron `--jobs=1` |
 |---|---|---|
-| app-lam | 9.73 s, 1920 MB | 5.34 s, 2761 MB |
-| beta-ladder | 2.38 s, 590 MB | 1.46 s, 882 MB |
-| let-ladder | 0.98 s, 320 MB | 0.70 s, 633 MB |
-| eager_open | 2.66 s, 555 MB | 2.04 s, 1020 MB |
-| c04a | 2.35 s, 391 MB | 1.80 s, 556 MB |
-| c05b | 1.35 s, 656 MB | 0.73 s, 208 MB |
-| c03d | 0.27 s, 136 MB | 0.22 s, 250 MB |
-| init-prelude | 0.11 s, 30 MB | 0.10 s, 59 MB |
+| app-lam | 7.78 s, 1767 MB | 5.40 s, 2762 MB |
+| beta-ladder | 1.86 s, 543 MB | 1.46 s, 962 MB |
+| let-ladder | 0.76 s, 293 MB | 0.69 s, 633 MB |
+| eager_open | 2.21 s, 513 MB | 2.07 s, 1021 MB |
+| c04a | 2.03 s, 370 MB | 1.80 s, 555 MB |
+| c05b | 1.28 s, 645 MB | 0.73 s, 208 MB |
+| c03d | 0.23 s, 128 MB | 0.22 s, 250 MB |
+| init-prelude | 0.09 s, 29 MB | 0.11 s, 60 MB |
 <!-- perf-overview: end others -->
 
 ## 4. Architecture
@@ -674,11 +674,13 @@ Each store's **cons table**, the hash map from a node's fields to its handle,
 is con-ron's `HashMap2`: open addressing, linear probing, one table per tier in
 its own word array, growth at load 3/4
 ([the layout](https://github.com/leanprover/con-agua/blob/master/ConAgua/Arena/ConsLib.lean#L209-L218),
-[the growth test](https://github.com/leanprover/con-agua/blob/master/ConAgua/Arena/ConsLib.lean#L488-L493)).
+[the growth test](https://github.com/leanprover/con-agua/blob/master/ConAgua/Arena/ConsLib.lean#L567-L572)).
 Where con-ron allocates a table of twice the size and frees the old one, L
-doubles the table **in place** (absl's in-place rehash: zero the upper half,
-mark the live slots, re-insert each marked entry)
-([`kgrowB`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Arena/ConsLib.lean#L465-L471)),
+doubles the table **in place**: it zeroes the upper half, then one top-down
+sweep re-inserts each live entry from its new home with a probe that stays
+above the sweep; the few entries that probe cannot place are marked and
+re-inserted by absl's in-place swap loop over the ranges that hold marks
+([`kgrowB`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Arena/ConsLib.lean#L538-L558)),
 since L cannot free memory. The home slot is `mulhi(mix(h), n)` rather than
 con-ron's mask
 ([`homeW`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Arena/SlotGrow.lean#L41-L44)).

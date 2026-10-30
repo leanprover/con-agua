@@ -222,3 +222,54 @@ home is below their slot, and those whose probe reaches the top slot or a marked
 per growth). absl's in-place swap loop then re-inserts them, scanning only the marked range. The
 layout differs from con-ron's `move_slots` (descending instead of ascending order). That is
 representation only.
+
+## 8. Landed (lane growtop)
+
+The top-down doubling is in `ConsLib.lean`'s `kgrowB` and proved; callers' proofs did not change
+(`kgrowM` is still the growth's model, `storeR_kgrow` its conclusion, `ConsR` untouched).
+
+**The L code** differs from the prototype in three small points: one deferral block
+(`if H < j { probe } else { x := v }; if x <= bt { move } else if j != H { mark }`); no mark count
+in pass 1 (pass 2's budget is `e = n` per range, as master's, so pass 1 keeps no counter); the
+ranges are `[a0, a1)` (marks below `n / 2`) and `[b0, b1)`, each with end set by its first mark and
+start by every mark, all four zeroed first. The push has `gO + 21 + nk` locals (the ranges at
+`gO + 17 ‥ gO + 20`, past the `ihash` block). 5-round check against `td`: same wall within 0.4 %.
+
+**The proof and code** (+1324 / −302 lines of Lean, ConsLib's L code +109 / −30 of it; about twice §6's estimate, mostly the L-level specs and the new file):
+* `SlotGrowSpec.lean` (+111 / −22): `MkR`, `kdefR`, `kupW` (the no-wrap probe; a `j < N` guard in
+  its condition makes it terminate and holds on every call), `kjW`/`ktgW`/`kxW`, `ktopQW`,
+  `ktopBW`, `ktopS`, `ktopW`, `kzM`, `ktopM`, the new `kgrowM` (sweep, then `krehashW` over the
+  two ranges, `Option.bind`); `kmarkW` gone.
+* `SlotRehash.lean` (+45 / −28): `SlotOK`'s mark condition is `(i ≤ j < n) ∨ Ex j` (`Ex`: the
+  range a later loop scans), `rinv_weaken` moves between ranges, `krehashW_inv` lost its `i ≤ n`.
+* `SlotTop.lean` (new, 550 lines): `TopInv` (a structure: frame, slots below `H` untouched, slots
+  from `H` on `SlotOK` with the ranges, every node old / marked / `FoundT`, the range facts),
+  `kupW_res`, `walkW_toNat`, the four steps `top_free`/`top_stay`/`top_mark`/`top_move`,
+  `ktopS_inv`, `ktopW_inv`, `topInv_init`, `topInv_reins` (`TopInv 0 ⇒ ReinsInv a0`). Pass 2 needs
+  no counting argument: fixed slot ranges, positional invariant.
+* `StoreGrow.lean` (+56 / −103): the mark-read lemmas went; the start is `topInv_init` from the
+  zeroed memory, then sweep, range 1, `rinv_weaken`, range 2, and master's tail unchanged.
+* `ConsLibSpec.lean` (+453 / −119): `kupLoop`/`kupL`/`kdefB`/`ktopP`/`ktopQ`/`ktopB`/`ktopBody`/
+  `ktopL` specs, `krehashL` generic in its bound variable, `KeepR` keeps the ranges, `khash_spec`
+  and `kpickB_spec` keep `gO + 17` on. `ktopB_spec` and the loop's step are by hand (`triple_seq`,
+  `ktopW_cons`): the first `grind` version of `ktopB_spec` passed 16 GB (the memory watchdog killed
+  it); all specs now elaborate in seconds, the whole file under 8 GB.
+
+**Verdicts:** `diff-e2e --refs`: 634 agree, 0 REFDIFF; `--jobs 4`: 634 agree.
+
+**Numbers** (landed binary vs master `b7fb34c5`, 30 interleaved paired rounds, CPUs 12–23,60–63,
+load 2–7; the gate build ran on other cores during rounds 11–20, which widens the CIs):
+
+| input | master | change | Wilcoxon p |
+|---|---:|---:|---:|
+| app-lam | 9.58 s | **−20.0 %** | < 0.001 |
+| beta-ladder | 2.34 s | **−20.7 %** | < 0.001 |
+| c05b | 1.28 s | −0.4 % | 0.30 |
+| `Init`, 1 thread | 17.33 s | −0.4 % | 0.45 |
+| `Init`, 16 threads | 3.83 s | −0.4 % | 0.25 |
+
+Peak RSS (median of 30) unchanged: app-lam 1767 / 1766 MB, beta-ladder 541 / 541, c05b 644 / 644,
+`Init` 716 / 716 and 954 / 954 MB. Instructions (`scripts/asmprof.py`): app-lam 50.17 G → 45.70 G
+(−8.9 %), beta-ladder 13.63 G → 12.32 G (−9.6 %), c05b 14.29 G → 14.15 G (−1.0 %), `Init`
+232.39 G → 232.50 G (+0.05 %), as the prototype. OVERVIEW §3's "others" block refreshed with
+`scripts/perf-overview.py --only others`.
