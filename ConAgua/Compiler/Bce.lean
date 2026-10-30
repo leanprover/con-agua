@@ -119,6 +119,12 @@ def lenKey : Expr → Option AKey
   | .len64t a t => keyT a t
   | _ => none
 
+/-- The access with key `k` (if any) and index `i`. -/
+def optLoad (k : Option AKey) (i : Expr) : List (AKey × Expr) :=
+  match k with
+  | some k => [(k, i)]
+  | none => []
+
 /-- The checked accesses of `e` (each one's key and index): when `e` evaluates, each passed its
 check. -/
 def Expr.loads : Expr → List (AKey × Expr)
@@ -126,8 +132,8 @@ def Expr.loads : Expr → List (AKey × Expr)
   | .ld8 a i => (.b a, i) :: Expr.loads i
   | .ld64 a i => (.w a, i) :: Expr.loads i
   | .ld64t a t i | .ld32h a t i _ =>
-    (match keyT a t with | some k => [(k, i)] | none => []) ++ Expr.loads t ++ Expr.loads i
-  | .ld32t a t i => (match key32 a t with | some k => [(k, i)] | none => []) ++ Expr.loads t ++ Expr.loads i
+    optLoad (keyT a t) i ++ Expr.loads t ++ Expr.loads i
+  | .ld32t a t i => optLoad (key32 a t) i ++ Expr.loads t ++ Expr.loads i
   | .ldc _ i | .ld8x8 _ i => Expr.loads i
   | .len64t _ t => Expr.loads t
   | _ => []
@@ -170,14 +176,20 @@ def killAll (fa : Facts) : List Var → Facts
   | [] => fa
   | x :: xs => killAll (fa.kill x) xs
 
-/-- What holds when `c` comes out `pol` (besides its accesses): `a < len` facts. -/
-def cond (fa : Facts) : Cond → Bool → Facts
-  | .cmp .ult a b, true => match lenKey b with | some k => fa.addLt k a | none => fa
-  | .cmp .ule a b, false => match lenKey a with | some k => fa.addLt k b | none => fa
-  | .and p q, true => (fa.cond p true).cond q true
-  | .or p q, false => (fa.cond p false).cond q false
-  | .not p, pol => fa.cond p (!pol)
+/-- What holds when `a op b` comes out `pol`: `a < len(k)` (`a < b`, `b` a length) or
+`b < len(k)` (`a ≤ b` false, `a` a length). -/
+def cmpF (fa : Facts) (op : Cmp) (a b : Expr) (pol : Bool) : Facts :=
+  match op, pol with
+  | .ult, true => match lenKey b with | some k => fa.addLt k a | none => fa
+  | .ule, false => match lenKey a with | some k => fa.addLt k b | none => fa
   | _, _ => fa
+
+/-- What holds when `c` comes out `pol` (besides its accesses). -/
+def cond (fa : Facts) : Cond → Bool → Facts
+  | .cmp op a b, pol => fa.cmpF op a b pol
+  | .and p q, pol => if pol then (fa.cond p true).cond q true else fa
+  | .or p q, pol => if pol then fa else (fa.cond p false).cond q false
+  | .not p, pol => fa.cond p (!pol)
 
 def condAll (fa : Facts) (c : Cond) (pol : Bool) : Facts :=
   (fa.addLoads (Cond.loads c pol)).cond c pol
