@@ -445,7 +445,6 @@ theorem ruleWords_length (m : Mem) : ∀ (ro : Word) (k : Nat), (ruleWords m ro 
   | _, 0 => rfl
   | ro, k + 1 => by simp [ruleWords, recWords, ruleWords_length m (ro + 1) k]; omega
 
-set_option maxHeartbeats 2000000 in
 theorem cpMem_eq {m : Mem} {b old : Word} (hlt : old.toNat + 11 ≤ b.toNat) (hb : b.toNat + 11 < 2 ^ 64) :
     cpMem m b old = wrER m b (recWords (m.arr64 EREC) old) := by
   simp only [cpMem, wrER, recWords]

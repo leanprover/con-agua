@@ -245,7 +245,6 @@ l_model tsrm_spec (p : Prog) (hL : TsrLook p)
 
 /-! ## The rebuilt record under the stage relation -/
 
-set_option maxHeartbeats 2000000 in
 theorem rmMem_eq {m1 : Mem} {q old flo fll fpo fpl : Word} (hlt : old.toNat + 11 ≤ q.toNat)
     (hq : q.toNat + 11 < 2 ^ 64) :
     rmMem m1 q old flo fll fpo fpl = wrER m1 q [rdW (m1.arr64 EREC) old, rdW (m1.arr64 EREC) (old + 1),

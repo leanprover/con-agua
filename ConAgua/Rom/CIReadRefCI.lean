@@ -283,7 +283,6 @@ theorem ci_ind {m₀ : Mem} {a₀ : AState} {T : Nat} (dn : NIdx → Option ConL
     have : pp.toNat + 1 + 4 = pp.toNat + 5 := by omega
     simp [decCI, nat?_of e0, ecv, ecaps]
 
-set_option maxHeartbeats 4000000 in
 /-- A recursor (plain rules). -/
 theorem ci_rec {m₀ : Mem} {a₀ : AState} {T : Nat} (dn : NIdx → Option ConLeche.Name)
     (seen : List ConLeche.Expr) (memo : EMemo) (v : ConLeche.ConstantVal) (hv : cvFits v = true)

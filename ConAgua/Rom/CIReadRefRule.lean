@@ -76,7 +76,6 @@ section rule
 variable {rom : List UInt8} {p : Prog} (hL : RomCIProg rom p) (hr : RomOK rom)
 include hL hr
 
-set_option maxHeartbeats 8000000 in
 /-- **`rci_rule` refines `Frontend.internRule`** for a plain rule, into the 11 words at `rr`. -/
 @[refines_part ConRon.Arena.Frontend.internRule "plain rules"]
 theorem rule_rel {m₀ : Mem} {a₀ : AState} {T : Nat} (seen : List ConLeche.Expr) (memo : EMemo)
