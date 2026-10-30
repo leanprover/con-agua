@@ -72,32 +72,26 @@ def dfltN (l : Word) : Word :=
 /-- `dfltN` as the L code computes it: the cap first, so that a large array takes one branch. -/
 theorem dfltN_alt (l : Word) :
     dfltN l = if MN0 < l >>> 2 then MN0 else (l >>> 2) - (if (0 : Word) < l >>> 2 then 1 else 0) := by
-  have hM : MN0.toNat = 16384 := rfl
   unfold dfltN
-  by_cases h : MN0 < l >>> 2
-  · have h' := UInt64.lt_iff_toNat_lt.mp h
-    have h0 : (0 : Word) < l >>> 2 := UInt64.lt_iff_toNat_lt.mpr (by simp; omega)
-    have hs : ((l >>> 2) - 1).toNat = (l >>> 2).toNat - 1 := by
-      rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; simp; omega)]; rfl
-    simp only [h, h0, ↓reduceIte]
-    split
-    · rfl
-    · rename_i hn
-      have := UInt64.lt_iff_toNat_lt.not.mp hn
-      rw [hs] at this
-      exact UInt64.toNat_inj.mp (by rw [hs]; omega)
-  · simp only [h, ↓reduceIte]
-    split
-    · rename_i hn
-      exfalso; apply h
-      have := UInt64.lt_iff_toNat_lt.mp hn
-      refine UInt64.lt_iff_toNat_lt.mpr (Nat.lt_of_lt_of_le this ?_)
-      split
-      · rw [UInt64.toNat_sub_of_le _ _ (by
-          rw [UInt64.le_iff_toNat_le]; simp; have := UInt64.lt_iff_toNat_lt.mp ‹(0 : Word) < l >>> 2›
-          simp at this; omega)]; simp
-      · simp
-    · rfl
+  generalize l >>> 2 = L
+  have hM : MN0.toNat = 16384 := rfl
+  by_cases h0 : L = 0
+  · subst h0; decide
+  · have hL : L.toNat ≠ 0 := fun h => h0 (UInt64.toNat_inj.mp (by simpa using h))
+    have hp : (0 : Word) < L := UInt64.lt_iff_toNat_lt.mpr (by simp; omega)
+    have hs : (L - 1).toNat = L.toNat - 1 := by
+      rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simp; omega))]; simp
+    simp only [hp, ↓reduceIte]
+    by_cases h1 : MN0 < L - 1
+    · have : MN0 < L := UInt64.lt_iff_toNat_lt.mpr (by have := UInt64.lt_iff_toNat_lt.mp h1; omega)
+      simp [h1, this]
+    · by_cases h2 : MN0 < L
+      · simp only [h1, h2, ↓reduceIte]
+        apply UInt64.toNat_inj.mp
+        have a := UInt64.lt_iff_toNat_lt.mp h2
+        have b := mt UInt64.lt_iff_toNat_lt.mpr h1
+        omega
+      · simp [h1, h2]
 
 /-- The header (slot 0) names the region: its first word is the live stamp. -/
 def hdG (S : MemoSch) (m : Mem) : Prop := rdW (m.arr64 S.arr) 0 = epG S m
