@@ -69,6 +69,36 @@ def dfltN (l : Word) : Word :=
   if MN0 < (l >>> 2) - (if (0 : Word) < l >>> 2 then 1 else 0) then MN0
   else (l >>> 2) - (if (0 : Word) < l >>> 2 then 1 else 0)
 
+/-- `dfltN` as the L code computes it: the cap first, so that a large array takes one branch. -/
+theorem dfltN_alt (l : Word) :
+    dfltN l = if MN0 < l >>> 2 then MN0 else (l >>> 2) - (if (0 : Word) < l >>> 2 then 1 else 0) := by
+  have hM : MN0.toNat = 16384 := rfl
+  unfold dfltN
+  by_cases h : MN0 < l >>> 2
+  · have h' := UInt64.lt_iff_toNat_lt.mp h
+    have h0 : (0 : Word) < l >>> 2 := UInt64.lt_iff_toNat_lt.mpr (by simp; omega)
+    have hs : ((l >>> 2) - 1).toNat = (l >>> 2).toNat - 1 := by
+      rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; simp; omega)]; rfl
+    simp only [h, h0, ↓reduceIte]
+    split
+    · rfl
+    · rename_i hn
+      have := UInt64.lt_iff_toNat_lt.not.mp hn
+      rw [hs] at this
+      exact UInt64.toNat_inj.mp (by rw [hs]; omega)
+  · simp only [h, ↓reduceIte]
+    split
+    · rename_i hn
+      exfalso; apply h
+      have := UInt64.lt_iff_toNat_lt.mp hn
+      refine UInt64.lt_iff_toNat_lt.mpr (Nat.lt_of_lt_of_le this ?_)
+      split
+      · rw [UInt64.toNat_sub_of_le _ _ (by
+          rw [UInt64.le_iff_toNat_le]; simp; have := UInt64.lt_iff_toNat_lt.mp ‹(0 : Word) < l >>> 2›
+          simp at this; omega)]; simp
+      · simp
+    · rfl
+
 /-- The header (slot 0) names the region: its first word is the live stamp. -/
 def hdG (S : MemoSch) (m : Mem) : Prop := rdW (m.arr64 S.arr) 0 = epG S m
 
@@ -165,11 +195,11 @@ def memoFindG (S : MemoSch) : FunDecl := lfn (k1, k2) locals (n, e, j, d, b) {
   } else {
     b := 1;
     n := len(S.arr.u64) >> 2;
-    n := n - u64(n > 0);
-    if n > ⟪MN0⟫ { n := ⟪MN0⟫ }
+    if n > ⟪MN0⟫ { n := ⟪MN0⟫ } else { n := n - u64(n > 0) }
   };
   j := (k1 ^ (k2 << 32)) ^ ((k2 >> 32) * ⟪golden⟫);
-  j := mulhi((j * ⟪golden⟫) ^ ((j * ⟪golden⟫) >> 32), n);
+  j := j * ⟪golden⟫;
+  j := mulhi(j ^ (j >> 32), n);
   ⟪mfindLoopG S⟫;
   abort
 }
@@ -228,7 +258,7 @@ theorem memoFindG_spec (f : FnName) (hp : p.lookup f = some (memoFindG S)) (n : 
     all_goals subst_vars
     all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, Locals.init_cons_zero, Locals.init_cons_succ,
       Cmp.eval, BinOp.eval, Nat.reduceEqDiff, reduceIte, beq_iff_eq, decide_eq_true_eq] at *)
-    all_goals grind [lang_grind, arena_grind, mfindG, nG, mbG, hdG, epG, dfltN, homeW, kh, Mem.len64]
+    all_goals grind [lang_grind, arena_grind, mfindG, nG, mbG, hdG, epG, dfltN_alt, homeW, kh, Mem.len64]
 
 end find
 
@@ -319,81 +349,86 @@ def msetG (S : MemoSch) (m : Mem) (k1 k2 v : Word) : Option Mem :=
   if mfindG S m k1 k2 = [] then none
   else mputG S m k1 k2 v ((mfindG S m k1 k2).headD 0) ((mfindG S m k1 k2).tail.headD 0)
 
-/-- The free-slot probe loop of the growth (variables of `memoPutG`): key `(x, y)` (12, 13),
-region `nb`, `nn` (9, 10), stamp `e` (6), slot `q` (14), step `d` (15). A live slot with the key
-aborts. -/
+/-- The free-slot probe loop of the growth (variables of `memoPutG`): key `(x, y)` (10, 11),
+region `b`, `n` (7, 8; the new region while growing), stamp `e` (6), slot `j` (4), step `d` (9).
+A live slot with the key aborts. -/
 def mslotLoopG (S : MemoSch) : Stmt :=
-  lblk (k1, k2, v, fd, j, c, e, b, n, nb, nn, i, x, y, q, d, w) {
-  while d < nn && S.arr.u64[(nb + q) * 4] == e {
-    if S.arr.u64[(nb + q) * 4 + 1] == x && S.arr.u64[(nb + q) * 4 + 2] == y { abort };
-    q := (q + 1) * u64(q + 1 < nn);
+  lblk (k1, k2, v, fd, j, c, e, b, n, d, x, y, w) {
+  while d < n && S.arr.u64[(b + j) * 4] == e {
+    if S.arr.u64[(b + j) * 4 + 1] == x && S.arr.u64[(b + j) * 4 + 2] == y { abort };
+    j := (j + 1) * u64(j + 1 < n);
     d += 1
   }
 }
 
-/-- A free slot for key `(x, y)` in the region `nb`, `nn`, into `q`; aborts if there is none. -/
+/-- A free slot for key `(x, y)` in the region `b`, `n`, into `j`; aborts if there is none. -/
 def mslotBlkG (S : MemoSch) : Stmt :=
-  lblk (k1, k2, v, fd, j, c, e, b, n, nb, nn, i, x, y, q, d, w) {
-  q := (x ^ (y << 32)) ^ ((y >> 32) * ⟪golden⟫);
-  q := mulhi((q * ⟪golden⟫) ^ ((q * ⟪golden⟫) >> 32), nn);
+  lblk (k1, k2, v, fd, j, c, e, b, n, d, x, y, w) {
+  j := (x ^ (y << 32)) ^ ((y >> 32) * ⟪golden⟫);
+  j := j * ⟪golden⟫;
+  j := mulhi(j ^ (j >> 32), n);
   d := 0;
   ⟪mslotLoopG S⟫;
-  if d >= nn { abort };
-  q := nb + q
+  if d >= n { abort };
+  j := b + j
 }
 
-/-- Move the live slot `i` to a free slot of the region `nb`, `nn`; count it in `c`. -/
+/-- Move the live slot `fd` to a free slot of the region `b`, `n`; count it in `c`. -/
 def mmoveG (S : MemoSch) : Stmt :=
-  lblk (k1, k2, v, fd, j, c, e, b, n, nb, nn, i, x, y, q, d, w) {
-  x := S.arr.u64[i * 4 + 1];
-  y := S.arr.u64[i * 4 + 2];
-  w := S.arr.u64[i * 4 + 3];
+  lblk (k1, k2, v, fd, j, c, e, b, n, d, x, y, w) {
+  x := S.arr.u64[fd * 4 + 1];
+  y := S.arr.u64[fd * 4 + 2];
+  w := S.arr.u64[fd * 4 + 3];
   ⟪mslotBlkG S⟫;
-  S.arr.u64[q * 4] := e;
-  S.arr.u64[q * 4 + 1] := x;
-  S.arr.u64[q * 4 + 2] := y;
-  S.arr.u64[q * 4 + 3] := w;
+  S.arr.u64[j * 4] := e;
+  S.arr.u64[j * 4 + 1] := x;
+  S.arr.u64[j * 4 + 2] := y;
+  S.arr.u64[j * 4 + 3] := w;
   c += 1
 }
 
-/-- One step of the rehash loop: move slot `i` if it is live and not a tombstone. -/
+/-- One step of the rehash loop: move slot `fd` if it is live and not a tombstone. -/
 def mstepG (S : MemoSch) : Stmt :=
-  lblk (k1, k2, v, fd, j, c, e, b, n, nb, nn, i, x, y, q, d, w) {
-  if S.arr.u64[i * 4] == e && S.arr.u64[i * 4 + 1] != ⟪TOMB⟫ { ⟪mmoveG S⟫ };
-  i += 1
+  lblk (k1, k2, v, fd, j, c, e, b, n, d, x, y, w) {
+  if S.arr.u64[fd * 4] == e && S.arr.u64[fd * 4 + 1] != ⟪TOMB⟫ { ⟪mmoveG S⟫ };
+  fd += 1
 }
 
-/-- The rehash loop: every live slot `i` of the region `[b, nb)` that is not a tombstone moves to a
-free slot of the region `nb`, `nn`; `c` counts them. -/
+/-- The rehash loop: every live slot `fd` of the old region (up to `b`, the new region's first
+slot) that is not a tombstone moves to a free slot of the new region `b`, `n`; `c` counts them. -/
 def mrehashLoopG (S : MemoSch) : Stmt :=
-  lblk (k1, k2, v, fd, j, c, e, b, n, nb, nn, i, x, y, q, d, w) {
-  while i < nb { ⟪mstepG S⟫ }
+  lblk (k1, k2, v, fd, j, c, e, b, n, d, x, y, w) {
+  while fd < b { ⟪mstepG S⟫ }
 }
 
-/-- The growth (variables of `memoPutG`): rehash the region `b`, `n` into `b + n`, `2 n`, name it
-in the header, set the count, and find the free slot `j` for the key `(k1, k2)` there. -/
+/-- The growth (variables of `memoPutG`): rehash the region `b`, `n` into `b + n`, `2 n` (from
+here on `fd` is the old slot and `b`, `n` the new region), name it in the header, set the count,
+and find the free slot `j` for the key `(k1, k2)` there. -/
 def mgrowBlkG (S : MemoSch) : Stmt :=
-  lblk (k1, k2, v, fd, j, c, e, b, n, nb, nn, i, x, y, q, d, w) {
-  nb := b + n;
-  nn := n * 2;
-  if nn == 0 { abort };
-  if (len(S.arr.u64) >> 2) < nb + nn { abort };
+  lblk (k1, k2, v, fd, j, c, e, b, n, d, x, y, w) {
+  fd := b;
+  b := b + n;
+  n := n * 2;
+  if n == 0 { abort };
+  if (len(S.arr.u64) >> 2) < b + n { abort };
   c := 0;
-  i := b;
   ⟪mrehashLoopG S⟫;
   S.arr.u64[0] := e;
-  S.arr.u64[1] := nb;
-  S.arr.u64[2] := nn;
+  S.arr.u64[1] := b;
+  S.arr.u64[2] := n;
   CTL.u64[⟪S.cs + 1⟫] := c;
   x := k1;
   y := k2;
-  ⟪mslotBlkG S⟫;
-  j := q
+  ⟪mslotBlkG S⟫
 }
 
-/-- con-ron: none — the memo library (open addressing over fixed arrays; the twin's `Std.HashMap` caches) -/
+/-- con-ron: none — the memo library (open addressing over fixed arrays; the twin's `Std.HashMap` caches)
+
+A leaf with 13 locals: the growth reuses `fd`, `j` and the region's `b`, `n`, so that the leaf
+register allocation keeps the common path (no growth) in registers; `fd` also holds `4 j` for the
+key's three stores. -/
 def memoPutG (S : MemoSch) : FunDecl :=
-  lfn (k1, k2, v, fd, j) locals (c, e, b, n, nb, nn, i, x, y, q, d, w) {
+  lfn (k1, k2, v, fd, j) locals (c, e, b, n, d, x, y, w) {
   if fd == 0 {
     c := CTL.u64[⟪S.cs + 1⟫];
     e := CTL.u64[⟪S.cs⟫] + 1;
@@ -403,13 +438,13 @@ def memoPutG (S : MemoSch) : FunDecl :=
     } else {
       b := 1;
       n := len(S.arr.u64) >> 2;
-      n := n - u64(n > 0);
-      if n > ⟪MN0⟫ { n := ⟪MN0⟫ }
+      if n > ⟪MN0⟫ { n := ⟪MN0⟫ } else { n := n - u64(n > 0) }
     };
     if n * 3 < (c + 1) * 4 { ⟪mgrowBlkG S⟫ };
-    S.arr.u64[j * 4] := e;
-    S.arr.u64[j * 4 + 1] := k1;
-    S.arr.u64[j * 4 + 2] := k2;
+    fd := j * 4;
+    S.arr.u64[fd] := e;
+    S.arr.u64[fd + 1] := k1;
+    S.arr.u64[fd + 2] := k2;
     CTL.u64[⟪S.cs + 1⟫] := c + 1
   };
   S.arr.u64[j * 4 + 3] := v;
@@ -422,10 +457,10 @@ variable (S : MemoSch) (p : Prog)
 theorem mslotLoopG_spec (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀⦄
     exec p n (mslotLoopG S)
-    ⦃fun r s' => s'.mem = s₀.mem ∧ r = .normal ∧ (∀ z, z ≠ 14 → z ≠ 15 → s'.loc z = s₀.loc z) ∧
-      mprobeG (s₀.mem.arr64 S.arr) (s₀.loc 12) (s₀.loc 13) (s₀.loc 6) (s₀.loc 9) (s₀.loc 10)
-        (s₀.loc 14) (s₀.loc 15) =
-      if s'.loc 15 < s₀.loc 10 then [0, s₀.loc 9 + s'.loc 14, s'.loc 15] else []; ⊤⦄ := by
+    ⦃fun r s' => s'.mem = s₀.mem ∧ r = .normal ∧ (∀ z, z ≠ 4 → z ≠ 9 → s'.loc z = s₀.loc z) ∧
+      mprobeG (s₀.mem.arr64 S.arr) (s₀.loc 10) (s₀.loc 11) (s₀.loc 6) (s₀.loc 7) (s₀.loc 8)
+        (s₀.loc 4) (s₀.loc 9) =
+      if s'.loc 9 < s₀.loc 8 then [0, s₀.loc 7 + s'.loc 4, s'.loc 9] else []; ⊤⦄ := by
   induction n generalizing s₀ with
   | zero => vcgen [exec] <;> grind
   | succ n ih =>
@@ -436,21 +471,21 @@ theorem mslotLoopG_spec (n : Nat) (s₀ : St) :
 theorem mslotLoopG_step_spec (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀⦄
     step p (exec p n) (mslotLoopG S)
-    ⦃fun r s' => s'.mem = s₀.mem ∧ r = .normal ∧ (∀ z, z ≠ 14 → z ≠ 15 → s'.loc z = s₀.loc z) ∧
-      mprobeG (s₀.mem.arr64 S.arr) (s₀.loc 12) (s₀.loc 13) (s₀.loc 6) (s₀.loc 9) (s₀.loc 10)
-        (s₀.loc 14) (s₀.loc 15) =
-      if s'.loc 15 < s₀.loc 10 then [0, s₀.loc 9 + s'.loc 14, s'.loc 15] else []; ⊤⦄ :=
+    ⦃fun r s' => s'.mem = s₀.mem ∧ r = .normal ∧ (∀ z, z ≠ 4 → z ≠ 9 → s'.loc z = s₀.loc z) ∧
+      mprobeG (s₀.mem.arr64 S.arr) (s₀.loc 10) (s₀.loc 11) (s₀.loc 6) (s₀.loc 7) (s₀.loc 8)
+        (s₀.loc 4) (s₀.loc 9) =
+      if s'.loc 9 < s₀.loc 8 then [0, s₀.loc 7 + s'.loc 4, s'.loc 9] else []; ⊤⦄ :=
   Triple.step_exec (mslotLoopG_spec S p (n + 1) s₀)
 
 theorem mslotBlkG_step_spec (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀⦄
     step p (exec p n) (mslotBlkG S)
-    ⦃fun r s' => s'.mem = s₀.mem ∧ r = .normal ∧ (∀ z, z ≠ 14 → z ≠ 15 → s'.loc z = s₀.loc z) ∧
-      mslotG (s₀.mem.arr64 S.arr) (s₀.loc 12) (s₀.loc 13) (s₀.loc 6) (s₀.loc 9) (s₀.loc 10) ≠ [] ∧
-      (mslotG (s₀.mem.arr64 S.arr) (s₀.loc 12) (s₀.loc 13) (s₀.loc 6) (s₀.loc 9)
-        (s₀.loc 10)).headD 0 = 0 ∧
-      s'.loc 14 = (mslotG (s₀.mem.arr64 S.arr) (s₀.loc 12) (s₀.loc 13) (s₀.loc 6) (s₀.loc 9)
-        (s₀.loc 10)).tail.headD 0; ⊤⦄ := by
+    ⦃fun r s' => s'.mem = s₀.mem ∧ r = .normal ∧ (∀ z, z ≠ 4 → z ≠ 9 → s'.loc z = s₀.loc z) ∧
+      mslotG (s₀.mem.arr64 S.arr) (s₀.loc 10) (s₀.loc 11) (s₀.loc 6) (s₀.loc 7) (s₀.loc 8) ≠ [] ∧
+      (mslotG (s₀.mem.arr64 S.arr) (s₀.loc 10) (s₀.loc 11) (s₀.loc 6) (s₀.loc 7)
+        (s₀.loc 8)).headD 0 = 0 ∧
+      s'.loc 4 = (mslotG (s₀.mem.arr64 S.arr) (s₀.loc 10) (s₀.loc 11) (s₀.loc 6) (s₀.loc 7)
+        (s₀.loc 8)).tail.headD 0; ⊤⦄ := by
   simp only [mslotBlkG]
   sym only [lang_grind, arena_grind] =>
     vcgen [step, evalE, evalC, evalArgs, setLoc, mslotLoopG_step_spec S p] <;>
@@ -485,17 +520,18 @@ end rehashArms
 theorem mmoveG_step_spec (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀⦄
     step p (exec p n) (mmoveG S)
-    ⦃fun r s' => r = .normal ∧ (∀ z, z ≠ 5 → z < 12 → s'.loc z = s₀.loc z) ∧ s'.loc 5 = s₀.loc 5 + 1 ∧
-      mslotG (s₀.mem.arr64 S.arr) (rdW (s₀.mem.arr64 S.arr) (s₀.loc 11 * 4 + 1))
-        (rdW (s₀.mem.arr64 S.arr) (s₀.loc 11 * 4 + 2)) (s₀.loc 6) (s₀.loc 9) (s₀.loc 10) ≠ [] ∧
-      (mslotG (s₀.mem.arr64 S.arr) (rdW (s₀.mem.arr64 S.arr) (s₀.loc 11 * 4 + 1))
-        (rdW (s₀.mem.arr64 S.arr) (s₀.loc 11 * 4 + 2)) (s₀.loc 6) (s₀.loc 9)
-        (s₀.loc 10)).headD 0 = 0 ∧
-      s'.mem = mput4 S s₀.mem ((mslotG (s₀.mem.arr64 S.arr) (rdW (s₀.mem.arr64 S.arr) (s₀.loc 11 * 4 + 1))
-        (rdW (s₀.mem.arr64 S.arr) (s₀.loc 11 * 4 + 2)) (s₀.loc 6) (s₀.loc 9)
-        (s₀.loc 10)).tail.headD 0) (s₀.loc 6)
-        (rdW (s₀.mem.arr64 S.arr) (s₀.loc 11 * 4 + 1)) (rdW (s₀.mem.arr64 S.arr) (s₀.loc 11 * 4 + 2))
-        (rdW (s₀.mem.arr64 S.arr) (s₀.loc 11 * 4 + 3)); ⊤⦄ := by
+    ⦃fun r s' => r = .normal ∧ (∀ z, z < 9 → z ≠ 4 → z ≠ 5 → s'.loc z = s₀.loc z) ∧
+      s'.loc 5 = s₀.loc 5 + 1 ∧
+      mslotG (s₀.mem.arr64 S.arr) (rdW (s₀.mem.arr64 S.arr) (s₀.loc 3 * 4 + 1))
+        (rdW (s₀.mem.arr64 S.arr) (s₀.loc 3 * 4 + 2)) (s₀.loc 6) (s₀.loc 7) (s₀.loc 8) ≠ [] ∧
+      (mslotG (s₀.mem.arr64 S.arr) (rdW (s₀.mem.arr64 S.arr) (s₀.loc 3 * 4 + 1))
+        (rdW (s₀.mem.arr64 S.arr) (s₀.loc 3 * 4 + 2)) (s₀.loc 6) (s₀.loc 7)
+        (s₀.loc 8)).headD 0 = 0 ∧
+      s'.mem = mput4 S s₀.mem ((mslotG (s₀.mem.arr64 S.arr) (rdW (s₀.mem.arr64 S.arr) (s₀.loc 3 * 4 + 1))
+        (rdW (s₀.mem.arr64 S.arr) (s₀.loc 3 * 4 + 2)) (s₀.loc 6) (s₀.loc 7)
+        (s₀.loc 8)).tail.headD 0) (s₀.loc 6)
+        (rdW (s₀.mem.arr64 S.arr) (s₀.loc 3 * 4 + 1)) (rdW (s₀.mem.arr64 S.arr) (s₀.loc 3 * 4 + 2))
+        (rdW (s₀.mem.arr64 S.arr) (s₀.loc 3 * 4 + 3)); ⊤⦄ := by
   simp only [mmoveG]
   sym only [lang_grind, arena_grind] =>
     vcgen [step, evalE, evalC, evalArgs, setLoc, ld64, st64, mslotBlkG_step_spec S p] <;>
@@ -504,11 +540,11 @@ theorem mmoveG_step_spec (n : Nat) (s₀ : St) :
 theorem mstepG_step_spec (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀⦄
     step p (exec p n) (mstepG S)
-    ⦃fun r s' => r = .normal ∧ (∀ z, z ≠ 5 → z < 11 → s'.loc z = s₀.loc z) ∧
-      s'.loc 11 = s₀.loc 11 + 1 ∧
-      (s₀.loc 11 < s₀.loc 9 →
-        mrehashG S (s₀.loc 6) (s₀.loc 9) (s₀.loc 10) (s₀.loc 11) (s₀.loc 5) s₀.mem =
-          mrehashG S (s₀.loc 6) (s₀.loc 9) (s₀.loc 10) (s'.loc 11) (s'.loc 5) s'.mem); ⊤⦄ := by
+    ⦃fun r s' => r = .normal ∧ (∀ z, z < 9 → z ≠ 3 → z ≠ 4 → z ≠ 5 → s'.loc z = s₀.loc z) ∧
+      s'.loc 3 = s₀.loc 3 + 1 ∧
+      (s₀.loc 3 < s₀.loc 7 →
+        mrehashG S (s₀.loc 6) (s₀.loc 7) (s₀.loc 8) (s₀.loc 3) (s₀.loc 5) s₀.mem =
+          mrehashG S (s₀.loc 6) (s₀.loc 7) (s₀.loc 8) (s'.loc 3) (s'.loc 5) s'.mem); ⊤⦄ := by
   simp only [mstepG]
   sym only [lang_grind, arena_grind] =>
     vcgen [step, evalE, evalC, evalArgs, setLoc, ld64, mmoveG_step_spec S p] <;>
@@ -517,8 +553,8 @@ theorem mstepG_step_spec (n : Nat) (s₀ : St) :
 theorem mrehashLoopG_spec (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀⦄
     exec p n (mrehashLoopG S)
-    ⦃fun r s' => r = .normal ∧ (∀ z, z ≠ 5 → z < 11 → s'.loc z = s₀.loc z) ∧
-      mrehashG S (s₀.loc 6) (s₀.loc 9) (s₀.loc 10) (s₀.loc 11) (s₀.loc 5) s₀.mem =
+    ⦃fun r s' => r = .normal ∧ (∀ z, z < 9 → z ≠ 3 → z ≠ 4 → z ≠ 5 → s'.loc z = s₀.loc z) ∧
+      mrehashG S (s₀.loc 6) (s₀.loc 7) (s₀.loc 8) (s₀.loc 3) (s₀.loc 5) s₀.mem =
         some (s'.mem, s'.loc 5); ⊤⦄ := by
   induction n generalizing s₀ with
   | zero => vcgen [exec] <;> grind
@@ -531,8 +567,8 @@ theorem mrehashLoopG_spec (n : Nat) (s₀ : St) :
 theorem mrehashLoopG_step_spec (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀⦄
     step p (exec p n) (mrehashLoopG S)
-    ⦃fun r s' => r = .normal ∧ (∀ z, z ≠ 5 → z < 11 → s'.loc z = s₀.loc z) ∧
-      mrehashG S (s₀.loc 6) (s₀.loc 9) (s₀.loc 10) (s₀.loc 11) (s₀.loc 5) s₀.mem =
+    ⦃fun r s' => r = .normal ∧ (∀ z, z < 9 → z ≠ 3 → z ≠ 4 → z ≠ 5 → s'.loc z = s₀.loc z) ∧
+      mrehashG S (s₀.loc 6) (s₀.loc 7) (s₀.loc 8) (s₀.loc 3) (s₀.loc 5) s₀.mem =
         some (s'.mem, s'.loc 5); ⊤⦄ :=
   Triple.step_exec (mrehashLoopG_spec S p (n + 1) s₀)
 
@@ -569,7 +605,7 @@ theorem memoPutG_spec (S : MemoSch) (p : Prog) (f : FnName) (hp : p.lookup f = s
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
         mgrowBlkG_step_spec S p n] <;>
-      finish [mputG, mputMem, mputMemE, nG, mbG, hdG, epG, cntG, dfltN]
+      finish [mputG, mputMem, mputMemE, nG, mbG, hdG, epG, cntG, dfltN_alt]
 
 /-! ## `X_clear()` -/
 
