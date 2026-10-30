@@ -1330,6 +1330,36 @@
     45  * `X_clear()`: `CTL[cs] += 1`, `CTL[cs + 1] := 0`, aborting where the stamp would wrap.
     46  -/
 
+== ConAgua/Arena/MemoLib.lean#L419-L446
+   419  /-- con-ron: none — the memo library (open addressing over fixed arrays; the twin's `Std.HashMap` caches)
+   420  
+   421  A leaf with 13 locals: the growth reuses `fd`, `j` and the region's `b`, `n`, so that the leaf
+   422  register allocation keeps the common path (no growth) in registers; `fd` also holds `4 j` for the
+   423  key's three stores. -/
+   424  def memoPutG (S : MemoSch) : FunDecl :=
+   425    lfn (k1, k2, v, fd, j) locals (c, e, b, n, d, x, y, w) {
+   426    if fd == 0 {
+   427      c := CTL.u64[⟪S.cs + 1⟫];
+   428      e := CTL.u64[⟪S.cs⟫] + 1;
+   429      if S.arr.u64[0] == e {
+   430        b := S.arr.u64[1];
+   431        n := S.arr.u64[2]
+   432      } else {
+   433        b := 1;
+   434        n := len(S.arr.u64) >> 2;
+   435        if n > ⟪MN0⟫ { n := ⟪MN0⟫ } else { n := n - u64(n > 0) }
+   436      };
+   437      if n * 3 < (c + 1) * 4 { ⟪mgrowBlkG S⟫ };
+   438      fd := j * 4;
+   439      S.arr.u64[fd] := e;
+   440      S.arr.u64[fd + 1] := k1;
+   441      S.arr.u64[fd + 2] := k2;
+   442      CTL.u64[⟪S.cs + 1⟫] := c + 1
+   443    };
+   444    S.arr.u64[j * 4 + 3] := v;
+   445    return 0
+   446  }
+
 == ConAgua/Arena/Pool.lean#L10-L29
     10  /-!
     11  # The limb pool: layout, abstraction, invariant
