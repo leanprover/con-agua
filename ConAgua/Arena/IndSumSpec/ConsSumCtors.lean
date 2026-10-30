@@ -4,7 +4,6 @@ import ConAgua.Arena.DeclRec
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr
-import ConAgua.L.WordOff
 
 /-!
 # ConsSumCtors: `ConRon.Arena.consSumCtors`

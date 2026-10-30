@@ -1,5 +1,4 @@
 import ConAgua.Rom.CIReadRefCV
-import ConAgua.L.WordOff
 
 /-!
 # The ROM constant readers: an inductive's capabilities (helper `decls4-rom`)

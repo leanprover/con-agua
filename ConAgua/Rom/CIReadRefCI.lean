@@ -1,5 +1,4 @@
 import ConAgua.Rom.CIReadRefRule
-import ConAgua.L.WordOff
 
 /-!
 # The ROM constant readers: constants (helper `decls4-rom`)

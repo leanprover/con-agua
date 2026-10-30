@@ -5,7 +5,6 @@ import ConAgua.Arena.IndPosSpec.FgW
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
-import ConAgua.L.WordOff
 
 /-!
 # TsrW

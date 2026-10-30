@@ -5,7 +5,6 @@ import ConAgua.Arena.PromoteCIRef.NatMove
 import ConAgua.Arena.PromoteCIRef.PreECongr
 import ConAgua.Arena.PromoteCIRef.PmDecRuleWords
 import ConRon.Bridge.Grind
-import ConAgua.L.WordOff
 
 /-!
 # Proj
