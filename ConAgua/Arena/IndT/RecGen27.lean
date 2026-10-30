@@ -6,7 +6,6 @@ import ConAgua.Arena.RecGenSpec.DecTMSlices
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.Arena.IndT.RecGen27Models
-import ConAgua.L.ForIdx
 
 /-!
 # `class_ctor_of`, `class_ctors_of`, `classes_ctors`: one model, one refinement each
@@ -703,17 +702,17 @@ theorem ccsLoop_ref (hbs : BSOK m0 q.toNat bs) (hft : decHL m0 fto.toNat ftl.toN
     (hlp : ClassesLp m0 mo ml) (hnpk : bs.nP + bs.k < 2 ^ 64) (hsz5 : (m0.arr64 IW).size + 5 < 2 ^ 64)
     (hq : qo.toNat = iwTop m0) (hformer : ∀ t ∈ formerTysP, ConLeche.Expr.WScoped 0 t)
     (hMs : ∀ M ∈ MsP, ConLeche.Cached.TargetMajScoped M) (k : Nat) (hk' : k ≤ 2 ^ 62) :
-    ∀ (m : Mem) (a : AState) (c : Nat) (acc : List (List ClassCtor)) (ps : List Nat)
+    ∀ (m : Mem) (a : AState) (c : Word) (acc : List (List ClassCtor)) (ps : List Nat)
       (lP : List ConLeche.TargetMajor),
     StageC dn vis fe env m a → AbsOK m → IWGrow m0 m →
-    KeepW m0 m → iwTop m0 + ml.toNat ≤ iwTop m → c ≤ ml.toNat → decNL m qo.toNat c = some ps →
+    KeepW m0 m → iwTop m0 + ml.toNat ≤ iwTop m → c ≤ ml → decNL m qo.toNat c.toNat = some ps →
     FA2 (fun p x => StabA (iwTop m0 + ml.toNat) (fun m => decLH m (decPL m (decCC m)) p) m x) ps acc →
     RcMR m →
     dShape a.store bs = some pP → Frontend.denoteEList a.store formerTys = some formerTysP →
     ConRon.Bridge.Inductives.dClassRead a.store R = some rdP → ms.mapM (dMajor a.store) = some MsP →
-    (ms.drop c).mapM (dMajor a.store) = some lP →
-    RefE (VerdictCtx p) (ccsE.loop1 p k m vis q fto ftl rd mo ml qo (UInt64.ofNat c))
-      (ConRon.Arena.classesCtors V fe bs formerTys R ms c (ms.drop c)) a
+    (ms.drop c.toNat).mapM (dMajor a.store) = some lP →
+    RefE (VerdictCtx p) (ccsE.loop1 p k m vis q fto ftl rd mo ml qo c)
+      (ConRon.Arena.classesCtors V fe bs formerTys R ms c.toNat (ms.drop c.toNat)) a
       (fun m' xss a' => SlotsLoopPost dn vis fe env (fun m p => decLH m (decPL m (decCC m)) p) m0 ml qo acc
         m' xss a') := by
   have hms0 : decPL (truncM m0) (decTM (truncM m0)) mo.toNat ml.toNat = some ms := hms
@@ -724,24 +723,29 @@ theorem ccsLoop_ref (hbs : BSOK m0 q.toNat bs) (hft : decHL m0 fto.toNat ftl.toN
   | succ k ih =>
   intro m a c acc ps lP hC hA hg hk htop hcm hps hfa hP hsh hftP hrdP hmsP hlP
   have hS := hC.stage
-  have hcT := forIdx_toNat hcm
-  by_cases hc : UInt64.ofNat c < ml
+  have hck : c.toNat ≤ ml.toNat := UInt64.le_iff_toNat_le.mp hcm
+  by_cases hc : c < ml
   rotate_left
-  · rw [ccsE.loop1.arm2 p k m vis q fto ftl rd mo ml qo _ hc]
-    obtain rfl := forIdx_exit hcm hc
+  · rw [ccsE.loop1.arm2 p k m vis q fto ftl rd mo ml qo c hc]
+    have h1 : ml.toNat ≤ c.toNat := by simpa [UInt64.lt_iff_toNat_lt] using hc
+    have hce : c.toNat = ml.toNat := by omega
     rw [List.drop_eq_nil_of_le (by omega)]
     exact RefE.ret (by simp only [ConRon.Arena.classesCtors]; rfl)
-      ⟨hC, hg, hk, htop, hP, hA, ps, hps, by simpa using hfa⟩
-  have hcl : c < ml.toNat := (forIdx_lt hcm).mp hc
-  rw [ccsE.loop1.arm1 p k m vis q fto ftl rd mo ml qo _ hc]
+      ⟨hC, hg, hk, htop, hP, hA, ps, by rw [← hce]; exact hps, by simpa using hfa⟩
+  have hcl : c.toNat < ml.toNat := UInt64.lt_iff_toNat_lt.mp hc
+  have := ml.toNat_lt
+  have hc1 : (c + 1).toNat = c.toNat + 1 := by rw [UInt64.toNat_add]; simp <;> omega
+  rw [ccsE.loop1.arm1 p k m vis q fto ftl rd mo ml qo c hc]
   -- the class record and its constructors
-  obtain ⟨v, hv, hdv⟩ := decPL_getH (truncM m0) hms0 c hcl
+  obtain ⟨v, hv, hdv⟩ := decPL_getH (truncM m0) hms0 c.toNat hcl
   obtain ⟨hvt, hv0⟩ := rec2IwN_trunc hv
-  have hrd0 := iwN_rdW_at (w := mo) (k := c) hv0 hsz0
-  have hmc : (mo + UInt64.ofNat c).toNat < iwTop m0 := by rw [forIdx_add (by omega)]; omega
-  have hrd : rdW (m.arr64 IW) (mo + UInt64.ofNat c) = UInt64.ofNat v := by rw [rdW_grow hg hmc, hrd0.1]
+  have hrd0 := iwN_rdW_at (w := mo) (k := c.toNat) hv0 hsz0
+  have hnc : mo + UInt64.ofNat c.toNat = mo + c := by simp
+  rw [hnc] at hrd0
+  have hmc : (mo + c).toNat < iwTop m0 := by rw [UInt64.toNat_add]; simp; omega
+  have hrd : rdW (m.arr64 IW) (mo + c) = UInt64.ofNat v := by rw [rdW_grow hg hmc, hrd0.1]
   have hvT : (UInt64.ofNat v : Word).toNat = v := UInt64.toNat_ofNat_of_lt' hrd0.2
-  have hTM0 : DecB (fun m => decTM m v) m0 ms[c] := by rw [← hlen] at hcl; exact hdv
+  have hTM0 : DecB (fun m => decTM m v) m0 ms[c.toNat] := by rw [← hlen] at hcl; exact hdv
   obtain ⟨o, l, ho, hl, hv7, hcts⟩ := decTM_ctors hTM0
   have r6 := iwN_rdW_at (w := UInt64.ofNat v) (k := 6) (by rw [hvT]; exact ho) hsz0
   have r7 := iwN_rdW_at (w := UInt64.ofNat v) (k := 7) (by rw [hvT]; exact hl) hsz0
@@ -752,8 +756,8 @@ theorem ccsLoop_ref (hbs : BSOK m0 q.toNat bs) (hft : decHL m0 fto.toNat ftl.toN
   have hoT : (UInt64.ofNat o : Word).toNat = o := UInt64.toNat_ofNat_of_lt' r6.2
   have hlT : (UInt64.ofNat l : Word).toNat = l := UInt64.toNat_ofNat_of_lt' r7.2
   have hcts' : DecB (fun m => decPL m (decCN m) (UInt64.ofNat o : Word).toNat (UInt64.ofNat l : Word).toNat) m0
-      ms[c].ctors := by rw [hoT, hlT]; exact hcts
-  have hlp0 := hlp c hcl v o l hv0 ho hl
+      ms[c.toNat].ctors := by rw [hoT, hlT]; exact hcts
+  have hlp0 := hlp c.toNat hcl v o l hv0 ho hl
   have hol : (UInt64.ofNat o : Word).toNat + (UInt64.ofNat l : Word).toNat < 2 ^ 64 := by
     rcases decB_decPL_bound hcts with h0 | h0
     · rw [hoT, hlT, h0]; omega
@@ -764,19 +768,17 @@ theorem ccsLoop_ref (hbs : BSOK m0 q.toNat bs) (hft : decHL m0 fto.toNat ftl.toN
   rw [List.drop_eq_getElem_cons (by omega), ConRon.Arena.classesCtors]
   -- `class_ctors_of`
   rcases k with _ | k'
-  · obtain ⟨e', he', h0⟩ := callE_zero p "class_ctors_of" [vis, q, fto, ftl, rd, mo, ml, UInt64.ofNat c,
+  · obtain ⟨e', he', h0⟩ := callE_zero p "class_ctors_of" [vis, q, fto, ftl, rd, mo, ml, c,
       UInt64.ofNat o, UInt64.ofNat l] m
     rw [he', ccsE.k_class_ctors_of.none]; exact RefE.of_cls0 h0
-  have hT1 := cosE_spec p P.toCosProg (k' + 1) ⟨m, Locals.init []⟩ vis q fto ftl rd mo ml (UInt64.ofNat c)
-    (UInt64.ofNat o)
+  have hT1 := cosE_spec p P.toCosProg (k' + 1) ⟨m, Locals.init []⟩ vis q fto ftl rd mo ml c (UInt64.ofNat o)
     (UInt64.ofNat l)
   have hR1 := cos_ref hkp henv P.toCosProg hIlpf hOpf dn fe k' (by omega) hC hA (hbs.grow hg)
     (by rw [decHL_grow hg hftb]; exact hft) (Nat.le_trans hftb hg.iw) (hR.grow (decCR_mono _) hg)
     (hms.grow (OMono.decPL (fun q => decTM_mono q) _ _) hg) hmsb
     (hcts'.grow (OMono.decPL (fun q => decCN_mono q) _ _) hg) (hlp0.grow hcts' hsz0 hg hk) hnpk
-    (by rw [hk IW]; exact hsz5) hP hsh hftP hrdP hmsP hmc hformer hMs (vis := vis) (c := UInt64.ofNat c)
-  rw [hcT] at hR1
-  rcases h1 : callE p (k' + 1) "class_ctors_of" [vis, q, fto, ftl, rd, mo, ml, UInt64.ofNat c, UInt64.ofNat o,
+    (by rw [hk IW]; exact hsz5) hP hsh hftP hrdP hmsP hmc hformer hMs (vis := vis) (c := c)
+  rcases h1 : callE p (k' + 1) "class_ctors_of" [vis, q, fto, ftl, rd, mo, ml, c, UInt64.ofNat o,
       UInt64.ofNat l] m with e1 | ⟨r1, m1⟩
   · rw [ccsE.k_class_ctors_of.none]
     exact RefE.bind_left fun hG => RefE.run_err hT1 hG.nv hG hR1 h1
@@ -790,7 +792,7 @@ theorem ccsLoop_ref (hbs : BSOK m0 q.toNat bs) (hft : decHL m0 fto.toNat ftl.toN
   have hA1 := hR1'.abs
   dsimp only at hC1 hg1 hd1 hP1 hA1
   obtain ⟨cs1, -⟩ := ConRon.Bridge.Inductives.classCtorsOf_spec fe (ConRon.Bridge.CoreSpec.of_core rfl) henv
-    bs pP formerTys formerTysP R rdP ms MsP c hformer hMs ms[c].ctors mP.ctors a _ _ hC.check
+    bs pP formerTys formerTysP R rdP ms MsP c.toNat hformer hMs ms[c.toNat].ctors mP.ctors a _ _ hC.check
     ⟨hsh, hftP, hrdP, hmsP, hmc⟩ run1
   have hS1 := hC1.stage
   have hk1 := callW_keepW (callW_of_callE h1)
@@ -823,31 +825,31 @@ theorem ccsLoop_ref (hbs : BSOK m0 q.toNat bs) (hft : decHL m0 fto.toNat ftl.toN
       ((hd1.mono (by omega)).grow (AgreeA.of_grow hg2))
   -- the slot write
   have hTm := hS.lt64 (Nat.le_refl (iwTop m))
-  have hqc : (qo + UInt64.ofNat c).toNat = qo.toNat + c := forIdx_add (by omega)
-  have hqb : (qo + UInt64.ofNat c).toNat < (s2.mem.arr64 IW).size := by
+  have hqc : (qo + c).toNat = qo.toNat + c.toNat := by rw [UInt64.toNat_add]; simp <;> omega
+  have hqb : (qo + c).toNat < (s2.mem.arr64 IW).size := by
     have := hS2.iw.iw; have := hg1.iw; have := hg2.iw; omega
   have hg12 := hg1.trans hg2
-  have hS3 := hS2.set_iw (qo + UInt64.ofNat c) (r2.headD 0)
-  have hAb3 := set64IW_afr s2.mem (qo + UInt64.ofNat c) (r2.headD 0) hAb2
+  have hS3 := hS2.set_iw (qo + c) (r2.headD 0)
+  have hAb3 := set64IW_afr s2.mem (qo + c) (r2.headD 0) hAb2
   have hC3 := hC2.of_pstep hS3 hAb3 (PStep.refl hC2.check.state)
-  have hg3 : IWGrow m0 (s2.mem.set64 IW (qo + UInt64.ofNat c) (r2.headD 0)) := ((hg.trans hg12)).set_iw _ _ (by omega)
-  have hk3 : KeepW m0 (s2.mem.set64 IW (qo + UInt64.ofNat c) (r2.headD 0)) := (hk.trans (hk1.trans hk2)).set64 _ _ _
-  have hA3 : AgreeA (iwTop m0 + ml.toNat) s2.mem (s2.mem.set64 IW (qo + UInt64.ofNat c) (r2.headD 0)) :=
+  have hg3 : IWGrow m0 (s2.mem.set64 IW (qo + c) (r2.headD 0)) := ((hg.trans hg12)).set_iw _ _ (by omega)
+  have hk3 : KeepW m0 (s2.mem.set64 IW (qo + c) (r2.headD 0)) := (hk.trans (hk1.trans hk2)).set64 _ _ _
+  have hA3 : AgreeA (iwTop m0 + ml.toNat) s2.mem (s2.mem.set64 IW (qo + c) (r2.headD 0)) :=
     AgreeA.set_iw _ _ (by omega)
-  have hps2 : decNL s2.mem qo.toNat c = some ps := by rw [decNL_grow hg12 (by omega)]; exact hps
-  have hps3 := decNL_write s2.mem qo.toNat c (qo + UInt64.ofNat c) (r2.headD 0) ps hqc (by omega) hps2
+  have hps2 : decNL s2.mem qo.toNat c.toNat = some ps := by rw [decNL_grow hg12 (by omega)]; exact hps
+  have hps3 := decNL_write s2.mem qo.toNat c.toNat (qo + c) (r2.headD 0) ps hqc (by omega) hps2
   have hfa3 : FA2 (fun p x => StabA (iwTop m0 + ml.toNat) (fun m => decLH m (decPL m (decCC m)) p)
-      (s2.mem.set64 IW (qo + UInt64.ofNat c) (r2.headD 0)) x) (ps ++ [(r2.headD 0).toNat]) (acc ++ [x1]) :=
+      (s2.mem.set64 IW (qo + c) (r2.headD 0)) x) (ps ++ [(r2.headD 0).toNat]) (acc ++ [x1]) :=
     FA2.snoc (FA2.imp (fun _ _ hq => (hq.grow (AgreeA.of_grow hg12)).grow hA3) hfa) (hhdr.grow hA3)
   have ih' := ih (by omega) _ a1 (c + 1)
     (acc ++ [x1]) (ps ++ [(r2.headD 0).toNat]) lP' hC3 hAb3 hg3 hk3
     (by rw [iwTop_set_iw]; exact Nat.le_trans htop hg12.iw)
-    hcl hps3 hfa3 (hP2.fr (MFr.set_iw _ _ _))
+    (UInt64.le_iff_toNat_le.mpr (by omega)) (by rw [hc1]; exact hps3) hfa3 (hP2.fr (MFr.set_iw _ _ _))
     (ConRon.Bridge.Inductives.dShape_ext cs1.ext _ _ hsh) (denoteEList_ext cs1.ext _ _ hftP)
     (ConRon.Bridge.Inductives.dClassRead_ext cs1.ext _ _ hrdP)
     (ConRon.Bridge.Inductives.dMajor_ext.list cs1.ext _ _ hmsP)
-    (ConRon.Bridge.Inductives.dMajor_ext.list cs1.ext _ _ hlP')
-  rw [← forIdx_succ] at ih'
+    (by rw [hc1]; exact ConRon.Bridge.Inductives.dMajor_ext.list cs1.ext _ _ hlP')
+  rw [hc1] at ih'
   exact RefE.tail (k := fun x => x) (f := id) (fun _ => rfl) (fun _ => rfl) id
     (fun xss a' h => ⟨x1 :: xss, by simp only [StateT.run_bind, h]; rfl,
       fun _ hR => ⟨hR.stage, hR.grow, hR.keep, hR.top, hR.rc, hR.abs, by
@@ -895,9 +897,9 @@ theorem ccs_ref (n : Nat) (hn : n + 1 ≤ 2 ^ 62) {m : Mem} {a : AState} {vis q 
   have hA1 := allocW_afr hal hA
   have h := ccsLoop_ref hkp henv P hIlpf hOpf dn fe vis q fto ftl rd mo ml (r1.headD 0) bs formerTys R ms m
     hbs hft hftb hR hms hmsb hlp hnpk hsz5 hq hformer hMs (n + 1) hn s1.mem a 0 [] [] MsP
-    (hC.of_pstep hS1 hA1 (PStep.refl hC.check.state)) hA1 hg1 (KeepW.of_mfr hf1) (by omega) (Nat.zero_le _)
+    (hC.of_pstep hS1 hA1 (PStep.refl hC.check.state)) hA1 hg1 (KeepW.of_mfr hf1) (by omega) UInt64.zero_le
     (by simp [decNL]) .nil (hP.fr hf1) hsh hftP hrdP hmsP (by simpa using hmsP)
-  simp only [forIdx_zero, List.drop_zero] at h
+  simp only [UInt64.toNat_zero, List.drop_zero] at h
   rcases hl : ccsE.loop1 p (n + 1) s1.mem vis q fto ftl rd mo ml (r1.headD 0) 0 with e' | m2 <;>
     rw [hl] at h
   · rw [ccsE.k_loop1.none]; exact h

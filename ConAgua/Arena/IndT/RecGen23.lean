@@ -3,7 +3,6 @@ import ConAgua.Verdict.IndBK53
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
-import ConAgua.L.ForIdx
 
 /-!
 # `class_nodes_agree`: one model, one refinement
@@ -60,19 +59,19 @@ structure CnaPost (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
 include hq henv P in
 /-- **`class_nodes_agree`'s loop refines `classNodesAgree`, both outcomes** (twin side: con-ron's
 `classNodesAgree_spec`'s list induction; `target_k53` by `tk_ref`). -/
-theorem cnaLoop_ref (k : Nat) (hk : k ≤ 2 ^ 62) : ∀ (m : Mem) (a : AState) (j : Nat)
+theorem cnaLoop_ref (k : Nat) (hk : k ≤ 2 ^ 62) : ∀ (m : Mem) (a : AState) (j : Word)
     (es : List NestCtorNf) (esP : List ConLeche.NestCtorNf),
     StageC dn vis fe env m a → AbsOK m → BSOK m q.toNat bs →
     decHL m fto.toNat ftl.toNat = some formerTys →
     fto.toNat + ftl.toNat ≤ iwTop m → DecB (fun m => decTM m mc.toNat) m TM → HSl0 m teo tel tele →
     H leaf → decHL m fvo.toNat fvl.toNat = some fvs → fvo.toNat + fvl.toNat ≤ iwTop m →
-    j ≤ el.toNat → PSlR decNCN es (eo + UInt64.ofNat j) (el - UInt64.ofNat j) m → RcMR m →
+    j ≤ el → PSlR decNCN es (eo + j) (el - j) m → RcMR m →
     dShape a.store bs = some pP → Frontend.denoteEList a.store formerTys = some formerTysP →
     dMajor a.store TM = some McP → Frontend.denoteEList a.store tele = some teleP →
     denoteE a.store (decE leaf) = some leafP → Frontend.denoteEList a.store fvs = some fvsP →
     es.mapM (dCtorNf a.store) = some esP →
     (∀ t ∈ formerTysP, ConLeche.Expr.WScoped 0 t) → ConLeche.Cached.TargetMajScoped McP →
-    RefE (VerdictCtx p) (cnaE.loop1 p k m vis q fto ftl mc teo tel leaf fvo fvl i eo el (UInt64.ofNat j))
+    RefE (VerdictCtx p) (cnaE.loop1 p k m vis q fto ftl mc teo tel leaf fvo fvl i eo el j)
       (ConRon.Arena.classNodesAgree V fe bs formerTys TM tele (decE leaf) fvs i.toNat es) a
       (fun m' _ a' => CnaPost dn vis fe env m m' a') := by
   induction k with
@@ -81,23 +80,29 @@ theorem cnaLoop_ref (k : Nat) (hk : k ≤ 2 ^ 62) : ∀ (m : Mem) (a : AState) (
   intro m a j es esP hC hA hbs hft hftb hMc htl hl hfv hfvb hje hes hP hsh hftP hMcP htlP hlP
     hfvP hesP hformer hMs
   have hS := hC.stage
-  have hjs := forIdx_sub hje
-  by_cases hj : UInt64.ofNat j < el
+  by_cases hj : j < el
   rotate_left
-  · rw [cnaE.loop1.arm2 p k m vis q fto ftl mc teo tel leaf fvo fvl i eo el _ hj]
-    obtain rfl := forIdx_exit hje hj
+  · rw [cnaE.loop1.arm2 p k m vis q fto ftl mc teo tel leaf fvo fvl i eo el j hj]
+    have hjl : el - j = 0 := by
+      apply UInt64.toNat_inj.mp
+      have h1 : el.toNat ≤ j.toNat := by simpa [UInt64.lt_iff_toNat_lt] using hj
+      have h2 : j.toNat ≤ el.toNat := UInt64.le_iff_toNat_le.mp hje
+      rw [UInt64.toNat_sub_of_le _ _ hje]; simp <;> omega
     have : es = [] := by
-      have := decPL_length _ (hes.1.get (OMono.decPL decNCN_mono _ _)); rw [hjs] at this; simpa using this
+      have := decPL_length _ (hes.1.get (OMono.decPL decNCN_mono _ _)); rw [hjl] at this; simpa using this
     subst this
     exact RefE.ret rfl ⟨hC, IWGrow.refl _, hP, hA⟩
-  rw [cnaE.loop1.arm1 p k m vis q fto ftl mc teo tel leaf fvo fvl i eo el _ hj]
+  rw [cnaE.loop1.arm1 p k m vis q fto ftl mc teo tel leaf fvo fvl i eo el j hj]
   have hsz := hS.iw.iwSize
-  have hjl := (forIdx_lt hje).mp hj
-  have hne : el - UInt64.ofNat j ≠ 0 := fun h0 => by have := congrArg UInt64.toNat h0; simp [hjs] at this; omega
+  have hne : el - j ≠ 0 := by
+    intro h0
+    have h1 : j.toNat < el.toNat := UInt64.lt_iff_toNat_lt.mp hj
+    have := congrArg UInt64.toNat h0
+    rw [UInt64.toNat_sub_of_le _ _ hje] at this; simp at this; omega
   obtain ⟨nf, es', rfl, hnf0, hes'⟩ := hes.uncons hne hsz
   obtain ⟨nfP, esP', rfl, hnfP, hesP'⟩ := ConRon.Bridge.Inductives.mapM_option_cons_inv hesP
   have hety := (ConRon.Bridge.Inductives.RC.dCtorNf_inv hnfP).2.2.2
-  generalize hE : rdW (m.arr64 IW) (eo + UInt64.ofNat j) = ew at hnf0 ⊢
+  generalize hE : rdW (m.arr64 IW) (eo + j) = ew at hnf0 ⊢
   obtain ⟨htyH, htyD⟩ := decNCN_ty hnf0 hsz
   rw [ConRon.Arena.classNodesAgree]
   -- `target_pi_doms_with`
@@ -121,20 +126,20 @@ theorem cnaLoop_ref (k : Nat) (hk : k ≤ 2 ^ 62) : ∀ (m : Mem) (a : AState) (
   dsimp only
   rcases res with _ | ds
   · have h0 : r1.headD 0 = 0 := hpd
-    rw [cnaE.k_target_pi_doms_with.arm1 p k vis q fto ftl mc teo tel leaf fvo fvl i eo el _ r1 _ h0,
-      cnaE.j1.abort1 p k vis q fto ftl mc teo tel leaf fvo fvl i eo el _ _ 0 _ UInt64.zero_le]
+    rw [cnaE.k_target_pi_doms_with.arm1 p k vis q fto ftl mc teo tel leaf fvo fvl i eo el j r1 _ h0,
+      cnaE.j1.abort1 p k vis q fto ftl mc teo tel leaf fvo fvl i eo el j _ 0 _ UInt64.zero_le]
     simp only [Option.getD_none, List.getElem?_nil]
     exact fun _ => ErrClaim.fail _ _ (by decide)
   obtain ⟨h1', hdd, hdb⟩ := hpd
   have h0 : ¬ r1.headD 0 = 0 := by rw [h1']; decide
-  rw [cnaE.k_target_pi_doms_with.arm2 p k vis q fto ftl mc teo tel leaf fvo fvl i eo el _ r1 _ h0]
+  rw [cnaE.k_target_pi_doms_with.arm2 p k vis q fto ftl mc teo tel leaf fvo fvl i eo el j r1 _ h0]
   by_cases hsh' : r1.tail.tail.headD 0 ≤ i
-  · rw [cnaE.j1.abort1 p k vis q fto ftl mc teo tel leaf fvo fvl i eo el _ _ _ _ hsh']
+  · rw [cnaE.j1.abort1 p k vis q fto ftl mc teo tel leaf fvo fvl i eo el j _ _ _ hsh']
     have hlen := decHL_length _ hdd
     have hle : ds.length ≤ i.toNat := by rw [hlen]; exact UInt64.le_iff_toNat_le.mp hsh'
     simp only [Option.getD_some, List.getElem?_eq_none hle]
     exact fun _ => ErrClaim.fail _ _ (by decide)
-  rw [cnaE.j1.arm1 p k vis q fto ftl mc teo tel leaf fvo fvl i eo el _ _ _ _ hsh']
+  rw [cnaE.j1.arm1 p k vis q fto ftl mc teo tel leaf fvo fvl i eo el j _ _ _ hsh']
   have hi : i.toNat < (r1.tail.tail.headD 0).toNat := by
     exact Nat.lt_of_not_le (fun hc => hsh' (UInt64.le_iff_toNat_le.mpr hc))
   have hdb64 := hS1.lt64 hdb
@@ -170,25 +175,26 @@ theorem cnaLoop_ref (k : Nat) (hk : k ≤ 2 ^ 62) : ∀ (m : Mem) (a : AState) (
   have c12 := c1'.trans c2'
   refine RefE.bind_right run2 ?_
   by_cases hb : b = 0
-  · rw [cnaE.k_target_k53.abort1 p k vis q fto ftl mc teo tel leaf fvo fvl i eo el _ b _ hb]
+  · rw [cnaE.k_target_k53.abort1 p k vis q fto ftl mc teo tel leaf fvo fvl i eo el j b _ hb]
     have hcf : c = false := by rw [← hc, hb]; rfl
     subst hcf
     simp only [Bool.false_eq_true, ite_false]
     exact fun _ => ErrClaim.fail _ _ (by decide)
-  rw [cnaE.k_target_k53.arm1 p k vis q fto ftl mc teo tel leaf fvo fvl i eo el _ b _ hb]
+  rw [cnaE.k_target_k53.arm1 p k vis q fto ftl mc teo tel leaf fvo fvl i eo el j b _ hb]
   have hct : c = true := by rw [← hc]; simpa using hb
   subst hct
   simp only [ite_true]
   have hg12 := hg1.trans hg2
-  have hes2 : PSlR decNCN es' (eo + UInt64.ofNat (j + 1)) (el - UInt64.ofNat (j + 1)) m2 := by
-    rw [← forIdx_succ, show ∀ a b : Word, a + (b + 1) = a + b + 1 by grind,
-      show ∀ a b : Word, a - (b + 1) = a - b - 1 by grind]
+  have hj1 : j + 1 ≤ el := by
+    have h1 : j.toNat < el.toNat := UInt64.lt_iff_toNat_lt.mp hj
+    apply UInt64.le_iff_toNat_le.mpr; rw [UInt64.toNat_add]; simp <;> omega
+  have hes2 : PSlR decNCN es' (eo + (j + 1)) (el - (j + 1)) m2 := by
+    rw [show eo + (j + 1) = eo + j + 1 by grind, show el - (j + 1) = el - j - 1 by grind]
     exact hes'.grow (fun q => decNCN_mono q) hg12
-  rw [forIdx_succ]
   exact RefE.mono (ih (by omega) m2 a2 (j + 1) es' esP' hC2 hA2
     (hbs.grow hg12)
     (by rw [decHL_grow hg12 hftb]; exact hft) (by have := hg12.iw; omega) (hMc.grow (decTM_mono _) hg12)
-    (htl.grow hg12) hl (by rw [decHL_grow hg12 hfvb]; exact hfv) (by have := hg12.iw; omega) hjl hes2 hP2
+    (htl.grow hg12) hl (by rw [decHL_grow hg12 hfvb]; exact hfv) (by have := hg12.iw; omega) hj1 hes2 hP2
     (ConRon.Bridge.Inductives.dShape_ext c12.ext _ _ hsh) (denoteEList_ext c12.ext _ _ hftP)
     (ConRon.Bridge.Inductives.dMajor_ext c12.ext _ _ hMcP) (denoteEList_ext c12.ext _ _ htlP)
     (denote_ext hlP c12.ext) (denoteEList_ext c12.ext _ _ hfvP)
@@ -221,9 +227,8 @@ theorem cna_ref (n : Nat) (hn : n ≤ 2 ^ 62) (m : Mem) (a : AState)
   · rw [cnaE.eq_1]; exact RefE.of_cls0 Err.cls_outOfFuel
   rw [cnaE.arm1]
   have h := cnaLoop_ref hq henv P vis q fto ftl mc teo tel leaf fvo fvl i eo el bs formerTys TM tele fvs
-    (n + 1) hn m a 0 es esP hC hA hbs hft hftb hMc htl hl hfv hfvb (Nat.zero_le _) (by simpa using hes)
+    (n + 1) hn m a 0 es esP hC hA hbs hft hftb hMc htl hl hfv hfvb UInt64.zero_le (by simpa using hes)
     hP hsh hftP hMcP htlP hlP hfvP hesP hformer hMs
-  rw [forIdx_zero] at h
   rcases h1 : cnaE.loop1 p (n + 1) m vis q fto ftl mc teo tel leaf fvo fvl i eo el 0 with e1 | m1 <;>
     rw [h1] at h
   · rw [cnaE.k_loop1.none]; exact h

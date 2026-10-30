@@ -3,7 +3,6 @@ import ConAgua.Arena.IndPartsSpec.BlockSplitRecs
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr
-import ConAgua.L.ForIdx
 
 /-!
 # `ind_params_ok(nP, off, len)` refines `indParamsOk` (lane `indproofs4`)
@@ -202,38 +201,47 @@ verdict `true` exactly when the loop falls through. -/
 theorem ipoW_ok (dn : NIdx → Option ConLeche.Name) {m : Mem} {a : AState} (hR : ArenaR m a)
     (np o l : Word) (blk : List IConstantInfo) (hdec : decEBlk dn m o.toNat l.toNat = some blk)
     (hb : o.toNat + l.toNat < 2 ^ 64) (hEs : (m.arr64 EREC).size < 2 ^ 64) :
-    ∀ (k : Nat) (j : Nat) (r : Sig), ipoW k m np o l (UInt64.ofNat j) = some r → j ≤ l.toNat →
-      (indParamsOk np.toNat (blk.drop j)).run a = .ok (decide (r = .normal), a) := by
+    ∀ (k : Nat) (j : Word) (r : Sig), ipoW k m np o l j = some r → j ≤ l →
+      (indParamsOk np.toNat (blk.drop j.toNat)).run a = .ok (decide (r = .normal), a) := by
   have hlen : blk.length = l.toNat := by rw [mapM_opt_length _ _ _ hdec]; simp
   intro k
   induction k with
   | zero => intro j r h; simp [ipoW] at h
   | succ k ih =>
   intro j r h hjl
-  by_cases hj : UInt64.ofNat j < l
+  by_cases hj : j < l
   rotate_left
   · rw [ipoW_exit (h := hj)] at h
     cases h
-    rw [forIdx_exit hjl hj, ← hlen, List.drop_length]; rfl
-  have hjn : j < l.toNat := (forIdx_lt hjl).mp hj
-  obtain ⟨q, hq, hci⟩ := decEBlk_get hdec j hjn
+    have : j.toNat = l.toNat := by
+      have := UInt64.le_iff_toNat_le.mp hjl
+      have : ¬ j.toNat < l.toNat := fun h' => hj (UInt64.lt_iff_toNat_lt.mpr h')
+      omega
+    rw [this, ← hlen, List.drop_length]; rfl
+  have hjn : j.toNat < l.toNat := UInt64.lt_iff_toNat_lt.mp hj
+  obtain ⟨q, hq, hci⟩ := decEBlk_get hdec j.toNat hjn
+  have hoj : (o + j).toNat = o.toNat + j.toNat := by rw [UInt64.toNat_add]; exact Nat.mod_eq_of_lt (by omega)
   obtain ⟨hpw, hqb⟩ := rdW_of_nat? hq (by omega)
-  rw [show (UInt64.ofNat (o.toNat + j) : Word) = o + UInt64.ofNat j by simp] at hpw
-  have hdrop : blk.drop j = blk[j]'(by omega) :: blk.drop (j + 1) := List.drop_eq_getElem_cons (by omega)
+  rw [show (UInt64.ofNat (o.toNat + j.toNat) : Word) = o + j by
+    apply UInt64.toNat_inj.mp; rw [hoj]; simp; omega] at hpw
+  have hj1n : (j + 1).toNat = j.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
+  have hdrop : blk.drop j.toNat = blk[j.toNat]'(by omega) :: blk.drop (j.toNat + 1) :=
+    List.drop_eq_getElem_cons (by omega)
+  have hj1 : j + 1 ≤ l := UInt64.le_iff_toNat_le.mpr (by rw [UInt64.toNat_add]; simp; omega)
   have hqT : (UInt64.ofNat q : Word).toNat = q := UInt64.toNat_ofNat_of_lt' hqb
   obtain ⟨wk, hwk, hk⟩ := ciD hci
-  have hkw : rdW (m.arr64 EREC) (rdW (m.arr64 EREC) (o + UInt64.ofNat j)) = wk := by
-    rw [show rdW (m.arr64 EREC) (o + UInt64.ofNat j) = UInt64.ofNat q from hpw]; simp only [rdW, hqT]; rw [show (m.arr64 EREC)[q]? = some wk from hwk]; rfl
-  have hpw' : rdW (m.arr64 EREC) (o + UInt64.ofNat j) = UInt64.ofNat q := hpw
+  have hkw : rdW (m.arr64 EREC) (rdW (m.arr64 EREC) (o + j)) = wk := by
+    rw [show rdW (m.arr64 EREC) (o + j) = UInt64.ofNat q from hpw]; simp only [rdW, hqT]; rw [show (m.arr64 EREC)[q]? = some wk from hwk]; rfl
+  have hpw' : rdW (m.arr64 EREC) (o + j) = UInt64.ofNat q := hpw
   have hqs : q < (m.arr64 EREC).size := (Array.getElem?_eq_some_iff.mp hwk).1
   rw [hdrop]
   -- the step of the twin: `ok` on the record, then the rest
-  have hrest : ∀ r', ipoW k m np o l (UInt64.ofNat j + 1) = some r' →
-      (indParamsOk np.toNat (blk.drop (j + 1))).run a = .ok (decide (r' = .normal), a) :=
-    fun r' h' => ih (j + 1) r' (by rw [← forIdx_succ]; exact h') hjn
+  have hrest : ∀ r', ipoW k m np o l (j + 1) = some r' →
+      (indParamsOk np.toNat (blk.drop (j.toNat + 1))).run a = .ok (decide (r' = .normal), a) :=
+    fun r' h' => by rw [← hj1n]; exact ih (j + 1) r' h' hj1
   have other : ∀ ci, wk ≠ 3 → wk ≠ 4 →
       (∀ cv caps, ci ≠ .indInfo cv caps) → (∀ cv x y, ci ≠ .ctorInfo cv x y) →
-      (indParamsOk np.toNat (ci :: blk.drop (j + 1))).run a = .ok (decide (r = .normal), a) := by
+      (indParamsOk np.toNat (ci :: blk.drop (j.toNat + 1))).run a = .ok (decide (r = .normal), a) := by
     intro ci hw3 hw4 h1 h2
     rw [ipoW_other (h := hj) (h3 := by rw [hkw]; exact hw3),
       ipoK_ok (h := by rw [hkw]; exact fun e => hw4 e.1)] at h
@@ -259,7 +267,7 @@ theorem ipoW_ok (dn : NIdx → Option ConLeche.Name) {m : Mem} {a : AState} (hR 
       | none => simp [hd?, hw4] at hty
       | some w => have := (Array.getElem?_eq_some_iff.mp hw4).1; simp only [erA] at this; omega
     obtain ⟨w, hwr, -, hwd⟩ := erH_rdW hty hq4b
-    have hp4 : rdW (m.arr64 EREC) (rdW (m.arr64 EREC) (o + UInt64.ofNat j) + 4) = w := by
+    have hp4 : rdW (m.arr64 EREC) (rdW (m.arr64 EREC) (o + j) + 4) = w := by
       rw [hpw', ← hwr]; congr 1; apply UInt64.toNat_inj.mp; simp [UInt64.toNat_add] <;> omega
     rw [hp4] at h
     rcases hst : L.Front.Ind.sortTeleW k m CWF w with _ | ⟨ok, n⟩
@@ -291,7 +299,7 @@ theorem ipoW_ok (dn : NIdx → Option ConLeche.Name) {m : Mem} {a : AState} (hR 
       obtain ⟨w, hw, -⟩ := hnpc
       have := (Array.getElem?_eq_some_iff.mp hw).1; simp only [erA] at this; omega
     obtain ⟨hr5, hnb⟩ := rdW_of_nat? hnpc hq5b
-    have hp5 : rdW (m.arr64 EREC) (rdW (m.arr64 EREC) (o + UInt64.ofNat j) + 5) = UInt64.ofNat npc := by
+    have hp5 : rdW (m.arr64 EREC) (rdW (m.arr64 EREC) (o + j) + 5) = UInt64.ofNat npc := by
       rw [hpw', ← hr5]; congr 1; apply UInt64.toNat_inj.mp; simp [UInt64.toNat_add] <;> omega
     have hnpcT : (UInt64.ofNat npc : Word).toNat = npc := UInt64.toNat_ofNat_of_lt' hnb
     simp only [indParamsOk, StateT.run_bind]
@@ -352,8 +360,8 @@ theorem indParamsOk_refines (p : Prog)
   | none => rw [hw] at hR; cases hR
   | some sg =>
   rw [hw] at hR
-  have hrun := ipoW_ok dn hS.check.arena.base np o l blk hdec hb hS.iw.erSize (k + 1) 0 sg hw (Nat.zero_le _)
-  simp only [List.drop_zero] at hrun
+  have hrun := ipoW_ok dn hS.check.arena.base np o l blk hdec hb hS.iw.erSize (k + 1) 0 sg hw (by simp)
+  simp only [UInt64.toNat_zero, List.drop_zero] at hrun
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
   refine ⟨hl, hm, hok, hst, ?_⟩
   rw [hres]
