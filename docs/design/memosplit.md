@@ -148,7 +148,7 @@ byte). Exact counts, `perf stat -e instructions:u`, `Init`, `--jobs=4`, master 3
 `MemoRV` would read the region from the globals, and `memoRV_frame` moves it across any writer with
 a `MemFrame`. `MemFrame` (`Arena/Frame.lean`) says nothing about globals, and the write-set check
 lets any function write any global (`L/WriteSet.lean`). The 154 uses of
-`memoRV_frame`/`memoRG_frame` in 31 files would each need a "the memo's globals are kept" fact.
+`memoRV_frame`/`memoRG_frame` in 53 files would each need a "the memo's globals are kept" fact.
 The alternative is ctlglobals §3: globals inside `MemFrame`, keyed by the `CTL` words of `C`
 (e.g. global `16 + x` kept unless `x ∈ C`, so that every frame list `[S.cs, S.cs + 1]` covers its
 memo's globals unchanged), `closedW` restricted for `g := e`, and each model frame showing the
@@ -176,7 +176,7 @@ rfhash's concern (a bank's generation in `k2`'s high half) still holds. The fold
 low 32 bits, which move `mulhi(·, n)` by at most 1 for `n < 2^32`. One-word keys get Fibonacci
 hashing (`k1 * golden`, high bits).
 
-**Proof delta.** `MemoLib.lean` +25 −11, `MemoLibRel.lean` ±14 (renames). Every spec statement,
+**Proof delta.** `MemoLib.lean` +29 −16, `MemoLibRel.lean` ±14 (renames). Every spec statement,
 `mprobeG`/`mputG`/`MemoRV`, and every caller are unchanged. Elaboration: `MemoLib` 3.9 s,
 `MemoLibRel` 1.8 s.
 
