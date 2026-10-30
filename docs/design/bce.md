@@ -154,11 +154,26 @@ Exact counts (`scripts/asmprof.py`), master (b4747f1d) against this branch; `Ini
 
 ## 6. Wall time
 
-(measured on the landed code; below)
+Interleaved paired rounds, master's binary and this branch's back to back in random order per
+fixture (`_tmp/bce/wb2.py`, `wstats.py`, from cgproto); median paired change, Wilcoxon p, mean with
+95 % CI. One thread on CPUs 44,92, 16 rounds, load 2.8–19.1 (median 6.0); 16 threads on CPUs
+24–39, 30 rounds, load up to 20.
+
+| cell | master | bce |
+|---|---:|---:|
+| `Init`, one thread | 17.62 s | **−1.6 %** (p 0.018; mean −1.2 % [−2.4, +0.0]) |
+| `Init`, `--jobs=16` | 3.58 s | −0.5 % (p 0.92; [−1.5, +2.9]) |
+| parse phase | 1.84 s | −1.3 % (p 0.25; [−6.2, +3.1]) |
+| app-lam | 8.47 s | **−1.4 %** (p < 0.001; [−3.4, −0.4]) |
+| c05b | 1.38 s | +0.3 % (p 0.67; [−2.8, +2.2]) |
+
+cgproto measured its prototype (the larger analysis) at −2.5 % (one thread) and −1.4 %
+(16 threads) at a lower load (2.0–9.1).
 
 ## 7. Verdicts
 
-`diff-e2e` (628): all agree. (`--refs` and `--jobs 4`: below.)
+`diff-e2e --refs --parallel 16`: 634 of 634 agree (406 accepted, 228 not), UNSOUND, INCOMPLETE,
+CRASH, TIMEOUT and REFDIFF 0. `--jobs 4`: 634 agree.
 
 ## 8. Sizes
 
