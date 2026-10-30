@@ -1,6 +1,7 @@
 import ConAgua.Arena.PromoteRec
 import ConAgua.Arena.PromoteERef
 import ConAgua.Arena.IndLibSpec
+import ConAgua.L.WordOff
 import Std.Tactic.BVDecide.Normalize.Prop
 
 /-!
@@ -575,13 +576,8 @@ theorem vgStore_facts {m m' : Mem} {d k nm q l t x : Word}
   · cases h
   rename_i hc
   cases h
-  have e1 : (d + 1).toNat = d.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
-  have e2 : (d + 2).toNat = d.toNat + 2 := by rw [UInt64.toNat_add]; simp; omega
-  have e3 : (d + 3).toNat = d.toNat + 3 := by rw [UInt64.toNat_add]; simp; omega
-  have e4 : (d + 4).toNat = d.toNat + 4 := by rw [UInt64.toNat_add]; simp; omega
-  have e5 : (d + 5).toNat = d.toNat + 5 := by rw [UInt64.toNat_add]; simp; omega
   have hlt : d.toNat + 5 < (m.arr64 EREC).size := by
-    simp only [not_or, Nat.not_le] at hc; have := hc.2.2.2.2.2; rw [e5] at this; exact this
+    simp only [not_or, Nat.not_le] at hc; have := hc.2.2.2.2.2; rw [off_toNat (by omega)] at this; exact this
   have fr : ∀ (m₁ : Mem) (i v : Word), MemFrame [EREC] [] m₁ (m₁.set64 EREC i v) :=
     fun m₁ i v => MemFrame.set64 m₁ EREC (by decide) i v
   have b0 : d.toNat < (m.arr64 EREC).size := by omega
@@ -591,8 +587,8 @@ theorem vgStore_facts {m m' : Mem} {d k nm q l t x : Word}
   have b4 : d.toNat + 4 < (m.arr64 EREC).size := by omega
   refine ⟨hlt, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
   all_goals (try intros)
-  all_goals (try simp only [Mem.arr64_set64_same, Array.set!_eq_setIfInBounds,
-    Array.getElem?_setIfInBounds, Array.size_setIfInBounds, e1, e2, e3, e4, e5])
+  all_goals (try simp (disch := omega) only [Mem.arr64_set64_same, Array.set!_eq_setIfInBounds,
+    Array.getElem?_setIfInBounds, Array.size_setIfInBounds, off_toNat])
   all_goals (try simp [b0, b1, b2, b3, b4, hlt])
   all_goals (try omega)
   · rename_i i hi
