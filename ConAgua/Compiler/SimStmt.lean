@@ -1,6 +1,5 @@
 module
 
-public import ConAgua.Compiler.RunEq
 public import ConAgua.Compiler.SimGen
 public import ConAgua.Compiler.BcePost
 import Kraken.X64.Registers
