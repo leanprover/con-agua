@@ -1256,7 +1256,7 @@ theorem ktopL_spec (p : Prog) (C : ConsSch) (hO : ConsOK p C) (n : Nat) (s₀ : 
   simp (disch := decide) only [mapS, mapE, mapC, gmap_lit, gmap_zero, Nat.reduceSub]
   vcgen [step, evalE_spec, evalC_spec, ktopBody_spec p C hO n, ih]
   all_goals (try simp (disch := decide) only [Cmp.eval, Expr.pval, Cond.pval, bne_iff_ne, ne_eq,
-    decide_eq_true_eq, Nat.reduceEqDiff] at *)
+    decide_eq_true_eq] at *)
   case vc1 =>
     obtain ⟨k1, h1, m1, r1⟩ := ‹KeepT C s₀ _ ∧ _›
     obtain ⟨k2, m2, r2⟩ := ‹KeepT C _ _ ∧ _›
@@ -1484,7 +1484,7 @@ theorem kgrowBlk_spec (p : Prog) (C : ConsSch) (hO : ConsOK p C) (n : Nat) (s₀
   have s6v0 : s₆.loc (gO C) = s₅.loc (gO C) := e6
   have g19 : gmap C 19 = gO C + 18 := by simp [gmap]
   have g21 : gmap C 21 = gO C + 20 := by simp [gmap]
-  simp only [g19, d2, d7, s7v0, s7v 1 (by simp), s7v 4 (by simp), s7v 13 (by simp),
+  simp only [g19, d2, d7, s7v0, s7v 4 (by simp), s7v 13 (by simp),
     s7v 18 (by simp), s7_0, m7, s6v0, s6v 1 (by simp), s6v 4 (by simp),
     s6v 13 (by simp)] at w8
   -- the second range
@@ -1492,7 +1492,7 @@ theorem kgrowBlk_spec (p : Prog) (C : ConsSch) (hO : ConsOK p C) (n : Nat) (s₀
       s₉.loc (gO C + i) = s₈.loc (gO C + i) := fun i hi => by
     rcases hi with rfl | rfl | rfl | rfl | rfl <;> exact K9 _ (by omega) (by omega)
   have s9v0 : s₉.loc (gO C) = s₈.loc (gO C) := by simpa using s9v 0 (by simp)
-  simp only [g21, g2, g7, s9v0, s9v 1 (by simp), s9v 4 (by simp), s9v 13 (by simp),
+  simp only [g21, g2, g7, s9v0, s9v 4 (by simp), s9v 13 (by simp),
     s9v 20 (by simp), t0, m9, H8 (gO C + 19) (by omega), H8 (gO C + 20) (by omega), e8, f8, o8, t8, s7v0,
     s7v 1 (by simp), s7v 4 (by simp), s7v 13 (by simp), s7v 19 (by simp), s7v 20 (by simp),
     s6v0, s6v 1 (by simp), s6v 4 (by simp), s6v 13 (by simp)] at w10
