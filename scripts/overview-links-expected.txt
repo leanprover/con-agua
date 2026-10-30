@@ -1158,29 +1158,29 @@
    225  termination_by e - i
    226  
 
-== ConAgua/Compiler/Compile.lean#L1025-L1036
-  1025  /-- `copy D[di ..] := S[si ..] for n`: the source checked and pointed at by `rcx`, the
-  1026  destination by `rdx`, the end of the source in temporary `0`, then 6 instructions per word. -/
-  1027  def copy64Code (ctx : Ctx) (path : Path) (d : WArr) (di : Expr) (s : WArr) (si n : Expr) : Program :=
-  1028    (warrDesc ctx .rcx s).1 ++ [movRM .rax (mb (warrDesc ctx .rcx s).2 (ctx.tab.len64 s.arr))] ++
-  1029    lenChk ctx si n ++ wordPtr ctx .rcx (warrDesc ctx .rcx s).2 s.arr si ++
-  1030    (warrDesc ctx .rdx d).1 ++ [movRM .rax (mb (warrDesc ctx .rdx d).2 (ctx.tab.len64 d.arr))] ++
-  1031    lenChk ctx di n ++ wordPtr ctx .rdx (warrDesc ctx .rdx d).2 d.arr di ++
-  1032    [i64 (.mov (.reg (rr .rax)) (opnd ctx n)),
-  1033     i64 (.shl (.reg (rr .rax)) (.imm8 (.int64 (Int64.ofInt 3)))),
-  1034     i64 (.add (.reg (rr .rax)) (oR .rcx)), movMR (ctx.tmp 0) .rax,
-  1035     i64 (.cmp (.reg (rr .rcx)) (oM (ctx.tmp 0))), jccL .nc (ctx.lbl path "X")] ++
-  1036    copy64Loop (ctx.lbl path "L") (ctx.tmp 0) ++ [.label (ctx.lbl path "X")]
+== ConAgua/Compiler/Compile.lean#L1037-L1048
+  1037  /-- `copy D[di ..] := S[si ..] for n`: the source checked and pointed at by `rcx`, the
+  1038  destination by `rdx`, the end of the source in temporary `0`, then 6 instructions per word. -/
+  1039  def copy64Code (ctx : Ctx) (path : Path) (d : WArr) (di : Expr) (s : WArr) (si n : Expr) : Program :=
+  1040    (warrDesc ctx .rcx s).1 ++ [movRM .rax (mb (warrDesc ctx .rcx s).2 (ctx.tab.len64 s.arr))] ++
+  1041    lenChk ctx si n ++ wordPtr ctx .rcx (warrDesc ctx .rcx s).2 s.arr si ++
+  1042    (warrDesc ctx .rdx d).1 ++ [movRM .rax (mb (warrDesc ctx .rdx d).2 (ctx.tab.len64 d.arr))] ++
+  1043    lenChk ctx di n ++ wordPtr ctx .rdx (warrDesc ctx .rdx d).2 d.arr di ++
+  1044    [i64 (.mov (.reg (rr .rax)) (opnd ctx n)),
+  1045     i64 (.shl (.reg (rr .rax)) (.imm8 (.int64 (Int64.ofInt 3)))),
+  1046     i64 (.add (.reg (rr .rax)) (oR .rcx)), movMR (ctx.tmp 0) .rax,
+  1047     i64 (.cmp (.reg (rr .rcx)) (oM (ctx.tmp 0))), jccL .nc (ctx.lbl path "X")] ++
+  1048    copy64Loop (ctx.lbl path "L") (ctx.tmp 0) ++ [.label (ctx.lbl path "X")]
 
-== ConAgua/Compiler/Compile.lean#L1058-L1065
-  1058  /-- The loop of `scan8`: per byte the byte, its class (constant data at `[r15 + off]`) and the
-  1059  tests, 7 instructions. -/
-  1060  def scanLoop (Lb Xb : Label) (off : Int) (eo : Operand .W64) : Program :=
-  1061    [.label Lb,
-  1062     i64 (.movzx (.reg (rr .rdx)) (w' := .W8) (.mem (mbi .rcx .rax .W8))),
-  1063     i64 (.movzx (.reg (rr .rdx)) (w' := .W8) (.mem (tblAddr off))),
-  1064     i64 (.cmp (.reg (rr .rdx)) (oI 0)), jccL .nz Xb,
-  1065     i64 (.add (.reg (rr .rax)) (oI 1)), i64 (.cmp (.reg (rr .rax)) eo), jccL .c Lb]
+== ConAgua/Compiler/Compile.lean#L1070-L1077
+  1070  /-- The loop of `scan8`: per byte the byte, its class (constant data at `[r15 + off]`) and the
+  1071  tests, 7 instructions. -/
+  1072  def scanLoop (Lb Xb : Label) (off : Int) (eo : Operand .W64) : Program :=
+  1073    [.label Lb,
+  1074     i64 (.movzx (.reg (rr .rdx)) (w' := .W8) (.mem (mbi .rcx .rax .W8))),
+  1075     i64 (.movzx (.reg (rr .rdx)) (w' := .W8) (.mem (tblAddr off))),
+  1076     i64 (.cmp (.reg (rr .rdx)) (oI 0)), jccL .nz Xb,
+  1077     i64 (.add (.reg (rr .rax)) (oI 1)), i64 (.cmp (.reg (rr .rax)) eo), jccL .c Lb]
 
 == ConAgua/L/TRec.lean#L101-L105
    101  /-- The tier of a handle word: bit 27. -/
@@ -1675,154 +1675,154 @@
     71  def InputsOK (b pb : ByteArray) (sz : TieredArray → Nat) : Prop :=
     72    System.Platform.numBits = 64 ∧ b.size < 2 ^ 63 ∧ pb.size < 2 ^ 63 ∧ ∀ s, sz s < 2 ^ 64
 
-== ConAgua/Compiler/Compile.lean#L8-L33
-     8  /-!
-     9  # The compiler from L to Kraken x64
-    10  
-    11  See DESIGN.md, "The compiler". One pass: an expression is evaluated straight into its target
-    12  register by `gen`, with scratch registers; where `gen` does not apply, into `rax` with
-    13  intermediate values in fixed per-frame temporary slots (`compileE`).
-    14  
-    15  **Machine state during L code.**
-    16  * `r15` = `T`, the address of the run's descriptor table (`Tab`); pinned.
-    17  * `r14` = the fuel counter; decremented at every loop back-edge and every call.
-    18  * `rsp` = the current frame; constant while a body runs. Local `x` is the word at `rsp + 8x`,
-    19    temporary `t` is at `rsp + 8(nlocals + t)`. The frame has `frameWords` words.
-    20  * `rbp` = the trampoline's saved stack pointer; never written by L code.
-    21  * `rbx`, `r12`, `r13`: free; the trampoline saves and restores them for its caller.
-    22  * `rax` = expression result, `rcx`/`rdx` = scratch, `rsi` = argument pointer at a call.
-    23  
-    24  **Exits.** `ca_error`, `ca_abort` and `ca_exhausted` are global; they restore the caller's `rsp`
-    25  from `rbp` and return to the harness with `rdx` = 2, 2 resp. 1. `ca_abort` is an error whose code
-    26  (`Err.code`) is in `rbx` (`abort e`, `if c abort k`: `if c abort k` sets `rbx` before the test
-    27  and keeps its one conditional jump; the test itself keeps `rbx`), `ca_error` one with code `0` (a
-    28  bounds check, a bare `abort`); both return the code in `rax`. `abort e` may overwrite any
-    29  register, a leaf's locals in `rbx` included (nothing after an abort reads a local), but `if c abort
-    30  k` writes `rbx` also when it does not abort: it does so only where no local lives in `rbx`
-    31  (`Ctx.rbxFree`, `sim_ifAbortK`); in a leaf that keeps a local there it is the general `if`. A
-    32  normal return has `rdx` = 0 and the result in `rax`.
-    33  -/
+== ConAgua/Compiler/Compile.lean#L9-L34
+     9  /-!
+    10  # The compiler from L to Kraken x64
+    11  
+    12  See DESIGN.md, "The compiler". One pass: an expression is evaluated straight into its target
+    13  register by `gen`, with scratch registers; where `gen` does not apply, into `rax` with
+    14  intermediate values in fixed per-frame temporary slots (`compileE`).
+    15  
+    16  **Machine state during L code.**
+    17  * `r15` = `T`, the address of the run's descriptor table (`Tab`); pinned.
+    18  * `r14` = the fuel counter; decremented at every loop back-edge and every call.
+    19  * `rsp` = the current frame; constant while a body runs. Local `x` is the word at `rsp + 8x`,
+    20    temporary `t` is at `rsp + 8(nlocals + t)`. The frame has `frameWords` words.
+    21  * `rbp` = the trampoline's saved stack pointer; never written by L code.
+    22  * `rbx`, `r12`, `r13`: free; the trampoline saves and restores them for its caller.
+    23  * `rax` = expression result, `rcx`/`rdx` = scratch, `rsi` = argument pointer at a call.
+    24  
+    25  **Exits.** `ca_error`, `ca_abort` and `ca_exhausted` are global; they restore the caller's `rsp`
+    26  from `rbp` and return to the harness with `rdx` = 2, 2 resp. 1. `ca_abort` is an error whose code
+    27  (`Err.code`) is in `rbx` (`abort e`, `if c abort k`: `if c abort k` sets `rbx` before the test
+    28  and keeps its one conditional jump; the test itself keeps `rbx`), `ca_error` one with code `0` (a
+    29  bounds check, a bare `abort`); both return the code in `rax`. `abort e` may overwrite any
+    30  register, a leaf's locals in `rbx` included (nothing after an abort reads a local), but `if c abort
+    31  k` writes `rbx` also when it does not abort: it does so only where no local lives in `rbx`
+    32  (`Ctx.rbxFree`, `sim_ifAbortK`); in a leaf that keeps a local there it is the general `if`. A
+    33  normal return has `rdx` = 0 and the result in `rax`.
+    34  -/
 
-== ConAgua/Compiler/Compile.lean#L2110-L2131
-  2110  def trampoline (tab : Tab) (entry : FnName) (c np : Nat) : Program :=
-  2111    [.label enterL,
-  2112     movMR (mb .rdi (tab.save np)) .r15, movMR (mb .rdi (tab.save np + 8)) .rbx,
-  2113     movMR (mb .rdi (tab.save np + 16)) .r12, movMR (mb .rdi (tab.save np + 24)) .r13,
-  2114     i64 (.push (oR .rbp)), i64 (.push (oR .r14)), i64 (.push (oR .rdi)),
-  2115     movRR .rbp .rsp, movRR .r15 .rdi, movRR .r14 .rsi,
-  2116     movRM .rsp (mb .r15 Tab.stackTop),
-  2117     i64 (.lea (rr .rsi) (mb .r15 tab.args))] ++
-  2118    (if np ≤ argRegs.length then loadArgs tab 0 (argRegs.take np) else []) ++ burnFuel ++
-  2119    [i64 (.call (.rel (.sub (.label (fnL entry)) .after_current_instruction))),
-  2120     jmpL okL,
-  2121     .label exhaustedL, movRI .rdx 1, jmpL finishL,
-  2122     .label errorL, movRI .rbx 0,
-  2123     .label abortL, movRR .rax .rbx, movRI .rdx 2,
-  2124     .label finishL, movRR .rsp .rbp,
-  2125     i64 (.pop (.reg (rr .r15))),
-  2126     movRM .rbx (mb .r15 (tab.save np + 8)), movRM .r12 (mb .r15 (tab.save np + 16)),
-  2127     movRM .r13 (mb .r15 (tab.save np + 24)), movRM .r15 (mb .r15 (tab.save np)),
-  2128     i64 (.pop (.reg (rr .r14))), i64 (.pop (.reg (rr .rbp))),
-  2129     i64 .ret,
-  2130     .label okL] ++ loadRes { tab, fn := entry, nl := 0, brk := okL } 0 c (tab.nres - c) ++
-  2131    [movRI .rdx 0, jmpL finishL]
+== ConAgua/Compiler/Compile.lean#L2134-L2155
+  2134  def trampoline (tab : Tab) (entry : FnName) (c np : Nat) : Program :=
+  2135    [.label enterL,
+  2136     movMR (mb .rdi (tab.save np)) .r15, movMR (mb .rdi (tab.save np + 8)) .rbx,
+  2137     movMR (mb .rdi (tab.save np + 16)) .r12, movMR (mb .rdi (tab.save np + 24)) .r13,
+  2138     i64 (.push (oR .rbp)), i64 (.push (oR .r14)), i64 (.push (oR .rdi)),
+  2139     movRR .rbp .rsp, movRR .r15 .rdi, movRR .r14 .rsi,
+  2140     movRM .rsp (mb .r15 Tab.stackTop),
+  2141     i64 (.lea (rr .rsi) (mb .r15 tab.args))] ++
+  2142    (if np ≤ argRegs.length then loadArgs tab 0 (argRegs.take np) else []) ++ burnFuel ++
+  2143    [i64 (.call (.rel (.sub (.label (fnL entry)) .after_current_instruction))),
+  2144     jmpL okL,
+  2145     .label exhaustedL, movRI .rdx 1, jmpL finishL,
+  2146     .label errorL, movRI .rbx 0,
+  2147     .label abortL, movRR .rax .rbx, movRI .rdx 2,
+  2148     .label finishL, movRR .rsp .rbp,
+  2149     i64 (.pop (.reg (rr .r15))),
+  2150     movRM .rbx (mb .r15 (tab.save np + 8)), movRM .r12 (mb .r15 (tab.save np + 16)),
+  2151     movRM .r13 (mb .r15 (tab.save np + 24)), movRM .r15 (mb .r15 (tab.save np)),
+  2152     i64 (.pop (.reg (rr .r14))), i64 (.pop (.reg (rr .rbp))),
+  2153     i64 .ret,
+  2154     .label okL] ++ loadRes { tab, fn := entry, nl := 0, brk := okL } 0 c (tab.nres - c) ++
+  2155    [movRI .rdx 0, jmpL finishL]
 
-== ConAgua/Compiler/Compile.lean#L800
-   800  def allocRegs : List Reg64 := [.rdi, .r8, .r9, .r10, .r11, .rsi, .rbx, .r12, .r13]
+== ConAgua/Compiler/Compile.lean#L804
+   804  def allocRegs : List Reg64 := [.rdi, .r8, .r9, .r10, .r11, .rsi, .rbx, .r12, .r13]
 
-== ConAgua/Compiler/Compile.lean#L2081-L2093
-  2081  def compileFn (tab : Tab) (t sk : NTree) (f : FnName) (fd : FunDecl) : Program :=
-  2082    let ctx := fnCtx tab t sk f fd
-  2083    let F := fd.nlocals + tempsS ctx.alloc ctx.nr fd.body
-  2084    if frameless fd then [.label (fnL f)] ++ fnBody ctx fd ++ [i64 .ret]
-  2085    else if ctx.leaf && sk.find (nameCode f) == some F then
-  2086    [.label (fnL f), i64 (.sub (.reg (rr .rsp)) (oI (8 * F)))] ++ fnBody ctx fd ++
-  2087    [i64 (.add (.reg (rr .rsp)) (oI (8 * F))), i64 .ret]
-  2088    else
-  2089    [.label (fnL f),
-  2090     movRR .rax .rsp, i64 (.sub (.reg (rr .rax)) (oM (mb .r15 Tab.stackLimit))),
-  2091     i64 (.cmp (.reg (rr .rax)) (oI (8 * F + 8 + 8 * ctx.need))), jccL .c exhaustedL,
-  2092     i64 (.sub (.reg (rr .rsp)) (oI (8 * F)))] ++ fnBody ctx fd ++
-  2093    [i64 (.add (.reg (rr .rsp)) (oI (8 * F))), i64 .ret]
+== ConAgua/Compiler/Compile.lean#L2105-L2117
+  2105  def compileFn (tab : Tab) (t sk : NTree) (f : FnName) (fd : FunDecl) : Program :=
+  2106    let ctx := fnCtx tab t sk f fd
+  2107    let F := fd.nlocals + tempsS ctx.alloc ctx.nr fd.body
+  2108    if frameless fd then [.label (fnL f)] ++ fnBody ctx fd ++ [i64 .ret]
+  2109    else if ctx.leaf && sk.find (nameCode f) == some F then
+  2110    [.label (fnL f), i64 (.sub (.reg (rr .rsp)) (oI (8 * F)))] ++ fnBody ctx fd ++
+  2111    [i64 (.add (.reg (rr .rsp)) (oI (8 * F))), i64 .ret]
+  2112    else
+  2113    [.label (fnL f),
+  2114     movRR .rax .rsp, i64 (.sub (.reg (rr .rax)) (oM (mb .r15 Tab.stackLimit))),
+  2115     i64 (.cmp (.reg (rr .rax)) (oI (8 * F + 8 + 8 * ctx.need))), jccL .c exhaustedL,
+  2116     i64 (.sub (.reg (rr .rsp)) (oI (8 * F)))] ++ fnBody ctx fd ++
+  2117    [i64 (.add (.reg (rr .rsp)) (oI (8 * F))), i64 .ret]
 
-== ConAgua/Compiler/Compile.lean#L98-L159
-    98  /-- **The layout check**: `l` lists the array at each of the `nb + nw` positions, `m` maps each of
-    99  them to its position and nothing else (an entry `k ↦ v` has `v` in range and `l[v]` of code `k`),
-   100  the byte positions `[0, nb)` hold tier-0 names, and a tier 1 sits at a word position right after
-   101  its tier 0. -/
-   102  def layOkB (nb nw : Nat) (l : List TieredArray) (m : NTree) : Bool :=
-   103    l.length == nb + nw &&
-   104    m.all (fun k v => decide (v < nb + nw) && (l[v]?.map TieredArray.code == some k)) &&
-   105    (List.range (nb + nw)).all (fun i => m.find (arrAtD l i).code == some i) &&
-   106    (List.range nb).all (fun i => !(arrAtD l i).hi) &&
-   107    (List.range (nb + nw)).all (fun i => !(arrAtD l i).hi ||
-   108      (decide (nb < i) && arrAtD l (i - 1) == TieredArray.t0 (arrAtD l i).arr))
-   109  
-   110  /-- The number of result registers. -/
-   111  def maxRes : Nat := 6
-   112  
-   113  /-- The layout of the descriptor table at `T`:
-   114  * `[T]` the initial stack pointer (top of the stack region), `[T + 8]` its lower limit;
-   115  * `[T + 16 + 8p]` the base of the array at descriptor position `p < nb + nw` (`Tab.dbase`), then
-   116    `[T + 16 + 8 (nb + nw) + 8p]` its length (`Tab.dlen`), in bytes for a byte position (`p < nb`),
-   117    in words for a word position, then `[T + 16 + 16 (nb + nw) + 8p]` a word position's length in
-   118    32-bit elements (`Tab.dlen32`, twice its length in words: the bound of a 32-bit access);
-   119  * then the constant data `rom` (the byte strings of the program's `ldc` reads), padded to whole
-   120    words;
-   121  * then the result area: results `maxRes, maxRes + 1, …, nres - 1` of a call, one word each (empty
-   122    if `nres ≤ maxRes`);
-   123  * then the global variables `0, …, ng - 1`, one word each;
-   124  * then the arguments of the entry function, one word each.
-   125  
-   126  (`nres` is not part of the table in memory: it says how many results the code passes.) -/
-   127  structure Tab where
-   128    /-- The byte positions `[0, nb)`. -/
-   129    nb : Nat
-   130    /-- The word positions `[nb, nb + nw)`. -/
-   131    nw : Nat
-   132    /-- The array at each position (`Tab.wAt`; a byte array `a` as `↑a`). -/
-   133    arrAt : List TieredArray
-   134    /-- The layout map: `s.code ↦` the position of `s` (`Tab.pos64`, `Tab.pos8`). -/
-   135    lmap : NTree
-   136    /-- The map and the position list agree (`layOkB`). -/
-   137    layOk : layOkB nb nw arrAt lmap = true
-   138    rom : List UInt8 := []
-   139    /-- The number of results in use: the most results any `return` gives or any call reads. The
-   140    first `maxRes` go in registers (`resReg 0`, …), the rest in the table's result area. -/
-   141    nres : Nat := 1
-   142    /-- The number of global variables: global `g` (with `g.id < ng`) is the word at `globOff g`. -/
-   143    ng : Nat := 0
-   144    /-- Minimum lengths (`L.ArrDecl.min`): `(s.code, k)` says that word array `s` has at
-   145    least `k` words in every layout the code runs in (`Layout.Ok.min64`; the entry stubs establish
-   146    it), so a constant index below `k` needs no bounds check (`Tab.min64`). -/
-   147    mins : List (Nat × Nat) := []
-   148    /-- The table-relative array (`L.ArrDecl.atTable`): `(a, c)` says that tier 0 of word array `a`
-   149    starts at `T + c`, past the table and the trampoline's save area, in every layout the code runs in
-   150    (`Layout.Ok.tbl64`; the entry stubs place it there), so the code addresses it from `r15` without
-   151    loading its base. -/
-   152    tbl : Option (ArrId × Nat) := none
-   153    /-- `rom.length`, stored: the offsets past the constant data (`resOff`, `globOff`, `args`) are
-   154    then arithmetic on the table's fields, and the kernel does not count the bytes of a large ROM
-   155    each time it evaluates the code generator (DESIGN.md, "Kernel-checked compiler output"). -/
-   156    romLen : Nat := rom.length
-   157    romLen_eq : romLen = rom.length := by rfl
-   158    deriving Repr, DecidableEq
-   159  
+== ConAgua/Compiler/Compile.lean#L99-L160
+    99  /-- **The layout check**: `l` lists the array at each of the `nb + nw` positions, `m` maps each of
+   100  them to its position and nothing else (an entry `k ↦ v` has `v` in range and `l[v]` of code `k`),
+   101  the byte positions `[0, nb)` hold tier-0 names, and a tier 1 sits at a word position right after
+   102  its tier 0. -/
+   103  def layOkB (nb nw : Nat) (l : List TieredArray) (m : NTree) : Bool :=
+   104    l.length == nb + nw &&
+   105    m.all (fun k v => decide (v < nb + nw) && (l[v]?.map TieredArray.code == some k)) &&
+   106    (List.range (nb + nw)).all (fun i => m.find (arrAtD l i).code == some i) &&
+   107    (List.range nb).all (fun i => !(arrAtD l i).hi) &&
+   108    (List.range (nb + nw)).all (fun i => !(arrAtD l i).hi ||
+   109      (decide (nb < i) && arrAtD l (i - 1) == TieredArray.t0 (arrAtD l i).arr))
+   110  
+   111  /-- The number of result registers. -/
+   112  def maxRes : Nat := 6
+   113  
+   114  /-- The layout of the descriptor table at `T`:
+   115  * `[T]` the initial stack pointer (top of the stack region), `[T + 8]` its lower limit;
+   116  * `[T + 16 + 8p]` the base of the array at descriptor position `p < nb + nw` (`Tab.dbase`), then
+   117    `[T + 16 + 8 (nb + nw) + 8p]` its length (`Tab.dlen`), in bytes for a byte position (`p < nb`),
+   118    in words for a word position, then `[T + 16 + 16 (nb + nw) + 8p]` a word position's length in
+   119    32-bit elements (`Tab.dlen32`, twice its length in words: the bound of a 32-bit access);
+   120  * then the constant data `rom` (the byte strings of the program's `ldc` reads), padded to whole
+   121    words;
+   122  * then the result area: results `maxRes, maxRes + 1, …, nres - 1` of a call, one word each (empty
+   123    if `nres ≤ maxRes`);
+   124  * then the global variables `0, …, ng - 1`, one word each;
+   125  * then the arguments of the entry function, one word each.
+   126  
+   127  (`nres` is not part of the table in memory: it says how many results the code passes.) -/
+   128  structure Tab where
+   129    /-- The byte positions `[0, nb)`. -/
+   130    nb : Nat
+   131    /-- The word positions `[nb, nb + nw)`. -/
+   132    nw : Nat
+   133    /-- The array at each position (`Tab.wAt`; a byte array `a` as `↑a`). -/
+   134    arrAt : List TieredArray
+   135    /-- The layout map: `s.code ↦` the position of `s` (`Tab.pos64`, `Tab.pos8`). -/
+   136    lmap : NTree
+   137    /-- The map and the position list agree (`layOkB`). -/
+   138    layOk : layOkB nb nw arrAt lmap = true
+   139    rom : List UInt8 := []
+   140    /-- The number of results in use: the most results any `return` gives or any call reads. The
+   141    first `maxRes` go in registers (`resReg 0`, …), the rest in the table's result area. -/
+   142    nres : Nat := 1
+   143    /-- The number of global variables: global `g` (with `g.id < ng`) is the word at `globOff g`. -/
+   144    ng : Nat := 0
+   145    /-- Minimum lengths (`L.ArrDecl.min`): `(s.code, k)` says that word array `s` has at
+   146    least `k` words in every layout the code runs in (`Layout.Ok.min64`; the entry stubs establish
+   147    it), so a constant index below `k` needs no bounds check (`Tab.min64`). -/
+   148    mins : List (Nat × Nat) := []
+   149    /-- The table-relative array (`L.ArrDecl.atTable`): `(a, c)` says that tier 0 of word array `a`
+   150    starts at `T + c`, past the table and the trampoline's save area, in every layout the code runs in
+   151    (`Layout.Ok.tbl64`; the entry stubs place it there), so the code addresses it from `r15` without
+   152    loading its base. -/
+   153    tbl : Option (ArrId × Nat) := none
+   154    /-- `rom.length`, stored: the offsets past the constant data (`resOff`, `globOff`, `args`) are
+   155    then arithmetic on the table's fields, and the kernel does not count the bytes of a large ROM
+   156    each time it evaluates the code generator (DESIGN.md, "Kernel-checked compiler output"). -/
+   157    romLen : Nat := rom.length
+   158    romLen_eq : romLen = rom.length := by rfl
+   159    deriving Repr, DecidableEq
+   160  
 
-== ConAgua/Compiler/Compile.lean#L169-L181
-   169  /-- The byte arrays a program may name (a byte position), and their positions. -/
-   170  def Tab.dom8 (t : Tab) (a : ArrId) : Bool :=
-   171    match t.lmap.find (TieredArray.t0 a).code with
-   172    | some p => decide (p < t.nb)
-   173    | none => false
-   174  def Tab.pos8 (t : Tab) (a : ArrId) : Nat := (t.lmap.find (TieredArray.t0 a).code).getD 0
-   175  
-   176  /-- The word arrays a program may name (a word position), and their positions. -/
-   177  def Tab.dom64 (t : Tab) (s : TieredArray) : Bool :=
-   178    match t.lmap.find s.code with
-   179    | some p => decide (t.nb ≤ p)
-   180    | none => false
-   181  def Tab.pos64 (t : Tab) (s : TieredArray) : Nat := (t.lmap.find s.code).getD 0
+== ConAgua/Compiler/Compile.lean#L170-L182
+   170  /-- The byte arrays a program may name (a byte position), and their positions. -/
+   171  def Tab.dom8 (t : Tab) (a : ArrId) : Bool :=
+   172    match t.lmap.find (TieredArray.t0 a).code with
+   173    | some p => decide (p < t.nb)
+   174    | none => false
+   175  def Tab.pos8 (t : Tab) (a : ArrId) : Nat := (t.lmap.find (TieredArray.t0 a).code).getD 0
+   176  
+   177  /-- The word arrays a program may name (a word position), and their positions. -/
+   178  def Tab.dom64 (t : Tab) (s : TieredArray) : Bool :=
+   179    match t.lmap.find s.code with
+   180    | some p => decide (t.nb ≤ p)
+   181    | none => false
+   182  def Tab.pos64 (t : Tab) (s : TieredArray) : Nat := (t.lmap.find s.code).getD 0
 
 == ConAgua/Compiler/Step.lean#L11-L19
     11  /-!
@@ -1998,6 +1998,72 @@
     20    let t1 ← IO.monoMsNow
     21    IO.println s!"{out}: {bytes.length} bytes ({romData.length} startup data, {pins.length} variant(s)), {t1 - t0} ms"
     22    return 0
+
+== ConAgua/Compiler/Bce.lean#L234-L258
+   234  /-- The facts after `s`, `none` if it does not end normally. -/
+   235  def postF : Option Facts → Stmt → Option Facts
+   236    | none, _ => none
+   237    | some fa, s =>
+   238    match s with
+   239    | .skip => some fa
+   240    | .set x e => some (fa.set x e)
+   241    | .st8 a i e => some ((fa.addLoads (Expr.loads i ++ Expr.loads e)).addLt (.b a) i)
+   242    | .st64 a i e => some ((fa.addLoads (Expr.loads i ++ Expr.loads e)).addLt (.w a) i)
+   243    | .st64t a t i e =>
+   244      let fa := fa.addLoads (Expr.loads t ++ Expr.loads i ++ Expr.loads e)
+   245      some (match keyT a t with | some k => fa.addLt k i | none => fa)
+   246    | .st32t a t i e =>
+   247      let fa := fa.addLoads (Expr.loads t ++ Expr.loads i ++ Expr.loads e)
+   248      some (match key32 a t with | some k => fa.addLt k i | none => fa)
+   249    | .gset _ e => some (fa.addLoads (Expr.loads e))
+   250    | .seq s t => postF (postF (some fa) s) t
+   251    | .ite c s t => joinF (postF (some (fa.condAll c true)) s) (postF (some (fa.condAll c false)) t)
+   252    | .while c s =>
+   253      let f' := fa.killAll (Stmt.writes s)
+   254      if Stmt.hasBrk s then some f' else some (f'.condAll c false)
+   255    | .brk | .ret _ | .abort _ => none
+   256    | .call xs _ args => some ((fa.addLoads (args.flatMap Expr.loads)).killAll xs)
+   257    | .scan8 x .. => some (fa.kill x)
+   258    | .copy64 .. | .copy8w .. => some fa
+
+== ConAgua/Compiler/Compile.lean#L838-L844
+   838  /-- An access with key `k` and index `i` to an array of minimum length `mn` needs its bounds check:
+   839  the facts do not prove `i` in range (`safeIdx`). -/
+   840  def Ctx.ck (ctx : Ctx) (k : Option AKey) (i : Expr) (mn : Nat) : Bool := !safeIdx ctx.fa k i mn
+   841  
+   842  /-- The bounds check of index register `r` against the length at `ln`, if `ck`. -/
+   843  def chkR (ck : Bool) (r : Reg64) (ln : AddrExpr) : Program :=
+   844    if ck then [i64 (.cmp (.reg (rr r)) (oM ln)), jccL .nc errorL] else []
+
+== ConAgua/Compiler/BcePost.lean#L439-L444
+   439  /-- **Every run of `exec p n` keeps the facts.** -/
+   440  theorem fsound_exec (p : Prog) : ∀ n, FSound fun s σ => (exec p n s).run σ
+   441    | 0 => fun s σ fa r σ' h _ => by
+   442      simp [exec, throw, throwThe, MonadExceptOf.throw, StateT.lift, StateT.run, bind,
+   443        Except.bind] at h
+   444    | n + 1 => fsound_step p (exec p n) (fsound_exec p n)
+
+== ConAgua/Compiler/BceSound.lean#L582-L586
+   582  /-- **The facts at an expression**: they hold in a state `σ0` with `σ`'s memory that agrees with
+   583  `σ` on the locals `e` reads. (`σ` may be a ghost state of the expression code's proof, whose
+   584  locals in clobbered registers changed, `Inv.ghost`; `σ0` is the statement's state.) -/
+   585  def FactsFor (ctx : Ctx) (σ : St) (e : Expr) : Prop :=
+   586    ∃ σ0 : St, FHolds ctx.fa σ0 ∧ σ0.mem = σ.mem ∧ ∀ y, Expr.readsV y e = true → σ0.loc y = σ.loc y
+
+== ConAgua/Compiler/BceSound.lean#L629-L641
+   629  /-- **The check of an access dropped by the code generator** (`Ctx.ck` false) is not needed: the
+   630  index `i` (a part of `e`) is below the array's length `L`, which is at least the minimum `mn` and
+   631  the key's length in the states that agree with `σ` on `e`. -/
+   632  theorem ck_sound {ctx : Ctx} {σ : St} {e i : Expr} (hfa : FactsFor ctx σ e)
+   633      (hsub : ∀ y, Expr.readsV y i = true → Expr.readsV y e = true)
+   634      {k : Option AKey} {mn L : Nat} (hck : ctx.ck k i mn = false) (hmn : mn ≤ L)
+   635      (hk : ∀ σ0 : St, σ0.mem = σ.mem → (∀ y, Expr.readsV y e = true → σ0.loc y = σ.loc y) →
+   636        ∀ key, k = some key → key.len σ0 ≤ L)
+   637      {j : Word} (hj : evalP σ i = .ok j) : j.toNat < L := by
+   638    obtain ⟨σ0, h1, h2, h3⟩ := hfa
+   639    have hs : safeIdx ctx.fa k i mn = true := by simpa [Ctx.ck] using hck
+   640    exact safeIdx_sound hs h1 hmn (hk σ0 h2 h3)
+   641      (by rw [evalP_congr h2 (fun y hy => h3 y (hsub y hy))]; exact hj)
 
 == ConAgua/Final/TwinPooled.lean#L3-L13
      3  /-!
