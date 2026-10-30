@@ -99,7 +99,7 @@ include hG hTab
 theorem sim_tail (t : NTree) (n : Nat) (hFun : FunSim p G t sk n)
     (hProg : ∀ f fd, p.lookup f = some fd → ∃ kf, Code (compileFn G.tab t sk f fd) kf) (s u : Stmt) :
     SimSTail p G sk (stepRun p (exec p n)) (· ≤ n) s u := by
-  intro ctx F k code hT hF htc hc hwf hN htmp σ d Q hI hP hK
+  intro ctx F k code hT hF htc hc hwf hN htmp σ d Q hI hfa hP hK
   obtain ⟨xs, f, args, es, Fw, rfl, rfl, hFw, rfl, hnd, hxl, hnr, hreg, rfl⟩ := tailCode_some htc
   obtain ⟨hFwF, hKt⟩ := hK.tail Fw hFw
   have e := hFwF.symm
@@ -134,7 +134,7 @@ theorem sim_tail (t : NTree) (n : Nat) (hFun : FunSim p G t sk n)
   simp only [burnFuel, List.append_assoc, List.cons_append, List.nil_append] at hc
   refine sim_regArgs hG hTab ctx hT F hF hal (hI.al.tleaf hleaf) args ctx.pool argRegs k hreg (fun r h => argRegs_sub h)
     (by decide) (fun r h => h) (pool_nodup ctx) hc.left hargs
-    (htmp.mono (Nat.le_max_left _ _)) σ d Q hI ?_ ?_
+    (htmp.mono (Nat.le_max_left _ _)) σ d Q hI hfa ?_ ?_
   · intro vs s1 hvs hR1 hI1 hregs
     have hvl := evalArgsP_length hvs
     have hc2 := hc.right

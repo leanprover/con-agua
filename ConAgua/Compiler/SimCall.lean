@@ -444,7 +444,7 @@ theorem sim_regArgs (ctx : Ctx) (hT : ctx.tab = G.tab) (F : Nat) (hF : 8 * F + 8
     ∀ (args : List Expr) (fr rs : List Reg64) (k : Nat), args.length ≤ rs.length → (∀ r ∈ rs, r ∈ allocRegs) →
     rs.Nodup → (∀ r ∈ fr, r ∈ ctx.pool) → fr.Nodup → Code (compileRegArgs ctx fr rs args) k →
     args.all (Expr.wf ctx.nl G.tab) = true → TmpFit ctx.nl F 0 (tempsEs args) →
-    ∀ (σ : St) (s : MachineData) (Q : MachineState → Prop), Inv G ctx F σ s →
+    ∀ (σ : St) (s : MachineData) (Q : MachineState → Prop), Inv G ctx F σ s → FHolds ctx.fa σ →
     (∀ vs s', evalArgsP σ args = .ok vs → RPost ctx.nl F (fun r => r ∈ rs ∨ r ∈ fr) s s' → Inv G ctx F σ s' →
       (∀ i (h : i < vs.length), s'.regs.get64 (rs.getD i .rax) = vs[i].toBitVec) →
       Ev Q s' (at_ (k + (compileRegArgs ctx fr rs args).length))) →
@@ -454,11 +454,11 @@ theorem sim_regArgs (ctx : Ctx) (hT : ctx.tab = G.tab) (F : Nat) (hF : 8 * F + 8
   intro args
   induction args with
   | nil =>
-    intro fr rs k _ _ _ _ _ _ _ _ σ s Q hI hok _
+    intro fr rs k _ _ _ _ _ _ _ _ σ s Q hI _ hok _
     exact ev_congr (hok [] s rfl (RPost.refl _ _ _ _) hI (fun i h => absurd h (by simp)))
       (by cases rs <;> simp [compileRegArgs])
   | cons e es ih =>
-    intro fr rs k hlen hrs hnd hfr hfn hc hwf htmp σ s Q hI hok herr
+    intro fr rs k hlen hrs hnd hfr hfn hc hwf htmp σ s Q hI hfa hok herr
     cases rs with
     | nil => simp at hlen
     | cons r rs =>
@@ -473,13 +473,13 @@ theorem sim_regArgs (ctx : Ctx) (hT : ctx.tab = G.tab) (F : Nat) (hF : 8 * F + 8
     have hW : ∀ r', (r' = r ∨ r' ∈ fr.filter (· != r)) → r' ∈ r :: rs ∨ r' ∈ fr := fun r' h =>
       h.elim (fun h => .inl (h ▸ List.mem_cons_self)) (fun h => .inr (mem_filter_sub r' h))
     refine sim_valInto hG hTab ctx hT F hF hr (fun h => absurd htn h) hfr' hfn' (by simp) e k hc.left hwf.1
-      (htmp.mono (Nat.le_max_left _ _)) σ s Q hI ?_
+      (htmp.mono (Nat.le_max_left _ _)) σ s Q hI (FactsFor.of hfa e) ?_
       (fun s' he hR => herr s' (by obtain ⟨x, hx⟩ := he; exact ⟨x, by simp [evalArgsP, hx]; rfl⟩)
         (hR.mono hW))
     intro v s1 hv hr1 hR1 hI1
     rw [hal, St.setReg_nil] at hI1
     refine ih (fr.filter (· != r)) rs _ (by simp at hlen; omega) (fun r' h => hrs r' (List.mem_cons_of_mem _ h))
-      (List.nodup_cons.mp hnd).2 hfr' hfn' hc.right hwf.2 (htmp.mono (Nat.le_max_right _ _)) σ s1 Q hI1 ?_ ?_
+      (List.nodup_cons.mp hnd).2 hfr' hfn' hc.right hwf.2 (htmp.mono (Nat.le_max_right _ _)) σ s1 Q hI1 hfa ?_ ?_
     · intro vs s2 hvs hR2 hI2 hregs
       refine ev_congr (hok (v :: vs) s2 (by simp [evalArgsP, hv, hvs]; rfl)
         ((hR1.trans hR2).mono fun r' h => h.elim (hW r') (fun h => h.elim
@@ -495,6 +495,19 @@ theorem sim_regArgs (ctx : Ctx) (hT : ctx.tab = G.tab) (F : Nat) (hF : 8 * F + 8
         ((hR1.trans hR2).mono fun r' h => h.elim (hW r') (fun h => h.elim
           (fun h => .inl (List.mem_cons_of_mem _ h)) (fun h => .inr (mem_filter_sub r' h))))
 
+omit [Host] hG hTab in
+/-- The facts at `e` after a write of a register `e` does not read. -/
+theorem FactsFor.setReg {ctx : Ctx} {σ : St} {e : Expr} (h : FactsFor ctx σ e) {r : Reg64}
+    (hr : Expr.readsReg ctx.alloc r e = false) (v : Word) : FactsFor ctx (σ.setReg ctx.alloc r v) e := by
+  obtain ⟨σ0, h1, h2, h3⟩ := h
+  refine ⟨σ0, h1, h2, fun y hy => ?_⟩
+  rw [h3 y hy]
+  simp only [St.setReg]
+  split
+  · rename_i hl
+    rw [readsReg_of_readsV hl hy] at hr; cases hr
+  · rfl
+
 /-- Results `i, i + 1, …` of a `return` straight into their registers (`retRegs`), with scratch
 `fr` and ghost states: the values do not read the registers written before them (`retSafe`). -/
 theorem sim_retRegs (ctx : Ctx) (hT : ctx.tab = G.tab) (F : Nat) (hF : 8 * F + 8 < maxOff)
@@ -504,8 +517,9 @@ theorem sim_retRegs (ctx : Ctx) (hT : ctx.tab = G.tab) (F : Nat) (hF : 8 * F + 8
     Code (retRegs ctx fr i rest) k → rest.all (Expr.wf ctx.nl G.tab) = true → TmpFit ctx.nl F 0 (tempsEs rest) →
     1 ≤ i → i + rest.length ≤ maxRes → retSafe ctx.alloc e0 i rest = true →
     Inv G ctx F σ s → σ.mem = σ0.mem → evalP σ e0 = evalP σ0 e0 → (∀ e ∈ rest, evalP σ e = evalP σ0 e) →
+    (∀ e ∈ e0 :: rest, FactsFor ctx σ e) →
     (∀ vs σ' s', evalArgsP σ0 rest = .ok vs → Inv G ctx F σ' s' → σ'.mem = σ0.mem →
-      evalP σ' e0 = evalP σ0 e0 →
+      evalP σ' e0 = evalP σ0 e0 → FactsFor ctx σ' e0 →
       RPost ctx.nl F (fun r => (∃ j, i ≤ j ∧ j < i + rest.length ∧ r = resReg j) ∨ r ∈ fr) s s' →
       (∀ j (h : j < vs.length), s'.regs.get64 (resReg (i + j)) = vs[j].toBitVec) →
       Ev Q s' (at_ (k + (retRegs ctx fr i rest).length))) →
@@ -516,11 +530,12 @@ theorem sim_retRegs (ctx : Ctx) (hT : ctx.tab = G.tab) (F : Nat) (hF : 8 * F + 8
   intro rest
   induction rest with
   | nil =>
-    intro fr i k σ s _ _ _ _ _ _ _ _ hI hm he0 _ hok _
-    exact ev_congr (hok [] σ s rfl hI hm he0 (RPost.refl _ _ _ _) (fun j h => absurd h (by simp)))
+    intro fr i k σ s _ _ _ _ _ _ _ _ hI hm he0 _ hfa hok _
+    exact ev_congr (hok [] σ s rfl hI hm he0 (hfa e0 List.mem_cons_self) (RPost.refl _ _ _ _)
+      (fun j h => absurd h (by simp)))
       (by simp [retRegs])
   | cons e rest ih =>
-    intro fr i k σ s hfr hfn hc hwf htmp hi1 hin hsafe hI hm he0 hes hok herr
+    intro fr i k σ s hfr hfn hc hwf htmp hi1 hin hsafe hI hm he0 hes hfa hok herr
     simp only [List.all_cons, Bool.and_eq_true] at hwf
     simp only [tempsEs] at htmp
     simp only [retRegs] at hc hok
@@ -535,7 +550,8 @@ theorem sim_retRegs (ctx : Ctx) (hT : ctx.tab = G.tab) (F : Nat) (hF : 8 * F + 8
         (∃ j, i ≤ j ∧ j < i + (rest.length + 1) ∧ r' = resReg j) ∨ r' ∈ fr := fun r' h =>
       h.elim (fun h => .inl ⟨i, Nat.le_refl _, by omega, h⟩) (fun h => .inr (mem_filter_sub r' h))
     refine sim_valInto hG hTab ctx hT F hF hr (fun _ => by unfold resReg; split <;> decide) hfr' hfn' (by simp)
-      e k hc.left hwf.1 (htmp.mono (Nat.le_max_left _ _)) σ s Q hI ?_
+      e k hc.left hwf.1 (htmp.mono (Nat.le_max_left _ _)) σ s Q hI
+      (hfa e (List.mem_cons_of_mem _ List.mem_cons_self)) ?_
       (fun s' he hR => herr s' (by obtain ⟨x, hx⟩ := he; rw [hev] at hx; exact ⟨x, by simp [evalArgsP, hx]; rfl⟩)
         (hR.mono fun r' h => by simpa using hW r' h))
     intro v s1 hv hr1 hR1 hI1
@@ -549,9 +565,18 @@ theorem sim_retRegs (ctx : Ctx) (hT : ctx.tab = G.tab) (F : Nat) (hF : 8 * F + 8
       (htmp.mono (Nat.le_max_right _ _)) (by omega) (by omega) hsafe.2 hI1 hm
       (by rw [evalP_setReg _ (hnr e0 List.mem_cons_self), he0])
       (fun e' h => by rw [evalP_setReg _ (hnr e' (List.mem_cons_of_mem _ h)), hes e' (List.mem_cons_of_mem _ h)])
+      (fun e' h => by
+        have h' : e' ∈ e0 :: e :: rest := by
+          rcases List.mem_cons.mp h with rfl | h
+          · exact List.mem_cons_self
+          · exact List.mem_cons_of_mem _ (List.mem_cons_of_mem _ h)
+        exact (hfa e' h').setReg (hnr e' (by
+          rcases List.mem_cons.mp h with rfl | h
+          · exact List.mem_cons_self
+          · exact List.mem_cons_of_mem _ h)) v)
       ?_ ?_
-    · intro vs σ' s2 hvs hI2 hm2 he2 hR2 hregs
-      refine ev_congr (hok (v :: vs) σ' s2 (by simp [evalArgsP, hv0, hvs]; rfl) hI2 hm2 he2
+    · intro vs σ' s2 hvs hI2 hm2 he2 hf2 hR2 hregs
+      refine ev_congr (hok (v :: vs) σ' s2 (by simp [evalArgsP, hv0, hvs]; rfl) hI2 hm2 he2 hf2
         ((hR1.trans hR2).mono fun r' h => by
           simpa using h.elim (hW r') (hW2 r')) ?_) ?_
       · intro j hj
@@ -591,7 +616,7 @@ theorem sim_valRax (ctx : Ctx) (hT : ctx.tab = G.tab) (F : Nat) (hF : 8 * F + 8 
     {fr : List Reg64} (hfr : ∀ r' ∈ fr, r' ∈ ctx.pool) (hfn : fr.Nodup) (hrf : Reg64.rax ∉ fr)
     (e : Expr) (k : Nat) (hc : Code (valRax ctx fr e) k)
     (hwf : Expr.wf ctx.nl G.tab e = true) (htmp : TmpFit ctx.nl F 0 (tempsE e))
-    (σ : St) (s : MachineData) (Q : MachineState → Prop) (hI : Inv G ctx F σ s)
+    (σ : St) (s : MachineData) (Q : MachineState → Prop) (hI : Inv G ctx F σ s) (hfa : FactsFor ctx σ e)
     (hok : ∀ v s', evalP σ e = .ok v → s'.regs.rax = v → RPost ctx.nl F (· ∈ fr) s s' →
       Inv G ctx F σ s' → Ev Q s' (at_ (k + (valRax ctx fr e).length)))
     (herr : ∀ s', (∃ x, evalP σ e = .error x) → RPost ctx.nl F (· ∈ fr) s s' → Ev Q s' (label errorL)) :
@@ -616,7 +641,7 @@ theorem sim_valRax (ctx : Ctx) (hT : ctx.tab = G.tab) (F : Nat) (hF : 8 * F + 8 
       rcases List.mem_cons.mp h with rfl | h
       · exact hpool
       · exact hfr r' h
-    refine sim_gen hG hT hTab hF e .rax fr code k hg hc hok' hwf σ s Q hI ?_ ?_
+    refine sim_gen hG hT hTab hF e .rax fr code k hg hc hok' hwf σ s Q hI hfa ?_ ?_
     · intro v s1 hv hr1 hX1
       have hI1 := hI.ghost hX1 hok'.dr
       rw [St.ghost_free (fun r' h => pool_free hI.al (hW r' h))] at hI1
@@ -699,7 +724,7 @@ theorem rdW_of_pres {t x : Nat} {d d' : DataMem} (hP : Pres G t d d') (hlo : G.l
 
 theorem sim_ret (K : Stmt → M Sig) (P : Nat → Prop) (es : List Expr) :
     SimS p G sk (stepRun p K) P (.ret es) := by
-  intro ctx F path k hT hF hc hwf hN htmp σ d Q hI hP hK
+  intro ctx F path k hT hF hc hwf hN htmp σ d Q hI hfa hP hK
   simp only [Stmt.wf, Bool.and_eq_true, decide_eq_true_eq] at hwf
   obtain ⟨hargs, hlen⟩ := hwf
   simp only [compileS] at hc hK
@@ -734,13 +759,14 @@ theorem sim_ret (K : Stmt → M Sig) (P : Nat → Prop) (es : List Expr) :
         retFree_sub rest ctx.pool 1 r (mem_filter_sub r h)
       refine sim_retRegs hG hTab ctx hT F hF σ e0 Q rest ctx.pool 1 k σ d (fun r h => h) (pool_nodup ctx)
         hc.left hargs.2
-        (htmp.mono (Nat.le_max_right _ _)) (Nat.le_refl _) (by omega) hsafe hI rfl rfl (fun _ _ => rfl) ?_ ?_
-      · intro vs σ' s1 hvs hI1 hm1 he1 hR1 hregs
+        (htmp.mono (Nat.le_max_right _ _)) (Nat.le_refl _) (by omega) hsafe hI rfl rfl (fun _ _ => rfl)
+        (fun e _ => FactsFor.of hfa e) ?_ ?_
+      · intro vs σ' s1 hvs hI1 hm1 he1 hf1 hR1 hregs
         have hvl := evalArgsP_length hvs
         have hc2 := hc.right
         refine sim_valRax hG hTab ctx hT F hF (fun r h => (hfr0 r h).1)
           (List.Nodup.sublist (List.filter_sublist.trans (retFree_sublist rest ctx.pool 1)) (pool_nodup ctx))
-          (by simp) e0 _ hc2.left hargs.1 (htmp.mono (Nat.le_max_left _ _)) σ' s1 Q hI1 ?_ ?_
+          (by simp) e0 _ hc2.left hargs.1 (htmp.mono (Nat.le_max_left _ _)) σ' s1 Q hI1 hf1 ?_ ?_
         · intro v0 s2 hv0 hrax hE2 hI2
           rw [he1] at hv0
           have hc3 := hc2.right
@@ -973,7 +999,7 @@ theorem sim_call (t : NTree) (n : Nat) (hFun : FunSim p G t sk n)
     (hProg : ∀ f fd, p.lookup f = some fd → ∃ kf, Code (compileFn G.tab t sk f fd) kf)
     (xs : List Var) (f : FnName) (args : List Expr) :
     SimS p G sk (stepRun p (exec p n)) (· ≤ n) (.call xs f args) := by
-  intro ctx F path k hT hF hc hwf hN htmp σ d Q hI hP hK
+  intro ctx F path k hT hF hc hwf hN htmp σ d Q hI hfa hP hK
   simp only [Stmt.wf, Bool.and_eq_true, decide_eq_true_eq] at hwf
   obtain ⟨⟨⟨hxs, hxl⟩, hargs⟩, hfd⟩ := hwf
   cases hlk : p.lookup f with
@@ -1000,7 +1026,7 @@ theorem sim_call (t : NTree) (n : Nat) (hFun : FunSim p G t sk n)
   · simp only [hreg, ite_true] at hc hK htmp
     refine sim_regArgs hG hTab ctx hT F hF hal htn args ctx.pool argRegs k hreg (fun r h => argRegs_sub h) (by decide)
       (fun r h => h) (pool_nodup ctx) hc.left hargs
-      htmp σ d Q hI ?_ (fun s1 he hR1 => herr s1 _ he hR1)
+      htmp σ d Q hI hfa ?_ (fun s1 he hR1 => herr s1 _ he hR1)
     intro vs s1 hvs hR1 hI1 hregs
     have hvl := evalArgsP_length hvs
     exact sim_callTail hG hTab p t n hFun hProg xs f args fd hlk ctx F hT hF hal htn hxs hxl hN σ d s1 Q _ vs hvs
