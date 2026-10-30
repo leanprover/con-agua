@@ -17,6 +17,9 @@ namespace L
 theorem forIdx_toNat {j : Nat} {n : Word} (h : j ≤ n.toNat) : (UInt64.ofNat j).toNat = j :=
   UInt64.toNat_ofNat_of_lt' (by have := n.toNat_lt; simp only [UInt64.size]; omega)
 
+/-- The start `j = 0`. -/
+theorem forIdx_zero : (UInt64.ofNat 0 : Word) = 0 := rfl
+
 /-- The guard `j < n`. -/
 theorem forIdx_lt {j : Nat} {n : Word} (h : j ≤ n.toNat) : UInt64.ofNat j < n ↔ j < n.toNat := by
   rw [UInt64.lt_iff_toNat_lt, forIdx_toNat h]
@@ -25,6 +28,11 @@ theorem forIdx_lt {j : Nat} {n : Word} (h : j ≤ n.toNat) : UInt64.ofNat j < n 
 theorem forIdx_exit {j : Nat} {n : Word} (h : j ≤ n.toNat) (hn : ¬ UInt64.ofNat j < n) :
     j = n.toNat := by
   rw [forIdx_lt h] at hn; omega
+
+/-- The count left, `n - j`. -/
+theorem forIdx_sub {j : Nat} {n : Word} (h : j ≤ n.toNat) : (n - UInt64.ofNat j).toNat = n.toNat - j := by
+  rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by rw [forIdx_toNat h]; exact h)),
+    forIdx_toNat h]
 
 /-- The step `j += 1`. -/
 theorem forIdx_succ (j : Nat) : UInt64.ofNat j + 1 = UInt64.ofNat (j + 1) := by
