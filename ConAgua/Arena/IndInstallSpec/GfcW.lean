@@ -6,6 +6,7 @@ import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.Arena.LdRd
 import ConAgua.L.ModelGen
+import ConAgua.L.ForIdx
 
 /-!
 # GfcW
@@ -145,7 +146,7 @@ variable {p : Prog} (P : CftProg p) (dn : NIdx → Option ConLeche.Name) (vis : 
 include P
 
 omit P in
-/-- **The loop refines `ms.mapM (classFormerTy fe cvTas)`** from cursor `j`. -/
+/-- **The loop refines `ms.mapM (classFormerTy fe cvTas)`** from index `j`. -/
 theorem gfcW_ok (s0 : Mem) (co cl mo ml q : Word) (cvTas : List IConstantVal) (ms : List TargetMajor)
     (hcv : PSlR decCVp cvTas co cl s0) (hms : PSlR decTM ms mo ml s0) (hq : q.toNat = iwTop s0)
     (J : Mem → AState → Prop)
@@ -156,11 +157,11 @@ theorem gfcW_ok (s0 : Mem) (co cl mo ml q : Word) (cvTas : List IConstantVal) (m
       callW p k "class_former_ty" [vis, co, cl, mp] m = some (r, m1) →
       ∃ x a1, (ConRon.Arena.classFormerTy fe cvTas M).run a = .ok (x, a1) ∧ StageR dn vis fe m1 a1 ∧
         IWGrow m m1 ∧ decW0E m1 r x ∧ J m1 a1)
-    (k : Nat) : ∀ (m m' : Mem) (a : AState) (j : Word) (acc : List EIdx),
-    gfcW.loop1 p k m vis co cl mo ml q j = some m' →
-    StageR dn vis fe m a → J m a → IWGrow s0 m → q.toNat + ml.toNat ≤ iwTop m → j ≤ ml →
-    decHL m q.toNat j.toNat = some acc →
-    ∃ rest a', ((ms.drop j.toNat).mapM (ConRon.Arena.classFormerTy fe cvTas)).run a = .ok (rest, a') ∧
+    (k : Nat) : ∀ (m m' : Mem) (a : AState) (j : Nat) (acc : List EIdx),
+    gfcW.loop1 p k m vis co cl mo ml q (UInt64.ofNat j) = some m' →
+    StageR dn vis fe m a → J m a → IWGrow s0 m → q.toNat + ml.toNat ≤ iwTop m → j ≤ ml.toNat →
+    decHL m q.toNat j = some acc →
+    ∃ rest a', ((ms.drop j).mapM (ConRon.Arena.classFormerTy fe cvTas)).run a = .ok (rest, a') ∧
       StageR dn vis fe m' a' ∧ IWGrow s0 m' ∧ q.toNat + ml.toNat ≤ iwTop m' ∧
       decHL m' q.toNat ml.toNat = some (acc ++ rest) ∧ J m' a' := by
   induction k with
@@ -168,50 +169,48 @@ theorem gfcW_ok (s0 : Mem) (co cl mo ml q : Word) (cvTas : List IConstantVal) (m
   | succ k ih =>
   intro m m' a j acc h hS hJ hg ht hjl hacc
   have hlen : ms.length = ml.toNat := decPL_length _ hms.dec
-  have hjl' : j.toNat ≤ ml.toNat := UInt64.le_iff_toNat_le.mp hjl
-  by_cases hj : ¬ j < ml
+  have hjT := forIdx_toNat hjl
+  by_cases hj : ¬ UInt64.ofNat j < ml
   · rw [gfcW.loop1.arm2 (hc1 := hj)] at h
     cases h
-    have hj' : j.toNat = ml.toNat := by
-      have : ¬ j.toNat < ml.toNat := fun e => hj (UInt64.lt_iff_toNat_lt.mpr e)
-      omega
-    refine ⟨[], a, ?_, hS, hg, ht, by rw [← hj']; simpa using hacc, hJ⟩
+    obtain rfl := forIdx_exit hjl hj
+    refine ⟨[], a, ?_, hS, hg, ht, by simpa using hacc, hJ⟩
     rw [List.drop_eq_nil_of_le (by omega)]; rfl
   simp only [Decidable.not_not] at hj
   rw [gfcW.loop1.arm1 (hc1 := hj)] at h
-  have hjn : j.toNat < ml.toNat := UInt64.lt_iff_toNat_lt.mp hj
+  have hjn : j < ml.toNat := (forIdx_lt hjl).mp hj
   obtain ⟨hI1, hE1, hsz, hEs, -⟩ := hS.iw
   have hT : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hI1 hsz
   have hgt : iwTop s0 ≤ iwTop m := hg.iw
   -- class `j`
   have hmsm := hms.grow (fun q => decTM_mono q) hg
-  obtain ⟨v, hv, hdv⟩ := decPL_getH (truncM m) hmsm.1 j.toNat hjn
+  obtain ⟨v, hv, hdv⟩ := decPL_getH (truncM m) hmsm.1 j hjn
   obtain ⟨-, hvm⟩ := rec2IwN_trunc hv
-  have hrv : (rdW (m.arr64 IW) (mo + j)).toNat = v := rd_iwN hvm (by have := hmsm.2; omega)
-  have hM : DecB (fun m' => decTM m' (rdW (m.arr64 IW) (mo + j)).toNat) m (ms[j.toNat]'(by omega)) := by
+  have hrv : (rdW (m.arr64 IW) (mo + UInt64.ofNat j)).toNat = v :=
+    rd_iwN (by rw [hjT]; exact hvm) (by have := hmsm.2; omega)
+  have hM : DecB (fun m' => decTM m' (rdW (m.arr64 IW) (mo + UInt64.ofNat j)).toNat) m
+      (ms[j]'(by omega)) := by
     show decTM (truncM m) _ = _; rw [hrv]; exact hdv
   have hcvm := hcv.grow (fun q => OMono.decCVp q) hg
   have hdcv : decPL m (decCVp m) co.toNat cl.toNat = some cvTas :=
     hcvm.1.get (OMono.decPL (fun q => OMono.decCVp q) _ _)
-  rcases c1 : callW p k "class_former_ty" [vis, co, cl, rdW (m.arr64 IW) (mo + j)] m with _ | ⟨r1, m1⟩
+  rcases c1 : callW p k "class_former_ty" [vis, co, cl, rdW (m.arr64 IW) (mo + UInt64.ofNat j)] m with
+    _ | ⟨r1, m1⟩
   · rw [c1] at h; simp [gfcW.k_class_former_ty] at h
-  rw [c1, gfcW.k_class_former_ty.arm1] at h
+  rw [c1, gfcW.k_class_former_ty.arm1, forIdx_succ] at h
   obtain ⟨x, a1, hrun1, hS1, hg1, ⟨hr1, he1⟩, hJ1⟩ := hcft k m m1 a _ _ r1 hJ hS (List.getElem_mem _) hM hdcv
     (by have := hcvm.2; omega) c1
   obtain ⟨hS1', hI1', hsz1, -, -⟩ := hS1.iw
-  have hacc1 : decHL m1 q.toNat j.toNat = some acc := by
-    rw [decHL_grow hg1 (by omega)]; exact hacc
-  have hqj : q.toNat + j.toNat < (m1.arr64 IW).size := by have := hg1.iw; omega
-  have hdec := decHL_write m1 q j (r1.headD 0) acc hr1 hsz1 hqj hacc1
-  have hj1 : (j + 1).toNat = j.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
-  have hqj' : (q + j).toNat = q.toNat + j.toNat := by rw [UInt64.toNat_add]; simp; omega
+  have hacc1 : decHL m1 q.toNat (UInt64.ofNat j).toNat = some acc := by
+    rw [hjT, decHL_grow hg1 (by omega)]; exact hacc
+  have hqj : q.toNat + (UInt64.ofNat j).toNat < (m1.arr64 IW).size := by have := hg1.iw; omega
+  have hdec := decHL_write m1 q _ (r1.headD 0) acc hr1 hsz1 hqj hacc1
   obtain ⟨rest, a', hrun, hS', hg', ht', hdec', hJ'⟩ := ih _ m' a1 (j + 1) (acc ++ [x]) h (hS1.set_iw _ _)
     (hJiw _ _ _ hJ1 ((MemFrame.set64 _ IW (by decide) _ _).mono (by simp) (by simp)) (hS1.set_iw _ _))
-    ((hg.trans hg1).set_iw _ _ (by rw [hqj']; omega)) (by rw [cnsTop_set]; have := hg1.iw; omega)
-    (UInt64.le_iff_toNat_le.mpr (by rw [hj1]; omega)) (by rw [hj1, hdec, he1])
+    ((hg.trans hg1).set_iw _ _ (by rw [forIdx_add (by omega)]; omega))
+    (by rw [cnsTop_set]; have := hg1.iw; omega) hjn (by rw [hjT] at hdec; rw [hdec, he1])
   refine ⟨x :: rest, a', ?_, hS', hg', ht', by simpa using hdec', hJ'⟩
   rw [List.drop_eq_getElem_cons (by omega), List.mapM_cons]
-  rw [hj1] at hrun
   simp only [StateT.run_bind, hrun1, except_ok_bind, hrun]
   rfl
 
@@ -257,8 +256,8 @@ theorem genRecCheckFormerTysC_refinesJ {p : Prog} (P : CftProg p)
   obtain ⟨hS0, hg0, hq0, ht0⟩ := allocW_stage hw0 hS
   obtain ⟨rest, a', run, hSF, hgF, htF, hdF, hJF⟩ := gfcW_ok dn vis fe s₀.mem cO cL mO mL (r0.headD 0) cvTas ms
     hcv hms hq0 J hJiw hcft (n + 1) s0.mem mF a₀ 0 [] c1 hS0 (hJiw _ _ _ hJ (allocW_iwFrame hw0) hS0) hg0 (by omega)
-    UInt64.zero_le (by simp [decHL, hslice?])
-  simp only [UInt64.toNat_zero, List.drop_zero, List.nil_append] at run hdF
+    (Nat.zero_le _) (by simp [decHL, hslice?])
+  simp only [List.drop_zero, List.nil_append] at run hdF
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ run
   rw [← hmF]
   refine ⟨hl, hok, by rw [hst]; exact hSF, hgF, by simpa [hres] using hdF, ?_, by rw [hst]; exact hJF⟩
