@@ -7,6 +7,7 @@ import ConAgua.Arena.IndSumSpec.ConsSumCtors
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr
+import ConAgua.L.WordOff
 
 /-!
 # IcaW
@@ -837,9 +838,6 @@ theorem iirW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv
     have := decCV_type hcvE; intro e; simp [hd?, e] at this
   have hcq : cv.toNat + 4 ≤ erTop m := by
     obtain ⟨v, hv⟩ := Option.ne_none_iff_exists'.mp h3; have := erecP_lt hv; omega
-  have c1 : (cv + 1).toNat = cv.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
-  have c2 : (cv + 2).toNat = cv.toNat + 2 := by rw [UInt64.toNat_add]; simp; omega
-  have c3 : (cv + 3).toNat = cv.toNat + 3 := by rw [UInt64.toNat_add]; simp; omega
   have hw : ∀ i, i < 4 → (erecP M)[q1.toNat + 1 + i]? = (erecP M)[cv.toNat + i]? := by
     intro i hi
     rw [show q1.toNat + 1 + i = q1.toNat + (i + 1) by omega, hP (i + 1) (by omega),
@@ -849,8 +847,8 @@ theorem iirW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv
     all_goals first
       | omega
       | (simp only [Nat.add_zero, Nat.zero_add] at hlt ⊢
-         simp only [iirWs, List.getElem?_cons_succ, List.getElem?_cons_zero, rdW, c1, c2, c3,
-          Array.getElem?_eq_getElem hlt, Option.getD_some])
+         simp (disch := omega) only [iirWs, List.getElem?_cons_succ, List.getElem?_cons_zero, rdW,
+          off_toNat, Array.getElem?_eq_getElem hlt, Option.getD_some])
   have hcv' : decCV (erecP M) (q1.toNat + 1) = some cvv := by
     rw [decCV_shift (by simpa using hw 0 (by decide)) (by simpa using hw 1 (by decide))
       (by simpa [Nat.add_assoc] using hw 2 (by decide)) (by simpa [Nat.add_assoc] using hw 3 (by decide))]
@@ -877,9 +875,8 @@ theorem iirW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv
     simp [nat?, this, iirWs]
   refine ⟨hS', hg, ?_, ?_⟩
   · simp only [decCI, Option.bind_eq_bind, n0, Option.bind_some, hcv', hcaps, Option.pure_def]
-  · have hq1 : (q1 + 1).toNat = q1.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
-    have := hget 1 (by decide)
-    rw [rdW_of_get? hq1.symm this]
+  · have := hget 1 (by decide)
+    rw [rdW_of_get? (off_toNat (by omega)).symm this]
     have := (partsCVName (IWGrow.refl m) hcv cv.toNat_lt).1
     simpa [iirWs] using this
 
