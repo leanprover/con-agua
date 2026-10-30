@@ -29,8 +29,8 @@ the count of the handle's tier in the store `c`. -/
 def viewOK (m : Mem) (h : Word) (c : TRec) : Prop :=
   ¬ (tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0) ∧ idxW h < tcnt m c (tierW h)
 
-/-- `min (x + 1) 32767` without wrapping (branch-free in L:
-`(x + 1) * u64(x < 32767) + 32767 * u64(32767 <= x)`), con-leche's `satSucc`. -/
+/-- `min (x + 1) 32767` without wrapping, con-leche's `satSucc`. The L readers (`der_b`'s `bvar` and
+`fvar` arms, `der_bv`'s `bvar` arm) branch: `if x < 32767 { return x + 1 }; return 32767`. -/
 def satSuccW (x : Word) : Word :=
   (x + 1) * (if x < 32767 then 1 else 0) + 32767 * (if 32767 ≤ x then 1 else 0)
 

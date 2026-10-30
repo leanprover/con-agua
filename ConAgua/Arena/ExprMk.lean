@@ -131,14 +131,16 @@ def derB : FunDecl := lfn (h) locals (g, t, i, x) {
   if g == 0 {
     if BVAR⟨t⟩.count <= i { return (0, 0, 0) };
     x := BVAR⟨t, i⟩.i;
-    return ((x + 1) * u64(x < 32767) + 32767 * u64(32767 <= x), 0, 0)
+    if x < 32767 { return (x + 1, 0, 0) };
+    return (32767, 0, 0)
   };
   if g == 3 { if CONST⟨t⟩.count <= i { return (0, 0, 0) }; return (0, 0, CONST_LP⟨t, i⟩) };
   if g == 5 { if LAM⟨t⟩.count <= i { return (0, 0, 0) }; x := LADER⟨t⟩.u32[i]; return (x & 32767, (x >> 15) & 32767, x >> 30) };
   if g == 1 {
     if FVAR⟨t⟩.count <= i { return (0, 0, 0) };
     x := FVAR⟨t, i⟩.i;
-    return (0, (x + 1) * u64(x < 32767) + 32767 * u64(32767 <= x), FVAR_LP⟨t, i⟩)
+    if x < 32767 { return (0, x + 1, FVAR_LP⟨t, i⟩) };
+    return (0, 32767, FVAR_LP⟨t, i⟩)
   };
   if g == 6 { if FORALL⟨t⟩.count <= i { return (0, 0, 0) }; x := FADER⟨t⟩.u32[i]; return (x & 32767, (x >> 15) & 32767, x >> 30) };
   if g == 2 { if SORT⟨t⟩.count <= i { return (0, 0, 0) }; return (0, 0, SORT_LP⟨t, i⟩) };
@@ -150,7 +152,7 @@ def derB : FunDecl := lfn (h) locals (g, t, i, x) {
 /-- con-ron: none — `der_b`'s first result alone (`derBW`), for the expression walks that read only
 the bvar range (`il_go`, `ilg_go`, `il_bvar`, `inst_go`, `lift_go`, `bvar_b`): one result
 register, and the `const`, `fvar` and `sort` arms fall through to the final `0` without a read.
-The `bvar` arm saturates by a branch, not by `u64` products. -/
+The `bvar` arm saturates by a branch, as `der_b`'s does. -/
 def derBv : FunDecl := lfn (h) locals (g, t, i, x) {
   g := h >> 28;
   t := ⟦h⟧.tier;
