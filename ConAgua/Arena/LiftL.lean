@@ -28,7 +28,7 @@ namespace L.Arena
 @[l_impl ConRon.Arena.liftLooseBVarsGo]
 def liftGo : FunDecl := lfn (h, c, k, fu) locals (x, g, t, i, r) {
   if fu == 0 { abort };
-  x := call der_b(h);
+  x := call der_bv(h);
   if x < 32767 && x <= c { return h };
   g := h >> 28;
   t := ⟦h⟧.tier;
@@ -148,7 +148,7 @@ def liftProj : FunDecl := lfn (h, c, k, fu) locals (fd, j, d, t, i, nm, ix, e, x
 
 /-- The functions of `LiftProg`. -/
 def liftProgFns : Prog :=
-  [("der_b", derB), ("bvar_find", bvarFind), ("bvar_push", bvarPush), ("intern_bvar", internBVar),
+  [("der_b", derB), ("der_bv", derBv), ("bvar_find", bvarFind), ("bvar_push", bvarPush), ("intern_bvar", internBVar),
    ("lf_find", memoFindG lfSch), ("lf_put", memoPutG lfSch), ("lf_clear", memoClearG lfSch),
    ("lift_go", liftGo), ("lift_app", liftApp), ("lift_lam", liftLam), ("lift_forall", liftForall),
    ("lift_let", liftLet), ("lift_proj", liftProj), ("mk_app", mkApp), ("app_find", appFind),
@@ -173,7 +173,7 @@ def liftEntry : FunDecl := lfn (h, k, c, f) locals (r, u) {
 
 /-- The walk, the memo, the `mk_*` and the stores they call, as one program. -/
 def liftProg : Prog :=
-  [("der_b", derB), ("lf_find", memoFindG lfSch), ("lf_put", memoPutG lfSch),
+  [("der_b", derB), ("der_bv", derBv), ("lf_find", memoFindG lfSch), ("lf_put", memoPutG lfSch),
     ("lf_clear", memoClearG lfSch), ("lift_go", liftGo), ("lift_app", liftApp),
     ("lift_lam", liftLam), ("lift_forall", liftForall), ("lift_let", liftLet),
     ("lift_proj", liftProj), ("lift_entry", liftEntry), ("mk_app", mkApp), ("mk_lam", mkLam),

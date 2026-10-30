@@ -55,7 +55,7 @@ namespace L.Arena
 l_model liftGo_spec (p : Prog) (hp : LiftProg p)
   fns [(hp.get "lift_go") ↦ liftW, (hp.get "lift_app") ↦ liftAppW, (hp.get "lift_lam") ↦ liftLamW, (hp.get "lift_forall") ↦ liftForallW,
     (hp.get "lift_let") ↦ liftLetW, (hp.get "lift_proj") ↦ liftProjW]
-  specs [derB_spec p (hp.get "der_b") n, internBVar_spec p (hp.get "bvar_find") (hp.get "bvar_push") (hp.get "intern_bvar") n,
+  specs [derBv_spec p (hp.get "der_bv") n, internBVar_spec p (hp.get "bvar_find") (hp.get "bvar_push") (hp.get "intern_bvar") n,
     memoFindG_spec lfSch p _ (hp.get "lf_find") n, memoPutG_spec lfSch p _ (hp.get "lf_put") n,
     mkApp_spec p (hp.get "der_b") (hp.get "app_find") (hp.get "app_push") (hp.get "intern_app") (hp.get "mk_app") n,
     mkLam_spec p (hp.get "der_b") (hp.get "lam_find") (hp.get "lam_push") (hp.get "intern_lam") (hp.get "mk_lam") n,

@@ -145,6 +145,29 @@ def derB : FunDecl := lfn (h) locals (g, t, i, x) {
   return (0, 0, 0)
 }
 
+/-- con-ron: none — `der_b`'s first result alone (`derBW`), for the expression walks that read only
+the bvar range (`il_go`, `ilg_go`, `il_bvar`, `inst_go`, `lift_go`, `bvar_b`): one result
+register, and the `const`, `fvar` and `sort` arms fall through to the final `0` without a read.
+The `bvar` arm saturates by a branch, not by `u64` products. -/
+def derBv : FunDecl := lfn (h) locals (g, t, i, x) {
+  g := h >> 28;
+  t := ⟦h⟧.tier;
+  i := ⟦h⟧.idx;
+  if t != 0 && CTL.u64[1] == 0 { return 0 };
+  if g == 4 { if APP⟨t⟩.count <= i { return 0 }; x := ADER⟨t⟩.u32[i]; return x & 32767 };
+  if g == 0 {
+    if BVAR⟨t⟩.count <= i { return 0 };
+    x := BVAR⟨t, i⟩.i;
+    if x < 32767 { return x + 1 };
+    return 32767
+  };
+  if g == 5 { if LAM⟨t⟩.count <= i { return 0 }; x := LADER⟨t⟩.u32[i]; return x & 32767 };
+  if g == 6 { if FORALL⟨t⟩.count <= i { return 0 }; x := FADER⟨t⟩.u32[i]; return x & 32767 };
+  if g == 9 { if PROJ⟨t⟩.count <= i { return 0 }; x := PJDER⟨t⟩.u32[i]; return x & 32767 };
+  if g == 7 { if LET⟨t⟩.count <= i { return 0 }; x := LEDER⟨t⟩.u32[i]; return x & 32767 };
+  return 0
+}
+
 /-- `der_b` after its three decodes (`g`, `t`, `i`): the dispatch. -/
 def derTailS : Stmt := seqDrop 3 derB.body
 
@@ -181,6 +204,39 @@ theorem derB_spec (p : Prog) (hp : p.lookup "der_b" = some derB) (n : Nat) (s₀
     rw [← seqTake_drop 3 derB.body, show seqDrop 3 derB.body = derTailS from rfl]
     simp only [derB, seqTake]
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, evalE_tierE, evalE_idxE, derTail_spec p n]
+    all_goals subst_vars
+    all_goals (try simp only [DerLocs, St.setLoc_loc, St.setLoc_mem, BinOp.eval, Nat.reduceEqDiff,
+      Locals.init_cons_zero, reduceIte] at *)
+    all_goals grind [lang_grind, arena_grind, LocEq]
+
+/-- `der_bv` after its three decodes: the dispatch. -/
+def derBvTailS : Stmt := seqDrop 3 derBv.body
+
+theorem derBvTail_spec (p : Prog) (n : Nat) (s₁ : St) (hL : DerLocs s₁) :
+    ⦃fun s => s = s₁⦄ step p (exec p n) derBvTailS
+    ⦃fun r s' => s'.mem = s₁.mem ∧ r.retVal.headD 0 = derBW s₁.mem (s₁.loc 0); ⊤⦄ := by
+  obtain ⟨h1, h2, h3⟩ := hL
+  simp only [derBvTailS, derBv, seqDrop]
+  vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rd_spec, ld32_pcol_spec, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
+  all_goals subst_vars
+  all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, Cmp.eval, BinOp.eval,
+      reduceIte, beq_iff_eq, decide_eq_true_eq, bne_iff_ne, ne_eq, h1, h2, h3] at *)
+  all_goals grind [lang_grind, arena_grind, derBW, tierW, idxW, satSuccW, Sig.retVal, Sig.retOr]
+
+/-- **`der_bv`**: `der_b`'s first result (`derB_spec`'s first conjunct), with `derB_spec`'s
+structure: the three decodes, then the dispatch (`derBvTail_spec`). -/
+theorem derBv_spec (p : Prog) (hp : p.lookup "der_bv" = some derBv) (n : Nat) (s₀ : St) (h : Word) :
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p n) "der_bv" [h]
+    ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧ r.headD 0 = derBW s₀.mem h; ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn]
+  cases n with
+  | zero => simp only [derBv]; vcgen [exec] <;> grind
+  | succ n =>
+    rw [← seqTake_drop 3 derBv.body, show seqDrop 3 derBv.body = derBvTailS from rfl]
+    simp only [derBv, seqTake]
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, evalE_tierE, evalE_idxE, derBvTail_spec p n]
     all_goals subst_vars
     all_goals (try simp only [DerLocs, St.setLoc_loc, St.setLoc_mem, BinOp.eval, Nat.reduceEqDiff,
       Locals.init_cons_zero, reduceIte] at *)

@@ -63,7 +63,7 @@ attribute [arena_grind =] lbbK_some
 /-- con-ron: ConRon/Arena/ExprOps.lean:1565-1572 ConRon.Arena.bvarB -/
 @[l_impl ConRon.Arena.bvarB]
 def bvarBL : FunDecl := lfn (f, e) locals (x, r) {
-  x := call der_b(e);
+  x := call der_bv(e);
   if x == 32767 { r := call bb_memo(e, f); return r };
   return x
 }
@@ -77,7 +77,7 @@ def lbbFastL : FunDecl := lfn (f, k, e) locals (x) {
 
 /-- The two reads, `der_b` and the bvar-bound walk, as one program. -/
 def bvbProg : Prog :=
-  [("bvar_b", bvarBL), ("loose_bvars_bounded_fast", lbbFastL), ("der_b", derB)] ++ walkProg
+  [("bvar_b", bvarBL), ("loose_bvars_bounded_fast", lbbFastL), ("der_b", derB), ("der_bv", derBv)] ++ walkProg
 
 /-- What the specs need of the program: `bvbProg`'s functions. -/
 def BvbProg (p : Prog) : Prop := ProgHas p bvbProg
@@ -111,7 +111,7 @@ theorem bvarBL_spec (n : Nat) (s₀ : St) (f h : Word) :
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, derB_spec p (hp.get "der_b") n,
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, derBv_spec p (hp.get "der_bv") n,
         bbN_spec p hp n] <;>
       finish
 

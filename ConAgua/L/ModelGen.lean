@@ -60,7 +60,7 @@ does this by hand), structural on the fuel if it has only models.
 ```
 l_model liftGo_spec (p : Prog) (hp : LiftProg p)
   fns [(hp.get "lift_go") ↦ liftW, (hp.get "lift_app") ↦ liftAppW]
-  specs [derB_spec p (hp.get "der_b") n, memoFindG_spec lfSch p _ (hp.get "lf_find") n]
+  specs [derBv_spec p (hp.get "der_bv") n, memoFindG_spec lfSch p _ (hp.get "lf_find") n]
   grind [arena_grind] fold [tierW, idxW] finish [tierW, idxW] gen 20 heartbeats 1000000
 ```
 

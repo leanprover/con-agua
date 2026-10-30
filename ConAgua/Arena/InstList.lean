@@ -608,7 +608,7 @@ grind_pattern [arena_grind] ilgProjW_miss => ilgProjW (n + 1) m h d o l fu
 @[l_impl ConRon.Arena.instantiateList]
 def ilGo : FunDecl := lfn (h, d, o, l, fu) locals (x, g, r) {
   if fu == 0 { abort };
-  x := call der_b(h);
+  x := call der_bv(h);
   if x < 32767 && x <= d { return h };
   g := h >> 28;
   if g == 4 { r := call il_app(h, d, o, l, fu - 1); return r };
@@ -694,7 +694,7 @@ def ilBVar : FunDecl := lfn (h, d, o, l, fu) locals (t, i, j, q, v, x, r) {
   q := j - d;
   if q < l {
     v := ILSPN.u64[o + (l - 1 - q)];
-    x := call der_b(v);
+    x := call der_bv(v);
     if x < 32767 && x <= d { return v };
     r := call il_go(v, d, o + (l - q), q, fu);
     return r
@@ -709,7 +709,7 @@ def ilBVar : FunDecl := lfn (h, d, o, l, fu) locals (t, i, j, q, v, x, r) {
 @[l_impl ConRon.Arena.instantiateListGo]
 def ilgGo : FunDecl := lfn (h, d, o, l, fu) locals (x, g, r) {
   if fu == 0 { abort };
-  x := call der_b(h);
+  x := call der_bv(h);
   if x < 32767 && x <= d { return h };
   g := h >> 28;
   if g == 4 { r := call ilg_app(h, d, o, l, fu - 1); return r };
@@ -878,7 +878,7 @@ theorem ilGo_step (n : Nat) (ih : IlArmSpec p n) : IlGoSpec p (n + 1) := by
   rw [invoke_eq _ (hp.get "il_go")]
   simp only [callFn, ilGo]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, derB_spec p (hp.get "der_b") n,
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, derBv_spec p (hp.get "der_bv") n,
       ihA, ihL, ihF, ihE, ihP, ihB] <;>
     finish
 
@@ -894,7 +894,7 @@ theorem ilgGo_step (n : Nat) (ih : IlgArmSpec p n) (ihl : IlGoSpec p n) : IlgGoS
   rw [invoke_eq _ (hp.get "ilg_go")]
   simp only [callFn, ilgGo]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, derB_spec p (hp.get "der_b") n,
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, derBv_spec p (hp.get "der_bv") n,
       ihA, ihL, ihF, ihE, ihP, ihl] <;>
     finish
 

@@ -44,7 +44,7 @@ namespace L.Arena
 @[l_impl ConRon.Arena.instantiate1Go]
 def instGo : FunDecl := lfn (h, d, v, fu) locals (x, g, t, i, r) {
   if fu == 0 { abort };
-  x := call der_b(h);
+  x := call der_bv(h);
   if x < 32767 && x <= d { return h };
   g := h >> 28;
   if g == 4 { r := call inst_app(h, d, v, fu - 1); return r };
@@ -168,7 +168,7 @@ structure InstProg (p : Prog) : Prop where
 l_model instGo_spec (p : Prog) (hp : InstProg p)
   fns [hp.go ↦ instW, hp.app ↦ instAppW, hp.lam ↦ instLamW, hp.fa ↦ instForallW,
     hp.le ↦ instLetW, hp.pj ↦ instProjW]
-  specs [derB_spec p (hp.base.get "der_b") n, internBVar_spec p (hp.base.get "bvar_find") (hp.base.get "bvar_push") (hp.base.get "intern_bvar") n,
+  specs [derBv_spec p (hp.base.get "der_bv") n, internBVar_spec p (hp.base.get "bvar_find") (hp.base.get "bvar_push") (hp.base.get "intern_bvar") n,
     memoFindG_spec imSch p _ hp.iff n, memoPutG_spec imSch p _ hp.ifp n,
     mkApp_spec p (hp.base.get "der_b") (hp.base.get "app_find") (hp.base.get "app_push") (hp.base.get "intern_app") (hp.base.get "mk_app") n,
     mkLam_spec p (hp.base.get "der_b") (hp.base.get "lam_find") (hp.base.get "lam_push") (hp.base.get "intern_lam") (hp.base.get "mk_lam") n,
