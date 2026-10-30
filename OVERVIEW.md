@@ -344,18 +344,18 @@ the workers stay below it.
 few pending groups), and `--jobs` costs con-agua nothing there.
 
 <!-- perf-overview: begin others -->
-Master `54018587`, 2026-10-28, `scripts/perf-overview.py`: the default run, 3 interleaved rounds, the median wall time and the largest peak RSS; load 2–4 on 96 cores:
+Master `75c5fabb`, 2026-10-30, `scripts/perf-overview.py`: the default run, 3 interleaved rounds, the median wall time and the largest peak RSS; load 1–2 on 96 cores:
 
 | input | con-agua | con-ron `--jobs=1` |
 |---|---|---|
-| app-lam | 9.73 s, 1920 MB | 5.34 s, 2761 MB |
-| beta-ladder | 2.38 s, 590 MB | 1.46 s, 882 MB |
-| let-ladder | 0.98 s, 320 MB | 0.70 s, 633 MB |
-| eager_open | 2.66 s, 555 MB | 2.04 s, 1020 MB |
-| c04a | 2.35 s, 391 MB | 1.80 s, 556 MB |
-| c05b | 1.35 s, 656 MB | 0.73 s, 208 MB |
-| c03d | 0.27 s, 136 MB | 0.22 s, 250 MB |
-| init-prelude | 0.11 s, 30 MB | 0.10 s, 59 MB |
+| app-lam | 7.78 s, 1767 MB | 5.40 s, 2762 MB |
+| beta-ladder | 1.86 s, 543 MB | 1.46 s, 962 MB |
+| let-ladder | 0.76 s, 293 MB | 0.69 s, 633 MB |
+| eager_open | 2.21 s, 513 MB | 2.07 s, 1021 MB |
+| c04a | 2.03 s, 370 MB | 1.80 s, 555 MB |
+| c05b | 1.28 s, 645 MB | 0.73 s, 208 MB |
+| c03d | 0.23 s, 128 MB | 0.22 s, 250 MB |
+| init-prelude | 0.09 s, 29 MB | 0.11 s, 60 MB |
 <!-- perf-overview: end others -->
 
 ## 4. Architecture
