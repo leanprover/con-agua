@@ -14,7 +14,8 @@ in step. This file is the walk's step rules, one per pair of shapes, both outcom
   `of_cls0`, `liftE_some`, `bind_right`; `RefE.bindLift` is the same for a callee without a step
   lemma, its run and the rest proved at the call site;
 * `RefE.bindE` / `RefE.lastE`: a unified callee (`K x`) by its own `RefE`, then the rest / as the
-  twin's last step;
+  twin's last step; `RefE.bindRun`: a unified callee read through its call's run
+  (`K (callE …)`, its model spec and its `RefE`);
 * `RefE.onlySim`: a lifted callee the twin has no step for (an L helper: `sl_eq`);
 * the guards of the model (`if c then .error e else rest`): `RefE.guard` against the twin's
   `unless … do fail` (its do-elaboration `if b = true then jp () else fail ce >>= jp`),
@@ -32,6 +33,7 @@ converted proof.
 -/
 
 open ConRon.Arena
+open Std.WP
 
 namespace L.Arena
 
@@ -43,12 +45,13 @@ caller's invariant package) runs the twin's first step; the model's `none` is cl
 theorem RefE.bindSim {K : Except Err (ρ × Mem) → Except Err α}
     (hK : ∀ e, K (.error e) = .error e) {c : Option (ρ × Mem)} {op : AM γ} {g : γ → AM β}
     {Q : ρ → γ → Mem → AState → Prop} (h1 : Sim c op a Q)
-    (h2 : ∀ r x m₁ a₁, op.run a = .ok (x, a₁) → Q r x m₁ a₁ → RefE G (K (.ok (r, m₁))) (g x) a₁ R) :
+    (h2 : ∀ r x m₁ a₁, c = some (r, m₁) → op.run a = .ok (x, a₁) → Q r x m₁ a₁ →
+      RefE G (K (.ok (r, m₁))) (g x) a₁ R) :
     RefE G (K (liftE c)) (op >>= g) a R := by
   rcases hc : c with _ | ⟨r, m₁⟩
   · rw [liftE_none, hK]; exact RefE.of_cls0 (by simp)
   obtain ⟨x, a₁, hr, hQ⟩ := h1 r m₁ hc
-  exact RefE.bind_right hr (h2 r x m₁ a₁ hr hQ)
+  exact RefE.bind_right hr (h2 r x m₁ a₁ hc hr hQ)
 
 /-- **A lifted callee without a step lemma** (one call site): `bindSim` with the rest as the
 callee's post; the call site proves the twin's run and the rest from the model's result. -/
@@ -56,7 +59,25 @@ theorem RefE.bindLift {K : Except Err (ρ × Mem) → Except Err α}
     (hK : ∀ e, K (.error e) = .error e) {c : Option (ρ × Mem)} {op : AM γ} {g : γ → AM β}
     (h : ∀ r m₁, c = some (r, m₁) → ∃ x a₁, op.run a = .ok (x, a₁) ∧ RefE G (K (.ok (r, m₁))) (g x) a₁ R) :
     RefE G (K (liftE c)) (op >>= g) a R :=
-  RefE.bindSim (Q := fun r x m₁ a₁ => RefE G (K (.ok (r, m₁))) (g x) a₁ R) hK h fun _ _ _ _ _ h => h
+  RefE.bindSim (Q := fun r x m₁ a₁ => RefE G (K (.ok (r, m₁))) (g x) a₁ R) hK h fun _ _ _ _ _ _ h => h
+
+/-- **A unified callee read through its call's run** (`callE` and the callee's model spec), then
+the rest, both outcomes: the ok half by `RefE.run_ok`, the error half by `RefE.run_err` under the
+callee's `G'` and its spec's `Gs`. -/
+theorem RefE.bindRun {p : Prog} {n : Nat} {f : FnName} {args : List Word} {s₀ : St}
+    {K : Except Err (List Word × Mem) → Except Err α} (hK : ∀ e, K (.error e) = .error e)
+    {G' Gs : Prop} {fx : Except Err ρ} {V : List Word → St → ρ} {Q : List Word → St → Prop}
+    {op : AM γ} {g : γ → AM β} {S : ρ → γ → AState → Prop}
+    (hs : ⦃fun s => s = s₀⦄ invoke p (exec p n) f args
+      ⦃fun r s' => Q r s' ∧ fx = .ok (V r s'); fun ε => Gs → ε.cls ≠ 0 → fx = .error ε⦄)
+    (hGs : G → Gs) (hG' : G → G') (h1 : RefE G' fx op a S)
+    (h2 : ∀ r s' y a₁, callE p n f args s₀.mem = .ok (r, s'.mem) → Q r s' → op.run a = .ok (y, a₁) →
+      S (V r s') y a₁ → RefE G (K (.ok (r, s'.mem))) (g y) a₁ R) :
+    RefE G (K (callE p n f args s₀.mem)) (op >>= g) a R := by
+  rcases c : callE p n f args s₀.mem with e | ⟨r, m'⟩
+  · rw [hK]; exact RefE.bind_left fun hG => RefE.run_err hs (hGs hG) (hG' hG) h1 c
+  obtain ⟨s', rfl, hQ, y, a₁, hr, hS⟩ := RefE.run_ok hs h1 c
+  exact RefE.bind_right hr (h2 r s' y a₁ c hQ hr hS)
 
 /-- **A lifted callee the twin has no step for** (an L helper): its model fact `Q`, the twin
 unchanged. -/

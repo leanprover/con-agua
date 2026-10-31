@@ -209,9 +209,12 @@ guards that were `rw`s. A first version with `grind` there was +60 ms.
 ## 6. Migration recipe (lane refwalk1)
 
 Landed: the kit `ConAgua/Arena/RefWalk.lean`, the pilot's sum family (`IndT/SumSteps.lean`,
-`ctl_ref`/`ctor_ref` in `IndT/Sum4.lean`) and the `target_major_of` family (`IndT/RecGenTmf.lean`:
-`tmt_ref`, `tmo_ref`, `tmc_ref`, `tmf_ref`; its callers `clm_ref` in `IndT/RecGen19.lean` and
-`cbc_ref` in `IndT/RecGen21.lean`). Statements unchanged. The pilot's `walk_k` macro is gone (PLAN.md:
+`ctl_ref`/`ctor_ref` in `IndT/Sum4.lean`) and the whole `RecGen` family in two packages: the
+`target_major_of` functions (`TmAt`: `IndT/RecGenTmf.lean`'s `tmt_ref`, `tmo_ref`, `tmc_ref`,
+`tmf_ref`; `clm_ref` in `RecGen19.lean`, `cbc_ref` in `RecGen21.lean`) and the class functions
+(`RcAt`, `RecGen23.lean`: `cnaLoop_ref`; `RecGen24.lean`: `cfaLoop_ref` and the step `tma_step`;
+`RecGen27.lean`: `cxo_ref`, `cosLoop_ref`, `ccsLoop_ref`; `RecGen28.lean`: `cns_ref`). Statements
+unchanged. The pilot's `walk_k` macro is gone (PLAN.md:
 no custom tactics); write `dsimp only [K]`. Follow this section verbatim for the next family.
 
 ### 6.1 The shape of a converted theorem
@@ -223,8 +226,9 @@ theorem f_ref … (hC : StageC dn vis fe env m a) (hA : AbsOK m) … :
   | zero => rw [fE.eq_1]; exact RefE.of_cls0 Err.cls_outOfFuel
   | succ n =>
   rw [fE.arm1]; unfold twinF                     -- or `rw [twinF_eq]` (an `rfl` lemma)
-  -- a lifted callee WITH a step lemma (≥ 2 call sites under this package)
-  refine RefE.bindSim (fun _ => rfl) (g_step hP k0 …) fun r1 x1 m1 a1 _ ⟨k1, hx1⟩ => ?_
+  -- a lifted callee WITH a step lemma (≥ 2 call sites under this package); the `_`s are the
+  -- call's equation (`callW … = some (r1, m1)`, for `callW_keepW`) and the twin's run
+  refine RefE.bindSim (fun _ => rfl) (g_step hP k0 …) fun r1 x1 m1 a1 _ _ ⟨k1, hx1⟩ => ?_
   dsimp only [fE.k_g]
   -- a lifted callee WITHOUT a step lemma: its plumbing stays at the call site
   refine RefE.bindLift (fun _ => rfl) fun r2 m2 h2 => ?_
@@ -240,6 +244,10 @@ theorem f_ref … (hC : StageC dn vis fe env m a) (hA : AbsOK m) … :
   refine RefE.bindE (fun _ => rfl) (fun hV => hV.nv) (u_ref … k2.stage k2.abs …)
     fun ⟨r3, m3⟩ y a3 hrun3 hR3 => ?_
   dsimp only [fE.k_u]
+  -- a unified callee read through its call (`K (callE …)`): its model spec, its `RefE`
+  refine RefE.bindRun (s₀ := ⟨m3, Locals.init []⟩) (fun _ => rfl) (uE_spec p … ⟨m3, Locals.init []⟩ …)
+    (fun hG => hG.nv) id (u2_ref …) fun r4 s4 z a4 h4 _ hrun4 ⟨hS4, hg4, …⟩ => ?_
+  dsimp only [fE.k_u2] at hS4 hg4 ⊢
   …
   exact RefE.ret rfl ⟨…, (k1.trans k2).grow.trans hR3.grow, …⟩
 ```
@@ -252,6 +260,7 @@ Which rule for which pair of shapes:
 | `K (liftE c)`, one call site | `op >>= g` | `RefE.bindLift`, then `⟨_, _, hrun, ?_⟩` |
 | `K (liftE c)` | no step (an L helper, `sl_find`, `sl_cons`, a record writer) | `RefE.onlySim (fun _ => rfl) (fun _ _ h => h)` |
 | `K x`, a unified callee | `op >>= g` / `op` last | `RefE.bindE` / `RefE.lastE` |
+| `K (callE p n f args s₀.mem)`, a unified callee through its spec | `op >>= g` | `RefE.bindRun` (pass `s₀`) |
 | `if c then .error e else rest` | `if b = true then jp () else fail ce >>= jp` (`unless`) | `RefE.guard` |
 | same | `if b = true then T else fail ce` / `if b = true then fail ce else T` | `RefE.guardIf` / `RefE.guardThen` |
 | same | `unwrapOr o ce >>= g` | `RefE.guardOpt` |
@@ -273,10 +282,12 @@ then threads one `kᵢ`; the final post takes `(k1.trans k2).grow`, `kᵢ.pos`, 
 Count the call sites of each lifted callee under the same package (grep the family's files for
 `"callee"`). Two or more: a step `g_step (hk : FamAt … m₀ a₀ m a) … : Sim (callW p n "g" args m)
 twinG a (fun r x m' a' => FamAt … m a m' a' ∧ decoded facts)`, proved once by the call site's
-plumbing. One: `bindLift` with the plumbing inline (5–8 lines). In the `target_major_of` family
-no lifted callee has two sites under `TmAt`, so it has no steps; `lvlEqC_simC` (already a `Sim`)
-went through `bindLift` too, because the rest needs the call's equation (`PosMR` from the run's
-frame), which `bindSim` does not hand over.
+plumbing (`tma_step` in `RecGen24.lean`: `cfaLoop_ref` and `cxo_ref`; a twin argument that is a
+`Nat` the caller has as `c.toNat` goes in as `(ht : c.toNat = t)`). One: `bindLift` with the
+plumbing inline (5–8 lines). In the `target_major_of` family no lifted callee has two sites under
+`TmAt`, so it has no steps. Over the whole `RecGen` family only `target_major_at` has two sites
+under one package (`RcAt`); refgen §4's "1.8 sites per callee" holds here too, so expect a family
+to need zero to two steps.
 
 ### 6.4 Pitfalls
 
@@ -297,11 +308,21 @@ frame), which `bindSim` does not hand over.
   (`(r.headD 0 != 0) = b`) at no measurable cost here. No `simp_all`.
 * `RefE.bindE`'s second argument is `id` when the callee's `G` is the caller's, `fun hV => hV.nv`
   from `VerdictCtx` to `closedNV`.
+* **`RefE.bindRun` infers `s₀` from `callE … s₀.mem` as the state of the goal**, not the spec's
+  `⟨m, Locals.init []⟩`; pass `(s₀ := ⟨m, Locals.init []⟩)`. A twin argument the caller rewrote
+  (`rw [hnpT] at h`) is rewritten in the callee's `RefE` before the rule (`rw [hnpT] at hR3`).
+* **A post with pair projections** (`(r, s'.mem).1`, a model value `⟨b, m2⟩.2`) after
+  `bindE`/`bindRun` needs `dsimp only at h…` before `omega` (`cnaLoop_ref`, `ccsLoop_ref`).
+* **`obtain ⟨rfl, …⟩` on a twin run's `s' = s₀`** eliminates the earlier state name, which
+  later lines still use; write `obtain ⟨e, …⟩ := …; subst a1` (the later name).
+* **A continuation decided by a `cases` of the callee's decoded result** (`rcases ox with _ | …`):
+  `rw [K.abort1 (hc1 := hd)]` / `rw [K.arm1 (hc1 := by …)]` with the named hypothesis, no
+  argument list.
 
 ### 6.5 Numbers (refwalk1)
 
 Lines per theorem (`reflen.py`) and code lines per file (`ncl.py`), against master 9948b019;
-elaboration `lake env lean` on the file, median of 3 interleaved runs, load ~15:
+elaboration `lake env lean` on the file, median of 3 interleaved runs (load 15–30):
 
 | theorem | before | after |
 |---|---:|---:|
@@ -310,18 +331,46 @@ elaboration `lake env lean` on the file, median of 3 interleaved runs, load ~15:
 | `tmo_ref` | 168 | 127 |
 | `tmt_ref` | 106 | 79 |
 | `clm_ref` | 161 | 131 |
-| `cbc_ref` | 174 | 143 |
-| **sum** | 776 | 618 (−20 %) |
+| `cbc_ref` | 174 | 135 |
+| `cnaLoop_ref` | 141 | 119 |
+| `cfaLoop_ref` | 226 | 192 |
+| `cxo_ref` | 303 | 241 |
+| `cosLoop_ref` | 124 | 113 |
+| `ccsLoop_ref` | 159 | 147 |
+| `cns_ref` | 254 | 241 |
+| the four wrappers (`cna_ref`, `cfa_ref`, `cos_ref`, `ccs_ref`) | 149 | 149 |
+| **`RecGen` family** | 2132 | 1812 (**−15 %**) |
 
 | file (code lines) | before | after | wall before → after | max RSS |
 |---|---:|---:|---:|---:|
 | `IndT/Sum4.lean` | 655 | 312 | 6.45 → 5.94 s | 2.94 → 2.94 GB |
 | `IndT/SumSteps.lean` (new) | — | 229 | | |
 | `IndT/RecGenTmf.lean` (with `TmAt`, 38 lines) | 510 | 437 | 1.61 → 1.57 s | 2.75 → 2.74 GB |
-| `IndT/RecGen19.lean` | 222 | 193 | 1.58 → 1.49 s | 2.72 → 2.72 GB |
-| `IndT/RecGen21.lean` | 243 | 213 | 2.19 → 2.35 s | 2.79 → 2.79 GB |
-| `RefWalk.lean` (new, shared) | — | 114 | | |
+| `IndT/RecGen19.lean` | 222 | 192 | 1.58 → 1.49 s | 2.72 → 2.72 GB |
+| `IndT/RecGen21.lean` | 243 | 204 | 2.07 → 2.00 s | 2.80 → 2.79 GB |
+| `IndT/RecGen23.lean` (with `RcAt`, 33 lines) | 238 | 238 | 2.65 → 2.52 s | 2.83 → 2.83 GB |
+| `IndT/RecGen24.lean` (with `tma_step`, 17 lines) | 335 | 319 | 3.35 → 3.44 s | 2.93 → 2.92 GB |
+| `IndT/RecGen27.lean` | 895 | 810 | 2.47 → 2.40 s | 2.92 → 2.92 GB |
+| `IndT/RecGen28.lean` | 280 | 268 | 3.47 → 3.20 s | 3.03 → 3.03 GB |
+| `RefWalk.lean` (new, shared) | — | 130 | | |
 
-The `target_major_of` family: 975 → 843 code lines (**−13.5 %**, the package included), time
-unchanged (these files elaborate in well under a second past their imports). The sum family:
-655 → 541 (−17 %, refgen §3).
+The `RecGen` family: 2723 → 2468 code lines (**−9.4 %** with its two packages and its step), time
+and memory unchanged (each file elaborates in 1–3 s past its imports). The sum family: 655 → 541
+(−17 %, refgen §3). So the `RefE` theorems lose 15–20 % and a converted file 9–17 %, the low end
+where the plumbing is mostly unified callees and loops (`cns_ref`, the class loops), the high end
+where it is lifted callees with guards (`tmo_ref`, `cxo_ref`, `ctl_ref`).
+
+### 6.6 Next families
+
+By `reflen.py` lines (master after this lane), lifted-call density first:
+
+* **`IndT/Install*` (1, 3, 4, 6, 7: 11 theorems, ~1.0 k lines)**: lifted callees with `StageC`
+  plumbing and `liftE_none` arms (14 `rcases … callW`); one package; `fvar_type_d` (Install1, two
+  sites) and `open_pis_at_fvars_f` / `strip_pis` (shared with the sum steps) are step candidates.
+  Expect −15 %, 2–3 h.
+* **`IndT/Sum1–3` (6 theorems, ~700 lines)**: `SumAt` and the pilot's steps exist (`opf` 3 further
+  sites, `strip` 2, `ic` 2); the cheapest next landing. −15 to −20 %, 1–2 h.
+* **`IndT/Positivity`, `PosCrest`, `Tail`, `Pass`, `Block`, `CheckIndDecl` (~1.5 k lines)**: mostly
+  unified callees and guards; `bindE`/`bindRun` and the guard rules only. −10 %, 2–3 h.
+* **`Verdict/IndB*` and the declaration arms**: not looked at; check `reflen.py` and the share of
+  `rcases … callW` first.

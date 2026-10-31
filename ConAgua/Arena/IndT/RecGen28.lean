@@ -3,6 +3,7 @@ import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.Arena.IndT.RecGen28Models
+import ConAgua.Arena.RefWalk
 
 /-!
 # `classes_nfs`' loop refinement
@@ -127,31 +128,18 @@ theorem cns_ref (hq : qr.toNat = iwTop mb) (hms : PSlR decTM ms mo ml mb) (htbl 
     (hbs.grow hg) hlH (by rw [decHL_grow hg hftb]; exact hft) (by have := hg.iw; omega) hpfS hdsS hctB hctb
     (htbl.grow (fun q => decNCN_mono q) hg) hP hsh hftP hpfvsP (by rw [hlD]; exact hlvls) hdsP hctorsP
     htblP hformer hscp
-  cases c1 : callE p k "target_major_nfs" [vis, q, fto, ftl,
-    (rdW (m.arr64 IW) (UInt64.ofNat p0 + 11)), (rdW (m.arr64 IW) (UInt64.ofNat p0 + 12)),
-    (rdW (m.arr64 IW) (UInt64.ofNat p0 + 1)), (rdW (m.arr64 IW) (UInt64.ofNat p0 + 2)),
-    (rdW (m.arr64 IW) (UInt64.ofNat p0 + 3)), (rdW (m.arr64 IW) (UInt64.ofNat p0 + 6)),
-    (rdW (m.arr64 IW) (UInt64.ofNat p0 + 7)), tblo, tbll] m with
-  | error e1 =>
-    rw [cnsEK1_err]
-    refine RefE.bind_left fun hG => ?_
-    have := RefE.run_err hsT hG.nv hG hT c1
-    rwa [hlD] at this
-  | ok q1 =>
-  obtain ⟨r1, m1⟩ := q1
+  rw [hlD] at hT
+  refine RefE.bindRun (s₀ := ⟨m, Locals.init []⟩) (fun _ => rfl) hsT (fun hG => hG.nv) id hT
+    fun r1 s1 es a1 c1 _ run1 hR1 => ?_
   rw [cnsEK1_ok]
-  obtain ⟨s1, hs1, -, es, a1, run1, hR1⟩ := RefE.run_ok hsT hT c1
-  subst hs1
   obtain ⟨hes, hC1, hg1, hP1, hA1, hptrs⟩ := hR1
   obtain ⟨hfr, pse, hpse, hpseb⟩ := hptrs mb tps (by rw [decNL_grow hg htbl.bound]; exact htps) htpb
   dsimp only at hes hC1 hg1 hP1 hA1 hfr hpse
-  rw [hlD] at run1
   obtain ⟨c1, -⟩ := ConRon.Bridge.Inductives.targetMajorNfs_spec fe (ConRon.Bridge.CoreSpec.of_core rfl)
     henv bs pP formerTys _ formerTysP _ _ _ _ _ _ _ hformer hscp tbl tblP a a1 es hC.check
     ⟨hsh, hftP, hpfvsP, hlvls, hdsP, hctorsP, htblP⟩ run1
   have hS1 := hC1.stage
   -- `iw_alloc(13)`
-  refine RefE.bind_right run1 ?_
   cases c2 : callW p k "iw_alloc" [13] s1.mem with
   | none => rw [cnsEK2_none]; exact RefE.of_cls0 (by simp)
   | some q2 =>
