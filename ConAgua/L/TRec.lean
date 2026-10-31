@@ -12,8 +12,8 @@ records of `w` words, and the node count of each tier in a control word. Code ou
 library reaches them only through the accessors below, written in L as
 
 * `R⟨t, i⟩.f`: field `f` of node `i` of tier `t` (`R⟨t, i⟩` for a one-word column);
-* `R⟦h⟧.f`, `R⟦h⟧`: the same for the node a handle word `h` names (tier bit 27, index the low 27
-  bits);
+* `R⟦h⟧.f`, `R⟦h⟧`: the same for the node a handle word `h` names (tier bit 31, index
+  `idxE`, or `idxAE` for `APP`, below);
 * `R⟨t⟩.count`: the node count of tier `t`;
 * `R⟨t, i⟩.f := e`: a field store (the store library's pushes only).
 
@@ -73,10 +73,10 @@ without `j * 1` and `+ 0` (as the address expression `adE` computes it). -/
   if R.hi = 0 then e else if f = 0 then .bin .and e (.const 4294967295)
   else if f = R.hi then .bin .shr e (.const 32) else e
 
-/-- The tier expression a load passes: a handle's tier bit `(h >> 27) & 1` (`tierE h`) as
-`h >> 27`, since the tiered access masks the tier with `1` itself. -/
+/-- The tier expression a load passes: a handle's tier bit `(h >> 31) & 1` (`tierE h`) as
+`h >> 31`, since the tiered access masks the tier with `1` itself. -/
 @[expose] def TRec.tierX : Expr → Expr
-  | .bin .and (.bin .shr h (.const 27)) (.const 1) => .bin .shr h (.const 27)
+  | .bin .and (.bin .shr h (.const 31)) (.const 1) => .bin .shr h (.const 31)
   | t => t
 
 /-- Is field `f` one half of word `0` (a packed record's field `0` or `hi`)? -/
@@ -98,10 +98,39 @@ word: unpacked fields only). -/
 /-- `R⟨t⟩.count`: the node count of tier `t`. -/
 @[expose] def TRec.cntE (R : TRec) (t : Expr) : Expr := .ld64 TRec.ctl (.bin .add (.const R.ca) t)
 
-/-- The tier of a handle word: bit 27. -/
-@[expose] def tierE (h : Expr) : Expr := .bin .and (.bin .shr h (.const 27)) (.const 1)
+/-! ### Handle words (con-ron's `Idx`, `ConRon/Arena/Handle.lean`)
 
-/-- The node index of a handle word: the low 27 bits. -/
-@[expose] def idxE (h : Expr) : Expr := .bin .and h (.const 134217727)
+A handle word has one of two shapes. Bit 31 is the tier in both; bit 30 says which:
+
+    wide   (expression `app` only)        narrow (every other node)
+    bit  31      tier                     bit  31      tier
+    bit  30      1                        bit  30      0
+    bits 29…0    index                    bits 29…26   ctor tag
+                                          bits 25…0    index
+
+The readers below are the twin's `Idx.tier`, `Idx.tag` and (per shape) `Idx.index`. -/
+
+/-- The tier of a handle word: bit 31. -/
+@[expose] def tierE (h : Expr) : Expr := .bin .and (.bin .shr h (.const 31)) (.const 1)
+
+/-- The node index of a NARROW handle word: bits 25…0, with bit 30 kept, so that a wide word
+reads an index of at least `2^30`, beyond every narrow array (whose cap is `2^26`): a node read
+through it fails its count check, as the twin's `get` (whose `app` and `param` arms test the
+shape) finds nothing. -/
+@[expose] def idxE (h : Expr) : Expr := .bin .and h (.const 0x43ffffff)
+
+/-- The node index of a WIDE handle word (an expression `app`): bits 29…0 of `h + 2^30`, below
+bit 31, so that a narrow word reads an index of at least `2^30`, beyond the `app` array (cap
+`2^30`). -/
+@[expose] def idxAE (h : Expr) : Expr :=
+  .bin .and (.bin .add h (.const 0x40000000)) (.const 0x7fffffff)
+
+/-- The constructor tag of a handle word, the twin's `Idx.tag`: `4` (`app`) for a wide word,
+bits 29…26 of a narrow one; branch-free, `f + w * (4 - f)` with `f = (h >> 26) & 15` and the
+shape bit `w = (h >> 30) & 1`. -/
+@[expose] def tagE (h : Expr) : Expr :=
+  .bin .add (.bin .and (.bin .shr h (.const 26)) (.const 15))
+    (.bin .mul (.bin .and (.bin .shr h (.const 30)) (.const 1))
+      (.bin .sub (.const 4) (.bin .and (.bin .shr h (.const 26)) (.const 15))))
 
 end L

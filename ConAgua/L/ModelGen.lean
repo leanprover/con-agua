@@ -85,7 +85,7 @@ l_model liftGo_spec (p : Prog) (hp : LiftProg p)
   call stays `callW p n "f" …`; also lets a loop call its own function). A conjunct
   `r = [r.headD 0, …]` (the result's length) is ignored.
 * `fold`: named functions whose bodies are folded back into the model: word arithmetic
-  (`tierW h = (h >>> 27) &&& 1`, also with comparison words `if a < b then 1 else 0` or
+  (`tierW h = (h >>> 31) &&& 1`, also with comparison words `if a < b then 1 else 0` or
   `Cmp.ult.evalW a b`, the model of `u64(a < b)`: `maxW`, `rpLen`) or a result of a list callee (`lvG m p = (lvNodeW m p).headD 0`).
 * `bind c`: the code after a call with several results is an inline continuation
   `c (call) fun ρᵢ μᵢ => …` instead of a named one (`bind ntBW`: the hand models of `Decl*`).
@@ -985,16 +985,20 @@ meta partial def transE (E : Env) (ctx : Ctx) : TSyntax `lexpr → GenM MT
   | `(lexpr| $r:ident⟦$h:lexpr⟧.$f:ident) => do
     let fI ← fieldNum (mkIdentFrom f (r.getId ++ f.getId))
     let h ← (← transE E ctx h).render
-    pure (.raw (← `($(mkIdent `L.Arena.tfld) $(← ctx.mem.render) $r ($(mkIdent `L.Arena.tierW) $h) ($(mkIdent `L.Arena.idxW) $h) $fI)))
+    let ix := mkIdent (if r.getId == `APP then `L.Arena.idxA else `L.Arena.idxW)
+    pure (.raw (← `($(mkIdent `L.Arena.tfld) $(← ctx.mem.render) $r ($(mkIdent `L.Arena.tierW) $h) ($ix $h) $fI)))
   | `(lexpr| $r:ident⟦$h:lexpr⟧) => do
     let h ← (← transE E ctx h).render
-    pure (.raw (← `($(mkIdent `L.Arena.tfld) $(← ctx.mem.render) $r ($(mkIdent `L.Arena.tierW) $h) ($(mkIdent `L.Arena.idxW) $h) 0)))
+    let ix := mkIdent (if r.getId == `APP then `L.Arena.idxA else `L.Arena.idxW)
+    pure (.raw (← `($(mkIdent `L.Arena.tfld) $(← ctx.mem.render) $r ($(mkIdent `L.Arena.tierW) $h) ($ix $h) 0)))
   | `(lexpr| ⟦$h:lexpr⟧.$c:ident) => do
     let h ← (← transE E ctx h).render
     match c.getId with
     | `tier => pure (.raw (← `($(mkIdent `L.Arena.tierW) $h)))
+    | `tag => pure (.raw (← `($(mkIdent `L.Arena.tagW) $h)))
     | `idx => pure (.raw (← `($(mkIdent `L.Arena.idxW) $h)))
-    | _ => throwErrorAt c "expected `⟦h⟧.tier` or `⟦h⟧.idx`"
+    | `aidx => pure (.raw (← `($(mkIdent `L.Arena.idxA) $h)))
+    | _ => throwErrorAt c "expected `⟦h⟧.tier`, `⟦h⟧.tag`, `⟦h⟧.idx` or `⟦h⟧.aidx`"
   | `(lexpr| $a:ident[$i:lexpr]) => do
     let (arr, k) ← splitArr a
     let i ← transE E ctx i
