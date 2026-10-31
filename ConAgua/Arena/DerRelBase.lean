@@ -163,30 +163,32 @@ variable (tb : ETables) (h : Word) (hh : h.toNat < 2 ^ 32)
 include hh
 
 theorem derAt_bvar (hg : tagW h = 0) : tb.derAt (decE h) = tb.bvars.derAt (idxW h).toNat := by
-  simp [ETables.derAt, decE_tag h hh, hg, decE_idx h, ETag.bvar]
+  simp [ETables.derAt, decE_tag h hh, hg, decE_idx h (narrow_of_tagW h (by rw [hg]; decide)), ETag.bvar]
 theorem derAt_fvar (hg : tagW h = 1) : tb.derAt (decE h) = tb.fvars.derAt (idxW h).toNat := by
-  simp [ETables.derAt, decE_tag h hh, hg, decE_idx h, ETag.bvar, ETag.fvar]
+  simp [ETables.derAt, decE_tag h hh, hg, decE_idx h (narrow_of_tagW h (by rw [hg]; decide)), ETag.bvar, ETag.fvar]
 theorem derAt_sort (hg : tagW h = 2) : tb.derAt (decE h) = tb.sorts.derAt (idxW h).toNat := by
-  simp [ETables.derAt, decE_tag h hh, hg, decE_idx h, ETag.bvar, ETag.fvar, ETag.sort]
+  simp [ETables.derAt, decE_tag h hh, hg, decE_idx h (narrow_of_tagW h (by rw [hg]; decide)), ETag.bvar, ETag.fvar, ETag.sort]
 theorem derAt_const (hg : tagW h = 3) : tb.derAt (decE h) = tb.consts.derAt (idxW h).toNat := by
-  simp [ETables.derAt, decE_tag h hh, hg, decE_idx h, ETag.bvar, ETag.fvar, ETag.sort, ETag.const]
-theorem derAt_app (hg : tagW h = 4) : tb.derAt (decE h) = tb.apps.derAt (idxW h).toNat := by
-  simp [ETables.derAt, decE_tag h hh, hg, decE_idx h, ETag.bvar, ETag.fvar, ETag.sort, ETag.const,
-    ETag.app]
+  simp [ETables.derAt, decE_tag h hh, hg, decE_idx h (narrow_of_tagW h (by rw [hg]; decide)), ETag.bvar, ETag.fvar, ETag.sort, ETag.const]
+/-- The `app` arm reads the derived column at con-ron's `idxNat` (no shape test): `idxG`. -/
+theorem derAt_app (hg : tagW h = 4) : tb.derAt (decE h) = tb.apps.derAt (idxG h).toNat := by
+  rw [decE_eq]
+  simp [ETables.derAt, decI_tag h hh, hg, decI_idxG, ETag.bvar, ETag.fvar, ETag.sort,
+    ETag.const, ETag.app]
 theorem derAt_lam (hg : tagW h = 5) : tb.derAt (decE h) = tb.lams.derAt (idxW h).toNat := by
-  simp [ETables.derAt, decE_tag h hh, hg, decE_idx h, ETag.bvar, ETag.fvar, ETag.sort, ETag.const,
+  simp [ETables.derAt, decE_tag h hh, hg, decE_idx h (narrow_of_tagW h (by rw [hg]; decide)), ETag.bvar, ETag.fvar, ETag.sort, ETag.const,
     ETag.app, ETag.lam]
 theorem derAt_forall (hg : tagW h = 6) : tb.derAt (decE h) = tb.foralls.derAt (idxW h).toNat := by
-  simp [ETables.derAt, decE_tag h hh, hg, decE_idx h, ETag.bvar, ETag.fvar, ETag.sort, ETag.const,
+  simp [ETables.derAt, decE_tag h hh, hg, decE_idx h (narrow_of_tagW h (by rw [hg]; decide)), ETag.bvar, ETag.fvar, ETag.sort, ETag.const,
     ETag.app, ETag.lam, ETag.forallE]
 theorem derAt_let (hg : tagW h = 7) : tb.derAt (decE h) = tb.lets.derAt (idxW h).toNat := by
-  simp [ETables.derAt, decE_tag h hh, hg, decE_idx h, ETag.bvar, ETag.fvar, ETag.sort, ETag.const,
+  simp [ETables.derAt, decE_tag h hh, hg, decE_idx h (narrow_of_tagW h (by rw [hg]; decide)), ETag.bvar, ETag.fvar, ETag.sort, ETag.const,
     ETag.app, ETag.lam, ETag.forallE, ETag.letE]
 theorem derAt_lit (hg : tagW h = 8) : tb.derAt (decE h) = tb.lits.derAt (idxW h).toNat := by
-  simp [ETables.derAt, decE_tag h hh, hg, decE_idx h, ETag.bvar, ETag.fvar, ETag.sort, ETag.const,
+  simp [ETables.derAt, decE_tag h hh, hg, decE_idx h (narrow_of_tagW h (by rw [hg]; decide)), ETag.bvar, ETag.fvar, ETag.sort, ETag.const,
     ETag.app, ETag.lam, ETag.forallE, ETag.letE, ETag.lit]
 theorem derAt_proj (hg : tagW h = 9) : tb.derAt (decE h) = tb.projs.derAt (idxW h).toNat := by
-  simp [ETables.derAt, decE_tag h hh, hg, decE_idx h, ETag.bvar, ETag.fvar, ETag.sort, ETag.const,
+  simp [ETables.derAt, decE_tag h hh, hg, decE_idx h (narrow_of_tagW h (by rw [hg]; decide)), ETag.bvar, ETag.fvar, ETag.sort, ETag.const,
     ETag.app, ETag.lam, ETag.forallE, ETag.letE, ETag.lit, ETag.proj]
 theorem derAt_other (h0 : tagW h ≠ 0) (h1 : tagW h ≠ 1) (h2 : tagW h ≠ 2)
     (h3 : tagW h ≠ 3) (h4 : tagW h ≠ 4) (h5 : tagW h ≠ 5) (h6 : tagW h ≠ 6)
@@ -244,11 +246,11 @@ theorem derBW_ok (m : Mem) (a : AState) (hR : ArenaR m a) (hD : DerR m a) (h : W
   have comp : ∀ {α : Type} [BEq α] [Hashable α] (C : ConsSch) (R : Mem → Word → Word → α → Prop)
       (g : ETables → Tbl α EIdx UInt64) (A : ArrId)
       (hT : ConsR C R m a.store.scratchOn (g a.store.pers) (g a.store.scr))
-      (hd : DerT2 a g (cP A m)),
-      (if cntC C m (tierW h) ≤ idxW h then (0 : Word)
-       else pcol m A (tierW h) (idxW h) &&& 32767) =
-        bvarOfData ((g (tierOf a (tierW h))).derAt (idxW h).toNat) := by
-    intro α _ _ C R g A hT hd
+      (hd : DerT2 a g (cP A m)) (i : Word),
+      (if cntC C m (tierW h) ≤ i then (0 : Word)
+       else pcol m A (tierW h) i &&& 32767) =
+        bvarOfData ((g (tierOf a (tierW h))).derAt i.toNat) := by
+    intro α _ _ C R g A hT hd i
     have hc := ConsR.cnt hT (tierW h) ht
     have hD' := derT2_tier hd (tierW h) ht
     have hg : (if tierW h = 0 then g a.store.pers else g a.store.scr) = g (tierOf a (tierW h)) := by
@@ -281,23 +283,23 @@ theorem derBW_ok (m : Mem) (a : AState) (hR : ArenaR m a) (hD : DerR m a) (h : W
   simp only [g0, ↓reduceIte]
   by_cases g4 : tagW h = 4
   · simp only [g4, ↓reduceIte]; rw [derAt_app _ h hh g4]
-    exact comp appCS ARecRel (·.apps) ADER hR.app hD.app
+    exact comp appCS ARecRel (·.apps) ADER hR.app hD.app (idxG h)
   simp only [g4, ↓reduceIte]
   by_cases g5 : tagW h = 5
   · simp only [g5, ↓reduceIte]; rw [derAt_lam _ h hh g5]
-    exact comp lamCS LaRecRel (·.lams) LADER hR.lam hD.lam
+    exact comp lamCS LaRecRel (·.lams) LADER hR.lam hD.lam (idxW h)
   simp only [g5, ↓reduceIte]
   by_cases g6 : tagW h = 6
   · simp only [g6, ↓reduceIte]; rw [derAt_forall _ h hh g6]
-    exact comp forallCS FaRecRel (·.foralls) FADER hR.forallE hD.forallE
+    exact comp forallCS FaRecRel (·.foralls) FADER hR.forallE hD.forallE (idxW h)
   simp only [g6, ↓reduceIte]
   by_cases g7 : tagW h = 7
   · simp only [g7, ↓reduceIte]; rw [derAt_let _ h hh g7]
-    exact comp letCS LeRecRel (·.lets) LEDER hR.letE hD.letE
+    exact comp letCS LeRecRel (·.lets) LEDER hR.letE hD.letE (idxW h)
   simp only [g7, ↓reduceIte]
   by_cases g9 : tagW h = 9
   · simp only [g9, ↓reduceIte]; rw [derAt_proj _ h hh g9]
-    exact comp projCS PJRecRel (·.projs) PJDER hR.proj hD.proj
+    exact comp projCS PJRecRel (·.projs) PJDER hR.proj hD.proj (idxW h)
   simp only [g9, ↓reduceIte]
   by_cases g1 : tagW h = 1
   · rw [derAt_fvar _ h hh g1, derT_fvar_b (derT2_tier hD.fvar (tierW h) ht) (idxW h).toNat]
@@ -322,11 +324,11 @@ theorem derFW_ok (m : Mem) (a : AState) (hR : ArenaR m a) (hD : DerR m a) (h : W
   have comp : ∀ {α : Type} [BEq α] [Hashable α] (C : ConsSch) (R : Mem → Word → Word → α → Prop)
       (g : ETables → Tbl α EIdx UInt64) (A : ArrId)
       (hT : ConsR C R m a.store.scratchOn (g a.store.pers) (g a.store.scr))
-      (hd : DerT2 a g (cP A m)),
-      (if cntC C m (tierW h) ≤ idxW h then (0 : Word)
-       else (pcol m A (tierW h) (idxW h) >>> 15) &&& 32767) =
-        fvarOfData ((g (tierOf a (tierW h))).derAt (idxW h).toNat) := by
-    intro α _ _ C R g A hT hd
+      (hd : DerT2 a g (cP A m)) (i : Word),
+      (if cntC C m (tierW h) ≤ i then (0 : Word)
+       else (pcol m A (tierW h) i >>> 15) &&& 32767) =
+        fvarOfData ((g (tierOf a (tierW h))).derAt i.toNat) := by
+    intro α _ _ C R g A hT hd i
     have hc := ConsR.cnt hT (tierW h) ht
     have hD' := derT2_tier hd (tierW h) ht
     have hg : (if tierW h = 0 then g a.store.pers else g a.store.scr) = g (tierOf a (tierW h)) := by
@@ -359,23 +361,23 @@ theorem derFW_ok (m : Mem) (a : AState) (hR : ArenaR m a) (hD : DerR m a) (h : W
   simp only [g1, ↓reduceIte]
   by_cases g4 : tagW h = 4
   · simp only [g4, ↓reduceIte]; rw [derAt_app _ h hh g4]
-    exact comp appCS ARecRel (·.apps) ADER hR.app hD.app
+    exact comp appCS ARecRel (·.apps) ADER hR.app hD.app (idxG h)
   simp only [g4, ↓reduceIte]
   by_cases g5 : tagW h = 5
   · simp only [g5, ↓reduceIte]; rw [derAt_lam _ h hh g5]
-    exact comp lamCS LaRecRel (·.lams) LADER hR.lam hD.lam
+    exact comp lamCS LaRecRel (·.lams) LADER hR.lam hD.lam (idxW h)
   simp only [g5, ↓reduceIte]
   by_cases g6 : tagW h = 6
   · simp only [g6, ↓reduceIte]; rw [derAt_forall _ h hh g6]
-    exact comp forallCS FaRecRel (·.foralls) FADER hR.forallE hD.forallE
+    exact comp forallCS FaRecRel (·.foralls) FADER hR.forallE hD.forallE (idxW h)
   simp only [g6, ↓reduceIte]
   by_cases g7 : tagW h = 7
   · simp only [g7, ↓reduceIte]; rw [derAt_let _ h hh g7]
-    exact comp letCS LeRecRel (·.lets) LEDER hR.letE hD.letE
+    exact comp letCS LeRecRel (·.lets) LEDER hR.letE hD.letE (idxW h)
   simp only [g7, ↓reduceIte]
   by_cases g9 : tagW h = 9
   · simp only [g9, ↓reduceIte]; rw [derAt_proj _ h hh g9]
-    exact comp projCS PJRecRel (·.projs) PJDER hR.proj hD.proj
+    exact comp projCS PJRecRel (·.projs) PJDER hR.proj hD.proj (idxW h)
   simp only [g9, ↓reduceIte]
   by_cases g0 : tagW h = 0
   · rw [derAt_bvar _ h hh g0, derT_bvar_f (derT2_tier hD.bvar (tierW h) ht) (idxW h).toNat]
@@ -411,10 +413,10 @@ theorem derLW_ok (m : Mem) (a : AState) (hR : ArenaR m a) (hD : DerR m a) (h : W
   have comp : ∀ {α : Type} [BEq α] [Hashable α] (C : ConsSch) (R : Mem → Word → Word → α → Prop)
       (g : ETables → Tbl α EIdx UInt64) (A : ArrId)
       (hT : ConsR C R m a.store.scratchOn (g a.store.pers) (g a.store.scr))
-      (hd : DerT2 a g (cP A m)),
-      (if idxW h < cntC C m (tierW h) then pcol m A (tierW h) (idxW h) >>> 30
-       else (0 : Word)) = lpW ((g (tierOf a (tierW h))).derAt (idxW h).toNat) := by
-    intro α _ _ C R g A hT hd
+      (hd : DerT2 a g (cP A m)) (i : Word),
+      (if i < cntC C m (tierW h) then pcol m A (tierW h) i >>> 30
+       else (0 : Word)) = lpW ((g (tierOf a (tierW h))).derAt i.toNat) := by
+    intro α _ _ C R g A hT hd i
     have hc := ConsR.cnt hT (tierW h) ht
     have hD' := derT2_tier hd (tierW h) ht
     have hg : (if tierW h = 0 then g a.store.pers else g a.store.scr) = g (tierOf a (tierW h)) := by
@@ -451,23 +453,23 @@ theorem derLW_ok (m : Mem) (a : AState) (hR : ArenaR m a) (hD : DerR m a) (h : W
   simp only [g3, ↓reduceIte]
   by_cases g4 : tagW h = 4
   · simp only [g4, ↓reduceIte]; rw [derAt_app _ h hh g4]
-    exact comp appCS ARecRel (·.apps) ADER hR.app hD.app
+    exact comp appCS ARecRel (·.apps) ADER hR.app hD.app (idxG h)
   simp only [g4, ↓reduceIte]
   by_cases g5 : tagW h = 5
   · simp only [g5, ↓reduceIte]; rw [derAt_lam _ h hh g5]
-    exact comp lamCS LaRecRel (·.lams) LADER hR.lam hD.lam
+    exact comp lamCS LaRecRel (·.lams) LADER hR.lam hD.lam (idxW h)
   simp only [g5, ↓reduceIte]
   by_cases g6 : tagW h = 6
   · simp only [g6, ↓reduceIte]; rw [derAt_forall _ h hh g6]
-    exact comp forallCS FaRecRel (·.foralls) FADER hR.forallE hD.forallE
+    exact comp forallCS FaRecRel (·.foralls) FADER hR.forallE hD.forallE (idxW h)
   simp only [g6, ↓reduceIte]
   by_cases g7 : tagW h = 7
   · simp only [g7, ↓reduceIte]; rw [derAt_let _ h hh g7]
-    exact comp letCS LeRecRel (·.lets) LEDER hR.letE hD.letE
+    exact comp letCS LeRecRel (·.lets) LEDER hR.letE hD.letE (idxW h)
   simp only [g7, ↓reduceIte]
   by_cases g9 : tagW h = 9
   · simp only [g9, ↓reduceIte]; rw [derAt_proj _ h hh g9]
-    exact comp projCS PJRecRel (·.projs) PJDER hR.proj hD.proj
+    exact comp projCS PJRecRel (·.projs) PJDER hR.proj hD.proj (idxW h)
   simp only [g9, ↓reduceIte]
   by_cases g0 : tagW h = 0
   · rw [derAt_bvar _ h hh g0, lpW, derT_lp_false (derT2_tier hD.bvar (tierW h) ht)
