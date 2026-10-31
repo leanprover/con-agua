@@ -495,24 +495,16 @@ theorem fire_ref (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
   | zero => rw [callW_zero, liftE_none, irFireE.k_get_app_args.none]; exact RefE.of_cls0 (by simp)
   | succ N =>
   -- the major's arguments
-  rcases c1 : callW p (N + 1) "get_app_args" [major] s₀.mem with _ | ⟨ra, m1⟩
-  · rw [liftE_none, irFireE.k_get_app_args.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]
+  unfold iotaRecFireT
+  refine RefE.bindLift (fun _ => rfl) fun ra m1 c1 => ?_
   obtain ⟨t1, ht1, -, fr1, gr1, hr0, htop1, xs, hrunA, hxs⟩ := triple_of_callW
     (getAppArgs_refines' p hp.spine.args hp.spine.cnt hp.spine.fill (N + 1) ⟨s₀.mem, Locals.init []⟩ a₀
       hS.arena.base major hmaj hspn) c1
   rw [ht1] at fr1 gr1 htop1 hxs
   have hS1 : CoreS dn m1 a₀ vis fe MM eb := hS.frame_stk fr1 (by simp) (by simp)
   have e1 : m1.arr64 EREC = s₀.mem.arr64 EREC := fr1.1 EREC (by simp [SPN, EREC]) (by decide)
+  refine ⟨_, _, hrunA, ?_⟩
   simp only [irFireE.k_get_app_args]
-  have hEq : (iotaRecFireT (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decI c)
-      (rdW (s₀.mem.arr64 EREC) (recP + 5)).toNat (rdW (s₀.mem.arr64 EREC) (recP + 6)).toNat lps
-      (decI us) args.toList (decE major) (decI usj) cvj rule).run a₀ =
-      (iotaRecFire2T (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decI c)
-      (rdW (s₀.mem.arr64 EREC) (recP + 5)).toNat (rdW (s₀.mem.arr64 EREC) (recP + 6)).toNat lps
-      (decI us) args.toList (decI usj) cvj rule xs.toArray.toList).run a₀ := by
-    simp only [iotaRecFireT, StateT.run_bind, hrunA, except_ok_bind]
-  refine RefE.of_run_eq hEq ?_
   have hsa1 := hsa.keep gr1.size gr1.below hsat hspn
   have hsat1 : so.toNat + sn.toNat ≤ (spTop m1).toNat := by
     have := UInt64.le_iff_toNat_le.mp gr1.1
@@ -521,25 +513,17 @@ theorem fire_ref (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
     omega
   have hsm1 : ra.headD 0 + ra.tail.headD 0 = spTop m1 := by rw [htop1, hr0]
   -- the fire
-  rcases c2 : callE p (N + 1) "iota_rec_fire2" [mode, vis, d, c, us, recP, so, usj, ctorP, rl,
-      ra.headD 0, ra.tail.headD 0] m1 with e2 | ⟨rf, m2⟩
-  · intro hG
-    have h := fire2_ref p hp hc hw hEI hER hEK N (hk.mono (by omega)) F (by omega) (by omega)
-      ⟨m1, Locals.init []⟩ a₀ dn vis fe MM eb mode d c us recP so usj ctorP rl (ra.headD 0)
-      (ra.tail.headD 0) sn lps rule cvj np nf args xs.toArray hS1 hm4 hebm hcw hus husj
-    simp only [e1] at h
-    exact RefE.run_err (fire2E_spec p hp.fire2 (N + 1) ⟨m1, Locals.init []⟩ mode vis d c us recP so usj
-      ctorP rl (ra.headD 0) (ra.tail.headD 0)) hG.nv (hG.mono (by omega))
-      (h hlps hrule hci hfe hsa1 hsat1 hmI hxs hsm1) c2
-  have hf2 := iotaRecFire2_refines' p hp hc hw hEI hER hEK N (hk.mono (by omega)) F (by omega)
-    (by omega) ⟨m1, Locals.init []⟩ a₀ dn vis fe MM eb mode d c us recP so usj ctorP rl (ra.headD 0)
+  have h := fire2_ref p hp hc hw hEI hER hEK N (hk.mono (by omega)) F (by omega) (by omega)
+    ⟨m1, Locals.init []⟩ a₀ dn vis fe MM eb mode d c us recP so usj ctorP rl (ra.headD 0)
     (ra.tail.headD 0) sn lps rule cvj np nf args xs.toArray hS1 hm4 hebm hcw hus husj
-  simp only [e1] at hf2
-  obtain ⟨hrun2, hP⟩ := (CoreSpec.of_callW (hf2 hlps hrule hci hfe hsa1 hsat1 hmI hxs hsm1)
-    (callW_of_callE c2)).post
-  refine RefE.ret hrun2 ?_
+  simp only [e1] at h
+  rw [← bind_pure (iotaRecFire2T _ _ _ _ _ _ _ _ _ _ _ _ _ _)]
+  refine RefE.bindRun (s₀ := ⟨m1, Locals.init []⟩) (fun _ => rfl)
+    (fire2E_spec p hp.fire2 (N + 1) ⟨m1, Locals.init []⟩ mode vis d c us recP so usj ctorP rl (ra.headD 0)
+      (ra.tail.headD 0)) (fun hG => hG.nv) (fun hG => hG.mono (by omega))
+    (h hlps hrule hci hfe hsa1 hsat1 hmI hxs hsm1) fun rf s2 _ a2 _ _ _ hP => ?_
   obtain ⟨M2, hS2, hK2, hSt2⟩ := hP.after
-  exact ⟨⟨M2, hS2.frame_stk (MemFrame.setCtl _ _ _) (by simp) (by simp), hK2,
+  exact RefE.ret rfl ⟨⟨M2, hS2.frame_stk (MemFrame.setCtl _ _ _) (by simp) (by simp), hK2,
     StackKept.restoreG' (gr1.trans hSt2.toGrew)⟩, hP.res, hP.valid⟩
 
 /-- **`iota_rec_fire` refines the fire** (`fire_ref`'s ok half). -/
