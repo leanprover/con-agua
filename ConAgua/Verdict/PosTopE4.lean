@@ -128,26 +128,16 @@ theorem nrt_ref : ∀ (n : Nat), n ≤ 2 ^ 62 → ∀ (m : Mem) (a : AState) (cO
       0 0 0 (nhiW m ctx 0) _ _ _ _ _ hO hL cO' cL' ns 0 0 c [] c.params c.names holes cs NS [] ctxP [] _ _ _ _ csP
       nsP [] hC hW hCc hcl' hcb' hcsAt hns (by simpa using OutsB.nil m 0) (by simp) hP hA hc hctx rfl hpre hc1
       (hcF csP List.mem_cons_self) hnsP rfl
-    rcases h2 : callE p n "nest_ctors" [vis, ctx, 1, 0, 0, 0, nhiW m ctx 0, rdW (m.arr64 IW) (ctx + 10),
-        rdW (m.arr64 IW) (ctx + 7), rdW (m.arr64 IW) (ctx + 8), rdW (m.arr64 IW) ctx,
-        rdW (m.arr64 IW) (ctx + 1), hO, hL, cO', cL', ns, 0, 0] m with e2 | ⟨r1', m1⟩
-    · rw [nrtE.k_nest_ctors.none]
-      refine RefE.bind_left fun hG => ?_
-      have hE := RefE.run_err (nctE_spec p L.nb.pctors n ⟨m, Locals.init []⟩ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _)
-        True.intro hG hRef h2
-      rw [hhi0, husd0] at hE
-      simpa using hE
+    rw [hhi0, husd0] at hRef
+    refine RefE.bindRun (s₀ := ⟨m, Locals.init []⟩) (fun _ => nrtE.k_nest_ctors.none ..)
+      (nctE_spec p L.nb.pctors n ⟨m, Locals.init []⟩ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) (fun _ => True.intro) id
+      hRef fun r1' s2 x1 a1 _ _ hrun1 ⟨hC1, hg1, hO1, hOb1, hns1, hP1, hA1, c1⟩ => ?_
+    dsimp only at hC1 hg1 hO1 hOb1 hns1 hP1 hA1
+    generalize s2.mem = m1 at hC1 hg1 hO1 hOb1 hns1 hP1 hA1 ⊢
     rw [nrtE.k_nest_ctors.arm1]
-    obtain ⟨s2, hs2, -, x1, a1, hrun1, hR1⟩ := RefE.run_ok
-      (nctE_spec p L.nb.pctors n ⟨m, Locals.init []⟩ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) hRef h2
-    rw [hs2] at hR1; dsimp only at hR1
-    obtain ⟨hC1, hg1, hO1, hOb1, hns1, hP1, hA1, c1⟩ := hR1
     have hS1 := hC1.stage
-    rw [hhi0, husd0] at hrun1
-    have hrun1' : (nestCtors V fe c true 0 [] (c.hiAt 0) c.lvls c.params c.names holes cs NS []).run a =
-        .ok (x1, a1) := by simpa using hrun1
     have hrun1P : (nestCtors V fe c true 0 [] (ctxP.hiAt 0) c.lvls c.params c.names holes cs NS []) a =
-        .ok (x1, a1) := by rw [← hhiP]; exact hrun1'
+        .ok (x1, a1) := by rw [← hhiP]; exact hrun1
     obtain ⟨-, v1, ⟨hv1, hns1P, -⟩, -⟩ := ConRon.Bridge.Inductives.nestCtors_spec coreSpecV henv true 0
       (fun crestP => ConLeche.nestPos (ConLeche.fueledOpsM V) env ctxP (ConLeche.whnfWalkFuel crestP))
       (fun _ => by simp) (fun crestP => by simpa using ConRon.Bridge.Inductives.nestPos_spec coreSpecV henv hc _)
@@ -155,19 +145,16 @@ theorem nrt_ref : ∀ (n : Nat), n ≤ 2 ^ 62 → ∀ (m : Mem) (a : AState) (cO
       hpar hholes hlen cs csP NS nsP [] [] (hcF csP List.mem_cons_self) a a1 x1 hC.check
       ⟨hctx, rfl, hlv, hpar', hcn, hholesP, hc1, hnsP, rfl⟩ hrun1P
     simp only [List.nil_append] at hv1
-    refine RefE.bind_right hrun1' ?_
     have htop1 : iwTop m1 < 2 ^ 64 := Nat.lt_of_le_of_lt hS1.iw.iw hS1.iw.iwSize
     -- its record, appended
-    rcases hr2 : posRecW m1 [r1'.headD 0, r1'.tail.headD 0] with _ | ⟨q, m2⟩
-    · rw [liftE_none, nrtE.k_rec2.none]; exact RefE.of_cls0 (by simp)
-    rw [liftE_some, nrtE.k_rec2.arm1]
+    refine RefE.onlySim (fun _ => nrtE.k_rec2.none ..) (fun _ _ h => h) fun q m2 hr2 => ?_
+    rw [nrtE.k_rec2.arm1]
     obtain ⟨hS2, hg2, hq2, ht2, hget2⟩ := posRecW_stage hr2 hS1 (by simp)
     simp only [List.length_cons, List.length_nil] at ht2
     have hrec := pos2_outs_rec (q := q) (by omega) hget2 (hO1.grow hg2)
     have htop2 : iwTop m2 < 2 ^ 64 := Nat.lt_of_le_of_lt hS2.iw.iw hS2.iw.iwSize
-    rcases hsn : snocW n m2 oO oL q with _ | ⟨ro, m3⟩
-    · rw [liftE_none, nrtE.k_sl_snoc.none]; exact RefE.of_cls0 (by simp)
-    rw [liftE_some, nrtE.k_sl_snoc.arm1]
+    refine RefE.onlySim (fun _ => nrtE.k_sl_snoc.none ..) (fun _ _ h => h) fun ro m3 hsn => ?_
+    rw [nrtE.k_sl_snoc.arm1]
     have hg12 := hg1.trans hg2
     obtain ⟨hS3, hg3, h30, h31, ht3, hw3, hx3⟩ := snocW_words hsn hS2 (by have := hg12.iw; omega)
     have hout3 : RootOutsB m3 (ro.headD 0).toNat (ro.tail.headD 0).toNat (outss ++ [x1.1]) := by
@@ -193,12 +180,8 @@ theorem nrt_ref : ∀ (n : Nat), n ≤ 2 ^ 62 → ∀ (m : Mem) (a : AState) (cO
       (ConRon.Bridge.Inductives.mapM_option_append (ConRon.Bridge.Inductives.dOutss_ext c1.ext _ _ houtsP)
         (by simp [hv1]))
       (fun cs hcs => hcF cs (List.mem_cons_of_mem _ hcs))
-    rcases hx : nrtE p n m3 vis ctx hO hL (cO + 1) (cL - 1) (r1'.tail.tail.headD 0) (ro.headD 0)
-      (ro.tail.headD 0) with ε | ⟨r0, m0⟩ <;> rw [hx] at ih
-    · rw [nrtE.k_nest_root.none]; exact ih
-    · rw [nrtE.k_nest_root.arm1]
-      obtain ⟨x, a', hrun, hR⟩ := ih
-      exact RefE.ret hrun ⟨hR.stage, hg13.trans hR.grow, by simpa using hR.outs, by simpa using hR.outsb,
+    exact RefE.lastE (fun _ => nrtE.k_nest_root.none ..) (fun _ => nrtE.k_nest_root.arm1 ..) id ih
+      fun _ _ _ _ hR => ⟨hR.stage, hg13.trans hR.grow, by simpa using hR.outs, by simpa using hR.outsb,
         by simpa using hR.ns, hR.pos, hR.abs, c1.trans hR.core⟩
 
 end root
