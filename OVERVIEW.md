@@ -931,7 +931,7 @@ it when the file changes. Then
 proves `checkerFile = checkerStub ++ checkerAsm`, where `checkerAsm` is a
 literal that the kernel checked, function by function, to be
 `compileProg checkerTab checkerProgI "check"` (§8.6)
-([`Checker/Asm.lean`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Checker/Asm.lean#L12-L21)).
+([`Checker/Asm.lean`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Checker/Asm.lean#L20-L29)).
 So neither the compiler run as compiled Lean code nor the printer that wrote
 the file is trusted; a stale file fails the build, naming the first function
 that differs.
