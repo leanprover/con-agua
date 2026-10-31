@@ -4,6 +4,7 @@ import ConAgua.Arena.IndRealLvlC
 import ConAgua.Arena.IndSumSpec.CheckStructFieldSortsISucc
 import ConAgua.L.ModelGen
 import ConAgua.Arena.IndSumSpec.SumProg
+import ConAgua.Arena.RefWalk
 
 /-!
 # `checkStructFieldSortsI` under `StageC` (lane `indstaget`)
@@ -133,39 +134,17 @@ theorem cfb_ref {p : Prog} (hcl : CoreStageClosed p) (hLC : LvlCacheProg p)
   · rw [cfbE.arm1 p n m isProp large s io il fv u hp]
     simp only [sfbT, hp, bne_self_eq_false, Bool.not_false, ite_true]
     rw [sfb_leq_eq]
-    rcases h1 : callW p n "lv_leq_top" [u, s] m with _ | ⟨r, m1⟩
-    · rw [liftE_none, cfbE.k_lv_leq_top.none]; exact RefE.of_cls0 (by simp)
-    rw [liftE_some]
-    obtain ⟨x, a', hrun, hC1, hg1, hx, hA1, -⟩ :=
-      lvLeqTop_simC p hLC.lev hLT n hC hA u s hu hs lu sP hdu hsP r m1 h1
-    refine RefE.bind_right hrun ?_
-    simp only [decLvlEq] at hx
-    by_cases h0 : r.headD 0 = 0
-    · rw [cfbE.k_lv_leq_top.abort1 p r m1 h0]
-      refine RefE.bind_left fun _ => ?_
-      cases x with
-      | none => exact ErrClaim.fail _ _ (by decide)
-      | some b => cases b <;> (rw [h0] at hx; exact absurd hx (by simp))
-    by_cases h2 : r.headD 0 = 2
-    · rw [cfbE.k_lv_leq_top.arm1 p r m1 h0 h2, cfbE.j1.arm1]
-      have : x = some true := by
-        rw [h2] at hx
-        rcases x with _ | _ | _
-        · exact absurd hx (by decide)
-        · exact absurd hx (by decide)
-        · rfl
-      subst this
+    refine RefE.bindSim (fun _ => rfl) (lvLeqTop_simC p hLC.lev hLT n hC hA u s hu hs lu sP hdu hsP)
+      fun r x m1 a' _ _ ⟨hC1, hg1, hx, hA1, _⟩ => ?_
+    dsimp only [cfbE.k_lv_leq_top]
+    rcases x with _ | _ | _ <;> simp only [decLvlEq] at hx
+    · exact RefE.abortAt hx fun _ => ErrClaim.bind_left (ErrClaim.fail _ _ (by decide))
+    · refine RefE.pass (by rw [hx]; decide) (RefE.abortAt (by rw [hx]; decide) fun _ => ?_)
+      exact ErrClaim.congr (T' := ConRon.Arena.fail (.invalid "direct sum: field universe too large"))
+        rfl (ErrClaim.fail _ _ (by decide))
+    · refine RefE.pass (by rw [hx]; decide) (RefE.pass (by rw [hx]; decide) ?_)
+      rw [cfbE.j1.arm1]
       exact RefE.ret rfl ⟨hC1.stage, hg1, hA1⟩
-    · rw [cfbE.k_lv_leq_top.abort2 p r m1 h0 h2]
-      cases x with
-      | none => exact absurd hx h0
-      | some b =>
-        cases b with
-        | true => exact absurd hx h2
-        | false =>
-          exact fun _ => ErrClaim.congr
-            (T' := ConRon.Arena.fail (.invalid "direct sum: field universe too large"))
-            rfl (ErrClaim.fail _ _ (by decide))
   have hp' : (isProp != 0) = true := by simpa using hp
   by_cases hl : large = 0
   · rw [cfbE.arm3 p n m isProp large s io il fv u hp hl, cfbE.j1.arm1]
@@ -174,27 +153,24 @@ theorem cfb_ref {p : Prog} (hcl : CoreStageClosed p) (hLC : LvlCacheProg p)
   have hl' : (large != 0) = true := by simpa using hl
   rw [cfbE.arm2 p n m isProp large s io il fv u hp hl]
   simp only [sfbT, hp', hl', Bool.not_true, Bool.false_eq_true, ite_false, ite_true]
-  rcases h1 : callW p n "pin_word" [53] m with _ | ⟨rz, m1⟩
-  · rw [liftE_none, cfbE.k_pin_word.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]
+  -- `pin_word`
+  refine RefE.bindLift (fun _ => rfl) fun rz m1 h1 => ?_
   obtain ⟨s', hs', -, hmm, hz'⟩ := triple_of_callW (pinWord_specV p hpw n ⟨m, Locals.init []⟩ 53) h1
-  simp only at hmm
+  simp only at hmm hz'
   subst hs'
-  rw [cfbE.k_pin_word.arm1, hmm]
-  simp only at hz'
   have hpne : rdW (m.arr64 PINS) 0 ≠ 0 := by
     intro h0; simp [pinWordV, h0] at hz'
   obtain ⟨hrun0, hz⟩ := pinZero_stage hS hz'
   have hzp : rz.headD 0 = pinW m 53 := by
     simp only [pinWordV, hpne, ite_false, Option.some.injEq] at hz'
     rw [← hz']; rfl
-  have hF := hS.check.pins.full hpne
   obtain ⟨lz, hdz⟩ := hC.stageT.twin.den.zero
-  rw [hF.zeroLevel, ← hzp] at hdz
-  refine RefE.bind_right hrun0 ?_
-  rcases h2 : callW p n "lvl_eq_true" [u, rz.headD 0] m with _ | ⟨rq, mq⟩
-  · rw [liftE_none, cfbE.k_lvl_eq_true.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some, cfbE.k_lvl_eq_true.arm1]
+  rw [(hS.check.pins.full hpne).zeroLevel, ← hzp] at hdz
+  refine ⟨_, _, hrun0, ?_⟩
+  dsimp only [cfbE.k_pin_word]
+  rw [hmm]
+  -- `lvl_eq_true`
+  refine RefE.bindLift (fun _ => rfl) fun rq mq h2 => ?_
   obtain ⟨s2, hs2, -, hW2⟩ := triple_of_callW (eqTrue_specC p het (realCall p) (realCall_spec p) n
     ⟨m, Locals.init []⟩ u (rz.headD 0)) h2
   simp only at hW2
@@ -209,60 +185,30 @@ theorem cfb_ref {p : Prog} (hcl : CoreStageClosed p) (hLC : LvlCacheProg p)
   obtain ⟨hreq, hm2⟩ := hW2
   obtain ⟨x, a1, hrun1, hC1, hg1, hx, hA1, -⟩ :=
     lvlEqC_simC p hcl hLC n' hC hA u (rz.headD 0) hu hz lu lz hdu hdz r1 m1 he'
-  refine RefE.bind_right hrun1 ?_
+  refine ⟨_, _, hrun1, ?_⟩
   have hmq : mq = m1 := by rw [← hs2, ← hm2]
   subst hmq
+  dsimp only [cfbE.k_lvl_eq_true]
   have hS1 := hC1.stage
   have hidx1 : decHL mq io.toNat il.toNat = some idxArgs := by
     rw [decHL_grow hg1 hib]; exact hidx
-  rcases h3 : callW p (n' + 1) "sl_contains" [io, il, fv] mq with _ | ⟨r3, m3⟩
-  · rw [liftE_none, cfbE.k_sl_contains.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]
-  obtain ⟨s3, hs3, -, hm3, hW3⟩ := triple_of_callW (slContains_spec p hc (n' + 1) ⟨mq, Locals.init []⟩ io il fv) h3
+  -- `sl_contains` (L only)
+  refine RefE.onlySim (fun _ => rfl) (fun r3 m3 h3 => triple_of_callW
+    (slContains_spec p hc (n' + 1) ⟨mq, Locals.init []⟩ io il fv) h3) fun r3 m3 ⟨s3, hs3, _, hm3, hW3⟩ => ?_
   simp only at hW3 hm3
   obtain ⟨ws, hws, hwsd, hwlt⟩ := slR_of_decHL mq _ _ idxArgs hidx1 (hS1.lt64 (by have := hg1.iw; omega))
   simp only [UInt64.ofNat_toNat] at hws
   have hct := containsW_ok (n' + 1) _ _ _ _ _ _ hws hW3
   have hm3' : m3 = mq := by rw [← hs3, hm3]
   subst hm3'
-  by_cases hg : (rq.headD 0) = 0 ∧ r3.headD 0 = 0
-  · rw [cfbE.k_sl_contains.abort1 p _ r3 m3 hg]
-    have hr1 : r1.headD 0 ≠ 2 := by
-      intro h2; rw [ite_eq_left h2] at hreq; rw [hg.1] at hreq; exact absurd hreq (by decide)
-    have hxn : x ≠ some true := by
-      intro hxt; subst hxt; simp only [decLvlEq] at hx; exact hr1 hx
-    have hnin : ws.contains fv = false := by
-      cases hcw : ws.contains fv
-      · rfl
-      · rw [hcw, hg.2] at hct; exact absurd hct (by decide)
-    have hcond : (x == some true || idxArgs.contains (decI fv)) = false := by
-      rw [hwsd, contains_map_decI fv hfv ws hwlt, hnin]
-      cases x with
-      | none => rfl
-      | some b => cases b with
-        | false => rfl
-        | true => exact absurd rfl hxn
-    refine fun _ => ErrClaim.congr (T' := ConRon.Arena.fail (.invalid "direct sum: large eliminator with a \
-        non-propositional field outside the indices")) ?_ (ErrClaim.fail _ _ (by decide))
-    simp only [hcond]; rfl
-  rw [cfbE.k_sl_contains.arm1 p _ r3 m3 hg, cfbE.j1.arm1]
-  have hcond : (x == some true || idxArgs.contains (decI fv)) = true := by
-    by_cases h2 : r1.headD 0 = 2
-    · have : x = some true := by
-        simp only [decLvlEq] at hx; rw [h2] at hx
-        rcases x with _ | _ | _
-        · exact absurd hx (by decide)
-        · exact absurd hx (by decide)
-        · rfl
-      rw [this]; rfl
-    · have hct1 : r3.headD 0 ≠ 0 := fun e => hg ⟨by rw [← hreq, ite_eq_right h2], e⟩
-      have hin : ws.contains fv = true := by
-        rw [hct] at hct1
-        cases hcw : ws.contains fv
-        · rw [hcw] at hct1; exact absurd rfl hct1
-        · rfl
-      rw [hwsd, contains_map_decI fv hfv ws hwlt, hin, Bool.or_true]
-  exact RefE.ret (by simp only [hcond]; rfl) ⟨hS1, hg1, hA1⟩
+  dsimp only [cfbE.k_sl_contains, cfbE.j1]
+  have hq3 : rq.headD 0 = 0 ↔ x ≠ some true := by
+    simp only [decLvlEq] at hx; rw [← hreq, hx]; rcases x with _ | _ | _ <;> simp
+  have hr3 : r3.headD 0 = 0 ↔ ws.contains fv = false := by rw [hct]; cases ws.contains fv <;> simp
+  rw [hwsd, contains_map_decI fv hfv ws hwlt]
+  refine RefE.guardIf (by decide) (fun hg => ?_) (fun hb => ?_) fun _ _ => RefE.ret rfl ⟨hS1, hg1, hA1⟩
+  · rw [hq3, hr3] at hg; rw [hg.2, Bool.or_false]; simpa using hg.1
+  · rw [hq3, hr3]; simpa using hb
 
 /-- **The model of `check_struct_field_sorts_i_go`, both outcomes**: `sl_get` and `fvar_type_d`
 (outside the verdict closure) through their `Option` models, the core stubs and
