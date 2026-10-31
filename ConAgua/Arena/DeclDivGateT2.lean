@@ -347,9 +347,8 @@ theorem ctp_ref (hD : DmProg8 p) (hq : KnotStageProg p) (hcl : LeafClosed p) (hk
     have hD6 := hD.toDmProg7.toDmProg6
     simp only [checkTypePins]
     -- the stored type
-    rcases h1 : callW p k "type_pin_stored" [vis, tp.1.word.toUInt64] m with _ | ⟨r1, m1⟩
-    · rw [liftE_none, checkTypePinsE.k_type_pin_stored.none]; exact RefE.of_cls0 (by simp)
-    rw [liftE_some, checkTypePinsE.k_type_pin_stored.arm1]
+    refine RefE.bindLift (fun _ => checkTypePinsE.k_type_pin_stored.none ..) fun r1 m1 h1 => ?_
+    rw [checkTypePinsE.k_type_pin_stored.arm1]
     obtain ⟨x1, a1, hrun1, hS1, hg1, hl1, hx1⟩ :=
       (tps_ref hD6 tp.1.word.toUInt64) k m a r1 m1 ⟨hC.stage, dmWord_lt32 _⟩ h1
     have hCr1 := hkp.call (im_mem _ rfl) h1 hCr
@@ -367,7 +366,7 @@ theorem ctp_ref (hD : DmProg8 p) (hq : KnotStageProg p) (hcl : LeafClosed p) (hk
         rw [h1]; omega)]
       exact v1
     rw [hrd]
-    refine RefE.bind_right hrun1 ?_
+    refine ⟨_, _, hrun1, ?_⟩
     -- the comparison
     rcases h2 : callE p k "is_def_eq_core" [vis, 0, r1.headD 0, tp.2.word.toUInt64] m1 with
       e2 | ⟨r2, m2⟩
@@ -463,9 +462,7 @@ theorem cpv_ref (hD : DmProg8 p) (hq : KnotStageProg p) (hcl : LeafClosed p) (hk
     exact ConLeche.Expr.WScoped.of_not_hasFvar hpg.1.1.1.2
   simp only [checkDivModPinValue]
   -- the pin
-  rcases h1 : callW p k "div_mod_decl_pin" [ps, c] m with _ | ⟨r1, m1⟩
-  · rw [liftE_none, checkDivModPinValueE.k_div_mod_decl_pin.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some, checkDivModPinValueE.k_div_mod_decl_pin.arm1]
+  refine RefE.bindLift (fun _ => rfl) fun r1 m1 h1 => ?_
   obtain ⟨x1, a1, hrun1, hS1, hg1, hl1, hx1⟩ :=
     (divModDeclPin_ref hD5.toDmProg2.toDmProg1 ps c ip) k m a r1 m1 ⟨hC.stage, hc, hP⟩ h1
   have hCr1 := hkp.call (im_mem _ rfl) h1 hCr
@@ -474,23 +471,18 @@ theorem cpv_ref (hD : DmProg8 p) (hq : KnotStageProg p) (hcl : LeafClosed p) (hk
   have hC1 := StageC.of_core hC hS1 (callW_leafFrame hcl (leaf_mem _ (by decide)) h1)
     (CoreStep.refl hC.check)
   rw [← hx1] at hpd
-  have hrun1' : (divModDeclPin ip (decI c)).run a = .ok (decI (r1.headD 0), a) := by
-    rw [hx1]; exact hrun1
-  refine RefE.bind_right hrun1' ?_
+  refine ⟨_, _, (by rw [hx1]; exact hrun1 :
+    (divModDeclPin ip (decI c)).run a = .ok (decI (r1.headD 0), a)), ?_⟩
+  dsimp only [checkDivModPinValueE.k_div_mod_decl_pin]
   -- the value against the pin
-  rcases h2 : callE p k "is_def_eq_core" [vis, 0, value, r1.headD 0] m1 with e2 | ⟨r2, m2⟩
-  · rw [checkDivModPinValueE.k_is_def_eq_core.eq_1]
-    exact RefE.bind_left fun hcE => hcE.isDefEqCore k hk' hC1.stageT 0 value (r1.headD 0) hval hl1 _ h2
+  refine RefE.bindCall (fun _ => rfl)
+    (fun hcE _ h2 => hcE.isDefEqCore k hk' hC1.stageT 0 value (r1.headD 0) hval hl1 _ h2)
+    (fun b h2 => hq.isDefEqCore_sim k hk' hC1.stageT 0 value (r1.headD 0) hval hl1 b.1 b.2 h2)
+    fun r2 m2 x2 a2 h2 hrun2 ⟨hT2, hg2, hd2⟩ => ?_
   have hCr2 := hkp.call (im_mem _ rfl) (callW_of_callE h2) hCr1
-  obtain ⟨x2, a2, hrun2, hT2, hg2, hd2⟩ :=
-    hq.isDefEqCore_sim k hk' hC1.stageT 0 value (r1.headD 0) hval hl1 r2 m2 (callW_of_callE h2)
-  rw [h0w] at hrun2
   obtain ⟨hck2, hx2', hp2, -⟩ := defeq_check henv hC1.check hv hpd hwsv hwsP hrun2
   have c2 : CoreStep V env fe a a2 := ⟨hck2, hx2', hp2⟩
   have hC2 := StageC.of_T hT2 hck2
-  have hrun2' : (isDefEqCore V fe checkFuel 0 (decE value) (decI (r1.headD 0))).run a =
-      .ok (x2, a2) := hrun2
-  refine RefE.bind_right hrun2' ?_
   by_cases z2 : r2.headD 0 = 0
   · rw [checkDivModPinValueE.k_is_def_eq_core.arm1 p _ _ _ _ _ _ _ z2]
     have hx2 : x2 = false := by rw [← hd2]; unfold decBool; rw [z2]; rfl
@@ -501,21 +493,16 @@ theorem cpv_ref (hD : DmProg8 p) (hq : KnotStageProg p) (hcl : LeafClosed p) (hk
   rw [hx2]
   refine RefE.ite_pos rfl ?_
   -- the statements and the proofs
-  rcases h3 : callW p k "div_mod_cert_stmts" [c] m2 with _ | ⟨r3, m3⟩
-  · rw [liftE_none, checkDivModPinValueE.k_div_mod_cert_stmts.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some, checkDivModPinValueE.k_div_mod_cert_stmts.arm1]
-  obtain ⟨x3, a3, hrun3, hS3, hg3, hd3⟩ :=
-    (divModCertStmts_ref hD5.toDmProg2 c) k m2 a2 r3 m3 ⟨hC2.stage, hc⟩ h3
+  refine RefE.bindSim (fun _ => rfl) ((divModCertStmts_ref hD5.toDmProg2 c) k m2 a2 · · ⟨hC2.stage, hc⟩ ·)
+    fun r3 x3 m3 a3 h3 hrun3 ⟨hS3, hg3, hd3⟩ => ?_
+  dsimp only [checkDivModPinValueE.k_div_mod_cert_stmts]
   have hCr3 := hkp.call (im_mem _ rfl) h3 hCr2
   have hn2 := ConRon.Bridge.denoteN_ext hn c2.ext
   obtain ⟨hi3, hsd⟩ := ConRon.Bridge.divModCertStmts_run hC2.check.state hC2.check.pins hn2 hrun3
   have c3 := ConRon.Bridge.CoreStep.of_istep hC2.check hi3
   have hC3 := StageC.of_core hC2 hS3 (callW_leafFrame hcl (leaf_mem _ (by decide)) h3) c3
   have c03 := c2.trans c3
-  refine RefE.bind_right hrun3 ?_
-  rcases h4 : callW p k "div_mod_cert_proofs" [ps, c] m3 with _ | ⟨r4, m4⟩
-  · rw [liftE_none, checkDivModPinValueE.k_div_mod_cert_proofs.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some, checkDivModPinValueE.k_div_mod_cert_proofs.arm1]
+  refine RefE.bindLift (fun _ => rfl) fun r4 m4 h4 => ?_
   obtain ⟨x4, a4, hrun4, hS4, hg4, hd4⟩ :=
     (divModCertProofs_ref hD5.toDmProg2.toDmProg1 ps c ip) k m3 a3 r4 m4
       ⟨hS3, hc, PinSetR.grow (PinSetR.grow hP hg1) (hg2.trans hg3)⟩ h4
@@ -527,7 +514,8 @@ theorem cpv_ref (hD : DmProg8 p) (hq : KnotStageProg p) (hcl : LeafClosed p) (hk
   rw [e4] at hrun4 hS4
   have hC4 := StageC.of_core hC3 hS4 (callW_leafFrame hcl (leaf_mem _ (by decide)) h4)
     (CoreStep.refl hC3.check)
-  refine RefE.bind_right hrun4 ?_
+  refine ⟨_, _, hrun4, ?_⟩
+  dsimp only [checkDivModPinValueE.k_div_mod_cert_proofs]
   -- the certificates
   simp only [decStmtL, ntGetD0, ntGetD1] at hd3
   unfold decRL at hd4
@@ -580,26 +568,16 @@ theorem cpa_ref (hD : DmProg8 p) (hq : KnotStageProg p) (hcl : LeafClosed p) (hk
   have hD1 := hD.toDmProg7.toDmProg6.toDmProg5.toDmProg2.toDmProg1
   simp only [checkDivModPinAt]
   -- the type pins
-  rcases h1 : callW p k "div_mod_type_pins" [ps, c] m with _ | ⟨r1, m1⟩
-  · rw [liftE_none, checkDivModPinAtE.k_div_mod_type_pins.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some, checkDivModPinAtE.k_div_mod_type_pins.arm1]
-  obtain ⟨x1, a1, hrun1, hS1, hg1, hd1⟩ :=
-    (divModTypePins_ref hD1 ps c ip) k m a r1 m1 ⟨hC.stage, hc, hP⟩ h1
+  refine RefE.bindSim (fun _ => rfl) ((divModTypePins_ref hD1 ps c ip) k m a · · ⟨hC.stage, hc, hP⟩ ·)
+    fun r1 x1 m1 a1 h1 hrun1 ⟨hS1, hg1, hd1⟩ => ?_
+  dsimp only [checkDivModPinAtE.k_div_mod_type_pins]
   have hCr1 := hkp.call (im_mem _ rfl) h1 hCr
   obtain ⟨e1, htd⟩ := ConRon.Bridge.divModTypePins_run hC.check.state hC.check.pins hps hn hrun1
-  rw [e1] at hrun1 hS1
+  subst a1
   have hC1 := StageC.of_core hC hS1 (callW_leafFrame hcl (leaf_mem _ (by decide)) h1)
     (CoreStep.refl hC.check)
-  refine RefE.bind_right hrun1 ?_
-  have h2 := ctp_ref hD hq hcl hkp henv x1 _ _ _ k hk' m1 a hC1 hCr1 hd1 htd
-    (ConRon.Bridge.divModTypePins_closed hpg)
-  rcases e2 : checkTypePinsE p k m1 vis (r1.headD 0) (r1.tail.headD 0) with e2 | ⟨r2, m2⟩
-  · rw [e2] at h2
-    rw [checkDivModPinAtE.k_check_type_pins.none]
-    exact RefE.bind_left h2
-  rw [e2] at h2
-  obtain ⟨x2, a2, hrun2, hR2⟩ := h2
-  refine RefE.bind_right hrun2 ?_
+  refine RefE.bindE (fun _ => rfl) id (ctp_ref hD hq hcl hkp henv x1 _ _ _ k hk' m1 a hC1 hCr1 hd1 htd
+    (ConRon.Bridge.divModTypePins_closed hpg)) fun ⟨r2, m2⟩ x2 a2 _ hR2 => ?_
   by_cases z2 : r2 = 0
   · rw [checkDivModPinAtE.k_check_type_pins.arm1 p _ _ _ _ _ _ _ z2]
     have hx2 := decW0B_false hR2.res (by simpa using z2)
