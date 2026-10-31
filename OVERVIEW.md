@@ -86,7 +86,7 @@ the same point (`fail R`). The labels are proved: an exit 1 or 2 means the
 twin's pipeline fails on the input with `invalid` resp. `notImplemented`
 (§2.1). The messages are not part of the theorem; on the test corpus they are
 con-ron's own
-([deviation D16](https://github.com/leanprover/con-agua/blob/master/docs/deviations.md#L49)).
+([deviation D16](https://github.com/leanprover/con-agua/blob/master/docs/deviations.md#L48)).
 Internally, accept is the return word `0x414343455054`, chosen so that no
 status word or unset register reads as accept
 ([`ACCEPT`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/Statement.lean#L90-L92)).
@@ -1120,11 +1120,11 @@ con-leche's three.
 [`docs/deviations.md`](docs/deviations.md) lists every place where L does
 something else than the twin, beyond fuel and fixed capacities, in three
 sections:
-[Temporary](https://github.com/leanprover/con-agua/blob/master/docs/deviations.md#L24-L39)
+[Temporary](https://github.com/leanprover/con-agua/blob/master/docs/deviations.md#L24-L38)
 (to be fixed, or intent unclear),
-[Deliberate](https://github.com/leanprover/con-agua/blob/master/docs/deviations.md#L41-L62)
+[Deliberate](https://github.com/leanprover/con-agua/blob/master/docs/deviations.md#L40-L61)
 (by design, with the reason), and
-[Fixed](https://github.com/leanprover/con-agua/blob/master/docs/deviations.md#L64-L91).
+[Fixed](https://github.com/leanprover/con-agua/blob/master/docs/deviations.md#L63-L91).
 Each row says what the twin does, what L does, and the effect: completeness (L
 declines where the twin accepts), performance, or none. No deviation may lose
 soundness, and the theorem would not let one through: it is about the L code as
