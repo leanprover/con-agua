@@ -83,6 +83,27 @@ theorem chkR_spec {ck : Bool} {r : Reg64} {ln : AddrExpr} {k : Nat} {s : Machine
       simp only [decide_eq_false_iff_not, UInt64.le_iff_toNat_le, UInt64.toNat_ofNat_of_lt' hn] at hcc
       exact ev_congr (hok (by omega) _) (by simp [chkR])
 
+/-- The bounds check `chkI`: on to the next instruction if `j < n` (or no check is emitted), to
+`ca_error` otherwise; only the flags change. -/
+theorem chkI_spec {ck : Bool} {r : Reg64} {n : Nat} {k : Nat} {s : MachineData}
+    {Q : MachineState → Prop} (hc : Code (chkI ck r n) k) {j : Word} (hn : n < 2 ^ 31)
+    (hx : s.regs.get64 r = j.toBitVec) (hck : ck = false → j.toNat < n)
+    (hok : j.toNat < n → ∀ st, Ev Q { s with status := st } (at_ (k + (chkI ck r n).length)))
+    (herr : ¬ j.toNat < n → ∀ st, Ev Q { s with status := st } (label errorL)) : Ev Q s (at_ k) := by
+  cases ck
+  · exact ev_congr (hok (hck rfl) s.status) (by simp only [chkI, Bool.false_eq_true, ite_false, List.length_nil, Nat.add_zero])
+  · simp only [chkI, ite_true] at hc ⊢
+    have hn' : (Int64.ofInt (n : Int)).toBitVec.toNat = n := by
+      simp [Int64.toBitVec_ofInt]; omega
+    refine ev_cmpRIg hc.head ?_
+    refine ev_jcc hc.tail.head (fun hcc => ?_) (fun hcc => ?_)
+    · simp only [CondCode.interp, cmpFlags_cf, Bool.not_eq_true', decide_eq_false_iff_not,
+        hn', hx, UInt64.toNat_toBitVec] at hcc
+      exact herr hcc _
+    · simp only [CondCode.interp, cmpFlags_cf, Bool.not_eq_false', decide_eq_true_eq,
+        hn', hx, UInt64.toNat_toBitVec] at hcc
+      exact ev_congr (hok hcc _) (by simp [chkI])
+
 /-- **`d := A.u32[x]`** (`ld32Code`): from `x` = the index `j`, the value `half32` of word `j / 2`
 in `d`, the scratch `t` and the flags clobbered; or `ca_error` when word `j / 2` does not exist. -/
 theorem ld32Code_spec {ck : Bool} {x t d : Reg64} {ln bs : AddrExpr} {arr : Array Word} {k : Nat} {s : MachineData}
