@@ -77,8 +77,14 @@ theorem posmemo_rx_mfr (n : Nat) :
   · simp only [rxW, rxK1.eq_def] at hh
     refine (MFr.trans ⟨_, _, benterG_frame 218 m, by simp, by simp⟩ ?_ : RxFr _ _)
     mfr_auto hh [iGo _ _ _ _ _ _]
-    simp only [Option.some.injEq, Prod.mk.injEq] at hh; rw [← hh.2]
-    exact ⟨_, _, MemFrame.setCtl _ 219 _, by simp, by simp⟩
+    simp only [rxK2] at hh
+    split at hh
+    · split at hh; · cases hh
+      simp only [Option.some.injEq, Prod.mk.injEq] at hh; rw [← hh.2]
+      exact MFr.trans (⟨_, _, MemFrame.setCtl _ 219 _, by simp, by simp⟩ : RxFr _ _)
+        ⟨_, _, mclearG_frame rfSch _, by simp, by simp [rfSch]⟩
+    · simp only [Option.some.injEq, Prod.mk.injEq] at hh; rw [← hh.2]
+      exact ⟨_, _, MemFrame.setCtl _ 219 _, by simp, by simp⟩
   · simp only [rxGoW] at hh
     split at hh; · cases hh
     simp only [rxG1] at hh

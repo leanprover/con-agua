@@ -16,7 +16,8 @@ image `nestHoleImg`), the whole-application substitution (`replaceApps`, `phApp?
 Per-call memos (`IndIface`'s schemas): `ma_*` (`mentionsAnyGo`), `no_*` (`nestOccGo`), `dp_*`
 (`depthGo`), `ra_*` (`replaceAppsGo`) are cleared once by their walk's top call; `replaceFVars`
 nests inside itself (`nestHoleImg`), so its memo (`rf_*`) is BANKED instead (`rf_bank_enter` /
-`rf_bank_leave`, key `k2 = g << 32` with `g = CTL.u64[219]` the current generation).
+`rf_bank_leave`, key `k2 = g << 32` with `g = CTL.u64[219]` the current generation), and the
+outermost call clears it (`rf_clear`) on return.
 -/
 
 namespace L.Ind
@@ -579,7 +580,8 @@ def replaceFVarsGo : FunDecl := lfn (f, fuel, h) locals (g, x, y, z, ok, r, k2, 
 }
 
 /-- `replace_fvars(f, e)`: `replaceFVars`, one memoised DAG walk in a fresh bank (nested calls,
-via `nestHoleImg`, get their own). -/
+via `nestHoleImg`, get their own). The outermost call (the caller's generation `0`) clears the
+memo on return: the twin's per-call map is dropped there, and the dead generations go with it. -/
 -- con-ron: ConRon/Arena/Inductives/Positivity.lean:525-532 ConRon.Arena.replaceFVars
 @[l_impl ConRon.Arena.replaceFVars]
 def replaceFVars : FunDecl := lfn (f, e) locals (s, r, u) {
@@ -587,6 +589,7 @@ def replaceFVars : FunDecl := lfn (f, e) locals (s, r, u) {
   r := call replace_fvars_go(f, ⟪CWF⟫, e);
   u := call rf_bank_leave(s);
   if 4294967296 <= r { abort };
+  if s == 0 { u := call rf_clear() };
   return r
 }
 

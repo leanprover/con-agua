@@ -22,7 +22,8 @@ variable (p : Prog) (L : RxLook p)
 include L
 
 /-- **`replace_fvars` refines `replaceFVars`** (through the `mk_app_n` stub of the hole images): one
-memoised walk in a fresh bank of the banked memo, the caller's banks untouched. -/
+memoised walk in a fresh bank of the banked memo, the caller's banks untouched (the outermost
+call, at generation `0`, clears the memo). -/
 @[refines ConRon.Arena.replaceFVars]
 theorem replaceFVars_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
     (fe : IFEnv) (vis f e : Word) (fm : FvMap) (M : Std.HashMap (EIdx × Word) EIdx) (G g : Word)
@@ -38,13 +39,13 @@ theorem replaceFVars_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx �
   exact ⟨hl, hok, by rw [hres], hH, by rw [hst]; exact hpost⟩
 
 /-- **`replace_fvars_go` (with `replace_fvars_node`) refines `replaceFVarsGo`**, from a memo whose
-current bank is the twin's. -/
+current bank is the twin's (inside a bank: generation `g ≠ 0`). -/
 @[refines ConRon.Arena.replaceFVarsGo]
 theorem replaceFVarsGo_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
     (fe : IFEnv) (vis f fu h : Word) (fm : FvMap) (mp : Std.HashMap EIdx EIdx)
     (M : Std.HashMap (EIdx × Word) EIdx) (G g : Word)
     (hS : StageR dn vis fe s₀.mem a₀) (hfm : FMOk s₀.mem f.toNat fm) (hh : H h) (hR : RfInv s₀.mem M G g)
-    (hb : Bank M g mp) :
+    (hb : Bank M g mp) (hg0 : g ≠ 0) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "replace_fvars_go" [f, fu, h]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.replaceFVarsGo fm mp fu.toNat (decE h)) a₀ ∧
       decE (r.headD 0) = (AM.res (ConRon.Arena.replaceFVarsGo fm mp fu.toNat (decE h)) a₀).1 ∧
@@ -53,7 +54,7 @@ theorem replaceFVarsGo_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx 
   refine triple_post ((rxSpec_all p L n).2.2.2.2.2.1 s₀ f fu h) ?_
   rintro r s' ⟨hl, hm⟩
   obtain ⟨mp', a', M', G', hrun, h1, h2, h3, h4, h5, h6⟩ :=
-    (rxOK_all dn fe vis n).2.2.2.2.2.1 _ _ a₀ f fu h fm mp _ M G g hm hS hfm hh hR hb
+    (rxOK_all dn fe vis n).2.2.2.2.2.1 _ _ a₀ f fu h fm mp _ M G g hm hS hfm hh hR hb hg0
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
   exact ⟨hl, hok, by rw [hres], by rw [hst, hres]; exact ⟨M', G', h1, h2, h3, h4, h5, h6⟩⟩
 

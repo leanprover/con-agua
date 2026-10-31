@@ -8,7 +8,7 @@ import ConRon.Bridge.Promote.Pers
 
 `loopFns`: every function phase A's fold (`install_fold_go`) and phase B (`check_pending_go`)
 reach in the checker's program (the bracket, the arms, the core, the stage), as a literal computed from
-`checkerProg`'s call graph (1422 names; the decided check in `ConAgua/Checker/LoopAll.lean`
+`checkerProg`'s call graph (1423 names; the decided check in `ConAgua/Checker/LoopAll.lean`
 fails if a callee is missing, then recompute it). No function of it writes the pin table or a
 byte array, and every `CTL` word it writes is below 1024 (`LoopClosed`): a step of the loop keeps
 the pin table, so the pin flag, and every array's size.
@@ -250,17 +250,17 @@ def loopFns : List FnName :=
    "reduce_proj_head", "reduce_stored_ok", "replace_apps", "replace_apps_go", "replace_apps_node",
    "replace_fvars", "replace_fvars_go", "replace_fvars_node", "reserved_contains",
    "reserved_contains_w", "reserved_from", "reserved_rec_name", "residual_pw", "rf_bank_enter",
-   "rf_bank_leave", "rf_find", "rf_put", "rom_and_pin", "rom_basis_decls", "rom_basis_decls_a",
-   "rom_ci", "rom_cv", "rom_ex_leaf", "rom_ex_one", "rom_ex_ref", "rom_ex_two", "rom_expr",
-   "rom_expr_pin", "rom_exprs_to", "rom_level", "rom_levels", "rom_lit", "rom_lvls_go", "rom_name",
-   "rom_pin_sets", "rom_put", "rom_u64", "rr_clear", "rr_find", "rr_put", "rset_clear",
-   "rset_find", "rset_put", "rule_copy", "rule_eq_a", "rule_eq_b", "rule_eq_but_rhs",
-   "rule_rhs_at", "rule_wr", "rules_eq", "rules_to_erec", "rules_to_erec_go", "same_const_heads",
-   "scratch_drop", "scratch_enter", "scratch_reset", "sl_all_in", "sl_append", "sl_cons",
-   "sl_contains", "sl_eq", "sl_find", "sl_get", "sl_getd", "sl_memo", "sl_new1", "sl_nodup",
-   "sl_set_eq", "sl_snoc", "sle_go", "slp_go", "sls_go", "sls_memo", "sort_find", "sort_push",
-   "spine_cmp", "spine_head", "spn_get", "spn_ls", "spn_pool", "spn_push", "spn_to_iw",
-   "stack_cover", "std_ax_family", "std_axiom_ok", "stk_pool", "stk_push", "stmt1",
+   "rf_bank_leave", "rf_clear", "rf_find", "rf_put", "rom_and_pin", "rom_basis_decls",
+   "rom_basis_decls_a", "rom_ci", "rom_cv", "rom_ex_leaf", "rom_ex_one", "rom_ex_ref",
+   "rom_ex_two", "rom_expr", "rom_expr_pin", "rom_exprs_to", "rom_level", "rom_levels", "rom_lit",
+   "rom_lvls_go", "rom_name", "rom_pin_sets", "rom_put", "rom_u64", "rr_clear", "rr_find",
+   "rr_put", "rset_clear", "rset_find", "rset_put", "rule_copy", "rule_eq_a", "rule_eq_b",
+   "rule_eq_but_rhs", "rule_rhs_at", "rule_wr", "rules_eq", "rules_to_erec", "rules_to_erec_go",
+   "same_const_heads", "scratch_drop", "scratch_enter", "scratch_reset", "sl_all_in", "sl_append",
+   "sl_cons", "sl_contains", "sl_eq", "sl_find", "sl_get", "sl_getd", "sl_memo", "sl_new1",
+   "sl_nodup", "sl_set_eq", "sl_snoc", "sle_go", "slp_go", "sls_go", "sls_memo", "sort_find",
+   "sort_push", "spine_cmp", "spine_head", "spn_get", "spn_ls", "spn_pool", "spn_push",
+   "spn_to_iw", "stack_cover", "std_ax_family", "std_axiom_ok", "stk_pool", "stk_push", "stmt1",
    "str_cons_spine", "str_ctor_pre", "str_cv", "str_lit_ctor", "str_lit_supported", "str_ls1",
    "str_param_sort", "str_sup_1", "str_sup_2", "str_sup_3", "str_sup_4", "str_sup_5", "str_sup_6",
    "str_sup_7", "str_utf8_char", "string_of_list_ty_ok", "string_ty_ok", "strip_lams", "strip_pis",

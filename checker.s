@@ -177982,9 +177982,9 @@ ret
 ca_f_replace_fvars:
 movq %rsp, %rax
 subq 8(%r15), %rax
-cmpq $64, %rax
+cmpq $72, %rax
 jb ca_exhausted
-subq $56, %rsp
+subq $64, %rsp
 movq %rdi, (%rsp)
 movq %r8, 8(%rsp)
 movq 44760(%r15), %rax
@@ -178020,12 +178020,30 @@ movq $0, 32(%rsp)
 movq $4294967296, %rax
 cmpq 24(%rsp), %rax
 jbe ca_error
+cmpq $0, 16(%rsp)
+jne .Lca_replace_fvars_22221E
+movq 44672(%r15), %rax
+addq $2, %rax
+cmpq $0, %rax
+jne .Lca_replace_fvars_22221422E
+jmp ca_error
+jmp .Lca_replace_fvars_22221422X
+.Lca_replace_fvars_22221422E:
+movq 44672(%r15), %rax
+addq $1, %rax
+movq %rax, 44672(%r15)
+movq $0, 44680(%r15)
+movq $0, 32(%rsp)
+.Lca_replace_fvars_22221422X:
+jmp .Lca_replace_fvars_22221X
+.Lca_replace_fvars_22221E:
+.Lca_replace_fvars_22221X:
 movq 24(%rsp), %rax
 jmp .Lca_replace_fvars_0R
 .Lca_replace_fvars_0Z:
 movq $0, %rax
 .Lca_replace_fvars_0R:
-addq $56, %rsp
+addq $64, %rsp
 ret
 ca_f_replace_fvars_go:
 movq %rsp, %rax
@@ -178550,6 +178568,23 @@ jmp .Lca_rf_bank_leave_0R
 .Lca_rf_bank_leave_0Z:
 movq $0, %rax
 .Lca_rf_bank_leave_0R:
+ret
+ca_f_rf_clear:
+subq $8, %rsp
+movq 44672(%r15), %rax
+addq $2, %rax
+cmpq $0, %rax
+je ca_error
+movq 44672(%r15), %rax
+addq $1, %rax
+movq %rax, 44672(%r15)
+movq $0, 44680(%r15)
+movq $0, %rax
+jmp .Lca_rf_clear_0R
+.Lca_rf_clear_0Z:
+movq $0, %rax
+.Lca_rf_clear_0R:
+addq $8, %rsp
 ret
 ca_f_rf_find:
 subq $64, %rsp

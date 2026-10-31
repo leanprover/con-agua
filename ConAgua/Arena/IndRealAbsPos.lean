@@ -196,7 +196,7 @@ theorem posmemo_rx_afr (n : Nat) :
     simp only [Option.some.injEq, Prod.mk.injEq] at hh; obtain ⟨-, -, rfl⟩ := hh; exact AFr.refl _
   · simp only [rxDsGoW, dgK.eq_def] at hh
     afr_auto hh [iRx _ _ _ _ _, fun h => (set64IW_afr _ _ _).trans (iDsGo _ _ _ _ _ _ _ h)]
-  · simp only [rxW, rxK1.eq_def] at hh
+  · simp only [rxW, rxK1.eq_def, rxK2] at hh
     refine (AFr.of_frame (benterG_frame 218 m)).trans ?_
     afr_auto hh [iGo _ _ _ _ _ _]
   · simp only [rxGoW] at hh
