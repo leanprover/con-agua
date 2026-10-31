@@ -1,3 +1,4 @@
+import ConAgua.Arena.RefWalk
 import ConAgua.Arena.RecGenSpec.DecTMDecBOf
 import ConAgua.Arena.IndInstallSpec.NestCtx
 import ConAgua.Arena.IndSumSpec.ParamLevels
@@ -128,18 +129,16 @@ theorem tmm_ref (n : Nat) {m : Mem} {a : AState} {pp cao cal pfo pfl fvo fvl ao 
   rw [hw0, rt, rni, rc, rco, rcl, hnpw]
   simp only [tmoMemT, List.getElem?_eq_getElem hvtl, List.getElem?_eq_getElem hvcl, unwrapOr, pure_bind]
   -- `block_shape_lps`
-  rcases hl1 : lpsW n m pp with _ | ⟨r1, m1⟩
-  · rw [liftE_none, tmmE.k_block_shape_lps.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some, tmmE.k_block_shape_lps.arm1]
+  refine RefE.onlySim (fun _ => rfl) (fun _ _ h => h) fun r1 m1 hl1 => ?_
+  dsimp only [tmmE.k_block_shape_lps]
   obtain ⟨hS1, hg1, hlps1, htop1⟩ := lpsW_ok' hl1 hS hq
   have hT1 : iwTop m1 < 2 ^ 64 := Nat.lt_of_le_of_lt hS1.iw.iw hS1.iw.iwSize
   -- `param_levels`
-  rcases hl2 : plW n m1 (r1.headD 0) (r1.tail.headD 0) with _ | ⟨r2, m2⟩
-  · rw [liftE_none, tmmE.k_param_levels.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some, tmmE_kpl, tmmE.j2.eq_1]
+  refine RefE.bindLift (fun _ => rfl) fun r2 m2 hl2 => ?_
   obtain ⟨blv, a2, run2, hS2, hg2, hH2, hd2⟩ := plW_ok dn vis fe n m1 m2 a _ _ bs.lps r2 hl2 hS1 hlps1
     (by omega) htop1
-  refine RefE.bind_right run2 ?_
+  refine ⟨_, _, run2, ?_⟩
+  rw [tmmE_kpl, tmmE.j2.eq_1]
   have hg02 := hg1.trans hg2
   -- the parameter prefixes
   have hnpe : (UInt64.ofNat bs.nP : Word).toNat = bs.nP := UInt64.toNat_ofNat_of_lt' hnpb
@@ -202,11 +201,8 @@ theorem tmm_ref (n : Nat) {m : Mem} {a : AState} {pp cao cal pfo pfl fvo fvl ao 
     rw [← hd2, hu0, hws1, hws2, hws]; simp
   refine RefE.ite_pos hc ?_
   -- the record
-  rcases hl4 : mkTMW m2 I us fvo (if UInt64.ofNat bs.nP < fvl then UInt64.ofNat bs.nP else fvl)
-      (UInt64.ofNat bs.nP) (UInt64.ofNat (bs.members[t.toNat]'hvtl).nIdx) co cl (t + 1) 0 0 pfo pfl
-    with _ | ⟨r4, m4⟩
-  · rw [liftE_none, tmmE.k_mk_target_major.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some, tmmE.k_mk_target_major.arm1]
+  refine RefE.onlySim (fun _ => rfl) (fun _ _ h => h) fun r4 m4 hl4 => ?_
+  dsimp only [tmmE.k_mk_target_major]
   have hafr : AFr m m4 := ((lpsW_afr hl1).trans (plW_afr hl2)).trans (mkTMW_afr hl4)
   rw [mkTMW_eq, Option.map_eq_some_iff] at hl4
   obtain ⟨⟨q, m4'⟩, hpr, he⟩ := hl4
