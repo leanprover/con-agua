@@ -737,3 +737,131 @@ were the longest hand splits (6–9 lines each to 3–4 lines each: `ivg_ref` �
 Next families: the ones §6.9 lists (the inference bodies, the iota reduction, `InferProj*`, the
 positivity tops), and the other `Verdict/IndB*` files (`IndBClm`, `IndBCrg`, `IndBTmo`, …; check
 `reflen.py`).
+
+### 6.11 The inference bodies and `InferProj*` (lane refwalk6)
+
+Converted: `pisLoop_ref`, `pisOut_ref`, `ipl_ref`, `ifr_ref` (`InferBodyBindPi.lean`),
+`lamsLoop_ref`, `lamsOut_ref`, `ilf_ref`, `ilm_ref` (`InferBodyBind.lean`), `ib_ref`, `ibo_ref`,
+`bodyArm_ref` (`InferBodyDisp.lean`), `spioLoop_ref`, `aio_ref` (`InferBodySpine.lean`),
+`spLoop_ref`, `a_ref`, `isa_ref` (`InferBodySpineF.lean`), `ilet_ref`, `ilam_ref`, `ifa_ref`
+(`InferBodyLet.lean`), `ipa_ref` (`InferProj.lean`), `ip_grade` (`InferProj2.lean`). Statements
+unchanged.
+
+**Four kit rules.** The inference bodies call core functions (`CoreSpec`/`CoreSpecE`,
+`WhnfBase.lean`), not unified callees with a `RefE`, so the walk's rules for them go in
+`RefECore.lean`, beside the existing `RefE.bind_callE` (a knot slot through `callE`: `infer`,
+`whnf`, `infer_io`, `defeq`, `ensure_sort`):
+
+* `RefE.bind_callW`: a lifted core callee, `K (liftE (callW …))` under its `CoreSpec`
+  (`inst_list`, `inst1`, `ar_entry`, and `intern_fvar`/`intern_succ`/`intern_sort` through their
+  new `CoreSpec`s); the model's `none` is class `0`, the continuation gets the `CoreRef`.
+* `RefE.after_core`: `RefE.bind_core` without the twin's bind, for a `CorePost` post after
+  `bind_callE`/`bind_callW`: `refine RefE.bind_callW (fun _ => rfl) hspec fun r₁ m₁ _ h₁ =>
+  RefE.after_core (w := id) h₁ fun M₁ hS₁ _ => ?_`.
+
+and in `RefWalk.lean`:
+
+* `RefE.under` / `RefE.underIf`: the loops (`ipsE.loop1`, `ilsE.loop1`, `spioE.loop1`, …) sit
+  under their exit continuation `K₀ = f.k_loop1 …` in the statement (`RefE G (K₀ (loop1 …))`),
+  and every rule's `?K (liftE c)` fails to unify with `K₀ (K (liftE c))` (not a pattern).
+  `refine RefE.under (fun _ => rfl) (fun _ => K.none ..) fun hx => RefE.bind_callE hx …` hands
+  the rule `K₀ ∘ K`, then `rw [Function.comp_apply, K.arm1]`; a guard is
+  `RefE.underIf (fun _ => rfl) (RefE.abort0 (by rfl) fun h => ?_)`.
+
+**Three steps**, each a callee's `CoreSpec` from its triple and its `_core` lemma, so that
+`bind_callW` takes it: `internFVar_coreSpec` (`InferBodyLet.lean`, six sites) and
+`internSucc_coreSpec`, `internSort_coreSpec` (`InferBodyDisp.lean`, two sites each). The
+`BKept` after `intern_fvar` comes from the `CoreRef`'s `StackKept.bstk`, not from a second
+triple.
+
+**`InferProj*` walk little.** `ipa_ref` and `ip_grade` do not step the twin: they compute its
+run up front (`projAtT_run`, `inferProj_miss`, `inferProj_hit`, the `…_err` lemmas) and match the
+model's arms against it. Only the lifted calls (`RefE.onlySim`: the twin unchanged) and the
+guards (`RefE.abort0`, `RefE.abortAt`/`RefE.pass`) convert; −5 % and −7 %.
+
+Pitfalls (add to §6.4):
+
+* **`RefE.abort0 rfl` does not elaborate** ("`?m = ?m` … expected `Err.cls ?e = 0`"): the error
+  is not known yet when the argument is elaborated. Write `RefE.abort0 (by rfl)`. Likewise
+  `RefE.guardIf (by rfl) …`.
+* **A guarded continuation's chain of `if`s**: `rw [K.eq_2]` (the ok equation, all guards as
+  plain `if`s) instead of `K.arm1` (which wants every guard as a hypothesis); then one guard rule
+  per `if`.
+* **`(fun hG => (hG.knot j …).infer …)` needs `(hG : InferG p N)`** as the error argument of
+  `bind_callE`: its type is a metavariable when the lambda is elaborated.
+* **`s₀` of a `CoreSpec`**: at the caller's start pass `s₀` itself (an anonymous
+  `⟨s₀.mem, Locals.init []⟩` does not unify with `callW … s₀.mem`); mid-proof pass
+  `⟨m₁, Locals.init []⟩` (a `_` leaves `St.mem ?s =?= m₁` unsolved, and `ioView.whnf` then fails
+  with "pattern variable contains metavariables").
+* **After `bind_callE` the twin reads `decH r`, not `decE (r.headD 0)`**: `rw [viewBind_run', hvb]`
+  fails, and `rw [viewBind_run']` alone closes the goal by `rfl` with an unreduced value. Write
+  `rw [viewBind_run', show decH r₂ = decE (r₂.headD 0) from rfl, hvb]`.
+* **A core callee as the twin's last step**: `rw [← bind_pure (internE _)]`, `bind_callW`/
+  `bind_callE`, then a separate `exact RefE.ret rfl ⟨…, rfl, h.resOk⟩` (the post's `res` is
+  `rfl`: the `CoreRef`'s `res` states the other direction). In one term the twin's continuation
+  stays a metavariable.
+* **A callee at `d + 1` whose twin reads `d.toNat + 1`**: rewrite the goal once,
+  `rw [← toNat_succ_of_ne hd]`, before the first rule; the specs at `d + 1` then unify as they are
+  (no `rwa [hd1] at h`).
+* **`grind`-free flag guards**: `tag_sort_ne _ hrw` and
+  `fun hb g => Bool.noConfusion ((tag_sort_beq _ hrw g).symm.trans hb)` for the "expected a sort"
+  `guardIf`; `simp only [decBool, h0]; rfl` for `defeq`'s `guardThen`.
+
+Numbers, against master 2b0b3402 (`reflen.py`, `ncl.py`; elaboration `lake env lean` on the file,
+master's text in a master worktree, 3 interleaved runs, median, load ~20):
+
+| theorem | before | after |
+|---|---:|---:|
+| `pisLoop_ref` | 203 | 166 |
+| `spLoop_ref` | 186 | 147 |
+| `lamsLoop_ref` | 180 | 148 |
+| `ibo_ref` | 169 | 149 |
+| `ib_ref` | 154 | 141 |
+| `spioLoop_ref` | 153 | 117 |
+| `ifr_ref` | 128 | 97 |
+| `ifa_ref` | 113 | 75 |
+| `ilm_ref` | 106 | 80 |
+| `ipl_ref` | 81 | 69 |
+| `pisOut_ref` | 67 | 66 |
+| `ilet_ref` | 63 | 42 |
+| `ilf_ref` | 58 | 50 |
+| `lamsOut_ref` | 57 | 56 |
+| `aio_ref` | 50 | 41 |
+| `a_ref` | 50 | 43 |
+| `ilam_ref` | 45 | 30 |
+| `isa_ref` | 33 | 20 |
+| `bodyArm_ref` | 18 | 14 |
+| **the inference bodies** | 1914 | 1551 (**−19 %**) |
+| `ipa_ref` | 184 | 172 |
+| `ip_grade` | 176 | 164 |
+| **with `InferProj*`** | 2274 | 1887 (**−17 %**) |
+
+| file (code lines) | before | after | wall before → after | max RSS |
+|---|---:|---:|---:|---:|
+| `InferBodyLet.lean` (`internFVar_coreSpec`) | 391 | 327 | 2.83 → 3.08 s | 2.04 → 2.04 GB |
+| `InferBodySpine.lean` | 441 | 394 | 4.45 → 4.51 s | 2.00 → 1.99 GB |
+| `InferBodySpineF.lean` | 422 | 359 | 1.45 → 1.44 s | 1.92 → 1.92 GB |
+| `InferBodyBind.lean` | 745 | 676 | 1.77 → 1.84 s | 1.98 → 1.98 GB |
+| `InferBodyBindPi.lean` | 621 | 538 | 1.69 → 1.84 s | 2.01 → 2.01 GB |
+| `InferBodyDisp.lean` (two `CoreSpec`s) | 656 | 639 | 1.44 → 1.33 s | 2.00 → 1.99 GB |
+| `InferProj.lean` | 525 | 513 | 2.13 → 1.94 s | 2.22 → 2.22 GB |
+| `InferProj2.lean` | 400 | 388 | 1.43 → 1.51 s | 2.23 → 2.23 GB |
+| `RefECore.lean` (`bind_callW`, `after_core`) | 231 | 255 | 1.00 → 0.98 s | 1.83 → 1.83 GB |
+| `RefWalk.lean` (`under`, `underIf`) | 165 | 176 | | |
+
+The family: 4201 → 3834 code lines (**−9 %**); with the kit rules 4597 → 4265 (−7 %). Memory
+unchanged. The wall times are mostly imports (the files elaborate in 1–5 s) and move by
+±0.3 s between runs: a second batch of 5 interleaved runs gave `InferBodyLet` 3.05 → 3.04 s and
+`InferBodyBindPi` 1.59 → 1.71 s. The profiler puts `pisLoop_ref` at 0.73 → 0.93 s: each
+`RefE.under` + `bind_callE` `refine` takes 0.08–0.12 s (the unifier against the loop's twin); the
+other theorems of the file got faster (`pisOut_ref` 0.22 → 0.13 s). Passing `s₀` explicitly or
+`K₀.none` for `fun _ => rfl` did not change it. No file was left out. As in §6.10, the gain is in
+the knot calls (6–8 lines each to 3–4) and the lifted core callees (5–7 to 2–3); the outward
+folds (`pisOut_ref`, `lamsOut_ref`: their callees' facts are the bulk) and `InferProj*` gain
+least.
+
+Next families: the iota reduction (`WhnfIotaRecRefine*`: `vck_ref`, `major_ref`, `fire2_ref`),
+the positivity tops (`PosNty`'s `nty_ref`, `PosTopE4`'s `nsd_ref`, `IndsE4`'s `cbao_ref`), the
+other `Verdict/IndB*` files, and `InferLeaves.lean` (`inferConst_ref`, `il_ref`, `da_ref`; ten
+`CoreSpec.of_callW`, the same rules as here). `spTail_ref` (`InferBodySpine.lean`) still has its
+`inst_list` split (the twin's last step; `bind_pure` and `bind_callW`, ~2 lines).
