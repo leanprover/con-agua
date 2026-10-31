@@ -196,39 +196,12 @@ def cdT (mode : ConLeche.CheckMode) (pins : List INatOpPinSet) (fe : IFEnv) (d :
     AM (IFEnv × Option ValueGroup) := do
   pure (← checkDecl mode pins fe d, none)
 
-/-- The pinned definitions' names (`natOpNames ++ natDivModNames`), as the pin table holds them. -/
-def pinnedDefnL (m : Mem) : List NIdx :=
-  (List.range' 15 7).map (fun j => decI (pinW m j)) ++ (List.range' 22 8).map (fun j => decI (pinW m j))
-
-/-- The pinned opaques' names (`reduceOpNames`). -/
-def pinnedOpaqueL (m : Mem) : List NIdx := (List.range' 44 2).map (fun j => decI (pinW m j))
-
-theorem pinnedDefnL_eq (m : Mem) :
-    pinnedDefnL m = (List.range' 15 15).map (fun j => decI (pinW m j)) := by
-  simp [pinnedDefnL, List.range']
-
-section twin
-variable (mode : ConLeche.CheckMode) (pins : List INatOpPinSet) (fe : IFEnv) {m : Mem} {a : AState}
-
-theorem installStepGo_defn (h : PinsFull m a.pins) (cv : IConstantVal) (v : EIdx)
-    (hint : ConLeche.ReducibilityHint) :
-    (installStepGo mode pins fe (.defnDecl cv v hint)).run a =
-      if (pinnedDefnL m).contains cv.name then (cdT mode pins fe (.defnDecl cv v hint)).run a
-      else (ivT fe (.defnDecl cv v hint)).run a := by
-  simp only [installStepGo, StateT.run_bind, natOpNames_run h, exc_ok_bind',
-    natDivModNames_run h, pinnedDefnL, List.contains_append]
-  split <;> simp [cdT, ivT, StateT.run_bind]
-
-theorem installStepGo_opaque (h : PinsFull m a.pins) (cv : IConstantVal) (v : EIdx) :
-    (installStepGo mode pins fe (.opaqueDecl cv v)).run a =
-      if (pinnedOpaqueL m).contains cv.name then (cdT mode pins fe (.opaqueDecl cv v)).run a
-      else (ivT fe (.opaqueDecl cv v)).run a := by
-  simp only [installStepGo, StateT.run_bind, reduceOpNames_run h, exc_ok_bind', pinnedOpaqueL]
-  by_cases hc : ((List.range' 44 2).map (fun j => (decI (pinW m j) : NIdx))).contains cv.name = true
-  · simp only [hc, ite_true]; rfl
-  · simp only [hc, ite_false, Bool.false_eq_true]; rfl
-
-end twin
+/-- The pinned definitions' names (`natOpNames ++ natDivModNames`) are the pin table's 15 to 29. -/
+theorem pinnedDefn_contains (m : Mem) (x : NIdx) :
+    (((List.range' 15 7).map fun j => (decI (pinW m j) : NIdx)).contains x ||
+      ((List.range' 22 8).map fun j => (decI (pinW m j) : NIdx)).contains x) =
+      ((List.range' 15 15).map fun j => (decI (pinW m j) : NIdx)).contains x := by
+  rw [← List.contains_append, ← List.map_append]; rfl
 
 /-- The lookups `install_step_go`'s body needs. -/
 structure IstgProg (p : Prog) : Prop where

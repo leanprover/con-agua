@@ -752,47 +752,31 @@ theorem istg_ref (hdc : LoopCallees dn p) (hFD : FrontDecls ds) (hLD : DeclsLpsD
   | defnDecl cv v hint =>
     obtain ⟨hk, hcv, -⟩ := hdecl
     rw [installStepGoE.k_iw_reset.arm1 _ _ _ _ _ _ (by rw [hw0, hk])]
-    rcases cp : callW p n "pin_in" [rdW (m0.arr64 DECL) (2 + 8 * i) &&& 4294967295, 15, 30] m0 with
-      _ | ⟨rp, m1⟩
-    · rw [liftE_none, installStepGoE.k_pin_in.none]; exact RefE.of_cls0 (by simp)
-    rw [liftE_some]
+    refine RefE.onlySim (fun _ => installStepGoE.k_pin_in.none ..) (fun _ _ h => h) fun rp m1 cp => ?_
     obtain ⟨rfl, hp⟩ := pinC cp
     obtain ⟨hF, hiff⟩ := pinT hcv hp (by decide) (by decide) (by decide)
-    have hT := installStepGo_defn V pins fe hF cv v hint
-    rw [pinnedDefnL_eq] at hT
+    rw [installStepGo]
+    refine RefE.bind_right (natOpNames_run hF) (RefE.bind_right (natDivModNames_run hF) ?_)
+    rw [pinnedDefn_contains]
     by_cases hc0 : rp.headD 0 ≠ 0
     · rw [installStepGoE.k_pin_in.arm1 _ _ _ _ _ _ hc0]
-      have hpin : ((List.range' 15 15).map fun j => (decI (pinW m1 j) : NIdx)).contains cv.name =
-          true := hiff.mp hc0
-      rw [ite_eq_left hpin] at hT
-      exact istg_cd hCD hT
+      exact RefE.ite_pos (hiff.mp hc0) (istg_cd hCD rfl)
     · rw [installStepGoE.k_pin_in.arm2 _ _ _ _ _ _ (Decidable.not_not.mp hc0)]
-      have hpin : ¬ ((List.range' 15 15).map fun j => (decI (pinW m1 j) : NIdx)).contains cv.name =
-          true := fun h' => hc0 (hiff.mpr h')
-      rw [ite_eq_right hpin] at hT
-      exact hIV ⟨rfl, rfl⟩ hT
+      exact RefE.ite_neg (mt hiff.mpr hc0) (hIV ⟨rfl, rfl⟩ rfl)
   | opaqueDecl cv v =>
     obtain ⟨hk, hcv, -⟩ := hdecl
     rw [installStepGoE.k_iw_reset.arm3 _ _ _ _ _ _ (by rw [hw0, hk]; decide) (by rw [hw0, hk]; decide)
       (by rw [hw0, hk])]
-    rcases cp : callW p n "pin_in" [rdW (m0.arr64 DECL) (2 + 8 * i) &&& 4294967295, 44, 46] m0 with
-      _ | ⟨rp, m1⟩
-    · rw [liftE_none, installStepGoE.k_pin_in_2.none]; exact RefE.of_cls0 (by simp)
-    rw [liftE_some]
+    refine RefE.onlySim (fun _ => installStepGoE.k_pin_in_2.none ..) (fun _ _ h => h) fun rp m1 cp => ?_
     obtain ⟨rfl, hp⟩ := pinC cp
     obtain ⟨hF, hiff⟩ := pinT hcv hp (by decide) (by decide) (by decide)
-    have hT := installStepGo_opaque V pins fe hF cv v
+    rw [installStepGo]
+    refine RefE.bind_right (reduceOpNames_run hF) ?_
     by_cases hc0 : rp.headD 0 ≠ 0
     · rw [installStepGoE.k_pin_in_2.arm1 _ _ _ _ _ _ hc0]
-      have hpin : ((List.range' 44 2).map fun j => (decI (pinW m1 j) : NIdx)).contains cv.name =
-          true := hiff.mp hc0
-      rw [ite_eq_left (show (pinnedOpaqueL m1).contains cv.name = true from hpin)] at hT
-      exact istg_cd hCD hT
+      exact RefE.ite_pos (hiff.mp hc0) (istg_cd hCD rfl)
     · rw [installStepGoE.k_pin_in_2.arm2 _ _ _ _ _ _ (Decidable.not_not.mp hc0)]
-      have hpin : ¬ ((List.range' 44 2).map fun j => (decI (pinW m1 j) : NIdx)).contains cv.name =
-          true := fun h' => hc0 (hiff.mpr h')
-      rw [ite_eq_right (show ¬ (pinnedOpaqueL m1).contains cv.name = true from hpin)] at hT
-      exact hIV ⟨rfl, rfl⟩ hT
+      exact RefE.ite_neg (mt hiff.mpr hc0) (hIV ⟨rfl, rfl⟩ rfl)
   | basisDecl _ => exact absurd hdecl id
 
 end istg
