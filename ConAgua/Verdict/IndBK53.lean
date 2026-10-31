@@ -234,15 +234,10 @@ theorem tk_ref (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState} {q fto ftl M
   have hC2 := hC1.of_cstep hS2 hA2 q2
   have hg12 := hg1.trans hg2
   refine ⟨_, _, run2, ?_⟩
-  by_cases hz : rt.headD 0 = 0
-  · rw [tkE.k_target_k53_tele.arm1 (hc1 := hz)]
-    have : c1 = false := by rw [← hc1, hz]; rfl
-    subst this
-    exact RefE.ite_neg (by simp) (RefE.ret (y := false) rfl ⟨rfl, hC2, hg12, hP2, hA2⟩)
-  rw [tkE.k_target_k53_tele.arm2 (hc1 := hz)]
-  have : c1 = true := by rw [← hc1]; simpa using hz
-  subst this
-  refine RefE.ite_pos rfl ?_
+  rw [tkE.k_target_k53_tele.eq_2]
+  refine RefE.retIf (fun hz => by rw [← hc1, hz]; rfl) (fun h => by rw [← hc1] at h; simpa using h)
+    (fun _ => ⟨rfl, hC2, hg12, hP2, hA2⟩) fun hz h => ?_
+  subst h
   -- `target_k53_heads`
   rw [← decE_eq] at hlwD
   have h3 := tkh_ref hq henv n (by omega) hC2 hA2
