@@ -91,10 +91,10 @@ theorem ngg_ref {p : Prog} (L : NbLook p) (hIlpf : IlpfF p) (hcl : CoreStageClos
     have hcL1 : (cL - 1).toNat = l' := by
       rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simp; omega))]; simp; omega
     -- the key record
-    rcases hk : posRecW m [cw, us, dO, dL] with _ | ⟨key, m1⟩
-    · rw [liftE_none, nggE.k_rec4.none]; exact RefE.of_cls0 rfl
-    rw [liftE_some, nggE.k_rec4.arm1]
-    obtain ⟨hS1, hg1, hkq, ht1, hget1⟩ := posRecW_stage hk hS (by simp)
+    rw [ConRon.Arena.nestGrowGroup]
+    refine RefE.onlySim (fun _ => nggE.k_rec4.none ..)
+      (fun _ _ h => And.intro h (posRecW_stage h hS (by simp))) fun key m1 ⟨hk, hS1, hg1, hkq, ht1, hget1⟩ => ?_
+    rw [nggE.k_rec4.arm1]
     have hA1 : AbsOK m1 := hA.iw (posRecW_iwFr hk)
     have hC1 : StageC dn vis fe env m1 a := hC.of_pstep hS1 hA1 (PStep.refl hC.check.state)
     simp only [List.length_cons, List.length_nil] at ht1
@@ -131,32 +131,27 @@ theorem ngg_ref {p : Prog} (L : NbLook p) (hIlpf : IlpfF p) (hcl : CoreStageClos
       simp [ConRon.Bridge.Inductives.dKey, ConRon.Bridge.denoteN_ext hn0P hx0,
         ConRon.Bridge.denoteLs_ext husP hx0, ConRon.Bridge.denoteEList_ext hx0 _ _ hdsP]
     have hctxa : dCtx a.store env.find? c = some ctxP := dCtx_ext _ hx0 _ _ hctx
-    rw [ConRon.Arena.nestGrowGroup]
     -- `nest_inst_type`
-    have hN := nit_ref L.nit hcl hIlpf hLC k hC1 hA1 hHI (hU.grow hg1) hdk hkin hksl hP1 hctxa hkeyP
-    rcases h2 : nitE p k m1 vis ctx hi key with e2 | ⟨r2, m2⟩ <;> rw [h2] at hN
-    · rw [nggE.k_nest_inst_type.none]; exact RefE.bind_left hN
+    refine RefE.bindE (fun _ => nggE.k_nest_inst_type.none ..) id
+      (nit_ref L.nit hcl hIlpf hLC k hC1 hA1 hHI (hU.grow hg1) hdk hkin hksl hP1 hctxa hkeyP)
+      fun ⟨r2, m2⟩ ⟨x1, x2⟩ a2 hrun2 ⟨hS2, hg2, hx1, htH, htd, hP2, hA2⟩ => ?_
     rw [nggE.k_nest_inst_type.arm1]
-    obtain ⟨x, a2, hrun2, hS2, hg2, hx1, htH, htd, hP2, hA2⟩ := hN
     obtain ⟨c4, -⟩ := ConRon.Bridge.Inductives.nestInstType_spec hc c HI ⟨n0, decI us, ds⟩
-      ⟨n0P, usP, dsP⟩ a a2 x hC1.check ⟨hctxa, hkeyP⟩ hrun2
+      ⟨n0P, usP, dsP⟩ a a2 _ hC1.check ⟨hctxa, hkeyP⟩ hrun2
     have hC2 : StageC dn vis fe env m2 a2 := hC1.of_cstep hS2 hA2 c4
     have hx2 := hx0.trans c4.ext
-    refine RefE.bind_right hrun2 ?_
-    obtain ⟨x1, x2⟩ := x
-    simp only at htd ⊢
+    dsimp only at htd ⊢
     -- the pair record and the snoc
-    rcases hpr : posRecW m2 [cw, r2.tail.headD 0] with _ | ⟨pw, m3⟩
-    · rw [liftE_none, nggE.k_rec2.none]; exact RefE.of_cls0 rfl
-    rw [liftE_some, nggE.k_rec2.arm1]
-    obtain ⟨hS3, hg3, hpq, ht3, hget3⟩ := posRecW_stage hpr hS2 (by simp)
+    refine RefE.onlySim (fun _ => nggE.k_rec2.none ..)
+      (fun _ _ h => And.intro h (posRecW_stage h hS2 (by simp))) fun pw m3 ⟨hpr, hS3, hg3, hpq, ht3, hget3⟩ => ?_
+    rw [nggE.k_rec2.arm1]
     have hA3 : AbsOK m3 := hA2.iw (posRecW_iwFr hpr)
     simp only [List.length_cons, List.length_nil] at ht3
     have hg13 := (hg1.trans hg2).trans hg3
-    rcases hsn : snocW k m3 gO gL pw with _ | ⟨r4, m4⟩
-    · rw [liftE_none, nggE.k_sl_snoc.none]; exact RefE.of_cls0 rfl
-    rw [liftE_some, nggE.k_sl_snoc.arm1]
-    obtain ⟨hS4, hg4, hr40, hr41, ht4, hw4, hx4⟩ := snocW_words hsn hS3 (by have := hg13.iw; omega)
+    refine RefE.onlySim (fun _ => nggE.k_sl_snoc.none ..)
+      (fun _ _ h => And.intro h (snocW_words h hS3 (by have := hg13.iw; omega)))
+      fun r4 m4 ⟨hsn, hS4, hg4, hr40, hr41, ht4, hw4, hx4⟩ => ?_
+    rw [nggE.k_sl_snoc.arm1]
     have hA4 : AbsOK m4 := hA3.iw (snocW_iwFr hsn)
     have hC4 : StageC dn vis fe env m4 a2 := hC2.of_pstep hS4 hA4 (PStep.refl hC2.check.state)
     have hg14 := hg13.trans hg4
@@ -179,19 +174,15 @@ theorem ngg_ref {p : Prog} (L : NbLook p) (hIlpf : IlpfF p) (hcl : CoreStageClos
         · simp [hcd]
         · rw [hg4.iwGet _ (by omega)]; simpa using hget3 1 (by simp)
         · simpa using htd
-    have ih' := ih m4 a2 (cO + 1) (cL - 1) _ _ cs' (grp ++ [(n0, x2)]) hC4 hA4 hx2
+    refine RefE.lastE (fun _ => nggE.k_nest_grow_group.none ..) (fun _ => nggE.k_nest_grow_group.arm1 ..) id
+      (ih m4 a2 (cO + 1) (cL - 1) _ _ cs' (grp ++ [(n0, x2)]) hC4 hA4 hx2
       (fun n hn => hcsA n (List.mem_cons_of_mem _ hn)) (hU.grow hg14)
       (by rw [decHL_agree (RdS.of_grow hg14) (fun j hj => by omega)]; exact hds)
       (by have := hg14.iw; omega)
       (by rw [hcO1, hcL1, decHL_agree (RdS.of_grow hg14) (fun j hj => by have := hcb (j + 1) (by omega); omega)]
           simpa [decHL] using hcs')
       (fun j hj => by rw [hcO1, hcL1] at *; have := hcb (j + 1) (by omega); have := hg14.iw; omega)
-      (by rw [hr41]; simp [hgl]) (by rw [hr40]; simp; omega) hgrp4 ((hP2.fr (posRecW_mfr hpr)).fr (snocW_mfr hsn))
-    rcases h5 : nggE p k m4 vis ctx hi us dO dL (cO + 1) (cL - 1) (r4.headD 0) (r4.tail.headD 0) with
-      e5 | ⟨r5, m5⟩ <;> rw [h5] at ih'
-    · rw [nggE.k_nest_grow_group.none]; exact ih'
-    rw [nggE.k_nest_grow_group.arm1]
-    obtain ⟨res, a', hrun, hR⟩ := ih'
-    exact RefE.ret hrun ⟨hR.stage, hg14.trans hR.grow, hR.length, hR.bound, hR.grp, hR.pos, hR.abs, hR.ext⟩
+      (by rw [hr41]; simp [hgl]) (by rw [hr40]; simp; omega) hgrp4 ((hP2.fr (posRecW_mfr hpr)).fr (snocW_mfr hsn)))
+      fun _ _ _ _ hR => ⟨hR.stage, hg14.trans hR.grow, hR.length, hR.bound, hR.grp, hR.pos, hR.abs, hR.ext⟩
 
 end L.Ind
