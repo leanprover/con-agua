@@ -133,12 +133,17 @@ shape test, so the derived reads of the `app` and `param` arms use it. -/
   .bin .and h (.bin .add (.const 0x3ffffff)
     (.bin .mul (.bin .and (.bin .shr h (.const 30)) (.const 1)) (.const 0x3c000000)))
 
+/-- The constructor tag of each value of a handle word's bits 30…26 (the shape bit, then the tag
+field): the field itself for a narrow word (`0 … 15`), `4` (`app`) for a wide one (`16 … 31`). -/
+@[expose] def tagTbl : List UInt8 :=
+  [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
+   4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4]
+
 /-- The constructor tag of a handle word, the twin's `Idx.tag`: `4` (`app`) for a wide word,
-bits 29…26 of a narrow one; branch-free, `f + w * (4 - f)` with `f = (h >> 26) & 15` and the
-shape bit `w = (h >> 30) & 1`. -/
+bits 29…26 of a narrow one. One read of the constant table `tagTbl` at bits 30…26 (lane
+tagread; the arithmetic form `f + w * (4 - f)`, `f = (h >> 26) & 15`, `w = (h >> 30) & 1`, is
+`tagW`, `StoreFields.lean`, and cost eleven operations on every dispatch). -/
 @[expose] def tagE (h : Expr) : Expr :=
-  .bin .add (.bin .and (.bin .shr h (.const 26)) (.const 15))
-    (.bin .mul (.bin .and (.bin .shr h (.const 30)) (.const 1))
-      (.bin .sub (.const 4) (.bin .and (.bin .shr h (.const 26)) (.const 15))))
+  .ldc tagTbl (.bin .and (.bin .shr h (.const 26)) (.const 31))
 
 end L
