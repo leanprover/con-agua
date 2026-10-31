@@ -125,10 +125,9 @@ theorem crest_ref {k : Nat} (hn : k ≤ 2 ^ 62) {m : Mem} {a : AState}
   rw [ncrE.arm1]
   have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.iw hS.iw.iwSize
   obtain ⟨hcvn, hcvl, hcvt⟩ := ConRon.Bridge.Core.denoteCV_inv hcvP
-  -- the level parameters
-  rcases hlp : cvLpsW k m cv with _ | ⟨r1, m1⟩
-  · rw [liftE_none, ncrE.k_cv_lps.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some, ncrE.k_cv_lps.arm1]
+  -- the level parameters (L only)
+  refine RefE.onlySim (fun _ => ncrE.k_cv_lps.none ..) (fun _ _ h => h) fun r1 m1 hlp => ?_
+  rw [ncrE.k_cv_lps.arm1]
   obtain ⟨hS1, hg1, hE1, hdec1, ht1⟩ := pos2_cvLpsW_stage hlp hS hcv hcv3
   have hA1 : AbsOK m1 := erToIwW_afr (show erToIwW _ m _ _ = some (r1, m1) from hlp) hA
   have htop1 : iwTop m1 < 2 ^ 64 := Nat.lt_of_le_of_lt hS1.iw.iw hS1.iw.iwSize
@@ -139,22 +138,10 @@ theorem crest_ref {k : Nat} (hn : k ≤ 2 ^ 62) {m : Mem} {a : AState}
   · rw [liftE_none, ncrE.k_sl_nodup.none]; exact RefE.of_cls0 (by simp)
   rw [liftE_some]
   have hb := nodupW_ok k m1 _ _ b ws hws hnd
+  have hnod : nameNodup cvv.levelParams = decide ws.Nodup := by rw [hwsd, nameNodup_map ws hwH]
   unfold crestT
-  by_cases hb0 : b = 0
-  · rw [ncrE.k_sl_nodup.abort1 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hb0]
-    have hnod : nameNodup cvv.levelParams = false := by
-      rw [hwsd, nameNodup_map ws hwH]
-      by_cases hn : ws.Nodup
-      · rw [ite_eq_left hn] at hb; rw [hb] at hb0; exact absurd hb0 (by decide)
-      · simp [hn]
-    exact RefE.ite_pos (by simp [hnod]) (fun _ => ErrClaim.fail _ _ (by decide))
-  rw [ncrE.k_sl_nodup.arm1 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hb0]
-  have hnod : nameNodup cvv.levelParams = true := by
-    rw [hwsd, nameNodup_map ws hwH]
-    by_cases hn : ws.Nodup
-    · simp [hn]
-    · rw [ite_eq_right hn] at hb; exact absurd hb hb0
-  refine RefE.ite_neg (by simp [hnod]) ?_
+  refine RefE.ofArms (fun h => ncrE.k_sl_nodup.abort1 (hc1 := h) ..) (fun h => ncrE.k_sl_nodup.arm1 (hc1 := h) ..)
+    (RefE.guardThen (by decide) (fun h => by grind) (fun h => by grind) fun _ _ => ?_)
   -- the instantiated type
   obtain ⟨-, -, hty⟩ := decCV_some hcv
   obtain ⟨wt, hwt, hwtH, hwtd⟩ := hd?_some hty
@@ -162,21 +149,18 @@ theorem crest_ref {k : Nat} (hn : k ≤ 2 ^ 62) {m : Mem} {a : AState}
   have hrdt : rdW (m1.arr64 EREC) (cv + 3) = wt := by
     rw [hE1]; simp only [erA] at hwt; simp [rdW, e3, hwt]
   rw [hrdt]
-  rcases hil : callW p k "inst_lp_fast" [CWF, r1.headD 0, r1.tail.headD 0, us, wt] m1 with _ | ⟨r2, m2⟩
-  · rw [liftE_none, ncrE.k_inst_lp_fast.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some, ncrE.k_inst_lp_fast.arm1]
+  refine RefE.bindLift (fun _ => ncrE.k_inst_lp_fast.none ..) fun r2 m2 hil => ?_
   obtain ⟨cty, a1, hrun1, ⟨hS2, hg2, hcH, hcd⟩, ⟨A2, C2, hA2s, hC2s, hfr2⟩, hAF2⟩ :=
     IlpRd.realC hIlpf hC k CWF _ _ _ _ cvv.levelParams m1 m2 a r2 hus hwtH ⟨rfl, erToIwW_iwFr hlp⟩ hS1 hdec1 hil
   rw [CWF_eq, ← hwtd] at hrun1
+  refine ⟨_, _, hrun1, ?_⟩
+  rw [ncrE.k_inst_lp_fast.arm1]
   have hA2 : AbsOK m2 := hAF2 hA1
   obtain ⟨c1, hctyP⟩ := ConRon.Bridge.Inductives.instLPFast_cstep hC.check hcvl hpre.hus hcvt hrun1
   have hC2 : StageC dn vis fe env m2 a1 := hC.of_cstep hS2 hA2 c1
-  refine RefE.bind_right hrun1 ?_
   -- the crest
   have hg12 := hg1.trans hg2
-  rcases hpc0 : pcrWf k m2 no nl us dO dL hO hL (r2.headD 0) with _ | ⟨r3, m3⟩
-  · rw [liftE_none, ncrE.k_nest_crest.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]
+  refine RefE.bindLift (fun _ => ncrE.k_nest_crest.none ..) fun r3 m3 hpc0 => ?_
   cases k with
   | zero => simp [pcrWf] at hpc0
   | succ k =>
@@ -197,13 +181,13 @@ theorem crest_ref {k : Nat} (hn : k ≤ 2 ^ 62) {m : Mem} {a : AState}
     (by rw [decHL_agree (RdS.of_grow hg12) (fun j hj => by omega)]; exact hds) (by have := hg12.iw; omega)
     (by rw [decHL_agree (RdS.of_grow hg12) (fun j hj => by omega)]; exact hho) (by have := hg12.iw; omega) hR
   rw [hcd] at hrun2
+  refine ⟨_, _, hrun2, ?_⟩
   have hA3 : AbsOK m3 := pcrW_afr hpc0 hA2
   obtain ⟨p2, ho⟩ := ConRon.Bridge.Inductives.nestCrest_spec names namesP (decI us) usP ds dsP holes holesP cty _
     a1 a2 x hC2.check.state hC2.check.pins
     ⟨ConRon.Bridge.denoteNListE_ext c1.ext _ _ hpre.hnames, ConRon.Bridge.denoteLs_ext hpre.hus c1.ext,
       ConRon.Bridge.denoteEList_ext c1.ext _ _ hpre.hds, ConRon.Bridge.denoteEList_ext c1.ext _ _ hpre.hholes,
       hctyP⟩ hrun2
-  refine RefE.bind_right hrun2 ?_
   cases x with
   | none =>
     simp only [decOE] at hx
@@ -220,43 +204,27 @@ theorem crest_ref {k : Nat} (hn : k ≤ 2 ^ 62) {m : Mem} {a : AState}
   have hC3 : StageC dn vis fe env m3 a2 := hC2.of_pstep hS3 hA3 p2
   have hxH' : H (r3.tail.headD 0) := by simpa using hxH
   have hxd' : decI (r3.tail.headD 0) = crest := by simpa [decE_eq] using hxd
+  subst hxd'
   -- its type
-  cases c5 : callE p (k + 1 + 1 + 1) "infer_type_core" [vis, hi, r3.tail.headD 0] m3 with
-  | error e5 =>
-    rw [ncrE.k_infer_type_core.none]
-    intro hV
-    have h5 := hV.core.inferTypeCore (k + 1 + 1 + 1) (by omega) hC3.stageT hi (r3.tail.headD 0) hxH' _ c5
-    rw [hxd'] at h5
-    exact ErrClaim.bind_left h5
-  | ok q5 =>
-  obtain ⟨r4, m4⟩ := q5
+  refine RefE.bindCall (fun _ => ncrE.k_infer_type_core.none ..)
+    (fun hV e h5 => hV.core.inferTypeCore (k + 1 + 1 + 1) (by omega) hC3.stageT hi _ hxH' e h5)
+    (inferC_rsim hq henv (k + 1 + 1 + 1) (by omega) hC3 hA3 hi _ hxH' hcrest hwc)
+    fun r4 m4 ty a3 c5 hrun3 ⟨hC4, hg4, ⟨htyH, htyd⟩, hA4, c4, tyP, htyP, hwty⟩ => ?_
+  dsimp only at hC4 hg4 htyH htyd hA4
   rw [ncrE.k_infer_type_core.arm1]
-  obtain ⟨ty, a3, hrun3, hC4, hg4, hdec4, hA4, c4, tyP, htyP, hwty⟩ :=
-    inferC_rsim hq henv (k + 1 + 1 + 1) (by omega) hC3 hA3 hi (r3.tail.headD 0) hxH'
-      (by rw [hxd']; exact hcrest) hwc _ (callW_of_callE c5)
-  obtain ⟨htyH, htyd⟩ := hdec4
-  rw [hxd'] at hrun3
+  subst htyd
   have hP4 : PosMR m4 := hP3.fr (coreF_mfr hq (by decide) (callW_of_callE c5))
-  refine RefE.bind_right hrun3 ?_
   -- its sort
-  cases c6 : callE p (k + 1 + 1 + 1) "ensure_sort_core" [vis, hi, r4.headD 0] m4 with
-  | error e6 =>
-    rw [ncrE.k_ensure_sort_core.none]
-    intro hV
-    have h6 := hV.core.ensureSortCore (k + 1 + 1 + 1) (by omega) hC4.stageT hi (r4.headD 0) htyH _ c6
-    rw [htyd] at h6
-    exact ErrClaim.bind_left h6
-  | ok q6 =>
-  obtain ⟨r5, m5⟩ := q6
+  refine RefE.bindCall (fun _ => ncrE.k_ensure_sort_core.none ..)
+    (fun hV e h6 => hV.core.ensureSortCore (k + 1 + 1 + 1) (by omega) hC4.stageT hi _ htyH e h6)
+    (ensureSortC_rsim hq henv (k + 1 + 1 + 1) (by omega) hC4 hA4 hi _ htyH htyP hwty)
+    fun r5 m5 so a4 c6 hrun4 ⟨hC5, hg5, _, hA5, c5', _⟩ => ?_
+  dsimp only at hC5 hg5 hA5
   rw [ncrE.k_ensure_sort_core.arm1]
-  obtain ⟨so, a4, hrun4, hC5, hg5, -, hA5, c5, -⟩ :=
-    ensureSortC_rsim hq henv (k + 1 + 1 + 1) (by omega) hC4 hA4 hi (r4.headD 0) htyH
-      (by rw [htyd]; exact htyP) hwty _ (callW_of_callE c6)
-  rw [htyd] at hrun4
-  refine RefE.bind_right hrun4 (RefE.ret rfl ⟨hC5, ((hg12.trans hg3).trans hg4).trans hg5, hxH', hxd',
+  exact RefE.ret rfl ⟨hC5, ((hg12.trans hg3).trans hg4).trans hg5, hxH', rfl,
     hP4.fr (coreF_mfr hq (by decide) (callW_of_callE c6)), hA5,
-    ((c1.trans (p2.toCore hC2.check)).trans c4).trans c5,
-    crestP, ConRon.Bridge.denote_ext hcrest (c4.ext.trans c5.ext), hwc⟩)
+    ((c1.trans (p2.toCore hC2.check)).trans c4).trans c5',
+    crestP, ConRon.Bridge.denote_ext hcrest (c4.ext.trans c5'.ext), hwc⟩
 
 end crest
 

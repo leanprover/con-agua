@@ -80,8 +80,8 @@ l_model sdomsE_spec (p : Prog) (hf : p.lookup "check_struct_doms_at" = some chec
 
 /-! ## The install family's invariant package and its steps -/
 
-/-- **The walk's package from `(m₀, a₀)` to `(m, a)`** (the install family, docs/design/refgen.md
-§6): the stage, `AbsOK`, the `IW` growth and the twin's core step. -/
+/-- **The walk's package from `(m₀, a₀)` to `(m, a)`** (the install and sum families,
+docs/design/refgen.md §6): the stage, `AbsOK`, the `IW` growth and the twin's core step. -/
 structure InsAt (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (env : ConLeche.Env)
     (m₀ : Mem) (a₀ : AState) (m : Mem) (a : AState) : Prop where
   stage : StageC dn vis fe env m a
@@ -114,6 +114,9 @@ theorem decHL {k : IdxKind} (h : InsAt dn vis fe env m₀ a₀ m a) {o l : Nat} 
     (hd : _root_.L.Ind.decHL m₀ o l = some xs) (hb : o + l ≤ iwTop m₀) :
     _root_.L.Ind.decHL m o l = some xs := by
   rw [decHL_grow h.grow hb]; exact hd
+
+theorem top (h : InsAt dn vis fe env m₀ a₀ m a) {x : Nat} (hb : x ≤ iwTop m₀) : x ≤ iwTop m :=
+  Nat.le_trans hb h.grow.iw
 
 end InsAt
 

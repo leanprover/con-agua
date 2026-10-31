@@ -1,5 +1,7 @@
 import ConAgua.Arena.Verdict
 import ConAgua.Arena.SimLib
+import ConAgua.Arena.CallF
+import ConAgua.Verdict.PosTopEMono
 
 /-!
 # The lockstep walk of a unified model against its twin
@@ -15,7 +17,8 @@ in step. This file is the walk's step rules, one per pair of shapes, both outcom
   lemma, its run and the rest proved at the call site;
 * `RefE.bindE` / `RefE.lastE`: a unified callee (`K x`) by its own `RefE`, then the rest / as the
   twin's last step; `RefE.bindRun`: a unified callee read through its call's run
-  (`K (callE …)`, its model spec and its `RefE`), `RefE.callE_zero` the same at fuel `0`;
+  (`K (callE …)`, its model spec and its `RefE`), `RefE.bindRunLe` the same with the spec at more
+  fuel than the call, `RefE.callE_zero` the same at fuel `0`;
   `RefE.bindCall`: a knot callee read through its call (`K (callE …)`, its error by `G`, its ok
   run by an `RSim`);
 * `RefE.onlySim`: a lifted callee the twin has no step for (an L helper: `sl_eq`);
@@ -80,6 +83,26 @@ theorem RefE.bindRun {p : Prog} {n : Nat} {f : FnName} {args : List Word} {s₀ 
   · rw [hK]; exact RefE.bind_left fun hG => RefE.run_err hs (hGs hG) (hG' hG) h1 c
   obtain ⟨s', rfl, hQ, y, a₁, hr, hS⟩ := RefE.run_ok hs h1 c
   exact RefE.bind_right hr (h2 r s' y a₁ c hQ hr hS)
+
+/-- **`RefE.bindRun` at a fuel below the callee's spec** (`n ≤ n'`): the model's call at `n`, the
+callee's spec and `RefE` at `n'`; an error of class `≠ 0` and an ok run are the same at `n'`
+(`callE_err_mono`, `callW_mono`). -/
+theorem RefE.bindRunLe {p : Prog} {n n' : Nat} (hle : n ≤ n') {f : FnName} {args : List Word} {s₀ : St}
+    {K : Except Err (List Word × Mem) → Except Err α} (hK : ∀ e, K (.error e) = .error e)
+    {G' Gs : Prop} {fx : Except Err ρ} {V : List Word → St → ρ} {Q : List Word → St → Prop}
+    {op : AM γ} {g : γ → AM β} {S : ρ → γ → AState → Prop}
+    (hs : ⦃fun s => s = s₀⦄ invoke p (exec p n') f args
+      ⦃fun r s' => Q r s' ∧ fx = .ok (V r s'); fun ε => Gs → ε.cls ≠ 0 → fx = .error ε⦄)
+    (hGs : G → Gs) (hG' : G → G') (h1 : RefE G' fx op a S)
+    (h2 : ∀ r s' y a₁, callE p n' f args s₀.mem = .ok (r, s'.mem) → Q r s' → op.run a = .ok (y, a₁) →
+      S (V r s') y a₁ → RefE G (K (.ok (r, s'.mem))) (g y) a₁ R) :
+    RefE G (K (callE p n f args s₀.mem)) (op >>= g) a R := by
+  rcases c : callE p n f args s₀.mem with e | ⟨r, m'⟩
+  · rw [hK]
+    exact RefE.bind_left fun hG hk => RefE.run_err hs (hGs hG) (hG' hG) h1 (callE_err_mono hle c hk) hk
+  have c' := callE_of_callW (callW_mono (callW_of_callE c) hle)
+  obtain ⟨s', rfl, hQ, y, a₁, hr, hS⟩ := RefE.run_ok hs h1 c'
+  exact RefE.bind_right hr (h2 r s' y a₁ c' hQ hr hS)
 
 /-- **A unified callee through its run at fuel `0`** (the fuel split before `RefE.bindRun` at
 `n + 1`): the call fails with a class-`0` error. -/
