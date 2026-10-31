@@ -75,7 +75,7 @@ theorem internE_fvar_run (idx : Nat) (ty : EIdx) (a : AState) :
     (try split) <;> simp_all [withScrFVars, withPersFVars, fail,
       throwThe, MonadExceptOf.throw, StateT.run, set, StateT.set,
       StateT.lift, bind, Except.bind, pure, Except.pure, StateT.bind, StateT.pure, mkS, capS,
-      ENodeView.cap, Idx.idxCap, Idx.wideCap]
+      ENodeView.cap, Idx.idxCap]
 
 /-! ## The relation between L memory and the arena's `fvar` tables -/
 

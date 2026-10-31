@@ -92,8 +92,7 @@ theorem internE_lam_run (ty b : EIdx) (a : AState) :
       | rfl
       | simp_all [withScrLams, withPersLams, fail,
           throwThe, MonadExceptOf.throw, StateT.run, set, StateT.set,
-          StateT.lift, bind, Except.bind, pure, Except.pure, StateT.bind, StateT.pure, mkS, capS,
-      ENodeView.cap, Idx.idxCap, Idx.wideCap]
+          StateT.lift, bind, Except.bind, pure, Except.pure, StateT.bind, StateT.pure, mkS, capS, Idx.idxCap]
 
 /-! ## The relation between L memory and the arena's `lam` tables -/
 

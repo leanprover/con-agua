@@ -40,7 +40,7 @@ theorem rowGet_specW (p : Prog) (hx : p.lookup "env_ix" = some envIxL)
     ⦃fun r s' => s'.mem = s₀.mem ∧ LocEq s' s₀ ∧ tagW w ≤ 2 ∧ r.headD 0 = rowCW s₀.mem w ∧
       r.tail.headD 0 = rowPW s₀.mem w; ⊤⦄ := by
   have hts : (rowSelW w).toNat = 2 * (tagW w).toNat + rowTier w := by
-    rw [rowSelW_toNat, tagW_toNat]
+    rw [rowSelW_toNat, tagW_toNat_row]
   have htr : rowTier w < 2 := Nat.mod_lt _ (by decide)
   rw [invoke_eq _ hp]
   simp only [callFn, envRowGetL]
@@ -74,7 +74,7 @@ theorem envFind_specW (p : Prog) (hx : p.lookup "env_ix" = some envIxL)
 
 theorem rowCW_eq (m : Mem) (w : Word) (hw : w.toNat < 2 ^ 32) (ht : tagW w ≤ 2) :
     rowCW m w = rowC m w := by
-  have h1 := tagW_toNat w
+  have h1 := tagW_toNat_row w
   have h2 := ixW_toNat w hw
   have ht' : rowTag w ≤ 2 := by rw [← h1]; exact UInt64.le_iff_toNat_le.mp ht
   simp only [rowCW, rowC, ht', ite_true, rdW, h2]
@@ -91,7 +91,7 @@ theorem envFindW_miss {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IF
   have ht2 : tagW w ≤ 2 := by
     have : ¬ (2 : Word).toNat < (tagW w).toNat := fun e => ht (UInt64.lt_iff_toNat_lt.mpr e)
     exact UInt64.le_iff_toNat_le.mpr (by omega)
-  have htag : rowTag w ≤ 2 := by rw [← tagW_toNat]; exact UInt64.le_iff_toNat_le.mp ht2
+  have htag : rowTag w ≤ 2 := by rw [← tagW_toNat_row]; exact UInt64.le_iff_toNat_le.mp ht2
   rw [EnvR.find?_eq hE w hw htag, ← rowCW_eq m w hw ht2]
   by_cases hc : rowCW m w = 0
   · rw [ite_eq_left hc] at h; simp only [Option.some.injEq, Prod.mk.injEq] at h
@@ -119,7 +119,7 @@ theorem envFindW_hitSome {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe :
   have ht2 : tagW w ≤ 2 := by
     have : ¬ (2 : Word).toNat < (tagW w).toNat := fun e => ht (UInt64.lt_iff_toNat_lt.mpr e)
     exact UInt64.le_iff_toNat_le.mpr (by omega)
-  have htag : rowTag w ≤ 2 := by rw [← tagW_toNat]; exact UInt64.le_iff_toNat_le.mp ht2
+  have htag : rowTag w ≤ 2 := by rw [← tagW_toNat_row]; exact UInt64.le_iff_toNat_le.mp ht2
   by_cases hc : rowCW m w = 0
   · rw [ite_eq_left hc] at h; simp only [Option.some.injEq, Prod.mk.injEq] at h
     rw [← h.1] at h0; simp at h0

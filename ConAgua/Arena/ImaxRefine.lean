@@ -63,8 +63,7 @@ theorem internLNode_imax_run (u v : LIdx) (a : AState) :
       ↓reduceIte, imaxKey, protoRun, imaxLens] <;>
     (try split) <;> simp_all [withScrImaxs, withPersImaxs, fail,
       throwThe, MonadExceptOf.throw, StateT.run, set, StateT.set,
-      StateT.lift, bind, Except.bind, pure, Except.pure, StateT.bind, StateT.pure, mkS, capS,
-      ENodeView.cap, Idx.idxCap, Idx.wideCap]
+      StateT.lift, bind, Except.bind, pure, Except.pure, StateT.bind, StateT.pure, mkS, capS, Idx.idxCap]
 
 /-! ## The relation between L memory and the arena's `imax` tables -/
 

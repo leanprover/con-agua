@@ -113,10 +113,10 @@ theorem keepsW_bvarB (F : Nat) (e : EIdx) : Keeps cpl (bvarB F e) := by
 /-- **One step of a walk family's `succ` case, for `cpl`** (`keeps_auto` with `cpl`'s primitives). -/
 macro "keepsL_auto " "[" arms:ident,* "]" " using " ih:term : tactic => `(tactic| (
   repeat' (first
-    | exact Keeps.pure _ | exact Keeps.fail _ | exact $ih _ _
-    | exact keepsW_internE _ | exact keepsW_internLamE _ _ | exact keepsW_internForallEE _ _
-    | exact keeps_view _ | exact keeps_derivedE _ | exact keeps_viewApp _ | exact keeps_viewBind _
-    | exact keeps_viewLet _ | exact keeps_viewProj _ | exact keeps_viewBVar _
+    | with_reducible exact Keeps.pure _ | with_reducible exact Keeps.fail _ | with_reducible exact $ih _ _
+    | with_reducible exact keepsW_internE _ | with_reducible exact keepsW_internLamE _ _ | with_reducible exact keepsW_internForallEE _ _
+    | with_reducible exact keeps_view _ | with_reducible exact keeps_derivedE _ | with_reducible exact keeps_viewApp _ | with_reducible exact keeps_viewBind _
+    | with_reducible exact keeps_viewLet _ | with_reducible exact keeps_viewProj _ | with_reducible exact keeps_viewBVar _
     | with_reducible exact keeps_inst1Get _ | with_reducible exact keeps_inst1Set cplW_blind _ _
     | with_reducible exact keepsW_instLGet _ | with_reducible exact keepsW_instLSet cplW_blind _ _
     | with_reducible exact keepsW_abs1Get _ | with_reducible exact keepsW_abs1Set cplW_blind _ _

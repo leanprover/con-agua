@@ -72,7 +72,7 @@ theorem internE_app_run (f x : EIdx) (a : AState) :
     (try split) <;> simp_all [withScrApps, withPersApps, fail,
       throwThe, MonadExceptOf.throw, StateT.run, set, StateT.set,
       StateT.lift, bind, Except.bind, pure, Except.pure, StateT.bind, StateT.pure, mkS, capS,
-      ENodeView.cap, Idx.idxCap, Idx.wideCap]
+      ENodeView.cap, Idx.wideCap]
 
 /-! ## The relation between L memory and the arena's `app` tables -/
 

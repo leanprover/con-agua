@@ -63,8 +63,7 @@ theorem internLNode_max_run (u v : LIdx) (a : AState) :
       ↓reduceIte, maxKey, protoRun, maxLens] <;>
     (try split) <;> simp_all [withScrMaxs, withPersMaxs, fail,
       throwThe, MonadExceptOf.throw, StateT.run, set, StateT.set,
-      StateT.lift, bind, Except.bind, pure, Except.pure, StateT.bind, StateT.pure, mkS, capS,
-      ENodeView.cap, Idx.idxCap, Idx.wideCap]
+      StateT.lift, bind, Except.bind, pure, Except.pure, StateT.bind, StateT.pure, mkS, capS, Idx.idxCap]
 
 /-! ## The relation between L memory and the arena's `max` tables -/
 

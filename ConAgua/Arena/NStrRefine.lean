@@ -68,8 +68,7 @@ theorem internNNode_str_run (pre : NIdx) (s : String) (a : AState) :
       ↓reduceIte, nstrKey, protoRun, nstrLens] <;>
     (try split) <;> simp_all [withScrNStrs, withPersNStrs, fail,
       throwThe, MonadExceptOf.throw, StateT.run, set, StateT.set,
-      StateT.lift, bind, Except.bind, pure, Except.pure, StateT.bind, StateT.pure, mkS, capS,
-      ENodeView.cap, Idx.idxCap, Idx.wideCap]
+      StateT.lift, bind, Except.bind, pure, Except.pure, StateT.bind, StateT.pure, mkS, capS, Idx.idxCap]
 
 /-! ## The relation between L memory and the arena's name `str` tables -/
 
