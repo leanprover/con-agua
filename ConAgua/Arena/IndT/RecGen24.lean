@@ -215,7 +215,7 @@ theorem cfaLoop_ref (k : Nat) (hk : k ≤ 2 ^ 62) : ∀ (m : Mem) (a : AState) (
     -- `target_major_at`
     refine RefE.bindSim (fun _ => cfaE.k_target_major_at.none ..) (tma_step P k2 htT
       (hms.grow (OMono.decPL (fun q => decTM_mono q) _ _) k02.grow) hmsb
-      (ConRon.Bridge.Inductives.dMajor_ext.list k02.step.ext _ _ hmsP)) fun r3 tm m3 a3 _ _ ⟨k3, hTM, hmt⟩ => ?_
+      (ConRon.Bridge.Inductives.dMajor_ext.list k02.core.ext _ _ hmsP)) fun r3 tm m3 a3 _ _ ⟨k3, hTM, hmt⟩ => ?_
     rw [cfaE.k_target_major_at.arm1]
     -- `class_leaf_at`
     refine RefE.bindLift (fun _ => cfaE.k_class_leaf_at.none ..) fun r4 m4 c4 => ?_
@@ -234,7 +234,7 @@ theorem cfaLoop_ref (k : Nat) (hk : k ≤ 2 ^ 62) : ∀ (m : Mem) (a : AState) (
     generalize hx4 : AM.res (ConRon.Arena.classLeafAt tm leafE) a3 = b4 at run4 hb4
     generalize ha4 : AM.st (ConRon.Arena.classLeafAt tm leafE) a3 = a4 at run4 hS4
     obtain ⟨q4, -⟩ := ConRon.Bridge.Inductives.classLeafAt_spec tm _ leafE leafP a3 a4 b4
-      k3.stage.check.state ⟨hmt, denote_ext hleaf k3.step.ext⟩ run4
+      k3.stage.check.state ⟨hmt, denote_ext hleaf k3.core.ext⟩ run4
     have k4 := RcAt.pstep k3.stage hS4 (leafAtW_afr hw4 k3.abs) (k3.rc.fr (leafAtW_mfr hw4)) hg4 q4
     refine ⟨_, _, run4, ?_⟩
     refine RefE.ofArms (fun h => cfaE.k_class_leaf_at.abort1 (hc1 := h) ..)
@@ -244,7 +244,7 @@ theorem cfaLoop_ref (k : Nat) (hk : k ≤ 2 ^ 62) : ∀ (m : Mem) (a : AState) (
     have k04 := k02.trans (k3.trans k4)
     have k34 := k3.trans k4
     have hlP : denoteE a4.store (decE (r2.tail.tail.tail.headD 0)) = some leafP := by
-      rw [decE_eq, hlwD]; exact denote_ext hleaf k34.step.ext
+      rw [decE_eq, hlwD]; exact denote_ext hleaf k34.core.ext
     -- `class_nodes_agree`
     have h5 := cna_ref hq henv P.toCnaProg vis q fto ftl (r3.headD 0) (r2.tail.headD 0)
       (r2.tail.tail.headD 0) (r2.tail.tail.tail.headD 0) fvo fvl i eo el bs formerTys tm teleB fvs
@@ -254,10 +254,10 @@ theorem cfaLoop_ref (k : Nat) (hk : k ≤ 2 ^ 62) : ∀ (m : Mem) (a : AState) (
         (Nat.le_trans hbl k34.grow.iw)) hlwH
       (by rw [decHL_grow k04.grow hfvb]; exact hfv) (Nat.le_trans hfvb k04.grow.iw)
       (hes.grow (fun q => decNCN_mono q) k04.grow) k4.rc
-      (ConRon.Bridge.Inductives.dShape_ext k04.step.ext _ _ hsh) (denoteEList_ext k04.step.ext _ _ hftP)
-      (ConRon.Bridge.Inductives.dMajor_ext k4.step.ext _ _ hmt) (denoteEList_ext k34.step.ext _ _ hteleB)
-      hlP (denoteEList_ext k04.step.ext _ _ hfvP)
-      (ConRon.Bridge.Inductives.dCtorNf_ext.list k04.step.ext _ _ hesP) hformer
+      (ConRon.Bridge.Inductives.dShape_ext k04.core.ext _ _ hsh) (denoteEList_ext k04.core.ext _ _ hftP)
+      (ConRon.Bridge.Inductives.dMajor_ext k4.core.ext _ _ hmt) (denoteEList_ext k34.core.ext _ _ hteleB)
+      hlP (denoteEList_ext k04.core.ext _ _ hfvP)
+      (ConRon.Bridge.Inductives.dCtorNf_ext.list k04.core.ext _ _ hesP) hformer
       (ConLeche.Cached.TargetMajScoped.getD hMs t)
     rw [decE_eq, hlwD] at h5
     refine RefE.bindE (fun _ => cfaE.k_class_nodes_agree.none ..) id h5 fun ⟨r5, m5⟩ u a5 run5 hR5 => ?_
@@ -268,11 +268,11 @@ theorem cfaLoop_ref (k : Nat) (hk : k ≤ 2 ^ 62) : ∀ (m : Mem) (a : AState) (
       henv bs pP formerTys formerTysP tm (MsP.getD t default) teleB teleP (decE (r2.tail.tail.tail.headD 0))
       leafP fvs fvsP i.toNat default hformer (ConLeche.Cached.TargetMajScoped.getD hMs t) es esP a4 _ u
       k4.stage.check
-      ⟨ConRon.Bridge.Inductives.dShape_ext k04.step.ext _ _ hsh, denoteEList_ext k04.step.ext _ _ hftP,
-        ConRon.Bridge.Inductives.dMajor_ext k4.step.ext _ _ hmt, denoteEList_ext k34.step.ext _ _ hteleB,
-        hlP, denoteEList_ext k04.step.ext _ _ hfvP,
-        ConRon.Bridge.Inductives.dCtorNf_ext.list k04.step.ext _ _ hesP⟩ run5'
-    have c06 := (k04.step.toCore hC.check).trans c6
+      ⟨ConRon.Bridge.Inductives.dShape_ext k04.core.ext _ _ hsh, denoteEList_ext k04.core.ext _ _ hftP,
+        ConRon.Bridge.Inductives.dMajor_ext k4.core.ext _ _ hmt, denoteEList_ext k34.core.ext _ _ hteleB,
+        hlP, denoteEList_ext k04.core.ext _ _ hfvP,
+        ConRon.Bridge.Inductives.dCtorNf_ext.list k04.core.ext _ _ hesP⟩ run5'
+    have c06 := k04.core.trans c6
     have hg05 : IWGrow m m5 := k04.grow.trans hR5.grow
     have := ih (by omega) m5 a5 (j + 1) (i + 1) hR5.stage hR5.abs
       (hbs.grow hg05)
@@ -289,9 +289,8 @@ theorem cfaLoop_ref (k : Nat) (hk : k ≤ 2 ^ 62) : ∀ (m : Mem) (a : AState) (
   · rw [cfaE.loop1.arm1 p k m vis q fto ftl mo ml fvo fvl eo el ko kl j i hj hrd1 hif, hkf, ht, htl]
     exact key [rdW (m.arr64 IW) (fvo + i)] m (cfaFv_in p k m fvo fvl i hif)
   · rw [cfaE.loop1.arm2 p k m vis q fto ftl mo ml fvo fvl eo el ko kl j i hj hrd1 hif, hkf, ht, htl]
-    rcases h0 : callW p k "intern_bvar" [0] m with _ | ⟨r0, m0⟩
-    · rw [liftE_none, cfaE.k_intern_bvar.none]; exact RefE.of_cls0 (by simp)
-    rw [liftE_some, cfaE.k_intern_bvar.arm1]
+    refine RefE.onlySim (fun _ => cfaE.k_intern_bvar.none ..) (fun _ _ h => h) fun r0 m0 h0 => ?_
+    rw [cfaE.k_intern_bvar.arm1]
     exact key r0 m0 (by rw [cfaFv_out p k m fvo fvl i hif]; exact h0)
 
 include hq henv P in
