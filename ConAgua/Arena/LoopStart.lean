@@ -103,7 +103,7 @@ theorem envR (dn : NIdx → Option ConLeche.Name) : EnvR dn m 0 (mkIFEnv IEnv.em
     have hl : loopZeroArr (rowArr w) := by
       rcases rowArr_cases w with e | e | e | e | e | e <;> rw [e] <;> decide
     have hz := h.arr (rowArr w) hl (UInt64.ofNat (rowIx w))
-    have hlt : rowIx w < 2 ^ 64 := by unfold rowIx; omega
+    have hlt : rowIx w < 2 ^ 64 := Nat.lt_trans (rowIx_lt w) (by decide)
     simpa [rdW, Nat.mod_eq_of_lt hlt] using hz
   have htrow : ∀ w : Word, tblRow m w = 0 := by
     intro w
@@ -115,7 +115,7 @@ theorem envR (dn : NIdx → Option ConLeche.Name) : EnvR dn m 0 (mkIFEnv IEnv.em
         rcases tierA_eq_or (tixArr (rowTag w)) (UInt64.ofNat (rowTier w)) with e | e <;> rw [e] <;>
           rcases tixArr_mem (rowTag w) with e' | e' | e' <;> rw [e'] <;> decide
       have hz := h.arr (tblArr w) hl (UInt64.ofNat (tblIx w))
-      have hlt : tblIx w < 2 ^ 64 := by unfold tblIx; omega
+      have hlt : tblIx w < 2 ^ 64 := Nat.lt_trans (tblIx_lt w) (by decide)
       simpa [rdW, Nat.mod_eq_of_lt hlt] using hz
     · rfl
   exact EnvR.init (fun w => by
