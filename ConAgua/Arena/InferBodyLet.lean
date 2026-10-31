@@ -42,6 +42,18 @@ structure InferBodyProg (p : Prog) : Prop where
   sup : p.lookup "succ_push" = some succPush
   sui : p.lookup "intern_succ" = some internSucc
 
+/-- **`intern_fvar` refines `internE (.fvar …)` under `CoreS`, as its `CoreSpec`** (for
+`RefE.bind_callW`). -/
+theorem internFVar_coreSpec {p : Prog} (hb : InferBodyProg p) (n : Nat) (s₀ : St) {a : AState}
+    {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {M : ModeMaps} {eb : Word}
+    (hS : CoreS dn s₀.mem a vis fe M eb) (u ty : Word) (hty : HW ty) :
+    CoreSpec p n "intern_fvar" [u, ty] (internE (.fvar u.toNat (decE ty))) decH s₀ a dn vis fe M eb :=
+  L.M.triple_of_run fun _ _ _ hp hr => by
+    subst hp
+    obtain ⟨hl, hfv⟩ := L.M.of_run (P := fun s => s = _) rfl hr
+      (internFVar_spec p hb.fvf hb.fvp hb.fvi n _ u ty)
+    exact ⟨hl, internFVar_core hS u ty hty _ hfv⟩
+
 /-! ## Sequencing -/
 
 /-- **A core run, then a core run at its result**: the refinement of a `>>=`. -/

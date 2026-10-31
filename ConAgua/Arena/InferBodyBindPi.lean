@@ -1,6 +1,7 @@
 import ConAgua.Arena.InferBodyBind
 import ConAgua.Arena.IndSumSpec.DecCVpGrow
 import ConAgua.Arena.InferBodyBindPiModels
+import ConAgua.Arena.RefWalk
 
 /-!
 # The ∀ telescope: `infer_pis_leaf`, `infer_pis`, `infer_forall` (lane `defeq`)
@@ -18,10 +19,6 @@ set_option experimental.vcgen true
 namespace L.Arena
 
 /-! ## `infer_pis_leaf` refines `inferPisLeaf` -/
-
-theorem BKept.of_imax {m m' : Mem} {u v r : Word} (h : iminternW m u v = some (r, m')) : BKept m m' := by
-  exact BKept.of_frame ((iminternW_frame (hI := h)))
-    (by simp [tier1, IREC, ISLOT, IHP, BSTK]) (by simp)
 
 /-- **The outward fold refines `inferPisOut`, both outcomes** (`intern_imax` lifted), with the
 result level's denotation. -/
@@ -277,12 +274,8 @@ theorem pisLoop_ref (p : Prog) (hp : InferLeafProg p) (hq : BindProg p) (hb : In
     by_cases hc : peel ≠ 0 ∧ t >>> 28 = 6
     · rw [ite_eq_left hc]
       obtain ⟨hp0, ht5⟩ := hc
-      by_cases hc1 : tierW t ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0
-      · rw [ite_eq_left hc1]; exact RefE.of_cls0 rfl
-      rw [ite_eq_right hc1]
-      by_cases hc2 : tcnt m FORALL (tierW t) ≤ idxW t
-      · rw [ite_eq_left hc2]; exact RefE.of_cls0 rfl
-      rw [ite_eq_right hc2]
+      refine RefE.underIf (fun _ => rfl) (RefE.abort0 (by rfl) fun hc1 => ?_)
+      refine RefE.underIf (fun _ => rfl) (RefE.abort0 (by rfl) fun hc2 => ?_)
       have hv : viewOK m t FORALL := ⟨hc1, UInt64.not_le.mp hc2⟩
       obtain ⟨-, hty, hbody⟩ := view_forall m a hS.arena.base t ht hv ht5
       have hvb := viewBind_forall m a hS.arena.base t ht hv ht5
@@ -295,79 +288,44 @@ theorem pisLoop_ref (p : Prog) (hp : InferLeafProg p) (hq : BindProg p) (hb : In
       rw [← haddd]
       refine RefE.bind_right (by rw [viewBind_run', hvb]) ?_
       dsimp only
-      have h0 : (0 : Word).toNat = 0 := rfl
-      rcases h1 : callW p j "inst_list" [tfld m FORALL (tierW t) (idxW t) 0, fo, k, 0] m with _ | ⟨r₁, m₁⟩
-      · rw [liftE_none, ipsE.k_inst_list.eq_1]; exact RefE.of_cls0 (by simp)
-      rw [liftE_some, ipsE.k_inst_list.eq_2]
-      obtain ⟨hok1, ⟨M₁, hS₁, hK₁, hSt₁⟩, hres1, hrw1⟩ := CoreSpec.of_callW
-        (hil j ⟨m, Locals.init []⟩ a dn vis fe M eb _ fo k 0 fvs hS hty hf hftop) h1
-      rw [h0] at hok1 hres1 hS₁
-      have hB₁ := hSt₁.bstk
-      refine RefE.bind_right (AM.run_of_ok _ _ hok1) ?_
-      rw [hres1]
+      -- `inst_list`, the slots `infer` and `whnf`
+      refine RefE.under (fun _ => rfl) (fun _ => ipsE.k_inst_list.none ..) fun hx => RefE.bind_callW hx
+        (hil j ⟨m, Locals.init []⟩ a dn vis fe M eb _ fo k 0 fvs hS hty hf hftop)
+        fun r₁ m₁ _ ⟨_, ⟨M₁, hS₁, hK₁, hSt₁⟩, _, hrw1⟩ => ?_
+      rw [Function.comp_apply, ipsE.k_inst_list.arm1]
       have hs₁ : SlotPre ⟨m₁, Locals.init []⟩ _ dn vis fe M₁ eb mode := ⟨hS₁, hmode, heb⟩
-      rcases h2 : callE p j "infer" [mode, vis, d + k, r₁.headD 0] m₁ with e2 | ⟨r₂, m₂⟩
-      · rw [ipsE.k_infer.eq_1]
-        exact RefE.bind_left fun hG => CoreSpecE.of_callE (s₀ := ⟨m₁, Locals.init []⟩)
-          ((hG.knot j (by omega)).infer F _ _ dn vis fe M₁ eb mode (d + k) (r₁.headD 0) (by omega)
-            (by omega) hs₁ hrw1) h2
-      rw [ipsE.k_infer.eq_2]
-      obtain ⟨hok2, ⟨M₂, hS₂, hK₂, hSt₂⟩, hres2, hrw2⟩ := CoreSpec.of_callW ((hk j (by omega)).infer F
-        ⟨m₁, Locals.init []⟩ _ dn vis fe M₁ eb mode (d + k) (r₁.headD 0) (by omega) (by omega) hs₁ hrw1)
-        (callW_of_callE h2)
-      have hB₂ := hSt₂.bstk
-      refine RefE.bind_right (AM.run_of_ok _ _ hok2) ?_
-      erw [hres2]
+      refine RefE.under (fun _ => rfl) (fun _ => ipsE.k_infer.none ..) fun hx => RefE.bind_callE hx
+        ((hk j (by omega)).infer F _ _ dn vis fe M₁ eb mode (d + k) (r₁.headD 0) (by omega) (by omega) hs₁ hrw1)
+        (fun (hG : InferG p N) => (hG.knot j (by omega)).infer F _ _ dn vis fe M₁ eb mode (d + k) (r₁.headD 0) (by omega)
+          (by omega) hs₁ hrw1) fun r₂ m₂ _ ⟨_, ⟨M₂, hS₂, hK₂, hSt₂⟩, _, hrw2⟩ => ?_
+      rw [Function.comp_apply, ipsE.k_infer.arm1]
       have hs₂ : SlotPre ⟨m₂, Locals.init []⟩ _ dn vis fe M₂ eb mode := ⟨hS₂, hmode, heb⟩
-      rcases h3 : callE p j "whnf" [mode, vis, d + k, r₂.headD 0] m₂ with e3 | ⟨r₃, m₃⟩
-      · rw [ipsE.k_whnf.eq_1]
-        exact RefE.bind_left fun hG => CoreSpecE.of_callE (s₀ := ⟨m₂, Locals.init []⟩)
-          ((hG.knot j (by omega)).whnf F _ _ dn vis fe M₂ eb mode (d + k) (r₂.headD 0) (by omega)
-            (by omega) hs₂ hrw2) h3
-      rw [ipsE.k_whnf.eq_2]
-      obtain ⟨hok3, ⟨M₃, hS₃, hK₃, hSt₃⟩, hres3, hrw3⟩ := CoreSpec.of_callW ((hk j (by omega)).whnf F
-        ⟨m₂, Locals.init []⟩ _ dn vis fe M₂ eb mode (d + k) (r₂.headD 0) (by omega) (by omega) hs₂ hrw2)
-        (callW_of_callE h3)
-      have hB₃ := hSt₃.bstk
-      refine RefE.bind_right (AM.run_of_ok _ _ hok3) ?_
-      erw [hres3]
-      by_cases g1 : r₃.headD 0 >>> 28 ≠ 2
-      · rw [ite_eq_left g1]
-        simp only [show decH r₃ = decE (r₃.headD 0) from rfl, tag_sort_ne _ hrw3 g1,
-          Bool.false_eq_true, ↓reduceIte]
-        exact fun _ => ErrClaim.fail _ _ rfl
-      rw [ite_eq_right g1]
+      refine RefE.under (fun _ => rfl) (fun _ => ipsE.k_whnf.none ..) fun hx => RefE.bind_callE hx
+        ((hk j (by omega)).whnf F _ _ dn vis fe M₂ eb mode (d + k) (r₂.headD 0) (by omega) (by omega) hs₂ hrw2)
+        (fun (hG : InferG p N) => (hG.knot j (by omega)).whnf F _ _ dn vis fe M₂ eb mode (d + k) (r₂.headD 0) (by omega)
+          (by omega) hs₂ hrw2) fun r₃ m₃ _ ⟨_, ⟨M₃, hS₃, hK₃, hSt₃⟩, _, hrw3⟩ => ?_
+      rw [Function.comp_apply, ipsE.k_whnf.eq_2]
+      refine RefE.underIf (fun _ => rfl) (RefE.guardIf (by rfl) (tag_sort_ne _ hrw3)
+        (fun hb g => Bool.noConfusion ((tag_sort_beq _ hrw3 g).symm.trans hb)) fun g1 _ => ?_)
       have g1' : r₃.headD 0 >>> 28 = 2 := by simpa using g1
-      have hsort : ((decH r₃).tag == ETag.sort) = true := tag_sort_beq _ hrw3 g1'
-      simp only [hsort, ↓reduceIte]
-      by_cases gs1 : tierW (r₃.headD 0) ≠ 0 ∧ rdW (m₃.arr64 CTL) 1 = 0
-      · rw [ite_eq_left gs1]; exact RefE.of_cls0 rfl
-      rw [ite_eq_right gs1]
-      by_cases gs2 : tcnt m₃ SORT (tierW (r₃.headD 0)) ≤ idxW (r₃.headD 0)
-      · rw [ite_eq_left gs2]; exact RefE.of_cls0 rfl
-      rw [ite_eq_right gs2]
+      refine RefE.underIf (fun _ => rfl) (RefE.abort0 (by rfl) fun gs1 => ?_)
+      refine RefE.underIf (fun _ => rfl) (RefE.abort0 (by rfl) fun gs2 => ?_)
       obtain ⟨hvs, hu⟩ := L.Ind.view_sort_f m₃ _ hS₃.arena.base (r₃.headD 0) hrw3 ⟨gs1, UInt64.not_le.mp gs2⟩ g1'
       refine RefE.bind_right (L.Ind.viewSort_run (L.Ind.viewSort_of_view _ _ _
         ((decE_tag_eq _ hrw3 2 (by decide)).mpr g1') hvs)) ?_
       dsimp only
       simp only [internFVarE]
-      rcases h4 : callW p j "intern_fvar" [d + k, r₁.headD 0] m₃ with _ | ⟨r₄, m₄⟩
-      · rw [liftE_none, ipsE.k_intern_fvar.eq_1]; exact RefE.of_cls0 (by simp)
-      rw [liftE_some, ipsE.k_intern_fvar.eq_2]
-      obtain ⟨s₄, hs₄, -, hfv⟩ := triple_of_callW (s₀ := ⟨m₃, Locals.init []⟩)
-        (internFVar_spec p hb.fvf hb.fvp hb.fvi j _ (d + k) (r₁.headD 0)) h4
-      rw [hs₄] at hfv
-      obtain ⟨hok4, ⟨M₄, hS₄, hK₄, hSt₄⟩, hres4, hrw4⟩ := internFVar_core hS₃ (d + k) (r₁.headD 0) hrw1 r₄ hfv
-      have hB₄ : BKept m₃ m₄ :=
-        BKept.of_frame ((fvinternW_frame (hI := hfv))) (by simp [tier1, FVREC, FVSLOT, FVLP, BSTK]) (by simp)
-      refine RefE.bind_right (AM.run_of_ok _ _ hok4) ?_
-      erw [hres4]
-      by_cases e1 : m₄.len64 SPN ≤ fo + k
-      · rw [ite_eq_left e1]; exact RefE.of_cls0 rfl
-      rw [ite_eq_right e1]
-      by_cases e2 : m₄.len64 BSTK ≤ lo + k
-      · rw [ite_eq_left e2]; exact RefE.of_cls0 rfl
-      rw [ite_eq_right e2]
+      -- `intern_fvar`
+      refine RefE.under (fun _ => rfl) (fun _ => ipsE.k_intern_fvar.none ..) fun hx => RefE.bind_callW hx
+        (internFVar_coreSpec hb j ⟨m₃, Locals.init []⟩ hS₃ (d + k) (r₁.headD 0) hrw1)
+        fun r₄ m₄ _ ⟨_, ⟨M₄, hS₄, hK₄, hSt₄⟩, _, hrw4⟩ => ?_
+      rw [Function.comp_apply, ipsE.k_intern_fvar.eq_2]
+      refine RefE.underIf (fun _ => rfl) (RefE.abort0 (by rfl) fun e1 => ?_)
+      refine RefE.underIf (fun _ => rfl) (RefE.abort0 (by rfl) fun e2 => ?_)
+      have hB₁ := hSt₁.bstk
+      have hB₂ := hSt₂.bstk
+      have hB₃ := hSt₃.bstk
+      have hB₄ := hSt₄.bstk
       have hSt14 := hSt₁.trans (hSt₂.trans (hSt₃.trans hSt₄))
       have hBK := hB₁.trans (hB₂.trans (hB₃.trans hB₄))
       have hf₄ : SpineR m₄ fo k fvs := hf.keep hSt14.size hSt14.below hftop hspn
