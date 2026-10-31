@@ -91,7 +91,7 @@ theorem viewN_anon (hg : tagW h = 0) (hc : ¬ tcnt m NANON (tierW h) ≤ idxW h)
   obtain ⟨x, hx, -⟩ := ConsR.node hR.nanon (tierW h) (tierW_le h)
     (idxW h) (UInt64.not_le.mp hc)
   simp only [NTables.get, e0, NTag.anonymous, beq_self_eq_true, ↓reduceIte, Tbl.node?,
-    decI_idx, apply_ite NTables.anons, hx, Option.map_some]
+    decI_idx h (narrow_of_tagW h (by rw [hg]; decide)), apply_ite NTables.anons, hx, Option.map_some]
 
 /-- The scratch view of a `str` record: its prefix word and a slice holding the string. -/
 theorem viewN_str (hg : tagW h = 1) (hc : ¬ tcnt m NSTR (tierW h) ≤ idxW h) :
@@ -108,7 +108,7 @@ theorem viewN_str (hg : tagW h = 1) (hc : ¬ tcnt m NSTR (tierW h) ≤ idxW h) :
   rw [nview_tier hR hh hv]
   have hne : ((1 : UInt32) == NTag.anonymous) = false := by decide
   simp only [NTables.get, e1, hne, NTag.str, beq_self_eq_true, Bool.false_eq_true, ↓reduceIte,
-    Tbl.node?, decI_idx, apply_ite NTables.strs, hx, Option.map_some, hq, decI_word]
+    Tbl.node?, decI_idx h (narrow_of_tagW h (by rw [hg]; decide)), apply_ite NTables.strs, hx, Option.map_some, hq, decI_word]
 
 /-- The scratch view of a `num` record: its prefix word and its number. -/
 theorem viewN_num (hg : tagW h = 2) (hc : ¬ tcnt m NNUM (tierW h) ≤ idxW h) :
@@ -125,7 +125,7 @@ theorem viewN_num (hg : tagW h = 2) (hc : ¬ tcnt m NNUM (tierW h) ≤ idxW h) :
   have hne0 : ((2 : UInt32) == NTag.anonymous) = false := by decide
   have hne1 : ((2 : UInt32) == NTag.str) = false := by decide
   simp only [NTables.get, e2, hne0, hne1, NTag.num, beq_self_eq_true, Bool.false_eq_true,
-    ↓reduceIte, Tbl.node?, decI_idx, apply_ite NTables.nums, hx, Option.map_some, nnQ, nnU, hq,
+    ↓reduceIte, Tbl.node?, decI_idx h (narrow_of_tagW h (by rw [hg]; decide)), apply_ite NTables.nums, hx, Option.map_some, nnQ, nnU, hq,
     hu, decI_word]
 
 end view

@@ -1,3 +1,4 @@
+import ConLeche.Kernel.NatOpPins
 import ConAgua.Arena.RomPins
 import ConAgua.Rom.PinRead
 import ConAgua.Arena.PromoteProg
