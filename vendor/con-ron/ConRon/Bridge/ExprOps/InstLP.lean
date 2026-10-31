@@ -24,8 +24,16 @@ the guarded `MemoLOK.get` / `MemoLsOK.get` below, the insert is
 `ExprOps/MemoSpecs.lean`'s `instLP*Set_specI`, and the readback cache clauses
 travel along the store order (§2).
 -/
+module
+
 import ConRon.Bridge.ExprOps.MemoSpecs
 import ConRon.Bridge.SpecsL
+import ConRon.Bridge.Specs
+import ConRon.Bridge.GrindAttr
+public import ConRon.Bridge.StateOK
+public import ConRon.Arena.ExprOps
+
+public section
 
 namespace ConRon.Bridge.ExprOps
 

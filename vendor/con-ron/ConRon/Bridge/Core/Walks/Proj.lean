@@ -48,14 +48,25 @@ list's denotation, about `readNamesM` itself, proved with
 registered spec the same way and passes the frame instead (`vcgen` erases a
 registered spec per call).
 -/
+module
+
 import ConRon.Bridge.Core.Walks.Cached
-import ConRon.Bridge.Core.Walks.Spec
-import ConRon.Bridge.ExprOps.Subst
-import ConRon.Bridge.ExprOps.Spine
+public import ConRon.Bridge.Core.Walks.Spec
+public import ConRon.Bridge.ExprOps.Subst
 import ConRon.Bridge.Core.Walks.Mono
-import ConRon.Bridge.Core.Walks.Owed
 import ConRon.Bridge.Core.Walks.Spine
-import ConRon.Bridge.Grind
+public import ConRon.Bridge.Grind
+import ConRon.Bridge.ExprOps.Owed
+import ConRon.Bridge.ExprOps.MemoSpecs
+public import ConRon.Bridge.Core.Walks.Frame
+import ConRon.Bridge.Core.Memo
+public import ConRon.Bridge.Core.Knot
+public import ConLeche.Verify.Knot
+import ConRon.Bridge.Specs
+import ConRon.Bridge.GrindAttr
+import ConRon.Bridge.SpecsL -- shake: keep (`vcgen [-readNamesM_spec]` names it; no proof term does)
+
+public section
 
 namespace ConRon.Bridge.Core
 
@@ -94,7 +105,7 @@ theorem CheckOK.readN' {s : AState} (h : CheckOK mode env fe s) :
 
 /-- con-leche: none — the denotation of an OPTIONAL projection entry, so that
 a lookup's answer is one equation (`denoteEO`'s shape). -/
-def denoteProjEntryO (st : EStore) : Option IProjEntry → Option (Option ProjEntry)
+@[expose] def denoteProjEntryO (st : EStore) : Option IProjEntry → Option (Option ProjEntry)
   | none => some none
   | some e => (denoteProjEntry st e).map some
 
@@ -688,7 +699,7 @@ grind_pattern [bridge_grind] isSome_of_denoteEO => denoteEO st r, some v where
 
 /-- con-leche: ConLeche/Kernel/CoreDefs.lean:752-753 teleArityOk — the
 arity test's answer at the denotations of the type and the spine. -/
-def TeleArityPost : Option Expr → Option (List Expr) → Bool → Prop
+@[expose] def TeleArityPost : Option Expr → Option (List Expr) → Bool → Prop
   | some T, some xs, r => r = ConLeche.teleArityOk T xs
   | _, _, _ => True
 

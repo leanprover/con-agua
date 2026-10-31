@@ -50,7 +50,12 @@ Each of the three interns is ONE field update as a value
 4. the three statements themselves: each is `{N,L,Ls}Store.intern_spec` plus
    that conjunct plus `denote*_unfold` for the new handle's denotation.
 -/
-import ConRon.Bridge.Rel
+module
+
+import ConRon.Arena.WFProofs
+public import ConRon.Arena.WF
+
+public section
 
 namespace ConRon.Bridge
 

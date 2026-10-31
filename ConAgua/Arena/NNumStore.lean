@@ -85,7 +85,7 @@ def nnumCS : ConsSch where
 
 /-! ## `nnum_find(t, pre, u, h)`: the probe -/
 
-/-- con-ron: ConRon/Arena/Store.lean:90-91 ConRon.Arena.Tbl.find? -/
+/-- con-ron: ConRon/Arena/Store.lean:94-95 ConRon.Arena.Tbl.find? -/
 def nnumFind : FunDecl := consFindG nnumCS
 
 /-! ## `nnum_push(t, pre, u, j)`: append a node to tier `t`, register it at slot `j` -/
@@ -97,7 +97,7 @@ def nncnt (m : Mem) (t : Word) : Word := rdW (m.arr64 CTL) (38 + t)
 def nnpushOK (m : Mem) (t : Word) : Bool :=
   decide (nncnt m t < (134217728 : Word)) && decide (nncnt m t < m.len64 (tierA NNREC t) >>> (1 : Word))
 
-/-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
+/-- con-ron: ConRon/Arena/Store.lean:97-102 ConRon.Arena.Tbl.push -/
 def nnumPush : FunDecl := consPushG nnumCS
 
 /-! ## `intern_nnum(pre, u)`: hash-cons the name `num pre u`
@@ -109,7 +109,8 @@ probe, the scratch probe if the scratch tier is open, the append to the tier the
 aborts (the library's `consInternM`). -/
 def nninternW (m : Mem) (pre u : Word) : Option (Word × Mem) := consInternM nnumCS m [pre, u]
 
-/-- con-ron: ConRon/Arena/Monad.lean:381-397 ConRon.Arena.internNNode -/
+/-- con-ron: ConRon/Arena/Monad.lean:384-400 ConRon.Arena.internNNode -/
+-- con-ron: CHANGED since ed864140 — below `ConRon.Arena.internNNode`, `ConRon.Arena.Idx.idxCap` changed; re-check the L code and its proofs, then delete this line
 @[l_impl ConRon.Arena.internNNode]
 def internNNum : FunDecl := consInternG nnumCS
 

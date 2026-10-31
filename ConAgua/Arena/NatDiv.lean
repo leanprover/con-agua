@@ -587,7 +587,7 @@ def rzLoop : Stmt := lblk (oa, la, ob, lb, top, n, ro, i, x, q, j, c, pa, pq, pt
   for j < n { POOL⟨pt⟩[pb + (la + j)] := 0 }
 }
 
-/-- con-ron: ConRon/Arena/Core.lean:994-1035 ConRon.Arena.natOpResult -/
+/-- con-ron: ConRon/Arena/Core.lean:999-1040 ConRon.Arena.natOpResult -/
 @[l_impl ConRon.Arena.natOpResult]
 def natDivmod : FunDecl := lfn (oa, la, ob, lb) locals (top, n, ro, i, x, q, j, c, pa, pq, pt, pb) {
   top := CTL.u64[0];

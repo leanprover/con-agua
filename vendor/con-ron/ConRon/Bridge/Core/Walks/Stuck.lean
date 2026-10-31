@@ -35,10 +35,24 @@ statements take `hμ : mode.verifiedChecks = true`, which every body theorem
 of this tier has in hand (`certs_of_verifiedChecks`, con-leche's
 `Verify/BetaGate.lean:126`).
 -/
-import ConRon.Bridge.Core.Walks.PropRead
+module
+
 import ConRon.Bridge.Core.Walks.Reserved
 import ConRon.Bridge.Core.Walks.Eta
 import ConRon.Bridge.ExprOps.Walks
+public import ConRon.Bridge.Core.Walks.Nat
+import ConRon.Bridge.Core.Walks.Proj
+import ConRon.Bridge.Core.Walks.Spine
+import ConRon.Bridge.Core.Walks.Cached
+import ConRon.Bridge.Core.Walks.Owed
+import ConRon.Bridge.Core.Walks.Mono
+import ConRon.Bridge.Core.Memo
+import ConLeche.Verify.InferLemmas
+public import ConLeche.Verify.EnvWF
+import ConRon.Bridge.Specs
+import ConRon.Bridge.GrindAttr
+
+public section
 
 namespace ConRon.Bridge.Core
 
@@ -73,7 +87,7 @@ def UnitCertE (mode : CheckMode) (env : Env) (d : Nat) (x y : Expr) (r : Bool) :
   SimBOp (fun F => ConLeche.structUnitCertFueled mode env F d x y) r
 
 /-- con-leche: ConLeche/Kernel/Core.lean:298-312 proofIrrel — its answer. -/
-def PIrrelE (mode : CheckMode) (env : Env) (d : Nat) (x y : Expr) (r : Bool) : Prop :=
+@[expose] def PIrrelE (mode : CheckMode) (env : Env) (d : Nat) (x y : Expr) (r : Bool) : Prop :=
   SimBOp (fun F => ConLeche.proofIrrelFueled mode env F d x y) r
 
 /-- con-leche: ConLeche/Kernel/Core.lean:487-492 stuckIrrel — its answer. -/

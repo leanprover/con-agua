@@ -82,7 +82,7 @@ def nanonCS : ConsSch where
 
 /-! ## `nanon_find(t, h)`: the probe -/
 
-/-- con-ron: ConRon/Arena/Store.lean:90-91 ConRon.Arena.Tbl.find? -/
+/-- con-ron: ConRon/Arena/Store.lean:94-95 ConRon.Arena.Tbl.find? -/
 def nanonFind : FunDecl := consFindG nanonCS
 
 /-! ## `nanon_push(t, j)`: append a node to tier `t`, register it at slot `j` -/
@@ -94,7 +94,7 @@ def nacnt (m : Mem) (t : Word) : Word := rdW (m.arr64 CTL) (34 + t)
 def napushOK (m : Mem) (t : Word) : Bool :=
   decide (nacnt m t < (134217728 : Word)) && decide (nacnt m t < m.len64 (tierA NAREC t))
 
-/-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
+/-- con-ron: ConRon/Arena/Store.lean:97-102 ConRon.Arena.Tbl.push -/
 def nanonPush : FunDecl := consPushG nanonCS
 
 /-! ## `intern_nanon()`: hash-cons the name `anonymous`
@@ -106,7 +106,8 @@ probe, the scratch probe if the scratch tier is open, the append to the tier the
 aborts (the library's `consInternM`). -/
 def nainternW (m : Mem) : Option (Word × Mem) := consInternM nanonCS m []
 
-/-- con-ron: ConRon/Arena/Monad.lean:381-397 ConRon.Arena.internNNode -/
+/-- con-ron: ConRon/Arena/Monad.lean:384-400 ConRon.Arena.internNNode -/
+-- con-ron: CHANGED since ed864140 — below `ConRon.Arena.internNNode`, `ConRon.Arena.Idx.idxCap` changed; re-check the L code and its proofs, then delete this line
 @[l_impl ConRon.Arena.internNNode]
 def internNAnon : FunDecl := consInternG nanonCS
 

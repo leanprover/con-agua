@@ -475,7 +475,7 @@ def slEq : FunDecl := lfn (o1, l1, o2, l2) locals (r) {
 }
 
 /-- `sl_nodup(o, l)`: `nameNodup` (no word twice). -/
--- con-ron: ConRon/Arena/CheckerBase.lean:35-40 ConRon.Arena.nameNodup
+-- con-ron: ConRon/Arena/CheckerBase.lean:38-43 ConRon.Arena.nameNodup
 @[l_impl ConRon.Arena.nameNodup]
 def slNodup : FunDecl := lfn (o, l) locals (b, r) {
   if l == 0 { return 1 };
@@ -595,7 +595,7 @@ def cvLps : FunDecl := lfn (q) locals (o, l) {
 
 /-- `reserved_contains(n)`: `(← reservedBasisNames).contains n` (the 16 reserved names,
 `PINS[55‥70]`). -/
--- con-ron: ConRon/Arena/Core.lean:1452-1456 ConRon.Arena.reservedBasisNames
+-- con-ron: ConRon/Arena/Core.lean:1457-1461 ConRon.Arena.reservedBasisNames
 def reservedContains : FunDecl := lfn (n) locals (r) {
   if PINS.u64[0] == 0 { abort };
   r := call reserved_from(n, 0);
@@ -603,7 +603,7 @@ def reservedContains : FunDecl := lfn (n) locals (r) {
 }
 
 /-- `reserved_from(n, j)`: `n` among `PINS[55 + j‥70]`. -/
--- con-ron: ConRon/Arena/Core.lean:1452-1456 ConRon.Arena.reservedBasisNames
+-- con-ron: ConRon/Arena/Core.lean:1457-1461 ConRon.Arena.reservedBasisNames
 def reservedFrom : FunDecl := lfn (n, j) locals (r) {
   if 16 <= j { return 0 };
   if PINS.u64[55 + j] == n { return 1 };
@@ -612,15 +612,15 @@ def reservedFrom : FunDecl := lfn (n, j) locals (r) {
 }
 
 /-- `lvl_eq_true(u, v)`: `lvlEq? u v == some true` as `0`/`1`. -/
--- con-ron: ConRon/Arena/Core.lean:132-149 ConRon.Arena.lvlEq?
+-- con-ron: ConRon/Arena/Core.lean:137-154 ConRon.Arena.lvlEq?
 def lvlEqTrue : FunDecl := lfn (u, v) locals (r) {
   r := call lvl_eq_c(u, v);
   return u64(r == 2)
 }
 
 /-- `lvl_eq_fueled(u, v)`: `liftFueled (← lvlEq? u v)`: `none` declines. -/
--- con-ron: ConRon/Arena/Core.lean:132-149 ConRon.Arena.lvlEq?
--- con-ron: ConRon/Arena/Core.lean:309-314 ConRon.Arena.liftFueled
+-- con-ron: ConRon/Arena/Core.lean:137-154 ConRon.Arena.lvlEq?
+-- con-ron: ConRon/Arena/Core.lean:314-319 ConRon.Arena.liftFueled
 def lvlEqFueled : FunDecl := lfn (u, v) locals (r) {
   r := call lvl_eq_c(u, v);
   if r == 0 { fail R_RESOURCE_LIMIT_FUEL };
@@ -633,7 +633,7 @@ def lvlEqFueled : FunDecl := lfn (u, v) locals (r) {
 `(9, s, i, e)`; unused fields `0`. A dangling handle (a closed scratch tier, an index past the
 count, an unknown tag) aborts, as the twin's `view` fails. The projections `viewBind`,
 `viewApp`, … are reads of this (the twin tests the tag first). -/
--- con-ron: ConRon/Arena/Monad.lean:153-160 ConRon.Arena.view
+-- con-ron: ConRon/Arena/Monad.lean:156-163 ConRon.Arena.view
 def eView : FunDecl := lfn (h) locals (g, t, i) {
   g := h >> 28;
   t := ⟦h⟧.tier;
@@ -675,7 +675,7 @@ def eView : FunDecl := lfn (h) locals (g, t, i) {
 }
 
 /-- `view_ls(us)`: the level handles of a level list (`viewLs`), copied from `POOL` into `IW`. -/
--- con-ron: ConRon/Arena/Monad.lean:491-497 ConRon.Arena.viewLs
+-- con-ron: ConRon/Arena/Monad.lean:494-500 ConRon.Arena.viewLs
 def viewLsL : FunDecl := lfn (us) locals (o, l, q, u) {
   (o, l) := call ls_node(us);
   q := call iw_alloc(l);
@@ -685,7 +685,7 @@ def viewLsL : FunDecl := lfn (us) locals (o, l, q, u) {
 
 /-- `view_ls_len(us)`: `viewLsLen us` as `(1, n)` (a dangling list aborts in `ls_node`, where the
 twin answers `none` and its callers fail). -/
--- con-ron: ConRon/Arena/Monad.lean:539-544 ConRon.Arena.viewLsLen
+-- con-ron: ConRon/Arena/Monad.lean:542-547 ConRon.Arena.viewLsLen
 def viewLsLenL : FunDecl := lfn (us) locals (o, l) {
   (o, l) := call ls_node(us);
   return (1, l)

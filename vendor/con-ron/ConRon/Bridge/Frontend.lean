@@ -19,8 +19,10 @@ The modules, in dependency order:
 * `Bridge/Frontend/Chunks.lean` — **the parser's exactness**: `feedChunk`,
   `chunkStep`, `chunkFinish`, `parseBytes`, `parseChunks`;
 * `Bridge/Frontend/Prepare.lean` — the two permuting passes and the prelude;
-* `Bridge/Frontend/Capstone.lean` — **`Arena.no_False_declaration`**, its
-  `_prelude` instance, and `_pipeline` at `Arena/Main.lean`'s one seam;
+* `Bridge/Frontend/Capstone.lean` — **`no_False_theorem_accepted_pure`**,
+  the letter at the pure fold (a stream that declares a theorem of type
+  `False` is never accepted), with `FoldOK_of_start` and the stream lemmas
+  `ConRon/Capstone.lean`'s byte-level capstones are assembled from;
 * `Bridge/Frontend/Axioms.lean` — the trust census.
 
 ## What this tier does NOT contain, and why
@@ -46,17 +48,18 @@ exactly as `Bridge/Checker`'s arms claim nothing about a `native` decline.
 ## The import rule
 
 `Bridge/Frontend/Capstone.lean` adds **two** imports to the library's rule:
-`ConRon.Arena.Main` (the seam `runPipeline` lives there, and
-`Arena.no_False_declaration_pipeline` is a statement about it) and
-`ConLeche.MainTheorem` (for `ConLeche.jsonWithTheoremFalse` and
-`ConLeche.Frontend.parseChunks_jsonWithTheoremFalse`, which is con-leche's own
-file-level lemma and the one thing this tier may not re-derive).  Both are
+con-leche's `Semantics/Bridge/DeclRun` and `Model/Fold`, for
+`Semantics.declThmRun_of` and `Model.no_proof_of_False_pure`.  Both are
 prebuilt in con-leche's `.lake`, so neither costs elaboration.
 -/
-import ConRon.Bridge.Frontend.Rel
-import ConRon.Bridge.Frontend.Shared
-import ConRon.Bridge.Frontend.Lines
-import ConRon.Bridge.Frontend.Chunks
-import ConRon.Bridge.Frontend.Prepare
-import ConRon.Bridge.Frontend.Capstone
-import ConRon.Bridge.Frontend.Axioms
+module
+
+public import ConRon.Bridge.Frontend.Rel
+public import ConRon.Bridge.Frontend.Shared
+public import ConRon.Bridge.Frontend.Lines
+public import ConRon.Bridge.Frontend.Chunks
+public import ConRon.Bridge.Frontend.Prepare
+public import ConRon.Bridge.Frontend.Capstone
+public import ConRon.Bridge.Frontend.Axioms
+
+public section

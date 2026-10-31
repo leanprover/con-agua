@@ -61,14 +61,19 @@ Each spec is `vcgen [f] with finish`, or `sym only [bridge_grind, …] =>
 vcgen [f, callee specs…] <;> finish` over `Bridge/Grind.lean`'s vocabulary
 where it calls other specs or needs the bridge's lemmas.
 -/
-import ConRon.Bridge.StateOK
-import ConRon.Bridge.Grind
+module
+
+public import ConRon.Bridge.StateOK
+public import ConRon.Bridge.Grind
 import ConRon.Bridge.StoreNested
 import ConRon.Bridge.StoreBind
-import ConRon.Arena.PersistentRun
-import Std.WP
+public import Std.WP
 -- the `vcgen` syntax on v4.35.0 (lean4#15290 moves it to `Std.WP.Tactic`)
-import Std.Tactic.Do
+public import Std.Tactic.Do
+import ConRon.Bridge.GrindAttr
+public import ConRon.Arena.Core
+
+public section
 
 namespace ConRon.Bridge
 

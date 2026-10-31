@@ -95,7 +95,7 @@ def imaxCS : ConsSch where
 
 /-! ## `imax_find(t, u, v, h)`: the probe -/
 
-/-- con-ron: ConRon/Arena/Store.lean:90-91 ConRon.Arena.Tbl.find? -/
+/-- con-ron: ConRon/Arena/Store.lean:94-95 ConRon.Arena.Tbl.find? -/
 def imaxFind : FunDecl := consFindG imaxCS
 
 /-! ## `imax_push(t, u, v, j)`: append a node to tier `t`, register it at slot `j` -/
@@ -108,7 +108,7 @@ def impushOK (m : Mem) (t : Word) : Bool :=
   decide (imcnt m t < (134217728 : Word)) && decide (imcnt m t < m.len64 (tierA IREC t)) &&
     decide (imcnt m t < m.len64 (tierA IHP t))
 
-/-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
+/-- con-ron: ConRon/Arena/Store.lean:97-102 ConRon.Arena.Tbl.push -/
 def imaxPush : FunDecl := consPushG imaxCS
 
 /-! ## `intern_imax(u, v)`: hash-cons the level `imax u v`
@@ -120,7 +120,8 @@ probe, the scratch probe if the scratch tier is open, the append to the tier the
 aborts (the library's `consInternM`). -/
 def iminternW (m : Mem) (u v : Word) : Option (Word × Mem) := consInternM imaxCS m [u, v]
 
-/-- con-ron: ConRon/Arena/Monad.lean:441-457 ConRon.Arena.internLNode -/
+/-- con-ron: ConRon/Arena/Monad.lean:444-460 ConRon.Arena.internLNode -/
+-- con-ron: CHANGED since ed864140 — below `ConRon.Arena.internLNode`, `ConRon.Arena.Idx.idxCap` changed; re-check the L code and its proofs, then delete this line
 @[l_impl ConRon.Arena.internLNode]
 def internImax : FunDecl := consInternG imaxCS
 

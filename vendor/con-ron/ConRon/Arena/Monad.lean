@@ -32,9 +32,12 @@ It adds no store lemma of its own; what it adds is
 imports nothing from it); the two are the same constructors and P2d merges
 them when the driver is wired to the checker.
 -/
-import ConRon.Arena.WFProofs
-import ConRon.Arena.CoreState
-import ConLeche.Kernel.Level
+module
+
+public import ConRon.Arena.CoreState
+public import ConRon.Arena.Denote
+
+@[expose] public section
 
 namespace ConRon.Arena
 
@@ -44,7 +47,7 @@ open ConLeche
 
 /-- con-leche: ConLeche/Kernel/Core.lean:50-69 CheckError — the checker's
 error, verbatim (census class (P)), plus the fourth constructor the arena
-needs: DESIGN §8.3's handle word runs out at 2^27 nodes per constructor per
+needs: DESIGN §8.3's handle word runs out at 2^30 `app` or 2^26 other nodes per constructor per
 tier and the checker `throw`s `native` there, exactly as the Rust port's
 `Native` does.  A `native` claims nothing about the input, so the bridge
 claims nothing about a run that raises one. -/
@@ -234,7 +237,7 @@ def internNodeE (v : ENodeView) : AM EIdx := do
   | some h => pure h
   | none =>
     let n := if s.store.scratchOn then s.store.scr.sizeOf v else s.store.pers.sizeOf v
-    if n < Idx.idxCap then
+    if n < v.cap then
       let st := s.store
       let s := { s with store := EStore.empty }
       let (st, h) := st.intern v
@@ -635,7 +638,7 @@ def internPersistentE (v : ENodeView) : AM EIdx := do
   match s.store.pers.find? v with
   | some h => pure h
   | none =>
-    if s.store.pers.sizeOf v < Idx.idxCap then
+    if s.store.pers.sizeOf v < v.cap then
       let st := s.store
       let s := { s with store := EStore.empty }
       let (st, h) := st.internPersistent v

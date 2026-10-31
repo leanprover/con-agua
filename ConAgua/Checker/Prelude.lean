@@ -157,7 +157,7 @@ def eidSpClear : FunDecl := memoClearG (L.Front.spS L.Front.EID)
 
 /-- `front_reset()`: the id tables emptied (their dense sizes `0`, their sparse maps cleared);
 the declaration records stay. -/
--- con-ron: ConRon/Arena/Frontend/ExportC.lean:490-499 ConRon.Arena.Frontend.StateD.init
+-- con-ron: ConRon/Arena/Frontend/ExportC.lean:494-503 ConRon.Arena.Frontend.StateD.init
 def frontResetL : FunDecl := lfn () locals (z) {
   CTL.u64[70] := 0;
   CTL.u64[71] := 0;
@@ -170,7 +170,7 @@ def frontResetL : FunDecl := lfn () locals (z) {
 
 /-- `builtin_prelude()`: `builtinPreludeE` — the frontend on the prelude's bytes; the number of
 prelude records into `CTL[240]`; the id tables emptied. -/
--- con-ron: ConRon/Arena/Frontend/Prelude.lean:39-52 ConRon.Arena.Frontend.builtinPreludeE
+-- con-ron: ConRon/Arena/Frontend/Prelude.lean:44-57 ConRon.Arena.Frontend.builtinPreludeE
 @[l_impl ConRon.Arena.Frontend.builtinPreludeE]
 def builtinPreludeL : FunDecl := lfn () locals (r, z) {
   r := call pre_front_run();
@@ -184,7 +184,7 @@ def builtinPreludeL : FunDecl := lfn () locals (r, z) {
 
 /-- `decl_declares_go(o, c, n, j)`: a block member `DIND[o + j ‥ o + c)` (a `DIND` record
 pointer) is named `n`. -/
--- con-ron: ConRon/Arena/Frontend/Prepare.lean:73-75 ConRon.Arena.Frontend.declares
+-- con-ron: ConRon/Arena/Frontend/Prepare.lean:76-78 ConRon.Arena.Frontend.declares
 def declDeclaresGoL : FunDecl := lfn (o, c, n, j) locals (r) {
   if c <= j { return 0 };
   if DIND.u64[DIND.u64[o + j] + 1] == n { return 1 };
@@ -194,7 +194,7 @@ def declDeclaresGoL : FunDecl := lfn (o, c, n, j) locals (r) {
 
 /-- `decl_declares(i, n)`: `declares n ds[i]` — record `i`'s names contain `n` (an inductive
 block's: its members', `DIND` records' names). -/
--- con-ron: ConRon/Arena/Frontend/Prepare.lean:73-75 ConRon.Arena.Frontend.declares
+-- con-ron: ConRon/Arena/Frontend/Prepare.lean:76-78 ConRon.Arena.Frontend.declares
 @[l_impl ConRon.Arena.Frontend.declares]
 def declDeclaresL : FunDecl := lfn (i, n) locals (x, r) {
   x := 1 + 8 * i;
@@ -207,7 +207,7 @@ def declDeclaresL : FunDecl := lfn (i, n) locals (x, r) {
 }
 
 /-- `decl_key(i)`: `preludeKey ds[i]` — the first name, or the anonymous name. -/
--- con-ron: ConRon/Arena/Frontend/Prepare.lean:52-59 ConRon.Arena.Frontend.preludeKey
+-- con-ron: ConRon/Arena/Frontend/Prepare.lean:55-62 ConRon.Arena.Frontend.preludeKey
 @[l_impl ConRon.Arena.Frontend.preludeKey]
 def declKeyL : FunDecl := lfn (i) locals (x, r) {
   x := 1 + 8 * i;
@@ -221,7 +221,7 @@ def declKeyL : FunDecl := lfn (i) locals (x, r) {
 
 /-- `prep_find(mk, n, key, j)`: the first record `j' ∈ [j, n)` not marked in `mk` that declares
 `key`, plus one; `0` if there is none (`pick`'s `findIdx` on the stream not yet picked). -/
--- con-ron: ConRon/Arena/Frontend/Prepare.lean:77-90 ConRon.Arena.Frontend.pick
+-- con-ron: ConRon/Arena/Frontend/Prepare.lean:80-93 ConRon.Arena.Frontend.pick
 @[l_impl ConRon.Arena.Frontend.pick]
 def prepFindL : FunDecl := lfn (mk, n, key, j) locals (d, r) {
   if n <= j { return 0 };
@@ -236,7 +236,7 @@ def prepFindL : FunDecl := lfn (mk, n, key, j) locals (d, r) {
 /-- `prep_front(np, n, ord, mk, a)`: the prelude records `a ‥ np`: each replaced by the first
 unmarked stream record declaring its key (which gets marked: it leaves the stream), or kept
 (`frontOf`). -/
--- con-ron: ConRon/Arena/Frontend/Prepare.lean:92-101 ConRon.Arena.Frontend.frontOf
+-- con-ron: ConRon/Arena/Frontend/Prepare.lean:95-104 ConRon.Arena.Frontend.frontOf
 @[l_impl ConRon.Arena.Frontend.frontOf]
 def prepFrontL : FunDecl := lfn (np, n, ord, mk, a) locals (key, f, r) {
   if np <= a { return 0 };
@@ -254,7 +254,7 @@ def prepFrontL : FunDecl := lfn (np, n, ord, mk, a) locals (key, f, r) {
 
 /-- `prep_rest(n, ord, mk, c, j)`: the unmarked stream records `j ‥ n`, in order, to
 `ord[c ..]`; the new `c` (`frontOf`'s rest of the stream, `front ++ rest`). -/
--- con-ron: ConRon/Arena/Frontend/Prepare.lean:126-131 ConRon.Arena.Frontend.prepareD
+-- con-ron: ConRon/Arena/Frontend/Prepare.lean:129-134 ConRon.Arena.Frontend.prepareD
 def prepRestL : FunDecl := lfn (n, ord, mk, c, j) locals (r) {
   if n <= j { return c };
   if IW.u64[mk + j] == 0 { IW.u64[ord + c] := j; c += 1 };
@@ -301,8 +301,8 @@ def prepBackL : FunDecl := lfn (t, c, i) locals (z, r) {
 /-- `prepare_prelude()`: `preparePrelude pre ds` on `DECL` = the prelude's `P = CTL[240]`
 records, then the stream's: the front (`prep_front`), the rest
 (`prep_rest`), the ground hoist, then `DECL` rewritten in the prepared order. -/
--- con-ron: ConRon/Arena/Frontend/Prepare.lean:133-140 ConRon.Arena.Frontend.preparePrelude
--- con-ron: ConRon/Arena/Frontend/Prepare.lean:126-131 ConRon.Arena.Frontend.prepareD
+-- con-ron: ConRon/Arena/Frontend/Prepare.lean:136-143 ConRon.Arena.Frontend.preparePrelude
+-- con-ron: ConRon/Arena/Frontend/Prepare.lean:129-134 ConRon.Arena.Frontend.prepareD
 @[l_impl ConRon.Arena.Frontend.preparePrelude ConRon.Arena.Frontend.prepareD]
 def preparePreludeL : FunDecl := lfn () locals (np, n, ord, mk, z, c, t) {
   np := CTL.u64[240];

@@ -17,8 +17,17 @@ slot 0 (`towerSlotsAll_eq`, `etaProjs_eq`).  Every proof is `sym only
 [bridge_grind, …] => vcgen […] <;> finish`, the recursion's induction
 hypothesis in the `vcgen` list.
 -/
-import ConRon.Bridge.Core.Walks.StrCtor
-import ConRon.Bridge.Core.Walks.StrLit
+module
+
+import ConRon.Bridge.Core.Walks.Nat
+import ConRon.Bridge.Core.Walks.Proj
+public import ConLeche.Verify.Shift
+import ConRon.Bridge.Specs
+import ConRon.Bridge.GrindAttr
+public import ConRon.Bridge.StateOK
+public import ConRon.Arena.Core
+
+public section
 
 namespace ConRon.Bridge.Core
 

@@ -63,7 +63,7 @@ def gcdLoop : Stmt := lblk (oa, la, ob, lb) {
   }
 }
 
-/-- con-ron: ConRon/Arena/Core.lean:994-1035 ConRon.Arena.natOpResult -/
+/-- con-ron: ConRon/Arena/Core.lean:999-1040 ConRon.Arena.natOpResult -/
 @[l_impl ConRon.Arena.natOpResult]
 def natGcd : FunDecl := lfn (oa, la, ob, lb) {
   ⟪gcdLoop⟫;

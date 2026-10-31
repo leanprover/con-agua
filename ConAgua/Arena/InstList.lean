@@ -604,7 +604,7 @@ grind_pattern [arena_grind] ilgProjW_miss => ilgProjW (n + 1) m h d o l fu
 
 /-! ## The L code: the pure walk -/
 
-/-- con-ron: ConRon/Arena/ExprOps.lean:394-420 ConRon.Arena.instantiateList -/
+/-- con-ron: ConRon/Arena/ExprOps.lean:399-425 ConRon.Arena.instantiateList -/
 @[l_impl ConRon.Arena.instantiateList]
 def ilGo : FunDecl := lfn (h, d, o, l, fu) locals (x, g, r) {
   if fu == 0 { abort };
@@ -620,7 +620,7 @@ def ilGo : FunDecl := lfn (h, d, o, l, fu) locals (x, g, r) {
   return h
 }
 
-/-- con-ron: ConRon/Arena/ExprOps.lean:422-432 ConRon.Arena.instListArmApp -/
+/-- con-ron: ConRon/Arena/ExprOps.lean:427-437 ConRon.Arena.instListArmApp -/
 @[l_impl ConRon.Arena.instListArmApp]
 def ilApp : FunDecl := lfn (h, d, o, l, fu) locals (t, i, f, a, x, y, r) {
   (t, i) := node APP⟦h⟧;
@@ -632,7 +632,7 @@ def ilApp : FunDecl := lfn (h, d, o, l, fu) locals (t, i, f, a, x, y, r) {
   return r
 }
 
-/-- con-ron: ConRon/Arena/ExprOps.lean:434-444 ConRon.Arena.instListArmBind -/
+/-- con-ron: ConRon/Arena/ExprOps.lean:439-449 ConRon.Arena.instListArmBind -/
 @[l_impl ConRon.Arena.instListArmBind]
 def ilLam : FunDecl := lfn (h, d, o, l, fu) locals (t, i, f, a, x, y, r) {
   if d + 1 == 0 { abort };
@@ -645,7 +645,7 @@ def ilLam : FunDecl := lfn (h, d, o, l, fu) locals (t, i, f, a, x, y, r) {
   return r
 }
 
-/-- con-ron: ConRon/Arena/ExprOps.lean:434-444 ConRon.Arena.instListArmBind -/
+/-- con-ron: ConRon/Arena/ExprOps.lean:439-449 ConRon.Arena.instListArmBind -/
 @[l_impl ConRon.Arena.instListArmBind]
 def ilForall : FunDecl := lfn (h, d, o, l, fu) locals (t, i, f, a, x, y, r) {
   if d + 1 == 0 { abort };
@@ -658,7 +658,7 @@ def ilForall : FunDecl := lfn (h, d, o, l, fu) locals (t, i, f, a, x, y, r) {
   return r
 }
 
-/-- con-ron: ConRon/Arena/ExprOps.lean:446-457 ConRon.Arena.instListArmLet -/
+/-- con-ron: ConRon/Arena/ExprOps.lean:451-462 ConRon.Arena.instListArmLet -/
 @[l_impl ConRon.Arena.instListArmLet]
 def ilLet : FunDecl := lfn (h, d, o, l, fu) locals (t, i, f, a, b, x, y, z, r) {
   if d + 1 == 0 { abort };
@@ -673,7 +673,7 @@ def ilLet : FunDecl := lfn (h, d, o, l, fu) locals (t, i, f, a, b, x, y, z, r) {
   return r
 }
 
-/-- con-ron: ConRon/Arena/ExprOps.lean:459-468 ConRon.Arena.instListArmProj -/
+/-- con-ron: ConRon/Arena/ExprOps.lean:464-473 ConRon.Arena.instListArmProj -/
 @[l_impl ConRon.Arena.instListArmProj]
 def ilProj : FunDecl := lfn (h, d, o, l, fu) locals (t, i, nm, ix, e, x, r) {
   (t, i) := node PROJ⟦h⟧;
@@ -685,7 +685,7 @@ def ilProj : FunDecl := lfn (h, d, o, l, fu) locals (t, i, nm, ix, e, x, r) {
   return r
 }
 
-/-- con-ron: ConRon/Arena/ExprOps.lean:470-495 ConRon.Arena.instListArmBVar -/
+/-- con-ron: ConRon/Arena/ExprOps.lean:475-500 ConRon.Arena.instListArmBVar -/
 @[l_impl ConRon.Arena.instListArmBVar]
 def ilBVar : FunDecl := lfn (h, d, o, l, fu) locals (t, i, j, q, v, x, r) {
   (t, i) := node BVAR⟦h⟧;
@@ -705,7 +705,7 @@ def ilBVar : FunDecl := lfn (h, d, o, l, fu) locals (t, i, j, q, v, x, r) {
 
 /-! ## The L code: the memo walk -/
 
-/-- con-ron: ConRon/Arena/ExprOps.lean:524-547 ConRon.Arena.instantiateListGo -/
+/-- con-ron: ConRon/Arena/ExprOps.lean:529-552 ConRon.Arena.instantiateListGo -/
 @[l_impl ConRon.Arena.instantiateListGo]
 def ilgGo : FunDecl := lfn (h, d, o, l, fu) locals (x, g, r) {
   if fu == 0 { abort };
@@ -721,7 +721,7 @@ def ilgGo : FunDecl := lfn (h, d, o, l, fu) locals (x, g, r) {
   return h
 }
 
-/-- con-ron: ConRon/Arena/ExprOps.lean:549-564 ConRon.Arena.instListGoArmApp -/
+/-- con-ron: ConRon/Arena/ExprOps.lean:554-569 ConRon.Arena.instListGoArmApp -/
 @[l_impl ConRon.Arena.instListGoArmApp]
 def ilgApp : FunDecl := lfn (h, d, o, l, fu) locals (fd, j, e0, t, i, f, a, x, y, r, u) {
   (fd, j, e0) := call ilm_find(h, d);
@@ -737,7 +737,7 @@ def ilgApp : FunDecl := lfn (h, d, o, l, fu) locals (fd, j, e0, t, i, f, a, x, y
   return r
 }
 
-/-- con-ron: ConRon/Arena/ExprOps.lean:566-581 ConRon.Arena.instListGoArmBind -/
+/-- con-ron: ConRon/Arena/ExprOps.lean:571-586 ConRon.Arena.instListGoArmBind -/
 @[l_impl ConRon.Arena.instListGoArmBind]
 def ilgLam : FunDecl := lfn (h, d, o, l, fu) locals (fd, j, e0, t, i, f, a, x, y, r, u) {
   if d + 1 == 0 { abort };
@@ -754,7 +754,7 @@ def ilgLam : FunDecl := lfn (h, d, o, l, fu) locals (fd, j, e0, t, i, f, a, x, y
   return r
 }
 
-/-- con-ron: ConRon/Arena/ExprOps.lean:566-581 ConRon.Arena.instListGoArmBind -/
+/-- con-ron: ConRon/Arena/ExprOps.lean:571-586 ConRon.Arena.instListGoArmBind -/
 @[l_impl ConRon.Arena.instListGoArmBind]
 def ilgForall : FunDecl := lfn (h, d, o, l, fu) locals (fd, j, e0, t, i, f, a, x, y, r, u) {
   if d + 1 == 0 { abort };
@@ -771,7 +771,7 @@ def ilgForall : FunDecl := lfn (h, d, o, l, fu) locals (fd, j, e0, t, i, f, a, x
   return r
 }
 
-/-- con-ron: ConRon/Arena/ExprOps.lean:583-599 ConRon.Arena.instListGoArmLet -/
+/-- con-ron: ConRon/Arena/ExprOps.lean:588-604 ConRon.Arena.instListGoArmLet -/
 @[l_impl ConRon.Arena.instListGoArmLet]
 def ilgLet : FunDecl := lfn (h, d, o, l, fu) locals (fd, j, e0, t, i, f, a, b, x, y, z, r, u) {
   if d + 1 == 0 { abort };
@@ -790,7 +790,7 @@ def ilgLet : FunDecl := lfn (h, d, o, l, fu) locals (fd, j, e0, t, i, f, a, b, x
   return r
 }
 
-/-- con-ron: ConRon/Arena/ExprOps.lean:601-615 ConRon.Arena.instListGoArmProj -/
+/-- con-ron: ConRon/Arena/ExprOps.lean:606-620 ConRon.Arena.instListGoArmProj -/
 @[l_impl ConRon.Arena.instListGoArmProj]
 def ilgProj : FunDecl := lfn (h, d, o, l, fu) locals (fd, j, e0, t, i, nm, ix, e, x, r, u) {
   (fd, j, e0) := call ilm_find(h, d);

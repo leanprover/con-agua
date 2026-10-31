@@ -14,11 +14,14 @@ not terminate on a shared DAG (con-leche's task #210 Part B).  Each is a
 memoised walk with an explicitly threaded table, so each needs its own memo
 invariant and its own fuel induction, in `Bridge/ExprOps/Walks.lean`'s shape.
 -/
-import ConRon.Bridge.Checker.Hyp
+module
+
+public import ConRon.Bridge.Checker.Hyp
 import ConRon.Bridge.Checker.Names
-import ConRon.Bridge.Checker.Canon
 import ConRon.Bridge.ExprOps.Ranges
 import ConLeche.Verify.BridgeDecl
+
+public section
 
 open ConLeche ConRon.Arena
 

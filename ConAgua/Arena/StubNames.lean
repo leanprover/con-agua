@@ -22,7 +22,7 @@ namespace L.Stubs
 
 open L.Arena L.Ind
 
-/-- con-ron: ConRon/Arena/ExprOps.lean:1574-1580 ConRon.Arena.fvarB -/
+/-- con-ron: ConRon/Arena/ExprOps.lean:1579-1585 ConRon.Arena.fvarB -/
 @[l_impl ConRon.Arena.fvarB]
 def fvarBL : FunDecl := lfn (f, e) locals (r) {
   r := call ab_fvb(e, f);
@@ -32,8 +32,8 @@ def fvarBL : FunDecl := lfn (f, e) locals (r) {
 /-! ## `reserved_rec_name(n)` -/
 
 /-- `pin_range_has(n, k, hi)`: `n` is one of the pins `k ‥ hi - 1` (`pin_at`, in order). -/
--- con-ron: ConRon/Arena/Core.lean:876-882 ConRon.Arena.natOpNames
--- con-ron: ConRon/Arena/Core.lean:884-890 ConRon.Arena.natDivModNames
+-- con-ron: ConRon/Arena/Core.lean:881-887 ConRon.Arena.natOpNames
+-- con-ron: ConRon/Arena/Core.lean:889-895 ConRon.Arena.natDivModNames
 def pinRangeHas : FunDecl := lfn (n, k, hi) locals (w, r) {
   if hi <= k { return 0 };
   w := call pin_at(k);
@@ -45,7 +45,7 @@ def pinRangeHas : FunDecl := lfn (n, k, hi) locals (w, r) {
 /-- `lit_guard_has(n)`: `(← litGuardNames).contains n`: the pins `Nat`, `Nat.zero`, `Nat.succ`,
 `String`, `String.ofList`, `List`, `List.nil`, `List.cons`, `Char`, `Char.ofNat` (slots 1, 2, 3,
 5‥10, 12), all read first, as the twin builds its list. -/
--- con-ron: ConRon/Arena/Core.lean:1458-1474 ConRon.Arena.litGuardNames
+-- con-ron: ConRon/Arena/Core.lean:1463-1479 ConRon.Arena.litGuardNames
 @[l_impl ConRon.Arena.litGuardNames]
 def litGuardHas : FunDecl := lfn (n) locals (a, b, c, d, f, g, h, i, j, k) {
   a := call pin_at(1); b := call pin_at(2); c := call pin_at(3); d := call pin_at(5);
@@ -56,7 +56,7 @@ def litGuardHas : FunDecl := lfn (n) locals (a, b, c, d, f, g, h, i, j, k) {
   return 0
 }
 
-/-- con-ron: ConRon/Arena/Core.lean:1476-1491 ConRon.Arena.reservedRecName -/
+/-- con-ron: ConRon/Arena/Core.lean:1481-1496 ConRon.Arena.reservedRecName -/
 @[l_impl ConRon.Arena.reservedRecName]
 def reservedRecNameL : FunDecl := lfn (n) locals (r) {
   r := call reserved_contains(n);
@@ -82,7 +82,7 @@ def poolRoom : FunDecl := lfn (k) locals (o) {
 }
 
 /-- `name_rec(n)`: the name `n.rec`. -/
--- con-ron: ConRon/Arena/Inductives/BlockParts.lean:287-295 ConRon.Arena.blockRecNameSetOk
+-- con-ron: ConRon/Arena/Inductives/BlockParts.lean:291-299 ConRon.Arena.blockRecNameSetOk
 def nameRecL : FunDecl := lfn (n) locals (o, s, pt, pb) {
   o := call pool_room(3);
   pt := ⦃o⦄.tier;
@@ -108,7 +108,7 @@ def decLen : FunDecl := lfn (x) locals (k) {
 }
 
 /-- `name_rec_i(n, i)`: the name `n.rec_i` (`i` in decimal). -/
--- con-ron: ConRon/Arena/Inductives/RecCheck.lean:362-397 ConRon.Arena.targetRecPins
+-- con-ron: ConRon/Arena/Inductives/RecCheck.lean:367-402 ConRon.Arena.targetRecPins
 def nameRecIL : FunDecl := lfn (n, i) locals (k, o, j, x, q, s, pt, pb) {
   k := call dec_len(i);
   o := call pool_room(k + 4);
@@ -146,7 +146,8 @@ def iwPool : FunDecl := lfn (s, d, l) locals (u, pt, pb) {
 
 /-- `intern_ls_iw(o, l)`: the `IW` slice of level handles, copied to the pool top and interned
 as a list node. -/
--- con-ron: ConRon/Arena/Monad.lean:499-515 ConRon.Arena.internLsNode
+-- con-ron: ConRon/Arena/Monad.lean:502-518 ConRon.Arena.internLsNode
+-- con-ron: CHANGED since ed864140 — below `ConRon.Arena.internLsNode`, `ConRon.Arena.Idx.idxCap` changed; re-check the L code and its proofs, then delete this line
 def internLsIwL : FunDecl := lfn (o, l) locals (top, u, h) {
   top := call pool_room(l);
   u := call iw_pool(o, top, l);

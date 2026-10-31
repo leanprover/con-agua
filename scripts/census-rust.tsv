@@ -828,11 +828,13 @@ ConRon/Arena/Frontend/Readback	internRules	21
 ConRon/Arena/Frontend/Types	RecordVerdict.toError	6
 ConRon/Arena/Handle	ETag.isBind	3
 ConRon/Arena/Handle	Idx.idxNat	15
-ConRon/Arena/Handle	Idx.index	3
+ConRon/Arena/Handle	Idx.index	7
 ConRon/Arena/Handle	Idx.isPersistent	15
+ConRon/Arena/Handle	Idx.isWide	9
 ConRon/Arena/Handle	Idx.mk	15
+ConRon/Arena/Handle	Idx.mkWide	6
 ConRon/Arena/Handle	Idx.ofWord	12
-ConRon/Arena/Handle	Idx.tag	15
+ConRon/Arena/Handle	Idx.tag	19
 ConRon/Arena/Handle	Idx.tier	15
 ConRon/Arena/Handle	instBEqIdx	12
 ConRon/Arena/Handle	instHashableIdx	12
@@ -1286,7 +1288,7 @@ ConRon/Arena/Store	ETables.count	12
 ConRon/Arena/Store	ETables.derAt	25
 ConRon/Arena/Store	ETables.empty	14
 ConRon/Arena/Store	ETables.find?	26
-ConRon/Arena/Store	ETables.get	47
+ConRon/Arena/Store	ETables.get	51
 ConRon/Arena/Store	ETables.push	54
 ConRon/Arena/Store	FVarNode	3
 ConRon/Arena/Store	LDer	3
@@ -1305,7 +1307,7 @@ ConRon/Arena/Store	LTables.count	7
 ConRon/Arena/Store	LTables.derAt	15
 ConRon/Arena/Store	LTables.empty	9
 ConRon/Arena/Store	LTables.find?	9
-ConRon/Arena/Store	LTables.get	30
+ConRon/Arena/Store	LTables.get	34
 ConRon/Arena/Store	LTables.push	29
 ConRon/Arena/Store	LetNode	3
 ConRon/Arena/Store	ListNode	3

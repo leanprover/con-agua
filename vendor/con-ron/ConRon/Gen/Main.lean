@@ -17,8 +17,13 @@ constructor they use.
 The output is deterministic: the emission order is the interning
 worklist's, which is a function of the value alone.
 -/
-import ConRon.Gen.Emit
-import ConLeche.Kernel.NatOpPins
+module
+
+public import ConRon.Gen.Emit
+public import ConLeche.Kernel.NatOpPins
+public import ConLeche.Kernel.BasisA
+
+@[expose] public section
 
 namespace ConRon.Gen
 

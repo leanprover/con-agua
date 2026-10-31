@@ -19,8 +19,19 @@ The walk's callees: `projLitToCtor_spec`, `projAnsAt`,
 `getAppFn_spec`, the head's `view`, `getAppArgs_spec`, `viewLsLen`,
 `IProjEntry.fireOk_specA`, `internE (.bvar 0)`, `projCertAt_specA`.
 -/
-import ConRon.Bridge.Core.Walks.ProjLit
+module
+
+public import ConRon.Bridge.Core.Walks.ProjLit
 import ConLeche.Verify.BetaSpine
+import ConRon.Bridge.Core.Walks.IotaLeaves
+import ConRon.Bridge.Core.Walks.Nat
+import ConRon.Bridge.Core.Walks.Proj
+import ConRon.Bridge.Core.Walks.Spine
+public import ConLeche.Verify.EnvWF
+import ConRon.Bridge.Specs
+import ConRon.Bridge.GrindAttr
+
+public section
 
 namespace ConRon.Bridge.Core
 
@@ -140,7 +151,7 @@ grind_pattern [bridge_grind] ProjCoreAns.of_lit =>
 
 /-- con-leche: ConLeche/Kernel/Core.lean:890-892 projCertAt — the
 certificate at optional subjects (one equation at `some`). -/
-def projCertAtO (env : Env) (verified : Bool) : Option Name → Option (List Expr) → Bool
+@[expose] def projCertAtO (env : Env) (verified : Bool) : Option Name → Option (List Expr) → Bool
   | some cn, some xs => ConLeche.projCertAt env verified cn xs
   | _, _ => false
 

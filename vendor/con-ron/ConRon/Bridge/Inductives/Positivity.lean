@@ -30,10 +30,27 @@ The twin's deviations (its module note) are absorbed as follows:
   prefix of con-leche's result list;
 * `NestState.ctorNfs` is an `Array` on both sides (`dState` reads `toList`).
 -/
+module
+
 import ConRon.Bridge.Inductives.FieldTele
 import ConRon.Bridge.Inductives.StructParts
 import ConRon.Bridge.Checker.Base
 import ConLeche.Verify.Cached.NestPosC
+/- `simp only [List.allM]`/`[List.anyM]` unfold the toolchain's monadic list
+folds, whose bodies `Init.Data.List.Control` does not expose. -/
+import all Init.Data.List.Control
+import ConRon.Bridge.Inductives.PosWalks
+public import ConRon.Bridge.Inductives.Rel
+public import ConLeche.Verify.Inductives.NestScope
+import ConRon.Bridge.Checker.Names
+import ConRon.Bridge.Core.Walks.FvarB
+import ConRon.Bridge.Core.Walks.Proj
+import ConRon.Bridge.Core.Walks.Spine
+import ConRon.Bridge.Core.Walks.Cached
+import ConRon.Bridge.ExprOps.Owed
+import ConRon.Bridge.Specs
+
+public section
 
 namespace ConRon.Bridge.Inductives
 
@@ -1153,7 +1170,7 @@ theorem dState_push {st : EStore} {ns : Arena.NestState} {nsP : ConLeche.NestSta
     exact mapM_option_append h3 (by simp [hn]))
 
 /-- con-leche: none — a constructor's output `(kinds, walked form)`, denoted. -/
-def dOut (st : EStore) (o : List Arena.NestFieldKind × EIdx) :
+@[expose] def dOut (st : EStore) (o : List Arena.NestFieldKind × EIdx) :
     Option (List ConLeche.NestFieldKind × Expr) :=
   (denoteE st o.2).map (o.1.map kindOf, ·)
 
@@ -2720,7 +2737,7 @@ section Top
 variable {μ : CheckMode} {env : Env} {fe : IFEnv}
 
 /-- con-leche: none — every member's outputs, denoted. -/
-def dOutss (st : EStore) (oss : List (List (List Arena.NestFieldKind × EIdx))) :
+@[expose] def dOutss (st : EStore) (oss : List (List (List Arena.NestFieldKind × EIdx))) :
     Option (List (List (List ConLeche.NestFieldKind × Expr))) :=
   oss.mapM fun os => os.mapM (dOut st)
 

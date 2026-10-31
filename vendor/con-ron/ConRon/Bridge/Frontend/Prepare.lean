@@ -47,13 +47,21 @@ prelude index denotes SOME con-leche prelude index — `⟨rc.decls⟩` of
 gate stays, as the claim "con-ron ships con-leche's prelude", but it is no
 hypothesis of any theorem.
 -/
+module
+
 import ConRon.Bridge.Frontend.Chunks
-import ConRon.Arena.Frontend.Prelude
-import ConLeche.Frontend.Prelude
-import ConLeche.Frontend.NatOpGround
-import ConLeche.Verify.Frontend.Prepare
+public import ConRon.Arena.Frontend.Prelude
+public import ConLeche.Frontend.NatOpGround
 import ConRon.Bridge.Checker.DeclVal
-import Init.Internal.Order.While
+public import Init.Internal.Order.While
+public import ConLeche.Frontend.Prepare
+import ConRon.Bridge.Frontend.Lines
+public import ConRon.Bridge.Frontend.Rel
+import ConRon.Bridge.Checker.Names
+import ConRon.Bridge.Promote.WalkDecl
+import ConRon.Bridge.Specs
+
+public section
 
 namespace ConRon.Bridge.Frontend
 
@@ -721,14 +729,14 @@ names too.  Both equations are `rfl`. -/
 
 /-- con-leche: ConLeche/Frontend/NatOpGround.lean:92 Declaration.usedConsts —
 the inner closure: one recursor rule's right-hand side. -/
-def ucRuleStep (p : Std.HashSet ConLeche.Expr × Array ConLeche.Name)
+@[expose] def ucRuleStep (p : Std.HashSet ConLeche.Expr × Array ConLeche.Name)
     (r : ConLeche.RecRule) : Std.HashSet ConLeche.Expr × Array ConLeche.Name :=
   ConLeche.Frontend.usedConstsGo p.1 p.2 r.rhs
 
 /-- con-leche: ConLeche/Frontend/NatOpGround.lean:88-93 Declaration.usedConsts
 — the outer closure: one block member's type, and its rules if it is a
 recursor. -/
-def ucBlockStep (p : Std.HashSet ConLeche.Expr × Array ConLeche.Name)
+@[expose] def ucBlockStep (p : Std.HashSet ConLeche.Expr × Array ConLeche.Name)
     (ci : ConLeche.ConstantInfo) :
     Std.HashSet ConLeche.Expr × Array ConLeche.Name :=
   let q := ConLeche.Frontend.usedConstsGo p.1 p.2 ci.toConstantVal.type

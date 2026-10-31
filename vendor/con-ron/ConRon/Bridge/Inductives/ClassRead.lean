@@ -19,8 +19,16 @@ and similar do-blocks; the helpers `fvarHeadP`, `slotP`, `recClsP` and
 inline one by `rfl` at its use.  The telescope opener's run forms are
 `Rel.lean`'s, `piBinders_run` is `FieldTele.lean`'s.
 -/
+module
+
 import ConRon.Bridge.Inductives.FieldTele
 import ConLeche.Verify.EnvBound
+import ConRon.Bridge.Inductives.PosWalks
+public import ConRon.Bridge.Inductives.Rel
+import ConLeche.Verify.Inductives.NestScope
+import ConRon.Bridge.ExprOps.Inst1
+
+public section
 
 namespace ConRon.Bridge.Inductives
 
@@ -32,19 +40,19 @@ open ConLeche ConRon.Arena ConRon.Bridge
 
 /-- con-leche: ConLeche/Kernel/Inductives/ClassRead.lean:37-43 ClassKey — a
 class over handles denotes con-leche's. -/
-def dClassKey (st : EStore) (k : Arena.ClassKey) : Option ConLeche.ClassKey := do
+@[expose] def dClassKey (st : EStore) (k : Arena.ClassKey) : Option ConLeche.ClassKey := do
   let ind ← denoteN st.ns k.ind
   let lvls ← denoteLs st.lss k.lvls
   let ds ← Frontend.denoteEList st k.ds
   pure ⟨ind, lvls, ds⟩
 
 /-- con-leche: ConLeche/Kernel/Inductives/ClassRead.lean:45-53 ClassSlot. -/
-def dSlot (st : EStore) : Arena.ClassSlot → Option ConLeche.ClassSlot
+@[expose] def dSlot (st : EStore) : Arena.ClassSlot → Option ConLeche.ClassSlot
   | .motive k => (dClassKey st k).map .motive
   | .minor c ctor ihs => (denoteN st.ns ctor).map fun n => .minor c n ihs
 
 /-- con-leche: ConLeche/Kernel/Inductives/ClassRead.lean:55-61 ClassRead. -/
-def dClassRead (st : EStore) (r : Arena.ClassRead) : Option ConLeche.ClassRead :=
+@[expose] def dClassRead (st : EStore) (r : Arena.ClassRead) : Option ConLeche.ClassRead :=
   (r.slots.mapM (dSlot st)).map fun slots => ⟨slots, r.recCls⟩
 
 theorem dClassKey_ext : DExt dClassKey := by

@@ -379,7 +379,7 @@ grind_pattern [arena_grind] arLetW_miss => arLetW (n + 1) m h c d k fu
 grind_pattern [arena_grind] arProjW_hit => arProjW (n + 1) m h c d k fu
 grind_pattern [arena_grind] arProjW_miss => arProjW (n + 1) m h c d k fu
 
-/-- con-ron: ConRon/Arena/ExprOps.lean:1758-1779 ConRon.Arena.abstractRangeGo -/
+/-- con-ron: ConRon/Arena/ExprOps.lean:1763-1784 ConRon.Arena.abstractRangeGo -/
 @[l_impl ConRon.Arena.abstractRangeGo]
 def arGo : FunDecl := lfn (h, c, d, k, fu) locals (x, r) {
   if fu == 0 { abort };
@@ -389,8 +389,8 @@ def arGo : FunDecl := lfn (h, c, d, k, fu) locals (x, r) {
   return r
 }
 
-/-- con-ron: ConRon/Arena/ExprOps.lean:1758-1779 ConRon.Arena.abstractRangeGo
-con-ron: ConRon/Arena/ExprOps.lean:1747-1754 ConRon.Arena.absRangeArmFVar -/
+/-- con-ron: ConRon/Arena/ExprOps.lean:1763-1784 ConRon.Arena.abstractRangeGo
+con-ron: ConRon/Arena/ExprOps.lean:1752-1759 ConRon.Arena.absRangeArmFVar -/
 @[l_impl ConRon.Arena.absRangeArmFVar]
 def arNode : FunDecl := lfn (h, c, d, k, fu) locals (x, g, t, i, v, r) {
   g := h >> 28;
@@ -414,7 +414,7 @@ def arNode : FunDecl := lfn (h, c, d, k, fu) locals (x, g, t, i, v, r) {
   return h
 }
 
-/-- con-ron: ConRon/Arena/ExprOps.lean:1781-1796 ConRon.Arena.absRangeGoArmApp -/
+/-- con-ron: ConRon/Arena/ExprOps.lean:1786-1801 ConRon.Arena.absRangeGoArmApp -/
 @[l_impl ConRon.Arena.absRangeGoArmApp]
 def arApp : FunDecl := lfn (h, c, d, k, fu) locals (fd, j, e0, t, i, f, a, x, y, r, u) {
   (fd, j, e0) := call ab_find(h, c);
@@ -430,7 +430,7 @@ def arApp : FunDecl := lfn (h, c, d, k, fu) locals (fd, j, e0, t, i, f, a, x, y,
   return r
 }
 
-/-- con-ron: ConRon/Arena/ExprOps.lean:1798-1813 ConRon.Arena.absRangeGoArmBind -/
+/-- con-ron: ConRon/Arena/ExprOps.lean:1803-1818 ConRon.Arena.absRangeGoArmBind -/
 @[l_impl ConRon.Arena.absRangeGoArmBind]
 def arLam : FunDecl := lfn (h, c, d, k, fu) locals (fd, j, e0, t, i, f, a, x, y, r, u) {
   if c + 1 == 0 { abort };
@@ -447,7 +447,7 @@ def arLam : FunDecl := lfn (h, c, d, k, fu) locals (fd, j, e0, t, i, f, a, x, y,
   return r
 }
 
-/-- con-ron: ConRon/Arena/ExprOps.lean:1798-1813 ConRon.Arena.absRangeGoArmBind -/
+/-- con-ron: ConRon/Arena/ExprOps.lean:1803-1818 ConRon.Arena.absRangeGoArmBind -/
 @[l_impl ConRon.Arena.absRangeGoArmBind]
 def arForall : FunDecl := lfn (h, c, d, k, fu) locals (fd, j, e0, t, i, f, a, x, y, r, u) {
   if c + 1 == 0 { abort };
@@ -464,7 +464,7 @@ def arForall : FunDecl := lfn (h, c, d, k, fu) locals (fd, j, e0, t, i, f, a, x,
   return r
 }
 
-/-- con-ron: ConRon/Arena/ExprOps.lean:1815-1831 ConRon.Arena.absRangeGoArmLet -/
+/-- con-ron: ConRon/Arena/ExprOps.lean:1820-1836 ConRon.Arena.absRangeGoArmLet -/
 @[l_impl ConRon.Arena.absRangeGoArmLet]
 def arLet : FunDecl := lfn (h, c, d, k, fu) locals (fd, j, e0, t, i, f, a, b, x, y, z, r, u) {
   if c + 1 == 0 { abort };
@@ -483,7 +483,7 @@ def arLet : FunDecl := lfn (h, c, d, k, fu) locals (fd, j, e0, t, i, f, a, b, x,
   return r
 }
 
-/-- con-ron: ConRon/Arena/ExprOps.lean:1833-1847 ConRon.Arena.absRangeGoArmProj -/
+/-- con-ron: ConRon/Arena/ExprOps.lean:1838-1852 ConRon.Arena.absRangeGoArmProj -/
 @[l_impl ConRon.Arena.absRangeGoArmProj]
 def arProj : FunDecl := lfn (h, c, d, k, fu) locals (fd, j, e0, t, i, nm, ix, e, x, r, u) {
   (fd, j, e0) := call ab_find(h, c);

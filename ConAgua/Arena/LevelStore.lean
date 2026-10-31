@@ -94,7 +94,7 @@ def succCS : ConsSch where
 
 /-! ## `succ_find(t, u, h)`: the probe -/
 
-/-- con-ron: ConRon/Arena/Store.lean:90-91 ConRon.Arena.Tbl.find? -/
+/-- con-ron: ConRon/Arena/Store.lean:94-95 ConRon.Arena.Tbl.find? -/
 def succFind : FunDecl := consFindG succCS
 
 /-! ## `succ_push(t, u, j)`: append a node to tier `t`, register it at slot `j` -/
@@ -107,7 +107,7 @@ def spushOK (m : Mem) (t : Word) : Bool :=
   decide (scnt m t < (134217728 : Word)) && decide (scnt m t < m.len64 (tierA SREC t)) &&
     decide (scnt m t < m.len64 (tierA SHP t))
 
-/-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
+/-- con-ron: ConRon/Arena/Store.lean:97-102 ConRon.Arena.Tbl.push -/
 def succPush : FunDecl := consPushG succCS
 
 /-! ## `intern_succ(u)`: hash-cons the level `succ u`
@@ -119,7 +119,8 @@ probe, the scratch probe if the scratch tier is open, the append to the tier the
 aborts (the library's `consInternM`). -/
 def sinternW (m : Mem) (u : Word) : Option (Word × Mem) := consInternM succCS m [u]
 
-/-- con-ron: ConRon/Arena/Monad.lean:441-457 ConRon.Arena.internLNode -/
+/-- con-ron: ConRon/Arena/Monad.lean:444-460 ConRon.Arena.internLNode -/
+-- con-ron: CHANGED since ed864140 — below `ConRon.Arena.internLNode`, `ConRon.Arena.Idx.idxCap` changed; re-check the L code and its proofs, then delete this line
 @[l_impl ConRon.Arena.internLNode]
 def internSucc : FunDecl := consInternG succCS
 

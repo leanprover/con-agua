@@ -269,7 +269,7 @@ def cfLoop (C : ConsSch) : Stmt :=
     (.seq (mapS (fvF C) (kfLoad C.sa))
       (.seq (.ite (mapC (fvF C) (kfKey C.sa)) (kfMatch C) .skip) (mapS (lvF C.nk) cfAdv)))
 
-/-- con-ron: ConRon/Arena/Store.lean:90-91 ConRon.Arena.Tbl.find? -/
+/-- con-ron: ConRon/Arena/Store.lean:94-95 ConRon.Arena.Tbl.find? -/
 def consFindG (C : ConsSch) : FunDecl :=
   { nparams := 2 + C.nk, nlocals := 10 + C.nk + C.mloc,
     body := .seq (mapS (fvF C) (kfHead C.sa))
@@ -580,7 +580,7 @@ def cpRest (C : ConsSch) : Stmt :=
   seqs [cpKey C, cpSlot C, cpCnt C]
     (seqO (cpColW C) (.seq (cpGrowIf C) (.ret [.var (2 + C.np)])))
 
-/-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
+/-- con-ron: ConRon/Arena/Store.lean:97-102 ConRon.Arena.Tbl.push -/
 def consPushG (C : ConsSch) : FunDecl :=
   { nparams := 2 + C.np, nlocals := gO C + 21 + C.nk,
     body := seqO C.pre (seqs ((cpHead C).map (mapS (lvF C.np)))
@@ -631,8 +631,9 @@ def ciChk (C : ConsSch) : List Stmt :=
     [.ite (.cmp .ne (.bin .shr (.bin .or (.var 0) (.var 1)) (.const 32)) (.const 0)) (.abort (.const R_CAP_KEY)) .skip]
   else []
 
-/-- con-ron: ConRon/Arena/Monad.lean:246-264 ConRon.Arena.internE
-con-ron: ConRon/Arena/Monad.lean:218-244 ConRon.Arena.internNodeE -/
+/-- con-ron: ConRon/Arena/Monad.lean:249-267 ConRon.Arena.internE
+con-ron: ConRon/Arena/Monad.lean:221-247 ConRon.Arena.internNodeE -/
+-- con-ron: CHANGED since ed864140 — `ConRon.Arena.internNodeE` changed; re-check the L code and its proofs, then delete this line
 def consInternG (C : ConsSch) : FunDecl :=
   match C.skipW with
   | some sk =>

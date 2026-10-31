@@ -27,7 +27,13 @@ never touches the pin table — which is what makes `PersStateD` free and what
 makes the fold theorems' `FoldOK` (`Arena.installThenCheck_bridge`'s `hok`)
 reachable at the post-parse state.
 -/
+module
+
 import ConRon.Bridge.Frontend.Shared
+public import ConRon.Bridge.Frontend.Rel
+import ConRon.Bridge.Specs
+
+public section
 
 namespace ConRon.Bridge.Frontend
 

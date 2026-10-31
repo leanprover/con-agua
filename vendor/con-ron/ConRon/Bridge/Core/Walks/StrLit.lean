@@ -12,7 +12,16 @@ shape's pieces and compares handles, con-leche matches the stored type, and
 DESIGN §8.3's *index equality is structural equality* (`beq_of_denoteE`,
 `beq_of_denoteLs`, `beq_handle_eq`) makes the two the same test.
 -/
-import ConRon.Bridge.Core.Walks.Nat
+module
+
+public import ConRon.Bridge.Core.Walks.Nat
+import ConRon.Bridge.Core.Walks.Spine
+import ConRon.Bridge.Core.Walks.Cached
+import ConRon.Bridge.Core.Memo
+import ConRon.Bridge.Specs
+import ConRon.Bridge.GrindAttr
+
+public section
 
 namespace ConRon.Bridge.Core
 

@@ -95,7 +95,7 @@ def maxCS : ConsSch where
 
 /-! ## `max_find(t, u, v, h)`: the probe -/
 
-/-- con-ron: ConRon/Arena/Store.lean:90-91 ConRon.Arena.Tbl.find? -/
+/-- con-ron: ConRon/Arena/Store.lean:94-95 ConRon.Arena.Tbl.find? -/
 def maxFind : FunDecl := consFindG maxCS
 
 /-! ## `max_push(t, u, v, j)`: append a node to tier `t`, register it at slot `j` -/
@@ -108,7 +108,7 @@ def mpushOK (m : Mem) (t : Word) : Bool :=
   decide (mcnt m t < (134217728 : Word)) && decide (mcnt m t < m.len64 (tierA MREC t)) &&
     decide (mcnt m t < m.len64 (tierA MHP t))
 
-/-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
+/-- con-ron: ConRon/Arena/Store.lean:97-102 ConRon.Arena.Tbl.push -/
 def maxPush : FunDecl := consPushG maxCS
 
 /-! ## `intern_max(u, v)`: hash-cons the level `max u v`
@@ -120,7 +120,8 @@ probe, the scratch probe if the scratch tier is open, the append to the tier the
 aborts (the library's `consInternM`). -/
 def minternW (m : Mem) (u v : Word) : Option (Word × Mem) := consInternM maxCS m [u, v]
 
-/-- con-ron: ConRon/Arena/Monad.lean:441-457 ConRon.Arena.internLNode -/
+/-- con-ron: ConRon/Arena/Monad.lean:444-460 ConRon.Arena.internLNode -/
+-- con-ron: CHANGED since ed864140 — below `ConRon.Arena.internLNode`, `ConRon.Arena.Idx.idxCap` changed; re-check the L code and its proofs, then delete this line
 @[l_impl ConRon.Arena.internLNode]
 def internMax : FunDecl := consInternG maxCS
 

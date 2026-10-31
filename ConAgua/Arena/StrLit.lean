@@ -27,13 +27,13 @@ namespace L.Arena
 
 /-- `str_cv(p)`: the constant value of the record at `p` (`IConstantInfo.toConstantVal`, inline at
 `p + 1`) as `(lo, ll, ty)`: the level parameters `EREC[lo‥lo+ll)` and the type. -/
--- con-ron: ConRon/Arena/Env.lean:176-180 ConRon.Arena.IConstantInfo.toConstantVal
+-- con-ron: ConRon/Arena/Env.lean:180-184 ConRon.Arena.IConstantInfo.toConstantVal
 def strCvL : FunDecl := lfn (p) locals () {
   return (EREC.u64[p + 2], EREC.u64[p + 3], EREC.u64[p + 4])
 }
 
 /-- `string_ty_ok(found, p)`: no level parameters, type `Sort 1`. -/
--- con-ron: ConRon/Arena/Core.lean:621-628 ConRon.Arena.stringTyOk
+-- con-ron: ConRon/Arena/Core.lean:626-633 ConRon.Arena.stringTyOk
 @[l_impl ConRon.Arena.stringTyOk]
 def stringTyOkL : FunDecl := lfn (found, p) locals (lo, ll, ty, s1) {
   if found == 0 { return 0 };
@@ -44,7 +44,7 @@ def stringTyOkL : FunDecl := lfn (found, p) locals (lo, ll, ty, s1) {
 }
 
 /-- `char_ty_ok(found, p)`: `string_ty_ok`'s body (the twins are the same). -/
--- con-ron: ConRon/Arena/Core.lean:630-637 ConRon.Arena.charTyOk
+-- con-ron: ConRon/Arena/Core.lean:635-642 ConRon.Arena.charTyOk
 @[l_impl ConRon.Arena.charTyOk]
 def charTyOkL : FunDecl := stringTyOkL
 
@@ -59,7 +59,8 @@ def strParamSortL : FunDecl := lfn (pn) locals (pl, sp, so) {
 }
 
 /-- `str_ls1(u)`: the level list `[u]`, its one handle word at the pool top. -/
--- con-ron: ConRon/Arena/Monad.lean:499-515 ConRon.Arena.internLsNode
+-- con-ron: ConRon/Arena/Monad.lean:502-518 ConRon.Arena.internLsNode
+-- con-ron: CHANGED since ed864140 — below `ConRon.Arena.internLsNode`, `ConRon.Arena.Idx.idxCap` changed; re-check the L code and its proofs, then delete this line
 def strLs1L : FunDecl := lfn (u) locals (o, h, pt, pb) {
   o := CTL.u64[0];
   pt := ⦃o⦄.tier;
@@ -72,7 +73,7 @@ def strLs1L : FunDecl := lfn (u) locals (o, h, pt, pb) {
 }
 
 /-- `list_ty_ok(found, p)`: one level parameter `u`, type `Sort (u+1) → Sort (u+1)`. -/
--- con-ron: ConRon/Arena/Core.lean:639-656 ConRon.Arena.listTyOk
+-- con-ron: ConRon/Arena/Core.lean:644-661 ConRon.Arena.listTyOk
 @[l_impl ConRon.Arena.listTyOk]
 def listTyOkL : FunDecl := lfn (found, p) locals (lo, ll, ty, pl, so, g, d, b, z) {
   if found == 0 { return 0 };
@@ -86,7 +87,7 @@ def listTyOkL : FunDecl := lfn (found, p) locals (lo, ll, ty, pl, so, g, d, b, z
 }
 
 /-- `list_nil_ty_ok(found, p)`: one level parameter `u`, type `Sort (u+1) → List.{u} #0`. -/
--- con-ron: ConRon/Arena/Core.lean:658-692 ConRon.Arena.listNilTyOk
+-- con-ron: ConRon/Arena/Core.lean:663-697 ConRon.Arena.listNilTyOk
 @[l_impl ConRon.Arena.listNilTyOk]
 def listNilTyOkL : FunDecl :=
   lfn (found, p) locals (lo, ll, ty, pl, so, ps, li, g, d, b, z, f, x, l1, u1, i, y, w) {
@@ -112,7 +113,7 @@ def listNilTyOkL : FunDecl :=
 
 /-- `list_cons_ty_ok(found, p)`: one level parameter `u`, type
 `(α : Sort (u+1)) → α → List.{u} α → List.{u} α` (in de Bruijn indices). -/
--- con-ron: ConRon/Arena/Core.lean:694-730 ConRon.Arena.listConsTyOk
+-- con-ron: ConRon/Arena/Core.lean:699-735 ConRon.Arena.listConsTyOk
 @[l_impl ConRon.Arena.listConsTyOk]
 def listConsTyOkL : FunDecl :=
   lfn (found, p) locals (lo, ll, ty, pl, so, ps, li, b0, b1, b2, l1, dom3, cod3, g, d, r, z,
@@ -142,7 +143,7 @@ def listConsTyOkL : FunDecl :=
 }
 
 /-- `char_of_nat_ty_ok(found, p)`: no level parameters, type `Nat → Char`. -/
--- con-ron: ConRon/Arena/Core.lean:732-747 ConRon.Arena.charOfNatTyOk
+-- con-ron: ConRon/Arena/Core.lean:737-752 ConRon.Arena.charOfNatTyOk
 @[l_impl ConRon.Arena.charOfNatTyOk]
 def charOfNatTyOkL : FunDecl := lfn (found, p) locals (lo, ll, ty, nt, nc, ch, cc, g, d, b, z) {
   if found == 0 { return 0 };
@@ -159,7 +160,7 @@ def charOfNatTyOkL : FunDecl := lfn (found, p) locals (lo, ll, ty, nt, nc, ch, c
 }
 
 /-- `string_of_list_ty_ok(found, p)`: no level parameters, type `List.{0} Char → String`. -/
--- con-ron: ConRon/Arena/Core.lean:749-770 ConRon.Arena.stringOfListTyOk
+-- con-ron: ConRon/Arena/Core.lean:754-775 ConRon.Arena.stringOfListTyOk
 @[l_impl ConRon.Arena.stringOfListTyOk]
 def stringOfListTyOkL : FunDecl :=
   lfn (found, p) locals (lo, ll, ty, zl, zs, li, lc, ch, cc, dom, st, sc, g, d, b, z) {
@@ -184,7 +185,7 @@ def stringOfListTyOkL : FunDecl :=
 /-! ## `str_lit_supported`: one function per tested declaration -/
 
 /-- `str_sup_7(vis)`: `Char.ofNat`. -/
--- con-ron: ConRon/Arena/Core.lean:772-791 ConRon.Arena.strLitSupported
+-- con-ron: ConRon/Arena/Core.lean:777-796 ConRon.Arena.strLitSupported
 def strSup7L : FunDecl := lfn (vis) locals (x, f, q, r) {
   x := call pin_at(12);
   (f, q) := call env_find(x, vis);
@@ -193,7 +194,7 @@ def strSup7L : FunDecl := lfn (vis) locals (x, f, q, r) {
 }
 
 /-- `str_sup_6(vis)`: `Char`, then `str_sup_7`. -/
--- con-ron: ConRon/Arena/Core.lean:772-791 ConRon.Arena.strLitSupported
+-- con-ron: ConRon/Arena/Core.lean:777-796 ConRon.Arena.strLitSupported
 def strSup6L : FunDecl := lfn (vis) locals (x, f, q, r) {
   x := call pin_at(10);
   (f, q) := call env_find(x, vis);
@@ -204,7 +205,7 @@ def strSup6L : FunDecl := lfn (vis) locals (x, f, q, r) {
 }
 
 /-- `str_sup_5(vis)`: `List.cons`, then `str_sup_6`. -/
--- con-ron: ConRon/Arena/Core.lean:772-791 ConRon.Arena.strLitSupported
+-- con-ron: ConRon/Arena/Core.lean:777-796 ConRon.Arena.strLitSupported
 def strSup5L : FunDecl := lfn (vis) locals (x, f, q, r) {
   x := call pin_at(9);
   (f, q) := call env_find(x, vis);
@@ -215,7 +216,7 @@ def strSup5L : FunDecl := lfn (vis) locals (x, f, q, r) {
 }
 
 /-- `str_sup_4(vis)`: `List.nil`, then `str_sup_5`. -/
--- con-ron: ConRon/Arena/Core.lean:772-791 ConRon.Arena.strLitSupported
+-- con-ron: ConRon/Arena/Core.lean:777-796 ConRon.Arena.strLitSupported
 def strSup4L : FunDecl := lfn (vis) locals (x, f, q, r) {
   x := call pin_at(8);
   (f, q) := call env_find(x, vis);
@@ -226,7 +227,7 @@ def strSup4L : FunDecl := lfn (vis) locals (x, f, q, r) {
 }
 
 /-- `str_sup_3(vis)`: `List`, then `str_sup_4`. -/
--- con-ron: ConRon/Arena/Core.lean:772-791 ConRon.Arena.strLitSupported
+-- con-ron: ConRon/Arena/Core.lean:777-796 ConRon.Arena.strLitSupported
 def strSup3L : FunDecl := lfn (vis) locals (x, f, q, r) {
   x := call pin_at(7);
   (f, q) := call env_find(x, vis);
@@ -237,7 +238,7 @@ def strSup3L : FunDecl := lfn (vis) locals (x, f, q, r) {
 }
 
 /-- `str_sup_2(vis)`: `String.ofList`, then `str_sup_3`. -/
--- con-ron: ConRon/Arena/Core.lean:772-791 ConRon.Arena.strLitSupported
+-- con-ron: ConRon/Arena/Core.lean:777-796 ConRon.Arena.strLitSupported
 def strSup2L : FunDecl := lfn (vis) locals (x, f, q, r) {
   x := call pin_at(6);
   (f, q) := call env_find(x, vis);
@@ -248,7 +249,7 @@ def strSup2L : FunDecl := lfn (vis) locals (x, f, q, r) {
 }
 
 /-- `str_sup_1(vis)`: `String`, then `str_sup_2`. -/
--- con-ron: ConRon/Arena/Core.lean:772-791 ConRon.Arena.strLitSupported
+-- con-ron: ConRon/Arena/Core.lean:777-796 ConRon.Arena.strLitSupported
 def strSup1L : FunDecl := lfn (vis) locals (x, f, q, r) {
   x := call pin_at(5);
   (f, q) := call env_find(x, vis);
@@ -259,7 +260,7 @@ def strSup1L : FunDecl := lfn (vis) locals (x, f, q, r) {
 }
 
 /-- `str_lit_supported(vis)`: the `Nat` literal guard, then the seven declarations. -/
--- con-ron: ConRon/Arena/Core.lean:772-791 ConRon.Arena.strLitSupported
+-- con-ron: ConRon/Arena/Core.lean:777-796 ConRon.Arena.strLitSupported
 @[l_impl ConRon.Arena.strLitSupported]
 def strLitSupportedL : FunDecl := lfn (vis) locals (r) {
   r := call nat_lit_supported(vis);
@@ -310,7 +311,7 @@ def strUtf8CharL : FunDecl := lfn (k, n) locals (c0, c1, c2, c3, v) {
 /-- `str_cons_spine(cons, ofNat, nilE, k, n)`: the `List.cons` spine of the characters whose UTF-8
 bytes are the pool words `[k, n)`; the rest of the spine first, then the character's nodes, as the
 twin's recursion interns them. -/
--- con-ron: ConRon/Arena/Core.lean:586-598 ConRon.Arena.strLitConsSpine
+-- con-ron: ConRon/Arena/Core.lean:591-603 ConRon.Arena.strLitConsSpine
 @[l_impl ConRon.Arena.strLitConsSpine]
 def strConsSpineL : FunDecl := lfn (cons, ofNat, nilE, k, n) locals (c, l, rest, lit, ch, f, r) {
   if n <= k { return nilE };
@@ -347,7 +348,7 @@ def strCtorPreL : FunDecl :=
 /-- `str_lit_ctor(h)`: the constructor form `String.ofList (List.cons.{0} Char (Char.ofNat c₁) …
 (List.nil.{0} Char))` of the string literal `h`: the prefix, then the literal's record (read
 after the prefix, so at the memory the spine reads) gives the bytes' pool slice. -/
--- con-ron: ConRon/Arena/Core.lean:600-619 ConRon.Arena.strLitToConstructor
+-- con-ron: ConRon/Arena/Core.lean:605-624 ConRon.Arena.strLitToConstructor
 @[l_impl ConRon.Arena.strLitToConstructor]
 def strLitCtorL : FunDecl :=
   lfn (h) locals (cons, ofNat, nilE, t, i, o, cnt, spine, slN, sl, r) {

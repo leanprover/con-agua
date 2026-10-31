@@ -83,7 +83,7 @@ def zeroCS : ConsSch where
 
 /-! ## `zero_find(t, h)`: the probe -/
 
-/-- con-ron: ConRon/Arena/Store.lean:90-91 ConRon.Arena.Tbl.find? -/
+/-- con-ron: ConRon/Arena/Store.lean:94-95 ConRon.Arena.Tbl.find? -/
 def zeroFind : FunDecl := consFindG zeroCS
 
 /-! ## `zero_push(t, j)`: append a node to tier `t`, register it at slot `j` -/
@@ -95,7 +95,7 @@ def zcnt (m : Mem) (t : Word) : Word := rdW (m.arr64 CTL) (8 + t)
 def zpushOK (m : Mem) (t : Word) : Bool :=
   decide (zcnt m t < (134217728 : Word)) && decide (zcnt m t < m.len64 (tierA ZREC t))
 
-/-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
+/-- con-ron: ConRon/Arena/Store.lean:97-102 ConRon.Arena.Tbl.push -/
 def zeroPush : FunDecl := consPushG zeroCS
 
 /-! ## `intern_zero()`: hash-cons the level `zero`
@@ -107,7 +107,8 @@ the scratch probe if the scratch tier is open, the append to the tier the store 
 aborts (the library's `consInternM`). -/
 def zinternW (m : Mem) : Option (Word × Mem) := consInternM zeroCS m []
 
-/-- con-ron: ConRon/Arena/Monad.lean:441-457 ConRon.Arena.internLNode -/
+/-- con-ron: ConRon/Arena/Monad.lean:444-460 ConRon.Arena.internLNode -/
+-- con-ron: CHANGED since ed864140 — below `ConRon.Arena.internLNode`, `ConRon.Arena.Idx.idxCap` changed; re-check the L code and its proofs, then delete this line
 @[l_impl ConRon.Arena.internLNode]
 def internZero : FunDecl := consInternG zeroCS
 

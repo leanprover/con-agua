@@ -31,7 +31,27 @@ side's value.
 `const_ty_hasFvar` (the certificate runs' subjects) and of the nested pins'
 closedness.
 -/
+module
+
 import ConRon.Bridge.Core.Walks.IotaMajor
+import ConRon.Bridge.Core.Walks.IotaLeaves
+import ConRon.Bridge.Core.Walks.StrLit
+import ConRon.Bridge.Core.Walks.StrCtor
+import ConRon.Bridge.Core.Walks.PropRead
+import ConRon.Bridge.Core.Walks.Proj
+public import ConRon.Bridge.Core.Walks.Spine
+import ConRon.Bridge.Core.Walks.Cached
+import ConRon.Bridge.ExprOps.Owed
+import ConRon.Bridge.ExprOps.MemoSpecs
+public import ConRon.Bridge.Core.Walks.Owed
+import ConRon.Bridge.Core.Walks.Mono
+import ConRon.Bridge.Core.Memo
+import ConLeche.Verify.Deep
+import ConRon.Bridge.SpecsL
+import ConRon.Bridge.Specs
+import ConRon.Bridge.GrindAttr
+
+public section
 
 namespace ConRon.Bridge.Core
 
@@ -84,7 +104,7 @@ theorem substParamLevels_spec (ks : List ConLeche.Name) (vs : List Level) :
         internLevel_specC (mode := mode) (env := env) (fe := fe), step] <;> finish
 
 /-- the nested pin comparand -/
-def pinCmpFn (xs : List Expr) (rP : Nat) (ks : List ConLeche.Name) (us : List Level)
+@[expose] def pinCmpFn (xs : List Expr) (rP : Nat) (ks : List ConLeche.Name) (us : List Level)
     (p : Expr) : Expr :=
   Expr.instSpine (xs.take rP) (rP - 1) (p.instantiateLevelParams ks us)
 
@@ -192,7 +212,7 @@ theorem piResAt_cons (x : Expr) (xs : List Expr) (e : Expr) :
     first | rfl | rw [if_neg (by decide)]
 
 /-- `instantiate1`'s answer at two optional subjects -/
-def Inst1Rel : Option Expr → Option Expr → Option Expr → Prop
+@[expose] def Inst1Rel : Option Expr → Option Expr → Option Expr → Prop
   | some w, some b, o => o = some (b.instantiate1 w)
   | _, _, _ => True
 
@@ -265,7 +285,7 @@ theorem instSpinePins_specA (lps : List NIdx) (us : LsIdx) (args : List EIdx)
   exact instSpinePins_spec lps us args rP ksv usv xs pins s₀ Ps hok hks hus hxs hPs
 
 /-- the canonical rule's level comparand -/
-def paramLvlFn (ks : List ConLeche.Name) (vs : List Level) (p : ConLeche.Name) : Level :=
+@[expose] def paramLvlFn (ks : List ConLeche.Name) (vs : List Level) (p : ConLeche.Name) : Level :=
   Level.subst ks vs (.param p)
 
 /-- con-leche: ConLeche/Kernel/CoreDefs.lean:906-920 recFireComparands — at a nested rule. -/
@@ -344,7 +364,7 @@ theorem substLevelsAt_spec (ks : List ConLeche.Name) (vs : List Level) :
 
 /-- con-leche: ConLeche/Kernel/CoreDefs.lean:906-920 recFireComparands — the
 level comparands, which do not read the argument spine. -/
-def cmpLevels (rl : RecRule) (lps : List ConLeche.Name) (us : List Level)
+@[expose] def cmpLevels (rl : RecRule) (lps : List ConLeche.Name) (us : List Level)
     (cvjLps : List ConLeche.Name) : List Level :=
   (ConLeche.recFireComparands rl lps us cvjLps [] 0).1
 
@@ -441,7 +461,7 @@ theorem recFireLevels_spec (s₀ : AState) (rl : IRecRule) (rl' : RecRule)
         internLsNode_okS (mode := mode) (env := env) (fe := fe)] <;> finish
 
 /-- `defEqList`'s answer at two optional subject lists -/
-def DefEqLAns (mode : CheckMode) (env : Env) (d : Nat) (r : Bool) :
+@[expose] def DefEqLAns (mode : CheckMode) (env : Env) (d : Nat) (r : Bool) :
     Option (List Expr) → Option (List Expr) → Prop
   | some xs, some ys => SimBOp (defEqListOp mode env d xs ys) r
   | _, _ => True

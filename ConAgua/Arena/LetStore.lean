@@ -90,7 +90,7 @@ def letCS : ConsSch where
 
 /-! ## `letE_find(t, ty, val, body, h)`: the probe -/
 
-/-- con-ron: ConRon/Arena/Store.lean:90-91 ConRon.Arena.Tbl.find? -/
+/-- con-ron: ConRon/Arena/Store.lean:94-95 ConRon.Arena.Tbl.find? -/
 def letFind : FunDecl := consFindG letCS
 
 /-! ## `letE_push(t, ty, val, body, j)`: append a node to tier `t`, register it at slot `j` -/
@@ -105,7 +105,7 @@ multiplication, `(c + 1) * 6 ≤ len`, matching `PushRoom`'s own shape directly 
 def lepushOK (m : Mem) (t : Word) : Bool :=
   decide (lecnt m t < (134217728 : Word)) && decide ((lecnt m t + 1) * 2 ≤ m.len64 (tierA LEREC t))
 
-/-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
+/-- con-ron: ConRon/Arena/Store.lean:97-102 ConRon.Arena.Tbl.push -/
 def letPush : FunDecl := consPushG letCS
 
 /-! ## `intern_letE(ty, val, body)`: hash-cons the expression `letE ty val body`
@@ -122,8 +122,9 @@ def leskipW (m : Mem) (ty val body : Word) : Word :=
 aborts (the library's `consInternM`). -/
 def leinternW (m : Mem) (ty val body : Word) : Option (Word × Mem) := consInternM letCS m [ty, val, body]
 
-/-- con-ron: ConRon/Arena/Monad.lean:246-264 ConRon.Arena.internE
-con-ron: ConRon/Arena/Monad.lean:218-244 ConRon.Arena.internNodeE -/
+/-- con-ron: ConRon/Arena/Monad.lean:249-267 ConRon.Arena.internE
+con-ron: ConRon/Arena/Monad.lean:221-247 ConRon.Arena.internNodeE -/
+-- con-ron: CHANGED since ed864140 — `ConRon.Arena.internNodeE` changed; re-check the L code and its proofs, then delete this line
 @[l_impl ConRon.Arena.internE ConRon.Arena.internNodeE]
 def internLet : FunDecl := consInternG letCS
 

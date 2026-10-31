@@ -32,8 +32,13 @@ bracketed per-declaration step and a list induction over
 capstone (DESIGN `### Task #97-T2-CLEANUP`).
 
 -/
-import ConRon.Bridge.Checker.Mono
+module
+
 import ConRon.Bridge.Checker.Arms
+public import ConRon.Bridge.Checker.Decl
+public import ConRon.Bridge.Checker.Hyp
+
+public section
 
 open ConLeche ConRon.Arena
 

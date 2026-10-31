@@ -40,7 +40,7 @@ def rciFresh : FunDecl := lfn () locals (z) {
 }
 
 /-- `rci_names_to(q, o, k)`: `k` names to `EREC[o ‥]`; the position after. -/
--- con-ron: ConRon/Arena/Frontend/Readback.lean:270-276 ConRon.Arena.Frontend.internNameList
+-- con-ron: ConRon/Arena/Frontend/Readback.lean:274-280 ConRon.Arena.Frontend.internNameList
 def rciNamesTo : FunDecl := lfn (q, o, k) locals (h, r) {
   if k == 0 { return q };
   (h, q) := call rom_name(q);
@@ -51,7 +51,7 @@ def rciNamesTo : FunDecl := lfn (q, o, k) locals (h, r) {
 
 /-- `rci_name_sl(q, d)`: a name list (count, names) as an `EREC` slice, its offset and length to
 `EREC[d]`, `EREC[d + 1]`; the position after. -/
--- con-ron: ConRon/Arena/Frontend/Readback.lean:270-276 ConRon.Arena.Frontend.internNameList
+-- con-ron: ConRon/Arena/Frontend/Readback.lean:274-280 ConRon.Arena.Frontend.internNameList
 def rciNameSl : FunDecl := lfn (q, d) locals (c, o) {
   c := call rom_u64(q);
   o := call erec_alloc(c);
@@ -62,7 +62,7 @@ def rciNameSl : FunDecl := lfn (q, d) locals (c, o) {
 }
 
 /-- `rci_lvls_to(q, o, k)`: `k` levels to `EREC[o ‥]`; the position after. -/
--- con-ron: ConRon/Arena/Monad.lean:525-531 ConRon.Arena.internLevelList
+-- con-ron: ConRon/Arena/Monad.lean:528-534 ConRon.Arena.internLevelList
 def rciLvlsTo : FunDecl := lfn (q, o, k) locals (h, r) {
   if k == 0 { return q };
   (h, q) := call rom_level(q);
@@ -73,7 +73,7 @@ def rciLvlsTo : FunDecl := lfn (q, o, k) locals (h, r) {
 
 /-- `rci_cv(q, p)`: a constant value to `EREC[p ‥ p + 3]` (name, level parameters, type) at the
 current memo; the position after. -/
--- con-ron: ConRon/Arena/Frontend/Readback.lean:278-283 ConRon.Arena.Frontend.internCV
+-- con-ron: ConRon/Arena/Frontend/Readback.lean:282-287 ConRon.Arena.Frontend.internCV
 @[l_impl ConRon.Arena.Frontend.internCV]
 def rciCv : FunDecl := lfn (q, p) locals (h) {
   (h, q) := call rom_name(q);
@@ -86,7 +86,7 @@ def rciCv : FunDecl := lfn (q, p) locals (h) {
 
 /-- `rci_caps(q, c)`: an inductive's capabilities to the 15 words at `c` (`decCaps`); the position
 after. -/
--- con-ron: ConRon/Arena/Frontend/Readback.lean:308-314 ConRon.Arena.Frontend.internCaps
+-- con-ron: ConRon/Arena/Frontend/Readback.lean:312-318 ConRon.Arena.Frontend.internCaps
 @[l_impl ConRon.Arena.Frontend.internCaps]
 def rciCaps : FunDecl := lfn (q, c) locals (x, h) {
   x := call rom_u64(q);
@@ -115,8 +115,8 @@ def rciCaps : FunDecl := lfn (q, c) locals (x, h) {
 
 /-- `rci_rule(q, r)`: a recursor rule to the 11-word record at `r` (`decRule`) at the current
 memo; the position after. -/
--- con-ron: ConRon/Arena/Frontend/Readback.lean:293-298 ConRon.Arena.Frontend.internRule
--- con-ron: ConRon/Arena/Frontend/Readback.lean:285-291 ConRon.Arena.Frontend.internFire
+-- con-ron: ConRon/Arena/Frontend/Readback.lean:297-302 ConRon.Arena.Frontend.internRule
+-- con-ron: ConRon/Arena/Frontend/Readback.lean:289-295 ConRon.Arena.Frontend.internFire
 @[l_impl ConRon.Arena.Frontend.internRule ConRon.Arena.Frontend.internFire]
 def rciRule : FunDecl := lfn (q, r) locals (h, x, f, l, o) {
   (h, q) := call rom_name(q);
@@ -155,7 +155,7 @@ def rciRule : FunDecl := lfn (q, r) locals (h, x, f, l, o) {
 
 /-- `rci_rules_to(q, o, k)`: `k` rules to the 11-word records at `o`, `o + 11`, …; the position
 after. -/
--- con-ron: ConRon/Arena/Frontend/Readback.lean:300-306 ConRon.Arena.Frontend.internRules
+-- con-ron: ConRon/Arena/Frontend/Readback.lean:304-310 ConRon.Arena.Frontend.internRules
 @[l_impl ConRon.Arena.Frontend.internRules]
 def rciRulesTo : FunDecl := lfn (q, o, k) locals (r) {
   if k == 0 { return q };
@@ -167,7 +167,7 @@ def rciRulesTo : FunDecl := lfn (q, o, k) locals (r) {
 /-- `rci_ci(q)`: a constant at the current memo, as a fresh `EREC` record (`decCI`); the record's
 pointer and the position after; an unknown kind is refused. Each kind's arm returns (no paths
 merge after it). -/
--- con-ron: ConRon/Arena/Frontend/Readback.lean:316-338 ConRon.Arena.Frontend.internCI
+-- con-ron: ConRon/Arena/Frontend/Readback.lean:320-342 ConRon.Arena.Frontend.internCI
 @[l_impl ConRon.Arena.Frontend.internCI]
 def rciCi : FunDecl := lfn (q) locals (k, n, p, h, x, l, o) {
   k := call rom_u64(q);
@@ -214,7 +214,7 @@ def rciCi : FunDecl := lfn (q) locals (k, n, p, h, x, l, o) {
 
 /-- `rci_block_to(q, o, k)`: `k` constants at the current memo, their record pointers to
 `IW[o ‥]`; the position after. -/
--- con-ron: ConRon/Arena/Frontend/Readback.lean:340-346 ConRon.Arena.Frontend.internCIList
+-- con-ron: ConRon/Arena/Frontend/Readback.lean:344-350 ConRon.Arena.Frontend.internCIList
 @[l_impl ConRon.Arena.Frontend.internCIList]
 def rciBlockTo : FunDecl := lfn (q, o, k) locals (p, r) {
   if k == 0 { return q };
@@ -225,7 +225,7 @@ def rciBlockTo : FunDecl := lfn (q, o, k) locals (p, r) {
 }
 
 /-- `rci_block(s)`: the block of entry `s` at one fresh memo, as an `IW` slice. -/
--- con-ron: ConRon/Arena/Intern.lean:62-65 ConRon.Arena.internCIList
+-- con-ron: ConRon/Arena/Intern.lean:66-69 ConRon.Arena.internCIList
 @[l_impl ConRon.Arena.internCIList]
 def rciBlock : FunDecl := lfn (s) locals (q, c, o, z) {
   q := call rci_slot(s);
@@ -239,7 +239,7 @@ def rciBlock : FunDecl := lfn (s) locals (q, c, o, z) {
 /-! ## The entries -/
 
 /-- `rom_basis_decls(kind)`: the raw basis block of `kind` (`0` eqK … `4` quotK). -/
--- con-ron: ConRon/Arena/Basis.lean:36-39 ConRon.Arena.BasisKind.decls
+-- con-ron: ConRon/Arena/Basis.lean:41-44 ConRon.Arena.BasisKind.decls
 @[l_impl ConRon.Arena.BasisKind.decls]
 def romBasisDeclsL : FunDecl := lfn (kind) locals (o, l) {
   if kind >= 5 { abort };
@@ -248,7 +248,7 @@ def romBasisDeclsL : FunDecl := lfn (kind) locals (o, l) {
 }
 
 /-- `rom_basis_decls_a(kind)`: the annotated basis block of `kind`. -/
--- con-ron: ConRon/Arena/Basis.lean:41-45 ConRon.Arena.BasisKind.declsA
+-- con-ron: ConRon/Arena/Basis.lean:46-50 ConRon.Arena.BasisKind.declsA
 @[l_impl ConRon.Arena.BasisKind.declsA]
 def romBasisDeclsAL : FunDecl := lfn (kind) locals (o, l) {
   if kind >= 5 { abort };
@@ -257,14 +257,14 @@ def romBasisDeclsAL : FunDecl := lfn (kind) locals (o, l) {
 }
 
 /-- `rom_ci(id)`: the constant `romCiT id` at a fresh memo, an `EREC` record pointer. -/
--- con-ron: ConRon/Arena/StdAxioms.lean:83-87 ConRon.Arena.eqA
--- con-ron: ConRon/Arena/StdAxioms.lean:89-91 ConRon.Arena.natA
--- con-ron: ConRon/Arena/StdAxioms.lean:66-67 ConRon.Arena.iffA
--- con-ron: ConRon/Arena/StdAxioms.lean:68-69 ConRon.Arena.iffIntroA
--- con-ron: ConRon/Arena/StdAxioms.lean:70-71 ConRon.Arena.iffRecA
--- con-ron: ConRon/Arena/StdAxioms.lean:74-75 ConRon.Arena.nonemptyA
--- con-ron: ConRon/Arena/StdAxioms.lean:76-77 ConRon.Arena.nonemptyIntroA
--- con-ron: ConRon/Arena/StdAxioms.lean:78-79 ConRon.Arena.nonemptyRecA
+-- con-ron: ConRon/Arena/StdAxioms.lean:87-91 ConRon.Arena.eqA
+-- con-ron: ConRon/Arena/StdAxioms.lean:93-95 ConRon.Arena.natA
+-- con-ron: ConRon/Arena/StdAxioms.lean:70-71 ConRon.Arena.iffA
+-- con-ron: ConRon/Arena/StdAxioms.lean:72-73 ConRon.Arena.iffIntroA
+-- con-ron: ConRon/Arena/StdAxioms.lean:74-75 ConRon.Arena.iffRecA
+-- con-ron: ConRon/Arena/StdAxioms.lean:78-79 ConRon.Arena.nonemptyA
+-- con-ron: ConRon/Arena/StdAxioms.lean:80-81 ConRon.Arena.nonemptyIntroA
+-- con-ron: ConRon/Arena/StdAxioms.lean:82-83 ConRon.Arena.nonemptyRecA
 @[l_impl ConRon.Arena.eqA ConRon.Arena.natA ConRon.Arena.iffA ConRon.Arena.iffIntroA
   ConRon.Arena.iffRecA ConRon.Arena.nonemptyA ConRon.Arena.nonemptyIntroA ConRon.Arena.nonemptyRecA]
 def romCiL : FunDecl := lfn (id) locals (q, z, p) {
@@ -276,16 +276,16 @@ def romCiL : FunDecl := lfn (id) locals (q, z, p) {
 }
 
 /-- `rom_cv(id)`: the constant value `romCvT id` at a fresh memo, a 4-word `EREC` record. -/
--- con-ron: ConRon/Arena/StdAxioms.lean:72-73 ConRon.Arena.propextA
--- con-ron: ConRon/Arena/StdAxioms.lean:80-81 ConRon.Arena.choiceA
--- con-ron: ConRon/Arena/TrustAxioms.lean:56-57 ConRon.Arena.trueCvA
--- con-ron: ConRon/Arena/TrustAxioms.lean:58-59 ConRon.Arena.trueIntroCvA
--- con-ron: ConRon/Arena/TrustAxioms.lean:60-61 ConRon.Arena.trustCompilerA
--- con-ron: ConRon/Arena/TrustAxioms.lean:62-63 ConRon.Arena.boolCvA
--- con-ron: ConRon/Arena/TrustAxioms.lean:76-78 ConRon.Arena.reduceNatCvA
--- con-ron: ConRon/Arena/TrustAxioms.lean:79-80 ConRon.Arena.reduceBoolCvA
--- con-ron: ConRon/Arena/TrustAxioms.lean:81-82 ConRon.Arena.ofReduceNatA
--- con-ron: ConRon/Arena/TrustAxioms.lean:83-84 ConRon.Arena.ofReduceBoolA
+-- con-ron: ConRon/Arena/StdAxioms.lean:76-77 ConRon.Arena.propextA
+-- con-ron: ConRon/Arena/StdAxioms.lean:84-85 ConRon.Arena.choiceA
+-- con-ron: ConRon/Arena/TrustAxioms.lean:61-62 ConRon.Arena.trueCvA
+-- con-ron: ConRon/Arena/TrustAxioms.lean:63-64 ConRon.Arena.trueIntroCvA
+-- con-ron: ConRon/Arena/TrustAxioms.lean:65-66 ConRon.Arena.trustCompilerA
+-- con-ron: ConRon/Arena/TrustAxioms.lean:67-68 ConRon.Arena.boolCvA
+-- con-ron: ConRon/Arena/TrustAxioms.lean:81-83 ConRon.Arena.reduceNatCvA
+-- con-ron: ConRon/Arena/TrustAxioms.lean:84-85 ConRon.Arena.reduceBoolCvA
+-- con-ron: ConRon/Arena/TrustAxioms.lean:86-87 ConRon.Arena.ofReduceNatA
+-- con-ron: ConRon/Arena/TrustAxioms.lean:88-89 ConRon.Arena.ofReduceBoolA
 @[l_impl ConRon.Arena.propextA ConRon.Arena.choiceA ConRon.Arena.trueCvA ConRon.Arena.trueIntroCvA
   ConRon.Arena.trustCompilerA ConRon.Arena.boolCvA ConRon.Arena.reduceNatCvA
   ConRon.Arena.reduceBoolCvA ConRon.Arena.ofReduceNatA ConRon.Arena.ofReduceBoolA]
@@ -300,8 +300,8 @@ def romCvL : FunDecl := lfn (id) locals (q, z, p) {
 
 /-- `rom_expr_pin(id)`: the expression `romExprT id` at a fresh memo, a handle (the stub
 `rom_expr(id)` of `romStubs`, renamed). -/
--- con-ron: ConRon/Arena/TrustAxioms.lean:104-106 ConRon.Arena.reduceNatDeclPin
--- con-ron: ConRon/Arena/TrustAxioms.lean:100-102 ConRon.Arena.reduceBoolDeclPin
+-- con-ron: ConRon/Arena/TrustAxioms.lean:109-111 ConRon.Arena.reduceNatDeclPin
+-- con-ron: ConRon/Arena/TrustAxioms.lean:105-107 ConRon.Arena.reduceBoolDeclPin
 @[l_impl ConRon.Arena.reduceNatDeclPin ConRon.Arena.reduceBoolDeclPin]
 def romExprPinL : FunDecl := lfn (id) locals (q, z, h) {
   if id >= 2 { abort };
@@ -312,7 +312,7 @@ def romExprPinL : FunDecl := lfn (id) locals (q, z, h) {
 }
 
 /-- `rom_and_pin()`: the pinned `And` block (`andPinDecls`, `internCIList andPin`), an `IW` slice. -/
--- con-ron: ConRon/Arena/Basis.lean:94-98 ConRon.Arena.andPinDecls
+-- con-ron: ConRon/Arena/Basis.lean:99-103 ConRon.Arena.andPinDecls
 @[l_impl ConRon.Arena.andPinDecls]
 def romAndPinL : FunDecl := lfn () locals (o, l) {
   (o, l) := call rci_block(30);

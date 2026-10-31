@@ -19,7 +19,12 @@ Every name here is primed and lives in `ConRon.Bridge`: the strong lemmas are
 `ConRon.Arena.EWFAt'.rank_lt`, so a `ConRon.Arena`-namespaced copy here would
 clash in any environment importing both tiers (the capstone's).
 -/
-import ConRon.Bridge.Promote.Pers
+module
+
+public import ConRon.Bridge.Promote.Pers
+import ConRon.Arena.WFProofs
+
+public section
 
 namespace ConRon.Bridge
 
@@ -60,7 +65,7 @@ theorem denoteNAux_congr' {st : NStore} {rk : NIdx → Nat} (h : NWFAt' st rk) :
       denoteNAux st f i = denoteNAux st f' i := by
   intro n
   induction n with
-  | zero => intro i f f' hn; omega
+  | zero => intro i f f' hn; grind
   | succ m ih =>
     intro i f f' hn hf hf'
     obtain ⟨g, rfl⟩ : ∃ g, f = g + 1 := ⟨f - 1, by omega⟩
@@ -113,7 +118,7 @@ theorem denoteLAux_congr' {st : LStore} {rk : LIdx → Nat} (h : LWFAt' st rk) :
       denoteLAux st f i = denoteLAux st f' i := by
   intro n
   induction n with
-  | zero => intro i f f' hn; omega
+  | zero => intro i f f' hn; grind
   | succ m ih =>
     intro i f f' hn hf hf'
     obtain ⟨g, rfl⟩ : ∃ g, f = g + 1 := ⟨f - 1, by omega⟩
@@ -186,7 +191,7 @@ theorem denoteEAux_congr' {st : EStore} {rk : EIdx → Nat} (h : EWFAt' st rk) :
       denoteEAux st f i = denoteEAux st f' i := by
   intro n
   induction n with
-  | zero => intro i f f' hn; omega
+  | zero => intro i f f' hn; grind
   | succ m ih =>
     intro i f f' hn hf hf'
     obtain ⟨g, rfl⟩ : ∃ g, f = g + 1 := ⟨f - 1, by omega⟩

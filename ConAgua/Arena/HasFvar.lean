@@ -39,14 +39,14 @@ theorem hfK_some (x : Word) (m₁ : Mem) : hfK (some (x, m₁)) = some (if x ≠
 
 attribute [arena_grind =] hfK_some
 
-/-- con-ron: ConRon/Arena/ExprOps.lean:1582-1586 ConRon.Arena.hasFvarFast -/
+/-- con-ron: ConRon/Arena/ExprOps.lean:1587-1591 ConRon.Arena.hasFvarFast -/
 @[l_impl ConRon.Arena.hasFvarFast]
 def hasFvarFastL : FunDecl := lfn (f, e) locals (x) {
   x := call ab_fvb(e, f);
   return u64(x != 0)
 }
 
-/-- con-ron: ConRon/Arena/ExprOps.lean:1582-1586 ConRon.Arena.hasFvarFast -/
+/-- con-ron: ConRon/Arena/ExprOps.lean:1587-1591 ConRon.Arena.hasFvarFast -/
 @[l_impl ConRon.Arena.hasFvarFast]
 def hasFvarL : FunDecl := lfn (e) locals (x) {
   x := call ab_fvb(e, 4000000000);

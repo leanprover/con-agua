@@ -37,7 +37,7 @@ open L.Front.Unescape (strPutEscW strPutEsc_specW escSur escOne utf8Put strPutEs
 
 namespace L.Front
 
-/-- con-ron: ConRon/Arena/Frontend/ExportC.lean:464-477 ConRon.Arena.Frontend.applyLine -/
+/-- con-ron: ConRon/Arena/Frontend/ExportC.lean:468-481 ConRon.Arena.Frontend.applyLine -/
 @[l_impl ConRon.Arena.Frontend.applyLine]
 -- con-leche: ConLeche/Frontend/Scan/Fast.lean:2576-2599 ConLeche.Frontend.scanLineFwd
 def frontLine : FunDecl := lfn (i) locals (ok, nx, s, pl, idx, a, c, d, j, q) {
@@ -59,7 +59,7 @@ def frontLine : FunDecl := lfn (i) locals (ok, nx, s, pl, idx, a, c, d, j, q) {
 
 /-- A declaration line: its fields, applied (an inductive block by `apply_ind` at its value's
 position `nm`, `IndApply.lean`; a line that does not read aborts). -/
--- con-ron: ConRon/Arena/Frontend/ExportC.lean:464-477 ConRon.Arena.Frontend.applyLine
+-- con-ron: ConRon/Arena/Frontend/ExportC.lean:468-481 ConRon.Arena.Frontend.applyLine
 def applyDLine : FunDecl := lfn (j) locals (pl, nm, lps, ty, vl, hk, hn, fl, z) {
   (pl, nm, lps, ty, vl, hk, hn, fl) := call rec_decl_line(j);
   if pl == 0 { abort };
@@ -72,7 +72,7 @@ def applyDLine : FunDecl := lfn (j) locals (pl, nm, lps, ty, vl, hk, hn, fl, z) 
 }
 
 /-- A name or level line with fields `(pl, idx, a, c, d)`, applied. -/
--- con-ron: ConRon/Arena/Frontend/ExportC.lean:464-477 ConRon.Arena.Frontend.applyLine
+-- con-ron: ConRon/Arena/Frontend/ExportC.lean:468-481 ConRon.Arena.Frontend.applyLine
 def applyRec : FunDecl := lfn (pl, idx, a, c, d) locals (z) {
   if pl == 0 { abort };
   if pl == 7 { return 0 };
@@ -91,7 +91,7 @@ def applyRec : FunDecl := lfn (pl, idx, a, c, d) locals (z) {
 }
 
 /-- A `str` name line: the body `[c, d)`, unescaped into the pool and applied. -/
--- con-ron: ConRon/Arena/Frontend/ExportC.lean:464-477 ConRon.Arena.Frontend.applyLine
+-- con-ron: ConRon/Arena/Frontend/ExportC.lean:468-481 ConRon.Arena.Frontend.applyLine
 def applyStr : FunDecl := lfn (idx, a, c, d) locals (z, o, l) {
   if c == 0 { abort };
   (o, l) := call str_put_esc(c, d);

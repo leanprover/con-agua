@@ -95,7 +95,7 @@ def sortCS : ConsSch where
 
 /-! ## `sort_find(t, u, h)`: the probe -/
 
-/-- con-ron: ConRon/Arena/Store.lean:90-91 ConRon.Arena.Tbl.find? -/
+/-- con-ron: ConRon/Arena/Store.lean:94-95 ConRon.Arena.Tbl.find? -/
 def sortFind : FunDecl := consFindG sortCS
 
 /-! ## `sort_push(t, u, j)`: append a node to tier `t`, register it at slot `j` -/
@@ -108,7 +108,7 @@ def sopushOK (m : Mem) (t : Word) : Bool :=
   decide (socnt m t < (134217728 : Word)) && decide (socnt m t < m.len64 (tierA SOREC t)) &&
     decide (socnt m t < m.len64 (tierA SOLP t))
 
-/-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
+/-- con-ron: ConRon/Arena/Store.lean:97-102 ConRon.Arena.Tbl.push -/
 def sortPush : FunDecl := consPushG sortCS
 
 /-! ## `intern_sort(u)`: hash-cons the expression `sort u`
@@ -125,8 +125,9 @@ def soskipW (m : Mem) (u : Word) : Word :=
 aborts (the library's `consInternM`). -/
 def sointernW (m : Mem) (u : Word) : Option (Word × Mem) := consInternM sortCS m [u]
 
-/-- con-ron: ConRon/Arena/Monad.lean:246-264 ConRon.Arena.internE
-con-ron: ConRon/Arena/Monad.lean:218-244 ConRon.Arena.internNodeE -/
+/-- con-ron: ConRon/Arena/Monad.lean:249-267 ConRon.Arena.internE
+con-ron: ConRon/Arena/Monad.lean:221-247 ConRon.Arena.internNodeE -/
+-- con-ron: CHANGED since ed864140 — `ConRon.Arena.internNodeE` changed; re-check the L code and its proofs, then delete this line
 @[l_impl ConRon.Arena.internE ConRon.Arena.internNodeE]
 def internSort : FunDecl := consInternG sortCS
 

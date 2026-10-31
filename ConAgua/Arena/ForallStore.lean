@@ -96,7 +96,7 @@ def forallCS : ConsSch where
 
 /-! ## `forall_find(t, ty, body, h)`: the probe -/
 
-/-- con-ron: ConRon/Arena/Store.lean:90-91 ConRon.Arena.Tbl.find? -/
+/-- con-ron: ConRon/Arena/Store.lean:94-95 ConRon.Arena.Tbl.find? -/
 def forallFind : FunDecl := consFindG forallCS
 
 /-! ## `forall_push(t, ty, body, j)`: append a node to tier `t`, register it at slot `j` -/
@@ -108,7 +108,7 @@ def facnt (m : Mem) (t : Word) : Word := rdW (m.arr64 CTL) (30 + t)
 def fapushOK (m : Mem) (t : Word) : Bool :=
   decide (facnt m t < (134217728 : Word)) && decide (facnt m t < m.len64 (tierA FAREC t))
 
-/-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
+/-- con-ron: ConRon/Arena/Store.lean:97-102 ConRon.Arena.Tbl.push -/
 def forallPush : FunDecl := consPushG forallCS
 
 /-! ## `intern_forall(ty, body)`: hash-cons the `forallE` binder with binder type `ty` and body
@@ -131,8 +131,9 @@ def fainternW (m : Mem) (ty body : Word) : Option (Word × Mem) := consInternM f
 /-- The L FunDecl for `intern_forall`. Named `internForallL`, not `internForallE`: con-ron's
 `ConRon.Arena.internForallEE`/`EStore.internForallE` are sibling names in a different namespace,
 but the `L`-suffix keeps the two visually apart in this file, which `open`s `ConRon.Arena`. -/
--- con-ron: ConRon/Arena/Monad.lean:246-264 ConRon.Arena.internE
--- con-ron: ConRon/Arena/Monad.lean:199-216 ConRon.Arena.internForallEE
+-- con-ron: ConRon/Arena/Monad.lean:249-267 ConRon.Arena.internE
+-- con-ron: CHANGED since ed864140 — below `ConRon.Arena.internForallEE`, `ConRon.Arena.Idx.idxCap` changed; re-check the L code and its proofs, then delete this line
+-- con-ron: ConRon/Arena/Monad.lean:202-219 ConRon.Arena.internForallEE
 @[l_impl ConRon.Arena.internE ConRon.Arena.internForallEE]
 def internForallL : FunDecl := consInternG forallCS
 

@@ -106,7 +106,7 @@ entry 1) is `check_a(0)`, the same with the buffer's header only; `2` (`ca_check
 
 /-- `check_a(c)`: `check`'s stages, then phase A and the frozen buffer (`c ≠ 0`: header and images;
 `c = 0`: the header only); returns `2^63 + k` (`1` if a line did not scan). -/
--- con-ron: ConRon/Arena/Main.lean:130-162 ConRon.Arena.runPipelineHead
+-- con-ron: ConRon/Arena/Main.lean:135-167 ConRon.Arena.runPipelineHead
 def checkAL : FunDecl := lfn (c) locals (r, z, cnt, v) {
   z := call cap_check();
   z := call pb_check();
@@ -126,8 +126,8 @@ def checkAL : FunDecl := lfn (c) locals (r, z, cnt, v) {
 /-- `check_b()`: on the worker region's first call the seed (`CTL`) from the buffer, then the
 pending groups `PLO‥PHI-1` (`PHI` at most the count) at phase A's final view, in order, as phase
 B's loop (`check_pending_go`); returns `ACCEPT`. -/
--- con-ron: ConRon/Arena/Phased.lean:29-36 ConRon.Arena.AState.worker
--- con-ron: ConRon/Arena/Pooled.lean:30-43 ConRon.Arena.PooledAccepts
+-- con-ron: ConRon/Arena/Phased.lean:33-40 ConRon.Arena.AState.worker
+-- con-ron: ConRon/Arena/Pooled.lean:34-47 ConRon.Arena.PooledAccepts
 def checkBL : FunDecl := lfn () locals (z, n) {
   if INIT == 0 {
     n := len(CTLF.u64);
@@ -157,21 +157,21 @@ Lane `induct`'s callers pass the walk fuel first (`abstract1_fast(fuel, e, d, k)
 `Inst1Spec.lean`), which take none (their walks count their own). -/
 
 /-- `abstract1_fast(fuel, e, d, k)`: `abs_entry(e, d, k)`. -/
--- con-ron: ConRon/Arena/ExprOps.lean:1719-1725 ConRon.Arena.abstract1Fast
+-- con-ron: ConRon/Arena/ExprOps.lean:1724-1730 ConRon.Arena.abstract1Fast
 def abstract1FastA : FunDecl := lfn (f, e, d, k) locals (r) {
   r := call abs_entry(e, d, k);
   return r
 }
 
 /-- `instantiate1_fast(fuel, e, v, d)`: `inst_entry(e, v, d)`. -/
--- con-ron: ConRon/Arena/ExprOps.lean:377-384 ConRon.Arena.instantiate1Fast
+-- con-ron: ConRon/Arena/ExprOps.lean:382-389 ConRon.Arena.instantiate1Fast
 def instantiate1FastA : FunDecl := lfn (f, e, v, d) locals (r) {
   r := call inst_entry(e, v, d);
   return r
 }
 
 /-- `inst1(e, v, d)`: `inst_entry(e, v, d)`. -/
--- con-ron: ConRon/Arena/ExprOps.lean:377-384 ConRon.Arena.instantiate1Fast
+-- con-ron: ConRon/Arena/ExprOps.lean:382-389 ConRon.Arena.instantiate1Fast
 def inst1A : FunDecl := lfn (e, v, d) locals (r) {
   r := call inst_entry(e, v, d);
   return r
@@ -185,8 +185,8 @@ def inst1A : FunDecl := lfn (e, v, d) locals (r) {
 `IW` slice); the first kind whose member names equal the block's (the name pre-filter; a constant
 record's name is its word `1`, `decCI`) decides by `canon_eq_list` (over `IW` slices: the block is
 copied there, `er_to_iw`); no such kind is `(0, 0)`. -/
--- con-ron: ConRon/Arena/Basis.lean:53-69 ConRon.Arena.basisPinHitGo
--- con-ron: ConRon/Arena/Basis.lean:71-79 ConRon.Arena.basisPinHit
+-- con-ron: ConRon/Arena/Basis.lean:58-74 ConRon.Arena.basisPinHitGo
+-- con-ron: ConRon/Arena/Basis.lean:76-84 ConRon.Arena.basisPinHit
 @[l_impl ConRon.Arena.basisPinHit]
 def basisPinHitL : FunDecl := lfn (bo, bl) locals (k, o, l, j, e, q, ql) {
   k := 0;
@@ -213,7 +213,7 @@ def basisPinHitL : FunDecl := lfn (bo, bl) locals (k, o, l, j, e, q, ql) {
 constant records (`decCI`: an `indInfo` is `3, name, lps.off, lps.len, type, …`, a `ctorInfo`
 `4, name, lps.off, lps.len, type, nP, nF`): a type former's telescope to a sort has at least `nP`
 binders (no such telescope: fine), a constructor declares exactly `nP` parameters. -/
--- con-ron: ConRon/Arena/CheckerBase.lean:327-340 ConRon.Arena.indParamsOk
+-- con-ron: ConRon/Arena/CheckerBase.lean:330-343 ConRon.Arena.indParamsOk
 @[l_impl ConRon.Arena.indParamsOk]
 def indParamsOkL : FunDecl := lfn (np, o, l) locals (j, p, k, ok, n) {
   j := 0;

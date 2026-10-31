@@ -256,7 +256,7 @@ def lvlEqW : Nat → Mem → Word → Word → Option (Word × Mem)
 fresh heap (the top reset to `0`). The verdict cache `lvlEqC` is `lvl_eq_c`'s, in front of this
 function (`CoreLevels.lean`); this is the uncached computation (`LevelArena.lean`,
 `lvlEq_refines`). -/
--- con-ron: ConRon/Arena/Core.lean:132-149 ConRon.Arena.lvlEq?
+-- con-ron: ConRon/Arena/Core.lean:137-154 ConRon.Arena.lvlEq?
 @[l_impl ConRon.Arena.lvlEq?]
 def lvlEqL : FunDecl := lfn (u, v) locals (z) {
   CTL.u64[192] := 0;
@@ -290,7 +290,7 @@ def lsNodeW (m : Mem) (h : Word) : List Word :=
   else if tcnt m LVLS (tierW h) ≤ idxW h then []
   else [tfld m LVLS (tierW h) (idxW h) 0, tfld m LVLS (tierW h) (idxW h) 1]
 
-/-- con-ron: ConRon/Arena/Monad.lean:491-497 ConRon.Arena.viewLs -/
+/-- con-ron: ConRon/Arena/Monad.lean:494-500 ConRon.Arena.viewLs -/
 def lsNode : FunDecl := lfn (h) locals (t, i) {
   if h >> 28 != 0 { abort };
   (t, i) := node LVLS⟦h⟧;
@@ -323,7 +323,7 @@ def lvlsEqW : Nat → Mem → Word → Word → Option (Word × Mem)
 
 /-- con-ron's `lvlsEq?` (`Arena/Core.lean:155`) on two level-list handles: `isEquivList` on their
 slices, on a fresh heap; the verdict cache `lvlsEqC` is not represented (as for `lvl_eq`). -/
--- con-ron: ConRon/Arena/Core.lean:151-168 ConRon.Arena.lvlsEq?
+-- con-ron: ConRon/Arena/Core.lean:156-173 ConRon.Arena.lvlsEq?
 @[l_impl ConRon.Arena.lvlsEq?]
 def lvlsEqL : FunDecl := lfn (us, vs) locals (a, n, b, k, z) {
   (a, n) := call ls_node(us);

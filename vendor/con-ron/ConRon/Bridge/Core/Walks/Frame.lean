@@ -30,7 +30,12 @@ readback and no unfolding past its spec.  `ReadbackFrame.ofReadL` /
 `.ofReadN` / `.ofReadLs` below are one constructor per readback, taking the
 spec's own conjuncts.
 -/
+module
+
 import ConRon.Bridge.Core.Memo
+public import ConRon.Bridge.StateOK
+
+public section
 
 namespace ConRon.Bridge.Core
 

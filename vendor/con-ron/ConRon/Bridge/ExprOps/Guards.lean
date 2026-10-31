@@ -52,7 +52,13 @@ hit, insert and dropped table, `leafMem`'s verdict (`LeafMemO`) and
 `leafGuard`'s composition (`LeafGuardAt.of_lSubAt`) are lemmas keyed by the
 terms the verification conditions have.
 -/
-import ConRon.Bridge.ExprOps.Leaves
+module
+
+public import ConRon.Bridge.ExprOps.Leaves
+import ConRon.Bridge.Specs
+import ConRon.Bridge.GrindAttr
+
+public section
 
 namespace ConRon.Bridge.ExprOps
 
@@ -134,7 +140,7 @@ it `Cached/ExprOpsC.lean`'s `leavesSubP` clause for clause. -/
 guard's pure specification**: every reachable `fvar` leaf of `e` is in `bl`.
 `Cached/ExprOpsC.lean:1167-1185`'s `leavesSubP` is this function with the
 range cutoff inlined; the equations below are the two against each other. -/
-def leavesSubSpec (bl : List (Nat × Expr)) (e : Expr) : Bool :=
+@[expose] def leavesSubSpec (bl : List (Nat × Expr)) (e : Expr) : Bool :=
   (Expr.fvarLeaves e).all (fun l => bl.contains l)
 
 @[bridge_grind =] theorem leavesSubSpec_bvar {bl : List (Nat × Expr)} {i : Nat} :
@@ -226,7 +232,7 @@ def LSubAt (bl : List (Nat × EIdx)) (st : EStore) (c : EIdx) (r : Bool) :
 /-- con-leche: none — `LSubAt`'s answer at the base list's optional
 denotation, as a named predicate (`Bridge/Grind.lean` §3's `MapRelV` shape):
 the verdict is the pure guard's at whatever the base list denotes. -/
-def LSubO (st : EStore) (c : EIdx) (r : Bool) : Option (List (Nat × Expr)) → Prop
+@[expose] def LSubO (st : EStore) (c : EIdx) (r : Bool) : Option (List (Nat × Expr)) → Prop
   | some bl' => RelV (leavesSubSpec bl') st c r
   | none => True
 
@@ -256,7 +262,7 @@ def LSubMemoA (bl : List (Nat × EIdx)) (tbl : Std.HashMap EIdx Bool)
   ∀ bl', denoteLeaves st bl = some bl' → MemoVOK (leavesSubSpec bl') tbl st
 
 /-- con-leche: none — `LSubMemoA` at the base list's optional denotation. -/
-def LSubMemoO (tbl : Std.HashMap EIdx Bool) (st : EStore) :
+@[expose] def LSubMemoO (tbl : Std.HashMap EIdx Bool) (st : EStore) :
     Option (List (Nat × Expr)) → Prop
   | some bl' => MemoVOK (leavesSubSpec bl') tbl st
   | none => True
@@ -282,7 +288,7 @@ witness `LSubO.some_eq` and `LSubMemoO.some_eq` fire on; an `∃` for the reason
 
 /-- con-leche: ConLeche/Cached/ExprOpsC.lean:1157-1162 leafMem — `leafMem`'s
 verdict at the base list's and the annotation's optional denotations. -/
-def LeafMemO (bl : List (Nat × EIdx)) (idx : Nat) (ty : EIdx) :
+@[expose] def LeafMemO (bl : List (Nat × EIdx)) (idx : Nat) (ty : EIdx) :
     Option (List (Nat × Expr)) → Option Expr → Prop
   | some bl', some t => leafMem bl idx ty = bl'.contains (idx, t)
   | _, _ => True
@@ -346,7 +352,7 @@ with `Expr.fvarLeaves ebase`'s MEMBERS, not that list. -/
 
 /-- con-leche: ConLeche/Cached/ExprOpsC.lean:1264-1268 leafGuard — the
 guard's answer relation, with `base`'s denotation quantified inside. -/
-def LeafGuardAt (st : EStore) (fab base : EIdx) (r : Bool) : Prop :=
+@[expose] def LeafGuardAt (st : EStore) (fab base : EIdx) (r : Bool) : Prop :=
   ∀ eb, denoteE st base = some eb →
     RelV (leavesSubSpec (Expr.fvarLeaves eb)) st fab r
 

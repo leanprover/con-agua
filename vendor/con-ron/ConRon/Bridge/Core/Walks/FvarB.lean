@@ -11,8 +11,14 @@ the Core tier's `abstract1Fast_spec` callers (`Arms/InferIO.lean`'s
 have their hypothesis.  `Ranges.lean`'s `fvarB_spec` gaining the `abs1C`
 conjunct would make this module one line.
 -/
-import ConRon.Bridge.Core.Walks.Cached
+module
+
 import ConRon.Bridge.ExprOps.Ranges
+public import ConRon.Bridge.ExprOps.Abs
+import ConRon.Bridge.Promote.Pers
+import ConRon.Bridge.Specs
+
+public section
 
 namespace ConRon.Bridge.Core
 

@@ -11,9 +11,16 @@ is a named predicate (`ProjLitAns`) with one `grind` lemma per exit
 (`ProjLitAns.pass`, `ProjLitAns.whnf`), the twin's literal arm one
 constructor deep (`projLitToCtor_split`).
 -/
+module
+
 import ConRon.Bridge.Core.Walks.StrLit
 import ConRon.Bridge.Core.Walks.StrCtor
-import ConRon.Bridge.Core.Walks.PropRead
+public import ConRon.Bridge.Core.Walks.PropRead
+import ConRon.Bridge.Core.Walks.Proj
+import ConRon.Bridge.Specs
+import ConRon.Bridge.GrindAttr
+
+public section
 
 namespace ConRon.Bridge.Core
 
@@ -37,7 +44,7 @@ and the lookup and a callee in that shape (`projAnsAt`,
 /-- con-leche: none — the index's projection-table answer against the
 environment's: a found entry denotes the environment's (which is found), a
 miss is a miss. -/
-def ProjAns (st : EStore) : Option IProjEntry → Option ProjEntry → Prop
+@[expose] def ProjAns (st : EStore) : Option IProjEntry → Option ProjEntry → Prop
   | some en, o => denoteProjEntry st en = o ∧ o.isSome = true
   | none, o => o = none
 
@@ -123,7 +130,7 @@ attribute [bridge_grind =] projLitFires
 /-- con-leche: ConLeche/Kernel/Core.lean:680-685 projLitToCtor — **the
 answer** of the walk at the subject `x` (a named predicate: `SimEOp` at the
 pure call, its `fun` hidden from `grind`). -/
-def ProjLitAns (mode : CheckMode) (env : Env) (d : Nat) (x : Expr) (st : EStore)
+@[expose] def ProjLitAns (mode : CheckMode) (env : Env) (d : Nat) (x : Expr) (st : EStore)
     (r : EIdx) : Prop :=
   SimEOp (fun F => ConLeche.projLitToCtorFueled mode env F d x) d st r
 

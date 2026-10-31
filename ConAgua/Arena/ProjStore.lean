@@ -94,7 +94,7 @@ def projCS : ConsSch where
 
 /-! ## `proj_find(t, n, u, e, h)`: the probe -/
 
-/-- con-ron: ConRon/Arena/Store.lean:90-91 ConRon.Arena.Tbl.find? -/
+/-- con-ron: ConRon/Arena/Store.lean:94-95 ConRon.Arena.Tbl.find? -/
 def projFind : FunDecl := consFindG projCS
 
 /-! ## `proj_push(t, n, u, e, j)`: append a node to tier `t`, register it at slot `j` -/
@@ -109,7 +109,7 @@ division). -/
 def pjpushOK (m : Mem) (t : Word) : Bool :=
   decide (pjcnt m t < (134217728 : Word)) && decide ((pjcnt m t + 1) * 2 ≤ m.len64 (tierA PJREC t))
 
-/-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
+/-- con-ron: ConRon/Arena/Store.lean:97-102 ConRon.Arena.Tbl.push -/
 def projPush : FunDecl := consPushG projCS
 
 /-! ## `intern_proj(n, u, e)`: hash-cons the expression `proj n u e`
@@ -127,8 +127,9 @@ def pjskipW (m : Mem) (n e : Word) : Word :=
 aborts (the library's `consInternM`). -/
 def pjinternW (m : Mem) (n u e : Word) : Option (Word × Mem) := consInternM projCS m [n, u, e]
 
-/-- con-ron: ConRon/Arena/Monad.lean:246-264 ConRon.Arena.internE
-con-ron: ConRon/Arena/Monad.lean:218-244 ConRon.Arena.internNodeE -/
+/-- con-ron: ConRon/Arena/Monad.lean:249-267 ConRon.Arena.internE
+con-ron: ConRon/Arena/Monad.lean:221-247 ConRon.Arena.internNodeE -/
+-- con-ron: CHANGED since ed864140 — `ConRon.Arena.internNodeE` changed; re-check the L code and its proofs, then delete this line
 @[l_impl ConRon.Arena.internE ConRon.Arena.internNodeE]
 def internProj : FunDecl := consInternG projCS
 

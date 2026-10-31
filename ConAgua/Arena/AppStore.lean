@@ -89,7 +89,7 @@ def appCS : ConsSch where
 
 /-! ## `app_find(t, f, a, h)`: the probe -/
 
-/-- con-ron: ConRon/Arena/Store.lean:90-91 ConRon.Arena.Tbl.find? -/
+/-- con-ron: ConRon/Arena/Store.lean:94-95 ConRon.Arena.Tbl.find? -/
 def appFind : FunDecl := consFindG appCS
 
 /-! ## `app_push(t, f, a, j)`: append a node to tier `t`, register it at slot `j` -/
@@ -101,7 +101,7 @@ def acnt (m : Mem) (t : Word) : Word := rdW (m.arr64 CTL) (4 + t)
 def apushOK (m : Mem) (t : Word) : Bool :=
   decide (acnt m t < (134217728 : Word)) && decide (acnt m t < m.len64 (tierA AREC t))
 
-/-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
+/-- con-ron: ConRon/Arena/Store.lean:97-102 ConRon.Arena.Tbl.push -/
 def appPush : FunDecl := consPushG appCS
 
 /-! ## `intern_app(f, a)`: hash-cons the `app` node with children `f` and `a`
@@ -118,8 +118,9 @@ def askipW (m : Mem) (f a : Word) : Word :=
 aborts (the library's `consInternM`). -/
 def ainternW (m : Mem) (f a : Word) : Option (Word × Mem) := consInternM appCS m [f, a]
 
-/-- con-ron: ConRon/Arena/Monad.lean:246-264 ConRon.Arena.internE
-con-ron: ConRon/Arena/Monad.lean:218-244 ConRon.Arena.internNodeE -/
+/-- con-ron: ConRon/Arena/Monad.lean:249-267 ConRon.Arena.internE
+con-ron: ConRon/Arena/Monad.lean:221-247 ConRon.Arena.internNodeE -/
+-- con-ron: CHANGED since ed864140 — `ConRon.Arena.internNodeE` changed; re-check the L code and its proofs, then delete this line
 @[l_impl ConRon.Arena.internE ConRon.Arena.internNodeE]
 def internApp : FunDecl := consInternG appCS
 

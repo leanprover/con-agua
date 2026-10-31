@@ -42,7 +42,7 @@ namespace L.Arena
 
 /-! ## `lv_intern(p)` -/
 
-/-- con-ron: ConRon/Arena/Monad.lean:470-487 ConRon.Arena.internLevel -/
+/-- con-ron: ConRon/Arena/Monad.lean:473-490 ConRon.Arena.internLevel -/
 @[l_impl ConRon.Arena.internLevel]
 def lvIntern : FunDecl := lfn (p) locals (g, a, b, x, y, h) {
   (g, a, b) := call lv_node(p);
@@ -181,8 +181,8 @@ end spec
 
 /-! ## `lv_sub_int(u, ko, kc, vo, vc)`: substitute, then intern -/
 
-/-- con-ron: ConRon/Arena/ExprOps.lean:2071-2086 ConRon.Arena.substLMemoAt
-con-ron: ConRon/Arena/Core.lean:1940-1950 ConRon.Arena.substLevelsAt -/
+/-- con-ron: ConRon/Arena/ExprOps.lean:2076-2091 ConRon.Arena.substLMemoAt
+con-ron: ConRon/Arena/Core.lean:1945-1955 ConRon.Arena.substLevelsAt -/
 def lvSubInt : FunDecl := lfn (u, ko, kc, vo, vc) locals (x, h) {
   CTL.u64[192] := 0;
   x := call lp_substl(u, ko, kc, vo, vc);
@@ -260,7 +260,7 @@ attribute [arena_grind =] lvSubIntW_succ
 
 /-! ## `caps_never_zero(po, pc, us, swd, so, sc)` -/
 
-/-- con-ron: ConRon/Arena/Core.lean:340-346 ConRon.Arena.capsNeverZero -/
+/-- con-ron: ConRon/Arena/Core.lean:345-351 ConRon.Arena.capsNeverZero -/
 @[l_impl ConRon.Arena.capsNeverZero]
 def capsNeverZeroL : FunDecl := lfn (po, pc, us, swd, so, sc) locals (vo, vc, b, x) {
   (vo, vc) := call ls_node(us);

@@ -81,7 +81,7 @@ def bvarCS : ConsSch where
 
 /-! ## `bvar_find(t, u, h)`: the probe -/
 
-/-- con-ron: ConRon/Arena/Store.lean:90-91 ConRon.Arena.Tbl.find? -/
+/-- con-ron: ConRon/Arena/Store.lean:94-95 ConRon.Arena.Tbl.find? -/
 def bvarFind : FunDecl := consFindG bvarCS
 
 /-! ## `bvar_push(t, u, j)`: append a node to tier `t`, register it at slot `j` -/
@@ -93,7 +93,7 @@ def bcnt (m : Mem) (t : Word) : Word := rdW (m.arr64 CTL) (22 + t)
 def bpushOK (m : Mem) (t : Word) : Bool :=
   decide (bcnt m t < (134217728 : Word)) && decide (bcnt m t < m.len64 (tierA BREC t))
 
-/-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
+/-- con-ron: ConRon/Arena/Store.lean:97-102 ConRon.Arena.Tbl.push -/
 def bvarPush : FunDecl := consPushG bvarCS
 
 /-! ## `intern_bvar(u)`: hash-cons the expression `bvar u`
@@ -105,8 +105,9 @@ the scratch probe if the scratch tier is open, the append to the tier the store 
 aborts (the library's `consInternM`). -/
 def binternW (m : Mem) (u : Word) : Option (Word × Mem) := consInternM bvarCS m [u]
 
-/-- con-ron: ConRon/Arena/Monad.lean:246-264 ConRon.Arena.internE
-con-ron: ConRon/Arena/Monad.lean:218-244 ConRon.Arena.internNodeE -/
+/-- con-ron: ConRon/Arena/Monad.lean:249-267 ConRon.Arena.internE
+con-ron: ConRon/Arena/Monad.lean:221-247 ConRon.Arena.internNodeE -/
+-- con-ron: CHANGED since ed864140 — `ConRon.Arena.internNodeE` changed; re-check the L code and its proofs, then delete this line
 @[l_impl ConRon.Arena.internE ConRon.Arena.internNodeE]
 def internBVar : FunDecl := consInternG bvarCS
 

@@ -52,7 +52,7 @@ abbrev lsbSch : MemoSch := ⟨LSM, 156⟩
 /-- Push the leaf `(x, y)` at entry `k`. -/
 def lvsPush (m : Mem) (k x y : Word) : Mem := (m.set64 LVS (k * 2) x).set64 LVS (k * 2 + 1) y
 
-/-- con-ron: ConRon/Arena/ExprOps.lean:1051-1078 ConRon.Arena.fvarLeavesGo -/
+/-- con-ron: ConRon/Arena/ExprOps.lean:1056-1083 ConRon.Arena.fvarLeavesGo -/
 @[l_impl ConRon.Arena.fvarLeavesGo]
 def flGo : FunDecl := lfn (h, k, c) locals (b, x, fd, j, e, u) {
   if c == 0 { abort };
@@ -66,10 +66,10 @@ def flGo : FunDecl := lfn (h, k, c) locals (b, x, fd, j, e, u) {
 }
 
 
-/-- con-ron: ConRon/Arena/ExprOps.lean:1051-1078 ConRon.Arena.fvarLeavesGo
-con-ron: ConRon/Arena/ExprOps.lean:1080-1087 ConRon.Arena.fvarLeavesGoArmApp
-con-ron: ConRon/Arena/ExprOps.lean:1089-1096 ConRon.Arena.fvarLeavesGoArmBind
-con-ron: ConRon/Arena/ExprOps.lean:1098-1106 ConRon.Arena.fvarLeavesGoArmLet -/
+/-- con-ron: ConRon/Arena/ExprOps.lean:1056-1083 ConRon.Arena.fvarLeavesGo
+con-ron: ConRon/Arena/ExprOps.lean:1085-1092 ConRon.Arena.fvarLeavesGoArmApp
+con-ron: ConRon/Arena/ExprOps.lean:1094-1101 ConRon.Arena.fvarLeavesGoArmBind
+con-ron: ConRon/Arena/ExprOps.lean:1103-1111 ConRon.Arena.fvarLeavesGoArmLet -/
 @[l_impl ConRon.Arena.fvarLeavesGo ConRon.Arena.fvarLeavesGoArmApp ConRon.Arena.fvarLeavesGoArmBind
   ConRon.Arena.fvarLeavesGoArmLet]
 def flNode : FunDecl := lfn (h, k, c) locals (g, t, i, f, a, b, x) {
@@ -176,7 +176,7 @@ def lmLoop : Stmt := lblk (k, x, y, j) {
   }
 }
 
-/-- con-ron: ConRon/Arena/ExprOps.lean:1144-1151 ConRon.Arena.leafMem -/
+/-- con-ron: ConRon/Arena/ExprOps.lean:1149-1156 ConRon.Arena.leafMem -/
 @[l_impl ConRon.Arena.leafMem]
 def leafMemL : FunDecl := lfn (k, x, y) locals (j) {
   j := k;
@@ -224,7 +224,7 @@ end lm
 
 /-! ## `lsb_go`: every leaf of `fab` among the first `k` leaves -/
 
-/-- con-ron: ConRon/Arena/ExprOps.lean:1155-1183 ConRon.Arena.leavesSubGo -/
+/-- con-ron: ConRon/Arena/ExprOps.lean:1160-1188 ConRon.Arena.leavesSubGo -/
 @[l_impl ConRon.Arena.leavesSubGo]
 def lsbGo : FunDecl := lfn (h, k, c) locals (b, x, fd, j, e, r, u) {
   if c == 0 { abort };
@@ -238,10 +238,10 @@ def lsbGo : FunDecl := lfn (h, k, c) locals (b, x, fd, j, e, r, u) {
   return r
 }
 
-/-- con-ron: ConRon/Arena/ExprOps.lean:1155-1183 ConRon.Arena.leavesSubGo
-con-ron: ConRon/Arena/ExprOps.lean:1185-1191 ConRon.Arena.leavesSubArmApp
-con-ron: ConRon/Arena/ExprOps.lean:1193-1199 ConRon.Arena.leavesSubArmBind
-con-ron: ConRon/Arena/ExprOps.lean:1201-1211 ConRon.Arena.leavesSubArmLet -/
+/-- con-ron: ConRon/Arena/ExprOps.lean:1160-1188 ConRon.Arena.leavesSubGo
+con-ron: ConRon/Arena/ExprOps.lean:1190-1196 ConRon.Arena.leavesSubArmApp
+con-ron: ConRon/Arena/ExprOps.lean:1198-1204 ConRon.Arena.leavesSubArmBind
+con-ron: ConRon/Arena/ExprOps.lean:1206-1216 ConRon.Arena.leavesSubArmLet -/
 @[l_impl ConRon.Arena.leavesSubGo ConRon.Arena.leavesSubArmApp ConRon.Arena.leavesSubArmBind
   ConRon.Arena.leavesSubArmLet]
 def lsbNode : FunDecl := lfn (h, k, c) locals (g, t, i, f, a, b, x) {
@@ -326,8 +326,8 @@ l_model lsbGo_spec (p : Prog) (hpd : p.lookup "der_b" = some derB)
 
 /-! ## `leaf_guard(fab, base)` -/
 
-/-- con-ron: ConRon/Arena/ExprOps.lean:1245-1256 ConRon.Arena.leafGuard
-con-ron: ConRon/Arena/ExprOps.lean:1138-1142 ConRon.Arena.fvarLeavesFast -/
+/-- con-ron: ConRon/Arena/ExprOps.lean:1250-1261 ConRon.Arena.leafGuard
+con-ron: ConRon/Arena/ExprOps.lean:1143-1147 ConRon.Arena.fvarLeavesFast -/
 @[l_impl ConRon.Arena.leafGuard ConRon.Arena.fvarLeavesFast]
 def leafGuardL : FunDecl := lfn (fab, base) locals (b, x, k, r, u) {
   (b, x) := call der_b(fab);

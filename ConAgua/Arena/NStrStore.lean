@@ -142,7 +142,7 @@ def nstrCS : ConsSch where
 The arena's `internNNode (.str pre s)`: the persistent probe, the scratch probe if the scratch
 tier is open, the append to the tier the store is in. -/
 
-/-- con-ron: ConRon/Arena/Store.lean:90-91 ConRon.Arena.Tbl.find? -/
+/-- con-ron: ConRon/Arena/Store.lean:94-95 ConRon.Arena.Tbl.find? -/
 def nsFind : FunDecl := consFindG nstrCS
 
 /-- The node count of tier `t` of the name `str` table, `CTL[36 + t]`. -/
@@ -153,14 +153,15 @@ def nscnt (m : Mem) (t : Word) : Word := rdW (m.arr64 CTL) (36 + t)
 def nspushOK (m : Mem) (t : Word) : Bool :=
   decide (nscnt m t < (134217728 : Word)) && decide ((nscnt m t + 1) * 4 ≤ m.len64 (tierA NSREC t))
 
-/-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
+/-- con-ron: ConRon/Arena/Store.lean:97-102 ConRon.Arena.Tbl.push -/
 def nsPush : FunDecl := consPushG nstrCS
 
 /-- The model of `intern_nstr`: the handle and the memory after, or `none` where the L code
 aborts (the library's `consInternM`). -/
 def nsinternW (m : Mem) (q o l : Word) : Option (Word × Mem) := consInternM nstrCS m [q, o, l]
 
-/-- con-ron: ConRon/Arena/Monad.lean:381-397 ConRon.Arena.internNNode -/
+/-- con-ron: ConRon/Arena/Monad.lean:384-400 ConRon.Arena.internNNode -/
+-- con-ron: CHANGED since ed864140 — below `ConRon.Arena.internNNode`, `ConRon.Arena.Idx.idxCap` changed; re-check the L code and its proofs, then delete this line
 @[l_impl ConRon.Arena.internNNode]
 def internNStr : FunDecl := consInternG nstrCS
 

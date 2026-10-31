@@ -42,8 +42,16 @@ program; `attribute [-spec]` is refused by the attribute (measured), so the
 priority is the only lever.  Each is proved by `vcgen [f]`, which unfolds a
 definition named in its list.
 -/
+module
+
 import ConRon.Bridge.Specs
-import ConRon.Bridge.Grind
+public import ConRon.Bridge.Grind
+import ConRon.Bridge.StoreBind
+import ConRon.Bridge.GrindAttr
+import ConRon.Arena.PersistentRun
+public import ConRon.Arena.ExprOps
+
+public section
 
 namespace ConRon.Bridge.ExprOps
 

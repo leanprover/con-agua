@@ -71,8 +71,8 @@ def keysPushIW : FunDecl := lfn (lo, ll) locals (b, r) {
 
 /-! ## Level lists: substitute each element, intern the list -/
 
-/-- con-ron: ConRon/Arena/ExprOps.lean:2062-2069 ConRon.Arena.substLevelList
-con-ron: ConRon/Arena/Monad.lean:525-531 ConRon.Arena.internLevelList -/
+/-- con-ron: ConRon/Arena/ExprOps.lean:2067-2074 ConRon.Arena.substLevelList
+con-ron: ConRon/Arena/Monad.lean:528-534 ConRon.Arena.internLevelList -/
 @[l_impl ConRon.Arena.substLevelList]
 def slsGo : FunDecl := lfn (o, l, b, ko, kc, vo, vc) locals (h, r) {
   if l == 0 { return 0 };
@@ -83,7 +83,7 @@ def slsGo : FunDecl := lfn (o, l, b, ko, kc, vo, vc) locals (h, r) {
   return r
 }
 
-/-- con-ron: ConRon/Arena/Core.lean:1940-1950 ConRon.Arena.substLevelsAt -/
+/-- con-ron: ConRon/Arena/Core.lean:1945-1955 ConRon.Arena.substLevelsAt -/
 @[l_impl ConRon.Arena.substLevelsAt]
 def sleGo : FunDecl := lfn (o, l, b, ko, kc, vo, vc) locals (h, r) {
   if l == 0 { return 0 };
@@ -94,7 +94,7 @@ def sleGo : FunDecl := lfn (o, l, b, ko, kc, vo, vc) locals (h, r) {
   return r
 }
 
-/-- con-ron: ConRon/Arena/Core.lean:1952-1962 ConRon.Arena.substParamLevels -/
+/-- con-ron: ConRon/Arena/Core.lean:1957-1967 ConRon.Arena.substParamLevels -/
 @[l_impl ConRon.Arena.substParamLevels]
 def slpGo : FunDecl := lfn (o, l, b, ko, kc, vo, vc) locals (f, v, h, r) {
   if l == 0 { return 0 };
@@ -117,7 +117,7 @@ def spnPool : FunDecl := lfn (b, d, l) locals (r, pt, pb) {
 }
 
 /-- The stack slice `(b, l)` of level handles, copied to the pool top and interned as a list node.
-con-ron: ConRon/Arena/Monad.lean:533-537 ConRon.Arena.internLevels -/
+con-ron: ConRon/Arena/Monad.lean:536-540 ConRon.Arena.internLevels -/
 def spnLs : FunDecl := lfn (b, l) locals (top, r, h, pt, pb) {
   top := CTL.u64[0];
   pt := ⦃top⦄.tier;
@@ -133,7 +133,7 @@ def spnLs : FunDecl := lfn (b, l) locals (top, r, h, pt, pb) {
 
 /-! ## The level memos -/
 
-/-- con-ron: ConRon/Arena/ExprOps.lean:2071-2086 ConRon.Arena.substLMemoAt -/
+/-- con-ron: ConRon/Arena/ExprOps.lean:2076-2091 ConRon.Arena.substLMemoAt -/
 @[l_impl ConRon.Arena.substLMemoAt]
 def slMemo : FunDecl := lfn (u, ko, kc, vo, vc) locals (fd, j, e0, h, x) {
   (fd, j, e0) := call ilpl_find(u, 0);
@@ -145,7 +145,7 @@ def slMemo : FunDecl := lfn (u, ko, kc, vo, vc) locals (fd, j, e0, h, x) {
   return h
 }
 
-/-- con-ron: ConRon/Arena/ExprOps.lean:2088-2098 ConRon.Arena.substLsMemoAt -/
+/-- con-ron: ConRon/Arena/ExprOps.lean:2093-2103 ConRon.Arena.substLsMemoAt -/
 @[l_impl ConRon.Arena.substLsMemoAt]
 def slsMemo : FunDecl := lfn (vs, ko, kc, vo, vc) locals (fd, j, e0, o, l, b, r, x) {
   (fd, j, e0) := call ilpls_find(vs, 0);
@@ -163,7 +163,7 @@ def slsMemo : FunDecl := lfn (vs, ko, kc, vo, vc) locals (fd, j, e0, o, l, b, r,
 
 /-! ## The walk -/
 
-/-- con-ron: ConRon/Arena/ExprOps.lean:2102-2134 ConRon.Arena.instLPGo -/
+/-- con-ron: ConRon/Arena/ExprOps.lean:2107-2139 ConRon.Arena.instLPGo -/
 @[l_impl ConRon.Arena.instLPGo]
 def lpGo : FunDecl := lfn (h, ko, kc, vo, vc, fu) locals (g, t, i, x, y, r) {
   if fu == 0 { abort };
@@ -203,7 +203,7 @@ def lpGo : FunDecl := lfn (h, ko, kc, vo, vc, fu) locals (g, t, i, x, y, r) {
   abort
 }
 
-/-- con-ron: ConRon/Arena/ExprOps.lean:2136-2147 ConRon.Arena.instLPArmFVar -/
+/-- con-ron: ConRon/Arena/ExprOps.lean:2141-2152 ConRon.Arena.instLPArmFVar -/
 @[l_impl ConRon.Arena.instLPArmFVar]
 def lpFVar : FunDecl := lfn (h, ko, kc, vo, vc, fu) locals (fd, j, e0, t, i, ix, ty, x, r, u) {
   (fd, j, e0) := call ilp_find(h, 0);
@@ -219,7 +219,7 @@ def lpFVar : FunDecl := lfn (h, ko, kc, vo, vc, fu) locals (fd, j, e0, t, i, ix,
   return r
 }
 
-/-- con-ron: ConRon/Arena/ExprOps.lean:2149-2161 ConRon.Arena.instLPArmApp -/
+/-- con-ron: ConRon/Arena/ExprOps.lean:2154-2166 ConRon.Arena.instLPArmApp -/
 @[l_impl ConRon.Arena.instLPArmApp]
 def lpApp : FunDecl := lfn (h, ko, kc, vo, vc, fu) locals (fd, j, e0, t, i, f, a, x, y, r, u) {
   (fd, j, e0) := call ilp_find(h, 0);
@@ -236,7 +236,7 @@ def lpApp : FunDecl := lfn (h, ko, kc, vo, vc, fu) locals (fd, j, e0, t, i, f, a
   return r
 }
 
-/-- con-ron: ConRon/Arena/ExprOps.lean:2163-2175 ConRon.Arena.instLPArmLam -/
+/-- con-ron: ConRon/Arena/ExprOps.lean:2168-2180 ConRon.Arena.instLPArmLam -/
 @[l_impl ConRon.Arena.instLPArmLam]
 def lpLam : FunDecl := lfn (h, ko, kc, vo, vc, fu) locals (fd, j, e0, t, i, f, a, x, y, r, u) {
   (fd, j, e0) := call ilp_find(h, 0);
@@ -253,7 +253,7 @@ def lpLam : FunDecl := lfn (h, ko, kc, vo, vc, fu) locals (fd, j, e0, t, i, f, a
   return r
 }
 
-/-- con-ron: ConRon/Arena/ExprOps.lean:2177-2189 ConRon.Arena.instLPArmForallE -/
+/-- con-ron: ConRon/Arena/ExprOps.lean:2182-2194 ConRon.Arena.instLPArmForallE -/
 @[l_impl ConRon.Arena.instLPArmForallE]
 def lpForall : FunDecl := lfn (h, ko, kc, vo, vc, fu) locals (fd, j, e0, t, i, f, a, x, y, r, u) {
   (fd, j, e0) := call ilp_find(h, 0);
@@ -270,7 +270,7 @@ def lpForall : FunDecl := lfn (h, ko, kc, vo, vc, fu) locals (fd, j, e0, t, i, f
   return r
 }
 
-/-- con-ron: ConRon/Arena/ExprOps.lean:2191-2204 ConRon.Arena.instLPArmLet -/
+/-- con-ron: ConRon/Arena/ExprOps.lean:2196-2209 ConRon.Arena.instLPArmLet -/
 @[l_impl ConRon.Arena.instLPArmLet]
 def lpLet : FunDecl := lfn (h, ko, kc, vo, vc, fu) locals (fd, j, e0, t, i, f, a, b, x, y, r, u) {
   (fd, j, e0) := call ilp_find(h, 0);
@@ -297,7 +297,7 @@ def lpLetTail : FunDecl := lfn (h, f, a, b, x, y, ko, kc, vo, vc, fu) locals (z,
 }
 
 /-- `lp_let`'s rebuild: `h` when the three children came back equal, else `mk_let`.
-con-ron: ConRon/Arena/ExprOps.lean:153-155 ConRon.Arena.internRebuiltLetE -/
+con-ron: ConRon/Arena/ExprOps.lean:158-160 ConRon.Arena.internRebuiltLetE -/
 def lpRbLet : FunDecl := lfn (h, f, a, b, x, y, z) locals (r) {
   if x == f && y == a { if z == b { return h } };
   r := call mk_let(x, y, z);
@@ -305,7 +305,7 @@ def lpRbLet : FunDecl := lfn (h, f, a, b, x, y, z) locals (r) {
   return r
 }
 
-/-- con-ron: ConRon/Arena/ExprOps.lean:2206-2217 ConRon.Arena.instLPArmProj -/
+/-- con-ron: ConRon/Arena/ExprOps.lean:2211-2222 ConRon.Arena.instLPArmProj -/
 @[l_impl ConRon.Arena.instLPArmProj]
 def lpProj : FunDecl := lfn (h, ko, kc, vo, vc, fu) locals (fd, j, e0, t, i, nm, ix, e, x, r, u) {
   (fd, j, e0) := call ilp_find(h, 0);
@@ -343,7 +343,7 @@ def keysOk : FunDecl := lfn (o, l) locals (w, g, t, i, r, c) {
   return r
 }
 
-/-- con-ron: ConRon/Arena/ExprOps.lean:2251-2268 ConRon.Arena.instLPFast -/
+/-- con-ron: ConRon/Arena/ExprOps.lean:2256-2273 ConRon.Arena.instLPFast -/
 @[l_impl ConRon.Arena.instLPFast]
 def instLPCore : FunDecl := lfn (ko, kc, us, e) locals (vo, vc, r, u) {
   (vo, vc, r) := call der_b(e);
@@ -361,7 +361,7 @@ def instLPCore : FunDecl := lfn (ko, kc, us, e) locals (vo, vc, r, u) {
 }
 
 /-- `inst_lp(po, pl, us, e)`: the keys an `EREC` name slice (lane `whnf`'s convention). -/
--- con-ron: ConRon/Arena/ExprOps.lean:2251-2268 ConRon.Arena.instLPFast
+-- con-ron: ConRon/Arena/ExprOps.lean:2256-2273 ConRon.Arena.instLPFast
 def instLPL : FunDecl := lfn (po, pl, us, e) locals (b, r) {
   b := call keys_push(po, pl);
   r := call inst_lp_core(b, pl, us, e);
@@ -371,7 +371,7 @@ def instLPL : FunDecl := lfn (po, pl, us, e) locals (b, r) {
 
 /-- `inst_lp_fast(f, lo, ll, us, e)`: lane `induct`'s convention (the keys an `IW` slice, the
 fuel explicit: anything but `coreWalkFuel` aborts, as `WhnfEntry.lean`'s `_f` adapters). -/
--- con-ron: ConRon/Arena/ExprOps.lean:2251-2268 ConRon.Arena.instLPFast
+-- con-ron: ConRon/Arena/ExprOps.lean:2256-2273 ConRon.Arena.instLPFast
 def instLPFastL : FunDecl := lfn (f, lo, ll, us, e) locals (b, r) {
   if f != 4000000000 { abort };
   b := call keys_push_iw(lo, ll);
@@ -380,7 +380,7 @@ def instLPFastL : FunDecl := lfn (f, lo, ll, us, e) locals (b, r) {
   return r
 }
 
-/-- con-ron: ConRon/Arena/Core.lean:1976-1994 ConRon.Arena.recFireLevels -/
+/-- con-ron: ConRon/Arena/Core.lean:1981-1999 ConRon.Arena.recFireLevels -/
 @[l_impl ConRon.Arena.recFireLevels]
 def recFireLevelsL : FunDecl := lfn (fireKind, fvo, fvc, po, pc, us, qo, qc) locals (vo, vc, b, c, x, r) {
   (vo, vc) := call ls_node(us);

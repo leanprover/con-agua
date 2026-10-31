@@ -97,7 +97,7 @@ def fvarCS : ConsSch where
 
 /-! ## `fvar_find(t, u, ty, h)`: the probe -/
 
-/-- con-ron: ConRon/Arena/Store.lean:90-91 ConRon.Arena.Tbl.find? -/
+/-- con-ron: ConRon/Arena/Store.lean:94-95 ConRon.Arena.Tbl.find? -/
 def fvarFind : FunDecl := consFindG fvarCS
 
 /-! ## `fvar_push(t, u, ty, j)`: append a node to tier `t`, register it at slot `j` -/
@@ -110,7 +110,7 @@ def fvpushOK (m : Mem) (t : Word) : Bool :=
   decide (fvcnt m t < (134217728 : Word)) && decide (fvcnt m t < m.len64 (tierA FVREC t) >>> (1 : Word)) &&
     decide (fvcnt m t < m.len64 (tierA FVLP t))
 
-/-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
+/-- con-ron: ConRon/Arena/Store.lean:97-102 ConRon.Arena.Tbl.push -/
 def fvarPush : FunDecl := consPushG fvarCS
 
 /-! ## `intern_fvar(u, ty)`: hash-cons the expression `fvar u ty`
@@ -128,8 +128,9 @@ def fvskipW (m : Mem) (ty : Word) : Word :=
 aborts (the library's `consInternM`). -/
 def fvinternW (m : Mem) (u ty : Word) : Option (Word × Mem) := consInternM fvarCS m [u, ty]
 
-/-- con-ron: ConRon/Arena/Monad.lean:246-264 ConRon.Arena.internE
-con-ron: ConRon/Arena/Monad.lean:218-244 ConRon.Arena.internNodeE -/
+/-- con-ron: ConRon/Arena/Monad.lean:249-267 ConRon.Arena.internE
+con-ron: ConRon/Arena/Monad.lean:221-247 ConRon.Arena.internNodeE -/
+-- con-ron: CHANGED since ed864140 — `ConRon.Arena.internNodeE` changed; re-check the L code and its proofs, then delete this line
 @[l_impl ConRon.Arena.internE ConRon.Arena.internNodeE]
 def internFVar : FunDecl := consInternG fvarCS
 

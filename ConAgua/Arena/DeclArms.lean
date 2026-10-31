@@ -37,7 +37,7 @@ open L.Front (DECL)
 /-- `check_constant_val(vis, q)`: `checkConstantVal fe cv` (`q` the constant value): the header's
 checks (`install_header`: the fresh name, the reserved names, the universe parameters, the type's
 guards), then the type's sort. -/
--- con-ron: ConRon/Arena/CheckerBase.lean:239-265 ConRon.Arena.checkConstantVal
+-- con-ron: ConRon/Arena/CheckerBase.lean:242-268 ConRon.Arena.checkConstantVal
 @[l_impl ConRon.Arena.checkConstantVal]
 def checkConstantValL : FunDecl := lfn (vis, q) locals (t, z, st, u) {
   t := EREC.u64[q + 3];
@@ -55,7 +55,7 @@ pushes that record itself. -/
 
 /-- `check_defn_val(vis, p)`: `checkDefnVal fe cv v hint`: the value's guards, its type against the
 declared one, the push. -/
--- con-ron: ConRon/Arena/DeclCheck.lean:783-793 ConRon.Arena.checkDefnVal
+-- con-ron: ConRon/Arena/DeclCheck.lean:790-800 ConRon.Arena.checkDefnVal
 @[l_impl ConRon.Arena.checkDefnVal]
 def checkDefnValL : FunDecl := lfn (vis, p) locals (v, t, z, vt, d, w) {
   v := EREC.u64[p + 5];
@@ -70,7 +70,7 @@ def checkDefnValL : FunDecl := lfn (vis, p) locals (v, t, z, vt, d, w) {
 
 /-- `check_thm_val(vis, p)`: `checkThmVal`: the type a proposition, the value's guards and type;
 stored by its statement. -/
--- con-ron: ConRon/Arena/DeclCheck.lean:795-811 ConRon.Arena.checkThmVal
+-- con-ron: ConRon/Arena/DeclCheck.lean:802-818 ConRon.Arena.checkThmVal
 @[l_impl ConRon.Arena.checkThmVal]
 def checkThmValL : FunDecl := lfn (vis, p) locals (v, t, st, u, zr, e, z, vt, d, w) {
   v := EREC.u64[p + 5];
@@ -90,7 +90,7 @@ def checkThmValL : FunDecl := lfn (vis, p) locals (v, t, st, u, zr, e, z, vt, d,
 
 /-- `check_opaque_val(vis, p)`: `checkOpaqueVal`: `check_defn_val`'s text (the record `p` is an
 `axiomInfo`). -/
--- con-ron: ConRon/Arena/DeclCheck.lean:813-824 ConRon.Arena.checkOpaqueVal
+-- con-ron: ConRon/Arena/DeclCheck.lean:820-831 ConRon.Arena.checkOpaqueVal
 @[l_impl ConRon.Arena.checkOpaqueVal]
 def checkOpaqueValL : FunDecl := lfn (vis, p) locals (v, t, z, vt, d, w) {
   v := EREC.u64[p + 5];
@@ -106,7 +106,7 @@ def checkOpaqueValL : FunDecl := lfn (vis, p) locals (v, t, z, vt, d, w) {
 /-! ## The standard axioms -/
 
 /-- `matches_pin(q, pin)`: `IConstantVal.matchesPin`: name, level parameters and type equal. -/
--- con-ron: ConRon/Arena/StdAxioms.lean:51-59 ConRon.Arena.IConstantVal.matchesPin
+-- con-ron: ConRon/Arena/StdAxioms.lean:55-63 ConRon.Arena.IConstantVal.matchesPin
 @[l_impl ConRon.Arena.IConstantVal.matchesPin]
 def matchesPinL : FunDecl := lfn (q, pin) locals (e) {
   e := call cv_eq(q, pin);
@@ -116,7 +116,7 @@ def matchesPinL : FunDecl := lfn (q, pin) locals (e) {
 /-- `find_pinned(vis, n, k, a, b, id)`: the stored constant `n` is of kind `k` (an inductive
 `3`; a constructor `4` or a recursor `5` with the two counts `a`, `b` at `+5`, `+6`), and its
 constant value matches the pin `rom_ci(id)`'s. One clause of `stdAxiomOk`'s chains. -/
--- con-ron: ConRon/Arena/DeclCheck.lean:35-82 ConRon.Arena.stdAxiomOk
+-- con-ron: ConRon/Arena/DeclCheck.lean:42-89 ConRon.Arena.stdAxiomOk
 def findPinned : FunDecl := lfn (vis, n, k, a, b, id) locals (f, r, p, q, e) {
   (f, r) := call env_find(n, vis);
   if f == 0 { return 0 };
@@ -133,7 +133,7 @@ def findPinned : FunDecl := lfn (vis, n, k, a, b, id) locals (f, r, p, q, e) {
 /-- `std_ax_family(vis, q, s1, s2, s3, i1, i2, i3, c2, c3, cvid)`: one family of `stdAxiomOk`: the
 inductive at pin slot `s1` matching `rom_ci(i1)`, its constructor (`s2`, counts `c2`, `rom_ci(i2)`),
 its recursor (`s3`, counts `c3`, `rom_ci(i3)`), then the axiom `q` against `rom_cv(cvid)`. -/
--- con-ron: ConRon/Arena/DeclCheck.lean:35-82 ConRon.Arena.stdAxiomOk
+-- con-ron: ConRon/Arena/DeclCheck.lean:42-89 ConRon.Arena.stdAxiomOk
 def stdAxFamily : FunDecl :=
     lfn (vis, q, s1, s2, s3, i1, i2, i3, c2, c3, cvid) locals (n, e, pa) {
   n := call pin_at(s1);
@@ -153,7 +153,7 @@ def stdAxFamily : FunDecl :=
 /-- `std_axiom_ok(vis, q)`: `stdAxiomOk`: `propext` over the pinned `Eq` and a standard `Iff`
 family, or `Classical.choice` over a standard `Nonempty` family (the `choice` name read only past
 the `propext` test). -/
--- con-ron: ConRon/Arena/DeclCheck.lean:35-82 ConRon.Arena.stdAxiomOk
+-- con-ron: ConRon/Arena/DeclCheck.lean:42-89 ConRon.Arena.stdAxiomOk
 @[l_impl ConRon.Arena.stdAxiomOk]
 def stdAxiomOkL : FunDecl := lfn (vis, q) locals (pn, nm, en, ea, e, cn) {
   pn := call pin_at(32);
@@ -179,7 +179,7 @@ def stdAxiomOkL : FunDecl := lfn (vis, q) locals (pn, nm, en, ea, e, cn) {
 /-- `find_pinned_cv(vis, n, k, id)`: the stored constant `n` is of kind `k` (an inductive `3`, or
 a constructor `4` with no parameters and no fields), its constant value matching `rom_cv(id)`.
 One clause of `trustCompilerOk`. -/
--- con-ron: ConRon/Arena/DeclCheck.lean:86-99 ConRon.Arena.trustCompilerOk
+-- con-ron: ConRon/Arena/DeclCheck.lean:93-106 ConRon.Arena.trustCompilerOk
 def findPinnedCv : FunDecl := lfn (vis, n, k, id) locals (f, r, p, e) {
   (f, r) := call env_find(n, vis);
   if f == 0 { return 0 };
@@ -194,7 +194,7 @@ def findPinnedCv : FunDecl := lfn (vis, n, k, id) locals (f, r, p, e) {
 
 /-- `trust_compiler_ok(vis, q)`: `trustCompilerOk`: the `True` family stored with the pinned
 shapes, the axiom's type the pin's. -/
--- con-ron: ConRon/Arena/DeclCheck.lean:86-99 ConRon.Arena.trustCompilerOk
+-- con-ron: ConRon/Arena/DeclCheck.lean:93-106 ConRon.Arena.trustCompilerOk
 @[l_impl ConRon.Arena.trustCompilerOk]
 def trustCompilerOkL : FunDecl := lfn (vis, q) locals (n, e, p) {
   n := call pin_at(40);
@@ -209,7 +209,7 @@ def trustCompilerOkL : FunDecl := lfn (vis, q) locals (n, e, p) {
 }
 
 /-- `reduce_op_cv_a(c)`: the pinned type of the reduce operation `c`. -/
--- con-ron: ConRon/Arena/TrustAxioms.lean:86-90 ConRon.Arena.reduceOpCvA
+-- con-ron: ConRon/Arena/TrustAxioms.lean:91-95 ConRon.Arena.reduceOpCvA
 @[l_impl ConRon.Arena.reduceOpCvA]
 def reduceOpCvAL : FunDecl := lfn (c) locals (rn, p) {
   rn := call pin_at(43);
@@ -220,7 +220,7 @@ def reduceOpCvAL : FunDecl := lfn (c) locals (rn, p) {
 
 /-- `reduce_stored_ok(vis, c)`: `c` is stored as a checked opaque (`axiomInfo`) of the pinned
 type. -/
--- con-ron: ConRon/Arena/DeclCheck.lean:101-108 ConRon.Arena.reduceStoredOk
+-- con-ron: ConRon/Arena/DeclCheck.lean:108-115 ConRon.Arena.reduceStoredOk
 @[l_impl ConRon.Arena.reduceStoredOk]
 def reduceStoredOkL : FunDecl := lfn (vis, c) locals (f, r, p, e) {
   (f, r) := call env_find(c, vis);
@@ -232,7 +232,7 @@ def reduceStoredOkL : FunDecl := lfn (vis, c) locals (f, r, p, e) {
 }
 
 /-- `reduce_elem_ok(vis, c)`: the pinned `Nat` basis (for `reduceNat`), or a standard `Bool`. -/
--- con-ron: ConRon/Arena/DeclCheck.lean:110-122 ConRon.Arena.reduceElemOk
+-- con-ron: ConRon/Arena/DeclCheck.lean:117-129 ConRon.Arena.reduceElemOk
 @[l_impl ConRon.Arena.reduceElemOk]
 def reduceElemOkL : FunDecl := lfn (vis, c) locals (rn, nn, f, r, na, e, bn, p) {
   rn := call pin_at(43);
@@ -254,7 +254,7 @@ def reduceElemOkL : FunDecl := lfn (vis, c) locals (rn, nn, f, r, na, e, bn, p) 
 }
 
 /-- `of_reduce_op(n)`: the reduce operation an `ofReduce*` axiom speaks about. -/
--- con-ron: ConRon/Arena/TrustAxioms.lean:47-52 ConRon.Arena.ofReduceOp
+-- con-ron: ConRon/Arena/TrustAxioms.lean:52-57 ConRon.Arena.ofReduceOp
 @[l_impl ConRon.Arena.ofReduceOp]
 def ofReduceOpL : FunDecl := lfn (n) locals (orn, r) {
   orn := call pin_at(45);
@@ -264,7 +264,7 @@ def ofReduceOpL : FunDecl := lfn (n) locals (orn, r) {
 }
 
 /-- `of_reduce_pin_a(n)`: the pin an `ofReduce*` axiom is matched against. -/
--- con-ron: ConRon/Arena/TrustAxioms.lean:92-96 ConRon.Arena.ofReducePinA
+-- con-ron: ConRon/Arena/TrustAxioms.lean:97-101 ConRon.Arena.ofReducePinA
 @[l_impl ConRon.Arena.ofReducePinA]
 def ofReducePinAL : FunDecl := lfn (n) locals (orn, p) {
   orn := call pin_at(45);
@@ -275,7 +275,7 @@ def ofReducePinAL : FunDecl := lfn (n) locals (orn, p) {
 
 /-- `of_reduce_ax_ok(vis, q)`: `ofReduceAxOk`: the pinned `Eq`, the element inductive, the
 stored reduce opaque, the pin. -/
--- con-ron: ConRon/Arena/DeclCheck.lean:124-134 ConRon.Arena.ofReduceAxOk
+-- con-ron: ConRon/Arena/DeclCheck.lean:131-141 ConRon.Arena.ofReduceAxOk
 @[l_impl ConRon.Arena.ofReduceAxOk]
 def ofReduceAxOkL : FunDecl := lfn (vis, q) locals (nm, c, en, ea, e, p) {
   nm := EREC.u64[q];
@@ -296,7 +296,7 @@ def ofReduceAxOkL : FunDecl := lfn (vis, q) locals (nm, c, en, ea, e, p) {
 /-! ## The reduce-operation install pin -/
 
 /-- `reduce_decl_pin(c)`: the pinned defining expression of the reduce operation `c`. -/
--- con-ron: ConRon/Arena/TrustAxioms.lean:108-112 ConRon.Arena.reduceDeclPin
+-- con-ron: ConRon/Arena/TrustAxioms.lean:113-117 ConRon.Arena.reduceDeclPin
 @[l_impl ConRon.Arena.reduceDeclPin]
 def reduceDeclPinL : FunDecl := lfn (c) locals (rn, e) {
   rn := call pin_at(43);
@@ -306,9 +306,9 @@ def reduceDeclPinL : FunDecl := lfn (c) locals (rn, e) {
 }
 
 /-- `reduce_cert_var(c)`: `fvar 0` at the element type (`Nat` for `reduceNat`, else `Bool`). -/
--- con-ron: ConRon/Arena/TrustAxioms.lean:114-117 ConRon.Arena.reduceCertVar
--- con-ron: ConRon/Arena/TrustAxioms.lean:71-74 ConRon.Arena.reduceElemTy
--- con-ron: ConRon/Arena/TrustAxioms.lean:65-69 ConRon.Arena.reduceElemName
+-- con-ron: ConRon/Arena/TrustAxioms.lean:119-122 ConRon.Arena.reduceCertVar
+-- con-ron: ConRon/Arena/TrustAxioms.lean:76-79 ConRon.Arena.reduceElemTy
+-- con-ron: ConRon/Arena/TrustAxioms.lean:70-74 ConRon.Arena.reduceElemName
 @[l_impl ConRon.Arena.reduceCertVar ConRon.Arena.reduceElemTy ConRon.Arena.reduceElemName]
 def reduceCertVarL : FunDecl := lfn (c) locals (rn, n, t, r) {
   rn := call pin_at(43);
@@ -320,7 +320,7 @@ def reduceCertVarL : FunDecl := lfn (c) locals (rn, n, t, r) {
 }
 
 /-- `reduce_pin_guard(vis, c)`: the syntactic guards on the reduce pin. -/
--- con-ron: ConRon/Arena/DeclCheck.lean:136-144 ConRon.Arena.reducePinGuard
+-- con-ron: ConRon/Arena/DeclCheck.lean:143-151 ConRon.Arena.reducePinGuard
 @[l_impl ConRon.Arena.reducePinGuard]
 def reducePinGuardL : FunDecl := lfn (vis, c) locals (p, b) {
   p := call reduce_decl_pin(c);
@@ -337,7 +337,7 @@ def reducePinGuardL : FunDecl := lfn (vis, c) locals (p, b) {
 /-- `check_reduce_pin(vis, vis2, c, v)`: `checkReducePin`: the stored constant's type, the element
 inductive, the pin's guards (short-circuiting), the value against the pin, the identity
 certificate `v x ≡ x`. -/
--- con-ron: ConRon/Arena/DeclCheck.lean:722-756 ConRon.Arena.checkReducePin
+-- con-ron: ConRon/Arena/DeclCheck.lean:729-763 ConRon.Arena.checkReducePin
 @[l_impl ConRon.Arena.checkReducePin]
 def checkReducePinL : FunDecl := lfn (vis, vis2, c, v) locals (e, pa, x, ax) {
   e := call reduce_stored_ok(vis2, c);
@@ -360,7 +360,7 @@ def checkReducePinL : FunDecl := lfn (vis, vis2, c, v) locals (e, pa, x, ax) {
 /-! ## The pinned basis install, the quotient pin -/
 
 /-- `install_basis_decl(vis, p)`: the constant record `p` installed, duplicate-checked. -/
--- con-ron: ConRon/Arena/DeclCheck.lean:826-833 ConRon.Arena.installBasisDecl
+-- con-ron: ConRon/Arena/DeclCheck.lean:833-840 ConRon.Arena.installBasisDecl
 @[l_impl ConRon.Arena.installBasisDecl]
 def installBasisDeclL : FunDecl := lfn (vis, p) locals (n, f, r, w) {
   n := EREC.u64[p + 1];
@@ -371,7 +371,7 @@ def installBasisDeclL : FunDecl := lfn (vis, p) locals (n, f, r, w) {
 }
 
 /-- `install_basis_decls(vis, o, l)`: an `IW` slice of constant records, in order. -/
--- con-ron: ConRon/Arena/DeclCheck.lean:835-839 ConRon.Arena.installBasisDecls
+-- con-ron: ConRon/Arena/DeclCheck.lean:842-846 ConRon.Arena.installBasisDecls
 @[l_impl ConRon.Arena.installBasisDecls]
 def installBasisDeclsL : FunDecl := lfn (vis, o, l) locals (c, w) {
   if l == 0 { return vis };
@@ -383,7 +383,7 @@ def installBasisDeclsL : FunDecl := lfn (vis, o, l) locals (c, w) {
 
 /-- `check_basis_decl(vis, kind)`: `checkBasisDecl`: the quotient block requires the pinned `Eq`
 basis; then the annotated block is installed. -/
--- con-ron: ConRon/Arena/CheckDecl.lean:37-48 ConRon.Arena.checkBasisDecl
+-- con-ron: ConRon/Arena/CheckDecl.lean:42-53 ConRon.Arena.checkBasisDecl
 @[l_impl ConRon.Arena.checkBasisDecl]
 def checkBasisDeclL : FunDecl := lfn (vis, kind) locals (en, ea, e, o, l, w) {
   if kind == 4 {
@@ -399,7 +399,7 @@ def checkBasisDeclL : FunDecl := lfn (vis, kind) locals (en, ea, e, o, l, w) {
 
 /-- `quot_pin_hit(k, q)`: the constant value `q` is the pinned quotient block's constant at slot
 `k`, up to the canonical form. -/
--- con-ron: ConRon/Arena/Basis.lean:81-90 ConRon.Arena.quotPinHit
+-- con-ron: ConRon/Arena/Basis.lean:86-95 ConRon.Arena.quotPinHit
 @[l_impl ConRon.Arena.quotPinHit]
 def quotPinHitL : FunDecl := lfn (k, q) locals (o, l, c, p, e) {
   (o, l) := call rom_basis_decls(4);
@@ -416,7 +416,7 @@ def quotPinHitL : FunDecl := lfn (k, q) locals (o, l, c, p, e) {
 the pinned block (installing nothing), else the constant check and the five recognised axioms:
 the standard two, `Lean.trustCompiler`, the `ofReduce*` pair; `propext`/`choice` of another shape
 and every other axiom decline; `sorryAx` is skipped. -/
--- con-ron: ConRon/Arena/CheckDecl.lean:82-214 ConRon.Arena.checkDecl
+-- con-ron: ConRon/Arena/CheckDecl.lean:87-219 ConRon.Arena.checkDecl
 @[l_impl ConRon.Arena.checkDecl]
 def checkDeclAxiom : FunDecl := lfn (i, vis) locals (p, n, s, o, l, c, e, z, w, a, b) {
   p := call erec_ci(i, 0);
@@ -460,7 +460,7 @@ def checkDeclAxiom : FunDecl := lfn (i, vis) locals (p, n, s, o, l, c, e, z, w, 
 the extended view `w`: for a `natOpNames` member, the guard and the stored dependencies (both
 computed before either is tested, as the twin's `g && (← …)` does), then the recurrences of the
 stored value certified at the pre-insertion view `vis`. Returns `0`. -/
--- con-ron: ConRon/Arena/CheckDecl.lean:82-214 ConRon.Arena.checkDecl
+-- con-ron: ConRon/Arena/CheckDecl.lean:87-219 ConRon.Arena.checkDecl
 def defnNatGate : FunDecl :=
     lfn (vis, w, n) locals (no, nl, c, g, dov, dl, s, ok) {
   (no, nl) := call nat_op_names();
@@ -478,7 +478,7 @@ def defnNatGate : FunDecl :=
 /-- `defn_div_gate(vis, w, n)`: the definition arm's `Nat.div`-family pin gate for the constant `n`
 over the ROM's variants (`rom_pin_sets()`), at the extended view `w` and the pre-insertion view
 `vis`. Returns `0`. -/
--- con-ron: ConRon/Arena/CheckDecl.lean:82-214 ConRon.Arena.checkDecl
+-- con-ron: ConRon/Arena/CheckDecl.lean:87-219 ConRon.Arena.checkDecl
 def defnDivGate : FunDecl := lfn (vis, w, n) locals (no, nl, c, po, pl, z) {
   (no, nl) := call nat_div_mod_names();
   c := call sl_contains(no, nl, n);
@@ -492,7 +492,7 @@ def defnDivGate : FunDecl := lfn (vis, w, n) locals (no, nl, c, po, pl, z) {
 /-- `check_decl_defn(i, vis)`: the `.defnDecl` arm: the constant check, the definition check,
 then the structural-`Nat` gate (`defn_nat_gate`) and the `Nat.div`-family pin gate
 (`defn_div_gate`). -/
--- con-ron: ConRon/Arena/CheckDecl.lean:82-214 ConRon.Arena.checkDecl
+-- con-ron: ConRon/Arena/CheckDecl.lean:87-219 ConRon.Arena.checkDecl
 @[l_impl ConRon.Arena.checkDecl]
 def checkDeclDefn : FunDecl := lfn (i, vis) locals (p, n, z, w) {
   p := call erec_ci(i, 1);
@@ -505,7 +505,7 @@ def checkDeclDefn : FunDecl := lfn (i, vis) locals (p, n, z, w) {
 }
 
 /-- `check_decl_thm(i, vis)`: the `.thmDecl` arm. -/
--- con-ron: ConRon/Arena/CheckDecl.lean:82-214 ConRon.Arena.checkDecl
+-- con-ron: ConRon/Arena/CheckDecl.lean:87-219 ConRon.Arena.checkDecl
 @[l_impl ConRon.Arena.checkDecl]
 def checkDeclThm : FunDecl := lfn (i, vis) locals (p, z, w) {
   p := call erec_ci(i, 2);
@@ -516,7 +516,7 @@ def checkDeclThm : FunDecl := lfn (i, vis) locals (p, z, w) {
 
 /-- `check_decl_opaque(i, vis)`: the `.opaqueDecl` arm: the opaque check, then for
 `Lean.reduceNat`/`Lean.reduceBool` the install pin. -/
--- con-ron: ConRon/Arena/CheckDecl.lean:82-214 ConRon.Arena.checkDecl
+-- con-ron: ConRon/Arena/CheckDecl.lean:87-219 ConRon.Arena.checkDecl
 @[l_impl ConRon.Arena.checkDecl]
 def checkDeclOpaque : FunDecl := lfn (i, vis) locals (p, n, v, z, w, a, b) {
   p := call erec_ci(i, 0);
@@ -534,7 +534,7 @@ def checkDeclOpaque : FunDecl := lfn (i, vis) locals (p, n, v, z, w, a, b) {
 
 /-- `check_decl_quot(i, vis)`: the `.quotDecl` arm: the record against the pinned block's
 constant at its own slot; `Quot` itself installs the block, the other three install nothing. -/
--- con-ron: ConRon/Arena/CheckDecl.lean:82-214 ConRon.Arena.checkDecl
+-- con-ron: ConRon/Arena/CheckDecl.lean:87-219 ConRon.Arena.checkDecl
 @[l_impl ConRon.Arena.checkDecl]
 def checkDeclQuot : FunDecl := lfn (i, vis) locals (kw, k, p, e, w) {
   kw := DECL.u64[7 + 8 * i];

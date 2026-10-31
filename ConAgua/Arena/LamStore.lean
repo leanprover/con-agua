@@ -96,7 +96,7 @@ def lamCS : ConsSch where
 
 /-! ## `lam_find(t, ty, body, h)`: the probe -/
 
-/-- con-ron: ConRon/Arena/Store.lean:90-91 ConRon.Arena.Tbl.find? -/
+/-- con-ron: ConRon/Arena/Store.lean:94-95 ConRon.Arena.Tbl.find? -/
 def lamFind : FunDecl := consFindG lamCS
 
 /-! ## `lam_push(t, ty, body, j)`: append a node to tier `t`, register it at slot `j` -/
@@ -108,7 +108,7 @@ def lacnt (m : Mem) (t : Word) : Word := rdW (m.arr64 CTL) (28 + t)
 def lapushOK (m : Mem) (t : Word) : Bool :=
   decide (lacnt m t < (134217728 : Word)) && decide (lacnt m t < m.len64 (tierA LAREC t))
 
-/-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
+/-- con-ron: ConRon/Arena/Store.lean:97-102 ConRon.Arena.Tbl.push -/
 def lamPush : FunDecl := consPushG lamCS
 
 /-! ## `intern_lam(ty, body)`: hash-cons the `lam` binder with binder type `ty` and body `body`
@@ -129,8 +129,9 @@ def lainternW (m : Mem) (ty body : Word) : Option (Word × Mem) := consInternM l
 /-- The L FunDecl for `intern_lam`. Named `internLamL`, not `internLam`: con-ron's
 `EStore.internLam` (`ConRon/Arena/Store.lean`) is a sibling name in a different namespace, but the
 `L`-suffix keeps the two visually apart in this file, which `open`s `ConRon.Arena`. -/
--- con-ron: ConRon/Arena/Monad.lean:246-264 ConRon.Arena.internE
--- con-ron: ConRon/Arena/Monad.lean:169-197 ConRon.Arena.internLamE
+-- con-ron: ConRon/Arena/Monad.lean:249-267 ConRon.Arena.internE
+-- con-ron: CHANGED since ed864140 — below `ConRon.Arena.internLamE`, `ConRon.Arena.Idx.idxCap` changed; re-check the L code and its proofs, then delete this line
+-- con-ron: ConRon/Arena/Monad.lean:172-200 ConRon.Arena.internLamE
 @[l_impl ConRon.Arena.internE ConRon.Arena.internLamE]
 def internLamL : FunDecl := consInternG lamCS
 
