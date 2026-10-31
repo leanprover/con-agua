@@ -365,10 +365,13 @@ where it is lifted callees with guards (`tmo_ref`, `cxo_ref`, `ctl_ref`).
 
 By `reflen.py` lines (master after this lane), lifted-call density first:
 
-* **`IndT/Install*` (1, 3, 4, 6, 7: 11 theorems, ~1.0 k lines)**: lifted callees with `StageC`
-  plumbing and `liftE_none` arms (14 `rcases … callW`); one package; `fvar_type_d` (Install1, two
-  sites) and `open_pis_at_fvars_f` / `strip_pis` (shared with the sum steps) are step candidates.
-  Expect −15 %, 2–3 h.
+* ~~`IndT/Install*`~~: done (refwalk3, §6.8).
+* **One package for the sum and install families**: `SumAt` (`SumSteps.lean`) and `InsAt`
+  (`Install1.lean`) have the same fields; move one down to `Install1` and drop the other (rename
+  only, ~40 lines).
+* **The remaining wrapper `Sim`s around a unified callee's `RefE`** (`installSimFsortsC`, used by
+  `IdxSorts`; grep `RefE.run_okW` next to a `RefE.run_err` of the same callee): `bindRun` at the call
+  site, the wrapper deleted (§6.8).
 * ~~`IndT/Sum1–3`~~: done (refwalk2, §6.7).
 * **The knot callers** (the 11 files of §6.7 with a `callE` split on `whnf_top`/`infer_type_core`/
   `ensure_sort_core`/`is_def_eq_core`): `RefE.bindCall` per site, plus whatever lifted callees they
@@ -383,7 +386,8 @@ By `reflen.py` lines (master after this lane), lifted-call density first:
 Converted: `wt_ref` (`Sum1.lean`), `cts_ref`, `ct_ref` (`Sum2.lean`), `cfb_ref`, `csfGo_ref`,
 `fsorts_ref` (`Sum3.lean`). Statements unchanged. New kit rule `RefE.bindCall` (a knot callee read
 through its call: `whnf_top` in `wt_ref`, `infer_type_core` and `ensure_sort_core` in `csfGo_ref`;
-11 other files have the same `rcases … callE … "whnf_top"/"infer_type_core"/…` split: `Install1`,
+11 other files have the same `rcases … callE … "whnf_top"/"infer_type_core"/…` split: `Install1`
+(done, refwalk3: `idc_ref`, §6.8),
 `RecCheckPins`, `DeclCrpT`, `DeclNatGateT`, `DeclDivGateT2`, `Verdict/DeclValE`, `DeclValsE`,
 `IndBHdr`, `IndBTpd`, `IndBRec2`, `IndBRec4`).
 
@@ -447,3 +451,87 @@ where the twin and L walk in lockstep with guards (`cfb_ref` −36 %, `csfGo_ref
 (−4 %) is mostly the twin's own branches on `strip_pis`'s result and the view, which no rule
 covers.
 
+### 6.8 Install1, 3, 4, 6, 7 (lane refwalk3)
+
+Converted: `cbda_ref`, `sds_ref` (`Install1.lean`), `cbt_ref`, `cbts_ref` (`Install3.lean`),
+`cbi_ref` (`Install4.lean`), `iao_ref`, `iac_ref`, `iaa_ref` (`Install6.lean`), `icbo_ref`,
+`icbg_ref`, `ict_ref` (`Install7.lean`). Statements unchanged. New kit rule `RefE.callE_zero`.
+
+**One package, three steps**, all in `Install1.lean` (the family's lowest file; `Install3` now
+imports it):
+
+* `InsAt` (stage, `AbsOK`, growth, core step; `refl`, `trans`, `pstep`, `cstep`, `decHL`): the same
+  fields as `SumAt`, which lives in `SumSteps.lean`, above `Install1`–`6`. One package for both
+  families is a move of `SumAt` down to `Install1` (or `Lift.lean`) and a rename; not done here,
+  since `SumSteps` was the sum lane's file.
+* `ftd_step` (`fvar_type_d`, two sites: `cbda_ref`, `sds_ref`), `slGet_step` (`sl_get`, an L helper
+  for `onlySim`: two sites in `sds_ref`), and `idc_ref` (`is_def_eq_core` as a unified callee's
+  `RefE`, its error by `CoreStubsE`, its ok run by `isDefEqC_rsim`; two sites) taken by `bindE`.
+  For one site `RefE.bindCall` (§6.7) does the same inline.
+* `open_pis_at_fvars_f` and `strip_pis` have one site each under `InsAt` (`iao_ref`, `cbt_ref`):
+  `bindLift`. The sum steps `opf_step`/`strip_step` are stated over `SumAt`.
+
+**`bindRun` retires the wrapper `Sim`s.** The unified callees read through their run
+(`check_constant_val`, `check_sum_tele`, `check_struct_field_sorts_i`, `check_sum_ctors`) were
+split twice: the error by `RefE.run_err` and the callee's `RefE`, the ok run by a hand `Sim`
+around the same `RefE` (`installCstSimC`, `installSimSumCtorsC`, `installSimFsortsC`) or by a
+second triple (`checkConstantVal_refinesT`). `bindRun` takes the callee's `RefE` once for both;
+its post (`CcvPost`, `CtsPost`, `FsortsPost`, `SctsPost`) has what the wrapper had, and the
+packages' `core` comes from the post or from con-ron's spec on the run. `installCstSimC`,
+`installSimSumCtorsC` and `installSimCall` are gone (dead), and so are the unused `RSim.toSim`
+and `Sim.withRunC`.
+
+Pitfalls (add to §6.4):
+
+* **A unified callee at `n` whose `RefE` is at `n + 1`** (`fsorts_ref`, called at the caller's
+  fuel): split the fuel before `bindRun` (`rcases n with _ | k`) and close the `0` case by
+  `RefE.callE_zero (fun _ => rfl)`. This replaces `callE_err_mono` on the error side.
+* **The twin's last step followed by L-only callees** (`icbo_ref`: `checkSumCtors`, then two
+  `rec2`): `rw [← bind_pure (checkSumCtors V fe fe _ _ _ _ _ _ _ _ _)]` makes the twin a bind, then
+  `bindRun`, `onlySim`s and `RefE.ret rfl`. Write the `_`s: `checkSumCtors ..` in the pattern
+  elaborates with one argument too many and does not match.
+* **A positive model guard** (`if c then rest else .error e`, class `0`: `cbt_ref`'s result sort)
+  has no rule: `split; rotate_left; · exact RefE.of_cls0 rfl`, then the `c` case.
+* **`hK' := fun _ => rfl` in `lastE` fails** when the callee's ok arm repacks the pair
+  (`ictE.k_check_block_ctors_go`), even for a non-recursive model: use `K.arm1 ..` (and `K.none ..`).
+* **A named argument that shares a name with an explicit one** (`ct_ref … (n := …)`, where `n` is a
+  `Word` after the fuel `k`) fills that one and shifts the positional rest: pass it positionally.
+* **`grind` on a flag-vs-`Bool` guard is not free at scale**: four `by grind [decBool]` in
+  `Install1` cost 0.35 s (90 ms each). Have the step state the flag as an iff
+  (`idc_ref`: `v.1.headD 0 = 0 ↔ c = false`) and pass `hc.1 hc.2`; for a `decW0B` flag,
+  `(fun h => by rw [← hok, h]; rfl) (fun h => by simpa [h] using hok)`.
+
+Numbers, against master 1b1b1898 (`reflen.py`, `ncl.py`; elaboration `lake env lean` on the file,
+3 interleaved runs, load 26–37, so "work" is the profiler's sum without imports and blocked time):
+
+| theorem | before | after |
+|---|---:|---:|
+| `cbda_ref` | 111 | 78 |
+| `sds_ref` | 128 | 66 |
+| `cbt_ref` | 123 | 90 |
+| `cbts_ref` | 58 | 56 |
+| `cbi_ref` | 175 | 145 |
+| `iao_ref` | 71 | 52 |
+| `iac_ref` | 136 | 121 |
+| `iaa_ref` | 68 | 63 |
+| `icbo_ref` | 82 | 71 |
+| `icbg_ref` | 101 | 88 |
+| `ict_ref` | 33 | 28 |
+| **`Install*` family** | 1086 | 858 (**−21 %**) |
+
+| file (code lines) | before | after | work before → after | wall (median) | max RSS |
+|---|---:|---:|---:|---:|---:|
+| `IndT/Install1.lean` (with `InsAt`, 3 steps) | 353 | 315 | 3.05 → 2.62 s | 3.47 → 3.53 s | 2.47 → 2.46 GB |
+| `IndT/Install3.lean` | 287 | 233 | 2.05 → 2.06 s | 2.97 → 2.12 s | 2.61 → 2.58 GB |
+| `IndT/Install4.lean` | 287 | 257 | 1.65 → 1.36 s | 2.15 → 2.08 s | 3.00 → 3.01 GB |
+| `IndT/Install6.lean` | 351 | 307 | 0.88 → 0.79 s | 1.37 → 1.41 s | 2.66 → 2.65 GB |
+| `IndT/Install7.lean` | 335 | 275 | 2.54 → 2.49 s | 3.81 → 2.74 s | 2.66 → 2.65 GB |
+| `IndInstallSpec/InstallSimCall.lean` | 48 | 38 | | | |
+| `RefWalk.lean` (`callE_zero`) | 142 | 147 | | | |
+
+The family: 1661 → 1425 code lines (**−14 %**, with its package, its three steps and the dead
+wrappers), no file slower, memory unchanged. The `RefE` theorems lose 21 %, more than the
+`RecGen` family (−15 %): the gain is where a unified callee was split twice (`sds_ref` −48 %,
+`cbt_ref` −27 %, `iao_ref` −27 %) and where `bindE`/`lastE` replace a `rcases` of a unified
+callee's result (`cbi_ref`, `icbg_ref`); the loops over unified callees (`cbts_ref`, `iaa_ref`)
+lose 3–7 %. No file was left out.
