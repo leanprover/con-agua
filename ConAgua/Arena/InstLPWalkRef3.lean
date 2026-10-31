@@ -224,30 +224,31 @@ theorem ilwGo_succ {p : Prog} (hp : ILWAllProg p) (n : Nat) (ih : ∀ k, k ≤ n
       internRebuiltConst, Bool.false_eq_true, ↓reduceIte, internConstE]
     exact r3
   -- the compound arms
-  have arm : ∀ (g : Word) (c : TRec) (fn : FnName), tagW h = g →
+  -- `ix`: the node's index (`idxA h` for `app`); the view fact is `viewOK`/`viewOKA` unfolded
+  have arm : ∀ (g : Word) (c : TRec) (fn : FnName) (ix : Word), tagW h = g →
       ilwDispW p n m₁ h ko kc vo vc fu =
-        (if tcnt m₁ c (tierW h) ≤ idxW h then none
+        (if tcnt m₁ c (tierW h) ≤ ix then none
          else ilwHd (callW p n fn [h, ko, kc, vo, vc, fu - 1] m₁)) →
-      ∃ k rs2, n = k + 1 ∧ viewOK m₁ h c ∧
+      ∃ k rs2, n = k + 1 ∧ (¬ (tierW h ≠ 0 ∧ rdW (m₁.arr64 CTL) 1 = 0) ∧ ix < tcnt m₁ c (tierW h)) ∧
         callW (p) (k + 1) fn [h, ko, kc, vo, vc, fu - 1] m₁ = some (rs2, m') ∧ r = rs2.headD 0 := by
-    intro g c fn _ he
+    intro g c fn ix _ he
     rw [he] at hW
-    by_cases hc0 : tcnt m₁ c (tierW h) ≤ idxW h
+    by_cases hc0 : tcnt m₁ c (tierW h) ≤ ix
     · simp [hc0] at hW
     simp only [hc0, ↓reduceIte] at hW
     rcases h2 : callW p n fn [h, ko, kc, vo, vc, fu - 1] m₁ with _ | ⟨rs2, m₂⟩ <;> simp only [h2, ilwHd, reduceCtorEq] at hW
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
     obtain ⟨k, rfl⟩ := armK fn rs2 m₂ h2
-    exact ⟨k, rs2, rfl, vok c hc0 hs, h2, rfl⟩
+    exact ⟨k, rs2, rfl, ⟨hs, UInt64.not_le.mp hc0⟩, h2, rfl⟩
   by_cases g1 : tagW h = 1
-  · obtain ⟨k, rs2, rfl, hvk, h2, rfl⟩ := arm 1 FVAR "lp_fvar" g1 (ilwDispW_fvar p n m₁ h ko kc vo vc fu hs g1)
+  · obtain ⟨k, rs2, rfl, hvk, h2, rfl⟩ := arm 1 FVAR "lp_fvar" (idxW h) g1 (ilwDispW_fvar p n m₁ h ko kc vo vc fu hs g1)
     obtain ⟨hv, hty⟩ := view_fvar_idx m₁ a hR h hh hvk g1
     obtain ⟨s2, hs2, -, hW2⟩ := triple_of_callW (s₀ := ⟨m₁, Locals.init []⟩)
       (lpFVar_spec p hp.lev.ilw (k + 1) _ h ko kc vo vc (fu - 1)) h2
     rw [hs2] at hW2
     exact hrun _ hv _ rfl (ilw_fvarArm hp.mkp (ih k (by omega)) hS hM hE hh hty hW2)
   by_cases g4 : tagW h = 4
-  · obtain ⟨k, rs2, rfl, hvk, h2, rfl⟩ := arm 4 APP "lp_app" g4 (ilwDispW_app p n m₁ h ko kc vo vc fu hs g4)
+  · obtain ⟨k, rs2, rfl, hvk, h2, rfl⟩ := arm 4 APP "lp_app" (idxA h) g4 (ilwDispW_app p n m₁ h ko kc vo vc fu hs g4)
     obtain ⟨hv, hf, ha⟩ := view_app m₁ a hR h hh hvk g4
     obtain ⟨s2, hs2, -, hW2⟩ := triple_of_callW (s₀ := ⟨m₁, Locals.init []⟩)
       (lpApp_spec p hp.lev.ilw k _ h ko kc vo vc (fu - 1)) h2
@@ -256,7 +257,7 @@ theorem ilwGo_succ {p : Prog} (hp : ILWAllProg p) (n : Nat) (ih : ∀ k, k ≤ n
     intro m m' a M x y rs hS hM hx hy hc hw
     exact ilw_mkApp p hp.mkp k x y rs hS hM hc
   by_cases g5 : tagW h = 5
-  · obtain ⟨k, rs2, rfl, hvk, h2, rfl⟩ := arm 5 LAM "lp_lam" g5 (ilwDispW_lam p n m₁ h ko kc vo vc fu hs g5)
+  · obtain ⟨k, rs2, rfl, hvk, h2, rfl⟩ := arm 5 LAM "lp_lam" (idxW h) g5 (ilwDispW_lam p n m₁ h ko kc vo vc fu hs g5)
     obtain ⟨hv, hf, ha⟩ := view_lam m₁ a hR h hh hvk g5
     obtain ⟨s2, hs2, -, hW2⟩ := triple_of_callW (s₀ := ⟨m₁, Locals.init []⟩)
       (lpLam_spec p hp.lev.ilw k _ h ko kc vo vc (fu - 1)) h2
@@ -265,7 +266,7 @@ theorem ilwGo_succ {p : Prog} (hp : ILWAllProg p) (n : Nat) (ih : ∀ k, k ≤ n
     intro m m' a M x y rs hS hM hx hy hc hw
     exact ilw_mkLam p hp.mkp k x y rs hS hM hc hw
   by_cases g6 : tagW h = 6
-  · obtain ⟨k, rs2, rfl, hvk, h2, rfl⟩ := arm 6 FORALL "lp_forall" g6 (ilwDispW_forall p n m₁ h ko kc vo vc fu hs g6)
+  · obtain ⟨k, rs2, rfl, hvk, h2, rfl⟩ := arm 6 FORALL "lp_forall" (idxW h) g6 (ilwDispW_forall p n m₁ h ko kc vo vc fu hs g6)
     obtain ⟨hv, hf, ha⟩ := view_forall m₁ a hR h hh hvk g6
     obtain ⟨s2, hs2, -, hW2⟩ := triple_of_callW (s₀ := ⟨m₁, Locals.init []⟩)
       (lpForall_spec p hp.lev.ilw k _ h ko kc vo vc (fu - 1)) h2
@@ -274,14 +275,14 @@ theorem ilwGo_succ {p : Prog} (hp : ILWAllProg p) (n : Nat) (ih : ∀ k, k ≤ n
     intro m m' a M x y rs hS hM hx hy hc hw
     exact ilw_mkForall p hp.mkp k x y rs hS hM hc hw
   by_cases g7 : tagW h = 7
-  · obtain ⟨k, rs2, rfl, hvk, h2, rfl⟩ := arm 7 LET "lp_let" g7 (ilwDispW_let p n m₁ h ko kc vo vc fu hs g7)
+  · obtain ⟨k, rs2, rfl, hvk, h2, rfl⟩ := arm 7 LET "lp_let" (idxW h) g7 (ilwDispW_let p n m₁ h ko kc vo vc fu hs g7)
     obtain ⟨hv, hf, ha, hb⟩ := view_let m₁ a hR h hh hvk g7
     obtain ⟨s2, hs2, -, hW2⟩ := triple_of_callW (s₀ := ⟨m₁, Locals.init []⟩)
       (lpLet_spec p hp.lev.ilw k _ h ko kc vo vc (fu - 1)) h2
     rw [hs2] at hW2
     exact hrun _ hv _ rfl (ilw_letArm hp.mkp (ih k (by omega)) hp.lev.ilw (fun j _ => ih j (by omega)) hS hM hE hh hf ha hb hW2)
   by_cases g9 : tagW h = 9
-  · obtain ⟨k, rs2, rfl, hvk, h2, rfl⟩ := arm 9 PROJ "lp_proj" g9 (ilwDispW_proj p n m₁ h ko kc vo vc fu hs g9)
+  · obtain ⟨k, rs2, rfl, hvk, h2, rfl⟩ := arm 9 PROJ "lp_proj" (idxW h) g9 (ilwDispW_proj p n m₁ h ko kc vo vc fu hs g9)
     obtain ⟨hv, -, he⟩ := view_proj m₁ a hR h hh hvk g9
     obtain ⟨s2, hs2, -, hW2⟩ := triple_of_callW (s₀ := ⟨m₁, Locals.init []⟩)
       (lpProj_spec p hp.lev.ilw (k + 1) _ h ko kc vo vc (fu - 1)) h2
