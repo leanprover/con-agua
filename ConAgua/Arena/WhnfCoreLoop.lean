@@ -1,4 +1,5 @@
 import ConAgua.Arena.WhnfCoreStep
+import ConAgua.Arena.RefWalk
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import Std.Tactic.BVDecide.Normalize.BitVec
@@ -82,45 +83,32 @@ theorem step_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n 
   have hR := hS.arena.base
   have hh : e.toNat < 2 ^ 32 := he
   simp only [whnfCoreStepE]
-  by_cases ht : tierW e ≠ 0 ∧ rdW (s₀.mem.arr64 CTL) 1 = 0
-  · rw [ite_eq_left ht]; exact RefE.of_cls0 (by decide)
-  rw [ite_eq_right ht]
+  refine RefE.abort0 (by decide) fun ht => ?_
   -- a stuck arm answers `(0, e)` after its view check
-  have done : ∀ (c : TRec) (v : ENodeView), viewOK s₀.mem e c →
-      (viewOK s₀.mem e c → a₀.store.view (decE e) = some v) → isDoneV v = true →
-      RefE (AppG p n)
-        (if tcnt s₀.mem c (tierW e) ≤ idxW e then .error (Err.abort 0) else .ok ([0, e], s₀.mem))
+  have done : ∀ v : ENodeView, a₀.store.view (decE e) = some v → isDoneV v = true →
+      RefE (AppG p n) (.ok ([0, e], s₀.mem))
         (whnfCoreStep (decMode mode) (coreKnot (decMode mode) fe id F) fe (cheap != 0) d.toNat
-          (decE e)) a₀ (CorePost decStep dn s₀.mem vis fe MM eb ResW) := by
-    intro c v hvw hv hd
-    rw [ite_eq_right (by simpa using hvw.2)]
-    exact RefE.ret (step_run_done v (hv hvw) hd) (CorePost.ret hS (by simp [decStep])
+          (decE e)) a₀ (CorePost decStep dn s₀.mem vis fe MM eb ResW) := fun v hv hd =>
+    RefE.ret (step_run_done v hv hd) (CorePost.ret hS (by simp [decStep])
       ⟨by show HW (0 : Word); unfold HW; decide, he⟩)
   have vok : ∀ c : TRec, ¬ tcnt s₀.mem c (tierW e) ≤ idxW e → viewOK s₀.mem e c :=
     fun c hc => ⟨ht, by simpa using hc⟩
   by_cases g4 : e >>> 28 = 4
   · rw [ite_eq_left g4]
-    by_cases hc4 : tcnt s₀.mem APP (tierW e) ≤ idxW e
-    · rw [ite_eq_left hc4]; exact RefE.of_cls0 (by decide)
-    rw [ite_eq_right hc4]
-    have hv := (view_app s₀.mem a₀ hR e hh (vok _ hc4) g4).1
-    refine RefE.of_run_eq (step_run_app _ _ hv) ?_
+    refine RefE.abort0 (by decide) fun hc4 => ?_
+    refine RefE.of_run_eq (step_run_app _ _ (view_app s₀.mem a₀ hR e hh (vok _ hc4) g4).1) ?_
     cases n with
     | zero => exact RefE.of_cls0 rfl
     | succ N =>
     have h1 := capp_ref p hp hwc hcc N (hk.mono (by omega)) F (by omega) (by omega) s₀ a₀ dn vis fe MM
       eb mode cheap d e hs he
-    rcases c1 : coreAppE p (N + 1) s₀.mem mode cheap vis d e with e1 | ⟨r₁, m₁⟩
-    · rw [c1] at h1; exact fun hG => h1 (hG.mono (by omega))
-    rw [c1] at h1
-    obtain ⟨y, a', hrun, hP⟩ := h1
-    exact RefE.ret hrun ⟨hP.after, hP.res, hP.valid⟩
+    exact RefE.lastE (K := whnfCoreStepE.k_whnf_core_app p) (fun _ => rfl) (fun _ => rfl)
+      (·.mono (Nat.le_succ N)) h1
+      fun _ _ _ _ h => ⟨h.after, h.res, h.valid⟩
   rw [ite_eq_right g4]
   by_cases g9 : e >>> 28 = 9
   · rw [ite_eq_left g9]
-    by_cases hc9 : tcnt s₀.mem PROJ (tierW e) ≤ idxW e
-    · rw [ite_eq_left hc9]; exact RefE.of_cls0 (by decide)
-    rw [ite_eq_right hc9]
+    refine RefE.abort0 (by decide) fun hc9 => ?_
     obtain ⟨hv, hsn, hpe⟩ := view_proj s₀.mem a₀ hR e hh (vok _ hc9) g9
     refine RefE.of_run_eq (step_run_proj _ _ _ hv) ?_
     cases n with
@@ -130,81 +118,58 @@ theorem step_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n 
       (hk.mono (by omega)) F (by omega) (by omega) s₀ a₀ dn vis fe MM eb mode cheap d e
       (tfld s₀.mem PROJ (tierW e) (idxW e) 0) (tfld s₀.mem PROJ (tierW e) (idxW e) 1)
       (tfld s₀.mem PROJ (tierW e) (idxW e) 2) hs he hsn hpe (hsup fe)
-    rcases c1 : coreStepProjE p (N + 1) s₀.mem mode cheap vis d e (tfld s₀.mem PROJ (tierW e) (idxW e) 0)
-      (tfld s₀.mem PROJ (tierW e) (idxW e) 1) (tfld s₀.mem PROJ (tierW e) (idxW e) 2) with
-      e1 | ⟨r₁, m₁⟩
-    · rw [c1] at h1; exact fun hG => h1 (hG.knot.mono (by omega))
-    rw [c1] at h1
-    obtain ⟨y, a', hrun, hP⟩ := h1
-    exact RefE.ret hrun ⟨hP.after, hP.res, hP.valid⟩
+    exact RefE.lastE (K := whnfCoreStepE.k_whnf_core_app p) (fun _ => rfl) (fun _ => rfl)
+      (·.knot.mono (Nat.le_succ N)) h1
+      fun _ _ _ _ h => ⟨h.after, h.res, h.valid⟩
   rw [ite_eq_right g9]
   by_cases g7 : e >>> 28 = 7
   · rw [ite_eq_left g7]
-    by_cases hc7 : tcnt s₀.mem LET (tierW e) ≤ idxW e
-    · rw [ite_eq_left hc7]; exact RefE.of_cls0 (by decide)
-    rw [ite_eq_right hc7]
-    rcases hca : callW p n "inst1" [tfld s₀.mem LET (tierW e) (idxW e) 2,
-        tfld s₀.mem LET (tierW e) (idxW e) 1, 0] s₀.mem with _ | ⟨r₁, m₁⟩
-    · rw [liftE_none]; exact RefE.of_cls0 (by simp)
-    rw [liftE_some]
+    refine RefE.abort0 (by decide) fun hc7 => ?_
     obtain ⟨hv, -, hvv, hbb⟩ := view_let s₀.mem a₀ hR e hh (vok _ hc7) g7
-    obtain ⟨hok, hA, hres, hrw⟩ := CoreSpec.of_callW (s₀ := ⟨s₀.mem, Locals.init []⟩)
-      (hcc.inst1 n _ a₀ dn vis fe MM eb _ _ 0 hS hbb hvv) hca
-    have hrun := AM.run_of_ok _ _ hok
-    rw [show ((0 : Word).toNat) = 0 from rfl] at hrun hres
-    rw [hres] at hrun
-    refine RefE.of_run_eq (step_run_let _ _ _ hv) (RefE.ret (y := WhnfStep.cont (decE (r₁.headD 0)))
-      ?_ ⟨hA, by simp [decStep], ⟨by
-      show HW (1 : Word); unfold HW; decide, hrw⟩⟩)
-    simp only [StateT.run_bind, hrun]; rfl
+    refine RefE.of_run_eq (step_run_let _ _ _ hv) ?_
+    refine RefE.bind_callW (s₀ := s₀) (fun _ => rfl) (hcc.inst1 n s₀ a₀ dn vis fe MM eb _ _ 0 hS hbb hvv)
+      fun r₁ m₁ _ h₁ => RefE.ret rfl ⟨h₁.after, by simp [decStep, decH], ⟨by
+        show HW (1 : Word); unfold HW; decide, h₁.resOk⟩⟩
   rw [ite_eq_right g7]
   by_cases g0 : e >>> 28 = 0
   · rw [ite_eq_left g0]
-    by_cases hc0 : tcnt s₀.mem BVAR (tierW e) ≤ idxW e
-    · rw [ite_eq_left hc0]; exact RefE.of_cls0 (by decide)
-    rw [ite_eq_right hc0]
-    have hv := view_bvar s₀.mem a₀ hR e hh (vok _ hc0) g0
-    exact fun _ => ErrClaim.of_run_eqW (step_run_bvar _ hv) (ErrClaim.fail _ _ rfl)
+    refine RefE.abort0 (by decide) fun hc0 => ?_
+    exact fun _ => ErrClaim.of_run_eqW (step_run_bvar _ (view_bvar s₀.mem a₀ hR e hh (vok _ hc0) g0))
+      (ErrClaim.fail _ _ rfl)
   rw [ite_eq_right g0]
   by_cases g1 : e >>> 28 = 1
   · rw [ite_eq_left g1]
-    by_cases hc : tcnt s₀.mem FVAR (tierW e) ≤ idxW e
-    · rw [ite_eq_left hc]; exact RefE.of_cls0 (by decide)
+    refine RefE.abort0 (by decide) fun hc => ?_
     obtain ⟨i, ty, hv'⟩ := view_fvar s₀.mem a₀ hR e hh (vok _ hc) g1
-    exact done _ _ (vok _ hc) (fun _ => hv') rfl
+    exact done _ hv' rfl
   rw [ite_eq_right g1]
   by_cases g2 : e >>> 28 = 2
   · rw [ite_eq_left g2]
-    by_cases hc : tcnt s₀.mem SORT (tierW e) ≤ idxW e
-    · rw [ite_eq_left hc]; exact RefE.of_cls0 (by decide)
+    refine RefE.abort0 (by decide) fun hc => ?_
     obtain ⟨u, hv'⟩ := view_sort s₀.mem a₀ hR e hh (vok _ hc) g2
-    exact done _ _ (vok _ hc) (fun _ => hv') rfl
+    exact done _ hv' rfl
   rw [ite_eq_right g2]
   by_cases g3 : e >>> 28 = 3
   · rw [ite_eq_left g3]
-    by_cases hc : tcnt s₀.mem CONST (tierW e) ≤ idxW e
-    · rw [ite_eq_left hc]; exact RefE.of_cls0 (by decide)
+    refine RefE.abort0 (by decide) fun hc => ?_
     obtain ⟨c, us, hv'⟩ := view_const s₀.mem a₀ hR e hh (vok _ hc) g3
-    exact done _ _ (vok _ hc) (fun _ => hv') rfl
+    exact done _ hv' rfl
   rw [ite_eq_right g3]
   by_cases g5 : e >>> 28 = 5
   · rw [ite_eq_left g5]
-    by_cases hc : tcnt s₀.mem LAM (tierW e) ≤ idxW e
-    · rw [ite_eq_left hc]; exact RefE.of_cls0 (by decide)
-    exact done _ _ (vok _ hc) (fun hw => (view_lam s₀.mem a₀ hR e hh hw g5).1) rfl
+    refine RefE.abort0 (by decide) fun hc => ?_
+    exact done _ (view_lam s₀.mem a₀ hR e hh (vok _ hc) g5).1 rfl
   rw [ite_eq_right g5]
   by_cases g6 : e >>> 28 = 6
   · rw [ite_eq_left g6]
-    by_cases hc : tcnt s₀.mem FORALL (tierW e) ≤ idxW e
-    · rw [ite_eq_left hc]; exact RefE.of_cls0 (by decide)
-    exact done _ _ (vok _ hc) (fun hw => (view_forall s₀.mem a₀ hR e hh hw g6).1) rfl
+    refine RefE.abort0 (by decide) fun hc => ?_
+    exact done _ (view_forall s₀.mem a₀ hR e hh (vok _ hc) g6).1 rfl
   rw [ite_eq_right g6]
   by_cases g8 : e >>> 28 = 8
   · rw [ite_eq_left g8]
-    by_cases hc : tcnt s₀.mem LIT (tierW e) ≤ idxW e
-    · rw [ite_eq_left hc]; exact RefE.of_cls0 (by decide)
+    refine RefE.abort0 (by decide) fun hc => ?_
     obtain ⟨l, hv'⟩ := view_lit s₀.mem a₀ hR e hh (vok _ hc) g8
-    exact done _ _ (vok _ hc) (fun _ => hv') rfl
+    exact done _ hv' rfl
   rw [ite_eq_right g8]
   exact RefE.of_cls0 (by decide)
 
@@ -264,40 +229,25 @@ theorem coreLoop_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn 
   | succ k ih =>
     intro hkn K hK m a MM eb e hS heb he
     simp only [whnfCoreLoopE.loop1]
-    rcases hc : callE p k "whnf_core_step" [mode, cheap, vis, d, e] m with e1 | ⟨r, m₁⟩
-    · rw [whnfCoreLoopE.k_whnf_core_step.none]
-      cases k with
-      | zero =>
-        obtain ⟨e', he', h0⟩ := callE_zero p "whnf_core_step" [mode, cheap, vis, d, e] m
-        rw [hc] at he'; cases he'; exact RefE.of_cls0 h0
-      | succ j =>
-      obtain ⟨K', rfl⟩ : ∃ K', K = K' + 1 := ⟨K - 1, by omega⟩
-      exact fun hG => ErrClaim.of_run_eq (fun ce h' => whnfCoreLoop_err _ _ _ _ _ K' _ a ce h')
-        (CoreSpecE.of_callE (hG j (by omega) F (by omega) (by omega) ⟨m, Locals.init []⟩ a dn vis fe
-          MM eb mode cheap d e ⟨hS, hmode, heb⟩ he) hc)
     cases k with
-    | zero =>
-      obtain ⟨e', he', -⟩ := callE_zero p "whnf_core_step" [mode, cheap, vis, d, e] m
-      rw [hc] at he'; cases he'
+    | zero => exact RefE.callE_zero (fun _ => whnfCoreLoopE.k_whnf_core_step.none ..)
     | succ j =>
     obtain ⟨K', rfl⟩ : ∃ K', K = K' + 1 := ⟨K - 1, by omega⟩
-    have hstep := whnfCoreStep_refines' p hp hwc hcc hsup j (hk.mono (by omega)) F (by omega) (by omega)
-      ⟨m, Locals.init []⟩ a dn vis fe MM eb mode cheap d e ⟨hS, hmode, heb⟩ he
-    obtain ⟨hok, hA, hres, hrw⟩ := CoreSpec.of_callW hstep (callW_of_callE hc)
-    have hsr := AM.run_of_ok _ _ hok
-    rw [hres] at hsr
+    have hs : SlotPre ⟨m, Locals.init []⟩ a dn vis fe MM eb mode := ⟨hS, hmode, heb⟩
+    rw [whnfCoreLoop.eq_2]
+    refine RefE.bind_callE (s₀ := ⟨m, Locals.init []⟩) (fun _ => whnfCoreLoopE.k_whnf_core_step.none ..)
+      (whnfCoreStep_refines' p hp hwc hcc hsup j (hk.mono (by omega)) F (by omega) (by omega) _ a dn vis
+        fe MM eb mode cheap d e hs he)
+      (fun (hG : CoreStepE p n) => hG j (by omega) F (by omega) (by omega) _ a dn vis fe MM eb mode cheap
+        d e hs he)
+      fun r m₁ _ h₁ => RefE.after_core (w := fun v : Word × Mem => ([v.1], v.2)) h₁ fun M₁ hS₁ _ => ?_
     by_cases h0 : r.headD 0 = 0
     · rw [whnfCoreLoopE.k_whnf_core_step.arm1 _ _ _ _ _ _ _ _ h0]
-      simp only [decStep, h0, ↓reduceIte] at hsr
-      exact RefE.ret (whnfCoreLoop_done (decMode mode) (coreKnot (decMode mode) fe id F) fe
-        (cheap != 0) d.toNat K' (decE e) _ a _ hsr) ⟨hA, rfl, hrw.2⟩
+      simp only [decStep, h0, ↓reduceIte]
+      exact RefE.ret rfl (CorePost.ret hS₁ rfl h₁.resOk.2)
     rw [whnfCoreLoopE.k_whnf_core_step.arm2 _ _ _ _ _ _ _ _ h0]
-    simp only [decStep, h0, ↓reduceIte] at hsr
-    obtain ⟨M', hS₁, hK₁, hSt₁⟩ := hA
-    exact RefE.of_run_eq (whnfCoreLoop_cont (decMode mode) (coreKnot (decMode mode) fe id F) fe
-        (cheap != 0) d.toNat K' (decE e) _ a _ hsr)
-      ((ih (by omega) K' (by omega) m₁ _ M' eb _ hS₁ heb hrw.2).mono
-        fun _ _ _ h => ⟨CoreAfter.comp hK₁ hSt₁ h.after, h.res, h.valid⟩)
+    simp only [decStep, h0, ↓reduceIte]
+    exact ih (by omega) K' (by omega) m₁ _ M₁ eb _ hS₁ heb h₁.resOk.2
 
 include hp hwc hcc hsup in
 /-- `whnf_core_loop` from its run, both outcomes (`coreLoop_ref` at the call's fuel). -/
@@ -401,12 +351,9 @@ theorem core_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (s₀ : St) (a₀ : ASt
   · rw [ite_eq_left hc]
     have hcb : (cheap != 0) = true := by simpa using hc
     rw [hcb]
-    rcases h1 : callW p n "wk_find" [e, ((mode >>> 1) &&& 1) <<< 32] s₀.mem with _ | ⟨r₁, m₁⟩
-    · rw [liftE_none]; exact RefE.of_cls0 (by simp)
-    rw [liftE_some]
-    obtain ⟨rfl, hne, hr⟩ := callW_memoFind hp.wkf h1
+    refine RefE.onlySim (fun _ => rfl) (fun _ _ h => callW_memoFind hp.wkf h) fun r₁ m₁ ⟨hm, hne, hr⟩ => ?_
     rw [hkey] at hr
-    subst hr
+    subst hm hr
     have hf := hS.core.wk.findE heb e he hne
     simp only [whnfCoreE.k_wk_find]
     by_cases h1' : (mfindG wkSch s₀.mem e (genW 0 eb)).headD 0 ≠ 0
@@ -416,9 +363,7 @@ theorem core_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (s₀ : St) (a₀ : ASt
     rw [ite_eq_right h1']
     have hmiss := hf.2 (by simpa using h1')
     cases n with
-    | zero =>
-      obtain ⟨e', he', h0⟩ := callE_zero p "whnf_core_loop" [mode, 1, vis, d, e] s₀.mem
-      rw [he']; exact RefE.of_cls0 h0
+    | zero => exact RefE.callE_zero (fun _ => rfl)
     | succ n' =>
     rcases h2 : callE p (n' + 1) "whnf_core_loop" [mode, 1, vis, d, e] s₀.mem with e2 | ⟨r₂, m₂⟩
     · exact fun hG => ErrClaim.of_run_eq (fun ce h' => knot_whnfCore_missK_err _ fe F' d.toNat _ a₀ ht
@@ -427,14 +372,9 @@ theorem core_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (s₀ : St) (a₀ : ASt
       (whnfCoreBody_refines' p hp hwc hcc hsup n' (hk.mono (by omega)) F' (by omega) (by omega) s₀ a₀ dn
         vis fe MM eb mode 1 d e hs he) (callW_of_callE h2)
     simp only [whnfCoreE.k_whnf_core_loop]
-    rcases h3 : callW p (n' + 1) "wk_find" [e, ((mode >>> 1) &&& 1) <<< 32] m₂ with _ | ⟨r₃, m₃⟩
-    · rw [liftE_none]; exact RefE.of_cls0 (by simp)
-    rw [liftE_some]
+    refine RefE.onlySim (fun _ => rfl) (fun _ _ h => h) fun r₃ m₃ h3 => ?_
     simp only [whnfCoreE.k_wk_find_2]
-    rcases h4 : callW p (n' + 1) "wk_put" [e, ((mode >>> 1) &&& 1) <<< 32, r₂.headD 0, r₃.headD 0,
-        r₃.tail.headD 0] m₃ with _ | ⟨r₄, m₄⟩
-    · rw [liftE_none]; exact RefE.of_cls0 (by simp)
-    rw [liftE_some]
+    refine RefE.onlySim (fun _ => rfl) (fun _ _ h => h) fun r₄ m₄ h4 => ?_
     simp only [whnfCoreE.k_wk_put]
     have hset := callW_memoSet hp.wkf hp.wkp h3 h4
     rw [hkey] at hset
@@ -447,12 +387,9 @@ theorem core_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (s₀ : St) (a₀ : ASt
   · rw [ite_eq_right hc]
     have hcb : (cheap != 0) = false := by simpa using hc
     rw [hcb]
-    rcases h1 : callW p n "wc_find" [e, ((mode >>> 1) &&& 1) <<< 32] s₀.mem with _ | ⟨r₁, m₁⟩
-    · rw [liftE_none]; exact RefE.of_cls0 (by simp)
-    rw [liftE_some]
-    obtain ⟨rfl, hne, hr⟩ := callW_memoFind hp.wcf h1
+    refine RefE.onlySim (fun _ => rfl) (fun _ _ h => callW_memoFind hp.wcf h) fun r₁ m₁ ⟨hm, hne, hr⟩ => ?_
     rw [hkey] at hr
-    subst hr
+    subst hm hr
     have hf := hS.core.wc.findE heb e he hne
     simp only [whnfCoreE.k_wc_find]
     by_cases h1' : (mfindG wcSch s₀.mem e (genW 0 eb)).headD 0 ≠ 0
@@ -462,9 +399,7 @@ theorem core_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (s₀ : St) (a₀ : ASt
     rw [ite_eq_right h1']
     have hmiss := hf.2 (by simpa using h1')
     cases n with
-    | zero =>
-      obtain ⟨e', he', h0⟩ := callE_zero p "whnf_core_loop" [mode, 0, vis, d, e] s₀.mem
-      rw [he']; exact RefE.of_cls0 h0
+    | zero => exact RefE.callE_zero (fun _ => rfl)
     | succ n' =>
     rcases h2 : callE p (n' + 1) "whnf_core_loop" [mode, 0, vis, d, e] s₀.mem with e2 | ⟨r₂, m₂⟩
     · exact fun hG => ErrClaim.of_run_eq (fun ce h' => knot_whnfCore_missF_err _ fe F' d.toNat _ a₀ ht
@@ -473,14 +408,9 @@ theorem core_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (s₀ : St) (a₀ : ASt
       (whnfCoreBody_refines' p hp hwc hcc hsup n' (hk.mono (by omega)) F' (by omega) (by omega) s₀ a₀ dn
         vis fe MM eb mode 0 d e hs he) (callW_of_callE h2)
     simp only [whnfCoreE.k_whnf_core_loop_2]
-    rcases h3 : callW p (n' + 1) "wc_find" [e, ((mode >>> 1) &&& 1) <<< 32] m₂ with _ | ⟨r₃, m₃⟩
-    · rw [liftE_none]; exact RefE.of_cls0 (by simp)
-    rw [liftE_some]
+    refine RefE.onlySim (fun _ => rfl) (fun _ _ h => h) fun r₃ m₃ h3 => ?_
     simp only [whnfCoreE.k_wc_find_2]
-    rcases h4 : callW p (n' + 1) "wc_put" [e, ((mode >>> 1) &&& 1) <<< 32, r₂.headD 0, r₃.headD 0,
-        r₃.tail.headD 0] m₃ with _ | ⟨r₄, m₄⟩
-    · rw [liftE_none]; exact RefE.of_cls0 (by simp)
-    rw [liftE_some]
+    refine RefE.onlySim (fun _ => rfl) (fun _ _ h => h) fun r₄ m₄ h4 => ?_
     simp only [whnfCoreE.k_wk_put]
     have hset := callW_memoSet hp.wcf hp.wcp h3 h4
     rw [hkey] at hset
