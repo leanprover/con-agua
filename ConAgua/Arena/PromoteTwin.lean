@@ -197,15 +197,15 @@ local macro "pe_case " v:term : tactic => `(tactic| (
   cases hf : ep.find? $v with
   | some h => simp [hf, StateT.run_pure, Except.map]; rfl
   | none =>
-    by_cases hc : ep.sizeOf $v < Idx.idxCap
-    · simp only [ETables.bindSizeOf, ETables.sizeOf, tag_fa_lam, tag_fa_lam'] at hc ⊢
+    by_cases hc : ep.sizeOf $v < ($v : ENodeView).cap
+    · simp only [ETables.bindSizeOf, ETables.sizeOf, ENodeView.cap, tag_fa_lam, tag_fa_lam'] at hc ⊢
       simp [hf, hc, EStore.internPersistent, EStore.intern, EStore.persFindMaybe,
         EStore.internLam, EStore.internForallE, EStore.internBind, EStore.persFindBindMaybe,
         findBind_lam, findBind_forall, pushBind_lam, pushBind_forall, derOfBindAt_lam,
         derOfBindAt_forall, derOfBindAt_19, derOfBindAt_23, hd, StateT.run_bind, StateT.run_set,
         StateT.run_pure, Except.map]
       rfl
-    · simp only [ETables.bindSizeOf, ETables.sizeOf, tag_fa_lam, tag_fa_lam'] at hc ⊢
+    · simp only [ETables.bindSizeOf, ETables.sizeOf, ENodeView.cap, tag_fa_lam, tag_fa_lam'] at hc ⊢
       simp [hf, hc, fail, throwThe, MonadExceptOf.throw, Except.map]
       rfl))
 
@@ -234,11 +234,11 @@ theorem internPersistentE_eq (v : ENodeView) (a : AState) (hF : FlagsEq a.store)
     | some h => simp [StateT.run_pure, Except.map]; rfl
     | none =>
       by_cases hc : ep.sizeOf (.forallE t b) < Idx.idxCap
-      · simp only [ETables.bindSizeOf, ETables.sizeOf, tag_fa_lam'] at hc ⊢
+      · simp only [ETables.bindSizeOf, ETables.sizeOf, ENodeView.cap, tag_fa_lam'] at hc ⊢
         simp only [hf, hc, EStore.internPersistent, EStore.internForallE, EStore.internBind, EStore.persFindBindMaybe, findBind_forall, pushBind_forall, Bool.false_eq_true,
           ↓reduceIte, tag_fa_lam', derOfBindAt_23, hd]
         rfl
-      · simp only [ETables.bindSizeOf, ETables.sizeOf, tag_fa_lam'] at hc ⊢
+      · simp only [ETables.bindSizeOf, ETables.sizeOf, ENodeView.cap, tag_fa_lam'] at hc ⊢
         simp only [hc, Bool.false_eq_true, ↓reduceIte]
         rfl
   case letE t x b => pe_case (.letE t x b)
