@@ -126,15 +126,9 @@ theorem cert_ref (hq : KnotStageProg p) (o l : Word) (ps : List (EIdx × EIdx)) 
       (fun hcE _ h1 => hcE.isDefEqCore k hk' hS 2 ea eb hea heb _ h1)
       (fun b h1 => hq.isDefEqCore_sim k hk' hS 2 ea eb hea heb b.1 b.2 h1)
       fun r1 m1 x1 a1 _ _ ⟨hS1, hg1, hx1⟩ => ?_
-    by_cases hz : r1.headD 0 = 0
-    · rw [certifyNatEqsE.k_is_def_eq_core.arm1 p k vis o l r1 m1 hz]
-      have hx : x1 = false := by rw [← hx1]; simp only [decBool, hz]; rfl
-      rw [hx]
-      exact RefE.ite_neg (by decide) (RefE.ret rfl ⟨hS1, hg1, by simp [decW0B]⟩)
-    rw [certifyNatEqsE.k_is_def_eq_core.arm2 p k vis o l r1 m1 hz]
-    have hx : x1 = true := by rw [← hx1]; simpa [decBool] using hz
-    rw [hx]
-    refine RefE.ite_pos rfl ?_
+    rw [certifyNatEqsE.k_is_def_eq_core.eq_2]
+    refine RefE.retIf (fun hz => hx1 ▸ decBool_f_m2c hz) (fun hb => by simpa [← hx1, decBool] using hb)
+      (fun _ => ⟨hS1, hg1, by simp [decW0B]⟩) fun _ _ => ?_
     have ho1 : (o + 1).toNat = o.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
     have hl1 : (l - 1).toNat = l.toNat - 1 := by
       have : 0 < l.toNat := Nat.pos_of_ne_zero (fun h0 => hl0 (by simp [h0]))
@@ -378,17 +372,9 @@ theorem dng_ref (hN : NatSubProg' p) (hq : KnotStageProg p) (hcl : LeafClosed p)
     exact hrun2.1.symm
   have hC2 := StageC.of_run hC1 (hS2.restrict vis) (callW_leafFrame hcl (leaf_mem _ (by decide)) h2)
     hC.check.state (Ext.refl _) rfl rfl
-  by_cases e2 : r2.headD 0 = 0
-  · rw [defnNatGateE.k_sl_contains.arm2 p _ _ _ _ _ _ e2, defnNatGateE.j1.arm1]
-    have hf : xs.contains (decI n) = false := by
-      rw [← hx2]; have := hd2.1; rw [e2] at this; simpa using this.symm
-    rw [hf]
-    exact RefE.ite_neg (by decide) (RefE.ret rfl ⟨hS2, hC2, hg1.trans hg2, Ext.refl _⟩)
-  rw [defnNatGateE.k_sl_contains.arm1 p _ _ _ _ _ _ e2]
-  have hx2t : xs.contains (decI n) = true := by
-    rw [← hx2, ← hd2.1]; simpa using e2
-  rw [hx2t]
-  refine RefE.ite_pos rfl ?_
+  rw [defnNatGateE.k_sl_contains.eq_2, ite_not]
+  refine RefE.retIf (fun e2 => by grind [decW0B]) (fun hf => by grind [decW0B])
+    (fun _ => ⟨hS2, hC2, hg1.trans hg2, Ext.refl _⟩) fun _ _ => ?_
   -- the guard
   refine RefE.bindSim (fun _ => rfl) (natOpGuard_ref hGd n k m2 a2 · · ⟨hS2, hn⟩ ·)
     fun r3 x3 m3 a3 h3 hrun3 ⟨hS3, hg3, hd3⟩ => ?_
