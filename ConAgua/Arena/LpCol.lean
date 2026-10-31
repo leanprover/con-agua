@@ -393,12 +393,21 @@ end blocks
 /-- The sum of a table's two counts `CTL[c] + CTL[c + 1]`. -/
 def cnt2 (m : Mem) (c : Word) : Word := rdW (m.arr64 CTL) c + rdW (m.arr64 CTL) (c + 1)
 
+/-- The node index of the handle `r` in the derived column `A`: the wide index for `app`'s column
+`ADER`, the narrow one for the others. -/
+abbrev derIxW (A : ArrId) (r : Word) : Word := if A = ADER then idxA r else idxW r
+
+@[simp] theorem derIxW_ADER (r : Word) : derIxW ADER r = idxA r := by simp [derIxW]
+
+theorem derIxW_ne (A : ArrId) (h : A ≠ ADER) (r : Word) : derIxW A r = idxW r := by
+  simp [derIxW, h]
+
 /-- After `intern_*` (from `m` to `m₁`, result `r`): if the table grew (`cnt2` changed from `s`),
 write the range `d` at `A[idx * 2 + tier]` of `r` (an `abort` past the array). -/
 def derPutW (A : ArrId) (c : Word) (m₁ : Mem) (s r d : Word) : Option Mem :=
   if cnt2 m₁ c = s then some m₁
-  else if p32Len (m₁.len64 (tierA A (tierW r))) ≤ idxW r then none
-  else some (m₁.set32 (tierA A (tierW r)) (idxW r) d)
+  else if p32Len (m₁.len64 (tierA A (tierW r))) ≤ derIxW A r then none
+  else some (m₁.set32 (tierA A (tierW r)) (derIxW A r) d)
 
 /-- The result of a `mk_*`: `r` and the memory after the tail, or `none`. -/
 def mkK (A : ArrId) (c s d : Word) : Option (Word × Mem) → Option (Word × Mem)

@@ -174,6 +174,11 @@ theorem idxW_lt (h : Word) : idxW h < 0x44000000 := by
   have : (0x44000000 : Word).toNat = 2 ^ 30 + 2 ^ 26 := rfl
   omega
 
+theorem idxA_lt (h : Word) : idxA h < 0x80000000 := by
+  rw [UInt64.lt_iff_toNat_lt, idxA_toNat]
+  have : (0x80000000 : Word).toNat = 2 ^ 31 := rfl
+  omega
+
 theorem mask_lt (w : Word) : (w &&& 4294967295).toNat < 2 ^ 32 := by
   rw [mask32_toNat]; omega
 
