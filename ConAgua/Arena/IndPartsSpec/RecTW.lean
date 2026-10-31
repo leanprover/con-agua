@@ -243,7 +243,7 @@ theorem viewConst_ok (m : Mem) (a : AState) (hR : ArenaR m a) (h : Word) (hh : h
   obtain ⟨k, hk, hn, hu⟩ := node_of m a h constCS CeRecRel (·.consts) _ hR.const hv.2
   simp only [EStore.viewConst, EStore.persGetConst]
   rw [proj_tier m a hR h hh (fun t i => t.getConst i) hv.1]
-  simp only [ETables.getConst, Tbl.node?, decE_idx]
+  simp only [ETables.getConst, Tbl.node?, decE_idx h (narrow_of_cnt m h hR.const rfl hv.2)]
   rw [hk]
   simp [hn, hu, decI_word]
 

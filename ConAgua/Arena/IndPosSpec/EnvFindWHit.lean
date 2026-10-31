@@ -67,7 +67,9 @@ theorem posRowPW_eq (m : Mem) (w : Word) (hw : w.toNat < 2 ^ 32) (ht : tagW w �
   have h1 := tagW_toNat_row w
   have h2 := ixW_toNat w hw
   have ht' : rowTag w ≤ 2 := by rw [← h1]; exact UInt64.le_iff_toNat_le.mp ht
-  have hix : rowIx w < 2 ^ 30 := by simp only [rowIx]; omega
+  have hix : rowIx w < 2 ^ 32 := by
+    have : (idxW w).toNat < 0x44000000 := UInt64.lt_iff_toNat_lt.mp (idxW_lt w)
+    simp only [rowIx]; omega
   have h3 : (ixW w + 1).toNat = rowIx w + 1 := by rw [word_add_toNat (by rw [h2]; simp; omega), h2]; rfl
   simp only [rowPW, rowP, ht', ite_true, rdW, h3]
   simp [selArr_rowSelW w ht']
