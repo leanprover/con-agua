@@ -209,11 +209,9 @@ theorem cid_ref (P : CidProg p) {fs fs2 fsR fsT fsC : List FnName}
   unfold checkDecl
   dsimp only
   -- `basis_pin_hit`
-  rcases c1 : callW p n "basis_pin_hit" [o, l] m with _ | ⟨r1, m1⟩
-  · rw [liftE_none, cidE.k_basis_pin_hit.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]
+  refine RefE.bindLift (fun _ => cidE.k_basis_pin_hit.none ..) fun r1 m1 c1 => ?_
   obtain ⟨x, a1, hrun1, hS1, hg1, hx⟩ := basisPinHit_ok P.bph n dn vis fe m m1 a o l block r1 hS hok hblk c1
-  refine RefE.bind_right hrun1 ?_
+  refine ⟨_, _, hrun1, ?_⟩
   have hM1 := hM.call hclC (hfC _ (by simp [cidFrameCallees])) c1
   obtain ⟨hIM1, hCM1⟩ := armMemos_call hclC (hfC _ (by simp [cidFrameCallees])) c1 hIM hCM
   obtain ⟨ok1, x1, hc1, hp1, -⟩ := ConRon.Bridge.basisPinHit_run hok hbP hrun1
@@ -225,20 +223,14 @@ theorem cid_ref (P : CidProg p) {fs fs2 fsR fsT fsC : List FnName}
     rw [cidE.k_basis_pin_hit.arm1 _ _ _ _ _ _ _ _ hz]
     dsimp only
     rw [← hkind]
-    rcases c2 : callE p n "check_basis_decl" [vis, r1.tail.headD 0] m1 with e2 | ⟨r2, m2⟩
-    · rw [cidE.k_check_basis_decl.none]
-      exact fun hG => RefE.run_err (s₀ := ⟨m1, Locals.init []⟩) (checkBasisDecl_specE p P.basis P.pa P.cbd n _ vis _)
-        hG.nv trivial (cbd_ref P.basis P.canon P.rom hdn n (by omega) hS1
-          (fun e => absurd hk4 (by rw [e]; decide))) c2
+    rw [← bind_pure (checkBasisDecl _ _)]
+    refine RefE.bindRun (s₀ := ⟨m1, Locals.init []⟩) (fun _ => cidE.k_check_basis_decl.none ..)
+      (checkBasisDecl_specE p P.basis P.pa P.cbd n _ vis _) (fun hG => hG.nv) (fun _ => trivial)
+      (cbd_ref P.basis P.canon P.rom hdn n (by omega) hS1 (fun e => absurd hk4 (by rw [e]; decide)))
+      fun r2 s2 _ _ c2 _ _ hR2 => ?_
     rw [cidE.k_check_basis_decl.arm1]
-    have d2 := callW_of_callE c2
-    obtain ⟨s2, hs2, -, hok2, hS2, hg2⟩ := triple_of_callW (s₀ := ⟨m1, Locals.init []⟩)
-      (checkBasisDecl_refines p P.basis P.canon P.rom P.pa P.cbd n ⟨m1, Locals.init []⟩ a1 dn hdn fe
-        vis (r1.tail.headD 0) (by omega) hS1
-        (fun e => absurd hk4 (by rw [e]; decide))) d2
-    subst hs2
-    obtain ⟨hIM2, hCM2⟩ := armMemos_call hclC hfB d2 hIM1 hCM1
-    exact RefE.ret (AM.run_of_ok _ _ hok2) ⟨by simpa using hS2, hCM2, hg1.trans hg2, hIM2⟩
+    obtain ⟨hIM2, hCM2⟩ := armMemos_call hclC hfB (callW_of_callE c2) hIM1 hCM1
+    exact RefE.ret rfl ⟨by simpa using hR2.stage, hCM2, hg1.trans hR2.grow, hIM2⟩
   | none =>
   replace hx : r1.headD 0 = 0 := hx
   rw [cidE.k_basis_pin_hit.arm2 _ _ _ _ _ _ _ _ hx]
@@ -246,9 +238,7 @@ theorem cid_ref (P : CidProg p) {fs fs2 fsR fsT fsC : List FnName}
   have hbE : o.toNat + l.toNat < 2 ^ 64 := by
     have := hS.iw.er; have := hS.iw.erSize; omega
   -- `ind_params_ok`
-  rcases c3 : callW p n "ind_params_ok" [w, o, l] m1 with _ | ⟨r3, m3⟩
-  · rw [liftE_none, cidE.k_ind_params_ok.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]
+  refine RefE.bindLift (fun _ => cidE.k_ind_params_ok.none ..) fun r3 m3 c3 => ?_
   obtain ⟨s3, hs3, -, hm3, hok3, hst3, hres3, -⟩ := triple_of_callW (s₀ := ⟨m1, Locals.init []⟩)
     (indParamsOk_refines p P.ps P.ev P.ipo n ⟨m1, Locals.init []⟩ a1 dn vis fe w o l block hS1 hblk1 hbE)
     (callW_mono c3 (Nat.le_succ n))
@@ -257,24 +247,15 @@ theorem cid_ref (P : CidProg p) {fs fs2 fsR fsT fsC : List FnName}
   subst hs3
   have hrun3 := AM.run_of_ok _ _ hok3
   rw [hst3] at hrun3
-  refine RefE.bind_right hrun3 ?_
-  by_cases z3 : r3.headD 0 = 0
-  · rw [cidE.k_ind_params_ok.abort1 _ _ _ _ _ _ _ _ z3]
-    have hpo3 : AM.res (indParamsOk w.toNat block) a1 = false := by
-      rw [← hres3, z3]; rfl
-    rw [hpo3]
-    exact fun _ => ErrClaim.fail _ _ (by decide)
-  rw [cidE.k_ind_params_ok.arm1 _ _ _ _ _ _ _ _ z3]
-  have hpo3 : AM.res (indParamsOk w.toNat block) a1 = true := by
-    rw [← hres3]; simpa using z3
+  refine ⟨_, _, hrun3, ?_⟩
+  refine RefE.ofArms (fun h => cidE.k_ind_params_ok.abort1 (hc1 := h) ..) (fun h => cidE.k_ind_params_ok.arm1 (hc1 := h) ..)
+    (RefE.guardThen (by decide) (fun h => by rw [← hres3, h]; rfl) (fun h => by rw [← hres3] at h; simpa using h)
+      fun _ hb3 => ?_)
+  have hpo3 : AM.res (indParamsOk w.toNat block) a1 = true := by simpa using hb3
   obtain ⟨st3, -⟩ := ConRon.Bridge.Inductives.indParamsOk_spec w.toNat block blockP a1 a1 _ k1.ok.state
     (ConRon.Bridge.denoteCIList_mono k1.ext _ _ hbP) (by rw [hpo3] at hrun3; exact hrun3)
-  rw [hpo3]
-  simp only [Bool.not_true, Bool.false_eq_true, ite_false]
   -- `block_parts`
-  rcases c4 : callW p n "block_parts" [w, o, l] m1 with _ | ⟨r4, m4⟩
-  · rw [liftE_none, cidE.k_block_parts.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]
+  refine RefE.bindLift (fun _ => cidE.k_block_parts.none ..) fun r4 m4 c4 => ?_
   obtain ⟨s4, hs4, -, hok4, hR4, hS4, hg4⟩ := triple_of_callW (s₀ := ⟨m1, Locals.init []⟩)
     (blockParts_refinesC p hkp.closed hLC P.parts n ⟨m1, Locals.init []⟩ a1 w o l block
       (StageC.of_parts hS1 k1.ok hM1.2.2.1 (dnE k1.ext)) hM1.2.2.1
@@ -282,7 +263,7 @@ theorem cid_ref (P : CidProg p) {fs fs2 fsR fsT fsC : List FnName}
     (callW_mono c4 (by omega))
   subst hs4
   have hrun4 := AM.run_of_ok _ _ hok4
-  refine RefE.bind_right hrun4 ?_
+  refine ⟨_, _, hrun4, ?_⟩
   have hM4 := hM1.call hclC (hfC _ (by simp [cidFrameCallees])) c4
   obtain ⟨hIM4, -⟩ := armMemos_call hclC (hfC _ (by simp [cidFrameCallees])) c4 hIM1 hCM1
   generalize AM.res (blockParts? w.toNat block) a1 = bp at hrun4 hR4 ⊢
@@ -325,17 +306,16 @@ theorem cid_ref (P : CidProg p) {fs fs2 fsR fsT fsC : List FnName}
     hclT hfT n (by omega) hC4 hq4 hsl4.1 (shapeCV_of_decB hq4) (hblk1.grow (decEBlk_mono _ _ _) hg4) hP4 hma4
     hA4 hkP hkt hkr hta4 hsl4.2 hfold.coh (ConRon.Bridge.denoteFEnv_mono (x01.trans k4.ext) hfold.denote) hshP
     (ConRon.Bridge.denoteCIList_mono (x01.trans k4.ext) _ _ hbP) hfRc hclH hfH hclM hfM (hlpd.members hrun4)
-  rcases c5 : callE p n "check_block" [vis, o, l, r4.tail.headD 0] s4.mem with e5 | ⟨r5, m5⟩
-  · rw [cidE.k_check_basis_decl.none]
-    exact fun hG => RefE.run_err hT5 hG.nv hG hR5 c5
+  dsimp only
+  rw [← bind_pure (ConRon.Arena.checkBlock _ _ _ _)]
+  refine RefE.bindRun (s₀ := ⟨s4.mem, Locals.init []⟩) (fun _ => cidE.k_check_basis_decl.none ..) hT5
+    (fun hG => hG.nv) id hR5 fun r5 s5 _ _ c5 _ _ hR5' => ?_
   rw [cidE.k_check_basis_decl.arm1]
-  obtain ⟨s5, hs5, -, x5, a5, hrun5, hR5'⟩ := RefE.run_ok hT5 hR5 c5
-  subst hs5
   have hmc5 := mcMR.ofClosed hclMc hfMc (callW_of_callE c5) hIM4.stage.mc
   have hA5 := hR5'.abs
   have hCM5 : CoreMemos s5.mem := ⟨hA5.il, hA5.ab, hA5.wk.1⟩
   obtain ⟨mp5, hma5⟩ := hR5'.ma
-  exact RefE.ret hrun5 ⟨hR5'.stage, hCM5, hg1.trans (hg4.trans hR5'.grow),
+  exact RefE.ret rfl ⟨hR5'.stage, hCM5, hg1.trans (hg4.trans hR5'.grow),
     ⟨⟨hR5'.rc.pos, ⟨mp5, hma5⟩, hmc5, hR5'.rc.ta⟩, hA5.i1, hA5.cr.crOK⟩⟩
 
 include hkp hV hOpf hLC hLT hApd hCrk hIlpf hLz in
