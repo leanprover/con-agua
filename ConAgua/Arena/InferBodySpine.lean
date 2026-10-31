@@ -138,13 +138,10 @@ theorem spTail_ref (p : Prog) (hil : InstListOK p) {G : Prop} (n : Nat)
   have hspn := hS.spn
   have hcn64 : co.toNat + cn.toNat < 2 ^ 64 := by omega
   have hadd : (co + cn).toNat = co.toNat + cn.toNat := addW _ _ hcn64
-  rcases h1 : callW p n "inst_list" [ty, co, cn, 0] m with _ | ⟨r₁, m₁⟩
-  · rw [liftE_none, hk0]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some, hk]
-  obtain ⟨hok, ⟨M', hS', hK', hSt'⟩, hres, hrw⟩ := CoreSpec.of_callW (hil n ⟨m, Locals.init []⟩ a dn
-    vis fe M eb ty co cn 0 acc hS ht hacc (by rw [htop, hadd]; exact Nat.le_refl _)) h1
-  have h0 : (0 : Word).toNat = 0 := rfl
-  rw [h0] at hok hres hS'
+  rw [← bind_pure (instantiateListFast coreWalkFuel (decE ty) acc 0)]
+  refine RefE.bind_callW hk0 (hil n ⟨m, Locals.init []⟩ a dn vis fe M eb ty co cn 0 acc hS ht hacc
+    (by rw [htop, hadd]; exact Nat.le_refl _)) fun r₁ m₁ _ ⟨_, ⟨M', hS', hK', hSt'⟩, _, hrw⟩ => ?_
+  rw [hk]
   have hjc : ∀ j : Word, j < co → j < spTop m := fun j hj => by
     rw [htop, UInt64.lt_iff_toNat_lt, hadd]; have := UInt64.lt_iff_toNat_lt.mp hj; omega
   have hg : StackGrew m₀ m₁ :=
@@ -153,8 +150,7 @@ theorem spTail_ref (p : Prog) (hil : InstListOK p) {G : Prop} (n : Nat)
       hbk.trans hSt'.bstk, hpg.trans hSt'.pool⟩
   have hkept := StackKept.restoreG' hg
   rw [show rdW (m₀.arr64 CTL) 136 = co by rw [hco]; rfl] at hkept
-  exact RefE.ret (AM.run_of_ok _ _ hok)
-    ⟨⟨M', hS'.frame_stk (MemFrame.setCtl m₁ 136 co) (by simp) (by simp), hK', hkept⟩, hres, hrw⟩
+  exact RefE.ret rfl ⟨⟨M', hS'.frame_stk (MemFrame.setCtl m₁ 136 co) (by simp) (by simp), hK', hkept⟩, rfl, hrw⟩
 
 /-- **The io spine's loop refines `inferSpineIO`, both outcomes**, by induction on the loop fuel: a
 step's `whnf` (the slot's errors), a non-`∀` type after it rejects, the exit is `spTail_ref`. -/
@@ -289,9 +285,7 @@ theorem spio_ref (p : Prog) (hil : InstListOK p) (n : Nat)
         args 0) a₀ (CorePost decH dn s₀.mem vis fe M eb ResH) := by
   have hS := hs.rel
   simp only [spioE]
-  by_cases hc : s₀.mem.len64 SPN < rdW (s₀.mem.arr64 CTL) 136
-  · rw [ite_eq_left hc]; exact RefE.of_cls0 rfl
-  rw [ite_eq_right hc]
+  refine RefE.abort0 (by rfl) fun hc => ?_
   have hcle := len64_not_lt hS.spn hc
   exact spioLoop_ref p hil n hk F hF hn dn vis fe mode d ao an args eb _ hs.mode4 hs.eb_mode s₀.mem
     har rfl hlo (n + 1) (Nat.le_refl _) s₀.mem a₀ M ty 0 0 #[] hS ht (SpineR.empty _ _ hcle)

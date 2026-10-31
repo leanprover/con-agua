@@ -296,9 +296,7 @@ theorem isp_ref (p : Prog) (hp : InferLeafProg p) (hkp : KnotProg p) (hq : Spine
       (CorePost decH dn s₀.mem vis fe M eb ResH) := by
   have hS := hs.rel
   simp only [ispE]
-  by_cases hc : s₀.mem.len64 SPN < rdW (s₀.mem.arr64 CTL) 136
-  · rw [ite_eq_left hc]; exact RefE.of_cls0 rfl
-  rw [ite_eq_right hc]
+  refine RefE.abort0 (by rfl) fun hc => ?_
   have hcle := len64_not_lt hS.spn hc
   exact spLoop_ref p hp hkp hq he hil n hk F hF hn dn vis fe mode d ao an args eb _ hs.mode4
     hs.eb_mode s₀.mem har rfl hlo (n + 1) (Nat.le_refl _) s₀.mem a₀ M ty 0 0 #[] hS ht
