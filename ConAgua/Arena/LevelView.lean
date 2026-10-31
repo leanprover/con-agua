@@ -52,7 +52,7 @@ theorem lview_of_lvNodeW (hne : lvNodeW m h ≠ []) : ∃ v, a.store.lss.ls.view
     refine hview (fun T => T.zeros.nodes[(idxW h).toNat]? = some x) ?_ ?_ ?_
     · intro T hT
       refine ⟨.zero, ?_⟩
-      simp (config := { decide := true }) only [LTables.get, LTag.zero, beq_iff_eq, e0, g0, ↓reduceIte, Tbl.node?, decI_idx h, hT, Option.map_some]
+      simp (config := { decide := true }) only [LTables.get, LTag.zero, beq_iff_eq, e0, g0, ↓reduceIte, Tbl.node?, decI_idx h (narrow_of_tagW h (by rw [g0]; decide)), hT, Option.map_some]
     · intro ht; simpa [ht] using hx
     · intro ht; simpa [ht] using hx
   by_cases g1 : tagW h = 1
@@ -63,7 +63,7 @@ theorem lview_of_lvNodeW (hne : lvNodeW m h ≠ []) : ∃ v, a.store.lss.ls.view
     refine hview (fun T => T.succs.nodes[(idxW h).toNat]? = some x) ?_ ?_ ?_
     · intro T hT
       refine ⟨.succ x.u, ?_⟩
-      simp (config := { decide := true }) only [LTables.get, LTag.zero, LTag.succ, beq_iff_eq, e0, e1, g1, ↓reduceIte, Tbl.node?, decI_idx h, hT, Option.map_some]
+      simp (config := { decide := true }) only [LTables.get, LTag.zero, LTag.succ, beq_iff_eq, e0, e1, g1, ↓reduceIte, Tbl.node?, decI_idx h (narrow_of_tagW h (by rw [g1]; decide)), hT, Option.map_some]
     · intro ht; simpa [ht] using hx
     · intro ht; simpa [ht] using hx
   by_cases g2 : tagW h = 2
@@ -74,7 +74,7 @@ theorem lview_of_lvNodeW (hne : lvNodeW m h ≠ []) : ∃ v, a.store.lss.ls.view
     refine hview (fun T => T.maxs.nodes[(idxW h).toNat]? = some x) ?_ ?_ ?_
     · intro T hT
       refine ⟨.max x.u x.v, ?_⟩
-      simp (config := { decide := true }) only [LTables.get, LTag.zero, LTag.succ, LTag.max, beq_iff_eq, e0, e1, e2, g2, ↓reduceIte, Tbl.node?, decI_idx h, hT, Option.map_some]
+      simp (config := { decide := true }) only [LTables.get, LTag.zero, LTag.succ, LTag.max, beq_iff_eq, e0, e1, e2, g2, ↓reduceIte, Tbl.node?, decI_idx h (narrow_of_tagW h (by rw [g2]; decide)), hT, Option.map_some]
     · intro ht; simpa [ht] using hx
     · intro ht; simpa [ht] using hx
   by_cases g3 : tagW h = 3
@@ -85,7 +85,7 @@ theorem lview_of_lvNodeW (hne : lvNodeW m h ≠ []) : ∃ v, a.store.lss.ls.view
     refine hview (fun T => T.imaxs.nodes[(idxW h).toNat]? = some x) ?_ ?_ ?_
     · intro T hT
       refine ⟨.imax x.u x.v, ?_⟩
-      simp (config := { decide := true }) only [LTables.get, LTag.zero, LTag.succ, LTag.max, LTag.imax, beq_iff_eq, e0, e1, e2, e3, g3, ↓reduceIte, Tbl.node?, decI_idx h, hT, Option.map_some]
+      simp (config := { decide := true }) only [LTables.get, LTag.zero, LTag.succ, LTag.max, LTag.imax, beq_iff_eq, e0, e1, e2, e3, g3, ↓reduceIte, Tbl.node?, decI_idx h (narrow_of_tagW h (by rw [g3]; decide)), hT, Option.map_some]
     · intro ht; simpa [ht] using hx
     · intro ht; simpa [ht] using hx
   by_cases g4 : tagW h = 4
@@ -93,10 +93,17 @@ theorem lview_of_lvNodeW (hne : lvNodeW m h ≠ []) : ∃ v, a.store.lss.ls.view
     have hc : ¬ tcnt m PARAM (tierW h) ≤ idxW h := fun c => hne (by simp [c])
     obtain ⟨x, hx, -⟩ := ConsR.node hR.param (tierW h) ht1 (idxW h)
       (UInt64.not_le.mp hc)
+    have hn : h.toNat / 2 ^ 30 % 2 = 0 := by
+      have e := ConsR.cnt hR.param (tierW h) ht1
+      have c := ConsR.cap hR.param (tierW h) ht1
+      have hc' : idxW h < cntC paramCS m (tierW h) := UInt64.not_le.mp hc
+      have := UInt64.lt_iff_toNat_lt.mp hc'
+      simp only [show paramCS.wide = false from rfl, capS, Bool.false_eq_true, ↓reduceIte] at c
+      exact narrow_of_idxW_lt h (by omega)
     refine hview (fun T => T.params.nodes[(idxW h).toNat]? = some x) ?_ ?_ ?_
     · intro T hT
       refine ⟨.param x.n, ?_⟩
-      simp (config := { decide := true }) only [LTables.get, LTag.zero, LTag.succ, LTag.max, LTag.imax, LTag.param, beq_iff_eq, e0, e1, e2, e3, e4, g4, ↓reduceIte, Tbl.node?, decI_idx h, hT, Option.map_some]
+      simp (config := { decide := true }) only [LTables.get, LTag.zero, LTag.succ, LTag.max, LTag.imax, LTag.param, beq_iff_eq, e0, e1, e2, e3, e4, g4, ↓reduceIte, Tbl.node?, decI_isWide_false h hn, Bool.false_eq_true, decI_idx h hn, hT, Option.map_some]
     · intro ht; simpa [ht] using hx
     · intro ht; simpa [ht] using hx
   simp [g0, g1, g2, g3, g4] at hne
