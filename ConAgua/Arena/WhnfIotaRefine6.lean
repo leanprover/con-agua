@@ -213,10 +213,10 @@ theorem viewConstName_f (m : Mem) (a : AState) (hR : ArenaR m a) (h : Word) (hh 
     unfold EStore.viewConstName EStore.persGetConstName
     rw [decE_pers h hh]
     by_cases ht : tierW h = 0
-    · simp [ht, ETables.getConstName, decE_idx h]
+    · simp [ht, ETables.getConstName, decE_idx h (narrow_of_cnt m h hR.const rfl hv.2)]
     · have hon : a.store.scratchOn = true := by
         rw [← hfl]; simp only [bne_iff_ne, ne_eq]; exact fun h1 => hv.1 ⟨ht, h1⟩
-      simp [ht, hon, ETables.getConstName, decE_idx h]
+      simp [ht, hon, ETables.getConstName, decE_idx h (narrow_of_cnt m h hR.const rfl hv.2)]
   rw [e, Tbl.node?, hk]
   simp [hn, decI_word]
 

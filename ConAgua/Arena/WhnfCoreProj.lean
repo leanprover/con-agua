@@ -292,7 +292,7 @@ theorem lsNodeW_viewLen {m : Mem} {a : AState} (hR : ArenaR m a) {h : Word} (hh 
     rw [sliceL_length] at hlen
     simp only [lsWords, List.length_map] at hlen
     simp only [h0, beq_self_eq_true, ↓reduceIte, LsStore.persGetLen, LsTables.getLen, htag,
-      Tbl.node?, decI_idx h, hx, Option.map_some]
+      Tbl.node?, decI_idx h (narrow_of_tagW h (by rw [g0']; decide)), hx, Option.map_some]
     simp only [h0] at hlen
     rw [hlen]
   · have hsc' : rdW (m.arr64 CTL) 1 ≠ 0 := fun e => hsc ⟨by rw [h1]; decide, e⟩
@@ -310,7 +310,7 @@ theorem lsNodeW_viewLen {m : Mem} {a : AState} (hR : ArenaR m a) {h : Word} (hh 
     have hlen := congrArg List.length hr.2.1
     rw [sliceL_length] at hlen
     simp only [lsWords, List.length_map] at hlen
-    simp only [h1, ↓reduceIte, hon, LsTables.getLen, htag, Tbl.node?, decI_idx h, hx,
+    simp only [h1, ↓reduceIte, hon, LsTables.getLen, htag, Tbl.node?, decI_idx h (narrow_of_tagW h (by rw [g0']; decide)), hx,
       Option.map_some]
     simp only [h1] at hlen
     rw [hlen]; simp

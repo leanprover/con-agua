@@ -96,7 +96,7 @@ def nfE (p : Prog) (n : Nat) (m : L.Mem) (vis : L.Word) (ctx : L.Word) (fuel : L
   | n + 1 =>
     if (nF) = 0 then Except.ok ([(ksOff), (ksLen), (ndsOff), (ndsLen), (cur), (ns)], (m))
     else
-      if ((cur) >>> (28 : L.Word) : L.Word) ≠ 6 then Except.error (L.Err.abort (R_NESTED_POSITIVITY_INVALID_NESTED))
+      if (tagW cur) ≠ 6 then Except.error (L.Err.abort (R_NESTED_POSITIVITY_INVALID_NESTED))
       else
         if ((base) + (j)) < (base) then Except.error (L.Err.abort 0)
         else
@@ -115,7 +115,7 @@ grind_pattern [arena_grind]nfE.arm1 =>
 theorem nfE.arm2 (p : Prog) (n : Nat) (m : L.Mem) (vis : L.Word) (ctx : L.Word) (fuel : L.Word) (progOff : L.Word)
     (progLen : L.Word) (base : L.Word) (nF : L.Word) (j : L.Word) (cur : L.Word) (ns : L.Word) (ksOff : L.Word)
     (ksLen : L.Word) (ndsOff : L.Word) (ndsLen : L.Word) (hc1 : (nF) ≠ 0)
-    (hc2 : ((cur) >>> (28 : L.Word) : L.Word) = 6) (hc3 : ¬((base) + (j)) < (base))
+    (hc2 : (tagW cur) = 6) (hc3 : ¬((base) + (j)) < (base))
     (hc4 : (((base) + (j)) + (1 : L.Word)) ≠ 0) :
     nfE p (n + 1) m vis ctx fuel progOff progLen base nF j cur ns ksOff ksLen ndsOff ndsLen =
       (nfE.k_e_view (p) (n) (vis) (ctx) (fuel) (progOff) (progLen) (base) (nF) (j) (ns) (ksOff) (ksLen) (ndsOff)
@@ -126,7 +126,7 @@ grind_pattern [arena_grind]nfE.arm2 =>
 theorem nfE.abort1 (p : Prog) (n : Nat) (m : L.Mem) (vis : L.Word) (ctx : L.Word) (fuel : L.Word)
     (progOff : L.Word) (progLen : L.Word) (base : L.Word) (nF : L.Word) (j : L.Word) (cur : L.Word) (ns : L.Word)
     (ksOff : L.Word) (ksLen : L.Word) (ndsOff : L.Word) (ndsLen : L.Word) (hc1 : (nF) ≠ 0)
-    (hc2 : ((cur) >>> (28 : L.Word) : L.Word) ≠ 6) :
+    (hc2 : (tagW cur) ≠ 6) :
     nfE p (n + 1) m vis ctx fuel progOff progLen base nF j cur ns ksOff ksLen ndsOff ndsLen =
       Except.error (L.Err.abort (R_NESTED_POSITIVITY_INVALID_NESTED)) :=
   by rw [nfE.eq_2, ite_eq_right hc1, ite_eq_left hc2]
@@ -135,7 +135,7 @@ grind_pattern [arena_grind]nfE.abort1 =>
 theorem nfE.abort2 (p : Prog) (n : Nat) (m : L.Mem) (vis : L.Word) (ctx : L.Word) (fuel : L.Word)
     (progOff : L.Word) (progLen : L.Word) (base : L.Word) (nF : L.Word) (j : L.Word) (cur : L.Word) (ns : L.Word)
     (ksOff : L.Word) (ksLen : L.Word) (ndsOff : L.Word) (ndsLen : L.Word) (hc1 : (nF) ≠ 0)
-    (hc2 : ((cur) >>> (28 : L.Word) : L.Word) = 6) (hc3 : ((base) + (j)) < (base)) :
+    (hc2 : (tagW cur) = 6) (hc3 : ((base) + (j)) < (base)) :
     nfE p (n + 1) m vis ctx fuel progOff progLen base nF j cur ns ksOff ksLen ndsOff ndsLen =
       Except.error (L.Err.abort 0) :=
   by rw [nfE.eq_2, ite_eq_right hc1, ite_eq_right (not_not_intro hc2), ite_eq_left hc3]
@@ -144,7 +144,7 @@ grind_pattern [arena_grind]nfE.abort2 =>
 theorem nfE.abort3 (p : Prog) (n : Nat) (m : L.Mem) (vis : L.Word) (ctx : L.Word) (fuel : L.Word)
     (progOff : L.Word) (progLen : L.Word) (base : L.Word) (nF : L.Word) (j : L.Word) (cur : L.Word) (ns : L.Word)
     (ksOff : L.Word) (ksLen : L.Word) (ndsOff : L.Word) (ndsLen : L.Word) (hc1 : (nF) ≠ 0)
-    (hc2 : ((cur) >>> (28 : L.Word) : L.Word) = 6) (hc3 : ¬((base) + (j)) < (base))
+    (hc2 : (tagW cur) = 6) (hc3 : ¬((base) + (j)) < (base))
     (hc4 : (((base) + (j)) + (1 : L.Word)) = 0) :
     nfE p (n + 1) m vis ctx fuel progOff progLen base nF j cur ns ksOff ksLen ndsOff ndsLen =
       Except.error (L.Err.abort 0) :=
