@@ -1,3 +1,4 @@
+import ConLeche.Kernel.NatOpPins
 import ConAgua.Rom.PinStream
 
 /-!
