@@ -1,7 +1,6 @@
 import ConAgua.Arena.RecCheckSpec.TargetRecPins
 import ConAgua.Arena.IndSumSpec.SoaW
 import ConAgua.Verdict.VCtx
-import ConAgua.Arena.Checker
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.ModelGen
 
@@ -28,175 +27,31 @@ l_model trpE_spec (p : Prog) (hf : p.lookup "target_rec_pins" = some targetRecPi
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
   heartbeats 4000000 unified
 
-/-! ## The twin's four failing tests -/
+/-! ## The twin's name pins, from `namesTwin`'s run -/
 
-theorem fail_run' {γ : Type} (e : CheckError) (a : AState) :
-    (ConRon.Arena.fail e : AM γ).run a = .error e := rfl
-
-theorem except_error_bind' {ε α β : Type} (e : ε) (f : α → Except ε β) :
-    (Except.error e >>= f) = Except.error e := rfl
-
-theorem trp_fail1 (bs : BlockShape) (blk : List IConstantInfo) (a : AState)
-    (h0 : ¬ ConRon.Arena.blockRecLpsOk bs = true) :
-    ∃ s, (ConRon.Arena.targetRecPins bs blk).run a = .error (.invalid s) := by
-  unfold ConRon.Arena.targetRecPins
-  simp [StateT.run_bind, h0, fail_run', except_error_bind']
-
-theorem trp_fail2 (bs : BlockShape) (blk : List IConstantInfo) (a a1 : AState)
-    (h0 : ConRon.Arena.blockRecLpsOk bs = true)
-    (h1 : (ConRon.Arena.blockRecNamesUnreserved bs.recs).run a = .ok (false, a1)) :
-    ∃ s, (ConRon.Arena.targetRecPins bs blk).run a = .error (.invalid s) := by
-  unfold ConRon.Arena.targetRecPins
-  simp [StateT.run_bind, h0, h1, fail_run', except_error_bind']
-
-theorem trp_fail3 (bs : BlockShape) (blk : List IConstantInfo) (a a1 a2 : AState)
-    (h0 : ConRon.Arena.blockRecLpsOk bs = true)
-    (h1 : (ConRon.Arena.blockRecNamesUnreserved bs.recs).run a = .ok (true, a1))
-    (h2 : (ConRon.Arena.blockRecNameSetOk bs.members (bs.recs.filter fun rc => rc.tgt < bs.k)).run a1 =
-      .ok (false, a2)) :
-    ∃ s, (ConRon.Arena.targetRecPins bs blk).run a = .error (.invalid s) := by
-  unfold ConRon.Arena.targetRecPins
-  simp [StateT.run_bind, h0, h1, h2, fail_run', except_error_bind']
-
-theorem trp_fail4 (bs : BlockShape) (blk : List IConstantInfo) (a a1 a2 a3 : AState)
-    (h0 : ConRon.Arena.blockRecLpsOk bs = true)
-    (h1 : (ConRon.Arena.blockRecNamesUnreserved bs.recs).run a = .ok (true, a1))
-    (h2 : (ConRon.Arena.blockRecNameSetOk bs.members (bs.recs.filter fun rc => rc.tgt < bs.k)).run a1 =
-      .ok (true, a2))
-    (h3 : (namesTwin bs).run a2 = .ok (false, a3)) :
-    ∃ s, (ConRon.Arena.targetRecPins bs blk).run a = .error (.invalid s) := by
-  unfold namesTwin at h3
-  simp only [StateT.run_bind] at h3
-  cases hn : (rpN0 bs).run a2 with
-  | error e => rw [hn] at h3; cases h3
+/-- **`namesTwin`'s run, step by step**: the twin's `n₀`, the wanted auxiliary names, its answer
+(the set test, then no two recursors sharing a name). -/
+theorem namesTwin_run {bs : BlockShape} {a a' : AState} {b : Bool} (h : (namesTwin bs).run a = .ok (b, a')) :
+    ∃ n0 a1 want, (rpN0 bs).run a = .ok (n0, a1) ∧
+      ((List.range (rpAux bs).length).mapM fun i => internNNode (.str n0 s!"rec_{i + 1}")).run a1 =
+        .ok (want, a') ∧
+      b = (rpSetOk ((rpAux bs).map (·.cvR.name)) want && nameNodup (bs.recs.map (·.cvR.name))) := by
+  unfold namesTwin at h
+  simp only [StateT.run_bind] at h
+  cases hn : (rpN0 bs).run a with
+  | error e => rw [hn] at h; cases h
   | ok x =>
-  obtain ⟨n0, a2'⟩ := x
-  rw [hn] at h3
-  simp only [except_ok_bind] at h3
-  cases hw : ((List.range (rpAux bs).length).mapM fun i => internNNode (.str n0 s!"rec_{i + 1}")).run a2' with
-  | error e => rw [hw] at h3; cases h3
+  obtain ⟨n0, a1⟩ := x
+  rw [hn] at h
+  simp only [except_ok_bind] at h
+  cases hw : ((List.range (rpAux bs).length).mapM fun i => internNNode (.str n0 s!"rec_{i + 1}")).run a1 with
+  | error e => rw [hw] at h; cases h
   | ok y =>
-  obtain ⟨want, a2''⟩ := y
-  rw [hw] at h3
-  simp only [except_ok_bind] at h3
-  unfold rpAux at hw
-  unfold ConRon.Arena.targetRecPins
-  rcases hm : bs.members with _ | ⟨ms0, rest⟩
-  · simp only [rpN0, hm] at hn
-    rw [hm] at h2
-    have hw' : ((List.range (List.filter (fun rc => !decide (rc.tgt < bs.k)) bs.recs).length).mapM
-        fun i => internNNode (.str n0 (toString "rec_" ++ (i + 1).repr))).run a2' = .ok (want, a2'') := hw
-    by_cases hc : rpSetOk ((List.filter (fun rc => !decide (rc.tgt < bs.k)) bs.recs).map (·.cvR.name)) want = true
-    · unfold rpAux at h3
-      rw [ite_eq_left hc] at h3
-      have hnd : nameNodup (bs.recs.map (·.cvR.name)) = false := by
-        change Except.ok (nameNodup (bs.recs.map (·.cvR.name)), a2'') = Except.ok (false, a3) at h3
-        simp only [Except.ok.injEq, Prod.mk.injEq] at h3
-        exact h3.1
-      unfold rpSetOk at hc
-      simp [StateT.run_bind, hw', h0, h1, h2, hn]
-      rw [ite_eq_left hc]
-      simp [hnd, fail_run', except_error_bind']
-    · unfold rpAux at h3
-      unfold rpSetOk at hc
-      simp [StateT.run_bind, hw', h0, h1, h2, hn]
-      rw [ite_eq_right hc]
-      simp [fail_run', except_error_bind']
-  · simp only [rpN0, hm] at hn
-    change Except.ok (ms0.cvT.name, a2) = Except.ok (n0, a2') at hn
-    simp only [Except.ok.injEq, Prod.mk.injEq] at hn
-    obtain ⟨rfl, rfl⟩ := hn
-    rw [hm] at h2
-    have hw' : ((List.range (List.filter (fun rc => !decide (rc.tgt < bs.k)) bs.recs).length).mapM
-        fun i => internNNode (.str ms0.cvT.name (toString "rec_" ++ (i + 1).repr))).run a2 = .ok (want, a2'') := hw
-    by_cases hc : rpSetOk ((List.filter (fun rc => !decide (rc.tgt < bs.k)) bs.recs).map (·.cvR.name)) want = true
-    · unfold rpAux at h3
-      rw [ite_eq_left hc] at h3
-      have hnd : nameNodup (bs.recs.map (·.cvR.name)) = false := by
-        change Except.ok (nameNodup (bs.recs.map (·.cvR.name)), a2'') = Except.ok (false, a3) at h3
-        simp only [Except.ok.injEq, Prod.mk.injEq] at h3
-        exact h3.1
-      unfold rpSetOk at hc
-      simp [StateT.run_bind, hw', h0, h1, h2]
-      rw [ite_eq_left hc]
-      simp [hnd, fail_run', except_error_bind']
-    · unfold rpAux at h3
-      unfold rpSetOk at hc
-      simp [StateT.run_bind, hw', h0, h1, h2]
-      rw [ite_eq_right hc]
-      simp [fail_run', except_error_bind']
-
-theorem trp_fail5 (bs : BlockShape) (blk : List IConstantInfo) (a a1 a2 a3 : AState)
-    (h0 : ConRon.Arena.blockRecLpsOk bs = true)
-    (h1 : (ConRon.Arena.blockRecNamesUnreserved bs.recs).run a = .ok (true, a1))
-    (h2 : (ConRon.Arena.blockRecNameSetOk bs.members (bs.recs.filter fun rc => rc.tgt < bs.k)).run a1 =
-      .ok (true, a2))
-    (h3 : (namesTwin bs).run a2 = .ok (true, a3)) (h4 : splitOk bs blk = false) :
-    ∃ s, (ConRon.Arena.targetRecPins bs blk).run a = .error (.invalid s) := by
-  unfold namesTwin at h3
-  simp only [StateT.run_bind] at h3
-  cases hn : (rpN0 bs).run a2 with
-  | error e => rw [hn] at h3; cases h3
-  | ok x =>
-  obtain ⟨n0, a2'⟩ := x
-  rw [hn] at h3
-  simp only [except_ok_bind] at h3
-  cases hw : ((List.range (rpAux bs).length).mapM fun i => internNNode (.str n0 s!"rec_{i + 1}")).run a2' with
-  | error e => rw [hw] at h3; cases h3
-  | ok y =>
-  obtain ⟨want, a2''⟩ := y
-  rw [hw] at h3
-  simp only [except_ok_bind] at h3
-  have hc : rpSetOk ((rpAux bs).map (·.cvR.name)) want = true := by
-    refine Classical.byContradiction fun hc => ?_; rw [ite_eq_right hc] at h3; cases h3
-  rw [ite_eq_left hc] at h3
-  have hnd : nameNodup (bs.recs.map (·.cvR.name)) = true := by
-    change Except.ok (nameNodup (bs.recs.map (·.cvR.name)), a2'') = Except.ok (true, a3) at h3
-    simp only [Except.ok.injEq, Prod.mk.injEq] at h3
-    exact h3.1
-  unfold rpSetOk at hc
-  unfold rpAux at hw hc
-  unfold splitOk at h4
-  unfold ConRon.Arena.targetRecPins
-  rcases hm : bs.members with _ | ⟨ms0, rest⟩
-  · simp only [rpN0, hm] at hn
-    rw [hm] at h2
-    have hw' : ((List.range (List.filter (fun rc => !decide (rc.tgt < bs.k)) bs.recs).length).mapM
-        fun i => internNNode (.str n0 (toString "rec_" ++ (i + 1).repr))).run a2' = .ok (want, a2'') := hw
-    simp [StateT.run_bind, hw', h0, h1, h2, hn]
-    rw [ite_eq_left hc]; simp [hnd]
-    rcases hb : ConRon.Arena.blockSplit blk with _ | ⟨cvTs, cs, rs⟩ <;> rw [hb] at h4
-    · simp [fail_run']
-    · simp at h4
-      have hn' : ¬ ((cvTs.length = bs.k ∧ rs.length = bs.recs.length) ∧
-          List.map (fun x => x.fst.name) bs.allCtors = List.map (fun x => x.fst.name) cs) :=
-        fun ⟨⟨a1', b1'⟩, c1'⟩ => h4 a1' b1' c1'
-      dsimp only
-      rw [ite_eq_right hn']
-      simp [fail_run']
-  · simp only [rpN0, hm] at hn
-    change Except.ok (ms0.cvT.name, a2) = Except.ok (n0, a2') at hn
-    simp only [Except.ok.injEq, Prod.mk.injEq] at hn
-    obtain ⟨rfl, rfl⟩ := hn
-    rw [hm] at h2
-    have hw' : ((List.range (List.filter (fun rc => !decide (rc.tgt < bs.k)) bs.recs).length).mapM
-        fun i => internNNode (.str ms0.cvT.name (toString "rec_" ++ (i + 1).repr))).run a2 = .ok (want, a2'') := hw
-    simp [StateT.run_bind, hw', h0, h1, h2]
-    rw [ite_eq_left hc]; simp [hnd]
-    rcases hb : ConRon.Arena.blockSplit blk with _ | ⟨cvTs, cs, rs⟩ <;> rw [hb] at h4
-    · simp [fail_run']
-    · simp at h4
-      have hn' : ¬ ((cvTs.length = bs.k ∧ rs.length = bs.recs.length) ∧
-          List.map (fun x => x.fst.name) bs.allCtors = List.map (fun x => x.fst.name) cs) :=
-        fun ⟨⟨a1', b1'⟩, c1'⟩ => h4 a1' b1' c1'
-      dsimp only
-      rw [ite_eq_right hn']
-      simp [fail_run']
-
-theorem claim_of_fail {α : Type} {T : AM α} {a : AState} {e : Err}
-    (h : ∃ s, T.run a = .error (.invalid s)) (hc : e.cls = 1) : ErrClaim T a e := fun _ => by
-  obtain ⟨s, hs⟩ := h
-  exact ⟨_, hs, by rw [twinCls_invalid, hc]⟩
+  obtain ⟨want, a2⟩ := y
+  rw [hw] at h
+  simp only [except_ok_bind] at h
+  refine ⟨n0, a1, want, rfl, ?_⟩
+  split at h <;> cases h <;> exact ⟨hw, by simp [*]⟩
 
 /-- What `target_rec_pins` gives besides the twin's run (from `m`): the stage relation, the growth. -/
 structure TrpPost (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (m m' : Mem)
@@ -209,8 +64,9 @@ variable {p : Prog} (L : RpLook p) {dn : NIdx → Option ConLeche.Name} {vis : W
 
 include L in
 /-- **`target_rec_pins` refines `targetRecPins`, both outcomes**: the callees run through their
-runs (`callE`; outside the verdict closure, so their errors claim nothing); the five aborts are
-the twin's five `fail`s, a passing run its `trp_twin`. -/
+runs (`callE`; outside the verdict closure, so their errors claim nothing), against the twin's
+steps; `target_rec_pins_names` is the twin's name pins from `n₀` on (`namesTwin_run`), checked in
+one answer where the twin has two `fail`s. -/
 theorem trp_ref (N : Nat) {m : Mem} {a : AState} {pp bo bl : Word} {bs : BlockShape}
     {blk : List IConstantInfo}
     (hS : StageR dn vis fe m a) (hq : DecB (fun m => decBS m pp.toNat) m bs)
@@ -245,6 +101,7 @@ theorem trp_ref (N : Nat) {m : Mem} {a : AState} {pp bo bl : Word} {bs : BlockSh
     have := (trpRd (IWGrow.refl m) (i := 3) (by simpa [Nat.add_assoc] using hrl) (hi 3 (by omega))).1
     simpa using this
   rw [trpE.arm1, rd2, rd3]
+  unfold ConRon.Arena.targetRecPins
   -- `block_rec_lps_ok`
   refine RefE.onlyCall (fun _ => rfl) (fun hV => hV.nv) (_root_.L.Checker.nv_mem (by decide +kernel))
     fun r1 m1 h1 => ?_
@@ -252,16 +109,9 @@ theorem trp_ref (N : Nat) {m : Mem} {a : AState} {pp bo bl : Word} {bs : BlockSh
     L.lpsOne L.lpsGo L.lps L.lpsOk N ⟨m, Locals.init []⟩ pp) (callW_of_callE h1)
   subst hs1
   obtain ⟨hr1, hS1, hg1⟩ := lokW_stage hW1 hS hq
-  by_cases hz1 : r1.headD 0 = 0
-  · rw [trpE.k_block_rec_lps_ok.abort1 p N pp bo bl ro rl r1 _ hz1]
-    refine fun _ => ?_
-    have hc : ¬ ConRon.Arena.blockRecLpsOk bs = true := by
-      intro hc; rw [hr1] at hz1; simp [hc] at hz1
-    exact claim_of_fail (trp_fail1 bs blk a hc) (by decide)
-  rw [trpE.k_block_rec_lps_ok.arm1 p N pp bo bl ro rl r1 _ hz1]
-  have hc0 : ConRon.Arena.blockRecLpsOk bs = true := by
-    rw [hr1] at hz1
-    exact Classical.byContradiction fun hc => by simp [hc] at hz1
+  rw [trpE.k_block_rec_lps_ok.eq_2]
+  refine RefE.guard rfl (fun hz => by rw [hr1] at hz; simpa using hz) (fun hc => by rw [hr1, hc]; rfl)
+    fun _ _ => ?_
   -- `block_rec_names_unreserved`
   refine RefE.onlyCall (fun _ => rfl) (fun hV => hV.nv) (_root_.L.Checker.nv_mem (by decide +kernel))
     fun r2 m2 h2 => ?_
@@ -274,20 +124,10 @@ theorem trp_ref (N : Nat) {m : Mem} {a : AState} {pp bo bl : Word} {bs : BlockSh
         · have := hT m; omega)) (callW_of_callE h2)
   subst hs2
   dsimp only at hok2 hr2 hS2 hg2
-  have hrun1 := partsRunOfOk hok2
-  by_cases hz2 : r2.headD 0 = 0
-  · rw [trpE.k_block_rec_names_unreserved.abort1 p N pp bo bl ro rl r2 _ hz2]
-    refine fun _ => ?_
-    have hc : AM.res (ConRon.Arena.blockRecNamesUnreserved bs.recs) a = false := by
-      rw [hr2] at hz2
-      exact Classical.byContradiction fun hc => by simp [Bool.not_eq_false] at hc; simp [hc] at hz2
-    rw [hc] at hrun1
-    exact claim_of_fail (trp_fail2 bs blk a _ hc0 hrun1) (by decide)
-  rw [trpE.k_block_rec_names_unreserved.arm1 p N pp bo bl ro rl r2 _ hz2, rd1 _ (hg1.trans hg2)]
-  have hc1 : AM.res (ConRon.Arena.blockRecNamesUnreserved bs.recs) a = true := by
-    rw [hr2] at hz2
-    exact Classical.byContradiction fun hc => by simp [hc] at hz2
-  rw [hc1] at hrun1
+  refine RefE.bind_right (partsRunOfOk hok2) ?_
+  rw [trpE.k_block_rec_names_unreserved.eq_2, rd1 _ (hg1.trans hg2)]
+  refine RefE.guard rfl (fun hz => by rw [hr2] at hz; simpa using hz) (fun hc => by rw [hr2, hc]; rfl)
+    fun _ _ => ?_
   -- `block_rec_split_own_aux`
   refine RefE.onlyCall (fun _ => rfl) (fun hV => hV.nv) (_root_.L.Checker.nv_mem (by decide +kernel))
     fun r3 m3 h3 => ?_
@@ -312,25 +152,11 @@ theorem trp_ref (N : Nat) {m : Mem} {a : AState} {pp bo bl : Word} {bs : BlockSh
       bs.members _ hS3 hms3 hown) (callW_mono (callW_of_callE h4) (by omega))
   subst hs4
   dsimp only at hok4 hr4 hS4 hg4
-  have hrun2 := partsRunOfOk hok4
-  by_cases hz4 : r4.headD 0 = 0
-  · rw [trpE.k_block_rec_name_set_ok.abort1 p (N' + 1) pp bo bl ro rl ml _ _ _ r4 _ hz4]
-    refine fun _ => ?_
-    have hc : AM.res (ConRon.Arena.blockRecNameSetOk bs.members
-        (bs.recs.filter fun rc => decide (rc.tgt < bs.k))) (AM.st (ConRon.Arena.blockRecNamesUnreserved bs.recs) a)
-        = false := by
-      rw [hr4] at hz4
-      exact Classical.byContradiction fun hc => by simp [Bool.not_eq_false] at hc; simp [hc] at hz4
-    rw [hc] at hrun2
-    exact claim_of_fail (trp_fail3 bs blk a _ _ hc0 hrun1 hrun2) (by decide)
-  rw [trpE.k_block_rec_name_set_ok.arm1 p (N' + 1) pp bo bl ro rl ml _ _ _ r4 _ hz4]
-  have hc2 : AM.res (ConRon.Arena.blockRecNameSetOk bs.members
-      (bs.recs.filter fun rc => decide (rc.tgt < bs.k))) (AM.st (ConRon.Arena.blockRecNamesUnreserved bs.recs) a)
-      = true := by
-    rw [hr4] at hz4
-    exact Classical.byContradiction fun hc => by simp [hc] at hz4
-  rw [hc2] at hrun2
-  -- `target_rec_pins_names`
+  refine RefE.bind_right (partsRunOfOk hok4) ?_
+  rw [trpE.k_block_rec_name_set_ok.eq_2]
+  refine RefE.guard rfl (fun hz => by rw [hr4] at hz; simpa using hz) (fun hc => by rw [hr4, hc]; rfl)
+    fun _ _ => ?_
+  -- `target_rec_pins_names`: the twin's name pins, from its `n₀` on
   refine RefE.onlyCall (fun _ => rfl) (fun hV => hV.nv) (_root_.L.Checker.nv_mem (by decide +kernel))
     fun r5 m5 h5 => ?_
   obtain ⟨s5, hs5, -, hW5⟩ := triple_of_callW (s₀ := ⟨s4.mem, Locals.init []⟩)
@@ -342,49 +168,33 @@ theorem trp_ref (N : Nat) {m : Mem} {a : AState} {pp bo bl : Word} {bs : BlockSh
   obtain ⟨b5, a5, hrun3, hr5, hS5, hg5⟩ := tpnW_sim p L N' s4.mem _ mo ml ro rl _ _ bs hS4
     (hms.grow (fun q => decMS_mono q) hg14) (hrs.grow (fun q => decRS_mono q) hg14)
     (haux.grow (fun q => decRS_mono q) hg4) r5 s5.mem hW5
-  by_cases hz5 : r5.headD 0 = 0
-  · rw [trpE.k_target_rec_pins_names.abort1 p (N' + 1) pp bo bl rl ml r5 _ hz5]
-    refine fun _ => ?_
-    have hb : b5 = false := by
-      rw [hr5] at hz5
-      exact Classical.byContradiction fun hc => by simp [hc] at hz5
-    subst hb
-    exact claim_of_fail (trp_fail4 bs blk a _ _ _ hc0 hrun1 hrun2 hrun3) (by decide)
-  rw [trpE.k_target_rec_pins_names.arm1 p (N' + 1) pp bo bl rl ml r5 _ hz5]
-  have hb : b5 = true := by
-    rw [hr5] at hz5
-    exact Classical.byContradiction fun hc => by simp [hc] at hz5
-  subst hb
-  -- `target_rec_pins_split`
-  refine RefE.onlyCall (fun _ => rfl) (fun hV => hV.nv) (_root_.L.Checker.nv_mem (by decide +kernel))
-    fun r6 m6 h6 => ?_
-  obtain ⟨s6, hs6, -, hW6⟩ := triple_of_callW (s₀ := ⟨s5.mem, Locals.init []⟩)
-    (tps_spec p L.psplit (N' + 1) _ pp ml rl bo bl) (callW_mono (callW_of_callE h6) (by omega))
-  subst hs6
-  dsimp only at hW6
-  have hg15 := hg14.trans hg5
-  obtain ⟨b6, a6, hrun4, hr6, rfl, hS6, hg6⟩ := tpsW_sim p L N' s5.mem a5 pp ml rl bo bl bs blk hS5
-    (hq.grow (decBS_mono _) hg15) (hblk.grow (decEBlk_mono dn _ _) hg15) hk hrlen r6 s6.mem hW6
-  by_cases hz6 : r6.headD 0 = 0
-  · rw [trpE.k_target_rec_pins_split.abort1 p r6 _ hz6]
-    refine fun _ => ?_
-    have hb : b6 = false := by
-      rw [hr6] at hz6
-      exact Classical.byContradiction fun hc => by simp [hc] at hz6
-    subst hb
-    have h4' : splitOk bs blk = false := by
-      change Except.ok (splitOk bs blk, _) = Except.ok (false, _) at hrun4
-      simp only [Except.ok.injEq, Prod.mk.injEq] at hrun4; exact hrun4.1
-    exact claim_of_fail (trp_fail5 bs blk a _ _ _ hc0 hrun1 hrun2 (by simpa using hrun3) h4') (by decide)
-  rw [trpE.k_target_rec_pins_split.arm1 p r6 _ hz6]
-  have h4' : splitOk bs blk = true := by
-    have hb : b6 = true := by
-      rw [hr6] at hz6
-      exact Classical.byContradiction fun hc => by simp [hc] at hz6
-    subst hb
-    change Except.ok (splitOk bs blk, _) = Except.ok (true, _) at hrun4
-    simp only [Except.ok.injEq, Prod.mk.injEq] at hrun4; exact hrun4.1
-  exact RefE.ret (trp_twin bs blk a _ _ _ hc0 hrun1 hrun2 (by simpa using hrun3) h4') ⟨hS6, hg15.trans hg6⟩
+  obtain ⟨n0, a2, want, hn0, hwant, rfl⟩ := namesTwin_run hrun3
+  rw [trpE.k_target_rec_pins_names.eq_2]
+  rcases hm : bs.members with _ | ⟨ms0, rest⟩ <;> simp only [rpN0, hm] at hn0 <;>
+    refine RefE.bind_right hn0 ?_
+  all_goals
+    refine RefE.bind_right hwant ?_
+    by_cases hs : rpSetOk ((rpAux bs).map (·.cvR.name)) want = false
+    · rw [ite_eq_left (by rw [hr5, hs]; rfl)]; exact RefE.twinFail rfl hs
+    refine RefE.twinPass (b := rpSetOk ((rpAux bs).map (·.cvR.name)) want) (by simpa using hs) ?_
+    refine RefE.guard rfl (fun hz => by rw [hr5] at hz; simpa [hs] using hz)
+      (fun hnd => by rw [hr5, hnd, Bool.and_false]; rfl) fun _ _ => ?_
+    -- `target_rec_pins_split`: the twin's constructor grouping
+    refine RefE.onlyCall (fun _ => rfl) (fun hV => hV.nv) (_root_.L.Checker.nv_mem (by decide +kernel))
+      fun r6 m6 h6 => ?_
+    obtain ⟨s6, hs6, -, hW6⟩ := triple_of_callW (s₀ := ⟨s5.mem, Locals.init []⟩)
+      (tps_spec p L.psplit (N' + 1) _ pp ml rl bo bl) (callW_mono (callW_of_callE h6) (by omega))
+    subst hs6
+    dsimp only at hW6
+    have hg15 := hg14.trans hg5
+    obtain ⟨b6, a6, hrun4, hr6, rfl, hS6, hg6⟩ := tpsW_sim p L N' s5.mem _ pp ml rl bo bl bs blk hS5
+      (hq.grow (decBS_mono _) hg15) (hblk.grow (decEBlk_mono dn _ _) hg15) hk hrlen r6 s6.mem hW6
+    obtain ⟨rfl, -⟩ := Prod.mk.inj (Except.ok.inj hrun4)
+    rw [trpE.k_target_rec_pins_split.eq_2]
+    rcases hb : ConRon.Arena.blockSplit blk with _ | ⟨cvTs, cs, rs⟩ <;> simp only [splitOk, hb] at hr6
+    · exact RefE.abortAt (by simpa using hr6) fun _ => ErrClaim.fail _ _ rfl
+    · exact RefE.guardIf rfl (fun hz => by rw [hr6] at hz; simpa using hz) (fun hc => by rw [hr6, hc]; rfl)
+        fun _ _ => RefE.ret rfl ⟨hS6, hg15.trans hg6⟩
 
 include L in
 /-- **`target_rec_pins` refines `targetRecPins`** (`trp_ref`'s ok half; through the stubs

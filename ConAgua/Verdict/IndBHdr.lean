@@ -239,18 +239,14 @@ theorem cch_ref {p : Prog} (hApd : ApdF p) (hCrf : CrfF p) {dn : NIdx → Option
     fun r9 m9 x9 a9 h9 hrun9 ⟨⟨hS9, hg9, hx9, _⟩, hCr9⟩ => ?_
   have h9' := crfF_of_callW hCrf (callW_of_callE h9)
   dsimp only [classConstOkHeaderE.k_consts_resolve_ffast]
-  by_cases hb9 : r9.headD 0 = 0
-  · rw [show x9 = false by rw [← hx9]; simpa using hb9]
-    refine RefE.ite_neg (by decide) ?_
-    rw [ite_eq_left hb9]
-    rcases h10 : callE p (n + 1) "unresolved_consts_error" [vis, wt, 2] m9 with e10 | ⟨r10, m10⟩ <;>
-      dsimp only [classConstOkHeaderE.k_unresolved_consts_error]
-    · obtain ⟨M9, hC9⟩ := hS9.core
-      exact fun hG => uce_errClaim_hi hG.uce hG.nv hC9.arena.base hC9.pins hwtl (by decide) h10 "type of"
-    · exact RefE.of_cls0 rfl
-  rw [show x9 = true by rw [← hx9]; simpa using hb9, ite_eq_right hb9]
-  exact RefE.ite_pos rfl (RefE.ret rfl ⟨hS9, hg4.trans (hg6.trans (hg7.trans (hg8.trans hg9))),
-    fun hA => absOK_crfF h9' (hA8 hA) hCr9 hS9⟩)
+  refine RefE.splitNot (fun hb9 => by rw [← hx9]; simpa using hb9)
+    (fun hb9 => by rw [← hx9] at hb9; simpa using hb9) (fun _ _ => ?_) fun _ _ => RefE.ret rfl
+      ⟨hS9, hg4.trans (hg6.trans (hg7.trans (hg8.trans hg9))), fun hA => absOK_crfF h9' (hA8 hA) hCr9 hS9⟩
+  rcases h10 : callE p (n + 1) "unresolved_consts_error" [vis, wt, 2] m9 with e10 | ⟨r10, m10⟩ <;>
+    dsimp only [classConstOkHeaderE.k_unresolved_consts_error]
+  · obtain ⟨M9, hC9⟩ := hS9.core
+    exact fun hG => uce_errClaim_hi hG.uce hG.nv hC9.arena.base hC9.pins hwtl (by decide) h10 "type of"
+  · exact RefE.of_cls0 rfl
 
 end L.Arena
 

@@ -268,6 +268,7 @@ Which rule for which pair of shapes:
 | same, class `0` (a capacity, a range) | nothing | `RefE.abort0` |
 | same, already decided by a `cases` (the twin's `match` on the callee's `Option`) | `fail ce` / the arm | `RefE.abortAt` / `RefE.pass` |
 | `.error e` / `x` | a twin guard L checks in pieces | `RefE.twinFail` / `RefE.twinPass` |
+| `if c then x else y`, both arms going on (a dispatch, an early `.ok`, an abort through a callee's error) | `if d then T else F` (`d` a `Prop` or `b = true`) | `RefE.split` (`c` iff `d`) / `RefE.splitNot` (`c` iff `¬ d`) |
 
 ### 6.2 The package
 
@@ -1082,6 +1083,12 @@ After refwalk9 (master 5507edf9 + this lane): 348 `RefE` theorems, 23026 lines; 
 leaves 1292 lines unconverted (kit rules and wrappers included). The early `.ok` arms are done
 where the twin is `if b then T else pure y` (§6.15); the rest is listed there.
 
+After refwalk10 and refwalk11 (master 40361d42 + this lane): 350 `RefE` theorems, 22648 lines; the
+classifier (with `retIf`, `split`, `splitNot` among the rules; the count is the same without them)
+leaves 838 lines unconverted, 199 of them the kit's own rules (`RefWalk`, `RefECore`, `Verdict`)
+and 57 the `RecGen` wrappers `cna_ref`, `cfa_ref`. The hand-split guard sites (`RefE.ite_neg`/`ite_pos`)
+of §6.15's list went from 58 to 17 in the nine files (§6.17); what is left is listed there.
+
 ### 6.14 The inference leaves, `whnf` core, `defeq`, the declarations (lane refwalk8)
 
 Converted (statements unchanged), by the lane: `es_ref`, `da_ref`, `il_arm`, `il_ref`,
@@ -1364,3 +1371,136 @@ Next families: §6.15's list, less its first item (this lane) and `IndRealSctC`'
 by `bindE`). From this lane: `tbl_ref`'s guards (a `RefE.ofArms` taking all of an arm's
 hypotheses at once would make each one line), and a `RefE.bindRun` variant whose ok half takes
 the callee's triple instead of its `RefE` post (`cpd_ref`, `istg_iv`).
+
+### 6.17 The hand-split guards, `trp_ref`, the tail of the migration (lane refwalk11)
+
+Converted (statements unchanged): the guard and branch sites of `cvg_ref`, `ivg_ref` (`DeclValE`),
+`cda_ref` (`DeclAxQuotT`, with its four pin reads by `onlySim`), `contRef_step` (`PosCont`),
+`pds_ref`, `pde_ref` (`IndBTpd`), `pfv_ref`, `ncc_ref` (`PosE1L`), `crg_ref` (`IndBCrg`),
+`tk_ref` (`IndBK53`), `ih_ref` (`DeclHdrE`), `cch_ref` (`IndBHdr`); `trp_ref` (`IndBRecPins`)
+walks its twin; `c_ref`'s three and `at_ref`'s one lifted call by `onlySim`
+(`WhnfIotaRecRefine3`, `_tmp/refgen/onlysim.py`).
+
+**New kit rules: `RefE.split` / `RefE.splitNot`** (`RefWalk.lean`, its own commit): the model's
+`if c then x else y` against the twin's `if d then T else F`, `c` iff `d` (resp. `¬ d`), both arms
+given; `d` is any `Prop`, so `b = true` is a case. They take every site here that no guard rule
+fits (14 sites in 8 files): a dispatch whose two arms both go on (`cda_ref`'s
+`std_axiom_ok`/`trustCompiler`/`ofReduce*` arms, `cvg_ref`'s theorem test), an early `.ok`
+against the twin's `if b then pure y else T` (§6.15's missing `RefE.retThen`: `pds_ref`), the
+`unresolved_consts_error` site (the abort is a callee's error: `ivg_ref`, `ih_ref`, `cch_ref`,
+`crg_ref`), a model guard with several aborts against one twin `fail` (`cvg_ref`'s
+type-mismatch: `split <;> (try split) <;> exact fun _ => ErrClaim.fail _ _ rfl`), and a guard
+against a twin condition that is a `Prop` (`if args.length < nPc then fail …`: `contRef_step` ×2,
+`pfv_ref`'s arity), which `guardIf`/`guardThen` (`b = true` only) do not take. The irreducible
+continuations go through `K.eq_2` (§6.15), which states every arm as a plain `if`:
+
+```lean
+rw [checkDeclAxiomE.k_std_axiom_ok.eq_2]
+refine RefE.split (fun z4 => by rw [← hb4]; simpa using z4) (fun z4 => by rw [← hb4] at z4; simpa using z4)
+  (fun _ _ => push hS4 (hg3.trans hg4) hM4) fun _ _ => ?_
+```
+
+**`trp_ref` walks its twin.** It took the twin's five failing runs (`trp_fail1–5`, 155 lines)
+and its passing run (`trp_twin`, 50 lines) up front. Now: `unfold targetRecPins`, `RefE.guard`
+for the three `unless` tests (`bind_right` on the callee's run first), then L's one
+`target_rec_pins_names` against the twin's name pins (`n₀`, the wanted names, two `unless`): its
+`namesTwin` run read back step by step (`namesTwin_run`, 20 lines), `rcases hm : bs.members`
+(the twin's `match` on the members puts the rest in a join point, so both arms are a bind into
+it; one `all_goals` block does the rest for both), `RefE.twinFail`/`twinPass` and `RefE.guard`
+for the two tests, then `rcases` on `blockSplit` and `abortAt`/`guardIf`.
+
+**Dead code removed**: `trp_fail1`–`trp_fail5`, `claim_of_fail`, `fail_run'`,
+`except_error_bind'` (`IndBRecPins`), `trp_twin` (`RecCheckSpec/TargetRecPins`).
+
+Pitfalls (add to §6.4):
+
+* **`rcases h : x with …` already rewrites `x` in the goal**: a `rw [h]` after it fails ("did not
+  find"). The twin's `match x with` reduces at the next rule.
+* **A twin `match` whose arms bind into a join point** (`let n₀ ← match … with | [] => op | ms
+  :: _ => pure …`): after `rcases` on the discriminant both arms are `op' >>= jp`, so one
+  `bind_right` (with the `pure` arm's run `rfl`-shaped) and an `all_goals` block cover both.
+* **`RefE.twinFail` under `abortAt`** cannot infer its `α`/`R`: `rw [ite_eq_left …]; exact
+  RefE.twinFail rfl hb` instead.
+* **`RefE.twinPass hs` with `hs` about a named test (`rpSetOk`)** where the twin spells it out:
+  pass `(b := rpSetOk …)`; unification unfolds the name.
+* **`split_ifs` is Mathlib**; for a model's nested aborts use `split <;> (try split) <;> …`.
+* **`simpa using h` against a twin condition** unfolds the condition's definitions too (the
+  set test of `rpSetOk` to `∀`s); `simpa using` on a goal stated with the name, then the rule.
+
+Numbers, against master 40361d42 (`reflen.py`, `ncl.py`; elaboration `lake env lean`, master's text
+in a master worktree and the branch's, alternated, 3 runs (IndBK53, IndBHdr, IndBRecPins, PosE1L:
+5), median, load 16–46):
+
+| theorem | before | after |
+|---|---:|---:|
+| `cda_ref` | 298 | 246 |
+| `cvg_ref` | 169 | 150 |
+| `ivg_ref` | 76 | 73 |
+| `trp_ref` | 174 | 128 |
+| `pds_ref` | 198 | 192 |
+| `pde_ref` | 81 | 76 |
+| `pfv_ref` | 90 | 78 |
+| `ncc_ref` | 58 | 49 |
+| `crg_ref` | 89 | 87 |
+| `tk_ref` | 70 | 65 |
+| `ih_ref` | 132 | 129 |
+| `cch_ref` | 128 | 124 |
+| `c_ref` | 125 | 119 |
+| `at_ref` | 36 | 34 |
+| **all** | **1724** | **1550 (−10 %)** |
+
+(`contRef_step`'s statement does not mention `RefE`; its file is below.)
+
+| file (code lines) | before | after | wall before → after | max RSS |
+|---|---:|---:|---:|---:|
+| `Verdict/DeclValE.lean` | 425 | 402 | 6.67 → 5.43 s | 2.75 → 2.78 GB |
+| `Arena/DeclAxQuotT.lean` | 331 | 279 | 5.28 → 5.01 s | 3.07 → 3.08 GB |
+| `Arena/IndT/PosCont.lean` | 216 | 204 | 1.97 → 1.82 s | 2.75 → 2.76 GB |
+| `Verdict/IndBTpd.lean` | 353 | 342 | 3.53 → 3.12 s | 2.77 → 2.75 GB |
+| `Verdict/PosE1L.lean` | 289 | 268 | 1.35 → 1.38 s | 2.63 → 2.62 GB |
+| `Verdict/IndBCrg.lean` | 140 | 138 | 1.67 → 1.68 s | 2.64 → 2.65 GB |
+| `Verdict/IndBK53.lean` | 252 | 247 | 2.90 → 2.82 s | 2.85 → 2.86 GB |
+| `Verdict/DeclHdrE.lean` | 206 | 203 | 2.84 → 2.79 s | 2.69 → 2.69 GB |
+| `Verdict/IndBHdr.lean` | 274 | 270 | 3.54 → 3.70 s | 2.61 → 2.60 GB |
+| `Verdict/IndBRecPins.lean` | 367 | 182 | 3.16 → 3.20 s | 2.95 → 2.93 GB |
+| `Arena/RecCheckSpec/TargetRecPins.lean` (`trp_twin` gone) | 159 | 106 | 2.72 → 2.74 s | 2.32 → 2.31 GB |
+| `Arena/WhnfIotaRecRefine3.lean` | 271 | 263 | 1.77 → 1.75 s | 2.13 → 2.14 GB |
+| `Arena/RefWalk.lean` (the two rules) | 192 | 206 | | |
+| **all** | **3475** | **3110 (−10.5 %)** | | |
+
+Memory unchanged; every time move is within its runs' spread (`IndBHdr`'s master runs
+2.85–4.37 s; `DeclValE`'s 5.55–8.56 s). No file grew or was left out. The largest gains are
+`trp_ref` (its twin's runs gone: −50 % of the two files) and `cda_ref` (−17 %: three dispatches
+and a guard by `split`/`guardThen`, the `||`-condition's two halves no longer proved twice).
+
+**The migration, in total** (`reflen.py`, `census.py`): before refwalk1 (master 06c58143^) 321
+`RefE` theorems, 26710 lines, all but the pilot's by hand; now (master 40361d42 + this lane) 350
+theorems (29 more, from other lanes), 22648 lines (−15 %; per theorem 83 → 65 lines, −22 %), 838
+lines unconverted, of which 199 are the kit's own rules and 57 the `RecGen` wrappers. The kit is
+`RefWalk.lean` (206 code lines, 25 rules) beside `RefECore.lean` and `Verdict.lean`.
+
+**What stays by hand, and why** (the remaining `ite_neg`/`ite_pos` sites and the classifier's
+leftovers):
+
+* **A class-`0` abort of the model against a twin guard** (`crg_ref` ×3, `cch_ref` ×2, `DeclCrpT`):
+  `abort0` then `ite_pos` on the twin, three lines; `splitNot` would also need the twin-to-model
+  implication, which the class-`0` abort does not.
+* **A twin `if` that no model guard faces** (`contRef_step` ×3 after `nest_cont_checks`,
+  `pds_ref`'s `tpClosed` and its `early` arm): one `bind_right … (ite_neg …)` line each.
+* **Several model arms against one twin `if`**: `tkh_ref` (`IndBK53`: two early `.ok` arms
+  against one `if … || …`), `c_ref` (three guards against one `if … ∧ … ∧ …`, §6.12), `cvg_ref`'s
+  `lvl_eq_c` (three arms against the twin's `liftFueled` on an `Option Bool`). A split needs one
+  condition per side.
+* **A guard whose twin runs differ by arm** (`ih_ref`'s `reserved_contains`: `resContW_hit`/
+  `resContW_miss` are different runs), so the split precedes the twin's bind; `at_ref`'s tag test
+  (the twin's `at_run_tag` up front).
+* **Not done, candidates for `split`**: `PosKey`'s `nest_keys_contains` dispatch (3 sites),
+  `DeclCrpT`'s pin dispatch (2), `IndBTmm` (3), `PosBind`, `PosApp`, `DeclArmQuot` (2 each).
+* The classifier's leftovers outside the kit (639 lines): `qd_ref` (78, twin up front, §6.14),
+  `m2cArms_ref`/`mtc_ref` (74), `m2cK_ref` (63), `ibds_ref` (49), `ps_ref`/`ps2_ref` (48),
+  `cms_ref` (46, the twin's `match` on the hit list), `si_ref` (46), `icr_ref` (41), `cnfs_ref` (40,
+  §6.15), `cr1_ref` (37), `sa_ref` (24), `dq_tail` (19), `si_tail` (17); each is one or two
+  hand-split steps in an otherwise short proof, with no rule shared by three of them.
+
+Next families: none of the migration's size. The `split` candidates above (about 12 sites, 2–4
+lines each), then `tbl_ref`'s guards (§6.16).

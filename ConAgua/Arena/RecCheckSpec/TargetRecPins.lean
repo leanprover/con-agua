@@ -8,9 +8,8 @@ import ConAgua.L.GrindAttr
 /-!
 # TargetRecPins: `ConRon.Arena.targetRecPins`
 
-The twin's `targetRecPins` when its tests pass (`trp_twin`), the stage relation across
-`block_rec_lps_ok` (`lokW_stage`), the record reads (`trpRd`); `target_rec_pins`' refinement is
-`trp_ref` (`Verdict/IndBRecPins.lean`).
+The stage relation across `block_rec_lps_ok` (`lokW_stage`), the record reads (`trpRd`);
+`target_rec_pins`' refinement is `trp_ref` (`Verdict/IndBRecPins.lean`).
 -/
 
 section
@@ -144,63 +143,6 @@ open scoped Lean.Order
 namespace L.Ind
 
 open L.Arena
-
-/-! ## The twin, when every test passes -/
-
-/-- **The twin's `targetRecPins` passes** when its tests do. -/
-theorem trp_twin (bs : BlockShape) (blk : List IConstantInfo) (a a1 a2 a3 : AState)
-    (h0 : ConRon.Arena.blockRecLpsOk bs = true)
-    (h1 : (ConRon.Arena.blockRecNamesUnreserved bs.recs).run a = .ok (true, a1))
-    (h2 : (ConRon.Arena.blockRecNameSetOk bs.members (bs.recs.filter fun rc => rc.tgt < bs.k)).run a1 =
-      .ok (true, a2))
-    (h3 : (namesTwin bs).run a2 = .ok (true, a3)) (h4 : splitOk bs blk = true) :
-    (ConRon.Arena.targetRecPins bs blk).run a = .ok ((), a3) := by
-  unfold namesTwin at h3
-  simp only [StateT.run_bind] at h3
-  cases hn : (rpN0 bs).run a2 with
-  | error e => rw [hn] at h3; cases h3
-  | ok x =>
-  obtain ⟨n0, a2'⟩ := x
-  rw [hn] at h3
-  simp only [except_ok_bind] at h3
-  cases hw : ((List.range (rpAux bs).length).mapM fun i => internNNode (.str n0 s!"rec_{i + 1}")).run a2' with
-  | error e => rw [hw] at h3; cases h3
-  | ok y =>
-  obtain ⟨want, a2''⟩ := y
-  rw [hw] at h3
-  simp only [except_ok_bind] at h3
-  have hc : rpSetOk ((rpAux bs).map (·.cvR.name)) want = true := by
-    refine Classical.byContradiction fun hc => ?_; rw [ite_eq_right hc] at h3; cases h3
-  rw [ite_eq_left hc] at h3
-  have hnd : nameNodup (bs.recs.map (·.cvR.name)) = true ∧ a2'' = a3 := by
-    change Except.ok (nameNodup (bs.recs.map (·.cvR.name)), a2'') = Except.ok (true, a3) at h3
-    simp only [Except.ok.injEq, Prod.mk.injEq] at h3
-    exact ⟨h3.1, h3.2⟩
-  obtain ⟨hnd, rfl⟩ := hnd
-  unfold rpSetOk at hc
-  unfold rpAux at hw hc
-  unfold splitOk at h4
-  unfold ConRon.Arena.targetRecPins
-  rcases hm : bs.members with _ | ⟨ms0, rest⟩
-  · simp only [rpN0, hm] at hn
-    rcases hb : ConRon.Arena.blockSplit blk with _ | ⟨cvTs, cs, rs⟩ <;> rw [hb] at h4
-    · cases h4
-    rw [hm] at h2
-    have hw' : ((List.range (List.filter (fun rc => !decide (rc.tgt < bs.k)) bs.recs).length).mapM
-        fun i => internNNode (.str n0 (toString "rec_" ++ (i + 1).repr))).run a2' = .ok (want, a2'') := hw
-    simp [StateT.run_bind, hw', h0, h1, h2, hn, hnd, h4, except_ok_bind]
-    rw [ite_eq_left hc]; simp; rfl
-  · simp only [rpN0, hm] at hn
-    change Except.ok (ms0.cvT.name, a2) = Except.ok (n0, a2') at hn
-    simp only [Except.ok.injEq, Prod.mk.injEq] at hn
-    obtain ⟨rfl, rfl⟩ := hn
-    rcases hb : ConRon.Arena.blockSplit blk with _ | ⟨cvTs, cs, rs⟩ <;> rw [hb] at h4
-    · cases h4
-    rw [hm] at h2
-    have hw' : ((List.range (List.filter (fun rc => !decide (rc.tgt < bs.k)) bs.recs).length).mapM
-        fun i => internNNode (.str ms0.cvT.name (toString "rec_" ++ (i + 1).repr))).run a2 = .ok (want, a2'') := hw
-    simp [StateT.run_bind, hw', h0, h1, h2, hnd, h4, except_ok_bind]
-    rw [ite_eq_left hc]; simp; rfl
 
 /-- A word of a decoded record below the top, in any memory grown into. -/
 theorem trpRd {m m' : Mem} (hg : IWGrow m m') {pp : Word} {i v : Nat} (h : iwN (truncM m) (pp.toNat + i) = some v)

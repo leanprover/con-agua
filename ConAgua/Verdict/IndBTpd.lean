@@ -240,14 +240,8 @@ theorem pds_ref (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState}
   have hg48 := hg47.trans hg8
   have hR6' := denote_ext hR6 (q7.trans q8).ext
   have c48 : CoreStep V env fe a a8 := (q.trans q48).toCore hC.check
-  by_cases he : av = bv
-  · subst he
-    rw [ite_eq_left rfl]
-    exact RefE.ite_pos (by simp) (RefE.ret rfl ⟨⟨rfl, hC8, hg48, hP8, hA8⟩, c48⟩)
-  rw [ite_eq_right he]
-  have hne : (decE av == decE bv) = false := by
-    simp only [beq_eq_false_iff_ne, ne_eq]; exact fun e => he (decI_inj hav hbv e)
-  refine RefE.ite_neg (by simp [hne]) ?_
+  refine RefE.split (fun he => by rw [he]; simp) (fun h => decI_inj hav hbv (by simpa [decE_eq] using h))
+    (fun he _ => by subst he; exact RefE.ret rfl ⟨⟨rfl, hC8, hg48, hP8, hA8⟩, c48⟩) fun he _ => ?_
   -- the knot: `infer_type_core` twice, then `is_def_eq_core`
   simp only [decE_eq]
   refine RefE.bindCall (fun _ => rfl)
@@ -337,15 +331,10 @@ theorem pde_ref (n : Nat) (hn : n ≤ 2 ^ 62) :
     (pds_ref hq henv n (by omega) hC hA hx hy hlv hno hnob hho hhob hpf hP hTA hpfP hxP hyP habs hpw)
     fun ⟨r1, m1⟩ c a1 _ hR1 => ?_
   dsimp only at hR1
-  by_cases hr1 : r1 = 0
-  · rw [pdeE.k_target_params_def_eq_step.arm1 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hr1]
-    have : c = false := by rw [← hR1.res, hr1]; rfl
-    subst this
-    exact RefE.ite_neg (by simp) (RefE.ret rfl ⟨rfl, hR1.stage, hR1.grow, hR1.rc, hR1.abs⟩)
-  rw [pdeE.k_target_params_def_eq_step.arm2 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hr1]
-  have : c = true := by rw [← hR1.res]; simpa using hr1
-  subst this
-  refine RefE.ite_pos rfl ?_
+  rw [pdeE.k_target_params_def_eq_step.eq_2]
+  refine RefE.retIf (fun hr1 => by rw [← hR1.res, hr1]; rfl) (fun hc => by rw [← hR1.res] at hc; simpa using hc)
+    (fun _ => ⟨rfl, hR1.stage, hR1.grow, hR1.rc, hR1.abs⟩) fun hr1 hc => ?_
+  subst hc
   have hg1 := hR1.grow
   have hgo := hg1.iw
   have h2 := ih (by omega) (m := m1) (ao := ao + 1) (al := al - 1) (bo := bo + 1) (bl := bl - 1)
