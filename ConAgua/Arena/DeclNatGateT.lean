@@ -373,7 +373,8 @@ theorem dng_ref (hN : NatSubProg' p) (hq : KnotStageProg p) (hcl : LeafClosed p)
   have hC2 := StageC.of_run hC1 (hS2.restrict vis) (callW_leafFrame hcl (leaf_mem _ (by decide)) h2)
     hC.check.state (Ext.refl _) rfl rfl
   rw [defnNatGateE.k_sl_contains.eq_2, ite_not]
-  refine RefE.retIf (fun e2 => by grind [decW0B]) (fun hf => by grind [decW0B])
+  refine RefE.retIf (fun e2 => by rw [← hx2, ← hd2.1, e2]; rfl)
+    (fun hf => by rw [← hx2, ← hd2.1] at hf; simpa using hf)
     (fun _ => ⟨hS2, hC2, hg1.trans hg2, Ext.refl _⟩) fun _ _ => ?_
   -- the guard
   refine RefE.bindSim (fun _ => rfl) (natOpGuard_ref hGd n k m2 a2 · · ⟨hS2, hn⟩ ·)

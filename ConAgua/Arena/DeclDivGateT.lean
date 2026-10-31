@@ -139,7 +139,7 @@ theorem dg_ref {p : Prog} (hD : DmProg10 p) (hq : KnotStageProg p) (hcl : LeafCl
     (CoreStep.refl hC1.check)
   have hG2 : IWGrow m m2 := hg1.trans hg2
   rw [defnDivGateE.k_sl_contains.eq_2, ite_not]
-  refine RefE.retIf (fun z2 => by rw [← hx2e]; exact decW0B_false hd2 z2) (fun _ => by grind [decW0B])
+  refine RefE.retIf (fun z2 => by rw [← hx2e]; exact decW0B_false hd2 z2) (fun hb => by rw [← hx2e, ← hd2.1] at hb; simpa using hb)
     (fun _ => ⟨hS2, hC2, Ext.refl _, hG2⟩) fun _ _ => ?_
   -- the variant records
   refine RefE.onlySim (fun _ => defnDivGateE.k_rom_pin_sets.none ..) (fun _ _ h => h) fun r3 m3 h3 => ?_

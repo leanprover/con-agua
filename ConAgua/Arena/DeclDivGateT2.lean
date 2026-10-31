@@ -161,7 +161,7 @@ theorem cm_ref (hD : DmProg8 p) (hq : KnotStageProg p) (hcl : LeafClosed p) (hkp
         (decI (rdW (m.arr64 IW) po))).run a = .ok (x1, a1) := hrun1
     refine ⟨_, _, hrun1', ?_⟩
     rw [checkDivModCertsE.k_div_mod_cert_guard.eq_2]
-    refine RefE.retIf (decW0B_false hd1) (fun hb => by grind [decW0B])
+    refine RefE.retIf (decW0B_false hd1) (fun hb => by rw [← hd1.1] at hb; simpa using hb)
       (fun _ => ⟨hC1, c1, hg1, by simp [decW0B], hCr1⟩) fun z1 hx1 => ?_
     have hg' : ConLeche.divModCertGuard env nm v hx ex px = true := by rw [← hxv1, hx1]
     simp only [ConLeche.divModCertGuard, Bool.and_eq_true, Bool.not_eq_true'] at hg'
@@ -546,7 +546,7 @@ theorem cpa_ref (hD : DmProg8 p) (hq : KnotStageProg p) (hcl : LeafClosed p) (hk
     (ConRon.Bridge.divModTypePins_closed hpg)) fun ⟨r2, m2⟩ x2 a2 _ hR2 => ?_
   rw [checkDivModPinAtE.k_check_type_pins.eq_2]
   refine RefE.retIf (fun z2 => decW0B_false hR2.res (by simpa using z2))
-    (fun hb => by have := hR2.res; grind [decW0B])
+    (fun hb => by rw [← hR2.res.1] at hb; simpa using hb)
     (fun _ => ⟨hR2.stage, hR2.core, hg1.trans hR2.grow, by simp [decW0B], hR2.cr⟩) fun z2 _ => ?_
   -- the value pin and the certificates
   refine (cpv_ref hD hq hcl hkp hs0 hsA henv hk' hR2.stage hc hval
