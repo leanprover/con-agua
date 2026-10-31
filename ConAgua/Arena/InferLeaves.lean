@@ -11,7 +11,6 @@ import Std.WP.Tactic
 import ConAgua.Arena.WhnfCoreApp
 import ConAgua.Arena.WhnfCoreRefine
 import ConAgua.Arena.RefECore
-import ConAgua.Arena.RefWalk
 import ConAgua.Arena.KnotE
 import ConAgua.L.ModelGen
 import ConAgua.Checker.NoVerdictTree
