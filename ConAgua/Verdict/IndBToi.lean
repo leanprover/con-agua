@@ -1,3 +1,4 @@
+import ConAgua.Arena.RefWalk
 import ConAgua.Arena.RecGenSpec.DecCIIndCv
 import ConAgua.Arena.RecClassSpec.ClassNPcOf
 import ConAgua.Arena.IlpRdReal
@@ -68,42 +69,40 @@ theorem toi_ref (n : Nat) {m : Mem} {a : AState} {I us dso dsl : Word} {ds : Lis
   | zero => rw [toiE.eq_1]; exact RefE.of_cls0 (by simp)
   | succ n =>
   have hS := hC.stage
-  rw [toiE.arm1]
-  rcases hef : envFindW m I vis with _ | ⟨r2, m2⟩
-  · rw [liftE_none, toiE.k_env_find.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]
+  rw [toiE.arm1, ConRon.Arena.targetOutsideInst]
+  refine RefE.onlySim (fun _ => rfl) (fun _ _ h => h) fun r2 m2 hef => ?_
   obtain ⟨hm2, hfind, hdec⟩ := envFindW_found hef hS.check.env hI
   subst m2
-  rw [ConRon.Arena.targetOutsideInst]
+  dsimp only [toiE.k_env_find]
   by_cases hf0 : r2.headD 0 = 0
-  · rw [toiE.k_env_find.abort1 p n us dso dsl r2 m hf0]
-    have hfn : fe.find? (decI I) = none := by rw [hfind, decFound, ite_eq_left hf0]
+  · have hfn : fe.find? (decI I) = none := by rw [hfind, decFound, ite_eq_left hf0]
+    refine RefE.abortAt hf0 ?_
     simp only [hfn]
     exact fun _ => ErrClaim.fail _ _ (by decide)
+  refine RefE.pass hf0 ?_
   obtain ⟨ci, hci⟩ := hdec hf0
   have hfci : fe.find? (decI I) = some ci := by rw [hfind, decFound, ite_eq_right hf0, hci]
   obtain ⟨kk, hkk, hcase⟩ := decCI_ind_cases hci
   have hkr := erec_nat (w := r2.tail.headD 0) (c := 0) (by simpa using hkk) (by decide)
   rw [show UInt64.ofNat 0 = (0 : Word) from rfl, UInt64.add_zero] at hkr
+  rw [hfci]
   by_cases hk3 : rdW (m.arr64 EREC) (r2.tail.headD 0) ≠ 3
-  · rw [toiE.k_env_find.abort2 p n us dso dsl r2 m hf0 hk3]
+  · refine RefE.abortAt hk3 ?_
     have hkind : kk ≠ 3 := by
       intro hk3'
       apply hk3
       rw [hkr.1, hk3']; rfl
     obtain ⟨-, hno⟩ := hcase.resolve_left (fun ⟨hh, _⟩ => hkind hh)
-    rw [hfci]
     cases ci with
     | indInfo cv caps => exact absurd rfl (hno cv caps)
     | _ => exact fun _ => ErrClaim.fail _ _ (by decide)
-  rw [toiE.k_env_find.arm1 p n us dso dsl r2 m hf0 (by simpa using hk3)]
+  refine RefE.pass hk3 ?_
   have hkind : kk = 3 := by
     have : rdW (m.arr64 EREC) (r2.tail.headD 0) = 3 := by simpa using hk3
     rw [hkr.1] at this
     have := congrArg UInt64.toNat this
     rwa [UInt64.toNat_ofNat_of_lt' (by simp only [UInt64.size]; exact hkr.2)] at this
   obtain ⟨-, cv, caps, rfl, -⟩ := hcase.resolve_right (fun ⟨hne, _⟩ => hne hkind)
-  rw [hfci]
   dsimp only
   have hcvP := decCI_ind_cv hci
   have hcvA : decCV (erA m) ((r2.tail.headD 0).toNat + 1) = some cv :=
@@ -121,9 +120,8 @@ theorem toi_ref (n : Nat) {m : Mem} {a : AState} {I us dso dsl : Word} {ds : Lis
     · exact .inl h0
     · exact .inr (hslice?_bound _ _ _ _ hsl h0)
   -- `er_to_iw`
-  rcases h3 : erToIwW n m w1 w2 with _ | ⟨r3, m3⟩
-  · rw [liftE_none, toiE.k_er_to_iw.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some, toiE.k_er_to_iw.arm1]
+  refine RefE.onlySim (fun _ => rfl) (fun _ _ h => h) fun r3 m3 h3 => ?_
+  dsimp only [toiE.k_er_to_iw]
   obtain ⟨-, hr3t, hdec3, hS3, hg3, -⟩ := L.Arena.erToIwW_stage h3 hS hsrc
   rw [hr3t]
   have hdecL : decHL m3 (r3.headD 0).toNat w2.toNat = some cv.levelParams := by rw [hdec3]; exact hsl
@@ -136,58 +134,47 @@ theorem toi_ref (n : Nat) {m : Mem} {a : AState} {I us dso dsl : Word} {ds : Lis
     rdW_of_get? (by rw [UInt64.toNat_add]; simp [erA] at hqE3 ⊢; omega) hwt
   rw [et]
   -- `inst_lp_fast`
-  rcases h4 : callW p n "inst_lp_fast" [CWF, r3.headD 0, w2, us, wt] m3 with _ | ⟨r4, m4⟩
-  · rw [liftE_none, toiE.k_inst_lp_fast.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some, toiE.k_inst_lp_fast.arm1]
+  refine RefE.bindLift (fun _ => rfl) fun r4 m4 h4 => ?_
   obtain ⟨x4, a4, hrun4, ⟨hS4, hg4, hx4⟩, -, hA4⟩ := (IlpRd.realC hIlpf hC) n CWF (r3.headD 0) w2 us wt
     cv.levelParams m3 m4 a r4 hu hwtH ⟨rfl, erToIwW_iwFr h3⟩ hS3 hdecL h4
   rw [CWF_eq, ← hwtE] at hrun4
+  refine ⟨_, _, hrun4, ?_⟩
+  dsimp only [toiE.k_inst_lp_fast]
   have hg34 := (hg3.trans hg4)
-  refine RefE.bind_right hrun4 ?_
   -- `inst_pis_with`
-  rcases h5 : instW n m4 dso dsl (r4.headD 0) with _ | ⟨r5, m5⟩
-  · rw [liftE_none, toiE.k_inst_pis_with.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]
+  refine RefE.bindLift (fun _ => rfl) fun r5 m5 h5 => ?_
   obtain ⟨hx4H, rfl⟩ := hx4
   obtain ⟨x5, a5, hrun5, hS5, hg5, hx5⟩ := instW_okB h5 hS4 hx4H
     (DecB.grow (OMono.decHL _ _) hg34 hds) hb
-  refine RefE.bind_right hrun5 ?_
-  by_cases hok : r5.headD 0 = 0
-  · rw [toiE.k_inst_pis_with.abort1 p n r5 m5 hok]
-    cases x5 with
-    | none => exact fun _ => ErrClaim.fail _ _ (by decide)
-    | some ty => simp only [decOE] at hx5; exact absurd (hx5.1.symm.trans hok) (by decide)
-  rw [toiE.k_inst_pis_with.arm1 p n r5 m5 hok]
+  refine ⟨_, _, hrun5, ?_⟩
+  dsimp only [toiE.k_inst_pis_with]
   cases x5 with
-  | none => simp only [decOE] at hx5; exact absurd hx5 hok
+  | none => exact RefE.abortAt hx5 fun _ => ErrClaim.fail _ _ (by decide)
   | some ty =>
-  obtain ⟨-, hty⟩ := hx5
+  obtain ⟨hok, hty⟩ := hx5
+  refine RefE.pass (by rw [hok]; decide) ?_
   -- `pi_binders`
-  rcases h6 : piBW n m5 CWF (r5.tail.headD 0) with _ | ⟨r6, m6⟩
-  · rw [liftE_none, toiE.k_pi_binders.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some, toiE.k_pi_binders.arm1]
+  refine RefE.bindLift (fun _ => rfl) fun r6 m6 h6 => ?_
   obtain ⟨bs, e, hrun6, hdec6, hb6, he6, hS6, hg6, -⟩ := piBW_cwf h6 hS5 hty.1
   rw [hty.2] at hrun6
-  refine RefE.bind_right hrun6 ?_
-  -- `e_view`
-  cases h7 : callE p n "e_view" [r6.tail.tail.headD 0] m6 with
-  | error e7 =>
-    rw [toiE.k_e_view.none]
-    exact RefE.bind_left fun hG => ErrClaim.of_callE_nv hG (_root_.L.Checker.nv_mem (by decide +kernel)) h7
-  | ok q7 =>
-  obtain ⟨r7, m7⟩ := q7
-  obtain ⟨s7, hs7, hs7e, hne7, hr7⟩ := triple_of_callW (s₀ := ⟨m6, Locals.init []⟩)
-    (eView_spec p P.v n ⟨m6, Locals.init []⟩ (r6.tail.tail.headD 0)) (callW_of_callE h7)
-  subst hs7e
-  dsimp only at hr7 hne7 hs7
-  subst hs7
-  obtain ⟨v, hv, hvr⟩ := eViewW_ok m6 a5 hS6.check.arena.base _ (by rw [← hr7]; exact hne7)
+  refine ⟨_, _, hrun6, ?_⟩
+  dsimp only [toiE.k_pi_binders]
   rw [getD_two] at he6
-  rw [he6] at hv
-  rw [← hr7] at hvr
-  refine RefE.bind_right (view_run _ _ _ hv) ?_
+  -- `e_view`
+  refine RefE.bindCall (Q := fun b a' v => b.2 = m6 ∧ a' = a5 ∧ ViewR b.1 v) (fun _ => rfl)
+    (fun hG _ h7 => ErrClaim.of_callE_nv hG (_root_.L.Checker.nv_mem (by decide +kernel)) h7)
+    (fun ⟨r7, m7⟩ h7 => by
+      obtain ⟨s7, hs7, hs7e, hne7, hr7⟩ := triple_of_callW (s₀ := ⟨m6, Locals.init []⟩)
+        (eView_spec p P.v n ⟨m6, Locals.init []⟩ (r6.tail.tail.headD 0)) h7
+      subst hs7e hs7
+      obtain ⟨v, hv, hvr⟩ := eViewW_ok m6 a5 hS6.check.arena.base _ (by rw [← hr7]; exact hne7)
+      rw [he6] at hv
+      exact ⟨v, a5, view_run _ _ _ hv, rfl, rfl, hr7 ▸ hvr⟩)
+    fun r7 m7 v a7 _ _ ⟨hm7, ha7, hvr⟩ => ?_
+  subst hm7 ha7
+  dsimp only [toiE.k_e_view]
   by_cases h2 : r7.headD 0 = 2
-  · rw [toiE.k_e_view.arm1 _ _ r7 _ h2]
+  · refine RefE.pass (by simpa using h2) ?_
     cases v
     case sort u =>
       obtain ⟨-, hu1, hu2⟩ := hvr
@@ -201,12 +188,9 @@ theorem toi_ref (n : Nat) {m : Mem} {a : AState} {I us dso dsl : Word} {ds : Lis
       rw [getD_one] at hdec6
       exact (decHL_length _ hdec6).symm
     all_goals (exfalso; revert hvr; simp only [ViewR, h2]; simp)
-  rw [toiE.k_e_view.abort1 _ _ r7 _ h2]
+  refine RefE.abortAt (by simpa using h2) ?_
   cases v with
-  | sort u =>
-    exfalso
-    obtain ⟨hh, -, -⟩ := hvr
-    exact h2 hh
+  | sort u => exact absurd hvr.1 h2
   | _ => exact fun _ => ErrClaim.fail _ _ (by decide)
 
 end sims
