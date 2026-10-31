@@ -181,7 +181,7 @@ theorem iac_ref (hP : AbsProg p) (ctx isP : Word) (c : NestCtx) (b : Bool) (hb :
   refine ⟨_, _, hr1, ?_⟩
   refine RefE.ofArms (fun h => iacE.k_all_level_params_defined.abort1 (hc1 := h) ..)
     (fun h => iacE.k_all_level_params_defined.arm1 (hc1 := h) ..)
-    (RefE.guard (by decide) (by grind) (by grind) fun _ _ => ?_)
+    (RefE.guard (by decide) (fun h => by rw [← hok1, h]; rfl) (fun h => by simpa [h] using hok1) fun _ _ => ?_)
   -- `NestCtx.hiAt` (L only)
   have hc1 : decCtx m1 ctx.toNat = some c := hc.stab (decCtx_mono _) m1 hg1
   have hnPlt := partsIwLt hnP

@@ -151,13 +151,13 @@ theorem idc_ref {n : Nat} (hn : n ≤ 2 ^ 62) (hk : InsAt dn vis fe env m₀ a�
     (hwy : ConLeche.Expr.WScoped d yP) :
     RefE (CoreStubsE p) (callE p n "is_def_eq_core" [vis, dep, x, y] m)
       (isDefEqCore V fe checkFuel d xi (decI y)) a
-      (fun v c a' => InsAt dn vis fe env m a v.2 a' ∧ decBool v.1 = c) := by
+      (fun v c a' => InsAt dn vis fe env m a v.2 a' ∧ (v.1.headD 0 = 0 ↔ c = false)) := by
   subst hd hxi
   rcases h : callE p n "is_def_eq_core" [vis, dep, x, y] m with e | ⟨r, m'⟩
   · exact fun hcE => hcE.isDefEqCore n hn hk.stage.stageT dep x y hx hy e h
   obtain ⟨c, a', hr, hC, hg, hd, hA, hcs⟩ :=
     isDefEqC_rsim hq henv n hn hk.stage hk.abs dep x y hx hy hdx hdy hwx hwy (r, m') (callW_of_callE h)
-  exact ⟨c, a', hr, ⟨hC, hA, hg, hcs⟩, hd⟩
+  exact ⟨c, a', hr, ⟨hC, hA, hg, hcs⟩, by rw [← hd]; simp [decBool]⟩
 
 /-- **`sl_get`** (an L helper, no twin step) on a decoded slice: the memory unchanged, the index in
 range, the word read the element. -/
@@ -249,7 +249,7 @@ theorem cbda_ref (hftd : FtdF p) (n : Nat) (hn : n ≤ 2 ^ 62) : ∀ (m : Mem) (
   dsimp only at k2 hc
   refine RefE.ofArms (fun h => cbdaE.k_is_def_eq_core.abort1 (hc1 := h) ..)
     (fun h => cbdaE.k_is_def_eq_core.arm1 (hc1 := h) ..)
-    (RefE.guard (by decide) (by grind [decBool]) (by grind [decBool]) fun _ _ => ?_)
+    (RefE.guard (by decide) hc.1 hc.2 fun _ _ => ?_)
   -- the recursion
   have k12 := k1.trans k2
   have hrec := ih (by omega) m2 a2 off fo fl dO dl (j - 1) fvs doms fvsP domsP k12.stage k12.abs
@@ -316,7 +316,7 @@ theorem sds_ref (hg : p.lookup "sl_get" = some slGet) (hftd : FtdF p) (n : Nat) 
   dsimp only at k2 hc
   refine RefE.ofArms (fun h => sdomsE.k_is_def_eq_core.abort1 (hc1 := h) ..)
     (fun h => sdomsE.k_is_def_eq_core.arm1 (hc1 := h) ..)
-    (RefE.guard (by decide) (by grind [decBool]) (by grind [decBool]) fun _ _ => ?_)
+    (RefE.guard (by decide) hc.1 hc.2 fun _ _ => ?_)
   -- the recursion
   have k12 := k1.trans k2
   have hrec := ih (by omega) m4 a2 off fo fl dO dl (j - 1) fvs doms fvsP domsP k12.stage k12.abs
