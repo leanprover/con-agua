@@ -40,6 +40,33 @@ l_model cnaE_spec (p : Prog) (P : CnaProg p)
   heartbeats 4000000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
+/-! ## The class family's walk package -/
+
+/-- **The walk's package from `(m₀, a₀)` to `(m, a)`** (the class functions, docs/design/refgen.md
+§6): the stage, `AbsOK`, `RcMR`, the `IW` growth and the twin's `PStep`. -/
+structure RcAt (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (env : ConLeche.Env)
+    (m₀ : Mem) (a₀ : AState) (m : Mem) (a : AState) : Prop where
+  stage : StageC dn vis fe env m a
+  abs : AbsOK m
+  rc : RcMR m
+  grow : IWGrow m₀ m
+  step : PStep a₀ a
+
+namespace RcAt
+variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {env : ConLeche.Env}
+  {m₀ m₁ m : Mem} {a₀ a₁ a : AState}
+
+theorem trans (h₁ : RcAt dn vis fe env m₀ a₀ m₁ a₁) (h₂ : RcAt dn vis fe env m₁ a₁ m a) :
+    RcAt dn vis fe env m₀ a₀ m a :=
+  ⟨h₂.stage, h₂.abs, h₂.rc, h₁.grow.trans h₂.grow, h₁.step.trans h₂.step⟩
+
+/-- A step that con-ron calls a `PStep`. -/
+theorem pstep (h : StageC dn vis fe env m₀ a₀) (hS : StageR dn vis fe m a) (hA : AbsOK m) (hP : RcMR m)
+    (hg : IWGrow m₀ m) (hp : PStep a₀ a) : RcAt dn vis fe env m₀ a₀ m a :=
+  ⟨h.of_pstep hS hA hp, hA, hP, hg, hp⟩
+
+end RcAt
+
 section sims
 variable {p : Prog} (hq : KnotStageProg p) {dn : NIdx → Option ConLeche.Name}
   {fe : IFEnv} {env : ConLeche.Env} (henv : ConLeche.EnvWF env) (P : CnaProg p)
