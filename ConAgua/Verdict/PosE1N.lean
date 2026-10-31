@@ -97,7 +97,8 @@ theorem nit_ref {p : Prog} (L : NitLook p) (hcl : CoreStageClosed p) (hIlpf : Il
   rw [hnP2, hHI] at hrunoa
   refine ⟨_, _, hrunoa, ?_⟩
   dsimp only [nitE.k_nest_occ_any]
-  refine RefE.guardThen (by decide) (fun h => by grind) (fun h => by grind) fun _ _ => ?_
+  refine RefE.guardThen (by decide) (fun h => by cases b; exact absurd hr3 h; rfl)
+    (fun hb => by subst hb; rw [hr3]; decide) fun _ _ => ?_
   -- the stage at the comparison
   have hok := hC.check
   obtain ⟨hcn, hlv, hds⟩ := ConRon.Bridge.Inductives.dKey_inv hkey
@@ -132,7 +133,8 @@ theorem nit_ref {p : Prog} (L : NitLook p) (hcl : CoreStageClosed p) (hIlpf : Il
     (lef_ref hcl hLC k hC3.stageT huH' hsH hsL hdv) fun ⟨w4, m4⟩ b' a6 _ hRp => ?_
   dsimp only [nitE.k_lvl_eq_fueled]
   have hres := hRp.res
-  refine RefE.guardIf (by decide) (fun h => by grind) (fun h => by grind) fun _ _ => ?_
+  refine RefE.guardIf (by decide) (fun h => by cases b'; rfl; exact absurd (hres.symm.trans h) (by decide))
+    (fun hb => by subst hb; exact hres) fun _ _ => ?_
   obtain ⟨hC4, hA4, -⟩ := hRp.stageC env hC3 hA3
   exact RefE.ret rfl ⟨hC4.stage, (hg12.trans hg3).trans hRp.grow, (decHL_length _ hdecbs).symm, htyH, htyd,
     hP3.fr hRp.mfr, hA4⟩
