@@ -1,3 +1,4 @@
+import ConAgua.Arena.RefWalk
 import ConAgua.Verdict.DeclHdrE
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.ModelGen
@@ -71,46 +72,29 @@ theorem ccv_ref {p : Prog} (hq : KnotStageProg p) (hap : ApdF p) (hkp : CrKeep p
   | zero => rw [checkConstantValE.eq_1]; exact RefE.of_cls0 rfl
   | succ n =>
   have hn' : n ≤ 2 ^ 62 := by omega
-  rw [checkConstantValE.arm1, et, checkConstantVal_eq]
+  rw [checkConstantValE.arm1, et, checkConstantVal_eq, hty]
   -- `install_header(vis, q)`
-  have h1R := ih_ref hap hkp.crf n hS hqd hqb hlps hCr
-  rcases h1 : installHeaderE p n m vis q with e1 | ⟨r1, m1⟩
-  · rw [checkConstantValE.k_install_header.none]
-    rw [h1] at h1R
-    exact RefE.bind_left fun hG => h1R ⟨hG.nv, hG.uce⟩
-  rw [checkConstantValE.k_install_header.arm1]
-  rw [h1] at h1R
-  obtain ⟨_, a1, hrun1, hP1⟩ := h1R
-  refine RefE.bind_right hrun1 ?_
+  refine RefE.bindE (fun _ => rfl) (fun hG => ⟨hG.nv, hG.uce⟩) (ih_ref hap hkp.crf n hS hqd hqb hlps hCr)
+    fun ⟨r1, m1⟩ _ a1 _ hP1 => ?_
+  dsimp only [checkConstantValE.k_install_header]
   -- the type's type
-  rcases h2 : callE p n "infer_type_core" [vis, 0, wt] m1 with e2 | ⟨r2, m2⟩
-  · rw [checkConstantValE.k_infer_type_core.none]
-    intro hG
-    have := hG.core.inferTypeCore n hn' hP1.stage 0 wt hwtl _ h2
-    rw [show ((0 : Word).toNat) = 0 from rfl, ← hty] at this
-    exact ErrClaim.bind_left this
-  rw [checkConstantValE.k_infer_type_core.arm1]
-  have h2w := callW_of_callE h2
-  obtain ⟨x2, a2, hrun2, hS2, hg2, hx2l, hx2⟩ := hq.inferTypeCore_sim n hn' hP1.stage 0 wt hwtl r2 m2 h2w
-  have hCr2 := hkp.call (im_mem _ rfl) h2w hP1.crOK
-  rw [show ((0 : Word).toNat) = 0 from rfl, ← hty] at hrun2
-  refine RefE.bind_right hrun2 ?_
+  refine RefE.bindCall (fun _ => rfl)
+    (fun hG _ h2 => hG.core.inferTypeCore n hn' hP1.stage 0 wt hwtl _ h2)
+    (fun b h2 => hq.inferTypeCore_sim n hn' hP1.stage 0 wt hwtl b.1 b.2 h2)
+    fun r2 m2 x2 a2 h2 _ ⟨hS2, hg2, hx2l, hx2⟩ => ?_
+  dsimp only [checkConstantValE.k_infer_type_core]
+  have hCr2 := hkp.call (im_mem _ rfl) (callW_of_callE h2) hP1.crOK
+  subst hx2
   -- its sort
-  rcases h3 : callE p n "ensure_sort_core" [vis, 0, r2.headD 0] m2 with e3 | ⟨r3, m3⟩
-  · rw [checkConstantValE.k_ensure_sort_core.none]
-    intro hG
-    have := hG.core.ensureSortCore n hn' hS2 0 (r2.headD 0) hx2l _ h3
-    rw [show ((0 : Word).toNat) = 0 from rfl, hx2] at this
-    exact ErrClaim.bind_left this
-  rw [checkConstantValE.k_ensure_sort_core.arm1]
-  have h3w := callW_of_callE h3
-  obtain ⟨x3, a3, hrun3, hS3, hg3, -⟩ := hq.ensureSortCore_sim n hn' hS2 0 (r2.headD 0) hx2l r3 m3 h3w
-  have hCr3 := hkp.call (im_mem _ rfl) h3w hCr2
-  rw [show ((0 : Word).toNat) = 0 from rfl, hx2] at hrun3
-  refine RefE.bind_right hrun3 (RefE.ret rfl ⟨hS3, hP1.grow.trans (hg2.trans hg3), hCr3, ?_⟩)
-  intro hA
-  exact absOK_core hq.closed (by decide) h3w
-    (absOK_core hq.closed (by decide) h2w (hP1.afr hA) hS2) hS3
+  refine RefE.bindCall (fun _ => rfl)
+    (fun hG _ h3 => hG.core.ensureSortCore n hn' hS2 0 (r2.headD 0) hx2l _ h3)
+    (fun b h3 => hq.ensureSortCore_sim n hn' hS2 0 (r2.headD 0) hx2l b.1 b.2 h3)
+    fun r3 m3 _ a3 h3 _ ⟨hS3, hg3, _⟩ => ?_
+  dsimp only [checkConstantValE.k_ensure_sort_core]
+  refine RefE.ret rfl ⟨hS3, hP1.grow.trans (hg2.trans hg3),
+    hkp.call (im_mem _ rfl) (callW_of_callE h3) hCr2, fun hA => ?_⟩
+  exact absOK_core hq.closed (by decide) (callW_of_callE h3)
+    (absOK_core hq.closed (by decide) (callW_of_callE h2) (hP1.afr hA) hS2) hS3
 
 /-- What `check_defn_val`'s and `check_opaque_val`'s error arms assume: `env_push` outside the
 verdict closure, the core stubs' and `install_value_guards`' claims. -/
@@ -154,7 +138,7 @@ theorem dv_ref {p : Prog} (hq : KnotStageProg p) (hp : ValProg p) (hap : ApdF p)
   have hn' : n ≤ 2 ^ 62 := by omega
   rw [checkDefnValE.arm1, ev, et]
   unfold dvT
-  have h00 : (0 : Word).toNat = 0 := rfl
+  rw [hty]
   -- `install_value_guards(vis, c + 1, v)`
   rcases h1 : callE p n "install_value_guards" [vis, c + 1, wv] m with e1 | ⟨r1, m1⟩
   · rw [checkDefnValE.k_install_value_guards.none]
@@ -169,36 +153,19 @@ theorem dv_ref {p : Prog} (hq : KnotStageProg p) (hp : ValProg p) (hap : ApdF p)
   subst hs1
   refine RefE.bind_right hrun1 ?_
   -- the value's type
-  rcases h2 : callE p n "infer_type_core" [vis, 0, wv] s1.mem with e2 | ⟨r2, m2⟩
-  · rw [checkDefnValE.k_infer_type_core.none]
-    intro hG
-    have := hG.core.inferTypeCore n hn' hS1 0 wv hwvl _ h2
-    rw [h00] at this
-    exact ErrClaim.bind_left this
-  rw [checkDefnValE.k_infer_type_core.arm1]
-  obtain ⟨x2, a2, hrun2, hS2, hg2, hx2l, hx2⟩ :=
-    hq.inferTypeCore_sim n hn' hS1 0 wv hwvl r2 m2 (callW_of_callE h2)
-  rw [h00] at hrun2
-  refine RefE.bind_right hrun2 ?_
+  refine RefE.bindCall (fun _ => rfl) (fun hG _ h2 => hG.core.inferTypeCore n hn' hS1 0 wv hwvl _ h2)
+    (fun b h2 => hq.inferTypeCore_sim n hn' hS1 0 wv hwvl b.1 b.2 h2)
+    fun r2 m2 x2 a2 _ _ ⟨hS2, hg2, hx2l, hx2⟩ => ?_
+  dsimp only [checkDefnValE.k_infer_type_core]
+  subst hx2
   -- the comparison with the declared type
-  rcases h3 : callE p n "is_def_eq_core" [vis, 0, r2.headD 0, wt] m2 with e3 | ⟨r3, m3⟩
-  · rw [checkDefnValE.k_is_def_eq_core.none]
-    intro hG
-    have := hG.core.isDefEqCore n hn' hS2 0 (r2.headD 0) wt hx2l hwtl _ h3
-    rw [h00, hx2, ← hty] at this
-    exact ErrClaim.bind_left this
-  obtain ⟨x3, a3, hrun3, hS3, hg3, hx3⟩ :=
-    hq.isDefEqCore_sim n hn' hS2 0 (r2.headD 0) wt hx2l hwtl r3 m3 (callW_of_callE h3)
-  rw [h00, hx2, ← hty] at hrun3
-  refine RefE.bind_right hrun3 ?_
-  by_cases hb3 : r3.headD 0 = 0
-  · rw [checkDefnValE.k_is_def_eq_core.abort1 p n vis c r3 m3 hb3]
-    have ex3 : x3 = false := by rw [← hx3, decBool, hb3]; rfl
-    rw [ex3]
-    exact fun _ => ErrClaim.bind_left (ErrClaim.fail _ _ rfl)
-  rw [checkDefnValE.k_is_def_eq_core.arm1 p n vis c r3 m3 hb3]
-  have ex3 : x3 = true := by rw [← hx3]; simpa [decBool] using hb3
-  rw [ex3]
+  refine RefE.bindCall (fun _ => rfl)
+    (fun hG _ h3 => hG.core.isDefEqCore n hn' hS2 0 (r2.headD 0) wt hx2l hwtl _ h3)
+    (fun b h3 => hq.isDefEqCore_sim n hn' hS2 0 (r2.headD 0) wt hx2l hwtl b.1 b.2 h3)
+    fun r3 m3 x3 a3 _ _ ⟨hS3, hg3, hx3⟩ => ?_
+  dsimp only [checkDefnValE.k_is_def_eq_core]
+  refine RefE.guard rfl (fun hb3 => by rw [← hx3, decBool, hb3]; rfl)
+    (fun hb3 => by rw [← hx3] at hb3; simpa [decBool] using hb3) fun _ _ => ?_
   -- the push
   have hx13 : ArrExt (erecP m) (erecP m3) := IWGrow.erecPExt (hg1.trans (hg2.trans hg3))
   have hci3 := ArrExt.decCI hx13 hci
@@ -242,7 +209,7 @@ theorem ov_ref {p : Prog} (hq : KnotStageProg p) (hp : ValProg p) (hap : ApdF p)
   have hn' : n ≤ 2 ^ 62 := by omega
   rw [checkOpaqueValE.arm1, ev, et]
   unfold dvT
-  have h00 : (0 : Word).toNat = 0 := rfl
+  rw [hty]
   -- `install_value_guards(vis, c + 1, v)`
   rcases h1 : callE p n "install_value_guards" [vis, c + 1, wv] m with e1 | ⟨r1, m1⟩
   · rw [checkOpaqueValE.k_install_value_guards.none]
@@ -257,36 +224,19 @@ theorem ov_ref {p : Prog} (hq : KnotStageProg p) (hp : ValProg p) (hap : ApdF p)
   subst hs1
   refine RefE.bind_right hrun1 ?_
   -- the value's type
-  rcases h2 : callE p n "infer_type_core" [vis, 0, wv] s1.mem with e2 | ⟨r2, m2⟩
-  · rw [checkOpaqueValE.k_infer_type_core.none]
-    intro hG
-    have := hG.core.inferTypeCore n hn' hS1 0 wv hwvl _ h2
-    rw [h00] at this
-    exact ErrClaim.bind_left this
-  rw [checkOpaqueValE.k_infer_type_core.arm1]
-  obtain ⟨x2, a2, hrun2, hS2, hg2, hx2l, hx2⟩ :=
-    hq.inferTypeCore_sim n hn' hS1 0 wv hwvl r2 m2 (callW_of_callE h2)
-  rw [h00] at hrun2
-  refine RefE.bind_right hrun2 ?_
+  refine RefE.bindCall (fun _ => rfl) (fun hG _ h2 => hG.core.inferTypeCore n hn' hS1 0 wv hwvl _ h2)
+    (fun b h2 => hq.inferTypeCore_sim n hn' hS1 0 wv hwvl b.1 b.2 h2)
+    fun r2 m2 x2 a2 _ _ ⟨hS2, hg2, hx2l, hx2⟩ => ?_
+  dsimp only [checkOpaqueValE.k_infer_type_core]
+  subst hx2
   -- the comparison with the declared type
-  rcases h3 : callE p n "is_def_eq_core" [vis, 0, r2.headD 0, wt] m2 with e3 | ⟨r3, m3⟩
-  · rw [checkOpaqueValE.k_is_def_eq_core.none]
-    intro hG
-    have := hG.core.isDefEqCore n hn' hS2 0 (r2.headD 0) wt hx2l hwtl _ h3
-    rw [h00, hx2, ← hty] at this
-    exact ErrClaim.bind_left this
-  obtain ⟨x3, a3, hrun3, hS3, hg3, hx3⟩ :=
-    hq.isDefEqCore_sim n hn' hS2 0 (r2.headD 0) wt hx2l hwtl r3 m3 (callW_of_callE h3)
-  rw [h00, hx2, ← hty] at hrun3
-  refine RefE.bind_right hrun3 ?_
-  by_cases hb3 : r3.headD 0 = 0
-  · rw [checkOpaqueValE.k_is_def_eq_core.abort1 p n vis c r3 m3 hb3]
-    have ex3 : x3 = false := by rw [← hx3, decBool, hb3]; rfl
-    rw [ex3]
-    exact fun _ => ErrClaim.bind_left (ErrClaim.fail _ _ rfl)
-  rw [checkOpaqueValE.k_is_def_eq_core.arm1 p n vis c r3 m3 hb3]
-  have ex3 : x3 = true := by rw [← hx3]; simpa [decBool] using hb3
-  rw [ex3]
+  refine RefE.bindCall (fun _ => rfl)
+    (fun hG _ h3 => hG.core.isDefEqCore n hn' hS2 0 (r2.headD 0) wt hx2l hwtl _ h3)
+    (fun b h3 => hq.isDefEqCore_sim n hn' hS2 0 (r2.headD 0) wt hx2l hwtl b.1 b.2 h3)
+    fun r3 m3 x3 a3 _ _ ⟨hS3, hg3, hx3⟩ => ?_
+  dsimp only [checkOpaqueValE.k_is_def_eq_core]
+  refine RefE.guard rfl (fun hb3 => by rw [← hx3, decBool, hb3]; rfl)
+    (fun hb3 => by rw [← hx3] at hb3; simpa [decBool] using hb3) fun _ _ => ?_
   -- the push
   have hx13 : ArrExt (erecP m) (erecP m3) := IWGrow.erecPExt (hg1.trans (hg2.trans hg3))
   have hci3 := ArrExt.decCI hx13 hci
