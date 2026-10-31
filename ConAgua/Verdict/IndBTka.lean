@@ -198,15 +198,9 @@ theorem tka_ref (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState}
   have hA6 := noF_afr h7 hA5
   have hC6 := hC5.of_pstep hS6 hA6 (PStep.refl hC5.check.state)
   have hg06 := (hg04.trans hg5).trans hg6
-  by_cases ho : occ = 0
-  · rw [tkaE.k_nest_occ.arm1 _ _ _ _ _ _ _ _ _ _ _ _ ho]
-    have : b = false := by rw [← hb6, ho]; rfl
-    subst this
-    exact RefE.ret (y := false) rfl ⟨rfl, hC6, hg06, hP6, hA6⟩
-  rw [tkaE.k_nest_occ.arm2 _ _ _ _ _ _ _ _ _ _ _ _ ho]
-  have hb1 : b = true := by rw [← hb6]; simpa using ho
-  subst hb1
-  rw [ite_eq_left rfl]
+  rw [tkaE.k_nest_occ.eq_2]
+  refine RefE.retIf (fun ho => by rw [← hb6, ho]; rfl) (fun hb => by rw [← hb6] at hb; simpa using hb)
+    (fun _ => ⟨rfl, hC6, hg06, hP6, hA6⟩) fun _ _ => ?_
   have hMk6 : ∀ k : Nat, k ≤ 12 → rdW (m6.arr64 IW) (Mc + UInt64.ofNat k) =
       rdW (m.arr64 IW) (Mc + UInt64.ofNat k) :=
     fun k hk => rdW_grow hg06 (hMk k hk)
