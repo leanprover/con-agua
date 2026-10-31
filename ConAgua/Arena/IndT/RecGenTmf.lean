@@ -167,16 +167,13 @@ theorem tmt_ref {p : Prog} (hP : TmtProg p) (hIlpf : IlpfF p) (hcore : CoreStage
   | succ n =>
   rw [tmtE.arm1]
   unfold tmoTailT
-  have hR1 := toi_ref hP.toi hIlpf n hC hI hus hds hdsb
-  rcases h1 : toiE p n m vis I us dso dsl with e1 | ⟨r1, m1⟩ <;> rw [h1] at hR1
-  · rw [tmtE.k_target_outside_inst.none]; exact RefE.bind_left hR1
-  rw [tmtE.k_target_outside_inst.arm1]
-  obtain ⟨x, a1, hrun, hR⟩ := hR1
+  refine RefE.bindE (fun _ => rfl) id (toi_ref hP.toi hIlpf n hC hI hus hds hdsb)
+    fun ⟨r1, m1⟩ x a1 hrun hR => ?_
+  dsimp only [tmtE.k_target_outside_inst]
   have hA1 := hR.afr hA
   obtain ⟨c1, v, ⟨-, hlP⟩, -⟩ := ConRon.Bridge.Inductives.targetOutsideInst_spec fe (decI I) IP
     (decI us) usP ds dsP a a1 x hC.check ⟨hIP, husP, hdsP⟩ hrun
   obtain ⟨hr1, hn1, hsH, hsd⟩ := hR.res
-  refine RefE.bind_right hrun ?_
   have hg1 : IWGrow m m1 := hR.grow
   have hP1 : PosMR m1 := hPm.fr hR.mfr
   have hC1 : StageC dn vis fe env m1 a1 := hC.of_check hR.stage hA1 c1.ok c1.ext
@@ -184,48 +181,24 @@ theorem tmt_ref {p : Prog} (hP : TmtProg p) (hIlpf : IlpfF p) (hcore : CoreStage
   have hdu : denoteL a1.store.ls (decI (r1.tail.headD 0)) = some v.2 := by rw [hsd]; exact hlP
   have hdv : denoteL a1.store.ls (decI (rdW (m1.arr64 IW) (pp + 6))) = some lr := by
     rw [hrsd]; exact ConRon.Bridge.denoteL_ext hres c1.ext
-  rcases h2 : callW p n "lvl_eq_c" [r1.tail.headD 0, rdW (m1.arr64 IW) (pp + 6)] m1 with _ | ⟨r2, m2⟩
-  · rw [liftE_none, tmtE.k_lvl_eq_c.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]
+  rw [← hsd, ← hrsd]
+  refine RefE.bindLift (fun _ => rfl) fun r2 m2 h2 => ?_
   obtain ⟨xl, al, hrunl, hC2, hg2, hx, hA2, -⟩ := lvlEqC_simC p hcore hLC n hC1 hA1 _ _ hsH hrsH v.2 lr
     hdu hdv r2 m2 h2
-  rw [hsd, hrsd] at hrunl
-  refine RefE.bind_right hrunl ?_
-  by_cases h0 : r2.headD 0 = 0
-  · rw [tmtE.k_lvl_eq_c.abort1 p n pfo pfl I us dso dsl cso csl _ r2 m2 h0]
-    have hn : xl = none := by
-      rcases xl with _ | b
-      · rfl
-      · cases b <;> simp only [decLvlEq] at hx <;> rw [hx] at h0 <;> exact absurd h0 (by decide)
-    subst hn
-    exact RefE.bind_left fun _ => ErrClaim.fail _ _ (by decide)
-  by_cases h2' : r2.headD 0 ≠ 2
-  · rw [tmtE.k_lvl_eq_c.abort2 p n pfo pfl I us dso dsl cso csl _ r2 m2 h0 h2']
-    have hf : xl = some false := by
-      rcases xl with _ | b
-      · simp only [decLvlEq] at hx; exact absurd hx h0
-      · cases b
-        · rfl
-        · simp only [decLvlEq] at hx; exact absurd hx h2'
-    subst hf
+  refine ⟨_, _, hrunl, ?_⟩
+  dsimp only [tmtE.k_lvl_eq_c]
+  simp only [decLvlEq] at hx
+  rcases xl with _ | _ | _
+  · exact RefE.abortAt hx fun _ => ErrClaim.bind_left (ErrClaim.fail _ _ (by decide))
+  · refine RefE.pass (by rw [hx]; decide) (RefE.abortAt (by rw [hx]; decide) fun _ => ?_)
     simp only [liftFueled, pure_bind, Bool.false_eq_true, ite_false]
-    exact RefE.bind_left fun _ => ErrClaim.fail _ _ (by decide)
-  replace h2' : r2.headD 0 = 2 := by simpa using h2'
-  rw [tmtE.k_lvl_eq_c.arm1 p n pfo pfl I us dso dsl cso csl _ r2 m2 h0 h2']
-  have ho : xl = some true := by
-    rcases xl with _ | b
-    · simp only [decLvlEq] at hx; exact absurd hx h0
-    · cases b
-      · simp only [decLvlEq] at hx; exact absurd (hx.symm.trans h2') (by decide)
-      · rfl
-  subst ho
-  simp only [liftFueled, pure_bind]
+    exact ErrClaim.bind_left (ErrClaim.fail _ _ (by decide))
+  refine RefE.pass (by rw [hx]; decide) (RefE.pass (by rw [hx]; decide) ?_)
+  simp only [liftFueled, pure_bind, ite_true]
   have hP2 : PosMR m2 := hP1.fr (MFr.of_frame (run_memFrame hcore (by decide) (run_of_callW h2)).1
     coreStageA_stage coreStageC_stage)
-  rcases e4 : callW p n "mk_target_major" [I, us, dso, dsl, dsl, r1.headD 0, cso, csl, 0, 0, 0, pfo, pfl] m2
-    with _ | ⟨r4, m4⟩
-  · rw [liftE_none, tmtE.k_mk_target_major.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some, tmtE.k_mk_target_major.arm1]
+  refine RefE.onlySim (fun _ => rfl) (fun _ _ h => h) fun r4 m4 e4 => ?_
+  dsimp only [tmtE.k_mk_target_major]
   have hA4 := mkTmC_afr hP.toi.alloc hP.mkTm e4 hA2
   obtain ⟨s4, rfl, -, hW4⟩ := triple_of_callW (s₀ := ⟨m2, Locals.init []⟩)
     (mkTargetMajor_spec p hP.toi.alloc hP.mkTm n _ _ _ _ _ _ _ _ _ _ _ _ _ _) e4
