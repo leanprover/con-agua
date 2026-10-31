@@ -3,7 +3,6 @@ import ConAgua.Arena.IndSumSpec.CheckSumCtor
 import ConAgua.Arena.IndSumSpec.SumRules
 import ConRon.Bridge.Inductives.SumInstall
 import ConRon.Bridge.Inductives.StructParts
-import ConAgua.Arena.RefWalk
 
 /-!
 # The sum family's walk steps

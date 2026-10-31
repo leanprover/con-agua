@@ -3,7 +3,6 @@ import ConAgua.Arena.IndInstallSpec.PosFreeMfr
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
-import ConAgua.Arena.RefWalk
 
 /-!
 # `check_block_classes`: one model, one refinement
