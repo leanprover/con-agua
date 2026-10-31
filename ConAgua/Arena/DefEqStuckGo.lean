@@ -240,54 +240,40 @@ theorem secg_ref (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : StuckCal
   have hIR := decCI_indCaps hcvT (erecP_ext _) hS.erec
   have hCL := decCI_ctorLp hcvc (erecP_ext _) hS.erec
   simp only [secgE]
-  -- `er_slice_eq`: memory unchanged
-  rcases c1 : callW p n "er_slice_eq" [rdW (s₀.mem.arr64 EREC) (pc + 2), rdW (s₀.mem.arr64 EREC) (pc + 3),
-      rdW (s₀.mem.arr64 EREC) (q + 2), rdW (s₀.mem.arr64 EREC) (q + 3)] s₀.mem with _ | ⟨r₁, m₁⟩
-  · rw [liftE_none, secgE.k_er_slice_eq.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]
   cases n with
-  | zero => rw [callW_zero] at c1; cases c1
+  | zero =>
+    exact RefE.onlySim (Q := fun _ _ => False) (fun _ => rfl)
+      (fun _ _ h => by rw [callW_zero] at h; cases h) fun _ _ h => h.elim
   | succ n' =>
-  obtain ⟨t₁, ht₁, hm₁, -, hr₁, -⟩ := triple_of_callW (s₀ := ⟨s₀.mem, Locals.init []⟩)
+  -- `er_slice_eq`: memory unchanged
+  refine RefE.onlySim (fun _ => rfl) (fun _ _ h => triple_of_callW (s₀ := ⟨s₀.mem, Locals.init []⟩)
     (erSliceEq_refines p hq.ers n' ⟨s₀.mem, Locals.init []⟩ _ _ _ _ cvc.levelParams cvT.levelParams
-      hS.erec hCL hIR.lp) c1
-  have em₁ : m₁ = s₀.mem := by rw [← ht₁]; exact hm₁
-  subst em₁
-  simp only [secgE.k_er_slice_eq]
+      hS.erec hCL hIR.lp) h) fun r₁ m₁ ⟨t₁, ht₁, hm₁, _, hr₁, _⟩ => ?_
+  obtain rfl : m₁ = s₀.mem := by rw [← ht₁]; exact hm₁
+  dsimp only [secgE.k_er_slice_eq]
   -- the two reserved-name tests: the twin unchanged
-  rcases c2 : callW p (n' + 1) "reserved_contains_w" [T] s₀.mem with _ | ⟨r₂, m₂⟩
-  · rw [liftE_none, secgE.k_reserved_contains_w.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]
-  obtain ⟨⟨M₂, hS₂, hK₂, hst₂⟩, hr₂⟩ := reservedContains_callW hc hS hT c2
+  refine RefE.onlySim (fun _ => rfl) (fun _ _ h => reservedContains_callW hc hS hT h)
+    fun r₂ m₂ ⟨⟨M₂, hS₂, hK₂, hst₂⟩, hr₂⟩ => ?_
   refine RefE.mono (R := GrowPost decBool dn m₂ vis fe M₂ eb ResH) ?_
     (fun _ _ _ h => ⟨CoreAfterG.compK hK₂ hst₂.toGrew h.after, h.res, h.valid⟩)
-  simp only [secgE.k_reserved_contains_w]
-  rcases c3 : callW p (n' + 1) "reserved_contains_w" [c] m₂ with _ | ⟨r₃, m₃⟩
-  · rw [liftE_none, secgE.k_reserved_contains_w_2.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]
-  obtain ⟨⟨M₃, hS₃, hK₃, hst₃⟩, hr₃⟩ := reservedContains_callW hc hS₂ hcw c3
+  dsimp only [secgE.k_reserved_contains_w]
+  refine RefE.onlySim (fun _ => rfl) (fun _ _ h => reservedContains_callW hc hS₂ hcw h)
+    fun r₃ m₃ ⟨⟨M₃, hS₃, hK₃, hst₃⟩, hr₃⟩ => ?_
   refine RefE.mono (R := GrowPost decBool dn m₃ vis fe M₃ eb ResH) ?_
     (fun _ _ _ h => ⟨CoreAfterG.compK hK₃ hst₃.toGrew h.after, h.res, h.valid⟩)
-  simp only [secgE.k_reserved_contains_w_2]
+  dsimp only [secgE.k_reserved_contains_w_2]
   -- `ls_node`: memory unchanged, the length
-  rcases c4 : callW p (n' + 1) "ls_node" [us2] m₃ with _ | ⟨r₄, m₄⟩
-  · rw [liftE_none, secgE.k_ls_node.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]
-  obtain ⟨t₄, ht₄, ht₄s, hne, hr₄⟩ := triple_of_callW (s₀ := ⟨m₃, Locals.init []⟩)
-    (lsNode_spec p hq.leaf.core.lsn (n' + 1) ⟨m₃, Locals.init []⟩ us2) c4
-  have em₄ : m₄ = m₃ := by rw [← ht₄, ht₄s]
-  subst em₄
+  refine RefE.onlySim (fun _ => rfl) (fun _ _ h => triple_of_callW (s₀ := ⟨m₃, Locals.init []⟩)
+    (lsNode_spec p hq.leaf.core.lsn (n' + 1) ⟨m₃, Locals.init []⟩ us2) h)
+    fun r₄ m₄ ⟨t₄, ht₄, ht₄s, hne, hr₄⟩ => ?_
+  obtain rfl : m₄ = m₃ := by rw [← ht₄, ht₄s]
   rw [hr₄] at hne
   have hvl := defeq_lsNodeW_viewLen hS₃.arena.base hus2 hne
   rw [← hr₄] at hvl
-  simp only [secgE.k_ls_node]
+  dsimp only [secgE.k_ls_node]
   -- `tower_slots_all`: the effect
-  rcases c5 : callW p (n' + 1) "tower_slots_all" [vis, T, rdW (s₀.mem.arr64 EREC) (q + 8)] m₄ with
-    _ | ⟨r₅, m₅⟩
-  · rw [liftE_none, secgE.k_tower_slots_all.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]
-  have h₅ := CoreSpec.of_callW (hc.towerSlots (n' + 1) ⟨m₄, Locals.init []⟩ a₀ dn vis fe M₃ eb T _
-    hS₃ hT) c5
+  refine RefE.onlySim (fun _ => rfl) (fun _ _ h => CoreSpec.of_callW (hc.towerSlots (n' + 1)
+    ⟨m₄, Locals.init []⟩ a₀ dn vis fe M₃ eb T _ hS₃ hT) h) fun r₅ m₅ h₅ => ?_
   rw [← hIR.etaFields] at h₅
   obtain ⟨_, _, _, hst₅⟩ := h₅.after
   refine RefE.of_run_eq (setGoT_run _ _ _ _ _ _ _ _ _ _ _ _ _ hS.pins _ hvl) ?_
