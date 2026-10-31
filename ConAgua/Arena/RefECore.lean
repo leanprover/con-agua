@@ -138,6 +138,20 @@ theorem RefE.bind_core {α β γ : Type} [Inhabited γ] {G : Prop} {x : Except E
   exact RefE.bind_right (by rw [AM.run_of_ok _ _ h₁.run, h₁.res])
     ((h₂ M' hS hSt).mono fun _ _ _ h => ⟨CoreAfter.comp hK hSt h.after, h.res, h.valid⟩)
 
+/-- **After a kept-stack callee's ok run** (`RefE.bind_callE`/`bind_callW`'s `CoreRef`): the rest's
+post from the callee's memory `m₁` composes to the caller's from `m₀` (`RefE.bind_core` without
+the twin's bind). -/
+theorem RefE.after_core {α β γ : Type} [Inhabited γ] {G : Prop} {x : Except Err α} {T₁ : AM γ}
+    {T : AM β} {a₀ : AState} {dec₁ : List Word → γ} {dec : List Word → β}
+    {dn : NIdx → Option ConLeche.Name} {m₀ m₁ : Mem} {vis : Word} {fe : IFEnv} {M : ModeMaps}
+    {eb : Word} {r₁ : List Word} {ok₁ ok : List Word → Prop} {w : α → List Word × Mem}
+    (h₁ : CoreRef T₁ a₀ dec₁ dn m₀ vis fe M eb r₁ m₁ ok₁)
+    (h₂ : ∀ M', CoreS dn m₁ (AM.st T₁ a₀) vis fe M' eb → StackKept m₀ m₁ →
+      RefE G x T (AM.st T₁ a₀) (fun v y a' => CorePost dec dn m₁ vis fe M' eb ok (w v) y a')) :
+    RefE G x T (AM.st T₁ a₀) (fun v y a' => CorePost dec dn m₀ vis fe M eb ok (w v) y a') := by
+  obtain ⟨M', hS, hK, hSt⟩ := h₁.after
+  exact (h₂ M' hS hSt).mono fun _ _ _ h => ⟨CoreAfter.comp hK hSt h.after, h.res, h.valid⟩
+
 /-- **The ok half of a unified core function** as its `CoreSpec`, for a model whose ok value is not
 the pair `(r, m)` itself: `w` reads it back as the results and the memory (`RefE.coreSpec` for
 `w = id`). -/
