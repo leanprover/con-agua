@@ -84,7 +84,7 @@ def mentionsAnyConst : FunDecl := lfn (namesOff, namesLen, e) locals (r, u) {
 -- con-ron: ConRon/Arena/Inductives/Positivity.lean:152-162 ConRon.Arena.memberIdxAt?
 @[l_impl ConRon.Arena.memberIdxAt?]
 def memberIdxAt : FunDecl := lfn (namesOff, namesLen, lvls, e) locals (g, n, us, z, ok, idx) {
-  if e >> 28 != 3 { return (0, 0) };
+  if ⟦e⟧.tag != 3 { return (0, 0) };
   (g, n, us, z) := call e_view(e);
   if us != lvls { return (0, 0) };
   (ok, idx) := call sl_find(namesOff, namesLen, n);
@@ -166,7 +166,7 @@ def nestOcc : FunDecl := lfn (namesOff, namesLen, lo, hi, e) locals (r, u) {
 @[l_impl ConRon.Arena.instPisWith]
 def instPisWith : FunDecl := lfn (argsOff, argsLen, e) locals (g, x, y, z, b, ok, r) {
   if argsLen == 0 { return (1, e) };
-  if e >> 28 != 6 { return (0, 0) };
+  if ⟦e⟧.tag != 6 { return (0, 0) };
   (g, x, y, z) := call e_view(e);
   b := call instantiate1_fast(⟪CWF⟫, y, IW.u64[argsOff], 0);
   (ok, r) := call inst_pis_with(argsOff + 1, argsLen - 1, b);
@@ -310,7 +310,7 @@ def nestCtorEntry : FunDecl := lfn (C, ciq) locals (ok0, cv, nPc, nF, body, hd, 
   (ok0, cv, nPc, nF, body) := call nest_ctor_entry_strip(ciq);
   if ok0 == 0 { return (0, 0, 0, 0) };
   hd := call get_app_fn_f(⟪CWF⟫, body);
-  if hd >> 28 != 3 { return (0, 0, 0, 0) };
+  if ⟦hd⟧.tag != 3 { return (0, 0, 0, 0) };
   (g, n, us, z) := call e_view(hd);
   if n != C { return (0, 0, 0, 0) };
   return (1, cv, nPc, nF)
@@ -600,13 +600,13 @@ def replaceFVars : FunDecl := lfn (f, e) locals (s, r, u) {
 @[l_impl ConRon.Arena.phApp?]
 def phApp : FunDecl := lfn (b, e, n) locals (g, x, y, z, g2, idx, y2, z2, ok, c, us) {
   if n == 0 {
-    if e >> 28 != 3 { return (0, 0, 0) };
+    if ⟦e⟧.tag != 3 { return (0, 0, 0) };
     (g, x, y, z) := call e_view(e);
     return (1, x, y)
   };
-  if e >> 28 != 4 { return (0, 0, 0) };
+  if ⟦e⟧.tag != 4 { return (0, 0, 0) };
   (g, x, y, z) := call e_view(e);
-  if y >> 28 != 1 { return (0, 0, 0) };
+  if ⟦y⟧.tag != 1 { return (0, 0, 0) };
   (g2, idx, y2, z2) := call e_view(y);
   if idx != b + (n - 1) { return (0, 0, 0) };
   (ok, c, us) := call ph_app(b, x, n - 1);

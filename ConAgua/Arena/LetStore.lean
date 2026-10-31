@@ -80,13 +80,13 @@ def letCS : ConsSch where
   recW := [.bin .or (.var 1) (.bin .shl (.var 2) (.const 32)), .var 3]
   ihash := lblk (ty, val, body, h) {
     h := (((⟪fnvBasis⟫ ^ ty) * ⟪fnvPrime⟫ ^ val) * ⟪fnvPrime⟫ ^ body) * ⟪fnvPrime⟫ }
-  skipW := some (rhsOf (lblk (ty, val, body, h, sk) { sk := ((ty | val | body) >> 27) & 1 }))
+  skipW := some (rhsOf (lblk (ty, val, body, h, sk) { sk := ((ty | val | body) >> 31) & 1 }))
   mtM m ks t i := lematchW (m.arr64 (tierA LEREC t)) t i (ks.getD 0 0) (ks.getD 1 0) (ks.getD 2 0)
   qhM _ ks := letHashW (ks.getD 0 0) (ks.getD 1 0) (ks.getD 2 0)
   hsM := lehash
   vsM as := [as.getD 0 0 ||| as.getD 1 0 <<< 32, as.getD 2 0]
   roomM m t c := decide (m.len64 (tierA LEREC t) < (c + 1) * 2)
-  skM ks := ((ks.getD 0 0 ||| ks.getD 1 0 ||| ks.getD 2 0) >>> 27) &&& 1
+  skM ks := ((ks.getD 0 0 ||| ks.getD 1 0 ||| ks.getD 2 0) >>> 31) &&& 1
 
 /-! ## `letE_find(t, ty, val, body, h)`: the probe -/
 
@@ -116,7 +116,7 @@ probe if the scratch tier is open, the append to the tier the store is in. -/
 
 /-- The scratch skip: the scratch tier is open and `ty`, `val` or `body` is a scratch handle. -/
 def leskipW (m : Mem) (ty val body : Word) : Word :=
-  if rdW (m.arr64 CTL) 1 ≠ 0 then ((ty ||| val ||| body) >>> 27) &&& 1 else 0
+  if rdW (m.arr64 CTL) 1 ≠ 0 then ((ty ||| val ||| body) >>> 31) &&& 1 else 0
 
 /-- The model of `intern_letE`: the handle and the memory after, or `none` where the L code
 aborts (the library's `consInternM`). -/

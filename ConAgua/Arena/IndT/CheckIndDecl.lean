@@ -41,7 +41,7 @@ l_model cidE_spec (p : Prog) (hV : ValProg p) (P : CidProg p)
   specs [callW_spec p n "basis_pin_hit", callW_spec p n "ind_params_ok", callW_spec p n "block_parts",
     cslE_spec p hV P.csf P.csl n]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] unified
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 

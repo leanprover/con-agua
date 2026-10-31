@@ -98,48 +98,48 @@ theorem bbW_frame (n : Nat) :
       have done0 : bbNodeW (n + 1) m h c = some (0, m) → BbFrame m m' := fun e => by
         rw [e] at hb; simp only [Option.some.injEq, Prod.mk.injEq] at hb
         obtain ⟨-, rfl⟩ := hb; exact MemFrame.refl _ _ _
-      by_cases g0 : h >>> 28 = 0
+      by_cases g0 : tagW h = 0
       · refine tagCase BVAR (fun hv => ?_) (fun hc => (none_of ?_).elim)
         · by_cases h1 : tfld m BVAR (tierW h) (idxW h) 0 + 1 = 0
           · exact (none_of (by rw [bbNodeW]; simp [hs, g0, h1, UInt64.not_le.mpr hv.2])).elim
           · rw [bbNodeW_bvar n m h c hv g0 h1] at hb; simp only [Option.some.injEq, Prod.mk.injEq] at hb
             obtain ⟨-, rfl⟩ := hb; exact MemFrame.refl _ _ _
         · rw [bbNodeW]; simp [hs, g0, hc]
-      by_cases g1 : h >>> 28 = 1
+      by_cases g1 : tagW h = 1
       · refine tagCase FVAR (fun hv => done0 (bbNodeW_fvar n m h c g1 hv)) (fun hc => (none_of ?_).elim)
         rw [bbNodeW]; simp [hs, g1, hc]
-      by_cases g4 : h >>> 28 = 4
+      by_cases g4 : tagW h = 4
       · refine tagCase APP (fun hv => ?_) (fun hc => (none_of ?_).elim)
         · rw [bbNodeW_app n m h c hv g4] at hb
           exact BbOK.app (ih.1 _ _ _) (fun m₁ => ih.1 m₁ _ _) _ _ hb
         · rw [bbNodeW]; simp [hs, g4, hc]
-      by_cases g5 : h >>> 28 = 5
+      by_cases g5 : tagW h = 5
       · refine tagCase LAM (fun hv => ?_) (fun hc => (none_of ?_).elim)
         · rw [bbNodeW_lam n m h c hv g5] at hb
           exact BbOK.bind (ih.1 _ _ _) (fun m₁ => ih.1 m₁ _ _) _ _ hb
         · rw [bbNodeW]; simp [hs, g5, hc]
-      by_cases g6 : h >>> 28 = 6
+      by_cases g6 : tagW h = 6
       · refine tagCase FORALL (fun hv => ?_) (fun hc => (none_of ?_).elim)
         · rw [bbNodeW_forall n m h c hv g6] at hb
           exact BbOK.bind (ih.1 _ _ _) (fun m₁ => ih.1 m₁ _ _) _ _ hb
         · rw [bbNodeW]; simp [hs, g6, hc]
-      by_cases g9 : h >>> 28 = 9
+      by_cases g9 : tagW h = 9
       · refine tagCase PROJ (fun hv => ?_) (fun hc => (none_of ?_).elim)
         · rw [bbNodeW_proj n m h c hv g9] at hb
           exact ih.1 _ _ _ _ _ hb
         · rw [bbNodeW]; simp [hs, g9, hc]
-      by_cases g7 : h >>> 28 = 7
+      by_cases g7 : tagW h = 7
       · refine tagCase LET (fun hv => ?_) (fun hc => (none_of ?_).elim)
         · rw [bbNodeW_let n m h c hv g7] at hb
           exact BbOK.letE (ih.1 _ _ _) (fun m₁ w => ih.1 m₁ w _) _ _ hb
         · rw [bbNodeW]; simp [hs, g7, hc]
-      by_cases g2 : h >>> 28 = 2
+      by_cases g2 : tagW h = 2
       · refine tagCase SORT (fun hv => done0 (bbNodeW_sort n m h c g2 hv)) (fun hc => (none_of ?_).elim)
         rw [bbNodeW]; simp [hs, g2, hc]
-      by_cases g3 : h >>> 28 = 3
+      by_cases g3 : tagW h = 3
       · refine tagCase CONST (fun hv => done0 (bbNodeW_const n m h c g3 hv)) (fun hc => (none_of ?_).elim)
         rw [bbNodeW]; simp [hs, g3, hc]
-      by_cases g8 : h >>> 28 = 8
+      by_cases g8 : tagW h = 8
       · refine tagCase LIT (fun hv => done0 (bbNodeW_lit n m h c g8 hv)) (fun hc => (none_of ?_).elim)
         rw [bbNodeW]; simp [hs, g8, hc]
       exact (none_of (by rw [bbNodeW]; simp [hs, g0, g1, g4, g5, g6, g9, g7, g2, g3, g8])).elim

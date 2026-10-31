@@ -36,7 +36,7 @@ l_model csrE_spec (p : Prog) (hV : ValProg p) (ha : p.lookup "iw_alloc" = some i
   fns [hf ↦ csrE]
   specs [checkConstantVal_specE p hV n, slCons_specW p ha hc hsc n]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE]
   heartbeats 4000000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 

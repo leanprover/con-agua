@@ -159,7 +159,7 @@ theorem viewLs_specW (p : Prog) (hn : p.lookup "ls_node" = some lsNode)
 theorem lsView_of_lsNodeW {m : Mem} {a : AState} (hR : ArenaR m a) {h : Word}
     (hh : h.toNat < 2 ^ 32) (hne : lsNodeW m h ≠ []) :
     ∃ ids : List LIdx, a.store.lss.view (decI h) = some ids := by
-  have hg : h >>> 28 = 0 := Classical.byContradiction fun c => hne (by simp [lsNodeW, c])
+  have hg : tagW h = 0 := Classical.byContradiction fun c => hne (by simp [lsNodeW, c])
   have hsc : ¬ (tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0) := fun c => hne (by simp [lsNodeW, hg, c])
   have hc : ¬ tcnt m LVLS (tierW h) ≤ idxW h := fun c => hne (by
     rw [lsNodeW, ite_eq_right (by simpa using hg), ite_eq_right hsc, ite_eq_left c])

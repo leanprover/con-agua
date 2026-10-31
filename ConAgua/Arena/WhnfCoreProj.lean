@@ -34,15 +34,15 @@ namespace L.Arena
 
 /-! ## Handle-word lemmas: the `lit` tag, and the kind word says `natVal`/`strVal` -/
 
-theorem decE_lit_tag (h : Word) (hh : HW h) : ((decE h).tag == ETag.lit) = (h >>> 28 == 8) := by
+theorem decE_lit_tag (h : Word) (hh : HW h) : ((decE h).tag == ETag.lit) = (tagW h == 8) := by
   rw [decE_tag h hh, ETag.lit]
   rw [show (8 : UInt32) = (8 : Word).toUInt32 from rfl]
-  exact toUInt32_beq _ _ (Nat.lt_trans (shr28_lt h hh) (by decide)) (by decide)
+  exact toUInt32_beq _ _ (Nat.lt_trans (tagW_lt h hh) (by decide)) (by decide)
 
 /-- **Under `ArenaR`, on a `lit` node past the view checks, the kind word says whether the
 literal is a `strVal`** (the converse direction of `view_lit`, exposing the kind word). -/
 theorem view_lit_kind (m : Mem) (a : AState) (hR : ArenaR m a) (h : Word) (hh : h.toNat < 2 ^ 32)
-    (hv : viewOK m h LIT) (hg : h >>> 28 = 8) :
+    (hv : viewOK m h LIT) (hg : tagW h = 8) :
     (tfld m LIT (tierW h) (idxW h) 0 = 1 →
       ∃ s, a.store.view (decE h) = some (.lit (.strVal s))) ∧
     (tfld m LIT (tierW h) (idxW h) 0 ≠ 1 →
@@ -65,14 +65,14 @@ theorem view_lit_kind (m : Mem) (a : AState) (hR : ArenaR m a) (h : Word) (hh : 
 /-! ## Twin-side runs of `projLitToCtor` -/
 
 theorem projLitToCtor_run_not_lit (r : CoreFnsA) (fe : IFEnv) (depth : Nat) (h : Word) (hh : HW h)
-    (hg : h >>> 28 ≠ 8) (a : AState) :
+    (hg : tagW h ≠ 8) (a : AState) :
     (projLitToCtor r fe depth (decE h)).run a = .ok (decE h, a) := by
   have ht : ((decE h).tag == ETag.lit) = false := by rw [decE_lit_tag h hh]; simp [hg]
   simp [projLitToCtor, ht, StateT.run_pure]
   rfl
 
 theorem projLitToCtor_run_plain (r : CoreFnsA) (fe : IFEnv) (depth : Nat) (h : Word) (hh : HW h)
-    (hg : h >>> 28 = 8) (a : AState) (l : ConLeche.Literal)
+    (hg : tagW h = 8) (a : AState) (l : ConLeche.Literal)
     (hv : a.store.view (decE h) = some (.lit l)) (hne : ∀ s, l ≠ .strVal s) :
     (projLitToCtor r fe depth (decE h)).run a = .ok (decE h, a) := by
   have ht : ((decE h).tag == ETag.lit) = true := by rw [decE_lit_tag h hh]; simp [hg]
@@ -82,7 +82,7 @@ theorem projLitToCtor_run_plain (r : CoreFnsA) (fe : IFEnv) (depth : Nat) (h : W
   | strVal s => exact absurd rfl (hne s)
 
 theorem projLitToCtor_run_unsupported (r : CoreFnsA) (fe : IFEnv) (depth : Nat) (h : Word)
-    (hh : HW h) (hg : h >>> 28 = 8) (a a' : AState) (s : String)
+    (hh : HW h) (hg : tagW h = 8) (a a' : AState) (s : String)
     (hv : a.store.view (decE h) = some (.lit (.strVal s)))
     (hsup : (strLitSupported fe).run a = .ok (false, a')) :
     (projLitToCtor r fe depth (decE h)).run a = .ok (decE h, a') := by
@@ -91,7 +91,7 @@ theorem projLitToCtor_run_unsupported (r : CoreFnsA) (fe : IFEnv) (depth : Nat) 
   rfl
 
 theorem projLitToCtor_run_ctor (r : CoreFnsA) (fe : IFEnv) (depth : Nat) (h : Word) (hh : HW h)
-    (hg : h >>> 28 = 8) (a a' a₁ a₂ : AState) (s : String)
+    (hg : tagW h = 8) (a a' a₁ a₂ : AState) (s : String)
     (hv : a.store.view (decE h) = some (.lit (.strVal s)))
     (hsup : (strLitSupported fe).run a = .ok (true, a')) (c : EIdx)
     (hc : (strLitToConstructor s).run a' = .ok (c, a₁)) (res : EIdx)
@@ -101,7 +101,7 @@ theorem projLitToCtor_run_ctor (r : CoreFnsA) (fe : IFEnv) (depth : Nat) (h : Wo
   simp [projLitToCtor, ht, StateT.run_bind, view_run _ _ _ hv, except_ok_bind, hsup, hc, hres]
 
 theorem projLitToCtor_err_ctor (r : CoreFnsA) (fe : IFEnv) (depth : Nat) (h : Word) (hh : HW h)
-    (hg : h >>> 28 = 8) (a a' a₁ : AState) (s : String)
+    (hg : tagW h = 8) (a a' a₁ : AState) (s : String)
     (hv : a.store.view (decE h) = some (.lit (.strVal s)))
     (hsup : (strLitSupported fe).run a = .ok (true, a')) (c : EIdx)
     (hc : (strLitToConstructor s).run a' = .ok (c, a₁)) (ce : CheckError)
@@ -121,11 +121,11 @@ theorem plit_ref (p : Prog) (hStrSup : StrLitSupportedOK p) (hStrCtor : StrLitCt
       (CorePost decH dn s₀.mem vis fe MM eb ResH) := by
   have hS := hs.rel
   simp only [projLitToCtorE]
-  by_cases htag : h >>> 28 ≠ 8
+  by_cases htag : tagW h ≠ 8
   · rw [ite_eq_left htag]
     exact RefE.ret (projLitToCtor_run_not_lit _ fe d.toNat h hh htag a₀) (CorePost.ret hS rfl hh)
   rw [ite_eq_right htag]
-  have htag8 : h >>> 28 = 8 := by simpa using htag
+  have htag8 : tagW h = 8 := by simpa using htag
   refine RefE.abort0 (by decide) fun hsc => ?_
   refine RefE.abort0 (by decide) fun hbd => ?_
   have hvOK : viewOK s₀.mem h LIT := ⟨hsc, by simpa using hbd⟩
@@ -261,7 +261,7 @@ theorem lsNodeW_viewLen {m : Mem} {a : AState} (hR : ArenaR m a) {h : Word} (hh 
   have hpers : (decI h : LsIdx).isPersistent = (tierW h == 0) := by
     rw [isPersistent_decI h hh]; rfl
   unfold lsNodeW at hl
-  by_cases g0 : h >>> 28 ≠ 0
+  by_cases g0 : tagW h ≠ 0
   · simp [g0] at hl
   rw [ite_eq_right g0] at hl
   by_cases hsc : tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0
@@ -270,7 +270,7 @@ theorem lsNodeW_viewLen {m : Mem} {a : AState} (hR : ArenaR m a) {h : Word} (hh 
   by_cases hbd : tcnt m LVLS (tierW h) ≤ idxW h
   · simp [hbd] at hl
   rw [ite_eq_right hbd] at hl
-  have g0' : h >>> 28 = 0 := by simpa using g0
+  have g0' : tagW h = 0 := by simpa using g0
   simp only [List.cons.injEq, and_true] at hl
   obtain ⟨rfl, rfl⟩ := hl
   have htag := decLs_tag0 h hh
@@ -821,15 +821,15 @@ theorem rpFire_refines (p : Prog) (hp : WhnfCoreProg p) (hc : ProjCallees p)
 
 /-! ## `reduce_proj_head` -/
 
-theorem decE_const_tag (h : Word) (hh : HW h) : ((decE h).tag == ETag.const) = (h >>> 28 == 3) := by
+theorem decE_const_tag (h : Word) (hh : HW h) : ((decE h).tag == ETag.const) = (tagW h == 3) := by
   rw [decE_tag h hh, ETag.const]
   rw [show (3 : UInt32) = (3 : Word).toUInt32 from rfl]
-  exact toUInt32_beq _ _ (Nat.lt_trans (shr28_lt h hh) (by decide)) (by decide)
+  exact toUInt32_beq _ _ (Nat.lt_trans (tagW_lt h hh) (by decide)) (by decide)
 
 /-- **A `const` node past the view checks**: its name and level-list handles are the record's
 words. -/
 theorem view_const_words (m : Mem) (a : AState) (hR : ArenaR m a) (h : Word) (hh : h.toNat < 2 ^ 32)
-    (hv : viewOK m h CONST) (hg : h >>> 28 = 3) :
+    (hv : viewOK m h CONST) (hg : tagW h = 3) :
     ∃ n us, a.store.view (decE h) = some (.const n us) ∧
       n = decI (tfld m CONST (tierW h) (idxW h) 0) ∧
       us = decI (tfld m CONST (tierW h) (idxW h) 1) ∧
@@ -859,7 +859,7 @@ def rpHeadW (p : Prog) (n : Nat) (m : Mem) (mode vis e1 q i : Word) : Option (Wo
   match callW p n "get_app_fn" [e1] m with
   | none => none
   | some (r₁, m₁) =>
-    if r₁.headD 0 >>> 28 ≠ 3 then some (0, 0, m₁)
+    if tagW (r₁.headD 0) ≠ 3 then some (0, 0, m₁)
     else if tierW (r₁.headD 0) ≠ 0 ∧ rdW (m₁.arr64 CTL) 1 = 0 then none
     else if tcnt m₁ CONST (tierW (r₁.headD 0)) ≤ idxW (r₁.headD 0) then none
     else match callW p n "reduce_proj_fire" [mode, vis, e1, q, i,
@@ -876,7 +876,7 @@ theorem rpHead_spec (p : Prog) (hp : WhnfCoreProg p) (n : Nat) (s₀ : St) (mode
   simp only [callFn, reduceProjHeadL]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt,
-      tcntM, evalE_tierE, evalE_idxE,
+      tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE,
       callW_spec p n "get_app_fn", callW_spec p n "reduce_proj_fire"] <;>
     finish [rpHeadW, tierW, idxW]
 
@@ -904,13 +904,13 @@ theorem rpHead_refines (p : Prog) (hp : WhnfCoreProg p) (hc : ProjCallees p)
     (getAppFn_refines p hp.spine n s a₀ hS.arena.base e1 he1) hc1
   have hm₁' : m₁ = s.mem := by rw [← ht₁]; exact hm₁
   subst hm₁'
-  by_cases g : r₁.headD 0 >>> 28 ≠ 3
+  by_cases g : tagW (r₁.headD 0) ≠ 3
   · rw [ite_eq_left g] at hW
     simp only [Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨hr0, hr1, hm⟩ := hW
     have hT : (rpHeadT (decMode mode) fe (tbl.entry i.toNat) i.toNat (decE e1)).run a₀ =
         .ok (none, a₀) := by
-      have hb : (r₁.headD 0 >>> 28 == 3) = false := by simpa using g
+      have hb : (tagW (r₁.headD 0) == 3) = false := by simpa using g
       simp only [rpHeadT, StateT.run_bind, hrun1, except_ok_bind, decE_const_tag _ hhw, hb]
       rfl
     obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hT
@@ -919,7 +919,7 @@ theorem rpHead_refines (p : Prog) (hp : WhnfCoreProg p) (hc : ProjCallees p)
     · rw [hres]; unfold decOptR; rw [← hr0]; rfl
     · unfold ResW; rw [← hr0, ← hr1]; exact ⟨by unfold HW; decide, by unfold HW; decide⟩
   rw [ite_eq_right g] at hW
-  have g3 : r₁.headD 0 >>> 28 = 3 := by simpa using g
+  have g3 : tagW (r₁.headD 0) = 3 := by simpa using g
   obtain ⟨hsc, hW⟩ := of_ite_none hW
   obtain ⟨hbd, hW⟩ := of_ite_none hW
   have hvOK : viewOK s.mem (r₁.headD 0) CONST := ⟨hsc, by simpa using hbd⟩
@@ -945,7 +945,7 @@ theorem rpHead_refines (p : Prog) (hp : WhnfCoreProg p) (hc : ProjCallees p)
       (rpFireT (decMode mode) fe (tbl.entry i.toNat) i.toNat (decE e1)
         (decI (tfld s.mem CONST (tierW (r₁.headD 0)) (idxW (r₁.headD 0)) 0))
         (decI (tfld s.mem CONST (tierW (r₁.headD 0)) (idxW (r₁.headD 0)) 1))).run a₀ := by
-    have hb : (r₁.headD 0 >>> 28 == 3) = true := by simpa using g3
+    have hb : (tagW (r₁.headD 0) == 3) = true := by simpa using g3
     simp only [rpHeadT, StateT.run_bind, hrun1, except_ok_bind, decE_const_tag _ hhw, hb, ite_true,
       view_run _ _ _ hv]
     rw [hn, hus]

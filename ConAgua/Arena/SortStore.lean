@@ -81,7 +81,7 @@ def sortCS : ConsSch where
     if len(SOREC⟨t⟩) <= c || len(SOLP⟨t⟩) <= c { skip } })
   recW := [.var 1]
   ihash := lblk (u, h) { h := (⟪fnvBasis⟫ ^ u) * ⟪fnvPrime⟫ }
-  skipW := some (rhsOf (lblk (u, h, sk) { sk := (u >> 27) & 1 }))
+  skipW := some (rhsOf (lblk (u, h, sk) { sk := (u >> 31) & 1 }))
   xloc := 4
   pre := some soPre
   col := some SOLP
@@ -91,7 +91,7 @@ def sortCS : ConsSch where
   hsM := sohash
   vsM as := as
   roomM m t c := decide (m.len64 (tierA SOREC t) ≤ c) || decide (m.len64 (tierA SOLP t) ≤ c)
-  skM ks := (ks.getD 0 0 >>> 27) &&& 1
+  skM ks := (ks.getD 0 0 >>> 31) &&& 1
 
 /-! ## `sort_find(t, u, h)`: the probe -/
 
@@ -119,7 +119,7 @@ tier is open, the append to the tier the store is in. -/
 
 /-- The scratch skip: the scratch tier is open and `u` is a scratch handle. -/
 def soskipW (m : Mem) (u : Word) : Word :=
-  if rdW (m.arr64 CTL) 1 ≠ 0 then (u >>> 27) &&& 1 else 0
+  if rdW (m.arr64 CTL) 1 ≠ 0 then (u >>> 31) &&& 1 else 0
 
 /-- The model of `intern_sort`: the handle and the memory after, or `none` where the L code
 aborts (the library's `consInternM`). -/
@@ -171,7 +171,7 @@ theorem soPre_spec (k : Stmt → M Sig) (s₀ : St) :
   simp only [soPre, hpBlkS, mapS, mapE_tld, mapE_cntE, mapE_tierE, mapE_idxE, mapE, mapC, L.Notation.blk]
   simp only [Nat.reduceLT, Nat.reduceAdd, ↓reduceIte]
   sym only [lang_grind, arena_grind] =>
-    vcgen [step, evalE, evalC, evalArgs, setLoc, ld64, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] <;>
+    vcgen [step, evalE, evalC, evalArgs, setLoc, ld64, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE] <;>
     finish [lvlHPW, tierW, idxW]
 
 /-- **The `sort` table's obligations.** -/

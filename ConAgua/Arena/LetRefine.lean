@@ -11,7 +11,7 @@ The tenth table on the store library, `app`'s shape at three fields instead of t
 `letSch` (`LEREC`, `LESLOT`, two words per node, counts at `CTL[20 + t]`, tag `7`), the record
 relation `LeRecRel` (the three fields are the children's handle words), the node hash `lehash`,
 the lens `letLens`; the scratch skip (`skLe`, `leskipW_eq`), `app`'s pattern at three fields
-(two applications of `bit27_or`, since `|||` is left-associative: `ty ||| val ||| body` is
+(two applications of `bit31_or`, since `|||` is left-associative: `ty ||| val ||| body` is
 `(ty ||| val) ||| body`). `LetR m a` is the library's `ConsR` for the two `letE` tables.
 `internLet_refines`: `intern_letE(ty, val, body)` refines
 `internE (.letE (decE ty) (decE val) (decE body))` under `LetR`.
@@ -190,14 +190,14 @@ theorem letCS_wf : letCS.WF where
   vs ks h hk := by simp [pushArgs, letCS, hk]
   ex h := by simp [letCS] at h
 
-/-- The L skip test is the arena's (two applications of `bit27_or`, matching `|||`'s left
+/-- The L skip test is the arena's (two applications of `bit31_or`, matching `|||`'s left
 associativity). -/
 theorem leskipW_eq (m : Mem) (a : AState) (ty val body : Word) (hty : ty.toNat < 2 ^ 32)
     (hval : val.toNat < 2 ^ 32) (hbody : body.toNat < 2 ^ 32)
     (hfl : (rdW (m.arr64 CTL) 1 != 0) = a.store.scratchOn) :
     (leskipW m ty val body = 0) = (skLe a (decE ty) (decE val) (decE body) = false) := by
-  have h1 := bit27_or ty val
-  have h2 := bit27_or (ty ||| val) body
+  have h1 := bit31_or ty val
+  have h2 := bit31_or (ty ||| val) body
   simp only [leskipW, skLe, isPersistent_decE ty hty, isPersistent_decE val hval,
     isPersistent_decE body hbody, ← hfl]
   grind

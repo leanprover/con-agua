@@ -72,7 +72,7 @@ variable {p : Prog} {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEn
 run. -/
 l_model certifyNatEqs_specE (p : Prog) (hf : p.lookup "certify_nat_eqs" = some certifyNatEqsL)
   fns [hf ↦ certifyNatEqsE] grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE]
   heartbeats 400000 unified
 
 /-- What `certify_nat_eqs` gives besides the twin's answer `x` (from `m`): `StageT` after, the
@@ -181,7 +181,7 @@ l_model defnNatCert_specE (p : Prog) (hf : p.lookup "defn_nat_cert" = some defnN
   specs [callW_spec p n "env_find", callW_spec p n "nat_op_equations",
     callW_spec p n "subst_const0_pairs"]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE]
   heartbeats 400000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
@@ -193,7 +193,7 @@ l_model defnNatGate_specE (p : Prog) (hf : p.lookup "defn_nat_gate" = some defnN
   specs [callW_spec p n "nat_op_names", callW_spec p n "sl_contains", callW_spec p n "nat_op_guard",
     callW_spec p n "nat_op_deps", callW_spec p n "nat_op_stored_ok_all", defnNatCert_specE p hc n]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE]
   heartbeats 400000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 

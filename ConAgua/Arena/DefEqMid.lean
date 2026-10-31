@@ -425,7 +425,7 @@ l_model offE_spec (p : Prog) (hf : p.lookup "defeq_offset" = some defeqOffsetL)
   fns [hf ↦ offE list]
   specs [callW_spec p n "is_nat_zero", callW_spec p n "nat_pred"]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] unified
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 theorem decOptR_some {r : List Word} (h : r.headD 0 ≠ 0) : decOptR r = some (decE (r.tail.headD 0)) := by
@@ -464,7 +464,7 @@ theorem off_ref (p : Prog) (hp : DefEqMidProg p) (hnp : NatPredW p) (n : Nat)
       rw [decBool_f h']; simp
   simp only [hzb, Bool.false_eq_true, ↓reduceIte, decE_tag_lit_beq a ha, decE_tag_lit_beq b hb,
     Bool.and_eq_true, decide_eq_true_eq]
-  by_cases hll : a >>> 28 = 8 ∧ b >>> 28 = 8
+  by_cases hll : tagW a = 8 ∧ tagW b = 8
   · rw [ite_eq_left hll]
     simp only [hll, and_self, ↓reduceIte]
     exact RefE.ret rfl (CorePost.ret hS₂ rfl ⟨hw0, hw0⟩)
@@ -510,7 +510,7 @@ their runs). -/
 l_model liE_spec (p : Prog) (hf : p.lookup "defeq_lams_inner" = some defeqLamsInnerL)
   fns [hf ↦ liE list]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] unified
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE] unified
 
 theorem mode_verified (mode : Word) (h : mode < 4) :
     (decMode mode).verifiedChecks = decide (mode &&& 1 = 0) := by

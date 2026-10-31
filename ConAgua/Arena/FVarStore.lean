@@ -83,7 +83,7 @@ def fvarCS : ConsSch where
     if len(FVREC⟨t⟩) >> 1 <= c || len(FVLP⟨t⟩) <= c { skip } })
   recW := [.var 1, .var 2]
   ihash := lblk (u, ty, h) { h := ((⟪fnvBasis⟫ ^ u) * ⟪fnvPrime⟫ ^ ty) * ⟪fnvPrime⟫ }
-  skipW := some (rhsOf (lblk (u, ty, h, sk) { sk := (ty >> 27) & 1 }))
+  skipW := some (rhsOf (lblk (u, ty, h, sk) { sk := (ty >> 31) & 1 }))
   xloc := 4
   pre := some lpBlkF
   col := some FVLP
@@ -93,7 +93,7 @@ def fvarCS : ConsSch where
   hsM := fvhash
   vsM as := as
   roomM m t c := decide (m.len64 (tierA FVREC t) >>> (1 : Word) ≤ c) || decide (m.len64 (tierA FVLP t) ≤ c)
-  skM ks := (ks.getD 1 0 >>> 27) &&& 1
+  skM ks := (ks.getD 1 0 >>> 31) &&& 1
 
 /-! ## `fvar_find(t, u, ty, h)`: the probe -/
 
@@ -122,7 +122,7 @@ scratch tier is open, the append to the tier the store is in. -/
 /-- The scratch skip: the scratch tier is open and `ty` is a scratch handle. The index `u` is not
 a handle, so only `ty` is tested. -/
 def fvskipW (m : Mem) (ty : Word) : Word :=
-  if rdW (m.arr64 CTL) 1 ≠ 0 then (ty >>> 27) &&& 1 else 0
+  if rdW (m.arr64 CTL) 1 ≠ 0 then (ty >>> 31) &&& 1 else 0
 
 /-- The model of `intern_fvar`: the handle and the memory after, or `none` where the L code
 aborts (the library's `consInternM`). -/

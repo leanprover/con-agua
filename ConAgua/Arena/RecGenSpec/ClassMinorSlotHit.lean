@@ -130,7 +130,7 @@ def leafAtW (m : Mem) (mm leaf : Word) : Option (List Word × Mem) :=
   match gafF m [CWF, leaf] with
   | none => none
   | some (r, m1) =>
-    if r.headD 0 >>> 28 ≠ 3 then some ([0], m1)
+    if tagW (r.headD 0) ≠ 3 then some ([0], m1)
     else if eViewW m1 (r.headD 0) = [] then none
     else some ([if (eViewW m1 (r.headD 0)).tail.headD 0 = rdW (m1.arr64 IW) mm then 1 else 0], m1)
 

@@ -68,7 +68,7 @@ def frGo : FunDecl := lfn (h, c) locals (fd, j, d, r, u) {
 /-- con-ron: ConRon/Arena/ExprOps.lean:1488-1510 ConRon.Arena.fvarRangeGo -/
 @[l_impl ConRon.Arena.fvarRangeGo]
 def frNode : FunDecl := lfn (h, c) locals (g, t, i, f, a, b, x, y, z) {
-  g := h >> 28;
+  g := ⟦h⟧.tag;
   t := ⟦h⟧.tier;
   i := ⟦h⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
@@ -133,7 +133,7 @@ l_model frGo_spec (p : Prog) (hpf : p.lookup "fm_find" = some (memoFindG frSch))
   fns [hp ↦ frW, hpn ↦ frNodeW]
   specs [memoFindG_spec frSch p _ hpf n, memoPutG_spec frSch p _ hps n]
   grind [arena_grind] fold [tierW, idxW]
-  extra [evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
+  extra [evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE]
   finish [tierW, idxW] gen 20 heartbeats 1000000
 
 /-! ## `fr_memo(h, c)`: the entry, between two clears -/

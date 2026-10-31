@@ -72,10 +72,10 @@ theorem nview_tier :
   unfold NStore.view
   rw [isPersistent_decI h hh]
   by_cases ht : tierW h = 0
-  · simp only [show (h >>> 27) &&& 1 = tierW h from rfl, ht, beq_self_eq_true, ↓reduceIte]
+  · simp only [show (h >>> 31) &&& 1 = tierW h from rfl, ht, beq_self_eq_true, ↓reduceIte]
   · have hon : a.store.lss.ls.ns.scratchOn = true := by
       rw [← hfl]; simp only [bne_iff_ne, ne_eq]; exact fun e => hv ⟨ht, e⟩
-    simp only [show (h >>> 27) &&& 1 = tierW h from rfl, beq_iff_eq, ht, ↓reduceIte, hon]
+    simp only [show (h >>> 31) &&& 1 = tierW h from rfl, beq_iff_eq, ht, ↓reduceIte, hon]
 
 omit hR hh hv in
 theorem viewN_run {v : NNodeView} (hw : a.store.lss.ls.ns.view (decI h) = some v) :
@@ -83,7 +83,7 @@ theorem viewN_run {v : NNodeView} (hw : a.store.lss.ls.ns.view (decI h) = some v
   simp only [viewN, EStore.ns, StateT.run_bind, StateT.run_get, pure_bind, hw]; rfl
 
 /-- The scratch view of an `anonymous` record. -/
-theorem viewN_anon (hg : h >>> 28 = 0) (hc : ¬ tcnt m NANON (tierW h) ≤ idxW h) :
+theorem viewN_anon (hg : tagW h = 0) (hc : ¬ tcnt m NANON (tierW h) ≤ idxW h) :
     (viewN (decI h)).run a = .ok (.anonymous, a) := by
   apply viewN_run
   rw [nview_tier hR hh hv]
@@ -94,7 +94,7 @@ theorem viewN_anon (hg : h >>> 28 = 0) (hc : ¬ tcnt m NANON (tierW h) ≤ idxW 
     decI_idx, apply_ite NTables.anons, hx, Option.map_some]
 
 /-- The scratch view of a `str` record: its prefix word and a slice holding the string. -/
-theorem viewN_str (hg : h >>> 28 = 1) (hc : ¬ tcnt m NSTR (tierW h) ≤ idxW h) :
+theorem viewN_str (hg : tagW h = 1) (hc : ¬ tcnt m NSTR (tierW h) ≤ idxW h) :
     ∃ s, (viewN (decI h)).run a = .ok (.str (decI (tfld m NSTR (tierW h) (idxW h) 0)) s, a) ∧
       SliceOK m (tfld m NSTR (tierW h) (idxW h) 1) (tfld m NSTR (tierW h) (idxW h) 2) ∧
       sliceL (vpool m) (tfld m NSTR (tierW h) (idxW h) 1).toNat (tfld m NSTR (tierW h) (idxW h) 2).toNat =
@@ -111,7 +111,7 @@ theorem viewN_str (hg : h >>> 28 = 1) (hc : ¬ tcnt m NSTR (tierW h) ≤ idxW h)
     Tbl.node?, decI_idx, apply_ite NTables.strs, hx, Option.map_some, hq, decI_word]
 
 /-- The scratch view of a `num` record: its prefix word and its number. -/
-theorem viewN_num (hg : h >>> 28 = 2) (hc : ¬ tcnt m NNUM (tierW h) ≤ idxW h) :
+theorem viewN_num (hg : tagW h = 2) (hc : ¬ tcnt m NNUM (tierW h) ≤ idxW h) :
     (viewN (decI h)).run a =
       .ok (.num (decI (nnQ m (tierW h) (idxW h))) (nnU m (tierW h) (idxW h)).toNat, a) ∧
       (nnQ m (tierW h) (idxW h)).toNat < 2 ^ 32 := by
@@ -331,7 +331,7 @@ theorem pn_rel : ∀ n : Nat,
     | zero => simp [pnArmW, callW_zero', hd1, pnStrK, pnNumK] at hW
     | succ n =>
     unfold pnArmT
-    by_cases g0 : h >>> 28 = 0
+    by_cases g0 : tagW h = 0
     · by_cases hcnt : tcnt m NANON (tierW h) ≤ idxW h
       · simp [pnArmW, hh', hv, g0, hcnt] at hW
       rw [pnArmW_anon _ _ _ _ _ hh' hv g0 hcnt] at hW
@@ -340,7 +340,7 @@ theorem pn_rel : ∀ n : Nat,
       rintro _ ⟨_, _⟩ _ _ ⟨rfl, rfl, hD₁, hpw, hcp, hfr⟩
       exact ⟨rfl, hD₁, hP.frameLo (by simp [tier1, NAREC, NASLOT]) (by simp) hfr, hpw, hcp,
         hfr.mono (by simp) (by simp), rfl, rfl, rfl, SlKeep.of_frame hfr (by decide) (by decide)⟩
-    by_cases g1 : h >>> 28 = 1
+    by_cases g1 : tagW h = 1
     · by_cases hcnt : tcnt m NSTR (tierW h) ≤ idxW h
       · simp [pnArmW, hh', hv, g1, hcnt] at hW
       rw [pnArmW_str _ _ _ _ _ hh' hv g1 hcnt] at hW
@@ -356,7 +356,7 @@ theorem pn_rel : ∀ n : Nat,
       rintro _ ⟨_, _⟩ _ _ ⟨rfl, rfl, hD₂, hpw₂, hcp₂, hfr₂, hsk₂⟩
       exact ⟨rfl, hD₂, hP₁.frameLo (by simp [tier1, POOL, PT0, NSREC, NSSLOT]) (by simp) hfr₂, hpw₂,
         hcp₂.trans hcp₁, hfr₁.trans (hfr₂.mono (by simp) (by simp)), he₁, hl₁, hls₁, hsk₁.trans hsk₂⟩
-    by_cases g2 : h >>> 28 = 2
+    by_cases g2 : tagW h = 2
     · by_cases hcnt : tcnt m NNUM (tierW h) ≤ idxW h
       · simp [pnArmW, hh', hv, g2, hcnt] at hW
       rw [pnArmW_num _ _ _ _ _ hh' hv g2 hcnt] at hW

@@ -267,9 +267,9 @@ theorem natOpTyPinned_ref (hN : NatTyProg p) (c ty : Word) :
   have hp3 : H (pr.headD 0) := by rw [hr3]; exact hF2.names_lt 14 (by decide)
   have e3 : (pinAt 14).run a2 = .ok (decI (pr.headD 0), a2) := by
     have := pinAt_run hF2 14 (by decide); rw [hr3]; exact this
-  have htag : ((decI ty : EIdx).tag == ETag.forallE) = decide (ty >>> 28 = 6) := decI_tag_forallE_beq ty hty
+  have htag : ((decI ty : EIdx).tag == ETag.forallE) = decide (tagW ty = 6) := decI_tag_forallE_beq ty hty
   have hbeqc : ((decI c : NIdx) == decI (pr.headD 0)) = decide (c = pr.headD 0) := decI_beq _ _ hc hp3
-  have hshort : ¬ ty >>> 28 = 6 → ∃ x a', (natOpTyPinned fe (decI c) (decI ty)).run a = .ok (x, a') ∧ KeepPost dn vis fe decW0B m m' a' r x := by
+  have hshort : ¬ tagW ty = 6 → ∃ x a', (natOpTyPinned fe (decI c) (decI ty)).run a = .ok (x, a') ∧ KeepPost dn vis fe decW0B m m' a' r x := by
     intro h6
     rw [ite_eq_left (by simpa using h6)] at hw
     simp only [Option.some.injEq, Prod.mk.injEq] at hw
@@ -280,7 +280,7 @@ theorem natOpTyPinned_ref (hN : NatTyProg p) (c ty : Word) :
     by_cases hcp : c = pr.headD 0
     · simp [hcp]; rfl
     · simp; rfl
-  refine (if h6 : ty >>> 28 = 6 then ?_ else hshort h6)
+  refine (if h6 : tagW ty = 6 then ?_ else hshort h6)
   rw [ite_eq_right (by simpa using h6)] at hw
   cases h4 : callW p k "e_view" [ty] m2 with
   | none => rw [h4] at hw; simp [ntBW] at hw
@@ -339,8 +339,8 @@ theorem natOpTyPinned_ref (hN : NatTyProg p) (c ty : Word) :
     have hdn : ((decE (rv.tail.headD 0) : EIdx) == x2) = decide (rv.tail.headD 0 = nc.headD 0) := by
       rw [← hx2]; exact decI_beq _ _ hd0 hx2l
     have htagb : ((decE (rv.tail.tail.headD 0) : EIdx).tag == ETag.forallE) =
-        decide (rv.tail.tail.headD 0 >>> 28 = 6) := decI_tag_forallE_beq _ hb0
-    have hshortb : ¬ rv.tail.tail.headD 0 >>> 28 = 6 → ∃ x a', (natOpTyPinned fe (decI c) (decI ty)).run a = .ok (x, a') ∧
+        decide (tagW (rv.tail.tail.headD 0) = 6) := decI_tag_forallE_beq _ hb0
+    have hshortb : ¬ tagW (rv.tail.tail.headD 0) = 6 → ∃ x a', (natOpTyPinned fe (decI c) (decI ty)).run a = .ok (x, a') ∧
         KeepPost dn vis fe decW0B m m' a' r x := by
       intro hb6
       rw [ite_eq_left (by simpa using hb6)] at hw
@@ -351,7 +351,7 @@ theorem natOpTyPinned_ref (hN : NatTyProg p) (c ty : Word) :
         hbeqc, htag, decide_eq_true h6, ite_true, hrun4', decide_eq_false hcp, Bool.false_eq_true,
         ite_false, ← hbody, htagb, decide_eq_false hb6]
       rfl
-    refine (if hb6 : rv.tail.tail.headD 0 >>> 28 = 6 then ?_ else hshortb hb6)
+    refine (if hb6 : tagW (rv.tail.tail.headD 0) = 6 then ?_ else hshortb hb6)
     rw [ite_eq_right (by simpa using hb6)] at hw
     cases h5 : callW p k "e_view" [rv.tail.tail.headD 0] m4 with
     | none => rw [h5] at hw; simp [ntBW] at hw

@@ -19,7 +19,7 @@ open L.Arena
 /-- `strip_pis`'s loop (named, for its spec). -/
 def stripPisLoop : Stmt := lblk (k, e, o, n, h, g, x, y, z, q) {
   while n < k {
-    if h >> 28 != 6 { CTL.u64[200] := o; return (0, 0, 0, 0) };
+    if ⟦h⟧.tag != 6 { CTL.u64[200] := o; return (0, 0, 0, 0) };
     (g, x, y, z) := call e_view(h);
     q := call iw_alloc(1);
     IW.u64[q] := x;
@@ -41,7 +41,7 @@ def stripPisL : FunDecl := lfn (k, e) locals (o, n, h, g, x, y, z, q) {
 /-- `strip_lams`'s loop (named, for its spec). -/
 def stripLamsLoop : Stmt := lblk (k, e, o, n, h, g, x, y, z, q) {
   while n < k {
-    if h >> 28 != 5 { CTL.u64[200] := o; return (0, 0, 0, 0) };
+    if ⟦h⟧.tag != 5 { CTL.u64[200] := o; return (0, 0, 0, 0) };
     (g, x, y, z) := call e_view(h);
     q := call iw_alloc(1);
     IW.u64[q] := x;

@@ -30,7 +30,7 @@ def liftGo : FunDecl := lfn (h, c, k, fu) locals (x, g, t, i, r) {
   if fu == 0 { abort };
   x := call der_bv(h);
   if x < 32767 && x <= c { return h };
-  g := h >> 28;
+  g := ⟦h⟧.tag;
   t := ⟦h⟧.tier;
   i := ⟦h⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };

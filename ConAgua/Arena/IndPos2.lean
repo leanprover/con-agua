@@ -143,7 +143,7 @@ def nestInstTypeL : FunDecl := lfn (vis, ctx, hi, key) locals
 @[l_impl ConRon.Arena.nestResHead]
 def nestResHeadL : FunDecl := lfn (e) locals (hd) {
   hd := call get_app_fn_f(⟪CWF⟫, e);
-  return u64((hd >> 28) == 1)
+  return u64((⟦hd⟧.tag) == 1)
 }
 
 /-- `nest_ctor_nf(ctx, progOff, progLen, us, dsOff, dsLen, cv, closed)`: a frame constructor's
@@ -284,7 +284,7 @@ def nestFieldsL : FunDecl :=
     lfn (vis, ctx, fuel, progOff, progLen, base, nF, j, cur, ns, ksOff, ksLen, ndsOff, ndsLen)
       locals (tag, g, a, b, zz, k, nd, ns2, bj, r0, r1, r2, r3, r4, r5) {
   if nF == 0 { return (ksOff, ksLen, ndsOff, ndsLen, cur, ns) };
-  tag := cur >> 28;
+  tag := ⟦cur⟧.tag;
   if tag != 6 { fail R_NESTED_POSITIVITY_INVALID_NESTED };
   bj := base + j;
   if bj < base { abort };
@@ -684,7 +684,7 @@ def nestPosL : FunDecl :=
     if occE != 0 { return (0, w, ns) };
     return (0, e, ns)
   };
-  tag := w >> 28;
+  tag := ⟦w⟧.tag;
   if tag == 6 {
     (kind, w, ns2) := call nest_pos_bind(vis, ctx, fuel, progOff, progLen, dep, kb, w, ns);
     return (kind, w, ns2)
@@ -744,7 +744,7 @@ first `n` binder domains of `e`? -/
 @[l_impl ConRon.Arena.piDomsOcc]
 def piDomsOccL : FunDecl := lfn (namesOff, namesLen, lo, hi, n, e) locals (g, d, b, z, occ, r) {
   if n == 0 { return 0 };
-  if e >> 28 != 6 { return 0 };
+  if ⟦e⟧.tag != 6 { return 0 };
   (g, d, b, z) := call e_view(e);
   occ := call nest_occ(namesOff, namesLen, lo, hi, d);
   if occ != 0 { return 1 };

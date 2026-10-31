@@ -194,7 +194,7 @@ persistently (`promoteN`'s three view arms). -/
 -- con-ron: ConRon/Arena/Promote.lean:84-105 ConRon.Arena.promoteN
 @[l_impl ConRon.Arena.promoteN]
 def pnArm : FunDecl := lfn (f, h) locals (g, t, i, q, o, l, r) {
-  g := h >> 28;
+  g := ⟦h⟧.tag;
   t := ⟦h⟧.tier;
   i := ⟦h⟧.idx;
   if 4294967295 < h { abort };

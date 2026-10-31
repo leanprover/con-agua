@@ -131,23 +131,23 @@ def IArmRef (n : Nat) (armW : Nat → Mem → Word → Word → Word → Word �
 def IArmOK (n : Nat) : Prop :=
   ∀ (m m' : Mem) (a : AState) (h d v fu r : Word), ArenaD m a →
     h.toNat < 2 ^ 32 →
-    (h >>> 28 = 4 →
+    (tagW h = 4 →
       IArmRef n instAppW (instantiate1ArmApp (decE v) fu.toNat (decE h) d.toNat) m m' a h d v fu r) ∧
-    (h >>> 28 = 5 →
+    (tagW h = 5 →
       IArmRef n instLamW (instantiate1ArmBind (decE v) fu.toNat (decE h) d.toNat) m m' a h d v fu r) ∧
-    (h >>> 28 = 6 →
+    (tagW h = 6 →
       IArmRef n instForallW (instantiate1ArmBind (decE v) fu.toNat (decE h) d.toNat) m m' a h d v fu r) ∧
-    (h >>> 28 = 7 →
+    (tagW h = 7 →
       IArmRef n instLetW (instantiate1ArmLet (decE v) fu.toNat (decE h) d.toNat) m m' a h d v fu r) ∧
-    (h >>> 28 = 9 →
+    (tagW h = 9 →
       IArmRef n instProjW (instantiate1ArmProj (decE v) fu.toNat (decE h) d.toNat) m m' a h d v fu r)
 
 /-! ## The dispatcher -/
 
 /-- The tag word and its `UInt32` (the twin's `h.tag`). -/
 theorem tag_iff (h g : Word) (hh : h.toNat < 2 ^ 32) (hg : g.toNat < 16) :
-    h >>> 28 = g ↔ (h >>> 28).toUInt32 = g.toUInt32 := by
-  have hl : (h >>> 28).toNat < 16 := shr28_lt h hh
+    tagW h = g ↔ (tagW h).toUInt32 = g.toUInt32 := by
+  have hl : (tagW h).toNat < 16 := tagW_lt h hh
   constructor
   · intro e; rw [e]
   · intro e
@@ -174,32 +174,32 @@ theorem igoOK_succ (n : Nat) (ih : IArmOK n) : IGoOK (n + 1) := by
   simp only [Bool.not_eq_true] at hcut'
   simp only [hcut', Bool.false_eq_true, ↓reduceIte, decE_tag h hh]
   have arm := ih m m' a h d v (fu - 1) r hA hh
-  have t4 : h >>> 28 = 4 ↔ (h >>> 28).toUInt32 = 4 := by simpa using tag_iff h 4 hh (by decide)
-  have t5 : h >>> 28 = 5 ↔ (h >>> 28).toUInt32 = 5 := by simpa using tag_iff h 5 hh (by decide)
-  have t6 : h >>> 28 = 6 ↔ (h >>> 28).toUInt32 = 6 := by simpa using tag_iff h 6 hh (by decide)
-  have t0 : h >>> 28 = 0 ↔ (h >>> 28).toUInt32 = 0 := by simpa using tag_iff h 0 hh (by decide)
-  have t7 : h >>> 28 = 7 ↔ (h >>> 28).toUInt32 = 7 := by simpa using tag_iff h 7 hh (by decide)
-  have t9 : h >>> 28 = 9 ↔ (h >>> 28).toUInt32 = 9 := by simpa using tag_iff h 9 hh (by decide)
+  have t4 : tagW h = 4 ↔ (tagW h).toUInt32 = 4 := by simpa using tag_iff h 4 hh (by decide)
+  have t5 : tagW h = 5 ↔ (tagW h).toUInt32 = 5 := by simpa using tag_iff h 5 hh (by decide)
+  have t6 : tagW h = 6 ↔ (tagW h).toUInt32 = 6 := by simpa using tag_iff h 6 hh (by decide)
+  have t0 : tagW h = 0 ↔ (tagW h).toUInt32 = 0 := by simpa using tag_iff h 0 hh (by decide)
+  have t7 : tagW h = 7 ↔ (tagW h).toUInt32 = 7 := by simpa using tag_iff h 7 hh (by decide)
+  have t9 : tagW h = 9 ↔ (tagW h).toUInt32 = 9 := by simpa using tag_iff h 9 hh (by decide)
   simp only [ETag.app, ETag.isBind, ETag.lam, ETag.forallE, ETag.bvar, ETag.letE, ETag.proj,
     beq_iff_eq, Bool.or_eq_true] at *
-  by_cases g4 : h >>> 28 = 4
+  by_cases g4 : tagW h = 4
   · rw [instW.arm2 n m h d v fu hfu hcut g4] at hb
-    simp only [show (h >>> 28).toUInt32 = 4 from (t4.mp g4), ↓reduceIte]
+    simp only [show (tagW h).toUInt32 = 4 from (t4.mp g4), ↓reduceIte]
     exact arm.1 g4 hb
-  have g4' : ¬ (h >>> 28).toUInt32 = 4 := fun e => g4 (t4.mpr e)
-  by_cases g5 : h >>> 28 = 5
+  have g4' : ¬ (tagW h).toUInt32 = 4 := fun e => g4 (t4.mpr e)
+  by_cases g5 : tagW h = 5
   · rw [instW.arm3 n m h d v fu hfu hcut g4 g5] at hb
-    simp only [show (h >>> 28).toUInt32 = 5 from (t5.mp g5), true_or, ↓reduceIte]
+    simp only [show (tagW h).toUInt32 = 5 from (t5.mp g5), true_or, ↓reduceIte]
     exact arm.2.1 g5 hb
-  have g5' : ¬ (h >>> 28).toUInt32 = 5 := fun e => g5 (t5.mpr e)
-  by_cases g6 : h >>> 28 = 6
+  have g5' : ¬ (tagW h).toUInt32 = 5 := fun e => g5 (t5.mpr e)
+  by_cases g6 : tagW h = 6
   · rw [instW.arm4 n m h d v fu hfu hcut g4 g5 g6] at hb
-    simp only [show (h >>> 28).toUInt32 = 6 from (t6.mp g6), or_true, ↓reduceIte]
+    simp only [show (tagW h).toUInt32 = 6 from (t6.mp g6), or_true, ↓reduceIte]
     exact arm.2.2.1 g6 hb
-  have g6' : ¬ (h >>> 28).toUInt32 = 6 := fun e => g6 (t6.mpr e)
+  have g6' : ¬ (tagW h).toUInt32 = 6 := fun e => g6 (t6.mpr e)
   simp only [g4', g5', g6', or_self, ↓reduceIte]
-  by_cases g0 : h >>> 28 = 0
-  · simp only [show (h >>> 28).toUInt32 = 0 from (t0.mp g0), ↓reduceIte]
+  by_cases g0 : tagW h = 0
+  · simp only [show (tagW h).toUInt32 = 0 from (t0.mp g0), ↓reduceIte]
     by_cases hs : tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0
     · rw [instW] at hb; simp [hfu, hcut, g0, hs] at hb
     by_cases hc : tcnt m BVAR (tierW h) ≤ idxW h
@@ -226,19 +226,19 @@ theorem igoOK_succ (n : Nat) (ih : IArmOK n) : IGoOK (n + 1) := by
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hb)
       have hl' : ¬ (tfld m BVAR (tierW h) (idxW h) 0).toNat > d.toNat := fun e => hl e
       simp only [he', hl', ↓reduceIte]; exact ⟨a, rfl, hA⟩
-  have g0' : ¬ (h >>> 28).toUInt32 = 0 := fun e => g0 (t0.mpr e)
+  have g0' : ¬ (tagW h).toUInt32 = 0 := fun e => g0 (t0.mpr e)
   simp only [g0', ↓reduceIte]
-  by_cases g7 : h >>> 28 = 7
+  by_cases g7 : tagW h = 7
   · rw [instW.arm8 n m h d v fu hfu hcut g4 g5 g6 g0 g7] at hb
-    simp only [show (h >>> 28).toUInt32 = 7 from (t7.mp g7), ↓reduceIte]
+    simp only [show (tagW h).toUInt32 = 7 from (t7.mp g7), ↓reduceIte]
     exact arm.2.2.2.1 g7 hb
-  have g7' : ¬ (h >>> 28).toUInt32 = 7 := fun e => g7 (t7.mpr e)
+  have g7' : ¬ (tagW h).toUInt32 = 7 := fun e => g7 (t7.mpr e)
   simp only [g7', ↓reduceIte]
-  by_cases g9 : h >>> 28 = 9
+  by_cases g9 : tagW h = 9
   · rw [instW.arm9 n m h d v fu hfu hcut g4 g5 g6 g0 g7 g9] at hb
-    simp only [show (h >>> 28).toUInt32 = 9 from (t9.mp g9), ↓reduceIte]
+    simp only [show (tagW h).toUInt32 = 9 from (t9.mp g9), ↓reduceIte]
     exact arm.2.2.2.2 g9 hb
-  have g9' : ¬ (h >>> 28).toUInt32 = 9 := fun e => g9 (t9.mpr e)
+  have g9' : ¬ (tagW h).toUInt32 = 9 := fun e => g9 (t9.mpr e)
   simp only [g9', ↓reduceIte]
   rw [instW.arm10 n m h d v fu hfu hcut g4 g5 g6 g0 g7 g9] at hb
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hb)
@@ -251,7 +251,7 @@ variable (n : Nat) (ih : IGoOK n) (m m' : Mem) (a : AState) (hA : ArenaD m a)
   (h d v fu r : Word) (hh : h.toNat < 2 ^ 32)
 include ih hA hh
 
-theorem iappArm_ok (hg : h >>> 28 = 4) :
+theorem iappArm_ok (hg : tagW h = 4) :
     IArmRef (n + 1) instAppW (instantiate1ArmApp (decE v) fu.toNat (decE h) d.toNat) m m' a h d v fu r := by
   intro hb
   rw [instantiate1ArmApp]
@@ -279,7 +279,7 @@ theorem iappArm_ok (hg : h >>> 28 = 4) :
   obtain ⟨a', h3, h4⟩ := itail_ok _ _ a₂ h d r m' hh (fun r₃ m₃ h => mkApp_ok m₂ a₂ hA₂ x y r₃ m₃ h) hb
   exact ⟨a', by simp only [StateT.run_bind, ha₁, ha₂, except_ok_bind]; exact h3, h4⟩
 
-theorem ilamArm_ok (hg : h >>> 28 = 5) :
+theorem ilamArm_ok (hg : tagW h = 5) :
     IArmRef (n + 1) instLamW (instantiate1ArmBind (decE v) fu.toNat (decE h) d.toNat) m m' a h d v fu r := by
   intro hb
   by_cases hd1 : d + 1 = 0
@@ -313,7 +313,7 @@ theorem ilamArm_ok (hg : h >>> 28 = 5) :
     (fun r₃ m₃ h => mkLam_ok m₂ a₂ hA₂ x y r₃ m₃ h) hb
   exact ⟨a', by simp only [StateT.run_bind, ha₁, ha₂, except_ok_bind, hbind]; exact h3, h4⟩
 
-theorem iforallArm_ok (hg : h >>> 28 = 6) :
+theorem iforallArm_ok (hg : tagW h = 6) :
     IArmRef (n + 1) instForallW (instantiate1ArmBind (decE v) fu.toNat (decE h) d.toNat) m m' a h d v fu r := by
   intro hb
   by_cases hd1 : d + 1 = 0
@@ -347,7 +347,7 @@ theorem iforallArm_ok (hg : h >>> 28 = 6) :
     (fun r₃ m₃ h => mkForall_ok m₂ a₂ hA₂ x y r₃ m₃ h) hb
   exact ⟨a', by simp only [StateT.run_bind, ha₁, ha₂, except_ok_bind, hbind]; exact h3, h4⟩
 
-theorem iletArm_ok (hg : h >>> 28 = 7) :
+theorem iletArm_ok (hg : tagW h = 7) :
     IArmRef (n + 1) instLetW (instantiate1ArmLet (decE v) fu.toNat (decE h) d.toNat) m m' a h d v fu r := by
   intro hb
   by_cases hd1 : d + 1 = 0
@@ -384,7 +384,7 @@ theorem iletArm_ok (hg : h >>> 28 = 7) :
     (fun r₄ m₄ h => mkLet_ok m₃ a₃ hA₃ x y z r₄ m₄ h) hb
   exact ⟨a', by simp only [StateT.run_bind, ha₁, ha₂, ha₃, except_ok_bind]; exact h4, h5⟩
 
-theorem iprojArm_ok (hg : h >>> 28 = 9) :
+theorem iprojArm_ok (hg : tagW h = 9) :
     IArmRef (n + 1) instProjW (instantiate1ArmProj (decE v) fu.toNat (decE h) d.toNat) m m' a h d v fu r := by
   intro hb
   rw [instantiate1ArmProj]

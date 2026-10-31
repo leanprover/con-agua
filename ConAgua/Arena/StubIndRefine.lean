@@ -67,7 +67,7 @@ def cfW (p : Prog) (n : Nat) (m : Mem) (vis c : Word) : Option (List Word × Mem
   if rdW (m1.arr64 EREC) (r1.tail.headD 0) ≠ 4 then some ([0, 0, 0], m1) else
   ntBW (callW p n "pi_result_f" [CWF, rdW (m1.arr64 EREC) (r1.tail.headD 0 + 4)] m1) fun r2 m2 =>
   ntBW (callW p n "get_app_fn_f" [CWF, r2.headD 0] m2) fun r3 m3 =>
-  if r3.headD 0 >>> 28 ≠ 3 then some ([r1.tail.headD 0, 0, 0], m3) else
+  if tagW (r3.headD 0) ≠ 3 then some ([r1.tail.headD 0, 0, 0], m3) else
   ntBW (callW p n "const_name_of" [r3.headD 0] m3) fun r4 m4 =>
   ntBW (callW p n "env_find" [r4.headD 0, vis] m4) fun r5 m5 =>
   if r5.headD 0 = 0 then some ([r1.tail.headD 0, 0, 0], m5) else
@@ -434,14 +434,14 @@ theorem cfW_ok {p : Prog} (hp : RrbProg p) (n : Nat) (dn : NIdx → Option ConLe
   have hblk : ∀ G : IConstantVal → Nat → IConstantVal → IIndCaps → Bool,
       famT fe G (decI c) = famBlk fe (G cvj nF) cvj := fun G => by simp only [famT, hfi]
   simp only [List.headD_cons] at hW
-  by_cases h3n : ¬ r3'.headD 0 >>> 28 = 3
+  by_cases h3n : ¬ tagW (r3'.headD 0) = 3
   · have h3' := h3n
     simp only [ne_eq, h3', not_false_eq_true, ↓reduceIte] at hW
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
     refine ⟨rfl, fun G => ⟨fun _ => ?_, fun h => absurd rfl h⟩⟩
     rw [hblk]
     exact famBlk_not fe _ cvj a _ _ hpr hga (fun ht => h3' ((decE_tag_eq _ hHW3 3 (by decide)).mp ht))
-  have h3' : r3'.headD 0 >>> 28 = 3 := Decidable.not_not.mp h3n
+  have h3' : tagW (r3'.headD 0) = 3 := Decidable.not_not.mp h3n
   simp only [ne_eq, h3', not_true_eq_false, ↓reduceIte] at hW
   have htag : (decE (r3'.headD 0)).tag = ETag.const := (decE_tag_eq _ hHW3 3 (by decide)).mpr h3'
   -- `const_name_of`

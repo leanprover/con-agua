@@ -64,7 +64,7 @@ l_model checkReducePin_specE (p : Prog) (hC : CrpProg p)
     callW_spec p n "reduce_pin_guard", callW_spec p n "reduce_decl_pin",
     callW_spec p n "reduce_cert_var", mkApp_spec p hC.db hC.af hC.ap hC.ia hC.ma n]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE]
   heartbeats 400000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 

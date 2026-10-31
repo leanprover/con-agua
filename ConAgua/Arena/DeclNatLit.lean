@@ -329,7 +329,7 @@ def natSuccOkW (p : Prog) (n : Nat) (m : Mem) (found q : Word) : Option (List Wo
   if rdW (m.arr64 EREC) (q + 3) ≠ 0 then some ([0], m) else
   ntBW (callW p n "pin_at" [1] m) fun r1 m1 =>
   ntBW (callW p n "const_e" [r1.headD 0] m1) fun r2 m2 =>
-  if rdW (m2.arr64 EREC) (q + 4) >>> 28 ≠ 6 then some ([0], m2) else
+  if tagW (rdW (m2.arr64 EREC) (q + 4)) ≠ 6 then some ([0], m2) else
   if tierW (rdW (m2.arr64 EREC) (q + 4)) ≠ 0 ∧ rdW (m2.arr64 CTL) 1 = 0 then none else
   if tcnt m2 FORALL (tierW (rdW (m2.arr64 EREC) (q + 4))) ≤ idxW (rdW (m2.arr64 EREC) (q + 4))
     then none else
@@ -344,7 +344,7 @@ theorem natSuccOk_specW (p : Prog) (hp : p.lookup "nat_succ_ok" = some natSuccOk
   simp only [callFn, natSuccOkL]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt,
-      tcntM, evalE_tierE, evalE_idxE,
+      tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE,
       callW_spec p n "pin_at", callW_spec p n "const_e"] <;>
     finish (gen := 20) [natSuccOkW, ntBW, tierW, idxW]
 
@@ -394,7 +394,7 @@ theorem natSuccOk_ref (hN : NatLitProg p) (found q : Word) (o : Option IConstant
           have e1 : (pinAt 1).run a = .ok (decI (r1.headD 0), a) := by
             have := pinAt_run hF 1 (by decide)
             rw [hr1]; exact this
-          by_cases h6 : wt >>> 28 = 6
+          by_cases h6 : tagW wt = 6
           · rw [ite_eq_right (by simpa using h6)] at hw
             by_cases hv1 : tierW wt ≠ 0 ∧ rdW (m2.arr64 CTL) 1 = 0
             · rw [ite_eq_left hv1] at hw; cases hw

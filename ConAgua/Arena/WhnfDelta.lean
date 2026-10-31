@@ -123,7 +123,7 @@ def natSuccOkL : FunDecl := lfn (found, p) locals (nt, nc, ty, t, i, dom, body) 
   nt := call pin_at(1);
   nc := call const_e(nt);
   ty := EREC.u64[p + 4];
-  if ty >> 28 != 6 { return 0 };
+  if ⟦ty⟧.tag != 6 { return 0 };
   (t, i) := node FORALL⟦ty⟧;
   dom := FORALL⟨t, i⟩.ty;
   body := FORALL⟨t, i⟩.b;
@@ -157,7 +157,7 @@ non-`lit` handle). -/
 @[l_impl ConRon.Arena.litToCtorIfNat]
 def litToCtorIfNatL : FunDecl :=
   lfn (vis, h) locals (tag, t, i, k, sup, o, cnt, r) {
-  tag := h >> 28;
+  tag := ⟦h⟧.tag;
   if tag != 8 { return h };
   (t, i) := node LIT⟦h⟧;
   k := LIT⟨t, i⟩.kind;
@@ -180,7 +180,7 @@ handle word; before, the last arm answered "no match" for the tags `10`‥`15` t
 -- con-ron: ConRon/Arena/Core.lean:577-587 ConRon.Arena.rawNatLit?
 @[l_impl ConRon.Arena.rawNatLit?]
 def rawNatLitL : FunDecl := lfn (h) locals (tag, t, i, k, nz, el) {
-  tag := h >> 28;
+  tag := ⟦h⟧.tag;
   t := ⟦h⟧.tier;
   i := ⟦h⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
@@ -255,13 +255,13 @@ def constValAtL : FunDecl := lfn (n, po, pl, value, us) locals (fd, j, dd, r, z)
 (through `const_val_at`) is applied to the spine. The level-argument list's length is read directly
 off `LSREC` (no `view_ls`/`view_ls_len` L function exists yet), after `ls_node`'s own tag test (a
 level-list handle has tag `0`; the twin's `viewLs` fails on any other tag, so the L code aborts
-there: whnf-delta2 added the `us >> 28` test). The argument slice `get_app_args` pushes is dropped
+there: whnf-delta2 added the `⟦us⟧.tag` test). The argument slice `get_app_args` pushes is dropped
 again before returning (`CTL[136]` put back, the `StackKept` contract of a core function; before,
 every unfolding leaked its spine onto the stack: whnf-delta2). -/
 -- con-ron: ConRon/Arena/Core.lean:383-403 ConRon.Arena.unfoldDefinition
 def unfoldDefnAtL : FunDecl :=
   lfn (e, n, us, p) locals (tu, iu, usl, lpl, po, value, v, top, ao, an, r) {
-  if us >> 28 != 0 { abort };
+  if ⟦us⟧.tag != 0 { abort };
   (tu, iu) := node LVLS⟦us⟧;
   usl := LVLS⟨tu, iu⟩.l;
   lpl := EREC.u64[p + 3];
@@ -284,7 +284,7 @@ behaviour-preserving split, whnf-delta2). -/
 def unfoldDefinitionL : FunDecl :=
   lfn (vis, e) locals (hh, t, i, n, us, found, p, fl, r) {
   hh := call get_app_fn(e);
-  if hh >> 28 != 3 { return (0, 0) };
+  if ⟦hh⟧.tag != 3 { return (0, 0) };
   (t, i) := node CONST⟦hh⟧;
   n := CONST⟨t, i⟩.n;
   us := CONST⟨t, i⟩.us;
@@ -408,7 +408,7 @@ def reduceNatApL : FunDecl :=
   if APP⟨t2⟩.count <= i2 { abort };
   g := APP⟨t2, i2⟩.f;
   a := APP⟨t2, i2⟩.a;
-  if g >> 28 != 3 { return (0, 0) };
+  if ⟦g⟧.tag != 3 { return (0, 0) };
   (t3, i3) := node CONST⟦g⟧;
   c := CONST⟨t3, i3⟩.n;
   us := CONST⟨t3, i3⟩.us;
@@ -431,7 +431,7 @@ whnf-delta2.) -/
 -- con-ron: ConRon/Arena/Core.lean:1228-1282 ConRon.Arena.reduceNat
 def reduceNatHeadL : FunDecl :=
   lfn (mode, vis, d, f, b) locals (tag2, t2, i2, rf, rh) {
-  tag2 := f >> 28;
+  tag2 := ⟦f⟧.tag;
   t2 := ⟦f⟧.tier;
   i2 := ⟦f⟧.idx;
   if t2 != 0 && CTL.u64[1] == 0 { abort };
@@ -471,7 +471,7 @@ whnf-delta2). -/
 @[l_impl ConRon.Arena.reduceNat]
 def reduceNatL : FunDecl :=
   lfn (mode, vis, d, e) locals (t, i, f, b, rf, rh) {
-  if e >> 28 != 4 { return (0, 0) };
+  if ⟦e⟧.tag != 4 { return (0, 0) };
   (t, i) := node APP⟦e⟧;
   f := APP⟨t, i⟩.f;
   b := APP⟨t, i⟩.a;
@@ -518,7 +518,7 @@ probes again (the loop may have changed the table) and inserts. -/
 -- con-ron: ConRon/Arena/Core.lean:2160-2172 ConRon.Arena.whnfStuckTag
 @[l_impl ConRon.Arena.whnfStuckTag]
 def whnfL : FunDecl := lfn (mode, vis, d, e) locals (t, fd, j, dd, x, z) {
-  t := e >> 28;
+  t := ⟦e⟧.tag;
   if t == 2 || t == 1 || t == 5 || t == 6 || t == 8 { return e };
   (fd, j, dd) := call wh_find(e, ((mode >> 1) & 1) << 32);
   if fd != 0 { return WH.u64[j * 4 + 3] };

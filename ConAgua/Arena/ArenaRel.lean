@@ -660,27 +660,27 @@ theorem lvlHPW_ok (u : Word) (hu : u.toNat < 2 ^ 32) :
   have hidx := decI_idx (k := .level) u
   simp only [LTables.derAt, hidx, beq_iff_eq]
   have tg := fun g (hg : g < 16) => decI_tag_eq (k := .level) u hu g hg
-  have hL : ∀ (g : Nat), g < 16 → u >>> 28 = UInt64.ofNat g →
+  have hL : ∀ (g : Nat), g < 16 → tagW u = UInt64.ofNat g →
       (decI u : LIdx).tag = UInt32.ofNat g := fun g hg h => (tg g hg).mpr h
-  have hN : ∀ (g : Nat), g < 16 → u >>> 28 ≠ UInt64.ofNat g →
+  have hN : ∀ (g : Nat), g < 16 → tagW u ≠ UInt64.ofNat g →
       (decI u : LIdx).tag ≠ UInt32.ofNat g := fun g hg h e => h ((tg g hg).mp e)
-  by_cases g0 : u >>> 28 = UInt64.ofNat 0
+  by_cases g0 : tagW u = UInt64.ofNat 0
   · simp (config := { decide := true }) only [g0, hL 0 (by decide) g0, LTag.zero, LTag.succ,
       LTag.max, LTag.imax, LTag.param, ite_true, ite_false]
     by_cases h0 : tierW u = 0 <;> simp only [h0, ite_true, ite_false] at hz ⊢ <;> exact hz
-  by_cases g1 : u >>> 28 = UInt64.ofNat 1
+  by_cases g1 : tagW u = UInt64.ofNat 1
   · simp (config := { decide := true }) only [g1, hL 1 (by decide) g1, LTag.zero, LTag.succ,
       LTag.max, LTag.imax, LTag.param, ite_true, ite_false]
     by_cases h0 : tierW u = 0 <;> simp only [h0, ite_true, ite_false] at hsu ⊢ <;> exact hsu
-  by_cases g2 : u >>> 28 = UInt64.ofNat 2
+  by_cases g2 : tagW u = UInt64.ofNat 2
   · simp (config := { decide := true }) only [g2, hL 2 (by decide) g2, LTag.zero, LTag.succ,
       LTag.max, LTag.imax, LTag.param, ite_true, ite_false]
     by_cases h0 : tierW u = 0 <;> simp only [h0, ite_true, ite_false] at hma ⊢ <;> exact hma
-  by_cases g3 : u >>> 28 = UInt64.ofNat 3
+  by_cases g3 : tagW u = UInt64.ofNat 3
   · simp (config := { decide := true }) only [g3, hL 3 (by decide) g3, LTag.zero, LTag.succ,
       LTag.max, LTag.imax, LTag.param, ite_true, ite_false]
     by_cases h0 : tierW u = 0 <;> simp only [h0, ite_true, ite_false] at him ⊢ <;> exact him
-  by_cases g4 : u >>> 28 = UInt64.ofNat 4
+  by_cases g4 : tagW u = UInt64.ofNat 4
   · simp (config := { decide := true }) only [g4, hL 4 (by decide) g4, LTag.zero, LTag.succ,
       LTag.max, LTag.imax, LTag.param, ite_true, ite_false]
     by_cases h0 : tierW u = 0 <;> simp only [h0, ite_true, ite_false] at hpa ⊢ <;> exact hpa
@@ -689,10 +689,10 @@ theorem lvlHPW_ok (u : Word) (hu : u.toNat < 2 ^ 32) :
   have n2 : (decI u : LIdx).tag ≠ LTag.max := hN 2 (by decide) g2
   have n3 : (decI u : LIdx).tag ≠ LTag.imax := hN 3 (by decide) g3
   have n4 : (decI u : LIdx).tag ≠ LTag.param := hN 4 (by decide) g4
-  have m1 : ¬ u >>> 28 = 1 := g1
-  have m2 : ¬ u >>> 28 = 2 := g2
-  have m3 : ¬ u >>> 28 = 3 := g3
-  have m4 : ¬ u >>> 28 = 4 := g4
+  have m1 : ¬ tagW u = 1 := g1
+  have m2 : ¬ tagW u = 2 := g2
+  have m3 : ¬ tagW u = 3 := g3
+  have m4 : ¬ tagW u = 4 := g4
   simp only [n0, n1, n2, n3, n4, m1, m2, m3, m4, ite_false]
   rfl
 
@@ -725,13 +725,13 @@ theorem lsHPW_ok (us : Word) (hus : us.toNat < 2 ^ 32) :
     (tierW us) (idxW us) ht
   simp only [lsCS] at hl
   simp only [LsTables.derAt, decI_idx, beq_iff_eq]
-  by_cases g0 : us >>> 28 = UInt64.ofNat 0
+  by_cases g0 : tagW us = UInt64.ofNat 0
   · simp (config := { decide := true }) only [g0, (decI_tag_eq (k := .levels) us hus 0 (by decide)).mpr g0,
       LsTag.list, ite_true]
     by_cases h0 : tierW us = 0 <;> simp only [h0, ite_true, ite_false] at hl ⊢ <;> exact hl
   · have n0 : (decI us : LsIdx).tag ≠ LsTag.list :=
       fun e => g0 ((decI_tag_eq (k := .levels) us hus 0 (by decide)).mp e)
-    have m0 : ¬ us >>> 28 = 0 := g0
+    have m0 : ¬ tagW us = 0 := g0
     simp only [n0, m0, ite_false]
     rfl
 

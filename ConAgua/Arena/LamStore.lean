@@ -86,13 +86,13 @@ def lamCS : ConsSch where
   room := condOf (lblk (t, ty, body, j, c) { if len(LAREC⟨t⟩) <= c { skip } })
   recW := [.bin .or (.var 1) (.bin .shl (.var 2) (.const 32))]
   ihash := lblk (ty, body, h) { h := ((⟪fnvBasis⟫ ^ ty) * ⟪fnvPrime⟫ ^ body) * ⟪fnvPrime⟫ }
-  skipW := some (rhsOf (lblk (ty, body, h, sk) { sk := ((ty | body) >> 27) & 1 }))
+  skipW := some (rhsOf (lblk (ty, body, h, sk) { sk := ((ty | body) >> 31) & 1 }))
   mtM m ks t i := lamatchW (m.arr64 (tierA LAREC t)) t i (ks.getD 0 0) (ks.getD 1 0)
   qhM _ ks := lamHashW (ks.getD 0 0) (ks.getD 1 0)
   hsM := lahash
   vsM as := [as.getD 0 0 ||| as.getD 1 0 <<< 32]
   roomM m t c := decide (m.len64 (tierA LAREC t) ≤ c)
-  skM ks := ((ks.getD 0 0 ||| ks.getD 1 0) >>> 27) &&& 1
+  skM ks := ((ks.getD 0 0 ||| ks.getD 1 0) >>> 31) &&& 1
 
 /-! ## `lam_find(t, ty, body, h)`: the probe -/
 
@@ -120,7 +120,7 @@ scratch tier is open, the append to the tier the store is in. Same L shape as `a
 
 /-- The scratch skip: the scratch tier is open and `ty` or `body` is a scratch handle. -/
 def laskipW (m : Mem) (ty body : Word) : Word :=
-  if rdW (m.arr64 CTL) 1 ≠ 0 then ((ty ||| body) >>> 27) &&& 1 else 0
+  if rdW (m.arr64 CTL) 1 ≠ 0 then ((ty ||| body) >>> 31) &&& 1 else 0
 
 /-- The model of `intern_lam`: the handle and the memory after, or `none` where the L code
 aborts (the library's `consInternM`). -/

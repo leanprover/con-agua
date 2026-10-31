@@ -71,22 +71,22 @@ namespace L.Arena
 in bits 0‥14, fvar range in bits 15‥29, `derFW` below): `& 32767` is `packBF_bvar`. -/
 def derBW (m : Mem) (h : Word) : Word :=
   if tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then 0
-  else if h >>> 28 = 0 then
+  else if tagW h = 0 then
     if tcnt m BVAR (tierW h) ≤ idxW h then 0
     else satSuccW (tfld m BVAR (tierW h) (idxW h) 0)
-  else if h >>> 28 = 4 then
+  else if tagW h = 4 then
     if tcnt m APP (tierW h) ≤ idxW h then 0
     else pcol m ADER (tierW h) (idxW h) &&& 32767
-  else if h >>> 28 = 5 then
+  else if tagW h = 5 then
     if tcnt m LAM (tierW h) ≤ idxW h then 0
     else pcol m LADER (tierW h) (idxW h) &&& 32767
-  else if h >>> 28 = 6 then
+  else if tagW h = 6 then
     if tcnt m FORALL (tierW h) ≤ idxW h then 0
     else pcol m FADER (tierW h) (idxW h) &&& 32767
-  else if h >>> 28 = 7 then
+  else if tagW h = 7 then
     if tcnt m LET (tierW h) ≤ idxW h then 0
     else pcol m LEDER (tierW h) (idxW h) &&& 32767
-  else if h >>> 28 = 9 then
+  else if tagW h = 9 then
     if tcnt m PROJ (tierW h) ≤ idxW h then 0
     else pcol m PJDER (tierW h) (idxW h) &&& 32767
   else 0
@@ -97,22 +97,22 @@ def derBW (m : Mem) (h : Word) : Word :=
 read the SAME packed word shifted and masked (`(>> 15) & 32767` is `packBFL_fvar`). -/
 def derFW (m : Mem) (h : Word) : Word :=
   if tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then 0
-  else if h >>> 28 = 1 then
+  else if tagW h = 1 then
     if tcnt m FVAR (tierW h) ≤ idxW h then 0
     else satSuccW (tfld m FVAR (tierW h) (idxW h) 0)
-  else if h >>> 28 = 4 then
+  else if tagW h = 4 then
     if tcnt m APP (tierW h) ≤ idxW h then 0
     else (pcol m ADER (tierW h) (idxW h) >>> 15) &&& 32767
-  else if h >>> 28 = 5 then
+  else if tagW h = 5 then
     if tcnt m LAM (tierW h) ≤ idxW h then 0
     else (pcol m LADER (tierW h) (idxW h) >>> 15) &&& 32767
-  else if h >>> 28 = 6 then
+  else if tagW h = 6 then
     if tcnt m FORALL (tierW h) ≤ idxW h then 0
     else (pcol m FADER (tierW h) (idxW h) >>> 15) &&& 32767
-  else if h >>> 28 = 7 then
+  else if tagW h = 7 then
     if tcnt m LET (tierW h) ≤ idxW h then 0
     else (pcol m LEDER (tierW h) (idxW h) >>> 15) &&& 32767
-  else if h >>> 28 = 9 then
+  else if tagW h = 9 then
     if tcnt m PROJ (tierW h) ≤ idxW h then 0
     else (pcol m PJDER (tierW h) (idxW h) >>> 15) &&& 32767
   else 0
@@ -123,7 +123,7 @@ level-parameter bit (`exprLPW`, the twin's `lpOfData (derived h)`; helper `whnf4
 are tested in order of frequency on Init (`app` 4, `bvar` 0, `const` 3, `lam` 5, `fvar` 1, `forallE` 6,
 `sort` 2, `proj` 9, `letE` 7; lane `derb`); the tests are disjoint, so the order changes no result. -/
 def derB : FunDecl := lfn (h) locals (g, t, i, x) {
-  g := h >> 28;
+  g := ⟦h⟧.tag;
   t := ⟦h⟧.tier;
   i := ⟦h⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { return (0, 0, 0) };
@@ -154,7 +154,7 @@ the bvar range (`il_go`, `ilg_go`, `il_bvar`, `inst_go`, `lift_go`, `bvar_b`): o
 register, and the `const`, `fvar` and `sort` arms fall through to the final `0` without a read.
 The `bvar` arm saturates by a branch, as `der_b`'s does. -/
 def derBv : FunDecl := lfn (h) locals (g, t, i, x) {
-  g := h >> 28;
+  g := ⟦h⟧.tag;
   t := ⟦h⟧.tier;
   i := ⟦h⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { return 0 };
@@ -177,7 +177,7 @@ def derTailS : Stmt := seqDrop 3 derB.body
 
 /-- The decoded locals of `der_b`. -/
 def DerLocs (s : St) : Prop :=
-  s.loc 1 = s.loc 0 >>> 28 ∧ s.loc 2 = tierW (s.loc 0) ∧ s.loc 3 = idxW (s.loc 0)
+  s.loc 1 = tagW (s.loc 0) ∧ s.loc 2 = tierW (s.loc 0) ∧ s.loc 3 = idxW (s.loc 0)
 
 theorem derTail_spec (p : Prog) (n : Nat) (s₁ : St) (hL : DerLocs s₁) :
     ⦃fun s => s = s₁⦄ step p (exec p n) derTailS
@@ -186,7 +186,7 @@ theorem derTail_spec (p : Prog) (n : Nat) (s₁ : St) (hL : DerLocs s₁) :
       r.retVal.tail.tail.headD 0 = exprLPW s₁.mem (s₁.loc 0); ⊤⦄ := by
   obtain ⟨h1, h2, h3⟩ := hL
   simp only [derTailS, derB, seqDrop]
-  vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rd_spec, ld32_pcol_spec, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
+  vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rd_spec, ld32_pcol_spec, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE]
   all_goals subst_vars
   all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, Cmp.eval, BinOp.eval,
       Nat.reduceEqDiff, reduceIte, beq_iff_eq, decide_eq_true_eq, bne_iff_ne, ne_eq, h1, h2, h3] at *)
@@ -207,7 +207,7 @@ theorem derB_spec (p : Prog) (hp : p.lookup "der_b" = some derB) (n : Nat) (s₀
   | succ n =>
     rw [← seqTake_drop 3 derB.body, show seqDrop 3 derB.body = derTailS from rfl]
     simp only [derB, seqTake]
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, evalE_tierE, evalE_idxE, derTail_spec p n]
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE, derTail_spec p n]
     all_goals subst_vars
     all_goals (try simp only [DerLocs, St.setLoc_loc, St.setLoc_mem, BinOp.eval, Nat.reduceEqDiff,
       Locals.init_cons_zero, reduceIte] at *)
@@ -221,7 +221,7 @@ theorem derBvTail_spec (p : Prog) (n : Nat) (s₁ : St) (hL : DerLocs s₁) :
     ⦃fun r s' => s'.mem = s₁.mem ∧ r.retVal.headD 0 = derBW s₁.mem (s₁.loc 0); ⊤⦄ := by
   obtain ⟨h1, h2, h3⟩ := hL
   simp only [derBvTailS, derBv, seqDrop]
-  vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rd_spec, ld32_pcol_spec, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
+  vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rd_spec, ld32_pcol_spec, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE]
   all_goals subst_vars
   all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, Cmp.eval, BinOp.eval,
       reduceIte, beq_iff_eq, decide_eq_true_eq, bne_iff_ne, ne_eq, h1, h2, h3] at *)
@@ -240,7 +240,7 @@ theorem derBv_spec (p : Prog) (hp : p.lookup "der_bv" = some derBv) (n : Nat) (s
   | succ n =>
     rw [← seqTake_drop 3 derBv.body, show seqDrop 3 derBv.body = derBvTailS from rfl]
     simp only [derBv, seqTake]
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, evalE_tierE, evalE_idxE, derBvTail_spec p n]
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE, derBvTail_spec p n]
     all_goals subst_vars
     all_goals (try simp only [DerLocs, St.setLoc_loc, St.setLoc_mem, BinOp.eval, Nat.reduceEqDiff,
       Locals.init_cons_zero, reduceIte] at *)
@@ -933,7 +933,7 @@ theorem mkApp_spec (hpf : p.lookup "app_find" = some appFind)
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, st64, st32,
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE, st64, st32,
         derB_spec p hd n, internApp_spec p hpf hpp hpi n, step_maxIf_spec p] <;>
       -- gen 20: the chain of three `der_b` results through `setLocs` is deeper than the default
       finish (gen := 20) [Mem.set64_set64_same, Mem.set32_set32_same, p32Len, mkAppW, satPredW_L, packBF_L, packBFL_L, derPutW, cnt2, tierW, idxW]
@@ -951,7 +951,7 @@ theorem mkLam_spec (hpf : p.lookup "lam_find" = some lamFind)
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, st64, st32,
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE, st64, st32,
         derB_spec p hd n, internLamL_spec p hpf hpp hpi n, step_maxIf_spec p] <;>
       -- gen 20: the chain of three `der_b` results through `setLocs` is deeper than the default
       finish (gen := 20) [Mem.set64_set64_same, Mem.set32_set32_same, p32Len, mkLamW, satPredW_L, packBF_L, packBFL_L, derPutW, cnt2, tierW, idxW]
@@ -969,7 +969,7 @@ theorem mkForall_spec (hpf : p.lookup "forall_find" = some forallFind)
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, st64, st32,
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE, st64, st32,
         derB_spec p hd n, internForallL_spec p hpf hpp hpi n, step_maxIf_spec p] <;>
       -- gen 20: the chain of three `der_b` results through `setLocs` is deeper than the default
       finish (gen := 20) [Mem.set64_set64_same, Mem.set32_set32_same, p32Len, mkForallW, satPredW_L, packBF_L, packBFL_L, derPutW, cnt2, tierW, idxW]
@@ -987,7 +987,7 @@ theorem mkLet_spec (hpf : p.lookup "letE_find" = some letFind)
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, st64, st32,
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE, st64, st32,
         derB_spec p hd n, internLet_spec p hpf hpp hpi n, step_maxIf_spec p] <;>
       -- gen 20: the chain of three `der_b` results through `setLocs` is deeper than the default
       finish (gen := 20) [p32Len, mkLetW, satPredW_L, packBF_L, packBFL_L, derPutW, cnt2, tierW, idxW]
@@ -1005,7 +1005,7 @@ theorem mkProj_spec (hpf : p.lookup "proj_find" = some projFind)
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, st64, st32,
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE, st64, st32,
         derB_spec p hd n, internProj_spec p hpf hpp hpi n] <;>
       -- gen 20: the chain of three `der_b` results through `setLocs` is deeper than the default
       finish (gen := 20) [p32Len, mkProjW, satPredW_L, packBF_L, packBFL_L, derPutW, cnt2, tierW, idxW]

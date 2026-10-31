@@ -75,7 +75,7 @@ theorem str_ref (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : StuckCall
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps)
     (eb mode d a b side lt fo : Word) (l : ConLeche.Literal) (hF : n ≤ F) (hn : n ≤ 2 ^ 62)
     (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (ha : HW a) (hb : HW b) (hlt : HW lt) (hfo : HW fo)
-    (hg : lt >>> 28 = 8) (hl : a₀.store.view (decE lt) = some (.lit l)) :
+    (hg : tagW lt = 8) (hl : a₀.store.view (decE lt) = some (.lit l)) :
     RefE (StuckG p n) (strE p (n + 1) s₀.mem mode vis d a b side lt fo)
       (stuckStrT (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b) (side != 0) l
         (decE fo)) a₀ (CorePost decBool dn s₀.mem vis fe M eb ResH) := by
@@ -116,7 +116,7 @@ theorem str_ref (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : StuckCall
     exact hirr a₀ s₀.mem M hS
   | strVal st =>
     have h0 : tfld s₀.mem LIT (tierW lt) (idxW lt) 0 = 1 := hrec.1
-    rcases (Classical.em (fo >>> 28 = 3)).symm with h3 | h3
+    rcases (Classical.em (tagW fo = 3)).symm with h3 | h3
     · rw [ite_eq_right (fun h => h3 h.2)]
       unfold stuckStrT
       rw [decE_tag_const_beq _ hfo]
@@ -179,7 +179,7 @@ theorem stuckStr_refines (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : 
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps)
     (eb mode d a b side lt fo : Word) (l : ConLeche.Literal) (hF : n ≤ F) (hn : n ≤ 2 ^ 62)
     (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (ha : HW a) (hb : HW b) (hlt : HW lt) (hfo : HW fo)
-    (hg : lt >>> 28 = 8) (hl : a₀.store.view (decE lt) = some (.lit l)) :
+    (hg : tagW lt = 8) (hl : a₀.store.view (decE lt) = some (.lit l)) :
     CoreSpec p (n + 1) "stuck_str" [mode, vis, d, a, b, side, lt, fo]
       (stuckStrT (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b) (side != 0) l
         (decE fo)) decBool s₀ a₀ dn vis fe M eb :=

@@ -285,14 +285,14 @@ end specs
 /-- **The model of `ls_node`**: the slice `[offset, length]` of a level-list handle, `[]` where the
 L code aborts (a tag other than `0`, a closed scratch tier, an index past the count). -/
 def lsNodeW (m : Mem) (h : Word) : List Word :=
-  if h >>> 28 ≠ 0 then []
+  if tagW h ≠ 0 then []
   else if tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then []
   else if tcnt m LVLS (tierW h) ≤ idxW h then []
   else [tfld m LVLS (tierW h) (idxW h) 0, tfld m LVLS (tierW h) (idxW h) 1]
 
 /-- con-ron: ConRon/Arena/Monad.lean:494-500 ConRon.Arena.viewLs -/
 def lsNode : FunDecl := lfn (h) locals (t, i) {
-  if h >> 28 != 0 { abort };
+  if ⟦h⟧.tag != 0 { abort };
   (t, i) := node LVLS⟦h⟧;
   return (LVLS⟨t, i⟩.o, LVLS⟨t, i⟩.l)
 }
@@ -309,7 +309,7 @@ theorem lsNode_spec (p : Prog) (hp : p.lookup "ls_node" = some lsNode) (n : Nat)
   | succ n =>
     sym only [lang_grind, arena_grind, level_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld,
-        evalE_cnt, tcntM, evalE_tierE, evalE_idxE] <;>
+        evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE] <;>
       finish [lsNodeW, tierW, idxW]
 
 /-- **The model of `lvls_eq`**: the two slices (none on a handle `ls_node` aborts on), the heap

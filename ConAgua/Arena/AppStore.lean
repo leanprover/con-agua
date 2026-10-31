@@ -79,13 +79,13 @@ def appCS : ConsSch where
   room := condOf (lblk (t, f, a, j, c) { if len(AREC⟨t⟩) <= c { skip } })
   recW := [.bin .or (.var 1) (.bin .shl (.var 2) (.const 32))]
   ihash := lblk (f, a, h) { h := ((⟪fnvBasis⟫ ^ f) * ⟪fnvPrime⟫ ^ a) * ⟪fnvPrime⟫ }
-  skipW := some (rhsOf (lblk (f, a, h, sk) { sk := ((f | a) >> 27) & 1 }))
+  skipW := some (rhsOf (lblk (f, a, h, sk) { sk := ((f | a) >> 31) & 1 }))
   mtM m ks t i := amatchW (m.arr64 (tierA AREC t)) t i (ks.getD 0 0) (ks.getD 1 0)
   qhM _ ks := appHashW (ks.getD 0 0) (ks.getD 1 0)
   hsM := ahash
   vsM as := [as.getD 0 0 ||| as.getD 1 0 <<< 32]
   roomM m t c := decide (m.len64 (tierA AREC t) ≤ c)
-  skM ks := ((ks.getD 0 0 ||| ks.getD 1 0) >>> 27) &&& 1
+  skM ks := ((ks.getD 0 0 ||| ks.getD 1 0) >>> 31) &&& 1
 
 /-! ## `app_find(t, f, a, h)`: the probe -/
 
@@ -112,7 +112,7 @@ scratch tier is open, the append to the tier the store is in. -/
 
 /-- The scratch skip: the scratch tier is open and `f` or `a` is a scratch handle. -/
 def askipW (m : Mem) (f a : Word) : Word :=
-  if rdW (m.arr64 CTL) 1 ≠ 0 then ((f ||| a) >>> 27) &&& 1 else 0
+  if rdW (m.arr64 CTL) 1 ≠ 0 then ((f ||| a) >>> 31) &&& 1 else 0
 
 /-- The model of `intern_app`: the handle and the memory after, or `none` where the L code
 aborts (the library's `consInternM`). -/

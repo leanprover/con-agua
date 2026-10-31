@@ -32,12 +32,12 @@ theorem piBW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv
     have hR := hS.check.arena.base
     by_cases hf : fuel = 0
     · rw [piBW_fuel0 n m fuel h hf] at hpb; simp at hpb
-    by_cases hg : h >>> 28 ≠ 6
+    by_cases hg : tagW h ≠ 6
     · rw [piBW_leaf n m fuel h hf hg] at hpb
       simp only [Option.some.injEq, Prod.mk.injEq] at hpb
       obtain ⟨-, rfl⟩ := hpb; exact hS
     rw [piBW_node n m fuel h hf hg] at hpb
-    have hg6 : h >>> 28 = 6 := by simpa using hg
+    have hg6 : tagW h = 6 := by simpa using hg
     by_cases hr : eViewW m h = []
     · rw [hr, piBK1_nil] at hpb; simp at hpb
     obtain ⟨hvok, hew⟩ := eViewW_forall m h hg6 hr

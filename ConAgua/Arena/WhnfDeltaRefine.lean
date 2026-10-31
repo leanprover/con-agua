@@ -655,7 +655,7 @@ l_model natSuccOk_spec (p : Prog) (hp : WhnfDeltaProg p)
   fns [hp.natSuccOk ↦ natSuccOkW]
   specs [callW_spec p n "pin_at", callW_spec p n "const_e"]
   grind [arena_grind] fold [tierW, idxW]
-  extra [evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
+  extra [evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE]
   finish [tierW, idxW] gen 30
 
 theorem natSuccOk_run_none (a : AState) : (natSuccOk none).run a = .ok (false, a) := rfl
@@ -772,7 +772,7 @@ theorem callW_natSuccOk (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀ : AS
       .ok (decE (r₂.headD 0), AM.st (constE (decI (pinW s₀.mem 2))) a₀) := by
     rw [hrun, hres]; rfl
   rw [hE] at hW
-  by_cases hg : rdW (s₀.mem.arr64 EREC) (q + 4) >>> 28 ≠ 6
+  by_cases hg : tagW (rdW (s₀.mem.arr64 EREC) (q + 4)) ≠ 6
   · rw [ite_eq_left hg] at hW
     simp only [Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨hr, hm⟩ := hW
@@ -787,7 +787,7 @@ theorem callW_natSuccOk (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀ : AS
     · rw [hres']; simp only [decBool, ← hr]; rfl
     · unfold ResH HW; rw [← hr]; decide
   rw [ite_eq_right hg] at hW
-  have hg' : rdW (s₀.mem.arr64 EREC) (q + 4) >>> 28 = 6 := by simpa using hg
+  have hg' : tagW (rdW (s₀.mem.arr64 EREC) (q + 4)) = 6 := by simpa using hg
   by_cases hsc : tierW (rdW (s₀.mem.arr64 EREC) (q + 4)) ≠ 0 ∧ rdW (m₂.arr64 CTL) 1 = 0
   · rw [ite_eq_left hsc] at hW; cases hW
   rw [ite_eq_right hsc] at hW

@@ -65,14 +65,14 @@ theorem b2w_le (x : Bool) : b2w x ≤ 1 := by cases x <;> decide
 view) is `0`. Counts: `CTL[14 + t]` (`param`), `CTL[6 + t]`, `CTL[10 + t]`, `CTL[12 + t]`. -/
 def lvlHPW (m : Mem) (u : Word) : Word :=
   if tierW u ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then 0
-  else if u >>> 28 = 4 then (if idxW u < tcnt m PARAM (tierW u) then 1 else 0)
-  else if u >>> 28 = 1 then
+  else if tagW u = 4 then (if idxW u < tcnt m PARAM (tierW u) then 1 else 0)
+  else if tagW u = 1 then
     (if idxW u < tcnt m SUCC (tierW u) then tfld m SUCC_HP (tierW u) (idxW u) 0
      else 0)
-  else if u >>> 28 = 2 then
+  else if tagW u = 2 then
     (if idxW u < tcnt m MAX (tierW u) then tfld m MAX_HP (tierW u) (idxW u) 0
      else 0)
-  else if u >>> 28 = 3 then
+  else if tagW u = 3 then
     (if idxW u < tcnt m IMAX (tierW u) then tfld m IMAX_HP (tierW u) (idxW u) 0
      else 0)
   else 0
@@ -81,7 +81,7 @@ def lvlHPW (m : Mem) (u : Word) : Word :=
 `CTL[40 + t]`, column `LSHP`. -/
 def lsHPW (m : Mem) (us : Word) : Word :=
   if tierW us ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then 0
-  else if us >>> 28 = 0 then
+  else if tagW us = 0 then
     (if idxW us < tcnt m LVLS (tierW us) then tfld m LS_HP (tierW us) (idxW us) 0
      else 0)
   else 0
@@ -117,28 +117,28 @@ block): `sort`, `const`, `fvar` read their column (`SOLP`, `CLP`, `FVLP`; counts
 `bvar`, `lit` and a handle that does not view `0`. -/
 def exprLPW (m : Mem) (h : Word) : Word :=
   if tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then 0
-  else if h >>> 28 = 1 then
+  else if tagW h = 1 then
     (if idxW h < tcnt m FVAR (tierW h) then tfld m FVAR_LP (tierW h) (idxW h) 0
      else 0)
-  else if h >>> 28 = 2 then
+  else if tagW h = 2 then
     (if idxW h < tcnt m SORT (tierW h) then tfld m SORT_LP (tierW h) (idxW h) 0
      else 0)
-  else if h >>> 28 = 3 then
+  else if tagW h = 3 then
     (if idxW h < tcnt m CONST (tierW h) then tfld m CONST_LP (tierW h) (idxW h) 0
      else 0)
-  else if h >>> 28 = 4 then
+  else if tagW h = 4 then
     (if idxW h < tcnt m APP (tierW h) then pcol m ADER (tierW h) (idxW h) >>> 30
      else 0)
-  else if h >>> 28 = 5 then
+  else if tagW h = 5 then
     (if idxW h < tcnt m LAM (tierW h) then pcol m LADER (tierW h) (idxW h) >>> 30
      else 0)
-  else if h >>> 28 = 6 then
+  else if tagW h = 6 then
     (if idxW h < tcnt m FORALL (tierW h) then pcol m FADER (tierW h) (idxW h) >>> 30
      else 0)
-  else if h >>> 28 = 7 then
+  else if tagW h = 7 then
     (if idxW h < tcnt m LET (tierW h) then pcol m LEDER (tierW h) (idxW h) >>> 30
      else 0)
-  else if h >>> 28 = 9 then
+  else if tagW h = 9 then
     (if idxW h < tcnt m PROJ (tierW h) then pcol m PJDER (tierW h) (idxW h) >>> 30
      else 0)
   else 0
@@ -206,7 +206,7 @@ gets the bit and that the others before it stay. One block per local layout. -/
 /-- `sort_push`, `succ_push` (`(t, u, j) locals (c, x, g, ti, ix)`): `x := lvlHP(u)`. -/
 def hpBlkS : Stmt := lblk (t, u, j, c, x, g, ti, ix) {
   x := 0;
-  g := u >> 28;
+  g := ⟦u⟧.tag;
   ti := ⟦u⟧.tier;
   ix := ⟦u⟧.idx;
   if ti == 0 || CTL.u64[1] != 0 {
@@ -220,7 +220,7 @@ def hpBlkS : Stmt := lblk (t, u, j, c, x, g, ti, ix) {
 /-- `max_push`, `imax_push` (`(t, u, v, j) locals (c, k, x, g, ti, ix, y)`): `x := lvlHP(u)`. -/
 def hpBlkM1 : Stmt := lblk (t, u, v, j, c, k, x, g, ti, ix) {
   x := 0;
-  g := u >> 28;
+  g := ⟦u⟧.tag;
   ti := ⟦u⟧.tier;
   ix := ⟦u⟧.idx;
   if ti == 0 || CTL.u64[1] != 0 {
@@ -234,7 +234,7 @@ def hpBlkM1 : Stmt := lblk (t, u, v, j, c, k, x, g, ti, ix) {
 /-- The same layout: `y := lvlHP(v)`. -/
 def hpBlkM2 : Stmt := lblk (t, u, v, j, c, k, x, g, ti, ix, y) {
   y := 0;
-  g := v >> 28;
+  g := ⟦v⟧.tag;
   ti := ⟦v⟧.tier;
   ix := ⟦v⟧.idx;
   if ti == 0 || CTL.u64[1] != 0 {
@@ -248,7 +248,7 @@ def hpBlkM2 : Stmt := lblk (t, u, v, j, c, k, x, g, ti, ix, y) {
 /-- `const_push` (`(t, f, a, j) locals (c, k, x, g, ti, ix)`): `x := lsHP(a)`. -/
 def lsBlkC : Stmt := lblk (t, f, a, j, c, k, x, g, ti, ix) {
   x := 0;
-  g := a >> 28;
+  g := ⟦a⟧.tag;
   ti := ⟦a⟧.tier;
   ix := ⟦a⟧.idx;
   if ti == 0 || CTL.u64[1] != 0 {
@@ -259,7 +259,7 @@ def lsBlkC : Stmt := lblk (t, f, a, j, c, k, x, g, ti, ix) {
 /-- `fvar_push` (`(t, u, ty, j) locals (c, k, x, g, ti, ix)`): `x := exprLP(ty)`. -/
 def lpBlkF : Stmt := lblk (t, u, ty, j, c, k, x, g, ti, ix) {
   x := 0;
-  g := ty >> 28;
+  g := ⟦ty⟧.tag;
   ti := ⟦ty⟧.tier;
   ix := ⟦ty⟧.idx;
   if ti == 0 || CTL.u64[1] != 0 {
@@ -277,7 +277,7 @@ def lpBlkF : Stmt := lblk (t, u, ty, j, c, k, x, g, ti, ix) {
 /-- `ls_push`'s loop body (`(t, o, l, h, j) locals (c, k, x, g, ti, ix, u, q, y)`): `y := lvlHP(u)`. -/
 def hpBlkL : Stmt := lblk (t, o, l, h, j, c, k, x, g, ti, ix, u, q, y) {
   y := 0;
-  g := u >> 28;
+  g := ⟦u⟧.tag;
   ti := ⟦u⟧.tier;
   ix := ⟦u⟧.idx;
   if ti == 0 || CTL.u64[1] != 0 {
@@ -308,7 +308,7 @@ theorem hpBlkM1_spec (s₀ : St) :
       s'.loc 6 = lvlHPW s₀.mem (s₀.loc 1); ⊤⦄ := by
   simp only [hpBlkM1, L.Notation.blk]
   sym only [lang_grind, arena_grind] =>
-    vcgen [step, evalE, evalC, evalArgs, setLoc, ld64, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] <;>
+    vcgen [step, evalE, evalC, evalArgs, setLoc, ld64, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE] <;>
     finish [lvlHPW, tierW, idxW]
 
 theorem hpBlkM2_spec (s₀ : St) :
@@ -319,7 +319,7 @@ theorem hpBlkM2_spec (s₀ : St) :
       s'.loc 6 = s₀.loc 6 ∧ s'.loc 10 = lvlHPW s₀.mem (s₀.loc 2); ⊤⦄ := by
   simp only [hpBlkM2, L.Notation.blk]
   sym only [lang_grind, arena_grind] =>
-    vcgen [step, evalE, evalC, evalArgs, setLoc, ld64, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] <;>
+    vcgen [step, evalE, evalC, evalArgs, setLoc, ld64, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE] <;>
     finish [lvlHPW, tierW, idxW]
 
 theorem hpBlkL_spec (s₀ : St) :
@@ -331,7 +331,7 @@ theorem hpBlkL_spec (s₀ : St) :
       s'.loc 13 = lvlHPW s₀.mem (s₀.loc 11); ⊤⦄ := by
   simp only [hpBlkL, L.Notation.blk]
   sym only [lang_grind, arena_grind] =>
-    vcgen [step, evalE, evalC, evalArgs, setLoc, ld64, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] <;>
+    vcgen [step, evalE, evalC, evalArgs, setLoc, ld64, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE] <;>
     finish [lvlHPW, tierW, idxW]
 
 theorem lsBlkC_spec (s₀ : St) :
@@ -342,7 +342,7 @@ theorem lsBlkC_spec (s₀ : St) :
       s'.loc 6 = lsHPW s₀.mem (s₀.loc 2); ⊤⦄ := by
   simp only [lsBlkC, L.Notation.blk]
   sym only [lang_grind, arena_grind] =>
-    vcgen [step, evalE, evalC, evalArgs, setLoc, ld64, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] <;>
+    vcgen [step, evalE, evalC, evalArgs, setLoc, ld64, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE] <;>
     finish [lsHPW, tierW, idxW]
 
 set_option maxHeartbeats 1000000 in
@@ -354,7 +354,7 @@ theorem lpBlkF_spec (s₀ : St) :
       s'.loc 6 = exprLPW s₀.mem (s₀.loc 2); ⊤⦄ := by
   simp only [lpBlkF, L.Notation.blk]
   sym only [lang_grind, arena_grind] =>
-    vcgen [step, evalE, evalC, evalArgs, setLoc, ld64, ld32_pcol_spec, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] <;>
+    vcgen [step, evalE, evalC, evalArgs, setLoc, ld64, ld32_pcol_spec, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE] <;>
     finish [exprLPW, tierW, idxW]
 
 /-- One more element of the slice (`k' = q + 1`, as words: `q < l`). -/
@@ -374,7 +374,7 @@ theorem hpLoopLs_spec (n : Nat) (s₀ : St) (hq : s₀.loc 12 ≤ s₀.loc 2)
   | succ n ih =>
     rw [exec, step_while (w := hpLoopLs) rfl]
     sym only [lang_grind, arena_grind] =>
-      vcgen [step, evalE, evalC, evalArgs, setLoc, ld64, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, hpBlkL_spec p (exec p n), ih] <;>
+      vcgen [step, evalE, evalC, evalArgs, setLoc, ld64, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE, hpBlkL_spec p (exec p n), ih] <;>
       finish [lsOrW_step]
 
 theorem hpLoopLs_step_spec (n : Nat) (s₀ : St) (hq : s₀.loc 12 ≤ s₀.loc 2)

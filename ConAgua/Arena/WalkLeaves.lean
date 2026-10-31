@@ -73,7 +73,7 @@ con-ron: ConRon/Arena/ExprOps.lean:1103-1111 ConRon.Arena.fvarLeavesGoArmLet -/
 @[l_impl ConRon.Arena.fvarLeavesGo ConRon.Arena.fvarLeavesGoArmApp ConRon.Arena.fvarLeavesGoArmBind
   ConRon.Arena.fvarLeavesGoArmLet]
 def flNode : FunDecl := lfn (h, k, c) locals (g, t, i, f, a, b, x) {
-  g := h >> 28;
+  g := ⟦h⟧.tag;
   t := ⟦h⟧.tier;
   i := ⟦h⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
@@ -142,7 +142,7 @@ l_model flGo_spec (p : Prog) (hpd : p.lookup "der_b" = some derB)
   fns [hp ↦ flW, hpn ↦ flNodeW]
   specs [derB_spec p hpd n, memoFindG_spec flSch p _ hpf n, memoPutG_spec flSch p _ hps n]
   grind [arena_grind] fold [tierW, idxW]
-  extra [evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
+  extra [evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE]
   finish [tierW, idxW] gen 20 heartbeats 1000000
 
 /-! ## `leaf_mem(k, x, y)`: membership in the first `k` leaves, newest first -/
@@ -245,7 +245,7 @@ con-ron: ConRon/Arena/ExprOps.lean:1206-1216 ConRon.Arena.leavesSubArmLet -/
 @[l_impl ConRon.Arena.leavesSubGo ConRon.Arena.leavesSubArmApp ConRon.Arena.leavesSubArmBind
   ConRon.Arena.leavesSubArmLet]
 def lsbNode : FunDecl := lfn (h, k, c) locals (g, t, i, f, a, b, x) {
-  g := h >> 28;
+  g := ⟦h⟧.tag;
   t := ⟦h⟧.tier;
   i := ⟦h⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
@@ -320,7 +320,7 @@ l_model lsbGo_spec (p : Prog) (hpd : p.lookup "der_b" = some derB)
   specs [derB_spec p hpd n, memoFindG_spec lsbSch p _ hpf n, memoPutG_spec lsbSch p _ hps n,
     leafMem_spec p hpm n]
   grind [arena_grind] fold [tierW, idxW]
-  extra [evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
+  extra [evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE]
   finish [tierW, idxW] gen 20 heartbeats 1000000
 
 

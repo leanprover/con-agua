@@ -49,7 +49,7 @@ theorem constNameOf_spec (p : Prog) (hp : p.lookup "const_name_of" = some constN
   simp only [callFn, constNameOfL]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt,
-      tcntM, evalE_tierE, evalE_idxE] <;>
+      tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE] <;>
     finish [cnoW, tierW, idxW]
 
 /-- Model of `ind_caps_check` (callees at fuel `n`). -/
@@ -105,7 +105,7 @@ def inpW (p : Prog) (n : Nat) (m : Mem) (vis ctorP us : Word) : Option (Word × 
   match callW p n "get_app_fn" [r1.headD 0] m1 with
   | none => none
   | some (r2, m2) =>
-  if r2.headD 0 >>> 28 ≠ 3 then some (0, m2) else
+  if tagW (r2.headD 0) ≠ 3 then some (0, m2) else
   match callW p n "const_name_of" [r2.headD 0] m2 with
   | none => none
   | some (r3, m3) =>
@@ -203,7 +203,7 @@ theorem decCI_ind_fields (b : Array Word) (dn : NIdx → Option ConLeche.Name) (
 /-! ## The head name of a `const` handle -/
 
 theorem viewConstName_f (m : Mem) (a : AState) (hR : ArenaR m a) (h : Word) (hh : h.toNat < 2 ^ 32)
-    (hv : viewOK m h CONST) (_hg : h >>> 28 = 3) :
+    (hv : viewOK m h CONST) (_hg : tagW h = 3) :
     a.store.viewConstName (decE h) = some (decI (tfld m CONST (tierW h) (idxW h) 0)) := by
   obtain ⟨k, hk, hn, hu⟩ := node_of m a h constCS CeRecRel (·.consts) _ hR.const hv.2
   have hfl := ConsR.flag hR.app
@@ -477,7 +477,7 @@ theorem iotaCtorNeverProp_refines (p : Prog) (hp : IotaProg4 p) (hcn : CapsNever
   have hpr : (piResult coreWalkFuel cvj.type).run a₀ = .ok (decE (r1.headD 0), a₀) := by
     rw [hty, ← hty0]; exact hrun1
   have hga : (getAppFn coreWalkFuel (decE (r1.headD 0))).run a₀ = .ok (decE (r2.headD 0), a₀) := hrun2
-  by_cases h3 : r2.headD 0 >>> 28 ≠ 3
+  by_cases h3 : tagW (r2.headD 0) ≠ 3
   · rw [ite_eq_left h3] at hW
     obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
     have hrun := inp_run_not fe cvj (decI us) a₀ _ _ hpr hga
@@ -486,7 +486,7 @@ theorem iotaCtorNeverProp_refines (p : Prog) (hp : IotaProg4 p) (hcn : CapsNever
     · show false = decBool r; simp only [decBool]; rw [← hr]; rfl
     · unfold ResH HW; rw [← hr]; decide
   rw [ite_eq_right h3] at hW
-  have h3' : r2.headD 0 >>> 28 = 3 := by simpa using h3
+  have h3' : tagW (r2.headD 0) = 3 := by simpa using h3
   rcases c3 : callW p (n' + 1) "const_name_of" [r2.headD 0] s₀.mem with _ | ⟨r3, m3⟩ <;>
     simp only [c3, reduceCtorEq] at hW
   obtain ⟨t3, ht3, -, hmem3, hcno⟩ := triple_of_callW

@@ -11,7 +11,7 @@ related to `a` by `ArenaR`, then `bvarBoundGo c.toNat (decE h)` from `a` returns
 state related to `m'`, at the twin fuel `c.toNat` of the walk's counter word `c` exactly
 whatever the L fuel.
 
-* **Decoding a handle word** (`decE_tag`, `decE_idx`, `decE_pers`): the tag is `h >> 28`, the
+* **Decoding a handle word** (`decE_tag`, `decE_idx`, `decE_pers`): the tag is `⟦h⟧.tag`, the
   index `h & (2^27 - 1)`, persistence the tier bit, for `h < 2^32`.
 * **The view** (`view_*`): under `ArenaR` and the L code's checks (`viewOK`), the arena's
   `view (decE h)` is the node the L records hold, children decoded from their words.
@@ -208,7 +208,7 @@ theorem nodeOK_succ (n : Nat) (ih : GoOK n) : NodeOK (n + 1) := by
       ∃ a', (bbNodeA F (decE h)).run a = .ok (r.toNat, a') ∧ ArenaR m' a' := by
     intro v hv hx hr hm; subst hr hm
     exact ⟨a, by rw [bbNodeA_run F _ a _ hv, hx]; rfl, hR⟩
-  by_cases g0 : h >>> 28 = 0
+  by_cases g0 : tagW h = 0
   · by_cases hc : tcnt m BVAR (tierW h) ≤ idxW h
     · rw [bbNodeW] at hb; simp [hs, g0, hc] at hb
     by_cases h1 : tfld m BVAR (tierW h) (idxW h) 0 + 1 = 0
@@ -217,63 +217,63 @@ theorem nodeOK_succ (n : Nat) (ih : GoOK n) : NodeOK (n + 1) := by
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hb)
     refine ⟨a, ?_, hR⟩
     rw [bbNodeA_run F _ a _ (view_bvar m a hR h hh (vok BVAR hc) g0), succW_toNat _ h1]; rfl
-  by_cases g4 : h >>> 28 = 4
+  by_cases g4 : tagW h = 4
   · by_cases hc : tcnt m APP (tierW h) ≤ idxW h
     · rw [bbNodeW] at hb; simp [hs, g4, hc] at hb
     obtain ⟨hv, hf, ha⟩ := view_app m a hR h hh (vok APP hc) g4
     rw [bbNodeW_app n m h c (vok APP hc) g4] at hb
     obtain ⟨a', h1, h2⟩ := bbAppArm_ok n ih F m m' a hR c _ _ r hf ha hF' hb
     exact ⟨a', (bbNodeA_run F _ a _ hv).trans h1, h2⟩
-  by_cases g5 : h >>> 28 = 5
+  by_cases g5 : tagW h = 5
   · by_cases hc : tcnt m LAM (tierW h) ≤ idxW h
     · rw [bbNodeW] at hb; simp [hs, g5, hc] at hb
     obtain ⟨hv, hf, ha⟩ := view_lam m a hR h hh (vok LAM hc) g5
     rw [bbNodeW_lam n m h c (vok LAM hc) g5] at hb
     obtain ⟨a', h1, h2⟩ := bbBindArm_ok n ih F m m' a hR c _ _ r hf ha hF' hb
     exact ⟨a', (bbNodeA_run F _ a _ hv).trans h1, h2⟩
-  by_cases g6 : h >>> 28 = 6
+  by_cases g6 : tagW h = 6
   · by_cases hc : tcnt m FORALL (tierW h) ≤ idxW h
     · rw [bbNodeW] at hb; simp [hs, g6, hc] at hb
     obtain ⟨hv, hf, ha⟩ := view_forall m a hR h hh (vok FORALL hc) g6
     rw [bbNodeW_forall n m h c (vok FORALL hc) g6] at hb
     obtain ⟨a', h1, h2⟩ := bbBindArm_ok n ih F m m' a hR c _ _ r hf ha hF' hb
     exact ⟨a', (bbNodeA_run F _ a _ hv).trans h1, h2⟩
-  by_cases g7 : h >>> 28 = 7
+  by_cases g7 : tagW h = 7
   · by_cases hc : tcnt m LET (tierW h) ≤ idxW h
     · rw [bbNodeW] at hb; simp [hs, g7, hc] at hb
     obtain ⟨hv, ht, hv', hb'⟩ := view_let m a hR h hh (vok LET hc) g7
     rw [bbNodeW_let n m h c (vok LET hc) g7] at hb
     obtain ⟨a', h1, h2⟩ := bbLetArm_ok n ih F m m' a hR c _ _ _ r ht hv' hb' hF' hb
     exact ⟨a', (bbNodeA_run F _ a _ hv).trans h1, h2⟩
-  by_cases g9 : h >>> 28 = 9
+  by_cases g9 : tagW h = 9
   · by_cases hc : tcnt m PROJ (tierW h) ≤ idxW h
     · rw [bbNodeW] at hb; simp [hs, g9, hc] at hb
     obtain ⟨hv, -, he⟩ := view_proj m a hR h hh (vok PROJ hc) g9
     rw [bbNodeW_proj n m h c (vok PROJ hc) g9] at hb
     obtain ⟨a', h1, h2⟩ := ih F m m' a _ c r hF' hR he hb
     exact ⟨a', (bbNodeA_run F _ a _ hv).trans h1, h2⟩
-  by_cases g1 : h >>> 28 = 1
+  by_cases g1 : tagW h = 1
   · by_cases hc : tcnt m FVAR (tierW h) ≤ idxW h
     · rw [bbNodeW] at hb; simp [hs, g1, hc] at hb
     rw [bbNodeW_fvar n m h c g1 (vok FVAR hc)] at hb
     obtain ⟨_, _, hv⟩ := view_fvar m a hR h hh (vok FVAR hc) g1
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hb)
     exact zero _ hv rfl rfl rfl
-  by_cases g2 : h >>> 28 = 2
+  by_cases g2 : tagW h = 2
   · by_cases hc : tcnt m SORT (tierW h) ≤ idxW h
     · rw [bbNodeW] at hb; simp [hs, g2, hc] at hb
     rw [bbNodeW_sort n m h c g2 (vok SORT hc)] at hb
     obtain ⟨_, hv⟩ := view_sort m a hR h hh (vok SORT hc) g2
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hb)
     exact zero _ hv rfl rfl rfl
-  by_cases g3 : h >>> 28 = 3
+  by_cases g3 : tagW h = 3
   · by_cases hc : tcnt m CONST (tierW h) ≤ idxW h
     · rw [bbNodeW] at hb; simp [hs, g3, hc] at hb
     rw [bbNodeW_const n m h c g3 (vok CONST hc)] at hb
     obtain ⟨_, _, hv⟩ := view_const m a hR h hh (vok CONST hc) g3
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hb)
     exact zero _ hv rfl rfl rfl
-  by_cases g8 : h >>> 28 = 8
+  by_cases g8 : tagW h = 8
   · by_cases hc : tcnt m LIT (tierW h) ≤ idxW h
     · rw [bbNodeW] at hb; simp [hs, g8, hc] at hb
     rw [bbNodeW_lit n m h c g8 (vok LIT hc)] at hb

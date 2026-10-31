@@ -204,7 +204,7 @@ theorem lamCS_wf : lamCS.WF where
 theorem laskipW_eq (m : Mem) (a : AState) (ty body : Word) (hty : ty.toNat < 2 ^ 32)
     (hbody : body.toNat < 2 ^ 32) (hfl : (rdW (m.arr64 CTL) 1 != 0) = a.store.scratchOn) :
     (laskipW m ty body = 0) = (skLa a (decE ty) (decE body) = false) := by
-  have := bit27_or ty body
+  have := bit31_or ty body
   simp only [laskipW, skLa, isPersistent_decE ty hty, isPersistent_decE body hbody, ← hfl]
   grind
 

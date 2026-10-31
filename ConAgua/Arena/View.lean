@@ -5,7 +5,7 @@ import ConAgua.Arena.ArenaRel
 
 Factored out of `WalkRefine.lean` (lane `walk`) for the walks after it (`LiftRefine.lean`):
 
-* **Handle words** (`decE_tag`, `decE_idx`, `decE_pers`): the tag is `h >> 28`, the index
+* **Handle words** (`decE_tag`, `decE_idx`, `decE_pers`): the tag is `⟦h⟧.tag`, the index
   `h & (2^27 - 1)`, persistence the tier bit, for `h < 2^32`; `decE_word`/`decI_word`: a handle's
   word decodes back to it.
 * **The view, per tag** (`view_bvar`, `view_app`, …): under `ArenaR`, the L code's checks
@@ -57,39 +57,39 @@ theorem node_of {α : Type} [BEq α] [Hashable α] (C : ConsSch) (R : Mem → Wo
 
 end view
 
-theorem get_bvar (tb : ETables) (h : Word) (hh : h.toNat < 2 ^ 32) (hg : h >>> 28 = 0) :
+theorem get_bvar (tb : ETables) (h : Word) (hh : h.toNat < 2 ^ 32) (hg : tagW h = 0) :
     tb.get (decE h) = (tb.bvars.node? (idxW h).toNat).map fun r => .bvar r.i := by
   simp [ETables.get, decE_tag h hh, hg, decE_idx h, ETag.bvar]
-theorem get_fvar (tb : ETables) (h : Word) (hh : h.toNat < 2 ^ 32) (hg : h >>> 28 = 1) :
+theorem get_fvar (tb : ETables) (h : Word) (hh : h.toNat < 2 ^ 32) (hg : tagW h = 1) :
     tb.get (decE h) = (tb.fvars.node? (idxW h).toNat).map fun r => .fvar r.idx r.ty := by
   simp [ETables.get, decE_tag h hh, hg, decE_idx h, ETag.bvar, ETag.fvar]
-theorem get_sort (tb : ETables) (h : Word) (hh : h.toNat < 2 ^ 32) (hg : h >>> 28 = 2) :
+theorem get_sort (tb : ETables) (h : Word) (hh : h.toNat < 2 ^ 32) (hg : tagW h = 2) :
     tb.get (decE h) = (tb.sorts.node? (idxW h).toNat).map fun r => .sort r.u := by
   simp [ETables.get, decE_tag h hh, hg, decE_idx h, ETag.bvar, ETag.fvar, ETag.sort]
-theorem get_const (tb : ETables) (h : Word) (hh : h.toNat < 2 ^ 32) (hg : h >>> 28 = 3) :
+theorem get_const (tb : ETables) (h : Word) (hh : h.toNat < 2 ^ 32) (hg : tagW h = 3) :
     tb.get (decE h) = (tb.consts.node? (idxW h).toNat).map fun r => .const r.n r.us := by
   simp [ETables.get, decE_tag h hh, hg, decE_idx h, ETag.bvar, ETag.fvar, ETag.sort, ETag.const]
-theorem get_app (tb : ETables) (h : Word) (hh : h.toNat < 2 ^ 32) (hg : h >>> 28 = 4) :
+theorem get_app (tb : ETables) (h : Word) (hh : h.toNat < 2 ^ 32) (hg : tagW h = 4) :
     tb.get (decE h) = (tb.apps.node? (idxW h).toNat).map fun r => .app r.f r.a := by
   simp [ETables.get, decE_tag h hh, hg, decE_idx h, ETag.bvar, ETag.fvar, ETag.sort, ETag.const,
     ETag.app]
-theorem get_lam (tb : ETables) (h : Word) (hh : h.toNat < 2 ^ 32) (hg : h >>> 28 = 5) :
+theorem get_lam (tb : ETables) (h : Word) (hh : h.toNat < 2 ^ 32) (hg : tagW h = 5) :
     tb.get (decE h) = (tb.lams.node? (idxW h).toNat).map fun r => .lam r.ty r.body := by
   simp [ETables.get, decE_tag h hh, hg, decE_idx h, ETag.bvar, ETag.fvar, ETag.sort, ETag.const,
     ETag.app, ETag.lam]
-theorem get_forall (tb : ETables) (h : Word) (hh : h.toNat < 2 ^ 32) (hg : h >>> 28 = 6) :
+theorem get_forall (tb : ETables) (h : Word) (hh : h.toNat < 2 ^ 32) (hg : tagW h = 6) :
     tb.get (decE h) = (tb.foralls.node? (idxW h).toNat).map fun r => .forallE r.ty r.body := by
   simp [ETables.get, decE_tag h hh, hg, decE_idx h, ETag.bvar, ETag.fvar, ETag.sort, ETag.const,
     ETag.app, ETag.lam, ETag.forallE]
-theorem get_proj (tb : ETables) (h : Word) (hh : h.toNat < 2 ^ 32) (hg : h >>> 28 = 9) :
+theorem get_proj (tb : ETables) (h : Word) (hh : h.toNat < 2 ^ 32) (hg : tagW h = 9) :
     tb.get (decE h) = (tb.projs.node? (idxW h).toNat).map fun r => .proj r.n r.i r.e := by
   simp [ETables.get, decE_tag h hh, hg, decE_idx h, ETag.bvar, ETag.fvar, ETag.sort, ETag.const,
     ETag.app, ETag.lam, ETag.forallE, ETag.letE, ETag.lit, ETag.proj]
-theorem get_let (tb : ETables) (h : Word) (hh : h.toNat < 2 ^ 32) (hg : h >>> 28 = 7) :
+theorem get_let (tb : ETables) (h : Word) (hh : h.toNat < 2 ^ 32) (hg : tagW h = 7) :
     tb.get (decE h) = (tb.lets.node? (idxW h).toNat).map fun r => .letE r.ty r.val r.body := by
   simp [ETables.get, decE_tag h hh, hg, decE_idx h, ETag.bvar, ETag.fvar, ETag.sort, ETag.const,
     ETag.app, ETag.lam, ETag.forallE, ETag.letE]
-theorem get_lit (tb : ETables) (h : Word) (hh : h.toNat < 2 ^ 32) (hg : h >>> 28 = 8) :
+theorem get_lit (tb : ETables) (h : Word) (hh : h.toNat < 2 ^ 32) (hg : tagW h = 8) :
     tb.get (decE h) = (tb.lits.node? (idxW h).toNat).map fun r => .lit r.l := by
   simp [ETables.get, decE_tag h hh, hg, decE_idx h, ETag.bvar, ETag.fvar, ETag.sort, ETag.const,
     ETag.app, ETag.lam, ETag.forallE, ETag.letE, ETag.lit]
@@ -143,20 +143,20 @@ variable (m : Mem) (a : AState) (hR : ArenaR m a) (h : Word) (hh : h.toNat < 2 ^
 
 include hR hh
 
-theorem view_bvar (hv : viewOK m h BVAR) (hg : h >>> 28 = 0) :
+theorem view_bvar (hv : viewOK m h BVAR) (hg : tagW h = 0) :
     a.store.view (decE h) = some (.bvar (tfld m BVAR (tierW h) (idxW h) 0).toNat) := by
   obtain ⟨k, hk, hkr⟩ := node_of m a h bvarCS BRecRel (·.bvars) _ hR.bvar hv.2
   rw [view_tier m a hR h hh hv.1, get_bvar _ h hh hg, Tbl.node?, hk]
   simp only [BRecRel] at hkr; simp [hkr]
 
-theorem view_fvar (hv : viewOK m h FVAR) (hg : h >>> 28 = 1) :
+theorem view_fvar (hv : viewOK m h FVAR) (hg : tagW h = 1) :
     ∃ i ty, a.store.view (decE h) = some (.fvar i ty) := by
   obtain ⟨k, hk, -⟩ := node_of m a h fvarCS FVRecRel (·.fvars) _ hR.fvar hv.2
   exact ⟨_, _, by rw [view_tier m a hR h hh hv.1, get_fvar _ h hh hg, Tbl.node?, hk]; rfl⟩
 
 /-- `view_fvar`, with the index and the child's handle word pinned to the record's two
 words (`fvarRangeGo`'s `fvar` arm needs the index, unlike `bvarBoundGo`'s). -/
-theorem view_fvar_idx (hv : viewOK m h FVAR) (hg : h >>> 28 = 1) :
+theorem view_fvar_idx (hv : viewOK m h FVAR) (hg : tagW h = 1) :
     a.store.view (decE h) = some (.fvar (tfld m FVAR (tierW h) (idxW h) 0).toNat
       (decE (tfld m FVAR (tierW h) (idxW h) 1))) ∧
     (tfld m FVAR (tierW h) (idxW h) 1).toNat < 2 ^ 32 := by
@@ -164,22 +164,22 @@ theorem view_fvar_idx (hv : viewOK m h FVAR) (hg : h >>> 28 = 1) :
   rw [hty, decE_word]
   exact ⟨by rw [view_tier m a hR h hh hv.1, get_fvar _ h hh hg, Tbl.node?, hk, hi]; rfl, word_lt _⟩
 
-theorem view_sort (hv : viewOK m h SORT) (hg : h >>> 28 = 2) :
+theorem view_sort (hv : viewOK m h SORT) (hg : tagW h = 2) :
     ∃ u, a.store.view (decE h) = some (.sort u) := by
   obtain ⟨k, hk, -⟩ := node_of m a h sortCS SoRecRel (·.sorts) _ hR.sort hv.2
   exact ⟨_, by rw [view_tier m a hR h hh hv.1, get_sort _ h hh hg, Tbl.node?, hk]; rfl⟩
 
-theorem view_const (hv : viewOK m h CONST) (hg : h >>> 28 = 3) :
+theorem view_const (hv : viewOK m h CONST) (hg : tagW h = 3) :
     ∃ n us, a.store.view (decE h) = some (.const n us) := by
   obtain ⟨k, hk, -⟩ := node_of m a h constCS CeRecRel (·.consts) _ hR.const hv.2
   exact ⟨_, _, by rw [view_tier m a hR h hh hv.1, get_const _ h hh hg, Tbl.node?, hk]; rfl⟩
 
-theorem view_lit (hv : viewOK m h LIT) (hg : h >>> 28 = 8) :
+theorem view_lit (hv : viewOK m h LIT) (hg : tagW h = 8) :
     ∃ l, a.store.view (decE h) = some (.lit l) := by
   obtain ⟨k, hk, -⟩ := node_of m a h litCS RecRel (·.lits) _ hR.lit.2 hv.2
   exact ⟨_, by rw [view_tier m a hR h hh hv.1, get_lit _ h hh hg, Tbl.node?, hk]; rfl⟩
 
-theorem view_app (hv : viewOK m h APP) (hg : h >>> 28 = 4) :
+theorem view_app (hv : viewOK m h APP) (hg : tagW h = 4) :
     a.store.view (decE h) = some (.app (decE (tfld m APP (tierW h) (idxW h) 0))
       (decE (tfld m APP (tierW h) (idxW h) 1))) ∧
     (tfld m APP (tierW h) (idxW h) 0).toNat < 2 ^ 32 ∧
@@ -189,7 +189,7 @@ theorem view_app (hv : viewOK m h APP) (hg : h >>> 28 = 4) :
   exact ⟨by rw [view_tier m a hR h hh hv.1, get_app _ h hh hg, Tbl.node?, hk]; rfl, word_lt _,
     word_lt _⟩
 
-theorem view_lam (hv : viewOK m h LAM) (hg : h >>> 28 = 5) :
+theorem view_lam (hv : viewOK m h LAM) (hg : tagW h = 5) :
     a.store.view (decE h) = some (.lam (decE (tfld m LAM (tierW h) (idxW h) 0))
       (decE (tfld m LAM (tierW h) (idxW h) 1))) ∧
     (tfld m LAM (tierW h) (idxW h) 0).toNat < 2 ^ 32 ∧
@@ -199,7 +199,7 @@ theorem view_lam (hv : viewOK m h LAM) (hg : h >>> 28 = 5) :
   exact ⟨by rw [view_tier m a hR h hh hv.1, get_lam _ h hh hg, Tbl.node?, hk]; rfl, word_lt _,
     word_lt _⟩
 
-theorem view_forall (hv : viewOK m h FORALL) (hg : h >>> 28 = 6) :
+theorem view_forall (hv : viewOK m h FORALL) (hg : tagW h = 6) :
     a.store.view (decE h) = some (.forallE (decE (tfld m FORALL (tierW h) (idxW h) 0))
       (decE (tfld m FORALL (tierW h) (idxW h) 1))) ∧
     (tfld m FORALL (tierW h) (idxW h) 0).toNat < 2 ^ 32 ∧
@@ -209,7 +209,7 @@ theorem view_forall (hv : viewOK m h FORALL) (hg : h >>> 28 = 6) :
   exact ⟨by rw [view_tier m a hR h hh hv.1, get_forall _ h hh hg, Tbl.node?, hk]; rfl, word_lt _,
     word_lt _⟩
 
-theorem view_let (hv : viewOK m h LET) (hg : h >>> 28 = 7) :
+theorem view_let (hv : viewOK m h LET) (hg : tagW h = 7) :
     a.store.view (decE h) = some (.letE (decE (tfld m LET (tierW h) (idxW h) 0))
       (decE (tfld m LET (tierW h) (idxW h) 1))
       (decE (tfld m LET (tierW h) (idxW h) 2))) ∧
@@ -221,7 +221,7 @@ theorem view_let (hv : viewOK m h LET) (hg : h >>> 28 = 7) :
   exact ⟨by rw [view_tier m a hR h hh hv.1, get_let _ h hh hg, Tbl.node?, hk]; rfl, word_lt _,
     word_lt _, word_lt _⟩
 
-theorem view_proj (hv : viewOK m h PROJ) (hg : h >>> 28 = 9) :
+theorem view_proj (hv : viewOK m h PROJ) (hg : tagW h = 9) :
     a.store.view (decE h) = some (.proj (decI (tfld m PROJ (tierW h) (idxW h) 0))
       (tfld m PROJ (tierW h) (idxW h) 1).toNat
       (decE (tfld m PROJ (tierW h) (idxW h) 2))) ∧
@@ -274,7 +274,7 @@ theorem viewApp_ok (hv : viewOK m h APP) :
   simp only [ETables.getApp, Tbl.node?, decE_idx]
   rw [hk, hf, ha, decE_word, decE_word]; rfl
 
-theorem viewBind_lam (hv : viewOK m h LAM) (hg : h >>> 28 = 5) :
+theorem viewBind_lam (hv : viewOK m h LAM) (hg : tagW h = 5) :
     a.store.viewBind (decE h) = some (decE (tfld m LAM (tierW h) (idxW h) 0),
       decE (tfld m LAM (tierW h) (idxW h) 1)) := by
   obtain ⟨k, hk, hf, ha⟩ := node_of m a h lamCS LaRecRel (·.lams) _ hR.lam hv.2
@@ -284,7 +284,7 @@ theorem viewBind_lam (hv : viewOK m h LAM) (hg : h >>> 28 = 5) :
   simp only [show ((5 : Word).toUInt32 == 5) = true from rfl, ↓reduceIte]
   rw [hk, hf, ha, decE_word, decE_word]; rfl
 
-theorem viewBind_forall (hv : viewOK m h FORALL) (hg : h >>> 28 = 6) :
+theorem viewBind_forall (hv : viewOK m h FORALL) (hg : tagW h = 6) :
     a.store.viewBind (decE h) = some (decE (tfld m FORALL (tierW h) (idxW h) 0),
       decE (tfld m FORALL (tierW h) (idxW h) 1)) := by
   obtain ⟨k, hk, hf, ha⟩ := node_of m a h forallCS FaRecRel (·.foralls) _ hR.forallE hv.2

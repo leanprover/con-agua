@@ -181,7 +181,7 @@ theorem appCS_wf : appCS.WF where
 theorem askipW_eq (m : Mem) (a : AState) (f x : Word) (hf : f.toNat < 2 ^ 32)
     (hx : x.toNat < 2 ^ 32) (hfl : (rdW (m.arr64 CTL) 1 != 0) = a.store.scratchOn) :
     (askipW m f x = 0) = (skA a (decE f) (decE x) = false) := by
-  have := bit27_or f x
+  have := bit31_or f x
   simp only [askipW, skA, isPersistent_decE f hf, isPersistent_decE x hx, ← hfl]
   grind
 

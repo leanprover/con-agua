@@ -75,7 +75,7 @@ l_model checkDeclAxiom_specE (p : Prog) (hX : AxProg p)
     callW_spec p n "env_push", callW_spec p n "trust_compiler_ok",
     callW_spec p n "of_reduce_ax_ok"]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE]
   heartbeats 400000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 

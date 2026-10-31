@@ -261,7 +261,7 @@ theorem pisLoop_ref (p : Prog) (hp : InferLeafProg p) (hq : BindProg p) (hb : In
     have haddd : (d + k).toNat = d.toNat + k.toNat := addW _ _ (by omega)
     have hftop : fo.toNat + k.toNat ≤ (spTop m).toNat := by rw [htop, haddf]; exact Nat.le_refl _
     have hbtop : lo.toNat + k.toNat ≤ (bTop m).toNat := by rw [hbt, haddl]; exact Nat.le_refl _
-    by_cases hc : peel ≠ 0 ∧ t >>> 28 = 6
+    by_cases hc : peel ≠ 0 ∧ tagW t = 6
     · rw [ite_eq_left hc]
       obtain ⟨hp0, ht5⟩ := hc
       refine RefE.underIf (fun _ => rfl) (RefE.abort0 (by rfl) fun hc1 => ?_)
@@ -299,7 +299,7 @@ theorem pisLoop_ref (p : Prog) (hp : InferLeafProg p) (hq : BindProg p) (hb : In
       rw [Function.comp_apply, ipsE.k_whnf.eq_2]
       refine RefE.underIf (fun _ => rfl) (RefE.guardIf (by rfl) (tag_sort_ne _ hrw3)
         (fun hb g => Bool.noConfusion ((tag_sort_beq _ hrw3 g).symm.trans hb)) fun g1 _ => ?_)
-      have g1' : r₃.headD 0 >>> 28 = 2 := by simpa using g1
+      have g1' : tagW (r₃.headD 0) = 2 := by simpa using g1
       refine RefE.underIf (fun _ => rfl) (RefE.abort0 (by rfl) fun gs1 => ?_)
       refine RefE.underIf (fun _ => rfl) (RefE.abort0 (by rfl) fun gs2 => ?_)
       obtain ⟨hvs, hu⟩ := L.Ind.view_sort_f m₃ _ hS₃.arena.base (r₃.headD 0) hrw3 ⟨gs1, UInt64.not_le.mp gs2⟩ g1'
@@ -368,7 +368,7 @@ theorem pisLoop_ref (p : Prog) (hp : InferLeafProg p) (hq : BindProg p) (hb : In
           k.toNat fvs (ws.map decI)).run a := by
         by_cases hp0 : peel = 0
         · subst hp0; rfl
-        · have ht5 : ¬ t >>> 28 = 6 := fun h => hc ⟨hp0, h⟩
+        · have ht5 : ¬ tagW t = 6 := fun h => hc ⟨hp0, h⟩
           obtain ⟨p', hp'⟩ : ∃ p', peel.toNat = p' + 1 :=
             ⟨peel.toNat - 1, by
               have : peel.toNat ≠ 0 := fun h' => hp0 (UInt64.toNat_inj.mp (by simpa using h')); omega⟩
@@ -499,7 +499,7 @@ theorem ifr_ref (p : Prog) (hp : InferLeafProg p) (hq : BindProg p) (hb : InferB
   dsimp only [ifrE.k_whnf]
   refine RefE.guardIf (by rfl) (tag_sort_ne _ hrw2)
     (fun hb g => Bool.noConfusion ((tag_sort_beq _ hrw2 g).symm.trans hb)) fun g1 _ => ?_
-  have g1' : r₂.headD 0 >>> 28 = 2 := by simpa using g1
+  have g1' : tagW (r₂.headD 0) = 2 := by simpa using g1
   refine RefE.abort0 (by rfl) fun gs1 => ?_
   refine RefE.abort0 (by rfl) fun gs2 => ?_
   obtain ⟨hvs, hu⟩ := L.Ind.view_sort_f m₂ _ hS₂.arena.base (r₂.headD 0) hrw2 ⟨gs1, UInt64.not_le.mp gs2⟩ g1'

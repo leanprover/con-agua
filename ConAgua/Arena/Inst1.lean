@@ -46,7 +46,7 @@ def instGo : FunDecl := lfn (h, d, v, fu) locals (x, g, t, i, r) {
   if fu == 0 { abort };
   x := call der_bv(h);
   if x < 32767 && x <= d { return h };
-  g := h >> 28;
+  g := ⟦h⟧.tag;
   if g == 4 { r := call inst_app(h, d, v, fu - 1); return r };
   if g == 5 { r := call inst_lam(h, d, v, fu - 1); return r };
   if g == 6 { r := call inst_forall(h, d, v, fu - 1); return r };
@@ -176,7 +176,7 @@ l_model instGo_spec (p : Prog) (hp : InstProg p)
     mkLet_spec p (hp.base.get "der_b") (hp.base.get "letE_find") (hp.base.get "letE_push") (hp.base.get "intern_letE") (hp.base.get "mk_let") n,
     mkProj_spec p (hp.base.get "der_b") (hp.base.get "proj_find") (hp.base.get "proj_push") (hp.base.get "intern_proj") (hp.base.get "mk_proj") n]
   grind [arena_grind] fold [tierW, idxW]
-  extra [evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
+  extra [evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE]
   finish [tierW, idxW] gen 20 heartbeats 1000000
 
 end L.Arena

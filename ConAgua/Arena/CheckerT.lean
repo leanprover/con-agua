@@ -327,7 +327,7 @@ closure) lifted; the arms and `check_ind_decl` through their runs (their contrac
 l_model checkDecl_specE (p : Prog) (hf : p.lookup "check_decl" = some checkDeclL)
   fns [hf ↦ checkDeclE] specs [callW_spec p n "ind_block_to_erec"]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE]
   heartbeats 400000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
@@ -585,7 +585,7 @@ l_model installStepGo_specE (p : Prog) (hG : IstgProg p) (hcd : p.lookup "check_
   fns [hG.go ↦ installStepGoE]
   specs [callW_spec p n "iw_reset", callW_spec p n "pin_in", checkDecl_specE p hcd n]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE]
   heartbeats 1600000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
@@ -1000,7 +1000,7 @@ l_model installStep_specE (p : Prog) (hf : p.lookup "install_step" = some instal
   specs [callW_spec p n "tbl_cnt", callW_spec p n "flush_caches", callW_spec p n "scratch_enter",
     installStepGo_specE p hG hcd n, callW_spec p n "is_none", callW_spec p n "is_some"]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE]
   heartbeats 400000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
@@ -1012,7 +1012,7 @@ l_model installDeclStep_specE (p : Prog) (hf : p.lookup "install_decl_step" = so
   fns [hf ↦ installDeclStepE]
   specs [callW_spec p n "and_pin_ok", installStep_specE p hi hG hcd n]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE]
   heartbeats 400000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 

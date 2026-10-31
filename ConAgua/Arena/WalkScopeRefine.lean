@@ -211,10 +211,10 @@ theorem wsNodeOK_succ (n : Nat) (ih : WsGoOK n) : WsNodeOK (n + 1) := by
         MemoRG wsSch lfKey decBW m' memo' ∧ r ≤ 1 ∧ WsFrame m m' := by
     intro v hv hx e; rw [e] at hb; obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hb)
     exact ⟨memo, by rw [wsNodeA_run _ _ _ _ a _ hv, hx]; rfl, hM, by decide, MemFrame.refl _ _ _⟩
-  by_cases g0 : h >>> 28 = 0
+  by_cases g0 : tagW h = 0
   · have hvo := vok BVAR fun hc => by rw [wsNodeW.abort2 n m h d c hs g0 hc] at hb; cases hb
     exact one _ (view_bvar m a hR h hh hvo g0) rfl (wsNodeW.arm1 n m h d c hs g0 (UInt64.not_le.mpr hvo.2))
-  by_cases g1 : h >>> 28 = 1
+  by_cases g1 : tagW h = 1
   · have hvo := vok FVAR fun hc => by rw [wsNodeW.abort3 n m h d c hs g0 g1 hc] at hb; cases hb
     obtain ⟨hv, hty⟩ := view_fvar_idx m a hR h hh hvo g1
     by_cases hl : tfld m FVAR (tierW h) (idxW h) 0 < d
@@ -232,31 +232,31 @@ theorem wsNodeOK_succ (n : Nat) (ih : WsGoOK n) : WsNodeOK (n + 1) := by
       have : ¬ (tfld m FVAR (tierW h) (idxW h) 0).toNat < d.toNat :=
         fun e => hl (UInt64.lt_iff_toNat_lt.mpr e)
       simp only [wsArm, this, ↓reduceIte]; rfl
-  by_cases g4 : h >>> 28 = 4
+  by_cases g4 : tagW h = 4
   · have hvo := vok APP fun hc => by rw [wsNodeW.abort4 n m h d c hs g0 g1 g4 hc] at hb; cases hb
     obtain ⟨hv, hf, ha⟩ := view_app m a hR h hh hvo g4
     rw [wsNodeW.arm4 n m h d c hs g0 g1 g4 (UInt64.not_le.mpr hvo.2)] at hb
     obtain ⟨memo', h1, h2⟩ := wsAnd_ok n ih m m' a memo hD hM _ _ d c r hf ha hb
     exact ⟨memo', (wsNodeA_run _ _ _ _ a _ hv).trans (by simp only [wsArm, wscopedBGoArmApp]; exact h1), h2⟩
-  by_cases g5 : h >>> 28 = 5
+  by_cases g5 : tagW h = 5
   · have hvo := vok LAM fun hc => by rw [wsNodeW.abort5 n m h d c hs g0 g1 g4 g5 hc] at hb; cases hb
     obtain ⟨hv, hf, ha⟩ := view_lam m a hR h hh hvo g5
     rw [wsNodeW.arm5 n m h d c hs g0 g1 g4 g5 (UInt64.not_le.mpr hvo.2)] at hb
     obtain ⟨memo', h1, h2⟩ := wsAnd_ok n ih m m' a memo hD hM _ _ d c r hf ha hb
     exact ⟨memo', (wsNodeA_run _ _ _ _ a _ hv).trans (by simp only [wsArm, wscopedBGoArmBind]; exact h1), h2⟩
-  by_cases g6 : h >>> 28 = 6
+  by_cases g6 : tagW h = 6
   · have hvo := vok FORALL fun hc => by rw [wsNodeW.abort6 n m h d c hs g0 g1 g4 g5 g6 hc] at hb; cases hb
     obtain ⟨hv, hf, ha⟩ := view_forall m a hR h hh hvo g6
     rw [wsNodeW.arm6 n m h d c hs g0 g1 g4 g5 g6 (UInt64.not_le.mpr hvo.2)] at hb
     obtain ⟨memo', h1, h2⟩ := wsAnd_ok n ih m m' a memo hD hM _ _ d c r hf ha hb
     exact ⟨memo', (wsNodeA_run _ _ _ _ a _ hv).trans (by simp only [wsArm, wscopedBGoArmBind]; exact h1), h2⟩
-  by_cases g9 : h >>> 28 = 9
+  by_cases g9 : tagW h = 9
   · have hvo := vok PROJ fun hc => by rw [wsNodeW.abort7 n m h d c hs g0 g1 g4 g5 g6 g9 hc] at hb; cases hb
     obtain ⟨hv, -, he⟩ := view_proj m a hR h hh hvo g9
     rw [wsNodeW.arm7 n m h d c hs g0 g1 g4 g5 g6 g9 (UInt64.not_le.mpr hvo.2)] at hb
     obtain ⟨memo', h1, h2⟩ := ih m m' a memo _ d c r hD hM he hb
     exact ⟨memo', (wsNodeA_run _ _ _ _ a _ hv).trans h1, h2⟩
-  by_cases g7 : h >>> 28 = 7
+  by_cases g7 : tagW h = 7
   · have hvo := vok LET fun hc => by rw [wsNodeW.abort8 n m h d c hs g0 g1 g4 g5 g6 g9 g7 hc] at hb; cases hb
     obtain ⟨hv, ht, hv', hb'⟩ := view_let m a hR h hh hvo g7
     rw [wsNodeW.arm8 n m h d c hs g0 g1 g4 g5 g6 g9 g7 (UInt64.not_le.mpr hvo.2)] at hb
@@ -279,15 +279,15 @@ theorem wsNodeOK_succ (n : Nat) (ih : WsGoOK n) : WsNodeOK (n + 1) := by
         have : (x != 0) = true := by simpa using hx0
         simp only [StateT.run_bind, ha₁, except_ok_bind, this, ↓reduceIte]
         exact ha₂
-  by_cases g2 : h >>> 28 = 2
+  by_cases g2 : tagW h = 2
   · have hvo := vok SORT fun hc => by rw [wsNodeW.abort9 n m h d c hs g0 g1 g4 g5 g6 g9 g7 g2 hc] at hb; cases hb
     obtain ⟨_, hv⟩ := view_sort m a hR h hh hvo g2
     exact one _ hv rfl (wsNodeW.arm9 n m h d c hs g0 g1 g4 g5 g6 g9 g7 g2 (UInt64.not_le.mpr hvo.2))
-  by_cases g3 : h >>> 28 = 3
+  by_cases g3 : tagW h = 3
   · have hvo := vok CONST fun hc => by rw [wsNodeW.abort10 n m h d c hs g0 g1 g4 g5 g6 g9 g7 g2 g3 hc] at hb; cases hb
     obtain ⟨_, _, hv⟩ := view_const m a hR h hh hvo g3
     exact one _ hv rfl (wsNodeW.arm10 n m h d c hs g0 g1 g4 g5 g6 g9 g7 g2 g3 (UInt64.not_le.mpr hvo.2))
-  by_cases g8 : h >>> 28 = 8
+  by_cases g8 : tagW h = 8
   · have hvo := vok LIT fun hc => by rw [wsNodeW.abort11 n m h d c hs g0 g1 g4 g5 g6 g9 g7 g2 g3 g8 hc] at hb; cases hb
     obtain ⟨_, hv⟩ := view_lit m a hR h hh hvo g8
     exact one _ hv rfl (wsNodeW.arm11 n m h d c hs g0 g1 g4 g5 g6 g9 g7 g2 g3 g8 (UInt64.not_le.mpr hvo.2))

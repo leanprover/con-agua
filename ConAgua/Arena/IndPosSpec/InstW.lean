@@ -42,7 +42,7 @@ theorem instW_ok (n : Nat) : ∀ (dn : NIdx → Option ConLeche.Name) (fe : IFEn
       rw [hl1, decHL, hslice?_succ] at hdec
       simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at hdec
       obtain ⟨xa, hxa, rest, hrest, rfl⟩ := hdec
-      by_cases hpi : e >>> 28 ≠ 6
+      by_cases hpi : tagW e ≠ 6
       · rw [instW_nopi n m ao al e hal hpi] at h
         obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
         refine ⟨none, a, ?_, hS, IWGrow.refl _, rfl⟩
@@ -50,7 +50,7 @@ theorem instW_ok (n : Nat) : ∀ (dn : NIdx → Option ConLeche.Name) (fe : IFEn
           rw [decI_tag_forallE_beq e he]; simpa using hpi
         simp only [ConRon.Arena.instPisWith, ht]; rfl
       · rw [instW_pi n m ao al e hal hpi] at h
-        have he6 : e >>> 28 = 6 := by simpa using hpi
+        have he6 : tagW e = 6 := by simpa using hpi
         cases hvl : eViewW m e with
         | nil => rw [hvl] at h; simp [instK1] at h
         | cons g vt =>

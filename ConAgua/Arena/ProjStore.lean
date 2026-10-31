@@ -84,13 +84,13 @@ def projCS : ConsSch where
   recW := [.bin .or (.var 1) (.bin .shl (.var 3) (.const 32)), .var 2]
   ihash := lblk (n, u, e, h) {
     h := (((⟪fnvBasis⟫ ^ n) * ⟪fnvPrime⟫ ^ u) * ⟪fnvPrime⟫ ^ e) * ⟪fnvPrime⟫ }
-  skipW := some (rhsOf (lblk (n, u, e, h, sk) { sk := ((n | e) >> 27) & 1 }))
+  skipW := some (rhsOf (lblk (n, u, e, h, sk) { sk := ((n | e) >> 31) & 1 }))
   mtM m ks t i := pjmatchW (m.arr64 (tierA PJREC t)) t i (ks.getD 0 0) (ks.getD 1 0) (ks.getD 2 0)
   qhM _ ks := projHashW (ks.getD 0 0) (ks.getD 1 0) (ks.getD 2 0)
   hsM := pjhash
   vsM as := [as.getD 0 0 ||| as.getD 2 0 <<< 32, as.getD 1 0]
   roomM m t c := decide (m.len64 (tierA PJREC t) < (c + 1) * 2)
-  skM ks := ((ks.getD 0 0 ||| ks.getD 2 0) >>> 27) &&& 1
+  skM ks := ((ks.getD 0 0 ||| ks.getD 2 0) >>> 31) &&& 1
 
 /-! ## `proj_find(t, n, u, e, h)`: the probe -/
 
@@ -121,7 +121,7 @@ scratch tier is open, the append to the tier the store is in. -/
 /-- The scratch skip: the scratch tier is open and `n` or `e` is a scratch handle. The index `u`
 is not a handle, so it is not tested. -/
 def pjskipW (m : Mem) (n e : Word) : Word :=
-  if rdW (m.arr64 CTL) 1 ≠ 0 then ((n ||| e) >>> 27) &&& 1 else 0
+  if rdW (m.arr64 CTL) 1 ≠ 0 then ((n ||| e) >>> 31) &&& 1 else 0
 
 /-- The model of `intern_proj`: the handle and the memory after, or `none` where the L code
 aborts (the library's `consInternM`). -/

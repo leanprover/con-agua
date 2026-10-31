@@ -151,7 +151,7 @@ def iotaRecFireL : FunDecl := lfn (mode, vis, d, c, us, recP, so, usj, ctorP, rl
 (the twin's `view` fails). -/
 -- con-ron: ConRon/Arena/Core.lean:2018-2103 ConRon.Arena.iotaRecAt
 def iotaRecHeadL : FunDecl := lfn (hh) locals (t, i) {
-  if hh >> 28 != 3 { return (0, 0, 0) };
+  if ⟦hh⟧.tag != 3 { return (0, 0, 0) };
   (t, i) := node CONST⟦hh⟧;
   return (1, CONST⟨t, i⟩.n, CONST⟨t, i⟩.us)
 }

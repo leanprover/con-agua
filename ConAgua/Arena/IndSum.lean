@@ -95,7 +95,7 @@ telescope of `n` Π binders ending in a sort, else the slow arm. Returns `(cvTa,
 @[l_impl ConRon.Arena.checkSumTele]
 def checkSumTeleL : FunDecl := lfn (vis, cv, n, cvTa0) locals (ok, bso, bsl, body, g, x, y, z, cvTaOut, s) {
   (ok, bso, bsl, body) := call strip_pis(n, EREC.u64[cvTa0 + 3]);
-  if ok == 1 && (body >> 28) == 2 {
+  if ok == 1 && (⟦body⟧.tag) == 2 {
     (g, x, y, z) := call e_view(body);
     return (cvTa0, x)
   };
@@ -704,7 +704,7 @@ projection before the walk continues. Returns `(ok, off, len)` (`Option (List EI
 def structProjBodiesGoL : FunDecl :=
   lfn (T, k, i, h) locals (g, x, y, z, a, b, ok2, ro, rl, no, nl) {
   if k == 0 { return (1, 0, 0) };
-  if h >> 28 != 6 { return (0, 0, 0) };
+  if ⟦h⟧.tag != 6 { return (0, 0, 0) };
   (g, x, y, z) := call e_view(h);
   a := call struct_proj_arg_p(T, i);
   if 4294967296 <= a { abort };

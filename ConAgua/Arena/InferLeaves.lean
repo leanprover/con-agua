@@ -63,13 +63,13 @@ structure InferLeafProg (p : Prog) : Prop where
 /-- **`ensure_sort`'s unified model**: the `whnf` slot through its run. -/
 l_model esE_spec (p : Prog) (hf : p.lookup "ensure_sort" = some ensureSortL)
   fns [hf ↦ esE list] grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE]
   finish [tierW, idxW] unified
 
-theorem tag_sort_beq (h : Word) (hh : HW h) (hg : h >>> 28 = 2) : ((decE h).tag == ETag.sort) = true := by
+theorem tag_sort_beq (h : Word) (hh : HW h) (hg : tagW h = 2) : ((decE h).tag == ETag.sort) = true := by
   rw [decE_tag_sort_beq h hh, hg]; rfl
 
-theorem tag_sort_ne (h : Word) (hh : HW h) (hg : h >>> 28 ≠ 2) :
+theorem tag_sort_ne (h : Word) (hh : HW h) (hg : tagW h ≠ 2) :
     ((decE h).tag == ETag.sort) = false := by
   rw [decE_tag_sort_beq h hh]; simpa using hg
 
@@ -92,7 +92,7 @@ theorem es_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (s₀ : St) (a₀ : AStat
   dsimp only [esE.k_whnf]
   refine RefE.guardIf (by rfl) (tag_sort_ne _ hrw)
     (fun hb g => Bool.noConfusion ((tag_sort_beq _ hrw g).symm.trans hb)) fun g1 _ => ?_
-  have hg : r₁.headD 0 >>> 28 = 2 := by simpa using g1
+  have hg : tagW (r₁.headD 0) = 2 := by simpa using g1
   refine RefE.abort0 (by rfl) fun g2 => ?_
   refine RefE.abort0 (by rfl) fun g3 => ?_
   obtain ⟨hv, hu⟩ := L.Ind.view_sort_f m₁ _ hS₁.arena.base (r₁.headD 0) hrw ⟨g2, UInt64.not_le.mp g3⟩ hg
@@ -511,11 +511,11 @@ l_model ilE_spec (p : Prog) (hf : p.lookup "infer_lit" = some inferLitL)
   specs [callW_spec p n "nat_lit_supported", callW_spec p n "str_lit_supported",
     callW_spec p n "pin_at", callW_spec p n "const_e"]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] finish [tierW, idxW] unified
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE] finish [tierW, idxW] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 theorem view_lit_f (m : Mem) (a : AState) (hR : ArenaR m a) (h : Word) (hh : h.toNat < 2 ^ 32)
-    (hv : viewOK m h LIT) (hg : h >>> 28 = 8) :
+    (hv : viewOK m h LIT) (hg : tagW h = 8) :
     ∃ k : LitNode, a.store.view (decE h) = some (.lit k.l) ∧ RecRel m (tierW h) (idxW h) k := by
   obtain ⟨k, hk, hu⟩ := node_of m a h litCS RecRel (·.lits) _ hR.lit.2 hv.2
   exact ⟨k, by rw [view_tier m a hR h hh hv.1, get_lit _ h hh hg, Tbl.node?, hk]; rfl, hu⟩
@@ -545,7 +545,7 @@ support declines; the support tests, the pin and `const_e` (`InferLitCallees`) c
 theorem il_ref (p : Prog) (hp : InferLeafProg p) (hc : InferLitCallees p) (n : Nat)
     (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (M : ModeMaps) (eb e : Word) (l : ConLeche.Literal) (hS : CoreS dn s₀.mem a₀ vis fe M eb)
-    (he : HW e) (hg : e >>> 28 = 8) (hv : a₀.store.view (decE e) = some (.lit l)) :
+    (he : HW e) (hg : tagW e = 8) (hv : a₀.store.view (decE e) = some (.lit l)) :
     RefE (closedNV p L.Checker.nvFns = true) (ilE p (n + 1) s₀.mem vis e) (inferLitT fe l) a₀
       (CorePost decH dn s₀.mem vis fe M eb ResH) := by
   simp only [ilE]
@@ -587,7 +587,7 @@ theorem il_ref (p : Prog) (hp : InferLeafProg p) (hc : InferLitCallees p) (n : N
 theorem inferLit_refines (p : Prog) (hp : InferLeafProg p) (hc : InferLitCallees p) (n : Nat)
     (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (M : ModeMaps) (eb e : Word) (l : ConLeche.Literal) (hS : CoreS dn s₀.mem a₀ vis fe M eb)
-    (he : HW e) (hg : e >>> 28 = 8) (hv : a₀.store.view (decE e) = some (.lit l)) :
+    (he : HW e) (hg : tagW e = 8) (hv : a₀.store.view (decE e) = some (.lit l)) :
     CoreSpec p (n + 1) "infer_lit" [vis, e] (inferLitT fe l) decH s₀ a₀ dn vis fe M eb :=
   RefE.coreSpec (ilE_spec p hp.inferLit (n + 1) s₀ vis e)
     (il_ref p hp hc n s₀ a₀ dn vis fe M eb e l hS he hg hv)
@@ -696,7 +696,7 @@ l_model inferConstE_spec (p : Prog) (hf : p.lookup "infer_const" = some inferCon
   fns [hf ↦ inferConstE list]
   specs [callW_spec p n "env_find", lsNode_spec p hls n, callW_spec p n "const_ty_at", callW_spec p n "pin_at"]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] finish [tierW, idxW] unified
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE] finish [tierW, idxW] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 /-- **`infer_const(vis, n, us)` refines the `.const` clause** (`inferConstT`), both outcomes: an

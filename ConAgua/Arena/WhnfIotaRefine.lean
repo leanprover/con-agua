@@ -305,7 +305,7 @@ theorem decBool_t_m2c {r : List Word} (h : ¬ r.headD 0 = 0) : decBool r = true 
 
 /-- Model of `is_str_lit`. -/
 def islW (m : Mem) (h : Word) : Option Word :=
-  if h >>> 28 ≠ 8 then some 0
+  if tagW h ≠ 8 then some 0
   else if tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
   else if tcnt m LIT (tierW h) ≤ idxW h then none
   else some (if tfld m LIT (tierW h) (idxW h) 0 = 1 then 1 else 0)
@@ -322,7 +322,7 @@ theorem isStrLit_spec (p : Prog) (hp : p.lookup "is_str_lit" = some isStrLitL) (
   | succ k =>
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt,
-        tcntM, evalE_tierE, evalE_idxE] <;> finish [islW, tierW, idxW]
+        tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE] <;> finish [islW, tierW, idxW]
 
 theorem viewLit_ok (m : Mem) (a : AState) (hR : ArenaR m a) (h : Word) (hh : h.toNat < 2 ^ 32)
     (hv : viewOK m h LIT) :
@@ -354,7 +354,7 @@ theorem isStrLit_refines (p : Prog) (hp : p.lookup "is_str_lit" = some isStrLitL
   refine ⟨hloc, ?_⟩
   have hR := hS.arena.base
   unfold islW at hW
-  by_cases h8 : h >>> 28 = 8
+  by_cases h8 : tagW h = 8
   · simp only [h8, ne_eq, not_true_eq_false, ↓reduceIte] at hW
     by_cases hv1 : tierW h ≠ 0 ∧ rdW (s₀.mem.arr64 CTL) 1 = 0
     · simp [hv1] at hW
@@ -402,7 +402,7 @@ structure IotaProg' (p : Prog) : Prop extends IotaProg p where
 /-! ## `is_ctor_app(vis, e)` -/
 
 theorem view_const_f (m : Mem) (a : AState) (hR : ArenaR m a) (h : Word) (hh : h.toNat < 2 ^ 32)
-    (hv : viewOK m h CONST) (hg : h >>> 28 = 3) :
+    (hv : viewOK m h CONST) (hg : tagW h = 3) :
     a.store.view (decE h) = some (.const (decI (tfld m CONST (tierW h) (idxW h) 0))
       (decI (tfld m CONST (tierW h) (idxW h) 1))) ∧
     (tfld m CONST (tierW h) (idxW h) 0).toNat < 2 ^ 32 ∧
@@ -417,7 +417,7 @@ def icaW (p : Prog) (n : Nat) (m : Mem) (vis e : Word) : Option (Word × Mem) :=
   match callW p n "get_app_fn" [e] m with
   | none => none
   | some (r₁, m₁) =>
-    if r₁.headD 0 >>> 28 ≠ 3 then some (0, m₁)
+    if tagW (r₁.headD 0) ≠ 3 then some (0, m₁)
     else if tierW (r₁.headD 0) ≠ 0 ∧ rdW (m₁.arr64 CTL) 1 = 0 then none
     else if tcnt m₁ CONST (tierW (r₁.headD 0)) ≤ idxW (r₁.headD 0) then none
     else match callW p n "env_find"
@@ -434,7 +434,7 @@ theorem isCtorApp_spec (p : Prog) (hp : IotaProg' p) (n : Nat) (s₀ : St) (vis 
   simp only [callFn, isCtorAppL]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt,
-      tcntM, evalE_tierE, evalE_idxE,
+      tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE,
       callW_spec p n "get_app_fn", callW_spec p n "env_find"] <;>
     finish [icaW, tierW, idxW]
 
@@ -472,7 +472,7 @@ theorem isCtorApp_refines (p : Prog) (hp : IotaProg' p) :
     (getAppFn_refines' p hp.spine.fn n s₀ a₀ hR e he) hc
   rw [ht₁] at hm₁
   subst hm₁
-  by_cases h3 : r₁.headD 0 >>> 28 ≠ 3
+  by_cases h3 : tagW (r₁.headD 0) ≠ 3
   · simp only [h3, ↓reduceIte, ne_eq, not_false_eq_true, Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨hr, hm⟩ := hW
     have hrun' := isCtorApp_run_not fe a₀ (decE e) _ hga (fun ht => h3 (by
@@ -480,7 +480,7 @@ theorem isCtorApp_refines (p : Prog) (hp : IotaProg' p) :
     refine CoreRef.of_pure hS hrun' hm.symm ?_ ?_
     · simp only [decBool]; rw [← hr]; rfl
     · unfold ResH HW; rw [← hr]; decide
-  have h3' : r₁.headD 0 >>> 28 = 3 := by simpa using h3
+  have h3' : tagW (r₁.headD 0) = 3 := by simpa using h3
   rw [ite_eq_right h3] at hW
   obtain ⟨hv1, hW⟩ := of_ite_none hW
   obtain ⟨hv2, hW⟩ := of_ite_none hW
@@ -849,7 +849,7 @@ def pirW (p : Prog) : Nat → Mem → Word → Word → Word → Word → Option
   | 0, _, _, _, _, _ => none
   | k + 1, m, e, ao, an, i =>
     if i < an then
-      if e >>> 28 ≠ 6 then some ([0, 0], m)
+      if tagW e ≠ 6 then some ([0, 0], m)
       else if tierW e ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
       else if tcnt m FORALL (tierW e) ≤ idxW e then none
       else match callW p k "inst_entry"
@@ -863,22 +863,22 @@ theorem pirW_end (p : Prog) (k : Nat) (m : Mem) (e ao an i : Word) (h : ¬ i < a
   simp [pirW, h]
 
 theorem pirW_exit (p : Prog) (k : Nat) (m : Mem) (e ao an i : Word) (h : i < an)
-    (h6 : e >>> 28 ≠ 6) : pirW p (k + 1) m e ao an i = some ([0, 0], m) := by
+    (h6 : tagW e ≠ 6) : pirW p (k + 1) m e ao an i = some ([0, 0], m) := by
   simp [pirW, h, h6]
 
 theorem pirW_ab1 (p : Prog) (k : Nat) (m : Mem) (e ao an i : Word) (h : i < an)
-    (h6 : ¬ e >>> 28 ≠ 6) (h1 : tierW e ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0) :
+    (h6 : ¬ tagW e ≠ 6) (h1 : tierW e ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0) :
     pirW p (k + 1) m e ao an i = none := by
   simp [pirW, h, h6, h1]
 
 theorem pirW_ab2 (p : Prog) (k : Nat) (m : Mem) (e ao an i : Word) (h : i < an)
-    (h6 : ¬ e >>> 28 ≠ 6) (h1 : ¬ (tierW e ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0))
+    (h6 : ¬ tagW e ≠ 6) (h1 : ¬ (tierW e ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0))
     (h2 : tcnt m FORALL (tierW e) ≤ idxW e) :
     pirW p (k + 1) m e ao an i = none := by
   simp only [pirW, h, h6, h1, h2]; simp
 
 theorem pirW_cont (p : Prog) (k : Nat) (m m₁ : Mem) (e ao an i : Word) (r : List Word)
-    (h : i < an) (h6 : ¬ e >>> 28 ≠ 6) (h1 : ¬ (tierW e ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0))
+    (h : i < an) (h6 : ¬ tagW e ≠ 6) (h1 : ¬ (tierW e ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0))
     (h2 : ¬ tcnt m FORALL (tierW e) ≤ idxW e)
     (hc : callW p k "inst_entry"
           [tfld m FORALL (tierW e) (idxW e) 1, rdW (m.arr64 SPN) (ao + i), 0] m =
@@ -897,7 +897,7 @@ theorem piResidualLoop_spec (p : Prog) (k : Nat) (s₀ : St) :
     rw [exec, step_while (w := piResidualLoop) rfl]
     sym only [lang_grind, arena_grind] =>
       vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt, tcntM,
-        evalE_tierE, evalE_idxE,
+        evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE,
         callW_spec p k "inst_entry", ih] <;>
       finish [pirW_end, pirW_exit, pirW_ab1, pirW_ab2, pirW_cont, tierW, idxW]
 
@@ -973,7 +973,7 @@ theorem pirW_ok (p : Prog) (hinst : IotaInst1OK p) (dn : NIdx → Option ConLech
     cases k with
     | zero => simp [pirW] at hL
     | succ k =>
-    by_cases h6 : e >>> 28 ≠ 6
+    by_cases h6 : tagW e ≠ 6
     · rw [pirW_exit p k m e ao an i hlt h6] at hL
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hL)
       rw [hdrop]
@@ -982,7 +982,7 @@ theorem pirW_ok (p : Prog) (hinst : IotaInst1OK p) (dn : NIdx → Option ConLech
       refine ⟨hok, ?_, ?_, by simp [HW], by simp [HW]⟩
       · rw [hst]; exact ⟨M, hS, KeptAll.refl _ _, StackKept.refl _⟩
       · rw [hres]; simp [decOptR, decOpt]
-    have h6' : e >>> 28 = 6 := by simpa using h6
+    have h6' : tagW e = 6 := by simpa using h6
     by_cases hv1 : tierW e ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0
     · rw [pirW_ab1 p k m e ao an i hlt h6 hv1] at hL; cases hL
     by_cases hv2 : tcnt m FORALL (tierW e) ≤ idxW e

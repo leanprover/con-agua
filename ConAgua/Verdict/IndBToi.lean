@@ -37,7 +37,7 @@ l_model toiE_spec (p : Prog) (P : ToiProg p)
     callW_spec p n "inst_lp_fast", instPisWith_spec p P.v P.ipw P.hi1 n,
     piBinders_spec p P.alloc P.icopy P.v P.sc P.pb n]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE]
   heartbeats 4000000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 

@@ -83,7 +83,7 @@ theorem dl_exit (r : CoreFnsA) (fe : IFEnv) (d : Nat) (an bn i : Word) (aas bs :
 through its run). -/
 l_model defeqList_specE (p : Prog) (hp : p.lookup "defeq_list" = some defeqListL)
   fns [hp ↦ dlE] grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] unified
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE] unified
 
 /-- **The `defeq_list` loop refines `defEqList`, both outcomes**, on the spines from index `i`: the
 errors are the `defeq` slot's. -/
@@ -187,7 +187,7 @@ l_model ioE_spec (p : Prog) (hp : p.lookup "iota_index_ok" = some iotaIndexOkL)
   fns [hp ↦ ioE list]
   specs [callW_spec p n "pi_residual", callW_spec p n "get_app_args", defeqList_specE p hd n]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] unified
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 /-- The slice after the first `c` words, as `iota_index_ok` computes it. -/

@@ -169,7 +169,7 @@ def lpGo : FunDecl := lfn (h, ko, kc, vo, vc, fu) locals (g, t, i, x, y, r) {
   if fu == 0 { abort };
   (x, y, r) := call der_b(h);
   if r == 0 { return h };
-  g := h >> 28;
+  g := ⟦h⟧.tag;
   t := ⟦h⟧.tier;
   i := ⟦h⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
@@ -330,7 +330,7 @@ def keysOk : FunDecl := lfn (o, l) locals (w, g, t, i, r, c) {
   if l == 0 { return 0 };
   w := SPN.u64[o];
   if w >= 4294967296 { abort };
-  g := w >> 28;
+  g := ⟦w⟧.tag;
   t := ⟦w⟧.tier;
   i := ⟦w⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };

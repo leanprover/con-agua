@@ -180,7 +180,7 @@ theorem m2cConstView_spec (p : Prog) (hp : p.lookup "m2c_const_view" = some m2cC
   | succ n =>
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt,
-        tcntM, evalE_tierE, evalE_idxE] <;>
+        tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE] <;>
       finish [cvwW, tierW, idxW]
 
 /-- Model of `m2c_eta2`. -/

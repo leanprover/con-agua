@@ -635,7 +635,7 @@ count, an unknown tag) aborts, as the twin's `view` fails. The projections `view
 `viewApp`, … are reads of this (the twin tests the tag first). -/
 -- con-ron: ConRon/Arena/Monad.lean:156-163 ConRon.Arena.view
 def eView : FunDecl := lfn (h) locals (g, t, i) {
-  g := h >> 28;
+  g := ⟦h⟧.tag;
   t := ⟦h⟧.tier;
   i := ⟦h⟧.idx;
   if 4294967295 < h { abort };

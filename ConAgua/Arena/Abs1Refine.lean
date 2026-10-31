@@ -268,51 +268,51 @@ theorem frW_frame (n : Nat) :
       · rw [frNodeW.abort1 n m h c hs] at hb; cases hb
       have done0 : (some (0, m) : Option (Word × Mem)) = some (r, m') → FrFrame m m' := fun e => by
         obtain ⟨-, rfl⟩ := Prod.mk.inj (Option.some.inj e); exact MemFrame.refl _ _ _
-      by_cases g0 : h >>> 28 = 0
+      by_cases g0 : tagW h = 0
       · by_cases hc : tcnt m BVAR (tierW h) ≤ idxW h
         · rw [frNodeW.abort2 n m h c hs g0 hc] at hb; cases hb
         · rw [frNodeW.arm1 n m h c hs g0 hc] at hb; exact done0 hb
-      by_cases g1 : h >>> 28 = 1
+      by_cases g1 : tagW h = 1
       · by_cases hc : tcnt m FVAR (tierW h) ≤ idxW h
         · rw [frNodeW.abort3 n m h c hs g0 g1 hc] at hb; cases hb
         by_cases h1 : tfld m FVAR (tierW h) (idxW h) 0 + 1 = 0
         · rw [frNodeW.abort4 n m h c hs g0 g1 hc h1] at hb; cases hb
         · rw [frNodeW.arm2 n m h c hs g0 g1 hc h1] at hb
           obtain ⟨-, rfl⟩ := Prod.mk.inj (Option.some.inj hb); exact MemFrame.refl _ _ _
-      by_cases g4 : h >>> 28 = 4
+      by_cases g4 : tagW h = 4
       · by_cases hc : tcnt m APP (tierW h) ≤ idxW h
         · rw [frNodeW.abort5 n m h c hs g0 g1 g4 hc] at hb; cases hb
         · rw [frNodeW.arm3 n m h c hs g0 g1 g4 hc] at hb
           exact FrOK.app (ih.1 _ _ _) (fun m₁ => ih.1 m₁ _ _) _ _ hb
-      by_cases g5 : h >>> 28 = 5
+      by_cases g5 : tagW h = 5
       · by_cases hc : tcnt m LAM (tierW h) ≤ idxW h
         · rw [frNodeW.abort6 n m h c hs g0 g1 g4 g5 hc] at hb; cases hb
         · rw [frNodeW.arm4 n m h c hs g0 g1 g4 g5 hc] at hb
           exact FrOK.app (ih.1 _ _ _) (fun m₁ => ih.1 m₁ _ _) _ _ hb
-      by_cases g6 : h >>> 28 = 6
+      by_cases g6 : tagW h = 6
       · by_cases hc : tcnt m FORALL (tierW h) ≤ idxW h
         · rw [frNodeW.abort7 n m h c hs g0 g1 g4 g5 g6 hc] at hb; cases hb
         · rw [frNodeW.arm5 n m h c hs g0 g1 g4 g5 g6 hc] at hb
           exact FrOK.app (ih.1 _ _ _) (fun m₁ => ih.1 m₁ _ _) _ _ hb
-      by_cases g9 : h >>> 28 = 9
+      by_cases g9 : tagW h = 9
       · by_cases hc : tcnt m PROJ (tierW h) ≤ idxW h
         · rw [frNodeW.abort8 n m h c hs g0 g1 g4 g5 g6 g9 hc] at hb; cases hb
         · rw [frNodeW.arm6 n m h c hs g0 g1 g4 g5 g6 g9 hc] at hb
           exact ih.1 _ _ _ _ _ hb
-      by_cases g7 : h >>> 28 = 7
+      by_cases g7 : tagW h = 7
       · by_cases hc : tcnt m LET (tierW h) ≤ idxW h
         · rw [frNodeW.abort9 n m h c hs g0 g1 g4 g5 g6 g9 g7 hc] at hb; cases hb
         · rw [frNodeW.arm7 n m h c hs g0 g1 g4 g5 g6 g9 g7 hc] at hb
           exact FrOK.letE (ih.1 _ _ _) (fun m₁ w => ih.1 m₁ w _) _ _ hb
-      by_cases g2 : h >>> 28 = 2
+      by_cases g2 : tagW h = 2
       · by_cases hc : tcnt m SORT (tierW h) ≤ idxW h
         · rw [frNodeW.abort10 n m h c hs g0 g1 g4 g5 g6 g9 g7 g2 hc] at hb; cases hb
         · rw [frNodeW.arm8 n m h c hs g0 g1 g4 g5 g6 g9 g7 g2 hc] at hb; exact done0 hb
-      by_cases g3 : h >>> 28 = 3
+      by_cases g3 : tagW h = 3
       · by_cases hc : tcnt m CONST (tierW h) ≤ idxW h
         · rw [frNodeW.abort11 n m h c hs g0 g1 g4 g5 g6 g9 g7 g2 g3 hc] at hb; cases hb
         · rw [frNodeW.arm9 n m h c hs g0 g1 g4 g5 g6 g9 g7 g2 g3 hc] at hb; exact done0 hb
-      by_cases g8 : h >>> 28 = 8
+      by_cases g8 : tagW h = 8
       · by_cases hc : tcnt m LIT (tierW h) ≤ idxW h
         · rw [frNodeW.abort12 n m h c hs g0 g1 g4 g5 g6 g9 g7 g2 g3 g8 hc] at hb; cases hb
         · rw [frNodeW.arm10 n m h c hs g0 g1 g4 g5 g6 g9 g7 g2 g3 g8 hc] at hb; exact done0 hb
@@ -554,12 +554,12 @@ def AArmRef (n : Nat) (armW : Nat → Mem → Word → Word → Word → Word �
 def AArmOK (n : Nat) : Prop :=
   ∀ (m m' : Mem) (a : AState) (h k d fu r : Word), ArenaA m a →
     h.toNat < 2 ^ 32 →
-    (h >>> 28 = 4 → AArmRef n absAppW (abstract1ArmApp d.toNat fu.toNat (decE h) k.toNat) m m' a h k d fu r) ∧
-    (h >>> 28 = 5 → AArmRef n absLamW (abstract1ArmBind d.toNat fu.toNat (decE h) k.toNat) m m' a h k d fu r) ∧
-    (h >>> 28 = 6 →
+    (tagW h = 4 → AArmRef n absAppW (abstract1ArmApp d.toNat fu.toNat (decE h) k.toNat) m m' a h k d fu r) ∧
+    (tagW h = 5 → AArmRef n absLamW (abstract1ArmBind d.toNat fu.toNat (decE h) k.toNat) m m' a h k d fu r) ∧
+    (tagW h = 6 →
       AArmRef n absForallW (abstract1ArmBind d.toNat fu.toNat (decE h) k.toNat) m m' a h k d fu r) ∧
-    (h >>> 28 = 7 → AArmRef n absLetW (abstract1ArmLet d.toNat fu.toNat (decE h) k.toNat) m m' a h k d fu r) ∧
-    (h >>> 28 = 9 → AArmRef n absProjW (abstract1ArmProj d.toNat fu.toNat (decE h) k.toNat) m m' a h k d fu r)
+    (tagW h = 7 → AArmRef n absLetW (abstract1ArmLet d.toNat fu.toNat (decE h) k.toNat) m m' a h k d fu r) ∧
+    (tagW h = 9 → AArmRef n absProjW (abstract1ArmProj d.toNat fu.toNat (decE h) k.toNat) m m' a h k d fu r)
 
 theorem agoOK_succ (n : Nat) (ih : ANodeOK n) : AGoOK (n + 1) := by
   intro m m' a h k d fu r hA hh hb
@@ -577,33 +577,33 @@ theorem agoOK_succ (n : Nat) (ih : ANodeOK n) : AGoOK (n + 1) := by
 theorem anodeOK_succ (n : Nat) (ih : AArmOK n) : ANodeOK (n + 1) := by
   intro m m' a h k d fu r hA hh hb
   have arm := ih m m' a h k d fu r hA hh
-  have t4 : h >>> 28 = 4 ↔ (h >>> 28).toUInt32 = 4 := by simpa using tag_iff h 4 hh (by decide)
-  have t5 : h >>> 28 = 5 ↔ (h >>> 28).toUInt32 = 5 := by simpa using tag_iff h 5 hh (by decide)
-  have t6 : h >>> 28 = 6 ↔ (h >>> 28).toUInt32 = 6 := by simpa using tag_iff h 6 hh (by decide)
-  have t1 : h >>> 28 = 1 ↔ (h >>> 28).toUInt32 = 1 := by simpa using tag_iff h 1 hh (by decide)
-  have t7 : h >>> 28 = 7 ↔ (h >>> 28).toUInt32 = 7 := by simpa using tag_iff h 7 hh (by decide)
-  have t9 : h >>> 28 = 9 ↔ (h >>> 28).toUInt32 = 9 := by simpa using tag_iff h 9 hh (by decide)
+  have t4 : tagW h = 4 ↔ (tagW h).toUInt32 = 4 := by simpa using tag_iff h 4 hh (by decide)
+  have t5 : tagW h = 5 ↔ (tagW h).toUInt32 = 5 := by simpa using tag_iff h 5 hh (by decide)
+  have t6 : tagW h = 6 ↔ (tagW h).toUInt32 = 6 := by simpa using tag_iff h 6 hh (by decide)
+  have t1 : tagW h = 1 ↔ (tagW h).toUInt32 = 1 := by simpa using tag_iff h 1 hh (by decide)
+  have t7 : tagW h = 7 ↔ (tagW h).toUInt32 = 7 := by simpa using tag_iff h 7 hh (by decide)
+  have t9 : tagW h = 9 ↔ (tagW h).toUInt32 = 9 := by simpa using tag_iff h 9 hh (by decide)
   simp only [absNodeA, decE_tag h hh]
   simp only [ETag.app, ETag.isBind, ETag.lam, ETag.forallE, ETag.fvar, ETag.letE, ETag.proj,
     beq_iff_eq, Bool.or_eq_true] at *
-  by_cases g4 : h >>> 28 = 4
+  by_cases g4 : tagW h = 4
   · rw [absNodeW.arm1 n m h k d fu g4] at hb
-    simp only [show (h >>> 28).toUInt32 = 4 from (t4.mp g4), ↓reduceIte]
+    simp only [show (tagW h).toUInt32 = 4 from (t4.mp g4), ↓reduceIte]
     exact arm.1 g4 hb
-  have g4' : ¬ (h >>> 28).toUInt32 = 4 := fun e => g4 (t4.mpr e)
-  by_cases g5 : h >>> 28 = 5
+  have g4' : ¬ (tagW h).toUInt32 = 4 := fun e => g4 (t4.mpr e)
+  by_cases g5 : tagW h = 5
   · rw [absNodeW.arm2 n m h k d fu g4 g5] at hb
-    simp only [show (h >>> 28).toUInt32 = 5 from (t5.mp g5), true_or, ↓reduceIte]
+    simp only [show (tagW h).toUInt32 = 5 from (t5.mp g5), true_or, ↓reduceIte]
     exact arm.2.1 g5 hb
-  have g5' : ¬ (h >>> 28).toUInt32 = 5 := fun e => g5 (t5.mpr e)
-  by_cases g6 : h >>> 28 = 6
+  have g5' : ¬ (tagW h).toUInt32 = 5 := fun e => g5 (t5.mpr e)
+  by_cases g6 : tagW h = 6
   · rw [absNodeW.arm3 n m h k d fu g4 g5 g6] at hb
-    simp only [show (h >>> 28).toUInt32 = 6 from (t6.mp g6), or_true, ↓reduceIte]
+    simp only [show (tagW h).toUInt32 = 6 from (t6.mp g6), or_true, ↓reduceIte]
     exact arm.2.2.1 g6 hb
-  have g6' : ¬ (h >>> 28).toUInt32 = 6 := fun e => g6 (t6.mpr e)
+  have g6' : ¬ (tagW h).toUInt32 = 6 := fun e => g6 (t6.mpr e)
   simp only [g4', g5', g6', or_self, ↓reduceIte]
-  by_cases g1 : h >>> 28 = 1
-  · simp only [show (h >>> 28).toUInt32 = 1 from (t1.mp g1), ↓reduceIte]
+  by_cases g1 : tagW h = 1
+  · simp only [show (tagW h).toUInt32 = 1 from (t1.mp g1), ↓reduceIte]
     have hs : ¬ (tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0) := fun hs => by
       rw [absNodeW.abort1 n m h k d fu g4 g5 g6 g1 hs] at hb; cases hb
     have hv : viewOK m h FVAR := ⟨hs, UInt64.not_le.mp fun hc => by
@@ -620,19 +620,19 @@ theorem anodeOK_succ (n : Nat) (ih : AArmOK n) : ANodeOK (n + 1) := by
       have he' : ¬ (tfld m FVAR (tierW h) (idxW h) 0).toNat = d.toNat :=
         fun e => he (UInt64.toNat_inj.mp e)
       simp only [he', ↓reduceIte]; exact ⟨a, rfl, hA⟩
-  have g1' : ¬ (h >>> 28).toUInt32 = 1 := fun e => g1 (t1.mpr e)
+  have g1' : ¬ (tagW h).toUInt32 = 1 := fun e => g1 (t1.mpr e)
   simp only [g1', ↓reduceIte]
-  by_cases g7 : h >>> 28 = 7
+  by_cases g7 : tagW h = 7
   · rw [absNodeW.arm6 n m h k d fu g4 g5 g6 g1 g7] at hb
-    simp only [show (h >>> 28).toUInt32 = 7 from (t7.mp g7), ↓reduceIte]
+    simp only [show (tagW h).toUInt32 = 7 from (t7.mp g7), ↓reduceIte]
     exact arm.2.2.2.1 g7 hb
-  have g7' : ¬ (h >>> 28).toUInt32 = 7 := fun e => g7 (t7.mpr e)
+  have g7' : ¬ (tagW h).toUInt32 = 7 := fun e => g7 (t7.mpr e)
   simp only [g7', ↓reduceIte]
-  by_cases g9 : h >>> 28 = 9
+  by_cases g9 : tagW h = 9
   · rw [absNodeW.arm7 n m h k d fu g4 g5 g6 g1 g7 g9] at hb
-    simp only [show (h >>> 28).toUInt32 = 9 from (t9.mp g9), ↓reduceIte]
+    simp only [show (tagW h).toUInt32 = 9 from (t9.mp g9), ↓reduceIte]
     exact arm.2.2.2.2 g9 hb
-  have g9' : ¬ (h >>> 28).toUInt32 = 9 := fun e => g9 (t9.mpr e)
+  have g9' : ¬ (tagW h).toUInt32 = 9 := fun e => g9 (t9.mpr e)
   simp only [g9', ↓reduceIte]
   rw [absNodeW.arm8 n m h k d fu g4 g5 g6 g1 g7 g9] at hb
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hb)
@@ -645,7 +645,7 @@ variable (n : Nat) (ih : AGoOK n) (m m' : Mem) (a : AState) (hA : ArenaA m a)
   (h k d fu r : Word) (hh : h.toNat < 2 ^ 32)
 include ih hA hh
 
-theorem aappArm_ok (hg : h >>> 28 = 4) :
+theorem aappArm_ok (hg : tagW h = 4) :
     AArmRef (n + 1) absAppW (abstract1ArmApp d.toNat fu.toNat (decE h) k.toNat) m m' a h k d fu r := by
   intro hb
   rw [abstract1ArmApp]
@@ -677,7 +677,7 @@ theorem aappArm_ok (hg : h >>> 28 = 4) :
       simp [e1, e2]
     · simp [e1]) hb
 
-theorem alamArm_ok (hg : h >>> 28 = 5) :
+theorem alamArm_ok (hg : tagW h = 5) :
     AArmRef (n + 1) absLamW (abstract1ArmBind d.toNat fu.toNat (decE h) k.toNat) m m' a h k d fu r := by
   intro hb
   have hk1 : ¬ k + 1 = 0 := fun hk1 => by rw [absLamW.abort1 n m h k d fu hk1] at hb; cases hb
@@ -714,7 +714,7 @@ theorem alamArm_ok (hg : h >>> 28 = 5) :
       simp [e1, e2]
     · simp [e1]) hb
 
-theorem aforallArm_ok (hg : h >>> 28 = 6) :
+theorem aforallArm_ok (hg : tagW h = 6) :
     AArmRef (n + 1) absForallW (abstract1ArmBind d.toNat fu.toNat (decE h) k.toNat) m m' a h k d fu r := by
   intro hb
   have hk1 : ¬ k + 1 = 0 := fun hk1 => by rw [absForallW.abort1 n m h k d fu hk1] at hb; cases hb
@@ -751,7 +751,7 @@ theorem aforallArm_ok (hg : h >>> 28 = 6) :
       simp [e1, e2]
     · simp [e1]) hb
 
-theorem aletArm_ok (hg : h >>> 28 = 7) :
+theorem aletArm_ok (hg : tagW h = 7) :
     AArmRef (n + 1) absLetW (abstract1ArmLet d.toNat fu.toNat (decE h) k.toNat) m m' a h k d fu r := by
   intro hb
   have hk1 : ¬ k + 1 = 0 := fun hk1 => by rw [absLetW.abort1 n m h k d fu hk1] at hb; cases hb
@@ -792,7 +792,7 @@ theorem aletArm_ok (hg : h >>> 28 = 7) :
       · simp [e1, e2]
     · simp [e1]) hb
 
-theorem aprojArm_ok (hg : h >>> 28 = 9) :
+theorem aprojArm_ok (hg : tagW h = 9) :
     AArmRef (n + 1) absProjW (abstract1ArmProj d.toNat fu.toNat (decE h) k.toNat) m m' a h k d fu r := by
   intro hb
   rw [abstract1ArmProj]

@@ -59,12 +59,12 @@ def ilW : Nat → Mem → Word → Word → Word → Word → Word → Option (W
   | n + 1, m, h, d, o, l, fu =>
     if fu = 0 then none
     else if derBW m h < 32767 ∧ derBW m h ≤ d then some (h, m)
-    else if h >>> 28 = 4 then ilAppW n m h d o l (fu - 1)
-    else if h >>> 28 = 5 then ilLamW n m h d o l (fu - 1)
-    else if h >>> 28 = 6 then ilForallW n m h d o l (fu - 1)
-    else if h >>> 28 = 7 then ilLetW n m h d o l (fu - 1)
-    else if h >>> 28 = 9 then ilProjW n m h d o l (fu - 1)
-    else if h >>> 28 = 0 then ilBVarW n m h d o l (fu - 1)
+    else if tagW h = 4 then ilAppW n m h d o l (fu - 1)
+    else if tagW h = 5 then ilLamW n m h d o l (fu - 1)
+    else if tagW h = 6 then ilForallW n m h d o l (fu - 1)
+    else if tagW h = 7 then ilLetW n m h d o l (fu - 1)
+    else if tagW h = 9 then ilProjW n m h d o l (fu - 1)
+    else if tagW h = 0 then ilBVarW n m h d o l (fu - 1)
     else some (h, m)
 
 /-- **The model of `il_app`.** -/
@@ -177,12 +177,12 @@ def ilgW : Nat → Mem → Word → Word → Word → Word → Word → Option (
   | n + 1, m, h, d, o, l, fu =>
     if fu = 0 then none
     else if derBW m h < 32767 ∧ derBW m h ≤ d then some (h, m)
-    else if h >>> 28 = 4 then ilgAppW n m h d o l (fu - 1)
-    else if h >>> 28 = 5 then ilgLamW n m h d o l (fu - 1)
-    else if h >>> 28 = 6 then ilgForallW n m h d o l (fu - 1)
-    else if h >>> 28 = 7 then ilgLetW n m h d o l (fu - 1)
-    else if h >>> 28 = 9 then ilgProjW n m h d o l (fu - 1)
-    else if h >>> 28 = 0 then ilW n m h d o l (fu - 1)
+    else if tagW h = 4 then ilgAppW n m h d o l (fu - 1)
+    else if tagW h = 5 then ilgLamW n m h d o l (fu - 1)
+    else if tagW h = 6 then ilgForallW n m h d o l (fu - 1)
+    else if tagW h = 7 then ilgLetW n m h d o l (fu - 1)
+    else if tagW h = 9 then ilgProjW n m h d o l (fu - 1)
+    else if tagW h = 0 then ilW n m h d o l (fu - 1)
     else some (h, m)
 
 /-- **The model of `ilg_app`.** -/
@@ -397,48 +397,48 @@ abbrev ilCut (m : Mem) (h d : Word) : Prop := derBW m h < 32767 ∧ derBW m h �
 
 theorem ilW_cut (hf : fu ≠ 0) (hc : ilCut m h d) : ilW (n + 1) m h d o l fu = some (h, m) := by
   rw [ilW]; simp only [hf, hc, and_self, ↓reduceIte]
-theorem ilW_app (hf : fu ≠ 0) (hc : ¬ ilCut m h d) (hg : h >>> 28 = 4) : ilW (n + 1) m h d o l fu = ilAppW n m h d o l (fu - 1) := by
+theorem ilW_app (hf : fu ≠ 0) (hc : ¬ ilCut m h d) (hg : tagW h = 4) : ilW (n + 1) m h d o l fu = ilAppW n m h d o l (fu - 1) := by
   rw [ilW]; simp [hf, hc, hg]
-theorem ilW_lam (hf : fu ≠ 0) (hc : ¬ ilCut m h d) (hg : h >>> 28 = 5) : ilW (n + 1) m h d o l fu = ilLamW n m h d o l (fu - 1) := by
+theorem ilW_lam (hf : fu ≠ 0) (hc : ¬ ilCut m h d) (hg : tagW h = 5) : ilW (n + 1) m h d o l fu = ilLamW n m h d o l (fu - 1) := by
   rw [ilW]; simp [hf, hc, hg]
-theorem ilW_forall (hf : fu ≠ 0) (hc : ¬ ilCut m h d) (hg : h >>> 28 = 6) :
+theorem ilW_forall (hf : fu ≠ 0) (hc : ¬ ilCut m h d) (hg : tagW h = 6) :
     ilW (n + 1) m h d o l fu = ilForallW n m h d o l (fu - 1) := by
   rw [ilW]; simp [hf, hc, hg]
-theorem ilW_let (hf : fu ≠ 0) (hc : ¬ ilCut m h d) (hg : h >>> 28 = 7) : ilW (n + 1) m h d o l fu = ilLetW n m h d o l (fu - 1) := by
+theorem ilW_let (hf : fu ≠ 0) (hc : ¬ ilCut m h d) (hg : tagW h = 7) : ilW (n + 1) m h d o l fu = ilLetW n m h d o l (fu - 1) := by
   rw [ilW]; simp [hf, hc, hg]
-theorem ilW_proj (hf : fu ≠ 0) (hc : ¬ ilCut m h d) (hg : h >>> 28 = 9) :
+theorem ilW_proj (hf : fu ≠ 0) (hc : ¬ ilCut m h d) (hg : tagW h = 9) :
     ilW (n + 1) m h d o l fu = ilProjW n m h d o l (fu - 1) := by
   rw [ilW]; simp [hf, hc, hg]
-theorem ilW_bvar (hf : fu ≠ 0) (hc : ¬ ilCut m h d) (hg : h >>> 28 = 0) :
+theorem ilW_bvar (hf : fu ≠ 0) (hc : ¬ ilCut m h d) (hg : tagW h = 0) :
     ilW (n + 1) m h d o l fu = ilBVarW n m h d o l (fu - 1) := by
   rw [ilW]; simp [hf, hc, hg]
-theorem ilW_leaf (hf : fu ≠ 0) (hc : ¬ ilCut m h d) (h0 : h >>> 28 ≠ 0) (h4 : h >>> 28 ≠ 4) (h5 : h >>> 28 ≠ 5)
-    (h6 : h >>> 28 ≠ 6) (h7 : h >>> 28 ≠ 7) (h9 : h >>> 28 ≠ 9) :
+theorem ilW_leaf (hf : fu ≠ 0) (hc : ¬ ilCut m h d) (h0 : tagW h ≠ 0) (h4 : tagW h ≠ 4) (h5 : tagW h ≠ 5)
+    (h6 : tagW h ≠ 6) (h7 : tagW h ≠ 7) (h9 : tagW h ≠ 9) :
     ilW (n + 1) m h d o l fu = some (h, m) := by
   rw [ilW]; simp [hf, hc, h0, h4, h5, h6, h7, h9]
 
 theorem ilgW_cut (hf : fu ≠ 0) (hc : ilCut m h d) : ilgW (n + 1) m h d o l fu = some (h, m) := by
   rw [ilgW]; simp only [hf, hc, and_self, ↓reduceIte]
-theorem ilgW_app (hf : fu ≠ 0) (hc : ¬ ilCut m h d) (hg : h >>> 28 = 4) :
+theorem ilgW_app (hf : fu ≠ 0) (hc : ¬ ilCut m h d) (hg : tagW h = 4) :
     ilgW (n + 1) m h d o l fu = ilgAppW n m h d o l (fu - 1) := by
   rw [ilgW]; simp [hf, hc, hg]
-theorem ilgW_lam (hf : fu ≠ 0) (hc : ¬ ilCut m h d) (hg : h >>> 28 = 5) :
+theorem ilgW_lam (hf : fu ≠ 0) (hc : ¬ ilCut m h d) (hg : tagW h = 5) :
     ilgW (n + 1) m h d o l fu = ilgLamW n m h d o l (fu - 1) := by
   rw [ilgW]; simp [hf, hc, hg]
-theorem ilgW_forall (hf : fu ≠ 0) (hc : ¬ ilCut m h d) (hg : h >>> 28 = 6) :
+theorem ilgW_forall (hf : fu ≠ 0) (hc : ¬ ilCut m h d) (hg : tagW h = 6) :
     ilgW (n + 1) m h d o l fu = ilgForallW n m h d o l (fu - 1) := by
   rw [ilgW]; simp [hf, hc, hg]
-theorem ilgW_let (hf : fu ≠ 0) (hc : ¬ ilCut m h d) (hg : h >>> 28 = 7) :
+theorem ilgW_let (hf : fu ≠ 0) (hc : ¬ ilCut m h d) (hg : tagW h = 7) :
     ilgW (n + 1) m h d o l fu = ilgLetW n m h d o l (fu - 1) := by
   rw [ilgW]; simp [hf, hc, hg]
-theorem ilgW_proj (hf : fu ≠ 0) (hc : ¬ ilCut m h d) (hg : h >>> 28 = 9) :
+theorem ilgW_proj (hf : fu ≠ 0) (hc : ¬ ilCut m h d) (hg : tagW h = 9) :
     ilgW (n + 1) m h d o l fu = ilgProjW n m h d o l (fu - 1) := by
   rw [ilgW]; simp [hf, hc, hg]
-theorem ilgW_bvar (hf : fu ≠ 0) (hc : ¬ ilCut m h d) (hg : h >>> 28 = 0) :
+theorem ilgW_bvar (hf : fu ≠ 0) (hc : ¬ ilCut m h d) (hg : tagW h = 0) :
     ilgW (n + 1) m h d o l fu = ilW n m h d o l (fu - 1) := by
   rw [ilgW]; simp [hf, hc, hg]
-theorem ilgW_leaf (hf : fu ≠ 0) (hc : ¬ ilCut m h d) (h0 : h >>> 28 ≠ 0) (h4 : h >>> 28 ≠ 4) (h5 : h >>> 28 ≠ 5)
-    (h6 : h >>> 28 ≠ 6) (h7 : h >>> 28 ≠ 7) (h9 : h >>> 28 ≠ 9) :
+theorem ilgW_leaf (hf : fu ≠ 0) (hc : ¬ ilCut m h d) (h0 : tagW h ≠ 0) (h4 : tagW h ≠ 4) (h5 : tagW h ≠ 5)
+    (h6 : tagW h ≠ 6) (h7 : tagW h ≠ 7) (h9 : tagW h ≠ 9) :
     ilgW (n + 1) m h d o l fu = some (h, m) := by
   rw [ilgW]; simp [hf, hc, h0, h4, h5, h6, h7, h9]
 
@@ -610,7 +610,7 @@ def ilGo : FunDecl := lfn (h, d, o, l, fu) locals (x, g, r) {
   if fu == 0 { abort };
   x := call der_bv(h);
   if x < 32767 && x <= d { return h };
-  g := h >> 28;
+  g := ⟦h⟧.tag;
   if g == 4 { r := call il_app(h, d, o, l, fu - 1); return r };
   if g == 5 { r := call il_lam(h, d, o, l, fu - 1); return r };
   if g == 6 { r := call il_forall(h, d, o, l, fu - 1); return r };
@@ -711,7 +711,7 @@ def ilgGo : FunDecl := lfn (h, d, o, l, fu) locals (x, g, r) {
   if fu == 0 { abort };
   x := call der_bv(h);
   if x < 32767 && x <= d { return h };
-  g := h >> 28;
+  g := ⟦h⟧.tag;
   if g == 4 { r := call ilg_app(h, d, o, l, fu - 1); return r };
   if g == 5 { r := call ilg_lam(h, d, o, l, fu - 1); return r };
   if g == 6 { r := call ilg_forall(h, d, o, l, fu - 1); return r };

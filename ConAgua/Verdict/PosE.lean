@@ -231,7 +231,7 @@ def BindRef (n : Nat) : Prop :=
     (NS : NestState) (ctxP : ConLeche.NestCtx) (progP : List ConLeche.NestHole)
     (wP : ConLeche.Expr) (nsP : ConLeche.NestState),
     StageC dn vis fe env m a →
-    WCtx dn vis fe m ctx po pl c prog → H w → w >>> 28 = 6 → NSB m ns NS → PosMR m → AbsOK m →
+    WCtx dn vis fe m ctx po pl c prog → H w → tagW w = 6 → NSB m ns NS → PosMR m → AbsOK m →
     ConLeche.NestCtxOk ctxP → dCtx a.store env.find? c = some ctxP → dProg a.store prog = some progP →
     denoteE a.store (decI w) = some wP → dState a.store NS = some nsP →
     ConLeche.Expr.WScoped dep.toNat wP →

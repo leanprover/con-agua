@@ -80,7 +80,7 @@ def listTyOkL : FunDecl := lfn (found, p) locals (lo, ll, ty, pl, so, g, d, b, z
   (lo, ll, ty) := call str_cv(p);
   if ll != 1 { return 0 };
   (pl, so) := call str_param_sort(EREC.u64[lo]);
-  if ty >> 28 != 6 { return 0 };
+  if ⟦ty⟧.tag != 6 { return 0 };
   (g, d, b, z) := call e_view(ty);
   if d == so && b == so { return 1 };
   return 0
@@ -97,14 +97,14 @@ def listNilTyOkL : FunDecl :=
   (pl, so) := call str_param_sort(EREC.u64[lo]);
   ps := call str_ls1(pl);
   li := call pin_at(7);
-  if ty >> 28 != 6 { return 0 };
+  if ⟦ty⟧.tag != 6 { return 0 };
   (g, d, b, z) := call e_view(ty);
   if d != so { return 0 };
-  if b >> 28 != 4 { return 0 };
+  if ⟦b⟧.tag != 4 { return 0 };
   (g, f, x, z) := call e_view(b);
-  if f >> 28 != 3 { return 0 };
+  if ⟦f⟧.tag != 3 { return 0 };
   (g, l1, u1, z) := call e_view(f);
-  if x >> 28 != 0 { return 0 };
+  if ⟦x⟧.tag != 0 { return 0 };
   (g, i, y, w) := call e_view(x);
   if i != 0 { return 0 };
   if l1 == li && u1 == ps { return 1 };
@@ -130,13 +130,13 @@ def listConsTyOkL : FunDecl :=
   l1 := call intern_const(li, ps);
   dom3 := call mk_app(l1, b1);
   cod3 := call mk_app(l1, b2);
-  if ty >> 28 != 6 { return 0 };
+  if ⟦ty⟧.tag != 6 { return 0 };
   (g, d, r, z) := call e_view(ty);
   if d != so { return 0 };
-  if r >> 28 != 6 { return 0 };
+  if ⟦r⟧.tag != 6 { return 0 };
   (g, d2, r2, z) := call e_view(r);
   if d2 != b0 { return 0 };
-  if r2 >> 28 != 6 { return 0 };
+  if ⟦r2⟧.tag != 6 { return 0 };
   (g, d3, c3, z) := call e_view(r2);
   if d3 == dom3 && c3 == cod3 { return 1 };
   return 0
@@ -153,7 +153,7 @@ def charOfNatTyOkL : FunDecl := lfn (found, p) locals (lo, ll, ty, nt, nc, ch, c
   nc := call const_e(nt);
   ch := call pin_at(10);
   cc := call const_e(ch);
-  if ty >> 28 != 6 { return 0 };
+  if ⟦ty⟧.tag != 6 { return 0 };
   (g, d, b, z) := call e_view(ty);
   if d == nc && b == cc { return 1 };
   return 0
@@ -176,7 +176,7 @@ def stringOfListTyOkL : FunDecl :=
   dom := call mk_app(lc, cc);
   st := call pin_at(5);
   sc := call const_e(st);
-  if ty >> 28 != 6 { return 0 };
+  if ⟦ty⟧.tag != 6 { return 0 };
   (g, d, b, z) := call e_view(ty);
   if d == dom && b == sc { return 1 };
   return 0
@@ -353,7 +353,7 @@ after the prefix, so at the memory the spine reads) gives the bytes' pool slice.
 def strLitCtorL : FunDecl :=
   lfn (h) locals (cons, ofNat, nilE, t, i, o, cnt, spine, slN, sl, r) {
   (cons, ofNat, nilE) := call str_ctor_pre();
-  if h >> 28 != 8 { abort };
+  if ⟦h⟧.tag != 8 { abort };
   (t, i) := node LIT⟦h⟧;
   if LIT⟨t, i⟩.kind != 1 { abort };
   o := LIT⟨t, i⟩.o;

@@ -363,7 +363,7 @@ def strCtorW (p : Prog) (n : Nat) (m : Mem) (h : Word) : Option (Word × Mem) :=
   match callW p n "str_ctor_pre" [] m with
   | none => none
   | some (t, m₁) =>
-  if h >>> 28 ≠ 8 then none
+  if tagW h ≠ 8 then none
   else if tierW h ≠ 0 ∧ rdW (m₁.arr64 CTL) 1 = 0 then none
   else if tcnt m₁ LIT (tierW h) ≤ idxW h then none
   else if tfld m₁ LIT (tierW h) (idxW h) 0 ≠ 1 then none
@@ -393,7 +393,7 @@ theorem strLitCtor_spec (p : Prog) (hp : p.lookup "str_lit_ctor" = some strLitCt
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       callW_spec p n "str_ctor_pre", callW_spec p n "str_cons_spine", callW_spec p n "pin_at",
       callW_spec p n "const_e", callW_spec p n "mk_app", evalE_tld, tld, evalE_cnt, tcntM,
-        evalE_tierE, evalE_idxE] <;>
+        evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE] <;>
     finish (gen := 20) [strCtorW, tierW, idxW]
 
 section ctor
@@ -411,7 +411,7 @@ theorem ctor_call (hS : CoreS dn m a vis fe M eb) {h : Word} (hh : HW h) {s : St
   obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩) (strLitCtor_spec p hp.strLitCtor n _ h) hc
   unfold strCtorW at hW
   wstep hW, h1 : callW p n "str_ctor_pre" [] m => t, m₁
-  by_cases g8 : h >>> 28 ≠ 8
+  by_cases g8 : tagW h ≠ 8
   · rw [ite_eq_left g8] at hW; cases hW
   rw [ite_eq_right g8] at hW
   by_cases gs : tierW h ≠ 0 ∧ rdW (m₁.arr64 CTL) 1 = 0
@@ -438,7 +438,7 @@ theorem ctor_call (hS : CoreS dn m a vis fe M eb) {h : Word} (hh : HW h) {s : St
   -- the literal is still there, and its record gives the bytes
   have hv₁ : (AM.st ctorPreT a).store.view (decE h) = some (.lit (.strVal s)) :=
     vmono_ctorPreT.run (AM.run_of_ok _ _ c1.run) hv
-  have g8' : h >>> 28 = 8 := by simpa using g8
+  have g8' : tagW h = 8 := by simpa using g8
   have hvOK : viewOK m₁ h LIT := ⟨gs, by simpa using gb⟩
   obtain ⟨htop, -, hstr⟩ := lit_rec m₁ _ hS₁.arena.base h hh hvOK g8' _ hv₁
   obtain ⟨-, hsl⟩ := hstr s rfl

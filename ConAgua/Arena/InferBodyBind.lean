@@ -457,7 +457,7 @@ theorem lamsLoop_ref (p : Prog) (hp : InferLeafProg p) (hq : BindProg p) (hb : I
     have haddd : (d + k).toNat = d.toNat + k.toNat := addW _ _ (by omega)
     have hftop : fo.toNat + k.toNat ≤ (spTop m).toNat := by rw [htop, haddf]; exact Nat.le_refl _
     have hbtop : lo.toNat + k.toNat ≤ (bTop m).toNat := by rw [hbt, haddl]; exact Nat.le_refl _
-    by_cases hc : peel ≠ 0 ∧ t >>> 28 = 5
+    by_cases hc : peel ≠ 0 ∧ tagW t = 5
     · rw [ite_eq_left hc]
       obtain ⟨hp0, ht5⟩ := hc
       refine RefE.underIf (fun _ => rfl) (RefE.abort0 (by rfl) fun hc1 => ?_)
@@ -546,7 +546,7 @@ theorem lamsLoop_ref (p : Prog) (hp : InferLeafProg p) (hq : BindProg p) (hb : I
           k.toNat fvs (ws.map decE)).run a := by
         by_cases hp0 : peel = 0
         · subst hp0; rfl
-        · have ht5 : ¬ t >>> 28 = 5 := fun h => hc ⟨hp0, h⟩
+        · have ht5 : ¬ tagW t = 5 := fun h => hc ⟨hp0, h⟩
           obtain ⟨p', hp'⟩ : ∃ p', peel.toNat = p' + 1 :=
             ⟨peel.toNat - 1, by
               have : peel.toNat ≠ 0 := fun h' => hp0 (UInt64.toNat_inj.mp (by simpa using h')); omega⟩

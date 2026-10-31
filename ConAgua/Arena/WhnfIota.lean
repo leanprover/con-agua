@@ -53,7 +53,7 @@ namespace L.Arena
 @[l_impl ConRon.Arena.isCtorApp]
 def isCtorAppL : FunDecl := lfn (vis, e) locals (hh, t, i, c, flag, q) {
   hh := call get_app_fn(e);
-  if hh >> 28 != 3 { return 0 };
+  if ⟦hh⟧.tag != 3 { return 0 };
   (t, i) := node CONST⟦hh⟧;
   c := CONST⟨t, i⟩.n;
   (flag, q) := call env_find(c, vis);
@@ -65,7 +65,7 @@ def isCtorAppL : FunDecl := lfn (vis, e) locals (hh, t, i, c, flag, q) {
 -- con-ron: ConRon/Arena/Core.lean:1909-1917 ConRon.Arena.isStrLit
 @[l_impl ConRon.Arena.isStrLit]
 def isStrLitL : FunDecl := lfn (h) locals (t, i) {
-  if h >> 28 != 8 { return 0 };
+  if ⟦h⟧.tag != 8 { return 0 };
   (t, i) := node LIT⟦h⟧;
   return u64(LIT⟨t, i⟩.kind == 1)
 }
@@ -156,7 +156,7 @@ def iotaCtorNeverPropL : FunDecl := lfn (vis, ctorP, us)
   ty := call e_rec_get(ctorP + 4);
   piRes := call pi_result(ty);
   hh := call get_app_fn(piRes);
-  if hh >> 28 != 3 { return 0 };
+  if ⟦hh⟧.tag != 3 { return 0 };
   T := call const_name_of(hh);
   (indFlag, indP) := call env_find(T, vis);
   if indFlag == 0 { return 0 };
@@ -282,7 +282,7 @@ literal to its reduced constructor form. -/
 -- con-ron: ConRon/Arena/Core.lean:1828-1841 ConRon.Arena.litMajorToCtor
 @[l_impl ConRon.Arena.litMajorToCtor]
 def litMajorToCtorL : FunDecl := lfn (mode, vis, d, h) locals (t, i, kind, sup, c, r) {
-  if h >> 28 != 8 { r := call lit_to_ctor_if_nat(vis, h); return r };
+  if ⟦h⟧.tag != 8 { r := call lit_to_ctor_if_nat(vis, h); return r };
   (t, i) := node LIT⟦h⟧;
   kind := LIT⟨t, i⟩.kind;
   if kind != 1 { r := call lit_to_ctor_if_nat(vis, h); return r };
@@ -350,7 +350,7 @@ def prepareMajorL : FunDecl := lfn (mode, vis, d, rec, ro, rc, major)
 /-- The telescope walk of `pi_residual` (a named block, for the proofs). -/
 def piResidualLoop : Stmt := lblk (e, ao, an, i, t, x, body, b2) {
   for i < an {
-    if e >> 28 != 6 { return (0, 0) };
+    if ⟦e⟧.tag != 6 { return (0, 0) };
     (t, x) := node FORALL⟦e⟧;
     body := FORALL⟨t, x⟩.b;
     b2 := call inst_entry(body, SPN.u64[ao + i], 0);
@@ -423,7 +423,7 @@ def proofIrrelHalfL : FunDecl := lfn (mode, vis, d, x)
   ta := call infer_io(mode, vis, d, x);
   tta := call infer_io(mode, vis, d, ta);
   hh := call whnf(mode, vis, d, tta);
-  if hh >> 28 != 2 { return 0 };
+  if ⟦hh⟧.tag != 2 { return 0 };
   (t, i) := node SORT⟦hh⟧;
   uT := SORT⟨t, i⟩.u;
   z := call pin_word(53);
@@ -562,7 +562,7 @@ fails there); returns `0`. -/
 def exprViewOkL : FunDecl := lfn (h) locals (t, x, g, c) {
   t := ⟦h⟧.tier;
   x := ⟦h⟧.idx;
-  g := h >> 28;
+  g := ⟦h⟧.tag;
   if t != 0 && CTL.u64[1] == 0 { abort };
   c := 0;
   if g == 0 { c := BVAR⟨t⟩.count } else {
@@ -633,11 +633,11 @@ intervenes between a growth and the next read, so it stays contiguous. -/
 @[l_impl ConRon.Arena.iotaCertsFullAux]
 def iotaCertsFullAuxL : FunDecl := lfn (mode, vis, d, h, aco, acn, ao, an, i) locals (dum) {
   if i < an {
-    if h >> 28 == 6 {
+    if ⟦h⟧.tag == 6 {
       dum := call iota_certs_full_forall(mode, vis, d, h, aco, acn, ao, an, i);
       return dum
     };
-    if h >> 28 == 0 {
+    if ⟦h⟧.tag == 0 {
       dum := call iota_certs_full_flush(mode, vis, d, h, aco, acn, ao, an, i);
       return dum
     };

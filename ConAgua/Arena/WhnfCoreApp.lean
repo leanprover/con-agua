@@ -332,7 +332,7 @@ theorem SpineR.push {m : Mem} {off cnt : Word} {xs : Array EIdx} (h : SpineR m o
 /-- The loop of `betaPeelL` (WhnfCore.lean), named for its spec. -/
 def betaPeelW : Stmt := lblk (t, a, ao, an, i, co, cn, tt, x, e2, e3) {
   for i < an {
-    if t >> 28 != 5 {
+    if ⟦t⟧.tag != 5 {
       e2 := call inst_list(t, co, cn, 0);
       e3 := call mk_app_n_from(e2, ao, an, i);
       CTL.u64[136] := co;
@@ -375,7 +375,7 @@ def peelLoop (p : Prog) : Nat → Mem → Word → Word → Word → Word → Wo
   | 0, _, _, _, _, _, _, _ => none
   | k + 1, m, t, ao, an, i, co, cn =>
     if i < an then
-      if t >>> 28 ≠ 5 then
+      if tagW t ≠ 5 then
         match callW p k "inst_list" [t, co, cn, 0] m with
         | none => none
         | some (r₁, m₁) =>
@@ -408,7 +408,7 @@ theorem betaPeelW_spec (p : Prog) (n : Nat) (s₀ : St) :
     rw [exec, step_while (w := betaPeelW) rfl]
     sym only [lang_grind, arena_grind] =>
       vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt, tcntM,
-        evalE_tierE, evalE_idxE, st64, ih,
+        evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE, st64, ih,
         callW_spec p n "inst_list", callW_spec p n "mk_app_n_from"] <;>
       finish [peelLoop, tierW, idxW, LoopOut.ofSig]
 
@@ -474,7 +474,7 @@ theorem peelFull_exit (p : Prog) (n k : Nat) (m : Mem) (t ao an i co cn : Word) 
   simp [peelFull, peelLoop, h]
 
 theorem peelFull_ret (p : Prog) (n k : Nat) (m : Mem) (t ao an i co cn : Word) (h : i < an)
-    (ht : t >>> 28 ≠ 5) :
+    (ht : tagW t ≠ 5) :
     peelFull p n (k + 1) m t ao an i co cn =
       (match callW p k "inst_list" [t, co, cn, 0] m with
         | none => none
@@ -491,7 +491,7 @@ theorem peelFull_ret (p : Prog) (n k : Nat) (m : Mem) (t ao an i co cn : Word) (
     · simp
 
 theorem peelFull_step (p : Prog) (n k : Nat) (m : Mem) (t ao an i co cn : Word) (h : i < an)
-    (ht : ¬ t >>> 28 ≠ 5) (h1 : ¬ (tierW t ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0))
+    (ht : ¬ tagW t ≠ 5) (h1 : ¬ (tierW t ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0))
     (h2 : ¬ tcnt m LAM (tierW t) ≤ idxW t) (h3 : ¬ m.len64 SPN ≤ co + cn) :
     peelFull p n (k + 1) m t ao an i co cn =
       peelFull p n k ((m.set64 SPN (co + cn) (rdW (m.arr64 SPN) (ao + i))).set64 CTL 136
@@ -559,7 +559,7 @@ theorem peelFull_ref (p : Prog) (hp : SpineProg p) (hil : InstListOK p) (n : Nat
     have har : SpineR m ao an args :=
       har₀.keepT co hsz hb hlo (hsz ▸ hspn)
     by_cases hlt : i < an
-    · by_cases ht5 : t >>> 28 = 5
+    · by_cases ht5 : tagW t = 5
       · -- the λ step: the argument is pushed and the loop goes on with the body
         have hc1 : ¬ (tierW t ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0) := fun h => by
           simp [peelFull, peelLoop, hlt, ht5, h] at hF

@@ -176,7 +176,7 @@ theorem spLoop_ref (p : Prog) (hp : InferLeafProg p) (hkp : KnotProg p) (hq : Sp
       have hvv : HW (spW m (ao + i)) := by
         have h := har.lt i.toNat (by rw [← har.size]; exact hlt'); rwa [hit] at h
       have hi1 := succ_toNat_of_lt hlt
-      by_cases ht6 : ty >>> 28 = 6
+      by_cases ht6 : tagW ty = 6
       · -- the ∀ step: the domain opened, the argument checked and pushed
         rw [ite_eq_left ht6]
         refine RefE.underIf (fun _ => rfl) (RefE.abort0 (by rfl) fun c1 => ?_)
@@ -238,7 +238,7 @@ theorem spLoop_ref (p : Prog) (hp : InferLeafProg p) (hkp : KnotProg p) (hq : Sp
         refine RefE.underIf (fun _ => rfl) (RefE.guardIf (by rfl)
           (fun g => (decE_tag_forallE_beq _ hrw2).trans (decide_eq_false g))
           (fun hb => of_decide_eq_false ((decE_tag_forallE_beq _ hrw2).symm.trans hb)) fun g1 _ => ?_)
-        have g1' : r₂.headD 0 >>> 28 = 6 := by simpa using g1
+        have g1' : tagW (r₂.headD 0) = 6 := by simpa using g1
         refine RefE.underIf (fun _ => rfl) (RefE.abort0 (by rfl) fun g2 => ?_)
         refine RefE.underIf (fun _ => rfl) (RefE.abort0 (by rfl) fun g3 => ?_)
         have hv : viewOK m₂ (r₂.headD 0) FORALL := ⟨g2, UInt64.not_le.mp g3⟩
@@ -364,7 +364,7 @@ theorem a_ref (p : Prog) (hp : InferLeafProg p) (hkp : KnotProg p) (hq : SpineFP
     (F : Nat) (hF : n ≤ F) (hn : n ≤ 2 ^ 62)
     (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (M : ModeMaps) (eb mode d e : Word) (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (hHe : HW e)
-    (h4 : e >>> 28 = 4) :
+    (h4 : tagW e = 4) :
     RefE (InferG p n) (aE p (n + 1) s₀.mem mode vis d e)
       (inferApp (coreKnot (decMode mode) fe id F) fe d.toNat (decE e)) a₀
       (CorePost decH dn s₀.mem vis fe M eb ResH) := by
@@ -410,7 +410,7 @@ theorem inferApp_refines (p : Prog) (hp : InferLeafProg p) (hkp : KnotProg p) (h
     (F : Nat) (hF : n ≤ F) (hn : n ≤ 2 ^ 62)
     (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (M : ModeMaps) (eb mode d e : Word) (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (hHe : HW e)
-    (h4 : e >>> 28 = 4) :
+    (h4 : tagW e = 4) :
     CoreSpec p (n + 1) "infer_app" [mode, vis, d, e]
       (inferApp (coreKnot (decMode mode) fe id F) fe d.toNat (decE e)) decH s₀ a₀ dn vis fe M eb :=
   RefE.coreSpec (aE_spec p hq.app (n + 1) s₀ mode vis d e)

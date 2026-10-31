@@ -69,7 +69,7 @@ con-ron: ConRon/Arena/ExprOps.lean:1005-1015 ConRon.Arena.wscopedBGoArmLet -/
 @[l_impl ConRon.Arena.wscopedBGo ConRon.Arena.wscopedBGoArmApp ConRon.Arena.wscopedBGoArmBind
   ConRon.Arena.wscopedBGoArmLet]
 def wsNode : FunDecl := lfn (h, d, c) locals (g, t, i, f, a, b, x) {
-  g := h >> 28;
+  g := ⟦h⟧.tag;
   t := ⟦h⟧.tier;
   i := ⟦h⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
@@ -140,7 +140,7 @@ l_model wsGo_spec (p : Prog) (hpd : p.lookup "der_b" = some derB)
   fns [hp ↦ wscW, hpn ↦ wsNodeW]
   specs [derB_spec p hpd n, memoFindG_spec wsSch p _ hpf n, memoPutG_spec wsSch p _ hps n]
   grind [arena_grind] fold [tierW, idxW]
-  extra [evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
+  extra [evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE]
   finish [tierW, idxW] gen 20 heartbeats 1000000
 
 /-! ## `wscoped_bfast(d, e)`: the entry -/

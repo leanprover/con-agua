@@ -100,7 +100,7 @@ def absGo : FunDecl := lfn (h, k, d, fu) locals (x, r) {
 con-ron: ConRon/Arena/ExprOps.lean:1604-1609 ConRon.Arena.abstract1ArmFVar -/
 @[l_impl ConRon.Arena.abstract1ArmFVar]
 def absNode : FunDecl := lfn (h, k, d, fu) locals (x, g, t, i, r) {
-  g := h >> 28;
+  g := ⟦h⟧.tag;
   if g == 4 { r := call abs_app(h, k, d, fu); return r };
   if g == 5 { r := call abs_lam(h, k, d, fu); return r };
   if g == 6 { r := call abs_forall(h, k, d, fu); return r };
@@ -270,7 +270,7 @@ l_model absGo_spec (p : Prog) (hp : AbsProg p)
     mkLet_spec p (hp.get "der_b") (hp.get "letE_find") (hp.get "letE_push") (hp.get "intern_letE") (hp.get "mk_let") n,
     mkProj_spec p (hp.get "der_b") (hp.get "proj_find") (hp.get "proj_push") (hp.get "intern_proj") (hp.get "mk_proj") n]
   grind [arena_grind] fold [tierW, idxW]
-  extra [evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
+  extra [evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE]
   finish [tierW, idxW] gen 20 heartbeats 1000000
 
 /-- `ab_fvb` is its model. -/

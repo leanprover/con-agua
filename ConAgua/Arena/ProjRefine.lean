@@ -14,7 +14,7 @@ tag `9`); the record relation `PJRecRel` (the first and third words are the chil
 words, decoded at their own kinds `.name`/`.expr`; the middle word is the index, as for `bvar`);
 the node hash `pjhash`; the lens `projLens`; the scratch skip (`skPj`, `pjskipW_eq`) tests only
 `n` and `e` (`eViewHasScratchChild (.proj n _ e) = if n.isPersistent then !e.isPersistent else
-true`), one application of `bit27_or` as `app`'s two-field skip does (the index `i` is not a
+true`), one application of `bit31_or` as `app`'s two-field skip does (the index `i` is not a
 handle and is not tested). `ProjR m a` is the library's `ConsR` for the two `proj` tables.
 `internProj_refines`: `intern_proj(n, u, e)` refines
 `internE (.proj (decI (k := .name) n) u.toNat (decE e))` under `ProjR`.
@@ -190,11 +190,11 @@ theorem projCS_wf : projCS.WF where
   vs ks h hk := by simp [pushArgs, projCS, hk]
   ex h := by simp [projCS] at h
 
-/-- The L skip test is the arena's (one application of `bit27_or`, the index `i` not tested). -/
+/-- The L skip test is the arena's (one application of `bit31_or`, the index `i` not tested). -/
 theorem pjskipW_eq (m : Mem) (a : AState) (n e : Word) (hn : n.toNat < 2 ^ 32)
     (he : e.toNat < 2 ^ 32) (hfl : (rdW (m.arr64 CTL) 1 != 0) = a.store.scratchOn) :
     (pjskipW m n e = 0) = (skPj a (decI (k := .name) n) (decE e) = false) := by
-  have := bit27_or n e
+  have := bit31_or n e
   simp only [pjskipW, skPj, isPersistent_decI (k := .name) n hn, isPersistent_decE e he, ← hfl]
   grind
 

@@ -47,7 +47,7 @@ l_model spioE_spec (p : Prog) (hf : p.lookup "infer_spine_io" = some inferSpineI
   fns [hf ↦ spioE list]
   specs [callW_spec p n "inst_list"]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE]
   finish [tierW, idxW] heartbeats 400000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
@@ -189,7 +189,7 @@ theorem spioLoop_ref (p : Prog) (hil : InstListOK p) (N : Nat) (hk : KnotUpTo p 
       have hvv : HW (spW m (ao + i)) := by
         have h := har.lt i.toNat (by rw [← har.size]; exact hlt'); rwa [hit] at h
       have hi1 := succ_toNat_of_lt hlt
-      by_cases ht6 : ty >>> 28 = 6
+      by_cases ht6 : tagW ty = 6
       · -- the ∀ step: the argument is pushed
         rw [ite_eq_left ht6]
         refine RefE.underIf (fun _ => rfl) (RefE.abort0 (by rfl) fun c1 => ?_)
@@ -232,7 +232,7 @@ theorem spioLoop_ref (p : Prog) (hil : InstListOK p) (N : Nat) (hk : KnotUpTo p 
         refine RefE.underIf (fun _ => rfl) (RefE.guardIf (by rfl)
           (fun g => (decE_tag_forallE_beq _ hrw2).trans (decide_eq_false g))
           (fun hb => of_decide_eq_false ((decE_tag_forallE_beq _ hrw2).symm.trans hb)) fun g1 _ => ?_)
-        have g1' : r₂.headD 0 >>> 28 = 6 := by simpa using g1
+        have g1' : tagW (r₂.headD 0) = 6 := by simpa using g1
         refine RefE.underIf (fun _ => rfl) (RefE.abort0 (by rfl) fun g2 => ?_)
         refine RefE.underIf (fun _ => rfl) (RefE.abort0 (by rfl) fun g3 => ?_)
         refine RefE.underIf (fun _ => rfl) (RefE.abort0 (by rfl) fun g4 => ?_)
@@ -340,7 +340,7 @@ theorem inferSpineIO_anyE (p : Prog) (hq : SpineInferProg p) (hil : InstListOK p
 /-- **`head_and_args` at an `app` handle** refines `headAndArgs` with no hypothesis on the stack top
 (`headAndArgs_refines` needs one for the empty slice of a non-`app` head). -/
 theorem headAndArgs_app (p : Prog) (hp : SpineProg p) (n : Nat) (s₀ : St) (a₀ : AState)
-    (hR : ArenaR s₀.mem a₀) (v : Word) (hv : HW v) (h4 : v >>> 28 = 4)
+    (hR : ArenaR s₀.mem a₀) (v : Word) (hv : HW v) (h4 : tagW v = 4)
     (hspn : (s₀.mem.arr64 SPN).size < 2 ^ 63) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "head_and_args" [v]
@@ -386,7 +386,7 @@ l_model aioE_spec (p : Prog) (hf : p.lookup "infer_app_io" = some inferAppIOL)
   fns [hf ↦ aioE list]
   specs [callW_spec p n "head_and_args"]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE]
   heartbeats 400000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
@@ -405,7 +405,7 @@ theorem aio_ref (p : Prog) (hq : SpineInferProg p) (hsp : SpineProg p)
     (hil : InstListOK p) (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n ≤ 2 ^ 62)
     (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (M : ModeMaps) (eb mode d e : Word) (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (he : HW e)
-    (h4 : e >>> 28 = 4) :
+    (h4 : tagW e = 4) :
     RefE (InferG p n) (aioE p (n + 1) s₀.mem mode vis d e)
       (inferAppIOAt (CoreFnsA.ioView (coreKnot (decMode mode) fe id F)) fe d.toNat (decE e)) a₀
       (CorePost decH dn s₀.mem vis fe M eb ResH) := by
@@ -449,7 +449,7 @@ theorem inferAppIO_refines (p : Prog) (hq : SpineInferProg p) (hsp : SpineProg p
     (hil : InstListOK p) (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n ≤ 2 ^ 62)
     (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (M : ModeMaps) (eb mode d e : Word) (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (he : HW e)
-    (h4 : e >>> 28 = 4) :
+    (h4 : tagW e = 4) :
     CoreSpec p (n + 1) "infer_app_io" [mode, vis, d, e]
       (inferAppIOAt (CoreFnsA.ioView (coreKnot (decMode mode) fe id F)) fe d.toNat (decE e)) decH
       s₀ a₀ dn vis fe M eb :=

@@ -137,7 +137,7 @@ def piSortTeleLen : FunDecl := lfn (f, h) locals (g, x, y, z, ok, r) {
 @[l_impl ConRon.Arena.viewN]
 def nameRecPre : FunDecl := lfn (h) locals (g, t, i, o) {
   if 4294967295 < h { abort };
-  g := h >> 28;
+  g := ⟦h⟧.tag;
   t := ⟦h⟧.tier;
   i := ⟦h⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };

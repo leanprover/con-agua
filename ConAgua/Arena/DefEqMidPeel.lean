@@ -121,7 +121,7 @@ l_model plE_spec (p : Prog) (hf : p.lookup "peel_leaf" = some peelLeafL)
   fns [hf ↦ plE list]
   specs [callW_spec p n "inst_list"]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] unified
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 /-- The common hypotheses on the slice `fvs = (fo, k)` at the top of the stack. -/
@@ -203,7 +203,7 @@ l_model pdE_spec (p : Prog) (hf : p.lookup "peel_dom" = some peelDomL)
   fns [hf ↦ pdE list]
   specs [callW_spec p n "inst_list"]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] unified
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 /-- **`peel_dom` refines `peelDomT` (one level's domains), both outcomes**: the errors are the
@@ -245,7 +245,7 @@ theorem pd_ref (p : Prog) (hil : InstListOK p) (n : Nat)
 
 /-! ## `e_view` runs -/
 
-theorem eViewW_lam (m : Mem) (h : Word) (hg : h >>> 28 = 5) (hne : L.Ind.eViewW m h ≠ []) :
+theorem eViewW_lam (m : Mem) (h : Word) (hg : tagW h = 5) (hne : L.Ind.eViewW m h ≠ []) :
     viewOK m h LAM ∧ L.Ind.eViewW m h = [5, tfld m LAM (tierW h) (idxW h) 0,
       tfld m LAM (tierW h) (idxW h) 1, 0] := by
   unfold L.Ind.eViewW at hne ⊢
@@ -254,11 +254,11 @@ theorem eViewW_lam (m : Mem) (h : Word) (hg : h >>> 28 = 5) (hne : L.Ind.eViewW 
   by_cases hs : tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0
   · simp [hs] at hne
   simp only [hs, ite_false] at hne ⊢
-  have n0 : ¬ h >>> 28 = 0 := by rw [hg]; decide
-  have n1 : ¬ h >>> 28 = 1 := by rw [hg]; decide
-  have n2 : ¬ h >>> 28 = 2 := by rw [hg]; decide
-  have n3 : ¬ h >>> 28 = 3 := by rw [hg]; decide
-  have n4 : ¬ h >>> 28 = 4 := by rw [hg]; decide
+  have n0 : ¬ tagW h = 0 := by rw [hg]; decide
+  have n1 : ¬ tagW h = 1 := by rw [hg]; decide
+  have n2 : ¬ tagW h = 2 := by rw [hg]; decide
+  have n3 : ¬ tagW h = 3 := by rw [hg]; decide
+  have n4 : ¬ tagW h = 4 := by rw [hg]; decide
   simp only [hg, ite_true] at hne ⊢
   by_cases c : tcnt m LAM (tierW h) ≤ idxW h
   · simp [c] at hne
@@ -268,7 +268,7 @@ theorem eViewW_lam (m : Mem) (h : Word) (hg : h >>> 28 = 5) (hne : L.Ind.eViewW 
 /-- **A run of `e_view` at a `∀`**: the memory kept, the binder's two words, the twin's
 `viewBind`. -/
 theorem eView_forall_callW {p : Prog} (hp : p.lookup "e_view" = some L.Ind.eView) {n : Nat}
-    {m m' : Mem} {a : AState} (hR : ArenaR m a) {h : Word} (hh : HW h) (hg : h >>> 28 = 6)
+    {m m' : Mem} {a : AState} (hR : ArenaR m a) {h : Word} (hh : HW h) (hg : tagW h = 6)
     {r : List Word} (hc : callW p n "e_view" [h] m = some (r, m')) :
     m' = m ∧ r.tail.headD 0 = tfld m FORALL (tierW h) (idxW h) 0 ∧
       r.tail.tail.headD 0 = tfld m FORALL (tierW h) (idxW h) 1 ∧
@@ -284,7 +284,7 @@ theorem eView_forall_callW {p : Prog} (hp : p.lookup "e_view" = some L.Ind.eView
 
 /-- **A run of `e_view` at a `λ`**. -/
 theorem eView_lam_callW {p : Prog} (hp : p.lookup "e_view" = some L.Ind.eView) {n : Nat}
-    {m m' : Mem} {a : AState} (hR : ArenaR m a) {h : Word} (hh : HW h) (hg : h >>> 28 = 5)
+    {m m' : Mem} {a : AState} (hR : ArenaR m a) {h : Word} (hh : HW h) (hg : tagW h = 5)
     {r : List Word} (hc : callW p n "e_view" [h] m = some (r, m')) :
     m' = m ∧ HW (r.tail.headD 0) ∧ HW (r.tail.tail.headD 0) ∧
       a.store.viewBind (decE h) = some (decE (r.tail.headD 0), decE (r.tail.tail.headD 0)) := by
@@ -339,7 +339,7 @@ l_model ps2E_spec (p : Prog) (hf : p.lookup "peel_step2" = some peelStep2L)
   fns [hf ↦ ps2E list]
   specs [callW_spec p n "e_view", pdE_spec p hd n]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] unified
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 /-- **`peel_step2` refines `peelStep2T`, both outcomes**, at a `∀` handle `b`: the errors are
@@ -348,7 +348,7 @@ theorem ps2_ref (p : Prog) (hp : PeelProg p) (hil : InstListOK p) (n : Nat)
     (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps)
     (eb mode d da b k fo : Word) (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (hda : HW da) (hb : HW b)
-    (hg : b >>> 28 = 6) (fvs : Array EIdx) (hx : FvsR s₀.mem fo k fvs)
+    (hg : tagW b = 6) (fvs : Array EIdx) (hx : FvsR s₀.mem fo k fvs)
     (hdk : d.toNat + k.toNat < 2 ^ 64) :
     RefE (KnotUpToE p n) (ps2E p (n + 1) s₀.mem mode vis d da b k fo)
       (peelStep2T (coreKnot (decMode mode) fe id F) d.toNat (decE da) (decE b) k.toNat fvs) a₀
@@ -376,7 +376,7 @@ l_model psE_spec (p : Prog) (hf : p.lookup "peel_step" = some peelStepL)
   fns [hf ↦ psE list]
   specs [callW_spec p n "e_view", ps2E_spec p h2 hd n]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] unified
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 /-- **`peel_step` refines `peelStepT`, both outcomes**, at two `∀` handles: the errors are
@@ -385,7 +385,7 @@ theorem ps_ref (p : Prog) (hp : PeelProg p) (hil : InstListOK p) (n : Nat)
     (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps)
     (eb mode d a b k fo : Word) (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (ha : HW a) (hb : HW b)
-    (hga : a >>> 28 = 6) (hgb : b >>> 28 = 6) (fvs : Array EIdx) (hx : FvsR s₀.mem fo k fvs)
+    (hga : tagW a = 6) (hgb : tagW b = 6) (fvs : Array EIdx) (hx : FvsR s₀.mem fo k fvs)
     (hdk : d.toNat + k.toNat < 2 ^ 64) :
     RefE (KnotUpToE p n) (psE p (n + 1) s₀.mem mode vis d a b k fo)
       (peelStepT (coreKnot (decMode mode) fe id F) d.toNat (decE a) (decE b) k.toNat fvs) a₀
@@ -411,7 +411,7 @@ theorem peelStep_refines (p : Prog) (hp : PeelProg p) (hil : InstListOK p) (n : 
     (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps)
     (eb mode d a b k fo : Word) (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (ha : HW a) (hb : HW b)
-    (hga : a >>> 28 = 6) (hgb : b >>> 28 = 6) (fvs : Array EIdx) (hx : FvsR s₀.mem fo k fvs)
+    (hga : tagW a = 6) (hgb : tagW b = 6) (fvs : Array EIdx) (hx : FvsR s₀.mem fo k fvs)
     (hdk : d.toNat + k.toNat < 2 ^ 64) :
     CoreSpec p (n + 1) "peel_step" [mode, vis, d, a, b, k, fo]
       (peelStepT (coreKnot (decMode mode) fe id F) d.toNat (decE a) (decE b) k.toNat fvs)
@@ -599,7 +599,7 @@ theorem peelLvl_step_run (r : CoreFnsA) (d peel : Nat) (cont : EIdx → EIdx →
 `peel_push` through their runs, `callE`). -/
 l_model defeqPeel_specE (p : Prog) (hf : p.lookup "defeq_peel" = some defeqPeelL)
   fns [hf ↦ peelE] grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] unified
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE] unified
 
 /-! ## The loop refines `defeqPeel` -/
 
@@ -650,11 +650,11 @@ theorem peel_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n 
       exact RefE.ret hr (GrowPost.of_core (CorePost.ret hS rfl resH_one))
     have hab' : (decE a == decE b) = false := by rw [hab]; simp [he]
     have hlw : (decide (peel.toNat = 0) || (decE a).tag != ETag.forallE ||
-        (decE b).tag != ETag.forallE) = decide (peel = 0 ∨ a >>> 28 ≠ 6 ∨ b >>> 28 ≠ 6) := by
+        (decE b).tag != ETag.forallE) = decide (peel = 0 ∨ tagW a ≠ 6 ∨ tagW b ≠ 6) := by
       simp only [bne, decE_tag_forallE_beq a ha, decE_tag_forallE_beq b hb, word_toNat_zero_iff]
-      by_cases h1 : peel = 0 <;> by_cases h2 : a >>> 28 = 6 <;> by_cases h3 : b >>> 28 = 6 <;>
+      by_cases h1 : peel = 0 <;> by_cases h2 : tagW a = 6 <;> by_cases h3 : tagW b = 6 <;>
         simp [h1, h2, h3]
-    by_cases hl : peel = 0 ∨ a >>> 28 ≠ 6 ∨ b >>> 28 ≠ 6
+    by_cases hl : peel = 0 ∨ tagW a ≠ 6 ∨ tagW b ≠ 6
     · rw [peelE.loop1.arm2 (hc1 := rfl) (hc2 := he) (hc3 := hl)]
       have hr := defeqPeel_leaf_run (coreKnot (decMode mode) fe id F) d.toNat peel.toNat _ _ k.toNat
         fvs s hab' (by rw [hlw]; simp [hl])
@@ -673,8 +673,8 @@ theorem peel_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n 
           mode d a b k fo ⟨hS, hmode, heb⟩ ha hb fvs hx (by omega)) (callW_of_callE h1)).post
       exact RefE.ret hrun (GrowPost.of_core ⟨hR.after, by simpa [decBool] using hR.res, hR.valid⟩)
     have hp0 : peel ≠ 0 := fun h0 => hl (.inl h0)
-    have hga : a >>> 28 = 6 := Classical.byContradiction fun h' => hl (.inr (.inl h'))
-    have hgb : b >>> 28 = 6 := Classical.byContradiction fun h' => hl (.inr (.inr h'))
+    have hga : tagW a = 6 := Classical.byContradiction fun h' => hl (.inr (.inl h'))
+    have hgb : tagW b = 6 := Classical.byContradiction fun h' => hl (.inr (.inr h'))
     obtain ⟨q, hq⟩ : ∃ q, peel.toNat = q + 1 :=
       ⟨peel.toNat - 1, by have : peel.toNat ≠ 0 := fun h0' => hp0 ((word_toNat_zero_iff peel).mp h0'); omega⟩
     have hq1 : (peel - 1).toNat = q := by
@@ -766,7 +766,7 @@ l_model dbE_spec (p : Prog) (hf : p.lookup "defeq_binders" = some defeqBindersL)
   fns [hf ↦ dbE list]
   specs [callW_spec p n "peel_push"]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] unified
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 /-- A run of `peel_push` wrote inside the stack array. -/

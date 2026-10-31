@@ -138,7 +138,7 @@ l_model drE_spec (p : Prog) (hf : p.lookup "stuck_rest" = some stuckRestL)
   fns [hf ↦ drE list]
   specs [callW_spec p n "lvls_eq_c", ecE_spec p he heb het n, siE_spec p hi hc hw hb hg ht hu hh hut n]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] unified
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 theorem ite_ite_neg {α : Type} {c d : Prop} [Decidable c] [Decidable d] {x y : α} (h : ¬ (c ∧ d)) :
@@ -283,7 +283,7 @@ l_model dsE_spec (p : Prog) (hf : p.lookup "defeq_stuck" = some defeqStuckL)
   specs [callW_spec p n "e_view", strE_spec p hstr hi hc hw hb hg ht hu hh hut n,
     saE_spec p hsa hac hi hc hw hb hg ht hu hh hut n, drE_spec p hdr hi hc hw hb hg ht hu hh hut he heb het n]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] unified
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 /-- **`defeq_stuck` refines `defeqStuck`, both outcomes**: the errors are the arms'. -/

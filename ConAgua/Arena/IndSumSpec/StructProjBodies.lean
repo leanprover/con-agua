@@ -66,7 +66,7 @@ theorem spaW_afr {m m' : Mem} {T j : Word} {r : List Word} (h : spaW m T j = som
   simp only [spaW, spaK.eq_def, spaK2.eq_def] at h
   afr_auto h [binternW_afr, mkProjW_afr]
 
-theorem eViewW_head6S (m : Mem) (h : Word) (hg : h >>> 28 = 6) (hne : eViewW m h ≠ []) :
+theorem eViewW_head6S (m : Mem) (h : Word) (hg : tagW h = 6) (hne : eViewW m h ≠ []) :
     (eViewW m h).headD 0 = 6 := by
   revert hne; unfold eViewW
   simp only [hg, show ((6 : Word) = 0) = False from by decide, show ((6 : Word) = 1) = False from by decide,
@@ -103,10 +103,10 @@ theorem pbW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n
       rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simpa using hk1))]; simp
     have hi1 : (i + 1).toNat = i.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
     have hks : k.toNat = (k.toNat - 1) + 1 := by omega
-    have htf : ((decE h).tag == ETag.forallE) = true ↔ h >>> 28 = 6 := by
+    have htf : ((decE h).tag == ETag.forallE) = true ↔ tagW h = 6 := by
       rw [beq_iff_eq, show ETag.forallE = (6 : Word).toUInt32 from rfl]
       exact decE_tag_eqW h hh 6 (by decide)
-    by_cases ht : h >>> 28 = 6
+    by_cases ht : tagW h = 6
     case neg =>
       rw [pbW.arm2 n m T k i h hk ht, hks, structProjBodiesGo, ← decE_eq, ite_eq_right (fun e => ht (htf.mp e))]
       exact Sim.ret ⟨hS, IWGrow.refl m, rfl, hA⟩

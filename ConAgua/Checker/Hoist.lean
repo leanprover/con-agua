@@ -145,7 +145,7 @@ def hoistWalkL : FunDecl := lfn (e, i, k, tg, ws, sp, fu) locals (fd, j, e0, z, 
   (fd, j, e0) := call hs_find(e, 0);
   if fd != 0 { return sp };
   z := call hs_put(e, 0, 1, fd, j);
-  g := e >> 28;
+  g := ⟦e⟧.tag;
   t := ⟦e⟧.tier;
   x := ⟦e⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
@@ -540,7 +540,7 @@ l_model hoistWalk_spec (p : Prog) (hp : HoistProg p)
   specs [memoFindG_spec hsSch p _ (hp.get "hs_find") n,
     memoPutG_spec hsSch p _ (hp.get "hs_put") n, hoistNote_spec p hp n]
   grind [arena_grind] fold [tierW, idxW]
-  extra [evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
+  extra [evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE]
   finish [tierW, idxW] gen 20 heartbeats 1000000
 
 /-- **`hoist_rules_go` is its model `hRulesGoW`** (generated). -/

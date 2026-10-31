@@ -41,7 +41,7 @@ l_model hasStrLitGo_spec (p : Prog) (hv : p.lookup "e_view" = some eView)
   fns [hp ↦ hslW ro]
   specs [eView_spec p hv n]
   grind [ind_grind] fold [tierW, idxW]
-  extra [evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
+  extra [evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE]
   finish [tierW, idxW]
 
 l_model ueMentionsGo_spec (p : Prog) (hv : p.lookup "e_view" = some eView)
@@ -49,7 +49,7 @@ l_model ueMentionsGo_spec (p : Prog) (hv : p.lookup "e_view" = some eView)
   fns [hp ↦ umW ro]
   specs [eView_spec p hv n]
   grind [ind_grind] fold [tierW, idxW]
-  extra [evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
+  extra [evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE]
   finish [tierW, idxW]
 
 /-- **The model of `unresolved_consts_error`, both outcomes** (it only aborts): its callees (outside
@@ -60,7 +60,7 @@ l_model unresolvedConstsErr_specE (p : Prog)
   specs [callW_spec p n "str_lit_supported", callW_spec p n "has_str_lit_go", callW_spec p n "pin_at",
     callW_spec p n "ue_mentions_go"]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE]
   heartbeats 400000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
@@ -505,7 +505,7 @@ theorem um_twin (a : AState) (T : NIdx) : ∀ (g : Nat) (h : EIdx) (mp : HM) (b 
 /-! ## The L walks' models are the pure walks -/
 
 theorem ue_eViewW_lit {m : Mem} {h : Word} (hne : eViewW m h ≠ []) (h8 : (eViewW m h).headD 0 = 8) :
-    viewOK m h LIT ∧ h >>> 28 = 8 := by
+    viewOK m h LIT ∧ tagW h = 8 := by
   unfold eViewW at hne h8
   simp only at hne h8
   by_cases c1 : (4294967295 : Word) < h
@@ -514,9 +514,9 @@ theorem ue_eViewW_lit {m : Mem} {h : Word} (hne : eViewW m h ≠ []) (h8 : (eVie
   by_cases c2 : tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0
   · simp [c2] at hne
   rw [ite_eq_right c2] at hne h8
-  by_cases g8 : h >>> 28 = 8
+  by_cases g8 : tagW h = 8
   · refine ⟨⟨c2, ?_⟩, g8⟩
-    have n : ∀ k : Word, k ≠ 8 → ¬ (h >>> 28 = k) := fun k hk e => hk (e ▸ g8)
+    have n : ∀ k : Word, k ≠ 8 → ¬ (tagW h = k) := fun k hk e => hk (e ▸ g8)
     rw [ite_eq_right (n 0 (by decide)), ite_eq_right (n 1 (by decide)), ite_eq_right (n 2 (by decide)),
       ite_eq_right (n 3 (by decide)), ite_eq_right (n 4 (by decide)), ite_eq_right (n 5 (by decide)),
       ite_eq_right (n 6 (by decide)), ite_eq_right (n 7 (by decide)), ite_eq_left g8] at hne

@@ -116,7 +116,7 @@ l_model stringOfListTyOk_spec (p : Prog)
 theorem cnW_faEq (p : Prog) (n : Nat) (ty nc : Word) (r : List Word) (m : Mem) :
     cnW.k_const_e_2 p n ty nc (some (r, m)) = faEqW p n m ty nc (r.headD 0) := by
   unfold faEqW
-  by_cases g : ty >>> 28 ≠ 6
+  by_cases g : tagW ty ≠ 6
   · rw [cnW.k_const_e_2.arm1 p n ty nc r m g, ite_eq_left g]
   · rw [cnW.k_const_e_2.arm2 p n ty nc r m (by simpa using g), ite_eq_right g]
     rcases callW p n "e_view" [ty] m with _ | ⟨g, m₁⟩
@@ -127,7 +127,7 @@ theorem cnW_faEq (p : Prog) (n : Nat) (ty nc : Word) (r : List Word) (m : Mem) :
 theorem solW_faEq (p : Prog) (n : Nat) (ty dom : Word) (r : List Word) (m : Mem) :
     solW.k_const_e_2 p n ty dom (some (r, m)) = faEqW p n m ty dom (r.headD 0) := by
   unfold faEqW
-  by_cases g : ty >>> 28 ≠ 6
+  by_cases g : tagW ty ≠ 6
   · rw [solW.k_const_e_2.arm1 p n ty dom r m g, ite_eq_left g]
   · rw [solW.k_const_e_2.arm2 p n ty dom r m (by simpa using g), ite_eq_right g]
     rcases callW p n "e_view" [ty] m with _ | ⟨g, m₁⟩

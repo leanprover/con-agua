@@ -95,7 +95,7 @@ theorem viewSort_of_view (st : EStore) (i : EIdx) (u : LIdx) (ht : i.tag = ETag.
     · rw [ite_eq_left (by assumption)]; exact getSort_of_get _ _ _ ht h
     · cases h
 
-theorem eViewW_head2 (m : Mem) (h : Word) (hg : h >>> 28 = 2) (hne : eViewW m h ≠ []) :
+theorem eViewW_head2 (m : Mem) (h : Word) (hg : tagW h = 2) (hne : eViewW m h ≠ []) :
     (eViewW m h).headD 0 = 2 := by
   revert hne; unfold eViewW
   simp only [hg, show ((2 : Word) = 0) = False from by decide, show ((2 : Word) = 1) = False from by decide,

@@ -38,7 +38,7 @@ theorem arApp_step (n : Nat) (ih : ArGoSpec p n) (s₀ : St) (h c d k fu : Word)
   rw [invoke_eq _ (hp.get "ar_app")]
   simp only [callFn, arApp]
   vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rd_spec, evalE_tld, tld, evalE_cnt,
-    tcntM, evalE_tierE, evalE_idxE,
+    tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE,
     memoFindG_spec abSch p _ (hp.get "ab_find") n, memoPutG_spec abSch p _ (hp.get "ab_put") n,
         ih,
     mkApp_spec p (hp.get "der_b") (hp.get "app_find") (hp.get "app_push") (hp.get "intern_app")
@@ -58,7 +58,7 @@ theorem arLam_step (n : Nat) (ih : ArGoSpec p n) (s₀ : St) (h c d k fu : Word)
   rw [invoke_eq _ (hp.get "ar_lam")]
   simp only [callFn, arLam]
   vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rd_spec, evalE_tld, tld, evalE_cnt,
-    tcntM, evalE_tierE, evalE_idxE,
+    tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE,
     memoFindG_spec abSch p _ (hp.get "ab_find") n, memoPutG_spec abSch p _ (hp.get "ab_put") n,
         ih,
     mkLam_spec p (hp.get "der_b") (hp.get "lam_find") (hp.get "lam_push") (hp.get "intern_lam")
@@ -78,7 +78,7 @@ theorem arForall_step (n : Nat) (ih : ArGoSpec p n) (s₀ : St) (h c d k fu : Wo
   rw [invoke_eq _ (hp.get "ar_forall")]
   simp only [callFn, arForall]
   vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rd_spec, evalE_tld, tld, evalE_cnt,
-    tcntM, evalE_tierE, evalE_idxE,
+    tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE,
     memoFindG_spec abSch p _ (hp.get "ab_find") n, memoPutG_spec abSch p _ (hp.get "ab_put") n,
         ih,
     mkForall_spec p (hp.get "der_b") (hp.get "forall_find") (hp.get "forall_push")
@@ -98,7 +98,7 @@ theorem arLet_step (n : Nat) (ih : ArGoSpec p n) (s₀ : St) (h c d k fu : Word)
   rw [invoke_eq _ (hp.get "ar_let")]
   simp only [callFn, arLet]
   vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rd_spec, evalE_tld, tld, evalE_cnt,
-    tcntM, evalE_tierE, evalE_idxE,
+    tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE,
     memoFindG_spec abSch p _ (hp.get "ab_find") n, memoPutG_spec abSch p _ (hp.get "ab_put") n,
         ih,
     mkLet_spec p (hp.get "der_b") (hp.get "letE_find") (hp.get "letE_push")
@@ -118,7 +118,7 @@ theorem arProj_step (n : Nat) (ih : ArGoSpec p n) (s₀ : St) (h c d k fu : Word
   rw [invoke_eq _ (hp.get "ar_proj")]
   simp only [callFn, arProj]
   vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rd_spec, evalE_tld, tld, evalE_cnt,
-    tcntM, evalE_tierE, evalE_idxE,
+    tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE,
     memoFindG_spec abSch p _ (hp.get "ab_find") n, memoPutG_spec abSch p _ (hp.get "ab_put") n,
         ih,
     mkProj_spec p (hp.get "der_b") (hp.get "proj_find") (hp.get "proj_push")

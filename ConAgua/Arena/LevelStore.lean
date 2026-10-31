@@ -162,7 +162,7 @@ theorem sPre_spec (k : Stmt → M Sig) (s₀ : St) :
   simp only [sPre, hpBlkS, mapS, mapE_tld, mapE_cntE, mapE_tierE, mapE_idxE, mapE, mapC, L.Notation.blk]
   simp only [Nat.reduceLT, Nat.reduceAdd, ↓reduceIte]
   sym only [lang_grind, arena_grind] =>
-    vcgen [step, evalE, evalC, evalArgs, setLoc, ld64, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] <;>
+    vcgen [step, evalE, evalC, evalArgs, setLoc, ld64, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE] <;>
     finish [lvlHPW, tierW, idxW]
 
 /-- **The `succ` table's obligations.** -/

@@ -36,7 +36,7 @@ open L.Arena
 -- con-ron: none — `instPisAtLiftL`'s own loop (`rfl`), a named block for the proof
 def ipalLoop : Stmt := lblk (f, o, l, e, h, k, g, x, y, z) {
   while k < l {
-    if h >> 28 != 6 { return (0, 0) };
+    if ⟦h⟧.tag != 6 { return (0, 0) };
     (g, x, y, z) := call e_view(h);
     h := call instantiate1_lift_fast(f, y, IW.u64[o + k], 0);
     k := k + 1
@@ -73,7 +73,7 @@ noncomputable def ipalGoW (f o l : Word) : Nat → Mem → Word → Word → Opt
   | 0, _, _, _ => none
   | n + 1, m, h, k =>
     if k < l then
-      if h >>> 28 ≠ 6 then some ([0, 0], m)
+      if tagW h ≠ 6 then some ([0, 0], m)
       else if eViewW m h = [] then none
       else match i1lF m [f, (eViewW m h).tail.tail.headD 0, rdW (m.arr64 IW) (o + k), 0] with
         | none => none
@@ -84,16 +84,16 @@ section arms
 variable (f o l : Word) (n : Nat) (m m1 : Mem) (h k : Word) (r : List Word)
 theorem ipalGoW_ge (hk : ¬ k < l) : ipalGoW f o l (n + 1) m h k = some ([1, h], m) := by
   simp only [ipalGoW, ite_eq_right hk]
-theorem ipalGoW_nopi (hk : k < l) (h6 : h >>> 28 ≠ 6) : ipalGoW f o l (n + 1) m h k = some ([0, 0], m) := by
+theorem ipalGoW_nopi (hk : k < l) (h6 : tagW h ≠ 6) : ipalGoW f o l (n + 1) m h k = some ([0, 0], m) := by
   simp only [ipalGoW, ite_eq_left hk, ite_eq_left h6]
-theorem ipalGoW_abort (hk : k < l) (h6 : ¬ h >>> 28 ≠ 6) (hv : eViewW m h = []) :
+theorem ipalGoW_abort (hk : k < l) (h6 : ¬ tagW h ≠ 6) (hv : eViewW m h = []) :
     ipalGoW f o l (n + 1) m h k = none := by
   simp only [ipalGoW, ite_eq_left hk, ite_eq_right h6, ite_eq_left hv]
-theorem ipalGoW_none (hk : k < l) (h6 : ¬ h >>> 28 ≠ 6) (hv : ¬ eViewW m h = [])
+theorem ipalGoW_none (hk : k < l) (h6 : ¬ tagW h ≠ 6) (hv : ¬ eViewW m h = [])
     (hi : i1lF m [f, (eViewW m h).tail.tail.headD 0, rdW (m.arr64 IW) (o + k), 0] = none) :
     ipalGoW f o l (n + 1) m h k = none := by
   simp only [ipalGoW, ite_eq_left hk, ite_eq_right h6, ite_eq_right hv, hi]
-theorem ipalGoW_step (hk : k < l) (h6 : ¬ h >>> 28 ≠ 6) (hv : ¬ eViewW m h = [])
+theorem ipalGoW_step (hk : k < l) (h6 : ¬ tagW h ≠ 6) (hv : ¬ eViewW m h = [])
     (hi : i1lF m [f, (eViewW m h).tail.tail.headD 0, rdW (m.arr64 IW) (o + k), 0] = some (r, m1)) :
     ipalGoW f o l (n + 1) m h k = ipalGoW f o l n m1 (r.headD 0) (k + 1) := by
   simp only [ipalGoW, ite_eq_left hk, ite_eq_right h6, ite_eq_right hv, hi]
@@ -181,7 +181,7 @@ theorem ipalGoW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv
         List.drop_eq_getElem_cons (by omega)
       have hxk : xs[k.toNat] = decI w := by
         rw [List.getElem?_eq_getElem (by omega)] at hwx; exact Option.some.inj hwx
-      by_cases h6 : h >>> 28 ≠ 6
+      by_cases h6 : tagW h ≠ 6
       · rw [ipalGoW_nopi f o l n m h k hk h6] at hW
         obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
         refine ⟨none, a, ?_, ⟨hS, IWGrow.refl _, rfl⟩, hA⟩
@@ -191,7 +191,7 @@ theorem ipalGoW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv
         simp only [ConRon.Arena.instPisAtLift, ht, ite_false, Bool.false_eq_true]; rfl
       by_cases hv : eViewW m h = []
       · rw [ipalGoW_abort f o l n m h k hk h6 hv] at hW; cases hW
-      have he6 : h >>> 28 = 6 := by simpa using h6
+      have he6 : tagW h = 6 := by simpa using h6
       obtain ⟨v, hvw, hvr⟩ := eViewW_ok m a hS.check.arena.base h hv
       have ht : (decE h).tag = ETag.forallE := by
         have h1 : ((decI h : EIdx).tag == ETag.forallE) = true := by

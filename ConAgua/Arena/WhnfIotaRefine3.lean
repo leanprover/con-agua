@@ -502,7 +502,7 @@ theorem fabScopeOk_refines' (p : Prog) (hp : IotaProg' p) (hc : IotaCallees p) :
 /-! ## `lit_major_to_ctor(mode, vis, d, h)` -/
 
 theorem viewLit_ok' (m : Mem) (a : AState) (hR : ArenaR m a) (h : Word) (hh : h.toNat < 2 ^ 32)
-    (hv : viewOK m h LIT) (hg : h >>> 28 = 8) :
+    (hv : viewOK m h LIT) (hg : tagW h = 8) :
     ∃ l, a.store.viewLit (decE h) = some l ∧ a.store.view (decE h) = some (.lit l) ∧
       RecRel m (tierW h) (idxW h) ⟨l⟩ := by
   obtain ⟨k, hk, hkr⟩ := node_of m a h litCS RecRel (·.lits) _ hR.lit.2 hv.2
@@ -598,12 +598,12 @@ theorem lmtc_ref (p : Prog) (hc : IotaCallees p)
     obtain ⟨hrun, hP⟩ := (CoreSpec.of_callW (hc.litToCtorIfNat n ⟨s₀.mem, Locals.init []⟩ a₀ dn vis fe
       MM eb h hS hh) c1).post
     exact RefE.of_run_eq hT (RefE.ret hrun ⟨hP.after, hP.res, hP.valid⟩)
-  by_cases h8 : h >>> 28 ≠ 8
+  by_cases h8 : tagW h ≠ 8
   · rw [ite_eq_left h8]
     exact hnat (litMajorToCtor_run_nolit _ fe d.toNat (decE h) a₀
       (fun ht => h8 ((decE_tag_lit h hh).mp ht)))
   rw [ite_eq_right h8]
-  have h8' : h >>> 28 = 8 := by simpa using h8
+  have h8' : tagW h = 8 := by simpa using h8
   refine RefE.abort0 (by decide) fun hv1 => ?_
   refine RefE.abort0 (by decide) fun hv2 => ?_
   obtain ⟨l, hl, hview, hrel⟩ := viewLit_ok' s₀.mem a₀ hR h hh ⟨hv1, UInt64.not_le.mp hv2⟩ h8'

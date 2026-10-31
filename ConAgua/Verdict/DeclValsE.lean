@@ -31,20 +31,20 @@ the core stubs through their runs. -/
 l_model checkConstantVal_specE (p : Prog) (hp : ValProg p)
   fns [hp.ccv ↦ checkConstantValE] specs [installHeader_specE p hp.ih n]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE]
   heartbeats 400000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 /-- **The model of `check_defn_val`, both outcomes**: its callees through their runs. -/
 l_model checkDefnVal_specE (p : Prog) (hp : ValProg p)
   fns [hp.dv ↦ checkDefnValE] grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE]
   heartbeats 400000 unified
 
 /-- **The model of `check_opaque_val`, both outcomes**: its callees through their runs. -/
 l_model checkOpaqueVal_specE (p : Prog) (hp : ValProg p)
   fns [hp.ov ↦ checkOpaqueValE] grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE]
   heartbeats 400000 unified
 
 /-- What `check_constant_val` gives besides the twin's run: the stage, the growth, the memos; the

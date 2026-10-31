@@ -52,7 +52,7 @@ def pdoW : Nat → Mem → Word → Word → Word → Word → Word → Word →
   | 0, _, _, _, _, _, _, _ => none
   | k + 1, m, no, nl, lo, hi, n, e =>
     if n = 0 then some ([0], m)
-    else if e >>> 28 ≠ 6 then some ([0], m)
+    else if tagW e ≠ 6 then some ([0], m)
     else if eViewW m e = [] then none
     else pdoK1 k no nl lo hi n (eViewW m e) (noConstWf k m no nl lo hi ((eViewW m e).tail.headD 0))
 def pdoK1 (k : Nat) (no nl lo hi n : Word) (v : List Word) : Option (Word × Mem) → Option (List Word × Mem)

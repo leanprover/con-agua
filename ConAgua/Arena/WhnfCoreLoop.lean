@@ -92,7 +92,7 @@ theorem step_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n 
       ⟨by show HW (0 : Word); unfold HW; decide, he⟩)
   have vok : ∀ c : TRec, ¬ tcnt s₀.mem c (tierW e) ≤ idxW e → viewOK s₀.mem e c :=
     fun c hc => ⟨ht, by simpa using hc⟩
-  by_cases g4 : e >>> 28 = 4
+  by_cases g4 : tagW e = 4
   · rw [ite_eq_left g4]
     refine RefE.abort0 (by decide) fun hc4 => ?_
     refine RefE.of_run_eq (step_run_app _ _ (view_app s₀.mem a₀ hR e hh (vok _ hc4) g4).1) ?_
@@ -105,7 +105,7 @@ theorem step_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n 
       (·.mono (Nat.le_succ N)) h1
       fun _ _ _ _ h => ⟨h.after, h.res, h.valid⟩
   rw [ite_eq_right g4]
-  by_cases g9 : e >>> 28 = 9
+  by_cases g9 : tagW e = 9
   · rw [ite_eq_left g9]
     refine RefE.abort0 (by decide) fun hc9 => ?_
     obtain ⟨hv, hsn, hpe⟩ := view_proj s₀.mem a₀ hR e hh (vok _ hc9) g9
@@ -121,7 +121,7 @@ theorem step_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n 
       (·.knot.mono (Nat.le_succ N)) h1
       fun _ _ _ _ h => ⟨h.after, h.res, h.valid⟩
   rw [ite_eq_right g9]
-  by_cases g7 : e >>> 28 = 7
+  by_cases g7 : tagW e = 7
   · rw [ite_eq_left g7]
     refine RefE.abort0 (by decide) fun hc7 => ?_
     obtain ⟨hv, -, hvv, hbb⟩ := view_let s₀.mem a₀ hR e hh (vok _ hc7) g7
@@ -130,41 +130,41 @@ theorem step_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n 
       fun r₁ m₁ _ h₁ => RefE.ret rfl ⟨h₁.after, by simp [decStep, decH], ⟨by
         show HW (1 : Word); unfold HW; decide, h₁.resOk⟩⟩
   rw [ite_eq_right g7]
-  by_cases g0 : e >>> 28 = 0
+  by_cases g0 : tagW e = 0
   · rw [ite_eq_left g0]
     refine RefE.abort0 (by decide) fun hc0 => ?_
     exact fun _ => ErrClaim.of_run_eqW (step_run_bvar _ (view_bvar s₀.mem a₀ hR e hh (vok _ hc0) g0))
       (ErrClaim.fail _ _ rfl)
   rw [ite_eq_right g0]
-  by_cases g1 : e >>> 28 = 1
+  by_cases g1 : tagW e = 1
   · rw [ite_eq_left g1]
     refine RefE.abort0 (by decide) fun hc => ?_
     obtain ⟨i, ty, hv'⟩ := view_fvar s₀.mem a₀ hR e hh (vok _ hc) g1
     exact done _ hv' rfl
   rw [ite_eq_right g1]
-  by_cases g2 : e >>> 28 = 2
+  by_cases g2 : tagW e = 2
   · rw [ite_eq_left g2]
     refine RefE.abort0 (by decide) fun hc => ?_
     obtain ⟨u, hv'⟩ := view_sort s₀.mem a₀ hR e hh (vok _ hc) g2
     exact done _ hv' rfl
   rw [ite_eq_right g2]
-  by_cases g3 : e >>> 28 = 3
+  by_cases g3 : tagW e = 3
   · rw [ite_eq_left g3]
     refine RefE.abort0 (by decide) fun hc => ?_
     obtain ⟨c, us, hv'⟩ := view_const s₀.mem a₀ hR e hh (vok _ hc) g3
     exact done _ hv' rfl
   rw [ite_eq_right g3]
-  by_cases g5 : e >>> 28 = 5
+  by_cases g5 : tagW e = 5
   · rw [ite_eq_left g5]
     refine RefE.abort0 (by decide) fun hc => ?_
     exact done _ (view_lam s₀.mem a₀ hR e hh (vok _ hc) g5).1 rfl
   rw [ite_eq_right g5]
-  by_cases g6 : e >>> 28 = 6
+  by_cases g6 : tagW e = 6
   · rw [ite_eq_left g6]
     refine RefE.abort0 (by decide) fun hc => ?_
     exact done _ (view_forall s₀.mem a₀ hR e hh (vok _ hc) g6).1 rfl
   rw [ite_eq_right g6]
-  by_cases g8 : e >>> 28 = 8
+  by_cases g8 : tagW e = 8
   · rw [ite_eq_left g8]
     refine RefE.abort0 (by decide) fun hc => ?_
     obtain ⟨l, hv'⟩ := view_lit s₀.mem a₀ hR e hh (vok _ hc) g8
@@ -191,7 +191,7 @@ end step
 (`callE`), done on `(0, v)`, continuing on `(1, e')`. -/
 l_model whnfCoreLoop_specE (p : Prog) (hf : p.lookup "whnf_core_loop" = some whnfCoreLoopL)
   fns [hf ↦ whnfCoreLoopE] grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE]
   finish [tierW, idxW] unified
 
 /-- **`whnf_core_step`'s error claim** at every L fuel up to `n` (what the loop's errors claim
@@ -330,7 +330,7 @@ theorem core_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (s₀ : St) (a₀ : ASt
   have heb := hS.core.eb1
   have hkey : ((mode >>> 1) &&& 1) <<< 32 = genW 0 eb := ebKey_eq mode eb hs.eb_mode
   simp only [whnfCoreE]
-  by_cases hst : e >>> 28 ≠ 4 ∧ e >>> 28 ≠ 9 ∧ e >>> 28 ≠ 7 ∧ e >>> 28 ≠ 0
+  by_cases hst : tagW e ≠ 4 ∧ tagW e ≠ 9 ∧ tagW e ≠ 7 ∧ tagW e ≠ 0
   · rw [ite_eq_left hst]
     have ht : whnfCoreStuckTag (decE e) = true := by rw [stuck_iff e he]; simpa using hst
     exact RefE.ret (knot_whnfCore_stuck _ fe F' (cheap != 0) d.toNat _ a₀ ht) (CorePost.ret hS rfl he)

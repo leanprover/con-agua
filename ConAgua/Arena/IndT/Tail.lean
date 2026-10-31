@@ -50,7 +50,7 @@ set_option experimental.vcgen true in
 l_model ictrE_spec (p : Prog) (hP : TailProg p)
   fns [hP.tailrec ↦ ictrE] specs [callW_spec p n "cons_block_recs_tf"]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] unified
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 set_option experimental.vcgen true in
@@ -62,7 +62,7 @@ l_model ictlE_spec (p : Prog) (hP : TailProg p)
   specs [callW_spec p n "cons_block_ctors", callW_spec p n "flush_caches", callW_spec p n "block_nested_bit",
     ictrE_spec p hP n]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] unified
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 /-- What `check_block_tail` gives besides the index `x` it returns, at the view `w` (from `m`): the

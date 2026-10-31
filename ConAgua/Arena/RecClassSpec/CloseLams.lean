@@ -487,7 +487,7 @@ def fvarHeadW (m : Mem) (e : Word) : Option (List Word × Mem) :=
   match gafF m [CWF, e] with
   | none => none
   | some (r, m1) =>
-    if r.headD 0 >>> 28 = 1 then
+    if tagW (r.headD 0) = 1 then
       (if eViewW m1 (r.headD 0) = [] then none
        else some ([1, (eViewW m1 (r.headD 0)).tail.headD 0], m1))
     else some ([0, 0], m1)
@@ -521,7 +521,7 @@ theorem fvarHeadW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFE
   obtain ⟨t, a1, hrun1, hS1, hg1, hd1, hd2⟩ := gafF_ok dn vis fe CWF e he m m1 a r1 hs hS
   rw [CWF_eq] at hrun1
   generalize r1.headD 0 = w at hd1 hd2 h
-  by_cases hf : w >>> 28 = 1
+  by_cases hf : tagW w = 1
   · rw [ite_eq_left hf] at h
     obtain ⟨hne, h⟩ := of_ite_none h
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)

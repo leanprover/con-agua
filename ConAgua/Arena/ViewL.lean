@@ -8,7 +8,7 @@ public import ConAgua.Arena.StoreFields
 # The L side of the expression view: handle words and branch-free arithmetic
 
 What every expression walk's L code shares: a handle word's tier bit and index (the tag is
-`h >> 28`), the view's checks (`viewOK`: the scratch tier open for a scratch handle, the index
+`⟦h⟧.tag`), the view's checks (`viewOK`: the scratch tier open for a scratch handle, the index
 below the tier's count in its store), and the branch-free `max`, truncating `z - 1` and the
 saturating range arithmetic of the derived words (`satSuccW`, `satPredW`), which keep a walk's
 bodies loop- and branch-free per tag (the house rule; `DESIGN.md`, lane `walk`).

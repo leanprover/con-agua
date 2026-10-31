@@ -26,7 +26,7 @@ namespace L.Arena
 /-! ## `get_app_fn(e)`: chase `.app` nodes' `f` child, counting down a 64-bit fuel word -/
 
 def getAppFnLoop : Stmt := lblk (e, f, t, x) {
-  while e >> 28 == 4 {
+  while ⟦e⟧.tag == 4 {
     if f == 0 { abort };
     f -= 1;
     (t, x) := node APP⟦e⟧;
@@ -46,7 +46,7 @@ def getAppFnL : FunDecl := lfn (e) locals (f, t, x) {
 /-- **The model of the `get_app_fn` loop**: from `(e, f)`, the final `(e, f)` or `none` where the
 L code aborts. Terminates because `f` strictly decreases (checked `≠ 0` before each decrement). -/
 def gafLoopW (m : Mem) (e f : Word) : Option (Word × Word) :=
-  if e >>> 28 = 4 then
+  if tagW e = 4 then
     if f = 0 then none
     else if tierW e ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
     else if tcnt m APP (tierW e) ≤ idxW e then none
@@ -63,10 +63,10 @@ decreasing_by
     simp; omega
   exact hlt
 
-theorem gafLoopW_done (m : Mem) (e f : Word) (h : e >>> 28 ≠ 4) : gafLoopW m e f = some (e, f) := by
+theorem gafLoopW_done (m : Mem) (e f : Word) (h : tagW e ≠ 4) : gafLoopW m e f = some (e, f) := by
   rw [gafLoopW]; simp [h]
 
-theorem gafLoopW_step (m : Mem) (e f e' : Word) (h : e >>> 28 = 4) (hf : f ≠ 0)
+theorem gafLoopW_step (m : Mem) (e f e' : Word) (h : tagW e = 4) (hf : f ≠ 0)
     (hv1 : ¬ (tierW e ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0))
     (hv2 : ¬ tcnt m APP (tierW e) ≤ idxW e)
     (he' : e' = tfld m APP (tierW e) (idxW e) 0) :
@@ -91,7 +91,7 @@ theorem getAppFnLoop_spec (n : Nat) (s₀ : St) :
     rw [exec, step_while (w := getAppFnLoop) rfl]
     sym only [lang_grind, arena_grind] =>
       vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih, evalE_tld, tld, evalE_cnt,
-        tcntM, evalE_tierE, evalE_idxE] <;> finish [tierW, idxW]
+        tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE] <;> finish [tierW, idxW]
 
 theorem getAppFnLoop_step_spec (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀⦄
@@ -140,13 +140,13 @@ theorem gafLoopW_ok (m : Mem) (a : AState) (hR : ArenaR m a) :
     intro e f e' f' hfN he hL hf'
     have hf0 : f = 0 := UInt64.toNat_inj.mp (by simp; omega)
     subst hf0
-    have hc : ¬ e >>> 28 = 4 := fun hc => by rw [gafLoopW] at hL; simp [hc] at hL
+    have hc : ¬ tagW e = 4 := fun hc => by rw [gafLoopW] at hL; simp [hc] at hL
     · rw [gafLoopW_done m e 0 hc] at hL
       obtain ⟨-, rfl⟩ := Prod.mk.inj (Option.some.inj hL)
       exact absurd rfl hf'
   | succ N ih =>
     intro e f e' f' hfN he hL hf'
-    by_cases hc : e >>> 28 = 4
+    by_cases hc : tagW e = 4
     · have hf0 : f ≠ 0 := by
         intro hf0; rw [hf0, gafLoopW] at hL; simp [hc] at hL
       have hv1 : ¬ (tierW e ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0) := by
@@ -219,7 +219,7 @@ Same shape as `get_app_fn`, chasing tag `6` (`forallE`) off `FAREC`'s second wor
 tag `4` off `AREC`'s first. -/
 
 def piResultLoop : Stmt := lblk (e, f, t, x) {
-  while e >> 28 == 6 {
+  while ⟦e⟧.tag == 6 {
     if f == 0 { abort };
     f -= 1;
     (t, x) := node FORALL⟦e⟧;
@@ -238,7 +238,7 @@ def piResultL : FunDecl := lfn (e) locals (f, t, x) {
 
 /-- **The model of the `pi_result` loop.** -/
 def priLoopW (m : Mem) (e f : Word) : Option (Word × Word) :=
-  if e >>> 28 = 6 then
+  if tagW e = 6 then
     if f = 0 then none
     else if tierW e ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
     else if tcnt m FORALL (tierW e) ≤ idxW e then none
@@ -255,10 +255,10 @@ decreasing_by
     simp; omega
   exact hlt
 
-theorem priLoopW_done (m : Mem) (e f : Word) (h : e >>> 28 ≠ 6) : priLoopW m e f = some (e, f) := by
+theorem priLoopW_done (m : Mem) (e f : Word) (h : tagW e ≠ 6) : priLoopW m e f = some (e, f) := by
   rw [priLoopW]; simp [h]
 
-theorem priLoopW_step (m : Mem) (e f e' : Word) (h : e >>> 28 = 6) (hf : f ≠ 0)
+theorem priLoopW_step (m : Mem) (e f e' : Word) (h : tagW e = 6) (hf : f ≠ 0)
     (hv1 : ¬ (tierW e ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0))
     (hv2 : ¬ tcnt m FORALL (tierW e) ≤ idxW e)
     (he' : e' = tfld m FORALL (tierW e) (idxW e) 1) :
@@ -283,7 +283,7 @@ theorem piResultLoop_spec (n : Nat) (s₀ : St) :
     rw [exec, step_while (w := piResultLoop) rfl]
     sym only [lang_grind, arena_grind] =>
       vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih, evalE_tld, tld, evalE_cnt,
-        tcntM, evalE_tierE, evalE_idxE] <;> finish [tierW, idxW]
+        tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE] <;> finish [tierW, idxW]
 
 theorem piResultLoop_step_spec (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀⦄
@@ -327,13 +327,13 @@ theorem priLoopW_ok (m : Mem) (a : AState) (hR : ArenaR m a) :
     intro e f e' f' hfN he hL hf'
     have hf0 : f = 0 := UInt64.toNat_inj.mp (by simp; omega)
     subst hf0
-    have hc : ¬ e >>> 28 = 6 := fun hc => by rw [priLoopW] at hL; simp [hc] at hL
+    have hc : ¬ tagW e = 6 := fun hc => by rw [priLoopW] at hL; simp [hc] at hL
     · rw [priLoopW_done m e 0 hc] at hL
       obtain ⟨-, rfl⟩ := Prod.mk.inj (Option.some.inj hL)
       exact absurd rfl hf'
   | succ N ih =>
     intro e f e' f' hfN he hL hf'
-    by_cases hc : e >>> 28 = 6
+    by_cases hc : tagW e = 6
     · have hf0 : f ≠ 0 := by
         intro hf0; rw [hf0, priLoopW] at hL; simp [hc] at hL
       have hv1 : ¬ (tierW e ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0) := by
@@ -408,7 +408,7 @@ non-`∀`, the trailing `return (1, e)` at `k = 0`. -/
 
 def peelPisLoop : Stmt := lblk (k, e, t, x) {
   while k != 0 {
-    if e >> 28 != 6 { return (0, 0) };
+    if ⟦e⟧.tag != 6 { return (0, 0) };
     (t, x) := node FORALL⟦e⟧;
     e := FORALL⟨t, x⟩.b;
     k -= 1
@@ -426,7 +426,7 @@ def peelPisL : FunDecl := lfn (k, e) locals (t, x) {
 `k = 0` base case): `(flag, value)`, `none` where the L code aborts. -/
 def peelPisW (m : Mem) (k e : Word) : Option (Word × Word) :=
   if k = 0 then some (1, e)
-  else if e >>> 28 ≠ 6 then some (0, 0)
+  else if tagW e ≠ 6 then some (0, 0)
   else if tierW e ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
   else if tcnt m FORALL (tierW e) ≤ idxW e then none
   else peelPisW m (k - 1) (tfld m FORALL (tierW e) (idxW e) 1)
@@ -444,11 +444,11 @@ decreasing_by
 theorem peelPisW_zero (m : Mem) (e : Word) : peelPisW m 0 e = some (1, e) := by
   rw [peelPisW]; simp
 
-theorem peelPisW_miss (m : Mem) (k e : Word) (hk : k ≠ 0) (h : e >>> 28 ≠ 6) :
+theorem peelPisW_miss (m : Mem) (k e : Word) (hk : k ≠ 0) (h : tagW e ≠ 6) :
     peelPisW m k e = some (0, 0) := by
   rw [peelPisW]; simp [hk, h]
 
-theorem peelPisW_step (m : Mem) (k e e' : Word) (hk : k ≠ 0) (h : e >>> 28 = 6)
+theorem peelPisW_step (m : Mem) (k e e' : Word) (hk : k ≠ 0) (h : tagW e = 6)
     (hv1 : ¬ (tierW e ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0))
     (hv2 : ¬ tcnt m FORALL (tierW e) ≤ idxW e)
     (he' : e' = tfld m FORALL (tierW e) (idxW e) 1) :
@@ -476,7 +476,7 @@ theorem peelPisLoop_spec (n : Nat) (s₀ : St) :
     rw [exec, step_while (w := peelPisLoop) rfl]
     sym only [lang_grind, arena_grind] =>
       vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih, evalE_tld, tld, evalE_cnt,
-        tcntM, evalE_tierE, evalE_idxE] <;> finish [tierW, idxW]
+        tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE] <;> finish [tierW, idxW]
 
 theorem peelPisLoop_step_spec (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀⦄
@@ -531,7 +531,7 @@ theorem peelPisW_ok (m : Mem) (a : AState) (hR : ArenaR m a) :
       rfl
     · have hk0' : k.toNat ≠ 0 := fun h => hk0 (UInt64.toNat_inj.mp (by simpa using h))
       obtain ⟨j, hj⟩ := Nat.exists_eq_succ_of_ne_zero hk0'
-      by_cases hc : e >>> 28 = 6
+      by_cases hc : tagW e = 6
       · have hv1 : ¬ (tierW e ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0) := by
           rw [peelPisW] at hL
           simp only [hk0, ↓reduceIte, hc] at hL

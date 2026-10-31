@@ -43,7 +43,7 @@ theorem pdW_mfr : ∀ (n : Nat) (m m' : Mem) (xo xl e : Word) (r : List Word),
     by_cases h0 : xl = 0
     · rw [pdW_nil (h := h0)] at h
       simp only [Option.some.injEq, Prod.mk.injEq] at h; rw [← h.2]; exact MFr.refl _ _ _
-    by_cases h6 : e >>> 28 ≠ 6
+    by_cases h6 : tagW e ≠ 6
     · rw [pdW_nf (h := h0) (h1 := h6)] at h
       simp only [Option.some.injEq, Prod.mk.injEq] at h; rw [← h.2]; exact MFr.refl _ _ _
     by_cases hv : eViewW m e = []

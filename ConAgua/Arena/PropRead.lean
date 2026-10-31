@@ -43,7 +43,7 @@ namespace L.Arena
 
 /-- `binder_dom(k, e)`'s loop: `k` ∀ binders down, the domain at `k = 0`. -/
 def binderDomLoop : Stmt := lblk (k, e, t, x) {
-  while e >> 28 == 6 {
+  while ⟦e⟧.tag == 6 {
     (t, x) := node FORALL⟦e⟧;
     if k == 0 { return (1, FORALL⟨t, x⟩.ty) };
     e := FORALL⟨t, x⟩.b;
@@ -60,7 +60,7 @@ def binderDomL : FunDecl := lfn (k, e) locals (t, x) {
 
 /-- `app_count_at(e, f)`'s loop: `get_app_fn`'s (`getAppFnLoop`), the start counter `f0` kept. -/
 def appCountAtLoop : Stmt := lblk (e, f, t, x, f0) {
-  while e >> 28 == 4 {
+  while ⟦e⟧.tag == 4 {
     if f == 0 { abort };
     f -= 1;
     (t, x) := node APP⟦e⟧;
@@ -84,7 +84,7 @@ def appCountAtL : FunDecl := lfn (e, f) locals (t, x, f0) {
 @[l_impl ConRon.Arena.residualPW]
 def residualPWL : FunDecl := lfn (fl, h) locals (t, x, t0, z) {
   if fl == 0 { return (0, 0, 0) };
-  if h >> 28 != 2 { return (0, 0, 0) };
+  if ⟦h⟧.tag != 2 { return (0, 0, 0) };
   (t, x) := node SORT⟦h⟧;
   t0 := CTL.u64[192];
   z := call lv_zero(SORT⟨t, x⟩.u);
@@ -96,7 +96,7 @@ def residualPWL : FunDecl := lfn (fl, h) locals (t, x, t0, z) {
 
 /-- `lam_proj(f, k, e)`'s loop: down the λ chain, counting the binders. -/
 def lamProjLoop : Stmt := lblk (f, k, e, t, x) {
-  while e >> 28 == 5 {
+  while ⟦e⟧.tag == 5 {
     if f == 0 { abort };
     f -= 1;
     (t, x) := node LAM⟦e⟧;
@@ -111,7 +111,7 @@ def lamProjLoop : Stmt := lblk (f, k, e, t, x) {
 def lamProjL : FunDecl := lfn (f, k, e) locals (t, x, j) {
   ⟪lamProjLoop⟫;
   if f == 0 { abort };
-  if e >> 28 != 0 { return (0, 0, 0) };
+  if ⟦e⟧.tag != 0 { return (0, 0, 0) };
   (t, x) := node BVAR⟦e⟧;
   j := BVAR⟨t, x⟩.i;
   if j < k { return (1, k, j) };
@@ -125,7 +125,7 @@ answers `e` itself. The argument slice `get_app_args` pushes is dropped (the top
 def unwrapStepL : FunDecl :=
     lfn (vis, f, e) locals (cnt, hh, t, x, fd, p, lf, k, j, top, ao, an, r) {
   (cnt, hh) := call app_count_at(e, f);
-  if hh >> 28 != 3 { return (0, 0) };
+  if ⟦hh⟧.tag != 3 { return (0, 0) };
   (t, x) := node CONST⟦hh⟧;
   (fd, p) := call env_find(CONST⟨t, x⟩.n, vis);
   if fd == 0 { return (0, 0) };
@@ -160,9 +160,9 @@ def peelPisWL : FunDecl := lfn (vis, f, k, e) locals (u, t, x, r1, r2) {
     return (1, u)
   };
   u := e;
-  if e >> 28 != 6 {
+  if ⟦e⟧.tag != 6 {
     u := call unwrap_id_defs(vis, f, 4, e);
-    if u >> 28 != 6 { return (0, 0) }
+    if ⟦u⟧.tag != 6 { return (0, 0) }
   };
   (t, x) := node FORALL⟦u⟧;
   (r1, r2) := call peel_pis_w(vis, f, k - 1, FORALL⟨t, x⟩.b);
@@ -234,7 +234,7 @@ def headTypePWL : FunDecl :=
 
 /-- `type_sort_pw`'s loop: down the ∀ telescope, counting the binders. -/
 def typeSortPWLoop : Stmt := lblk (vis, f, rt, r, d, t, x) {
-  while r >> 28 == 6 {
+  while ⟦r⟧.tag == 6 {
     if f == 0 { abort };
     f -= 1;
     (t, x) := node FORALL⟦r⟧;
@@ -253,7 +253,7 @@ def typeSortPWL : FunDecl := lfn (vis, f, rt) locals (r, d, t, x, cnt, fn, k, o,
   ⟪typeSortPWLoop⟫;
   if f == 0 { abort };
   f -= 1;
-  if r >> 28 == 2 { return (1, 0, 0) };
+  if ⟦r⟧.tag == 2 { return (1, 0, 0) };
   (cnt, fn) := call app_count_at(r, f);
   (k, o, c) := call head_type_pw(vis, f, rt, d, fn, cnt);
   return (k, o, c)
@@ -312,17 +312,17 @@ def headProofPWL : FunDecl := lfn (vis, f, h) locals (g, x1, x2, x3, k, o, c) {
 
 /-- `proof_pw`'s loop: through λ bodies, `let` bodies and application heads. -/
 def proofPWLoop : Stmt := lblk (vis, f, e, t, x) {
-  while e >> 28 == 5 || e >> 28 == 7 || e >> 28 == 4 {
+  while ⟦e⟧.tag == 5 || ⟦e⟧.tag == 7 || ⟦e⟧.tag == 4 {
     if f == 0 { abort };
     f -= 1;
     t := ⟦e⟧.tier;
     x := ⟦e⟧.idx;
     if t != 0 && CTL.u64[1] == 0 { abort };
-    if e >> 28 == 5 {
+    if ⟦e⟧.tag == 5 {
       if LAM⟨t⟩.count <= x { abort };
       e := LAM⟨t, x⟩.b
     } else {
-      if e >> 28 == 7 {
+      if ⟦e⟧.tag == 7 {
         if LET⟨t⟩.count <= x { abort };
         e := LET⟨t, x⟩.b
       } else {

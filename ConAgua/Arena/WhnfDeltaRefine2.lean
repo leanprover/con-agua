@@ -26,7 +26,7 @@ l_model rawNatLit_spec (p : Prog) (hp : WhnfDeltaProg p)
   fns [hp.rawNatLit ↦ rawNatLitW tuple]
   specs [callW_spec p n "pin_at", callW_spec p n "pin_word"]
   grind [arena_grind] fold [tierW, idxW]
-  extra [evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
+  extra [evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE]
   finish [tierW, idxW] gen 30
 
 
@@ -36,7 +36,7 @@ theorem rdW_ctl_top' (m : Mem) : rdW (m.arr64 CTL) 0 = m.top := by
 /-- **A `lit` node past the view checks**: the kind word `0` says `natVal`, with the record's
 slice; any other kind says `strVal`. -/
 theorem view_lit_nat (m : Mem) (a : AState) (hR : ArenaR m a) (h : Word) (hh : h.toNat < 2 ^ 32)
-    (hv : viewOK m h LIT) (hg : h >>> 28 = 8) :
+    (hv : viewOK m h LIT) (hg : tagW h = 8) :
     (tfld m LIT (tierW h) (idxW h) 0 = 0 →
       ∃ N, a.store.view (decE h) = some (.lit (.natVal N)) ∧ NatRec m (tierW h) (idxW h) N) ∧
     (tfld m LIT (tierW h) (idxW h) 0 ≠ 0 →
@@ -96,9 +96,9 @@ theorem rawNatLit_run_const {m : Mem} {a : AState} {h : EIdx} {c : NIdx} {us : L
 
 theorem view_other (m : Mem) (a : AState) (hR : ArenaR m a) (h : Word) (hh : h.toNat < 2 ^ 32)
     (c : TRec) (hv : viewOK m h c)
-    (hcg : (h >>> 28 = 0 ∧ c = BVAR) ∨ (h >>> 28 = 1 ∧ c = FVAR) ∨ (h >>> 28 = 2 ∧ c = SORT) ∨
-      (h >>> 28 = 4 ∧ c = APP) ∨ (h >>> 28 = 5 ∧ c = LAM) ∨ (h >>> 28 = 6 ∧ c = FORALL) ∨
-      (h >>> 28 = 7 ∧ c = LET) ∨ (h >>> 28 = 9 ∧ c = PROJ)) :
+    (hcg : (tagW h = 0 ∧ c = BVAR) ∨ (tagW h = 1 ∧ c = FVAR) ∨ (tagW h = 2 ∧ c = SORT) ∨
+      (tagW h = 4 ∧ c = APP) ∨ (tagW h = 5 ∧ c = LAM) ∨ (tagW h = 6 ∧ c = FORALL) ∨
+      (tagW h = 7 ∧ c = LET) ∨ (tagW h = 9 ∧ c = PROJ)) :
     ∃ v, a.store.view (decE h) = some v ∧ (∀ N, v ≠ .lit (.natVal N)) ∧
       (∀ c us, v ≠ .const c us) := by
   rcases hcg with ⟨g, rfl⟩ | ⟨g, rfl⟩ | ⟨g, rfl⟩ | ⟨g, rfl⟩ | ⟨g, rfl⟩ | ⟨g, rfl⟩ | ⟨g, rfl⟩ | ⟨g, rfl⟩
@@ -117,9 +117,9 @@ theorem rawSimple {dn : NIdx → Option ConLeche.Name} {m : Mem} {a₀ : AState}
     {fe : IFEnv} {M : ModeMaps} {eb : Word} (hS : CoreS dn m a₀ vis fe M eb) {h : Word} (hh : HW h)
     (c : TRec) (hsc : ¬(tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0))
     (hb : ¬ tcnt m c (tierW h) ≤ idxW h)
-    (hcg : (h >>> 28 = 0 ∧ c = BVAR) ∨ (h >>> 28 = 1 ∧ c = FVAR) ∨ (h >>> 28 = 2 ∧ c = SORT) ∨
-      (h >>> 28 = 4 ∧ c = APP) ∨ (h >>> 28 = 5 ∧ c = LAM) ∨ (h >>> 28 = 6 ∧ c = FORALL) ∨
-      (h >>> 28 = 7 ∧ c = LET) ∨ (h >>> 28 = 9 ∧ c = PROJ))
+    (hcg : (tagW h = 0 ∧ c = BVAR) ∨ (tagW h = 1 ∧ c = FVAR) ∨ (tagW h = 2 ∧ c = SORT) ∨
+      (tagW h = 4 ∧ c = APP) ∨ (tagW h = 5 ∧ c = LAM) ∨ (tagW h = 6 ∧ c = FORALL) ∨
+      (tagW h = 7 ∧ c = LET) ∨ (tagW h = 9 ∧ c = PROJ))
     (r : List Word) (hr : r.headD 0 = 0) : RawOut m a₀ h r := by
   obtain ⟨v, hv, hl, hc⟩ := view_other m a₀ hS.arena.base h hh c ⟨hsc, by simpa using hb⟩ hcg
   exact RawOut.none (rawNatLit_run_other hv hl hc) hr
@@ -142,9 +142,9 @@ theorem callW_rawNatLit (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀ : AS
   rw [ite_eq_right hsc] at hW
   -- the tags whose arm only checks the bound
   have simple : ∀ (c : TRec) (g : Prop) [Decidable g], g →
-      (g → (h >>> 28 = 0 ∧ c = BVAR) ∨ (h >>> 28 = 1 ∧ c = FVAR) ∨ (h >>> 28 = 2 ∧ c = SORT) ∨
-        (h >>> 28 = 4 ∧ c = APP) ∨ (h >>> 28 = 5 ∧ c = LAM) ∨ (h >>> 28 = 6 ∧ c = FORALL) ∨
-        (h >>> 28 = 7 ∧ c = LET) ∨ (h >>> 28 = 9 ∧ c = PROJ)) →
+      (g → (tagW h = 0 ∧ c = BVAR) ∨ (tagW h = 1 ∧ c = FVAR) ∨ (tagW h = 2 ∧ c = SORT) ∨
+        (tagW h = 4 ∧ c = APP) ∨ (tagW h = 5 ∧ c = LAM) ∨ (tagW h = 6 ∧ c = FORALL) ∨
+        (tagW h = 7 ∧ c = LET) ∨ (tagW h = 9 ∧ c = PROJ)) →
       (if tcnt s₀.mem c (tierW h) ≤ idxW h then none else
         some ((0 : Word), (0 : Word), (0 : Word), s₀.mem)) =
         some (r.headD 0, r.tail.headD 0, r.tail.tail.headD 0, s'.mem) →
@@ -156,22 +156,22 @@ theorem callW_rawNatLit (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀ : AS
     simp only [Option.some.injEq, Prod.mk.injEq] at hW'
     obtain ⟨hf, -, -, hm⟩ := hW'
     exact ⟨hm.symm, rawSimple hC hh c hsc hb (hcg hg) r hf.symm⟩
-  by_cases g0 : h >>> 28 = 0
+  by_cases g0 : tagW h = 0
   · rw [ite_eq_left g0] at hW
     obtain ⟨h1, h2⟩ := simple BVAR _ g0 (fun _ => Or.inl ⟨g0, rfl⟩) hW
     exact ⟨h1, h2⟩
   rw [ite_eq_right g0] at hW
-  by_cases g1 : h >>> 28 = 1
+  by_cases g1 : tagW h = 1
   · rw [ite_eq_left g1] at hW
     obtain ⟨h1, h2⟩ := simple FVAR _ g1 (fun _ => Or.inr (Or.inl ⟨g1, rfl⟩)) hW
     exact ⟨h1, h2⟩
   rw [ite_eq_right g1] at hW
-  by_cases g2 : h >>> 28 = 2
+  by_cases g2 : tagW h = 2
   · rw [ite_eq_left g2] at hW
     obtain ⟨h1, h2⟩ := simple SORT _ g2 (fun _ => Or.inr (Or.inr (Or.inl ⟨g2, rfl⟩))) hW
     exact ⟨h1, h2⟩
   rw [ite_eq_right g2] at hW
-  by_cases g3 : h >>> 28 = 3
+  by_cases g3 : tagW h = 3
   · rw [ite_eq_left g3] at hW
     by_cases hb : tcnt s₀.mem CONST (tierW h) ≤ idxW h
     · rw [ite_eq_left hb] at hW; cases hW
@@ -227,30 +227,30 @@ theorem callW_rawNatLit (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀ : AS
       rw [decide_eq_false hcond] at hrun
       simpa only [Bool.false_eq_true, ↓reduceIte] using hrun
   rw [ite_eq_right g3] at hW
-  by_cases g4 : h >>> 28 = 4
+  by_cases g4 : tagW h = 4
   · rw [ite_eq_left g4] at hW
     obtain ⟨h1, h2⟩ := simple APP _ g4 (fun _ => Or.inr (Or.inr (Or.inr (Or.inl ⟨g4, rfl⟩)))) hW
     exact ⟨h1, h2⟩
   rw [ite_eq_right g4] at hW
-  by_cases g5 : h >>> 28 = 5
+  by_cases g5 : tagW h = 5
   · rw [ite_eq_left g5] at hW
     obtain ⟨h1, h2⟩ := simple LAM _ g5
       (fun _ => Or.inr (Or.inr (Or.inr (Or.inr (Or.inl ⟨g5, rfl⟩))))) hW
     exact ⟨h1, h2⟩
   rw [ite_eq_right g5] at hW
-  by_cases g6 : h >>> 28 = 6
+  by_cases g6 : tagW h = 6
   · rw [ite_eq_left g6] at hW
     obtain ⟨h1, h2⟩ := simple FORALL _ g6
       (fun _ => Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inl ⟨g6, rfl⟩)))))) hW
     exact ⟨h1, h2⟩
   rw [ite_eq_right g6] at hW
-  by_cases g7 : h >>> 28 = 7
+  by_cases g7 : tagW h = 7
   · rw [ite_eq_left g7] at hW
     obtain ⟨h1, h2⟩ := simple LET _ g7
       (fun _ => Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inl ⟨g7, rfl⟩))))))) hW
     exact ⟨h1, h2⟩
   rw [ite_eq_right g7] at hW
-  by_cases g8 : h >>> 28 = 8
+  by_cases g8 : tagW h = 8
   · rw [ite_eq_left g8] at hW
     by_cases hb : tcnt s₀.mem LIT (tierW h) ≤ idxW h
     · rw [ite_eq_left hb] at hW; cases hW
@@ -279,10 +279,10 @@ theorem callW_rawNatLit (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀ : AS
       exact ⟨hm.symm, RawOut.none (rawNatLit_run_other hview (fun N => nofun) (fun c us => nofun))
         hf.symm⟩
   rw [ite_eq_right g8] at hW
-  by_cases g9 : h >>> 28 ≠ 9
+  by_cases g9 : tagW h ≠ 9
   · rw [ite_eq_left g9] at hW; cases hW
   rw [ite_eq_right g9] at hW
-  have g9' : h >>> 28 = 9 := by simpa using g9
+  have g9' : tagW h = 9 := by simpa using g9
   obtain ⟨h1, h2⟩ := simple PROJ _ g9'
     (fun _ => Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr ⟨g9', rfl⟩))))))) hW
   exact ⟨h1, h2⟩
@@ -586,17 +586,17 @@ l_model litToCtorIfNat_spec (p : Prog) (hp : WhnfDeltaProg p)
   fns [hp.litToCtorIfNat ↦ litToCtorIfNatW ]
   specs [callW_spec p n "nat_lit_supported", callW_spec p n "nat_lit_to_ctor"]
   grind [arena_grind] fold [tierW, idxW]
-  extra [evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
+  extra [evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE]
   finish [tierW, idxW] gen 30
 
 
-theorem litToCtor_run_notlit (fe : IFEnv) (a : AState) (h : Word) (hh : HW h) (hg : h >>> 28 ≠ 8) :
+theorem litToCtor_run_notlit (fe : IFEnv) (a : AState) (h : Word) (hh : HW h) (hg : tagW h ≠ 8) :
     (litToCtorIfNat fe (decE h)).run a = .ok (decE h, a) := by
   have ht : ((decE h).tag == ETag.lit) = false := by rw [decE_lit_tag h hh]; simp [hg]
   simp [litToCtorIfNat, ht, StateT.run_pure]
   rfl
 
-theorem litToCtor_run_str (fe : IFEnv) (a : AState) (h : Word) (hh : HW h) (hg : h >>> 28 = 8)
+theorem litToCtor_run_str (fe : IFEnv) (a : AState) (h : Word) (hh : HW h) (hg : tagW h = 8)
     (s : String) (hv : a.store.view (decE h) = some (.lit (.strVal s))) :
     (litToCtorIfNat fe (decE h)).run a = .ok (decE h, a) := by
   have ht : ((decE h).tag == ETag.lit) = true := by rw [decE_lit_tag h hh]; simp [hg]
@@ -604,7 +604,7 @@ theorem litToCtor_run_str (fe : IFEnv) (a : AState) (h : Word) (hh : HW h) (hg :
   rfl
 
 theorem litToCtor_run_unsup (fe : IFEnv) (a a₁ : AState) (h : Word) (hh : HW h)
-    (hg : h >>> 28 = 8) (N : Nat) (hv : a.store.view (decE h) = some (.lit (.natVal N)))
+    (hg : tagW h = 8) (N : Nat) (hv : a.store.view (decE h) = some (.lit (.natVal N)))
     (hs : (natLitSupported fe).run a = .ok (false, a₁)) :
     (litToCtorIfNat fe (decE h)).run a = .ok (decE h, a₁) := by
   have ht : ((decE h).tag == ETag.lit) = true := by rw [decE_lit_tag h hh]; simp [hg]
@@ -612,7 +612,7 @@ theorem litToCtor_run_unsup (fe : IFEnv) (a a₁ : AState) (h : Word) (hh : HW h
   rfl
 
 theorem litToCtor_run_sup (fe : IFEnv) (a a₁ a₂ : AState) (h : Word) (hh : HW h)
-    (hg : h >>> 28 = 8) (N : Nat) (hv : a.store.view (decE h) = some (.lit (.natVal N)))
+    (hg : tagW h = 8) (N : Nat) (hv : a.store.view (decE h) = some (.lit (.natVal N)))
     (hs : (natLitSupported fe).run a = .ok (true, a₁)) (x : EIdx)
     (hc : (natLitToConstructor N).run a₁ = .ok (x, a₂)) :
     (litToCtorIfNat fe (decE h)).run a = .ok (x, a₂) := by
@@ -635,7 +635,7 @@ theorem litToCtorIfNat_refines (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a�
   | succ n =>
   obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (litToCtorIfNat_spec p hp.toWhnfDeltaProg (n + 1) s₀ vis h) hcall
   rw [litToCtorIfNatW.eq_2] at hW
-  by_cases hg : h >>> 28 ≠ 8
+  by_cases hg : tagW h ≠ 8
   · rw [ite_eq_left hg] at hW
     simp only [Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨hr, hm⟩ := hW
@@ -643,7 +643,7 @@ theorem litToCtorIfNat_refines (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a�
     exact (CRef.pure hC _ (litToCtor_run_notlit fe a₀ h hh hg) (by simp only [decH, ← hr]) (by
       unfold ResH; rw [← hr]; exact hh)).core
   rw [ite_eq_right hg] at hW
-  have hg8 : h >>> 28 = 8 := by simpa using hg
+  have hg8 : tagW h = 8 := by simpa using hg
   by_cases hsc : tierW h ≠ 0 ∧ rdW (s₀.mem.arr64 CTL) 1 = 0
   · rw [ite_eq_left hsc] at hW; cases hW
   rw [ite_eq_right hsc] at hW
@@ -892,7 +892,7 @@ end refs13
 
 /-- The model of `unfold_defn_at`: `(flag, result, memory)`. -/
 def unfoldDefnAtW (p : Prog) (n : Nat) (m : Mem) (e nw usw q : Word) : Option (Word × Word × Mem) :=
-  if usw >>> 28 ≠ 0 then none
+  if tagW usw ≠ 0 then none
   else if tierW usw ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
   else if tcnt m LVLS (tierW usw) ≤ idxW usw then none
   else if tfld m LVLS (tierW usw) (idxW usw) 1 ≠ rdW (m.arr64 EREC) (q + 3) then
@@ -918,7 +918,7 @@ theorem unfoldDefnAt_spec (p : Prog) (hp : WhnfDeltaProg p) (n : Nat) (s₀ : St
   simp only [callFn, unfoldDefnAtL]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt,
-      tcntM, evalE_tierE, evalE_idxE, st64,
+      tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE, st64,
       callW_spec p n "const_val_at", callW_spec p n "get_app_args",
       callW_spec p n "mk_app_n"] <;>
     finish (gen := 30) [unfoldDefnAtW, tierW, idxW]
@@ -928,7 +928,7 @@ l_model unfoldDefinition_spec (p : Prog) (hp : WhnfDeltaProg p)
   fns [hp.unfoldDefinition ↦ unfoldDefinitionW tuple]
   specs [callW_spec p n "get_app_fn", callW_spec p n "env_find", callW_spec p n "unfold_defn_at"]
   grind [arena_grind] fold [tierW, idxW]
-  extra [evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
+  extra [evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE]
   finish [tierW, idxW] gen 30
 
 
@@ -1016,10 +1016,10 @@ theorem callW_unfoldDefnAt (hp : WhnfDeltaProg' p) (hlp : InstLPOK p) (n : Nat) 
   subst hcv_eq hv_eq
   obtain ⟨hslice, hlen, -, -⟩ := decCV_rd (erecP_ext s₀.mem) hC.erec hcv
   unfold unfoldDefnAtW at hW
-  by_cases g1 : usw >>> 28 ≠ 0
+  by_cases g1 : tagW usw ≠ 0
   · rw [ite_eq_left g1] at hW; cases hW
   rw [ite_eq_right g1] at hW
-  have g1' : usw >>> 28 = 0 := by simpa using g1
+  have g1' : tagW usw = 0 := by simpa using g1
   by_cases g2 : tierW usw ≠ 0 ∧ rdW (s₀.mem.arr64 CTL) 1 = 0
   · rw [ite_eq_left g2] at hW; cases hW
   rw [ite_eq_right g2] at hW
@@ -1187,7 +1187,7 @@ theorem callW_unfoldDefinition (hp : WhnfDeltaProg' p) (hlp : InstLPOK p) (n : N
     (getAppFn_refines p hp.spine n s₀ a₀ hC.arena.base e he) h1
   have hm1 : m₁ = s₀.mem := by rw [← ht₁, hm₁]
   subst hm1
-  by_cases g0 : r₁.headD 0 >>> 28 ≠ 3
+  by_cases g0 : tagW (r₁.headD 0) ≠ 3
   · rw [ite_eq_left g0] at hW
     simp only [Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨hr0, hr1, hm⟩ := hW
@@ -1198,7 +1198,7 @@ theorem callW_unfoldDefinition (hp : WhnfDeltaProg' p) (hlp : InstLPOK p) (n : N
     · simp only [decOptR, decOpt, ← hr0]; rfl
     · unfold ResW HW; rw [← hr0, ← hr1]; exact ⟨by decide, by decide⟩
   rw [ite_eq_right g0] at hW
-  have g0' : r₁.headD 0 >>> 28 = 3 := by simpa using g0
+  have g0' : tagW (r₁.headD 0) = 3 := by simpa using g0
   have ht : ((decE (r₁.headD 0)).tag == ETag.const) = true := by
     rw [decE_const_tag _ hhw1]; exact beq_iff_eq.mpr g0'
   by_cases g1 : tierW (r₁.headD 0) ≠ 0 ∧ rdW (s₀.mem.arr64 CTL) 1 = 0

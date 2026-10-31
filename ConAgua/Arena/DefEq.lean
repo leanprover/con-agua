@@ -52,7 +52,7 @@ instance : Inhabited LazyResA := ⟨.verdict false⟩
 /-- con-ron: ConRon/Arena/Core.lean:845-857 ConRon.Arena.isBoolTrue -/
 @[l_impl ConRon.Arena.isBoolTrue]
 def isBoolTrueL : FunDecl := lfn (h) locals (t, i, el, bt) {
-  if h >> 28 != 3 { return 0 };
+  if ⟦h⟧.tag != 3 { return 0 };
   (t, i) := node CONST⟦h⟧;
   el := call pin_word(52);
   if CONST⟨t, i⟩.us != el { return 0 };
@@ -63,13 +63,13 @@ def isBoolTrueL : FunDecl := lfn (h) locals (t, i, el, bt) {
 /-- con-ron: ConRon/Arena/Core.lean:859-879 ConRon.Arena.isEagerReduce -/
 @[l_impl ConRon.Arena.isEagerReduce]
 def isEagerReduceL : FunDecl := lfn (h) locals (t, i, f, g, er) {
-  if h >> 28 != 4 { return 0 };
+  if ⟦h⟧.tag != 4 { return 0 };
   (t, i) := node APP⟦h⟧;
   f := APP⟨t, i⟩.f;
-  if f >> 28 != 4 { return 0 };
+  if ⟦f⟧.tag != 4 { return 0 };
   (t, i) := node APP⟦f⟧;
   g := APP⟨t, i⟩.f;
-  if g >> 28 != 3 { return 0 };
+  if ⟦g⟧.tag != 3 { return 0 };
   (t, i) := node CONST⟦g⟧;
   er := call pin_at(50);
   return u64(CONST⟨t, i⟩.n == er)
@@ -95,7 +95,7 @@ def litEqL : FunDecl := lfn (a, b) locals (ta, xa, tb, xb, la, lb, r) {
 @[l_impl ConRon.Arena.ioNeutral]
 def ioNeutralL : FunDecl := lfn (e) locals (h, t) {
   h := call get_app_fn(e);
-  t := h >> 28;
+  t := ⟦h⟧.tag;
   if t == 5 || t == 7 || t == 0 { return 0 };
   return 1
 }
@@ -104,7 +104,7 @@ def ioNeutralL : FunDecl := lfn (e) locals (h, t) {
 @[l_impl ConRon.Arena.unfoldableHead]
 def unfoldableHeadL : FunDecl := lfn (vis, e) locals (hh, t, i, f, p, lo, l) {
   hh := call get_app_fn(e);
-  if hh >> 28 != 3 { return 0 };
+  if ⟦hh⟧.tag != 3 { return 0 };
   (t, i) := node CONST⟦hh⟧;
   (f, p) := call env_find(CONST⟨t, i⟩.n, vis);
   if f == 0 { return 0 };
@@ -117,7 +117,7 @@ def unfoldableHeadL : FunDecl := lfn (vis, e) locals (hh, t, i, f, p, lo, l) {
 @[l_impl ConRon.Arena.headHint]
 def headHintL : FunDecl := lfn (vis, e) locals (hh, t, i, f, p) {
   hh := call get_app_fn(e);
-  if hh >> 28 != 3 { return (0, 0) };
+  if ⟦hh⟧.tag != 3 { return (0, 0) };
   (t, i) := node CONST⟦hh⟧;
   (f, p) := call env_find(CONST⟨t, i⟩.n, vis);
   if f == 0 { return (0, 0) };
@@ -140,18 +140,18 @@ def hintLtL : FunDecl := lfn (k1, h1, k2, h2) locals () {
 /-- con-ron: ConRon/Arena/Core.lean:436-461 ConRon.Arena.sameConstHeads -/
 @[l_impl ConRon.Arena.sameConstHeads]
 def sameConstHeadsL : FunDecl := lfn (a, b) locals (t, i, f1, f2, hh, n1) {
-  if a >> 28 != 4 { return 0 };
+  if ⟦a⟧.tag != 4 { return 0 };
   (t, i) := node APP⟦a⟧;
   f1 := APP⟨t, i⟩.f;
-  if b >> 28 != 4 { return 0 };
+  if ⟦b⟧.tag != 4 { return 0 };
   (t, i) := node APP⟦b⟧;
   f2 := APP⟨t, i⟩.f;
   hh := call get_app_fn(f1);
-  if hh >> 28 != 3 { return 0 };
+  if ⟦hh⟧.tag != 3 { return 0 };
   (t, i) := node CONST⟦hh⟧;
   n1 := CONST⟨t, i⟩.n;
   hh := call get_app_fn(f2);
-  if hh >> 28 != 3 { return 0 };
+  if ⟦hh⟧.tag != 3 { return 0 };
   (t, i) := node CONST⟦hh⟧;
   return u64(n1 == CONST⟨t, i⟩.n)
 }
@@ -230,7 +230,7 @@ def boolTrueShortcutL : FunDecl := lfn (mode, vis, d, a) locals (w, r) {
 @[l_impl ConRon.Arena.defeqSpine]
 def spineHeadL : FunDecl := lfn (e) locals (hh, g, n, us, x) {
   hh := call get_app_fn(e);
-  if hh >> 28 != 3 { return (0, 0, 0) };
+  if ⟦hh⟧.tag != 3 { return (0, 0, 0) };
   (g, n, us, x) := call e_view(hh);
   return (1, n, us)
 }
@@ -352,7 +352,7 @@ def peelPushL : FunDecl := lfn (d, k, fo, t2) locals (fv) {
 def defeqPeelLoop : Stmt := lblk (mode, vis, d, peel, a, b, k, fo, dq, t2, ba, bb, fv) {
   while 0 == 0 {
     if a == b { return 1 };
-    if peel == 0 || a >> 28 != 6 || b >> 28 != 6 {
+    if peel == 0 || ⟦a⟧.tag != 6 || ⟦b⟧.tag != 6 {
       dq := call peel_leaf(mode, vis, d, a, b, k, fo);
       return dq
     };
@@ -426,7 +426,7 @@ def lamsInstL : FunDecl := lfn (d, ty2, body1, body2) locals (fv, b1, b2) {
 -- con-ron: ConRon/Arena/ExprOps.lean:1271-1282 ConRon.Arena.lamPair?
 @[l_impl ConRon.Arena.lamPair?]
 def lamPairL : FunDecl := lfn (a, b) locals (g, x1, y1, x2, y2, z) {
-  if a >> 28 != 5 || b >> 28 != 5 { return (0, 0, 0, 0, 0) };
+  if ⟦a⟧.tag != 5 || ⟦b⟧.tag != 5 { return (0, 0, 0, 0, 0) };
   (g, x1, y1, z) := call e_view(a);
   (g, x2, y2, z) := call e_view(b);
   return (1, x1, y1, x2, y2)
@@ -495,8 +495,8 @@ def quickLamL : FunDecl := lfn (mode, vis, d, a, b) locals (g, x1, y1, x2, y2, z
 @[l_impl ConRon.Arena.quickDefEq]
 def quickDefeqL : FunDecl := lfn (mode, vis, d, a, b) locals (g, r) {
   if a == b { return (1, 1) };
-  g := a >> 28;
-  if g != b >> 28 { return (0, 0) };
+  g := ⟦a⟧.tag;
+  if g != ⟦b⟧.tag { return (0, 0) };
   if g == 2 {
     r := call quick_sort(a, b);
     return (1, r)
@@ -521,13 +521,13 @@ def quickDefeqL : FunDecl := lfn (mode, vis, d, a, b) locals (g, r) {
 def isNatZeroL : FunDecl := lfn (e) locals (t, i, el, nz) {
   t := ⟦e⟧.tier;
   i := ⟦e⟧.idx;
-  if e >> 28 == 8 {
+  if ⟦e⟧.tag == 8 {
     if t != 0 && CTL.u64[1] == 0 { abort };
     if LIT⟨t⟩.count <= i { abort };
     if LIT⟨t, i⟩.kind != 0 { return 0 };
     return u64(LIT⟨t, i⟩.l == 0)
   };
-  if e >> 28 == 3 {
+  if ⟦e⟧.tag == 3 {
     if t != 0 && CTL.u64[1] == 0 { abort };
     if CONST⟨t⟩.count <= i { abort };
     el := call pin_word(52);
@@ -544,7 +544,7 @@ def isNatZeroL : FunDecl := lfn (e) locals (t, i, el, nz) {
 def natPredL : FunDecl := lfn (e) locals (t, i, l, f, x, el, ns) {
   t := ⟦e⟧.tier;
   i := ⟦e⟧.idx;
-  if e >> 28 == 8 {
+  if ⟦e⟧.tag == 8 {
     if t != 0 && CTL.u64[1] == 0 { abort };
     if LIT⟨t⟩.count <= i { abort };
     if LIT⟨t, i⟩.kind != 0 { return (0, 0) };
@@ -552,12 +552,12 @@ def natPredL : FunDecl := lfn (e) locals (t, i, l, f, x, el, ns) {
     l := call nat_pred_lit(LIT⟨t, i⟩.o, LIT⟨t, i⟩.l);
     return (1, l)
   };
-  if e >> 28 == 4 {
+  if ⟦e⟧.tag == 4 {
     if t != 0 && CTL.u64[1] == 0 { abort };
     if APP⟨t⟩.count <= i { abort };
     f := APP⟨t, i⟩.f;
     x := APP⟨t, i⟩.a;
-    if f >> 28 != 3 { return (0, 0) };
+    if ⟦f⟧.tag != 3 { return (0, 0) };
     (t, i) := node CONST⟦f⟧;
     el := call pin_word(52);
     ns := call pin_at(3);
@@ -573,7 +573,7 @@ def defeqOffsetL : FunDecl := lfn (mode, vis, d, a, b) locals (za, zb, fa, x, fb
   za := call is_nat_zero(a);
   zb := call is_nat_zero(b);
   if za != 0 && zb != 0 { return (1, 1) };
-  if a >> 28 == 8 && b >> 28 == 8 { return (0, 0) };
+  if ⟦a⟧.tag == 8 && ⟦b⟧.tag == 8 { return (0, 0) };
   (fa, x) := call nat_pred(a);
   if fa == 0 { return (0, 0) };
   (fb, y) := call nat_pred(b);
@@ -588,7 +588,7 @@ def defeqOffsetL : FunDecl := lfn (mode, vis, d, a, b) locals (za, zb, fa, x, fb
 @[l_impl ConRon.Arena.headIsProj]
 def headIsProjL : FunDecl := lfn (e) locals (h) {
   h := call get_app_fn(e);
-  return u64(h >> 28 == 9)
+  return u64(⟦h⟧.tag == 9)
 }
 
 /-- `try_unfold_proj_app(mode, vis, d, e)`: `(1, e')` when `tryUnfoldProjApp` is `some e'`. -/
@@ -812,8 +812,8 @@ paths).
 con-ron: ConRon/Arena/Core.lean:3314-3327 ConRon.Arena.defeqProjPair -/
 @[l_impl ConRon.Arena.defeqProjPair]
 def defeqProjPairL : FunDecl := lfn (mode, vis, d, a, b) locals (t, i, s, x1, x2, x3, y1, y2, y3, r) {
-  if a >> 28 != 9 { return 0 };
-  if b >> 28 != 9 { return 0 };
+  if ⟦a⟧.tag != 9 { return 0 };
+  if ⟦b⟧.tag != 9 { return 0 };
   (t, i) := node PROJ⟦a⟧;
   x1 := PROJ⟨t, i⟩.n;
   x2 := PROJ⟨t, i⟩.i;
@@ -880,7 +880,7 @@ def etaCertL : FunDecl :=
   if nt == 0 { return 0 };
   tb := call infer_io(mode, vis, d, b);
   hh := call whnf(mode, vis, d, tb);
-  if hh >> 28 != 6 { return 0 };
+  if ⟦hh⟧.tag != 6 { return 0 };
   (t, i) := node FORALL⟦hh⟧;
   ty2 := FORALL⟨t, i⟩.ty;
   cod2 := FORALL⟨t, i⟩.b;
@@ -894,7 +894,7 @@ def etaCertL : FunDecl :=
 @[l_impl ConRon.Arena.etaCtorShape]
 def etaCtorShapeL : FunDecl := lfn (vis, a) locals (top, hh, t, i, f, p, ao, an, nf) {
   hh := call get_app_fn(a);
-  if hh >> 28 != 3 { return 0 };
+  if ⟦hh⟧.tag != 3 { return 0 };
   (t, i) := node CONST⟦hh⟧;
   (f, p) := call env_find(CONST⟨t, i⟩.n, vis);
   if f == 0 { return 0 };
@@ -967,7 +967,7 @@ def structEtaCertGoL : FunDecl :=
 def structEtaCertWtbL : FunDecl :=
     lfn (mode, vis, d, b, us, c, p, ao, an, wtb) locals (hh, t, i, T, us2, f, q, to, tn, r) {
   hh := call get_app_fn(wtb);
-  if hh >> 28 != 3 { return 0 };
+  if ⟦hh⟧.tag != 3 { return 0 };
   (t, i) := node CONST⟦hh⟧;
   T := CONST⟨t, i⟩.n;
   us2 := CONST⟨t, i⟩.us;
@@ -984,7 +984,7 @@ def structEtaCertWtbL : FunDecl :=
 def structEtaCertWithL : FunDecl :=
     lfn (mode, vis, d, a, b, wtb) locals (top, hh, t, i, c, us, f, p, ao, an, nf, r) {
   hh := call get_app_fn(a);
-  if hh >> 28 != 3 { return 0 };
+  if ⟦hh⟧.tag != 3 { return 0 };
   (t, i) := node CONST⟦hh⟧;
   c := CONST⟨t, i⟩.n;
   us := CONST⟨t, i⟩.us;
@@ -1021,7 +1021,7 @@ proofs). -/
 def structUnitTailL : FunDecl := lfn (mode, vis, d, b, wta) locals (tb, wtb, r) {
   tb := call infer_io(mode, vis, d, b);
   wtb := call whnf(mode, vis, d, tb);
-  if wtb >> 28 == 6 { return 0 };
+  if ⟦wtb⟧.tag == 6 { return 0 };
   r := call defeq(mode, vis, d, wta, wtb);
   return r
 }
@@ -1034,7 +1034,7 @@ The record words are read before the first call after `env_find`, and the twin's
 def structUnitHeadL : FunDecl :=
     lfn (mode, vis, d, b, wta) locals (top, hh, t, i, T, us2, f, q, ul, up, lpn, to, tn, lo, uslen, rc, r) {
   hh := call get_app_fn(wta);
-  if hh >> 28 != 3 { return 0 };
+  if ⟦hh⟧.tag != 3 { return 0 };
   (t, i) := node CONST⟦hh⟧;
   T := CONST⟨t, i⟩.n;
   us2 := CONST⟨t, i⟩.us;
@@ -1089,7 +1089,7 @@ the first call. -/
 def stuckStrL : FunDecl :=
     lfn (mode, vis, d, a, b, side, lt, fo) locals (t, i, co, uo, el, sl, ss, c, r) {
   (t, i) := node LIT⟦lt⟧;
-  if LIT⟨t, i⟩.kind == 1 && fo >> 28 == 3 {
+  if LIT⟨t, i⟩.kind == 1 && ⟦fo⟧.tag == 3 {
     (t, i) := node CONST⟦fo⟧;
     co := CONST⟨t, i⟩.n;
     uo := CONST⟨t, i⟩.us;

@@ -291,13 +291,13 @@ theorem ip_grade (p : Prog) (hp : InferProjProg p) (hpj : ProjProg p) (hc : Infe
   refine RefE.onlySim (fun _ => rfl) (fun _ _ h => h) fun r₃ m₃ hc3 => ?_
   dsimp only [ipE.k_get_app_fn]
   obtain ⟨rfl, hhw, hgaf⟩ := getAppFn_callW hp.leaf hS₂.arena.base hrw2 hc3
-  by_cases g1 : r₃.headD 0 >>> 28 ≠ 3
+  by_cases g1 : tagW (r₃.headD 0) ≠ 3
   · have ht : ((decE (r₃.headD 0)).tag == ETag.const) = false := by
       rw [decE_const_tag _ hhw]; simpa using g1
     exact RefE.abortAt g1 fun _ =>
       ErrClaim.of_error (inferProj_notConst _ _ _ _ _ _ _ _ _ _ _ _ hrun1 hrun2 hgaf ht) rfl
   refine RefE.pass g1 ?_
-  have g1' : r₃.headD 0 >>> 28 = 3 := Classical.not_not.mp g1
+  have g1' : tagW (r₃.headD 0) = 3 := Classical.not_not.mp g1
   have ht : ((decE (r₃.headD 0)).tag == ETag.const) = true := by
     rw [decE_const_tag _ hhw]; simpa using g1'
   refine RefE.abort0 (by rfl) fun g2 => ?_

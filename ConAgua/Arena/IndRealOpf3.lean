@@ -202,13 +202,13 @@ theorem opfGo_ok : ∀ (k : Nat) (m m' : Mem) (a : AState) (n e i co cn : Word) 
     rw [hspn1, hcc]; exact hsl.bound
   rw [ite_eq_right hn] at c'
   have hn1 := wsub1 hn
-  by_cases hg : e >>> 28 ≠ 6
+  by_cases hg : tagW e ≠ 6
   · rw [ite_eq_left hg] at c'
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj c')
     refine ⟨none, a, by rw [← hn1]; exact opfGo_run_nf acc _ _ _ a (by rw [decE_tag_forallE_beq e he]; simpa using hg),
       hS, IWGrow.refl _, hAb, rfl, rfl⟩
   rw [ite_eq_right hg] at c'
-  have hg6 : e >>> 28 = 6 := Decidable.not_not.mp hg
+  have hg6 : tagW e = 6 := Decidable.not_not.mp hg
   obtain ⟨rv, m1, h1, c'⟩ := ntBW_some c'
   obtain ⟨hm1, hx, hy, hview⟩ := opfV_ok hS hg6 h1
   subst m1
@@ -269,13 +269,13 @@ theorem opaGo_ok : ∀ (k : Nat) (m m' : Mem) (a : AState) (n e i : Word) (r : L
     exact ⟨rfl, he, rfl, by simp, SpineR.empty' htb, fun w _ => rfl⟩
   rw [ite_eq_right hn] at c'
   have hn1 := wsub1 hn
-  by_cases hg : e >>> 28 ≠ 6
+  by_cases hg : tagW e ≠ 6
   · rw [ite_eq_left hg] at c'
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj c')
     refine ⟨none, a, by rw [← hn1]; exact opa_run_nf _ _ _ a (by rw [decE_tag_forallE_beq e he]; simpa using hg),
       hS, IWGrow.refl _, hAb, rfl, rfl⟩
   rw [ite_eq_right hg] at c'
-  have hg6 : e >>> 28 = 6 := Decidable.not_not.mp hg
+  have hg6 : tagW e = 6 := Decidable.not_not.mp hg
   obtain ⟨rv, m1, h1, c'⟩ := ntBW_some c'
   obtain ⟨hm1, hx, hy, hview⟩ := opfV_ok hS hg6 h1
   subst m1

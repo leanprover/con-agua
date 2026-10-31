@@ -5,30 +5,32 @@ import ConAgua.Arena.GrindAttr
 /-!
 # Handle words: encoding, decoding, and the bridge to the twin's `Idx`, proved once
 
-A handle of con-ron (`ConRon/Arena/Handle.lean`, `Idx`) *is* its 32-bit word
-`tag · 2^28 + tier · 2^27 + index`. L keeps the word: it hashes it, packs two into a cons key and
-compares handles with `==`. The relation between an L word `w` and the twin's handle is
-`decI w` (`Idx.ofWord w.toUInt32`).
+A handle of con-ron (`ConRon/Arena/Handle.lean`, `Idx`) *is* its 32-bit word, in one of two
+shapes (con-ron task #133): bit 31 the tier; bit 30 set for a WIDE word (an expression `app`,
+`tier · 2^31 + 2^30 + index`), clear for a NARROW one (`tier · 2^31 + tag · 2^26 + index`). L
+keeps the word: it hashes it, packs two into a cons key and compares handles with `==`. The
+relation between an L word `w` and the twin's handle is `decI w` (`Idx.ofWord w.toUInt32`).
 
 This file and the section "Handle words" of `StoreFields.lean` are the one place that knows
 the encoding. Proofs use the names and laws below instead of unfolding the shifts, masks and powers
 of two:
 
 * **Encode and decode** (`StoreFields.lean`, plain words, usable in `module` files): `hdW g t i`
-  (the handle word of node `i` of tier `t` of tag `g`), `tagW h = h >>> 28`, `tierW h` (bit 27),
-  `idxW h` (the low 27 bits); their values as numbers (`shr28_toNat`, `tierW_toNat'`,
-  `idxW_toNat`, `mask32_toNat`), bounds (`shr28_lt`, `tierW_le`, `idxW_lt`, `mask_lt`) and the laws
-  of `hdW` (`hdW_toNat`, `hdW_tag`, `hdW_tier`, `hdW_idx`, `hdW_lt`).
+  (the narrow handle word of node `i` of tier `t` of tag `g`), `hdA t i` (the wide one of `app`
+  node `i`), `tagW h` (the twin's `Idx.tag`), `tierW h` (bit 31), `idxW h` (a narrow word's
+  index), `idxA h` (a wide word's); their values as numbers (`tagW_toNat`, `tierW_toNat'`,
+  `idxW_toNat`, `idxA_toNat`, `mask32_toNat`), bounds (`tagW_lt`, `tierW_le`, `idxW_lt`, `mask_lt`)
+  and the laws of `hdW`/`hdA` (`hdW_tag`, `hdW_tier`, `hdW_idx`, `hdW_lt`, `hdA_…`).
 * **The bridge**: `decI_inj`/`decI_inj_iff`/`decI_beq`/`decI_bne` (two words below `2^32` decode to
   the same handle iff they are equal), `decI_mask` (only the low 32 bits count), `decI_tag`,
-  `decI_tag_eq`, `decI_tag_beq`, `decI_idx`, `isPersistent_decI`, `decI_word_self`,
-  `decI_eq_iff`, `decI_word`, and the list forms `contains_map_decI`, `findIdx_map_decI`,
-  `map_decI_inj`, `map_decI_beq`.
+  `decI_tag_eq`, `decI_tag_beq`, `decI_isWide`, `decI_idx` (narrow), `decI_idxA` (wide),
+  `isPersistent_decI`, `decI_word_self`, `decI_eq_iff`, `decI_word`, and the list forms
+  `contains_map_decI`, `findIdx_map_decI`, `map_decI_inj`, `map_decI_beq`.
 * **Expression tags**: `decE_tag`, `decE_tag_eq`, `decE_tag_beq`, `tag_beq_w` (any spelling of a
   small numeral), and one lemma per `ETag` constant a proof needs (`decE_tag_const`,
   `decE_tag_const_beq`, `decI_tag_const_beq`, …).
 
-The tag lemmas are stated with `h >>> 28`, the term `vcgen` leaves for an L tag test `h >> 28`.
+The tag lemmas are stated with `tagW h`, the term `vcgen` leaves for an L tag read `⟦h⟧.tag`.
 Every proof goes through `toNat` and `omega`, as con-ron's `Handle.lean` does (no `bv_decide`).
 -/
 
@@ -46,16 +48,53 @@ theorem decE_eq (w : Word) : decE w = decI w := rfl
 /-- The index of a handle, as a word. -/
 def hix {k : IdxKind} (x : Idx k) : Word := UInt64.ofNat x.idxNat
 
-theorem hix_hdW {k : IdxKind} (g t i : Word) (hi : i.toNat < 2 ^ 27) :
-    hix (decI (hdW g t i) : Idx k) = i := by
-  simp only [hix, decI, hdW, Idx.idxNat, Idx.index]
-  apply UInt64.toNat_inj.mp
-  simp only [UInt64.toNat_ofNat', UInt32.toNat_mod, UInt64.toNat_toUInt32, UInt64.toNat_add,
-    UInt64.toNat_mul]
-  grind
-grind_pattern [store_grind] hix_hdW => hix (decI (hdW g t i) : Idx k)
+theorem decI_word_toNat {k : IdxKind} (w : Word) : (decI w : Idx k).word.toNat = w.toNat % 2 ^ 32 := by
+  simp [decI, UInt64.toNat_toUInt32]
 
-/-- The arena's handle of node `n` of tier `b` is the L handle word. -/
+/-- The shape of a decoded word: wide iff bit 30 is set. -/
+theorem decI_isWide {k : IdxKind} (h : Word) :
+    (decI h : Idx k).isWide = decide (h.toNat / 2 ^ 30 % 2 = 1) := by
+  have e := decI_word_toNat (k := k) h
+  simp only [Idx.isWide]
+  rw [Bool.eq_iff_iff, beq_iff_eq, decide_eq_true_iff, ← UInt32.toNat_inj]
+  simp only [UInt32.toNat_mod, UInt32.toNat_div, e]
+  simp; omega
+
+theorem decI_isWide_false {k : IdxKind} (h : Word) (hn : h.toNat / 2 ^ 30 % 2 = 0) :
+    (decI h : Idx k).isWide = false := by
+  rw [decI_isWide]; simp [hn]
+
+theorem decI_isWide_true {k : IdxKind} (h : Word) (hw : h.toNat / 2 ^ 30 % 2 = 1) :
+    (decI h : Idx k).isWide = true := by
+  rw [decI_isWide]; simp [hw]
+
+/-- The index of a narrow word. -/
+theorem decI_idx {k : IdxKind} (h : Word) (hn : h.toNat / 2 ^ 30 % 2 = 0) :
+    (decI h : Idx k).idxNat = (idxW h).toNat := by
+  have e := decI_word_toNat (k := k) h
+  simp only [Idx.idxNat, Idx.index, decI_isWide_false h hn, Bool.false_eq_true, ↓reduceIte,
+    UInt32.toNat_mod, e, idxW_toNat_narrow h hn]
+  simp
+
+/-- The index of a wide word. -/
+theorem decI_idxA {k : IdxKind} (h : Word) (hw : h.toNat / 2 ^ 30 % 2 = 1) :
+    (decI h : Idx k).idxNat = (idxA h).toNat := by
+  have e := decI_word_toNat (k := k) h
+  simp only [Idx.idxNat, Idx.index, decI_isWide_true h hw, ↓reduceIte,
+    UInt32.toNat_mod, e, idxA_toNat_wide h hw]
+  simp
+
+theorem hix_hdW {k : IdxKind} (g t i : Word) (hg : g.toNat < 16) (ht : t ≤ 1)
+    (hi : i.toNat < 2 ^ 26) : hix (decI (hdW g t i) : Idx k) = i := by
+  simp only [hix]
+  rw [decI_idx _ (hdW_narrow g t i hg ht hi), hdW_idx g t i hg ht hi]; simp
+
+theorem hix_hdA {k : IdxKind} (t i : Word) (ht : t ≤ 1) (hi : i.toNat < 2 ^ 30) :
+    hix (decI (hdA t i) : Idx k) = i := by
+  simp only [hix]
+  rw [decI_idxA _ (hdA_wide t i ht hi), hdA_idx t i ht hi]; simp
+
+/-- The arena's narrow handle of node `n` of tier `b` is the L handle word. -/
 theorem mk_eq {k : IdxKind} (g : UInt32) (b n : Nat) :
     (Idx.mk g (UInt32.ofNat b) (UInt32.ofNat n) : Idx k) =
       decI (hdW g.toUInt64 (UInt64.ofNat b) (UInt64.ofNat n)) := by
@@ -64,10 +103,25 @@ theorem mk_eq {k : IdxKind} (g : UInt32) (b n : Nat) :
   apply UInt32.toNat_inj.mp
   simp only [UInt64.toNat_toUInt32, UInt64.toNat_add, UInt64.toNat_mul, UInt64.toNat_ofNat',
     UInt32.toNat_add, UInt32.toNat_mul, UInt32.toNat_ofNat', UInt32.toNat_toUInt64]
-  simp only [show (268435456 : UInt32).toNat = 268435456 from rfl,
-    show (134217728 : UInt32).toNat = 134217728 from rfl,
-    show (0x10000000 : UInt64).toNat = 268435456 from rfl,
-    show (0x8000000 : UInt64).toNat = 134217728 from rfl]
+  simp only [show (2147483648 : UInt32).toNat = 2147483648 from rfl,
+    show (67108864 : UInt32).toNat = 67108864 from rfl,
+    show (0x80000000 : UInt64).toNat = 2147483648 from rfl,
+    show (0x4000000 : UInt64).toNat = 67108864 from rfl]
+  omega
+
+/-- The arena's wide (`app`) handle of node `n` of tier `b` is the L handle word. -/
+theorem mkWide_eq {k : IdxKind} (b n : Nat) :
+    (Idx.mkWide (UInt32.ofNat b) (UInt32.ofNat n) : Idx k) =
+      decI (hdA (UInt64.ofNat b) (UInt64.ofNat n)) := by
+  simp only [decI, hdA, Idx.mkWide]
+  congr 1
+  apply UInt32.toNat_inj.mp
+  simp only [UInt64.toNat_toUInt32, UInt64.toNat_add, UInt64.toNat_mul, UInt64.toNat_ofNat',
+    UInt32.toNat_add, UInt32.toNat_mul, UInt32.toNat_ofNat']
+  simp only [show (2147483648 : UInt32).toNat = 2147483648 from rfl,
+    show (1073741824 : UInt32).toNat = 1073741824 from rfl,
+    show (0x80000000 : UInt64).toNat = 2147483648 from rfl,
+    show (0x40000000 : UInt64).toNat = 1073741824 from rfl]
   omega
 
 /-! ## The bridge: words below `2^32` and the twin's handles -/
@@ -120,22 +174,24 @@ theorem decI_mask {k : IdxKind} (w : Word) : (decI (w &&& 4294967295) : Idx k) =
 
 theorem decE_mask (y : Word) : decE (y &&& 4294967295) = decE y := decI_mask y
 
+/-- The tag of a decoded word (con-ron's `Idx.tag`: `app`'s for a wide word). -/
 theorem decI_tag {k : IdxKind} (h : Word) (hh : h.toNat < 2 ^ 32) :
-    (decI h : Idx k).tag = (h >>> 28).toUInt32 := by
-  simp only [decI, Idx.tag]
+    (decI h : Idx k).tag = (tagW h).toUInt32 := by
+  have e := decI_word_toNat (k := k) h
+  have t := tagW_toNat h
   apply UInt32.toNat_inj.mp
-  simp [UInt32.toNat_div, UInt64.toNat_toUInt32, UInt64.toNat_shiftRight, Nat.shiftRight_eq_div_pow]
-  omega
-
-theorem decI_idx {k : IdxKind} (h : Word) : (decI h : Idx k).idxNat = (idxW h).toNat := by
-  simp only [decI, Idx.idxNat, Idx.index]
-  simp only [UInt32.toNat_mod, UInt64.toNat_toUInt32, idxW_toNat]
-  simp
+  simp only [Idx.tag, decI_isWide, UInt64.toNat_toUInt32]
+  rcases Nat.mod_two_eq_zero_or_one (h.toNat / 2 ^ 30) with hw | hw
+  · simp only [hw] at t ⊢
+    simp [UInt32.toNat_mod, UInt32.toNat_div, e, t]
+    omega
+  · simp only [hw] at t ⊢
+    simp [t]
 
 theorem decI_tag_eq {k : IdxKind} (h : Word) (hh : h.toNat < 2 ^ 32) (g : Nat) (hg : g < 16) :
-    ((decI h : Idx k).tag = UInt32.ofNat g) ↔ (h >>> 28 = UInt64.ofNat g) := by
+    ((decI h : Idx k).tag = UInt32.ofNat g) ↔ (tagW h = UInt64.ofNat g) := by
   rw [decI_tag h hh]
-  have hgt := shr28_lt h hh
+  have hgt := tagW_lt h hh
   constructor
   · intro e; apply UInt64.toNat_inj.mp
     have := congrArg UInt32.toNat e
@@ -143,21 +199,22 @@ theorem decI_tag_eq {k : IdxKind} (h : Word) (hh : h.toNat < 2 ^ 32) (g : Nat) (
   · intro e; rw [e]; apply UInt32.toNat_inj.mp; simp
 
 theorem decI_tag_beq {k : IdxKind} (h : Word) (hh : h.toNat < 2 ^ 32) (g : Nat) (hg : g < 16) :
-    ((decI h : Idx k).tag == UInt32.ofNat g) = decide (h >>> 28 = UInt64.ofNat g) := by
+    ((decI h : Idx k).tag == UInt32.ofNat g) = decide (tagW h = UInt64.ofNat g) := by
   rw [Bool.eq_iff_iff, beq_iff_eq, decide_eq_true_iff, decI_tag_eq h hh g hg]
 
 /-- The tier bit of a handle word, at any handle kind. -/
-theorem isPersistent_decI {k : IdxKind} (w : Word) (hw : w.toNat < 2 ^ 32) :
-    (decI w : Idx k).isPersistent = ((w >>> 27) &&& 1 == 0) := by
-  simp only [decI, Idx.isPersistent, Idx.tier]
-  have := bit27_toNat w
-  have : (w.toUInt32 / 134217728 % 2).toNat = w.toNat / 2 ^ 27 % 2 := by
-    simp [UInt32.toNat_mod, UInt32.toNat_div, UInt64.toNat_toUInt32]; omega
-  grind
+theorem isPersistent_decI {k : IdxKind} (w : Word) (_hw : w.toNat < 2 ^ 32) :
+    (decI w : Idx k).isPersistent = ((w >>> 31) &&& 1 == 0) := by
+  have e := decI_word_toNat (k := k) w
+  have := bit31_toNat w
+  simp only [Idx.isPersistent, Idx.tier]
+  rw [Bool.eq_iff_iff, beq_iff_eq, beq_iff_eq, ← UInt32.toNat_inj, ← UInt64.toNat_inj]
+  simp only [UInt32.toNat_div, e]
+  simp; omega
 
 /-- The tier bit of a handle word, at expression handles (as `app`'s skip test uses it). -/
 theorem isPersistent_decE (w : Word) (hw : w.toNat < 2 ^ 32) :
-    (decE w).isPersistent = ((w >>> 27) &&& 1 == 0) := by
+    (decE w).isPersistent = ((w >>> 31) &&& 1 == 0) := by
   rw [decE_eq]; exact isPersistent_decI w hw
 
 /-- The tier bit, at any handle kind, as `tierW`. -/
@@ -168,70 +225,75 @@ theorem decI_pers {k : IdxKind} (h : Word) (hh : h.toNat < 2 ^ 32) :
 theorem decE_pers (h : Word) (hh : h.toNat < 2 ^ 32) : (decE h).isPersistent = (tierW h == 0) :=
   decI_pers h hh
 
+/-- The tier bit, as `tierW`, for any word: only its low 32 bits reach the handle, and bit 31 is
+one of them. -/
 theorem decE_tierW (h : Word) : (decE h).isPersistent = (tierW h == 0) := by
-  simp only [decE, Idx.isPersistent, Idx.tier, tierW]
-  have := bit27_toNat h
-  have : (h.toUInt32 / 134217728 % 2).toNat = h.toNat / 2 ^ 27 % 2 := by
-    simp [UInt32.toNat_mod, UInt32.toNat_div, UInt64.toNat_toUInt32]; omega
-  grind
+  rw [← decE_mask h, decE_pers _ (mask_lt h)]
+  congr 1
+  apply UInt64.toNat_inj.mp
+  rw [tierW_toNat', tierW_toNat', mask32_toNat]; omega
 
 /-! ## Tags of expression handles (`decE`, the `ETag` constants) -/
 
-theorem decE_tag (h : Word) (hh : h.toNat < 2 ^ 32) : (decE h).tag = (h >>> 28).toUInt32 :=
+theorem decE_tag (h : Word) (hh : h.toNat < 2 ^ 32) : (decE h).tag = (tagW h).toUInt32 :=
   decI_tag h hh
 
-theorem decE_idx (h : Word) : (decE h).idxNat = (idxW h).toNat := decI_idx h
+theorem decE_idx (h : Word) (hn : h.toNat / 2 ^ 30 % 2 = 0) : (decE h).idxNat = (idxW h).toNat :=
+  decI_idx h hn
+
+theorem decE_idxA (h : Word) (hw : h.toNat / 2 ^ 30 % 2 = 1) : (decE h).idxNat = (idxA h).toNat :=
+  decI_idxA h hw
 
 theorem decE_tag_eq (e : Word) (hh : e.toNat < 2 ^ 32) (k : Nat) (hk : k < 16) :
-    ((decE e).tag = UInt32.ofNat k) ↔ e >>> 28 = UInt64.ofNat k := decI_tag_eq e hh k hk
+    ((decE e).tag = UInt32.ofNat k) ↔ tagW e = UInt64.ofNat k := decI_tag_eq e hh k hk
 
 theorem decE_tag_beq (e : Word) (hh : e.toNat < 2 ^ 32) (k : Nat) (hk : k < 16) :
-    ((decE e).tag == UInt32.ofNat k) = decide (e >>> 28 = UInt64.ofNat k) := decI_tag_beq e hh k hk
+    ((decE e).tag == UInt32.ofNat k) = decide (tagW e = UInt64.ofNat k) := decI_tag_beq e hh k hk
 
 /-- The tag compared with a tag word `t`. -/
 theorem decI_tag_eqW {k : IdxKind} (b : Word) (hb : b.toNat < 2 ^ 32) (t : Word) (ht : t.toNat < 16) :
-    (decI b : Idx k).tag = t.toUInt32 ↔ b >>> 28 = t := by
+    (decI b : Idx k).tag = t.toUInt32 ↔ tagW b = t := by
   have e := decI_tag_eq (k := k) b hb t.toNat ht
   rw [UInt64.ofNat_toNat] at e
   rw [← e]; constructor <;> intro h <;> rw [h] <;> apply UInt32.toNat_inj.mp <;> simp <;> omega
 
 theorem decE_tag_eqW (b : Word) (hb : b.toNat < 2 ^ 32) (t : Word) (ht : t.toNat < 16) :
-    (decE b).tag = t.toUInt32 ↔ b >>> 28 = t := decI_tag_eqW b hb t ht
+    (decE b).tag = t.toUInt32 ↔ tagW b = t := decI_tag_eqW b hb t ht
 
 /-- The tag compared with any spelling `t` of a small numeral `k` (an `ETag` constant). -/
 theorem tag_beq_w (h : Word) (hh : h.toNat < 2 ^ 32) (k : Nat) (hk : k < 16) (t : UInt32)
     (ht : t = UInt32.ofNat k) (w : Word) (hw : UInt64.ofNat k = w) :
-    ((decE h).tag == t) = decide (h >>> 28 = w) := by
+    ((decE h).tag == t) = decide (tagW h = w) := by
   rw [ht, decE_tag_beq h hh k hk, hw]
 
 section etags
 variable (e : Word) (hh : e.toNat < 2 ^ 32)
 include hh
-theorem decE_tag_sort : (decE e).tag = ETag.sort ↔ e >>> 28 = 2 := decE_tag_eq e hh 2 (by decide)
-theorem decE_tag_const : (decE e).tag = ETag.const ↔ e >>> 28 = 3 := decE_tag_eq e hh 3 (by decide)
-theorem decE_tag_app : (decE e).tag = ETag.app ↔ e >>> 28 = 4 := decE_tag_eq e hh 4 (by decide)
-theorem decE_tag_forallE : (decE e).tag = ETag.forallE ↔ e >>> 28 = 6 :=
+theorem decE_tag_sort : (decE e).tag = ETag.sort ↔ tagW e = 2 := decE_tag_eq e hh 2 (by decide)
+theorem decE_tag_const : (decE e).tag = ETag.const ↔ tagW e = 3 := decE_tag_eq e hh 3 (by decide)
+theorem decE_tag_app : (decE e).tag = ETag.app ↔ tagW e = 4 := decE_tag_eq e hh 4 (by decide)
+theorem decE_tag_forallE : (decE e).tag = ETag.forallE ↔ tagW e = 6 :=
   decE_tag_eq e hh 6 (by decide)
-theorem decE_tag_lit : (decE e).tag = ETag.lit ↔ e >>> 28 = 8 := decE_tag_eq e hh 8 (by decide)
-theorem decE_tag_sort_beq : ((decE e).tag == ETag.sort) = decide (e >>> 28 = 2) :=
+theorem decE_tag_lit : (decE e).tag = ETag.lit ↔ tagW e = 8 := decE_tag_eq e hh 8 (by decide)
+theorem decE_tag_sort_beq : ((decE e).tag == ETag.sort) = decide (tagW e = 2) :=
   decE_tag_beq e hh 2 (by decide)
-theorem decE_tag_const_beq : ((decE e).tag == ETag.const) = decide (e >>> 28 = 3) :=
+theorem decE_tag_const_beq : ((decE e).tag == ETag.const) = decide (tagW e = 3) :=
   decE_tag_beq e hh 3 (by decide)
-theorem decE_tag_app_beq : ((decE e).tag == ETag.app) = decide (e >>> 28 = 4) :=
+theorem decE_tag_app_beq : ((decE e).tag == ETag.app) = decide (tagW e = 4) :=
   decE_tag_beq e hh 4 (by decide)
-theorem decE_tag_lam_beq : ((decE e).tag == ETag.lam) = decide (e >>> 28 = 5) :=
+theorem decE_tag_lam_beq : ((decE e).tag == ETag.lam) = decide (tagW e = 5) :=
   decE_tag_beq e hh 5 (by decide)
-theorem decE_tag_forallE_beq : ((decE e).tag == ETag.forallE) = decide (e >>> 28 = 6) :=
+theorem decE_tag_forallE_beq : ((decE e).tag == ETag.forallE) = decide (tagW e = 6) :=
   decE_tag_beq e hh 6 (by decide)
-theorem decE_tag_lit_beq : ((decE e).tag == ETag.lit) = decide (e >>> 28 = 8) :=
+theorem decE_tag_lit_beq : ((decE e).tag == ETag.lit) = decide (tagW e = 8) :=
   decE_tag_beq e hh 8 (by decide)
-theorem decI_tag_fvar_beq : ((decI e : EIdx).tag == ETag.fvar) = decide (e >>> 28 = 1) :=
+theorem decI_tag_fvar_beq : ((decI e : EIdx).tag == ETag.fvar) = decide (tagW e = 1) :=
   decI_tag_beq e hh 1 (by decide)
-theorem decI_tag_const_beq : ((decI e : EIdx).tag == ETag.const) = decide (e >>> 28 = 3) :=
+theorem decI_tag_const_beq : ((decI e : EIdx).tag == ETag.const) = decide (tagW e = 3) :=
   decI_tag_beq e hh 3 (by decide)
-theorem decI_tag_app_beq : ((decI e : EIdx).tag == ETag.app) = decide (e >>> 28 = 4) :=
+theorem decI_tag_app_beq : ((decI e : EIdx).tag == ETag.app) = decide (tagW e = 4) :=
   decI_tag_beq e hh 4 (by decide)
-theorem decI_tag_forallE_beq : ((decI e : EIdx).tag == ETag.forallE) = decide (e >>> 28 = 6) :=
+theorem decI_tag_forallE_beq : ((decI e : EIdx).tag == ETag.forallE) = decide (tagW e = 6) :=
   decI_tag_beq e hh 6 (by decide)
 end etags
 

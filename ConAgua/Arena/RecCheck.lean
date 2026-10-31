@@ -421,7 +421,7 @@ def targetMajorOf : FunDecl := lfn (vis, p, cao, cal, pfo, pfl, fvo, fvl, mty)
     locals (args_o, args_l, hd, tag, g, x, y, z, r) {
   (args_o, args_l) := call get_app_args_f(⟪CWF⟫, mty);
   hd := call get_app_fn_f(⟪CWF⟫, mty);
-  tag := hd >> 28;
+  tag := ⟦hd⟧.tag;
   if tag != 3 { fail R_TARGET_REC_THE_RECURSOR_S_MAJOR_PREMISE };
   (g, x, y, z) := call e_view(hd);
   r := call target_major_of_const(vis, p, cao, cal, pfo, pfl, fvo, fvl, args_o, args_l, x, y);
@@ -616,8 +616,8 @@ def targetK53Heads : FunDecl := lfn (vis, p, fto, ftl, Mc, leafW, majDom)
     locals (lh, mh, ltag, mtag, g, x, y, z, ip, usp, ii, lao, lal, mao, mal, r) {
   lh := call get_app_fn_f(⟪CWF⟫, leafW);
   mh := call get_app_fn_f(⟪CWF⟫, majDom);
-  ltag := lh >> 28;
-  mtag := mh >> 28;
+  ltag := ⟦lh⟧.tag;
+  mtag := ⟦mh⟧.tag;
   if ltag != 3 { return 0 };
   if mtag != 3 { return 0 };
   (g, x, y, z) := call e_view(lh);
@@ -676,7 +676,7 @@ the earlier `xs`; `(0, 0, 0)` when `e` runs out of binders first. -/
 @[l_impl ConRon.Arena.targetPiDomsWith]
 def targetPiDomsWith : FunDecl := lfn (xo, xl, e) locals (tag, g, d, b, z, xj, cur, ok, ro, rl, qo, ql) {
   if xl == 0 { return (1, 0, 0) };
-  tag := e >> 28;
+  tag := ⟦e⟧.tag;
   if tag != 6 { return (0, 0, 0) };
   (g, d, b, z) := call e_view(e);
   xj := IW.u64[xo];

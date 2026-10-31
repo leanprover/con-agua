@@ -86,13 +86,13 @@ def forallCS : ConsSch where
   room := condOf (lblk (t, ty, body, j, c) { if len(FAREC⟨t⟩) <= c { skip } })
   recW := [.bin .or (.var 1) (.bin .shl (.var 2) (.const 32))]
   ihash := lblk (ty, body, h) { h := ((⟪fnvBasis⟫ ^ ty) * ⟪fnvPrime⟫ ^ body) * ⟪fnvPrime⟫ }
-  skipW := some (rhsOf (lblk (ty, body, h, sk) { sk := ((ty | body) >> 27) & 1 }))
+  skipW := some (rhsOf (lblk (ty, body, h, sk) { sk := ((ty | body) >> 31) & 1 }))
   mtM m ks t i := famatchW (m.arr64 (tierA FAREC t)) t i (ks.getD 0 0) (ks.getD 1 0)
   qhM _ ks := forallHashW (ks.getD 0 0) (ks.getD 1 0)
   hsM := fahash
   vsM as := [as.getD 0 0 ||| as.getD 1 0 <<< 32]
   roomM m t c := decide (m.len64 (tierA FAREC t) ≤ c)
-  skM ks := ((ks.getD 0 0 ||| ks.getD 1 0) >>> 27) &&& 1
+  skM ks := ((ks.getD 0 0 ||| ks.getD 1 0) >>> 31) &&& 1
 
 /-! ## `forall_find(t, ty, body, h)`: the probe -/
 
@@ -122,7 +122,7 @@ probe if the scratch tier is open, the append to the tier the store is in. Same 
 
 /-- The scratch skip: the scratch tier is open and `ty` or `body` is a scratch handle. -/
 def faskipW (m : Mem) (ty body : Word) : Word :=
-  if rdW (m.arr64 CTL) 1 ≠ 0 then ((ty ||| body) >>> 27) &&& 1 else 0
+  if rdW (m.arr64 CTL) 1 ≠ 0 then ((ty ||| body) >>> 31) &&& 1 else 0
 
 /-- The model of `intern_forall`: the handle and the memory after, or `none` where the L code
 aborts (the library's `consInternM`). -/

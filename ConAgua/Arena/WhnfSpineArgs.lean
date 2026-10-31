@@ -108,7 +108,7 @@ theorem appFillLoop_spec (p : Prog) (k : Nat) (s₀ : St) :
     rw [exec, step_while (w := appFillLoop) rfl]
     sym only [lang_grind, arena_grind] =>
       vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt, tcntM,
-        evalE_tierE, evalE_idxE, st64, ih] <;>
+        evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE, st64, ih] <;>
       finish [fillW_zero, fillW_succ, fnW, argW, tierW, idxW, tfld_set64_SPN_app, tcnt]
 
 
@@ -266,7 +266,7 @@ theorem appFillNLoop_spec (p : Prog) (k : Nat) (s₀ : St) :
     rw [exec, step_while (w := appFillNLoop) rfl]
     sym only [lang_grind, arena_grind] =>
       vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt, tcntM,
-        evalE_tierE, evalE_idxE, st64, ih] <;>
+        evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE, st64, ih] <;>
       finish [fillNW_zero, fillNW_succ, fnW, tierW, idxW, tfld_set64_SPN_app, tcnt]
 
 
@@ -370,7 +370,7 @@ theorem fillNW_ok (o : Word) : ∀ (j k : Nat) (m : Mem) (e : Word), j < k →
 
 /-- A count loop at fuel zero ends with fuel zero. -/
 theorem gafLoopW_f0 {m : Mem} {e e' f' : Word} (hL : gafLoopW m e 0 = some (e', f')) : f' = 0 := by
-  by_cases hc : e >>> 28 = 4
+  by_cases hc : tagW e = 4
   · rw [gafLoopW] at hL; simp [hc] at hL
   · rw [gafLoopW_done m e 0 hc] at hL
     exact (Prod.mk.inj (Option.some.inj hL)).2.symm
@@ -378,7 +378,7 @@ theorem gafLoopW_f0 {m : Mem} {e e' f' : Word} (hL : gafLoopW m e 0 = some (e', 
 /-- **One step of the count loop at an `app` node**: the guards pass and the loop goes on at the
 function. -/
 theorem gafLoopW_app {m : Mem} {e f e' f' : Word} (hL : gafLoopW m e f = some (e', f'))
-    (hc : e >>> 28 = 4) :
+    (hc : tagW e = 4) :
     f.toNat ≠ 0 ∧ ¬ (tierW e ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0) ∧
       idxW e < tcnt m APP (tierW e) ∧ gafLoopW m (fnW m e) (f - 1) = some (e', f') ∧
       (f - 1).toNat = f.toNat - 1 := by
@@ -418,7 +418,7 @@ theorem gaaTwin (m : Mem) (a : AState) (hR : ArenaR m a) :
     exact absurd (gafLoopW_f0 hL) hf'
   | succ N ih =>
     intro e f e' f' hfN he hL hf'
-    by_cases hc : e >>> 28 = 4
+    by_cases hc : tagW e = 4
     · obtain ⟨hf0', hv1, hcnt, hL', hfm1⟩ := gafLoopW_app hL hc
       have hfm1N : (f - 1).toNat ≤ N := by rw [hfm1]; omega
       have hva := viewApp_ok m a hR e he ⟨hv1, hcnt⟩
@@ -466,7 +466,7 @@ theorem gasTwin (m : Mem) (a : AState) (hR : ArenaR m a) :
     exact absurd (gafLoopW_f0 hL) hf'
   | succ N ih =>
     intro e f e' f' hfN he hL hf'
-    by_cases hc : e >>> 28 = 4
+    by_cases hc : tagW e = 4
     · obtain ⟨hf0', hv1, hcnt, hL', hfm1⟩ := gafLoopW_app hL hc
       have hfm1N : (f - 1).toNat ≤ N := by rw [hfm1]; omega
       have hva := viewApp_ok m a hR e he ⟨hv1, hcnt⟩
@@ -882,7 +882,7 @@ theorem getAppSpine_refines' (p : Prog) (hg : p.lookup "get_app_spine" = some ge
 /-- con-ron: ConRon/Arena/Core.lean:2136-2144 ConRon.Arena.headAndArgs -/
 @[l_impl ConRon.Arena.headAndArgs]
 def headAndArgsL : FunDecl := lfn (v) locals (h, o, n) {
-  if v >> 28 == 4 {
+  if ⟦v⟧.tag == 4 {
     h := call get_app_fn(v);
     (o, n) := call get_app_args(v);
     return (h, o, n)
@@ -892,7 +892,7 @@ def headAndArgsL : FunDecl := lfn (v) locals (h, o, n) {
 
 /-- The model of `head_and_args`. -/
 def haaW (p : Prog) (n : Nat) (m : Mem) (v : Word) : Option (Word × Word × Word × Mem) :=
-  if v >>> 28 = 4 then
+  if tagW v = 4 then
     match callW p n "get_app_fn" [v] m with
     | none => none
     | some (r₁, m₁) =>
@@ -938,7 +938,7 @@ theorem headAndArgs_refines' (p : Prog) (hh : p.lookup "head_and_args" = some he
   rw [ht] at hW
   refine ⟨hloc, ?_⟩
   simp only [haaW] at hW
-  by_cases h4 : v >>> 28 = 4
+  by_cases h4 : tagW v = 4
   · rw [ite_eq_left h4] at hW
     rcases h1 : callW p n "get_app_fn" [v] s.mem with _ | ⟨r₁, m₁⟩ <;>
       simp only [h1, reduceCtorEq] at hW

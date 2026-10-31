@@ -55,20 +55,20 @@ def lvNodeW (m : Mem) (p : Word) : List Word :=
     else [rdW (m.arr64 LH) (p - 4294967296), rdW (m.arr64 LH) (p - 4294967296 + 1),
       rdW (m.arr64 LH) (p - 4294967296 + 2)]
   else if tierW p ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then []
-  else if p >>> 28 = 0 then
+  else if tagW p = 0 then
     if tcnt m ZERO (tierW p) ≤ idxW p then [] else [0, 0, 0]
-  else if p >>> 28 = 1 then
+  else if tagW p = 1 then
     if tcnt m SUCC (tierW p) ≤ idxW p then []
     else [1, tfld m SUCC (tierW p) (idxW p) 0, 0]
-  else if p >>> 28 = 2 then
+  else if tagW p = 2 then
     if tcnt m MAX (tierW p) ≤ idxW p then []
     else [2, tfld m MAX (tierW p) (idxW p) 0,
       tfld m MAX (tierW p) (idxW p) 1]
-  else if p >>> 28 = 3 then
+  else if tagW p = 3 then
     if tcnt m IMAX (tierW p) ≤ idxW p then []
     else [3, tfld m IMAX (tierW p) (idxW p) 0,
       tfld m IMAX (tierW p) (idxW p) 1]
-  else if p >>> 28 = 4 then
+  else if tagW p = 4 then
     if tcnt m PARAM (tierW p) ≤ idxW p then []
     else [4, tfld m PARAM (tierW p) (idxW p) 0, 0]
   else []
@@ -80,7 +80,7 @@ def lvNode : FunDecl := lfn (p) locals (o, g, t, i) {
     if CTL.u64[192] < o + 3 { abort };
     return (LH.u64[o], LH.u64[o + 1], LH.u64[o + 2])
   };
-  g := p >> 28;
+  g := ⟦p⟧.tag;
   t := ⟦p⟧.tier;
   i := ⟦p⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
@@ -110,7 +110,7 @@ theorem lvNode_spec (p : Prog) (hp : p.lookup "lv_node" = some lvNode) (n : Nat)
   | succ n =>
     sym only [lang_grind, arena_grind, level_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld,
-        evalE_cnt, tcntM, evalE_tierE, evalE_idxE] <;>
+        evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE] <;>
       finish [lvNodeW, tierW, idxW]
 
 /-! ## `lh_mk(g, a, b)`: allocate a heap node -/

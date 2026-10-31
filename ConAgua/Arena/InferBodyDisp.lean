@@ -138,68 +138,68 @@ structure InferAllProg (p : Prog) : Prop where
 /-! ## The arms -/
 
 theorem eViewW_head (m : Mem) (h : Word) (hne : L.Ind.eViewW m h ≠ []) :
-    (L.Ind.eViewW m h).headD 0 = h >>> 28 := by
+    (L.Ind.eViewW m h).headD 0 = tagW h := by
   unfold L.Ind.eViewW at hne ⊢
   dsimp only at hne ⊢
   have c0 : ¬ (4294967295 : Word) < h := fun c0 => by rw [ite_eq_left c0] at hne; exact absurd rfl hne
   rw [ite_eq_right c0] at hne ⊢
   have c1 : ¬ (tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0) := fun c1 => by rw [ite_eq_left c1] at hne; exact absurd rfl hne
   rw [ite_eq_right c1] at hne ⊢
-  by_cases g0 : h >>> 28 = 0
+  by_cases g0 : tagW h = 0
   · rw [ite_eq_left g0] at hne ⊢
     split at hne
     · exact absurd rfl hne
     · rename_i hc; rw [ite_eq_right hc, g0]; rfl
   rw [ite_eq_right g0] at hne ⊢
-  by_cases g1 : h >>> 28 = 1
+  by_cases g1 : tagW h = 1
   · rw [ite_eq_left g1] at hne ⊢
     split at hne
     · exact absurd rfl hne
     · rename_i hc; rw [ite_eq_right hc, g1]; rfl
   rw [ite_eq_right g1] at hne ⊢
-  by_cases g2 : h >>> 28 = 2
+  by_cases g2 : tagW h = 2
   · rw [ite_eq_left g2] at hne ⊢
     split at hne
     · exact absurd rfl hne
     · rename_i hc; rw [ite_eq_right hc, g2]; rfl
   rw [ite_eq_right g2] at hne ⊢
-  by_cases g3 : h >>> 28 = 3
+  by_cases g3 : tagW h = 3
   · rw [ite_eq_left g3] at hne ⊢
     split at hne
     · exact absurd rfl hne
     · rename_i hc; rw [ite_eq_right hc, g3]; rfl
   rw [ite_eq_right g3] at hne ⊢
-  by_cases g4 : h >>> 28 = 4
+  by_cases g4 : tagW h = 4
   · rw [ite_eq_left g4] at hne ⊢
     split at hne
     · exact absurd rfl hne
     · rename_i hc; rw [ite_eq_right hc, g4]; rfl
   rw [ite_eq_right g4] at hne ⊢
-  by_cases g5 : h >>> 28 = 5
+  by_cases g5 : tagW h = 5
   · rw [ite_eq_left g5] at hne ⊢
     split at hne
     · exact absurd rfl hne
     · rename_i hc; rw [ite_eq_right hc, g5]; rfl
   rw [ite_eq_right g5] at hne ⊢
-  by_cases g6 : h >>> 28 = 6
+  by_cases g6 : tagW h = 6
   · rw [ite_eq_left g6] at hne ⊢
     split at hne
     · exact absurd rfl hne
     · rename_i hc; rw [ite_eq_right hc, g6]; rfl
   rw [ite_eq_right g6] at hne ⊢
-  by_cases g7 : h >>> 28 = 7
+  by_cases g7 : tagW h = 7
   · rw [ite_eq_left g7] at hne ⊢
     split at hne
     · exact absurd rfl hne
     · rename_i hc; rw [ite_eq_right hc, g7]; rfl
   rw [ite_eq_right g7] at hne ⊢
-  by_cases g8 : h >>> 28 = 8
+  by_cases g8 : tagW h = 8
   · rw [ite_eq_left g8] at hne ⊢
     split at hne
     · exact absurd rfl hne
     · rename_i hc; rw [ite_eq_right hc, g8]; rfl
   rw [ite_eq_right g8] at hne ⊢
-  by_cases g9 : h >>> 28 = 9
+  by_cases g9 : tagW h = 9
   · rw [ite_eq_left g9] at hne ⊢
     split at hne
     · exact absurd rfl hne
@@ -450,7 +450,7 @@ theorem ib_ref (p : Prog) (hq : InferAllProg p) (hc : InferCallees p) (n : Nat) 
   | lit l =>
     have hg : (L.Ind.eViewW s₀.mem e).headD 0 = 8 := hvr
     simp (config := { decide := true }) only [hg, ↓reduceIte]
-    have h8 : e >>> 28 = 8 := by rw [← hhd, hg]
+    have h8 : tagW e = 8 := by rw [← hhd, hg]
     refine RefE.of_run_eq (inferBody_lit _ fe d.toNat (decE e) a₀ l hv) ?_
     refine bodyArm_ref (s₀ := ⟨s₀.mem, Locals.init []⟩) (fun _ => rfl) (fun _ _ => rfl) fun k hk' => ?_
     subst hk'
@@ -487,7 +487,7 @@ theorem ib_ref (p : Prog) (hq : InferAllProg p) (hc : InferCallees p) (n : Nat) 
   | app f x =>
     obtain ⟨hg, -⟩ := hvr
     simp (config := { decide := true }) only [hg, ↓reduceIte]
-    have h4 : e >>> 28 = 4 := by rw [← hhd, hg]
+    have h4 : tagW e = 4 := by rw [← hhd, hg]
     refine RefE.of_run_eq (inferBody_app _ fe d.toNat (decE e) a₀ f x hv) ?_
     refine bodyArm_ref (s₀ := ⟨s₀.mem, Locals.init []⟩) (fun _ => rfl) (fun _ _ => rfl) fun k hk' => ?_
     subst hk'
@@ -602,7 +602,7 @@ theorem ibo_ref (p : Prog) (hq : InferAllProg p) (hc : InferCallees p) (n : Nat)
   | lit l =>
     have hg : (L.Ind.eViewW s₀.mem e).headD 0 = 8 := hvr
     simp (config := { decide := true }) only [hg, ↓reduceIte]
-    have h8 : e >>> 28 = 8 := by rw [← hhd, hg]
+    have h8 : tagW e = 8 := by rw [← hhd, hg]
     refine RefE.of_run_eq (inferBodyIO_lit _ fe d.toNat (decE e) a₀ l hv) ?_
     refine bodyArm_ref (s₀ := ⟨s₀.mem, Locals.init []⟩) (fun _ => rfl) (fun _ _ => rfl) fun k hk' => ?_
     subst hk'
@@ -638,7 +638,7 @@ theorem ibo_ref (p : Prog) (hq : InferAllProg p) (hc : InferCallees p) (n : Nat)
   | app f x =>
     obtain ⟨hg, -⟩ := hvr
     simp (config := { decide := true }) only [hg, ↓reduceIte]
-    have h4 : e >>> 28 = 4 := by rw [← hhd, hg]
+    have h4 : tagW e = 4 := by rw [← hhd, hg]
     refine RefE.of_run_eq (inferBodyIO_app _ fe d.toNat (decE e) a₀ f x hv) ?_
     refine bodyArm_ref (s₀ := ⟨s₀.mem, Locals.init []⟩) (fun _ => rfl) (fun _ _ => rfl) fun k hk' => ?_
     subst hk'

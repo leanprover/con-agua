@@ -53,68 +53,68 @@ structure QuickProg (p : Prog) : Prop where
 /-! ## `e_view` runs -/
 
 theorem quick_eViewW_head (m : Mem) (h : Word) (hne : L.Ind.eViewW m h ≠ []) :
-    (L.Ind.eViewW m h).headD 0 = h >>> 28 := by
+    (L.Ind.eViewW m h).headD 0 = tagW h := by
   unfold L.Ind.eViewW at hne ⊢
   by_cases c1 : (4294967295 : Word) < h
   · simp [c1] at hne
   by_cases c2 : tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0
   · simp [c1, c2] at hne
   simp only [c1, c2, ite_false] at hne ⊢
-  by_cases g0 : h >>> 28 = 0
+  by_cases g0 : tagW h = 0
   · simp only [g0, ite_true] at hne ⊢
     split at hne
     · exact absurd rfl hne
     · rename_i hh; simp only [hh, ite_false, List.headD_cons]
   simp only [g0, ite_false] at hne ⊢
-  by_cases g1 : h >>> 28 = 1
+  by_cases g1 : tagW h = 1
   · simp only [g1, ite_true] at hne ⊢
     split at hne
     · exact absurd rfl hne
     · rename_i hh; simp only [hh, ite_false, List.headD_cons]
   simp only [g1, ite_false] at hne ⊢
-  by_cases g2 : h >>> 28 = 2
+  by_cases g2 : tagW h = 2
   · simp only [g2, ite_true] at hne ⊢
     split at hne
     · exact absurd rfl hne
     · rename_i hh; simp only [hh, ite_false, List.headD_cons]
   simp only [g2, ite_false] at hne ⊢
-  by_cases g3 : h >>> 28 = 3
+  by_cases g3 : tagW h = 3
   · simp only [g3, ite_true] at hne ⊢
     split at hne
     · exact absurd rfl hne
     · rename_i hh; simp only [hh, ite_false, List.headD_cons]
   simp only [g3, ite_false] at hne ⊢
-  by_cases g4 : h >>> 28 = 4
+  by_cases g4 : tagW h = 4
   · simp only [g4, ite_true] at hne ⊢
     split at hne
     · exact absurd rfl hne
     · rename_i hh; simp only [hh, ite_false, List.headD_cons]
   simp only [g4, ite_false] at hne ⊢
-  by_cases g5 : h >>> 28 = 5
+  by_cases g5 : tagW h = 5
   · simp only [g5, ite_true] at hne ⊢
     split at hne
     · exact absurd rfl hne
     · rename_i hh; simp only [hh, ite_false, List.headD_cons]
   simp only [g5, ite_false] at hne ⊢
-  by_cases g6 : h >>> 28 = 6
+  by_cases g6 : tagW h = 6
   · simp only [g6, ite_true] at hne ⊢
     split at hne
     · exact absurd rfl hne
     · rename_i hh; simp only [hh, ite_false, List.headD_cons]
   simp only [g6, ite_false] at hne ⊢
-  by_cases g7 : h >>> 28 = 7
+  by_cases g7 : tagW h = 7
   · simp only [g7, ite_true] at hne ⊢
     split at hne
     · exact absurd rfl hne
     · rename_i hh; simp only [hh, ite_false, List.headD_cons]
   simp only [g7, ite_false] at hne ⊢
-  by_cases g8 : h >>> 28 = 8
+  by_cases g8 : tagW h = 8
   · simp only [g8, ite_true] at hne ⊢
     split at hne
     · exact absurd rfl hne
     · rename_i hh; simp only [hh, ite_false, List.headD_cons]
   simp only [g8, ite_false] at hne ⊢
-  by_cases g9 : h >>> 28 = 9
+  by_cases g9 : tagW h = 9
   · simp only [g9, ite_true] at hne ⊢
     split at hne
     · exact absurd rfl hne
@@ -132,7 +132,7 @@ theorem getD_two (r : List Word) : r.getD 2 0 = r.tail.tail.headD 0 := by
 theorem eView_callW_view {p : Prog} (hp : p.lookup "e_view" = some L.Ind.eView) {n : Nat}
     {m m' : Mem} {a : AState} (hR : ArenaR m a) {h : Word} {r : List Word}
     (hc : callW p n "e_view" [h] m = some (r, m')) :
-    m' = m ∧ ∃ v, a.store.view (decE h) = some v ∧ L.Ind.ViewR r v ∧ r.headD 0 = h >>> 28 := by
+    m' = m ∧ ∃ v, a.store.view (decE h) = some v ∧ L.Ind.ViewR r v ∧ r.headD 0 = tagW h := by
   obtain ⟨s', hm, rfl, hne, hr⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (L.Ind.eView_spec p hp n ⟨m, Locals.init []⟩ h) hc
   obtain ⟨v, hv, hvr⟩ := L.Ind.eViewW_ok m a hR h (hr ▸ hne)
@@ -253,7 +253,7 @@ l_model qsE_spec (p : Prog) (hf : p.lookup "quick_sort" = some quickSortL)
   fns [hf ↦ qsE list]
   specs [callW_spec p n "e_view", callW_spec p n "lvl_eq_c"]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] unified
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 theorem decO_ne_zero {w : Word} (h : w ≠ 0) : decO w = some ((w - 1) != 0) := by
@@ -270,7 +270,7 @@ decline, `lvl_eq_c`'s `0` (out of level fuel), as the twin's `liftFueled "level 
 theorem qs_ref (p : Prog) (hp : QuickProg p) (hsd : StoreDenotes) (n : Nat) (s₀ : St)
     (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps)
     (eb : Word) (mode : ConLeche.CheckMode) (r : CoreFnsA) (depth : Nat) (a b : Word)
-    (hS : CoreS dn s₀.mem a₀ vis fe M eb) (h2a : a >>> 28 = 2) (h2b : b >>> 28 = 2) :
+    (hS : CoreS dn s₀.mem a₀ vis fe M eb) (h2a : tagW a = 2) (h2b : tagW b = 2) :
     RefE True (qsE p (n + 1) s₀.mem a b) (quickPairT mode r depth (decE a) (decE b)) a₀
       (CorePost (fun r => some (decBool r)) dn s₀.mem vis fe M eb ResH) := by
   simp only [qsE]
@@ -323,7 +323,7 @@ l_model qfE_spec (p : Prog) (hf : p.lookup "quick_forall" = some quickForallL)
   fns [hf ↦ qfE list]
   specs [callW_spec p n "e_view", dbE_spec p hb n]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] unified
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 /-- **`quick_forall` refines `quickDefEq`'s `∀` arm, both outcomes**: the errors are
@@ -332,7 +332,7 @@ theorem qf_ref (p : Prog) (hp : QuickProg p) (hil : InstListOK p) (n : Nat)
     (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps)
     (eb mode d a b : Word) (hs : SlotPre s₀ a₀ dn vis fe M eb mode)
-    (h6a : a >>> 28 = 6) (h6b : b >>> 28 = 6) (hd : d.toNat < 2 ^ 63) :
+    (h6a : tagW a = 6) (h6b : tagW b = 6) (hd : d.toNat < 2 ^ 63) :
     RefE (KnotNvG p n) (qfE p (n + 1) s₀.mem mode vis d a b)
       (quickPairT (decMode mode) (coreKnot (decMode mode) fe id F) d.toNat (decE a) (decE b)) a₀
       (CorePost (fun r => some (decBool r)) dn s₀.mem vis fe M eb ResH) := by
@@ -363,7 +363,7 @@ l_model qlE_spec (p : Prog) (hf : p.lookup "quick_lam" = some quickLamL)
   fns [hf ↦ qlE list]
   specs [callW_spec p n "e_view", defeqLams_specE p hl n]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] unified
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 /-- **`quick_lam` refines `quickDefEq`'s `λ` arm, both outcomes**: the errors are `defeq_lams`'. -/
@@ -371,7 +371,7 @@ theorem ql_ref (p : Prog) (hp : QuickProg p) (hi : Inst1OK p) (n : Nat)
     (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps)
     (eb mode d a b : Word) (hs : SlotPre s₀ a₀ dn vis fe M eb mode)
-    (h5a : a >>> 28 = 5) (h5b : b >>> 28 = 5) (hd : d.toNat < 2 ^ 63) :
+    (h5a : tagW a = 5) (h5b : tagW b = 5) (hd : d.toNat < 2 ^ 63) :
     RefE (KnotNvG p n) (qlE p (n + 1) s₀.mem mode vis d a b)
       (quickPairT (decMode mode) (coreKnot (decMode mode) fe id F) d.toNat (decE a) (decE b)) a₀
       (CorePost (fun r => some (decBool r)) dn s₀.mem vis fe M eb ResH) := by
@@ -405,7 +405,7 @@ l_model qdE_spec (p : Prog) (hf : p.lookup "quick_defeq" = some quickDefeqL)
   fns [hf ↦ qdE list]
   specs [callW_spec p n "lit_eq", qsE_spec p hs n, qfE_spec p hfa hb n, qlE_spec p hla hl n]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] unified
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 theorem coreRef_redec {α : Type} [Inhabited α] {T : AM α} {a₀ : AState} {dec₁ dec : List Word → α}
@@ -416,10 +416,10 @@ theorem coreRef_redec {α : Type} [Inhabited α] {T : AM α} {a₀ : AState} {de
   ⟨h.run, h.after, h.res.trans hd, hok⟩
 
 theorem tag_bne (x y : Word) (hx : HW x) (hy : HW y) :
-    ((decE x).tag != (decE y).tag) = decide (x >>> 28 ≠ y >>> 28) := by
+    ((decE x).tag != (decE y).tag) = decide (tagW x ≠ tagW y) := by
   rw [decE_tag x hx, decE_tag y hy]
-  have h1 : (x >>> 28).toNat < 2 ^ 32 := by have := shr28_lt x hx; omega
-  have h2 : (y >>> 28).toNat < 2 ^ 32 := by have := shr28_lt y hy; omega
+  have h1 : (tagW x).toNat < 2 ^ 32 := by have := tagW_lt x hx; omega
+  have h2 : (tagW y).toNat < 2 ^ 32 := by have := tagW_lt y hy; omega
   rw [Bool.eq_iff_iff]
   simp only [bne_iff_ne, ne_eq, decide_eq_true_eq]
   constructor
@@ -474,15 +474,15 @@ theorem qd_ref (p : Prog) (hp : QuickProg p) (hil : InstListOK p) (hi : Inst1OK 
   rw [ite_eq_right he]
   have hb : (decE x == decE y) = false := by rw [decE_beq_eq _ _ hx hy]; simp [he]
   simp only [hb, Bool.false_eq_true, ↓reduceIte, tag_bne x y hx hy, decide_eq_true_eq]
-  by_cases hg : x >>> 28 ≠ y >>> 28
+  by_cases hg : tagW x ≠ tagW y
   · rw [ite_eq_left hg, ite_eq_left hg]
     exact RefE.ret rfl (CorePost.ret hS rfl ⟨hw0, hw0⟩)
-  have hg' : x >>> 28 = y >>> 28 := Classical.byContradiction hg
+  have hg' : tagW x = tagW y := Classical.byContradiction hg
   rw [ite_eq_right hg, ite_eq_right hg]
   simp only [tag_beq_w x hx 2 (by decide) ETag.sort rfl 2 rfl,
     tag_beq_w x hx 8 (by decide) ETag.lit rfl 8 rfl, tag_beq_w x hx 6 (by decide) ETag.forallE rfl 6 rfl,
     tag_beq_w x hx 5 (by decide) ETag.lam rfl 5 rfl, Bool.or_eq_true, decide_eq_true_eq]
-  by_cases h2 : x >>> 28 = 2
+  by_cases h2 : tagW x = 2
   · rw [ite_eq_left h2]
     simp only [h2, true_or, ↓reduceIte]
     cases n with
@@ -491,7 +491,7 @@ theorem qd_ref (p : Prog) (hp : QuickProg p) (hil : InstListOK p) (hi : Inst1OK 
     exact qd_arm (fun _ => trivial)
       (qs_ref p hp hsd k s₀ a₀ dn vis fe M eb _ _ _ x y hS h2 (hg' ▸ h2))
   rw [ite_eq_right h2]
-  by_cases h8 : x >>> 28 = 8
+  by_cases h8 : tagW x = 8
   · rw [ite_eq_left h8]
     simp only [h8, true_or, or_true, ↓reduceIte]
     rcases c : callW p n "lit_eq" [x, y] s₀.mem with _ | ⟨r, m₁⟩
@@ -511,7 +511,7 @@ theorem qd_ref (p : Prog) (hp : QuickProg p) (hil : InstListOK p) (hi : Inst1OK 
     exact RefE.ret (quickPairT_lit _ _ _ _ _ a₀ _ _ hl₁ hl₂)
       (CorePost.ret hS (by rw [decOB, ite_eq_right (show ([1, r.headD 0] : List Word).headD 0 ≠ 0 by simp)]; simp only [List.tail_cons, List.headD_cons]; rw [← hdec]; rfl) ⟨hw1, hrh⟩)
   rw [ite_eq_right h8]
-  by_cases h6 : x >>> 28 = 6
+  by_cases h6 : tagW x = 6
   · rw [ite_eq_left h6]
     simp only [h6, true_or, or_true, ↓reduceIte]
     cases n with
@@ -521,7 +521,7 @@ theorem qd_ref (p : Prog) (hp : QuickProg p) (hil : InstListOK p) (hi : Inst1OK 
       (qf_ref p hp hil k (hk.mono (by omega)) F (by omega) (by omega) s₀ a₀ dn vis fe M
         eb mode d x y hs h6 (hg' ▸ h6) hd)
   rw [ite_eq_right h6]
-  by_cases h5 : x >>> 28 = 5
+  by_cases h5 : tagW x = 5
   · rw [ite_eq_left h5]
     simp only [h5, or_true, ↓reduceIte]
     cases n with

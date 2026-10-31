@@ -200,9 +200,9 @@ def nrpStr (m : Mem) (t i : Word) : Option (Word × Word) :=
 def nrpW (m : Mem) (h : Word) : Option (Word × Word) :=
   if 4294967295 < h then none
   else if tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
-  else if h >>> 28 = 0 then (if tcnt m NANON (tierW h) ≤ idxW h then none else some (0, 0))
-  else if h >>> 28 = 2 then (if tcnt m NNUM (tierW h) ≤ idxW h then none else some (0, 0))
-  else if h >>> 28 ≠ 1 then none
+  else if tagW h = 0 then (if tcnt m NANON (tierW h) ≤ idxW h then none else some (0, 0))
+  else if tagW h = 2 then (if tcnt m NNUM (tierW h) ≤ idxW h then none else some (0, 0))
+  else if tagW h ≠ 1 then none
   else if tcnt m NSTR (tierW h) ≤ idxW h then none
   else nrpStr m (tierW h) (idxW h)
 
@@ -221,7 +221,7 @@ theorem nrp_spec (n : Nat) (s₀ : St) (h : Word) :
   | succ n =>
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, evalE_tld, tld, evalE_cnt, tcntM,
-        evalE_tierE, evalE_idxE] <;> finish [nrpW, nrpStr, tierW, idxW]
+        evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE] <;> finish [nrpW, nrpStr, tierW, idxW]
 
 end
 

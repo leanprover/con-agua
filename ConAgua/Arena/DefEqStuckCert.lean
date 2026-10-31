@@ -136,12 +136,12 @@ theorem secwtb_ref (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : StuckC
   subst e1
   dsimp only [secwtbE.k_get_app_fn]
   generalize r₁.headD 0 = h at hh hgaf
-  by_cases h3 : h >>> 28 ≠ 3
+  by_cases h3 : tagW h ≠ 3
   · rw [ite_eq_left h3]
     exact RefE.of_run_eq (setWtbT_nonconst _ fe _ _ _ _ _ _ _ a₀ _ hgaf
       (by rw [decE_tag_const_beq _ hh]; simpa using h3)) hl
   rw [ite_eq_right h3]
-  have h3' : h >>> 28 = 3 := by simpa using h3
+  have h3' : tagW h = 3 := by simpa using h3
   refine RefE.abort0 (by decide) fun hsc => ?_
   refine RefE.abort0 (by decide) fun hcc => ?_
   have hvo : viewOK s₀.mem h CONST := ⟨hsc, by simpa using hcc⟩
@@ -280,12 +280,12 @@ theorem secw_ref (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : StuckCal
   subst e1
   dsimp only [secwE.k_get_app_fn]
   generalize r₁.headD 0 = h at hh hgaf
-  by_cases h3 : h >>> 28 ≠ 3
+  by_cases h3 : tagW h ≠ 3
   · rw [ite_eq_left h3]
     exact RefE.of_run_eq (setWith_nonconst _ fe _ _ _ _ a₀ _ hgaf
       (by rw [decE_tag_const_beq _ hh]; simpa using h3)) hl
   rw [ite_eq_right h3]
-  have h3' : h >>> 28 = 3 := by simpa using h3
+  have h3' : tagW h = 3 := by simpa using h3
   refine RefE.abort0 (by decide) fun hsc => ?_
   refine RefE.abort0 (by decide) fun hcc => ?_
   have hvo : viewOK s₀.mem h CONST := ⟨hsc, by simpa using hcc⟩

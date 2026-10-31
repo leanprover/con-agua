@@ -31,8 +31,8 @@ def keysOkW : Nat → Mem → Word → Word → Option Unit
     if l = 0 then some ()
     else if 4294967296 ≤ rdW (m.arr64 SPN) o then none
     else if tierW (rdW (m.arr64 SPN) o) ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
-    else if (3 : Word) ≤ rdW (m.arr64 SPN) o >>> 28 then none
-    else if nameCnt m (rdW (m.arr64 SPN) o >>> 28) (tierW (rdW (m.arr64 SPN) o)) ≤
+    else if (3 : Word) ≤ tagW (rdW (m.arr64 SPN) o) then none
+    else if nameCnt m (tagW (rdW (m.arr64 SPN) o)) (tierW (rdW (m.arr64 SPN) o)) ≤
         idxW (rdW (m.arr64 SPN) o) then none
     else keysOkW n m (o + 1) (l - 1)
 
@@ -41,8 +41,8 @@ def keysOkW : Nat → Mem → Word → Word → Option Unit
       if l = 0 then some ()
       else if 4294967296 ≤ rdW (m.arr64 SPN) o then none
       else if tierW (rdW (m.arr64 SPN) o) ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
-      else if (3 : Word) ≤ rdW (m.arr64 SPN) o >>> 28 then none
-      else if nameCnt m (rdW (m.arr64 SPN) o >>> 28) (tierW (rdW (m.arr64 SPN) o)) ≤
+      else if (3 : Word) ≤ tagW (rdW (m.arr64 SPN) o) then none
+      else if nameCnt m (tagW (rdW (m.arr64 SPN) o)) (tierW (rdW (m.arr64 SPN) o)) ≤
           idxW (rdW (m.arr64 SPN) o) then none
       else keysOkW n m (o + 1) (l - 1) := rfl
 
@@ -57,7 +57,7 @@ theorem keysOk_spec (p : Prog) (hk : p.lookup "keys_ok" = some keysOk) (n : Nat)
     rw [invoke_eq _ hk]
     simp only [callFn, keysOk]
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, ih] <;>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE, ih] <;>
       finish [tierW, idxW, nameCnt]
 
 /-- A name handle that views reads back. -/
@@ -101,12 +101,12 @@ theorem keysOkW_names {m : Mem} {a : AState} (hR : ArenaR m a) (hwf : NStoreWF a
       have := UInt64.lt_iff_toNat_lt.mp (UInt64.not_le.mp h1); simpa using this
     -- the key reads back
     have hx : ∃ x, denoteN a.store.lss.ls.ns (decI w) = some x := by
-      have hg : w >>> 28 = 0 ∨ w >>> 28 = 1 ∨ w >>> 28 = 2 := by
-        have : (w >>> 28).toNat < 3 := by
+      have hg : tagW w = 0 ∨ tagW w = 1 ∨ tagW w = 2 := by
+        have : (tagW w).toNat < 3 := by
           have := UInt64.lt_iff_toNat_lt.mp (UInt64.not_le.mp h3); simpa using this
-        have e : ∀ k : Nat, k < 3 → (w >>> 28).toNat = k → w >>> 28 = k.toUInt64 := fun k _ e =>
+        have e : ∀ k : Nat, k < 3 → (tagW w).toNat = k → tagW w = k.toUInt64 := fun k _ e =>
           UInt64.toNat_inj.mp (by rw [e]; simp; omega)
-        rcases (by omega : (w >>> 28).toNat = 0 ∨ (w >>> 28).toNat = 1 ∨ (w >>> 28).toNat = 2) with
+        rcases (by omega : (tagW w).toNat = 0 ∨ (tagW w).toNat = 1 ∨ (tagW w).toNat = 2) with
           e0 | e0 | e0
         · exact .inl (e 0 (by omega) e0)
         · exact .inr (.inl (e 1 (by omega) e0))

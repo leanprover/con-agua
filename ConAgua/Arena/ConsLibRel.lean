@@ -1025,8 +1025,8 @@ theorem consInternM_pw (hfl : rdW (m.arr64 CTL) 1 = 0) {ks : List Word} {w : Wor
   have e := hdW_toNat _ _ _ hW.tag16 ht hi
   have := hW.tag16
   apply UInt64.toNat_inj.mp
-  rw [show tierW (hdW C.tag.toUInt64 0 i) = (hdW C.tag.toUInt64 0 i >>> 27) &&& 1 from rfl,
-    bit27_toNat, e]
+  rw [show tierW (hdW C.tag.toUInt64 0 i) = (hdW C.tag.toUInt64 0 i >>> 31) &&& 1 from rfl,
+    bit31_toNat, e]
   simp only [UInt64.toNat_zero]
   omega
 

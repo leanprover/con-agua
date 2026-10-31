@@ -168,7 +168,7 @@ l_model installBasisDecl_specE (p : Prog) (hB : BasisProg p)
   fns [hB.ibd ↦ installBasisDeclE]
   specs [envFind_specW p hB.ih.ix hB.ih.rowGet hB.ih.find n, callW_spec p n "env_push"]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE]
   heartbeats 400000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
@@ -240,7 +240,7 @@ l_model installBasisDecls_specE (p : Prog) (hB : BasisProg p)
   fns [hB.ibds ↦ installBasisDeclsE]
   specs [installBasisDecl_specE p hB n]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE]
   heartbeats 400000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 

@@ -130,7 +130,7 @@ theorem leafAtW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv
   rw [CWF_eq] at hrun1
   generalize hw : r1.headD 0 = w at hd1 hd2 h
   have e1 : (decI leaf : EIdx) = decE leaf := rfl
-  by_cases hf : w >>> 28 ≠ 3
+  by_cases hf : tagW w ≠ 3
   · rw [ite_eq_left hf] at h
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     refine ⟨false, a1, ?_, hS1, hg1, by simp, by simp⟩
@@ -143,7 +143,7 @@ theorem leafAtW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv
     rw [← hd2, show (decI w : EIdx) = decE w from rfl]
     simp only [htag', Bool.false_eq_true, ite_false]
     rfl
-  · have hf3 : w >>> 28 = 3 := by simpa using hf
+  · have hf3 : tagW w = 3 := by simpa using hf
     rw [ite_eq_right hf] at h
     obtain ⟨hev, h⟩ := of_ite_none h
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)

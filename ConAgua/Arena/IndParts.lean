@@ -49,7 +49,7 @@ on a dangling handle, as `viewBind` can). The result list is built by consing on
 @[l_impl ConRon.Arena.piBinders]
 def piBinders : FunDecl := lfn (fuel, h) locals (g, ty, b, z, bo, bl, be, o, l) {
   if fuel == 0 { abort };
-  if h >> 28 != 6 { return (0, 0, h) };
+  if ⟦h⟧.tag != 6 { return (0, 0, h) };
   (g, ty, b, z) := call e_view(h);
   (bo, bl, be) := call pi_binders(fuel - 1, b);
   (o, l) := call sl_cons(ty, bo, bl);
@@ -308,10 +308,10 @@ that member's index; else `no, nl`'s length (`names.length`, the twin's `none'`)
 def recTargetOf : FunDecl := lfn (no, nl, mI, ty) locals (ok, bo, bl, body, g, x, y, z, hd, fnd, idx) {
   (ok, bo, bl, body) := call strip_pis(mI, ty);
   if ok == 0 { return nl };
-  if body >> 28 != 6 { return nl };
+  if ⟦body⟧.tag != 6 { return nl };
   (g, x, y, z) := call e_view(body);
   hd := call get_app_fn_f(⟪CWF⟫, x);
-  if hd >> 28 != 3 { return nl };
+  if ⟦hd⟧.tag != 3 { return nl };
   (g, x, y, z) := call e_view(hd);
   (fnd, idx) := call sl_find(no, nl, x);
   if fnd == 0 { return nl };

@@ -356,12 +356,12 @@ end census
 section arms
 variable (k : Nat) (m m1 : Mem) (no nl lo hi n e r : Word) (v : List Word)
 theorem pdoW_zero (h : n = 0) : pdoW (k + 1) m no nl lo hi n e = some ([0], m) := by simp [pdoW, h]
-theorem pdoW_notpi (h : ¬ n = 0) (h6 : e >>> 28 ≠ 6) : pdoW (k + 1) m no nl lo hi n e = some ([0], m) := by
+theorem pdoW_notpi (h : ¬ n = 0) (h6 : tagW e ≠ 6) : pdoW (k + 1) m no nl lo hi n e = some ([0], m) := by
   simp [pdoW, h, h6]
-theorem pdoW_empty (h : ¬ n = 0) (h6 : ¬ e >>> 28 ≠ 6) (hv : eViewW m e = []) :
+theorem pdoW_empty (h : ¬ n = 0) (h6 : ¬ tagW e ≠ 6) (hv : eViewW m e = []) :
     pdoW (k + 1) m no nl lo hi n e = none := by
   simp only [pdoW]; rw [ite_eq_right h, ite_eq_right h6, ite_eq_left hv]
-theorem pdoW_pi (h : ¬ n = 0) (h6 : ¬ e >>> 28 ≠ 6) (hv : eViewW m e ≠ []) : pdoW (k + 1) m no nl lo hi n e =
+theorem pdoW_pi (h : ¬ n = 0) (h6 : ¬ tagW e ≠ 6) (hv : eViewW m e ≠ []) : pdoW (k + 1) m no nl lo hi n e =
     pdoK1 k no nl lo hi n (eViewW m e) (noConstWf k m no nl lo hi ((eViewW m e).tail.headD 0)) := by
   simp only [pdoW]; rw [ite_eq_right h, ite_eq_right h6, ite_eq_right hv]
 theorem pdoK1_hit (h : r ≠ 0) : pdoK1 k no nl lo hi n v (some (r, m1)) = some ([1], m1) := by
@@ -407,14 +407,14 @@ theorem pdoW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis no nl lo 
       exact ⟨false, a, mp, rfl, hS, IWGrow.refl _, rfl, hM, MFr.refl _ _ _⟩
     have hn0 : n.toNat ≠ 0 := fun e' => h0 (UInt64.toNat_inj.mp (by simpa using e'))
     have hsucc : n.toNat = (n.toNat - 1) + 1 := by omega
-    by_cases h6 : e >>> 28 ≠ 6
+    by_cases h6 : tagW e ≠ 6
     · rw [pdoW_notpi (h := h0) (h6 := h6)] at h
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       refine ⟨false, a, mp, ?_, hS, IWGrow.refl _, rfl, hM, MFr.refl _ _ _⟩
       have htag : ¬ (decE e).tag = ETag.forallE := fun h' => h6 ((decE_tag_forallE e he).mp h')
       rw [hsucc, ConRon.Arena.piDomsOcc.eq_2]
       simp [htag]; rfl
-    have hg6 : e >>> 28 = 6 := by simpa using h6
+    have hg6 : tagW e = 6 := by simpa using h6
     have hR := hS.check.arena.base
     by_cases hr : eViewW m e = []
     · rw [pdoW_empty (h := h0) (h6 := h6) (hv := hr)] at h; simp at h

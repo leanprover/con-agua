@@ -582,7 +582,7 @@ theorem EStore.viewConst_of_view_r (st : EStore) (i : EIdx) (n : NIdx) (us : LsI
     · simp only [*, ite_true]; split <;> simp_all [ETables.getConst_of_get_r _ _ _ _ h]
     · simp at h
 
-theorem eViewW_head6 (m : Mem) (w : Word) (hne : eViewW m w ≠ []) (hg : w >>> 28 = 6) :
+theorem eViewW_head6 (m : Mem) (w : Word) (hne : eViewW m w ≠ []) (hg : tagW w = 6) :
     (eViewW m w).headD 0 = 6 := by
   unfold eViewW at hne ⊢
   simp (config := {decide := true}) only [hg, ite_true, ite_false] at hne ⊢
@@ -858,7 +858,7 @@ theorem ihW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (m
       · show (r2.headD 0).toNat + (0 : Word).toNat ≤ iwTop m2
         simp only [UInt64.toNat_zero]; omega
 
-theorem eViewW_head3 (m : Mem) (w : Word) (hne : eViewW m w ≠ []) (hg : w >>> 28 = 3) :
+theorem eViewW_head3 (m : Mem) (w : Word) (hne : eViewW m w ≠ []) (hg : tagW w = 3) :
     (eViewW m w).headD 0 = 3 := by
   unfold eViewW at hne ⊢
   simp (config := {decide := true}) only [hg, ite_true, ite_false] at hne ⊢
@@ -932,8 +932,8 @@ theorem pdW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n
       refine ⟨some [], a, rfl, hS, IWGrow.refl m, ?_⟩
       simp [PdRes, decHL, hslice?]
     · obtain ⟨x, xs', w, rfl, hxs', hw1, hw2, hw3, hxo1, hxl1⟩ := rcSl_step hxs hxl hb
-      have hftag : (decE e).tag = ETag.forallE ↔ e >>> 28 = 6 := decE_tag_eq e he 6 (by decide)
-      by_cases hf : e >>> 28 ≠ 6
+      have hftag : (decE e).tag = ETag.forallE ↔ tagW e = 6 := decE_tag_eq e he 6 (by decide)
+      by_cases hf : tagW e ≠ 6
       · rw [pdW_nf n m xo xl e hxl hf] at h
         obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
         refine ⟨none, a, ?_, hS, IWGrow.refl m, rfl⟩
@@ -943,7 +943,7 @@ theorem pdW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n
         rw [e1]
         simp only [ConRon.Arena.targetPiDomsWith, htag', Bool.false_eq_true, ite_false]
         rfl
-      have hf6 : e >>> 28 = 6 := by simpa using hf
+      have hf6 : tagW e = 6 := by simpa using hf
       by_cases hev : eViewW m e = []
       · rw [pdW_ev n m xo xl e hxl (by simpa using hf) hev] at h; simp at h
       rw [pdW_cons n m xo xl e hxl (by simpa using hf) hev] at h

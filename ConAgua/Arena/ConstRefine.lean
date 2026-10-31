@@ -208,7 +208,7 @@ theorem constLocal : RLocal constSch CeRecRel cehash [] [] := by
 theorem ceskipW_eq (m : Mem) (a : AState) (f x : Word) (hf : f.toNat < 2 ^ 32)
     (hx : x.toNat < 2 ^ 32) (hfl : (rdW (m.arr64 CTL) 1 != 0) = a.store.scratchOn) :
     (ceskipW m f x = 0) = (skCe a ((decI (k := .name) f)) ((decI (k := .levels) x)) = false) := by
-  have := bit27_or f x
+  have := bit31_or f x
   simp only [ceskipW, skCe, isPersistent_decI (k := .name) f hf, isPersistent_decI (k := .levels) x hx, ← hfl]
   grind
 

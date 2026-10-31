@@ -48,7 +48,7 @@ def m2cCtorL : FunDecl := lfn (mode, vis, d, ro, cvjP, major)
     locals (piRes, hh, T, us, f, indP, r) {
   piRes := call pi_result(EREC.u64[cvjP + 4]);
   hh := call get_app_fn(piRes);
-  if hh >> 28 != 3 { return major };
+  if ⟦hh⟧.tag != 3 { return major };
   (T, us) := call m2c_const_view(hh);
   (f, indP) := call env_find(T, vis);
   if f == 0 { return major };
@@ -88,7 +88,7 @@ def m2cPreL : FunDecl := lfn (mode, vis, d, major) locals (ioa, tmaj, hh, T2, us
   ioa := call infer_io(mode, vis, d, major);
   tmaj := call whnf(mode, vis, d, ioa);
   hh := call get_app_fn(tmaj);
-  if hh >> 28 != 3 { return (0, 0, 0, 0, 0) };
+  if ⟦hh⟧.tag != 3 { return (0, 0, 0, 0, 0) };
   (T2, ust) := call m2c_const_view(hh);
   (uo, ul) := call ls_node(ust);
   return (1, tmaj, T2, ust, ul)

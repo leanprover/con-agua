@@ -44,15 +44,15 @@ theorem toUInt32_beq (a b : Word) (ha : a.toNat < 2 ^ 32) (hb : b.toNat < 2 ^ 32
 /-- `whnfCoreStuckTag` off the handle word. -/
 theorem stuck_iff (e : Word) (he : HW e) :
     whnfCoreStuckTag (decE e) =
-      decide (e >>> 28 ≠ 4 ∧ e >>> 28 ≠ 9 ∧ e >>> 28 ≠ 7 ∧ e >>> 28 ≠ 0) := by
-  have h : (e >>> 28).toNat < 2 ^ 32 := Nat.lt_trans (shr28_lt e he) (by decide)
+      decide (tagW e ≠ 4 ∧ tagW e ≠ 9 ∧ tagW e ≠ 7 ∧ tagW e ≠ 0) := by
+  have h : (tagW e).toNat < 2 ^ 32 := Nat.lt_trans (tagW_lt e he) (by decide)
   simp only [whnfCoreStuckTag, decE_tag e he, ETag.app, ETag.proj, ETag.letE, ETag.bvar]
   rw [show (4 : UInt32) = (4 : Word).toUInt32 from rfl, toUInt32_beq _ _ h (by decide)]
   rw [show (9 : UInt32) = (9 : Word).toUInt32 from rfl, toUInt32_beq _ _ h (by decide)]
   rw [show (7 : UInt32) = (7 : Word).toUInt32 from rfl, toUInt32_beq _ _ h (by decide)]
   rw [show (0 : UInt32) = (0 : Word).toUInt32 from rfl, toUInt32_beq _ _ h (by decide)]
-  by_cases h4 : e >>> 28 = 4 <;> by_cases h9 : e >>> 28 = 9 <;> by_cases h7 : e >>> 28 = 7 <;>
-    by_cases h0 : e >>> 28 = 0 <;> simp_all
+  by_cases h4 : tagW e = 4 <;> by_cases h9 : tagW e = 9 <;> by_cases h7 : tagW e = 7 <;>
+    by_cases h0 : tagW e = 0 <;> simp_all
 
 /-! ## The model -/
 

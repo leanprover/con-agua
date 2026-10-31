@@ -86,7 +86,7 @@ theorem spnPush_spec (p : Prog) (hp : p.lookup "spn_push" = some L.Stubs.spnPush
 /-- `opf_go(n, e, i, co, cn)`'s body over its callees' runs. -/
 def opfGoK (p : Prog) (k : Nat) (m : Mem) (n e i co cn : Word) : Option (List Word × Mem) :=
   if n = 0 then ntBW (callW p k "inst_list" [e, co, cn, 0] m) fun r m1 => some ([1, r.headD 0], m1)
-  else if e >>> 28 ≠ 6 then some ([0, 0], m)
+  else if tagW e ≠ 6 then some ([0, 0], m)
   else ntBW (callW p k "e_view" [e] m) fun rv m1 =>
     ntBW (callW p k "inst_list" [rv.tail.headD 0, co, cn, 0] m1) fun rd m2 =>
     ntBW (callW p k "intern_fvar" [i, rd.headD 0] m2) fun rf m3 =>
@@ -107,7 +107,7 @@ theorem opfGoK_spec (p : Prog) (hp : p.lookup "opf_go" = some L.Stubs.opfGo) (k 
 /-- `opa_go(n, e, i)`'s body over its callees' runs. -/
 def opaGoK (p : Prog) (k : Nat) (m : Mem) (n e i : Word) : Option (List Word × Mem) :=
   if n = 0 then some ([1, e], m)
-  else if e >>> 28 ≠ 6 then some ([0, 0], m)
+  else if tagW e ≠ 6 then some ([0, 0], m)
   else ntBW (callW p k "e_view" [e] m) fun rv m1 =>
     ntBW (callW p k "intern_fvar" [i, rv.tail.headD 0] m1) fun rf m2 =>
     ntBW (callW p k "inst_entry" [rv.tail.tail.headD 0, rf.headD 0, 0] m2) fun rb m3 =>

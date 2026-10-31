@@ -93,13 +93,13 @@ theorem spineHead_run {p : Prog} (hp : SpineDProg p) {n : Nat} {m m' : Mem} {a�
     else pure none : AM (Option (NIdx × LsIdx))).run a₀ := by
     simp only [spineHeadT, StateT.run_bind, hgaf, except_ok_bind]
   rw [tag_beq_w _ hh 3 (by decide) ETag.const rfl 3 rfl] at hT
-  by_cases h3 : r₁.headD 0 >>> 28 ≠ 3
+  by_cases h3 : tagW (r₁.headD 0) ≠ 3
   · rw [shW.k_get_app_fn.arm1 (hc1 := h3), Option.some.injEq, Prod.mk.injEq, Prod.mk.injEq, Prod.mk.injEq] at hW
     obtain ⟨g1, g2, g3, hm⟩ := hW
     simp only [h3, decide_false, Bool.false_eq_true, ↓reduceIte] at hT
     refine ⟨hm.symm, by rw [hT]; simp only [decSH, ← g1, ↓reduceIte]; rfl,
       res3_of hw0 hw0 hw0 g1 g2 g3, fun h => absurd g1.symm h⟩
-  have h3' : r₁.headD 0 >>> 28 = 3 := by simpa using h3
+  have h3' : tagW (r₁.headD 0) = 3 := by simpa using h3
   rw [shW.k_get_app_fn.arm2 (hc1 := h3')] at hW
   cases hc2 : callW p n "e_view" [r₁.headD 0] m with
   | none => rw [hc2, shW.k_e_view.none] at hW; cases hW
@@ -133,7 +133,7 @@ l_model spcE_spec (p : Prog) (hf : p.lookup "spine_cmp" = some spineCmpL)
   fns [hf ↦ spcE list]
   specs [callW_spec p n "lvls_eq_c", defeqListRev_specE p hr n]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] unified
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 /-- `lvls_eq_c` does not return at fuel `1`. -/
@@ -244,7 +244,7 @@ l_model sp2E_spec (p : Prog) (hf : p.lookup "defeq_spine2" = some defeqSpine2L)
   fns [hf ↦ sp2E list]
   specs [callW_spec p n "get_app_args", spcE_spec p hc hr n]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] unified
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 /-- **`defeq_spine2` refines `spine2T`, both outcomes**: the two argument slices pushed, compared,
@@ -343,7 +343,7 @@ l_model spE_spec (p : Prog) (hf : p.lookup "defeq_spine" = some defeqSpineL)
   fns [hf ↦ spE list]
   specs [callW_spec p n "spine_head", sp2E_spec p h2 hc hr n]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] unified
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 /-- **`defeq_spine` refines `defeqSpine`, both outcomes**: the errors are `defeq_spine2`'s. -/
 theorem sp_ref (p : Prog) (hp : SpineDProg p) (n : Nat) (hk : KnotUpTo p n) (F : Nat)

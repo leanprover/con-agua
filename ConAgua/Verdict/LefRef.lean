@@ -33,7 +33,7 @@ def NVAt (p : Prog) (f : FnName) : Prop :=
 
 l_model lefE_spec (p : Prog) (hf : p.lookup "lvl_eq_fueled" = some lvlEqFueled)
   fns [hf ↦ lefE] grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE]
   finish [tierW, idxW] unified
 
 /-- **The twin of `lvl_eq_fueled`**: the level comparison, `none` (out of fuel) a failure. -/

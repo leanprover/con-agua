@@ -272,7 +272,7 @@ def natOpTyPinnedL : FunDecl :=
   nn := call pin_at(1);
   nc := call const_e(nn);
   pr := call pin_at(14);
-  if ty >> 28 != 6 { return 0 };
+  if ⟦ty⟧.tag != 6 { return 0 };
   (t, d, b, z) := call e_view(ty);
   if t != 6 { return 0 };
   if c == pr {
@@ -280,7 +280,7 @@ def natOpTyPinnedL : FunDecl :=
     r := call nat_op_cod(vis, c, b);
     return r
   };
-  if b >> 28 != 6 { return 0 };
+  if ⟦b⟧.tag != 6 { return 0 };
   (t2, d2, b2, z2) := call e_view(b);
   if t2 != 6 { return 0 };
   if d != nc || d2 != nc { return 0 };

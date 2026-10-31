@@ -46,7 +46,7 @@ l_model ctlE_spec (p : Prog) (hP : SumProg p)
     callW_spec p n "field_doms_resolve", callW_spec p n "idx_args_resolve",
     fsortsE_spec p hP.hcfs hP.hcfg hP.ha hP.ad.ftd hP.hfsb n]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE]
   heartbeats 4000000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
@@ -58,7 +58,7 @@ l_model ctorE_spec (p : Prog) (hP : SumProg p) (hV : ValProg p)
     callW_spec p n "open_pis_at_fvars_f", callW_spec p n "fvar_type_ds", sdomsE_spec p hP.hsd n,
     ctlE_spec p hP n]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE]
   heartbeats 4000000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 

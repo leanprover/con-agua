@@ -28,7 +28,7 @@ l_model iplE_spec (p : Prog) (hf : p.lookup "infer_pis_leaf" = some inferPisLeaf
   fns [hf ↦ iplE list]
   specs [callW_spec p n "inst_list", callW_spec p n "intern_imax", callW_spec p n "intern_sort"]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE]
   finish [tierW, idxW] heartbeats 400000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
@@ -38,7 +38,7 @@ l_model ipsE_spec (p : Prog) (hf : p.lookup "infer_pis" = some inferPisL)
   fns [hf ↦ ipsE list]
   specs [callW_spec p n "inst_list", callW_spec p n "intern_fvar"]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] unified
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 /-- `infer_forall`'s unified model: the slots and `infer_pis` through their runs, the binder's free
@@ -47,7 +47,7 @@ l_model ifrE_spec (p : Prog) (hf : p.lookup "infer_forall" = some inferForallL)
   fns [hf ↦ ifrE list]
   specs [callW_spec p n "intern_fvar"]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] unified
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 end L.Arena

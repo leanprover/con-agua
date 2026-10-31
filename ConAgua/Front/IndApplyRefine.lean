@@ -343,7 +343,7 @@ theorem nrpW_ok {m : Mem} {a : AState} (hR : ArenaR m a) (w f T : Word) (h : nrp
     · rw [ite_eq_left ht] at hx; simp [ht, hx]
     · rw [ite_eq_right ht] at hx; simp [ht, hx]
   split at h; cases h; rename_i hg0 hg2 hg1
-  have hg : w >>> 28 = 1 := by simpa using hg1
+  have hg : tagW w = 1 := by simpa using hg1
   split at h; cases h; rename_i hc
   obtain ⟨x, hx, hrel⟩ := ConsR.node hR.nstr (tierW w) ht1 (idxW w)
     (UInt64.not_le.mp hc)

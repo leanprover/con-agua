@@ -53,11 +53,11 @@ the same one the persistent build gives; promoting again hits the memo. -/
   match buildT (promoteMem 1) with
   | none => false
   | some (t, m) =>
-    (t >>> 27) &&& 1 == 1 &&
+    (t >>> 31) &&& 1 == 1 &&
     match pRun "promote_e" [L.Ind.CWF, t] m with
     | none => false
     | some (r, m) =>
-      (r >>> 27) &&& 1 == 0 &&
+      (r >>> 31) &&& 1 == 0 &&
       (match pRun "promote_e" [L.Ind.CWF, t] m with
        | some (r', _) => r' == r | none => false) &&
       (match buildT (setSc m 0) with

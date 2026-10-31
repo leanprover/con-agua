@@ -73,7 +73,7 @@ def classOfMotiveVar : FunDecl := lfn (nP, mo, ml, p) locals (r, i) {
 @[l_impl ConRon.Arena.fvarHead]
 def fvarHead : FunDecl := lfn (e) locals (hd, g, x, y, z) {
   hd := call get_app_fn_f(⟪CWF⟫, e);
-  if hd >> 28 == 1 {
+  if ⟦hd⟧.tag == 1 {
     (g, x, y, z) := call e_view(hd);
     return (1, x)
   };
@@ -122,7 +122,7 @@ test its tag and build the `.minor` slot. -/
 @[l_impl ConRon.Arena.classReadMinor]
 def classReadMinorFinish : FunDecl := lfn (nP, mo, ml, d, fo, fl, hd, c) locals
     (g, cn, us, z, ihso, ihsl, slot) {
-  if hd >> 28 != 3 { return (0, 0) };
+  if ⟦hd⟧.tag != 3 { return (0, 0) };
   (g, cn, us, z) := call e_view(hd);
   (ihso, ihsl) := call class_read_minor_ihs(nP, mo, ml, d, fo, fl);
   slot := call rec5(1, c, cn, ihso, ihsl);
@@ -184,7 +184,7 @@ def classReadSlotMotive : FunDecl := lfn (p, vis, dom) locals
   if bl == 0 { return (0, 0) };
   mdom := IW.u64[bo + bl - 1];
   hd := call get_app_fn_f(⟪CWF⟫, mdom);
-  if hd >> 28 != 3 { return (0, 0) };
+  if ⟦hd⟧.tag != 3 { return (0, 0) };
   (g, iName, us, z) := call e_view(hd);
   (ao, al) := call get_app_args_f(⟪CWF⟫, mdom);
   n := call class_n_pc_of(p, vis, iName);
@@ -201,7 +201,7 @@ def classReadSlotMotive : FunDecl := lfn (p, vis, dom) locals
 @[l_impl ConRon.Arena.classReadSlot]
 def classReadSlot : FunDecl := lfn (p, vis, np, mo, ml, d, dom) locals (r, ok, slot) {
   r := call pi_result_f(⟪CWF⟫, dom);
-  if r >> 28 == 2 {
+  if ⟦r⟧.tag == 2 {
     (ok, slot) := call class_read_slot_motive(p, vis, dom);
     return (ok, slot)
   };
@@ -216,7 +216,7 @@ opened at the parameters, classifying each. -/
 def classReadSlots : FunDecl := lfn (p, vis, np, n, mo, ml, d, e) locals
     (ok, dom, body, g, z, slot, co, cl) {
   if n == 0 { return (1, 0, 0) };
-  if e >> 28 != 6 { return (0, 0, 0) };
+  if ⟦e⟧.tag != 6 { return (0, 0, 0) };
   (g, dom, body, z) := call e_view(e);
   (ok, slot) := call class_read_slot(p, vis, np, mo, ml, d, dom);
   if ok == 0 { return (0, 0, 0) };

@@ -43,7 +43,7 @@ namespace L.Arena
 -- con-ron: ConRon/Arena/Core.lean:2146-2158 ConRon.Arena.whnfCoreStuckTag
 @[l_impl ConRon.Arena.whnfCoreStuckTag]
 def whnfCoreL : FunDecl := lfn (mode, cheap, vis, d, e) locals (g, fd, j, dd, x, u) {
-  g := e >> 28;
+  g := ⟦e⟧.tag;
   if g != 4 && g != 9 && g != 7 && g != 0 { return e };
   if cheap != 0 {
     (fd, j, dd) := call wk_find(e, ((mode >> 1) & 1) << 32);
@@ -107,7 +107,7 @@ def whnfCoreApp2L : FunDecl := lfn (mode, vis, d, v, h, so, sn) locals (top, hd,
 @[l_impl ConRon.Arena.whnfCoreStep]
 def whnfCoreStepL : FunDecl :=
     lfn (mode, cheap, vis, d, e) locals (g, t, i, st, r) {
-  g := e >> 28;
+  g := ⟦e⟧.tag;
   t := ⟦e⟧.tier;
   i := ⟦e⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
@@ -146,7 +146,7 @@ def whnfAppL : FunDecl :=
   for i < an {
     a := SPN.u64[ao + i];
     node := SPN.u64[ao + an + i];
-    if v >> 28 == 5 {
+    if ⟦v⟧.tag == 5 {
       (t, x) := node LAM⟦v⟧;
       (st, e3) := call beta_peel(LAM⟨t, x⟩.b, a, ao, an, i + 1);
       CTL.u64[136] := top;
@@ -158,7 +158,7 @@ def whnfAppL : FunDecl :=
     SPN.u64[vo + vn] := a;
     vn += 1;
     CTL.u64[136] := vo + vn;
-    if hd >> 28 == 3 {
+    if ⟦hd⟧.tag == 3 {
       (st, e2) := call iota_rec_at(mode, vis, d, hd, vo, vn);
       if st != 0 {
         e3 := call mk_app_n_from(e2, ao, an, i + 1);
@@ -181,7 +181,7 @@ def betaPeelL : FunDecl := lfn (t, a, ao, an, i) locals (co, cn, tt, x, e2, e3) 
   cn := 1;
   CTL.u64[136] := co + 1;
   for i < an {
-    if t >> 28 != 5 {
+    if ⟦t⟧.tag != 5 {
       e2 := call inst_list(t, co, cn, 0);
       e3 := call mk_app_n_from(e2, ao, an, i);
       CTL.u64[136] := co;
@@ -227,7 +227,7 @@ con-ron: ConRon/Arena/Core.lean:2302-2335 ConRon.Arena.reduceProjCore -/
 def reduceProjHeadL : FunDecl :=
     lfn (mode, vis, e1, q, i) locals (hh, t, x, k, us, st, r) {
   hh := call get_app_fn(e1);
-  if hh >> 28 != 3 { return (0, 0) };
+  if ⟦hh⟧.tag != 3 { return (0, 0) };
   (t, x) := node CONST⟦hh⟧;
   k := CONST⟨t, x⟩.n;
   us := CONST⟨t, x⟩.us;
@@ -281,7 +281,7 @@ def projCertL : FunDecl := lfn (vis, k, ao, an) locals (f, q, ok, r) {
 /-- con-ron: ConRon/Arena/Core.lean:1843-1855 ConRon.Arena.projLitToCtor -/
 @[l_impl ConRon.Arena.projLitToCtor]
 def projLitToCtorL : FunDecl := lfn (mode, vis, d, h) locals (t, x, s, c) {
-  if h >> 28 != 8 { return h };
+  if ⟦h⟧.tag != 8 { return h };
   (t, x) := node LIT⟦h⟧;
   if LIT⟨t, x⟩.kind != 1 { return h };
   s := call str_lit_supported(vis);

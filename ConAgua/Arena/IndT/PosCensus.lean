@@ -52,7 +52,7 @@ theorem nestPosBind_refinesC (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState) (ct
     (h0 : StageC dn vis fe env s₀.mem a₀)
     (h1 : WCtx dn vis fe s₀.mem ctx po pl c prog)
     (h2 : H w)
-    (h3 : w >>> 28 = 6)
+    (h3 : tagW w = 6)
     (h4 : NSB s₀.mem ns NS) (hP : PosMR s₀.mem) (hA : AbsOK s₀.mem)
     {ctxP : ConLeche.NestCtx} {progP : List ConLeche.NestHole} {wP : ConLeche.Expr} {nsP : ConLeche.NestState}
     (hc : ConLeche.NestCtxOk ctxP) (hctx : dCtx a₀.store env.find? c = some ctxP) (hprog : dProg a₀.store prog = some progP)

@@ -820,7 +820,7 @@ component"). Promotion and lookup reach them only through these functions. -/
 /-- `tbl_ix(w)`: the tag, the tier and the index of name handle `w`. -/
 -- con-ron: none — row access of L's table map (the twin's `IFEnv.tbls`)
 def tblIxL : FunDecl := lfn (w) locals () {
-  return (w >> 28, (w >> 27) & 1, w & 134217727)
+  return (⟦w⟧.tag, (w >> 31) & 1, w & 134217727)
 }
 
 /-- `tbl_row_get(w)`: the table row of name handle `w` (the table record's pointer plus one, `0`
@@ -872,23 +872,23 @@ theorem tixW_toNat (w : Word) : (tixW w).toNat = tblIx w := by
 /-- The memory after `tbl_row_set(w, v)`. -/
 def tblSet (m : Mem) (w v : Word) : Mem := m.set64 (tblArr w) (tixW w) v
 
-theorem tagW28_toNat (w : Word) : (w >>> 28).toNat = rowTag w := by
+theorem tagW28_toNat (w : Word) : (tagW w).toNat = rowTag w := by
   rw [shr28_toNat]; rfl
 
-theorem tierW_toNat (w : Word) : ((w >>> 27) &&& 1).toNat = rowTier w := bit27_toNat w
+theorem tierW_toNat (w : Word) : ((w >>> 31) &&& 1).toNat = rowTier w := bit31_toNat w
 
 theorem tierA_tbl (w : Word) (g : Nat) (hg : rowTag w = g) (hg2 : g ≤ 2) :
-    tierA (129 + g) ((w >>> 27) &&& 1) = tblArr w := by
+    tierA (129 + g) ((w >>> 31) &&& 1) = tblArr w := by
   have hx : tixArr g = 129 + g := by
     rcases (by omega : g = 0 ∨ g = 1 ∨ g = 2) with h | h | h <;> subst h <;> rfl
   have ht2 : rowTier w < 2 := Nat.mod_lt _ (by decide)
   have h2 : (UInt64.ofNat (rowTier w) &&& (1 : Word)).toNat = rowTier w := by
     rcases (by omega : rowTier w = 0 ∨ rowTier w = 1) with h | h <;> rw [h] <;> decide
-  have h1 : (((w >>> 27) &&& 1) &&& (1 : Word)).toNat = rowTier w := by
+  have h1 : (((w >>> 31) &&& 1) &&& (1 : Word)).toNat = rowTier w := by
     rw [UInt64.toNat_and, tierW_toNat]
     have : rowTier w < 2 := Nat.mod_lt _ (by decide)
     rw [show (1 : Word).toNat = 1 from rfl, Nat.and_one_is_mod]; omega
-  have e : ((w >>> 27) &&& 1) &&& (1 : Word) = UInt64.ofNat (rowTier w) &&& 1 :=
+  have e : ((w >>> 31) &&& 1) &&& (1 : Word) = UInt64.ofNat (rowTier w) &&& 1 :=
     UInt64.toNat_inj.mp (h1.trans h2.symm)
   simp only [tierA, tblArr, hg, hx, e]
 
@@ -898,8 +898,8 @@ variable (p : Prog)
 theorem tblIx_spec (hp : p.lookup "tbl_ix" = some tblIxL) (n : Nat) (s₀ : St) (w : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "tbl_ix" [w]
-    ⦃fun r s' => s'.mem = s₀.mem ∧ LocEq s' s₀ ∧ r.headD 0 = w >>> 28 ∧
-      r.tail.headD 0 = (w >>> 27) &&& 1 ∧ r.tail.tail.headD 0 = tixW w; ⊤⦄ := by
+    ⦃fun r s' => s'.mem = s₀.mem ∧ LocEq s' s₀ ∧ r.headD 0 = tagW w ∧
+      r.tail.headD 0 = (w >>> 31) &&& 1 ∧ r.tail.tail.headD 0 = tixW w; ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, tblIxL]
   cases n with
@@ -916,7 +916,7 @@ theorem tblRowGet_spec (hx : p.lookup "tbl_ix" = some tblIxL)
   have hg := tagW28_toNat w
   have hi := tixW_toNat w
   have hc : ∀ g, rowTag w = g → g ≤ 2 →
-      tblRow s₀.mem w = rdN (s₀.mem.arr64 (tierA (129 + g) ((w >>> 27) &&& 1))) (tblIx w) := by
+      tblRow s₀.mem w = rdN (s₀.mem.arr64 (tierA (129 + g) ((w >>> 31) &&& 1))) (tblIx w) := by
     intro g hk hk2; rw [tierA_tbl w g hk hk2, tblRow_eq _ _ (by omega)]
   have hrd : ∀ (a : Array Word) (k : Nat) (h : k < a.size), rdN a k = a[k] := by
     intro a k h; simp [rdN, h]
@@ -937,7 +937,7 @@ theorem tblRowSet_spec (hx : p.lookup "tbl_ix" = some tblIxL)
       tblIx w < (s₀.mem.arr64 (tblArr w)).size; ⊤⦄ := by
   have hg := tagW28_toNat w
   have hi := tixW_toNat w
-  have ha : ∀ g, rowTag w = g → g ≤ 2 → tierA (129 + g) ((w >>> 27) &&& 1) = tblArr w :=
+  have ha : ∀ g, rowTag w = g → g ≤ 2 → tierA (129 + g) ((w >>> 31) &&& 1) = tblArr w :=
     fun g hk hk2 => tierA_tbl w g hk hk2
   rw [invoke_eq _ hp]
   simp only [callFn, tblRowSetL]

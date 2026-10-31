@@ -66,7 +66,7 @@ def ctorFamily : FunDecl := lfn (vis, c) locals (f, q, pr, hh, t, f2, q2) {
   if EREC.u64[q] != 4 { return (0, 0, 0) };
   pr := call pi_result_f(⟪CWF⟫, EREC.u64[q + 4]);
   hh := call get_app_fn_f(⟪CWF⟫, pr);
-  if hh >> 28 != 3 { return (q, 0, 0) };
+  if ⟦hh⟧.tag != 3 { return (q, 0, 0) };
   t := call const_name_of(hh);
   (f2, q2) := call env_find(t, vis);
   if f2 == 0 { return (q, 0, 0) };
@@ -121,7 +121,7 @@ def spnPush : FunDecl := lfn (x) locals (o) {
 @[l_impl ConRon.Arena.openPisAtFvarsFGo]
 def opfGo : FunDecl := lfn (n, e, i, co, cn) locals (g, x, y, w, d, fv, u, ok, b) {
   if n == 0 { b := call inst_list(e, co, cn, 0); return (1, b) };
-  if e >> 28 != 6 { return (0, 0) };
+  if ⟦e⟧.tag != 6 { return (0, 0) };
   (g, x, y, w) := call e_view(e);
   d := call inst_list(x, co, cn, 0);
   fv := call intern_fvar(i, d);
@@ -136,7 +136,7 @@ are pushed. -/
 @[l_impl ConRon.Arena.openPisAtFvars]
 def opaGo : FunDecl := lfn (n, e, i) locals (g, x, y, w, fv, b, u, ok) {
   if n == 0 { return (1, e) };
-  if e >> 28 != 6 { return (0, 0) };
+  if ⟦e⟧.tag != 6 { return (0, 0) };
   (g, x, y, w) := call e_view(e);
   fv := call intern_fvar(i, x);
   b := call inst_entry(y, fv, 0);

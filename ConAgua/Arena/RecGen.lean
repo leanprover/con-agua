@@ -161,7 +161,7 @@ def classNodesAgreeL : FunDecl := lfn
 @[l_impl ConRon.Arena.classLeafAt]
 def classLeafAtL : FunDecl := lfn (m, leaf) locals (hd, g, nI, us, z) {
   hd := call get_app_fn_f(⟪CWF⟫, leaf);
-  if hd >> 28 != 3 { return 0 };
+  if ⟦hd⟧.tag != 3 { return 0 };
   (g, nI, us, z) := call e_view(hd);
   return u64(nI == IW.u64[m])
 }

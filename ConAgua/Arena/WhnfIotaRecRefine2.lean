@@ -609,7 +609,7 @@ theorem irCallW_internBVar (p : Prog) (hp : IotaRecProg' p) (n : Nat)
 l_model iotaRecHead_spec (p : Prog) (hp : p.lookup "iota_rec_head" = some iotaRecHeadL)
   fns [hp ↦ irHeadW ro list]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rd_spec, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
+  extra [ld64_rd_spec, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE]
 
 /-- **`iota_rec_head` as a run**: the memory unchanged; another tag, or the `const` view. -/
 theorem irCallW_head (p : Prog) (hp : p.lookup "iota_rec_head" = some iotaRecHeadL) (n : Nat)
@@ -624,7 +624,7 @@ theorem irCallW_head (p : Prog) (hp : p.lookup "iota_rec_head" = some iotaRecHea
   refine ⟨hm, fun h0 => ?_, fun h0 => ?_⟩
   · simp only [irHeadW] at hW
     intro htag
-    have h3 : hh >>> 28 = 3 := (decE_tag_eq _ hw 3 (by decide)).mp htag
+    have h3 : tagW hh = 3 := (decE_tag_eq _ hw 3 (by decide)).mp htag
     simp only [h3, ne_eq, not_true_eq_false, ↓reduceIte] at hW
     split at hW
     · cases hW
@@ -632,7 +632,7 @@ theorem irCallW_head (p : Prog) (hp : p.lookup "iota_rec_head" = some iotaRecHea
     · cases hW
     · simp only [Option.some.injEq] at hW; rw [← hW] at h0; simp at h0
   · simp only [irHeadW] at hW
-    by_cases h3 : hh >>> 28 = 3
+    by_cases h3 : tagW hh = 3
     · simp only [h3, ne_eq, not_true_eq_false, ↓reduceIte] at hW
       obtain ⟨hv1, hW⟩ := of_ite_none hW
       obtain ⟨hv2, hW⟩ := of_ite_none hW

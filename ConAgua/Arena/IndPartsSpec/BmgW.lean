@@ -74,7 +74,7 @@ theorem piBW_ptop (n : Nat) : ∀ (m m' : Mem) (fuel h : Word) (rs : List Word),
     intro m m' fuel h rs hh hP
     by_cases hf : fuel = 0
     · rw [piBW_fuel0 n m fuel h hf] at hh; cases hh
-    by_cases hg : h >>> 28 ≠ 6
+    by_cases hg : tagW h ≠ 6
     · rw [piBW_leaf n m fuel h hf hg] at hh; simp at hh; rw [← hh.2]; exact hP
     rw [piBW_node n m fuel h hf hg] at hh
     by_cases hr : eViewW m h = []

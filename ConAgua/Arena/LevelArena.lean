@@ -95,22 +95,22 @@ theorem lvNodeW_store {v : LNodeView} (hv : a.store.lss.ls.view (decI h) = some 
   have hidx := decI_idx (k := .level) h
   simp only [LTables.get, decI_tag h hh] at hg
   simp only [lvNodeW, h32 hh, ne_eq, not_true_eq_false, ↓reduceIte, hsc]
-  have e0 : ((decI h : LIdx).tag = 0 ↔ h >>> 28 = 0) := decI_tag_eq h hh 0 (by decide)
-  have e1 : ((decI h : LIdx).tag = 1 ↔ h >>> 28 = 1) := decI_tag_eq h hh 1 (by decide)
-  have e2 : ((decI h : LIdx).tag = 2 ↔ h >>> 28 = 2) := decI_tag_eq h hh 2 (by decide)
-  have e3 : ((decI h : LIdx).tag = 3 ↔ h >>> 28 = 3) := decI_tag_eq h hh 3 (by decide)
-  have e4 : ((decI h : LIdx).tag = 4 ↔ h >>> 28 = 4) := decI_tag_eq h hh 4 (by decide)
+  have e0 : ((decI h : LIdx).tag = 0 ↔ tagW h = 0) := decI_tag_eq h hh 0 (by decide)
+  have e1 : ((decI h : LIdx).tag = 1 ↔ tagW h = 1) := decI_tag_eq h hh 1 (by decide)
+  have e2 : ((decI h : LIdx).tag = 2 ↔ tagW h = 2) := decI_tag_eq h hh 2 (by decide)
+  have e3 : ((decI h : LIdx).tag = 3 ↔ tagW h = 3) := decI_tag_eq h hh 3 (by decide)
+  have e4 : ((decI h : LIdx).tag = 4 ↔ tagW h = 4) := decI_tag_eq h hh 4 (by decide)
   rw [← decI_tag (k := .level) h hh] at hg
   simp only [LTag.zero, LTag.succ, LTag.max, LTag.max, LTag.imax, LTag.param, beq_iff_eq] at hg
   simp only [e0, e1, e2, e3, e4] at hg
-  by_cases g0 : h >>> 28 = 0
+  by_cases g0 : tagW h = 0
   · simp (config := { decide := true }) only [g0, ↓reduceIte, Option.map_eq_some_iff] at hg ⊢
     obtain ⟨z, hz, rfl⟩ := hg
     rw [Tbl.node?, hidx, apply_ite LTables.zeros] at hz
     obtain ⟨hc, -⟩ := tier_node zeroCS ZRecRel m _ _ _ hR.zero (tierW h) ht1 _ _ hz
     replace hc : ¬ tcnt m ZERO (tierW h) ≤ idxW h := hc
     simp [hc, lvEnc]
-  by_cases g1 : h >>> 28 = 1
+  by_cases g1 : tagW h = 1
   · simp (config := { decide := true }) only [g1, ↓reduceIte, Option.map_eq_some_iff] at hg ⊢
     obtain ⟨z, hz, rfl⟩ := hg
     rw [Tbl.node?, hidx, apply_ite LTables.succs] at hz
@@ -118,7 +118,7 @@ theorem lvNodeW_store {v : LNodeView} (hv : a.store.lss.ls.view (decI h) = some 
     replace hc : ¬ tcnt m SUCC (tierW h) ≤ idxW h := hc
     simp only [SRecRel] at hr
     simp [hc, hr, lvEnc]
-  by_cases g2 : h >>> 28 = 2
+  by_cases g2 : tagW h = 2
   · simp (config := { decide := true }) only [g2, ↓reduceIte, Option.map_eq_some_iff] at hg ⊢
     obtain ⟨z, hz, rfl⟩ := hg
     rw [Tbl.node?, hidx, apply_ite LTables.maxs] at hz
@@ -126,7 +126,7 @@ theorem lvNodeW_store {v : LNodeView} (hv : a.store.lss.ls.view (decI h) = some 
     replace hc : ¬ tcnt m MAX (tierW h) ≤ idxW h := hc
     simp only [MRecRel] at hr
     simp [hc, hr.1, hr.2, lvEnc]
-  by_cases g3 : h >>> 28 = 3
+  by_cases g3 : tagW h = 3
   · simp (config := { decide := true }) only [g3, ↓reduceIte, Option.map_eq_some_iff] at hg ⊢
     obtain ⟨z, hz, rfl⟩ := hg
     rw [Tbl.node?, hidx, apply_ite LTables.imaxs] at hz
@@ -134,7 +134,7 @@ theorem lvNodeW_store {v : LNodeView} (hv : a.store.lss.ls.view (decI h) = some 
     replace hc : ¬ tcnt m IMAX (tierW h) ≤ idxW h := hc
     simp only [IRecRel] at hr
     simp [hc, hr.1, hr.2, lvEnc]
-  by_cases g4 : h >>> 28 = 4
+  by_cases g4 : tagW h = 4
   · simp (config := { decide := true }) only [g4, ↓reduceIte, Option.map_eq_some_iff] at hg ⊢
     obtain ⟨z, hz, rfl⟩ := hg
     rw [Tbl.node?, hidx, apply_ite LTables.params] at hz
@@ -312,7 +312,7 @@ theorem lvsR_of_slice {m : Mem} {a : AState} (hR : ArenaR m a) :
     rw [hw]; exact denoteL_lvR hR u l hl
 
 theorem decLs_tag0 (h : Word) (hh : h.toNat < 2 ^ 32) :
-    ((decI h : LsIdx).tag == LsTag.list) = (h >>> 28 == 0) := decI_tag_beq h hh 0 (by decide)
+    ((decI h : LsIdx).tag == LsTag.list) = (tagW h == 0) := decI_tag_beq h hh 0 (by decide)
 
 /-- **Under `ArenaR`, L's view of a level-list handle is the arena's**: the record's slice holds
 the list's handle words, a slice in use. -/
@@ -340,7 +340,7 @@ theorem lsNodeW_store' {m : Mem} {a : AState} (hR : ArenaR m a) {h : Word} (hh :
       · simp at hv
   obtain ⟨hsc, hg⟩ := hsc
   simp only [LsTables.get, decLs_tag0 h hh] at hg
-  by_cases g0 : h >>> 28 = 0
+  by_cases g0 : tagW h = 0
   · simp only [g0, beq_self_eq_true, ↓reduceIte, Option.map_eq_some_iff] at hg
     obtain ⟨z, hz, rfl⟩ := hg
     rw [Tbl.node?, decI_idx h, apply_ite LsTables.lists] at hz
@@ -368,7 +368,7 @@ theorem lsNodeW_view {m : Mem} {a : AState} (hR : ArenaR m a) {h : Word} (hh : h
     ∃ ids : List LIdx, a.store.lss.view (decI h) = some ids ∧
       (lsNodeW m h).tail.headD 0 = tfld m LVLS (tierW h) (idxW h) 1 ∧
       (tfld m LVLS (tierW h) (idxW h) 1).toNat = ids.length := by
-  have hg : h >>> 28 = 0 := Classical.byContradiction fun c => hne (by simp [lsNodeW, c])
+  have hg : tagW h = 0 := Classical.byContradiction fun c => hne (by simp [lsNodeW, c])
   have hsc : ¬ (tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0) := fun c => hne (by simp [lsNodeW, hg, c])
   have hc : ¬ tcnt m LVLS (tierW h) ≤ idxW h := fun c => hne (by
     rw [lsNodeW, ite_eq_right (by simpa using hg), ite_eq_right hsc, ite_eq_left c])

@@ -22,7 +22,7 @@ local notation "V" => ConLeche.CheckMode.verified
 
 /-- A `Π` handle's view: its domain and body, decoded. -/
 theorem pos2_forall_view {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m : Mem} {a : AState}
-    {w : Word} (hS : StageR dn vis fe m a) (hw : H w) (h6 : w >>> 28 = 6) (hne : eViewW m w ≠ []) :
+    {w : Word} (hS : StageR dn vis fe m a) (hw : H w) (h6 : tagW w = 6) (hne : eViewW m w ≠ []) :
     ∃ d b, eViewW m w = [6, d, b, 0] ∧ H d ∧ H b ∧
       (viewBind (decI w)).run a = .ok (some (decI d, decI b), a) ∧ (decI w : EIdx).tag = ETag.forallE := by
   obtain ⟨hvok, hew⟩ := eViewW_forall m w h6 hne

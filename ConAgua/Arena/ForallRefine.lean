@@ -205,7 +205,7 @@ theorem forallCS_wf : forallCS.WF where
 theorem faskipW_eq (m : Mem) (a : AState) (ty body : Word) (hty : ty.toNat < 2 ^ 32)
     (hbody : body.toNat < 2 ^ 32) (hfl : (rdW (m.arr64 CTL) 1 != 0) = a.store.scratchOn) :
     (faskipW m ty body = 0) = (skFa a (decE ty) (decE body) = false) := by
-  have := bit27_or ty body
+  have := bit31_or ty body
   simp only [faskipW, skFa, isPersistent_decE ty hty, isPersistent_decE body hbody, ← hfl]
   grind
 

@@ -337,7 +337,7 @@ theorem promote_lsNodeW_view {m : Mem} {a : AState} (hR : ArenaR m a) {h : Word}
     (hne : lsNodeW m h ≠ []) : ∃ ids, a.store.lss.view (decI h) = some ids := by
   have hfl := ConsR.flag hR.ls
   unfold lsNodeW at hne
-  by_cases g0 : h >>> 28 ≠ 0
+  by_cases g0 : tagW h ≠ 0
   · simp [g0] at hne
   by_cases hsc : tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0
   · simp [g0, hsc] at hne
@@ -348,14 +348,14 @@ theorem promote_lsNodeW_view {m : Mem} {a : AState} (hR : ArenaR m a) {h : Word}
     unfold LsStore.view
     rw [isPersistent_decI h hh]
     by_cases ht : tierW h = 0
-    · simp only [show (h >>> 27) &&& 1 = tierW h from rfl, ht, beq_self_eq_true, ↓reduceIte]
+    · simp only [show (h >>> 31) &&& 1 = tierW h from rfl, ht, beq_self_eq_true, ↓reduceIte]
     · have hon : a.store.lss.scratchOn = true := by
         rw [← hfl]; simp only [bne_iff_ne, ne_eq]; exact fun e => hsc ⟨ht, e⟩
-      simp only [show (h >>> 27) &&& 1 = tierW h from rfl, beq_iff_eq, ht, ↓reduceIte, hon]
+      simp only [show (h >>> 31) &&& 1 = tierW h from rfl, beq_iff_eq, ht, ↓reduceIte, hon]
   rw [hview]
   obtain ⟨x, hx, -⟩ := ConsR.node hR.ls (tierW h) (tierW_le h)
     (idxW h) (UInt64.not_le.mp hc)
-  simp only [LsTables.get, decLs_tag0 h hh, show h >>> 28 = 0 from by simpa using g0,
+  simp only [LsTables.get, decLs_tag0 h hh, show tagW h = 0 from by simpa using g0,
     beq_self_eq_true, ↓reduceIte, Tbl.node?, decI_idx, apply_ite LsTables.lists, hx,
     Option.map_some]
   exact ⟨_, rfl⟩
