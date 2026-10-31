@@ -97,13 +97,10 @@ theorem pfv_ref {p : Prog} (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe
     (fun j hj => by have := hg1.iw; omega) (hP.fr (haW_mfr hha'))
   rw [hnP1] at hrunoa
   refine RefE.bind_right hrunoa ?_
-  cases b with
-  | true =>
-    rw [pfvE.k_nest_occ_any.abort1 _ _ _ _ _ _ _ _ _ _ (by rw [hr2]; decide)]
-    exact fun _ => ErrClaim.ite_pos rfl (ErrClaim.fail _ _ (by decide))
-  | false =>
-  rw [pfvE.k_nest_occ_any.arm1 _ _ _ _ _ _ _ _ _ _ (by rw [hr2]; rfl)]
-  refine RefE.ite_neg (by simp) ?_
+  rw [pfvE.k_nest_occ_any.eq_2]
+  refine RefE.guardThen (by decide) (fun h => by rw [hr2] at h; cases b <;> simp at h ⊢) (fun h => by rw [hr2, h]; decide)
+    fun _ hb => ?_
+  subst hb
   have htop2 : iwTop m2 < 2 ^ 64 := Nat.lt_of_le_of_lt hS2.iw.iw hS2.iw.iwSize
   obtain ⟨hd2, hnin2⟩ := hnin.grow hg2
   rw [← hd2] at hdec
@@ -115,8 +112,8 @@ theorem pfv_ref {p : Prog} (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe
   rw [hcd] at hrun3
   refine RefE.bind_right hrun3 ?_
   have hal := decHL_length m hargs
-  by_cases hov : aL + rdW (m2.arr64 IW) (rdW (m2.arr64 IW) (r1.tail.headD 0) + 3) < aL
-  · rw [pfvE.k_nest_arity.abort1 _ _ _ _ _ _ _ _ _ hov]; exact RefE.of_cls0 (by simp)
+  rw [pfvE.k_nest_arity.eq_2]
+  refine RefE.abort0 rfl fun hov => ?_
   have hsum : (aL + rdW (m2.arr64 IW) (rdW (m2.arr64 IW) (r1.tail.headD 0) + 3)).toNat =
       aL.toNat + hl.key.ds.length := by
     rw [← hdl]
@@ -125,17 +122,8 @@ theorem pfv_ref {p : Prog} (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe
     · exact word_add_toNat hl'
     · exfalso; apply hov; apply UInt64.lt_iff_toNat_lt.mpr; rw [UInt64.toNat_add]
       have := aL.toNat_lt; have := (rdW (m2.arr64 IW) (rdW (m2.arr64 IW) (r1.tail.headD 0) + 3)).toNat_lt; omega
-  by_cases hne : aL + rdW (m2.arr64 IW) (rdW (m2.arr64 IW) (r1.tail.headD 0) + 3) ≠ r3.headD 0
-  · rw [pfvE.k_nest_arity.abort2 _ _ _ _ _ _ _ _ _ hov hne]
-    refine RefE.ite_neg ?_ (fun _ => ErrClaim.fail _ _ (by decide))
-    intro hq
-    apply hne
-    apply UInt64.toNat_inj.mp
-    rw [hsum, hr3, ← hal]; simpa using hq
-  rw [pfvE.k_nest_arity.arm1 _ _ _ _ _ _ _ _ _ hov (by simpa using hne)]
-  have heq : args.length + hl.key.ds.length = ar := by
-    rw [hal, ← hsum, ← hr3]; simp only [ne_eq, Decidable.not_not] at hne; rw [hne]
-  refine RefE.ite_pos (by simp [heq]) ?_
+  refine RefE.splitNot (fun hne hq => hne (UInt64.toNat_inj.mp (by rw [hsum, hr3, ← hal]; simpa using hq)))
+    (fun hq he => hq (by rw [hal, ← hsum, ← hr3, he, beq_self_eq_true])) (fun _ _ _ => ErrClaim.fail _ _ (by decide)) fun _ _ => ?_
   rcases hk : hkWf (k + 1) m3 ctx kb i with _ | w
   · rw [liftE_none, pfvE.k_nest_pos_hole_kind.none]; exact RefE.of_cls0 (by simp)
   rw [liftE_some, pfvE.k_nest_pos_hole_kind.arm1]
@@ -286,38 +274,29 @@ theorem ncc_ref {p : Prog} (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe
   rw [hnP] at hrunoa
   unfold nccT
   refine RefE.bind_right hrunoa ?_
-  cases b with
-  | true =>
-    rw [nccE.k_nest_occ_any.abort1 _ _ _ _ _ _ _ _ (by rw [hr1]; decide)]
-    exact fun _ => ErrClaim.ite_pos rfl (ErrClaim.fail _ _ (by decide))
-  | false =>
-  rw [nccE.k_nest_occ_any.arm1 _ _ _ _ _ _ _ _ (by rw [hr1]; rfl)]
-  refine RefE.ite_neg (by simp) ?_
+  rw [nccE.k_nest_occ_any.eq_2]
+  refine RefE.guardThen (by decide) (fun h => by rw [hr1] at h; cases b <;> simp at h ⊢) (fun h => by rw [hr1, h]; decide)
+    fun _ hb => ?_
+  subst hb
   refine RefE.onlySim (fun _ => nccE.k_pin_at.none ..) (fun _ _ h => h) fun rq m2 hq => ?_
   obtain ⟨hm2, hqH, hqrun⟩ := pos2PinW_ok hq hS1.check.pins
   subst hm2
   have hpq : pinQuot = pinAt 47 := rfl
   have hqrun' : pinQuot.run a = .ok ((decI (rq.headD 0) : NIdx), a) := by rw [hpq]; simpa using hqrun
   refine RefE.bind_right hqrun' ?_
-  by_cases hnq : nn = rq.headD 0
-  · rw [nccE.k_pin_at.abort1 _ _ _ _ _ _ _ _ hnq]
-    exact fun _ => ErrClaim.ite_pos (by rw [hnq]; simp) (ErrClaim.fail _ _ (by decide))
-  rw [nccE.k_pin_at.arm1 _ _ _ _ _ _ _ _ hnq]
-  have hbeq : ((decI nn : NIdx) == decI (rq.headD 0)) = false := by rw [decI_beq _ _ hnH hqH]; simpa using hnq
-  refine RefE.ite_neg (by rw [hbeq]; simp) ?_
+  rw [nccE.k_pin_at.eq_2]
+  refine RefE.guardThen (by decide) (fun h => by rw [decI_beq _ _ hnH hqH]; simpa using h)
+    (fun h => by rw [decI_beq _ _ hnH hqH] at h; simpa using h) fun _ hbeq => ?_
   refine RefE.onlySim (fun _ => nccE.k_nest_cont_params_closed.none ..) (fun _ _ h => h) fun r3 m3 hcp => ?_
   obtain ⟨b3, a3, hrun3, hS3, hg3, hr3⟩ := cpW_okW dn fe vis hp k m2 m3 a dO dL ds r3 hcp hS1
     (by rw [decHL_agree (RdS.of_grow hg1) (fun j hj => hdsb j hj)]; exact hds)
     (fun j hj => by have := hdsb j hj; have := hg1.iw; omega)
   refine RefE.bind_right hrun3 ?_
-  cases b3 with
-  | false =>
-    rw [nccE.k_nest_cont_params_closed.abort1 _ _ _ (by rw [hr3]; rfl)]
-    exact fun _ => ErrClaim.ite_pos rfl (ErrClaim.fail _ _ (by decide))
-  | true =>
-    rw [nccE.k_nest_cont_params_closed.arm1 _ _ _ (by rw [hr3]; decide)]
-    exact RefE.ite_neg (by simp) (RefE.ret rfl ⟨hrunoa, ⟨_, hqrun', hbeq⟩, hrun3, hS3, hg1.trans hg3,
-      hP1.fr (cpW_mfr _ _ _ _ _ _ _ hcp),
-      ((noaW_afr _ _ _ _ _ _ _ _ _ _ hoa).trans (pos2PinW_afr hq)).trans (cpW_afr _ _ _ _ _ _ _ hcp)⟩)
+  rw [nccE.k_nest_cont_params_closed.eq_2]
+  refine RefE.guardThen (by decide) (fun h => by rw [hr3] at h; cases b3 <;> simp at h ⊢) (fun h => by rw [hr3]; cases b3 <;> simp at h ⊢)
+    fun _ hb => ?_
+  obtain rfl : b3 = true := by simpa using hb
+  exact RefE.ret rfl ⟨hrunoa, ⟨_, hqrun', hbeq⟩, hrun3, hS3, hg1.trans hg3, hP1.fr (cpW_mfr _ _ _ _ _ _ _ hcp),
+    ((noaW_afr _ _ _ _ _ _ _ _ _ _ hoa).trans (pos2PinW_afr hq)).trans (cpW_afr _ _ _ _ _ _ _ hcp)⟩
 
 end L.Ind
