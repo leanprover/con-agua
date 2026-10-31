@@ -39,14 +39,14 @@ structure StoreTr (m m' : Mem) : Prop where
   ra0 : m'.arr64 S.ra = (m.arr64 S.ra).extract 0 (cntW S m 0 * S.w).toNat
   sa0 : m'.arr64 S.sa = (m.arr64 S.sa).extract 0 (2 + 2 * knW S.sa m 0).toNat
 
-theorem mul_toNat_small {c w : Word} (hc : c.toNat ≤ 2 ^ 27) (hw : w.toNat ≤ 256) :
+theorem mul_toNat_small {c w : Word} (hc : c.toNat ≤ 2 ^ 30) (hw : w.toNat ≤ 256) :
     (c * w).toNat = c.toNat * w.toNat := by
   rw [UInt64.toNat_mul]; apply Nat.mod_eq_of_lt
   have := Nat.mul_le_mul hc hw
   omega
 
 /-- The tier-0 fields of a node below the count survive. -/
-theorem fld_trunc0 (hS : S.WF) {m m' : Mem} (hT : StoreTr S m m') (hc : (cntW S m 0).toNat ≤ 2 ^ 27)
+theorem fld_trunc0 (hS : S.WF) {m m' : Mem} (hT : StoreTr S m m') (hc : (cntW S m 0).toNat ≤ 2 ^ 30)
     {i f : Word} (hi : i.toNat < (cntW S m 0).toNat) (hf : f < S.w) :
     fld S m' 0 i f = fld S m 0 i f := by
   simp only [fld, tierA_zero', hT.ra0]
@@ -103,7 +103,7 @@ theorem storeR_trunc (hS : S.WF) (hK : KFrame S hs KP) {m m' : Mem} (hT : StoreT
     ?_, ?_, ?_⟩
   · -- tier 0
     obtain ⟨hc, hcap, hrs, hrec, hsome, hback, hsl, hkp, hrun⟩ := hT0
-    have hc27 : (cntW S m 0).toNat ≤ 2 ^ 27 := by rw [hc]; exact hcap
+    have hc27 : (cntW S m 0).toNat ≤ 2 ^ 30 := by rw [hc]; exact Nat.le_trans hcap (capS_le _)
     have hfl0 : ∀ i : Word, i.toNat < tbP.nodes.size → ∀ f, f < S.w →
         fld S m' 0 i f = fld S m 0 i f := fun i hi f hf =>
       fld_trunc0 S hS hT hc27 (by rw [hc]; exact hi) hf

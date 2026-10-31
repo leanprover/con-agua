@@ -277,11 +277,17 @@ theorem nmCnt_le {m : Mem} {a : AState} (h : ArenaR m a) (g : Nat) (hg : g ≤ 2
     nmCnt m g ≤ 2 ^ 27 := by
   rcases (show g = 0 ∨ g = 1 ∨ g = 2 by omega) with rfl | rfl | rfl
   · have := ConsR.cnt0 h.nanon (ca := nanonCS.ca.toNat) (by decide)
-    have := h.nanon.cap 0 (by decide); simp at this; unfold nmCnt; simp only [nmCS]; omega
+    have := h.nanon.cap 0 (by decide)
+    simp only [show nanonCS.wide = false from rfl, capS] at this; simp at this
+    unfold nmCnt; simp only [nmCS]; omega
   · have := ConsR.cnt0 h.nstr (ca := nstrCS.ca.toNat) (by decide)
-    have := h.nstr.cap 0 (by decide); simp at this; unfold nmCnt; simp only [nmCS]; omega
+    have := h.nstr.cap 0 (by decide)
+    simp only [show nstrCS.wide = false from rfl, capS] at this; simp at this
+    unfold nmCnt; simp only [nmCS]; omega
   · have := ConsR.cnt0 h.nnum (ca := nnumCS.ca.toNat) (by decide)
-    have := h.nnum.cap 0 (by decide); simp at this; unfold nmCnt; simp only [nmCS]; omega
+    have := h.nnum.cap 0 (by decide)
+    simp only [show nnumCS.wide = false from rfl, capS] at this; simp at this
+    unfold nmCnt; simp only [nmCS]; omega
 
 section main
 variable {m : Mem} (htop : m.top.toNat < 2 ^ 40)
@@ -348,21 +354,25 @@ theorem denoteN_view {st : NStore} {n : NIdx} {x : ConLeche.Name} (h : denoteN s
 /-- A persistent name handle that denotes is a tier-0 name below its table's count. -/
 theorem nameIn_of {m : Mem} {a : AState} (hR : ArenaR m a) {n : NIdx} {nm : ConLeche.Name}
     (hper : n.isPersistent = true) (hdn : denoteN a.store.ns n = some nm)
-    (_hn : rowTag n.word.toUInt64 ≤ 2) :
-    rowTier n.word.toUInt64 = 0 ∧ n.word.toUInt64.toNat % 2 ^ 27 < nmCnt m (rowTag n.word.toUInt64) := by
+    (hn : rowTag n.word.toUInt64 ≤ 2) :
+    rowTier n.word.toUInt64 = 0 ∧ tblIx n.word.toUInt64 < nmCnt m (rowTag n.word.toUInt64) := by
   have hv := denoteN_view hdn
   simp only [NStore.view, hper, ↓reduceIte, EStore.ns, NTables.get] at hv
-  have hw : n.word.toUInt64.toNat = n.word.toNat := UInt32.toNat_toUInt64 _
-  have hwl := n.word.toNat_lt
-  have htier : n.word.toNat / 134217728 % 2 = 0 := by
-    have := hper; simp only [Idx.isPersistent, Idx.tier, beq_iff_eq] at this
-    have := congrArg UInt32.toNat this
-    simpa [UInt32.toNat_mod, UInt32.toNat_div] using this
-  have htag : ∀ g : UInt32, n.tag = g → n.word.toNat / 268435456 = g.toNat := fun g e => by
-    have := congrArg UInt32.toNat e; simpa [Idx.tag, UInt32.toNat_div] using this
-  have hidx : n.idxNat = n.word.toNat % 134217728 := by
-    simp [Idx.idxNat, Idx.index, UInt32.toNat_mod]
-  simp only [rowTag, rowTier, hw] at _hn ⊢
+  have hw := word_lt32 n
+  have hnr := rowTag_narrow hn
+  have htier : rowTier n.word.toUInt64 = 0 := by
+    have hp := decI_pers (k := .name) n.word.toUInt64 hw
+    rw [decI_word, hper] at hp
+    have : tierW n.word.toUInt64 = 0 := by simpa using hp.symm
+    rw [← tierW_toNat_row, this]; rfl
+  have htag : ∀ g : UInt32, n.tag = g → rowTag n.word.toUInt64 = g.toNat := fun g e => by
+    have ht := decI_tag (k := .name) n.word.toUInt64 hw
+    rw [decI_word, e] at ht
+    have hl := rowTag_lt n.word.toUInt64
+    rw [ht]; simp only [rowTag, UInt64.toNat_toUInt32] at hl ⊢; omega
+  have hidx : n.idxNat = tblIx n.word.toUInt64 := by
+    have := decI_idx (k := .name) n.word.toUInt64 hnr
+    rwa [decI_word] at this
   refine ⟨htier, ?_⟩
   by_cases h0 : n.tag == NTag.anonymous
   · simp only [h0, ↓reduceIte, Option.isSome_map] at hv
@@ -427,7 +437,7 @@ theorem envKeysIn_of {m : Mem} {a : AState} {fe : IFEnv} {pend : List PendingChe
     obtain ⟨nm, c', hdn, -, -⟩ := hok.check.ienv.hit n ci hf
     have hper : n.isPersistent = true := (hok.persEnv.idx n _ hp).1
     obtain ⟨ht, hl⟩ := nameIn_of hR hper hdn hn
-    exact ⟨ht, by simp only [rowIx]; omega⟩
+    exact ⟨ht, by simp only [rowIx, tblIx] at hl ⊢; omega⟩
   · obtain ⟨t, hp⟩ := Option.isSome_iff_exists.mp hs
     have hper : n.isPersistent = true := (hok.persEnv.tbls n t hp).1
     have hfind := hp
