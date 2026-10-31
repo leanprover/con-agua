@@ -11,19 +11,23 @@ in step. This file is the walk's step rules, one per pair of shapes, both outcom
 
 * `RefE.bindSim`: a lifted callee (`K (liftE c)`, outside the verdict closure) against the twin's
   bind, by the callee's `Sim` (its registered step): no `rcases`, `liftE_none`, `K.none`,
-  `of_cls0`, `liftE_some`, `bind_right`;
+  `of_cls0`, `liftE_some`, `bind_right`; `RefE.bindLift` is the same for a callee without a step
+  lemma, its run and the rest proved at the call site;
 * `RefE.bindE` / `RefE.lastE`: a unified callee (`K x`) by its own `RefE`, then the rest / as the
   twin's last step;
 * `RefE.onlySim`: a lifted callee the twin has no step for (an L helper: `sl_eq`);
-* `RefE.guard`: an abort guard of the model against the twin's `unless … do fail` (its
-  do-elaboration `if b = true then jp () else fail ce >>= jp`), the two conditions related by
-  one implication each way;
-* `RefE.guardOpt`: an abort guard against the twin's `unwrapOr o ce >>= g`;
-* `RefE.twinFail`: the model aborts where the twin's guard fails (a guard of the twin that L
-  checks in pieces).
+* the guards of the model (`if c then .error e else rest`): `RefE.guard` against the twin's
+  `unless … do fail` (its do-elaboration `if b = true then jp () else fail ce >>= jp`),
+  `RefE.guardIf` / `RefE.guardThen` against `if b then rest else fail ce` / `if b then fail ce
+  else rest`, `RefE.guardOpt` against `unwrapOr o ce >>= g`, the two conditions related by one
+  implication each way; `RefE.abort0` for a guard of the model alone with a class-`0` abort;
+  `RefE.abortAt` / `RefE.pass` where a split of the proof already decided the guard;
+* `RefE.twinFail` / `RefE.twinPass`: a guard of the twin that L checks in pieces;
+* `RefE.ofArms`: an irreducible continuation (a recursive model's) read through its guarded
+  equations as the `if` the guard rules take.
 
 Between two rules, `dsimp only [K]` unfolds the continuation `K` at the head of the model
-(`K (.ok (r, m))` to its arm). docs/design/refgen.md, "Migration recipe", is the shape of a
+(`K (.ok (r, m))` to its arm), or `rw [K.arm1]` where `K` is irreducible. docs/design/refgen.md, "Migration recipe", is the shape of a
 converted proof.
 -/
 

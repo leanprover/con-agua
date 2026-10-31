@@ -6,7 +6,7 @@ import ConRon.Bridge.Inductives.StructParts
 import ConAgua.Arena.RefWalk
 
 /-!
-# The sum family's walk steps (lane `refgen`, pilot)
+# The sum family's walk steps
 
 The registered steps of `check_sum_ctor`'s callees outside the verdict closure, for the lockstep
 walk of `RefWalk.lean` (docs/design/refgen.md): each is the callee's `Sim` under the family's package
