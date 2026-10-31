@@ -50,15 +50,24 @@ INL_OUT = os.path.join(ROOT, "ConAgua", "Checker", "ProgI.lean")
 # (docs/design/inline.md §1). Its per-function literals (`inl_round_fns`) in INL_PARTS modules
 # before the prelude's copies and INL_PRE_PARTS for the copies (the slowest to check).
 INLINE_SIZE = 80
-INL_PARTS = 6
-INL_PRE_PARTS = 1
+# The cut points (function indices, for a `checkerProg` of CUT_REF functions; scaled to the actual
+# count) are balanced by measured kernel time, not by function count: a function's check costs
+# anywhere from 1 ms to 4.5 s, and the heavy ones cluster (docs/design/lnext3.md, "Balanced
+# parts"). To retune, profile each part (`set_option profiler true`, `profiler.threshold 1` before
+# `inl_round_fns` / `asm_lit_fns`; one `type checking took` line per batch or function, in order),
+# and cut the cumulative cost into equal shares.
+CUT_REF = 1721
+INL_CUTS = [0, 173, 316, 608, 805, 924, 1126, 1251, 1418, 1578, 1721]
+ASM_CUTS = [0, 175, 314, 503, 645, 758, 906, 966, 1086, 1222, 1238, 1372, 1489, 1597, 1721]
+INL_PARTS = len(INL_CUTS) - 1
+INL_PRE_PARTS = 2
 # `checkerAsm`'s per-function kernel checks, spread over this many modules (built in parallel;
 # each loads `Checker/Prog.lean`, about 3 GB): ASM_PARTS for the functions before the prelude's
 # copies, one kernel check per function; PRE_PARTS for the copies (`pre_*`, and the stubs after
 # them), one kernel check per part (`asmLitBatch`): every copy reads the prelude's 15 700 bytes
 # (`ldc`), whose `romIdx` the kernel then evaluates once per part instead of once per function
 # (~5 s each; 110 copies: 350 s in one part before)
-ASM_PARTS = 6
+ASM_PARTS = len(ASM_CUTS) - 1
 PRE_PARTS = 4
 # `checkerSkt_eq` (one kernel check of every leaf's frame: 55 s) in SKT_PARTS modules, by function
 # ranges; `checkerProg_wf`'s chunk checks (`progWfChunk` functions each; 50 s) in WF_PARTS
@@ -534,14 +543,14 @@ def main():
                         entries=",\n".join(entries))
     n = len(entries)
     s0 = len(reach)  # the first copy
-    bounds = [s0 * k // ASM_PARTS for k in range(ASM_PARTS)] + \
+    bounds = [s0 * c // CUT_REF for c in ASM_CUTS[:-1]] + \
         [s0 + (n - s0) * k // PRE_PARTS for k in range(PRE_PARTS + 1)]
     nparts = ASM_PARTS + PRE_PARTS
     chk = os.path.join(ROOT, "ConAgua", "Checker")
     skt_b = [n * k // SKT_PARTS for k in range(SKT_PARTS + 1)]
     nch = (n + WF_CHUNK - 1) // WF_CHUNK
     wf_b = [nch * k // WF_PARTS for k in range(WF_PARTS + 1)]
-    inl_b = [s0 * k // INL_PARTS for k in range(INL_PARTS)] + \
+    inl_b = [s0 * c // CUT_REF for c in INL_CUTS[:-1]] + \
         [s0 + (n - s0) * k // INL_PRE_PARTS for k in range(INL_PRE_PARTS + 1)]
     ninl = INL_PARTS + INL_PRE_PARTS
     outs = [(OUT, txt), (TAB_OUT, TAB), (NRT_OUT, NRT), (TREE_OUT, TREE), (TREE_I_OUT, TREE_I),
