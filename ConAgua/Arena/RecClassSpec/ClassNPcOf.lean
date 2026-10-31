@@ -97,6 +97,8 @@ theorem rowPW_eq (m : Mem) (w : Word) (hw : w.toNat < 2 ^ 32) (ht : tagW w ≤ 2
   have h2 := ixW_toNat w hw
   have ht' : rowTag w ≤ 2 := by rw [← h1]; exact UInt64.le_iff_toNat_le.mp ht
   have hix : (ixW w + 1).toNat = rowIx w + 1 := by
+    have : (idxW w).toNat < 2 ^ 26 := by
+      rw [idxW_toNat_narrow w (rowTag_narrow ht')]; exact Nat.mod_lt _ (by decide)
     rw [UInt64.toNat_add, h2]; simp [rowIx]; omega
   simp only [rowPW, rowP, ht', ite_true, rdW, hix]
   simp [selArr_rowSelW w ht']
