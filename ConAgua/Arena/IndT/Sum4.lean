@@ -3,8 +3,8 @@ import ConAgua.Verdict.DeclValsE
 import ConAgua.Arena.RecGenSpec.Classes
 import ConAgua.Arena.RecGenSpec.Rec3TmdWDecB
 import ConAgua.Arena.RecGenSpec.ClassFeR
-import ConAgua.Arena.IndT.Install1
-import ConAgua.Arena.IndSumSpec.CheckSumCtor
+import ConAgua.Arena.IndT.SumSteps
+import ConAgua.Arena.RefWalk
 
 
 /-!
@@ -107,301 +107,90 @@ theorem ctl_ref (hP : SumProg p) (m : Nat) (hn : m + 1 ≤ 2 ^ 62) (m0 : Mem)
       (cscTailT (fe.restrictTo vis0.toNat) fe (decI T) lps nP.toNat nIdx.toNat (decI rs) (isP != 0)
         (lg != 0) cvCa nF.toNat (cq1, decI cqB)) a
       (fun v x a' => CtlPost dn vis fe env m0 a cvCa v.1 v.2 x a') := by
-  rw [ctlE.arm1]
-  have hS := hC.stage
-  have hv := hS.check.env.vis
-  unfold cscTailT
-  rcases h1 : callW p m "open_pis_at_fvars_f" [nF, cqB, nP] m0 with _ | ⟨rx, m1⟩
-  · rw [liftE_none, ctlE.k_open_pis_at_fvars_f.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]
-  obtain ⟨ox, a1, hrun1, ⟨⟨hS1, hg1, hdec1⟩, hr1⟩, hA1⟩ :=
-    opfSimRA (n := m) hOpf hcqB hS hA rx m1 (h1)
-  obtain ⟨p1, ho1⟩ := ConRon.Bridge.Inductives.openPisAtFvarsF_run hC.check.state hcqBP hr1
-  have hC1 : StageC dn vis fe env m1 a1 := hC.of_pstep hS1 hA1 p1
-  refine RefE.bind_right hrun1 ?_
-  by_cases h0 : rx.headD 0 = 0
-  · rw [ctlE.k_open_pis_at_fvars_f.abort1 p m _ _ _ _ _ _ _ _ _ _ _ _ _ rx m1 h0]
-    cases ox with
-    | none =>
-      simp only [unwrapOr]
-      exact RefE.bind_left fun _ => ErrClaim.fail _ _ (by decide)
-    | some xq => exact absurd (by simpa [decOLE] using hdec1.1 : rx.headD 0 = 1) (by rw [h0]; decide)
-  rw [ctlE.k_open_pis_at_fvars_f.arm1 p m vis0 vis T lo ll nP nIdx rs isP lg nF cqO cqL rx m1 h0]
-  cases ox with
-  | none => exact absurd hdec1 h0
-  | some xq =>
-  obtain ⟨xl1, xb⟩ := xq
-  obtain ⟨xfvsP, xrestP, hxq, hxfvs, hxrest⟩ := ConRon.Bridge.Inductives.denoteOpen_some_inv ho1
-  obtain ⟨-, ⟨hxl, hxlb⟩, hxb, hxbd⟩ := hdec1
-  rw [sumGetD1, sumGetD2] at hxl hxlb
-  rw [drop3_eq] at hxb hxbd
-  simp only [unwrapOr, pure_bind]
-  -- `param_levels`
-  rcases h2 : callW p m "param_levels" [lo, ll] m1 with _ | ⟨ru, m2⟩
-  · rw [liftE_none, ctlE.k_param_levels.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]
-  rw [ctlE.k_param_levels.arm1]
-  obtain ⟨s2, hs2, -, h2m⟩ := triple_of_callW
-    (plW_spec p hP.ha hP.hc hP.hsc hP.hg hP.hpf hP.hpp hP.hip hP.hplg hP.hpl hP.hil m
-      ⟨m1, Locals.init []⟩ lo ll) (h2)
-  subst hs2
-  obtain ⟨us, a2, hrun2, hS2, hg2, hu, hus⟩ := plSim m m1 a1 lo ll lps hS1
-    (by rw [decHL_grow hg1 hlb]; exact hlps) (by have := hg1.iw; omega) ru s2.mem h2m
-  have hA2 : AbsOK s2.mem := plW_afr h2m hA1
-  obtain ⟨p2, husP⟩ := ConRon.Bridge.Inductives.paramLevels_spec lps lpsP a1 a2 us hC1.check.state
-    (ConRon.Bridge.denoteNListE_ext p1.ext _ _ hlpsP) hrun2
-  have hC2 : StageC dn vis fe env s2.mem a2 := hC1.of_pstep hS2 hA2 p2
-  subst hus
-  refine RefE.bind_right hrun2 ?_
-  generalize hxo : rx.tail.headD 0 = xo at hxl hxlb ⊢
-  generalize hxlw : rx.tail.tail.headD 0 = xlw at hxl hxlb ⊢
-  generalize hxbw : rx.tail.tail.tail.headD 0 = xbw at hxb hxbd ⊢
-  -- `intern_const`
-  rcases h3 : callW p m "intern_const" [T, ru.headD 0] s2.mem with _ | ⟨rh, m3⟩
-  · rw [liftE_none, ctlE.k_intern_const.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]
-  by_cases hbig : 4294967296 ≤ rh.headD 0
-  · rw [ctlE.k_intern_const.abort1 p m vis0 vis nP nIdx rs isP lg nF cqO cqL xo xlw xbw rh m3 hbig]
-    exact RefE.of_cls0 rfl
-  rw [ctlE.k_intern_const.arm1 p m vis0 vis nP nIdx rs isP lg nF cqO cqL xo xlw xbw rh m3 hbig]
-  obtain ⟨s3, hs3, -, h3m⟩ := triple_of_callW (internConst_spec p hP.hcf hP.hcp hP.hic m
-    ⟨s2.mem, Locals.init []⟩ T (ru.headD 0)) (h3)
-  subst hs3
-  obtain ⟨he, a3, hrun3, he', hS3, hg3⟩ := ceSim s2.mem a2 T (ru.headD 0) hS2 hT hu (rh.headD 0) s3.mem
-    (by rw [h3m])
-  have hA3 : AbsOK s3.mem := ceinternW_afr h3m hA2
-  obtain ⟨p3, hhd⟩ := ConRon.Bridge.Inductives.internConstE_run hC2.check.state
-    (ConRon.Bridge.denoteN_ext hTP (p1.ext.trans p2.ext)) husP hrun3
-  have hC3 : StageC dn vis fe env s3.mem a3 := hC2.of_pstep hS3 hA3 p3
-  subst he'
-  refine RefE.bind_right hrun3 ?_
-  have hd32 : H (rh.headD 0) := by
+  rw [ctlE.arm1]; unfold cscTailT
+  have k0 := SumAt.refl hC hA
+  refine RefE.bindSim (fun _ => rfl) (opf_step hOpf k0 hcqB rfl hcqBP) fun rx o m1 a1 _ ⟨k1, ho, hdo⟩ => ?_
+  dsimp only [ctlE.k_open_pis_at_fvars_f]
+  refine RefE.guardOpt (by decide) ho.1 ho.2 fun ⟨xl1, xb⟩ hq0 _ => ?_
+  obtain ⟨hxl, hxlb, hxb, rfl, xfvsP, xrestP, hxq, hxfvs, hxrest⟩ := hdo _ _ hq0
+  refine RefE.bindSim (fun _ => rfl) (pl_step hP k1 (k1.decHL hlps hlb) (k1.top hlb)
+    (ConRon.Bridge.denoteNListE_ext k1.core.ext _ _ hlpsP)) fun ru us m2 a2 _ ⟨k2, hu, rfl, husP⟩ => ?_
+  dsimp only [ctlE.k_param_levels]
+  refine RefE.bindSim (fun _ => rfl) (ic_step hP k2 hT hu
+    (ConRon.Bridge.denoteN_ext hTP (k1.trans k2).core.ext) husP) fun rh hd m3 a3 _ h3 => ?_
+  obtain ⟨k3, rfl, hhd⟩ := h3
+  dsimp only [ctlE.k_intern_const]
+  refine RefE.abort0 rfl fun hbig => ?_
+  have k13 := k2.trans k3
+  refine RefE.bindSim (fun _ => rfl) (gaf_step hP k3 hxb (ConRon.Bridge.denote_ext hxrest k13.core.ext))
+    fun rf xfn m4 a4 _ ⟨k4, hf32, rfl, hfn⟩ => ?_
+  dsimp only [ctlE.k_get_app_fn_f]
+  refine RefE.bindSim (fun _ => rfl) (gaa_step hP k4 hxb (ConRon.Bridge.denote_ext hxrest (k13.trans k4).core.ext))
+    fun ra args m5 a5 _ ⟨k5, hargs, hab, hargsP⟩ => ?_
+  dsimp only [ctlE.k_get_app_args_f]
+  have k05 := (k1.trans k13).trans (k4.trans k5)
+  have k15 := k13.trans (k4.trans k5)
+  have hlen := decHL_length m5 hargs
+  have hrh : (rh.headD 0).toNat < 2 ^ 32 := by
     have : ¬ (4294967296 : Nat) ≤ (rh.headD 0).toNat := hbig
-    show (rh.headD 0).toNat < 2 ^ 32; omega
-  have hx13 := p2.ext.trans p3.ext
-  have hxr3 : denoteE a3.store (decI xbw) = some xrestP := by
-    rw [hxbd]; exact ConRon.Bridge.denote_ext hxrest hx13
-  -- `get_app_fn_f`
-  have h4 := gafF_ok dn vis fe CWF xbw hxb
-  rw [CWF_eq, hxbd] at h4
-  rcases h4c : callW p m "get_app_fn_f" [CWF, xbw] s3.mem with _ | ⟨rf, m4⟩
-  · rw [liftE_none, ctlE.k_get_app_fn_f.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]
-  rw [ctlE.k_get_app_fn_f.arm1]
-  obtain ⟨s4, hs4, -, h4m⟩ := triple_of_callW (gafF_spec p hP.ad m ⟨s3.mem, Locals.init []⟩ [CWF, xbw])
-    (h4c)
-  subst hs4
-  obtain ⟨xfn, a4, hr4, hS4, hg4, hf32, hfd⟩ := (sumSim_of_relW h4 hS3) rf s4.mem h4m
-  have hA4 : AbsOK s4.mem := (show AFr _ _ from AFr.of_frame (gafF_frame h4m)) hA3
-  have hr4c := hr4
-  rw [← hxbd] at hr4
-  obtain ⟨ha4, -⟩ := ConRon.Bridge.Inductives.getAppFn_run hC3.check.state hxr3 hr4
-  rw [ha4] at hS4 hr4c
-  have hC4 : StageC dn vis fe env s4.mem a3 := hC3.of_pstep hS4 hA4 (PStep.refl hC3.check.state)
-  refine RefE.bind_right hr4c ?_
-  -- `get_app_args_f`
-  have h5 := gaaF_ok dn vis fe CWF xbw hxb
-  rw [CWF_eq, hxbd] at h5
-  rcases h5c : callW p m "get_app_args_f" [CWF, xbw] s4.mem with _ | ⟨ra, m5⟩
-  · rw [liftE_none, ctlE.k_get_app_args_f.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]
-  obtain ⟨s5, hs5, -, h5m⟩ := triple_of_callW (gaaF_spec p hP.ad m ⟨s4.mem, Locals.init []⟩ [CWF, xbw])
-    (h5c)
-  subst hs5
-  obtain ⟨args, a5, hr5, hS5, hg5, hargs, hab⟩ := (sumSim_of_relW h5 hS4) ra s5.mem h5m
-  have hA5 : AbsOK s5.mem := gaaF_afr h5m hA4
-  have hr5c := hr5
-  rw [← hxbd] at hr5
-  obtain ⟨ha5, hargsP⟩ := ConRon.Bridge.Inductives.getAppArgs_run hC4.check.state hxr3 hr5
-  rw [ha5] at hS5 hr5c
-  have hC5 : StageC dn vis fe env s5.mem a3 := hC4.of_pstep hS5 hA5 (PStep.refl hC4.check.state)
-  refine RefE.bind_right hr5c ?_
-  rw [sumGetD0, sumGetD1] at hargs hab
-  subst hfd
-  generalize hao : ra.headD 0 = ao at hargs hab ⊢
-  generalize hal : ra.tail.headD 0 = al at hargs hab ⊢
-  have hlen : args.length = al.toNat := decHL_length s5.mem hargs
-  have hg15 := ((hg2.trans hg3).trans hg4).trans hg5
-  have hg05 := hg1.trans hg15
-  have hcq5 : decHL s5.mem cqO.toNat cqL.toNat = some cq1 := by rw [decHL_grow hg05 hcqb]; exact hcq
-  have hle' : ¬ nP ≤ al → al.toNat < nP.toNat := fun h => by
-    have : ¬ nP.toNat ≤ al.toNat := fun e => h (UInt64.le_iff_toNat_le.mpr e)
     omega
-  by_cases hle : nP ≤ al
-  · have hle1 : (if nP ≤ ra.tail.headD 0 then (1 : Word) else 0) = 1 := by rw [hal]; simp [hle]
-    rw [ctlE.k_get_app_args_f.arm1 p m vis0 vis nP nIdx rs isP lg nF cqO cqL xo xlw (rh.headD 0)
-      (rf.headD 0) _ _ hle1, hao, hal]
-    rcases h6 : callW p m "sl_eq" [ao, nP, cqO, cqL] s5.mem with _ | ⟨re, m6⟩
-    · rw [liftE_none, ctlE.k_sl_eq.none]; exact RefE.of_cls0 (by simp)
-    rw [liftE_some]
-    rw [ctlE.k_sl_eq.arm1]
-    obtain ⟨s6, hs6, -, hm6, hq6⟩ := triple_of_callW (slEq_spec p hP.heq m ⟨s5.mem, Locals.init []⟩ ao nP cqO cqL)
-      (h6)
-    have hm6' : m6 = s5.mem := by rw [← hs6, hm6]
-    subst hm6'
-    have hle2 : nP.toNat ≤ al.toNat := UInt64.le_iff_toNat_le.mp hle
-    have hcq5 : decHL s5.mem cqO.toNat cqL.toNat = some cq1 := by rw [decHL_grow hg05 hcqb]; exact hcq
-    have htk := decHL_take hargs nP.toNat hle2
-    obtain ⟨ws1, hs1, hmm1, hb1⟩ := slR_of_decHL s5.mem _ _ _ htk (hS5.lt64 (by omega))
-    obtain ⟨ws2, hs2, hmm2, hb2⟩ := slR_of_decHL s5.mem _ _ _ hcq5 (hS5.lt64 (by have := hg05.iw; omega))
-    simp only [UInt64.ofNat_toNat] at hs1 hs2
-    have heq := eqW_ok m s5.mem _ _ _ _ (re.headD 0) ws1 ws2 hs1 hs2 hq6
-    have hb3 : re.headD 0 = if (args.take nP.toNat == cq1) then 1 else 0 := by
-      rw [heq]
-      have := map_decI_inj (k := .expr) ws1 ws2 hb1 hb2
-      by_cases hw : ws1 = ws2
-      · rw [ite_eq_left hw]
-        have ht : args.take nP.toNat = cq1 := by rw [hmm1, hmm2, hw]
-        rw [ht]; simp
-      · rw [ite_eq_right hw]
-        have hne : args.take nP.toNat ≠ cq1 := by
-          rw [hmm1, hmm2]; exact fun h' => hw (this.mp h')
-        rw [show (args.take nP.toNat == cq1) = false from by simpa using hne]; rfl
-    by_cases hcond : (if rf.headD 0 = rh.headD 0 then (1 : Word) else 0) = 0 ∨
-        (if al = nP + nIdx then (1 : Word) else 0) = 0 ∨ re.headD 0 = 0
-    · rw [ctlE.j1.abort1 p m vis0 vis nP rs isP lg nF xo xlw ao al _ _ _ s5.mem hcond]
-      have hfalse : ((decI (rf.headD 0) : EIdx) == (decI (rh.headD 0) : EIdx) && args.take nP.toNat == cq1 &&
-          args.length == nP.toNat + nIdx.toNat) = false := by
-        cases hh : ((decI (rf.headD 0) : EIdx) == (decI (rh.headD 0) : EIdx) && args.take nP.toNat == cq1 &&
-          args.length == nP.toNat + nIdx.toNat)
-        · rfl
-        · exfalso
-          simp only [Bool.and_eq_true, beq_iff_eq] at hh
-          obtain ⟨⟨h1', h2'⟩, h3'⟩ := hh
-          rcases hcond with h | h | h
-          · apply absurd h
-            rw [ite_eq_left (decI_inj (k := .expr) hf32 (by omega) h1')]; decide
-          · apply absurd h
-            rw [ite_eq_left (by apply UInt64.toNat_inj.mp; rw [sum_toNat_add hni, ← hlen]; exact h3')]; decide
-          · rw [hb3, h2'] at h; simp at h
-      simp only [hfalse, Bool.false_eq_true, ite_false]
-      exact RefE.bind_left fun _ => ErrClaim.fail _ _ (by decide)
-    · rw [ctlE.j1.arm1 p m vis0 vis nP rs isP lg nF xo xlw ao al _ _ _ s5.mem hcond]
-      have htrue : ((decI (rf.headD 0) : EIdx) == (decI (rh.headD 0) : EIdx) && args.take nP.toNat == cq1 &&
-          args.length == nP.toNat + nIdx.toNat) = true := by
-        simp only [not_or] at hcond
-        obtain ⟨h1', h2', h3'⟩ := hcond
-        have e1 : rf.headD 0 = rh.headD 0 := by
-          refine Classical.byContradiction fun hne => ?_; apply h1'; rw [ite_eq_right hne]
-        have e2 : al = nP + nIdx := by
-          refine Classical.byContradiction fun hne => ?_; apply h2'; rw [ite_eq_right hne]
-        have e3 : args.take nP.toNat = cq1 := by
-          rw [hb3] at h3'
-          refine Classical.byContradiction fun hne => ?_
-          apply h3'
-          rw [show (args.take nP.toNat == cq1) = false from by simpa using hne]; rfl
-        rw [e1, e3, hlen, e2, sum_toNat_add hni]; simp
-      simp only [htrue, ite_true]
-      have hT5 : ao.toNat + al.toNat < 2 ^ 64 := hS5.lt64 hab
-      have hxl5 : decHL s5.mem xo.toNat xlw.toNat = some xl1 := by rw [decHL_grow hg15 hxlb]; exact hxl
-      have hxlb5 : xo.toNat + xlw.toNat ≤ iwTop s5.mem := by have := hg15.iw; omega
-      have hx03 := p1.ext.trans hx13
-      have hread : ConRon.Bridge.Inductives.ReadOK env₀ (fe.restrictTo vis0.toNat) a3 :=
-        ⟨hC5.check.state, hC5.check.pins, hok₀.mono hx03 a3 rfl⟩
-      -- `field_doms_resolve`
-      rcases h7 : callW p m "field_doms_resolve" [vis0, xo, xlw] s5.mem with _ | ⟨r7, m7⟩
-      · rw [liftE_none, ctlE.k_field_doms_resolve.none]; exact RefE.of_cls0 (by simp)
-      rw [liftE_some]
-      obtain ⟨s7, hs7, -, h7m⟩ := triple_of_callW (fdrW_spec p hP.hfdr hP.ad.ftd hP.hcr m
-        ⟨s5.mem, Locals.init []⟩ vis0 xo xlw) (h7)
-      subst hs7
-      obtain ⟨b1, a6, hr6, hQ6, hA6⟩ := (fdrSim m s5.mem a3 xo xlw xl1 (hS5.restrict vis0) hxl5 hxlb5 hA5)
-        r7 s7.mem h7m
-      obtain ⟨hS6, hg6, hb1⟩ := sumKeep_restrict hv hQ6
-      obtain ⟨p6, -⟩ := ConRon.Bridge.Inductives.fieldDomsResolve_spec xl1 xfvsP hread
-        (ConRon.Bridge.denoteEList_ext hx13 _ _ hxfvs) hr6
-      have hC6 : StageC dn vis fe env s7.mem a6 := hC5.of_pstep hS6 hA6 p6
-      refine RefE.bind_right hr6 ?_
-      by_cases h71 : r7.headD 0 = 0
-      · rw [ctlE.k_field_doms_resolve.abort1 p m vis0 vis nP rs isP lg nF xo xlw (ao + nP) (al - nP)
-          r7 s7.mem h71]
-        have hbf : b1 = false := by rw [← hb1, h71]; rfl
-        subst hbf
-        simp only [Bool.false_eq_true, ite_false]
-        exact RefE.bind_left fun _ => ErrClaim.fail _ _ (by decide)
-      rw [ctlE.k_field_doms_resolve.arm1 p m vis0 vis nP rs isP lg nF xo xlw (ao + nP) (al - nP)
-        r7 s7.mem h71]
-      have hb1' : b1 = true := by rw [← hb1]; simpa using h71
-      subst hb1'
-      simp only [ite_true]
-      -- `idx_args_resolve`
-      have hao' : (ao + nP).toNat = ao.toNat + nP.toNat := sum_toNat_add (by omega)
-      have halp : (al - nP).toNat = al.toNat - nP.toNat := by
-        rw [UInt64.toNat_sub_of_le _ _ hle]
-      have hdrop6 : decHL s7.mem (ao + nP).toNat (al - nP).toNat = some (args.drop nP.toNat) := by
-        rw [hao', halp]
-        exact decHL_drop nP.toNat (by rw [decHL_grow hg6 hab]; exact hargs) hle2
-      have hdb6 : (ao + nP).toNat + (al - nP).toNat ≤ iwTop s7.mem := by
-        rw [hao', halp]; have := hg6.iw; omega
-      rcases h8 : callW p m "idx_args_resolve" [vis0, ao + nP, al - nP] s7.mem with _ | ⟨r8, m8⟩
-      · rw [liftE_none, ctlE.k_idx_args_resolve.none]; exact RefE.of_cls0 (by simp)
-      rw [liftE_some]
-      obtain ⟨s8, hs8, -, h8m⟩ := triple_of_callW (iarW_spec p hP.hiar hP.hcr m
-        ⟨s7.mem, Locals.init []⟩ vis0 (ao + nP) (al - nP)) (h8)
-      subst hs8
-      obtain ⟨b2, a7, hr7, hQ7, hA7⟩ := (iarSim m s7.mem a6 (ao + nP) (al - nP) (args.drop nP.toNat)
-        (hS6.restrict vis0) hdrop6 hdb6 hA6) r8 s8.mem h8m
-      obtain ⟨hS7, hg7, hb2⟩ := sumKeep_restrict hv hQ7
-      have hargs6 := ConRon.Bridge.denoteEList_ext p6.ext _ _ hargsP
-      obtain ⟨p7, -⟩ := ConRon.Bridge.Inductives.idxArgsResolve_spec (args.drop nP.toNat)
-        (xrestP.getAppArgs.drop nP.toNat) (hread.mono p6.ok p6.ext p6.pins)
-        (ConRon.Bridge.Inductives.denoteEList_drop hargs6 nP.toNat) hr7
-      have hC7 : StageC dn vis fe env s8.mem a7 := hC6.of_pstep hS7 hA7 p7
-      refine RefE.bind_right hr7 ?_
-      by_cases h81 : r8.headD 0 = 0
-      · rw [ctlE.k_idx_args_resolve.abort1 p m vis nP rs isP lg nF xo xlw (ao + nP) (al - nP)
-          r8 s8.mem h81]
-        have hbf : b2 = false := by rw [← hb2, h81]; rfl
-        subst hbf
-        simp only [Bool.false_eq_true, ite_false]
-        exact RefE.bind_left fun _ => ErrClaim.fail _ _ (by decide)
-      rw [ctlE.k_idx_args_resolve.arm1 p m vis nP rs isP lg nF xo xlw (ao + nP) (al - nP)
-        r8 s8.mem h81]
-      have hb2' : b2 = true := by rw [← hb2]; simpa using h81
-      subst hb2'
-      simp only [ite_true]
-      -- the field sorts
-      have hg67 := hg6.trans hg7
-      have hx37 := p6.ext.trans p7.ext
-      have hx07 := hx03.trans hx37
-      have hxfvs7 := ConRon.Bridge.denoteEList_ext (hx13.trans hx37) _ _ hxfvs
+  rw [decI_beq _ _ hf32 hrh]
+  by_cases hle : nP ≤ ra.tail.headD 0
+  · rw [ite_eq_left (by rw [ite_eq_left hle])]
+    have hle2 : nP.toNat ≤ (ra.tail.headD 0).toNat := UInt64.le_iff_toNat_le.mp hle
+    refine RefE.onlySim (fun _ => rfl) (slEq_step hP k5.stage.stage (decHL_take hargs _ hle2)
+      (by omega) (k05.decHL hcq hcqb) (k05.top hcqb)) fun re m6 ⟨hm6, hre⟩ => ?_
+    subst hm6
+    dsimp only [ctlE.k_sl_eq]
+    dsimp only [ctlE.j1]
+    refine RefE.guard (by decide) (fun hc => ?_) (fun hb => ?_) fun _ _ => ?_
+    · grind
+    · grind
+    · have k16 := k15.trans (SumAt.refl k5.stage k5.abs)
+      have hxfvs5 := ConRon.Bridge.denoteEList_ext k15.core.ext _ _ hxfvs
+      refine RefE.bindSim (fun _ => rfl) (fdr_step hP k5 (k15.decHL hxl hxlb) (k15.top hxlb)
+        (hok₀.mono k05.core.ext) hxfvs5) fun r7 b1 m7 a7 _ ⟨k7, hb1⟩ => ?_
+      dsimp only [ctlE.k_field_doms_resolve]
+      refine RefE.guard (by decide) hb1.1 hb1.2 fun _ hb => ?_
+      have hao' : (ra.headD 0 + nP).toNat = (ra.headD 0).toNat + nP.toNat :=
+        sum_toNat_add (by have := k5.stage.stage.lt64 hab; omega)
+      have halp : (ra.tail.headD 0 - nP).toNat = (ra.tail.headD 0).toNat - nP.toNat :=
+        UInt64.toNat_sub_of_le _ _ hle
+      have hdrop := decHL_drop nP.toNat (k7.decHL hargs hab) hle2
+      rw [← hao', ← halp] at hdrop
+      refine RefE.bindSim (fun _ => rfl) (iar_step hP k7 hdrop (by rw [hao', halp]; have := k7.grow.iw; omega)
+        (hok₀.mono (k05.trans k7).core.ext)
+        (ConRon.Bridge.Inductives.denoteEList_drop (ConRon.Bridge.denoteEList_ext k7.core.ext _ _ hargsP) _))
+        fun r8 b2 m8 a8 _ ⟨k8, hb2⟩ => ?_
+      dsimp only [ctlE.k_idx_args_resolve]
+      refine RefE.guard (by decide) hb2.1 hb2.2 fun _ hb' => ?_
+      have k58 := k7.trans k8
+      have k18 := k15.trans k58
+      rcases m with _ | m'
+      · rw [fsortsE.eq_1]; exact RefE.of_cls0 Err.cls_outOfFuel
       have hxpos : ∀ i, i < nF.toNat → ∀ x, xfvsP[i]? = some x →
           ConLeche.Expr.WScoped (nP.toNat + i) x.fvarTypeD :=
         fun i _ x hx => ConRon.Bridge.Inductives.openers_typeD_WScoped hxq hwsc i x hx
-      have hidx7 := ConRon.Bridge.Inductives.denoteEList_drop
-        (ConRon.Bridge.denoteEList_ext hx37 _ _ hargsP) nP.toNat
-      rcases m with _ | m'
-      · rw [fsortsE.eq_1, ctlE.k_check_struct_field_sorts_i.none]; exact RefE.of_cls0 Err.cls_outOfFuel
-      have h9R := fsorts_ref hq henv hLC hLT hP.hg hP.hpw hP.het hP.hcn m' (by omega) s8.mem a7 isP lg rs nP xo
-        xlw (ao + nP) (al - nP) nF xl1 (args.drop nP.toNat) hC7 hA7
-        (by rw [decHL_grow hg67 hxlb5]; exact hxl5) (by have := hg67.iw; omega)
-        (by rw [decHL_grow hg7 hdb6]; exact hdrop6) (by have := hg7.iw; omega) hrs
-        (ConRon.Bridge.denoteL_ext hrsP hx07) hnf hxfvs7 hxpos
-      rcases h9 : fsortsE p (m' + 1) s8.mem vis isP lg rs nP xo xlw (ao + nP) (al - nP) nF with e9 | ⟨r9, m9⟩ <;>
-        rw [h9] at h9R
-      · rw [ctlE.k_check_struct_field_sorts_i.none]; exact RefE.bind_left h9R
-      rw [ctlE.k_check_struct_field_sorts_i.arm1]
-      obtain ⟨sorts, a8, hr8, hR8⟩ := h9R
-      obtain ⟨c8, -⟩ := ConRon.Bridge.Inductives.checkStructFieldSortsI_spec fe
+      have hxfvs8 := ConRon.Bridge.denoteEList_ext k18.core.ext _ _ hxfvs
+      have hidx8 := ConRon.Bridge.Inductives.denoteEList_drop
+        (ConRon.Bridge.denoteEList_ext k58.core.ext _ _ hargsP) nP.toNat
+      have k08 := k1.trans k18
+      refine RefE.bindE (fun _ => rfl) id (fsorts_ref hq henv hLC hLT hP.hg hP.hpw hP.het hP.hcn m' (by omega)
+        m8 a8 isP lg rs nP _ _ _ _ nF xl1 (args.drop nP.toNat) k8.stage k8.abs (k18.decHL hxl hxlb)
+        (k18.top hxlb) (k8.decHL hdrop (by rw [hao', halp]; have := k7.grow.iw; omega))
+        (k8.top (by rw [hao', halp]; have := k7.grow.iw; omega)) hrs
+        (ConRon.Bridge.denoteL_ext hrsP k08.core.ext) hnf hxfvs8 hxpos) fun v sorts a9 hr9 hR9 => ?_
+      obtain ⟨c9, -⟩ := ConRon.Bridge.Inductives.checkStructFieldSortsI_spec fe
         (ConRon.Bridge.CoreSpec.of_core rfl) henv (isP != 0) (lg != 0) (decI rs) rsP nP.toNat xl1
-        (args.drop nP.toNat) xfvsP (xrestP.getAppArgs.drop nP.toNat) nF.toNat hxpos a7 a8 sorts hC7.check
-        ⟨ConRon.Bridge.denoteL_ext hrsP hx07, hxfvs7, hidx7, ConRon.Bridge.denoteFEnv_mono hx07 hfe⟩ hr8
-      have hp07 := (((p1.trans p2).trans p3).trans p6).trans p7
-      exact RefE.bind_right hr8 (RefE.ret rfl ⟨hR8.stage, ((hg1.trans hg15).trans hg67).trans hR8.grow, rfl,
-        by simpa using hR8.sorts, by simpa using hR8.top, hR8.abs, (hp07.toCore hC.check).trans c8⟩)
-  · have hle1 : (if nP ≤ ra.tail.headD 0 then (1 : Word) else 0) ≠ 1 := by
-      rw [hal]; simp [hle]
-    rw [ctlE.k_get_app_args_f.arm2 p m vis0 vis nP nIdx rs isP lg nF cqO cqL xo xlw (rh.headD 0)
-      (rf.headD 0) _ _ hle1, hao, hal]
-    rw [ctlE.j1.abort1 p m vis0 vis nP rs isP lg nF xo xlw ao al _ _ _ s5.mem (Or.inr (Or.inr rfl))]
-    have hlt := hle' hle
-    have hfalse : ((decI (rf.headD 0) : EIdx) == (decI (rh.headD 0) : EIdx) && args.take nP.toNat == cq1 &&
-        args.length == nP.toNat + nIdx.toNat) = false := by
-      have : (args.length == nP.toNat + nIdx.toNat) = false := by
-        simp only [beq_eq_false_iff_ne, ne_eq]; omega
-      rw [this]; simp
-    simp only [hfalse, Bool.false_eq_true, ite_false]
-    exact RefE.bind_left fun _ => ErrClaim.fail _ _ (by decide)
+        (args.drop nP.toNat) xfvsP (xrestP.getAppArgs.drop nP.toNat) nF.toNat hxpos a8 a9 sorts k8.stage.check
+        ⟨ConRon.Bridge.denoteL_ext hrsP k08.core.ext, hxfvs8, hidx8,
+          ConRon.Bridge.denoteFEnv_mono k08.core.ext hfe⟩ hr9
+      exact RefE.ret rfl ⟨hR9.stage, k08.grow.trans hR9.grow, rfl, by simpa using hR9.sorts,
+        by simpa using hR9.top, hR9.abs, k08.core.trans c9⟩
+  · rw [ite_eq_right (by rw [ite_eq_right hle]; decide)]
+    dsimp only [ctlE.j1]
+    rw [ite_eq_left (Or.inr (Or.inr rfl))]
+    exact RefE.twinFail (by decide) (by have := UInt64.lt_iff_toNat_lt.mp (UInt64.not_le.mp hle); grind)
 
 /-- What `check_sum_ctor` gives besides the twin's `(cvCa, sorts)` `x` (from `m`, `a`): the stage,
 the growth, the constant returned unchanged, the sorts as the `IW` slice `r = [cv, o, l]`, `AbsOK`, the
@@ -444,184 +233,59 @@ theorem ctor_ref (hP : SumProg p) (m : Nat) (hn : m + 1 ≤ 2 ^ 62) (m0 : Mem) (
       (checkSumCtor V (fe.restrictTo vis0.toNat) fe (decI T) lps nP.toNat nIdx.toNat (decI rs)
         (isP != 0) (lg != 0) cvC nF.toNat cvTa) a
       (fun v x a' => CtorPost dn vis fe env m0 a cvCw cvC v.1 v.2 x a') := by
-  rw [ctorE.arm1]
-  have hS := hC.stage
-  rw [checkSumCtor_eq]
+  rw [ctorE.arm1, checkSumCtor_eq]
   obtain ⟨hcvx, -⟩ := rec3CVExt_of_trunc (show decCVp (truncM m0) cvCw.toNat = some cvC from hcv)
-  have h1R := ccv_ref (n := m) hq hApd hCrk (by omega) hC.stageT
-    (rec2DecCV_erecP (DecB.get (OMono.decCVp _) hcv) hcvx) (rec3CVExt_lt hS hcvx) (denoteCV_lps hcvCP)
-    hA.crMemo.crOK
-  rcases h1 : checkConstantValE p m m0 vis cvCw with e1 | ⟨r1, m1⟩ <;> rw [h1] at h1R
-  · rw [ctorE.k_check_constant_val.none]; exact RefE.bind_left h1R
-  rw [ctorE.k_check_constant_val.arm1]
-  obtain ⟨u1, a1, hrun1, hP1⟩ := h1R
-  have hT1 := hP1.stage
-  have hg1 := hP1.grow
-  have hA1 := hP1.abs hA
-  refine RefE.bind_right hrun1 ?_
-  have hS1 := hT1.stage
+  refine RefE.bindE (fun _ => rfl) id (ccv_ref (n := m) hq hApd hCrk (by omega) hC.stageT
+    (rec2DecCV_erecP (DecB.get (OMono.decCVp _) hcv) hcvx) (rec3CVExt_lt hC.stage hcvx) (denoteCV_lps hcvCP)
+    hA.crMemo.crOK) fun ⟨u1, m1⟩ _ a1 hr1 hP1 => ?_
   obtain ⟨c1, F₁, hF₁⟩ := ConRon.Bridge.checkConstantVal_bridge rfl (ConRon.Bridge.CoreSpec.of_core rfl)
-    hC.check henv hcvCP hrun1
-  have hC1 : StageC dn vis fe env m1 a1 := StageC.of_T hT1 c1.ok
+    hC.check henv hcvCP hr1
+  have k1 : SumAt dn vis fe env m0 a m1 a1 := ⟨StageC.of_T hP1.stage c1.ok, hP1.abs hA, hP1.grow, c1⟩
   have hcA := ConRon.Bridge.denoteCV_ext hcvCP c1.ext
   have hwsA : ConLeche.Expr.WScoped 0 cvCP.type :=
     ConLeche.Expr.WScoped.of_not_hasFvar (ConLeche.checkConstantVal_typeWF hF₁).1
+  dsimp only [ctorE.k_check_constant_val]
   -- `strip_pis`
-  obtain ⟨w1, hw1, hw1l, hw1d⟩ := sumTypeWord (hcv.stab (OMono.decCVp _) m1 hg1) hS1.iw.erSize
+  obtain ⟨w1, hw1, hw1l, hw1d⟩ := sumTypeWord (hcv.stab (OMono.decCVp _) m1 k1.grow) k1.stage.stage.iw.erSize
   rw [hw1]
-  have h2 := stripF_pis_ok dn vis fe (nP + nF) w1 hw1l
-  rw [sum_toNat_add hnf, hw1d] at h2
-  rcases h2c : callW p m "strip_pis" [nP + nF, w1] m1 with _ | ⟨r2, m2⟩
-  · rw [liftE_none, ctorE.k_strip_pis.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]
-  obtain ⟨s2, hs2, -, h2m⟩ := triple_of_callW (stripPis_specF p hP.strip m ⟨m1, Locals.init []⟩
-    (nP + nF) w1) (h2c)
-  subst hs2
-  obtain ⟨o2, a2, hr2, hS2, hg2, hdec2⟩ := h2 m1 s2.mem a1 r2 h2m hS1
-  have hA2 : AbsOK s2.mem := stripF_afr h2m hA1
-  obtain ⟨ha2, ho2⟩ := ConRon.Bridge.Inductives.stripPis_pstep hC1.check.state
-    (ConRon.Bridge.denoteCV_type hcA) hr2
-  rw [ha2] at hS2 hr2
-  have hC2 : StageC dn vis fe env s2.mem a1 := hC1.of_pstep hS2 hA2 (PStep.refl hC1.check.state)
-  refine RefE.bind_right hr2 ?_
-  by_cases h20 : r2.headD 0 = 0
-  · rw [ctorE.k_strip_pis.abort1 p m vis0 vis T lo ll nP nIdx rs isP lg cvCw nF cvTaw r2 s2.mem h20]
-    cases o2 with
-    | none =>
-      simp only [unwrapOr]
-      exact RefE.bind_left fun _ => ErrClaim.fail _ _ (by decide)
-    | some le => exact absurd (by simpa [decOLE] using hdec2.1 : r2.headD 0 = 1) (by rw [h20]; decide)
-  rw [ctorE.k_strip_pis.arm1 p m vis0 vis T lo ll nP nIdx rs isP lg cvCw nF cvTaw r2 s2.mem h20]
-  cases o2 with
-  | none => exact absurd hdec2 h20
-  | some le =>
-  obtain ⟨sl, cb⟩ := le
-  obtain ⟨cxs, cbodyP, -, -, hcbP⟩ := ConRon.Bridge.Inductives.denoteBP_some ho2
-  obtain ⟨-, -, hcb, hcbd⟩ := hdec2
-  rw [drop3_eq] at hcb hcbd
-  simp only [unwrapOr, pure_bind]
-  subst hcbd
-  have hg02 := hg1.trans hg2
-  have hlps2 : decHL s2.mem lo.toNat ll.toNat = some lps := by rw [decHL_grow hg02 hlb]; exact hlps
+  refine RefE.bindSim (fun _ => rfl) (strip_step hP k1 hw1l (sum_toNat_add hnf) hw1d
+    (ConRon.Bridge.denoteCV_type hcA)) fun r2 o2 m2 a2 _ ⟨k2, ho2, hdo2⟩ => ?_
+  dsimp only [ctorE.k_strip_pis]
+  refine RefE.guardOpt (by decide) ho2.1 ho2.2 fun ⟨sl, cb⟩ hq2 _ => ?_
+  obtain ⟨hcb, rfl, cbP, hcbP⟩ := hdo2 _ _ hq2
+  have k02 := k1.trans k2
   -- `struct_ctor_resid_ok`
-  rcases h3 : callW p m "struct_ctor_resid_ok" [T, lo, ll, nP, nF, nIdx, r2.tail.tail.tail.headD 0] s2.mem with _ | ⟨r3, m3⟩
-  · rw [liftE_none, ctorE.k_struct_ctor_resid_ok.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]
-  obtain ⟨s3, hs3, -, h3m⟩ := triple_of_callW (srW_spec p hP.ha hP.hc hP.hsc hP.hg hP.hpf hP.hpp hP.hip hP.hplg
-    hP.hpl hP.hil hP.hcf hP.hcp hP.hic hP.hbf hP.hbp hP.hib hP.hpg hP.hps hP.heq hP.hsr hP.ad m
-    ⟨s2.mem, Locals.init []⟩ T lo ll nP nF nIdx _) (h3)
-  subst hs3
-  obtain ⟨b3, a3, hr3, hS3, hg3, hb3, -⟩ := srW_ok dn vis fe m s2.mem s3.mem a1 T lo ll nP nF nIdx _ r3 lps h3m
-    hS2 hT hcb hlps2 (hS2.lt64 (by have := hg02.iw; omega)) (by have := hg02.iw; omega) (by omega) hni
-  have hA3 : AbsOK s3.mem := srW_afr _ _ _ _ _ _ _ _ _ _ _ h3m hA2
-  have hx01 := c1.ext
-  obtain ⟨p3, -⟩ := ConRon.Bridge.Inductives.structCtorResidOk_spec (decI T) TP lps lpsP nP.toNat
-    nF.toNat nIdx.toNat _ cbodyP a1 a3 b3 hC2.check.state
-    ⟨ConRon.Bridge.denoteN_ext hTP hx01, ConRon.Bridge.denoteNListE_ext hx01 _ _ hlpsP, hcbP⟩ hr3
-  have hC3 : StageC dn vis fe env s3.mem a3 := hC2.of_pstep hS3 hA3 p3
-  refine RefE.bind_right hr3 ?_
-  have hg03 := hg02.trans hg3
-  by_cases h30 : r3.headD 0 = 0
-  · rw [ctorE.k_struct_ctor_resid_ok.abort1 p m vis0 vis T lo ll nP nIdx rs isP lg cvCw nF cvTaw r3 s3.mem
-      h30]
-    have hbf : b3 = false := by rw [← hb3, h30]; rfl
-    subst hbf
-    simp only [Bool.false_eq_true, ite_false]
-    exact RefE.bind_left fun _ => ErrClaim.fail _ _ (by decide)
-  rw [ctorE.k_struct_ctor_resid_ok.arm1 p m vis0 vis T lo ll nP nIdx rs isP lg cvCw nF cvTaw r3 s3.mem
-    h30]
-  have hb3' : b3 = true := by rw [← hb3]; simpa using h30
-  subst hb3'
-  simp only [ite_true]
+  refine RefE.bindSim (fun _ => rfl) (sr_step hP k2 hT hcb (k02.decHL hlps hlb) (k02.top hlb) (by omega) hni
+    (ConRon.Bridge.denoteN_ext hTP k02.core.ext) (ConRon.Bridge.denoteNListE_ext k02.core.ext _ _ hlpsP) hcbP)
+    fun r3 b3 m3 a3 _ ⟨k3, hb3⟩ => ?_
+  dsimp only [ctorE.k_struct_ctor_resid_ok]
+  refine RefE.guard (by decide) hb3.1 hb3.2 fun _ _ => ?_
+  have k03 := k02.trans k3
   -- the constructor's opened telescope
-  obtain ⟨w3, hw3, hw3l, hw3d⟩ := sumTypeWord (hcv.stab (OMono.decCVp _) s3.mem hg03) hS3.iw.erSize
+  obtain ⟨w3, hw3, hw3l, hw3d⟩ := sumTypeWord (hcv.stab (OMono.decCVp _) m3 k03.grow) k3.stage.stage.iw.erSize
   rw [hw3]
-  have h4 := opfSimRA (n := m) (k := nP) (i := 0) hOpf hw3l hS3 hA3
-  rw [hw3d, show (0 : Word).toNat = 0 from rfl] at h4
-  rcases h4c : callW p m "open_pis_at_fvars_f" [nP, w3, 0] s3.mem with _ | ⟨r4, m4⟩
-  · rw [liftE_none, ctorE.k_open_pis_at_fvars_f.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]
-  obtain ⟨o4, a4, hr4, ⟨⟨hS4, hg4, hdec4⟩, -⟩, hA4⟩ := h4 r4 m4 (h4c)
-  obtain ⟨p4, ho4⟩ := ConRon.Bridge.Inductives.openPisAtFvarsF_run hC3.check.state
-    (ConRon.Bridge.denote_ext (ConRon.Bridge.denoteCV_type hcA) p3.ext) hr4
-  have hC4 : StageC dn vis fe env m4 a4 := hC3.of_pstep hS4 hA4 p4
-  refine RefE.bind_right hr4 ?_
-  by_cases h40 : r4.headD 0 = 0
-  · rw [ctorE.k_open_pis_at_fvars_f.abort1 p m vis0 vis T lo ll nP nIdx rs isP lg cvCw nF cvTaw r4 m4
-      h40]
-    cases o4 with
-    | none =>
-      simp only
-      exact RefE.bind_left fun _ => ErrClaim.fail _ _ (by decide)
-    | some le => exact absurd (by simpa [decOLE] using hdec4.1 : r4.headD 0 = 1) (by rw [h40]; decide)
-  rw [ctorE.k_open_pis_at_fvars_f.arm1 p m vis0 vis T lo ll nP nIdx rs isP lg cvCw nF cvTaw r4 m4
-    h40]
-  cases o4 with
-  | none => exact absurd hdec4 h40
-  | some le =>
-  obtain ⟨cl, cb4⟩ := le
-  obtain ⟨cfvsP, crestP, hcq, hcfvs, hcrest⟩ := ConRon.Bridge.Inductives.denoteOpen_some_inv ho4
-  obtain ⟨-, ⟨hcl, hclb⟩, hcqB, hcqBd⟩ := hdec4
-  rw [sumGetD1, sumGetD2] at hcl hclb
-  rw [drop3_eq] at hcqB hcqBd
-  simp only [pure_bind]
-  subst hcqBd
-  have hg04 := hg03.trans hg4
+  refine RefE.bindSim (fun _ => rfl) (opf_step hOpf k3 hw3l hw3d
+    (ConRon.Bridge.denote_ext (ConRon.Bridge.denoteCV_type hcA) (k2.trans k3).core.ext))
+    fun r4 o4 m4 a4 _ ⟨k4, ho4, hdo4⟩ => ?_
+  dsimp only [ctorE.k_open_pis_at_fvars_f]
+  refine RefE.guardOpt (by decide) ho4.1 ho4.2 fun ⟨cl, cqb⟩ hq4 _ => ?_
+  obtain ⟨hcl, hclb, hcqB, rfl, cfvsP, crestP, hcq, hcfvs, hcrest⟩ := hdo4 _ _ hq4
+  have k04 := k03.trans k4
   -- the type former's opened telescope
-  obtain ⟨w5, hw5, hw5l, hw5d⟩ := sumTypeWord (hta.stab (OMono.decCVp _) m4 hg04) hS4.iw.erSize
+  obtain ⟨w5, hw5, hw5l, hw5d⟩ := sumTypeWord (hta.stab (OMono.decCVp _) m4 k04.grow) k4.stage.stage.iw.erSize
   rw [hw5]
-  have h5 := opfSimRA (n := m) (k := nP) (i := 0) hOpf hw5l hS4 hA4
-  rw [hw5d, show (0 : Word).toNat = 0 from rfl] at h5
-  have hx04 := hx01.trans (p3.ext.trans p4.ext)
-  rcases h5c : callW p m "open_pis_at_fvars_f" [nP, w5, 0] m4 with _ | ⟨r5, m5⟩
-  · rw [liftE_none, ctorE.k_open_pis_at_fvars_f_2.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]
-  obtain ⟨o5, a5, hr5, ⟨⟨hS5, hg5, hdec5⟩, -⟩, hA5⟩ := h5 r5 m5 (h5c)
-  obtain ⟨p5, ho5⟩ := ConRon.Bridge.Inductives.openPisAtFvarsF_run hC4.check.state
-    (ConRon.Bridge.denote_ext (ConRon.Bridge.denoteCV_type hcvTaP) hx04) hr5
-  have hC5 : StageC dn vis fe env m5 a5 := hC4.of_pstep hS5 hA5 p5
-  refine RefE.bind_right hr5 ?_
-  by_cases h50 : r5.headD 0 = 0
-  · rw [ctorE.k_open_pis_at_fvars_f_2.abort1 p m vis0 vis T lo ll nP nIdx rs isP lg cvCw nF _ _ _ r5 m5
-      h50]
-    cases o5 with
-    | none =>
-      simp only
-      exact RefE.bind_left fun _ => ErrClaim.fail _ _ (by decide)
-    | some le => exact absurd (by simpa [decOLE] using hdec5.1 : r5.headD 0 = 1) (by rw [h50]; decide)
-  rw [ctorE.k_open_pis_at_fvars_f_2.arm1 p m vis0 vis T lo ll nP nIdx rs isP lg cvCw nF _ _ _ r5 m5
-    h50]
-  cases o5 with
-  | none => exact absurd hdec5 h50
-  | some le =>
-  obtain ⟨tl, tb⟩ := le
-  obtain ⟨tfvsP, trestP, htq, htfvs, -⟩ := ConRon.Bridge.Inductives.denoteOpen_some_inv ho5
-  obtain ⟨-, ⟨htl, htlb⟩, -, -⟩ := hdec5
-  rw [sumGetD1, sumGetD2] at htl htlb
-  simp only [pure_bind]
+  refine RefE.bindSim (fun _ => rfl) (opf_step hOpf k4 hw5l hw5d
+    (ConRon.Bridge.denote_ext (ConRon.Bridge.denoteCV_type hcvTaP) k04.core.ext))
+    fun r5 o5 m5 a5 _ ⟨k5, ho5, hdo5⟩ => ?_
+  dsimp only [ctorE.k_open_pis_at_fvars_f_2]
+  refine RefE.guardOpt (by decide) ho5.1 ho5.2 fun ⟨tl, tb⟩ hq5 _ => ?_
+  obtain ⟨htl, htlb, _, _, tfvsP, _, htq, htfvs, _⟩ := hdo5 _ _ hq5
   -- `fvar_type_ds`
-  rcases h6 : callW p m "fvar_type_ds" [r5.tail.headD 0, r5.tail.tail.headD 0] m5 with _ | ⟨r6, m6⟩
-  · rw [liftE_none, ctorE.k_fvar_type_ds.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]
-  rw [ctorE.k_fvar_type_ds.arm1]
-  obtain ⟨s6, hs6, -, h6m⟩ := triple_of_callW (ftdsF_spec p hP.ad m ⟨m5, Locals.init []⟩
-    [r5.tail.headD 0, r5.tail.tail.headD 0]) (h6)
-  subst hs6
-  obtain ⟨tdoms, a6, hr6, hS6, hg6, htd, htdb⟩ := (sumSim_of_relW (ftdsF_ok dn vis fe _ _ tl) ⟨hS5, htl, fun _ => htlb⟩)
-    r6 s6.mem h6m
-  have hA6 : AbsOK s6.mem := ftdsF_afr h6m hA5
-  obtain ⟨p6, hdoms⟩ := ConRon.Bridge.Inductives.fvarTypeDs_run tl tfvsP hC5.check.state htfvs hr6
-  have hC6 : StageC dn vis fe env s6.mem a6 := hC5.of_pstep hS6 hA6 p6
-  rw [sumGetD0, sumGetD1] at htd htdb
-  refine RefE.bind_right hr6 ?_
+  refine RefE.bindSim (fun _ => rfl) (ftds_step hP k5 htl htlb htfvs) fun r6 tdoms m6 a6 _ ⟨k6, htd, htdb, hdoms⟩ => ?_
+  dsimp only [ctorE.k_fvar_type_ds]
   -- `check_struct_doms_at`
-  have hg56 := hg5.trans hg6
-  have hcl6 : decHL s6.mem (r4.tail.headD 0).toNat (r4.tail.tail.headD 0).toNat = some cl := by
-    rw [decHL_grow hg56 hclb]; exact hcl
-  have hclb6 : (r4.tail.headD 0).toNat + (r4.tail.tail.headD 0).toNat ≤ iwTop s6.mem := by
-    have := hg56.iw; omega
-  have hx46 := p5.ext.trans p6.ext
-  have hcfvs6 := ConRon.Bridge.denoteEList_ext hx46 _ _ hcfvs
+  have k46 := k5.trans k6
+  have hcfvs6 := ConRon.Bridge.denoteEList_ext k46.core.ext _ _ hcfvs
   have hws7 : ∀ i, i < nP.toNat → ∀ x y, cfvsP[i]? = some x →
       (tfvsP.map ConLeche.Expr.fvarTypeD)[i]? = some y →
       ConLeche.Expr.WScoped ((0 : Word).toNat + i) x.fvarTypeD ∧
@@ -631,48 +295,33 @@ theorem ctor_ref (hP : SumProg p) (m : Nat) (hn : m + 1 ≤ 2 ^ 62) (m0 : Mem) (
     rw [List.getElem?_map] at hy
     obtain ⟨z, hz, rfl⟩ := Option.map_eq_some_iff.mp hy
     exact ConRon.Bridge.Inductives.openers_typeD_WScoped htq hws i z hz
-  have hR7 := sds_ref hq henv hP.hg hP.ad.ftd m (by omega) s6.mem a6 0 _ _ _ _ nP cl tdoms cfvsP
-    (tfvsP.map ConLeche.Expr.fvarTypeD) hC6 hA6 hcl6 htd (hS6.lt64 hclb6) (hS6.lt64 htdb) hclb6 htdb
-    (by simp only [UInt64.toNat_zero, Nat.zero_add]; have := hC6.stage.lt64 hclb6; omega)
-    hcfvs6 hdoms hws7
-  rcases h7 : sdomsE p m s6.mem vis 0 (r4.tail.headD 0) (r4.tail.tail.headD 0) (r6.headD 0) (r6.tail.headD 0) nP
-    with e7 | ⟨r7, m7⟩ <;> rw [h7] at hR7
-  · rw [ctorE.k_check_struct_doms_at.none]; exact RefE.bind_left fun hG => hR7 hG.core
-  rw [ctorE.k_check_struct_doms_at.arm1]
-  obtain ⟨u7, a7, hr7, hR7'⟩ := hR7
-  have hC7 := hR7'.stage
-  have hg7 := hR7'.grow
-  have hA7 := hR7'.abs
-  dsimp only at hC7 hg7 hA7
-  have hx06 := hx04.trans hx46
+  have hclb6 := k46.top hclb
+  have k06 := k04.trans k46
+  refine RefE.bindE (fun _ => rfl) (fun hG => hG.core) (sds_ref hq henv hP.hg hP.ad.ftd m (by omega) m6 a6 0 _ _ _ _
+    nP cl tdoms cfvsP (tfvsP.map ConLeche.Expr.fvarTypeD) k6.stage k6.abs (k46.decHL hcl hclb) htd
+    (k6.stage.stage.lt64 hclb6) (k6.stage.stage.lt64 htdb) hclb6 htdb
+    (by simp only [UInt64.toNat_zero, Nat.zero_add]; have := k6.stage.stage.lt64 hclb6; omega)
+    hcfvs6 hdoms hws7) fun ⟨u7, m7⟩ _ a7 hr7 hR7 => ?_
   obtain ⟨c7, -⟩ := ConRon.Bridge.Inductives.checkStructDomsAt_spec fe (ConRon.Bridge.CoreSpec.of_core rfl)
     henv 0 cl tdoms cfvsP (tfvsP.map ConLeche.Expr.fvarTypeD) nP.toNat
-    (fun i hi x y hx hy => hws7 i hi x y hx hy) a6 a7 _ hC6.check
-    ⟨hcfvs6, hdoms, ConRon.Bridge.denoteFEnv_mono hx06 hfe⟩ hr7
-  refine RefE.bind_right hr7 ?_
+    (fun i hi x y hx hy => hws7 i hi x y hx hy) a6 a7 _ k6.stage.check
+    ⟨hcfvs6, hdoms, ConRon.Bridge.denoteFEnv_mono k06.core.ext hfe⟩ hr7
+  have k07 := k06.trans ⟨hR7.stage, hR7.abs, hR7.grow, c7⟩
+  have k47 := k46.trans ⟨hR7.stage, hR7.abs, hR7.grow, c7⟩
+  dsimp only [ctorE.k_check_struct_doms_at]
   -- the tail
-  have hg06 := hg04.trans hg56
-  have hx07 := hx06.trans c7.ext
   have hwsc : ConLeche.Expr.WScoped nP.toNat crestP := by
-    have := (ConLeche.openPisAtFvars_WScoped _ _ _ hcq hwsA).2
-    simpa using this
+    simpa using (ConLeche.openPisAtFvars_WScoped _ _ _ hcq hwsA).2
   rcases m with _ | m'
-  · rw [ctlE.eq_1, ctorE.k_check_sum_ctor_tail.none]; exact RefE.of_cls0 Err.cls_outOfFuel
-  have h8R := ctl_ref hq henv hOpf hLC hLT hP m' (by omega) m7 a7 vis0 T lo ll nP nIdx rs isP lg nF _ _ _ lps cl cvC
-    hC7 hT (by rw [decHL_grow (hg06.trans hg7) hlb]; exact hlps) (by have := (hg06.trans hg7).iw; omega)
-    (by rw [decHL_grow hg7 hclb6]; exact hcl6) (by have := hg7.iw; omega) hcqB hrs hni hnf hA7
-    (ConRon.Bridge.denoteN_ext hTP hx07) (ConRon.Bridge.denoteNListE_ext hx07 _ _ hlpsP)
-    (ConRon.Bridge.denoteL_ext hrsP hx07)
-    (ConRon.Bridge.denote_ext hcrest (hx46.trans c7.ext)) hwsc
-    (hok₀.mono hx07) (ConRon.Bridge.denoteFEnv_mono hx07 hfe)
-  rcases h8 : ctlE p (m' + 1) m7 vis0 vis T lo ll nP nIdx rs isP lg nF (r4.tail.headD 0) (r4.tail.tail.headD 0)
-      (r4.tail.tail.tail.headD 0) with e8 | ⟨r8, m8⟩ <;> rw [h8] at h8R
-  · rw [ctorE.k_check_sum_ctor_tail.none]; exact fun hG => h8R hG.toVerdictCtx
-  rw [ctorE.k_check_sum_ctor_tail.arm1]
-  obtain ⟨x, a8, hr8, hR8⟩ := h8R
-  have hp16 := ((p3.trans p4).trans p5).trans p6
-  exact RefE.ret hr8 ⟨hR8.stage, (hg06.trans hg7).trans hR8.grow, rfl, hR8.cv, by simpa using hR8.sorts,
-    by simpa using hR8.sortsB, hR8.abs, ((c1.trans (hp16.toCore c1.ok)).trans c7).trans hR8.core⟩
+  · rw [ctlE.eq_1]; exact RefE.of_cls0 Err.cls_outOfFuel
+  exact RefE.lastE (K := ctorE.k_check_sum_ctor_tail p cvCw) (fun _ => rfl) (fun _ => rfl) (·.toVerdictCtx)
+    (ctl_ref hq henv hOpf hLC hLT hP m' (by omega) m7 a7 vis0 T lo ll nP nIdx rs isP lg nF _ _ _ lps cl cvC
+      k07.stage hT (k07.decHL hlps hlb) (k07.top hlb) (k47.decHL hcl hclb) (k47.top hclb) hcqB hrs hni hnf
+      k07.abs (ConRon.Bridge.denoteN_ext hTP k07.core.ext) (ConRon.Bridge.denoteNListE_ext k07.core.ext _ _ hlpsP)
+      (ConRon.Bridge.denoteL_ext hrsP k07.core.ext) (ConRon.Bridge.denote_ext hcrest k47.core.ext) hwsc
+      (hok₀.mono k07.core.ext) (ConRon.Bridge.denoteFEnv_mono k07.core.ext hfe))
+    fun v x a8 _ hR8 => ⟨hR8.stage, k07.grow.trans hR8.grow, rfl, hR8.cv, by simpa using hR8.sorts,
+      by simpa using hR8.sortsB, hR8.abs, k07.core.trans hR8.core⟩
 
 include hq henv hV hOpf hLC hLT hApd hCrk in
 /-- **`check_sum_ctor` refines `checkSumCtor .verified`** under `StageC` (the knot's core calls;

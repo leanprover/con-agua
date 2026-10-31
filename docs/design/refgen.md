@@ -205,3 +205,123 @@ guards that were `rw`s. A first version with `grind` there was +60 ms.
   criterion counted with its steps is not met.
 * lnext2 should drop rank 2 or demote it to "kit when touching". Rank 3 and lower are not
   affected.
+
+## 6. Migration recipe (lane refwalk1)
+
+Landed: the kit `ConAgua/Arena/RefWalk.lean`, the pilot's sum family (`IndT/SumSteps.lean`,
+`ctl_ref`/`ctor_ref` in `IndT/Sum4.lean`) and the `target_major_of` family (`IndT/RecGenTmf.lean`:
+`tmt_ref`, `tmo_ref`, `tmc_ref`, `tmf_ref`; its callers `clm_ref` in `IndT/RecGen19.lean` and
+`cbc_ref` in `IndT/RecGen21.lean`). Statements unchanged. The pilot's `walk_k` macro is gone (PLAN.md:
+no custom tactics); write `dsimp only [K]`. Follow this section verbatim for the next family.
+
+### 6.1 The shape of a converted theorem
+
+```lean
+theorem f_ref … (hC : StageC dn vis fe env m a) (hA : AbsOK m) … :
+    RefE G (fE p n m …) (twinF …) a (fun v x a' => FPost …) := by
+  cases n with
+  | zero => rw [fE.eq_1]; exact RefE.of_cls0 Err.cls_outOfFuel
+  | succ n =>
+  rw [fE.arm1]; unfold twinF                     -- or `rw [twinF_eq]` (an `rfl` lemma)
+  -- a lifted callee WITH a step lemma (≥ 2 call sites under this package)
+  refine RefE.bindSim (fun _ => rfl) (g_step hP k0 …) fun r1 x1 m1 a1 _ ⟨k1, hx1⟩ => ?_
+  dsimp only [fE.k_g]
+  -- a lifted callee WITHOUT a step lemma: its plumbing stays at the call site
+  refine RefE.bindLift (fun _ => rfl) fun r2 m2 h2 => ?_
+  obtain ⟨s2, rfl, -, hW2⟩ := triple_of_callW (s₀ := ⟨m1, Locals.init []⟩) (h_spec p …) h2
+  obtain ⟨x2, a2, hrun2, hS2, hg2, hd2⟩ := hSim … hW2 k1.stage.stage   -- the `Sim`/`RelW`/`_ok`
+  obtain ⟨p2, hP2⟩ := ConRon.Bridge.Inductives.h_run k1.stage.check.state … hrun2
+  have k2 := FamAt.pstep k1.stage hS2 (h_afr hW2 k1.abs) hg2 … p2
+  refine ⟨_, _, hrun2, ?_⟩
+  dsimp only [fE.k_h]
+  -- a guard: model `if c then .error e else rest` against the twin's check
+  refine RefE.guard (by decide) (fun hc => …) (fun hb => …) fun _ _ => ?_
+  -- a unified callee (its own `RefE`), `G → G'` as the second argument
+  refine RefE.bindE (fun _ => rfl) (fun hV => hV.nv) (u_ref … k2.stage k2.abs …)
+    fun ⟨r3, m3⟩ y a3 hrun3 hR3 => ?_
+  dsimp only [fE.k_u]
+  …
+  exact RefE.ret rfl ⟨…, (k1.trans k2).grow.trans hR3.grow, …⟩
+```
+
+Which rule for which pair of shapes:
+
+| model | twin | rule |
+|---|---|---|
+| `K (liftE c)`, a step lemma `Sim c op a Q` | `op >>= g` | `RefE.bindSim` |
+| `K (liftE c)`, one call site | `op >>= g` | `RefE.bindLift`, then `⟨_, _, hrun, ?_⟩` |
+| `K (liftE c)` | no step (an L helper, `sl_find`, `sl_cons`, a record writer) | `RefE.onlySim (fun _ => rfl) (fun _ _ h => h)` |
+| `K x`, a unified callee | `op >>= g` / `op` last | `RefE.bindE` / `RefE.lastE` |
+| `if c then .error e else rest` | `if b = true then jp () else fail ce >>= jp` (`unless`) | `RefE.guard` |
+| same | `if b = true then T else fail ce` / `if b = true then fail ce else T` | `RefE.guardIf` / `RefE.guardThen` |
+| same | `unwrapOr o ce >>= g` | `RefE.guardOpt` |
+| same, class `0` (a capacity, a range) | nothing | `RefE.abort0` |
+| same, already decided by a `cases` (the twin's `match` on the callee's `Option`) | `fail ce` / the arm | `RefE.abortAt` / `RefE.pass` |
+| `.error e` / `x` | a twin guard L checks in pieces | `RefE.twinFail` / `RefE.twinPass` |
+
+### 6.2 The package
+
+One structure per family, named fields, from `(m₀, a₀)` to `(m, a)`: the stage (`StageC`), `AbsOK`,
+the `IW` growth and whatever else the family threads (`PosMR` for `TmAt`; the core step for
+`SumAt`, the store's `Ext` for `TmAt`). Give it `trans`, a constructor from con-ron's step
+(`pstep`: `StageC.of_pstep` inside), and the transports the family uses more than once (`decHL`,
+`top`). It goes in the family's lowest file (`SumSteps.lean`, `RecGenTmf.lean`). Each call site
+then threads one `kᵢ`; the final post takes `(k1.trans k2).grow`, `kᵢ.pos`, `kᵢ.abs`.
+
+### 6.3 When to write a step lemma
+
+Count the call sites of each lifted callee under the same package (grep the family's files for
+`"callee"`). Two or more: a step `g_step (hk : FamAt … m₀ a₀ m a) … : Sim (callW p n "g" args m)
+twinG a (fun r x m' a' => FamAt … m a m' a' ∧ decoded facts)`, proved once by the call site's
+plumbing. One: `bindLift` with the plumbing inline (5–8 lines). In the `target_major_of` family
+no lifted callee has two sites under `TmAt`, so it has no steps; `lvlEqC_simC` (already a `Sim`)
+went through `bindLift` too, because the rest needs the call's equation (`PosMR` from the run's
+frame), which `bindSim` does not hand over.
+
+### 6.4 Pitfalls
+
+* **Irreducible continuations.** The model of a recursive function (`clmE`: a mutual
+  definition) has `@[irreducible]` continuations, so `fun _ => rfl` and `dsimp only [K]` fail
+  ("type mismatch `rfl`"). Use `(fun _ => K.none ..)` for `hK`, `rw [K.arm1]` for an unguarded arm,
+  and for a guard `RefE.ofArms (fun h => K.abort1 (hc1 := h) ..) (fun h => K.arm1 (hc1 := h) ..)
+  (RefE.abort0 …)` (the guard hypotheses of the generated equations are named `hc1`, `hc2`, …;
+  `..` fills the rest, it must come last).
+* **`rw [ite_eq_left …]` after `dsimp only [K, List.headD_cons]` fails** ("did not find
+  pattern"): `dsimp` rewrites the condition but not its `Decidable` instance. Use the rules
+  (`RefE.abortAt`, `RefE.pass`, `RefE.guard…`), which unify up to defeq, instead of `rw`.
+* **`fun ⟨…, -⟩ => ?_` does not parse**; a `refine`'s `fun` pattern takes `_`.
+* **Keep the `simp only at hS hg hd hA`** after `triple_of_callW` where its post mentions
+  `{ mem := m, loc := … }.mem`: `omega` takes the unreduced term for another atom (cbc_ref).
+* **Guard conditions.** Write the two implications as terms when short (`Bool.eq_false_iff`,
+  `beq_iff_eq`, `hgood.symm.trans (by rw [hz]; rfl)`); `by grind` closes the flag-vs-Bool ones
+  (`(r.headD 0 != 0) = b`) at no measurable cost here. No `simp_all`.
+* `RefE.bindE`'s second argument is `id` when the callee's `G` is the caller's, `fun hV => hV.nv`
+  from `VerdictCtx` to `closedNV`.
+
+### 6.5 Numbers (refwalk1)
+
+Lines per theorem (`reflen.py`) and code lines per file (`ncl.py`), against master 9948b019;
+elaboration `lake env lean` on the file, median of 3 interleaved runs, load ~15:
+
+| theorem | before | after |
+|---|---:|---:|
+| `tmf_ref` | 81 | 60 |
+| `tmc_ref` | 86 | 78 |
+| `tmo_ref` | 168 | 127 |
+| `tmt_ref` | 106 | 79 |
+| `clm_ref` | 161 | 131 |
+| `cbc_ref` | 174 | 143 |
+| **sum** | 776 | 618 (−20 %) |
+
+| file (code lines) | before | after | wall before → after | max RSS |
+|---|---:|---:|---:|---:|
+| `IndT/Sum4.lean` | 655 | 312 | 6.45 → 5.94 s | 2.94 → 2.94 GB |
+| `IndT/SumSteps.lean` (new) | — | 229 | | |
+| `IndT/RecGenTmf.lean` (with `TmAt`, 38 lines) | 510 | 437 | 1.61 → 1.57 s | 2.75 → 2.74 GB |
+| `IndT/RecGen19.lean` | 222 | 193 | 1.58 → 1.49 s | 2.72 → 2.72 GB |
+| `IndT/RecGen21.lean` | 243 | 213 | 2.19 → 2.35 s | 2.79 → 2.79 GB |
+| `RefWalk.lean` (new, shared) | — | 114 | | |
+
+The `target_major_of` family: 975 → 843 code lines (**−13.5 %**, the package included), time
+unchanged (these files elaborate in well under a second past their imports). The sum family:
+655 → 541 (−17 %, refgen §3).

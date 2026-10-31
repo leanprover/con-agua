@@ -88,14 +88,11 @@ theorem cbc_ref (hP : CbcProg p) {fs : List FnName}
   have hnpT : (UInt64.ofNat bs.nP : Word).toNat = bs.nP := UInt64.toNat_ofNat_of_lt' hnpb
   rw [cbcE.arm1]
   -- `class_read`
-  rcases c1 : callW p n "class_read" [pp, vis, rdW (m.arr64 IW) (pp + 4), rdW (m.arr64 IW) (pp + 2),
-      rdW (m.arr64 IW) (pp + 3)] m with _ | ⟨r1, m1⟩
-  · rw [liftE_none, cbcE.k_class_read.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]
-  obtain ⟨s1, hs1, -, hok1, ⟨hS1, hg1, hd1⟩, hA1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+  unfold ConRon.Arena.checkBlockClasses
+  refine RefE.bindLift (fun _ => rfl) fun r1 m1 c1 => ?_
+  obtain ⟨s1, rfl, -, hok1, ⟨hS1, hg1, hd1⟩, hA1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (classRead_refinesA p hP.read hOpf n _ a dn vis fe pp _ _ _ bs bs.recs hS hA hb hrecs) c1
-  simp only at hs1 hS1 hg1 hd1 hA1
-  subst hs1
+  simp only at hS1 hg1 hd1 hA1
   have hP1 := PosMR.ofClosed hcl hfr c1 hPm
   rw [hnp, hnpT] at hok1 hS1 hd1
   have hrun1 := AM.run_of_ok _ a hok1
@@ -105,12 +102,10 @@ theorem cbc_ref (hP : CbcProg p) {fs : List FnName}
   generalize ha1 : AM.st (ConRon.Arena.classRead bs fe bs.nP bs.recs) a = a1 at hrun1 hS1 p1 ho1
   have hC1 : StageC dn vis fe env s1.mem a1 := hC.of_pstep hS1 hA1 p1
   have c1' := p1.toCore hC.check
-  unfold ConRon.Arena.checkBlockClasses
-  refine RefE.bind_right hrun1 ?_
+  refine ⟨_, _, hrun1, ?_⟩
+  dsimp only [cbcE.k_class_read]
   rcases x1 with _ | rd
-  · simp only [decRead] at hd1
-    rw [cbcE.k_class_read.abort1 p n vis pp po pl co cl r1 s1.mem hd1]
-    exact fun _ => ErrClaim.fail _ _ (by decide)
+  · exact RefE.abortAt (by simpa only [decRead] using hd1) fun _ => ErrClaim.fail _ _ (by decide)
   obtain ⟨rdP, -, hrd⟩ := ho1
   have hsl : rd.slots.mapM (ConRon.Bridge.Inductives.dSlot a1.store) = some rdP.slots := by
     simp only [ConRon.Bridge.Inductives.dClassRead, Option.map_eq_some_iff] at hrd
@@ -118,8 +113,7 @@ theorem cbc_ref (hP : CbcProg p) {fs : List FnName}
     exact hq
   have hcls := ConRon.Bridge.Inductives.classes_denote rd.recCls hsl
   obtain ⟨h1ok, hrdS, so, sl, hso, hsl', hspl⟩ := hd1
-  have h1ne : ¬ r1.headD 0 = 0 := by rw [h1ok]; decide
-  rw [cbcE.k_class_read.arm1 p n vis pp po pl co cl r1 s1.mem h1ne]
+  refine RefE.pass (by rw [h1ok]; decide) ?_
   have hsz1 : (s1.mem.arr64 IW).size < 2 ^ 64 := hS1.iw.iwSize
   obtain ⟨wso, hwsob⟩ := iwN_rdW_at (k := 0) (w := r1.tail.headD 0) (by simpa using hso) hsz1
   obtain ⟨wsl, hwslb⟩ := iwN_rdW_at (k := 1) (w := r1.tail.headD 0) hsl' hsz1
@@ -130,15 +124,13 @@ theorem cbc_ref (hP : CbcProg p) {fs : List FnName}
   have hslT : (UInt64.ofNat sl : Word).toNat = sl := UInt64.toNat_ofNat_of_lt' hwslb
   obtain ⟨hslots, hext⟩ := slots_ok hspl hsz1
   -- `class_read_classes` (L only)
-  rcases c2 : callW p n "class_read_classes" [UInt64.ofNat so, UInt64.ofNat sl] s1.mem with _ | ⟨r2, m2⟩
-  · rw [liftE_none, cbcE.k_class_read_classes.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some, cbcE.k_class_read_classes.arm1]
-  obtain ⟨s2, hs2, -, hS2, hg2, hcc⟩ := triple_of_callW (s₀ := ⟨s1.mem, Locals.init []⟩)
+  refine RefE.onlySim (fun _ => rfl) (fun _ _ h => h) fun r2 m2 c2 => ?_
+  dsimp only [cbcE.k_class_read_classes]
+  obtain ⟨s2, rfl, -, hS2, hg2, hcc⟩ := triple_of_callW (s₀ := ⟨s1.mem, Locals.init []⟩)
     (classReadClasses_refines p hP.clm.keys.copy hP.ha hP.clm.keys.cons hP.crc n _ a1 dn vis fe
       (UInt64.ofNat so) (UInt64.ofNat sl) rd.slots hS1 (by rw [hsoT, hslT]; exact hslots)
       (by rw [hsoT, hslT]; exact hext)) c2
-  simp only at hs2 hS2 hg2 hcc
-  subst hs2
+  simp only at hS2 hg2 hcc
   have hP2 := PosMR.ofClosed hcl hfc c2 hP1
   have hA2 := hk2 n _ s1.mem r2 s2.mem c2 hA1
   have hC2 : StageC dn vis fe env s2.mem a1 := hC1.of_check hS2 hA2 hC1.check (Ext.refl _)
@@ -158,9 +150,7 @@ theorem cbc_ref (hP : CbcProg p) {fs : List FnName}
     rw [hnpT] at h
     exact h
   rw [cbcE.k_check_block_classes_keys.arm1]
-  obtain ⟨s3, hs3, -, keys, a3, hrun3, hR3⟩ := RefE.run_ok hsT hR3 c3
-  subst hs3
-  obtain ⟨hS3, hg3, hks, hP3⟩ := hR3
+  obtain ⟨s3, rfl, -, keys, a3, hrun3, hS3, hg3, hks, hP3⟩ := RefE.run_ok hsT hR3 c3
   rw [hnpT] at hrun3
   have hA3 := hk3 n _ s2.mem r3 s3.mem (callW_of_callE c3) hA2
   obtain ⟨c2', keysP, ⟨hkeys, hwk⟩, -⟩ := ConRon.Bridge.Inductives.classKeysOf_spec fe bs.nP pfvs
@@ -171,35 +161,27 @@ theorem cbc_ref (hP : CbcProg p) {fs : List FnName}
   have hg03 := hg02.trans hg3
   refine RefE.bind_right hrun3 ?_
   -- the majors
-  have hR4 := clm_ref hq hIlpf hLC henv hP.clm pp co cl po pl bs css pfvs pP cssP pfvsP hpw n hn s3.mem a3 _ _ keys
-      keysP hC3 hA3 (hbsD.grow (decBS_mono _) hg03) (partsHsrc_grow hg03 hq9 hsrc)
+  refine RefE.bindE (fun _ => rfl) id (clm_ref hq hIlpf hLC henv hP.clm pp co cl po pl bs css pfvs pP cssP
+      pfvsP hpw n hn s3.mem a3 _ _ keys keysP hC3 hA3 (hbsD.grow (decBS_mono _) hg03) (partsHsrc_grow hg03 hq9 hsrc)
       (hcss.grow decCNS_mono hg03) (hpf.grow (OMono.decHL _ _) hg03) (Nat.le_trans hpfb hg03.iw) hks
       hP3 (fun k hk x hx => ⟨pP.nP, hnPP ▸ hwk k hk x hx⟩)
       (ConRon.Bridge.Inductives.dShape_ext c12.ext _ _ hshP)
       (ConRon.Bridge.Inductives.dCtors_ext.list c12.ext _ _ hcssP)
-      (ConRon.Bridge.denoteEList_ext c12.ext _ _ hpfP) hkeys (vis := vis)
-  rcases c4 : clmE p n s3.mem vis pp co cl po pl (r3.headD 0) (r3.tail.headD 0) with e4 | ⟨r4, m4⟩ <;>
-    rw [c4] at hR4
-  · rw [cbcE.k_class_majors.none]; exact RefE.bind_left hR4
-  rw [cbcE.k_class_majors.arm1]
-  obtain ⟨ms, a4, hrun4, ⟨hC4, hg4, hms, hP4, hA4⟩⟩ := hR4
-  dsimp only at hC4 hg4 hms hP4 hA4
+      (ConRon.Bridge.denoteEList_ext c12.ext _ _ hpfP) hkeys (vis := vis))
+    fun ⟨r4, m4⟩ ms a4 hrun4 ⟨hC4, hg4, hms, hP4, hA4⟩ => ?_
+  dsimp only [cbcE.k_class_majors] at hC4 hg4 hms hP4 hA4 ⊢
   obtain ⟨c3', -⟩ := ConRon.Bridge.Inductives.classMajors_spec fe (ConRon.Bridge.CoreSpec.of_core rfl)
     henv bs pP css cssP pfvs pfvsP hpl hpw keys keysP (fun k hk x hx => ⟨pP.nP, hnPP ▸ hwk k hk x hx⟩) a3 a4
     ms hC3.check ⟨ConRon.Bridge.Inductives.dShape_ext c12.ext _ _ hshP,
       ConRon.Bridge.Inductives.dCtors_ext.list c12.ext _ _ hcssP,
       ConRon.Bridge.denoteEList_ext c12.ext _ _ hpfP, hkeys⟩ hrun4
   have hg04 := hg03.trans hg4
-  refine RefE.bind_right hrun4 ?_
   -- one class per member (L only)
-  rcases c5 : callW p n "check_block_classes_one_per_member" [0, rdW (m4.arr64 IW) (pp + 1), r4.headD 0,
-      r4.tail.headD 0] m4 with _ | ⟨r5, m5⟩
-  · rw [liftE_none, cbcE.k_check_block_classes_one_per_member.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]
-  obtain ⟨s5, hs5, -, hm5, hW5⟩ := triple_of_callW (s₀ := ⟨m4, Locals.init []⟩)
+  refine RefE.onlySim (fun _ => rfl) (fun _ _ h => h) fun r5 m5 c5 => ?_
+  dsimp only [cbcE.k_check_block_classes_one_per_member]
+  obtain ⟨s5, rfl, -, hm5, hW5⟩ := triple_of_callW (s₀ := ⟨m4, Locals.init []⟩)
     (opm_spec p hP.cnt hP.opm n _ 0 (rdW (m4.arr64 IW) (pp + 1)) (r4.headD 0) (r4.tail.headD 0)) c5
-  simp only at hs5 hm5 hW5
-  subst hs5
+  simp only at hm5 hW5
   have hS4 := hC4.stage
   have hT0 : iwTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 200).toNat_lt
   have hpp1 : pp.toNat + 1 < 2 ^ 64 := by omega
@@ -216,24 +198,12 @@ theorem cbc_ref (hP : CbcProg p) {fs : List FnName}
   have hkb : bs.k < 2 ^ 64 := by rw [BlockShape.k, decPL_length _ hgdk]; exact (iwN_rdW hlk hpp1).2
   rw [hk1', UInt64.toNat_ofNat_of_lt' hkb, show (0 : Word).toNat = 0 from rfl, Nat.sub_zero,
     ← List.range_eq_range'] at hgood
-  by_cases hz : r5.headD 0 = 0
-  · rw [cbcE.k_check_block_classes_one_per_member.abort1 _ _ _ _ _ _ hz]
-    have hall : (List.range bs.k).all (fun t => (ms.filter (·.member == some t)).length == 1) = false := by
-      have : (r5.headD 0 != 0) = false := by rw [hz]; rfl
-      rw [this] at hgood; exact hgood.symm
-    show RefE _ _ (if (List.range bs.k).all (fun t => (ms.filter (·.member == some t)).length == 1) then _ else _)
-      _ _
-    rw [hall]
-    exact fun _ => ErrClaim.fail _ _ (by decide)
-  rw [cbcE.k_check_block_classes_one_per_member.arm1 _ _ _ _ _ _ hz]
-  have hall : (List.range bs.k).all (fun t => (ms.filter (·.member == some t)).length == 1) = true := by
-    have : (r5.headD 0 != 0) = true := by simpa using hz
-    rw [this] at hgood; exact hgood.symm
-  show RefE _ _ (if (List.range bs.k).all (fun t => (ms.filter (·.member == some t)).length == 1) then _ else _)
-    _ _
-  rw [hall, hm5]
+  refine RefE.guardIf (by decide) (fun hz => hgood.symm.trans (by rw [hz]; rfl))
+    (fun hb => by simpa using hgood.trans hb) fun _ _ => ?_
+  rw [show s5.mem = m4 from hm5]
   refine RefE.ret (y := (rd, ms)) (a' := a4) rfl ⟨hC4, hg04, ?_, by simpa using hms, hP4, hA4, c12.trans c3'⟩
   exact stab_decCR_decB (by simpa using hrdS.grow (hg2.trans (hg3.trans hg4))) hS4.iw.iwSize
+
 
 include hq hIlpf hLC henv in
 /-- **`check_block_classes` refines `checkBlockClasses`** under `StageC` (the inputs' denotations

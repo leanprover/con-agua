@@ -107,20 +107,14 @@ theorem clm_ref (hP : ClmProg p) (pp cao cal pfo pfl : Word) (bs : BlockShape)
   obtain ⟨-, -, hnP, -, -, -, -⟩ := ConRon.Bridge.Inductives.dShape_inv hsh
   simp only [ConRon.Arena.classMajors, ckOfNk]
   -- the head
-  rcases h1 : ceinternW m (rdW (m.arr64 IW) (UInt64.ofNat q)) (rdW (m.arr64 IW) (UInt64.ofNat q + 1))
-    with _ | ⟨⟨r1, m1⟩⟩
-  · rw [liftE_none, clmE.k_intern_const.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]
+  refine RefE.bindLift (fun _ => clmE.k_intern_const.none ..) fun r1 m1 h1 => ?_
   obtain ⟨a1, hrun, hS1, hg1⟩ := internConst_stage hS _ _ hcH huH h1
   rw [hcd, hud] at hrun
   obtain ⟨p1, hhd⟩ := ConRon.Bridge.Inductives.internConstE_run hC.check.state hind hlvls hrun
-  have hA1 := ceinternW_afr h1 hA
-  have hC1 : StageC dn vis fe env m1 a1 := hC.of_pstep hS1 hA1 p1
-  have hP1 : PosMR m1 := hPm.fr (ceinternW_mfr h1)
-  refine RefE.bind_right hrun ?_
-  by_cases hb : 4294967296 ≤ r1
-  · rw [clmE.k_intern_const.abort1 _ _ _ _ _ _ _ _ _ _ _ _ _ hb]; exact RefE.of_cls0 (by decide)
-  rw [clmE.k_intern_const.arm1 _ _ _ _ _ _ _ _ _ _ _ _ _ hb]
+  have k1 := TmAt.pstep hC hS1 (ceinternW_afr h1 hA) hg1 (hPm.fr (ceinternW_mfr h1)) p1
+  refine ⟨_, _, hrun, ?_⟩
+  refine RefE.ofArms (fun h => clmE.k_intern_const.abort1 (hc1 := h) ..)
+    (fun h => clmE.k_intern_const.arm1 (hc1 := h) ..) (RefE.abort0 (by decide) fun hb => ?_)
   have hr1H : H r1 := lt_of_notbig hb
   have hkq : (UInt64.ofNat q : Word).toNat + 4 ≤ iwTop m := hk4
   have e2 : rdW (m1.arr64 IW) (UInt64.ofNat q + 2) = rdW (m.arr64 IW) (UInt64.ofNat q + 2) := by
@@ -132,38 +126,26 @@ theorem clm_ref (hP : ClmProg p) (pp cao cal pfo pfl : Word) (bs : BlockShape)
       word_add_toNat (by rw [show (3 : Word).toNat = 3 from rfl]; omega)
     simp only [rdW, e]; rw [hg1.iwGet _ (by omega)]
   rw [e2, e3]
-  have hds1 : decHL m1 (rdW (m.arr64 IW) (UInt64.ofNat q + 2)).toNat
-      (rdW (m.arr64 IW) (UInt64.ofNat q + 3)).toNat = some nk.ds := by
-    rw [decHL_agree (RdS.of_grow hg1) hdsb]; exact hds
   -- the application
-  rcases h2 : mknF m1 [r1, rdW (m.arr64 IW) (UInt64.ofNat q + 2), rdW (m.arr64 IW) (UInt64.ofNat q + 3)]
-    with _ | ⟨⟨r2, m2⟩⟩
-  · rw [liftE_none, clmE.k_mk_app_n_f.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some, clmE.k_mk_app_n_f.arm1]
-  obtain ⟨x, a2, hrun2, hS2, hg2, hmH, hmd⟩ :=
-    mknF_ok dn vis fe _ _ _ hr1H nk.ds m1 m2 a1 r2 h2 ⟨hC1.stage, hds1⟩
-  have hrun' : ConRon.Arena.mkAppN (decE r1) nk.ds a1 = .ok (x, a2) := hrun2
+  refine RefE.bindLift (fun _ => clmE.k_mk_app_n_f.none ..) fun r2 m2 h2 => ?_
+  obtain ⟨x, a2, hrun2, hS2, hg2, hmH, rfl⟩ := mknF_ok dn vis fe _ _ _ hr1H nk.ds m1 m2 a1 r2 h2
+    ⟨k1.stage.stage, by rw [decHL_agree (RdS.of_grow hg1) hdsb]; exact hds⟩
   obtain ⟨p2, hmty⟩ := ConRon.Bridge.Inductives.mkAppN_run nk.ds dsP p1.ok hhd
-    (ConRon.Bridge.denoteEList_ext p1.ext _ _ hdsP) hrun'
-  have hA2 := mknF_afr h2 hA1
-  have hC2 := hC1.of_pstep hS2 hA2 p2
-  have hP2 := hP1.fr (MFr.ofMknF h2)
-  refine RefE.bind_right hrun' ?_
-  subst hmd
-  have hg02 := hg1.trans hg2
+    (ConRon.Bridge.denoteEList_ext p1.ext _ _ hdsP) (show ConRon.Arena.mkAppN (decE r1) nk.ds a1 = _ from hrun2)
+  have k2 := TmAt.pstep k1.stage hS2 (mknF_afr h2 k1.abs) hg2 (k1.pos.fr (MFr.ofMknF h2)) p2
+  refine ⟨_, _, hrun2, ?_⟩
+  rw [clmE.k_mk_app_n_f.arm1]
+  have k02 := k1.trans k2
   have c12 := (p1.trans p2).toCore hC.check
   have hshP2 := ConRon.Bridge.Inductives.dShape_ext c12.ext _ _ hsh
   -- the major
-  have hR3 := tmf_ref hP.tmf hIlpf hq.closed hLC n hC2.stage
-    (hq'.grow (decBS_mono _) hg02) (partsHsrc_grow hg02 (partsShapeFacts hq' hsrc).2.1 hsrc)
-    (hcss.grow decCNS_mono hg02) (hpf.grow (OMono.decHL _ _) hg02) (hpf.grow (OMono.decHL _ _) hg02)
-    (Nat.le_trans hpfb hg02.iw) hmH hP2 hC2 hA2 hshP2 hmty
-  rcases h3 : tmfE p n m2 vis pp cao cal pfo pfl pfo pfl (r2.headD 0) with e3 | ⟨r3, m3⟩ <;> rw [h3] at hR3
-  · rw [clmE.k_target_major_of.none]; exact RefE.bind_left fun hV => hR3 hV.nv
+  refine RefE.bindE (fun _ => clmE.k_target_major_of.none ..) (fun hV => hV.nv) (tmf_ref hP.tmf hIlpf hq.closed hLC n k2.stage.stage
+    (hq'.grow (decBS_mono _) k02.grow) (partsHsrc_grow k02.grow (partsShapeFacts hq' hsrc).2.1 hsrc)
+    (hcss.grow decCNS_mono k02.grow) (hpf.grow (OMono.decHL _ _) k02.grow) (hpf.grow (OMono.decHL _ _) k02.grow)
+    (k02.top hpfb) hmH k2.pos k2.stage k2.abs hshP2 hmty) fun ⟨r3, m3⟩ tm a3 hrun3 hR3 => ?_
   rw [clmE.k_target_major_of.arm1]
-  obtain ⟨tm, a3, hrun3, hR3⟩ := hR3
   obtain ⟨c3, MP, hm, hF1⟩ := ConRon.Bridge.Inductives.targetMajorOf_spec fe bs pP css cssP pfvs pfvs
-    pfvsP pfvsP _ _ a2 _ _ hC2.check
+    pfvsP pfvsP _ _ a2 _ _ k2.stage.check
     ⟨hshP2, ConRon.Bridge.Inductives.dCtors_ext.list c12.ext _ _ hcas,
       ConRon.Bridge.denoteEList_ext c12.ext _ _ hpfP, ConRon.Bridge.denoteEList_ext c12.ext _ _ hpfP,
       hmty⟩ hrun3
@@ -180,45 +162,33 @@ theorem clm_ref (hP : ClmProg p) (pp cao cal pfo pfl : Word) (bs : BlockShape)
       simp only [ConLeche.Expr.getAppArgs, List.nil_append] at hxa
       obtain ⟨D, hD⟩ := hsc _ List.mem_cons_self x hxa
       exact ConLeche.WScoped.of_fvarsBelow hD (ConLeche.Expr.fvarB_le hfb)
-  have hC3 := hC2.of_cstep hR3.stage hR3.abs c3
-  refine RefE.bind_right hrun3 ?_
-  have hg03 := hg02.trans hR3.grow
+  have hC3 := k2.stage.of_cstep hR3.stage hR3.abs c3
+  have hg03 := k02.grow.trans hR3.grow
   obtain ⟨hnpw, hnpb, -, -⟩ := partsShapeWords hg03 hq' (partsShapeFacts hq' hsrc).2.1
   have hrB : (rdW (m3.arr64 IW) (pp + 4)).toNat = bs.nP := by
     rw [hnpw, UInt64.toNat_ofNat_of_lt' hnpb]
   have hrP : (rdW (m3.arr64 IW) (pp + 4)).toNat = pP.nP := hrB.trans hnP
   -- the pins
   have hR4 := tmp_ref hq henv n (by omega) hC3 hR3.abs hR3.dec hm (fun _ => by rw [hrP]; exact hdsW)
-  rcases h4 : tmpE p n m3 vis (rdW (m3.arr64 IW) (pp + 4)) r3 with e4 | ⟨r4, m4⟩ <;> rw [h4] at hR4
-  · rw [clmE.k_target_major_pins.none]; rw [hrB] at hR4; exact RefE.bind_left hR4
+  rw [hrB] at hR4
+  refine RefE.bindE (fun _ => clmE.k_target_major_pins.none ..) id hR4 fun ⟨r4, m4⟩ _ a4 hrun4 hR4 => ?_
   rw [clmE.k_target_major_pins.arm1]
-  obtain ⟨⟨⟩, a4, hrun4, hR4⟩ := hR4
-  have hrun4' := hrun4
-  rw [hrP] at hrun4'
   obtain ⟨c4, -⟩ := ConRon.Bridge.Inductives.targetMajorPins_spec fe (ConRon.Bridge.CoreSpec.of_core rfl)
-    henv pP.nP tm MP (fun _ => hdsW) a3 a4 () hC3.check hm hrun4'
-  rw [hrB] at hrun4
-  refine RefE.bind_right hrun4 ?_
-  have hP4 : PosMR m4 := hR3.pos.fr hR4.mfr
+    henv pP.nP tm MP (fun _ => hdsW) a3 a4 () hC3.check hm (by rw [← hnP]; exact hrun4)
   have hg04 := hg03.trans hR4.grow
   have c14 := (c12.trans c3).trans c4
   -- the rest
-  have hR5 := ih (by omega) m4 a4 (ko + 1) (kl - 1) ks' ksP' hR4.stage hR4.abs (hq'.grow (decBS_mono _) hg04)
-    (partsHsrc_grow hg04 (partsShapeFacts hq' hsrc).2.1 hsrc) (hcss.grow decCNS_mono hg04)
-    (hpf.grow (OMono.decHL _ _) hg04) (Nat.le_trans hpfb hg04.iw) (hks'.grow decCK_mono hg04) hP4
-    (fun k hk' => hsc k (List.mem_cons_of_mem _ hk'))
+  refine RefE.bindE (fun _ => clmE.k_class_majors.none ..) id (ih (by omega) m4 a4 (ko + 1) (kl - 1) ks' ksP' hR4.stage hR4.abs
+    (hq'.grow (decBS_mono _) hg04) (partsHsrc_grow hg04 (partsShapeFacts hq' hsrc).2.1 hsrc)
+    (hcss.grow decCNS_mono hg04) (hpf.grow (OMono.decHL _ _) hg04) (Nat.le_trans hpfb hg04.iw)
+    (hks'.grow decCK_mono hg04) (hR3.pos.fr hR4.mfr) (fun k hk' => hsc k (List.mem_cons_of_mem _ hk'))
     (ConRon.Bridge.Inductives.dShape_ext c14.ext _ _ hsh)
     (ConRon.Bridge.Inductives.dCtors_ext.list c14.ext _ _ hcas)
     (ConRon.Bridge.denoteEList_ext c14.ext _ _ hpfP)
-    (ConRon.Bridge.Inductives.dClassKey_ext.list c14.ext _ _ hksP')
-  rcases h5 : clmE p n m4 vis pp cao cal pfo pfl (ko + 1) (kl - 1) with e5 | ⟨r5, m5⟩ <;> rw [h5] at hR5
-  · rw [clmE.k_class_majors.none]; exact RefE.bind_left hR5
+    (ConRon.Bridge.Inductives.dClassKey_ext.list c14.ext _ _ hksP')) fun ⟨r5, m5⟩ xs a5 hrun5 hR5 => ?_
   rw [clmE.k_class_majors.arm1]
-  obtain ⟨xs, a5, hrun5, hR5⟩ := hR5
-  refine RefE.bind_right hrun5 ?_
-  rcases h6 : consW n m5 r3 (r5.headD 0) (r5.tail.headD 0) with _ | ⟨⟨r6, m6⟩⟩
-  · rw [liftE_none, clmE.k_sl_cons.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some, clmE.k_sl_cons.arm1]
+  refine RefE.onlySim (fun _ => clmE.k_sl_cons.none ..) (fun _ _ h => h) fun r6 m6 h6 => ?_
+  rw [clmE.k_sl_cons.arm1]
   obtain ⟨hS6, hg6, hd6, hf6⟩ := clsConsW decTM_mono h6 hR5.stage.stage hR5.dec
     (hR3.dec.grow (decTM_mono _) (hR4.grow.trans hR5.grow))
   have hA6 := consW_afr h6 hR5.abs
