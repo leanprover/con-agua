@@ -1,7 +1,6 @@
 import ConAgua.Arena.WhnfIotaRefine3
 import ConAgua.Arena.CoreLevels
 import ConAgua.Arena.CoreDen
-import ConAgua.Arena.RefWalk
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen

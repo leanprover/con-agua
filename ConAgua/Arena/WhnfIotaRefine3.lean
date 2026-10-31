@@ -1,4 +1,5 @@
 import ConAgua.Arena.WhnfIotaRefine2
+import ConAgua.Arena.RefWalk
 import ConAgua.Verdict.WhnfModels3E
 import ConAgua.Arena.Abs1Refine
 import ConAgua.Arena.Rom
@@ -604,12 +605,8 @@ theorem lmtc_ref (p : Prog) (hc : IotaCallees p)
       (fun ht => h8 ((decE_tag_lit h hh).mp ht)))
   rw [ite_eq_right h8]
   have h8' : h >>> 28 = 8 := by simpa using h8
-  by_cases hv1 : tierW h ≠ 0 ∧ rdW (s₀.mem.arr64 CTL) 1 = 0
-  · rw [ite_eq_left hv1]; exact RefE.of_cls0 (by decide)
-  rw [ite_eq_right hv1]
-  by_cases hv2 : tcnt s₀.mem LIT (tierW h) ≤ idxW h
-  · rw [ite_eq_left hv2]; exact RefE.of_cls0 (by decide)
-  rw [ite_eq_right hv2]
+  refine RefE.abort0 (by decide) fun hv1 => ?_
+  refine RefE.abort0 (by decide) fun hv2 => ?_
   obtain ⟨l, hl, hview, hrel⟩ := viewLit_ok' s₀.mem a₀ hR h hh ⟨hv1, UInt64.not_le.mp hv2⟩ h8'
   have htag : (decE h).tag = ETag.lit := (decE_tag_lit h hh).mpr h8'
   cases l with
