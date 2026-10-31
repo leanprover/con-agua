@@ -91,7 +91,7 @@ theorem sgGoW_ok (k : Nat) :
     decHL m q.toNat j.toNat = some acc → RfInv m M G g → PosMR m →
     ∃ ys a', ((ds.drop j.toNat).mapM (sgF c holes)).run a = .ok (ys, a') ∧
       decHL m' q.toNat dL.toNat = some (acc ++ ys) ∧ StageR dn vis fe m' a' ∧ IWGrow m0 m' ∧
-      iwTop m ≤ iwTop m' ∧ (∃ M' G', RfInv m' M' G' g ∧ GKeep M M' G ∧ G ≤ G') ∧ PosMR m' := by
+      iwTop m ≤ iwTop m' ∧ (∃ M' G', RfInv m' M' G' g ∧ GKeep M M' G g ∧ G ≤ G') ∧ PosMR m' := by
   induction k with
   | zero => intro m0 m m' a ctx f dO dL q j c holes ds acc M G g h; simp [sgGoW] at h
   | succ k ih =>
@@ -103,7 +103,7 @@ theorem sgGoW_ok (k : Nat) :
   · rw [sgGoW_done (h := hd)] at h
     cases h
     have hjl : j.toNat = dL.toNat := by have := UInt64.le_iff_toNat_le.mp hd; omega
-    refine ⟨[], a, ?_, by rw [← hjl]; simpa using hacc, hS, hg0, Nat.le_refl _, ⟨M, G, hR, GKeep.refl _ _,
+    refine ⟨[], a, ?_, by rw [← hjl]; simpa using hacc, hS, hg0, Nat.le_refl _, ⟨M, G, hR, GKeep.refl _ _ _,
       UInt64.le_refl _⟩, hP⟩
     rw [List.drop_eq_nil_of_le (by omega)]; rfl
   rw [sgGoW_step (h := hd)] at h

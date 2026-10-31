@@ -187,7 +187,8 @@ theorem rxRf_step (s₀ : St) (f e : Word) :
   simp only [invoke_eq _ L.rf, callFn, replaceFVars]
   sym only [lang_grind, arena_grind, ind_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, hGo,
-      bankEnterG_spec 218 p _ L.rfe n, bankLeaveG_spec 218 p _ L.rfl' n] <;> finish (gen := 20)
+      bankEnterG_spec 218 p _ L.rfe n, bankLeaveG_spec 218 p _ L.rfl' n,
+      memoClearG_spec rfSch p _ L.rfc n] <;> finish (gen := 20)
 
 end step
 

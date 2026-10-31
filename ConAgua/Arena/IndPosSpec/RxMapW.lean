@@ -92,9 +92,13 @@ def pfrK3 (kp : Word) : Option (Word × Word × Mem) → Option (Word × Word ×
 def dsB (q l : Word) : Option Mem → Option (Word × Word × Mem)
   | none => none
   | some m2 => some (q, l, m2)
+/-- The outermost call (caller's generation `0`) clears the memo (`rf_clear`). -/
+def rxK2 (s r : Word) (m : Mem) : Option (Word × Mem) :=
+  if s = 0 then (if rdW (m.arr64 CTL) rfSch.cs + 2 = 0 then none else some (r, mclearG rfSch m))
+  else some (r, m)
 def rxK1 (s : Word) : Option (Word × Mem) → Option (Word × Mem)
   | none => none
-  | some (r, m1) => if 4294967296 ≤ r then none else some (r, m1.set64 CTL 219 s)
+  | some (r, m1) => if 4294967296 ≤ r then none else rxK2 s r (m1.set64 CTL 219 s)
 def rxH (h : Word) : Option (Word × Word × Mem) → Option (Word × Mem)
   | none => none
   | some (ok, r, m1) => some ((if ok ≠ 0 then r else h), m1)
@@ -265,8 +269,13 @@ theorem dgK_some : dgK n f o l q j (some (r, m1)) = rxDsGoW n (m1.set64 IW (q + 
 theorem rxW_ok (hb : ¬ 4294967296 ≤ rdW (m.arr64 CTL) 218 + 1) :
     rxW (n + 1) m f e = rxK1 (rdW (m.arr64 CTL) 219) (rxGoW n (benterG 218 m) f CWF e) := by
   simp only [rxW]; rw [ite_eq_right hb]
-theorem rxK1_ok (hb : ¬ 4294967296 ≤ r) : rxK1 s (some (r, m1)) = some (r, m1.set64 CTL 219 s) := by
+theorem rxK1_ok (hb : ¬ 4294967296 ≤ r) : rxK1 s (some (r, m1)) = rxK2 s r (m1.set64 CTL 219 s) := by
   simp only [rxK1]; rw [ite_eq_right hb]
+theorem rxK2_keep (hs : s ≠ 0) : rxK2 s r m = some (r, m) := by simp [rxK2, hs]
+theorem rxK2_clear (hs : s = 0) (hw : rdW (m.arr64 CTL) rfSch.cs + 2 ≠ 0) :
+    rxK2 s r m = some (r, mclearG rfSch m) := by simp [rxK2, hs, hw]
+theorem rxK2_wrap (hs : s = 0) (hw : rdW (m.arr64 CTL) rfSch.cs + 2 = 0) : rxK2 s r m = none := by
+  simp [rxK2, hs, hw]
 theorem rxGoW_view (hf : fu ≠ 0) : rxGoW (n + 1) m f fu h = rxG1 n m f fu h (eViewW m h) := by
   simp [rxGoW, hf]
 theorem rxG1_abort (hv : v = []) : rxG1 n m f fu h v = none := by simp [rxG1, hv]
@@ -302,7 +311,7 @@ theorem rxL2_some : rxL2 n f f1 z a2 (some (x2, m2)) = rxL3 a2 x2 (rxGoW n m2 f 
 theorem rxL3_some : rxL3 a2 x2 (some (c2, m3)) = rpMkW m3 7 a2 x2 c2 0 0 := rfl
 theorem rxP1_some : rxP1 x y (some (a2, m1)) = rpMkW m1 9 a2 0 0 y x := rfl
 end arms
-attribute [ind_grind] rxMapW_img rxMapW_km rxMapW_er rxMapW_cin rxMapW_cout rxImgW_root rxImgW_frame rxImgW_next rxFrameW_in rxFrameW_def frK0_some pfrK1_some pfrK2_some pfrK3_some frK4_ok frK5_some rxDsW_succ dsA_some dsB_some rxDsGoW_done rxDsGoW_step dgK_some rxW_ok rxK1_ok rxGoW_view rxG1_abort rxG1_leaf rxG1_fvar rxG1_node rxH_some rxG3_hit rxG3_miss rxG4_some rxG5_some rxNodeW_bin rxNodeW_let rxNodeW_proj rxB1_some rxB2_some rxL1_some rxL2_some rxL3_some rxP1_some
+attribute [ind_grind] rxMapW_img rxMapW_km rxMapW_er rxMapW_cin rxMapW_cout rxImgW_root rxImgW_frame rxImgW_next rxFrameW_in rxFrameW_def frK0_some pfrK1_some pfrK2_some pfrK3_some frK4_ok frK5_some rxDsW_succ dsA_some dsB_some rxDsGoW_done rxDsGoW_step dgK_some rxW_ok rxK1_ok rxK2_keep rxK2_clear rxK2_wrap rxGoW_view rxG1_abort rxG1_leaf rxG1_fvar rxG1_node rxH_some rxG3_hit rxG3_miss rxG4_some rxG5_some rxNodeW_bin rxNodeW_let rxNodeW_proj rxB1_some rxB2_some rxL1_some rxL2_some rxL3_some rxP1_some
 
 end L.Ind
 
@@ -329,6 +338,7 @@ structure RxLook (p : Prog) : Prop where
   rfp : p.lookup "rf_put" = some (memoPutG rfSch)
   rfe : p.lookup "rf_bank_enter" = some (bankEnterG 218)
   rfl' : p.lookup "rf_bank_leave" = some (bankLeaveG 218)
+  rfc : p.lookup "rf_clear" = some (memoClearG rfSch)
   fma : p.lookup "fv_map_at" = some fvMapAt
   rt : p.lookup "nest_hole_img_root" = some nestHoleImgRoot
   dsg : p.lookup "nest_hole_img_ds_go" = some nestHoleImgDsGo
@@ -377,13 +387,15 @@ theorem RfInv.frame {m m' : Mem} {M : Std.HashMap (EIdx × Word) EIdx} {G g : Wo
 theorem ceinternW_low {m m' : Mem} {f x r : Word} (h : ceinternW m f x = some (r, m')) : LowFr m m' := by
   exact ⟨_, _, (ceinternW_frame (hI := h)), by simp [tier1, CREC, CSLOT, CLP], by simp⟩
 
-/-- The map at the generations up to `G` is unchanged. -/
-def GKeep (M M' : Std.HashMap (EIdx × Word) EIdx) (G : Word) : Prop :=
-  ∀ (k : EIdx) (gen : Word), gen ≤ G → M'[(k, gen)]? = M[(k, gen)]?
+/-- The map at the generations up to `G` is unchanged, for a caller inside a bank (current
+generation `g ≠ 0`); the outermost caller (`g = 0`) gets the memo cleared (`replace_fvars`'s
+`rf_clear`, the twin's per-call map dropped). -/
+def GKeep (M M' : Std.HashMap (EIdx × Word) EIdx) (G g : Word) : Prop :=
+  g ≠ 0 → ∀ (k : EIdx) (gen : Word), gen ≤ G → M'[(k, gen)]? = M[(k, gen)]?
 
-theorem GKeep.trans {M₁ M₂ M₃ : Std.HashMap (EIdx × Word) EIdx} {G G' : Word} (h₁ : GKeep M₁ M₂ G)
-    (h₂ : GKeep M₂ M₃ G') (hG : G ≤ G') : GKeep M₁ M₃ G :=
-  fun k gen hg => (h₂ k gen (UInt64.le_trans hg hG)).trans (h₁ k gen hg)
+theorem GKeep.trans {M₁ M₂ M₃ : Std.HashMap (EIdx × Word) EIdx} {G G' g : Word} (h₁ : GKeep M₁ M₂ G g)
+    (h₂ : GKeep M₂ M₃ G' g) (hG : G ≤ G') : GKeep M₁ M₃ G g :=
+  fun hg0 k gen hg => (h₂ hg0 k gen (UInt64.le_trans hg hG)).trans (h₁ hg0 k gen hg)
 
 /-- An optional handle as `(ok, e)`. -/
 def OptE (r0 r1 : Word) : Option EIdx → Prop
@@ -423,7 +435,7 @@ variable (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word)
 /-- The common post: the stage relation, the pool grown, the memo's invariant at the same current
 generation, the map unchanged up to the old last generation. -/
 def RxPost (m m' : Mem) (a' : AState) (M : Std.HashMap (EIdx × Word) EIdx) (G g : Word) : Prop :=
-  ∃ M' G', StageR dn vis fe m' a' ∧ IWGrow m m' ∧ RfInv m' M' G' g ∧ GKeep M M' G ∧ G ≤ G'
+  ∃ M' G', StageR dn vis fe m' a' ∧ IWGrow m m' ∧ RfInv m' M' G' g ∧ GKeep M M' G g ∧ G ≤ G'
 
 /-- A frame's hole, read back (`nestHoleImg`'s hit arm). -/
 def frameTwin (c : NestCtx) (prog : List NestHole) (n1 : Nat) : AM (Option EIdx) := do
@@ -471,7 +483,7 @@ def DsGoOK (n : Nat) : Prop :=
     j.toNat ≤ l.toNat → decHL m q.toNat j.toNat = some acc → RfInv m M G g →
     ∃ ys a', ((xs.drop j.toNat).mapM fun x => ConRon.Arena.replaceFVars fm x).run a = .ok (ys, a') ∧
       decHL m' q.toNat l.toNat = some (acc ++ ys) ∧ StageR dn vis fe m' a' ∧ IWGrow m0 m' ∧
-      iwTop m ≤ iwTop m' ∧ ∃ M' G', RfInv m' M' G' g ∧ GKeep M M' G ∧ G ≤ G'
+      iwTop m ≤ iwTop m' ∧ ∃ M' G', RfInv m' M' G' g ∧ GKeep M M' G g ∧ G ≤ G'
 
 /-- The map unchanged up to `G` except at the current generation. -/
 def GKeepX (M M' : Std.HashMap (EIdx × Word) EIdx) (G g : Word) : Prop :=
@@ -480,7 +492,7 @@ def GKeepX (M M' : Std.HashMap (EIdx × Word) EIdx) (G g : Word) : Prop :=
 def GoOK (n : Nat) : Prop :=
   ∀ (m m' : Mem) (a : AState) (f fu h : Word) (fm : FvMap) (mp : Std.HashMap EIdx EIdx) (r : Word)
     (M : Std.HashMap (EIdx × Word) EIdx) (G g : Word), rxGoW n m f fu h = some (r, m') →
-    StageR dn vis fe m a → FMOk m f.toNat fm → H h → RfInv m M G g → Bank M g mp →
+    StageR dn vis fe m a → FMOk m f.toNat fm → H h → RfInv m M G g → Bank M g mp → g ≠ 0 →
     ∃ mp' a' M' G', (ConRon.Arena.replaceFVarsGo fm mp fu.toNat (decE h)).run a = .ok ((decE r, mp'), a') ∧
       StageR dn vis fe m' a' ∧ IWGrow m m' ∧ RfInv m' M' G' g ∧ Bank M' g mp' ∧ GKeepX M M' G g ∧ G ≤ G'
 
@@ -503,7 +515,7 @@ theorem RxPost.trans {dn : NIdx → Option ConLeche.Name} {fe : IFEnv} {vis : Wo
     {a1 a2 : AState} {M : Std.HashMap (EIdx × Word) EIdx} {G g : Word}
     (h₁ : RxPost dn fe vis m m1 a1 M G g)
     (h₂ : ∀ M1 G1, RfInv m1 M1 G1 g → G ≤ G1 → ∃ M2 G2, StageR dn vis fe m2 a2 ∧ IWGrow m1 m2 ∧
-      RfInv m2 M2 G2 g ∧ GKeep M1 M2 G1 ∧ G1 ≤ G2) :
+      RfInv m2 M2 G2 g ∧ GKeep M1 M2 G1 g ∧ G1 ≤ G2) :
     RxPost dn fe vis m m2 a2 M G g := by
   obtain ⟨M1, G1, -, hg1, hR1, hk1, hG1⟩ := h₁
   obtain ⟨M2, G2, hS2, hg2, hR2, hk2, hG2⟩ := h₂ M1 G1 hR1 hG1
