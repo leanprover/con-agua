@@ -17,8 +17,9 @@ is live. Generic in the schema, the key codec `K` (two words per key) and the va
 The lemmas: a probe hit is `mp`'s entry (`memoRG_hit`), a miss is its absence (`memoRG_miss`),
 `put` after a probe is `insert` (`memoRV_set`; a `put` that grows the table moves the live slots into
 a fresh region of twice the size and keeps the map, `memoRV_grow`), `clear` is `∅`
-(`memoRG_clear`), other writers leave it alone (`memoRG_frame`), and all-zero memory is the empty
-map (`memoRG_zero`). An instance supplies the codec and its one law `ek_dk`; nothing else.
+(`memoRG_clear`; `clear_fit` too, `memoRG_clearFit`: its new header names a region from slot `1`
+within the array), other writers leave it alone (`memoRG_frame`), and all-zero memory is the
+empty map (`memoRG_zero`). An instance supplies the codec and its one law `ek_dk`; nothing else.
 -/
 
 open ConRon.Arena
@@ -1328,8 +1329,8 @@ theorem rd_hdr (S : MemoSch) (m : Mem) (a b c d x : Word) (hx : x.toNat < 3) :
     · exact Or.inl (UInt64.toNat_inj.mp h)
     · exact Or.inr (Or.inl (UInt64.toNat_inj.mp h))
     · exact Or.inr (Or.inr (UInt64.toNat_inj.mp h))
-  rcases this with rfl | rfl | rfl <;> simp only [rdW_set64, size_set64] <;> split <;> simp_all
-  all_goals (split <;> first | rfl | (rename_i hh; exact rdW_oob _ _ (by simp at hh ⊢; omega)))
+  rcases this with rfl | rfl | rfl <;> simp only [rdW_set64, size_set64] <;> split <;>
+    grind [rdW_oob]
 
 /-- The cap of a re-made region is the array's slot count less the header's. -/
 theorem mfitL_toNat (S : MemoSch) (m : Mem) : (mfitL S m).toNat = slotsG S m - 1 := by

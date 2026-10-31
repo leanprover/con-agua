@@ -44,6 +44,8 @@ three entries of the program (`("bm_find", memoFindG bmSch)`, …) and no proof.
   value (and on a miss, the stamp and the key, growing the table past 3/4 load, con-ron's `HashMap2` load factor). Callers probe right
   before (`set` = `find; put`); a walk that recursed since its first probe probes again.
 * `X_clear()`: `CTL[cs] += 1`, `CTL[cs + 1] := 0`, aborting where the stamp would wrap.
+* `X_clear_fit()`: `X_clear()` that also sizes the next round's region, as the twin's
+  `HashMap2::clear_fit` (below).
 -/
 
 set_option experimental.vcgen true
