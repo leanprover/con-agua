@@ -95,6 +95,17 @@ theorem RefE.abort0 {c : Prop} [Decidable c] {e : Err} {rest : Except Err α} {T
   · rw [ite_eq_left hc]; exact RefE.of_cls0 he
   · rw [ite_eq_right hc]; exact h hc
 
+/-- **A guard of the model that fires** where the twin's own split already decided (a `match` on a
+callee's result): the abort's claim on the twin. -/
+theorem RefE.abortAt {c : Prop} [Decidable c] {e : Err} {rest : Except Err α} {T : AM β} (hc : c)
+    (h : G → ErrClaim T a e) : RefE G (if c then .error e else rest) T a R := by
+  rw [ite_eq_left hc]; exact h
+
+/-- **A guard of the model that passes.** -/
+theorem RefE.pass {c : Prop} [Decidable c] {e : Err} {rest : Except Err α} {T : AM β} (hc : ¬ c)
+    (h : RefE G rest T a R) : RefE G (if c then .error e else rest) T a R := by
+  rw [ite_eq_right hc]; exact h
+
 /-- **An abort guard against the twin's `unless b do fail ce`**: the model aborts with `e`
 exactly when `b` is false; the error classes agree. -/
 theorem RefE.guard {c : Prop} [Decidable c] {b : Bool} {e : Err} {ce : CheckError}
@@ -132,6 +143,17 @@ theorem RefE.guardIf {c : Prop} [Decidable c] {b : Bool} {e : Err} {ce : CheckEr
     exact fun _ => ErrClaim.fail _ _ hcls
   · have hb : b = true := by cases hb : b; exact absurd (hbc hb) hc; rfl
     rw [ite_eq_right hc, ite_eq_left hb]; exact h hc hb
+
+/-- **An abort guard against the twin's `if b then fail ce else rest`**. -/
+theorem RefE.guardThen {c : Prop} [Decidable c] {b : Bool} {e : Err} {ce : CheckError}
+    {rest : Except Err α} {T : AM β} (hcls : e.cls = twinCls ce) (hcb : c → b = true)
+    (hbc : b = true → c) (h : ¬ c → b = false → RefE G rest T a R) :
+    RefE G (if c then .error e else rest) (if b = true then fail ce else T) a R := by
+  by_cases hc : c
+  · rw [ite_eq_left hc, ite_eq_left (hcb hc)]
+    exact fun _ => ErrClaim.fail _ _ hcls
+  · have hb : b = false := by cases hb : b; rfl; exact absurd (hbc hb) hc
+    rw [ite_eq_right hc, ite_eq_right (by simp [hb])]; exact h hc hb
 
 /-- **The model aborts where the twin's guard fails** (`b` false, the model's error of the
 twin's class). -/

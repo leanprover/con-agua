@@ -278,28 +278,16 @@ theorem tmo_ref {p : Prog} (hP : TmoOProg p) (hIlpf : IlpfF p) (hcore : CoreStag
   rw [tmoE.arm1]
   unfold tmoOutT
   -- `pin_at`
-  rcases h1 : callW p n "pin_at" [47] m with _ | ⟨r1, m1⟩
-  · rw [liftE_none, tmoE.k_pin_at.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]
+  refine RefE.bindLift (fun _ => rfl) fun r1 m1 h1 => ?_
   obtain ⟨s1, rfl, -, hW1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩) (L.Arena.pinAt_specW p hP.pin n _ 47) h1
-  obtain ⟨hm1, hr1, hqH, hrun1⟩ := L.Arena.pinAtW_ok (a := a) hW1 hS.check.pins
-  have hm1' : s1.mem = m := hm1
-  simp only at hr1 hqH hrun1
-  rw [hm1']
-  subst hr1
-  refine RefE.bind_right hrun1 ?_
-  by_cases hIq : I = pinW m (1 + (47 : Word).toNat)
-  · rw [tmoE.k_pin_at.abort1 _ _ _ _ _ _ _ _ _ _ _ _ _ _ hIq]
-    simp only [hIq, beq_self_eq_true, ite_true]
-    exact fun _ => ErrClaim.fail _ _ (by decide)
-  rw [tmoE.k_pin_at.arm1 _ _ _ _ _ _ _ _ _ _ _ _ _ _ hIq]
-  have hne : ((decI I : NIdx) == decI (pinW m (1 + (47 : Word).toNat))) = false := by
-    simp only [beq_eq_false_iff_ne, ne_eq]; rw [decI_inj_iff hI hqH]; exact hIq
-  simp only [hne, Bool.false_eq_true, ite_false]
+  obtain ⟨hm1, rfl, hqH, hrun1⟩ := L.Arena.pinAtW_ok (a := a) hW1 hS.check.pins
+  refine ⟨_, _, hrun1, ?_⟩
+  dsimp only [tmoE.k_pin_at]
+  rw [show s1.mem = m from hm1]
+  refine RefE.guardThen (by decide) (fun h => by simp [h]) (fun h => (decI_inj_iff hI hqH).mp (beq_iff_eq.mp h))
+    fun hIq _ => ?_
   -- `target_ctors_of`
-  rcases h2 : callW p n "target_ctors_of" [vis, I] m with _ | ⟨r2, m2⟩
-  · rw [liftE_none, tmoE.k_target_ctors_of.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]
+  refine RefE.bindLift (fun _ => rfl) fun r2 m2 h2 => ?_
   rcases n with _ | k
   · rw [callW_zero] at h2; cases h2
   obtain ⟨s2, rfl, -, hW2⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩) (tco_spec p hP.nt hP.tco k _ vis I) h2
@@ -311,37 +299,26 @@ theorem tmo_ref {p : Prog} (hP : TmoOProg p) (hIlpf : IlpfF p) (hcore : CoreStag
   rw [show ntWf (k' + 1) _ vis I = ntW k' _ vis I from rfl, hnt, tcoPK_some] at hW2
   obtain ⟨rfl, hm'⟩ := Prod.mk.inj (Option.some.inj hW2)
   obtain ⟨x, a', hrun, hS2, hg2, hout⟩ := ntW_ok dn fe vis I hI k' m m' a r hnt hS
-  have hf : MFr [] [] m m' := ntWf_mfr (k := k' + 1) (show ntWf (k' + 1) m vis I = some (r, m') from hnt)
-  have hA2 : AbsOK m' := ntWf_afr (k := k' + 1) (show ntWf (k' + 1) m vis I = some (r, m') from hnt) hA
+  have hnt' : ntWf (k' + 1) m vis I = some (r, m') := hnt
   obtain ⟨p2, -⟩ := ConRon.Bridge.Inductives.targetCtorsOf_spec (env := env) fe (decI I) IP a a' x
     hC.check.state ⟨hC.check.ienv.toS, hIP⟩ hrun
-  have hC2 := hC.of_pstep hS2 hA2 p2
-  have hP2 : PosMR m' := hPm.fr hf
+  have k2 := TmAt.pstep hC hS2 (ntWf_afr hnt' hA) hg2 (hPm.fr (ntWf_mfr hnt')) p2
+  refine ⟨_, _, hrun, ?_⟩
   rw [← hm']
-  refine RefE.bind_right hrun ?_
+  dsimp only [tmoE.k_target_ctors_of, List.headD_cons, List.tail_cons]
   rcases x with _ | ⟨nPc, cs⟩
-  · have hz : r.headD 0 = 0 := by simpa [NcOut] using hout
-    rw [tmoE.k_target_ctors_of.abort1 _ _ _ _ _ _ _ _ _ _ _ _ [r.headD 0, r.tail.headD 0, r.tail.tail.headD 0, r.tail.tail.tail.headD 0] _ (by simpa using hz)]
-    exact fun _ => ErrClaim.fail _ _ (by decide)
+  · exact RefE.abortAt (by simpa [NcOut] using hout) fun _ => ErrClaim.fail _ _ (by decide)
   obtain ⟨h1, hnP, hcl, hcb, hcsat⟩ := hout
-  have hne0 : r.headD 0 ≠ 0 := by rw [h1]; decide
+  refine RefE.pass (by rw [h1]; decide) ?_
   have hagT : decHL (truncM m) ao.toNat al.toNat = some args := hag
   have hal' := decHL_length _ hagT
-  by_cases hal : al < r.tail.headD 0
-  · rw [tmoE.k_target_ctors_of.abort2 _ _ _ _ _ _ _ _ _ _ _ _ [r.headD 0, r.tail.headD 0, r.tail.tail.headD 0, r.tail.tail.tail.headD 0] _
-      (by simpa using hne0) (by simpa using hal)]
-    have hlt : al.toNat < nPc := by have := UInt64.lt_iff_toNat_lt.mp hal; omega
-    refine RefE.ite_pos ?_ (fun _ => ErrClaim.fail _ _ (by decide))
-    simp only [bne_iff_ne, ne_eq, List.length_take]; omega
-  rw [tmoE.k_target_ctors_of.arm1 _ _ _ _ _ _ _ _ _ _ _ _ [r.headD 0, r.tail.headD 0, r.tail.tail.headD 0, r.tail.tail.tail.headD 0] _
-    (by simpa using hne0) (by simpa using hal)]
-  simp only [List.tail_cons, List.headD_cons]
+  refine RefE.guardThen (by decide) (fun hal => by
+      have := UInt64.lt_iff_toNat_lt.mp hal; simp only [bne_iff_ne, ne_eq, List.length_take]; omega)
+    (fun h => by simp only [bne_iff_ne, ne_eq, List.length_take] at h; exact UInt64.lt_iff_toNat_lt.mpr (by omega))
+    fun hal _ => ?_
   have hnal : nPc ≤ al.toNat := by
     have : ¬ al.toNat < (r.tail.headD 0).toNat := fun h => hal (UInt64.lt_iff_toNat_lt.mpr h)
     omega
-  have hlen : (args.take nPc).length = nPc := by simp; omega
-  refine RefE.ite_neg (by simp only [hlen, bne_self_eq_false, Bool.false_eq_true, not_false_eq_true]) ?_
-  have hT2 : iwTop m' < 2 ^ 64 := Nat.lt_of_le_of_lt hS2.iw.iw hS2.iw.iwSize
   have htake : DecB (fun m => decHL m ao.toNat (r.tail.headD 0).toNat) m (args.take nPc) := by
     show decHL (truncM m) _ _ = _
     rw [hnP, decHL_take hagT _ hnal]
@@ -349,80 +326,62 @@ theorem tmo_ref {p : Prog} (hP : TmoOProg p) (hIlpf : IlpfF p) (hcore : CoreStag
     htake.stab (OMono.decHL _ _) m' hg2
   obtain ⟨hnpw, hnpb, -, -⟩ := partsShapeWords hg2 hq hq9
   -- the closedness test
-  rcases h3 : callW p (k' + 1 + 1) "target_major_of_outside_closed"
-      [ao, r.tail.headD 0, rdW (m'.arr64 IW) (pp + 4)] m' with _ | ⟨r3, m3⟩
-  · rw [liftE_none, tmoE.k_target_major_of_outside_closed.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]
+  refine RefE.bindLift (fun _ => rfl) fun r3 m3 h3 => ?_
   obtain ⟨s3, rfl, -, hW3⟩ := triple_of_callW (s₀ := ⟨m', Locals.init []⟩)
     (tmoc_spec p hP.bvb hP.hf hP.tmoc (k' + 1 + 1) _ ao (r.tail.headD 0) (rdW (m'.arr64 IW) (pp + 4))) h3
   obtain ⟨b, a3, hrun3, hS3, hg3, hb3, -⟩ := ckc2W_ok dn fe vis (k' + 1 + 1) m' s3.mem a' _ ao _ _ r3 hW3 hS2
     htake2 (by have := hg2.iw; omega) (by have := hg2.iw; omega)
   rw [hnpw, UInt64.toNat_ofNat_of_lt' hnpb] at hrun3
-  have hA3 : AbsOK s3.mem := ckc2W_afr _ _ _ _ _ _ _ hW3 hA2
   obtain ⟨p3, -⟩ := ConRon.Bridge.Inductives.allM_E_pstep (fun _ => True) (fun _ h => h)
     (fun e eP s₀ s' b hok _ he hrun => ConRon.Bridge.Inductives.RC.closed1_run hok he hrun)
-    _ _ a' a3 b hC2.check.state trivial
-    (ConRon.Bridge.Inductives.denoteEList_take (ConRon.Bridge.denoteEList_ext p2.ext _ _ hargsP) nPc) hrun3
-  refine RefE.bind_right hrun3 ?_
-  cases b
-  · have hz : r3.headD 0 = 0 := by simpa using hb3
-    rw [tmoE.k_target_major_of_outside_closed.abort1 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hz]
-    exact RefE.ite_pos (by simp) (fun _ => ErrClaim.fail _ _ (by decide))
-  have h0 : r3.headD 0 ≠ 0 := by simpa using hb3
-  rw [tmoE.k_target_major_of_outside_closed.arm1 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ h0]
-  refine RefE.ite_neg (by simp) ?_
-  have hP3 : PosMR s3.mem := hP2.fr (ckc2W_mfr _ _ _ _ _ _ _ hW3)
-  have hC3 := hC2.of_pstep hS3 hA3 p3
-  have hg03 := hg2.trans hg3
+    _ _ a' a3 b k2.stage.check.state trivial
+    (ConRon.Bridge.Inductives.denoteEList_take (ConRon.Bridge.denoteEList_ext k2.ext _ _ hargsP) nPc) hrun3
+  have k3 := TmAt.pstep k2.stage hS3 (ckc2W_afr _ _ _ _ _ _ _ hW3 k2.abs) hg3
+    (k2.pos.fr (ckc2W_mfr _ _ _ _ _ _ _ hW3)) p3
+  refine ⟨_, _, hrun3, ?_⟩
+  dsimp only [tmoE.k_target_major_of_outside_closed]
+  refine RefE.guardThen (by decide) (fun hz => by cases b <;> simp_all) (fun hb => by cases b <;> simp_all)
+    fun _ _ => ?_
   -- the occurrence test
   rw [← hnames]
-  rcases h4 : callW p (k' + 1 + 1) "target_major_of_outside_occ" [mno, mnl, ao, r.tail.headD 0] s3.mem
-    with _ | ⟨r4, m4⟩
-  · rw [liftE_none, tmoE.k_target_major_of_outside_occ.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]
+  have k23 := k2.trans k3
+  refine RefE.bindLift (fun _ => rfl) fun r4 m4 h4 => ?_
   obtain ⟨s4, rfl, -, hW4⟩ := triple_of_callW (s₀ := ⟨s3.mem, Locals.init []⟩)
     (oc_spec p hP.occ (k' + 1 + 1) _ mno mnl ao (r.tail.headD 0)) h4
   have hT3 : iwTop s3.mem < 2 ^ 64 := Nat.lt_of_le_of_lt hS3.iw.iw hS3.iw.iwSize
   obtain ⟨b, a4, hrun4, hb4, hS4, hg4, hP4⟩ := ocW_sim hP.no mno mnl ws hwlt (k' + 1 + 1) s3.mem a3 ao _
-    (args.take nPc) hS3 (slR_grow hg03 hT hws hwsb)
-    (fun i hi => Nat.lt_of_lt_of_le (hwsb i hi) hg03.iw) (htake.stab (OMono.decHL _ _) s3.mem hg03)
-    (by have := hg03.iw; omega) hP3 r4 s4.mem hW4
-  have hA4 : AbsOK s4.mem := ocW_afr hP.no _ _ _ _ _ _ _ _ hW4 hA3
-  have hx3 := (p2.trans p3).ext
+    (args.take nPc) hS3 (slR_grow k23.grow hT hws hwsb)
+    (fun i hi => k23.top (hwsb i hi)) (htake.stab (OMono.decHL _ _) s3.mem k23.grow)
+    (by have := k23.grow.iw; omega) k3.pos r4 s4.mem hW4
   have hnm : Frontend.denoteNList a3.store.ns (ws.map (fun w => (decI w : NIdx))) = some pP.memberNames := by
-    rw [hnames]; exact ConRon.Bridge.denoteNListE_ext hx3 _ _
+    rw [hnames]; exact ConRon.Bridge.denoteNListE_ext k23.ext _ _
       (ConRon.Bridge.Inductives.BlockShape.memberNames_spec hshP)
   obtain ⟨p4, -⟩ := ConRon.Bridge.Inductives.anyM_E_pstep
     (fun st => Frontend.denoteNList st.ns (ws.map (fun w => (decI w : NIdx))) = some pP.memberNames)
     (fun hx h => ConRon.Bridge.denoteNListE_ext hx _ _ h)
     (fun e eP s₀ s' b hok hq he hrun => ConRon.Bridge.Inductives.nestOcc_spec _ pP.memberNames 0 0 e eP
       s₀ s' b hok ⟨hq, he⟩ hrun)
-    _ _ a3 a4 b hC3.check.state hnm
-    (ConRon.Bridge.Inductives.denoteEList_take (ConRon.Bridge.denoteEList_ext hx3 _ _ hargsP) nPc) hrun4
-  refine RefE.bind_right hrun4 ?_
-  cases b
-  · have hz : r4.headD 0 = 0 := by simpa using hb4
-    rw [tmoE.k_target_major_of_outside_occ.abort1 _ _ _ _ _ _ _ _ _ _ _ _ _ _ hz]
-    exact RefE.ite_neg (by simp) (RefE.bind_left fun _ => ErrClaim.fail _ _ (by decide))
-  have h0 : r4.headD 0 ≠ 0 := by simpa using hb4
-  rw [tmoE.k_target_major_of_outside_occ.arm1 _ _ _ _ _ _ _ _ _ _ _ _ _ _ h0]
-  refine RefE.ite_pos (by simp) ?_
+    _ _ a3 a4 b k3.stage.check.state hnm
+    (ConRon.Bridge.Inductives.denoteEList_take (ConRon.Bridge.denoteEList_ext k23.ext _ _ hargsP) nPc) hrun4
+  have k4 := TmAt.pstep k3.stage hS4 (ocW_afr hP.no _ _ _ _ _ _ _ _ hW4 k3.abs) hg4 hP4 p4
+  refine ⟨_, _, hrun4, ?_⟩
+  dsimp only [tmoE.k_target_major_of_outside_occ]
+  refine RefE.guard (by decide) (fun hz => by cases b <;> simp_all) (fun hb => by cases b <;> simp_all)
+    fun _ _ => ?_
   -- the tail
-  have hC4 := hC3.of_pstep hS4 hA4 p4
-  have hg04 := hg03.trans hg4
-  have hx4 := (p2.trans (p3.trans p4)).ext
+  have k24 := k23.trans k4
   obtain ⟨-, -, -, -, hsP, -, -⟩ := ConRon.Bridge.Inductives.dShape_inv hshP
   have hcsd := csAt_decB hcsat hcb
   rw [← hcl] at hcsd
   have := tmt_ref hP.tmt hIlpf hcore hLC (k' + 1 + 1) (bs := bs) (pfvs := pfvs) (ds := args.take nPc)
-    (ctors := cs) hC4 hA4 (hq.grow (decBS_mono _) hg04) (by have := hg04.iw; omega) hI hus
-    (htake.grow (OMono.decHL _ _) hg04) (by have := hg04.iw; omega)
-    (hcsd.grow (OMono.decPL decCN_mono _ _) (hg3.trans hg4)) (hpf.grow (OMono.decHL _ _) hg04) hP4
-    (ConRon.Bridge.denoteN_ext hIP hx4) (ConRon.Bridge.denoteLs_ext husP hx4)
-    (ConRon.Bridge.Inductives.denoteEList_take (ConRon.Bridge.denoteEList_ext hx4 _ _ hargsP) nPc)
-    (ConRon.Bridge.denoteL_ext hsP hx4)
+    (ctors := cs) k4.stage k4.abs (hq.grow (decBS_mono _) k24.grow) (k24.top hq9) hI hus
+    (htake.grow (OMono.decHL _ _) k24.grow) (by have := k24.grow.iw; omega)
+    (hcsd.grow (OMono.decPL decCN_mono _ _) (k3.grow.trans k4.grow)) (hpf.grow (OMono.decHL _ _) k24.grow) k4.pos
+    (ConRon.Bridge.denoteN_ext hIP k24.ext) (ConRon.Bridge.denoteLs_ext husP k24.ext)
+    (ConRon.Bridge.Inductives.denoteEList_take (ConRon.Bridge.denoteEList_ext k24.ext _ _ hargsP) nPc)
+    (ConRon.Bridge.denoteL_ext hsP k24.ext)
   rw [hnP] at this
-  exact this.mono fun _ _ _ h => ⟨h.dec, h.stage, hg04.trans h.grow, h.pos, h.abs⟩
+  exact this.mono fun _ _ _ h => ⟨h.dec, h.stage, k24.grow.trans h.grow, h.pos, h.abs⟩
 
 /-- **`target_major_of_const` refines `targetMajorOf` after the head's view, both outcomes**: the
 member branch is `tmm_ref`, the outside branch `tmo_ref`; `block_shape_member_names` and
@@ -454,12 +413,11 @@ theorem tmc_ref {p : Prog} (hP : TmfProg p) (hIlpf : IlpfF p) (hcore : CoreStage
   obtain ⟨hqd, hq9, hptr⟩ := partsShapeFacts hq hsrc
   rw [tmcE.arm1]
   -- `block_shape_member_names`
-  rcases h4 : callW p n "block_shape_member_names" [pp] m with _ | ⟨r4, m4⟩
-  · rw [liftE_none, tmcE.k_block_shape_member_names.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some, tmcE.k_block_shape_member_names.arm1]
-  obtain ⟨s4, rfl, hr4, hdn, hg4, hf4, ht4⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+  refine RefE.onlySim (fun _ => rfl) (fun _ _ h => h) fun r4 m4 h4 => ?_
+  obtain ⟨s4, rfl, rfl, hdn, hg4, hf4, ht4⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (blockShapeMemberNames_refines p hP.tmm.alloc hP.mnc hP.bsmn n _ pp bs hqd (by omega) hS.iw.iwSize hS.iw.ctl
       hsrc (fun o l j v h1 h2 h3 h4 => Nat.lt_of_succ_lt (hptr o l j v h1 h2 h3 h4))) h4
+  dsimp only [tmcE.k_block_shape_member_names]
   obtain ⟨s4', hs4', -, hW4⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (blockShapeMemberNames_spec p hP.tmm.alloc hP.mnc hP.bsmn n _ pp) h4
   have hroom := memberNamesW_room hW4 hS.iw.iwSize
@@ -468,27 +426,20 @@ theorem tmc_ref {p : Prog} (hP : TmfProg p) (hIlpf : IlpfF p) (hcore : CoreStage
     obtain ⟨o, l, -, hl', hg'⟩ := decAt_some (decBS_some hqd).1
     have := iwN_rdW hl' (by omega); rw [BlockShape.k, decPL_length _ hg']; exact this.2
   rw [UInt64.toNat_ofNat_of_lt' hkb] at hroom
-  simp only at hr4 hdn hg4 hf4 ht4
   have hS4 : StageR dn vis fe s4.mem a := stage_frame_iw hS hf4 (by
     rw [← ht4]; simp only [iwTop] at hroom ⊢; omega)
-  have hT4 : iwTop s4.mem < 2 ^ 64 := Nat.lt_of_le_of_lt hS4.iw.iw hS4.iw.iwSize
-  have hP4 : PosMR s4.mem := hPm.fr (MFr.of_iw hf4)
-  have hA4 : AbsOK s4.mem := memberNamesW_afr (hs4' ▸ hW4) hA
-  have hC4 : StageC dn vis fe env s4.mem a := hC.of_pstep hS4 hA4 (PStep.refl hC.check.state)
-  subst hr4
+  have k4 := TmAt.pstep hC hS4 (memberNamesW_afr (hs4' ▸ hW4) hA) hg4 (hPm.fr (MFr.of_iw hf4))
+    (PStep.refl hC.check.state)
   simp only [List.headD_cons, List.tail_cons]
-  obtain ⟨ws, hsl, hws, hwlt⟩ := slR_of_decHL s4.mem _ _ _ hdn (by omega)
+  obtain ⟨ws, hsl, hws, hwlt⟩ := slR_of_decHL s4.mem _ _ _ hdn (by have := hS4.iw.iw; have := hS4.iw.iwSize; omega)
   rw [UInt64.ofNat_toNat] at hsl
   -- `sl_find`
-  rcases h5 : callW p n "sl_find" [rdW (m.arr64 CTL) 200, UInt64.ofNat bs.k, x] s4.mem with _ | ⟨r5, m5⟩
-  · rw [liftE_none, tmcE.k_sl_find.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]
+  refine RefE.onlySim (fun _ => rfl) (fun _ _ h => h) fun r5 m5 h5 => ?_
   obtain ⟨s5, rfl, -, hm5, hW5⟩ := triple_of_callW (s₀ := ⟨s4.mem, Locals.init []⟩)
     (slFind_spec p hP.find n _ _ _ x) h5
-  simp only at hm5
+  rw [show s5.mem = s4.mem from hm5]
   have hlen : ws.length < 2 ^ 64 := by rw [slR_length hsl]; exact UInt64.toNat_lt _
   have hr5 := findW_ok n s4.mem _ _ x r5 ws hsl hW5 hlen
-  rw [hm5]
   rw [hws, findIdx_map_decI x hx ws hwlt]
   cases hfi : ws.findIdx? (· == x) with
   | some i =>
@@ -500,18 +451,18 @@ theorem tmc_ref {p : Prog} (hP : TmfProg p) (hIlpf : IlpfF p) (hcore : CoreStage
     have hie : (UInt64.ofNat i : Word).toNat = i := UInt64.toNat_ofNat_of_lt' (show i < 2 ^ 64 by omega)
     have := tmm_ref (p := p) (dn := dn) (vis := vis) (fe := fe) n (t := UInt64.ofNat i) (bs := bs) (css := css) hS4
       (hq.grow (decBS_mono _) hg4) (partsHsrc_grow hg4 hq9 hsrc) (hcss.grow decCNS_mono hg4)
-      (hpf.grow (OMono.decHL _ _) hg4) (hfv.grow (OMono.decHL _ _) hg4) (Nat.le_trans hfvb hg4.iw)
-      (hag.grow (OMono.decHL _ _) hg4) (Nat.le_trans hagb hg4.iw) hx hy hP4
+      (hpf.grow (OMono.decHL _ _) hg4) (hfv.grow (OMono.decHL _ _) hg4) (k4.top hfvb)
+      (hag.grow (OMono.decHL _ _) hg4) (k4.top hagb) hx hy k4.pos
     rw [hie] at this
-    exact this.mono fun _ _ _ h => ⟨h.dec, h.stage, hg4.trans h.grow, h.pos, h.afr hA4⟩
+    exact this.mono fun _ _ _ h => ⟨h.dec, h.stage, hg4.trans h.grow, h.pos, h.afr k4.abs⟩
   | none =>
     rw [hfi] at hr5
     subst hr5
     rw [tmcE.k_sl_find.arm2 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ (by simp)]
     exact (tmo_ref hP.tmo hIlpf hcore hLC n (m := s4.mem) hS4 (hq.grow (decBS_mono _) hg4)
-      (by have := hg4.iw; omega) hsl hwlt (fun j hj => by rw [UInt64.toNat_ofNat_of_lt' hkb] at hj; omega)
-      hws.symm (hag.grow (OMono.decHL _ _) hg4) (Nat.le_trans hagb hg4.iw) (hpf.grow (OMono.decHL _ _) hg4)
-      hx hy hP4 hC4 hA4 hshP hIP husP hargsP).mono
+      (k4.top hq9) hsl hwlt (fun j hj => by rw [UInt64.toNat_ofNat_of_lt' hkb] at hj; omega)
+      hws.symm (hag.grow (OMono.decHL _ _) hg4) (k4.top hagb) (hpf.grow (OMono.decHL _ _) hg4)
+      hx hy k4.pos k4.stage k4.abs hshP hIP husP hargsP).mono
       fun _ _ _ h => ⟨h.dec, h.stage, hg4.trans h.grow, h.pos, h.abs⟩
 
 /-- **`target_major_of` refines `targetMajorOf`, both outcomes**: the reject is the twin's "not an
