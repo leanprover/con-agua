@@ -55,7 +55,7 @@ theorem eViewW_lit (m : Mem) (h : Word) (hne : eViewW m h ≠ []) (h8 : (eViewW 
   simp only [g3, ite_false] at hne h8
   by_cases g4 : tagW h = 4
   · simp only [g4, ite_true] at hne h8
-    by_cases cc : tcnt m APP (tierW h) ≤ idxW h
+    by_cases cc : tcnt m APP (tierW h) ≤ idxA h
     · simp [cc] at hne
     · simp [cc] at h8
   simp only [g4, ite_false] at hne h8

@@ -219,7 +219,7 @@ theorem app_idx_lt (hc : idxA h < tcnt m APP (tierW h)) : (idxA h).toNat < 2 ^ 3
   simp only [cntC, tcnt, appCS, capS, ↓reduceIte] at e c this ⊢
   omega
 
-theorem view_app (hv : viewOK m h APP) (hg : tagW h = 4) :
+theorem view_app (hv : viewOKA m h) (hg : tagW h = 4) :
     a.store.view (decE h) = some (.app (decE (tfld m APP (tierW h) (idxA h) 0))
       (decE (tfld m APP (tierW h) (idxA h) 1))) ∧
     (tfld m APP (tierW h) (idxA h) 0).toNat < 2 ^ 32 ∧
@@ -305,7 +305,7 @@ theorem viewBVar_ok (hv : viewOK m h BVAR) :
   simp only [ETables.getBVar, Tbl.node?, decE_idx h (narrow_of_cnt m h hR.bvar rfl hv.2)]
   rw [hk]; simp only [BRecRel] at hkr; simp [hkr]
 
-theorem viewApp_ok (hv : viewOK m h APP) :
+theorem viewApp_ok (hv : viewOKA m h) :
     a.store.viewApp (decE h) = some (decE (tfld m APP (tierW h) (idxA h) 0),
       decE (tfld m APP (tierW h) (idxA h) 1)) := by
   obtain ⟨k, hk, hf, ha⟩ := node_ofI m a h appCS ARecRel (·.apps) _ hR.app (idxA h) hv.2

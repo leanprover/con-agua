@@ -74,8 +74,8 @@ def appFillL : FunDecl := lfn (e, o, n) locals (t, x) {
 }
 
 /-- The function child and the argument child of an `.app` handle word. -/
-def fnW (m : Mem) (e : Word) : Word := tfld m APP (tierW e) (idxW e) 0
-def argW (m : Mem) (e : Word) : Word := tfld m APP (tierW e) (idxW e) 1
+def fnW (m : Mem) (e : Word) : Word := tfld m APP (tierW e) (idxA e) 0
+def argW (m : Mem) (e : Word) : Word := tfld m APP (tierW e) (idxA e) 1
 
 /-- The fills' stack writes do not touch the `app` records (either tier). -/
 theorem tfld_set64_SPN_app (m : Mem) (k v t i f : Word) :
@@ -380,7 +380,7 @@ function. -/
 theorem gafLoopW_app {m : Mem} {e f e' f' : Word} (hL : gafLoopW m e f = some (e', f'))
     (hc : tagW e = 4) :
     f.toNat ≠ 0 ∧ ¬ (tierW e ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0) ∧
-      idxW e < tcnt m APP (tierW e) ∧ gafLoopW m (fnW m e) (f - 1) = some (e', f') ∧
+      idxA e < tcnt m APP (tierW e) ∧ gafLoopW m (fnW m e) (f - 1) = some (e', f') ∧
       (f - 1).toNat = f.toNat - 1 := by
   have hf0 : f ≠ 0 := by
     intro hf0; rw [hf0, gafLoopW] at hL; simp [hc] at hL
@@ -390,10 +390,10 @@ theorem gafLoopW_app {m : Mem} {e f e' f' : Word} (hL : gafLoopW m e f = some (e
     by_cases hv : (tierW e ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0)
     · simp [hv] at hL
     · exact hv
-  have hv2 : ¬ tcnt m APP (tierW e) ≤ idxW e := by
+  have hv2 : ¬ tcnt m APP (tierW e) ≤ idxA e := by
     rw [gafLoopW] at hL
     simp only [hc, ↓reduceIte, hf0, hv1] at hL
-    by_cases hv : tcnt m APP (tierW e) ≤ idxW e
+    by_cases hv : tcnt m APP (tierW e) ≤ idxA e
     · simp [hv] at hL
     · exact hv
   have hf0' : f.toNat ≠ 0 := fun h => hf0 (UInt64.toNat_inj.mp (by simpa using h))

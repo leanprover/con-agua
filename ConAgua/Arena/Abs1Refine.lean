@@ -280,7 +280,7 @@ theorem frW_frame (n : Nat) :
         · rw [frNodeW.arm2 n m h c hs g0 g1 hc h1] at hb
           obtain ⟨-, rfl⟩ := Prod.mk.inj (Option.some.inj hb); exact MemFrame.refl _ _ _
       by_cases g4 : tagW h = 4
-      · by_cases hc : tcnt m APP (tierW h) ≤ idxW h
+      · by_cases hc : tcnt m APP (tierW h) ≤ idxA h
         · rw [frNodeW.abort5 n m h c hs g0 g1 g4 hc] at hb; cases hb
         · rw [frNodeW.arm3 n m h c hs g0 g1 g4 hc] at hb
           exact FrOK.app (ih.1 _ _ _) (fun m₁ => ih.1 m₁ _ _) _ _ hb
@@ -653,7 +653,7 @@ theorem aappArm_ok (hg : tagW h = 4) :
     (absAppW.abort1 n m h k d fu) (fun hr hh0 hb => ?_) hb
   by_cases hs : tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0
   · rw [absAppW.abort2 n m h k d fu hr hh0 hs] at hb; cases hb
-  have hv : viewOK m h APP := ⟨hs, UInt64.not_le.mp fun hc => by
+  have hv : viewOKA m h := ⟨hs, UInt64.not_le.mp fun hc => by
     rw [absAppW.abort3 n m h k d fu hr hh0 hs hc] at hb; cases hb⟩
   obtain ⟨-, hfw, haw⟩ := view_app m a hA.1.1 h hh hv hg
   rw [absAppW.arm2 n m h k d fu hr hh0 hs (UInt64.not_le.mpr hv.2)] at hb
@@ -665,14 +665,14 @@ theorem aappArm_ok (hg : tagW h = 4) :
     (fun y m₂ => absAppW.k_abs_go_2.set ..)
     (Sim.ofD fun y m₂ e => ih m₁ m₂ a₁ _ k d fu y hA₁ haw e) fun y m₂ a₂ hA₂ => ?_
   refine Sim.ofD fun r m' hb => atail_ok (internRebuiltApp (decE h)
-      (decE x == decE (tfld m APP (tierW h) (idxW h) 0) && decE y == decE (tfld m APP (tierW h) (idxW h) 1)) (decE x) (decE y))
+      (decE x == decE (tfld m APP (tierW h) (idxA h) 0) && decE y == decE (tfld m APP (tierW h) (idxA h) 1)) (decE x) (decE y))
       _ a₂ h k r m' hh (fun r₃ m₃ hr₃ => by
     unfold internRebuiltApp
     refine rb_ok _ _ _ _ m₂ a₂ hA₂ h r₃ m₃ (fun ⟨e1, e2⟩ => by simp [e1, e2]) (fun hn hI => ?_) hr₃
     obtain ⟨hx, hy⟩ := mkAppW_lt m₂ x y r₃ m₃ hI
     refine ⟨?_, mkApp_okA m₂ a₂ hA₂ x y r₃ m₃ hI⟩
-    rcases Decidable.em (decE x = decE (tfld m APP (tierW h) (idxW h) 0)) with e1 | e1
-    · have e2 : decE y ≠ decE (tfld m APP (tierW h) (idxW h) 1) :=
+    rcases Decidable.em (decE x = decE (tfld m APP (tierW h) (idxA h) 0)) with e1 | e1
+    · have e2 : decE y ≠ decE (tfld m APP (tierW h) (idxA h) 1) :=
         fun e2 => hn ⟨decI_inj hx hfw e1, decI_inj hy haw e2⟩
       simp [e1, e2]
     · simp [e1]) hb

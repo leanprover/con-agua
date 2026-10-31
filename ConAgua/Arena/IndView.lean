@@ -178,7 +178,7 @@ theorem eViewW_ok (m : Mem) (a : AState) (hR : ArenaR m a) (h : Word) (hne : eVi
   simp only [g3, ite_false] at hne ⊢
   by_cases g4 : tagW h = 4
   · simp only [g4, ite_true] at hne ⊢
-    by_cases c : tcnt m APP (tierW h) ≤ idxW h
+    by_cases c : tcnt m APP (tierW h) ≤ idxA h
     · simp [c] at hne
     simp only [c, ite_false]
     obtain ⟨e, hl, hl2⟩ := view_app m a hR h hh (vok APP c) g4

@@ -221,9 +221,9 @@ theorem bbNodeW_fvar (hg : tagW h = 1) (hv : viewOK m h FVAR) : bbNodeW (n + 1) 
 theorem bbNodeW_lit (hg : tagW h = 8) (hv : viewOK m h LIT) : bbNodeW (n + 1) m h c = some (0, m) := by
   rw [bbNodeW]; simp [hv.1, hg, UInt64.not_le.mpr hv.2]
 
-theorem bbNodeW_app (hv : viewOK m h APP) (hg : tagW h = 4) :
-    bbNodeW (n + 1) m h c = bbAppK₁ n c (tfld m APP (tierW h) (idxW h) 1)
-      (bbW n m (tfld m APP (tierW h) (idxW h) 0) c) := by
+theorem bbNodeW_app (hv : viewOKA m h) (hg : tagW h = 4) :
+    bbNodeW (n + 1) m h c = bbAppK₁ n c (tfld m APP (tierW h) (idxA h) 1)
+      (bbW n m (tfld m APP (tierW h) (idxA h) 0) c) := by
   rw [bbNodeW]; simp only [hv.1, hg, ↓reduceIte, UInt64.not_le.mpr hv.2, bbAppK₁, bbAppK₁.bbAppK₂]
   simp
 
@@ -383,7 +383,7 @@ theorem bbNode_step (n : Nat) (ih : BbGoSpec p n) : BbNodeSpec p (n + 1) := by
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt,
       tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE, ih] <;>
-    finish [viewOK, tierW, idxW, maxW, predW]
+    finish [viewOK, viewOKA, tierW, idxW, maxW, predW]
 
 include hpf hps hp hpn in
 /-- **`bb_go` and `bb_node` are their models**, at every fuel: by induction on the fuel, the

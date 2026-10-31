@@ -237,11 +237,11 @@ theorem gafLoopW_numArgs (m : Mem) (a : AState) (hR : ArenaR m a) :
         intro hf0; rw [hf0, gafLoopW] at hL; simp [hc] at hL
       have hv1 : ¬ (tierW e ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0) := by
         intro hv; rw [gafLoopW] at hL; simp [hc, hf0, hv] at hL
-      have hv2 : ¬ tcnt m APP (tierW e) ≤ idxW e := by
+      have hv2 : ¬ tcnt m APP (tierW e) ≤ idxA e := by
         intro hv; rw [gafLoopW] at hL; simp [hc, hf0, hv1, hv] at hL
       rw [gafLoopW_step m e f _ hc hf0 hv1 hv2 rfl] at hL
       have hfm1 := pr_word_sub1 f hf0
-      have hcnt : idxW e < tcnt m APP (tierW e) := UInt64.not_le.mp hv2
+      have hcnt : idxA e < tcnt m APP (tierW e) := UInt64.not_le.mp hv2
       have hva := viewApp_ok m a hR e he ⟨hv1, hcnt⟩
       have h1 := (view_app m a hR e he ⟨hv1, hcnt⟩ hc).2.1
       obtain ⟨ihr, ihb⟩ := ih _ (f - 1) e' f' (by rw [hfm1]; omega) h1 hL hf'
@@ -308,11 +308,11 @@ theorem gafLoopW_args (m : Mem) (a : AState) (hR : ArenaR m a) :
         intro hf0; rw [hf0, gafLoopW] at hL; simp [hc] at hL
       have hv1 : ¬ (tierW e ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0) := by
         intro hv; rw [gafLoopW] at hL; simp [hc, hf0, hv] at hL
-      have hv2 : ¬ tcnt m APP (tierW e) ≤ idxW e := by
+      have hv2 : ¬ tcnt m APP (tierW e) ≤ idxA e := by
         intro hv; rw [gafLoopW] at hL; simp [hc, hf0, hv1, hv] at hL
       rw [gafLoopW_step m e f _ hc hf0 hv1 hv2 rfl] at hL
       have hfm1 := pr_word_sub1 f hf0
-      have hcnt : idxW e < tcnt m APP (tierW e) := UInt64.not_le.mp hv2
+      have hcnt : idxA e < tcnt m APP (tierW e) := UInt64.not_le.mp hv2
       have hva := viewApp_ok m a hR e he ⟨hv1, hcnt⟩
       have h1 := (view_app m a hR e he ⟨hv1, hcnt⟩ hc).2.1
       have hf1 := pr_word_ne0 f hf0
@@ -644,8 +644,8 @@ def ppLoopW (m : Mem) (f e : Word) : Option (Word × Word) :=
     else if tagW e = 7 then
       if tcnt m LET (tierW e) ≤ idxW e then none
       else ppLoopW m (f - 1) (tfld m LET (tierW e) (idxW e) 2)
-    else if tcnt m APP (tierW e) ≤ idxW e then none
-      else ppLoopW m (f - 1) (tfld m APP (tierW e) (idxW e) 0)
+    else if tcnt m APP (tierW e) ≤ idxA e then none
+      else ppLoopW m (f - 1) (tfld m APP (tierW e) (idxA e) 0)
   else some (f, e)
 termination_by f.toNat
 decreasing_by
@@ -677,8 +677,8 @@ theorem ppLoopW_let (m : Mem) (f e e' : Word) (h : tagW e = 7) (hf : f ≠ 0)
 
 theorem ppLoopW_app (m : Mem) (f e e' : Word) (h : tagW e = 4) (hf : f ≠ 0)
     (hv1 : ¬ (tierW e ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0))
-    (hv2 : ¬ tcnt m APP (tierW e) ≤ idxW e)
-    (he' : e' = tfld m APP (tierW e) (idxW e) 0) :
+    (hv2 : ¬ tcnt m APP (tierW e) ≤ idxA e)
+    (he' : e' = tfld m APP (tierW e) (idxA e) 0) :
     ppLoopW m f e = ppLoopW m (f - 1) e' := by
   subst he'; rw [ppLoopW]
   simp only [h, or_true, ↓reduceIte, hf, hv1, hv2, show ¬ ((4 : Word) = 5) by decide,
@@ -775,12 +775,12 @@ theorem ppLoopW_ok (m : Mem) (a : AState) (hR : ArenaR m a) (fe : IFEnv) :
         simp only [ht, ht7, Bool.false_eq_true, ↓reduceIte, StateT.run_bind,
           show ∀ x, (viewLet x).run a = .ok (a.store.viewLet x, a) from fun _ => rfl, hvl,
           except_ok_bind]
-      · have hv2 : ¬ tcnt m APP (tierW e) ≤ idxW e := by
+      · have hv2 : ¬ tcnt m APP (tierW e) ≤ idxA e := by
           intro hv; rw [ppLoopW] at hL
           simp [h4, hf0, hv1, hv, show ¬ ((4 : Word) = 5) by decide,
             show ¬ ((4 : Word) = 7) by decide] at hL
         rw [ppLoopW_app m f e _ h4 hf0 hv1 hv2 rfl] at hL
-        have hcnt : idxW e < tcnt m APP (tierW e) := UInt64.not_le.mp hv2
+        have hcnt : idxA e < tcnt m APP (tierW e) := UInt64.not_le.mp hv2
         have hva := viewApp_ok m a hR e he ⟨hv1, hcnt⟩
         have h1 := (view_app m a hR e he ⟨hv1, hcnt⟩ h4).2.1
         obtain ⟨ihr, ihb⟩ := ih (f - 1) _ f' e' (by rw [hfm1]; omega) h1 hL

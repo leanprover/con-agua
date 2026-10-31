@@ -420,10 +420,10 @@ def LIArmRef (n : Nat) (armW : Nat → Mem → Word → Word → Word → Word �
 def LIArmOK (n : Nat) : Prop :=
   ∀ (m m' : Mem) (a : AState) (h d v fu r : Word), ArenaI m a →
     h.toNat < 2 ^ 32 → v.toNat < 2 ^ 32 →
-    (viewOK m h APP → tagW h = 4 → LIArmRef n i1lAppW
+    (viewOKA m h → tagW h = 4 → LIArmRef n i1lAppW
       (inst1LiftArmApp (decE v) fu.toNat (decE h) d.toNat
-        (decE (tfld m APP (tierW h) (idxW h) 0))
-        (decE (tfld m APP (tierW h) (idxW h) 1))) m m' a h d v fu r) ∧
+        (decE (tfld m APP (tierW h) (idxA h) 0))
+        (decE (tfld m APP (tierW h) (idxA h) 1))) m m' a h d v fu r) ∧
     (viewOK m h LAM → tagW h = 5 → LIArmRef n i1lLamW
       (inst1LiftArmLam (decE v) fu.toNat (decE h) d.toNat
         (decE (tfld m LAM (tierW h) (idxW h) 0))
@@ -546,7 +546,7 @@ theorem ligoOK_succ (n : Nat) (ih : LIArmOK n) : LIGoOK (n + 1) := by
     exact pure_h _ hw (i1lW.k_bvar_b.arm8 n h d v fu x m₁ hcut hs g0 g1 g2 g3 g8 hc) (fun _ => rfl)
   have arm := ih m₁ m' a₁ h d v (fu - 1) r hA₁ hh hv
   by_cases g4 : tagW h = 4
-  · by_cases hc : tcnt m₁ APP (tierW h) ≤ idxW h
+  · by_cases hc : tcnt m₁ APP (tierW h) ≤ idxA h
     · rw [i1lW.k_bvar_b] at hb; simp [hcut, hs, g4, hc] at hb
     rw [view_run _ a₁ _ (view_app m₁ a₁ hR h hh (vok APP hc) g4).1]
     rw [i1lW.k_bvar_b.arm9 n h d v fu x m₁ hcut hs g0 g1 g2 g3 g8 g4 hc] at hb
@@ -636,22 +636,22 @@ variable (n : Nat) (ih : LIGoOK n) (m m' : Mem) (a : AState) (hA : ArenaI m a)
   (h d v fu r : Word) (hh : h.toNat < 2 ^ 32) (hv : v.toNat < 2 ^ 32)
 include ih hA hh hv
 
-theorem i1lAppArm_ok (hvw : viewOK m h APP) (hg : tagW h = 4) :
+theorem i1lAppArm_ok (hvw : viewOKA m h) (hg : tagW h = 4) :
     LIArmRef (n + 1) i1lAppW
       (inst1LiftArmApp (decE v) fu.toNat (decE h) d.toNat
-        (decE (tfld m APP (tierW h) (idxW h) 0))
-        (decE (tfld m APP (tierW h) (idxW h) 1))) m m' a h d v fu r := by
+        (decE (tfld m APP (tierW h) (idxA h) 0))
+        (decE (tfld m APP (tierW h) (idxA h) 1))) m m' a h d v fu r := by
   intro hb
   obtain ⟨-, hfw, haw⟩ := view_app m a hA.1.1 h hh hvw hg
   rw [inst1LiftArmApp]
   refine i1lProbe_ok _ _ m m' a hA h d r hh (i1lAppW.arm1 n m h d v fu)
     (fun hr => by rw [i1lAppW]; simp [hr]) (fun hr hh0 hb => ?_) hb
   rw [i1lAppW.arm2 n m h d v fu hr hh0] at hb
-  cases h1 : i1lW n m (tfld m APP (tierW h) (idxW h) 0) d v fu with
+  cases h1 : i1lW n m (tfld m APP (tierW h) (idxA h) 0) d v fu with
   | none => simp [h1, i1lAppW.k_i1l_go] at hb
   | some p =>
   obtain ⟨x, m₁⟩ := p
-  rcases h2 : i1lW n m₁ (tfld m APP (tierW h) (idxW h) 1) d v fu with _ | ⟨y, m₂⟩ <;> simp only [h2, h1, i1lAppW.k_i1l_go, i1lAppW.k_i1l_go_2, reduceCtorEq] at hb
+  rcases h2 : i1lW n m₁ (tfld m APP (tierW h) (idxA h) 1) d v fu with _ | ⟨y, m₂⟩ <;> simp only [h2, h1, i1lAppW.k_i1l_go, i1lAppW.k_i1l_go_2, reduceCtorEq] at hb
   obtain ⟨a₁, ha₁, hA₁⟩ := ih m m₁ a _ d v fu x hA hfw hv h1
   obtain ⟨a₂, ha₂, hA₂⟩ := ih m₁ m₂ a₁ _ d v fu y hA₁ haw hv h2
   obtain ⟨a', h3, h4⟩ := i1lTail_ok _ _ a₂ h d r m' hh

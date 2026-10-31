@@ -218,7 +218,7 @@ theorem nodeOK_succ (n : Nat) (ih : GoOK n) : NodeOK (n + 1) := by
     refine ⟨a, ?_, hR⟩
     rw [bbNodeA_run F _ a _ (view_bvar m a hR h hh (vok BVAR hc) g0), succW_toNat _ h1]; rfl
   by_cases g4 : tagW h = 4
-  · by_cases hc : tcnt m APP (tierW h) ≤ idxW h
+  · by_cases hc : tcnt m APP (tierW h) ≤ idxA h
     · rw [bbNodeW] at hb; simp [hs, g4, hc] at hb
     obtain ⟨hv, hf, ha⟩ := view_app m a hR h hh (vok APP hc) g4
     rw [bbNodeW_app n m h c (vok APP hc) g4] at hb

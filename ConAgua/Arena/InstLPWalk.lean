@@ -179,7 +179,7 @@ theorem ilwDispW_fvar (hs : ¬ (tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0)) (hg 
 
 theorem ilwDispW_app (hs : ¬ (tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0)) (hg : tagW h = 4) :
     ilwDispW p n m h ko kc vo vc fu =
-      if tcnt m APP (tierW h) ≤ idxW h then none
+      if tcnt m APP (tierW h) ≤ idxA h then none
       else ilwHd (callW p n "lp_app" [h, ko, kc, vo, vc, fu - 1] m) :=
   ilwDispW_arm p n m h ko kc vo vc fu 4 APP "lp_app" hs hg (.inr ((.inl ⟨rfl, rfl, rfl⟩)))
 

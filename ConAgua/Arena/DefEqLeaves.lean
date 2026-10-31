@@ -277,14 +277,14 @@ theorem isEagerReduce_run (m : Mem) (a : AState) (hR : ArenaR m a) (hP : PinsFul
     rfl
   by_cases hs : tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0
   · simp [h4, hs] at hW
-  by_cases hc : tcnt m APP (tierW h) ≤ idxW h
+  by_cases hc : tcnt m APP (tierW h) ≤ idxA h
   · simp [h4, hs, hc] at hW
   simp only [h4, hs, hc, ne_eq, not_true_eq_false, ↓reduceIte] at hW
-  have hvo : viewOK m h APP := ⟨hs, by simpa using hc⟩
+  have hvo : viewOKA m h := ⟨hs, by simpa using hc⟩
   obtain ⟨-, hf, -⟩ := view_app m a hR h hh hvo h4
   simp only [isEagerReduce, decE_tag_app_beq h hh, h4, decide_true, ↓reduceIte, StateT.run_bind,
     viewApp_run', viewApp_ok m a hR h hh hvo, except_ok_bind]
-  generalize tfld m APP (tierW h) (idxW h) 0 = f at hf hW ⊢
+  generalize tfld m APP (tierW h) (idxA h) 0 = f at hf hW ⊢
   rcases (Classical.em (tagW f = 4)).symm with f4 | f4
   · simp only [f4, not_false_eq_true, ↓reduceIte, Option.some.injEq] at hW
     subst hW
@@ -292,14 +292,14 @@ theorem isEagerReduce_run (m : Mem) (a : AState) (hR : ArenaR m a) (hP : PinsFul
     rfl
   by_cases fs : tierW f ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0
   · simp [f4, fs] at hW
-  by_cases fc : tcnt m APP (tierW f) ≤ idxW f
+  by_cases fc : tcnt m APP (tierW f) ≤ idxA f
   · simp [f4, fs, fc] at hW
   simp only [f4, fs, fc, not_true_eq_false, ↓reduceIte] at hW
-  have fvo : viewOK m f APP := ⟨fs, by simpa using fc⟩
+  have fvo : viewOKA m f := ⟨fs, by simpa using fc⟩
   obtain ⟨-, hg, -⟩ := view_app m a hR f hf fvo f4
   simp only [decE_tag_app_beq f hf, f4, decide_true, ↓reduceIte, StateT.run_bind,
     viewApp_run', viewApp_ok m a hR f hf fvo, except_ok_bind]
-  generalize tfld m APP (tierW f) (idxW f) 0 = g at hg hW ⊢
+  generalize tfld m APP (tierW f) (idxA f) 0 = g at hg hW ⊢
   rcases (Classical.em (tagW g = 3)).symm with g3 | g3
   · simp only [g3, not_false_eq_true, ↓reduceIte, Option.some.injEq] at hW
     subst hW
@@ -910,12 +910,12 @@ def scB1 (p : Prog) (n : Nat) (f2 : Word) (x : List Word × Mem) : Option (Word 
 def sameConstHeadsW (p : Prog) (n : Nat) (m : Mem) (a b : Word) : Option (Word × Mem) :=
   if tagW a ≠ 4 then some (0, m)
   else if tierW a ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
-  else if tcnt m APP (tierW a) ≤ idxW a then none
+  else if tcnt m APP (tierW a) ≤ idxA a then none
   else if tagW b ≠ 4 then some (0, m)
   else if tierW b ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
-  else if tcnt m APP (tierW b) ≤ idxW b then none
-  else (callW p n "get_app_fn" [tfld m APP (tierW a) (idxW a) 0] m).bind
-    (scB1 p n (tfld m APP (tierW b) (idxW b) 0))
+  else if tcnt m APP (tierW b) ≤ idxA b then none
+  else (callW p n "get_app_fn" [tfld m APP (tierW a) (idxA a) 0] m).bind
+    (scB1 p n (tfld m APP (tierW b) (idxA b) 0))
 
 section schArms
 variable (p : Prog) (n : Nat) (m : Mem) (a b f2 n1 : Word) (r : List Word)
@@ -923,17 +923,17 @@ variable (p : Prog) (n : Nat) (m : Mem) (a b f2 n1 : Word) (r : List Word)
 theorem schW_a (ha : ¬ tagW a = 4) : sameConstHeadsW p n m a b = some (0, m) := by
   simp [sameConstHeadsW, ha]
 theorem schW_b (ha : tagW a = 4) (hs : ¬ (tierW a ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0))
-    (hc : ¬ tcnt m APP (tierW a) ≤ idxW a) (hb : ¬ tagW b = 4) :
+    (hc : ¬ tcnt m APP (tierW a) ≤ idxA a) (hb : ¬ tagW b = 4) :
     sameConstHeadsW p n m a b = some (0, m) := by
   simp only [sameConstHeadsW, ha, hs, hc, hb, ne_eq, not_true_eq_false, not_false_eq_true,
     ↓reduceIte]
 theorem schW_go (ha : tagW a = 4) (hs : ¬ (tierW a ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0))
-    (hc : ¬ tcnt m APP (tierW a) ≤ idxW a) (hb : tagW b = 4)
+    (hc : ¬ tcnt m APP (tierW a) ≤ idxA a) (hb : tagW b = 4)
     (hs' : ¬ (tierW b ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0))
-    (hc' : ¬ tcnt m APP (tierW b) ≤ idxW b) :
+    (hc' : ¬ tcnt m APP (tierW b) ≤ idxA b) :
     sameConstHeadsW p n m a b =
-      (callW p n "get_app_fn" [tfld m APP (tierW a) (idxW a) 0] m).bind
-        (scB1 p n (tfld m APP (tierW b) (idxW b) 0)) := by
+      (callW p n "get_app_fn" [tfld m APP (tierW a) (idxA a) 0] m).bind
+        (scB1 p n (tfld m APP (tierW b) (idxA b) 0)) := by
   simp only [sameConstHeadsW, ha, hs, hc, hb, hs', hc', ne_eq, not_true_eq_false, ↓reduceIte]
 theorem scB1_tag (h : ¬ tagW (r.headD 0) = 3) : scB1 p n f2 (r, m) = some (0, m) := by
   simp only [scB1, h, ne_eq, not_false_eq_true, ↓reduceIte]
@@ -997,16 +997,16 @@ theorem sameConstHeads_refines (p : Prog) (hp : DefEqLeafProg p) (n : Nat) (s₀
     rfl
   by_cases as : tierW a ≠ 0 ∧ rdW (s₀.mem.arr64 CTL) 1 = 0
   · simp [a4, as] at hW
-  by_cases ac : tcnt s₀.mem APP (tierW a) ≤ idxW a
+  by_cases ac : tcnt s₀.mem APP (tierW a) ≤ idxA a
   · simp [a4, as, ac] at hW
   simp only [a4, as, ac, ne_eq, not_true_eq_false, ↓reduceIte] at hW
-  have avo : viewOK s₀.mem a APP := ⟨as, by simpa using ac⟩
+  have avo : viewOKA s₀.mem a := ⟨as, by simpa using ac⟩
   obtain ⟨hva, hf1, -⟩ := view_app s₀.mem a₀ hR a ha avo a4
   have hpre : ∀ T : AM Bool, (sameConstHeads (decE a) (decE b)).run a₀ = (do
       if (decE b).tag == ETag.app then
         match ← view (decE b) with
         | .app f₂ _ => do
-          let hh ← getAppFn coreWalkFuel (decE (tfld s₀.mem APP (tierW a) (idxW a) 0))
+          let hh ← getAppFn coreWalkFuel (decE (tfld s₀.mem APP (tierW a) (idxA a) 0))
           if hh.tag == ETag.const then
             match ← view hh with
             | .const n₁ _ =>
@@ -1032,15 +1032,15 @@ theorem sameConstHeads_refines (p : Prog) (hp : DefEqLeafProg p) (n : Nat) (s₀
     rfl
   by_cases bs : tierW b ≠ 0 ∧ rdW (s₀.mem.arr64 CTL) 1 = 0
   · simp [b4, bs] at hW
-  by_cases bc : tcnt s₀.mem APP (tierW b) ≤ idxW b
+  by_cases bc : tcnt s₀.mem APP (tierW b) ≤ idxA b
   · simp [b4, bs, bc] at hW
   simp only [b4, bs, bc, not_true_eq_false, ↓reduceIte] at hW
-  have bvo : viewOK s₀.mem b APP := ⟨bs, by simpa using bc⟩
+  have bvo : viewOKA s₀.mem b := ⟨bs, by simpa using bc⟩
   obtain ⟨hvb, hf2, -⟩ := view_app s₀.mem a₀ hR b hb bvo b4
   simp only [decE_tag_app_beq b hb, b4, decide_true, ↓reduceIte, StateT.run_bind, view_run _ _ _ hvb,
     except_ok_bind] at hres
-  generalize tfld s₀.mem APP (tierW a) (idxW a) 0 = f1 at hf1 hW hres
-  generalize tfld s₀.mem APP (tierW b) (idxW b) 0 = f2 at hf2 hW hres
+  generalize tfld s₀.mem APP (tierW a) (idxA a) 0 = f1 at hf1 hW hres
+  generalize tfld s₀.mem APP (tierW b) (idxA b) 0 = f2 at hf2 hW hres
   rcases hc : callW p n "get_app_fn" [f1] s₀.mem with _ | ⟨r₁, m₁⟩
   · simp [hc] at hW
   rw [hc, Option.bind_some] at hW

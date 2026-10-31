@@ -195,7 +195,7 @@ theorem rappArm_ok (hg : tagW h = 4) :
     (fun hr => by rw [arAppW]; simp [hr]) (fun hr hh0 hb => ?_) hb
   by_cases hs : tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0
   · rw [arAppW] at hb; simp only [ne_eq] at hs; simp only [hr, hh0, ne_eq, not_true_eq_false, ↓reduceIte, hs, not_false_eq_true, and_self, reduceCtorEq] at hb
-  have hv : viewOK m h APP := ⟨hs, UInt64.not_le.mp fun hc => by
+  have hv : viewOKA m h := ⟨hs, UInt64.not_le.mp fun hc => by
     rw [arAppW] at hb; simp only [ne_eq] at hs; simp only [hr, hh0, ne_eq, not_true_eq_false, ↓reduceIte, hs, hc, reduceCtorEq] at hb⟩
   obtain ⟨-, hfw, haw⟩ := view_app m a hA.1.1 h hh hv hg
   rw [arAppW_miss n m h c d k fu hr hh0 hv] at hb
@@ -205,14 +205,14 @@ theorem rappArm_ok (hg : tagW h = 4) :
   refine Sim.bindD (K := rappK₁.rappK₂ h c _ _ x) rfl (fun _ _ => rfl)
     (Sim.ofD fun y m₂ e => ih m₁ m₂ a₁ _ c d k fu y hA₁ haw e) fun y m₂ a₂ hA₂ => ?_
   refine Sim.ofD fun r m' hb => atail_ok (internRebuiltApp (decE h)
-      (decE x == decE (tfld m APP (tierW h) (idxW h) 0) && decE y == decE (tfld m APP (tierW h) (idxW h) 1)) (decE x) (decE y))
+      (decE x == decE (tfld m APP (tierW h) (idxA h) 0) && decE y == decE (tfld m APP (tierW h) (idxA h) 1)) (decE x) (decE y))
       _ a₂ h c r m' hh (fun r₃ m₃ hr₃ => by
     unfold internRebuiltApp
     refine rb_ok _ _ _ _ m₂ a₂ hA₂ h r₃ m₃ (fun ⟨e1, e2⟩ => by simp [e1, e2]) (fun hn hI => ?_) hr₃
     obtain ⟨hx, hy⟩ := mkAppW_lt m₂ x y r₃ m₃ hI
     refine ⟨?_, mkApp_okA m₂ a₂ hA₂ x y r₃ m₃ hI⟩
-    rcases Decidable.em (decE x = decE (tfld m APP (tierW h) (idxW h) 0)) with e1 | e1
-    · have e2 : decE y ≠ decE (tfld m APP (tierW h) (idxW h) 1) :=
+    rcases Decidable.em (decE x = decE (tfld m APP (tierW h) (idxA h) 0)) with e1 | e1
+    · have e2 : decE y ≠ decE (tfld m APP (tierW h) (idxA h) 1) :=
         fun e2 => hn ⟨decI_inj hx hfw e1, decI_inj hy haw e2⟩
       simp [e1, e2]
     · simp [e1]) hb

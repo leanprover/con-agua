@@ -68,8 +68,8 @@ theorem gafLoopW_done (m : Mem) (e f : Word) (h : tagW e ≠ 4) : gafLoopW m e f
 
 theorem gafLoopW_step (m : Mem) (e f e' : Word) (h : tagW e = 4) (hf : f ≠ 0)
     (hv1 : ¬ (tierW e ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0))
-    (hv2 : ¬ tcnt m APP (tierW e) ≤ idxW e)
-    (he' : e' = tfld m APP (tierW e) (idxW e) 0) :
+    (hv2 : ¬ tcnt m APP (tierW e) ≤ idxA e)
+    (he' : e' = tfld m APP (tierW e) (idxA e) 0) :
     gafLoopW m e f = gafLoopW m e' (f - 1) := by
   subst he'; rw [gafLoopW]
   simp only [h, ↓reduceIte, hf, hv2, hv1]
@@ -154,20 +154,20 @@ theorem gafLoopW_ok (m : Mem) (a : AState) (hR : ArenaR m a) :
         simp only [hc, ↓reduceIte, hf0] at hL
         have hv : ¬ ((tierW e ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0)) := fun hv => by simp [hv] at hL
         · exact hv
-      have hv2 : ¬ tcnt m APP (tierW e) ≤ idxW e := by
+      have hv2 : ¬ tcnt m APP (tierW e) ≤ idxA e := by
         rw [gafLoopW] at hL
         simp only [hc, ↓reduceIte, hf0, hv1] at hL
-        have hv : ¬ tcnt m APP (tierW e) ≤ idxW e := fun hv => by simp [hv] at hL
+        have hv : ¬ tcnt m APP (tierW e) ≤ idxA e := fun hv => by simp [hv] at hL
         · exact hv
-      have hL' : gafLoopW m (tfld m APP (tierW e) (idxW e) 0) (f - 1) = some (e', f') := by
+      have hL' : gafLoopW m (tfld m APP (tierW e) (idxA e) 0) (f - 1) = some (e', f') := by
         rw [← gafLoopW_step m e f _ hc hf0 hv1 hv2 rfl]; exact hL
       have hf0' : f.toNat ≠ 0 := fun h => hf0 (UInt64.toNat_inj.mp (by simpa using h))
       have hfm1 : (f - 1).toNat = f.toNat - 1 := by
         rw [UInt64.toNat_sub_of_le _ _ (by simp [UInt64.le_iff_toNat_le]; omega)]; simp
       have hfm1N : (f - 1).toNat ≤ N := by rw [hfm1]; omega
-      have hcnt : idxW e < tcnt m APP (tierW e) := UInt64.not_le.mp hv2
+      have hcnt : idxA e < tcnt m APP (tierW e) := UInt64.not_le.mp hv2
       have hva := viewApp_ok m a hR e he ⟨hv1, hcnt⟩
-      have h1 : (tfld m APP (tierW e) (idxW e) 0).toNat < 2 ^ 32 :=
+      have h1 : (tfld m APP (tierW e) (idxA e) 0).toNat < 2 ^ 32 :=
         (view_app m a hR e he ⟨hv1, hcnt⟩ hc).2.1
       obtain ⟨ihr, ihb⟩ := ih _ (f - 1) e' f' hfm1N h1 hL' hf'
       have heq : getAppFn f.toNat (decE e) = getAppFn ((f.toNat - 1) + 1) (decE e) := by

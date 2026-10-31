@@ -77,9 +77,9 @@ def ArmRef (n : Nat) (armW : Nat → Mem → Word → Word → Word → Word →
 def LArmOK (n : Nat) : Prop :=
   ∀ (m m' : Mem) (a : AState) (h c k fu r : Word), ArenaD m a →
     h.toNat < 2 ^ 32 →
-    (viewOK m h APP → tagW h = 4 → ArmRef n liftAppW
-      (liftArmApp k.toNat fu.toNat (decE h) c.toNat (decE (tfld m APP (tierW h) (idxW h) 0))
-        (decE (tfld m APP (tierW h) (idxW h) 1))) m m' a h c k fu r) ∧
+    (viewOKA m h → tagW h = 4 → ArmRef n liftAppW
+      (liftArmApp k.toNat fu.toNat (decE h) c.toNat (decE (tfld m APP (tierW h) (idxA h) 0))
+        (decE (tfld m APP (tierW h) (idxA h) 1))) m m' a h c k fu r) ∧
     (viewOK m h LAM → tagW h = 5 → ArmRef n liftLamW
       (liftArmLam k.toNat fu.toNat (decE h) c.toNat
         (decE (tfld m LAM (tierW h) (idxW h) 0))
@@ -175,7 +175,7 @@ theorem lgoOK_succ (n : Nat) (ih : LArmOK n) : LGoOK (n + 1) := by
   have arm := fun c0 (hc : ¬ tcnt m c0 (tierW h) ≤ idxW h) =>
     ih m m' a h c k (fu - 1) r hA hh
   by_cases g4 : tagW h = 4
-  · by_cases hc : tcnt m APP (tierW h) ≤ idxW h
+  · by_cases hc : tcnt m APP (tierW h) ≤ idxA h
     · rw [liftW] at hb; simp [hfu, hcut, hs, g4, hc] at hb
     rw [view_run _ a _ (view_app m a hR h hh (vok APP hc) g4).1]
     rw [liftW.arm4 n m h c k fu hfu hcut hs g0 g4 hc] at hb
@@ -296,21 +296,21 @@ variable (n : Nat) (ih : LGoOK n) (m m' : Mem) (a : AState) (hA : ArenaD m a)
   (h c k fu r : Word) (hh : h.toNat < 2 ^ 32)
 include ih hA hh
 
-theorem appArm_ok (hv : viewOK m h APP) (hg : tagW h = 4) :
+theorem appArm_ok (hv : viewOKA m h) (hg : tagW h = 4) :
     ArmRef (n + 1) liftAppW
-      (liftArmApp k.toNat fu.toNat (decE h) c.toNat (decE (tfld m APP (tierW h) (idxW h) 0))
-        (decE (tfld m APP (tierW h) (idxW h) 1))) m m' a h c k fu r := by
+      (liftArmApp k.toNat fu.toNat (decE h) c.toNat (decE (tfld m APP (tierW h) (idxA h) 0))
+        (decE (tfld m APP (tierW h) (idxA h) 1))) m m' a h c k fu r := by
   intro hb
   obtain ⟨-, hfw, haw⟩ := view_app m a hA.1 h hh hv hg
   rw [liftArmApp]
   refine probe_ok _ _ m m' a hA h c r hh (liftAppW.arm1 n m h c k fu) (fun hr => by rw [liftAppW]; simp [hr])
     (fun hr hh0 hb => ?_) hb
   rw [liftAppW.arm2 n m h c k fu hr hh0] at hb
-  cases h1 : liftW n m (tfld m APP (tierW h) (idxW h) 0) c k fu with
+  cases h1 : liftW n m (tfld m APP (tierW h) (idxA h) 0) c k fu with
   | none => simp [h1, liftAppW.k_lift_go] at hb
   | some p =>
   obtain ⟨x, m₁⟩ := p
-  cases h2 : liftW n m₁ (tfld m APP (tierW h) (idxW h) 1) c k fu with
+  cases h2 : liftW n m₁ (tfld m APP (tierW h) (idxA h) 1) c k fu with
   | none => simp [h1, h2, liftAppW.k_lift_go, liftAppW.k_lift_go_2] at hb
   | some q =>
   obtain ⟨y, m₂⟩ := q

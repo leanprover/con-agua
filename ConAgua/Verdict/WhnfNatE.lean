@@ -277,8 +277,8 @@ theorem reduceNatAp_ref (hno : NatOpResultOK p) (n F : Nat) (hF : n ≤ F) (hn2 
   rw [reduceNatApE.eq_2]
   refine RefE.abort0 (by simp) fun hbd => ?_
   obtain ⟨hviewf, hgw, hxw⟩ := view_app s₀.mem a₀ hC.arena.base f hf ⟨hsc, by simpa using hbd⟩ hg4
-  generalize tfld s₀.mem APP (tierW f) (idxW f) 0 = gw at hgw hviewf ⊢
-  generalize tfld s₀.mem APP (tierW f) (idxW f) 1 = xw at hxw hviewf ⊢
+  generalize tfld s₀.mem APP (tierW f) (idxA f) 0 = gw at hgw hviewf ⊢
+  generalize tfld s₀.mem APP (tierW f) (idxA f) 1 = xw at hxw hviewf ⊢
   unfold redHeadT redAppT
   refine RefE.bind_right (view_run _ _ _ hviewf) ?_
   refine RefE.retIf (fun g3 => by rw [decE_const_tag _ hgw]; exact beq_eq_false_iff_ne.mpr g3)

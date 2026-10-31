@@ -259,17 +259,17 @@ theorem iappArm_ok (hg : tagW h = 4) :
     (fun hr => by rw [instAppW]; simp [hr]) (fun hr hh0 hb => ?_) hb
   by_cases hs : tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0
   · rw [instAppW] at hb; simp only [ne_eq] at hs; simp only [hr, hh0, ne_eq, not_true_eq_false, ↓reduceIte, hs, not_false_eq_true, and_self, reduceCtorEq] at hb
-  by_cases hc : tcnt m APP (tierW h) ≤ idxW h
+  by_cases hc : tcnt m APP (tierW h) ≤ idxA h
   · rw [instAppW] at hb; simp only [ne_eq] at hs; simp only [hr, hh0, ne_eq, not_true_eq_false, ↓reduceIte, hs, hc, reduceCtorEq] at hb
-  have hv : viewOK m h APP := ⟨hs, UInt64.not_le.mp hc⟩
+  have hv : viewOKA m h := ⟨hs, UInt64.not_le.mp hc⟩
   obtain ⟨-, hfw, haw⟩ := view_app m a hA.1 h hh hv hg
   rw [instAppW.arm2 n m h d v fu hr hh0 hs hc] at hb
   rw [StateT.run_bind, viewApp_run, viewApp_ok m a hA.1 h hh hv, except_ok_bind]
-  cases h1 : instW n m (tfld m APP (tierW h) (idxW h) 0) d v fu with
+  cases h1 : instW n m (tfld m APP (tierW h) (idxA h) 0) d v fu with
   | none => simp [h1, instAppW.k_inst_go] at hb
   | some p =>
   obtain ⟨x, m₁⟩ := p
-  cases h2 : instW n m₁ (tfld m APP (tierW h) (idxW h) 1) d v fu with
+  cases h2 : instW n m₁ (tfld m APP (tierW h) (idxA h) 1) d v fu with
   | none => simp [h1, h2, instAppW.k_inst_go, instAppW.k_inst_go_2] at hb
   | some q =>
   obtain ⟨y, m₂⟩ := q

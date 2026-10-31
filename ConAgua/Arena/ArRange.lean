@@ -73,16 +73,16 @@ def arAppW : Nat → Mem → Word → Word → Word → Word → Word → Option
     else if (mfindG abSch m h c).headD 0 ≠ 0 then
       some (rdW (m.arr64 ABMEMO) ((mfindG abSch m h c).tail.headD 0 * 4 + 3), m)
     else if tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
-    else if tcnt m APP (tierW h) ≤ idxW h then none
+    else if tcnt m APP (tierW h) ≤ idxA h then none
     else
-      match arW n m (tfld m APP (tierW h) (idxW h) 0) c d k fu with
+      match arW n m (tfld m APP (tierW h) (idxA h) 0) c d k fu with
       | none => none
       | some (x, m₁) =>
-        match arW n m₁ (tfld m APP (tierW h) (idxW h) 1) c d k fu with
+        match arW n m₁ (tfld m APP (tierW h) (idxA h) 1) c d k fu with
         | none => none
         | some (y, m₂) =>
-          asetK h c (rbAppW m₂ h (tfld m APP (tierW h) (idxW h) 0)
-            (tfld m APP (tierW h) (idxW h) 1) x y)
+          asetK h c (rbAppW m₂ h (tfld m APP (tierW h) (idxA h) 0)
+            (tfld m APP (tierW h) (idxA h) 1) x y)
 
 /-- **The model of `abs_lam`.** -/
 def arLamW : Nat → Mem → Word → Word → Word → Word → Word → Option (Word × Mem)
@@ -284,13 +284,13 @@ theorem arAppW_hit (hr : mfindG abSch m h c ≠ []) (hh : (mfindG abSch m h c).h
   rw [arAppW]; simp only [hr, hh, ↓reduceIte, ne_eq, not_false_eq_true]
 
 theorem arAppW_miss (hr : mfindG abSch m h c ≠ []) (hh : (mfindG abSch m h c).headD 0 = 0)
-    (hvk : viewOK m h APP) :
+    (hvk : viewOKA m h) :
     arAppW (n + 1) m h c d k fu =
-      rappK₁ n h c d k fu (tfld m APP (tierW h) (idxW h) 0)
-        (tfld m APP (tierW h) (idxW h) 1)
-        (arW n m (tfld m APP (tierW h) (idxW h) 0) c d k fu) := by
+      rappK₁ n h c d k fu (tfld m APP (tierW h) (idxA h) 0)
+        (tfld m APP (tierW h) (idxA h) 1)
+        (arW n m (tfld m APP (tierW h) (idxA h) 0) c d k fu) := by
   rw [arAppW]; simp only [hr, hh, ↓reduceIte, ne_eq, not_true_eq_false, hvk.1, ↓reduceIte, UInt64.not_le.mpr hvk.2]
-  cases arW n m (tfld m APP (tierW h) (idxW h) 0) c d k fu <;> rfl
+  cases arW n m (tfld m APP (tierW h) (idxA h) 0) c d k fu <;> rfl
 
 theorem arLamW_hit (h1 : c + 1 ≠ 0) (hr : mfindG abSch m h c ≠ [])
     (hh : (mfindG abSch m h c).headD 0 ≠ 0) :

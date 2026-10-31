@@ -454,28 +454,28 @@ theorem natPred_refines (p : Prog) (hp : NatPredProg p) (hlw : LitInternHW) (n :
   simp only [h4, ↓reduceIte] at hW
   by_cases hs : tierW e ≠ 0 ∧ rdW (s₀.mem.arr64 CTL) 1 = 0
   · simp [hs] at hW
-  by_cases hc : tcnt s₀.mem APP (tierW e) ≤ idxW e
+  by_cases hc : tcnt s₀.mem APP (tierW e) ≤ idxA e
   · simp [hs, hc] at hW
   simp only [hs, hc, ↓reduceIte] at hW
-  have hvo : viewOK s₀.mem e APP := ⟨hs, by simpa using hc⟩
+  have hvo : viewOKA s₀.mem e := ⟨hs, by simpa using hc⟩
   obtain ⟨-, hf, hx⟩ := view_app s₀.mem a₀ hR e he hvo h4
   have hpre : (natPred? (decE e)).run a₀ = (do
-      let f := decE (tfld s₀.mem APP (tierW e) (idxW e) 0)
+      let f := decE (tfld s₀.mem APP (tierW e) (idxA e) 0)
       if f.tag == ETag.const then
         match ← view f with
         | .const c us => do
           let el ← emptyLevels
           let ns ← pinNatSucc
           if c == ns && us == el then
-            pure (some (decE (tfld s₀.mem APP (tierW e) (idxW e) 1)))
+            pure (some (decE (tfld s₀.mem APP (tierW e) (idxA e) 1)))
           else pure none
         | _ => pure none
       else pure none : AM (Option EIdx)).run a₀ := by
     simp only [natPred?, htl, decE_tag_app_beq e he, h4, decide_true, Bool.false_eq_true, ↓reduceIte,
       StateT.run_bind, viewApp_run', viewApp_ok s₀.mem a₀ hR e he hvo, except_ok_bind]
     rfl
-  generalize tfld s₀.mem APP (tierW e) (idxW e) 0 = f at hf hW hpre
-  generalize tfld s₀.mem APP (tierW e) (idxW e) 1 = x at hx hW hpre
+  generalize tfld s₀.mem APP (tierW e) (idxA e) 0 = f at hf hW hpre
+  generalize tfld s₀.mem APP (tierW e) (idxA e) 1 = x at hx hW hpre
   rcases (Classical.em (tagW f = 3)).symm with f3 | f3
   · simp only [ne_eq, f3, not_false_eq_true, ↓reduceIte] at hW
     refine hres 0 0 hW hw0 hw0 ?_

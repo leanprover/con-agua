@@ -72,12 +72,12 @@ def ilAppW : Nat → Mem → Word → Word → Word → Word → Word → Option
   | 0, _, _, _, _, _, _ => none
   | n + 1, m, h, d, o, l, fu =>
     if tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
-    else if tcnt m APP (tierW h) ≤ idxW h then none
+    else if tcnt m APP (tierW h) ≤ idxA h then none
     else
-      match ilW n m (tfld m APP (tierW h) (idxW h) 0) d o l fu with
+      match ilW n m (tfld m APP (tierW h) (idxA h) 0) d o l fu with
       | none => none
       | some (x, m₁) =>
-        match ilW n m₁ (tfld m APP (tierW h) (idxW h) 1) d o l fu with
+        match ilW n m₁ (tfld m APP (tierW h) (idxA h) 1) d o l fu with
         | none => none
         | some (y, m₂) => mkAppW m₂ x y
 
@@ -193,12 +193,12 @@ def ilgAppW : Nat → Mem → Word → Word → Word → Word → Word → Optio
     else if (mfindG ilSch m h d).headD 0 ≠ 0 then
       some (rdW (m.arr64 ILMEMO) ((mfindG ilSch m h d).tail.headD 0 * 4 + 3), m)
     else if tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
-    else if tcnt m APP (tierW h) ≤ idxW h then none
+    else if tcnt m APP (tierW h) ≤ idxA h then none
     else
-      match ilgW n m (tfld m APP (tierW h) (idxW h) 0) d o l fu with
+      match ilgW n m (tfld m APP (tierW h) (idxA h) 0) d o l fu with
       | none => none
       | some (x, m₁) =>
-        match ilgW n m₁ (tfld m APP (tierW h) (idxW h) 1) d o l fu with
+        match ilgW n m₁ (tfld m APP (tierW h) (idxA h) 1) d o l fu with
         | none => none
         | some (y, m₂) => ilsetK h d (mkAppW m₂ x y)
 
@@ -442,12 +442,12 @@ theorem ilgW_leaf (hf : fu ≠ 0) (hc : ¬ ilCut m h d) (h0 : tagW h ≠ 0) (h4 
     ilgW (n + 1) m h d o l fu = some (h, m) := by
   rw [ilgW]; simp [hf, hc, h0, h4, h5, h6, h7, h9]
 
-theorem ilAppW_miss (hvk : viewOK m h APP) :
+theorem ilAppW_miss (hvk : viewOKA m h) :
     ilAppW (n + 1) m h d o l fu =
-      lappK₁ n d o l fu (tfld m APP (tierW h) (idxW h) 1)
-        (ilW n m (tfld m APP (tierW h) (idxW h) 0) d o l fu) := by
+      lappK₁ n d o l fu (tfld m APP (tierW h) (idxA h) 1)
+        (ilW n m (tfld m APP (tierW h) (idxA h) 0) d o l fu) := by
   rw [ilAppW]; simp only [hvk.1, ↓reduceIte, UInt64.not_le.mpr hvk.2]
-  cases ilW n m (tfld m APP (tierW h) (idxW h) 0) d o l fu <;> rfl
+  cases ilW n m (tfld m APP (tierW h) (idxA h) 0) d o l fu <;> rfl
 theorem ilLamW_miss (h1 : d + 1 ≠ 0) (hvk : viewOK m h LAM) :
     ilLamW (n + 1) m h d o l fu =
       llamK₁ n d o l fu (tfld m LAM (tierW h) (idxW h) 1)
@@ -503,12 +503,12 @@ theorem ilgAppW_hit (hr : mfindG ilSch m h d ≠ []) (hh : (mfindG ilSch m h d).
       some (rdW (m.arr64 ILMEMO) ((mfindG ilSch m h d).tail.headD 0 * 4 + 3), m) := by
   rw [ilgAppW]; simp only [hr, hh, ↓reduceIte, ne_eq, not_false_eq_true]
 theorem ilgAppW_miss (hr : mfindG ilSch m h d ≠ []) (hh : (mfindG ilSch m h d).headD 0 = 0)
-    (hvk : viewOK m h APP) :
+    (hvk : viewOKA m h) :
     ilgAppW (n + 1) m h d o l fu =
-      gappK₁ n h d o l fu (tfld m APP (tierW h) (idxW h) 1)
-        (ilgW n m (tfld m APP (tierW h) (idxW h) 0) d o l fu) := by
+      gappK₁ n h d o l fu (tfld m APP (tierW h) (idxA h) 1)
+        (ilgW n m (tfld m APP (tierW h) (idxA h) 0) d o l fu) := by
   rw [ilgAppW]; simp only [hr, hh, ↓reduceIte, ne_eq, not_true_eq_false, hvk.1, ↓reduceIte, UInt64.not_le.mpr hvk.2]
-  cases ilgW n m (tfld m APP (tierW h) (idxW h) 0) d o l fu <;> rfl
+  cases ilgW n m (tfld m APP (tierW h) (idxA h) 0) d o l fu <;> rfl
 theorem ilgLamW_hit (h1 : d + 1 ≠ 0) (hr : mfindG ilSch m h d ≠ [])
     (hh : (mfindG ilSch m h d).headD 0 ≠ 0) :
     ilgLamW (n + 1) m h d o l fu =

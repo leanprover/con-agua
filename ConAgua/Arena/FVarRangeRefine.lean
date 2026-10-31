@@ -223,7 +223,7 @@ theorem frNodeOK_succ (n : Nat) (ih : FrGoOK n) : FrNodeOK (n + 1) := by
       succW_toNat _ h1]
     rfl
   by_cases g4 : tagW h = 4
-  · by_cases hc : tcnt m APP (tierW h) ≤ idxW h
+  · by_cases hc : tcnt m APP (tierW h) ≤ idxA h
     · rw [frNodeW.abort5 n m h c hs g0 g1 g4 hc] at hb; cases hb
     obtain ⟨hv, hf, ha⟩ := view_app m a hR h hh (vok APP hc) g4
     rw [frNodeW.arm3 n m h c hs g0 g1 g4 hc] at hb

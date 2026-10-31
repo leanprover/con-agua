@@ -292,12 +292,12 @@ theorem tier_ok (a : ArrId) (t : Word) (h1 : a ≠ IW) (h2 : a ≠ HSEEN) (h3 : 
   · simp
 
 theorem app_ok (ih : WalkOK n) (hA : ArenaR m a) (hs : SeenR m seen) (he : e.toNat < 2 ^ 32)
-    (hv : viewOK m e APP) (hg : tagW e = 4)
+    (hv : viewOKA m e) (hg : tagW e = 4)
     (hf : ∀ s ac, f (s, ac) = usedConstsGo s ac fu.toNat
-      (decE (tfld m APP (tierW e) (idxW e) 1)))
+      (decE (tfld m APP (tierW e) (idxA e) 1)))
     (hb : hAppW (n + 1) m e i k tg ws sp fu = some (sp', m')) :
     WRes m m' i k tg ws sp sp' acc (usedConstsGo seen acc fu.toNat
-      (decE (tfld m APP (tierW e) (idxW e) 0)) >>= f) a := by
+      (decE (tfld m APP (tierW e) (idxA e) 0)) >>= f) a := by
   obtain ⟨-, h1w, h2w⟩ := view_app m a hA e he hv hg
   rw [hAppW.arm1, hAppW.k_hoist_walk.eq_def] at hb
   obtain ⟨n1, n2, n3⟩ := tier_ok AREC (tierW e) (by decide) (by decide) (by decide)
@@ -407,7 +407,7 @@ theorem walk_step (n : Nat) (ih : ∀ n', n = n' + 1 → WalkOK n') : WalkOK (n 
     exact wres_pure (memoRG_frame hsSch hsSch_wf bmKey _ [IW] [] (by decide) (by decide) _ _
       (hNoteW_iw hb) _ hs₀)
   by_cases g4 : tagW e = 4
-  · by_cases hc : tcnt m₀ APP (tierW e) ≤ idxW e
+  · by_cases hc : tcnt m₀ APP (tierW e) ≤ idxA e
     · exact (bad _ hc (by rw [hWalkW.k_hs_put.eq_def]; simp [hsc, g4, hc])).elim
     rw [hWalkW.k_hs_put.arm2 n e i k tg ws sp fu m₀ hsc g3 g4 hc] at hb
     obtain ⟨n', rfl⟩ := arm0 _ (fun _ _ _ _ _ _ _ _ => by rw [hAppW.eq_def]) hb

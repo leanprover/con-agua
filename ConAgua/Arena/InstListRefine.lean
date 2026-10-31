@@ -461,7 +461,7 @@ theorem lappArm_ok (hg : tagW h = 4) :
   rw [instListArmApp]
   by_cases hs : tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0
   · rw [ilAppW] at hb; simp only [ne_eq] at hs; simp only [hs, ne_eq, not_false_eq_true, and_self, ↓reduceIte, reduceCtorEq] at hb
-  have hv : viewOK m h APP := ⟨hs, UInt64.not_le.mp fun hc => by
+  have hv : viewOKA m h := ⟨hs, UInt64.not_le.mp fun hc => by
     rw [ilAppW] at hb; simp only [ne_eq] at hs; simp only [hs, hc, ↓reduceIte, reduceCtorEq] at hb⟩
   obtain ⟨-, hfw, haw⟩ := view_app m a hA.1.1 h hh hv hg
   rw [ilAppW_miss n m h d o l fu hv] at hb
@@ -712,7 +712,7 @@ theorem gappArm_ok (hg : tagW h = 4) :
   refine lprobe_ok _ _ m m' a hA h d r hh (ilgAppW_hit n m h d o l fu ) (fun hr => by rw [ilgAppW]; simp [hr]) (fun hr hh0 hb => ?_) hb
   by_cases hs : tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0
   · rw [ilgAppW] at hb; simp only [ne_eq] at hs; simp only [hr, hh0, ne_eq, not_true_eq_false, ↓reduceIte, hs, not_false_eq_true, and_self, reduceCtorEq] at hb
-  have hv : viewOK m h APP := ⟨hs, UInt64.not_le.mp fun hc => by
+  have hv : viewOKA m h := ⟨hs, UInt64.not_le.mp fun hc => by
     rw [ilgAppW] at hb; simp only [ne_eq] at hs; simp only [hr, hh0, ne_eq, not_true_eq_false, ↓reduceIte, hs, hc, reduceCtorEq] at hb⟩
   obtain ⟨-, hfw, haw⟩ := view_app m a hA.1.1 h hh hv hg
   rw [ilgAppW_miss n m h d o l fu hr hh0 hv] at hb
