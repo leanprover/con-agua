@@ -49,8 +49,8 @@ def phash (m : Mem) (t i : Word) : Word := paramHashW (rdW (m.arr64 (tierA PREC 
 /-! ## The schema -/
 
 /-- The handle word of node `0` of the persistent / scratch `param` tier (tag `4`). -/
-def paramP : Word := 0x40000000
-def paramS : Word := 0x48000000
+def paramP : Word := 0x10000000
+def paramS : Word := 0x90000000
 
 /-- The `param` table as a cons schema: one key word, stored as the record; the match is one word comparison;
 no scratch skip. -/
@@ -90,7 +90,7 @@ def pcnt (m : Mem) (t : Word) : Word := rdW (m.arr64 CTL) (14 + t)
 
 /-- `param_push`'s room checks: the handle index, the record array. -/
 def ppushOK (m : Mem) (t : Word) : Bool :=
-  decide (pcnt m t < (134217728 : Word)) && decide (pcnt m t < m.len64 (tierA PREC t))
+  decide (pcnt m t < (67108864 : Word)) && decide (pcnt m t < m.len64 (tierA PREC t))
 
 /-- con-ron: ConRon/Arena/Store.lean:97-102 ConRon.Arena.Tbl.push -/
 def paramPush : FunDecl := consPushG paramCS
@@ -128,10 +128,10 @@ def internParams (m : Mem) : List Word → Option (List Word)
     | .error _ => none
 
 /- `param` of name handles `0`, `1`, `0`: persistent handles 0, 1, 0 (sharing). -/
-#guard internParams (paramMem 0) [0, 1, 0] == some [0x40000000, 0x40000001, 0x40000000]
+#guard internParams (paramMem 0) [0, 1, 0] == some [0x10000000, 0x10000001, 0x10000000]
 
 /- Scratch open: the nodes go to the scratch tier (the persistent tier is empty). -/
-#guard internParams (paramMem 1) [0, 1, 0] == some [0x48000000, 0x48000001, 0x48000000]
+#guard internParams (paramMem 1) [0, 1, 0] == some [0x90000000, 0x90000001, 0x90000000]
 
 /-! ## The specs: the library's, from this table's obligations -/
 

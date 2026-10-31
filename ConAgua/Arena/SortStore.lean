@@ -50,8 +50,8 @@ def somatchW (r : Array Word) (_t i u : Word) : Bool := rdW r i == u
 /-! ## The schema -/
 
 /-- The handle word of node `0` of the persistent / scratch `sort` tier (tag `2`). -/
-def sortP : Word := 0x20000000
-def sortS : Word := 0x28000000
+def sortP : Word := 0x08000000
+def sortS : Word := 0x88000000
 
 /-- The hash of node `i` of tier `t`. -/
 def sohash (m : Mem) (t i : Word) : Word := sortHashW (rdW (m.arr64 (tierA SOREC t)) i)
@@ -105,7 +105,7 @@ def socnt (m : Mem) (t : Word) : Word := rdW (m.arr64 CTL) (16 + t)
 
 /-- `sort_push`'s room checks: the handle index, the record array. -/
 def sopushOK (m : Mem) (t : Word) : Bool :=
-  decide (socnt m t < (134217728 : Word)) && decide (socnt m t < m.len64 (tierA SOREC t)) &&
+  decide (socnt m t < (67108864 : Word)) && decide (socnt m t < m.len64 (tierA SOREC t)) &&
     decide (socnt m t < m.len64 (tierA SOLP t))
 
 /-- con-ron: ConRon/Arena/Store.lean:97-102 ConRon.Arena.Tbl.push -/
@@ -151,12 +151,12 @@ def internSorts (m : Mem) : List Word → Option (List Word)
     | .error _ => none
 
 /- `sort` of handles `1`, `2`, `1`: persistent handles 0, 1, 0 (sharing). -/
-#guard internSorts (sortMem 0) [1, 2, 1] == some [0x20000000, 0x20000001, 0x20000000]
+#guard internSorts (sortMem 0) [1, 2, 1] == some [0x08000000, 0x08000001, 0x08000000]
 
 /- Scratch open: a persistent child is probed in the persistent tier (empty); the nodes go to
 the scratch tier; a scratch child (`0x28000000`) skips the persistent probe. -/
-#guard internSorts (sortMem 1) [1, 0x28000000, 1, 0x28000000] ==
-  some [0x28000000, 0x28000001, 0x28000000, 0x28000001]
+#guard internSorts (sortMem 1) [1, 0x88000000, 1, 0x88000000] ==
+  some [0x88000000, 0x88000001, 0x88000000, 0x88000001]
 
 /-! ## The specs: the library's, from this table's obligations -/
 
@@ -168,7 +168,7 @@ theorem soPre_spec (k : Stmt → M Sig) (s₀ : St) :
     step p k soPre
     ⦃fun r s' => s'.mem = s₀.mem ∧ r = .normal ∧ s'.loc 0 = s₀.loc 0 ∧ s'.loc 1 = s₀.loc 1 ∧
       s'.loc 2 = s₀.loc 2 ∧ s'.loc 5 = lvlHPW s₀.mem (s₀.loc 1); ⊤⦄ := by
-  simp only [soPre, hpBlkS, mapS, mapE_tld, mapE_cntE, mapE_tierE, mapE_idxE, mapE, mapC, L.Notation.blk]
+  simp only [soPre, hpBlkS, mapS, mapE_tld, mapE_cntE, mapE_tierE, mapE_idxE, mapE_idxAE, mapE_tagE, mapE, mapC, L.Notation.blk]
   simp only [Nat.reduceLT, Nat.reduceAdd, ↓reduceIte]
   sym only [lang_grind, arena_grind] =>
     vcgen [step, evalE, evalC, evalArgs, setLoc, ld64, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE] <;>

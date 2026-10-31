@@ -25,7 +25,7 @@ tier (`Arena/Store.lean:294`, `ETables.lets`). Its L representation is `app`'s/`
 * **Cons table.** Word array `LESLOT`, the same open addressing as `SLOT`/`ASLOT`.
 * **The scratch skip.** `internE (.letE ty val body)` does not probe the persistent tier when the
   scratch tier is open and a child is a scratch handle (`EStore.persFindMaybe`,
-  `eViewHasScratchChild`): bit 27 of `ty | val | body`.
+  `eViewHasScratchChild`): bit 31 of `ty | val | body`.
 
 The functions `letE_find(t, ty, val, body, h)` (the probe, the match inline: three word
 comparisons), `letE_push(t, ty, val, body, j)` and `intern_letE(ty, val, body)` are the cons-table
@@ -56,11 +56,11 @@ def lehash (m : Mem) (t i : Word) : Word :=
 /-! ## The schema -/
 
 /-- The handle word of node `0` of the persistent / scratch `letE` tier (tag `7`). -/
-def letP : Word := 0x70000000
-def letS : Word := 0x78000000
+def letP : Word := 0x1C000000
+def letS : Word := 0x9C000000
 
 /-- The `letE` table as a cons schema: three key words `ty val body`, packed into the record (lane
-memlay); the match is three field comparisons; the scratch skip is bit 27 of `ty | val | body`. -/
+memlay); the match is three field comparisons; the scratch skip is bit 31 of `ty | val | body`. -/
 def letCS : ConsSch where
   ra := LEREC
   sa := LESLOT
@@ -103,7 +103,7 @@ width (3) is not a power of two, so (unlike `app`'s `>> 2`) the record-room chec
 multiplication, `(c + 1) * 6 ≤ len`, matching `PushRoom`'s own shape directly (L has no division:
 `PLAN.md`, "the language L"). -/
 def lepushOK (m : Mem) (t : Word) : Bool :=
-  decide (lecnt m t < (134217728 : Word)) && decide ((lecnt m t + 1) * 2 ≤ m.len64 (tierA LEREC t))
+  decide (lecnt m t < (67108864 : Word)) && decide ((lecnt m t + 1) * 2 ≤ m.len64 (tierA LEREC t))
 
 /-- con-ron: ConRon/Arena/Store.lean:97-102 ConRon.Arena.Tbl.push -/
 def letPush : FunDecl := consPushG letCS
@@ -148,11 +148,11 @@ def internLets (m : Mem) : List (Word × Word × Word) → Option (List Word)
 
 /- `(1, 2, 3)`, `(3, 2, 1)`, `(1, 2, 3)`: persistent handles 0, 1, 0. -/
 #guard internLets (letMem 0) [(1, 2, 3), (3, 2, 1), (1, 2, 3)] ==
-  some [0x70000000, 0x70000001, 0x70000000]
+  some [0x1C000000, 0x1C000001, 0x1C000000]
 
 /- Scratch open: a scratch child (`0x78000000`) skips the persistent probe. -/
-#guard internLets (letMem 1) [(1, 2, 3), (0x78000000, 2, 3), (1, 2, 3), (0x78000000, 2, 3)] ==
-  some [0x78000000, 0x78000001, 0x78000000, 0x78000001]
+#guard internLets (letMem 1) [(1, 2, 3), (0x9C000000, 2, 3), (1, 2, 3), (0x9C000000, 2, 3)] ==
+  some [0x9C000000, 0x9C000001, 0x9C000000, 0x9C000001]
 
 /-! ## The specs: the library's, from this table's obligations -/
 

@@ -99,6 +99,12 @@ theorem mapE_tierE (f : Var → Var) (h : Expr) : mapE f (tierE h) = tierE (mapE
 theorem mapE_idxE (f : Var → Var) (h : Expr) : mapE f (idxE h) = idxE (mapE f h) := by
   simp [idxE, mapE]
 
+theorem mapE_idxAE (f : Var → Var) (h : Expr) : mapE f (idxAE h) = idxAE (mapE f h) := by
+  simp [idxAE, mapE]
+
+theorem mapE_tagE (f : Var → Var) (h : Expr) : mapE f (tagE h) = tagE (mapE f h) := by
+  simp [tagE, mapE]
+
 /-- Condition `c` with every variable renamed by `f`. -/
 def mapC (f : Var → Var) : Cond → Cond
   | .cmp c a b => .cmp c (mapE f a) (mapE f b)

@@ -60,11 +60,11 @@ def pjhash (m : Mem) (t i : Word) : Word :=
 /-! ## The schema -/
 
 /-- The handle word of node `0` of the persistent / scratch `proj` tier (tag `9`). -/
-def projP : Word := 0x90000000
-def projS : Word := 0x98000000
+def projP : Word := 0x24000000
+def projS : Word := 0xA4000000
 
 /-- The `proj` table as a cons schema: three key words `n u e`, packed into the record; the match
-is three field comparisons; the scratch skip is bit 27 of `n | e` (the index `u` is not a handle). -/
+is three field comparisons; the scratch skip is bit 31 of `n | e` (the index `u` is not a handle). -/
 def projCS : ConsSch where
   ra := PJREC
   sa := PJSLOT
@@ -107,7 +107,7 @@ width (3) is not a power of two, so (as for `letE`) the record-room check is sta
 multiplication, `(c + 1) * 6 ≤ len`, matching `PushRoom`'s own shape directly (`L` has no
 division). -/
 def pjpushOK (m : Mem) (t : Word) : Bool :=
-  decide (pjcnt m t < (134217728 : Word)) && decide ((pjcnt m t + 1) * 2 ≤ m.len64 (tierA PJREC t))
+  decide (pjcnt m t < (67108864 : Word)) && decide ((pjcnt m t + 1) * 2 ≤ m.len64 (tierA PJREC t))
 
 /-- con-ron: ConRon/Arena/Store.lean:97-102 ConRon.Arena.Tbl.push -/
 def projPush : FunDecl := consPushG projCS
@@ -154,12 +154,12 @@ def internProjs (m : Mem) : List (Word × Word × Word) → Option (List Word)
 /- `proj 1 0 2`, `proj 2 0 1`, `proj 1 1 2`, `proj 1 0 2`: persistent handles 0, 1, 2, 0 (sharing
 is on the whole triple, not any one field). -/
 #guard internProjs (projMem 0) [(1, 0, 2), (2, 0, 1), (1, 1, 2), (1, 0, 2)] ==
-  some [0x90000000, 0x90000001, 0x90000002, 0x90000000]
+  some [0x24000000, 0x24000001, 0x24000002, 0x24000000]
 
 /- Scratch open: a scratch `e` (`0x98000000`) skips the persistent probe; the index `u` alone
 being a bit-27 word does not (it is not tested). -/
-#guard internProjs (projMem 1) [(1, 0, 2), (1, 0, 0x98000000), (1, 0, 2), (1, 0, 0x98000000)] ==
-  some [0x98000000, 0x98000001, 0x98000000, 0x98000001]
+#guard internProjs (projMem 1) [(1, 0, 2), (1, 0, 0xA4000000), (1, 0, 2), (1, 0, 0xA4000000)] ==
+  some [0xA4000000, 0xA4000001, 0xA4000000, 0xA4000001]
 
 /-! ## The specs: the library's, from this table's obligations -/
 

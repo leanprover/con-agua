@@ -51,7 +51,7 @@ def bhash (m : Mem) (t i : Word) : Word := bvarHashW (rdW (m.arr64 (tierA BREC t
 
 /-- The handle word of node `0` of the persistent / scratch `bvar` tier (tag `0`). -/
 def bvarP : Word := 0x00000000
-def bvarS : Word := 0x08000000
+def bvarS : Word := 0x80000000
 
 /-- The `bvar` table as a cons schema: one key word `u`, stored as the record; the match is one
 word comparison; no scratch skip. -/
@@ -91,7 +91,7 @@ def bcnt (m : Mem) (t : Word) : Word := rdW (m.arr64 CTL) (22 + t)
 
 /-- `bvar_push`'s room checks: the handle index, the record array. -/
 def bpushOK (m : Mem) (t : Word) : Bool :=
-  decide (bcnt m t < (134217728 : Word)) && decide (bcnt m t < m.len64 (tierA BREC t))
+  decide (bcnt m t < (67108864 : Word)) && decide (bcnt m t < m.len64 (tierA BREC t))
 
 /-- con-ron: ConRon/Arena/Store.lean:97-102 ConRon.Arena.Tbl.push -/
 def bvarPush : FunDecl := consPushG bvarCS
@@ -133,7 +133,7 @@ def internBVars (m : Mem) : List Word → Option (List Word)
 #guard internBVars (bvarMem 0) [0, 1, 0, 7] == some [0, 1, 0, 2]
 
 /- Scratch open: the nodes go to the scratch tier (the persistent tier is empty). -/
-#guard internBVars (bvarMem 1) [0, 1, 0] == some [0x08000000, 0x08000001, 0x08000000]
+#guard internBVars (bvarMem 1) [0, 1, 0] == some [0x80000000, 0x80000001, 0x80000000]
 
 /-! ## The specs: the library's, from this table's obligations -/
 

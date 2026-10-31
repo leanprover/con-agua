@@ -26,7 +26,7 @@ is theirs, written out again for this record:
 * **Cons table.** Word array `FASLOT`, the same open addressing as `SLOT`/`ASLOT`/`LASLOT`.
 * **The scratch skip.** `internE (.forallE ty body)` does not probe the persistent tier when the
   scratch tier is open and a child is a scratch handle (`EStore.persFindBindMaybe`,
-  `bindHasScratchChild`): bit 27 of `ty | body`.
+  `bindHasScratchChild`): bit 31 of `ty | body`.
 
 As `lam`, `internE` at `forallE` does **not** go through `internNodeE`: it is `internForallEE`
 (`ConRon/Arena/Monad.lean`), which probes with `EStore.findBind ETag.forallE ty body`, tests
@@ -62,11 +62,11 @@ def fahash (m : Mem) (t i : Word) : Word :=
 /-! ## The schema -/
 
 /-- The handle word of node `0` of the persistent / scratch `forallE` tier (tag `6`). -/
-def forallP : Word := 0x60000000
-def forallS : Word := 0x68000000
+def forallP : Word := 0x18000000
+def forallS : Word := 0x98000000
 
 /-- The `forallE` table as a cons schema: two key words `ty body`, stored as the record; the match
-is two word comparisons; the scratch skip is bit 27 of `ty | body`. -/
+is two word comparisons; the scratch skip is bit 31 of `ty | body`. -/
 def forallCS : ConsSch where
   ra := FAREC
   sa := FASLOT
@@ -106,7 +106,7 @@ def facnt (m : Mem) (t : Word) : Word := rdW (m.arr64 CTL) (30 + t)
 
 /-- `forall_push`'s room checks: the handle index, the record array. -/
 def fapushOK (m : Mem) (t : Word) : Bool :=
-  decide (facnt m t < (134217728 : Word)) && decide (facnt m t < m.len64 (tierA FAREC t))
+  decide (facnt m t < (67108864 : Word)) && decide (facnt m t < m.len64 (tierA FAREC t))
 
 /-- con-ron: ConRon/Arena/Store.lean:97-102 ConRon.Arena.Tbl.push -/
 def forallPush : FunDecl := consPushG forallCS
@@ -157,12 +157,12 @@ def internForalls (m : Mem) : List (Word × Word) → Option (List Word)
 
 /- `(1, 2)`, `(2, 1)`, `(1, 2)`: persistent handles 0, 1, 0. -/
 #guard internForalls (forallMem 0) [(1, 2), (2, 1), (1, 2)] ==
-  some [0x60000000, 0x60000001, 0x60000000]
+  some [0x18000000, 0x18000001, 0x18000000]
 
 /- Scratch open: persistent children are probed in the persistent tier (empty), the nodes go to
 the scratch tier; a scratch child (`0x68000000`) skips the persistent probe. -/
-#guard internForalls (forallMem 1) [(1, 2), (0x68000000, 1), (1, 2), (0x68000000, 1)] ==
-  some [0x68000000, 0x68000001, 0x68000000, 0x68000001]
+#guard internForalls (forallMem 1) [(1, 2), (0x98000000, 1), (1, 2), (0x98000000, 1)] ==
+  some [0x98000000, 0x98000001, 0x98000000, 0x98000001]
 
 /-! ## The specs: the library's, from this table's obligations -/
 

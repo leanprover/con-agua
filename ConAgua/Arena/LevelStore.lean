@@ -50,8 +50,8 @@ def smatchW (r : Array Word) (_t i u : Word) : Bool := rdW r i == u
 /-! ## The schema -/
 
 /-- The handle word of node `0` of the persistent / scratch `succ` tier (tag `1`). -/
-def succP : Word := 0x10000000
-def succS : Word := 0x18000000
+def succP : Word := 0x04000000
+def succS : Word := 0x84000000
 
 /-- The hash of node `i` of tier `t`. -/
 def shash (m : Mem) (t i : Word) : Word := succHashW (rdW (m.arr64 (tierA SREC t)) i)
@@ -104,7 +104,7 @@ def scnt (m : Mem) (t : Word) : Word := rdW (m.arr64 CTL) (6 + t)
 
 /-- `succ_push`'s room checks: the handle index, the record array. -/
 def spushOK (m : Mem) (t : Word) : Bool :=
-  decide (scnt m t < (134217728 : Word)) && decide (scnt m t < m.len64 (tierA SREC t)) &&
+  decide (scnt m t < (67108864 : Word)) && decide (scnt m t < m.len64 (tierA SREC t)) &&
     decide (scnt m t < m.len64 (tierA SHP t))
 
 /-- con-ron: ConRon/Arena/Store.lean:97-102 ConRon.Arena.Tbl.push -/
@@ -143,11 +143,11 @@ def internSuccs (m : Mem) : List Word → Option (List Word)
     | .error _ => none
 
 /- `succ 0`, `succ 1`, `succ 0`, `succ (succ 0)`: persistent handles 0, 1, 0, 2. -/
-#guard internSuccs (succMem 0) [0, 1, 0, 0x10000000] ==
-  some [0x10000000, 0x10000001, 0x10000000, 0x10000002]
+#guard internSuccs (succMem 0) [0, 1, 0, 0x04000000] ==
+  some [0x04000000, 0x04000001, 0x04000000, 0x04000002]
 
 /- Scratch open: the nodes go to the scratch tier (the persistent tier is empty). -/
-#guard internSuccs (succMem 1) [0, 1, 0] == some [0x18000000, 0x18000001, 0x18000000]
+#guard internSuccs (succMem 1) [0, 1, 0] == some [0x84000000, 0x84000001, 0x84000000]
 
 /-! ## The specs: the library's, from this table's obligations -/
 
@@ -159,7 +159,7 @@ theorem sPre_spec (k : Stmt → M Sig) (s₀ : St) :
     step p k sPre
     ⦃fun r s' => s'.mem = s₀.mem ∧ r = .normal ∧ s'.loc 0 = s₀.loc 0 ∧ s'.loc 1 = s₀.loc 1 ∧
       s'.loc 2 = s₀.loc 2 ∧ s'.loc 5 = lvlHPW s₀.mem (s₀.loc 1); ⊤⦄ := by
-  simp only [sPre, hpBlkS, mapS, mapE_tld, mapE_cntE, mapE_tierE, mapE_idxE, mapE, mapC, L.Notation.blk]
+  simp only [sPre, hpBlkS, mapS, mapE_tld, mapE_cntE, mapE_tierE, mapE_idxE, mapE_idxAE, mapE_tagE, mapE, mapC, L.Notation.blk]
   simp only [Nat.reduceLT, Nat.reduceAdd, ↓reduceIte]
   sym only [lang_grind, arena_grind] =>
     vcgen [step, evalE, evalC, evalArgs, setLoc, ld64, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE] <;>

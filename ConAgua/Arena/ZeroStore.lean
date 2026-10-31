@@ -53,7 +53,7 @@ def zhash (_m : Mem) (_t _i : Word) : Word := zeroHashW
 
 /-- The handle word of node `0` of the persistent / scratch `zero` tier (tag `0`). -/
 def zeroP : Word := 0x00000000
-def zeroS : Word := 0x08000000
+def zeroS : Word := 0x80000000
 
 /-- The `zero` table as a cons schema: no key word, a dummy record word `0`; every node matches;
 no scratch skip. -/
@@ -93,7 +93,7 @@ def zcnt (m : Mem) (t : Word) : Word := rdW (m.arr64 CTL) (8 + t)
 
 /-- `zero_push`'s room checks: the handle index, the record array. -/
 def zpushOK (m : Mem) (t : Word) : Bool :=
-  decide (zcnt m t < (134217728 : Word)) && decide (zcnt m t < m.len64 (tierA ZREC t))
+  decide (zcnt m t < (67108864 : Word)) && decide (zcnt m t < m.len64 (tierA ZREC t))
 
 /-- con-ron: ConRon/Arena/Store.lean:97-102 ConRon.Arena.Tbl.push -/
 def zeroPush : FunDecl := consPushG zeroCS
@@ -133,7 +133,7 @@ def internZeros (m : Mem) : Nat → Option (List Word)
 #guard internZeros (zeroMem 0) 3 == some [0x00000000, 0x00000000, 0x00000000]
 
 /- Scratch open: the one node goes to the scratch tier (the persistent tier is empty). -/
-#guard internZeros (zeroMem 1) 2 == some [0x08000000, 0x08000000]
+#guard internZeros (zeroMem 1) 2 == some [0x80000000, 0x80000000]
 
 /-! ## The specs: the library's, from this table's obligations -/
 

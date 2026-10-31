@@ -49,8 +49,8 @@ def immatchW (r : Array Word) (_t i u v : Word) : Bool :=
 /-! ## The schema -/
 
 /-- The handle word of node `0` of the persistent / scratch `imax` tier (tag `3`). -/
-def imaxP : Word := 0x30000000
-def imaxS : Word := 0x38000000
+def imaxP : Word := 0x0C000000
+def imaxS : Word := 0x8C000000
 
 /-- The hash of node `i` of tier `t`. -/
 def imhash (m : Mem) (t i : Word) : Word :=
@@ -105,7 +105,7 @@ def imcnt (m : Mem) (t : Word) : Word := rdW (m.arr64 CTL) (12 + t)
 
 /-- `imax_push`'s room checks: the handle index, the record array. -/
 def impushOK (m : Mem) (t : Word) : Bool :=
-  decide (imcnt m t < (134217728 : Word)) && decide (imcnt m t < m.len64 (tierA IREC t)) &&
+  decide (imcnt m t < (67108864 : Word)) && decide (imcnt m t < m.len64 (tierA IREC t)) &&
     decide (imcnt m t < m.len64 (tierA IHP t))
 
 /-- con-ron: ConRon/Arena/Store.lean:97-102 ConRon.Arena.Tbl.push -/
@@ -144,10 +144,10 @@ def internImaxs (m : Mem) : List (Word × Word) → Option (List Word)
     | .error _ => none
 
 /- `(1, 2)`, `(2, 1)`, `(1, 2)`: persistent handles 0, 1, 0. -/
-#guard internImaxs (imaxMem 0) [(1, 2), (2, 1), (1, 2)] == some [0x30000000, 0x30000001, 0x30000000]
+#guard internImaxs (imaxMem 0) [(1, 2), (2, 1), (1, 2)] == some [0x0C000000, 0x0C000001, 0x0C000000]
 
 /- Scratch open: the nodes go to the scratch tier (the persistent tier is empty). -/
-#guard internImaxs (imaxMem 1) [(1, 2), (2, 1), (1, 2)] == some [0x38000000, 0x38000001, 0x38000000]
+#guard internImaxs (imaxMem 1) [(1, 2), (2, 1), (1, 2)] == some [0x8C000000, 0x8C000001, 0x8C000000]
 
 /-! ## The specs: the library's, from this table's obligations -/
 

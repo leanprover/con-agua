@@ -30,7 +30,7 @@ same width-2, scratch-skipping shape:
   per tier, the key word the key itself (an exact table), linear probing from `homeW`.
 * **The scratch skip.** `internE (.const n us)` does not probe the persistent tier when the
   scratch tier is open and a child is a scratch handle (`EStore.persFindMaybe`,
-  `eViewHasScratchChild`): bit 27 of `n | us`.
+  `eViewHasScratchChild`): bit 31 of `n | us`.
 
 The functions: `const_find(t, n, us, h)` (the probe, the match inline: two half-word comparisons),
 `const_push(t, n, us, j)` and `intern_const(n, us)`. They are the cons-table library's templates
@@ -55,8 +55,8 @@ def cematchW (r : Array Word) (_t i f a : Word) : Bool :=
 /-! ## The schema -/
 
 /-- The handle word of node `0` of the persistent / scratch `const` tier (tag `3`). -/
-def constP : Word := 0x30000000
-def constS : Word := 0x38000000
+def constP : Word := 0x0C000000
+def constS : Word := 0x8C000000
 
 /-- The hash of node `i` of tier `t`. -/
 def cehash (m : Mem) (t i : Word) : Word :=
@@ -108,7 +108,7 @@ def cecnt (m : Mem) (t : Word) : Word := rdW (m.arr64 CTL) (18 + t)
 
 /-- `const_push`'s room checks: the handle index, the record array. -/
 def cepushOK (m : Mem) (t : Word) : Bool :=
-  decide (cecnt m t < (134217728 : Word)) && decide (cecnt m t < m.len64 (tierA CREC t)) &&
+  decide (cecnt m t < (67108864 : Word)) && decide (cecnt m t < m.len64 (tierA CREC t)) &&
     decide (cecnt m t < m.len64 (tierA CLP t))
 
 /-- con-ron: ConRon/Arena/Store.lean:97-102 ConRon.Arena.Tbl.push -/
@@ -154,12 +154,12 @@ def internConsts (m : Mem) : List (Word × Word) → Option (List Word)
     | .error _ => none
 
 /- `(1, 2)`, `(2, 1)`, `(1, 2)`: persistent handles 0, 1, 0. -/
-#guard internConsts (constMem 0) [(1, 2), (2, 1), (1, 2)] == some [0x30000000, 0x30000001, 0x30000000]
+#guard internConsts (constMem 0) [(1, 2), (2, 1), (1, 2)] == some [0x0C000000, 0x0C000001, 0x0C000000]
 
 /- Scratch open: persistent children are probed in the persistent tier (empty), the nodes go to
 the scratch tier; a scratch child (`0x38000000`) skips the persistent probe. -/
-#guard internConsts (constMem 1) [(1, 2), (0x38000000, 1), (1, 2), (0x38000000, 1)] ==
-  some [0x38000000, 0x38000001, 0x38000000, 0x38000001]
+#guard internConsts (constMem 1) [(1, 2), (0x8C000000, 1), (1, 2), (0x8C000000, 1)] ==
+  some [0x8C000000, 0x8C000001, 0x8C000000, 0x8C000001]
 
 /-! ## The specs: the library's, from this table's obligations -/
 

@@ -26,7 +26,7 @@ The arena's `app` constructor is a `Tbl AppNode EIdx UInt64` per tier, `AppNode 
   per tier, the key word the key itself (an exact table), linear probing from `homeW`.
 * **The scratch skip.** `internE (.app f a)` does not probe the persistent tier when the scratch
   tier is open and a child is a scratch handle (`EStore.persFindMaybe`,
-  `eViewHasScratchChild`): bit 27 of `f | a`.
+  `eViewHasScratchChild`): bit 31 of `f | a`.
 
 The functions `app_find(t, f, a, h)` (the probe, the match inline: two half-word comparisons),
 `app_push(t, f, a, j)` and `intern_app(f, a)` are the cons-table library's templates
@@ -56,10 +56,10 @@ def amatchW (r : Array Word) (_t i f a : Word) : Bool :=
 
 /-- The handle word of node `0` of the persistent / scratch `app` tier (tag `4`). -/
 def appP : Word := 0x40000000
-def appS : Word := 0x48000000
+def appS : Word := 0xC0000000
 
 /-- The `app` table as a cons schema: two key words `f a`, packed into the record word; the match compares
-its two halves; the scratch skip is bit 27 of `f | a`. -/
+its two halves; the scratch skip is bit 31 of `f | a`. Its handles are wide (con-ron task #133). -/
 def appCS : ConsSch where
   ra := AREC
   sa := ASLOT
@@ -68,6 +68,7 @@ def appCS : ConsSch where
   P := appP
   S := appS
   tag := 4
+  wide := true
   fname := "app_find"
   pname := "app_push"
   nk := 2
@@ -99,7 +100,7 @@ def acnt (m : Mem) (t : Word) : Word := rdW (m.arr64 CTL) (4 + t)
 
 /-- `app_push`'s room checks: the handle index, the record array. -/
 def apushOK (m : Mem) (t : Word) : Bool :=
-  decide (acnt m t < (134217728 : Word)) && decide (acnt m t < m.len64 (tierA AREC t))
+  decide (acnt m t < (1073741824 : Word)) && decide (acnt m t < m.len64 (tierA AREC t))
 
 /-- con-ron: ConRon/Arena/Store.lean:97-102 ConRon.Arena.Tbl.push -/
 def appPush : FunDecl := consPushG appCS
@@ -145,9 +146,9 @@ def internApps (m : Mem) : List (Word × Word) → Option (List Word)
 #guard internApps (appMem 0) [(1, 2), (2, 1), (1, 2)] == some [0x40000000, 0x40000001, 0x40000000]
 
 /- Scratch open: persistent children are probed in the persistent tier (empty), the nodes go to
-the scratch tier; a scratch child (`0x48000000`) skips the persistent probe. -/
-#guard internApps (appMem 1) [(1, 2), (0x48000000, 1), (1, 2), (0x48000000, 1)] ==
-  some [0x48000000, 0x48000001, 0x48000000, 0x48000001]
+the scratch tier; a scratch child (`0xC0000000`) skips the persistent probe. -/
+#guard internApps (appMem 1) [(1, 2), (0xC0000000, 1), (1, 2), (0xC0000000, 1)] ==
+  some [0xC0000000, 0xC0000001, 0xC0000000, 0xC0000001]
 
 /-! ## The specs: the library's, from this table's obligations -/
 

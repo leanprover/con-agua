@@ -55,8 +55,8 @@ def fvmatchW (r : Array Word) (_t i u ty : Word) : Bool :=
 /-! ## The schema -/
 
 /-- The handle word of node `0` of the persistent / scratch `fvar` tier (tag `1`). -/
-def fvarP : Word := 0x10000000
-def fvarS : Word := 0x18000000
+def fvarP : Word := 0x04000000
+def fvarS : Word := 0x84000000
 
 /-- The hash of node `i` of tier `t`. -/
 def fvhash (m : Mem) (t i : Word) : Word :=
@@ -107,7 +107,7 @@ def fvcnt (m : Mem) (t : Word) : Word := rdW (m.arr64 CTL) (26 + t)
 
 /-- `fvar_push`'s room checks: the handle index, the record array. -/
 def fvpushOK (m : Mem) (t : Word) : Bool :=
-  decide (fvcnt m t < (134217728 : Word)) && decide (fvcnt m t < m.len64 (tierA FVREC t) >>> (1 : Word)) &&
+  decide (fvcnt m t < (67108864 : Word)) && decide (fvcnt m t < m.len64 (tierA FVREC t) >>> (1 : Word)) &&
     decide (fvcnt m t < m.len64 (tierA FVLP t))
 
 /-- con-ron: ConRon/Arena/Store.lean:97-102 ConRon.Arena.Tbl.push -/
@@ -156,12 +156,12 @@ def internFVars (m : Mem) : List (Word × Word) → Option (List Word)
 /- `fvar 0 1`, `fvar 1 1`, `fvar 0 2`, `fvar 0 1`: persistent handles 0, 1, 2, 0 (sharing is on the
 whole pair, not the index alone or the type alone). -/
 #guard internFVars (fvarMem 0) [(0, 1), (1, 1), (0, 2), (0, 1)] ==
-  some [0x10000000, 0x10000001, 0x10000002, 0x10000000]
+  some [0x04000000, 0x04000001, 0x04000002, 0x04000000]
 
 /- Scratch open: a persistent `ty` is probed in the persistent tier (empty); the nodes go to the
 scratch tier; a scratch `ty` (`0x08000000`) skips the persistent probe. -/
-#guard internFVars (fvarMem 1) [(0, 1), (0, 0x08000000), (0, 1), (0, 0x08000000)] ==
-  some [0x18000000, 0x18000001, 0x18000000, 0x18000001]
+#guard internFVars (fvarMem 1) [(0, 1), (0, 0x80000000), (0, 1), (0, 0x80000000)] ==
+  some [0x84000000, 0x84000001, 0x84000000, 0x84000001]
 
 /-! ## The specs: the library's, from this table's obligations -/
 

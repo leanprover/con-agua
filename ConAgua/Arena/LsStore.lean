@@ -92,7 +92,7 @@ writes the derived column `LSHP` (the list's has-param word, `lsOrW`, computed b
 
 /-- The handle word of node `0` of the persistent / scratch level-list tier. -/
 def lsP : Word := 0x00000000
-def lsS : Word := 0x08000000
+def lsS : Word := 0x80000000
 
 /-- The hash of node `i` of tier `t`: its word 2. -/
 def lshash (m : Mem) (t i : Word) : Word := rdW (m.arr64 (tierA LSREC t)) (i * 3 + 2)
@@ -149,7 +149,7 @@ def lscnt (m : Mem) (t : Word) : Word := rdW (m.arr64 CTL) (40 + t)
 /-- `ls_push`'s room checks: the handle index, the record array (width 3: by multiplication,
 as `letE`'s), the load limit. -/
 def lspushOK (m : Mem) (t : Word) : Bool :=
-  decide (lscnt m t < (134217728 : Word)) && decide ((lscnt m t + 1) * 3 ≤ m.len64 (tierA LSREC t)) &&
+  decide (lscnt m t < (67108864 : Word)) && decide ((lscnt m t + 1) * 3 ≤ m.len64 (tierA LSREC t)) &&
     decide (lscnt m t < m.len64 (tierA LSHP t))
 
 /-- con-ron: ConRon/Arena/Store.lean:97-102 ConRon.Arena.Tbl.push -/
@@ -189,7 +189,7 @@ def internLss (m : Mem) : List (Word × Word) → Option (List Word)
   some [0, 1, 0, 2, 3, 3]
 
 /- With the scratch tier open the nodes go there. -/
-#guard internLss (lsMem 1) [(0, 1), (1, 1), (2, 1)] == some [0x08000000, 0x08000001, 0x08000000]
+#guard internLss (lsMem 1) [(0, 1), (1, 1), (2, 1)] == some [0x80000000, 0x80000001, 0x80000000]
 
 /-! ## The specs: the library's, from the table's obligations -/
 
