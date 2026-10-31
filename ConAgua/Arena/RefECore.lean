@@ -12,7 +12,8 @@ it. An arm that leaves a slice on the stack has `GrowPost` (`CoreAfterG`: the st
 top kept, the top possibly grown) and `GrowRef`. A callee's ok run is threaded by
 `RefE.bind_core` (kept stack) and `RefE.bind_grow`/`bind_growK` (grown). A knot callee that is
 read through its run (`callE`) is `RefE.bind_callE`: its ok half from its `CoreSpec`, its error half
-from its claim. `GrowPost.restore` puts a grown stack's top back.
+from its claim; a lifted core callee (`liftE (callW …)`) is `RefE.bind_callW`. `GrowPost.restore`
+puts a grown stack's top back.
 -/
 
 open ConRon.Arena
@@ -172,6 +173,23 @@ theorem RefE.bind_callE {α β γ : Type} [Inhabited γ] {G : Prop} {p : Prog} {
   · rw [hx]
     exact RefE.bind_left fun hG => CoreSpecE.of_callE (herr hG) c
   have h1 := CoreSpec.of_callW hok (callW_of_callE c)
+  exact RefE.bind_right (by rw [AM.run_of_ok _ _ h1.run, h1.res]) (h r m' c h1)
+
+/-- **A lifted core callee** (`K (liftE (callW …))`, its run under a `CoreSpec`: `inst_list`), then
+the rest, both outcomes: the model's `none` is class `0`, its ok run the callee's `CoreRef`. -/
+theorem RefE.bind_callW {α β γ : Type} [Inhabited γ] {G : Prop} {p : Prog} {n : Nat} {f : FnName}
+    {args : List Word} {s₀ : St} {x : Except Err (List Word × Mem) → Except Err α}
+    (hx : ∀ e, x (.error e) = .error e) {T : AM γ} {k : γ → AM β} {a : AState}
+    {dec : List Word → γ} {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
+    {M : ModeMaps} {eb : Word} {ok : List Word → Prop} {R : α → β → AState → Prop}
+    (hok : CoreSpec p n f args T dec s₀ a dn vis fe M eb ok)
+    (h : ∀ r m', callW p n f args s₀.mem = some (r, m') →
+      CoreRef T a dec dn s₀.mem vis fe M eb r m' ok → RefE G (x (.ok (r, m'))) (k (dec r)) (AM.st T a) R) :
+    RefE G (x (liftE (callW p n f args s₀.mem))) (T >>= k) a R := by
+  rcases c : callW p n f args s₀.mem with _ | ⟨r, m'⟩
+  · rw [liftE_none, hx]; exact RefE.of_cls0 (by simp)
+  have h1 := CoreSpec.of_callW hok c
+  rw [liftE_some]
   exact RefE.bind_right (by rw [AM.run_of_ok _ _ h1.run, h1.res]) (h r m' c h1)
 
 /-- **A unified core callee, then the rest**, both outcomes: the callee's model value `x` against
