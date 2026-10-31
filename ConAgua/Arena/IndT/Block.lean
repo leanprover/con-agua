@@ -267,13 +267,11 @@ theorem block_ref (hP : CbProg p) {fs fs2 : List FnName}
   have hR9 := tail_ref hkp henv₁ hV hOpf hLC hLT hApd hCrk hIlpf hP.tail hP.cbr hfs2 hcl2 (k + 1) hclR hfR
     (by omega) hC8 hR8'.bpass (hblk.grow (decEBlk_mono _ _ _) hg18) hR8'.pos.hbOK hR8'.abs hkt ⟨hR8'.pos, hta8⟩
     hrb8 hR8'.classes hcoh8 hden8 hqP (ConRon.Bridge.denoteCIList_mono i8.ext _ _ hbP) hTw henv₂ hMs hfRc hclH hfH
-  rcases c9 : callE p (k + 1) "check_block_tail" [bO, bL, r8.headD 0] s8.mem with e9 | ⟨r9, m9⟩
-  · rw [icbE.k_check_block_tail.none]
-    exact fun hG => RefE.run_err hT9 hG.nv hG.toVerdictCtxU hR9 c9
+  rw [← bind_pure (ConRon.Arena.checkBlockTail V block x8)]
+  refine RefE.bindRun (s₀ := ⟨s8.mem, Locals.init []⟩) (fun _ => icbE.k_check_block_tail.none ..) hT9
+    (fun hG => hG.nv) (fun hG => hG.toVerdictCtxU) hR9 fun r9 s9 x9 a9 c9 _ _ hR9' => ?_
   rw [icbE.k_check_block_tail.arm1]
-  obtain ⟨s9, hs9, -, x9, a9, hrun9, hR9'⟩ := RefE.run_ok hT9 hR9 c9
-  subst hs9
-  exact RefE.ret hrun9 ⟨hR9'.stage, hg18.trans hR9'.grow, hR9'.memo, hR9'.abs, hR9'.rc,
+  exact RefE.ret rfl ⟨hR9'.stage, hg18.trans hR9'.grow, hR9'.memo, hR9'.abs, hR9'.rc,
     maMR.ofClosed hclM (hfM _ (by simp)) (callW_of_callE c9) hma8⟩
 
 include hkp henv hV hOpf hLC hLT hApd hCrk hIlpf hLz in
