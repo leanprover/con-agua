@@ -95,7 +95,25 @@ TODO
 
 ## 6. The module conversion (#136–#138): what our files needed
 
-TODO
+Our ConAgua files are not modules; they import con-ron's (now `module`) files and see their
+public, exposed part. Two kinds of fallout, both fixed on our side, **no `@[expose]` was needed**
+(no vendor patch; nothing to ask con-ron to upstream):
+
+* **Imports.** #137's `lake shake` turned the Arena/Bridge imports into the minimal public set,
+  so names our files got transitively before must now be imported directly:
+  `DeclTwin` (`ConRon.Bridge.Checker.Decl`, `.Basis`, `.Fold`, `.Split`, `ConRon.Arena.Checker`),
+  `Final/Twin` (`ConRon.Arena.Frontend.Prepare`, `.Prelude`, `ConRon.Bridge.Checker.Pins`,
+  `ConRon.Bridge.Frontend.Prepare`, `ConLeche.Verify.Frontend.Prepare`), `Pins`
+  (`ConRon.Arena.StdAxioms`, `.TrustAxioms`), `StoreDenLvl`/`StoreDenIntern`/`LevelArena`
+  (`ConRon.Arena.WFProofs`), `RomExprRef` (`ConRon.Arena.Frontend.Readback`), `Rom.Gen`/`Rom.Test`
+  (`ConLeche.Kernel.NatOpPins`).
+* **Definitions** we unfold (`internNodeE`, `ETables.get`, `Idx.tag`, …) are in Arena files that
+  are `@[expose] public section` throughout, so every `unfold`/`simp` of a twin body still works.
+
+For the follow-up lane that turns ConAgua's own files into modules: a non-module file importing
+these module files saw everything it needed once the imports were explicit; the failures were
+all "unknown identifier/constant" (a missing import), never a hidden body. Our `module` files
+(StoreFields, TRec, ConsLib, …) import only con-ron's Arena files, which expose everything.
 
 ## 7. Gates
 

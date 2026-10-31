@@ -723,12 +723,12 @@ theorem defeq_lsNodeW_viewLen {m : Mem} {a : AState} (hR : ArenaR m a) {h : Word
   rw [hpers]
   by_cases ht : tierW h = 0
   · simp only [ht, ↓reduceIte] at hx
-    simp only [ht, beq_self_eq_true, ↓reduceIte, LsTables.getLen, htag, Tbl.node?, decI_idx h (narrow_of_cnt m h hR.ls rfl hi), hx,
+    simp only [ht, beq_self_eq_true, ↓reduceIte, LsTables.getLen, htag, Tbl.node?, decI_idx h (narrow_of_tagW h (by rw [show tagW h = 0 by simpa using g0]; decide)), hx,
       Option.map_some, hlen]
   · simp only [ht, ↓reduceIte] at hx
     have hon : a.store.lss.scratchOn = true := by
       rw [← hfl]; simp only [bne_iff_ne, ne_eq]; exact fun h1 => hs ⟨ht, h1⟩
-    simp only [ht, beq_iff_eq, ↓reduceIte, hon, LsTables.getLen, htag, Tbl.node?, decI_idx h (narrow_of_cnt m h hR.ls rfl hi), hx,
+    simp only [ht, beq_iff_eq, ↓reduceIte, hon, LsTables.getLen, htag, Tbl.node?, decI_idx h (narrow_of_tagW h (by rw [show tagW h = 0 by simpa using g0]; decide)), hx,
       Option.map_some, hlen]
 
 /-! ## `unfoldable_head`
@@ -964,7 +964,7 @@ theorem sameConstHeads_spec (p : Prog) (hp : DefEqLeafProg p) (n : Nat) (s₀ : 
   simp only [callFn, sameConstHeadsL]
   vcgen [exec, step, evalE, L.evalC_spec, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld,
     evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE, callW_spec p n "get_app_fn"]
-  all_goals (try simp only [Cond.pval, Expr.pval, Expr.pval_cntE, del_rd64, St.setLoc_loc, St.setLoc_mem,
+  all_goals (try simp only [Cond.pval, Expr.pval_tagE, Expr.pval_idxAE, Expr.pval_idxGE, Expr.pval, Expr.pval_cntE, del_rd64, St.setLoc_loc, St.setLoc_mem,
     St.setLocs_nil, St.setLocs_cons,
     Locals.init_nil, Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval,
     Nat.reduceEqDiff, reduceIte, beq_iff_eq, bne_iff_ne, ne_eq, decide_eq_true_eq, Bool.and_eq_true] at *)
