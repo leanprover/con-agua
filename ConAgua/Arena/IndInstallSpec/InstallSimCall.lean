@@ -7,7 +7,7 @@ import ConAgua.L.GrindAttr
 /-!
 # InstallSimCall
 
-`installSimCall`, `installSortSim`, `MemOK.grow`, `_root_.L.Arena.Sim.callW_pos`.
+`installSortSim`, `MemOK.grow`, `_root_.L.Arena.Sim.callW_pos`.
 -/
 
 noncomputable section
@@ -25,18 +25,6 @@ open L.Arena
 local notation "V" => ConLeche.CheckMode.verified
 
 /-! ## Callees as runs -/
-
-/-- **A callee's refinement triple, as a `Sim` on its run.** -/
-theorem installSimCall {α : Type} [Inhabited α] {p : Prog} {n : Nat} {f : FnName} {args : List Word}
-    {m : Mem} {op : AM α} {a : AState} {Q : List Word → α → Mem → AState → Prop}
-    {P : List Word → St → Prop}
-    (h : ⦃fun s => s = (⟨m, Locals.init []⟩ : St)⦄ invoke p (exec p n) f args ⦃fun r s' => P r s'; ⊤⦄)
-    (hP : ∀ r s', P r s' → AM.ok op a ∧ Q r (AM.res op a) s'.mem (AM.st op a)) :
-    Sim (callW p n f args m) op a Q := by
-  intro r m' e
-  obtain ⟨s', rfl, hp⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩) h e
-  obtain ⟨hok, hq⟩ := hP r s' hp
-  exact ⟨_, _, partsRunOfOk hok, hq⟩
 
 /-- `intern_sort` as a `Sim` (master's, through its stage lemma). -/
 theorem installSortSim {p : Prog} (hP : CstProg p) (n : Nat) {dn : NIdx → Option ConLeche.Name}
