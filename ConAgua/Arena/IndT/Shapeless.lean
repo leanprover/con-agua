@@ -201,18 +201,12 @@ theorem csf_ref (hq : KnotStageProg p) (hap : ApdF p) (hkp : CrKeep p)
         have hqd : decCV (erecP m) (w + 1).toNat = some cv := by rw [hw1]; exact hcvd
         have hqb : (w + 1).toNat + 3 < 2 ^ 64 := by omega
         rw [csfE.arm2 p F m vis off cnt hc0 htag, hw]
-        have h1R := ccv_ref hq hap hkp hF' hT hqd hqb hlpsd hCr
-        rcases c1 : checkConstantValE p F m vis (w + 1) with e1 | ⟨r1, m1⟩ <;> rw [c1] at h1R
-        · rw [csfE.k_check_constant_val.none]; exact RefE.bind_left h1R
+        refine RefE.bindE (fun _ => csfE.k_check_constant_val.none ..) id
+          (ccv_ref hq hap hkp hF' hT hqd hqb hlpsd hCr) fun ⟨_, m1⟩ _ a1 _ hP1 => ?_
         rw [csfE.k_check_constant_val.arm1, csfE.j1.arm1]
-        obtain ⟨_, a1, hrun1, hP1⟩ := h1R
-        refine RefE.bind_right hrun1 ?_
-        have t := tail _ _ hP1.stage hP1.grow hP1.crOK
-        rcases hx : csfE p F m1 vis (off + 1) (cnt - 1) with ε | ⟨r0, m0⟩ <;> rw [hx] at t
-        · rw [csfE.k_check_shapeless_formers.none]; exact t
-        rw [csfE.k_check_shapeless_formers.arm1]
-        obtain ⟨_, a', hrun, hR⟩ := t
-        exact RefE.ret hrun hR
+        exact RefE.lastE (f := fun v => (0, v.2)) (fun _ => csfE.k_check_shapeless_formers.none ..)
+          (fun _ => csfE.k_check_shapeless_formers.arm1 ..) id (tail _ _ hP1.stage hP1.grow hP1.crOK)
+          fun _ _ _ _ h => h
       · have hne : wt ≠ 3 := by
           intro h
           have := (L.Arena.decCI_kind3 hci hwt).1 h
@@ -225,12 +219,9 @@ theorem csf_ref (hq : KnotStageProg p) (hap : ApdF p) (hkp : CrKeep p)
           | indInfo cv caps => exact absurd ⟨cv, caps, rfl⟩ h3
           | _ => rfl
         rw [csfE.arm3 p F m vis off cnt hc0 htag, csfE.j1.arm1, htw]
-        have t := tail m a hT (IWGrow.refl m) hCr
-        rcases hx : csfE p F m vis (off + 1) (cnt - 1) with ε | ⟨r0, m0⟩ <;> rw [hx] at t
-        · rw [csfE.k_check_shapeless_formers.none]; exact t
-        rw [csfE.k_check_shapeless_formers.arm1]
-        obtain ⟨_, a', hrun, hR⟩ := t
-        exact RefE.ret hrun hR
+        exact RefE.lastE (f := fun v => (0, v.2)) (fun _ => csfE.k_check_shapeless_formers.none ..)
+          (fun _ => csfE.k_check_shapeless_formers.arm1 ..) id (tail m a hT (IWGrow.refl m) hCr)
+          fun _ _ _ _ h => h
 
 /-- **`check_shapeless` refines `checkShapeless .verified`, both outcomes**: it never returns
 (the ok case is empty); its error is the formers' (`csf_ref`) or its decline, after the twin's
@@ -249,13 +240,12 @@ theorem csl_ref (hq : KnotStageProg p) (hap : ApdF p) (hkp : CrKeep p) (F : Nat)
   have hF' : F ≤ 2 ^ 62 := by omega
   have hlen : l.toNat = block.length :=
     (decEBlk_length dn m _ _ block (hd.get (decEBlk_mono _ _ _))).symm
-  have hcl := csf_ref hq hap hkp (dn := dn) (vis := vis) (fe := fe) block F hF' m a o l hT hCr hd hlen hb hlps
   unfold ConRon.Arena.checkShapeless
-  rcases c1 : csfE p F m vis o l with e1 | ⟨r1, m1⟩ <;> rw [c1] at hcl
-  · rw [cslE.k_check_shapeless_formers.none]; exact RefE.bind_left hcl
+  refine RefE.bindE (fun _ => cslE.k_check_shapeless_formers.none ..) id
+    (csf_ref hq hap hkp (dn := dn) (vis := vis) (fe := fe) block F hF' m a o l hT hCr hd hlen hb hlps)
+    fun ⟨_, _⟩ _ _ _ _ => ?_
   rw [cslE.k_check_shapeless_formers.eq_2]
-  obtain ⟨_, a', hrun, -⟩ := hcl
-  exact RefE.bind_right hrun fun _ => ErrClaim.fail _ _ (by decide)
+  exact fun _ => ErrClaim.fail _ _ (by decide)
 
 end
 

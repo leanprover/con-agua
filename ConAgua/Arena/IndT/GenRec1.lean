@@ -70,10 +70,8 @@ theorem cnfs_ref {p : Prog} (hkp : KnotStageProg p) {env : ConLeche.Env}
   rcases n with _ | n
   · rw [cnfsE_zero]; exact RefE.of_cls0 (by simp)
   rw [cnfsE_succ]
-  cases c0 : callW p n "iw_alloc" [ml] m with
-  | none => rw [cnfsEK1_none]; exact RefE.of_cls0 (by simp)
-  | some q0 =>
-  obtain ⟨r0, m0⟩ := q0
+  rcases c0 : callW p n "iw_alloc" [ml] m with _ | ⟨r0, m0⟩
+  · rw [cnfsEK1_none]; exact RefE.of_cls0 (by simp)
   rw [cnfsEK1_some]
   obtain ⟨s0, rfl, -, hw0⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩) (iwAlloc_specW p P.ha n _ ml) c0
   obtain ⟨hS0, hg0, hq0, ht0⟩ := allocW_stage hw0 hC.stage

@@ -127,9 +127,7 @@ theorem dg_ref {p : Prog} (hD : DmProg10 p) (hq : KnotStageProg p) (hcl : LeafCl
   have hrun1' : natDivModNames.run a = .ok (x1, a) := hrun1
   refine RefE.bind_right hrun1' ?_
   -- the membership
-  rcases h2 : callW p k "sl_contains" [r1.headD 0, r1.tail.headD 0, n] m1 with _ | ⟨r2, m2⟩
-  · rw [liftE_none, defnDivGateE.k_sl_contains.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]
+  refine RefE.onlySim (fun _ => defnDivGateE.k_sl_contains.none ..) (fun _ _ h => h) fun r2 m2 h2 => ?_
   have hCr2 := hkp.call (im_mem _ rfl) h2 (hkp.call (im_mem _ rfl) h1 hCr)
   obtain ⟨x2, a2, hrun2, hS2, hg2, hd2⟩ := slContains_ref hN.lSlContains (vis := w) (fe := fe2)
     (dn := dn) (r1.headD 0) (r1.tail.headD 0) n x1 (by exact_mod_cast hn) k m1 a r2 m2 ⟨hS1, hd1.1⟩ h2
@@ -140,26 +138,21 @@ theorem dg_ref {p : Prog} (hD : DmProg10 p) (hq : KnotStageProg p) (hcl : LeafCl
   have hC2 := StageC.of_core hC1 (hS2.restrict vis) (callW_leafFrame hcl (leaf_mem _ (by decide)) h2)
     (CoreStep.refl hC1.check)
   have hG2 : IWGrow m m2 := hg1.trans hg2
-  by_cases z2 : r2.headD 0 ≠ 0
-  · rw [defnDivGateE.k_sl_contains.arm1 p _ _ _ _ _ _ z2]
-    have hx2' : x1.contains (decI n) = true := by rw [← hx2e]; exact decW0B_true hd2 z2
-    refine RefE.ite_pos hx2' ?_
-    -- the variant records
-    refine RefE.onlySim (fun _ => defnDivGateE.k_rom_pin_sets.none ..) (fun _ _ h => h) fun r3 m3 h3 => ?_
-    rw [defnDivGateE.k_rom_pin_sets.arm1]
-    obtain ⟨hS3, hg3, hP3, hI3⟩ := romPinSets_ref hD hS2 hP2 h3
-    have hC3 := StageC.of_core hC2 (hS3.restrict vis)
-      (callW_leafFrame hcl (leaf_mem _ (by decide)) h3) (CoreStep.refl hC2.check)
-    -- the gate
-    exact RefE.lastE (f := fun v => (0, v.2)) (fun _ => defnDivGateE.k_check_div_mod_pin.none ..)
-      (fun _ => by rw [defnDivGateE.k_check_div_mod_pin.arm1, defnDivGateE.j1.arm1]) id
-      (cp_ref hD.toDmProg8 hq hcl hkp hdn (hs0 dn vis _) (hsA dn vis _) henv hk' hS3 hC3 hok2
-        (by exact_mod_cast hn) hI3 hpd hnm (hkp.call (im_mem _ rfl) h3 hCr2))
-      fun _ _ _ _ hR4 => ⟨hR4.stageW, hR4.stage, hR4.core.ext, hG2.trans (hg3.trans hR4.grow)⟩
-  · have z2' : r2.headD 0 = 0 := by simpa using z2
-    rw [defnDivGateE.k_sl_contains.arm2 p _ _ _ _ _ _ z2', defnDivGateE.j1.arm1]
-    have hx2' : x1.contains (decI n) = false := by rw [← hx2e]; exact decW0B_false hd2 z2'
-    exact RefE.ite_neg (by rw [hx2']; decide) (RefE.ret rfl ⟨hS2, hC2, Ext.refl _, hG2⟩)
+  rw [defnDivGateE.k_sl_contains.eq_2, ite_not]
+  refine RefE.retIf (fun z2 => by rw [← hx2e]; exact decW0B_false hd2 z2) (fun hb => by rw [← hx2e, ← hd2.1] at hb; simpa using hb)
+    (fun _ => ⟨hS2, hC2, Ext.refl _, hG2⟩) fun _ _ => ?_
+  -- the variant records
+  refine RefE.onlySim (fun _ => defnDivGateE.k_rom_pin_sets.none ..) (fun _ _ h => h) fun r3 m3 h3 => ?_
+  rw [defnDivGateE.k_rom_pin_sets.arm1]
+  obtain ⟨hS3, hg3, hP3, hI3⟩ := romPinSets_ref hD hS2 hP2 h3
+  have hC3 := StageC.of_core hC2 (hS3.restrict vis)
+    (callW_leafFrame hcl (leaf_mem _ (by decide)) h3) (CoreStep.refl hC2.check)
+  -- the gate
+  exact RefE.lastE (f := fun v => (0, v.2)) (fun _ => defnDivGateE.k_check_div_mod_pin.none ..)
+    (fun _ => by rw [defnDivGateE.k_check_div_mod_pin.arm1, defnDivGateE.j1.arm1]) id
+    (cp_ref hD.toDmProg8 hq hcl hkp hdn (hs0 dn vis _) (hsA dn vis _) henv hk' hS3 hC3 hok2
+      (by exact_mod_cast hn) hI3 hpd hnm (hkp.call (im_mem _ rfl) h3 hCr2))
+    fun _ _ _ _ hR4 => ⟨hR4.stageW, hR4.stage, hR4.core.ext, hG2.trans (hg3.trans hR4.grow)⟩
 
 /-- **`defn_div_gate` under `StageC`** from the call's run (`dg_ref`'s ok half; the variant records
 after and the frame from the gate's write set). -/

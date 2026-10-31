@@ -1,5 +1,6 @@
 import ConAgua.Verdict.PosTopE1
 import ConAgua.Arena.IndPosSpec.UnW2
+import ConAgua.Arena.RefWalk
 
 /-!
 # `nest_uniform`: one model and one refinement for both outcomes
@@ -68,30 +69,21 @@ theorem nu_ref {p : Prog} (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis
       have := hS.iw.iw; have := hS.iw.iwSize; simp; omega)
     have r3 : rdW (m.arr64 IW) (hdr + 1) = ll := by simp [rdW, hh1, h3]
     rw [r1, r2, r3, ConRon.Arena.nestUniform.eq_2]
-    rcases huc' : ucW (realCall p) k m ctx o ll with _ | ⟨r, m1⟩
-    · rw [liftE_none, nuE.k_nest_uniform_cs.none]; exact RefE.of_cls0 (by simp)
-    rw [liftE_some]
+    refine RefE.bindLift (fun _ => nuE.k_nest_uniform_cs.none ..) fun r m1 huc' => ?_
     obtain ⟨b, a1, hrun1, hS1, hg1, hr, hP1, hJ1⟩ := ucW_ok dn fe vis ctx c hhi (realCall p) J Pcv hJI hJnu k m m1 a
       o ll cs _ huc' hS hJ (hPc cs List.mem_cons_self) hU h6 (by omega) h8 hP
-    refine RefE.bind_right hrun1 ?_
-    cases b with
-    | false =>
-      rw [nuE.k_nest_uniform_cs.abort1 p k ctx off l r m1 (by simpa using hr)]
-      exact fun _ => ErrClaim.fail _ _ (by decide)
-    | true =>
-      rw [nuE.k_nest_uniform_cs.arm1 p k ctx off l r m1 (by rw [hr]; decide)]
-      refine RefE.ite_pos rfl ?_
-      have ho1 : (off + 1).toNat = off.toNat + 1 := word_add_toNat (by
-        have := hS.iw.iw; have := hS.iw.iwSize; simp; omega)
-      have hl1 : (l - 1).toNat = l.toNat - 1 :=
-        UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simp; omega))
-      have ih' := ih (m := m1) (a := a1) (off := off + 1) (l := l - 1) (css := css') hS1 hJ1
+    refine ⟨_, _, hrun1, RefE.ofArms (fun h => nuE.k_nest_uniform_cs.abort1 (hc1 := h) ..)
+      (fun h => nuE.k_nest_uniform_cs.arm1 (hc1 := h) ..) ?_⟩
+    refine RefE.guardIf (by decide) (fun h => by grind) (fun h => by grind) fun _ _ => ?_
+    have ho1 : (off + 1).toNat = off.toNat + 1 := word_add_toNat (by
+      have := hS.iw.iw; have := hS.iw.iwSize; simp; omega)
+    have hl1 : (l - 1).toNat = l.toNat - 1 :=
+      UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simp; omega))
+    exact RefE.lastE (fun _ => nuE.k_nest_uniform.none ..) (f := fun v => ([0], v.2))
+      (fun _ => nuE.k_nest_uniform.arm1 ..) id
+      (ih (m := m1) (a := a1) (off := off + 1) (l := l - 1) (css := css') hS1 hJ1
         (fun cs hcs => hPc cs (List.mem_cons_of_mem _ hcs)) (hU.grow hg1)
-        (by rw [hl1, hl]; simp) (by rw [ho1]; exact hcss.tail.grow hg1) hP1
-      rcases hx : nuE p k m1 ctx (off + 1) (l - 1) with ε | ⟨r0, m0⟩ <;> rw [hx] at ih'
-      · rw [nuE.k_nest_uniform.none]; exact ih'
-      · rw [nuE.k_nest_uniform.arm1]
-        obtain ⟨y, a', hrun, hR⟩ := ih'
-        exact RefE.ret hrun ⟨hR.stage, hg1.trans hR.grow, hR.pos, hR.inv⟩
+        (by rw [hl1, hl]; simp) (by rw [ho1]; exact hcss.tail.grow hg1) hP1)
+      fun _ _ _ _ hR => ⟨hR.stage, hg1.trans hR.grow, hR.pos, hR.inv⟩
 
 end L.Ind

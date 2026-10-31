@@ -151,19 +151,13 @@ theorem tmn_ref (n : Nat) (hn : n ≤ 2 ^ 62) : ∀ {m : Mem} {a : AState}
   -- `ctors_have_name` (outside the verdict closure)
   rcases h2 : chnW n m1 cto ctl (rdW (m1.arr64 IW) e) with _ | hv
   · rw [liftE_none, tmnE.k_ctors_have_name.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]
+  rw [liftE_some, tmnE.k_ctors_have_name.eq_2]
   obtain ⟨hany, -⟩ := chnW_ok n m1 cto ctl _ hv ctors h2 (hct1.get (OMono.decPL decCN_mono _ _)) hcH hctb
   rw [hcD] at hany
-  by_cases hh : hv = 0
-  · rw [tmnE.k_ctors_have_name.arm1 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hh]
-    have hf : ctors.any (fun c => c.1.name == nf.ctor) = false := by rw [← hany, hh]; rfl
-    simp only [hf, Bool.false_eq_true, ite_false]
-    refine RefE.ret (y := ys) rfl ⟨hR1.slice, hC1, hg1, hR1.rc, hR1.abs, fun mb ps hps hpb => ?_⟩
-    obtain ⟨v, -, -, hfr, pr, hpr, hprb⟩ := hptr1 mb ps hps hpb
-    exact ⟨by simpa using hfr, pr, by simpa using hpr, hprb⟩
-  rw [tmnE.k_ctors_have_name.arm2 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hh]
-  have ht : ctors.any (fun c => c.1.name == nf.ctor) = true := by rw [← hany]; simpa using hh
-  simp only [ht, ite_true]
+  refine RefE.retIf (fun hh => by rw [← hany, hh]; rfl) (fun hf => by rw [← hany] at hf; simpa using hf)
+    (fun _ => ⟨hR1.slice, hC1, hg1, hR1.rc, hR1.abs, fun mb ps hps hpb => by
+      obtain ⟨v, -, -, hfr, pr, hpr, hprb⟩ := hptr1 mb ps hps hpb
+      exact ⟨by simpa using hfr, pr, by simpa using hpr, hprb⟩⟩) fun _ _ => ?_
   obtain ⟨-, hlvP, hedP, -⟩ := ConRon.Bridge.Inductives.RC.dCtorNf_inv
     (ConRon.Bridge.Inductives.dCtorNf_ext c1.ext _ _ hnfP1)
   -- `target_class_match`
@@ -178,19 +172,16 @@ theorem tmn_ref (n : Nat) (hn : n ≤ 2 ^ 62) : ∀ {m : Mem} {a : AState}
   have hg2 : IWGrow m1 m2 := hR2.grow
   have hg12 := hg1.trans hg2
   have hys2 := hR1.slice.grow (fun q => decNCN_mono q) hg2
-  by_cases hk : rk = 0
-  · rw [tmnE.k_target_class_match.arm1 _ _ _ _ _ _ _ hk]
-    have hc0 : c = false := by rw [← hR2.res, hk]; rfl
-    subst hc0
-    refine RefE.ret (y := ys) rfl ⟨hys2, hR2.stage, hg12, hR2.rc, hR2.abs, fun mb ps hps hpb => ?_⟩
-    obtain ⟨v, -, -, hfr, pr, hpr, hprb⟩ := hptr1 mb ps hps hpb
-    have hb := hR1.slice.bound
-    dsimp only at hb hpr ⊢
-    exact ⟨by simpa using hfr, pr, by simp only [List.headD_cons, List.tail_cons]; rw [decNL_grow hg2 hb]; exact hpr, hprb⟩
-  rw [tmnE.k_target_class_match.arm2 _ _ _ _ _ _ _ hk]
-  have hc1 : c = true := by rw [← hR2.res]; simpa using hk
+  rw [tmnE.k_target_class_match.eq_2]
+  refine RefE.retIf (fun hk => by rw [← hR2.res, hk]; rfl) (fun hc => by rw [← hR2.res] at hc; simpa using hc)
+    (fun _ => ⟨hys2, hR2.stage, hg12, hR2.rc, hR2.abs, fun mb ps hps hpb => by
+      obtain ⟨v, -, -, hfr, pr, hpr, hprb⟩ := hptr1 mb ps hps hpb
+      have hb := hR1.slice.bound
+      dsimp only at hb hpr ⊢
+      exact ⟨by simpa using hfr, pr,
+        by simp only [List.headD_cons, List.tail_cons]; rw [decNL_grow hg2 hb]; exact hpr, hprb⟩⟩)
+    fun _ hc1 => ?_
   subst hc1
-  simp only [ite_true]
   -- `sl_cons` (outside the verdict closure)
   refine RefE.onlySim (fun _ => tmnE.k_sl_cons.none ..) (fun _ _ h => h) fun rc m3 h4 => ?_
   rw [tmnE.k_sl_cons.arm1]
