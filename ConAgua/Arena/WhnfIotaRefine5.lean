@@ -394,9 +394,7 @@ theorem icfForall_ref (p : Prog) (hp : IotaProg4 p) (hil : InstListOK p) (N F : 
   have hb' : b = true := by rw [hb]; simpa [decBool] using hok0
   subst hb'
   refine RefE.ite_pos rfl ?_
-  by_cases hlen : m3.len64 SPN ≤ aco + acn
-  · rw [ite_eq_left hlen]; exact RefE.of_cls0 rfl
-  rw [ite_eq_right hlen]
+  refine RefE.abort0 (by rfl) fun hlen => ?_
   have hsz3 : (m3.arr64 SPN).size = (s₀.mem.arr64 SPN).size := hSt3.size
   have hg1 : (aco + acn).toNat < (m3.arr64 SPN).size := by
     have h' := UInt64.not_le.mp hlen

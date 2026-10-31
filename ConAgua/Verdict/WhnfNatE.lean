@@ -463,9 +463,7 @@ theorem reduceNatAp_ref (hno : NatOpResultOK p) (n F : Nat) (hF : n ≤ F) (hn2 
   | zero => rw [reduceNatApE.eq_1]; exact RefE.of_cls0 (by simp)
   | succ n =>
   rw [reduceNatApE.eq_2]
-  by_cases hbd : tcnt s₀.mem APP (tierW f) ≤ idxW f
-  · rw [ite_eq_left hbd]; exact RefE.of_cls0 (by simp)
-  rw [ite_eq_right hbd]
+  refine RefE.abort0 (by simp) fun hbd => ?_
   obtain ⟨hviewf, hgw, hxw⟩ := view_app s₀.mem a₀ hC.arena.base f hf ⟨hsc, by simpa using hbd⟩ hg4
   have hcg0 := redHead_app (coreKnot (decMode mode) fe id F) fe d.toNat (decE f) (decE b) _ _ a₀ hviewf
   generalize tfld s₀.mem APP (tierW f) (idxW f) 0 = gw at hgw hviewf hcg0 ⊢
@@ -481,12 +479,8 @@ theorem reduceNatAp_ref (hno : NatOpResultOK p) (n F : Nat) (hF : n ≤ F) (hn2 
   have g3' : gw >>> 28 = 3 := by simpa using g3
   have ht : ((decE (gw)).tag == ETag.const) = true := by
     rw [decE_const_tag _ hgw]; exact beq_iff_eq.mpr g3'
-  by_cases hs2 : tierW (gw) ≠ 0 ∧ rdW (s₀.mem.arr64 CTL) 1 = 0
-  · rw [ite_eq_left hs2]; exact RefE.of_cls0 (by simp)
-  rw [ite_eq_right hs2]
-  by_cases hb2 : tcnt s₀.mem CONST (tierW (gw)) ≤ idxW (gw)
-  · rw [ite_eq_left hb2]; exact RefE.of_cls0 (by simp)
-  rw [ite_eq_right hb2]
+  refine RefE.abort0 (by simp) fun hs2 => ?_
+  refine RefE.abort0 (by simp) fun hb2 => ?_
   obtain ⟨n_, us_, hview, hn, hu, hnl, hul⟩ := view_const_words s₀.mem a₀ hC.arena.base _ hgw
     ⟨hs2, by simpa using hb2⟩ g3'
   subst hn hu
@@ -564,9 +558,7 @@ theorem reduceNatHead_ref (hno : NatOpResultOK p) (n F : Nat) (hF : n ≤ F) (hn
   | zero => rw [reduceNatHeadE.eq_1]; exact RefE.of_cls0 (by simp)
   | succ n =>
   rw [reduceNatHeadE.eq_2]
-  by_cases hsc : tierW f ≠ 0 ∧ rdW (s₀.mem.arr64 CTL) 1 = 0
-  · rw [ite_eq_left hsc]; exact RefE.of_cls0 (by simp)
-  rw [ite_eq_right hsc]
+  refine RefE.abort0 (by simp) fun hsc => ?_
   -- the tags that only check a bound
   have simple : ∀ (c : TRec), (f >>> 28 = 0 ∧ c = BVAR) ∨ (f >>> 28 = 1 ∧ c = FVAR) ∨
       (f >>> 28 = 2 ∧ c = SORT) ∨ (f >>> 28 = 5 ∧ c = LAM) ∨ (f >>> 28 = 6 ∧ c = FORALL) ∨
@@ -576,9 +568,7 @@ theorem reduceNatHead_ref (hno : NatOpResultOK p) (n F : Nat) (hF : n ≤ F) (hn
         (redHeadT (coreKnot (decMode mode) fe id F) fe d.toNat (decE f) (decE b)) a₀
         (CorePost decOptR dn s₀.mem vis fe MM eb ResW) := by
     intro c hcg
-    by_cases hbd : tcnt s₀.mem c (tierW f) ≤ idxW f
-    · rw [ite_eq_left hbd]; exact RefE.of_cls0 (by simp)
-    rw [ite_eq_right hbd]
+    refine RefE.abort0 (by simp) fun hbd => ?_
     obtain ⟨v, hv, hc, hp'⟩ := view_nca s₀.mem a₀ hC.arena.base f hf c ⟨hsc, by simpa using hbd⟩ hcg
     exact RefE.ret (redHead_other _ fe d.toNat _ (decE b) a₀ v hv hc hp')
       ⟨⟨MM, hC, KeptAll.refl _ _, StackKept.refl _⟩, rfl, resW_zero⟩
@@ -622,9 +612,7 @@ theorem reduceNatHead_ref (hno : NatOpResultOK p) (n F : Nat) (hF : n ≤ F) (hn
   · rw [ite_eq_left g8]
     exact simple LIT (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inl ⟨g8, rfl⟩)))))))
   rw [ite_eq_right g8]
-  by_cases g9 : f >>> 28 ≠ 9
-  · rw [ite_eq_left g9]; exact RefE.of_cls0 (by simp)
-  rw [ite_eq_right g9]
+  refine RefE.abort0 (by simp) fun g9 => ?_
   exact simple PROJ (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr ⟨by simpa using g9, rfl⟩)))))))
 
 include hp in
@@ -653,12 +641,8 @@ theorem reduceNat_ref (hno : NatOpResultOK p) (n F : Nat) (hF : n ≤ F) (hn2 : 
       ⟨⟨MM, hC, KeptAll.refl _ _, StackKept.refl _⟩, rfl, resW_zero⟩
   rw [ite_eq_right g4]
   have g4' : e >>> 28 = 4 := by simpa using g4
-  by_cases hsc : tierW e ≠ 0 ∧ rdW (s₀.mem.arr64 CTL) 1 = 0
-  · rw [ite_eq_left hsc]; exact RefE.of_cls0 (by simp)
-  rw [ite_eq_right hsc]
-  by_cases hbd : tcnt s₀.mem APP (tierW e) ≤ idxW e
-  · rw [ite_eq_left hbd]; exact RefE.of_cls0 (by simp)
-  rw [ite_eq_right hbd]
+  refine RefE.abort0 (by simp) fun hsc => ?_
+  refine RefE.abort0 (by simp) fun hbd => ?_
   obtain ⟨hview, hfw, hbw⟩ := view_app s₀.mem a₀ hC.arena.base e he ⟨hsc, by simpa using hbd⟩ g4'
   exact RefE.tail_eq (reduceNatE.k_reduce_nat_head.none p)
     (fun v => reduceNatE.k_reduce_nat_head.arm1 p v.1 v.2) (fun h => h.mono (by omega))
