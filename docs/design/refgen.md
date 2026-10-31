@@ -602,8 +602,8 @@ master's text in a master worktree, 3 interleaved runs, median, load 13–16):
 | `IndT/Install1.lean` (`InsAt.top`) | 315 | 317 | 2.26 → 2.24 s | 2.58 → 2.59 GB |
 | `RefWalk.lean` (`bindRunLe`) | 147 | 165 | | |
 
-The family: 2211 → 1981 code lines (**−10 %**); with the cleanups and the kit rule 3131 → 2861
-(−9 %). Time and memory unchanged (the differences are within the runs' spread: Sum3's runs are
+The family: 2211 → 1981 code lines (**−10 %**); with the cleanups and the kit rule 3593 → 3326
+(−7 %). Time and memory unchanged (the differences are within the runs' spread: Sum3's runs are
 2.88–3.99 s before, 2.87–4.17 s after). As §6.5 predicted for unified callees, the files lose ~10 %;
 the theorems lose more (−15 %) where a callee was split twice (`pass_ref` −21 %, `crest_ref` −21 %
 with its two knot calls) and least where the plumbing is facts about the results (`cbp_ref` −7 %:
