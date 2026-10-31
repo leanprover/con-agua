@@ -45,7 +45,7 @@ theorem ilApp_step (n : Nat) (ih : IlGoSpec p n) (s₀ : St) (h d o l fu : Word)
       ih,
       mkApp_spec p (hp.get "der_b") (hp.get "app_find") (hp.get "app_push") (hp.get "intern_app")
           (hp.get "mk_app") n] <;>
-    finish (gen := 20) [viewOK, tierW, idxW]
+    finish (gen := 20) [viewOKA, tierW, idxW]
 
 set_option maxHeartbeats 1000000 in
 include hp in
@@ -142,7 +142,7 @@ theorem ilgApp_step (n : Nat) (ih : IlgGoSpec p n) (s₀ : St) (h d o l fu : Wor
           ih,
       mkApp_spec p (hp.get "der_b") (hp.get "app_find") (hp.get "app_push") (hp.get "intern_app")
           (hp.get "mk_app") n] <;>
-    finish (gen := 20) [viewOK, tierW, idxW]
+    finish (gen := 20) [viewOKA, tierW, idxW]
 
 set_option maxHeartbeats 1000000 in
 include hp in
