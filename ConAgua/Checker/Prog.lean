@@ -1133,7 +1133,7 @@ def checkerProg : Prog := [
   ("ilg_lam", L.Arena.ilgLam),
   ("ilg_let", L.Arena.ilgLet),
   ("ilg_proj", L.Arena.ilgProj),
-  ("ilm_clear", L.Arena.memoClearG L.Arena.ilSch),
+  ("ilm_clear", L.Arena.memoClearFitG L.Arena.ilSch),
   ("ilm_find", L.Arena.memoFindG L.Arena.ilSch),
   ("ilm_put", L.Arena.memoPutG L.Arena.ilSch),
   ("ilp_clear", L.Arena.memoClearG L.Arena.lpSch),
