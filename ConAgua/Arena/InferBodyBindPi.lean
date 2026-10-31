@@ -20,6 +20,10 @@ namespace L.Arena
 
 /-! ## `infer_pis_leaf` refines `inferPisLeaf` -/
 
+theorem BKept.of_imax {m m' : Mem} {u v r : Word} (h : iminternW m u v = some (r, m')) : BKept m m' := by
+  exact BKept.of_frame ((iminternW_frame (hI := h)))
+    (by simp [tier1, IREC, ISLOT, IHP, BSTK]) (by simp)
+
 /-- **The outward fold refines `inferPisOut`, both outcomes** (`intern_imax` lifted), with the
 result level's denotation. -/
 theorem pisOut_ref (p : Prog) (hb : InferBodyProg p) (hcap : BStkCap) (dn : NIdx → Option ConLeche.Name)
