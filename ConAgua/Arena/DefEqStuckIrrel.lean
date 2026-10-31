@@ -56,7 +56,7 @@ theorem si_ref (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : StuckCalle
     (sec_ref p hq hi hc k (hk.mono (by omega)) F s₀ a₀ dn vis fe M eb mode d a b (by omega)
       (by omega) hs ha hb)
     (fun r₁ m₁ _ _ M₁ hS₁ _ => ?_)
-  simp only [siE.k_struct_eta_cert]
+  dsimp only [siE.k_struct_eta_cert]
   by_cases g1 : r₁.headD 0 ≠ 0
   · rw [ite_eq_left g1, decBool_true_of g1]; exact RefE.ret rfl (CorePost.ret hS₁ rfl hw1)
   rw [ite_eq_right g1, decBool_false_of (by simpa using g1)]
@@ -65,7 +65,7 @@ theorem si_ref (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : StuckCalle
     (sec_ref p hq hi hc k (hk.mono (by omega)) F ⟨m₁, Locals.init []⟩ _ dn vis fe M₁ eb mode d
       b a (by omega) (by omega) ⟨hS₁, hs.mode4, hs.eb_mode⟩ hb ha)
     (fun r₂ m₂ _ _ M₂ hS₂ _ => ?_)
-  simp only [siE.k_struct_eta_cert_2]
+  dsimp only [siE.k_struct_eta_cert_2]
   by_cases g2 : r₂.headD 0 ≠ 0
   · rw [ite_eq_left g2, decBool_true_of g2]; exact RefE.ret rfl (CorePost.ret hS₂ rfl hw1)
   rw [ite_eq_right g2, decBool_false_of (by simpa using g2)]
@@ -74,19 +74,17 @@ theorem si_ref (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : StuckCalle
     (suc_ref p hq hc k (hk.mono (by omega)) F ⟨m₂, Locals.init []⟩ _ dn vis fe M₂ eb mode d
       a b (by omega) (by omega) ⟨hS₂, hs.mode4, hs.eb_mode⟩ ha hb)
     (fun r₃ m₃ _ _ M₃ hS₃ _ => ?_)
-  simp only [siE.k_struct_unit_cert]
+  dsimp only [siE.k_struct_unit_cert]
   by_cases g3 : r₃.headD 0 ≠ 0
   · rw [ite_eq_left g3, decBool_true_of g3]; exact RefE.ret rfl (CorePost.ret hS₃ rfl hw1)
   rw [ite_eq_right g3, decBool_false_of (by simpa using g3)]
   simp only [Bool.false_eq_true, ↓reduceIte]
-  rcases c4 : callE p (k + 1) "proof_irrel" [mode, vis, d, a, b] m₃ with e | ⟨r₄, m₄⟩
-  · exact fun hG => CoreSpecE.of_callE (s₀ := ⟨m₃, Locals.init []⟩)
-      (hG.pirr k (hk.mono (by omega)) (hG.knot.mono (by omega)) F (by omega) (by omega) _ _ dn vis fe
-        M₃ eb mode d a b hS₃ hs.mode4 hs.eb_mode ha hb) c4
-  obtain ⟨hrun, hP⟩ := (CoreSpec.of_callW (s₀ := ⟨m₃, Locals.init []⟩)
-    (proofIrrel_at p hc (k + 1) hk F hF hn _ _ dn vis fe M₃ eb mode d a b hS₃ hs.mode4 hs.eb_mode ha
-      hb) (callW_of_callE c4)).post
-  exact RefE.ret hrun ⟨hP.after, hP.res, hP.valid⟩
+  rw [← bind_pure (proofIrrel _ _ _ _ _)]
+  exact RefE.bind_callE (fun _ => rfl) (proofIrrel_at p hc (k + 1) hk F hF hn ⟨m₃, Locals.init []⟩ _ dn vis fe
+      M₃ eb mode d a b hS₃ hs.mode4 hs.eb_mode ha hb)
+    (fun hG => hG.pirr k (hk.mono (by omega)) (hG.knot.mono (by omega)) F (by omega) (by omega) _ _ dn vis fe
+      M₃ eb mode d a b hS₃ hs.mode4 hs.eb_mode ha hb)
+    fun _ _ _ h => RefE.ret rfl ⟨h.after, rfl, h.resOk⟩
 
 /-- **`stuck_irrel` refines `stuckIrrel`** at the knot (`si_ref`'s ok half). -/
 @[refines ConRon.Arena.stuckIrrel]
