@@ -28,6 +28,8 @@ in step. This file is the walk's step rules, one per pair of shapes, both outcom
   else rest`, `RefE.guardOpt` against `unwrapOr o ce >>= g`, the two conditions related by one
   implication each way; `RefE.abort0` for a guard of the model alone with a class-`0` abort;
   `RefE.abortAt` / `RefE.pass` where a split of the proof already decided the guard;
+* `RefE.retIf`: an early return of the model (`if c then .ok v else rest`) against the twin's
+  `if b then T else pure y`;
 * `RefE.twinFail` / `RefE.twinPass`: a guard of the twin that L checks in pieces;
 * `RefE.ofArms`: an irreducible continuation (a recursive model's) read through its guarded
   equations as the `if` the guard rules take.
@@ -238,6 +240,17 @@ theorem RefE.guardThen {c : Prop} [Decidable c] {b : Bool} {e : Err} {ce : Check
     exact fun _ => ErrClaim.fail _ _ hcls
   · have hb : b = false := by cases hb : b; rfl; exact absurd (hbc hb) hc
     rw [ite_eq_right hc, ite_eq_right (by simp [hb])]; exact h hc hb
+
+/-- **An early return of the model against the twin's `if b then T else pure y`** (a check that
+answers `false` before the rest): the model returns `v` exactly when `b` is false. -/
+theorem RefE.retIf {c : Prop} [Decidable c] {b : Bool} {v : α} {y : β} {rest : Except Err α}
+    {T : AM β} (hcb : c → b = false) (hbc : b = false → c) (hv : c → R v y a)
+    (h : ¬ c → b = true → RefE G rest T a R) :
+    RefE G (if c then .ok v else rest) (if b = true then T else pure y) a R := by
+  by_cases hc : c
+  · rw [ite_eq_left hc, ite_eq_right (by simp [hcb hc])]; exact RefE.ret rfl (hv hc)
+  · have hb : b = true := by cases hb : b; exact absurd (hbc hb) hc; rfl
+    rw [ite_eq_right hc, ite_eq_left hb]; exact h hc hb
 
 /-- **The model aborts where the twin's guard fails** (`b` false, the model's error of the
 twin's class). -/
