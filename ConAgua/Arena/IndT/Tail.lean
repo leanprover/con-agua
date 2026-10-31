@@ -14,7 +14,7 @@ import ConAgua.L.ModelGen
 
 `check_block_tail`'s model (over the program's own calls), from `StageC` at the formers' index
 and the pass record's denotation (con-ron's `checkBlockTail_of`): the index binders' sorts
-(`checkBlockIdxSorts_refinesC`), the constructors consed (L only; con-ron's `consBlockCtors_spec`
+(`iisr_ref` through its run), the constructors consed (L only; con-ron's `consBlockCtors_spec`
 gives the pushed index's reading), the flush entering them (`ReadOK.flush`: `StageC` at the pushed
 index and environment), the recursor stage (`checkBlockRec_refinesC`), then the recursors consed
 and the tables under `StageR` (no core call follows them).
@@ -83,7 +83,7 @@ variable {p : Prog} (hkp : KnotStageProg p) {env₁ : ConLeche.Env} (henv₁ : C
 
 include hkp henv₁ hV hOpf hLC hLT hApd hCrk hIlpf in
 /-- **`check_block_tail` refines `checkBlockTail`, both outcomes** (twin side con-ron's
-`checkBlockTail_of`): the index sorts (`iisr_ref`, `checkBlockIdxSorts_refinesC` on the run), the
+`checkBlockTail_of`): the index sorts (`iisr_ref` through its run), the
 constructors consed, the flush, the nested bit, then `check_block_tail_rec`'s model (no refinement
 of its own: it is the tail's second half): the recursor stage (`icr_ref` on the run), the recursors
 consed, the tables (`ctb_ref` on the run). -/
