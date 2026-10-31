@@ -43,8 +43,8 @@ def eViewW (m : Mem) (h : Word) : List Word :=
     if tcnt m CONST t ≤ i then []
     else [3, tfld m CONST t i 0, tfld m CONST t i 1, 0]
   else if g = 4 then
-    if tcnt m APP t ≤ i then []
-    else [4, tfld m APP t i 0, tfld m APP t i 1, 0]
+    if tcnt m APP t ≤ idxA h then []
+    else [4, tfld m APP t (idxA h) 0, tfld m APP t (idxA h) 1, 0]
   else if g = 5 then
     if tcnt m LAM t ≤ i then []
     else [5, tfld m LAM t i 0, tfld m LAM t i 1, 0]
@@ -181,7 +181,7 @@ theorem eViewW_ok (m : Mem) (a : AState) (hR : ArenaR m a) (h : Word) (hne : eVi
     by_cases c : tcnt m APP (tierW h) ≤ idxA h
     · simp [c] at hne
     simp only [c, ite_false]
-    obtain ⟨e, hl, hl2⟩ := view_app m a hR h hh (vok APP c) g4
+    obtain ⟨e, hl, hl2⟩ := view_app m a hR h hh ⟨hs, by simpa using c⟩ g4
     exact ⟨_, e, by simp [ViewR, hl, hl2]⟩
   simp only [g4, ite_false] at hne ⊢
   by_cases g5 : tagW h = 5
