@@ -1,4 +1,5 @@
 import ConAgua.Arena.StoreDen
+import ConRon.Arena.WFProofs
 import Std.Tactic.BVDecide.Normalize.Prop
 
 /-!
@@ -37,7 +38,8 @@ theorem lview_of_find {m : Mem} {a : AState} (hR : ArenaR m a) {v : LNodeView} {
       simp [LStore.view, hpers, LTables.get, htag, Tbl.node?, hn, imaxCS, imaxSch, LTag.zero, LTag.succ,
         LTag.max, LTag.imax, LTag.param]
     · obtain ⟨hn, htag, hpers⟩ := ConsR.cons_hitP paramCS_wf hR.param hp
-      simp [LStore.view, hpers, LTables.get, htag, Tbl.node?, hn, paramCS, paramSch, LTag.zero, LTag.succ,
+      have hw := ConsR.cons_hit_wide paramCS_wf hR.param 0 (by decide) (by simpa using hp)
+      simp [LStore.view, hpers, LTables.get, htag, hw, Tbl.node?, hn, paramCS, paramSch, LTag.zero, LTag.succ,
         LTag.max, LTag.imax, LTag.param]
   · by_cases hon : a.store.lss.ls.scratchOn = true
     · simp only [hon, ↓reduceIte] at hf
@@ -55,7 +57,8 @@ theorem lview_of_find {m : Mem} {a : AState} (hR : ArenaR m a) {v : LNodeView} {
         simp [LStore.view, hpers, LTables.get, htag, Tbl.node?, hn, imaxCS, imaxSch, LTag.zero, LTag.succ,
           LTag.max, LTag.imax, LTag.param, hon]
       · obtain ⟨hn, htag, hpers⟩ := ConsR.cons_hitS paramCS_wf hR.param hf
-        simp [LStore.view, hpers, LTables.get, htag, Tbl.node?, hn, paramCS, paramSch, LTag.zero, LTag.succ,
+        have hw := ConsR.cons_hit_wide paramCS_wf hR.param 1 (by decide) (by simpa using hf)
+        simp [LStore.view, hpers, LTables.get, htag, hw, Tbl.node?, hn, paramCS, paramSch, LTag.zero, LTag.succ,
           LTag.max, LTag.imax, LTag.param, hon]
     · simp [hon] at hf
 

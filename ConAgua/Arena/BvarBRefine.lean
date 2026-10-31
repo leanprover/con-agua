@@ -109,10 +109,10 @@ theorem bbW_frame (n : Nat) :
       · refine tagCase FVAR (fun hv => done0 (bbNodeW_fvar n m h c g1 hv)) (fun hc => (none_of ?_).elim)
         rw [bbNodeW]; simp [hs, g1, hc]
       by_cases g4 : tagW h = 4
-      · refine tagCase APP (fun hv => ?_) (fun hc => (none_of ?_).elim)
-        · rw [bbNodeW_app n m h c hv g4] at hb
+      · by_cases hc : tcnt m APP (tierW h) ≤ idxA h
+        · exact (none_of (by rw [bbNodeW]; simp [hs, g4, hc])).elim
+        · rw [bbNodeW_app n m h c ⟨hs, UInt64.not_le.mp hc⟩ g4] at hb
           exact BbOK.app (ih.1 _ _ _) (fun m₁ => ih.1 m₁ _ _) _ _ hb
-        · rw [bbNodeW]; simp [hs, g4, hc]
       by_cases g5 : tagW h = 5
       · refine tagCase LAM (fun hv => ?_) (fun hc => (none_of ?_).elim)
         · rw [bbNodeW_lam n m h c hv g5] at hb

@@ -311,7 +311,7 @@ theorem flNodeOK_succ (n : Nat) (ih : FlGoOK n) : FlNodeOK (n + 1) := by
         hL₁ hty hb
     exact ⟨acc', seen', by rw [flNodeA_run _ _ _ _ a _ hv]; exact ha, hM', hL', hfp.trans hf'⟩
   by_cases g4 : tagW h = 4
-  · have hvo := vok APP fun hc => by rw [flNodeW.abort5 n m h k c hs g0 g1 g4 hc] at hb; cases hb
+  · have hvo : viewOKA m h := ⟨hs, UInt64.not_le.mp fun hc => by rw [flNodeW.abort5 n m h k c hs g0 g1 g4 hc] at hb; cases hb⟩
     obtain ⟨hv, hf, ha⟩ := view_app m a hR h hh hvo g4
     rw [flNodeW.arm3 n m h k c hs g0 g1 g4 (UInt64.not_le.mpr hvo.2)] at hb
     obtain ⟨acc', seen', h1, h2⟩ := flSeq_ok n ih m m' a seen acc hD hM k hL _ _ c k' hf ha hb
@@ -573,7 +573,7 @@ theorem lsbNodeOK_succ (n : Nat) (ih : LsbGoOK n) : LsbNodeOK (n + 1) := by
       simp only [hin, Bool.false_eq_true, ↓reduceIte]
       exact ⟨memo, rfl, hM, by decide, MemFrame.refl _ _ _⟩
   by_cases g4 : tagW h = 4
-  · have hvo := vok APP fun hc => by rw [lsbNodeW.abort4 n m h k c hs g0 g1 g4 hc] at hb; cases hb
+  · have hvo : viewOKA m h := ⟨hs, UInt64.not_le.mp fun hc => by rw [lsbNodeW.abort4 n m h k c hs g0 g1 g4 hc] at hb; cases hb⟩
     obtain ⟨hv, hf, ha⟩ := view_app m a hR h hh hvo g4
     rw [lsbNodeW.arm4 n m h k c hs g0 g1 g4 (UInt64.not_le.mpr hvo.2)] at hb
     obtain ⟨memo', h1, h2⟩ := lsbAnd_ok n ih m m' a memo bl hD hM k hL _ _ c r hf ha hb

@@ -548,9 +548,9 @@ theorem ligoOK_succ (n : Nat) (ih : LIArmOK n) : LIGoOK (n + 1) := by
   by_cases g4 : tagW h = 4
   · by_cases hc : tcnt m₁ APP (tierW h) ≤ idxA h
     · rw [i1lW.k_bvar_b] at hb; simp [hcut, hs, g4, hc] at hb
-    rw [view_run _ a₁ _ (view_app m₁ a₁ hR h hh (vok APP hc) g4).1]
+    rw [view_run _ a₁ _ (view_app m₁ a₁ hR h hh ⟨hs, UInt64.not_le.mp hc⟩ g4).1]
     rw [i1lW.k_bvar_b.arm9 n h d v fu x m₁ hcut hs g0 g1 g2 g3 g8 g4 hc] at hb
-    exact arm.1 (vok APP hc) g4 hb
+    exact arm.1 ⟨hs, UInt64.not_le.mp hc⟩ g4 hb
   by_cases g5 : tagW h = 5
   · by_cases hc : tcnt m₁ LAM (tierW h) ≤ idxW h
     · rw [i1lW.k_bvar_b] at hb; simp [hcut, hs, g5, hc] at hb

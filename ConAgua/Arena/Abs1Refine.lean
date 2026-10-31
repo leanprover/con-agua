@@ -203,7 +203,7 @@ theorem viewFVarIdx_ok (m : Mem) (a : AState) (hR : ArenaR m a) (h : Word) (hh :
   obtain ⟨k, hk, hi, -⟩ := node_of m a h fvarCS FVRecRel (·.fvars) _ hR.fvar hv.2
   simp only [EStore.viewFVarIdx, EStore.persGetFVarIdx]
   rw [proj_tier m a hR h hh (fun t i => t.getFVarIdx i) hv.1]
-  simp only [ETables.getFVarIdx, Tbl.node?, decE_idx]
+  simp only [ETables.getFVarIdx, Tbl.node?, decE_idx h (narrow_of_cnt m h hR.fvar rfl hv.2)]
   rw [hk]; simp [hi]
 
 /-! ## `fr_memo` writes only its memo (L side) -/

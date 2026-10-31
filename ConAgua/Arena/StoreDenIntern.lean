@@ -1,4 +1,5 @@
 import ConAgua.Arena.StoreDen
+import ConRon.Arena.WFProofs
 
 /-!
 # `StoreDen` across the interning of a `sort` or a `const` node (lane `defeq2`)
