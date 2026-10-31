@@ -83,12 +83,12 @@ def bbNodeW : Nat → Mem → Word → Word → Option (Word × Mem)
       else if tfld m BVAR (tierW h) (idxW h) 0 + 1 = 0 then none
       else some (tfld m BVAR (tierW h) (idxW h) 0 + 1, m)
     else if tagW h = 4 then
-      if tcnt m APP (tierW h) ≤ idxW h then none
+      if tcnt m APP (tierW h) ≤ idxA h then none
       else
-        match bbW n m (tfld m APP (tierW h) (idxW h) 0) c with
+        match bbW n m (tfld m APP (tierW h) (idxA h) 0) c with
         | none => none
         | some (x, m₁) =>
-          match bbW n m₁ (tfld m APP (tierW h) (idxW h) 1) c with
+          match bbW n m₁ (tfld m APP (tierW h) (idxA h) 1) c with
           | none => none
           | some (y, m₂) => some (maxW x y, m₂)
     else if tagW h = 5 then

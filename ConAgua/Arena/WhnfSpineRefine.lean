@@ -49,8 +49,8 @@ def gafLoopW (m : Mem) (e f : Word) : Option (Word × Word) :=
   if tagW e = 4 then
     if f = 0 then none
     else if tierW e ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
-    else if tcnt m APP (tierW e) ≤ idxW e then none
-    else gafLoopW m (tfld m APP (tierW e) (idxW e) 0) (f - 1)
+    else if tcnt m APP (tierW e) ≤ idxA e then none
+    else gafLoopW m (tfld m APP (tierW e) (idxA e) 0) (f - 1)
   else some (e, f)
 termination_by f.toNat
 decreasing_by

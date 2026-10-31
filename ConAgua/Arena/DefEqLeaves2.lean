@@ -329,15 +329,15 @@ def natPredW (p : Prog) (n : Nat) (m : Mem) (e : Word) : Option (Word × Word ×
       tfld m LIT (tierW e) (idxW e) 2] m).bind npLitF
   else if tagW e = 4 then
     if tierW e ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
-    else if tcnt m APP (tierW e) ≤ idxW e then none
-    else if tagW (tfld m APP (tierW e) (idxW e) 0) ≠ 3 then some (0, 0, m)
-    else if tierW (tfld m APP (tierW e) (idxW e) 0) ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0
+    else if tcnt m APP (tierW e) ≤ idxA e then none
+    else if tagW (tfld m APP (tierW e) (idxA e) 0) ≠ 3 then some (0, 0, m)
+    else if tierW (tfld m APP (tierW e) (idxA e) 0) ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0
       then none
-    else if tcnt m CONST (tierW (tfld m APP (tierW e) (idxW e) 0)) ≤
-      idxW (tfld m APP (tierW e) (idxW e) 0) then none
-    else if tfld m CONST (tierW (tfld m APP (tierW e) (idxW e) 0)) (idxW (tfld m APP (tierW e) (idxW e) 0)) 0 = rdW (m.arr64 PINS) (1 + 3) ∧
-      tfld m CONST (tierW (tfld m APP (tierW e) (idxW e) 0)) (idxW (tfld m APP (tierW e) (idxW e) 0)) 1 = rdW (m.arr64 PINS) 52
-      then some (1, tfld m APP (tierW e) (idxW e) 1, m)
+    else if tcnt m CONST (tierW (tfld m APP (tierW e) (idxA e) 0)) ≤
+      idxW (tfld m APP (tierW e) (idxA e) 0) then none
+    else if tfld m CONST (tierW (tfld m APP (tierW e) (idxA e) 0)) (idxW (tfld m APP (tierW e) (idxA e) 0)) 0 = rdW (m.arr64 PINS) (1 + 3) ∧
+      tfld m CONST (tierW (tfld m APP (tierW e) (idxA e) 0)) (idxW (tfld m APP (tierW e) (idxA e) 0)) 1 = rdW (m.arr64 PINS) 52
+      then some (1, tfld m APP (tierW e) (idxA e) 1, m)
     else some (0, 0, m)
   else some (0, 0, m)
 

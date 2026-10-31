@@ -111,7 +111,7 @@ def ilwDispW (p : Prog) (n : Nat) (m : Mem) (h ko kc vo vc fu : Word) : Option (
     (if tcnt m FVAR (tierW h) ≤ idxW h then none
      else ilwHd (callW p n "lp_fvar" [h, ko, kc, vo, vc, fu - 1] m))
   else if tagW h = 4 then
-    (if tcnt m APP (tierW h) ≤ idxW h then none
+    (if tcnt m APP (tierW h) ≤ idxA h then none
      else ilwHd (callW p n "lp_app" [h, ko, kc, vo, vc, fu - 1] m))
   else if tagW h = 5 then
     (if tcnt m LAM (tierW h) ≤ idxW h then none
