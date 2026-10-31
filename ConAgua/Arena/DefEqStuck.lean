@@ -215,19 +215,13 @@ theorem pi_ref (p : Prog) (hc : StuckCallees p) (n : Nat)
       (CorePost decBool dn s₀.mem vis fe M eb ResH) := by
   simp only [piE]
   rw [propIrrel_eq]
-  rcases c1 : callW p n "not_proof_fast" [vis, a] s₀.mem with _ | ⟨r₁, m₁⟩
-  · rw [liftE_none, piE.k_not_proof_fast.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]
-  have h₁ := CoreSpec.of_callW (hc.defeq.notProofFast n s₀ a₀ dn vis fe M eb a hs.rel ha) c1
-  refine RefE.bind_core (w := id) h₁ (fun M₁ hS₁ _ => ?_)
-  simp only [piE.k_not_proof_fast]
-  rcases c2 : callW p n "not_proof_fast" [vis, b] m₁ with _ | ⟨r₂, m₂⟩
-  · rw [liftE_none, piE.k_not_proof_fast_2.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]
-  have h₂ := CoreSpec.of_callW
-    (hc.defeq.notProofFast n ⟨m₁, Locals.init []⟩ _ dn vis fe M₁ eb b hS₁ hb) c2
-  refine RefE.bind_core (w := id) h₂ (fun M₂ hS₂ _ => ?_)
-  simp only [piE.k_not_proof_fast_2]
+  refine RefE.bind_callW (fun _ => rfl) (hc.defeq.notProofFast n s₀ a₀ dn vis fe M eb a hs.rel ha)
+    fun r₁ m₁ _ h₁ => RefE.after_core (w := id) h₁ fun M₁ hS₁ _ => ?_
+  dsimp only [piE.k_not_proof_fast]
+  refine RefE.bind_callW (fun _ => rfl) (hc.defeq.notProofFast n ⟨m₁, Locals.init []⟩ _ dn vis fe M₁ eb b
+      hS₁ hb)
+    fun r₂ m₂ _ h₂ => RefE.after_core (w := id) h₂ fun M₂ hS₂ _ => ?_
+  dsimp only [piE.k_not_proof_fast_2]
   by_cases h12 : r₁.headD 0 ≠ 0 ∨ r₂.headD 0 ≠ 0
   · rw [ite_eq_left h12]
     have hx : (decBool r₁ || decBool r₂) = true := by
@@ -240,20 +234,14 @@ theorem pi_ref (p : Prog) (hc : StuckCallees p) (n : Nat)
     simp [decBool_eq_false h12.1, decBool_eq_false h12.2]
   rw [hx]
   simp only [Bool.false_eq_true, ↓reduceIte]
-  rcases c3 : callW p n "is_proof_fast" [vis, a] m₂ with _ | ⟨r₃, m₃⟩
-  · rw [liftE_none, piE.k_is_proof_fast.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]
-  have h₃ := CoreSpec.of_callW
-    (hc.defeq.isProofFast n ⟨m₂, Locals.init []⟩ _ dn vis fe M₂ eb a hS₂ ha) c3
-  refine RefE.bind_core (w := id) h₃ (fun M₃ hS₃ _ => ?_)
-  simp only [piE.k_is_proof_fast]
-  rcases c4 : callW p n "is_proof_fast" [vis, b] m₃ with _ | ⟨r₄, m₄⟩
-  · rw [liftE_none, piE.k_is_proof_fast_2.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]
-  have h₄ := CoreSpec.of_callW
-    (hc.defeq.isProofFast n ⟨m₃, Locals.init []⟩ _ dn vis fe M₃ eb b hS₃ hb) c4
-  refine RefE.bind_core (w := id) h₄ (fun M₄ hS₄ _ => ?_)
-  simp only [piE.k_is_proof_fast_2]
+  refine RefE.bind_callW (fun _ => rfl) (hc.defeq.isProofFast n ⟨m₂, Locals.init []⟩ _ dn vis fe M₂ eb a
+      hS₂ ha)
+    fun r₃ m₃ _ h₃ => RefE.after_core (w := id) h₃ fun M₃ hS₃ _ => ?_
+  dsimp only [piE.k_is_proof_fast]
+  refine RefE.bind_callW (fun _ => rfl) (hc.defeq.isProofFast n ⟨m₃, Locals.init []⟩ _ dn vis fe M₃ eb b
+      hS₃ hb)
+    fun r₄ m₄ _ h₄ => RefE.after_core (w := id) h₄ fun M₄ hS₄ _ => ?_
+  dsimp only [piE.k_is_proof_fast_2]
   by_cases h34 : r₃.headD 0 ≠ 0 ∧ r₄.headD 0 ≠ 0
   · rw [ite_eq_left h34]
     have hx : (decBool r₃ && decBool r₄) = true := by
@@ -268,19 +256,20 @@ theorem pi_ref (p : Prog) (hc : StuckCallees p) (n : Nat)
       simp [decBool_eq_false h4]
   rw [hx]
   simp only [Bool.false_eq_true, ↓reduceIte]
-  rcases c5 : callE p n "proof_irrel" [mode, vis, d, a, b] m₄ with e5 | ⟨r₅, m₅⟩
-  · intro hG
-    cases n with
-    | zero =>
-      obtain ⟨e', he', h0⟩ := callE_zero p "proof_irrel" [mode, vis, d, a, b] m₄
-      rw [c5] at he'; cases he'; exact ErrClaim.of_cls0 h0
-    | succ N =>
-    exact CoreSpecE.of_callE (hG.pirr N (hk.mono (Nat.le_succ N)) (hG.knot.mono (Nat.le_succ N)) F
-      (by omega) (by omega) ⟨m₄, Locals.init []⟩ _ dn vis fe M₄ eb mode d a b hS₄ hs.mode4 hs.eb_mode
-      ha hb) c5
-  obtain ⟨hrun, hP⟩ := (CoreSpec.of_callW (s₀ := ⟨m₄, Locals.init []⟩) (proofIrrel_at p hc n hk F hF
-    hn _ _ dn vis fe M₄ eb mode d a b hS₄ hs.mode4 hs.eb_mode ha hb) (callW_of_callE c5)).post
-  exact RefE.ret hrun ⟨hP.after, hP.res, hP.valid⟩
+  rw [← bind_pure (proofIrrel _ _ _ _ _)]
+  refine RefE.bind_callE (fun _ => rfl) (proofIrrel_at p hc n hk F hF hn ⟨m₄, Locals.init []⟩ _ dn vis fe
+      M₄ eb
+      mode d a b hS₄ hs.mode4 hs.eb_mode ha hb)
+    (fun hG => CoreSpecE.of_runs fun _ c5 => by
+      cases n with
+      | zero =>
+        obtain ⟨e', he', h0⟩ := callE_zero p "proof_irrel" [mode, vis, d, a, b] m₄
+        rw [c5] at he'; cases he'; exact ErrClaim.of_cls0 h0
+      | succ N =>
+      exact CoreSpecE.of_callE (hG.pirr N (hk.mono (Nat.le_succ N)) (hG.knot.mono (Nat.le_succ N)) F
+        (by omega) (by omega) ⟨m₄, Locals.init []⟩ _ dn vis fe M₄ eb mode d a b hS₄ hs.mode4 hs.eb_mode
+        ha hb) c5)
+    fun _ _ _ h => RefE.ret rfl ⟨h.after, rfl, h.resOk⟩
 
 /-- **`prop_irrel` refines `propIrrel`** at the knot, from the head readers' specs and
 `proof_irrel`'s (`pi_ref`'s ok half). -/

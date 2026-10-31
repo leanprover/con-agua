@@ -155,32 +155,20 @@ theorem pl_ref (p : Prog) (hil : InstListOK p) (n : Nat)
       (CorePost decBool dn s₀.mem vis fe M eb ResH) := by
   simp only [plE]
   unfold defeqPeelLeaf
-  rcases c1 : callW p n "inst_list" [a, fo, k, 0] s₀.mem with _ | ⟨r₁, m₁⟩
-  · rw [liftE_none, plE.k_inst_list.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]; simp only [plE.k_inst_list]
-  have e₁ := CoreSpec.of_callW (hil n s₀ a₀ dn vis fe M eb a fo k 0 fvs hs.rel ha hx.spine hx.le_top) c1
-  rw [toNat_zero_w] at e₁
-  refine RefE.bind_core (w := id) e₁ (fun M₁ hS₁ hst₁ => ?_)
+  rw [← peel_word_add_toNat d k hdk]
+  refine RefE.bind_callW (fun _ => rfl) (hil n s₀ a₀ dn vis fe M eb a fo k 0 fvs hs.rel ha hx.spine
+    hx.le_top) fun r₁ m₁ _ e₁ => RefE.after_core (w := id) e₁ fun M₁ hS₁ hst₁ => ?_
+  dsimp only [plE.k_inst_list]
   have hx₁ := hx.kept hst₁ hs.rel.spn
-  rcases c2 : callW p n "inst_list" [b, fo, k, 0] m₁ with _ | ⟨r₂, m₂⟩
-  · rw [liftE_none, plE.k_inst_list_2.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]; simp only [plE.k_inst_list_2]
-  have e₂ := CoreSpec.of_callW (s₀ := ⟨m₁, Locals.init []⟩)
-    (hil n _ _ dn vis fe M₁ eb b fo k 0 fvs hS₁ hb hx₁.spine hx₁.le_top) c2
-  rw [toNat_zero_w] at e₂
-  refine RefE.bind_core (w := id) e₂ (fun M₂ hS₂ _ => ?_)
-  rcases c3 : callE p n "defeq" [mode, vis, d + k, r₁.headD 0, r₂.headD 0] m₂ with e | ⟨r₃, m₃⟩
-  · intro hkE
-    have := CoreSpecE.of_callE (s₀ := ⟨m₂, Locals.init []⟩)
-      ((hkE n (Nat.le_refl _)).defeq F _ _ dn vis fe M₂ eb mode (d + k) _ _ hF hn
-        ⟨hS₂, hs.mode4, hs.eb_mode⟩ e₁.resOk e₂.resOk) c3
-    rwa [peel_word_add_toNat d k hdk] at this
-  have e₃ := CoreSpec.of_callW (s₀ := ⟨m₂, Locals.init []⟩)
-    ((hk n (Nat.le_refl _)).defeq F _ _ dn vis fe M₂ eb mode (d + k) _ _ hF hn
-      ⟨hS₂, hs.mode4, hs.eb_mode⟩ e₁.resOk e₂.resOk) (callW_of_callE c3)
-  rw [peel_word_add_toNat d k hdk] at e₃
-  obtain ⟨hrun, hP⟩ := e₃.post
-  exact RefE.ret hrun ⟨hP.after, hP.res, hP.valid⟩
+  refine RefE.bind_callW (fun _ => rfl) (hil n ⟨m₁, Locals.init []⟩ _ dn vis fe M₁ eb b fo k 0 fvs hS₁ hb
+    hx₁.spine hx₁.le_top) fun r₂ m₂ _ e₂ => RefE.after_core (w := id) e₂ fun M₂ hS₂ _ => ?_
+  dsimp only [plE.k_inst_list_2]
+  have hs₂ : SlotPre ⟨m₂, Locals.init []⟩ _ dn vis fe M₂ eb mode := ⟨hS₂, hs.mode4, hs.eb_mode⟩
+  rw [← bind_pure (CoreFnsA.defeq _ _ _ _)]
+  refine RefE.bind_callE (fun _ => rfl) ((hk n (Nat.le_refl _)).defeq F _ _ dn vis fe M₂ eb mode (d + k)
+    _ _ hF hn hs₂ e₁.resOk e₂.resOk) (fun (hG : KnotUpToE p n) => (hG n (Nat.le_refl _)).defeq F _ _ dn
+      vis fe M₂ eb mode (d + k) _ _ hF hn hs₂ e₁.resOk e₂.resOk) fun _ _ _ e₃ => ?_
+  exact RefE.ret rfl ⟨e₃.after, rfl, e₃.resOk⟩
 
 /-- **`peel_leaf` refines `defeqPeelLeaf`** at the knot, from `inst_list`'s spec (`pl_ref`'s ok
 half). -/
@@ -230,12 +218,10 @@ theorem pd_ref (p : Prog) (hil : InstListOK p) (n : Nat)
       (CorePost decDom dn s₀.mem vis fe M eb ResW) := by
   simp only [pdE]
   unfold peelDomT
-  rcases c1 : callW p n "inst_list" [da, fo, k, 0] s₀.mem with _ | ⟨r₁, m₁⟩
-  · rw [liftE_none, pdE.k_inst_list.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]; simp only [pdE.k_inst_list]
-  have e₁ := CoreSpec.of_callW (hil n s₀ a₀ dn vis fe M eb da fo k 0 fvs hs.rel ha hx.spine hx.le_top) c1
-  rw [toNat_zero_w] at e₁
-  refine RefE.bind_core (w := id) e₁ (fun M₁ hS₁ hst₁ => ?_)
+  rw [← peel_word_add_toNat d k hdk]
+  refine RefE.bind_callW (fun _ => rfl) (hil n s₀ a₀ dn vis fe M eb da fo k 0 fvs hs.rel ha hx.spine
+    hx.le_top) fun r₁ m₁ _ e₁ => RefE.after_core (w := id) e₁ fun M₁ hS₁ hst₁ => ?_
+  dsimp only [pdE.k_inst_list]
   by_cases he : da = db
   · have hbq : (decE da == decE db) = true := by rw [he]; exact beq_self_eq_true _
     rw [ite_eq_left he]
@@ -246,25 +232,14 @@ theorem pd_ref (p : Prog) (hil : InstListOK p) (n : Nat)
     rw [decE_beq_eq _ _ ha hb]; simp [he]
   simp only [hbq, Bool.false_eq_true, ↓reduceIte]
   have hx₁ := hx.kept hst₁ hs.rel.spn
-  rcases c2 : callW p n "inst_list" [db, fo, k, 0] m₁ with _ | ⟨r₂, m₂⟩
-  · rw [liftE_none, pdE.k_inst_list_2.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]; simp only [pdE.k_inst_list_2]
-  have e₂ := CoreSpec.of_callW (s₀ := ⟨m₁, Locals.init []⟩)
-    (hil n _ _ dn vis fe M₁ eb db fo k 0 fvs hS₁ hb hx₁.spine hx₁.le_top) c2
-  rw [toNat_zero_w] at e₂
-  refine RefE.bind_core (w := id) e₂ (fun M₂ hS₂ _ => ?_)
-  rcases c3 : callE p n "defeq" [mode, vis, d + k, r₁.headD 0, r₂.headD 0] m₂ with e | ⟨r₃, m₃⟩
-  · intro hkE
-    have := CoreSpecE.of_callE (s₀ := ⟨m₂, Locals.init []⟩)
-      ((hkE n (Nat.le_refl _)).defeq F _ _ dn vis fe M₂ eb mode (d + k) _ _ hF hn
-        ⟨hS₂, hs.mode4, hs.eb_mode⟩ e₁.resOk e₂.resOk) c3
-    rw [peel_word_add_toNat d k hdk] at this
-    exact ErrClaim.bind_left this
-  have e₃ := CoreSpec.of_callW (s₀ := ⟨m₂, Locals.init []⟩)
-    ((hk n (Nat.le_refl _)).defeq F _ _ dn vis fe M₂ eb mode (d + k) _ _ hF hn
-      ⟨hS₂, hs.mode4, hs.eb_mode⟩ e₁.resOk e₂.resOk) (callW_of_callE c3)
-  rw [peel_word_add_toNat d k hdk] at e₃
-  refine RefE.bind_core (w := id) e₃ (fun M₃ hS₃ _ => ?_)
+  refine RefE.bind_callW (fun _ => rfl) (hil n ⟨m₁, Locals.init []⟩ _ dn vis fe M₁ eb db fo k 0 fvs hS₁ hb
+    hx₁.spine hx₁.le_top) fun r₂ m₂ _ e₂ => RefE.after_core (w := id) e₂ fun M₂ hS₂ _ => ?_
+  dsimp only [pdE.k_inst_list_2]
+  have hs₂ : SlotPre ⟨m₂, Locals.init []⟩ _ dn vis fe M₂ eb mode := ⟨hS₂, hs.mode4, hs.eb_mode⟩
+  refine RefE.bind_callE (fun _ => rfl) ((hk n (Nat.le_refl _)).defeq F _ _ dn vis fe M₂ eb mode (d + k)
+    _ _ hF hn hs₂ e₁.resOk e₂.resOk) (fun (hG : KnotUpToE p n) => (hG n (Nat.le_refl _)).defeq F _ _ dn
+      vis fe M₂ eb mode (d + k) _ _ hF hn hs₂ e₁.resOk e₂.resOk)
+    fun r₃ m₃ _ e₃ => RefE.after_core (w := id) e₃ fun M₃ hS₃ _ => ?_
   exact RefE.ret rfl (CorePost.ret hS₃ (by simp only [decDom, decBool, decH]; rfl)
     ⟨e₃.resOk, e₂.resOk⟩)
 
@@ -684,17 +659,14 @@ theorem peel_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n 
       have hr := defeqPeel_leaf_run (coreKnot (decMode mode) fe id F) d.toNat peel.toNat _ _ k.toNat
         fvs s hab' (by rw [hlw]; simp [hl])
       refine RefE.of_run_eq hr ?_
-      rcases h1 : callE p j "peel_leaf" [mode, vis, d, a, b, k, fo] m with e | ⟨r, m₁⟩
+      cases j with
+      | zero => exact RefE.callE_zero fun _ => peelE.k_peel_leaf.none ..
+      | succ j' =>
+      rcases h1 : callE p (j' + 1) "peel_leaf" [mode, vis, d, a, b, k, fo] m with e | ⟨r, m₁⟩
       · rw [peelE.k_peel_leaf.none]
-        cases j with
-        | zero =>
-          obtain ⟨e', he', h0⟩ := callE_zero p "peel_leaf" [mode, vis, d, a, b, k, fo] m
-          rw [h1] at he'; cases he'; exact RefE.of_cls0 h0
-        | succ j' =>
         exact fun hG => RefE.run_err (plE_spec p hp.leaf (j' + 1) ⟨m, Locals.init []⟩ mode vis d a b k fo)
           hG.nv (hG.knot.mono (by omega)) (pl_ref p hil j' (hk.mono (by omega)) F (by omega) (by omega)
             _ s dn vis fe M eb mode d a b k fo ⟨hS, hmode, heb⟩ ha hb fvs hx (by omega)) h1
-      obtain ⟨j', rfl⟩ := callW_succ (callW_of_callE h1)
       simp only [peelE.k_peel_leaf]
       obtain ⟨hrun, hR⟩ := (CoreSpec.of_callW (s₀ := ⟨m, Locals.init []⟩)
         (peelLeaf_refines p hp hil j' (hk.mono (by omega)) F (by omega) (by omega) _ s dn vis fe M eb
@@ -717,18 +689,15 @@ theorem peel_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n 
     rw [hq]
     refine RefE.of_run_eq ((congrArg (fun T => StateT.run T s) hr).trans
       (peelLvl_step_run _ _ _ _ _ _ _ _ _ hab' hl')) ?_
-    rcases hc : callE p j "peel_step" [mode, vis, d, a, b, k, fo] m with e | ⟨r₁, m₁⟩
+    cases j with
+    | zero => exact RefE.callE_zero fun _ => peelE.k_peel_step.none ..
+    | succ j' =>
+    rcases hc : callE p (j' + 1) "peel_step" [mode, vis, d, a, b, k, fo] m with e | ⟨r₁, m₁⟩
     · rw [peelE.k_peel_step.none]
-      cases j with
-      | zero =>
-        obtain ⟨e', he', h0⟩ := callE_zero p "peel_step" [mode, vis, d, a, b, k, fo] m
-        rw [hc] at he'; cases he'; exact RefE.of_cls0 h0
-      | succ j' =>
       exact RefE.bind_left fun hG => RefE.run_err
         (psE_spec p hp.step hp.step2 hp.dom (j' + 1) ⟨m, Locals.init []⟩ mode vis d a b k fo) hG.nv
         (hG.knot.mono (by omega)) (ps_ref p hp hil j' (hk.mono (by omega)) F (by omega) (by omega)
           _ s dn vis fe M eb mode d a b k fo ⟨hS, hmode, heb⟩ ha hb hga hgb fvs hx (by omega)) hc
-    obtain ⟨j', rfl⟩ := callW_succ (callW_of_callE hc)
     have e₁ := CoreSpec.of_callW (s₀ := ⟨m, Locals.init []⟩)
       (peelStep_refines p hp hil j' (hk.mono (by omega)) F (by omega) (by omega) _ s dn vis fe M eb
         mode d a b k fo ⟨hS, hmode, heb⟩ ha hb hga hgb fvs hx (by omega)) (callW_of_callE hc)
@@ -838,14 +807,13 @@ theorem db_ref (p : Prog) (hp : PeelProg p) (hil : InstListOK p) (n : Nat)
         (decE body2)) a₀ (CorePost decBool dn s₀.mem vis fe M eb ResH) := by
   simp only [dbE]
   unfold defeqBinders
-  rcases c1 : callE p n "defeq" [mode, vis, d, ty1, ty2] s₀.mem with e | ⟨r₁, m₁⟩
-  · exact fun hG => ErrClaim.bind_left (CoreSpecE.of_callE
-      ((hG.knot n (Nat.le_refl _)).defeq F s₀ a₀ dn vis fe M eb mode d ty1 ty2 hF hn hs h1 h2) c1)
-  have e₁ := CoreSpec.of_callW
-    ((hk n (Nat.le_refl _)).defeq F s₀ a₀ dn vis fe M eb mode d ty1 ty2 hF hn hs h1 h2)
-    (callW_of_callE c1)
-  simp only [dbE.k_defeq]
-  refine RefE.bind_core (w := id) e₁ (fun M₁ hS₁ hst₁ => ?_)
+  cases n with
+  | zero => exact RefE.callE_zero fun _ => rfl
+  | succ n' =>
+  refine RefE.bind_callE (fun _ => rfl) ((hk _ (Nat.le_refl _)).defeq F s₀ a₀ dn vis fe M eb mode d ty1
+    ty2 hF hn hs h1 h2) (fun (hG : KnotNvG p (n' + 1)) => (hG.knot _ (Nat.le_refl _)).defeq F s₀ a₀ dn vis
+      fe M eb mode d ty1 ty2 hF hn hs h1 h2) fun r₁ m₁ _ e₁ => RefE.after_core (w := id) e₁ fun M₁ hS₁ _ => ?_
+  dsimp only [dbE.k_defeq]
   by_cases h0 : r₁.headD 0 = 0
   · rw [ite_eq_left h0, decBool_f h0]
     exact RefE.ret rfl (CorePost.ret hS₁ rfl resH_zero)
@@ -853,14 +821,10 @@ theorem db_ref (p : Prog) (hp : PeelProg p) (hil : InstListOK p) (n : Nat)
   simp only [Bool.not_true, Bool.false_eq_true, ↓reduceIte]
   have hso : rdW (m₁.arr64 CTL) 136 = spTop m₁ := rfl
   rw [hso]
-  rcases c2 : callW p n "peel_push" [d, 0, spTop m₁, ty2] m₁ with _ | ⟨r₂, m₂⟩
-  · rw [liftE_none, dbE.k_peel_push.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]; simp only [dbE.k_peel_push]
-  obtain ⟨n', rfl⟩ := callW_succ c2
-  have hbnd := peelPush_bound hp d 0 (spTop m₁) ty2 c2
-  rw [UInt64.add_zero] at hbnd
-  obtain ⟨e₂, hx₂⟩ := peelPush_run hp hS₁ d 0 (spTop m₁) ty2 h2 #[]
-    (fvsR_empty rfl hbnd hS₁.spn) (by rw [toNat_zero_w, Nat.add_zero]; omega) r₂ c2
+  refine RefE.onlySim (fun _ => rfl) (fun r₂ m₂ c2 => peelPush_run hp hS₁ d 0 (spTop m₁) ty2 h2 #[]
+    (fvsR_empty rfl (by simpa using peelPush_bound hp d 0 (spTop m₁) ty2 c2) hS₁.spn)
+    (by rw [toNat_zero_w, Nat.add_zero]; omega) r₂ c2) fun r₂ m₂ ⟨e₂, hx₂⟩ => ?_
+  dsimp only [dbE.k_peel_push]
   have e0 : d.toNat + (0 : Word).toNat = d.toNat := rfl
   rw [e0] at e₂
   rw [UInt64.zero_add] at hx₂

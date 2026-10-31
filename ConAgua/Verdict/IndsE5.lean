@@ -79,9 +79,7 @@ theorem cbag_ref (hP : AgreeProg p) (nP c0 s0 : Word) (cv0 : IConstantVal) {cv0P
   have hd0 : denoteE a.store (decI (rdW (m.arr64 EREC) (c0 + 3))) = some cv0P.type := by
     rw [htye0]; exact ConRon.Bridge.denoteCV_type hc0P
   -- member 0's telescope
-  rcases h1 : callW p n "open_pis_at_fvars_f" [nP, rdW (m.arr64 EREC) (c0 + 3), 0] m with _ | ⟨r1, m1⟩
-  · rw [liftE_none, cbagE.k_open_pis_at_fvars_f.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]
+  refine RefE.onlySim (fun _ => cbagE.k_open_pis_at_fvars_f.none ..) (fun _ _ h => h) fun r1 m1 h1 => ?_
   by_cases hr0 : r1.headD 0 = 0
   · rw [cbagE.k_open_pis_at_fvars_f.abort1 p n vis nP c0 s0 o l r1 m1 hr0]
     exact RefE.of_cls0 rfl

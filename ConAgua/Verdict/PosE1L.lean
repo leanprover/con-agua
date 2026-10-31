@@ -67,9 +67,7 @@ theorem pfv_ref {p : Prog} (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe
   | succ k =>
   rw [pfvE.arm1]
   have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.iw hS.iw.iwSize
-  rcases hha : haWf k m ctx po pl i with _ | ⟨r1, m1⟩
-  · rw [liftE_none, pfvE.k_nest_hole_at.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]
+  refine RefE.onlySim (fun _ => pfvE.k_nest_hole_at.none ..) (fun _ _ h => h) fun r1 m1 hha => ?_
   cases k with
   | zero => simp [haWf] at hha
   | succ k =>
@@ -110,9 +108,7 @@ theorem pfv_ref {p : Prog} (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe
   obtain ⟨hd2, hnin2⟩ := hnin.grow hg2
   rw [← hd2] at hdec
   obtain ⟨hcH, hcd, hdl⟩ := nh_key_words hdec hnin2 htop2
-  rcases hna : naWf (k + 1) m2 vis (rdW (m2.arr64 IW) (rdW (m2.arr64 IW) (r1.tail.headD 0))) with _ | ⟨r3, m3⟩
-  · rw [liftE_none, pfvE.k_nest_arity.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]
+  refine RefE.onlySim (fun _ => pfvE.k_nest_arity.none ..) (fun _ _ h => h) fun r3 m3 hna => ?_
   have hna' : naW k m2 vis (rdW (m2.arr64 IW) (rdW (m2.arr64 IW) (r1.tail.headD 0))) = some (r3, m3) := by
     simpa [naWf] using hna
   obtain ⟨ar, a3, hrun3, hS3, hg3, hr3⟩ := naW_ok dn fe vis _ hcH k m2 m3 a r3 hna' hS2
@@ -297,9 +293,7 @@ theorem ncc_ref {p : Prog} (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe
   | false =>
   rw [nccE.k_nest_occ_any.arm1 _ _ _ _ _ _ _ _ (by rw [hr1]; rfl)]
   refine RefE.ite_neg (by simp) ?_
-  rcases hq : pos2PinW m1 47 with _ | ⟨rq, m2⟩
-  · rw [liftE_none, nccE.k_pin_at.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]
+  refine RefE.onlySim (fun _ => nccE.k_pin_at.none ..) (fun _ _ h => h) fun rq m2 hq => ?_
   obtain ⟨hm2, hqH, hqrun⟩ := pos2PinW_ok hq hS1.check.pins
   subst hm2
   have hpq : pinQuot = pinAt 47 := rfl
@@ -311,9 +305,7 @@ theorem ncc_ref {p : Prog} (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe
   rw [nccE.k_pin_at.arm1 _ _ _ _ _ _ _ _ hnq]
   have hbeq : ((decI nn : NIdx) == decI (rq.headD 0)) = false := by rw [decI_beq _ _ hnH hqH]; simpa using hnq
   refine RefE.ite_neg (by rw [hbeq]; simp) ?_
-  rcases hcp : cpW k m2 hp dO dL with _ | ⟨r3, m3⟩
-  · rw [liftE_none, nccE.k_nest_cont_params_closed.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]
+  refine RefE.onlySim (fun _ => nccE.k_nest_cont_params_closed.none ..) (fun _ _ h => h) fun r3 m3 hcp => ?_
   obtain ⟨b3, a3, hrun3, hS3, hg3, hr3⟩ := cpW_okW dn fe vis hp k m2 m3 a dO dL ds r3 hcp hS1
     (by rw [decHL_agree (RdS.of_grow hg1) (fun j hj => hdsb j hj)]; exact hds)
     (fun j hj => by have := hdsb j hj; have := hg1.iw; omega)

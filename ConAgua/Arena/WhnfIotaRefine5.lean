@@ -291,30 +291,23 @@ theorem icfCheck_ref (p : Prog) (hil : InstListOK p) (K F : Nat) (hk : KnotUpTo 
       (icfChkT (coreKnot (decMode mode) fe id F) d.toNat (decE ty) acc (decE arg)) a
       (CorePost decBool dn m vis fe M eb ResH) := by
   rw [icfCheckE.eq_2]
-  rcases c1 : callW p K "inst_list" [ty, aco, acn, 0] m with _ | ⟨r1, m1⟩
-  · rw [liftE_none, icfCheckE.k_inst_list.eq_1]; exact RefE.of_cls0 rfl
-  rw [liftE_some, icfCheckE.k_inst_list.eq_2]
-  have h1 := CoreSpec.of_callW (hil K ⟨m, Locals.init []⟩ a dn vis fe M eb ty aco acn 0 acc hS hty hacc
-    htop) c1
-  refine RefE.bind_core (w := id) h1 fun M1 hS1 _ => ?_
+  refine RefE.bind_callW (fun _ => icfCheckE.k_inst_list.eq_1 ..)
+    (hil K ⟨m, Locals.init []⟩ a dn vis fe M eb ty aco acn 0 acc hS hty hacc htop)
+    fun r1 m1 _ h1 => RefE.after_core (w := id) h1 fun M1 hS1 _ => ?_
+  rw [icfCheckE.k_inst_list.eq_2]
   refine RefE.bind_callE (x := icfCheckE.k_infer p K mode vis d (r1.headD 0)) (fun _ => rfl)
     ((hk K (Nat.le_refl _)).infer F ⟨m1, Locals.init []⟩ _ dn vis fe M1 eb mode d arg hnF hn62
       ⟨hS1, hm4, hebm⟩ harg)
     (fun hG => (hG K (Nat.le_refl _)).infer F ⟨m1, Locals.init []⟩ _ dn vis fe M1 eb mode d arg hnF hn62
-      ⟨hS1, hm4, hebm⟩ harg) fun r2 m2 _ h2 => ?_
-  have hr1 : HW (r1.headD 0) := h1.resOk
-  rw [icfCheckE.k_infer.eq_2]
-  have hS2 := h2.after
-  obtain ⟨M2, hS2, hK2, hSt2⟩ := hS2
-  rcases c3 : callE p K "defeq" [mode, vis, d, r2.headD 0, r1.headD 0] m2 with e3 | ⟨r3, m3⟩
-  · rw [icfCheckE.k_defeq.eq_1]
-    exact fun hG => CoreSpecE.of_callE ((hG K (Nat.le_refl _)).defeq F ⟨m2, Locals.init []⟩ _ dn vis
-      fe M2 eb mode d _ _ hnF hn62 ⟨hS2, hm4, hebm⟩ h2.resOk hr1) c3
+      ⟨hS1, hm4, hebm⟩ harg) fun r2 m2 _ h2 => RefE.after_core (w := id) h2 fun M2 hS2 _ => ?_
+  rw [icfCheckE.k_infer.eq_2, ← bind_pure ((coreKnot (decMode mode) fe id F).defeq _ _ _)]
+  refine RefE.bind_callE (x := icfCheckE.k_defeq p) (fun _ => icfCheckE.k_defeq.eq_1 ..)
+    ((hk K (Nat.le_refl _)).defeq F ⟨m2, Locals.init []⟩ _ dn vis fe M2 eb mode d _ _ hnF hn62
+      ⟨hS2, hm4, hebm⟩ h2.resOk h1.resOk)
+    (fun hG => (hG K (Nat.le_refl _)).defeq F ⟨m2, Locals.init []⟩ _ dn vis fe M2 eb mode d _ _ hnF hn62
+      ⟨hS2, hm4, hebm⟩ h2.resOk h1.resOk) fun r3 m3 _ h3 => ?_
   rw [icfCheckE.k_defeq.eq_2]
-  have h3 := CoreSpec.of_callW ((hk K (Nat.le_refl _)).defeq F ⟨m2, Locals.init []⟩ _ dn vis fe M2 eb
-    mode d _ _ hnF hn62 ⟨hS2, hm4, hebm⟩ h2.resOk hr1) (callW_of_callE c3)
-  obtain ⟨hrun3, hP3⟩ := CoreRef.post h3
-  exact RefE.ret hrun3 ⟨CoreAfter.comp hK2 hSt2 hP3.after, hP3.res, hP3.valid⟩
+  exact RefE.ret rfl ⟨h3.after, rfl, h3.resOk⟩
 
 /-- **The three functions' refinement, both outcomes** (`cond` is the case the helper handles; the
 model `fE` at fuel `N + 1`). The errors are the slots'. -/
@@ -401,9 +394,7 @@ theorem icfForall_ref (p : Prog) (hp : IotaProg4 p) (hil : InstListOK p) (N F : 
   have hb' : b = true := by rw [hb]; simpa [decBool] using hok0
   subst hb'
   refine RefE.ite_pos rfl ?_
-  by_cases hlen : m3.len64 SPN ≤ aco + acn
-  · rw [ite_eq_left hlen]; exact RefE.of_cls0 rfl
-  rw [ite_eq_right hlen]
+  refine RefE.abort0 (by rfl) fun hlen => ?_
   have hsz3 : (m3.arr64 SPN).size = (s₀.mem.arr64 SPN).size := hSt3.size
   have hg1 : (aco + acn).toNat < (m3.arr64 SPN).size := by
     have h' := UInt64.not_le.mp hlen
@@ -563,12 +554,11 @@ theorem icfTop_ref (p : Prog) (hp : IotaProg4 p) (hil : InstListOK p) (n : Nat) 
   cases n with
   | zero => rw [callW_zero, liftE_none, icfTopE.k_ctl_get]; exact RefE.of_cls0 rfl
   | succ n' =>
-  rcases c0 : callW p (n' + 1) "ctl_get" [136] s₀.mem with _ | ⟨t, m0⟩
-  · rw [liftE_none, icfTopE.k_ctl_get]; exact RefE.of_cls0 rfl
-  rw [liftE_some, icfTopE.k_ctl_get]
-  obtain ⟨t0, ht0, -, hmem0, hget⟩ := triple_of_callW
-    (ctlGet_spec p hp.ctlGet n' ⟨s₀.mem, Locals.init []⟩ 136) c0
+  refine RefE.onlySim (fun _ => by rw [icfTopE.k_ctl_get])
+    (fun _ _ c0 => triple_of_callW (ctlGet_spec p hp.ctlGet n' ⟨s₀.mem, Locals.init []⟩ 136) c0)
+    fun t m0 ⟨t0, ht0, _, hmem0, hget⟩ => ?_
   obtain rfl : m0 = s₀.mem := by rw [← ht0]; exact hmem0
+  rw [icfTopE.k_ctl_get]
   have ht : t.headD 0 = rdW (s₀.mem.arr64 CTL) 136 := by
     simp only [ctlGetW] at hget
     split at hget

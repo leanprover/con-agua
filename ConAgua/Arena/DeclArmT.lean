@@ -210,9 +210,8 @@ theorem cdt_ref {p : Prog} (hV : ValProg p) (hq : KnotStageProg p) (hap : ApdF p
   have hn' : n ≤ 2 ^ 62 := by omega
   rw [checkDeclThmE.arm1]
   show RefE _ _ (do checkConstantVal V fe cv; checkThmVal V fe cv v) a _
-  rcases h1 : erecCiW n m i 2 with _ | ⟨r1, m1⟩
-  · rw [liftE_none, checkDeclThmE.k_erec_ci.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some, checkDeclThmE.k_erec_ci.arm1]
+  refine RefE.onlySim (fun _ => checkDeclThmE.k_erec_ci.none ..) (fun _ _ h => h) fun r1 m1 h1 => ?_
+  rw [checkDeclThmE.k_erec_ci.arm1]
   have hCr1 := CrOK.frame hCr (erecCiW_frame h1) (by decide) (by decide)
   obtain ⟨hS1, hg1, hci1, hcv1, hval1, htop1⟩ :=
     erecCiW_okT (ci := .thmInfo cv) h1 hS hD hi (by rw [hd]; rfl)
@@ -223,13 +222,9 @@ theorem cdt_ref {p : Prog} (hV : ValProg p) (hq : KnotStageProg p) (hap : ApdF p
     have := hS1.stage.iw.er; have := hS1.stage.iw.erSize; omega
   have hq1 : (q + 1).toNat = q.toNat + 1 := toNat_add_small q 1 (by omega)
   -- `check_constant_val(vis, q + 1)`
-  have h2 := ccv_ref hq hap hkp hn' hS1 (by rw [hq1]; exact hcv1) (by omega) (denoteCV_lps hcvd) hCr1
-  rcases e2 : checkConstantValE p n m1 vis (q + 1) with e2 | ⟨r2, m2⟩
-  · rw [e2] at h2
-    rw [checkDeclThmE.k_check_constant_val.none]
-    exact RefE.bind_left fun hG => h2 hG.toVerdictCtxU
-  rw [e2] at h2
-  obtain ⟨u2, a2, hrun2, hP2⟩ := h2
+  refine RefE.bindE (fun _ => checkDeclThmE.k_check_constant_val.none ..) (fun hG => hG.toVerdictCtxU)
+    (ccv_ref hq hap hkp hn' hS1 (by rw [hq1]; exact hcv1) (by omega) (denoteCV_lps hcvd) hCr1)
+    fun ⟨r2, m2⟩ u2 a2 hrun2 hP2 => ?_
   rw [checkDeclThmE.k_check_constant_val.arm1]
   obtain ⟨hstep1, _F1, hpure1⟩ :=
     ConRon.Bridge.checkConstantVal_bridge_of_fold rfl (ConRon.Bridge.CoreSpec.of_core rfl) hfold hcvd hrun2
@@ -237,17 +232,12 @@ theorem cdt_ref {p : Prog} (hV : ValProg p) (hq : KnotStageProg p) (hap : ApdF p
   have hcA := ConRon.Bridge.denoteCV_ext hcvd hstep1.ext
   have hwsT : ConLeche.Expr.WScoped 0 c.type :=
     ConLeche.Expr.WScoped.of_not_hasFvar (ConRon.Bridge.checkConstantVal_typeWF hpure1).fvar
-  refine RefE.bind_right hrun2 ?_
   -- `check_thm_val(vis, q)`
   have hx2 : ArrExt (erecP m1) (erecP m2) := IWGrow.erecPExt hP2.grow
-  have h3 := tv_ref hq hV hap hkp hn' hP2.stage (ArrExt.decCI hx2 hci1) (ArrExt.hd? hx2 hval1)
-    ⟨env, c, hok1.envWF, hok1.check, hcA, hwsT⟩ hP2.crOK
-  rcases e3 : checkThmValE p n m2 vis q with e3 | ⟨r3, m3⟩
-  · rw [e3] at h3
-    exact fun hG => h3 hG.tv
-  rw [e3] at h3
-  obtain ⟨y3, a3, hrun3, hP3⟩ := h3
-  exact RefE.ret hrun3 ⟨hP3.stage, hP3.memos, hg1.trans (hP2.grow.trans hP3.grow)⟩
+  exact RefE.lastE (K := id) (fun _ => rfl) (fun _ => rfl) (fun hG => hG.tv)
+    (tv_ref hq hV hap hkp hn' hP2.stage (ArrExt.decCI hx2 hci1) (ArrExt.hd? hx2 hval1)
+      ⟨env, c, hok1.envWF, hok1.check, hcA, hwsT⟩ hP2.crOK)
+    fun _ _ _ _ hP3 => ⟨hP3.stage, hP3.memos, hg1.trans (hP2.grow.trans hP3.grow)⟩
 
 /-- **`erec_vg` writes the record pool and its top.** -/
 theorem erecVgW_frame {m m' : Mem} {q vk : Word} {r : List Word} (h : erecVgW m q vk = some (r, m')) :
@@ -321,9 +311,8 @@ theorem ivc_ref {p : Prog} (hRp : RecProg p) (hC : CvgProg p) (hap : ApdF p) (hk
   | zero => rw [installValueE.eq_1]; exact RefE.of_cls0 rfl
   | succ n =>
   rw [installValueE.arm1]
-  rcases h1 : erecCiW n m i ck with _ | ⟨r1, m1⟩
-  · rw [liftE_none, installValueE.k_erec_ci.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some, installValueE.k_erec_ci.arm1]
+  refine RefE.onlySim (fun _ => installValueE.k_erec_ci.none ..) (fun _ _ h => h) fun r1 m1 h1 => ?_
+  rw [installValueE.k_erec_ci.arm1]
   have hCr1 := CrOK.frame hCr (erecCiW_frame h1) (by decide) (by decide)
   obtain ⟨hS1, hg1, hci1, hcv1, hval1, htop1⟩ := erecCiW_okT h1 hS hD hi hci
   generalize hq : r1.headD 0 = q at hci1 hcv1 hval1 htop1 ⊢
@@ -331,20 +320,14 @@ theorem ivc_ref {p : Prog} (hRp : RecProg p) (hC : CvgProg p) (hap : ApdF p) (hk
     have h1 := hS1.stage.iw.er; have h2 := hS1.stage.iw.erSize; omega
   have hq1 : (q + 1).toNat = q.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
   -- `install_header(vis, q + 1)`
-  have h2R := ih_ref hap hkp.crf n hS1 (by rw [hq1]; exact hcv1) (by rw [hq1]; omega)
-    (denoteCV_lps hcvd) hCr1
   simp only [ivCoreT]
-  rcases h2 : installHeaderE p n m1 vis (q + 1) with e2 | ⟨r2, m2⟩
-  · rw [installValueE.k_install_header.none]
-    rw [h2] at h2R
-    exact RefE.bind_left fun hG => h2R ⟨hG.nv, hG.uce⟩
-  rw [h2] at h2R
-  obtain ⟨_, a2, hrun2, hP2⟩ := h2R
+  refine RefE.bindE (fun _ => installValueE.k_install_header.none ..) (fun hG => ⟨hG.nv, hG.uce⟩)
+    (ih_ref hap hkp.crf n hS1 (by rw [hq1]; exact hcv1) (by rw [hq1]; omega) (denoteCV_lps hcvd) hCr1)
+    fun ⟨r2, m2⟩ _ a2 hrun2 hP2 => ?_
   -- the parameters' names read back after the header: con-ron's `installHeader_bridge`
   have hlps2 : ∃ ks, (stepCV ds[i.toNat]).levelParams.mapM (denoteN a2.store.ns) = some ks := by
     obtain ⟨hstep, -⟩ := ConRon.Bridge.installHeader_bridge hfold hcvd hrun2
     exact denoteCV_lps (ConRon.Bridge.denoteCV_ext hcvd hstep.ext)
-  refine RefE.bind_right hrun2 ?_
   have tail : ∀ (m3 : Mem) (a3 : AState), StageT dn vis fe m3 a3 → IWGrow m1 m3 →
       RefE (IvCtx p) (installValueE.j1 p n vis vk q m3)
         (pure (fe.push ci, some ⟨k, stepCV ds[i.toNat], stepVal ds[i.toNat]⟩) : AM _) a3
@@ -366,9 +349,8 @@ theorem ivc_ref {p : Prog} (hRp : RecProg p) (hC : CvgProg p) (hap : ApdF p) (hk
     obtain ⟨hS4, hg4⟩ := envPushW_ok hW4 hS3.stage hci3
     have hM4 : CoreMemos s4.mem := hS3.twin.memos.frame (envPushW_frame hW4)
       (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)
-    rcases h5 : erecVgW s4.mem q vk with _ | ⟨r5, m5⟩
-    · rw [liftE_none, installValueE.k_erec_vg.none]; exact RefE.of_cls0 (by simp)
-    rw [liftE_some, installValueE.k_erec_vg.arm1]
+    refine RefE.onlySim (fun _ => installValueE.k_erec_vg.none ..) (fun _ _ h => h) fun r5 m5 h5 => ?_
+    rw [installValueE.k_erec_vg.arm1]
     have hx4 : ArrExt (erecP m1) (erecP s4.mem) := IWGrow.erecPExt (hg3.trans hg4)
     have htop4 : q.toNat + 8 ≤ erTop s4.mem := by
       have := (hg3.trans hg4).er; omega

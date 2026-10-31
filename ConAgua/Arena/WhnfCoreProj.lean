@@ -3,6 +3,7 @@ import ConAgua.Arena.WhnfCoreApp
 import ConAgua.Arena.WhnfCoreSlot
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.RefECore
+import ConAgua.Arena.RefWalk
 import ConAgua.Arena.KnotE
 import ConAgua.Verdict.WhnfModels2E
 import ConAgua.L.GrindAttr
@@ -125,12 +126,8 @@ theorem plit_ref (p : Prog) (hStrSup : StrLitSupportedOK p) (hStrCtor : StrLitCt
     exact RefE.ret (projLitToCtor_run_not_lit _ fe d.toNat h hh htag a₀) (CorePost.ret hS rfl hh)
   rw [ite_eq_right htag]
   have htag8 : h >>> 28 = 8 := by simpa using htag
-  by_cases hsc : tierW h ≠ 0 ∧ rdW (s₀.mem.arr64 CTL) 1 = 0
-  · rw [ite_eq_left hsc]; exact RefE.of_cls0 (by decide)
-  rw [ite_eq_right hsc]
-  by_cases hbd : tcnt s₀.mem LIT (tierW h) ≤ idxW h
-  · rw [ite_eq_left hbd]; exact RefE.of_cls0 (by decide)
-  rw [ite_eq_right hbd]
+  refine RefE.abort0 (by decide) fun hsc => ?_
+  refine RefE.abort0 (by decide) fun hbd => ?_
   have hvOK : viewOK s₀.mem h LIT := ⟨hsc, by simpa using hbd⟩
   obtain ⟨hviewS, hviewN⟩ := view_lit_kind s₀.mem a₀ hS.arena.base h hh hvOK htag8
   by_cases hkind : tfld s₀.mem LIT (tierW h) (idxW h) 0 ≠ 1
@@ -140,11 +137,10 @@ theorem plit_ref (p : Prog) (hStrSup : StrLitSupportedOK p) (hStrCtor : StrLitCt
       (CorePost.ret hS rfl hh)
   rw [ite_eq_right hkind]
   obtain ⟨s', hv⟩ := hviewS (by simpa using hkind)
-  rcases c1 : callW p n "str_lit_supported" [vis] s₀.mem with _ | ⟨r₁, m₁⟩
-  · rw [liftE_none, projLitToCtorE.k_str_lit_supported.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]
-  obtain ⟨hok1, ⟨M₁, hS₁, hK₁, hSt₁⟩, hres1, -⟩ :=
-    CoreSpec.of_callW (s₀ := ⟨s₀.mem, Locals.init []⟩) (hStrSup n _ a₀ dn vis fe MM eb hS) c1
+  refine RefE.onlySim (fun _ => projLitToCtorE.k_str_lit_supported.none ..)
+    (fun _ _ h => CoreSpec.of_callW (s₀ := ⟨s₀.mem, Locals.init []⟩) (hStrSup n _ a₀ dn vis fe MM eb hS)
+      h)
+    fun r₁ m₁ ⟨hok1, ⟨M₁, hS₁, hK₁, hSt₁⟩, hres1, _⟩ => ?_
   have hrr := AM.run_of_ok _ _ hok1
   rw [hres1] at hrr
   simp only [projLitToCtorE.k_str_lit_supported]
@@ -159,11 +155,10 @@ theorem plit_ref (p : Prog) (hStrSup : StrLitSupportedOK p) (hStrCtor : StrLitCt
   rw [hdb] at hrr
   have hv₁ : (AM.st (strLitSupported fe) a₀).store.view (decE h) = some (.lit (.strVal s')) :=
     hsupKeep a₀ _ _ hv
-  rcases c2 : callW p n "str_lit_ctor" [h] m₁ with _ | ⟨r₂, m₂⟩
-  · rw [liftE_none, projLitToCtorE.k_str_lit_ctor.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]
-  obtain ⟨hok2, ⟨M₂, hS₂, hK₂, hSt₂⟩, hres2, hrw2⟩ := CoreSpec.of_callW (s₀ := ⟨m₁, Locals.init []⟩)
-    (hStrCtor n _ _ dn vis fe M₁ eb h s' hS₁ hh hv₁) c2
+  refine RefE.onlySim (fun _ => projLitToCtorE.k_str_lit_ctor.none ..)
+    (fun _ _ hc2 => CoreSpec.of_callW (s₀ := ⟨m₁, Locals.init []⟩)
+      (hStrCtor n _ _ dn vis fe M₁ eb h s' hS₁ hh hv₁) hc2)
+    fun r₂ m₂ ⟨hok2, ⟨M₂, hS₂, hK₂, hSt₂⟩, hres2, hrw2⟩ => ?_
   have hc2run := AM.run_of_ok _ _ hok2
   rw [hres2] at hc2run
   simp only [projLitToCtorE.k_str_lit_ctor]
@@ -994,19 +989,12 @@ theorem rp_ref (p : Prog) (hp : WhnfCoreProg p) (hStrSup : StrLitSupportedOK p)
   | succ N =>
   rw [reduceProjCore_eq]
   unfold rpCoreT
-  have h1 := plit_ref p hStrSup hStrCtor N (hk.mono (by omega)) F (by omega) (by omega) s₀ a₀ dn vis fe
-    MM eb mode d c hs hc' hsup
-  rcases c1 : projLitToCtorE p (N + 1) s₀.mem mode vis d c with e1 | ⟨r₁, m₁⟩
-  · rw [c1] at h1
-    exact RefE.bind_left fun hG => h1 (hG.mono (by omega))
-  rw [c1] at h1
-  obtain ⟨y1, a1, hrun1, ⟨⟨M₁, hS₁, hK₁, hSt₁⟩, hy1, hrw1⟩⟩ := h1
-  refine RefE.bind_right hrun1 ?_
+  refine RefE.bindE (fun _ => rfl) (·.mono (Nat.le_succ N))
+    (plit_ref p hStrSup hStrCtor N (hk.mono (by omega)) F (by omega) (by omega) s₀ a₀ dn vis fe
+      MM eb mode d c hs hc' hsup) fun ⟨r₁, m₁⟩ _ a1 _ ⟨⟨M₁, hS₁, hK₁, hSt₁⟩, hy1, hrw1⟩ => ?_
   subst hy1
   simp only [reduceProjCoreE.k_proj_lit_to_ctor]
-  rcases c2 : callW p (N + 1) "find_proj" [vis, sn, i] m₁ with _ | ⟨r₂, m₂⟩
-  · rw [liftE_none, reduceProjCoreE.k_find_proj.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]
+  refine RefE.onlySim (fun _ => reduceProjCoreE.k_find_proj.none ..) (fun _ _ h => h) fun r₂ m₂ c2 => ?_
   obtain ⟨-, ⟨M₂, hS₂, hK₂, hSt₂⟩, hres2, -⟩ := CoreSpec.of_callW (s₀ := ⟨m₁, Locals.init []⟩)
     (hc.findProj (N + 1) _ _ dn vis fe M₁ eb sn i hS₁ hsn) c2
   have hE₂ : m₂.arr64 EREC = m₁.arr64 EREC :=
@@ -1029,13 +1017,11 @@ theorem rp_ref (p : Prog) (hp : WhnfCoreProg p) (hStrSup : StrLitSupportedOK p)
   rw [hde] at hfx
   rw [hfx]
   have hq : decTbl (m₂.arr64 EREC) (r₂.tail.headD 0).toNat = some tbl := by rw [hE₂]; exact hdt
-  rcases c3 : callW p (N + 1) "reduce_proj_head" [mode, vis, r₁.headD 0, r₂.tail.headD 0, i] m₂ with
-    _ | ⟨r₃, m₃⟩
-  · rw [liftE_none, reduceProjCoreE.k_reduce_proj_head.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]
-  obtain ⟨hok3, ⟨M₃, hS₃, hK₃, hSt₃⟩, hres3, hrw3⟩ := GrowSpec.of_callW (s₀ := ⟨m₂, Locals.init []⟩)
-    (rpHead_refines p hp hc N _ _ dn vis fe M₂ eb mode (r₁.headD 0) (r₂.tail.headD 0) i tbl
-      ⟨hS₂, hs.mode4, hs.eb_mode⟩ hrw1 hq hfe (by simpa [IProjTable.entry] using findProj?_lt hfx)) c3
+  refine RefE.onlySim (fun _ => reduceProjCoreE.k_reduce_proj_head.none ..)
+    (fun _ _ h => GrowSpec.of_callW (s₀ := ⟨m₂, Locals.init []⟩)
+      (rpHead_refines p hp hc N _ _ dn vis fe M₂ eb mode (r₁.headD 0) (r₂.tail.headD 0) i tbl
+        ⟨hS₂, hs.mode4, hs.eb_mode⟩ hrw1 hq hfe (by simpa [IProjTable.entry] using findProj?_lt hfx)) h)
+    fun r₃ m₃ ⟨hok3, ⟨M₃, hS₃, hK₃, hSt₃⟩, hres3, hrw3⟩ => ?_
   have hrun3 := AM.run_of_ok _ _ hok3
   rw [hres3] at hrun3
   simp only [reduceProjCoreE.k_reduce_proj_head]
@@ -1085,15 +1071,10 @@ theorem stepProj_ref (p : Prog) (hp : WhnfCoreProg p) (hStrSup : StrLitSupported
     cases n with
     | zero => exact RefE.of_cls0 rfl
     | succ N =>
-    have h2 := rp_ref p hp hStrSup hStrCtor hc hE N (hk.mono (by omega)) F (by omega) (by omega)
-      ⟨m₁, Locals.init []⟩ a₁ dn vis fe M₁ eb mode d sn i (r₁.headD 0) ⟨hS₁, hs.mode4, hs.eb_mode⟩ hsn
-      hr₁ hsup
-    rcases c2 : reduceProjCoreE p (N + 1) m₁ mode vis d sn i (r₁.headD 0) with e2 | ⟨r₂, m₂⟩
-    · rw [c2] at h2
-      exact RefE.bind_left fun hG => h2 (hG.mono (by omega))
-    rw [c2] at h2
-    obtain ⟨y2, a2, hrun2, ⟨⟨M₂, hS₂, hK₂, hSt₂⟩, hy2, hrw2⟩⟩ := h2
-    refine RefE.bind_right hrun2 ?_
+    refine RefE.bindE (fun _ => rfl) (·.mono (Nat.le_succ N))
+      (rp_ref p hp hStrSup hStrCtor hc hE N (hk.mono (by omega)) F (by omega) (by omega)
+        ⟨m₁, Locals.init []⟩ a₁ dn vis fe M₁ eb mode d sn i (r₁.headD 0) ⟨hS₁, hs.mode4, hs.eb_mode⟩
+        hsn hr₁ hsup) fun ⟨r₂, m₂⟩ _ a2 _ ⟨⟨M₂, hS₂, hK₂, hSt₂⟩, hy2, hrw2⟩ => ?_
     subst hy2
     simp only [coreStepProjE.k_reduce_proj_core]
     by_cases hf : r₂.headD 0 = 0

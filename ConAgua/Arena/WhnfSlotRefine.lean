@@ -18,11 +18,6 @@ open scoped Lean.Order
 
 namespace L.Arena
 
-theorem whnfLoop_err (r : CoreFnsA) (fe : IFEnv) (d K : Nat) (e : EIdx) (a : AState)
-    (ce : CheckError) (hs : (whnfStep r fe d e).run a = .error ce) :
-    (whnfLoop r fe d (K + 1) e).run a = .error ce := by
-  simp only [whnfLoop, StateT.run_bind, hs]; rfl
-
 theorem knot_whnf_miss_err (mode : ConLeche.CheckMode) (fe : IFEnv) (F : Nat) (d : Nat) (e : EIdx)
     (a : AState) (h : whnfStuckTag e = false) (hm : a.caches.whnfC[e]? = none) (ce : CheckError)
     (hb : (whnfBody (coreKnot mode fe id F) fe d e).run a = .error ce) :
@@ -55,13 +50,9 @@ theorem wstep_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n
     (fun _ => rfl) hW1 hE1 (fun r₁ m₁ _ h1 => ?_)
   obtain ⟨-, ⟨M₁, hS₁, hK₁, hSt₁⟩, -, hrw₁⟩ := h1
   simp only [whnfStepE.k_whnf_core]
-  have h2 := reduceNat_ref p hp hno n F hF hn hk ⟨m₁, Locals.init []⟩ _ dn vis fe M₁ eb mode d
-    (r₁.headD 0) ⟨hS₁, hs.mode4, hs.eb_mode⟩ hrw₁
-  rcases c2 : reduceNatE p n m₁ mode vis d (r₁.headD 0) with e2 | ⟨r₂, m₂⟩
-  · rw [c2] at h2; exact RefE.bind_left h2
-  rw [c2] at h2
-  obtain ⟨y2, a2, hrun2, ⟨⟨M₂, hS₂, hK₂, hSt₂⟩, hy2, hrw₂⟩⟩ := h2
-  refine RefE.bind_right hrun2 ?_
+  refine RefE.bindE (fun _ => rfl) id (reduceNat_ref p hp hno n F hF hn hk ⟨m₁, Locals.init []⟩ _ dn vis
+    fe M₁ eb mode d (r₁.headD 0) ⟨hS₁, hs.mode4, hs.eb_mode⟩ hrw₁)
+    fun ⟨r₂, m₂⟩ _ a2 _ ⟨⟨M₂, hS₂, hK₂, hSt₂⟩, hy2, hrw₂⟩ => ?_
   subst hy2
   simp only [whnfStepE.k_reduce_nat]
   by_cases hf2 : r₂.headD 0 ≠ 0
@@ -75,14 +66,9 @@ theorem wstep_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n
   have hnone : decOptR r₂ = none := by
     simp only [decOptR, decOpt]; rw [ite_eq_left (by simpa using hf2)]
   rw [hnone]
-  rcases h3 : callW p n "unfold_definition" [vis, r₁.headD 0] m₂ with _ | ⟨r₃, m₃⟩
-  · rw [liftE_none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]
-  obtain ⟨hok3, ⟨M₃, hS₃, hK₃, hSt₃⟩, hres3, hrw3⟩ := CoreSpec.of_callW (s₀ := ⟨m₂, Locals.init []⟩)
-    (unfoldDefinition_refines' p hp n _ a2 dn vis fe M₂ eb (r₁.headD 0) hS₂ hrw₁ hlp) h3
-  have hrun3 := AM.run_of_ok _ _ hok3
-  rw [hres3] at hrun3
-  refine RefE.bind_right hrun3 ?_
+  refine RefE.bind_callW (s₀ := ⟨m₂, Locals.init []⟩) (fun _ => rfl)
+    (unfoldDefinition_refines' p hp n _ a2 dn vis fe M₂ eb (r₁.headD 0) hS₂ hrw₁ hlp)
+    fun r₃ m₃ _ ⟨_, ⟨M₃, hS₃, hK₃, hSt₃⟩, _, hrw3⟩ => ?_
   simp only [whnfStepE.k_unfold_definition]
   by_cases hf3 : r₃.headD 0 ≠ 0
   · rw [ite_eq_left hf3]
@@ -120,26 +106,21 @@ theorem wloop_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n
     cases k with
     | zero => simp only [whnfStepE, whnfLoopE.k_whnf_step]; exact RefE.of_cls0 rfl
     | succ j =>
-    have h1 := wstep_ref p hp hno hlp j (hk.mono (by omega)) F (by omega) (by omega)
-      ⟨m, Locals.init []⟩ a dn vis fe MM eb mode d e ⟨hS, hmode, heb⟩ he
-    rcases c1 : whnfStepE p (j + 1) m mode vis d e with e1 | ⟨r, m₁⟩
-    · rw [c1] at h1
-      simp only [whnfLoopE.k_whnf_step]
-      exact fun hG => ErrClaim.of_run_eq (fun ce h' => whnfLoop_err _ fe d.toNat K' _ a ce h')
-        (h1 (hG.mono (by omega)))
-    rw [c1] at h1
-    obtain ⟨y, a1, hrun, ⟨⟨M', hS₁, hK₁, hSt₁⟩, hy, hrw⟩⟩ := h1
-    rw [hy] at hrun
+    rw [whnfLoop.eq_2]
+    refine RefE.bindE (fun _ => by simp only [whnfLoopE.k_whnf_step]) (·.mono (by omega))
+      (wstep_ref p hp hno hlp j (hk.mono (by omega)) F (by omega) (by omega) ⟨m, Locals.init []⟩ a dn
+        vis fe MM eb mode d e ⟨hS, hmode, heb⟩ he)
+      fun ⟨r, m₁⟩ _ a1 _ ⟨⟨M', hS₁, hK₁, hSt₁⟩, hy, hrw⟩ => ?_
+    subst hy
     simp only [whnfLoopE.k_whnf_step]
     by_cases h0 : r.headD 0 = 0
     · rw [ite_eq_left h0]
-      simp only [decStep, h0, ↓reduceIte] at hrun
-      exact RefE.ret (whnfLoop_done _ fe d.toNat K' (decE e) _ a _ hrun) ⟨⟨M', hS₁, hK₁, hSt₁⟩, rfl, hrw.2⟩
+      simp only [decStep, h0, ↓reduceIte]
+      exact RefE.ret rfl ⟨⟨M', hS₁, hK₁, hSt₁⟩, rfl, hrw.2⟩
     rw [ite_eq_right h0]
-    simp only [decStep, h0, ↓reduceIte] at hrun
-    exact RefE.of_run_eq (whnfLoop_cont _ fe d.toNat K' (decE e) _ a _ hrun)
-      ((ih (by omega) K' (by omega) m₁ _ M' eb _ hS₁ heb hrw.2).mono
-        fun _ _ _ h => ⟨CoreAfter.comp hK₁ hSt₁ h.after, h.res, h.valid⟩)
+    simp only [decStep, h0, ↓reduceIte]
+    exact (ih (by omega) K' (by omega) m₁ _ M' eb _ hS₁ heb hrw.2).mono
+      fun _ _ _ h => ⟨CoreAfter.comp hK₁ hSt₁ h.after, h.res, h.valid⟩
 
 include hp hno hlp in
 /-- **`whnf` at `n + 1` refines the knot's `whnf` slot of `coreKnot mode fe id F`, both
@@ -162,9 +143,7 @@ theorem whnf_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (s₀ : St) (a₀ : ASt
     exact RefE.ret (knot_whnf_stuck _ fe F' d.toNat _ a₀ ht) (CorePost.ret hS rfl he)
   rw [ite_eq_right hst]
   have ht : whnfStuckTag (decE e) = false := by rw [whnfStuck_iff e he]; simpa using hst
-  rcases h1 : callW p n "wh_find" [e, ((mode >>> 1) &&& 1) <<< 32] s₀.mem with _ | ⟨r₁, m₁⟩
-  · rw [liftE_none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]
+  refine RefE.onlySim (fun _ => rfl) (fun _ _ h => h) fun r₁ m₁ h1 => ?_
   obtain ⟨rfl, hne, hr⟩ := callW_memoFind hp.whFind h1
   rw [hkey] at hr
   subst hr
@@ -191,14 +170,9 @@ theorem whnf_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (s₀ : St) (a₀ : ASt
   rw [c2] at h2
   obtain ⟨y, a1, hrun, ⟨⟨M', hS₁, hK₁, hSt₁⟩, hy, hrw⟩⟩ := h2
   simp only [whnfE.k_whnf_loop]
-  rcases h3 : callW p (n' + 1) "wh_find" [e, ((mode >>> 1) &&& 1) <<< 32] m₂ with _ | ⟨r₃, m₃⟩
-  · rw [liftE_none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]
+  refine RefE.onlySim (fun _ => rfl) (fun _ _ h => h) fun r₃ m₃ h3 => ?_
   simp only [whnfE.k_wh_find_2]
-  rcases h4 : callW p (n' + 1) "wh_put" [e, ((mode >>> 1) &&& 1) <<< 32, x, r₃.headD 0,
-      r₃.tail.headD 0] m₃ with _ | ⟨r₄, m₄⟩
-  · rw [liftE_none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]
+  refine RefE.onlySim (fun _ => rfl) (fun _ _ h => h) fun r₄ m₄ h4 => ?_
   simp only [whnfE.k_wh_put]
   have hset := callW_memoSet hp.whFind hp.whPut h3 h4
   rw [hkey] at hset

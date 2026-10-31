@@ -204,9 +204,7 @@ theorem ibd_ref {p : Prog} (hB : BasisProg p) {dn : NIdx → Option ConLeche.Nam
   | zero => rw [installBasisDeclE.eq_1]; exact RefE.of_cls0 (by simp)
   | succ n =>
   rw [installBasisDeclE.arm1, ew]
-  rcases h1 : envFindW m w vis with _ | ⟨r1, m1⟩
-  · rw [liftE_none, installBasisDeclE.k_env_find.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]
+  refine RefE.onlySim (fun _ => installBasisDeclE.k_env_find.none ..) (fun _ _ h => h) fun r1 m1 h1 => ?_
   by_cases hb : r1.headD 0 ≠ 0
   · rw [installBasisDeclE.k_env_find.abort1 p _ _ _ _ _ hb]
     have : (fe.find? ci.name).isSome = true := by
@@ -217,9 +215,8 @@ theorem ibd_ref {p : Prog} (hB : BasisProg p) {dn : NIdx → Option ConLeche.Nam
   rw [installBasisDeclE.k_env_find.arm1 p _ _ _ _ _ (by simpa using hb)]
   obtain ⟨rfl, hfind⟩ := envFindW_miss h1 hS.check.env hwl (by simpa using hb)
   have hw : (rdW (m1.arr64 EREC) (c + 1)).toNat < 2 ^ 32 := by rw [ew]; exact hwl
-  rcases h2 : callW p n "env_push" [vis, c] m1 with _ | ⟨r2, m2⟩
-  · rw [liftE_none, installBasisDeclE.k_env_push.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some, installBasisDeclE.k_env_push.arm1]
+  refine RefE.onlySim (fun _ => installBasisDeclE.k_env_push.none ..) (fun _ _ h => h) fun r2 m2 h2 => ?_
+  rw [installBasisDeclE.k_env_push.arm1]
   obtain ⟨s2, hs2, -, hW2⟩ := triple_of_callW (s₀ := ⟨m1, Locals.init []⟩)
     (envPush_specW p hB.rcp n ⟨m1, Locals.init []⟩ vis c hw) h2
   subst hs2

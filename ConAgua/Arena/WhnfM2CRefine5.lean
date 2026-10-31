@@ -161,20 +161,18 @@ theorem m2cCtor_ref (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N �
   have hA0 : GrowPost decH dn m vis fe M eb ResH ([major], m) (decE major) a :=
     ⟨CoreAfter.toG ⟨M, hS, KeptAll.refl _ _, StackKept.refl _⟩, rfl, hmaj⟩
   have hR := hS.arena.base
-  rcases c1 : callW p N "pi_result" [w4] m with _ | ⟨r1, m1⟩
-  · rw [liftE_none, m2cCtorE.k_pi_result.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some, m2cCtorE.k_pi_result.arm1]
-  obtain ⟨t1, ht1, hm1, -, hh1, hpr⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (piResult_refines' p hp.spine.pires N _ a hR w4 l4) c1
+  refine RefE.onlySim (fun _ => m2cCtorE.k_pi_result.none ..) (fun _ _ h =>
+      triple_of_callW (s₀ := ⟨m, Locals.init []⟩) (piResult_refines' p hp.spine.pires N _ a hR w4 l4) h)
+    fun r1 m1 ⟨t1, ht1, hm1, _, hh1, hpr⟩ => ?_
+  rw [m2cCtorE.k_pi_result.arm1]
   have hm1' : m1 = m := ht1.symm.trans hm1
   rw [hm1']
   have hpr' : (piResult coreWalkFuel cvj.type).run a = .ok (decE (r1.headD 0), a) := by
     rw [hty]; exact hpr
-  rcases c2 : callW p N "get_app_fn" [r1.headD 0] m with _ | ⟨r2, m2⟩
-  · rw [liftE_none, m2cCtorE.k_get_app_fn.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]
-  obtain ⟨t2, ht2, hm2, -, hh2, hga⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (getAppFn_refines' p hp.spine.fn N _ a hR (r1.headD 0) hh1) c2
+  refine RefE.onlySim (fun _ => m2cCtorE.k_get_app_fn.none ..) (fun _ _ h =>
+      triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+        (getAppFn_refines' p hp.spine.fn N _ a hR (r1.headD 0) hh1) h)
+    fun r2 m2 ⟨t2, ht2, hm2, _, hh2, hga⟩ => ?_
   have hm2' : m2 = m := ht2.symm.trans hm2
   rw [hm2']
   by_cases g2 : r2.headD 0 >>> 28 ≠ 3
@@ -186,11 +184,10 @@ theorem m2cCtor_ref (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N �
   rw [m2cCtorE.k_get_app_fn.arm2 _ _ _ _ _ _ _ _ _ _ g2']
   have ht : ((decE (r2.headD 0)).tag == ETag.const) = true := by
     rw [decE_const_tag _ hh2]; simpa using g2'
-  rcases c3 : callW p N "m2c_const_view" [r2.headD 0] m with _ | ⟨r3, m3⟩
-  · rw [liftE_none, m2cCtorE.k_m2c_const_view.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some, m2cCtorE.k_m2c_const_view.arm1]
-  obtain ⟨t3, ht3, -, hm3, hcv⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (m2cConstView_spec p hp.constView N _ (r2.headD 0)) c3
+  refine RefE.onlySim (fun _ => m2cCtorE.k_m2c_const_view.none ..) (fun _ _ h =>
+      triple_of_callW (s₀ := ⟨m, Locals.init []⟩) (m2cConstView_spec p hp.constView N _ (r2.headD 0)) h)
+    fun r3 m3 ⟨t3, ht3, _, hm3, hcv⟩ => ?_
+  rw [m2cCtorE.k_m2c_const_view.arm1]
   have hm3' : m3 = m := ht3.symm.trans hm3
   rw [hm3']
   simp only [cvwW] at hcv
@@ -201,10 +198,9 @@ theorem m2cCtor_ref (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N �
   have hn0 : tfld m CONST (tierW (r2.headD 0)) (idxW (r2.headD 0)) 0 = r3.headD 0 := by
     rw [hr3]; rfl
   rw [hn0] at hvw hn32
-  rcases c4 : callW p N "env_find" [r3.headD 0, vis] m with _ | ⟨r4, m4⟩
-  · rw [liftE_none, m2cCtorE.k_env_find.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]
-  obtain ⟨hm4', hfind, hfound⟩ := callW_envFindI p hp.toIotaProg' N m vis _ hS.env hn32 r4 m4 c4
+  refine RefE.onlySim (fun _ => m2cCtorE.k_env_find.none ..)
+    (fun r4 m4 h => callW_envFindI p hp.toIotaProg' N m vis _ hS.env hn32 r4 m4 h)
+    fun r4 m4 ⟨hm4', hfind, hfound⟩ => ?_
   rw [hm4']
   have hview := view_run _ _ _ hvw
   by_cases g4 : r4.headD 0 = 0
@@ -251,9 +247,7 @@ theorem m2cHead_ref (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N �
   cases N with
   | zero => rw [callW_zero, liftE_none, m2cHeadE.k_is_ctor_app.none]; exact RefE.of_cls0 (by simp)
   | succ N' =>
-  rcases c1 : callW p (N' + 1) "is_ctor_app" [vis, major] m with _ | ⟨r1, m1⟩
-  · rw [liftE_none, m2cHeadE.k_is_ctor_app.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]
+  refine RefE.onlySim (fun _ => m2cHeadE.k_is_ctor_app.none ..) (fun _ _ h => h) fun r1 m1 c1 => ?_
   obtain ⟨hrun1, ⟨M1, hS1, hK1, hSt1⟩, -⟩ := CoreSpec.run
     (isCtorApp_refines p hp.toIotaProg' N' ⟨m, Locals.init []⟩ a dn vis fe M eb major hS hmaj) c1
   have e1 : m1.arr64 EREC = m.arr64 EREC := hE _ _ _ _ _ _ (by simp) c1
@@ -297,10 +291,9 @@ theorem m2cHead_ref (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N �
   obtain ⟨⟨w0, e0, l0, hctor⟩, -, -⟩ := decRule_words _ _ _ hrl
   have r0 : rdW (m1.arr64 EREC) ro = w0 := by rw [e1]; simp only [rdW, e0]; rfl
   rw [r0]
-  rcases c2 : callW p (N' + 1) "env_find" [w0, vis] m1 with _ | ⟨r2, m2⟩
-  · rw [liftE_none, m2cHeadE.k_env_find.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]
-  obtain ⟨hm2, hfind, hfound⟩ := callW_envFindI p hp.toIotaProg' (N' + 1) m1 vis _ hS1.env l0 r2 m2 c2
+  refine RefE.onlySim (fun _ => m2cHeadE.k_env_find.none ..)
+    (fun r2 m2 h => callW_envFindI p hp.toIotaProg' (N' + 1) m1 vis _ hS1.env l0 r2 m2 h)
+    fun r2 m2 ⟨hm2, hfind, hfound⟩ => ?_
   rw [hm2]
   by_cases g3 : r2.headD 0 = 0
   · rw [m2cHeadE.k_env_find.arm1 _ _ _ _ _ _ _ _ _ g3]

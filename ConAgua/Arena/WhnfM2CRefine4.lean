@@ -230,19 +230,15 @@ theorem m2cEta_ref (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤
   obtain ⟨htm, hT2, hus⟩ := hhw g0
   obtain ⟨l, hvls, hll, -⟩ := hpre.view g0
   have hpre' := m2cPreT_some hpre g0
-  rcases c2 : callW p (N' + 1) "get_app_args" [L.tail.headD 0] m1 with _ | ⟨r2', m2⟩
-  · rw [liftE_none, m2cEtaE.k_get_app_args.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some, m2cEtaE.k_get_app_args.arm1]
+  refine RefE.onlySim (fun _ => m2cEtaE.k_get_app_args.none ..) (fun _ _ h => h) fun r2' m2 c2 => ?_
+  rw [m2cEtaE.k_get_app_args.arm1]
   obtain ⟨t2, ht2, -, hfr2, hg2, htop2, htop2', xs, hargs, hsp2⟩ := triple_of_callW
     (s₀ := ⟨m1, Locals.init []⟩) (getAppArgs_refines p hp.spine (N' + 1) _ a1 hS1.arena.base _ htm hS1.spn) c2
   rw [ht2] at hfr2 hg2 hsp2 htop2'
   have hS2 := hS1.frame_stk hfr2 (by simp) (by simp)
   have he2 : m2.arr64 EREC = m1.arr64 EREC := hfr2.1 EREC (by simp [EREC, SPN]) (by decide)
   have hlen : xs.length = (r2'.tail.headD 0).toNat := by simpa using hsp2.size
-  rcases c3 : callW p (N' + 1) "caps_never_zero" [po, pc, L.tail.tail.tail.headD 0, swd, so, sc] m2 with
-    _ | ⟨r3', m3⟩
-  · rw [liftE_none, m2cEtaE.k_caps_never_zero.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]
+  refine RefE.onlySim (fun _ => m2cEtaE.k_caps_never_zero.none ..) (fun _ _ h => h) fun r3' m3 c3 => ?_
   have hEe : m2.arr64 EREC = m.arr64 EREC := he2.trans he1
   obtain ⟨hrun3, ⟨M3, hS3, hK3, hSt3⟩, -⟩ := CoreSpec.run
     (hc.capsNeverZero (N' + 1) ⟨m2, Locals.init []⟩ a1 dn vis fe M1 eb po pc _ swd so sc
@@ -289,10 +285,8 @@ theorem m2cEta_ref (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤
   have hcond : (decI (L.tail.tail.headD 0) : NIdx) = decI T ∧ xs.length = caps.etaParams ∧
       l.length = cvT.levelParams.length ∧ decBool r3' = true :=
     ⟨by rw [g2'], by rw [hlen, g3', hep], by rw [hll, g4', hlps], decBool_t_m2c g5⟩
-  rcases c4 : callW p (N' + 1) "m2c_eta2" [vis, d, T, w6, w8, r2'.headD 0, r2'.tail.headD 0,
-      L.tail.tail.tail.headD 0, major] m3 with _ | ⟨r4, m4⟩
-  · rw [liftE_none, m2cEtaE.k_m2c_eta2.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some, m2cEtaE.k_m2c_eta2.arm1]
+  refine RefE.onlySim (fun _ => m2cEtaE.k_m2c_eta2.none ..) (fun _ _ h => h) fun r4 m4 c4 => ?_
+  rw [m2cEtaE.k_m2c_eta2.arm1]
   have hspn2 : (m2.arr64 SPN).size < 2 ^ 63 := hS2.spn
   have htop3 : r2'.headD 0 + r2'.tail.headD 0 = spTop m3 := by
     rw [hSt3.1, htop2', htop2]

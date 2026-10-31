@@ -131,22 +131,22 @@ theorem m2cAnd2_ref (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N �
   cases N with
   | zero => rw [callW_zero, liftE_none, m2cAnd2E.k_mk_proj.none]; exact RefE.of_cls0 (by simp)
   | succ N' =>
-  rcases c1 : callW p (N' + 1) "mk_proj" [T, 0, major] m with _ | ⟨r1, m1⟩
-  · rw [liftE_none, m2cAnd2E.k_mk_proj.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some, m2cAnd2E.k_mk_proj.arm1]
+  refine RefE.onlySim (fun _ => m2cAnd2E.k_mk_proj.none ..) (fun _ _ h => h) fun r1 m1 c1 => ?_
+  rw [m2cAnd2E.k_mk_proj.arm1]
   obtain ⟨ok1, hD1, res1, hfr1, hh1⟩ := callW_mkProj p hp.toIotaProg' (N' + 1) ⟨m, Locals.init []⟩ a
     hS.arena T 0 major r1 m1 c1
   have hrun1 := AM.run_of_ok _ _ ok1
   rw [res1, show (0 : Word).toNat = 0 from rfl] at hrun1
+  unfold m2cAnd2T
+  refine RefE.bind_right hrun1 ?_
   have hS1 := hS.of_proj hD1 (Keeps.run (keeps_cpl_internProj _ _ _) hrun1) hfr1
   obtain ⟨e1, t1⟩ := store_spn hfr1.pjStore
-  rcases c2 : callW p (N' + 1) "mk_proj" [T, 1, major] m1 with _ | ⟨r2, m2⟩
-  · rw [liftE_none, m2cAnd2E.k_mk_proj_2.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]
+  refine RefE.onlySim (fun _ => m2cAnd2E.k_mk_proj_2.none ..) (fun _ _ h => h) fun r2 m2 c2 => ?_
   obtain ⟨ok2, hD2, res2, hfr2, hh2⟩ := callW_mkProj p hp.toIotaProg' (N' + 1) ⟨m1, Locals.init []⟩ _
     hS1.arena T 1 major r2 m2 c2
   have hrun2 := AM.run_of_ok _ _ ok2
   rw [res2, show (1 : Word).toNat = 1 from rfl] at hrun2
+  refine RefE.bind_right hrun2 ?_
   have hS2 := hS1.of_proj hD2 (Keeps.run (keeps_cpl_internProj _ _ _) hrun2) hfr2
   obtain ⟨e2, t2⟩ := store_spn hfr2.pjStore
   have hsp2 : SpineR m2 to tn targs.toArray := (hsp.of_spn_core e1).of_spn_core e2
@@ -159,13 +159,13 @@ theorem m2cAnd2_ref (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N �
     (and2Push_of hS2 b1 b2)
   generalize ((m2.set64 SPN (to + tn) (r1.headD 0)).set64 SPN (to + tn + 1) (r2.headD 0)).set64 CTL 136
     (to + tn + 2) = m3 at hS3 hg3 hsp3 ⊢
-  rcases c4 : callW p (N' + 1) "intern_const" [ctor, ust] m3 with _ | ⟨r4, m4⟩
-  · rw [liftE_none, m2cAnd2E.k_intern_const.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some, m2cAnd2E.k_intern_const.arm1]
+  refine RefE.onlySim (fun _ => m2cAnd2E.k_intern_const.none ..) (fun _ _ h => h) fun r4 m4 c4 => ?_
+  rw [m2cAnd2E.k_intern_const.arm1]
   obtain ⟨ok4, hD4, res4, hfr4, hh4⟩ := callW_internConst' p hp.constFind' hp.constPush'
     hp.internConst' (N' + 1) m3 _ hS3.arena ctor ust hctor hus r4 m4 c4
   have hrun4 := AM.run_of_ok _ _ ok4
   rw [res4] at hrun4
+  refine RefE.bind_right hrun4 ?_
   have hS4 := hS3.of_const' hD4 (Keeps.run (keeps_cpl_internConst' _ _) hrun4) hfr4 hrun4 (by
     obtain ⟨x, c, hx⟩ := hvus
     have hx1 := internNodeE_fwd (v := .proj _ _ _) (by simpa [internE] using hrun1) x _
@@ -174,9 +174,8 @@ theorem m2cAnd2_ref (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N �
       (.inr ⟨_, _, rfl⟩) hx1
     exact hS3.den.constLs _ _ _ hx2)
   have hsp4 := hsp3.of_spn_core (const_spn hfr4)
-  rcases c5 : callW p (N' + 1) "mk_app_n" [r4.headD 0, to, tn + 2] m4 with _ | ⟨r5, m5⟩
-  · rw [liftE_none, m2cAnd2E.k_mk_app_n.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some, m2cAnd2E.k_mk_app_n.arm1]
+  refine RefE.onlySim (fun _ => m2cAnd2E.k_mk_app_n.none ..) (fun _ _ h => h) fun r5 m5 c5 => ?_
+  rw [m2cAnd2E.k_mk_app_n.arm1]
   obtain ⟨ok5, hD5, res5, hfr5, hh5⟩ := callW_mkAppN' p hp.spine (N' + 1) m4 _ hS4.arena
     (r4.headD 0) to (tn + 2) _ hh4 hsp4 r5 m5 c5
   have hrun5 := AM.run_of_ok _ _ ok5
@@ -187,23 +186,13 @@ theorem m2cAnd2_ref (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N �
       (hg3.trans (((StackKept.of_constF hfr4).trans (StackKept.of_app_frame hfr5)).toGrew))
   have el : ((targs.toArray.push (decE (r1.headD 0))).push (decE (r2.headD 0))).toList =
       targs ++ [decE (r1.headD 0), decE (r2.headD 0)] := by simp
-  rw [el, show decE (r4.headD 0) = decI (r4.headD 0) from rfl] at hrun5
-  have z0 : (0 : Word).toNat = 0 := rfl
-  have z1 : (1 : Word).toNat = 1 := rfl
-  simp only [z0, z1] at hrun2 hrun4 hrun5
-  exact RefE.tail (m2cAnd2E.k_m2c_check.none p) (fun v => m2cAnd2E.k_m2c_check.arm1 p v.1 v.2)
+  rw [el, show decE (r4.headD 0) = decI (r4.headD 0) from rfl] at hrun5 hS5
+  refine RefE.bind_right hrun5 ?_
+  exact RefE.lastE (m2cAnd2E.k_m2c_check.none p) (fun v => m2cAnd2E.k_m2c_check.arm1 p v.1 v.2)
     (fun h => h.mono (Nat.le_succ _))
-    (fun y a' hr => ⟨y, by
-        rw [el] at hr; simp only [z0, z1] at hr
-        unfold m2cAnd2T; simp only [StateT.run_bind, hrun1, except_ok_bind, hrun2, hrun4, hrun5]
-        exact hr,
-      fun v hv => ⟨CoreAfterG.compK (KeptAll.refl _ _) hgrow hv.after.toG, hv.res, hv.valid⟩⟩)
-    (fun ce h' => by
-      rw [el] at h'; simp only [z0, z1] at h'
-      unfold m2cAnd2T; simp only [StateT.run_bind, hrun1, except_ok_bind, hrun2, hrun4, hrun5]
-      exact h')
     (m2cCheck_ref p hp hc hpi N' F (hk.mono (Nat.le_succ _)) (by omega) (by omega) dn vis fe eb mode d
       tmaj (r5.headD 0) major hm4 hebm htm hh5 hmaj m5 _ M hS5)
+    fun _ _ _ _ hv => ⟨CoreAfterG.compK (KeptAll.refl _ _) hgrow hv.after.toG, hv.res, hv.valid⟩
 
 include hE hcc in
 /-- **`m2c_and` refines `m2cAndT`, both outcomes** (the errors are `m2c_pre`'s and
@@ -220,9 +209,7 @@ theorem m2cAnd_ref (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤
   cases N with
   | zero => rw [callW_zero, liftE_none, m2cAndE.k_pin_at.none]; exact RefE.of_cls0 (by simp)
   | succ N' =>
-  rcases c1 : callW p (N' + 1) "pin_at" [11] m with _ | ⟨r1, m1⟩
-  · rw [liftE_none, m2cAndE.k_pin_at.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]
+  refine RefE.onlySim (fun _ => m2cAndE.k_pin_at.none ..) (fun _ _ h => h) fun r1 m1 c1 => ?_
   obtain ⟨t1, ht1, hm1, -, hanHW, hpin⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (pinAt_refines p hp.pinat (N' + 1) _ a ⟨fun _ => hS.pins⟩ 11) c1
   have hm1' : m1 = m := ht1.symm.trans hm1
@@ -257,18 +244,14 @@ theorem m2cAnd_ref (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤
   obtain ⟨htm, hT2, hus⟩ := hhw g0
   obtain ⟨l, -, hll, hvl⟩ := hpre.view g0
   have hpre' := m2cPreT_some hpre g0
-  rcases c3 : callW p (N' + 1) "get_app_args" [L.tail.headD 0] m2 with _ | ⟨r3, m3⟩
-  · rw [liftE_none, m2cAndE.k_get_app_args.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some, m2cAndE.k_get_app_args.arm1]
+  refine RefE.onlySim (fun _ => m2cAndE.k_get_app_args.none ..) (fun _ _ h => h) fun r3 m3 c3 => ?_
+  rw [m2cAndE.k_get_app_args.arm1]
   obtain ⟨t3, ht3, -, hfr3, hg3, htop3, htop3', xs, hargs, hsp3⟩ := triple_of_callW
     (s₀ := ⟨m2, Locals.init []⟩) (getAppArgs_refines p hp.spine (N' + 1) _ a2 hS2.arena.base _ htm hS2.spn) c3
   rw [ht3] at hfr3 hg3 hsp3 htop3'
   have hS3 := hS2.frame_stk hfr3 (by simp) (by simp)
   have hlen : xs.length = (r3.tail.headD 0).toNat := by simpa using hsp3.size
-  rcases c4 : callW p (N' + 1) "and_rescue_slots" [vis, ctor, cnP, L.tail.tail.tail.headD 0] m3 with
-    _ | ⟨r4, m4⟩
-  · rw [liftE_none, m2cAndE.k_and_rescue_slots.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]
+  refine RefE.onlySim (fun _ => m2cAndE.k_and_rescue_slots.none ..) (fun _ _ h => h) fun r4 m4 c4 => ?_
   obtain ⟨hrun4, ⟨M4, hS4, hK4, hSt4⟩, -⟩ := CoreSpec.run
     (andRescueSlots_refines' p hp.toIotaProg' hcc (N' + 1) ⟨m3, Locals.init []⟩ a2 dn vis fe M2 eb
       ctor cnP _ hS3 hctor hus (hpre.cview g0)) c4

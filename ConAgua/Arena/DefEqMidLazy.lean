@@ -162,26 +162,21 @@ theorem ll_ref (p : Prog) (hp : LazyProg p) (hc : LazyCallees p) (n : Nat)
   have hS := hs.rel
   unfold ldsOneT
   simp only [↓reduceIte, llE]
-  rcases c1 : callW p n "unfold_definition" [vis, a] s₀.mem with _ | ⟨r₁, m₁⟩
-  · rw [liftE_none, llE.k_unfold_definition.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]; simp only [llE.k_unfold_definition]
-  have e₁ := CoreSpec.of_callW (hc.unfold n s₀ a₀ dn vis fe M eb a hS ha) c1
-  refine RefE.bind_core (w := id) e₁ (fun M₁ hS₁ _ => ?_)
+  refine RefE.bind_callW (fun _ => rfl) (hc.unfold n s₀ a₀ dn vis fe M eb a hS ha)
+    fun r₁ m₁ _ h₁ => RefE.after_core (w := id) h₁ fun M₁ hS₁ _ => ?_
+  dsimp only [llE.k_unfold_definition]
   by_cases h0 : r₁.headD 0 = 0
   · rw [ite_eq_left h0, decOptR_none h0]
     exact RefE.ret rfl (CorePost.ret hS₁ rfl ⟨hw3, hw0, hw0⟩)
   rw [ite_eq_right h0, decOptR_some h0]
-  rcases c2 : callE p n "whnf_core" [mode, 1, vis, d, r₁.tail.headD 0] m₁ with e | ⟨r₂, m₂⟩
-  · exact fun hG => ErrClaim.bind_left (CoreSpecE.of_callE (s₀ := ⟨m₁, Locals.init []⟩)
-      ((hG.knot n (Nat.le_refl _)).whnfCore F _ _ dn vis fe M₁ eb mode 1 d _ hF hn
-        ⟨hS₁, hs.mode4, hs.eb_mode⟩ e₁.resOk.2) c2)
-  have e₂ := CoreSpec.of_callW (s₀ := ⟨m₁, Locals.init []⟩)
-    ((hk n (Nat.le_refl _)).whnfCore F _ _ dn vis fe M₁ eb mode 1 d _ hF hn
-      ⟨hS₁, hs.mode4, hs.eb_mode⟩ e₁.resOk.2) (callW_of_callE c2)
-  simp only [llE.k_whnf_core]
-  refine RefE.bind_core (w := id) e₂ (fun M₂ hS₂ _ => ?_)
+  have hs₁ : SlotPre ⟨m₁, Locals.init []⟩ _ dn vis fe M₁ eb mode := ⟨hS₁, hs.mode4, hs.eb_mode⟩
+  refine RefE.bind_callE (fun _ => rfl)
+    ((hk n (Nat.le_refl _)).whnfCore F _ _ dn vis fe M₁ eb mode 1 d _ hF hn hs₁ h₁.resOk.2)
+    (fun (hG : KnotNvG p n) => (hG.knot n (Nat.le_refl _)).whnfCore F _ _ dn vis fe M₁ eb mode 1 d _
+      hF hn hs₁ h₁.resOk.2) fun r₂ m₂ _ h₂ => RefE.after_core (w := id) h₂ fun M₂ hS₂ _ => ?_
+  dsimp only [llE.k_whnf_core]
   exact dq_tail hp hc (fun _ => rfl) (fun _ => rfl) n hk F hF hn ⟨m₂, Locals.init []⟩ _ dn vis fe M₂
-    eb mode d _ b ⟨hS₂, hs.mode4, hs.eb_mode⟩ e₂.resOk hb hd
+    eb mode d _ b ⟨hS₂, hs.mode4, hs.eb_mode⟩ h₂.resOk hb hd
 
 /-- **`lds_right` refines the right unfolding of `lazyDeltaStep`, both outcomes**. -/
 theorem lr_ref (p : Prog) (hp : LazyProg p) (hc : LazyCallees p) (n : Nat)
@@ -194,26 +189,21 @@ theorem lr_ref (p : Prog) (hp : LazyProg p) (hc : LazyCallees p) (n : Nat)
   have hS := hs.rel
   unfold ldsOneT
   simp only [Bool.false_eq_true, ↓reduceIte, lrE]
-  rcases c1 : callW p n "unfold_definition" [vis, b] s₀.mem with _ | ⟨r₁, m₁⟩
-  · rw [liftE_none, lrE.k_unfold_definition.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]; simp only [lrE.k_unfold_definition]
-  have e₁ := CoreSpec.of_callW (hc.unfold n s₀ a₀ dn vis fe M eb b hS hb) c1
-  refine RefE.bind_core (w := id) e₁ (fun M₁ hS₁ _ => ?_)
+  refine RefE.bind_callW (fun _ => rfl) (hc.unfold n s₀ a₀ dn vis fe M eb b hS hb)
+    fun r₁ m₁ _ h₁ => RefE.after_core (w := id) h₁ fun M₁ hS₁ _ => ?_
+  dsimp only [lrE.k_unfold_definition]
   by_cases h0 : r₁.headD 0 = 0
   · rw [ite_eq_left h0, decOptR_none h0]
     exact RefE.ret rfl (CorePost.ret hS₁ rfl ⟨hw3, hw0, hw0⟩)
   rw [ite_eq_right h0, decOptR_some h0]
-  rcases c2 : callE p n "whnf_core" [mode, 1, vis, d, r₁.tail.headD 0] m₁ with e | ⟨r₂, m₂⟩
-  · exact fun hG => ErrClaim.bind_left (CoreSpecE.of_callE (s₀ := ⟨m₁, Locals.init []⟩)
-      ((hG.knot n (Nat.le_refl _)).whnfCore F _ _ dn vis fe M₁ eb mode 1 d _ hF hn
-        ⟨hS₁, hs.mode4, hs.eb_mode⟩ e₁.resOk.2) c2)
-  have e₂ := CoreSpec.of_callW (s₀ := ⟨m₁, Locals.init []⟩)
-    ((hk n (Nat.le_refl _)).whnfCore F _ _ dn vis fe M₁ eb mode 1 d _ hF hn
-      ⟨hS₁, hs.mode4, hs.eb_mode⟩ e₁.resOk.2) (callW_of_callE c2)
-  simp only [lrE.k_whnf_core]
-  refine RefE.bind_core (w := id) e₂ (fun M₂ hS₂ _ => ?_)
+  have hs₁ : SlotPre ⟨m₁, Locals.init []⟩ _ dn vis fe M₁ eb mode := ⟨hS₁, hs.mode4, hs.eb_mode⟩
+  refine RefE.bind_callE (fun _ => rfl)
+    ((hk n (Nat.le_refl _)).whnfCore F _ _ dn vis fe M₁ eb mode 1 d _ hF hn hs₁ h₁.resOk.2)
+    (fun (hG : KnotNvG p n) => (hG.knot n (Nat.le_refl _)).whnfCore F _ _ dn vis fe M₁ eb mode 1 d _
+      hF hn hs₁ h₁.resOk.2) fun r₂ m₂ _ h₂ => RefE.after_core (w := id) h₂ fun M₂ hS₂ _ => ?_
+  dsimp only [lrE.k_whnf_core]
   exact dq_tail hp hc (fun _ => rfl) (fun _ => rfl) n hk F hF hn ⟨m₂, Locals.init []⟩ _ dn vis fe M₂
-    eb mode d a _ ⟨hS₂, hs.mode4, hs.eb_mode⟩ ha e₂.resOk hd
+    eb mode d a _ ⟨hS₂, hs.mode4, hs.eb_mode⟩ ha h₂.resOk hd
 
 /-! ## `lds_unfold2` -/
 
@@ -248,17 +238,12 @@ theorem u2_ref (p : Prog) (hp : LazyProg p) (hc : LazyCallees p) (n : Nat)
   have hS := hs.rel
   unfold unfold2T
   simp only [u2E]
-  rcases c1 : callW p n "unfold_definition" [vis, a] s₀.mem with _ | ⟨ra, m₁⟩
-  · rw [liftE_none, u2E.k_unfold_definition.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]; simp only [u2E.k_unfold_definition]
-  have e₁ := CoreSpec.of_callW (hc.unfold n s₀ a₀ dn vis fe M eb a hS ha) c1
-  refine RefE.bind_core (w := id) e₁ (fun M₁ hS₁ _ => ?_)
-  rcases c2 : callW p n "unfold_definition" [vis, b] m₁ with _ | ⟨rb, m₂⟩
-  · rw [liftE_none, u2E.k_unfold_definition_2.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]; simp only [u2E.k_unfold_definition_2]
-  have e₂ := CoreSpec.of_callW (s₀ := ⟨m₁, Locals.init []⟩)
-    (hc.unfold n _ _ dn vis fe M₁ eb b hS₁ hb) c2
-  refine RefE.bind_core (w := id) e₂ (fun M₂ hS₂ _ => ?_)
+  refine RefE.bind_callW (fun _ => rfl) (hc.unfold n s₀ a₀ dn vis fe M eb a hS ha)
+    fun ra m₁ _ e₁ => RefE.after_core (w := id) e₁ fun M₁ hS₁ _ => ?_
+  dsimp only [u2E.k_unfold_definition]
+  refine RefE.bind_callW (fun _ => rfl) (hc.unfold n ⟨m₁, Locals.init []⟩ _ dn vis fe M₁ eb b hS₁ hb)
+    fun rb m₂ _ e₂ => RefE.after_core (w := id) e₂ fun M₂ hS₂ _ => ?_
+  dsimp only [u2E.k_unfold_definition_2]
   by_cases h0 : ra.headD 0 = 0 ∨ rb.headD 0 = 0
   · rw [ite_eq_left h0]
     rcases h0 with h0 | h0
@@ -270,24 +255,18 @@ theorem u2_ref (p : Prog) (hp : LazyProg p) (hc : LazyCallees p) (n : Nat)
   have ha0 : ra.headD 0 ≠ 0 := fun h => h0 (.inl h)
   have hb0 : rb.headD 0 ≠ 0 := fun h => h0 (.inr h)
   rw [decOptR_some ha0, decOptR_some hb0]
-  rcases c3 : callE p n "whnf_core" [mode, 1, vis, d, ra.tail.headD 0] m₂ with e | ⟨r₃, m₃⟩
-  · exact fun hG => ErrClaim.bind_left (CoreSpecE.of_callE (s₀ := ⟨m₂, Locals.init []⟩)
-      ((hG.knot n (Nat.le_refl _)).whnfCore F _ _ dn vis fe M₂ eb mode 1 d _ hF hn
-        ⟨hS₂, hs.mode4, hs.eb_mode⟩ e₁.resOk.2) c3)
-  have e₃ := CoreSpec.of_callW (s₀ := ⟨m₂, Locals.init []⟩)
-    ((hk n (Nat.le_refl _)).whnfCore F _ _ dn vis fe M₂ eb mode 1 d _ hF hn
-      ⟨hS₂, hs.mode4, hs.eb_mode⟩ e₁.resOk.2) (callW_of_callE c3)
-  simp only [u2E.k_whnf_core]
-  refine RefE.bind_core (w := id) e₃ (fun M₃ hS₃ _ => ?_)
-  rcases c4 : callE p n "whnf_core" [mode, 1, vis, d, rb.tail.headD 0] m₃ with e | ⟨r₄, m₄⟩
-  · exact fun hG => ErrClaim.bind_left (CoreSpecE.of_callE (s₀ := ⟨m₃, Locals.init []⟩)
-      ((hG.knot n (Nat.le_refl _)).whnfCore F _ _ dn vis fe M₃ eb mode 1 d _ hF hn
-        ⟨hS₃, hs.mode4, hs.eb_mode⟩ e₂.resOk.2) c4)
-  have e₄ := CoreSpec.of_callW (s₀ := ⟨m₃, Locals.init []⟩)
-    ((hk n (Nat.le_refl _)).whnfCore F _ _ dn vis fe M₃ eb mode 1 d _ hF hn
-      ⟨hS₃, hs.mode4, hs.eb_mode⟩ e₂.resOk.2) (callW_of_callE c4)
-  simp only [u2E.k_whnf_core_2]
-  refine RefE.bind_core (w := id) e₄ (fun M₄ hS₄ _ => ?_)
+  have hs₂ : SlotPre ⟨m₂, Locals.init []⟩ _ dn vis fe M₂ eb mode := ⟨hS₂, hs.mode4, hs.eb_mode⟩
+  refine RefE.bind_callE (fun _ => rfl)
+    ((hk n (Nat.le_refl _)).whnfCore F _ _ dn vis fe M₂ eb mode 1 d _ hF hn hs₂ e₁.resOk.2)
+    (fun (hG : KnotNvG p n) => (hG.knot n (Nat.le_refl _)).whnfCore F _ _ dn vis fe M₂ eb mode 1 d _
+      hF hn hs₂ e₁.resOk.2) fun r₃ m₃ _ e₃ => RefE.after_core (w := id) e₃ fun M₃ hS₃ _ => ?_
+  dsimp only [u2E.k_whnf_core]
+  have hs₃ : SlotPre ⟨m₃, Locals.init []⟩ _ dn vis fe M₃ eb mode := ⟨hS₃, hs.mode4, hs.eb_mode⟩
+  refine RefE.bind_callE (fun _ => rfl)
+    ((hk n (Nat.le_refl _)).whnfCore F _ _ dn vis fe M₃ eb mode 1 d _ hF hn hs₃ e₂.resOk.2)
+    (fun (hG : KnotNvG p n) => (hG.knot n (Nat.le_refl _)).whnfCore F _ _ dn vis fe M₃ eb mode 1 d _
+      hF hn hs₃ e₂.resOk.2) fun r₄ m₄ _ e₄ => RefE.after_core (w := id) e₄ fun M₄ hS₄ _ => ?_
+  dsimp only [u2E.k_whnf_core_2]
   exact dq_tail hp hc (fun _ => rfl) (fun _ => rfl) n hk F hF hn ⟨m₄, Locals.init []⟩ _ dn vis fe M₄
     eb mode d _ _ ⟨hS₄, hs.mode4, hs.eb_mode⟩ e₃.resOk e₄.resOk hd
 
@@ -343,12 +322,12 @@ theorem sm_ref (p : Prog) (hp : LazyProg p) (hc : LazyCallees p) (n : Nat)
   have hS := hs.rel
   unfold sameT
   simp only [smE]
-  rcases c1 : callW p n "same_const_heads" [a, b] s₀.mem with _ | ⟨r₁, m₁⟩
-  · rw [liftE_none, smE.k_same_const_heads.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]; simp only [smE.k_same_const_heads]
-  obtain ⟨k, rfl⟩ := callW_succ c1
-  have e₁ := CoreSpec.of_callW (sameConstHeads_refines p hp.mid.leaf k s₀ a₀ dn vis fe M eb a b hS hwa hwb) c1
-  refine RefE.bind_core (w := id) e₁ (fun M₁ hS₁ _ => ?_)
+  cases n with
+  | zero => rw [callW_zero, liftE_none, smE.k_same_const_heads.none]; exact RefE.of_cls0 (by simp)
+  | succ k =>
+  refine RefE.bind_callW (fun _ => rfl) (sameConstHeads_refines p hp.mid.leaf k s₀ a₀ dn vis fe M eb a b
+    hS hwa hwb) fun r₁ m₁ _ e₁ => RefE.after_core (w := id) e₁ fun M₁ hS₁ _ => ?_
+  dsimp only [smE.k_same_const_heads]
   rw [sameRegular_w]
   -- the unfold arm
   have unf : ∀ (m₂ : Mem) (M₂ : ModeMaps) (a₂ : AState), CoreS dn m₂ a₂ vis fe M₂ eb →
@@ -423,28 +402,23 @@ theorem bo_ref (p : Prog) (hp : LazyProg p) (hc : LazyCallees p) (n : Nat)
   have hS := hs.rel
   unfold bothT
   simp only [boE]
-  rcases c1 : callW p n "head_hint" [vis, a] s₀.mem with _ | ⟨ra, m₁⟩
-  · rw [liftE_none, boE.k_head_hint.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]; simp only [boE.k_head_hint]
-  obtain ⟨k, rfl⟩ := callW_succ c1
-  have e₁ := CoreSpec.of_callW (headHint_refines p hp.mid.leaf k s₀ a₀ dn vis fe M eb a hS ha) c1
-  refine RefE.bind_core (w := id) e₁ (fun M₁ hS₁ _ => ?_)
-  rcases c2 : callW p (k + 1) "head_hint" [vis, b] m₁ with _ | ⟨rb, m₂⟩
-  · rw [liftE_none, boE.k_head_hint_2.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]; simp only [boE.k_head_hint_2]
-  have e₂ := CoreSpec.of_callW (s₀ := ⟨m₁, Locals.init []⟩)
-    (headHint_refines p hp.mid.leaf k _ _ dn vis fe M₁ eb b hS₁ hb) c2
-  refine RefE.bind_core (w := id) e₂ (fun M₂ hS₂ _ => ?_)
+  cases n with
+  | zero => rw [callW_zero, liftE_none, boE.k_head_hint.none]; exact RefE.of_cls0 (by simp)
+  | succ k =>
+  refine RefE.bind_callW (fun _ => rfl) (headHint_refines p hp.mid.leaf k s₀ a₀ dn vis fe M eb a hS ha)
+    fun ra m₁ _ e₁ => RefE.after_core (w := id) e₁ fun M₁ hS₁ _ => ?_
+  dsimp only [boE.k_head_hint]
+  refine RefE.bind_callW (fun _ => rfl) (headHint_refines p hp.mid.leaf k ⟨m₁, Locals.init []⟩ _ dn vis fe
+    M₁ eb b hS₁ hb) fun rb m₂ _ e₂ => RefE.after_core (w := id) e₂ fun M₂ hS₂ _ => ?_
+  dsimp only [boE.k_head_hint_2]
   have hdh : ∀ r : List Word, decHintR r = decHintW (r.headD 0) (r.tail.headD 0) := fun _ => rfl
   rw [hdh ra, hdh rb]
-  rcases c3 : callW p (k + 1) "hint_lt" [rb.headD 0, rb.tail.headD 0, ra.headD 0, ra.tail.headD 0] m₂
-    with _ | ⟨rl, m₃⟩
-  · rw [liftE_none, boE.k_hint_lt.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]; simp only [boE.k_hint_lt]
-  obtain ⟨t₃, ht₃, hm₃, -, hlt₁, -⟩ := triple_of_callW (s₀ := ⟨m₂, Locals.init []⟩)
-    (hintLt_refines p hp.mid.leaf k ⟨m₂, Locals.init []⟩ _ _ _ _) c3
-  have hm₃' : m₃ = m₂ := by rw [← ht₃, hm₃]
-  subst hm₃'
+  refine RefE.onlySim (fun _ => rfl) (fun rl m₃ c3 => by
+      obtain ⟨t₃, ht₃, hm₃, -, hlt₁, -⟩ := triple_of_callW (s₀ := ⟨m₂, Locals.init []⟩)
+        (hintLt_refines p hp.mid.leaf k ⟨m₂, Locals.init []⟩ _ _ _ _) c3
+      exact And.intro (ht₃ ▸ hm₃ : m₃ = m₂) hlt₁) fun rl m₃ h₃ => ?_
+  obtain ⟨rfl, hlt₁⟩ := h₃
+  dsimp only [boE.k_hint_lt]
   by_cases h1 : rl.headD 0 ≠ 0
   · rw [ite_eq_left h1]
     have hl : ConLeche.ReducibilityHint.lt (decHintW (rb.headD 0) (rb.tail.headD 0))
@@ -458,14 +432,12 @@ theorem bo_ref (p : Prog) (hp : LazyProg p) (hc : LazyCallees p) (n : Nat)
   have hl : ConLeche.ReducibilityHint.lt (decHintW (rb.headD 0) (rb.tail.headD 0))
       (decHintW (ra.headD 0) (ra.tail.headD 0)) = false := by rw [← hlt₁]; exact decBool_f h1'
   simp only [hl, Bool.false_eq_true, ↓reduceIte]
-  rcases c5 : callW p (k + 1) "hint_lt" [ra.headD 0, ra.tail.headD 0, rb.headD 0, rb.tail.headD 0] m₃
-    with _ | ⟨rl₂, m₅⟩
-  · rw [liftE_none, boE.k_hint_lt_2.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]; simp only [boE.k_hint_lt_2]
-  obtain ⟨t₅, ht₅, hm₅, -, hlt₂, -⟩ := triple_of_callW (s₀ := ⟨m₃, Locals.init []⟩)
-    (hintLt_refines p hp.mid.leaf k ⟨m₃, Locals.init []⟩ _ _ _ _) c5
-  have hm₅' : m₅ = m₃ := by rw [← ht₅, hm₅]
-  subst hm₅'
+  refine RefE.onlySim (fun _ => rfl) (fun rl₂ m₅ c5 => by
+      obtain ⟨t₅, ht₅, hm₅, -, hlt₂, -⟩ := triple_of_callW (s₀ := ⟨m₃, Locals.init []⟩)
+        (hintLt_refines p hp.mid.leaf k ⟨m₃, Locals.init []⟩ _ _ _ _) c5
+      exact And.intro (ht₅ ▸ hm₅ : m₅ = m₃) hlt₂) fun rl₂ m₅ h₅ => ?_
+  obtain ⟨rfl, hlt₂⟩ := h₅
+  dsimp only [boE.k_hint_lt_2]
   by_cases h2 : rl₂.headD 0 ≠ 0
   · rw [ite_eq_left h2]
     have hl2 : ConLeche.ReducibilityHint.lt (decHintW (ra.headD 0) (ra.tail.headD 0))
@@ -530,18 +502,15 @@ theorem lds_ref (p : Prog) (hp : LazyProg p) (hc : LazyCallees p) (n : Nat)
   have hS := hs.rel
   rw [lazyDeltaStep_eq]
   simp only [ldsE]
-  rcases c1 : callW p n "unfoldable_head" [vis, a] s₀.mem with _ | ⟨ra, m₁⟩
-  · rw [liftE_none, ldsE.k_unfoldable_head.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]; simp only [ldsE.k_unfoldable_head]
-  obtain ⟨k, rfl⟩ := callW_succ c1
-  have e₁ := CoreSpec.of_callW (unfoldableHead_refines p hp.mid.leaf k s₀ a₀ dn vis fe M eb a hS ha) c1
-  refine RefE.bind_core (w := id) e₁ (fun M₁ hS₁ _ => ?_)
-  rcases c2 : callW p (k + 1) "unfoldable_head" [vis, b] m₁ with _ | ⟨rb, m₂⟩
-  · rw [liftE_none, ldsE.k_unfoldable_head_2.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]; simp only [ldsE.k_unfoldable_head_2]
-  have e₂ := CoreSpec.of_callW (s₀ := ⟨m₁, Locals.init []⟩)
-    (unfoldableHead_refines p hp.mid.leaf k _ _ dn vis fe M₁ eb b hS₁ hb) c2
-  refine RefE.bind_core (w := id) e₂ (fun M₂ hS₂ _ => ?_)
+  cases n with
+  | zero => rw [callW_zero, liftE_none, ldsE.k_unfoldable_head.none]; exact RefE.of_cls0 (by simp)
+  | succ k =>
+  refine RefE.bind_callW (fun _ => rfl) (unfoldableHead_refines p hp.mid.leaf k s₀ a₀ dn vis fe M eb a
+    hS ha) fun ra m₁ _ e₁ => RefE.after_core (w := id) e₁ fun M₁ hS₁ _ => ?_
+  dsimp only [ldsE.k_unfoldable_head]
+  refine RefE.bind_callW (fun _ => rfl) (unfoldableHead_refines p hp.mid.leaf k ⟨m₁, Locals.init []⟩ _
+    dn vis fe M₁ eb b hS₁ hb) fun rb m₂ _ e₂ => RefE.after_core (w := id) e₂ fun M₂ hS₂ _ => ?_
+  dsimp only [ldsE.k_unfoldable_head_2]
   have hs₂ : SlotPre ⟨m₂, Locals.init []⟩ _ dn vis fe M₂ eb mode := ⟨hS₂, hs.mode4, hs.eb_mode⟩
   by_cases h00 : ra.headD 0 = 0 ∧ rb.headD 0 = 0
   · rw [ite_eq_left h00, decBool_f h00.1, decBool_f h00.2]

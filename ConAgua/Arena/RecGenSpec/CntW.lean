@@ -116,9 +116,8 @@ theorem ckk_ref {p : Prog} (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe
   rw [ckkE.k_check_block_classes_keys.arm1]
   refine RefE.bind_right hrun2 ?_
   -- `sl_cons`
-  rcases h3 : consW n m2 r1 (r2.headD 0) (r2.tail.headD 0) with _ | ⟨r3, m3⟩
-  · rw [liftE_none, ckkE.k_sl_cons.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some, ckkE.k_sl_cons.arm1]
+  refine RefE.onlySim (fun _ => ckkE.k_sl_cons.none ..) (fun _ _ h => h) fun r3 m3 h3 => ?_
+  rw [ckkE.k_sl_cons.arm1]
   obtain ⟨hS3, hg3, hd3, hf3⟩ := clsConsW decCK_mono h3 hR2.stage hR2.keys
     (hR1.key.grow (decCK_mono _) hR2.grow)
   exact RefE.ret rfl ⟨hS3, (hg1.trans hR2.grow).trans hg3, by simpa using hd3, hR2.pos.fr hf3⟩

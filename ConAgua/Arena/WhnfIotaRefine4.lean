@@ -184,32 +184,22 @@ theorem pih_ref (p : Prog) (hp : IotaProg4 p) (hld : LvlDen) (n F : Nat) (hknot 
       (fun v y a' => CorePost (fun r => decO (r.headD 0)) dn m vis fe M eb ResH v y a') := by
   simp only [pihE]
   unfold piHalfA
-  rcases c1 : callE p n "infer_io" [mode, vis, d, x] m with e1 | ⟨r1, m1⟩
-  · simp only [pihE.k_infer_io]
-    exact RefE.bind_left fun hG => CoreSpecE.of_callE ((hG.knot n (Nat.le_refl _)).inferIO F
-      ⟨m, Locals.init []⟩ a dn vis fe M eb mode d x hnF hn62 ⟨hS, hm4, hebm⟩ hx) c1
-  simp only [pihE.k_infer_io]
-  have e1 := CoreSpec.of_callW ((hknot n (Nat.le_refl _)).inferIO F ⟨m, Locals.init []⟩ a dn vis fe
-    M eb mode d x hnF hn62 ⟨hS, hm4, hebm⟩ hx) (callW_of_callE c1)
-  refine RefE.bind_core (w := id) e1 (fun M1 hS1 _ => ?_)
-  have hr1 := e1.resOk
-  rcases c2 : callE p n "infer_io" [mode, vis, d, r1.headD 0] m1 with e2 | ⟨r2, m2⟩
-  · simp only [pihE.k_infer_io_2]
-    exact RefE.bind_left fun hG => CoreSpecE.of_callE ((hG.knot n (Nat.le_refl _)).inferIO F
-      ⟨m1, Locals.init []⟩ _ dn vis fe M1 eb mode d _ hnF hn62 ⟨hS1, hm4, hebm⟩ hr1) c2
-  simp only [pihE.k_infer_io_2]
-  have e2 := CoreSpec.of_callW ((hknot n (Nat.le_refl _)).inferIO F ⟨m1, Locals.init []⟩ _ dn vis
-    fe M1 eb mode d _ hnF hn62 ⟨hS1, hm4, hebm⟩ hr1) (callW_of_callE c2)
-  refine RefE.bind_core (w := id) e2 (fun M2 hS2 _ => ?_)
-  have hr2 := e2.resOk
-  rcases c3 : callE p n "whnf" [mode, vis, d, r2.headD 0] m2 with e3 | ⟨r3, m3⟩
-  · simp only [pihE.k_whnf]
-    exact RefE.bind_left fun hG => CoreSpecE.of_callE ((hG.knot n (Nat.le_refl _)).whnf F
-      ⟨m2, Locals.init []⟩ _ dn vis fe M2 eb mode d _ hnF hn62 ⟨hS2, hm4, hebm⟩ hr2) c3
-  simp only [pihE.k_whnf]
-  have e3 := CoreSpec.of_callW ((hknot n (Nat.le_refl _)).whnf F ⟨m2, Locals.init []⟩ _ dn vis fe
-    M2 eb mode d _ hnF hn62 ⟨hS2, hm4, hebm⟩ hr2) (callW_of_callE c3)
-  refine RefE.bind_core (w := id) e3 (fun M3 hS3 _ => ?_)
+  have hK := hknot n (Nat.le_refl _)
+  refine RefE.bind_callE (fun _ => rfl)
+    (hK.inferIO F ⟨m, Locals.init []⟩ a dn vis fe M eb mode d x hnF hn62 ⟨hS, hm4, hebm⟩ hx)
+    (fun (hG : PihG p n) => (hG.knot n (Nat.le_refl _)).inferIO F ⟨m, Locals.init []⟩ a dn vis fe M eb
+      mode d x hnF hn62 ⟨hS, hm4, hebm⟩ hx) fun r1 m1 _ e1 => RefE.after_core (w := id) e1 fun M1 hS1 _ => ?_
+  dsimp only [pihE.k_infer_io]
+  refine RefE.bind_callE (fun _ => rfl)
+    (hK.inferIO F ⟨m1, Locals.init []⟩ _ dn vis fe M1 eb mode d _ hnF hn62 ⟨hS1, hm4, hebm⟩ e1.resOk)
+    (fun (hG : PihG p n) => (hG.knot n (Nat.le_refl _)).inferIO F ⟨m1, Locals.init []⟩ _ dn vis fe M1 eb
+      mode d _ hnF hn62 ⟨hS1, hm4, hebm⟩ e1.resOk) fun r2 m2 _ e2 => RefE.after_core (w := id) e2 fun M2 hS2 _ => ?_
+  dsimp only [pihE.k_infer_io_2]
+  refine RefE.bind_callE (fun _ => rfl)
+    (hK.whnf F ⟨m2, Locals.init []⟩ _ dn vis fe M2 eb mode d _ hnF hn62 ⟨hS2, hm4, hebm⟩ e2.resOk)
+    (fun (hG : PihG p n) => (hG.knot n (Nat.le_refl _)).whnf F ⟨m2, Locals.init []⟩ _ dn vis fe M2 eb
+      mode d _ hnF hn62 ⟨hS2, hm4, hebm⟩ e2.resOk) fun r3 m3 _ e3 => RefE.after_core (w := id) e3 fun M3 hS3 _ => ?_
+  dsimp only [pihE.k_whnf]
   have hr3 : HW (r3.headD 0) := e3.resOk
   rw [show decH r3 = decE (r3.headD 0) from rfl]
   by_cases h2 : r3.headD 0 >>> 28 ≠ 2
@@ -220,12 +210,8 @@ theorem pih_ref (p : Prog) (hp : IotaProg4 p) (hld : LvlDen) (n F : Nat) (hknot 
     exact RefE.ret rfl (CorePost.ret hS3 rfl (by unfold ResH HW; simp))
   rw [ite_eq_right h2]
   have h2' : r3.headD 0 >>> 28 = 2 := by simpa using h2
-  by_cases hv1 : tierW (r3.headD 0) ≠ 0 ∧ rdW (m3.arr64 CTL) 1 = 0
-  · rw [ite_eq_left hv1]; exact RefE.of_cls0 (by simp)
-  rw [ite_eq_right hv1]
-  by_cases hv2 : tcnt m3 SORT (tierW (r3.headD 0)) ≤ idxW (r3.headD 0)
-  · rw [ite_eq_left hv2]; exact RefE.of_cls0 (by simp)
-  rw [ite_eq_right hv2]
+  refine RefE.abort0 (by rfl) fun hv1 => ?_
+  refine RefE.abort0 (by rfl) fun hv2 => ?_
   generalize ha3 : AM.st _ _ = a3 at hS3
   obtain ⟨hvw, hn32⟩ := view_sort_f m3 a3 hS3.arena.base (r3.headD 0) hr3
     ⟨hv1, UInt64.not_le.mp hv2⟩ h2'
@@ -294,16 +280,11 @@ theorem pirr_ref (p : Prog) (hp : IotaProg4 p) (hld : LvlDen) (n F : Nat) (hk : 
   cases n with
   | zero => exact RefE.of_cls0 (e := .outOfFuel) rfl
   | succ n' =>
-  have hA := pih_ref p hp hld n' F (hk.mono (Nat.le_succ n')) (by omega) (by omega) dn vis fe eb mode
-    d a hm4 hebm ha m a₀ M hS
-  rcases h1 : pihE p (n' + 1) m mode vis d a with e1 | ⟨ra, m1⟩
-  · rw [h1] at hA
-    exact fun hG => ErrClaim.bind_left (hA (hG.mono (Nat.le_succ n')))
-  rw [h1] at hA
-  obtain ⟨ya, a1, hA1, hRa⟩ := hA
-  refine RefE.bind_right hA1 ?_
+  refine RefE.bindE (fun _ => rfl) (fun hG => hG.mono (Nat.le_succ n'))
+    (pih_ref p hp hld n' F (hk.mono (Nat.le_succ n')) (by omega) (by omega) dn vis fe eb mode d a hm4 hebm
+      ha m a₀ M hS) fun ⟨ra, m1⟩ ya a1 _ hRa => ?_
   have hya : ya = decO (ra.headD 0) := hRa.res
-  simp only [pirrE.k_proof_irrel_half]
+  dsimp only [pirrE.k_proof_irrel_half]
   by_cases hwa : ra.headD 0 = 0
   · rw [ite_eq_left hwa, hya, hwa]
     exact RefE.ret rfl ⟨hRa.after, rfl, by show HW (0 : Word); unfold HW; decide⟩
@@ -316,17 +297,12 @@ theorem pirr_ref (p : Prog) (hp : IotaProg4 p) (hld : LvlDen) (n F : Nat) (hk : 
   rw [hx]
   simp only
   rw [piHalfT_eq]
-  have hB := pih_ref p hp hld n' F (hk.mono (Nat.le_succ n')) (by omega) (by omega) dn vis fe eb mode
-    d b hm4 hebm hb m1 a1 M1 hS1
-  rcases h2 : pihE p (n' + 1) m1 mode vis d b with e2 | ⟨rb, m2⟩
-  · rw [h2] at hB
-    exact fun hG => ErrClaim.bind_left (hB (hG.mono (Nat.le_succ n')))
-  rw [h2] at hB
-  obtain ⟨yb, a2, hA2, hRb⟩ := hB
-  refine RefE.bind_right hA2 ?_
+  refine RefE.bindE (fun _ => rfl) (fun hG => hG.mono (Nat.le_succ n'))
+    (pih_ref p hp hld n' F (hk.mono (Nat.le_succ n')) (by omega) (by omega) dn vis fe eb mode d b hm4 hebm
+      hb m1 a1 M1 hS1) fun ⟨rb, m2⟩ yb a2 _ hRb => ?_
   have hyb : yb = decO (rb.headD 0) := hRb.res
   have hCA := CoreAfter.comp hK1 hSt1 hRb.after
-  simp only [pirrE.k_proof_irrel_half_2]
+  dsimp only [pirrE.k_proof_irrel_half_2]
   by_cases hwb : rb.headD 0 = 0
   · rw [ite_eq_left hwb, hyb, hwb]
     exact RefE.ret rfl ⟨hCA, rfl, by show HW (0 : Word); unfold HW; decide⟩
@@ -447,39 +423,30 @@ theorem pmTail_ref (N : Nat) (hk : KnotUpTo p (N + 1)) (F : Nat) (hnF : N + 1 �
       a (CorePost decH dn m3 vis fe M eb ResH) := by
   simp only [pmE.j1]
   unfold pmTailT
-  rcases c4 : callW p (N + 1) "is_ctor_app" [vis, me] m3 with _ | ⟨r4, m4⟩
-  · rw [liftE_none, pmE.k_is_ctor_app_2.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]
-  have h4 := CoreSpec.of_callW (isCtorApp_refines p hp.toIotaProg' N ⟨m3, Locals.init []⟩ a dn vis fe
-    M eb me hS hme) c4
-  refine RefE.bind_core (w := id) h4 (fun M4 hS4 _ => ?_)
-  simp only [pmE.k_is_ctor_app_2]
+  refine RefE.bind_callW (fun _ => rfl) (isCtorApp_refines p hp.toIotaProg' N ⟨m3, Locals.init []⟩ a dn vis
+    fe M eb me hS hme) fun r4 m4 c4 h4 => RefE.after_core (w := id) h4 fun M4 hS4 _ => ?_
+  dsimp only [pmE.k_is_ctor_app_2]
   have e4 : m4.arr64 EREC = m3.arr64 EREC := hE _ _ _ _ _ _ (by simp) c4
   by_cases hc4 : r4.headD 0 ≠ 0
   · rw [ite_eq_left hc4, decBool_t_m2c (by simpa using hc4)]
     exact RefE.ret rfl (CorePost.ret hS4 rfl hme)
   rw [ite_eq_right hc4, decBool_f_m2c (by simpa using hc4)]
   simp only [Bool.false_eq_true, ↓reduceIte]
-  have hW := (hk (N + 1) (Nat.le_refl _)).whnf F ⟨m4, Locals.init []⟩ _ dn vis fe M4 eb mode d me hnF
-    hn62 ⟨hS4, hm4, hebm⟩ hme
-  rcases c5 : callE p (N + 1) "whnf" [mode, vis, d, me] m4 with e5 | ⟨r5, m5⟩
-  · exact RefE.bind_left fun hG => CoreSpecE.of_callE ((hG.knot (N + 1) (Nat.le_refl _)).whnf F
-      ⟨m4, Locals.init []⟩ _ dn vis fe M4 eb mode d me hnF hn62 ⟨hS4, hm4, hebm⟩ hme) c5
-  have h5 := CoreSpec.of_callW hW (callW_of_callE c5)
-  refine RefE.bind_core (w := id) h5 (fun M5 hS5 _ => ?_)
-  simp only [pmE.k_whnf]
+  refine RefE.bind_callE (fun _ => rfl) ((hk (N + 1) (Nat.le_refl _)).whnf F ⟨m4, Locals.init []⟩ _ dn vis fe
+      M4 eb mode d me hnF hn62 ⟨hS4, hm4, hebm⟩ hme)
+    (fun (hG : PmG p (N + 1)) => (hG.knot (N + 1) (Nat.le_refl _)).whnf F ⟨m4, Locals.init []⟩ _ dn vis fe M4
+      eb mode d me hnF hn62 ⟨hS4, hm4, hebm⟩ hme) fun r5 m5 c5 h5 => RefE.after_core (w := id) h5 fun M5 hS5 _ => ?_
+  dsimp only [pmE.k_whnf]
   have e5 : m5.arr64 EREC = m4.arr64 EREC := hE _ _ _ _ _ _ (by simp) (callW_of_callE c5)
   refine RefE.bind_callE (s₀ := ⟨m5, Locals.init []⟩) (fun _ => rfl)
     (litMajorToCtor_refines' p hp.toIotaProg' hc hw hsup N (hk.mono (Nat.le_succ N)) F (by omega)
       (by omega) _ _ dn vis fe M5 eb mode d _ hS5 hm4 hebm h5.resOk)
     (fun hG => RefE.coreSpecE (lmtcE_spec p hp.litMajorToCtor (N + 1) _ mode vis d _) hG.nv
       (hG.knot.mono (Nat.le_succ N)) (lmtc_ref p hc hw hsup N (hk.mono (Nat.le_succ N)) F (by omega)
-        (by omega) _ _ dn vis fe M5 eb mode d _ hS5 hm4 hebm h5.resOk)) (fun r6 m6 c6 h6 => ?_)
+        (by omega) _ _ dn vis fe M5 eb mode d _ hS5 hm4 hebm h5.resOk))
+    fun r6 m6 c6 h6 => RefE.after_core (w := id) h6 fun M6 hS6 _ => ?_
   have e6 : m6.arr64 EREC = m5.arr64 EREC := hE _ _ _ _ _ _ (by simp) (callW_of_callE c6)
-  obtain ⟨M6, hS6, hK6, hSt6⟩ := h6.after
-  simp only [pmE.k_lit_major_to_ctor_2]
-  refine RefE.mono (R := CorePost decH dn m6 vis fe M6 eb ResH) ?_
-    (fun _ _ _ h => ⟨CoreAfter.comp hK6 hSt6 h.after, h.res, h.valid⟩)
+  dsimp only [pmE.k_lit_major_to_ctor_2]
   rw [← bind_pure (majorToCtor _ _ _ _ _ _ _)]
   have hr6 : decRules (m6.arr64 EREC) ro.toNat rc.toNat = some rules := by rw [e6, e5, e4]; exact hrules
   refine RefE.bind_callE (s₀ := ⟨m6, Locals.init []⟩) (fun _ => rfl)
@@ -504,15 +471,13 @@ theorem pm_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hnF : n ≤ F) (hn62 : n
   cases n with
   | zero => rw [callW_zero, liftE_none, pmE.k_rec_rule_k.none]; exact RefE.of_cls0 (by simp)
   | succ N =>
-  rcases c1 : callW p (N + 1) "rec_rule_k" [ro, rc] s₀.mem with _ | ⟨rk, m1⟩
-  · rw [liftE_none, pmE.k_rec_rule_k.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]
-  obtain ⟨t1, ht1, hmem1, -, hkk⟩ := triple_of_callW
+  refine RefE.onlySim (fun _ => rfl) (fun _ _ c1 => triple_of_callW
     (recRuleK_refines p hp.recRuleK (N + 1) ⟨s₀.mem, Locals.init []⟩ ro rc rules
-      (by have := hS.erec; show (s₀.mem.arr64 EREC).size < 2 ^ 64; omega) hr) c1
+      (by have := hS.erec; show (s₀.mem.arr64 EREC).size < 2 ^ 64; omega) hr) c1)
+    fun rk m1 ⟨t1, ht1, hmem1, _, hkk⟩ => ?_
   have hm1 : m1 = s₀.mem := by rw [← ht1]; exact hmem1
   subst hm1
-  simp only [pmE.k_rec_rule_k]
+  dsimp only [pmE.k_rec_rule_k]
   by_cases hkr : rk.headD 0 ≠ 0
   · -- the K arm
     rw [ite_eq_left hkr]
@@ -522,18 +487,12 @@ theorem pm_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hnF : n ≤ F) (hn62 : n
       (hmtc N (hk.mono (Nat.le_succ N)) F (by omega) _ _ dn vis fe MM eb mode d rec ro rc major rules
         (by omega) hS hm4 hebm hmaj hr)
       (fun hG => hG.m2c N (hk.mono (Nat.le_succ N)) (hG.knot.mono (Nat.le_succ N)) F (by omega) _ _
-        dn vis fe MM eb mode d rec ro rc major rules (by omega) hS hm4 hebm hmaj hr) (fun r2 m2 c2 h2 => ?_)
-    obtain ⟨M2, hS2, hK2, hSt2⟩ := h2.after
-    refine RefE.mono (R := CorePost decH dn m2 vis fe M2 eb ResH) ?_
-      (fun _ _ _ h => ⟨CoreAfter.comp hK2 hSt2 h.after, h.res, h.valid⟩)
-    simp only [pmE.k_major_to_ctor]
-    rcases c3 : callW p (N + 1) "is_ctor_app" [vis, r2.headD 0] m2 with _ | ⟨r3, m3⟩
-    · rw [liftE_none, pmE.k_is_ctor_app.none]; exact RefE.of_cls0 (by simp)
-    rw [liftE_some]
-    have h3 := CoreSpec.of_callW (isCtorApp_refines p hp.toIotaProg' N ⟨m2, Locals.init []⟩ _ dn vis
-      fe M2 eb (r2.headD 0) hS2 h2.resOk) c3
-    refine RefE.bind_core (w := id) h3 (fun M3 hS3 _ => ?_)
-    simp only [pmE.k_is_ctor_app]
+        dn vis fe MM eb mode d rec ro rc major rules (by omega) hS hm4 hebm hmaj hr)
+      fun r2 m2 _ h2 => RefE.after_core (w := id) h2 fun M2 hS2 _ => ?_
+    dsimp only [pmE.k_major_to_ctor]
+    refine RefE.bind_callW (fun _ => rfl) (isCtorApp_refines p hp.toIotaProg' N ⟨m2, Locals.init []⟩ _ dn vis
+      fe M2 eb (r2.headD 0) hS2 h2.resOk) fun r3 m3 _ h3 => RefE.after_core (w := id) h3 fun M3 hS3 _ => ?_
+    dsimp only [pmE.k_is_ctor_app]
     by_cases hc3 : r3.headD 0 ≠ 0
     · rw [ite_eq_left hc3, decBool_t_m2c (by simpa using hc3)]
       simp only [↓reduceIte]
@@ -553,13 +512,9 @@ theorem pm_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hnF : n ≤ F) (hn62 : n
     rw [ite_eq_right hkr]
     have hK0 : recRuleK rules = false := by rw [← hkk, Classical.not_not.mp hkr]; rfl
     rw [prepareMajor_nk _ _ _ _ _ _ _ hK0]
-    rcases c2 : callW p (N + 1) "is_str_lit" [major] s₀.mem with _ | ⟨r2, m2⟩
-    · rw [liftE_none, pmE.k_is_str_lit.none]; exact RefE.of_cls0 (by simp)
-    rw [liftE_some]
-    have h2 := CoreSpec.of_callW (isStrLit_refines p hp.isStrLit (N + 1) ⟨s₀.mem, Locals.init []⟩ a₀
-      dn vis fe MM eb major hS hmaj) c2
-    refine RefE.bind_core (w := id) h2 (fun M2 hS2 _ => ?_)
-    simp only [pmE.k_is_str_lit]
+    refine RefE.bind_callW (fun _ => rfl) (isStrLit_refines p hp.isStrLit (N + 1) s₀ a₀
+      dn vis fe MM eb major hS hmaj) fun r2 m2 c2 h2 => RefE.after_core (w := id) h2 fun M2 hS2 _ => ?_
+    dsimp only [pmE.k_is_str_lit]
     have hrules2 : decRules (m2.arr64 EREC) ro.toNat rc.toNat = some rules := by
       rw [hE _ _ _ _ _ _ (by simp) c2]; exact hr
     by_cases hs2 : r2.headD 0 ≠ 0
@@ -573,14 +528,13 @@ theorem pm_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hnF : n ≤ F) (hn62 : n
         (hmtc N (hk.mono (Nat.le_succ N)) F (by omega) _ _ dn vis fe M2 eb mode d rec ro rc major rules
           (by omega) hS2 hm4 hebm hmaj hrules2)
         (fun hG => hG.m2c N (hk.mono (Nat.le_succ N)) (hG.knot.mono (Nat.le_succ N)) F (by omega) _ _
-          dn vis fe M2 eb mode d rec ro rc major rules (by omega) hS2 hm4 hebm hmaj hrules2) (fun r3 m3 c3 h3 => ?_)
-      obtain ⟨M3, hS3, hK3, hSt3⟩ := h3.after
+          dn vis fe M2 eb mode d rec ro rc major rules (by omega) hS2 hm4 hebm hmaj hrules2)
+        fun r3 m3 c3 h3 => RefE.after_core (w := id) h3 fun M3 hS3 _ => ?_
       have hrules3 : decRules (m3.arr64 EREC) ro.toNat rc.toNat = some rules := by
         rw [hE _ _ _ _ _ _ (by simp) (callW_of_callE c3)]; exact hrules2
-      simp only [pmE.k_major_to_ctor_2]
-      exact (pmTail_ref p hp hc hw hsup hmtc hE N hk F hnF hn62 dn vis fe eb mode d rec ro rc
-        (r3.headD 0) rules hm4 hebm h3.resOk m3 _ M3 hS3 hrules3).mono
-        (fun _ _ _ h => ⟨CoreAfter.comp hK3 hSt3 h.after, h.res, h.valid⟩)
+      dsimp only [pmE.k_major_to_ctor_2]
+      exact pmTail_ref p hp hc hw hsup hmtc hE N hk F hnF hn62 dn vis fe eb mode d rec ro rc
+        (r3.headD 0) rules hm4 hebm h3.resOk m3 _ M3 hS3 hrules3
 
 /-- **`prepare_major` refines `prepareMajor`** (`pm_ref`'s ok half). Statement changes:
 `n ≤ 2 ^ 62`, the eager bit `eb = (mode >>> 1) &&& 1`, and the callees' hypotheses

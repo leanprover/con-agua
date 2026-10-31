@@ -145,23 +145,17 @@ theorem dg_ref {p : Prog} (hD : DmProg10 p) (hq : KnotStageProg p) (hcl : LeafCl
     have hx2' : x1.contains (decI n) = true := by rw [← hx2e]; exact decW0B_true hd2 z2
     refine RefE.ite_pos hx2' ?_
     -- the variant records
-    rcases h3 : callW p k "rom_pin_sets" [] m2 with _ | ⟨r3, m3⟩
-    · rw [liftE_none, defnDivGateE.k_rom_pin_sets.none]; exact RefE.of_cls0 (by simp)
-    rw [liftE_some, defnDivGateE.k_rom_pin_sets.arm1]
+    refine RefE.onlySim (fun _ => defnDivGateE.k_rom_pin_sets.none ..) (fun _ _ h => h) fun r3 m3 h3 => ?_
+    rw [defnDivGateE.k_rom_pin_sets.arm1]
     obtain ⟨hS3, hg3, hP3, hI3⟩ := romPinSets_ref hD hS2 hP2 h3
     have hC3 := StageC.of_core hC2 (hS3.restrict vis)
       (callW_leafFrame hcl (leaf_mem _ (by decide)) h3) (CoreStep.refl hC2.check)
     -- the gate
-    have h4R := cp_ref hD.toDmProg8 hq hcl hkp hdn (hs0 dn vis _) (hsA dn vis _) henv hk' hS3 hC3
-      hok2 (by exact_mod_cast hn) hI3 hpd hnm (hkp.call (im_mem _ rfl) h3 hCr2)
-    rcases e4 : checkDivModPinE p k m3 (r3.headD 0) (r3.tail.headD 0) vis w n with e4 | ⟨r4, m4⟩
-    · rw [e4] at h4R
-      rw [defnDivGateE.k_check_div_mod_pin.none]
-      exact h4R
-    rw [e4] at h4R
-    rw [defnDivGateE.k_check_div_mod_pin.arm1, defnDivGateE.j1.arm1]
-    obtain ⟨x4, a4, hrun4, hR4⟩ := h4R
-    exact RefE.ret hrun4 ⟨hR4.stageW, hR4.stage, hR4.core.ext, hG2.trans (hg3.trans hR4.grow)⟩
+    exact RefE.lastE (f := fun v => (0, v.2)) (fun _ => defnDivGateE.k_check_div_mod_pin.none ..)
+      (fun _ => by rw [defnDivGateE.k_check_div_mod_pin.arm1, defnDivGateE.j1.arm1]) id
+      (cp_ref hD.toDmProg8 hq hcl hkp hdn (hs0 dn vis _) (hsA dn vis _) henv hk' hS3 hC3 hok2
+        (by exact_mod_cast hn) hI3 hpd hnm (hkp.call (im_mem _ rfl) h3 hCr2))
+      fun _ _ _ _ hR4 => ⟨hR4.stageW, hR4.stage, hR4.core.ext, hG2.trans (hg3.trans hR4.grow)⟩
   · have z2' : r2.headD 0 = 0 := by simpa using z2
     rw [defnDivGateE.k_sl_contains.arm2 p _ _ _ _ _ _ z2', defnDivGateE.j1.arm1]
     have hx2' : x1.contains (decI n) = false := by rw [← hx2e]; exact decW0B_false hd2 z2'
