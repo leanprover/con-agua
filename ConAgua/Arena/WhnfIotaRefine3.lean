@@ -509,7 +509,7 @@ theorem viewLit_ok' (m : Mem) (a : AState) (hR : ArenaR m a) (h : Word) (hh : h.
   refine ⟨k.l, ?_, ?_, hkr⟩
   · simp only [EStore.viewLit, EStore.persGetLit]
     rw [proj_tier m a hR h hh (fun t i => t.getLit i) hv.1]
-    simp only [ETables.getLit, Tbl.node?, decE_idx]
+    simp only [ETables.getLit, Tbl.node?, decE_idx h (narrow_of_cnt m h hR.lit.2 rfl hv.2)]
     rw [hk]; rfl
   · rw [view_tier m a hR h hh hv.1, get_lit _ h hh hg, Tbl.node?, hk]; rfl
 

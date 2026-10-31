@@ -723,12 +723,12 @@ theorem defeq_lsNodeW_viewLen {m : Mem} {a : AState} (hR : ArenaR m a) {h : Word
   rw [hpers]
   by_cases ht : tierW h = 0
   · simp only [ht, ↓reduceIte] at hx
-    simp only [ht, beq_self_eq_true, ↓reduceIte, LsTables.getLen, htag, Tbl.node?, decI_idx, hx,
+    simp only [ht, beq_self_eq_true, ↓reduceIte, LsTables.getLen, htag, Tbl.node?, decI_idx h (narrow_of_cnt m h hR.ls rfl hi), hx,
       Option.map_some, hlen]
   · simp only [ht, ↓reduceIte] at hx
     have hon : a.store.lss.scratchOn = true := by
       rw [← hfl]; simp only [bne_iff_ne, ne_eq]; exact fun h1 => hs ⟨ht, h1⟩
-    simp only [ht, beq_iff_eq, ↓reduceIte, hon, LsTables.getLen, htag, Tbl.node?, decI_idx, hx,
+    simp only [ht, beq_iff_eq, ↓reduceIte, hon, LsTables.getLen, htag, Tbl.node?, decI_idx h (narrow_of_cnt m h hR.ls rfl hi), hx,
       Option.map_some, hlen]
 
 /-! ## `unfoldable_head`
@@ -955,7 +955,7 @@ theorem scB2_go (h : tagW (r.headD 0) = 3)
 end schArms
 
 -- Four views and two calls. The `&&` conditions go through `L.evalC_spec`; `grind` runs without
--- `lia`/`linarith`, which otherwise spend minutes on the `>>> 28` tag tests (nothing here needs them).
+-- `lia`/`linarith`, which otherwise spend minutes on the `tagW` tag tests (nothing here needs them).
 set_option maxHeartbeats 2000000 in
 theorem sameConstHeads_spec (p : Prog) (hp : DefEqLeafProg p) (n : Nat) (s₀ : St) (a b : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "same_const_heads" [a, b]
