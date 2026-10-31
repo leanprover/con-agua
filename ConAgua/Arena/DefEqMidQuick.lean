@@ -274,29 +274,28 @@ theorem qs_ref (p : Prog) (hp : QuickProg p) (hsd : StoreDenotes) (n : Nat) (s�
     RefE True (qsE p (n + 1) s₀.mem a b) (quickPairT mode r depth (decE a) (decE b)) a₀
       (CorePost (fun r => some (decBool r)) dn s₀.mem vis fe M eb ResH) := by
   simp only [qsE]
-  rcases c1 : callW p n "e_view" [a] s₀.mem with _ | ⟨ra, m₁⟩
-  · rw [liftE_none, qsE.k_e_view.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]; simp only [qsE.k_e_view]
-  obtain ⟨rfl, va, hva, hvra, hta⟩ := eView_callW_view (a := a₀) hp.lams.peel.eview hS.arena.base c1
+  refine RefE.onlySim (fun _ => rfl) (fun _ _ c1 => eView_callW_view (a := a₀) hp.lams.peel.eview
+    hS.arena.base c1) fun ra m₁ ⟨e₁, va, hva, hvra, hta⟩ => ?_
+  subst e₁; dsimp only [qsE.k_e_view]
   obtain ⟨rfl, hwa⟩ := viewR_sort hvra (hta.trans h2a)
-  rcases c2 : callW p n "e_view" [b] s₀.mem with _ | ⟨rb, m₂⟩
-  · rw [liftE_none, qsE.k_e_view_2.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]; simp only [qsE.k_e_view_2]
-  obtain ⟨rfl, vb, hvb, hvrb, htb⟩ := eView_callW_view (a := a₀) hp.lams.peel.eview hS.arena.base c2
+  refine RefE.onlySim (fun _ => rfl) (fun _ _ c2 => eView_callW_view (a := a₀) hp.lams.peel.eview
+    hS.arena.base c2) fun rb m₂ ⟨e₂, vb, hvb, hvrb, htb⟩ => ?_
+  subst e₂; dsimp only [qsE.k_e_view_2]
   obtain ⟨rfl, hwb⟩ := viewR_sort hvrb (htb.trans h2b)
   refine RefE.of_run_eq (quickPairT_sort mode r depth _ _ a₀ _ _ hva hvb) ?_
   obtain ⟨lu, hdu⟩ := hsd.sort dn s₀.mem a₀ vis fe M eb hS _ _ hva
   obtain ⟨lv, hdv⟩ := hsd.sort dn s₀.mem a₀ vis fe M eb hS _ _ hvb
-  rcases c3 : callW p n "lvl_eq_c" [ra.tail.headD 0, rb.tail.headD 0] s₀.mem with _ | ⟨rz, m₃⟩
-  · rw [liftE_none, qsE.k_lvl_eq_c.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]; simp only [qsE.k_lvl_eq_c]
-  obtain ⟨n₁, rfl⟩ := callW_succ c3
+  cases n with
+  | zero => rw [callW_zero, liftE_none, qsE.k_lvl_eq_c.none]; exact RefE.of_cls0 (by simp)
+  | succ n₁ =>
   cases n₁ with
-  | zero => exact absurd c3 (lvlEqC_one p hp.lv _ _ _ _ _)
+  | zero =>
+    exact RefE.onlySim (Q := fun _ _ => False) (fun _ => qsE.k_lvl_eq_c.none ..)
+      (fun _ _ c3 => lvlEqC_one p hp.lv _ _ _ _ _ c3) fun _ _ h => h.elim
   | succ n₂ =>
-  have e₃ := CoreSpec.of_callW (s₀ := ⟨s₀.mem, Locals.init []⟩)
-    (lvlEqC_refines p hp.lv n₂ ⟨s₀.mem, Locals.init []⟩ a₀ dn vis fe M eb hS _ _ hwa hwb lu lv hdu hdv) c3
-  refine RefE.bind_core (w := id) e₃ (fun M₃ hS₃ _ => ?_)
+  refine RefE.bind_callW (fun _ => rfl) (lvlEqC_refines p hp.lv n₂ s₀ a₀ dn vis fe M eb hS _ _ hwa hwb lu lv
+    hdu hdv) fun rz m₃ _ e₃ => RefE.after_core (w := id) e₃ fun M₃ hS₃ _ => ?_
+  dsimp only [qsE.k_lvl_eq_c]
   by_cases hz : rz.headD 0 = 0
   · -- the decline: `lvl_eq_c` ran out of fuel, the twin's `liftFueled` fails
     rw [ite_eq_left hz, show decO (rz.headD 0) = none by unfold decO; rw [ite_eq_left hz]]
@@ -339,16 +338,16 @@ theorem qf_ref (p : Prog) (hp : QuickProg p) (hil : InstListOK p) (n : Nat)
       (CorePost (fun r => some (decBool r)) dn s₀.mem vis fe M eb ResH) := by
   have hS := hs.rel
   simp only [qfE]
-  rcases c1 : callW p n "e_view" [a] s₀.mem with _ | ⟨ra, m₁⟩
-  · rw [liftE_none, qfE.k_e_view.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]; simp only [qfE.k_e_view]
-  obtain ⟨k, rfl⟩ := callW_succ c1
-  obtain ⟨rfl, va, hva, hvra, hta⟩ := eView_callW_view (a := a₀) hp.lams.peel.eview hS.arena.base c1
+  cases n with
+  | zero => rw [callW_zero, liftE_none, qfE.k_e_view.none]; exact RefE.of_cls0 (by simp)
+  | succ k =>
+  refine RefE.onlySim (fun _ => rfl) (fun _ _ c1 => eView_callW_view (a := a₀) hp.lams.peel.eview
+    hS.arena.base c1) fun ra m₁ ⟨e₁, va, hva, hvra, hta⟩ => ?_
+  subst e₁; dsimp only [qfE.k_e_view]
   obtain ⟨rfl, hwa1, hwa2⟩ := viewR_forall hvra (hta.trans h6a)
-  rcases c2 : callW p (k + 1) "e_view" [b] s₀.mem with _ | ⟨rb, m₂⟩
-  · rw [liftE_none, qfE.k_e_view_2.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]; simp only [qfE.k_e_view_2]
-  obtain ⟨rfl, vb, hvb, hvrb, htb⟩ := eView_callW_view (a := a₀) hp.lams.peel.eview hS.arena.base c2
+  refine RefE.onlySim (fun _ => rfl) (fun _ _ c2 => eView_callW_view (a := a₀) hp.lams.peel.eview
+    hS.arena.base c2) fun rb m₂ ⟨e₂, vb, hvb, hvrb, htb⟩ => ?_
+  subst e₂; dsimp only [qfE.k_e_view_2]
   obtain ⟨rfl, hwb1, hwb2⟩ := viewR_forall hvrb (htb.trans h6b)
   refine RefE.of_run_eq (quickPairT_forall _ _ _ _ _ a₀ _ _ _ _ hva hvb) ?_
   have hpf := peelFuel_lt
@@ -378,16 +377,16 @@ theorem ql_ref (p : Prog) (hp : QuickProg p) (hi : Inst1OK p) (n : Nat)
       (CorePost (fun r => some (decBool r)) dn s₀.mem vis fe M eb ResH) := by
   have hS := hs.rel
   simp only [qlE]
-  rcases c1 : callW p n "e_view" [a] s₀.mem with _ | ⟨ra, m₁⟩
-  · rw [liftE_none, qlE.k_e_view.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]; simp only [qlE.k_e_view]
-  obtain ⟨k, rfl⟩ := callW_succ c1
-  obtain ⟨rfl, va, hva, hvra, hta⟩ := eView_callW_view (a := a₀) hp.lams.peel.eview hS.arena.base c1
+  cases n with
+  | zero => rw [callW_zero, liftE_none, qlE.k_e_view.none]; exact RefE.of_cls0 (by simp)
+  | succ k =>
+  refine RefE.onlySim (fun _ => rfl) (fun _ _ c1 => eView_callW_view (a := a₀) hp.lams.peel.eview
+    hS.arena.base c1) fun ra m₁ ⟨e₁, va, hva, hvra, hta⟩ => ?_
+  subst e₁; dsimp only [qlE.k_e_view]
   obtain ⟨rfl, hwa1, hwa2⟩ := viewR_lam hvra (hta.trans h5a)
-  rcases c2 : callW p (k + 1) "e_view" [b] s₀.mem with _ | ⟨rb, m₂⟩
-  · rw [liftE_none, qlE.k_e_view_2.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]; simp only [qlE.k_e_view_2]
-  obtain ⟨rfl, vb, hvb, hvrb, htb⟩ := eView_callW_view (a := a₀) hp.lams.peel.eview hS.arena.base c2
+  refine RefE.onlySim (fun _ => rfl) (fun _ _ c2 => eView_callW_view (a := a₀) hp.lams.peel.eview
+    hS.arena.base c2) fun rb m₂ ⟨e₂, vb, hvb, hvrb, htb⟩ => ?_
+  subst e₂; dsimp only [qlE.k_e_view_2]
   obtain ⟨rfl, hwb1, hwb2⟩ := viewR_lam hvrb (htb.trans h5b)
   refine RefE.of_run_eq (quickPairT_lam _ _ _ _ _ a₀ _ _ _ _ hva hvb) ?_
   have H := defeqLams_ref p hp.lams hi k (hk.mono (by omega)) F (by omega) (by omega) s₀ a₀ dn

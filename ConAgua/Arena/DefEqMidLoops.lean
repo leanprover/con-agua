@@ -148,15 +148,11 @@ theorem lst_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n �
     obtain ⟨hly, hgy, hwy⟩ := slice_get hy i hib2
     rw [slice_kept hst hxt i hia2, slice_kept hst hyt i hib2]
     rw [List.drop_eq_getElem_cons hlx, List.drop_eq_getElem_cons hly, defEqList_cons, hgx, hgy]
-    rcases hc : callE p k "defeq" [mode, vis, d, spW m₀ (ao + i), spW m₀ (bo + i)] m with e | ⟨r, m₁⟩
-    · rw [lstE.k_defeq.none]
-      exact RefE.bind_left fun hG => CoreSpecE.of_callE (s₀ := ⟨m, Locals.init []⟩)
-        ((hG k (by omega)).defeq F _ a dn vis fe M eb mode d _ _ (by omega) (by omega)
-          ⟨hS, hmode, heb⟩ hwx hwy) hc
-    have h₁ := CoreSpec.of_callW (s₀ := ⟨m, Locals.init []⟩)
-      ((hk k (by omega)).defeq F _ a dn vis fe M eb mode d _ _ (by omega) (by omega)
-        ⟨hS, hmode, heb⟩ hwx hwy) (callW_of_callE hc)
-    refine RefE.bind_core (w := fun (v : Word × Mem) => ([v.1], v.2)) h₁ (fun M₁ hS₁ hst₁ => ?_)
+    refine RefE.bind_callE (s₀ := ⟨m, Locals.init []⟩) (fun _ => lstE.k_defeq.none ..)
+      ((hk k (by omega)).defeq F _ a dn vis fe M eb mode d _ _ (by omega) (by omega) ⟨hS, hmode, heb⟩ hwx hwy)
+      (fun (hG : KnotUpToE p n) => (hG k (by omega)).defeq F _ a dn vis fe M eb mode d _ _ (by omega)
+        (by omega) ⟨hS, hmode, heb⟩ hwx hwy) fun r m₁ _ h₁ =>
+      RefE.after_core (w := fun (v : Word × Mem) => ([v.1], v.2)) h₁ fun M₁ hS₁ hst₁ => ?_
     by_cases h0 : r.headD 0 = 0
     · rw [lstE.k_defeq.arm1 (hc1 := h0), decBool_f h0]
       exact RefE.ret rfl (CorePost.ret hS₁ rfl resH_zero)
@@ -272,16 +268,11 @@ theorem lrev_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n 
     have ei : i.toNat = (i - 1).toNat + 1 := by omega
     have ej : j.toNat = (j - 1).toNat + 1 := by omega
     rw [ei, ej, take_rev_succ xs _ hlx, take_rev_succ ys _ hly, defEqList_cons, hgx, hgy]
-    rcases hc : callE p k "defeq" [mode, vis, d, spW m₀ (ao + (i - 1)), spW m₀ (bo + (j - 1))] m with
-      e | ⟨r, m₁⟩
-    · rw [lrevE.k_defeq.none]
-      exact RefE.bind_left fun hG => CoreSpecE.of_callE (s₀ := ⟨m, Locals.init []⟩)
-        ((hG k (by omega)).defeq F _ a dn vis fe M eb mode d _ _ (by omega) (by omega)
-          ⟨hS, hmode, heb⟩ hwx hwy) hc
-    have h₁ := CoreSpec.of_callW (s₀ := ⟨m, Locals.init []⟩)
-      ((hk k (by omega)).defeq F _ a dn vis fe M eb mode d _ _ (by omega) (by omega)
-        ⟨hS, hmode, heb⟩ hwx hwy) (callW_of_callE hc)
-    refine RefE.bind_core (w := fun (v : Word × Mem) => ([v.1], v.2)) h₁ (fun M₁ hS₁ hst₁ => ?_)
+    refine RefE.bind_callE (s₀ := ⟨m, Locals.init []⟩) (fun _ => lrevE.k_defeq.none ..)
+      ((hk k (by omega)).defeq F _ a dn vis fe M eb mode d _ _ (by omega) (by omega) ⟨hS, hmode, heb⟩ hwx hwy)
+      (fun (hG : KnotUpToE p n) => (hG k (by omega)).defeq F _ a dn vis fe M eb mode d _ _ (by omega)
+        (by omega) ⟨hS, hmode, heb⟩ hwx hwy) fun r m₁ _ h₁ =>
+      RefE.after_core (w := fun (v : Word × Mem) => ([v.1], v.2)) h₁ fun M₁ hS₁ hst₁ => ?_
     by_cases h0 : r.headD 0 = 0
     · rw [lrevE.k_defeq.arm1 (hc1 := h0), decBool_f h0]
       exact RefE.ret rfl (CorePost.ret hS₁ rfl resH_zero)
