@@ -44,7 +44,7 @@ def armPosFns : List FnName :=
     "infer_forall", "whnf", "wh_find", "whnf_loop", "whnf_step", "whnf_core", "wk_find",
     "whnf_core_loop", "whnf_core_step", "whnf_core_app", "get_app_spine", "app_count", "app_fill",
     "app_fill_n", "whnf_core_app2", "head_and_args", "get_app_fn", "get_app_args", "whnf_app",
-    "beta_peel", "inst_list", "ilm_clear", "ilg_go", "ilg_app", "ilm_find", "ilm_put", "ilg_lam",
+    "beta_peel", "inst_list", "ilm_clear", "ilm_fit", "ilg_go", "ilg_app", "ilm_find", "ilm_put", "ilg_lam",
     "ilg_forall", "ilg_let", "ilg_proj", "il_go", "il_app", "il_lam", "il_forall", "il_let",
     "il_proj", "il_bvar", "mk_app_n_from", "iota_rec_at", "iota_rec_head", "iota_rec_c",
     "peel_pis", "iota_rec_major", "prepare_major", "rec_rule_k", "major_to_ctor", "m2c_head",
@@ -135,7 +135,7 @@ def armPosFns : List FnName :=
 /-- `tailCallees`, closed under calls. -/
 def armHbFns : List FnName :=
   ["check_block_idx_sorts", "check_block_idx_sorts_one", "open_pis_at_fvars_f", "opf_go",
-    "inst_list", "ilm_clear", "ilg_go", "der_b", "der_bv", "ilg_app", "ilm_find", "mk_app", "intern_app",
+    "inst_list", "ilm_clear", "ilm_fit", "ilg_go", "der_b", "der_bv", "ilg_app", "ilm_find", "mk_app", "intern_app",
     "app_find", "app_push", "ilm_put", "ilg_lam", "mk_lam", "intern_lam", "lam_find", "lam_push",
     "ilg_forall", "mk_forall", "intern_forall", "forall_find", "forall_push", "ilg_let", "mk_let",
     "intern_letE", "letE_find", "letE_push", "ilg_proj", "mk_proj", "intern_proj", "proj_find",
@@ -287,7 +287,7 @@ def armHbFns : List FnName :=
 /-- `tailRcCallees`, `grcRcCallees` and `cons_block_recs_tf`, closed under calls. -/
 def armRcFns : List FnName :=
   ["check_block_idx_sorts", "check_block_idx_sorts_one", "open_pis_at_fvars_f", "opf_go",
-    "inst_list", "ilm_clear", "ilg_go", "der_b", "der_bv", "ilg_app", "ilm_find", "mk_app", "intern_app",
+    "inst_list", "ilm_clear", "ilm_fit", "ilg_go", "der_b", "der_bv", "ilg_app", "ilm_find", "mk_app", "intern_app",
     "app_find", "app_push", "ilm_put", "ilg_lam", "mk_lam", "intern_lam", "lam_find", "lam_push",
     "ilg_forall", "mk_forall", "intern_forall", "forall_find", "forall_push", "ilg_let", "mk_let",
     "intern_letE", "letE_find", "letE_push", "ilg_proj", "mk_proj", "intern_proj", "proj_find",
@@ -453,7 +453,7 @@ def armTaFns : List FnName :=
     "str_sup_7", "char_of_nat_ty_ok", "infer_forall", "whnf", "wh_find", "whnf_loop", "whnf_step",
     "whnf_core", "wk_find", "whnf_core_loop", "whnf_core_step", "whnf_core_app", "get_app_spine",
     "app_count", "app_fill", "app_fill_n", "whnf_core_app2", "head_and_args", "get_app_fn",
-    "get_app_args", "whnf_app", "beta_peel", "inst_list", "ilm_clear", "ilg_go", "ilg_app",
+    "get_app_args", "whnf_app", "beta_peel", "inst_list", "ilm_clear", "ilm_fit", "ilg_go", "ilg_app",
     "ilm_find", "ilm_put", "ilg_lam", "ilg_forall", "ilg_let", "ilg_proj", "il_go", "il_app",
     "il_lam", "il_forall", "il_let", "il_proj", "il_bvar", "mk_app_n_from", "iota_rec_at",
     "iota_rec_head", "iota_rec_c", "peel_pis", "iota_rec_major", "prepare_major", "rec_rule_k",
@@ -669,7 +669,7 @@ def armMaFns : List FnName :=
     "infer_forall", "whnf", "wh_find", "whnf_loop", "whnf_step", "whnf_core", "wk_find",
     "whnf_core_loop", "whnf_core_step", "whnf_core_app", "get_app_spine", "app_count", "app_fill",
     "app_fill_n", "whnf_core_app2", "head_and_args", "get_app_fn", "get_app_args", "whnf_app",
-    "beta_peel", "inst_list", "ilm_clear", "ilg_go", "ilg_app", "ilm_find", "ilm_put", "ilg_lam",
+    "beta_peel", "inst_list", "ilm_clear", "ilm_fit", "ilg_go", "ilg_app", "ilm_find", "ilm_put", "ilg_lam",
     "ilg_forall", "ilg_let", "ilg_proj", "il_go", "il_app", "il_lam", "il_forall", "il_let",
     "il_proj", "il_bvar", "mk_app_n_from", "iota_rec_at", "iota_rec_head", "iota_rec_c",
     "peel_pis", "iota_rec_major", "prepare_major", "rec_rule_k", "major_to_ctor", "m2c_head",
@@ -876,7 +876,7 @@ def armMcFns : List FnName :=
     "str_sup_7", "char_of_nat_ty_ok", "infer_forall", "whnf", "wh_find", "whnf_loop", "whnf_step",
     "whnf_core", "wk_find", "whnf_core_loop", "whnf_core_step", "whnf_core_app", "get_app_spine",
     "app_count", "app_fill", "app_fill_n", "whnf_core_app2", "head_and_args", "get_app_fn",
-    "get_app_args", "whnf_app", "beta_peel", "inst_list", "ilm_clear", "ilg_go", "ilg_app",
+    "get_app_args", "whnf_app", "beta_peel", "inst_list", "ilm_clear", "ilm_fit", "ilg_go", "ilg_app",
     "ilm_find", "ilm_put", "ilg_lam", "ilg_forall", "ilg_let", "ilg_proj", "il_go", "il_app",
     "il_lam", "il_forall", "il_let", "il_proj", "il_bvar", "mk_app_n_from", "iota_rec_at",
     "iota_rec_head", "iota_rec_c", "peel_pis", "iota_rec_major", "prepare_major", "rec_rule_k",

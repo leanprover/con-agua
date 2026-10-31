@@ -142,7 +142,7 @@ def loopFns : List FnName :=
    "head_type_res", "hint_eq", "hint_lt", "i1l_app", "i1l_clear", "i1l_find", "i1l_forall",
    "i1l_go", "i1l_lam", "i1l_let", "i1l_proj", "i1l_put", "idx_args_resolve", "if_clear",
    "if_find", "if_put", "ik_copy", "il_app", "il_bvar", "il_forall", "il_go", "il_lam", "il_let",
-   "il_proj", "ilg_app", "ilg_forall", "ilg_go", "ilg_lam", "ilg_let", "ilg_proj", "ilm_clear",
+   "il_proj", "ilg_app", "ilg_forall", "ilg_go", "ilg_lam", "ilg_let", "ilg_proj", "ilm_clear", "ilm_fit",
    "ilm_find", "ilm_put", "ilp_clear", "ilp_find", "ilp_put", "ilpl_clear", "ilpl_find",
    "ilpl_put", "ilpls_clear", "ilpls_find", "ilpls_put", "imax_find", "imax_push", "in_clear",
    "in_find", "in_put", "ind_block_to_erec", "ind_caps_check", "ind_copy_go", "ind_info_rec",

@@ -822,6 +822,15 @@ theorem memoClearFitG_spec (f : FnName) (hp : p.lookup f = some (memoClearFitG S
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, st64, mfitTailG_step_spec S p n] <;>
       finish [mclearFitG, mclearG, cntG]
 
+/-- **The fast path**: with no stored mark and a round within the floor's mark, `clear_fit` is
+the epoch bump. A caller tests this and calls `X_clear` (a leaf, inlined), and `X_clear_fit`
+only otherwise. -/
+theorem mclearFitG_fast (m : Mem) (ha : (S.arr : TieredArray) ≠ CTL)
+    (h3 : rdW (m.arr64 S.arr) 3 = 0) (hc : cntG S m ≤ FITLO) : mclearFitG S m = mclearG S m := by
+  have : (mclearG S m).arr64 S.arr = m.arr64 S.arr := by
+    simp only [mclearG]; rw [Mem.arr64_set64_ne _ _ _ _ _ ha, Mem.arr64_set64_ne _ _ _ _ _ ha]
+  simp [mclearFitG, mfitTail, this, h3, hc]
+
 end clearFit
 
 /-- `set` is `put` after a probe that returned. -/

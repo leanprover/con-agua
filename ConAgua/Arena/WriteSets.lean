@@ -181,7 +181,7 @@ theorem ArProg.closed {p : Prog} (hp : ArProg p) (he : p.lookup "ar_entry" = som
 /-! ## `inst_list` -/
 
 def instListFns : List FnName :=
-  ["ilm_find", "ilm_put", "ilm_clear", "der_bv", "il_go", "il_app", "il_lam", "il_forall", "il_let",
+  ["ilm_find", "ilm_put", "ilm_clear", "ilm_fit", "der_bv", "il_go", "il_app", "il_lam", "il_forall", "il_let",
     "il_proj", "il_bvar", "ilg_go", "ilg_app", "ilg_lam", "ilg_forall", "ilg_let", "ilg_proj",
     "inst_list"] ++ mkFns
 

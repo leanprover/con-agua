@@ -48,7 +48,7 @@ def phaseBFns : List FnName :=
    "head_and_args", "head_hint", "head_is_proj", "head_proof_const", "head_proof_proj",
    "head_proof_pw", "head_type_const", "head_type_pw", "head_type_res", "hint_lt", "if_clear",
    "if_find", "if_put", "il_app", "il_bvar", "il_forall", "il_go", "il_lam", "il_let", "il_proj",
-   "ilg_app", "ilg_forall", "ilg_go", "ilg_lam", "ilg_let", "ilg_proj", "ilm_clear", "ilm_find",
+   "ilg_app", "ilg_forall", "ilg_go", "ilg_lam", "ilg_let", "ilg_proj", "ilm_clear", "ilm_fit", "ilm_find",
    "ilm_put", "ilp_clear", "ilp_find", "ilp_put", "ilpl_clear", "ilpl_find", "ilpl_put",
    "ilpls_clear", "ilpls_find", "ilpls_put", "imax_find", "imax_push", "in_clear", "in_find",
    "in_put", "ind_caps_check", "infer", "infer_app", "infer_app_io", "infer_body", "infer_body_io",

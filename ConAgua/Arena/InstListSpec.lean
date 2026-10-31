@@ -275,11 +275,16 @@ grind_pattern [arena_grind] ilclrK_some => ilclrK (some (r, m₁))
 /-- con-ron: ConRon/Arena/ExprOps.lean:642-649 ConRon.Arena.instantiateListFast -/
 @[l_impl ConRon.Arena.instantiateListFast]
 def instListL : FunDecl := lfn (e, o, l, d) locals (r, u) {
-  u := call ilm_clear();
+  if ILMEMO.u64[3] == 0 && CTL.u64[51] <= ⟪FITLO⟫ { u := call ilm_clear() } else { u := call ilm_fit() };
   r := call ilg_go(e, d, o, l, 4000000000);
-  u := call ilm_clear();
+  if ILMEMO.u64[3] == 0 && CTL.u64[51] <= ⟪FITLO⟫ { u := call ilm_clear() } else { u := call ilm_fit() };
   return r & 4294967295
 }
+
+/-- `clear_fit`'s fast path for `ilSch`. -/
+theorem ilm_fast (m : Mem) (h3 : rdW (m.arr64 ILMEMO) 3 = 0) (hc : rdW (m.arr64 CTL) 51 ≤ FITLO) :
+    mclearFitG ilSch m = mclearG ilSch m :=
+  mclearFitG_fast ilSch m (by decide) h3 hc
 
 theorem instList_spec' (p : Prog) (hp : InstListProg p) (he : p.lookup "inst_list" = some instListL)
     (n : Nat) (s₀ : St) (e o l d : Word) :
@@ -291,10 +296,10 @@ theorem instList_spec' (p : Prog) (hp : InstListProg p) (he : p.lookup "inst_lis
   rw [invoke_eq _ he]
   simp only [callFn, instListL]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, memoClearFitG_spec ilSch p _
-        (hp.get "ilm_clear") n,
-      ih] <;>
-    finish
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+      memoClearG_spec ilSch p _ (hp.get "ilm_clear") n,
+      memoClearFitG_spec ilSch p _ (hp.get "ilm_fit") n, ih] <;>
+    finish [ilm_fast, cntG]
 
 /-- Both walks, their memo and `liftProg` (the `mk_*`, the stores), as one program. -/
 def instListProg : Prog := instListWalkProg ++ [("inst_list", instListL)]
