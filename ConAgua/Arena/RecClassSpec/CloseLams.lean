@@ -551,16 +551,8 @@ theorem fvarHeadW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFE
     all_goals (have := eViewW_head1 m1 w hne hf; simp only [ViewR] at hR; first | exact absurd (this.symm.trans hR) (by decide) | exact absurd (this.symm.trans hR.1) (by decide))
   · rw [ite_eq_right hf] at h
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-    have htag : ¬ (decE w).tag = ETag.fvar := by
-      rw [decE_tag w hd1]
-      intro hc
-      apply hf
-      have := congrArg UInt32.toNat hc
-      simp [ETag.fvar] at this
-      apply UInt64.toNat_inj.mp
-      simp only [UInt64.toNat_shiftRight]
-      simp
-      omega
+    have htag : ¬ (decE w).tag = ETag.fvar := fun hc => hf (by
+      simpa using (decE_tag_eq w hd1 1 (by decide)).mp (by simpa [ETag.fvar] using hc))
     refine ⟨none, a1, ?_, hS1, hg1, rfl, fun i hi => by simp at hi⟩
     simp only [ConRon.Arena.fvarHead]
     rw [StateT.run_bind, hrun1]

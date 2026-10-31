@@ -985,20 +985,22 @@ meta partial def transE (E : Env) (ctx : Ctx) : TSyntax `lexpr → GenM MT
   | `(lexpr| $r:ident⟦$h:lexpr⟧.$f:ident) => do
     let fI ← fieldNum (mkIdentFrom f (r.getId ++ f.getId))
     let h ← (← transE E ctx h).render
+    if r.getId == `APP then noteVcg #["L.Arena.evalE_idxAE"]
     let ix := mkIdent (if r.getId == `APP then `L.Arena.idxA else `L.Arena.idxW)
     pure (.raw (← `($(mkIdent `L.Arena.tfld) $(← ctx.mem.render) $r ($(mkIdent `L.Arena.tierW) $h) ($ix $h) $fI)))
   | `(lexpr| $r:ident⟦$h:lexpr⟧) => do
     let h ← (← transE E ctx h).render
+    if r.getId == `APP then noteVcg #["L.Arena.evalE_idxAE"]
     let ix := mkIdent (if r.getId == `APP then `L.Arena.idxA else `L.Arena.idxW)
     pure (.raw (← `($(mkIdent `L.Arena.tfld) $(← ctx.mem.render) $r ($(mkIdent `L.Arena.tierW) $h) ($ix $h) 0)))
   | `(lexpr| ⟦$h:lexpr⟧.$c:ident) => do
     let h ← (← transE E ctx h).render
     match c.getId with
     | `tier => pure (.raw (← `($(mkIdent `L.Arena.tierW) $h)))
-    | `tag => pure (.raw (← `($(mkIdent `L.Arena.tagW) $h)))
+    | `tag => noteVcg #["L.Arena.evalE_tagE"]; pure (.raw (← `($(mkIdent `L.Arena.tagW) $h)))
     | `idx => pure (.raw (← `($(mkIdent `L.Arena.idxW) $h)))
-    | `aidx => pure (.raw (← `($(mkIdent `L.Arena.idxA) $h)))
-    | `gidx => pure (.raw (← `($(mkIdent `L.Arena.idxG) $h)))
+    | `aidx => noteVcg #["L.Arena.evalE_idxAE"]; pure (.raw (← `($(mkIdent `L.Arena.idxA) $h)))
+    | `gidx => noteVcg #["L.Arena.evalE_idxGE"]; pure (.raw (← `($(mkIdent `L.Arena.idxG) $h)))
     | _ => throwErrorAt c "expected `⟦h⟧.tier`, `⟦h⟧.tag`, `⟦h⟧.idx`, `⟦h⟧.aidx` or `⟦h⟧.gidx`"
   | `(lexpr| $a:ident[$i:lexpr]) => do
     let (arr, k) ← splitArr a
