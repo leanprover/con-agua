@@ -384,66 +384,45 @@ theorem cvg_ref {p : Prog} (hq : KnotStageProg p) (hP : CvgProg p) (hL : LvlCach
   have ev : rdW (m0.arr64 EREC) (g + 5) = wj :=
     rdW_of_get? (k := g.toNat + 5) (by rw [UInt64.toNat_add]; simp; omega) (erecP_get hwj)
   rw [et, ev]
-  have h00 : (0 : Word).toNat = 0 := rfl
   unfold checkValueGroup
+  rw [hty, hjv]
   -- `infer_type_core(vis, 0, t)`
-  rcases h1 : callE p n "infer_type_core" [vis, 0, wt] m0 with e1 | ⟨r1, m1⟩
-  · rw [checkValueGroupE.k_infer_type_core.none]
-    refine RefE.bind_left fun hG => ?_
-    have := hG.core.inferTypeCore n hn' hS0 0 wt hwtl _ h1
-    rwa [h00, ← hty] at this
-  rw [checkValueGroupE.k_infer_type_core.arm1]
-  have h1' := callW_of_callE h1
-  have hCr1 := hkp.call (im_mem _ rfl) h1' hCr0
-  obtain ⟨x1, a1, hrun1, hS1, hg1, hx1l, hx1⟩ := hq.inferTypeCore_sim n hn' hS0 0 wt hwtl r1 m1 h1'
-  rw [h00, ← hty] at hrun1
-  refine RefE.bind_right hrun1 ?_
+  refine RefE.bindCall (fun _ => rfl) (fun hG _ h1 => hG.core.inferTypeCore n hn' hS0 0 wt hwtl _ h1)
+    (fun b h1 => hq.inferTypeCore_sim n hn' hS0 0 wt hwtl b.1 b.2 h1)
+    fun r1 m1 x1 a1 h1 hrun1 ⟨hS1, hg1, hx1l, hx1⟩ => ?_
+  dsimp only [checkValueGroupE.k_infer_type_core]
+  have hCr1 := hkp.call (im_mem _ rfl) (callW_of_callE h1) hCr0
+  subst hx1
   -- `ensure_sort_core(vis, 0, st)`
-  rcases h2 : callE p n "ensure_sort_core" [vis, 0, r1.headD 0] m1 with e2 | ⟨r2, m2⟩
-  · rw [checkValueGroupE.k_ensure_sort_core.none]
-    refine RefE.bind_left fun hG => ?_
-    have := hG.core.ensureSortCore n hn' hS1 0 (r1.headD 0) hx1l _ h2
-    rwa [h00, hx1] at this
-  have h2' := callW_of_callE h2
-  have hCr2 := hkp.call (im_mem _ rfl) h2' hCr1
-  obtain ⟨x2, a2, hrun2, hS2, hg2, hx2l, hx2⟩ :=
-    hq.ensureSortCore_sim n hn' hS1 0 (r1.headD 0) hx1l r2 m2 h2'
-  rw [h00, hx1] at hrun2
-  refine RefE.bind_right hrun2 ?_
+  refine RefE.bindCall (fun _ => checkValueGroupE.k_ensure_sort_core.none ..)
+    (fun hG _ h2 => hG.core.ensureSortCore n hn' hS1 0 (r1.headD 0) hx1l _ h2)
+    (fun b h2 => hq.ensureSortCore_sim n hn' hS1 0 (r1.headD 0) hx1l b.1 b.2 h2)
+    fun r2 m2 x2 a2 h2 hrun2 ⟨hS2, hg2, hx2l, hx2⟩ => ?_
+  have hCr2 := hkp.call (im_mem _ rfl) (callW_of_callE h2) hCr1
+  subst hx2
   have hext2 : ArrExt (erecP m0) (erA m2) := IWGrow.erecExt (hg1.trans hg2)
   have ek : rdW (m2.arr64 EREC) g = wk := rdW_of_get? rfl (hext2 _ _ hwk)
   -- the tail: `infer_type_core(vis, 0, v)`, `is_def_eq_core(vis, 0, vt, t)`, the mismatch
   have tail : ∀ (m5 : Mem) (a5 : AState), StageT dn vis fe m5 a5 → IWGrow m0 m5 →
       L.Stubs.CrOK m5 →
       RefE (CvgCtx p) (checkValueGroupE.j1 p n vis g wt wj m5) (do
-          let vtype ← inferTypeCore V fe checkFuel 0 vg.jv
-          let b ← isDefEqCore V fe checkFuel 0 vtype vg.cv.type
+          let vtype ← inferTypeCore V fe checkFuel 0 (decI wj)
+          let b ← isDefEqCore V fe checkFuel 0 vtype (decI wt)
           if b = true then pure ()
             else fail (CheckError.invalid (toString "type mismatch in " ++ toString vg.kind.word)) :
           AM Unit) a5 (fun v _ a' => CvgPost dn vis fe m v.2 a') := by
     intro m5 a5 hS5 hg5 hCr5
     rw [checkValueGroupE.j1.arm1]
-    rcases h7 : callE p n "infer_type_core" [vis, 0, wj] m5 with e7 | ⟨r7, m7⟩
-    · rw [checkValueGroupE.k_infer_type_core_2.none]
-      refine RefE.bind_left fun hG => ?_
-      have := hG.core.inferTypeCore n hn' hS5 0 wj hwjl _ h7
-      rwa [h00, ← hjv] at this
-    rw [checkValueGroupE.k_infer_type_core_2.arm1]
-    have h7' := callW_of_callE h7
-    obtain ⟨x7, a7, hrun7, hS7, hg7, hx7l, hx7⟩ := hq.inferTypeCore_sim n hn' hS5 0 wj hwjl r7 m7 h7'
-    rw [h00, ← hjv] at hrun7
-    refine RefE.bind_right hrun7 ?_
-    rcases h8 : callE p n "is_def_eq_core" [vis, 0, r7.headD 0, wt] m7 with e8 | ⟨r8, m8⟩
-    · rw [checkValueGroupE.k_is_def_eq_core.none]
-      refine RefE.bind_left fun hG => ?_
-      have := hG.core.isDefEqCore n hn' hS7 0 (r7.headD 0) wt hx7l hwtl _ h8
-      rwa [h00, hx7, ← hty] at this
-    have h8' := callW_of_callE h8
-    have hCr8 := hkp.call (im_mem _ rfl) h8' (hkp.call (im_mem _ rfl) h7' hCr5)
-    obtain ⟨x8, a8, hrun8, hS8, hg8, hx8⟩ :=
-      hq.isDefEqCore_sim n hn' hS7 0 (r7.headD 0) wt hx7l hwtl r8 m8 h8'
-    rw [h00, hx7, ← hty] at hrun8
-    refine RefE.bind_right hrun8 ?_
+    refine RefE.bindCall (fun _ => rfl) (fun hG _ h7 => hG.core.inferTypeCore n hn' hS5 0 wj hwjl _ h7)
+      (fun b h7 => hq.inferTypeCore_sim n hn' hS5 0 wj hwjl b.1 b.2 h7)
+      fun r7 m7 x7 a7 h7 _ ⟨hS7, hg7, hx7l, hx7⟩ => ?_
+    dsimp only [checkValueGroupE.k_infer_type_core_2]
+    subst hx7
+    refine RefE.bindCall (fun _ => checkValueGroupE.k_is_def_eq_core.none ..)
+      (fun hG _ h8 => hG.core.isDefEqCore n hn' hS7 0 (r7.headD 0) wt hx7l hwtl _ h8)
+      (fun b h8 => hq.isDefEqCore_sim n hn' hS7 0 (r7.headD 0) wt hx7l hwtl b.1 b.2 h8)
+      fun r8 m8 x8 a8 h8 _ ⟨hS8, hg8, hx8⟩ => ?_
+    have hCr8 := hkp.call (im_mem _ rfl) (callW_of_callE h8) (hkp.call (im_mem _ rfl) (callW_of_callE h7) hCr5)
     by_cases hb8 : r8.headD 0 = 0
     · have ex8 : x8 = false := by rw [← hx8, decBool, hb8]; rfl
       rw [ex8]
@@ -474,21 +453,15 @@ theorem cvg_ref {p : Prog} (hq : KnotStageProg p) (hP : CvgProg p) (hL : LvlCach
     refine RefE.bind_right (pinZeroLevel_run hF) ?_
     -- the two levels read back: the sort's level, the pinned zero
     obtain ⟨xs, hxs⟩ := ensureSort_view (r := pureFnsA V fe checkFuel) (fe := fe) (d := 0)
-      (e := x1) hrun2
+      (e := decI (r1.headD 0)) hrun2
     obtain ⟨lu, hdu⟩ := hS2.twin.den.sort _ _ hxs
-    rw [← hx2] at hdu
     obtain ⟨lz, hdz⟩ := hS2.twin.den.zero
     rw [hF.zeroLevel] at hdz
     -- `lvl_eq_c(u, zr)`
-    rcases h4 : callW p n "lvl_eq_c" [r2.headD 0, pinW m2 53] m2 with _ | ⟨r4, m4⟩
-    · rw [liftE_none, checkValueGroupE.k_lvl_eq_c.none]; exact RefE.of_cls0 (by simp)
-    rw [liftE_some]
+    refine RefE.bindSim (fun _ => checkValueGroupE.k_lvl_eq_c.none ..)
+      (lvlEqC_simTE p hq.closed hL n hS2 (r2.headD 0) (pinW m2 53) hx2l hF.lv_lt.2.1 lu lz hdu hdz)
+      fun r4 x4 m4 a4 h4 hrun4 ⟨hS4, hg4, hdec4⟩ => ?_
     have hCr4 := hkp.call (im_mem _ rfl) h4 hCr2
-    obtain ⟨x4, a4, hrun4, hS4, hg4, hdec4⟩ :=
-      lvlEqC_simTE p hq.closed hL n hS2 (r2.headD 0) (pinW m2 53) hx2l hF.lv_lt.2.1 lu lz hdu hdz
-        r4 m4 h4
-    rw [hx2] at hrun4
-    refine RefE.bind_right hrun4 ?_
     unfold decLvlEq at hdec4
     by_cases c0 : r4.headD 0 = 0
     · -- out of fuel: the twin's `liftFueled` on `none`
@@ -520,7 +493,7 @@ theorem cvg_ref {p : Prog} (hq : KnotStageProg p) (hP : CvgProg p) (hL : LvlCach
     -- the parameters' names read back at the guards: the prefix extends the store
     have hlps4 : ∃ ks, vg.cv.levelParams.mapM (denoteN a4.store.ns) = some ks := by
       obtain ⟨env, cP, henv, hck, hcvd, hws⟩ := hthm hkind
-      obtain ⟨hck2, hx02⟩ := thmPrefix_ext henv hck hcvd hws hrun1 hrun2
+      obtain ⟨hck2, hx02⟩ := thmPrefix_ext henv hck hcvd hws (by rw [hty]; exact hrun1) hrun2
       obtain ⟨-, hst4, -⟩ := ConRon.Bridge.AM.of_run (P := fun t => t = a2) rfl hrun4
         (ConRon.Bridge.Core.lvlEq?_spec a2 _ _ hck2)
       rw [hst4]
@@ -531,7 +504,7 @@ theorem cvg_ref {p : Prog} (hq : KnotStageProg p) (hP : CvgProg p) (hL : LvlCach
       exact ArrExt.decCV (IWGrow.erecExt (hg1.trans (hg2.trans hg4))) hcv
     -- `install_value_guards(vis, g + 1, v)`
     rcases h5 : callE p n "install_value_guards" [vis, g + 1, wj] m4 with e5 | ⟨r5, m5⟩
-    · rw [checkValueGroupE.k_install_value_guards.none, hjv]
+    · rw [checkValueGroupE.k_install_value_guards.none]
       exact RefE.bind_left fun hG => hG.ivg h5 hS4 hcv4 (by rw [hg1']; omega) hwjl hlps4 hCr4
     rw [checkValueGroupE.k_install_value_guards.arm1]
     obtain ⟨s5, hs5, -, _, a5, hrun5, hS5, hg5, hCr5⟩ := RefE.run_ok
@@ -539,7 +512,6 @@ theorem cvg_ref {p : Prog} (hq : KnotStageProg p) (hP : CvgProg p) (hL : LvlCach
       (installValueGuards_specE p hP n _ vis (g + 1) wj)
       (ivg_ref hap hkp.crf n hS4 hcv4 (by rw [hg1']; omega) hwjl hlps4 hCr4) h5
     subst hs5
-    rw [← hjv] at hrun5
     exact RefE.bind_right hrun5 (tail _ _ hS5 (hg1.trans (hg2.trans (hg4.trans hg5))) hCr5)
   · rw [checkValueGroupE.k_ensure_sort_core.arm2 p n vis g wt wj r2 m2 (by rw [ek]; exact hk1)]
     have hkind : vg.kind ≠ .thm := by
