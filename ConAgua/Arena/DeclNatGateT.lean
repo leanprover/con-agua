@@ -1,3 +1,4 @@
+import ConAgua.Arena.RefWalk
 import ConAgua.Arena.KnotEntry
 import ConAgua.Verdict.VCtx
 import ConAgua.Arena.DeclNatGateSpec
@@ -122,13 +123,10 @@ theorem cert_ref (hq : KnotStageProg p) (o l : Word) (ps : List (EIdx × EIdx)) 
     rw [hpp', hea', heb']
     subst he
     simp only [certifyNatEqs]
-    rcases h1 : callE p k "is_def_eq_core" [vis, 2, ea, eb] m with e1 | ⟨r1, m1⟩
-    · rw [certifyNatEqsE.k_is_def_eq_core.none]
-      exact RefE.bind_left fun hcE => hcE.isDefEqCore k hk' hS 2 ea eb hea heb _ h1
-    obtain ⟨x1, a1, hrun1, hS1, hg1, hx1⟩ := hq.isDefEqCore_sim k hk' hS 2 ea eb hea heb r1 m1
-      (callW_of_callE h1)
-    have hrun1' : (isDefEqCore V fe checkFuel 2 (decE ea) (decE eb)).run a = .ok (x1, a1) := hrun1
-    refine RefE.bind_right hrun1' ?_
+    refine RefE.bindCall (fun _ => certifyNatEqsE.k_is_def_eq_core.none ..)
+      (fun hcE _ h1 => hcE.isDefEqCore k hk' hS 2 ea eb hea heb _ h1)
+      (fun b h1 => hq.isDefEqCore_sim k hk' hS 2 ea eb hea heb b.1 b.2 h1)
+      fun r1 m1 x1 a1 _ _ ⟨hS1, hg1, hx1⟩ => ?_
     by_cases hz : r1.headD 0 = 0
     · rw [certifyNatEqsE.k_is_def_eq_core.arm1 p k vis o l r1 m1 hz]
       have hx : x1 = false := by rw [← hx1]; simp only [decBool, hz]; rfl
@@ -237,9 +235,7 @@ theorem dnc_ref (hN : NatSubProg' p) (hq : KnotStageProg p) (hcl : LeafClosed p)
   rw [defnNatCertE.arm1]
   have hE := hN.toNatSubProg.toNatEqProg
   have hG := hE.toNatTyProg.toNatGuardProg.toNatLitProg.toNatCvProg.toNatGateProg
-  rcases h1 : callW p k "env_find" [n, w] m with _ | ⟨r1, m1⟩
-  · rw [liftE_none, defnNatCertE.k_env_find.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]
+  refine RefE.onlySim (fun _ => rfl) (fun _ _ h => h) fun r1 m1 h1 => ?_
   obtain ⟨hm1, hfd⟩ := envFind_call hG.toMasterProg n hn hSw.check.env h1
   subst hm1
   cases hf : fe2.find? (decI n) with
@@ -283,12 +279,12 @@ theorem dnc_ref (hN : NatSubProg' p) (hq : KnotStageProg p) (hcl : LeafClosed p)
   have hv : decE wv = v := hwd
   simp only [natCertT, hf]
   -- the equations
-  rcases h2 : callW p k "nat_op_equations" [0, n] m1 with _ | ⟨r2, m2⟩
-  · rw [liftE_none, defnNatCertE.k_nat_op_equations.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some, defnNatCertE.k_nat_op_equations.arm1]
+  refine RefE.bindLift (fun _ => rfl) fun r2 m2 h2 => ?_
   obtain ⟨x2, a2, hrun2, hS2, hg2, hd2⟩ :=
     natOpEquations_ref hN 0 n k m1 a r2 m2 ⟨hSw, by decide, hn⟩ h2
   have hrun2' : (natOpEquations 0 (decI n)).run a = .ok (x2, a2) := hrun2
+  refine ⟨_, _, hrun2', ?_⟩
+  dsimp only [defnNatCertE.k_nat_op_equations]
   obtain ⟨hst2, hx2, hc2, hp2, hdeq⟩ :=
     ConRon.Bridge.natOpEquations_run hC.check.state hC.check.pins hnm hrun2'
   have hC2 := StageC.of_run hC (hS2.restrict vis) (callW_leafFrame hcl (leaf_mem _ (by decide)) h2)
@@ -297,12 +293,9 @@ theorem dnc_ref (hN : NatSubProg' p) (hq : KnotStageProg p) (hcl : LeafClosed p)
   have e5' : rdW (m2.arr64 EREC) (q + 5) = wv := by
     simp only [rdW, hq5]; rw [hg2.erGet _ hqlt, erecP_get hk5]; rfl
   rw [e5']
-  refine RefE.bind_right hrun2' ?_
   -- their substitution
-  rcases h3 : callW p k "subst_const0_pairs" [n, wv, r2.headD 0, r2.tail.headD 0] m2 with
-    _ | ⟨r3, m3⟩
-  · rw [liftE_none, defnNatCertE.k_subst_const0_pairs.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some, defnNatCertE.k_subst_const0_pairs.arm1]
+  rw [← hv]
+  refine RefE.bindLift (fun _ => rfl) fun r3 m3 h3 => ?_
   obtain ⟨x3, a3, hrun3, hS3, hg3, hd3⟩ := pairs_ref hN.toNatSubProg n wv hn hwl x2 (r2.headD 0)
     (r2.tail.headD 0) k m2 a2 r3 m3 hS2 hE2 (EqL.lt64 hE2 hS2.iw) h3
   have hvP2 : denoteE a2.store (decE wv) = some vP := by
@@ -312,27 +305,20 @@ theorem dnc_ref (hN : NatSubProg' p) (hq : KnotStageProg p) (hcl : LeafClosed p)
   have hC3 := StageC.of_run hC2 (hS3.restrict vis) (callW_leafFrame hcl (leaf_mem _ (by decide)) h3)
     hst3 hx3 hc3 hp3
   have hE3 := decEqRL_headD hd3
-  have hrun3' : (substConst0Pairs (decI n) (decE wv) x2).run a2 = .ok (x3, a3) := hrun3
-  rw [← hv]
-  refine RefE.bind_right hrun3' ?_
+  refine ⟨_, _, (hrun3 : (substConst0Pairs (decI n) (decE wv) x2).run a2 = .ok (x3, a3)), ?_⟩
+  dsimp only [defnNatCertE.k_subst_const0_pairs]
   -- the certificate, at the pre-insertion view
-  rcases h4 : callE p k "certify_nat_eqs" [vis, r3.headD 0, r3.tail.headD 0] m3 with e4 | ⟨r4, m4⟩
-  · rw [defnNatCertE.k_certify_nat_eqs.none]
-    exact RefE.bind_left fun hcE => RefE.run_err (s₀ := ⟨m3, Locals.init []⟩)
+  refine RefE.bindCall (fun _ => rfl)
+    (fun hcE _ h4 => RefE.run_err (s₀ := ⟨m3, Locals.init []⟩)
       (certifyNatEqs_specE p hE.lNatCertify k _ vis (r3.headD 0) (r3.tail.headD 0)) trivial hcE
-      (cert_ref hq _ _ x3 k hk' m3 a3 hC3.stageT hE3 (EqL.lt64 hE3 hS3.iw)) h4
-  obtain ⟨x4, a4, hrun4, hC4, hg4, hd4, hx4⟩ := certW_okC hE hq henv hk' hC3 hE3
-    (EqL.lt64 hE3 hS3.iw) hdps (ConRon.Bridge.natOpEqs_wscoped hie.envWF hfindP) (callW_of_callE h4)
-  refine RefE.bind_right hrun4 ?_
-  by_cases e4 : r4.headD 0 = 0
-  · rw [defnNatCertE.k_certify_nat_eqs.abort1 p r4 m4 e4]
-    have t4 : x4 = false := by rw [← hd4.1, e4]; rfl
-    rw [t4]
-    exact RefE.ite_neg (by decide) fun _ => ErrClaim.fail _ _ rfl
-  rw [defnNatCertE.k_certify_nat_eqs.arm1 p r4 m4 e4]
-  have t4 : x4 = true := by rw [← hd4.1]; simpa using e4
-  rw [t4]
-  exact RefE.ite_pos rfl (RefE.ret rfl ⟨hC4, (hg2.trans hg3).trans hg4, hx2.trans (hx3.trans hx4)⟩)
+      (cert_ref hq _ _ x3 k hk' m3 a3 hC3.stageT hE3 (EqL.lt64 hE3 hS3.iw)) h4)
+    (fun _ h4 => certW_okC hE hq henv hk' hC3 hE3 (EqL.lt64 hE3 hS3.iw) hdps
+      (ConRon.Bridge.natOpEqs_wscoped hie.envWF hfindP) h4)
+    fun r4 m4 x4 a4 _ _ ⟨hC4, hg4, hd4, hx4⟩ => ?_
+  dsimp only [defnNatCertE.k_certify_nat_eqs]
+  refine RefE.guardIf rfl (fun e4 => by rw [← hd4.1, e4]; rfl)
+    (fun e4 => by rw [← hd4.1] at e4; simpa using e4) fun _ _ => ?_
+  exact RefE.ret rfl ⟨hC4, (hg2.trans hg3).trans hg4, hx2.trans (hx3.trans hx4)⟩
 
 /-- What `defn_nat_gate` gives besides the twin's run (from `m`, `a`): the stage relation at the
 pushed view `w`, `StageC` at the pre-insertion view `vis`, the growth, `Ext` of the twin's
@@ -371,21 +357,17 @@ theorem dng_ref (hN : NatSubProg' p) (hq : KnotStageProg p) (hcl : LeafClosed p)
   have hvb : fe2.visibleBelow = w.toNat := hSw.check.env.vis
   rw [natGateT_eq]
   -- the operation names
-  rcases h1 : callW p k "nat_op_names" [] m with _ | ⟨r1, m1⟩
-  · rw [liftE_none, defnNatGateE.k_nat_op_names.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some, defnNatGateE.k_nat_op_names.arm1]
-  obtain ⟨xs, a1, hrun1, hS1, hg1, hd1⟩ := natOpNames_ref hG k m a r1 m1 hSw h1
+  refine RefE.bindSim (fun _ => rfl) (natOpNames_ref hG k m a · · hSw ·)
+    fun r1 xs m1 a1 h1 hrun1 ⟨hS1, hg1, hd1⟩ => ?_
+  dsimp only [defnNatGateE.k_nat_op_names]
   obtain ⟨e1, -⟩ := ConRon.Bridge.natOpNames_run hC.check.pins hrun1
   have e1' := e1.symm
   subst e1'
-  refine RefE.bind_right hrun1 ?_
   have hC1 := StageC.of_run hC (hS1.restrict vis) (callW_leafFrame hcl (leaf_mem _ (by decide)) h1)
     hC.check.state (Ext.refl _) rfl rfl
   obtain ⟨hdh1, hb1⟩ := decRL0 hd1
   -- membership
-  rcases h2 : callW p k "sl_contains" [r1.headD 0, r1.tail.headD 0, n] m1 with _ | ⟨r2, m2⟩
-  · rw [liftE_none, defnNatGateE.k_sl_contains.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]
+  refine RefE.onlySim (fun _ => rfl) (fun _ _ h => h) fun r2 m2 h2 => ?_
   obtain ⟨x2, a2, hrun2, hS2, hg2, hd2⟩ := slContains_ref hG.lSlContains (r1.headD 0)
     (r1.tail.headD 0) n xs hn k m1 a r2 m2 ⟨hS1, hdh1⟩ h2
   have ha2 : a2 = a := by
@@ -409,64 +391,40 @@ theorem dng_ref (hN : NatSubProg' p) (hq : KnotStageProg p) (hcl : LeafClosed p)
   rw [hx2t]
   refine RefE.ite_pos rfl ?_
   -- the guard
-  rcases h3 : callW p k "nat_op_guard" [w, n] m2 with _ | ⟨r3, m3⟩
-  · rw [liftE_none, defnNatGateE.k_nat_op_guard.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some, defnNatGateE.k_nat_op_guard.arm1]
-  obtain ⟨x3, a3, hrun3, hS3, hg3, hd3⟩ := natOpGuard_ref hGd n k m2 a2 r3 m3 ⟨hS2, hn⟩ h3
+  refine RefE.bindSim (fun _ => rfl) (natOpGuard_ref hGd n k m2 a2 · · ⟨hS2, hn⟩ ·)
+    fun r3 x3 m3 a3 h3 hrun3 ⟨hS3, hg3, hd3⟩ => ?_
+  dsimp only [defnNatGateE.k_nat_op_guard]
   obtain ⟨hst3, hx3, hc3, hp3, -⟩ :=
     ConRon.Bridge.natOpGuard_run hC2.check.state hC2.check.pins hie.ienv hnm hrun3
   have hC3 := StageC.of_run hC2 (hS3.restrict vis) (callW_leafFrame hcl (leaf_mem _ (by decide)) h3)
     hst3 hx3 hc3 hp3
   have hnm3 := ConRon.Bridge.denoteN_ext hnm hx3
-  refine RefE.bind_right hrun3 ?_
   -- the dependencies
-  rcases h4 : callW p k "nat_op_deps" [n] m3 with _ | ⟨r4, m4⟩
-  · rw [liftE_none, defnNatGateE.k_nat_op_deps.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some, defnNatGateE.k_nat_op_deps.arm1]
-  obtain ⟨ds, a4, hrun4, hS4, hg4, hd4⟩ := natOpDeps_ref hG n k m3 a3 r4 m4 ⟨hS3, hn⟩ h4
+  refine RefE.bindSim (fun _ => rfl) (natOpDeps_ref hG n k m3 a3 · · ⟨hS3, hn⟩ ·)
+    fun r4 ds m4 a4 h4 hrun4 ⟨hS4, hg4, hd4⟩ => ?_
+  dsimp only [defnNatGateE.k_nat_op_deps]
   obtain ⟨hst4, hx4, hc4, hp4, hdeps⟩ :=
     ConRon.Bridge.natOpDeps_run hst3 hC3.check.pins hnm3 hrun4
   have hC4 := StageC.of_run hC3 (hS4.restrict vis) (callW_leafFrame hcl (leaf_mem _ (by decide)) h4)
     hst4 hx4 hc4 hp4
   obtain ⟨hdh4, hb4⟩ := decRL0 hd4
-  refine RefE.bind_right hrun4 ?_
   -- the stored dependencies
-  rcases h5 : callW p k "nat_op_stored_ok_all" [w, r4.headD 0, r4.tail.headD 0] m4 with
-    _ | ⟨r5, m5⟩
-  · rw [liftE_none, defnNatGateE.k_nat_op_stored_ok_all.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]
-  obtain ⟨x5, a5, hrun5, hS5, hg5, hd5⟩ :=
-    okAll_ref hT (r4.headD 0) (r4.tail.headD 0) ds k m4 a4 r5 m5 hS4 hdh4 hb4 h5
+  refine RefE.bindSim (fun _ => rfl) (okAll_ref hT (r4.headD 0) (r4.tail.headD 0) ds k m4 a4 · · hS4 hdh4 hb4 ·)
+    fun r5 x5 m5 a5 h5 hrun5 ⟨hS5, hg5, hd5⟩ => ?_
   obtain ⟨hst5, hx5, hc5, hp5, -⟩ := ConRon.Bridge.natOpStoredOkAll_run hst4 hC4.check.pins
     (hie.mono (hx3.trans hx4)).ienv hdeps hrun5
   have hC5 := StageC.of_run hC4 (hS5.restrict vis) (callW_leafFrame hcl (leaf_mem _ (by decide)) h5)
     hst5 hx5 hc5 hp5
-  refine RefE.bind_right hrun5 ?_
-  by_cases e35 : r3.headD 0 = 0 ∨ r5.headD 0 = 0
-  · rw [defnNatGateE.k_nat_op_stored_ok_all.abort1 p _ _ _ _ _ _ _ e35]
-    have hbool : (x3 && x5) = false := by
-      rcases e35 with e | e
-      · have : x3 = false := by rw [← hd3.1, e]; rfl
-        simp [this]
-      · have : x5 = false := by rw [← hd5.1, e]; rfl
-        simp [this]
-    rw [hbool]
-    exact RefE.ite_neg (by decide) (RefE.bind_left fun _ => ErrClaim.fail _ _ rfl)
-  rw [defnNatGateE.k_nat_op_stored_ok_all.arm1 p _ _ _ _ _ _ _ e35]
-  have t3 : x3 = true := by rw [← hd3.1]; simp at e35; simp [e35.1]
-  have t5 : x5 = true := by rw [← hd5.1]; simp at e35; simp [e35.2]
-  rw [t3, t5]
-  refine RefE.ite_pos rfl ?_
+  dsimp only [defnNatGateE.k_nat_op_stored_ok_all]
+  have e3 := hd3.1
+  have e5 := hd5.1
+  refine RefE.guard rfl (fun e35 => by grind) (fun hb => by grind) fun _ _ => ?_
   -- the certificate
   have hx35 := hx3.trans (hx4.trans hx5)
-  have h6r := dnc_ref hN hq hcl k hk' hn hS5 hC5 henv (hie.mono hx35)
-    (ConRon.Bridge.denoteN_ext hnm hx35)
-  rcases h6 : defnNatCertE p k m5 vis w n with e6 | ⟨r6, m6⟩ <;> rw [h6] at h6r
-  · rw [defnNatGateE.k_defn_nat_cert.none]; exact h6r
-  rw [defnNatGateE.k_defn_nat_cert.arm1, defnNatGateE.j1.arm1]
-  obtain ⟨_, a6, hrun6, hC6, hg6, hx6⟩ := h6r
-  exact RefE.ret hrun6 ⟨stageR_of_restrict hC6.stage hvb, hC6,
-    (((((hg1.trans hg2).trans hg3).trans hg4).trans hg5).trans hg6), hx35.trans hx6⟩
+  refine RefE.lastE (K := defnNatGateE.k_defn_nat_cert p) (fun _ => rfl) (fun _ => rfl) id
+    (dnc_ref hN hq hcl k hk' hn hS5 hC5 henv (hie.mono hx35) (ConRon.Bridge.denoteN_ext hnm hx35))
+    fun _ _ _ _ ⟨hC6, hg6, hx6⟩ => ⟨stageR_of_restrict hC6.stage hvb, hC6,
+      (((((hg1.trans hg2).trans hg3).trans hg4).trans hg5).trans hg6), hx35.trans hx6⟩
 
 /-- **`defn_nat_gate` under `StageC`** from the call's run (`dng_ref`'s ok half). -/
 theorem defnNatGate_okC (hN : NatSubProg' p) (hg : p.lookup "defn_nat_gate" = some defnNatGate)
