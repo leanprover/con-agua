@@ -109,23 +109,17 @@ theorem dt_ref (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : StuckCalle
     (pp_ref p hq hc k (hk.mono (by omega)) F s₀ a₀ dn vis fe M eb mode d a1 b1 (by omega)
       (by omega) hs ha hb hd)
     (fun r₁ m₁ _ _ M₁ hS₁ _ => ?_)
-  simp only [dtE.k_defeq_proj_pair]
+  dsimp only [dtE.k_defeq_proj_pair]
   by_cases h0 : r₁.headD 0 ≠ 0
   · rw [ite_eq_left h0, decBool_true_of h0]; exact RefE.ret rfl (CorePost.ret hS₁ rfl hw1)
   rw [ite_eq_right h0, decBool_false_of (by simpa using h0)]
   simp only [Bool.false_eq_true, ↓reduceIte]
-  rcases c2 : callW p (k + 1) "head_is_proj" [a1] m₁ with _ | ⟨r₂, m₂⟩
-  · rw [liftE_none, dtE.k_head_is_proj.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]; simp only [dtE.k_head_is_proj]
-  have h₂ := CoreSpec.of_callW (headIsProj_at p hq (k + 1) ⟨m₁, Locals.init []⟩ _ dn vis fe M₁ eb a1
-    hS₁ ha) c2
-  refine RefE.bind_core (w := id) h₂ (fun M₂ hS₂ _ => ?_)
-  rcases c3 : callW p (k + 1) "head_is_proj" [b1] m₂ with _ | ⟨r₃, m₃⟩
-  · rw [liftE_none, dtE.k_head_is_proj_2.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]; simp only [dtE.k_head_is_proj_2]
-  have h₃ := CoreSpec.of_callW (headIsProj_at p hq (k + 1) ⟨m₂, Locals.init []⟩ _ dn vis fe M₂ eb b1
-    hS₂ hb) c3
-  refine RefE.bind_core (w := id) h₃ (fun M₃ hS₃ _ => ?_)
+  refine RefE.bind_callW (fun _ => rfl) (headIsProj_at p hq (k + 1) ⟨m₁, Locals.init []⟩ _ dn vis fe M₁ eb a1
+    hS₁ ha) fun r₂ m₂ _ h₂ => RefE.after_core (w := id) h₂ fun M₂ hS₂ _ => ?_
+  dsimp only [dtE.k_head_is_proj]
+  refine RefE.bind_callW (fun _ => rfl) (headIsProj_at p hq (k + 1) ⟨m₂, Locals.init []⟩ _ dn vis fe M₂ eb b1
+    hS₂ hb) fun r₃ m₃ _ h₃ => RefE.after_core (w := id) h₃ fun M₃ hS₃ _ => ?_
+  dsimp only [dtE.k_head_is_proj_2]
   have hpp : (!decBool r₂ && !decBool r₃) = decide (r₂.headD 0 = 0 ∧ r₃.headD 0 = 0) := by
     unfold decBool
     generalize r₂.headD 0 = u
@@ -138,22 +132,20 @@ theorem dt_ref (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : StuckCalle
     exact hstk _ m₃ M₃ hS₃
   rw [ite_eq_right hp0]
   simp only [hp0, decide_false, Bool.false_eq_true, ↓reduceIte]
-  rcases c4 : callE p (k + 1) "whnf_core" [mode, 0, vis, d, a1] m₃ with e | ⟨r₄, m₄⟩
-  · exact fun hG => ErrClaim.bind_left (CoreSpecE.of_callE (s₀ := ⟨m₃, Locals.init []⟩)
-      ((hG.knot (k + 1) (Nat.le_refl _)).whnfCore F ⟨m₃, Locals.init []⟩ _ dn vis fe M₃ eb mode 0 d a1
-        hF hn ⟨hS₃, hs.mode4, hs.eb_mode⟩ ha) c4)
-  have h₄ := CoreSpec.of_callW ((hk (k + 1) (Nat.le_refl _)).whnfCore F ⟨m₃, Locals.init []⟩ _ dn vis
-    fe M₃ eb mode 0 d a1 hF hn ⟨hS₃, hs.mode4, hs.eb_mode⟩ ha) (callW_of_callE c4)
-  simp only [dtE.k_whnf_core]
-  refine RefE.bind_core (w := id) h₄ (fun M₄ hS₄ _ => ?_)
-  rcases c5 : callE p (k + 1) "whnf_core" [mode, 0, vis, d, b1] m₄ with e | ⟨r₅, m₅⟩
-  · exact fun hG => ErrClaim.bind_left (CoreSpecE.of_callE (s₀ := ⟨m₄, Locals.init []⟩)
-      ((hG.knot (k + 1) (Nat.le_refl _)).whnfCore F ⟨m₄, Locals.init []⟩ _ dn vis fe M₄ eb mode 0 d b1
-        hF hn ⟨hS₄, hs.mode4, hs.eb_mode⟩ hb) c5)
-  have h₅ := CoreSpec.of_callW ((hk (k + 1) (Nat.le_refl _)).whnfCore F ⟨m₄, Locals.init []⟩ _ dn vis
-    fe M₄ eb mode 0 d b1 hF hn ⟨hS₄, hs.mode4, hs.eb_mode⟩ hb) (callW_of_callE c5)
-  simp only [dtE.k_whnf_core_2]
-  refine RefE.bind_core (w := id) h₅ (fun M₅ hS₅ _ => ?_)
+  have hs₃ : SlotPre ⟨m₃, Locals.init []⟩ _ dn vis fe M₃ eb mode := ⟨hS₃, hs.mode4, hs.eb_mode⟩
+  refine RefE.bind_callE (fun _ => rfl)
+    ((hk (k + 1) (Nat.le_refl _)).whnfCore F _ _ dn vis fe M₃ eb mode 0 d a1 hF hn hs₃ ha)
+    (fun (hG : TailG p (k + 1)) => (hG.knot (k + 1) (Nat.le_refl _)).whnfCore F _ _ dn vis fe M₃ eb mode
+        0 d a1 hF hn hs₃ ha)
+    fun r₄ m₄ _ h₄ => RefE.after_core (w := id) h₄ fun M₄ hS₄ _ => ?_
+  dsimp only [dtE.k_whnf_core]
+  have hs₄ : SlotPre ⟨m₄, Locals.init []⟩ _ dn vis fe M₄ eb mode := ⟨hS₄, hs.mode4, hs.eb_mode⟩
+  refine RefE.bind_callE (fun _ => rfl)
+    ((hk (k + 1) (Nat.le_refl _)).whnfCore F _ _ dn vis fe M₄ eb mode 0 d b1 hF hn hs₄ hb)
+    (fun (hG : TailG p (k + 1)) => (hG.knot (k + 1) (Nat.le_refl _)).whnfCore F _ _ dn vis fe M₄ eb mode
+        0 d b1 hF hn hs₄ hb)
+    fun r₅ m₅ _ h₅ => RefE.after_core (w := id) h₅ fun M₅ hS₅ _ => ?_
+  dsimp only [dtE.k_whnf_core_2]
   have heq : (decH r₄ == decE a1 && decH r₅ == decE b1) =
       decide (r₄.headD 0 = a1 ∧ r₅.headD 0 = b1) := by
     simp only [decH, decE_beq h₄.resOk ha, decE_beq h₅.resOk hb, Bool.decide_and]
@@ -164,14 +156,13 @@ theorem dt_ref (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : StuckCalle
     exact hstk _ m₅ M₅ hS₅
   rw [ite_eq_right hm]
   simp only [hm, decide_false, Bool.false_eq_true, ↓reduceIte]
-  rcases c6 : callE p (k + 1) "defeq" [mode, vis, d, r₄.headD 0, r₅.headD 0] m₅ with e | ⟨r₆, m₆⟩
-  · exact fun hG => CoreSpecE.of_callE (s₀ := ⟨m₅, Locals.init []⟩)
-      ((hG.knot (k + 1) (Nat.le_refl _)).defeq F _ _ dn vis fe M₅ eb mode d (r₄.headD 0) (r₅.headD 0)
-        hF hn ⟨hS₅, hs.mode4, hs.eb_mode⟩ h₄.resOk h₅.resOk) c6
-  obtain ⟨hrun, hP⟩ := (CoreSpec.of_callW (s₀ := ⟨m₅, Locals.init []⟩)
-    ((hk (k + 1) (Nat.le_refl _)).defeq F _ _ dn vis fe M₅ eb mode d (r₄.headD 0) (r₅.headD 0) hF hn
-      ⟨hS₅, hs.mode4, hs.eb_mode⟩ h₄.resOk h₅.resOk) (callW_of_callE c6)).post
-  exact RefE.ret hrun ⟨hP.after, hP.res, hP.valid⟩
+  have hs₅ : SlotPre ⟨m₅, Locals.init []⟩ _ dn vis fe M₅ eb mode := ⟨hS₅, hs.mode4, hs.eb_mode⟩
+  rw [← bind_pure ((coreKnot (decMode mode) fe id F).defeq _ _ _)]
+  exact RefE.bind_callE (fun _ => rfl)
+    ((hk (k + 1) (Nat.le_refl _)).defeq F _ _ dn vis fe M₅ eb mode d _ _ hF hn hs₅ h₄.resOk h₅.resOk)
+    (fun (hG : TailG p (k + 1)) => (hG.knot (k + 1) (Nat.le_refl _)).defeq F _ _ dn vis fe M₅ eb mode d _
+        _ hF hn hs₅ h₄.resOk h₅.resOk)
+    fun _ _ _ h => RefE.ret rfl ⟨h.after, rfl, h.resOk⟩
 
 /-- **`defeq_tail` refines `defeqTailT`** (`defeqBody` past the lazy-delta loop) at the knot
 (`dt_ref`'s ok half). -/

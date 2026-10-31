@@ -141,6 +141,12 @@ l_model drE_spec (p : Prog) (hf : p.lookup "stuck_rest" = some stuckRestL)
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
+theorem ite_ite_neg {α : Type} {c d : Prop} [Decidable c] [Decidable d] {x y : α} (h : ¬ (c ∧ d)) :
+    (if c then (if d then x else y) else y) = y := by
+  by_cases hc : c
+  · rw [ite_eq_left hc, ite_eq_right (fun hd => h ⟨hc, hd⟩)]
+  · rw [ite_eq_right hc]
+
 /-- **`stuck_rest` refines `defeqStuck`, both outcomes**, past its string-literal and application
 arms: the errors are `eta_cert`'s, `stuck_irrel`'s and the level comparison's decline (out of
 level fuel, as the twin's `liftFueled`). -/
@@ -171,29 +177,13 @@ theorem dr_ref (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : StuckCalle
     obtain ⟨i, t, rfl⟩ := tagV_fvar (hta ▸ hf.1)
     obtain ⟨j, u, rfl⟩ := tagV_fvar (htb ▸ hf.2)
     refine RefE.of_run_eq (ds_fvar _ _ fe _ _ _ a₀ i j t u hva hvb) ?_
-    have hij : (i == j) = decide (a1 = b1) := by
-      rw [← hwa.2, ← hwb.2]
-      by_cases e : a1 = b1
-      · simp [e]
-      · have : a1.toNat ≠ b1.toNat := fun e' => e (UInt64.toNat_inj.mp e')
-        simp [e, this]
-    rw [hij]
     by_cases e : a1 = b1
-    · rw [ite_eq_left e]
-      simp only [e, decide_true, ↓reduceIte]
+    · rw [ite_eq_left e, show (i == j) = true by simp [← hwa.2, ← hwb.2, e]]
       exact RefE.ret rfl (CorePost.ret hS rfl L.Arena.hw1)
-    · rw [ite_eq_right e]
-      simp only [e, decide_false, Bool.false_eq_true, ↓reduceIte]
+    · rw [ite_eq_right e, show (i == j) = false by
+        simpa [← hwa.2, ← hwb.2] using fun h => e (UInt64.toNat_inj.mp h)]
       exact hirr a₀ s₀.mem M hS
-  have hj1 : ∀ x : Except Err (List Word × Mem),
-      x = drE.j1 p n mode vis d a b ga a1 a2 gb b1 b2 s₀.mem →
-      (if ga = 1 then (if gb = 1 then (if a1 = b1 then .ok ([1], s₀.mem)
-        else drE.k_stuck_irrel p (siE p n s₀.mem mode vis d a b)) else x) else x) = x := by
-    intro x _
-    by_cases g : ga = 1
-    · rw [ite_eq_left g, ite_eq_right (fun h => hf ⟨g, h⟩)]
-    · rw [ite_eq_right g]
-  rw [hj1 _ rfl]
+  rw [ite_ite_neg hf]
   simp only [drE.j1]
   -- the constants
   by_cases hcn : ga = 3 ∧ gb = 3
@@ -206,38 +196,25 @@ theorem dr_ref (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : StuckCalle
     rw [← hd1, ← hd1', ← hd2, ← hd2']
     by_cases e : a1 = b1
     · rw [ite_eq_left e, ite_eq_left (by rw [e])]
-      rcases hl : callW p n "lvls_eq_c" [a2, b2] s₀.mem with _ | ⟨r₁, m₁⟩
-      · rw [liftE_none, drE.k_lvls_eq_c.none]; exact RefE.of_cls0 (by simp)
-      rw [liftE_some]; simp only [drE.k_lvls_eq_c]
-      have h₁ := CoreSpec.of_callW (hc.lvlsEqC n ⟨s₀.mem, Locals.init []⟩ a₀ dn vis fe M eb a2 b2 hS
+      refine RefE.bind_callW (fun _ => rfl) (hc.lvlsEqC n s₀ a₀ dn vis fe M eb a2 b2 hS
         hw2 hw2' (by rw [hd2]; exact (hc.den _ _ _ _ _ _ _ hS).constLs _ _ _ hva)
-        (by rw [hd2']; exact (hc.den _ _ _ _ _ _ _ hS).constLs _ _ _ hvb)) hl
-      refine RefE.bind_core (w := id) h₁ (fun M₁ hS₁ _ => ?_)
-      by_cases z0 : r₁.headD 0 = 0
-      · -- the decline: `lvls_eq_c` ran out of fuel, the twin's `liftFueled` fails
-        rw [ite_eq_left z0, show decO (r₁.headD 0) = none by unfold decO; rw [ite_eq_left z0]]
-        exact fun _ => ErrClaim.bind_left (ErrClaim.fail _ _ rfl)
-      rw [ite_eq_right z0]
+        (by rw [hd2']; exact (hc.den _ _ _ _ _ _ _ hS).constLs _ _ _ hvb))
+        fun r₁ m₁ _ h₁ => RefE.after_core (w := id) h₁ fun M₁ hS₁ _ => ?_
+      dsimp only [drE.k_lvls_eq_c]
+      -- the decline: `lvls_eq_c` ran out of fuel, the twin's `liftFueled` fails
+      refine RefE.guardOpt rfl (fun z0 => ite_eq_left z0) (fun h => by unfold decO at h; grind)
+        fun v hv z0 => ?_
       by_cases z1 : r₁.headD 0 = 1
-      · rw [ite_eq_right (fun h => h z1), show decO (r₁.headD 0) = some false by
-          unfold decO; rw [ite_eq_right z0, ite_eq_left z1]]
+      · rw [decO, ite_eq_right z0, ite_eq_left z1] at hv; cases hv
+        rw [ite_eq_right (fun h => h z1)]
         exact hirr _ m₁ M₁ hS₁
-      · rw [ite_eq_left z1, show decO (r₁.headD 0) = some true by
-          unfold decO; rw [ite_eq_right z0, ite_eq_right z1]]
+      · rw [decO, ite_eq_right z0, ite_eq_right z1] at hv; cases hv
+        rw [ite_eq_left z1]
         exact RefE.ret rfl (CorePost.ret hS₁ rfl L.Arena.hw1)
     · rw [ite_eq_right e]
       rw [ite_eq_right (fun h => e (decI_inj hw1 hw1' h))]
       exact hirr a₀ s₀.mem M hS
-  have hj2 : ∀ x : Except Err (List Word × Mem),
-      x = drE.j2 p n mode vis d a b ga a1 a2 gb b1 b2 s₀.mem →
-      (if ga = 3 then (if gb = 3 then (if a1 = b1 then
-        drE.k_lvls_eq_c p n mode vis d a b (liftE (callW p n "lvls_eq_c" [a2, b2] s₀.mem))
-        else drE.j3 p n mode vis d a b s₀.mem) else x) else x) = x := by
-    intro x _
-    by_cases g : ga = 3
-    · rw [ite_eq_left g, ite_eq_right (fun h => hcn ⟨g, h⟩)]
-    · rw [ite_eq_right g]
-  rw [hj2 _ rfl]
+  rw [ite_ite_neg hcn]
   simp only [drE.j2]
   have hlam : ∀ (t bd : EIdx) (w1 w2 x : Word) (T : AM Bool),
       HW w1 → decE w1 = t → HW w2 → decE w2 = bd → HW x →
@@ -309,12 +286,6 @@ l_model dsE_spec (p : Prog) (hf : p.lookup "defeq_stuck" = some defeqStuckL)
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
-theorem ite_ite_neg {α : Type} {c d : Prop} [Decidable c] [Decidable d] {x y : α} (h : ¬ (c ∧ d)) :
-    (if c then (if d then x else y) else y) = y := by
-  by_cases hc : c
-  · rw [ite_eq_left hc, ite_eq_right (fun hd => h ⟨hc, hd⟩)]
-  · rw [ite_eq_right hc]
-
 /-- **`defeq_stuck` refines `defeqStuck`, both outcomes**: the errors are the arms'. -/
 theorem ds_ref (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : StuckCallees p)
     (n : Nat) (hk : KnotUpTo p n) (F : Nat) (s₀ : St) (a₀ : AState)
@@ -326,29 +297,25 @@ theorem ds_ref (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : StuckCalle
       (CorePost decBool dn s₀.mem vis fe M eb ResH) := by
   have hS := hs.rel
   simp only [dsE]
-  rcases hca : callW p n "e_view" [a] s₀.mem with _ | ⟨ra, m₁⟩
-  · rw [liftE_none, dsE.k_e_view.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]; simp only [dsE.k_e_view]
-  obtain ⟨t₁, ht₁, hts₁, hne₁, hra⟩ := triple_of_callW (L.Ind.eView_spec p hq.eview n s₀ a) hca
-  have hm₁ : m₁ = s₀.mem := by rw [← ht₁, hts₁]
-  subst hm₁
-  rcases hcb : callW p n "e_view" [b] s₀.mem with _ | ⟨rb, m₂⟩
-  · rw [liftE_none, dsE.k_e_view_2.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]; simp only [dsE.k_e_view_2]
-  obtain ⟨t₂, ht₂, hts₂, hne₂, hrb⟩ := triple_of_callW
-    (L.Ind.eView_spec p hq.eview n ⟨s₀.mem, Locals.init []⟩ b) hcb
-  have hm₂ : m₂ = s₀.mem := by rw [← ht₂, hts₂]
-  subst hm₂
-  have hne₁' : L.Ind.eViewW s₀.mem a ≠ [] := hra ▸ hne₁
-  have hne₂' : L.Ind.eViewW s₀.mem b ≠ [] := hrb ▸ hne₂
-  have hhda := eViewW_head s₀.mem a hne₁'
-  have hhdb := eViewW_head s₀.mem b hne₂'
-  rw [← hra] at hhda
-  rw [← hrb] at hhdb
-  obtain ⟨va, hva, hvra⟩ := L.Ind.eViewW_ok s₀.mem a₀ hS.arena.base a hne₁'
-  obtain ⟨vb, hvb, hvrb⟩ := L.Ind.eViewW_ok s₀.mem a₀ hS.arena.base b hne₂'
-  rw [← hra] at hvra
-  rw [← hrb] at hvrb
+  cases n with
+  | zero =>
+    exact RefE.onlySim (Q := fun _ _ => False) (fun _ => rfl)
+      (fun _ _ h => by rw [callW_zero] at h; cases h) fun _ _ h => h.elim
+  | succ k =>
+  refine RefE.onlySim (fun _ => rfl) (fun _ _ h => triple_of_callW (L.Ind.eView_spec p hq.eview (k + 1)
+    ⟨s₀.mem, Locals.init []⟩ a) h) fun ra m₁ ⟨_, ht, hts, hne, hra⟩ => ?_
+  obtain rfl : m₁ = s₀.mem := by rw [← ht, hts]
+  obtain ⟨va, hva, hvra⟩ := L.Ind.eViewW_ok s₀.mem a₀ hS.arena.base a (hra ▸ hne)
+  have hhda := eViewW_head s₀.mem a (hra ▸ hne)
+  rw [← hra] at hvra hhda
+  dsimp only [dsE.k_e_view]
+  refine RefE.onlySim (fun _ => rfl) (fun _ _ h => triple_of_callW (L.Ind.eView_spec p hq.eview (k + 1)
+    ⟨s₀.mem, Locals.init []⟩ b) h) fun rb m₂ ⟨_, ht, hts, hne, hrb⟩ => ?_
+  obtain rfl : m₂ = s₀.mem := by rw [← ht, hts]
+  obtain ⟨vb, hvb, hvrb⟩ := L.Ind.eViewW_ok s₀.mem a₀ hS.arena.base b (hrb ▸ hne)
+  have hhdb := eViewW_head s₀.mem b (hrb ▸ hne)
+  rw [← hrb] at hvrb hhdb
+  dsimp only [dsE.k_e_view_2]
   have hta := viewR_tag hvra
   have htb := viewR_tag hvrb
   by_cases c1 : ra.headD 0 = 8 ∧ rb.headD 0 = 4
@@ -358,18 +325,11 @@ theorem ds_ref (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : StuckCalle
     obtain ⟨-, hfw, hfo, -, -⟩ := hvrb
     rw [getD1] at hfw hfo
     refine RefE.of_run_eq (ds_strL _ _ fe _ _ _ a₀ l fo x hva hvb) ?_
-    cases n with
-    | zero => exact RefE.of_cls0 (e := .outOfFuel) rfl
-    | succ k =>
     have H := str_ref p hq hi hc k (hk.mono (by omega)) F s₀ a₀ dn vis fe M eb mode d
-      a b 0 a (rb.tail.headD 0) l (by omega) (by omega) hs ha hb ha hfw
-      (by rw [← hhda]; exact c1.1) hva
+      a b 0 a (rb.tail.headD 0) l (by omega) (by omega) hs ha hb ha hfw (hhda ▸ c1.1) hva
     rw [hfo, show ((0 : Word) != 0) = false from rfl] at H
     exact RefE.tail_relist1 (fun _ => rfl) (fun _ => rfl) (fun hG => hG.mono (by omega)) H
-  have e1 := ite_ite_neg (x := dsE.k_stuck_rest p (strE p n s₀.mem mode vis d a b 0 a (rb.tail.headD 0)))
-    (y := dsE.j1 p n mode vis d a b (ra.headD 0) (ra.tail.headD 0) (ra.tail.tail.headD 0) (rb.headD 0)
-      (rb.tail.headD 0) (rb.tail.tail.headD 0) s₀.mem) c1
-  rw [e1]
+  rw [ite_ite_neg c1]
   simp only [dsE.j1]
   by_cases c2 : ra.headD 0 = 4 ∧ rb.headD 0 = 8
   · rw [ite_eq_left c2.1, ite_eq_left c2.2]
@@ -378,12 +338,8 @@ theorem ds_ref (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : StuckCalle
     obtain ⟨-, hfw, hfo, -, -⟩ := hvra
     rw [getD1] at hfw hfo
     refine RefE.of_run_eq (ds_strR _ _ fe _ _ _ a₀ l fo x hva hvb) ?_
-    cases n with
-    | zero => exact RefE.of_cls0 (e := .outOfFuel) rfl
-    | succ k =>
     have H := str_ref p hq hi hc k (hk.mono (by omega)) F s₀ a₀ dn vis fe M eb mode d
-      a b 1 b (ra.tail.headD 0) l (by omega) (by omega) hs ha hb hb hfw
-      (by rw [← hhdb]; exact c2.2) hvb
+      a b 1 b (ra.tail.headD 0) l (by omega) (by omega) hs ha hb hb hfw (hhdb ▸ c2.2) hvb
     rw [hfo, show ((1 : Word) != 0) = true from rfl] at H
     exact RefE.tail_relist1 (fun _ => rfl) (fun _ => rfl) (fun hG => hG.mono (by omega)) H
   by_cases c3 : ra.headD 0 = 4 ∧ rb.headD 0 = 4
@@ -391,13 +347,10 @@ theorem ds_ref (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : StuckCalle
     obtain ⟨f, x, rfl⟩ := tagV_app (hta ▸ c3.1)
     obtain ⟨g, y, rfl⟩ := tagV_app (htb ▸ c3.2)
     refine RefE.of_run_eq (ds_app _ _ fe _ _ _ a₀ f x g y hva hvb) ?_
-    cases n with
-    | zero => exact RefE.of_cls0 (e := .outOfFuel) rfl
-    | succ k =>
     exact RefE.tail_relist1 (fun _ => rfl) (fun _ => rfl) (fun hG => hG.mono (by omega))
       (sa_ref p hq hi hc k (hk.mono (by omega)) F s₀ a₀ dn vis fe M eb mode d a b
         (by omega) (by omega) hs ha hb)
-  generalize hJ : dsE.j2 p n mode vis d a b (ra.headD 0) (ra.tail.headD 0) (ra.tail.tail.headD 0)
+  generalize hJ : dsE.j2 p (k + 1) mode vis d a b (ra.headD 0) (ra.tail.headD 0) (ra.tail.tail.headD 0)
     (rb.headD 0) (rb.tail.headD 0) (rb.tail.tail.headD 0) s₀.mem = J2
   have e3 : ∀ x y : Except Err (List Word × Mem), (if ra.headD 0 = 4 then
       (if rb.headD 0 = 8 then x else if rb.headD 0 = 4 then y else J2) else J2) = J2 := by
@@ -407,9 +360,6 @@ theorem ds_ref (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : StuckCalle
     · rw [ite_eq_right g]
   rw [e3, ← hJ]
   simp only [dsE.j2]
-  cases n with
-  | zero => exact RefE.of_cls0 (e := .outOfFuel) rfl
-  | succ k =>
   exact RefE.tail_relist1 (fun _ => rfl) (fun _ => rfl) (fun hG => hG.mono (by omega))
     (dr_ref p hq hi hc k (hk.mono (by omega)) F s₀ a₀ dn vis fe M eb mode d a b _ _ _
       _ _ _ va vb (by omega) (by omega) hs ha hb hva hvb (viewW_of hvra) (viewW_of hvrb) c1 c2 c3)

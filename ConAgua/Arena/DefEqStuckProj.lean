@@ -36,24 +36,6 @@ def ldprExitT (mode : ConLeche.CheckMode) (r : CoreFnsA) (fe : IFEnv) (depth : N
       | none => r.defeq depth a b
     | none => r.defeq depth a b
 
-theorem ldpr_cont_run (mode : ConLeche.CheckMode) (r : CoreFnsA) (fe : IFEnv) (depth : Nat)
-    (sn : NIdx) (i K : Nat) (a b a' b' : EIdx) (s s₁ : AState)
-    (h : (lazyDeltaStep mode r fe depth a b).run s = .ok (.cont a' b', s₁)) :
-    (lazyDeltaProjReduction mode r fe depth sn i (K + 1) a b).run s =
-      (lazyDeltaProjReduction mode r fe depth sn i K a' b').run s₁ := by
-  simp only [lazyDeltaProjReduction, StateT.run_bind, h, except_ok_bind]
-
-theorem ldpr_exit_run (mode : ConLeche.CheckMode) (r : CoreFnsA) (fe : IFEnv) (depth : Nat)
-    (sn : NIdx) (i K : Nat) (a b : EIdx) (s s₁ : AState) (st : DeltaStepA)
-    (hst : ∀ a' b', st ≠ .cont a' b')
-    (h : (lazyDeltaStep mode r fe depth a b).run s = .ok (st, s₁)) :
-    (lazyDeltaProjReduction mode r fe depth sn i (K + 1) a b).run s =
-      (ldprExitT mode r fe depth sn i a b st).run s₁ := by
-  simp only [lazyDeltaProjReduction, StateT.run_bind, h, except_ok_bind]
-  cases st with
-  | cont a' b' => exact absurd rfl (hst a' b')
-  | eq | diff | unknown => rfl
-
 /-! ## `ldpr_exit` -/
 
 /-- **`reduce_proj_core`'s error spec** (whnf family; the error half of `ReduceProjCoreH`). -/
@@ -117,14 +99,13 @@ theorem ex_ref (p : Prog) (hc : StuckCallees p) (n : Nat)
         ((coreKnot (decMode mode) fe id F).defeq d.toNat (decE x) (decE y)) st
         (CorePost decBool dn m vis fe M' eb ResH) := by
     intro st m M' x y hS' hx hy
-    rcases c : callE p n "defeq" [mode, vis, d, x, y] m with e | ⟨r, m'⟩
-    · exact fun hG => CoreSpecE.of_callE (s₀ := ⟨m, Locals.init []⟩)
-        ((hG.knot n (Nat.le_refl _)).defeq F _ st dn vis fe M' eb mode d x y hF hn
-          ⟨hS', hs.mode4, hs.eb_mode⟩ hx hy) c
-    obtain ⟨hrun, hP⟩ := (CoreSpec.of_callW (s₀ := ⟨m, Locals.init []⟩)
-      ((hk n (Nat.le_refl _)).defeq F _ st dn vis fe M' eb mode d x y hF hn
-        ⟨hS', hs.mode4, hs.eb_mode⟩ hx hy) (callW_of_callE c)).post
-    exact RefE.ret hrun ⟨hP.after, hP.res.trans (by simp only [decBool, List.headD_cons]), hP.valid⟩
+    have hs' : SlotPre ⟨m, Locals.init []⟩ st dn vis fe M' eb mode := ⟨hS', hs.mode4, hs.eb_mode⟩
+    rw [← bind_pure ((coreKnot (decMode mode) fe id F).defeq _ _ _)]
+    exact RefE.bind_callE (fun _ => rfl) ((hk n (Nat.le_refl _)).defeq F _ st dn vis fe M' eb mode d x y hF hn
+        hs' hx hy)
+      (fun (hG : ExitG p n) => (hG.knot n (Nat.le_refl _)).defeq F _ st dn vis fe M' eb mode d x y hF hn hs'
+        hx hy)
+      fun _ _ _ h => RefE.ret rfl ⟨h.after, rfl, h.resOk⟩
   simp only [exE]
   by_cases h1 : k = 1
   · rw [ite_eq_left h1, show decDSs [k] = .eq by simp [decDSs, h1]]
@@ -146,28 +127,23 @@ theorem ex_ref (p : Prog) (hc : StuckCallees p) (n : Nat)
     rintro st (rfl | rfl) <;> rfl
   rw [hbody _ (by rw [hst]; split <;> simp)]
   cases n with
-  | zero =>
-    obtain ⟨e', he', h0⟩ := callE_zero p "reduce_proj_core" [mode, vis, d, sn, i, a] s₀.mem
-    rw [he']; exact RefE.of_cls0 h0
+  | zero => exact RefE.callE_zero (fun _ => rfl)
   | succ n' =>
-  rcases c1 : callE p (n' + 1) "reduce_proj_core" [mode, vis, d, sn, i, a] s₀.mem with e | ⟨r₁, m₁⟩
-  · exact fun hG => ErrClaim.bind_left (CoreSpecE.of_callE (hG.rpc n' (hk.mono (by omega))
-      (hG.knot.mono (by omega)) F (by omega) (by omega) s₀ a₀ dn vis fe M eb mode d sn i a hs hsn ha) c1)
-  have h₁ := CoreSpec.of_callW (hc.reduceProjCore n' (hk.mono (by omega)) F (by omega) (by omega) s₀ a₀
-    dn vis fe M eb mode d sn i a hs hsn ha) (callW_of_callE c1)
-  simp only [exE.k_reduce_proj_core]
-  refine RefE.bind_core (w := id) h₁ (fun M₁ hS₁ _ => ?_)
+  refine RefE.bind_callE (fun _ => rfl) (hc.reduceProjCore n' (hk.mono (by omega)) F (by omega) (by omega)
+      s₀ a₀ dn vis fe M eb mode d sn i a hs hsn ha)
+    (fun hG => hG.rpc n' (hk.mono (by omega)) (hG.knot.mono (by omega)) F (by omega) (by omega) s₀ a₀ dn vis
+      fe M eb mode d sn i a hs hsn ha)
+    fun r₁ m₁ _ h₁ => RefE.after_core (w := id) h₁ fun M₁ hS₁ _ => ?_
+  dsimp only [exE.k_reduce_proj_core]
   by_cases f1 : r₁.headD 0 ≠ 0
   · rw [ite_eq_left f1, decOptR_someS f1]
-    rcases c2 : callE p (n' + 1) "reduce_proj_core" [mode, vis, d, sn, i, b] m₁ with e | ⟨r₂, m₂⟩
-    · exact fun hG => ErrClaim.bind_left (CoreSpecE.of_callE (s₀ := ⟨m₁, Locals.init []⟩)
-        (hG.rpc n' (hk.mono (by omega)) (hG.knot.mono (by omega)) F (by omega) (by omega) _ _ dn vis fe
-          M₁ eb mode d sn i b ⟨hS₁, hs.mode4, hs.eb_mode⟩ hsn hb) c2)
-    have h₂ := CoreSpec.of_callW (hc.reduceProjCore n' (hk.mono (by omega)) F (by omega) (by omega)
-      ⟨m₁, Locals.init []⟩ _ dn vis fe M₁ eb mode d sn i b ⟨hS₁, hs.mode4, hs.eb_mode⟩ hsn hb)
-      (callW_of_callE c2)
-    simp only [exE.k_reduce_proj_core_2]
-    refine RefE.bind_core (w := id) h₂ (fun M₂ hS₂ _ => ?_)
+    have hs₁ : SlotPre ⟨m₁, Locals.init []⟩ _ dn vis fe M₁ eb mode := ⟨hS₁, hs.mode4, hs.eb_mode⟩
+    refine RefE.bind_callE (fun _ => rfl) (hc.reduceProjCore n' (hk.mono (by omega)) F (by omega)
+        (by omega) _ _ dn vis fe M₁ eb mode d sn i b hs₁ hsn hb)
+      (fun hG => hG.rpc n' (hk.mono (by omega)) (hG.knot.mono (by omega)) F (by omega) (by omega) _ _ dn
+        vis fe M₁ eb mode d sn i b hs₁ hsn hb)
+      fun r₂ m₂ _ h₂ => RefE.after_core (w := id) h₂ fun M₂ hS₂ _ => ?_
+    dsimp only [exE.k_reduce_proj_core_2]
     by_cases f2 : r₂.headD 0 ≠ 0
     · rw [ite_eq_left f2, decOptR_someS f2]
       exact hdef _ m₂ M₂ _ _ hS₂ h₁.resOk.2 h₂.resOk.2
@@ -233,56 +209,36 @@ theorem ldpr_ref (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (n : Nat) (
   | succ k ih =>
     intro hkn K hK m a MM eb x y hS heb hx hy
     rw [ldprE.loop1.arm1 _ _ _ _ _ _ _ _ _ _ rfl]
-    rcases hcl : callE p k "lazy_delta_step" [mode, vis, d, x, y] m with e | ⟨r, m₁⟩
-    · rw [ldprE.k_lazy_delta_step.none]
-      cases k with
-      | zero =>
-        obtain ⟨e', he', h0⟩ := callE_zero p "lazy_delta_step" [mode, vis, d, x, y] m
-        rw [hcl] at he'; cases he'; exact RefE.of_cls0 h0
-      | succ j =>
-      obtain ⟨K', rfl⟩ : ∃ K', K = K' + 1 := ⟨K - 1, by omega⟩
-      exact RefE.bind_left fun hG => CoreSpecE.of_callE (s₀ := ⟨m, Locals.init []⟩)
-        (hG.step j (by omega) F (by omega) (by omega) ⟨m, Locals.init []⟩ a dn vis fe MM eb mode d x y
-          ⟨hS, hmode, heb⟩ hx hy hd) hcl
     cases k with
-    | zero =>
-      obtain ⟨e', he', -⟩ := callE_zero p "lazy_delta_step" [mode, vis, d, x, y] m
-      rw [hcl] at he'; cases he'
+    | zero => exact RefE.callE_zero (fun _ => ldprE.k_lazy_delta_step.none ..)
     | succ j =>
     obtain ⟨K', rfl⟩ : ∃ K', K = K' + 1 := ⟨K - 1, by omega⟩
-    have hstep := hc.lazyDeltaStep j (hk.mono (by omega)) F (by omega) (by omega)
-      ⟨m, Locals.init []⟩ a dn vis fe MM eb mode d x y ⟨hS, hmode, heb⟩ hx hy hd
-    obtain ⟨hok, hA, hres, hrw⟩ := CoreSpec.of_callW hstep (callW_of_callE hcl)
-    have hsr := AM.run_of_ok _ _ hok
-    rw [hres] at hsr
-    obtain ⟨M', hS₁, hK₁, hSt₁⟩ := hA
+    have hs : SlotPre ⟨m, Locals.init []⟩ a dn vis fe MM eb mode := ⟨hS, hmode, heb⟩
+    rw [lazyDeltaProjReduction]
+    refine RefE.bind_callE (fun _ => ldprE.k_lazy_delta_step.none ..)
+      (hc.lazyDeltaStep j (hk.mono (by omega)) F (by omega) (by omega) _ a dn vis fe MM eb mode d x y hs
+        hx hy hd)
+      (fun hG => hG.step j (by omega) F (by omega) (by omega) _ a dn vis fe MM eb mode d x y hs hx hy hd)
+      fun r m₁ _ h₁ => RefE.after_core (w := fun (v : Word × Mem) => ([v.1], v.2)) h₁ fun M₁ hS₁ _ => ?_
     by_cases h0 : r.headD 0 = 0
-    · rw [ldprE.k_lazy_delta_step.arm2 _ _ _ _ _ _ _ _ _ _ _ h0]
-      rw [decDS_zero h0] at hsr
-      exact RefE.of_run_eq (ldpr_cont_run (decMode mode) (coreKnot (decMode mode) fe id F) fe
-        d.toNat (decI sn) i.toNat K' (decE x) (decE y) _ _ a _ hsr)
-        ((ih (by omega) K' (by omega) m₁ _ M' eb _ _ hS₁ heb hrw.2.1 hrw.2.2).mono
-          fun _ _ _ h => ⟨CoreAfter.comp hK₁ hSt₁ h.after, h.res, h.valid⟩)
+    · rw [ldprE.k_lazy_delta_step.arm2 _ _ _ _ _ _ _ _ _ _ _ h0, decDS_zero h0]
+      exact ih (by omega) K' (by omega) m₁ _ M₁ eb _ _ hS₁ heb h₁.resOk.2.1 h₁.resOk.2.2
     rw [ldprE.k_lazy_delta_step.arm1 _ _ _ _ _ _ _ _ _ _ _ h0]
-    have hds : decDSs r = decDSs [r.headD 0] := decDS_nz h0
-    have hnc : ∀ a' b', decDSs r ≠ .cont a' b' := decDS_ne_cont h0
-    have hrun := ldpr_exit_run (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decI sn)
-      i.toNat K' (decE x) (decE y) _ _ _ hnc hsr
-    rw [hds] at hrun
-    refine RefE.of_run_eq hrun ?_
-    rcases hx' : callE p (j + 1) "ldpr_exit" [mode, vis, d, sn, i, x, y, r.headD 0] m₁ with
-      e | ⟨r', m₂⟩
-    · rw [ldprE.k_ldpr_exit.none]
-      exact fun hG => RefE.run_err (exE_spec p hq.ldprExit (j + 1) ⟨m₁, Locals.init []⟩ mode vis d sn
-        i x y (r.headD 0)) trivial ⟨hG.knot.mono (by omega), hG.rpc⟩
-        (ex_ref p hc j (hk.mono (by omega)) F ⟨m₁, Locals.init []⟩ _ dn vis fe M' eb mode d sn i x y
-          (r.headD 0) (by omega) (by omega) ⟨hS₁, hmode, heb⟩ hsn hx hy h0) hx'
+    refine RefE.of_run_eq (T' := ldprExitT (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat
+      (decI sn) i.toNat (decE x) (decE y) (decDSs [r.headD 0]) >>= pure) (by
+        rw [bind_pure, ← decDS_nz h0]
+        rcases hd : decDSs r with _ | _ | _ | _ <;> first | rfl | exact absurd hd (decDS_ne_cont h0 _ _)) ?_
+    have hs₁ : SlotPre ⟨m₁, Locals.init []⟩ _ dn vis fe M₁ eb mode := ⟨hS₁, hmode, heb⟩
+    refine RefE.bind_callE (fun _ => ldprE.k_ldpr_exit.none ..)
+      (ldprExit_refines p hq hc j (hk.mono (by omega)) F _ _ dn vis fe M₁ eb mode d sn i x y (r.headD 0)
+        (by omega) (by omega) hs₁ hsn hx hy h0)
+      (fun hG => RefE.coreSpecE (exE_spec p hq.ldprExit (j + 1) _ mode vis d sn i x y (r.headD 0)) trivial
+        ⟨hG.knot.mono (by omega), hG.rpc⟩ (ex_ref p hc j (hk.mono (by omega)) F _ _ dn vis fe M₁ eb mode d
+          sn i x y (r.headD 0) (by omega) (by omega) hs₁ hsn hx hy h0))
+      fun r' m₂ _ h₂ => ?_
     rw [ldprE.k_ldpr_exit.arm1]
-    obtain ⟨hrun₂, hR⟩ := (CoreSpec.of_callW (s₀ := ⟨m₁, Locals.init []⟩)
-      (ldprExit_refines p hq hc j (hk.mono (by omega)) F ⟨m₁, Locals.init []⟩ _ dn vis fe
-        M' eb mode d sn i x y (r.headD 0) (by omega) (by omega) ⟨hS₁, hmode, heb⟩ hsn hx hy h0)
-      (callW_of_callE hx')).post
-    exact RefE.ret hrun₂ ⟨CoreAfter.comp hK₁ hSt₁ hR.after, by simpa [decBool] using hR.res, hR.valid⟩
+    exact RefE.after_core (w := fun (v : Word × Mem) => ([v.1], v.2)) h₂ fun M₂ hS₂ _ =>
+      RefE.ret rfl (CorePost.ret hS₂ rfl h₂.resOk)
 
 /-- `lazy_delta_proj_reduction` from its run, both outcomes (`ldpr_ref` at the call's fuel). -/
 theorem ldpr_refC (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (n : Nat)
@@ -376,18 +332,10 @@ theorem pp_ref (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (n : Nat)
   rw [ite_eq_right g2]
   have g1' : a >>> 28 = 9 := by simpa using g1
   have g2' : b >>> 28 = 9 := by simpa using g2
-  by_cases c1 : tierW a ≠ 0 ∧ rdW (s₀.mem.arr64 CTL) 1 = 0
-  · rw [ite_eq_left c1]; exact RefE.of_cls0 rfl
-  rw [ite_eq_right c1]
-  by_cases c2 : tcnt s₀.mem PROJ (tierW a) ≤ idxW a
-  · rw [ite_eq_left c2]; exact RefE.of_cls0 rfl
-  rw [ite_eq_right c2]
-  by_cases c3 : tierW b ≠ 0 ∧ rdW (s₀.mem.arr64 CTL) 1 = 0
-  · rw [ite_eq_left c3]; exact RefE.of_cls0 rfl
-  rw [ite_eq_right c3]
-  by_cases c4 : tcnt s₀.mem PROJ (tierW b) ≤ idxW b
-  · rw [ite_eq_left c4]; exact RefE.of_cls0 rfl
-  rw [ite_eq_right c4]
+  refine RefE.abort0 (by rfl) fun c1 => ?_
+  refine RefE.abort0 (by rfl) fun c2 => ?_
+  refine RefE.abort0 (by rfl) fun c3 => ?_
+  refine RefE.abort0 (by rfl) fun c4 => ?_
   obtain ⟨hva, hx1, hx3⟩ := view_proj s₀.mem a₀ hR a ha ⟨c1, by simpa using c2⟩ g1'
   obtain ⟨hvb, hy1, hy3⟩ := view_proj s₀.mem a₀ hR b hb ⟨c3, by simpa using c4⟩ g2'
   have hboth : ((decE a).tag == ETag.proj && (decE b).tag == ETag.proj) = true := by

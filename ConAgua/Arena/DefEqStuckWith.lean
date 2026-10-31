@@ -277,30 +277,21 @@ theorem sect_ref (p : Prog) (hi : IotaProg' p) (hc : StuckCallees p)
       (GrowPost decBool dn s₀.mem vis fe M eb ResH) := by
   have hspn := hs.rel.spn
   simp only [sectE]
-  rcases c1 : callW p n "lvls_eq_c" [us, us2] s₀.mem with _ | ⟨r₁, m₁⟩
-  · rw [liftE_none, sectE.k_lvls_eq_c.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]
-  have h₁ := CoreSpec.of_callW (hc.lvlsEqC n s₀ a₀ dn vis fe M eb us us2 hs.rel hus hus2 hdus hdus2) c1
+  refine RefE.onlySim (fun _ => rfl) (fun _ _ h => CoreSpec.of_callW
+    (hc.lvlsEqC n s₀ a₀ dn vis fe M eb us us2 hs.rel hus hus2 hdus hdus2) h) fun r₁ m₁ h₁ => ?_
   obtain ⟨_, _, _, hst₁⟩ := h₁.after
   unfold setTailT
   refine RefE.bind_growK (w := id) h₁ (fun M₁ hS₁ _ => ?_)
-  simp only [sectE.k_lvls_eq_c]
-  by_cases h0 : r₁.headD 0 = 0
-  · rw [ite_eq_left h0]
-    have hdo : decO (r₁.headD 0) = none := by rw [h0]; rfl
-    rw [hdo]
-    exact fun _ => ErrClaim.bind_left (ErrClaim.fail _ _ rfl)
-  rw [ite_eq_right h0]
+  dsimp only [sectE.k_lvls_eq_c]
+  -- the decline: `lvls_eq_c` ran out of fuel, the twin's `liftFueled` fails
+  refine RefE.guardOpt rfl (fun z0 => ite_eq_left z0) (fun h => by unfold decO at h; grind)
+    fun v hv h0 => ?_
   by_cases h1 : r₁.headD 0 = 1
-  · rw [ite_eq_left h1]
-    have hdo : decO (r₁.headD 0) = some false := by rw [h1]; rfl
-    rw [hdo]
-    refine RefE.bind_right (by simp [liftFueled]; rfl) ?_
+  · rw [decO, ite_eq_right h0, ite_eq_left h1] at hv; cases hv
+    rw [ite_eq_left h1]
     exact RefE.ret rfl (GrowPost.of_core (CorePost.ret hS₁ rfl hw0))
+  rw [decO, ite_eq_right h0, ite_eq_right h1] at hv; cases hv
   rw [ite_eq_right h1]
-  have hdo : decO (r₁.headD 0) = some true := by unfold decO; rw [ite_eq_right h0, ite_eq_right h1]
-  rw [hdo]
-  refine RefE.bind_right (by simp [liftFueled]; rfl) ?_
   simp only [↓reduceIte]
   obtain ⟨tk, htk⟩ : ∃ tk, tk = (if an < ep then an else ep) := ⟨_, rfl⟩
   have hj : (if an < ep then sectE.j1 p n mode vis d b T ao an to tn nf an m₁
@@ -316,31 +307,29 @@ theorem sect_ref (p : Prog) (hi : IotaProg' p) (hc : StuckCallees p)
   have htake := hsp₁.take tk hmin
   have etake : ((aargs.toList.take tk.toNat).toArray).toList = aargs.toList.take ep.toNat := by
     rw [htk]; exact take_min_eq _ _ _ hlen
-  rcases c2 : callE p n "defeq_lst" [mode, vis, d, ao, tk, to, tn] m₁ with e2 | ⟨r₂, m₂⟩
-  · intro hG
-    have h := hG.lstE hk hF hn (s₀ := ⟨m₁, Locals.init []⟩) ⟨hS₁, hs.mode4, hs.eb_mode⟩ htake htp₁
-      (by rw [htop₁]; omega) (by rw [htop₁]; exact htt) c2
-    rw [etake] at h
-    exact ErrClaim.bind_left h
-  have h₂ := CoreSpec.of_callW (defeqLst_at p hc n hk F hF hn ⟨m₁, Locals.init []⟩ _ dn vis fe M₁ eb
-    mode d ao tk to tn _ targs ⟨hS₁, hs.mode4, hs.eb_mode⟩ htake htp₁
-    (by rw [htop₁]; omega) (by rw [htop₁]; exact htt)) (callW_of_callE c2)
-  rw [etake] at h₂
-  obtain ⟨_, _, _, hst₂⟩ := h₂.after
-  refine RefE.bind_growK (w := id) h₂ (fun M₂ hS₂ _ => ?_)
-  simp only [sectE.k_defeq_lst]
+  have hs₁ : SlotPre ⟨m₁, Locals.init []⟩ _ dn vis fe M₁ eb mode := ⟨hS₁, hs.mode4, hs.eb_mode⟩
+  have hb₁ : ao.toNat + tk.toNat ≤ (spTop m₁).toNat := by rw [htop₁]; omega
+  have ht₁ : to.toNat + tn.toNat ≤ (spTop m₁).toNat := by rw [htop₁]; exact htt
+  have hD := defeqLst_at p hc n hk F hF hn _ _ dn vis fe M₁ eb mode d ao tk to tn _ targs hs₁ htake htp₁
+      hb₁ ht₁
+  rw [etake] at hD
+  refine RefE.bind_callE (fun _ => rfl) hD (fun hG => CoreSpecE.of_runs fun _ c => by
+      have h := hG.lstE hk hF hn hs₁ htake htp₁ hb₁ ht₁ c; rwa [etake] at h)
+    fun r₂ m₂ _ h₂ => ?_
+  obtain ⟨M₂, hS₂, hK₂, hst₂⟩ := h₂.after
+  refine RefE.mono (R := GrowPost decBool dn m₂ vis fe M₂ eb ResH) ?_
+    (fun _ _ _ h => ⟨CoreAfterG.compK hK₂ hst₂.toGrew h.after, h.res, h.valid⟩)
+  dsimp only [sectE.k_defeq_lst]
   by_cases h20 : r₂.headD 0 = 0
   · rw [ite_eq_left h20, decBool_false_of h20]
     exact RefE.ret rfl (GrowPost.of_core (CorePost.ret hS₂ rfl hw0))
   rw [ite_eq_right h20, decBool_true_of h20]
   simp only [↓reduceIte]
-  rcases c3 : callW p n "eta_projs" [T, b, nf] m₂ with _ | ⟨r₃, m₃⟩
-  · rw [liftE_none, sectE.k_eta_projs.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]
-  obtain ⟨h₃, hr30, hr31, htop₃, hroom₃, hsp₃⟩ := etaProjs_callW hi hS₂ hT hb c3
+  refine RefE.onlySim (fun _ => rfl) (fun _ _ h => etaProjs_callW hi hS₂ hT hb h)
+    fun r₃ m₃ ⟨h₃, hr30, hr31, htop₃, hroom₃, hsp₃⟩ => ?_
   obtain ⟨_, _, _, hst₃⟩ := h₃.2.1
   refine RefE.bind_grow (w := id) h₃ (fun M₃ hS₃ _ => ?_)
-  simp only [sectE.k_eta_projs]
+  dsimp only [sectE.k_eta_projs]
   have hspn₂ : (m₂.arr64 SPN).size < 2 ^ 63 := hS₂.spn
   have htop₂ : spTop m₂ = spTop s₀.mem := hst₂.1.trans htop₁
   have hdrop := hsp₁.drop tk hmin hspn₁
@@ -358,18 +347,13 @@ theorem sect_ref (p : Prog) (hi : IotaProg' p) (hc : StuckCallees p)
     rw [hr30, hr31, htop₃, UInt64.toNat_add, Nat.mod_eq_of_lt (by omega)]; exact Nat.le_refl _
   have edrop : ((aargs.toList.drop tk.toNat).toArray).toList = aargs.toList.drop ep.toNat := by
     rw [htk]; exact drop_min_eq _ _ _ hlen
-  rcases c4 : callE p n "defeq_lst" [mode, vis, d, ao + tk, an - tk, r₃.headD 0, r₃.tail.headD 0] m₃
-    with e4 | ⟨r₄, m₄⟩
-  · intro hG
-    have h := hG.lstE hk hF hn (s₀ := ⟨m₃, Locals.init []⟩) ⟨hS₃, hs.mode4, hs.eb_mode⟩ hdrop₃ hsp₃
-      hb₃ hp₃ c4
-    rw [edrop, List.toList_toArray] at h
-    exact h
-  have h₄ := CoreSpec.of_callW (defeqLst_at p hc n hk F hF hn ⟨m₃, Locals.init []⟩ _ dn vis fe M₃ eb
-    mode d (ao + tk) (an - tk) (r₃.headD 0) (r₃.tail.headD 0) _ _ ⟨hS₃, hs.mode4, hs.eb_mode⟩
-    hdrop₃ hsp₃ hb₃ hp₃) (callW_of_callE c4)
-  rw [edrop, List.toList_toArray] at h₄
-  obtain ⟨hrun, hP⟩ := h₄.post
-  exact RefE.ret hrun (GrowPost.of_core ⟨hP.after, hP.res, hP.valid⟩)
+  have hs₃ : SlotPre ⟨m₃, Locals.init []⟩ _ dn vis fe M₃ eb mode := ⟨hS₃, hs.mode4, hs.eb_mode⟩
+  have hD := defeqLst_at p hc n hk F hF hn _ _ dn vis fe M₃ eb mode d (ao + tk) (an - tk) (r₃.headD 0)
+    (r₃.tail.headD 0) _ _ hs₃ hdrop₃ hsp₃ hb₃ hp₃
+  rw [edrop, List.toList_toArray] at hD
+  rw [← bind_pure (defEqList _ _ _ _ _)]
+  exact RefE.bind_callE (fun _ => rfl) hD (fun hG => CoreSpecE.of_runs fun _ c => by
+      have h := hG.lstE hk hF hn hs₃ hdrop₃ hsp₃ hb₃ hp₃ c; rwa [edrop, List.toList_toArray] at h)
+    fun _ _ _ h => RefE.ret rfl (GrowPost.of_core ⟨h.after, rfl, h.resOk⟩)
 
 end L.Arena
