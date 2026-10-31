@@ -482,13 +482,15 @@ theorem lamsLoop_ref (p : Prog) (hp : InferLeafProg p) (hq : BindProg p) (hb : I
       rw [Function.comp_apply, ilsE.k_inst_list.arm1]
       have hs₁ : SlotPre ⟨m₁, Locals.init []⟩ _ dn vis fe M₁ eb mode := ⟨hS₁, hmode, heb⟩
       refine RefE.under (fun _ => rfl) (fun _ => ilsE.k_infer.none ..) fun hx => RefE.bind_callE hx
-        ((hk j (by omega)).infer F _ _ dn vis fe M₁ eb mode (d + k) (r₁.headD 0) (by omega) (by omega) hs₁ hrw1)
+        ((hk j (by omega)).infer F _ _ dn vis fe M₁ eb mode (d + k) (r₁.headD 0) (by omega) (by omega)
+          hs₁ hrw1)
         (fun (hG : InferG p N) => (hG.knot j (by omega)).infer F _ _ dn vis fe M₁ eb mode (d + k) (r₁.headD 0)
           (by omega) (by omega) hs₁ hrw1) fun r₂ m₂ _ ⟨_, ⟨M₂, hS₂, hK₂, hSt₂⟩, _, hrw2⟩ => ?_
       rw [Function.comp_apply, ilsE.k_infer.arm1]
       have hs₂ : SlotPre ⟨m₂, Locals.init []⟩ _ dn vis fe M₂ eb mode := ⟨hS₂, hmode, heb⟩
       refine RefE.under (fun _ => rfl) (fun _ => ilsE.k_whnf.none ..) fun hx => RefE.bind_callE hx
-        ((hk j (by omega)).whnf F _ _ dn vis fe M₂ eb mode (d + k) (r₂.headD 0) (by omega) (by omega) hs₂ hrw2)
+        ((hk j (by omega)).whnf F _ _ dn vis fe M₂ eb mode (d + k) (r₂.headD 0) (by omega) (by omega)
+          hs₂ hrw2)
         (fun (hG : InferG p N) => (hG.knot j (by omega)).whnf F _ _ dn vis fe M₂ eb mode (d + k) (r₂.headD 0)
           (by omega) (by omega) hs₂ hrw2) fun r₃ m₃ _ ⟨_, ⟨M₃, hS₃, hK₃, hSt₃⟩, _, hrw3⟩ => ?_
       rw [Function.comp_apply, ilsE.k_whnf.eq_2]

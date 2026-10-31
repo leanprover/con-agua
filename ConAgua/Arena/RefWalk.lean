@@ -193,7 +193,8 @@ theorem RefE.under {σ : Type} {K₀ : Except Err ρ → Except Err α} {K : Exc
 `if c then .error e else K₀ rest`. -/
 theorem RefE.underIf {K₀ : Except Err ρ → Except Err α} (h0 : ∀ e, K₀ (.error e) = .error e)
     {c : Prop} [Decidable c] {e : Err} {rest : Except Err ρ} {T : AM β}
-    (h : RefE G (if c then .error e else K₀ rest) T a R) : RefE G (K₀ (if c then .error e else rest)) T a R := by
+    (h : RefE G (if c then .error e else K₀ rest) T a R) :
+    RefE G (K₀ (if c then .error e else rest)) T a R := by
   by_cases hc : c
   · rw [ite_eq_left hc, h0]; rw [ite_eq_left hc] at h; exact h
   · rw [ite_eq_right hc]; rw [ite_eq_right hc] at h; exact h

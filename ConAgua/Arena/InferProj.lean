@@ -4,6 +4,7 @@ import ConAgua.Arena.CoreDen
 import ConAgua.Arena.InferBodySpine
 import ConAgua.Arena.WhnfCoreProj
 import ConAgua.Arena.InferProjModels
+import ConAgua.Arena.RefWalk
 
 /-!
 # `inferProj`: `proj_type_at` and `infer_proj_at` (lane `defeq2`, helper `defeq2-proj`)
@@ -468,9 +469,8 @@ theorem ipa_ref (p : Prog) (hp : InferProjProg p) (hc : InferProjCallees p) (n :
   obtain ⟨cT, hfeT⟩ := hfe
   simp only [ipaE]
   -- `get_app_args`
-  rcases hc1 : callW p n "get_app_args" [te] s₀.mem with _ | ⟨r₁, m₁⟩
-  · rw [liftE_none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]; simp only [ipaE.k_get_app_args]
+  refine RefE.onlySim (fun _ => rfl) (fun _ _ h => h) fun r₁ m₁ hc1 => ?_
+  dsimp only [ipaE.k_get_app_args]
   obtain ⟨t₁, ht₁, -, hf₁, hg₁, ho₁, htop₁, xs, hxs, hsp₁⟩ := triple_of_callW
     (getAppArgs_refines p hp.leaf.core.spine n ⟨s₀.mem, Locals.init []⟩ a₀ hS.arena.base te hte hS.spn) hc1
   rw [ht₁] at hf₁ hg₁ htop₁ hsp₁
@@ -481,25 +481,22 @@ theorem ipa_ref (p : Prog) (hp : InferProjProg p) (hc : InferProjCallees p) (n :
   have hlen0 : xs.length = (r₁.tail.headD 0).toNat := by
     have := hsp₁.size; simp only [List.size_toArray] at this; exact this
   by_cases g1 : T ≠ sn
-  · rw [ite_eq_left g1]
-    have hne : ((decI T : NIdx) != decI sn) = true := by
+  · have hne : ((decI T : NIdx) != decI sn) = true := by
       simp only [bne_iff_ne, ne_eq]; exact fun h => g1 (decI_inj hT hsn h)
-    exact fun _ => ErrClaim.of_error (projAtT_errT _ _ _ _ _ _ _ xs hxs hne) rfl
-  rw [ite_eq_right g1]
+    exact RefE.abortAt g1 fun _ => ErrClaim.of_error (projAtT_errT _ _ _ _ _ _ _ xs hxs hne) rfl
+  refine RefE.pass g1 ?_
   have hTs : T = sn := Classical.not_not.mp g1
   by_cases g2 : r₁.tail.headD 0 ≠ rdW (m₁.arr64 EREC) (q + 5)
-  · rw [ite_eq_left g2]
-    have hl : (xs.length != (tbl.entry i.toNat).numParams) = true := by
+  · have hl : (xs.length != (tbl.entry i.toNat).numParams) = true := by
       simp only [bne_iff_ne, ne_eq, hlen0]
       intro h; apply g2; apply UInt64.toNat_inj.mp; rw [h]; exact hnp
-    exact fun _ => ErrClaim.of_error (projAtT_errNP _ _ _ _ _ _ _ xs hxs (by rw [hTs]) hl) rfl
-  rw [ite_eq_right g2]
+    exact RefE.abortAt g2 fun _ => ErrClaim.of_error (projAtT_errNP _ _ _ _ _ _ _ xs hxs (by rw [hTs]) hl) rfl
+  refine RefE.pass g2 ?_
   have g2' : r₁.tail.headD 0 = rdW (m₁.arr64 EREC) (q + 5) := Classical.not_not.mp g2
   have hlen : xs.length = (tbl.entry i.toNat).numParams := by rw [hlen0, g2']; exact hnp.symm
   -- `ls_node`
-  rcases hc2 : callW p n "ls_node" [us] m₁ with _ | ⟨r₂, m₂⟩
-  · rw [liftE_none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]; simp only [ipaE.k_ls_node]
+  refine RefE.onlySim (fun _ => rfl) (fun _ _ h => h) fun r₂ m₂ hc2 => ?_
+  dsimp only [ipaE.k_ls_node]
   obtain ⟨t₂, ht₂, ht₂s, hne₂, hr₂⟩ :=
     triple_of_callW (lsNode_spec p hp.lv.lsnode n ⟨m₁, Locals.init []⟩ us) hc2
   have hm₂ : m₂ = m₁ := by rw [← ht₂, ht₂s]
@@ -512,18 +509,17 @@ theorem ipa_ref (p : Prog) (hp : InferProjProg p) (hc : InferProjCallees p) (n :
   subst hr₂'
   have hvl : a₀.store.lss.viewLen (decI us) = some l₂.toNat := lsNodeW_viewLen hS₁.arena.base hus hl₂
   by_cases g3 : [o₂, l₂].tail.headD 0 ≠ rdW (m₂.arr64 EREC) (q + 4)
-  · rw [ite_eq_left g3]
-    have hl : l₂.toNat ≠ (tbl.entry i.toNat).levelParams.length := by
+  · have hl : l₂.toNat ≠ (tbl.entry i.toNat).levelParams.length := by
       intro h; apply g3; apply UInt64.toNat_inj.mp; simp only [List.tail_cons, List.headD_cons]
       rw [h]; exact hlp
-    exact fun _ => ErrClaim.of_error (projAtT_errLP _ _ _ _ _ _ _ xs _ hxs (by rw [hTs]) hlen hvl hl) rfl
-  rw [ite_eq_right g3]
+    exact RefE.abortAt g3 fun _ =>
+      ErrClaim.of_error (projAtT_errLP _ _ _ _ _ _ _ xs _ hxs (by rw [hTs]) hlen hvl hl) rfl
+  refine RefE.pass g3 ?_
   have g3' : l₂ = rdW (m₂.arr64 EREC) (q + 4) := by simpa using g3
   have hlpl : l₂.toNat = (tbl.entry i.toNat).levelParams.length := by rw [g3']; exact hlp.symm
   -- `pin_word(53)`
-  rcases hcp : callW p n "pin_word" [53] m₂ with _ | ⟨rp, mp⟩
-  · rw [liftE_none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]; simp only [ipaE.k_pin_word]
+  refine RefE.onlySim (fun _ => rfl) (fun _ _ h => h) fun rp mp hcp => ?_
+  dsimp only [ipaE.k_pin_word]
   obtain ⟨tp, htp, hmp, -, hrp⟩ := triple_of_callW (pinWord_rd p hp.leaf.pinword n ⟨m₂, Locals.init []⟩ 53) hcp
   have hmp' : mp = m₂ := htp ▸ hmp
   subst hmp'
@@ -541,10 +537,8 @@ theorem ipa_ref (p : Prog) (hp : InferProjProg p) (hc : InferProjCallees p) (n :
   obtain ⟨⟨lss, hdss⟩, -, -⟩ := hD.proj cT tbl hfeT
   rw [hssd] at hdss
   -- `lvl_eq_c`
-  rcases hc3 : callW p n "lvl_eq_c" [rdW (mp.arr64 EREC) (q + 8), rdW (mp.arr64 PINS) 53] mp
-    with _ | ⟨r₃, m₃⟩
-  · rw [liftE_none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]; simp only [ipaE.k_lvl_eq_c]
+  refine RefE.onlySim (fun _ => rfl) (fun _ _ h => h) fun r₃ m₃ hc3 => ?_
+  dsimp only [ipaE.k_lvl_eq_c]
   rcases Nat.lt_or_ge n 2 with hsm | hbig
   · rw [ip_lvlEqC_small p hp.lv.c n hsm] at hc3; cases hc3
   obtain ⟨N, rfl⟩ : ∃ N, n = N + 2 := ⟨n - 2, by omega⟩
@@ -578,10 +572,8 @@ theorem ipa_ref (p : Prog) (hp : InferProjProg p) (hc : InferProjCallees p) (n :
         (CorePost decH dn s₀.mem vis fe M eb ResH) := by
     intro m' a' M' hS' hK' hSt' hq' hok
     simp only [ipaE.j1]
-    rcases hc5 : callW p (N + 2) "proj_type_at" [q, i, us, r₁.headD 0, r₁.tail.headD 0, pe] m'
-      with _ | ⟨r₅, m₅⟩
-    · rw [liftE_none]; exact RefE.of_cls0 (by simp)
-    rw [liftE_some]; simp only [ipaE.k_proj_type_at]
+    refine RefE.onlySim (fun _ => rfl) (fun _ _ h => h) fun r₅ m₅ hc5 => ?_
+    dsimp only [ipaE.k_proj_type_at]
     have hsp' : SpineR m' (r₁.headD 0) (r₁.tail.headD 0) xs.toArray :=
       hsp₁.keep hSt'.size hSt'.below htopv hspn₁
     have h₅ := CoreSpec.of_callW (projTypeAt_refines p hp hc.instLP (N + 1) ⟨m', Locals.init []⟩ _ dn
@@ -613,10 +605,8 @@ theorem ipa_ref (p : Prog) (hp : InferProjProg p) (hc : InferProjCallees p) (n :
     have hdus : ∃ ls, denoteLs (AM.st (lvlEq? (decI (rdW (mp.arr64 EREC) (q + 8)))
         (decI (rdW (mp.arr64 PINS) 53))) a₀).store.lss (decI us) = some ls := by
       rw [hst₃]; exact hden
-    rcases hc4 : callW p (N + 2) "field_sort_zero" [rdW (m₃.arr64 EREC) (q + 3),
-        rdW (m₃.arr64 EREC) (q + 4), us, guardW m₃ q i] m₃ with _ | ⟨r₄, m₄⟩
-    · rw [liftE_none]; exact RefE.of_cls0 (by simp)
-    rw [liftE_some]; simp only [ipaE.k_field_sort_zero]
+    refine RefE.onlySim (fun _ => rfl) (fun _ _ h => h) fun r₄ m₄ hc4 => ?_
+    dsimp only [ipaE.k_field_sort_zero]
     have h₄ := CoreSpec.of_callW (fieldSortZero_core p hp.fsz (N + 2) ⟨m₃, Locals.init []⟩ _ dn vis fe
       M₃ eb _ _ us (guardW m₃ q i) tbl.levelParams hS₃ hus hfw hlps₃ hD₃.readN hks hdus ⟨lf, hdf⟩) hc4
     have hrun4 := ipRun_of_ref h₄
@@ -627,11 +617,10 @@ theorem ipa_ref (p : Prog) (hp : InferProjProg p) (hc : InferProjCallees p) (n :
     have hT2 := fszTail_run (tbl.entry i.toNat) (decI us) xs (decE pe) _ _ _
       (by rw [hfs]; exact hrun4)
     by_cases g5 : r₄.headD 0 = 0
-    · rw [ite_eq_left g5]
-      have hb : decBool r₄ = false := by simp only [decBool, g5, bne_self_eq_false]
+    · have hb : decBool r₄ = false := by simp only [decBool, g5, bne_self_eq_false]
       rw [hb] at hT2
-      exact fun _ => ErrClaim.of_error (hT1.trans hT2) rfl
-    rw [ite_eq_right g5]
+      exact RefE.abortAt g5 fun _ => ErrClaim.of_error (hT1.trans hT2) rfl
+    refine RefE.pass g5 ?_
     have hb : decBool r₄ = true := by simp only [decBool, bne_iff_ne]; exact g5
     rw [hb] at hT2
     refine hpta m₄ _ M₄ hS₄ (hK₃.trans hK₄) (hSt₃.trans hSt₄) hq₄ (fun y a'' h => ?_)
