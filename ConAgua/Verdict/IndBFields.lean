@@ -1,3 +1,4 @@
+import ConAgua.Arena.RefWalk
 import ConAgua.Arena.RecGenSpec.CfhW
 import ConAgua.Arena.RecClassSpec.ClassNPcOf
 import ConAgua.Arena.RecGenSpec.ClassFieldsOf
@@ -78,15 +79,10 @@ theorem cfgTailE {G : Prop} {n : Nat} {m m2 m5 : Mem} {a2 : AState} {k : Word} {
   have hy5 := rec2RecW_decCF_A (b := iwTop m) h5 hc hsz hk hg2.iw (by rw [hr5]; exact hy)
   have hR := hrest hS5 hg5 (rec2NoMR_iw hf5 hM2)
   rw [cfgE.j1.arm1]
-  rcases h6 : cfgE p n m5 mo ml io il (i + 1) (fo + 1) (fl - 1) with e6 | ⟨r6, m6⟩
-  · rw [cfgE.k_class_fields_of_go.none]; rw [h6] at hR; exact RefE.bind_left hR
+  refine RefE.bindE (fun _ => cfgE.k_class_fields_of_go.none ..) id hR fun ⟨r6, m6⟩ _ _ _ hP6 => ?_
   rw [cfgE.k_class_fields_of_go.arm1]
-  rw [h6] at hR
-  obtain ⟨ks, a6, run6, hP6⟩ := hR
-  refine RefE.bind_right run6 ?_
-  rcases h7 : consW n m6 (r5.headD 0) (r6.headD 0) (r6.tail.headD 0) with _ | ⟨r7, m7⟩
-  · rw [liftE_none, cfgE.k_sl_cons.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some, cfgE.k_sl_cons.arm1]
+  refine RefE.onlySim (fun _ => cfgE.k_sl_cons.none ..) (fun _ _ h => h) fun r7 m7 h7 => ?_
+  rw [cfgE.k_sl_cons.arm1]
   have hsp6 := hP6.kinds
   obtain ⟨mp6, hM6⟩ := hP6.nomr
   obtain ⟨hS7, hg7, hsp7⟩ := SPLA.cons h7 hP6.stage (hsp6.mono (Nat.le_trans hg2.iw hg5.iw))
@@ -137,23 +133,19 @@ theorem cfg_ref (bsh : BlockShape) (ihs : List (Nat × Nat)) (n : Nat) :
   have hi1 : (i + 1).toNat = i.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
   rw [ConRon.Arena.classFieldsOf]
   -- `fvar_type_d`
-  rcases h1 : ftdF m [rdW (m.arr64 IW) fo] with _ | ⟨r1, m1⟩
-  · rw [liftE_none, cfgE.k_fvar_type_d.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some, cfgE.k_fvar_type_d.arm1]
-  obtain ⟨w, a1, hrun1, hS1, hg1, hwH, hwd⟩ := simFvarTypeD hS hw0H (r1, m1) h1
+  refine RefE.bindSim (fun _ => cfgE.k_fvar_type_d.none ..) (fun r m h => simFvarTypeD hS hw0H (r, m) h)
+    fun r1 _ m1 a1 h1 _ ⟨hS1, hg1, hwH, hwd⟩ => ?_
+  rw [cfgE.k_fvar_type_d.arm1]
   dsimp only at hS1 hg1 hwH hwd
   subst hwd
-  refine RefE.bind_right hrun1 ?_
   have hM1 := rec2NoMR_ftd h1 hM
   -- `nest_occ`
-  rcases h2 : noConstWf n m1 mo ml 0 0 (r1.headD 0) with _ | ⟨occ, m2⟩
-  · rw [liftE_none, cfgE.k_nest_occ.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some, cfgE.k_nest_occ.arm1]
-  obtain ⟨b, a2, hrun2, ha2, hob, hM2, hS2, hg2, hf2⟩ :=
-    rec2SimNestOcc hS1 hwH (by rw [decHL_grow hg1 hmb]; exact hmn) (by omega) hM1 n (occ, m2) h2
+  refine RefE.bindSim (fun _ => cfgE.k_nest_occ.none ..) (fun r m h =>
+      rec2SimNestOcc hS1 hwH (by rw [decHL_grow hg1 hmb]; exact hmn) (by omega) hM1 n (r, m) h)
+    fun occ b m2 a2 h2 _ ⟨ha2, hob, hM2, hS2, hg2, hf2⟩ => ?_
+  rw [cfgE.k_nest_occ.arm1]
   subst a2
   dsimp only at hob hM2 hS2 hg2 hf2
-  refine RefE.bind_right hrun2 ?_
   have hf12 : MFr [NOM] [204, 205] m m2 := (MFr.of_frame (ftdF_frame h1) (by simp) (by simp)).up.trans hf2
   have hg12 := hg1.trans hg2
   have hA12 : AFr m m2 := (ftdF_afr h1).trans (noConstWf_afr h2)
@@ -178,9 +170,8 @@ theorem cfg_ref (bsh : BlockShape) (ihs : List (Nat × Nat)) (n : Nat) :
     have hlen : (List.filter (fun h => h.1 == i.toNat) ihs).length = 0 := by rw [← hcnt, hA.2]; rfl
     subst hb
     simp only [hlen, Bool.not_false, Bool.true_and, beq_self_eq_true, ite_true]
-    rcases h4 : allocW m2 1 with _ | ⟨cf, m4⟩
-    · rw [liftE_none, cfgE.k_iw_alloc.none]; exact RefE.of_cls0 (by simp)
-    rw [liftE_some, cfgE.k_iw_alloc.arm1]
+    refine RefE.onlySim (fun _ => cfgE.k_iw_alloc.none ..) (fun _ _ h => h) fun cf m4 h4 => ?_
+    rw [cfgE.k_iw_alloc.arm1]
     have h5 : recW m2 1 [0] = some ([cf], m4.set64 IW cf 0) := by simp [recW, h4, wrIW]
     refine cfgTailE hS2 hg12 hM2 hf12 hA12 rfl ?_ h5 (hrest _)
     intro m'' hw
@@ -195,15 +186,13 @@ theorem cfg_ref (bsh : BlockShape) (ihs : List (Nat × Nat)) (n : Nat) :
     obtain ⟨hcl, hcl64⟩ := hcls hh hhs
     simp only [hhs, Bool.not_true, Bool.false_and, Bool.true_and,
       ite_false, Bool.false_eq_true]
-    rcases h4 : piBW n m2 CWF (r1.headD 0) with _ | ⟨r4, m4⟩
-    · rw [liftE_none, cfgE.k_pi_binders.none]; exact RefE.of_cls0 (by simp)
-    rw [liftE_some, cfgE.k_pi_binders.arm1]
-    obtain ⟨⟨bs, e⟩, a4, hrun4, rfl, hS4, hg4, hf4, hd4⟩ := rec2SimPiBinders n hS2 hwH (r4, m4) h4
+    refine RefE.bindSim (fun _ => cfgE.k_pi_binders.none ..) (fun r m h => rec2SimPiBinders n hS2 hwH (r, m) h)
+      fun r4 ⟨bs, e⟩ m4 a4 h4 _ ⟨ha4, hS4, hg4, hf4, hd4⟩ => ?_
+    rw [cfgE.k_pi_binders.arm1]
+    subst a4
     dsimp only at hS4 hg4 hf4 hd4
-    refine RefE.bind_right hrun4 ?_
-    rcases h5 : recW m4 3 [1, cls, r4.tail.headD 0] with _ | ⟨r5, m5⟩
-    · rw [liftE_none, cfgE.k_rec3.none]; exact RefE.of_cls0 (by simp)
-    rw [liftE_some, cfgE.k_rec3.arm1]
+    refine RefE.onlySim (fun _ => cfgE.k_rec3.none ..) (fun _ _ h => h) fun r5 m5 h5 => ?_
+    rw [cfgE.k_rec3.arm1]
     have hbl : bs.length = (r4.tail.headD 0).toNat := decHL_length _ hd4
     refine cfgTailE hS4 (hg12.trans hg4) (rec2NoMR_iw hf4 hM2) (hf12.trans (MFr.of_iw hf4).up)
       (hA12.trans (piBW_afr _ _ _ _ _ _ h4)) rfl ?_ h5
@@ -264,27 +253,17 @@ theorem cfo_ref (bsh : BlockShape) (ihs : List (Nat × Nat)) (n : Nat) {m : Mem}
   | zero => rw [cfoE.eq_1]; exact RefE.of_cls0 (by simp)
   | succ n =>
   rw [cfoE.arm1]
-  rcases h1 : memberNamesW n m q with _ | ⟨r1, m1⟩
-  · rw [liftE_none, cfoE.k_block_shape_member_names.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some, cfoE.k_block_shape_member_names.arm1]
-  have ht := hb.ptop
+  refine RefE.onlySim (fun _ => rfl) (fun _ _ h => h) fun r1 m1 h1 => ?_
+  dsimp only [cfoE.k_block_shape_member_names]
   have hsz := hS.iw.iwSize
-  have hts : iwTop m ≤ (m.arr64 IW).size := hS.iw.iw
-  have hf1 := (memberNamesW_dec h1 hsz hS.iw.ctl hb.dec (by omega) hb.2.1 hb.2.2).2.2.2.1
+  have hf1 := (memberNamesW_dec h1 hsz hS.iw.ctl hb.dec (by have := hb.ptop; have := hS.iw.iw; omega)
+    hb.2.1 hb.2.2).2.2.2.1
   obtain ⟨hS1, hg1, -, hd1, ht1⟩ := memberNamesW_stage h1 hS hb
-  have hR := cfg_ref (p := p) (dn := dn) (vis := vis) (fe := fe) bsh ihs n (a := a) (mo := r1.headD 0)
-    (ml := r1.tail.headD 0) (io := io) (il := il) (i := i) (fo := fo) (fl := fl) hS1 hd1
-    (by omega) (hih.grow hg1) hib (by rw [decHL_grow hg1 hfb]; exact hfs)
-    (Nat.le_trans hfb hg1.iw) hi (rec2NoMR_iw hf1 hM)
-  rcases h2 : cfgE p n m1 (r1.headD 0) (r1.tail.headD 0) io il i fo fl with e2 | ⟨r2, m2⟩
-  · rw [h2] at hR
-    rw [cfoE.k_class_fields_of_go.none]
-    exact hR
-  rw [h2] at hR
-  rw [cfoE.k_class_fields_of_go.arm1]
-  obtain ⟨ks, a2, run2, hP2⟩ := hR
-  exact RefE.ret run2 ⟨hP2.stage, hg1.trans hP2.grow, by simpa using hP2.kinds.mono hg1.iw, hP2.nomr,
-    (MFr.of_iw hf1).up.trans hP2.frame, (memberNamesW_afr h1).trans hP2.afr⟩
+  refine RefE.lastE (fun _ => cfoE.k_class_fields_of_go.none ..) (fun _ => cfoE.k_class_fields_of_go.arm1 ..) id
+    (cfg_ref (p := p) bsh ihs n hS1 hd1 (by omega) (hih.grow hg1) hib
+      (by rw [decHL_grow hg1 hfb]; exact hfs) (Nat.le_trans hfb hg1.iw) hi (rec2NoMR_iw hf1 hM))
+    fun _ _ _ _ hP2 => ⟨hP2.stage, hg1.trans hP2.grow, by simpa using hP2.kinds.mono hg1.iw, hP2.nomr,
+      (MFr.of_iw hf1).up.trans hP2.frame, (memberNamesW_afr h1).trans hP2.afr⟩
 
 /-- **`class_fields_of` refines `classFieldsOf`** (through the stub `fvar_type_d`; `cfo_ref`'s ok
 half): the fields' kinds are a stable slice of `ClassField` records; `nest_occ`'s memo relation is
