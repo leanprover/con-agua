@@ -95,6 +95,16 @@ theorem RefE.abort0 {c : Prop} [Decidable c] {e : Err} {rest : Except Err α} {T
   · rw [ite_eq_left hc]; exact RefE.of_cls0 he
   · rw [ite_eq_right hc]; exact h hc
 
+/-- **A guard of an irreducible continuation** (the model of a recursive function): its guarded
+equations `K.abortᵢ`/`K.armᵢ`, given as `fun h => K.abort1 (hc1 := h)`, as the `if` the other
+guard rules read. -/
+theorem RefE.ofArms {x rest : Except Err α} {T : AM β} {c : Prop} [Decidable c] {e : Err}
+    (hab : c → x = .error e) (harm : ¬ c → x = rest) (h : RefE G (if c then .error e else rest) T a R) :
+    RefE G x T a R := by
+  by_cases hc : c
+  · rw [hab hc]; rw [ite_eq_left hc] at h; exact h
+  · rw [harm hc]; rw [ite_eq_right hc] at h; exact h
+
 /-- **A guard of the model that fires** where the twin's own split already decided (a `match` on a
 callee's result): the abort's claim on the twin. -/
 theorem RefE.abortAt {c : Prop} [Decidable c] {e : Err} {rest : Except Err α} {T : AM β} (hc : c)

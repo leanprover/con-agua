@@ -313,7 +313,7 @@ theorem tmo_ref {p : Prog} (hP : TmoOProg p) (hIlpf : IlpfF p) (hcore : CoreStag
     (k2.pos.fr (ckc2W_mfr _ _ _ _ _ _ _ hW3)) p3
   refine ⟨_, _, hrun3, ?_⟩
   dsimp only [tmoE.k_target_major_of_outside_closed]
-  refine RefE.guardThen (by decide) (fun hz => by cases b <;> simp_all) (fun hb => by cases b <;> simp_all)
+  refine RefE.guardThen (by decide) (fun hz => by grind) (fun hb => by grind)
     fun _ _ => ?_
   -- the occurrence test
   rw [← hnames]
@@ -339,7 +339,7 @@ theorem tmo_ref {p : Prog} (hP : TmoOProg p) (hIlpf : IlpfF p) (hcore : CoreStag
   have k4 := TmAt.pstep k3.stage hS4 (ocW_afr hP.no _ _ _ _ _ _ _ _ hW4 k3.abs) hg4 hP4 p4
   refine ⟨_, _, hrun4, ?_⟩
   dsimp only [tmoE.k_target_major_of_outside_occ]
-  refine RefE.guard (by decide) (fun hz => by cases b <;> simp_all) (fun hb => by cases b <;> simp_all)
+  refine RefE.guard (by decide) (fun hz => by grind) (fun hb => by grind)
     fun _ _ => ?_
   -- the tail
   have k24 := k23.trans k4
