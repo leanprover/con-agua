@@ -59,9 +59,7 @@ theorem capp2_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n
         args nodes) a₀ (CorePost decStep dn s₀.mem vis fe MM eb ResW) := by
   have hS := hs.rel
   simp only [coreApp2E]
-  rcases h3 : callW p (n + 1) "head_and_args" [v] s₀.mem with _ | ⟨r₃, m₃⟩
-  · rw [liftE_none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]
+  refine RefE.onlySim (fun _ => rfl) (fun _ _ h => h) fun r₃ m₃ h3 => ?_
   simp only [coreApp2E.k_head_and_args]
   obtain ⟨t₃, ht₃, -, hf₃, hg₃, hhw, ho3, htop3, xs, hha, hxs⟩ := triple_of_callW
     (headAndArgs_refines p hp.spine (n + 1) ⟨s₀.mem, Locals.init []⟩ a₀ hS.arena.base v hv hS.spn htop) h3
@@ -81,14 +79,11 @@ theorem capp2_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n
     rw [← evalW_eq_ne v h hv hh]; simp [Cmp.evalW, Cmp.eval]
   have h0 : (0 : Word).toNat = 0 := rfl
   rw [hsame, h0] at h4
-  rcases c4 : whnfAppE p (n + 1) m₃ mode vis d v (r₃.headD 0) (r₃.tail.headD 0)
-    (r₃.tail.tail.headD 0) (if v = h then 1 else 0) so sn 0 with e4 | ⟨r₄, m₄⟩
-  · rw [c4] at h4; exact h4
-  rw [c4] at h4
-  obtain ⟨y, a', hrun, hP⟩ := h4
+  refine RefE.lastE (K := coreApp2E.k_whnf_app p _) (fun _ => rfl) (fun _ => rfl) id h4
+    fun ⟨r₄, m₄⟩ y a' _ hP => ?_
   obtain ⟨M', hS₄, hK₄, hSt₄⟩ := hP.after
-  exact RefE.ret hrun ((⟨⟨M', hS₄, hK₄, hg₃.trans hSt₄.toGrew⟩, hP.res, hP.valid⟩ :
-    GrowPost decStep dn s₀.mem vis fe MM eb ResW (r₄, m₄) y a').restore _ rfl hP.valid)
+  exact (⟨⟨M', hS₄, hK₄, hg₃.trans hSt₄.toGrew⟩, hP.res, hP.valid⟩ :
+    GrowPost decStep dn s₀.mem vis fe MM eb ResW (r₄, m₄) y a').restore _ rfl hP.valid
 
 include hp hwc hcc in
 /-- **`whnf_core_app2` refines the second half of the `.app` clause** (`capp2_ref`'s ok half). -/
@@ -117,9 +112,7 @@ theorem capp_ref (N : Nat) (hk : KnotUpTo p N) (F : Nat) (hF : N ≤ F) (hn : N 
       a₀ (CorePost decStep dn s₀.mem vis fe MM eb ResW) := by
   have hS := hs.rel
   simp only [coreAppE]
-  rcases h1 : callW p N "get_app_spine" [e] s₀.mem with _ | ⟨r₁, m₁⟩
-  · rw [liftE_none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]
+  refine RefE.onlySim (fun _ => rfl) (fun _ _ h => h) fun r₁ m₁ h1 => ?_
   simp only [coreAppE.k_get_app_spine]
   obtain ⟨t₁, ht₁, -, hf₁, hg₁, hhw, ho1, htop1, xs, ns, hsp, hxs, hns⟩ := triple_of_callW
     (getAppSpine_refines p hp.spine N ⟨s₀.mem, Locals.init []⟩ a₀ hS.arena.base e he hS.spn) h1
@@ -163,16 +156,11 @@ theorem capp_ref (N : Nat) (hk : KnotUpTo p N) (F : Nat) (hF : N ≤ F) (hn : N 
     (by have h22 := hSt₂.1; simp only at h22 ⊢; rw [h22]; omega)
     (by show (spTop m₂).toNat ≤ (m₂.arr64 SPN).size
         have a := hSt₂.1; have b := hSt₂.size; simp only at a b; rw [a, b]; omega)
-  rcases c4 : coreApp2E p (n' + 2) m₂ mode vis d (r₂.headD 0) (r₁.headD 0) (r₁.tail.headD 0)
-    (r₁.tail.tail.headD 0) with e4 | ⟨r₄, m₄⟩
-  · rw [c4] at h4; exact fun hG => h4 (hG.mono (by omega))
-  rw [c4] at h4
-  obtain ⟨y, a', hrun, hP⟩ := h4
-  simp only [coreAppE.k_whnf_core_app2]
+  refine RefE.lastE (K := coreAppE.k_whnf_core_app2 p _) (fun _ => rfl) (fun _ => rfl)
+    (·.mono (by omega)) h4 fun ⟨r₄, m₄⟩ y a' _ hP => ?_
   obtain ⟨M'', hS₄, hK₄, hSt₄⟩ := hP.after
-  exact RefE.ret hrun ((⟨⟨M'', hS₄, hK₂.trans hK₄, (hg₁.trans hSt₂.toGrew).trans hSt₄.toGrew⟩,
-    hP.res, hP.valid⟩ : GrowPost decStep dn s₀.mem vis fe MM eb ResW (r₄, m₄) y a').restore _ rfl
-      hP.valid)
+  exact (⟨⟨M'', hS₄, hK₂.trans hK₄, (hg₁.trans hSt₂.toGrew).trans hSt₄.toGrew⟩, hP.res, hP.valid⟩ :
+    GrowPost decStep dn s₀.mem vis fe MM eb ResW (r₄, m₄) y a').restore _ rfl hP.valid
 
 include hp hwc hcc in
 /-- **`whnf_core_app` refines the `.app` clause of `whnfCoreStep`** (`capp_ref`'s ok half). -/

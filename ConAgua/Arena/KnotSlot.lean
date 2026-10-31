@@ -3,6 +3,7 @@ import ConAgua.Arena.WhnfDeltaSlot
 import ConAgua.Arena.SimLib
 import ConAgua.Arena.KnotE
 import ConAgua.Arena.RefECore
+import ConAgua.Arena.RefWalk
 import ConAgua.Checker.NoVerdictTree
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
@@ -337,13 +338,9 @@ theorem isl_ref (n : Nat) (hk : KnotUpTo p n) (hb : InferBodySpec p n) (F : Nat)
   have hkey : ((mode >>> 1) &&& 1) <<< 32 = genW 0 eb := ebKey_eq mode eb hs.eb_mode
   simp only [islE]
   rw [hkey]
-  rcases h1 : callW p n "in_find" [e, genW 0 eb] s₀.mem with _ | ⟨r₁, m₁⟩
-  · rw [liftE_none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]
-  obtain ⟨t₁, ht₁, rfl, hne, rfl⟩ := triple_of_callW (s₀ := ⟨s₀.mem, Locals.init []⟩)
-    (memoFindG_spec inSch p _ hp.inFind n ⟨s₀.mem, Locals.init []⟩ e (genW 0 eb)) h1
-  simp only at ht₁
-  subst ht₁
+  refine RefE.onlySim (fun _ => rfl) (fun _ _ h => callW_memoFind hp.inFind h)
+    fun r₁ m₁ ⟨hm, hne, hr⟩ => ?_
+  subst hm hr
   have hf := hS.core.inf.findE hS.core.eb1 e he hne
   simp only [islE.k_in_find]
   by_cases h2 : (mfindG inSch s₀.mem e (genW 0 eb)).headD 0 ≠ 0
@@ -358,24 +355,11 @@ theorem isl_ref (n : Nat) (hk : KnotUpTo p n) (hb : InferBodySpec p n) (F : Nat)
   obtain ⟨hok, ⟨M', hS₁, hK₁, hSt₁⟩, hres, hrw⟩ := CoreSpec.of_callW
     (hb F' s₀ a₀ dn vis fe MM eb mode d e (by omega) (by omega) hs he hk) (callW_of_callE h3)
   simp only [islE.k_infer_body]
-  rcases h4 : callW p n "in_find" [e, genW 0 eb] m₃ with _ | ⟨r₄, m₄⟩
-  · rw [liftE_none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]
+  refine RefE.onlySim (fun _ => rfl) (fun _ _ h => h) fun r₄ m₄ h4 => ?_
   simp only [islE.k_in_find_2]
-  rcases h5 : callW p n "in_put" [e, genW 0 eb, r₃.headD 0, r₄.headD 0, r₄.tail.headD 0] m₄ with
-    _ | ⟨r₅, m₅⟩
-  · rw [liftE_none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]
+  refine RefE.onlySim (fun _ => rfl) (fun _ _ h => h) fun r₅ m₅ h5 => ?_
   simp only [islE.k_in_put]
-  have hset : msetG inSch m₃ e (genW 0 eb) (r₃.headD 0) = some m₅ := by
-    obtain ⟨t₄, ht₄, rfl, hne₄, hr₄⟩ := triple_of_callW (s₀ := ⟨m₃, Locals.init []⟩)
-      (memoFindG_spec inSch p _ hp.inFind n ⟨m₃, Locals.init []⟩ e (genW 0 eb)) h4
-    simp only at ht₄
-    subst ht₄
-    obtain ⟨s', hm, -, hput⟩ := triple_of_callW
-      (memoPutG_spec inSch p _ hp.inPut n ⟨m₃, Locals.init []⟩ e (genW 0 eb) (r₃.headD 0) _ _) h5
-    unfold msetG
-    rw [← hr₄, ite_eq_right hne₄, hput, hm]
+  have hset := callW_memoSet hp.inFind hp.inPut h4 h5
   obtain ⟨hS₂, hSt₂⟩ := hS₁.set_in e (r₃.headD 0) he hrw hset
   have hrun := knot_infer_miss _ fe F' d.toNat _ a₀ hmiss _ _ (AM.run_of_ok _ _ hok)
   rw [hres] at hrun
@@ -407,13 +391,9 @@ theorem islo_ref (n : Nat) (hk : KnotUpTo p n) (hb : InferIOBodySpec p n) (F : N
   have hkey : ((mode >>> 1) &&& 1) <<< 32 = genW 0 eb := ebKey_eq mode eb hs.eb_mode
   simp only [isloE]
   rw [hkey]
-  rcases h1 : callW p n "io_find" [e, genW 0 eb] s₀.mem with _ | ⟨r₁, m₁⟩
-  · rw [liftE_none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]
-  obtain ⟨t₁, ht₁, rfl, hne, rfl⟩ := triple_of_callW (s₀ := ⟨s₀.mem, Locals.init []⟩)
-    (memoFindG_spec ioSch p _ hp.ioFind n ⟨s₀.mem, Locals.init []⟩ e (genW 0 eb)) h1
-  simp only at ht₁
-  subst ht₁
+  refine RefE.onlySim (fun _ => rfl) (fun _ _ h => callW_memoFind hp.ioFind h)
+    fun r₁ m₁ ⟨hm, hne, hr⟩ => ?_
+  subst hm hr
   have hf := hS.core.io.findE hS.core.eb1 e he hne
   simp only [isloE.k_io_find]
   by_cases h2 : (mfindG ioSch s₀.mem e (genW 0 eb)).headD 0 ≠ 0
@@ -428,24 +408,11 @@ theorem islo_ref (n : Nat) (hk : KnotUpTo p n) (hb : InferIOBodySpec p n) (F : N
   obtain ⟨hok, ⟨M', hS₁, hK₁, hSt₁⟩, hres, hrw⟩ := CoreSpec.of_callW
     (hb F' s₀ a₀ dn vis fe MM eb mode d e (by omega) (by omega) hs he hk) (callW_of_callE h3)
   simp only [isloE.k_infer_body_io]
-  rcases h4 : callW p n "io_find" [e, genW 0 eb] m₃ with _ | ⟨r₄, m₄⟩
-  · rw [liftE_none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]
+  refine RefE.onlySim (fun _ => rfl) (fun _ _ h => h) fun r₄ m₄ h4 => ?_
   simp only [isloE.k_io_find_2]
-  rcases h5 : callW p n "io_put" [e, genW 0 eb, r₃.headD 0, r₄.headD 0, r₄.tail.headD 0] m₄ with
-    _ | ⟨r₅, m₅⟩
-  · rw [liftE_none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]
+  refine RefE.onlySim (fun _ => rfl) (fun _ _ h => h) fun r₅ m₅ h5 => ?_
   simp only [isloE.k_io_put]
-  have hset : msetG ioSch m₃ e (genW 0 eb) (r₃.headD 0) = some m₅ := by
-    obtain ⟨t₄, ht₄, rfl, hne₄, hr₄⟩ := triple_of_callW (s₀ := ⟨m₃, Locals.init []⟩)
-      (memoFindG_spec ioSch p _ hp.ioFind n ⟨m₃, Locals.init []⟩ e (genW 0 eb)) h4
-    simp only at ht₄
-    subst ht₄
-    obtain ⟨s', hm, -, hput⟩ := triple_of_callW
-      (memoPutG_spec ioSch p _ hp.ioPut n ⟨m₃, Locals.init []⟩ e (genW 0 eb) (r₃.headD 0) _ _) h5
-    unfold msetG
-    rw [← hr₄, ite_eq_right hne₄, hput, hm]
+  have hset := callW_memoSet hp.ioFind hp.ioPut h4 h5
   obtain ⟨hS₂, hSt₂⟩ := hS₁.set_io e (r₃.headD 0) he hrw hset
   have hrun := knot_inferIO_miss _ fe F' d.toNat _ a₀ hmiss _ _ (AM.run_of_ok _ _ hok)
   rw [hres] at hrun
@@ -476,10 +443,9 @@ theorem dsl_ref (n : Nat) (hk : KnotUpTo p n) (hb : DefeqBodySpec p n) (F : Nat)
   have hkey : y ||| (mode >>> 1 &&& 1) <<< 32 = genW y eb := by rw [hs.eb_mode]; rfl
   simp only [dslE]
   rw [hkey]
-  rcases h1 : callW p n "de_find" [x, genW y eb] s₀.mem with _ | ⟨r₁, m₁⟩
-  · rw [liftE_none, dslE.k_de_find.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]
-  obtain ⟨rfl, hne, rfl⟩ := callW_memoFind hp.deFind h1
+  refine RefE.onlySim (fun _ => dslE.k_de_find.none ..) (fun _ _ h => callW_memoFind hp.deFind h)
+    fun r₁ m₁ ⟨hm, hne, hr⟩ => ?_
+  subst hm hr
   have hf := hS.core.de.findD hS.core.eb1 x y hx hy hne
   simp only [dslE.k_de_find]
   by_cases h2 : (mfindG deSch s₀.mem x (genW y eb)).headD 0 ≠ 0
@@ -496,14 +462,9 @@ theorem dsl_ref (n : Nat) (hk : KnotUpTo p n) (hb : DefeqBodySpec p n) (F : Nat)
   obtain ⟨hok, ⟨M', hS₁, hK₁, hSt₁⟩, hres, hrw⟩ := CoreSpec.of_callW
     (hb F' s₀ a₀ dn vis fe MM eb mode d x y (by omega) (by omega) hs hx hy hk) (callW_of_callE h3)
   simp only [dslE.k_defeq_body]
-  rcases h4 : callW p n "de_find" [x, genW y eb] m₃ with _ | ⟨r₄, m₄⟩
-  · rw [liftE_none, dslE.k_de_find_2.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]
+  refine RefE.onlySim (fun _ => dslE.k_de_find_2.none ..) (fun _ _ h => h) fun r₄ m₄ h4 => ?_
   simp only [dslE.k_de_find_2]
-  rcases h5 : callW p n "de_put" [x, genW y eb, r₃.headD 0, r₄.headD 0, r₄.tail.headD 0] m₄ with
-    _ | ⟨r₅, m₅⟩
-  · rw [liftE_none, dslE.k_de_put.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]
+  refine RefE.onlySim (fun _ => dslE.k_de_put.none ..) (fun _ _ h => h) fun r₅ m₅ h5 => ?_
   simp only [dslE.k_de_put]
   have hset := callW_memoSet hp.deFind hp.dePut h4 h5
   obtain ⟨hS₂, hSt₂⟩ := hS₁.set_de x y (r₃.headD 0) hx hy hset

@@ -1,5 +1,6 @@
 import ConAgua.Arena.WhnfCoreApp
 import ConAgua.Arena.RefECore
+import ConAgua.Arena.RefWalk
 import ConAgua.Arena.KnotE
 import ConAgua.Verdict.WhnfModels2E
 import ConAgua.Arena.GrindAttr
@@ -200,16 +201,10 @@ theorem appLoop_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn :
       rwa [hit] at h
     by_cases hlam : v >>> 28 = 5
     · rw [ite_eq_left hlam]
-      by_cases c1 : tierW v ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0
-      · rw [ite_eq_left c1]; exact RefE.of_cls0 (by decide)
-      rw [ite_eq_right c1]
-      by_cases c2 : tcnt m LAM (tierW v) ≤ idxW v
-      · rw [ite_eq_left c2]; exact RefE.of_cls0 (by decide)
-      rw [ite_eq_right c2]
-      rcases hcall : callW p k "beta_peel" [tfld m LAM (tierW v) (idxW v) 1,
-          rdW (m.arr64 SPN) (ao + i), ao, an, i + 1] m with _ | ⟨r₁, m₁⟩
-      · rw [liftE_none]; exact RefE.of_cls0 (by simp)
-      rw [liftE_some]
+      refine RefE.underIf (fun _ => rfl) (RefE.abort0 (by decide) fun c1 => ?_)
+      refine RefE.underIf (fun _ => rfl) (RefE.abort0 (by decide) fun c2 => ?_)
+      refine RefE.under (fun _ => rfl) (fun _ => rfl) fun hx =>
+        RefE.onlySim hx (fun _ _ h => h) fun r₁ m₁ hcall => ?_
       cases k with
       | zero => rw [callW_zero] at hcall; cases hcall
       | succ k' =>
@@ -235,7 +230,8 @@ theorem appLoop_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn :
         have hxi' : args[i.toNat] = decE (rdW (m.arr64 SPN) (ao + i)) := hxi
         rw [hxi']
         exact AM.run_of_ok _ _ hok
-      simp only [whnfAppE.k_beta_peel, whnfAppE.k_loop1, reduceCtorEq, ite_false, Sig.retVal, Sig.retOr]
+      simp only [Function.comp_apply, whnfAppE.k_beta_peel, whnfAppE.k_loop1, reduceCtorEq, ite_false,
+        Sig.retVal, Sig.retOr]
       exact RefE.ret hrun ⟨⟨M', hS'.frame_stk (MemFrame.setCtl m₁ 136 _) (by simp) (by simp), hK',
         StackKept.restoreTop (fun j hj => by rw [hSt'.below j (hjtop j hj)]; exact hb j hj)
           (by rw [hSt'.top]; exact hle0) (hSt'.size.trans hsz) (hbk.trans hSt'.bstk)
@@ -282,9 +278,7 @@ theorem appLoop_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn :
         (rdW (m.arr64 SPN) (ao + i)) (rdW (m.arr64 SPN) (ao + an + i)) hv hvv hnW ap m₁ hapE
       refine RefE.bind_right hrunAp ?_
       simp only [whnfAppE.j1]
-      by_cases hlen : m₁.len64 SPN ≤ vo + vn
-      · rw [ite_eq_left hlen]; exact RefE.of_cls0 (by decide)
-      rw [ite_eq_right hlen]
+      refine RefE.underIf (fun _ => rfl) (RefE.abort0 (by decide) fun hlen => ?_)
       -- the stack top is in bounds (it is `vo + vn ≠ 0`)
       have hc136 : (136 : Word).toNat < (m₁.arr64 CTL).size := by
         have ht1 : spTop m₁ = vo + vn := hSt₁.1.trans htop
@@ -348,8 +342,8 @@ theorem appLoop_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn :
         simp only [hctag, ↓reduceIte]
         cases k with
         | zero =>
-          obtain ⟨e', he', h0⟩ := callE_zero p "iota_rec_at" [mode, vis, d, hd, vo, vn + 1] m₂
-          rw [he']; simp only [whnfAppE.k_iota_rec_at, whnfAppE.k_loop1]; exact RefE.of_cls0 h0
+          exact RefE.under (fun _ => rfl) (fun _ => by simp only [whnfAppE.k_iota_rec_at]) fun hx =>
+            RefE.callE_zero hx
         | succ k' =>
         refine RefE.bind_callE (s₀ := ⟨m₂, Locals.init []⟩)
           (x := fun c => whnfAppE.k_loop1 p (spTop m₀) (whnfAppE.k_iota_rec_at p (k' + 1) mode vis d v
@@ -375,10 +369,8 @@ theorem appLoop_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn :
           have hopt : decOptR rr = some (decE (rr.tail.headD 0)) := decOpt_ne _ _ hz
           rw [hopt]
           simp only [appStepT]
-          rcases hcM : callW p (k' + 1) "mk_app_n_from" [rr.tail.headD 0, ao, an, i + 1] m₃ with
-            _ | ⟨r', m₄⟩
-          · rw [liftE_none]; exact RefE.of_cls0 (by simp)
-          rw [liftE_some]
+          refine RefE.under (fun _ => rfl) (fun _ => rfl) fun hx =>
+            RefE.onlySim hx (fun _ _ h => h) fun r' m₄ hcM => ?_
           have hx3 : SpineR m₃ ao an args := har₀.keepT _ hsz₃ hb₃ haoT hspn0
           obtain ⟨hok2, hD2, hres2, hfr2, hhw2⟩ := callW_mkAppNFrom p hp.spine (k' + 1)
             ⟨m₃, Locals.init []⟩ _ hS₃.arena (rr.tail.headD 0) ao an (i + 1) args hrwI.2 hx3
@@ -388,8 +380,8 @@ theorem appLoop_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn :
           have hS₄ := hS₃.of_app hD2 hcpl hfr2
           rw [hi1] at hok2 hres2 hS₄
           have hSt4 := StackKept.of_app_frame hfr2
-          simp only [whnfAppE.k_mk_app_n_from, whnfAppE.k_loop1, reduceCtorEq, ite_false,
-            Sig.retVal, Sig.retOr]
+          simp only [Function.comp_apply, whnfAppE.k_mk_app_n_from, whnfAppE.k_loop1, reduceCtorEq,
+            ite_false, Sig.retVal, Sig.retOr]
           have hr2 := AM.run_of_ok _ _ hok2
           rw [hres2] at hr2
           refine RefE.ret (by simp only [StateT.run_bind, hr2, except_ok_bind]; rfl)
@@ -427,10 +419,9 @@ theorem appLoop_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn :
     by_cases hs : same ≠ 0
     · rw [ite_eq_left hs]; exact rest _ _ (apW_same hs)
     rw [ite_eq_right hs]
-    rcases hmk : callW p k "mk_app" [v, rdW (m.arr64 SPN) (ao + i)] m with _ | ⟨r₁, m₁⟩
-    · rw [liftE_none]; simp only [whnfAppE.k_mk_app, whnfAppE.k_loop1]; exact RefE.of_cls0 (by simp)
-    rw [liftE_some]
-    simp only [whnfAppE.k_mk_app]
+    refine RefE.under (fun _ => rfl) (fun _ => by simp only [whnfAppE.k_mk_app]) fun hx =>
+      RefE.onlySim hx (fun _ _ h => h) fun r₁ m₁ hmk => ?_
+    simp only [Function.comp_apply, whnfAppE.k_mk_app]
     exact rest _ _ (by simp [apW, hs, hmk])
 
 include hp hwc hcc in

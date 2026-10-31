@@ -157,16 +157,4 @@ theorem knot_whnf_miss (h : whnfStuckTag e = false)
 
 end twin
 
-/-! ## The loop's twin runs -/
-
-theorem whnfLoop_done (r : CoreFnsA) (fe : IFEnv) (d K : Nat) (e v : EIdx) (a a₁ : AState)
-    (hs : (whnfStep r fe d e).run a = .ok (.done v, a₁)) :
-    (whnfLoop r fe d (K + 1) e).run a = .ok (v, a₁) := by
-  simp only [whnfLoop, StateT.run_bind, hs, except_ok_bind]; rfl
-
-theorem whnfLoop_cont (r : CoreFnsA) (fe : IFEnv) (d K : Nat) (e e' : EIdx) (a a₁ : AState)
-    (hs : (whnfStep r fe d e).run a = .ok (.cont e', a₁)) :
-    (whnfLoop r fe d (K + 1) e).run a = (whnfLoop r fe d K e').run a₁ := by
-  simp only [whnfLoop, StateT.run_bind, hs, except_ok_bind]
-
 end L.Arena
