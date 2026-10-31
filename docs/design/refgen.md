@@ -366,18 +366,14 @@ where it is lifted callees with guards (`tmo_ref`, `cxo_ref`, `ctl_ref`).
 By `reflen.py` lines (master after this lane), lifted-call density first:
 
 * ~~`IndT/Install*`~~: done (refwalk3, §6.8).
-* **One package for the sum and install families**: `SumAt` (`SumSteps.lean`) and `InsAt`
-  (`Install1.lean`) have the same fields; move one down to `Install1` and drop the other (rename
-  only, ~40 lines).
-* **The remaining wrapper `Sim`s around a unified callee's `RefE`** (`installSimFsortsC`, used by
-  `IdxSorts`; grep `RefE.run_okW` next to a `RefE.run_err` of the same callee): `bindRun` at the call
-  site, the wrapper deleted (§6.8).
+* ~~One package for the sum and install families~~, ~~the remaining wrapper `Sim`s~~: done
+  (refwalk5, §6.9).
 * ~~`IndT/Sum1–3`~~: done (refwalk2, §6.7).
 * **The knot callers** (the 11 files of §6.7 with a `callE` split on `whnf_top`/`infer_type_core`/
   `ensure_sort_core`/`is_def_eq_core`): `RefE.bindCall` per site, plus whatever lifted callees they
   have; `Verdict/IndB*` and the `Decl*T` gates first, by `reflen.py`.
-* **`IndT/Positivity`, `PosCrest`, `Tail`, `Pass`, `Block`, `CheckIndDecl` (~1.5 k lines)**: mostly
-  unified callees and guards; `bindE`/`bindRun` and the guard rules only. −10 %, 2–3 h.
+* ~~`IndT/Positivity`, `PosCrest`, `Tail`, `Pass`, `Block`, `CheckIndDecl`~~: done (refwalk5,
+  §6.9).
 * **`Verdict/IndB*` and the declaration arms**: not looked at; check `reflen.py` and the share of
   `rcases … callW` first.
 
@@ -535,3 +531,87 @@ wrappers), no file slower, memory unchanged. The `RefE` theorems lose 21 %, more
 `cbt_ref` −27 %, `iao_ref` −27 %) and where `bindE`/`lastE` replace a `rcases` of a unified
 callee's result (`cbi_ref`, `icbg_ref`); the loops over unified callees (`cbts_ref`, `iaa_ref`)
 lose 3–7 %. No file was left out.
+
+### 6.9 Positivity, PosCrest, Tail, Pass, Block, CheckIndDecl (lane refwalk5)
+
+Converted: `crest_ref` (`PosCrest.lean`), `cbp_ref` (`Positivity.lean`), `tail_ref` (`Tail.lean`),
+`pass_ref` (`Pass.lean`), `block_ref` (`Block.lean`), `cid_ref` (`CheckIndDecl.lean`); and, from
+§6.6's cleanups, `iis_ref` (`IdxSorts.lean`). Statements unchanged. New kit rule `RefE.bindRunLe`.
+
+**No package and no steps.** Every lifted callee has one site (`bindLift`, or `onlySim` for the L
+steps: `cv_lps`, the `block_shape_*` readers, `sl_nodup`, `check_block_positivity_init`/`_nfs`,
+`cons_block_ctors`, `check_block_pass_rec`); the bulk is unified callees, which were split twice
+(the error by `RefE.run_err`, the ok run by a second triple: `checkBlockInds_refinesC`,
+`checkBasisDecl_refines`, `checkBlockIdxSorts_refinesC`, …) and are now one `bindRun`/`bindRunLe`
+each. The knot calls of `crest_ref` (`infer_type_core`, `ensure_sort_core`) are `bindCall`.
+
+**One package for the sum and install families.** `SumAt` (`SumSteps.lean`) is gone; its steps
+and `Sum4` take `InsAt` (`Install1.lean`), which got `SumAt.top`.
+
+**The last wrapper `Sim`.** `installSimFsortsC` (`Sum3.lean`) is deleted; `iis_ref` takes
+`fsorts_ref` by `bindRunLe`. The `@[refines]` ok halves (`checkBlockIdxSorts_refinesC`,
+`checkBasisDecl_refines`, the `…_refinesC` of the pass's checks) lose their last proof users here
+but stay: they are the census links. The remaining wrapper `Sim`s (`cmC`, `cpvC`, `cpaC`,
+`checkConstantVal_absOK`, …) are in the `Decl*T` files of the knot-call lane.
+
+Pitfalls (add to §6.4):
+
+* **A unified callee called at less fuel than its spec** (`pass_ref`: the checks at `F`, their
+  specs and `RefE`s at `n + 3`, only `F ≤ n + 3` known; `iis_ref`: `fsorts_ref n` is at `n + 1`):
+  `RefE.bindRunLe hle`. It replaces both `callE_err_mono` with its `hk0` on the error side and the
+  fuel split of §6.8 (`rcases n` and `RefE.callE_zero`).
+* **The twin's last step is a unified callee read through its run** (`check_basis_decl` and
+  `check_block` in `cid_ref`, `check_block_tail` in `block_ref`, `check_block_tables` in
+  `tail_ref`, `checkStructFieldSortsI` in `iis_ref`): `rw [← bind_pure (f _ _)]`, `bindRun`, then
+  `RefE.ret rfl`. A twin still behind a `match some … with` (`cid_ref`'s `checkBlock`) needs
+  `dsimp only` before the `rw`.
+* **A guard on a `Bool` the twin computes** (`if !nameNodup … then fail … else`, `if !b then fail`):
+  `RefE.ofArms (fun h => K.abort1 (hc1 := h) ..) (fun h => K.arm1 (hc1 := h) ..) (RefE.guardThen
+  …)`, also for a non-recursive model whose guarded equations take explicit arguments.
+* **`RefE.onlySim` needs `Option (ρ × Mem)`**: a callee whose `Option` has no memory
+  (`nodupW : … → Option Word`) keeps its `rcases`.
+* **A binder named `V`** clashes with `local notation "V"`; name it `Vf` in a rule stated in such a
+  file.
+* **Unused imports**: the conversions left three (`shake` gate).
+
+Numbers, against master c7e644e2 (`reflen.py`, `ncl.py`; elaboration `lake env lean` on the file,
+master's text in a master worktree, 3 interleaved runs, median, load 13–16):
+
+| theorem | before | after |
+|---|---:|---:|
+| `crest_ref` | 154 | 122 |
+| `cbp_ref` | 213 | 198 |
+| `tail_ref` | 307 | 270 |
+| `pass_ref` | 448 | 353 |
+| `block_ref` | 242 | 211 |
+| `cid_ref` | 174 | 154 |
+| **the family** | 1538 | 1308 (**−15 %**) |
+| `iis_ref` | 121 | 110 |
+
+| file (code lines) | before | after | wall before → after | max RSS |
+|---|---:|---:|---:|---:|
+| `IndT/PosCrest.lean` | 220 | 188 | 1.37 → 1.45 s | 2.77 → 2.77 GB |
+| `IndT/Positivity.lean` | 460 | 445 | 3.26 → 3.16 s | 2.93 → 2.93 GB |
+| `IndT/Tail.lean` | 381 | 344 | 3.86 → 3.74 s | 3.32 → 3.32 GB |
+| `IndT/Pass.lean` | 513 | 418 | 3.84 → 3.70 s | 3.41 → 3.40 GB |
+| `IndT/Block.lean` | 307 | 276 | 2.24 → 2.18 s | 3.34 → 3.33 GB |
+| `IndT/CheckIndDecl.lean` | 330 | 310 | 2.21 → 2.31 s | 3.34 → 3.33 GB |
+| `IndT/IdxSorts.lean` | 277 | 266 | 2.72 → 2.75 s | 2.75 → 2.74 GB |
+| `IndT/Sum3.lean` (`installSimFsortsC`) | 415 | 392 | 3.08 → 3.40 s | 2.70 → 2.70 GB |
+| `IndT/SumSteps.lean` (`SumAt`) | 228 | 205 | 1.04 → 0.93 s | 2.59 → 2.58 GB |
+| `IndT/Install1.lean` (`InsAt.top`) | 315 | 317 | 2.26 → 2.24 s | 2.58 → 2.59 GB |
+| `RefWalk.lean` (`bindRunLe`) | 147 | 165 | | |
+
+The family: 2211 → 1981 code lines (**−10 %**); with the cleanups and the kit rule 3131 → 2861
+(−9 %). Time and memory unchanged (the differences are within the runs' spread: Sum3's runs are
+2.88–3.99 s before, 2.87–4.17 s after). As §6.5 predicted for unified callees, the files lose ~10 %;
+the theorems lose more (−15 %) where a callee was split twice (`pass_ref` −21 %, `crest_ref` −21 %
+with its two knot calls) and least where the plumbing is facts about the results (`cbp_ref` −7 %:
+the twin's whole run is rebuilt for `checkBlockPositivity_spec`). No file was left out.
+
+Next families, by `reflen.py` (none converted yet, `liftE_none` splits per file): the inference
+bodies (`InferBodyBindPi`'s `pisLoop_ref`, `InferBodyBind`'s `lamsLoop_ref`, `InferBodyDisp`'s
+`ibo_ref`/`ib_ref`, `InferBodySpine*`'s `spLoop_ref`/`spioLoop_ref`; ~1.1 k lines, 3–7 splits each),
+the iota reduction (`WhnfIotaRecRefine*`: `vck_ref`, `major_ref`, `fire2_ref`; 13 splits per file),
+`InferProj*` (`ipa_ref`, `ip_grade`), and the positivity tops (`PosNty`'s `nty_ref`, `PosTopE4`'s
+`nsd_ref`, `IndsE4`'s `cbao_ref`).
