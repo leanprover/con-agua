@@ -1,3 +1,4 @@
+import ConAgua.Arena.RefWalk
 import ConAgua.Arena.DeclArmT
 import ConAgua.Arena.DeclCanonInfo
 import ConAgua.Arena.DeclArmAxiom
@@ -119,9 +120,8 @@ theorem cda_ref {p : Prog} (hX : AxProg p) (hq : KnotStageProg p) (hcl : LeafClo
   unfold checkDecl
   simp only []
   -- `erec_ci`
-  rcases h1 : erecCiW n m i 0 with _ | ⟨r1, m1⟩
-  · rw [liftE_none, checkDeclAxiomE.k_erec_ci.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some, checkDeclAxiomE.k_erec_ci.arm1]
+  refine RefE.onlySim (fun _ => rfl) (fun _ _ h => h) fun r1 m1 h1 => ?_
+  dsimp only [checkDeclAxiomE.k_erec_ci]
   have hf1 := erecCiW_frame h1
   have hCr1 := CrOK.frame hCr hf1 (by decide) (by decide)
   obtain ⟨hS1, hg1, hci1, hcv1, htop1⟩ := erecCiW_okA h1 hS.stage hD hi hcvAt
@@ -139,16 +139,14 @@ theorem cda_ref {p : Prog} (hX : AxProg p) (hq : KnotStageProg p) (hcl : LeafClo
   have hname : cv.name = decI wn := hname0
   rw [rdW_of_get? hq1.symm (erecP_get hwn)]
   -- `Quot.sound`
-  rcases h2 : pinAtW m1 4 with _ | ⟨r2, m2⟩
-  · rw [liftE_none, checkDeclAxiomE.k_pin_at.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]
+  refine RefE.bindLift (fun _ => rfl) fun r2 m2 h2 => ?_
   obtain ⟨hm2, hr2, hl2, hrun2⟩ := pinAtW_ok h2 hS1.check.pins
   subst hm2
   have ep2 : r2.headD 0 = pinW m2 (1 + (4 : Word).toNat) := by rw [hr2]; rfl
   have hb2 := decI_beq (k := .name) wn _ hwnl hl2
   have hpq : pinQuotSound.run a = .ok (decI (pinW m2 (1 + (4 : Word).toNat)), a) := by
     simpa [pinQuotSound, show PIN_QUOT_SOUND = (4 : Word).toNat from rfl] using hrun2
-  refine RefE.bind_right hpq ?_
+  refine ⟨_, _, hpq, ?_⟩
   rw [hname, hb2]
   have hcv1' : decCV (erecP m2) (q + 1).toNat = some cv := by rw [hq1]; exact hcv1
   by_cases eq2 : wn = r2.headD 0
@@ -157,16 +155,14 @@ theorem cda_ref {p : Prog} (hX : AxProg p) (hq : KnotStageProg p) (hcl : LeafClo
     rw [ep2] at eq2
     simp only [eq2, decide_true, ite_true]
     have hN : L.Rom.NamesDn dn a L.Rom.quotNames := hQd.namesDn hS.twin.mem
-    rcases h3 : callW p n "rom_basis_decls" [4] m2 with _ | ⟨r3, m3⟩
-    · rw [liftE_none, checkDeclAxiomE.k_rom_basis_decls.none]; exact RefE.of_cls0 (by simp)
-    rw [liftE_some]
+    refine RefE.bindLift (fun _ => rfl) fun r3 m3 h3 => ?_
     obtain ⟨blk, a3, hrun3, hS3, hg3, hD3, -⟩ :=
       hX.quot.rom.quot dn vis fe n m2 a r3 m3 ⟨hS1, hok, hN⟩ h3
     have hM3 := hlf (by simp [cdaLeaves]) h3 hM1
     have hrun3' : (BasisKind.decls .quotK).run a = .ok (blk, a3) := hrun3
     have hok3 := (ConRon.Bridge.BasisKind.decls_run hok hrun3').1
     have hlen : blk.length = (r3.tail.headD 0).toNat := decPL_length (truncM m3) hD3
-    refine RefE.bind_right hrun3' ?_
+    refine ⟨_, _, hrun3', ?_⟩
     by_cases hl : r3.tail.headD 0 ≤ 4
     · rw [checkDeclAxiomE.k_rom_basis_decls.abort1 p _ _ _ _ _ hl]
       have hn4 : blk[4]? = none := by
@@ -190,38 +186,27 @@ theorem cda_ref {p : Prog} (hX : AxProg p) (hq : KnotStageProg p) (hcl : LeafClo
         rw [UInt64.toNat_add]; simp; omega
       simp only [rdW, this]; simp only [iwA] at hw; simp [hw]
     rw [ew, hget]
-    rcases h4 : callW p n "ci_canon_eq" [q, w] m3 with _ | ⟨r4, m4⟩
-    · rw [liftE_none, checkDeclAxiomE.k_ci_canon_eq.none]; exact RefE.of_cls0 (by simp)
-    rw [liftE_some]
+    refine RefE.bindLift (fun _ => rfl) fun r4 m4 h4 => ?_
     obtain ⟨s4, hs4, -, hok4, ⟨⟨hS4, hg4, hb4, -⟩, -⟩, -⟩ := triple_of_callW (s₀ := ⟨m3, Locals.init []⟩)
       (ciCanonEq_refines p hX.quot.canon dn vis fe q w (.axiomInfo cv) ci n ⟨m3, Locals.init []⟩ a3
         ⟨hS3, ArrExt.decCI (IWGrow.erecPExt hg3) hci1, ArrExt.decCI (truncM_erecP m3) hci,
           poolSmall_of_stage hS3, fun x y l hx hy => hok3.view_inj hx hy⟩) h4
     subst hs4
-    have hrun4 := AM.run_of_ok _ _ hok4
-    refine RefE.bind_right hrun4 ?_
-    by_cases z4 : r4.headD 0 = 0
-    · rw [checkDeclAxiomE.k_ci_canon_eq.abort1 p _ _ _ z4]
-      have hb : AM.res ((IConstantInfo.axiomInfo cv).canonEq ci) a3 = false := by
-        rw [← hb4, z4]; rfl
-      rw [hb]
-      exact RefE.ite_neg (by decide) fun _ => ErrClaim.fail _ _ rfl
-    rw [checkDeclAxiomE.k_ci_canon_eq.arm1 p _ _ _ z4]
-    have hb : AM.res ((IConstantInfo.axiomInfo cv).canonEq ci) a3 = true := by
-      rw [← hb4]; simpa using z4
-    rw [hb]
-    exact RefE.ite_pos rfl (RefE.ret rfl ⟨by simpa using hS4,
-      hlf (by simp [cdaLeaves]) h4 hM3, hg1.trans (hg3.trans hg4)⟩)
+    refine ⟨_, _, AM.run_of_ok _ _ hok4, ?_⟩
+    dsimp only [checkDeclAxiomE.k_ci_canon_eq]
+    refine RefE.guardIf rfl (fun z4 => by rw [← hb4, z4]; rfl)
+      (fun z4 => by rw [← hb4] at z4; simpa using z4) fun _ _ => ?_
+    exact RefE.ret rfl ⟨by simpa using hS4,
+      hlf (by simp [cdaLeaves]) h4 hM3, hg1.trans (hg3.trans hg4)⟩
   ----- the ordinary axioms
   rw [checkDeclAxiomE.k_pin_at.arm2 p _ _ _ _ _ _ eq2]
   rw [ep2] at eq2
   simp only [eq2, decide_false, Bool.false_eq_true, ite_false]
   -- the constant check
-  have h3R := ccv_ref hq hap hkp hn' hT1 hcv1' (by omega) (denoteCV_lps hcvd) hCr1
-  rcases h3 : checkConstantValE p n m2 vis (q + 1) with e3 | ⟨r3, m3⟩ <;> rw [h3] at h3R
-  · rw [checkDeclAxiomE.k_check_constant_val.none]; exact RefE.bind_left h3R
-  rw [checkDeclAxiomE.k_check_constant_val.arm1]
-  obtain ⟨_, a3, hrun3, hP3⟩ := h3R
+  refine RefE.bindE (fun _ => rfl) id (ccv_ref hq hap hkp hn' hT1 hcv1' (by omega) (denoteCV_lps hcvd) hCr1)
+    fun ⟨r3, m3⟩ _ a3 hrun3 hP3 => ?_
+  dsimp only [checkDeclAxiomE.k_check_constant_val]
+  dsimp only at hP3
   have hS3 := hP3.stage
   have hg3 := hP3.grow
   obtain ⟨env, hFo⟩ := hF
@@ -232,20 +217,17 @@ theorem cda_ref {p : Prog} (hX : AxProg p) (hq : KnotStageProg p) (hcl : LeafClo
   have hnmA : denoteN a.store.ns (decI wn) = some c.name := by
     rw [← hname]; exact (ConRon.Bridge.denoteCV_inv hcvd).1
   have hext1 := hstep1.ext
-  refine RefE.bind_right hrun3 ?_
   have hPx : ArrExt (erecP m2) (erecP m3) := IWGrow.erecPExt hg3
   have hM3 : CoreMemos m3 := hS3.twin.memos
   -- the standard axioms
-  rcases h4 : callW p n "std_axiom_ok" [vis, q + 1] m3 with _ | ⟨r4, m4⟩
-  · rw [liftE_none, checkDeclAxiomE.k_std_axiom_ok.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]
+  refine RefE.bindLift (fun _ => rfl) fun r4 m4 h4 => ?_
   obtain ⟨s4, hs4, -, hok4, hS4, hg4, hb4, -⟩ := triple_of_callW (s₀ := ⟨m3, Locals.init []⟩)
     (stdAxiomOk_refines p hX.std dn hdn vis fe (q + 1) cv n ⟨m3, Locals.init []⟩ a3
       ⟨hS3.stage, ArrExt.decCV hPx hcv1'⟩) h4
   subst hs4
   have hM4 := hlf (by simp [cdaLeaves]) h4 hM3
   have hrun4 := AM.run_of_ok _ _ hok4
-  refine RefE.bind_right hrun4 ?_
+  refine ⟨_, _, hrun4, ?_⟩
   generalize s4.mem = m4 at *
   generalize AM.res (stdAxiomOk fe cv) a3 = b4 at hrun4 hb4
   generalize AM.st (stdAxiomOk fe cv) a3 = a4 at hrun4 hS4
@@ -257,9 +239,8 @@ theorem cda_ref {p : Prog} (hX : AxProg p) (hq : KnotStageProg p) (hcl : LeafClo
         (pure (fe.push (.axiomInfo cv)) : AM IFEnv) ax
         (fun v fe' a' => CdaPost dn m v.1 v.2 fe' a') := by
     intro mx ax hSx hgx hMx
-    rcases e : callW p n "env_push" [vis, q] mx with _ | ⟨ry, my⟩
-    · rw [liftE_none, checkDeclAxiomE.k_env_push.none]; exact RefE.of_cls0 (by simp)
-    rw [liftE_some, checkDeclAxiomE.k_env_push.arm1]
+    refine RefE.onlySim (fun _ => rfl) (fun _ _ h => h) fun ry my e => ?_
+    dsimp only [checkDeclAxiomE.k_env_push]
     obtain ⟨hSy, hgy⟩ := push_call hX.val.rcp e hSx (ArrExt.decCI (IWGrow.erecPExt hgx) hci1)
     exact RefE.ret rfl ⟨by simpa using hSy, hlf (by simp [cdaLeaves]) e hMx,
       hg1.trans (hgx.trans hgy)⟩
@@ -274,9 +255,7 @@ theorem cda_ref {p : Prog} (hX : AxProg p) (hq : KnotStageProg p) (hcl : LeafClo
   rw [hb]
   refine RefE.ite_neg (by decide) ?_
   -- `Lean.trustCompiler`
-  rcases h5 : pinAtW m4 42 with _ | ⟨r5, m5⟩
-  · rw [liftE_none, checkDeclAxiomE.k_pin_at_2.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]
+  refine RefE.bindLift (fun _ => rfl) fun r5 m5 h5 => ?_
   obtain ⟨hm5, hr5, hl5, hrun5⟩ := pinAtW_ok h5 hS4.check.pins
   subst hm5
   have ep5 : r5.headD 0 = pinW m5 (1 + (42 : Word).toNat) := by rw [hr5]; rfl
@@ -284,31 +263,22 @@ theorem cda_ref {p : Prog} (hX : AxProg p) (hq : KnotStageProg p) (hcl : LeafClo
   have htn : trustCompilerName.run a4 = .ok (decI (pinW m5 (1 + (42 : Word).toNat)), a4) := by
     simpa [trustCompilerName, pinTrustCompiler, show PIN_TRUST_COMPILER = (42 : Word).toNat from rfl]
       using hrun5
-  refine RefE.bind_right htn ?_
+  refine ⟨_, _, htn, ?_⟩
   rw [hb5]
   by_cases eq5 : wn = r5.headD 0
   · rw [checkDeclAxiomE.k_pin_at_2.arm1 p _ _ _ _ _ _ eq5]
     rw [ep5] at eq5
     simp only [eq5, decide_true, ite_true]
-    rcases h6 : callW p n "trust_compiler_ok" [vis, q + 1] m5 with _ | ⟨r6, m6⟩
-    · rw [liftE_none, checkDeclAxiomE.k_trust_compiler_ok.none]; exact RefE.of_cls0 (by simp)
-    rw [liftE_some]
+    refine RefE.bindLift (fun _ => rfl) fun r6 m6 h6 => ?_
     obtain ⟨s6, hs6, -, hok6, hS6, hg6, hb6, -⟩ := triple_of_callW (s₀ := ⟨m5, Locals.init []⟩)
       (trustCompilerOk_refines p hX.tco dn vis fe (q + 1) cv n ⟨m5, Locals.init []⟩ a4
         ⟨hS4, ArrExt.decCV hP4 hcv1'⟩) h6
     subst hs6
-    have hrun6 := AM.run_of_ok _ _ hok6
-    refine RefE.bind_right hrun6 ?_
-    by_cases z6 : r6.headD 0 = 0
-    · rw [checkDeclAxiomE.k_trust_compiler_ok.abort1 p _ _ _ _ _ z6]
-      have ht6 : AM.res (trustCompilerOk fe cv) a4 = false := by rw [← hb6, z6]; rfl
-      rw [ht6]
-      exact RefE.ite_neg (by decide) fun _ => ErrClaim.fail _ _ rfl
-    rw [checkDeclAxiomE.k_trust_compiler_ok.arm1 p _ _ _ _ _ (by simpa using z6)]
-    have ht6 : AM.res (trustCompilerOk fe cv) a4 = true := by rw [← hb6]; simpa using z6
-    rw [ht6]
-    exact RefE.ite_pos rfl (push hS6 (hg3.trans (hg4.trans hg6))
-      (hlf (by simp [cdaLeaves]) h6 hM4))
+    refine ⟨_, _, AM.run_of_ok _ _ hok6, ?_⟩
+    dsimp only [checkDeclAxiomE.k_trust_compiler_ok]
+    refine RefE.guardIf rfl (fun z6 => by rw [← hb6, z6]; rfl)
+      (fun z6 => by rw [← hb6] at z6; simpa using z6) fun _ _ => ?_
+    exact push hS6 (hg3.trans (hg4.trans hg6)) (hlf (by simp [cdaLeaves]) h6 hM4)
   rw [checkDeclAxiomE.k_pin_at_2.arm2 p _ _ _ _ _ _ eq5]
   rw [ep5] at eq5
   simp only [eq5, decide_false, Bool.false_eq_true, ite_false]
@@ -342,25 +312,16 @@ theorem cda_ref {p : Prog} (hX : AxProg p) (hq : KnotStageProg p) (hcl : LeafClo
       rw [hb7, hb8]; rcases eq8 with e | e <;> simp [e]
     rw [hor]
     refine RefE.ite_pos rfl ?_
-    rcases h9 : callW p n "of_reduce_ax_ok" [vis, q + 1] m8 with _ | ⟨r9, m9⟩
-    · rw [liftE_none, checkDeclAxiomE.k_of_reduce_ax_ok.none]; exact RefE.of_cls0 (by simp)
-    rw [liftE_some]
+    refine RefE.bindLift (fun _ => rfl) fun r9 m9 h9 => ?_
     obtain ⟨s9, hs9, -, hok9, hS9, hg9, hb9, -⟩ := triple_of_callW (s₀ := ⟨m8, Locals.init []⟩)
       (ofReduceAxOk_refines p hX.ora dn hdn vis fe (q + 1) cv n ⟨m8, Locals.init []⟩ a4
         ⟨hS4, ArrExt.decCV hP4 hcv1'⟩) h9
     subst hs9
-    have hrun9 := AM.run_of_ok _ _ hok9
-    refine RefE.bind_right hrun9 ?_
-    by_cases z9 : r9.headD 0 = 0
-    · rw [checkDeclAxiomE.k_of_reduce_ax_ok.abort1 p _ _ _ _ _ z9]
-      have ht9 : AM.res (ofReduceAxOk fe cv) a4 = false := by rw [← hb9, z9]; rfl
-      rw [ht9]
-      exact RefE.ite_neg (by decide) fun _ => ErrClaim.fail _ _ rfl
-    rw [checkDeclAxiomE.k_of_reduce_ax_ok.arm1 p _ _ _ _ _ (by simpa using z9)]
-    have ht9 : AM.res (ofReduceAxOk fe cv) a4 = true := by rw [← hb9]; simpa using z9
-    rw [ht9]
-    exact RefE.ite_pos rfl (push hS9 (hg3.trans (hg4.trans hg9))
-      (hlf (by simp [cdaLeaves]) h9 hM4))
+    refine ⟨_, _, AM.run_of_ok _ _ hok9, ?_⟩
+    dsimp only [checkDeclAxiomE.k_of_reduce_ax_ok]
+    refine RefE.guardIf rfl (fun z9 => by rw [← hb9, z9]; rfl)
+      (fun z9 => by rw [← hb9] at z9; simpa using z9) fun _ _ => ?_
+    exact push hS9 (hg3.trans (hg4.trans hg9)) (hlf (by simp [cdaLeaves]) h9 hM4)
   rw [checkDeclAxiomE.k_pin_at_4.arm2 p _ _ _ _ _ _ _ eq8]
   rw [ep7, ep8] at eq8
   have hor : ((decI wn : NIdx) == decI (pinW m8 (1 + (45 : Word).toNat)) ||
@@ -406,16 +367,14 @@ theorem cda_ref {p : Prog} (hX : AxProg p) (hq : KnotStageProg p) (hcl : LeafClo
   rw [hor2]
   refine RefE.ite_neg (by decide) ?_
   -- `sorryAx` is skipped
-  rcases h12 : pinAtW m11 13 with _ | ⟨r12, m12⟩
-  · rw [liftE_none, checkDeclAxiomE.k_pin_at_7.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]
+  refine RefE.bindLift (fun _ => rfl) fun r12 m12 h12 => ?_
   obtain ⟨hm12, hr12, hl12, hrun12⟩ := pinAtW_ok h12 hS4.check.pins
   subst hm12
   have ep12 : r12.headD 0 = pinW m12 (1 + (13 : Word).toNat) := by rw [hr12]; rfl
   have hb12 := decI_beq (k := .name) wn _ hwnl hl12
   have hsa : pinSorryAx.run a4 = .ok (decI (pinW m12 (1 + (13 : Word).toNat)), a4) := by
     simpa [pinSorryAx, show PIN_SORRY_AX = (13 : Word).toNat from rfl] using hrun12
-  refine RefE.bind_right hsa ?_
+  refine ⟨_, _, hsa, ?_⟩
   rw [hb12]
   by_cases eq12 : wn = r12.headD 0
   · rw [checkDeclAxiomE.k_pin_at_7.arm1 p _ _ _ _ eq12]
