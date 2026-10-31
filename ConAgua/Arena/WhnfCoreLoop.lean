@@ -95,7 +95,7 @@ theorem step_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n 
   by_cases g4 : tagW e = 4
   · rw [ite_eq_left g4]
     refine RefE.abort0 (by decide) fun hc4 => ?_
-    refine RefE.of_run_eq (step_run_app _ _ (view_app s₀.mem a₀ hR e hh (vok _ hc4) g4).1) ?_
+    refine RefE.of_run_eq (step_run_app _ _ (view_app s₀.mem a₀ hR e hh ⟨ht, by simpa using hc4⟩ g4).1) ?_
     cases n with
     | zero => exact RefE.of_cls0 rfl
     | succ N =>

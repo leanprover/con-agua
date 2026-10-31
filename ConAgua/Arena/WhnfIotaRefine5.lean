@@ -65,12 +65,15 @@ def evoCnt (g : Word) : Option TRec :=
   else if g = 6 then some FORALL else if g = 7 then some LET else if g = 8 then some LIT
   else if g = 9 then some PROJ else none
 
+/-- The index `expr_view_ok` checks against the count: the wide index for an `app`, else narrow. -/
+def evoIx (h : Word) : Word := if tagW h = 4 then idxA h else idxW h
+
 /-- Model of `expr_view_ok`. -/
 def evoW (m : Mem) (h : Word) : Option Word :=
   if tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
   else match evoCnt (tagW h) with
     | none => none
-    | some c => if tcnt m c (tierW h) ≤ idxW h then none else some 0
+    | some c => if tcnt m c (tierW h) ≤ evoIx h then none else some 0
 
 theorem exprViewOk_spec (p : Prog) (hp : p.lookup "expr_view_ok" = some exprViewOkL) (n : Nat)
     (s₀ : St) (h : Word) :
@@ -81,7 +84,7 @@ theorem exprViewOk_spec (p : Prog) (hp : p.lookup "expr_view_ok" = some exprView
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt,
       tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] <;>
-    finish [evoW, evoCnt, tierW, idxW]
+    finish [evoW, evoCnt, evoIx, tierW, idxW]
 
 
 /-- Model of `ctl_get`. -/
@@ -130,19 +133,22 @@ theorem evo_view (m : Mem) (a : AState) (hR : ArenaR m a) (h : Word) (hh : HW h)
   | some c =>
   rw [hc] at hev
   simp only at hev
-  by_cases g2 : tcnt m c (tierW h) ≤ idxW h
+  by_cases g2 : tcnt m c (tierW h) ≤ evoIx h
   · rw [ite_eq_left g2] at hev; cases hev
-  have hv : viewOK m h c := ⟨g1, UInt64.not_le.mp g2⟩
+  have hvn : tagW h ≠ 4 → viewOK m h c := fun t => ⟨g1, UInt64.not_le.mp (by simpa [evoIx, t] using g2)⟩
+  have hva : tagW h = 4 → ¬ tcnt m c (tierW h) ≤ idxA h := fun t => by simpa [evoIx, t] using g2
   simp only [evoCnt] at hc
   by_cases t0 : tagW h = 0
   · simp [t0] at hc
     subst hc
+    have hv := hvn (by rw [t0]; decide)
     have := view_bvar m a hR h hh hv t0
     refine ⟨⟨_, this⟩, fun _ => ⟨_, this⟩, fun h6 => by rw [t0] at h6; exact absurd h6 (by decide),
       fun h0 => absurd t0 h0⟩
   by_cases t1 : tagW h = 1
   · simp [t1] at hc
     subst hc
+    have hv := hvn (by rw [t1]; decide)
     obtain ⟨i, ty, hvw⟩ := view_fvar m a hR h hh hv t1
     refine ⟨⟨_, hvw⟩, fun h0 => absurd h0 t0, fun h6 => by rw [t1] at h6; exact absurd h6 (by decide),
       fun _ _ v hv' => ?_⟩
@@ -150,6 +156,7 @@ theorem evo_view (m : Mem) (a : AState) (hR : ArenaR m a) (h : Word) (hh : HW h)
   by_cases t2 : tagW h = 2
   · simp [t2] at hc
     subst hc
+    have hv := hvn (by rw [t2]; decide)
     obtain ⟨u, hvw⟩ := view_sort m a hR h hh hv t2
     refine ⟨⟨_, hvw⟩, fun h0 => absurd h0 t0, fun h6 => by rw [t2] at h6; exact absurd h6 (by decide),
       fun _ _ v hv' => ?_⟩
@@ -157,6 +164,7 @@ theorem evo_view (m : Mem) (a : AState) (hR : ArenaR m a) (h : Word) (hh : HW h)
   by_cases t3 : tagW h = 3
   · simp [t3] at hc
     subst hc
+    have hv := hvn (by rw [t3]; decide)
     obtain ⟨n, us, hvw⟩ := view_const m a hR h hh hv t3
     refine ⟨⟨_, hvw⟩, fun h0 => absurd h0 t0, fun h6 => by rw [t3] at h6; exact absurd h6 (by decide),
       fun _ _ v hv' => ?_⟩
@@ -164,6 +172,7 @@ theorem evo_view (m : Mem) (a : AState) (hR : ArenaR m a) (h : Word) (hh : HW h)
   by_cases t4 : tagW h = 4
   · simp [t4] at hc
     subst hc
+    have hv : viewOKA m h := ⟨g1, UInt64.not_le.mp (hva t4)⟩
     obtain ⟨hvw, -⟩ := view_app m a hR h hh hv t4
     refine ⟨⟨_, hvw⟩, fun h0 => absurd h0 t0, fun h6 => by rw [t4] at h6; exact absurd h6 (by decide),
       fun _ _ v hv' => ?_⟩
@@ -171,6 +180,7 @@ theorem evo_view (m : Mem) (a : AState) (hR : ArenaR m a) (h : Word) (hh : HW h)
   by_cases t5 : tagW h = 5
   · simp [t5] at hc
     subst hc
+    have hv := hvn (by rw [t5]; decide)
     obtain ⟨hvw, -⟩ := view_lam m a hR h hh hv t5
     refine ⟨⟨_, hvw⟩, fun h0 => absurd h0 t0, fun h6 => by rw [t5] at h6; exact absurd h6 (by decide),
       fun _ _ v hv' => ?_⟩
@@ -178,24 +188,28 @@ theorem evo_view (m : Mem) (a : AState) (hR : ArenaR m a) (h : Word) (hh : HW h)
   by_cases t6 : tagW h = 6
   · simp [t6] at hc
     subst hc
+    have hv := hvn (by rw [t6]; decide)
     obtain ⟨hvw, -⟩ := view_forall m a hR h hh hv t6
     exact ⟨⟨_, hvw⟩, fun h0 => absurd t6 (by rw [h0]; decide), fun _ => ⟨_, _, hvw⟩,
       fun _ h6 => absurd t6 h6⟩
   by_cases t7 : tagW h = 7
   · simp [t7] at hc
     subst hc
+    have hv := hvn (by rw [t7]; decide)
     obtain ⟨hvw, -⟩ := view_let m a hR h hh hv t7
     refine ⟨⟨_, hvw⟩, fun h0 => absurd h0 t0, fun h6 => absurd h6 t6, fun _ _ v hv' => ?_⟩
     rw [hvw] at hv'; cases hv'; exact ⟨fun _ _ => by simp, fun _ => by simp⟩
   by_cases t8 : tagW h = 8
   · simp [t8] at hc
     subst hc
+    have hv := hvn (by rw [t8]; decide)
     obtain ⟨l, hvw⟩ := view_lit m a hR h hh hv t8
     refine ⟨⟨_, hvw⟩, fun h0 => absurd h0 t0, fun h6 => absurd h6 t6, fun _ _ v hv' => ?_⟩
     rw [hvw] at hv'; cases hv'; exact ⟨fun _ _ => by simp, fun _ => by simp⟩
   by_cases t9 : tagW h = 9
   · simp [t9] at hc
     subst hc
+    have hv := hvn (by rw [t9]; decide)
     obtain ⟨hvw, -⟩ := view_proj m a hR h hh hv t9
     refine ⟨⟨_, hvw⟩, fun h0 => absurd h0 t0, fun h6 => absurd h6 t6, fun _ _ v hv' => ?_⟩
     rw [hvw] at hv'; cases hv'; exact ⟨fun _ _ => by simp, fun _ => by simp⟩
