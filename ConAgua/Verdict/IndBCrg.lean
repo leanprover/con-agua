@@ -153,23 +153,21 @@ theorem crg_ref {p : Prog} (hp : CruleProg p) (hApd : ApdF p) (n : Nat) {dn : NI
   refine RefE.bindSim (fun _ => rfl)
     (fun r m' h => crfF_okT dn visR feR gen hgen m4 m' a4 r h ⟨hC4.stageT, hA4.crMemo⟩)
     fun r5 x5 m5 a5 h5 hrun5 ⟨⟨hT5, hg5, hx5, _⟩, hCr5⟩ => ?_
-  by_cases hb5 : r5.headD 0 = 0
+  rw [crgE.k_consts_resolve_ffast.eq_2]
+  refine RefE.splitNot (fun hb5 => by rw [← hx5]; simpa using hb5) (fun hb5 => by rw [← hx5] at hb5; simpa using hb5)
+    (fun _ _ => ?_) fun _ hb5 => ?_
   · -- the consts-resolve site
-    rw [crgE.k_consts_resolve_ffast.arm1 _ _ _ _ _ _ hb5]
-    obtain rfl : x5 = false := by rw [← hx5]; simpa using hb5
-    refine RefE.ite_neg (by decide) ?_
     rcases h6 : callE p N "unresolved_consts_error" [visR, gen, 3] m5 with e6 | ⟨r6, m6⟩
     · rw [crgE.k_unresolved_consts_error.none]
       obtain ⟨M5, hC5⟩ := hT5.core
       exact fun hV => uce_errClaim_hi hV.uce hV.nv hC5.arena.base hC5.pins hgen (by decide) h6 _
     rw [crgE.k_unresolved_consts_error.abort1]; exact RefE.of_cls0 rfl
-  rw [crgE.k_consts_resolve_ffast.arm2 _ _ _ _ _ _ hb5]
-  obtain rfl : x5 = true := by rw [← hx5]; simpa using hb5
+  subst hb5
   obtain ⟨p4, -⟩ := ConRon.Bridge.Inductives.constsResolveFFast_pstep c13.ok.toR
     (ConRon.Bridge.denote_ext hgP c13.ext) hrun5
   have c14 := c13.trans (p4.toCore c13.ok)
-  refine RefE.ite_pos rfl (RefE.ret rfl ⟨StageC.of_T hT5 c14.ok,
-    ((hg12.trans hg3).trans hg4).trans hg5, absOK_crfF h5 hA4 hCr5 hT5, c14, by rw [← hfv]⟩)
+  exact RefE.ret rfl ⟨StageC.of_T hT5 c14.ok,
+    ((hg12.trans hg3).trans hg4).trans hg5, absOK_crfF h5 hA4 hCr5 hT5, c14, by rw [← hfv]⟩
 
 end L.Ind
 
