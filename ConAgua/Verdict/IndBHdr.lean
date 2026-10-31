@@ -1,3 +1,4 @@
+import ConAgua.Arena.RefWalk
 import ConAgua.Arena.IndRealMemoCrT
 import ConAgua.Arena.CrOKFrame
 import ConAgua.Arena.DeclCvgT
@@ -139,36 +140,29 @@ theorem cch_ref {p : Prog} (hApd : ApdF p) (hCrf : CrfF p) {dn : NIdx → Option
   | zero => rw [classConstOkHeaderE.eq_1]; exact RefE.of_cls0 (by simp)
   | succ n =>
   rw [classConstOkHeaderE.arm1, ex, et]
-  simp only [cchT, fail_bindAM]
+  simp only [cchT, fail_bindAM, hname, hty]
   -- `env_find(x, vis)`
-  rcases h1 : envFindW m wx vis with _ | ⟨r1, m1⟩
-  · rw [liftE_none, classConstOkHeaderE.k_env_find.eq_1]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]
-  by_cases hb1 : r1.headD 0 ≠ 0
-  · rw [classConstOkHeaderE.k_env_find.abort1 _ _ _ _ _ _ _ _ hb1]
-    have : (fe.find? cv.name).isSome = true := by
-      rw [hname]; exact envFindW_hitSome h1 hS.stage.check.env hwxl hb1
-    exact fun _ => ErrClaim.ite_pos this (ErrClaim.fail_abort _ _ rfl)
-  rw [classConstOkHeaderE.k_env_find.arm1 _ _ _ _ _ _ _ _ (by simpa using hb1)]
-  obtain ⟨hm1, hfind⟩ := envFindW_miss h1 hS.stage.check.env hwxl (by simpa using hb1)
-  rw [hm1]
-  have hfind' : (fe.find? cv.name).isSome = false := by rw [hname, hfind]; rfl
-  refine RefE.ite_neg (by simp [hfind']) ?_
+  refine RefE.onlySim (fun _ => rfl) (fun _ _ h => h) fun r1 m1 h1 => ?_
+  dsimp only [classConstOkHeaderE.k_env_find]
+  refine RefE.guardThen rfl (envFindW_hitSome h1 hS.stage.check.env hwxl)
+    (fun hb h0 => by
+      rw [(envFindW_miss h1 hS.stage.check.env hwxl (by simpa using h0)).2] at hb; cases hb)
+    fun hb1 _ => ?_
+  obtain ⟨hm1, -⟩ := envFindW_miss h1 hS.stage.check.env hwxl (by simpa using hb1)
+  subst m1
   -- `reserved_contains(x)`
   rcases h2 : resContW n m wx with _ | c
   · rw [liftE_none, classConstOkHeaderE.k_reserved_contains.none]; exact RefE.of_cls0 (by simp)
   rw [liftE_some]
+  dsimp only [classConstOkHeaderE.k_reserved_contains]
   by_cases hb2 : c ≠ 0
-  · rw [classConstOkHeaderE.k_reserved_contains.abort1 _ _ _ _ _ _ _ hb2]
-    obtain ⟨l, hrunR, hcl⟩ := ibResContW_hit hb2 h2 hS.stage.check.pins
-    refine fun _ => ErrClaim.bind_right hrunR (ErrClaim.ite_pos ?_ (ErrClaim.fail_abort _ _ rfl))
-    rw [hname]; exact hcl
-  have hc0 : c = 0 := by simpa using hb2
-  subst hc0
-  rw [classConstOkHeaderE.k_reserved_contains.arm1 _ _ _ _ _ _ _ rfl]
+  · obtain ⟨l, hrunR, hcl⟩ := ibResContW_hit hb2 h2 hS.stage.check.pins
+    exact RefE.bind_right hrunR (RefE.guardThen rfl (fun _ => hcl) (fun _ => hb2) fun h _ => absurd hb2 h)
+  simp only [ne_eq, Decidable.not_not] at hb2
+  subst hb2
   obtain ⟨l, hrunR, hcl⟩ := resContW_miss hwxl h2 hS.stage.check.pins
-  refine RefE.bind_right hrunR (RefE.ite_neg ?_ ?_)
-  · rw [hname, hcl]; decide
+  refine RefE.bind_right hrunR (RefE.guardThen rfl (fun h => absurd rfl h) (fun h => by rw [hcl] at h; cases h)
+    fun _ _ => ?_)
   -- `cv_lps(q)`
   obtain ⟨w1, w2, hw1, hw2, hsl⟩ := decCV_slice hq0
   have e1 : rdW (m.arr64 EREC) (q + 1) = w1 :=
@@ -185,9 +179,8 @@ theorem cch_ref {p : Prog} (hApd : ApdF p) (hCrf : CrfF p) {dn : NIdx → Option
     exact RefE.of_cls0 (by simp)
   | succ n =>
   rw [cvLpsW_step, e1, e2]
-  rcases h4 : erToIwW n m w1 w2 with _ | ⟨r4, m4⟩
-  · rw [liftE_none, classConstOkHeaderE.k_cv_lps.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some, classConstOkHeaderE.k_cv_lps.eq_2]
+  refine RefE.onlySim (fun _ => rfl) (fun _ _ h => h) fun r4 m4 h4 => ?_
+  dsimp only [classConstOkHeaderE.k_cv_lps]
   obtain ⟨-, hr4t, hdec4, hS4R, hg4, htop4⟩ := erToIwW_stage h4 hS.stage hsrc
   have hS4 := StageT.of_iw hS hS4R (erToIwW_frame h4 hS.stage hsrc)
   have hCr4 := CrOK.frame hCr (erToIwW_frame h4 hS.stage hsrc) (by decide) (by decide)
@@ -199,110 +192,64 @@ theorem cch_ref {p : Prog} (hApd : ApdF p) (hCrf : CrfF p) {dn : NIdx → Option
   rcases h5 : nodupW (n + 1) m4 (r4.headD 0) w2 with _ | d
   · rw [liftE_none, classConstOkHeaderE.k_sl_nodup.none]; exact RefE.of_cls0 (by simp)
   rw [liftE_some]
+  dsimp only [classConstOkHeaderE.k_sl_nodup]
   have htopb : iwTop m4 < 2 ^ 64 := by simp only [iwTop]; exact UInt64.toNat_lt _
   obtain ⟨ws, hws, hlps, hwsl⟩ := slR_of_decHL m4 _ _ _ hdecL (by omega)
   simp only [UInt64.ofNat_toNat] at hws
   have hd := nodupW_ok _ _ _ _ _ _ hws h5
-  by_cases hb5 : d = 0
-  · rw [classConstOkHeaderE.k_sl_nodup.abort1 _ _ _ _ _ _ _ _ hb5]
-    have hnd : nameNodup cv.levelParams = false := by
-      rw [hlps, nameNodup_map ws hwsl]
-      by_cases hn : ws.Nodup
-      · rw [ite_eq_left hn, hb5] at hd; exact absurd hd (by decide)
-      · simp [hn]
-    exact fun _ => ErrClaim.ite_neg (by simp [hnd]) (ErrClaim.fail_abort _ _ rfl)
-  rw [classConstOkHeaderE.k_sl_nodup.arm1 _ _ _ _ _ _ _ _ hb5]
-  have hnd : nameNodup cv.levelParams = true := by
-    rw [hlps, nameNodup_map ws hwsl]
-    by_cases hn : ws.Nodup
-    · simp [hn]
-    · rw [ite_eq_right hn] at hd; exact absurd hd hb5
-  refine RefE.ite_pos hnd ?_
+  have hnd : nameNodup cv.levelParams = decide ws.Nodup := by rw [hlps, nameNodup_map ws hwsl]
+  refine RefE.guardIf rfl (fun hb5 => by grind) (fun hb5 => by grind) fun _ _ => ?_
   -- `loose_bvars_bounded_fast(4000000000, 0, t)`
-  rcases h6 : lbbF m4 [4000000000, 0, wt] with _ | ⟨r6, m6⟩
-  · rw [liftE_none, classConstOkHeaderE.k_loose_bvars_bounded_fast.eq_1]
-    exact RefE.of_cls0 (by simp)
-  rw [liftE_some]
-  obtain ⟨x6, a6, hrun6, hS6, hg6, hx6, -⟩ :=
-    lbbF_okT dn vis fe 4000000000 0 wt hwtl m4 m6 a r6 h6 hS4
+  refine RefE.bindSim (fun _ => rfl) (fun r m' h => lbbF_okT dn vis fe 4000000000 0 wt hwtl m4 m' a r h hS4)
+    fun r6 x6 m6 a6 h6 hrun6 ⟨hS6, hg6, hx6, _⟩ => ?_
   have hCr6 := CrOK.frame hCr4 (lbbF_frame h6) (by decide) (by decide)
   have hA6 : AFr m m6 := hA4.trans (AFr.of_frame (lbbF_frame h6))
-  rw [fuelW, show ((0 : Word).toNat) = 0 from rfl, ← hty] at hrun6
-  refine RefE.bind_right hrun6 ?_
-  by_cases hb6 : r6.headD 0 = 0
-  · rw [classConstOkHeaderE.k_loose_bvars_bounded_fast.abort1 _ _ _ _ _ _ _ _ hb6]
-    exact RefE.of_cls0 rfl
-  rw [classConstOkHeaderE.k_loose_bvars_bounded_fast.arm1 _ _ _ _ _ _ _ _ hb6]
-  have ex6 : x6 = true := by rw [← hx6]; simpa using hb6
-  rw [ex6]
+  dsimp only [classConstOkHeaderE.k_loose_bvars_bounded_fast]
+  refine RefE.abort0 rfl fun hb6 => ?_
+  rw [show x6 = true by rw [← hx6]; simpa using hb6]
   refine RefE.ite_pos rfl ?_
   -- `has_fvar_fast(4000000000, t)`
-  rcases h7 : hffF m6 [4000000000, wt] with _ | ⟨r7, m7⟩
-  · rw [liftE_none, classConstOkHeaderE.k_has_fvar_fast.eq_1]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]
-  obtain ⟨x7, a7, hrun7, hS7, hg7, hx7, -⟩ :=
-    hffF_okT dn vis fe 4000000000 wt hwtl m6 m7 a6 r7 h7 hS6
+  refine RefE.bindSim (fun _ => rfl) (fun r m' h => hffF_okT dn vis fe 4000000000 wt hwtl m6 m' a6 r h hS6)
+    fun r7 x7 m7 a7 h7 hrun7 ⟨hS7, hg7, hx7, _⟩ => ?_
   have hCr7 := CrOK.frame hCr6 (hffF_frame h7) (by decide) (by decide)
   have hA7 : AFr m m7 := hA6.trans (AFr.of_frame (hffF_frame h7))
-  rw [fuelW, ← hty] at hrun7
-  refine RefE.bind_right hrun7 ?_
-  by_cases hb7 : r7.headD 0 ≠ 0
-  · rw [classConstOkHeaderE.k_has_fvar_fast.abort1 _ _ _ _ _ _ _ _ hb7]
-    exact RefE.of_cls0 rfl
-  have hb7' : r7.headD 0 = 0 := by simpa using hb7
-  rw [classConstOkHeaderE.k_has_fvar_fast.arm1 _ _ _ _ _ _ _ _ hb7']
-  have ex7 : x7 = false := by rw [← hx7]; simpa using hb7
-  rw [ex7]
+  dsimp only [classConstOkHeaderE.k_has_fvar_fast]
+  refine RefE.abort0 rfl fun hb7 => ?_
+  rw [show x7 = false by rw [← hx7]; simpa using hb7]
   refine RefE.ite_neg (by decide) ?_
   -- `all_level_params_defined(o, l, t)`
   have hdec7 : decHL m7 (r4.headD 0).toNat w2.toNat = some cv.levelParams := by
     rw [decHL_grow (hg6.trans hg7) (by omega), hdecL]
   have hst7 : a7.store = a.store := by
     rw [hffF_store hrun7, lbbF_store hrun6]
-  rcases h8 : callE p (n + 1) "all_level_params_defined" [r4.headD 0, w2, wt] m7 with e8 | ⟨r8, m8⟩
-  · rw [classConstOkHeaderE.k_all_level_params_defined.eq_1]
-    exact fun hG => ErrClaim.of_callE_nv hG.nv (_root_.L.Checker.nv_mem (by decide +kernel)) h8
+  refine RefE.bindCall (fun _ => rfl)
+    (fun hG _ h8 => ErrClaim.of_callE_nv hG.nv (_root_.L.Checker.nv_mem (by decide +kernel)) h8)
+    (fun b h8 => apdF_okT dn vis fe (r4.headD 0) w2 wt hwtl cv.levelParams m7 b.2 a7 b.1
+      (apdF_of_callW hApd h8) ⟨hS7, hdec7, by rw [hst7]; exact hlpsN⟩)
+    fun r8 m8 x8 a8 h8 hrun8 ⟨hS8, hg8, hx8, _⟩ => ?_
   have h8' := apdF_of_callW hApd (callW_of_callE h8)
   have hCr8 := CrOK.frame hCr7 (apdF_frame h8') (by decide) (by decide)
-  obtain ⟨x8, a8, hrun8, hS8, hg8, hx8, -⟩ :=
-    apdF_okT dn vis fe (r4.headD 0) w2 wt hwtl cv.levelParams m7 m8 a7 r8 h8'
-      ⟨hS7, hdec7, by rw [hst7]; exact hlpsN⟩
   have hA8 : AFr m m8 := fun hA => absOK_apdF h8' (hA7 hA) hS8
-  rw [← hty] at hrun8
-  refine RefE.bind_right hrun8 ?_
-  by_cases hb8 : r8.headD 0 = 0
-  · rw [classConstOkHeaderE.k_all_level_params_defined.abort1 _ _ _ _ _ _ hb8]
-    have ex8 : x8 = false := by rw [← hx8]; simpa using hb8
-    rw [ex8]
-    exact fun _ => ErrClaim.ite_neg (by decide) (ErrClaim.fail_abort _ _ rfl)
-  rw [classConstOkHeaderE.k_all_level_params_defined.arm1 _ _ _ _ _ _ hb8]
-  have ex8 : x8 = true := by rw [← hx8]; simpa using hb8
-  rw [ex8]
-  refine RefE.ite_pos rfl ?_
+  dsimp only [classConstOkHeaderE.k_all_level_params_defined]
+  refine RefE.guardIf rfl (fun hb8 => by rw [← hx8]; simpa using hb8)
+    (fun hb8 => by rw [← hx8] at hb8; simpa using hb8) fun _ _ => ?_
   -- `consts_resolve_ffast(vis, t)`
-  rcases h9 : callE p (n + 1) "consts_resolve_ffast" [vis, wt] m8 with e9 | ⟨r9, m9⟩
-  · rw [classConstOkHeaderE.k_consts_resolve_ffast.none]
-    exact fun hG => ErrClaim.of_callE_nv hG.nv (_root_.L.Checker.nv_mem (by decide +kernel)) h9
+  refine RefE.bindCall (fun _ => rfl)
+    (fun hG _ h9 => ErrClaim.of_callE_nv hG.nv (_root_.L.Checker.nv_mem (by decide +kernel)) h9)
+    (fun b h9 => crfF_okT dn vis fe wt hwtl m8 b.2 a8 b.1 (crfF_of_callW hCrf h9) ⟨hS8, hCr8.crMemo⟩)
+    fun r9 m9 x9 a9 h9 hrun9 ⟨⟨hS9, hg9, hx9, _⟩, hCr9⟩ => ?_
   have h9' := crfF_of_callW hCrf (callW_of_callE h9)
-  obtain ⟨x9, a9, hrun9, ⟨hS9, hg9, hx9, -⟩, hCr9⟩ :=
-    crfF_okT dn vis fe wt hwtl m8 m9 a8 r9 h9' ⟨hS8, hCr8.crMemo⟩
-  rw [← hty] at hrun9
-  refine RefE.bind_right hrun9 ?_
+  dsimp only [classConstOkHeaderE.k_consts_resolve_ffast]
   by_cases hb9 : r9.headD 0 = 0
-  · rw [classConstOkHeaderE.k_consts_resolve_ffast.arm1 _ _ _ _ _ _ hb9]
-    have ex9 : x9 = false := by rw [← hx9]; simpa using hb9
-    rw [ex9]
+  · rw [show x9 = false by rw [← hx9]; simpa using hb9]
     refine RefE.ite_neg (by decide) ?_
-    rcases h10 : callE p (n + 1) "unresolved_consts_error" [vis, wt, 2] m9 with e10 | ⟨r10, m10⟩
-    · rw [classConstOkHeaderE.k_unresolved_consts_error.eq_1]
-      obtain ⟨M9, hC9⟩ := hS9.core
-      rw [hty]
+    rw [ite_eq_left hb9]
+    rcases h10 : callE p (n + 1) "unresolved_consts_error" [vis, wt, 2] m9 with e10 | ⟨r10, m10⟩ <;>
+      dsimp only [classConstOkHeaderE.k_unresolved_consts_error]
+    · obtain ⟨M9, hC9⟩ := hS9.core
       exact fun hG => uce_errClaim_hi hG.uce hG.nv hC9.arena.base hC9.pins hwtl (by decide) h10 "type of"
-    · rw [classConstOkHeaderE.k_unresolved_consts_error.abort1]
-      exact RefE.of_cls0 rfl
-  rw [classConstOkHeaderE.k_consts_resolve_ffast.arm2 _ _ _ _ _ _ hb9]
-  have ex9 : x9 = true := by rw [← hx9]; simpa using hb9
-  rw [ex9]
+    · exact RefE.of_cls0 rfl
+  rw [show x9 = true by rw [← hx9]; simpa using hb9, ite_eq_right hb9]
   exact RefE.ite_pos rfl (RefE.ret rfl ⟨hS9, hg4.trans (hg6.trans (hg7.trans (hg8.trans hg9))),
     fun hA => absOK_crfF h9' (hA8 hA) hCr9 hS9⟩)
 
@@ -347,38 +294,23 @@ theorem cco_ref (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState} {q : Word} 
   | zero => rw [classConstOkE.eq_1]; exact RefE.of_cls0 (by simp)
   | succ n =>
   rw [classConstOkE.arm1, cchT_bind]
-  have hh := cch_ref hApd hCrk.crf n hS hq' hqb hlps hA.crMemo.crOK
-  rcases h1 : classConstOkHeaderE p n m vis q with e1 | ⟨r1, m1⟩
-  · rw [h1] at hh
-    rw [classConstOkE.k_class_const_ok_header.eq_1]
-    exact RefE.bind_left hh
-  rw [h1] at hh
-  obtain ⟨_, a1, hrun, hS1, hg1, hA1⟩ := hh
-  rw [classConstOkE.k_class_const_ok_header.eq_2]
-  refine RefE.bind_right hrun ?_
+  refine RefE.bindE (fun _ => rfl) id (cch_ref hApd hCrk.crf n hS hq' hqb hlps hA.crMemo.crOK)
+    fun ⟨r1, m1⟩ _ a1 hrun ⟨hS1, hg1, hA1⟩ => ?_
+  dsimp only [classConstOkE.k_class_const_ok_header]
   have hq1 : decCV (erA m1) q.toNat = some cv := ArrExt.decCV (IWGrow.erecExt hg1) hq'
   obtain ⟨wt, hwt, hwtl, hty⟩ := decCV_typeW hq1
   have et : rdW (m1.arr64 EREC) (q + 3) = wt :=
     rdW_of_get? (by rw [UInt64.toNat_add]; simp; omega) hwt
-  have hA1 : AbsOK m1 := hA1 hA
   rw [et, hty]
-  rcases h2 : callE p n "infer_type_core" [vis, 0, wt] m1 with e2 | ⟨r2, m2⟩
-  · rw [classConstOkE.k_infer_type_core.eq_1]
-    exact RefE.bind_left fun hG => hG.core.inferTypeCore n (by omega) hS1 0 wt hwtl _ h2
-  rw [classConstOkE.k_infer_type_core.arm1]
-  have hi := RSim.coreAbs hq.closed (by decide) hA1 (inferT_rsim hq n (by omega) hS1 0 wt hwtl)
-  rw [show (0 : Word).toNat = 0 from rfl] at hi
-  obtain ⟨st, a2, hrun2, ⟨⟨hS2, hg2, hb2, rfl⟩, hA2⟩⟩ := hi (r2, m2) (callW_of_callE h2)
-  refine RefE.bind_right hrun2 ?_
-  rcases h3 : callE p n "ensure_sort_core" [vis, 0, r2.headD 0] m2 with e3 | ⟨r3, m3⟩
-  · rw [classConstOkE.k_ensure_sort_core.eq_1]
-    exact RefE.bind_left fun hG => hG.core.ensureSortCore n (by omega) hS2 0 (r2.headD 0) hb2 _ h3
-  rw [classConstOkE.k_ensure_sort_core.arm1]
-  have he := RSim.coreAbs hq.closed (by decide) hA2
-    (ensureSortT_rsim hq n (by omega) hS2 0 (r2.headD 0) hb2)
-  rw [show (0 : Word).toNat = 0 from rfl] at he
-  obtain ⟨u, a3, hrun3, ⟨⟨hS3, hg3, -⟩, hA3⟩⟩ := he (r3, m3) (callW_of_callE h3)
-  exact RefE.bind_right hrun3 (RefE.ret rfl ⟨hS3, (hg1.trans hg2).trans hg3, hA3⟩)
+  refine RefE.bindCall (fun _ => rfl) (fun hG _ h2 => hG.core.inferTypeCore n (by omega) hS1 0 wt hwtl _ h2)
+    (RSim.coreAbs hq.closed (by decide) (hA1 hA) (inferT_rsim hq n (by omega) hS1 0 wt hwtl))
+    fun r2 m2 _ a2 _ hrun2 ⟨⟨hS2, hg2, hb2, rfl⟩, hA2⟩ => ?_
+  dsimp only [classConstOkE.k_infer_type_core]
+  refine RefE.bindCall (fun _ => rfl)
+    (fun hG _ h3 => hG.core.ensureSortCore n (by omega) hS2 0 (r2.headD 0) hb2 _ h3)
+    (RSim.coreAbs hq.closed (by decide) hA2 (ensureSortT_rsim hq n (by omega) hS2 0 (r2.headD 0) hb2))
+    fun r3 m3 _ a3 _ hrun3 ⟨⟨hS3, hg3, _⟩, hA3⟩ => ?_
+  exact RefE.ret rfl ⟨hS3, (hg1.trans hg2).trans hg3, hA3⟩
 
 include hq hApd hCrk in
 /-- **`class_const_ok` refines `classConstOk`** under `StageT` (`cco_ref`'s ok half). -/

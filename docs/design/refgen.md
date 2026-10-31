@@ -369,13 +369,11 @@ By `reflen.py` lines (master after this lane), lifted-call density first:
 * ~~One package for the sum and install families~~, ~~the remaining wrapper `Sim`s~~: done
   (refwalk5, §6.9).
 * ~~`IndT/Sum1–3`~~: done (refwalk2, §6.7).
-* **The knot callers** (the 11 files of §6.7 with a `callE` split on `whnf_top`/`infer_type_core`/
-  `ensure_sort_core`/`is_def_eq_core`): `RefE.bindCall` per site, plus whatever lifted callees they
-  have; `Verdict/IndB*` and the `Decl*T` gates first, by `reflen.py`.
+* ~~The knot callers~~ (the 11 files of §6.7, and `DeclAxQuotT`): done (refwalk4, §6.10).
 * ~~`IndT/Positivity`, `PosCrest`, `Tail`, `Pass`, `Block`, `CheckIndDecl`~~: done (refwalk5,
   §6.9).
-* **`Verdict/IndB*` and the declaration arms**: not looked at; check `reflen.py` and the share of
-  `rcases … callW` first.
+* **`Verdict/IndB*` and the declaration arms**: `IndBHdr`, `IndBTpd`, `IndBRec2`, `IndBRec4` and
+  the `Decl*T` gates done (refwalk4, §6.10); the other `IndB*` files not looked at.
 
 ### 6.7 Sum1–3 (lane refwalk2)
 
@@ -615,3 +613,127 @@ bodies (`InferBodyBindPi`'s `pisLoop_ref`, `InferBodyBind`'s `lamsLoop_ref`, `In
 the iota reduction (`WhnfIotaRecRefine*`: `vck_ref`, `major_ref`, `fire2_ref`; 13 splits per file),
 `InferProj*` (`ipa_ref`, `ip_grade`), and the positivity tops (`PosNty`'s `nty_ref`, `PosTopE4`'s
 `nsd_ref`, `IndsE4`'s `cbao_ref`).
+
+### 6.10 The knot callers (lane refwalk4)
+
+Converted: `cch_ref`, `cco_ref` (`Verdict/IndBHdr.lean`), `pds_ref`, `pde_ref` (`IndBTpd.lean`),
+`rto_ref` (`IndBRec2.lean`), `crule_ref` (`IndBRec4.lean`), `crp_ref`, `cdo_ref` (`DeclCrpT.lean`),
+`cert_ref`, `dnc_ref`, `dng_ref` (`DeclNatGateT.lean`), `cm_ref`, `ctp_ref`, `cpv_ref`, `cpa_ref`
+(`DeclDivGateT2.lean`), `cda_ref` (`DeclAxQuotT.lean`), `ivg_ref`, `tv_ref`, `cvg_ref`
+(`Verdict/DeclValE.lean`), `ccv_ref`, `dv_ref`, `ov_ref` (`DeclValsE.lean`), `tmp_ref`
+(`IndT/RecCheckPins.lean`). Statements unchanged. No new kit rule, no package, no steps: every
+lifted callee has one site under its theorem, and the knot calls are `bindCall` as they stand.
+`checkConstantVal_absOK` (`DeclArmT.lean`) had no users and is gone. `cmC`, `cpvC`, `cpaC` have no
+proof users either, but they are `@[refines]` census links (their proofs are one `RefE.run_okW`
+each), so they stay, like §6.9's ok halves. `e_view` does not occur in these files, so no shared
+`e_view` lemma was added.
+
+**`bindCall` takes the knot's `Sim`s as they are.** The `StageT` sims of `KnotStageProg`
+(`inferTypeCore_sim`, `ensureSortCore_sim`, `isDefEqCore_sim`) are `Sim`s over `(r, m')`. `bindCall`
+wants an `RSim`-shaped `h1`, which is `fun b h => hq.isDefEqCore_sim … b.1 b.2 h`. A `RelW`
+(`apdF_okT`, `crfF_okT`, applied to the call's `callW`) goes in the same way:
+`fun b h => apdF_okT … m b.2 a b.1 (apdF_of_callW hap h) pre`. The `StageC` `RSim`s (`inferC_rsim`,
+`isDefEqC_rsim`) go in unapplied. A `RelW` for `bindSim` (`lbbF_okT`, `hffF_okT`, the `nat_op_*`
+refs) is `(fun r m' h => lbbF_okT … m m' a r h hS)`, or `(natOpGuard_ref … m a · · pre ·)`.
+
+Pitfalls (add to §6.4):
+
+* **Rewrite the twin's argument once, at the top.** The twin reads `cv.type`, `vg.jv`, `decE x`
+  where the knot claims and sims say `decI wt`, `decI wj`. A `rw [hty]` (or `rw [hty, hjv]`,
+  `simp only [decE_eq]`) on the goal before the first `bindCall` removes every
+  `rw [h00, ← hty] at this` / `at hrun` pair. `(0 : Word).toNat` against `0` needs no rewrite:
+  `bindCall` unifies up to defeq. A twin form folded under a definition (`dvT`) needs the `rw` again
+  after the `unfold`.
+* **The twin's result as an equation in the post** (`decI (r.headD 0) = x` of the sims): name it
+  in the `fun` pattern and `subst`. A `rfl` pattern fails when the twin's result binder is `_`.
+* **`bindCall`'s `herr` is the claim on the twin step itself.** The old `intro hG; …;
+  exact ErrClaim.bind_left this` becomes the bare claim. An extra `ErrClaim.bind_left` makes the
+  rule split the twin at the wrong bind (`get`, `whnf`).
+* **`lastE` against a non-recursive continuation of the model's own arguments**
+  (`defnNatGateE.k_defn_nat_cert p`) needs `(K := …)` too, as in §6.7.
+* **A run that leaves the twin state (`e1 : a1 = a`) after `bindSim`** is `subst a1`. A
+  `rw [e1] at hrun1 hS1` leaves the goal at `a1`, and a later `bindE` with a callee stated at `a`
+  fails.
+* **A redundant `import ConAgua.Arena.RefWalk`** where an imported knot caller already brings it
+  (`IndBRec2` through `IndBHdr`, the `Decl*T` files and `DeclAxQuotT` through each other) fails the `shake` gate. So
+  did `RecGen28`'s import after refwalk3; it is dropped here.
+
+**What stays by hand**, and why:
+
+* **A twin step computed from several L calls**: `pds_ref`'s `tpClosed` from four reads (`bvar_b` ×2,
+  `fvar_b` ×2) with early exits. The reads are `onlySim`, but the exits stay `K.arm` rewrites.
+* **Model arms that return `.ok` early** (`if r = 0 then .ok (0, m) else rest`: `cert_ref`, the
+  `div_mod` guards of `cm_ref`/`ctp_ref`/`cpa_ref`, `dng_ref`'s membership): no rule. The
+  `by_cases` and the `K.armᵢ` rewrites stay.
+* **A callee whose model equation is needed later**: `tmp_ref`'s `tptE` (its frame `tptE_mfr` takes
+  `tptE … = .ok`). `bindE` does not hand the equation out, so the `rcases` stays.
+* **A call outside the closure with no twin step and an error claim** (`callE` of `erec_ci`,
+  `pin_at`, `env_push` in `cdo_ref`, `dv_ref`, `ov_ref`): no rule. An `onlyCall` (the `callE`
+  analogue of `onlySim`) would save one line per site, so it was not added.
+* **`install_value_guards` in `tv_ref`, `cvg_ref`, `dv_ref`, `ov_ref`**: its error half is a field of
+  the caller's `G` (`hG.ivg`), not `RefE.run_err` under the spec's `Gs`, so `bindRun` does not
+  apply.
+* **`ctp_ref`'s `is_def_eq_core`**: the twin reads `tp.2` where L reads `decI tp.2.word.toUInt64`.
+  `rw [← decI_word]` on the goal would also rewrite the model's arguments.
+
+`dv_ref` and `ov_ref` are the same proof over two models (67 lines each). One lemma over the
+model would take another 67 lines off.
+
+Numbers, against master 1b1b1898 (the eleven files are unchanged on master since; `reflen.py`,
+`ncl.py`; elaboration is `lake env lean` on master's text and the branch's in the branch worktree, 3 interleaved runs, median, load 13–23. "work" is the profiler's
+sum without `import` and `blocked`:
+
+| theorem | before | after |
+|---|---:|---:|
+| `cch_ref` | 182 | 128 |
+| `cco_ref` | 41 | 26 |
+| `pds_ref` | 227 | 198 |
+| `pde_ref` | 88 | 81 |
+| `rto_ref` | 130 | 103 |
+| `crule_ref` | 109 | 91 |
+| `crp_ref` | 201 | 156 |
+| `cdo_ref` | 172 | 153 |
+| `cert_ref` | 61 | 58 |
+| `dnc_ref` | 111 | 99 |
+| `dng_ref` | 117 | 89 |
+| `cm_ref` | 239 | 221 |
+| `ctp_ref` | 112 | 111 |
+| `cpv_ref` | 98 | 86 |
+| `cpa_ref` | 55 | 45 |
+| `cda_ref` | 340 | 298 |
+| `ivg_ref` | 117 | 76 |
+| `tv_ref` | 178 | 131 |
+| `cvg_ref` | 197 | 169 |
+| `ccv_ref` | 54 | 37 |
+| `dv_ref` | 84 | 67 |
+| `ov_ref` | 84 | 67 |
+| `tmp_ref` | 126 | 112 |
+| **the family** | 3123 | 2602 (**−17 %**) |
+
+| file (code lines) | before | after | work before → after | wall (median) | max RSS |
+|---|---:|---:|---:|---:|---:|
+| `Verdict/IndBHdr.lean` | 343 | 275 | 2.54 → 2.59 s | 3.87 → 3.86 s | 2.57 → 2.57 GB |
+| `Verdict/IndBTpd.lean` | 389 | 354 | 3.54 → 3.45 s | 4.60 → 4.44 s | 2.74 → 2.74 GB |
+| `Verdict/IndBRec2.lean` | 193 | 166 | 1.37 → 1.45 s | 2.60 → 2.10 s | 2.69 → 2.72 GB |
+| `Verdict/IndBRec4.lean` | 217 | 200 | 1.52 → 1.46 s | 2.30 → 1.83 s | 2.69 → 2.70 GB |
+| `DeclCrpT.lean` | 528 | 464 | 2.50 → 2.14 s | 2.72 → 3.00 s | 2.70 → 2.69 GB |
+| `DeclNatGateT.lean` | 396 | 354 | 2.78 → 2.61 s | 2.81 → 3.34 s | 2.62 → 2.61 GB |
+| `DeclDivGateT2.lean` | 630 | 589 | 6.39 → 6.54 s | 5.67 → 6.47 s | 2.89 → 2.88 GB |
+| `DeclAxQuotT.lean` | 373 | 332 | 4.30 → 4.25 s | 5.33 → 4.92 s | 3.09 → 3.08 GB |
+| `Verdict/DeclValE.lean` | 543 | 426 | 5.19 → 4.87 s | 5.25 → 5.63 s | 2.79 → 2.79 GB |
+| `Verdict/DeclValsE.lean` | 279 | 228 | 1.94 → 1.92 s | 1.78 → 1.91 s | 2.66 → 2.66 GB |
+| `IndT/RecCheckPins.lean` | 192 | 179 | 0.41 → 0.39 s | 1.15 → 1.20 s | 2.62 → 2.61 GB |
+| `DeclArmT.lean` (`checkConstantVal_absOK`) | 384 | 375 | | | |
+
+The family: 4083 → 3567 code lines (**−13 %**), memory unchanged, work unchanged (−0.4 to +0.15 s
+per file). The wall times at load ~20 move both ways by up to 0.5 s between batches (a second batch
+gave `DeclNatGateT` 3.13 → 2.83 s, `IndBRec2` 1.97 → 2.35 s). Only `DeclDivGateT2` was slower in
+both batches (+0.6 s), and its profile differs by 0.1 s (`instantiate metavars`), so no file was
+left out. The `RefE` theorems lose 17 %. That is the Sum1–3/`Install` range, because the knot calls
+were the longest hand splits (6–9 lines each to 3–4 lines each: `ivg_ref` −35 %, `tv_ref` −26 %,
+`cch_ref` −30 %, `dng_ref` −24 %). They lose least where the plumbing is model-only arms (`ctp_ref`
+−1 %, `cert_ref` −5 %, `cm_ref` −8 %).
+
+Next families: the ones §6.9 lists (the inference bodies, the iota reduction, `InferProj*`, the
+positivity tops), and the other `Verdict/IndB*` files (`IndBClm`, `IndBCrg`, `IndBTmo`, …; check
+`reflen.py`).

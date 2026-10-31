@@ -86,29 +86,23 @@ theorem rto_ref (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState} {g k rc cvR
   rw [classRecTyOkE.arm1]
   unfold ConRon.Arena.classRecTyOk
   rw [rgT_bind]
-  have hrg := rg_ref (p := p) (k := k) (c := c) dn fe vis n hC.stage hG hns hrc hA
-  rcases h1 : classRecTyOkGuardsE p n m g k rc c with e1 | ⟨r1, m1⟩
-  · rw [h1] at hrg
-    rw [classRecTyOkE.k_class_rec_ty_ok_guards.none]
-    exact RefE.bind_left fun hG' => hrg hG'.nv
-  rw [h1] at hrg
-  obtain ⟨tm, a1, hrunT, hrun1, hS1, hg1, hA1⟩ := hrg
+  refine RefE.bindE (fun _ => rfl) (fun hV => hV.nv)
+    (rg_ref (p := p) (k := k) (c := c) dn fe vis n hC.stage hG hns hrc hA)
+    fun ⟨r1, m1⟩ tm a1 _ ⟨hrun1, hS1, hg1, hA1⟩ => ?_
+  dsimp only at hrun1 hS1 hg1 hA1
   obtain ⟨-, -, hcls, -, -, -, -, -⟩ := dClassGen_inv hgP
   obtain ⟨p1, -⟩ := ConRon.Bridge.Inductives.targetMajorAt_spec G.cls gP.cls c.toNat a a1 tm
     hC.check.state hC.check.pins hcls hrun1
   have hC1 : StageC dn vis fe env m1 a1 := hC.of_pstep hS1 hA1 p1
-  rw [classRecTyOkE.k_class_rec_ty_ok_guards.arm1]
-  refine RefE.bind_right hrunT ?_
+  dsimp only [classRecTyOkE.k_class_rec_ty_ok_guards]
   -- `class_gen_rec_ty(g, c)`
-  rcases h2 : gtW n m1 g c with _ | ⟨r2, m2⟩
-  · rw [liftE_none, classRecTyOkE.k_class_gen_rec_ty.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]
+  refine RefE.bindLift (fun _ => rfl) fun r2 m2 h2 => ?_
   obtain ⟨o, a2, hrun2, hC2, ⟨⟨hS2, hg2, ho⟩, hA2⟩, hR2, p2⟩ :=
     (RSim.liftPP hC1 (gtW_sim dn vis fe n m1 a1 g c G hS1 (hG.grow (decCG_mono _) hg1) hns hA1)
       (fun _ _ _ h => ⟨h.1.1, h.2⟩) (ConRon.Bridge.Inductives.classGenRecTy_spec G gP c.toNat)
       (dClassGen_ext p1.ext _ _ hgP)) (r2, m2) h2
   dsimp only at hS2 hg2 ho hA2 hC2
-  refine RefE.bind_right hrun2 ?_
+  refine ⟨_, _, hrun2, ?_⟩
   rcases o with _ | gty
   · rw [classRecTyOkE.k_class_gen_rec_ty.abort1 _ _ _ _ _ _ _ ho]; exact RefE.of_cls0 rfl
   obtain ⟨gtyP, -, hgtyd⟩ := hR2
@@ -126,10 +120,8 @@ theorem rto_ref (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState} {g k rc cvR
   simp only [show UInt64.ofNat 0 = (0 : Word) from rfl, UInt64.add_zero] at erc
   rw [erc]
   -- `cv_new(…)` (twin side none)
-  rcases h3 : cvNewW m2 (rdW (m2.arr64 EREC) (UInt64.ofNat q0)) (rdW (m2.arr64 EREC) (UInt64.ofNat q0 + 1))
-      (rdW (m2.arr64 EREC) (UInt64.ofNat q0 + 2)) (r2.tail.headD 0) with _ | ⟨q, m3⟩
-  · rw [liftE_none, classRecTyOkE.k_cv_new.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some, classRecTyOkE.k_cv_new.arm1]
+  refine RefE.onlySim (fun _ => rfl) (fun _ _ h => h) fun q m3 h3 => ?_
+  dsimp only [classRecTyOkE.k_cv_new]
   obtain ⟨hS3, hg3, hqe, htop3, hsl3, hdec3⟩ := cvNew_stage (cq := UInt64.ofNat q0) h3 hS2
     (by rw [trc]; exact hcv2) (by rw [trc]; exact hext2.1) (by rw [trc]; exact hext2.2) hgH
   have hext3 : CVExt m3 q.toNat :=
@@ -146,19 +138,14 @@ theorem rto_ref (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState} {g k rc cvR
       some { rcP.cvR with type := gtyP } := by
     simp only [Frontend.denoteCV, hnm, hlps, hgtyd]
   -- `class_const_ok(vis, q)`
-  have hcco := cco_ref hq hApd hCrk n (by omega) hC3.stageT (rec2DecCV_erecP hdec3 hext3) hqb hA3
-    (denoteCV_lps hcvG)
-  rcases h4 : classConstOkE p n m3 vis q with e4 | ⟨r4, m4⟩
-  · rw [h4] at hcco
-    rw [classRecTyOkE.k_class_const_ok.none]
-    exact RefE.bind_left hcco
-  rw [h4] at hcco
-  obtain ⟨u, a4, hrun4, hS4, hg4, hA4⟩ := hcco
+  refine RefE.bindE (fun _ => rfl) id
+    (cco_ref hq hApd hCrk n (by omega) hC3.stageT (rec2DecCV_erecP hdec3 hext3) hqb hA3
+      (denoteCV_lps hcvG)) fun ⟨r4, m4⟩ u a4 hrun4 ⟨hS4, hg4, hA4⟩ => ?_
+  dsimp only at hS4 hg4 hA4
   obtain ⟨c4, -, ⟨hwG, -⟩, -⟩ := ConRon.Bridge.Inductives.classConstOk_spec fe
     (ConRon.Bridge.CoreSpec.of_core rfl) henv _ _ a2 a4 u hC3.check hcvG hrun4
   have hC4 : StageC dn vis fe env m4 a4 := StageC.of_T hS4 c4.ok
-  rw [classRecTyOkE.k_class_const_ok.arm1]
-  refine RefE.bind_right hrun4 ?_
+  dsimp only [classRecTyOkE.k_class_const_ok]
   have hg14 := hg12.trans (hg3.trans hg4)
   have hri := hcvRi.stab (OMono.decCVp _) m4 hg14
   obtain ⟨wt, hwt, hwtH, hwtE⟩ := decCV_typeW hri
@@ -168,33 +155,19 @@ theorem rto_ref (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState} {g k rc cvR
     rdW_of_get? (by rw [UInt64.toNat_add]; simp [erA] at hEi ⊢; omega) hwt
   rw [et, hwtE]
   -- `is_def_eq_core(vis, 0, cvRi.type, gty)`
-  rcases h5 : callE p n "is_def_eq_core" [vis, 0, wt, r2.tail.headD 0] m4 with e5 | ⟨r5, m5⟩
-  · rw [classRecTyOkE.k_is_def_eq_core.none]
-    refine RefE.bind_left fun hG' => ?_
-    have := hG'.core.isDefEqCore n (by omega) hC4.stageT 0 wt (r2.tail.headD 0) hwtH hgH _ h5
-    simpa using this
   have hdx : denoteE a4.store (decI wt) = some cvRiP.type := by
     rw [← hwtE]
     exact (ConRon.Bridge.Core.denoteCV_inv
       (dExt_denoteCV (p12.ext.trans c4.ext) _ _ hRiP)).2.2
   have hdy : denoteE a4.store (decI (r2.tail.headD 0)) = some gtyP :=
     ConRon.Bridge.denote_ext hgtyd c4.ext
-  have hi := isDefEqC_rsim hq henv n (by omega) hC4 hA4 0 wt (r2.tail.headD 0) hwtH hgH
-    hdx hdy hRi hwG
-  rw [show (0 : Word).toNat = 0 from rfl] at hi
-  obtain ⟨bb, a5, hrun5, hC5, hg5, hbb, hA5, -⟩ := hi (r5, m5) (callW_of_callE h5)
-  dsimp only at hC5 hg5 hbb hA5
-  refine RefE.bind_right hrun5 ?_
-  by_cases h50 : r5.headD 0 = 0
-  · rw [classRecTyOkE.k_is_def_eq_core.abort1 _ _ _ _ h50]
-    have hbf : bb = false := by rw [← hbb]; simp [decBool]; simpa using h50
-    subst hbf
-    simp only [Bool.false_eq_true, ite_false]
-    exact fun _ => ErrClaim.fail _ _ (by decide)
-  rw [classRecTyOkE.k_is_def_eq_core.arm1 _ _ _ _ h50]
-  have hbt : bb = true := by rw [← hbb]; simpa [decBool] using h50
-  subst hbt
-  simp only [ite_true]
+  refine RefE.bindCall (fun _ => rfl)
+    (fun hG' _ h5 => hG'.core.isDefEqCore n (by omega) hC4.stageT 0 wt (r2.tail.headD 0) hwtH hgH _ h5)
+    (isDefEqC_rsim hq henv n (by omega) hC4 hA4 0 wt (r2.tail.headD 0) hwtH hgH hdx hdy hRi hwG)
+    fun r5 m5 bb a5 _ _ ⟨hC5, hg5, hbb, hA5, _⟩ => ?_
+  dsimp only [classRecTyOkE.k_is_def_eq_core]
+  refine RefE.guardIf (by decide) (fun h50 => by rw [← hbb]; simpa [decBool] using h50)
+    (fun h50 => by rw [← hbb] at h50; simpa [decBool] using h50) fun _ _ => ?_
   have hg35 := hg4.trans hg5
   refine RefE.ret rfl ⟨hC5, hg14.trans hg5, ⟨?_, CVExt_grow hg35 hext3⟩, hA5⟩
   show decCVp m5 q.toNat = _

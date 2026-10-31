@@ -3,7 +3,6 @@ import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.Arena.IndT.RecGen28Models
-import ConAgua.Arena.RefWalk
 
 /-!
 # `classes_nfs`' loop refinement

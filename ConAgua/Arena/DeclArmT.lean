@@ -102,17 +102,6 @@ theorem checkConstantVal_refinesT (p : Prog) (hp : ValProg p) (hq : KnotStagePro
   obtain ⟨hok, hst, -⟩ := AM.of_run_ok _ _ _ _ hrun
   exact ⟨hl, hok, by rw [hst]; exact hP.stage, hP.grow, hP.crOK⟩
 
-/-- **`check_constant_val` keeps the walk memos** (`AbsOK`), under `checkConstantVal_refinesT`'s
-preconditions (lane `indstaget`: replaces the `AbsKeep` premise of the inductive stage). -/
-theorem checkConstantVal_absOK (p : Prog) (hp : ValProg p) (hq : KnotStageProg p) (hap : ApdF p)
-    (hkp : CrKeep p) {n : Nat} (hn : n ≤ 2 ^ 62) {m m' : Mem} {r : List Word} {a₀ : AState}
-    {dn : NIdx → Option ConLeche.Name} {fe : IFEnv} {vis q : Word} {cv : IConstantVal}
-    (hS : StageT dn vis fe m a₀) (hqd : decCV (erecP m) q.toNat = some cv) (hqb : q.toNat + 3 < 2 ^ 64)
-    (hlps : ∃ ks, cv.levelParams.mapM (denoteN a₀.store.ns) = some ks) (hCr : L.Stubs.CrOK m)
-    (h : callW p n "check_constant_val" [vis, q] m = some (r, m')) (hA : AbsOK m) : AbsOK m' := by
-  obtain ⟨s', rfl, -, _, _, -, hP⟩ := RefE.run_okW (s₀ := ⟨m, Locals.init []⟩)
-    (checkConstantVal_specE p hp n _ vis q) (ccv_ref hq hap hkp hn hS hqd hqb hlps hCr) h
-  exact hP.abs hA
 /-- **`check_thm_val` refines `checkThmVal .verified`** under `StageT`, at the call: the stage
 relation at the extended environment and the core's memos after it (the census link since lane
 `indstaget`). -/
