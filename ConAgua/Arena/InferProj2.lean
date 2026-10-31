@@ -288,25 +288,20 @@ theorem ip_grade (p : Prog) (hp : InferProjProg p) (hpj : ProjProg p) (hc : Infe
   have hrun2 := ipRun_of_ref h₂
   obtain ⟨-, ⟨M₂, hS₂, hK₂, hSt₂⟩, -, hrw2⟩ := h₂
   -- `get_app_fn`
-  rcases hc3 : callW p n "get_app_fn" [r₂.headD 0] m₂ with _ | ⟨r₃, m₃⟩
-  · rw [liftE_none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]; simp only [ipE.k_get_app_fn]
+  refine RefE.onlySim (fun _ => rfl) (fun _ _ h => h) fun r₃ m₃ hc3 => ?_
+  dsimp only [ipE.k_get_app_fn]
   obtain ⟨rfl, hhw, hgaf⟩ := getAppFn_callW hp.leaf hS₂.arena.base hrw2 hc3
   by_cases g1 : r₃.headD 0 >>> 28 ≠ 3
-  · rw [ite_eq_left g1]
-    have ht : ((decE (r₃.headD 0)).tag == ETag.const) = false := by
+  · have ht : ((decE (r₃.headD 0)).tag == ETag.const) = false := by
       rw [decE_const_tag _ hhw]; simpa using g1
-    exact fun _ => ErrClaim.of_error (inferProj_notConst _ _ _ _ _ _ _ _ _ _ _ _ hrun1 hrun2 hgaf ht) rfl
-  rw [ite_eq_right g1]
+    exact RefE.abortAt g1 fun _ =>
+      ErrClaim.of_error (inferProj_notConst _ _ _ _ _ _ _ _ _ _ _ _ hrun1 hrun2 hgaf ht) rfl
+  refine RefE.pass g1 ?_
   have g1' : r₃.headD 0 >>> 28 = 3 := Classical.not_not.mp g1
   have ht : ((decE (r₃.headD 0)).tag == ETag.const) = true := by
     rw [decE_const_tag _ hhw]; simpa using g1'
-  by_cases g2 : tierW (r₃.headD 0) ≠ 0 ∧ rdW (m₃.arr64 CTL) 1 = 0
-  · rw [ite_eq_left g2]; exact RefE.of_cls0 rfl
-  rw [ite_eq_right g2]
-  by_cases g3 : tcnt m₃ CONST (tierW (r₃.headD 0)) ≤ idxW (r₃.headD 0)
-  · rw [ite_eq_left g3]; exact RefE.of_cls0 rfl
-  rw [ite_eq_right g3]
+  refine RefE.abort0 (by rfl) fun g2 => ?_
+  refine RefE.abort0 (by rfl) fun g3 => ?_
   have hvOK : viewOK m₃ (r₃.headD 0) CONST := ⟨g2, by simpa using g3⟩
   obtain ⟨cT, cu, hv, hcT, hcu, hcTw, hcuw⟩ :=
     view_const_words m₃ _ hS₂.arena.base (r₃.headD 0) hhw hvOK g1'
@@ -315,9 +310,8 @@ theorem ip_grade (p : Prog) (hp : InferProjProg p) (hpj : ProjProg p) (hc : Infe
   subst hcT hcu
   obtain ⟨lsu, hdu⟩ := (hc.den dn m₃ _ vis fe M₂ eb hS₂).constLs _ _ _ hv
   -- `find_proj`
-  rcases hc4 : callW p n "find_proj" [vis, wT, i] m₃ with _ | ⟨r₄, m₄⟩
-  · rw [liftE_none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]; simp only [ipE.k_find_proj]
+  refine RefE.onlySim (fun _ => rfl) (fun _ _ h => h) fun r₄ m₄ hc4 => ?_
+  dsimp only [ipE.k_find_proj]
   have h₄ := CoreSpec.of_callW (hc.findProj n ⟨m₃, Locals.init []⟩ _ dn vis fe M₂ eb wT i hS₂ hcTw) hc4
   have hrun4 : fe.findProj? (decI wT) i.toNat =
       decEntry (m₃.arr64 EREC) (r₄.headD 0) (r₄.tail.headD 0) i.toNat := h₄.res
@@ -331,30 +325,26 @@ theorem ip_grade (p : Prog) (hp : InferProjProg p) (hpj : ProjProg p) (hc : Infe
     obtain ⟨xs, hxs⟩ := getAppArgs_of_getAppFn _ _ _ _ _ hgaf
     have hT := inferProj_miss R fe d.toNat (decI sn) i.toNat (decE pe) a₀ _ _ _ _ _ _ _ xs hrun1
       hrun2 hgaf ht hv hnone hxs
-    rcases hc5 : callW p n "find_table" [vis, wT] m₄ with _ | ⟨r₅, m₅⟩
-    · rw [liftE_none]; exact RefE.of_cls0 (by simp)
-    rw [liftE_some]; simp only [ipE.k_find_table]
+    refine RefE.onlySim (fun _ => rfl) (fun _ _ h => h) fun r₅ m₅ hc5 => ?_
+    dsimp only [ipE.k_find_table]
     obtain ⟨t₅, ht₅, hm₅, -, htbl, hsome⟩ := triple_of_callW (findTable_refines p
       hp.leaf.core.envix hp.leaf.core.envrow hpj.tblix hpj.tblrow hpj.findTable n
       ⟨m₄, Locals.init []⟩ vis wT hS₄.env hcTw) hc5
     have hm5 : m₅ = m₄ := ht₅ ▸ hm₅
     subst hm5
     by_cases g5 : r₅.headD 0 ≠ 0
-    · rw [ite_eq_left g5]
-      have hts : (fe.findTable? (decI wT)).isSome = true := by rw [htbl]; exact hsome g5
-      exact fun _ => ErrClaim.of_error hT (by rw [hts]; rfl)
-    rw [ite_eq_right g5]
+    · have hts : (fe.findTable? (decI wT)).isSome = true := by rw [htbl]; exact hsome g5
+      exact RefE.abortAt g5 fun _ => ErrClaim.of_error hT (by rw [hts]; rfl)
+    refine RefE.pass g5 ?_
     have hts : (fe.findTable? (decI wT)).isSome = false := by
       rw [htbl]; simp only [tblOut, Classical.not_not.mp g5, ↓reduceIte, Option.isSome_none]
     by_cases g6 : wT = sn
     · subst g6
       rw [ite_eq_left rfl]
-      rcases hc6 : callW p n "get_app_args" [r₂.headD 0] m₅ with _ | ⟨r₆, m₆⟩
-      · rw [liftE_none]; exact RefE.of_cls0 (by simp)
-      rw [liftE_some]; simp only [ipE.k_get_app_args]
-      rcases hc7 : callW p n "env_find" [wT, vis] m₆ with _ | ⟨r₇, m₇⟩
-      · rw [liftE_none]; exact RefE.of_cls0 (by simp)
-      rw [liftE_some]; simp only [ipE.k_env_find]
+      refine RefE.onlySim (fun _ => rfl) (fun _ _ h => h) fun r₆ m₆ hc6 => ?_
+      dsimp only [ipE.k_get_app_args]
+      refine RefE.onlySim (fun _ => rfl) (fun _ _ h => h) fun r₇ m₇ hc7 => ?_
+      dsimp only [ipE.k_env_find]
       obtain ⟨hf6, -, -, -, xs', hxs', hsp⟩ := getAppArgs_callW hp.leaf.core.spine hS₄ hrw2 hc6
       have hxx : xs' = xs := by
         have := hxs'.symm.trans hxs
@@ -372,10 +362,8 @@ theorem ip_grade (p : Prog) (hp : InferProjProg p) (hpj : ProjProg p) (hc : Infe
           rdW (m₇.arr64 EREC) (r₇.tail.headD 0 + 17) < r₆.tail.headD 0
       · rw [ite_eq_left C1]
         obtain ⟨hwc, hpe1⟩ := hP.2 C1
-        rcases hc8 : callW p n "env_find"
-            [rdW (m₇.arr64 EREC) (rdW (m₇.arr64 EREC) (r₇.tail.headD 0 + 18)), vis] m₇ with _ | ⟨r₈, m₈⟩
-        · rw [liftE_none]; exact RefE.of_cls0 (by simp)
-        rw [liftE_some]; simp only [ipE.k_env_find_2]
+        refine RefE.onlySim (fun _ => rfl) (fun _ _ h => h) fun r₈ m₈ hc8 => ?_
+        dsimp only [ipE.k_env_find_2]
         obtain ⟨rfl, hfind8, hfound8⟩ := envFind_callE hp.leaf.core.envix hp.leaf.core.envrow
           hp.leaf.core.envfind hS₆.env hwc (callE_of_callW hc8)
         have hcf := ctorFieldsGt_eq (iw := i) hS₆.erec hfind8 hfound8

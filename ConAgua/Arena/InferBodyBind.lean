@@ -157,13 +157,12 @@ theorem lamsOut_ref (p : Prog) (hp : InferLeafProg p) (hab : AbstractRangeOK p)
         rw [← hn1, getElem!_pos (ws.map decE) _ (by simpa using hjK), Array.getElem_map, hwsj]]
       rfl
     rw [hT]
-    rcases h1 : callW p k "ar_entry" [rdW (m.arr64 BSTK) (lo + (n - 1)), d, n - 1, 0] m with _ | ⟨r₁, m₁⟩
-    · rw [liftE_none, ilfE.k_ar_entry_2.eq_1]; exact RefE.of_cls0 (by simp)
-    rw [liftE_some, ilfE.k_ar_entry_2.eq_2]
-    have h₁ := CoreSpec.of_callW (hab k ⟨m, Locals.init []⟩ a dn vis fe M eb _ d (n - 1) 0 hS hwj) h1
+    refine RefE.bind_callW (fun _ => ilfE.k_ar_entry_2.none ..)
+      (hab k ⟨m, Locals.init []⟩ a dn vis fe M eb _ d (n - 1) 0 hS hwj) fun r₁ m₁ _ h₁ =>
+      RefE.after_core (w := fun (v : Word × Mem) => ([v.1], v.2)) h₁ fun M₁ hS₁ _ => ?_
+    rw [ilfE.k_ar_entry_2.arm1]
     have hK₁ := h₁.after.bkept
     have hsz := hcap _ _ _ _ _ _ _ hS
-    refine RefE.bind_core (w := fun (v : Word × Mem) => ([v.1], v.2)) h₁ (fun M₁ hS₁ _ => ?_)
     rcases h2 : callW p k "mk_forall" [r₁.headD 0, cur] m₁ with _ | ⟨r₂, m₂⟩
     · rw [liftE_none, ilfE.k_mk_forall.eq_1]; exact RefE.of_cls0 (by simp)
     rw [liftE_some, ilfE.k_mk_forall.eq_2]
@@ -206,29 +205,21 @@ theorem ilf_ref (p : Prog) (hp : InferLeafProg p)
     rw [hdk', h0, inferLamsLeaf, Array.size_map, hB.size]
   rw [hT]
   simp only [ilfE]
-  rcases h1 : callW p n "inst_list" [t, fo, k, 0] s₀.mem with _ | ⟨r₁, m₁⟩
-  · rw [liftE_none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]; simp only [ilfE.k_inst_list]
-  have h₁ := CoreSpec.of_callW (hil n s₀ a₀ dn vis fe M eb t fo k 0 fvs hS ht hf hftop) h1
-  have hK₁ := h₁.after.bkept
-  refine RefE.bind_core (w := id) h₁ (fun M₁ hS₁ _ => ?_)
+  refine RefE.bind_callW (fun _ => rfl) (hil n s₀ a₀ dn vis fe M eb t fo k 0 fvs hS ht hf hftop)
+    fun r₁ m₁ _ h₁ => RefE.after_core (w := id) h₁ fun M₁ hS₁ _ => ?_
+  dsimp only [ilfE.k_inst_list]
   have hs₁ : SlotPre ⟨m₁, Locals.init []⟩ _ dn vis fe M₁ eb mode := ⟨hS₁, hs.mode4, hs.eb_mode⟩
-  rcases h2 : callE p n "infer" [mode, vis, d + k, r₁.headD 0] m₁ with e2 | ⟨r₂, m₂⟩
-  · exact RefE.bind_left fun hG => CoreSpecE.of_callE (s₀ := ⟨m₁, Locals.init []⟩)
-      ((hG.knot n (Nat.le_refl _)).infer F _ _ dn vis fe M₁ eb mode (d + k) (r₁.headD 0) hF hn hs₁
-        h₁.resOk) h2
-  have h₂ := CoreSpec.of_callW ((hk n (Nat.le_refl _)).infer F ⟨m₁, Locals.init []⟩ _ dn vis fe M₁ eb
-    mode (d + k) (r₁.headD 0) hF hn hs₁ h₁.resOk) (callW_of_callE h2)
+  refine RefE.bind_callE (fun _ => rfl) ((hk n (Nat.le_refl _)).infer F _ _ dn vis fe M₁ eb mode (d + k)
+      (r₁.headD 0) hF hn hs₁ h₁.resOk)
+    (fun (hG : InferG p n) => (hG.knot n (Nat.le_refl _)).infer F _ _ dn vis fe M₁ eb mode (d + k)
+      (r₁.headD 0) hF hn hs₁ h₁.resOk) fun r₂ m₂ _ h₂ => RefE.after_core (w := id) h₂ fun M₂ hS₂ _ => ?_
+  dsimp only [ilfE.k_infer]
+  refine RefE.bind_callW (fun _ => rfl) (hab n ⟨m₂, Locals.init []⟩ _ dn vis fe M₂ eb (r₂.headD 0) d k 0 hS₂
+    h₂.resOk) fun r₃ m₃ _ h₃ => RefE.after_core (w := id) h₃ fun M₃ hS₃ _ => ?_
+  dsimp only [ilfE.k_ar_entry]
+  have hK₁ := h₁.after.bkept
   have hK₂ := h₂.after.bkept
-  refine RefE.bind_core (w := id) h₂ (fun M₂ hS₂ _ => ?_)
-  simp only [ilfE.k_infer]
-  rcases h3 : callW p n "ar_entry" [r₂.headD 0, d, k, 0] m₂ with _ | ⟨r₃, m₃⟩
-  · rw [liftE_none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]; simp only [ilfE.k_ar_entry]
-  have h₃ := CoreSpec.of_callW (hab n ⟨m₂, Locals.init []⟩ _ dn vis fe M₂ eb (r₂.headD 0) d k 0 hS₂
-    h₂.resOk) h3
   have hK₃ := h₃.after.bkept
-  refine RefE.bind_core (w := id) h₃ (fun M₃ hS₃ _ => ?_)
   have hB₁ := hB.keep hK₁ hbtop hsz
   have hB₂ := hB₁.keep hK₂ (by rw [hK₁.1]; exact hbtop) (by rw [hK₁.2.1]; exact hsz)
   have hB₃ := hB₂.keep hK₃ (by rw [hK₂.1, hK₁.1]; exact hbtop)
@@ -469,12 +460,8 @@ theorem lamsLoop_ref (p : Prog) (hp : InferLeafProg p) (hq : BindProg p) (hb : I
     by_cases hc : peel ≠ 0 ∧ t >>> 28 = 5
     · rw [ite_eq_left hc]
       obtain ⟨hp0, ht5⟩ := hc
-      by_cases hc1 : tierW t ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0
-      · rw [ite_eq_left hc1]; exact RefE.of_cls0 rfl
-      rw [ite_eq_right hc1]
-      by_cases hc2 : tcnt m LAM (tierW t) ≤ idxW t
-      · rw [ite_eq_left hc2]; exact RefE.of_cls0 rfl
-      rw [ite_eq_right hc2]
+      refine RefE.underIf (fun _ => rfl) (RefE.abort0 (by rfl) fun hc1 => ?_)
+      refine RefE.underIf (fun _ => rfl) (RefE.abort0 (by rfl) fun hc2 => ?_)
       have hv : viewOK m t LAM := ⟨hc1, UInt64.not_le.mp hc2⟩
       obtain ⟨-, hty, hbody⟩ := view_lam m a hS.arena.base t ht hv ht5
       have hvb := viewBind_lam m a hS.arena.base t ht hv ht5
@@ -487,67 +474,39 @@ theorem lamsLoop_ref (p : Prog) (hp : InferLeafProg p) (hq : BindProg p) (hb : I
       rw [← haddd]
       refine RefE.bind_right (by rw [viewBind_run', hvb]) ?_
       dsimp only
-      have h0 : (0 : Word).toNat = 0 := rfl
-      rcases h1 : callW p j "inst_list" [tfld m LAM (tierW t) (idxW t) 0, fo, k, 0] m with _ | ⟨r₁, m₁⟩
-      · rw [liftE_none, ilsE.k_inst_list.eq_1]; exact RefE.of_cls0 (by simp)
-      rw [liftE_some, ilsE.k_inst_list.eq_2]
-      obtain ⟨hok1, ⟨M₁, hS₁, hK₁, hSt₁⟩, hres1, hrw1⟩ := CoreSpec.of_callW
-        (hil j ⟨m, Locals.init []⟩ a dn vis fe M eb _ fo k 0 fvs hS hty hf hftop) h1
-      rw [h0] at hok1 hres1 hS₁
-      have hB₁ := hSt₁.bstk
-      refine RefE.bind_right (AM.run_of_ok _ _ hok1) ?_
-      rw [hres1]
+      -- `inst_list`, the slots `infer` and `whnf`
+      refine RefE.under (fun _ => rfl) (fun _ => ilsE.k_inst_list.none ..) fun hx => RefE.bind_callW hx
+        (hil j ⟨m, Locals.init []⟩ a dn vis fe M eb _ fo k 0 fvs hS hty hf hftop)
+        fun r₁ m₁ _ ⟨_, ⟨M₁, hS₁, hK₁, hSt₁⟩, _, hrw1⟩ => ?_
+      rw [Function.comp_apply, ilsE.k_inst_list.arm1]
       have hs₁ : SlotPre ⟨m₁, Locals.init []⟩ _ dn vis fe M₁ eb mode := ⟨hS₁, hmode, heb⟩
-      rcases h2 : callE p j "infer" [mode, vis, d + k, r₁.headD 0] m₁ with e2 | ⟨r₂, m₂⟩
-      · rw [ilsE.k_infer.eq_1]
-        exact RefE.bind_left fun hG => CoreSpecE.of_callE (s₀ := ⟨m₁, Locals.init []⟩)
-          ((hG.knot j (by omega)).infer F _ _ dn vis fe M₁ eb mode (d + k) (r₁.headD 0) (by omega)
-            (by omega) hs₁ hrw1) h2
-      rw [ilsE.k_infer.eq_2]
-      obtain ⟨hok2, ⟨M₂, hS₂, hK₂, hSt₂⟩, hres2, hrw2⟩ := CoreSpec.of_callW ((hk j (by omega)).infer F
-        ⟨m₁, Locals.init []⟩ _ dn vis fe M₁ eb mode (d + k) (r₁.headD 0) (by omega) (by omega) hs₁ hrw1)
-        (callW_of_callE h2)
-      have hB₂ := hSt₂.bstk
-      refine RefE.bind_right (AM.run_of_ok _ _ hok2) ?_
-      erw [hres2]
+      refine RefE.under (fun _ => rfl) (fun _ => ilsE.k_infer.none ..) fun hx => RefE.bind_callE hx
+        ((hk j (by omega)).infer F _ _ dn vis fe M₁ eb mode (d + k) (r₁.headD 0) (by omega) (by omega)
+          hs₁ hrw1)
+        (fun (hG : InferG p N) => (hG.knot j (by omega)).infer F _ _ dn vis fe M₁ eb mode (d + k) (r₁.headD 0)
+          (by omega) (by omega) hs₁ hrw1) fun r₂ m₂ _ ⟨_, ⟨M₂, hS₂, hK₂, hSt₂⟩, _, hrw2⟩ => ?_
+      rw [Function.comp_apply, ilsE.k_infer.arm1]
       have hs₂ : SlotPre ⟨m₂, Locals.init []⟩ _ dn vis fe M₂ eb mode := ⟨hS₂, hmode, heb⟩
-      rcases h3 : callE p j "whnf" [mode, vis, d + k, r₂.headD 0] m₂ with e3 | ⟨r₃, m₃⟩
-      · rw [ilsE.k_whnf.eq_1]
-        exact RefE.bind_left fun hG => CoreSpecE.of_callE (s₀ := ⟨m₂, Locals.init []⟩)
-          ((hG.knot j (by omega)).whnf F _ _ dn vis fe M₂ eb mode (d + k) (r₂.headD 0) (by omega)
-            (by omega) hs₂ hrw2) h3
-      rw [ilsE.k_whnf.eq_2]
-      obtain ⟨hok3, ⟨M₃, hS₃, hK₃, hSt₃⟩, hres3, hrw3⟩ := CoreSpec.of_callW ((hk j (by omega)).whnf F
-        ⟨m₂, Locals.init []⟩ _ dn vis fe M₂ eb mode (d + k) (r₂.headD 0) (by omega) (by omega) hs₂ hrw2)
-        (callW_of_callE h3)
+      refine RefE.under (fun _ => rfl) (fun _ => ilsE.k_whnf.none ..) fun hx => RefE.bind_callE hx
+        ((hk j (by omega)).whnf F _ _ dn vis fe M₂ eb mode (d + k) (r₂.headD 0) (by omega) (by omega)
+          hs₂ hrw2)
+        (fun (hG : InferG p N) => (hG.knot j (by omega)).whnf F _ _ dn vis fe M₂ eb mode (d + k) (r₂.headD 0)
+          (by omega) (by omega) hs₂ hrw2) fun r₃ m₃ _ ⟨_, ⟨M₃, hS₃, hK₃, hSt₃⟩, _, hrw3⟩ => ?_
+      rw [Function.comp_apply, ilsE.k_whnf.eq_2]
+      refine RefE.underIf (fun _ => rfl) (RefE.guardIf (by rfl) (tag_sort_ne _ hrw3)
+        (fun hb g => Bool.noConfusion ((tag_sort_beq _ hrw3 g).symm.trans hb)) fun _ _ => ?_)
+      simp only [internFVarE]
+      -- `intern_fvar`
+      refine RefE.under (fun _ => rfl) (fun _ => ilsE.k_intern_fvar.none ..) fun hx => RefE.bind_callW hx
+        (internFVar_coreSpec hb j ⟨m₃, Locals.init []⟩ hS₃ (d + k) (r₁.headD 0) hrw1)
+        fun r₄ m₄ _ ⟨_, ⟨M₄, hS₄, hK₄, hSt₄⟩, _, hrw4⟩ => ?_
+      rw [Function.comp_apply, ilsE.k_intern_fvar.eq_2]
+      refine RefE.underIf (fun _ => rfl) (RefE.abort0 (by rfl) fun e1 => ?_)
+      refine RefE.underIf (fun _ => rfl) (RefE.abort0 (by rfl) fun e2 => ?_)
+      have hB₁ := hSt₁.bstk
+      have hB₂ := hSt₂.bstk
       have hB₃ := hSt₃.bstk
-      refine RefE.bind_right (AM.run_of_ok _ _ hok3) ?_
-      erw [hres3]
-      by_cases g1 : r₃.headD 0 >>> 28 ≠ 2
-      · rw [ite_eq_left g1]
-        simp only [show decH r₃ = decE (r₃.headD 0) from rfl, tag_sort_ne _ hrw3 g1,
-          Bool.false_eq_true, ↓reduceIte]
-        exact fun _ => ErrClaim.fail _ _ rfl
-      rw [ite_eq_right g1]
-      have hsort : ((decH r₃).tag == ETag.sort) = true := tag_sort_beq _ hrw3 (by simpa using g1)
-      simp only [hsort, ↓reduceIte, internFVarE]
-      rcases h4 : callW p j "intern_fvar" [d + k, r₁.headD 0] m₃ with _ | ⟨r₄, m₄⟩
-      · rw [liftE_none, ilsE.k_intern_fvar.eq_1]; exact RefE.of_cls0 (by simp)
-      rw [liftE_some, ilsE.k_intern_fvar.eq_2]
-      obtain ⟨s₄, hs₄, -, hfv⟩ := triple_of_callW (s₀ := ⟨m₃, Locals.init []⟩)
-        (internFVar_spec p hb.fvf hb.fvp hb.fvi j _ (d + k) (r₁.headD 0)) h4
-      rw [hs₄] at hfv
-      obtain ⟨hok4, ⟨M₄, hS₄, hK₄, hSt₄⟩, hres4, hrw4⟩ := internFVar_core hS₃ (d + k) (r₁.headD 0) hrw1 r₄ hfv
-      have hB₄ : BKept m₃ m₄ :=
-        BKept.of_frame ((fvinternW_frame (hI := hfv))) (by simp [tier1, FVREC, FVSLOT, FVLP, BSTK]) (by simp)
-      refine RefE.bind_right (AM.run_of_ok _ _ hok4) ?_
-      erw [hres4]
-      by_cases e1 : m₄.len64 SPN ≤ fo + k
-      · rw [ite_eq_left e1]; exact RefE.of_cls0 rfl
-      rw [ite_eq_right e1]
-      by_cases e2 : m₄.len64 BSTK ≤ lo + k
-      · rw [ite_eq_left e2]; exact RefE.of_cls0 rfl
-      rw [ite_eq_right e2]
+      have hB₄ := hSt₄.bstk
       have hSt14 := hSt₁.trans (hSt₂.trans (hSt₃.trans hSt₄))
       have hBK := hB₁.trans (hB₂.trans (hB₃.trans hB₄))
       have hf₄ : SpineR m₄ fo k fvs := hf.keep hSt14.size hSt14.below hftop hspn
@@ -732,9 +691,7 @@ theorem ilm_ref (p : Prog) (hp : InferLeafProg p) (hq : BindProg p) (hb : InferB
   have hS := hs.rel
   have hK := hk n (Nat.le_refl _)
   simp only [ilmE]
-  by_cases hd : d >>> 63 ≠ 0
-  · rw [ite_eq_left hd]; exact RefE.of_cls0 rfl
-  rw [ite_eq_right hd]
+  refine RefE.abort0 (by rfl) fun hd => ?_
   have hd63 : d.toNat < 2 ^ 63 := by
     have : d >>> 63 = 0 := by simpa using hd
     have h2 := congrArg UInt64.toNat this
@@ -743,50 +700,26 @@ theorem ilm_ref (p : Prog) (hp : InferLeafProg p) (hq : BindProg p) (hb : InferB
     have := d.toNat_lt
     omega
   simp only [inferLam]
-  rcases h1 : callE p n "infer" [mode, vis, d, ty] s₀.mem with e1 | ⟨r₁, m₁⟩
-  · exact RefE.bind_left fun hG => CoreSpecE.of_callE ((hG.knot n (Nat.le_refl _)).infer F s₀ a₀ dn vis
-      fe M eb mode d ty hF hn hs hty) h1
-  obtain ⟨hok1, ⟨M₁, hS₁, hK₁, hSt₁⟩, hres1, hrw1⟩ := CoreSpec.of_callW (hK.infer F s₀ a₀ dn vis fe M eb
-    mode d ty hF hn hs hty) (callW_of_callE h1)
-  refine RefE.bind_right (AM.run_of_ok _ _ hok1) ?_
-  simp only [ilmE.k_infer]
-  erw [hres1]
+  refine RefE.bind_callE (fun _ => rfl) (hK.infer F s₀ a₀ dn vis fe M eb mode d ty hF hn hs hty)
+    (fun (hG : InferG p n) => (hG.knot n (Nat.le_refl _)).infer F s₀ a₀ dn vis fe M eb mode d ty hF hn hs hty)
+    fun r₁ m₁ _ ⟨_, ⟨M₁, hS₁, hK₁, hSt₁⟩, _, hrw1⟩ => ?_
+  dsimp only [ilmE.k_infer]
   have hs₁ : SlotPre ⟨m₁, Locals.init []⟩ _ dn vis fe M₁ eb mode := ⟨hS₁, hs.mode4, hs.eb_mode⟩
-  rcases h2 : callE p n "whnf" [mode, vis, d, r₁.headD 0] m₁ with e2 | ⟨r₂, m₂⟩
-  · exact RefE.bind_left fun hG => CoreSpecE.of_callE (s₀ := ⟨m₁, Locals.init []⟩)
-      ((hG.knot n (Nat.le_refl _)).whnf F _ _ dn vis fe M₁ eb mode d (r₁.headD 0) hF hn hs₁ hrw1) h2
-  obtain ⟨hok2, ⟨M₂, hS₂, hK₂, hSt₂⟩, hres2, hrw2⟩ := CoreSpec.of_callW (hK.whnf F ⟨m₁, Locals.init []⟩
-    _ dn vis fe M₁ eb mode d (r₁.headD 0) hF hn hs₁ hrw1) (callW_of_callE h2)
-  refine RefE.bind_right (AM.run_of_ok _ _ hok2) ?_
-  simp only [ilmE.k_whnf]
-  erw [hres2]
-  by_cases g1 : r₂.headD 0 >>> 28 ≠ 2
-  · rw [ite_eq_left g1]
-    simp only [show decH r₂ = decE (r₂.headD 0) from rfl, tag_sort_ne _ hrw2 g1, Bool.false_eq_true,
-      ↓reduceIte]
-    exact fun _ => ErrClaim.fail _ _ rfl
-  rw [ite_eq_right g1]
-  have hsort : ((decH r₂).tag == ETag.sort) = true := tag_sort_beq _ hrw2 (by simpa using g1)
-  simp only [hsort, ↓reduceIte, internFVarE]
-  rcases h3 : callW p n "intern_fvar" [d, ty] m₂ with _ | ⟨r₃, m₃⟩
-  · rw [liftE_none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]
-  obtain ⟨s₃, hs₃, -, hfv⟩ := triple_of_callW (s₀ := ⟨m₂, Locals.init []⟩)
-    (internFVar_spec p hb.fvf hb.fvp hb.fvi n _ d ty) h3
-  rw [hs₃] at hfv
-  obtain ⟨hok3, ⟨M₃, hS₃, hK₃, hSt₃⟩, hres3, hrw3⟩ := internFVar_core hS₂ d ty hty r₃ hfv
-  refine RefE.bind_right (AM.run_of_ok _ _ hok3) ?_
-  simp only [ilmE.k_intern_fvar]
-  erw [hres3]
+  refine RefE.bind_callE (fun _ => rfl) (hK.whnf F _ _ dn vis fe M₁ eb mode d (r₁.headD 0) hF hn hs₁ hrw1)
+    (fun (hG : InferG p n) => (hG.knot n (Nat.le_refl _)).whnf F _ _ dn vis fe M₁ eb mode d (r₁.headD 0) hF hn
+      hs₁ hrw1) fun r₂ m₂ _ ⟨_, ⟨M₂, hS₂, hK₂, hSt₂⟩, _, hrw2⟩ => ?_
+  dsimp only [ilmE.k_whnf]
+  refine RefE.guardIf (by rfl) (tag_sort_ne _ hrw2)
+    (fun hb g => Bool.noConfusion ((tag_sort_beq _ hrw2 g).symm.trans hb)) fun _ _ => ?_
+  simp only [internFVarE]
+  refine RefE.bind_callW (fun _ => rfl) (internFVar_coreSpec hb n ⟨m₂, Locals.init []⟩ hS₂ d ty hty)
+    fun r₃ m₃ _ ⟨_, ⟨M₃, hS₃, hK₃, hSt₃⟩, _, hrw3⟩ => ?_
+  dsimp only [ilmE.k_intern_fvar]
   have hSt13 := hSt₁.trans (hSt₂.trans hSt₃)
   generalize hso : rdW (m₃.arr64 CTL) 136 = so
   generalize hlo : rdW (m₃.arr64 CTL) 137 = lo
-  by_cases e1 : m₃.len64 SPN ≤ so
-  · rw [ite_eq_left e1]; exact RefE.of_cls0 rfl
-  rw [ite_eq_right e1]
-  by_cases e2 : m₃.len64 BSTK ≤ lo
-  · rw [ite_eq_left e2]; exact RefE.of_cls0 rfl
-  rw [ite_eq_right e2]
+  refine RefE.abort0 (by rfl) fun e1 => ?_
+  refine RefE.abort0 (by rfl) fun e2 => ?_
   have g2 : tPushOK m₃ so lo 0 := tPushOK_of hS₃ (by simpa using e1) (by simpa using e2)
   have hcp := hcap _ _ _ _ _ _ _ hS₃
   have hsoS : so.toNat ≤ (m₃.arr64 SPN).size := by

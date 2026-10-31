@@ -1,7 +1,6 @@
 import ConAgua.Arena.IndT.Lift
 import ConAgua.Arena.IndRealOpf3
 import ConAgua.Verdict.VCtx
-import ConAgua.Arena.RefWalk
 
 /-!
 # `check_block_doms_at`, `check_struct_doms_at`: one model and one refinement each

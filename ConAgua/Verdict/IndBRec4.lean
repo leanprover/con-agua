@@ -1,4 +1,3 @@
-import ConAgua.Arena.RefWalk
 import ConAgua.Arena.RecGenSpec.CfhW
 import ConAgua.Verdict.IndBCrg
 import ConAgua.Arena.RecGenSpec.Rec3TmdWDecB
