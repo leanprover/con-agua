@@ -372,8 +372,9 @@ By `reflen.py` lines (master after this lane), lifted-call density first:
 * ~~The knot callers~~ (the 11 files of §6.7, and `DeclAxQuotT`): done (refwalk4, §6.10).
 * ~~`IndT/Positivity`, `PosCrest`, `Tail`, `Pass`, `Block`, `CheckIndDecl`~~: done (refwalk5,
   §6.9).
-* **`Verdict/IndB*` and the declaration arms**: `IndBHdr`, `IndBTpd`, `IndBRec2`, `IndBRec4` and
-  the `Decl*T` gates done (refwalk4, §6.10); the other `IndB*` files not looked at.
+* ~~`Verdict/IndB*` and the declaration arms~~: `IndBHdr`, `IndBTpd`, `IndBRec2`, `IndBRec4` and
+  the `Decl*T` gates done (refwalk4, §6.10), the other `IndB*` files (refwalk7, §6.12).
+* ~~The positivity tops, the iota reduction~~: done (refwalk7, §6.12), but for `WhnfIotaRecRefine3`.
 
 ### 6.7 Sum1–3 (lane refwalk2)
 
@@ -865,3 +866,182 @@ the positivity tops (`PosNty`'s `nty_ref`, `PosTopE4`'s `nsd_ref`, `IndsE4`'s `c
 other `Verdict/IndB*` files, and `InferLeaves.lean` (`inferConst_ref`, `il_ref`, `da_ref`; ten
 `CoreSpec.of_callW`, the same rules as here). `spTail_ref` (`InferBodySpine.lean`) still has its
 `inst_list` split (the twin's last step; `bind_pure` and `bind_callW`, ~2 lines).
+
+### 6.12 The other `IndB*` files, `dv_ref`/`ov_ref`, the positivity tops, the iota reduction (lane refwalk7)
+
+Converted (statements unchanged):
+
+* the `Verdict/IndB*` refinements not yet done: `trp_ref` (`IndBRecPins`), `rg_ref`, `cms_ref`,
+  `kof_ref` (`IndBRec1`), `rts_ref` (`IndBRec3`), `crs_ref` (`IndBRec5`), `crr_ref`, `crra_ref`
+  (`IndBRec6`); `toi_ref`, `tcm_ref`, `tmn_ref`, `tka_ref`, `tmm_ref` (`IndBToi`, `IndBTcm`,
+  `IndBTmn`, `IndBTka`, `IndBTmm`); `crg_ref` (`IndBCrg`), `tpt_ref` (`IndBPins`), `cfg_ref`,
+  `cfgTailE`, `cfo_ref` (`IndBFields`), `tkh_ref`, `tk_ref` (`IndBK53`), `scts_ref` (`IndBSum4`).
+  The other `IndB*` files (`IndBClm`, `IndBTmc`, `IndBTmf`, `IndBTmo`, `IndBTmt`, `IndBGrpM`) are
+  `l_model` declarations only; their refinements are the `RecGen` family's (§6.5).
+* `dv_ref`, `ov_ref` (`DeclValsE`): one proof `dvo_ref` over `dvoE k`, the two models with the
+  mismatch's abort code `k` a parameter (`check_defn_val` and `check_opaque_val` have the same text
+  but for that code, as their twins are `dvT` but for the message). `checkDefnValE_dvo`,
+  `checkOpaqueValE_dvo` are `cases n <;> rfl`; `dv_ref`, `ov_ref` are one line each.
+* the positivity tops: `nty_ref` (`PosNty`), `nsd_ref`, `nrt_ref` (`PosTopE4`), `cbao_ref`
+  (`IndsE4`).
+* the iota reduction: `vck_ref`, `irCmp_ref` (`WhnfIotaRecRefine`), `fam_ref`, `fire2_ref`,
+  `fire_ref`, `major_ref` (`WhnfIotaRecRefine2`).
+
+Done by three helpers (the `IndB*` files) and the lane (the rest). Two new kit rules:
+
+* `RefE.retIf`: an early return of the model (`if c then .ok v else rest`) against the twin's
+  `if b then T else pure y`, `c` iff `b` false. The iota family's checks answer `false`/`none`
+  this way at every step (`vck_ref` ×3, `fam_ref` ×2, `fire2_ref`, `major_ref`), so the twin no
+  longer needs a run lemma per exit.
+* `RefE.onlyCall`: an L helper read through `callE` that the twin has no step for, its error by
+  `closedNV` (`ErrClaim.of_callE_nv`); 7 sites (`trp_ref` ×6, `cms_ref`). Narrower than §6.10's
+  `onlyCall`, which was for calls whose error claims something.
+
+**Dead code.** The iota family's twin run lemmas lost their users: `vckT_run_*`/`vckT_fail_lvl`/
+`vckT_err_*` (8), `famT_*` (4), `fire2T_*` (4), `majorT_*` (6), and `defeqList_refines` (no
+`@[refines]` tag; `irCmp_ref` takes `defeqList_ref` by `bindRun`, which gives both halves). That is
+where most of the iota files' −11 to −20 % comes from: each exit of the twin had a lemma
+restating its whole `do` block up to that exit.
+
+Pitfalls (add to §6.4):
+
+* **The iota family is `CoreSpec`-shaped**, not `StageC`: a lifted callee's twin run comes from
+  `CoreSpec.run`/`CoreSpec.of_callW` (`bindLift` with `⟨_, _, hrun, ?_⟩`), a unified callee with a
+  `RefE` and a model spec goes in by `bindRun` (its `G'` `fun hG => hG.knot.mono …`, its `Gs`
+  `fun hG => hG.nv`), and the twin's last callee needs `rw [← bind_pure (f _ … _)]` as in §6.9.
+  Unfold the twin (`rw [iotaRecVckT_eq]`, `unfold iotaRecFamT`) at the top and walk it; no run
+  lemmas.
+  refwalk6's `RefE.bind_callW`/`RefE.after_core` (`RefECore.lean`, §6.11), which landed
+  meanwhile, take such a lifted `CoreSpec` callee in one rule; the iota proofs predate them and
+  still write `bindLift` with `CoreSpec.run`.
+* **A callee with a `CoreSpecE` error claim and a `CoreSpec`** (`prepare_major`,
+  `iota_rec_fire` in `major_ref`) fits `bindCall` only with an explicit `Q`; the split by hand
+  (`rcases`, `RefE.bind_left (… CoreSpecE.of_callE …)`, `RefE.bind_right hrun`) is as short.
+* **`do` notation for a hand model does not unfold by `rfl` to the generated one**:
+  `Except.bind x f` and the generated `match x with …` are only equal per case. Write the shared
+  model as the generator does, one continuation per call (`dvoE.k_…`); then the equation is
+  `cases n <;> rfl` and the rules take `fun _ => rfl`.
+* **A model guard with a `Prop` twin condition** (`if margs.length = … then … else pure none` in
+  `iotaRecFire2T`) has no rule (`retIf` wants a `Bool`): `rw [ite_eq_left h]` on the twin.
+* **`if_pos`/`if_neg` are deprecated** (warnings): `ite_eq_left`/`ite_eq_right`.
+* **`import ConAgua.Arena.RefWalk` in a low module** (`WhnfIotaRecRefine`, below most of the
+  checker's proofs) makes the direct RefWalk import of every module above it redundant: 13 files
+  (`Install1`, `Sum1`, `Sum3`, `RecGenTmf`, `DeclNatGateT`, `DeclValE`, `IndBHdr`, `IndBTpd`, …)
+  failed `shake` and lost theirs. `IndsE4`'s `import ConAgua.Arena.Checker` was there only for
+  con-ron's `checkBlockDomsAt_specF`; it is now `import ConRon.Bridge.Inductives.BlockInstall`.
+* `RefE.lastE (K := id)` for a model that is the callee's call itself (`tcm_ref`'s `pdeE`).
+* `bindCall` with no ready `RSim` (`e_view` in `toi_ref`) needs `(Q := …)`.
+* An `RSim` into `bindSim`: `(fun r m h => rsim (r, m) h)`.
+* A decoded twin result that later lines name as `decE …`: `obtain rfl : _ = decE … := hD.symm`
+  (a `subst` leaves the `decI` form).
+* A twin argument the old proof rewrote in the run (`tele.length` against `tel.toNat`) is not
+  defeq: `rw` the goal before the rule.
+* `RefE.abortAt c (RefE.twinFail …)` does not elaborate (`R` not synthesized): `rw [ite_eq_left c]`,
+  then `RefE.twinFail`.
+* A twin guard L checks in pieces with a class-`0` overflow check between them (`rg_ref`):
+  per piece `by_cases`, `rw [ite_eq_left]` + `twinFail` or `RefE.pass`, `RefE.abort0` between,
+  `RefE.twinPass` and `RefE.ret` at the end.
+
+**What stays by hand**, and why:
+
+* **Early `.ok` arms against a twin that is not `if b then T else pure y`**: `tcm_ref`
+  (`lvls_eq_c ≠ 2`), `tmn_ref`, `tka_ref`, `crr_ref`, `tkh_ref` (the heads' tags, the class, the
+  argument counts), `major_ref`'s `env_find`/`find_rule` exits (the twin's `match` on `find?` and
+  `findRule`). The `IndB*` ones were converted before `retIf` existed; some may fit it (see next
+  families).
+* **Callees returning an `Option` with no memory** (`chnW`, `eqW`, `cfhW`): `onlySim` needs
+  `Option (ρ × Mem)` (§6.9).
+* **`tmm_ref`'s range guards** (cascaded `abort1`/`abort2` against the twin's `&&` by
+  `ErrClaim.ite_neg`), **`trp_ref`'s guards** (the twin's failures from `trp_fail1–5` on the run so
+  far), **`cms_ref`'s guard** (against the twin's `match` on the hit list).
+* **`cv_lps` in `crg_ref`** and the `unresolved_consts_error` site: §6.10's call with an error
+  claim and no twin step.
+* **`c_ref`, `at_ref` (`WhnfIotaRecRefine3`)** not converted: the twin's first step is a `match`
+  on `fe.find?` with no monadic call, then three model guards (arity, levels' length, telescope)
+  against one twin `if … ∧ … ∧ …`; its four run lemmas (`cT_run_*`, `cT_eq_major`) fold them, and a
+  walk would add a split per guard.
+
+Numbers, against master 2b0b3402 (`reflen.py`, `ncl.py`; elaboration `lake env lean` on the file,
+master's text in a master worktree and the branch's in the branch worktree (the helpers: master's
+text in their branch worktree), 3 interleaved runs, median, load 15–25):
+
+| theorem | before | after |
+|---|---:|---:|
+| `trp_ref` | 199 | 174 |
+| `rg_ref` | 137 | 108 |
+| `cms_ref` | 49 | 46 |
+| `kof_ref` | 47 | 37 |
+| `rts_ref` | 115 | 108 |
+| `crs_ref` | 143 | 125 |
+| `crr_ref` | 161 | 150 |
+| `crra_ref` | 27 | 24 |
+| `toi_ref` | 150 | 133 |
+| `tcm_ref` | 144 | 132 |
+| `tmn_ref` | 154 | 142 |
+| `tka_ref` | 160 | 153 |
+| `tmm_ref` | 167 | 162 |
+| `crg_ref` | 110 | 89 |
+| `tpt_ref` | 60 | 51 |
+| `cfg_ref` | 132 | 125 |
+| `cfgTailE` | 38 | 33 |
+| `cfo_ref` | 33 | 23 |
+| `tkh_ref` | 138 | 124 |
+| `tk_ref` | 75 | 70 |
+| `scts_ref` | 166 | 151 |
+| **`IndB*`** | 2405 | 2160 (**−10 %**) |
+| `dv_ref` + `ov_ref` (+ `dvo_ref`) | 134 | 86 |
+| `nty_ref` | 158 | 135 |
+| `nsd_ref` | 150 | 139 |
+| `nrt_ref` | 146 | 129 |
+| `cbao_ref` | 159 | 111 |
+| `vck_ref` | 182 | 141 |
+| `irCmp_ref` | 126 | 114 |
+| `fam_ref` | 97 | 73 |
+| `fire2_ref` | 150 | 129 |
+| `fire_ref` | 72 | 56 |
+| `major_ref` | 171 | 149 |
+| **all** | 3950 | 3422 (**−13 %**) |
+
+| file (code lines) | before | after | wall before → after | max RSS |
+|---|---:|---:|---:|---:|
+| `Verdict/IndBRecPins.lean` | 392 | 368 | 2.69 → 2.64 s (5 runs) | 2.96 → 2.96 GB |
+| `Verdict/IndBRec1.lean` | 372 | 331 | 3.95 → 3.69 s | 2.64 → 2.64 GB |
+| `Verdict/IndBRec3.lean` | 192 | 185 | 2.22 → 2.24 s | 2.71 → 2.72 GB |
+| `Verdict/IndBRec5.lean` | 213 | 195 | 2.56 → 2.31 s | 2.75 → 2.74 GB |
+| `Verdict/IndBRec6.lean` | 282 | 268 | 3.50 → 3.29 s | 2.80 → 2.81 GB |
+| `Verdict/IndBToi.lean` | 182 | 166 | 2.71 → 2.62 s | 2.41 → 2.41 GB |
+| `Verdict/IndBTcm.lean` | 235 | 223 | 2.82 → 2.60 s | 2.85 → 2.85 GB |
+| `Verdict/IndBTmn.lean` | 230 | 218 | 1.94 → 2.01 s | 2.79 → 2.79 GB |
+| `Verdict/IndBTka.lean` | 202 | 195 | 3.69 → 3.48 s | 2.83 → 2.84 GB |
+| `Verdict/IndBTmm.lean` | 203 | 199 | 4.69 → 4.28 s | 2.79 → 2.80 GB |
+| `Verdict/IndBCrg.lean` | 161 | 141 | 1.54 → 1.50 s | 2.67 → 2.66 GB |
+| `Verdict/IndBPins.lean` | 117 | 109 | 1.81 → 1.95 s | 2.64 → 2.65 GB |
+| `Verdict/IndBFields.lean` | 266 | 245 | 4.08 → 3.61 s | 2.45 → 2.45 GB |
+| `Verdict/IndBK53.lean` | 271 | 252 | 2.38 → 2.20 s | 2.86 → 2.86 GB |
+| `Verdict/IndBSum4.lean` | 241 | 226 | 2.15 → 2.11 s | 2.74 → 2.75 GB |
+| `Verdict/DeclValsE.lean` (with `dvoE`, 23 lines) | 228 | 210 | 1.78 → 1.68 s | 2.67 → 2.66 GB |
+| `Verdict/PosNty.lean` | 191 | 169 | 1.36 → 1.28 s | 2.61 → 2.61 GB |
+| `Verdict/PosTopE4.lean` | 346 | 318 | 2.92 → 2.77 s | 2.88 → 2.87 GB |
+| `Verdict/IndsE4.lean` | 186 | 139 | 2.83 → 1.99 s | 2.99 → 2.99 GB |
+| `Arena/WhnfIotaRecRefine.lean` | 1117 | 995 | 9.30 → 9.08 s | 2.37 → 2.36 GB |
+| `Arena/WhnfIotaRecRefine2.lean` | 1007 | 806 | 2.62 → 2.57 s | 2.32 → 2.29 GB |
+| `Arena/WhnfIotaRefine2.lean` (`defeqList_refines`) | 976 | 959 | 4.04 → 4.08 s | 2.18 → 2.19 GB |
+| `RefWalk.lean` (`retIf`, `onlyCall`) | 165 | 181 | | |
+
+All: 7610 → 6917 code lines (**−9.1 %**; the `IndB*` files 3559 → 3321, −6.7 %; the lane's
+seven files 4051 → 3596, −11 %), with the kit rules 7775 → 7098. No file was left out for growth
+or time: the three slower ones (`IndBTmn` +0.07 s, `IndBPins` +0.14 s, `WhnfIotaRefine2` +0.04 s)
+are within their runs' spread; `IndsE4` is 0.8 s faster (its twin prefix `hpre`, a `simp` over
+`agreeBodyAM`, is gone). Memory unchanged. The `IndB*` theorems lose least (−10 %): their
+plumbing is mostly facts about the results and early `.ok` arms; the iota family most (−17 %, and
+−20 % in `WhnfIotaRecRefine2`'s code lines), because the walk retires its run lemmas.
+
+Next families, by `reflen.py`:
+
+* the early `.ok` arms the `IndB*` and §6.10 conversions left (`tcm_ref`, `tmn_ref`, `tka_ref`,
+  `crr_ref`, `tkh_ref`, `cert_ref`, `cm_ref`, `ctp_ref`, `cpa_ref`, `dng_ref`): check which twins
+  are `if b then T else pure y` and take `RefE.retIf`;
+* the other whnf families written the iota way, with a twin run lemma per exit (grep
+  `theorem .*T_run_` and `T_err_`: `WhnfIotaRefine*`, `WhnfIotaRecRefine3`'s `c_ref`/`at_ref` if a
+  `match` rule pays);
+* whatever the inference-bodies lane leaves.

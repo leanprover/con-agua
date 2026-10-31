@@ -86,9 +86,8 @@ theorem rts_ref (g k : Word) (G : ClassGen) (hns : G.nP + G.slots.length < 2 ^ 6
     unfold ConRon.Arena.classRecTysOk
     exact RefE.ret rfl ⟨hC, IWGrow.refl m,
       by simpa [decCVS] using SPL.nil (dec := decCVX) (m := m) 0 (by omega), hA⟩
-  by_cases hsh : vl = 0 ∨ cl = 0
-  · rw [classRecTysOkE.abort1 p n m vis g k ro rl vo vl co cl hrl hsh]; exact RefE.of_cls0 rfl
-  rw [classRecTysOkE.arm2 p n m vis g k ro rl vo vl co cl hrl hsh]
+  refine RefE.ofArms (fun h => classRecTysOkE.abort1 (hc1 := hrl) (hc2 := h) ..)
+    (fun h => classRecTysOkE.arm2 (hc1 := hrl) (hc2 := h) ..) (RefE.abort0 rfl fun hsh => ?_)
   have hvl : vl ≠ 0 := fun e => hsh (.inl e)
   have hcl : cl ≠ 0 := fun e => hsh (.inr e)
   have hl0 : ∀ w : Word, w ≠ 0 → ∃ j, w.toNat = j + 1 := fun w hw =>
@@ -127,15 +126,13 @@ theorem rts_ref (g k : Word) (G : ClassGen) (hns : G.nP + G.slots.length < 2 ^ 6
     (by rw [tp]; exact hRS) (by rw [tp]; exact hcvR) (by rw [tv]; exact hCV) hA hgP hrcP hcvP
     (hw _ List.mem_cons_self)
   rw [tc] at hr
-  rcases h1 : classRecTyOkE p n m vis g k (UInt64.ofNat pr) (UInt64.ofNat pv) (UInt64.ofNat c0)
-    with e1 | ⟨r1, m1⟩ <;> rw [h1] at hr
-  · rw [classRecTysOkE.k_class_rec_ty_ok.none]; exact RefE.bind_left hr
+  refine RefE.bindE (fun _ => classRecTysOkE.k_class_rec_ty_ok.none ..) id hr
+    fun ⟨r1, m1⟩ x a1 hrun1 ⟨hC1, hg1, hx, hA1⟩ => ?_
+  dsimp only at hC1 hg1 hx hA1
   rw [classRecTysOkE.k_class_rec_ty_ok.arm1]
-  obtain ⟨x, a1, hrun1, hC1, hg1, hx, hA1⟩ := hr
   obtain ⟨c1, -⟩ := ConRon.Bridge.Inductives.classRecTyOk_spec fe (ConRon.Bridge.CoreSpec.of_core rfl)
     henv G gP k.toNat RS rcP CV cvP c0 (hw _ List.mem_cons_self) a a1 x hC.check ⟨hgP, hrcP, hcvP⟩
     hrun1
-  refine RefE.bind_right hrun1 ?_
   -- the rest
   have hro1 := rec2ToNat_succ (o := ro) (i := ro.toNat) (Nat.le_refl _) (by omega)
   have hvo1 := rec2ToNat_succ (o := vo) (i := vo.toNat) (Nat.le_refl _) (by omega)
@@ -155,16 +152,12 @@ theorem rts_ref (g k : Word) (G : ClassGen) (hns : G.nP + G.slots.length < 2 ^ 6
       hcsT).grow (OMono.decNL _ _) hg1) hA1
     (dClassGen_ext c1.ext _ _ hgP) (dRec_ext.list c1.ext _ _ hrcsP')
     (dExt_denoteCV.list c1.ext _ _ hcvsP') (fun cv h => hw cv (List.mem_cons_of_mem _ h))
-  rcases h2 : classRecTysOkE p n m1 vis g k (ro + 1) (rl - 1) (vo + 1) (vl - 1) (co + 1) (cl - 1)
-    with e2 | ⟨r2, m2⟩ <;> rw [h2] at ih'
-  · rw [classRecTysOkE.k_class_rec_tys_ok.none]; exact RefE.bind_left ih'
+  refine RefE.bindE (fun _ => classRecTysOkE.k_class_rec_tys_ok.none ..) id ih'
+    fun ⟨r2, m2⟩ xs a2 _ hR2 => ?_
   rw [classRecTysOkE.k_class_rec_tys_ok.arm1]
-  obtain ⟨xs, a2, hrun2, hR2⟩ := ih'
-  refine RefE.bind_right hrun2 ?_
   -- `sl_cons`
-  rcases h3 : consW n m2 r1 (r2.headD 0) (r2.tail.headD 0) with _ | ⟨r3, m3⟩
-  · rw [liftE_none, classRecTysOkE.k_sl_cons.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some, classRecTysOkE.k_sl_cons.arm1]
+  refine RefE.onlySim (fun _ => classRecTysOkE.k_sl_cons.none ..) (fun _ _ h => h) fun r3 m3 h3 => ?_
+  rw [classRecTysOkE.k_sl_cons.arm1]
   have hy : StabD (fun m => decCVX m r1.toNat) m1 x := decCVX_stab hx.1 hx.2
   obtain ⟨hS3, hg3, hsp3⟩ := SPL.cons h3 hR2.stage.stage hR2.dec (hy.grow hR2.grow)
   have hA3 := consW_afr h3 hR2.abs

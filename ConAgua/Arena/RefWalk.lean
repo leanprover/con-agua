@@ -21,13 +21,16 @@ in step. This file is the walk's step rules, one per pair of shapes, both outcom
   fuel than the call, `RefE.callE_zero` the same at fuel `0`;
   `RefE.bindCall`: a knot callee read through its call (`K (callE …)`, its error by `G`, its ok
   run by an `RSim`);
-* `RefE.onlySim`: a lifted callee the twin has no step for (an L helper: `sl_eq`);
+* `RefE.onlySim`: a lifted callee the twin has no step for (an L helper: `sl_eq`); `RefE.onlyCall`
+  the same for one read through its call (`K (callE …)`, its error by `closedNV`);
 * the guards of the model (`if c then .error e else rest`): `RefE.guard` against the twin's
   `unless … do fail` (its do-elaboration `if b = true then jp () else fail ce >>= jp`),
   `RefE.guardIf` / `RefE.guardThen` against `if b then rest else fail ce` / `if b then fail ce
   else rest`, `RefE.guardOpt` against `unwrapOr o ce >>= g`, the two conditions related by one
   implication each way; `RefE.abort0` for a guard of the model alone with a class-`0` abort;
   `RefE.abortAt` / `RefE.pass` where a split of the proof already decided the guard;
+* `RefE.retIf`: an early return of the model (`if c then .ok v else rest`) against the twin's
+  `if b then T else pure y`;
 * `RefE.twinFail` / `RefE.twinPass`: a guard of the twin that L checks in pieces;
 * `RefE.ofArms`: an irreducible continuation (a recursive model's) read through its guarded
   equations as the `if` the guard rules take;
@@ -129,6 +132,18 @@ theorem RefE.bindCall {p : Prog} {n : Nat} {f : FnName} {args : List Word} {m : 
   · rw [hK]; exact RefE.bind_left fun hG => herr hG e c
   obtain ⟨x, a₁, hr, hQ⟩ := h1 _ (callW_of_callE c)
   exact RefE.bind_right hr (h2 r m₁ x a₁ c hr hQ)
+
+/-- **A call the twin has no step for, read through its call** (`K (callE …)`: an L helper outside
+the verdict closure): its error of class `0` by `closedNV` (`ErrClaim.of_callE_nv`), the twin
+unchanged. -/
+theorem RefE.onlyCall {p : Prog} {n : Nat} {f : FnName} {args : List Word} {m : Mem}
+    {fs : List FnName} {K : Except Err (List Word × Mem) → Except Err α}
+    (hK : ∀ e, K (.error e) = .error e) {T : AM β} (hnv : G → closedNV p fs = true) (hf : f ∈ fs)
+    (h : ∀ r m₁, callE p n f args m = .ok (r, m₁) → RefE G (K (.ok (r, m₁))) T a R) :
+    RefE G (K (callE p n f args m)) T a R := by
+  rcases c : callE p n f args m with e | ⟨r, m₁⟩
+  · rw [hK]; exact fun hG => ErrClaim.of_callE_nv (hnv hG) hf c
+  exact h r m₁ c
 
 /-- **A lifted callee the twin has no step for** (an L helper): its model fact `Q`, the twin
 unchanged. -/
@@ -258,6 +273,17 @@ theorem RefE.guardThen {c : Prop} [Decidable c] {b : Bool} {e : Err} {ce : Check
     exact fun _ => ErrClaim.fail _ _ hcls
   · have hb : b = false := by cases hb : b; rfl; exact absurd (hbc hb) hc
     rw [ite_eq_right hc, ite_eq_right (by simp [hb])]; exact h hc hb
+
+/-- **An early return of the model against the twin's `if b then T else pure y`** (a check that
+answers `false` before the rest): the model returns `v` exactly when `b` is false. -/
+theorem RefE.retIf {c : Prop} [Decidable c] {b : Bool} {v : α} {y : β} {rest : Except Err α}
+    {T : AM β} (hcb : c → b = false) (hbc : b = false → c) (hv : c → R v y a)
+    (h : ¬ c → b = true → RefE G rest T a R) :
+    RefE G (if c then .ok v else rest) (if b = true then T else pure y) a R := by
+  by_cases hc : c
+  · rw [ite_eq_left hc, ite_eq_right (by simp [hcb hc])]; exact RefE.ret rfl (hv hc)
+  · have hb : b = true := by cases hb : b; exact absurd (hbc hb) hc; rfl
+    rw [ite_eq_right hc, ite_eq_left hb]; exact h hc hb
 
 /-- **The model aborts where the twin's guard fails** (`b` false, the model's error of the
 twin's class). -/

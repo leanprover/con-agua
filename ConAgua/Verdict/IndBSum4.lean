@@ -138,13 +138,11 @@ theorem scts_ref (hP : SumProg p)
   -- the head constructor (by its unified model)
   rcases k with _ | j
   · rw [ctorE.eq_1, sctsE.k_check_sum_ctor.none]; exact RefE.of_cls0 Err.cls_outOfFuel
-  have h1R := ctor_ref hq henv hOpf hLC hLT hApd hCrk hP j (by omega) m a vis0 T lo ll nP nIdx rs isP lg w2 w3 cvTaw
-    lps cv cvTa hC hT hlps hlb hcvB hta hrs hni hnf hA hTP hlpsP hrsP hcvP hcvTaP hws hok₀ hfe
-  rcases h1 : ctorE p (j + 1) m vis0 vis T lo ll nP nIdx rs isP lg w2 w3 cvTaw with e1 | ⟨r, m1⟩ <;>
-    rw [h1] at h1R
-  · rw [sctsE.k_check_sum_ctor.none]; exact RefE.bind_left h1R
+  refine RefE.bindE (fun _ => sctsE.k_check_sum_ctor.none ..) id
+    (ctor_ref hq henv hOpf hLC hLT hApd hCrk hP j (by omega) m a vis0 T lo ll nP nIdx rs isP lg w2 w3 cvTaw
+      lps cv cvTa hC hT hlps hlb hcvB hta hrs hni hnf hA hTP hlpsP hrsP hcvP hcvTaP hws hok₀ hfe)
+    fun ⟨r, m1⟩ ⟨cvCa, sorts⟩ a1 _ hR1 => ?_
   rw [sctsE.k_check_sum_ctor.arm1]
-  obtain ⟨x, a1, hrun1, hR1⟩ := h1R
   have hC1 := hR1.stage
   have hg1 := hR1.grow
   have hr0 := hR1.cvW
@@ -154,21 +152,16 @@ theorem scts_ref (hP : SumProg p)
   have hA1 := hR1.abs
   have c1 := hR1.core
   dsimp only at hC1 hg1 hr0 hx1 hsorts hsb hA1
-  refine RefE.bind_right hrun1 ?_
   have hS1 := hC1.stage
-  obtain ⟨cvCa, sorts⟩ := x
-  simp only at hx1 hsorts
   subst hx1
   -- the two `rec2`s (L only)
-  rcases hn : recW m1 2 [r.headD 0, w3] with _ | ⟨rn, m2⟩
-  · rw [liftE_none, sctsE.k_rec2.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some, sctsE.k_rec2.arm1]
+  refine RefE.onlySim (fun _ => sctsE.k_rec2.none ..) (fun _ _ h => h) fun rn m2 hn => ?_
+  rw [sctsE.k_rec2.arm1]
   obtain ⟨hS2, hg2, hn0, hn1⟩ := sumRec2 hn hS1
   have hA2 : AbsOK m2 := recW_afr hn hA1
   have hC2 : StageC dn vis fe env m2 a1 := hC1.of_pstep hS2 hA2 (PStep.refl hC1.check.state)
-  rcases hh : recW m2 2 [r.tail.headD 0, r.tail.tail.headD 0] with _ | ⟨rh, m3⟩
-  · rw [liftE_none, sctsE.k_rec2_2.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some, sctsE.k_rec2_2.arm1]
+  refine RefE.onlySim (fun _ => sctsE.k_rec2_2.none ..) (fun _ _ h => h) fun rh m3 hh => ?_
+  rw [sctsE.k_rec2_2.arm1]
   obtain ⟨hS3, hg3, hh0, hh1⟩ := sumRec2 hh hS2
   have hA3 : AbsOK m3 := recW_afr hh hA2
   have hC3 : StageC dn vis fe env m3 a1 := hC2.of_pstep hS3 hA3 (PStep.refl hC2.check.state)
@@ -177,34 +170,26 @@ theorem scts_ref (hP : SumProg p)
   have hcO1 : (cO + 1).toNat = cO.toNat + 1 := sumToNat_succ (by omega)
   have hcL1 : (cL - 1).toNat = L := by rw [sumToNat_pred hl]; omega
   -- the rest
-  have h4 := ih (by omega) m3 a1 (cO + 1) (cL - 1) cs restP hC3 (by rw [decHL_grow hg03 hlb]; exact hlps)
+  refine RefE.bindE (fun _ => sctsE.k_check_sum_ctors.none ..) id (ih (by omega) m3 a1 (cO + 1) (cL - 1) cs restP hC3 (by rw [decHL_grow hg03 hlb]; exact hlps)
     (by have := hg03.iw; omega) (DecB.grow (OMono.decCVp _) hg03 hta)
     (by rw [hcO1, hcL1]; exact DecB.grow (OMono.decPL decCN_mono _ _) hg03 htail) hA3
     (ConRon.Bridge.denoteN_ext hTP x1) (ConRon.Bridge.denoteNListE_ext x1 _ _ hlpsP)
     (ConRon.Bridge.denoteL_ext hrsP x1) (ConRon.Bridge.denoteCV_ext hcvTaP x1)
     (ConRon.Bridge.Inductives.denoteCtors_ext x1 _ _ hrestP) (hok₀.mono x1)
-    (ConRon.Bridge.denoteFEnv_mono x1 hfe)
-  rcases h4' : sctsE p (j + 1) m3 vis0 vis T lo ll nP nIdx rs isP lg cvTaw (cO + 1) (cL - 1) with e4 | ⟨rr, m4⟩
-  · rw [h4'] at h4
-    rw [sctsE.k_check_sum_ctors.none]; exact RefE.bind_left h4
-  rw [h4'] at h4
-  obtain ⟨⟨rest, srest⟩, a4, hrun4, hR4⟩ := h4
+    (ConRon.Bridge.denoteFEnv_mono x1 hfe)) fun ⟨rr, m4⟩ ⟨rest, srest⟩ a4 _ hR4 => ?_
   dsimp only at hR4
   rw [sctsE.k_check_sum_ctors.arm1]
-  refine RefE.bind_right hrun4 ?_
   have hS4 := hR4.stage.stage
   obtain ⟨ps1, hps1t, hps1, hmap1⟩ := sumDecNL_of_decB hR4.cns
   -- the two `sl_cons` (L only)
-  rcases hc1 : consW (j + 1) m4 (rn.headD 0) (rr.headD 0) (rr.tail.headD 0) with _ | ⟨r1, m5⟩
-  · rw [liftE_none, sctsE.k_sl_cons.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some, sctsE.k_sl_cons.arm1]
+  refine RefE.onlySim (fun _ => sctsE.k_sl_cons.none ..) (fun _ _ h => h) fun r1 m5 hc1 => ?_
+  rw [sctsE.k_sl_cons.arm1]
   obtain ⟨hS5, hg5, hd5, ht5⟩ := consW_stageN hc1 hS4 hR4.cnsB hps1
   obtain ⟨ps2, hps2t, hps2, hmap2⟩ := sumDecNL_of_decB hR4.sorts
   have hb2' : (rr.tail.tail.headD 0).toNat + (rr.tail.tail.tail.headD 0).toNat ≤ iwTop m5 := by
     have := hg5.iw; have := hR4.sortsB; omega
-  rcases hc2 : consW (j + 1) m5 (rh.headD 0) (rr.tail.tail.headD 0) (rr.tail.tail.tail.headD 0) with _ | ⟨r2, m6⟩
-  · rw [liftE_none, sctsE.k_sl_cons_2.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some, sctsE.k_sl_cons_2.arm1]
+  refine RefE.onlySim (fun _ => sctsE.k_sl_cons_2.none ..) (fun _ _ h => h) fun r2 m6 hc2 => ?_
+  rw [sctsE.k_sl_cons_2.arm1]
   obtain ⟨hS6, hg6, hd6, ht6⟩ := consW_stageN hc2 hS5 hb2'
     ((OMono.decNL _ _).mono _ _ _ (IWGrow.truncExt hg5) hps2t)
   -- the head's records, decoded at the end

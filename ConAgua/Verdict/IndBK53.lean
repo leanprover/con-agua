@@ -78,31 +78,24 @@ theorem tkh_ref (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState} {q fto ftl 
   rw [tkhE.arm1]
   unfold tkHeads
   -- `get_app_fn_f` of the leaf and of the major's domain
-  rcases h1 : gafF m [CWF, leafW] with _ | ⟨rl, m1⟩
-  · rw [liftE_none, tkhE.k_get_app_fn_f.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some, tkhE.k_get_app_fn_f.arm1]
-  obtain ⟨lh, a1, run1, hS1, hg1, hlhH, hlhD⟩ := gafF_ok dn vis fe CWF leafW hl m m1 a rl h1 hS
-  rw [CWF_eq, ← decE_eq] at run1
-  rw [← hlhD, ← decE_eq] at run1
+  refine RefE.bindSim (fun _ => rfl) (fun r m' h => gafF_ok dn vis fe CWF leafW hl m m' a r h hS)
+    fun rl _ m1 a1 h1 run1 ⟨hS1, hg1, hlhH, hlhD⟩ => ?_
+  obtain rfl : _ = decE (rl.headD 0) := hlhD.symm
+  dsimp only [tkhE.k_get_app_fn_f]
   have hP1 := hP.fr (MFr.ofGafF h1)
   have hA1 := gafF_afr h1 hA
   obtain ⟨e1, hlh⟩ := ConRon.Bridge.Inductives.getAppFn_run hC.check.state hlwP run1
   subst a1
   have hC1 := hC.of_pstep hS1 hA1 (PStep.refl hC.check.state)
-  refine RefE.bind_right run1 ?_
-  rcases h2 : gafF m1 [CWF, majDom] with _ | ⟨rm, m2⟩
-  · rw [liftE_none, tkhE.k_get_app_fn_f_2.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]
-  obtain ⟨mh, a2, run2, hS2, hg2, hmhH, hmhD⟩ := gafF_ok dn vis fe CWF majDom hmj m1 m2 a rm h2 hS1
-  rw [CWF_eq, ← decE_eq] at run2
-  rw [← hmhD, ← decE_eq] at run2
+  refine RefE.bindSim (fun _ => rfl) (fun r m' h => gafF_ok dn vis fe CWF majDom hmj m1 m' a r h hS1)
+    fun rm _ m2 a2 h2 run2 ⟨hS2, hg2, hmhH, hmhD⟩ => ?_
+  obtain rfl : _ = decE (rm.headD 0) := hmhD.symm
   have hP2 := hP1.fr (MFr.ofGafF h2)
   have hA2 := gafF_afr h2 hA1
   obtain ⟨e2, hmh⟩ := ConRon.Bridge.Inductives.getAppFn_run hC.check.state hmdP run2
   subst a2
   have hC2 := hC1.of_pstep hS2 hA2 (PStep.refl hC.check.state)
   have hg12 := hg1.trans hg2
-  refine RefE.bind_right run2 ?_
   -- the heads' tags
   by_cases t1 : rl.headD 0 >>> 28 ≠ 3
   · rw [tkhE.k_get_app_fn_f_2.arm1 (hc1 := t1)]
@@ -142,26 +135,19 @@ theorem tkh_ref (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState} {q fto ftl 
   refine RefE.bind_right vr1 (RefE.bind_right vr2 ?_)
   dsimp only
   -- `get_app_args_f` of the leaf and of the major's domain
-  rcases h3 : gaaF m2 [CWF, leafW] with _ | ⟨ra, m3⟩
-  · rw [liftE_none, tkhE.k_get_app_args_f.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some, tkhE.k_get_app_args_f.arm1]
-  obtain ⟨la, a3, run3, hS3, hg3, hla, hlab⟩ := gaaF_ok dn vis fe CWF leafW hl m2 m3 a ra h3 hS2
-  rw [CWF_eq, ← decE_eq] at run3
+  refine RefE.bindSim (fun _ => rfl) (fun r m' h => gaaF_ok dn vis fe CWF leafW hl m2 m' a r h hS2)
+    fun ra la m3 a3 h3 run3 ⟨hS3, hg3, hla, hlab⟩ => ?_
+  dsimp only [tkhE.k_get_app_args_f]
   have hP3 := hP2.fr (MFr.ofGaaF h3)
   have hA3 := gaaF_afr h3 hA2
   obtain ⟨e3, hlaP⟩ := ConRon.Bridge.Inductives.getAppArgs_run hC.check.state hlwP run3
   subst a3
-  refine RefE.bind_right run3 ?_
-  rcases h4 : gaaF m3 [CWF, majDom] with _ | ⟨rb, m4⟩
-  · rw [liftE_none, tkhE.k_get_app_args_f_2.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]
-  obtain ⟨ma, a4, run4, hS4, hg4, hma, hmab⟩ := gaaF_ok dn vis fe CWF majDom hmj m3 m4 a rb h4 hS3
-  rw [CWF_eq, ← decE_eq] at run4
+  refine RefE.bindSim (fun _ => rfl) (fun r m' h => gaaF_ok dn vis fe CWF majDom hmj m3 m' a r h hS3)
+    fun rb ma m4 a4 h4 run4 ⟨hS4, hg4, hma, hmab⟩ => ?_
   have hP4 := hP3.fr (MFr.ofGaaF h4)
   have hA4 := gaaF_afr h4 hA3
   obtain ⟨e4, hmaP⟩ := ConRon.Bridge.Inductives.getAppArgs_run hC.check.state hmdP run4
   subst a4
-  refine RefE.bind_right run4 ?_
   have hC4 := hC2.of_pstep hS4 hA4 (PStep.refl hC.check.state)
   have hg14 := (hg12.trans hg3).trans hg4
   simp only [getD_zero, getD_one, Nat.zero_add] at hla hlab hma hmab
@@ -220,17 +206,14 @@ theorem tk_ref (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState} {q fto ftl M
   · rw [tkE.eq_1]; exact RefE.of_cls0 (by simp)
   rw [tkE.arm1, tk53_eq]
   -- `strip_pis`
-  rcases h1 : stripF 6 m [tel, f] with _ | ⟨rs, m1⟩
-  · rw [liftE_none, tkE.k_strip_pis.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]
-  obtain ⟨o, a1, run1, hS1, hg1, hd1⟩ := stripF_pis_ok dn vis fe tel f hf m m1 a rs h1 hS
-  rw [← decE_eq, ← htl.len] at run1
+  rw [htl.len]
+  refine RefE.bindSim (fun _ => rfl) (fun r m' h => stripF_pis_ok dn vis fe tel f hf m m' a r h hS)
+    fun rs o m1 a1 h1 run1 ⟨hS1, hg1, hd1⟩ => ?_
   have hP1 := hP.fr (MFr.ofStripF h1)
   have hA1 := stripF_afr h1 hA
   obtain ⟨e1, hbp⟩ := ConRon.Bridge.Inductives.stripPis_pstep hC.check.state hfP run1
   subst a1
   have hC1 := hC.of_pstep hS1 hA1 (PStep.refl hC.check.state)
-  refine RefE.bind_right run1 ?_
   rcases o with _ | ⟨teleW, leafW⟩
   · have h0 : rs.headD 0 = 0 := hd1
     rw [tkE.k_strip_pis.arm1 (hc1 := h0)]
@@ -244,15 +227,13 @@ theorem tk_ref (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState} {q fto ftl M
   rw [hl3] at hlwH hlwD
   dsimp only
   -- `target_k53_tele`
-  rcases h2 : tteW n m1 (rs.tail.headD 0) (rs.tail.tail.headD 0) teo tel with _ | ⟨rt, m2⟩
-  · rw [liftE_none, tkE.k_target_k53_tele.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]
+  refine RefE.bindLift (fun _ => rfl) fun rt m2 h2 => ?_
   obtain ⟨c1, a2, run2, hc1, hS2, hg2, hP2⟩ := tteW_ok dn fe vis n h2 hS1 (HSl0.of hdl hbl) (htl.grow hg1) hP1
   have hA2 := tteW_afr h2 hA1
   have q2 := tkTele_cstep hC.check htw htlP run2
   have hC2 := hC1.of_cstep hS2 hA2 q2
   have hg12 := hg1.trans hg2
-  refine RefE.bind_right run2 ?_
+  refine ⟨_, _, run2, ?_⟩
   by_cases hz : rt.headD 0 = 0
   · rw [tkE.k_target_k53_tele.arm1 (hc1 := hz)]
     have : c1 = false := by rw [← hc1, hz]; rfl

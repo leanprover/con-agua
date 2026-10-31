@@ -110,15 +110,10 @@ theorem tmn_ref (n : Nat) (hn : n ≤ 2 ^ 62) : ∀ {m : Mem} {a : AState}
   have ih' := ih (by omega) hC hA hbs hus hft hftb hpf hds hct hctb hnf' hP hsh hftP hpfP husP hdsP hctP
     hnfsP' hformer hpw
   rw [ConRon.Arena.targetMajorNfs]
-  rcases h1 : tmnE p n m vis q fto ftl pfo pfl us dso dsl cto ctl (nfo + 1) (nfl - 1) with e1' | ⟨rr, m1⟩
-  · rw [h1] at ih'
-    rw [tmnE.k_target_major_nfs.none]; exact RefE.bind_left ih'
-  rw [h1] at ih'
-  obtain ⟨ys, a1, run1, hR1⟩ := ih'
+  refine RefE.bindE (fun _ => tmnE.k_target_major_nfs.none ..) id ih' fun ⟨rr, m1⟩ ys a1 run1 hR1 => ?_
   obtain ⟨c1, -⟩ := ConRon.Bridge.Inductives.targetMajorNfs_spec fe (ConRon.Bridge.CoreSpec.of_core rfl)
     henv bs pP formerTys pfvs formerTysP pfvsP (decI us) usP ds dsP ctors ctorsP hformer hpw nfs'
     nfsP' a a1 ys hC.check ⟨hsh, hftP, hpfP, husP, hdsP, hctP, hnfsP'⟩ run1
-  refine RefE.bind_right run1 ?_
   rw [tmnE.k_target_major_nfs.arm1]
   have hC1 := hR1.stage
   have hg1 := hR1.grow
@@ -179,13 +174,7 @@ theorem tmn_ref (n : Nat) (hn : n ≤ 2 ^ 62) : ∀ {m : Mem} {a : AState}
     (denoteEList_ext c1.ext _ _ hpfP) (ConRon.Bridge.denoteLs_ext husP c1.ext)
     (denoteEList_ext c1.ext _ _ hdsP) (by rw [hlD]; exact hlvP) hedP hformer hpw
   rw [hlD] at h3
-  rcases h3' : tcmE p n m1 vis q fto ftl pfo pfl us dso dsl (rdW (m1.arr64 IW) (e + 1))
-      (rdW (m1.arr64 IW) (e + 2)) (rdW (m1.arr64 IW) (e + 3)) with e3 | ⟨rk, m2⟩
-  · rw [h3'] at h3
-    rw [tmnE.k_target_class_match.none]; exact RefE.bind_left h3
-  rw [h3'] at h3
-  obtain ⟨c, a2, run2, hR2⟩ := h3
-  refine RefE.bind_right run2 ?_
+  refine RefE.bindE (fun _ => tmnE.k_target_class_match.none ..) id h3 fun ⟨rk, m2⟩ c a2 _ hR2 => ?_
   have hg2 : IWGrow m1 m2 := hR2.grow
   have hg12 := hg1.trans hg2
   have hys2 := hR1.slice.grow (fun q => decNCN_mono q) hg2
@@ -203,9 +192,8 @@ theorem tmn_ref (n : Nat) (hn : n ≤ 2 ^ 62) : ∀ {m : Mem} {a : AState}
   subst hc1
   simp only [ite_true]
   -- `sl_cons` (outside the verdict closure)
-  rcases h4 : consW n m2 e (rr.headD 0) (rr.tail.headD 0) with _ | ⟨rc, m3⟩
-  · rw [liftE_none, tmnE.k_sl_cons.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some, tmnE.k_sl_cons.arm1]
+  refine RefE.onlySim (fun _ => tmnE.k_sl_cons.none ..) (fun _ _ h => h) fun rc m3 h4 => ?_
+  rw [tmnE.k_sl_cons.arm1]
   obtain ⟨hS3, hg3, hps3, hf3⟩ := consW_pslr (fun q => decNCN_mono q) h4 hR2.stage.stage hys2
     (hnf1.grow (decNCN_mono _) hg2)
   have hA3 := consW_afr h4 hR2.abs

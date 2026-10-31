@@ -94,32 +94,20 @@ theorem crg_ref {p : Prog} (hp : CruleProg p) (hApd : ApdF p) (n : Nat) {dn : NI
   | zero => rw [crgE.eq_1]; exact RefE.of_cls0 (by simp)
   | succ N =>
   rw [crgE.arm1]
-  have hS := hC.stage
-  rcases h1 : lbbF m [CWF, 0, gen] with _ | ⟨r1, m1⟩
-  · rw [liftE_none, crgE.k_loose_bvars_bounded_fast.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]
-  obtain ⟨x1, a1, hrun1, hS1, hg1, hx1, -⟩ :=
-    lbbF_ok dn visR feR CWF 0 gen hgen m m1 a r1 h1 hS
-  rw [CWF_eq, show ((0 : Word).toNat) = 0 from rfl] at hrun1
-  by_cases hb1 : r1.headD 0 = 0
-  · rw [crgE.k_loose_bvars_bounded_fast.abort1 _ _ _ _ _ _ _ hb1]; exact RefE.of_cls0 rfl
-  rw [crgE.k_loose_bvars_bounded_fast.arm1 _ _ _ _ _ _ _ hb1]
-  have ex1 : x1 = true := by rw [← hx1]; simpa using hb1
-  subst ex1
   unfold crgT
   simp only [fail_bindAM]
-  refine RefE.bind_right hrun1 (RefE.ite_pos rfl ?_)
-  rcases h2 : hffF m1 [CWF, gen] with _ | ⟨r2, m2⟩
-  · rw [liftE_none, crgE.k_has_fvar_fast.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]
-  obtain ⟨x2, a2, hrun2, hS2, hg2, hx2, -⟩ := hffF_ok dn visR feR CWF gen hgen m1 m2 a1 r2 h2 hS1
-  rw [CWF_eq] at hrun2
-  by_cases hb2 : r2.headD 0 ≠ 0
-  · rw [crgE.k_has_fvar_fast.abort1 _ _ _ _ _ _ _ hb2]; exact RefE.of_cls0 rfl
-  rw [crgE.k_has_fvar_fast.arm1 _ _ _ _ _ _ _ (by simpa using hb2)]
-  have ex2 : x2 = false := by rw [← hx2]; simpa using hb2
-  subst ex2
-  refine RefE.bind_right hrun2 (RefE.ite_neg (by decide) ?_)
+  refine RefE.bindSim (fun _ => rfl) (fun r m' h => lbbF_ok dn visR feR CWF 0 gen hgen m m' a r h hC.stage)
+    fun r1 x1 m1 a1 h1 hrun1 ⟨hS1, hg1, hx1, _⟩ => ?_
+  dsimp only [crgE.k_loose_bvars_bounded_fast]
+  refine RefE.abort0 rfl fun hb1 => ?_
+  obtain rfl : x1 = true := by rw [← hx1]; simpa using hb1
+  refine RefE.ite_pos rfl ?_
+  refine RefE.bindSim (fun _ => rfl) (fun r m' h => hffF_ok dn visR feR CWF gen hgen m1 m' a1 r h hS1)
+    fun r2 x2 m2 a2 h2 hrun2 ⟨hS2, hg2, hx2, _⟩ => ?_
+  dsimp only [crgE.k_has_fvar_fast]
+  refine RefE.abort0 rfl fun hb2 => ?_
+  obtain rfl : x2 = false := by rw [← hx2]; simpa using hb2
+  refine RefE.ite_neg (by decide) ?_
   -- the twin's closedness guards
   obtain ⟨-, hlps, -⟩ := ConRon.Bridge.Core.denoteCV_inv hcvP
   obtain ⟨p1, -⟩ := ConRon.Bridge.Inductives.RC.looseBVarsBoundedFast_pstep hC.check.state hgP hrun1
@@ -143,21 +131,17 @@ theorem crg_ref {p : Prog} (hp : CruleProg p) (hApd : ApdF p) (n : Nat) {dn : NI
     | succ N => exact erToIwW_afr h3' hA2
   have hC3 : StageC dn visR feR envR m3 a2 := hC.of_pstep hS3 hA3 p12
   -- `all_level_params_defined`, real
-  rcases h4 : callE p N "all_level_params_defined" [r3.headD 0, r3.tail.headD 0, gen] m3 with
-    e4 | ⟨r4, m4⟩
-  · rw [crgE.k_all_level_params_defined.none]
-    exact fun hV => ErrClaim.of_callE_nv hV.nv (_root_.L.Checker.nv_mem (by decide +kernel)) h4
-  have h4' := apdF_of_callW hApd (callW_of_callE h4)
   have hlps2 := ConRon.Bridge.denoteNList_ext p12.ext.lss.ls.ns _ _ hlps
-  obtain ⟨x4, a4, hrun4, hT4, hg4, hx4, -⟩ := apdF_okT dn visR feR _ _ gen hgen cv.levelParams m3 m4
-    a2 r4 h4' ⟨hC3.stageT, hd3, _, denoteNList_mapM hlps2⟩
-  have hA4 : AbsOK m4 := absOK_apdF h4' hA3 hT4
-  by_cases hb4 : r4.headD 0 = 0
-  · rw [crgE.k_all_level_params_defined.abort1 _ _ _ _ _ _ hb4]; exact RefE.of_cls0 rfl
-  rw [crgE.k_all_level_params_defined.arm1 _ _ _ _ _ _ hb4]
-  have ex4 : x4 = true := by rw [← hx4]; simpa using hb4
-  subst ex4
-  refine RefE.bind_right hrun4 (RefE.ite_pos rfl ?_)
+  refine RefE.bindCall (fun _ => rfl)
+    (fun hV _ h4 => ErrClaim.of_callE_nv hV.nv (_root_.L.Checker.nv_mem (by decide +kernel)) h4)
+    (fun b h4 => apdF_okT dn visR feR _ _ gen hgen cv.levelParams m3 b.2 a2 b.1 (apdF_of_callW hApd h4)
+      ⟨hC3.stageT, hd3, _, denoteNList_mapM hlps2⟩)
+    fun r4 m4 x4 a4 h4 hrun4 ⟨hT4, hg4, hx4, _⟩ => ?_
+  have hA4 : AbsOK m4 := absOK_apdF (apdF_of_callW hApd (callW_of_callE h4)) hA3 hT4
+  dsimp only [crgE.k_all_level_params_defined]
+  refine RefE.abort0 rfl fun hb4 => ?_
+  obtain rfl : x4 = true := by rw [← hx4]; simpa using hb4
+  refine RefE.ite_pos rfl ?_
   obtain ⟨h3st, h3c, h3p, -⟩ := ConRon.Bridge.allLevelParamsDefined_run p2.ok hlps2
     (ConRon.Bridge.denote_ext hgP p12.ext) hrun4
   have p3 : ConRon.Bridge.Inductives.PStep a2 a4 :=
@@ -166,17 +150,13 @@ theorem crg_ref {p : Prog} (hp : CruleProg p) (hApd : ApdF p) (n : Nat) {dn : NI
   have c13 := (p12.trans p3).toCore hC.check
   have hC4 : StageC dn visR feR envR m4 a4 := StageC.of_T hT4 c13.ok
   -- `consts_resolve_ffast`, real
-  rcases h5 : crfF m4 [visR, gen] with _ | ⟨r5, m5⟩
-  · rw [liftE_none, crgE.k_consts_resolve_ffast.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]
-  obtain ⟨x5, a5, hrun5, ⟨hT5, hg5, hx5, -⟩, hCr5⟩ :=
-    crfF_okT dn visR feR gen hgen m4 m5 a4 r5 h5 ⟨hC4.stageT, hA4.crMemo⟩
-  refine RefE.bind_right hrun5 ?_
+  refine RefE.bindSim (fun _ => rfl)
+    (fun r m' h => crfF_okT dn visR feR gen hgen m4 m' a4 r h ⟨hC4.stageT, hA4.crMemo⟩)
+    fun r5 x5 m5 a5 h5 hrun5 ⟨⟨hT5, hg5, hx5, _⟩, hCr5⟩ => ?_
   by_cases hb5 : r5.headD 0 = 0
   · -- the consts-resolve site
     rw [crgE.k_consts_resolve_ffast.arm1 _ _ _ _ _ _ hb5]
-    have ex5 : x5 = false := by rw [← hx5]; simpa using hb5
-    subst ex5
+    obtain rfl : x5 = false := by rw [← hx5]; simpa using hb5
     refine RefE.ite_neg (by decide) ?_
     rcases h6 : callE p N "unresolved_consts_error" [visR, gen, 3] m5 with e6 | ⟨r6, m6⟩
     · rw [crgE.k_unresolved_consts_error.none]
@@ -184,8 +164,7 @@ theorem crg_ref {p : Prog} (hp : CruleProg p) (hApd : ApdF p) (n : Nat) {dn : NI
       exact fun hV => uce_errClaim_hi hV.uce hV.nv hC5.arena.base hC5.pins hgen (by decide) h6 _
     rw [crgE.k_unresolved_consts_error.abort1]; exact RefE.of_cls0 rfl
   rw [crgE.k_consts_resolve_ffast.arm2 _ _ _ _ _ _ hb5]
-  have ex5 : x5 = true := by rw [← hx5]; simpa using hb5
-  subst ex5
+  obtain rfl : x5 = true := by rw [← hx5]; simpa using hb5
   obtain ⟨p4, -⟩ := ConRon.Bridge.Inductives.constsResolveFFast_pstep c13.ok.toR
     (ConRon.Bridge.denote_ext hgP c13.ext) hrun5
   have c14 := c13.trans (p4.toCore c13.ok)
