@@ -30,7 +30,9 @@ in step. This file is the walk's step rules, one per pair of shapes, both outcom
   `RefE.abortAt` / `RefE.pass` where a split of the proof already decided the guard;
 * `RefE.twinFail` / `RefE.twinPass`: a guard of the twin that L checks in pieces;
 * `RefE.ofArms`: an irreducible continuation (a recursive model's) read through its guarded
-  equations as the `if` the guard rules take.
+  equations as the `if` the guard rules take;
+* `RefE.under` / `RefE.underIf`: a callee or a guard under an outer continuation (a loop's exit
+  around its body).
 
 Between two rules, `dsimp only [K]` unfolds the continuation `K` at the head of the model
 (`K (.ok (r, m))` to its arm), or `rw [K.arm1]` where `K` is irreducible. docs/design/refgen.md, "Migration recipe", is the shape of a
@@ -178,6 +180,23 @@ theorem RefE.ofArms {x rest : Except Err α} {T : AM β} {c : Prop} [Decidable c
   by_cases hc : c
   · rw [hab hc]; rw [ite_eq_left hc] at h; exact h
   · rw [harm hc]; rw [ite_eq_right hc] at h; exact h
+
+/-- **Under an outer continuation** (a loop's exit `K₀`, `f.k_loop1 …`, around every arm of its
+body): the rule for the inner continuation `K` at `y` takes `K₀ ∘ K` as its continuation, its
+`hK` the argument of `h`; `rw [Function.comp_apply, K.arm1]` after it. -/
+theorem RefE.under {σ : Type} {K₀ : Except Err ρ → Except Err α} {K : Except Err σ → Except Err ρ}
+    {y : Except Err σ} {T : AM β} (h0 : ∀ e, K₀ (.error e) = .error e) (hK : ∀ e, K (.error e) = .error e)
+    (h : (∀ e, (K₀ ∘ K) (.error e) = .error e) → RefE G ((K₀ ∘ K) y) T a R) : RefE G (K₀ (K y)) T a R :=
+  h fun e => by rw [Function.comp_apply, hK, h0]
+
+/-- **A guard under an outer continuation** (`RefE.under`'s `if`): the guard rules read
+`if c then .error e else K₀ rest`. -/
+theorem RefE.underIf {K₀ : Except Err ρ → Except Err α} (h0 : ∀ e, K₀ (.error e) = .error e)
+    {c : Prop} [Decidable c] {e : Err} {rest : Except Err ρ} {T : AM β}
+    (h : RefE G (if c then .error e else K₀ rest) T a R) : RefE G (K₀ (if c then .error e else rest)) T a R := by
+  by_cases hc : c
+  · rw [ite_eq_left hc, h0]; rw [ite_eq_left hc] at h; exact h
+  · rw [ite_eq_right hc]; rw [ite_eq_right hc] at h; exact h
 
 /-- **A guard of the model that fires** where the twin's own split already decided (a `match` on a
 callee's result): the abort's claim on the twin. -/
