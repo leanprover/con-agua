@@ -2,7 +2,6 @@ import ConAgua.Arena.IndT.Sum3
 import ConAgua.Arena.IndRealSctC
 import ConAgua.Arena.IndInstallSpec.PnfW
 import ConAgua.Verdict.PosTopE1
-import ConAgua.Verdict.PosTopEMono
 import ConAgua.Arena.IndT.Install1
 
 /-!

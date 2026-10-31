@@ -1,5 +1,4 @@
 import ConAgua.Arena.IndInstallSpec.InstallCvDecB
-import ConAgua.Arena.IndInstallSpec.NhW
 import ConAgua.Arena.RecStab
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr

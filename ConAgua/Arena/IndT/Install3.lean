@@ -2,7 +2,6 @@ import ConAgua.Arena.IndT.Sum2
 import ConAgua.Arena.IndT.Install1
 import ConAgua.Arena.IndInstallSpec.InstallSimCall
 import ConAgua.Arena.IndInstallSpec.Cons
-import ConAgua.Arena.DeclArmT
 import ConAgua.L.ModelGen
 
 /-!
