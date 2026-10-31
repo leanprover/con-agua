@@ -259,12 +259,6 @@ theorem sctW_mfr_real {p : Prog} (hp : ApdF p) : ∀ (n : Nat) (m m' : Mem) (vis
     (fun x hx => .inl (by simp only [List.mem_cons, List.not_mem_nil, or_false] at hx
                           rcases hx with rfl | rfl <;> decide))
 
-/-- A `Sim` also records the twin's run. -/
-theorem sctSim_withRun {β α : Type} {mo : Option (β × Mem)} {op : AM α} {a : AState}
-    {Q : β → α → Mem → AState → Prop} (h : Sim mo op a Q) :
-    Sim mo op a (fun r x m' a' => Q r x m' a' ∧ op.run a = .ok (x, a')) := by
-  intro r m' e; obtain ⟨x, a', h1, h2⟩ := h r m' e; exact ⟨x, a', h1, h2, h1⟩
-
 /-- Names read back in a store read back in its extension. -/
 theorem names_ext {st st' : EStore} (hx : ConRon.Arena.Ext st st') {lps : List NIdx}
     (h : ∃ ks, lps.mapM (denoteN st.lss.ls.ns) = some ks) :
@@ -433,10 +427,8 @@ theorem tbl_ref {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
   have hlps1 : decHL m1 lo.toNat ll.toNat = some lps := by rw [decHL_grow hg1 hlb]; exact hlps
   have hlb1 : lo.toNat + ll.toNat ≤ iwTop m1 := by have := hg1.iw; omega
   -- the scoping
-  rcases h2 : sctW (realCall p) (n + 1) m1 vis nP lo ll (rb.tail.headD 0) (rb.tail.tail.headD 0)
-    with _ | ⟨rs', m2⟩
-  · rw [liftE_none, tblE.k_check_struct_proj_table_scoped.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]
+  refine RefE.onlySim (fun _ => tblE.k_check_struct_proj_table_scoped.none ..) (fun _ _ h => h)
+    fun rs' m2 h2 => ?_
   obtain ⟨b, a2, hrun2, hS2, hg2, hsok, hsl, hA2, he2⟩ := sctW_okR hp nP lo ll lps hnP (n + 1) m1 a1 _ _
     bodies.toList hS1 ps1.ok (names_ext ps1.ext hks) hlps1 hlb1 hbd hbb hA1 rs' m2 h2
   have hf2 := sctW_mfr_real hp _ _ _ _ _ _ _ _ _ _ h2
@@ -684,33 +676,34 @@ theorem cto_ref {p : Prog} (hP : TabsProg p) (hp : ApdF p) (n : Nat) (hn : n ≤
   rw [hwT]
   unfold tabOne
   -- `struct_proj_guards`
-  rcases h1 : callW p n "struct_proj_guards" [w, UInt64.ofNat bs.nP, UInt64.ofNat nF, UInt64.ofNat so',
-      UInt64.ofNat sl'] m with _ | ⟨rg, m1⟩
-  · rw [liftE_none, ctoE.k_struct_proj_guards.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some, ctoE.k_struct_proj_guards.arm1]
-  match n, hn, h1 with
-  | 0, _, h1 => rw [callW_zero] at h1; cases h1
-  | 1, _, h1 =>
+  match n, hn with
+  | 0, _ =>
+    exact RefE.onlySim (Q := fun _ _ => False) (fun _ => ctoE.k_struct_proj_guards.none ..)
+      (fun _ _ h => by rw [callW_zero] at h; cases h) fun _ _ h => h.elim
+  | 1, _ =>
+    refine RefE.onlySim (Q := fun _ _ => False) (fun _ => ctoE.k_struct_proj_guards.none ..)
+      (fun _ _ h1 => ?_) fun _ _ h => h.elim
     obtain ⟨s', -, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
       (spg_spec p hP.tbl.hv hP.hf hP.hput hP.hins hP.hgo hP.hbp hP.hst hP.hsg hP.tbl.ha hP.tbl.hc hP.tbl.hsc
         hP.hul hP.hgd hP.hmf hP.hmp hP.him hP.hcol hP.hrow hP.hpw hP.hcl hP.hspg 0 _ _ _ _ _ _) h1
     rw [spgW_zero] at hW; cases hW
-  | j + 2, hn, h1 =>
-  have hsim := sctSim_withRun (by
-      have h := tabSimSpg hP (j + 1) w (UInt64.ofNat bs.nP) (UInt64.ofNat nF) (UInt64.ofNat so')
-        (UInt64.ofNat sl') sorts hwl
-        (by rw [UInt64.toNat_ofNat_of_lt' hnpb, UInt64.toNat_ofNat_of_lt' hnFb]; exact hb) hS hM
-        (by rw [hso', hsl']; exact hsorts.1)
-        (by rcases hsorts.2 with h | h
-            · left; rw [h]; rfl
-            · right; rw [hso', hsl']; exact h)
-      rw [hwd, UInt64.toNat_ofNat_of_lt' hnpb, UInt64.toNat_ofNat_of_lt' hnFb] at h
-      exact (Sim.withFr (F := fun m1 => AFr m m1) h
-        fun _ _ e => hkeep _ (by simp [tablesKeepCallees]) _ _ _ _ _ e))
-  obtain ⟨guards, a1, -, ⟨⟨⟨hS1, hg1, hgd1, hgt1, hM1⟩, ha1⟩, hrun1⟩⟩ := hsim rg m1 h1
+  | j + 2, hn =>
+  have hsim := by
+    have h := tabSimSpg hP (j + 1) w (UInt64.ofNat bs.nP) (UInt64.ofNat nF) (UInt64.ofNat so')
+      (UInt64.ofNat sl') sorts hwl
+      (by rw [UInt64.toNat_ofNat_of_lt' hnpb, UInt64.toNat_ofNat_of_lt' hnFb]; exact hb) hS hM
+      (by rw [hso', hsl']; exact hsorts.1)
+      (by rcases hsorts.2 with h | h
+          · left; rw [h]; rfl
+          · right; rw [hso', hsl']; exact h)
+    rw [hwd, UInt64.toNat_ofNat_of_lt' hnpb, UInt64.toNat_ofNat_of_lt' hnFb] at h
+    exact (Sim.withFr (F := fun m1 => AFr m m1) h
+      fun _ _ e => hkeep _ (by simp [tablesKeepCallees]) _ _ _ _ _ e)
+  refine RefE.bindSim (fun _ => ctoE.k_struct_proj_guards.none ..) hsim
+    fun rg guards m1 a1 _ hrun1 ⟨⟨hS1, hg1, hgd1, hgt1, hM1⟩, ha1⟩ => ?_
+  rw [ctoE.k_struct_proj_guards.arm1]
   obtain ⟨ps1, -⟩ := ConRon.Bridge.Inductives.structProjGuards_spec cA.type cAP.type bs.nP nF sorts sortsP
     a a1 guards hok hpins ⟨ConRon.Bridge.denoteCV_type hcAP, hsP⟩ hrun1
-  refine RefE.bind_right hrun1 ?_
   -- `block_shape_lps` (model only)
   refine RefE.onlySim (fun _ => ctoE.k_block_shape_lps.none ..) (fun _ _ h => h) fun rl m2 h2 => ?_
   rw [ctoE.k_block_shape_lps.arm1]
@@ -745,13 +738,7 @@ theorem cto_ref {p : Prog} (hP : TabsProg p) (hp : ApdF p) (n : Nat) (hn : n ≤
     (by rw [UInt64.toNat_ofNat_of_lt' hnpb]; omega) hl2 hlb2 hgdT (by rw [hgt1]; exact hg2.iw) hcvT2 hA2 ps1.ok
     hks hTP hcty
   rw [hTn, hCn, hrse2, UInt64.toNat_ofNat_of_lt' hnpb, UInt64.toNat_ofNat_of_lt' hnFb] at h
-  rcases h3 : tblE p (j + 2) s2.mem (rdW (s2.mem.arr64 EREC) (UInt64.ofNat cvm))
-      (rdW (s2.mem.arr64 EREC) (UInt64.ofNat cvp)) (rl.headD 0) (rl.tail.headD 0) (UInt64.ofNat bs.nP)
-      (UInt64.ofNat nF) (rdW (s2.mem.arr64 IW) (pp + 6)) (rg.headD 0) (rg.tail.headD 0) (UInt64.ofNat cvp) vis
-    with e3 | ⟨r3, m3⟩ <;> rw [h3] at h
-  · exact h
-  obtain ⟨x, a3, hrun3, hR3⟩ := h
-  exact RefE.ret hrun3 ⟨hR3.stage, hg12.trans hR3.grow, hM2.fr hR3.frame, hR3.abs, ps1.trans hR3.step⟩
+  exact h.mono fun _ _ _ hR3 => ⟨hR3.stage, hg12.trans hR3.grow, hM2.fr hR3.frame, hR3.abs, ps1.trans hR3.step⟩
 
 /-- **`check_block_tables` refines `checkBlockTables`, both outcomes** (each member's table by
 `cto_ref`), from the twin's `StateOK`, `PinsOK` and the shape's, the members', the constructors' and
@@ -845,11 +832,8 @@ theorem ctb_ref {p : Prog} (hP : TabsProg p) (hp : ApdF p) (dn : NIdx → Option
     have h1 := cto_ref hP hp k (by omega) hS hq hsrc (by rw [hmsp']; exact hdm)
       ⟨hd1, hb1.resolve_left (by decide)⟩ ⟨hd2, hb2.resolve_left (by decide)⟩ hM hA hkeep hok hpins
       hsh hmP hcAP hsP (vis := vis)
-    rcases h1' : ctoE p (k + 1) m pp (UInt64.ofNat msp) o1 o2 vis with e1 | ⟨r1, m1⟩ <;> rw [h1'] at h1
-    · rw [ctbE.k_check_block_tables_one.none]; exact RefE.bind_left h1
+    refine RefE.bindE (fun _ => ctbE.k_check_block_tables_one.none ..) id h1 fun ⟨r1, m1⟩ fe₂ a1 _ hR1 => ?_
     rw [ctbE.k_check_block_tables_one.arm1, ctbE.j1.arm1]
-    obtain ⟨fe₂, a1, hrun1, hR1⟩ := h1
-    refine RefE.bind_right hrun1 ?_
     have h2 := ih (by omega) m1 a1 r1 fe₂ (mo + 1) (ml - 1) (co + 1) (cl - 1) (so + 1) (sl - 1) rest
       css' sss' hR1.stage (hq.grow (decBS_mono _) hR1.grow) (partsHsrc_grow hR1.grow hq9 hsrc)
       (hrest.grow decMS_mono hR1.grow) (hcss'.grow decCNS_mono hR1.grow) (hsss'.grow decISS_mono hR1.grow)
