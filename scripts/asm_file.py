@@ -16,13 +16,12 @@ Both modes also run the parser cross-check `ConAgua/AsmFile/CrossCheck.lean` on 
 Kraken's own parser must read the code as the trusted parser does (~13 s; not in `include_asm`,
 where it would double the module's elaboration time).
 
-Order after changing L code: scripts/checker_prog.py (writes Checker/Prog*.lean), then
-`scripts/lake build` (or just this script, which builds the `ProgI` chain itself), then this script.
-`--no-build` on out-of-date oleans is refused.
-
 Usage: scripts/asm_file.py [--check] [--no-build]
   --check     fail (exit 1) if a file would change; do not write it
   --no-build  do not build ConAgua.Checker.AsmEmit's imports and romgen first"""
+# Order after changing L code: scripts/checker_prog.py (writes Checker/Prog*.lean), then
+# `scripts/lake build` (or just this script, which builds the `ProgI` chain itself), then this
+# script. `--no-build` on out-of-date oleans is refused (check_oleans_fresh).
 import argparse, os, subprocess, sys, tempfile
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
