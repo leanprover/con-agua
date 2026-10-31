@@ -4,7 +4,6 @@ import ConAgua.Arena.RecGenSpec.ClassKeyCanon
 import ConAgua.Verdict.IndBTmf
 import ConAgua.Arena.IndInstallSpec.ConsBlockCtors
 import ConAgua.Arena.DeclBasisSpec
-import ConAgua.Arena.RefWalk
 
 /-!
 # `target_major_of` under `StageC` with the real `inst_lp_fast` (lane `indstaget`, helper `rcC`)

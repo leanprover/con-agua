@@ -1,4 +1,3 @@
-import ConAgua.Arena.RefWalk
 import ConAgua.Arena.RecGenSpec.DecTMDecBOf
 import ConAgua.Arena.IndInstallSpec.NestCtx
 import ConAgua.Arena.IndSumSpec.ParamLevels

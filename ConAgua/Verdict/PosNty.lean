@@ -2,7 +2,6 @@ import ConAgua.Arena.IndPosSpec.BvbWMfr
 import ConAgua.Arena.IndPosSpec.NitW
 import ConAgua.Arena.IlpRd
 import ConAgua.Verdict.PosE1M
-import ConAgua.Arena.RefWalk
 
 /-!
 # `nest_inst_type_ty`: one model and one refinement for both outcomes

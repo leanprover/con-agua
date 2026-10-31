@@ -1,7 +1,7 @@
 import ConAgua.Arena.IndT.Install1
 import ConAgua.Verdict.LefRef
 import ConAgua.Arena.IndInstallSpec.IagW
-import ConAgua.Arena.Checker
+import ConRon.Bridge.Inductives.BlockInstall
 /-!
 # `check_block_agree_one`: one model and one refinement for both outcomes
 

@@ -1,4 +1,3 @@
-import ConAgua.Arena.RefWalk
 import ConAgua.Arena.RecCheckSpec.DecHLTruncMBound
 import ConAgua.Arena.IndT.Lift
 import ConRon.Bridge.Inductives.RecCheck

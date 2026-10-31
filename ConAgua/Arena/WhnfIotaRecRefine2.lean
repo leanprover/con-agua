@@ -1,5 +1,4 @@
 import ConAgua.Arena.LdRd
-import ConAgua.Arena.RefWalk
 import ConAgua.Arena.RecFireEnv
 import ConAgua.Arena.WhnfIotaRefine6
 import ConAgua.Arena.GrindAttr

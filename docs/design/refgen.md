@@ -793,6 +793,11 @@ Pitfalls (add to §6.4):
 * **A model guard with a `Prop` twin condition** (`if margs.length = … then … else pure none` in
   `iotaRecFire2T`) has no rule (`retIf` wants a `Bool`): `rw [ite_eq_left h]` on the twin.
 * **`if_pos`/`if_neg` are deprecated** (warnings): `ite_eq_left`/`ite_eq_right`.
+* **`import ConAgua.Arena.RefWalk` in a low module** (`WhnfIotaRecRefine`, below most of the
+  checker's proofs) makes the direct RefWalk import of every module above it redundant: 13 files
+  (`Install1`, `Sum1`, `Sum3`, `RecGenTmf`, `DeclNatGateT`, `DeclValE`, `IndBHdr`, `IndBTpd`, …)
+  failed `shake` and lost theirs. `IndsE4`'s `import ConAgua.Arena.Checker` was there only for
+  con-ron's `checkBlockDomsAt_specF`; it is now `import ConRon.Bridge.Inductives.BlockInstall`.
 * `RefE.lastE (K := id)` for a model that is the callee's call itself (`tcm_ref`'s `pdeE`).
 * `bindCall` with no ready `RSim` (`e_view` in `toi_ref`) needs `(Q := …)`.
 * An `RSim` into `bindSim`: `(fun r m h => rsim (r, m) h)`.

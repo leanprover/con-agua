@@ -3,7 +3,6 @@ import ConAgua.Verdict.VCtx
 import ConAgua.Arena.IndRealLvlC
 import ConAgua.Arena.IndSumSpec.CheckStructFieldSortsISucc
 import ConAgua.L.ModelGen
-import ConAgua.Arena.RefWalk
 
 /-!
 # `checkStructFieldSortsI` under `StageC` (lane `indstaget`)

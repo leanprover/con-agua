@@ -1,4 +1,3 @@
-import ConAgua.Arena.RefWalk
 import ConAgua.Arena.RecGenSpec.CruleProg
 import ConAgua.Verdict.VCtx
 import ConAgua.Arena.IndT.Lift
