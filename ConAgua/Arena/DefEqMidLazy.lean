@@ -1,5 +1,4 @@
 import ConAgua.Arena.DefEqMidSpine
-import ConAgua.Arena.RefWalk
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen

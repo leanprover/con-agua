@@ -1,5 +1,4 @@
 import ConAgua.Arena.DefEqMid
-import ConAgua.Arena.RefWalk
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 
