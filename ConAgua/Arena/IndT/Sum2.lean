@@ -4,6 +4,7 @@ import ConAgua.Arena.RecGenSpec.ClassFeR
 import ConAgua.Arena.RecGenSpec.Rec3TmdWDecB
 import ConRon.Bridge.Inductives.SumInstall
 import ConAgua.L.ModelGen
+import ConAgua.Arena.RefWalk
 
 /-!
 # `checkSumTele.checkSumTeleSlow`, `checkSumTele` under `StageC`, both outcomes (lane `indstaget`)
@@ -136,38 +137,29 @@ theorem cts_ref (k : Nat) (hk : k ≤ 2 ^ 62)
   -- `whnf_telescope`
   have h1R := wt_ref hq hP henv k (by omega) m a 0 n w hC hA hw32 (by simpa using n.toNat_lt) hdw hws
   rw [show (0 : Word).toNat = 0 from rfl] at h1R
-  rcases h1 : wtE p k m vis 0 n w with e1 | ⟨r1, m1⟩
-  · rw [ctsE.k_whnf_telescope.none]; rw [h1] at h1R
-    exact RefE.bind_left fun hG => h1R ⟨hG.nv, hG.whnf⟩
-  rw [ctsE.k_whnf_telescope.arm1]; rw [h1] at h1R
-  obtain ⟨⟨bs, s⟩, a1, hrun1, hC1, hg1, hd1, ht1, hs32, hs, hA1⟩ := h1R
-  dsimp only at hC1 hg1 hd1 ht1 hs32 hs hA1
+  refine RefE.bindE (fun _ => rfl) (fun hG => ⟨hG.nv, hG.whnf⟩) h1R
+    fun ⟨r1, m1⟩ ⟨bs, s⟩ a1 hrun1 ⟨hC1, hg1, hd1, ht1, hs32, hs, hA1⟩ => ?_
+  dsimp only [ctsE.k_whnf_telescope] at hC1 hg1 hd1 ht1 hs32 hs hA1 ⊢
   have hS1 := hC1.stage
   obtain ⟨c1, F₁, bsP, sP, -, hbs, hsP⟩ := ConRon.Bridge.Inductives.whnfTelescope_spec fe
     (ConRon.Bridge.CoreSpec.of_core rfl) henv 0 n.toNat (decI w) cvTaP.type hws a a1 (bs, s)
     hC.check ⟨hdw, hfe⟩ hrun1
   dsimp only at hbs hsP
-  refine RefE.bind_right hrun1 ?_
   -- `intern_sort` (outside the verdict closure)
-  rcases h2 : sointernW m1 (r1.tail.tail.headD 0) with _ | ⟨ss, m2⟩
-  · rw [liftE_none, ctsE.k_intern_sort.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]
-  by_cases hss : 4294967296 ≤ ss
-  · rw [ctsE.k_intern_sort.abort1 _ _ _ _ _ _ _ _ _ hss]; exact RefE.of_cls0 rfl
-  rw [ctsE.k_intern_sort.arm1 _ _ _ _ _ _ _ _ _ hss]
-  have hss32 : ss.toNat < 2 ^ 32 := by have : ¬ (4294967296 : Nat) ≤ ss.toNat := hss; omega
+  refine RefE.bindLift (fun _ => rfl) fun ss m2 h2 => ?_
   obtain ⟨a2, hrun2, hS2, hg2⟩ := internSort_stage hS1 _ hs32 h2
   rw [hs] at hrun2
+  refine ⟨_, _, hrun2, ?_⟩
+  dsimp only [ctsE.k_intern_sort]
+  refine RefE.abort0 rfl fun hss => ?_
+  have hss32 : ss.toNat < 2 ^ 32 := by have : ¬ (4294967296 : Nat) ≤ ss.toNat := hss; omega
   obtain ⟨p2, hsort⟩ := ConRon.Bridge.Inductives.internSortE_run hC1.check.state hsP hrun2
   have hA2 := sointernW_afr h2 hA1
   have hC2 : StageC dn vis fe env m2 a2 := hC1.of_pstep hS2 hA2 p2
-  refine RefE.bind_right hrun2 ?_
   -- `close_telescope` (outside the verdict closure)
   have hb1 : (r1.headD 0).toNat + (r1.tail.headD 0).toNat < 2 ^ 64 := by
     obtain ⟨hI, -, hsz1, -⟩ := hS1.iw; simp only [iwTop] at hI ht1 ⊢; omega
-  rcases h3 : closeW k m2 (r1.headD 0) (r1.tail.headD 0) 0 ss with _ | ⟨rt, m3⟩
-  · rw [liftE_none, ctsE.k_close_telescope.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some, ctsE.k_close_telescope.arm1]
+  refine RefE.bindLift (fun _ => rfl) fun rt m3 h3 => ?_
   obtain ⟨ty, a3, hrun3, hS3, hg3, ⟨hty32, htyd⟩, hA3⟩ := closeW_ok k dn fe vis m2 m3 a2 _ _ 0 ss bs rt h3
     hS2 hss32 (by rw [decHL_grow hg2 ht1]; exact hd1) hb1 (by have := hg2.iw; omega)
     (by rw [show (0 : Word).toNat = 0 from rfl]; omega) hA2
@@ -177,12 +169,11 @@ theorem cts_ref (k : Nat) (hk : k ≤ 2 ^ 62)
   have hC3 : StageC dn vis fe env m3 a3 := hC2.of_pstep hS3 hA3 p3
   have hg13 := (hg1.trans hg2).trans hg3
   rw [← decE_eq] at hrun3
-  refine RefE.bind_right hrun3 ?_
+  refine ⟨_, _, hrun3, ?_⟩
+  dsimp only [ctsE.k_close_telescope]
   -- `cv_new` (outside the verdict closure; no twin step)
-  rcases h4 : cvNewW m3 (rdW (m3.arr64 EREC) cv) (rdW (m3.arr64 EREC) (cv + 1))
-      (rdW (m3.arr64 EREC) (cv + 2)) (rt.headD 0) with _ | ⟨q, m4⟩
-  · rw [liftE_none, ctsE.k_cv_new.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some, ctsE.k_cv_new.arm1]
+  refine RefE.onlySim (fun _ => rfl) (fun _ _ h => h) fun q m4 h4 => ?_
+  dsimp only [ctsE.k_cv_new]
   have hnat : ∀ j, j < 4 → nat? (erA m3) (cv.toNat + j) = nat? (erA m) (cv.toNat + j) := fun j hj => by
     simp only [nat?, erA]; rw [hg13.erGet _ (by omega)]
   obtain ⟨hS4, hg4, hqe, htop4, hsl4, hdq⟩ := cvNew_stage h4 hS3 (decCVp_grow hg13 hcvb hsl hcv)
@@ -208,16 +199,12 @@ theorem cts_ref (k : Nat) (hk : k ≤ 2 ^ 62)
   have h5R := ccv_ref hq hApd hCrk (n := k) (by omega) hC4.stageT (rec2DecCV_erecP hdq hqx)
     (rec3CVExt_lt hS4 hqx) (denoteCV_lps hcvT) hA4.crMemo.crOK
   rw [← htyd]
-  rcases h5 : checkConstantValE p k m4 vis q with e5 | ⟨u, m5⟩
-  · rw [ctsE.k_check_constant_val.none]; rw [h5] at h5R
-    exact RefE.bind_left fun hG => h5R hG.toVerdictCtxU
-  rw [ctsE.k_check_constant_val.arm1]; rw [h5] at h5R
-  obtain ⟨u', a5, hrun5, hP5⟩ := h5R
+  refine RefE.bindE (fun _ => rfl) (fun hG => hG.toVerdictCtxU) h5R fun ⟨u, m5⟩ u' a5 hrun5 hP5 => ?_
   obtain ⟨c5, -⟩ := ConRon.Bridge.checkConstantVal_bridge rfl (ConRon.Bridge.CoreSpec.of_core rfl)
     hC4.check henv hcvT hrun5
   have hg5 : IWGrow m4 m5 := hP5.grow
-  refine RefE.bind_right hrun5 (RefE.ret rfl ⟨StageC.of_T hP5.stage c5.ok, (hg13.trans hg4).trans hg5,
-    ?_, ?_, ?_, by simpa using hs32, by simpa using hs, hP5.abs hA4⟩)
+  refine RefE.ret rfl ⟨StageC.of_T hP5.stage c5.ok, (hg13.trans hg4).trans hg5,
+    ?_, ?_, ?_, by simpa using hs32, by simpa using hs, hP5.abs hA4⟩
   · simp only [List.headD]
     exact decCVp_grow hg5 (by omega) (fun lo ll e1 e2 => by have := hsl4 lo ll e1 e2; omega) hdq
   · simp only [List.headD]; have := hg5.er; omega
