@@ -332,6 +332,25 @@ theorem ConsR.cons_hit (hW : C.WF) (h : ConsR C R m on P Q) (t : Word) (ht : t �
   exact ⟨decI_hdS_tag C.tag C.wide t (hix x) hg ht hi hW.wtag,
     decI_hdS_pers C.tag C.wide t (hix x) hg ht hi⟩
 
+/-- A cons hit's handle has the schema's shape. -/
+theorem ConsR.cons_hit_wide (hW : C.WF) (h : ConsR C R m on P Q) (t : Word) (ht : t ≤ 1) {a : α}
+    {x : Idx k} (hc : (if t = 0 then P else Q).cons[a]? = some x) : x.isWide = C.wide := by
+  have hg : C.tag.toNat < 16 := by have := hW.sch.tag; simpa [ConsSch.sch] using this
+  have h6 := h.back t ht a x hc
+  have hix_nat : (hix x).toNat = x.idxNat := by
+    simp only [hix]
+    have : x.idxNat < 2 ^ 32 := by simp only [Idx.idxNat]; exact (Idx.index _).toNat_lt
+    simp; omega
+  rw [hix_nat] at h6
+  have h5 := h.cons t ht (hix x) a (by rw [hix_nat]; exact h6)
+  rw [hc] at h5
+  have hi : (hix x).toNat < capS C.wide := by
+    have := (Array.getElem?_eq_some_iff.mp h6).1
+    have := h.cap t ht
+    rw [hix_nat]; omega
+  rw [Option.some.inj h5]
+  exact decI_hdS_isWide C.tag C.wide t (hix x) hg ht hi
+
 theorem ConsR.cons_hitP (hW : C.WF) (h : ConsR C R m on P Q) {a : α} {x : Idx k}
     (hc : P.cons[a]? = some x) : P.nodes[x.idxNat]? = some a ∧ x.tag = C.tag ∧ x.isPersistent = true := by
   have := h.cons_hit hW 0 (by decide) (a := a) (x := x) (by simpa using hc)

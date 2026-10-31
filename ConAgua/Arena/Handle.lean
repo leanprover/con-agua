@@ -307,6 +307,11 @@ theorem decI_hdS_idx {k : IdxKind} : (decI (hdS g wide t i) : Idx k).idxNat = i.
   simp only [hix, UInt64.toNat_ofNat'] at this
   omega
 
+theorem decI_hdS_isWide {k : IdxKind} : (decI (hdS g wide t i) : Idx k).isWide = wide := by
+  cases wide
+  · exact decI_isWide_false _ (hdW_narrow _ t i (by simpa using hg) ht (by simpa [capS] using hi))
+  · exact decI_isWide_true _ (hdA_wide t i ht (by simpa [capS] using hi))
+
 theorem decI_hdS_pers {k : IdxKind} :
     (decI (hdS g wide t i) : Idx k).isPersistent = (t == 0) := by
   rw [decI_pers _ (hdS_lt g wide t i hg ht hi), hdS_tier g wide t i hg ht hi]
