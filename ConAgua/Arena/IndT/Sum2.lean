@@ -4,7 +4,6 @@ import ConAgua.Arena.RecGenSpec.ClassFeR
 import ConAgua.Arena.RecGenSpec.Rec3TmdWDecB
 import ConRon.Bridge.Inductives.SumInstall
 import ConAgua.L.ModelGen
-import ConAgua.Arena.RefWalk
 
 /-!
 # `checkSumTele.checkSumTeleSlow`, `checkSumTele` under `StageC`, both outcomes (lane `indstaget`)
