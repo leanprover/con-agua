@@ -1525,7 +1525,7 @@ theorem classReadSlots_specs (p : Prog) (hP : SlotsProg p) (cR : CallM) (hcR : C
       all_goals subst_vars
       all_goals (try simp only [LocEq] at *)
       all_goals (try simp only [*, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
-        Locals.init_nil, Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval, Nat.reduceEqDiff,
+        Locals.init_nil, Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, Nat.reduceEqDiff,
         reduceIte, beq_iff_eq, bne_iff_ne, ne_eq] at *)
       all_goals grind (gen := 20) [lang_grind, arena_grind, ind_grind, rdW_eq, loc_init4, loc_init5, loc_init6,
         loc_init7]
