@@ -209,7 +209,7 @@ theorem derB_spec (p : Prog) (hp : p.lookup "der_b" = some derB) (n : Nat) (s₀
     simp only [derB, seqTake]
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE, derTail_spec p n]
     all_goals subst_vars
-    all_goals (try simp only [DerLocs, St.setLoc_loc, St.setLoc_mem, BinOp.eval, Nat.reduceEqDiff,
+    all_goals (try simp only [DerLocs, St.setLoc_loc, St.setLoc_mem, Nat.reduceEqDiff,
       Locals.init_cons_zero, reduceIte] at *)
     all_goals grind [lang_grind, arena_grind, LocEq]
 
@@ -242,7 +242,7 @@ theorem derBv_spec (p : Prog) (hp : p.lookup "der_bv" = some derBv) (n : Nat) (s
     simp only [derBv, seqTake]
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE, derBvTail_spec p n]
     all_goals subst_vars
-    all_goals (try simp only [DerLocs, St.setLoc_loc, St.setLoc_mem, BinOp.eval, Nat.reduceEqDiff,
+    all_goals (try simp only [DerLocs, St.setLoc_loc, St.setLoc_mem, Nat.reduceEqDiff,
       Locals.init_cons_zero, reduceIte] at *)
     all_goals grind [lang_grind, arena_grind, LocEq]
 
@@ -302,7 +302,6 @@ theorem slot_eq_iff {i c t u : Word} (hi : i < 2147483648) (hc : c < 2147483648)
   · intro h
     simp only [UInt64.le_iff_toNat_le, UInt64.lt_iff_toNat_lt, ← UInt64.toNat_inj, UInt64.toNat_add,
       UInt64.toNat_mul, show (2 : Word).toNat = 2 from rfl, show (1 : Word).toNat = 1 from rfl,
-      show (1073741824 : Word).toNat = 1073741824 from rfl, show (1140850688 : Word).toNat = 1140850688 from rfl,
       show (2147483648 : Word).toNat = 2147483648 from rfl] at *
     omega
   · rintro ⟨rfl, rfl⟩; rfl

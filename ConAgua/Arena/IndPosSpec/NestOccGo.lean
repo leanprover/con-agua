@@ -331,7 +331,7 @@ theorem ETables.get_app (t : ETables) (i : EIdx) (ht : i.tag = ETag.app) (v : EN
   simp only [ETables.get, ht, ETag.bvar, ETag.fvar, ETag.sort, ETag.const, ETag.app] at h
   cases hn : t.apps.node? i.idxNat with
   | none => simp [hn] at h
-  | some x => simp [hn] at h; exact ⟨_, _, h.symm⟩
+  | some x => simp [hn] at h; exact ⟨x.f, x.a, by grind⟩
 
 theorem EStore.view_app (st : EStore) (i : EIdx) (ht : i.tag = ETag.app) (v : ENodeView)
     (h : st.view i = some v) : ∃ f x, v = .app f x := by
@@ -408,6 +408,7 @@ l_model phApp_spec (p : Prog) (hv : p.lookup "e_view" = some eView)
   fns [hp ↦ phW ro]
   specs [eView_spec p hv n]
   grind [ind_grind]
+  extra [evalE_tagE]
 
 def PhOut (r : List Word) : Option (NIdx × LsIdx) → Prop
   | none => r.headD 0 = 0
