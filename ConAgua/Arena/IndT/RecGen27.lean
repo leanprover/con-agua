@@ -465,25 +465,15 @@ theorem cosLoop_ref (hbs : BSOK m0 q.toNat bs) (hft : decHL m0 fto.toNat ftl.toN
   rcases k with _ | k
   · obtain ⟨e', he', h0⟩ := callE_zero p "class_ctor_of" [vis, q, fto, ftl, rd, mo, ml, c, UInt64.ofNat v] m
     rw [he', cosE.k_class_ctor_of.none]; exact RefE.of_cls0 h0
-  have hT1 := cxoE_spec p P.toCxoProg (k + 1) ⟨m, Locals.init []⟩ vis q fto ftl rd mo ml c (UInt64.ofNat v)
-  have hR1 := cxo_ref hkp henv P.toCxoProg hIlpf hOpf dn fe k (by omega) hC hA (hbs.grow hg)
+  refine RefE.bindRun (s₀ := ⟨m, Locals.init []⟩) (fun _ => cosE.k_class_ctor_of.none ..)
+    (cxoE_spec p P.toCxoProg (k + 1) ⟨m, Locals.init []⟩ vis q fto ftl rd mo ml c (UInt64.ofNat v))
+    (fun hG => hG.nv) id (cxo_ref hkp henv P.toCxoProg hIlpf hOpf dn fe k (by omega) hC hA (hbs.grow hg)
     (by rw [decHL_grow hg hftb]; exact hft) (Nat.le_trans hftb hg.iw)
     (hR.grow (decCR_mono _) hg) (hms.grow (OMono.decPL (fun q => decTM_mono q) _ _) hg) hmsb
     (hcA0.grow (decCN_mono _) hg) (hlp0.grow hcA0 hsz0 hg hk) hnpk (by rw [hk IW]; exact hsz5) hP
     hsh hftP hmsP hcAP hformer hMs (vis := vis) (q := q) (fto := fto) (ftl := ftl) (rd := rd) (mo := mo)
-    (ml := ml) (c := c)
-  rcases h1 : callE p (k + 1) "class_ctor_of" [vis, q, fto, ftl, rd, mo, ml, c, UInt64.ofNat v] m with
-    e1 | ⟨r1, m1⟩
-  · rw [cosE.k_class_ctor_of.none]
-    exact RefE.bind_left fun hG => RefE.run_err hT1 hG.nv hG hR1 h1
+    (ml := ml) (c := c)) fun r1 s1 x1 a1 h1 _ run1 ⟨hC1, hg1, hd1, hP1, hA1⟩ => ?_
   rw [cosE.k_class_ctor_of.arm1]
-  obtain ⟨s1, hs1, -, x1, a1, run1, hR1'⟩ := RefE.run_ok hT1 hR1 h1
-  subst hs1
-  have hC1 := hR1'.stage
-  have hg1 := hR1'.grow
-  have hd1 := hR1'.cc
-  have hP1 := hR1'.rc
-  have hA1 := hR1'.abs
   dsimp only at hC1 hg1 hd1 hP1 hA1
   obtain ⟨cs1, -⟩ := ConRon.Bridge.Inductives.classCtorOf_spec fe (ConRon.Bridge.CoreSpec.of_core rfl) henv
     bs pP formerTys formerTysP R rdP ms MsP c.toNat cAs[j.toNat] cAP hformer hMs a _ _ hC.check
@@ -511,7 +501,6 @@ theorem cosLoop_ref (hbs : BSOK m0 q.toNat bs) (hft : decHL m0 fto.toNat ftl.toN
       (s1.mem.set64 IW (qo + j) (r1.headD 0)) x) (ps ++ [(r1.headD 0).toNat]) (acc ++ [x1]) :=
     FA2.snoc (FA2.imp (fun _ _ hq => (hq.grow (AgreeA.of_grow hg1)).grow hA2) hfa)
       ((hd1.mono hb0).grow hA2)
-  refine RefE.bind_right run1 ?_
   have ih' := ih (by omega) _ a1 (j + 1)
     (acc ++ [x1]) (ps ++ [(r1.headD 0).toNat]) csP' hC2 hAb2 hg2 hk2
     (by rw [iwTop_set_iw]; exact Nat.le_trans htop hg1.iw)
@@ -709,36 +698,24 @@ theorem ccsLoop_ref (hbs : BSOK m0 q.toNat bs) (hft : decHL m0 fto.toNat ftl.toN
   · obtain ⟨e', he', h0⟩ := callE_zero p "class_ctors_of" [vis, q, fto, ftl, rd, mo, ml, c,
       UInt64.ofNat o, UInt64.ofNat l] m
     rw [he', ccsE.k_class_ctors_of.none]; exact RefE.of_cls0 h0
-  have hT1 := cosE_spec p P.toCosProg (k' + 1) ⟨m, Locals.init []⟩ vis q fto ftl rd mo ml c (UInt64.ofNat o)
-    (UInt64.ofNat l)
-  have hR1 := cos_ref hkp henv P.toCosProg hIlpf hOpf dn fe k' (by omega) hC hA (hbs.grow hg)
+  refine RefE.bindRun (s₀ := ⟨m, Locals.init []⟩) (fun _ => ccsE.k_class_ctors_of.none ..)
+    (cosE_spec p P.toCosProg (k' + 1) ⟨m, Locals.init []⟩ vis q fto ftl rd mo ml c (UInt64.ofNat o)
+    (UInt64.ofNat l)) (fun hG => hG.nv) id (cos_ref hkp henv P.toCosProg hIlpf hOpf dn fe k' (by omega) hC hA (hbs.grow hg)
     (by rw [decHL_grow hg hftb]; exact hft) (Nat.le_trans hftb hg.iw) (hR.grow (decCR_mono _) hg)
     (hms.grow (OMono.decPL (fun q => decTM_mono q) _ _) hg) hmsb
     (hcts'.grow (OMono.decPL (fun q => decCN_mono q) _ _) hg) (hlp0.grow hcts' hsz0 hg hk) hnpk
-    (by rw [hk IW]; exact hsz5) hP hsh hftP hrdP hmsP hmc hformer hMs (vis := vis) (c := c)
-  rcases h1 : callE p (k' + 1) "class_ctors_of" [vis, q, fto, ftl, rd, mo, ml, c, UInt64.ofNat o,
-      UInt64.ofNat l] m with e1 | ⟨r1, m1⟩
-  · rw [ccsE.k_class_ctors_of.none]
-    exact RefE.bind_left fun hG => RefE.run_err hT1 hG.nv hG hR1 h1
+    (by rw [hk IW]; exact hsz5) hP hsh hftP hrdP hmsP hmc hformer hMs (vis := vis) (c := c))
+    fun r1 s1 x1 a1 h1 _ run1 ⟨hC1, hg1, hd1, hP1, hA1⟩ => ?_
   rw [ccsE.k_class_ctors_of.arm1]
-  obtain ⟨s1, hs1, -, x1, a1, run1, hR1'⟩ := RefE.run_ok hT1 hR1 h1
-  subst hs1
-  have hC1 := hR1'.stage
-  have hg1 := hR1'.grow
-  have hd1 := hR1'.slots
-  have hP1 := hR1'.rc
-  have hA1 := hR1'.abs
   dsimp only at hC1 hg1 hd1 hP1 hA1
   obtain ⟨cs1, -⟩ := ConRon.Bridge.Inductives.classCtorsOf_spec fe (ConRon.Bridge.CoreSpec.of_core rfl) henv
     bs pP formerTys formerTysP R rdP ms MsP c.toNat hformer hMs ms[c.toNat].ctors mP.ctors a _ _ hC.check
     ⟨hsh, hftP, hrdP, hmsP, hmc⟩ run1
   have hS1 := hC1.stage
   have hk1 := callW_keepW (callW_of_callE h1)
-  refine RefE.bind_right run1 ?_
   -- `rec2`
-  rcases c2 : callW p (k' + 1) "rec2" [r1.headD 0, r1.tail.headD 0] s1.mem with _ | ⟨r2, m2⟩
-  · rw [liftE_none, ccsE.k_rec2.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some, ccsE.k_rec2.arm1]
+  refine RefE.onlySim (fun _ => ccsE.k_rec2.none ..) (fun _ _ h => h) fun r2 m2 c2 => ?_
+  rw [ccsE.k_rec2.arm1]
   obtain ⟨s2, hs2, -, hw2⟩ := triple_of_callW (s₀ := ⟨s1.mem, Locals.init []⟩)
     (rec2_specW p P.ha (k' + 1) P.r2 _ (r1.headD 0) (r1.tail.headD 0)) c2
   simp only at hs2 hw2; subst hs2
