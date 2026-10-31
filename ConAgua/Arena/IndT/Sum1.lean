@@ -1,6 +1,5 @@
 import ConAgua.Arena.IndT.Lift
 import ConAgua.Arena.IndSumSpec.StructProjArgP
-import ConAgua.Arena.RefWalk
 
 /-!
 # `whnfTelescope` under `StageC` (lane `indstaget`)

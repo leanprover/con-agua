@@ -1,4 +1,3 @@
-import ConAgua.Arena.RefWalk
 import ConAgua.Arena.KnotEntry
 import ConAgua.Verdict.VCtx
 import ConAgua.Arena.DeclNatGateSpec

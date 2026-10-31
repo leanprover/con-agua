@@ -1,4 +1,3 @@
-import ConAgua.Arena.RefWalk
 import ConAgua.Arena.DeclCvgT
 import ConAgua.Arena.CrOKFrame
 import ConAgua.Arena.IndRealMemoCrT

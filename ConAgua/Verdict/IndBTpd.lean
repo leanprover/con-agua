@@ -1,4 +1,3 @@
-import ConAgua.Arena.RefWalk
 import ConAgua.Arena.IndT.RecCheckTpd
 import ConAgua.Arena.IndT.Lift
 import ConAgua.Arena.RecCheckSpec.Tpd
