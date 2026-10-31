@@ -865,3 +865,30 @@ the positivity tops (`PosNty`'s `nty_ref`, `PosTopE4`'s `nsd_ref`, `IndsE4`'s `c
 other `Verdict/IndB*` files, and `InferLeaves.lean` (`inferConst_ref`, `il_ref`, `da_ref`; ten
 `CoreSpec.of_callW`, the same rules as here). `spTail_ref` (`InferBodySpine.lean`) still has its
 `inst_list` split (the twin's last step; `bind_pure` and `bind_callW`, ~2 lines).
+
+### 6.12 Rollout tracker (lane refwalk8)
+
+The `RefE` theorems not yet in walk style, master 47741ea8: those whose proof uses none of the
+walk's rules (`RefE.bindSim` … `RefE.under`, `RefE.bind_callW`, `RefE.after_core`) but some of
+the old plumbing (`liftE_none`, `liftE_some`, `of_cls0`, `bind_right`, `RefE.bind_core`). Lines by
+`reflen.py` (whole theorem); a classifier over the same spans is
+`_tmp/refgen/census.py` (`v` lists the theorems). Of 345 `RefE` theorems (24745 lines), about
+14700 lines are unconverted. The kit's own rules (`RefWalk.lean`, `RefECore.lean`,
+`Verdict.lean`) and the four `RecGen` wrappers (`cos_ref`, `ccs_ref`, `cna_ref`, `cfa_ref`:
+fuel `0` and one fold) count as unconverted but stay as they are.
+
+| family | file: unconverted lines (theorems) | owner |
+|---|---|---|
+| inference leaves | `InferLeaves` 249 (`inferConst_ref` 90, `il_ref` 57, `da_ref` 45, `es_ref` 30, `il_arm` 27); `InferBodySpine` 50 (`spTail_ref` 32, `spio_ref` 18); `InferBodySpineF` 19 (`isp_ref`) | refwalk8 |
+| `whnf` core | `WhnfCoreLoop` 308 (`step_ref` 136, `core_ref` 121, `coreLoop_ref` 51); `WhnfCoreAppLoop` 300 (`appLoop_ref`); `WhnfM2CRefine5` 255 (`m2cCtor_ref` 93, `m2cHead_ref` 88, `m2cArms_ref` 53, `mtc_ref` 21); `WhnfM2CRefine2` 213 (`m2cCheck_ref` 89, `m2cK_ref` 63, `m2cK2_ref` 61); `WhnfM2CRefine3` 205 (`m2cAnd_ref` 118, `m2cAnd2_ref` 87); `WhnfCoreProj` 196 (`plit_ref` 68, `stepProj_ref` 65, `rp_ref` 63); `WhnfSlotRefine` 162 (`wstep_ref` 62, `whnf_ref` 61, `wloop_ref` 39); `KnotSlot` 157 (`isl_ref` 55, `islo_ref` 55, `dsl_ref` 47); `WhnfM2CRefine4` 128 (`m2cEta_ref`); `WhnfCoreStep` 106 (`capp_ref` 64, `capp2_ref` 42) — 2030 | |
+| iota | `WhnfIotaRecRefine2` 490, `WhnfIotaRecRefine` 308, `WhnfIotaRecRefine3` 161 | refwalk7 |
+| iota, the rest | `WhnfIotaRefine4` 307 (`pih_ref` 102, `pm_ref` 89, `pirr_ref` 63, `pmTail_ref` 53); `WhnfIotaRefine2` 175 (`io_ref` 91, `dl_ref` 84); `WhnfIotaRefine3` 80 (`lmtc_ref`); `WhnfIotaRefine5` 80 (`icfTop_ref` 46, `icfCheck_ref` 34) — 642 | |
+| Nat literals | `WhnfNatE` 582 (`reduceNatWf_ref` 127, `reduceNatAp_ref` 103, `reduceNatSucc_ref` 101, `reduceNatOp_ref` 91, `reduceNatHead_ref` 74, `reduceNatK_ref` 49, `reduceNat_ref` 37); `DivModPinE` 238 (`loop_ref` 122, `cp_ref` 116) — 820 | |
+| `defeq`, middle | `DefEqMidLazy` 324 (`bo_ref` 71, `lds_ref` 63, `sm_ref` 55, `u2_ref` 54, `lr_ref` 32, `ll_ref` 30, `dq_tail` 19); `DefEqMidPeel` 302 (`peel_ref` 103, `db_ref` 66, `pd_ref` 49, `pl_ref` 36, `ps2_ref` 24, `ps_ref` 24); `DefEqMid` 234 (`li_ref` 75, `off_ref` 68, `tupa_ref` 42, `dq_ref` 26, `bts_ref` 23); `DefEqBody` 206 (`body_ref`); `DefEqMidLazy2` 191 (`it_ref` 94, `ln_ref` 52, `lazy_ref` 45); `DefEqMidQuick` 180 (`qd_ref` 78, `qs_ref` 47, `ql_ref` 28, `qf_ref` 27); `DefEqMidSpine` 155 (`spc_ref` 62, `sp2_ref` 58, `sp_ref` 35); `DefEqMidLoops` 134 (`lst_ref` 68, `lrev_ref` 66); `DefEqMidLams` 115 (`lams_ref` 81, `lo_ref` 34) — 1841 | |
+| `defeq`, stuck terms | `DefEqStuckDisp` 233 (`dr_ref` 136, `ds_ref` 97); `DefEqStuckCert` 229 (`secw_ref` 95, `secwtb_ref` 90, `sec_ref` 44); `DefEqStuckProj` 217 (`pp_ref` 77, `ex_ref` 73, `ldpr_ref` 67); `DefEqStuckUnit` 204 (`suh_ref` 132, `sut_ref` 40, `suc_ref` 32); `DefEqStuckEta` 184 (`ec_ref` 75, `ecb_ref` 68, `ect_ref` 41); `DefEqStuckStr` 138 (`str_ref` 121, `si_tail` 17); `DefEqStuckApp` 122 (`ac_ref` 98, `sa_ref` 24); `DefEqStuckGo` 118 (`secg_ref`); `DefEqStuckWith` 110 (`sect_ref`); `DefEqStuckTail` 89 (`dt_ref`); `DefEqStuck` 75 (`pi_ref`); `DefEqStuckIrrel` 48 (`si_ref`) — 1767 | |
+| `Verdict/IndB*` | `IndBK53` 213, `IndBFields` 203, `IndBRec1` 233, `IndBRecPins` 199, `IndBRec6` 188, `IndBTmm` 167, `IndBSum4` 166, `IndBTka` 160, `IndBTmn` 154, `IndBToi` 150, `IndBTcm` 144, `IndBRec5` 143, `IndBRec3` 115, `IndBCrg` 110, `IndBPins` 60, `IndBRec4` 37 | refwalk7 |
+| positivity tops | `PosTopE4` 296 (`nsd_ref`, `nrt_ref`), `IndsE4` 159 (`cbao_ref`), `PosNty` 158 (`nty_ref`) | refwalk7 |
+| positivity, the rest | `PosE1L` 156 (`pfv_ref` 94, `ncc_ref` 62); `PosE2` 145 (`ngg_ref`); `PosE1N` 127 (`nit_ref`); `IndsE5` 124 (`cbag_ref`); `PosNgc` 110 (`ngc_ref`); `PosTopE2` 63 (`nu_ref`); `LefRef` 33 (`lef_ref`) — 758 | |
+| the inductive realisation, checker top | `IndRealSctC` 420 (`tbl_ref` 168, `cto_ref` 133, `ctb_ref` 119); `CheckerT` 311 (`istg_ref` 133, `cd_ref` 93, `ist_ref` 85); `PhaseBT` 55 (`cpd_ref`) — 786 | |
+| `IndT` leftovers | `GenRec3` 213 (`gck_ref` 172, `icr_ref` 41); `Shapeless` 117 (`csf_ref` 94, `csl_ref` 23); `StreamRecs` 107 (`csr_ref`); `IdxSorts` 75 (`iisr_ref`); `RecGenSpec/CntW` 54 (`ckk_ref`); `GenRec1` 42 (`cnfs_ref`) — 608 | |
+| declarations | `DeclHdrE` 185 (`ih_ref`); `DeclArmT` 152 (`ivc_ref` 98, `cdt_ref` 54); `DeclDefnT` 147 (`cdf_ref`); `DeclBasisSpec2` 88 (`cbd_ref` 65, `cbdJ_ref` 23); `DeclBasisSpec` 85 (`ibds_ref` 49, `ibd_ref` 36); `DeclDivGateT` 81 (`dg_ref`); `DeclArmQuot` 66 (`cdq_ref`) — 804 | |
