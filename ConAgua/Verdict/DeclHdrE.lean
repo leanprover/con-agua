@@ -132,18 +132,14 @@ theorem ih_ref {p : Prog} (hap : ApdF p) (hCrf : CrfF p) {dn : NIdx → Option C
   rw [installHeaderE.arm1, ex, et]
   simp only [installHeader, fail_bindAM]
   -- `env_find(x, vis)`
-  rcases h1 : envFindW m wx vis with _ | ⟨r1, m1⟩
-  · rw [liftE_none, installHeaderE.k_env_find.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]
-  by_cases hb1 : r1.headD 0 ≠ 0
-  · rw [installHeaderE.k_env_find.abort1 p _ _ _ _ _ _ _ hb1]
-    have : (fe.find? cv.name).isSome = true := by
-      rw [hname]; exact envFindW_hitSome h1 hS.stage.check.env hwxl hb1
-    exact fun _ => ErrClaim.ite_pos this (ErrClaim.fail_abort _ _ rfl)
-  rw [installHeaderE.k_env_find.arm1 p _ _ _ _ _ _ _ (by simpa using hb1)]
-  obtain ⟨rfl, hfind⟩ := envFindW_miss h1 hS.stage.check.env hwxl (by simpa using hb1)
-  have hfind' : (fe.find? cv.name).isSome = false := by rw [hname, hfind]; rfl
-  refine RefE.ite_neg (by simp [hfind']) ?_
+  refine RefE.onlySim (fun _ => rfl) (fun _ _ h => h) fun r1 m1 h1 => ?_
+  dsimp only [installHeaderE.k_env_find]
+  refine RefE.guardThen (by rfl)
+    (fun hb1 => by rw [hname]; exact envFindW_hitSome h1 hS.stage.check.env hwxl hb1)
+    (fun hb => Classical.byContradiction fun hb1 => by
+      rw [hname, (envFindW_miss h1 hS.stage.check.env hwxl (by simpa using hb1)).2] at hb; cases hb)
+    fun hb1 _ => ?_
+  obtain ⟨rfl, -⟩ := envFindW_miss h1 hS.stage.check.env hwxl (by simpa using hb1)
   -- `reserved_contains(x)`
   rcases h2 : resContW n m1 wx with _ | c
   · rw [liftE_none, installHeaderE.k_reserved_contains.none]; exact RefE.of_cls0 (by simp)
@@ -169,9 +165,8 @@ theorem ih_ref {p : Prog} (hap : ApdF p) (hCrf : CrfF p) {dn : NIdx → Option C
     rcases Nat.eq_zero_or_pos w2.toNat with h0 | h0
     · exact .inl h0
     · exact .inr (L.Ind.hslice?_bound _ _ _ _ hsl h0)
-  rcases h4 : cvLpsW n m1 q with _ | ⟨r4, m4⟩
-  · rw [liftE_none, installHeaderE.k_cv_lps.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some, installHeaderE.k_cv_lps.arm1]
+  refine RefE.onlySim (fun _ => rfl) (fun _ _ h => h) fun r4 m4 h4 => ?_
+  dsimp only [installHeaderE.k_cv_lps]
   cases n with
   | zero => simp [cvLpsW] at h4
   | succ n =>
@@ -191,112 +186,64 @@ theorem ih_ref {p : Prog} (hap : ApdF p) (hCrf : CrfF p) {dn : NIdx → Option C
   obtain ⟨ws, hws, hlps, hwsl⟩ := slR_of_decHL m4 _ _ _ hdecL (by omega)
   simp only [UInt64.ofNat_toNat] at hws
   have hd := nodupW_ok _ _ _ _ _ _ hws h5
-  by_cases hb5 : d = 0
-  · rw [installHeaderE.k_sl_nodup.abort1 p _ _ _ _ _ _ _ hb5]
-    have hnd : nameNodup cv.levelParams = false := by
+  dsimp only [installHeaderE.k_sl_nodup]
+  refine RefE.guardIf (by rfl)
+    (fun hb5 => by
       rw [hlps, nameNodup_map ws hwsl]
       by_cases hn : ws.Nodup
       · rw [ite_eq_left hn, hb5] at hd; exact absurd hd (by decide)
-      · simp [hn]
-    exact fun _ => ErrClaim.ite_neg (by simp [hnd]) (ErrClaim.fail_abort _ _ rfl)
-  rw [installHeaderE.k_sl_nodup.arm1 p _ _ _ _ _ _ _ hb5]
-  have hnd : nameNodup cv.levelParams = true := by
-    rw [hlps, nameNodup_map ws hwsl]
-    by_cases hn : ws.Nodup
-    · simp [hn]
-    · rw [ite_eq_right hn] at hd; exact absurd hd hb5
-  refine RefE.ite_pos hnd ?_
+      · simp [hn])
+    (fun hnd => Classical.byContradiction fun hb5 => by
+      rw [hlps, nameNodup_map ws hwsl] at hnd
+      by_cases hn : ws.Nodup
+      · simp [hn] at hnd
+      · rw [ite_eq_right hn] at hd; exact hb5 hd) fun _ _ => ?_
   -- `loose_bvars_bounded_fast(4000000000, 0, t)`
-  rcases h6 : lbbF m4 [4000000000, 0, wt] with _ | ⟨r6, m6⟩
-  · rw [liftE_none, installHeaderE.k_loose_bvars_bounded_fast.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]
-  obtain ⟨x6, a6, hrun6, hS6, hg6, hx6, -⟩ :=
-    lbbF_okT dn vis fe 4000000000 0 wt hwtl m4 m6 a r6 h6 hS4
+  rw [hty]
+  refine RefE.bindSim (fun _ => rfl) (fun r m' h => lbbF_okT dn vis fe 4000000000 0 wt hwtl m4 m' a r h hS4)
+    fun r6 x6 m6 a6 h6 hrun6 ⟨hS6, hg6, hx6, _⟩ => ?_
   have hCr6 := CrOK.frame hCr4 (lbbF_frame h6) (by decide) (by decide)
   have hA6 : AFr m1 m6 := hA4.trans (AFr.of_frame (lbbF_frame h6))
-  rw [fuelW] at hrun6
-  rw [show ((0 : Word).toNat) = 0 from rfl, ← hty] at hrun6
-  refine RefE.bind_right hrun6 ?_
-  by_cases hb6 : r6.headD 0 = 0
-  · rw [installHeaderE.k_loose_bvars_bounded_fast.abort1 p _ _ _ _ _ _ _ hb6]
-    have ex6 : x6 = false := by rw [← hx6]; simpa using hb6
-    rw [ex6]
-    exact fun _ => ErrClaim.ite_neg (by decide) (ErrClaim.fail_abort _ _ rfl)
-  rw [installHeaderE.k_loose_bvars_bounded_fast.arm1 p _ _ _ _ _ _ _ hb6]
-  have ex6 : x6 = true := by rw [← hx6]; simpa using hb6
-  rw [ex6]
-  refine RefE.ite_pos rfl ?_
+  dsimp only [installHeaderE.k_loose_bvars_bounded_fast]
+  refine RefE.guardIf rfl (fun hb6 => by rw [← hx6]; simpa using hb6)
+    (fun hb6 => by rw [← hx6] at hb6; simpa using hb6) fun _ _ => ?_
   -- `has_fvar_fast(4000000000, t)`
-  rcases h7 : hffF m6 [4000000000, wt] with _ | ⟨r7, m7⟩
-  · rw [liftE_none, installHeaderE.k_has_fvar_fast.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]
-  obtain ⟨x7, a7, hrun7, hS7, hg7, hx7, -⟩ :=
-    hffF_okT dn vis fe 4000000000 wt hwtl m6 m7 a6 r7 h7 hS6
+  refine RefE.bindSim (fun _ => rfl) (fun r m' h => hffF_okT dn vis fe 4000000000 wt hwtl m6 m' a6 r h hS6)
+    fun r7 x7 m7 a7 h7 hrun7 ⟨hS7, hg7, hx7, _⟩ => ?_
   have hCr7 := CrOK.frame hCr6 (hffF_frame h7) (by decide) (by decide)
   have hA7 : AFr m1 m7 := hA6.trans (AFr.of_frame (hffF_frame h7))
-  rw [fuelW] at hrun7
-  rw [← hty] at hrun7
-  refine RefE.bind_right hrun7 ?_
-  by_cases hb7 : r7.headD 0 ≠ 0
-  · rw [installHeaderE.k_has_fvar_fast.abort1 p _ _ _ _ _ _ _ hb7]
-    have ex7 : x7 = true := by rw [← hx7]; simpa using hb7
-    rw [ex7]
-    exact fun _ => ErrClaim.ite_pos rfl (ErrClaim.fail_abort _ _ rfl)
-  have hb7' : r7.headD 0 = 0 := by simpa using hb7
-  rw [installHeaderE.k_has_fvar_fast.arm1 p _ _ _ _ _ _ _ hb7']
-  have ex7 : x7 = false := by rw [← hx7]; simpa using hb7
-  rw [ex7]
-  refine RefE.ite_neg (by decide) ?_
+  dsimp only [installHeaderE.k_has_fvar_fast]
+  refine RefE.guardThen rfl (fun hb7 => by rw [← hx7]; simpa using hb7)
+    (fun hb7 => by rw [← hx7] at hb7; simpa using hb7) fun _ _ => ?_
   -- `all_level_params_defined(o, l, t)`
   have hdec7 : decHL m7 (r4.headD 0).toNat w2.toNat = some cv.levelParams := by
     rw [decHL_grow (hg6.trans hg7) (by omega), hdecL]
-  have hst7 : a7.store = a.store := by
-    rw [hffF_store hrun7, lbbF_store hrun6]
-  rcases h8 : callE p (n + 1) "all_level_params_defined" [r4.headD 0, w2, wt] m7 with e8 | ⟨r8, m8⟩
-  · rw [installHeaderE.k_all_level_params_defined.none]
-    exact fun hG => nvl hG.nv (by decide +kernel) h8
+  have hst7 : a7.store = a.store := (hffF_store hrun7).trans (lbbF_store hrun6)
+  refine RefE.bindCall (fun _ => rfl) (fun hG _ h8 => nvl hG.nv (by decide +kernel) h8)
+    (fun b h8 => apdF_okT dn vis fe (r4.headD 0) w2 wt hwtl cv.levelParams m7 b.2 a7 b.1
+      (apdF_of_callW hap h8) ⟨hS7, hdec7, by rw [hst7]; exact hlpsN⟩)
+    fun r8 m8 x8 a8 h8 _ ⟨hS8, hg8, hx8, _⟩ => ?_
   have h8' := apdF_of_callW hap (callW_of_callE h8)
   have hCr8 := CrOK.frame hCr7 (apdF_frame h8') (by decide) (by decide)
-  obtain ⟨x8, a8, hrun8, hS8, hg8, hx8, -⟩ :=
-    apdF_okT dn vis fe (r4.headD 0) w2 wt hwtl cv.levelParams m7 m8 a7 r8 h8'
-      ⟨hS7, hdec7, by rw [hst7]; exact hlpsN⟩
   have hA8 : AFr m1 m8 := fun hA => absOK_apdF h8' (hA7 hA) hS8
-  rw [← hty] at hrun8
-  refine RefE.bind_right hrun8 ?_
-  by_cases hb8 : r8.headD 0 = 0
-  · rw [installHeaderE.k_all_level_params_defined.abort1 p _ _ _ _ _ hb8]
-    have ex8 : x8 = false := by rw [← hx8]; simpa using hb8
-    rw [ex8]
-    exact fun _ => ErrClaim.ite_neg (by decide) (ErrClaim.fail_abort _ _ rfl)
-  rw [installHeaderE.k_all_level_params_defined.arm1 p _ _ _ _ _ hb8]
-  have ex8 : x8 = true := by rw [← hx8]; simpa using hb8
-  rw [ex8]
-  refine RefE.ite_pos rfl ?_
+  dsimp only [installHeaderE.k_all_level_params_defined]
+  refine RefE.guardIf rfl (fun hb8 => by rw [← hx8]; simpa using hb8)
+    (fun hb8 => by rw [← hx8] at hb8; simpa using hb8) fun _ _ => ?_
   -- `consts_resolve_ffast(vis, t)`
-  rcases h9 : callE p (n + 1) "consts_resolve_ffast" [vis, wt] m8 with e9 | ⟨r9, m9⟩
-  · rw [installHeaderE.k_consts_resolve_ffast.none]
-    exact fun hG => nvl hG.nv (by decide +kernel) h9
-  have h9' := crfF_of_callW hCrf (callW_of_callE h9)
-  obtain ⟨x9, a9, hrun9, ⟨hS9, hg9, hx9, -⟩, hCr9⟩ :=
-    crfF_okT dn vis fe wt hwtl m8 m9 a8 r9 h9' ⟨hS8, hCr8.crMemo⟩
-  have hA9 : AFr m1 m9 := fun hA => absOK_crfF h9' (hA8 hA) hCr9 hS9
-  rw [← hty] at hrun9
-  refine RefE.bind_right hrun9 ?_
+  refine RefE.bindCall (fun _ => rfl) (fun hG _ h9 => nvl hG.nv (by decide +kernel) h9)
+    (fun b h9 => crfF_okT dn vis fe wt hwtl m8 b.2 a8 b.1 (crfF_of_callW hCrf h9) ⟨hS8, hCr8.crMemo⟩)
+    fun r9 m9 x9 a9 h9 _ ⟨⟨hS9, hg9, hx9, _⟩, hCr9⟩ => ?_
+  have hA9 : AFr m1 m9 := fun hA => absOK_crfF (crfF_of_callW hCrf (callW_of_callE h9)) (hA8 hA) hCr9 hS9
+  dsimp only [installHeaderE.k_consts_resolve_ffast]
   by_cases hb9 : r9.headD 0 = 0
-  · rw [installHeaderE.k_consts_resolve_ffast.arm1 p _ _ _ _ _ hb9]
-    have ex9 : x9 = false := by rw [← hx9]; simpa using hb9
-    rw [ex9]
+  · rw [show x9 = false by rw [← hx9]; simpa using hb9, ite_eq_left hb9]
     refine RefE.ite_neg (by decide) ?_
-    rcases h10 : callE p (n + 1) "unresolved_consts_error" [vis, wt, 0] m9 with e10 | ⟨r10, m10⟩
-    · rw [installHeaderE.k_unresolved_consts_error.none]
-      intro hG
-      obtain ⟨M9, hC9⟩ := hS9.core
-      rw [hty]
-      exact uce_errClaim_lo hG.uce hG.nv hC9 hwtl (by decide) h10 "type"
-    · rw [installHeaderE.k_unresolved_consts_error.abort1]; exact RefE.of_cls0 rfl
-  rw [installHeaderE.k_consts_resolve_ffast.arm2 p _ _ _ _ _ hb9]
-  have ex9 : x9 = true := by rw [← hx9]; simpa using hb9
-  rw [ex9]
+    rcases h10 : callE p (n + 1) "unresolved_consts_error" [vis, wt, 0] m9 with e10 | ⟨r10, m10⟩ <;>
+      dsimp only [installHeaderE.k_unresolved_consts_error]
+    · obtain ⟨M9, hC9⟩ := hS9.core
+      exact fun hG => uce_errClaim_lo hG.uce hG.nv hC9 hwtl (by decide) h10 "type"
+    · exact RefE.of_cls0 rfl
+  rw [show x9 = true by rw [← hx9]; simpa using hb9, ite_eq_right hb9]
   exact RefE.ite_pos rfl (RefE.ret rfl
     ⟨hS9, hg4.trans (hg6.trans (hg7.trans (hg8.trans hg9))), hCr9.crOK, hA9⟩)
 
