@@ -455,7 +455,6 @@ theorem cpv_ref (hD : DmProg8 p) (hq : KnotStageProg p) (hcl : LeafClosed p) (hk
   | succ k =>
   have hk' : k ≤ 2 ^ 62 := by omega
   rw [checkDivModPinValueE.arm1]
-  have h0w : (0 : Word).toNat = 0 := rfl
   have hD5 := hD.toDmProg7.toDmProg6.toDmProg5
   have hwsP : ConLeche.Expr.WScoped 0 (ConLeche.divModDeclPin psP nm) := by
     simp only [ConLeche.divModPinGuard, Bool.and_eq_true, Bool.not_eq_true'] at hpg

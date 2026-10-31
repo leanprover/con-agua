@@ -213,48 +213,33 @@ theorem tv_ref {p : Prog} (hq : KnotStageProg p) (hV : ValProg p) (hap : ApdF p)
   have et : rdW (m.arr64 EREC) (c + 4) = wt :=
     rdW_of_get? (toNat_add_small c 4 (by omega)).symm (erecP_get (by simpa [Nat.add_assoc] using hwt))
   have hc1 : (c + 1).toNat = c.toNat + 1 := toNat_add_small c 1 (by omega)
-  have h00 : (0 : Word).toNat = 0 := rfl
   cases n with
   | zero => rw [checkThmValE.eq_1]; exact RefE.of_cls0 (by simp)
   | succ n =>
   have hn' : n ≤ 2 ^ 62 := by omega
-  rw [checkThmValE.arm1, ev, et, checkThmVal_eq]
+  rw [checkThmValE.arm1, ev, et, checkThmVal_eq, hty]
   -- the type's type
-  rcases h1 : callE p n "infer_type_core" [vis, 0, wt] m with e1 | ⟨r1, m1⟩
-  · rw [checkThmValE.k_infer_type_core.none]
-    refine RefE.bind_left fun hG => ?_
-    have := hG.core.inferTypeCore n hn' hS 0 wt hwtl _ h1
-    rw [h00, ← hty] at this
-    exact this
-  rw [checkThmValE.k_infer_type_core.arm1]
-  have h1' := callW_of_callE h1
-  have hCr1 := hkp.call (im_mem _ rfl) h1' hCr
-  obtain ⟨x1, a1, hrun1, hS1, hg1, hx1l, hx1⟩ := hq.inferTypeCore_sim n hn' hS 0 wt hwtl r1 m1 h1'
-  have hrun1' := hrun1
-  rw [h00, ← hty] at hrun1'
-  refine RefE.bind_right hrun1' ?_
+  refine RefE.bindCall (fun _ => rfl) (fun hG _ h1 => hG.core.inferTypeCore n hn' hS 0 wt hwtl _ h1)
+    (fun b h1 => hq.inferTypeCore_sim n hn' hS 0 wt hwtl b.1 b.2 h1)
+    fun r1 m1 x1 a1 h1 hrun1 ⟨hS1, hg1, hx1l, hx1⟩ => ?_
+  dsimp only [checkThmValE.k_infer_type_core]
+  have hCr1 := hkp.call (im_mem _ rfl) (callW_of_callE h1) hCr
+  subst hx1
   -- its sort
-  rcases h2 : callE p n "ensure_sort_core" [vis, 0, r1.headD 0] m1 with e2 | ⟨r2, m2⟩
-  · rw [checkThmValE.k_ensure_sort_core.none]
-    refine RefE.bind_left fun hG => ?_
-    have := hG.core.ensureSortCore n hn' hS1 0 (r1.headD 0) hx1l _ h2
-    rw [h00, hx1] at this
-    exact this
-  rw [checkThmValE.k_ensure_sort_core.arm1]
-  have h2' := callW_of_callE h2
-  have hCr2 := hkp.call (im_mem _ rfl) h2' hCr1
-  obtain ⟨x2, a2, hrun2, hS2, hg2, hx2l, hx2⟩ :=
-    hq.ensureSortCore_sim n hn' hS1 0 (r1.headD 0) hx1l r2 m2 h2'
-  have hrun2' := hrun2
-  rw [h00, hx1] at hrun2'
-  refine RefE.bind_right hrun2' ?_
+  refine RefE.bindCall (fun _ => rfl)
+    (fun hG _ h2 => hG.core.ensureSortCore n hn' hS1 0 (r1.headD 0) hx1l _ h2)
+    (fun b h2 => hq.ensureSortCore_sim n hn' hS1 0 (r1.headD 0) hx1l b.1 b.2 h2)
+    fun r2 m2 x2 a2 h2 hrun2 ⟨hS2, hg2, hx2l, hx2⟩ => ?_
+  dsimp only [checkThmValE.k_ensure_sort_core]
+  have hCr2 := hkp.call (im_mem _ rfl) (callW_of_callE h2) hCr1
   -- the zero level
   have hflag : pinW m2 0 ≠ 0 := hS2.flag
   have hF := hS2.stage.check.pins.full hflag
   have hz : rdW (m2.arr64 PINS) 53 = pinW m2 53 := by simp [rdW, pinW]
   have h3 : pinWordW m2 53 = some ([pinW m2 53], m2) := by
     simp only [pinWordW, hflag, ite_false, hz]
-  rw [h3, liftE_some, checkThmValE.k_pin_word.arm1]
+  rw [h3, liftE_some]
+  dsimp only [checkThmValE.k_pin_word]
   simp only [List.headD_cons]
   refine RefE.bind_right (pinZeroLevel_run hF) ?_
   -- the two levels read back
@@ -265,40 +250,25 @@ theorem tv_ref {p : Prog} (hq : KnotStageProg p) (hV : ValProg p) (hap : ApdF p)
   obtain ⟨lz, hdz⟩ := hS2.twin.den.zero
   rw [hF.zeroLevel] at hdz
   -- the comparison
-  have hsL := lefE_spec p hV.lef n ⟨m2, Locals.init []⟩ (r2.headD 0) (pinW m2 53)
-  have hRL := lef_ref hq.closed hL n hS2 hx2l hF.lv_lt.2.1 hdu hdz
   rw [← hx2, lefT_bind]
-  rcases h4 : callE p n "lvl_eq_fueled" [r2.headD 0, pinW m2 53] m2 with e4 | ⟨r4, m4⟩
-  · rw [checkThmValE.k_lvl_eq_fueled.none]
-    exact RefE.bind_left fun hG => RefE.run_err hsL trivial hG.lvc hRL h4
-  have hCr4 := hkp.call (im_mem _ rfl) (callW_of_callE h4) hCr2
-  obtain ⟨s4, hs4, -, b4, a4, hrunT, ⟨hrun4, hr4, hS4, hg4, -, -⟩⟩ := RefE.run_ok hsL hRL h4
-  subst hs4
+  refine RefE.bindRun (s₀ := ⟨m2, Locals.init []⟩) (fun _ => rfl)
+    (lefE_spec p hV.lef n ⟨m2, Locals.init []⟩ (r2.headD 0) (pinW m2 53)) (fun _ => trivial)
+    (fun hG => hG.lvc) (lef_ref hq.closed hL n hS2 hx2l hF.lv_lt.2.1 hdu hdz)
+    fun r4 s4 b4 a4 h4 _ _ ⟨hrun4, hr4, hS4, hg4, _, _⟩ => ?_
   dsimp only at hS4 hg4 hr4
-  have hrun4' := hrun4
-  refine RefE.bind_right hrunT ?_
-  by_cases hb4 : r4.headD 0 = 0
-  · -- the type is not a proposition
-    rw [checkThmValE.k_lvl_eq_fueled.abort1 p n vis c wv wt r4 _ hb4]
-    have : b4 = false := by
-      cases b4
-      · rfl
-      · exact absurd hr4 (by rw [hb4]; decide)
-    subst this
-    exact RefE.bind_left fun _ => ErrClaim.fail _ _ rfl
-  rw [checkThmValE.k_lvl_eq_fueled.arm1 p n vis c wv wt r4 _ hb4]
-  have ex4 : b4 = true := by
-    cases b4
-    · exact absurd hr4 (by simpa using hb4)
-    · rfl
-  subst ex4
+  have hCr4 := hkp.call (im_mem _ rfl) (callW_of_callE h4) hCr2
+  dsimp only [checkThmValE.k_lvl_eq_fueled]
+  -- the type is not a proposition
+  refine RefE.guard rfl (fun hb4 => by cases b4; rfl; exact absurd hr4 (by rw [hb4]; decide))
+    (fun hb => by subst hb; simpa using hr4) fun _ hb => ?_
+  subst hb
   show RefE _ _ (dvT fe cv (decI wv) (.thmInfo cv) "type mismatch in theorem") a4 _
   unfold dvT
   -- the parameters' names read back at the guards: the prefix extends the store
   have hlps4 : ∃ ks, cv.levelParams.mapM (denoteN a4.store.ns) = some ks := by
     obtain ⟨env, cP, henv, hck, hcvd, hws⟩ := hpre
-    obtain ⟨hck2, hx02⟩ := thmPrefix_ext henv hck hcvd hws hrun1' hrun2'
-    obtain ⟨-, hst4, -⟩ := ConRon.Bridge.AM.of_run (P := fun t => t = a2) rfl hrun4'
+    obtain ⟨hck2, hx02⟩ := thmPrefix_ext henv hck hcvd hws (by rw [hty]; exact hrun1) hrun2
+    obtain ⟨-, hst4, -⟩ := ConRon.Bridge.AM.of_run (P := fun t => t = a2) rfl hrun4
       (ConRon.Bridge.Core.lvlEq?_spec a2 _ _ hck2)
     rw [hst4]
     exact denoteCV_lps (ConRon.Bridge.denoteCV_ext hcvd hx02)
@@ -317,46 +287,29 @@ theorem tv_ref {p : Prog} (hq : KnotStageProg p) (hV : ValProg p) (hap : ApdF p)
   subst hs5
   refine RefE.bind_right hrun5 ?_
   -- the value's type
-  rcases h7 : callE p n "infer_type_core" [vis, 0, wv] s5.mem with e7 | ⟨r7, m7⟩
-  · rw [checkThmValE.k_infer_type_core_2.none]
-    refine RefE.bind_left fun hG => ?_
-    have := hG.core.inferTypeCore n hn' hS5 0 wv hwvl _ h7
-    rw [h00] at this
-    exact this
-  rw [checkThmValE.k_infer_type_core_2.arm1]
-  obtain ⟨x7, a7, hrun7, hS7, hg7, hx7l, hx7⟩ :=
-    hq.inferTypeCore_sim n hn' hS5 0 wv hwvl r7 m7 (callW_of_callE h7)
-  rw [h00] at hrun7
-  refine RefE.bind_right hrun7 ?_
+  refine RefE.bindCall (fun _ => rfl) (fun hG _ h7 => hG.core.inferTypeCore n hn' hS5 0 wv hwvl _ h7)
+    (fun b h7 => hq.inferTypeCore_sim n hn' hS5 0 wv hwvl b.1 b.2 h7)
+    fun r7 m7 x7 a7 _ _ ⟨hS7, hg7, hx7l, hx7⟩ => ?_
+  dsimp only [checkThmValE.k_infer_type_core_2]
+  subst hx7
+  rw [hty]
   -- the comparison with the declared type
-  rcases h8 : callE p n "is_def_eq_core" [vis, 0, r7.headD 0, wt] m7 with e8 | ⟨r8, m8⟩
-  · rw [checkThmValE.k_is_def_eq_core.none]
-    refine RefE.bind_left fun hG => ?_
-    have := hG.core.isDefEqCore n hn' hS7 0 (r7.headD 0) wt hx7l hwtl _ h8
-    rw [h00, hx7, ← hty] at this
-    exact this
-  obtain ⟨x8, a8, hrun8, hS8, hg8, hx8⟩ :=
-    hq.isDefEqCore_sim n hn' hS7 0 (r7.headD 0) wt hx7l hwtl r8 m8 (callW_of_callE h8)
-  rw [h00, hx7, ← hty] at hrun8
-  refine RefE.bind_right hrun8 ?_
-  by_cases hb8 : r8.headD 0 = 0
-  · -- the type mismatch
-    rw [checkThmValE.k_is_def_eq_core.abort1 p n vis c r8 m8 hb8]
-    have ex8 : x8 = false := by rw [← hx8, decBool, hb8]; rfl
-    rw [ex8]
-    exact fun _ => ErrClaim.bind_left (ErrClaim.fail _ _ rfl)
-  rw [checkThmValE.k_is_def_eq_core.arm1 p n vis c r8 m8 hb8]
-  have ex8 : x8 = true := by rw [← hx8]; simpa [decBool] using hb8
-  rw [ex8]
+  refine RefE.bindCall (fun _ => rfl)
+    (fun hG _ h8 => hG.core.isDefEqCore n hn' hS7 0 (r7.headD 0) wt hx7l hwtl _ h8)
+    (fun b h8 => hq.isDefEqCore_sim n hn' hS7 0 (r7.headD 0) wt hx7l hwtl b.1 b.2 h8)
+    fun r8 m8 x8 a8 _ _ ⟨hS8, hg8, hx8⟩ => ?_
+  dsimp only [checkThmValE.k_is_def_eq_core]
+  -- the type mismatch
+  refine RefE.guard rfl (fun hb8 => by rw [← hx8, decBool, hb8]; rfl)
+    (fun hb8 => by rw [← hx8] at hb8; simpa [decBool] using hb8) fun _ _ => ?_
   -- the push
   have hg18 := hg14.trans (hg5.trans (hg7.trans hg8))
   have hci8 := ArrExt.decCI (IWGrow.erecPExt hg18) hci
   obtain ⟨w, hw1, hwl, -⟩ := decCI_name hci8
   have hw : (rdW (m8.arr64 EREC) (c + 1)).toNat < 2 ^ 32 := by
     rw [rdW_of_get? hc1.symm (erecP_get hw1)]; exact hwl
-  rcases h9 : callW p n "env_push" [vis, c] m8 with _ | ⟨r9, m9⟩
-  · rw [liftE_none, checkThmValE.k_env_push.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some, checkThmValE.k_env_push.arm1]
+  refine RefE.onlySim (fun _ => rfl) (fun _ _ h => h) fun r9 m9 h9 => ?_
+  dsimp only [checkThmValE.k_env_push]
   obtain ⟨s9, hs9, -, hW9⟩ := triple_of_callW (s₀ := ⟨m8, Locals.init []⟩)
     (envPush_specW p hV.rcp n ⟨m8, Locals.init []⟩ vis c hw) h9
   subst hs9
