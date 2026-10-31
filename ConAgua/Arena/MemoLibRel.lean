@@ -1,5 +1,6 @@
 import ConAgua.Arena.Frame
 import ConAgua.Arena.MemoLib
+import ConAgua.Arena.StoreGrow
 import Std.Tactic.BVDecide.Normalize.Prop
 
 /-!
@@ -17,8 +18,9 @@ is live. Generic in the schema, the key codec `K` (two words per key) and the va
 The lemmas: a probe hit is `mp`'s entry (`memoRG_hit`), a miss is its absence (`memoRG_miss`),
 `put` after a probe is `insert` (`memoRV_set`; a `put` that grows the table moves the live slots into
 a fresh region of twice the size and keeps the map, `memoRV_grow`), `clear` is `∅`
-(`memoRG_clear`), other writers leave it alone (`memoRG_frame`), and all-zero memory is the empty
-map (`memoRG_zero`). An instance supplies the codec and its one law `ek_dk`; nothing else.
+(`memoRG_clear`; `clear_fit` too, `memoRG_clearFit`: its new header names a region from slot `1`
+within the array), other writers leave it alone (`memoRG_frame`), and all-zero memory is the
+empty map (`memoRG_zero`). An instance supplies the codec and its one law `ek_dk`; nothing else.
 -/
 
 open ConRon.Arena
@@ -546,6 +548,18 @@ theorem mclearG_frame (S : MemoSch) (m : Mem) : MemFrame [] [S.cs, S.cs + 1] m (
   have h2 := MemFrame.setCtl (m.set64 CTL S.cs (rdW (m.arr64 CTL) S.cs + 1)) (S.cs + 1) 0
   exact (h1.mono (by simp) (by simp)).trans (h2.mono (by simp) (by simp))
 
+theorem mclearFitG_frame (S : MemoSch) (hS : S.WF) (m : Mem) :
+    MemFrame [S.arr] [S.cs, S.cs + 1] m (mclearFitG S m) := by
+  have f0 := (mclearG_frame S m).mono (A' := [S.arr]) (by simp) (fun _ h => h)
+  have fa : ∀ (m : Mem) k v, MemFrame [S.arr] [S.cs, S.cs + 1] m (m.set64 S.arr k v) :=
+    fun m k v => (MemFrame.set64 m S.arr (TieredArray.t0_ne hS.arr_ctl) k v).mono (by simp) (by simp)
+  unfold mclearFitG mfitTail
+  split
+  · exact f0
+  split
+  · exact f0.trans (fa _ _ _)
+  · exact (((f0.trans (fa _ _ _)).trans (fa _ _ _)).trans (fa _ _ _)).trans (fa _ _ _)
+
 /-! ## The relation lemmas -/
 
 section setClear
@@ -731,6 +745,47 @@ theorem dfltN_fits (l : Word) : (dfltN l).toNat = 0 ∨ (dfltN l).toNat + 1 ≤ 
     · left; rw [hl]; exact this
 
 omit [LawfulBEq κ] [LawfulHashable κ] in
+/-- **A memo whose slots after the header hold stamps below the live one is the empty map**,
+when its region starts at slot `1` (or the array has no slot) and fits the array, and the header's
+stamp word is not above the live one. -/
+theorem memoRV_empty (m : Mem) (hctl : S.cs.toNat + 2 ≤ (m.arr64 CTL).size) (he : epG S m ≠ 0)
+    (hb : slotsG S m = 0 ∨ mbG S m = 1)
+    (hn : (nG S m).toNat = 0 ∨ (nG S m).toNat + 1 ≤ slotsG S m)
+    (h0 : (rdW (m.arr64 S.arr) 0).toNat ≤ (epG S m).toNat)
+    (hst : ∀ j : Word, 1 ≤ j.toNat → j.toNat < slotsG S m → (mstG S m j).toNat < (epG S m).toNat) :
+    MemoRV S K VR m ∅ := by
+  have h1 : (1 : Word).toNat = 1 := rfl
+  have hlo : ∀ j : Word, (mbG S m).toNat ≤ j.toNat → j.toNat < slotsG S m → 1 ≤ j.toNat :=
+    fun j hj hs => by
+      rcases hb with h | h
+      · omega
+      · rw [h] at hj; omega
+  have hne : ∀ j : Word, (mbG S m).toNat ≤ j.toNat → j.toNat < slotsG S m → mstG S m j ≠ epG S m :=
+    fun j hj hs h => by have := hst j (hlo j hj hs) hs; rw [h] at this; omega
+  have hin : ∀ j : Word, InReg (mbG S m) (nG S m) j → j.toNat < slotsG S m ∧ (mbG S m).toNat ≤ j.toNat :=
+    fun j hj => by
+      rcases hn with h | h
+      · have := hj.1; have := hj.2; omega
+      · rcases hb with hb | hb
+        · omega
+        · rw [hb] at hj ⊢; have := hj.1; have := hj.2; omega
+  refine ⟨hctl, he, ⟨?_, fun j hj => ?_, fun j hj hs => hne j (by omega) hs, h0⟩, ?_, ?_,
+    fun x v h => by simp at h⟩
+  · rcases hn with h | h
+    · left; exact h
+    · rcases hb with hb | hb
+      · omega
+      · right; rw [hb]; exact ⟨by decide, by omega⟩
+  · by_cases hj0 : 1 ≤ j.toNat
+    · exact Nat.le_of_lt (hst j hj0 hj)
+    · have : j = 0 := UInt64.toNat_inj.mp (by simp; omega)
+      subst this; simpa [mstG] using h0
+  · intro j hj hl
+    exact absurd hl (hne j (hin j hj).2 (hin j hj).1)
+  · intro j _ hj _ hl
+    exact absurd hl (hne j (hin j hj).2 (hin j hj).1)
+
+omit [LawfulBEq κ] [LawfulHashable κ] in
 /-- **A memo whose stamps are all below the live one is the empty map** (after a `clear`, and on
 zeroed memory): the header names no region, so the region is the default one, and no slot is
 live. -/
@@ -742,30 +797,11 @@ theorem memoRV_fresh (m : Mem) (hctl : S.cs.toNat + 2 ≤ (m.arr64 CTL).size) (h
     rw [h] at h0; omega
   have hb : mbG S m = 1 := by simp [mbG, hd]
   have hn : nG S m = dfltN (m.len64 S.arr) := by simp [nG, hd]
-  have hne : ∀ j : Word, j.toNat < slotsG S m → mstG S m j ≠ epG S m := fun j hj h => by
-    have := hst j hj; rw [h] at this; omega
-  refine ⟨hctl, he, ⟨?_, fun j hj => Nat.le_of_lt (hst j hj), fun j _ hj => hne j hj,
-    Nat.le_of_lt h0⟩, ?_, ?_, fun x v h => by simp at h⟩
-  · rw [hb, hn]
-    rcases dfltN_fits (m.len64 S.arr) with h | h
-    · left; exact h
-    · right; simp only [slotsG]; refine ⟨by decide, ?_⟩
-      have : (1 : Word).toNat = 1 := rfl
-      omega
-  · intro j hj hl
-    exfalso
-    rcases dfltN_fits (m.len64 S.arr) with h | h
-    · rw [hn] at hj; have := hj.2; rw [h] at this; have := hj.1; omega
-    · rw [hb, hn] at hj
-      have : (1 : Word).toNat = 1 := rfl
-      exact hne j (by simp only [slotsG]; have := hj.2; omega) hl
-  · intro j _ hj _ hl
-    exfalso
-    rcases dfltN_fits (m.len64 S.arr) with h | h
-    · rw [hn] at hj; have := hj.2; rw [h] at this; have := hj.1; omega
-    · rw [hb, hn] at hj
-      have : (1 : Word).toNat = 1 := rfl
-      exact hne j (by simp only [slotsG]; have := hj.2; omega) hl
+  refine memoRV_empty S K VR m hctl he (Or.inr hb) ?_ (Nat.le_of_lt h0) (fun j _ hj => hst j hj)
+  rw [hn]
+  rcases dfltN_fits (m.len64 S.arr) with h | h
+  · left; exact h
+  · right; simp only [slotsG]; omega
 
 include hS in
 /-- **`put` without a growth is `insert`.** -/
@@ -1232,9 +1268,16 @@ theorem memoRV_set (hVS : VStable S VR) (m : Mem) (mp : Std.HashMap κ ν) (hR :
 
 include hS in
 omit [LawfulBEq κ] [LawfulHashable κ] in
-/-- **`clear` is `∅`.** -/
-theorem memoRV_clear (m : Mem) (mp : Std.HashMap κ ν) (hR : MemoRV S K VR m mp)
-    (hw : rdW (m.arr64 CTL) S.cs + 2 ≠ 0) : MemoRV S K VR (mclearG S m) ∅ := by
+/-- **After the epoch bump every stamp is below the live one**, which is the old stamp word plus
+`2`; the slots are untouched. -/
+theorem mclearG_stamps (m : Mem) (mp : Std.HashMap κ ν) (hR : MemoRV S K VR m mp)
+    (hw : rdW (m.arr64 CTL) S.cs + 2 ≠ 0) :
+    S.cs.toNat + 2 ≤ ((mclearG S m).arr64 CTL).size ∧ epG S (mclearG S m) ≠ 0 ∧
+    (mclearG S m).arr64 S.arr = m.arr64 S.arr ∧
+    epG S (mclearG S m) = rdW (m.arr64 CTL) S.cs + 2 ∧
+    (rdW ((mclearG S m).arr64 S.arr) 0).toNat < (epG S (mclearG S m)).toNat ∧
+    ∀ j : Word, j.toNat < slotsG S (mclearG S m) →
+      (mstG S (mclearG S m) j).toNat < (epG S (mclearG S m)).toNat := by
   obtain ⟨hctl, hep, hreg, -⟩ := hR
   have hf := mclearG_frame S m
   have hsz := hf.size
@@ -1247,10 +1290,138 @@ theorem memoRV_clear (m : Mem) (mp : Std.HashMap κ ν) (hR : MemoRV S K VR m mp
     simp only [epG, mclearG, rdW_set64, size_set64, hcs]; grind
   have he1 : (epG S m + 1).toNat = (epG S m).toNat + 1 := by
     simp only [epG] at *; rw [UInt64.toNat_add]; grind
-  apply memoRV_fresh S K VR _ (by rw [hsz]; exact hctl)
-  · rw [he]; simp only [epG] at *; grind
+  refine ⟨by rw [hsz]; exact hctl, by rw [he]; simp only [epG] at *; grind,
+    hb, by rw [he]; simp only [epG]; grind, ?_, ?_⟩
   · rw [hb, he, he1]; have := hreg.2.2.2; omega
   · intro j hj; rw [hsl] at hj; rw [hs, he, he1]; have := hreg.2.1 j hj; omega
+
+include hS in
+omit [LawfulBEq κ] [LawfulHashable κ] in
+/-- **`clear` is `∅`.** -/
+theorem memoRV_clear (m : Mem) (mp : Std.HashMap κ ν) (hR : MemoRV S K VR m mp)
+    (hw : rdW (m.arr64 CTL) S.cs + 2 ≠ 0) : MemoRV S K VR (mclearG S m) ∅ := by
+  obtain ⟨hctl, hne, -, -, h0, hst⟩ := mclearG_stamps S hS K VR m mp hR hw
+  exact memoRV_fresh S K VR _ hctl hne h0 hst
+
+/-- A word of slot `j ≥ 1` is not one of the header's four words. -/
+theorem slot_ne_hdr (S : MemoSch) (m : Mem) (j k : Word) (hj1 : 1 ≤ j.toNat)
+    (hj : j.toNat < slotsG S m) (hk : k.toNat < 4) : k ≠ j * 4 := by
+  have := (adS S m j hj 0 (by decide)).1
+  simp only [UInt64.add_zero] at this
+  intro h; rw [← h] at this; omega
+
+/-- The stamp of slot `j ≥ 1` through a write to a header word. -/
+theorem mstG_hdr (S : MemoSch) (m : Mem) (k v j : Word) (hk : k.toNat < 4) (hj1 : 1 ≤ j.toNat)
+    (hj : j.toNat < slotsG S m) : mstG S (m.set64 S.arr k v) j = mstG S m j := by
+  simp only [mstG, rdW_set64, slot_ne_hdr S m j k hj1 hj hk, false_and, and_false, ↓reduceIte]
+
+/-- The header words `x < 3` after the four header writes: the write, or `0` past the end. -/
+theorem rd_hdr (S : MemoSch) (m : Mem) (a b c d x : Word) (hx : x.toNat < 3) :
+    rdW (((((m.set64 S.arr 0 a).set64 S.arr 1 b).set64 S.arr 2 c).set64 S.arr 3 d).arr64 S.arr) x =
+      if x.toNat < (m.arr64 S.arr).size then (if x = 0 then a else if x = 1 then b else c)
+      else 0 := by
+  have : x = 0 ∨ x = 1 ∨ x = 2 := by
+    have h0 : x.toNat = 0 ∨ x.toNat = 1 ∨ x.toNat = 2 := by omega
+    rcases h0 with h | h | h
+    · exact Or.inl (UInt64.toNat_inj.mp h)
+    · exact Or.inr (Or.inl (UInt64.toNat_inj.mp h))
+    · exact Or.inr (Or.inr (UInt64.toNat_inj.mp h))
+  rcases this with rfl | rfl | rfl <;> simp only [rdW_set64, size_set64] <;> split <;>
+    grind [rdW_oob]
+
+/-- The cap of a re-made region is the array's slot count less the header's. -/
+theorem mfitL_toNat (S : MemoSch) (m : Mem) : (mfitL S m).toNat = slotsG S m - 1 := by
+  have hl : (m.len64 S.arr >>> 2).toNat = (m.len64 S.arr).toNat / 4 := by
+    rw [UInt64.toNat_shiftRight]; simp [Nat.shiftRight_eq_div_pow]
+  simp only [mfitL, slotsG]
+  by_cases h0 : (0 : Word) < m.len64 S.arr >>> 2
+  · have h0' := UInt64.lt_iff_toNat_lt.mp h0
+    simp only [h0, ↓reduceIte]
+    rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simp at h0' ⊢; omega)), hl]; rfl
+  · have : (m.len64 S.arr).toNat / 4 = 0 := by
+      have := mt UInt64.lt_iff_toNat_lt.mpr h0; simp at this; omega
+    simp only [h0, ↓reduceIte, UInt64.sub_zero]; omega
+
+theorem mfitNE_le (S : MemoSch) (m : Mem) (e h : Word) :
+    (mfitNE S m e h).toNat ≤ (mfitL S m).toNat := by
+  unfold mfitNE; split
+  · exact Nat.le_refl _
+  · rename_i h'; exact Nat.le_of_not_lt (fun x => h' (UInt64.lt_iff_toNat_lt.mpr x))
+
+include hS in
+omit [LawfulBEq κ] [LawfulHashable κ] in
+/-- **`clear_fit` is `∅`**: the epoch bump, and a header that names a region from slot `1` within
+the array, or none. -/
+theorem memoRV_clearFit (m : Mem) (mp : Std.HashMap κ ν) (hR : MemoRV S K VR m mp)
+    (hw : rdW (m.arr64 CTL) S.cs + 2 ≠ 0) : MemoRV S K VR (mclearFitG S m) ∅ := by
+  obtain ⟨hctl, hne, -, hep, h0, hst⟩ := mclearG_stamps S hS K VR m mp hR hw
+  have ha : (S.arr : TieredArray) ≠ CTL := TieredArray.t0_ne hS.arr_ctl
+  have hc : ∀ (m' : Mem) k v, (m'.set64 S.arr k v).arr64 CTL = m'.arr64 CTL :=
+    fun m' k v => Mem.arr64_set64_ne _ _ _ _ _ (Ne.symm ha)
+  have he : ∀ (m' : Mem) k v, epG S (m'.set64 S.arr k v) = epG S m' := fun m' k v => by
+    simp only [epG, hc]
+  have hsl : ∀ (m' : Mem) k v, slotsG S (m'.set64 S.arr k v) = slotsG S m' := fun m' k v =>
+    slotsG_set64 S m' _ k v
+  unfold mclearFitG mfitTail
+  generalize mclearG S m = m₁ at *
+  split
+  · exact memoRV_fresh S K VR m₁ hctl hne h0 hst
+  split
+  · apply memoRV_fresh S K VR _ (by rw [hc]; exact hctl) (by rw [he]; exact hne)
+    · rw [he, rdW_set64]; simpa using h0
+    · intro j hj; rw [hsl] at hj; rw [he]
+      by_cases hj1 : 1 ≤ j.toNat
+      · rw [mstG_hdr S m₁ 3 0 j (by decide) hj1 hj]; exact hst j hj
+      · have : j = 0 := UInt64.toNat_inj.mp (by simp; omega)
+        subst this; have := hst 0 hj; simp only [mstG, rdW_set64] at this ⊢; simpa using this
+  · generalize hN : mfitNE S m₁ (rdW (m.arr64 CTL) S.cs + 1) _ = N
+    have hNl := mfitNE_le S m₁ (rdW (m.arr64 CTL) S.cs + 1)
+      (mfitHW (rdW (m₁.arr64 S.arr) 3) (cntG S m))
+    rw [hN, mfitL_toNat] at hNl
+    unfold mfitHdr; rw [hN]
+    generalize mfitHW (rdW (m₁.arr64 S.arr) 3) (cntG S m) = h
+    generalize hm' : (((m₁.set64 S.arr 0 (rdW (m.arr64 CTL) S.cs + 2)).set64 S.arr 1 1).set64 S.arr 2
+        N).set64 S.arr 3 h = m'
+    have he3 : epG S m' = rdW (m.arr64 CTL) S.cs + 2 := by rw [← hm', he, he, he, he, hep]
+    have hs3 : slotsG S m' = slotsG S m₁ := by rw [← hm', hsl, hsl, hsl, hsl]
+    have r0 := hm' ▸ rd_hdr S m₁ _ 1 N h 0 (by decide)
+    have r1 := hm' ▸ rd_hdr S m₁ _ 1 N h 1 (by decide)
+    have r2 := hm' ▸ rd_hdr S m₁ _ 1 N h 2 (by decide)
+    simp only [show (0 : Word).toNat = 0 from rfl, show (1 : Word).toNat = 1 from rfl,
+      show (2 : Word).toNat = 2 from rfl, ↓reduceIte, show (1 : Word) ≠ 0 by decide,
+      show (2 : Word) ≠ 0 by decide, show (2 : Word) ≠ 1 by decide] at r0 r1 r2
+    have hsz := slotsG_toNat S m₁
+    have hmod := Nat.mod_le (m₁.arr64 S.arr).size (2 ^ 64)
+    apply memoRV_empty S K VR _ (by rw [← hm', hc, hc, hc, hc]; exact hctl)
+      (by rw [he3, ← hep]; exact hne)
+    · by_cases h4 : 4 ≤ (m₁.arr64 S.arr).size
+      · right; simp only [mbG, he3, r0, r1, show 0 < (m₁.arr64 S.arr).size by omega,
+          show 1 < (m₁.arr64 S.arr).size by omega, ↓reduceIte]
+      · left; rw [hs3]; omega
+    · rw [hs3]
+      by_cases h4 : 4 ≤ (m₁.arr64 S.arr).size
+      · simp only [nG, he3, r0, r2, show 0 < (m₁.arr64 S.arr).size by omega,
+          show 2 < (m₁.arr64 S.arr).size by omega, ↓reduceIte]
+        omega
+      · left
+        have hd := dfltN_fits (m'.len64 S.arr)
+        have hl : (m'.len64 S.arr).toNat = (m₁.arr64 S.arr).size % 2 ^ 64 := by
+          rw [← hm']; simp only [len64_eq, size_set64, UInt64.toNat_ofNat']
+        unfold nG; split
+        · rw [r2]; split
+          · have : slotsG S m₁ = 0 := by omega
+            omega
+          · rfl
+        · omega
+    · rw [he3, r0]; split
+      · exact Nat.le_refl _
+      · simp
+    · intro j hj1 hj; rw [hs3] at hj; rw [he3, ← hep, ← hm']
+      rw [mstG_hdr _ _ _ _ _ (by decide) hj1 (by rw [hsl, hsl, hsl]; exact hj),
+        mstG_hdr _ _ _ _ _ (by decide) hj1 (by rw [hsl, hsl]; exact hj),
+        mstG_hdr _ _ _ _ _ (by decide) hj1 (by rw [hsl]; exact hj),
+        mstG_hdr _ _ _ _ _ (by decide) hj1 hj]
+      exact hst j hj
 
 include hS in
 omit [LawfulBEq κ] [LawfulHashable κ] in
@@ -1313,6 +1484,12 @@ omit [LawfulBEq κ] [LawfulHashable κ] in
 theorem memoRG_clear (m : Mem) (mp : Std.HashMap κ ν) (hR : MemoRG S K dv m mp)
     (hw : rdW (m.arr64 CTL) S.cs + 2 ≠ 0) : MemoRG S K dv (mclearG S m) ∅ :=
   memoRV_clear S hS K _ m mp hR hw
+
+include hS in
+omit [LawfulBEq κ] [LawfulHashable κ] in
+theorem memoRG_clearFit (m : Mem) (mp : Std.HashMap κ ν) (hR : MemoRG S K dv m mp)
+    (hw : rdW (m.arr64 CTL) S.cs + 2 ≠ 0) : MemoRG S K dv (mclearFitG S m) ∅ :=
+  memoRV_clearFit S hS K _ m mp hR hw
 
 include hS in
 omit [LawfulBEq κ] [LawfulHashable κ] in

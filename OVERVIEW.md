@@ -703,11 +703,19 @@ persistent one, as con-ron's `promote` does.
 The **memos** (con-ron's per-call maps) are one generic library: a schema names
 the array and the stamp word, four words per slot, epoch stamps, growth at load
 3/4
-([`MemoLib`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Arena/MemoLib.lean#L19-L47)).
+([`MemoLib`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Arena/MemoLib.lean#L19-L49)).
 The put is one leaf function whose growth reuses its locals, so that the leaf
 register allocation keeps the common case, an insertion without growth, in
 registers
-([`memoPutG`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Arena/MemoLib.lean#L432-L459)).
+([`memoPutG`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Arena/MemoLib.lean#L434-L461)).
+A clear is an epoch bump, after which the table restarts at its default region;
+`inst_list`'s memo clears as con-ron's `clear_fit` instead: the next call's
+region is sized from a decaying high-water mark of the entries, kept in the
+header slot
+([`X_clear_fit`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Arena/MemoLib.lean#L648-L659)),
+and the caller makes the common case (no mark, a small call) the epoch bump
+alone
+([`inst_list`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Arena/InstListSpec.lean#L277-L282)).
 
 ### 6.3 The limb pool
 

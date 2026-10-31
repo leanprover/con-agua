@@ -8,7 +8,7 @@ import ConRon.Bridge.Promote.Pers
 
 `loopFns`: every function phase A's fold (`install_fold_go`) and phase B (`check_pending_go`)
 reach in the checker's program (the bracket, the arms, the core, the stage), as a literal computed from
-`checkerProg`'s call graph (1423 names; the decided check in `ConAgua/Checker/LoopAll.lean`
+`checkerProg`'s call graph (1424 names; the decided check in `ConAgua/Checker/LoopAll.lean`
 fails if a callee is missing, then recompute it). No function of it writes the pin table or a
 byte array, and every `CTL` word it writes is below 1024 (`LoopClosed`): a step of the loop keeps
 the pin table, so the pin flag, and every array's size.
@@ -143,7 +143,7 @@ def loopFns : List FnName :=
    "i1l_go", "i1l_lam", "i1l_let", "i1l_proj", "i1l_put", "idx_args_resolve", "if_clear",
    "if_find", "if_put", "ik_copy", "il_app", "il_bvar", "il_forall", "il_go", "il_lam", "il_let",
    "il_proj", "ilg_app", "ilg_forall", "ilg_go", "ilg_lam", "ilg_let", "ilg_proj", "ilm_clear",
-   "ilm_find", "ilm_put", "ilp_clear", "ilp_find", "ilp_put", "ilpl_clear", "ilpl_find",
+   "ilm_find", "ilm_fit", "ilm_put", "ilp_clear", "ilp_find", "ilp_put", "ilpl_clear", "ilpl_find",
    "ilpl_put", "ilpls_clear", "ilpls_find", "ilpls_put", "imax_find", "imax_push", "in_clear",
    "in_find", "in_put", "ind_block_to_erec", "ind_caps_check", "ind_copy_go", "ind_info_rec",
    "ind_params_ok", "ind_rec_copy", "index_promoted", "index_promoted_tables", "infer",
