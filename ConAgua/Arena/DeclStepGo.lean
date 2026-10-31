@@ -222,12 +222,6 @@ theorem LoopR.reset {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Na
   refine h.of_step (iwReset_stage ⟨h.check, h.iw⟩).1 hf ?_
   rw [erecP_reset]; exact fun _ _ h => h
 
-/-- `cdT` from a `checkDecl` run. -/
-theorem cdT_run {mode : ConLeche.CheckMode} {pins : List INatOpPinSet} {fe fe' : IFEnv}
-    {d : IDeclaration} {a a' : AState} (h : (checkDecl mode pins fe d).run a = .ok (fe', a')) :
-    (cdT mode pins fe d).run a = .ok ((fe', none), a') := by
-  simp only [cdT, StateT.run_bind, h, exc_ok_bind']; rfl
-
 /-- The constant-record and value-group kinds of `install_value`'s call for a record. -/
 def IvArgs (ck vk : Word) : IDeclaration → Prop
   | .defnDecl .. => ck = 1 ∧ vk = 0

@@ -623,14 +623,10 @@ theorem istg_cd {n : Nat} {m0 : Mem} {a : AState} {vis : Word} {fe : IFEnv} {pen
     (hT : T.run a = (cdT V pins fe d).run a) :
     RefE (IstgG pins dn ds p) (installStepGoE.k_check_decl p (checkDeclE p n m0 i vis)) T a
       (fun v x a' => IstgPost pins dn ds pend v.1 x v.2 a') := by
-  rcases hx : checkDeclE p n m0 i vis with e | ⟨w, m'⟩
-  · rw [installStepGoE.k_check_decl.none]
-    rw [hx] at h
-    exact fun hG => ErrClaim.of_run_eqW hT (ErrClaim.bind_left (h hG.cd))
+  refine RefE.of_run_eq hT (RefE.bindE (fun _ => installStepGoE.k_check_decl.none ..) IstgG.cd h
+    fun ⟨w, m'⟩ y a' _ hR => ?_)
   rw [installStepGoE.k_check_decl.arm1]
-  rw [hx] at h
-  obtain ⟨y, a', hy, hR⟩ := h
-  exact RefE.ret (hT.trans (cdT_run hy)) ⟨by simpa using hR.loop, by simp [vgOut], by simp, hR.core, hR.ind⟩
+  exact RefE.ret rfl ⟨by simpa using hR.loop, by simp [vgOut], by simp, hR.core, hR.ind⟩
 
 /-- The `install_value` branch: `iv_ref` on the call's run, against a twin that runs as `ivT`. -/
 theorem istg_iv (hP : IvProg p) (hC : CvgProg p) (hcl : IndMemoClosed p) (hcrf : L.Ind.CrfF p)
@@ -1086,13 +1082,7 @@ theorem ist_ref (hdc : LoopCallees dn p) (hFD : FrontDecls ds) (hLD : DeclsLpsDn
       exact PinsDenote.pmono (PExt.enterScratch hok.wf) _ _ hpps h⟩
   have h3 := istg_ref (pend := pend) hdc hFD hLD (N := n) (by omega) hi (TwinFold.enterAM hok) hFe
     hLE hTE hflE hde hPDe hIME
-  rcases c3 : installStepGoE p n s2.mem i vis with e3 | ⟨r3, m3⟩
-  · rw [installStepE.k_install_step_go.none]
-    rw [c3] at h3
-    exact RefE.bind_left h3
-  rw [c3] at h3
-  obtain ⟨y, a3, hy, hP3⟩ := h3
-  refine RefE.bind_right hy ?_
+  refine RefE.bindE (fun _ => installStepE.k_install_step_go.none ..) id h3 fun ⟨r3, m3⟩ y a3 _ hP3 => ?_
   rw [hR.vis, hR.check.env.tables_length, hnt']
   by_cases hf : r3.tail.headD 0 = 0
   · rw [installStepE.k_install_step_go.arm1 _ _ _ _ _ _ _ hf]
@@ -1109,10 +1099,8 @@ theorem ist_ref (hdc : LoopCallees dn p) (hFD : FrontDecls ds) (hLD : DeclsLpsDn
     have hg : decVG (erecP m3) (r3.tail.tail.headD 0).toNat = some vg := by
       rw [← hvg]; simp only [hP3.vg, vgOut]; exact (ite_eq_right hf).symm
     rw [installStepK_some _ _ _ _ _ vg hvg]
-    rcases c4 : callW p n "is_some" [i, vis, r3.headD 0, r0.headD 0, r3.tail.tail.headD 0] m3 with
-      _ | ⟨r4, m4⟩
-    · rw [liftE_none, installStepE.k_is_none.none]; exact RefE.of_cls0 (by simp)
-    rw [liftE_some, installStepE.k_is_none.arm1, installStepE.j1.arm1]
+    refine RefE.onlySim (fun _ => installStepE.k_is_none.none ..) (fun _ _ h => h) fun r4 m4 c4 => ?_
+    rw [installStepE.k_is_none.arm1, installStepE.j1.arm1]
     obtain ⟨s4, rfl, -, hok4, hL4, hcm4, hIM4⟩ := triple_of_callW (s₀ := ⟨m3, Locals.init []⟩)
       (isSome_refinesC pins dn ds p hdc.leaf hdc.indMemo hdc.crf hb hpp hps n _ a3 i vis (r3.headD 0)
         (r0.headD 0) (r3.tail.tail.headD 0) y.1 pend vg hg hP3.loop hP3.core hP3.ind) c4
