@@ -1,3 +1,4 @@
+import ConAgua.Arena.RefWalk
 import ConAgua.Arena.DeclArmT
 import ConAgua.Arena.RecGenSpec.CruleProg
 import ConAgua.Arena.DeclReducePin
@@ -243,23 +244,16 @@ theorem crp_ref {p : Prog} (hC : CrpProg p) (hq : KnotStageProg p) (hcl : LeafCl
   have hC0 : StageC dn vis (fe2.restrictTo vis.toNat) env m a := ⟨hS.restrict vis, hck, hmem, hflag⟩
   generalize hfe : fe2.restrictTo vis.toNat = fe at hC0 hck ⊢
   -- the stored constant, at `vis2`
-  rcases h1 : callW p n "reduce_stored_ok" [vis2, c] m with _ | ⟨r1, m1⟩
-  · rw [liftE_none, checkReducePinE.k_reduce_stored_ok.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]
+  refine RefE.bindLift (fun _ => rfl) fun r1 m1 h1 => ?_
   have hCr1 := hkp.call (im_mem _ rfl) h1 hCr
   obtain ⟨s1, hs1, -, hok1, hS1, hg1, hb1, -⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (reduceStoredOk_refines p hC.red dn vis2 fe2 c hc n ⟨m, Locals.init []⟩ a hS) h1
   subst hs1
   have hrun1 := AM.run_of_ok _ _ hok1
-  by_cases e1 : r1.headD 0 = 0
-  · rw [checkReducePinE.k_reduce_stored_ok.abort1 p _ _ _ _ _ _ e1]
-    have t1 : AM.res (reduceStoredOk fe2 (decI c)) a = false := by rw [← hb1]; simpa using e1
-    rw [t1] at hrun1
-    exact RefE.bind_right hrun1 (RefE.ite_neg (by decide) fun _ => ErrClaim.fail _ _ rfl)
-  rw [checkReducePinE.k_reduce_stored_ok.arm1 p _ _ _ _ _ _ e1]
-  have t1 : AM.res (reduceStoredOk fe2 (decI c)) a = true := by rw [← hb1]; simpa using e1
-  rw [t1] at hrun1
-  refine RefE.bind_right hrun1 (RefE.ite_pos rfl ?_)
+  refine ⟨_, _, hrun1, ?_⟩
+  dsimp only [checkReducePinE.k_reduce_stored_ok]
+  refine RefE.guardIf rfl (fun e1 => by rw [← hb1]; simpa using e1)
+    (fun e1 => by rw [← hb1] at e1; simpa using e1) fun _ _ => ?_
   obtain ⟨hi1, -⟩ := ConRon.Bridge.reduceStoredOk_run hck.state hck.pins hok2.ienv hnm _ _ hrun1
   generalize AM.st (reduceStoredOk fe2 (decI c)) a = a1 at hrun1 hS1 hi1
   have hC1 : StageC dn vis fe env s1.mem a1 :=
@@ -268,23 +262,16 @@ theorem crp_ref {p : Prog} (hC : CrpProg p) (hq : KnotStageProg p) (hcl : LeafCl
   have hnm1 := ConRon.Bridge.denoteN_ext hnm hi1.ext
   have hv1 := ConRon.Bridge.denote_ext hvx hi1.ext
   -- the element inductive
-  rcases h2 : callW p n "reduce_elem_ok" [vis, c] s1.mem with _ | ⟨r2, m2⟩
-  · rw [liftE_none, checkReducePinE.k_reduce_elem_ok.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]
+  refine RefE.bindLift (fun _ => rfl) fun r2 m2 h2 => ?_
   have hCr2 := hkp.call (im_mem _ rfl) h2 hCr1
   obtain ⟨s2, hs2, -, hok2', hS2, hg2, hb2, -⟩ := triple_of_callW (s₀ := ⟨s1.mem, Locals.init []⟩)
     (reduceElemOk_refines p hC.red dn hdn vis fe c hc n ⟨s1.mem, Locals.init []⟩ a1 hC1.stage) h2
   subst hs2
   have hrun2 := AM.run_of_ok _ _ hok2'
-  by_cases e2 : r2.headD 0 = 0
-  · rw [checkReducePinE.k_reduce_elem_ok.abort1 p _ _ _ _ _ _ e2]
-    have t2 : AM.res (reduceElemOk fe (decI c)) a1 = false := by rw [← hb2]; simpa using e2
-    rw [t2] at hrun2
-    exact RefE.bind_right hrun2 (RefE.ite_neg (by decide) fun _ => ErrClaim.fail _ _ rfl)
-  rw [checkReducePinE.k_reduce_elem_ok.arm1 p _ _ _ _ _ _ e2]
-  have t2 : AM.res (reduceElemOk fe (decI c)) a1 = true := by rw [← hb2]; simpa using e2
-  rw [t2] at hrun2
-  refine RefE.bind_right hrun2 (RefE.ite_pos rfl ?_)
+  refine ⟨_, _, hrun2, ?_⟩
+  dsimp only [checkReducePinE.k_reduce_elem_ok]
+  refine RefE.guardIf rfl (fun e2 => by rw [← hb2]; simpa using e2)
+    (fun e2 => by rw [← hb2] at e2; simpa using e2) fun _ _ => ?_
   obtain ⟨hi2, -⟩ := ConRon.Bridge.reduceElemOk_run hC1.check.state hC1.check.pins
     hC1.check.ienv hnm1 _ _ hrun2
   generalize AM.st (reduceElemOk fe (decI c)) a1 = a2 at hrun2 hS2 hi2
@@ -292,24 +279,18 @@ theorem crp_ref {p : Prog} (hC : CrpProg p) (hq : KnotStageProg p) (hcl : LeafCl
   have hnm2 := ConRon.Bridge.denoteN_ext hnm1 hi2.ext
   have hv2 := ConRon.Bridge.denote_ext hv1 hi2.ext
   -- the pin's guards
-  rcases h3 : callW p n "reduce_pin_guard" [vis, c] s2.mem with _ | ⟨r3, m3⟩
-  · rw [liftE_none, checkReducePinE.k_reduce_pin_guard.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]
+  refine RefE.bindLift (fun _ => rfl) fun r3 m3 h3 => ?_
   obtain ⟨s3, hs3, -, hW3⟩ := triple_of_callW (s₀ := ⟨s2.mem, Locals.init []⟩)
     (rpg_specW p hC.bvb hC.hf hC.rpg (realCall p) (realCall_spec p) n ⟨s2.mem, Locals.init []⟩ vis c)
     h3
   subst hs3
   obtain ⟨x3, a3, hrun3, hC3, hx3, hr3, hg3, hb3⟩ :=
     rpgW_okC hC.red.pa hC.rdp hC.red.rom hcl hC.apd hkp hW3 hC2 hc hnm2 hCr2
-  by_cases e3 : r3.headD 0 = 0
-  · rw [checkReducePinE.k_reduce_pin_guard.abort1 p _ _ _ _ _ _ e3]
-    have t3 : x3 = false := by rw [← hb3.1]; simpa using e3
-    rw [t3] at hrun3
-    exact RefE.bind_right hrun3 (RefE.ite_neg (by decide) fun _ => ErrClaim.fail _ _ rfl)
-  rw [checkReducePinE.k_reduce_pin_guard.arm1 p _ _ _ _ _ _ e3]
-  have t3 : x3 = true := by rw [← hb3.1]; simpa using e3
-  rw [t3] at hrun3
-  refine RefE.bind_right hrun3 (RefE.ite_pos rfl ?_)
+  refine ⟨_, _, hrun3, ?_⟩
+  dsimp only [checkReducePinE.k_reduce_pin_guard]
+  refine RefE.guardIf rfl (fun e3 => by rw [← hb3.1]; simpa using e3)
+    (fun e3 => by rw [← hb3.1] at e3; simpa using e3) fun _ e3 => ?_
+  have t3 : x3 = true := e3
   have hc2 : ConLeche.reducePinGuard env nm = true := by rw [← hr3, t3]
   have hwsP : ConLeche.Expr.WScoped 0 (ConLeche.reduceDeclPin nm) := by
     refine ConLeche.Expr.WScoped.of_not_hasFvar ?_
@@ -318,9 +299,7 @@ theorem crp_ref {p : Prog} (hC : CrpProg p) (hq : KnotStageProg p) (hcl : LeafCl
   have hnm3 := ConRon.Bridge.denoteN_ext hnm2 hx3
   have hv3 := ConRon.Bridge.denote_ext hv2 hx3
   -- the pin
-  rcases h4 : callW p n "reduce_decl_pin" [c] s3.mem with _ | ⟨r4, m4⟩
-  · rw [liftE_none, checkReducePinE.k_reduce_decl_pin.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some, checkReducePinE.k_reduce_decl_pin.arm1]
+  refine RefE.bindLift (fun _ => rfl) fun r4 m4 h4 => ?_
   obtain ⟨s4, hs4, -, hok4, hS4, hg4, hpl, hpe⟩ := triple_of_callW (s₀ := ⟨s3.mem, Locals.init []⟩)
     (reduceDeclPin_refines p hC.red.pa n ⟨s3.mem, Locals.init []⟩ a3 dn fe vis c hC3.stage hc
       hC.red.rom hC.rdp) h4
@@ -328,59 +307,42 @@ theorem crp_ref {p : Prog} (hC : CrpProg p) (hq : KnotStageProg p) (hcl : LeafCl
   have hrun4 := AM.run_of_ok _ _ hok4
   rw [← hpe] at hrun4
   obtain ⟨hi4, hpd⟩ := ConRon.Bridge.reduceDeclPin_run hC3.check.state hC3.check.pins hnm3 hrun4
+  refine ⟨_, _, hrun4, ?_⟩
+  dsimp only [checkReducePinE.k_reduce_decl_pin]
   generalize AM.st (reduceDeclPin (decI c)) a3 = a4 at hrun4 hS4 hi4 hpd
-  refine RefE.bind_right hrun4 ?_
   have hC4 := StageC.of_leaf hC3 hS4 (callW_leafFrame hcl (leaf_mem _ (by decide)) h4) hi4
   have hnm4 := ConRon.Bridge.denoteN_ext hnm3 hi4.ext
   have hv4 := ConRon.Bridge.denote_ext hv3 hi4.ext
-  have h00 : (0 : Word).toNat = 0 := rfl
-  have h01 : (1 : Word).toNat = 1 := rfl
   -- the value against the pin
-  rcases h5 : callE p n "is_def_eq_core" [vis, 0, v, r4.headD 0] s4.mem with e5 | ⟨r5, m5⟩
-  · rw [checkReducePinE.k_is_def_eq_core.none]
-    refine RefE.bind_left fun hcE => ?_
-    have := hcE.isDefEqCore n hn' hC4.stageT 0 v (r4.headD 0) hv hpl _ h5
-    rwa [h00] at this
-  obtain ⟨x5, a5, hrun5, hT5, hg5, hx5⟩ :=
-    hq.isDefEqCore_sim n hn' hC4.stageT 0 v (r4.headD 0) hv hpl r5 m5 (callW_of_callE h5)
-  rw [h00] at hrun5
+  refine RefE.bindCall (fun _ => rfl)
+    (fun hcE _ h5 => hcE.isDefEqCore n hn' hC4.stageT 0 v (r4.headD 0) hv hpl _ h5)
+    (fun b h5 => hq.isDefEqCore_sim n hn' hC4.stageT 0 v (r4.headD 0) hv hpl b.1 b.2 h5)
+    fun r5 m5 x5 a5 _ hrun5 ⟨hT5, hg5, hx5⟩ => ?_
   obtain ⟨hck5, hx5', -, -⟩ := defeq_check henv hC4.check hv4 hpd hws hwsP hrun5
   have hC5 := StageC.of_T hT5 hck5
-  refine RefE.bind_right hrun5 ?_
-  by_cases e5 : r5.headD 0 = 0
-  · rw [checkReducePinE.k_is_def_eq_core.abort1 p _ _ _ _ _ _ e5]
-    have t5 : x5 = false := by rw [← hx5, decBool, e5]; rfl
-    rw [t5]
-    exact RefE.ite_neg (by decide) fun _ => ErrClaim.fail _ _ rfl
-  rw [checkReducePinE.k_is_def_eq_core.arm1 p _ _ _ _ _ _ e5]
-  have t5 : x5 = true := by rw [← hx5]; simpa [decBool] using e5
-  rw [t5]
-  refine RefE.ite_pos rfl ?_
+  dsimp only [checkReducePinE.k_is_def_eq_core]
+  refine RefE.guardIf rfl (fun e5 => by rw [← hx5, decBool, e5]; rfl)
+    (fun e5 => by rw [← hx5] at e5; simpa [decBool] using e5) fun _ _ => ?_
   have hnm5 := ConRon.Bridge.denoteN_ext hnm4 hx5'
   have hv5 := ConRon.Bridge.denote_ext hv4 hx5'
   -- the certificate's variable
-  rcases h6 : callW p n "reduce_cert_var" [c] m5 with _ | ⟨r6, m6⟩
-  · rw [liftE_none, checkReducePinE.k_reduce_cert_var.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]
+  refine RefE.bindLift (fun _ => rfl) fun r6 m6 h6 => ?_
   obtain ⟨s6, hs6, -, hok6, hS6, hg6, hx6⟩ := triple_of_callW (s₀ := ⟨m5, Locals.init []⟩)
     (reduceCertVar_refines p hC.rcv n ⟨m5, Locals.init []⟩ a5 dn fe vis c hC5.stage hc) h6
   subst hs6
   have hrun6 := AM.run_of_ok _ _ hok6
   rw [hx6] at hrun6
   obtain ⟨hi6, hxv⟩ := ConRon.Bridge.reduceCertVar_run hck5.state hck5.pins hnm5 hrun6
+  refine ⟨_, _, hrun6, ?_⟩
   generalize AM.st (reduceCertVar (decI c)) a5 = a6 at hrun6 hS6 hi6 hxv
-  refine RefE.bind_right hrun6 ?_
   have hC6 := StageC.of_leaf hC5 hS6 (callW_leafFrame hcl (leaf_mem _ (by decide)) h6) hi6
   have hv6 : denoteE a6.store (decE v) = some x := ConRon.Bridge.denote_ext hv5 hi6.ext
-  by_cases e6 : 4294967296 ≤ r6.headD 0
-  · rw [checkReducePinE.k_reduce_cert_var.abort1 p _ _ _ _ _ e6]; exact RefE.of_cls0 rfl
-  rw [checkReducePinE.k_reduce_cert_var.arm1 p _ _ _ _ _ e6]
+  dsimp only [checkReducePinE.k_reduce_cert_var]
+  refine RefE.abort0 rfl fun e6 => ?_
   have hxl : (r6.headD 0).toNat < 2 ^ 32 := by
     have := UInt64.lt_iff_toNat_lt.mp (UInt64.not_le.mp e6); simpa using this
   -- the application
-  rcases h7 : mkAppW s6.mem v (r6.headD 0) with _ | ⟨ax, m7⟩
-  · rw [liftE_none, checkReducePinE.k_mk_app.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some, checkReducePinE.k_mk_app.arm1]
+  refine RefE.bindLift (fun _ => rfl) fun ax m7 h7 => ?_
   obtain ⟨a7, hrun7, hS7, hg7⟩ := mkApp_stage hC6.stage v (r6.headD 0) h7
   have haxl := mkAppW_hw s6.mem a6 hC6.stage.check.arena v (r6.headD 0) ax m7 h7
   obtain ⟨hi7, hax⟩ := ConRon.Bridge.Frontend.internE_sstep hC6.check.state
@@ -396,24 +358,18 @@ theorem crp_ref {p : Prog} (hC : CrpProg p) (hq : KnotStageProg p) (hcl : LeafCl
   have hwsA : ConLeche.Expr.WScoped 1 (.app x (ConLeche.reduceCertVar nm)) := by
     unfold ConLeche.Expr.WScoped
     exact ⟨ConLeche.Expr.WScoped.mono (by omega) hws, hwsC⟩
-  have e7 : (internE (.app (decI v) (decE (r6.headD 0)))).run a6 = .ok (decE ax, a7) := hrun7
-  refine RefE.bind_right e7 ?_
+  refine ⟨_, _, (hrun7 : (internE (.app (decI v) (decE (r6.headD 0)))).run a6 = .ok (decE ax, a7)), ?_⟩
+  dsimp only [checkReducePinE.k_mk_app]
   -- the identity certificate
-  rcases h8 : callE p n "is_def_eq_core" [vis, 1, ax, r6.headD 0] m7 with e8 | ⟨r8, m8⟩
-  · rw [checkReducePinE.k_is_def_eq_core_2.none]
-    refine RefE.bind_left fun hcE => ?_
-    have := hcE.isDefEqCore n hn' hC7.stageT 1 ax (r6.headD 0) haxl hxl _ h8
-    rwa [h01] at this
-  obtain ⟨x8, a8, hrun8, hT8, hg8, hx8⟩ :=
-    hq.isDefEqCore_sim n hn' hC7.stageT 1 ax (r6.headD 0) haxl hxl r8 m8 (callW_of_callE h8)
-  rw [h01] at hrun8
+  refine RefE.bindCall (fun _ => rfl)
+    (fun hcE _ h8 => hcE.isDefEqCore n hn' hC7.stageT 1 ax (r6.headD 0) haxl hxl _ h8)
+    (fun b h8 => hq.isDefEqCore_sim n hn' hC7.stageT 1 ax (r6.headD 0) haxl hxl b.1 b.2 h8)
+    fun r8 m8 x8 a8 _ hrun8 ⟨hT8, hg8, hx8⟩ => ?_
   obtain ⟨hck8, -, -, -⟩ := defeq_check henv hC7.check hax'
     (ConRon.Bridge.denote_ext hxv hi7.ext) hwsA hwsC hrun8
   have hC8 := StageC.of_T hT8 hck8
-  refine RefE.bind_right hrun8 ?_
-  by_cases e8 : r8.headD 0 = 0
-  · rw [checkReducePinE.k_is_def_eq_core_2.abort1 p _ _ e8]; exact RefE.of_cls0 rfl
-  rw [checkReducePinE.k_is_def_eq_core_2.arm1 p _ _ e8]
+  dsimp only [checkReducePinE.k_is_def_eq_core_2]
+  refine RefE.abort0 rfl fun e8 => ?_
   have t8 : x8 = true := by rw [← hx8]; simpa [decBool] using e8
   rw [t8]
   refine RefE.ite_pos rfl (RefE.ret rfl ⟨?_, by rw [← hfe] at hC8; exact hC8, hg1.trans (hg2.trans (hg3.trans (hg4.trans
