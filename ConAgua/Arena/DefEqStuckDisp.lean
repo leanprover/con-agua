@@ -298,7 +298,9 @@ theorem ds_ref (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : StuckCalle
   have hS := hs.rel
   simp only [dsE]
   cases n with
-  | zero => exact RefE.onlySim (Q := fun _ _ => False) (fun _ => rfl) (fun _ _ h => by rw [callW_zero] at h; cases h) fun _ _ h => h.elim
+  | zero =>
+    exact RefE.onlySim (Q := fun _ _ => False) (fun _ => rfl)
+      (fun _ _ h => by rw [callW_zero] at h; cases h) fun _ _ h => h.elim
   | succ k =>
   refine RefE.onlySim (fun _ => rfl) (fun _ _ h => triple_of_callW (L.Ind.eView_spec p hq.eview (k + 1)
     ⟨s₀.mem, Locals.init []⟩ a) h) fun ra m₁ ⟨_, ht, hts, hne, hra⟩ => ?_
