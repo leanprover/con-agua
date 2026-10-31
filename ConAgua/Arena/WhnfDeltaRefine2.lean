@@ -97,17 +97,16 @@ theorem rawNatLit_run_const {m : Mem} {a : AState} {h : EIdx} {c : NIdx} {us : L
 theorem view_other (m : Mem) (a : AState) (hR : ArenaR m a) (h : Word) (hh : h.toNat < 2 ^ 32)
     (c : TRec) (hv : viewOK m h c)
     (hcg : (tagW h = 0 ∧ c = BVAR) ∨ (tagW h = 1 ∧ c = FVAR) ∨ (tagW h = 2 ∧ c = SORT) ∨
-      (tagW h = 4 ∧ c = APP) ∨ (tagW h = 5 ∧ c = LAM) ∨ (tagW h = 6 ∧ c = FORALL) ∨
+      (tagW h = 5 ∧ c = LAM) ∨ (tagW h = 6 ∧ c = FORALL) ∨
       (tagW h = 7 ∧ c = LET) ∨ (tagW h = 9 ∧ c = PROJ)) :
     ∃ v, a.store.view (decE h) = some v ∧ (∀ N, v ≠ .lit (.natVal N)) ∧
       (∀ c us, v ≠ .const c us) := by
-  rcases hcg with ⟨g, rfl⟩ | ⟨g, rfl⟩ | ⟨g, rfl⟩ | ⟨g, rfl⟩ | ⟨g, rfl⟩ | ⟨g, rfl⟩ | ⟨g, rfl⟩ | ⟨g, rfl⟩
+  rcases hcg with ⟨g, rfl⟩ | ⟨g, rfl⟩ | ⟨g, rfl⟩ | ⟨g, rfl⟩ | ⟨g, rfl⟩ | ⟨g, rfl⟩ | ⟨g, rfl⟩
   · exact ⟨_, view_bvar m a hR h hh hv g, fun N => nofun, fun c us => nofun⟩
   · obtain ⟨i, ty, hw⟩ := view_fvar m a hR h hh hv g
     exact ⟨_, hw, fun N => nofun, fun c us => nofun⟩
   · obtain ⟨u, hw⟩ := view_sort m a hR h hh hv g
     exact ⟨_, hw, fun N => nofun, fun c us => nofun⟩
-  · exact ⟨_, (view_app m a hR h hh hv g).1, fun N => nofun, fun c us => nofun⟩
   · exact ⟨_, (view_lam m a hR h hh hv g).1, fun N => nofun, fun c us => nofun⟩
   · exact ⟨_, (view_forall m a hR h hh hv g).1, fun N => nofun, fun c us => nofun⟩
   · exact ⟨_, (view_let m a hR h hh hv g).1, fun N => nofun, fun c us => nofun⟩
@@ -118,11 +117,21 @@ theorem rawSimple {dn : NIdx → Option ConLeche.Name} {m : Mem} {a₀ : AState}
     (c : TRec) (hsc : ¬(tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0))
     (hb : ¬ tcnt m c (tierW h) ≤ idxW h)
     (hcg : (tagW h = 0 ∧ c = BVAR) ∨ (tagW h = 1 ∧ c = FVAR) ∨ (tagW h = 2 ∧ c = SORT) ∨
-      (tagW h = 4 ∧ c = APP) ∨ (tagW h = 5 ∧ c = LAM) ∨ (tagW h = 6 ∧ c = FORALL) ∨
+      (tagW h = 5 ∧ c = LAM) ∨ (tagW h = 6 ∧ c = FORALL) ∨
       (tagW h = 7 ∧ c = LET) ∨ (tagW h = 9 ∧ c = PROJ))
     (r : List Word) (hr : r.headD 0 = 0) : RawOut m a₀ h r := by
   obtain ⟨v, hv, hl, hc⟩ := view_other m a₀ hS.arena.base h hh c ⟨hsc, by simpa using hb⟩ hcg
   exact RawOut.none (rawNatLit_run_other hv hl hc) hr
+
+/-- `rawSimple` at an `app` handle (its index is the wide one). -/
+theorem rawSimpleA {dn : NIdx → Option ConLeche.Name} {m : Mem} {a₀ : AState} {vis : Word}
+    {fe : IFEnv} {M : ModeMaps} {eb : Word} (hS : CoreS dn m a₀ vis fe M eb) {h : Word} (hh : HW h)
+    (hsc : ¬(tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0))
+    (hb : ¬ tcnt m APP (tierW h) ≤ idxA h) (g : tagW h = 4)
+    (r : List Word) (hr : r.headD 0 = 0) : RawOut m a₀ h r :=
+  RawOut.none (rawNatLit_run_other
+    (view_app m a₀ hS.arena.base h hh ⟨hsc, by simpa using hb⟩ g).1 (fun N => nofun)
+    (fun c us => nofun)) hr
 
 section refs9
 variable (p : Prog)
@@ -143,7 +152,7 @@ theorem callW_rawNatLit (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀ : AS
   -- the tags whose arm only checks the bound
   have simple : ∀ (c : TRec) (g : Prop) [Decidable g], g →
       (g → (tagW h = 0 ∧ c = BVAR) ∨ (tagW h = 1 ∧ c = FVAR) ∨ (tagW h = 2 ∧ c = SORT) ∨
-        (tagW h = 4 ∧ c = APP) ∨ (tagW h = 5 ∧ c = LAM) ∨ (tagW h = 6 ∧ c = FORALL) ∨
+        (tagW h = 5 ∧ c = LAM) ∨ (tagW h = 6 ∧ c = FORALL) ∨
         (tagW h = 7 ∧ c = LET) ∨ (tagW h = 9 ∧ c = PROJ)) →
       (if tcnt s₀.mem c (tierW h) ≤ idxW h then none else
         some ((0 : Word), (0 : Word), (0 : Word), s₀.mem)) =
@@ -229,25 +238,29 @@ theorem callW_rawNatLit (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀ : AS
   rw [ite_eq_right g3] at hW
   by_cases g4 : tagW h = 4
   · rw [ite_eq_left g4] at hW
-    obtain ⟨h1, h2⟩ := simple APP _ g4 (fun _ => Or.inr (Or.inr (Or.inr (Or.inl ⟨g4, rfl⟩)))) hW
-    exact ⟨h1, h2⟩
+    by_cases hb : tcnt s₀.mem APP (tierW h) ≤ idxA h
+    · rw [ite_eq_left hb] at hW; cases hW
+    rw [ite_eq_right hb] at hW
+    simp only [Option.some.injEq, Prod.mk.injEq] at hW
+    obtain ⟨hf, -, -, hm⟩ := hW
+    exact ⟨hm.symm, rawSimpleA hC hh hsc hb g4 r hf.symm⟩
   rw [ite_eq_right g4] at hW
   by_cases g5 : tagW h = 5
   · rw [ite_eq_left g5] at hW
     obtain ⟨h1, h2⟩ := simple LAM _ g5
-      (fun _ => Or.inr (Or.inr (Or.inr (Or.inr (Or.inl ⟨g5, rfl⟩))))) hW
+      (fun _ => Or.inr (Or.inr (Or.inr (Or.inl ⟨g5, rfl⟩)))) hW
     exact ⟨h1, h2⟩
   rw [ite_eq_right g5] at hW
   by_cases g6 : tagW h = 6
   · rw [ite_eq_left g6] at hW
     obtain ⟨h1, h2⟩ := simple FORALL _ g6
-      (fun _ => Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inl ⟨g6, rfl⟩)))))) hW
+      (fun _ => Or.inr (Or.inr (Or.inr (Or.inr (Or.inl ⟨g6, rfl⟩))))) hW
     exact ⟨h1, h2⟩
   rw [ite_eq_right g6] at hW
   by_cases g7 : tagW h = 7
   · rw [ite_eq_left g7] at hW
     obtain ⟨h1, h2⟩ := simple LET _ g7
-      (fun _ => Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inl ⟨g7, rfl⟩))))))) hW
+      (fun _ => Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inl ⟨g7, rfl⟩)))))) hW
     exact ⟨h1, h2⟩
   rw [ite_eq_right g7] at hW
   by_cases g8 : tagW h = 8
@@ -284,7 +297,7 @@ theorem callW_rawNatLit (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀ : AS
   rw [ite_eq_right g9] at hW
   have g9' : tagW h = 9 := by simpa using g9
   obtain ⟨h1, h2⟩ := simple PROJ _ g9'
-    (fun _ => Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr ⟨g9', rfl⟩))))))) hW
+    (fun _ => Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr ⟨g9', rfl⟩)))))) hW
   exact ⟨h1, h2⟩
 
 /-- **`raw_nat_lit` refines `rawNatLit?`**: the result is a flag and the literal's POOL slice
