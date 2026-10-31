@@ -656,9 +656,10 @@ says how (§7).
 
 ### 6.1 Handles
 
-A handle is con-ron's 32-bit word, held in a 64-bit word: the constructor tag in
-bits 31–28, the tier in bit 27, the node index in bits 26–0
-([`tierE`, `idxE`](https://github.com/leanprover/con-agua/blob/master/ConAgua/L/TRec.lean#L101-L105)).
+A handle is con-ron's 32-bit word, held in a 64-bit word, in one of two shapes: the tier in
+bit 31; bit 30 set for an expression `app` (wide: the node index in bits 29–0), clear for every
+other node (narrow: the constructor tag in bits 29–26, the node index in bits 25–0)
+([`tierE`, `idxE`, `idxAE`, `tagE`](https://github.com/leanprover/con-agua/blob/master/ConAgua/L/TRec.lean#L101-L105)).
 Equal terms have equal handles (hash-consing), so comparing two terms is
 comparing two words.
 
