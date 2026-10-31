@@ -247,7 +247,7 @@ theorem pi_lens {β δ : Type} {k : IdxKind} [BEq β] [Hashable β] {L : Lens β
     (heq : opP.run a = (op.run (onA false a)).map (fun r => (r.1, onA a.store.scratchOn r.2))) :
     ∃ a', opP.run a = .ok (decI r, a') ∧
       ArenaD (m₁.set64 CTL 1 (rdW (m.arr64 CTL) 1)) a' ∧ cp a' = cp a := by
-  have hcs := AM.st_proto L op key tag pf d err (onA false a) hrun hok
+  have hcs := AM.st_proto L op key tag wide pf d err (onA false a) hrun hok
   have hk : (AM.st op (onA false a)).store.pers = a.store.pers ∧
       (AM.st op (onA false a)).store.scr = a.store.scr ∧ cp (AM.st op (onA false a)) = cp a := by
     rcases hcs with h | ⟨t, h⟩ | ⟨t, h⟩ <;> rw [h]
