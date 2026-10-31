@@ -225,7 +225,7 @@ theorem frNodeOK_succ (n : Nat) (ih : FrGoOK n) : FrNodeOK (n + 1) := by
   by_cases g4 : tagW h = 4
   · by_cases hc : tcnt m APP (tierW h) ≤ idxA h
     · rw [frNodeW.abort5 n m h c hs g0 g1 g4 hc] at hb; cases hb
-    obtain ⟨hv, hf, ha⟩ := view_app m a hR h hh (vok APP hc) g4
+    obtain ⟨hv, hf, ha⟩ := view_app m a hR h hh ⟨hs, UInt64.not_le.mp hc⟩ g4
     rw [frNodeW.arm3 n m h c hs g0 g1 g4 hc] at hb
     obtain ⟨a', h1, h2⟩ := frAppArm_ok n ih F m m' a hR c _ _ r hf ha hF' hb
     exact ⟨a', (frNodeA_run F _ a _ hv).trans h1, h2⟩

@@ -63,7 +63,7 @@ theorem internLNode_succ_run (u : LIdx) (a : AState) :
     (try split) <;> simp_all [withScrSuccs, withPersSuccs, fail,
       throwThe, MonadExceptOf.throw, StateT.run, set, StateT.set,
       StateT.lift, bind, Except.bind, pure, Except.pure, StateT.bind, StateT.pure, mkS, capS,
-      ENodeView.cap, Idx.idxCap, Idx.wideCap]
+      Idx.idxCap]
 
 /-! ## The relation between L memory and the arena's `succ` tables -/
 

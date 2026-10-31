@@ -150,7 +150,7 @@ theorem nodes_eq_of_consR {α δ : Type} {k : IdxKind} [BEq α] [Hashable α] {C
     rw [← hT.cnt t ht, ← hT'.cnt t ht, hc]
   apply Array.ext hsz
   intro i h1 h2
-  have hlt : i < 2 ^ 64 := by have := hT.cap t ht; omega
+  have hlt : i < 2 ^ 64 := by have := hT.cap t ht; have := capS_le C.wide; omega
   have e : (i.toUInt64).toNat = i := by simp; omega
   have g1 : (if t = 0 then P else Q).nodes[(i.toUInt64).toNat]? = some (if t = 0 then P else Q).nodes[i] := by
     rw [e]; simp [h2]
