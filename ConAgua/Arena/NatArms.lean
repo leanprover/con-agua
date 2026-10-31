@@ -560,7 +560,7 @@ the quotient finds `7`'s node again. -/
   | some (h₁, m) => match go m "nat_mod_lit" [1, 1, 3, 1] with
     | some (h₂, m) => match go m "nat_mul_lit" [1, 1, 0, 1] with
       | some (h₃, m) => match go m "nat_div_lit" [9, 1, 0, 1] with
-        | some (h₄, _) => [h₁, h₂, h₃, h₄] == [0x20000000, 0x20000001, 0x20000002, 0x20000001]
+        | some (h₄, _) => [h₁, h₂, h₃, h₄] == [0x08000000, 0x08000001, 0x08000002, 0x08000001]
         | none => false
       | none => false
     | none => false
