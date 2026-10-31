@@ -1,3 +1,4 @@
+import ConAgua.Arena.RefWalk
 import ConAgua.Arena.RecGenSpec.CfhW
 import ConAgua.Verdict.IndBCrg
 import ConAgua.Arena.RecGenSpec.Rec3TmdWDecB
@@ -79,36 +80,22 @@ theorem crule_ref (hp : CruleProg p) (hApd : ApdF p) {visT visR : Word} {feR : I
   | zero => rw [cruleE.eq_1]; exact RefE.of_cls0 (by simp)
   | succ N =>
   rw [cruleE.arm1]
-  have hR := crg_ref hp hApd N hC hgen hqd hqb hA hcvP hgP
   unfold ConRon.Arena.classRuleOk
   rw [crgT_bind]
-  rcases h1 : crgE p N m visR cvR gen with e1 | ⟨r1, m1⟩
-  · rw [h1] at hR
-    rw [cruleE.k_class_rule_ok_guards.none]
-    exact RefE.bind_left hR
-  rw [h1] at hR
-  obtain ⟨_, a1, hc, hC1, hg1, hA1, c14, hfvP⟩ := hR
+  refine RefE.bindE (fun _ => rfl) id (crg_ref hp hApd N hC hgen hqd hqb hA hcvP hgP)
+    fun ⟨r1, m1⟩ _ a1 _ ⟨hC1, hg1, hA1, c14, hfvP⟩ => ?_
   dsimp only at hC1 hg1 hA1
   have hws : ConLeche.Expr.WScoped 0 genP := ConLeche.Expr.WScoped.of_not_hasFvar hfvP
-  rw [cruleE.k_class_rule_ok_guards.arm1]
+  dsimp only [cruleE.k_class_rule_ok_guards]
   simp only [fail_bindAM]
-  refine RefE.bind_right hc ?_
   -- the inference
-  rcases h2 : callE p N "infer_type_core" [visR, 0, gen] m1 with e2 | ⟨r2, m2⟩
-  · rw [cruleE.k_infer_type_core.none]
-    refine RefE.bind_left fun hG => ?_
-    have := hG.core.inferTypeCore N (by omega) hC1.stageT 0 gen hgen _ h2
-    simpa using this
-  obtain ⟨x6, a6, hi, hC2, hg2, -, hA2, c5, -⟩ := inferC_rsim hq henvR N (by omega) hC1 hA1 0 gen
-    hgen (ConRon.Bridge.denote_ext hgP c14.ext) hws (r2, m2) (callW_of_callE h2)
-  rw [show ((0 : Word).toNat) = 0 from rfl] at hi
-  refine RefE.bind_right hi ?_
+  refine RefE.bindCall (fun _ => rfl) (fun hG _ h2 => hG.core.inferTypeCore N (by omega) hC1.stageT 0 gen hgen _ h2)
+    (inferC_rsim hq henvR N (by omega) hC1 hA1 0 gen hgen (ConRon.Bridge.denote_ext hgP c14.ext) hws)
+    fun r2 m2 x6 a6 _ _ ⟨hC2, hg2, _, hA2, c5, _⟩ => ?_
   -- the flush
-  by_cases hno : ¬ FlushOK m2
-  · rw [cruleE.k_infer_type_core.arm1 _ _ _ _ _ _ _ _ (by simpa using hno)]
-    exact RefE.of_cls0 (by simp)
-  have hok : FlushOK m2 := Classical.not_not.mp hno
-  rw [cruleE.k_infer_type_core.arm2 _ _ _ _ _ _ _ _ (by simpa using hok)]
+  dsimp only [cruleE.k_infer_type_core]
+  refine RefE.abort0 rfl fun hno => ?_
+  have hok : FlushOK m2 := by simpa using hno
   obtain ⟨hS3, hg3⟩ := flush_stage hC2.stage hok
   obtain ⟨hok6, -, hst6⟩ := ConRon.Bridge.Inductives.ReadOK.flush (μ := V) hC2.check.toR
     (flushCaches_run a6)
@@ -120,17 +107,15 @@ theorem crule_ref (hp : CruleProg p) (hApd : ApdF p) {visT visR : Word} {feR : I
       ConRon.Bridge.CoreStep V envR feR a6 { a6 with caches := Caches.empty })
   refine RefE.bind_right (flushCaches_run a6) ?_
   -- the λ-telescope
-  rcases h4 : stripF 5 (flushMem m2) [n, gen] with _ | ⟨r4, m4⟩
-  · rw [liftE_none, cruleE.k_strip_lams.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]
+  refine RefE.bindLift (fun _ => rfl) fun r4 m4 h4 => ?_
   obtain ⟨x7, a7, hs, hS4, hg4, hd4⟩ := stripF_lams_ok dn visR feR n gen hgen _ m4 _ r4 h4 hS3
+  refine ⟨_, _, hs, ?_⟩
   have hA4 : AbsOK m4 := stripF_afr h4 hA3
   obtain ⟨hs7, hq7⟩ := ConRon.Bridge.Inductives.stripLams_pstep hok6.state
     (ConRon.Bridge.denote_ext hgP c16.ext) hs
   subst hs7
   have hC4 : StageC dn visR feR envR m4 { a6 with caches := Caches.empty } :=
     hC3.of_check hS4 hA4 hok6 (Ext.refl _)
-  refine RefE.bind_right hs ?_
   rcases x7 with _ | ⟨rbs, body⟩
   · rw [cruleE.k_strip_lams.abort1 _ _ _ _ _ _ _ hd4]; exact RefE.of_cls0 rfl
   obtain ⟨h41, ⟨hdl, htl⟩, -⟩ := hd4
@@ -138,9 +123,7 @@ theorem crule_ref (hp : CruleProg p) (hApd : ApdF p) {visT visR : Word} {feR : I
   simp only [getD_one, getD_two, Nat.reduceAdd] at hdl htl
   obtain ⟨rbsP, bodyP, -, hrbs, -⟩ := ConRon.Bridge.Inductives.denoteBP_some hq7
   -- the domains at the restricted index
-  rcases h5 : iarW N m4 visT (r4.tail.headD 0) (r4.tail.tail.headD 0) with _ | ⟨r5, m5⟩
-  · rw [liftE_none, cruleE.k_class_rule_ok_domains.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]
+  refine RefE.bindLift (fun _ => rfl) fun r5 m5 h5 => ?_
   have hb4 : (r4.tail.headD 0).toNat + (r4.tail.tail.headD 0).toNat < 2 ^ 64 := by
     have h1 : iwTop m4 ≤ (m4.arr64 IW).size := hS4.iw.iw
     have h2 : (m4.arr64 IW).size < 2 ^ 64 := hS4.iw.iwSize
@@ -149,6 +132,7 @@ theorem crule_ref (hp : CruleProg p) (hApd : ApdF p) {visT visR : Word} {feR : I
     visT _ _ rbs r5 h5 (hS4.restrict visT) hdl hb4 htl hA4
   have hdom' := hdom
   rw [← allM_resolve_eq] at hdom'
+  refine ⟨_, _, hdom', ?_⟩
   have hr6 : ConRon.Bridge.Inductives.ReadOK env₂ (feR.restrictTo visT.toNat)
       { a6 with caches := Caches.empty } :=
     ⟨hok6.state, hok6.pins, (hie.mono c16.ext) _ rfl⟩
@@ -156,7 +140,6 @@ theorem crule_ref (hp : CruleProg p) (hApd : ApdF p) {visT visR : Word} {feR : I
   have c18 := c16.trans (p8.toCore hok6)
   have hC5 : StageC dn visR feR envR m5 a8 :=
     hC4.of_check (hS5.unrestrict hC.stage.check.env.vis) hA5 c18.ok (p8.ext)
-  refine RefE.bind_right hdom' ?_
   by_cases h50 : r5.headD 0 = 0
   · rw [cruleE.k_class_rule_ok_domains.arm1 _ _ _ _ _ _ h50]
     have eb : b = false := by rw [← hb5.1]; simpa using h50
