@@ -124,8 +124,7 @@ theorem loop_ref (hD : DmProg8 p) (hq : KnotStageProg p) (hcl : LeafClosed p) (h
     obtain ⟨x1, a1, hrun1, hC1, c1, hg1, hd1, hx1v⟩ :=
       pgC hD.toDmProg7.toDmProg6 hcl hkp h1 hC hc hP hq0 hn hCr
     have hCr1 := hkp.call (im_mem _ rfl) h1 hCr
-    have hrun1' : (divModPinGuard ip fe (decI c)).run a = .ok (x1, a1) := hrun1
-    refine RefE.bind_right hrun1' ?_
+    refine RefE.bind_right hrun1 ?_
     by_cases z1 : r1.headD 0 = 0
     · rw [checkDivModPinLoopE.k_div_mod_pin_guard.arm2 _ _ _ _ _ _ _ _ _ _ z1, decW0B_false hd1 z1]
       exact RefE.ite_neg (by simp) (next m1 a1 _ hC1 hCr1 hg1 c1)
@@ -142,8 +141,7 @@ theorem loop_ref (hD : DmProg8 p) (hq : KnotStageProg p) (hcl : LeafClosed p) (h
     have hCr2 := hkp.call (im_mem _ rfl) h2 hCr1
     have hG2 : IWGrow m m2 := hg1.trans hg2
     have c02 := c1.trans c2
-    have hrun2' : (divModCertsGuard ip fe (decI c) (decE value)).run a1 = .ok (x2, a2) := hrun2
-    refine RefE.bind_right hrun2' ?_
+    refine RefE.bind_right hrun2 ?_
     by_cases z2 : r2.headD 0 = 0
     · rw [checkDivModPinLoopE.k_div_mod_certs_guard.arm2 _ _ _ _ _ _ _ _ _ _ z2, decW0B_false hd2 z2]
       exact RefE.ite_neg (by simp) (next m2 a2 _ hC2 hCr2 hG2 c02)
@@ -154,13 +152,8 @@ theorem loop_ref (hD : DmProg8 p) (hq : KnotStageProg p) (hcl : LeafClosed p) (h
       (ConRon.Bridge.PinsDenote.mono c02.ext [ip] [psP] ⟨hq0, trivial⟩).1
       (ConRon.Bridge.denoteN_ext hn c02.ext) (ConRon.Bridge.denote_ext hv c02.ext) hwsv
       (by rw [← hx1v, hx1]) hCr2
-    rcases e3 : checkDivModPinAtE p k m2 vis c value ps with e3 | ⟨r3, m3⟩
-    · rw [e3] at h3R
-      rw [checkDivModPinLoopE.k_check_div_mod_pin_at.none]
-      exact RefE.bind_left h3R
-    rw [e3] at h3R
-    obtain ⟨x3, a3, hrun3, hR3⟩ := h3R
-    refine RefE.bind_right hrun3 ?_
+    refine RefE.bindE (fun _ => checkDivModPinLoopE.k_check_div_mod_pin_at.none ..) id h3R
+      fun ⟨r3, m3⟩ x3 a3 _ hR3 => ?_
     by_cases z3 : r3 ≠ 0
     · rw [checkDivModPinLoopE.k_check_div_mod_pin_at.arm1 _ _ _ _ _ _ _ _ _ z3,
         decW0B_true hR3.res (by simpa using z3)]
@@ -225,15 +218,10 @@ theorem cp_ref (hD : DmProg8 p) (hq : KnotStageProg p) (hcl : LeafClosed p) (hkp
     (callW_leafFrame hcl (leaf_mem _ (by decide)) h1) c1
   have hCr1 := hkp.call (im_mem _ rfl) h1 hCr
   unfold checkDivModPin
-  by_cases z1 : r1.headD 0 = 0
-  · rw [checkDivModPinE.k_div_mod_env_guard.abort1 _ _ _ _ _ _ _ _ _ z1]
-    have hrun1' : (divModEnvGuard fe2 (decI c)).run a = .ok (false, a1) := by
-      rw [← decW0B_false hd1 z1]; exact hrun1
-    exact RefE.bind_right hrun1' (RefE.ite_neg (by simp) fun _ => ErrClaim.fail _ _ rfl)
-  rw [checkDivModPinE.k_div_mod_env_guard.arm1 _ _ _ _ _ _ _ _ _ z1]
-  have hrun1' : (divModEnvGuard fe2 (decI c)).run a = .ok (true, a1) := by
-    rw [← decW0B_true hd1 z1]; exact hrun1
-  refine RefE.bind_right hrun1' (RefE.ite_pos rfl ?_)
+  refine RefE.bind_right hrun1 (RefE.ofArms (fun h => checkDivModPinE.k_div_mod_env_guard.abort1 (hc1 := h) ..)
+    (fun h => checkDivModPinE.k_div_mod_env_guard.arm1 (hc1 := h) ..) (RefE.guardIf rfl (decW0B_false hd1)
+      (fun h => Classical.byContradiction fun z => Bool.false_ne_true (h.symm.trans (decW0B_true hd1 z)))
+      fun _ _ => ?_))
   -- the stored value
   refine RefE.onlySim (fun _ => checkDivModPinE.k_env_find.none ..) (fun _ _ h => h) fun r2 m2 h2 => ?_
   obtain ⟨hm2, hfd⟩ := envFind_call hD7.toDmProg6.toDmProg5.toMasterProg c hc hS1.check.env h2
@@ -296,16 +284,11 @@ theorem cp_ref (hD : DmProg8 p) (hq : KnotStageProg p) (hcl : LeafClosed p) (hkp
   have h3R := loop_ref hD hq hcl hkp hs0 hsA henv c wv hc hwlt hwsv ips psPs po pl [] k hk' m2 a1
     hC1 hCr1 (hI.grow hg1) (ConRon.Bridge.PinsDenote.mono hx1 _ _ hpd)
     (ConRon.Bridge.denoteN_ext hn hx1) hv1
-  rcases e3 : checkDivModPinLoopE p k m2 vis c wv po pl with e3 | ⟨r3, m3⟩
-  · rw [e3] at h3R
-    rw [checkDivModPinE.k_check_div_mod_pin_loop.none]
-    exact h3R
-  rw [e3] at h3R
-  rw [checkDivModPinE.k_check_div_mod_pin_loop.arm1]
-  obtain ⟨x3, a3, hrun3, hR3⟩ := h3R
+  refine RefE.lastE (fun _ => checkDivModPinE.k_check_div_mod_pin_loop.none ..)
+    (fun _ => checkDivModPinE.k_check_div_mod_pin_loop.arm1 ..) id h3R fun _ _ _ _ hR3 => ?_
   have hS3' := StageR.restrict hR3.stage.stage vis2
   rw [IFEnv.restrictTo_restrictTo, ← hS.check.env.vis, IFEnv.restrictTo_self] at hS3'
-  exact RefE.ret hrun3 ⟨⟨hR3.stage, c1.trans hR3.core, hg1.trans hR3.grow⟩, hS3'⟩
+  exact ⟨⟨hR3.stage, c1.trans hR3.core, hg1.trans hR3.grow⟩, hS3'⟩
 
 end pin
 
