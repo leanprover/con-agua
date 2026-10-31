@@ -113,29 +113,25 @@ theorem crs_ref (hP : CrsProg p) (henv : ConLeche.EnvWF env) (visT visR : Word) 
   unfold ConRon.Arena.classRulesOk
   obtain ⟨-, hlps, -⟩ := ConRon.Bridge.Core.denoteCV_inv hcvP
   -- `cv_lps`: L only
-  rcases h1 : L.Arena.cvLpsW n m cvR with _ | ⟨r1, m1⟩
-  · rw [liftE_none, crsE.k_cv_lps.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some, crsE.k_cv_lps.arm1]
+  refine RefE.onlySim (fun _ => crsE.k_cv_lps.none ..) (fun _ _ h => h) fun r1 m1 h1 => ?_
+  rw [crsE.k_cv_lps.arm1]
   obtain ⟨hS1, hg1, hd1, ht1⟩ := cvLpsA_stage h1 hS hcv (rec3CVExt_lt hS hext)
   have hA1 := cvLpsA_afr h1 hA
   have hC1 : StageC dn visR feR env m1 a := hC.of_check hS1 hA1 hC.check (Ext.refl _)
   -- `param_levels`
-  rcases h2 : plW n m1 (r1.headD 0) (r1.tail.headD 0) with _ | ⟨r2, m2⟩
-  · rw [liftE_none, crsE.k_param_levels.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some, crsE.k_param_levels.arm1]
+  refine RefE.bindLift (fun _ => crsE.k_param_levels.none ..) fun r2 m2 h2 => ?_
   obtain ⟨rl, a2, hrl2, hC2, ⟨⟨hrlH, hrl, hS2, hg2⟩, hf2⟩, hRl, p1⟩ :=
     (RSim.liftP hC1 (RSim.withF (rec3Sim_rsim (plW_sim (k := n) hS1 hd1 ht1)) (fun _ hb => plW_afr hb))
       (fun _ _ _ h => ⟨h.1.2.2.1, h.2 hA1⟩)
       (ConRon.Bridge.Inductives.paramLevels_spec cv.levelParams _) hlps) (r2, m2) h2
   dsimp only at hrlH hrl hS2 hg2 hC2
   subst hrl
-  refine RefE.bind_right hrl2 ?_
+  refine ⟨_, _, hrl2, ?_⟩
+  rw [crsE.k_param_levels.arm1]
   have hg02 := hg1.trans hg2
   have hA2 := hf2 hA1
   -- `class_gen_rule`
-  rcases h3 : ruW n m2 g rco rcl cgo cgl (r2.headD 0) c (UInt64.ofNat px) with _ | ⟨r3, m3⟩
-  · rw [liftE_none, crsE.k_class_gen_rule.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]
+  refine RefE.bindLift (fun _ => crsE.k_class_gen_rule.none ..) fun r3 m3 h3 => ?_
   obtain ⟨o3, a3, hr3, hC3, ⟨⟨hS3, hg3, ho3⟩, hA3⟩, hR3, p2⟩ :=
     (RSim.liftPP hC2 (ruW_sim dn visR feR n m2 a2 g rco rcl cgo cgl (r2.headD 0) c (UInt64.ofNat px)
       G X recCls cvGs hS2 (hG.grow (decCG_mono _) hg02) hns (hX'.grow (decCC_mono _) hg02) hrlH
@@ -147,17 +143,12 @@ theorem crs_ref (hP : CrsProg p) (henv : ConLeche.EnvWF env) (visT visR : Word) 
       ⟨dClassGen_ext p1.ext _ _ hgP, dClassCtor_ext p1.ext _ _ hXP,
         dExt_denoteCV.list p1.ext _ _ hcvsP, hRl⟩) (r3, m3) h3
   dsimp only at hS3 hg3 ho3 hC3
-  refine RefE.bind_right hr3 ?_
-  by_cases h30 : r3.headD 0 = 0
-  · rw [crsE.k_class_gen_rule.abort1 p n visT visR g rco rcl cgo cgl cvR c xo xl _ r3 m3 h30]
-    cases o3 with
-    | none => exact fun _ => ErrClaim.fail _ _ (by decide)
-    | some gen => exact absurd (by simpa using ho3.1 : r3.headD 0 = 1) (by rw [h30]; decide)
-  rw [crsE.k_class_gen_rule.arm1 p n visT visR g rco rcl cgo cgl cvR c xo xl _ r3 m3 h30]
+  refine ⟨_, _, hr3, ?_⟩
   rcases o3 with _ | gen
-  · exact absurd ho3 h30
+  · rw [crsE.k_class_gen_rule.abort1 (hc1 := ho3) ..]; exact fun _ => ErrClaim.fail _ _ (by decide)
   obtain ⟨genP, -, hgenP⟩ := hR3
   obtain ⟨h31, hgH, hgd⟩ := ho3
+  rw [crsE.k_class_gen_rule.arm1 (hc1 := by rw [h31]; decide) ..]
   subst hgd
   have hg03 := hg02.trans hg3
   have p12 := p1.trans p2
@@ -166,14 +157,10 @@ theorem crs_ref (hP : CrsProg p) (henv : ConLeche.EnvWF env) (visT visR : Word) 
     (by rw [decCVp_grow_r hg03 hext]; exact hcv) (CVExt_grow hg03 hext)
     (hG.grow (decCG_mono _) hg03) hns (hX'.grow (decCC_mono _) hg03) hA3
     (dExt_denoteCV p12.ext _ _ hcvP) hgenP (hie.mono p12.ext) (visT := visT)
-  rcases h4 : cr1E p n m3 visT visR g cvR (UInt64.ofNat px) (r3.tail.headD 0) with e4 | ⟨r4, m4⟩ <;>
-    rw [h4] at hr
-  · rw [crsE.k_class_rules_ok_one.none]; exact RefE.bind_left hr
+  refine RefE.bindE (fun _ => crsE.k_class_rules_ok_one.none ..) id hr fun ⟨r4, m4⟩ y a4 _ hR4 => ?_
   rw [crsE.k_class_rules_ok_one.arm1]
-  obtain ⟨y, a4, hrun4, hR4⟩ := hr
   have hv : r4 = r3.tail.headD 0 := hR4.val
   subst hv
-  refine RefE.bind_right hrun4 ?_
   have hg04 := hg03.trans hR4.grow
   have c14 := (p12.toCore hC.check).trans hR4.core
   -- the rest
@@ -187,16 +174,11 @@ theorem crs_ref (hP : CrsProg p) (henv : ConLeche.EnvWF env) (visT visR : Word) 
       hXsT).grow (OMono.decPL (fun q => decCC_mono q) _ _) hg04) hR4.abs
     (dClassGen_ext c14.ext _ _ hgP) (dExt_denoteCV.list c14.ext _ _ hcvsP)
     (dExt_denoteCV c14.ext _ _ hcvP) (dClassCtor_ext.list c14.ext _ _ hXsP') (hie.mono c14.ext)
-  rcases h5 : crsE p n m4 visT visR g rco rcl cgo cgl cvR c (xo + 1) (xl - 1) with e5 | ⟨r5, m5⟩ <;>
-    rw [h5] at ih'
-  · rw [crsE.k_class_rules_ok.none]; exact RefE.bind_left ih'
+  refine RefE.bindE (fun _ => crsE.k_class_rules_ok.none ..) id ih' fun ⟨r5, m5⟩ rs a5 _ hR5 => ?_
   rw [crsE.k_class_rules_ok.arm1]
-  obtain ⟨rs, a5, hrun5, hR5⟩ := ih'
-  refine RefE.bind_right hrun5 ?_
   -- `sl_cons`
-  rcases h6 : consW n m5 (r3.tail.headD 0) (r5.headD 0) (r5.tail.headD 0) with _ | ⟨r6, m6⟩
-  · rw [liftE_none, crsE.k_sl_cons.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some, crsE.k_sl_cons.arm1]
+  refine RefE.onlySim (fun _ => crsE.k_sl_cons.none ..) (fun _ _ h => h) fun r6 m6 h6 => ?_
+  rw [crsE.k_sl_cons.arm1]
   obtain ⟨hrs, hrsb⟩ := hR5.dec
   rw [getD_zero, getD_one] at hrs hrsb
   obtain ⟨hS6, hg6, hd6, ht6⟩ := consW_stage h6 hR5.stage.stage hrsb hgH hrs

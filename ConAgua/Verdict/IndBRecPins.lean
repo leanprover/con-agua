@@ -1,3 +1,4 @@
+import ConAgua.Arena.RefWalk
 import ConAgua.Arena.RecCheckSpec.TargetRecPins
 import ConAgua.Arena.IndSumSpec.SoaW
 import ConAgua.Verdict.VCtx
@@ -246,12 +247,8 @@ theorem trp_ref (N : Nat) {m : Mem} {a : AState} {pp bo bl : Word} {bs : BlockSh
     simpa using this
   rw [trpE.arm1, rd2, rd3]
   -- `block_rec_lps_ok`
-  cases h1 : callE p N "block_rec_lps_ok" [pp] m with
-  | error e1 =>
-    rw [trpE.k_block_rec_lps_ok.none]
-    exact fun hV => ErrClaim.of_callE_nv hV.nv (_root_.L.Checker.nv_mem (by decide +kernel)) h1
-  | ok q1 =>
-  obtain ⟨r1, m1⟩ := q1
+  refine RefE.onlyCall (fun _ => rfl) (fun hV => hV.nv) (_root_.L.Checker.nv_mem (by decide +kernel))
+    fun r1 m1 h1 => ?_
   obtain ⟨s1, hs1, -, hW1⟩ := triple_of_callW (blockRecLpsOk_spec p L.alloc L.erCopy L.erToIw L.slEq L.copy L.cons
     L.lpsOne L.lpsGo L.lps L.lpsOk N ⟨m, Locals.init []⟩ pp) (callW_of_callE h1)
   subst hs1
@@ -267,12 +264,8 @@ theorem trp_ref (N : Nat) {m : Mem} {a : AState} {pp bo bl : Word} {bs : BlockSh
     rw [hr1] at hz1
     exact Classical.byContradiction fun hc => by simp [hc] at hz1
   -- `block_rec_names_unreserved`
-  cases h2 : callE p N "block_rec_names_unreserved" [ro, rl] s1.mem with
-  | error e2 =>
-    rw [trpE.k_block_rec_names_unreserved.none]
-    exact fun hV => ErrClaim.of_callE_nv hV.nv (_root_.L.Checker.nv_mem (by decide +kernel)) h2
-  | ok q2 =>
-  obtain ⟨r2, m2⟩ := q2
+  refine RefE.onlyCall (fun _ => rfl) (fun hV => hV.nv) (_root_.L.Checker.nv_mem (by decide +kernel))
+    fun r2 m2 h2 => ?_
   obtain ⟨s2, hs2, -, hok2, hr2, hS2, hg2⟩ := triple_of_callW (s₀ := ⟨s1.mem, Locals.init []⟩)
     (blockRecNamesUnreserved_refines p L.unres L.rrn N _ a dn fe vis ro rl bs.recs hS1
       ((hrsB.grow (OMono.decPL (fun q => decRS_mono q) _ _) hg1).stab (OMono.decPL (fun q => decRS_mono q) _ _))
@@ -297,12 +290,8 @@ theorem trp_ref (N : Nat) {m : Mem} {a : AState} {pp bo bl : Word} {bs : BlockSh
     exact Classical.byContradiction fun hc => by simp [hc] at hz2
   rw [hc1] at hrun1
   -- `block_rec_split_own_aux`
-  cases h3 : callE p N "block_rec_split_own_aux" [ro, rl, ml] s2.mem with
-  | error e3 =>
-    rw [trpE.k_block_rec_split_own_aux.none]
-    exact fun hV => ErrClaim.of_callE_nv hV.nv (_root_.L.Checker.nv_mem (by decide +kernel)) h3
-  | ok q3 =>
-  obtain ⟨r3, m3⟩ := q3
+  refine RefE.onlyCall (fun _ => rfl) (fun hV => hV.nv) (_root_.L.Checker.nv_mem (by decide +kernel))
+    fun r3 m3 h3 => ?_
   obtain ⟨s3, hs3, -, hW3⟩ := triple_of_callW (s₀ := ⟨s2.mem, Locals.init []⟩)
     (soa_spec p L.toIndPartsProg L.soa N _ ro rl ml) (callW_of_callE h3)
   subst hs3
@@ -316,12 +305,8 @@ theorem trp_ref (N : Nat) {m : Mem} {a : AState} {pp bo bl : Word} {bs : BlockSh
   rw [hk] at hown haux
   rw [trpE.k_block_rec_split_own_aux.arm1, rd0 _ (hg12.trans hg3)]
   -- `block_rec_name_set_ok`
-  cases h4 : callE p (N' + 1) "block_rec_name_set_ok" [mo, ml, r3.headD 0, r3.tail.headD 0] s3.mem with
-  | error e4 =>
-    rw [trpE.k_block_rec_name_set_ok.none]
-    exact fun hV => ErrClaim.of_callE_nv hV.nv (_root_.L.Checker.nv_mem (by decide +kernel)) h4
-  | ok q4 =>
-  obtain ⟨r4, m4⟩ := q4
+  refine RefE.onlyCall (fun _ => rfl) (fun hV => hV.nv) (_root_.L.Checker.nv_mem (by decide +kernel))
+    fun r4 m4 h4 => ?_
   have hms3 := hms.grow (fun q => decMS_mono q) (hg12.trans hg3)
   obtain ⟨s4, hs4, -, hok4, hr4, hS4, hg4⟩ := triple_of_callW (s₀ := ⟨s3.mem, Locals.init []⟩)
     (blockRecNameSetOk_refines p L.toIndPartsProg3 N' _ _ dn vis fe mo ml (r3.headD 0) (r3.tail.headD 0)
@@ -347,13 +332,8 @@ theorem trp_ref (N : Nat) {m : Mem} {a : AState} {pp bo bl : Word} {bs : BlockSh
     exact Classical.byContradiction fun hc => by simp [hc] at hz4
   rw [hc2] at hrun2
   -- `target_rec_pins_names`
-  cases h5 : callE p (N' + 1) "target_rec_pins_names"
-      [mo, ml, ro, rl, r3.tail.tail.headD 0, r3.tail.tail.tail.headD 0] s4.mem with
-  | error e5 =>
-    rw [trpE.k_target_rec_pins_names.none]
-    exact fun hV => ErrClaim.of_callE_nv hV.nv (_root_.L.Checker.nv_mem (by decide +kernel)) h5
-  | ok q5 =>
-  obtain ⟨r5, m5⟩ := q5
+  refine RefE.onlyCall (fun _ => rfl) (fun hV => hV.nv) (_root_.L.Checker.nv_mem (by decide +kernel))
+    fun r5 m5 h5 => ?_
   obtain ⟨s5, hs5, -, hW5⟩ := triple_of_callW (s₀ := ⟨s4.mem, Locals.init []⟩)
     (tpn_spec p L.names (N' + 1) ⟨s4.mem, Locals.init []⟩ mo ml ro rl (r3.tail.tail.headD 0)
       (r3.tail.tail.tail.headD 0)) (callW_mono (callW_of_callE h5) (by omega))
@@ -377,12 +357,8 @@ theorem trp_ref (N : Nat) {m : Mem} {a : AState} {pp bo bl : Word} {bs : BlockSh
     exact Classical.byContradiction fun hc => by simp [hc] at hz5
   subst hb
   -- `target_rec_pins_split`
-  cases h6 : callE p (N' + 1) "target_rec_pins_split" [pp, ml, rl, bo, bl] s5.mem with
-  | error e6 =>
-    rw [trpE.k_target_rec_pins_split.none]
-    exact fun hV => ErrClaim.of_callE_nv hV.nv (_root_.L.Checker.nv_mem (by decide +kernel)) h6
-  | ok q6 =>
-  obtain ⟨r6, m6⟩ := q6
+  refine RefE.onlyCall (fun _ => rfl) (fun hV => hV.nv) (_root_.L.Checker.nv_mem (by decide +kernel))
+    fun r6 m6 h6 => ?_
   obtain ⟨s6, hs6, -, hW6⟩ := triple_of_callW (s₀ := ⟨s5.mem, Locals.init []⟩)
     (tps_spec p L.psplit (N' + 1) _ pp ml rl bo bl) (callW_mono (callW_of_callE h6) (by omega))
   subst hs6

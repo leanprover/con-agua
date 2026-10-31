@@ -161,12 +161,8 @@ theorem crr_ref (hP : CrrProg p) (henv : ConLeche.EnvWF env) (visT visR : Word) 
     (gP.ctors.getD c0 []) hC hG hrc (rec3SPL_decB hcg) (by rw [tp]; exact hcvp)
     (by rw [tp]; exact hcvx) hxs hA hgP hcvGsP hcvP (ctorsAt_denote hgP c0) hie
   rw [tc] at hr
-  rcases h1 : crsE p n m visT visR g rco rcl cgo cgl (UInt64.ofNat pp) (UInt64.ofNat c0)
-      (crrXs m g (UInt64.ofNat c0)).1 (crrXs m g (UInt64.ofNat c0)).2 with e1 | ⟨r1, m1⟩ <;> rw [h1] at hr
-  · rw [crrE.k_class_rules_ok.none]; exact RefE.bind_left hr
+  refine RefE.bindE (fun _ => crrE.k_class_rules_ok.none ..) id hr fun ⟨r1, m1⟩ rhss a1 _ hR1 => ?_
   rw [crrE.k_class_rules_ok.arm1]
-  obtain ⟨rhss, a1, hrun1, hR1⟩ := hr
-  refine RefE.bind_right hrun1 ?_
   -- `target_major_at`
   have hS1 := hR1.stage.stage
   have hG1 := hG.grow (decCG_mono _) hR1.grow
@@ -184,20 +180,18 @@ theorem crr_ref (hP : CrrProg p) (henv : ConLeche.EnvWF env) (visT visR : Word) 
     G.cls hS1 (by rw [t3, t4]; exact hcls) (by rw [t3, t4]; exact hb3)
   rw [tc] at hM
   obtain ⟨-, -, hclsP, -, -, -, -, -⟩ := dClassGen_inv hgP
-  rcases h2 : tmaW n m1 (UInt64.ofNat o3) (UInt64.ofNat l3) (UInt64.ofNat c0) with _ | ⟨r2, m2⟩
-  · rw [liftE_none, crrE.k_target_major_at.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some, crrE.k_target_major_at.arm1]
+  refine RefE.bindLift (fun _ => crrE.k_target_major_at.none ..) fun r2 m2 h2 => ?_
   obtain ⟨M, a2, hrun2, hC2, ⟨⟨hS2, hg2, hMd⟩, hf2⟩, -, p2⟩ :=
     (RSim.liftPP hR1.stage (RSim.withF hM (fun _ hb => tmaW_afr hb)) (fun _ _ _ h => ⟨h.1.1, h.2 hR1.abs⟩)
       (ConRon.Bridge.Inductives.targetMajorAt_spec G.cls gP.cls c0)
       (dMajor_ext.list hR1.core.ext _ _ hclsP)) (r2, m2) h2
   dsimp only at hS2 hg2 hMd hC2
   have c12 := hR1.core.trans (p2.toCore hR1.core.ok)
-  refine RefE.bind_right hrun2 ?_
+  refine ⟨_, _, hrun2, ?_⟩
+  rw [crrE.k_target_major_at.arm1]
   -- `rec4`: L only
-  rcases h3' : recW m2 4 [UInt64.ofNat pp, r2.headD 0, r1.headD 0, r1.tail.headD 0] with _ | ⟨r3, m3⟩
-  · rw [liftE_none, crrE.k_rec4.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some, crrE.k_rec4.arm1]
+  refine RefE.onlySim (fun _ => crrE.k_rec4.none ..) (fun _ _ h => h) fun r3 m3 h3' => ?_
+  rw [crrE.k_rec4.arm1]
   obtain ⟨hS3, hg3, hr3, hget3, htop3⟩ := recW_stage h3' hS2 rfl
   have hA3 := recW_afr h3' (hf2 hR1.abs)
   have hC3 : StageC dn visR feR env m3 a2 := hC2.of_check hS3 hA3 hC2.check (Ext.refl _)
@@ -222,16 +216,11 @@ theorem crr_ref (hP : CrrProg p) (henv : ConLeche.EnvWF env) (visT visR : Word) 
       hcsT).grow (OMono.decNL _ _) hg03) hA3
     (dClassGen_ext c12.ext _ _ hgP) (dExt_denoteCV.list c12.ext _ _ hcvGsP)
     (dExt_denoteCV.list c12.ext _ _ hcvsP') (hie.mono c12.ext)
-  rcases h4' : crrE p n m3 visT visR g rco rcl cgo cgl (vo + 1) (vl - 1) (co + 1) (cl - 1) with e4 | ⟨r4, m4⟩ <;>
-    rw [h4'] at ih'
-  · rw [crrE.k_class_recs_rules_ok_go.none]; exact RefE.bind_left ih'
+  refine RefE.bindE (fun _ => crrE.k_class_recs_rules_ok_go.none ..) id ih' fun ⟨r4, m4⟩ rest a4 _ hR4 => ?_
   rw [crrE.k_class_recs_rules_ok_go.arm1]
-  obtain ⟨rest, a4, hrun4, hR4⟩ := ih'
-  refine RefE.bind_right hrun4 ?_
   -- `sl_cons`
-  rcases h5 : consW n m4 (r3.headD 0) (r4.headD 0) (r4.tail.headD 0) with _ | ⟨r5, m5⟩
-  · rw [liftE_none, crrE.k_sl_cons.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some, crrE.k_sl_cons.arm1]
+  refine RefE.onlySim (fun _ => crrE.k_sl_cons.none ..) (fun _ _ h => h) fun r5 m5 h5 => ?_
+  rw [crrE.k_sl_cons.arm1]
   obtain ⟨hrs, hrsb⟩ := hR4.dec
   obtain ⟨hS5, hg5, hd5, ht5⟩ := partsConsPL decRR_mono h5 hR4.stage.stage hrsb hrs
     (hrec.grow (decRR_mono _) hR4.grow)
@@ -264,12 +253,9 @@ theorem crra_ref (hP : CrrProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : A
   have h := crr_ref hq hApd hP henv visT visR feR (env₂ := env₂) g rco rcl cgo cgl G recCls cvGs hns hrcb
     hcgb gP cvGsP n (by omega) m a cgo cgl rco rcl cvGs recCls cvGsP hC hG hrc hcg hcg hrc hA hgP hcvGsP
     hcvGsP hie
-  rcases h1 : crrE p n m visT visR g rco rcl cgo cgl cgo cgl rco rcl with e1 | ⟨r1, m1⟩ <;> rw [h1] at h
-  · rw [crraE.k_class_recs_rules_ok_go.none]; exact h
-  rw [crraE.k_class_recs_rules_ok_go.arm1]
-  obtain ⟨xs, a1, hrun, hR⟩ := h
-  exact RefE.ret hrun ⟨hR.stage, hR.grow, ⟨by simpa using hR.dec.1, by simpa using hR.dec.2⟩, hR.abs,
-    hR.core⟩
+  refine RefE.lastE (fun _ => crraE.k_class_recs_rules_ok_go.none ..)
+    (fun _ => crraE.k_class_recs_rules_ok_go.arm1 ..) id h fun _ _ _ _ hR =>
+    ⟨hR.stage, hR.grow, ⟨by simpa using hR.dec.1, by simpa using hR.dec.2⟩, hR.abs, hR.core⟩
 
 include hq hApd in
 /-- **`class_recs_rules_ok` refines `classRecsRulesOk`** under `StageC` (the inputs' denotations as

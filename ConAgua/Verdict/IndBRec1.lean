@@ -1,3 +1,4 @@
+import ConAgua.Arena.RefWalk
 import ConAgua.Arena.RecGenSpec.ClassMinorSlotW
 import ConAgua.Arena.RecClassSpec.Rec2SimTMA
 import ConAgua.Arena.RecClassSpec.MkTMWAfr
@@ -68,34 +69,24 @@ theorem kof_ref (n : Nat) {m : Mem} {a : AState} {nP po pl key : Word} {pfvs : L
   | zero => rw [classKeyOfE.eq_1]; exact RefE.of_cls0 (by simp)
   | succ n =>
   rw [classKeyOfE.arm1]
-  rcases h1 : kcWf n m po pl key with _ | ⟨r1, m1⟩
-  · rw [liftE_none, classKeyOfE.k_class_key_canon.none]; exact RefE.of_cls0 (by simp)
+  unfold ConRon.Arena.classKeyOf
+  refine RefE.bindLift (fun _ => rfl) fun r1 m1 h1 => ?_
   obtain _ | k := n
   · simp [kcWf] at h1
-  rw [liftE_some]
   obtain ⟨x1, a1, hrun1, hd1, hb1, hds1, hS1, hg1, hP1⟩ :=
     kcW_ok dn fe vis k m m1 a po pl key r1 pfvs ck h1 hS hpf hpb hk hP
   have htop1 : iwTop m1 < 2 ^ 64 := Nat.lt_of_le_of_lt hS1.iw.iw hS1.iw.iwSize
   obtain ⟨nk, hnk, rfl⟩ := decCK_decB_nk hd1
   obtain ⟨-, -, -, -, hds, -, -⟩ := pos2_nk_fields hnk htop1
-  unfold ConRon.Arena.classKeyOf
-  refine RefE.bind_right hrun1 ?_
-  rw [classKeyOfE.k_class_key_canon.eq_2]
-  rcases h2 : ckc2W (k + 1) m1 nP (rdW (m1.arr64 IW) (r1.headD 0 + 2))
-      (rdW (m1.arr64 IW) (r1.headD 0 + 3)) with _ | ⟨r2, m2⟩
-  · rw [liftE_none, classKeyOfE.k_class_key_of_closed.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]
+  refine ⟨_, _, hrun1, ?_⟩
+  dsimp only [classKeyOfE.k_class_key_canon]
+  refine RefE.bindLift (fun _ => rfl) fun r2 m2 h2 => ?_
   obtain ⟨b, a2, hrun2, hS2, hg2, hb2, -⟩ := ckc2W_ok dn fe vis (k + 1) m1 m2 a1 nP _ _ nk.ds r2 h2 hS1
     hds (by omega) hds1
-  refine RefE.bind_right hrun2 ?_
-  by_cases h0 : r2.headD 0 = 0
-  · rw [classKeyOfE.k_class_key_of_closed.abort1 p _ r2 _ h0]
-    have hbf : b = false := by rw [← hb2, h0]; rfl
-    subst hbf
-    exact fun _ => ErrClaim.fail _ _ rfl
-  rw [classKeyOfE.k_class_key_of_closed.arm1 p _ r2 _ h0]
-  have hbt : b = true := by rw [← hb2]; exact bne_iff_ne.mpr h0
-  subst hbt
+  refine ⟨_, _, hrun2, ?_⟩
+  dsimp only [classKeyOfE.k_class_key_of_closed]
+  refine RefE.guard rfl (fun h0 => by rw [← hb2, h0]; rfl)
+    (fun hb => by rw [← hb2] at hb; simpa using hb) fun _ _ => ?_
   have ek (j : Word) (hj : j.toNat < 4) :
       rdW (m2.arr64 IW) (r1.headD 0 + j) = rdW (m1.arr64 IW) (r1.headD 0 + j) := by
     simp only [rdW, word_add_toNat (show (r1.headD 0).toNat + j.toNat < 2 ^ 64 by omega)]
@@ -160,10 +151,7 @@ theorem cms_ref {p : Prog} (hgo : p.lookup "class_minor_slot_go" = some classMin
   | zero => rw [classMinorSlotE.eq_1]; exact RefE.of_cls0 (by simp)
   | succ n =>
   simp only [classMinorSlotE]
-  rcases h1 : callE p n "class_minor_slot_go"
-      [rdW (m.arr64 IW) rd, rdW (m.arr64 IW) (rd + 1), 0, c, cc, 0, 0, 0, 0] m with e1 | ⟨r, m1⟩
-  · rw [classMinorSlotE.k_class_minor_slot_go.none]
-    exact fun hnv => ErrClaim.of_callE_nv hnv (_root_.L.Checker.nv_mem (by decide +kernel)) h1
+  refine RefE.onlyCall (fun _ => rfl) id (_root_.L.Checker.nv_mem (by decide +kernel)) fun r m1 h1 => ?_
   obtain ⟨s', rfl, -, hm, x, y, z, w, hg, rfl⟩ := triple_of_callW
     (classMinorSlotGo_spec p hgo n ⟨m, Locals.init []⟩ _ _ 0 c cc 0 0 0 0) (callW_of_callE h1)
   simp only at hm hg
@@ -309,15 +297,13 @@ theorem rg_ref {p : Prog} (n : Nat) {m : Mem} {a : AState} {g k rc c : Word} {G 
     · have := iwN_rdW h3 (by omega); omega
     · have := rec2DecB_PL_top hcls hl; omega
   rw [classRecTyOkGuardsE.arm1, e3, e4]
-  rcases h1 : tmaW n m (UInt64.ofNat o3) (UInt64.ofNat l3) c with _ | ⟨r1, m1⟩
-  · rw [liftE_none, classRecTyOkGuardsE.k_target_major_at.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]
+  unfold rgT
+  refine RefE.bindLift (fun _ => rfl) fun r1 m1 h1 => ?_
   obtain ⟨tm, a1, hrun1, hS1, hg1, hTM, -⟩ := rec2SimTMA dn vis fe n m a (UInt64.ofNat o3) (UInt64.ofNat l3)
     c G.cls hS (by rw [t3, t4]; exact hcls) (by rw [t3, t4]; exact hb3) (r1, m1) h1
   dsimp only at hS1 hg1 hTM
   have hA1 : AbsOK m1 := tmaW_afr h1 hA
-  unfold rgT
-  refine RefE.bind_right hrun1 ?_
+  refine ⟨_, _, hrun1, ?_⟩
   have hsz1 := hS1.iw.iwSize
   obtain ⟨k8, hk8, hmem⟩ := decTM_member hTM
   obtain ⟨-, -, -, -, hni⟩ := rec2DecTM_parts hTM
@@ -357,66 +343,39 @@ theorem rg_ref {p : Prog} (n : Nat) {m : Mem} {a : AState} {g k rc c : Word} {G 
               not the generated one")
           pure tm) a1 (fun v tm' a' => RgPost dn vis fe m a G c v.2 tm' a') := by
     intro memv hmv
-    by_cases c1 : rdW (m1.arr64 IW) (rc + 3) = memv
-    · have g1t : (RS.tgt == tm.member.getD k.toNat) = true := by
-        apply hmg.mp; rw [← hmv, ← eT]; exact c1
-      by_cases c2 : rdW (m1.arr64 IW) (rc + 1) = rdW (m1.arr64 IW) g + rdW (m1.arr64 IW) (g + 8)
-      · have hrPe : RS.rP = G.nP + G.slots.length := by
-          have := congrArg UInt64.toNat c2
-          rw [eP, eg, eg8, UInt64.toNat_ofNat_of_lt' rPlt, rec2W_add _ _ nPlt sllt, hsl8] at this
-          rw [this, Nat.mod_eq_of_lt hns]
-        by_cases c3 : rdW (m1.arr64 IW) (rc + 1) + rdW (m1.arr64 IW) (r1.headD 0 + 5) <
-            rdW (m1.arr64 IW) (rc + 1)
-        · rw [classRecTyOkGuardsE.j1.abort3 p g rc _ memv m1 c1 c2 c3]
-          exact RefE.of_cls0 rfl
-        have hno : RS.rP + tm.nIdx < 2 ^ 64 := by
-          rw [eP, e5] at c3
-          have : ¬ (UInt64.ofNat RS.rP + UInt64.ofNat tm.nIdx : Word).toNat < (UInt64.ofNat RS.rP : Word).toNat :=
-            fun x => c3 (UInt64.lt_iff_toNat_lt.mpr x)
-          rw [rec2W_add _ _ rPlt nilt, UInt64.toNat_ofNat_of_lt' rPlt] at this
-          omega
-        by_cases c4 : rdW (m1.arr64 IW) (rc + 2) = rdW (m1.arr64 IW) (rc + 1) + rdW (m1.arr64 IW) (r1.headD 0 + 5)
-        · rw [classRecTyOkGuardsE.j1.arm1 p g rc _ memv m1 c1 c2 c3 c4]
-          have hmIe : RS.mI = RS.rP + tm.nIdx := by
-            have := congrArg UInt64.toNat c4
-            rw [eI, eP, e5, UInt64.toNat_ofNat_of_lt' mIlt, rec2W_add _ _ rPlt nilt, Nat.mod_eq_of_lt hno] at this
-            exact this
-          have g2t : (RS.rP == G.nP + G.slots.length && RS.mI == RS.rP + tm.nIdx) = true := by
-            simp [hrPe, hmIe]
-          refine RefE.ret (y := tm) (a' := a1) ?_ ⟨hrun1, hS1, hg1, hA1⟩
-          simp only [g1t, g2t, ite_true]
-          rfl
-        · rw [classRecTyOkGuardsE.j1.abort4 p g rc _ memv m1 c1 c2 c3 c4]
-          refine fun _ => ?_
-          have g2f : (RS.rP == G.nP + G.slots.length && RS.mI == RS.rP + tm.nIdx) = false := by
-            cases hh : (RS.rP == G.nP + G.slots.length && RS.mI == RS.rP + tm.nIdx)
-            · rfl
-            · exfalso
-              simp only [Bool.and_eq_true, beq_iff_eq] at hh
-              apply c4
-              rw [eI, eP, e5, hh.2, UInt64.ofNat_add]
-          simp only [g1t, g2f, Bool.false_eq_true, ite_true, ite_false]
-          exact ErrClaim.bind_left (ErrClaim.fail _ _ (by decide))
-      · rw [classRecTyOkGuardsE.j1.abort2 p g rc _ memv m1 c1 c2]
-        refine fun _ => ?_
-        have g2f : (RS.rP == G.nP + G.slots.length && RS.mI == RS.rP + tm.nIdx) = false := by
-          cases hh : (RS.rP == G.nP + G.slots.length && RS.mI == RS.rP + tm.nIdx)
-          · rfl
-          · exfalso
-            simp only [Bool.and_eq_true, beq_iff_eq] at hh
-            apply c2
-            rw [eP, eg, eg8, hh.1, ← hsl8, UInt64.ofNat_add]
-        simp only [g1t, g2f, Bool.false_eq_true, ite_true, ite_false]
-        exact ErrClaim.bind_left (ErrClaim.fail _ _ (by decide))
-    · rw [classRecTyOkGuardsE.j1.abort1 p g rc _ memv m1 c1]
-      refine fun _ => ?_
-      rw [eT, hmv] at c1
-      have g1f : (RS.tgt == tm.member.getD k.toNat) = false := by
-        cases hh : (RS.tgt == tm.member.getD k.toNat)
-        · rfl
-        · exact absurd (hmg.mpr hh) c1
-      simp only [g1f, Bool.false_eq_true, ite_false]
-      exact ErrClaim.bind_left (ErrClaim.fail _ _ (by decide))
+    have hgm : rdW (m1.arr64 IW) (rc + 3) = memv ↔ (RS.tgt == tm.member.getD k.toNat) = true := by
+      rw [eT, hmv]; exact hmg
+    dsimp only [classRecTyOkGuardsE.j1]
+    refine RefE.guard (by decide) (fun c1 => Bool.eq_false_iff.mpr fun h => c1 (hgm.mpr h))
+      (fun hb h => absurd (hgm.mp h) (by simp [hb])) fun _ _ => ?_
+    by_cases c2 : rdW (m1.arr64 IW) (rc + 1) ≠ rdW (m1.arr64 IW) g + rdW (m1.arr64 IW) (g + 8)
+    · rw [ite_eq_left c2]
+      refine RefE.twinFail (by decide) (Bool.eq_false_iff.mpr fun hh => c2 ?_)
+      simp only [Bool.and_eq_true, beq_iff_eq] at hh
+      rw [eP, eg, eg8, hh.1, ← hsl8, UInt64.ofNat_add]
+    refine RefE.pass c2 ?_
+    have hrPe : RS.rP = G.nP + G.slots.length := by
+      have := congrArg UInt64.toNat (Decidable.of_not_not c2)
+      rw [eP, eg, eg8, UInt64.toNat_ofNat_of_lt' rPlt, rec2W_add _ _ nPlt sllt, hsl8] at this
+      rw [this, Nat.mod_eq_of_lt hns]
+    refine RefE.abort0 rfl fun c3 => ?_
+    have hno : RS.rP + tm.nIdx < 2 ^ 64 := by
+      rw [eP, e5] at c3
+      have : ¬ (UInt64.ofNat RS.rP + UInt64.ofNat tm.nIdx : Word).toNat < (UInt64.ofNat RS.rP : Word).toNat :=
+        fun x => c3 (UInt64.lt_iff_toNat_lt.mpr x)
+      rw [rec2W_add _ _ rPlt nilt, UInt64.toNat_ofNat_of_lt' rPlt] at this
+      omega
+    by_cases c4 : rdW (m1.arr64 IW) (rc + 2) ≠ rdW (m1.arr64 IW) (rc + 1) + rdW (m1.arr64 IW) (r1.headD 0 + 5)
+    · rw [ite_eq_left c4]
+      refine RefE.twinFail (by decide) (Bool.eq_false_iff.mpr fun hh => c4 ?_)
+      simp only [Bool.and_eq_true, beq_iff_eq] at hh
+      rw [eI, eP, e5, hh.2, UInt64.ofNat_add]
+    refine RefE.pass c4 ?_
+    have hmIe : RS.mI = RS.rP + tm.nIdx := by
+      have := congrArg UInt64.toNat (Decidable.of_not_not c4)
+      rw [eI, eP, e5, UInt64.toNat_ofNat_of_lt' mIlt, rec2W_add _ _ rPlt nilt, Nat.mod_eq_of_lt hno] at this
+      exact this
+    exact RefE.twinPass (by simp [hrPe, hmIe]) (RefE.ret rfl ⟨hrun1, hS1, hg1, hA1⟩)
   by_cases hmz : rdW (m1.arr64 IW) (r1.headD 0 + 8) ≠ 0
   · rw [classRecTyOkGuardsE.k_target_major_at.arm1 p g k rc r1 m1 hmz]
     refine key _ ?_
