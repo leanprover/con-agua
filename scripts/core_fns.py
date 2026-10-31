@@ -4,6 +4,11 @@
 ConAgua.Checker.Prog built. Usage: scripts/core_fns.py [--check]"""
 import os, re, subprocess, sys
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+# Refuse stale oleans: right after checker_prog.py the old `Prog` olean would give an old list.
+_r = subprocess.run([os.path.join(ROOT, "scripts", "lake"), "build", "--no-build", "ConAgua.Checker.Prog"],
+                    cwd=ROOT, capture_output=True, text=True)
+if _r.returncode != 0:
+    sys.exit("ConAgua.Checker.Prog is out of date: run `scripts/lake build ConAgua.Checker.Prog` first\n" + _r.stdout[-800:])
 out = subprocess.run([os.path.join(ROOT, "scripts", "lake"), "env", "lean", "scripts/core_fns.lean"],
                      cwd=ROOT, capture_output=True, text=True)
 fns = [l[3:].strip() for l in out.stdout.splitlines() if l.startswith("FN ")]
