@@ -437,40 +437,29 @@ theorem cdo_ref {p : Prog} (hV : ValProg p) (hC : CrpProg p) (hq : KnotStageProg
   obtain ⟨wv, hwv, hwvl, rfl⟩ := hd?_some hval1
   rw [rdW_of_get? hq1.symm (erecP_get hwn), rdW_of_get? hq5.symm (erecP_get hwv)]
   -- `check_constant_val`
-  have h2R := ccv_ref hq hap hkp hn' hS1 (by rw [hq1]; exact hcv1) (by omega) (denoteCV_lps hcvd)
-    hCr1
-  rcases h2 : callE p n "check_constant_val" [vis, q + 1] s1.mem with e2 | ⟨r2, m2⟩
-  · rw [checkDeclOpaqueE.k_check_constant_val.none]
-    exact RefE.bind_left fun hG => RefE.run_err (s₀ := ⟨s1.mem, Locals.init []⟩)
-      (checkConstantVal_specE p hV n _ vis (q + 1)) hG.nv hG.toVerdictCtxU h2R h2
-  rw [checkDeclOpaqueE.k_check_constant_val.arm1]
-  obtain ⟨s2, hs2, -, _, a2, hrun2, hP2⟩ := RefE.run_ok (s₀ := ⟨s1.mem, Locals.init []⟩)
-    (checkConstantVal_specE p hV n _ vis (q + 1)) h2R h2
-  subst hs2
+  refine RefE.bindRun (s₀ := ⟨s1.mem, Locals.init []⟩) (fun _ => rfl)
+    (checkConstantVal_specE p hV n _ vis (q + 1)) (fun hG => hG.nv) (fun hG => hG.toVerdictCtxU)
+    (ccv_ref hq hap hkp hn' hS1 (by rw [hq1]; exact hcv1) (by omega) (denoteCV_lps hcvd) hCr1)
+    fun r2 s2 _ a2 _ _ hrun2 hP2 => ?_
+  dsimp only [checkDeclOpaqueE.k_check_constant_val]
   obtain ⟨hstep1, F1, hpure1⟩ :=
     ConRon.Bridge.checkConstantVal_bridge_of_fold rfl (CoreSpec.of_core rfl) hfold hcvd hrun2
   have hok1 := hfold.ofCore hstep1
   have hcA := ConRon.Bridge.denoteCV_ext hcvd hstep1.ext
   have hv1 := ConRon.Bridge.denote_ext hvd hstep1.ext
-  refine RefE.bind_right hrun2 ?_
   -- `check_opaque_val`
   have hx2 : ArrExt (erecP s1.mem) (erecP s2.mem) := IWGrow.erecPExt hP2.grow
-  have h3R := ov_ref hq hV hap hkp hn' "type mismatch in opaque" hP2.stage
-    (ArrExt.decCI hx2 hci1) (ArrExt.decCV hx2 (decCI_cvTA hci1 (.inr rfl)))
-    (ArrExt.hd? hx2 hval1) (denoteCV_lps hcA) hP2.crOK
-  rcases h3 : callE p n "check_opaque_val" [vis, q] s2.mem with e3 | ⟨r3, m3⟩
-  · rw [checkDeclOpaqueE.k_check_opaque_val.none]
-    refine RefE.bind_left fun hG => ?_
-    rw [checkOpaqueVal_dvT]
-    exact RefE.run_err (s₀ := ⟨s2.mem, Locals.init []⟩) (checkOpaqueVal_specE p hV n _ vis q)
-      trivial ⟨fun _ _ _ _ h => callE_nv hG.nv (declNv_mem _ (by decide +kernel)) _ _ _ h,
-        hG.core, hG.ivg⟩ h3R h3
-  rw [checkDeclOpaqueE.k_check_opaque_val.arm1]
+  rw [checkOpaqueVal_dvT]
+  refine RefE.bindRun (s₀ := ⟨s2.mem, Locals.init []⟩) (fun _ => rfl) (checkOpaqueVal_specE p hV n _ vis q)
+    (fun _ => trivial)
+    (fun hG => ⟨fun _ _ _ _ h => callE_nv hG.nv (declNv_mem _ (by decide +kernel)) _ _ _ h, hG.core, hG.ivg⟩)
+    (ov_ref hq hV hap hkp hn' "type mismatch in opaque" hP2.stage (ArrExt.decCI hx2 hci1)
+      (ArrExt.decCV hx2 (decCI_cvTA hci1 (.inr rfl))) (ArrExt.hd? hx2 hval1) (denoteCV_lps hcA) hP2.crOK)
+    fun r3 s3 y3 a3 h3 _ hrun3 ⟨hS3, hM3, hg3, hy3⟩ => ?_
+  subst hy3
+  dsimp only [checkDeclOpaqueE.k_check_opaque_val]
   have h3w := callW_of_callE h3
   have hCr3 := hkp.call (im_mem _ rfl) h3w hP2.crOK
-  obtain ⟨s3, hs3, -, y3, a3, hrun3, hS3, hM3, hg3, rfl⟩ :=
-    RefE.run_ok (s₀ := ⟨s2.mem, Locals.init []⟩) (checkOpaqueVal_specE p hV n _ vis q) h3R h3
-  subst hs3
   rw [← checkOpaqueVal_dvT] at hrun3
   -- the twin's value check: `CheckOK` at the old index, `StepOK` at the pushed one
   obtain ⟨hstep2, -, -, env2, F2, hstepOK2, hpure2⟩ := ConRon.Bridge.checkOpaqueVal_bridge rfl
@@ -497,7 +486,6 @@ theorem cdo_ref {p : Prog} (hV : ValProg p) (hC : CrpProg p) (hq : KnotStageProg
       fun k y e => hstep2.ext.lss.ls.ns k y (hP2.stage.twin.den.dnN k y e)⟩
   have hflag3 : pinW s3.mem 0 ≠ 0 := by
     simp only [pinW, hf3.1 PINS loopA_pins (by decide)]; exact hP2.stage.flag
-  refine RefE.bind_right hrun3 ?_
   generalize hfe2 : fe.push (.axiomInfo cv) = fe2 at hS3 hrun3 hck3 hstepOK2 ⊢
   -- the two pins
   rcases h4 : callE p n "pin_at" [43] s3.mem with e4 | ⟨r4, m4⟩
@@ -533,21 +521,14 @@ theorem cdo_ref {p : Prog} (hV : ValProg p) (hC : CrpProg p) (hq : KnotStageProg
       · exact ⟨44, by omega, by omega, e.symm⟩
       · exact ⟨45, by omega, by omega, e.symm⟩
     refine RefE.ite_pos hc ?_
-    have h6R := crp_ref hC hq hcl hkp hdn hn' hS3 hck3 hok3.envWF hstepOK2 hmem3 hflag3 hnm3 hv3
-      hws hwnl hwvl hCr3
-    rcases h6 : callE p n "check_reduce_pin" [vis, r3.headD 0, wn, wv] s3.mem with e6 | ⟨r6, m6⟩
-    · rw [checkDeclOpaqueE.k_check_reduce_pin.none]
-      refine RefE.bind_left fun hG => ?_
-      rw [hvis]
-      exact RefE.run_err (s₀ := ⟨s3.mem, Locals.init []⟩)
-        (checkReducePin_specE p hC n _ vis (r3.headD 0) wn wv) hG.nv hG.core h6R h6
-    rw [checkDeclOpaqueE.k_check_reduce_pin.arm1, checkDeclOpaqueE.j1.arm1]
-    obtain ⟨s6, hs6, -, _, a6, hrun6, hR6⟩ := RefE.run_ok (s₀ := ⟨s3.mem, Locals.init []⟩)
-      (checkReducePin_specE p hC n _ vis (r3.headD 0) wn wv) h6R h6
-    subst hs6
     rw [hvis]
-    exact RefE.bind_right hrun6 (RefE.ret rfl ⟨by simpa using hR6.stage2, hR6.stageC.mem.memos,
-      hg1.trans (hP2.grow.trans (hg3.trans hR6.grow))⟩)
+    refine RefE.bindRun (s₀ := ⟨s3.mem, Locals.init []⟩) (fun _ => rfl)
+      (checkReducePin_specE p hC n _ vis (r3.headD 0) wn wv) (fun hG => hG.nv) (fun hG => hG.core)
+      (crp_ref hC hq hcl hkp hdn hn' hS3 hck3 hok3.envWF hstepOK2 hmem3 hflag3 hnm3 hv3 hws hwnl hwvl
+        hCr3) fun r6 s6 _ a6 _ _ _ hR6 => ?_
+    rw [checkDeclOpaqueE.k_check_reduce_pin.arm1, checkDeclOpaqueE.j1.arm1]
+    exact RefE.ret rfl ⟨by simpa using hR6.stage2, hR6.stageC.mem.memos,
+      hg1.trans (hP2.grow.trans (hg3.trans hR6.grow))⟩
   · rw [checkDeclOpaqueE.k_pin_at_2.arm2 p _ _ _ _ _ _ _ _ hin, checkDeclOpaqueE.j1.arm1]
     rw [e4, e5] at hin
     have hc : ((List.range' 44 2).map fun j => (decI (pinW s3.mem j) : NIdx)).contains (decI wn) =
