@@ -124,11 +124,11 @@ that class. Every other outcome (`rdx = 1`, class `0`, `ok R`) claims nothing. `
 an inductive, so the run also terminates in Kraken's semantics, whatever the
 input.
 
-[`TwinAccepts`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/Twin.lean#L57-L67)
+[`TwinAccepts`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/Twin.lean#L62-L72)
 is the stages con-ron's binary runs, from the twin's start state: intern the
 reserved names, parse the built-in prelude, parse the input, prepare the
 records, intern the pins, then the fold, at some pin list. The fold is
-[`SeqAccepts`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/Twin.lean#L39-L45):
+[`SeqAccepts`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/Twin.lean#L44-L50):
 phase A (install), then phase B (check the pending bodies) on one worker.
 [`TwinVerdict [b] c`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/TwinVerdict.lean#L58-L59)
 is the same pipeline
@@ -146,7 +146,7 @@ parsed records (prepared with some prelude, at some pin list), and the accepted
 environment has a model in every `ConLeche.SetTheory V`; and a file in
 `jsonWithTheoremFalse`'s shape is never accepted. Their glue is con-ron's
 capstone, restated on the vendored Theorem 1
-([`twinAccepts_pure`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/Twin.lean#L119-L135)).
+([`twinAccepts_pure`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/Twin.lean#L124-L140)).
 A fourth variant,
 [`checkerFile_accepts_regs`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/EndToEnd.lean#L61-L69),
 adds that the caller's callee-saved registers (System V: `rsp`, `rbp`, `rbx`,
@@ -194,7 +194,7 @@ not accepted
   `TwinAccepts` holds at the pin list it decoded; con-leche's theorems hold at
   every pin list. The prelude is not an assumption either: con-leche's
   `preparePrelude` puts its records into the checked stream
-  ([the module doc](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/Twin.lean#L27-L29)).
+  ([the module doc](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/Twin.lean#L32-L34)).
 * **Capacities and fuel are not assumptions.** The stub gives every word
   array `2^32` words and each entry's run `2^62 - 1` units of fuel; the refinement holds
   at every capacity and every fuel below `2^62`
@@ -461,7 +461,7 @@ entry 1 runs the stages and phase A (quoted in §5.1), entry 2 phase B.
 
 Entry 1's function, beside the twin function it cites
 ([L](https://github.com/leanprover/con-agua/blob/master/ConAgua/Checker/Entry.lean#L108-L124),
-[the twin](https://github.com/leanprover/con-agua/blob/master/vendor/con-ron/ConRon/Arena/Main.lean#L154-L190)):
+[the twin](https://github.com/leanprover/con-agua/blob/master/vendor/con-ron/ConRon/Arena/Main.lean#L159-L195)):
 
 ```
 def checkAL : FunDecl := lfn (c) locals (r, z, cnt, v) {
@@ -493,7 +493,7 @@ entry stubs write (§9); a zero region leaves it `0`, and then `check` aborts.
 
 A function closer to the data, which decodes a level-list handle
 ([L](https://github.com/leanprover/con-agua/blob/master/ConAgua/Arena/LevelEquiv.lean#L293-L298),
-[the twin's `viewLs`](https://github.com/leanprover/con-agua/blob/master/vendor/con-ron/ConRon/Arena/Monad.lean#L491-L497)):
+[the twin's `viewLs`](https://github.com/leanprover/con-agua/blob/master/vendor/con-ron/ConRon/Arena/Monad.lean#L494-L500)):
 
 ```
 def lsNode : FunDecl := lfn (h) locals (t, i) {
@@ -523,9 +523,9 @@ and can bind several results. Arithmetic wraps; there is no division (Kraken
 has no `div`), only `mulhi`, the high word of the 128-bit product.
 
 The concrete syntax is a set of Lean macros that produce these terms
-([the rules](https://github.com/leanprover/con-agua/blob/master/ConAgua/L/Notation.lean#L80-L171),
-[`lfn`](https://github.com/leanprover/con-agua/blob/master/ConAgua/L/Notation.lean#L472-L473),
-[summary](https://github.com/leanprover/con-agua/blob/master/ConAgua/L/Notation.lean#L11-L68)).
+([the rules](https://github.com/leanprover/con-agua/blob/master/ConAgua/L/Notation.lean#L83-L174),
+[`lfn`](https://github.com/leanprover/con-agua/blob/master/ConAgua/L/Notation.lean#L481-L482),
+[summary](https://github.com/leanprover/con-agua/blob/master/ConAgua/L/Notation.lean#L11-L71)).
 Informally (`A` an array, `R` a store, `f` a function, `x` a local or a global,
 all names of Lean constants except the locals):
 
@@ -556,7 +556,7 @@ c      ::= e == e  |  e != e  |  e < e  |  e <= e  |  e > e  |  e >= e  -- unsig
 ```
 
 The two sugar statements stand for plain ones and give the same terms
-([`desugar`](https://github.com/leanprover/con-agua/blob/master/ConAgua/L/Notation.lean#L329-L354)):
+([`desugar`](https://github.com/leanprover/con-agua/blob/master/ConAgua/L/Notation.lean#L337-L363)):
 `(t, i) := node R⟦h⟧` is the checked node read of §5.1, and `for j < n { … }`
 is `while j < n { …; j += 1 }`, where the body assigns neither `j` nor `n`. The
 model generator reads L text through the same function. A counted loop has a
@@ -631,8 +631,8 @@ then the 4-byte load of the low or the high half.
 
 Three primitives do in one statement what a loop would do word by word, with
 the bounds checked once
-([`le64!`](https://github.com/leanprover/con-agua/blob/master/ConAgua/L/Notation.lean#L103-L104),
-[`scan!`, `copy!`](https://github.com/leanprover/con-agua/blob/master/ConAgua/L/Notation.lean#L156-L162)):
+([`le64!`](https://github.com/leanprover/con-agua/blob/master/ConAgua/L/Notation.lean#L106-L107),
+[`scan!`, `copy!`](https://github.com/leanprover/con-agua/blob/master/ConAgua/L/Notation.lean#L159-L165)):
 
 * `copy!(D, di, S, si, n)`: copy `n` words (or bytes, zero-extended into
   words) from `S` to `D`, ascending;
@@ -659,7 +659,7 @@ says how (§7).
 A handle is con-ron's 32-bit word, held in a 64-bit word, in one of two shapes: the tier in
 bit 31; bit 30 set for an expression `app` (wide: the node index in bits 29–0), clear for every
 other node (narrow: the constructor tag in bits 29–26, the node index in bits 25–0)
-([`tierE`, `idxE`, `idxAE`, `tagE`](https://github.com/leanprover/con-agua/blob/master/ConAgua/L/TRec.lean#L101-L105)).
+([`tierE`, `idxE`, `idxAE`, `tagE`](https://github.com/leanprover/con-agua/blob/master/ConAgua/L/TRec.lean#L113-L142)).
 Equal terms have equal handles (hash-consing), so comparing two terms is
 comparing two words.
 
@@ -668,20 +668,20 @@ comparing two words.
 Each store keeps, per tier, one word array of fixed-size records (node `i` of
 tier `t` at `arr⟨t⟩[i * w ..]`) and its node count in a control word; the
 stores and their fields are declared in one file,
-[`ConAgua/Arena/StoreFields.lean`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Arena/StoreFields.lean#L11-L34).
+[`ConAgua/Arena/StoreFields.lean`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Arena/StoreFields.lean#L12-L35).
 A store whose two key fields are handles packs them into one record word.
 
 Each store's **cons table**, the hash map from a node's fields to its handle,
 is con-ron's `HashMap2`: open addressing, linear probing, one table per tier in
 its own word array, growth at load 3/4
-([the layout](https://github.com/leanprover/con-agua/blob/master/ConAgua/Arena/ConsLib.lean#L209-L218),
-[the growth test](https://github.com/leanprover/con-agua/blob/master/ConAgua/Arena/ConsLib.lean#L567-L572)).
+([the layout](https://github.com/leanprover/con-agua/blob/master/ConAgua/Arena/ConsLib.lean#L221-L230),
+[the growth test](https://github.com/leanprover/con-agua/blob/master/ConAgua/Arena/ConsLib.lean#L583-L588)).
 Where con-ron allocates a table of twice the size and frees the old one, L
 doubles the table **in place**: it zeroes the upper half, then one top-down
 sweep re-inserts each live entry from its new home with a probe that stays
 above the sweep; the few entries that probe cannot place are marked and
 re-inserted by absl's in-place swap loop over the ranges that hold marks
-([`kgrowB`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Arena/ConsLib.lean#L538-L558)),
+([`kgrowB`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Arena/ConsLib.lean#L554-L574)),
 since L cannot free memory. The home slot is `mulhi(mix(h), n)` rather than
 con-ron's mask
 ([`homeW`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Arena/SlotGrow.lean#L41-L44)).
@@ -788,8 +788,8 @@ Take `lvl_eq`, the uncached core of the twin's `lvlEq?`:
 3. **The refinement**: under the arena relation, a model that returns `z`
    gives a twin run of `lvlEq? u v` that succeeds with the result `z` encodes,
    and the relation holds again
-   ([`lvlEq_refines`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Arena/LevelArena.lean#L259-L264),
-   against [the twin](https://github.com/leanprover/con-agua/blob/master/vendor/con-ron/ConRon/Arena/Core.lean#L132-L149)).
+   ([`lvlEq_refines`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Arena/LevelArena.lean#L265-L270),
+   against [the twin](https://github.com/leanprover/con-agua/blob/master/vendor/con-ron/ConRon/Arena/Core.lean#L137-L154)).
 
 The split keeps `vcgen` away from the twin's monad and the twin's proofs away
 from L's syntax. Most word models and specs are generated: the `l_model`
@@ -965,7 +965,7 @@ make regen-check    # fail if either committed file is stale
 
 ([what it does](https://github.com/leanprover/con-agua/blob/master/scripts/asm_file.py#L2-L21);
 `pins.bin` is `scripts/lake exe romgen pins.bin 3`,
-[`ConAgua/Rom/Gen.lean`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Rom/Gen.lean#L13-L22)).
+[`ConAgua/Rom/Gen.lean`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Rom/Gen.lean#L14-L23)).
 Regeneration is a convenience, not part of the trust: the build fails at
 `checkerFile_eq` if `checker.s` is not exactly the compiler's output (§8.4),
 and the theorem holds at every pin-data buffer.

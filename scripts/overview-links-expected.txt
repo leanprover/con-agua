@@ -8,7 +8,7 @@
 >>> OVERVIEW.md
 
 == vendor/UPSTREAM#L3-L4
-     3  con-ron	ed864140e053a1c1deb51d39d8b8e17d5f244598	https://github.com/leanprover/con-ron.git
+     3  con-ron	97eead2d5b496f1017da5d11fe08bb1cb328eb7d	https://github.com/leanprover/con-ron.git
      4  con-leche	0d2f467bbe576f21e42ea861d246abef718f1c13	https://github.com/leanprover/con-leche.git
 
 == main.c#L1-L43
@@ -103,27 +103,27 @@
     29  /-- The code `c` sits at index `k` of the host program. -/
     30  abbrev Code (c : Program) (k : Nat) : Prop := c.IsInfixAt Host.prog k
 
-== ConAgua/Final/Twin.lean#L57-L67
-    57  /-- **The twin accepts `chunks`**: the stages con-ron's binary runs, from the twin's start state
-    58  `AState.init EStore.empty`, at some pin list, the fold on one worker. -/
-    59  def TwinAccepts (chunks : List ByteArray) : Prop :=
-    60    ∃ (pins : List NatOpPinSet) (sA sB sC sD sE sF : AState) (pre : PreludeIx) (r : ParseResultD)
-    61      (ds : Array IDeclaration) (ipins : List INatOpPinSet) (fe : IFEnv),
-    62      internReservedPins (AState.init EStore.empty) = .ok ((), sA) ∧
-    63      builtinPreludeE sA = .ok (.ok pre, sB) ∧
-    64      parseChunks chunks sB = .ok (.ok r, sC) ∧
-    65      preparePrelude pre r.decls sC = .ok (ds, sD) ∧
-    66      internAllPins pins sD = .ok (ipins, sE) ∧
-    67      SeqAccepts .verified ipins ds sE fe sF
+== ConAgua/Final/Twin.lean#L62-L72
+    62  /-- **The twin accepts `chunks`**: the stages con-ron's binary runs, from the twin's start state
+    63  `AState.init EStore.empty`, at some pin list, the fold on one worker. -/
+    64  def TwinAccepts (chunks : List ByteArray) : Prop :=
+    65    ∃ (pins : List NatOpPinSet) (sA sB sC sD sE sF : AState) (pre : PreludeIx) (r : ParseResultD)
+    66      (ds : Array IDeclaration) (ipins : List INatOpPinSet) (fe : IFEnv),
+    67      internReservedPins (AState.init EStore.empty) = .ok ((), sA) ∧
+    68      builtinPreludeE sA = .ok (.ok pre, sB) ∧
+    69      parseChunks chunks sB = .ok (.ok r, sC) ∧
+    70      preparePrelude pre r.decls sC = .ok (ds, sD) ∧
+    71      internAllPins pins sD = .ok (ipins, sE) ∧
+    72      SeqAccepts .verified ipins ds sE fe sF
 
-== ConAgua/Final/Twin.lean#L39-L45
-    39  /-- **The x64 checker's fold**: phase A accepted with environment `fe` and pending records `pend`,
-    40  ending in `s'`; phase B, every pending record in order on one worker made from `s'`, accepted. -/
-    41  def SeqAccepts (mode : CheckMode) (pins : List INatOpPinSet) (ds : Array IDeclaration)
-    42      (s : AState) (fe : IFEnv) (s' : AState) : Prop :=
-    43    ∃ (n : Nat) (pend : Array PendingCheck) (s'' : AState),
-    44      installFold mode pins (0, mkIFEnv IEnv.empty, #[]) ds.toList s = .ok (.ok (n, fe, pend), s') ∧
-    45      checkPendingList mode fe pend.toList s'.worker = .ok (.ok (), s'')
+== ConAgua/Final/Twin.lean#L44-L50
+    44  /-- **The x64 checker's fold**: phase A accepted with environment `fe` and pending records `pend`,
+    45  ending in `s'`; phase B, every pending record in order on one worker made from `s'`, accepted. -/
+    46  def SeqAccepts (mode : CheckMode) (pins : List INatOpPinSet) (ds : Array IDeclaration)
+    47      (s : AState) (fe : IFEnv) (s' : AState) : Prop :=
+    48    ∃ (n : Nat) (pend : Array PendingCheck) (s'' : AState),
+    49      installFold mode pins (0, mkIFEnv IEnv.empty, #[]) ds.toList s = .ok (.ok (n, fe, pend), s') ∧
+    50      checkPendingList mode fe pend.toList s'.worker = .ok (.ok (), s'')
 
 == ConAgua/Final/TwinVerdict.lean#L58-L59
     58  def TwinVerdict (chunks : List ByteArray) (c : L.Word) : Prop :=
@@ -165,24 +165,24 @@
    132          ¬ (st.data.regs.rdx = 0 ∧ st.data.regs.rax = ACCEPT))
    133        dm (label abiStartL) :=
 
-== ConAgua/Final/Twin.lean#L119-L135
-   119  /-- **What the twin's accept means, in con-leche's terms**: con-leche's parser reads the chunks, and
-   120  con-leche's pure fold accepts the parsed records prepared with some prelude, at the twin's pin
-   121  list. `stages_frame`, then Theorem 1 (`Arena.pooledAccepts_bridge`, with its two tier specs
-   122  discharged by `CoreSpec.of_core` and `indSpec_of_bridge`). -/
-   123  theorem twinAccepts_pure {chunks : List ByteArray} (h : TwinAccepts chunks) :
-   124      ∃ (pins : List NatOpPinSet) (preC : ConLeche.Frontend.PreludeIx)
-   125        (rc : ConLeche.Frontend.ParseResultD) (F : Nat) (env : Env),
-   126        ConLeche.Frontend.parseChunks chunks = .ok rc ∧
-   127        checkDeclsPure .verified (fueledOps .verified F) pins
-   128          (ConLeche.Frontend.preparePrelude preC rc.decls).toList = .ok env := by
-   129    obtain ⟨pins, sA, sB, sC, sD, sE, sF, pre, r, ds, ipins, fe, hA, hB, hC, hD, hE, hF⟩ := h
-   130    have hk : CoreSpec .verified ConRon.Arena.checkFuel := CoreSpec.of_core rfl
-   131    have hind : IndSpec .verified := ConRon.Bridge.Inductives.indSpec_of_bridge rfl hk
-   132    obtain ⟨-, hfold, hipins, hpps, hpd, preC, rc, hrc, hden⟩ := stages_frame hA hB hC hD hE
-   133    obtain ⟨env, F, -, hpure⟩ :=
-   134      ConRon.Bridge.Arena.pooledAccepts_bridge rfl hk hind hpps hfold hipins hpd hden (pooledAccepts_of_seq hF)
-   135    exact ⟨pins, preC, rc, F, env, hrc, hpure⟩
+== ConAgua/Final/Twin.lean#L124-L140
+   124  /-- **What the twin's accept means, in con-leche's terms**: con-leche's parser reads the chunks, and
+   125  con-leche's pure fold accepts the parsed records prepared with some prelude, at the twin's pin
+   126  list. `stages_frame`, then Theorem 1 (`Arena.pooledAccepts_bridge`, with its two tier specs
+   127  discharged by `CoreSpec.of_core` and `indSpec_of_bridge`). -/
+   128  theorem twinAccepts_pure {chunks : List ByteArray} (h : TwinAccepts chunks) :
+   129      ∃ (pins : List NatOpPinSet) (preC : ConLeche.Frontend.PreludeIx)
+   130        (rc : ConLeche.Frontend.ParseResultD) (F : Nat) (env : Env),
+   131        ConLeche.Frontend.parseChunks chunks = .ok rc ∧
+   132        checkDeclsPure .verified (fueledOps .verified F) pins
+   133          (ConLeche.Frontend.preparePrelude preC rc.decls).toList = .ok env := by
+   134    obtain ⟨pins, sA, sB, sC, sD, sE, sF, pre, r, ds, ipins, fe, hA, hB, hC, hD, hE, hF⟩ := h
+   135    have hk : CoreSpec .verified ConRon.Arena.checkFuel := CoreSpec.of_core rfl
+   136    have hind : IndSpec .verified := ConRon.Bridge.Inductives.indSpec_of_bridge rfl hk
+   137    obtain ⟨-, hfold, hipins, hpps, hpd, preC, rc, hrc, hden⟩ := stages_frame hA hB hC hD hE
+   138    obtain ⟨env, F, -, hpure⟩ :=
+   139      ConRon.Bridge.Arena.pooledAccepts_bridge rfl hk hind hpps hfold hipins hpd hden (pooledAccepts_of_seq hF)
+   140    exact ⟨pins, preC, rc, F, env, hrc, hpure⟩
 
 == ConAgua/Final/EndToEnd.lean#L61-L69
     61  theorem checkerFile_accepts_regs [Host]
@@ -280,10 +280,10 @@
     47    hcs24 : 24 ≤ dm.regs.rsp.toNat
     48    hcs8 : dm.regs.rsp.toNat + 8 < 2 ^ 64
 
-== ConAgua/Final/Twin.lean#L27-L29
-    27  The prelude is free: `builtinPreludeE_run` gives *some* con-leche prelude `preC` the twin's prelude
-    28  denotes, and con-leche's `preparePrelude` puts its records into the checked stream, so soundness
-    29  holds whatever the prelude bytes are. The pins are free for the same reason as in con-leche.
+== ConAgua/Final/Twin.lean#L32-L34
+    32  The prelude is free: `builtinPreludeE_run` gives *some* con-leche prelude `preC` the twin's prelude
+    33  denotes, and con-leche's `preparePrelude` puts its records into the checked stream, so soundness
+    34  holds whatever the prelude bytes are. The pins are free for the same reason as in con-leche.
 
 == ConAgua/Checker/Pipeline.lean#L69-L72
     69  /-- What every stage may assume of the inputs: a 64-bit platform, both buffers below `2^63`
@@ -620,7 +620,7 @@
 
 == ConAgua/Checker/Entry.lean#L108-L124
    108  `c = 0`: the header only); returns `2^63 + k` (`1` if a line did not scan). -/
-   109  -- con-ron: ConRon/Arena/Main.lean:130-162 ConRon.Arena.runPipelineHead
+   109  -- con-ron: ConRon/Arena/Main.lean:135-167 ConRon.Arena.runPipelineHead
    110  def checkAL : FunDecl := lfn (c) locals (r, z, cnt, v) {
    111    z := call cap_check();
    112    z := call pb_check();
@@ -637,61 +637,61 @@
    123    return 9223372036854775808 + CTL.u64[130]
    124  }
 
-== vendor/con-ron/ConRon/Arena/Main.lean#L154-L190
-   154  def runPipelineHead :
-   155      AM (Except (CheckError × Nat) (Frontend.PreludeIx × Frontend.StateD)) := do
-   156    -- **The reserved-name pins, interned ONCE** (task #97-P6-4a): immediately
-   157    -- after the state is made and before the prelude, so the scratch tier is
-   158    -- closed and every pinned handle is persistent.
-   159    internReservedPins
-   160    match ← Frontend.builtinPreludeE with
-   161    | .error e => pure (.error e)
-   162    | .ok pre => pure (.ok (pre, ← Frontend.StateD.init))
-   163  
-   164  /-- con-leche: ConLeche/Driver/Run.lean:236-424 checkMain
-   165  The pipeline AFTER the parse: `preparePrelude`, then **the fold** (task
-   166  #97d), then the verdict number.  Shared verbatim by the pure seam and by the
-   167  driver's interleaved loop, which is what makes the two the same computation.
+== vendor/con-ron/ConRon/Arena/Main.lean#L159-L195
+   159  def runPipelineHead :
+   160      AM (Except (CheckError × Nat) (Frontend.PreludeIx × Frontend.StateD)) := do
+   161    -- **The reserved-name pins, interned ONCE** (task #97-P6-4a): immediately
+   162    -- after the state is made and before the prelude, so the scratch tier is
+   163    -- closed and every pinned handle is persistent.
+   164    internReservedPins
+   165    match ← Frontend.builtinPreludeE with
+   166    | .error e => pure (.error e)
+   167    | .ok pre => pure (.ok (pre, ← Frontend.StateD.init))
    168  
-   169  The verdict number is con-leche's own, "a property of the INPUT"
-   170  (`ConLeche/Driver/Run.lean`'s `checkMain`): the records the parse produced, which no later step
-   171  moves.  The fold's own environment is discarded — an accept is the
-   172  statement, not the environment.
+   169  /-- con-leche: ConLeche/Driver/Run.lean:236-424 checkMain
+   170  The pipeline AFTER the parse: `preparePrelude`, then **the fold** (task
+   171  #97d), then the verdict number.  Shared verbatim by the pure seam and by the
+   172  driver's interleaved loop, which is what makes the two the same computation.
    173  
-   174  `internAllPins` runs BEFORE the fold and while the scratch tier is still off,
-   175  which is what DESIGN §8.6 P2d means by "at startup": every pinned datum is in
-   176  the persistent cons table before any declaration's check can intern one into
-   177  a tier that is about to vanish. -/
-   178  def runPipelineTail (mode : CheckMode) (pins : List NatOpPinSet)
-   179      (pre : Frontend.PreludeIx) (r : Frontend.ParseResultD) :
-   180      AM (Except CheckError Nat) := do
-   181    -- The verdict number is read HERE, before the fold, so that `r` dies at
-   182    -- `preparePrelude` instead of being pinned across the whole check (DESIGN
-   183    -- §8.4: decide the rare branch, and read what a later line needs, BEFORE
-   184    -- the expensive step).
-   185    let records := r.decls.size
-   186    let ds ← Frontend.preparePrelude pre r.decls
-   187    let ipins ← internAllPins pins
-   188    match ← installThenCheck mode ipins ds with
-   189    | .error (e, n) => pure (.error (atDecl e n))
-   190    | .ok _ => pure (.ok records)
+   174  The verdict number is con-leche's own, "a property of the INPUT"
+   175  (`ConLeche/Driver/Run.lean`'s `checkMain`): the records the parse produced, which no later step
+   176  moves.  The fold's own environment is discarded — an accept is the
+   177  statement, not the environment.
+   178  
+   179  `internAllPins` runs BEFORE the fold and while the scratch tier is still off,
+   180  which is what DESIGN §8.6 P2d means by "at startup": every pinned datum is in
+   181  the persistent cons table before any declaration's check can intern one into
+   182  a tier that is about to vanish. -/
+   183  def runPipelineTail (mode : CheckMode) (pins : List NatOpPinSet)
+   184      (pre : Frontend.PreludeIx) (r : Frontend.ParseResultD) :
+   185      AM (Except CheckError Nat) := do
+   186    -- The verdict number is read HERE, before the fold, so that `r` dies at
+   187    -- `preparePrelude` instead of being pinned across the whole check (DESIGN
+   188    -- §8.4: decide the rare branch, and read what a later line needs, BEFORE
+   189    -- the expensive step).
+   190    let records := r.decls.size
+   191    let ds ← Frontend.preparePrelude pre r.decls
+   192    let ipins ← internAllPins pins
+   193    match ← installThenCheck mode ipins ds with
+   194    | .error (e, n) => pure (.error (atDecl e n))
+   195    | .ok _ => pure (.ok records)
 
 == ConAgua/Arena/LevelEquiv.lean#L293-L298
-   293  /-- con-ron: ConRon/Arena/Monad.lean:491-497 ConRon.Arena.viewLs -/
+   293  /-- con-ron: ConRon/Arena/Monad.lean:494-500 ConRon.Arena.viewLs -/
    294  def lsNode : FunDecl := lfn (h) locals (t, i) {
-   295    if h >> 28 != 0 { abort };
+   295    if ⟦h⟧.tag != 0 { abort };
    296    (t, i) := node LVLS⟦h⟧;
    297    return (LVLS⟨t, i⟩.o, LVLS⟨t, i⟩.l)
    298  }
 
-== vendor/con-ron/ConRon/Arena/Monad.lean#L491-L497
-   491  /-- con-leche: ConLeche/Kernel/Expr.lean:256-375 Expr — decode a
-   492  universe-argument list handle (the `const` node's second field, line 347). -/
-   493  @[inline] def viewLs (h : LsIdx) : AM LsNodeView := do
-   494    let s ← get
-   495    match s.store.lss.view h with
-   496    | some v => pure v
-   497    | none => fail (.internal "arena: dangling level-list handle")
+== vendor/con-ron/ConRon/Arena/Monad.lean#L494-L500
+   494  /-- con-leche: ConLeche/Kernel/Expr.lean:256-375 Expr — decode a
+   495  universe-argument list handle (the `const` node's second field, line 347). -/
+   496  @[inline] def viewLs (h : LsIdx) : AM LsNodeView := do
+   497    let s ← get
+   498    match s.store.lss.view h with
+   499    | some v => pure v
+   500    | none => fail (.internal "arena: dangling level-list handle")
 
 == ConAgua/L/Syntax.lean#L118-L148
    118  /-- Word expressions. Reading an array can fail (out of bounds); nothing else can. -/
@@ -781,105 +781,105 @@
    224  /-- A program: its functions, by name. The first binding of a name wins. -/
    225  abbrev Prog := List (FnName × FunDecl)
 
-== ConAgua/L/Notation.lean#L80-L171
-    80  declare_syntax_cat lexpr
-    81  declare_syntax_cat lcond
-    82  declare_syntax_cat lstmt (behavior := both)
-    83  declare_syntax_cat lblock
-    84  
-    85  syntax num : lexpr
-    86  syntax char : lexpr
-    87  syntax "⟪" term "⟫" : lexpr
-    88  syntax ident : lexpr
-    89  syntax ident noWs "[" lexpr "]" : lexpr
-    90  syntax ident noWs "[" lexpr "]" noWs "." noWs ident : lexpr
-    91  syntax ident noWs "⟨" lexpr "⟩" noWs "[" lexpr "]" : lexpr
-    92  syntax ident noWs "⟨" lexpr "⟩" noWs "." noWs &"u32" noWs "[" lexpr "]" : lexpr
-    93  syntax ident noWs "⟨" lexpr "⟩" noWs "[" lexpr "]" noWs "." noWs ident : lexpr
-    94  syntax ident noWs "⟨" lexpr ", " lexpr "⟩" noWs "." noWs ident : lexpr
-    95  syntax ident noWs "⟨" lexpr ", " lexpr "⟩" : lexpr
-    96  syntax ident noWs "⟨" lexpr "⟩" noWs "." noWs ident : lexpr
-    97  syntax ident noWs "⟦" lexpr "⟧" noWs "." noWs ident : lexpr
-    98  syntax ident noWs "⟦" lexpr "⟧" : lexpr
-    99  syntax "⟦" lexpr "⟧" noWs "." noWs ident : lexpr
-   100  syntax "len" "(" ident ")" : lexpr
-   101  syntax "len" "(" ident noWs "⟨" lexpr "⟩" ")" : lexpr
-   102  syntax "mulhi" "(" lexpr ", " lexpr ")" : lexpr
-   103  /-- `le64!(A.u8, i)`: the little-endian word of the bytes `i … i + 7` (`D.c8` for constant bytes). -/
-   104  syntax "le64!" "(" ident ", " lexpr ")" : lexpr
-   105  syntax "u64" "(" lcond ")" : lexpr
-   106  syntax ident noWs "⦃" lexpr "⦄" : lexpr
-   107  syntax "⦃" lexpr "⦄" noWs "." noWs ident : lexpr
-   108  syntax "(" lexpr ")" : lexpr
-   109  syntax:70 lexpr:70 " * " lexpr:71 : lexpr
-   110  syntax:65 lexpr:65 " + " lexpr:66 : lexpr
-   111  syntax:65 lexpr:65 " - " lexpr:66 : lexpr
-   112  syntax:60 lexpr:60 " << " lexpr:61 : lexpr
-   113  syntax:60 lexpr:60 " >> " lexpr:61 : lexpr
-   114  syntax:58 lexpr:58 " & " lexpr:59 : lexpr
-   115  syntax:57 lexpr:57 " ^ " lexpr:58 : lexpr
-   116  syntax:56 lexpr:56 " | " lexpr:57 : lexpr
-   117  
-   118  syntax:50 lexpr:51 " == " lexpr:51 : lcond
-   119  syntax:50 lexpr:51 " != " lexpr:51 : lcond
-   120  syntax:50 lexpr:51 " < " lexpr:51 : lcond
-   121  syntax:50 lexpr:51 " <= " lexpr:51 : lcond
-   122  syntax:50 lexpr:51 " > " lexpr:51 : lcond
-   123  syntax:50 lexpr:51 " >= " lexpr:51 : lcond
-   124  syntax:50 lexpr:51 " <ₛ " lexpr:51 : lcond
-   125  syntax:50 lexpr:51 " ≤ₛ " lexpr:51 : lcond
-   126  syntax:35 lcond:36 " && " lcond:35 : lcond
-   127  syntax:30 lcond:31 " || " lcond:30 : lcond
-   128  syntax:max "!" lcond:max : lcond
-   129  syntax "(" lcond ")" : lcond
-   130  
-   131  syntax "{" sepBy(lstmt, "; ", "; ", allowTrailingSep) "}" : lblock
-   132  
-   133  syntax ident " := " "call " ident "(" lexpr,* ")" : lstmt
-   134  syntax "(" ident ", " ident,+ ")" " := " "call " ident "(" lexpr,* ")" : lstmt
-   135  syntax ident " := " lexpr : lstmt
-   136  syntax ident " += " lexpr : lstmt
-   137  syntax ident " -= " lexpr : lstmt
-   138  syntax ident noWs "[" lexpr "]" " := " lexpr : lstmt
-   139  syntax ident noWs "[" lexpr "]" noWs "." noWs ident " := " lexpr : lstmt
-   140  syntax ident noWs "⟨" lexpr ", " lexpr "⟩" noWs "." noWs ident " := " lexpr : lstmt
-   141  syntax ident noWs "⟨" lexpr "⟩" noWs "[" lexpr "]" " := " lexpr : lstmt
-   142  syntax ident noWs "⟨" lexpr "⟩" noWs "." noWs &"u32" noWs "[" lexpr "]" " := " lexpr : lstmt
-   143  syntax ident noWs "⟨" lexpr "⟩" noWs "[" lexpr "]" noWs "." noWs ident " := " lexpr : lstmt
-   144  syntax "if " lcond lblock : lstmt
-   145  syntax "if " lcond lblock " else " lblock : lstmt
-   146  syntax "if " lcond lblock " else " lstmt : lstmt
-   147  syntax "while " lcond lblock : lstmt
-   148  syntax "break" : lstmt
-   149  syntax "return " lexpr : lstmt
-   150  syntax "return " "(" lexpr ", " lexpr,+ ")" : lstmt
-   151  syntax "abort" : lstmt
-   152  /-- `abort R`: abort with the code `R` (a Lean constant of type `L.Word`, `Arena/Reasons.lean`). -/
-   153  syntax "abort " ident : lstmt
-   154  /-- `fail R`: a reject or decline site, the twin's `fail`: abort with the code `R` (as `abort R`). -/
-   155  syntax (name := lfail) &"fail" ident : lstmt
-   156  /-- `x := scan!(A.u8, i, e, C)`: the first `j ∈ [i, e)` whose byte is in the class `C` (a Lean
-   157  constant: a 256-byte table), else `e` (`D.c8` for constant bytes; lane blkcopy). -/
-   158  syntax ident " := " "scan!" "(" ident ", " lexpr ", " lexpr ", " ident ")" : lstmt
-   159  /-- `copy!(D, di, S, si, n)`: `D[di + j] := S[si + j]` for `j < n` (`S` a word array `B.u64` or bytes
-   160  `B.u8`/`B.c8`; `D⟨t⟩`, `S⟨t⟩` for tiered word arrays; lane blkcopy). -/
-   161  syntax "copy!" "(" ident (noWs "⟨" lexpr "⟩")? ", " lexpr ", " ident (noWs "⟨" lexpr "⟩")? ", " lexpr ", "
-   162    lexpr ")" : lstmt
-   163  syntax "skip" : lstmt
-   164  syntax "⟪" term "⟫" : lstmt
-   165  /-- `(t, i) := node R⟦h⟧`: the tier and index of the node that the handle word `h` names in the
-   166  store `R`, checked (sugar, `desugar`): abort on a scratch-tier handle while the scratch tier is
-   167  closed, and on an index at or past the tier's node count. -/
-   168  syntax "(" ident ", " ident ")" " := " &"node" ident noWs "⟦" lexpr "⟧" : lstmt
-   169  /-- `for j < n { body }`: the counted loop `while j < n { body; j += 1 }` (sugar, `desugar`);
-   170  `body` assigns neither `j` nor `n`. -/
-   171  syntax "for " ident " < " ident lblock : lstmt
+== ConAgua/L/Notation.lean#L83-L174
+    83  declare_syntax_cat lexpr
+    84  declare_syntax_cat lcond
+    85  declare_syntax_cat lstmt (behavior := both)
+    86  declare_syntax_cat lblock
+    87  
+    88  syntax num : lexpr
+    89  syntax char : lexpr
+    90  syntax "⟪" term "⟫" : lexpr
+    91  syntax ident : lexpr
+    92  syntax ident noWs "[" lexpr "]" : lexpr
+    93  syntax ident noWs "[" lexpr "]" noWs "." noWs ident : lexpr
+    94  syntax ident noWs "⟨" lexpr "⟩" noWs "[" lexpr "]" : lexpr
+    95  syntax ident noWs "⟨" lexpr "⟩" noWs "." noWs &"u32" noWs "[" lexpr "]" : lexpr
+    96  syntax ident noWs "⟨" lexpr "⟩" noWs "[" lexpr "]" noWs "." noWs ident : lexpr
+    97  syntax ident noWs "⟨" lexpr ", " lexpr "⟩" noWs "." noWs ident : lexpr
+    98  syntax ident noWs "⟨" lexpr ", " lexpr "⟩" : lexpr
+    99  syntax ident noWs "⟨" lexpr "⟩" noWs "." noWs ident : lexpr
+   100  syntax ident noWs "⟦" lexpr "⟧" noWs "." noWs ident : lexpr
+   101  syntax ident noWs "⟦" lexpr "⟧" : lexpr
+   102  syntax "⟦" lexpr "⟧" noWs "." noWs ident : lexpr
+   103  syntax "len" "(" ident ")" : lexpr
+   104  syntax "len" "(" ident noWs "⟨" lexpr "⟩" ")" : lexpr
+   105  syntax "mulhi" "(" lexpr ", " lexpr ")" : lexpr
+   106  /-- `le64!(A.u8, i)`: the little-endian word of the bytes `i … i + 7` (`D.c8` for constant bytes). -/
+   107  syntax "le64!" "(" ident ", " lexpr ")" : lexpr
+   108  syntax "u64" "(" lcond ")" : lexpr
+   109  syntax ident noWs "⦃" lexpr "⦄" : lexpr
+   110  syntax "⦃" lexpr "⦄" noWs "." noWs ident : lexpr
+   111  syntax "(" lexpr ")" : lexpr
+   112  syntax:70 lexpr:70 " * " lexpr:71 : lexpr
+   113  syntax:65 lexpr:65 " + " lexpr:66 : lexpr
+   114  syntax:65 lexpr:65 " - " lexpr:66 : lexpr
+   115  syntax:60 lexpr:60 " << " lexpr:61 : lexpr
+   116  syntax:60 lexpr:60 " >> " lexpr:61 : lexpr
+   117  syntax:58 lexpr:58 " & " lexpr:59 : lexpr
+   118  syntax:57 lexpr:57 " ^ " lexpr:58 : lexpr
+   119  syntax:56 lexpr:56 " | " lexpr:57 : lexpr
+   120  
+   121  syntax:50 lexpr:51 " == " lexpr:51 : lcond
+   122  syntax:50 lexpr:51 " != " lexpr:51 : lcond
+   123  syntax:50 lexpr:51 " < " lexpr:51 : lcond
+   124  syntax:50 lexpr:51 " <= " lexpr:51 : lcond
+   125  syntax:50 lexpr:51 " > " lexpr:51 : lcond
+   126  syntax:50 lexpr:51 " >= " lexpr:51 : lcond
+   127  syntax:50 lexpr:51 " <ₛ " lexpr:51 : lcond
+   128  syntax:50 lexpr:51 " ≤ₛ " lexpr:51 : lcond
+   129  syntax:35 lcond:36 " && " lcond:35 : lcond
+   130  syntax:30 lcond:31 " || " lcond:30 : lcond
+   131  syntax:max "!" lcond:max : lcond
+   132  syntax "(" lcond ")" : lcond
+   133  
+   134  syntax "{" sepBy(lstmt, "; ", "; ", allowTrailingSep) "}" : lblock
+   135  
+   136  syntax ident " := " "call " ident "(" lexpr,* ")" : lstmt
+   137  syntax "(" ident ", " ident,+ ")" " := " "call " ident "(" lexpr,* ")" : lstmt
+   138  syntax ident " := " lexpr : lstmt
+   139  syntax ident " += " lexpr : lstmt
+   140  syntax ident " -= " lexpr : lstmt
+   141  syntax ident noWs "[" lexpr "]" " := " lexpr : lstmt
+   142  syntax ident noWs "[" lexpr "]" noWs "." noWs ident " := " lexpr : lstmt
+   143  syntax ident noWs "⟨" lexpr ", " lexpr "⟩" noWs "." noWs ident " := " lexpr : lstmt
+   144  syntax ident noWs "⟨" lexpr "⟩" noWs "[" lexpr "]" " := " lexpr : lstmt
+   145  syntax ident noWs "⟨" lexpr "⟩" noWs "." noWs &"u32" noWs "[" lexpr "]" " := " lexpr : lstmt
+   146  syntax ident noWs "⟨" lexpr "⟩" noWs "[" lexpr "]" noWs "." noWs ident " := " lexpr : lstmt
+   147  syntax "if " lcond lblock : lstmt
+   148  syntax "if " lcond lblock " else " lblock : lstmt
+   149  syntax "if " lcond lblock " else " lstmt : lstmt
+   150  syntax "while " lcond lblock : lstmt
+   151  syntax "break" : lstmt
+   152  syntax "return " lexpr : lstmt
+   153  syntax "return " "(" lexpr ", " lexpr,+ ")" : lstmt
+   154  syntax "abort" : lstmt
+   155  /-- `abort R`: abort with the code `R` (a Lean constant of type `L.Word`, `Arena/Reasons.lean`). -/
+   156  syntax "abort " ident : lstmt
+   157  /-- `fail R`: a reject or decline site, the twin's `fail`: abort with the code `R` (as `abort R`). -/
+   158  syntax (name := lfail) &"fail" ident : lstmt
+   159  /-- `x := scan!(A.u8, i, e, C)`: the first `j ∈ [i, e)` whose byte is in the class `C` (a Lean
+   160  constant: a 256-byte table), else `e` (`D.c8` for constant bytes; lane blkcopy). -/
+   161  syntax ident " := " "scan!" "(" ident ", " lexpr ", " lexpr ", " ident ")" : lstmt
+   162  /-- `copy!(D, di, S, si, n)`: `D[di + j] := S[si + j]` for `j < n` (`S` a word array `B.u64` or bytes
+   163  `B.u8`/`B.c8`; `D⟨t⟩`, `S⟨t⟩` for tiered word arrays; lane blkcopy). -/
+   164  syntax "copy!" "(" ident (noWs "⟨" lexpr "⟩")? ", " lexpr ", " ident (noWs "⟨" lexpr "⟩")? ", " lexpr ", "
+   165    lexpr ")" : lstmt
+   166  syntax "skip" : lstmt
+   167  syntax "⟪" term "⟫" : lstmt
+   168  /-- `(t, i) := node R⟦h⟧`: the tier and index of the node that the handle word `h` names in the
+   169  store `R`, checked (sugar, `desugar`): abort on a scratch-tier handle while the scratch tier is
+   170  closed, and on an index at or past the tier's node count. -/
+   171  syntax "(" ident ", " ident ")" " := " &"node" ident noWs "⟦" lexpr "⟧" : lstmt
+   172  /-- `for j < n { body }`: the counted loop `while j < n { body; j += 1 }` (sugar, `desugar`);
+   173  `body` assigns neither `j` nor `n`. -/
+   174  syntax "for " ident " < " ident lblock : lstmt
 
-== ConAgua/L/Notation.lean#L472-L473
-   472  syntax "lfn " "(" ident,* ")" (" locals " "(" ident,* ")")? lblock : term
-   473  
+== ConAgua/L/Notation.lean#L481-L482
+   481  syntax "lfn " "(" ident,* ")" (" locals " "(" ident,* ")")? lblock : term
+   482  
 
-== ConAgua/L/Notation.lean#L11-L68
+== ConAgua/L/Notation.lean#L11-L71
     11  # L: concrete syntax
     12  
     13  A Rust-like surface for writing L functions by hand:
@@ -907,65 +907,69 @@
     35  * The node stores' records (`L/TRec.lean`, the stores in `Arena/StoreFields.lean`; lane tieracc):
     36    `R⟨t, i⟩.f` is field `f` of node `i` of tier `t` of the store `R : L.TRec` (`R⟨t, i⟩` a one-word
     37    column), `R⟦h⟧.f` / `R⟦h⟧` the node the handle word `h` names, `R⟨t⟩.count` the node count of
-    38    tier `t`, `⟦h⟧.tier` / `⟦h⟧.idx` a handle's tier bit and index; `R⟨t, i⟩.f := e` writes a field
-    39    (the store library only).
-    40  * `⦃x⦄.tier`, `⦃x⦄.idx`, `⦃x⦄.base` are the tier (bit 40), the index (the low 40 bits) and the
-    41    tier's base address (`(x >> 40) << 40`) of a tier-tagged address `x`, and `A⦃x⦄` reads the word
-    42    at the tagged address `x` of the tiered word array `A` (`A⟨⦃x⦄.tier⟩[⦃x⦄.idx]`). The limb
-    43    pool's slices are named by such addresses: the tier is `1` for a slice of the scratch tier (open
-    44    while the arena's scratch flag is set) and `0` otherwise (lane tierpool). A
-    45    store's tier must be simple, so a writer decodes the tier and base of its top once into locals
-    46    and indexes relative to the base: `t := ⦃top⦄.tier; b := ⦃top⦄.base; … A⟨t⟩[top + j - b] := e`
-    47    (for a tier-0 top this is exactly `A[top + j]`, out-of-bounds aborts included). This macro is
-    48    the one place that fixes the encoding.
-    49  * `D.c8[i]` reads byte `i` of the constant byte string `D : List UInt8` (a Lean constant);
-    50    `len(D.c8)` is its length (a constant).
-    51  * Literals: numbers, characters (`'{'` is `123`), and `⟪t⟫` for any Lean term of type `Word`.
-    52  * An identifier that is not a local names a global variable: a Lean constant `g : L.GVar`
-    53    (`abbrev HTOP : L.GVar := ⟨3⟩`). `g` reads it, `g := e`, `g += e`, `g -= e` write it.
-    54  * Operators `+ - * & | ^ << >>` (wrapping, as in Rust's `wrapping_*`), `mulhi(a, b)` (the high
-    55    word of the 128-bit product), `u64(a < b)` (a comparison as `1`/`0`, Rust's `(a < b) as u64`),
-    56    comparisons
-    57    `== != < <= > >=` (unsigned) and `<ₛ ≤ₛ` (signed), and short-circuit `&& || !`.
-    58  * Statements are separated by `;`: `x := e`, `x += e`, `x -= e`, `x := call f(e, …)`,
-    59    `(x, y, …) := call f(e, …)` (several results), `if c { … } else { … }` (with `else if`),
-    60    `while c { … }`, `break`, `return e`, `return (e, e', …)`, `abort`, `abort R`, `fail R`, `skip`, and `⟪t⟫` for a
-    61    named block `t : L.Stmt` (see `lblk`; a block written with other variables than a prefix of
-    62    the enclosing ones is an error).
-    63  * Two statements are shorthand for plain ones (`desugar`): `(t, i) := node R⟦h⟧`, the checked
-    64    node read (`t := ⟦h⟧.tier; i := ⟦h⟧.idx; if t != 0 && CTL.u64[1] == 0 { abort };
-    65    if R⟨t⟩.count <= i { abort }`), and `for j < n { … }`, the counted loop
-    66    (`while j < n { …; j += 1 }`; the body assigns neither `j` nor `n`, and `L/For.lean` has its
-    67    loop rule).
-    68  -/
+    38    tier `t`, `⟦h⟧.tier` / `⟦h⟧.tag` / `⟦h⟧.idx` / `⟦h⟧.aidx` a handle's tier bit, constructor tag,
+    39    narrow index, wide (`app`) index and the twin's own index `idxNat` (`⟦h⟧.gidx`, for derived
+    40    reads; `L/TRec.lean`, "Handle words"); `R⟨t, i⟩.f := e` writes a
+    41    field (the store library only). `APP⟦h⟧` reads through the wide index, every other store
+    42    through the narrow one.
+    43  * `⦃x⦄.tier`, `⦃x⦄.idx`, `⦃x⦄.base` are the tier (bit 40), the index (the low 40 bits) and the
+    44    tier's base address (`(x >> 40) << 40`) of a tier-tagged address `x`, and `A⦃x⦄` reads the word
+    45    at the tagged address `x` of the tiered word array `A` (`A⟨⦃x⦄.tier⟩[⦃x⦄.idx]`). The limb
+    46    pool's slices are named by such addresses: the tier is `1` for a slice of the scratch tier (open
+    47    while the arena's scratch flag is set) and `0` otherwise (lane tierpool). A
+    48    store's tier must be simple, so a writer decodes the tier and base of its top once into locals
+    49    and indexes relative to the base: `t := ⦃top⦄.tier; b := ⦃top⦄.base; … A⟨t⟩[top + j - b] := e`
+    50    (for a tier-0 top this is exactly `A[top + j]`, out-of-bounds aborts included). This macro is
+    51    the one place that fixes the encoding.
+    52  * `D.c8[i]` reads byte `i` of the constant byte string `D : List UInt8` (a Lean constant);
+    53    `len(D.c8)` is its length (a constant).
+    54  * Literals: numbers, characters (`'{'` is `123`), and `⟪t⟫` for any Lean term of type `Word`.
+    55  * An identifier that is not a local names a global variable: a Lean constant `g : L.GVar`
+    56    (`abbrev HTOP : L.GVar := ⟨3⟩`). `g` reads it, `g := e`, `g += e`, `g -= e` write it.
+    57  * Operators `+ - * & | ^ << >>` (wrapping, as in Rust's `wrapping_*`), `mulhi(a, b)` (the high
+    58    word of the 128-bit product), `u64(a < b)` (a comparison as `1`/`0`, Rust's `(a < b) as u64`),
+    59    comparisons
+    60    `== != < <= > >=` (unsigned) and `<ₛ ≤ₛ` (signed), and short-circuit `&& || !`.
+    61  * Statements are separated by `;`: `x := e`, `x += e`, `x -= e`, `x := call f(e, …)`,
+    62    `(x, y, …) := call f(e, …)` (several results), `if c { … } else { … }` (with `else if`),
+    63    `while c { … }`, `break`, `return e`, `return (e, e', …)`, `abort`, `abort R`, `fail R`, `skip`, and `⟪t⟫` for a
+    64    named block `t : L.Stmt` (see `lblk`; a block written with other variables than a prefix of
+    65    the enclosing ones is an error).
+    66  * Two statements are shorthand for plain ones (`desugar`): `(t, i) := node R⟦h⟧`, the checked
+    67    node read (`t := ⟦h⟧.tier; i := ⟦h⟧.idx; if t != 0 && CTL.u64[1] == 0 { abort };
+    68    if R⟨t⟩.count <= i { abort }`, with `⟦h⟧.aidx` for `R = APP`), and `for j < n { … }`, the counted loop
+    69    (`while j < n { …; j += 1 }`; the body assigns neither `j` nor `n`, and `L/For.lean` has its
+    70    loop rule).
+    71  -/
 
-== ConAgua/L/Notation.lean#L329-L354
-   329  /-- **The sugar statements**, as the plain statements they stand for, at the syntax level: the
-   330  notation (`transBlock`) and the model generator (`l_model`, `desugarAll`) both expand them with
-   331  this function, so a function written with them is the term, and has the models, of the function
-   332  written without them.
-   333  
-   334  * `(t, i) := node R⟦h⟧` is `t := ⟦h⟧.tier; i := ⟦h⟧.idx; if t != 0 && CTL.u64[1] == 0 { abort };
-   335    if R⟨t⟩.count <= i { abort }`;
-   336  * `for j < n { body }` is `while j < n { body; j += 1 }`.
-   337  
-   338  Other statements are returned unchanged. -/
-   339  meta def desugar (s : TSyntax `lstmt) : MacroM (Array (TSyntax `lstmt)) := withRef s do
-   340    match s with
-   341    | `(lstmt| ($t:ident, $i:ident) := node $r:ident⟦$h:lexpr⟧) =>
-   342      -- built with `mkIdent`: hygiene would rename them, and the accessors compare names
-   343      let (ctl, tier, idx, cnt) := (mkIdent `CTL.u64, mkIdent `tier, mkIdent `idx, mkIdent `count)
-   344      return #[← `(lstmt| $t:ident := ⟦$h⟧.$tier:ident), ← `(lstmt| $i:ident := ⟦$h⟧.$idx:ident),
-   345        ← `(lstmt| if $t:ident != 0 && $ctl:ident[1] == 0 { abort }),
-   346        ← `(lstmt| if $r:ident⟨$t:ident⟩.$cnt:ident <= $i:ident { abort })]
-   347    | `(lstmt| for $j:ident < $n:ident { $ss;* }) => do
-   348      for x in ss.getElems do
-   349        let a := assigned x
-   350        if a.contains j.getId || a.contains n.getId then
-   351          Macro.throwErrorAt x s!"the body of `for {j.getId} < {n.getId}` assigns `{j.getId}` or `{n.getId}`"
-   352      let body : Syntax.TSepArray `lstmt "; " := .ofElems (ss.getElems.push (← `(lstmt| $j:ident += 1)))
-   353      return #[← `(lstmt| while $j:ident < $n:ident { $body;* })]
-   354    | _ => return #[s]
+== ConAgua/L/Notation.lean#L337-L363
+   337  /-- **The sugar statements**, as the plain statements they stand for, at the syntax level: the
+   338  notation (`transBlock`) and the model generator (`l_model`, `desugarAll`) both expand them with
+   339  this function, so a function written with them is the term, and has the models, of the function
+   340  written without them.
+   341  
+   342  * `(t, i) := node R⟦h⟧` is `t := ⟦h⟧.tier; i := ⟦h⟧.idx; if t != 0 && CTL.u64[1] == 0 { abort };
+   343    if R⟨t⟩.count <= i { abort }` (`⟦h⟧.aidx` for `R = APP`);
+   344  * `for j < n { body }` is `while j < n { body; j += 1 }`.
+   345  
+   346  Other statements are returned unchanged. -/
+   347  meta def desugar (s : TSyntax `lstmt) : MacroM (Array (TSyntax `lstmt)) := withRef s do
+   348    match s with
+   349    | `(lstmt| ($t:ident, $i:ident) := node $r:ident⟦$h:lexpr⟧) =>
+   350      -- built with `mkIdent`: hygiene would rename them, and the accessors compare names
+   351      let (ctl, tier, cnt) := (mkIdent `CTL.u64, mkIdent `tier, mkIdent `count)
+   352      let idx := mkIdent (if r.getId == `APP then `aidx else `idx)
+   353      return #[← `(lstmt| $t:ident := ⟦$h⟧.$tier:ident), ← `(lstmt| $i:ident := ⟦$h⟧.$idx:ident),
+   354        ← `(lstmt| if $t:ident != 0 && $ctl:ident[1] == 0 { abort }),
+   355        ← `(lstmt| if $r:ident⟨$t:ident⟩.$cnt:ident <= $i:ident { abort })]
+   356    | `(lstmt| for $j:ident < $n:ident { $ss;* }) => do
+   357      for x in ss.getElems do
+   358        let a := assigned x
+   359        if a.contains j.getId || a.contains n.getId then
+   360          Macro.throwErrorAt x s!"the body of `for {j.getId} < {n.getId}` assigns `{j.getId}` or `{n.getId}`"
+   361      let body : Syntax.TSepArray `lstmt "; " := .ofElems (ss.getElems.push (← `(lstmt| $j:ident += 1)))
+   362      return #[← `(lstmt| while $j:ident < $n:ident { $body;* })]
+   363    | _ => return #[s]
 
 == ConAgua/L/For.lean#L69-L85
     69  /-- **The counted-loop rule.** An invariant `I` that the body keeps (with `j += 1` after it)
@@ -1105,8 +1109,8 @@
     12  library reaches them only through the accessors below, written in L as
     13  
     14  * `R⟨t, i⟩.f`: field `f` of node `i` of tier `t` (`R⟨t, i⟩` for a one-word column);
-    15  * `R⟦h⟧.f`, `R⟦h⟧`: the same for the node a handle word `h` names (tier bit 27, index the low 27
-    16    bits);
+    15  * `R⟦h⟧.f`, `R⟦h⟧`: the same for the node a handle word `h` names (tier bit 31, index
+    16    `idxE`, or `idxAE` for `APP`, below);
     17  * `R⟨t⟩.count`: the node count of tier `t`;
     18  * `R⟨t, i⟩.f := e`: a field store (the store library's pushes only).
     19  
@@ -1123,18 +1127,18 @@
     30  written once, whole, by the store library's pushes (the combined word `f₀ | f_hi << 32`);
     31  `TRec.st` stores a whole word (unpacked fields only).
 
-== ConAgua/L/Notation.lean#L103-L104
-   103  /-- `le64!(A.u8, i)`: the little-endian word of the bytes `i … i + 7` (`D.c8` for constant bytes). -/
-   104  syntax "le64!" "(" ident ", " lexpr ")" : lexpr
+== ConAgua/L/Notation.lean#L106-L107
+   106  /-- `le64!(A.u8, i)`: the little-endian word of the bytes `i … i + 7` (`D.c8` for constant bytes). -/
+   107  syntax "le64!" "(" ident ", " lexpr ")" : lexpr
 
-== ConAgua/L/Notation.lean#L156-L162
-   156  /-- `x := scan!(A.u8, i, e, C)`: the first `j ∈ [i, e)` whose byte is in the class `C` (a Lean
-   157  constant: a 256-byte table), else `e` (`D.c8` for constant bytes; lane blkcopy). -/
-   158  syntax ident " := " "scan!" "(" ident ", " lexpr ", " lexpr ", " ident ")" : lstmt
-   159  /-- `copy!(D, di, S, si, n)`: `D[di + j] := S[si + j]` for `j < n` (`S` a word array `B.u64` or bytes
-   160  `B.u8`/`B.c8`; `D⟨t⟩`, `S⟨t⟩` for tiered word arrays; lane blkcopy). -/
-   161  syntax "copy!" "(" ident (noWs "⟨" lexpr "⟩")? ", " lexpr ", " ident (noWs "⟨" lexpr "⟩")? ", " lexpr ", "
-   162    lexpr ")" : lstmt
+== ConAgua/L/Notation.lean#L159-L165
+   159  /-- `x := scan!(A.u8, i, e, C)`: the first `j ∈ [i, e)` whose byte is in the class `C` (a Lean
+   160  constant: a 256-byte table), else `e` (`D.c8` for constant bytes; lane blkcopy). -/
+   161  syntax ident " := " "scan!" "(" ident ", " lexpr ", " lexpr ", " ident ")" : lstmt
+   162  /-- `copy!(D, di, S, si, n)`: `D[di + j] := S[si + j]` for `j < n` (`S` a word array `B.u64` or bytes
+   163  `B.u8`/`B.c8`; `D⟨t⟩`, `S⟨t⟩` for tiered word arrays; lane blkcopy). -/
+   164  syntax "copy!" "(" ident (noWs "⟨" lexpr "⟩")? ", " lexpr ", " ident (noWs "⟨" lexpr "⟩")? ", " lexpr ", "
+   165    lexpr ")" : lstmt
 
 == ConAgua/L/Semantics.lean#L207-L226
    207  /-- The little-endian word of the bytes `k, …, k + 7` of `b` (as the machine's 8-byte load
@@ -1182,81 +1186,106 @@
   1076     i64 (.cmp (.reg (rr .rdx)) (oI 0)), jccL .nz Xb,
   1077     i64 (.add (.reg (rr .rax)) (oI 1)), i64 (.cmp (.reg (rr .rax)) eo), jccL .c Lb]
 
-== ConAgua/L/TRec.lean#L101-L105
-   101  /-- The tier of a handle word: bit 27. -/
-   102  @[expose] def tierE (h : Expr) : Expr := .bin .and (.bin .shr h (.const 27)) (.const 1)
-   103  
-   104  /-- The node index of a handle word: the low 27 bits. -/
-   105  @[expose] def idxE (h : Expr) : Expr := .bin .and h (.const 134217727)
+== ConAgua/L/TRec.lean#L113-L142
+   113  /-- The tier of a handle word: bit 31. -/
+   114  @[expose] def tierE (h : Expr) : Expr := .bin .and (.bin .shr h (.const 31)) (.const 1)
+   115  
+   116  /-- The node index of a NARROW handle word: bits 25…0, with bit 30 kept, so that a wide word
+   117  reads an index of at least `2^30`, beyond every narrow array (whose cap is `2^26`): a node read
+   118  through it fails its count check, as the twin's `get` (whose `app` and `param` arms test the
+   119  shape) finds nothing. -/
+   120  @[expose] def idxE (h : Expr) : Expr := .bin .and h (.const 0x43ffffff)
+   121  
+   122  /-- The node index of a WIDE handle word (an expression `app`): bits 30…0 of `2^30 + h`, so that
+   123  a narrow word reads an index of at least `2^30`, beyond the `app` array (cap `2^30`). The
+   124  constant comes first (`idxA`, `StoreFields.lean`, says why). -/
+   125  @[expose] def idxAE (h : Expr) : Expr :=
+   126    .bin .and (.bin .add (.const 0x40000000) h) (.const 0x7fffffff)
+   127  
+   128  /-- The node index of any handle word, con-ron's `Idx.idxNat` itself (bits 29…0 of a wide word,
+   129  25…0 of a narrow one): `h & (2^26 - 1 + w · (2^30 - 2^26))`, `w` the shape bit. The twin's
+   130  `derived` (`ETables.derAt`, `LTables.derAt`) reads the derived column at this index without a
+   131  shape test, so the derived reads of the `app` and `param` arms use it. -/
+   132  @[expose] def idxGE (h : Expr) : Expr :=
+   133    .bin .and h (.bin .add (.const 0x3ffffff)
+   134      (.bin .mul (.bin .and (.bin .shr h (.const 30)) (.const 1)) (.const 0x3c000000)))
+   135  
+   136  /-- The constructor tag of a handle word, the twin's `Idx.tag`: `4` (`app`) for a wide word,
+   137  bits 29…26 of a narrow one; branch-free, `f + w * (4 - f)` with `f = (h >> 26) & 15` and the
+   138  shape bit `w = (h >> 30) & 1`. -/
+   139  @[expose] def tagE (h : Expr) : Expr :=
+   140    .bin .add (.bin .and (.bin .shr h (.const 26)) (.const 15))
+   141      (.bin .mul (.bin .and (.bin .shr h (.const 30)) (.const 1))
+   142        (.bin .sub (.const 4) (.bin .and (.bin .shr h (.const 26)) (.const 15))))
 
-== ConAgua/Arena/StoreFields.lean#L11-L34
-    11  # The store records: one accessor per field, one evaluation lemma per accessor (lane tieracc)
-    12  
-    13  Every node store of the arena keeps its records in a word array and its node counts in `CTL`
-    14  (`L/TRec.lean`). This file is the **only** place outside the store library that knows the
-    15  layout:
-    16  
-    17  * **The stores** (`LIT`, `APP`, …, `LVLS`) and their one-word columns (`APP_DER`, …, `FVAR_LP`), as
-    18    `L.TRec` values, with a constant per field (`APP.f`, `APP.a`, …). L code reads them as
-    19    `APP⟨t, i⟩.f`, `APP⟦h⟧.a`, `APP⟨t⟩.count` (`L/Notation.lean`).
-    20  * **The proof accessors** `tfld m R t i f` (field `f` of node `i` of tier `t`) and `tcnt m R t`
-    21    (the node count of tier `t`), and the handle words: `hdW`, `tagW`, `tierW`, `idxW` and their
-    22    laws, proved once through `toNat` (the bridge to the twin's `Idx` is `Handle.lean`).
-    23  * **One evaluation lemma per accessor**: `evalE_tld` / `tld_eq` (pass both to `vcgen`, as
-    24    `ld64`), `evalE_cnt` / `tcntM_eq`, `evalE_tierE`, `evalE_idxE`, and the pure forms
-    25    `Expr.pval_tld`, `Expr.pval_cntE`, … (`lang_grind`); the frame lemmas `tfld_set64_ne`,
-    26    `tcnt_set64_ne`, `tfld_setG`, ….
-    27  
-    28  Proofs outside the store library state models and relations with `tfld` and `tcnt` and never
-    29  unfold them (`TRec.ad` stays folded). The layout (one tiered array per store, lane
-    30  `tierswitch`: tier `t` of array `a` is `tierA a t`) lives in `L/TRec.lean`, the definitions and
-    31  lemma proofs here, and the store library.
-    32  
-    33  The array and control-word ids below are the memory map's (`AREC` = `APP.arr`, …): each store
-    34  file's `abbrev` must agree, `StoreFieldsCheck.lean` checks it.
+== ConAgua/Arena/StoreFields.lean#L12-L35
+    12  # The store records: one accessor per field, one evaluation lemma per accessor (lane tieracc)
+    13  
+    14  Every node store of the arena keeps its records in a word array and its node counts in `CTL`
+    15  (`L/TRec.lean`). This file is the **only** place outside the store library that knows the
+    16  layout:
+    17  
+    18  * **The stores** (`LIT`, `APP`, …, `LVLS`) and their one-word columns (`APP_DER`, …, `FVAR_LP`), as
+    19    `L.TRec` values, with a constant per field (`APP.f`, `APP.a`, …). L code reads them as
+    20    `APP⟨t, i⟩.f`, `APP⟦h⟧.a`, `APP⟨t⟩.count` (`L/Notation.lean`).
+    21  * **The proof accessors** `tfld m R t i f` (field `f` of node `i` of tier `t`) and `tcnt m R t`
+    22    (the node count of tier `t`), and the handle words: `hdW`, `hdA`, `tagW`, `tierW`, `idxW`, `idxA` and their
+    23    laws, proved once through `toNat` (the bridge to the twin's `Idx` is `Handle.lean`).
+    24  * **One evaluation lemma per accessor**: `evalE_tld` / `tld_eq` (pass both to `vcgen`, as
+    25    `ld64`), `evalE_cnt` / `tcntM_eq`, `evalE_tierE`, `evalE_idxE`, `evalE_idxAE`, `evalE_tagE`, and the pure forms
+    26    `Expr.pval_tld`, `Expr.pval_cntE`, … (`lang_grind`); the frame lemmas `tfld_set64_ne`,
+    27    `tcnt_set64_ne`, `tfld_setG`, ….
+    28  
+    29  Proofs outside the store library state models and relations with `tfld` and `tcnt` and never
+    30  unfold them (`TRec.ad` stays folded). The layout (one tiered array per store, lane
+    31  `tierswitch`: tier `t` of array `a` is `tierA a t`) lives in `L/TRec.lean`, the definitions and
+    32  lemma proofs here, and the store library.
+    33  
+    34  The array and control-word ids below are the memory map's (`AREC` = `APP.arr`, …): each store
+    35  file's `abbrev` must agree, `StoreFieldsCheck.lean` checks it.
 
-== ConAgua/Arena/ConsLib.lean#L209-L218
-   209  /-! ## The slot layout (KSTP)
-   210  
-   211  Each tier has its own slot array `sa⟨t⟩` (lane tierswitch; con-ron's per-tier tables). Its words
-   212  `0` and `1` hold `n - SN0` (`n` the slot count, a multiple of 8) and `o`, the table's offset (`0`:
-   213  nothing writes it); the table starts at word `r = 2 + o`. Slot `j` is the two words `r + 2 j` (the
-   214  value: `0` free, `B t + i + 1` node `i`) and `r + 2 j + 1` (the key word). The table grows at load
-   215  3/4 (con-ron's `HashMap2`) and **in place** (lane memlay): it doubles where it is (`kgrowB`), so no
-   216  old copy of it stays resident, and the growth aborts if the array cannot hold the doubled table.
-   217  A fresh array (all zero) is a table of `SN0` slots at offset `0`: a small run touches only the
-   218  array's first words.
+== ConAgua/Arena/ConsLib.lean#L221-L230
+   221  /-! ## The slot layout (KSTP)
+   222  
+   223  Each tier has its own slot array `sa⟨t⟩` (lane tierswitch; con-ron's per-tier tables). Its words
+   224  `0` and `1` hold `n - SN0` (`n` the slot count, a multiple of 8) and `o`, the table's offset (`0`:
+   225  nothing writes it); the table starts at word `r = 2 + o`. Slot `j` is the two words `r + 2 j` (the
+   226  value: `0` free, `B t + i + 1` node `i`) and `r + 2 j + 1` (the key word). The table grows at load
+   227  3/4 (con-ron's `HashMap2`) and **in place** (lane memlay): it doubles where it is (`kgrowB`), so no
+   228  old copy of it stays resident, and the growth aborts if the array cannot hold the doubled table.
+   229  A fresh array (all zero) is a table of `SN0` slots at offset `0`: a small run touches only the
+   230  array's first words.
 
-== ConAgua/Arena/ConsLib.lean#L567-L572
-   567  /-- The growth test: the tier grows when its node count `c + 1` passes 3/4 of its slot count
-   568  `g + SN0` (`(g + SN0) * 3 < (c + 1) * 4`; con-ron's `HashMap2` load factor `LOAD_NUM/LOAD_DEN`). -/
-   569  def cpGrowIf (C : ConsSch) : Stmt :=
-   570    .ite (.cmp .ult (.bin .mul (.bin .add (.var (gO C + 1)) (.const SN0)) (.const 3))
-   571        (.bin .mul (.bin .add (.var (2 + C.np)) (.const 1)) (.const 4)))
-   572      (kgrowBlk C) .skip
+== ConAgua/Arena/ConsLib.lean#L583-L588
+   583  /-- The growth test: the tier grows when its node count `c + 1` passes 3/4 of its slot count
+   584  `g + SN0` (`(g + SN0) * 3 < (c + 1) * 4`; con-ron's `HashMap2` load factor `LOAD_NUM/LOAD_DEN`). -/
+   585  def cpGrowIf (C : ConsSch) : Stmt :=
+   586    .ite (.cmp .ult (.bin .mul (.bin .add (.var (gO C + 1)) (.const SN0)) (.const 3))
+   587        (.bin .mul (.bin .add (.var (2 + C.np)) (.const 1)) (.const 4)))
+   588      (kgrowBlk C) .skip
 
-== ConAgua/Arena/ConsLib.lean#L538-L558
-   538  /-- **The growth of tier `t`, in place** (con-ron's `HashMap2::try_resize` doubles into a new
-   539  table and frees the old one; here the table doubles where it is, so no old copy stays resident):
-   540  the slot count doubles and the new upper half is zeroed. Then one top-down sweep over the old
-   541  half re-inserts each live entry from its home in the doubled table with a probe that runs above
-   542  the sweep (so it meets no unmoved entry) and does not wrap. The few entries it cannot place
-   543  that way get the mark (`MARK` added to the value word): those whose home is below their slot,
-   544  and those whose probe meets a marked slot or the top one. They lie in two ranges, which absl's
-   545  in-place re-insertion then scans (linear probing past the live unmarked slots; a marked slot
-   546  met on the way is swapped and re-inserted next). Aborts if the array cannot hold the doubled
-   547  table. Template variables `t n2 n H Q ob nb x e v q h j d bt` (`t` the push's tier, the others
-   548  from `gO`), the `ihash` block, and the ranges `a0 a1 b0 b1`. -/
-   549  def kgrowB (C : ConsSch) : Stmt := lblk (t, n2, n, H, Q, ob, nb, x, e, v, q, h, j, d, bt, y15, y16, y17, a0, a1, b0, b1) {
-   550    ⟪kgrowH C⟫;
-   551    ⟪kzeroL C⟫;
-   552    ⟪kgrowH4⟫;
-   553    ⟪ktopL C⟫;
-   554    ⟪kgrowH5⟫;
-   555    ⟪krehashL C 19⟫;
-   556    ⟪kgrowH6⟫;
-   557    ⟪krehashL C 21⟫
-   558  }
+== ConAgua/Arena/ConsLib.lean#L554-L574
+   554  /-- **The growth of tier `t`, in place** (con-ron's `HashMap2::try_resize` doubles into a new
+   555  table and frees the old one; here the table doubles where it is, so no old copy stays resident):
+   556  the slot count doubles and the new upper half is zeroed. Then one top-down sweep over the old
+   557  half re-inserts each live entry from its home in the doubled table with a probe that runs above
+   558  the sweep (so it meets no unmoved entry) and does not wrap. The few entries it cannot place
+   559  that way get the mark (`MARK` added to the value word): those whose home is below their slot,
+   560  and those whose probe meets a marked slot or the top one. They lie in two ranges, which absl's
+   561  in-place re-insertion then scans (linear probing past the live unmarked slots; a marked slot
+   562  met on the way is swapped and re-inserted next). Aborts if the array cannot hold the doubled
+   563  table. Template variables `t n2 n H Q ob nb x e v q h j d bt` (`t` the push's tier, the others
+   564  from `gO`), the `ihash` block, and the ranges `a0 a1 b0 b1`. -/
+   565  def kgrowB (C : ConsSch) : Stmt := lblk (t, n2, n, H, Q, ob, nb, x, e, v, q, h, j, d, bt, y15, y16, y17, a0, a1, b0, b1) {
+   566    ⟪kgrowH C⟫;
+   567    ⟪kzeroL C⟫;
+   568    ⟪kgrowH4⟫;
+   569    ⟪ktopL C⟫;
+   570    ⟪kgrowH5⟫;
+   571    ⟪krehashL C 19⟫;
+   572    ⟪kgrowH6⟫;
+   573    ⟪krehashL C 21⟫
+   574  }
 
 == ConAgua/Arena/SlotGrow.lean#L41-L44
     41  /-- The home slot of hash `h` among `n`: con-ron's multiply-xor finaliser, then the high word
@@ -1489,7 +1518,7 @@
    256  fresh heap (the top reset to `0`). The verdict cache `lvlEqC` is `lvl_eq_c`'s, in front of this
    257  function (`CoreLevels.lean`); this is the uncached computation (`LevelArena.lean`,
    258  `lvlEq_refines`). -/
-   259  -- con-ron: ConRon/Arena/Core.lean:132-149 ConRon.Arena.lvlEq?
+   259  -- con-ron: ConRon/Arena/Core.lean:137-154 ConRon.Arena.lvlEq?
    260  @[l_impl ConRon.Arena.lvlEq?]
    261  def lvlEqL : FunDecl := lfn (u, v) locals (z) {
    262    CTL.u64[192] := 0;
@@ -1515,36 +1544,36 @@
    275    | zero => vcgen [exec] <;> grind
    276    | succ n =>
    277      sym only [lang_grind, arena_grind, level_grind] =>
-   278        vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, st64, lvEquiv_spec p hp hpe n] <;>
+   278        vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, st64, lvEquiv_spec p hp hpe n] <;>
    279        finish (gen := 20) [lvlEqW]
 
-== ConAgua/Arena/LevelArena.lean#L259-L264
-   259  theorem lvlEq_refines {m m' : Mem} {a : AState} (hR : ArenaR m a)
-   260      (hwf : NStoreWF a.store.lss.ls.ns) (u v : LIdx) (lu lv : Level)
-   261      (hu : denoteL a.store.ls u = some lu) (hv : denoteL a.store.ls v = some lv)
-   262      (hc : ReadLCOK a) (he : LvlEqCOK a u v lu lv) (n : Nat) (z : Word)
-   263      (h : lvlEqW n m u.word.toUInt64 v.word.toUInt64 = some (z, m')) :
-   264      ∃ o a', (lvlEq? u v).run a = .ok (o, a') ∧ z = encO o ∧ ArenaR m' a' := by
+== ConAgua/Arena/LevelArena.lean#L265-L270
+   265  theorem lvlEq_refines {m m' : Mem} {a : AState} (hR : ArenaR m a)
+   266      (hwf : NStoreWF a.store.lss.ls.ns) (u v : LIdx) (lu lv : Level)
+   267      (hu : denoteL a.store.ls u = some lu) (hv : denoteL a.store.ls v = some lv)
+   268      (hc : ReadLCOK a) (he : LvlEqCOK a u v lu lv) (n : Nat) (z : Word)
+   269      (h : lvlEqW n m u.word.toUInt64 v.word.toUInt64 = some (z, m')) :
+   270      ∃ o a', (lvlEq? u v).run a = .ok (o, a') ∧ z = encO o ∧ ArenaR m' a' := by
 
-== vendor/con-ron/ConRon/Arena/Core.lean#L132-L149
-   132  /-- con-leche: ConLeche/Kernel/Level.lean:164-169 isEquiv — `Level.isEquiv`
-   133  at two level HANDLES, with the verdict cached on the pair.  `none` is
-   134  con-leche's fuel exhaustion and is never cached. -/
-   135  def lvlEq? (u v : LIdx) : AM (Option Bool) := do
-   136    let s ← get
-   137    match s.caches.lvlEqC[(u, v)]? with
-   138    | some r => pure (some r)
-   139    | none => do
-   140      let lu ← readLevelM u
-   141      let lv ← readLevelM v
-   142      match Level.isEquiv lu lv with
-   143      | some r => do
-   144        let s ← get
-   145        let mp := s.caches.lvlEqC
-   146        let s := { s with caches := { s.caches with lvlEqC := ∅ } }
-   147        set { s with caches := { s.caches with lvlEqC := mp.insert (u, v) r } }
-   148        pure (some r)
-   149      | none => pure none
+== vendor/con-ron/ConRon/Arena/Core.lean#L137-L154
+   137  /-- con-leche: ConLeche/Kernel/Level.lean:164-169 isEquiv — `Level.isEquiv`
+   138  at two level HANDLES, with the verdict cached on the pair.  `none` is
+   139  con-leche's fuel exhaustion and is never cached. -/
+   140  def lvlEq? (u v : LIdx) : AM (Option Bool) := do
+   141    let s ← get
+   142    match s.caches.lvlEqC[(u, v)]? with
+   143    | some r => pure (some r)
+   144    | none => do
+   145      let lu ← readLevelM u
+   146      let lv ← readLevelM v
+   147      match Level.isEquiv lu lv with
+   148      | some r => do
+   149        let s ← get
+   150        let mp := s.caches.lvlEqC
+   151        let s := { s with caches := { s.caches with lvlEqC := ∅ } }
+   152        set { s with caches := { s.caches with lvlEqC := mp.insert (u, v) r } }
+   153        pure (some r)
+   154      | none => pure none
 
 == ConAgua/L/ModelGen.lean#L12-L65
     12  /-!
@@ -2042,17 +2071,17 @@
     20    --check     fail (exit 1) if a file would change; do not write it
     21    --no-build  do not build ConAgua.Checker.AsmEmit's imports and romgen first"""
 
-== ConAgua/Rom/Gen.lean#L13-L22
-    13  def main (args : List String) : IO UInt32 := do
-    14    let some out := args.head? | IO.eprintln "usage: romgen OUT [N]"; return 2
-    15    let k := ((args.drop 1).head?.bind String.toNat?).getD 1
-    16    let pins := ConLeche.natOpPinSets.take k
-    17    let t0 ← IO.monoMsNow
-    18    let bytes := pinBuffer pins
-    19    IO.FS.writeBinFile out (ByteArray.mk bytes.toArray)
-    20    let t1 ← IO.monoMsNow
-    21    IO.println s!"{out}: {bytes.length} bytes ({romData.length} startup data, {pins.length} variant(s)), {t1 - t0} ms"
-    22    return 0
+== ConAgua/Rom/Gen.lean#L14-L23
+    14  def main (args : List String) : IO UInt32 := do
+    15    let some out := args.head? | IO.eprintln "usage: romgen OUT [N]"; return 2
+    16    let k := ((args.drop 1).head?.bind String.toNat?).getD 1
+    17    let pins := ConLeche.natOpPinSets.take k
+    18    let t0 ← IO.monoMsNow
+    19    let bytes := pinBuffer pins
+    20    IO.FS.writeBinFile out (ByteArray.mk bytes.toArray)
+    21    let t1 ← IO.monoMsNow
+    22    IO.println s!"{out}: {bytes.length} bytes ({romData.length} startup data, {pins.length} variant(s)), {t1 - t0} ms"
+    23    return 0
 
 == ConAgua/Compiler/Bce.lean#L234-L258
    234  /-- The facts after `s`, `none` if it does not end normally. -/
@@ -2143,7 +2172,7 @@
 
 == ConAgua/Checker/Entry.lean#L108-L124
    108  `c = 0`: the header only); returns `2^63 + k` (`1` if a line did not scan). -/
-   109  -- con-ron: ConRon/Arena/Main.lean:130-162 ConRon.Arena.runPipelineHead
+   109  -- con-ron: ConRon/Arena/Main.lean:135-167 ConRon.Arena.runPipelineHead
    110  def checkAL : FunDecl := lfn (c) locals (r, z, cnt, v) {
    111    z := call cap_check();
    112    z := call pb_check();
@@ -2164,8 +2193,8 @@
    126  /-- `check_b()`: on the worker region's first call the seed (`CTL`) from the buffer, then the
    127  pending groups `PLO‥PHI-1` (`PHI` at most the count) at phase A's final view, in order, as phase
    128  B's loop (`check_pending_go`); returns `ACCEPT`. -/
-   129  -- con-ron: ConRon/Arena/Phased.lean:29-36 ConRon.Arena.AState.worker
-   130  -- con-ron: ConRon/Arena/Pooled.lean:30-43 ConRon.Arena.PooledAccepts
+   129  -- con-ron: ConRon/Arena/Phased.lean:33-40 ConRon.Arena.AState.worker
+   130  -- con-ron: ConRon/Arena/Pooled.lean:34-47 ConRon.Arena.PooledAccepts
    131  def checkBL : FunDecl := lfn () locals (z, n) {
    132    if INIT == 0 {
    133      n := len(CTLF.u64);
