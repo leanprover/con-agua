@@ -177,99 +177,72 @@ theorem cbi_ref (hP : IndsProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : A
   have hR1 := cbt_ref hq henv hV hApd hCrk hP.toCstProg k (by omega) hC hmok hA hm0 hfe (vis := vis)
     (nP := UInt64.ofNat bs.nP)
   rw [hnp] at hR1
-  rcases h1 : cbtE p (k + 1) m vis (UInt64.ofNat bs.nP) (UInt64.ofNat q0) with e1 | ⟨r1, m1⟩ <;> rw [h1] at hR1
-  · rw [cbiE.k_check_block_tele.none]; exact RefE.bind_left hR1
-  rw [cbiE.k_check_block_tele.arm1]
-  obtain ⟨⟨cvTa0, s0⟩, a1, hr1, hT1⟩ := hR1
+  refine RefE.bindE (fun _ => rfl) id hR1 fun ⟨r1, m1⟩ ⟨cvTa0, s0⟩ a1 hr1 hT1 => ?_
+  dsimp only [cbiE.k_check_block_tele]
   obtain ⟨hC1, hg1, hcv1, hcx1, hs32, hsd⟩ := hT1.out
-  have hA1 := hT1.abs
-  have c1 := hT1.core
   obtain ⟨-, ⟨cvTa₀P, s0P⟩, ⟨h1a, h1b, hw1⟩, hfk1⟩ := ConRon.Bridge.Inductives.checkBlockTele_specF fe rfl
     (ConRon.Bridge.CoreSpec.of_core rfl) henv bs.nP ms0 ms0P a a1 _ hC.check ⟨hm0, hfe⟩ hr1
   dsimp only at h1a h1b hw1
+  have k1 : InsAt dn vis fe env m a m1 a1 := ⟨hC1, hT1.abs, hg1, hT1.core⟩
   have hc0 := installCvDecB hcv1 hcx1
-  have hfe1 := ConRon.Bridge.denoteFEnv_mono c1.ext hfe
-  refine RefE.bind_right hr1 ?_
+  have hfe1 := ConRon.Bridge.denoteFEnv_mono k1.core.ext hfe
   -- the other members' formers
-  have hR2 := cbts_ref hq henv hV hApd hCrk hP.toInstProg (UInt64.ofNat bs.nP) (k + 1) (by omega) m1 a1 (o + 1)
-    (l - 1) rest restP hC1 (hrest.grow hg1) hA1 (ConRon.Bridge.Inductives.dMember_ext.list c1.ext _ _ hrestP)
-    hfe1 (vis := vis)
+  have hR2 := cbts_ref hq henv hV hApd hCrk hP.toInstProg (UInt64.ofNat bs.nP) (k + 1) (by omega) m1 a1
+    (o + 1) (l - 1) rest restP hC1 (hrest.grow hg1) k1.abs
+    (ConRon.Bridge.Inductives.dMember_ext.list k1.core.ext _ _ hrestP) hfe1 (vis := vis)
   rw [hnp] at hR2
-  rcases h2 : cbtsE p (k + 1) m1 vis (UInt64.ofNat bs.nP) (o + 1) (l - 1) with e2 | ⟨r2, m2⟩ <;>
-    rw [h2] at hR2
-  · rw [cbiE.k_check_block_teles.none]; exact RefE.bind_left hR2
-  rw [cbiE.k_check_block_teles.arm1]
-  obtain ⟨cvs, a2, hr2, hT2⟩ := hR2
-  have hC2 := hT2.stage
-  have hg2 := hT2.grow
-  have hcvs := hT2.teles
-  have hA2 := hT2.abs
-  dsimp only at hC2 hg2 hcvs hA2
-  obtain ⟨c2, cvsP, ⟨h2', hw2⟩, -⟩ := ConRon.Bridge.Inductives.checkBlockTeles_specF fe rfl
+  refine RefE.bindE (fun _ => rfl) id hR2 fun ⟨r2, m2⟩ cvs a2 hr2 hT2 => ?_
+  dsimp only [cbiE.k_check_block_teles] at hT2 ⊢
+  have k2 : InsAt dn vis fe env m1 a1 m2 a2 := ⟨hT2.stage, hT2.abs, hT2.grow, hT2.core⟩
+  obtain ⟨-, cvsP, ⟨h2', hw2⟩, -⟩ := ConRon.Bridge.Inductives.checkBlockTeles_specF fe rfl
     (ConRon.Bridge.CoreSpec.of_core rfl) henv bs.nP rest restP a1 a2 cvs hC1.check
-    ⟨ConRon.Bridge.Inductives.dMember_ext.list c1.ext _ _ hrestP, hfe1⟩ hr2
-  refine RefE.bind_right hr2 ?_
+    ⟨ConRon.Bridge.Inductives.dMember_ext.list k1.core.ext _ _ hrestP, hfe1⟩ hr2
   -- the agreements
   have hsd' : decI (r1.tail.headD 0) = s0 := hsd
   rw [← hsd']
   rw [← hsd'] at h1b
   have hR3 := cbag_ref hq henv hOpf hLC hP.agreeP (UInt64.ofNat bs.nP) (r1.headD 0)
-    (r1.tail.headD 0) cvTa0 hw1 (k + 1) (by omega) m2 a2 (r2.headD 0) (r2.tail.headD 0) cvs cvsP hC2 hA2
-    (hc0.grow (OMono.decCVp _) hg2) hs32 hcvs (ConRon.Bridge.denoteCV_ext h1a c2.ext)
-    (ConRon.Bridge.denoteL_ext h1b c2.ext) h2' hw2 (vis := vis)
+    (r1.tail.headD 0) cvTa0 hw1 (k + 1) (by omega) m2 a2 (r2.headD 0) (r2.tail.headD 0) cvs cvsP k2.stage
+    k2.abs (hc0.grow (OMono.decCVp _) k2.grow) hs32 hT2.teles (ConRon.Bridge.denoteCV_ext h1a k2.core.ext)
+    (ConRon.Bridge.denoteL_ext h1b k2.core.ext) h2' hw2 (vis := vis)
   rw [hnp] at hR3
-  rcases h3 : cbagE p (k + 1) m2 vis (UInt64.ofNat bs.nP) (r1.headD 0) (r1.tail.headD 0) (r2.headD 0)
-    (r2.tail.headD 0) with e3 | ⟨u3, m3⟩ <;> rw [h3] at hR3
-  · rw [cbiE.k_check_block_agree.none]; exact RefE.bind_left fun hG => hR3 hG.toVerdictCtx
-  rw [cbiE.k_check_block_agree.arm1]
-  obtain ⟨_, a3, hr3, hT3⟩ := hR3
-  have hC3 := hT3.stage
-  have hg3 := hT3.grow
-  have hA3 := hT3.abs
-  dsimp only at hC3 hg3 hA3
-  obtain ⟨c3, -⟩ := ConRon.Bridge.Inductives.checkBlockAgree_specF fe (ConRon.Bridge.CoreSpec.of_core rfl)
-    henv bs.nP cvTa0 cvTa₀P (decI (r1.tail.headD 0)) s0P hw1 cvs cvsP hw2 a2 a3 _ hC2.check
-    ⟨ConRon.Bridge.denoteCV_ext h1a c2.ext, ConRon.Bridge.denoteL_ext h1b c2.ext, h2'⟩ hr3
-  have hg03 := (hg1.trans hg2).trans hg3
-  have c13 := c1.trans (c2.trans c3)
-  refine RefE.bind_right hr3 ?_
+  refine RefE.bindE (fun _ => rfl) (fun hG => hG.toVerdictCtx) hR3 fun ⟨u3, m3⟩ _ a3 _ hT3 => ?_
+  dsimp only [cbiE.k_check_block_agree] at hT3 ⊢
+  have k3 : InsAt dn vis fe env m2 a2 m3 a3 := ⟨hT3.stage, hT3.abs, hT3.grow, hT3.core⟩
+  have k03 := (k1.trans k2).trans k3
+  have hx13 := (k2.trans k3).core.ext
   -- the shape with its sort
-  rcases c4 : callW p (k + 1) "block_shape_with_sort" [pp, r1.tail.headD 0] m3 with _ | ⟨r4, m4⟩
-  · rw [liftE_none, cbiE.k_block_shape_with_sort.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some, cbiE.k_block_shape_with_sort.arm1]
+  refine RefE.bindLift (fun _ => rfl) fun r4 m4 c4 => ?_
   obtain ⟨p1, a4, hr4, hS4, hg4, hp1, hsrc4, hrb4⟩ := installWithSortSimC hq.closed hLC hP.alloc hP.pinWord
-    hP.withSort (k + 1) hC3 hA3 (hqd.grow (decBS_mono _) hg03) (partsHsrc_grow hg03 hq9 hsrc) hs32
-    (ConRon.Bridge.denoteL_ext h1b (c2.ext.trans c3.ext)) r4 m4 c4
-  have hA4 := hk _ (by simp [indsKeepCalleesC]) _ _ _ _ _ c4 hA3
+    hP.withSort (k + 1) k3.stage k3.abs (hqd.grow (decBS_mono _) k03.grow)
+    (partsHsrc_grow k03.grow hq9 hsrc) hs32 (ConRon.Bridge.denoteL_ext h1b hx13) r4 m4 c4
+  have hA4 := hk _ (by simp [indsKeepCalleesC]) _ _ _ _ _ c4 k3.abs
   obtain ⟨c4', hp1P⟩ := ConRon.Bridge.Inductives.BlockShape.withSort_spec fe bs bsP
-    (decI (r1.tail.headD 0)) s0P a3 a4 p1 hC3.check
-    ⟨ConRon.Bridge.Inductives.dShape_ext c13.ext _ _ hbsP,
-      ConRon.Bridge.denoteL_ext h1b (c2.ext.trans c3.ext)⟩ hr4
-  have c14 := c13.trans c4'
+    (decI (r1.tail.headD 0)) s0P a3 a4 p1 k3.stage.check
+    ⟨ConRon.Bridge.Inductives.dShape_ext k03.core.ext _ _ hbsP, ConRon.Bridge.denoteL_ext h1b hx13⟩ hr4
+  have k4 := InsAt.cstep k3.stage hS4 hA4 hg4 c4'
   have hSortDn : SortDn dn s0P :=
     sortDn_of_member hm0 hC.mem.dnN (hlpsDn ms0 (by rw [hmeq]; exact List.mem_cons_self ..)) hfk1
-  have hC4 : StageC dn vis fe env m4 a4 := hC3.of_check hS4 hA4 c4'.ok c4'.ext
-  refine RefE.bind_right hr4 ?_
-  -- the formers' constants
-  rcases c5 : callW p (k + 1) "check_block_inds_cv_tas" [r1.headD 0, r2.headD 0, r2.tail.headD 0] m4 with
-    _ | ⟨r5, m5⟩
-  · rw [liftE_none, cbiE.k_check_block_inds_cv_tas.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some, cbiE.k_check_block_inds_cv_tas.arm1]
+  refine ⟨_, _, hr4, ?_⟩
+  dsimp only [cbiE.k_block_shape_with_sort]
+  -- the formers' constants (L only)
+  refine RefE.onlySim (fun _ => rfl) (fun _ _ h => h) fun r5 m5 c5 => ?_
+  dsimp only [cbiE.k_check_block_inds_cv_tas]
   obtain ⟨hS5, hg5, hcvT⟩ := installCvTasRun hP.toCstProg hP.cvTas hP.cvTasGo c5 hS4
-    ((hc0.grow (OMono.decCVp _) ((hg2.trans hg3).trans hg4)))
-    (hcvs.grow decTele_mono (hg3.trans hg4))
+    (hc0.grow (OMono.decCVp _) (k2.trans (k3.trans k4)).grow)
+    (hT2.teles.grow decTele_mono (k3.trans k4).grow)
   have hA5 := hk _ (by simp [indsKeepCalleesC]) _ _ _ _ _ c5 hA4
   -- the formers consed
   have hp1' := hp1.grow (decBS_mono _) hg5
   obtain ⟨-, hp9, -⟩ := partsShapeFacts hp1 hsrc4
   have hsrc5 := partsHsrc_grow hg5 hp9 hsrc4
-  have hx24 := c3.ext.trans c4'.ext
+  have hx24 := (k3.trans k4).core.ext
   have hcvTas : (cvTa0 :: cvs.map (·.1)).mapM (Frontend.denoteCV a4.store) =
       some (cvTa₀P :: cvsP.map (·.1)) := by
     refine ConRon.Bridge.Inductives.mapM_option_cons
-      (ConRon.Bridge.denoteCV_ext h1a (c2.ext.trans hx24)) ?_
+      (ConRon.Bridge.denoteCV_ext h1a (k2.core.ext.trans hx24)) ?_
     have h2'' := ConRon.Bridge.Inductives.BI.dCvL_ext.list hx24 _ _ h2'
-    clear h2' hw2 hcvs
+    clear h2' hw2 hT2 hR2 hR3
     generalize cvs = xs at h2''
     generalize cvsP = ys at h2''
     induction xs generalizing ys with
@@ -280,17 +253,13 @@ theorem cbi_ref (hP : IndsProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : A
       obtain ⟨y, ys', rfl, hy, hys⟩ := ConRon.Bridge.Inductives.mapM_option_cons_inv h2''
       exact ConRon.Bridge.Inductives.mapM_option_cons (ConRon.Bridge.Inductives.BI.dCvL_inv hy).1
         (ih ys' hys)
-  rcases c6 : callW p (k + 1) "cons_block_inds" [r4.headD 0, isRec, r5.headD 0, r5.tail.headD 0, vis, 0] m5 with
-    _ | ⟨r6, m6⟩
-  · rw [liftE_none, cbiE.k_cons_block_inds.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some, cbiE.k_cons_block_inds.arm1]
-  obtain ⟨s6, hs6, -, hok6, hS6, hg6, -⟩ := triple_of_callW (s₀ := ⟨m5, Locals.init []⟩)
-    (consBlockInds_refinesR p hP.toConsIndsProg hLz (k + 1) ⟨m5, Locals.init []⟩ a4 dn vis fe (r4.headD 0) isRec
-      (r5.headD 0) (r5.tail.headD 0) 0 p1 b _ hb hS5 hC4.lzFacts.1 (LzFacts.of_stageC hC4 hp1P hSortDn) hp1'
-      hsrc5 hcvT (by have := (r5.tail.headD 0).toNat_lt; simp only [UInt64.toNat_zero, Nat.zero_add]; exact this))
+  refine RefE.bindLift (fun _ => rfl) fun r6 m6 c6 => ?_
+  obtain ⟨s6, rfl, -, hok6, hS6, hg6, -⟩ := triple_of_callW (s₀ := ⟨m5, Locals.init []⟩)
+    (consBlockInds_refinesR p hP.toConsIndsProg hLz (k + 1) ⟨m5, Locals.init []⟩ a4 dn vis fe (r4.headD 0)
+      isRec (r5.headD 0) (r5.tail.headD 0) 0 p1 b _ hb hS5 k4.stage.lzFacts.1
+      (LzFacts.of_stageC k4.stage hp1P hSortDn) hp1' hsrc5 hcvT
+      (by have := (r5.tail.headD 0).toNat_lt; simp only [UInt64.toNat_zero, Nat.zero_add]; exact this))
     c6
-  simp only at hs6 hS6 hg6
-  subst hs6
   have hr6 := AM.run_of_ok _ a4 hok6
   generalize AM.res (ConRon.Arena.consBlockInds p1 b (cvTa0 :: cvs.map (·.1)) (0 : Word).toNat fe) a4 = fe1
     at hr6 hS6
@@ -298,14 +267,15 @@ theorem cbi_ref (hP : IndsProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : A
     at hr6 hS6
   have hA6 := hk _ (by simp [indsKeepCalleesC]) _ _ _ _ _ c6 hA5
   obtain ⟨c5', -⟩ := ConRon.Bridge.Inductives.consBlockInds_spec fe p1 _ b _ _ 0 fe env hcoh a4 a6 fe1
-    hC4.check ⟨hp1P, hcvTas, ConRon.Bridge.denoteFEnv_mono c14.ext hfe⟩ hr6
+    k4.stage.check ⟨hp1P, hcvTas, ConRon.Bridge.denoteFEnv_mono (k03.trans k4).core.ext hfe⟩ hr6
   obtain ⟨-, hp9', -⟩ := partsShapeFacts hp1' hsrc5
-  refine RefE.bind_right hr6 ?_
-  exact RefE.ret rfl ⟨⟨hS6, (((((hg1.trans hg2).trans hg3).trans hg4).trans hg5).trans hg6),
-    hcvT.grow (fun q => OMono.decCVp q) hg6,
+  refine ⟨_, _, hr6, ?_⟩
+  dsimp only [cbiE.k_cons_block_inds]
+  have k04 := k03.trans k4
+  exact RefE.ret rfl ⟨⟨hS6, (k04.grow.trans hg5).trans hg6, hcvT.grow (fun q => OMono.decCVp q) hg6,
     hp1'.grow (decBS_mono _) hg6, partsHsrc_grow hg6 hp9' hsrc5⟩, hA6, fun hrb =>
-    ((hrb4 ((hrb.grow (hg1.trans hg2) (by omega)).grow hg3 (by have := hg1.trans hg2; have := this.1; omega))).grow
-      (hg5.trans hg6) (by omega)), c14.trans c5'⟩
+    ((hrb4 ((hrb.grow (k1.trans k2).grow (by omega)).grow k3.grow
+      (by have := (k1.trans k2).grow.1; omega))).grow (hg5.trans hg6) (by omega)), k04.core.trans c5'⟩
 
 include hq henv hV hOpf hLC hApd hCrk hLz in
 /-- **`check_block_inds` refines `checkBlockInds`** under `StageC` (stage 1; the shape's and the
