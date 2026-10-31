@@ -43,17 +43,6 @@ theorem ntyT_eq {β : Type} (fe : IFEnv) (key : NestKey) (K : EIdx → AM β) :
         · funext s; rfl
         · simp
 
-/-- `nestInstType` is `ntyT` with a continuation. -/
-theorem nestInstType_ntyT (fe : IFEnv) (c : NestCtx) (hi : Nat) (key : NestKey) :
-    ∃ K, ConRon.Arena.nestInstType fe c hi key = ntyT fe key K := ⟨_, rfl⟩
-
-/-- A failing `ntyT` fails `nestInstType`. -/
-theorem ErrClaim.nestInstType {fe : IFEnv} {c : NestCtx} {hi : Nat} {key : NestKey} {a : AState}
-    {e : Err} (h : ErrClaim (ntyT fe key pure) a e) :
-    ErrClaim (ConRon.Arena.nestInstType fe c hi key) a e := by
-  obtain ⟨K, hK⟩ := nestInstType_ntyT fe c hi key
-  rw [hK, ntyT_eq]; exact ErrClaim.bind_left h
-
 /-- **`nest_inst_type_ty` refines `ntyT`, both outcomes**: the container (`env_find`), the level
 count (`view_ls_len`), `strip_pis`, `cv_lps`, `inst_lp_fast` (its contract `hI`), `inst_pis_with`. -/
 theorem nty_ref {p : Prog} (hl : NtyLook p) {dn : NIdx → Option ConLeche.Name} {vis : Word}
