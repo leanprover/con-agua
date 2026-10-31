@@ -128,10 +128,11 @@ constant comes first (`idxA`, `StoreFields.lean`, says why). -/
 /-- The node index of any handle word, con-ron's `Idx.idxNat` itself (bits 29…0 of a wide word,
 25…0 of a narrow one): `h & (2^26 - 1 + w · (2^30 - 2^26))`, `w` the shape bit. The twin's
 `derived` (`ETables.derAt`, `LTables.derAt`) reads the derived column at this index without a
-shape test, so the derived reads of the `app` and `param` arms use it. -/
+shape test, so the derived reads of the `app` and `param` arms use it. Every right operand is a
+constant or `h`: the code generator then needs no frame temporary for it (`tempsE`). -/
 @[expose] def idxGE (h : Expr) : Expr :=
-  .bin .and h (.bin .add (.const 0x3ffffff)
-    (.bin .mul (.bin .and (.bin .shr h (.const 30)) (.const 1)) (.const 0x3c000000)))
+  .bin .and (.bin .add (.bin .mul (.bin .and (.bin .shr h (.const 30)) (.const 1)) (.const 0x3c000000))
+    (.const 0x3ffffff)) h
 
 /-- The constructor tag of each value of a handle word's bits 30…26 (the shape bit, then the tag
 field): the field itself for a narrow word (`0 … 15`), `4` (`app`) for a wide one (`16 … 31`). -/

@@ -555,6 +555,10 @@ theorem evalE_idxE (h : Expr) : evalE (idxE h) = (do let x ← evalE h; pure (id
 theorem evalE_idxAE (h : Expr) : evalE (idxAE h) = (do let x ← evalE h; pure (idxA x)) := by
   simp [idxAE, evalE, BinOp.eval, idxA, bind_pure_comp]
 
+/-- `idxGE`'s value: `idxG` with the operands in code-generator order. -/
+theorem idxG_eq (h : Word) : (((h >>> 30) &&& 1) * 0x3c000000 + 0x3ffffff) &&& h = idxG h := by
+  rw [UInt64.and_comm, UInt64.add_comm]; rfl
+
 /-- `idxGE` reads `h` twice; an expression's value does not depend on how often it is read
 (`evalE_spec`: it leaves the state alone). -/
 theorem evalE_idxGE (h : Expr) : evalE (idxGE h) = (do let x ← evalE h; pure (idxG x)) := by
@@ -566,8 +570,8 @@ theorem evalE_idxGE (h : Expr) : evalE (idxGE h) = (do let x ← evalE h; pure (
     obtain ⟨v, s'⟩ := p
     obtain ⟨hs, -⟩ := M.of_run' (P := fun t => t = s) rfl hr (evalE_spec h s)
     subst hs
-    simp [idxGE, evalE, StateT.run_bind, hr, BinOp.eval, idxG]
-    simp only [bind, Except.bind, hr, Functor.map, Except.map]
+    simp [idxGE, evalE, StateT.run_bind, hr, BinOp.eval]
+    simp only [bind, Except.bind, hr, Functor.map, Except.map, idxG_eq]
 
 theorem evalE_tagE (h : Expr) : evalE (tagE h) = (do let x ← evalE h; pure (tagW x)) := by
   simp only [tagE, evalE, BinOp.eval, bind_assoc, pure_bind, ldc_tagTbl]
@@ -606,7 +610,7 @@ theorem pval_ld_ex (s : St) (R : TRec) (t i : Expr) (f : Word) :
 
 @[lang_grind =] theorem Expr.pval_idxGE (s : St) (h : Expr) :
     Expr.pval s (idxGE h) = idxG (Expr.pval s h) := by
-  simp [idxGE, Expr.pval, BinOp.eval, idxG]
+  simp only [idxGE, Expr.pval, BinOp.eval, idxG_eq]
 
 @[lang_grind =] theorem Expr.pval_tagE (s : St) (h : Expr) :
     Expr.pval s (tagE h) = tagW (Expr.pval s h) := by
