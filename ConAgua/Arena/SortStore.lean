@@ -127,7 +127,6 @@ def sointernW (m : Mem) (u : Word) : Option (Word × Mem) := consInternM sortCS 
 
 /-- con-ron: ConRon/Arena/Monad.lean:249-267 ConRon.Arena.internE
 con-ron: ConRon/Arena/Monad.lean:221-247 ConRon.Arena.internNodeE -/
--- con-ron: CHANGED since ed864140 — `ConRon.Arena.internNodeE` changed; re-check the L code and its proofs, then delete this line
 @[l_impl ConRon.Arena.internE ConRon.Arena.internNodeE]
 def internSort : FunDecl := consInternG sortCS
 

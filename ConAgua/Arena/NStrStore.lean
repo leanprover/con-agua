@@ -161,7 +161,6 @@ aborts (the library's `consInternM`). -/
 def nsinternW (m : Mem) (q o l : Word) : Option (Word × Mem) := consInternM nstrCS m [q, o, l]
 
 /-- con-ron: ConRon/Arena/Monad.lean:384-400 ConRon.Arena.internNNode -/
--- con-ron: CHANGED since ed864140 — below `ConRon.Arena.internNNode`, `ConRon.Arena.Idx.idxCap` changed; re-check the L code and its proofs, then delete this line
 @[l_impl ConRon.Arena.internNNode]
 def internNStr : FunDecl := consInternG nstrCS
 

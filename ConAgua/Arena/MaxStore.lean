@@ -121,7 +121,6 @@ aborts (the library's `consInternM`). -/
 def minternW (m : Mem) (u v : Word) : Option (Word × Mem) := consInternM maxCS m [u, v]
 
 /-- con-ron: ConRon/Arena/Monad.lean:444-460 ConRon.Arena.internLNode -/
--- con-ron: CHANGED since ed864140 — below `ConRon.Arena.internLNode`, `ConRon.Arena.Idx.idxCap` changed; re-check the L code and its proofs, then delete this line
 @[l_impl ConRon.Arena.internLNode]
 def internMax : FunDecl := consInternG maxCS
 

@@ -107,7 +107,6 @@ aborts (the library's `consInternM`). -/
 def nainternW (m : Mem) : Option (Word × Mem) := consInternM nanonCS m []
 
 /-- con-ron: ConRon/Arena/Monad.lean:384-400 ConRon.Arena.internNNode -/
--- con-ron: CHANGED since ed864140 — below `ConRon.Arena.internNNode`, `ConRon.Arena.Idx.idxCap` changed; re-check the L code and its proofs, then delete this line
 @[l_impl ConRon.Arena.internNNode]
 def internNAnon : FunDecl := consInternG nanonCS
 

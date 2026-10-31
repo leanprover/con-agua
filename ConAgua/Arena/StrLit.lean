@@ -60,7 +60,6 @@ def strParamSortL : FunDecl := lfn (pn) locals (pl, sp, so) {
 
 /-- `str_ls1(u)`: the level list `[u]`, its one handle word at the pool top. -/
 -- con-ron: ConRon/Arena/Monad.lean:502-518 ConRon.Arena.internLsNode
--- con-ron: CHANGED since ed864140 — below `ConRon.Arena.internLsNode`, `ConRon.Arena.Idx.idxCap` changed; re-check the L code and its proofs, then delete this line
 def strLs1L : FunDecl := lfn (u) locals (o, h, pt, pb) {
   o := CTL.u64[0];
   pt := ⦃o⦄.tier;

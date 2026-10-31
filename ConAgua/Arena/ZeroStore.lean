@@ -108,7 +108,6 @@ aborts (the library's `consInternM`). -/
 def zinternW (m : Mem) : Option (Word × Mem) := consInternM zeroCS m []
 
 /-- con-ron: ConRon/Arena/Monad.lean:444-460 ConRon.Arena.internLNode -/
--- con-ron: CHANGED since ed864140 — below `ConRon.Arena.internLNode`, `ConRon.Arena.Idx.idxCap` changed; re-check the L code and its proofs, then delete this line
 @[l_impl ConRon.Arena.internLNode]
 def internZero : FunDecl := consInternG zeroCS
 

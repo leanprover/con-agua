@@ -147,7 +147,6 @@ def iwPool : FunDecl := lfn (s, d, l) locals (u, pt, pb) {
 /-- `intern_ls_iw(o, l)`: the `IW` slice of level handles, copied to the pool top and interned
 as a list node. -/
 -- con-ron: ConRon/Arena/Monad.lean:502-518 ConRon.Arena.internLsNode
--- con-ron: CHANGED since ed864140 — below `ConRon.Arena.internLsNode`, `ConRon.Arena.Idx.idxCap` changed; re-check the L code and its proofs, then delete this line
 def internLsIwL : FunDecl := lfn (o, l) locals (top, u, h) {
   top := call pool_room(l);
   u := call iw_pool(o, top, l);

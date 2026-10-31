@@ -52,7 +52,6 @@ def piBVar : FunDecl := lfn (i) locals (sc, r) {
 }
 /-- `pi_fvar(i, ty)`. -/
 -- con-ron: ConRon/Arena/Monad.lean:630-648 ConRon.Arena.internPersistentE
--- con-ron: CHANGED since ed864140 — `ConRon.Arena.internPersistentE` changed; re-check the L code and its proofs, then delete this line
 def piFVar : FunDecl := lfn (i, ty) locals (sc, r) {
   sc := CTL.u64[1]; CTL.u64[1] := 0; r := call intern_fvar(i, ty); CTL.u64[1] := sc; return r
 }
@@ -63,7 +62,6 @@ def piSort : FunDecl := lfn (u) locals (sc, r) {
 }
 /-- `pi_const(n, us)`. -/
 -- con-ron: ConRon/Arena/Monad.lean:630-648 ConRon.Arena.internPersistentE
--- con-ron: CHANGED since ed864140 — `ConRon.Arena.internPersistentE` changed; re-check the L code and its proofs, then delete this line
 def piConst : FunDecl := lfn (n, us) locals (sc, r) {
   sc := CTL.u64[1]; CTL.u64[1] := 0; r := call intern_const(n, us); CTL.u64[1] := sc; return r
 }
@@ -74,7 +72,6 @@ def piApp : FunDecl := lfn (f, a) locals (sc, r) {
 }
 /-- `pi_lam(t, b)`. -/
 -- con-ron: ConRon/Arena/Monad.lean:630-648 ConRon.Arena.internPersistentE
--- con-ron: CHANGED since ed864140 — `ConRon.Arena.internPersistentE` changed; re-check the L code and its proofs, then delete this line
 def piLam : FunDecl := lfn (t, b) locals (sc, r) {
   sc := CTL.u64[1]; CTL.u64[1] := 0; r := call mk_lam(t, b); CTL.u64[1] := sc; return r
 }
@@ -85,7 +82,6 @@ def piForall : FunDecl := lfn (t, b) locals (sc, r) {
 }
 /-- `pi_let(t, v, b)`. -/
 -- con-ron: ConRon/Arena/Monad.lean:630-648 ConRon.Arena.internPersistentE
--- con-ron: CHANGED since ed864140 — `ConRon.Arena.internPersistentE` changed; re-check the L code and its proofs, then delete this line
 def piLet : FunDecl := lfn (t, v, b) locals (sc, r) {
   sc := CTL.u64[1]; CTL.u64[1] := 0; r := call mk_let(t, v, b); CTL.u64[1] := sc; return r
 }
@@ -116,7 +112,6 @@ def poolCopy0 : FunDecl := lfn (o, l) locals (q, j) {
 
 /-- `pi_lit(o, l)` (a `natVal`). -/
 -- con-ron: ConRon/Arena/Monad.lean:630-648 ConRon.Arena.internPersistentE
--- con-ron: CHANGED since ed864140 — `ConRon.Arena.internPersistentE` changed; re-check the L code and its proofs, then delete this line
 def piLit : FunDecl := lfn (o, l) locals (sc, r) {
   if o >> 40 != 0 { o := call pool_copy0(o, l) };
   sc := CTL.u64[1]; CTL.u64[1] := 0; r := call intern_lit(o, l); CTL.u64[1] := sc; return r
@@ -129,13 +124,11 @@ def piLitStr : FunDecl := lfn (o, l) locals (sc, r) {
 }
 /-- `pi_proj(n, i, e)`. -/
 -- con-ron: ConRon/Arena/Monad.lean:630-648 ConRon.Arena.internPersistentE
--- con-ron: CHANGED since ed864140 — `ConRon.Arena.internPersistentE` changed; re-check the L code and its proofs, then delete this line
 def piProj : FunDecl := lfn (n, i, e) locals (sc, r) {
   sc := CTL.u64[1]; CTL.u64[1] := 0; r := call mk_proj(n, i, e); CTL.u64[1] := sc; return r
 }
 /-- `pi_nanon()`: `internPersistentN .anonymous`. -/
 -- con-ron: ConRon/Arena/Monad.lean:650-664 ConRon.Arena.internPersistentN
--- con-ron: CHANGED since ed864140 — below `ConRon.Arena.internPersistentN`, `ConRon.Arena.Idx.idxCap` changed; re-check the L code and its proofs, then delete this line
 def piNAnon : FunDecl := lfn () locals (sc, r) {
   sc := CTL.u64[1]; CTL.u64[1] := 0; r := call intern_nanon(); CTL.u64[1] := sc; return r
 }
@@ -147,13 +140,11 @@ def piNStr : FunDecl := lfn (q, o, l) locals (sc, r) {
 }
 /-- `pi_nnum(q, u)`. -/
 -- con-ron: ConRon/Arena/Monad.lean:650-664 ConRon.Arena.internPersistentN
--- con-ron: CHANGED since ed864140 — below `ConRon.Arena.internPersistentN`, `ConRon.Arena.Idx.idxCap` changed; re-check the L code and its proofs, then delete this line
 def piNNum : FunDecl := lfn (q, u) locals (sc, r) {
   sc := CTL.u64[1]; CTL.u64[1] := 0; r := call intern_nnum(q, u); CTL.u64[1] := sc; return r
 }
 /-- `pi_zero()`: `internPersistentL .zero`. -/
 -- con-ron: ConRon/Arena/Monad.lean:666-680 ConRon.Arena.internPersistentL
--- con-ron: CHANGED since ed864140 — below `ConRon.Arena.internPersistentL`, `ConRon.Arena.Idx.idxCap` changed; re-check the L code and its proofs, then delete this line
 def piZero : FunDecl := lfn () locals (sc, r) {
   sc := CTL.u64[1]; CTL.u64[1] := 0; r := call intern_zero(); CTL.u64[1] := sc; return r
 }
@@ -164,7 +155,6 @@ def piSucc : FunDecl := lfn (u) locals (sc, r) {
 }
 /-- `pi_max(u, v)`. -/
 -- con-ron: ConRon/Arena/Monad.lean:666-680 ConRon.Arena.internPersistentL
--- con-ron: CHANGED since ed864140 — below `ConRon.Arena.internPersistentL`, `ConRon.Arena.Idx.idxCap` changed; re-check the L code and its proofs, then delete this line
 def piMax : FunDecl := lfn (u, v) locals (sc, r) {
   sc := CTL.u64[1]; CTL.u64[1] := 0; r := call intern_max(u, v); CTL.u64[1] := sc; return r
 }
@@ -175,13 +165,11 @@ def piImax : FunDecl := lfn (u, v) locals (sc, r) {
 }
 /-- `pi_param(n)`. -/
 -- con-ron: ConRon/Arena/Monad.lean:666-680 ConRon.Arena.internPersistentL
--- con-ron: CHANGED since ed864140 — below `ConRon.Arena.internPersistentL`, `ConRon.Arena.Idx.idxCap` changed; re-check the L code and its proofs, then delete this line
 def piParam : FunDecl := lfn (n) locals (sc, r) {
   sc := CTL.u64[1]; CTL.u64[1] := 0; r := call intern_param(n); CTL.u64[1] := sc; return r
 }
 /-- `pi_ls(o, l)`: `internPersistentLs` of the pool slice. -/
 -- con-ron: ConRon/Arena/Monad.lean:682-696 ConRon.Arena.internPersistentLs
--- con-ron: CHANGED since ed864140 — below `ConRon.Arena.internPersistentLs`, `ConRon.Arena.Idx.idxCap` changed; re-check the L code and its proofs, then delete this line
 def piLs : FunDecl := lfn (o, l) locals (sc, r) {
   if o >> 40 != 0 { o := call pool_copy0(o, l) };
   sc := CTL.u64[1]; CTL.u64[1] := 0; r := call intern_ls(o, l); CTL.u64[1] := sc; return r

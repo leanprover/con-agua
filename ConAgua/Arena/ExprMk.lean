@@ -798,7 +798,6 @@ def mkAppW (m : Mem) (f a : Word) : Option (Word × Mem) :=
       (exprLPW m f ||| exprLPW m a)) (ainternW m f a)
 
 /-- con-ron: ConRon/Arena/Monad.lean:221-247 ConRon.Arena.internNodeE -/
--- con-ron: CHANGED since ed864140 — `ConRon.Arena.internNodeE` changed; re-check the L code and its proofs, then delete this line
 def mkApp : FunDecl := lfn (f, a) locals (x, y, s, r, q, xf, yf, xl, yl, tr) {
   if (f | a) >> 32 != 0 { abort };
   s := CTL.u64[4] + CTL.u64[5];
@@ -829,7 +828,6 @@ def mkLamW (m : Mem) (t b : Word) : Option (Word × Mem) :=
     (lainternW m t b)
 
 /-- con-ron: ConRon/Arena/Monad.lean:221-247 ConRon.Arena.internNodeE -/
--- con-ron: CHANGED since ed864140 — `ConRon.Arena.internNodeE` changed; re-check the L code and its proofs, then delete this line
 def mkLam : FunDecl := lfn (t, b) locals (x, y, s, r, q, xf, yf, xl, yl, tr) {
   if (t | b) >> 32 != 0 { abort };
   s := CTL.u64[28] + CTL.u64[29];
@@ -858,7 +856,6 @@ def mkForallW (m : Mem) (t b : Word) : Option (Word × Mem) :=
     (fainternW m t b)
 
 /-- con-ron: ConRon/Arena/Monad.lean:221-247 ConRon.Arena.internNodeE -/
--- con-ron: CHANGED since ed864140 — `ConRon.Arena.internNodeE` changed; re-check the L code and its proofs, then delete this line
 def mkForall : FunDecl := lfn (t, b) locals (x, y, s, r, q, xf, yf, xl, yl, tr) {
   if (t | b) >> 32 != 0 { abort };
   s := CTL.u64[30] + CTL.u64[31];
@@ -890,7 +887,6 @@ def mkLetW (m : Mem) (t v b : Word) : Option (Word × Mem) :=
     (leinternW m t v b)
 
 /-- con-ron: ConRon/Arena/Monad.lean:221-247 ConRon.Arena.internNodeE -/
--- con-ron: CHANGED since ed864140 — `ConRon.Arena.internNodeE` changed; re-check the L code and its proofs, then delete this line
 def mkLet : FunDecl := lfn (t, v, b) locals (x, y, z, s, r, q, xf, yf, zf, xl, yl, zl, tr) {
   if (t | v | b) >> 32 != 0 { abort };
   (x, xf, xl) := call der_b(t);
@@ -920,7 +916,6 @@ def mkProjW (m : Mem) (n i e : Word) : Option (Word × Mem) :=
   else mkK PJDER 32 (cnt2 m 32) (packBFL (derBW m e) (derFW m e) (exprLPW m e)) (pjinternW m n i e)
 
 /-- con-ron: ConRon/Arena/Monad.lean:221-247 ConRon.Arena.internNodeE -/
--- con-ron: CHANGED since ed864140 — `ConRon.Arena.internNodeE` changed; re-check the L code and its proofs, then delete this line
 def mkProj : FunDecl := lfn (n, i, e) locals (x, s, r, q, xf, xl, tr) {
   if (n | e) >> 32 != 0 { abort };
   (x, xf, xl) := call der_b(e);

@@ -132,7 +132,6 @@ def fainternW (m : Mem) (ty body : Word) : Option (Word × Mem) := consInternM f
 `ConRon.Arena.internForallEE`/`EStore.internForallE` are sibling names in a different namespace,
 but the `L`-suffix keeps the two visually apart in this file, which `open`s `ConRon.Arena`. -/
 -- con-ron: ConRon/Arena/Monad.lean:249-267 ConRon.Arena.internE
--- con-ron: CHANGED since ed864140 — below `ConRon.Arena.internForallEE`, `ConRon.Arena.Idx.idxCap` changed; re-check the L code and its proofs, then delete this line
 -- con-ron: ConRon/Arena/Monad.lean:202-219 ConRon.Arena.internForallEE
 @[l_impl ConRon.Arena.internE ConRon.Arena.internForallEE]
 def internForallL : FunDecl := consInternG forallCS

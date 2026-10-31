@@ -130,7 +130,6 @@ def lainternW (m : Mem) (ty body : Word) : Option (Word × Mem) := consInternM l
 `EStore.internLam` (`ConRon/Arena/Store.lean`) is a sibling name in a different namespace, but the
 `L`-suffix keeps the two visually apart in this file, which `open`s `ConRon.Arena`. -/
 -- con-ron: ConRon/Arena/Monad.lean:249-267 ConRon.Arena.internE
--- con-ron: CHANGED since ed864140 — below `ConRon.Arena.internLamE`, `ConRon.Arena.Idx.idxCap` changed; re-check the L code and its proofs, then delete this line
 -- con-ron: ConRon/Arena/Monad.lean:172-200 ConRon.Arena.internLamE
 @[l_impl ConRon.Arena.internE ConRon.Arena.internLamE]
 def internLamL : FunDecl := consInternG lamCS
