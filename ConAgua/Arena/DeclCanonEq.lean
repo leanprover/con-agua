@@ -690,7 +690,7 @@ open L.Ind
 
 theorem rowPW_eq (m : Mem) (w : Word) (hw : w.toNat < 2 ^ 32) (ht : tagW w ≤ 2) :
     rowPW m w = rowP m w := by
-  have h1 := tagW_toNat w
+  have h1 := tagW_toNat_row w
   have h2 := ixW_succ w hw
   have ht' : rowTag w ≤ 2 := by rw [← h1]; exact UInt64.le_iff_toNat_le.mp ht
   simp only [rowPW, rowP, ht', ite_true, rdW, h2]
@@ -708,7 +708,7 @@ theorem envFindW_hit {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFE
   have ht2 : tagW w ≤ 2 := by
     have : ¬ (2 : Word).toNat < (tagW w).toNat := fun e => ht (UInt64.lt_iff_toNat_lt.mpr e)
     exact UInt64.le_iff_toNat_le.mpr (by omega)
-  have htag : rowTag w ≤ 2 := by rw [← tagW_toNat]; exact UInt64.le_iff_toNat_le.mp ht2
+  have htag : rowTag w ≤ 2 := by rw [← tagW_toNat_row]; exact UInt64.le_iff_toNat_le.mp ht2
   rw [EnvR.find?_eq hE w hw htag, ← rowCW_eq m w hw ht2]
   by_cases hc : rowCW m w = 0
   · rw [ite_eq_left hc] at h; simp only [Option.some.injEq, Prod.mk.injEq] at h

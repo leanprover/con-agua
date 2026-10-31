@@ -457,7 +457,7 @@ theorem ferW_ok (p : Prog) (hp : CfrProg p) (dn : NIdx → Option ConLeche.Name)
   have ht2 : tagW w ≤ 2 := by
     have : ¬ (2 : Word).toNat < (tagW w).toNat := fun e => htg (UInt64.lt_iff_toNat_lt.mpr e)
     exact UInt64.le_iff_toNat_le.mpr (by omega)
-  have htag : rowTag w ≤ 2 := by rw [← tagW_toNat]; exact UInt64.le_iff_toNat_le.mp ht2
+  have htag : rowTag w ≤ 2 := by rw [← tagW_toNat_row]; exact UInt64.le_iff_toNat_le.mp ht2
   rw [rowCW_eq m w hwH ht2, rowPW_eq m w hwH ht2] at h
   have hprev := rec3PrevD hS.check.env hwH htag
   obtain ⟨hmi, hrp⟩ := rec3FerMiRp (M := M) hrecs hsz
