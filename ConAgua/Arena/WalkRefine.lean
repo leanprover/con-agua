@@ -220,8 +220,8 @@ theorem nodeOK_succ (n : Nat) (ih : GoOK n) : NodeOK (n + 1) := by
   by_cases g4 : tagW h = 4
   · by_cases hc : tcnt m APP (tierW h) ≤ idxA h
     · rw [bbNodeW] at hb; simp [hs, g4, hc] at hb
-    obtain ⟨hv, hf, ha⟩ := view_app m a hR h hh (vok APP hc) g4
-    rw [bbNodeW_app n m h c (vok APP hc) g4] at hb
+    obtain ⟨hv, hf, ha⟩ := view_app m a hR h hh ⟨hs, UInt64.not_le.mp hc⟩ g4
+    rw [bbNodeW_app n m h c ⟨hs, UInt64.not_le.mp hc⟩ g4] at hb
     obtain ⟨a', h1, h2⟩ := bbAppArm_ok n ih F m m' a hR c _ _ r hf ha hF' hb
     exact ⟨a', (bbNodeA_run F _ a _ hv).trans h1, h2⟩
   by_cases g5 : tagW h = 5
