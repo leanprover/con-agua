@@ -441,3 +441,32 @@ memos. cgproto's variants are costed in its §5.
   incremental rebuild: every landing re-elaborates the whole import closure of what it touched (435
   to 1,100 modules), because nothing above the twin can use the module system's early cutoff.
   Making con-ron's arena and bridge `module` files is the largest build lever left.
+
+## 3. Balanced parts (lane splitparts, rank 5 done)
+
+The whole-program checks were split by function count, but a function's kernel check costs from 1 ms
+to 9 s and the heavy ones cluster (`AsmPart3`, functions 860-1146: 61 s against 28-34 s for its
+neighbours). `scripts/checker_prog.py` now cuts by measured cost: `INL_CUTS` (10 parts + 2 for the
+prelude copies, was 6 + 1) and `ASM_CUTS` (14 + 4, was 6 + 4), function indices for 1,721 functions
+scaled to the actual count (`CUT_REF`); the comment there says how to re-profile (one
+`type checking took` line per batch or function under `profiler.threshold 1`). The cuts come from
+those profiles of the old parts. No statement, name or Audit/Final changed; `checkerAsm_eq`,
+`checkerProgI` and `checker.s` are as before. A part loads its imports in under 5 s, so more parts
+cost little extra (sum of the asm parts 249 s -> 267 s, of the `ProgIPart`s 203 s -> 187 s).
+
+Each module alone (`lake env lean`, one after the other, wall seconds, machine shared with other
+sessions so +-30 %; peak RSS 2.2-4.1 GB, as before):
+
+| stage | before: parts, slowest | after: parts, slowest |
+|---|---|---|
+| `ProgIPart*` | 7, 34.1 s (`ProgIPart4`; 20-34 s) | 12, 17.3 s (11-17 s) |
+| `ProgSktPart*` (unchanged) | 6, 17.3 s | 6, 17.3 s |
+| `AsmPart*` | 10, 60.9 s (`AsmPart3`; then 48, 45) | 18, 27 s (`AsmPart0`, 27-41 over three runs: one 9 s function in 165-175; the rest 10-23 s) |
+
+L-change critical path (`Prog → ProgIdx → ProgIPart → ProgI → ProgSktPart → ProgSkt → AsmPart →
+Asm → AsmFileEq → Final/*`): the three parts on it were 34 + 17 + 61 = 112 s standalone, now
+17 + 17 + 27 = 62 s (75 s with the slowest `AsmPart0` run): **-37 to -50 s**. Against lnext3's
+in-build numbers (40, 21, 63 s) the 154 s path becomes about 100 s. Memory: parts are still
+2.2-4.1 GB each; a build with `LEAN_NUM_THREADS=4` rebuilt all 30 new parts in 3 min 47 s.
+Further cuts would need `AsmPart0`'s heavy function (a 9 s single check) split inside the function,
+or a cheaper `asm_lit` check; the next stage on the path is `ProgSktPart` (17 s).
