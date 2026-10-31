@@ -200,17 +200,17 @@ theorem spc_ref (p : Prog) (hp : SpineDProg p) (n : Nat) (hk : KnotUpTo p n) (F 
   have hc' : decI nm = (decI nm₂ : NIdx) ∧ xs.length = ys.length := by
     have := hcond.mpr hc; simpa using this
   rw [ite_eq_left hc']
-  rcases c2 : callW p n "lvls_eq_c" [us, us₂] s₀.mem with _ | ⟨rz, m₁⟩
-  · rw [liftE_none, spcE.k_lvls_eq_c.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]
-  obtain ⟨n₁, rfl⟩ := callW_succ c2
+  cases n with
+  | zero => rw [callW_zero, liftE_none, spcE.k_lvls_eq_c.none]; exact RefE.of_cls0 (by simp)
+  | succ n₁ =>
   cases n₁ with
-  | zero => exact absurd c2 (lvlsEqC_one p hp.quick.lv _ _ _ _ _)
+  | zero =>
+    exact RefE.onlySim (Q := fun _ _ => False) (fun _ => spcE.k_lvls_eq_c.none ..)
+      (fun _ _ c2 => lvlsEqC_one p hp.quick.lv _ _ _ _ _ c2) fun _ _ h => h.elim
   | succ n₂ =>
-  have e₁ := CoreSpec.of_callW (s₀ := ⟨s₀.mem, Locals.init []⟩)
-    (lvlsEqC_refines p hp.quick.lv n₂ ⟨s₀.mem, Locals.init []⟩ a₀ dn vis fe M eb hS us us₂ hus
-      hus₂) c2
-  refine RefE.bind_core (w := id) e₁ (fun M₁ hS₁ hst₁ => ?_)
+  refine RefE.bind_callW (fun _ => spcE.k_lvls_eq_c.none ..) (lvlsEqC_refines p hp.quick.lv n₂ s₀ a₀
+    dn vis fe M eb hS us us₂ hus hus₂)
+    fun rz m₁ _ e₁ => RefE.after_core (w := id) e₁ fun M₁ hS₁ hst₁ => ?_
   by_cases h2 : 2 ≤ rz.headD 0
   case neg =>
     rw [spcE.k_lvls_eq_c.arm2 (hc1 := h2), spcE.j1]
@@ -259,21 +259,19 @@ theorem sp2_ref (p : Prog) (hp : SpineDProg p) (n : Nat) (hk : KnotUpTo p n) (F 
         (decI nm₂) (decI us₂)) a₀ (CorePost decBool dn s₀.mem vis fe M eb ResH) := by
   have hS := hs.rel
   simp only [sp2E]
-  rcases c1 : callW p n "get_app_args" [a] s₀.mem with _ | ⟨r₁, m₁⟩
-  · rw [liftE_none, sp2E.k_get_app_args.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some, sp2E.k_get_app_args.arm1]
-  obtain ⟨k, rfl⟩ := callW_succ c1
-  obtain ⟨t₁, ht₁, -, hfr₁, hg₁, ho₁, htop₁, xs, hxs, hx₁⟩ := triple_of_callW
-    (s₀ := ⟨s₀.mem, Locals.init []⟩)
-    (getAppArgs_refines p hp.spine (k + 1) ⟨s₀.mem, Locals.init []⟩ a₀ hS.arena.base a ha hS.spn) c1
+  cases n with
+  | zero => rw [callW_zero, liftE_none, sp2E.k_get_app_args.none]; exact RefE.of_cls0 (by simp)
+  | succ k =>
+  refine RefE.onlySim (fun _ => sp2E.k_get_app_args.none ..) (fun _ _ c1 => triple_of_callW
+    (s₀ := ⟨s₀.mem, Locals.init []⟩) (getAppArgs_refines p hp.spine (k + 1) ⟨s₀.mem, Locals.init []⟩ a₀
+      hS.arena.base a ha hS.spn) c1) fun r₁ m₁ ⟨t₁, ht₁, _, hfr₁, hg₁, ho₁, htop₁, xs, hxs, hx₁⟩ => ?_
+  rw [sp2E.k_get_app_args.arm1]
   rw [ht₁] at hfr₁ hg₁ htop₁ hx₁
   have hS₁ := hS.frame_stk hfr₁ (by simp) (by simp)
-  rcases c2 : callW p (k + 1) "get_app_args" [b] m₁ with _ | ⟨r₂, m₂⟩
-  · rw [liftE_none, sp2E.k_get_app_args_2.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some, sp2E.k_get_app_args_2.arm1]
-  obtain ⟨t₂, ht₂, -, hfr₂, hg₂, ho₂, htop₂, ys, hys, hy₂⟩ := triple_of_callW
-    (s₀ := ⟨m₁, Locals.init []⟩)
-    (getAppArgs_refines p hp.spine (k + 1) ⟨m₁, Locals.init []⟩ a₀ hS₁.arena.base b hb hS₁.spn) c2
+  refine RefE.onlySim (fun _ => sp2E.k_get_app_args_2.none ..) (fun _ _ c2 => triple_of_callW
+    (s₀ := ⟨m₁, Locals.init []⟩) (getAppArgs_refines p hp.spine (k + 1) ⟨m₁, Locals.init []⟩ a₀
+      hS₁.arena.base b hb hS₁.spn) c2) fun r₂ m₂ ⟨t₂, ht₂, _, hfr₂, hg₂, ho₂, htop₂, ys, hys, hy₂⟩ => ?_
+  rw [sp2E.k_get_app_args_2.arm1]
   rw [ht₂] at hfr₂ hg₂ htop₂ hy₂
   have hS₂ := hS₁.frame_stk hfr₂ (by simp) (by simp)
   -- the first slice survives the second push
@@ -358,23 +356,21 @@ theorem sp_ref (p : Prog) (hp : SpineDProg p) (n : Nat) (hk : KnotUpTo p n) (F :
   have hS := hs.rel
   rw [defeqSpine_eq]
   simp only [spE]
-  rcases c1 : callW p n "spine_head" [a] s₀.mem with _ | ⟨ra, m₁⟩
-  · rw [liftE_none, spE.k_spine_head.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]
-  obtain ⟨k, rfl⟩ := callW_succ c1
+  cases n with
+  | zero => rw [callW_zero, liftE_none, spE.k_spine_head.none]; exact RefE.of_cls0 (by simp)
+  | succ k =>
+  refine RefE.bindLift (fun _ => rfl) fun ra m₁ c1 => ?_
   obtain ⟨rfl, hra, ⟨hra0, hra1, hra2⟩, -⟩ := spineHead_run hp hS.arena.base ha c1
-  simp only [spE.k_spine_head]
-  refine RefE.bind_right hra ?_
+  refine ⟨_, _, hra, ?_⟩
+  dsimp only [spE.k_spine_head]
   by_cases h0 : ra.headD 0 = 0
   · rw [ite_eq_left h0, decSH_none h0]
     exact RefE.ret rfl (CorePost.ret hS rfl resH_zero)
   rw [ite_eq_right h0, decSH_some h0]
-  rcases c2 : callW p (k + 1) "spine_head" [b] s₀.mem with _ | ⟨rb, m₂⟩
-  · rw [liftE_none, spE.k_spine_head_2.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]
+  refine RefE.bindLift (fun _ => rfl) fun rb m₂ c2 => ?_
   obtain ⟨rfl, hrb, ⟨hrb0, hrb1, hrb2⟩, -⟩ := spineHead_run hp hS.arena.base hb c2
-  simp only [spE.k_spine_head_2]
-  refine RefE.bind_right hrb ?_
+  refine ⟨_, _, hrb, ?_⟩
+  dsimp only [spE.k_spine_head_2]
   by_cases h0' : rb.headD 0 = 0
   · rw [ite_eq_left h0', decSH_none h0']
     exact RefE.ret rfl (CorePost.ret hS rfl resH_zero)
