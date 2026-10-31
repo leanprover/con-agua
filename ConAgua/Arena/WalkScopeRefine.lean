@@ -233,7 +233,7 @@ theorem wsNodeOK_succ (n : Nat) (ih : WsGoOK n) : WsNodeOK (n + 1) := by
         fun e => hl (UInt64.lt_iff_toNat_lt.mpr e)
       simp only [wsArm, this, ↓reduceIte]; rfl
   by_cases g4 : tagW h = 4
-  · have hvo := vok APP fun hc => by rw [wsNodeW.abort4 n m h d c hs g0 g1 g4 hc] at hb; cases hb
+  · have hvo : viewOKA m h := ⟨hs, UInt64.not_le.mp fun hc => by rw [wsNodeW.abort4 n m h d c hs g0 g1 g4 hc] at hb; cases hb⟩
     obtain ⟨hv, hf, ha⟩ := view_app m a hR h hh hvo g4
     rw [wsNodeW.arm4 n m h d c hs g0 g1 g4 (UInt64.not_le.mpr hvo.2)] at hb
     obtain ⟨memo', h1, h2⟩ := wsAnd_ok n ih m m' a memo hD hM _ _ d c r hf ha hb

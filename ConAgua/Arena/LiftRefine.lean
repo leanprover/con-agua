@@ -177,9 +177,9 @@ theorem lgoOK_succ (n : Nat) (ih : LArmOK n) : LGoOK (n + 1) := by
   by_cases g4 : tagW h = 4
   · by_cases hc : tcnt m APP (tierW h) ≤ idxA h
     · rw [liftW] at hb; simp [hfu, hcut, hs, g4, hc] at hb
-    rw [view_run _ a _ (view_app m a hR h hh (vok APP hc) g4).1]
+    rw [view_run _ a _ (view_app m a hR h hh ⟨hs, UInt64.not_le.mp hc⟩ g4).1]
     rw [liftW.arm4 n m h c k fu hfu hcut hs g0 g4 hc] at hb
-    exact (arm APP hc).1 (vok APP hc) g4 hb
+    exact (ih m m' a h c k (fu - 1) r hA hh).1 ⟨hs, UInt64.not_le.mp hc⟩ g4 hb
   by_cases g5 : tagW h = 5
   · by_cases hc : tcnt m LAM (tierW h) ≤ idxW h
     · rw [liftW] at hb; simp [hfu, hcut, hs, g5, hc] at hb
