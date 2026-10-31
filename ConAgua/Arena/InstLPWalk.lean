@@ -162,13 +162,13 @@ theorem ilwDispW_const (hs : ¬ (tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0)) (hg
 /-- A compound arm: tag `g`, count word `c`, arm `f`. -/
 theorem ilwDispW_arm (g : Word) (c : TRec) (f : FnName) (hs : ¬ (tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0))
     (hg : tagW h = g)
-    (hgc : (g = 1 ∧ c = FVAR ∧ f = "lp_fvar") ∨ (g = 4 ∧ c = APP ∧ f = "lp_app") ∨
+    (hgc : (g = 1 ∧ c = FVAR ∧ f = "lp_fvar") ∨
       (g = 5 ∧ c = LAM ∧ f = "lp_lam") ∨ (g = 6 ∧ c = FORALL ∧ f = "lp_forall") ∨
       (g = 7 ∧ c = LET ∧ f = "lp_let") ∨ (g = 9 ∧ c = PROJ ∧ f = "lp_proj")) :
     ilwDispW p n m h ko kc vo vc fu =
       if tcnt m c (tierW h) ≤ idxW h then none
       else ilwHd (callW p n f [h, ko, kc, vo, vc, fu - 1] m) := by
-  rcases hgc with ⟨rfl, rfl, rfl⟩ | ⟨rfl, rfl, rfl⟩ | ⟨rfl, rfl, rfl⟩ | ⟨rfl, rfl, rfl⟩ | ⟨rfl, rfl, rfl⟩ |
+  rcases hgc with ⟨rfl, rfl, rfl⟩ | ⟨rfl, rfl, rfl⟩ | ⟨rfl, rfl, rfl⟩ | ⟨rfl, rfl, rfl⟩ |
     ⟨rfl, rfl, rfl⟩ <;> rw [ilwDispW] <;> simp [hs, hg]
 
 theorem ilwDispW_fvar (hs : ¬ (tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0)) (hg : tagW h = 1) :
@@ -180,32 +180,32 @@ theorem ilwDispW_fvar (hs : ¬ (tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0)) (hg 
 theorem ilwDispW_app (hs : ¬ (tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0)) (hg : tagW h = 4) :
     ilwDispW p n m h ko kc vo vc fu =
       if tcnt m APP (tierW h) ≤ idxA h then none
-      else ilwHd (callW p n "lp_app" [h, ko, kc, vo, vc, fu - 1] m) :=
-  ilwDispW_arm p n m h ko kc vo vc fu 4 APP "lp_app" hs hg (.inr ((.inl ⟨rfl, rfl, rfl⟩)))
+      else ilwHd (callW p n "lp_app" [h, ko, kc, vo, vc, fu - 1] m) := by
+  rw [ilwDispW]; simp [hs, hg]
 
 theorem ilwDispW_lam (hs : ¬ (tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0)) (hg : tagW h = 5) :
     ilwDispW p n m h ko kc vo vc fu =
       if tcnt m LAM (tierW h) ≤ idxW h then none
       else ilwHd (callW p n "lp_lam" [h, ko, kc, vo, vc, fu - 1] m) :=
-  ilwDispW_arm p n m h ko kc vo vc fu 5 LAM "lp_lam" hs hg (.inr (.inr ((.inl ⟨rfl, rfl, rfl⟩))))
+  ilwDispW_arm p n m h ko kc vo vc fu 5 LAM "lp_lam" hs hg ((.inr ((.inl ⟨rfl, rfl, rfl⟩))))
 
 theorem ilwDispW_forall (hs : ¬ (tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0)) (hg : tagW h = 6) :
     ilwDispW p n m h ko kc vo vc fu =
       if tcnt m FORALL (tierW h) ≤ idxW h then none
       else ilwHd (callW p n "lp_forall" [h, ko, kc, vo, vc, fu - 1] m) :=
-  ilwDispW_arm p n m h ko kc vo vc fu 6 FORALL "lp_forall" hs hg (.inr (.inr (.inr ((.inl ⟨rfl, rfl, rfl⟩)))))
+  ilwDispW_arm p n m h ko kc vo vc fu 6 FORALL "lp_forall" hs hg ((.inr (.inr ((.inl ⟨rfl, rfl, rfl⟩)))))
 
 theorem ilwDispW_let (hs : ¬ (tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0)) (hg : tagW h = 7) :
     ilwDispW p n m h ko kc vo vc fu =
       if tcnt m LET (tierW h) ≤ idxW h then none
       else ilwHd (callW p n "lp_let" [h, ko, kc, vo, vc, fu - 1] m) :=
-  ilwDispW_arm p n m h ko kc vo vc fu 7 LET "lp_let" hs hg (.inr (.inr (.inr (.inr ((.inl ⟨rfl, rfl, rfl⟩))))))
+  ilwDispW_arm p n m h ko kc vo vc fu 7 LET "lp_let" hs hg ((.inr (.inr (.inr ((.inl ⟨rfl, rfl, rfl⟩))))))
 
 theorem ilwDispW_proj (hs : ¬ (tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0)) (hg : tagW h = 9) :
     ilwDispW p n m h ko kc vo vc fu =
       if tcnt m PROJ (tierW h) ≤ idxW h then none
       else ilwHd (callW p n "lp_proj" [h, ko, kc, vo, vc, fu - 1] m) :=
-  ilwDispW_arm p n m h ko kc vo vc fu 9 PROJ "lp_proj" hs hg (.inr (.inr (.inr (.inr (.inr (⟨rfl, rfl, rfl⟩))))))
+  ilwDispW_arm p n m h ko kc vo vc fu 9 PROJ "lp_proj" hs hg ((.inr (.inr (.inr (.inr (⟨rfl, rfl, rfl⟩))))))
 
 theorem ilwDispW_other (hs : ¬ (tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0)) (h0 : tagW h ≠ 0)
     (h1 : tagW h ≠ 1) (h2 : tagW h ≠ 2) (h3 : tagW h ≠ 3) (h4 : tagW h ≠ 4)
