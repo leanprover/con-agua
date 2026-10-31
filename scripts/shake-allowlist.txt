@@ -166,3 +166,4 @@ ConAgua/Checker/AsmStub.lean	public import ConAguaAsm.Checker	# the build needs 
 ConAgua/Checker/PipeRest.lean	public import ConAgua.Checker.PreLoopWSStages	# the build needs it: the stage frames of PreLoopWSPart0-2 (stageFrame_*) come through this module, which collects the parts
 ConAgua/Checker/PrepProgChecker.lean	public import ConAgua.Checker.PrepProgExt	# the module collects the two parts (PrepProgExt, PrepProgHoist), built in parallel
 ConAgua/Checker/PrepProgChecker.lean	public import ConAgua.Checker.PrepProgHoist	# the module collects the two parts (PrepProgExt, PrepProgHoist), built in parallel
+ConAgua/Arena/KnotSlot.lean	public import ConAgua.Arena.RefWalk	# the build needs it (RefE.onlySim; the tool attributes it to WhnfCoreProj, which KnotSlot does not import)
