@@ -254,24 +254,4 @@ theorem KeptAll.wc {M M' : ModeMaps} {eb : Word} (h : KeptAll M M' eb) (k : EIdx
   have : ¬ ((k, eb) == (k', (0 : Word))) = true := by simp [h0]
   simp only [this, Bool.false_eq_true, ↓reduceIte]; exact a1 k'
 
-/-! ## The loop refines `whnfCoreLoop` -/
-
-theorem whnfCoreLoop_done (mode : ConLeche.CheckMode) (r : CoreFnsA) (fe : IFEnv) (c : Bool)
-    (d K : Nat) (e v : EIdx) (a a₁ : AState)
-    (hs : (whnfCoreStep mode r fe c d e).run a = .ok (.done v, a₁)) :
-    (whnfCoreLoop mode r fe c d (K + 1) e).run a = .ok (v, a₁) := by
-  simp only [whnfCoreLoop, StateT.run_bind, hs, except_ok_bind]; rfl
-
-theorem whnfCoreLoop_cont (mode : ConLeche.CheckMode) (r : CoreFnsA) (fe : IFEnv) (c : Bool)
-    (d K : Nat) (e e' : EIdx) (a a₁ : AState)
-    (hs : (whnfCoreStep mode r fe c d e).run a = .ok (.cont e', a₁)) :
-    (whnfCoreLoop mode r fe c d (K + 1) e).run a = (whnfCoreLoop mode r fe c d K e').run a₁ := by
-  simp only [whnfCoreLoop, StateT.run_bind, hs, except_ok_bind]
-
-theorem whnfCoreLoop_err (mode : ConLeche.CheckMode) (r : CoreFnsA) (fe : IFEnv) (c : Bool)
-    (d K : Nat) (e : EIdx) (a : AState) (ce : CheckError)
-    (hs : (whnfCoreStep mode r fe c d e).run a = .error ce) :
-    (whnfCoreLoop mode r fe c d (K + 1) e).run a = .error ce := by
-  simp only [whnfCoreLoop, StateT.run_bind, hs]; rfl
-
 end L.Arena

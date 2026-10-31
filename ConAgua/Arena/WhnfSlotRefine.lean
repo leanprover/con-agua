@@ -18,11 +18,6 @@ open scoped Lean.Order
 
 namespace L.Arena
 
-theorem whnfLoop_err (r : CoreFnsA) (fe : IFEnv) (d K : Nat) (e : EIdx) (a : AState)
-    (ce : CheckError) (hs : (whnfStep r fe d e).run a = .error ce) :
-    (whnfLoop r fe d (K + 1) e).run a = .error ce := by
-  simp only [whnfLoop, StateT.run_bind, hs]; rfl
-
 theorem knot_whnf_miss_err (mode : ConLeche.CheckMode) (fe : IFEnv) (F : Nat) (d : Nat) (e : EIdx)
     (a : AState) (h : whnfStuckTag e = false) (hm : a.caches.whnfC[e]? = none) (ce : CheckError)
     (hb : (whnfBody (coreKnot mode fe id F) fe d e).run a = .error ce) :
