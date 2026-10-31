@@ -88,11 +88,13 @@ theorem hix_hdW {k : IdxKind} (g t i : Word) (hg : g.toNat < 16) (ht : t ≤ 1)
     (hi : i.toNat < 2 ^ 26) : hix (decI (hdW g t i) : Idx k) = i := by
   simp only [hix]
   rw [decI_idx _ (hdW_narrow g t i hg ht hi), hdW_idx g t i hg ht hi]; simp
+grind_pattern [store_grind] hix_hdW => hix (decI (hdW g t i) : Idx k)
 
 theorem hix_hdA {k : IdxKind} (t i : Word) (ht : t ≤ 1) (hi : i.toNat < 2 ^ 30) :
     hix (decI (hdA t i) : Idx k) = i := by
   simp only [hix]
   rw [decI_idxA _ (hdA_wide t i ht hi), hdA_idx t i ht hi]; simp
+grind_pattern [store_grind] hix_hdA => hix (decI (hdA t i) : Idx k)
 
 /-- The arena's narrow handle of node `n` of tier `b` is the L handle word. -/
 theorem mk_eq {k : IdxKind} (g : UInt32) (b n : Nat) :
@@ -123,6 +125,58 @@ theorem mkWide_eq {k : IdxKind} (b n : Nat) :
     show (0x80000000 : UInt64).toNat = 2147483648 from rfl,
     show (0x40000000 : UInt64).toNat = 1073741824 from rfl]
   omega
+
+/-! ## Stores by shape
+
+A store's handles are narrow with its tag, or wide (the expression `app` store). The generic
+store library (`StoreLib`, `ConsLib`) is stated over the pair `(tag, wide)`. -/
+
+/-- The handle word of node `i` of tier `t` of a store with tag `g` and shape `wide`. -/
+def hdS (g : UInt32) (wide : Bool) (t i : Word) : Word := if wide then hdA t i else hdW g.toUInt64 t i
+
+/-- A store's per-tier node capacity: con-ron's `Idx.wideCap` (`2^30`) for the wide store, else
+`Idx.idxCap` (`2^26`). -/
+def capS (wide : Bool) : Nat := if wide then 2 ^ 30 else 2 ^ 26
+
+theorem capS_le (wide : Bool) : capS wide ≤ 2 ^ 30 := by cases wide <;> simp [capS]
+grind_pattern capS_le => capS wide
+
+theorem capS_eq (wide : Bool) : capS wide = if wide then Idx.wideCap else Idx.idxCap := by
+  cases wide <;> rfl
+
+/-- con-ron's handle constructor by shape: `Idx.mkWide` for the wide store, else `Idx.mk`. -/
+def mkS {k : IdxKind} (g : UInt32) (wide : Bool) (tr n : UInt32) : Idx k :=
+  if wide then Idx.mkWide tr n else Idx.mk g tr n
+
+theorem mkS_eq {k : IdxKind} (g : UInt32) (wide : Bool) (b n : Nat) :
+    (mkS g wide (UInt32.ofNat b) (UInt32.ofNat n) : Idx k) =
+      decI (hdS g wide (UInt64.ofNat b) (UInt64.ofNat n)) := by
+  cases wide
+  · exact mk_eq g b n
+  · exact mkWide_eq b n
+
+section hdS
+variable (g : UInt32) (wide : Bool) (t i : Word) (hg : g.toNat < 16) (ht : t ≤ 1)
+  (hi : i.toNat < capS wide)
+include hg ht hi
+
+theorem hdS_lt : (hdS g wide t i).toNat < 2 ^ 32 := by
+  cases wide
+  · exact hdW_lt _ t i (by simpa using hg) ht (by simpa [capS] using hi)
+  · exact hdA_lt t i ht (by simpa [capS] using hi)
+
+theorem hdS_tier : tierW (hdS g wide t i) = t := by
+  cases wide
+  · exact hdW_tier _ t i (by simpa using hg) ht (by simpa [capS] using hi)
+  · exact hdA_tier t i ht (by simpa [capS] using hi)
+
+theorem hix_hdS {k : IdxKind} : hix (decI (hdS g wide t i) : Idx k) = i := by
+  cases wide
+  · exact hix_hdW _ t i (by simpa using hg) ht (by simpa [capS] using hi)
+  · exact hix_hdA t i ht (by simpa [capS] using hi)
+
+end hdS
+grind_pattern [store_grind] hix_hdS => hix (decI (hdS g wide t i) : Idx k)
 
 /-! ## The bridge: words below `2^32` and the twin's handles -/
 
