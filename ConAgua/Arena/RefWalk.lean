@@ -2,7 +2,7 @@ import ConAgua.Arena.Verdict
 import ConAgua.Arena.SimLib
 
 /-!
-# The lockstep walk of a unified model against its twin (lane `refgen`, pilot)
+# The lockstep walk of a unified model against its twin
 
 A `RefE` proof walks the model (`l_model … unified`: a chain of continuations `K`, one per call,
 each a `match` on the callee's outcome followed by the arm's guards) and the twin (a `do` block)
@@ -22,7 +22,9 @@ in step. This file is the walk's step rules, one per pair of shapes, both outcom
 * `RefE.twinFail`: the model aborts where the twin's guard fails (a guard of the twin that L
   checks in pieces).
 
-`walk_k` unfolds the continuation at the head of the model (`K (.ok (r, m))` to its arm).
+Between two rules, `dsimp only [K]` unfolds the continuation `K` at the head of the model
+(`K (.ok (r, m))` to its arm). docs/design/refgen.md, "Migration recipe", is the shape of a
+converted proof.
 -/
 
 open ConRon.Arena
@@ -43,6 +45,14 @@ theorem RefE.bindSim {K : Except Err (ρ × Mem) → Except Err α}
   · rw [liftE_none, hK]; exact RefE.of_cls0 (by simp)
   obtain ⟨x, a₁, hr, hQ⟩ := h1 r m₁ hc
   exact RefE.bind_right hr (h2 r x m₁ a₁ hr hQ)
+
+/-- **A lifted callee without a step lemma** (one call site): `bindSim` with the rest as the
+callee's post; the call site proves the twin's run and the rest from the model's result. -/
+theorem RefE.bindLift {K : Except Err (ρ × Mem) → Except Err α}
+    (hK : ∀ e, K (.error e) = .error e) {c : Option (ρ × Mem)} {op : AM γ} {g : γ → AM β}
+    (h : ∀ r m₁, c = some (r, m₁) → ∃ x a₁, op.run a = .ok (x, a₁) ∧ RefE G (K (.ok (r, m₁))) (g x) a₁ R) :
+    RefE G (K (liftE c)) (op >>= g) a R :=
+  RefE.bindSim (Q := fun r x m₁ a₁ => RefE G (K (.ok (r, m₁))) (g x) a₁ R) hK h fun _ _ _ _ _ h => h
 
 /-- **A lifted callee the twin has no step for** (an L helper): its model fact `Q`, the twin
 unchanged. -/
@@ -112,6 +122,17 @@ theorem RefE.guardOpt {c : Prop} [Decidable c] {o : Option γ} {e : Err} {ce : C
     rw [ite_eq_right hnc]
     exact RefE.bind_right rfl (h v ho hnc)
 
+/-- **An abort guard against the twin's `if b then rest else fail ce`** (no join point). -/
+theorem RefE.guardIf {c : Prop} [Decidable c] {b : Bool} {e : Err} {ce : CheckError}
+    {rest : Except Err α} {T : AM β} (hcls : e.cls = twinCls ce) (hcb : c → b = false)
+    (hbc : b = false → c) (h : ¬ c → b = true → RefE G rest T a R) :
+    RefE G (if c then .error e else rest) (if b = true then T else fail ce) a R := by
+  by_cases hc : c
+  · rw [ite_eq_left hc, ite_eq_right (by simp [hcb hc])]
+    exact fun _ => ErrClaim.fail _ _ hcls
+  · have hb : b = true := by cases hb : b; exact absurd (hbc hb) hc; rfl
+    rw [ite_eq_right hc, ite_eq_left hb]; exact h hc hb
+
 /-- **The model aborts where the twin's guard fails** (`b` false, the model's error of the
 twin's class). -/
 theorem RefE.twinFail {b : Bool} {e : Err} {ce : CheckError} {jp : Unit → AM β}
@@ -127,11 +148,5 @@ theorem RefE.twinPass {b : Bool} {ce : CheckError} {jp : Unit → AM β} {x : Ex
   rw [ite_eq_left hb]; exact h
 
 end walk
-
-/-- **`walk_k`**: unfold the continuation `K` applied at the head of the model (the arm of a
-`K (.ok (r, m))` and its `match`), and beta-reduce the twin's continuation. -/
-syntax "walk_k " ident : tactic
-macro_rules
-  | `(tactic| walk_k $k:ident) => `(tactic| dsimp only [$k:ident])
 
 end L.Arena

@@ -4,6 +4,7 @@ import ConAgua.Arena.RecGenSpec.ClassKeyCanon
 import ConAgua.Verdict.IndBTmf
 import ConAgua.Arena.IndInstallSpec.ConsBlockCtors
 import ConAgua.Arena.DeclBasisSpec
+import ConAgua.Arena.RefWalk
 
 /-!
 # `target_major_of` under `StageC` with the real `inst_lp_fast` (lane `indstaget`, helper `rcC`)
@@ -106,6 +107,39 @@ structure TmoPost (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
   grow : IWGrow m m'
   pos : PosMR m'
   abs : AbsOK m'
+
+/-- **The family's walk package from `(m₀, a₀)` to `(m, a)`**: the stage, `AbsOK`, `PosMR`, the
+`IW` growth and the twin store's extension. -/
+structure TmAt (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (env : ConLeche.Env)
+    (m₀ : Mem) (a₀ : AState) (m : Mem) (a : AState) : Prop where
+  stage : StageC dn vis fe env m a
+  abs : AbsOK m
+  pos : PosMR m
+  grow : IWGrow m₀ m
+  ext : ConRon.Arena.Ext a₀.store a.store
+
+namespace TmAt
+variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {env : ConLeche.Env}
+  {m₀ m₁ m : Mem} {a₀ a₁ a : AState}
+
+theorem trans (h₁ : TmAt dn vis fe env m₀ a₀ m₁ a₁) (h₂ : TmAt dn vis fe env m₁ a₁ m a) :
+    TmAt dn vis fe env m₀ a₀ m a :=
+  ⟨h₂.stage, h₂.abs, h₂.pos, h₁.grow.trans h₂.grow, h₁.ext.trans h₂.ext⟩
+
+/-- A step that con-ron calls a `PStep`. -/
+theorem pstep (h : StageC dn vis fe env m₀ a₀) (hS : StageR dn vis fe m a) (hA : AbsOK m)
+    (hg : IWGrow m₀ m) (hP : PosMR m) (hp : PStep a₀ a) : TmAt dn vis fe env m₀ a₀ m a :=
+  ⟨h.of_pstep hS hA hp, hA, hP, hg, hp.ext⟩
+
+theorem decHL {k : IdxKind} (h : TmAt dn vis fe env m₀ a₀ m a) {o l : Nat} {xs : List (Idx k)}
+    (hd : _root_.L.Ind.decHL m₀ o l = some xs) (hb : o + l ≤ iwTop m₀) :
+    _root_.L.Ind.decHL m o l = some xs := by
+  rw [decHL_grow h.grow hb]; exact hd
+
+theorem top (h : TmAt dn vis fe env m₀ a₀ m a) {x : Nat} (hb : x ≤ iwTop m₀) : x ≤ iwTop m :=
+  Nat.le_trans hb h.grow.iw
+
+end TmAt
 
 /-- **`target_major_of_outside_tail` refines `tmoTailT`, both outcomes** (the real `inst_lp_fast`
 and `lvl_eq_c`): `toi_ref`, then con-ron's `targetOutsideInst_spec` (a core step) gives `StageC`
@@ -503,66 +537,45 @@ theorem tmf_ref {p : Prog} (hP : TmfProg p) (hIlpf : IlpfF p) (hcore : CoreStage
   | succ n =>
   rw [tmfE.arm1, targetMajorOf_eq]
   -- the arguments
-  rcases h1 : callW p n "get_app_args_f" [CWF, mty] m with _ | ⟨r1, m1⟩
-  · rw [liftE_none, tmfE.k_get_app_args_f.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some, tmfE.k_get_app_args_f.arm1]
+  refine RefE.bindLift (fun _ => rfl) fun r1 m1 h1 => ?_
   obtain ⟨s1, rfl, -, hs1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩) (gaaF_spec p hP.ad n _ [CWF, mty]) h1
-  obtain ⟨x, a1, hrun, hS1, hg1, hd1⟩ := gaaF_ok dn vis fe CWF mty hmty m s1.mem a r1 hs1 hS
+  obtain ⟨x, a1, hrun, hS1, hg1, hd1, hb1⟩ := gaaF_ok dn vis fe CWF mty hmty m s1.mem a r1 hs1 hS
   rw [CWF_eq] at hrun
-  obtain ⟨ha1, hargsP⟩ := ConRon.Bridge.Inductives.getAppArgs_run hC.check.state hmtyP hrun
-  rw [ha1] at hrun hS1
-  refine RefE.bind_right hrun ?_
-  obtain ⟨hd1, hb1⟩ := hd1
-  have hP1 : PosMR s1.mem := hPm.fr (MFr.ofGaaF hs1)
-  have hA1 : AbsOK s1.mem := gaaF_afr hs1 hA
-  have hC1 : StageC dn vis fe env s1.mem a := hC.of_pstep hS1 hA1 (PStep.refl hC.check.state)
+  obtain ⟨rfl, hargsP⟩ := ConRon.Bridge.Inductives.getAppArgs_run hC.check.state hmtyP hrun
+  refine ⟨_, _, hrun, ?_⟩
+  dsimp only [tmfE.k_get_app_args_f]
+  have k1 := TmAt.pstep hC hS1 (gaaF_afr hs1 hA) hg1 (hPm.fr (MFr.ofGaaF hs1)) (PStep.refl hC.check.state)
   rw [getD_zero, getD_one] at hd1 hb1
   -- the head
-  rcases h2 : callW p n "get_app_fn_f" [CWF, mty] s1.mem with _ | ⟨r2, m2⟩
-  · rw [liftE_none, tmfE.k_get_app_fn_f.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]
+  refine RefE.bindLift (fun _ => rfl) fun r2 m2 h2 => ?_
   obtain ⟨s2, rfl, -, hs2⟩ := triple_of_callW (s₀ := ⟨s1.mem, Locals.init []⟩) (gafF_spec p hP.ad n _ [CWF, mty]) h2
-  obtain ⟨x2, a2, hrun2, hS2, hg2, hw32, hwd⟩ := gafF_ok dn vis fe CWF mty hmty s1.mem s2.mem a r2 hs2 hS1
+  obtain ⟨x2, a2, hrun2, hS2, hg2, hw32, rfl⟩ := gafF_ok dn vis fe CWF mty hmty s1.mem s2.mem _ r2 hs2 hS1
   rw [CWF_eq] at hrun2
-  obtain ⟨ha2, hhd⟩ := ConRon.Bridge.Inductives.getAppFn_run hC1.check.state hmtyP hrun2
-  rw [ha2] at hrun2 hS2
-  refine RefE.bind_right hrun2 ?_
-  have hP2 : PosMR s2.mem := hP1.fr (MFr.ofGafF hs2)
-  have hA2 : AbsOK s2.mem := gafF_afr hs2 hA1
-  have hC2 : StageC dn vis fe env s2.mem a := hC1.of_pstep hS2 hA2 (PStep.refl hC1.check.state)
+  obtain ⟨rfl, hhd⟩ := ConRon.Bridge.Inductives.getAppFn_run hC.check.state hmtyP hrun2
+  refine ⟨_, _, hrun2, ?_⟩
+  dsimp only [tmfE.k_get_app_fn_f]
+  have k2 := TmAt.pstep k1.stage hS2 (gafF_afr hs2 k1.abs) hg2 (k1.pos.fr (MFr.ofGafF hs2))
+    (PStep.refl hC.check.state)
   have hct := decE_tag_eq (r2.headD 0) hw32 3 (by decide)
-  subst hwd
   rw [show (decI (r2.headD 0) : EIdx) = decE (r2.headD 0) from rfl] at hhd ⊢
-  by_cases hng : r2.headD 0 >>> 28 ≠ 3
-  · rw [tmfE.k_get_app_fn_f.abort1 _ _ _ _ _ _ _ _ _ _ _ _ _ _ hng]
-    refine RefE.ite_neg (fun hc => hng (hct.mp (beq_iff_eq.mp hc))) ?_
-    exact fun _ => ErrClaim.fail _ _ (by decide)
-  have hg : r2.headD 0 >>> 28 = 3 := by simpa using hng
-  rw [tmfE.k_get_app_fn_f.arm1 _ _ _ _ _ _ _ _ _ _ _ _ _ _ hg]
-  have htag0 : (decE (r2.headD 0)).tag = ETag.const := hct.mpr hg
-  have htag : ((decE (r2.headD 0)).tag == ETag.const) = true := by simpa using htag0
-  refine RefE.ite_pos htag ?_
+  refine RefE.guardIf (by decide) (fun hc => Bool.eq_false_iff.mpr fun h => hc (hct.mp (beq_iff_eq.mp h)))
+    (fun hb hg => Bool.eq_false_iff.mp hb (beq_iff_eq.mpr (hct.mpr hg))) fun _ htag => ?_
   -- the view
-  rcases h3 : callW p n "e_view" [r2.headD 0] s2.mem with _ | ⟨r3, m3⟩
-  · rw [liftE_none, tmfE.k_e_view.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some, tmfE.k_e_view.arm1]
-  obtain ⟨s3, rfl, hs3e, hne, hr3⟩ := triple_of_callW (s₀ := ⟨s2.mem, Locals.init []⟩)
+  refine RefE.bindLift (fun _ => rfl) fun r3 m3 h3 => ?_
+  obtain ⟨s3, rfl, hs3e, hne, rfl⟩ := triple_of_callW (s₀ := ⟨s2.mem, Locals.init []⟩)
     (eView_spec p hP.ev n _ (r2.headD 0)) h3
-  have hm3 : s3.mem = s2.mem := by rw [hs3e]
-  obtain ⟨hrun3, hxH, hyH⟩ := viewConstW hS2.check.arena.base (by rw [← hr3]; exact hne) hg
-  rw [← hr3] at hrun3 hxH hyH
+  obtain ⟨hrun3, hxH, hyH⟩ := viewConstW hS2.check.arena.base hne (by grind)
   obtain ⟨-, hvc⟩ := ConRon.Bridge.Inductives.viewConst_run hrun3
-  obtain ⟨IP, usP, -, hIP, husP⟩ := ConRon.Bridge.denote_const_inv hC2.check.state.wf
+  obtain ⟨IP, usP, -, hIP, husP⟩ := ConRon.Bridge.denote_const_inv hC.check.state.wf
     (ConRon.Bridge.view_of_viewConst_tag htag hvc.symm) hhd
-  refine RefE.bind_right hrun3 ?_
-  simp only
-  rw [hm3]
-  have hg12 := hg1.trans hg2
-  exact (tmc_ref hP hIlpf hcore hLC n hS2 (hq.grow (decBS_mono _) hg12)
-    (partsHsrc_grow hg12 (partsShapeFacts hq hsrc).2.1 hsrc) (hcss.grow decCNS_mono hg12)
-    (hpf.grow (OMono.decHL _ _) hg12) (hfv.grow (OMono.decHL _ _) hg12) (Nat.le_trans hfvb hg12.iw)
-    (decHL_decB (by rw [decHL_grow hg2 hb1]; exact hd1) (Nat.le_trans hb1 hg2.iw))
-    (Nat.le_trans hb1 hg2.iw) hxH hyH hP2 hC2 hA2 hshP hIP husP hargsP).mono
-    fun _ _ _ h => ⟨h.dec, h.stage, hg12.trans h.grow, h.pos, h.abs⟩
+  refine ⟨_, _, hrun3, ?_⟩
+  dsimp only [tmfE.k_e_view]
+  rw [hs3e]
+  have k12 := k1.trans k2
+  exact (tmc_ref hP hIlpf hcore hLC n k2.stage.stage (hq.grow (decBS_mono _) k12.grow)
+    (partsHsrc_grow k12.grow (partsShapeFacts hq hsrc).2.1 hsrc) (hcss.grow decCNS_mono k12.grow)
+    (hpf.grow (OMono.decHL _ _) k12.grow) (hfv.grow (OMono.decHL _ _) k12.grow) (k12.top hfvb)
+    (decHL_decB (k2.decHL hd1 hb1) (k2.top hb1)) (k2.top hb1) hxH hyH k2.pos k2.stage k2.abs hshP hIP husP
+    hargsP).mono fun _ _ _ h => ⟨h.dec, h.stage, k12.grow.trans h.grow, h.pos, h.abs⟩
 
 end L.Ind

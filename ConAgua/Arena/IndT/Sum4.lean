@@ -111,24 +111,24 @@ theorem ctl_ref (hP : SumProg p) (m : Nat) (hn : m + 1 ≤ 2 ^ 62) (m0 : Mem)
   rw [ctlE.arm1]; unfold cscTailT
   have k0 := SumAt.refl hC hA
   refine RefE.bindSim (fun _ => rfl) (opf_step hOpf k0 hcqB rfl hcqBP) fun rx o m1 a1 _ ⟨k1, ho, hdo⟩ => ?_
-  walk_k ctlE.k_open_pis_at_fvars_f
+  dsimp only [ctlE.k_open_pis_at_fvars_f]
   refine RefE.guardOpt (by decide) ho.1 ho.2 fun ⟨xl1, xb⟩ hq0 _ => ?_
   obtain ⟨hxl, hxlb, hxb, rfl, xfvsP, xrestP, hxq, hxfvs, hxrest⟩ := hdo _ _ hq0
   refine RefE.bindSim (fun _ => rfl) (pl_step hP k1 (k1.decHL hlps hlb) (k1.top hlb)
     (ConRon.Bridge.denoteNListE_ext k1.core.ext _ _ hlpsP)) fun ru us m2 a2 _ ⟨k2, hu, rfl, husP⟩ => ?_
-  walk_k ctlE.k_param_levels
+  dsimp only [ctlE.k_param_levels]
   refine RefE.bindSim (fun _ => rfl) (ic_step hP k2 hT hu
     (ConRon.Bridge.denoteN_ext hTP (k1.trans k2).core.ext) husP) fun rh hd m3 a3 _ h3 => ?_
   obtain ⟨k3, rfl, hhd⟩ := h3
-  walk_k ctlE.k_intern_const
+  dsimp only [ctlE.k_intern_const]
   refine RefE.abort0 rfl fun hbig => ?_
   have k13 := k2.trans k3
   refine RefE.bindSim (fun _ => rfl) (gaf_step hP k3 hxb (ConRon.Bridge.denote_ext hxrest k13.core.ext))
     fun rf xfn m4 a4 _ ⟨k4, hf32, rfl, hfn⟩ => ?_
-  walk_k ctlE.k_get_app_fn_f
+  dsimp only [ctlE.k_get_app_fn_f]
   refine RefE.bindSim (fun _ => rfl) (gaa_step hP k4 hxb (ConRon.Bridge.denote_ext hxrest (k13.trans k4).core.ext))
     fun ra args m5 a5 _ ⟨k5, hargs, hab, hargsP⟩ => ?_
-  walk_k ctlE.k_get_app_args_f
+  dsimp only [ctlE.k_get_app_args_f]
   have k05 := (k1.trans k13).trans (k4.trans k5)
   have k15 := k13.trans (k4.trans k5)
   have hlen := decHL_length m5 hargs
@@ -142,8 +142,8 @@ theorem ctl_ref (hP : SumProg p) (m : Nat) (hn : m + 1 ≤ 2 ^ 62) (m0 : Mem)
     refine RefE.onlySim (fun _ => rfl) (slEq_step hP k5.stage.stage (decHL_take hargs _ hle2)
       (by omega) (k05.decHL hcq hcqb) (k05.top hcqb)) fun re m6 ⟨hm6, hre⟩ => ?_
     subst hm6
-    walk_k ctlE.k_sl_eq
-    walk_k ctlE.j1
+    dsimp only [ctlE.k_sl_eq]
+    dsimp only [ctlE.j1]
     refine RefE.guard (by decide) (fun hc => ?_) (fun hb => ?_) fun _ _ => ?_
     · grind
     · grind
@@ -151,7 +151,7 @@ theorem ctl_ref (hP : SumProg p) (m : Nat) (hn : m + 1 ≤ 2 ^ 62) (m0 : Mem)
       have hxfvs5 := ConRon.Bridge.denoteEList_ext k15.core.ext _ _ hxfvs
       refine RefE.bindSim (fun _ => rfl) (fdr_step hP k5 (k15.decHL hxl hxlb) (k15.top hxlb)
         (hok₀.mono k05.core.ext) hxfvs5) fun r7 b1 m7 a7 _ ⟨k7, hb1⟩ => ?_
-      walk_k ctlE.k_field_doms_resolve
+      dsimp only [ctlE.k_field_doms_resolve]
       refine RefE.guard (by decide) hb1.1 hb1.2 fun _ hb => ?_
       have hao' : (ra.headD 0 + nP).toNat = (ra.headD 0).toNat + nP.toNat :=
         sum_toNat_add (by have := k5.stage.stage.lt64 hab; omega)
@@ -163,7 +163,7 @@ theorem ctl_ref (hP : SumProg p) (m : Nat) (hn : m + 1 ≤ 2 ^ 62) (m0 : Mem)
         (hok₀.mono (k05.trans k7).core.ext)
         (ConRon.Bridge.Inductives.denoteEList_drop (ConRon.Bridge.denoteEList_ext k7.core.ext _ _ hargsP) _))
         fun r8 b2 m8 a8 _ ⟨k8, hb2⟩ => ?_
-      walk_k ctlE.k_idx_args_resolve
+      dsimp only [ctlE.k_idx_args_resolve]
       refine RefE.guard (by decide) hb2.1 hb2.2 fun _ hb' => ?_
       have k58 := k7.trans k8
       have k18 := k15.trans k58
@@ -189,7 +189,7 @@ theorem ctl_ref (hP : SumProg p) (m : Nat) (hn : m + 1 ≤ 2 ^ 62) (m0 : Mem)
       exact RefE.ret rfl ⟨hR9.stage, k08.grow.trans hR9.grow, rfl, by simpa using hR9.sorts,
         by simpa using hR9.top, hR9.abs, k08.core.trans c9⟩
   · rw [ite_eq_right (by rw [ite_eq_right hle]; decide)]
-    walk_k ctlE.j1
+    dsimp only [ctlE.j1]
     rw [ite_eq_left (Or.inr (Or.inr rfl))]
     exact RefE.twinFail (by decide) (by have := UInt64.lt_iff_toNat_lt.mp (UInt64.not_le.mp hle); grind)
 
@@ -245,13 +245,13 @@ theorem ctor_ref (hP : SumProg p) (m : Nat) (hn : m + 1 ≤ 2 ^ 62) (m0 : Mem) (
   have hcA := ConRon.Bridge.denoteCV_ext hcvCP c1.ext
   have hwsA : ConLeche.Expr.WScoped 0 cvCP.type :=
     ConLeche.Expr.WScoped.of_not_hasFvar (ConLeche.checkConstantVal_typeWF hF₁).1
-  walk_k ctorE.k_check_constant_val
+  dsimp only [ctorE.k_check_constant_val]
   -- `strip_pis`
   obtain ⟨w1, hw1, hw1l, hw1d⟩ := sumTypeWord (hcv.stab (OMono.decCVp _) m1 k1.grow) k1.stage.stage.iw.erSize
   rw [hw1]
   refine RefE.bindSim (fun _ => rfl) (strip_step hP k1 hw1l (sum_toNat_add hnf) hw1d
     (ConRon.Bridge.denoteCV_type hcA)) fun r2 o2 m2 a2 _ ⟨k2, ho2, hdo2⟩ => ?_
-  walk_k ctorE.k_strip_pis
+  dsimp only [ctorE.k_strip_pis]
   refine RefE.guardOpt (by decide) ho2.1 ho2.2 fun ⟨sl, cb⟩ hq2 _ => ?_
   obtain ⟨hcb, rfl, cbP, hcbP⟩ := hdo2 _ _ hq2
   have k02 := k1.trans k2
@@ -259,7 +259,7 @@ theorem ctor_ref (hP : SumProg p) (m : Nat) (hn : m + 1 ≤ 2 ^ 62) (m0 : Mem) (
   refine RefE.bindSim (fun _ => rfl) (sr_step hP k2 hT hcb (k02.decHL hlps hlb) (k02.top hlb) (by omega) hni
     (ConRon.Bridge.denoteN_ext hTP k02.core.ext) (ConRon.Bridge.denoteNListE_ext k02.core.ext _ _ hlpsP) hcbP)
     fun r3 b3 m3 a3 _ ⟨k3, hb3⟩ => ?_
-  walk_k ctorE.k_struct_ctor_resid_ok
+  dsimp only [ctorE.k_struct_ctor_resid_ok]
   refine RefE.guard (by decide) hb3.1 hb3.2 fun _ _ => ?_
   have k03 := k02.trans k3
   -- the constructor's opened telescope
@@ -268,7 +268,7 @@ theorem ctor_ref (hP : SumProg p) (m : Nat) (hn : m + 1 ≤ 2 ^ 62) (m0 : Mem) (
   refine RefE.bindSim (fun _ => rfl) (opf_step hOpf k3 hw3l hw3d
     (ConRon.Bridge.denote_ext (ConRon.Bridge.denoteCV_type hcA) (k2.trans k3).core.ext))
     fun r4 o4 m4 a4 _ ⟨k4, ho4, hdo4⟩ => ?_
-  walk_k ctorE.k_open_pis_at_fvars_f
+  dsimp only [ctorE.k_open_pis_at_fvars_f]
   refine RefE.guardOpt (by decide) ho4.1 ho4.2 fun ⟨cl, cqb⟩ hq4 _ => ?_
   obtain ⟨hcl, hclb, hcqB, rfl, cfvsP, crestP, hcq, hcfvs, hcrest⟩ := hdo4 _ _ hq4
   have k04 := k03.trans k4
@@ -278,12 +278,12 @@ theorem ctor_ref (hP : SumProg p) (m : Nat) (hn : m + 1 ≤ 2 ^ 62) (m0 : Mem) (
   refine RefE.bindSim (fun _ => rfl) (opf_step hOpf k4 hw5l hw5d
     (ConRon.Bridge.denote_ext (ConRon.Bridge.denoteCV_type hcvTaP) k04.core.ext))
     fun r5 o5 m5 a5 _ ⟨k5, ho5, hdo5⟩ => ?_
-  walk_k ctorE.k_open_pis_at_fvars_f_2
+  dsimp only [ctorE.k_open_pis_at_fvars_f_2]
   refine RefE.guardOpt (by decide) ho5.1 ho5.2 fun ⟨tl, tb⟩ hq5 _ => ?_
   obtain ⟨htl, htlb, _, _, tfvsP, _, htq, htfvs, _⟩ := hdo5 _ _ hq5
   -- `fvar_type_ds`
   refine RefE.bindSim (fun _ => rfl) (ftds_step hP k5 htl htlb htfvs) fun r6 tdoms m6 a6 _ ⟨k6, htd, htdb, hdoms⟩ => ?_
-  walk_k ctorE.k_fvar_type_ds
+  dsimp only [ctorE.k_fvar_type_ds]
   -- `check_struct_doms_at`
   have k46 := k5.trans k6
   have hcfvs6 := ConRon.Bridge.denoteEList_ext k46.core.ext _ _ hcfvs
@@ -309,7 +309,7 @@ theorem ctor_ref (hP : SumProg p) (m : Nat) (hn : m + 1 ≤ 2 ^ 62) (m0 : Mem) (
     ⟨hcfvs6, hdoms, ConRon.Bridge.denoteFEnv_mono k06.core.ext hfe⟩ hr7
   have k07 := k06.trans ⟨hR7.stage, hR7.abs, hR7.grow, c7⟩
   have k47 := k46.trans ⟨hR7.stage, hR7.abs, hR7.grow, c7⟩
-  walk_k ctorE.k_check_struct_doms_at
+  dsimp only [ctorE.k_check_struct_doms_at]
   -- the tail
   have hwsc : ConLeche.Expr.WScoped nP.toNat crestP := by
     simpa using (ConLeche.openPisAtFvars_WScoped _ _ _ hcq hwsA).2
