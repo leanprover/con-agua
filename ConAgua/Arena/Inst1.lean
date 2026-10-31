@@ -176,7 +176,7 @@ l_model instGo_spec (p : Prog) (hp : InstProg p)
     mkLet_spec p (hp.base.get "der_b") (hp.base.get "letE_find") (hp.base.get "letE_push") (hp.base.get "intern_letE") (hp.base.get "mk_let") n,
     mkProj_spec p (hp.base.get "der_b") (hp.base.get "proj_find") (hp.base.get "proj_push") (hp.base.get "intern_proj") (hp.base.get "mk_proj") n]
   grind [arena_grind] fold [tierW, idxW]
-  extra [evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE]
+  extra [evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
   finish [tierW, idxW] gen 20 heartbeats 1000000
 
 end L.Arena

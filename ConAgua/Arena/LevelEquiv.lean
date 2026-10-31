@@ -210,7 +210,7 @@ theorem lvLeqTop_spec (hpt : p.lookup "lv_leq_top" = some lvLeqTop) (n : Nat) (s
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind, level_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
         lvSimp_spec p hp.node hp.alloc hp.comb hp.simp n, (leqSpecs p hp n).1] <;>
       finish (gen := 20)
 
@@ -224,7 +224,7 @@ theorem lvEquiv_spec (hpe : p.lookup "lv_equiv" = some lvEquiv) (n : Nat) (s₀ 
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind, level_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, lvEq_spec p hp.node hp.eq n,
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, lvEq_spec p hp.node hp.eq n,
         lvSimp_spec p hp.node hp.alloc hp.comb hp.simp n, (leqSpecs p hp n).1] <;>
       finish (gen := 20)
 
@@ -241,7 +241,7 @@ theorem lvEquivs_spec (hpe : p.lookup "lv_equiv" = some lvEquiv)
     rw [invoke_eq _ hps]
     simp only [callFn, lvEquivs]
     sym only [lang_grind, arena_grind, level_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         lvEquiv_spec p hp hpe n, ih] <;>
       finish (gen := 20)
 
@@ -275,7 +275,7 @@ theorem lvlEq_spec (hpe : p.lookup "lv_equiv" = some lvEquiv) (hpl : p.lookup "l
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind, level_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, st64, lvEquiv_spec p hp hpe n] <;>
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, st64, lvEquiv_spec p hp hpe n] <;>
       finish (gen := 20) [lvlEqW]
 
 end specs
@@ -309,7 +309,7 @@ theorem lsNode_spec (p : Prog) (hp : p.lookup "ls_node" = some lsNode) (n : Nat)
   | succ n =>
     sym only [lang_grind, arena_grind, level_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld,
-        evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE] <;>
+        evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] <;>
       finish [lsNodeW, tierW, idxW]
 
 /-- **The model of `lvls_eq`**: the two slices (none on a handle `ls_node` aborts on), the heap
@@ -348,7 +348,7 @@ theorem lvlsEq_spec (hpe : p.lookup "lv_equiv" = some lvEquiv)
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind, level_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, st64, lsNode_spec p hpn n,
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, st64, lsNode_spec p hpn n,
         lvEquivs_spec p hp hpe hps n] <;>
       finish (gen := 20) [lvlsEqW]
 

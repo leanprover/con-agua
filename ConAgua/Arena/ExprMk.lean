@@ -75,8 +75,8 @@ def derBW (m : Mem) (h : Word) : Word :=
     if tcnt m BVAR (tierW h) ≤ idxW h then 0
     else satSuccW (tfld m BVAR (tierW h) (idxW h) 0)
   else if tagW h = 4 then
-    if tcnt m APP (tierW h) ≤ idxA h then 0
-    else pcol m ADER (tierW h) (idxA h) &&& 32767
+    if tcnt m APP (tierW h) ≤ idxG h then 0
+    else pcol m ADER (tierW h) (idxG h) &&& 32767
   else if tagW h = 5 then
     if tcnt m LAM (tierW h) ≤ idxW h then 0
     else pcol m LADER (tierW h) (idxW h) &&& 32767
@@ -101,8 +101,8 @@ def derFW (m : Mem) (h : Word) : Word :=
     if tcnt m FVAR (tierW h) ≤ idxW h then 0
     else satSuccW (tfld m FVAR (tierW h) (idxW h) 0)
   else if tagW h = 4 then
-    if tcnt m APP (tierW h) ≤ idxA h then 0
-    else (pcol m ADER (tierW h) (idxA h) >>> 15) &&& 32767
+    if tcnt m APP (tierW h) ≤ idxG h then 0
+    else (pcol m ADER (tierW h) (idxG h) >>> 15) &&& 32767
   else if tagW h = 5 then
     if tcnt m LAM (tierW h) ≤ idxW h then 0
     else (pcol m LADER (tierW h) (idxW h) >>> 15) &&& 32767
@@ -127,7 +127,7 @@ def derB : FunDecl := lfn (h) locals (g, t, i, x) {
   t := ⟦h⟧.tier;
   i := ⟦h⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { return (0, 0, 0) };
-  if g == 4 { i := ⟦h⟧.aidx; if APP⟨t⟩.count <= i { return (0, 0, 0) }; x := ADER⟨t⟩.u32[i]; return (x & 32767, (x >> 15) & 32767, x >> 30) };
+  if g == 4 { i := ⟦h⟧.gidx; if APP⟨t⟩.count <= i { return (0, 0, 0) }; x := ADER⟨t⟩.u32[i]; return (x & 32767, (x >> 15) & 32767, x >> 30) };
   if g == 0 {
     if BVAR⟨t⟩.count <= i { return (0, 0, 0) };
     x := BVAR⟨t, i⟩.i;
@@ -158,7 +158,7 @@ def derBv : FunDecl := lfn (h) locals (g, t, i, x) {
   t := ⟦h⟧.tier;
   i := ⟦h⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { return 0 };
-  if g == 4 { i := ⟦h⟧.aidx; if APP⟨t⟩.count <= i { return 0 }; x := ADER⟨t⟩.u32[i]; return x & 32767 };
+  if g == 4 { i := ⟦h⟧.gidx; if APP⟨t⟩.count <= i { return 0 }; x := ADER⟨t⟩.u32[i]; return x & 32767 };
   if g == 0 {
     if BVAR⟨t⟩.count <= i { return 0 };
     x := BVAR⟨t, i⟩.i;
@@ -186,7 +186,7 @@ theorem derTail_spec (p : Prog) (n : Nat) (s₁ : St) (hL : DerLocs s₁) :
       r.retVal.tail.tail.headD 0 = exprLPW s₁.mem (s₁.loc 0); ⊤⦄ := by
   obtain ⟨h1, h2, h3⟩ := hL
   simp only [derTailS, derB, seqDrop]
-  vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rd_spec, ld32_pcol_spec, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE]
+  vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rd_spec, ld32_pcol_spec, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
   all_goals subst_vars
   all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, Cmp.eval, BinOp.eval,
       Nat.reduceEqDiff, reduceIte, beq_iff_eq, decide_eq_true_eq, bne_iff_ne, ne_eq, h1, h2, h3] at *)
@@ -207,7 +207,7 @@ theorem derB_spec (p : Prog) (hp : p.lookup "der_b" = some derB) (n : Nat) (s₀
   | succ n =>
     rw [← seqTake_drop 3 derB.body, show seqDrop 3 derB.body = derTailS from rfl]
     simp only [derB, seqTake]
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE, derTail_spec p n]
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE, derTail_spec p n]
     all_goals subst_vars
     all_goals (try simp only [DerLocs, St.setLoc_loc, St.setLoc_mem, BinOp.eval, Nat.reduceEqDiff,
       Locals.init_cons_zero, reduceIte] at *)
@@ -221,7 +221,7 @@ theorem derBvTail_spec (p : Prog) (n : Nat) (s₁ : St) (hL : DerLocs s₁) :
     ⦃fun r s' => s'.mem = s₁.mem ∧ r.retVal.headD 0 = derBW s₁.mem (s₁.loc 0); ⊤⦄ := by
   obtain ⟨h1, h2, h3⟩ := hL
   simp only [derBvTailS, derBv, seqDrop]
-  vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rd_spec, ld32_pcol_spec, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE]
+  vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rd_spec, ld32_pcol_spec, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
   all_goals subst_vars
   all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, Cmp.eval, BinOp.eval,
       reduceIte, beq_iff_eq, decide_eq_true_eq, bne_iff_ne, ne_eq, h1, h2, h3] at *)
@@ -240,7 +240,7 @@ theorem derBv_spec (p : Prog) (hp : p.lookup "der_bv" = some derBv) (n : Nat) (s
   | succ n =>
     rw [← seqTake_drop 3 derBv.body, show seqDrop 3 derBv.body = derBvTailS from rfl]
     simp only [derBv, seqTake]
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE, derBvTail_spec p n]
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE, derBvTail_spec p n]
     all_goals subst_vars
     all_goals (try simp only [DerLocs, St.setLoc_loc, St.setLoc_mem, BinOp.eval, Nat.reduceEqDiff,
       Locals.init_cons_zero, reduceIte] at *)
@@ -390,7 +390,7 @@ theorem der_pushZ_A (hT : BinTbl R S D k) (hsel : R = AREC ∧ S = ASLOT ∧ D =
       exprLPW (pushZ R S D k m t f a) h = exprLPW m h := by
   have hctl := pushZ_ctl m t f a hT ht
   have hid := idxW_lt h
-  have hidA := idxA_lt h
+  have hidA := idxG_lt h
   have htw := tierW_le h
   have hcnt : ∀ X : TRec, tcnt (pushZ R S D k m t f a) X (tierW h) =
       if k + t = X.ca + tierW h ∧ (k + t).toNat < (m.arr64 CTL).size then
@@ -414,15 +414,15 @@ theorem der_pushZ_A (hT : BinTbl R S D k) (hsel : R = AREC ∧ S = ASLOT ∧ D =
       show (1073741824 : Word).toNat = 1073741824 from rfl, show (1140850688 : Word).toNat = 1140850688 from rfl,
       show (2147483648 : Word).toNat = 2147483648 from rfl] at *
     omega
-  have keyA : rdW (m.arr64 CTL) (k + t) ≤ idxA h → ¬rdW (m.arr64 CTL) (k + t) + 1 ≤ idxA h →
-      idxA h = rdW (m.arr64 CTL) (k + t) := by
+  have keyA : rdW (m.arr64 CTL) (k + t) ≤ idxG h → ¬rdW (m.arr64 CTL) (k + t) + 1 ≤ idxG h →
+      idxG h = rdW (m.arr64 CTL) (k + t) := by
     simp only [UInt64.le_iff_toNat_le, ← UInt64.toNat_inj, UInt64.toNat_add,
       UInt64.lt_iff_toNat_lt, show (1 : Word).toNat = 1 from rfl,
       show (1073741824 : Word).toNat = 1073741824 from rfl, show (1140850688 : Word).toNat = 1140850688 from rfl,
       show (2147483648 : Word).toNat = 2147483648 from rfl] at *
     omega
-  have key2A : idxA h < rdW (m.arr64 CTL) (k + t) + 1 → ¬ idxA h < rdW (m.arr64 CTL) (k + t) →
-      idxA h = rdW (m.arr64 CTL) (k + t) := by
+  have key2A : idxG h < rdW (m.arr64 CTL) (k + t) + 1 → ¬ idxG h < rdW (m.arr64 CTL) (k + t) →
+      idxG h = rdW (m.arr64 CTL) (k + t) := by
     simp only [UInt64.le_iff_toNat_le, ← UInt64.toNat_inj, UInt64.toNat_add,
       UInt64.lt_iff_toNat_lt, show (1 : Word).toNat = 1 from rfl,
       show (1073741824 : Word).toNat = 1073741824 from rfl, show (1140850688 : Word).toNat = 1140850688 from rfl,
@@ -466,7 +466,7 @@ theorem der_pushZ_LA (hT : BinTbl R S D k) (hsel : R = LAREC ∧ S = LASLOT ∧ 
       exprLPW (pushZ R S D k m t f a) h = exprLPW m h := by
   have hctl := pushZ_ctl m t f a hT ht
   have hid := idxW_lt h
-  have hidA := idxA_lt h
+  have hidA := idxG_lt h
   have htw := tierW_le h
   have hcnt : ∀ X : TRec, tcnt (pushZ R S D k m t f a) X (tierW h) =
       if k + t = X.ca + tierW h ∧ (k + t).toNat < (m.arr64 CTL).size then
@@ -490,15 +490,15 @@ theorem der_pushZ_LA (hT : BinTbl R S D k) (hsel : R = LAREC ∧ S = LASLOT ∧ 
       show (1073741824 : Word).toNat = 1073741824 from rfl, show (1140850688 : Word).toNat = 1140850688 from rfl,
       show (2147483648 : Word).toNat = 2147483648 from rfl] at *
     omega
-  have keyA : rdW (m.arr64 CTL) (k + t) ≤ idxA h → ¬rdW (m.arr64 CTL) (k + t) + 1 ≤ idxA h →
-      idxA h = rdW (m.arr64 CTL) (k + t) := by
+  have keyA : rdW (m.arr64 CTL) (k + t) ≤ idxG h → ¬rdW (m.arr64 CTL) (k + t) + 1 ≤ idxG h →
+      idxG h = rdW (m.arr64 CTL) (k + t) := by
     simp only [UInt64.le_iff_toNat_le, ← UInt64.toNat_inj, UInt64.toNat_add,
       UInt64.lt_iff_toNat_lt, show (1 : Word).toNat = 1 from rfl,
       show (1073741824 : Word).toNat = 1073741824 from rfl, show (1140850688 : Word).toNat = 1140850688 from rfl,
       show (2147483648 : Word).toNat = 2147483648 from rfl] at *
     omega
-  have key2A : idxA h < rdW (m.arr64 CTL) (k + t) + 1 → ¬ idxA h < rdW (m.arr64 CTL) (k + t) →
-      idxA h = rdW (m.arr64 CTL) (k + t) := by
+  have key2A : idxG h < rdW (m.arr64 CTL) (k + t) + 1 → ¬ idxG h < rdW (m.arr64 CTL) (k + t) →
+      idxG h = rdW (m.arr64 CTL) (k + t) := by
     simp only [UInt64.le_iff_toNat_le, ← UInt64.toNat_inj, UInt64.toNat_add,
       UInt64.lt_iff_toNat_lt, show (1 : Word).toNat = 1 from rfl,
       show (1073741824 : Word).toNat = 1073741824 from rfl, show (1140850688 : Word).toNat = 1140850688 from rfl,
@@ -542,7 +542,7 @@ theorem der_pushZ_FA (hT : BinTbl R S D k) (hsel : R = FAREC ∧ S = FASLOT ∧ 
       exprLPW (pushZ R S D k m t f a) h = exprLPW m h := by
   have hctl := pushZ_ctl m t f a hT ht
   have hid := idxW_lt h
-  have hidA := idxA_lt h
+  have hidA := idxG_lt h
   have htw := tierW_le h
   have hcnt : ∀ X : TRec, tcnt (pushZ R S D k m t f a) X (tierW h) =
       if k + t = X.ca + tierW h ∧ (k + t).toNat < (m.arr64 CTL).size then
@@ -566,15 +566,15 @@ theorem der_pushZ_FA (hT : BinTbl R S D k) (hsel : R = FAREC ∧ S = FASLOT ∧ 
       show (1073741824 : Word).toNat = 1073741824 from rfl, show (1140850688 : Word).toNat = 1140850688 from rfl,
       show (2147483648 : Word).toNat = 2147483648 from rfl] at *
     omega
-  have keyA : rdW (m.arr64 CTL) (k + t) ≤ idxA h → ¬rdW (m.arr64 CTL) (k + t) + 1 ≤ idxA h →
-      idxA h = rdW (m.arr64 CTL) (k + t) := by
+  have keyA : rdW (m.arr64 CTL) (k + t) ≤ idxG h → ¬rdW (m.arr64 CTL) (k + t) + 1 ≤ idxG h →
+      idxG h = rdW (m.arr64 CTL) (k + t) := by
     simp only [UInt64.le_iff_toNat_le, ← UInt64.toNat_inj, UInt64.toNat_add,
       UInt64.lt_iff_toNat_lt, show (1 : Word).toNat = 1 from rfl,
       show (1073741824 : Word).toNat = 1073741824 from rfl, show (1140850688 : Word).toNat = 1140850688 from rfl,
       show (2147483648 : Word).toNat = 2147483648 from rfl] at *
     omega
-  have key2A : idxA h < rdW (m.arr64 CTL) (k + t) + 1 → ¬ idxA h < rdW (m.arr64 CTL) (k + t) →
-      idxA h = rdW (m.arr64 CTL) (k + t) := by
+  have key2A : idxG h < rdW (m.arr64 CTL) (k + t) + 1 → ¬ idxG h < rdW (m.arr64 CTL) (k + t) →
+      idxG h = rdW (m.arr64 CTL) (k + t) := by
     simp only [UInt64.le_iff_toNat_le, ← UInt64.toNat_inj, UInt64.toNat_add,
       UInt64.lt_iff_toNat_lt, show (1 : Word).toNat = 1 from rfl,
       show (1073741824 : Word).toNat = 1073741824 from rfl, show (1140850688 : Word).toNat = 1140850688 from rfl,
@@ -951,7 +951,7 @@ theorem step_maxIf_spec (p : Prog) (k : Stmt → M Sig) (x y : Var) (Q : Sig →
     ⦃fun s => Q .normal (s.setLoc x (maxW (s.loc x) (s.loc y)))⦄
     step p k (.ite (.cmp .ult (.var x) (.var y)) (.set x (.var y)) .skip)
     ⦃Q; E⦄ := by
-  vcgen [step, evalC, evalE, setLoc] <;> rename_i s hq hc <;> obtain ⟨m, l⟩ := s
+  vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, step, evalC, evalE, setLoc] <;> rename_i s hq hc <;> obtain ⟨m, l⟩ := s
   · have e : maxW (l x) (l y) = l y := by grind [maxW, Cmp.eval]
     rwa [e] at hq
   · have e : (St.setLoc ⟨m, l⟩ x (maxW (l x) (l y))) = ⟨m, l⟩ := by
@@ -985,7 +985,7 @@ theorem mkApp_spec (hpf : p.lookup "app_find" = some appFind)
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE, st64, st32,
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE, st64, st32,
         derB_spec p hd n, internApp_spec p hpf hpp hpi n, step_maxIf_spec p] <;>
       -- gen 20: the chain of three `der_b` results through `setLocs` is deeper than the default
       finish (gen := 20) [Mem.set64_set64_same, Mem.set32_set32_same, p32Len, mkAppW, satPredW_L, packBF_L, packBFL_L, derPutW, cnt2, tierW, idxW]
@@ -1003,7 +1003,7 @@ theorem mkLam_spec (hpf : p.lookup "lam_find" = some lamFind)
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE, st64, st32,
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE, st64, st32,
         derB_spec p hd n, internLamL_spec p hpf hpp hpi n, step_maxIf_spec p] <;>
       -- gen 20: the chain of three `der_b` results through `setLocs` is deeper than the default
       finish (gen := 20) [Mem.set64_set64_same, Mem.set32_set32_same, p32Len, mkLamW, satPredW_L, packBF_L, packBFL_L, derPutW, cnt2, tierW, idxW]
@@ -1021,7 +1021,7 @@ theorem mkForall_spec (hpf : p.lookup "forall_find" = some forallFind)
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE, st64, st32,
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE, st64, st32,
         derB_spec p hd n, internForallL_spec p hpf hpp hpi n, step_maxIf_spec p] <;>
       -- gen 20: the chain of three `der_b` results through `setLocs` is deeper than the default
       finish (gen := 20) [Mem.set64_set64_same, Mem.set32_set32_same, p32Len, mkForallW, satPredW_L, packBF_L, packBFL_L, derPutW, cnt2, tierW, idxW]
@@ -1039,7 +1039,7 @@ theorem mkLet_spec (hpf : p.lookup "letE_find" = some letFind)
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE, st64, st32,
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE, st64, st32,
         derB_spec p hd n, internLet_spec p hpf hpp hpi n, step_maxIf_spec p] <;>
       -- gen 20: the chain of three `der_b` results through `setLocs` is deeper than the default
       finish (gen := 20) [p32Len, mkLetW, satPredW_L, packBF_L, packBFL_L, derPutW, cnt2, tierW, idxW]
@@ -1057,7 +1057,7 @@ theorem mkProj_spec (hpf : p.lookup "proj_find" = some projFind)
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE, st64, st32,
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE, st64, st32,
         derB_spec p hd n, internProj_spec p hpf hpp hpi n] <;>
       -- gen 20: the chain of three `der_b` results through `setLocs` is deeper than the default
       finish (gen := 20) [p32Len, mkProjW, satPredW_L, packBF_L, packBFL_L, derPutW, cnt2, tierW, idxW]

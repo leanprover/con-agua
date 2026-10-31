@@ -425,7 +425,7 @@ l_model offE_spec (p : Prog) (hf : p.lookup "defeq_offset" = some defeqOffsetL)
   fns [hf ↦ offE list]
   specs [callW_spec p n "is_nat_zero", callW_spec p n "nat_pred"]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE] unified
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 theorem decOptR_some {r : List Word} (h : r.headD 0 ≠ 0) : decOptR r = some (decE (r.tail.headD 0)) := by
@@ -510,7 +510,7 @@ their runs). -/
 l_model liE_spec (p : Prog) (hf : p.lookup "defeq_lams_inner" = some defeqLamsInnerL)
   fns [hf ↦ liE list]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE] unified
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
 
 theorem mode_verified (mode : Word) (h : mode < 4) :
     (decMode mode).verifiedChecks = decide (mode &&& 1 = 0) := by

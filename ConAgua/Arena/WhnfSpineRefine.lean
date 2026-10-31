@@ -91,7 +91,7 @@ theorem getAppFnLoop_spec (n : Nat) (s₀ : St) :
     rw [exec, step_while (w := getAppFnLoop) rfl]
     sym only [lang_grind, arena_grind] =>
       vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih, evalE_tld, tld, evalE_cnt,
-        tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE] <;> finish [tierW, idxW]
+        tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] <;> finish [tierW, idxW]
 
 theorem getAppFnLoop_step_spec (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀⦄
@@ -119,7 +119,7 @@ theorem getAppFnL_spec (p : Prog) (hp : p.lookup "get_app_fn" = some getAppFnL) 
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, getAppFnLoop_step_spec p n] <;>
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, getAppFnLoop_step_spec p n] <;>
       finish [gafW]
 
 /-! ## `get_app_fn` refines `getAppFn` -/
@@ -283,7 +283,7 @@ theorem piResultLoop_spec (n : Nat) (s₀ : St) :
     rw [exec, step_while (w := piResultLoop) rfl]
     sym only [lang_grind, arena_grind] =>
       vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih, evalE_tld, tld, evalE_cnt,
-        tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE] <;> finish [tierW, idxW]
+        tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] <;> finish [tierW, idxW]
 
 theorem piResultLoop_step_spec (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀⦄
@@ -311,7 +311,7 @@ theorem piResultL_spec (p : Prog) (hp : p.lookup "pi_result" = some piResultL) (
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, piResultLoop_step_spec p n] <;>
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, piResultLoop_step_spec p n] <;>
       finish [priW]
 
 theorem viewBind_run' (h : EIdx) (a : AState) :
@@ -476,7 +476,7 @@ theorem peelPisLoop_spec (n : Nat) (s₀ : St) :
     rw [exec, step_while (w := peelPisLoop) rfl]
     sym only [lang_grind, arena_grind] =>
       vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih, evalE_tld, tld, evalE_cnt,
-        tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE] <;> finish [tierW, idxW]
+        tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] <;> finish [tierW, idxW]
 
 theorem peelPisLoop_step_spec (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀⦄
@@ -500,7 +500,7 @@ theorem peelPisL_spec (p : Prog) (hp : p.lookup "peel_pis" = some peelPisL) (n :
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalArgs, setLocs, peelPisLoop_step_spec p n] <;> finish [peelPisW]
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalArgs, setLocs, peelPisLoop_step_spec p n] <;> finish [peelPisW]
 
 /-- **The model of `peel_pis` refines `peelPis`**: by induction on (a bound on) `k.toNat`, as
 `gafLoopW_ok`. -/
@@ -664,7 +664,7 @@ theorem mkAppNFromLoop_spec (n' : Nat) (s₀ : St) :
   | succ n' ih =>
     rw [exec, step_while (w := mkAppNFromLoop) rfl]
     sym only [lang_grind, arena_grind] =>
-      vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         mkApp_spec p hpd hpf hpp hpi hp n', ih] <;> finish [mkAppNFromW, spW]
 
 theorem mkAppNFromLoop_step_spec (n' : Nat) (s₀ : St) :
@@ -690,7 +690,7 @@ theorem mkAppNFromL_spec (p : Prog) (hpd : p.lookup "der_b" = some derB)
   | zero => vcgen [exec] <;> grind
   | succ n' =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalArgs,
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalArgs,
         mkAppNFromLoop_step_spec p hpd hpf hpp hpi hp n'] <;> finish
 
 theorem mkAppNL_spec (p : Prog) (hpd : p.lookup "der_b" = some derB)
@@ -706,7 +706,7 @@ theorem mkAppNL_spec (p : Prog) (hpd : p.lookup "der_b" = some derB)
   | zero => vcgen [exec] <;> grind
   | succ n' =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalArgs, setLoc,
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalArgs, setLoc,
         mkAppNFromLoop_step_spec p hpd hpf hpp hpi hp n'] <;> finish
 
 /-- **What `mk_app` changes** (the app tables and their derived-range cache): the `Grows`

@@ -109,7 +109,7 @@ theorem ipalLoop_spec (p : Prog) (hp : IpalF p) (n : Nat) (s₀ : St) :
   | succ n ih =>
     rw [exec, step_while (w := ipalLoop) rfl]
     sym only [lang_grind, arena_grind] =>
-      vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64, ih,
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64, ih,
         eView_spec p (hp.get "e_view") n, i1lF_spec p (IpalF.i1l hp) n] <;>
       finish [ipalGoW_ge, ipalGoW_nopi, ipalGoW_abort, ipalGoW_none, ipalGoW_step]
 
@@ -127,7 +127,7 @@ theorem ipal_specW (p : Prog) (hp : IpalF p) (n : Nat) (s₀ : St) (f o l e : Wo
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
         fun s => Triple.step_exec (ipalLoop_spec p hp (n + 1) s)] <;>
       finish [ipalW]
 

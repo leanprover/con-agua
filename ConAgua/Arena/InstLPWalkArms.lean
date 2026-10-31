@@ -31,7 +31,7 @@ theorem lpApp_spec (n : Nat) (s₀ : St) (h ko kc vo vc fu : Word) :
   rw [invoke_eq _ hp.app]
   simp only [callFn, lpApp]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE,
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE,
       memoFindG_spec lpSch p _ hp.ilpf n, memoPutG_spec lpSch p _ hp.ilpp n,
       callW_spec p n "lp_go", callW_spec p n "mk_app"] <;>
     finish (gen := 20) [ilwBinW, ilwProbe, msetG, tierW, idxW]
@@ -43,7 +43,7 @@ theorem lpLam_spec (n : Nat) (s₀ : St) (h ko kc vo vc fu : Word) :
   rw [invoke_eq _ hp.lam]
   simp only [callFn, lpLam]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE,
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE,
       memoFindG_spec lpSch p _ hp.ilpf n, memoPutG_spec lpSch p _ hp.ilpp n,
       callW_spec p n "lp_go", callW_spec p n "mk_lam"] <;>
     finish (gen := 20) [ilwBinW, ilwProbe, msetG, tierW, idxW]
@@ -55,7 +55,7 @@ theorem lpForall_spec (n : Nat) (s₀ : St) (h ko kc vo vc fu : Word) :
   rw [invoke_eq _ hp.fa]
   simp only [callFn, lpForall]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE,
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE,
       memoFindG_spec lpSch p _ hp.ilpf n, memoPutG_spec lpSch p _ hp.ilpp n,
       callW_spec p n "lp_go", callW_spec p n "mk_forall"] <;>
     finish (gen := 20) [ilwBinW, ilwProbe, msetG, tierW, idxW]

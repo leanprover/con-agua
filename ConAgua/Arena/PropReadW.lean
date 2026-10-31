@@ -51,7 +51,7 @@ theorem residualPW_spec (p : Prog) (hp : p.lookup "residual_pw" = some residualP
   rw [invoke_eq _ hp]
   simp only [callFn, residualPWL]
   vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rdW_spec,
-      callW_spec p n "lv_zero", evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE] <;>
+      callW_spec p n "lv_zero", evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] <;>
   simp_all [rpwW, pushedK, htop, tierW, idxW, LocEq, BinOp.eval, St.setLocs_cons, CTL,
     Cmp.eval, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Sig.retVal, Sig.retOr,
     Locals.init_cons_zero, Locals.init_cons_succ]
@@ -74,7 +74,7 @@ theorem substPWAt_spec (p : Prog) (hp : p.lookup "subst_pw_at" = some substPWAtL
       ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, substPWAtL]
-  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rdW_spec,
+  vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rdW_spec,
       lsNode_spec p hl n, callW_spec p n "lv_spw"] <;>
   simp_all [spaW, pushedK, htop, LocEq, BinOp.eval, St.setLocs_cons, CTL,
     Cmp.eval, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Sig.retVal, Sig.retOr,
@@ -112,7 +112,7 @@ theorem headTypeRes_spec (p : Prog) (hp : PropReadProg p) (n : Nat) (s₀ : St) 
       some (r.headD 0, r.tail.headD 0, r.tail.tail.headD 0, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ (hp.get "head_type_res")]
   simp only [callFn, headTypeResL]
-  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
+  vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
       callW_spec p n "peel_pis_w", callW_spec p n "residual_pw"] <;>
   simp_all [htrK, t3W, LocEq, St.setLocs_cons, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil,
     Sig.retVal, Sig.retOr, Locals.init_cons_zero, Locals.init_cons_succ]
@@ -147,7 +147,7 @@ theorem headTypeConst_spec (p : Prog) (hp : PropReadProg p) (n : Nat) (s₀ : St
       some (r.headD 0, r.tail.headD 0, r.tail.tail.headD 0, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ (hp.get "head_type_const")]
   simp only [callFn, headTypeConstL]
-  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rdW_spec,
+  vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rdW_spec,
       callW_spec p n "env_find", lsNode_spec p (hp.get "ls_node") n, callW_spec p n "head_type_res",
       callW_spec p n "subst_pw_at"] <;>
   simp_all [cArmK1, cArmK2, t3W, LocEq, BinOp.eval, St.setLocs_cons, EREC,
@@ -162,7 +162,7 @@ theorem headProofConst_spec (p : Prog) (hp : PropReadProg p) (n : Nat) (s₀ : S
       some (r.headD 0, r.tail.headD 0, r.tail.tail.headD 0, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ (hp.get "head_proof_const")]
   simp only [callFn, headProofConstL]
-  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rdW_spec,
+  vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rdW_spec,
       callW_spec p n "env_find", lsNode_spec p (hp.get "ls_node") n, callW_spec p n "type_sort_pw",
       callW_spec p n "subst_pw_at"] <;>
   simp_all [cArmK1, cArmK2, t3W, LocEq, BinOp.eval, St.setLocs_cons, EREC,
@@ -202,7 +202,7 @@ theorem headTypePW_spec (p : Prog) (hp : PropReadProg p) (n : Nat) (s₀ : St)
       ⊤⦄ := by
   rw [invoke_eq _ (hp.get "head_type_pw")]
   simp only [callFn, headTypePWL]
-  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
+  vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
       L.Ind.eView_spec p (hp.get "e_view") n, binderDomL_spec p (hp.get "binder_dom") n, callW_spec p n "head_type_const",
       callW_spec p n "head_type_res"] <;>
   simp_all [htpW, htpK, vG, vX, vY, t3W, LocEq, BinOp.eval, St.setLocs_cons,
@@ -230,7 +230,7 @@ theorem typeSortPW_spec (p : Prog) (hp : PropReadProg p) (n : Nat) (s₀ : St) (
       ⊤⦄ := by
   rw [invoke_eq _ (hp.get "type_sort_pw")]
   simp only [callFn, typeSortPWL]
-  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, typeSortPWLoop_step_spec p n,
+  vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, typeSortPWLoop_step_spec p n,
       appCountAtL_spec p (hp.get "app_count_at") n, callW_spec p n "head_type_pw"] <;>
   simp_all [tspW, t3W, LocEq, BinOp.eval, St.setLocs_cons,
     Cmp.eval, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Sig.retVal, Sig.retOr,
@@ -277,7 +277,7 @@ theorem unwrapStep_spec (p : Prog) (hp : PropReadProg p) (n : Nat) (s₀ : St) (
   simp only [callFn, unwrapStepL]
   vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rdW_spec, st64_spec,
       appCountAtL_spec p (hp.get "app_count_at") n, callW_spec p n "env_find", lamProjL_spec p (hp.get "lam_proj") n,
-      callW_spec p n "get_app_args", evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE] <;>
+      callW_spec p n "get_app_args", evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] <;>
   simp_all [uwsW, uwsK1, uwsK2, tierW, idxW, LocEq, BinOp.eval, St.setLocs_cons, CTL, EREC,
     SPN, Cmp.eval, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Sig.retVal, Sig.retOr,
     Locals.init_cons_zero, Locals.init_cons_succ]
@@ -298,7 +298,7 @@ theorem unwrapIdDefs_spec (p : Prog) (hp : PropReadProg p) (n : Nat) (s₀ : St)
     ⦃fun r s' => LocEq s' s₀ ∧ uidW p n s₀.mem vis f k e = some (r.headD 0, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ (hp.get "unwrap_id_defs")]
   simp only [callFn, unwrapIdDefsL]
-  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
+  vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
       callW_spec p n "unwrap_step", callW_spec p n "unwrap_id_defs"] <;>
   simp_all [uidW, uidK, call1W, LocEq, BinOp.eval, St.setLocs_cons,
     Cmp.eval, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Sig.retVal, Sig.retOr,
@@ -336,7 +336,7 @@ theorem peelPisW_spec (p : Prog) (hp : PropReadProg p) (n : Nat) (s₀ : St) (vi
   simp only [callFn, peelPisWL]
   vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rdW_spec,
       callW_spec p n "unwrap_id_defs", callW_spec p n "peel_pis_w", evalE_tld, tld, evalE_cnt,
-        tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE] <;>
+        tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] <;>
   simp_all [ppwW, ppwK0, ppwK1, ppwK2, t2W, call1W, tierW, idxW, LocEq, BinOp.eval,
     St.setLocs_cons, CTL, Cmp.eval, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil,
     Sig.retVal, Sig.retOr, Locals.init_cons_zero, Locals.init_cons_succ]
@@ -366,7 +366,7 @@ theorem headProofProj_spec (p : Prog) (hp : PropReadProg p) (n : Nat) (s₀ : St
       some (r.headD 0, r.tail.headD 0, r.tail.tail.headD 0, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ (hp.get "head_proof_proj")]
   simp only [callFn, headProofProjL]
-  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rdW_spec,
+  vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rdW_spec,
       callW_spec p n "find_proj", callW_spec p n "type_sort_pw"] <;>
   simp_all [hppK1, hppK2, hppB, LocEq, BinOp.eval, St.setLocs_cons, EREC, TieredArray.t0,
     Cmp.eval, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Sig.retVal, Sig.retOr,
@@ -395,7 +395,7 @@ theorem headProofPW_spec (p : Prog) (hp : PropReadProg p) (n : Nat) (s₀ : St) 
       hpwW p n s₀.mem vis f h = some (r.headD 0, r.tail.headD 0, r.tail.tail.headD 0, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ (hp.get "head_proof_pw")]
   simp only [callFn, headProofPWL]
-  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
+  vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
       L.Ind.eView_spec p (hp.get "e_view") n, callW_spec p n "head_proof_const",
       callW_spec p n "type_sort_pw", callW_spec p n "head_proof_proj"] <;>
   simp_all [hpwW, vG, vX, vY, t3W, LocEq, St.setLocs_cons,
@@ -414,7 +414,7 @@ theorem proofPW_spec (p : Prog) (hp : PropReadProg p) (n : Nat) (s₀ : St) (vis
       prfW p n s₀.mem vis f e = some (r.headD 0, r.tail.headD 0, r.tail.tail.headD 0, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ (hp.get "proof_pw")]
   simp only [callFn, proofPWL]
-  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, proofPWLoop_step_spec p n,
+  vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, proofPWLoop_step_spec p n,
       callW_spec p n "head_proof_pw"] <;>
   simp_all [prfW, t3W, LocEq, BinOp.eval, St.setLocs_cons,
     Cmp.eval, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Sig.retVal, Sig.retOr,
@@ -440,7 +440,7 @@ theorem notProofFast_spec (p : Prog) (hp : PropReadProg p) (n : Nat) (s₀ : St)
         some (r.headD 0, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ (hp.get "not_proof_fast")]
   simp only [callFn, notProofFastL]
-  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, st64_spec,
+  vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, st64_spec,
       callW_spec p n "proof_pw"] <;>
   simp_all [propArmK, npfV, LocEq, St.setLocs_cons,
     Cmp.eval, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Sig.retVal, Sig.retOr,
@@ -453,7 +453,7 @@ theorem isProofFast_spec (p : Prog) (hp : PropReadProg p) (n : Nat) (s₀ : St) 
         some (r.headD 0, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ (hp.get "is_proof_fast")]
   simp only [callFn, isProofFastL]
-  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, st64_spec,
+  vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, st64_spec,
       callW_spec p n "proof_pw"] <;>
   simp_all [propArmK, ipfV, LocEq, St.setLocs_cons,
     Cmp.eval, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Sig.retVal, Sig.retOr,

@@ -40,7 +40,7 @@ theorem icfParts_spec (p : Prog) (hp : p.lookup "iota_certs_full_parts" = some i
   simp only [callFn, iotaCertsFullPartsL]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt,
-      tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE] <;>
+      tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] <;>
     finish [icfPartsW, tierW, idxW]
 
 /-- Model of `spn_get`. -/
@@ -54,7 +54,7 @@ theorem spnGet_spec (p : Prog) (hp : p.lookup "spn_get" = some spnGetL) (n : Nat
   rw [invoke_eq _ hp]
   simp only [callFn, spnGetL]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64] <;>
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64] <;>
     finish [spnGetW, rdW]
 
 
@@ -80,7 +80,7 @@ theorem exprViewOk_spec (p : Prog) (hp : p.lookup "expr_view_ok" = some exprView
   simp only [callFn, exprViewOkL]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt,
-      tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE] <;>
+      tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] <;>
     finish [evoW, evoCnt, tierW, idxW]
 
 
@@ -95,7 +95,7 @@ theorem ctlGet_spec (p : Prog) (hp : p.lookup "ctl_get" = some ctlGetL) (n : Nat
   rw [invoke_eq _ hp]
   simp only [callFn, ctlGetL]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64] <;>
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64] <;>
     finish [ctlGetW, rdW]
 
 
@@ -213,7 +213,7 @@ l_model icfE_spec (p : Prog) (hp : IotaProg4 p)
   specs [callW_spec p n "inst_list", callW_spec p n "iota_certs_full_parts", callW_spec p n "spn_get",
     callW_spec p n "expr_view_ok", callW_spec p n "ctl_get"]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE] unified
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 /-! ### The twin, by arms -/

@@ -159,10 +159,10 @@ theorem sPre_spec (k : Stmt → M Sig) (s₀ : St) :
     step p k sPre
     ⦃fun r s' => s'.mem = s₀.mem ∧ r = .normal ∧ s'.loc 0 = s₀.loc 0 ∧ s'.loc 1 = s₀.loc 1 ∧
       s'.loc 2 = s₀.loc 2 ∧ s'.loc 5 = lvlHPW s₀.mem (s₀.loc 1); ⊤⦄ := by
-  simp only [sPre, hpBlkS, mapS, mapE_tld, mapE_cntE, mapE_tierE, mapE_idxE, mapE_idxAE, mapE_tagE, mapE, mapC, L.Notation.blk]
+  simp only [sPre, hpBlkS, mapS, mapE_tld, mapE_cntE, mapE_tierE, mapE_idxE, mapE_idxAE, mapE_idxGE, mapE_tagE, mapE, mapC, L.Notation.blk]
   simp only [Nat.reduceLT, Nat.reduceAdd, ↓reduceIte]
   sym only [lang_grind, arena_grind] =>
-    vcgen [step, evalE, evalC, evalArgs, setLoc, ld64, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE] <;>
+    vcgen [step, evalE, evalC, evalArgs, setLoc, ld64, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] <;>
     finish [lvlHPW, tierW, idxW]
 
 /-- **The `succ` table's obligations.** -/
@@ -174,16 +174,16 @@ theorem succOK : ConsOK p succCS where
   ihash := by
     intro n s₀
     simp only [succCS, L.Notation.blk]
-    vcgen [step, evalE_spec, setLoc]
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, step, evalE_spec, setLoc]
     all_goals simp_all [Expr.pval, succHashW, argsOf, BinOp.eval]
   ihashG := fun _ => by
     intro n s₀
     simp only [ihashAt, succCS, gO, shiftS, shiftE, L.Notation.blk, Nat.reduceAdd]
-    vcgen [step, evalE_spec, setLoc]
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, step, evalE_spec, setLoc]
     all_goals simp_all [Expr.pval, succHashW, argsOf, BinOp.eval]
   pre := by
     intro n s₀
-    vcgen [sPre_spec p (exec p n) s₀]
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, sPre_spec p (exec p n) s₀]
     all_goals obtain ⟨h0, h1, h2, hx⟩ := ‹_ ∧ _›
     · assumption
     · intro x hx'

@@ -71,7 +71,7 @@ theorem bnc_specC (p : Prog) (hP : NckProg p) (hl : NhLook p)
     ⦃fun r s' => LocEq s' s₀ ∧ bncC cR n s₀.mem vis q cvO cvL = some (r, s'.mem); ⊤⦄ := by
   simp only [invoke_eq _ hp, callFn, blockNestCtx]
   sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       hcR (n + 1) "open_pis_at_fvars_f", nck_spec p hP n, nestHoles_spec p hl n] <;>
     finish (gen := 20) [bncC, rdW_eq]
 
@@ -228,7 +228,7 @@ l_model cbpE_spec (p : Prog) (hP : PosBlkProg p)
     callW_spec p n "check_block_positivity_init", nrtE_spec p hP.rs n, callW_spec p n "pin_word",
     callW_spec p n "lvl_eq_true", callW_spec p n "check_block_positivity_nfs"]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE] unified
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 /-- What `check_block_positivity` gives besides the twin's kinds, normal forms and walk state `x`

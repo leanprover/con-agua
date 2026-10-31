@@ -139,7 +139,7 @@ theorem promoteN_spec (f h : Word) :
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       memoFindG_spec pnSch p _ (hp.get "pn_find") n, memoPutG_spec pnSch p _ (hp.get "pn_put") n,
-      callW_spec p n "pn_arm", evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE] <;>
+      callW_spec p n "pn_arm", evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] <;>
     finish [pnW_pers, pnW_hit, pnW_miss, memoK_some, mvG, tierW]
 
 theorem pnArm_spec (f h : Word) :
@@ -150,7 +150,7 @@ theorem pnArm_spec (f h : Word) :
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       callW_spec p n "pi_nanon", callW_spec p n "promote_n", callW_spec p n "pi_nstr",
-      callW_spec p n "pi_nnum", evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE] <;>
+      callW_spec p n "pi_nnum", evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] <;>
     finish [pnArmW_anon, pnArmW_str, pnArmW_num, pnStrK_some, pnNumK_some, hd1_some, tierW,
       idxW]
 

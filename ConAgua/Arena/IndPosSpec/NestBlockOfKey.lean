@@ -424,7 +424,7 @@ theorem instPisWith_spec (p : Prog) (hv : p.lookup "e_view" = some eView)
     intro s₀ ao al e
     simp only [invoke_eq _ hp, callFn, instPisWith]
     sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         eView_spec p hv n, i1F_spec p hi1 n, ih] <;> finish (gen := 20)
 
 theorem ETables.get_forall (t : ETables) (i : EIdx) (ht : i.tag = ETag.forallE) (v : ENodeView)
@@ -534,7 +534,7 @@ theorem closeTelescope_spec (n : Nat) : ∀ (s₀ : St) (dO dl i body : Word),
     intro s₀ dO dl i body
     simp only [invoke_eq _ hp, callFn, closeTelescope]
     sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         abF_spec p hab n, mkForall_spec p hd hpf hpp hpi hmk n, ih] <;>
       finish (gen := 20)
 

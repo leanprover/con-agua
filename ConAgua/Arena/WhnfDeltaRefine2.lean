@@ -26,7 +26,7 @@ l_model rawNatLit_spec (p : Prog) (hp : WhnfDeltaProg p)
   fns [hp.rawNatLit ↦ rawNatLitW tuple]
   specs [callW_spec p n "pin_at", callW_spec p n "pin_word"]
   grind [arena_grind] fold [tierW, idxW]
-  extra [evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE]
+  extra [evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
   finish [tierW, idxW] gen 30
 
 
@@ -586,7 +586,7 @@ l_model litToCtorIfNat_spec (p : Prog) (hp : WhnfDeltaProg p)
   fns [hp.litToCtorIfNat ↦ litToCtorIfNatW ]
   specs [callW_spec p n "nat_lit_supported", callW_spec p n "nat_lit_to_ctor"]
   grind [arena_grind] fold [tierW, idxW]
-  extra [evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE]
+  extra [evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
   finish [tierW, idxW] gen 30
 
 
@@ -918,7 +918,7 @@ theorem unfoldDefnAt_spec (p : Prog) (hp : WhnfDeltaProg p) (n : Nat) (s₀ : St
   simp only [callFn, unfoldDefnAtL]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt,
-      tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE, st64,
+      tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE, st64,
       callW_spec p n "const_val_at", callW_spec p n "get_app_args",
       callW_spec p n "mk_app_n"] <;>
     finish (gen := 30) [unfoldDefnAtW, tierW, idxW]
@@ -928,7 +928,7 @@ l_model unfoldDefinition_spec (p : Prog) (hp : WhnfDeltaProg p)
   fns [hp.unfoldDefinition ↦ unfoldDefinitionW tuple]
   specs [callW_spec p n "get_app_fn", callW_spec p n "env_find", callW_spec p n "unfold_defn_at"]
   grind [arena_grind] fold [tierW, idxW]
-  extra [evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE]
+  extra [evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
   finish [tierW, idxW] gen 30
 
 

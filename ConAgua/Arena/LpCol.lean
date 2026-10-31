@@ -65,7 +65,7 @@ theorem b2w_le (x : Bool) : b2w x ≤ 1 := by cases x <;> decide
 view) is `0`. Counts: `CTL[14 + t]` (`param`), `CTL[6 + t]`, `CTL[10 + t]`, `CTL[12 + t]`. -/
 def lvlHPW (m : Mem) (u : Word) : Word :=
   if tierW u ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then 0
-  else if tagW u = 4 then (if idxW u < tcnt m PARAM (tierW u) then 1 else 0)
+  else if tagW u = 4 then (if idxG u < tcnt m PARAM (tierW u) then 1 else 0)
   else if tagW u = 1 then
     (if idxW u < tcnt m SUCC (tierW u) then tfld m SUCC_HP (tierW u) (idxW u) 0
      else 0)
@@ -127,7 +127,7 @@ def exprLPW (m : Mem) (h : Word) : Word :=
     (if idxW h < tcnt m CONST (tierW h) then tfld m CONST_LP (tierW h) (idxW h) 0
      else 0)
   else if tagW h = 4 then
-    (if idxA h < tcnt m APP (tierW h) then pcol m ADER (tierW h) (idxA h) >>> 30
+    (if idxG h < tcnt m APP (tierW h) then pcol m ADER (tierW h) (idxG h) >>> 30
      else 0)
   else if tagW h = 5 then
     (if idxW h < tcnt m LAM (tierW h) then pcol m LADER (tierW h) (idxW h) >>> 30
@@ -210,7 +210,7 @@ def hpBlkS : Stmt := lblk (t, u, j, c, x, g, ti, ix) {
   ti := ⟦u⟧.tier;
   ix := ⟦u⟧.idx;
   if ti == 0 || CTL.u64[1] != 0 {
-    if g == 4 { if ix < PARAM⟨ti⟩.count { x := 1 } }
+    if g == 4 { ix := ⟦u⟧.gidx; if ix < PARAM⟨ti⟩.count { x := 1 } }
     else if g == 1 { if ix < SUCC⟨ti⟩.count { x := SUCC_HP⟨ti, ix⟩ } }
     else if g == 2 { if ix < MAX⟨ti⟩.count { x := MAX_HP⟨ti, ix⟩ } }
     else if g == 3 { if ix < IMAX⟨ti⟩.count { x := IMAX_HP⟨ti, ix⟩ } }
@@ -224,7 +224,7 @@ def hpBlkM1 : Stmt := lblk (t, u, v, j, c, k, x, g, ti, ix) {
   ti := ⟦u⟧.tier;
   ix := ⟦u⟧.idx;
   if ti == 0 || CTL.u64[1] != 0 {
-    if g == 4 { if ix < PARAM⟨ti⟩.count { x := 1 } }
+    if g == 4 { ix := ⟦u⟧.gidx; if ix < PARAM⟨ti⟩.count { x := 1 } }
     else if g == 1 { if ix < SUCC⟨ti⟩.count { x := SUCC_HP⟨ti, ix⟩ } }
     else if g == 2 { if ix < MAX⟨ti⟩.count { x := MAX_HP⟨ti, ix⟩ } }
     else if g == 3 { if ix < IMAX⟨ti⟩.count { x := IMAX_HP⟨ti, ix⟩ } }
@@ -238,7 +238,7 @@ def hpBlkM2 : Stmt := lblk (t, u, v, j, c, k, x, g, ti, ix, y) {
   ti := ⟦v⟧.tier;
   ix := ⟦v⟧.idx;
   if ti == 0 || CTL.u64[1] != 0 {
-    if g == 4 { if ix < PARAM⟨ti⟩.count { y := 1 } }
+    if g == 4 { ix := ⟦v⟧.gidx; if ix < PARAM⟨ti⟩.count { y := 1 } }
     else if g == 1 { if ix < SUCC⟨ti⟩.count { y := SUCC_HP⟨ti, ix⟩ } }
     else if g == 2 { if ix < MAX⟨ti⟩.count { y := MAX_HP⟨ti, ix⟩ } }
     else if g == 3 { if ix < IMAX⟨ti⟩.count { y := IMAX_HP⟨ti, ix⟩ } }
@@ -266,7 +266,7 @@ def lpBlkF : Stmt := lblk (t, u, ty, j, c, k, x, g, ti, ix) {
     if g == 1 { if ix < FVAR⟨ti⟩.count { x := FVAR_LP⟨ti, ix⟩ } }
     else if g == 2 { if ix < SORT⟨ti⟩.count { x := SORT_LP⟨ti, ix⟩ } }
     else if g == 3 { if ix < CONST⟨ti⟩.count { x := CONST_LP⟨ti, ix⟩ } }
-    else if g == 4 { ix := ⟦ty⟧.aidx; if ix < APP⟨ti⟩.count { x := ADER⟨ti⟩.u32[ix] >> 30 } }
+    else if g == 4 { ix := ⟦ty⟧.gidx; if ix < APP⟨ti⟩.count { x := ADER⟨ti⟩.u32[ix] >> 30 } }
     else if g == 5 { if ix < LAM⟨ti⟩.count { x := LADER⟨ti⟩.u32[ix] >> 30 } }
     else if g == 6 { if ix < FORALL⟨ti⟩.count { x := FADER⟨ti⟩.u32[ix] >> 30 } }
     else if g == 7 { if ix < LET⟨ti⟩.count { x := LEDER⟨ti⟩.u32[ix] >> 30 } }
@@ -281,7 +281,7 @@ def hpBlkL : Stmt := lblk (t, o, l, h, j, c, k, x, g, ti, ix, u, q, y) {
   ti := ⟦u⟧.tier;
   ix := ⟦u⟧.idx;
   if ti == 0 || CTL.u64[1] != 0 {
-    if g == 4 { if ix < PARAM⟨ti⟩.count { y := 1 } }
+    if g == 4 { ix := ⟦u⟧.gidx; if ix < PARAM⟨ti⟩.count { y := 1 } }
     else if g == 1 { if ix < SUCC⟨ti⟩.count { y := SUCC_HP⟨ti, ix⟩ } }
     else if g == 2 { if ix < MAX⟨ti⟩.count { y := MAX_HP⟨ti, ix⟩ } }
     else if g == 3 { if ix < IMAX⟨ti⟩.count { y := IMAX_HP⟨ti, ix⟩ } }
@@ -308,7 +308,7 @@ theorem hpBlkM1_spec (s₀ : St) :
       s'.loc 6 = lvlHPW s₀.mem (s₀.loc 1); ⊤⦄ := by
   simp only [hpBlkM1, L.Notation.blk]
   sym only [lang_grind, arena_grind] =>
-    vcgen [step, evalE, evalC, evalArgs, setLoc, ld64, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE] <;>
+    vcgen [step, evalE, evalC, evalArgs, setLoc, ld64, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] <;>
     finish [lvlHPW, tierW, idxW]
 
 theorem hpBlkM2_spec (s₀ : St) :
@@ -319,7 +319,7 @@ theorem hpBlkM2_spec (s₀ : St) :
       s'.loc 6 = s₀.loc 6 ∧ s'.loc 10 = lvlHPW s₀.mem (s₀.loc 2); ⊤⦄ := by
   simp only [hpBlkM2, L.Notation.blk]
   sym only [lang_grind, arena_grind] =>
-    vcgen [step, evalE, evalC, evalArgs, setLoc, ld64, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE] <;>
+    vcgen [step, evalE, evalC, evalArgs, setLoc, ld64, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] <;>
     finish [lvlHPW, tierW, idxW]
 
 theorem hpBlkL_spec (s₀ : St) :
@@ -331,7 +331,7 @@ theorem hpBlkL_spec (s₀ : St) :
       s'.loc 13 = lvlHPW s₀.mem (s₀.loc 11); ⊤⦄ := by
   simp only [hpBlkL, L.Notation.blk]
   sym only [lang_grind, arena_grind] =>
-    vcgen [step, evalE, evalC, evalArgs, setLoc, ld64, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE] <;>
+    vcgen [step, evalE, evalC, evalArgs, setLoc, ld64, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] <;>
     finish [lvlHPW, tierW, idxW]
 
 theorem lsBlkC_spec (s₀ : St) :
@@ -342,7 +342,7 @@ theorem lsBlkC_spec (s₀ : St) :
       s'.loc 6 = lsHPW s₀.mem (s₀.loc 2); ⊤⦄ := by
   simp only [lsBlkC, L.Notation.blk]
   sym only [lang_grind, arena_grind] =>
-    vcgen [step, evalE, evalC, evalArgs, setLoc, ld64, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE] <;>
+    vcgen [step, evalE, evalC, evalArgs, setLoc, ld64, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] <;>
     finish [lsHPW, tierW, idxW]
 
 set_option maxHeartbeats 1000000 in
@@ -354,7 +354,7 @@ theorem lpBlkF_spec (s₀ : St) :
       s'.loc 6 = exprLPW s₀.mem (s₀.loc 2); ⊤⦄ := by
   simp only [lpBlkF, L.Notation.blk]
   sym only [lang_grind, arena_grind] =>
-    vcgen [step, evalE, evalC, evalArgs, setLoc, ld64, ld32_pcol_spec, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE] <;>
+    vcgen [step, evalE, evalC, evalArgs, setLoc, ld64, ld32_pcol_spec, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] <;>
     finish [exprLPW, tierW, idxW]
 
 /-- One more element of the slice (`k' = q + 1`, as words: `q < l`). -/
@@ -374,7 +374,7 @@ theorem hpLoopLs_spec (n : Nat) (s₀ : St) (hq : s₀.loc 12 ≤ s₀.loc 2)
   | succ n ih =>
     rw [exec, step_while (w := hpLoopLs) rfl]
     sym only [lang_grind, arena_grind] =>
-      vcgen [step, evalE, evalC, evalArgs, setLoc, ld64, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE, hpBlkL_spec p (exec p n), ih] <;>
+      vcgen [step, evalE, evalC, evalArgs, setLoc, ld64, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE, hpBlkL_spec p (exec p n), ih] <;>
       finish [lsOrW_step]
 
 theorem hpLoopLs_step_spec (n : Nat) (s₀ : St) (hq : s₀.loc 12 ≤ s₀.loc 2)

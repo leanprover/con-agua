@@ -79,7 +79,7 @@ theorem abstractPrefix_spec (p : Prog) (hp : p.lookup "abstract_prefix" = some a
     rw [invoke_eq _ hp]
     simp only [callFn, abstractPrefix]
     sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         abF_spec p hab n, ih] <;>
       finish (gen := 20)
 
@@ -261,7 +261,7 @@ theorem targetHoles_spec (p : Prog) (hff : p.lookup "fvar_find" = some fvarFind)
     rw [invoke_eq _ hp]
     simp only [callFn, targetHoles]
     sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         internFVar_spec p hff hfp hif n, slCons_specW p ha hc hsc n, ih] <;>
       finish (gen := 20)
 
@@ -394,7 +394,7 @@ theorem targetPiDomsWith_spec (p : Prog) (hv : p.lookup "e_view" = some eView)
     rw [invoke_eq _ hp]
     simp only [callFn, targetPiDomsWith]
     sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         eView_spec p hv n, i1F_spec p hi1 n, slCons_specW p ha hc hsc n, ih] <;>
       finish (gen := 20)
 
@@ -475,7 +475,7 @@ theorem cvLps_spec (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         erToIw_specW2 p ha hc he n] <;>
       finish (gen := 20) [cvLpsW, rdW_eq]
 

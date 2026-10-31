@@ -90,7 +90,7 @@ theorem i1Adapter_spec (n : Nat) (s₀ : St) (f e v d : Word) :
   rw [invoke_eq _ (show i1Prog.lookup "instantiate1_fast" = some L.Checker.instantiate1FastA from rfl)]
   simp only [callFn, L.Checker.instantiate1FastA]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
       callW_spec i1Prog n "inst_entry"] <;>
     finish [fwd1_some]
 

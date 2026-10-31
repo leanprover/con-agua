@@ -223,7 +223,7 @@ theorem classNPcOf_spec (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
   rcases n with _ | n
   · vcgen [exec] <;> grind
   sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       blockShapeMemberNames_spec p ha hmc hmn n, slContains_spec p hct n,
       envFind_specW p hx hg hef n] <;>
     finish (gen := 20) [rdW_eq]

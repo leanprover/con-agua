@@ -141,7 +141,7 @@ l_model wsGo_spec (p : Prog) (hpd : p.lookup "der_b" = some derB)
   fns [hp ↦ wscW, hpn ↦ wsNodeW]
   specs [derB_spec p hpd n, memoFindG_spec wsSch p _ hpf n, memoPutG_spec wsSch p _ hps n]
   grind [arena_grind] fold [tierW, idxW]
-  extra [evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE]
+  extra [evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
   finish [tierW, idxW] gen 20 heartbeats 1000000
 
 /-! ## `wscoped_bfast(d, e)`: the entry -/
@@ -175,7 +175,7 @@ theorem wscopedBFast_spec (p : Prog) (hpd : p.lookup "der_b" = some derB)
   rw [invoke_eq _ hpm]
   simp only [callFn, wscopedBFastL]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, memoClearG_spec wsSch p _ hpc n, ih] <;>
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, memoClearG_spec wsSch p _ hpc n, ih] <;>
     finish
 
 /-- What the specs need of the program. -/

@@ -57,7 +57,7 @@ theorem poolCopy_spec (p : Prog) (hp : p.lookup "pool_copy" = some poolCopy) (n 
     rw [invoke_eq _ hp]
     simp only [callFn, poolCopy]
     sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64, ih] <;>
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64, ih] <;>
       finish (gen := 20)
 
 
@@ -151,7 +151,7 @@ theorem viewLs_specW (p : Prog) (hn : p.lookup "ls_node" = some lsNode)
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
         lsNode_spec p hn n, iwAlloc_specW p ha n, poolCopy_spec p hc n] <;>
       finish (gen := 20) [viewLsW]
 

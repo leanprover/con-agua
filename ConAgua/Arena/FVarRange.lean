@@ -134,7 +134,7 @@ l_model frGo_spec (p : Prog) (hpf : p.lookup "fm_find" = some (memoFindG frSch))
   fns [hp ↦ frW, hpn ↦ frNodeW]
   specs [memoFindG_spec frSch p _ hpf n, memoPutG_spec frSch p _ hps n]
   grind [arena_grind] fold [tierW, idxW]
-  extra [evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE]
+  extra [evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
   finish [tierW, idxW] gen 20 heartbeats 1000000
 
 /-! ## `fr_memo(h, c)`: the entry, between two clears -/
@@ -177,7 +177,7 @@ theorem frMemo_spec (p : Prog) (hpf : p.lookup "fm_find" = some (memoFindG frSch
   rw [invoke_eq _ hpm]
   simp only [callFn, frMemo]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, memoClearG_spec frSch p _ hpc n, ih] <;>
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, memoClearG_spec frSch p _ hpc n, ih] <;>
     finish
 
 /-- The walk and the memo, as one program. -/

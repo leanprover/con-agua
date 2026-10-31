@@ -264,7 +264,7 @@ theorem classOfMotiveVar_spec (p : Prog) (hf : p.lookup "sl_find" = some slFind)
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, slFind_spec p hf n] <;>
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, slFind_spec p hf n] <;>
       finish (gen := 20) [cmvW]
 
 theorem cmvW_ok (n : Nat) (m : Mem) (nP o l pv : Word) (r : List Word) (ns : List Nat)
@@ -324,7 +324,7 @@ theorem classBinder_spec (p : Prog) (hp : p.lookup "class_binder" = some classBi
     ⦃fun r s' => LocEq s' s₀ ∧ fvarTypeDW1 s₀.mem x = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hp]; simp only [callFn, classBinder]
   sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ftdF_spec p had n] <;>
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ftdF_spec p had n] <;>
     finish [fvarTypeDW1]
 
 theorem classGenBinder_spec (p : Prog) (hp : p.lookup "class_gen_binder" = some classGenBinder)
@@ -333,7 +333,7 @@ theorem classGenBinder_spec (p : Prog) (hp : p.lookup "class_gen_binder" = some 
     ⦃fun r s' => LocEq s' s₀ ∧ fvarTypeDW1 s₀.mem x = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hp]; simp only [callFn, classGenBinder]
   sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ftdF_spec p had n] <;>
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ftdF_spec p had n] <;>
     finish [fvarTypeDW1]
 
 /-- The relational lemma of `fvarTypeDW1`. -/
@@ -401,7 +401,7 @@ theorem exprGetD_spec (p : Prog) (hpf : p.lookup "bvar_find" = some bvarFind)
     ⦃fun r s' => LocEq s' s₀ ∧ exprGetDW s₀.mem o l i = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hp]; simp only [callFn, exprGetD]
   sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       internBVar_spec p hpf hpp hib n] <;>
     finish [exprGetDW]
 
@@ -501,7 +501,7 @@ theorem fvarHead_spec (p : Prog) (hp : p.lookup "fvar_head" = some fvarHead)
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         gafF_spec p had n, eView_spec p hv n] <;>
       finish [fvarHeadW]
 
@@ -660,7 +660,7 @@ theorem closeLams_spec (p : Prog) (hd : p.lookup "der_b" = some derB)
     rw [invoke_eq _ hp]
     simp only [callFn, closeLams]
     sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         abF_spec p hab n, mkLam_spec p hd hpf hpp hpi hml n, ih] <;>
       finish (gen := 20)
 

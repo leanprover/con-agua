@@ -35,7 +35,7 @@ theorem mentionsAnyConst_spec (p : Prog) (hv : p.lookup "e_view" = some eView)
   unfold MaGoSpec at ih
   simp only [invoke_eq _ hp, callFn, mentionsAnyConst]
   sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, memoClearG_spec maSch p _ hcl n, ih] <;>
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, memoClearG_spec maSch p _ hcl n, ih] <;>
     finish
 
 theorem maConstW_ok (n : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word)
@@ -154,7 +154,7 @@ theorem nestOcc_spec (p : Prog) (hv : p.lookup "e_view" = some eView)
   unfold NoGoSpec at ih
   simp only [invoke_eq _ hp, callFn, nestOcc]
   sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, memoClearG_spec noSch p _ hcl n, ih] <;>
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, memoClearG_spec noSch p _ hcl n, ih] <;>
     finish
 
 theorem noConstW_ok (n : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word)
@@ -240,7 +240,7 @@ theorem memberIdxAt_spec (p : Prog) (hv : p.lookup "e_view" = some eView)
     ⦃fun r s' => LocEq s' s₀ ∧ memW n s₀.mem no nl lvls e = some (r, s'.mem); ⊤⦄ := by
   simp only [invoke_eq _ hp, callFn, memberIdxAt]
   sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, eView_spec p hv n,
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, eView_spec p hv n,
       slFind_spec p hf n] <;> finish (gen := 20)
 
 theorem memW_ok (n : Nat) (m m' : Mem) (a : AState) (no nl lvls e : Word) (r : List Word)

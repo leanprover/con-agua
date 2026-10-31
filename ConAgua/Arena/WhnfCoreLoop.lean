@@ -191,7 +191,7 @@ end step
 (`callE`), done on `(0, v)`, continuing on `(1, e')`. -/
 l_model whnfCoreLoop_specE (p : Prog) (hf : p.lookup "whnf_core_loop" = some whnfCoreLoopL)
   fns [hf ↦ whnfCoreLoopE] grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
   finish [tierW, idxW] unified
 
 /-- **`whnf_core_step`'s error claim** at every L fuel up to `n` (what the loop's errors claim

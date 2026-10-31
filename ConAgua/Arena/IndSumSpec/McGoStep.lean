@@ -136,7 +136,7 @@ theorem mcGo_step (n : Nat) (ih : McGoSpec p n) : McGoSpec p (n + 1) := by
   intro s₀ f T h
   rw [invoke_eq _ hgo]
   simp only [callFn, mentionsConstGoL]
-  vcgen [exec, step, evalE, L.evalC_spec, evalArgs, setLoc, setLocs, ld64_rd_spec,
+  vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, L.evalC_spec, evalArgs, setLoc, setLocs, ld64_rd_spec,
     eView_spec p hv n, memoFindG_spec mcSch p _ hf n,
     memoPutG_spec mcSch p _ hput n, ih]
   all_goals subst_vars
@@ -532,7 +532,7 @@ theorem hbIns_spec_raw (hp : p.lookup "has_loose_b_var_b_ins" = some hasLooseBVa
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, memoFindG_spec hbSch p _ hf n,
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, memoFindG_spec hbSch p _ hf n,
       memoPutG_spec hbSch p _ hput n]
     all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons, Locals.init, List.getD_cons_zero, List.getD_cons_succ, Nat.reduceEqDiff, reduceIte] at *)
     all_goals grind [lang_grind, arena_grind, ind_grind, msetG]
@@ -558,7 +558,7 @@ theorem hbGo_step (n : Nat) (ih : HbGoSpec p n) : HbGoSpec p (n + 1) := by
   intro s₀ f i h
   rw [invoke_eq _ hgo]
   simp only [callFn, hasLooseBVarBGoL]
-  vcgen [exec, step, evalE, L.evalC_spec, evalArgs, setLoc, setLocs, ld64_rd_spec,
+  vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, L.evalC_spec, evalArgs, setLoc, setLocs, ld64_rd_spec,
     bvarBL_spec p hbp n, eView_spec p hv n, memoFindG_spec hbSch p _ hf n,
     hbIns_spec p hf hput hins n, ih]
   all_goals subst_vars
@@ -901,7 +901,7 @@ theorem hbFast_spec (p : Prog) (hv : p.lookup "e_view" = some eView)
   unfold HbGoSpec at ih
   rw [invoke_eq _ hp]
   simp only [callFn, hasLooseBVarBFastL]
-  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, memoClearG_spec hbSch p _ hcl n, ih]
+  vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, memoClearG_spec hbSch p _ hcl n, ih]
   all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons, Nat.reduceEqDiff, reduceIte] at *)
   all_goals grind [lang_grind, arena_grind, ind_grind]
 

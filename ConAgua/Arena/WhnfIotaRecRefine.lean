@@ -251,7 +251,7 @@ theorem erecPushLoop_spec (p : Prog) (k : Nat) (s₀ : St) :
   | succ k ih =>
     rw [exec, step_while (w := erecPushLoop) rfl]
     sym only [lang_grind, arena_grind] =>
-      vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64, ih] <;>
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64, ih] <;>
       finish [epW_end, epW_cont, epW_bad1, epW_bad2]
 
 /-- Model of `erec_push`. -/
@@ -272,7 +272,7 @@ theorem erecPush_spec (p : Prog) (hp : p.lookup "erec_push" = some erecPushL) (k
     ⦃fun r s' => LocEq s' s₀ ∧ epTop k s₀.mem o c kd = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, erecPushL]
-  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, fun s₀ => Triple.step_exec (erecPushLoop_spec p (k + 1) s₀)] <;>
+  vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, fun s₀ => Triple.step_exec (erecPushLoop_spec p (k + 1) s₀)] <;>
   simp_all [epTop, Cmp.eval, BinOp.eval, Mem.len64, LocEq, St.setLoc_loc,
     St.setLoc_mem, Locals.init_cons_zero, Locals.init_cons_succ, Sig.retVal,
     Sig.retOr, rdW, CTL] <;>
@@ -594,7 +594,7 @@ theorem stackCover_spec (p : Prog) (hp : p.lookup "stack_cover" = some stackCove
   rw [invoke_eq _ hp]
   simp only [callFn, stackCoverL]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64] <;>
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64] <;>
     finish [scovW]
 
 /-- **`stack_cover` as a run**: only the top written, the stack kept below the old top, the new
@@ -789,7 +789,7 @@ theorem lvlsEqC_small (p : Prog) (hp : p.lookup "lvls_eq_c" = some lvlsEqCL) (n 
         (s₀ := ⟨m, Locals.init []⟩) (Q := fun _ _ => False) (by
           rw [invoke_eq _ hp]
           simp only [callFn, lvlsEqCL]
-          vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+          vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
             callW_spec p 0 "lsq_find", callW_spec p 0 "lvls_eq_rec"] <;>
           simp_all [callW_zero]) hc
       exact hF

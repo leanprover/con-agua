@@ -302,12 +302,12 @@ theorem nfE_spec (p : Prog) (hf : p.lookup "nest_fields" = some nestFieldsL) (n 
   cases n with
   | zero =>
     rw [_root_.L.invoke_eq _ (hf)]; simp only [_root_.L.callFn, _root_.L.Ind.nestFieldsL]
-    vcgen [_root_.L.exec] <;> grind
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, _root_.L.exec] <;> grind
   | succ n =>
     rw [_root_.L.invoke_eq _ (hf)]; simp only [_root_.L.callFn, _root_.L.Ind.nestFieldsL]
     vcgen [_root_.L.exec, _root_.L.step, _root_.L.evalE, _root_.L.evalC, _root_.L.evalArgs, _root_.L.setLoc,
             _root_.L.setLocs, _root_.L.ld8_specE, _root_.L.st64, _root_.L.setG, ld64_rdW_specE, evalE_tld, tld,
-            evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE, callE_spec p n "nest_fields", _root_.L.callE_spec p n "e_view",
+            evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE, callE_spec p n "nest_fields", _root_.L.callE_spec p n "e_view",
             _root_.L.callE_spec p n "nest_pos", _root_.L.callE_spec p n "intern_fvar",
             _root_.L.callE_spec p n "instantiate1_fast", _root_.L.callE_spec p n "sl_snoc"] <;>
           (try

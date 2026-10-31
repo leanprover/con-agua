@@ -548,7 +548,7 @@ theorem arGo_step (n : Nat) (ih : ArNodeSpec p n) : ArGoSpec p (n + 1) := by
   rw [invoke_eq _ (hp.get "ar_go")]
   simp only [callFn, arGo]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, abFvb_spec p hp.base n, ih] <;>
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, abFvb_spec p hp.base n, ih] <;>
     finish
 
 include hp in
@@ -563,7 +563,7 @@ theorem arNode_step (n : Nat) (ih : ArArmSpec p n) : ArNodeSpec p (n + 1) := by
   simp only [callFn, arNode]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt,
-      tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE,
+      tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE,
       internBVar_spec p (hp.get "bvar_find") (hp.get "bvar_push") (hp.get "intern_bvar") n, ihA,
           ihL, ihF, ihE, ihP] <;>
     finish [viewOK, tierW, idxW]

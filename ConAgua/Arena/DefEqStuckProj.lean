@@ -57,7 +57,7 @@ through their runs). -/
 l_model exE_spec (p : Prog) (hf : p.lookup "ldpr_exit" = some ldprExitL)
   fns [hf ↦ exE list]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE] unified
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
 
 theorem decOptR_someS {r : List Word} (h : r.headD 0 ≠ 0) : decOptR r = some (decE (r.tail.headD 0)) := by
   simp only [decOptR, decOpt, h, ↓reduceIte]
@@ -171,7 +171,7 @@ theorem ldprExit_refines (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (n 
 `lazy_delta_step` run per iteration, a final `ldpr_exit`, both `callE`). -/
 l_model ldpr_specE (p : Prog) (hf : p.lookup "lazy_delta_proj_reduction" = some lazyDeltaProjReductionL)
   fns [hf ↦ ldprE] grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE] unified
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
 
 /-- **What the projection loop's errors claim from**: `lazy_delta_step`'s claims at every L fuel up
 to `n` (its refinement is outside the stuck side), the `defeq` slot's and `reduce_proj_core`'s
@@ -279,7 +279,7 @@ l_model ppE_spec (p : Prog) (hf : p.lookup "defeq_proj_pair" = some defeqProjPai
   fns [hf ↦ ppE list]
   specs [ldpr_specE p hl n]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE] unified
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
 
 section ppRuns
 variable (mode : ConLeche.CheckMode) (r : CoreFnsA) (fe : IFEnv) (depth : Nat) (a b : EIdx)

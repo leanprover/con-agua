@@ -293,7 +293,7 @@ l_model ifaE_spec (p : Prog) (hf : p.lookup "infer_forall_io" = some inferForall
   specs [callW_spec p n "intern_fvar", callW_spec p n "inst1", callW_spec p n "intern_imax",
     callW_spec p n "intern_sort"]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
   unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 

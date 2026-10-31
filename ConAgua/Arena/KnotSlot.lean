@@ -294,7 +294,7 @@ l_model islE_spec (p : Prog) (hf : p.lookup "infer" = some inferSlotL)
   fns [hf ↦ islE list]
   specs [callW_spec p n "in_find", callW_spec p n "in_put"]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
   finish [tierW, idxW] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
@@ -303,7 +303,7 @@ l_model isloE_spec (p : Prog) (hf : p.lookup "infer_io" = some inferIOSlotL)
   fns [hf ↦ isloE list]
   specs [callW_spec p n "io_find", callW_spec p n "io_put"]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
   finish [tierW, idxW] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
@@ -313,7 +313,7 @@ l_model dslE_spec (p : Prog) (hf : p.lookup "defeq" = some defeqSlotL)
   fns [hf ↦ dslE list]
   specs [callW_spec p n "de_find", callW_spec p n "de_put"]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
   finish [tierW, idxW] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
@@ -718,7 +718,7 @@ def EnsureSortSpec (p : Prog) (n : Nat) : Prop :=
 l_model iceE_spec (p : Prog) (hf : p.lookup "is_def_eq_core" = some isDefEqCoreL)
   fns [hf ↦ iceE list]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
   finish [tierW, idxW] unified
 
 section entry

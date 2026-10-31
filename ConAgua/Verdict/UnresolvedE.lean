@@ -41,7 +41,7 @@ l_model hasStrLitGo_spec (p : Prog) (hv : p.lookup "e_view" = some eView)
   fns [hp ↦ hslW ro]
   specs [eView_spec p hv n]
   grind [ind_grind] fold [tierW, idxW]
-  extra [evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE]
+  extra [evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
   finish [tierW, idxW]
 
 l_model ueMentionsGo_spec (p : Prog) (hv : p.lookup "e_view" = some eView)
@@ -49,7 +49,7 @@ l_model ueMentionsGo_spec (p : Prog) (hv : p.lookup "e_view" = some eView)
   fns [hp ↦ umW ro]
   specs [eView_spec p hv n]
   grind [ind_grind] fold [tierW, idxW]
-  extra [evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE]
+  extra [evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
   finish [tierW, idxW]
 
 /-- **The model of `unresolved_consts_error`, both outcomes** (it only aborts): its callees (outside
@@ -60,7 +60,7 @@ l_model unresolvedConstsErr_specE (p : Prog)
   specs [callW_spec p n "str_lit_supported", callW_spec p n "has_str_lit_go", callW_spec p n "pin_at",
     callW_spec p n "ue_mentions_go"]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
   heartbeats 400000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 

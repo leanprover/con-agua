@@ -77,7 +77,7 @@ theorem ikCopy_spec (n : Nat) : ∀ (s₀ : St) (s d l : Word),
     rw [invoke_eq _ hik]
     simp only [callFn, ikCopy]
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64, ih] <;>
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64, ih] <;>
       finish
 
 include hkp hik in
@@ -91,7 +91,7 @@ theorem keysPushIW_spec (n : Nat) (s₀ : St) (lo ll : Word) :
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
         ikCopy_spec p hik n] <;>
       finish [keysPushIWW, spTop]
 
@@ -102,7 +102,7 @@ theorem instLPFast_specW (n : Nat) (s₀ : St) (f lo ll us e : Word) :
   rw [invoke_eq _ hf]
   simp only [callFn, instLPFastL]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
       callW_spec p n "keys_push_iw", callW_spec p n "inst_lp_core"] <;>
     finish [ilpfW]
 

@@ -55,7 +55,7 @@ theorem eraseFVarTys_spec (p : Prog) (L : RxLook p) (hp : p.lookup "erase_fvar_t
   rw [invoke_eq _ hp]
   simp only [callFn, eraseFVarTys]
   sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
       iwAlloc_specW p L.ha n, (rxSpec_all p L n).2.2.2.2.2.2.2] <;>
     finish (gen := 20) [eftW]
 
@@ -108,7 +108,7 @@ theorem targetCanonParams_spec (p : Prog) (L : RxLook p) (h3 : p.lookup "rec3" =
   rw [invoke_eq _ hp]
   simp only [callFn, targetCanonParams]
   sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
       rec3_specW p L.ha n h3, (rxSpec_all p L n).2.2.2.2.2.2.2] <;>
     finish (gen := 20) [tcpW]
 

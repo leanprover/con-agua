@@ -129,7 +129,7 @@ theorem tcpP_spec (k : Nat) (s₀ : St) (pfo pfl e : Word) :
   rw [invoke_eq _ L.tcp]
   simp only [callFn, targetCanonParams]
   sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
       posRec3_specW p L.rx.ha L.h3 k, hrx] <;>
     finish (gen := 20) [tcpPW]
 
@@ -152,7 +152,7 @@ theorem ckg_spec (k : Nat) : ∀ (s₀ : St) (po pl dO dL q j : Word),
     rw [invoke_eq _ L.go]
     simp only [callFn, classKeyCanonGo]
     sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
         tcpP_specF L k, ih] <;>
       finish (gen := 20) [rdW_eq]
 
@@ -162,7 +162,7 @@ theorem kc_spec (k : Nat) (s₀ : St) (po pl key : Word) :
   rw [invoke_eq _ L.kc]
   simp only [callFn, classKeyCanonL]
   sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       iwAlloc_specW p L.rx.ha k, ckg_spec L k, posRec4_specW p L.rx.ha L.rx.h4 k] <;>
     finish (gen := 20) [kcW, kcK, rdW_eq]
 
@@ -185,7 +185,7 @@ theorem ckc2_spec (k : Nat) : ∀ (s₀ : St) (nP o l : Word),
     rw [invoke_eq _ L.kcl]
     simp only [callFn, classKeyOfClosed]
     sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         bvarBL_spec p L.bvb k, fvbF_spec p L.hf k, ih] <;>
       finish (gen := 20)
 

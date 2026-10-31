@@ -105,7 +105,7 @@ theorem findRuleLoop_spec (p : Prog) (k : Nat) (s₀ : St) :
         frN (s₀.mem.arr64 EREC) (s₀.loc 0) (s₀.loc 1) (s₀.loc 2) (s₀.loc 3).toNat)
     (fun _ => ⟨rfl, rfl, rfl, rfl, rfl⟩) (by grind [frN_end, Sig.retOr]) (fun k s₁ => by
       sym only [lang_grind, arena_grind] =>
-        vcgen [step, evalE, evalC, evalArgs, setLoc, ld64_rd_spec] <;> finish [frN_hit, frN_miss, LoopPost]) k
+        vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, step, evalE, evalC, evalArgs, setLoc, ld64_rd_spec] <;> finish [frN_hit, frN_miss, LoopPost]) k
 
 theorem findRule_spec (p : Prog) (hp : p.lookup "find_rule" = some findRuleL) (k : Nat)
     (s₀ : St) (ro rc c : Word) :
@@ -118,7 +118,7 @@ theorem findRule_spec (p : Prog) (hp : p.lookup "find_rule" = some findRuleL) (k
   | zero => vcgen [exec] <;> grind
   | succ k =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
         fun s₀ => Triple.step_exec (findRuleLoop_spec p (k + 1) s₀)] <;> finish
 
 /-- Rule `i` of a decoded slice, as the model reads it. -/
@@ -192,7 +192,7 @@ theorem recRuleK_spec (p : Prog) (hp : p.lookup "rec_rule_k" = some recRuleKL) (
   | zero => vcgen [exec] <;> grind
   | succ k =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64] <;> finish [rrkW]
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64] <;> finish [rrkW]
 
 /-- **`rec_rule_k` refines `recRuleK`.** -/
 @[refines ConRon.Arena.recRuleK]
@@ -322,7 +322,7 @@ theorem isStrLit_spec (p : Prog) (hp : p.lookup "is_str_lit" = some isStrLitL) (
   | succ k =>
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt,
-        tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE] <;> finish [islW, tierW, idxW]
+        tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] <;> finish [islW, tierW, idxW]
 
 theorem viewLit_ok (m : Mem) (a : AState) (hR : ArenaR m a) (h : Word) (hh : h.toNat < 2 ^ 32)
     (hv : viewOK m h LIT) :
@@ -434,7 +434,7 @@ theorem isCtorApp_spec (p : Prog) (hp : IotaProg' p) (n : Nat) (s₀ : St) (vis 
   simp only [callFn, isCtorAppL]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt,
-      tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE,
+      tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE,
       callW_spec p n "get_app_fn", callW_spec p n "env_find"] <;>
     finish [icaW, tierW, idxW]
 
@@ -687,7 +687,7 @@ theorem constTyAt_spec (p : Prog) (hp : IotaProg' p) (n : Nat) (s₀ : St) (nn p
   rw [invoke_eq _ hp.constTyAt]
   simp only [callFn, constTyAtL]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       memoFindG_spec ctSch p _ hp.ctf n, memoPutG_spec ctSch p _ hp.ctp n,
       callW_spec p n "inst_lp"] <;>
     finish [ctaW, mvG]
@@ -714,7 +714,7 @@ theorem ruleRhsAt_spec (p : Prog) (hp : IotaProg' p) (n : Nat) (s₀ : St)
   rw [invoke_eq _ hp.ruleRhsAt]
   simp only [callFn, ruleRhsAtL]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       memoFindG_spec rrSch p _ hp.rrf n, memoPutG_spec rrSch p _ hp.rrp n,
       callW_spec p n "inst_lp"] <;>
     finish [rraW, mvG]
@@ -897,7 +897,7 @@ theorem piResidualLoop_spec (p : Prog) (k : Nat) (s₀ : St) :
     rw [exec, step_while (w := piResidualLoop) rfl]
     sym only [lang_grind, arena_grind] =>
       vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt, tcntM,
-        evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE,
+        evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE,
         callW_spec p k "inst_entry", ih] <;>
       finish [pirW_end, pirW_exit, pirW_ab1, pirW_ab2, pirW_cont, tierW, idxW]
 
@@ -909,7 +909,7 @@ theorem piResidual_spec (p : Prog) (hp : p.lookup "pi_residual" = some piResidua
   rw [invoke_eq _ hp]
   simp only [callFn, piResidualL]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, fun s₀ => Triple.step_exec (piResidualLoop_spec p (k + 1) s₀)] <;>
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, fun s₀ => Triple.step_exec (piResidualLoop_spec p (k + 1) s₀)] <;>
     finish
 
 theorem viewBind_run₀ (h : EIdx) (a : AState) :

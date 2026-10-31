@@ -49,7 +49,7 @@ theorem nestArity_spec (p : Prog) (hl : NaLook p) (n : Nat) (s₀ : St) (vis c :
     ⦃fun r s' => LocEq s' s₀ ∧ naW n s₀.mem vis c = some (r, s'.mem); ⊤⦄ := by
   simp only [invoke_eq _ hl.hp, callFn, nestArityL]
   sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       envFind_specW p hl.hx hl.hg hl.hf n,
       piBinders_spec p hl.ha hl.hc hl.hv hl.hs hl.hpb n] <;>
     finish (gen := 20) [naW, rdW_eq, List.getD_cons_zero, List.getD_cons_succ]
@@ -178,7 +178,7 @@ theorem dcGo_spec (p : Prog) (hf : HfF p) (hp : p.lookup "nest_ds_closed_go" = s
     intro s₀ hi off l
     simp only [invoke_eq _ hp, callFn, nestDsClosedGoL]
     sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         fvbF_spec p hf n, ih] <;>
       finish (gen := 20) [rdW_eq]
 
@@ -189,7 +189,7 @@ theorem dc_spec (p : Prog) (hf : HfF p) (hh : p.lookup "nest_ctx_hi_at" = some n
     ⦃fun r s' => LocEq s' s₀ ∧ dcW n s₀.mem ctx off l = some ([r.headD 0], s'.mem); ⊤⦄ := by
   simp only [invoke_eq _ hp, callFn, nestDsClosedL]
   sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
       nestCtxHiAt_specE p hh n, dcGo_spec p hf hg n] <;>
     finish (gen := 20) [dcW]
 
@@ -293,7 +293,7 @@ theorem nestWalkStack_spec (p : Prog) (hl : DcLook p)
     ⦃fun r s' => LocEq s' s₀ ∧ nwsW n s₀.mem ctx off l po pl = some (r, s'.mem); ⊤⦄ := by
   simp only [invoke_eq _ hp, callFn, nestWalkStackL]
   sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
       dc_spec' p hl.hf hl.hh hl.hg hl.hp n] <;>
     finish (gen := 20) [nwsW]
 
@@ -383,7 +383,7 @@ theorem piDomsOcc_spec (p : Prog) (hl : NoLook p) (hp : p.lookup "pi_doms_occ" =
     intro s₀ no nl lo hi n e
     simp only [invoke_eq _ hp, callFn, piDomsOccL]
     sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
         eView_spec p hl.hv k, nestOcc_spec' p hl k, ih] <;>
       finish (gen := 20)
 

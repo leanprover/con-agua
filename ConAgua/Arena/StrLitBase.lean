@@ -326,7 +326,7 @@ theorem strLs1_spec (p : Prog) (hp : p.lookup "str_ls1" = some strLs1L) (n : Nat
   rw [invoke_eq _ hp]
   simp only [callFn, strLs1L]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
       callW_spec p n "intern_ls"] <;>
     finish [ls1W, Mem.top]
 

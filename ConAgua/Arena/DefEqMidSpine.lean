@@ -133,7 +133,7 @@ l_model spcE_spec (p : Prog) (hf : p.lookup "spine_cmp" = some spineCmpL)
   fns [hf ↦ spcE list]
   specs [callW_spec p n "lvls_eq_c", defeqListRev_specE p hr n]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE] unified
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 /-- `lvls_eq_c` does not return at fuel `1`. -/
@@ -144,7 +144,7 @@ theorem lvlsEqC_one (p : Prog) (hp : LvlCacheProg p) (u v : Word) (m m' : Mem) (
       ⦃fun _ _ => False; ⊤⦄ := by
     rw [invoke_eq _ hp.cs]
     simp only [callFn, lvlsEqCL]
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, invoke_zero_false p "lsq_find",
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, invoke_zero_false p "lsq_find",
       invoke_zero_false p "lvls_eq_rec"] <;> grind
   obtain ⟨_, _, hf⟩ := triple_of_callW h hc
   exact hf
@@ -244,7 +244,7 @@ l_model sp2E_spec (p : Prog) (hf : p.lookup "defeq_spine2" = some defeqSpine2L)
   fns [hf ↦ sp2E list]
   specs [callW_spec p n "get_app_args", spcE_spec p hc hr n]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE] unified
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 /-- **`defeq_spine2` refines `spine2T`, both outcomes**: the two argument slices pushed, compared,
@@ -343,7 +343,7 @@ l_model spE_spec (p : Prog) (hf : p.lookup "defeq_spine" = some defeqSpineL)
   fns [hf ↦ spE list]
   specs [callW_spec p n "spine_head", sp2E_spec p h2 hc hr n]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE] unified
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 /-- **`defeq_spine` refines `defeqSpine`, both outcomes**: the errors are `defeq_spine2`'s. -/
 theorem sp_ref (p : Prog) (hp : SpineDProg p) (n : Nat) (hk : KnotUpTo p n) (F : Nat)

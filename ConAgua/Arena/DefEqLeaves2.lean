@@ -31,7 +31,7 @@ theorem erSliceEqLoop_spec (p : Prog) (n : Nat) (s₀ : St) :
   | succ n ih =>
     rw [exec, step_while (w := erSliceEqLoop) rfl]
     sym only [lang_grind, arena_grind] =>
-      vcgen [step, evalE, evalC, evalArgs, setLoc, ld64, ih] <;> finish
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, step, evalE, evalC, evalArgs, setLoc, ld64, ih] <;> finish
 
 
 theorem erSliceEq_spec (p : Prog) (hp : p.lookup "er_slice_eq" = some erSliceEqL) (n : Nat)
@@ -43,7 +43,7 @@ theorem erSliceEq_spec (p : Prog) (hp : p.lookup "er_slice_eq" = some erSliceEqL
   rw [invoke_eq _ hp]
   simp only [callFn, erSliceEqL]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, fun s₀ => Triple.step_exec (erSliceEqLoop_spec p (n + 1) s₀)] <;> finish
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, fun s₀ => Triple.step_exec (erSliceEqLoop_spec p (n + 1) s₀)] <;> finish
 
 theorem mapM_get {α β : Type} {f : α → Option β} :
     ∀ {xs : List α} {l : List β}, xs.mapM f = some l →
@@ -309,7 +309,7 @@ theorem natPredLit_refines_hw (hg : p.lookup "nat_pred_lit" = some natPredLit) (
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind, natop_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
         natSub_spec p hpl hps hpt hpn n, hI a₀ n] <;>
       finish (gen := 20) [natPredArm]
 
@@ -351,7 +351,7 @@ theorem natPred_spec (p : Prog) (hp : NatPredProg p) (n : Nat) (s₀ : St) (e : 
   simp only [callFn, natPredL]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt,
-      tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE,
+      tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE,
       callW_spec p n "nat_pred_lit", pinAt_rd p hp.leaf.pinat n, pinWord_rd p hp.leaf.pinword n] <;>
     finish [natPredW, npLitF, Option.bind_some, tierW, idxW]
 
@@ -549,7 +549,7 @@ theorem litEq_spec (p : Prog) (hle : p.lookup "lit_eq" = some litEqL)
   simp only [callFn, litEqL]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt,
-      tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE, limbsEq_spec p hlq n] <;>
+      tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE, limbsEq_spec p hlq n] <;>
     finish [litEqW, tierW, idxW]
 
 /-- **A `lit` node's record**, past the view checks: a `natVal` is a normalised slice of its value,

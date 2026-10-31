@@ -316,7 +316,7 @@ theorem erecAlloc_specW (p : Prog) (hp : p.lookup "erec_alloc" = some erecAlloc)
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64] <;>
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64] <;>
       finish [erAllocW, erAllocMem]
 
 /-- Write `ws` into `EREC` at `q, q + 1, …`. -/
@@ -512,7 +512,7 @@ theorem cvNew_specW (p : Prog) (ha : p.lookup "erec_alloc" = some erecAlloc)
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
         erecAlloc_specW p ha n] <;>
       finish [cvNewW, cvNewMem]
 

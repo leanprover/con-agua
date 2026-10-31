@@ -33,7 +33,7 @@ theorem nestRootCanon_spec (p : Prog) (hl : PccLook p) (hc : p.lookup "er_copy" 
     ⦃fun r s' => LocEq s' s₀ ∧ nrcW cR k s₀.mem ctx cv = some (r, s'.mem); ⊤⦄ := by
   simp only [invoke_eq _ hl.hp', callFn, nestRootCanonL]
   sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       cvLps_spec p hl.ha hc he hcv (k + 2), hcR (k + 2) "inst_lp_fast",
       nestCanonCrest_spec p hl.ha hl.hl hl.hk hl.hng hl.hnp hl.hip hl.hf hl.hput hl.hgo hl.hnode hl.hcl
         hl.hra hl.hp k] <;>
@@ -103,7 +103,7 @@ theorem nestUniformOk_spec (p : Prog) (hl : NuLook p) (cR : CallM) (hcR : CallSp
     ⦃fun r s' => LocEq s' s₀ ∧ nuW cR k s₀.mem ctx cv = some (r, s'.mem); ⊤⦄ := by
   simp only [invoke_eq _ hl.hp, callFn, nestUniformOkL]
   sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       nestCtxHiAt_specE p hl.hh (k + 3), piDomsOcc_spec p hl.no hl.hpd (k + 3),
       nestRootCanon_spec p hl.pcc hl.hc hl.he hl.hcv cR hcR k, nestOcc_spec' p hl.no (k + 3)] <;>
     finish (gen := 20) [nuW, rdW_eq]
@@ -216,7 +216,7 @@ theorem cvLps_exec1 (p : Prog) (hcv : p.lookup "cv_lps" = some cvLps) (s₀ : St
     ⦃fun s => s = s₀⦄ invoke p (exec p 1) "cv_lps" [q] ⦃fun _ _ => False; ⊤⦄ := by
   rw [invoke_eq _ hcv]; simp only [callFn, cvLps]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, invoke_exec0 p] <;> finish
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, invoke_exec0 p] <;> finish
 
 theorem rootCanon_small (p : Prog) (hcv : p.lookup "cv_lps" = some cvLps)
     (hp : p.lookup "nest_root_canon" = some nestRootCanonL) (k : Nat) (hk : k ≤ 2) (s₀ : St) (ctx cv : Word) :
@@ -226,11 +226,11 @@ theorem rootCanon_small (p : Prog) (hcv : p.lookup "cv_lps" = some cvLps)
   | 1, _ =>
     rw [invoke_eq _ hp]; simp only [callFn, nestRootCanonL]
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, invoke_exec0 p] <;> finish
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, invoke_exec0 p] <;> finish
   | 2, _ =>
     rw [invoke_eq _ hp]; simp only [callFn, nestRootCanonL]
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, cvLps_exec1 p hcv] <;> finish
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, cvLps_exec1 p hcv] <;> finish
   | _ + 3, h => exact absurd h (by omega)
 
 theorem nestUniformOk_spec' (p : Prog) (hl : NuLook p) (cR : CallM) (hcR : CallSpec p cR) (k : Nat) (s₀ : St)
@@ -242,17 +242,17 @@ theorem nestUniformOk_spec' (p : Prog) (hl : NuLook p) (cR : CallM) (hcR : CallS
   | 1 =>
     rw [invoke_eq _ hl.hp]; simp only [callFn, nestUniformOkL]
     sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, invoke_exec0 p] <;> finish
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, invoke_exec0 p] <;> finish
   | 2 =>
     rw [invoke_eq _ hl.hp]; simp only [callFn, nestUniformOkL]
     sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         nestCtxHiAt_specE p hl.hh 1, piDomsOcc_spec p hl.no hl.hpd 1,
         rootCanon_small p hl.hcv hl.pcc.hp' 1 (by omega)] <;> finish [pdoW, pdoK1, noConstWf]
   | 3 =>
     rw [invoke_eq _ hl.hp]; simp only [callFn, nestUniformOkL]
     sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         nestCtxHiAt_specE p hl.hh 2, piDomsOcc_spec p hl.no hl.hpd 2,
         rootCanon_small p hl.hcv hl.pcc.hp' 2 (by omega)] <;>
       finish [pdoW, pdoK1, noConstWf, noConstW, noClrK, noGoW]
@@ -270,7 +270,7 @@ theorem nestUniformCs_spec (p : Prog) (hl : NuLook p) (hp : p.lookup "nest_unifo
     intro s₀ ctx o l
     simp only [invoke_eq _ hp, callFn, nestUniformCsL]
     sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         nestUniformOk_spec' p hl cR hcR k, ih] <;>
       finish (gen := 20) [rdW_eq]
 

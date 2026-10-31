@@ -35,14 +35,14 @@ l_model iisE_spec (p : Prog) (hP : IdxProg p) (hOpf : OpfF p)
   fns [hP.one ↦ iisE]
   specs [opfF_spec p hOpf n, rec2_specW p hP.alloc n hP.rec2]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE] unified
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 l_model iisrE_spec (p : Prog) (hP : IdxProg p) (hOpf : OpfF p)
   fns [hP.idx ↦ iisrE]
   specs [iisE_spec p hP hOpf n, slCons_specW p hP.alloc hP.copy hP.cons n]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE] unified
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 theorem iisE_k_opf_eq (p : Prog) (n : Nat) (vis nP ni srt : Word) (r : List Word) (m₁ : Mem)

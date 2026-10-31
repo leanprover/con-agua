@@ -41,7 +41,7 @@ theorem ftdAd_spec (p : Prog) (hp : p.lookup "fvar_type_d" = some fvarTypeDL)
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, eView_spec p hv n] <;>
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, eView_spec p hv n] <;>
       finish [ftdW]
 
 /-- `fvar_type_d` and its callee. -/

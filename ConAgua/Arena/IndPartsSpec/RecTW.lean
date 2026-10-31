@@ -33,7 +33,7 @@ theorem eViewShape (p : Prog) (hp : p.lookup "e_view" = some eView) (n : Nat) (s
   | succ n =>
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld,
-        evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE] <;>
+        evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] <;>
       finish [List.getD_cons_zero, List.getD_cons_succ]
 
 /-- `e_view`'s spec with its four result words spelt out. -/
@@ -346,7 +346,7 @@ theorem recTargetOf_spec (n : Nat) (s₀ : St) (no nl mI ty : Word) :
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         stripPis_specF p hst n, gafF_spec p had n, eViewSpec4 p hv n,
         slFind_spec p hf n] <;>
       finish (gen := 20)

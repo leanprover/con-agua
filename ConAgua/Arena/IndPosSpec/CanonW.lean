@@ -68,7 +68,7 @@ theorem nestCanonSub_spec (n : Nat) (s₀ : St) (no nl us nn c v : Word) :
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         slFind_spec p hf n, pinWord_specV p hpw n, internSort_spec p hsf hsp his n,
         internFVar_spec p hff hfp hif n] <;> finish (gen := 20) [canonW]
 
@@ -198,7 +198,7 @@ theorem nestFrameMatesGo_spec (n : Nat) : ∀ (s₀ : St) (c off l oO oL : Word)
     intro s₀ c off l oO oL
     simp only [invoke_eq _ hp, callFn, nestFrameMatesGoL]
     sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         slContains_spec p hc n, slSnoc_specW p ha hcp hsn n, ih] <;> finish (gen := 20)
 
 end spec
@@ -385,7 +385,7 @@ theorem maGo_step (n : Nat) (ih : MaNodeSpec p n) : MaGoSpec p (n + 1) := by
   intro s₀ no nl f h
   simp only [invoke_eq _ hgo, callFn, mentionsAnyGo]
   sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       eView_spec p hv n, slContains_spec p hc n, memoFindG_spec maSch p _ hf n,
       memoPutG_spec maSch p _ hput n, ih] <;> finish (gen := 20)
 
@@ -395,7 +395,7 @@ theorem maNode_step (n : Nat) (ih : MaGoSpec p n) : MaNodeSpec p (n + 1) := by
   intro s₀ no nl f1 g x y z
   simp only [invoke_eq _ hnode, callFn, mentionsAnyNode]
   sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       slContains_spec p hc n, ih] <;> finish (gen := 20)
 
 include hv hc hf hput hgo hnode in

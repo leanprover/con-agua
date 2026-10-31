@@ -79,7 +79,7 @@ theorem binderDomLoop_spec (n : Nat) (s₀ : St) :
     rw [exec, step_while (w := binderDomLoop) rfl]
     sym only [lang_grind, arena_grind] =>
       vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih, evalE_tld, tld, evalE_cnt,
-        tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE] <;> finish [tierW, idxW]
+        tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] <;> finish [tierW, idxW]
 
 theorem binderDomLoop_step_spec (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀⦄
@@ -101,7 +101,7 @@ theorem binderDomL_spec (hp : p.lookup "binder_dom" = some binderDomL) (n : Nat)
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalArgs, setLocs, binderDomLoop_step_spec p n] <;> finish [LocEq]
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalArgs, setLocs, binderDomLoop_step_spec p n] <;> finish [LocEq]
 
 end bdLoop
 
@@ -188,7 +188,7 @@ theorem appCountAtLoop_spec (n : Nat) (s₀ : St) :
     rw [exec, step_while (w := appCountAtLoop) rfl]
     sym only [lang_grind, arena_grind] =>
       vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih, evalE_tld, tld, evalE_cnt,
-        tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE] <;> finish [tierW, idxW]
+        tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] <;> finish [tierW, idxW]
 
 theorem appCountAtLoop_step_spec (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀⦄
@@ -211,7 +211,7 @@ theorem appCountAtL_spec (p : Prog) (hp : p.lookup "app_count_at" = some appCoun
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, appCountAtLoop_step_spec p n] <;>
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, appCountAtLoop_step_spec p n] <;>
       finish [acaW, LocEq]
 
 /-- **The loop's count is `numArgs`.** -/
@@ -381,7 +381,7 @@ theorem lamProjLoop_spec (n : Nat) (s₀ : St) :
     rw [exec, step_while (w := lamProjLoop) rfl]
     sym only [lang_grind, arena_grind] =>
       vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih, evalE_tld, tld, evalE_cnt,
-        tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE] <;> finish [tierW, idxW]
+        tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] <;> finish [tierW, idxW]
 
 theorem lamProjLoop_step_spec (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀⦄
@@ -418,7 +418,7 @@ theorem lamProjL_spec (p : Prog) (hp : p.lookup "lam_proj" = some lamProjL) (n :
   | succ n =>
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        lamProjLoop_step_spec p n, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE] <;>
+        lamProjLoop_step_spec p n, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] <;>
       finish [lamProjW, LocEq, tierW, idxW]
 
 /-- **The loop's model refines `lamProj?`'s descent** (`k + f` does not wrap). -/
@@ -570,7 +570,7 @@ theorem typeSortPWLoop_spec (n : Nat) (s₀ : St) :
     rw [exec, step_while (w := typeSortPWLoop) rfl]
     sym only [lang_grind, arena_grind] =>
       vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih, evalE_tld, tld, evalE_cnt,
-        tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE] <;> finish [tierW, idxW]
+        tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] <;> finish [tierW, idxW]
 
 theorem typeSortPWLoop_step_spec (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀⦄
@@ -703,7 +703,7 @@ theorem proofPWLoop_spec (n : Nat) (s₀ : St) :
     rw [exec, step_while (w := proofPWLoop) rfl]
     sym only [lang_grind, arena_grind] =>
       vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih, evalE_tld, tld, evalE_cnt,
-        tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE] <;> finish [tierW, idxW]
+        tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] <;> finish [tierW, idxW]
 
 theorem proofPWLoop_step_spec (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀⦄

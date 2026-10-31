@@ -49,7 +49,7 @@ theorem structElimLevel_refines (p : Prog) (hpf1 : p.lookup "param_find" = some 
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
         internParam_refinesA p hpf1 hpp1 hp1 a₀ n,
         internZero_refinesA p hpf2 hpp2 hp2 a₀ n] <;>
       finish [structElimLevel]
@@ -147,7 +147,7 @@ theorem structPsAtGo_spec (n : Nat) : ∀ (s₀ : St) (o nP N k : Word),
     rw [invoke_eq _ hp]
     simp only [callFn, structPsAtGoL]
     sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
         iwAlloc_specW p ha n, slCons_specW p ha hc hsc n, internBVar_spec p hpf hpp hib n, ih] <;>
       finish (gen := 20)
 

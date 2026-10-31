@@ -142,7 +142,7 @@ theorem natIndOk_specW (p : Prog) (hp : p.lookup "nat_ind_ok" = some natIndOkL) 
   rw [invoke_eq _ hp]
   simp only [callFn, natIndOkL]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       callW_spec p n "pin_word"] <;>
     finish (gen := 20) [natIndOkW, ntBW]
 
@@ -228,7 +228,7 @@ theorem natZeroOk_specW (p : Prog) (hp : p.lookup "nat_zero_ok" = some natZeroOk
   rw [invoke_eq _ hp]
   simp only [callFn, natZeroOkL]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       callW_spec p n "pin_at", callW_spec p n "const_e"] <;>
     finish (gen := 20) [natZeroOkW, ntBW]
 
@@ -344,7 +344,7 @@ theorem natSuccOk_specW (p : Prog) (hp : p.lookup "nat_succ_ok" = some natSuccOk
   simp only [callFn, natSuccOkL]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt,
-      tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE,
+      tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE,
       callW_spec p n "pin_at", callW_spec p n "const_e"] <;>
     finish (gen := 20) [natSuccOkW, ntBW, tierW, idxW]
 
@@ -475,7 +475,7 @@ theorem natLitSupported_specW (p : Prog) (hp : p.lookup "nat_lit_supported" = so
   rw [invoke_eq _ hp]
   simp only [callFn, natLitSupportedL]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       callW_spec p n "pin_at", callW_spec p n "env_find", callW_spec p n "nat_ind_ok",
       callW_spec p n "nat_zero_ok", callW_spec p n "nat_succ_ok"] <;>
     finish (gen := 20) [natLitSupportedW, ntBW]

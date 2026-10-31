@@ -254,7 +254,7 @@ theorem spbW_spec (k : Nat) (s₀ : St) (T nP nF cty : Word) :
   | zero => vcgen [exec] <;> grind
   | succ k =>
     sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
         projPsW_spec p ha hc hsc hpf hpp hib hgo hps hpj k, ipalF_spec p hipal k,
         pbW_spec p ha hc hsc hv hd hpf hpp hib hjf hjp hji hmp hap hpg hi1 k] <;>
       finish (gen := 20)

@@ -409,7 +409,7 @@ theorem rpArg_spec (p : Prog) (hp : WhnfCoreProg p) (n : Nat) (s₀ : St)
   rw [invoke_eq _ hp.rparg]
   simp only [callFn, reduceProjArgL]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       callW_spec p n "intern_bvar", callW_spec p n "proj_cert"] <;>
     finish [rpArgW]
 
@@ -595,7 +595,7 @@ theorem rpFire_spec (p : Prog) (hp : WhnfCoreProg p) (n : Nat) (s₀ : St)
       rpFireW p n s₀.mem mode vis e1 q i k us = some (r.headD 0, r.tail.headD 0, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hp.rpfire]
   simp only [callFn, reduceProjFireL]
-  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+  vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       callW_spec p n "get_app_args", callW_spec p n "ls_node", callW_spec p n "fire_ok",
       callW_spec p n "reduce_proj_arg"] <;>
   simp_all [-UInt64.toNat_add, rpFireW, EREC, BinOp.eval, getElem_rdW', Cmp.eval, LocEq, St.setLocs_cons, St.setLoc_loc,
@@ -876,7 +876,7 @@ theorem rpHead_spec (p : Prog) (hp : WhnfCoreProg p) (n : Nat) (s₀ : St) (mode
   simp only [callFn, reduceProjHeadL]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt,
-      tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE,
+      tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE,
       callW_spec p n "get_app_fn", callW_spec p n "reduce_proj_fire"] <;>
     finish [rpHeadW, tierW, idxW]
 

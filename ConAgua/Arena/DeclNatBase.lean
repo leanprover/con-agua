@@ -602,7 +602,7 @@ theorem constE_specW (p : Prog) (hp : p.lookup "const_e" = some constEL) (n : Na
   rw [invoke_eq _ hp]
   simp only [callFn, constEL]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       callW_spec p n "pin_word", callW_spec p n "intern_const"] <;>
     finish [constEW, ntBW]
 

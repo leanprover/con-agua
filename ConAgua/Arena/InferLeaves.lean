@@ -63,7 +63,7 @@ structure InferLeafProg (p : Prog) : Prop where
 /-- **`ensure_sort`'s unified model**: the `whnf` slot through its run. -/
 l_model esE_spec (p : Prog) (hf : p.lookup "ensure_sort" = some ensureSortL)
   fns [hf ↦ esE list] grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
   finish [tierW, idxW] unified
 
 theorem tag_sort_beq (h : Word) (hh : HW h) (hg : tagW h = 2) : ((decE h).tag == ETag.sort) = true := by
@@ -414,7 +414,7 @@ theorem inferLamResult_spec (n : Nat) (s₀ : St) (ty bt d : Word) :
   rw [invoke_eq _ hp.lamResult]
   simp only [callFn, inferLamResultL]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, callW_spec p n "abs_entry",
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, callW_spec p n "abs_entry",
       callW_spec p n "mk_forall"] <;>
     finish [lamResK_some, call1W_some]
 
@@ -511,7 +511,7 @@ l_model ilE_spec (p : Prog) (hf : p.lookup "infer_lit" = some inferLitL)
   specs [callW_spec p n "nat_lit_supported", callW_spec p n "str_lit_supported",
     callW_spec p n "pin_at", callW_spec p n "const_e"]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE] finish [tierW, idxW] unified
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] finish [tierW, idxW] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 theorem view_lit_f (m : Mem) (a : AState) (hR : ArenaR m a) (h : Word) (hh : h.toNat < 2 ^ 32)
@@ -696,7 +696,7 @@ l_model inferConstE_spec (p : Prog) (hf : p.lookup "infer_const" = some inferCon
   fns [hf ↦ inferConstE list]
   specs [callW_spec p n "env_find", lsNode_spec p hls n, callW_spec p n "const_ty_at", callW_spec p n "pin_at"]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE] finish [tierW, idxW] unified
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] finish [tierW, idxW] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 /-- **`infer_const(vis, n, us)` refines the `.const` clause** (`inferConstT`), both outcomes: an

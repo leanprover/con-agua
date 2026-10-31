@@ -93,7 +93,7 @@ theorem resH_ite (c : Prop) [Decidable c] : ResH [if c then (1 : Word) else 0] :
 /-- **`defeq_lst`'s model, both outcomes** (generated; the loop is `lstE.loop1`). -/
 l_model defeqLst_specE (p : Prog) (hp : p.lookup "defeq_lst" = some defeqLstL)
   fns [hp ↦ lstE] grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE] unified
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
 
 section lstRef
 variable (p : Prog)
@@ -204,7 +204,7 @@ end lstRef
 /-- **`defeq_list_rev`'s model, both outcomes** (generated; the loop is `lrevE.loop1`). -/
 l_model defeqListRev_specE (p : Prog) (hp : p.lookup "defeq_list_rev" = some defeqListRevL)
   fns [hp ↦ lrevE] grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE] unified
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
 
 theorem take_rev_succ {α : Type} (xs : List α) (i : Nat) (h : i < xs.length) :
     (xs.take (i + 1)).reverse = xs[i] :: (xs.take i).reverse := by

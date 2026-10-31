@@ -160,7 +160,7 @@ theorem etaCtorShape_spec (p : Prog) (hq : StuckProg p) (n : Nat) (s₀ : St) (v
   rw [invoke_eq _ hq.etaCtorShape]
   simp only [callFn, etaCtorShapeL]
   vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rdW_spec, evalE_tld, tld,
-    evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE, st64_spec,
+    evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE, st64_spec,
       callW_spec p n "get_app_fn", callW_spec p n "env_find", callW_spec p n "get_app_args"] <;>
   simp_all [ecsK1, ecsK2, ecsK3, tierW, idxW, LocEq, BinOp.eval,
     St.setLocs_cons, CTL, EREC, Cmp.eval, Cmp.evalW,

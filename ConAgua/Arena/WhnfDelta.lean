@@ -668,7 +668,7 @@ theorem natBinOpNameL_spec (p : Prog) (hp : p.lookup "nat_bin_op_name" = some na
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64] <;>
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64] <;>
       finish [natBinOpSel, pinW_eq, HW]
 
 /-- **`nat_bin_op_name` refines `natBinOpName`.** `hflag` (the pin table's filled flag) is not

@@ -51,7 +51,7 @@ theorem appCount_spec (p : Prog) (hp : p.lookup "app_count" = some appCountL) (n
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, getAppFnLoop_step_spec p n] <;>
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, getAppFnLoop_step_spec p n] <;>
       finish [appCntW]
 
 /-! ## `app_fill(e, o, n)`: the arguments into `SPN[o ‥ o + n)`, last first -/
@@ -108,7 +108,7 @@ theorem appFillLoop_spec (p : Prog) (k : Nat) (s₀ : St) :
     rw [exec, step_while (w := appFillLoop) rfl]
     sym only [lang_grind, arena_grind] =>
       vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt, tcntM,
-        evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE, st64, ih] <;>
+        evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE, st64, ih] <;>
       finish [fillW_zero, fillW_succ, fnW, argW, tierW, idxW, tfld_set64_SPN_app, tcnt]
 
 
@@ -120,7 +120,7 @@ theorem appFill_spec (p : Prog) (hp : p.lookup "app_fill" = some appFillL) (k : 
   rw [invoke_eq _ hp]
   simp only [callFn, appFillL]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, fun s₀ => Triple.step_exec (appFillLoop_spec p (k + 1) s₀)] <;>
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, fun s₀ => Triple.step_exec (appFillLoop_spec p (k + 1) s₀)] <;>
     finish
 
 theorem toUInt64_succ_sub_one (j : Nat) : ((j + 1).toUInt64 - 1) = j.toUInt64 := by
@@ -266,7 +266,7 @@ theorem appFillNLoop_spec (p : Prog) (k : Nat) (s₀ : St) :
     rw [exec, step_while (w := appFillNLoop) rfl]
     sym only [lang_grind, arena_grind] =>
       vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt, tcntM,
-        evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE, st64, ih] <;>
+        evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE, st64, ih] <;>
       finish [fillNW_zero, fillNW_succ, fnW, tierW, idxW, tfld_set64_SPN_app, tcnt]
 
 
@@ -278,7 +278,7 @@ theorem appFillN_spec (p : Prog) (hp : p.lookup "app_fill_n" = some appFillNL) (
   rw [invoke_eq _ hp]
   simp only [callFn, appFillNL]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, fun s₀ => Triple.step_exec (appFillNLoop_spec p (k + 1) s₀)] <;>
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, fun s₀ => Triple.step_exec (appFillNLoop_spec p (k + 1) s₀)] <;>
     finish
 
 /-- A fill that succeeds had fuel for every node. -/
@@ -536,7 +536,7 @@ theorem gaa_spec (p : Prog) (hp : p.lookup "get_app_args" = some getAppArgsL) (n
   rw [invoke_eq _ hp]
   simp only [callFn, getAppArgsL]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
       callW_spec p n "app_count", callW_spec p n "app_fill"] <;>
     finish [gaaW]
 
@@ -700,7 +700,7 @@ theorem gas_spec (p : Prog) (hp : p.lookup "get_app_spine" = some getAppSpineL) 
   rw [invoke_eq _ hp]
   simp only [callFn, getAppSpineL]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
       callW_spec p n "app_count", callW_spec p n "app_fill", callW_spec p n "app_fill_n"] <;>
     finish [gasW]
 
@@ -910,7 +910,7 @@ theorem haa_spec (p : Prog) (hp : p.lookup "head_and_args" = some headAndArgsL) 
   rw [invoke_eq _ hp]
   simp only [callFn, headAndArgsL]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       callW_spec p n "get_app_fn", callW_spec p n "get_app_args"] <;>
     finish [haaW]
 

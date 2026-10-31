@@ -47,7 +47,7 @@ theorem gaff_spec (p : Prog) (hp : p.lookup "get_app_fn_f" = some getAppFnFL) (n
   rw [invoke_eq _ hp]
   simp only [callFn, getAppFnFL]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, callW_spec p n "get_app_fn"] <;>
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, callW_spec p n "get_app_fn"] <;>
     finish (gen := 20) [gaffW, ntBW, CWF]
 
 theorem pirf_spec (p : Prog) (hp : p.lookup "pi_result_f" = some piResultFL) (n : Nat) (s₀ : St)
@@ -57,7 +57,7 @@ theorem pirf_spec (p : Prog) (hp : p.lookup "pi_result_f" = some piResultFL) (n 
   rw [invoke_eq _ hp]
   simp only [callFn, piResultFL]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, callW_spec p n "pi_result"] <;>
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, callW_spec p n "pi_result"] <;>
     finish (gen := 20) [pirfW, ntBW, CWF]
 
 /-- The model of `ctor_family(vis, c)` (callees at fuel `n`). -/
@@ -81,7 +81,7 @@ theorem cf_spec (p : Prog) (hp : p.lookup "ctor_family" = some ctorFamily) (n : 
   rw [invoke_eq _ hp]
   simp only [callFn, ctorFamily]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
     callW_spec p n "env_find", callW_spec p n "pi_result_f", callW_spec p n "get_app_fn_f",
     callW_spec p n "const_name_of"] <;>
     finish (gen := 20) [cfW, ntBW, CWF]
@@ -101,7 +101,7 @@ theorem kof_spec (p : Prog) (hp : p.lookup "rec_rule_k_of" = some recRuleKOfL) (
   rw [invoke_eq _ hp]
   simp only [callFn, recRuleKOfL]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, callW_spec p n "ctor_family"] <;>
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, callW_spec p n "ctor_family"] <;>
     finish (gen := 20) [kofW, ntBW, CWF]
 
 /-- The model of `rec_rule_eta_of(vis, c)`. -/
@@ -121,7 +121,7 @@ theorem eof_spec (p : Prog) (hp : p.lookup "rec_rule_eta_of" = some recRuleEtaOf
   rw [invoke_eq _ hp]
   simp only [callFn, recRuleEtaOfL]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, callW_spec p n "ctor_family",
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, callW_spec p n "ctor_family",
     callW_spec p n "er_sl_eq"] <;>
     finish (gen := 20) [eofW, ntBW, CWF]
 
@@ -137,7 +137,7 @@ theorem rrb_spec (p : Prog) (hp : p.lookup "rec_rule_bits" = some recRuleBitsL) 
   rw [invoke_eq _ hp]
   simp only [callFn, recRuleBitsL]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, callW_spec p n "rec_rule_k_of",
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, callW_spec p n "rec_rule_k_of",
     callW_spec p n "rec_rule_eta_of"] <;>
     finish (gen := 20) [rrbW, ntBW, CWF]
 
@@ -520,7 +520,7 @@ theorem erSlEq_spec' (p : Prog) (hp : p.lookup "er_sl_eq" = some L.Ind.erSlEq) (
     rw [invoke_eq _ hp]
     simp only [callFn, L.Ind.erSlEq]
     sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih] <;>
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih] <;>
       finish (gen := 20) [rdW_eq]
 
 section bits

@@ -67,7 +67,7 @@ l_model dtE_spec (p : Prog) (hf : p.lookup "defeq_tail" = some defeqTailL)
   specs [callW_spec p n "head_is_proj", ppE_spec p hpp hl n,
     dsE_spec p hds hstr hsa hac hdr hi hc hw hb hg ht hu hh hut he heb het n]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE] unified
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 /-- **What `defeq_tail`'s errors claim from**: the projection pair's (`LdprG`) and the stuck

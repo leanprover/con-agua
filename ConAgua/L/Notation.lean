@@ -36,7 +36,8 @@ lfn (b_dummy, j) locals (c) {
   `R⟨t, i⟩.f` is field `f` of node `i` of tier `t` of the store `R : L.TRec` (`R⟨t, i⟩` a one-word
   column), `R⟦h⟧.f` / `R⟦h⟧` the node the handle word `h` names, `R⟨t⟩.count` the node count of
   tier `t`, `⟦h⟧.tier` / `⟦h⟧.tag` / `⟦h⟧.idx` / `⟦h⟧.aidx` a handle's tier bit, constructor tag,
-  narrow index and wide (`app`) index (`L/TRec.lean`, "Handle words"); `R⟨t, i⟩.f := e` writes a
+  narrow index, wide (`app`) index and the twin's own index `idxNat` (`⟦h⟧.gidx`, for derived
+  reads; `L/TRec.lean`, "Handle words"); `R⟨t, i⟩.f := e` writes a
   field (the store library only). `APP⟦h⟧` reads through the wide index, every other store
   through the narrow one.
 * `⦃x⦄.tier`, `⦃x⦄.idx`, `⦃x⦄.base` are the tier (bit 40), the index (the low 40 bits) and the
@@ -263,7 +264,8 @@ meta partial def transExpr (env : Array Name) : TSyntax `lexpr → MacroM Term
     | `tag => `(L.tagE $(← transExpr env h))
     | `idx => `(L.idxE $(← transExpr env h))
     | `aidx => `(L.idxAE $(← transExpr env h))
-    | _ => Macro.throwErrorAt c "expected `⟦h⟧.tier`, `⟦h⟧.tag`, `⟦h⟧.idx` or `⟦h⟧.aidx`"
+    | `gidx => `(L.idxGE $(← transExpr env h))
+    | _ => Macro.throwErrorAt c "expected `⟦h⟧.tier`, `⟦h⟧.tag`, `⟦h⟧.idx`, `⟦h⟧.aidx` or `⟦h⟧.gidx`"
   | `(lexpr| $a:ident[$i:lexpr]) => do
     let (arr, k) ← splitArr a
     let i ← transExpr env i

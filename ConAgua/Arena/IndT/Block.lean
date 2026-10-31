@@ -36,7 +36,7 @@ l_model icbE_spec (p : Prog) (hP : CbProg p)
   specs [callW_spec p n "block_shape_all_ctors", callW_spec p n "block_caps_ctor_names",
     callW_spec p n "block_shape_member_names", callW_spec p n "sl_nodup", callW_spec p n "flush_caches"]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE] unified
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 /-- What `check_block` gives besides the twin's run, a view `w` and the memory `m'` (from `m`): the

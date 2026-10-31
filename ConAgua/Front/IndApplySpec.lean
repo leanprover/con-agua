@@ -104,7 +104,7 @@ theorem storeFuel_spec (n : Nat) (s₀ : St) :
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ctlSum_spec p hL n] <;>
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ctlSum_spec p hL n] <;>
         finish [storeFuelW, sfK]
 
 end
@@ -146,7 +146,7 @@ theorem tele_spec (n : Nat) : ∀ (s₀ : St) (f h : Word),
     rw [invoke_eq _ hL.ind_pi_tele_len]
     simp only [callFn, indPiTeleLen]
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ih,
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ih,
         eView_spec p hL.e_view n] <;> finish [teleW]
 
 end
@@ -183,7 +183,7 @@ theorem sortTele_spec (n : Nat) : ∀ (s₀ : St) (f h : Word),
     rw [invoke_eq _ hL.pi_sort_tele_len]
     simp only [callFn, piSortTeleLen]
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ih,
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ih,
         eView_spec p hL.e_view n] <;> finish [sortTeleW]
 
 end
@@ -221,7 +221,7 @@ theorem nrp_spec (n : Nat) (s₀ : St) (h : Word) :
   | succ n =>
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, evalE_tld, tld, evalE_cnt, tcntM,
-        evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE] <;> finish [nrpW, nrpStr, tierW, idxW]
+        evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] <;> finish [nrpW, nrpStr, tierW, idxW]
 
 end
 
@@ -249,7 +249,7 @@ theorem contains_spec (n : Nat) : ∀ (s₀ : St) (o l x j : Word),
     rw [invoke_eq _ hL.ifl_contains]
     simp only [callFn, iflContains]
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih] <;> finish [containsW]
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih] <;> finish [containsW]
 
 end
 
@@ -283,7 +283,7 @@ theorem nodup_spec (n : Nat) : ∀ (s₀ : St) (o l j : Word),
     rw [invoke_eq _ hL.ifl_nodup]
     simp only [callFn, iflNodup]
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih,
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih,
         contains_spec p hL n] <;> finish [nodupW]
 
 end
@@ -310,7 +310,7 @@ theorem findLast_spec (n : Nat) : ∀ (s₀ : St) (o x j : Word),
     rw [invoke_eq _ hL.ifl_find_last]
     simp only [callFn, iflFindLast]
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih] <;> finish [findLastW]
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih] <;> finish [findLastW]
 
 end
 
@@ -442,7 +442,7 @@ theorem mapGo_spec (n : Nat) : ∀ (s₀ : St) (o l sz s f j : Word),
     rw [invoke_eq _ hL.vi_map_go]
     simp only [callFn, viMapGo]
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih,
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih,
         nameGet_spec p hL.decl.expr.front n, exprGet_spec p hL.decl.expr n,
         iflPush_spec p hL.ifl_alloc hL.ifl_push n] <;> finish [mapGoW, mapLk, lkW]
 
@@ -455,7 +455,7 @@ theorem map_spec (n : Nat) (s₀ : St) (o l sz s f : Word) :
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
         iflAlloc_spec p hL.ifl_alloc n, mapGo_spec p hL n] <;> finish [mapW]
 
 theorem listed_spec (n : Nat) (s₀ : St) (to tn : Word) :
@@ -467,7 +467,7 @@ theorem listed_spec (n : Nat) (s₀ : St) (to tn : Word) :
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         iflAlloc_spec p hL.ifl_alloc n, listedGo_spec p hL n] <;> finish [listedW]
 
 end specs2
@@ -554,7 +554,7 @@ theorem kExp_spec (n : Nat) (s₀ : St) (to tn tyt oo fuel : Word) :
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
         piRes_spec p hL n, eView_spec p hL.e_view n, lhMk_spec p hL.level.alloc n,
         lvEquiv_spec p hL.level hL.lv_equiv n] <;> finish (gen := 20) [kExpW]
 
@@ -568,7 +568,7 @@ theorem nested_spec (n : Nat) : ∀ (s₀ : St) (to tn j : Word),
     rw [invoke_eq _ hL.vi_nested]
     simp only [callFn, viNested]
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih] <;> finish (gen := 20) [nestedW]
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih] <;> finish (gen := 20) [nestedW]
 
 end specs4
 

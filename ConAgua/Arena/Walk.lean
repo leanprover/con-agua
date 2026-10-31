@@ -369,7 +369,7 @@ theorem bbGo_step (n : Nat) (ih : BbNodeSpec p n) : BbGoSpec p (n + 1) := by
   rw [invoke_eq _ hp]
   simp only [callFn, bbGo]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       memoFindG_spec bmSch p _ hpf n, memoPutG_spec bmSch p _ hps n, ih] <;>
     finish
 
@@ -382,7 +382,7 @@ theorem bbNode_step (n : Nat) (ih : BbGoSpec p n) : BbNodeSpec p (n + 1) := by
   simp only [callFn, bbNode]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt,
-      tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE, ih] <;>
+      tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE, ih] <;>
     finish [viewOK, tierW, idxW, maxW, predW]
 
 include hpf hps hp hpn in
@@ -436,7 +436,7 @@ theorem bbMemo_spec (hpc : p.lookup "bm_clear" = some (memoClearG bmSch))
   rw [invoke_eq _ hpm]
   simp only [callFn, bbMemo]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, memoClearG_spec bmSch p _ hpc n, ih] <;>
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, memoClearG_spec bmSch p _ hpc n, ih] <;>
     finish
 
 end go

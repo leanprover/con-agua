@@ -116,7 +116,7 @@ theorem sTy_spec (p : Prog) (f : FnName) (hp : p.lookup f = some stringTyOkL) (n
   rw [invoke_eq _ hp]
   simp only [callFn, stringTyOkL]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       callW_spec p n "str_cv", callW_spec p n "pin_word"] <;>
     finish [sTyW]
 

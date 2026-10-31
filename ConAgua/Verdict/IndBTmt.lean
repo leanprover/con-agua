@@ -27,7 +27,7 @@ l_model tmtE_spec (p : Prog) (P : TmtProg p)
   fns [P.tail ↦ tmtE]
   specs [toiE_spec p P.toi n, callW_spec p n "lvl_eq_c", callW_spec p n "mk_target_major"]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
   heartbeats 4000000 unified nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 end L.Ind

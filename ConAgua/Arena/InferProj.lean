@@ -164,7 +164,7 @@ theorem projTypeAt_spec (p : Prog) (hp : InferProjProg p) (n : Nat) (s₀ : St)
     ⦃fun r s' => LocEq s' s₀ ∧ ptaW p n s₀.mem q i us to tn pe = some (r.headD 0, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hp.pta]
   simp only [callFn, projTypeAtL]
-  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rdW_spec, st64_spec,
+  vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rdW_spec, st64_spec,
       callW_spec p n "inst_lp", callW_spec p n "inst_list"] <;>
   simp_all [ptaW, ptaK1, ptaK2, ptPush, projBodyW, sliceAt, Cmp.eval, LocEq, BinOp.eval,
     St.setLocs_cons, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Sig.retVal, Sig.retOr,
@@ -404,7 +404,7 @@ theorem ip_lvlEqC_small (p : Prog) (hp : p.lookup "lvl_eq_c" = some lvlEqCL) (n 
         (s₀ := ⟨m, Locals.init []⟩) (Q := fun _ _ => False) (by
           rw [invoke_eq _ hp]
           simp only [callFn, lvlEqCL]
-          vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+          vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
             callW_spec p 0 "lq_find", callW_spec p 0 "lvl_eq_rec"] <;>
           simp_all [callW_zero]) hc
       exact hF

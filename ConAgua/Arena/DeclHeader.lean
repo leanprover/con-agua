@@ -48,7 +48,7 @@ theorem rowGet_specW (p : Prog) (hx : p.lookup "env_ix" = some envIxL)
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, envIx_spec p hx n] <;>
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, envIx_spec p hx n] <;>
       finish [rowCW, rowPW, rdW_eq, selArr]
 
 /-- **The model of `env_find(w, vis)`** (it leaves the memory alone). -/
@@ -69,7 +69,7 @@ theorem envFind_specW (p : Prog) (hx : p.lookup "env_ix" = some envIxL)
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, rowGet_specW p hx hg n] <;>
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, rowGet_specW p hx hg n] <;>
       finish [envFindW]
 
 theorem rowCW_eq (m : Mem) (w : Word) (hw : w.toNat < 2 ^ 32) (ht : tagW w ≤ 2) :
@@ -188,7 +188,7 @@ theorem resFrom_spec (p : Prog) (hp : p.lookup "reserved_from" = some reservedFr
     rw [invoke_eq _ hp]
     simp only [callFn, reservedFrom]
     sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih] <;>
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih] <;>
       finish (gen := 20) [rdW_eq]
 
 theorem resCont_spec (p : Prog) (hf : p.lookup "reserved_from" = some reservedFrom)
@@ -201,7 +201,7 @@ theorem resCont_spec (p : Prog) (hf : p.lookup "reserved_from" = some reservedFr
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, resFrom_spec p hf n] <;>
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, resFrom_spec p hf n] <;>
       finish (gen := 20) [pinW_eq]
 
 /-- A miss of `reserved_from` from `j`: none of the reserved words from `j` on is `x`. -/

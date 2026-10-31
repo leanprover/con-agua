@@ -62,7 +62,7 @@ l_model ctsE_spec (p : Prog) (hV : ValProg p) (hP : CtsProg p)
     closeTelescope_spec p hP.d hP.pf hP.pp hP.pi hP.mkf hP.ct hP.ab n, cvNew_specW p hP.ea hP.cn n,
     checkConstantVal_specE p hV n]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
   heartbeats 4000000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
@@ -73,7 +73,7 @@ l_model ctE_spec (p : Prog) (hV : ValProg p) (hP : CtProg p)
   fns [hP.cst ↦ ctE]
   specs [stripPis_specF p hP.st n, eView_spec p hP.view n, ctsE_spec p hV hP.toCtsProg n]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
   heartbeats 4000000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 

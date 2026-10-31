@@ -38,7 +38,7 @@ l_model classRecTyOkE_spec (p : Prog) (hp : RtoProg p)
   specs [classRecTyOkGuardsE_spec p hp n, classGenRecTy_spec p hp.toGtProg n,
     cvNew_specW p hp.era hp.cvn n, classConstOkE_spec p hp.ih hp.ccoh hp.cco n]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
   finish [tierW, idxW] gen 20 heartbeats 400000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 

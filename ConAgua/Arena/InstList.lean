@@ -879,7 +879,7 @@ theorem ilGo_step (n : Nat) (ih : IlArmSpec p n) : IlGoSpec p (n + 1) := by
   rw [invoke_eq _ (hp.get "il_go")]
   simp only [callFn, ilGo]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, derBv_spec p (hp.get "der_bv") n,
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, derBv_spec p (hp.get "der_bv") n,
       ihA, ihL, ihF, ihE, ihP, ihB] <;>
     finish
 
@@ -895,7 +895,7 @@ theorem ilgGo_step (n : Nat) (ih : IlgArmSpec p n) (ihl : IlGoSpec p n) : IlgGoS
   rw [invoke_eq _ (hp.get "ilg_go")]
   simp only [callFn, ilgGo]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, derBv_spec p (hp.get "der_bv") n,
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, derBv_spec p (hp.get "der_bv") n,
       ihA, ihL, ihF, ihE, ihP, ihl] <;>
     finish
 

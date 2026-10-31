@@ -72,7 +72,7 @@ theorem gafAd_spec (p : Prog) (hp : p.lookup "get_app_fn_f" = some getAppFnFL) (
   rw [invoke_eq _ hp]
   simp only [callFn, getAppFnFL]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, callW_spec p n "get_app_fn"] <;>
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, callW_spec p n "get_app_fn"] <;>
     finish (gen := 20) [gafAdW, ntBW, CWF]
 
 /-- `get_app_fn_f` and its callee. -/
@@ -121,7 +121,7 @@ theorem pirAd_spec (p : Prog) (hp : p.lookup "pi_result_f" = some piResultFL) (n
   rw [invoke_eq _ hp]
   simp only [callFn, piResultFL]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, callW_spec p n "pi_result"] <;>
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, callW_spec p n "pi_result"] <;>
     finish (gen := 20) [pirAdW, ntBW, CWF]
 
 /-- `pi_result_f` and its callee. -/
@@ -184,7 +184,7 @@ theorem i2s_spec (p : Prog) (hp : p.lookup "iw_to_spn" = some iwToSpnL) (k : Nat
     rw [invoke_eq _ hp]
     simp only [callFn, iwToSpnL]
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64, ih] <;>
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64, ih] <;>
       finish (gen := 20) [i2sW_nil, i2sW_cons, ntBW]
 
 theorem word_add_nat_succ (d : Word) (j : Nat) : d + (j + 1).toUInt64 = (d + 1) + j.toUInt64 := by
@@ -256,7 +256,7 @@ theorem mknAd_spec (p : Prog) (hp : p.lookup "mk_app_n_f" = some mkAppNFL) (n : 
   rw [invoke_eq _ hp]
   simp only [callFn, mkAppNFL]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
       callW_spec p n "iw_to_spn", callW_spec p n "mk_app_n"] <;>
     finish (gen := 20) [mknAdW, ntBW]
 

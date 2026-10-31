@@ -214,7 +214,7 @@ theorem envIx_spec (hp : p.lookup "env_ix" = some envIxL) (n : Nat) (s₀ : St) 
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs] <;>
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs] <;>
       simp_all [rowSelW, ixW, LocEq, BinOp.eval, Sig.retVal, Sig.retOr, Locals.init]
 
 theorem envRowGet_spec (hx : p.lookup "env_ix" = some envIxL)
@@ -242,7 +242,7 @@ theorem envRowGet_spec (hx : p.lookup "env_ix" = some envIxL)
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, envIx_spec p hx n] <;>
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, envIx_spec p hx n] <;>
       finish
 
 theorem envRowSet_spec (hx : p.lookup "env_ix" = some envIxL)
@@ -263,7 +263,7 @@ theorem envRowSet_spec (hx : p.lookup "env_ix" = some envIxL)
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64, envIx_spec p hx n] <;>
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64, envIx_spec p hx n] <;>
       finish [rowSet]
 
 end specs
@@ -338,7 +338,7 @@ theorem envFind_refines (p : Prog) (hx : p.lookup "env_ix" = some envIxL)
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, envRowGet_spec p hx hg n] <;>
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, envRowGet_spec p hx hg n] <;>
       finish [decFound]
 
 /-! ## `env_push` -/
@@ -563,7 +563,7 @@ theorem envPush_refines (p : Prog) (hx : p.lookup "env_ix" = some envIxL)
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
         envRowSet_spec p hx hs n] <;>
       finish
 
@@ -638,7 +638,7 @@ theorem envErase_spec (p : Prog) (hx : p.lookup "env_ix" = some envIxL)
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, envRowSet_spec p hx hs n] <;>
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, envRowSet_spec p hx hs n] <;>
       finish
 
 /-- The memory after `env_pop_temp`'s count update: `CTL[128] - 1` (none at `0`). -/
@@ -794,7 +794,7 @@ theorem envPopTemp_refines (p : Prog) (hx : p.lookup "env_ix" = some envIxL)
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
         envRowSet_spec p hx hs n] <;>
       finish [IFEnv.popTemp]
 
@@ -905,7 +905,7 @@ theorem tblIx_spec (hp : p.lookup "tbl_ix" = some tblIxL) (n : Nat) (s₀ : St) 
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs] <;>
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs] <;>
       simp_all [tixW, LocEq, BinOp.eval, Sig.retVal, Sig.retOr, Locals.init]
 
 theorem tblRowGet_spec (hx : p.lookup "tbl_ix" = some tblIxL)
@@ -926,7 +926,7 @@ theorem tblRowGet_spec (hx : p.lookup "tbl_ix" = some tblIxL)
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, tblIx_spec p hx n] <;>
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, tblIx_spec p hx n] <;>
       finish
 
 theorem tblRowSet_spec (hx : p.lookup "tbl_ix" = some tblIxL)
@@ -945,7 +945,7 @@ theorem tblRowSet_spec (hx : p.lookup "tbl_ix" = some tblIxL)
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64, tblIx_spec p hx n] <;>
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64, tblIx_spec p hx n] <;>
       finish [tblSet]
 
 theorem tblCnt_spec (hp : p.lookup "tbl_cnt" = some tblCntL) (n : Nat) (s₀ : St) :
@@ -960,7 +960,7 @@ theorem tblCnt_spec (hp : p.lookup "tbl_cnt" = some tblCntL) (n : Nat) (s₀ : S
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64] <;>
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64] <;>
       finish
 
 theorem tblAt_spec (hp : p.lookup "tbl_at" = some tblAtL) (n : Nat) (s₀ : St) (j : Word) :
@@ -976,7 +976,7 @@ theorem tblAt_spec (hp : p.lookup "tbl_at" = some tblAtL) (n : Nat) (s₀ : St) 
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64] <;>
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64] <;>
       finish
 
 theorem tblPut_spec (hp : p.lookup "tbl_put" = some tblPutL) (n : Nat) (s₀ : St) (j q : Word) :
@@ -990,7 +990,7 @@ theorem tblPut_spec (hp : p.lookup "tbl_put" = some tblPutL) (n : Nat) (s₀ : S
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64] <;>
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64] <;>
       finish
 
 end specs
@@ -1228,7 +1228,7 @@ theorem findTable_refines (p : Prog) (hx : p.lookup "env_ix" = some envIxL)
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, envRowGet_spec p hx hg n,
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, envRowGet_spec p hx hg n,
         tblRowGet_spec p htx htg n] <;>
       finish
 
@@ -1313,7 +1313,7 @@ theorem envPushTable_refines (p : Prog) (htx : p.lookup "tbl_ix" = some tblIxL)
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
         tblRowSet_spec p htx hs n] <;>
       finish
 

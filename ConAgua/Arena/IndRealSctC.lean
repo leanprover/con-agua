@@ -311,7 +311,7 @@ theorem envPushTable_mem (p : Prog) (htx : p.lookup "tbl_ix" = some tblIxL)
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
         tblRowSet_spec p htx hs n] <;>
       finish [tblListPush]
 
@@ -367,7 +367,7 @@ l_model tblE_spec (p : Prog) (hP : TblProg p)
     envFind_specW p hP.hix hP.hrg hP.hfind n, callW_spec p n "find_table", callW_spec p n "er_from_iw",
     erecAlloc_specW p hP.hea n, callW_spec p n "env_push_table"]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
   heartbeats 4000000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
@@ -586,7 +586,7 @@ theorem checkStructProjTable_refinesC (p : Prog) (hP : TblProg p) (hp : ApdF p) 
 l_model ctoE_spec (p : Prog) (ht : TblProg p) (hf : p.lookup "check_block_tables_one" = some checkBlockTablesOne)
   fns [hf ↦ ctoE] specs [callW_spec p n "struct_proj_guards", callW_spec p n "block_shape_lps", tblE_spec p ht n]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE] heartbeats 1000000 unified
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] heartbeats 1000000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 /-- **`check_block_tables`' unified model**: every member's table through `ctoE`. -/
@@ -594,7 +594,7 @@ l_model ctbE_spec (p : Prog) (ht : TblProg p) (h1 : p.lookup "check_block_tables
   (hf : p.lookup "check_block_tables" = some checkBlockTables)
   fns [hf ↦ ctbE] specs [ctoE_spec p ht h1 n]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE] heartbeats 1000000 unified
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] heartbeats 1000000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 /-- What a table install gives besides the environment `x` it returns (from `m`, `a`): the stage at

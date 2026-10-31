@@ -125,7 +125,7 @@ l_model loE_spec (p : Prog) (hf : p.lookup "lams_open" = some lamsOpenL)
   fns [hf ↦ loE list]
   specs [callW_spec p n "lams_inst"]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE] unified
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 /-- **`lams_open` refines `lamsOpenT`, both outcomes**: the errors are the domains' `defeq` slot
@@ -291,7 +291,7 @@ theorem lamsLvl_succ (mode : ConLeche.CheckMode) (r : CoreFnsA) (f : Nat)
 `defeq_lams_inner` through their runs, `callE`). -/
 l_model defeqLams_specE (p : Prog) (hf : p.lookup "defeq_lams" = some defeqLamsL)
   fns [hf ↦ lamsE] grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE] unified
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
 
 /-! ## The loop refines `defeqLams` -/
 

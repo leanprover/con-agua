@@ -35,7 +35,7 @@ theorem classRecOf_spec (p : Prog) (hp : p.lookup "class_rec_of" = some classRec
     intro s₀ rco rcl cgo cgl t
     rw [invoke_eq _ hp]
     simp only [callFn, classRecOf]
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih]
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih]
     all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons, Locals.init, List.getD_cons_zero, List.getD_cons_succ, Cmp.eval,
       BinOp.eval, Nat.reduceEqDiff, reduceIte, beq_iff_eq, bne_iff_ne, ne_eq] at *)
     all_goals grind (gen := 20) [lang_grind, arena_grind, ind_grind, croK]
@@ -227,7 +227,7 @@ theorem classReadMotiveSlot_spec (p : Prog) (hp : p.lookup "class_read_motive_sl
     intro s₀ so sl c
     rw [invoke_eq _ hp]
     simp only [callFn, classReadMotiveSlot]
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih]
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih]
     all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons, Locals.init, List.getD_cons_zero, List.getD_cons_succ, Cmp.eval,
       BinOp.eval, Nat.reduceEqDiff, reduceIte, beq_iff_eq] at *)
     all_goals grind (gen := 20) [lang_grind, arena_grind, ind_grind, msK]
@@ -361,7 +361,7 @@ theorem pinWord_specW (p : Prog) (hp : p.lookup "pin_word" = some pinWordL) (n :
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64]
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64]
     all_goals (try simp only [Locals.init, List.getD_cons_zero, Cmp.eval, beq_iff_eq] at *)
     all_goals grind [lang_grind, arena_grind, ind_grind, pinWordW]
 
@@ -394,7 +394,7 @@ theorem slotVar_spec (p : Prog) (hpin : p.lookup "pin_word" = some pinWordL)
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       pinWord_specW p hpin n, internSort_spec p hsf hsp his n, internFVar_spec p hff hfp hif n]
     all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons, Cmp.eval,
       BinOp.eval, Nat.reduceEqDiff, reduceIte,
@@ -487,7 +487,7 @@ theorem motVar_spec (p : Prog) (hpin : p.lookup "pin_word" = some pinWordL)
     ⦃fun s_ => s_ = s₀⦄ invoke p (exec p (n + 1)) "class_gen_mot_var" [g, c]
     ⦃fun r s' => LocEq s' s₀ ∧ motVarW n s₀.mem g c = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hp]; simp only [callFn, classGenMotVar]
-  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+  vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
     classReadMotiveSlot_spec p hms n, slotVar_spec p hpin hsf hsp his hff hfp hif hsv n]
   all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons, Locals.init, List.getD_cons_zero, List.getD_cons_succ, Cmp.eval,
     BinOp.eval, Nat.reduceEqDiff, reduceIte, beq_iff_eq] at *)
@@ -656,7 +656,7 @@ theorem classGenIhParts_spec (p : Prog) (hp : p.lookup "class_gen_ih_parts" = so
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "class_gen_ih_parts" [g, t, tele, w, d]
     ⦃fun r s' => LocEq s' s₀ ∧ ihW s₀.mem g t tele w d = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hp]; simp only [callFn, classGenIhParts]
-  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+  vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
     opfF_spec p hopf n, gaaF_spec p had n]
   all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons, Locals.init, List.getD_cons_zero, List.getD_cons_succ, Cmp.eval,
     BinOp.eval, Nat.reduceEqDiff, reduceIte, beq_iff_eq,

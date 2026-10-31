@@ -121,7 +121,7 @@ theorem cfrRec_specW (p : Prog) (ha : p.lookup "erec_alloc" = some erecAlloc)
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
         erecAlloc_specW p ha n] <;>
       finish [cfrRecW, cfrMem]
 
@@ -229,7 +229,7 @@ theorem classFeRGo_spec (p : Prog) (h : CfrProg p) (n : Nat) :
     intro s₀ cvo cvl rcl ro rl vis M
     rw [invoke_eq _ h.go]
     simp only [callFn, classFeRGo]
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rd_spec, rowGet_specW p h.ix h.rg n,
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rd_spec, rowGet_specW p h.ix h.rg n,
       cfrRec_specW p h.rp.alloc h.frec n, callW_spec p n "env_push", rec3_specW p h.ia n h.rec3,
       slCons_specW p h.ia h.copy h.cons n, ih]
     all_goals subst_vars

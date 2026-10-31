@@ -223,7 +223,7 @@ theorem natOpResultL_refinesR (R : Mem → AState → Prop) (harms : NatArmsR R)
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rd_spec,
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rd_spec,
       (harms.pred n · a₀), (harms.add n · a₀), (harms.sub n · a₀),
       (harms.mul n · a₀), (harms.pow n · a₀), (harms.div n · a₀),
       (harms.mod n · a₀), (harms.gcd n · a₀), (harms.land n · a₀),

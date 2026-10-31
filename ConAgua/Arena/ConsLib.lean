@@ -102,6 +102,9 @@ theorem mapE_idxE (f : Var → Var) (h : Expr) : mapE f (idxE h) = idxE (mapE f 
 theorem mapE_idxAE (f : Var → Var) (h : Expr) : mapE f (idxAE h) = idxAE (mapE f h) := by
   simp [idxAE, mapE]
 
+theorem mapE_idxGE (f : Var → Var) (h : Expr) : mapE f (idxGE h) = idxGE (mapE f h) := by
+  simp [idxGE, mapE]
+
 theorem mapE_tagE (f : Var → Var) (h : Expr) : mapE f (tagE h) = tagE (mapE f h) := by
   simp [tagE, mapE]
 

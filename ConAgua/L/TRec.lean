@@ -125,6 +125,14 @@ bit 31, so that a narrow word reads an index of at least `2^30`, beyond the `app
 @[expose] def idxAE (h : Expr) : Expr :=
   .bin .and (.bin .add h (.const 0x40000000)) (.const 0x7fffffff)
 
+/-- The node index of any handle word, con-ron's `Idx.idxNat` itself (bits 29…0 of a wide word,
+25…0 of a narrow one): `h & (2^26 - 1 + w · (2^30 - 2^26))`, `w` the shape bit. The twin's
+`derived` (`ETables.derAt`, `LTables.derAt`) reads the derived column at this index without a
+shape test, so the derived reads of the `app` and `param` arms use it. -/
+@[expose] def idxGE (h : Expr) : Expr :=
+  .bin .and h (.bin .add (.const 0x3ffffff)
+    (.bin .mul (.bin .and (.bin .shr h (.const 30)) (.const 1)) (.const 0x3c000000)))
+
 /-- The constructor tag of a handle word, the twin's `Idx.tag`: `4` (`app`) for a wide word,
 bits 29…26 of a narrow one; branch-free, `f + w * (4 - f)` with `f = (h >> 26) & 15` and the
 shape bit `w = (h >> 30) & 1`. -/

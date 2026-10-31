@@ -210,7 +210,7 @@ l_model i1lGo_spec (p : Prog) (hp : I1lProg p)
     mkLet_spec p (hp.lift.get "der_b") (hp.lift.get "letE_find") (hp.lift.get "letE_push") (hp.lift.get "intern_letE") (hp.lift.get "mk_let") n,
     mkProj_spec p (hp.lift.get "der_b") (hp.lift.get "proj_find") (hp.lift.get "proj_push") (hp.lift.get "intern_proj") (hp.lift.get "mk_proj") n]
   grind [arena_grind] fold [tierW, idxW]
-  extra [evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE]
+  extra [evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
   finish [tierW, idxW] gen 20 heartbeats 1000000
 
 /-- **`instantiate1_lift_fast` is its model `i1lFastW`** (generated). -/

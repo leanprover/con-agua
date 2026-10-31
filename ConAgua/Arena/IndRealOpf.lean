@@ -80,7 +80,7 @@ theorem spnPush_spec (p : Prog) (hp : p.lookup "spn_push" = some L.Stubs.spnPush
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64] <;>
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64] <;>
       finish [spnPushW]
 
 /-- `opf_go(n, e, i, co, cn)`'s body over its callees' runs. -/
@@ -101,7 +101,7 @@ theorem opfGoK_spec (p : Prog) (hp : p.lookup "opf_go" = some L.Stubs.opfGo) (k 
   rw [invoke_eq _ hp]
   simp only [callFn, L.Stubs.opfGo]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, callW_spec p k] <;>
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, callW_spec p k] <;>
     finish (gen := 20) [opfGoK, ntBW]
 
 /-- `opa_go(n, e, i)`'s body over its callees' runs. -/
@@ -122,7 +122,7 @@ theorem opaGoK_spec (p : Prog) (hp : p.lookup "opa_go" = some L.Stubs.opaGo) (k 
   rw [invoke_eq _ hp]
   simp only [callFn, L.Stubs.opaGo]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, callW_spec p k] <;>
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, callW_spec p k] <;>
     finish (gen := 20) [opaGoK, ntBW]
 
 /-- The common tail: the fresh pool slice, the copy of the stack slice, the stack top put back. -/
@@ -160,7 +160,7 @@ theorem opfTopK_spec (p : Prog) (hp : p.lookup "open_pis_at_fvars_f" = some L.St
   rw [invoke_eq _ hp]
   simp only [callFn, L.Stubs.openPisAtFvarsFL]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64, callW_spec p k "opf_go",
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64, callW_spec p k "opf_go",
       callW_spec p k "opa_go",
       iwAlloc_specW p ha k, s2i_spec p hs k] <;>
     finish (gen := 20) [opfTopK, opfK2, opfK3, opfTail_some, ntBW]

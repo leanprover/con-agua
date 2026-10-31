@@ -36,7 +36,7 @@ l_model tkhE_spec (p : Prog) (hL : K53Look p)
   fns [hL.tkh ↦ tkhE]
   specs [gafF_spec p hL.ad n, gaaF_spec p hL.ad n, eView_spec p hL.hv n, tkaE_spec p hL n]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
   finish [] gen 20 heartbeats 4000000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
@@ -44,7 +44,7 @@ l_model tkE_spec (p : Prog) (hL : K53Look p)
   fns [hL.tk ↦ tkE]
   specs [stripPis_specF p hL.strip n, tte_spec p hL n, tkhE_spec p hL n]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
   heartbeats 4000000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 

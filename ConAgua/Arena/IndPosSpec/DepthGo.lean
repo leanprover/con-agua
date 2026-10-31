@@ -88,7 +88,7 @@ theorem dpGo_step (n : Nat) (ih : DpNodeSpec p n) : DpGoSpec p (n + 1) := by
   intro s₀ f h
   simp only [invoke_eq _ hgo, callFn, depthGo]
   sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       eView_spec p hv n, memoFindG_spec dpSch p _ hf n, memoPutG_spec dpSch p _ hput n, ih] <;>
     finish (gen := 20)
 
@@ -98,7 +98,7 @@ theorem dpNode_step (n : Nat) (ih : DpGoSpec p n) : DpNodeSpec p (n + 1) := by
   intro s₀ f1 g x y z
   simp only [invoke_eq _ hnode, callFn, depthNode]
   sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih] <;>
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih] <;>
     finish (gen := 20) [maxW]
 
 include hv hf hput hgo hnode in
@@ -456,7 +456,7 @@ theorem depth_spec (n : Nat) (s₀ : St) (e : Word) :
   unfold DpGoSpec at ih
   simp only [invoke_eq _ hd, callFn, depth]
   sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, memoClearG_spec dpSch p _ hcl n, ih] <;>
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, memoClearG_spec dpSch p _ hcl n, ih] <;>
     finish
 
 include hv hf hput hgo hnode hcl hd in
@@ -465,7 +465,7 @@ theorem whnfWalkFuel_spec (hw : p.lookup "whnf_walk_fuel" = some whnfWalkFuel) (
     ⦃fun r s' => LocEq s' s₀ ∧ wfW n s₀.mem e = some (r.headD 0, s'.mem); ⊤⦄ := by
   simp only [invoke_eq _ hw, callFn, whnfWalkFuel]
   sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, depth_spec p hv hf hput hgo hnode hcl hd n] <;>
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, depth_spec p hv hf hput hgo hnode hcl hd n] <;>
     finish (gen := 20) [wfW]
 
 end spec2
@@ -631,7 +631,7 @@ theorem nestPhsGo_spec (k : Nat) : ∀ (s₀ : St) (q n i : Word),
     intro s₀ q n i
     simp only [invoke_eq _ hp, callFn, nestPhsGo]
     sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
         pinWord_specV p hpw k, internSort_spec p hsf hsp his k, internFVar_spec p hff hfp hif k, ih] <;>
       finish (gen := 20)
 
@@ -655,7 +655,7 @@ theorem nestPhs_spec (k : Nat) (s₀ : St) (nn : Word) :
     ⦃fun r s' => LocEq s' s₀ ∧ phsW k s₀.mem nn = some (r, s'.mem); ⊤⦄ := by
   simp only [invoke_eq _ hp, callFn, nestPhs]
   sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       iwAlloc_specW p ha k, nestPhsGo_spec p hpw hsf hsp his hff hfp hif hg k] <;>
     finish (gen := 20) [phsW]
 
@@ -888,7 +888,7 @@ theorem nestCanonCrest_spec (n : Nat) (s₀ : St) (no nl us nn cty : Word) :
     ⦃fun r s' => LocEq s' s₀ ∧ pccW n s₀.mem no nl us nn cty = some (r, s'.mem); ⊤⦄ := by
   simp only [invoke_eq _ hp, callFn, nestCanonCrest]
   sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       nestPhs_spec p ha hl.hpw hl.hsf hl.hsp hl.his hl.hff hl.hfp hl.hif hng hnp n,
       instPisWith_spec p hl.hv hip hl.hi1 (n + 1),
       replaceApps_spec p hl hk hf hput hgo hnode hcl hra n] <;>

@@ -129,7 +129,7 @@ theorem classReadRecCls_spec (p : Prog) (hfh : p.lookup "fvar_head" = some fvarH
     rw [invoke_eq _ hp]
     simp only [callFn, classReadRecCls]
     sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         hcR n "open_pis_at_fvars_f", fvarHead_spec p hfh hv had n,
         classOfMotiveVar_spec p hf hcm n, slCons_specW p ha hc hsc n, ih] <;>
       finish (gen := 20) [rdW_eq]
@@ -1095,7 +1095,7 @@ theorem classReadSlot_spec (p : Prog) (hP : SlotProg p) (cR : CallM) (hcR : Call
   rcases n with _ | n
   · vcgen [exec] <;> grind
   sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       pirF_spec p hP.ad n, classReadSlotMotive_spec p hP n,
       classReadMinor_spec p hP.fh hP.v hP.f hP.cm hP.c hP.a hP.sc hP.r2 hP.r5 hP.i1 hP.is hP.fin
         hP.pb hP.min hP.tl hP.ad cR hcR n] <;>
@@ -1520,7 +1520,7 @@ theorem classReadSlots_specs (p : Prog) (hP : SlotsProg p) (cR : CallM) (hcR : C
     obtain ⟨ih1, ih2⟩ := ih
     refine ⟨fun s₀ q vis np n mo ml d e => ?_, fun s₀ q vis np n mo ml d dom body slot => ?_⟩
     · rw [invoke_eq _ hP.slots]; simp only [callFn, classReadSlots]
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rd_spec, eView_spec p hP.v N,
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rd_spec, eView_spec p hP.v N,
         classReadSlot_spec p hP.toSlotProg cR hcR N, ih2]
       all_goals subst_vars
       all_goals (try simp only [LocEq] at *)
@@ -1530,7 +1530,7 @@ theorem classReadSlots_specs (p : Prog) (hP : SlotsProg p) (cR : CallM) (hcR : C
       all_goals grind (gen := 20) [lang_grind, arena_grind, ind_grind, rdW_eq, loc_init4, loc_init5, loc_init6,
         loc_init7]
     · rw [invoke_eq _ hP.next]; simp only [callFn, classReadSlotsNext]
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rd_spec,
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rd_spec,
         classReadSlotsSnoc_spec p hP.a hP.c hP.sn hP.msn N, internFVar_spec p hP.ff hP.fp hP.ifv N,
         i1F_spec p hP.hi1 N, slCons_specW p hP.a hP.c hP.sc N, ih1]
       all_goals subst_vars
@@ -1869,7 +1869,7 @@ theorem classReadFinish_spec (p : Prog) (hP : ReadProg p) (cR : CallM) (hcR : Ca
   rcases N with _ | N
   · vcgen [exec] <;> grind
   sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       classReadMotPos_spec p hP N,
       classReadRecCls_spec p hP.fh hP.v hP.f hP.cm hP.c hP.a hP.sc hP.rcl hP.ad cR hcR N,
       rec4_specW p hP.a N hP.r4] <;>
@@ -1882,7 +1882,7 @@ theorem classReadNSlots_spec (p : Prog) (hP : ReadProg p) (N : Nat) (s₀ : St) 
   rcases N with _ | N
   · vcgen [exec] <;> grind
   sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs] <;>
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs] <;>
     finish (gen := 20)
 
 theorem classRead_spec (p : Prog) (hP : ReadProg p) (cR : CallM) (hcR : CallSpec p cR) (N : Nat) (s₀ : St)
@@ -1893,7 +1893,7 @@ theorem classRead_spec (p : Prog) (hP : ReadProg p) (cR : CallM) (hcR : CallSpec
   rcases N with _ | N
   · vcgen [exec] <;> grind
   sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       hcR N "open_pis_at_fvars_f", classReadNSlots_spec p hP N,
       (classReadSlots_specs p hP.toSlotsProg cR hcR N).1, classReadFinish_spec p hP cR hcR N] <;>
     finish (gen := 20) [rdW_eq, loc_init4, loc_init5, loc_init6, loc_init7]

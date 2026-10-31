@@ -51,7 +51,7 @@ theorem envFind_specWP (p : Prog) (hx : p.lookup "env_ix" = some envIxL)
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, envRowGet_spec p hx hg n] <;>
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, envRowGet_spec p hx hg n] <;>
       finish [efW]
 
 /-! ## `find_proj` -/
@@ -117,7 +117,7 @@ theorem findProj_spec (p : Prog) (hp : ProjProg p) (n : Nat) (s₀ : St) (vis T 
   rw [invoke_eq _ hp.findProj]
   simp only [callFn, findProjL]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, callW_spec p n "find_table"] <;>
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, callW_spec p n "find_table"] <;>
     finish [findProjK]
 
 /-- **`find_proj` as words**: memory unchanged; the twin's lookup is the decoded answer; when the

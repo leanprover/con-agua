@@ -998,7 +998,8 @@ meta partial def transE (E : Env) (ctx : Ctx) : TSyntax `lexpr → GenM MT
     | `tag => pure (.raw (← `($(mkIdent `L.Arena.tagW) $h)))
     | `idx => pure (.raw (← `($(mkIdent `L.Arena.idxW) $h)))
     | `aidx => pure (.raw (← `($(mkIdent `L.Arena.idxA) $h)))
-    | _ => throwErrorAt c "expected `⟦h⟧.tier`, `⟦h⟧.tag`, `⟦h⟧.idx` or `⟦h⟧.aidx`"
+    | `gidx => pure (.raw (← `($(mkIdent `L.Arena.idxG) $h)))
+    | _ => throwErrorAt c "expected `⟦h⟧.tier`, `⟦h⟧.tag`, `⟦h⟧.idx`, `⟦h⟧.aidx` or `⟦h⟧.gidx`"
   | `(lexpr| $a:ident[$i:lexpr]) => do
     let (arr, k) ← splitArr a
     let i ← transE E ctx i

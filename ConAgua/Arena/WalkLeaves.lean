@@ -143,7 +143,7 @@ l_model flGo_spec (p : Prog) (hpd : p.lookup "der_b" = some derB)
   fns [hp ↦ flW, hpn ↦ flNodeW]
   specs [derB_spec p hpd n, memoFindG_spec flSch p _ hpf n, memoPutG_spec flSch p _ hps n]
   grind [arena_grind] fold [tierW, idxW]
-  extra [evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE]
+  extra [evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
   finish [tierW, idxW] gen 20 heartbeats 1000000
 
 /-! ## `leaf_mem(k, x, y)`: membership in the first `k` leaves, newest first -/
@@ -198,7 +198,7 @@ theorem lmLoop_spec (n : Nat) (s₀ : St) :
   | succ n ih =>
     rw [exec, step_while (w := lmLoop) rfl]
     sym only [lang_grind, arena_grind] =>
-      vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih] <;> finish
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih] <;> finish
 
 theorem lmLoop_step_spec (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀⦄
@@ -218,7 +218,7 @@ theorem leafMem_spec (n : Nat) (s₀ : St) (k x y : Word) :
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalArgs, setLoc, lmLoop_step_spec p n] <;> finish
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalArgs, setLoc, lmLoop_step_spec p n] <;> finish
 
 end lm
 
@@ -322,7 +322,7 @@ l_model lsbGo_spec (p : Prog) (hpd : p.lookup "der_b" = some derB)
   specs [derB_spec p hpd n, memoFindG_spec lsbSch p _ hpf n, memoPutG_spec lsbSch p _ hps n,
     leafMem_spec p hpm n]
   grind [arena_grind] fold [tierW, idxW]
-  extra [evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE]
+  extra [evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
   finish [tierW, idxW] gen 20 heartbeats 1000000
 
 

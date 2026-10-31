@@ -36,7 +36,7 @@ l_model checkBasisDecl_specE (p : Prog) (hB : BasisProg p) (hpa : p.lookup "pin_
   specs [pinAt_specW p hpa n, callW_spec p n "rom_ci", callW_spec p n "find_is",
     callW_spec p n "rom_basis_decls_a", installBasisDecls_specE p hB n]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
   heartbeats 400000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 

@@ -423,7 +423,7 @@ l_model checkPending_specE (p : Prog) (hf : p.lookup "check_pending" = some chec
   fns [hf ↦ checkPendingE]
   specs [callW_spec p n "scratch_enter", callW_spec p n "scratch_drop"]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
   finish [tierW, idxW] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 

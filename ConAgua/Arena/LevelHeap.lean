@@ -110,7 +110,7 @@ theorem lvNode_spec (p : Prog) (hp : p.lookup "lv_node" = some lvNode) (n : Nat)
   | succ n =>
     sym only [lang_grind, arena_grind, level_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld,
-        evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE] <;>
+        evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] <;>
       finish [lvNodeW, tierW, idxW]
 
 /-! ## `lh_mk(g, a, b)`: allocate a heap node -/
@@ -149,7 +149,7 @@ theorem lhMk_spec (p : Prog) (hp : p.lookup "lh_mk" = some lhMk) (n : Nat) (s₀
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind, level_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64] <;>
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64] <;>
       finish [lhMkW, lhMem, htop]
 
 /-! ## `lv_eq(p, q)`: structural equality -/
@@ -235,7 +235,7 @@ theorem lvEq_spec (n : Nat) : ∀ (s₀ : St) (a b : Word),
     rw [invoke_eq _ hp]
     simp only [callFn, lvEq]
     sym only [lang_grind, arena_grind, level_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, lvNode_spec p hpn n, ih] <;>
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, lvNode_spec p hpn n, ih] <;>
       finish (gen := 20)
 
 end eq

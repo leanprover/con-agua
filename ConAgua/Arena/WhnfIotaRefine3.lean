@@ -150,7 +150,7 @@ theorem andRescueLoop_spec (p : Prog) (k : Nat) (s₀ : St) :
   | succ k ih =>
     rw [exec, step_while (w := andRescueLoop) rfl]
     sym only [lang_grind, arena_grind] =>
-      vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         callW_spec p k "find_proj", callW_spec p k "fire_ok", ih] <;>
       finish (gen := 20) [iotaArW, ldE]
 
@@ -169,7 +169,7 @@ theorem andRescueSlots_spec (p : Prog) (hp : p.lookup "and_rescue_slots" = some 
   rw [invoke_eq _ hp]
   simp only [callFn, andRescueSlotsL]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
       callW_spec p k "pin_at", fun s₀ => Triple.step_exec (andRescueLoop_spec p (k + 1) s₀)] <;>
     finish [arTop]
 
@@ -778,7 +778,7 @@ theorem etaProjsLoop_spec (p : Prog) (k : Nat) (s₀ : St) :
   | succ k ih =>
     rw [exec, step_while (w := etaProjsLoop) rfl]
     sym only [lang_grind, arena_grind] =>
-      vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
         callW_spec p k "mk_proj", ih] <;>
       finish (gen := 20) [etpW_end, etpW_cont, etpW_bad]
 
@@ -804,7 +804,7 @@ theorem etaProjs_spec (p : Prog) (hp : p.lookup "eta_projs" = some etaProjsL) (k
   rw [invoke_eq _ hp]
   simp only [callFn, etaProjsL]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
       fun s₀ => Triple.step_exec (etaProjsLoop_spec p (k + 1) s₀)] <;>
     finish (gen := 20) [etpTop, rdW, Mem.len64]
 

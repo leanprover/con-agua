@@ -73,7 +73,7 @@ theorem copy0Loop_spec (n : Nat) (s₀ : St) :
   | succ n ih =>
     rw [exec, step_while (w := copy0Loop) rfl]
     sym only [lang_grind, arena_grind] =>
-      vcgen [step, evalE, evalC, evalArgs, setLoc, ld64, st64, ih] <;> finish [prd]
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, step, evalE, evalC, evalArgs, setLoc, ld64, st64, ih] <;> finish [prd]
 
 theorem copy0Loop_step_spec (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀⦄
@@ -101,7 +101,7 @@ theorem poolAlloc0_spec (hp : p.lookup "pool_alloc0" = some poolAlloc0) (n : Nat
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, st64] <;>
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, ld64, st64] <;>
       finish [Alloc0OK, alloc0Q, alloc0Mem, Mem.ptop0, Mem.top]
 
 theorem poolCopy0_spec (hp : p.lookup "pool_copy0" = some poolCopy0)
@@ -113,7 +113,7 @@ theorem poolCopy0_spec (hp : p.lookup "pool_copy0" = some poolCopy0)
   rw [invoke_eq _ hp]
   simp only [callFn, poolCopy0]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, poolAlloc0_spec p ha n,
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, poolAlloc0_spec p ha n,
       copy0Loop_step_spec p n] <;>
     finish
 

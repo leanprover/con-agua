@@ -340,7 +340,7 @@ theorem bmg_spec (p : Prog) (hP : IndPartsProg4 p) (n : Nat) :
     rw [invoke_eq _ hP.mcGo]
     simp only [callFn, blockMemberCountsGo]
     sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         bmf_spec p hP n, blockCounts_spec p hP.alloc hP.copy hP.view hP.cons hP.piB hP.bcHead hP.bcPure
           hP.counts n, slCons_specW p hP.alloc hP.copy hP.cons n, ih] <;>
       finish (gen := 20) [rdW_eq]
@@ -480,7 +480,7 @@ theorem bmc_spec (p : Prog) (hP : IndPartsProg4 p) (n : Nat) (s₀ : St) (nPd k 
   rw [invoke_eq _ hP.mc]
   simp only [callFn, blockMemberCounts]
   sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, bmg_spec p hP n] <;>
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, bmg_spec p hP n] <;>
     finish (gen := 20) [bmcW]
 
 end L.Ind

@@ -147,7 +147,7 @@ theorem strCtorPre_spec (p : Prog) (hp : p.lookup "str_ctor_pre" = some strCtorP
   rw [invoke_eq _ hp]
   simp only [callFn, strCtorPreL]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
       callW_spec p n "pin_word", callW_spec p n "str_ls1", callW_spec p n "pin_at",
       callW_spec p n "const_e", callW_spec p n "intern_const", callW_spec p n "mk_app"] <;>
     finish (gen := 30) [preW]
@@ -247,7 +247,7 @@ theorem strConsSpine_spec (p : Prog) (hp : p.lookup "str_cons_spine" = some strC
   rw [invoke_eq _ hp]
   simp only [callFn, strConsSpineL]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
       callW_spec p n "str_utf8_char", callW_spec p n "str_cons_spine", callW_spec p n "rom_lit",
       callW_spec p n "mk_app"] <;>
     finish (gen := 20) [spineW]
@@ -393,7 +393,7 @@ theorem strLitCtor_spec (p : Prog) (hp : p.lookup "str_lit_ctor" = some strLitCt
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       callW_spec p n "str_ctor_pre", callW_spec p n "str_cons_spine", callW_spec p n "pin_at",
       callW_spec p n "const_e", callW_spec p n "mk_app", evalE_tld, tld, evalE_cnt, tcntM,
-        evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE] <;>
+        evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] <;>
     finish (gen := 20) [strCtorW, tierW, idxW]
 
 section ctor

@@ -85,7 +85,7 @@ theorem blockRecNamesUnreserved_spec (n : Nat) : ∀ (s₀ : St) (ro rl : Word),
     rw [invoke_eq _ hp]
     simp only [callFn, blockRecNamesUnreserved]
     sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         rrnF_spec p hrrn n, ih] <;>
       finish (gen := 20) [rdW_eq]
 
@@ -303,7 +303,7 @@ theorem blockShapeWithSort_specC (cR : CallM) (hcR : CallSpec p cR) (n : Nat) (s
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rd_spec, st64,
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rd_spec, st64,
       pinWord_specV p hpw n, hcR n "lvl_eq_c", iwAlloc_specW p ha n]
     all_goals subst_vars
     all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,

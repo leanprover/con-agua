@@ -93,7 +93,7 @@ theorem pdm_spec (p : Prog) (hM : MaProg p) (hp : p.lookup "pi_doms_mention_any"
     rw [invoke_eq _ hp]
     simp only [callFn, piDomsMentionAny]
     sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, eViewSpec4 p hM.view n,
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, eViewSpec4 p hM.view n,
         mentionsAnyConst_specK p hM.view hM.cont hM.find hM.put hM.go hM.node hM.clr hM.ma n, ih] <;>
       finish (gen := 20)
 
@@ -311,7 +311,7 @@ theorem brm_spec (p : Prog) (hM : MaProg p) (hpd : p.lookup "pi_doms_mention_any
     rw [invoke_eq _ hp]
     simp only [callFn, blockRawRecMember]
     sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, pdm_spec p hM hpd n, ih] <;>
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, pdm_spec p hM hpd n, ih] <;>
       finish (gen := 20) [rdW_eq, CWF]
 
 theorem brgo_spec (p : Prog) (hM : MaProg p) (hpd : p.lookup "pi_doms_mention_any" = some piDomsMentionAny)
@@ -327,7 +327,7 @@ theorem brgo_spec (p : Prog) (hM : MaProg p) (hpd : p.lookup "pi_doms_mention_an
     rw [invoke_eq _ hp]
     simp only [callFn, blockRawRecGo]
     sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, brm_spec p hM hpd hm n, ih] <;>
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, brm_spec p hM hpd hm n, ih] <;>
       finish (gen := 20) [rdW_eq]
 
 /-- The post of the memo walks: the result a `Bool` word, the twin's state kept, a memo left. -/
@@ -452,7 +452,7 @@ theorem brr_spec (p : Prog) (hM : MaProg p) (ha : p.lookup "iw_alloc" = some iwA
   rw [invoke_eq _ hp]
   simp only [callFn, blockRawRec]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       blockShapeMemberNames_spec p ha hc hn n, brgo_spec p hM hpd hm hg n] <;>
     finish (gen := 20) [brrW, rdW_eq]
 

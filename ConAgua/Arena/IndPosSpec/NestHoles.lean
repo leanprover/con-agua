@@ -44,7 +44,7 @@ theorem nhGo_spec (p : Prog) (hl : NhLook p) (k : Nat) :
   | succ k ih =>
     intro s₀ vis ctx mm off l oo ol
     simp only [invoke_eq _ hl.hgo, callFn, nestHolesGoL]
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rd_spec,
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rd_spec,
       envFind_specW p hl.hx hl.hg hl.hf k, instPisWith_spec p hl.hv hl.hip hl.hi1 k,
       internFVar_spec p hl.hff hl.hfp hl.hif k, slSnoc_specW p hl.ha hl.hc hl.hsn k, ih]
     all_goals subst_vars
@@ -61,7 +61,7 @@ theorem nestHoles_spec (p : Prog) (hl : NhLook p) (k : Nat) (s₀ : St) (vis ctx
       nhW k s₀.mem vis ctx = some ([r.headD 0, r.tail.headD 0, r.tail.tail.headD 0], s'.mem); ⊤⦄ := by
   simp only [invoke_eq _ hl.hp, callFn, nestHolesL]
   sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, nhGo_spec p hl k] <;>
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, nhGo_spec p hl k] <;>
     finish (gen := 20) [nhW, rdW_eq]
 
 /-- The params slice's end, as the words L reads. -/

@@ -59,7 +59,7 @@ l_model acE_spec (p : Prog) (hf : p.lookup "stuck_app_cong" = some stuckAppCongL
   fns [hf ↦ acE list]
   specs [callW_spec p n "get_app_args", callW_spec p n "get_app_fn"]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE] unified
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 /-! ## The refinements -/
@@ -205,7 +205,7 @@ l_model saE_spec (p : Prog) (hf : p.lookup "stuck_app" = some stuckAppL)
   fns [hf ↦ saE list]
   specs [acE_spec p hac n, siE_spec p hi hc hw hb hg ht hu hh hut n]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE] unified
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 /-- **`stuck_app` refines `defeqStuck`'s application arm (`stuckAppT`), both outcomes**: the errors

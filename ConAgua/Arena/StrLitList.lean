@@ -156,7 +156,7 @@ theorem strParamSort_spec (p : Prog) (hp : p.lookup "str_param_sort" = some strP
   rw [invoke_eq _ hp]
   simp only [callFn, strParamSortL]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
       callW_spec p n "intern_param", callW_spec p n "intern_succ", callW_spec p n "intern_sort"] <;>
     finish [psW]
 
@@ -396,7 +396,7 @@ theorem listTy_spec (p : Prog) (hp : p.lookup "list_ty_ok" = some listTyOkL) (n 
   rw [invoke_eq _ hp]
   simp only [callFn, listTyOkL]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       callW_spec p n "str_cv", callW_spec p n "str_param_sort", callW_spec p n "e_view"] <;>
     finish (gen := 20) [listK0_f, listK0_t, listK1_f, listK1_t, listK2_s, faEqA_f, faEqA_t, faEqK_s,
       rdW_eq,
@@ -409,7 +409,7 @@ theorem listNil_spec (p : Prog) (hp : p.lookup "list_nil_ty_ok" = some listNilTy
     ⦃fun r s' => LocEq s' s₀ ∧ nilK0 p n s₀.mem found q = some (r.headD 0, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, listNilTyOkL]
-  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+  vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
     callW_spec p n "str_cv", callW_spec p n "str_param_sort", callW_spec p n "str_ls1",
     callW_spec p n "pin_at", callW_spec p n "e_view"] <;>
   simp_all [-UInt64.toNat_add, nilK0, nilK1, nilK2, nilK3, nilK4, nilA, nilAK, nilB, nilBK, nilC,
@@ -424,7 +424,7 @@ theorem listCons_spec (p : Prog) (hp : p.lookup "list_cons_ty_ok" = some listCon
     ⦃fun r s' => LocEq s' s₀ ∧ consK0 p n s₀.mem found q = some (r.headD 0, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, listConsTyOkL]
-  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+  vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
     callW_spec p n "str_cv", callW_spec p n "str_param_sort", callW_spec p n "str_ls1",
     callW_spec p n "pin_at", callW_spec p n "intern_bvar", callW_spec p n "intern_const",
     callW_spec p n "mk_app", callW_spec p n "e_view"] <;>

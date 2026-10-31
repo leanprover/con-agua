@@ -54,6 +54,8 @@ def idxW (h : Word) : Word := h &&& 0x43ffffff
 /-- The index of a wide word (an `app`): `(h + 2^30) mod 2^31` (a narrow word reads `2^30` or
 more). -/
 def idxA (h : Word) : Word := (h + 0x40000000) &&& 0x7fffffff
+/-- The index of any word, con-ron's `Idx.idxNat` (`idxGE`). -/
+def idxG (h : Word) : Word := h &&& ((0x3ffffff : Word) + ((h >>> 30) &&& 1) * 0x3c000000)
 /-- The shape bit: `1` for a wide word (con-ron's `Idx.isWide`). -/
 def wideW (h : Word) : Word := (h >>> 30) &&& 1
 /-- The constructor tag (con-ron's `Idx.tag`): `4` for a wide word, bits 29…26 of a narrow one,
@@ -108,6 +110,27 @@ theorem idxW_toNat_narrow (w : Word) (hw : w.toNat / 2 ^ 30 % 2 = 0) :
 /-- A wide word's narrow index is out of every narrow array's range. -/
 theorem idxW_wide (w : Word) (hw : w.toNat / 2 ^ 30 % 2 = 1) : 2 ^ 30 ≤ (idxW w).toNat := by
   rw [idxW_toNat, hw]; omega
+
+theorem idxG_toNat (w : Word) :
+    (idxG w).toNat = if w.toNat / 2 ^ 30 % 2 = 1 then w.toNat % 2 ^ 30 else w.toNat % 2 ^ 26 := by
+  have hb : ((w >>> 30) &&& 1).toNat = w.toNat / 2 ^ 30 % 2 := by
+    simp [UInt64.toNat_and, UInt64.toNat_shiftRight, Nat.shiftRight_eq_div_pow, Nat.and_one_is_mod]
+  unfold idxG
+  generalize (w >>> 30) &&& 1 = b at *
+  split
+  · have : b = 1 := UInt64.toNat_inj.mp (by simp; omega)
+    subst this
+    rw [show ((0x3ffffff : Word) + 1 * 0x3c000000) = (1073741823 : Word) from rfl, UInt64.toNat_and,
+      show (1073741823 : Word).toNat = 2 ^ 30 - 1 from rfl, Nat.and_two_pow_sub_one_eq_mod]
+  · have : b = 0 := UInt64.toNat_inj.mp (by simp; omega)
+    subst this
+    rw [show ((0x3ffffff : Word) + 0 * 0x3c000000) = (67108863 : Word) from rfl, UInt64.toNat_and,
+      show (67108863 : Word).toNat = 2 ^ 26 - 1 from rfl, Nat.and_two_pow_sub_one_eq_mod]
+
+/-- On a narrow word the generic index is the narrow one. -/
+theorem idxG_narrow (w : Word) (hw : w.toNat / 2 ^ 30 % 2 = 0) : idxG w = idxW w := by
+  apply UInt64.toNat_inj.mp
+  rw [idxG_toNat, idxW_toNat_narrow w hw, hw]; simp
 
 theorem idxA_toNat (w : Word) : (idxA w).toNat = (w.toNat + 2 ^ 30) % 2 ^ 31 := by
   simp only [idxA, UInt64.toNat_and]
@@ -178,6 +201,11 @@ theorem idxA_lt (h : Word) : idxA h < 0x80000000 := by
   rw [UInt64.lt_iff_toNat_lt, idxA_toNat]
   have : (0x80000000 : Word).toNat = 2 ^ 31 := rfl
   omega
+
+theorem idxG_lt (h : Word) : idxG h < 0x40000000 := by
+  rw [UInt64.lt_iff_toNat_lt, idxG_toNat]
+  have : (0x40000000 : Word).toNat = 2 ^ 30 := rfl
+  split <;> omega
 
 theorem mask_lt (w : Word) : (w &&& 4294967295).toNat < 2 ^ 32 := by
   rw [mask32_toNat]; omega
@@ -490,6 +518,18 @@ theorem evalE_idxAE (h : Expr) : evalE (idxAE h) = (do let x ← evalE h; pure (
 
 /-- `tagE` reads `h` three times; an expression's value does not depend on how often it is read
 (`evalE_spec`: it leaves the state alone). -/
+theorem evalE_idxGE (h : Expr) : evalE (idxGE h) = (do let x ← evalE h; pure (idxG x)) := by
+  apply StateT.ext; intro s
+  cases hr : (evalE h).run s with
+  | error err =>
+    simp only [idxGE, evalE, StateT.run_bind, hr]; rfl
+  | ok p =>
+    obtain ⟨v, s'⟩ := p
+    obtain ⟨hs, -⟩ := M.of_run' (P := fun t => t = s) rfl hr (evalE_spec h s)
+    subst hs
+    simp [idxGE, evalE, StateT.run_bind, hr, BinOp.eval, idxG]
+    simp only [bind, Except.bind, hr, Functor.map, Except.map]
+
 theorem evalE_tagE (h : Expr) : evalE (tagE h) = (do let x ← evalE h; pure (tagW x)) := by
   apply StateT.ext; intro s
   cases hr : (evalE h).run s with
@@ -533,6 +573,10 @@ theorem pval_ld_ex (s : St) (R : TRec) (t i : Expr) (f : Word) :
 @[lang_grind =] theorem Expr.pval_idxAE (s : St) (h : Expr) :
     Expr.pval s (idxAE h) = idxA (Expr.pval s h) := by
   simp [idxAE, Expr.pval, BinOp.eval, idxA]
+
+@[lang_grind =] theorem Expr.pval_idxGE (s : St) (h : Expr) :
+    Expr.pval s (idxGE h) = idxG (Expr.pval s h) := by
+  simp [idxGE, Expr.pval, BinOp.eval, idxG]
 
 @[lang_grind =] theorem Expr.pval_tagE (s : St) (h : Expr) :
     Expr.pval s (tagE h) = tagW (Expr.pval s h) := by

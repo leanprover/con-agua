@@ -347,7 +347,7 @@ l_model slMemo_spec (p : Prog) (hp : ILWProg p)
   fns [hp.sl ↦ ilwSlW]
   specs [memoFindG_spec lplSch p _ hp.ilplf n, memoPutG_spec lplSch p _ hp.ilplp n, callW_spec p n "lv_sub_int"]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rd_spec, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE]
+  extra [ld64_rd_spec, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
   finish [tierW, idxW]
 
 /-- The continuation after `lv_sub_int`, with the memo write as `msetG`. -/
@@ -363,7 +363,7 @@ l_model slsMemo_spec (p : Prog) (hp : ILWProg p)
   specs [memoFindG_spec lplsSch p _ hp.ilplsf n, memoPutG_spec lplsSch p _ hp.ilplsp n,
     lsNode_spec p hp.lsn n, callW_spec p n "sls_go", callW_spec p n "spn_ls"]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rd_spec, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE]
+  extra [ld64_rd_spec, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
   finish [tierW, idxW]
 
 /-- The continuation after `spn_ls`, with the memo write as `msetG`. -/
@@ -378,7 +378,7 @@ l_model lpFVar_spec (p : Prog) (hp : ILWProg p)
   specs [memoFindG_spec lpSch p _ hp.ilpf n, memoPutG_spec lpSch p _ hp.ilpp n,
     callW_spec p n "lp_go", callW_spec p n "intern_fvar"]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rd_spec, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE]
+  extra [ld64_rd_spec, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
   finish [tierW, idxW]
 
 l_model lpProj_spec (p : Prog) (hp : ILWProg p)
@@ -386,7 +386,7 @@ l_model lpProj_spec (p : Prog) (hp : ILWProg p)
   specs [memoFindG_spec lpSch p _ hp.ilpf n, memoPutG_spec lpSch p _ hp.ilpp n,
     callW_spec p n "lp_go", callW_spec p n "mk_proj"]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rd_spec, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE]
+  extra [ld64_rd_spec, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
   finish [tierW, idxW]
 
 l_model instLPCore_spec (p : Prog) (hp : ILWProg p)
@@ -394,7 +394,7 @@ l_model instLPCore_spec (p : Prog) (hp : ILWProg p)
   specs [callW_spec p n "keys_ok", callW_spec p n "ilp_clear", callW_spec p n "ilpl_clear", callW_spec p n "ilpls_clear",
     callW_spec p n "der_b", lsNode_spec p hp.lsn n, callW_spec p n "lp_go"]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rd_spec, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE]
+  extra [ld64_rd_spec, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
   heartbeats 1000000
 
 l_model instLP_spec (p : Prog) (hp : ILWProg p)

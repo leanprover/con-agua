@@ -538,7 +538,7 @@ theorem inst1W_spec {p : Prog} (hi : p.lookup "inst1" = some inst1W) (n : Nat) (
   rw [invoke_eq _ hi]
   simp only [callFn, inst1W]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, callW_spec p n "inst_entry"] <;>
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, callW_spec p n "inst_entry"] <;>
     finish [inst1WW]
 
 

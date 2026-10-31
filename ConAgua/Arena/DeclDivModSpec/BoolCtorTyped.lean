@@ -170,7 +170,7 @@ theorem gg_specW (p : Prog) (hb : BvbProg p) (hf : HfF p) (hp : p.lookup "ground
   rw [invoke_eq _ hp]
   simp only [callFn, groundGuardsL]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, lbbF_spec p hb n,
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, lbbF_spec p hb n,
       hffF_spec p hf n, hcl n "all_level_params_defined", hcl n "consts_resolve_ffast"] <;>
     finish (gen := 30) (instances := 10000) [dmGgW, ntBW]
 
@@ -182,7 +182,7 @@ theorem tpg_specW (p : Prog) (hb : BvbProg p) (hf : HfF p) (hp : p.lookup "type_
   rw [invoke_eq _ hp]
   simp only [callFn, typePinGuardL]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, callW_spec p n "env_find",
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, callW_spec p n "env_find",
       callW_spec p n "type_pin_stored", lbbF_spec p hb n, hffF_spec p hf n,
       hcl n "consts_resolve_ffast"] <;>
     finish (gen := 30) (instances := 10000) [dmTpgW, ntBW]

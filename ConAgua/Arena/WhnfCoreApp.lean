@@ -408,7 +408,7 @@ theorem betaPeelW_spec (p : Prog) (n : Nat) (s₀ : St) :
     rw [exec, step_while (w := betaPeelW) rfl]
     sym only [lang_grind, arena_grind] =>
       vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt, tcntM,
-        evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE, st64, ih,
+        evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE, st64, ih,
         callW_spec p n "inst_list", callW_spec p n "mk_app_n_from"] <;>
       finish [peelLoop, tierW, idxW, LoopOut.ofSig]
 
@@ -435,7 +435,7 @@ theorem betaPeel_spec (p : Prog) (hp : p.lookup "beta_peel" = some betaPeelL) (n
   rw [invoke_eq _ hp, betaPeelL_eq]
   simp only [callFn, betaPeelL']
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
       fun s => Triple.step_exec (betaPeelW_spec p (n + 1) s),
       callW_spec p n "inst_list"] <;>
     finish [betaPeelFnW, rdW, size_set64, LoopOut.ofSig]

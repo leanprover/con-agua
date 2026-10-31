@@ -145,7 +145,7 @@ theorem topLit_refines (g f : FnName) (F : Nat → Nat → Nat) (hg : p.lookup g
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalArgs, setLoc, setLocs, ld64, hF n, hI a₀ n] <;>
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalArgs, setLoc, setLocs, ld64, hF n, hI a₀ n] <;>
       finish [litArm]
 
 end generic
@@ -201,7 +201,7 @@ theorem natDivLit_refines (hg : p.lookup "nat_div_lit" = some natDivLit) (n : Na
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalArgs, setLoc, setLocs,
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalArgs, setLoc, setLocs,
         natDivmod_spec p hpl hps hpc hp1 hp2 hp3 hp4 hpt hpd n, hI a₀ n] <;>
       finish [litArm]
 
@@ -226,7 +226,7 @@ theorem natModLit_refines (hg : p.lookup "nat_mod_lit" = some natModLit) (n : Na
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalArgs, setLoc, setLocs,
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalArgs, setLoc, setLocs,
         natDivmod_spec p hpl hps hpc hp1 hp2 hp3 hp4 hpt hpd n, hI a₀ n] <;>
       finish [litArm]
 
@@ -294,7 +294,7 @@ theorem natPredLit_refines (hg : p.lookup "nat_pred_lit" = some natPredLit) (n :
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
       natSub_spec p hpl hps hpt hpn n, hI a₀ n]
     all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, Cmp.eval, BinOp.eval,
       Nat.reduceEqDiff, reduceIte, decide_eq_true_eq] at *)
@@ -378,7 +378,7 @@ theorem natPowLit_refines (hg : p.lookup "nat_pow_lit" = some natPowLit) (n : Na
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind, natop_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         natPow_spec p hph hpt hpm hpn n, hI a₀ n] <;>
       finish (gen := 20) [natPowArm, pv_of_lt_one, pow_of_eq_zero]
 
@@ -467,7 +467,7 @@ theorem natGcdLit_refines (hg : p.lookup "nat_gcd_lit" = some natGcdLit) (n : Na
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalArgs, setLoc, setLocs,
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalArgs, setLoc, setLocs,
         natGcd_spec p hpl hps hpc hp1 hp2 hp3 hp4 hpt hpd hps' hpg n, hI a₀ n] <;>
       finish [natGcdArm]
 
@@ -738,7 +738,7 @@ theorem natBeqLit_refinesA (n : Nat) (s₀ : St) (a₀ : AState) (hR : ArenaR s�
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind, natcmp_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
         natCmp_spec natArmProg rfl n, internConst_refinesA natArmProg rfl rfl rfl a₀ n] <;>
       finish [natBeqArm, constE, decE_eq]
 
@@ -772,7 +772,7 @@ theorem natBleLit_refinesA (n : Nat) (s₀ : St) (a₀ : AState) (hR : ArenaR s�
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind, natcmp_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
         natCmp_spec natArmProg rfl n, internConst_refinesA natArmProg rfl rfl rfl a₀ n] <;>
       finish [natBleArm, constE, decE_eq]
 

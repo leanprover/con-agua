@@ -134,7 +134,7 @@ theorem fvarBL_spec (p : Prog) (hp : AbsProg p) (hpf : p.lookup "fvar_b" = some 
   rw [invoke_eq _ hpf]
   simp only [callFn, L.Stubs.fvarBL]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, abFvb_spec p hp n] <;>
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, abFvb_spec p hp n] <;>
     finish
 
 /-- **`fvar_b`'s model refines `fvarB` under the stage relation** (replaces

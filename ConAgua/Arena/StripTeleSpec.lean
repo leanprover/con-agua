@@ -148,7 +148,7 @@ theorem stripPisLoop_spec (p : Prog) (hp : StripProg p) (f : Nat) (s₀ : St) :
   | succ f ih =>
     rw [exec, step_while (w := stripPisLoop) rfl]
     sym only [lang_grind, arena_grind] =>
-      vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, st64, ih,
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, step, evalE, evalC, evalArgs, setLoc, setLocs, st64, ih,
         eView_spec p (hp.get "e_view") f, iwAlloc_specW p (hp.get "iw_alloc") f] <;>
       finish [stripGoW_ge, stripGoW_tag, stripGoW_step]
 
@@ -162,7 +162,7 @@ theorem stripLamsLoop_spec (p : Prog) (hp : StripProg p) (f : Nat) (s₀ : St) :
   | succ f ih =>
     rw [exec, step_while (w := stripLamsLoop) rfl]
     sym only [lang_grind, arena_grind] =>
-      vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, st64, ih,
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, step, evalE, evalC, evalArgs, setLoc, setLocs, st64, ih,
         eView_spec p (hp.get "e_view") f, iwAlloc_specW p (hp.get "iw_alloc") f] <;>
       finish [stripGoW_ge, stripGoW_tag, stripGoW_step]
 
@@ -179,7 +179,7 @@ theorem stripPis_specW (p : Prog) (hp : StripProg p) (n : Nat) (s₀ : St) (k e 
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         fun s => Triple.step_exec (stripPisLoop_spec p hp (n + 1) s)] <;>
       finish [stripTW_succ]
 
@@ -193,7 +193,7 @@ theorem stripLams_specW (p : Prog) (hp : StripProg p) (n : Nat) (s₀ : St) (k e
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         fun s => Triple.step_exec (stripLamsLoop_spec p hp (n + 1) s)] <;>
       finish [stripTW_succ]
 

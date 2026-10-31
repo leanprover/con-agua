@@ -60,7 +60,7 @@ theorem pinAt_rd (p : Prog) (hp : p.lookup "pin_at" = some pinAtL) (n : Nat) (s�
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64] <;>
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64] <;>
       finish [rdW]
 
 /-- `pin_word(k)` reads `PINS[k]` and changes nothing. -/
@@ -74,7 +74,7 @@ theorem pinWord_rd (p : Prog) (hp : p.lookup "pin_word" = some pinWordL) (n : Na
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64] <;>
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64] <;>
       finish [rdW]
 
 theorem pinW_rdW (m : Mem) (k : Nat) (w : Word) (hk : w.toNat = k) :
@@ -116,7 +116,7 @@ l_model isBoolTrue_spec (p : Prog) (hp : DefEqLeafProg p)
   fns [hp.bt ↦ isBoolTrueW ro]
   specs [pinAt_rd p hp.pinat n, pinWord_rd p hp.pinword n]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rd_spec, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE] finish [tierW, idxW]
+  extra [ld64_rd_spec, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] finish [tierW, idxW]
 
 theorem isBoolTrue_run (m : Mem) (a : AState) (hR : ArenaR m a) (hP : PinsFull m a.pins)
     (h : Word) (hh : HW h) (w : Word) (hW : isBoolTrueW m h = some w) :
@@ -264,7 +264,7 @@ l_model isEagerReduce_spec (p : Prog) (hp : DefEqLeafProg p)
   fns [hp.eager ↦ isEagerReduceW ro]
   specs [pinAt_rd p hp.pinat n]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rd_spec, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE] finish [tierW, idxW]
+  extra [ld64_rd_spec, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] finish [tierW, idxW]
 
 theorem isEagerReduce_run (m : Mem) (a : AState) (hR : ArenaR m a) (hP : PinsFull m a.pins)
     (h : Word) (hh : HW h) (w : Word) (hW : isEagerReduceW m h = some w) :
@@ -381,7 +381,7 @@ l_model isNatZero_spec (p : Prog) (hp : DefEqLeafProg p)
   fns [hp.natzero ↦ isNatZeroW ro]
   specs [pinAt_rd p hp.pinat n, pinWord_rd p hp.pinword n]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rd_spec, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE] finish [tierW, idxW]
+  extra [ld64_rd_spec, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] finish [tierW, idxW]
 
 theorem isNatZero_run (m : Mem) (a : AState) (hR : ArenaR m a) (hP : PinsFull m a.pins)
     (e : Word) (he : HW e) (w : Word) (hW : isNatZeroW m e = some w) :
@@ -559,7 +559,7 @@ l_model headHint_spec (p : Prog) (hp : DefEqLeafProg p)
   fns [hp.hhint ↦ headHintW tuple]
   specs [callW_spec p n "get_app_fn", callW_spec p n "env_find"]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rd_spec, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE]
+  extra [ld64_rd_spec, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
 
 /-- The hint the twin reads off a lookup. -/
 def hintOf : Option IConstantInfo → ConLeche.ReducibilityHint
@@ -663,7 +663,7 @@ theorem hintLt_spec (p : Prog) (hp : DefEqLeafProg p) (n : Nat) (s₀ : St) (k1 
   rw [invoke_eq _ hp.hlt]
   simp only [callFn, hintLtL]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs] <;>
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs] <;>
     finish [hintLtW]
 
 theorem ite_bne (c : Prop) [Decidable c] : ((if c then (1 : Word) else 0) != 0) = decide c := by
@@ -767,7 +767,7 @@ theorem unfoldableHead_spec (p : Prog) (hp : DefEqLeafProg p) (n : Nat) (s₀ : 
   simp only [callFn, unfoldableHeadL]
   sym only [lang_grind, arena_grind, defeq_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt,
-      tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE,
+      tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE,
       callW_spec p n "get_app_fn", callW_spec p n "env_find", callW_spec p n "ls_node"] <;>
     finish [unfoldableHeadW, ufHeadF, ufEnvF, ufLsF, Option.bind_some, tierW, idxW, tfld, tcnt]
 
@@ -963,7 +963,7 @@ theorem sameConstHeads_spec (p : Prog) (hp : DefEqLeafProg p) (n : Nat) (s₀ : 
   rw [invoke_eq _ hp.sch]
   simp only [callFn, sameConstHeadsL]
   vcgen [exec, step, evalE, L.evalC_spec, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld,
-    evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE, callW_spec p n "get_app_fn"]
+    evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE, callW_spec p n "get_app_fn"]
   all_goals (try simp only [Cond.pval, Expr.pval, Expr.pval_cntE, del_rd64, St.setLoc_loc, St.setLoc_mem,
     St.setLocs_nil, St.setLocs_cons,
     Locals.init_nil, Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval,

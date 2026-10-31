@@ -47,7 +47,7 @@ l_model wtE_spec (p : Prog) (hP : WtProg p)
   specs [internFVar_spec p hP.ff hP.fp hP.ifv n, i1F_spec p hP.i1 n,
     slCons_specW p hP.alloc hP.copy hP.cons n]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
   heartbeats 4000000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 

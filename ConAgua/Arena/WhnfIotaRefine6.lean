@@ -32,7 +32,7 @@ theorem eRecGet_spec (p : Prog) (hp : p.lookup "e_rec_get" = some eRecGetL) (n :
   rw [invoke_eq _ hp]
   simp only [callFn, eRecGetL]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64] <;>
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64] <;>
     finish [eRecGetW, rdW]
 
 /-- Model of `const_name_of`. -/
@@ -49,7 +49,7 @@ theorem constNameOf_spec (p : Prog) (hp : p.lookup "const_name_of" = some constN
   simp only [callFn, constNameOfL]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt,
-      tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_tagE] <;>
+      tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] <;>
     finish [cnoW, tierW, idxW]
 
 /-- Model of `ind_caps_check` (callees at fuel `n`). -/
@@ -88,7 +88,7 @@ theorem indCapsCheck_spec (p : Prog) (hp : p.lookup "ind_caps_check" = some indC
     ⦃fun r s' => LocEq s' s₀ ∧ iccW p n s₀.mem indP us = some (r.headD 0, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, indCapsCheckL]
-  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+  vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
     callW_spec p n "e_rec_get", callW_spec p n "ls_node", callW_spec p n "caps_never_zero"] <;>
   simp_all [iccW, Cmp.eval, BinOp.eval, LocEq, St.setLocs_cons,
     St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Locals.init_cons_zero, Locals.init_cons_succ,
@@ -124,7 +124,7 @@ theorem iotaCtorNeverProp_spec (p : Prog)
     ⦃fun r s' => LocEq s' s₀ ∧ inpW p n s₀.mem vis ctorP us = some (r.headD 0, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, iotaCtorNeverPropL]
-  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+  vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
     callW_spec p n "e_rec_get", callW_spec p n "pi_result", callW_spec p n "get_app_fn",
     callW_spec p n "const_name_of", callW_spec p n "env_find",
     callW_spec p n "ind_caps_check"] <;>
@@ -575,7 +575,7 @@ theorem iotaCase3_spec (p : Prog) (hp : p.lookup "iota_case3" = some iotaCase3L)
   rw [invoke_eq _ hp]
   simp only [callFn, iotaCase3L]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       callW_spec p n "iota_ctor_never_prop"] <;>
     finish [icW]
 

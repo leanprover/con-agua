@@ -296,7 +296,7 @@ theorem certCtxPins_specW (p : Prog) (hp : p.lookup "cert_ctx_pins" = some certC
   rw [invoke_eq _ hp]
   simp only [callFn, certCtxPinsL]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64] <;>
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64] <;>
     finish (gen := 20) (instances := 10000) [certCtxPinsMem, rdW_eq]
 
 theorem certCtxPins_model {p : Prog} (hp : p.lookup "cert_ctx_pins" = some certCtxPinsL) {n : Nat}
@@ -320,7 +320,7 @@ theorem certCtxMain_specW (p : Prog) (hp : p.lookup "cert_ctx_main" = some certC
   rw [invoke_eq _ hp]
   simp only [callFn, certCtxMainL]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64] <;>
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64] <;>
     finish (gen := 20) (instances := 10000) [certCtxMainMem]
 
 theorem certCtxMain_model {p : Prog} (hp : p.lookup "cert_ctx_main" = some certCtxMainL) {n : Nat}
@@ -363,7 +363,7 @@ theorem certCtx_specW (p : Prog) (hp : p.lookup "cert_ctx" = some certCtxL) (n :
     ⦃fun r s' => LocEq s' s₀ ∧ certCtxW p n s₀.mem = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, certCtxL]
-  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
+  vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
       callW_spec p n "nat_op_pins", callW_spec p n "const_e", callW_spec p n "nat_var",
       callW_spec p n "nat_one", callW_spec p n "nat_ap1", callW_spec p n "iw_alloc",
       callW_spec p n "cert_ctx_pins", callW_spec p n "cert_ctx_main"]
