@@ -1,5 +1,6 @@
 import ConAgua.Arena.Frame
 import ConAgua.Arena.MemoLib
+import ConAgua.Arena.StoreGrow
 import Std.Tactic.BVDecide.Normalize.Prop
 
 /-!
@@ -1313,10 +1314,6 @@ theorem slot_ne_hdr (S : MemoSch) (m : Mem) (j k : Word) (hj1 : 1 ≤ j.toNat)
 theorem mstG_hdr (S : MemoSch) (m : Mem) (k v j : Word) (hk : k.toNat < 4) (hj1 : 1 ≤ j.toNat)
     (hj : j.toNat < slotsG S m) : mstG S (m.set64 S.arr k v) j = mstG S m j := by
   simp only [mstG, rdW_set64, slot_ne_hdr S m j k hj1 hj hk, false_and, and_false, ↓reduceIte]
-
-/-- A read past the end of an array is `0`. -/
-theorem rdW_oob (a : Array Word) (x : Word) (h : a.size ≤ x.toNat) : rdW a x = 0 := by
-  simp [rdW, Array.getElem?_eq_none h]
 
 /-- The header words `x < 3` after the four header writes: the write, or `0` past the end. -/
 theorem rd_hdr (S : MemoSch) (m : Mem) (a b c d x : Word) (hx : x.toNat < 3) :
