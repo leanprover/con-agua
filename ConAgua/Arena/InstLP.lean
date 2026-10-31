@@ -195,7 +195,7 @@ def lpGo : FunDecl := lfn (h, ko, kc, vo, vc, fu) locals (g, t, i, x, y, r) {
     return r
   };
   if g == 1 { if FVAR⟨t⟩.count <= i { abort }; r := call lp_fvar(h, ko, kc, vo, vc, fu - 1); return r };
-  if g == 4 { if APP⟨t⟩.count <= i { abort }; r := call lp_app(h, ko, kc, vo, vc, fu - 1); return r };
+  if g == 4 { i := ⟦h⟧.aidx; if APP⟨t⟩.count <= i { abort }; r := call lp_app(h, ko, kc, vo, vc, fu - 1); return r };
   if g == 5 { if LAM⟨t⟩.count <= i { abort }; r := call lp_lam(h, ko, kc, vo, vc, fu - 1); return r };
   if g == 6 { if FORALL⟨t⟩.count <= i { abort }; r := call lp_forall(h, ko, kc, vo, vc, fu - 1); return r };
   if g == 7 { if LET⟨t⟩.count <= i { abort }; r := call lp_let(h, ko, kc, vo, vc, fu - 1); return r };
@@ -225,7 +225,7 @@ def lpApp : FunDecl := lfn (h, ko, kc, vo, vc, fu) locals (fd, j, e0, t, i, f, a
   (fd, j, e0) := call ilp_find(h, 0);
   if fd != 0 { return LPMEMO.u64[j * 4 + 3] };
   t := ⟦h⟧.tier;
-  i := ⟦h⟧.idx;
+  i := ⟦h⟧.aidx;
   f := APP⟨t, i⟩.f;
   a := APP⟨t, i⟩.a;
   x := call lp_go(f, ko, kc, vo, vc, fu);

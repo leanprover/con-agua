@@ -62,7 +62,7 @@ theorem persFindMaybe_app (a : AState) (f x : EIdx) :
 /-- `internE` at an `app` node is the library's protocol, the persistent probe after the skip. -/
 theorem internE_app_run (f x : EIdx) (a : AState) :
     (internE (.app f x)).run a =
-      protoRun appLens (appKey f x) ETag.app (pfA a f x) (a.store.derOfView (.app f x))
+      protoRun appLens (appKey f x) ETag.app true (pfA a f x) (a.store.derOfView (.app f x))
         (.native "arena: expression constructor array full") a := by
   simp only [internE, internNodeE, EStore.find?, EStore.intern, ETables.find?, Tbl.find?,
     ETables.sizeOf, ETables.push, StateT.run_bind, StateT.run_get, pure_bind, persFindMaybe_app]
@@ -71,12 +71,13 @@ theorem internE_app_run (f x : EIdx) (a : AState) :
     simp only [hs, hc, Bool.false_eq_true, ↓reduceIte, appKey, protoRun, appLens] <;>
     (try split) <;> simp_all [withScrApps, withPersApps, fail,
       throwThe, MonadExceptOf.throw, StateT.run, set, StateT.set,
-      StateT.lift, bind, Except.bind, pure, Except.pure, StateT.bind, StateT.pure]
+      StateT.lift, bind, Except.bind, pure, Except.pure, StateT.bind, StateT.pure, mkS, capS,
+      ENodeView.cap, Idx.idxCap, Idx.wideCap]
 
 /-! ## The relation between L memory and the arena's `app` tables -/
 
 /-- The `app` schema: `AREC`, `ASLOT`, one packed word per node, the counts at `CTL[4 + t]`. -/
-def appSch : Schema := ⟨AREC, ASLOT, 1, 4, ETag.app⟩
+def appSch : Schema := ⟨AREC, ASLOT, 1, 4, ETag.app, true⟩
 
 theorem appSch_wf : appSch.WF :=
   ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide⟩
@@ -150,7 +151,7 @@ end query
 
 theorem apushOK_room (m : Mem) (t : Word) (h : apushOK m t = true) : PushRoom appSch m t := by
   simp only [apushOK, Bool.and_eq_true, decide_eq_true_eq] at h
-  simp only [PushRoom, cntW, acnt, appSch, len64_eq] at *
+  simp only [PushRoom, Schema.cap, capS, cntW, acnt, appSch, len64_eq] at *
   grind
 
 /-- **The `app` table's shape.** -/
@@ -158,6 +159,7 @@ theorem appCS_wf : appCS.WF where
   sch := appSch_wf
   P := by decide
   S := by decide
+  wtag _ := rfl
   col A h := by simp [appCS] at h
   colRoom A h := by simp [appCS] at h
   room m t h := (apushOK_room m t ((apushOK_eqC m t).trans h)).2

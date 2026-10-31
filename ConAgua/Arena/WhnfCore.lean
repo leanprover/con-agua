@@ -112,6 +112,7 @@ def whnfCoreStepL : FunDecl :=
   i := ⟦e⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
   if g == 4 {
+    i := ⟦e⟧.aidx;
     if APP⟨t⟩.count <= i { abort };
     (st, r) := call whnf_core_app(mode, cheap, vis, d, e);
     return (st, r)

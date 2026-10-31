@@ -569,7 +569,7 @@ def exprViewOkL : FunDecl := lfn (h) locals (t, x, g, c) {
     if g == 1 { c := FVAR⟨t⟩.count } else {
       if g == 2 { c := SORT⟨t⟩.count } else {
         if g == 3 { c := CONST⟨t⟩.count } else {
-          if g == 4 { c := APP⟨t⟩.count } else {
+          if g == 4 { x := ⟦h⟧.aidx; c := APP⟨t⟩.count } else {
             if g == 5 { c := LAM⟨t⟩.count } else {
               if g == 6 { c := FORALL⟨t⟩.count } else {
                 if g == 7 { c := LET⟨t⟩.count } else {

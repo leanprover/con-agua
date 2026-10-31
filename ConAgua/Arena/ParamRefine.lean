@@ -55,7 +55,7 @@ def paramLens : Lens ParamNode LDer .level where
 /-- `internLNode` at a `param` node is the library's protocol, with no skip. -/
 theorem internLNode_param_run (n : NIdx) (a : AState) :
     (internLNode (.param n)).run a =
-      protoRun paramLens (paramKey n) LTag.param a.store.lss.ls.pers.params.cons[paramKey n]?
+      protoRun paramLens (paramKey n) LTag.param false a.store.lss.ls.pers.params.cons[paramKey n]?
         (a.store.lss.ls.derOfView (.param n)) (.native "arena: level constructor array full") a := by
   simp only [internLNode, LStore.find?, LTables.find?, Tbl.find?, LTables.sizeOf, EStore.ls,
     EStore.internLevel, LsStore.internLevel, LStore.intern, LTables.push]
@@ -65,12 +65,13 @@ theorem internLNode_param_run (n : NIdx) (a : AState) :
       ↓reduceIte, paramKey, protoRun, paramLens] <;>
     (try split) <;> simp_all [withScrParams, withPersParams, fail,
       throwThe, MonadExceptOf.throw, StateT.run, set, StateT.set,
-      StateT.lift, bind, Except.bind, pure, Except.pure, StateT.bind, StateT.pure]
+      StateT.lift, bind, Except.bind, pure, Except.pure, StateT.bind, StateT.pure, mkS, capS,
+      ENodeView.cap, Idx.idxCap, Idx.wideCap]
 
 /-! ## The relation between L memory and the arena's `param` tables -/
 
 /-- The `param` schema: `PREC`, `PSLOT`, one word per node, the counts at `CTL[14 + t]`. -/
-def paramSch : Schema := ⟨PREC, PSLOT, 1, 14, LTag.param⟩
+def paramSch : Schema := ⟨PREC, PSLOT, 1, 14, LTag.param, false⟩
 
 theorem paramSch_wf : paramSch.WF :=
   ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide⟩
@@ -144,7 +145,7 @@ end query
 theorem ppushOK_room (m : Mem) (t : Word) (h : ppushOK m t = true) : PushRoom paramSch m t := by
   simp only [ppushOK, Bool.and_eq_true, decide_eq_true_eq] at h
   have := UInt64.toNat_shiftRight (m.len64 (tierA PREC t)) 0
-  simp only [PushRoom, cntW, pcnt, paramSch, len64_eq] at *
+  simp only [PushRoom, Schema.cap, capS, cntW, pcnt, paramSch, len64_eq] at *
   grind
 
 /-- **The `param` table's shape.** -/
@@ -152,6 +153,7 @@ theorem paramCS_wf : paramCS.WF where
   sch := paramSch_wf
   P := by decide
   S := by decide
+  wtag h := by simp [paramCS] at h
   col A h := by simp [paramCS] at h
   colRoom A h := by simp [paramCS] at h
   room m t h := (ppushOK_room m t ((ppushOK_eqC m t).trans h)).2
@@ -189,8 +191,8 @@ theorem pintern_hp (hC : ConstT2 paramLens (fun d : LDer => hpW d = 1) a) (w : W
     (hI : pinternW m u = some (w, m')) :
     ConstT2 paramLens (fun d : LDer => hpW d = 1) (AM.st (internLNode (.param (decI u))) a) := by
   obtain ⟨hok, -, -⟩ := pintern_correct m a hR u hu w m' hI
-  exact constMk paramLens _ a _ _ _ _ _ hC rfl
-    (AM.proto_casesG paramLens _ _ _ _ _ _ a (internLNode_param_run _ a) hok)
+  exact constMk paramLens _ a _ _ _ _ _ _ hC rfl
+    (AM.proto_casesG paramLens _ _ _ _ _ _ _ a (internLNode_param_run _ a) hok)
 end intern
 
 end L.Arena

@@ -41,7 +41,7 @@ theorem stage_of_name {β δ : Type} [BEq β] [Hashable β] {L : Lens β δ .nam
       a'.store.view = a.store.view ∧ (∀ b, (m'.arr64 b).size = (m.arr64 b).size) := by
   have hD₁ : DerR m' a := DerR.frameM _ _ m m' hf
     (fun b hb => by have := hA b hb; omega) a hS.check.arena.der
-  have hcs := AM.st_proto L op key tag pf d err a hrun hok
+  have hcs := AM.st_proto L op key tag wide pf d err a hrun hok
   have hDk : DerR m' (AM.st op a) ∧ cp (AM.st op a) = cp a := by
     rcases hcs with h | ⟨t, h⟩ | ⟨t, h⟩ <;> rw [h]
     · exact ⟨hD₁, rfl⟩
@@ -65,7 +65,7 @@ theorem internNAnon_stage (hS : StageR dn vis fe m a) (hI : nainternW m = some (
   have hI₂ := hI
   have hfr := consInternM_frame nanonCS_wf hI₂
   exact stage_of_name hS (internNNode_anon_run a) hok
-    (hR.lift_nanon _ _ _ _ hX hfr (AM.st_proto nanonLens _ _ _ _ _ _ a (internNNode_anon_run a) hok))
+    (hR.lift_nanon _ _ _ _ hX hfr (AM.st_proto nanonLens _ _ _ _ _ _ _ a (internNNode_anon_run a) hok))
     hres hfr (by simp [tier1, ConsSch.wset, nanonCS, NAREC, NASLOT]) (by simp [nanonCS]) (fun _ => ⟨DerR.lvl, rfl⟩)
     (fun _ => ⟨DerR.lvl, rfl⟩) (fun _ => ⟨rfl, rfl⟩)
     (hS.check.mode.frame hfr (by decide) (by decide))
@@ -80,7 +80,7 @@ theorem internNNum_stage (hS : StageR dn vis fe m a) (pre u : Word) (hpre : pre.
   have hI₂ := hI
   have hfr := consInternM_frame nnumCS_wf hI₂
   exact stage_of_name hS (internNNode_num_run _ _ a) hok
-    (hR.lift_nnum _ _ _ _ hX hfr (AM.st_proto nnumLens _ _ _ _ _ _ a (internNNode_num_run _ _ a) hok))
+    (hR.lift_nnum _ _ _ _ hX hfr (AM.st_proto nnumLens _ _ _ _ _ _ _ a (internNNode_num_run _ _ a) hok))
     hres hfr (by simp [tier1, ConsSch.wset, nnumCS, NNREC, NNSLOT]) (by simp [nnumCS]) (fun _ => ⟨DerR.lvl, rfl⟩)
     (fun _ => ⟨DerR.lvl, rfl⟩) (fun _ => ⟨rfl, rfl⟩)
     (hS.check.mode.frame hfr (by decide) (by decide))
@@ -100,7 +100,7 @@ theorem internSucc_stage (hS : StageR dn vis fe m a) (u : Word) (hu : u.toNat < 
   have hfr := sinternW_frame m u _ _ hI
   exact stage_of_level hS (internLNode_succ_run _ a) hok
     (hR.lift_succ _ _ _ _ ⟨hX, sintern_hp m a hR.succ u hu hR.succHp (lvlHPW_ok m a hR u hu) _ _ hI⟩
-      hfr (AM.st_proto succLens _ _ _ _ _ _ a (internLNode_succ_run _ a) hok))
+      hfr (AM.st_proto succLens _ _ _ _ _ _ _ a (internLNode_succ_run _ a) hok))
     hres hfr (by simp [tier1, SREC, SSLOT, SHP]) (by simp) (fun _ => ⟨DerR.lvl, rfl⟩)
     (fun _ => ⟨DerR.lvl, rfl⟩)
     (hS.check.mode.frame hfr (by decide) (by decide))

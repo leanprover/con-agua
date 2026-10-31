@@ -60,7 +60,7 @@ def appFillLoop : Stmt := lblk (e, o, n, t, x) {
   while n != 0 {
     n -= 1;
     t := ⟦e⟧.tier;
-    x := ⟦e⟧.idx;
+    x := ⟦e⟧.aidx;
     SPN.u64[o + n] := APP⟨t, x⟩.a;
     e := APP⟨t, x⟩.f
   }
@@ -227,7 +227,7 @@ def appFillNLoop : Stmt := lblk (e, o, n, t, x) {
   while n != 0 {
     n -= 1;
     t := ⟦e⟧.tier;
-    x := ⟦e⟧.idx;
+    x := ⟦e⟧.aidx;
     SPN.u64[o + n] := e;
     e := APP⟨t, x⟩.f
   }

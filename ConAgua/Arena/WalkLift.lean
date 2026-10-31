@@ -66,7 +66,7 @@ def i1lGo : FunDecl := lfn (h, d, v, fu) locals (x, g, t, i, r) {
   if g == 2 { if SORT⟨t⟩.count <= i { abort }; return h };
   if g == 3 { if CONST⟨t⟩.count <= i { abort }; return h };
   if g == 8 { if LIT⟨t⟩.count <= i { abort }; return h };
-  if g == 4 { if APP⟨t⟩.count <= i { abort }; r := call i1l_app(h, d, v, fu - 1); return r };
+  if g == 4 { i := ⟦h⟧.aidx; if APP⟨t⟩.count <= i { abort }; r := call i1l_app(h, d, v, fu - 1); return r };
   if g == 5 { if LAM⟨t⟩.count <= i { abort }; r := call i1l_lam(h, d, v, fu - 1); return r };
   if g == 6 { if FORALL⟨t⟩.count <= i { abort }; r := call i1l_forall(h, d, v, fu - 1); return r };
   if g == 7 { if LET⟨t⟩.count <= i { abort }; r := call i1l_let(h, d, v, fu - 1); return r };
@@ -80,7 +80,7 @@ def i1lApp : FunDecl := lfn (h, d, v, fu) locals (fd, j, e0, t, i, f, a, x, y, r
   (fd, j, e0) := call i1l_find(h, d);
   if fd != 0 { return ILFM.u64[j * 4 + 3] };
   t := ⟦h⟧.tier;
-  i := ⟦h⟧.idx;
+  i := ⟦h⟧.aidx;
   f := APP⟨t, i⟩.f;
   a := APP⟨t, i⟩.a;
   x := call i1l_go(f, d, v, fu);

@@ -75,8 +75,8 @@ def derBW (m : Mem) (h : Word) : Word :=
     if tcnt m BVAR (tierW h) ≤ idxW h then 0
     else satSuccW (tfld m BVAR (tierW h) (idxW h) 0)
   else if tagW h = 4 then
-    if tcnt m APP (tierW h) ≤ idxW h then 0
-    else pcol m ADER (tierW h) (idxW h) &&& 32767
+    if tcnt m APP (tierW h) ≤ idxA h then 0
+    else pcol m ADER (tierW h) (idxA h) &&& 32767
   else if tagW h = 5 then
     if tcnt m LAM (tierW h) ≤ idxW h then 0
     else pcol m LADER (tierW h) (idxW h) &&& 32767
@@ -101,8 +101,8 @@ def derFW (m : Mem) (h : Word) : Word :=
     if tcnt m FVAR (tierW h) ≤ idxW h then 0
     else satSuccW (tfld m FVAR (tierW h) (idxW h) 0)
   else if tagW h = 4 then
-    if tcnt m APP (tierW h) ≤ idxW h then 0
-    else (pcol m ADER (tierW h) (idxW h) >>> 15) &&& 32767
+    if tcnt m APP (tierW h) ≤ idxA h then 0
+    else (pcol m ADER (tierW h) (idxA h) >>> 15) &&& 32767
   else if tagW h = 5 then
     if tcnt m LAM (tierW h) ≤ idxW h then 0
     else (pcol m LADER (tierW h) (idxW h) >>> 15) &&& 32767
@@ -127,7 +127,7 @@ def derB : FunDecl := lfn (h) locals (g, t, i, x) {
   t := ⟦h⟧.tier;
   i := ⟦h⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { return (0, 0, 0) };
-  if g == 4 { if APP⟨t⟩.count <= i { return (0, 0, 0) }; x := ADER⟨t⟩.u32[i]; return (x & 32767, (x >> 15) & 32767, x >> 30) };
+  if g == 4 { i := ⟦h⟧.aidx; if APP⟨t⟩.count <= i { return (0, 0, 0) }; x := ADER⟨t⟩.u32[i]; return (x & 32767, (x >> 15) & 32767, x >> 30) };
   if g == 0 {
     if BVAR⟨t⟩.count <= i { return (0, 0, 0) };
     x := BVAR⟨t, i⟩.i;
@@ -158,7 +158,7 @@ def derBv : FunDecl := lfn (h) locals (g, t, i, x) {
   t := ⟦h⟧.tier;
   i := ⟦h⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { return 0 };
-  if g == 4 { if APP⟨t⟩.count <= i { return 0 }; x := ADER⟨t⟩.u32[i]; return x & 32767 };
+  if g == 4 { i := ⟦h⟧.aidx; if APP⟨t⟩.count <= i { return 0 }; x := ADER⟨t⟩.u32[i]; return x & 32767 };
   if g == 0 {
     if BVAR⟨t⟩.count <= i { return 0 };
     x := BVAR⟨t, i⟩.i;
@@ -754,7 +754,7 @@ def mkApp : FunDecl := lfn (f, a) locals (x, y, s, r, q, xf, yf, xl, yl, tr) {
   r := call intern_app(f, a);
   if CTL.u64[4] + CTL.u64[5] != s {
     tr := ⟦r⟧.tier;
-    q := ⟦r⟧.idx;
+    q := ⟦r⟧.aidx;
     if len(ADER⟨tr⟩) * 2 <= q { abort };
     ADER⟨tr⟩.u32[q] := 0;
     (x, xf, xl) := call der_b(f);

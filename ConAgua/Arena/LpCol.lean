@@ -127,7 +127,7 @@ def exprLPW (m : Mem) (h : Word) : Word :=
     (if idxW h < tcnt m CONST (tierW h) then tfld m CONST_LP (tierW h) (idxW h) 0
      else 0)
   else if tagW h = 4 then
-    (if idxW h < tcnt m APP (tierW h) then pcol m ADER (tierW h) (idxW h) >>> 30
+    (if idxA h < tcnt m APP (tierW h) then pcol m ADER (tierW h) (idxA h) >>> 30
      else 0)
   else if tagW h = 5 then
     (if idxW h < tcnt m LAM (tierW h) then pcol m LADER (tierW h) (idxW h) >>> 30
@@ -266,7 +266,7 @@ def lpBlkF : Stmt := lblk (t, u, ty, j, c, k, x, g, ti, ix) {
     if g == 1 { if ix < FVAR⟨ti⟩.count { x := FVAR_LP⟨ti, ix⟩ } }
     else if g == 2 { if ix < SORT⟨ti⟩.count { x := SORT_LP⟨ti, ix⟩ } }
     else if g == 3 { if ix < CONST⟨ti⟩.count { x := CONST_LP⟨ti, ix⟩ } }
-    else if g == 4 { if ix < APP⟨ti⟩.count { x := ADER⟨ti⟩.u32[ix] >> 30 } }
+    else if g == 4 { ix := ⟦ty⟧.aidx; if ix < APP⟨ti⟩.count { x := ADER⟨ti⟩.u32[ix] >> 30 } }
     else if g == 5 { if ix < LAM⟨ti⟩.count { x := LADER⟨ti⟩.u32[ix] >> 30 } }
     else if g == 6 { if ix < FORALL⟨ti⟩.count { x := FADER⟨ti⟩.u32[ix] >> 30 } }
     else if g == 7 { if ix < LET⟨ti⟩.count { x := LEDER⟨ti⟩.u32[ix] >> 30 } }

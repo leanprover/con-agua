@@ -57,7 +57,7 @@ def nnumLens : Lens NumNode UInt64 .name where
 `internLNode`). -/
 theorem internNNode_num_run (pre : NIdx) (n : Nat) (a : AState) :
     (internNNode (.num pre n)).run a =
-      protoRun nnumLens (nnKey pre n) NTag.num a.store.lss.ls.ns.pers.nums.cons[nnKey pre n]?
+      protoRun nnumLens (nnKey pre n) NTag.num false a.store.lss.ls.ns.pers.nums.cons[nnKey pre n]?
         (a.store.lss.ls.ns.derOfView (.num pre n)) (.native "arena: name constructor array full")
         a := by
   simp only [internNNode, NStore.find?, NTables.find?, Tbl.find?, NTables.sizeOf, EStore.ns,
@@ -69,12 +69,13 @@ theorem internNNode_num_run (pre : NIdx) (n : Nat) (a : AState) :
       ↓reduceIte, nnKey, protoRun, nnumLens] <;>
     (try split) <;> simp_all [withScrNNums, withPersNNums, fail,
       throwThe, MonadExceptOf.throw, StateT.run, set, StateT.set,
-      StateT.lift, bind, Except.bind, pure, Except.pure, StateT.bind, StateT.pure]
+      StateT.lift, bind, Except.bind, pure, Except.pure, StateT.bind, StateT.pure, mkS, capS,
+      ENodeView.cap, Idx.idxCap, Idx.wideCap]
 
 /-! ## The relation between L memory and the arena's `num` tables -/
 
 /-- The `num` schema: `NNREC`, `NNSLOT`, two words per node, the counts at `CTL[38 + t]`. -/
-def nnumSch : Schema := ⟨NNREC, NNSLOT, 2, 38, NTag.num⟩
+def nnumSch : Schema := ⟨NNREC, NNSLOT, 2, 38, NTag.num, false⟩
 
 theorem nnumSch_wf : nnumSch.WF :=
   ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide⟩
@@ -164,7 +165,7 @@ end query
 theorem nnpushOK_room (m : Mem) (t : Word) (h : nnpushOK m t = true) : PushRoom nnumSch m t := by
   simp only [nnpushOK, Bool.and_eq_true, decide_eq_true_eq] at h
   have := UInt64.toNat_shiftRight (m.len64 (tierA NNREC t)) 1
-  simp only [PushRoom, cntW, nncnt, nnumSch, len64_eq] at *
+  simp only [PushRoom, Schema.cap, capS, cntW, nncnt, nnumSch, len64_eq] at *
   grind
 
 /-- **The `nnum` table's shape.** -/
@@ -172,6 +173,7 @@ theorem nnumCS_wf : nnumCS.WF where
   sch := nnumSch_wf
   P := by decide
   S := by decide
+  wtag h := by simp [nnumCS] at h
   col A h := by simp [nnumCS] at h
   colRoom A h := by simp [nnumCS] at h
   room m t h := (nnpushOK_room m t ((nnpushOK_eqC m t).trans h)).2

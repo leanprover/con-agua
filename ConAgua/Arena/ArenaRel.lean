@@ -791,7 +791,7 @@ theorem internApp_refinesA (p : Prog) (hpf : p.lookup "app_find" = some appFind)
   subst hs
   obtain ⟨hok, hX, hres⟩ := aintern_correct s.mem a₀ hR.app f x hf hx _ _ hI
   exact ⟨hloc, hok, hR.lift_app _ _ _ _ hX (consInternM_frame appCS_wf hI)
-    (AM.st_proto appLens _ _ _ _ _ _ a₀ (internE_app_run _ _ a₀) hok), hres⟩
+    (AM.st_proto appLens _ _ _ _ _ _ _ a₀ (internE_app_run _ _ a₀) hok), hres⟩
 
 /-- `intern_*` for `sort` refines its arena interning under `ArenaR`. -/
 @[refines_part ConRon.Arena.internE "sort"]
@@ -810,7 +810,7 @@ theorem internSort_refinesA (p : Prog) (hpf : p.lookup "sort_find" = some sortFi
   obtain ⟨hok, hX, hres⟩ := sointern_correct s.mem a₀ hR.sort u hu _ _ hI
   exact ⟨hloc, hok, hR.lift_sort _ _ _ _ ⟨hX, sointern_lp s.mem a₀ hR.sort u hu hR.sortLp
       (lvlHPW_ok s.mem a₀ hR u hu) _ _ hI⟩ (sointernW_frame _ _ _ _ hI)
-    (AM.st_proto sortLens _ _ _ _ _ _ a₀ (internE_sort_run _ a₀) hok), hres⟩
+    (AM.st_proto sortLens _ _ _ _ _ _ _ a₀ (internE_sort_run _ a₀) hok), hres⟩
 
 /-- `intern_*` for `const` refines its arena interning under `ArenaR`. -/
 @[refines_part ConRon.Arena.internE "const"]
@@ -830,7 +830,7 @@ theorem internConst_refinesA (p : Prog) (hpf : p.lookup "const_find" = some cons
   obtain ⟨hok, hX, hres⟩ := ceintern_correct s.mem a₀ hR.const f x hf hx _ _ hI
   exact ⟨hloc, hok, hR.lift_const _ _ _ _ ⟨hX, ceintern_lp s.mem a₀ hR.const f x hf hx hR.constLp
       (lsHPW_ok s.mem a₀ hR x hx) _ _ hI⟩ (ceinternW_frame _ _ _ _ _ hI)
-    (AM.st_proto constLens _ _ _ _ _ _ a₀ (internE_const_run _ _ a₀) hok), hres⟩
+    (AM.st_proto constLens _ _ _ _ _ _ _ a₀ (internE_const_run _ _ a₀) hok), hres⟩
 
 /-- `intern_*` for `letE` refines its arena interning under `ArenaR`. -/
 @[refines_part ConRon.Arena.internE "letE"]
@@ -850,7 +850,7 @@ theorem internLet_refinesA (p : Prog) (hpf : p.lookup "letE_find" = some letFind
   subst hs
   obtain ⟨hok, hX, hres⟩ := leintern_correct s.mem a₀ hR.letE ty val body hty hval hbody _ _ hI
   exact ⟨hloc, hok, hR.lift_letE _ _ _ _ hX (consInternM_frame letCS_wf hI)
-    (AM.st_proto letLens _ _ _ _ _ _ a₀ (internE_let_run _ _ _ a₀) hok), hres⟩
+    (AM.st_proto letLens _ _ _ _ _ _ _ a₀ (internE_let_run _ _ _ a₀) hok), hres⟩
 
 /-- `intern_*` for `bvar` refines its arena interning under `ArenaR`. -/
 @[refines_part ConRon.Arena.internE "bvar"]
@@ -868,7 +868,7 @@ theorem internBVar_refinesA (p : Prog) (hpf : p.lookup "bvar_find" = some bvarFi
   subst hs
   obtain ⟨hok, hX, hres⟩ := bintern_correct s.mem a₀ hR.bvar u _ _ hI
   exact ⟨hloc, hok, hR.lift_bvar _ _ _ _ hX (consInternM_frame bvarCS_wf hI)
-    (AM.st_proto bvarLens _ _ _ _ _ _ a₀ (internE_bvar_run _ a₀) hok), hres⟩
+    (AM.st_proto bvarLens _ _ _ _ _ _ _ a₀ (internE_bvar_run _ a₀) hok), hres⟩
 
 /-- `intern_*` for `zero` refines its arena interning under `ArenaR`. -/
 @[refines_part ConRon.Arena.internLNode "zero"]
@@ -887,7 +887,7 @@ theorem internZero_refinesA (p : Prog) (hpf : p.lookup "zero_find" = some zeroFi
   obtain ⟨hok, hX, hres⟩ := zintern_correct s.mem a₀ hR.zero _ _ hI
   have hL := zintern_hp s.mem a₀ hR.zero hR.zeroHp _ _ hI
   exact ⟨hloc, hok, hR.lift_zero _ _ _ _ ⟨hX, hL⟩ (consInternM_frame zeroCS_wf hI)
-    (AM.st_proto zeroLens _ _ _ _ _ _ a₀ (internLNode_zero_run a₀) hok), hres⟩
+    (AM.st_proto zeroLens _ _ _ _ _ _ _ a₀ (internLNode_zero_run a₀) hok), hres⟩
 
 /-- `intern_*` for `succ` refines its arena interning under `ArenaR`. -/
 @[refines_part ConRon.Arena.internLNode "succ"]
@@ -906,7 +906,7 @@ theorem internSucc_refinesA (p : Prog) (hpf : p.lookup "succ_find" = some succFi
   obtain ⟨hok, hX, hres⟩ := sintern_correct s.mem a₀ hR.succ u hu _ _ hI
   exact ⟨hloc, hok, hR.lift_succ _ _ _ _ ⟨hX, sintern_hp s.mem a₀ hR.succ u hu hR.succHp
       (lvlHPW_ok s.mem a₀ hR u hu) _ _ hI⟩ (sinternW_frame _ _ _ _ hI)
-    (AM.st_proto succLens _ _ _ _ _ _ a₀ (internLNode_succ_run _ a₀) hok), hres⟩
+    (AM.st_proto succLens _ _ _ _ _ _ _ a₀ (internLNode_succ_run _ a₀) hok), hres⟩
 
 /-- `intern_*` for `max` refines its arena interning under `ArenaR`. -/
 @[refines_part ConRon.Arena.internLNode "max"]
@@ -926,7 +926,7 @@ theorem internMax_refinesA (p : Prog) (hpf : p.lookup "max_find" = some maxFind)
   obtain ⟨hok, hX, hres⟩ := mintern_correct s.mem a₀ hR.max u v hu hv _ _ hI
   exact ⟨hloc, hok, hR.lift_max _ _ _ _ ⟨hX, mintern_hp s.mem a₀ hR.max u v hu hv hR.maxHp
       (lvlHPW_or s.mem a₀ hR u v hu hv) _ _ hI⟩ (minternW_frame _ _ _ _ _ hI)
-    (AM.st_proto maxLens _ _ _ _ _ _ a₀ (internLNode_max_run _ _ a₀) hok), hres⟩
+    (AM.st_proto maxLens _ _ _ _ _ _ _ a₀ (internLNode_max_run _ _ a₀) hok), hres⟩
 
 /-- `intern_*` for `imax` refines its arena interning under `ArenaR`. -/
 @[refines_part ConRon.Arena.internLNode "imax"]
@@ -946,7 +946,7 @@ theorem internImax_refinesA (p : Prog) (hpf : p.lookup "imax_find" = some imaxFi
   obtain ⟨hok, hX, hres⟩ := imintern_correct s.mem a₀ hR.imax u v hu hv _ _ hI
   exact ⟨hloc, hok, hR.lift_imax _ _ _ _ ⟨hX, imintern_hp s.mem a₀ hR.imax u v hu hv hR.imaxHp
       (lvlHPW_or s.mem a₀ hR u v hu hv) _ _ hI⟩ (iminternW_frame _ _ _ _ _ hI)
-    (AM.st_proto imaxLens _ _ _ _ _ _ a₀ (internLNode_imax_run _ _ a₀) hok), hres⟩
+    (AM.st_proto imaxLens _ _ _ _ _ _ _ a₀ (internLNode_imax_run _ _ a₀) hok), hres⟩
 
 /-- `intern_*` for `param` refines its arena interning under `ArenaR`. -/
 @[refines_part ConRon.Arena.internLNode "param"]
@@ -965,7 +965,7 @@ theorem internParam_refinesA (p : Prog) (hpf : p.lookup "param_find" = some para
   obtain ⟨hok, hX, hres⟩ := pintern_correct s.mem a₀ hR.param u hu _ _ hI
   have hL := pintern_hp s.mem a₀ hR.param u hu hR.paramHp _ _ hI
   exact ⟨hloc, hok, hR.lift_param _ _ _ _ ⟨hX, hL⟩ (consInternM_frame paramCS_wf hI)
-    (AM.st_proto paramLens _ _ _ _ _ _ a₀ (internLNode_param_run _ a₀) hok), hres⟩
+    (AM.st_proto paramLens _ _ _ _ _ _ _ a₀ (internLNode_param_run _ a₀) hok), hres⟩
 
 /-- `intern_ls` refines `internLsNode` under `ArenaR`. -/
 @[refines ConRon.Arena.internLsNode]
@@ -993,7 +993,7 @@ theorem internLs_refinesA (p : Prog) (hph : p.lookup "lit_hash" = some litHash)
   obtain ⟨hok, hX, hres⟩ := lsintern_correct s.mem a₀ hR.lit.1 hR.ls o l hq us hk hq0 _ _ hI
   exact ⟨hloc, hok, hR.lift_ls _ _ _ _ ⟨hX, lsintern_hp s.mem a₀ hR.lit.1 hR.ls o l hq us hk hq0 hR.lsHp
       (lsOrW_ok s.mem a₀ hR o l hq us hk) _ _ hI⟩ (lsinternW_frame _ _ _ _ _ hI)
-    (AM.st_proto lsLens _ _ _ _ _ _ a₀ (internLsNode_run _ a₀) hok), hres⟩
+    (AM.st_proto lsLens _ _ _ _ _ _ _ a₀ (internLsNode_run _ a₀) hok), hres⟩
 
 /-- `intern_nstr` refines `internNNode (.str _ _)` under `ArenaR`. -/
 @[refines_part ConRon.Arena.internNNode "str"]
@@ -1020,7 +1020,7 @@ theorem internNStr_refinesA (p : Prog) (hph : p.lookup "lit_hash" = some litHash
   subst hs
   obtain ⟨hok, hX, hres⟩ := nsintern_correct s'.mem a₀ hR.lit.1 hR.nstr q o l hqw hq s hk hq0 _ _ hI
   exact ⟨hloc, hok, hR.lift_nstr _ _ _ _ hX (consInternM_frame nstrCS_wf hI)
-    (AM.st_proto nstrLens _ _ _ _ _ _ a₀ (internNNode_str_run _ _ a₀) hok), hres⟩
+    (AM.st_proto nstrLens _ _ _ _ _ _ _ a₀ (internNNode_str_run _ _ a₀) hok), hres⟩
 
 /-- `intern_*` for name `anonymous` refines its arena interning under `ArenaR`. -/
 @[refines_part ConRon.Arena.internNNode "anon"]
@@ -1038,7 +1038,7 @@ theorem internNAnon_refinesA (p : Prog) (hpf : p.lookup "nanon_find" = some nano
   subst hs
   obtain ⟨hok, hX, hres⟩ := naintern_correct s.mem a₀ hR.nanon _ _ hI
   exact ⟨hloc, hok, hR.lift_nanon _ _ _ _ hX (consInternM_frame nanonCS_wf hI)
-    (AM.st_proto nanonLens _ _ _ _ _ _ a₀ (internNNode_anon_run a₀) hok), hres⟩
+    (AM.st_proto nanonLens _ _ _ _ _ _ _ a₀ (internNNode_anon_run a₀) hok), hres⟩
 
 /-- `intern_*` for name `num` refines its arena interning under `ArenaR`. -/
 @[refines_part ConRon.Arena.internNNode "num"]
@@ -1058,7 +1058,7 @@ theorem internNNum_refinesA (p : Prog) (hpf : p.lookup "nnum_find" = some nnumFi
   subst hs
   obtain ⟨hok, hX, hres⟩ := nnintern_correct s.mem a₀ hR.nnum pre u hpre _ _ hI
   exact ⟨hloc, hok, hR.lift_nnum _ _ _ _ hX (consInternM_frame nnumCS_wf hI)
-    (AM.st_proto nnumLens _ _ _ _ _ _ a₀ (internNNode_num_run _ _ a₀) hok), hres⟩
+    (AM.st_proto nnumLens _ _ _ _ _ _ _ a₀ (internNNode_num_run _ _ a₀) hok), hres⟩
 
 /-- `intern_*` for `forallE` refines its arena interning under `ArenaR`. -/
 @[refines_part ConRon.Arena.internE "forallE"]
@@ -1077,7 +1077,7 @@ theorem internForall_refinesA (p : Prog) (hpf : p.lookup "forall_find" = some fo
   subst hs
   obtain ⟨hok, hX, hres⟩ := faintern_correct s.mem a₀ hR.forallE ty body hty hbody _ _ hI
   exact ⟨hloc, hok, hR.lift_forallE _ _ _ _ hX (consInternM_frame forallCS_wf hI)
-    (AM.st_proto forallLens _ _ _ _ _ _ a₀ (internE_forall_run _ _ a₀) hok), hres⟩
+    (AM.st_proto forallLens _ _ _ _ _ _ _ a₀ (internE_forall_run _ _ a₀) hok), hres⟩
 
 /-- `intern_*` for `fvar` refines its arena interning under `ArenaR`. -/
 @[refines_part ConRon.Arena.internE "fvar"]
@@ -1097,7 +1097,7 @@ theorem internFVar_refinesA (p : Prog) (hpf : p.lookup "fvar_find" = some fvarFi
   obtain ⟨hok, hX, hres⟩ := fvintern_correct s.mem a₀ hR.fvar u ty hty _ _ hI
   exact ⟨hloc, hok, hR.lift_fvar _ _ _ _ ⟨hX, fvintern_lp s.mem a₀ hR.fvar u ty hty hR.fvarLp hb _ _ hI⟩
       (fvinternW_frame _ _ _ _ _ hI)
-    (AM.st_proto fvarLens _ _ _ _ _ _ a₀ (internE_fvar_run _ _ a₀) hok), hres⟩
+    (AM.st_proto fvarLens _ _ _ _ _ _ _ a₀ (internE_fvar_run _ _ a₀) hok), hres⟩
 
 /-- `intern_*` for `lam` refines its arena interning under `ArenaR`. -/
 @[refines_part ConRon.Arena.internE "lam"]
@@ -1116,7 +1116,7 @@ theorem internLam_refinesA (p : Prog) (hpf : p.lookup "lam_find" = some lamFind)
   subst hs
   obtain ⟨hok, hX, hres⟩ := laintern_correct s.mem a₀ hR.lam ty body hty hbody _ _ hI
   exact ⟨hloc, hok, hR.lift_lam _ _ _ _ hX (consInternM_frame lamCS_wf hI)
-    (AM.st_proto lamLens _ _ _ _ _ _ a₀ (internE_lam_run _ _ a₀) hok), hres⟩
+    (AM.st_proto lamLens _ _ _ _ _ _ _ a₀ (internE_lam_run _ _ a₀) hok), hres⟩
 
 /-- `intern_*` for `proj` refines its arena interning under `ArenaR`. -/
 @[refines_part ConRon.Arena.internE "proj"]
@@ -1136,7 +1136,7 @@ theorem internProj_refinesA (p : Prog) (hpf : p.lookup "proj_find" = some projFi
   subst hs
   obtain ⟨hok, hX, hres⟩ := pjintern_correct s.mem a₀ hR.proj n u e hn he _ _ hI
   exact ⟨hloc, hok, hR.lift_proj _ _ _ _ hX (consInternM_frame projCS_wf hI)
-    (AM.st_proto projLens _ _ _ _ _ _ a₀ (internE_proj_run _ _ _ a₀) hok), hres⟩
+    (AM.st_proto projLens _ _ _ _ _ _ _ a₀ (internE_proj_run _ _ _ a₀) hok), hres⟩
 
 end L.Arena
 
@@ -1193,7 +1193,7 @@ theorem internLit_refinesA (p : Prog) (hph : p.lookup "lit_hash" = some litHash)
   subst hs
   obtain ⟨hok, hX, hres⟩ := intern_correct s.mem a₀ hR.lit o l hq hn hq0 _ _ hI
   exact ⟨hloc, hok, hR.lift_lit _ _ _ _ hX (consInternM_frame litCS_wf hI)
-    (AM.st_proto litLens _ _ _ _ _ _ a₀ (internE_lit_run _ a₀) hok), hres⟩
+    (AM.st_proto litLens _ _ _ _ _ _ _ a₀ (internE_lit_run _ a₀) hok), hres⟩
 
 /-- `intern_lit_str` refines `internE (.lit (.strVal _))` under `ArenaR`. -/
 @[refines_part ConRon.Arena.internE "lit"]
@@ -1221,7 +1221,7 @@ theorem internLitStr_refinesA (p : Prog) (hph : p.lookup "lit_hash" = some litHa
   subst hs
   obtain ⟨hok, hX, hres⟩ := internStr_correct s.mem a₀ hR.lit o l hq _ hk hq0 _ _ hI
   exact ⟨hloc, hok, hR.lift_lit _ _ _ _ hX (consInternM_frame litStrCS_wf hI)
-    (AM.st_proto litLens _ _ _ _ _ _ a₀ (internE_lit_run _ a₀) hok), hres⟩
+    (AM.st_proto litLens _ _ _ _ _ _ _ a₀ (internE_lit_run _ a₀) hok), hres⟩
 
 /-- **`nat_add_lit` refines `natOpResult`'s `Nat.add` arm under `ArenaR`**: the store's
 `natAddLit_refines_store` with the whole arena relation in place of `LitR`. -/

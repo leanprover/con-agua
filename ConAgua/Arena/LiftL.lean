@@ -42,7 +42,7 @@ def liftGo : FunDecl := lfn (h, c, k, fu) locals (x, g, t, i, r) {
     r := call intern_bvar(x + k);
     return r
   };
-  if g == 4 { if APP⟨t⟩.count <= i { abort }; r := call lift_app(h, c, k, fu - 1); return r };
+  if g == 4 { i := ⟦h⟧.aidx; if APP⟨t⟩.count <= i { abort }; r := call lift_app(h, c, k, fu - 1); return r };
   if g == 5 { if LAM⟨t⟩.count <= i { abort }; r := call lift_lam(h, c, k, fu - 1); return r };
   if g == 6 { if FORALL⟨t⟩.count <= i { abort }; r := call lift_forall(h, c, k, fu - 1); return r };
   if g == 7 { if LET⟨t⟩.count <= i { abort }; r := call lift_let(h, c, k, fu - 1); return r };
@@ -60,7 +60,7 @@ def liftApp : FunDecl := lfn (h, c, k, fu) locals (fd, j, d, t, i, f, a, x, y, r
   (fd, j, d) := call lf_find(h, c);
   if fd != 0 { return LMEMO.u64[j * 4 + 3] };
   t := ⟦h⟧.tier;
-  i := ⟦h⟧.idx;
+  i := ⟦h⟧.aidx;
   f := APP⟨t, i⟩.f;
   a := APP⟨t, i⟩.a;
   x := call lift_go(f, c, k, fu);

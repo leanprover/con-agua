@@ -154,7 +154,7 @@ def hoistWalkL : FunDecl := lfn (e, i, k, tg, ws, sp, fu) locals (fd, j, e0, z, 
     r := call hoist_note(CONST⟨t, x⟩.n, i, k, tg, ws, sp);
     return r
   };
-  if g == 4 { if APP⟨t⟩.count <= x { abort }; r := call hoist_app(e, i, k, tg, ws, sp, fu - 1); return r };
+  if g == 4 { x := ⟦e⟧.aidx; if APP⟨t⟩.count <= x { abort }; r := call hoist_app(e, i, k, tg, ws, sp, fu - 1); return r };
   if g == 5 { if LAM⟨t⟩.count <= x { abort }; r := call hoist_lam(e, i, k, tg, ws, sp, fu - 1); return r };
   if g == 6 { if FORALL⟨t⟩.count <= x { abort }; r := call hoist_forall(e, i, k, tg, ws, sp, fu - 1); return r };
   if g == 7 { if LET⟨t⟩.count <= x { abort }; r := call hoist_let(e, i, k, tg, ws, sp, fu - 1); return r };
@@ -171,7 +171,7 @@ fuel `fu`). -/
 -- con-ron: ConRon/Arena/Frontend/NatOpGround.lean:53-77 ConRon.Arena.Frontend.usedConstsGo
 def hoistAppL : FunDecl := lfn (e, i, k, tg, ws, sp, fu) locals (t, x) {
   t := ⟦e⟧.tier;
-  x := ⟦e⟧.idx;
+  x := ⟦e⟧.aidx;
   sp := call hoist_walk(APP⟨t, x⟩.f, i, k, tg, ws, sp, fu);
   sp := call hoist_walk(APP⟨t, x⟩.a, i, k, tg, ws, sp, fu);
   return sp

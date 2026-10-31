@@ -196,7 +196,7 @@ def rawNatLitL : FunDecl := lfn (h) locals (tag, t, i, k, nz, el) {
     };
     return (0, 0, 0)
   };
-  if tag == 4 { if APP⟨t⟩.count <= i { abort }; return (0, 0, 0) };
+  if tag == 4 { i := ⟦h⟧.aidx; if APP⟨t⟩.count <= i { abort }; return (0, 0, 0) };
   if tag == 5 { if LAM⟨t⟩.count <= i { abort }; return (0, 0, 0) };
   if tag == 6 { if FORALL⟨t⟩.count <= i { abort }; return (0, 0, 0) };
   if tag == 7 { if LET⟨t⟩.count <= i { abort }; return (0, 0, 0) };
@@ -404,7 +404,7 @@ binary operation) or `reduce_nat_wf`. (A split of `reduce_nat`, whnf-delta2.) -/
 def reduceNatApL : FunDecl :=
   lfn (mode, vis, d, f, b) locals (t2, i2, g, a, t3, i3, c, us, el, isbin, stored, rf, rh) {
   t2 := ⟦f⟧.tier;
-  i2 := ⟦f⟧.idx;
+  i2 := ⟦f⟧.aidx;
   if APP⟨t2⟩.count <= i2 { abort };
   g := APP⟨t2, i2⟩.f;
   a := APP⟨t2, i2⟩.a;

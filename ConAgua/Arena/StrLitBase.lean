@@ -179,7 +179,7 @@ theorem internParam_core (hS : CoreS dn m a vis fe M eb) (u : Word) (hu : HW u)
   have hI₂ := hI
   have hf := consInternM_frame paramCS_wf hI₂
   have hR' := hS.arena.base.lift_param _ _ _ _ ⟨hX, hLp⟩ hf
-    (AM.st_proto paramLens _ _ _ _ _ _ a (internLNode_param_run _ a) hok)
+    (AM.st_proto paramLens _ _ _ _ _ _ _ a (internLNode_param_run _ a) hok)
   have hL := internLNode_step _ a _ _ (AM.run_of_ok _ _ hok)
   obtain ⟨hS', hst⟩ := hS.of_level hL hR' hf
     (fun b hb => by simp only [ConsSch.wset, paramCS, Option.toList, List.map_nil, List.append_nil, List.mem_cons, List.mem_nil_iff, or_false] at hb
@@ -206,7 +206,7 @@ theorem internZero_core (hS : CoreS dn m a vis fe M eb)
   have hI₂ := hI
   have hf := consInternM_frame zeroCS_wf hI₂
   have hR' := hS.arena.base.lift_zero _ _ _ _ ⟨hX, hLp⟩ hf
-    (AM.st_proto zeroLens _ _ _ _ _ _ a (internLNode_zero_run a) hok)
+    (AM.st_proto zeroLens _ _ _ _ _ _ _ a (internLNode_zero_run a) hok)
   have hL := internLNode_step _ a _ _ (AM.run_of_ok _ _ hok)
   obtain ⟨hS', hst⟩ := hS.of_level hL hR' hf
     (fun b hb => by simp only [ConsSch.wset, zeroCS, Option.toList, List.map_nil, List.append_nil, List.mem_cons, List.mem_nil_iff, or_false] at hb
@@ -464,7 +464,7 @@ theorem ls1_call (hS : CoreS dn m a vis fe M eb) {u : Word} (hu : HW u)
     (ModeOK.slice0 hK.1.mode hq) hK.1.arena.base.lsHp (lsOrW_ok m₀ a hK.1.arena.base m.top 1 hq [decI u] hk) _ _ hI
   have hI₂ := hI
   have hR' := hK.1.arena.base.lift_ls _ _ _ _ ⟨hX, hLp⟩ hf
-    (AM.st_proto lsLens _ _ _ _ _ _ a (internLsNode_run _ a) hok)
+    (AM.st_proto lsLens _ _ _ _ _ _ _ a (internLsNode_run _ a) hok)
   have hL := internLsNode_step _ a _ _ (AM.run_of_ok _ _ hok)
   obtain ⟨hS', hst⟩ := hK.1.of_ls hL hR' hf
     (fun b hb => by simp only [List.mem_cons, List.mem_nil_iff, or_false] at hb

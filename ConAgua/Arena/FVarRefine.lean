@@ -65,7 +65,7 @@ theorem persFindMaybe_fvar (a : AState) (idx : Nat) (ty : EIdx) :
 /-- `internE` at an `fvar` node is the library's protocol, the persistent probe after the skip. -/
 theorem internE_fvar_run (idx : Nat) (ty : EIdx) (a : AState) :
     (internE (.fvar idx ty)).run a =
-      protoRun fvarLens (fvKey idx ty) ETag.fvar (pfFv a idx ty) (a.store.derOfView (.fvar idx ty))
+      protoRun fvarLens (fvKey idx ty) ETag.fvar false (pfFv a idx ty) (a.store.derOfView (.fvar idx ty))
         (.native "arena: expression constructor array full") a := by
   simp only [internE, internNodeE, EStore.find?, EStore.intern, ETables.find?, Tbl.find?,
     ETables.sizeOf, ETables.push, StateT.run_bind, StateT.run_get, pure_bind, persFindMaybe_fvar]
@@ -74,12 +74,13 @@ theorem internE_fvar_run (idx : Nat) (ty : EIdx) (a : AState) :
     simp only [hs, hc, Bool.false_eq_true, ↓reduceIte, fvKey, protoRun, fvarLens] <;>
     (try split) <;> simp_all [withScrFVars, withPersFVars, fail,
       throwThe, MonadExceptOf.throw, StateT.run, set, StateT.set,
-      StateT.lift, bind, Except.bind, pure, Except.pure, StateT.bind, StateT.pure]
+      StateT.lift, bind, Except.bind, pure, Except.pure, StateT.bind, StateT.pure, mkS, capS,
+      ENodeView.cap, Idx.idxCap, Idx.wideCap]
 
 /-! ## The relation between L memory and the arena's `fvar` tables -/
 
 /-- The `fvar` schema: `FVREC`, `FVSLOT`, two words per node, the counts at `CTL[26 + t]`. -/
-def fvarSch : Schema := ⟨FVREC, FVSLOT, 2, 26, ETag.fvar⟩
+def fvarSch : Schema := ⟨FVREC, FVSLOT, 2, 26, ETag.fvar, false⟩
 
 theorem fvarSch_wf : fvarSch.WF :=
   ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide⟩
@@ -168,7 +169,7 @@ end query
 theorem fvpushOK_room (m : Mem) (t : Word) (h : fvpushOK m t = true) : PushRoom fvarSch m t := by
   simp only [fvpushOK, Bool.and_eq_true, decide_eq_true_eq] at h
   have := UInt64.toNat_shiftRight (m.len64 (tierA FVREC t)) 1
-  simp only [PushRoom, cntW, fvcnt, fvarSch, len64_eq] at *
+  simp only [PushRoom, Schema.cap, capS, cntW, fvcnt, fvarSch, len64_eq] at *
   grind
 
 /-- **The `fvar` table's shape.** -/
@@ -176,6 +177,7 @@ theorem fvarCS_wf : fvarCS.WF where
   sch := fvarSch_wf
   P := by decide
   S := by decide
+  wtag h := by simp [fvarCS] at h
   col A h := by
     simp only [fvarCS, Option.some.injEq] at h; subst h
     exact ⟨by decide, by decide, by decide, fun m u k x t i => by
@@ -246,7 +248,7 @@ theorem fvintern_lp (hC : ColT2 fvarLens FVLP lpW m a)
     (hI : fvinternW m u ty = some (w, m')) :
     ColT2 fvarLens FVLP lpW m' (AM.st (internE (.fvar u.toNat (decE ty))) a) := by
   obtain ⟨hok, hX, hres⟩ := fvintern_correct m a hR u ty hty w m' hI
-  have hcs := AM.proto_casesG fvarLens _ _ _ _ _ _ a (internE_fvar_run _ _ a) hok
+  have hcs := AM.proto_casesG fvarLens _ _ _ _ _ _ _ a (internE_fvar_run _ _ a) hok
   exact colMkC fvarCS_wf rfl fvarLens lpW hR hX hC hI hcs
     (by show exprLPW m ty = _; rw [hb, lpW, lp_derFVar])
 

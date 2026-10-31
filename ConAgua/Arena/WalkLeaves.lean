@@ -89,6 +89,7 @@ def flNode : FunDecl := lfn (h, k, c) locals (g, t, i, f, a, b, x) {
     return x
   };
   if g == 4 {
+    i := ⟦h⟧.aidx;
     if APP⟨t⟩.count <= i { abort };
     f := APP⟨t, i⟩.f;
     a := APP⟨t, i⟩.a;
@@ -260,6 +261,7 @@ def lsbNode : FunDecl := lfn (h, k, c) locals (g, t, i, f, a, b, x) {
     return x
   };
   if g == 4 {
+    i := ⟦h⟧.aidx;
     if APP⟨t⟩.count <= i { abort };
     f := APP⟨t, i⟩.f;
     a := APP⟨t, i⟩.a;

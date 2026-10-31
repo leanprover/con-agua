@@ -78,7 +78,7 @@ theorem persFindBindMaybe_forall (a : AState) (ty body : EIdx) :
 `lam`'s `internE_lam_run` (`LamRefine.lean`) reasoning, at `ETag.forallE` and `foralls`. -/
 theorem internE_forall_run (ty b : EIdx) (a : AState) :
     (internE (.forallE ty b)).run a =
-      protoRun forallLens (faKey ty b) ETag.forallE (pfFa a ty b) (a.store.derOfBindAt 23 ty b)
+      protoRun forallLens (faKey ty b) ETag.forallE false (pfFa a ty b) (a.store.derOfBindAt 23 ty b)
         (.native "arena: expression constructor array full") a := by
   simp only [internE, internForallEE, EStore.findBind, EStore.internForallE, EStore.internBind,
     ETables.findBind, ETables.bindSizeOf, ETables.pushBind, Tbl.find?, StateT.run_bind,
@@ -91,12 +91,13 @@ theorem internE_forall_run (ty b : EIdx) (a : AState) :
       | rfl
       | simp_all [withScrForalls, withPersForalls, fail,
           throwThe, MonadExceptOf.throw, StateT.run, set, StateT.set,
-          StateT.lift, bind, Except.bind, pure, Except.pure, StateT.bind, StateT.pure]
+          StateT.lift, bind, Except.bind, pure, Except.pure, StateT.bind, StateT.pure, mkS, capS,
+      ENodeView.cap, Idx.idxCap, Idx.wideCap]
 
 /-! ## The relation between L memory and the arena's `forallE` tables -/
 
 /-- The `forallE` schema: `FAREC`, `FASLOT`, one packed word per node, the counts at `CTL[30 + t]`. -/
-def forallSch : Schema := ⟨FAREC, FASLOT, 1, 30, ETag.forallE⟩
+def forallSch : Schema := ⟨FAREC, FASLOT, 1, 30, ETag.forallE, false⟩
 
 theorem forallSch_wf : forallSch.WF :=
   ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide⟩
@@ -174,7 +175,7 @@ end query
 
 theorem fapushOK_room (m : Mem) (t : Word) (h : fapushOK m t = true) : PushRoom forallSch m t := by
   simp only [fapushOK, Bool.and_eq_true, decide_eq_true_eq] at h
-  simp only [PushRoom, cntW, facnt, forallSch, len64_eq] at *
+  simp only [PushRoom, Schema.cap, capS, cntW, facnt, forallSch, len64_eq] at *
   grind
 
 /-- **The `forall` table's shape.** -/
@@ -182,6 +183,7 @@ theorem forallCS_wf : forallCS.WF where
   sch := forallSch_wf
   P := by decide
   S := by decide
+  wtag h := by simp [forallCS] at h
   col A h := by simp [forallCS] at h
   colRoom A h := by simp [forallCS] at h
   room m t h := (fapushOK_room m t ((fapushOK_eqC m t).trans h)).2

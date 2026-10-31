@@ -53,7 +53,7 @@ def imaxLens : Lens BinLNode LDer .level where
 /-- `internLNode` at an `imax` node is the library's protocol, with no skip. -/
 theorem internLNode_imax_run (u v : LIdx) (a : AState) :
     (internLNode (.imax u v)).run a =
-      protoRun imaxLens (imaxKey u v) LTag.imax a.store.lss.ls.pers.imaxs.cons[imaxKey u v]?
+      protoRun imaxLens (imaxKey u v) LTag.imax false a.store.lss.ls.pers.imaxs.cons[imaxKey u v]?
         (a.store.lss.ls.derOfView (.imax u v)) (.native "arena: level constructor array full") a := by
   simp only [internLNode, LStore.find?, LTables.find?, Tbl.find?, LTables.sizeOf, EStore.ls,
     EStore.internLevel, LsStore.internLevel, LStore.intern, LTables.push]
@@ -63,12 +63,13 @@ theorem internLNode_imax_run (u v : LIdx) (a : AState) :
       ↓reduceIte, imaxKey, protoRun, imaxLens] <;>
     (try split) <;> simp_all [withScrImaxs, withPersImaxs, fail,
       throwThe, MonadExceptOf.throw, StateT.run, set, StateT.set,
-      StateT.lift, bind, Except.bind, pure, Except.pure, StateT.bind, StateT.pure]
+      StateT.lift, bind, Except.bind, pure, Except.pure, StateT.bind, StateT.pure, mkS, capS,
+      ENodeView.cap, Idx.idxCap, Idx.wideCap]
 
 /-! ## The relation between L memory and the arena's `imax` tables -/
 
 /-- The `imax` schema: `IREC`, `ISLOT`, one packed word per node, the counts at `CTL[12 + t]`. -/
-def imaxSch : Schema := ⟨IREC, ISLOT, 1, 12, LTag.imax⟩
+def imaxSch : Schema := ⟨IREC, ISLOT, 1, 12, LTag.imax, false⟩
 
 theorem iimaxSch_wf : imaxSch.WF :=
   ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide⟩
@@ -143,7 +144,7 @@ end query
 
 theorem iimpushOK_room (m : Mem) (t : Word) (h : impushOK m t = true) : PushRoom imaxSch m t := by
   simp only [impushOK, Bool.and_eq_true, decide_eq_true_eq] at h
-  simp only [PushRoom, cntW, imcnt, imaxSch, len64_eq] at *
+  simp only [PushRoom, Schema.cap, capS, cntW, imcnt, imaxSch, len64_eq] at *
   grind
 
 /-- **The `imax` table's shape.** -/
@@ -151,6 +152,7 @@ theorem imaxCS_wf : imaxCS.WF where
   sch := iimaxSch_wf
   P := by decide
   S := by decide
+  wtag h := by simp [imaxCS] at h
   col A h := by
     simp only [imaxCS, Option.some.injEq] at h; subst h
     exact ⟨by decide, by decide, by decide, fun m u k x t i => by
@@ -216,7 +218,7 @@ theorem imintern_hp (hC : ColT2 imaxLens IHP hpW m a)
     (hI : iminternW m u v = some (w, m')) :
     ColT2 imaxLens IHP hpW m' (AM.st (internLNode (.imax (decI u) (decI v))) a) := by
   obtain ⟨hok, hX, hres⟩ := imintern_correct m a hR u v hu hv w m' hI
-  have hcs := AM.proto_casesG imaxLens _ _ _ _ _ _ a (internLNode_imax_run _ _ a) hok
+  have hcs := AM.proto_casesG imaxLens _ _ _ _ _ _ _ a (internLNode_imax_run _ _ a) hok
   exact colMkC imaxCS_wf rfl imaxLens hpW hR hX hC hI hcs
     (by show lvlHPW m u ||| lvlHPW m v = _; rw [hb]; rfl)
 

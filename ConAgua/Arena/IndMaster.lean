@@ -214,7 +214,7 @@ theorem stage_of_level {β : Type} [BEq β] [Hashable β] {L : Lens β LDer .lev
     ∃ a', op.run a = .ok (decI r, a') ∧ StageR dn vis fe m' a' ∧ IWGrow m m' := by
   have hD₁ : DerR m' a := DerR.frameM _ _ m m' hf (fun b hb => by have := hA b hb; omega) a
     hS.check.arena.der
-  have hcs := AM.st_proto L op key tag pf d err a hrun hok
+  have hcs := AM.st_proto L op key tag wide pf d err a hrun hok
   have hDk : DerR m' (AM.st op a) ∧ cp (AM.st op a) = cp a := by
     rcases hcs with h | ⟨t, h⟩ | ⟨t, h⟩ <;> rw [h]
     · exact ⟨hD₁, rfl⟩
@@ -236,7 +236,7 @@ theorem internParam_stage (hS : StageR dn vis fe m a) (u : Word) (hu : u.toNat <
   have hI₂ := hI
   have hfr := consInternM_frame paramCS_wf hI₂
   exact stage_of_level hS (internLNode_param_run _ a) hok
-    (hR.lift_param _ _ _ _ ⟨hX, hL⟩ hfr (AM.st_proto paramLens _ _ _ _ _ _ a (internLNode_param_run _ a) hok))
+    (hR.lift_param _ _ _ _ ⟨hX, hL⟩ hfr (AM.st_proto paramLens _ _ _ _ _ _ _ a (internLNode_param_run _ a) hok))
     hres hfr (by simp [tier1, ConsSch.wset, paramCS, PREC, PSLOT]) (by simp [paramCS]) (fun _ => ⟨DerR.lvl, rfl⟩)
     (fun _ => ⟨DerR.lvl, rfl⟩)
     (hS.check.mode.frame hfr (by decide) (by decide))
@@ -250,7 +250,7 @@ theorem internZero_stage (hS : StageR dn vis fe m a) (hI : zinternW m = some (r,
   have hI₂ := hI
   have hfr := consInternM_frame zeroCS_wf hI₂
   exact stage_of_level hS (internLNode_zero_run a) hok
-    (hR.lift_zero _ _ _ _ ⟨hX, hL⟩ hfr (AM.st_proto zeroLens _ _ _ _ _ _ a (internLNode_zero_run a) hok))
+    (hR.lift_zero _ _ _ _ ⟨hX, hL⟩ hfr (AM.st_proto zeroLens _ _ _ _ _ _ _ a (internLNode_zero_run a) hok))
     hres hfr (by simp [tier1, ConsSch.wset, zeroCS, ZREC, ZSLOT]) (by simp [zeroCS]) (fun _ => ⟨DerR.lvl, rfl⟩)
     (fun _ => ⟨DerR.lvl, rfl⟩)
     (hS.check.mode.frame hfr (by decide) (by decide))
@@ -264,7 +264,7 @@ theorem internMax_stage (hS : StageR dn vis fe m a) (u v : Word) (hu : u.toNat <
   have hfr := minternW_frame m u v _ _ hI
   exact stage_of_level hS (internLNode_max_run _ _ a) hok
     (hR.lift_max _ _ _ _ ⟨hX, mintern_hp m a hR.max u v hu hv hR.maxHp (lvlHPW_or m a hR u v hu hv) _ _ hI⟩
-      hfr (AM.st_proto maxLens _ _ _ _ _ _ a (internLNode_max_run _ _ a) hok))
+      hfr (AM.st_proto maxLens _ _ _ _ _ _ _ a (internLNode_max_run _ _ a) hok))
     hres hfr (by simp [tier1, MREC, MSLOT, MHP]) (by simp) (fun _ => ⟨DerR.lvl, rfl⟩)
     (fun _ => ⟨DerR.lvl, rfl⟩)
     (hS.check.mode.frame hfr (by decide) (by decide))

@@ -63,7 +63,7 @@ def lsLens : Lens ListNode LDer .levels where
 /-- `internLsNode` is the library's protocol, with no skip. -/
 theorem internLsNode_run (us : List LIdx) (a : AState) :
     (internLsNode us).run a =
-      protoRun lsLens (lsKey us) LsTag.list a.store.lss.pers.lists.cons[lsKey us]?
+      protoRun lsLens (lsKey us) LsTag.list false a.store.lss.pers.lists.cons[lsKey us]?
         (a.store.lss.derOfView us) (.native "arena: level-list array full") a := by
   simp only [internLsNode, LsStore.find?, LsTables.find?, Tbl.find?, LsTables.sizeOf,
     EStore.internLevels, LsStore.intern, LsTables.push]
@@ -73,12 +73,13 @@ theorem internLsNode_run (us : List LIdx) (a : AState) :
       ↓reduceIte, lsKey, protoRun, lsLens] <;>
     (try split) <;> simp_all [withScrLists, withPersLists, fail,
       throwThe, MonadExceptOf.throw, StateT.run, set, StateT.set,
-      StateT.lift, bind, Except.bind, pure, Except.pure, StateT.bind, StateT.pure]
+      StateT.lift, bind, Except.bind, pure, Except.pure, StateT.bind, StateT.pure, mkS, capS,
+      ENodeView.cap, Idx.idxCap, Idx.wideCap]
 
 /-! ## The relation between L memory and the arena's level-list tables -/
 
 /-- The level-list schema: `LSREC`, `LSSLOT`, three words per node, the counts at `CTL[40 + t]`. -/
-def lsSch : Schema := ⟨LSREC, LSSLOT, 3, 40, LsTag.list⟩
+def lsSch : Schema := ⟨LSREC, LSSLOT, 3, 40, LsTag.list, false⟩
 
 theorem lsSch_wf : lsSch.WF :=
   ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide⟩
@@ -219,7 +220,7 @@ end query
 
 theorem lspushOK_room (m : Mem) (t : Word) (h : lspushOK m t = true) : PushRoom lsSch m t := by
   simp only [lspushOK, Bool.and_eq_true, decide_eq_true_eq] at h
-  simp only [PushRoom, cntW, lscnt, lsSch, len64_eq] at *
+  simp only [PushRoom, Schema.cap, capS, cntW, lscnt, lsSch, len64_eq] at *
   grind
 
 /-- **The level-list table's shape.** -/
@@ -227,6 +228,7 @@ theorem lsCS_wf : lsCS.WF where
   sch := lsSch_wf
   P := by decide
   S := by decide
+  wtag h := by simp [lsCS] at h
   col A h := by
     simp only [lsCS, Option.some.injEq] at h; subst h
     exact ⟨by decide, by decide, by decide, fun m u k x t i => by
@@ -303,7 +305,7 @@ theorem lsintern_hp (hC : ColT2 lsLens LSHP hpW m a)
     (hI : lsinternW m o l = some (w, m')) :
     ColT2 lsLens LSHP hpW m' (AM.st (internLsNode us) a) := by
   obtain ⟨hok, hX, hres⟩ := lsintern_correct m a hpool hR o l hq us hk hq0 w m' hI
-  have hcs := AM.proto_casesG lsLens _ _ _ _ _ _ a (internLsNode_run us a) hok
+  have hcs := AM.proto_casesG lsLens _ _ _ _ _ _ _ a (internLsNode_run us a) hok
   exact colMkC lsCS_wf rfl lsLens hpW hR hX hC hI hcs
     (by show lsOrW m o l.toNat = _; rw [hb]; rfl)
 

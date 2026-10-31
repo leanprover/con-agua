@@ -68,7 +68,7 @@ def litLens : Lens LitNode UInt64 .expr where
 /-- `internE` at a literal is the library's protocol, with no skip. -/
 theorem internE_lit_run (l : ConLeche.Literal) (a : AState) :
     (internE (.lit l)).run a =
-      protoRun litLens (litKey l) ETag.lit a.store.pers.lits.cons[litKey l]?
+      protoRun litLens (litKey l) ETag.lit false a.store.pers.lits.cons[litKey l]?
         (a.store.derOfView (.lit l)) (.native "arena: expression constructor array full") a := by
   simp only [internE, internNodeE, EStore.find?, EStore.persFindMaybe,
     EStore.eViewHasScratchChild, EStore.intern, ETables.find?, Tbl.find?, ETables.sizeOf,
@@ -79,7 +79,8 @@ theorem internE_lit_run (l : ConLeche.Literal) (a : AState) :
       ↓reduceIte, litKey, ite_self, protoRun, litLens] <;>
     (try split) <;> simp_all [withScrLits, withPersLits, fail,
       throwThe, MonadExceptOf.throw, StateT.run, set, StateT.set,
-      StateT.lift, bind, Except.bind, pure, Except.pure, StateT.bind, StateT.pure]
+      StateT.lift, bind, Except.bind, pure, Except.pure, StateT.bind, StateT.pure, mkS, capS,
+      ENodeView.cap, Idx.idxCap, Idx.wideCap]
 
 /-! ## Normalised slices are unique -/
 
@@ -297,7 +298,7 @@ theorem strWords_inj (s s' : String) (h : strWords s = strWords s') : s = s' :=
 /-! ## The relation between L memory and the arena's `lit` tables -/
 
 /-- The `lit` schema: `REC`, `SLOT`, four words per node, the counts at `CTL[2 + t]`. -/
-def litSch : Schema := ⟨REC, SLOT, 4, 2, ETag.lit⟩
+def litSch : Schema := ⟨REC, SLOT, 4, 2, ETag.lit, false⟩
 
 theorem litS_wf : litSch.WF :=
   ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide⟩
@@ -575,7 +576,7 @@ end queryStr
 theorem pushOK_room (m : Mem) (t : Word) (h : pushOK m t = true) : PushRoom litSch m t := by
   simp only [pushOK, Bool.and_eq_true, decide_eq_true_eq] at h
   have := UInt64.toNat_shiftRight (m.len64 (tierA REC t)) 2
-  simp only [PushRoom, cntW, cnt, litSch, len64_eq] at *
+  simp only [PushRoom, Schema.cap, capS, cntW, cnt, litSch, len64_eq] at *
   grind
 
 /-- **The `lit` tables' shape** (both schemas). -/
@@ -583,6 +584,7 @@ theorem litCS_wf : litCS.WF where
   sch := litS_wf
   P := by decide
   S := by decide
+  wtag h := by simp [litCS, litCSk] at h
   col A h := by simp [litCS, litCSk] at h
   colRoom A h := by simp [litCS, litCSk] at h
   room m t h := (pushOK_room m t ((pushOK_eqC m t).trans h)).2
@@ -593,6 +595,7 @@ theorem litStrCS_wf : litStrCS.WF where
   sch := litS_wf
   P := by decide
   S := by decide
+  wtag h := by simp [litStrCS, litCSk] at h
   col A h := by simp [litStrCS, litCSk] at h
   colRoom A h := by simp [litStrCS, litCSk] at h
   room m t h := (pushOK_room m t ((pushOK_eqC m t).trans h)).2

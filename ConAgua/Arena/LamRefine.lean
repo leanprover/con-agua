@@ -79,7 +79,7 @@ at the tier the append goes to, then calls `EStore.internLam`, which **re-probes
 on the re-probe than `app`'s, and `ETables.pushBind`'s own `if tag == ETag.lam` (always taken). -/
 theorem internE_lam_run (ty b : EIdx) (a : AState) :
     (internE (.lam ty b)).run a =
-      protoRun lamLens (laKey ty b) ETag.lam (pfLa a ty b) (a.store.derOfBindAt 19 ty b)
+      protoRun lamLens (laKey ty b) ETag.lam false (pfLa a ty b) (a.store.derOfBindAt 19 ty b)
         (.native "arena: expression constructor array full") a := by
   simp only [internE, internLamE, EStore.findBind, EStore.internLam, EStore.internBind,
     ETables.findBind, ETables.bindSizeOf, ETables.pushBind, Tbl.find?, StateT.run_bind,
@@ -92,12 +92,13 @@ theorem internE_lam_run (ty b : EIdx) (a : AState) :
       | rfl
       | simp_all [withScrLams, withPersLams, fail,
           throwThe, MonadExceptOf.throw, StateT.run, set, StateT.set,
-          StateT.lift, bind, Except.bind, pure, Except.pure, StateT.bind, StateT.pure]
+          StateT.lift, bind, Except.bind, pure, Except.pure, StateT.bind, StateT.pure, mkS, capS,
+      ENodeView.cap, Idx.idxCap, Idx.wideCap]
 
 /-! ## The relation between L memory and the arena's `lam` tables -/
 
 /-- The `lam` schema: `LAREC`, `LASLOT`, one packed word per node, the counts at `CTL[28 + t]`. -/
-def lamSch : Schema := ⟨LAREC, LASLOT, 1, 28, ETag.lam⟩
+def lamSch : Schema := ⟨LAREC, LASLOT, 1, 28, ETag.lam, false⟩
 
 theorem lamSch_wf : lamSch.WF :=
   ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide⟩
@@ -173,7 +174,7 @@ end query
 
 theorem lapushOK_room (m : Mem) (t : Word) (h : lapushOK m t = true) : PushRoom lamSch m t := by
   simp only [lapushOK, Bool.and_eq_true, decide_eq_true_eq] at h
-  simp only [PushRoom, cntW, lacnt, lamSch, len64_eq] at *
+  simp only [PushRoom, Schema.cap, capS, cntW, lacnt, lamSch, len64_eq] at *
   grind
 
 /-- **The `lam` table's shape.** -/
@@ -181,6 +182,7 @@ theorem lamCS_wf : lamCS.WF where
   sch := lamSch_wf
   P := by decide
   S := by decide
+  wtag h := by simp [lamCS] at h
   col A h := by simp [lamCS] at h
   colRoom A h := by simp [lamCS] at h
   room m t h := (lapushOK_room m t ((lapushOK_eqC m t).trans h)).2

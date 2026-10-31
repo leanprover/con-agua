@@ -228,7 +228,7 @@ theorem psGoW_ok (n : Nat) : ∀ (m m' : Mem) (a : AState) (o nP N k : Word) (r 
       have hI' := hI
       have hfr := consInternM_frame bvarCS_wf hI'
       have hR1 := hR.lift_bvar _ _ _ _ hX hfr
-        (AM.st_proto bvarLens _ _ _ _ _ _ a (internE_bvar_run _ a) hok)
+        (AM.st_proto bvarLens _ _ _ _ _ _ _ a (internE_bvar_run _ a) hok)
       have hg1 := IWGrow.of_frame hfr (by decide) (by decide)
       have hs1 : ∀ b, (m1.arr64 b).size = (m.arr64 b).size := hfr.size
       have hiw1 : m1.arr64 IW = m.arr64 IW := hfr.arr IW (by decide) (by decide)

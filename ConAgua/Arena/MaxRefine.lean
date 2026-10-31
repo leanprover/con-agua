@@ -53,7 +53,7 @@ def maxLens : Lens BinLNode LDer .level where
 /-- `internLNode` at a `max` node is the library's protocol, with no skip. -/
 theorem internLNode_max_run (u v : LIdx) (a : AState) :
     (internLNode (.max u v)).run a =
-      protoRun maxLens (maxKey u v) LTag.max a.store.lss.ls.pers.maxs.cons[maxKey u v]?
+      protoRun maxLens (maxKey u v) LTag.max false a.store.lss.ls.pers.maxs.cons[maxKey u v]?
         (a.store.lss.ls.derOfView (.max u v)) (.native "arena: level constructor array full") a := by
   simp only [internLNode, LStore.find?, LTables.find?, Tbl.find?, LTables.sizeOf, EStore.ls,
     EStore.internLevel, LsStore.internLevel, LStore.intern, LTables.push]
@@ -63,12 +63,13 @@ theorem internLNode_max_run (u v : LIdx) (a : AState) :
       ↓reduceIte, maxKey, protoRun, maxLens] <;>
     (try split) <;> simp_all [withScrMaxs, withPersMaxs, fail,
       throwThe, MonadExceptOf.throw, StateT.run, set, StateT.set,
-      StateT.lift, bind, Except.bind, pure, Except.pure, StateT.bind, StateT.pure]
+      StateT.lift, bind, Except.bind, pure, Except.pure, StateT.bind, StateT.pure, mkS, capS,
+      ENodeView.cap, Idx.idxCap, Idx.wideCap]
 
 /-! ## The relation between L memory and the arena's `max` tables -/
 
 /-- The `max` schema: `MREC`, `MSLOT`, one packed word per node, the counts at `CTL[10 + t]`. -/
-def maxSch : Schema := ⟨MREC, MSLOT, 1, 10, LTag.max⟩
+def maxSch : Schema := ⟨MREC, MSLOT, 1, 10, LTag.max, false⟩
 
 theorem maxSch_wf : maxSch.WF :=
   ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide⟩
@@ -143,7 +144,7 @@ end query
 
 theorem mpushOK_room (m : Mem) (t : Word) (h : mpushOK m t = true) : PushRoom maxSch m t := by
   simp only [mpushOK, Bool.and_eq_true, decide_eq_true_eq] at h
-  simp only [PushRoom, cntW, mcnt, maxSch, len64_eq] at *
+  simp only [PushRoom, Schema.cap, capS, cntW, mcnt, maxSch, len64_eq] at *
   grind
 
 /-- **The `max` table's shape.** -/
@@ -151,6 +152,7 @@ theorem maxCS_wf : maxCS.WF where
   sch := maxSch_wf
   P := by decide
   S := by decide
+  wtag h := by simp [maxCS] at h
   col A h := by
     simp only [maxCS, Option.some.injEq] at h; subst h
     exact ⟨by decide, by decide, by decide, fun m u k x t i => by
@@ -216,7 +218,7 @@ theorem mintern_hp (hC : ColT2 maxLens MHP hpW m a)
     (hI : minternW m u v = some (w, m')) :
     ColT2 maxLens MHP hpW m' (AM.st (internLNode (.max (decI u) (decI v))) a) := by
   obtain ⟨hok, hX, hres⟩ := mintern_correct m a hR u v hu hv w m' hI
-  have hcs := AM.proto_casesG maxLens _ _ _ _ _ _ a (internLNode_max_run _ _ a) hok
+  have hcs := AM.proto_casesG maxLens _ _ _ _ _ _ _ a (internLNode_max_run _ _ a) hok
   exact colMkC maxCS_wf rfl maxLens hpW hR hX hC hI hcs
     (by show lvlHPW m u ||| lvlHPW m v = _; rw [hb]; rfl)
 

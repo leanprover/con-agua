@@ -80,6 +80,7 @@ def frNode : FunDecl := lfn (h, c) locals (g, t, i, f, a, b, x, y, z) {
     return x
   };
   if g == 4 {
+    i := ⟦h⟧.aidx;
     if APP⟨t⟩.count <= i { abort };
     f := APP⟨t, i⟩.f;
     a := APP⟨t, i⟩.a;

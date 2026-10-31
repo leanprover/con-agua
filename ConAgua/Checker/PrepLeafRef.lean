@@ -139,7 +139,7 @@ theorem pKey_ok (m m' : Mem) (a : AState) (i r : Word) (d : IDeclaration)
       obtain ⟨hok', hX, hres⟩ := naintern_correct m a hA.nanon r m' h
       have hI := h
       have hF := consInternM_frame nanonCS_wf hI
-      have hst := AM.st_proto nanonLens _ _ _ _ _ _ a (internNNode_anon_run a) hok'
+      have hst := AM.st_proto nanonLens _ _ _ _ _ _ _ a (internNNode_anon_run a) hok'
       refine ⟨AM.st (internNNode .anonymous) a, ?_, ?_, hA.lift_nanon _ _ _ _ hX hF hst, ?_, ?_⟩
       · have := AM.run_of_ok _ a hok'
         rw [hres] at this

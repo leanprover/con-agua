@@ -96,16 +96,16 @@ theorem protoRun_casesG (L : Lens α δ k) (key : α) (tag : UInt32) (wide : Boo
         · rename_i hc
           simp only [Except.ok.injEq, Prod.mk.injEq] at h
           obtain ⟨rfl, rfl⟩ := h
-          refine .inr (.inr ⟨hon, by simpa [Tbl.size, Idx.idxCap] using hc, ?_, ?_⟩) <;>
-            simp only [show Idx.tierS = UInt32.ofNat 1 from rfl, mk_eq, Tbl.size] <;> rfl
+          refine .inr (.inr ⟨hon, by simpa [Tbl.size] using hc, ?_, ?_⟩) <;>
+            simp only [show Idx.tierS = UInt32.ofNat 1 from rfl, mkS_eq, Tbl.size] <;> rfl
         · simp at h
     · rename_i hon
       split at h
       · rename_i hc
         simp only [Except.ok.injEq, Prod.mk.injEq] at h
         obtain ⟨rfl, rfl⟩ := h
-        refine .inr (.inl ⟨by simpa using hon, by simpa [Tbl.size, Idx.idxCap] using hc, ?_, ?_⟩) <;>
-          simp only [show Idx.tierP = UInt32.ofNat 0 from rfl, mk_eq, Tbl.size] <;> rfl
+        refine .inr (.inl ⟨by simpa using hon, by simpa [Tbl.size] using hc, ?_, ?_⟩) <;>
+          simp only [show Idx.tierP = UInt32.ofNat 0 from rfl, mkS_eq, Tbl.size] <;> rfl
       · simp at h
 
 /-- The same through an operation's run equation. -/
@@ -366,10 +366,10 @@ theorem colMkC {C : ConsSch} (hW : C.WF) {A : ArrId} (hA : C.col = some A)
     (hR' : ConsR C R m' (L.on a') (L.getP a') (L.getS a'))
     (hc : ColT2 L A f m a) (hI : consInternM C m ks = some (w, m'))
     (hst : a' = a ∨
-      (L.on a = false ∧ (L.getP a).nodes.size < capS wide ∧
+      (L.on a = false ∧ (L.getP a).nodes.size < capS C.wide ∧
         y = decI (hdS C.tag C.wide 0 (UInt64.ofNat (L.getP a).nodes.size)) ∧
         a' = L.setP a ((L.getP a).push key d y)) ∨
-      (L.on a = true ∧ (L.getS a).nodes.size < capS wide ∧
+      (L.on a = true ∧ (L.getS a).nodes.size < capS C.wide ∧
         y = decI (hdS C.tag C.wide 1 (UInt64.ofNat (L.getS a).nodes.size)) ∧
         a' = L.setS a ((L.getS a).push key d y)))
     (hdd : C.colM m (pushArgs C ks (C.qhM m ks)) = f d) : ColT2 L A f m' a' := by
@@ -396,14 +396,16 @@ theorem colMkC {C : ConsSch} (hW : C.WF) {A : ArrId} (hA : C.col = some A)
   have hAm := pushRec_col C hW hA m t ks
   rw [← he _ (tierA_ne hAsa t t)] at hAm
   have hq := hW.colRoom A hA m t ht hok
-  have hc27 : (cntC C m t).toNat < 2 ^ 27 := by
-    simp only [pushOKC, Bool.and_eq_true, decide_eq_true_eq] at hok; exact hok.1
+  have hc27 : (cntC C m t).toNat < 2 ^ 30 := by
+    simp only [pushOKC, Bool.and_eq_true, decide_eq_true_eq] at hok
+    have := UInt64.lt_iff_toNat_lt.mp hok.1
+    rw [C.capW_toNat] at this; exact Nat.lt_of_lt_of_le this (capS_le _)
   have hsucc : (cntC C m t + 1).toNat = (cntC C m t).toNat + 1 := by
     rw [UInt64.toNat_add]; simp; omega
   have hct : cntC C m t = UInt64.ofNat (cntC C m t).toNat := (UInt64.ofNat_toNat).symm
   -- reads of the column after the append: tier `t`'s array has the new word, the other tier's
   -- array is untouched
-  have rd : ∀ i, i < 2 ^ 27 → i ≠ (cntC C m t).toNat →
+  have rd : ∀ i, i < 2 ^ 30 → i ≠ (cntC C m t).toNat →
       rdW (m'.arr64 (tierA A t)) (UInt64.ofNat i) = rdW (m.arr64 (tierA A t)) (UInt64.ofNat i) := by
     intro i hi hne
     rw [hAm, rdW_set!]

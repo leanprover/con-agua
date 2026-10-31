@@ -66,7 +66,7 @@ theorem persFindMaybe_const (a : AState) (f : NIdx) (x : LsIdx) :
 /-- `internE` at a `const` node is the library's protocol, the persistent probe after the skip. -/
 theorem internE_const_run (f : NIdx) (x : LsIdx) (a : AState) :
     (internE (.const f x)).run a =
-      protoRun constLens (constKey f x) ETag.const (pfCe a f x) (a.store.derOfView (.const f x))
+      protoRun constLens (constKey f x) ETag.const false (pfCe a f x) (a.store.derOfView (.const f x))
         (.native "arena: expression constructor array full") a := by
   simp only [internE, internNodeE, EStore.find?, EStore.intern, ETables.find?, Tbl.find?,
     ETables.sizeOf, ETables.push, StateT.run_bind, StateT.run_get, pure_bind, persFindMaybe_const]
@@ -75,12 +75,13 @@ theorem internE_const_run (f : NIdx) (x : LsIdx) (a : AState) :
     simp only [hs, hc, Bool.false_eq_true, ↓reduceIte, constKey, protoRun, constLens] <;>
     (try split) <;> simp_all [withScrConsts, withPersConsts, fail,
       throwThe, MonadExceptOf.throw, StateT.run, set, StateT.set,
-      StateT.lift, bind, Except.bind, pure, Except.pure, StateT.bind, StateT.pure]
+      StateT.lift, bind, Except.bind, pure, Except.pure, StateT.bind, StateT.pure, mkS, capS,
+      ENodeView.cap, Idx.idxCap, Idx.wideCap]
 
 /-! ## The relation between L memory and the arena's `const` tables -/
 
 /-- The `const` schema: `CREC`, `CSLOT`, one packed word per node, the counts at `CTL[18 + t]`. -/
-def constSch : Schema := ⟨CREC, CSLOT, 1, 18, ETag.const⟩
+def constSch : Schema := ⟨CREC, CSLOT, 1, 18, ETag.const, false⟩
 
 theorem constSch_wf : constSch.WF :=
   ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide⟩
@@ -154,7 +155,7 @@ end query
 
 theorem cepushOK_room (m : Mem) (t : Word) (h : cepushOK m t = true) : PushRoom constSch m t := by
   simp only [cepushOK, Bool.and_eq_true, decide_eq_true_eq] at h
-  simp only [PushRoom, cntW, cecnt, constSch, len64_eq] at *
+  simp only [PushRoom, Schema.cap, capS, cntW, cecnt, constSch, len64_eq] at *
   grind
 
 /-- **The `const` table's shape.** -/
@@ -162,6 +163,7 @@ theorem constCS_wf : constCS.WF where
   sch := constSch_wf
   P := by decide
   S := by decide
+  wtag h := by simp [constCS] at h
   col A h := by
     simp only [constCS, Option.some.injEq] at h; subst h
     exact ⟨by decide, by decide, by decide, fun m u k x t i => by
@@ -237,7 +239,7 @@ theorem ceintern_lp (hC : ColT2 constLens CLP lpW m a)
     (hI : ceinternW m f x = some (w, m')) :
     ColT2 constLens CLP lpW m' (AM.st (internE (.const ((decI (k := .name) f)) ((decI (k := .levels) x)))) a) := by
   obtain ⟨hok, hX, hres⟩ := ceintern_correct m a hR f x hf hx w m' hI
-  have hcs := AM.proto_casesG constLens _ _ _ _ _ _ a (internE_const_run _ _ a) hok
+  have hcs := AM.proto_casesG constLens _ _ _ _ _ _ _ a (internE_const_run _ _ a) hok
   exact colMkC constCS_wf rfl constLens lpW hR hX hC hI hcs
     (by show lsHPW m x = _; rw [hb, lpW, lp_derConst])
 

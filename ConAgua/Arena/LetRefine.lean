@@ -66,7 +66,7 @@ theorem persFindMaybe_let (a : AState) (ty val body : EIdx) :
 /-- `internE` at a `letE` node is the library's protocol, the persistent probe after the skip. -/
 theorem internE_let_run (ty val body : EIdx) (a : AState) :
     (internE (.letE ty val body)).run a =
-      protoRun letLens (letKey ty val body) ETag.letE (pfLe a ty val body)
+      protoRun letLens (letKey ty val body) ETag.letE false (pfLe a ty val body)
         (a.store.derOfView (.letE ty val body)) (.native "arena: expression constructor array full")
         a := by
   simp only [internE, internNodeE, EStore.find?, EStore.intern, ETables.find?, Tbl.find?,
@@ -76,12 +76,13 @@ theorem internE_let_run (ty val body : EIdx) (a : AState) :
     simp only [hs, hc, Bool.false_eq_true, ↓reduceIte, letKey, protoRun, letLens] <;>
     (try split) <;> simp_all [withScrLets, withPersLets, fail,
       throwThe, MonadExceptOf.throw, StateT.run, set, StateT.set,
-      StateT.lift, bind, Except.bind, pure, Except.pure, StateT.bind, StateT.pure]
+      StateT.lift, bind, Except.bind, pure, Except.pure, StateT.bind, StateT.pure, mkS, capS,
+      ENodeView.cap, Idx.idxCap, Idx.wideCap]
 
 /-! ## The relation between L memory and the arena's `letE` tables -/
 
 /-- The `letE` schema: `LEREC`, `LESLOT`, two words per node, the counts at `CTL[20 + t]`. -/
-def letSch : Schema := ⟨LEREC, LESLOT, 2, 20, ETag.letE⟩
+def letSch : Schema := ⟨LEREC, LESLOT, 2, 20, ETag.letE, false⟩
 
 theorem letSch_wf : letSch.WF :=
   ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide⟩
@@ -176,7 +177,7 @@ end query
 
 theorem lepushOK_room (m : Mem) (t : Word) (h : lepushOK m t = true) : PushRoom letSch m t := by
   simp only [lepushOK, Bool.and_eq_true, decide_eq_true_eq] at h
-  simp only [PushRoom, cntW, lecnt, letSch, len64_eq] at *
+  simp only [PushRoom, Schema.cap, capS, cntW, lecnt, letSch, len64_eq] at *
   grind
 
 /-- **The `let` table's shape.** -/
@@ -184,6 +185,7 @@ theorem letCS_wf : letCS.WF where
   sch := letSch_wf
   P := by decide
   S := by decide
+  wtag h := by simp [letCS] at h
   col A h := by simp [letCS] at h
   colRoom A h := by simp [letCS] at h
   room m t h := (lepushOK_room m t ((lepushOK_eqC m t).trans h)).2

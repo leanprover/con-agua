@@ -288,7 +288,7 @@ theorem nanon_A (hI : nainternW m = some (w, m')) :
   have hR := hA.1
   obtain ⟨hok, hX, hres⟩ := naintern_correct m a hR.nanon _ _ hI
   have hf := consInternM_frame nanonCS_wf hI
-  have hst := AM.st_proto nanonLens _ _ _ _ _ _ a (internNNode_anon_run a) hok
+  have hst := AM.st_proto nanonLens _ _ _ _ _ _ _ a (internNNode_anon_run a) hok
   exact ⟨hok, ⟨hR.lift_nanon _ _ _ _ hX hf hst, derR_lss _ (fun _ _ => ⟨rfl, rfl⟩) (fun _ _ => ⟨rfl, rfl⟩) hst
     (DerR.frameT hf (by tapart) hA.2)⟩, hres, hf⟩
 
@@ -300,7 +300,7 @@ theorem zero_A (hI : zinternW m = some (w, m')) :
   obtain ⟨hok, hX, hres⟩ := zintern_correct m a hR.zero _ _ hI
   have hL := zintern_hp m a hR.zero hR.zeroHp _ _ hI
   have hf := consInternM_frame zeroCS_wf hI
-  have hst := AM.st_proto zeroLens _ _ _ _ _ _ a (internLNode_zero_run a) hok
+  have hst := AM.st_proto zeroLens _ _ _ _ _ _ _ a (internLNode_zero_run a) hok
   exact ⟨hok, ⟨hR.lift_zero _ _ _ _ ⟨hX, hL⟩ hf hst, derR_lss _ (fun _ _ => ⟨rfl, rfl⟩) (fun _ _ => ⟨rfl, rfl⟩) hst
     (DerR.frameT hf (by tapart) hA.2)⟩, hres, hf⟩
 
@@ -312,7 +312,7 @@ theorem nstr_A (q o l : Word) (hqw : q.toNat < 2 ^ 32) (hq : SliceOK m o l) (s :
   have hR := hA.1
   obtain ⟨hok, hX, hres⟩ := nsintern_correct m a hR.lit.1 hR.nstr q o l hqw hq s hk hq0 _ _ hI
   have hf := consInternM_frame nstrCS_wf hI
-  have hst := AM.st_proto nstrLens _ _ _ _ _ _ a (internNNode_str_run _ _ a) hok
+  have hst := AM.st_proto nstrLens _ _ _ _ _ _ _ a (internNNode_str_run _ _ a) hok
   exact ⟨hok, ⟨hR.lift_nstr _ _ _ _ hX hf hst, derR_lss _ (fun _ _ => ⟨rfl, rfl⟩) (fun _ _ => ⟨rfl, rfl⟩) hst
     (DerR.frameT hf (by tapart) hA.2)⟩, hres, hf⟩
 
@@ -324,7 +324,7 @@ theorem nnum_A (q u : Word) (hqw : q.toNat < 2 ^ 32) (hI : nninternW m q u = som
   have hR := hA.1
   obtain ⟨hok, hX, hres⟩ := nnintern_correct m a hR.nnum q u hqw _ _ hI
   have hf := consInternM_frame nnumCS_wf hI
-  have hst := AM.st_proto nnumLens _ _ _ _ _ _ a (internNNode_num_run _ _ a) hok
+  have hst := AM.st_proto nnumLens _ _ _ _ _ _ _ a (internNNode_num_run _ _ a) hok
   exact ⟨hok, ⟨hR.lift_nnum _ _ _ _ hX hf hst, derR_lss _ (fun _ _ => ⟨rfl, rfl⟩) (fun _ _ => ⟨rfl, rfl⟩) hst
     (DerR.frameT hf (by tapart) hA.2)⟩, hres, hf⟩
 
@@ -336,7 +336,7 @@ theorem succ_A (u : Word) (hu : u.toNat < 2 ^ 32) (hI : sinternW m u = some (w, 
   obtain ⟨hok, hX, hres⟩ := sintern_correct m a hR.succ u hu _ _ hI
   have hL := sintern_hp m a hR.succ u hu hR.succHp (lvlHPW_ok m a hR u hu) _ _ hI
   have hf := sinternW_frame m u _ _ hI
-  have hst := AM.st_proto succLens _ _ _ _ _ _ a (internLNode_succ_run _ a) hok
+  have hst := AM.st_proto succLens _ _ _ _ _ _ _ a (internLNode_succ_run _ a) hok
   exact ⟨hok, ⟨hR.lift_succ _ _ _ _ ⟨hX, hL⟩ hf hst, derR_lss _ (fun _ _ => ⟨rfl, rfl⟩) (fun _ _ => ⟨rfl, rfl⟩) hst
     (DerR.frameT hf (by tapart) hA.2)⟩, hres, hf⟩
 
@@ -350,7 +350,7 @@ theorem max_A (u v : Word) (hu : u.toNat < 2 ^ 32) (hv : v.toNat < 2 ^ 32)
   obtain ⟨hok, hX, hres⟩ := mintern_correct m a hR.max u v hu hv _ _ hI
   have hL := mintern_hp m a hR.max u v hu hv hR.maxHp (lvlHPW_or m a hR u v hu hv) _ _ hI
   have hf := minternW_frame m u v _ _ hI
-  have hst := AM.st_proto maxLens _ _ _ _ _ _ a (internLNode_max_run _ _ a) hok
+  have hst := AM.st_proto maxLens _ _ _ _ _ _ _ a (internLNode_max_run _ _ a) hok
   exact ⟨hok, ⟨hR.lift_max _ _ _ _ ⟨hX, hL⟩ hf hst, derR_lss _ (fun _ _ => ⟨rfl, rfl⟩) (fun _ _ => ⟨rfl, rfl⟩) hst
     (DerR.frameT hf (by tapart) hA.2)⟩, hres, hf⟩
 
@@ -364,7 +364,7 @@ theorem imax_A (u v : Word) (hu : u.toNat < 2 ^ 32) (hv : v.toNat < 2 ^ 32)
   obtain ⟨hok, hX, hres⟩ := imintern_correct m a hR.imax u v hu hv _ _ hI
   have hL := imintern_hp m a hR.imax u v hu hv hR.imaxHp (lvlHPW_or m a hR u v hu hv) _ _ hI
   have hf := iminternW_frame m u v _ _ hI
-  have hst := AM.st_proto imaxLens _ _ _ _ _ _ a (internLNode_imax_run _ _ a) hok
+  have hst := AM.st_proto imaxLens _ _ _ _ _ _ _ a (internLNode_imax_run _ _ a) hok
   exact ⟨hok, ⟨hR.lift_imax _ _ _ _ ⟨hX, hL⟩ hf hst, derR_lss _ (fun _ _ => ⟨rfl, rfl⟩) (fun _ _ => ⟨rfl, rfl⟩) hst
     (DerR.frameT hf (by tapart) hA.2)⟩, hres, hf⟩
 
@@ -376,7 +376,7 @@ theorem param_A (u : Word) (hu : u.toNat < 2 ^ 32) (hI : pinternW m u = some (w,
   obtain ⟨hok, hX, hres⟩ := pintern_correct m a hR.param u hu _ _ hI
   have hL := pintern_hp m a hR.param u hu hR.paramHp _ _ hI
   have hf := consInternM_frame paramCS_wf hI
-  have hst := AM.st_proto paramLens _ _ _ _ _ _ a (internLNode_param_run _ a) hok
+  have hst := AM.st_proto paramLens _ _ _ _ _ _ _ a (internLNode_param_run _ a) hok
   exact ⟨hok, ⟨hR.lift_param _ _ _ _ ⟨hX, hL⟩ hf hst, derR_lss _ (fun _ _ => ⟨rfl, rfl⟩) (fun _ _ => ⟨rfl, rfl⟩) hst
     (DerR.frameT hf (by tapart) hA.2)⟩, hres, hf⟩
 

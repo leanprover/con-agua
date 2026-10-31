@@ -554,6 +554,7 @@ def natPredL : FunDecl := lfn (e) locals (t, i, l, f, x, el, ns) {
   };
   if ⟦e⟧.tag == 4 {
     if t != 0 && CTL.u64[1] == 0 { abort };
+    i := ⟦e⟧.aidx;
     if APP⟨t⟩.count <= i { abort };
     f := APP⟨t, i⟩.f;
     x := APP⟨t, i⟩.a;

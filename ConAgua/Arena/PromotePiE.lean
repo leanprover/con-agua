@@ -59,9 +59,9 @@ theorem internLitStr_D (m : Mem) (a : AState) (hA : ArenaD m a) (o l r : Word)
   obtain ⟨hok, hX, hres⟩ := internStr_correct m a hR.lit o l hq s hk hq0 _ _ hI
   have hI₂ := hI
   have hfr := consInternM_frame litStrCS_wf hI₂
-  have hcs := AM.proto_cases litLens _ _ _ _ _ _ a (internE_lit_run _ a) hok
+  have hcs := AM.proto_cases litLens _ _ _ _ _ _ _ a (internE_lit_run _ a) hok
   have hR₁ := hR.lift_lit _ _ _ _ hX hfr
-    (AM.st_proto litLens _ _ _ _ _ _ a (internE_lit_run _ a) hok)
+    (AM.st_proto litLens _ _ _ _ _ _ _ a (internE_lit_run _ a) hok)
   have hD₁ : DerR m' a := DerR.frameM _ _ m m' hfr (by simp [tier1, ConsSch.wset, litStrCS, litCSk, REC, SLOT]) a hD
   refine ⟨hok, ⟨hR₁, ?_⟩, hres⟩
   rcases hcs with h | ⟨-, -, -, h⟩ | ⟨-, -, -, h⟩ <;> rw [h]

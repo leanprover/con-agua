@@ -651,6 +651,7 @@ def eView : FunDecl := lfn (h) locals (g, t, i) {
     return (3, CONST⟨t, i⟩.n, CONST⟨t, i⟩.us, 0)
   };
   if g == 4 {
+    i := ⟦h⟧.aidx;
     if APP⟨t⟩.count <= i { abort };
     return (4, APP⟨t, i⟩.f, APP⟨t, i⟩.a, 0)
   };

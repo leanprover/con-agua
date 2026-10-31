@@ -62,7 +62,7 @@ theorem persFindMaybe_sort (a : AState) (u : LIdx) :
 /-- `internE` at a `sort` node is the library's protocol, the persistent probe after the skip. -/
 theorem internE_sort_run (u : LIdx) (a : AState) :
     (internE (.sort u)).run a =
-      protoRun sortLens (sortKey u) ETag.sort (pfSo a u) (a.store.derOfView (.sort u))
+      protoRun sortLens (sortKey u) ETag.sort false (pfSo a u) (a.store.derOfView (.sort u))
         (.native "arena: expression constructor array full") a := by
   simp only [internE, internNodeE, EStore.find?, EStore.intern, ETables.find?, Tbl.find?,
     ETables.sizeOf, ETables.push, StateT.run_bind, StateT.run_get, pure_bind, persFindMaybe_sort]
@@ -71,12 +71,13 @@ theorem internE_sort_run (u : LIdx) (a : AState) :
     simp only [hs, hc, Bool.false_eq_true, ↓reduceIte, sortKey, protoRun, sortLens] <;>
     (try split) <;> simp_all [withScrSorts, withPersSorts, fail,
       throwThe, MonadExceptOf.throw, StateT.run, set, StateT.set,
-      StateT.lift, bind, Except.bind, pure, Except.pure, StateT.bind, StateT.pure]
+      StateT.lift, bind, Except.bind, pure, Except.pure, StateT.bind, StateT.pure, mkS, capS,
+      ENodeView.cap, Idx.idxCap, Idx.wideCap]
 
 /-! ## The relation between L memory and the arena's `sort` tables -/
 
 /-- The `sort` schema: `SOREC`, `SOSLOT`, one word per node, the counts at `CTL[16 + t]`. -/
-def sortSch : Schema := ⟨SOREC, SOSLOT, 1, 16, ETag.sort⟩
+def sortSch : Schema := ⟨SOREC, SOSLOT, 1, 16, ETag.sort, false⟩
 
 theorem sortSch_wf : sortSch.WF :=
   ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide⟩
@@ -149,7 +150,7 @@ end query
 theorem sopushOK_room (m : Mem) (t : Word) (h : sopushOK m t = true) : PushRoom sortSch m t := by
   simp only [sopushOK, Bool.and_eq_true, decide_eq_true_eq] at h
   have := UInt64.toNat_shiftRight (m.len64 (tierA SOREC t)) 0
-  simp only [PushRoom, cntW, socnt, sortSch, len64_eq] at *
+  simp only [PushRoom, Schema.cap, capS, cntW, socnt, sortSch, len64_eq] at *
   grind
 
 /-- **The `sort` table's shape.** -/
@@ -157,6 +158,7 @@ theorem sortCS_wf : sortCS.WF where
   sch := sortSch_wf
   P := by decide
   S := by decide
+  wtag h := by simp [sortCS] at h
   col A h := by
     simp only [sortCS, Option.some.injEq] at h; subst h
     exact ⟨by decide, by decide, by decide, fun m u k x t i => by
@@ -228,7 +230,7 @@ theorem sointern_lp (hC : ColT2 sortLens SOLP lpW m a)
     (hI : sointernW m u = some (w, m')) :
     ColT2 sortLens SOLP lpW m' (AM.st (internE (.sort (decI u))) a) := by
   obtain ⟨hok, hX, hres⟩ := sointern_correct m a hR u hu w m' hI
-  have hcs := AM.proto_casesG sortLens _ _ _ _ _ _ a (internE_sort_run _ a) hok
+  have hcs := AM.proto_casesG sortLens _ _ _ _ _ _ _ a (internE_sort_run _ a) hok
   exact colMkC sortCS_wf rfl sortLens lpW hR hX hC hI hcs
     (by show lvlHPW m u = _; rw [hb, lpW, lp_derSort])
 

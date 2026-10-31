@@ -82,6 +82,7 @@ def wsNode : FunDecl := lfn (h, d, c) locals (g, t, i, f, a, b, x) {
     return 0
   };
   if g == 4 {
+    i := ⟦h⟧.aidx;
     if APP⟨t⟩.count <= i { abort };
     f := APP⟨t, i⟩.f;
     a := APP⟨t, i⟩.a;

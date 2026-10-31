@@ -56,7 +56,7 @@ def nanonLens : Lens AnonNode UInt64 .name where
 store's `internLNode`). -/
 theorem internNNode_anon_run (a : AState) :
     (internNNode .anonymous).run a =
-      protoRun nanonLens naKey NTag.anonymous a.store.lss.ls.ns.pers.anons.cons[naKey]?
+      protoRun nanonLens naKey NTag.anonymous false a.store.lss.ls.ns.pers.anons.cons[naKey]?
         (a.store.lss.ls.ns.derOfView .anonymous) (.native "arena: name constructor array full") a := by
   simp only [internNNode, NStore.find?, NTables.find?, Tbl.find?, NTables.sizeOf, EStore.ns,
     EStore.internName, LsStore.internName, LStore.internName, NStore.intern, NTables.push]
@@ -66,13 +66,14 @@ theorem internNNode_anon_run (a : AState) :
       ↓reduceIte, naKey, protoRun, nanonLens] <;>
     (try split) <;> simp_all [withScrNAnons, withPersNAnons, fail,
       throwThe, MonadExceptOf.throw, StateT.run, set, StateT.set,
-      StateT.lift, bind, Except.bind, pure, Except.pure, StateT.bind, StateT.pure]
+      StateT.lift, bind, Except.bind, pure, Except.pure, StateT.bind, StateT.pure, mkS, capS,
+      ENodeView.cap, Idx.idxCap, Idx.wideCap]
 
 /-! ## The relation between L memory and the arena's `anonymous` tables -/
 
 /-- The `anonymous` schema: `NAREC`, `NASLOT`, one dummy word per node, the counts at
 `CTL[34 + t]`. -/
-def nanonSch : Schema := ⟨NAREC, NASLOT, 1, 34, NTag.anonymous⟩
+def nanonSch : Schema := ⟨NAREC, NASLOT, 1, 34, NTag.anonymous, false⟩
 
 theorem nanonSch_wf : nanonSch.WF :=
   ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide⟩
@@ -114,7 +115,7 @@ theorem naNewOK (m : Mem) : NewOKR nanonSch NaRecRel nahash m [0] naKey nahashW 
 theorem napushOK_room (m : Mem) (t : Word) (h : napushOK m t = true) : PushRoom nanonSch m t := by
   simp only [napushOK, Bool.and_eq_true, decide_eq_true_eq] at h
   have := UInt64.toNat_shiftRight (m.len64 (tierA NAREC t)) 0
-  simp only [PushRoom, cntW, nacnt, nanonSch, len64_eq] at *
+  simp only [PushRoom, Schema.cap, capS, cntW, nacnt, nanonSch, len64_eq] at *
   grind
 
 /-- **The `nanon` table's shape.** -/
@@ -122,6 +123,7 @@ theorem nanonCS_wf : nanonCS.WF where
   sch := nanonSch_wf
   P := by decide
   S := by decide
+  wtag h := by simp [nanonCS] at h
   col A h := by simp [nanonCS] at h
   colRoom A h := by simp [nanonCS] at h
   room m t h := (napushOK_room m t ((napushOK_eqC m t).trans h)).2

@@ -326,6 +326,7 @@ def proofPWLoop : Stmt := lblk (vis, f, e, t, x) {
         if LET⟨t⟩.count <= x { abort };
         e := LET⟨t, x⟩.b
       } else {
+        x := ⟦e⟧.aidx;
         if APP⟨t⟩.count <= x { abort };
         e := APP⟨t, x⟩.f
       }
