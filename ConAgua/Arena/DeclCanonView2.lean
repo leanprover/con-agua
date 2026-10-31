@@ -172,7 +172,7 @@ theorem lsView_of_lsNodeW {m : Mem} {a : AState} (hR : ArenaR m a) {h : Word}
   have hget : ∀ T : LsTables, T.lists.nodes[(idxW h).toNat]? = some x →
       T.get (decI h) = some x.us := fun T hT => by
     simp only [LsTables.get, decLs_tag0 h hh, hg, beq_self_eq_true, ↓reduceIte, Tbl.node?,
-      decI_idx h, hT, Option.map_some]
+      decI_idx h (narrow_of_tagW h (by rw [hg]; decide)), hT, Option.map_some]
   unfold LsStore.view
   rw [hpers]
   by_cases ht : tierW h = 0
