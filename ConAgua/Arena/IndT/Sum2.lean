@@ -243,15 +243,16 @@ theorem ct_ref (k : Nat) (hk : k ≤ 2 ^ 62)
   have hw' : rdW (m.arr64 EREC) (cvTa0 + 3) = w := by
     rw [← hw]; congr 1
   rw [hw']
-  -- `strip_pis` (outside the verdict closure)
-  rcases h1 : stripF 6 m [n, w] with _ | ⟨r1, m1⟩
-  · rw [liftE_none, ctE.k_strip_pis.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]
-  obtain ⟨x, a1, hrun1, hS1, hg1, hdec⟩ := stripF_pis_ok dn vis fe n w hw32 m m1 a r1 h1 hS
   have hdw : denoteE a.store (decI w) = some cvTaP.type := by
     rw [hwd]; exact ConRon.Bridge.denoteCV_type hcvTaP
+  unfold checkSumTele
+  rw [← hwd]
+  -- `strip_pis` (outside the verdict closure)
+  refine RefE.bindLift (fun _ => rfl) fun r1 m1 h1 => ?_
+  obtain ⟨x, a1, hrun1, hS1, hg1, hdec⟩ := stripF_pis_ok dn vis fe n w hw32 m m1 a r1 h1 hS
   obtain ⟨ha1, -⟩ := ConRon.Bridge.Inductives.stripPis_pstep hC.check.state hdw hrun1
   rw [ha1] at hrun1 hS1
+  refine ⟨_, _, hrun1, ?_⟩
   have hA1 := stripF_afr h1 hA
   have hC1 : StageC dn vis fe env m1 a := hC.of_pstep hS1 hA1 (PStep.refl hC.check.state)
   have hcv1 := decCVp_grow hg1 hcvb hsl hcv
@@ -259,9 +260,6 @@ theorem ct_ref (k : Nat) (hk : k ≤ 2 ^ 62)
   have hnat : ∀ q : Word, q.toNat + 4 ≤ erTop m → ∀ j, j < 4 →
       nat? (erA m1) (q.toNat + j) = nat? (erA m) (q.toNat + j) := fun q hq j hj => by
     simp only [nat?, erA]; rw [hg1.erGet _ (by omega)]
-  unfold checkSumTele
-  rw [← hwd]
-  refine RefE.bind_right hrun1 ?_
   by_cases hf : r1.headD 0 = 1 ∧ r1.tail.tail.tail.headD 0 >>> 28 = 2
   · cases x with
     | none => simp only [decOLE] at hdec; rw [hf.1] at hdec; cases hdec
@@ -321,12 +319,10 @@ theorem ct_ref (k : Nat) (hk : k ≤ 2 ^ 62)
         exact hf ⟨h1', (decE_tag_sort _ (by simpa using hb32)).mp (by simpa using ht)⟩
       simp only [hnt, Bool.false_eq_true, ite_false]
       exact hS'
-  rcases h2 : ctsE p k m1 vis cv n cvTa0 with e2 | ⟨r2, m2⟩
-  · rw [ctE.k_check_sum_tele_slow.none]; rw [h2] at hR; exact hR
-  rw [ctE.k_check_sum_tele_slow.arm1]; rw [h2] at hR
-  obtain ⟨res, a2, hrun2, hR2⟩ := hR
-  exact RefE.ret hrun2 ⟨hR2.stage, hg1.trans hR2.grow, by simpa using hR2.cv, by simpa using hR2.top,
-    by simpa using hR2.lps, by simpa using hR2.sort32, by simpa using hR2.sort, hR2.abs⟩
+  exact RefE.lastE (K := ctE.k_check_sum_tele_slow p) (fun _ => rfl) (fun _ => rfl) id hR
+    fun _ _ _ _ hR2 => ⟨hR2.stage, hg1.trans hR2.grow,
+    by simpa using hR2.cv, by simpa using hR2.top, by simpa using hR2.lps, by simpa using hR2.sort32,
+    by simpa using hR2.sort, hR2.abs⟩
 
 section census
 variable (ha : p.lookup "iw_alloc" = some iwAlloc)
