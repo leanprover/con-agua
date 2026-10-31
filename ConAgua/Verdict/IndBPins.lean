@@ -98,28 +98,19 @@ theorem tpt_ref (n : Nat) (hn : n ≤ 2 ^ 62) :
   obtain ⟨xP, xsP', hxP, hxsP', rfl⟩ := ConRon.Bridge.denoteEList_cons_inv hxsP
   rw [ConRon.Arena.targetPinTys]
   subst hw3
-  cases h1 : callE p n "infer_type_core" [vis, d, w] m with
-  | error e1 =>
-    rw [tptE.k_infer_type_core.none]
-    exact RefE.bind_left fun hV => hV.core.inferTypeCore n (by omega) hC.stageT d w hw2 _ h1
-  | ok q1 =>
-  obtain ⟨r1, m1⟩ := q1
+  refine RefE.bindCall (fun _ => tptE.k_infer_type_core.none ..)
+    (fun hV _ h1 => hV.core.inferTypeCore n (by omega) hC.stageT d w hw2 _ h1)
+    (inferC_rsim hq henv n (by omega) hC hA d w hw2 hxP (hw xP List.mem_cons_self))
+    fun r1 m1 t1 a1 _ _ ⟨hC1, hg1, _, hA1, c1', _⟩ => ?_
   rw [tptE.k_infer_type_core.arm1]
-  obtain ⟨t1, a1, hrun1, hC1, hg1, -, hA1, c1', -⟩ :=
-    inferC_rsim hq henv n (by omega) hC hA d w hw2 hxP (hw xP List.mem_cons_self) (r1, m1)
-      (callW_of_callE h1)
   dsimp only at hC1 hg1 hA1
-  refine RefE.bind_right hrun1 ?_
   have hxs1 : HSl0 m1 (xo + 1) (xl - 1) xs' :=
     ⟨by rw [hxo1, hxl1, decHL_grow hg1 (by omega)]; exact hxs',
       .inr (by rw [hxo1, hxl1]; have := hg1.iw; omega)⟩
-  have hr := ih (by omega) hC1 hA1 hxs1 (ConRon.Bridge.denoteEList_ext c1'.ext _ _ hxsP')
-    (fun y hy => hw y (List.mem_cons_of_mem _ hy))
-  rcases h2 : tptE p n m1 vis d (xo + 1) (xl - 1) with e2 | ⟨v2, m2⟩ <;> rw [h2] at hr
-  · rw [tptE.k_target_pin_tys.none]; exact hr
-  rw [tptE.k_target_pin_tys.arm1]
-  obtain ⟨y, a2, run2, hR⟩ := hr
-  exact RefE.ret run2 ⟨hR.stage, hg1.trans hR.grow, hR.abs⟩
+  refine RefE.lastE (fun _ => tptE.k_target_pin_tys.none ..) (fun _ => tptE.k_target_pin_tys.arm1 ..) id
+    (ih (by omega) hC1 hA1 hxs1 (ConRon.Bridge.denoteEList_ext c1'.ext _ _ hxsP')
+      (fun y hy => hw y (List.mem_cons_of_mem _ hy)))
+    fun _ _ _ _ hR => ⟨hR.stage, hg1.trans hR.grow, hR.abs⟩
 
 include hq henv in
 /-- **`target_pin_tys` refines `targetPinTys .verified`** under `StageC` (`tpt_ref`'s ok half; the

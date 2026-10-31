@@ -6,7 +6,8 @@ import ConAgua.L.ModelGen
 # `check_constant_val`'s refinement; the verdict claims of `check_defn_val`, `check_opaque_val`
 
 `check_constant_val`: one unified model and one refinement for both outcomes (`ccv_ref`).
-`check_defn_val`, `check_opaque_val`: error claims under the hypotheses
+`check_defn_val`, `check_opaque_val`: one refinement over both models (`dvo_ref`, on `dvoE`),
+and error claims under the hypotheses
 of the ok refinements (`checkDefnVal_refinesT`, `checkOpaqueVal_refinesT`) and the callees' error
 claims (`CoreStubsE`, `IvgE`).
 -/
@@ -111,9 +112,123 @@ structure DvPost (dn : NIdx → Option ConLeche.Name) (m : Mem) (fe' : IFEnv) (w
   grow : IWGrow m w.2
   res : y = fe'
 
-/-- **`check_defn_val` refines its twin `dvT …`, both outcomes**, under `StageT`: the value's guards
-by `ivg_ref`, the core stubs by `KnotStageProg` and `CoreStubsE`, the
-type mismatch the twin's `invalid`; after the push the stage at the extended environment. -/
+/-! `dvoE k`: `checkDefnValE` and `checkOpaqueValE` with the mismatch's abort code `k` a
+parameter. The two L functions have the same text but for that code (as their twins are `dvT` but
+for the message), so one refinement (`dvo_ref`) serves both; `checkDefnValE_dvo` and
+`checkOpaqueValE_dvo` are definitional. -/
+
+/-- `dvoE`'s continuation after `env_push`. -/
+def dvoE.k_env_push : Except Err (List Word × Mem) → Except Err (Word × Mem)
+  | .error ε => .error ε
+  | .ok (r, m₁) => .ok (r.headD 0, m₁)
+
+/-- `dvoE`'s continuation after `is_def_eq_core`: the mismatch guard. -/
+def dvoE.k_is_def_eq_core (k : Word) (p : Prog) (n : Nat) (vis c : Word) :
+    Except Err (List Word × Mem) → Except Err (Word × Mem)
+  | .error ε => .error ε
+  | .ok (r, m₁) => if r.headD 0 = 0 then .error (.abort k)
+    else dvoE.k_env_push (callE p n "env_push" [vis, c] m₁)
+
+/-- `dvoE`'s continuation after `infer_type_core`. -/
+def dvoE.k_infer_type_core (k : Word) (p : Prog) (n : Nat) (vis c t : Word) :
+    Except Err (List Word × Mem) → Except Err (Word × Mem)
+  | .error ε => .error ε
+  | .ok (r, m₁) => dvoE.k_is_def_eq_core k p n vis c (callE p n "is_def_eq_core" [vis, 0, r.headD 0, t] m₁)
+
+/-- `dvoE`'s continuation after `install_value_guards`. -/
+def dvoE.k_install_value_guards (k : Word) (p : Prog) (n : Nat) (vis c v t : Word) :
+    Except Err (List Word × Mem) → Except Err (Word × Mem)
+  | .error ε => .error ε
+  | .ok (_, m₁) => dvoE.k_infer_type_core k p n vis c t (callE p n "infer_type_core" [vis, 0, v] m₁)
+
+/-- **`check_defn_val`'s and `check_opaque_val`'s model, over the mismatch's abort code `k`**: the
+two L functions have the same text but for that code, as their twins are `dvT` but for the
+message. -/
+def dvoE (k : Word) (p : Prog) : Nat → Mem → Word → Word → Except Err (Word × Mem)
+  | 0, _, _, _ => .error .outOfFuel
+  | n + 1, m, vis, c => dvoE.k_install_value_guards k p n vis c (rdW (m.arr64 EREC) (c + 5))
+    (rdW (m.arr64 EREC) (c + 4)) (callE p n "install_value_guards" [vis, c + 1, rdW (m.arr64 EREC) (c + 5)] m)
+
+theorem checkDefnValE_dvo (p : Prog) (n : Nat) (m : Mem) (vis c : Word) :
+    checkDefnValE p n m vis c = dvoE R_TYPE_MISMATCH_IN p n m vis c := by
+  cases n <;> rfl
+
+theorem checkOpaqueValE_dvo (p : Prog) (n : Nat) (m : Mem) (vis c : Word) :
+    checkOpaqueValE p n m vis c = dvoE R_TYPE_MISMATCH_IN_OPAQUE p n m vis c := by
+  cases n <;> rfl
+
+/-- **`dvoE k` refines its twin `dvT …`, both outcomes**, under `StageT`, for a code `k` of the
+twin's mismatch class: the value's guards by `ivg_ref`, the core stubs by `KnotStageProg` and
+`CoreStubsE`, the type mismatch the twin's `invalid`; after the push the stage at the extended
+environment. -/
+theorem dvo_ref {p : Prog} (hq : KnotStageProg p) (hp : ValProg p) (hap : ApdF p) (hkp : CrKeep p)
+    {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
+    {n : Nat} (hn : n ≤ 2 ^ 62) {m : Mem} {c : Word} {cv : IConstantVal} {v : EIdx}
+    {ci : IConstantInfo} {k : Word} (msg : String) (hk : (Err.abort k).cls = twinCls (.invalid msg))
+    (hS : StageT dn vis fe m a)
+    (hci : decCI (erecP m) dn c.toNat = some ci) (hcv : decCV (erecP m) (c.toNat + 1) = some cv)
+    (hv : hd? (erecP m) (c.toNat + 5) = some v)
+    (hlps : ∃ ks, cv.levelParams.mapM (denoteN a.store.ns) = some ks) (hCr : L.Stubs.CrOK m) :
+    RefE (DvCtx p) (dvoE k p n m vis c) (dvT fe cv v ci msg) a
+      (fun w y a' => DvPost dn m (fe.push ci) w y a') := by
+  obtain ⟨wv, hwv, hwvl, rfl⟩ := hd?_some hv
+  obtain ⟨wt, hwt, hwtl, hty⟩ := decCV_typeW hcv
+  have hcb : c.toNat + 5 < 2 ^ 64 := erecP_bound hwv hS.stage.iw
+  have ev : rdW (m.arr64 EREC) (c + 5) = wv :=
+    rdW_of_get? (toNat_add_small c 5 (by omega)).symm (erecP_get hwv)
+  have et : rdW (m.arr64 EREC) (c + 4) = wt :=
+    rdW_of_get? (toNat_add_small c 4 (by omega)).symm (erecP_get (by simpa [Nat.add_assoc] using hwt))
+  have hc1 : (c + 1).toNat = c.toNat + 1 := toNat_add_small c 1 (by omega)
+  cases n with
+  | zero => exact RefE.of_cls0 rfl
+  | succ n =>
+  have hn' : n ≤ 2 ^ 62 := by omega
+  rw [dvoE, ev, et]
+  unfold dvT
+  rw [hty]
+  -- `install_value_guards(vis, c + 1, v)`
+  rcases h1 : callE p n "install_value_guards" [vis, c + 1, wv] m with e1 | ⟨r1, m1⟩
+  · exact RefE.bind_left fun hG => hG.ivg h1 hS (by rw [hc1]; exact ArrExt.decCV (erecP_ext m) hcv)
+      (by rw [hc1]; omega) hwvl hlps hCr
+  obtain ⟨s1, hs1, -, _, a1, hrun1, hS1, hg1, -⟩ := RefE.run_ok
+    (s₀ := ⟨m, Locals.init []⟩)
+    (installValueGuards_specE p hp.cvg n _ vis (c + 1) wv)
+    (ivg_ref hap hkp.crf n hS (by rw [hc1]; exact ArrExt.decCV (erecP_ext m) hcv)
+      (by rw [hc1]; omega) hwvl hlps hCr) h1
+  subst hs1
+  dsimp only [dvoE.k_install_value_guards]
+  refine RefE.bind_right hrun1 ?_
+  -- the value's type
+  refine RefE.bindCall (fun _ => rfl) (fun hG _ h2 => hG.core.inferTypeCore n hn' hS1 0 wv hwvl _ h2)
+    (fun b h2 => hq.inferTypeCore_sim n hn' hS1 0 wv hwvl b.1 b.2 h2)
+    fun r2 m2 x2 a2 _ _ ⟨hS2, hg2, hx2l, hx2⟩ => ?_
+  dsimp only [dvoE.k_infer_type_core]
+  subst hx2
+  -- the comparison with the declared type
+  refine RefE.bindCall (fun _ => rfl)
+    (fun hG _ h3 => hG.core.isDefEqCore n hn' hS2 0 (r2.headD 0) wt hx2l hwtl _ h3)
+    (fun b h3 => hq.isDefEqCore_sim n hn' hS2 0 (r2.headD 0) wt hx2l hwtl b.1 b.2 h3)
+    fun r3 m3 x3 a3 _ _ ⟨hS3, hg3, hx3⟩ => ?_
+  dsimp only [dvoE.k_is_def_eq_core]
+  refine RefE.guard hk (fun hb3 => by rw [← hx3, decBool, hb3]; rfl)
+    (fun hb3 => by rw [← hx3] at hb3; simpa [decBool] using hb3) fun _ _ => ?_
+  -- the push
+  have hx13 : ArrExt (erecP m) (erecP m3) := IWGrow.erecPExt (hg1.trans (hg2.trans hg3))
+  have hci3 := ArrExt.decCI hx13 hci
+  obtain ⟨w, hw1, hwl, -⟩ := decCI_name hci3
+  have hw : (rdW (m3.arr64 EREC) (c + 1)).toNat < 2 ^ 32 := by
+    rw [rdW_of_get? hc1.symm (erecP_get hw1)]; exact hwl
+  rcases h4 : callE p n "env_push" [vis, c] m3 with e4 | ⟨r4, m4⟩
+  · exact fun hG => ErrClaim.of_cls0 (hG.env _ _ _ _ h4)
+  obtain ⟨s4, hs4, -, hW4⟩ := triple_of_callW (s₀ := ⟨m3, Locals.init []⟩)
+    (envPush_specW p hp.rcp n ⟨m3, Locals.init []⟩ vis c hw) (callW_of_callE h4)
+  subst hs4
+  obtain ⟨hS4, hg4⟩ := envPushW_ok hW4 hS3.stage hci3
+  have hM4 : CoreMemos s4.mem := hS3.twin.memos.frame (envPushW_frame hW4)
+    (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)
+  exact RefE.ret rfl ⟨by simpa using hS4, hM4, hg1.trans (hg2.trans (hg3.trans hg4)), rfl⟩
+
+/-- **`check_defn_val` refines its twin `dvT …`, both outcomes** (`dvo_ref`). -/
 theorem dv_ref {p : Prog} (hq : KnotStageProg p) (hp : ValProg p) (hap : ApdF p) (hkp : CrKeep p)
     {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
     {n : Nat} (hn : n ≤ 2 ^ 62) {m : Mem} {c : Word} {cv : IConstantVal} {v : EIdx}
@@ -123,68 +238,9 @@ theorem dv_ref {p : Prog} (hq : KnotStageProg p) (hp : ValProg p) (hap : ApdF p)
     (hlps : ∃ ks, cv.levelParams.mapM (denoteN a.store.ns) = some ks) (hCr : L.Stubs.CrOK m) :
     RefE (DvCtx p) (checkDefnValE p n m vis c) (dvT fe cv v ci msg) a
       (fun w y a' => DvPost dn m (fe.push ci) w y a') := by
-  obtain ⟨wv, hwv, hwvl, rfl⟩ := hd?_some hv
-  obtain ⟨wt, hwt, hwtl, hty⟩ := decCV_typeW hcv
-  have hcb : c.toNat + 5 < 2 ^ 64 := erecP_bound hwv hS.stage.iw
-  have ev : rdW (m.arr64 EREC) (c + 5) = wv :=
-    rdW_of_get? (toNat_add_small c 5 (by omega)).symm (erecP_get hwv)
-  have et : rdW (m.arr64 EREC) (c + 4) = wt :=
-    rdW_of_get? (toNat_add_small c 4 (by omega)).symm (erecP_get (by simpa [Nat.add_assoc] using hwt))
-  have hc1 : (c + 1).toNat = c.toNat + 1 := toNat_add_small c 1 (by omega)
-  cases n with
-  | zero => rw [checkDefnValE.eq_1]; exact RefE.of_cls0 rfl
-  | succ n =>
-  have hn' : n ≤ 2 ^ 62 := by omega
-  rw [checkDefnValE.arm1, ev, et]
-  unfold dvT
-  rw [hty]
-  -- `install_value_guards(vis, c + 1, v)`
-  rcases h1 : callE p n "install_value_guards" [vis, c + 1, wv] m with e1 | ⟨r1, m1⟩
-  · rw [checkDefnValE.k_install_value_guards.none]
-    exact RefE.bind_left fun hG => hG.ivg h1 hS (by rw [hc1]; exact ArrExt.decCV (erecP_ext m) hcv)
-      (by rw [hc1]; omega) hwvl hlps hCr
-  rw [checkDefnValE.k_install_value_guards.arm1]
-  obtain ⟨s1, hs1, -, _, a1, hrun1, hS1, hg1, -⟩ := RefE.run_ok
-    (s₀ := ⟨m, Locals.init []⟩)
-    (installValueGuards_specE p hp.cvg n _ vis (c + 1) wv)
-    (ivg_ref hap hkp.crf n hS (by rw [hc1]; exact ArrExt.decCV (erecP_ext m) hcv)
-      (by rw [hc1]; omega) hwvl hlps hCr) h1
-  subst hs1
-  refine RefE.bind_right hrun1 ?_
-  -- the value's type
-  refine RefE.bindCall (fun _ => rfl) (fun hG _ h2 => hG.core.inferTypeCore n hn' hS1 0 wv hwvl _ h2)
-    (fun b h2 => hq.inferTypeCore_sim n hn' hS1 0 wv hwvl b.1 b.2 h2)
-    fun r2 m2 x2 a2 _ _ ⟨hS2, hg2, hx2l, hx2⟩ => ?_
-  dsimp only [checkDefnValE.k_infer_type_core]
-  subst hx2
-  -- the comparison with the declared type
-  refine RefE.bindCall (fun _ => rfl)
-    (fun hG _ h3 => hG.core.isDefEqCore n hn' hS2 0 (r2.headD 0) wt hx2l hwtl _ h3)
-    (fun b h3 => hq.isDefEqCore_sim n hn' hS2 0 (r2.headD 0) wt hx2l hwtl b.1 b.2 h3)
-    fun r3 m3 x3 a3 _ _ ⟨hS3, hg3, hx3⟩ => ?_
-  dsimp only [checkDefnValE.k_is_def_eq_core]
-  refine RefE.guard rfl (fun hb3 => by rw [← hx3, decBool, hb3]; rfl)
-    (fun hb3 => by rw [← hx3] at hb3; simpa [decBool] using hb3) fun _ _ => ?_
-  -- the push
-  have hx13 : ArrExt (erecP m) (erecP m3) := IWGrow.erecPExt (hg1.trans (hg2.trans hg3))
-  have hci3 := ArrExt.decCI hx13 hci
-  obtain ⟨w, hw1, hwl, -⟩ := decCI_name hci3
-  have hw : (rdW (m3.arr64 EREC) (c + 1)).toNat < 2 ^ 32 := by
-    rw [rdW_of_get? hc1.symm (erecP_get hw1)]; exact hwl
-  rcases h4 : callE p n "env_push" [vis, c] m3 with e4 | ⟨r4, m4⟩
-  · rw [checkDefnValE.k_env_push.none]; exact fun hG => ErrClaim.of_cls0 (hG.env _ _ _ _ h4)
-  rw [checkDefnValE.k_env_push.arm1]
-  obtain ⟨s4, hs4, -, hW4⟩ := triple_of_callW (s₀ := ⟨m3, Locals.init []⟩)
-    (envPush_specW p hp.rcp n ⟨m3, Locals.init []⟩ vis c hw) (callW_of_callE h4)
-  subst hs4
-  obtain ⟨hS4, hg4⟩ := envPushW_ok hW4 hS3.stage hci3
-  have hM4 : CoreMemos s4.mem := hS3.twin.memos.frame (envPushW_frame hW4)
-    (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)
-  exact RefE.ret rfl ⟨by simpa using hS4, hM4, hg1.trans (hg2.trans (hg3.trans hg4)), rfl⟩
+  rw [checkDefnValE_dvo]; exact dvo_ref hq hp hap hkp hn msg rfl hS hci hcv hv hlps hCr
 
-/-- **`check_opaque_val` refines its twin `dvT …`, both outcomes**, under `StageT`: the value's guards
-by `ivg_ref`, the core stubs by `KnotStageProg` and `CoreStubsE`, the
-type mismatch the twin's `invalid`; after the push the stage at the extended environment. -/
+/-- **`check_opaque_val` refines its twin `dvT …`, both outcomes** (`dvo_ref`). -/
 theorem ov_ref {p : Prog} (hq : KnotStageProg p) (hp : ValProg p) (hap : ApdF p) (hkp : CrKeep p)
     {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
     {n : Nat} (hn : n ≤ 2 ^ 62) {m : Mem} {c : Word} {cv : IConstantVal} {v : EIdx}
@@ -194,64 +250,7 @@ theorem ov_ref {p : Prog} (hq : KnotStageProg p) (hp : ValProg p) (hap : ApdF p)
     (hlps : ∃ ks, cv.levelParams.mapM (denoteN a.store.ns) = some ks) (hCr : L.Stubs.CrOK m) :
     RefE (DvCtx p) (checkOpaqueValE p n m vis c) (dvT fe cv v ci msg) a
       (fun w y a' => DvPost dn m (fe.push ci) w y a') := by
-  obtain ⟨wv, hwv, hwvl, rfl⟩ := hd?_some hv
-  obtain ⟨wt, hwt, hwtl, hty⟩ := decCV_typeW hcv
-  have hcb : c.toNat + 5 < 2 ^ 64 := erecP_bound hwv hS.stage.iw
-  have ev : rdW (m.arr64 EREC) (c + 5) = wv :=
-    rdW_of_get? (toNat_add_small c 5 (by omega)).symm (erecP_get hwv)
-  have et : rdW (m.arr64 EREC) (c + 4) = wt :=
-    rdW_of_get? (toNat_add_small c 4 (by omega)).symm (erecP_get (by simpa [Nat.add_assoc] using hwt))
-  have hc1 : (c + 1).toNat = c.toNat + 1 := toNat_add_small c 1 (by omega)
-  cases n with
-  | zero => rw [checkOpaqueValE.eq_1]; exact RefE.of_cls0 rfl
-  | succ n =>
-  have hn' : n ≤ 2 ^ 62 := by omega
-  rw [checkOpaqueValE.arm1, ev, et]
-  unfold dvT
-  rw [hty]
-  -- `install_value_guards(vis, c + 1, v)`
-  rcases h1 : callE p n "install_value_guards" [vis, c + 1, wv] m with e1 | ⟨r1, m1⟩
-  · rw [checkOpaqueValE.k_install_value_guards.none]
-    exact RefE.bind_left fun hG => hG.ivg h1 hS (by rw [hc1]; exact ArrExt.decCV (erecP_ext m) hcv)
-      (by rw [hc1]; omega) hwvl hlps hCr
-  rw [checkOpaqueValE.k_install_value_guards.arm1]
-  obtain ⟨s1, hs1, -, _, a1, hrun1, hS1, hg1, -⟩ := RefE.run_ok
-    (s₀ := ⟨m, Locals.init []⟩)
-    (installValueGuards_specE p hp.cvg n _ vis (c + 1) wv)
-    (ivg_ref hap hkp.crf n hS (by rw [hc1]; exact ArrExt.decCV (erecP_ext m) hcv)
-      (by rw [hc1]; omega) hwvl hlps hCr) h1
-  subst hs1
-  refine RefE.bind_right hrun1 ?_
-  -- the value's type
-  refine RefE.bindCall (fun _ => rfl) (fun hG _ h2 => hG.core.inferTypeCore n hn' hS1 0 wv hwvl _ h2)
-    (fun b h2 => hq.inferTypeCore_sim n hn' hS1 0 wv hwvl b.1 b.2 h2)
-    fun r2 m2 x2 a2 _ _ ⟨hS2, hg2, hx2l, hx2⟩ => ?_
-  dsimp only [checkOpaqueValE.k_infer_type_core]
-  subst hx2
-  -- the comparison with the declared type
-  refine RefE.bindCall (fun _ => rfl)
-    (fun hG _ h3 => hG.core.isDefEqCore n hn' hS2 0 (r2.headD 0) wt hx2l hwtl _ h3)
-    (fun b h3 => hq.isDefEqCore_sim n hn' hS2 0 (r2.headD 0) wt hx2l hwtl b.1 b.2 h3)
-    fun r3 m3 x3 a3 _ _ ⟨hS3, hg3, hx3⟩ => ?_
-  dsimp only [checkOpaqueValE.k_is_def_eq_core]
-  refine RefE.guard rfl (fun hb3 => by rw [← hx3, decBool, hb3]; rfl)
-    (fun hb3 => by rw [← hx3] at hb3; simpa [decBool] using hb3) fun _ _ => ?_
-  -- the push
-  have hx13 : ArrExt (erecP m) (erecP m3) := IWGrow.erecPExt (hg1.trans (hg2.trans hg3))
-  have hci3 := ArrExt.decCI hx13 hci
-  obtain ⟨w, hw1, hwl, -⟩ := decCI_name hci3
-  have hw : (rdW (m3.arr64 EREC) (c + 1)).toNat < 2 ^ 32 := by
-    rw [rdW_of_get? hc1.symm (erecP_get hw1)]; exact hwl
-  rcases h4 : callE p n "env_push" [vis, c] m3 with e4 | ⟨r4, m4⟩
-  · rw [checkOpaqueValE.k_env_push.none]; exact fun hG => ErrClaim.of_cls0 (hG.env _ _ _ _ h4)
-  rw [checkOpaqueValE.k_env_push.arm1]
-  obtain ⟨s4, hs4, -, hW4⟩ := triple_of_callW (s₀ := ⟨m3, Locals.init []⟩)
-    (envPush_specW p hp.rcp n ⟨m3, Locals.init []⟩ vis c hw) (callW_of_callE h4)
-  subst hs4
-  obtain ⟨hS4, hg4⟩ := envPushW_ok hW4 hS3.stage hci3
-  have hM4 : CoreMemos s4.mem := hS3.twin.memos.frame (envPushW_frame hW4)
-    (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)
-  exact RefE.ret rfl ⟨by simpa using hS4, hM4, hg1.trans (hg2.trans (hg3.trans hg4)), rfl⟩
+  rw [checkOpaqueValE_dvo]; exact dvo_ref hq hp hap hkp hn msg rfl hS hci hcv hv hlps hCr
 
 /-- **`check_defn_val`'s error claim under `StageT`** (`dv_ref`'s error half). -/
 theorem defnvE_okT {p : Prog} (hq : KnotStageProg p) (hp : ValProg p) (hap : ApdF p) (hkp : CrKeep p)

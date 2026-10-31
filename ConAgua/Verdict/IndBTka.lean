@@ -108,19 +108,20 @@ theorem tka_ref (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState}
   generalize hK : rdW (m.arr64 IW) (Mc + 4) = K at hnP ⊢
   unfold tkArgs
   -- `erase_each` of the leaf's indices
-  rcases h1 : eeW n m (if lal < K then lao else lao + K) (if lal < K then 0 else lal - K) with _ | ⟨r1, m1⟩
-  · rw [liftE_none, tkaE.k_erase_each.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some, tkaE.k_erase_each.arm1]
+  refine RefE.bindLift (fun _ => rfl) fun r1 m1 h1 => ?_
   obtain ⟨le, a1, run1, hd1, hb1, hS1, hg1, hP1⟩ := eeW_ok dn fe vis n h1 hS hla.drop hP
+  rw [hnP] at run1
+  refine ⟨_, _, run1, ?_⟩
+  dsimp only [tkaE.k_erase_each]
   have hA1 := eeW_afr n h1 hA
   -- `erase_each` of the major's indices
-  rcases h2 : eeW n m1 (if mal < K then mao else mao + K) (if mal < K then 0 else mal - K) with _ | ⟨r2, m2⟩
-  · rw [liftE_none, tkaE.k_erase_each_2.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some, tkaE.k_erase_each_2.arm1]
+  refine RefE.bindLift (fun _ => rfl) fun r2 m2 h2 => ?_
   obtain ⟨me, a2, run2, hd2, hb2, hS2, hg2, hP2⟩ := eeW_ok dn fe vis n h2 hS1 (hma.grow hg1).drop hP1
+  rw [hnP] at run2
+  refine ⟨_, _, run2, ?_⟩
+  dsimp only [tkaE.k_erase_each_2]
   have hA2 := eeW_afr n h2 hA1
   have hg12 := hg1.trans hg2
-  rw [hnP] at run1 run2
   obtain ⟨q1, -⟩ := eraseAll_spec (la.drop TM.nPc) (laP.drop TM.nPc) a a1 le hC.check.state
     hC.check.pins ⟨trivial, ConRon.Bridge.Inductives.denoteEList_drop hlaP TM.nPc⟩ run1
   have hC1 := hC.of_pstep hS1 hA1 q1
@@ -129,7 +130,6 @@ theorem tka_ref (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState}
       (denoteEList_ext q1.ext _ _ hmaP) TM.nPc⟩ run2
   have hC2 := hC1.of_pstep hS2 hA2 q2
   have q12 := q1.trans q2
-  refine RefE.bind_right run1 (RefE.bind_right run2 ?_)
   -- `sl_eq`
   rcases h3 : eqW n m2 (r1.headD 0) (r1.tail.headD 0) (r2.headD 0) (r2.tail.headD 0) with _ | e
   · rw [liftE_none, tkaE.k_sl_eq.none]; exact RefE.of_cls0 (by simp)
@@ -150,19 +150,16 @@ theorem tka_ref (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState}
   subst heq
   refine RefE.ite_neg (by simp) ?_
   -- `intern_const`
-  rcases h4 : ceinternW m2 ip usp with _ | ⟨hd, m3⟩
-  · rw [liftE_none, tkaE.k_intern_const.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]
+  refine RefE.bindLift (fun _ => rfl) fun hd m3 h4 => ?_
   obtain ⟨a3, run3, hS3, hg3⟩ := internConst_stage hS2 ip usp hip hus h4
+  refine ⟨_, _, run3, ?_⟩
   have hA3 := ceinternW_afr h4 hA2
   obtain ⟨q3, hhdP⟩ := ConRon.Bridge.Inductives.internConstE_run hC2.check.state
     (ConRon.Bridge.denoteN_ext hipP q12.ext) (ConRon.Bridge.denoteLs_ext husP q12.ext) run3
   have hC3 := hC2.of_pstep hS3 hA3 q3
   have q13 := q12.trans q3
-  refine RefE.bind_right run3 ?_
-  by_cases hb4 : 4294967296 ≤ hd
-  · rw [tkaE.k_intern_const.abort1 _ _ _ _ _ _ _ _ _ _ _ _ hb4]; exact RefE.of_cls0 (by simp)
-  rw [tkaE.k_intern_const.arm1 _ _ _ _ _ _ _ _ _ _ _ _ hb4]
+  dsimp only [tkaE.k_intern_const]
+  refine RefE.abort0 rfl fun hb4 => ?_
   have hhd : H hd := by simp only [H]; rw [UInt64.le_iff_toNat_le] at hb4; simp at hb4; omega
   have hP3 : RcMR m3 := hP2.fr (ceinternW_mfr h4)
   have hg03 := hg12.trans hg3
@@ -170,9 +167,7 @@ theorem tka_ref (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState}
   rw [hnP] at hlp
   generalize hL : (if lal < K then lal else K) = lpl at hlp ⊢
   -- `mk_app_n_f`
-  rcases h5 : mknF m3 [hd, lao, lpl] with _ | ⟨ra, m4⟩
-  · rw [liftE_none, tkaE.k_mk_app_n_f.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some, tkaE.k_mk_app_n_f.arm1]
+  refine RefE.bindLift (fun _ => rfl) fun ra m4 h5 => ?_
   obtain ⟨app, a4, run4, hS4, hg4, happH, happD⟩ := mknF_ok dn vis fe hd lao lpl hhd _ m3 m4 a3 ra h5
     ⟨hS3, hlp.1⟩
   have hA4 := mknF_afr h5 hA3
@@ -184,11 +179,11 @@ theorem tka_ref (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState}
   have hP4 : RcMR m4 := hP3.fr (MFr.ofMknF h5)
   have hg04 := hg03.trans hg4
   rw [← happD] at run4
-  refine RefE.bind_right run4 ?_
+  refine ⟨_, _, run4, ?_⟩
+  dsimp only [tkaE.k_mk_app_n_f]
   -- `block_shape_member_names`
-  rcases h6 : memberNamesW n m4 q with _ | ⟨rn, m5⟩
-  · rw [liftE_none, tkaE.k_block_shape_member_names.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some, tkaE.k_block_shape_member_names.arm1]
+  refine RefE.onlySim (fun _ => rfl) (fun _ _ h => h) fun rn m5 h6 => ?_
+  dsimp only [tkaE.k_block_shape_member_names]
   have hbs4 := hbs.grow hg04
   obtain ⟨hS5, hg5, -, hdn, htn⟩ := memberNamesW_stage h6 hS4 hbs4
   have hf5 := (memberNamesW_dec h6 hS4.iw.iwSize hS4.iw.ctl hbs4.dec
@@ -197,14 +192,12 @@ theorem tka_ref (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState}
   have hA5 := AFr.iw hf5 hA4
   have hC5 := hC4.of_pstep hS5 hA5 (PStep.refl hC4.check.state)
   -- `nest_occ`
-  rcases h7 : noF n m5 (rn.headD 0) (rn.tail.headD 0) 0 0 (ra.headD 0) with _ | ⟨occ, m6⟩
-  · rw [liftE_none, tkaE.k_nest_occ.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]
+  refine RefE.bindLift (fun _ => rfl) fun occ m6 h7 => ?_
   obtain ⟨b, run6, hb6, hS6, hg6, hP6⟩ := noF_ok dn fe vis n h7 hS5 happH hdn (Nat.le_of_eq htn) hP5
+  refine ⟨_, _, run6, ?_⟩
   have hA6 := noF_afr h7 hA5
   have hC6 := hC5.of_pstep hS6 hA6 (PStep.refl hC5.check.state)
   have hg06 := (hg04.trans hg5).trans hg6
-  refine RefE.bind_right run6 ?_
   by_cases ho : occ = 0
   · rw [tkaE.k_nest_occ.arm1 _ _ _ _ _ _ _ _ _ _ _ _ ho]
     have : b = false := by rw [← hb6, ho]; rfl
