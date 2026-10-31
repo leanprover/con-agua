@@ -243,16 +243,9 @@ theorem cda_ref {p : Prog} (hX : AxProg p) (hq : KnotStageProg p) (hcl : LeafClo
     obtain ⟨hSy, hgy⟩ := push_call hX.val.rcp e hSx (ArrExt.decCI (IWGrow.erecPExt hgx) hci1)
     exact RefE.ret rfl ⟨by simpa using hSy, hlf (by simp [cdaLeaves]) e hMx,
       hg1.trans (hgx.trans hgy)⟩
-  by_cases z4 : r4.headD 0 ≠ 0
-  · rw [checkDeclAxiomE.k_std_axiom_ok.arm1 p _ _ _ _ _ _ z4]
-    have hb : b4 = true := by rw [← hb4]; simpa using z4
-    rw [hb]
-    exact RefE.ite_pos rfl (push hS4 (hg3.trans hg4) hM4)
-  have z4' : r4.headD 0 = 0 := by simpa using z4
-  rw [checkDeclAxiomE.k_std_axiom_ok.arm2 p _ _ _ _ _ _ z4']
-  have hb : b4 = false := by rw [← hb4, z4']; rfl
-  rw [hb]
-  refine RefE.ite_neg (by decide) ?_
+  rw [checkDeclAxiomE.k_std_axiom_ok.eq_2]
+  refine RefE.split (fun z4 => by rw [← hb4]; simpa using z4) (fun z4 => by rw [← hb4] at z4; simpa using z4)
+    (fun _ _ => push hS4 (hg3.trans hg4) hM4) fun _ _ => ?_
   -- `Lean.trustCompiler`
   refine RefE.bindLift (fun _ => rfl) fun r5 m5 h5 => ?_
   obtain ⟨hm5, hr5, hl5, hrun5⟩ := pinAtW_ok h5 hS4.check.pins
@@ -263,12 +256,10 @@ theorem cda_ref {p : Prog} (hX : AxProg p) (hq : KnotStageProg p) (hcl : LeafClo
     simpa [trustCompilerName, pinTrustCompiler, show PIN_TRUST_COMPILER = (42 : Word).toNat from rfl]
       using hrun5
   refine ⟨_, _, htn, ?_⟩
-  rw [hb5]
-  by_cases eq5 : wn = r5.headD 0
-  · rw [checkDeclAxiomE.k_pin_at_2.arm1 p _ _ _ _ _ _ eq5]
-    rw [ep5] at eq5
-    simp only [eq5, decide_true, ite_true]
-    refine RefE.bindLift (fun _ => rfl) fun r6 m6 h6 => ?_
+  rw [hb5, checkDeclAxiomE.k_pin_at_2.eq_2]
+  refine RefE.split (fun eq5 => by rw [← ep5]; exact decide_eq_true eq5)
+    (fun eq5 => by rw [ep5]; exact of_decide_eq_true eq5) (fun _ _ => ?_) fun _ _ => ?_
+  · refine RefE.bindLift (fun _ => rfl) fun r6 m6 h6 => ?_
     obtain ⟨s6, hs6, -, hok6, hS6, hg6, hb6, -⟩ := triple_of_callW (s₀ := ⟨m5, Locals.init []⟩)
       (trustCompilerOk_refines p hX.tco dn vis fe (q + 1) cv n ⟨m5, Locals.init []⟩ a4
         ⟨hS4, ArrExt.decCV hP4 hcv1'⟩) h6
@@ -278,19 +269,13 @@ theorem cda_ref {p : Prog} (hX : AxProg p) (hq : KnotStageProg p) (hcl : LeafClo
     refine RefE.guardIf rfl (fun z6 => by rw [← hb6, z6]; rfl)
       (fun z6 => by rw [← hb6] at z6; simpa using z6) fun _ _ => ?_
     exact push hS6 (hg3.trans (hg4.trans hg6)) (hlf (by simp [cdaLeaves]) h6 hM4)
-  rw [checkDeclAxiomE.k_pin_at_2.arm2 p _ _ _ _ _ _ eq5]
-  rw [ep5] at eq5
-  simp only [eq5, decide_false, Bool.false_eq_true, ite_false]
   -- the `ofReduce*` pair
-  rcases h7 : pinAtW m5 45 with _ | ⟨r7, m7⟩
-  · rw [liftE_none, checkDeclAxiomE.k_pin_at_3.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some, checkDeclAxiomE.k_pin_at_3.arm1]
+  refine RefE.onlySim (fun _ => checkDeclAxiomE.k_pin_at_3.none ..) (fun _ _ h => h) fun r7 m7 h7 => ?_
+  rw [checkDeclAxiomE.k_pin_at_3.arm1]
   obtain ⟨hm7, hr7, hl7, hrun7⟩ := pinAtW_ok h7 hS4.check.pins
   subst hm7
   have ep7 : r7.headD 0 = pinW m7 (1 + (45 : Word).toNat) := by rw [hr7]; rfl
-  rcases h8 : pinAtW m7 46 with _ | ⟨r8, m8⟩
-  · rw [liftE_none, checkDeclAxiomE.k_pin_at_4.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]
+  refine RefE.onlySim (fun _ => checkDeclAxiomE.k_pin_at_4.none ..) (fun _ _ h => h) fun r8 m8 h8 => ?_
   obtain ⟨hm8, hr8, hl8, hrun8⟩ := pinAtW_ok h8 hS4.check.pins
   subst hm8
   have ep8 : r8.headD 0 = pinW m8 (1 + (46 : Word).toNat) := by rw [hr8]; rfl
@@ -303,15 +288,9 @@ theorem cda_ref {p : Prog} (hX : AxProg p) (hq : KnotStageProg p) (hcl : LeafClo
     simpa [ofReduceBoolName, pinOfReduceBool, show PIN_OF_REDUCE_BOOL = (46 : Word).toNat from rfl]
       using hrun8
   refine RefE.bind_right hon (RefE.bind_right hob ?_)
-  by_cases eq8 : wn = r7.headD 0 ∨ wn = r8.headD 0
-  · rw [checkDeclAxiomE.k_pin_at_4.arm1 p _ _ _ _ _ _ _ eq8]
-    rw [ep7, ep8] at eq8
-    have hor : ((decI wn : NIdx) == decI (pinW m8 (1 + (45 : Word).toNat)) ||
-        (decI wn : NIdx) == decI (pinW m8 (1 + (46 : Word).toNat))) = true := by
-      rw [hb7, hb8]; rcases eq8 with e | e <;> simp [e]
-    rw [hor]
-    refine RefE.ite_pos rfl ?_
-    refine RefE.bindLift (fun _ => rfl) fun r9 m9 h9 => ?_
+  rw [checkDeclAxiomE.k_pin_at_4.eq_2, hb7, hb8, ← ep7, ← ep8]
+  refine RefE.split (fun eq8 => by simpa using eq8) (fun eq8 => by simpa using eq8) (fun _ _ => ?_) fun _ _ => ?_
+  · refine RefE.bindLift (fun _ => rfl) fun r9 m9 h9 => ?_
     obtain ⟨s9, hs9, -, hok9, hS9, hg9, hb9, -⟩ := triple_of_callW (s₀ := ⟨m8, Locals.init []⟩)
       (ofReduceAxOk_refines p hX.ora dn hdn vis fe (q + 1) cv n ⟨m8, Locals.init []⟩ a4
         ⟨hS4, ArrExt.decCV hP4 hcv1'⟩) h9
@@ -321,24 +300,13 @@ theorem cda_ref {p : Prog} (hX : AxProg p) (hq : KnotStageProg p) (hcl : LeafClo
     refine RefE.guardIf rfl (fun z9 => by rw [← hb9, z9]; rfl)
       (fun z9 => by rw [← hb9] at z9; simpa using z9) fun _ _ => ?_
     exact push hS9 (hg3.trans (hg4.trans hg9)) (hlf (by simp [cdaLeaves]) h9 hM4)
-  rw [checkDeclAxiomE.k_pin_at_4.arm2 p _ _ _ _ _ _ _ eq8]
-  rw [ep7, ep8] at eq8
-  have hor : ((decI wn : NIdx) == decI (pinW m8 (1 + (45 : Word).toNat)) ||
-      (decI wn : NIdx) == decI (pinW m8 (1 + (46 : Word).toNat))) = false := by
-    rw [hb7, hb8]; simp only [not_or] at eq8
-    simp only [decide_eq_false eq8.1, decide_eq_false eq8.2, Bool.or_false]
-  rw [hor]
-  refine RefE.ite_neg (by decide) ?_
   -- `propext` / `choice` of another shape
-  rcases h10 : pinAtW m8 32 with _ | ⟨r10, m10⟩
-  · rw [liftE_none, checkDeclAxiomE.k_pin_at_5.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some, checkDeclAxiomE.k_pin_at_5.arm1]
+  refine RefE.onlySim (fun _ => checkDeclAxiomE.k_pin_at_5.none ..) (fun _ _ h => h) fun r10 m10 h10 => ?_
+  rw [checkDeclAxiomE.k_pin_at_5.arm1]
   obtain ⟨hm10, hr10, hl10, hrun10⟩ := pinAtW_ok h10 hS4.check.pins
   subst hm10
   have ep10 : r10.headD 0 = pinW m10 (1 + (32 : Word).toNat) := by rw [hr10]; rfl
-  rcases h11 : pinAtW m10 33 with _ | ⟨r11, m11⟩
-  · rw [liftE_none, checkDeclAxiomE.k_pin_at_6.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]
+  refine RefE.onlySim (fun _ => checkDeclAxiomE.k_pin_at_6.none ..) (fun _ _ h => h) fun r11 m11 h11 => ?_
   obtain ⟨hm11, hr11, hl11, hrun11⟩ := pinAtW_ok h11 hS4.check.pins
   subst hm11
   have ep11 : r11.headD 0 = pinW m11 (1 + (33 : Word).toNat) := by rw [hr11]; rfl
@@ -349,22 +317,8 @@ theorem cda_ref {p : Prog} (hX : AxProg p) (hq : KnotStageProg p) (hcl : LeafClo
   have hch : choiceName.run a4 = .ok (decI (pinW m11 (1 + (33 : Word).toNat)), a4) := by
     simpa [choiceName, pinChoice, show PIN_CHOICE = (33 : Word).toNat from rfl] using hrun11
   refine RefE.bind_right hpn (RefE.bind_right hch ?_)
-  by_cases eq11 : wn = r10.headD 0 ∨ wn = r11.headD 0
-  · rw [checkDeclAxiomE.k_pin_at_6.abort1 p _ _ _ _ _ eq11]
-    rw [ep10, ep11] at eq11
-    have hor2 : ((decI wn : NIdx) == decI (pinW m11 (1 + (32 : Word).toNat)) ||
-        (decI wn : NIdx) == decI (pinW m11 (1 + (33 : Word).toNat))) = true := by
-      rw [hb10, hb11]; rcases eq11 with e | e <;> simp [e]
-    rw [hor2]
-    exact RefE.ite_pos rfl fun _ => ErrClaim.fail _ _ rfl
-  rw [checkDeclAxiomE.k_pin_at_6.arm1 p _ _ _ _ _ eq11]
-  rw [ep10, ep11] at eq11
-  have hor2 : ((decI wn : NIdx) == decI (pinW m11 (1 + (32 : Word).toNat)) ||
-      (decI wn : NIdx) == decI (pinW m11 (1 + (33 : Word).toNat))) = false := by
-    rw [hb10, hb11]; simp only [not_or] at eq11
-    simp only [decide_eq_false eq11.1, decide_eq_false eq11.2, Bool.or_false]
-  rw [hor2]
-  refine RefE.ite_neg (by decide) ?_
+  rw [checkDeclAxiomE.k_pin_at_6.eq_2, hb10, hb11, ← ep10, ← ep11]
+  refine RefE.guardThen rfl (fun eq11 => by simpa using eq11) (fun eq11 => by simpa using eq11) fun _ _ => ?_
   -- `sorryAx` is skipped
   refine RefE.bindLift (fun _ => rfl) fun r12 m12 h12 => ?_
   obtain ⟨hm12, hr12, hl12, hrun12⟩ := pinAtW_ok h12 hS4.check.pins
@@ -374,16 +328,10 @@ theorem cda_ref {p : Prog} (hX : AxProg p) (hq : KnotStageProg p) (hcl : LeafClo
   have hsa : pinSorryAx.run a4 = .ok (decI (pinW m12 (1 + (13 : Word).toNat)), a4) := by
     simpa [pinSorryAx, show PIN_SORRY_AX = (13 : Word).toNat from rfl] using hrun12
   refine ⟨_, _, hsa, ?_⟩
-  rw [hb12]
-  by_cases eq12 : wn = r12.headD 0
-  · rw [checkDeclAxiomE.k_pin_at_7.arm1 p _ _ _ _ eq12]
-    rw [ep12] at eq12
-    simp only [eq12, decide_true, ite_true]
-    exact RefE.ret rfl ⟨by simpa using hS4, hM4, hg1.trans (hg3.trans hg4)⟩
-  rw [checkDeclAxiomE.k_pin_at_7.abort1 p _ _ _ _ eq12]
-  rw [ep12] at eq12
-  rw [decide_eq_false eq12]
-  refine RefE.ite_neg (by decide) ?_
+  rw [hb12, checkDeclAxiomE.k_pin_at_7.eq_2]
+  refine RefE.split (fun eq12 => by rw [← ep12]; exact decide_eq_true eq12)
+    (fun eq12 => by rw [ep12]; exact of_decide_eq_true eq12)
+    (fun _ _ => RefE.ret rfl ⟨by simpa using hS4, hM4, hg1.trans (hg3.trans hg4)⟩) fun _ _ => ?_
   -- the readback of the name
   have hrn4 : ReadNCOK a4 := fun h x e =>
     ConRon.Bridge.denoteN_ext (hok1.check.caches.readN h x (by rw [← hcache4]; exact e)) hext4
