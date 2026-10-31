@@ -1,6 +1,5 @@
 import ConAgua.Arena.IndT.Sum3
 import ConAgua.Arena.IndInstallSpec.InstallRec2PSl
-import ConAgua.Verdict.PosTopEMono
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
