@@ -1,6 +1,7 @@
 import ConAgua.Arena.View
 import ConAgua.Arena.LevelEquivRel
 import ConRon.Arena.Core
+import ConRon.Arena.WFProofs
 import Std.Tactic.BVDecide.Normalize.Prop
 
 /-!
@@ -106,14 +107,14 @@ theorem lvNodeW_store {v : LNodeView} (hv : a.store.lss.ls.view (decI h) = some 
   by_cases g0 : tagW h = 0
   · simp (config := { decide := true }) only [g0, ↓reduceIte, Option.map_eq_some_iff] at hg ⊢
     obtain ⟨z, hz, rfl⟩ := hg
-    rw [Tbl.node?, hidx, apply_ite LTables.zeros] at hz
+    rw [Tbl.node?, hidx (narrow_of_tagW h (by rw [g0]; decide)), apply_ite LTables.zeros] at hz
     obtain ⟨hc, -⟩ := tier_node zeroCS ZRecRel m _ _ _ hR.zero (tierW h) ht1 _ _ hz
     replace hc : ¬ tcnt m ZERO (tierW h) ≤ idxW h := hc
     simp [hc, lvEnc]
   by_cases g1 : tagW h = 1
   · simp (config := { decide := true }) only [g1, ↓reduceIte, Option.map_eq_some_iff] at hg ⊢
     obtain ⟨z, hz, rfl⟩ := hg
-    rw [Tbl.node?, hidx, apply_ite LTables.succs] at hz
+    rw [Tbl.node?, hidx (narrow_of_tagW h (by rw [g1]; decide)), apply_ite LTables.succs] at hz
     obtain ⟨hc, hr⟩ := tier_node succCS SRecRel m _ _ _ hR.succ (tierW h) ht1 _ _ hz
     replace hc : ¬ tcnt m SUCC (tierW h) ≤ idxW h := hc
     simp only [SRecRel] at hr
@@ -121,7 +122,7 @@ theorem lvNodeW_store {v : LNodeView} (hv : a.store.lss.ls.view (decI h) = some 
   by_cases g2 : tagW h = 2
   · simp (config := { decide := true }) only [g2, ↓reduceIte, Option.map_eq_some_iff] at hg ⊢
     obtain ⟨z, hz, rfl⟩ := hg
-    rw [Tbl.node?, hidx, apply_ite LTables.maxs] at hz
+    rw [Tbl.node?, hidx (narrow_of_tagW h (by rw [g2]; decide)), apply_ite LTables.maxs] at hz
     obtain ⟨hc, hr⟩ := tier_node maxCS MRecRel m _ _ _ hR.max (tierW h) ht1 _ _ hz
     replace hc : ¬ tcnt m MAX (tierW h) ≤ idxW h := hc
     simp only [MRecRel] at hr
@@ -129,15 +130,20 @@ theorem lvNodeW_store {v : LNodeView} (hv : a.store.lss.ls.view (decI h) = some 
   by_cases g3 : tagW h = 3
   · simp (config := { decide := true }) only [g3, ↓reduceIte, Option.map_eq_some_iff] at hg ⊢
     obtain ⟨z, hz, rfl⟩ := hg
-    rw [Tbl.node?, hidx, apply_ite LTables.imaxs] at hz
+    rw [Tbl.node?, hidx (narrow_of_tagW h (by rw [g3]; decide)), apply_ite LTables.imaxs] at hz
     obtain ⟨hc, hr⟩ := tier_node imaxCS IRecRel m _ _ _ hR.imax (tierW h) ht1 _ _ hz
     replace hc : ¬ tcnt m IMAX (tierW h) ≤ idxW h := hc
     simp only [IRecRel] at hr
     simp [hc, hr.1, hr.2, lvEnc]
   by_cases g4 : tagW h = 4
-  · simp (config := { decide := true }) only [g4, ↓reduceIte, Option.map_eq_some_iff] at hg ⊢
+  · have hn : h.toNat / 2 ^ 30 % 2 = 0 := by
+      rcases Nat.mod_two_eq_zero_or_one (h.toNat / 2 ^ 30) with hn | hw
+      · exact hn
+      · simp [g4, decI_isWide_true (k := .level) h hw] at hg
+    simp (config := { decide := true }) only [g4, ↓reduceIte, decI_isWide_false (k := .level) h hn,
+      Bool.false_eq_true, Option.map_eq_some_iff] at hg ⊢
     obtain ⟨z, hz, rfl⟩ := hg
-    rw [Tbl.node?, hidx, apply_ite LTables.params] at hz
+    rw [Tbl.node?, hidx hn, apply_ite LTables.params] at hz
     obtain ⟨hc, hr⟩ := tier_node paramCS PRecRel m _ _ _ hR.param (tierW h) ht1 _ _ hz
     replace hc : ¬ tcnt m PARAM (tierW h) ≤ idxW h := hc
     simp only [PRecRel] at hr
@@ -343,7 +349,7 @@ theorem lsNodeW_store' {m : Mem} {a : AState} (hR : ArenaR m a) {h : Word} (hh :
   by_cases g0 : tagW h = 0
   · simp only [g0, beq_self_eq_true, ↓reduceIte, Option.map_eq_some_iff] at hg
     obtain ⟨z, hz, rfl⟩ := hg
-    rw [Tbl.node?, decI_idx h, apply_ite LsTables.lists] at hz
+    rw [Tbl.node?, decI_idx h (narrow_of_tagW h (by rw [g0]; decide)), apply_ite LsTables.lists] at hz
     obtain ⟨hc, hr⟩ := tier_node lsCS LsRecRel m _ _ _ hR.ls (tierW h) ht1 _ _ hz
     replace hc : ¬ tcnt m LVLS (tierW h) ≤ idxW h := hc
     simp only [LsRecRel] at hr
@@ -383,7 +389,7 @@ theorem lsNodeW_view {m : Mem} {a : AState} (hR : ArenaR m a) {h : Word} (hh : h
     have hget : ∀ T : LsTables, T.lists.nodes[(idxW h).toNat]? = some x →
         T.get (decI h) = some x.us := fun T hT => by
       simp only [LsTables.get, decLs_tag0 h hh, hg, beq_self_eq_true, ↓reduceIte, Tbl.node?,
-        decI_idx h, hT, Option.map_some]
+        decI_idx h (narrow_of_tagW h (by rw [hg]; decide)), hT, Option.map_some]
     unfold LsStore.view
     rw [hpers]
     by_cases ht : tierW h = 0
