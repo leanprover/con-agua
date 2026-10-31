@@ -12,7 +12,8 @@ it. An arm that leaves a slice on the stack has `GrowPost` (`CoreAfterG`: the st
 top kept, the top possibly grown) and `GrowRef`. A callee's ok run is threaded by
 `RefE.bind_core` (kept stack) and `RefE.bind_grow`/`bind_growK` (grown). A knot callee that is
 read through its run (`callE`) is `RefE.bind_callE`: its ok half from its `CoreSpec`, its error half
-from its claim. `GrowPost.restore` puts a grown stack's top back.
+from its claim; a lifted core callee (`liftE (callW …)`) is `RefE.bind_callW`. `GrowPost.restore`
+puts a grown stack's top back.
 -/
 
 open ConRon.Arena
@@ -137,6 +138,20 @@ theorem RefE.bind_core {α β γ : Type} [Inhabited γ] {G : Prop} {x : Except E
   exact RefE.bind_right (by rw [AM.run_of_ok _ _ h₁.run, h₁.res])
     ((h₂ M' hS hSt).mono fun _ _ _ h => ⟨CoreAfter.comp hK hSt h.after, h.res, h.valid⟩)
 
+/-- **After a kept-stack callee's ok run** (`RefE.bind_callE`/`bind_callW`'s `CoreRef`): the rest's
+post from the callee's memory `m₁` composes to the caller's from `m₀` (`RefE.bind_core` without
+the twin's bind). -/
+theorem RefE.after_core {α β γ : Type} [Inhabited γ] {G : Prop} {x : Except Err α} {T₁ : AM γ}
+    {T : AM β} {a₀ : AState} {dec₁ : List Word → γ} {dec : List Word → β}
+    {dn : NIdx → Option ConLeche.Name} {m₀ m₁ : Mem} {vis : Word} {fe : IFEnv} {M : ModeMaps}
+    {eb : Word} {r₁ : List Word} {ok₁ ok : List Word → Prop} {w : α → List Word × Mem}
+    (h₁ : CoreRef T₁ a₀ dec₁ dn m₀ vis fe M eb r₁ m₁ ok₁)
+    (h₂ : ∀ M', CoreS dn m₁ (AM.st T₁ a₀) vis fe M' eb → StackKept m₀ m₁ →
+      RefE G x T (AM.st T₁ a₀) (fun v y a' => CorePost dec dn m₁ vis fe M' eb ok (w v) y a')) :
+    RefE G x T (AM.st T₁ a₀) (fun v y a' => CorePost dec dn m₀ vis fe M eb ok (w v) y a') := by
+  obtain ⟨M', hS, hK, hSt⟩ := h₁.after
+  exact (h₂ M' hS hSt).mono fun _ _ _ h => ⟨CoreAfter.comp hK hSt h.after, h.res, h.valid⟩
+
 /-- **The ok half of a unified core function** as its `CoreSpec`, for a model whose ok value is not
 the pair `(r, m)` itself: `w` reads it back as the results and the memory (`RefE.coreSpec` for
 `w = id`). -/
@@ -172,6 +187,23 @@ theorem RefE.bind_callE {α β γ : Type} [Inhabited γ] {G : Prop} {p : Prog} {
   · rw [hx]
     exact RefE.bind_left fun hG => CoreSpecE.of_callE (herr hG) c
   have h1 := CoreSpec.of_callW hok (callW_of_callE c)
+  exact RefE.bind_right (by rw [AM.run_of_ok _ _ h1.run, h1.res]) (h r m' c h1)
+
+/-- **A lifted core callee** (`K (liftE (callW …))`, its run under a `CoreSpec`: `inst_list`), then
+the rest, both outcomes: the model's `none` is class `0`, its ok run the callee's `CoreRef`. -/
+theorem RefE.bind_callW {α β γ : Type} [Inhabited γ] {G : Prop} {p : Prog} {n : Nat} {f : FnName}
+    {args : List Word} {s₀ : St} {x : Except Err (List Word × Mem) → Except Err α}
+    (hx : ∀ e, x (.error e) = .error e) {T : AM γ} {k : γ → AM β} {a : AState}
+    {dec : List Word → γ} {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
+    {M : ModeMaps} {eb : Word} {ok : List Word → Prop} {R : α → β → AState → Prop}
+    (hok : CoreSpec p n f args T dec s₀ a dn vis fe M eb ok)
+    (h : ∀ r m', callW p n f args s₀.mem = some (r, m') →
+      CoreRef T a dec dn s₀.mem vis fe M eb r m' ok → RefE G (x (.ok (r, m'))) (k (dec r)) (AM.st T a) R) :
+    RefE G (x (liftE (callW p n f args s₀.mem))) (T >>= k) a R := by
+  rcases c : callW p n f args s₀.mem with _ | ⟨r, m'⟩
+  · rw [liftE_none, hx]; exact RefE.of_cls0 (by simp)
+  have h1 := CoreSpec.of_callW hok c
+  rw [liftE_some]
   exact RefE.bind_right (by rw [AM.run_of_ok _ _ h1.run, h1.res]) (h r m' c h1)
 
 /-- **A unified core callee, then the rest**, both outcomes: the callee's model value `x` against

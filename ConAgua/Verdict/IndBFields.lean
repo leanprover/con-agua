@@ -1,4 +1,3 @@
-import ConAgua.Arena.RefWalk
 import ConAgua.Arena.RecGenSpec.CfhW
 import ConAgua.Arena.RecClassSpec.ClassNPcOf
 import ConAgua.Arena.RecGenSpec.ClassFieldsOf

@@ -1,4 +1,3 @@
-import ConAgua.Arena.RefWalk
 import ConAgua.Arena.RecGenSpec.ClassMinorSlotW
 import ConAgua.Arena.RecClassSpec.Rec2SimTMA
 import ConAgua.Arena.RecClassSpec.MkTMWAfr

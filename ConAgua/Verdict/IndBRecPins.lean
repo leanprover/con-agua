@@ -1,4 +1,3 @@
-import ConAgua.Arena.RefWalk
 import ConAgua.Arena.RecCheckSpec.TargetRecPins
 import ConAgua.Arena.IndSumSpec.SoaW
 import ConAgua.Verdict.VCtx
