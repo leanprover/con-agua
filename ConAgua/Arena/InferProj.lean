@@ -4,7 +4,6 @@ import ConAgua.Arena.CoreDen
 import ConAgua.Arena.InferBodySpine
 import ConAgua.Arena.WhnfCoreProj
 import ConAgua.Arena.InferProjModels
-import ConAgua.Arena.RefWalk
 
 /-!
 # `inferProj`: `proj_type_at` and `infer_proj_at` (lane `defeq2`, helper `defeq2-proj`)

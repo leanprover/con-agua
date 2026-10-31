@@ -5,7 +5,6 @@ import Std.WP.Tactic
 import ConAgua.Arena.WhnfCoreApp
 import ConAgua.Arena.WhnfCoreRefine
 import ConAgua.Arena.InferBodyBindModels
-import ConAgua.Arena.RefWalk
 
 /-!
 # The binder telescopes: `infer_lams`, `infer_pis`, their leaves, `infer_lam`, `infer_forall`
