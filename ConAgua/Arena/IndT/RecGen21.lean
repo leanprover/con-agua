@@ -140,18 +140,11 @@ theorem cbc_ref (hP : CbcProg p) {fs : List FnName}
   rw [hnp2]
   have hR3 := ckk_ref (p := p) dn vis fe (UInt64.ofNat bs.nP) po pl pfvs n s2.mem a1 _ _ _ hS2
     (hpf.grow (OMono.decHL _ _) hg02) (Nat.le_trans hpfb hg02.iw) (ccRes_pslR hcc) hP2
-  have hsT := ckkE_spec p hP.clm.keys n ⟨s2.mem, Locals.init []⟩ (UInt64.ofNat bs.nP) po pl (r2.headD 0)
-    (r2.tail.headD 0)
-  rcases c3 : callE p n "check_block_classes_keys" [UInt64.ofNat bs.nP, po, pl, r2.headD 0, r2.tail.headD 0]
-      s2.mem with e3 | ⟨r3, m3⟩
-  · rw [cbcE.k_check_block_classes_keys.none]
-    refine RefE.bind_left fun hG => ?_
-    have h := RefE.run_err hsT hG.nv hG.nv hR3 c3
-    rw [hnpT] at h
-    exact h
-  rw [cbcE.k_check_block_classes_keys.arm1]
-  obtain ⟨s3, rfl, -, keys, a3, hrun3, hS3, hg3, hks, hP3⟩ := RefE.run_ok hsT hR3 c3
-  rw [hnpT] at hrun3
+  rw [hnpT] at hR3
+  refine RefE.bindRun (s₀ := ⟨s2.mem, Locals.init []⟩) (fun _ => rfl) (ckkE_spec p hP.clm.keys n
+    ⟨s2.mem, Locals.init []⟩ (UInt64.ofNat bs.nP) po pl (r2.headD 0) (r2.tail.headD 0)) (fun hG => hG.nv)
+    (fun hG => hG.nv) hR3 fun r3 s3 keys a3 c3 _ hrun3 ⟨hS3, hg3, hks, hP3⟩ => ?_
+  dsimp only [cbcE.k_check_block_classes_keys]
   have hA3 := hk3 n _ s2.mem r3 s3.mem (callW_of_callE c3) hA2
   obtain ⟨c2', keysP, ⟨hkeys, hwk⟩, -⟩ := ConRon.Bridge.Inductives.classKeysOf_spec fe bs.nP pfvs
     pfvsP (by rw [hpl, hnPP]) (by rw [hnPP]; exact hpw) _ _ [] [] (fun _ h => nomatch h) a1 a3 keys
@@ -159,7 +152,6 @@ theorem cbc_ref (hP : CbcProg p) {fs : List FnName}
   have c12 := c1'.trans c2'
   have hC3 : StageC dn vis fe env s3.mem a3 := hC2.of_check hS3 hA3 c2'.ok c2'.ext
   have hg03 := hg02.trans hg3
-  refine RefE.bind_right hrun3 ?_
   -- the majors
   refine RefE.bindE (fun _ => rfl) id (clm_ref hq hIlpf hLC henv hP.clm pp co cl po pl bs css pfvs pP cssP
       pfvsP hpw n hn s3.mem a3 _ _ keys keysP hC3 hA3 (hbsD.grow (decBS_mono _) hg03) (partsHsrc_grow hg03 hq9 hsrc)
