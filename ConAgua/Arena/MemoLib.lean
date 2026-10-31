@@ -643,6 +643,187 @@ theorem memoClearG_spec (S : MemoSch) (p : Prog) (f : FnName)
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, st64] <;>
       finish [mclearG]
 
+/-! ## `X_clear()` with a capacity policy (`X_clear_fit`)
+
+con-ron's `HashMap2::clear_fit` (`ron/hashmap2.rs`): the clear also sizes the next round's table
+to twice a **decaying high-water mark** `hw` of the entries, `hw := max(entries, hw - hw / 8)`,
+rounded up to a power of two (`pow2_at_least(2 hw + 1, MIN_CAPACITY)`), and re-makes the table
+when that size is above the current one or more than 64 times below it. Here the mark is the
+header's word 3 (the header slot's value word, which no region covers), and "re-made" is a new
+header: the stamp of the new epoch, region from slot `1` of the chosen size (at most the slots the
+array has after the header). The floor is the default region's `MN0` slots (the twin's
+`MIN_CAPACITY` is 32, a size L's measurements do not favour), so a mark of at most `FITLO`
+(`2 hw + 1 ≤ MN0`) sizes the default region, and the clear leaves the header stale (the epoch bump
+alone, as `X_clear`) and the mark `0`. -/
+
+/-- The largest mark whose next round fits the default region: `2 · FITLO + 1 = MN0 - 1`. -/
+def FITLO : Word := 8191
+
+/-- The decayed mark at a clear, from the stored mark `h` and the count `c`:
+`max(c, h - h / 8)`. -/
+def mfitHW (h c : Word) : Word := if h - (h >>> 3) < c then c else h - (h >>> 3)
+
+/-- `pow2_at_least(x, w)`: double `w` until it reaches `x` (or `2^62`). -/
+def mpow2 (x w : Word) : Word :=
+  if w < x ∧ w < 4611686018427387904 ∧ 0 < w then mpow2 x (w + w) else w
+termination_by 4611686018427387904 - w.toNat
+decreasing_by
+  obtain ⟨-, h1, h2⟩ := ‹w < x ∧ w < 4611686018427387904 ∧ 0 < w›
+  have a := UInt64.lt_iff_toNat_lt.mp h1
+  have b := UInt64.lt_iff_toNat_lt.mp h2
+  have : (w + w).toNat = w.toNat + w.toNat := by
+    rw [UInt64.toNat_add]; simp at a ⊢; omega
+  simp at a b; omega
+
+/-- The slots after the header: the cap of a re-made region. -/
+def mfitL (S : MemoSch) (m : Mem) : Word :=
+  (m.len64 S.arr >>> 2) - (if (0 : Word) < m.len64 S.arr >>> 2 then 1 else 0)
+
+/-- The current slot count at stamp `e` (`nG` at the stamp before the clear). -/
+def mfitCur (S : MemoSch) (m : Mem) (e : Word) : Word :=
+  if rdW (m.arr64 S.arr) 0 = e then rdW (m.arr64 S.arr) 2
+  else if MN0 < mfitL S m then MN0 else mfitL S m
+
+/-- The twin's policy: keep the size `n` unless the wanted `w` is above it or more than 64 times
+below it. -/
+def mfitPol (n w : Word) : Word := if n < w ∨ w < n >>> 6 then w else n
+
+/-- The next round's slot count at mark `h`, current stamp `e`: the policy at
+`mpow2 (2 h + 1) MN0`, capped at `mfitL`. -/
+def mfitNE (S : MemoSch) (m : Mem) (e h : Word) : Word :=
+  if mfitL S m < mfitPol (mfitCur S m e) (mpow2 (h + h + 1) MN0) then mfitL S m
+  else mfitPol (mfitCur S m e) (mpow2 (h + h + 1) MN0)
+
+/-- The re-made header, at the old stamp word `s` (new live stamp `s + 2`) and mark `h`. -/
+def mfitHdr (S : MemoSch) (m : Mem) (s h : Word) : Mem :=
+  (((m.set64 S.arr 0 (s + 2)).set64 S.arr 1 1).set64 S.arr 2 (mfitNE S m (s + 1) h)).set64 S.arr 3 h
+
+/-- The mark and the header after the epoch bump, from the old stamp word `s` and the count `c`
+before the clear. -/
+def mfitTail (S : MemoSch) (m : Mem) (s c : Word) : Mem :=
+  if rdW (m.arr64 S.arr) 3 = 0 ∧ c ≤ FITLO then m
+  else if mfitHW (rdW (m.arr64 S.arr) 3) c ≤ FITLO then m.set64 S.arr 3 0
+  else mfitHdr S m s (mfitHW (rdW (m.arr64 S.arr) 3) c)
+
+/-- The memory after `X_clear_fit()`: the epoch bump, then the mark and the header. -/
+def mclearFitG (S : MemoSch) (m : Mem) : Mem :=
+  mfitTail S (mclearG S m) (rdW (m.arr64 CTL) S.cs) (cntG S m)
+
+/-- The doubling loop (variables of `memoClearFitG`: mark `h` 2, size `w` 4). -/
+def mfitLoopG : Stmt := lblk (s, c, h, n, w, l) {
+  while w < h + h + 1 && w < 4611686018427387904 { w := w + w }
+}
+
+/-- The re-make (variables of `memoClearFitG`): the cap `l`, the current size `n`, the doubling,
+the policy, and the new header. -/
+def mfitBlkG (S : MemoSch) : Stmt := lblk (s, c, h, n, w, l) {
+  l := len(S.arr.u64) >> 2;
+  l := l - u64(l > 0);
+  if S.arr.u64[0] == s + 1 { n := S.arr.u64[2] } else {
+    n := l;
+    if n > ⟪MN0⟫ { n := ⟪MN0⟫ }
+  };
+  w := ⟪MN0⟫;
+  ⟪mfitLoopG⟫;
+  if n < w || (n >> 6) > w { n := w };
+  if n > l { n := l };
+  S.arr.u64[0] := s + 2;
+  S.arr.u64[1] := 1;
+  S.arr.u64[2] := n;
+  S.arr.u64[3] := h
+}
+
+/-- The mark and the re-make (variables of `memoClearFitG`: old stamp word `s`, count `c`). -/
+def mfitTailG (S : MemoSch) : Stmt := lblk (s, c, h, n, w, l) {
+  h := S.arr.u64[3];
+  if h != 0 || c > ⟪FITLO⟫ {
+    h := h - (h >> 3);
+    if c > h { h := c };
+    if h > ⟪FITLO⟫ { ⟪mfitBlkG S⟫ } else { S.arr.u64[3] := 0 }
+  }
+}
+
+/-- con-ron: none — the memo library (open addressing over fixed arrays; the twin's `Std.HashMap` caches) -/
+def memoClearFitG (S : MemoSch) : FunDecl := lfn () locals (s, c, h, n, w, l) {
+  s := CTL.u64[⟪S.cs⟫];
+  if s + 2 == 0 { abort };
+  c := CTL.u64[⟪S.cs + 1⟫];
+  CTL.u64[⟪S.cs⟫] := s + 1;
+  CTL.u64[⟪S.cs + 1⟫] := 0;
+  ⟪mfitTailG S⟫;
+  return 0
+}
+
+section clearFit
+variable (S : MemoSch) (p : Prog)
+
+theorem mpow2_step (x w : Word) (h : w < x ∧ w < 4611686018427387904) :
+    mpow2 x w = mpow2 x (w + w) := by
+  by_cases h0 : 0 < w
+  · rw [mpow2]; simp only [h.1, h.2, h0, and_self, ↓reduceIte]
+  · have : w = 0 := by
+      apply UInt64.toNat_inj.mp; have := mt UInt64.lt_iff_toNat_lt.mpr h0; simp at this ⊢; omega
+    subst this; rfl
+
+theorem mpow2_end (x w : Word) (h : ¬ (w < x ∧ w < 4611686018427387904)) : mpow2 x w = w := by
+  rw [mpow2]; split
+  · rename_i h'; exact absurd ⟨h'.1, h'.2.1⟩ h
+  · rfl
+
+theorem mfitLoopG_spec (n : Nat) (s₀ : St) :
+    ⦃fun s => s = s₀⦄
+    exec p n mfitLoopG
+    ⦃fun r s' => s'.mem = s₀.mem ∧ r = .normal ∧ (∀ z, z ≠ 4 → s'.loc z = s₀.loc z) ∧
+      s'.loc 4 = mpow2 (s₀.loc 2 + s₀.loc 2 + 1) (s₀.loc 4); ⊤⦄ := by
+  induction n generalizing s₀ with
+  | zero => vcgen [exec] <;> grind
+  | succ n ih =>
+    rw [exec, step_while (w := mfitLoopG) rfl]
+    sym only [lang_grind, arena_grind] =>
+      vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ih] <;> finish [mpow2_step, mpow2_end]
+
+theorem mfitLoopG_step_spec (n : Nat) (s₀ : St) :
+    ⦃fun s => s = s₀⦄
+    step p (exec p n) mfitLoopG
+    ⦃fun r s' => s'.mem = s₀.mem ∧ r = .normal ∧ (∀ z, z ≠ 4 → s'.loc z = s₀.loc z) ∧
+      s'.loc 4 = mpow2 (s₀.loc 2 + s₀.loc 2 + 1) (s₀.loc 4); ⊤⦄ :=
+  Triple.step_exec (mfitLoopG_spec p (n + 1) s₀)
+
+theorem mfitBlkG_step_spec (n : Nat) (s₀ : St) :
+    ⦃fun s => s = s₀⦄
+    step p (exec p n) (mfitBlkG S)
+    ⦃fun r s' => r = .normal ∧ s'.mem = mfitHdr S s₀.mem (s₀.loc 0) (s₀.loc 2); ⊤⦄ := by
+  simp only [mfitBlkG]
+  sym only [lang_grind, arena_grind] =>
+    vcgen [step, evalE, evalC, evalArgs, setLoc, ld64, st64, mfitLoopG_step_spec p] <;>
+    finish [mfitHdr, mfitNE, mfitPol, mfitCur, mfitL]
+
+theorem mfitTailG_step_spec (n : Nat) (s₀ : St) :
+    ⦃fun s => s = s₀⦄
+    step p (exec p n) (mfitTailG S)
+    ⦃fun r s' => r = .normal ∧ s'.mem = mfitTail S s₀.mem (s₀.loc 0) (s₀.loc 1); ⊤⦄ := by
+  simp only [mfitTailG]
+  sym only [lang_grind, arena_grind] =>
+    vcgen [step, evalE, evalC, evalArgs, setLoc, ld64, st64, mfitBlkG_step_spec S p] <;>
+    finish [mfitTail, mfitHW]
+
+theorem memoClearFitG_spec (f : FnName) (hp : p.lookup f = some (memoClearFitG S)) (n : Nat)
+    (s₀ : St) :
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p n) f []
+    ⦃fun _ s' => LocEq s' s₀ ∧ rdW (s₀.mem.arr64 CTL) S.cs + 2 ≠ 0 ∧
+      s'.mem = mclearFitG S s₀.mem; ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, memoClearFitG]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind, arena_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, st64, mfitTailG_step_spec S p n] <;>
+      finish [mclearFitG, mclearG, cntG]
+
+end clearFit
+
 /-- `set` is `put` after a probe that returned. -/
 theorem msetG_eq (S : MemoSch) (m : Mem) (k1 k2 v : Word) (h : mfindG S m k1 k2 ≠ []) :
     msetG S m k1 k2 v =
