@@ -660,11 +660,10 @@ theorem irCmp_ref (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
   have herec := hS.erec
   obtain ⟨-, -, -, hcpw, hfpl, hfne, -, -, -⟩ := decRule_rd herec hrule
   generalize hE0 : s₀.mem.arr64 EREC = E at *
+  unfold iotaRecCmpT
   -- the pins
-  rcases c1 : callW p (N + 1) "erec_push" [rdW E (rl + 6), rdW E (rl + 7), rdW E (rl + 3)] s₀.mem with
-    _ | ⟨rp, m1⟩
-  · simp only [liftE_none, irCmpE.k_erec_push]; exact RefE.of_cls0 rfl
-  simp only [liftE_some, irCmpE.k_erec_push]
+  refine RefE.onlySim (fun _ => rfl) (fun _ _ h => h) fun rp m1 c1 => ?_
+  dsimp only [irCmpE.k_erec_push]
   have P1 : MemFrame [SPN] [136] s₀.mem m1 ∧ StackGrew s₀.mem m1 ∧
       (rdW E (rl + 3) = 1 → rp.headD 0 = spTop s₀.mem ∧
         ∃ lv pins, rule.fire = .nested lv pins ∧ SpineR m1 (rp.headD 0) (rdW E (rl + 7)) pins.toArray ∧
@@ -691,11 +690,7 @@ theorem irCmp_ref (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
     apply UInt64.toNat_inj.mp
     have := sn.toNat_lt
     rw [UInt64.toNat_add]; simp; omega
-  rcases c2 : callW p (N + 1) "rec_fire_args" [rdW E (rl + 3), rp.headD 0, rdW E (rl + 7),
-      rdW E (recP + 2), rdW E (recP + 3), us, so, rdW E (recP + 5) + 1, rdW E (recP + 6),
-      rdW E (rl + 2)] m1 with _ | ⟨ra, m2⟩
-  · simp only [liftE_none, irCmpE.k_rec_fire_args]; exact RefE.of_cls0 rfl
-  simp only [liftE_some, irCmpE.k_rec_fire_args]
+  refine RefE.bindLift (fun _ => rfl) fun ra m2 c2 => ?_
   have htop1 : (spTop s₀.mem).toNat ≤ (spTop m1).toNat := gr1.1
   obtain ⟨t2, ht2, -, ok2, ⟨M2, hS2, hK2, gr2⟩, xs, res2, hxs⟩ := triple_of_callW
     (recFireArgs_refines' p hp.toIotaProg' hc hw hEI (N + 1) ⟨m1, Locals.init []⟩ a₀ dn vis fe MM eb
@@ -711,12 +706,12 @@ theorem irCmp_ref (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
     rw [hER _ _ _ _ _ _ (by simp) c2, e1]
   have hrunA := AM.run_of_ok _ _ ok2
   rw [res2] at hrunA
-  refine RefE.bind_right hrunA ?_
+  refine ⟨_, _, hrunA, ?_⟩
+  dsimp only [irCmpE.k_rec_fire_args]
   rw [hcpw]
   -- the cover
-  rcases c3 : callW p (N + 1) "stack_cover" [ra.headD 0 + ra.tail.headD 0] m2 with _ | ⟨rx, m3⟩
-  · simp only [liftE_none, irCmpE.k_stack_cover]; exact RefE.of_cls0 rfl
-  simp only [liftE_some, irCmpE.k_stack_cover]
+  refine RefE.onlySim (fun _ => rfl) (fun _ _ h => h) fun rx m3 c3 => ?_
+  dsimp only [irCmpE.k_stack_cover]
   obtain ⟨fr3, gr3, hcov⟩ := callW_stackCover p hp.stackCover (N + 1) m2 _ rx m3 c3
   have hS3 : CoreS dn m3 _ vis fe M2 eb := hS2.frame_stk fr3 (by simp) (by simp)
   have e3 : m3.arr64 EREC = E := by rw [fr3.1 EREC (by simp) (by decide), e2]
@@ -744,21 +739,14 @@ theorem irCmp_ref (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
     (margs.toList.take (rdW E (rl + 2)).toNat).toArray xs.toArray hS3 hm4 hebm hsl hxs3.toN hta
     (fun _ => hxt)
   simp only at hD
-  rcases c4 : callE p (N + 1) "defeq_list" [mode, vis, d, mo, rdW E (rl + 2), ra.headD 0,
-      ra.tail.headD 0] m3 with e4 | ⟨rd, m4⟩
-  · simp only [irCmpE.k_defeq_list]
-    exact fun hG => RefE.run_err (defeqList_specE p hp.defeqList (N + 1) ⟨m3, Locals.init []⟩ mode vis d
-      mo (rdW E (rl + 2)) (ra.headD 0) (ra.tail.headD 0)) trivial (hG.mono (Nat.le_succ N)) hD c4
-  simp only [irCmpE.k_defeq_list]
-  obtain ⟨hrunD, ⟨M4, hS4, hK4, hSt4⟩, hr4⟩ := CoreSpec.run
-    (defeqList_refines p hp.toIotaProg' N hk' F (by omega) (by omega) ⟨m3, Locals.init []⟩ _ dn vis fe
-      M2 eb mode d mo (rdW E (rl + 2)) (ra.headD 0) (ra.tail.headD 0)
-      (margs.toList.take (rdW E (rl + 2)).toNat).toArray xs.toArray hS3 hm4 hebm hsl hxs3.toN hta
-      (fun _ => hxt)) (callW_of_callE c4)
-  simp only at hrunD
-  refine RefE.ret hrunD ⟨⟨M4, hS4.frame_stk (MemFrame.setCtl m4 136 _) (by simp) (by simp),
-    hK2.trans hK4, ?_⟩, rfl, hr4⟩
-  exact StackKept.restoreG' (hgr13.trans hSt4.toGrew)
+  rw [← bind_pure (defEqList _ _ _ _ _)]
+  refine RefE.bindRun (s₀ := ⟨m3, Locals.init []⟩) (fun _ => rfl)
+    (defeqList_specE p hp.defeqList (N + 1) ⟨m3, Locals.init []⟩ mode vis d mo (rdW E (rl + 2)) (ra.headD 0)
+      (ra.tail.headD 0)) (fun _ => trivial) (fun hG => hG.mono (Nat.le_succ N)) hD
+    fun rd s4 _ a4 _ _ _ ⟨⟨M4, hS4, hK4, hSt4⟩, hr4, hv4⟩ => ?_
+  dsimp only [irCmpE.k_defeq_list]
+  exact RefE.ret rfl ⟨⟨M4, hS4.frame_stk (MemFrame.setCtl _ 136 _) (by simp) (by simp),
+    hK2.trans hK4, StackKept.restoreG' (hgr13.trans hSt4.toGrew)⟩, hr4, hv4⟩
 
 /-- **`iota_rec_cmp` refines the parameter comparison** (`irCmp_ref`'s ok half). -/
 theorem iotaRecCmp_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
