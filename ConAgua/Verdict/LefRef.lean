@@ -69,21 +69,18 @@ theorem lef_ref {p : Prog} (hcl : CoreStageClosed p) (hL : LvlCacheProg p) (n : 
   cases n with
   | zero => rw [lefE.eq_1]; exact RefE.of_cls0 (by simp)
   | succ n =>
-  rw [lefE.arm1]
-  rcases h1 : callE p n "lvl_eq_c" [u, v] m with e1 | ⟨r1, m1⟩
-  · rw [lefE.k_lvl_eq_c.none]; exact fun hnv => ErrClaim.of_cls0 (hnv _ _ _ _ h1)
+  rw [lefE.arm1]; unfold lefT
+  refine RefE.bindCall (Q := fun b a1 x => StageT dn vis fe b.2 a1 ∧ IWGrow m b.2 ∧ decLvlEq b.2 b.1 x)
+    (fun _ => lefE.k_lvl_eq_c.none ..) (fun hnv _ h1 => ErrClaim.of_cls0 (hnv _ _ _ _ h1))
+    (fun b h => lvlEqC_simTE p hcl hL n hS u v hu hv lu lv hdu hdv b.1 b.2 h)
+    fun r1 m1 x a1 h1 hrun ⟨hSt, hg, hdec⟩ => ?_
   have h1' := callW_of_callE h1
-  obtain ⟨x, a1, hrun, hSt, hg, hdec⟩ := lvlEqC_simTE p hcl hL n hS u v hu hv lu lv hdu hdv r1 m1 h1'
-  unfold lefT
-  refine RefE.bind_right hrun ?_
   unfold decLvlEq at hdec
-  by_cases h0 : r1.headD 0 = 0
-  · rw [lefE.k_lvl_eq_c.abort1 p r1 m1 h0]
-    rcases x with _ | _ | _ <;> rw [h0] at hdec <;> try exact absurd hdec (by decide)
-    exact fun _ => ErrClaim.fail _ _ rfl
-  rw [lefE.k_lvl_eq_c.arm1 p r1 m1 h0]
-  rcases x with _ | b
-  · exact absurd hdec h0
+  rw [← bind_pure (liftFueled _ x)]
+  dsimp only [lefE.k_lvl_eq_c]
+  refine RefE.guardOpt rfl (fun h0 => by rcases x with _ | _ | _ <;> grind)
+    (fun hx => by subst hx; exact hdec) fun b hb h0 => ?_
+  subst hb
   refine RefE.ret rfl ⟨hrun, ?_, hSt, hg,
     MFr.of_frame (run_memFrame hcl (by decide) (run_of_callW h1')).1 coreStageA_stage coreStageC_stage,
     fun env hC hA => ?_⟩
