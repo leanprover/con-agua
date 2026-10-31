@@ -82,16 +82,11 @@ theorem contRef_step (L : NbLook p) (hq : KnotStageProg p) (hIlpf : IlpfF p) (hL
   dsimp only at hmh hrh
   rw [hs2] at hmh
   rw [hmh]
-  by_cases hlt : aL < r1.tail.headD 0
-  · rw [ncE.k_nest_ctx_hi_at.abort1 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hlt]
-    refine RefE.ite_pos ?_ fun _ => ErrClaim.fail _ _ (by decide)
-    have := UInt64.lt_iff_toNat_lt.mp hlt
-    omega
-  rw [ncE.k_nest_ctx_hi_at.arm1 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hlt, hrh]
-  have hle : nPc ≤ args.length := by
-    have : ¬ aL.toNat < (r1.tail.headD 0).toNat := fun e => hlt (UInt64.lt_iff_toNat_lt.mpr e)
-    omega
-  refine RefE.ite_neg (by omega) ?_
+  rw [ncE.k_nest_ctx_hi_at.eq_2]
+  refine RefE.split (fun hlt => by have := UInt64.lt_iff_toNat_lt.mp hlt; omega)
+    (fun _ => UInt64.lt_iff_toNat_lt.mpr (by omega)) (fun _ _ _ => ErrClaim.fail _ _ (by decide))
+    fun hlt _ => ?_
+  rw [hrh]
   generalize hPw : r1.tail.headD 0 = nPcW at hnc1 ⊢
   subst hnc1
   have htop1 : iwTop m1 < 2 ^ 64 := Nat.lt_of_le_of_lt hS1.iw.iw hS1.iw.iwSize
@@ -199,17 +194,10 @@ theorem contRef_step (L : NbLook p) (hq : KnotStageProg p) (hIlpf : IlpfF p) (hL
   have hx04 := c24.ext
   have hC4 : StageC dn vis fe env m4 a4 := hC.of_cstep hS4 hA4 c24
   refine RefE.bind_right hrun4 ?_
-  by_cases hne : aL ≠ nPcW + r4.headD 0
-  · rw [ncE.k_nest_inst_type.abort1 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hne]
-    refine RefE.ite_pos ?_ fun _ => ErrClaim.fail _ _ (by decide)
-    have : ¬ args.length = nPcW.toNat + xi.1 := fun heq =>
-      hne ((pos2_len_eq (nI := r4.headD 0) (show nPcW.toNat ≤ aL.toNat by omega)).mpr (by omega))
-    simpa using this
-  rw [ncE.k_nest_inst_type.arm1 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ (by simpa using hne)]
-  have heq : args.length = nPcW.toNat + xi.1 := by
-    have := (pos2_len_eq (nI := r4.headD 0) (show nPcW.toNat ≤ aL.toNat by omega)).mp (by simpa using hne)
-    omega
-  refine RefE.ite_neg (by simp [heq]) ?_
+  have hlen := pos2_len_eq (nI := r4.headD 0) (show nPcW.toNat ≤ aL.toNat by omega)
+  rw [ncE.k_nest_inst_type.eq_2]
+  refine RefE.split (fun hne => by grind) (fun hne => by grind) (fun _ _ _ => ErrClaim.fail _ _ (by decide))
+    fun hne _ => ?_
   -- the instantiation met
   have hg14 := hg13.trans hg4
   have hs6 := nckE_spec p L.pkey (n' + 1) ⟨m4, Locals.init []⟩ vis ctx fu po pl kb nn us aO nPcW nPcW
