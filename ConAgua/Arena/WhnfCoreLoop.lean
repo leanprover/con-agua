@@ -1,5 +1,4 @@
 import ConAgua.Arena.WhnfCoreStep
-import ConAgua.Arena.RefWalk
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import Std.Tactic.BVDecide.Normalize.BitVec
