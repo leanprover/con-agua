@@ -151,13 +151,9 @@ theorem dl_ref (p : Prog) (n F : Nat) (hknot : KnotUpTo p n) (hnF : n ≤ F) (hn
         (by omega) ⟨hS, hm4, hebm⟩ hxa hxb)
       fun r₁ m₁ _ h₁ => RefE.after_core (w := fun (v : Word × Mem) => ([v.1], v.2)) h₁
         fun M₁ hS₁ hSt₁ => ?_
-    by_cases h0 : r₁.headD 0 = 0
-    · rw [dlE.k_defeq.arm1 (hc1 := h0)]
-      simp only [decBool, h0, bne_self_eq_false, Bool.false_eq_true, ↓reduceIte]
-      exact RefE.ret rfl (CorePost.ret hS₁ rfl (by simp [ResH, HW]))
-    rw [dlE.k_defeq.arm2 (hc1 := h0)]
-    have : decBool r₁ = true := by simpa [decBool] using h0
-    rw [this, ite_eq_left rfl]
+    rw [dlE.k_defeq.eq_2]
+    refine RefE.retIf decBool_f_m2c (fun h => by simpa [decBool] using h)
+      (fun _ => CorePost.ret hS₁ rfl (by simp [ResH, HW])) fun _ _ => ?_
     have hsa₁ : SpineN m₁ ao an aas := hsa'.toN.keep hSt₁.size hSt₁.below (hta hna) hS.spn
     have hsb₁ : SpineN m₁ bo bn bs := hsb'.toN.keep hSt₁.size hSt₁.below (htb hnb) hS.spn
     have hta₁ : an ≠ 0 → ao.toNat + an.toNat ≤ (spTop m₁).toNat := fun h => by

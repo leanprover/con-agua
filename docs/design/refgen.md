@@ -1078,7 +1078,7 @@ the classifier leaves 1954 lines unconverted (kit rules and wrappers included). 
 theorem as converted once it uses one rule, so the "lifted calls only" rows above still have
 hand-split arms (the twin computed up front, model arms that return `.ok` early).
 
-After refwalk9 (master 5507edf9 + this lane): 348 `RefE` theorems, 23030 lines; the classifier
+After refwalk9 (master 5507edf9 + this lane): 348 `RefE` theorems, 23026 lines; the classifier
 leaves 1292 lines unconverted (kit rules and wrappers included). The early `.ok` arms are done
 where the twin is `if b then T else pure y` (§6.15); the rest is listed there.
 
@@ -1168,8 +1168,8 @@ lemmas deleted.
 
 ### 6.15 `WhnfIotaRefine2`, the positivity rest, `Shapeless`/`GenRec1`, the early `.ok` arms (lane refwalk9)
 
-Converted (statements unchanged), by the lane: `io_ref`, `dl_ref` (`WhnfIotaRefine2`); the early
-`.ok` arms of `cert_ref`, `dng_ref` (`DeclNatGateT`), `dg_ref` (`DeclDivGateT`), `cm_ref` (×2),
+Converted (statements unchanged), by the lane: `io_ref`, `dl_ref` (`WhnfIotaRefine2`, with
+`dl_ref`'s `defeq` answer); the early `.ok` arms of `cert_ref`, `dng_ref` (`DeclNatGateT`), `dg_ref` (`DeclDivGateT`), `cm_ref` (×2),
 `ctp_ref`, `cpv_ref`, `cpa_ref` (`DeclDivGateT2`), and `ctp_ref`'s `is_def_eq_core` (by
 `bindCall`), `dg_ref`'s `sl_contains` (by `onlySim`). By two helpers: `ngg_ref` (`PosE2`), `nit_ref`
 (`PosE1N`), `nu_ref` (`PosTopE2`), `lef_ref` (`LefRef`); `csf_ref`, `csl_ref` (`Shapeless`),
@@ -1226,8 +1226,7 @@ Pitfalls (add to §6.4):
 * `crr_ref`: the twin matches on its list arguments (`| cvG :: cvs, c :: cs => … | _, _ => pure
   []`).
 * `cnfs_ref`'s `iw_alloc`: the hand model `cnfsEK1` takes `callW`'s `Option` without `liftE`.
-* `dl_ref`'s `defeq` answer and loop exit: an irreducible continuation with an `.ok` arm has no
-  `eq_2` here, and the loop's exit is `dl_exit` (the twin's two empty-list cases).
+* `dl_ref`'s loop exit: `dl_exit` (the twin's two empty-list cases).
 
 Numbers, against master 5507edf9 (`reflen.py`, `ncl.py`; elaboration `lake env lean` on the file,
 master's and the branch's text alternated in the same worktree, 3 runs, median, load 24–32):
@@ -1235,7 +1234,7 @@ master's and the branch's text alternated in the same worktree, 3 runs, median, 
 | theorem | before | after |
 |---|---:|---:|
 | `io_ref` | 91 | 71 |
-| `dl_ref` | 84 | 80 |
+| `dl_ref` | 84 | 76 |
 | `ngg_ref` | 145 | 136 |
 | `nit_ref` | 127 | 100 |
 | `nu_ref` | 63 | 54 |
@@ -1252,11 +1251,11 @@ master's and the branch's text alternated in the same worktree, 3 runs, median, 
 | `ctp_ref` | 111 | 97 |
 | `cpv_ref` | 86 | 80 |
 | `cpa_ref` | 45 | 40 |
-| **all** | **1682** | **1526 (−9 %)** |
+| **all** | **1682** | **1522 (−10 %)** |
 
 | file (code lines) | before | after | wall before → after | max RSS |
 |---|---:|---:|---:|---:|
-| `Arena/WhnfIotaRefine2.lean` | 959 | 903 | 4.96 → 4.86 s (5 runs) | 2.07 → 2.04 GB |
+| `Arena/WhnfIotaRefine2.lean` | 959 | 899 | 4.96 → 4.86 s (5 runs) | 2.07 → 2.04 GB |
 | `Arena/DeclNatGateT.lean` | 353 | 340 | 2.83 → 2.79 s | 2.51 → 2.50 GB |
 | `Arena/DeclDivGateT.lean` | 138 | 131 | 1.39 → 1.40 s | 2.59 → 2.59 GB |
 | `Arena/DeclDivGateT2.lean` | 589 | 552 | 5.93 → 5.56 s | 2.77 → 2.78 GB |
@@ -1270,7 +1269,7 @@ master's and the branch's text alternated in the same worktree, 3 runs, median, 
 | `Verdict/IndBTmn.lean` | 218 | 209 | 2.02 → 2.23 s | 2.79 → 2.79 GB |
 | `Verdict/IndBTka.lean` | 195 | 189 | 3.40 → 3.19 s | 2.85 → 2.85 GB |
 
-All: 3393 → 3195 code lines (**−5.8 %**). Memory unchanged; every time move is within its runs'
+All: 3393 → 3191 code lines (**−6.0 %**). Memory unchanged; every time move is within its runs'
 spread (`IndBTmn`'s master runs spread 1.95–2.58 s; `PosTopE2`'s profiler tactic time went
 90 → 73 ms, the extra wall time is the `RefWalk` import's load). No file was left out. The largest
 gains are where a twin was computed up front or run per exit (`io_ref` −22 %, `nit_ref` −21 %:
