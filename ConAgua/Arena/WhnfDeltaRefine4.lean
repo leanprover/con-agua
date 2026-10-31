@@ -43,66 +43,6 @@ def redHeadT (r : CoreFnsA) (fe : IFEnv) (depth : Nat) (f b : EIdx) : AM (Option
   | .app g a => redAppT r fe depth g a b
   | _ => pure none
 
-theorem reduceNat_head_eq (r : CoreFnsA) (fe : IFEnv) (depth : Nat) (e f b : EIdx) (a : AState)
-    (h : (e.tag == ETag.app) = true) (hv : a.store.view e = some (.app f b)) :
-    (reduceNat r fe depth e).run a = (redHeadT r fe depth f b).run a := by
-  simp only [reduceNat, h, ↓reduceIte, StateT.run_bind, view_run _ _ _ hv, except_ok_bind, redHeadT,
-    redConstT, redSuccT, redAppT, redBinT, redOpT, redWfT]
-  rfl
-
-theorem redHead_other (r : CoreFnsA) (fe : IFEnv) (depth : Nat) (f b : EIdx) (a : AState)
-    (v : ENodeView) (hvf : a.store.view f = some v) (hc : ∀ c us, v ≠ .const c us)
-    (hp : ∀ g x, v ≠ .app g x) : (redHeadT r fe depth f b).run a = .ok (none, a) := by
-  simp only [redHeadT, StateT.run_bind, view_run _ _ _ hvf, except_ok_bind]
-  cases v with
-  | const c us => exact absurd rfl (hc c us)
-  | app g x => exact absurd rfl (hp g x)
-  | _ => rfl
-
-theorem redHead_const (r : CoreFnsA) (fe : IFEnv) (depth : Nat) (f b : EIdx) (a : AState)
-    (c : NIdx) (us : LsIdx) (hvf : a.store.view f = some (.const c us)) :
-    (redHeadT r fe depth f b).run a = (redConstT r fe depth c us b).run a := by
-  simp only [redHeadT, StateT.run_bind, view_run _ _ _ hvf, except_ok_bind]
-
-theorem redHead_app (r : CoreFnsA) (fe : IFEnv) (depth : Nat) (f b g x : EIdx) (a : AState)
-    (hvf : a.store.view f = some (.app g x)) :
-    (redHeadT r fe depth f b).run a = (redAppT r fe depth g x b).run a := by
-  simp only [redHeadT, StateT.run_bind, view_run _ _ _ hvf, except_ok_bind]
-
-theorem redConst_ne (r : CoreFnsA) (fe : IFEnv) (depth : Nat) (c : NIdx) (us el : LsIdx) (b : EIdx)
-    (a : AState) (hel : emptyLevels.run a = .ok (el, a)) (hne : (us != el) = true) :
-    (redConstT r fe depth c us b).run a = .ok (none, a) := by
-  simp only [redConstT, StateT.run_bind, hel, except_ok_bind, hne]; rfl
-
-theorem redConst_eq (r : CoreFnsA) (fe : IFEnv) (depth : Nat) (c : NIdx) (us el : LsIdx) (b : EIdx)
-    (a : AState) (hel : emptyLevels.run a = .ok (el, a)) (heq : (us != el) = false) :
-    (redConstT r fe depth c us b).run a = (redSuccT r fe depth c b).run a := by
-  simp only [redConstT, StateT.run_bind, hel, except_ok_bind, heq]; rfl
-
-theorem redApp_notconst (r : CoreFnsA) (fe : IFEnv) (depth : Nat) (g x b : EIdx) (a : AState)
-    (hg : (g.tag == ETag.const) = false) : (redAppT r fe depth g x b).run a = .ok (none, a) := by
-  simp only [redAppT, hg]; rfl
-
-theorem redApp_ne (r : CoreFnsA) (fe : IFEnv) (depth : Nat) (g x b : EIdx) (a : AState)
-    (c : NIdx) (us el : LsIdx) (hg : (g.tag == ETag.const) = true)
-    (hv : a.store.view g = some (.const c us)) (hel : emptyLevels.run a = .ok (el, a))
-    (hne : (us != el) = true) : (redAppT r fe depth g x b).run a = .ok (none, a) := by
-  simp only [redAppT, hg, ↓reduceIte, StateT.run_bind, view_run _ _ _ hv, except_ok_bind, hel, hne]; rfl
-
-theorem redApp_eq (r : CoreFnsA) (fe : IFEnv) (depth : Nat) (g x b : EIdx) (a : AState)
-    (c : NIdx) (us el : LsIdx) (hg : (g.tag == ETag.const) = true)
-    (hv : a.store.view g = some (.const c us)) (hel : emptyLevels.run a = .ok (el, a))
-    (heq : (us != el) = false) :
-    (redAppT r fe depth g x b).run a = (redBinT r fe depth c x b).run a := by
-  simp only [redAppT, hg, ↓reduceIte, StateT.run_bind, view_run _ _ _ hv, except_ok_bind, hel, heq]; rfl
-
-theorem natOpStored_run_pure (fe : IFEnv) (c : NIdx) (a : AState) :
-    ∃ b, (natOpStored fe c).run a = .ok (b, a) := by
-  unfold natOpStored
-  cases fe.find? c with
-  | none => exact ⟨false, rfl⟩
-  | some ci => cases ci <;> exact ⟨_, rfl⟩
-
 theorem bne_and_bne (x y : Word) : ((x != 0) && (y != 0)) = decide (x ≠ 0 ∧ y ≠ 0) := by
   by_cases hx : x = 0 <;> by_cases hy : y = 0 <;> simp [hx, hy]
 
