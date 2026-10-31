@@ -77,7 +77,7 @@ theorem internE_let_run (ty val body : EIdx) (a : AState) :
     (try split) <;> simp_all [withScrLets, withPersLets, fail,
       throwThe, MonadExceptOf.throw, StateT.run, set, StateT.set,
       StateT.lift, bind, Except.bind, pure, Except.pure, StateT.bind, StateT.pure, mkS, capS,
-      ENodeView.cap, Idx.idxCap, Idx.wideCap]
+      ENodeView.cap, Idx.idxCap]
 
 /-! ## The relation between L memory and the arena's `letE` tables -/
 

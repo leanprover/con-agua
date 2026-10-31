@@ -88,7 +88,7 @@ theorem decI_idxA {k : IdxKind} (h : Word) (hw : h.toNat / 2 ^ 30 % 2 = 1) :
 theorem decI_idxG {k : IdxKind} (h : Word) : (decI h : Idx k).idxNat = (idxG h).toNat := by
   rcases Nat.mod_two_eq_zero_or_one (h.toNat / 2 ^ 30) with hn | hw
   · rw [decI_idx h hn, idxG_narrow h hn]
-  · rw [decI_idxA h hw, idxA_toNat_wide h hw, idxG_toNat, if_pos hw]
+  · rw [decI_idxA h hw, idxA_toNat_wide h hw, idxG_toNat, ite_eq_left hw]
 
 theorem hix_hdW {k : IdxKind} (g t i : Word) (hg : g.toNat < 16) (ht : t ≤ 1)
     (hi : i.toNat < 2 ^ 26) : hix (decI (hdW g t i) : Idx k) = i := by

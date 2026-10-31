@@ -80,7 +80,7 @@ theorem internE_lit_run (l : ConLeche.Literal) (a : AState) :
     (try split) <;> simp_all [withScrLits, withPersLits, fail,
       throwThe, MonadExceptOf.throw, StateT.run, set, StateT.set,
       StateT.lift, bind, Except.bind, pure, Except.pure, StateT.bind, StateT.pure, mkS, capS,
-      ENodeView.cap, Idx.idxCap, Idx.wideCap]
+      ENodeView.cap, Idx.idxCap]
 
 /-! ## Normalised slices are unique -/
 

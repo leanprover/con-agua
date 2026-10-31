@@ -76,7 +76,7 @@ theorem internE_const_run (f : NIdx) (x : LsIdx) (a : AState) :
     (try split) <;> simp_all [withScrConsts, withPersConsts, fail,
       throwThe, MonadExceptOf.throw, StateT.run, set, StateT.set,
       StateT.lift, bind, Except.bind, pure, Except.pure, StateT.bind, StateT.pure, mkS, capS,
-      ENodeView.cap, Idx.idxCap, Idx.wideCap]
+      ENodeView.cap, Idx.idxCap]
 
 /-! ## The relation between L memory and the arena's `const` tables -/
 

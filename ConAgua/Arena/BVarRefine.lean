@@ -63,7 +63,7 @@ theorem internE_bvar_run (i : Nat) (a : AState) :
     (try split) <;> simp_all [withScrBVars, withPersBVars, fail,
       throwThe, MonadExceptOf.throw, StateT.run, set, StateT.set,
       StateT.lift, bind, Except.bind, pure, Except.pure, StateT.bind, StateT.pure, mkS, capS,
-      ENodeView.cap, Idx.idxCap, Idx.wideCap]
+      ENodeView.cap, Idx.idxCap]
 
 /-! ## The relation between L memory and the arena's `bvar` tables -/
 
