@@ -256,18 +256,18 @@ The walk's depth counter starts at `coreWalkFuel` (`4000000000`). -/
 def ilclrK : Option (Word × Mem) → Option (Word × Mem)
   | none => none
   | some (r, m₁) =>
-    if rdW (m₁.arr64 CTL) 50 + 2 = 0 then none else some (r &&& 4294967295, mclearG ilSch m₁)
+    if rdW (m₁.arr64 CTL) 50 + 2 = 0 then none else some (r &&& 4294967295, mclearFitG ilSch m₁)
 
 /-- **The model of `inst_list`.** -/
 def instListW (n : Nat) (m : Mem) (e o l d : Word) : Option (Word × Mem) :=
-  if rdW (m.arr64 CTL) 50 + 2 = 0 then none else ilclrK (ilgW n (mclearG ilSch m) e d o l 4000000000)
+  if rdW (m.arr64 CTL) 50 + 2 = 0 then none else ilclrK (ilgW n (mclearFitG ilSch m) e d o l 4000000000)
 
 theorem instListW_eq (n : Nat) (m : Mem) (e o l d : Word) (h0 : rdW (m.arr64 CTL) 50 + 2 ≠ 0) :
-    instListW n m e o l d = ilclrK (ilgW n (mclearG ilSch m) e d o l 4000000000) := by
+    instListW n m e o l d = ilclrK (ilgW n (mclearFitG ilSch m) e d o l 4000000000) := by
   simp [instListW, h0]
 
 theorem ilclrK_some (r : Word) (m₁ : Mem) (h0 : rdW (m₁.arr64 CTL) 50 + 2 ≠ 0) :
-    ilclrK (some (r, m₁)) = some (r &&& 4294967295, mclearG ilSch m₁) := by simp [ilclrK, h0]
+    ilclrK (some (r, m₁)) = some (r &&& 4294967295, mclearFitG ilSch m₁) := by simp [ilclrK, h0]
 
 grind_pattern [arena_grind] instListW_eq => instListW n m e o l d
 grind_pattern [arena_grind] ilclrK_some => ilclrK (some (r, m₁))
@@ -291,7 +291,7 @@ theorem instList_spec' (p : Prog) (hp : InstListProg p) (he : p.lookup "inst_lis
   rw [invoke_eq _ he]
   simp only [callFn, instListL]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, memoClearG_spec ilSch p _
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, memoClearFitG_spec ilSch p _
         (hp.get "ilm_clear") n,
       ih] <;>
     finish

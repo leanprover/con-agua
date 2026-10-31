@@ -68,8 +68,8 @@ theorem ArenaL.lmemo_set (m m' : Mem) (a : AState) (hA : ArenaL m a) (h c v : Wo
   exact memoRG_set ilSch ilSch_wf lfKey decE m _ hA.2 h c v hh m' hs
 
 theorem ArenaL.lmemo_clear (m : Mem) (a : AState) (hA : ArenaL m a)
-    (h0 : rdW (m.arr64 CTL) 50 + 2 ≠ 0) : ArenaL (mclearG ilSch m) (withLLC a ∅) := by
-  have hf := mclearG_frame ilSch m
+    (h0 : rdW (m.arr64 CTL) 50 + 2 ≠ 0) : ArenaL (mclearFitG ilSch m) (withLLC a ∅) := by
+  have hf := mclearFitG_frame ilSch ilSch_wf m
   have hC : ∀ x ∈ [ilSch.cs, ilSch.cs + 1], x ∉ arenaCtl := by
     intro x hx
     simp only [List.mem_cons, List.not_mem_nil, or_false] at hx
@@ -77,7 +77,7 @@ theorem ArenaL.lmemo_clear (m : Mem) (a : AState) (hA : ArenaL m a)
     · exact not_arenaCtl_50
     · exact not_arenaCtl_51
   exact ⟨ArenaD.withLLC ⟨hA.1.1.frame (by decide) hC hf, DerR.frameM _ _ m _ hf (by decide) _ hA.1.2⟩ _,
-    memoRG_clear ilSch ilSch_wf lfKey decE m _ hA.2 h0⟩
+    memoRG_clearFit ilSch ilSch_wf lfKey decE m _ hA.2 h0⟩
 
 /-- **`ILR` survives a writer apart from it, if the twin's memo did not move.** -/
 theorem ILR.across {A : List TieredArray} {C : List Word} {m m' : Mem} {a a' : AState}
@@ -896,9 +896,9 @@ theorem instListW_correct (n : Nat) (m m' : Mem) (a : AState) (hA : ArenaL m a)
   have h0 : ¬ rdW (m.arr64 CTL) 50 + 2 = 0 := fun h0 => by simp [h0] at hb
   simp only [h0, ↓reduceIte] at hb
   have hA₀ := ArenaL.lmemo_clear m a hA h0
-  have hs₀ : (mclearG ilSch m).arr64 ILSPN = m.arr64 ILSPN :=
-    spn_of_frame (mclearG_frame ilSch m) (by decide)
-  cases hw : ilgW n (mclearG ilSch m) e d o l 4000000000 with
+  have hs₀ : (mclearFitG ilSch m).arr64 ILSPN = m.arr64 ILSPN :=
+    spn_of_frame (mclearFitG_frame ilSch ilSch_wf m) (by decide)
+  cases hw : ilgW n (mclearFitG ilSch m) e d o l 4000000000 with
   | none => simp [hw, ilclrK] at hb
   | some p =>
     obtain ⟨r₁, m₁⟩ := p
@@ -909,7 +909,7 @@ theorem instListW_correct (n : Nat) (m m' : Mem) (a : AState) (hA : ArenaL m a)
       (ilgOK n).1 _ _ _ e d o l 4000000000 r₁ vs hA₀ (hsl.of_spn hs₀) hbd he hw
     rw [coreWalkFuel_toNat] at ha₁
     exact ⟨_, by rw [instListFast_run, ha₁, decE_mask]; rfl, ArenaL.lmemo_clear m₁ a₁ hA₁ h1,
-      (spn_of_frame (mclearG_frame ilSch m₁) (by decide)).trans (hs₁.trans hs₀), mask_lt r₁⟩
+      (spn_of_frame (mclearFitG_frame ilSch ilSch_wf m₁) (by decide)).trans (hs₁.trans hs₀), mask_lt r₁⟩
 
 /-- **`inst_list(e, o, l, d)` refines the arena's `instantiateListFast coreWalkFuel` under
 `ArenaL`**, at every L fuel (the walk's counter starts at `coreWalkFuel`), the substitution `vs`
