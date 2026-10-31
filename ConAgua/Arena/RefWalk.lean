@@ -15,7 +15,8 @@ in step. This file is the walk's step rules, one per pair of shapes, both outcom
   lemma, its run and the rest proved at the call site;
 * `RefE.bindE` / `RefE.lastE`: a unified callee (`K x`) by its own `RefE`, then the rest / as the
   twin's last step; `RefE.bindRun`: a unified callee read through its call's run
-  (`K (callE …)`, its model spec and its `RefE`);
+  (`K (callE …)`, its model spec and its `RefE`); `RefE.bindCall`: a knot callee read through its
+  call (`K (callE …)`, its error by `G`, its ok run by an `RSim`);
 * `RefE.onlySim`: a lifted callee the twin has no step for (an L helper: `sl_eq`);
 * the guards of the model (`if c then .error e else rest`): `RefE.guard` against the twin's
   `unless … do fail` (its do-elaboration `if b = true then jp () else fail ce >>= jp`),
@@ -78,6 +79,22 @@ theorem RefE.bindRun {p : Prog} {n : Nat} {f : FnName} {args : List Word} {s₀ 
   · rw [hK]; exact RefE.bind_left fun hG => RefE.run_err hs (hGs hG) (hG' hG) h1 c
   obtain ⟨s', rfl, hQ, y, a₁, hr, hS⟩ := RefE.run_ok hs h1 c
   exact RefE.bind_right hr (h2 r s' y a₁ c hQ hr hS)
+
+/-- **A unified callee read through its call outside `RefE`** (a knot function: `whnf_top`,
+`infer_type_core`), both outcomes: its error by the caller's `G` (the knot's `ErrClaim`), its ok
+run by an `RSim` of its call (`whnfC_rsim`, `inferC_rsim`). -/
+theorem RefE.bindCall {p : Prog} {n : Nat} {f : FnName} {args : List Word} {m : Mem}
+    {K : Except Err (List Word × Mem) → Except Err α} (hK : ∀ e, K (.error e) = .error e)
+    {op : AM γ} {g : γ → AM β} {Q : List Word × Mem → AState → γ → Prop}
+    (herr : G → ∀ e, callE p n f args m = .error e → ErrClaim op a e)
+    (h1 : ∀ b, callW p n f args m = some b → ∃ x a₁, op.run a = .ok (x, a₁) ∧ Q b a₁ x)
+    (h2 : ∀ r m₁ x a₁, callE p n f args m = .ok (r, m₁) → op.run a = .ok (x, a₁) → Q (r, m₁) a₁ x →
+      RefE G (K (.ok (r, m₁))) (g x) a₁ R) :
+    RefE G (K (callE p n f args m)) (op >>= g) a R := by
+  rcases c : callE p n f args m with e | ⟨r, m₁⟩
+  · rw [hK]; exact RefE.bind_left fun hG => herr hG e c
+  obtain ⟨x, a₁, hr, hQ⟩ := h1 _ (callW_of_callE c)
+  exact RefE.bind_right hr (h2 r m₁ x a₁ c hr hQ)
 
 /-- **A lifted callee the twin has no step for** (an L helper): its model fact `Q`, the twin
 unchanged. -/
