@@ -58,7 +58,7 @@ def isort (m : Mem) : Option (Word × Mem) := instRun "intern_sort" [0x10000000]
 
 /- `proj s 0 (bvar 3)` at depth 1 with `bvar 1 := bvar 7`: `bvar 3` is above, lowered to
 `bvar 2`. -/
-#guard instCheck (fun m => do let (e, m) ← ibv 3 m; instRun "mk_proj" [0x10000000, 0, e] m)
-  (ibv 7) 1 (fun m => do let (e, m) ← ibv 2 m; instRun "mk_proj" [0x10000000, 0, e] m)
+#guard instCheck (fun m => do let (e, m) ← ibv 3 m; instRun "mk_proj" [0x04000000, 0, e] m)
+  (ibv 7) 1 (fun m => do let (e, m) ← ibv 2 m; instRun "mk_proj" [0x04000000, 0, e] m)
 
 end L.Arena

@@ -751,7 +751,7 @@ def storeProg : Prog := natProg ++ [("nat_add_lit", natAddLit)] ++ litProg
   | some (h₁, m) => match go m 0 1 with
     | some (h₂, m) => match go m 1 0 with
       | some (h₃, m) => match go m 0 0 with
-        | some (h₄, _) => [h₁, h₂, h₃, h₄] == [0x80000000, 0x80000000, 0x80000000, 0x80000001]
+        | some (h₄, _) => [h₁, h₂, h₃, h₄] == [0x20000000, 0x20000000, 0x20000000, 0x20000001]
         | none => false
       | none => false
     | none => false

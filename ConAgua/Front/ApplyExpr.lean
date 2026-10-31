@@ -636,8 +636,8 @@ def exprRuns (m : Mem) : List (FnName × List Word) → Option (List (List Word)
    ("expr_get", [4]), ("expr_get", [5]), ("expr_get", [6]), ("expr_get", [7]),
    ("expr_get", [8]), ("expr_get", [9]), ("expr_get", [10])] ==
   some [[0], [0], [0], [0], [0], [0], [0], [0], [0], [0], [0], [0], [0],
-    [0x20000000], [0], [0x40000000], [0x50000000], [0x60000000], [0x70000000], [0x90000000],
-    [0x30000000], [0x80000000], [0x80000001], [0x40000000]]
+    [0x08000000], [0], [0x40000000], [0x14000000], [0x18000000], [0x1C000000], [0x24000000],
+    [0x0C000000], [0x20000000], [0x20000001], [0x40000000]]
 
 /- A rebound id aborts; an unbound child aborts; a `strVal` aborts. -/
 #guard (exprRuns exprMem [("front_init", []), ("apply_expr", [8, 0, 0, 0, 0]),
@@ -649,12 +649,12 @@ def exprRuns (m : Mem) : List (FnName × List Word) → Option (List (List Word)
 def exprStrMem : Mem :=
   (Mem.ofWords (ArrTable.zeroWords (checkerArrays.filter (·.id ≤ Front.EIDS)) fun _ => 128)).putBytes IN "\"ab\"\"cd\"".toUTF8.data
 
-/- `"ab"` interned twice (the same handle, `0x80000000`), `"cd"` a different one (`0x80000001`). -/
+/- `"ab"` interned twice (the same handle, `0x20000000`), `"cd"` a different one (`0x20000001`). -/
 #guard exprRuns exprStrMem
   [("front_init", []), ("apply_expr", [17, 0, 0, 1, 3]), ("apply_expr", [17, 1, 0, 1, 3]),
    ("apply_expr", [17, 2, 0, 5, 7]),
    ("expr_get", [0]), ("expr_get", [1]), ("expr_get", [2])] ==
-  some [[0], [0], [0], [0], [0x80000000], [0x80000000], [0x80000001]]
+  some [[0], [0], [0], [0], [0x20000000], [0x20000000], [0x20000001]]
 
 /-! ## The specs -/
 

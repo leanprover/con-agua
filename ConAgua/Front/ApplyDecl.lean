@@ -285,8 +285,8 @@ universe parameter words. -/
    ("apply_expr", [9, 0, 0, 0, 0]),
    ("apply_decl", [20, 1, 0, 0, 0, 0, 0, 0]), ("apply_decl", [21, 1, 0, 0, 0, 3, 7, 1])]).map
   (fun m => ((m.arr64 DECL).extract 0 17, (m.arr64 DLP).extract 0 5)) ==
-  some (#[2, 1, 0x10000000, 0, 2, 0x20000000, 0, 0, 0, 2, 0x10000000, 2, 2, 0x20000000, 0x20000000, 3, 7],
-    #[4, 0, 0x10000000, 0, 0x10000000])
+  some (#[2, 1, 0x04000000, 0, 2, 0x08000000, 0, 0, 0, 2, 0x04000000, 2, 2, 0x08000000, 0x08000000, 3, 7],
+    #[4, 0, 0x04000000, 0, 0x04000000])
 
 /- An unsafe axiom aborts; a definition that is not `safe` aborts; an unbound type aborts;
 `inductive` aborts. -/

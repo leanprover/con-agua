@@ -240,8 +240,8 @@ handles of names 0‥3 and levels 0‥3 (tag in bits 28‥31, tier bit 27). -/
    ("name_get", [0]), ("name_get", [1]), ("name_get", [2]), ("name_get", [3]),
    ("level_get", [0]), ("level_get", [1]), ("level_get", [2]), ("level_get", [3])] ==
   some [[0], [0, 3], [0], [3, 2], [0], [0], [0], [0], [0],
-    [0], [0x10000000], [0x10000001], [0x20000000],
-    [0], [0x10000000], [0x40000000], [0x20000000]]
+    [0], [0x04000000], [0x04000001], [0x08000000],
+    [0], [0x04000000], [0x10000000], [0x08000000]]
 
 /- A rebound id aborts, an unbound one aborts, an unknown level kind aborts. -/
 #guard (frontRuns frontMem [("front_init", []), ("apply_nnum", [0, 0, 1])]).isNone
@@ -255,7 +255,7 @@ id aborts. -/
    ("apply_nnum", [200, 3000000000000000, 8]), ("apply_nnum", [130, 200, 9]),
    ("apply_nnum", [129, 0, 9]), ("name_get", [3000000000000000]), ("name_get", [200]),
    ("name_get", [130]), ("name_get", [129])] ==
-  some [[0], [0], [0], [0], [0], [0x20000000], [0x20000001], [0x20000002], [0x20000003]]
+  some [[0], [0], [0], [0], [0], [0x08000000], [0x08000001], [0x08000002], [0x08000003]]
 #guard (frontRuns frontMem [("front_init", []), ("apply_nnum", [300, 0, 1]),
   ("apply_nnum", [300, 0, 2])]).isNone
 #guard (frontRuns frontMem [("front_init", []), ("name_get", [300])]).isNone
