@@ -259,6 +259,16 @@ theorem storeFuelW_ok {m : Mem} {a : AState} (hR : ArenaR m a) {n : Nat} {f : Wo
   obtain ⟨h1', h2', h3', h4'⟩ := ConsR.sizes hR.lam
   obtain ⟨i1, i2, i3, i4⟩ := ConsR.sizes hR.forallE
   obtain ⟨j1, j2, j3, j4⟩ := ConsR.sizes hR.proj
+  replace a2 := Nat.le_trans a2 (capS_le _); replace a4 := Nat.le_trans a4 (capS_le _)
+  replace b2 := Nat.le_trans b2 (capS_le _); replace b4 := Nat.le_trans b4 (capS_le _)
+  replace c2 := Nat.le_trans c2 (capS_le _); replace c4 := Nat.le_trans c4 (capS_le _)
+  replace d2 := Nat.le_trans d2 (capS_le _); replace d4 := Nat.le_trans d4 (capS_le _)
+  replace e2 := Nat.le_trans e2 (capS_le _); replace e4 := Nat.le_trans e4 (capS_le _)
+  replace f2 := Nat.le_trans f2 (capS_le _); replace f4 := Nat.le_trans f4 (capS_le _)
+  replace g2 := Nat.le_trans g2 (capS_le _); replace g4 := Nat.le_trans g4 (capS_le _)
+  replace h2' := Nat.le_trans h2' (capS_le _); replace h4' := Nat.le_trans h4' (capS_le _)
+  replace i2 := Nat.le_trans i2 (capS_le _); replace i4 := Nat.le_trans i4 (capS_le _)
+  replace j2 := Nat.le_trans j2 (capS_le _); replace j4 := Nat.le_trans j4 (capS_le _)
   simp only [litCS, litCSk, appCS, sortCS, constCS, letCS, bvarCS, fvarCS, lamCS, forallCS,
     projCS] at a1 a3 b1 b3 c1 c3 d1 d3 e1 e3 f1 f3 g1 g3 h1' h3' i1 i3 j1 j3
   simp only [EStore.nodeCount, EStore.persCount, EStore.scrCount, ETables.count, Tbl.size] at *
@@ -325,7 +335,7 @@ theorem nrpW_ok {m : Mem} {a : AState} (hR : ArenaR m a) (w f T : Word) (h : nrp
       (UInt64.not_le.mp hc)
     refine ⟨.anonymous, viewN_run ?_, by simp, by simp⟩
     rw [EStore.ns, hv, NTables.get, decI_tag w hw, hg]
-    simp only [NTag.anonymous, decI_idx, Tbl.node?]
+    simp only [NTag.anonymous, decI_idx w (narrow_of_tagW w (by rw [hg]; decide)), Tbl.node?]
     by_cases ht : tierW w = 0
     · rw [ite_eq_left ht] at hx; simp [ht, hx]
     · rw [ite_eq_right ht] at hx; simp [ht, hx]
@@ -338,7 +348,7 @@ theorem nrpW_ok {m : Mem} {a : AState} (hR : ArenaR m a) (w f T : Word) (h : nrp
       (UInt64.not_le.mp hc)
     refine ⟨.num x.pre x.n, viewN_run ?_, by simp, by simp⟩
     rw [EStore.ns, hv, NTables.get, decI_tag w hw, hg]
-    simp only [NTag.anonymous, NTag.str, NTag.num, decI_idx, Tbl.node?]
+    simp only [NTag.anonymous, NTag.str, NTag.num, decI_idx w (narrow_of_tagW w (by rw [hg]; decide)), Tbl.node?]
     by_cases ht : tierW w = 0
     · rw [ite_eq_left ht] at hx; simp [ht, hx]
     · rw [ite_eq_right ht] at hx; simp [ht, hx]
@@ -350,7 +360,7 @@ theorem nrpW_ok {m : Mem} {a : AState} (hR : ArenaR m a) (w f T : Word) (h : nrp
   have hview : (viewN (decI w)).run a = .ok (.str x.pre x.s, a) := by
     apply viewN_run
     rw [EStore.ns, hv, NTables.get, decI_tag w hw, hg]
-    simp only [NTag.anonymous, NTag.str, decI_idx, Tbl.node?]
+    simp only [NTag.anonymous, NTag.str, decI_idx w (narrow_of_tagW w (by rw [hg]; decide)), Tbl.node?]
     by_cases ht : tierW w = 0
     · rw [ite_eq_left ht] at hx; simp [ht, hx]
     · rw [ite_eq_right ht] at hx; simp [ht, hx]
