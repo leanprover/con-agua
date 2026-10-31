@@ -655,7 +655,7 @@ Pitfalls (add to §6.4):
   `rw [e1] at hrun1 hS1` leaves the goal at `a1`, and a later `bindE` with a callee stated at `a`
   fails.
 * **A redundant `import ConAgua.Arena.RefWalk`** where an imported knot caller already brings it
-  (`IndBRec2` through `IndBHdr`, the `Decl*T` files through each other) fails the `shake` gate. So
+  (`IndBRec2` through `IndBHdr`, the `Decl*T` files and `DeclAxQuotT` through each other) fails the `shake` gate. So
   did `RecGen28`'s import after refwalk3; it is dropped here.
 
 **What stays by hand**, and why:
@@ -680,8 +680,7 @@ Pitfalls (add to §6.4):
 model would take another 67 lines off.
 
 Numbers, against master 1b1b1898 (the eleven files are unchanged on master since; `reflen.py`,
-`ncl.py`; elaboration is `lake env lean` on master's text and the
-branch's in the branch worktree, 3 interleaved runs, median, load 13–23. "work" is the profiler's
+`ncl.py`; elaboration is `lake env lean` on master's text and the branch's in the branch worktree, 3 interleaved runs, median, load 13–23. "work" is the profiler's
 sum without `import` and `blocked`:
 
 | theorem | before | after |

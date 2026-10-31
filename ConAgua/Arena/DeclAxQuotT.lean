@@ -1,4 +1,3 @@
-import ConAgua.Arena.RefWalk
 import ConAgua.Arena.DeclArmT
 import ConAgua.Arena.DeclCanonInfo
 import ConAgua.Arena.DeclArmAxiom
