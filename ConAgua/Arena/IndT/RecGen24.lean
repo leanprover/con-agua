@@ -2,7 +2,6 @@ import ConAgua.Arena.IndT.RecGen23
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
-import ConAgua.Arena.RefWalk
 
 /-!
 # `class_fields_agree`: one model, one refinement
