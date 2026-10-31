@@ -422,32 +422,6 @@ theorem fsorts_ref (hg : p.lookup "sl_get" = some slGet) (hpw : p.lookup "pin_wo
     fun _ _ _ _ hR => ⟨hR.stage, hR.grow, by simpa using hR.sorts, by simpa using hR.top, hR.abs⟩
 
 include hq henv hLC hLT in
-/-- `check_struct_field_sorts_i` under `StageC` as a `Sim` of its call (`fsorts_ref`'s ok half,
-from the run). -/
-theorem installSimFsortsC (hP : SumProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState}
-    (isP large s nP fo fl io il j : Word) (hs : H s) (fvs idx : List EIdx) {sP : ConLeche.Level}
-    (hC : StageC dn vis fe env m a) (hA : AbsOK m) (hsP : denoteL a.store.ls (decI s) = some sP)
-    (hfd : decHL m fo.toNat fl.toNat = some fvs) (hfb : fo.toNat + fl.toNat ≤ iwTop m)
-    (hid : decHL m io.toNat il.toNat = some idx) (hib : io.toNat + il.toNat ≤ iwTop m)
-    (hnj : nP.toNat + j.toNat < 2 ^ 64) {fvsP : List ConLeche.Expr}
-    (hfP : Frontend.denoteEList a.store fvs = some fvsP)
-    (hws : ∀ i, i < j.toNat → ∀ x, fvsP[i]? = some x →
-      ConLeche.Expr.WScoped (nP.toNat + i) x.fvarTypeD) :
-    Sim (callW p n "check_struct_field_sorts_i" [vis, isP, large, s, nP, fo, fl, io, il, j] m)
-      (checkStructFieldSortsI V fe (isP != 0) (large != 0) (decI s) nP.toNat fvs idx j.toNat) a
-      (fun r x m' a' => StageC dn vis fe env m' a' ∧ IWGrow m m' ∧
-        decHL m' (r.headD 0).toNat (r.tail.headD 0).toNat = some x ∧
-        (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop m' ∧ AbsOK m') := by
-  rcases n with _ | k
-  · intro r m' e; rw [callW_zero] at e; cases e
-  intro r m' e
-  obtain ⟨s', rfl, -, x, a', hrun, hR⟩ := RefE.run_okW
-    (fsortsE_spec p hP.hcfs hP.hcfg hP.ha hP.ad.ftd hP.hfsb (k + 1) ⟨m, Locals.init []⟩ vis isP large s nP fo fl io il j)
-    (fsorts_ref hq henv hLC hLT hP.hg hP.hpw hP.het hP.hcn k (by omega) m a isP large s nP fo fl io il j
-      fvs idx hC hA hfd hfb hid hib hs hsP hnj hfP hws) e
-  exact ⟨x, a', hrun, hR.stage, hR.grow, hR.sorts, hR.top, hR.abs⟩
-
-include hq henv hLC hLT in
 /-- **`check_struct_field_sorts_i` refines `checkStructFieldSortsI .verified`** under `StageC`
 (`fsorts_ref`'s ok half; the fields' denotations and scoping as con-ron's
 `checkStructFieldSortsI_spec` asks): the sorts in a fresh `IW` slice. -/

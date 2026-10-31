@@ -11,8 +11,8 @@ import ConAgua.Arena.IndT.Install1
 
 `iisE` (`check_block_idx_sorts_one`) and `iisrE` (`check_block_idx_sorts`), `l_model … unified`:
 `open_pis_at_fvars_f`, `rec2` and `sl_cons` (outside the verdict closure) through their `Option`
-models, `check_struct_field_sorts_i` through its run (`callE`; its ok half by its `Option` spec
-and `fsorts_ref` from the run, its error half by `fsorts_ref` and `RefE.run_err`), the member check
+models, `check_struct_field_sorts_i` through its run (`callE`; `RefE.bindRun` with its spec and
+`fsorts_ref`), the member check
 through its unified model. `iis_ref` and `iisr_ref` refine `idxOneAM` and `checkBlockIdxSorts`
 for both outcomes; `checkBlockIdxSorts_refinesC` is the ok half.
 -/
@@ -154,29 +154,18 @@ theorem iis_ref (hP : IdxProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AS
   have hxsd := ConRon.Bridge.Inductives.denoteEList_drop hxs bs.nP
   have hsP1 := ConRon.Bridge.denoteL_ext hsP p1.ext
   -- `check_struct_field_sorts_i` (through its run)
-  rcases h2 : callE p n "check_struct_field_sorts_i" [vis, 1, 0, rdW (m.arr64 IW) (pp + 6), UInt64.ofNat bs.nP,
-      (idxTail (UInt64.ofNat bs.nP) (r1.tail.headD 0) (r1.tail.tail.headD 0)).1,
-      (idxTail (UInt64.ofNat bs.nP) (r1.tail.headD 0) (r1.tail.tail.headD 0)).2, 0, 0,
-      UInt64.ofNat msh.nIdx] m1 with e2 | ⟨r2, m2⟩
-  · rw [iisE.k_check_struct_field_sorts_i.none]
-    intro hG hk0
-    have h := RefE.run_err (fsortsE_spec p hP.sum.hcfs hP.sum.hcfg hP.sum.ha hP.sum.ad.ftd hP.sum.hfsb (n + 1)
-      ⟨m1, Locals.init []⟩ vis 1 0 (rdW (m.arr64 IW) (pp + 6)) (UInt64.ofNat bs.nP) _ _ 0 0 (UInt64.ofNat msh.nIdx))
-      hG.nv hG (fsorts_ref hq henv hLC hLT hP.sum.hg hP.sum.hpw hP.sum.het hP.sum.hcn n (by omega) m1 a1 1 0
-        (rdW (m.arr64 IW) (pp + 6)) (UInt64.ofNat bs.nP) _ _ 0 0 (UInt64.ofNat msh.nIdx) (fvs.drop bs.nP) [] hC1
-        hA1 hdT hbT (by simp [decHL, hslice?]) (by simp) hrs32 (by rw [hrse]; exact hsP1)
-        (by rw [← partsAddNoOv hov]; exact UInt64.toNat_lt _) hxsd hxPos) (callE_err_mono n.le_succ h2 hk0)
-    rw [hrse, UInt64.toNat_ofNat_of_lt' hnpb, UInt64.toNat_ofNat_of_lt' hnib,
-      show ((1 : Word) != 0) = true from rfl, show ((0 : Word) != 0) = false from rfl] at h
-    exact h hk0
-  rw [iisE.k_check_struct_field_sorts_i.arm1]
-  have hsim := installSimFsortsC (dn := dn) (fe := fe) hq henv hLC hLT hP.sum n (by omega) 1 0
-    (rdW (m.arr64 IW) (pp + 6)) (UInt64.ofNat bs.nP) _ _ 0 0 (UInt64.ofNat msh.nIdx) hrs32
-    (fvs.drop bs.nP) [] hC1 hA1 (by rw [hrse]; exact hsP1) hdT hbT (by simp [decHL, hslice?]) (by simp)
+  have hR2 := fsorts_ref hq henv hLC hLT hP.sum.hg hP.sum.hpw hP.sum.het hP.sum.hcn n (by omega) m1 a1 1 0
+    (rdW (m.arr64 IW) (pp + 6)) (UInt64.ofNat bs.nP) _ _ 0 0 (UInt64.ofNat msh.nIdx) (fvs.drop bs.nP) [] hC1
+    hA1 hdT hbT (by simp [decHL, hslice?]) (by simp) hrs32 (by rw [hrse]; exact hsP1)
     (by rw [← partsAddNoOv hov]; exact UInt64.toNat_lt _) hxsd hxPos
   rw [hrse, UInt64.toNat_ofNat_of_lt' hnpb, UInt64.toNat_ofNat_of_lt' hnib,
-    show ((1 : Word) != 0) = true from rfl, show ((0 : Word) != 0) = false from rfl] at hsim
-  obtain ⟨isorts, a2, hr2, hC2, hg2, hdl, hbl, hA2⟩ := hsim r2 m2 (callW_of_callE h2)
+    show ((1 : Word) != 0) = true from rfl, show ((0 : Word) != 0) = false from rfl] at hR2
+  rw [← bind_pure (checkStructFieldSortsI _ _ _ _ _ _ _ _ _)]
+  refine RefE.bindRunLe n.le_succ (s₀ := ⟨m1, Locals.init []⟩) (fun _ => iisE.k_check_struct_field_sorts_i.none ..)
+    (fsortsE_spec p hP.sum.hcfs hP.sum.hcfg hP.sum.ha hP.sum.ad.ftd hP.sum.hfsb (n + 1) _ vis 1 0 _ _ _ _ 0 0 _)
+    (fun hG => hG.nv) id hR2 fun r2 s2 isorts a2 _ _ hr2 ⟨hC2, hg2, hdl, hbl, hA2⟩ => ?_
+  rw [iisE.k_check_struct_field_sorts_i.arm1]
+  generalize s2.mem = m2 at hC2 hg2 hdl hbl hA2 ⊢
   obtain ⟨c2, -⟩ := ConRon.Bridge.Inductives.checkStructFieldSortsI_spec fe
     (ConRon.Bridge.CoreSpec.of_core rfl) henv true false bs.resSort bsP.resSort bs.nP (fvs.drop bs.nP) []
     (xsP.drop bs.nP) [] msh.nIdx (fun i hi x hx => by
@@ -190,7 +179,7 @@ theorem iis_ref (hP : IdxProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AS
   obtain ⟨hS3, hg3, hr3, hget, htop⟩ := recW_stage h3 hC2.stage rfl
   have hA3 := recW_afr h3 hA2
   subst hr3
-  refine RefE.ret hr2 ⟨hC2.of_pstep hS3 hA3 (PStep.refl hC2.check.state), (hg1.trans hg2).trans hg3, ?_, hA3,
+  refine RefE.ret rfl ⟨hC2.of_pstep hS3 hA3 (PStep.refl hC2.check.state), (hg1.trans hg2).trans hg3, ?_, hA3,
     (p1.toCore hC.check).trans c2⟩
   simp only [List.headD_cons]
   have hq0 : (rdW (m2.arr64 CTL) 200).toNat < iwTop m3 := by rw [htop]; simp [iwTop]
