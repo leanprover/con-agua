@@ -1,4 +1,3 @@
-import ConAgua.Arena.RefWalk
 import ConAgua.Arena.DeclDivGateT1
 import ConAgua.Arena.DeclDivModSpec.RomPinSets
 import ConAgua.Arena.DeclCrpT

@@ -1,4 +1,3 @@
-import ConAgua.Arena.RefWalk
 import ConAgua.Arena.RecClassSpec.ClassGenRecTy
 import ConAgua.Verdict.IndBHdr
 import ConAgua.Verdict.IndBRec1
