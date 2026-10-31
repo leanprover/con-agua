@@ -139,17 +139,14 @@ theorem ivg_ref {p : Prog} (hap : ApdF p) (hCrf : CrfF p) {dn : NIdx → Option 
     (fun b h5 => crfF_okT dn vis fe v hv m4 b.2 a4 b.1 (crfF_of_callW hCrf h5) ⟨hS4, hCr4.crMemo⟩)
     fun r5 m5 x5 a5 _ _ ⟨⟨hS5, hg5, hx5, _⟩, hCr5⟩ => ?_
   dsimp only [installValueGuardsE.k_consts_resolve_ffast]
-  by_cases hb5 : r5.headD 0 = 0
-  · rw [show x5 = false by rw [← hx5]; simpa using hb5, ite_eq_left hb5]
-    refine RefE.ite_neg (by decide) ?_
-    rcases h6 : callE p (n + 1) "unresolved_consts_error" [vis, v, 1] m5 with e6 | ⟨r6, m6⟩ <;>
-      dsimp only [installValueGuardsE.k_unresolved_consts_error]
-    · obtain ⟨M5, hC5⟩ := hS5.core
-      exact fun hG => uce_errClaim_lo hG.uce hG.nv hC5 hv (by decide) h6 "value"
-    · exact RefE.of_cls0 rfl
-  rw [show x5 = true by rw [← hx5]; simpa using hb5, ite_eq_right hb5]
-  exact RefE.ite_pos rfl (RefE.ret rfl
-    ⟨hS5, hg1.trans (hg2.trans (hg3.trans (hg4.trans hg5))), hCr5.crOK⟩)
+  refine RefE.splitNot (fun hb5 => by rw [← hx5]; simpa using hb5)
+    (fun hb5 => by rw [← hx5] at hb5; simpa using hb5) (fun _ _ => ?_) fun _ _ => RefE.ret rfl
+      ⟨hS5, hg1.trans (hg2.trans (hg3.trans (hg4.trans hg5))), hCr5.crOK⟩
+  rcases h6 : callE p (n + 1) "unresolved_consts_error" [vis, v, 1] m5 with e6 | ⟨r6, m6⟩ <;>
+    dsimp only [installValueGuardsE.k_unresolved_consts_error]
+  · obtain ⟨M5, hC5⟩ := hS5.core
+    exact fun hG => uce_errClaim_lo hG.uce hG.nv hC5 hv (by decide) h6 "value"
+  · exact RefE.of_cls0 rfl
 
 /-- **`install_value_guards`' error claim under `StageT`** (`ivg_ref`'s error half). -/
 theorem ivgE_okT {p : Prog} (hP : CvgProg p) (hap : ApdF p) (hkp : CrKeep p)
@@ -422,104 +419,85 @@ theorem cvg_ref {p : Prog} (hq : KnotStageProg p) (hP : CvgProg p) (hL : LvlCach
       (fun b h8 => hq.isDefEqCore_sim n hn' hS7 0 (r7.headD 0) wt hx7l hwtl b.1 b.2 h8)
       fun r8 m8 x8 a8 h8 _ ⟨hS8, hg8, hx8⟩ => ?_
     have hCr8 := hkp.call (im_mem _ rfl) (callW_of_callE h8) (hkp.call (im_mem _ rfl) (callW_of_callE h7) hCr5)
-    by_cases hb8 : r8.headD 0 = 0
-    · have ex8 : x8 = false := by rw [← hx8, decBool, hb8]; rfl
-      rw [ex8]
-      by_cases k1 : rdW (m8.arr64 EREC) g = 1
-      · rw [checkValueGroupE.k_is_def_eq_core.abort1 p g r8 m8 hb8 k1]
-        exact RefE.ite_neg (by decide) fun _ => ErrClaim.fail _ _ rfl
-      by_cases k2 : rdW (m8.arr64 EREC) g = 2
-      · rw [checkValueGroupE.k_is_def_eq_core.abort2 p g r8 m8 hb8 k1 k2]
-        exact RefE.ite_neg (by decide) fun _ => ErrClaim.fail _ _ rfl
-      · rw [checkValueGroupE.k_is_def_eq_core.abort3 p g r8 m8 hb8 k1 k2]
-        exact RefE.ite_neg (by decide) fun _ => ErrClaim.fail _ _ rfl
-    rw [checkValueGroupE.k_is_def_eq_core.arm1 p g r8 m8 hb8]
-    have ex8 : x8 = true := by rw [← hx8]; simpa [decBool] using hb8
-    rw [ex8]
-    exact RefE.ite_pos rfl (RefE.ret rfl ⟨hS8, hm0 ▸ hg5.trans (hg7.trans hg8), hCr8⟩)
-  by_cases hk1 : wk = 1
-  · -- a theorem: the proposition test and the value's guards
-    subst hk1
-    have hkind : vg.kind = .thm := by simpa [decVK] using hvk.symm
-    rw [checkValueGroupE.k_ensure_sort_core.arm1 p n vis g wt wj r2 m2 ek]
-    have hb : (vg.kind == ValueKind.thm) = true := by rw [hkind]; rfl
-    refine RefE.ite_pos hb ?_
-    have hflag : pinW m2 0 ≠ 0 := hS2.flag
-    have hz : rdW (m2.arr64 PINS) 53 = pinW m2 53 := by simp [rdW, pinW]
-    simp only [pinWordW, hflag, ite_false, liftE_some, checkValueGroupE.k_pin_word.arm1,
-      List.headD_cons, hz]
-    have hF := hS2.stage.check.pins.full hflag
-    refine RefE.bind_right (pinZeroLevel_run hF) ?_
-    -- the two levels read back: the sort's level, the pinned zero
-    obtain ⟨xs, hxs⟩ := ensureSort_view (r := pureFnsA V fe checkFuel) (fe := fe) (d := 0)
-      (e := decI (r1.headD 0)) hrun2
-    obtain ⟨lu, hdu⟩ := hS2.twin.den.sort _ _ hxs
-    obtain ⟨lz, hdz⟩ := hS2.twin.den.zero
-    rw [hF.zeroLevel] at hdz
-    -- `lvl_eq_c(u, zr)`
-    refine RefE.bindSim (fun _ => checkValueGroupE.k_lvl_eq_c.none ..)
-      (lvlEqC_simTE p hq.closed hL n hS2 (r2.headD 0) (pinW m2 53) hx2l hF.lv_lt.2.1 lu lz hdu hdz)
-      fun r4 x4 m4 a4 h4 hrun4 ⟨hS4, hg4, hdec4⟩ => ?_
-    have hCr4 := hkp.call (im_mem _ rfl) h4 hCr2
-    unfold decLvlEq at hdec4
-    by_cases c0 : r4.headD 0 = 0
-    · -- out of fuel: the twin's `liftFueled` on `none`
-      rw [checkValueGroupE.k_lvl_eq_c.abort1 p n vis g wt wj r4 m4 c0]
-      have hx : x4 = none := by
-        rw [c0] at hdec4
-        rcases x4 with _ | _ | _ <;> first | rfl | exact absurd hdec4 (by decide)
-      subst hx
-      exact RefE.bind_left fun _ => ErrClaim.fail _ _ rfl
-    by_cases c1 : r4.headD 0 = 1
-    · -- not a proposition
-      rw [checkValueGroupE.k_lvl_eq_c.abort2 p n vis g wt wj r4 m4 c0 c1]
-      have hx : x4 = some false := by
-        rw [c1] at hdec4
-        rcases x4 with _ | _ | _ <;> first | rfl | exact absurd hdec4 (by decide)
-      subst hx
-      exact RefE.bind_right (a₁ := a4) rfl
-        (RefE.ite_neg (by decide) (RefE.bind_left fun _ => ErrClaim.fail _ _ rfl))
-    by_cases c2' : r4.headD 0 ≠ 2
-    · rw [checkValueGroupE.k_lvl_eq_c.abort3 p n vis g wt wj r4 m4 c0 c1 c2']
-      exact RefE.of_cls0 rfl
-    have c2 : r4.headD 0 = 2 := Classical.not_not.mp c2'
-    rw [checkValueGroupE.k_lvl_eq_c.arm1 p n vis g wt wj r4 m4 c0 c1 c2]
-    have hx : x4 = some true := by
-      rw [c2] at hdec4
+    rw [checkValueGroupE.k_is_def_eq_core.eq_2]
+    refine RefE.splitNot (fun hb8 => by rw [← hx8, decBool, hb8]; decide)
+      (fun hb8 => by rw [← hx8] at hb8; simpa [decBool] using hb8)
+      (fun _ _ => by split <;> (try split) <;> exact fun _ => ErrClaim.fail _ _ rfl)
+      fun _ _ => RefE.ret rfl ⟨hS8, hm0 ▸ hg5.trans (hg7.trans hg8), hCr8⟩
+  -- a theorem: the proposition test and the value's guards; otherwise the tail
+  have hkd : wk = 1 ↔ (vg.kind == ValueKind.thm) = true := by
+    rw [← UInt64.toNat_inj]; unfold decVK at hvk; split at hvk <;> grind
+  rw [checkValueGroupE.k_ensure_sort_core.eq_2, ek]
+  refine RefE.split hkd.mp hkd.mpr (fun hk1 _ => ?_) fun _ _ => tail m2 a2 hS2 (hg1.trans hg2) hCr2
+  subst hk1
+  have hkind : vg.kind = .thm := by simpa [decVK] using hvk.symm
+  have hflag : pinW m2 0 ≠ 0 := hS2.flag
+  have hz : rdW (m2.arr64 PINS) 53 = pinW m2 53 := by simp [rdW, pinW]
+  simp only [pinWordW, hflag, ite_false, liftE_some, checkValueGroupE.k_pin_word.arm1,
+    List.headD_cons, hz]
+  have hF := hS2.stage.check.pins.full hflag
+  refine RefE.bind_right (pinZeroLevel_run hF) ?_
+  -- the two levels read back: the sort's level, the pinned zero
+  obtain ⟨xs, hxs⟩ := ensureSort_view (r := pureFnsA V fe checkFuel) (fe := fe) (d := 0)
+    (e := decI (r1.headD 0)) hrun2
+  obtain ⟨lu, hdu⟩ := hS2.twin.den.sort _ _ hxs
+  obtain ⟨lz, hdz⟩ := hS2.twin.den.zero
+  rw [hF.zeroLevel] at hdz
+  -- `lvl_eq_c(u, zr)`
+  refine RefE.bindSim (fun _ => checkValueGroupE.k_lvl_eq_c.none ..)
+    (lvlEqC_simTE p hq.closed hL n hS2 (r2.headD 0) (pinW m2 53) hx2l hF.lv_lt.2.1 lu lz hdu hdz)
+    fun r4 x4 m4 a4 h4 hrun4 ⟨hS4, hg4, hdec4⟩ => ?_
+  have hCr4 := hkp.call (im_mem _ rfl) h4 hCr2
+  unfold decLvlEq at hdec4
+  by_cases c0 : r4.headD 0 = 0
+  · -- out of fuel: the twin's `liftFueled` on `none`
+    rw [checkValueGroupE.k_lvl_eq_c.abort1 p n vis g wt wj r4 m4 c0]
+    have hx : x4 = none := by
+      rw [c0] at hdec4
       rcases x4 with _ | _ | _ <;> first | rfl | exact absurd hdec4 (by decide)
     subst hx
-    refine RefE.bind_right (a₁ := a4) rfl (RefE.ite_pos rfl ?_)
-    -- the parameters' names read back at the guards: the prefix extends the store
-    have hlps4 : ∃ ks, vg.cv.levelParams.mapM (denoteN a4.store.ns) = some ks := by
-      obtain ⟨env, cP, henv, hck, hcvd, hws⟩ := hthm hkind
-      obtain ⟨hck2, hx02⟩ := thmPrefix_ext henv hck hcvd hws (by rw [hty]; exact hrun1) hrun2
-      obtain ⟨-, hst4, -⟩ := ConRon.Bridge.AM.of_run (P := fun t => t = a2) rfl hrun4
-        (ConRon.Bridge.Core.lvlEq?_spec a2 _ _ hck2)
-      rw [hst4]
-      exact denoteCV_lps (ConRon.Bridge.denoteCV_ext hcvd hx02)
-    have hg1' : (g + 1).toNat = g.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
-    have hcv4 : decCV (erA m4) (g + 1).toNat = some vg.cv := by
-      rw [hg1']
-      exact ArrExt.decCV (IWGrow.erecExt (hg1.trans (hg2.trans hg4))) hcv
-    -- `install_value_guards(vis, g + 1, v)`
-    rcases h5 : callE p n "install_value_guards" [vis, g + 1, wj] m4 with e5 | ⟨r5, m5⟩
-    · rw [checkValueGroupE.k_install_value_guards.none]
-      exact RefE.bind_left fun hG => hG.ivg h5 hS4 hcv4 (by rw [hg1']; omega) hwjl hlps4 hCr4
-    rw [checkValueGroupE.k_install_value_guards.arm1]
-    obtain ⟨s5, hs5, -, _, a5, hrun5, hS5, hg5, hCr5⟩ := RefE.run_ok
-      (s₀ := ⟨m4, Locals.init []⟩)
-      (installValueGuards_specE p hP n _ vis (g + 1) wj)
-      (ivg_ref hap hkp.crf n hS4 hcv4 (by rw [hg1']; omega) hwjl hlps4 hCr4) h5
-    subst hs5
-    exact RefE.bind_right hrun5 (tail _ _ hS5 (hg1.trans (hg2.trans (hg4.trans hg5))) hCr5)
-  · rw [checkValueGroupE.k_ensure_sort_core.arm2 p n vis g wt wj r2 m2 (by rw [ek]; exact hk1)]
-    have hkind : vg.kind ≠ .thm := by
-      intro hk; rw [hk] at hvk
-      have : wk.toNat = 1 := by
-        unfold decVK at hvk; split at hvk <;> simp_all
-      exact hk1 (UInt64.toNat_inj.mp (by simpa using this))
-    have hb : (vg.kind == ValueKind.thm) = false := by
-      revert hkind; cases vg.kind <;> decide
-    exact RefE.ite_neg (by rw [hb]; decide) (tail m2 a2 hS2 (hg1.trans hg2) hCr2)
+    exact RefE.bind_left fun _ => ErrClaim.fail _ _ rfl
+  by_cases c1 : r4.headD 0 = 1
+  · -- not a proposition
+    rw [checkValueGroupE.k_lvl_eq_c.abort2 p n vis g wt wj r4 m4 c0 c1]
+    have hx : x4 = some false := by
+      rw [c1] at hdec4
+      rcases x4 with _ | _ | _ <;> first | rfl | exact absurd hdec4 (by decide)
+    subst hx
+    exact RefE.bind_right (a₁ := a4) rfl
+      (RefE.ite_neg (by decide) (RefE.bind_left fun _ => ErrClaim.fail _ _ rfl))
+  by_cases c2' : r4.headD 0 ≠ 2
+  · rw [checkValueGroupE.k_lvl_eq_c.abort3 p n vis g wt wj r4 m4 c0 c1 c2']
+    exact RefE.of_cls0 rfl
+  have c2 : r4.headD 0 = 2 := Classical.not_not.mp c2'
+  rw [checkValueGroupE.k_lvl_eq_c.arm1 p n vis g wt wj r4 m4 c0 c1 c2]
+  have hx : x4 = some true := by
+    rw [c2] at hdec4
+    rcases x4 with _ | _ | _ <;> first | rfl | exact absurd hdec4 (by decide)
+  subst hx
+  refine RefE.bind_right (a₁ := a4) rfl (RefE.ite_pos rfl ?_)
+  -- the parameters' names read back at the guards: the prefix extends the store
+  have hlps4 : ∃ ks, vg.cv.levelParams.mapM (denoteN a4.store.ns) = some ks := by
+    obtain ⟨env, cP, henv, hck, hcvd, hws⟩ := hthm hkind
+    obtain ⟨hck2, hx02⟩ := thmPrefix_ext henv hck hcvd hws (by rw [hty]; exact hrun1) hrun2
+    obtain ⟨-, hst4, -⟩ := ConRon.Bridge.AM.of_run (P := fun t => t = a2) rfl hrun4
+      (ConRon.Bridge.Core.lvlEq?_spec a2 _ _ hck2)
+    rw [hst4]
+    exact denoteCV_lps (ConRon.Bridge.denoteCV_ext hcvd hx02)
+  have hg1' : (g + 1).toNat = g.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
+  have hcv4 : decCV (erA m4) (g + 1).toNat = some vg.cv := by
+    rw [hg1']
+    exact ArrExt.decCV (IWGrow.erecExt (hg1.trans (hg2.trans hg4))) hcv
+  -- `install_value_guards(vis, g + 1, v)`
+  rcases h5 : callE p n "install_value_guards" [vis, g + 1, wj] m4 with e5 | ⟨r5, m5⟩
+  · rw [checkValueGroupE.k_install_value_guards.none]
+    exact RefE.bind_left fun hG => hG.ivg h5 hS4 hcv4 (by rw [hg1']; omega) hwjl hlps4 hCr4
+  rw [checkValueGroupE.k_install_value_guards.arm1]
+  obtain ⟨s5, hs5, -, _, a5, hrun5, hS5, hg5, hCr5⟩ := RefE.run_ok
+    (s₀ := ⟨m4, Locals.init []⟩)
+    (installValueGuards_specE p hP n _ vis (g + 1) wj)
+    (ivg_ref hap hkp.crf n hS4 hcv4 (by rw [hg1']; omega) hwjl hlps4 hCr4) h5
+  subst hs5
+  exact RefE.bind_right hrun5 (tail _ _ hS5 (hg1.trans (hg2.trans (hg4.trans hg5))) hCr5)
 
 end L.Arena
