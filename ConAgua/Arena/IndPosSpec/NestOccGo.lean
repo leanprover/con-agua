@@ -408,7 +408,6 @@ l_model phApp_spec (p : Prog) (hv : p.lookup "e_view" = some eView)
   fns [hp ↦ phW ro]
   specs [eView_spec p hv n]
   grind [ind_grind]
-  extra [evalE_tagE]
 
 def PhOut (r : List Word) : Option (NIdx × LsIdx) → Prop
   | none => r.headD 0 = 0
