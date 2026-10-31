@@ -31,6 +31,10 @@ in step. This file is the walk's step rules, one per pair of shapes, both outcom
   `RefE.abortAt` / `RefE.pass` where a split of the proof already decided the guard;
 * `RefE.retIf`: an early return of the model (`if c then .ok v else rest`) against the twin's
   `if b then T else pure y`;
+* `RefE.split` / `RefE.splitNot`: a branch of the model (`if c then x else y`, both arms going
+  on: a dispatch, an early return against `if b then pure y else T`, an abort that is a callee's
+  error) against the twin's `if d then T else F`, its first arm with the twin's first / second;
+  also a guard against a twin condition that is a `Prop` (`if n < k then fail ce else T`);
 * `RefE.twinFail` / `RefE.twinPass`: a guard of the twin that L checks in pieces;
 * `RefE.ofArms`: an irreducible continuation (a recursive model's) read through its guarded
   equations as the `if` the guard rules take;
@@ -284,6 +288,26 @@ theorem RefE.retIf {c : Prop} [Decidable c] {b : Bool} {v : α} {y : β} {rest :
   · rw [ite_eq_left hc, ite_eq_right (by simp [hcb hc])]; exact RefE.ret rfl (hv hc)
   · have hb : b = true := by cases hb : b; exact absurd (hbc hb) hc; rfl
     rw [ite_eq_right hc, ite_eq_left hb]; exact h hc hb
+
+/-- **A branch of the model against a branch of the twin**, the first arms together: the model
+takes `x` exactly when the twin takes `T`. -/
+theorem RefE.split {c d : Prop} [Decidable c] [Decidable d] {x y : Except Err α} {T F : AM β}
+    (hcd : c → d) (hdc : d → c) (h1 : c → d → RefE G x T a R) (h2 : ¬ c → ¬ d → RefE G y F a R) :
+    RefE G (if c then x else y) (if d then T else F) a R := by
+  by_cases hc : c
+  · rw [ite_eq_left hc, ite_eq_left (hcd hc)]; exact h1 hc (hcd hc)
+  · have hd : ¬ d := fun h => hc (hdc h)
+    rw [ite_eq_right hc, ite_eq_right hd]; exact h2 hc hd
+
+/-- **`RefE.split` with the twin's arms the other way round**: the model takes `x` exactly when
+the twin takes `F`. -/
+theorem RefE.splitNot {c d : Prop} [Decidable c] [Decidable d] {x y : Except Err α} {T F : AM β}
+    (hcd : c → ¬ d) (hdc : ¬ d → c) (h1 : c → ¬ d → RefE G x F a R) (h2 : ¬ c → d → RefE G y T a R) :
+    RefE G (if c then x else y) (if d then T else F) a R := by
+  by_cases hc : c
+  · rw [ite_eq_left hc, ite_eq_right (hcd hc)]; exact h1 hc (hcd hc)
+  · have hd : d := Decidable.not_not.mp fun h => hc (hdc h)
+    rw [ite_eq_right hc, ite_eq_left hd]; exact h2 hc hd
 
 /-- **The model aborts where the twin's guard fails** (`b` false, the model's error of the
 twin's class). -/
