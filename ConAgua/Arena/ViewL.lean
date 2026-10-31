@@ -24,10 +24,14 @@ def predW (z : Word) : Word := z - (if 0 < z then 1 else 0)
 
 -- The tier bit and the index of a handle word: `tierW`, `idxW` (`StoreFields.lean`).
 
+/-- The node index the L code reads a handle of store `c` at: the wide one for `APP`, else the
+narrow one (`node R⟦h⟧`, `L/Notation.lean`). -/
+abbrev ixOf (c : TRec) (h : Word) : Word := if c = APP then idxA h else idxW h
+
 /-- The view checks: a scratch handle needs the scratch tier open, and the index must be below
 the count of the handle's tier in the store `c`. -/
 def viewOK (m : Mem) (h : Word) (c : TRec) : Prop :=
-  ¬ (tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0) ∧ idxW h < tcnt m c (tierW h)
+  ¬ (tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0) ∧ ixOf c h < tcnt m c (tierW h)
 
 /-- `min (x + 1) 32767` without wrapping, con-leche's `satSucc`. The L readers (`der_b`'s `bvar` and
 `fvar` arms, `der_bv`'s `bvar` arm) branch: `if x < 32767 { return x + 1 }; return 32767`. -/

@@ -132,6 +132,10 @@ theorem idxG_narrow (w : Word) (hw : w.toNat / 2 ^ 30 % 2 = 0) : idxG w = idxW w
   apply UInt64.toNat_inj.mp
   rw [idxG_toNat, idxW_toNat_narrow w hw, hw]; simp
 
+/-- A narrow index below `2^30` is a narrow word's. -/
+theorem narrow_of_idxW_lt (w : Word) (hc : (idxW w).toNat < 2 ^ 30) : w.toNat / 2 ^ 30 % 2 = 0 := by
+  rw [idxW_toNat] at hc; omega
+
 theorem idxA_toNat (w : Word) : (idxA w).toNat = (w.toNat + 2 ^ 30) % 2 ^ 31 := by
   simp only [idxA, UInt64.toNat_and]
   rw [show (0x7fffffff : Word).toNat = 2 ^ 31 - 1 from rfl, Nat.and_two_pow_sub_one_eq_mod,
