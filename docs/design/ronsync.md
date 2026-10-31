@@ -48,7 +48,46 @@ regenerated, `provenance.py update --old ed864140`: 1318 citations moved, **40 C
 
 ### Data layout and the word readers
 
-TODO
+The handle word is con-ron's word, as before; only its readers and makers change. All of them
+are in `L/TRec.lean` ("Handle words", the L expressions) and `Arena/StoreFields.lean` (their
+Lean values and laws), the bridge to `Idx` in `Arena/Handle.lean`:
+
+| L | Lean | value | where used |
+|---|---|---|---|
+| `⟦h⟧.tier` | `tierW` | `(h >> 31) & 1` | every node read (was bit 27) |
+| `⟦h⟧.tag` | `tagW` | `f + w·(4 − f)`, `f = (h >> 26) & 15`, `w = (h >> 30) & 1` | every tag test (was `h >> 28`): the twin's `Idx.tag`, exact on every word |
+| `⟦h⟧.idx` | `idxW` | `h & 0x43ffffff` | narrow node reads: bit 30 is kept, so a wide word reads ≥ 2^30, past every narrow array |
+| `⟦h⟧.aidx` | `idxA` | `(h + 2^30) & 0x7fffffff` | `app` node reads (`node APP⟦h⟧`, `APP⟦h⟧.f`): a narrow word reads ≥ 2^30, past the `app` array |
+| `⟦h⟧.gidx` | `idxG` | `h & (2^26 − 1 + w·(2^30 − 2^26))` | the twin's `idxNat` itself: the derived reads of the `app` and `param` arms |
+| — | `hdW g t i`, `hdA t i`, `hdS g wide t i` | `t·2^31 + g·2^26 + i`, `t·2^31 + 2^30 + i` | the handles a push returns |
+
+Why three index readers. The twin decodes a tag-4 word in two ways: `get`/`getApp` (and
+`LTables.get`'s `param` arm) refuse the other shape, `derAt` does not. The L node read mirrors
+`get` with the existing count check: `idxA` sends a narrow word, `idxW` a wide one, past the
+array, so the read fails exactly where `get` answers `none` (`View.get_app` needs only
+`idxA h < 2^30`, which the count check and the cap give: `app_idx_lt`). The derived reads
+(`der_b`, `der_bv`, the `lp`/`hp` blocks, `lvlHPW`) mirror `derAt`, so their `app`/`param` arms
+read at `idxG`, and `decI_idxG` holds for every word. Every other arm is entered only with a
+narrow word (the tag is not 4), where `idxW` is exact (`narrow_of_tagW`, `decI_idx` now takes the
+narrow premise). Dispatchers that compute one shared `i := ⟦h⟧.idx` and then branch on the tag
+reassign `i := ⟦h⟧.aidx` (node reads) or `⟦h⟧.gidx` (derived reads) at the head of the `app`
+arm (`bb_node`, `fl_node`, `lsb_node`, `ws_node`, `fr_node`, `lift_go`, `i1l_go`, `lp_go`,
+`hoist_walk`, `e_view`, `nat_pred`, `raw_nat_lit`, `whnf_core_step`, `der_b`, `der_bv`, …).
+With that the L code is the twin's on every word below 2^32, so no relation needs a validity
+premise and no deviation row is needed.
+
+Caps: the cons library's push tests `c ≥ capW` (`ConsSch.capW`: `2^30` for the `app` schema,
+the only `wide := true` one, `2^26` for the others; the twin's `ENodeView.cap` and
+`Idx.idxCap`); the bases `P`/`S` of each schema are `hdS tag wide 0 0`, `hdS tag wide 1 0`.
+The generic store library (`StoreLib`, `ConsLibRel`, `DerRel`, `LpColRel`) is stated over
+`(tag, wide)`: `protoRun L key tag wide …`, `Schema.hd`, `Schema.cap`, `mkS` (the twin's
+`Idx.mk`/`Idx.mkWide`), `capS`.
+
+The environment index (`Env.lean`, `Tiers.lean`, L-private): selector `(⟦w⟧.tag << 1) +
+⟦w⟧.tier`, row `⟦w⟧.idx << 1`; `tbl_ix(w) = (⟦w⟧.tag, ⟦w⟧.tier, ⟦w⟧.idx)` (helper ronsync-b).
+
+Not changed: the ROM, `pins.bin` and the export format hold no handle words (as con-ron's #133
+notes for its own files); the cons hashes are of words but computed at run time.
 
 ## 5. Proof fallout
 

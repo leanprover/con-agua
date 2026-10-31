@@ -119,11 +119,11 @@ through it fails its count check, as the twin's `get` (whose `app` and `param` a
 shape) finds nothing. -/
 @[expose] def idxE (h : Expr) : Expr := .bin .and h (.const 0x43ffffff)
 
-/-- The node index of a WIDE handle word (an expression `app`): bits 29…0 of `h + 2^30`, below
-bit 31, so that a narrow word reads an index of at least `2^30`, beyond the `app` array (cap
-`2^30`). -/
+/-- The node index of a WIDE handle word (an expression `app`): bits 30…0 of `2^30 + h`, so that
+a narrow word reads an index of at least `2^30`, beyond the `app` array (cap `2^30`). The
+constant comes first (`idxA`, `StoreFields.lean`, says why). -/
 @[expose] def idxAE (h : Expr) : Expr :=
-  .bin .and (.bin .add h (.const 0x40000000)) (.const 0x7fffffff)
+  .bin .and (.bin .add (.const 0x40000000) h) (.const 0x7fffffff)
 
 /-- The node index of any handle word, con-ron's `Idx.idxNat` itself (bits 29…0 of a wide word,
 25…0 of a narrow one): `h & (2^26 - 1 + w · (2^30 - 2^26))`, `w` the shape bit. The twin's

@@ -51,9 +51,11 @@ The two shapes of con-ron's handle word (`ConRon/Arena/Handle.lean`, task #133; 
 def tierW (h : Word) : Word := (h >>> 31) &&& 1
 /-- The index of a narrow word, bit 30 kept (a wide word reads `2^30` or more). -/
 def idxW (h : Word) : Word := h &&& 0x43ffffff
-/-- The index of a wide word (an `app`): `(h + 2^30) mod 2^31` (a narrow word reads `2^30` or
-more). -/
-def idxA (h : Word) : Word := (h + 0x40000000) &&& 0x7fffffff
+/-- The index of a wide word (an `app`): `(2^30 + h) mod 2^31` (a narrow word reads `2^30` or
+more). The constant comes first: with `h + 2^30`, a definitional unfolding on a symbolic `h`
+(`whnf` of the `UInt64` sum, then `Nat.add` by a literal) peels the literal into a `Nat.succ`
+chain of length 2^30 (lane ronsync: `WhnfModels2E` above 16 GB). -/
+def idxA (h : Word) : Word := ((0x40000000 : Word) + h) &&& 0x7fffffff
 /-- The index of any word, con-ron's `Idx.idxNat` (`idxGE`). -/
 def idxG (h : Word) : Word := h &&& ((0x3ffffff : Word) + ((h >>> 30) &&& 1) * 0x3c000000)
 /-- The shape bit: `1` for a wide word (con-ron's `Idx.isWide`). -/
@@ -67,7 +69,7 @@ def tagW (h : Word) : Word :=
 def hdW (g t i : Word) : Word := t * 0x80000000 + g * 0x4000000 + i
 
 /-- The wide handle word of `app` node `i` of tier `t`. -/
-def hdA (t i : Word) : Word := t * 0x80000000 + 0x40000000 + i
+def hdA (t i : Word) : Word := 0x40000000 + t * 0x80000000 + i
 
 /-! ### Decoding as numbers -/
 
@@ -140,7 +142,7 @@ theorem idxA_toNat (w : Word) : (idxA w).toNat = (w.toNat + 2 ^ 30) % 2 ^ 31 := 
   simp only [idxA, UInt64.toNat_and]
   rw [show (0x7fffffff : Word).toNat = 2 ^ 31 - 1 from rfl, Nat.and_two_pow_sub_one_eq_mod,
     UInt64.toNat_add]
-  simp
+  simp; omega
 
 /-- The index of a wide word. -/
 theorem idxA_toNat_wide (w : Word) (hw : w.toNat / 2 ^ 30 % 2 = 1) :
