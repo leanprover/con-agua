@@ -198,27 +198,6 @@ theorem defeqList_ref (p : Prog) (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hnF : 
   simpa using dl_ref p n F hk hnF hn62 dn vis fe eb mode d ao an bo bn hm4 hebm aas bs (n + 1) s₀.mem a₀
     MM 0 (by simp) (by simp) (Nat.le_refl _) hS hsa hsb hta htb
 
-/-- **`defeq_list` refines `defEqList`** (`defeqList_ref`'s ok half). Statement changes (the knot's
-`defeq` slot needs them): `n ≤ 2 ^ 62`, the eager bit `eb = (mode >>> 1) &&& 1`, and both slices
-(when not empty) below the stack top. -/
-theorem defeqList_refines (p : Prog) (hp : IotaProg' p) :
-    ∀ (n : Nat), KnotUpTo p n → ∀ (F : Nat), n ≤ F → n ≤ 2 ^ 62 →
-    ∀ (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
-    (MM : ModeMaps) (eb mode d ao an bo bn : Word) (aas bs : Array EIdx),
-    CoreS dn s₀.mem a₀ vis fe MM eb → mode < 4 → eb = (mode >>> 1) &&& 1 →
-    SpineN s₀.mem ao an aas → SpineN s₀.mem bo bn bs →
-    (an ≠ 0 → ao.toNat + an.toNat ≤ (spTop s₀.mem).toNat) →
-    (bn ≠ 0 → bo.toNat + bn.toNat ≤ (spTop s₀.mem).toNat) →
-    CoreSpec p (n + 1) "defeq_list" [mode, vis, d, ao, an, bo, bn]
-      (defEqList (coreKnot (decMode mode) fe id F) fe d.toNat aas.toList bs.toList) decBool s₀ a₀ dn
-      vis fe MM eb :=
-  fun n hk F hnF hn62 s₀ a₀ dn vis fe MM eb mode d ao an bo bn aas bs hS hm4 hebm hsa hsb hta htb =>
-    CoreSpec.of_refE (w := fun (v : Word × Mem) => ([v.1], v.2))
-      (defeqList_specE p hp.defeqList (n + 1) s₀ mode vis d ao an bo bn)
-      (defeqList_ref p n hk F hnF hn62 s₀ a₀ dn vis fe MM eb mode d ao an bo bn aas bs hS hm4 hebm hsa
-        hsb hta htb)
-      fun _ _ => ⟨rfl, by simp [decBool], id⟩
-
 /-! ## `iota_index_ok` -/
 
 /-- **`iota_index_ok`'s model, both outcomes** (generated; `defeq_list` by its unified model). -/
