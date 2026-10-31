@@ -244,7 +244,8 @@ theorem cbda_ref (hftd : FtdF p) (n : Nat) (hn : n ≤ 2 ^ 62) : ∀ (m : Mem) (
   rw [cbdaE.k_fvar_type_d.arm1]
   -- `is_def_eq_core`
   refine RefE.bindE (fun _ => cbdaE.k_is_def_eq_core.none ..) id
-    (idc_ref hq henv (by omega) k1 hdep hw1eq hw1lt hwb_lt hdx (ConRon.Bridge.denote_ext hdb k1.core.ext) hwx hwy)
+    (idc_ref hq henv (by omega) k1 hdep hw1eq hw1lt hwb_lt hdx (ConRon.Bridge.denote_ext hdb k1.core.ext)
+      hwx hwy)
     fun ⟨rb, m2⟩ c a2 _ ⟨k2, hc⟩ => ?_
   dsimp only at k2 hc
   refine RefE.ofArms (fun h => cbdaE.k_is_def_eq_core.abort1 (hc1 := h) ..)
@@ -311,7 +312,8 @@ theorem sds_ref (hg : p.lookup "sl_get" = some slGet) (hftd : FtdF p) (n : Nat) 
   rw [sdomsE.k_fvar_type_d.arm1]
   -- `is_def_eq_core`
   refine RefE.bindE (fun _ => sdomsE.k_is_def_eq_core.none ..) id
-    (idc_ref hq henv (by omega) k1 hdep hw1eq hw1lt hwb hdx (ConRon.Bridge.denote_ext hdb k1.core.ext) hwx hwy)
+    (idc_ref hq henv (by omega) k1 hdep hw1eq hw1lt hwb hdx (ConRon.Bridge.denote_ext hdb k1.core.ext)
+      hwx hwy)
     fun ⟨rb, m4⟩ c a2 _ ⟨k2, hc⟩ => ?_
   dsimp only at k2 hc
   refine RefE.ofArms (fun h => sdomsE.k_is_def_eq_core.abort1 (hc1 := h) ..)
