@@ -1,3 +1,4 @@
+import ConAgua.Arena.RefWalk
 import ConAgua.Arena.RecClassSpec.IhW
 import ConAgua.Arena.RecGenSpec.DecCIIndCv
 import ConAgua.Arena.RecGenSpec.CkcW
@@ -143,9 +144,7 @@ theorem tmp_ref (N : Nat) (hN : N ≤ 2 ^ 62) {m : Mem} {a : AState} {rP Mp : Wo
   rw [show Mp + UInt64.ofNat 0 = Mp by simp] at hwi
   rw [show UInt64.ofNat 1 = (1 : Word) from rfl] at hwu
   rw [hwi, hwu]
-  rcases h2 : ceinternW m1 wi wu with _ | ⟨hd, m2⟩
-  · rw [liftE_none, tmpE.k_intern_const.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]
+  refine RefE.bindLift (fun _ => rfl) fun hd m2 h2 => ?_
   obtain ⟨a2, hrun2, hS2, hg2⟩ := internConst_stage hS1 wi wu hwiH hwuH h2
   rw [hwiE, hwuE] at hrun2
   obtain ⟨p2, hhd⟩ := ConRon.Bridge.Inductives.internConstE_run c1.ok.state
@@ -153,11 +152,9 @@ theorem tmp_ref (N : Nat) (hN : N ≤ 2 ^ 62) {m : Mem} {a : AState} {rP Mp : Wo
   have hA2 := ceinternW_afr h2 hR.abs
   have hC2 : StageC dn vis fe env m2 a2 := hC1.of_pstep hS2 hA2 p2
   have c2 := c1.trans (p2.toCore c1.ok)
-  refine RefE.bind_right (x := ConRon.Arena.internConstE M.ind M.lvls)
-    (by unfold ConRon.Arena.internConstE; exact hrun2) ?_
-  by_cases hbig : 4294967296 ≤ hd
-  · rw [tmpE.k_intern_const.abort1 p N vis rP Mp hd m2 hbig]; exact RefE.of_cls0 rfl
-  rw [tmpE.k_intern_const.arm1 p N vis rP Mp hd m2 hbig]
+  refine ⟨_, _, (by unfold ConRon.Arena.internConstE; exact hrun2), ?_⟩
+  dsimp only [tmpE.k_intern_const]
+  refine RefE.abort0 rfl fun hbig => ?_
   have hdH : H hd := by
     have : hd.toNat < (4294967296 : Word).toNat :=
       Nat.lt_of_not_le fun x => hbig (UInt64.le_iff_toNat_le.mpr x)
@@ -171,9 +168,7 @@ theorem tmp_ref (N : Nat) (hN : N ≤ 2 ^ 62) {m : Mem} {a : AState} {rP Mp : Wo
     rw [← rl.1]; simp only [rdW]
     rw [show (Mp + 3).toNat = Mp.toNat + 3 by rw [UInt64.toNat_add]; simp; omega, hg12.iwGet _ hli]
   rw [e2, e3]
-  rcases h3 : mknF m2 [hd, UInt64.ofNat o, UInt64.ofNat l] with _ | ⟨r3, m3⟩
-  · rw [liftE_none, tmpE.k_mk_app_n_f.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some, tmpE.k_mk_app_n_f.arm1]
+  refine RefE.bindLift (fun _ => rfl) fun r3 m3 h3 => ?_
   have hds2 : decHL m2 (UInt64.ofNat o).toNat (UInt64.ofNat l).toNat = some M.ds := by
     rw [hoo, hll]; exact (OMono.decHL o l).mono _ _ _ hg12.truncExt hdT
   obtain ⟨x3, a3, hrun3, hS3, hg3, hx3⟩ := mknF_ok dn vis fe hd _ _ hdH M.ds m2 m3 a2 r3 h3 ⟨hS2, hds2⟩
@@ -182,23 +177,15 @@ theorem tmp_ref (N : Nat) (hN : N ≤ 2 ^ 62) {m : Mem} {a : AState} {rP Mp : Wo
     (ConRon.Bridge.denoteEList_ext c2.ext _ _ hdsd) hrun3'
   have hA3 := mknF_afr h3 hA2
   have hC3 : StageC dn vis fe env m3 a3 := hC2.of_pstep hS3 hA3 p3
-  refine RefE.bind_right (x := ConRon.Arena.mkAppN (decE hd) M.ds) hrun3 ?_
-  cases h4 : callE p N "infer_type_core" [vis, rP, r3.headD 0] m3 with
-  | error e4 =>
-    rw [tmpE.k_infer_type_core.none]
-    refine RefE.bind_left fun hV => ?_
-    rw [← hx3.2]
-    exact hV.core.inferTypeCore N (by omega) hC3.stageT rP (r3.headD 0) hx3.1 _ h4
-  | ok q4 =>
-  obtain ⟨r4, m4⟩ := q4
-  rw [tmpE.k_infer_type_core.arm1]
-  rw [← hx3.2] at happ
-  obtain ⟨x4, a4, hrun4, hC4, hg4, -, hA4, -⟩ := inferC_rsim hq henv N (by omega) hC3 hA3 rP
-    (r3.headD 0) hx3.1 happ
-    (ConLeche.Expr.WScoped.mkAppN (by simp [ConLeche.Expr.WScoped]) hw) _ (callW_of_callE h4)
-  dsimp only at hC4 hg4 hA4
-  rw [hx3.2] at hrun4
-  refine RefE.bind_right hrun4 (RefE.ret rfl ⟨hC4, (hg12.trans hg3).trans hg4, hA4, ?_⟩)
+  refine ⟨_, _, hrun3, ?_⟩
+  dsimp only [tmpE.k_mk_app_n_f]
+  rw [← hx3.2] at happ ⊢
+  refine RefE.bindCall (fun _ => rfl)
+    (fun hV _ h4 => hV.core.inferTypeCore N (by omega) hC3.stageT rP (r3.headD 0) hx3.1 _ h4)
+    (inferC_rsim hq henv N (by omega) hC3 hA3 rP (r3.headD 0) hx3.1 happ
+      (ConLeche.Expr.WScoped.mkAppN (by simp [ConLeche.Expr.WScoped]) hw))
+    fun r4 m4 _ a4 h4 _ ⟨hC4, hg4, _, hA4, _⟩ => ?_
+  refine RefE.ret rfl ⟨hC4, (hg12.trans hg3).trans hg4, hA4, ?_⟩
   exact (((tptE_mfr hq _ _ _ _ _ _ _ _ h1).trans (ceinternW_mfr h2)).trans (MFr.ofMknF h3)).trans
     (coreC_mfr hq (callW_of_callE h4))
 
