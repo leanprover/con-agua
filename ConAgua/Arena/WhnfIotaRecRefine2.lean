@@ -413,7 +413,7 @@ theorem fire2_ref (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
       margs.toList.length = rule.ctorParams + rule.nfields := by
     by_cases h : margs.toList.length = rule.ctorParams + rule.nfields
     · exact .inr h
-    · refine .inl (RefE.ret (by rw [iotaRecFire2T, if_neg h]; rfl) ⟨⟨MM, hS, KeptAll.refl _ _,
+    · refine .inl (RefE.ret (by rw [iotaRecFire2T, ite_eq_right h]; rfl) ⟨⟨MM, hS, KeptAll.refl _ _,
         StackKept.refl _⟩, (decOptR_none_rec _ rfl).symm, by show ResW [0, 0]; unfold ResW HW; decide⟩)
   by_cases l1 : mn < rdW E (rl + 2)
   · rw [ite_eq_left l1]
@@ -427,7 +427,7 @@ theorem fire2_ref (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
     hlen_iff.mpr ⟨l1, Classical.not_not.mp l2⟩
   have hcpm : rule.ctorParams ≤ mn.toNat := by omega
   unfold iotaRecFire2T
-  rw [if_pos hlen]
+  rw [ite_eq_left hlen]
   simp only [mkAppN_append, bind_assoc]
   cases n with
   | zero => exact RefE.callE_zero (fun _ => rfl)
