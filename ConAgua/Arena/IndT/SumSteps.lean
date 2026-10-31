@@ -8,9 +8,9 @@ import ConRon.Bridge.Inductives.StructParts
 # The sum family's walk steps
 
 The registered steps of `check_sum_ctor`'s callees outside the verdict closure, for the lockstep
-walk of `RefWalk.lean` (docs/design/refgen.md): each is the callee's `Sim` under the family's package
-`SumAt` (`StageC`, `AbsOK`, the `IW` growth, the twin's core step), its result decoded against the
-twin's and denoting con-leche's. They collect what each call site of a hand walk repeated: the
+walk of `RefWalk.lean` (docs/design/refgen.md): each is the callee's `Sim` under the package
+`InsAt` (`Install1.lean`: `StageC`, `AbsOK`, the `IW` growth, the twin's core step), its result
+decoded against the twin's and denoting con-leche's. They collect what each call site of a hand walk repeated: the
 callee's triple (`triple_of_callW`), its relational lemma, its `AFr`, con-ron's bridge lemma for the
 twin's run and `StageC.of_pstep`.
 -/
@@ -28,52 +28,16 @@ open L.Arena
 
 local notation "V" => ConLeche.CheckMode.verified
 
-/-! ## The sum family's invariant package -/
-
-/-- **The walk's package from `(m₀, a₀)` to `(m, a)`**: the stage, `AbsOK`, the `IW` growth and the
-twin's core step. -/
-structure SumAt (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (env : ConLeche.Env)
-    (m₀ : Mem) (a₀ : AState) (m : Mem) (a : AState) : Prop where
-  stage : StageC dn vis fe env m a
-  abs : AbsOK m
-  grow : IWGrow m₀ m
-  core : ConRon.Bridge.CoreStep V env fe a₀ a
-
-namespace SumAt
-variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {env : ConLeche.Env}
-  {m₀ m₁ m : Mem} {a₀ a₁ a : AState}
-
-theorem refl (h : StageC dn vis fe env m a) (hA : AbsOK m) : SumAt dn vis fe env m a m a :=
-  ⟨h, hA, IWGrow.refl _, ConRon.Bridge.CoreStep.refl h.check⟩
-
-theorem trans (h₁ : SumAt dn vis fe env m₀ a₀ m₁ a₁) (h₂ : SumAt dn vis fe env m₁ a₁ m a) :
-    SumAt dn vis fe env m₀ a₀ m a :=
-  ⟨h₂.stage, h₂.abs, h₁.grow.trans h₂.grow, h₁.core.trans h₂.core⟩
-
-/-- A step that con-ron calls a `PStep`. -/
-theorem pstep (h : StageC dn vis fe env m₀ a₀) {m : Mem} {a : AState} (hS : StageR dn vis fe m a)
-    (hA : AbsOK m) (hg : IWGrow m₀ m) (hp : PStep a₀ a) : SumAt dn vis fe env m₀ a₀ m a :=
-  ⟨h.of_pstep hS hA hp, hA, hg, hp.toCore h.check⟩
-
-theorem decHL {k : IdxKind} (h : SumAt dn vis fe env m₀ a₀ m a) {o l : Nat} {xs : List (Idx k)}
-    (hd : _root_.L.Ind.decHL m₀ o l = some xs) (hb : o + l ≤ iwTop m₀) : _root_.L.Ind.decHL m o l = some xs := by
-  rw [decHL_grow h.grow hb]; exact hd
-
-theorem top (h : SumAt dn vis fe env m₀ a₀ m a) {x : Nat} (hb : x ≤ iwTop m₀) : x ≤ iwTop m :=
-  Nat.le_trans hb h.grow.iw
-
-end SumAt
-
 section steps
 variable {p : Prog} {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
   {env : ConLeche.Env} {m₀ m : Mem} {a₀ a : AState} {n : Nat}
 
 /-- **`open_pis_at_fvars_f`'s step**: the twin's `openPisAtFvarsF`, the package, the result decoded
 (`none` exactly when the flag word is `0`) and denoting the opened telescope. -/
-theorem opf_step (hOpf : OpfF p) (hk : SumAt dn vis fe env m₀ a₀ m a) {k e i : Word} (he : H e)
+theorem opf_step (hOpf : OpfF p) (hk : InsAt dn vis fe env m₀ a₀ m a) {k e i : Word} (he : H e)
     {c : EIdx} (hc : decI e = c) {eP : ConLeche.Expr} (heP : denoteE a.store c = some eP) :
     Sim (callW p n "open_pis_at_fvars_f" [k, e, i] m) (openPisAtFvarsF k.toNat c i.toNat) a
-      fun r o m' a' => SumAt dn vis fe env m a m' a' ∧ (r.headD 0 = 0 ↔ o = none) ∧
+      fun r o m' a' => InsAt dn vis fe env m a m' a' ∧ (r.headD 0 = 0 ↔ o = none) ∧
         ∀ l b, o = some (l, b) → decHL m' (r.tail.headD 0).toNat (r.tail.tail.headD 0).toNat = some l ∧
           (r.tail.headD 0).toNat + (r.tail.tail.headD 0).toNat ≤ iwTop m' ∧
           H (r.tail.tail.tail.headD 0) ∧ decI (r.tail.tail.tail.headD 0) = b ∧
@@ -83,7 +47,7 @@ theorem opf_step (hOpf : OpfF p) (hk : SumAt dn vis fe env m₀ a₀ m a) {k e i
     subst hc
     obtain ⟨o, a', hr, ⟨⟨hS, hg, hdec⟩, -⟩, hA⟩ := opfSimRA (n := n) hOpf he hk.stage.stage hk.abs r m' hc'
     obtain ⟨p1, ho⟩ := ConRon.Bridge.Inductives.openPisAtFvarsF_run hk.stage.check.state heP hr
-    refine ⟨o, a', hr, SumAt.pstep hk.stage hS hA hg p1, ?_, ?_⟩
+    refine ⟨o, a', hr, InsAt.pstep hk.stage hS hA hg p1, ?_, ?_⟩
     · cases o with
       | none => simpa [decOLE] using hdec
       | some q => exact ⟨fun h => absurd (hdec.1.symm.trans h) (by decide), fun h => by cases h⟩
@@ -95,11 +59,11 @@ theorem opf_step (hOpf : OpfF p) (hk : SumAt dn vis fe env m₀ a₀ m a) {k e i
       exact ⟨hl', hlb, hb', hbd, lP, bP, hq, hl, hb⟩
 
 /-- **`param_levels`' step**. -/
-theorem pl_step (hP : SumProg p) (hk : SumAt dn vis fe env m₀ a₀ m a) {o l : Word} {lps : List NIdx}
+theorem pl_step (hP : SumProg p) (hk : InsAt dn vis fe env m₀ a₀ m a) {o l : Word} {lps : List NIdx}
     (hd : decHL m o.toNat l.toNat = some lps) (hb : o.toNat + l.toNat ≤ iwTop m)
     {lpsP : List ConLeche.Name} (hP' : Frontend.denoteNList a.store.ns lps = some lpsP) :
     Sim (callW p n "param_levels" [o, l] m) (paramLevels lps) a
-      fun r us m' a' => SumAt dn vis fe env m a m' a' ∧ H (r.headD 0) ∧ decI (r.headD 0) = us ∧
+      fun r us m' a' => InsAt dn vis fe env m a m' a' ∧ H (r.headD 0) ∧ decI (r.headD 0) = us ∧
         denoteLs a'.store.lss us = some (lpsP.map .param) :=
   fun r m' hc => by
     obtain ⟨s, hs, -, hm⟩ := triple_of_callW (plW_spec p hP.ha hP.hc hP.hsc hP.hg hP.hpf hP.hpp hP.hip
@@ -107,14 +71,14 @@ theorem pl_step (hP : SumProg p) (hk : SumAt dn vis fe env m₀ a₀ m a) {o l :
     subst hs
     obtain ⟨us, a', hr, hS, hg, hu, hus⟩ := plSim n m a o l lps hk.stage.stage hd hb r s.mem hm
     obtain ⟨p2, husP⟩ := ConRon.Bridge.Inductives.paramLevels_spec lps lpsP a a' us hk.stage.check.state hP' hr
-    exact ⟨us, a', hr, SumAt.pstep hk.stage hS (plW_afr hm hk.abs) hg p2, hu, hus, husP⟩
+    exact ⟨us, a', hr, InsAt.pstep hk.stage hS (plW_afr hm hk.abs) hg p2, hu, hus, husP⟩
 
 /-- **`intern_const`'s step**. -/
-theorem ic_step (hP : SumProg p) (hk : SumAt dn vis fe env m₀ a₀ m a) {T u : Word} (hT : H T)
+theorem ic_step (hP : SumProg p) (hk : InsAt dn vis fe env m₀ a₀ m a) {T u : Word} (hT : H T)
     (hu : H u) {TP : ConLeche.Name} {usP : List ConLeche.Level}
     (hTP : denoteN a.store.ns (decI T) = some TP) (husP : denoteLs a.store.lss (decI u) = some usP) :
     Sim (callW p n "intern_const" [T, u] m) (internE (.const (decI T) (decI u))) a
-      fun r h m' a' => SumAt dn vis fe env m a m' a' ∧ h = decI (r.headD 0) ∧
+      fun r h m' a' => InsAt dn vis fe env m a m' a' ∧ h = decI (r.headD 0) ∧
         denoteE a'.store h = some (.const TP usP) :=
   fun r m' hc => by
     obtain ⟨s, hs, -, hm⟩ := triple_of_callW (internConst_spec p hP.hcf hP.hcp hP.hic n
@@ -122,13 +86,13 @@ theorem ic_step (hP : SumProg p) (hk : SumAt dn vis fe env m₀ a₀ m a) {T u :
     subst hs
     obtain ⟨h, a', hr, he, hS, hg⟩ := ceSim m a T u hk.stage.stage hT hu (r.headD 0) s.mem hm
     obtain ⟨p3, hhd⟩ := ConRon.Bridge.Inductives.internConstE_run hk.stage.check.state hTP husP hr
-    exact ⟨h, a', hr, SumAt.pstep hk.stage hS (ceinternW_afr hm hk.abs) hg p3, he, hhd⟩
+    exact ⟨h, a', hr, InsAt.pstep hk.stage hS (ceinternW_afr hm hk.abs) hg p3, he, hhd⟩
 
 /-- **`get_app_fn_f`'s step** (the twin state unchanged). -/
-theorem gaf_step (hP : SumProg p) (hk : SumAt dn vis fe env m₀ a₀ m a) {e : Word} (he : H e)
+theorem gaf_step (hP : SumProg p) (hk : InsAt dn vis fe env m₀ a₀ m a) {e : Word} (he : H e)
     {eP : ConLeche.Expr} (heP : denoteE a.store (decI e) = some eP) :
     Sim (callW p n "get_app_fn_f" [CWF, e] m) (getAppFn coreWalkFuel (decI e)) a
-      fun r x m' a' => SumAt dn vis fe env m a m' a' ∧ (r.headD 0).toNat < 2 ^ 32 ∧
+      fun r x m' a' => InsAt dn vis fe env m a m' a' ∧ (r.headD 0).toNat < 2 ^ 32 ∧
         decI (r.headD 0) = x ∧ denoteE a'.store x = some eP.getAppFn :=
   fun r m' hc => by
     have h4 := gafF_ok dn vis fe CWF e he
@@ -138,14 +102,14 @@ theorem gaf_step (hP : SumProg p) (hk : SumAt dn vis fe env m₀ a₀ m a) {e : 
     obtain ⟨x, a', hr, hS, hg, hf32, hfd⟩ := (sumSim_of_relW h4 hk.stage.stage) r s.mem hm
     obtain ⟨ha, hx⟩ := ConRon.Bridge.Inductives.getAppFn_run hk.stage.check.state heP hr
     rw [ha] at hr hS
-    exact ⟨x, a, hr, SumAt.pstep hk.stage hS ((show AFr _ _ from AFr.of_frame (gafF_frame hm)) hk.abs) hg
+    exact ⟨x, a, hr, InsAt.pstep hk.stage hS ((show AFr _ _ from AFr.of_frame (gafF_frame hm)) hk.abs) hg
       (PStep.refl hk.stage.check.state), hf32, hfd, hx⟩
 
 /-- **`get_app_args_f`'s step** (the twin state unchanged). -/
-theorem gaa_step (hP : SumProg p) (hk : SumAt dn vis fe env m₀ a₀ m a) {e : Word} (he : H e)
+theorem gaa_step (hP : SumProg p) (hk : InsAt dn vis fe env m₀ a₀ m a) {e : Word} (he : H e)
     {eP : ConLeche.Expr} (heP : denoteE a.store (decI e) = some eP) :
     Sim (callW p n "get_app_args_f" [CWF, e] m) (getAppArgs coreWalkFuel (decI e)) a
-      fun r xs m' a' => SumAt dn vis fe env m a m' a' ∧
+      fun r xs m' a' => InsAt dn vis fe env m a m' a' ∧
         decHL m' (r.headD 0).toNat (r.tail.headD 0).toNat = some xs ∧
         (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop m' ∧
         Frontend.denoteEList a'.store xs = some eP.getAppArgs :=
@@ -158,7 +122,7 @@ theorem gaa_step (hP : SumProg p) (hk : SumAt dn vis fe env m₀ a₀ m a) {e : 
     obtain ⟨ha, hx⟩ := ConRon.Bridge.Inductives.getAppArgs_run hk.stage.check.state heP hr
     rw [ha] at hr hS
     rw [sumGetD0, sumGetD1] at hxs hxb
-    exact ⟨xs, a, hr, SumAt.pstep hk.stage hS (gaaF_afr hm hk.abs) hg (PStep.refl hk.stage.check.state),
+    exact ⟨xs, a, hr, InsAt.pstep hk.stage hS (gaaF_afr hm hk.abs) hg (PStep.refl hk.stage.check.state),
       hxs, hxb, hx⟩
 
 /-- **`sl_eq`** (an L helper, no twin step): the memory unchanged, `0` exactly when the two decoded
@@ -178,12 +142,12 @@ theorem slEq_step (hP : SumProg p) (hS : StageR dn vis fe m a) {o1 l1 o2 l2 : Wo
   by_cases hw : ws1 = ws2 <;> simp [hw]
 
 /-- **`field_doms_resolve`'s step**, under the view `vis0` (`fe₀`, the pre-block environment). -/
-theorem fdr_step (hP : SumProg p) (hk : SumAt dn vis fe env m₀ a₀ m a) {vis0 o l : Word}
+theorem fdr_step (hP : SumProg p) (hk : InsAt dn vis fe env m₀ a₀ m a) {vis0 o l : Word}
     {xs : List EIdx} (hd : decHL m o.toNat l.toNat = some xs) (hb : o.toNat + l.toNat ≤ iwTop m)
     {env₀ : ConLeche.Env} (hok : ConRon.Bridge.Inductives.IFEnvOKS env₀ (fe.restrictTo vis0.toNat) a.store)
     {xsP : List ConLeche.Expr} (hxs : Frontend.denoteEList a.store xs = some xsP) :
     Sim (callW p n "field_doms_resolve" [vis0, o, l] m) (fieldDomsResolve (fe.restrictTo vis0.toNat) xs) a
-      fun r b m' a' => SumAt dn vis fe env m a m' a' ∧ (r.headD 0 = 0 ↔ b = false) :=
+      fun r b m' a' => InsAt dn vis fe env m a m' a' ∧ (r.headD 0 = 0 ↔ b = false) :=
   fun r m' hc => by
     obtain ⟨s, hs, -, hm⟩ := triple_of_callW (fdrW_spec p hP.hfdr hP.ad.ftd hP.hcr n
       ⟨m, Locals.init []⟩ vis0 o l) hc
@@ -192,16 +156,16 @@ theorem fdr_step (hP : SumProg p) (hk : SumAt dn vis fe env m₀ a₀ m a) {vis0
     obtain ⟨hS, hg, hb1⟩ := sumKeep_restrict hk.stage.stage.check.env.vis hQ
     obtain ⟨p6, -⟩ := ConRon.Bridge.Inductives.fieldDomsResolve_spec xs xsP
       ⟨hk.stage.check.state, hk.stage.check.pins, hok a rfl⟩ hxs hr
-    refine ⟨b, a', hr, SumAt.pstep hk.stage hS hA hg p6, ?_⟩
+    refine ⟨b, a', hr, InsAt.pstep hk.stage hS hA hg p6, ?_⟩
     rw [← hb1]; cases b <;> simp
 
 /-- **`idx_args_resolve`'s step**, under the view `vis0`. -/
-theorem iar_step (hP : SumProg p) (hk : SumAt dn vis fe env m₀ a₀ m a) {vis0 o l : Word}
+theorem iar_step (hP : SumProg p) (hk : InsAt dn vis fe env m₀ a₀ m a) {vis0 o l : Word}
     {xs : List EIdx} (hd : decHL m o.toNat l.toNat = some xs) (hb : o.toNat + l.toNat ≤ iwTop m)
     {env₀ : ConLeche.Env} (hok : ConRon.Bridge.Inductives.IFEnvOKS env₀ (fe.restrictTo vis0.toNat) a.store)
     {xsP : List ConLeche.Expr} (hxs : Frontend.denoteEList a.store xs = some xsP) :
     Sim (callW p n "idx_args_resolve" [vis0, o, l] m) (idxArgsResolve (fe.restrictTo vis0.toNat) xs) a
-      fun r b m' a' => SumAt dn vis fe env m a m' a' ∧ (r.headD 0 = 0 ↔ b = false) :=
+      fun r b m' a' => InsAt dn vis fe env m a m' a' ∧ (r.headD 0 = 0 ↔ b = false) :=
   fun r m' hc => by
     obtain ⟨s, hs, -, hm⟩ := triple_of_callW (iarW_spec p hP.hiar hP.hcr n ⟨m, Locals.init []⟩ vis0 o l) hc
     subst hs
@@ -209,15 +173,15 @@ theorem iar_step (hP : SumProg p) (hk : SumAt dn vis fe env m₀ a₀ m a) {vis0
     obtain ⟨hS, hg, hb1⟩ := sumKeep_restrict hk.stage.stage.check.env.vis hQ
     obtain ⟨p7, -⟩ := ConRon.Bridge.Inductives.idxArgsResolve_spec xs xsP
       ⟨hk.stage.check.state, hk.stage.check.pins, hok a rfl⟩ hxs hr
-    refine ⟨b, a', hr, SumAt.pstep hk.stage hS hA hg p7, ?_⟩
+    refine ⟨b, a', hr, InsAt.pstep hk.stage hS hA hg p7, ?_⟩
     rw [← hb1]; cases b <;> simp
 
 /-- **`strip_pis`' step** (the twin state unchanged). -/
-theorem strip_step (hP : SumProg p) (hk : SumAt dn vis fe env m₀ a₀ m a) {k e : Word} (he : H e)
+theorem strip_step (hP : SumProg p) (hk : InsAt dn vis fe env m₀ a₀ m a) {k e : Word} (he : H e)
     {kN : Nat} (hkN : k.toNat = kN) {c : EIdx} (hc : decI e = c) {eP : ConLeche.Expr}
     (heP : denoteE a.store c = some eP) :
     Sim (callW p n "strip_pis" [k, e] m) (stripPis kN c) a
-      fun r o m' a' => SumAt dn vis fe env m a m' a' ∧ (r.headD 0 = 0 ↔ o = none) ∧
+      fun r o m' a' => InsAt dn vis fe env m a m' a' ∧ (r.headD 0 = 0 ↔ o = none) ∧
         ∀ l b, o = some (l, b) → H (r.tail.tail.tail.headD 0) ∧ decI (r.tail.tail.tail.headD 0) = b ∧
           ∃ bP, denoteE a'.store b = some bP :=
   fun r m' hc' => by
@@ -227,7 +191,7 @@ theorem strip_step (hP : SumProg p) (hk : SumAt dn vis fe env m₀ a₀ m a) {k 
     obtain ⟨o, a', hr, hS, hg, hdec⟩ := stripF_pis_ok dn vis fe k e he m s.mem a r hm hk.stage.stage
     obtain ⟨ha, ho⟩ := ConRon.Bridge.Inductives.stripPis_pstep hk.stage.check.state heP hr
     rw [ha] at hr hS
-    refine ⟨o, a, hr, SumAt.pstep hk.stage hS (stripF_afr hm hk.abs) hg (PStep.refl hk.stage.check.state),
+    refine ⟨o, a, hr, InsAt.pstep hk.stage hS (stripF_afr hm hk.abs) hg (PStep.refl hk.stage.check.state),
       ?_, ?_⟩
     · cases o with
       | none => simpa [decOLE] using hdec
@@ -239,7 +203,7 @@ theorem strip_step (hP : SumProg p) (hk : SumAt dn vis fe env m₀ a₀ m a) {k 
       exact ⟨hb', hbd, bP, hb⟩
 
 /-- **`struct_ctor_resid_ok`'s step**. -/
-theorem sr_step (hP : SumProg p) (hk : SumAt dn vis fe env m₀ a₀ m a) {T lo ll nP o nIdx cb : Word}
+theorem sr_step (hP : SumProg p) (hk : InsAt dn vis fe env m₀ a₀ m a) {T lo ll nP o nIdx cb : Word}
     {lps : List NIdx} (hT : H T) (hcb : H cb) (hd : decHL m lo.toNat ll.toNat = some lps)
     (hb : lo.toNat + ll.toNat ≤ iwTop m) (ho : o.toNat + nP.toNat < 2 ^ 64)
     (hni : nP.toNat + nIdx.toNat < 2 ^ 64) {TP : ConLeche.Name} {lpsP : List ConLeche.Name}
@@ -247,7 +211,7 @@ theorem sr_step (hP : SumProg p) (hk : SumAt dn vis fe env m₀ a₀ m a) {T lo 
     (hlP : Frontend.denoteNList a.store.ns lps = some lpsP) (hcbP : denoteE a.store (decI cb) = some cbP) :
     Sim (callW p n "struct_ctor_resid_ok" [T, lo, ll, nP, o, nIdx, cb] m)
       (structCtorResidOk (decI T) lps nP.toNat o.toNat nIdx.toNat (decI cb)) a
-      fun r b m' a' => SumAt dn vis fe env m a m' a' ∧ (r.headD 0 = 0 ↔ b = false) :=
+      fun r b m' a' => InsAt dn vis fe env m a m' a' ∧ (r.headD 0 = 0 ↔ b = false) :=
   fun r m' hc => by
     obtain ⟨s, hs, -, hm⟩ := triple_of_callW (srW_spec p hP.ha hP.hc hP.hsc hP.hg hP.hpf hP.hpp hP.hip
       hP.hplg hP.hpl hP.hil hP.hcf hP.hcp hP.hic hP.hbf hP.hbp hP.hib hP.hpg hP.hps hP.heq hP.hsr hP.ad n
@@ -257,15 +221,15 @@ theorem sr_step (hP : SumProg p) (hk : SumAt dn vis fe env m₀ a₀ m a) {T lo 
       hk.stage.stage hT hcb hd (hk.stage.stage.lt64 hb) hb ho hni
     obtain ⟨p3, -⟩ := ConRon.Bridge.Inductives.structCtorResidOk_spec (decI T) TP lps lpsP nP.toNat
       o.toNat nIdx.toNat _ cbP a a' b hk.stage.check.state ⟨hTP, hlP, hcbP⟩ hr
-    refine ⟨b, a', hr, SumAt.pstep hk.stage hS (srW_afr _ _ _ _ _ _ _ _ _ _ _ hm hk.abs) hg p3, ?_⟩
+    refine ⟨b, a', hr, InsAt.pstep hk.stage hS (srW_afr _ _ _ _ _ _ _ _ _ _ _ hm hk.abs) hg p3, ?_⟩
     rw [← hb3]; cases b <;> simp
 
 /-- **`fvar_type_ds`' step**. -/
-theorem ftds_step (hP : SumProg p) (hk : SumAt dn vis fe env m₀ a₀ m a) {o l : Word} {xs : List EIdx}
+theorem ftds_step (hP : SumProg p) (hk : InsAt dn vis fe env m₀ a₀ m a) {o l : Word} {xs : List EIdx}
     (hd : decHL m o.toNat l.toNat = some xs) (hb : o.toNat + l.toNat ≤ iwTop m)
     {xsP : List ConLeche.Expr} (hxs : Frontend.denoteEList a.store xs = some xsP) :
     Sim (callW p n "fvar_type_ds" [o, l] m) (fvarTypeDs xs) a
-      fun r ds m' a' => SumAt dn vis fe env m a m' a' ∧
+      fun r ds m' a' => InsAt dn vis fe env m a m' a' ∧
         decHL m' (r.headD 0).toNat (r.tail.headD 0).toNat = some ds ∧
         (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop m' ∧
         Frontend.denoteEList a'.store ds = some (xsP.map ConLeche.Expr.fvarTypeD) :=
@@ -276,7 +240,7 @@ theorem ftds_step (hP : SumProg p) (hk : SumAt dn vis fe env m₀ a₀ m a) {o l
       (sumSim_of_relW (ftdsF_ok dn vis fe o l xs) ⟨hk.stage.stage, hd, fun _ => hb⟩) r s.mem hm
     obtain ⟨p6, hdP⟩ := ConRon.Bridge.Inductives.fvarTypeDs_run xs xsP hk.stage.check.state hxs hr
     rw [sumGetD0, sumGetD1] at hds hdb
-    exact ⟨ds, a', hr, SumAt.pstep hk.stage hS (ftdsF_afr hm hk.abs) hg p6, hds, hdb, hdP⟩
+    exact ⟨ds, a', hr, InsAt.pstep hk.stage hS (ftdsF_afr hm hk.abs) hg p6, hds, hdb, hdP⟩
 
 end steps
 

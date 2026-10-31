@@ -107,7 +107,7 @@ theorem ctl_ref (hP : SumProg p) (m : Nat) (hn : m + 1 ≤ 2 ^ 62) (m0 : Mem)
         (lg != 0) cvCa nF.toNat (cq1, decI cqB)) a
       (fun v x a' => CtlPost dn vis fe env m0 a cvCa v.1 v.2 x a') := by
   rw [ctlE.arm1]; unfold cscTailT
-  have k0 := SumAt.refl hC hA
+  have k0 := InsAt.refl hC hA
   refine RefE.bindSim (fun _ => rfl) (opf_step hOpf k0 hcqB rfl hcqBP) fun rx o m1 a1 _ _ ⟨k1, ho, hdo⟩ => ?_
   dsimp only [ctlE.k_open_pis_at_fvars_f]
   refine RefE.guardOpt (by decide) ho.1 ho.2 fun ⟨xl1, xb⟩ hq0 _ => ?_
@@ -145,7 +145,7 @@ theorem ctl_ref (hP : SumProg p) (m : Nat) (hn : m + 1 ≤ 2 ^ 62) (m0 : Mem)
     refine RefE.guard (by decide) (fun hc => ?_) (fun hb => ?_) fun _ _ => ?_
     · grind
     · grind
-    · have k16 := k15.trans (SumAt.refl k5.stage k5.abs)
+    · have k16 := k15.trans (InsAt.refl k5.stage k5.abs)
       have hxfvs5 := ConRon.Bridge.denoteEList_ext k15.core.ext _ _ hxfvs
       refine RefE.bindSim (fun _ => rfl) (fdr_step hP k5 (k15.decHL hxl hxlb) (k15.top hxlb)
         (hok₀.mono k05.core.ext) hxfvs5) fun r7 b1 m7 a7 _ _ ⟨k7, hb1⟩ => ?_
@@ -239,7 +239,7 @@ theorem ctor_ref (hP : SumProg p) (m : Nat) (hn : m + 1 ≤ 2 ^ 62) (m0 : Mem) (
     hA.crMemo.crOK) fun ⟨u1, m1⟩ _ a1 hr1 hP1 => ?_
   obtain ⟨c1, F₁, hF₁⟩ := ConRon.Bridge.checkConstantVal_bridge rfl (ConRon.Bridge.CoreSpec.of_core rfl)
     hC.check henv hcvCP hr1
-  have k1 : SumAt dn vis fe env m0 a m1 a1 := ⟨StageC.of_T hP1.stage c1.ok, hP1.abs hA, hP1.grow, c1⟩
+  have k1 : InsAt dn vis fe env m0 a m1 a1 := ⟨StageC.of_T hP1.stage c1.ok, hP1.abs hA, hP1.grow, c1⟩
   have hcA := ConRon.Bridge.denoteCV_ext hcvCP c1.ext
   have hwsA : ConLeche.Expr.WScoped 0 cvCP.type :=
     ConLeche.Expr.WScoped.of_not_hasFvar (ConLeche.checkConstantVal_typeWF hF₁).1
