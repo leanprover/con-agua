@@ -547,9 +547,8 @@ theorem cos_ref (n : Nat) (hn : n + 1 ≤ 2 ^ 62) {m : Mem} {a : AState} {vis q 
       (ConRon.Arena.classCtorsOf V fe bs formerTys R ms c.toNat cAs) a
       (fun v xs a' => SlotsPost dn vis fe env decCC m v.1 v.2 xs a') := by
   rw [cosE.arm1]
-  rcases h1 : callW p n "iw_alloc" [al] m with _ | ⟨r1, m1⟩
-  · rw [liftE_none, cosE.k_iw_alloc.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some, cosE.k_iw_alloc.arm1]
+  refine RefE.onlySim (fun _ => cosE.k_iw_alloc.none ..) (fun _ _ h => h) fun r1 m1 h1 => ?_
+  rw [cosE.k_iw_alloc.arm1]
   obtain ⟨s1, hs1, -, hal⟩ := triple_of_callW (iwAlloc_specW p P.ha n ⟨m, Locals.init []⟩ al) h1
   dsimp only at hs1 hal
   subst hs1
@@ -801,9 +800,8 @@ theorem ccs_ref (n : Nat) (hn : n + 1 ≤ 2 ^ 62) {m : Mem} {a : AState} {vis q 
       (ConRon.Arena.classesCtors V fe bs formerTys R ms 0 ms) a
       (fun v xss a' => SlotsPost dn vis fe env (fun m p => decLH m (decPL m (decCC m)) p) m v.1 v.2 xss a') := by
   rw [ccsE.arm1]
-  rcases h1 : callW p n "iw_alloc" [ml] m with _ | ⟨r1, m1⟩
-  · rw [liftE_none, ccsE.k_iw_alloc.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some, ccsE.k_iw_alloc.arm1]
+  refine RefE.onlySim (fun _ => ccsE.k_iw_alloc.none ..) (fun _ _ h => h) fun r1 m1 h1 => ?_
+  rw [ccsE.k_iw_alloc.arm1]
   obtain ⟨s1, hs1, -, hal⟩ := triple_of_callW (iwAlloc_specW p P.ha n ⟨m, Locals.init []⟩ ml) h1
   dsimp only at hs1 hal
   subst hs1

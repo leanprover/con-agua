@@ -120,9 +120,7 @@ theorem loop_ref (hD : DmProg8 p) (hq : KnotStageProg p) (hcl : LeafClosed p) (h
         (ConRon.Bridge.denote_ext hv c02.ext)).mono
         fun _ _ _ hR => ⟨hR.stage, c02.trans hR.core, hG2.trans hR.grow⟩
     -- the pin guard
-    rcases h1 : callW p k "div_mod_pin_guard" [ps, vis, c] m with _ | ⟨r1, m1⟩
-    · rw [liftE_none, checkDivModPinLoopE.k_div_mod_pin_guard.none]; exact RefE.of_cls0 (by simp)
-    rw [liftE_some]
+    refine RefE.onlySim (fun _ => checkDivModPinLoopE.k_div_mod_pin_guard.none ..) (fun _ _ h => h) fun r1 m1 h1 => ?_
     obtain ⟨x1, a1, hrun1, hC1, c1, hg1, hd1, hx1v⟩ :=
       pgC hD.toDmProg7.toDmProg6 hcl hkp h1 hC hc hP hq0 hn hCr
     have hCr1 := hkp.call (im_mem _ rfl) h1 hCr
@@ -137,9 +135,7 @@ theorem loop_ref (hD : DmProg8 p) (hq : KnotStageProg p) (hcl : LeafClosed p) (h
     refine RefE.ite_pos rfl ?_
     -- the certificates' guards
     have hq1 := (ConRon.Bridge.PinsDenote.mono c1.ext [ip] [psP] ⟨hq0, trivial⟩).1
-    rcases h2 : callW p k "div_mod_certs_guard" [ps, vis, c, value] m1 with _ | ⟨r2, m2⟩
-    · rw [liftE_none, checkDivModPinLoopE.k_div_mod_certs_guard.none]; exact RefE.of_cls0 (by simp)
-    rw [liftE_some]
+    refine RefE.onlySim (fun _ => checkDivModPinLoopE.k_div_mod_certs_guard.none ..) (fun _ _ h => h) fun r2 m2 h2 => ?_
     obtain ⟨x2, a2, hrun2, hC2, c2, hg2, hd2⟩ :=
       cgsC hD.toDmProg7.toDmProg6 hcl hkp hs0 hsA h2 hC1 hc hval (PinSetR.grow hP hg1) hq1
         (ConRon.Bridge.denoteN_ext hn c1.ext) (ConRon.Bridge.denote_ext hv c1.ext) hCr1
@@ -219,9 +215,7 @@ theorem cp_ref (hD : DmProg8 p) (hq : KnotStageProg p) (hcl : LeafClosed p) (hkp
   rw [checkDivModPinE.arm1]
   have hD7 := hD.toDmProg7
   -- the environment guard, at the extended view
-  rcases h1 : callW p k "div_mod_env_guard" [vis2, c] m with _ | ⟨r1, m1⟩
-  · rw [liftE_none, checkDivModPinE.k_div_mod_env_guard.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]
+  refine RefE.onlySim (fun _ => checkDivModPinE.k_div_mod_env_guard.none ..) (fun _ _ h => h) fun r1 m1 h1 => ?_
   obtain ⟨x1, a1, hrun1, ⟨hS1, hg1, hd1⟩⟩ := (eg_ref hD7 hdn c) k m a r1 m1 ⟨hS, hc⟩ h1
   obtain ⟨hst1, hx1, hc1, hp1, hgv⟩ :=
     ConRon.Bridge.divModEnvGuard_run hC.check.state hC.check.pins hok2.ienv hn hrun1
@@ -241,9 +235,7 @@ theorem cp_ref (hD : DmProg8 p) (hq : KnotStageProg p) (hcl : LeafClosed p) (hkp
     rw [← decW0B_true hd1 z1]; exact hrun1
   refine RefE.bind_right hrun1' (RefE.ite_pos rfl ?_)
   -- the stored value
-  rcases h2 : callW p k "env_find" [c, vis2] m1 with _ | ⟨r2, m2⟩
-  · rw [liftE_none, checkDivModPinE.k_env_find.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]
+  refine RefE.onlySim (fun _ => checkDivModPinE.k_env_find.none ..) (fun _ _ h => h) fun r2 m2 h2 => ?_
   obtain ⟨hm2, hfd⟩ := envFind_call hD7.toDmProg6.toDmProg5.toMasterProg c hc hS1.check.env h2
   subst hm2
   cases hf : fe2.find? (decI c) with

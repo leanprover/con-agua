@@ -65,9 +65,7 @@ theorem ngc_ref {p : Prog} (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vi
       word_add_toNat (show off.toNat + 1 < 2 ^ 64 by have := hcb 0 (by omega); omega)
     have hl1 : (l - 1).toNat = l' := by
       rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simp; omega))]; simp; omega
-    rcases hnt : ntWf k m vis (rdW (m.arr64 IW) off) with _ | ⟨r1, m1⟩
-    · rw [liftE_none, ngcE.k_nest_container.none]; exact RefE.of_cls0 (by simp)
-    rw [liftE_some]
+    refine RefE.onlySim (fun _ => ngcE.k_nest_container.none ..) (fun _ _ h => h) fun r1 m1 hnt => ?_
     cases k with
     | zero => simp [ntWf] at hnt
     | succ k =>
@@ -109,9 +107,8 @@ theorem ngc_ref {p : Prog} (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vi
     show RefE _ _ (if (!(nPc2 == nPc.toNat || ctors.length == 0)) = true then _ else _) a1 _
     rw [hchk]
     simp only [Bool.not_true, Bool.false_eq_true, ite_false]
-    rcases hap : appendW (k + 1) m1 oo ol (r1.tail.tail.headD 0) (r1.tail.tail.tail.headD 0) with _ | ⟨r2, m2⟩
-    · rw [liftE_none, ngcE.k_sl_append.none]; exact RefE.of_cls0 (by simp)
-    rw [liftE_some, ngcE.k_sl_append.arm1]
+    refine RefE.onlySim (fun _ => ngcE.k_sl_append.none ..) (fun _ _ h => h) fun r2 m2 hap => ?_
+    rw [ngcE.k_sl_append.arm1]
     obtain ⟨hS2, hg2, hr20, hr21, ht2, hw1, hw2⟩ := appendW_stage hap hS1 (by have := hg1.iw; omega)
       (by rw [h3]; exact h2b)
     rw [h3] at hr21 ht2 hw2

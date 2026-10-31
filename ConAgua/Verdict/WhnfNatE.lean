@@ -1,5 +1,6 @@
 import ConAgua.Arena.WhnfDeltaRefine4
 import ConAgua.Arena.CoreNatOp
+import ConAgua.Arena.RefWalk
 /-!
 # `reduce_nat`'s family: one model and one refinement for both outcomes
 
@@ -96,13 +97,10 @@ theorem reduceNatSucc_ref (n F : Nat) (hF : n ≤ F) (hn2 : n ≤ 2 ^ 62)
   | zero => rw [reduceNatSuccE.eq_1]; exact RefE.of_cls0 (by simp)
   | succ n =>
   rw [reduceNatSuccE.arm1]
-  rcases h1 : callW p n "nat_lit_supported" [vis] s₀.mem with _ | ⟨r₁, m₁⟩
-  · rw [liftE_none, reduceNatSuccE.k_nat_lit_supported.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some, reduceNatSuccE.k_nat_lit_supported.arm1]
+  refine RefE.onlySim (fun _ => reduceNatSuccE.k_nat_lit_supported.none ..) (fun _ _ h => h) fun r₁ m₁ h1 => ?_
+  rw [reduceNatSuccE.k_nat_lit_supported.arm1]
   obtain ⟨hok1, hS1, hres1, hfr1, -⟩ := callW_natLitSupported p hp n s₀ a₀ dn vis fe MM eb hC r₁ m₁ h1
-  rcases h2 : callW p n "pin_at" [3] m₁ with _ | ⟨r₂, m₂⟩
-  · rw [liftE_none, reduceNatSuccE.k_pin_at.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]
+  refine RefE.onlySim (fun _ => reduceNatSuccE.k_pin_at.none ..) (fun _ _ h => h) fun r₂ m₂ h2 => ?_
   obtain ⟨hm2, -, -, hr₂⟩ := callW_pinAt p hp.pinAt n m₁ 3 r₂ m₂ h2
   subst m₂
   simp only [show (3 : Word).toNat = 3 from rfl] at hr₂
@@ -153,9 +151,7 @@ theorem reduceNatSucc_ref (n F : Nat) (hF : n ≤ F) (hn2 : n ≤ 2 ^ 62)
   obtain ⟨hok3, ⟨M', hS3, hK3, hSt3⟩, hres3, hrw3⟩ := CoreSpec.of_callW
     (hkn.whnf F ⟨m₁, Locals.init []⟩ a₁ dn vis fe MM eb mode d b (by omega) (by omega) hSP1 hb)
     (callW_of_callE h3)
-  rcases h4 : callW p n "raw_nat_lit" [r₃.headD 0] m₃ with _ | ⟨r₄, m₄⟩
-  · rw [liftE_none, reduceNatSuccE.k_raw_nat_lit.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]
+  refine RefE.onlySim (fun _ => reduceNatSuccE.k_raw_nat_lit.none ..) (fun _ _ h => h) fun r₄ m₄ h4 => ?_
   have hrun3 := AM.run_of_ok _ _ hok3
   rw [hres3] at hrun3
   generalize AM.st ((coreKnot (decMode mode) fe id F).whnf d.toNat (decE b)) a₁ = a₂ at hrun3 hS3
@@ -171,9 +167,8 @@ theorem reduceNatSucc_ref (n F : Nat) (hF : n ≤ F) (hn2 : n ≤ 2 ^ 62)
       hcond (decE (r₃.headD 0)) (by rw [hrun3]; rfl) hrun4) ⟨⟨M', hS3, hK3, hStK1.trans hSt3⟩, rfl, resW_zero⟩
   rw [reduceNatSuccE.k_raw_nat_lit.arm2 _ _ _ _ hf]
   obtain ⟨hsl, hnorm⟩ := hslice4 hf
-  rcases h5 : callW p n "nat_succ_lit" [r₄.tail.headD 0, r₄.tail.tail.headD 0] m₃ with _ | ⟨r₅, m₅⟩
-  · rw [liftE_none, reduceNatSuccE.k_nat_succ_lit.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some, reduceNatSuccE.k_nat_succ_lit.arm1]
+  refine RefE.onlySim (fun _ => reduceNatSuccE.k_nat_succ_lit.none ..) (fun _ _ h => h) fun r₅ m₅ h5 => ?_
+  rw [reduceNatSuccE.k_nat_succ_lit.arm1]
   obtain ⟨hok5, hS5, hres5, hfr5, hhw5, hP5⟩ := callW_natSuccLit p hp n ⟨m₃, Locals.init []⟩ a₂ dn vis fe M' eb _ _
     hS3 hsl r₅ m₅ h5
   have hsome : rawDec m₃ r₄ = some (pv (vpool m₃) (r₄.tail.headD 0).toNat
@@ -213,9 +208,7 @@ theorem reduceNatOp_ref (hno : NatOpResultOK p) (n F : Nat) (hF : n ≤ F) (hn2 
   have hrun1 := AM.run_of_ok _ _ hok1
   rw [hres1] at hrun1
   generalize AM.st ((coreKnot (decMode mode) fe id F).whnf d.toNat (decE a)) a₀ = a₁ at hrun1 hS₁
-  rcases h2 : callW p n "raw_nat_lit" [r₁.headD 0] m₁ with _ | ⟨r₂, m₂⟩
-  · rw [liftE_none, reduceNatOpE.k_raw_nat_lit.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]
+  refine RefE.onlySim (fun _ => reduceNatOpE.k_raw_nat_lit.none ..) (fun _ _ h => h) fun r₂ m₂ h2 => ?_
   obtain ⟨hm2, hrun2, hres2, hslice2⟩ := callW_rawNatLit p hp n ⟨m₁, Locals.init []⟩ a₁ dn vis fe M₁ eb _
     hS₁ hrw1 r₂ m₂ h2
   subst m₂
@@ -246,9 +239,7 @@ theorem reduceNatOp_ref (hno : NatOpResultOK p) (n F : Nat) (hF : n ≤ F) (hn2 
   have hrun3 := AM.run_of_ok _ _ hok3
   rw [hres3] at hrun3
   generalize AM.st ((coreKnot (decMode mode) fe id F).whnf d.toNat (decE b)) a₁ = a₂ at hrun3 hS₃
-  rcases h4 : callW p n "raw_nat_lit" [r₃.headD 0] m₃ with _ | ⟨r₄, m₄⟩
-  · rw [liftE_none, reduceNatOpE.k_raw_nat_lit_2.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]
+  refine RefE.onlySim (fun _ => reduceNatOpE.k_raw_nat_lit_2.none ..) (fun _ _ h => h) fun r₄ m₄ h4 => ?_
   obtain ⟨hm4, hrun4, hres4, hslice4⟩ := callW_rawNatLit p hp n ⟨m₃, Locals.init []⟩ a₂ dn vis fe M₃ eb _
     hS₃ hrw3 r₄ m₄ h4
   subst m₄
@@ -297,16 +288,13 @@ theorem reduceNatWf_ref (n F : Nat) (hF : n ≤ F) (hn2 : n ≤ 2 ^ 62)
   | succ n =>
   rw [reduceNatWfE.arm1]
   have hkn : KnotOK p n := hk n (by omega)
-  rcases h1 : callW p n "nat_op_is_wf" [c] s₀.mem with _ | ⟨r₁, m₁⟩
-  · rw [liftE_none, reduceNatWfE.k_nat_op_is_wf.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some, reduceNatWfE.k_nat_op_is_wf.arm1]
+  refine RefE.onlySim (fun _ => reduceNatWfE.k_nat_op_is_wf.none ..) (fun _ _ h => h) fun r₁ m₁ h1 => ?_
+  rw [reduceNatWfE.k_nat_op_is_wf.arm1]
   obtain ⟨s₁', hs₁', hm₁, -, -, hwfsel, -⟩ := triple_of_callW
     (natOpIsWfL_spec p hp.natOpIsWf n ⟨s₀.mem, Locals.init []⟩ c) h1
   have hm1 : m₁ = s₀.mem := by rw [← hs₁', hm₁]
   subst hm1
-  rcases h2 : callW p n "nat_lit_supported" [vis] s₀.mem with _ | ⟨r₂, m₂⟩
-  · rw [liftE_none, reduceNatWfE.k_nat_lit_supported.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]
+  refine RefE.onlySim (fun _ => reduceNatWfE.k_nat_lit_supported.none ..) (fun _ _ h => h) fun r₂ m₂ h2 => ?_
   obtain ⟨hok2, hS2, hres2, hfr2, hrh2⟩ := callW_natLitSupported p hp n s₀ a₀ dn vis fe MM eb hC r₂ m₂ h2
   have hsup : (natLitSupported fe).run a₀ = .ok (decBool r₂, AM.st (natLitSupported fe) a₀) := by
     have := AM.run_of_ok _ _ hok2
@@ -358,9 +346,7 @@ theorem reduceNatWf_ref (n F : Nat) (hF : n ≤ F) (hn2 : n ≤ 2 ^ 62)
   have hrun3 := AM.run_of_ok _ _ hok3
   rw [hres3] at hrun3
   generalize AM.st ((coreKnot (decMode mode) fe id F).whnf d.toNat (decE a)) a₁ = a₂ at hrun3 hS₃
-  rcases h4 : callW p n "raw_nat_lit" [r₃.headD 0] m₃ with _ | ⟨r₄, m₄⟩
-  · rw [liftE_none, reduceNatWfE.k_raw_nat_lit.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]
+  refine RefE.onlySim (fun _ => reduceNatWfE.k_raw_nat_lit.none ..) (fun _ _ h => h) fun r₄ m₄ h4 => ?_
   obtain ⟨hm4, hrun4, hres4, hslice4⟩ := callW_rawNatLit p hp n ⟨m₃, Locals.init []⟩ a₂ dn vis fe M₃ eb _
     hS₃ hrw3 r₄ m₄ h4
   subst m₄
@@ -389,9 +375,7 @@ theorem reduceNatWf_ref (n F : Nat) (hF : n ≤ F) (hn2 : n ≤ 2 ^ 62)
   have hrun5 := AM.run_of_ok _ _ hok5
   rw [hres5] at hrun5
   generalize AM.st ((coreKnot (decMode mode) fe id F).whnf d.toNat (decE b)) a₂ = a₃ at hrun5 hS₅
-  rcases h6 : callW p n "raw_nat_lit" [r₅.headD 0] m₅ with _ | ⟨r₆, m₆⟩
-  · rw [liftE_none, reduceNatWfE.k_raw_nat_lit_2.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]
+  refine RefE.onlySim (fun _ => reduceNatWfE.k_raw_nat_lit_2.none ..) (fun _ _ h => h) fun r₆ m₆ h6 => ?_
   obtain ⟨hm6, hrun6, hres6, hslice6⟩ := callW_rawNatLit p hp n ⟨m₅, Locals.init []⟩ a₃ dn vis fe M₅ eb _
     hS₅ hrw5 r₆ m₆ h6
   subst m₆
@@ -434,9 +418,7 @@ theorem reduceNatK_ref (n F : Nat) (hF : n ≤ F) (hn2 : n ≤ 2 ^ 62)
     view_const_words s₀.mem a₀ hC.arena.base f hf ⟨hsc, by simpa using hbd⟩ hg3
   have hcg := redHead_const (coreKnot (decMode mode) fe id F) fe d.toNat (decE f) (decE b) a₀ n_ us_ hview
   subst hn hu
-  rcases h1 : callW p n "pin_word" [52] s₀.mem with _ | ⟨r₁, m₁⟩
-  · rw [liftE_none, reduceNatKE.k_pin_word.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]
+  refine RefE.onlySim (fun _ => reduceNatKE.k_pin_word.none ..) (fun _ _ h => h) fun r₁ m₁ h1 => ?_
   obtain ⟨hm1, -, hr₁⟩ := callW_pinWord p hp.pinWord n s₀.mem 52 r₁ m₁ h1
   subst m₁
   simp only [show (52 : Word).toNat = 52 from rfl] at hr₁
@@ -510,9 +492,7 @@ theorem reduceNatAp_ref (hno : NatOpResultOK p) (n F : Nat) (hF : n ≤ F) (hn2 
   subst hn hu
   generalize tfld s₀.mem CONST (tierW gw) (idxW gw) 0 = cw at *
   generalize tfld s₀.mem CONST (tierW gw) (idxW gw) 1 = uw at *
-  rcases h1 : callW p n "pin_word" [52] s₀.mem with _ | ⟨r₁, m₁⟩
-  · rw [liftE_none, reduceNatApE.k_pin_word.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]
+  refine RefE.onlySim (fun _ => reduceNatApE.k_pin_word.none ..) (fun _ _ h => h) fun r₁ m₁ h1 => ?_
   obtain ⟨hm1, hflag, hr₁⟩ := callW_pinWord p hp.pinWord n s₀.mem 52 r₁ m₁ h1
   subst m₁
   simp only [show (52 : Word).toNat = 52 from rfl] at hr₁
@@ -533,16 +513,13 @@ theorem reduceNatAp_ref (hno : NatOpResultOK p) (n F : Nat) (hF : n ≤ F) (hn2 
     (decI cw) (decI uw) (decI (pinW s₀.mem 52)) ht hview hel
     (by rw [hbne _ _ hul hC.pins.lv_lt.1]; simp [hne'])
   -- `nat_bin_op_name`
-  rcases h2 : callW p n "nat_bin_op_name" [cw] s₀.mem with _ | ⟨r₂, m₂⟩
-  · rw [liftE_none, reduceNatApE.k_nat_bin_op_name.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some, reduceNatApE.k_nat_bin_op_name.arm1]
+  refine RefE.onlySim (fun _ => reduceNatApE.k_nat_bin_op_name.none ..) (fun _ _ h => h) fun r₂ m₂ h2 => ?_
+  rw [reduceNatApE.k_nat_bin_op_name.arm1]
   obtain ⟨t₂, ht₂, hm₂, -, hsel2, -⟩ := triple_of_callW
     (natBinOpNameL_spec p hp.natBinOpName n ⟨s₀.mem, Locals.init []⟩ hflag cw) h2
   have hm2 : m₂ = s₀.mem := by rw [← ht₂, hm₂]
   subst hm2
-  rcases h3 : callW p n "nat_op_stored" [vis, cw] s₀.mem with _ | ⟨r₃, m₃⟩
-  · rw [liftE_none, reduceNatApE.k_nat_op_stored.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]
+  refine RefE.onlySim (fun _ => reduceNatApE.k_nat_op_stored.none ..) (fun _ _ h => h) fun r₃ m₃ h3 => ?_
   obtain ⟨hok3, hS3, hres3, hfr3, hrh3⟩ := callW_natOpStored p hp n ⟨s₀.mem, Locals.init []⟩ a₀ dn vis fe
     MM eb cw hC hnl r₃ m₃ h3
   obtain ⟨b3, hb3⟩ := natOpStored_run_pure fe (decI cw) a₀

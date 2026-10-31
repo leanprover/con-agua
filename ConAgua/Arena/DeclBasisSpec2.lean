@@ -51,9 +51,8 @@ theorem cbdJ_ref {p : Prog} (hB : BasisProg p) (hR : L.Rom.RomRefs p)
       (do installBasisDecls fe (← BasisKind.declsA (basisOfW k.toNat)) : AM IFEnv) a
       (fun v fe' a' => IbdPost dn m v.1 v.2 fe' a') := by
   rw [checkBasisDeclE.j1.arm1]
-  rcases h4 : callW p n "rom_basis_decls_a" [k] m with _ | ⟨r4, m4⟩
-  · rw [liftE_none, checkBasisDeclE.k_rom_basis_decls_a.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some, checkBasisDeclE.k_rom_basis_decls_a.arm1]
+  refine RefE.onlySim (fun _ => checkBasisDeclE.k_rom_basis_decls_a.none ..) (fun _ _ h => h) fun r4 m4 h4 => ?_
+  rw [checkBasisDeclE.k_rom_basis_decls_a.arm1]
   obtain ⟨cis, a4, hrun4, hS4, hg4, hD4, -⟩ :
       ∃ cis a4, (BasisKind.declsA (basisOfW k.toNat)).run a = .ok (cis, a4) ∧
         KeepPost dn vis fe (decRBlk dn) m m4 a4 r4 cis := by
@@ -85,9 +84,8 @@ theorem cbd_ref {p : Prog} (hB : BasisProg p) (hC : CanonProg p) (hR : L.Rom.Rom
     simp only [checkBasisDecl, basisOfW, show (4 : Word).toNat = 4 from rfl,
       show (ConLeche.BasisKind.quotK == ConLeche.BasisKind.quotK) = true from rfl, ite_true]
     -- the `Eq` pin
-    rcases h1 : pinAtW m 0 with _ | ⟨r1, m1⟩
-    · rw [liftE_none, checkBasisDeclE.k_pin_at.none]; exact RefE.of_cls0 (by simp)
-    rw [liftE_some, checkBasisDeclE.k_pin_at.arm1]
+    refine RefE.onlySim (fun _ => checkBasisDeclE.k_pin_at.none ..) (fun _ _ h => h) fun r1 m1 h1 => ?_
+    rw [checkBasisDeclE.k_pin_at.arm1]
     obtain ⟨hm1, hr1, hl1, hrun1⟩ := pinAtW_ok h1 hS.check.pins
     subst hm1
     have hpe : pinEq.run a = .ok (decI (pinW m1 (1 + (0 : Word).toNat)), a) := by
@@ -96,9 +94,8 @@ theorem cbd_ref {p : Prog} (hB : BasisProg p) (hC : CanonProg p) (hR : L.Rom.Rom
     rw [hr1]
     simp only [List.headD_cons]
     -- `eqA`
-    rcases h2 : callW p n "rom_ci" [0] m1 with _ | ⟨r2, m2⟩
-    · rw [liftE_none, checkBasisDeclE.k_rom_ci.none]; exact RefE.of_cls0 (by simp)
-    rw [liftE_some, checkBasisDeclE.k_rom_ci.arm1]
+    refine RefE.onlySim (fun _ => checkBasisDeclE.k_rom_ci.none ..) (fun _ _ h => h) fun r2 m2 h2 => ?_
+    rw [checkBasisDeclE.k_rom_ci.arm1]
     obtain ⟨ea, a2, hrun2, hS2, hg2, hea⟩ := hR.ci dn vis fe 0 (by decide) n m1 a r2 m2 hS h2
     have hrun2' : eqA.run a = .ok (ea, a2) := hrun2
     refine RefE.bind_right hrun2' ?_

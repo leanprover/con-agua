@@ -465,9 +465,8 @@ theorem cpd_ref (hm : mode = .verified) (hP : PhaseBProg p) {N : Nat} (hN : N �
     have : ¬ (4611686018427387904 : Word).toNat ≤ j.toNat := fun h => g1 (UInt64.le_iff_toNat_le.mpr h)
     simp at this; omega
   unfold checkPending
-  rcases c1 : callW p n "scratch_enter" [] m with _ | ⟨r1, m1⟩
-  · rw [liftE_none, checkPendingE.k_scratch_enter.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some, checkPendingE.k_scratch_enter.arm1]
+  refine RefE.onlySim (fun _ => checkPendingE.k_scratch_enter.none ..) (fun _ _ h => h) fun r1 m1 c1 => ?_
+  rw [checkPendingE.k_scratch_enter.arm1]
   obtain ⟨s1, hs1, -, hok1, hR1, hT1, hfl1, hCr1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (enter_loopB dn ds p hb hP.crk (pins := pins) n _ a₀ vis fe (fe.restrictTo (pdAt pend j).vis) pend
       hT.stateOK.wf hT.off hR hTw hM.flag hCr) c1
@@ -491,9 +490,8 @@ theorem cpd_ref (hm : mode = .verified) (hP : PhaseBProg p) {N : Nat} (hN : N �
       (AM.st enterScratch a₀) v (fe.restrictTo (pdAt pend j).vis) pend g _ hg hthm hR' hT1 hfl1 hCr1) c2
   subst hs2
   refine RefE.bind_right (AM.run_of_ok _ _ hok2) ?_
-  rcases c3 : callW p n "scratch_drop" [] s2.mem with _ | ⟨r3, m3⟩
-  · rw [liftE_none, checkPendingE.k_scratch_drop.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some, checkPendingE.k_scratch_drop.arm1]
+  refine RefE.onlySim (fun _ => checkPendingE.k_scratch_drop.none ..) (fun _ _ h => h) fun r3 m3 c3 => ?_
+  rw [checkPendingE.k_scratch_drop.arm1]
   obtain ⟨s3, hs3, -, hok3, hR3, hcm3, hCr3⟩ := triple_of_callW (s₀ := ⟨s2.mem, Locals.init []⟩)
     (drop_loopB dn ds p hb hP.leaf hP.crk (pins := pins) n _ _ vis fe pend (hR2.unrestrict hR.vis)
       hcm2 hCr2) c3

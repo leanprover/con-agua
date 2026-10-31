@@ -414,9 +414,7 @@ theorem tbl_ref {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
   unfold checkStructProjTable
   rw [← hwd]
   -- `struct_proj_bodies`
-  rcases h1 : spbW (n + 1) m T nP nF w with _ | ⟨rb, m1⟩
-  · rw [liftE_none, tblE.k_struct_proj_bodies.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]
+  refine RefE.onlySim (fun _ => tblE.k_struct_proj_bodies.none ..) (fun _ _ h => h) fun rb m1 h1 => ?_
   obtain ⟨x, a1, h1', hS1, hg1, hdec1, hA1⟩ := spbW_ok dn vis fe (n + 1) m m1 a T nP nF w rb h1 hS hwl
     (by omega) nF.toNat_lt hA
   obtain ⟨ps1, -⟩ := ConRon.Bridge.Inductives.structProjBodies_spec (decI T) TP nP.toNat nF.toNat
@@ -463,9 +461,7 @@ theorem tbl_ref {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
   subst hsok'
   simp only [hsz, and_self, ite_true]
   -- `env_find`: the structure is stored
-  rcases hf : envFindW m2 T vis with _ | ⟨rf, m3⟩
-  · rw [liftE_none, tblE.k_env_find.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]
+  refine RefE.onlySim (fun _ => tblE.k_env_find.none ..) (fun _ _ h => h) fun rf m3 hf => ?_
   by_cases hf0 : rf.headD 0 = 0
   · rw [tblE.k_env_find.abort1 p (n + 1) T C lo ll nP nF rs go gl vis _ _ rf m3 hf0]
     exact RefE.of_cls0 rfl
@@ -475,9 +471,7 @@ theorem tbl_ref {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
   have hhit : (fe.find? (decI T)).isSome := by rw [hfind0, hci0]; rfl
   simp only [hhit, ite_true]
   -- `find_table`: the table is not taken
-  rcases hft : callW p (n + 1) "find_table" [vis, T] m2 with _ | ⟨rt, m3⟩
-  · rw [liftE_none, tblE.k_find_table.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]
+  refine RefE.onlySim (fun _ => tblE.k_find_table.none ..) (fun _ _ h => h) fun rt m3 hft => ?_
   obtain ⟨hm32, hfind⟩ := findTable_call hP hS2.check.env hT hft
   subst m3
   by_cases ht0 : rt.headD 0 ≠ 0
@@ -498,36 +492,32 @@ theorem tbl_ref {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
   simp only [hnone, Option.isNone_none, ite_true]
   -- the three copies
   have hg12 := hg1.trans hg2
-  rcases h5 : callW p (n + 1) "er_from_iw" [lo, ll] m2 with _ | ⟨rl, m5⟩
-  · rw [liftE_none, tblE.k_er_from_iw.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some, tblE.k_er_from_iw.arm1]
+  refine RefE.onlySim (fun _ => tblE.k_er_from_iw.none ..) (fun _ _ h => h) fun rl m5 h5 => ?_
+  rw [tblE.k_er_from_iw.arm1]
   obtain ⟨s5, rfl, -, h5'⟩ := triple_of_callW
     (efW_spec p hP.hea hP.hefg hP.hef n ⟨m2, Locals.init []⟩ lo ll) h5
   dsimp only at h5'
   obtain ⟨hS5, hg5, hrl1, hrl0, hsl5, ht5⟩ := efW_stage n h5' hS2
     (by rw [decHL_grow hg12 hlb]; exact hlps) (by have := hg12.iw; omega)
   have hg25 := hg2.trans hg5
-  rcases h6 : callW p (n + 1) "er_from_iw" [rb.tail.headD 0, rb.tail.tail.headD 0] s5.mem with _ | ⟨rb2, m6⟩
-  · rw [liftE_none, tblE.k_er_from_iw_2.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some, tblE.k_er_from_iw_2.arm1]
+  refine RefE.onlySim (fun _ => tblE.k_er_from_iw_2.none ..) (fun _ _ h => h) fun rb2 m6 h6 => ?_
+  rw [tblE.k_er_from_iw_2.arm1]
   obtain ⟨s6, rfl, -, h6'⟩ := triple_of_callW
     (efW_spec p hP.hea hP.hefg hP.hef n ⟨s5.mem, Locals.init []⟩ _ _) h6
   dsimp only at h6'
   obtain ⟨hS6, hg6, hrb1, hrb0, hsl6, ht6⟩ := efW_stage n h6' hS5
     (by rw [decHL_grow hg25 hbb]; exact hbd) (by have := hg25.iw; omega)
   have hg06 := ((hg1.trans hg2).trans hg5).trans hg6
-  rcases h7 : callW p (n + 1) "er_from_iw" [go, gl] s6.mem with _ | ⟨rg, m7⟩
-  · rw [liftE_none, tblE.k_er_from_iw_3.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some, tblE.k_er_from_iw_3.arm1]
+  refine RefE.onlySim (fun _ => tblE.k_er_from_iw_3.none ..) (fun _ _ h => h) fun rg m7 h7 => ?_
+  rw [tblE.k_er_from_iw_3.arm1]
   obtain ⟨s7, rfl, -, h7'⟩ := triple_of_callW
     (efW_spec p hP.hea hP.hefg hP.hef n ⟨s6.mem, Locals.init []⟩ go gl) h7
   dsimp only at h7'
   obtain ⟨hS7, hg7, hrg1, hrg0, hsl7, ht7⟩ := efW_stage n h7' hS6
     (by rw [decHL_grow hg06 hgb]; exact hgs) (by have := hg06.iw; omega)
   -- the record
-  rcases h8 : erAllocW s7.mem 13 with _ | ⟨q, m8⟩
-  · rw [liftE_none, tblE.k_erec_alloc.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some, tblE.k_erec_alloc.arm1]
+  refine RefE.onlySim (fun _ => tblE.k_erec_alloc.none ..) (fun _ _ h => h) fun q m8 h8 => ?_
+  rw [tblE.k_erec_alloc.arm1]
   obtain ⟨hSM, hgM, hq, htM, hget⟩ := erRec_stage h8 hS7
     [6, 0, T, rl.headD 0, rl.tail.headD 0, nP, C, nF, rs, rb2.headD 0, rb2.tail.headD 0,
       rg.headD 0, rg.tail.headD 0] rfl
@@ -551,9 +541,8 @@ theorem tbl_ref {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
     (by rw [hrl1]; exact ArrExt.hslice? he5 hsl5) (by rw [hrb1]; exact ArrExt.hslice? he7 hsl6)
     (by rw [hrg1]; exact ArrExt.hslice? (IWGrow.erecPExtR hgM) hsl7)
   -- `env_push_table`
-  rcases hc : callW p (n + 1) "env_push_table" [q] M with _ | ⟨rv, m9⟩
-  · rw [liftE_none, tblE.k_env_push_table.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some, tblE.k_env_push_table.arm1]
+  refine RefE.onlySim (fun _ => tblE.k_env_push_table.none ..) (fun _ _ h => h) fun rv m9 hc => ?_
+  rw [tblE.k_env_push_table.arm1]
   obtain ⟨hS9, hg9, hf9, ha9⟩ := envPushTable_stage hP hSM htbl hc
   refine RefE.ret rfl ⟨by simpa using hS9, ?_, ?_, ?_, ps2⟩
   · exact (((((hg1.trans hg2).trans hg5).trans hg6).trans hg7).trans hgM).trans hg9
@@ -723,9 +712,8 @@ theorem cto_ref {p : Prog} (hP : TabsProg p) (hp : ApdF p) (n : Nat) (hn : n ≤
     a a1 guards hok hpins ⟨ConRon.Bridge.denoteCV_type hcAP, hsP⟩ hrun1
   refine RefE.bind_right hrun1 ?_
   -- `block_shape_lps` (model only)
-  rcases h2 : callW p (j + 2) "block_shape_lps" [pp] m1 with _ | ⟨rl, m2⟩
-  · rw [liftE_none, ctoE.k_block_shape_lps.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some, ctoE.k_block_shape_lps.arm1]
+  refine RefE.onlySim (fun _ => ctoE.k_block_shape_lps.none ..) (fun _ _ h => h) fun rl m2 h2 => ?_
+  rw [ctoE.k_block_shape_lps.arm1]
   obtain ⟨s2, rfl, -, hW2, -⟩ := triple_of_callW (s₀ := ⟨m1, Locals.init []⟩)
     (blockShapeLps_spec2 p hP.tbl.ha hP.erCopy hP.erToIw hP.lps (j + 2) _ pp) h2
   obtain ⟨hS2, hg2, hl2, hlb2⟩ := lpsW_ok' hW2 hS1 (hq.grow (decBS_mono _) hg1)

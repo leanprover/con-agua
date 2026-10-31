@@ -421,9 +421,8 @@ theorem gck_ref (P : GrcProg p) {fsR : List FnName} (hclR : closedA p rcFreeA rc
   rw [hvis]
   refine RefE.bind_right (flushCaches_run a1) ?_
   -- the flush into the rule-less recursors' environment
-  rcases c3 : callW p (n + 1) "flush_caches" [] s2.mem with _ | ⟨r3, m3⟩
-  · rw [liftE_none, gckE.k_flush_caches.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some, gckE.k_flush_caches.arm1]
+  refine RefE.onlySim (fun _ => gckE.k_flush_caches.none ..) (fun _ _ h => h) fun r3 m3 c3 => ?_
+  rw [gckE.k_flush_caches.arm1]
   obtain ⟨s3, rfl, -, hfok, hfm⟩ := triple_of_callW (s₀ := ⟨s2.mem, Locals.init []⟩)
     (flushCaches_spec p P.flush (n + 1) _) c3
   have hP3 := RcMR.ofClosed hclR (hfRc _ (by decide)) c3 hP2
@@ -482,9 +481,8 @@ theorem gck_ref (P : GrcProg p) {fsR : List FnName} (hclR : closedA p rcFreeA rc
   have hP5 := RcMR.ofClosed hclR (hfRc _ (by decide)) c5 hP4
   have hA5 := hkeep _ (by simp [grcKeepCalleesC]) _ _ _ _ _ c5 hA4
   -- the flush back
-  rcases c6 : callW p (n + 1) "flush_caches" [] s5.mem with _ | ⟨r6, m6⟩
-  · rw [liftE_none, gckE.k_flush_caches_2.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some, gckE.k_flush_caches_2.arm1]
+  refine RefE.onlySim (fun _ => gckE.k_flush_caches_2.none ..) (fun _ _ h => h) fun r6 m6 c6 => ?_
+  rw [gckE.k_flush_caches_2.arm1]
   obtain ⟨s6, rfl, -, hfok6, hfm6⟩ := triple_of_callW (s₀ := ⟨s5.mem, Locals.init []⟩)
     (flushCaches_spec p P.flush (n + 1) _) c6
   have hP6 := RcMR.ofClosed hclR (hfRc _ (by decide)) c6 hP5

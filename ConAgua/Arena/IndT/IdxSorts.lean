@@ -264,9 +264,8 @@ theorem iisr_ref (hP : IdxProg p) (pp : Word) (bs : BlockShape) {bsP : ConLeche.
   obtain ⟨rs, a2, hrun2, hR2⟩ := h2
   rw [iisrE.k_check_block_idx_sorts.eq_2]
   refine RefE.bind_right hrun2 ?_
-  rcases h3 : consW n m2 w1 (r2.headD 0) (r2.tail.headD 0) with _ | ⟨r3, m3⟩
-  · rw [liftE_none, iisrE.k_sl_cons.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some, iisrE.k_sl_cons.arm1]
+  refine RefE.onlySim (fun _ => iisrE.k_sl_cons.none ..) (fun _ _ h => h) fun r3 m3 h3 => ?_
+  rw [iisrE.k_sl_cons.arm1]
   obtain ⟨hS3, hg3, hd3, htop3⟩ := partsConsPL decIS_mono h3 hR2.stage.stage hR2.sorts.bound hR2.sorts.dec
     (hR1.sorts.grow (decIS_mono _) hR2.grow)
   have hA3 : AbsOK m3 := consW_afr h3 hR2.abs

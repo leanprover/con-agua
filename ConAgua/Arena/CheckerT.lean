@@ -482,9 +482,8 @@ theorem cd_ref {p : Prog} (hP : CheckDeclProg p) (hq : KnotStageProg p)
     have hlpd := hLD _ hi _ _ hdi
     have hD : (m.arr64 DECL).size < 2 ^ 63 := hR.decls.dsize
     have hP' : (m.arr64 DLP).size < 2 ^ 63 := hR.decls.psize
-    rcases c1 : callW p n "ind_block_to_erec" [i] m with _ | ⟨r1, m1⟩
-    · rw [liftE_none, checkDeclE.k_ind_block_to_erec.none]; exact RefE.of_cls0 (by simp)
-    rw [liftE_some, checkDeclE.k_ind_block_to_erec.arm1]
+    refine RefE.onlySim (fun _ => checkDeclE.k_ind_block_to_erec.none ..) (fun _ _ h => h) fun r1 m1 c1 => ?_
+    rw [checkDeclE.k_ind_block_to_erec.arm1]
     obtain ⟨hS1, hg1, hf1, -, hl1, hdec1, htop1⟩ := indBlockToErec_ok hib c1 hS.stage hdecl' hFB hD hP'
     have hT1 : StageT dn vis fe m1 a :=
       ⟨hS1, hS.twin.frame hf1 (by decide) (by decide) (by decide) (by decide) (by decide) (by decide),
@@ -676,9 +675,7 @@ theorem istg_ref (hdc : LoopCallees dn p) (hFD : FrontDecls ds) (hLD : DeclsLpsD
   · rw [installStepGoE.eq_1]; exact RefE.of_cls0 Err.cls_outOfFuel
   have hn' : n ≤ 2 ^ 62 := by omega
   rw [installStepGoE.arm1]
-  rcases c0 : callW p n "iw_reset" [] m with _ | ⟨r0, m0'⟩
-  · rw [liftE_none, installStepGoE.k_iw_reset.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]
+  refine RefE.onlySim (fun _ => installStepGoE.k_iw_reset.none ..) (fun _ _ h => h) fun r0 m0' c0 => ?_
   obtain ⟨s0, hs0, -, hW0⟩ := triple_of_callW (iwReset_specW p hdc.istg.reset n ⟨m, Locals.init []⟩) c0
   rw [show iwResetW m = some ([], m.set64 CTL 200 0) from rfl] at hW0
   simp only [Option.some.injEq, Prod.mk.injEq] at hW0
@@ -1070,24 +1067,21 @@ theorem ist_ref (hdc : LoopCallees dn p) (hFD : FrontDecls ds) (hLD : DeclsLpsDn
   rcases N with _ | n
   · rw [installStepE.eq_1]; exact RefE.of_cls0 Err.cls_outOfFuel
   rw [installStepE.arm1, installStep_eq]
-  rcases c0 : callW p n "tbl_cnt" [] m with _ | ⟨r0, m0⟩
-  · rw [liftE_none, installStepE.k_tbl_cnt.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some, installStepE.k_tbl_cnt.arm1]
+  refine RefE.onlySim (fun _ => installStepE.k_tbl_cnt.none ..) (fun _ _ h => h) fun r0 m0 c0 => ?_
+  rw [installStepE.k_tbl_cnt.arm1]
   obtain ⟨s0, rfl, hm0, -, hnt⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (tblCnt_spec p (hb.pr.get "tbl_cnt") n _) c0
   have hnt' : rdW (m.arr64 CTL) 133 = r0.headD 0 := hnt.symm
   rw [hm0]
-  rcases c1 : callW p n "flush_caches" [] m with _ | ⟨r1, m1⟩
-  · rw [liftE_none, installStepE.k_flush_caches.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some, installStepE.k_flush_caches.arm1]
+  refine RefE.onlySim (fun _ => installStepE.k_flush_caches.none ..) (fun _ _ h => h) fun r1 m1 c1 => ?_
+  rw [installStepE.k_flush_caches.arm1]
   obtain ⟨s1, rfl, -, hokF, hLF, hTF, hflF, hIMF⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (flush_loopW (pins := pins) dn ds p hb n _ a vis fe pend hR hTw hfl hIM) c1
   refine RefE.bind_right (AM.run_of_ok _ _ hokF) ?_
   have hwf' : StoreWF (AM.st flushCaches a).store := by rw [flushCaches_st]; exact hok.wf
   have hoff' : (AM.st flushCaches a).store.scratchOn = false := by rw [flushCaches_st]; exact hoff
-  rcases c2 : callW p n "scratch_enter" [] s1.mem with _ | ⟨r2, m2⟩
-  · rw [liftE_none, installStepE.k_scratch_enter.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some, installStepE.k_scratch_enter.arm1]
+  refine RefE.onlySim (fun _ => installStepE.k_scratch_enter.none ..) (fun _ _ h => h) fun r2 m2 c2 => ?_
+  rw [installStepE.k_scratch_enter.arm1]
   obtain ⟨s2, rfl, -, hokE, hLE, hTE, hflE, hIME⟩ := triple_of_callW (s₀ := ⟨s1.mem, Locals.init []⟩)
     (enter_loopW (pins := pins) dn ds p hb n _ (AM.st flushCaches a) vis fe pend hwf' hoff' hLF hTF
       hflF hIMF) c2
@@ -1120,9 +1114,8 @@ theorem ist_ref (hdc : LoopCallees dn p) (hFD : FrontDecls ds) (hLD : DeclsLpsDn
   · rw [installStepE.k_install_step_go.arm1 _ _ _ _ _ _ _ hf]
     have hy2 : y.2 = none := by simp only [hP3.vg, vgOut]; exact ite_eq_left hf
     rw [installStepK_none _ _ _ _ _ hy2]
-    rcases c4 : callW p n "is_none" [vis, r3.headD 0, r0.headD 0] m3 with _ | ⟨r4, m4⟩
-    · rw [liftE_none, installStepE.k_is_none.none]; exact RefE.of_cls0 (by simp)
-    rw [liftE_some, installStepE.k_is_none.arm1, installStepE.j1.arm1]
+    refine RefE.onlySim (fun _ => installStepE.k_is_none.none ..) (fun _ _ h => h) fun r4 m4 c4 => ?_
+    rw [installStepE.k_is_none.arm1, installStepE.j1.arm1]
     obtain ⟨s4, rfl, -, hok4, hL4, hcm4, hIM4⟩ := triple_of_callW (s₀ := ⟨m3, Locals.init []⟩)
       (isNone_refinesC pins dn ds p hdc.leaf hdc.indMemo hdc.crf hb hpn n _ a3 vis (r3.headD 0)
         (r0.headD 0) y.1 pend hP3.loop hP3.core hP3.ind) c4
