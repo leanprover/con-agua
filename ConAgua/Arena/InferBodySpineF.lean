@@ -174,7 +174,6 @@ theorem spLoop_ref (p : Prog) (hp : InferLeafProg p) (hkp : KnotProg p) (hq : Sp
     have hadd : (co + cn).toNat = co.toNat + cn.toNat := addW _ _ hcn64
     have hspT : (spTop m).toNat = co.toNat + cn.toNat := by rw [htop, hadd]
     have har : SpineR m ao an args := har₀.keepT co hsz hb hlo (hsz ▸ hspn)
-    have h0 : (0 : Word).toNat = 0 := rfl
     have hkeep : ∀ {m₂ : Mem}, StackKept m m₂ → (∀ j, j < co → spW m₂ j = spW m₀ j) := by
       intro m₂ hSt j hj
       have hj' : j < spTop m := by
@@ -193,44 +192,31 @@ theorem spLoop_ref (p : Prog) (hp : InferLeafProg p) (hkp : KnotProg p) (hq : Sp
       by_cases ht6 : ty >>> 28 = 6
       · -- the ∀ step: the domain opened, the argument checked and pushed
         rw [ite_eq_left ht6]
-        by_cases c1 : tierW ty ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0
-        · rw [ite_eq_left c1]; exact RefE.of_cls0 rfl
-        rw [ite_eq_right c1]
-        by_cases c2 : tcnt m FORALL (tierW ty) ≤ idxW ty
-        · rw [ite_eq_left c2]; exact RefE.of_cls0 rfl
-        rw [ite_eq_right c2]
+        refine RefE.underIf (fun _ => rfl) (RefE.abort0 (by rfl) fun c1 => ?_)
+        refine RefE.underIf (fun _ => rfl) (RefE.abort0 (by rfl) fun c2 => ?_)
         have hv : viewOK m ty FORALL := ⟨c1, UInt64.not_le.mp c2⟩
         obtain ⟨-, hdom, hbody⟩ := view_forall m a hS.arena.base ty ht hv ht6
         have hvb := viewBind_forall m a hS.arena.base ty ht hv ht6
-        rcases h1 : callW p k "inst_list" [tfld m FORALL (tierW ty) (idxW ty) 0, co, cn, 0] m with
-          _ | ⟨r₁, m₁⟩
-        · rw [liftE_none, ispE.k_inst_list_2.eq_1]; exact RefE.of_cls0 (by simp)
-        rw [liftE_some, ispE.k_inst_list_2.eq_2]
-        obtain ⟨hok1, ⟨M₁, hS₁, hK₁, hSt₁⟩, hres1, hrw1⟩ := CoreSpec.of_callW (hil k ⟨m, Locals.init []⟩
-          a dn vis fe M eb _ co cn 0 acc hS hdom hacc (by rw [hspT]; exact Nat.le_refl _)) h1
-        rw [h0] at hok1 hres1 hS₁
         rw [inferSpine]
         simp only [hlt', dite_true, decE_tag_forallE_beq ty ht, ht6, decide_true, ite_true, hxi,
           spineArg_bind]
         refine RefE.bind_right (by rw [viewBind_run', hvb]) ?_
         dsimp only
-        refine RefE.bind_right (AM.run_of_ok _ _ hok1) ?_
-        rw [hres1]
+        -- `inst_list` at the domain, `infer_spine_arg`
+        refine RefE.under (fun _ => rfl) (fun _ => ispE.k_inst_list_2.none ..) fun hx => RefE.bind_callW hx
+          (hil k ⟨m, Locals.init []⟩ a dn vis fe M eb _ co cn 0 acc hS hdom hacc (by rw [hspT]; exact Nat.le_refl _))
+          fun r₁ m₁ _ ⟨_, ⟨M₁, hS₁, hK₁, hSt₁⟩, _, hrw1⟩ => ?_
+        rw [Function.comp_apply, ispE.k_inst_list_2.arm1]
         have hs₁ : SlotPre ⟨m₁, Locals.init []⟩ _ dn vis fe M₁ eb mode := ⟨hS₁, hmode, heb⟩
-        rcases h2 : callE p k "infer_spine_arg" [mode, vis, d, rdW (m.arr64 SPN) (ao + i), r₁.headD 0]
-            m₁ with e2 | ⟨r₂, m₂⟩
-        · rw [ispE.k_infer_spine_arg.eq_1]
-          exact RefE.bind_left fun hG => CoreSpecE.of_callE (s₀ := ⟨m₁, Locals.init []⟩)
-            (inferSpineArg_anyE p hp hkp hq he k (hk.mono (by omega)) (hG.mono (by omega)) F
-              (by omega) (by omega) _ _ dn vis fe M₁ eb mode d _ (r₁.headD 0) hs₁ hvv hrw1) h2
-        obtain ⟨hok2, ⟨M₂, hS₂, hK₂, hSt₂⟩, -, -⟩ := CoreSpec.of_callW (inferSpineArg_any p hp hkp hq he
-          k (hk.mono (by omega)) F (by omega) (by omega) ⟨m₁, Locals.init []⟩ _ dn vis fe M₁ eb mode d _
-          (r₁.headD 0) hs₁ hvv hrw1) (callW_of_callE h2)
-        refine RefE.bind_right (AM.run_of_ok _ _ hok2) ?_
-        rw [ispE.k_infer_spine_arg.eq_2]
-        by_cases g4 : m₂.len64 SPN ≤ co + cn
-        · rw [ite_eq_left g4]; exact RefE.of_cls0 rfl
-        rw [ite_eq_right g4, ispE.j1.eq_def]
+        refine RefE.under (fun _ => rfl) (fun _ => ispE.k_infer_spine_arg.none ..) fun hx => RefE.bind_callE hx
+          (inferSpineArg_any p hp hkp hq he k (hk.mono (by omega)) F (by omega) (by omega) ⟨m₁, Locals.init []⟩ _
+            dn vis fe M₁ eb mode d _ (r₁.headD 0) hs₁ hvv hrw1)
+          (fun (hG : InferG p N) => inferSpineArg_anyE p hp hkp hq he k (hk.mono (by omega)) (hG.mono (by omega)) F
+            (by omega) (by omega) ⟨m₁, Locals.init []⟩ _ dn vis fe M₁ eb mode d _ (r₁.headD 0) hs₁ hvv hrw1)
+          fun r₂ m₂ _ ⟨_, ⟨M₂, hS₂, hK₂, hSt₂⟩, _, _⟩ => ?_
+        rw [Function.comp_apply, ispE.k_infer_spine_arg.eq_2]
+        refine RefE.underIf (fun _ => rfl) (RefE.abort0 (by rfl) fun g4 => ?_)
+        rw [ispE.j1.eq_def]
         have g5 := lt_of_not_len64_le hS₂.spn g4
         have hSt12 := hSt₁.trans hSt₂
         have hacc₂ : SpineR m₂ co cn acc :=
@@ -248,67 +234,42 @@ theorem spLoop_ref (p : Prog) (hp : InferLeafProg p) (hkp : KnotProg p) (hq : Sp
         rw [ite_eq_right ht6]
         have hnfa : ((decE ty).tag == ETag.forallE) = false := by
           rw [decE_tag_forallE_beq ty ht]; simp [ht6]
-        rcases h1 : callW p k "inst_list" [ty, co, cn, 0] m with _ | ⟨r₁, m₁⟩
-        · rw [liftE_none, ispE.k_inst_list_3.eq_1]; exact RefE.of_cls0 (by simp)
-        rw [liftE_some, ispE.k_inst_list_3.eq_2]
-        obtain ⟨hok1, ⟨M₁, hS₁, hK₁, hSt₁⟩, hres1, hrw1⟩ := CoreSpec.of_callW (hil k ⟨m, Locals.init []⟩
-          a dn vis fe M eb ty co cn 0 acc hS ht hacc (by rw [hspT]; exact Nat.le_refl _)) h1
-        rw [h0] at hok1 hres1 hS₁
         rw [inferSpine]
         simp only [hlt', dite_true, hnfa, Bool.false_eq_true, ite_false, hxi]
-        refine RefE.bind_right (AM.run_of_ok _ _ hok1) ?_
-        rw [hres1]
+        -- `inst_list`, the slot `whnf`, `infer_spine_arg`
+        refine RefE.under (fun _ => rfl) (fun _ => ispE.k_inst_list_3.none ..) fun hx => RefE.bind_callW hx
+          (hil k ⟨m, Locals.init []⟩ a dn vis fe M eb ty co cn 0 acc hS ht hacc (by rw [hspT]; exact Nat.le_refl _))
+          fun r₁ m₁ _ ⟨_, ⟨M₁, hS₁, hK₁, hSt₁⟩, _, hrw1⟩ => ?_
+        rw [Function.comp_apply, ispE.k_inst_list_3.arm1]
         have hs₁ : SlotPre ⟨m₁, Locals.init []⟩ _ dn vis fe M₁ eb mode := ⟨hS₁, hmode, heb⟩
-        rcases h2 : callE p k "whnf" [mode, vis, d, r₁.headD 0] m₁ with e2 | ⟨r₂, m₂⟩
-        · rw [ispE.k_whnf.eq_1]
-          exact RefE.bind_left fun hG => CoreSpecE.of_callE (s₀ := ⟨m₁, Locals.init []⟩)
-            ((hG.knot k (by omega)).whnf F ⟨m₁, Locals.init []⟩ _ dn vis fe M₁ eb mode d (r₁.headD 0)
-              (by omega) (by omega) hs₁ hrw1) h2
-        obtain ⟨hok2, ⟨M₂, hS₂, hK₂, hSt₂⟩, hres2, hrw2⟩ := CoreSpec.of_callW ((hk k (by omega)).whnf F
-          ⟨m₁, Locals.init []⟩ _ dn vis fe M₁ eb mode d (r₁.headD 0) (by omega) (by omega) hs₁ hrw1)
-          (callW_of_callE h2)
-        refine RefE.bind_right (AM.run_of_ok _ _ hok2) ?_
-        simp only [decH] at hres2 ⊢
-        simp only [hres2]
-        rw [ispE.k_whnf.eq_2]
-        by_cases g1 : r₂.headD 0 >>> 28 ≠ 6
-        · rw [ite_eq_left g1]
-          have hfa : ((decE (r₂.headD 0)).tag == ETag.forallE) = false := by
-            rw [decE_tag_forallE_beq _ hrw2]; simpa using g1
-          simp only [hfa, Bool.false_eq_true, ↓reduceIte]
-          exact fun _ => ErrClaim.fail _ _ rfl
-        rw [ite_eq_right g1]
+        refine RefE.under (fun _ => rfl) (fun _ => ispE.k_whnf.none ..) fun hx => RefE.bind_callE hx
+          ((hk k (by omega)).whnf F ⟨m₁, Locals.init []⟩ _ dn vis fe M₁ eb mode d (r₁.headD 0) (by omega) (by omega)
+            hs₁ hrw1)
+          (fun (hG : InferG p N) => (hG.knot k (by omega)).whnf F ⟨m₁, Locals.init []⟩ _ dn vis fe M₁ eb mode d
+            (r₁.headD 0) (by omega) (by omega) hs₁ hrw1) fun r₂ m₂ _ ⟨_, ⟨M₂, hS₂, hK₂, hSt₂⟩, _, hrw2⟩ => ?_
+        rw [Function.comp_apply, ispE.k_whnf.eq_2]
+        refine RefE.underIf (fun _ => rfl) (RefE.guardIf (by rfl)
+          (fun g => (decE_tag_forallE_beq _ hrw2).trans (decide_eq_false g))
+          (fun hb => of_decide_eq_false ((decE_tag_forallE_beq _ hrw2).symm.trans hb)) fun g1 _ => ?_)
         have g1' : r₂.headD 0 >>> 28 = 6 := by simpa using g1
-        by_cases g2 : tierW (r₂.headD 0) ≠ 0 ∧ rdW (m₂.arr64 CTL) 1 = 0
-        · rw [ite_eq_left g2]; exact RefE.of_cls0 rfl
-        rw [ite_eq_right g2]
-        by_cases g3 : tcnt m₂ FORALL (tierW (r₂.headD 0)) ≤ idxW (r₂.headD 0)
-        · rw [ite_eq_left g3]; exact RefE.of_cls0 rfl
-        rw [ite_eq_right g3]
+        refine RefE.underIf (fun _ => rfl) (RefE.abort0 (by rfl) fun g2 => ?_)
+        refine RefE.underIf (fun _ => rfl) (RefE.abort0 (by rfl) fun g3 => ?_)
         have hv : viewOK m₂ (r₂.headD 0) FORALL := ⟨g2, UInt64.not_le.mp g3⟩
         obtain ⟨-, hdom, hbody⟩ := view_forall m₂ _ hS₂.arena.base (r₂.headD 0) hrw2 hv g1'
         have hvb := viewBind_forall m₂ _ hS₂.arena.base (r₂.headD 0) hrw2 hv g1'
-        have hfa : ((decE (r₂.headD 0)).tag == ETag.forallE) = true := by
-          rw [decE_tag_forallE_beq _ hrw2]; exact decide_eq_true g1'
-        simp only [hfa, ite_true]
-        refine RefE.bind_right (by rw [viewBind_run', hvb]) ?_
+        refine RefE.bind_right (by rw [viewBind_run', show decH r₂ = decE (r₂.headD 0) from rfl, hvb]) ?_
         dsimp only
         rw [spineArg_bind]
         have hs₂ : SlotPre ⟨m₂, Locals.init []⟩ _ dn vis fe M₂ eb mode := ⟨hS₂, hmode, heb⟩
-        rcases h3 : callE p k "infer_spine_arg" [mode, vis, d, rdW (m.arr64 SPN) (ao + i),
-            tfld m₂ FORALL (tierW (r₂.headD 0)) (idxW (r₂.headD 0)) 0] m₂ with e3 | ⟨r₃, m₃⟩
-        · rw [ispE.k_infer_spine_arg_2.eq_1]
-          exact RefE.bind_left fun hG => CoreSpecE.of_callE (s₀ := ⟨m₂, Locals.init []⟩)
-            (inferSpineArg_anyE p hp hkp hq he k (hk.mono (by omega)) (hG.mono (by omega)) F
-              (by omega) (by omega) _ _ dn vis fe M₂ eb mode d _ _ hs₂ hvv hdom) h3
-        obtain ⟨hok3, ⟨M₃, hS₃, hK₃, hSt₃⟩, -, -⟩ := CoreSpec.of_callW (inferSpineArg_any p hp hkp hq he
-          k (hk.mono (by omega)) F (by omega) (by omega) ⟨m₂, Locals.init []⟩ _ dn vis fe M₂ eb mode d _
-          _ hs₂ hvv hdom) (callW_of_callE h3)
-        refine RefE.bind_right (AM.run_of_ok _ _ hok3) ?_
-        rw [ispE.k_infer_spine_arg_2.eq_2]
-        by_cases g4 : m₃.len64 SPN ≤ co
-        · rw [ite_eq_left g4]; exact RefE.of_cls0 rfl
-        rw [ite_eq_right g4, ispE.j1.eq_def]
+        refine RefE.under (fun _ => rfl) (fun _ => ispE.k_infer_spine_arg_2.none ..) fun hx => RefE.bind_callE hx
+          (inferSpineArg_any p hp hkp hq he k (hk.mono (by omega)) F (by omega) (by omega) ⟨m₂, Locals.init []⟩ _
+            dn vis fe M₂ eb mode d _ _ hs₂ hvv hdom)
+          (fun (hG : InferG p N) => inferSpineArg_anyE p hp hkp hq he k (hk.mono (by omega)) (hG.mono (by omega)) F
+            (by omega) (by omega) ⟨m₂, Locals.init []⟩ _ dn vis fe M₂ eb mode d _ _ hs₂ hvv hdom)
+          fun r₃ m₃ _ ⟨_, ⟨M₃, hS₃, hK₃, hSt₃⟩, _, _⟩ => ?_
+        rw [Function.comp_apply, ispE.k_infer_spine_arg_2.eq_2]
+        refine RefE.underIf (fun _ => rfl) (RefE.abort0 (by rfl) fun g4 => ?_)
+        rw [ispE.j1.eq_def]
         have g5 := lt_of_not_len64_le hS₃.spn g4
         have hSt13 := hSt₁.trans (hSt₂.trans hSt₃)
         have hacc0 := SpineR.empty m₃ co (by omega)
