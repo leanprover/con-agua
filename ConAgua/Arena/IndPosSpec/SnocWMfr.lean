@@ -1,4 +1,8 @@
-import ConAgua.Arena.IndPosSpec.DepthGo
+module
+
+public import ConAgua.Arena.IndPosSpec.DepthGo
+
+@[expose] public section
 
 /-!
 # SnocWMfr

@@ -1,5 +1,9 @@
-import ConRon.Arena.Promote
-import ConAgua.Arena.Promote
+module
+
+public import ConRon.Arena.Promote
+public import ConAgua.Arena.Promote
+
+@[expose] public section
 
 /-!
 # The promotion memo's relation `PMemoR`

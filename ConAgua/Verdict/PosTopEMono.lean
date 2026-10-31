@@ -1,4 +1,8 @@
-import ConAgua.L.ErrSpec
+module
+
+public import ConAgua.L.ErrSpec
+
+@[expose] public section
 
 /-!
 # More fuel, the same error of class `1`/`2` (lane `verdicts-b`, helper `ia2`, fork `top`)

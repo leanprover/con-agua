@@ -1,9 +1,13 @@
-import ConAgua.Arena.RecCheckSpec.RpLook
-import ConAgua.Arena.IndInstallSpec.InstallRec2Tele
-import ConAgua.Arena.IndPartsSpec.BlockRecNameSetOk
-import ConAgua.Arena.GrindAttr
-import ConAgua.L.GrindAttr
-import ConAgua.L.ModelGen
+module
+
+public import ConAgua.Arena.RecCheckSpec.RpLook
+public import ConAgua.Arena.IndInstallSpec.InstallRec2Tele
+public import ConAgua.Arena.IndPartsSpec.BlockRecNameSetOk
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.L.GrindAttr
+public import ConAgua.L.ModelGen
+
+@[expose] public section
 
 /-!
 # TpnB

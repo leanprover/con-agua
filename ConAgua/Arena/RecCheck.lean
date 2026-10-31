@@ -1,4 +1,8 @@
-import ConAgua.Arena.IndIface
+module
+
+public import ConAgua.Arena.IndIface
+
+@[expose] public section
 
 /-!
 # The recursor stage's class kit, in L (lane `induct`, module `RecCheck`)

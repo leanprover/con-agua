@@ -1,6 +1,10 @@
-import ConAgua.Arena.RecCheckSpec.TaCW
-import ConAgua.Arena.RecSim
-import ConAgua.Arena.IndPosSpec.BvbWMfr
+module
+
+public import ConAgua.Arena.RecCheckSpec.TaCW
+public import ConAgua.Arena.RecSim
+public import ConAgua.Arena.IndPosSpec.BvbWMfr
+
+@[expose] public section
 
 /-!
 # RcLook

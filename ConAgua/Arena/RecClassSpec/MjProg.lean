@@ -1,7 +1,11 @@
-import ConAgua.Arena.IndRealNames
-import ConAgua.Arena.IndRealOpf
-import ConAgua.Arena.RecClassSpec.CloseLams
-import ConAgua.Arena.IndDecStab
+module
+
+public import ConAgua.Arena.IndRealNames
+public import ConAgua.Arena.IndRealOpf
+public import ConAgua.Arena.RecClassSpec.CloseLams
+public import ConAgua.Arena.IndDecStab
+
+@[expose] public section
 
 /-!
 # MjProg

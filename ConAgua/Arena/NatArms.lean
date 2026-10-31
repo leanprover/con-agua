@@ -1,16 +1,20 @@
-import ConAgua.Arena.Tiers
-import ConAgua.Arena.NatGcd
-import ConAgua.Arena.NatCmp
-import ConAgua.Arena.NatBitsNat
-import ConAgua.Arena.NatPow
-import ConAgua.Arena.NatShr
-import ConAgua.Arena.NatShl
-import ConAgua.Arena.GrindAttr
-import ConAgua.Arena.NatGrindAttr
-import ConAgua.L.GrindAttr
-import Std.Tactic.BVDecide.Normalize.BitVec
-import Std.Tactic.BVDecide.Normalize.Prop
-import Std.WP.Tactic
+module
+
+public import ConAgua.Arena.Tiers
+public import ConAgua.Arena.NatGcd
+public import ConAgua.Arena.NatCmp
+public import ConAgua.Arena.NatBitsNat
+public import ConAgua.Arena.NatPow
+public import ConAgua.Arena.NatShr
+public import ConAgua.Arena.NatShl
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.Arena.NatGrindAttr
+public import ConAgua.L.GrindAttr
+public import Std.Tactic.BVDecide.Normalize.BitVec
+public import Std.Tactic.BVDecide.Normalize.Prop
+public import Std.WP.Tactic
+
+@[expose] public section
 
 /-!
 # The `Nat` arms of `natOpResult`, refined under `ArenaR`

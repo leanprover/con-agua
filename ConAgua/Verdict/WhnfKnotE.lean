@@ -1,9 +1,13 @@
-import ConAgua.Verdict.WhnfM2CE
-import ConAgua.Verdict.WhnfPrepE
-import ConAgua.Verdict.WhnfIotaRecE
-import ConAgua.Verdict.WhnfIotaE
-import ConAgua.Verdict.WhnfSlotE
-import ConAgua.Verdict.WhnfPirrE
+module
+
+public import ConAgua.Verdict.WhnfM2CE
+public import ConAgua.Verdict.WhnfPrepE
+public import ConAgua.Verdict.WhnfIotaRecE
+public import ConAgua.Verdict.WhnfIotaE
+public import ConAgua.Verdict.WhnfSlotE
+public import ConAgua.Verdict.WhnfPirrE
+
+@[expose] public section
 
 /-!
 # The `whnf` family's part of the error knot (lane `verdicts-b`, helper `k2`)

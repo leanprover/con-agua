@@ -1,8 +1,12 @@
-import ConAgua.Arena.DefEqMidLazy
-import ConAgua.Verdict.WhnfNatE
-import ConAgua.Arena.GrindAttr
-import ConAgua.L.GrindAttr
-import ConAgua.L.ModelGen
+module
+
+public import ConAgua.Arena.DefEqMidLazy
+public import ConAgua.Verdict.WhnfNatE
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.L.GrindAttr
+public import ConAgua.L.ModelGen
+
+@[expose] public section
 
 /-!
 # The lazy-delta loop: `lazy_nat`, `lazy_iter`, `lazy_delta_reduction` (lane `defeq`)

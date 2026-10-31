@@ -1,6 +1,10 @@
-import ConAgua.Arena.IndPartsSpec.PartsConsPL
-import ConAgua.Arena.IndSumSpec.SumProg
-import ConAgua.Arena.RecClassSpec.MjProg
+module
+
+public import ConAgua.Arena.IndPartsSpec.PartsConsPL
+public import ConAgua.Arena.IndSumSpec.SumProg
+public import ConAgua.Arena.RecClassSpec.MjProg
+
+@[expose] public section
 
 /-!
 # InstallCtxWord9

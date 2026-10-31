@@ -1,8 +1,12 @@
-import ConAgua.Arena.DefEqStuck
-import ConAgua.Arena.GrindAttr
-import ConAgua.L.GrindAttr
-import ConAgua.Arena.WhnfCoreProj
-import ConAgua.Arena.LdRd
+module
+
+public import ConAgua.Arena.DefEqStuck
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.L.GrindAttr
+public import ConAgua.Arena.WhnfCoreProj
+public import ConAgua.Arena.LdRd
+
+@[expose] public section
 
 /-!
 # `eta_cert` refines `etaCert` (lane `defeq`, helper `defeq-top`)

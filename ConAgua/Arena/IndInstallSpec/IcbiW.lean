@@ -1,12 +1,16 @@
-import ConAgua.Arena.IndInstall
-import ConAgua.Arena.IndMaster
-import ConAgua.Arena.WhnfBase
-import Std.Tactic.BVDecide.Normalize.Prop
-import ConAgua.Arena.GrindAttr
-import ConAgua.Arena.IndGrindAttr
-import ConAgua.L.GrindAttr
-import Std.WP.Tactic
-import ConAgua.L.Examples
+module
+
+public import ConAgua.Arena.IndInstall
+public import ConAgua.Arena.IndMaster
+public import ConAgua.Arena.WhnfBase
+public import Std.Tactic.BVDecide.Normalize.Prop
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.Arena.IndGrindAttr
+public import ConAgua.L.GrindAttr
+public import Std.WP.Tactic
+public import ConAgua.L.Examples
+
+@[expose] public section
 
 /-!
 # IcbiW

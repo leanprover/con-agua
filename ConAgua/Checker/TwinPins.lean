@@ -1,4 +1,8 @@
-import ConRon.Bridge.Checker.Pins
+module
+
+public import ConRon.Bridge.Checker.Pins
+
+@[expose] public section
 
 /-!
 # `internAllPins` leaves the pin table (lane `pipeline`)

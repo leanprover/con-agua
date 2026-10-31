@@ -1,5 +1,9 @@
-import ConAgua.Arena.PromoteCIRef.Rule
-import ConRon.Bridge.Grind
+module
+
+public import ConAgua.Arena.PromoteCIRef.Rule
+public import ConRon.Bridge.Grind
+
+@[expose] public section
 
 /-!
 # Rules

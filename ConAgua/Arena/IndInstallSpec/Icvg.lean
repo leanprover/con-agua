@@ -1,7 +1,11 @@
-import ConAgua.Arena.RecClassSpec.Classes
-import ConAgua.Arena.IndGrindAttr
-import ConAgua.L.GrindAttr
-import ConAgua.L.ModelGen
+module
+
+public import ConAgua.Arena.RecClassSpec.Classes
+public import ConAgua.Arena.IndGrindAttr
+public import ConAgua.L.GrindAttr
+public import ConAgua.L.ModelGen
+
+@[expose] public section
 
 /-!
 # Icvg

@@ -1,9 +1,13 @@
-import ConAgua.Arena.RecGen
-import ConAgua.Arena.Verdict
-import ConAgua.Checker.NoVerdictTree
-import ConAgua.Arena.GrindAttr
-import ConAgua.L.GrindAttr
-import ConAgua.L.ModelGen
+module
+
+public import ConAgua.Arena.RecGen
+public import ConAgua.Arena.Verdict
+public import ConAgua.Checker.NoVerdictTree
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.L.GrindAttr
+public import ConAgua.L.ModelGen
+
+@[expose] public section
 
 /-!
 # The unified model of `gen_rec_check_prep`

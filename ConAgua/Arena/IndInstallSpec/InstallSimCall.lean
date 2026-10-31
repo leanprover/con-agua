@@ -1,8 +1,12 @@
-import ConAgua.Arena.IndInstallSpec.InstallCvDecB
-import ConAgua.Arena.IndPartsSpec.IndPartsProg2
-import ConAgua.Arena.RecStab
-import ConAgua.Arena.IndGrindAttr
-import ConAgua.L.GrindAttr
+module
+
+public import ConAgua.Arena.IndInstallSpec.InstallCvDecB
+public import ConAgua.Arena.IndPartsSpec.IndPartsProg2
+public import ConAgua.Arena.RecStab
+public import ConAgua.Arena.IndGrindAttr
+public import ConAgua.L.GrindAttr
+
+@[expose] public section
 
 /-!
 # InstallSimCall

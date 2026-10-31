@@ -1,4 +1,8 @@
-import ConAgua.Arena.DefEqMid
+module
+
+public import ConAgua.Arena.DefEqMid
+
+@[expose] public section
 
 /-!
 # The defeq family's error claims: the kit (lane `verdicts-b`, helper `k3`)

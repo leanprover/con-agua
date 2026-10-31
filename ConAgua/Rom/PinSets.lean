@@ -1,5 +1,9 @@
-import ConAgua.Rom.PinReadSpec
-import ConAgua.Rom.DecExpr
+module
+
+public import ConAgua.Rom.PinReadSpec
+public import ConAgua.Rom.DecExpr
+
+@[expose] public section
 
 /-!
 # The pin-set reader in the decoder direction (lane `romload`)

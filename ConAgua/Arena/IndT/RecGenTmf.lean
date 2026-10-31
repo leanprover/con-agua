@@ -1,9 +1,13 @@
-import ConAgua.Arena.IndRealLvlC
-import ConAgua.Arena.RecClassSpec.CrW
-import ConAgua.Arena.RecGenSpec.ClassKeyCanon
-import ConAgua.Verdict.IndBTmf
-import ConAgua.Arena.IndInstallSpec.ConsBlockCtors
-import ConAgua.Arena.DeclBasisSpec
+module
+
+public import ConAgua.Arena.IndRealLvlC
+public import ConAgua.Arena.RecClassSpec.CrW
+public import ConAgua.Arena.RecGenSpec.ClassKeyCanon
+public import ConAgua.Verdict.IndBTmf
+public import ConAgua.Arena.IndInstallSpec.ConsBlockCtors
+public import ConAgua.Arena.DeclBasisSpec
+
+@[expose] public section
 
 /-!
 # `target_major_of` under `StageC` with the real `inst_lp_fast` (lane `indstaget`, helper `rcC`)

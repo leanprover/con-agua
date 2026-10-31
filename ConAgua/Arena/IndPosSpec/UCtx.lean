@@ -1,5 +1,9 @@
-import ConAgua.Arena.IndPosSpec.EnvFindWHit
-import ConAgua.Arena.IndPosSpec.Pos2CvLpsWStage
+module
+
+public import ConAgua.Arena.IndPosSpec.EnvFindWHit
+public import ConAgua.Arena.IndPosSpec.Pos2CvLpsWStage
+
+@[expose] public section
 
 /-!
 # UCtx

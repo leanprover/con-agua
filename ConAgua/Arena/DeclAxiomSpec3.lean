@@ -1,9 +1,13 @@
-import ConAgua.Arena.DeclCanonSpec2
-import ConAgua.Arena.DeclReduceSpec2
-import ConAgua.Arena.GrindAttr
-import ConAgua.Arena.IndGrindAttr
-import ConAgua.L.GrindAttr
-import ConAgua.Arena.DeclAxiomSpec2
+module
+
+public import ConAgua.Arena.DeclCanonSpec2
+public import ConAgua.Arena.DeclReduceSpec2
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.Arena.IndGrindAttr
+public import ConAgua.L.GrindAttr
+public import ConAgua.Arena.DeclAxiomSpec2
+
+@[expose] public section
 
 /-!
 # The standard axioms: `find_pinned`, `std_axiom_ok` (lane `decls3`)

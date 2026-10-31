@@ -1,4 +1,8 @@
-import ConAgua.Arena.InstLPWalkRef
+module
+
+public import ConAgua.Arena.InstLPWalkRef
+
+@[expose] public section
 
 /-!
 # The `instLP` walk refines `instLPGo`: the arms `fvar`, `proj`, `letE`

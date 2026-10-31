@@ -1,10 +1,14 @@
-import ConRon.Bridge.Promote.Walk
-import ConAgua.Arena.InstLP
-import ConAgua.Arena.LevelInternRef
-import Std.Tactic.BVDecide.Normalize.BitVec
-import ConAgua.Arena.GrindAttr
-import ConAgua.L.GrindAttr
-import ConRon.Bridge.Grind
+module
+
+public import ConRon.Bridge.Promote.Walk
+public import ConAgua.Arena.InstLP
+public import ConAgua.Arena.LevelInternRef
+public import Std.Tactic.BVDecide.Normalize.BitVec
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.L.GrindAttr
+public import ConRon.Bridge.Grind
+
+@[expose] public section
 
 /-!
 # `keys_ok`: the substitution's keys are stored names

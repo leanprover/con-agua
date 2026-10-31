@@ -1,9 +1,13 @@
-import ConAgua.Arena.DefEqMidQuick
-import ConAgua.Arena.DefEqMidLoops
-import ConAgua.Arena.GrindAttr
-import ConAgua.L.GrindAttr
-import ConAgua.L.ModelGen
-import ConAgua.Arena.WhnfIotaRefine
+module
+
+public import ConAgua.Arena.DefEqMidQuick
+public import ConAgua.Arena.DefEqMidLoops
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.L.GrindAttr
+public import ConAgua.L.ModelGen
+public import ConAgua.Arena.WhnfIotaRefine
+
+@[expose] public section
 
 /-!
 # The same-head spine comparison: `defeq_spine` (lane `defeq`)

@@ -1,9 +1,13 @@
-import ConAgua.Arena.IndPosSpec.InstW
-import ConAgua.Arena.IndPosSpec.PcrK3
-import ConAgua.Arena.IndPosSpec.PosmemoRxMfr
-import ConAgua.Arena.GrindAttr
-import ConAgua.Arena.IndGrindAttr
-import ConAgua.L.GrindAttr
+module
+
+public import ConAgua.Arena.IndPosSpec.InstW
+public import ConAgua.Arena.IndPosSpec.PcrK3
+public import ConAgua.Arena.IndPosSpec.PosmemoRxMfr
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.Arena.IndGrindAttr
+public import ConAgua.L.GrindAttr
+
+@[expose] public section
 
 /-!
 # DepthGo: `ConRon.Arena.depthGo`, `ConRon.Arena.depth`, `ConRon.Arena.nestPhs`, `ConRon.Arena.whnfWalkFuel`

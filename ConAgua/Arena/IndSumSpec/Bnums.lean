@@ -1,6 +1,10 @@
-import ConRon.Arena.Handle
-import Std.WP.Assertion
-import ConAgua.Arena.Reasons
+module
+
+public import ConRon.Arena.Handle
+public import Std.WP.Assertion
+public import ConAgua.Arena.Reasons
+
+@[expose] public section
 
 /-!
 # Bnums

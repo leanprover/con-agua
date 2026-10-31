@@ -1,7 +1,11 @@
-import ConAgua.Front.LineRefine
-import ConAgua.Front.ApplyDLineRef
-import ConAgua.Front.LineRecLink
-import ConAgua.Scan.LineLink
+module
+
+public import ConAgua.Front.LineRefine
+public import ConAgua.Front.ApplyDLineRef
+public import ConAgua.Front.LineRecLink
+public import ConAgua.Scan.LineLink
+
+@[expose] public section
 
 /-!
 # One line, both outcomes: `front_line`

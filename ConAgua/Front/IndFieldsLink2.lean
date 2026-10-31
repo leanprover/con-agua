@@ -1,6 +1,10 @@
-import ConAgua.Front.IndFieldsLink
-import Std.Tactic.BVDecide.Normalize.Bool
-import Std.Tactic.BVDecide.Normalize.Prop
+module
+
+public import ConAgua.Front.IndFieldsLink
+public import Std.Tactic.BVDecide.Normalize.Bool
+public import Std.Tactic.BVDecide.Normalize.Prop
+
+@[expose] public section
 
 /-!
 # The fields pass of an `inductive` line, linked to con-leche: the record kinds

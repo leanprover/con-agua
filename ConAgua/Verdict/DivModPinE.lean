@@ -1,5 +1,9 @@
-import ConAgua.Arena.DeclDivGateT2
-import ConAgua.L.ModelGen
+module
+
+public import ConAgua.Arena.DeclDivGateT2
+public import ConAgua.L.ModelGen
+
+@[expose] public section
 
 /-!
 # The `Nat.div` family's variant loop and gate: `check_div_mod_pin_loop`, `check_div_mod_pin`

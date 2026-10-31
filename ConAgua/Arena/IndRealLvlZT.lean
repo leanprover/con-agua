@@ -1,8 +1,12 @@
-import ConAgua.Arena.IndMaster
-import ConAgua.Arena.LevelApd
-import ConAgua.Arena.LevelArena
-import Std.Tactic.BVDecide.Normalize.Prop
-import ConRon.Bridge.Grind
+module
+
+public import ConAgua.Arena.IndMaster
+public import ConAgua.Arena.LevelApd
+public import ConAgua.Arena.LevelArena
+public import Std.Tactic.BVDecide.Normalize.Prop
+public import ConRon.Bridge.Grind
+
+@[expose] public section
 
 /-!
 # `lv_zero_caps` under `StageT` (lane `indproofs4`, helper `lvl`)

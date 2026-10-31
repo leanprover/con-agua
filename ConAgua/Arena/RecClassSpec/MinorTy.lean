@@ -1,4 +1,8 @@
-import ConAgua.Arena.RecClassSpec.MnW
+module
+
+public import ConAgua.Arena.RecClassSpec.MnW
+
+@[expose] public section
 
 /-!
 # MinorTy: `ConRon.Arena.ClassGen.minorTy`

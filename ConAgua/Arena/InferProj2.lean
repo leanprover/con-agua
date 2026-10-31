@@ -1,10 +1,14 @@
-import ConAgua.Arena.InferProj
-import ConAgua.Arena.InferBodyDisp
-import ConAgua.Arena.ProjView
-import ConAgua.Arena.WhnfCoreProj
-import ConAgua.Arena.DefEqStuckCert
-import ConAgua.Arena.WhnfProjRefine
-import ConAgua.Arena.InferProj2Models
+module
+
+public import ConAgua.Arena.InferProj
+public import ConAgua.Arena.InferBodyDisp
+public import ConAgua.Arena.ProjView
+public import ConAgua.Arena.WhnfCoreProj
+public import ConAgua.Arena.DefEqStuckCert
+public import ConAgua.Arena.WhnfProjRefine
+public import ConAgua.Arena.InferProj2Models
+
+@[expose] public section
 
 /-!
 # `inferProj`: `infer_proj` (lane `defeq2`, helper `defeq2-proj`)

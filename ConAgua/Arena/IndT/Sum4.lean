@@ -1,9 +1,13 @@
-import ConAgua.Arena.IndT.Sum3
-import ConAgua.Verdict.DeclValsE
-import ConAgua.Arena.RecGenSpec.Classes
-import ConAgua.Arena.RecGenSpec.Rec3TmdWDecB
-import ConAgua.Arena.RecGenSpec.ClassFeR
-import ConAgua.Arena.IndT.SumSteps
+module
+
+public import ConAgua.Arena.IndT.Sum3
+public import ConAgua.Verdict.DeclValsE
+public import ConAgua.Arena.RecGenSpec.Classes
+public import ConAgua.Arena.RecGenSpec.Rec3TmdWDecB
+public import ConAgua.Arena.RecGenSpec.ClassFeR
+public import ConAgua.Arena.IndT.SumSteps
+
+@[expose] public section
 
 
 /-!

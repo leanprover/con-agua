@@ -1,4 +1,8 @@
-import ConAgua.Arena.RecClassSpec.MjProg
+module
+
+public import ConAgua.Arena.RecClassSpec.MjProg
+
+@[expose] public section
 
 /-!
 # GtProg

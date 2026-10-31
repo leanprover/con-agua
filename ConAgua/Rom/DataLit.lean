@@ -1,5 +1,9 @@
-import ConAgua.Arena.Prelude
-import ConAgua.Compiler.WFSplit
+module
+
+public import ConAgua.Arena.Prelude
+public import ConAgua.Compiler.WFSplit
+
+@[expose] public section
 
 /-!
 # The startup data as a byte literal

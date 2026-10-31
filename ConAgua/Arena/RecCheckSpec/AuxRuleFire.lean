@@ -1,4 +1,8 @@
-import ConAgua.Arena.RecCheckSpec.ArfW
+module
+
+public import ConAgua.Arena.RecCheckSpec.ArfW
+
+@[expose] public section
 
 /-!
 # AuxRuleFire: `ConRon.Arena.auxRuleFire`

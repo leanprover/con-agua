@@ -1,8 +1,12 @@
-import ConAgua.Arena.IndPartsSpec.BlockRecNamesUnreserved
-import ConAgua.Arena.IndPartsSpec.EqW
-import ConAgua.Arena.GrindAttr
-import ConAgua.Arena.IndGrindAttr
-import ConAgua.L.GrindAttr
+module
+
+public import ConAgua.Arena.IndPartsSpec.BlockRecNamesUnreserved
+public import ConAgua.Arena.IndPartsSpec.EqW
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.Arena.IndGrindAttr
+public import ConAgua.L.GrindAttr
+
+@[expose] public section
 
 /-!
 # BlockRecLpsOk: `ConRon.Arena.blockRecLpsOk`

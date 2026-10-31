@@ -1,5 +1,9 @@
-import ConAgua.Arena.PromoteCIRef.HlistUnfold
-import ConAgua.Arena.PromoteCIRef.PmDecRuleWords
+module
+
+public import ConAgua.Arena.PromoteCIRef.HlistUnfold
+public import ConAgua.Arena.PromoteCIRef.PmDecRuleWords
+
+@[expose] public section
 
 /-!
 # PmDecTblBound

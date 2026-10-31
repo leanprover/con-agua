@@ -1,5 +1,9 @@
-import Lean
-import ConAgua.Census.Attr
+module
+
+public import Lean
+public import ConAgua.Census.Attr
+
+@[expose] public section
 
 /-!
 # The census dump (`lake exe census`)

@@ -1,6 +1,10 @@
-import ConAgua.Rom.Dec
-import ConRon.Bridge.Frontend.Shared
-import ConAgua.Arena.RomExprRef
+module
+
+public import ConAgua.Rom.Dec
+public import ConRon.Bridge.Frontend.Shared
+public import ConAgua.Arena.RomExprRef
+
+@[expose] public section
 
 /-!
 # The expression reader in the decoder direction (lane `romload`)

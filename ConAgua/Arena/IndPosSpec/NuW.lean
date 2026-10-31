@@ -1,11 +1,15 @@
-import ConAgua.Arena.IndPosSpec.FgW
-import ConAgua.Arena.IndPosSpec.Grow
-import ConAgua.Arena.IndPosSpec.NestGroupCtors
-import ConAgua.Arena.IndPosSpec.UnW
-import ConAgua.Arena.IlpRd
-import ConAgua.Arena.GrindAttr
-import ConAgua.Arena.IndGrindAttr
-import ConAgua.L.GrindAttr
+module
+
+public import ConAgua.Arena.IndPosSpec.FgW
+public import ConAgua.Arena.IndPosSpec.Grow
+public import ConAgua.Arena.IndPosSpec.NestGroupCtors
+public import ConAgua.Arena.IndPosSpec.UnW
+public import ConAgua.Arena.IlpRd
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.Arena.IndGrindAttr
+public import ConAgua.L.GrindAttr
+
+@[expose] public section
 
 /-!
 # NuW

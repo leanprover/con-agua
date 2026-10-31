@@ -1,8 +1,12 @@
-import ConAgua.Arena.IndT.Sum3
-import ConAgua.Arena.IndRealSctC
-import ConAgua.Arena.IndInstallSpec.PnfW
-import ConAgua.Verdict.PosTopE1
-import ConAgua.Arena.IndT.Install1
+module
+
+public import ConAgua.Arena.IndT.Sum3
+public import ConAgua.Arena.IndRealSctC
+public import ConAgua.Arena.IndInstallSpec.PnfW
+public import ConAgua.Verdict.PosTopE1
+public import ConAgua.Arena.IndT.Install1
+
+@[expose] public section
 
 /-!
 # `checkAbsCtorSorts`, `checkAbsCtorSortsAll` under `StageC` (lane `indstaget`)

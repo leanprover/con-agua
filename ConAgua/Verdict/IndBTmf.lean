@@ -1,6 +1,10 @@
-import ConAgua.Verdict.IndBTmc
-import ConAgua.Arena.GrindAttr
-import ConAgua.L.ModelGen
+module
+
+public import ConAgua.Verdict.IndBTmc
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.L.ModelGen
+
+@[expose] public section
 /-!
 # `target_major_of`: the model for both outcomes
 

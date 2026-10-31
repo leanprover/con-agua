@@ -1,6 +1,10 @@
-import ConAgua.Arena.DefEqMid
-import ConAgua.Arena.GrindAttr
-import ConAgua.L.GrindAttr
+module
+
+public import ConAgua.Arena.DefEqMid
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.L.GrindAttr
+
+@[expose] public section
 
 /-!
 # The batched ∀ descent: `defeq_peel` and `defeq_binders` (lane `defeq`)

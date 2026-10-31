@@ -1,6 +1,10 @@
-import ConAgua.Arena.IndRealLvlC
-import ConAgua.Arena.GrindAttr
-import ConAgua.L.ModelGen
+module
+
+public import ConAgua.Arena.IndRealLvlC
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.L.ModelGen
+
+@[expose] public section
 
 /-!
 # `lvl_eq_fueled`: one model and one refinement for both outcomes

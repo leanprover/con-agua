@@ -1,6 +1,10 @@
-import ConAgua.Arena.DeclApdRef
-import ConAgua.Arena.MemoRekey
-import ConAgua.Arena.StageTLift
+module
+
+public import ConAgua.Arena.DeclApdRef
+public import ConAgua.Arena.MemoRekey
+public import ConAgua.Arena.StageTLift
+
+@[expose] public section
 
 /-!
 # `all_level_params_defined`'s model and its refinement under `StageT` (lane `indproofs4`, helper `wkt`)

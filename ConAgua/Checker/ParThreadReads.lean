@@ -1,6 +1,10 @@
-import ConAgua.Checker.PhaseBReads
-import ConAgua.Arena.LevelIntern
-import ConAgua.Arena.LevelSubstLP
+module
+
+public import ConAgua.Checker.PhaseBReads
+public import ConAgua.Arena.LevelIntern
+public import ConAgua.Arena.LevelSubstLP
+
+@[expose] public section
 
 /-!
 # Phase B's read set is the thread's arrays (lane parmode)

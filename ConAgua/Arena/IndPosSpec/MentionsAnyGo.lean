@@ -1,7 +1,11 @@
-import ConAgua.Arena.IndPosSpec.NodeV
-import ConAgua.Arena.IndPosSpec.SlRCongr
-import ConAgua.Arena.IndPosSpec.SnocWDecK
-import ConAgua.Arena.IndGrindAttr
+module
+
+public import ConAgua.Arena.IndPosSpec.NodeV
+public import ConAgua.Arena.IndPosSpec.SlRCongr
+public import ConAgua.Arena.IndPosSpec.SnocWDecK
+public import ConAgua.Arena.IndGrindAttr
+
+@[expose] public section
 
 /-!
 # MentionsAnyGo: `ConRon.Arena.mentionsAnyGo`, `ConRon.Arena.nestCanonSub`

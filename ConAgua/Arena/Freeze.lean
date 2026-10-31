@@ -1,4 +1,8 @@
-import ConAgua.Arena.DeclBase
+module
+
+public import ConAgua.Arena.DeclBase
+
+@[expose] public section
 
 /-!
 # The frozen buffer: compaction of the persistent tier (lane parmode, docs/design/parmode.md)

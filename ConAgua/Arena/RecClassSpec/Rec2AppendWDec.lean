@@ -1,5 +1,9 @@
-import ConAgua.Arena.RecClassSpec.ClassGenMajorCi
-import ConAgua.Arena.IndPosSpec.RootHoles
+module
+
+public import ConAgua.Arena.RecClassSpec.ClassGenMajorCi
+public import ConAgua.Arena.IndPosSpec.RootHoles
+
+@[expose] public section
 
 /-!
 # Rec2AppendWDec

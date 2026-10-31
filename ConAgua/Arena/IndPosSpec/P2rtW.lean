@@ -1,8 +1,12 @@
-import ConAgua.Arena.IndPosSpec.Nb
-import ConAgua.Arena.IndPosSpec.RsLook
-import ConAgua.Arena.GrindAttr
-import ConAgua.Arena.IndGrindAttr
-import ConAgua.L.GrindAttr
+module
+
+public import ConAgua.Arena.IndPosSpec.Nb
+public import ConAgua.Arena.IndPosSpec.RsLook
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.Arena.IndGrindAttr
+public import ConAgua.L.GrindAttr
+
+@[expose] public section
 
 /-!
 # P2rtW

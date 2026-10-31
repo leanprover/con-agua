@@ -1,6 +1,10 @@
-import ConAgua.Verdict.DeclHdrE
-import ConAgua.Arena.GrindAttr
-import ConAgua.L.ModelGen
+module
+
+public import ConAgua.Verdict.DeclHdrE
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.L.ModelGen
+
+@[expose] public section
 
 /-!
 # `check_constant_val`'s refinement; the verdict claims of `check_defn_val`, `check_opaque_val`

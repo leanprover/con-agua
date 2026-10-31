@@ -1,4 +1,8 @@
-import ConAgua.Checker.VerdictEntry1
+module
+
+public import ConAgua.Checker.VerdictEntry1
+
+@[expose] public section
 
 /-!
 # The frontend's two stages' error specs: `builtin_prelude`, `front_run`

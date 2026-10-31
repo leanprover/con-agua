@@ -1,4 +1,8 @@
-import ConAgua.Arena.DeclStepSpec
+module
+
+public import ConAgua.Arena.DeclStepSpec
+
+@[expose] public section
 
 /-!
 # OfFrame

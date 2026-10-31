@@ -1,4 +1,8 @@
-import ConAgua.Arena.PromoteRecRef
+module
+
+public import ConAgua.Arena.PromoteRecRef
+
+@[expose] public section
 
 /-!
 # TakeDropMin

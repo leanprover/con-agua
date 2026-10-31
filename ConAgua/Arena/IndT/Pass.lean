@@ -1,11 +1,15 @@
-import ConAgua.Arena.IndT.Tail
-import ConAgua.Arena.IndT.Install4
-import ConAgua.Arena.IndT.Positivity
-import ConAgua.Arena.IndT.RecGen21
-import ConAgua.Arena.IndT.Install7
-import ConAgua.Arena.GrindAttr
-import ConAgua.L.GrindAttr
-import ConAgua.L.ModelGen
+module
+
+public import ConAgua.Arena.IndT.Tail
+public import ConAgua.Arena.IndT.Install4
+public import ConAgua.Arena.IndT.Positivity
+public import ConAgua.Arena.IndT.RecGen21
+public import ConAgua.Arena.IndT.Install7
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.L.GrindAttr
+public import ConAgua.L.ModelGen
+
+@[expose] public section
 
 /-!
 # `check_block_pass`: one model, one refinement

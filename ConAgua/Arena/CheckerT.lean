@@ -1,13 +1,17 @@
-import ConAgua.Arena.LoopT
-import ConAgua.Arena.IndArmLps
-import ConAgua.Arena.DeclAndPinIndRef
-import ConAgua.Arena.AndPinScratch
-import ConAgua.Arena.DeclDefnT
-import ConAgua.Arena.DeclAxQuotT
-import ConAgua.Arena.DeclNatSubAll
-import ConAgua.Arena.GrindAttr
-import ConAgua.L.GrindAttr
-import ConAgua.L.ModelGen
+module
+
+public import ConAgua.Arena.LoopT
+public import ConAgua.Arena.IndArmLps
+public import ConAgua.Arena.DeclAndPinIndRef
+public import ConAgua.Arena.AndPinScratch
+public import ConAgua.Arena.DeclDefnT
+public import ConAgua.Arena.DeclAxQuotT
+public import ConAgua.Arena.DeclNatSubAll
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.L.GrindAttr
+public import ConAgua.L.ModelGen
+
+@[expose] public section
 
 /-!
 # Phase A under `StageT` (lane `loopt2`)

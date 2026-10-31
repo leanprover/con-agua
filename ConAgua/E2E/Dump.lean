@@ -1,7 +1,11 @@
-import ConAgua.E2E.Ser
-import Lean.Elab.Command
-import Lean.Meta.Eval
-import Std.Do.Triple.SpecLemmas
+module
+
+public import ConAgua.E2E.Ser
+public import Lean.Elab.Command
+public import Lean.Meta.Eval
+public import Std.Do.Triple.SpecLemmas
+
+@[expose] public section
 
 /-!
 # Dump every L function an import closure names (lane `e2e`)

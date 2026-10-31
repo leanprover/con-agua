@@ -1,4 +1,8 @@
-import ConAgua.Arena.IndIface
+module
+
+public import ConAgua.Arena.IndIface
+
+@[expose] public section
 
 /-!
 # The inductive stage in L: nested positivity, part 2 (lane `induct`, worker E)

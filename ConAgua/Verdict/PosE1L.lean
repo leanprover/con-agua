@@ -1,6 +1,10 @@
-import ConAgua.Verdict.PosE1M
-import ConAgua.Arena.IndRealAbsPos
-import ConAgua.Arena.IndPosSpec.NestCrest
+module
+
+public import ConAgua.Verdict.PosE1M
+public import ConAgua.Arena.IndRealAbsPos
+public import ConAgua.Arena.IndPosSpec.NestCrest
+
+@[expose] public section
 
 /-!
 # `nest_pos_fvar`, `nest_cont_checks`: one refinement for both outcomes

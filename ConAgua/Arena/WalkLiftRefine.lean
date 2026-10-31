@@ -1,11 +1,15 @@
-import ConAgua.Arena.WalkLift
-import ConAgua.Arena.Abs1Refine
-import ConAgua.Arena.BvarBRefine
-import ConAgua.Arena.LiftRefine
-import ConAgua.Arena.Keeps
-import ConAgua.Arena.WriteSets
-import ConAgua.Census.Attr
-import Std.Tactic.BVDecide.Normalize.Prop
+module
+
+public import ConAgua.Arena.WalkLift
+public import ConAgua.Arena.Abs1Refine
+public import ConAgua.Arena.BvarBRefine
+public import ConAgua.Arena.LiftRefine
+public import ConAgua.Arena.Keeps
+public import ConAgua.Arena.WriteSets
+public import ConAgua.Census.Attr
+public import Std.Tactic.BVDecide.Normalize.Prop
+
+@[expose] public section
 
 /-!
 # `instantiate1_lift_fast` refines the arena's `instantiate1LiftFast` (lane `tails`)

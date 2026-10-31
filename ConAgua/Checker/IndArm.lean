@@ -1,6 +1,10 @@
-import ConAgua.Checker.LoopProg
-import ConAgua.Checker.IndArmClosed
-import ConAgua.Arena.IndArm
+module
+
+public import ConAgua.Checker.LoopProg
+public import ConAgua.Checker.IndArmClosed
+public import ConAgua.Arena.IndArm
+
+@[expose] public section
 
 /-!
 # The inductive arm's contract at the checker's program (lane `indproofs4`)

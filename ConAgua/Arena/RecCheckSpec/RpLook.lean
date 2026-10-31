@@ -1,6 +1,10 @@
-import ConAgua.Arena.IndRealIlpN
-import ConAgua.Arena.RecCheckSpec.PtrNamesWDec
-import ConAgua.Arena.IndPartsSpec.SetEqW
+module
+
+public import ConAgua.Arena.IndRealIlpN
+public import ConAgua.Arena.RecCheckSpec.PtrNamesWDec
+public import ConAgua.Arena.IndPartsSpec.SetEqW
+
+@[expose] public section
 
 /-!
 # RpLook

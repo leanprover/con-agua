@@ -1,5 +1,9 @@
-import ConAgua.Arena.IndPosSpec.FgW
-import ConAgua.Arena.RecCheckSpec.TpnB
+module
+
+public import ConAgua.Arena.IndPosSpec.FgW
+public import ConAgua.Arena.RecCheckSpec.TpnB
+
+@[expose] public section
 
 /-!
 # SoaW

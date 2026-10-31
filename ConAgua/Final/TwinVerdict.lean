@@ -1,5 +1,9 @@
-import ConAgua.Final.Twin
-import ConAgua.Arena.Verdict
+module
+
+public import ConAgua.Final.Twin
+public import ConAgua.Arena.Verdict
+
+@[expose] public section
 
 /-!
 # The twin's pipeline failing: what a reject or a decline claims

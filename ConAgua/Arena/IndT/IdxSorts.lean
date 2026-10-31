@@ -1,9 +1,13 @@
-import ConAgua.Arena.IndT.Sum3
-import ConAgua.Arena.IndInstallSpec.InstallRec2PSl
-import ConAgua.Arena.GrindAttr
-import ConAgua.L.GrindAttr
-import ConAgua.L.ModelGen
-import ConAgua.Arena.IndT.Install1
+module
+
+public import ConAgua.Arena.IndT.Sum3
+public import ConAgua.Arena.IndInstallSpec.InstallRec2PSl
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.L.GrindAttr
+public import ConAgua.L.ModelGen
+public import ConAgua.Arena.IndT.Install1
+
+@[expose] public section
 
 /-!
 # `check_block_idx_sorts`: one model and one refinement for both outcomes

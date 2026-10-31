@@ -1,4 +1,8 @@
-import ConAgua.Arena.IndPosSpec.RpGoStep
+module
+
+public import ConAgua.Arena.IndPosSpec.RpGoStep
+
+@[expose] public section
 
 /-!
 # ReplaceAppsGo: `ConRon.Arena.appHole`, `ConRon.Arena.replaceAppsGo`, `ConRon.Arena.replaceApps`

@@ -1,4 +1,8 @@
-import ConAgua.Arena.TwinStep
+module
+
+public import ConAgua.Arena.TwinStep
+
+@[expose] public section
 
 /-!
 # Lifting stage facts from `StageR` to `StageT` (lane `indproofs3`)

@@ -1,5 +1,9 @@
-import ConAgua.Arena.IndCallM
-import ConAgua.Arena.IndRealAbs
+module
+
+public import ConAgua.Arena.IndCallM
+public import ConAgua.Arena.IndRealAbs
+
+@[expose] public section
 
 /-!
 # How a model's `inst_lp_fast` call is read (lane `indstaget`, helper `rcC`)

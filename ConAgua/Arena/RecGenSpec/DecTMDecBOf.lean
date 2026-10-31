@@ -1,8 +1,12 @@
-import ConAgua.Arena.IndRealNames
-import ConAgua.Arena.IndDecStab
-import ConAgua.Arena.IndParts
-import ConAgua.Arena.IndSum
-import ConAgua.Arena.RecCheck
+module
+
+public import ConAgua.Arena.IndRealNames
+public import ConAgua.Arena.IndDecStab
+public import ConAgua.Arena.IndParts
+public import ConAgua.Arena.IndSum
+public import ConAgua.Arena.RecCheck
+
+@[expose] public section
 
 /-!
 # DecTMDecBOf

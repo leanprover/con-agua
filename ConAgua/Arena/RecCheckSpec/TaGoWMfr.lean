@@ -1,6 +1,10 @@
-import ConAgua.Arena.RecCheckSpec.BvbWStageC
-import ConAgua.Arena.RecCheckSpec.EraseFVarTys
-import ConAgua.Arena.IndGrindAttr
+module
+
+public import ConAgua.Arena.RecCheckSpec.BvbWStageC
+public import ConAgua.Arena.RecCheckSpec.EraseFVarTys
+public import ConAgua.Arena.IndGrindAttr
+
+@[expose] public section
 
 /-!
 # TaGoWMfr

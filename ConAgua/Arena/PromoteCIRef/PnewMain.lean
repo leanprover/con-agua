@@ -1,9 +1,13 @@
-import ConAgua.Arena.PromoteCIRef.CiList
-import ConAgua.Arena.PromoteCIRef.Erase
-import ConAgua.Arena.PromoteCIRef.Index
-import ConAgua.Arena.PromoteCIRef.OfFrame
-import ConAgua.Arena.PromoteCIRef.TakeDropMin
-import ConAgua.Arena.PromoteCIRef.TdecJoin
+module
+
+public import ConAgua.Arena.PromoteCIRef.CiList
+public import ConAgua.Arena.PromoteCIRef.Erase
+public import ConAgua.Arena.PromoteCIRef.Index
+public import ConAgua.Arena.PromoteCIRef.OfFrame
+public import ConAgua.Arena.PromoteCIRef.TakeDropMin
+public import ConAgua.Arena.PromoteCIRef.TdecJoin
+
+@[expose] public section
 
 /-!
 # PnewMain

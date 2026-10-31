@@ -1,6 +1,10 @@
-import ConAgua.Arena.DeclDivModSpec.DivModTypePins
-import ConAgua.Arena.GrindAttr
-import ConAgua.L.GrindAttr
+module
+
+public import ConAgua.Arena.DeclDivModSpec.DivModTypePins
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.L.GrindAttr
+
+@[expose] public section
 
 /-!
 # DecCIDefnValue

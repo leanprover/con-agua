@@ -1,6 +1,10 @@
-import ConAgua.Arena.StrLitTy
-import ConAgua.Arena.GrindAttr
-import ConAgua.L.GrindAttr
+module
+
+public import ConAgua.Arena.StrLitTy
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.L.GrindAttr
+
+@[expose] public section
 
 /-!
 # The `List` declaration tests under `CoreS` (helper `defeq2-str-list`)

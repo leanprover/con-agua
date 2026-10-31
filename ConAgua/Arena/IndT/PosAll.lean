@@ -1,12 +1,16 @@
-import ConAgua.Arena.IndT.PosBind
-import ConAgua.Arena.IndT.PosApp
-import ConAgua.Arena.IndT.PosCont
-import ConAgua.Arena.IndT.PosCtors
-import ConAgua.Arena.IndT.PosFrame
-import ConAgua.Arena.IndT.PosKey
-import ConAgua.Arena.IndT.PosNew
-import ConAgua.Arena.IndT.PosOne
-import ConAgua.Arena.IndT.PosWalk
+module
+
+public import ConAgua.Arena.IndT.PosBind
+public import ConAgua.Arena.IndT.PosApp
+public import ConAgua.Arena.IndT.PosCont
+public import ConAgua.Arena.IndT.PosCtors
+public import ConAgua.Arena.IndT.PosFrame
+public import ConAgua.Arena.IndT.PosKey
+public import ConAgua.Arena.IndT.PosNew
+public import ConAgua.Arena.IndT.PosOne
+public import ConAgua.Arena.IndT.PosWalk
+
+@[expose] public section
 
 /-!
 # `nest_pos` and the whole walk under `StageC`

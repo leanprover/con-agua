@@ -1,5 +1,9 @@
-import ConAgua.Arena.IndRealSpine
-import ConAgua.Arena.IndGrindAttr
+module
+
+public import ConAgua.Arena.IndRealSpine
+public import ConAgua.Arena.IndGrindAttr
+
+@[expose] public section
 
 /-!
 # ClassMinorSlotHit

@@ -1,9 +1,13 @@
-import ConAgua.Arena.IndPosSpec.CtxFields
-import ConAgua.Arena.IndPosSpec.RpGoStep
-import ConAgua.Arena.IndSim
-import ConAgua.Arena.GrindAttr
-import ConAgua.Arena.IndGrindAttr
-import ConAgua.L.GrindAttr
+module
+
+public import ConAgua.Arena.IndPosSpec.CtxFields
+public import ConAgua.Arena.IndPosSpec.RpGoStep
+public import ConAgua.Arena.IndSim
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.Arena.IndGrindAttr
+public import ConAgua.L.GrindAttr
+
+@[expose] public section
 
 /-!
 # TaCW

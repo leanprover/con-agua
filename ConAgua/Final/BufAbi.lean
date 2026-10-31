@@ -1,6 +1,10 @@
-import ConAgua.Final.BufLayout
-import ConAgua.Final.ParAbi
-import Kraken.X64.Registers
+module
+
+public import ConAgua.Final.BufLayout
+public import ConAgua.Final.ParAbi
+public import Kraken.X64.Registers
+
+@[expose] public section
 
 /-!
 # `ca_check_b` on the machine (lane parmode)

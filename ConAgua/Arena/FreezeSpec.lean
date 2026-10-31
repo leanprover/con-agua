@@ -1,4 +1,8 @@
-import ConAgua.Arena.FreezeRel
+module
+
+public import ConAgua.Arena.FreezeRel
+
+@[expose] public section
 
 /-!
 # The frozen buffer's spec: `fz_i` and `par_compact` (lane parmode, entry 1)

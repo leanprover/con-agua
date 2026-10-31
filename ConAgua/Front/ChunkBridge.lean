@@ -1,5 +1,9 @@
-import ConLeche.Verify.Frontend.Chunks
-import ConRon.Arena.Frontend.ExportC
+module
+
+public import ConLeche.Verify.Frontend.Chunks
+public import ConRon.Arena.Frontend.ExportC
+
+@[expose] public section
 
 /-!
 # One chunk is the wholesale parse (lane `front3`)

@@ -1,10 +1,14 @@
-import ConAgua.Arena.IndPosSpec.CtxFields
-import ConAgua.Arena.IndPosSpec.GrpAt
-import ConAgua.Arena.DeclHeader
-import ConAgua.Arena.IndPosSpec.MatesW
-import ConAgua.Arena.IndGrindAttr
-import ConAgua.L.GrindAttr
-import ConAgua.L.ModelGen
+module
+
+public import ConAgua.Arena.IndPosSpec.CtxFields
+public import ConAgua.Arena.IndPosSpec.GrpAt
+public import ConAgua.Arena.DeclHeader
+public import ConAgua.Arena.IndPosSpec.MatesW
+public import ConAgua.Arena.IndGrindAttr
+public import ConAgua.L.GrindAttr
+public import ConAgua.L.ModelGen
+
+@[expose] public section
 
 /-!
 # FgW2

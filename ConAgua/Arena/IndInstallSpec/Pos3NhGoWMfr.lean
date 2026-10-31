@@ -1,6 +1,10 @@
-import ConAgua.Arena.IndInstallSpec.PartsShapeFacts
-import ConAgua.Arena.IndPosSpec.FgW
-import ConAgua.Arena.IndPosSpec.NestHoles
+module
+
+public import ConAgua.Arena.IndInstallSpec.PartsShapeFacts
+public import ConAgua.Arena.IndPosSpec.FgW
+public import ConAgua.Arena.IndPosSpec.NestHoles
+
+@[expose] public section
 
 /-!
 # Pos3NhGoWMfr

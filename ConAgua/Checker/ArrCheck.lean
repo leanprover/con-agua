@@ -1,7 +1,11 @@
-import ConAgua.Checker.ParOwned
-import ConAgua.Checker.CapCheck
-import ConAgua.Arena.ArenaRel
-import ConAgua.Checker.ProgTab
+module
+
+public import ConAgua.Checker.ParOwned
+public import ConAgua.Checker.CapCheck
+public import ConAgua.Arena.ArenaRel
+public import ConAgua.Checker.ProgTab
+
+@[expose] public section
 
 /-!
 # The checker's arrays, checked against the program

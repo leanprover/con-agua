@@ -1,12 +1,16 @@
-import ConAgua.Arena.IndRealPartsC2
-import ConAgua.Arena.IndT.Block
-import ConAgua.Arena.IndArmLps
-import ConAgua.Arena.IndRealIpo
-import ConAgua.Arena.IndInstallSpec.ShapeCVOfDecB
-import ConAgua.Arena.IndT.Shapeless
-import ConAgua.Arena.GrindAttr
-import ConAgua.L.GrindAttr
-import ConAgua.L.ModelGen
+module
+
+public import ConAgua.Arena.IndRealPartsC2
+public import ConAgua.Arena.IndT.Block
+public import ConAgua.Arena.IndArmLps
+public import ConAgua.Arena.IndRealIpo
+public import ConAgua.Arena.IndInstallSpec.ShapeCVOfDecB
+public import ConAgua.Arena.IndT.Shapeless
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.L.GrindAttr
+public import ConAgua.L.ModelGen
+
+@[expose] public section
 
 /-!
 # `check_ind_decl` under `StageC` (lane `indstaget`)

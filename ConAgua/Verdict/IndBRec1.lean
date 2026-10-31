@@ -1,13 +1,17 @@
-import ConAgua.Arena.RecGenSpec.ClassMinorSlotW
-import ConAgua.Arena.RecClassSpec.Rec2SimTMA
-import ConAgua.Arena.RecClassSpec.MkTMWAfr
-import ConAgua.Arena.RecGenSpec.ClassKeyCanon
-import ConAgua.Arena.RecGenSpec.ClassMinorSlot
-import ConAgua.Arena.RecGenSpec.RgW
-import ConAgua.Arena.GrindAttr
-import ConAgua.L.GrindAttr
-import ConAgua.L.ModelGen
-import ConRon.Bridge.Inductives.GenRec
+module
+
+public import ConAgua.Arena.RecGenSpec.ClassMinorSlotW
+public import ConAgua.Arena.RecClassSpec.Rec2SimTMA
+public import ConAgua.Arena.RecClassSpec.MkTMWAfr
+public import ConAgua.Arena.RecGenSpec.ClassKeyCanon
+public import ConAgua.Arena.RecGenSpec.ClassMinorSlot
+public import ConAgua.Arena.RecGenSpec.RgW
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.L.GrindAttr
+public import ConAgua.L.ModelGen
+public import ConRon.Bridge.Inductives.GenRec
+
+@[expose] public section
 
 /-!
 # The recursor generation's leaves: one model and one refinement for both outcomes

@@ -1,4 +1,8 @@
-import ConAgua.Checker.LoopProgTac
+module
+
+public import ConAgua.Checker.LoopProgTac
+
+@[expose] public section
 
 /-!
 # The checker's program under the pin-data substitution: names, levels, reserved pins

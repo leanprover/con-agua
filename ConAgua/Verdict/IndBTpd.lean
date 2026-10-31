@@ -1,11 +1,15 @@
-import ConAgua.Arena.IndT.RecCheckTpd
-import ConAgua.Arena.IndT.Lift
-import ConAgua.Arena.RecCheckSpec.Tpd
-import ConAgua.Arena.RecCheckSpec.TmFields
-import ConAgua.Verdict.VCtx
-import ConAgua.Arena.GrindAttr
-import ConAgua.L.GrindAttr
-import ConAgua.L.ModelGen
+module
+
+public import ConAgua.Arena.IndT.RecCheckTpd
+public import ConAgua.Arena.IndT.Lift
+public import ConAgua.Arena.RecCheckSpec.Tpd
+public import ConAgua.Arena.RecCheckSpec.TmFields
+public import ConAgua.Verdict.VCtx
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.L.GrindAttr
+public import ConAgua.L.ModelGen
+
+@[expose] public section
 
 /-!
 # `target_params_def_eq` and its head step: one model and one refinement for both outcomes

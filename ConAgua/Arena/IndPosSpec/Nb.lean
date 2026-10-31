@@ -1,6 +1,10 @@
-import ConAgua.Arena.IndPosSpec.UnW
-import ConAgua.Arena.IndPosSpec.NbLook
-import ConAgua.Arena.IndPosSpec.NbKeyK2
+module
+
+public import ConAgua.Arena.IndPosSpec.UnW
+public import ConAgua.Arena.IndPosSpec.NbLook
+public import ConAgua.Arena.IndPosSpec.NbKeyK2
+
+@[expose] public section
 
 /-!
 # Nb

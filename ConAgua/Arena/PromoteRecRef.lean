@@ -1,7 +1,11 @@
-import ConAgua.Arena.PromoteRec
-import ConAgua.Arena.PromoteERef
-import ConAgua.Arena.IndLibSpec
-import Std.Tactic.BVDecide.Normalize.Prop
+module
+
+public import ConAgua.Arena.PromoteRec
+public import ConAgua.Arena.PromoteERef
+public import ConAgua.Arena.IndLibSpec
+public import Std.Tactic.BVDecide.Normalize.Prop
+
+@[expose] public section
 
 /-!
 # The record side of the promotion refines the twin's

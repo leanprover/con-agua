@@ -1,5 +1,9 @@
-import ConAgua.Arena.IndInstallSpec.PartsAt
-import ConAgua.Arena.IndSumSpec.ColW
+module
+
+public import ConAgua.Arena.IndInstallSpec.PartsAt
+public import ConAgua.Arena.IndSumSpec.ColW
+
+@[expose] public section
 
 /-!
 # PartsShapeFacts

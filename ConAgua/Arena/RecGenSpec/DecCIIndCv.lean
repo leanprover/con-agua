@@ -1,8 +1,12 @@
-import ConAgua.Arena.IndCallM
-import ConAgua.Arena.IndCopy2
-import ConAgua.Arena.RecGen
-import Std.Tactic.BVDecide.Normalize.Prop
-import ConAgua.Arena.IndGrindAttr
+module
+
+public import ConAgua.Arena.IndCallM
+public import ConAgua.Arena.IndCopy2
+public import ConAgua.Arena.RecGen
+public import Std.Tactic.BVDecide.Normalize.Prop
+public import ConAgua.Arena.IndGrindAttr
+
+@[expose] public section
 
 /-!
 # DecCIIndCv

@@ -1,6 +1,10 @@
-import ConAgua.Arena.CheckerT
-import ConAgua.Arena.IndT.CheckIndDecl
-import ConAgua.Arena.IndArmBridge2
+module
+
+public import ConAgua.Arena.CheckerT
+public import ConAgua.Arena.IndT.CheckIndDecl
+public import ConAgua.Arena.IndArmBridge2
+
+@[expose] public section
 
 /-!
 # The inductive arm's contract from `checkIndDecl_refinesC` (lane `indproofs4`)

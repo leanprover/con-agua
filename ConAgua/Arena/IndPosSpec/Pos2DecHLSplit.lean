@@ -1,5 +1,9 @@
-import ConAgua.Arena.IndPosSpec.Pos2RdGrow
-import ConAgua.Arena.IndPosSpec.NkcW
+module
+
+public import ConAgua.Arena.IndPosSpec.Pos2RdGrow
+public import ConAgua.Arena.IndPosSpec.NkcW
+
+@[expose] public section
 
 /-!
 # Pos2DecHLSplit

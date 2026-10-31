@@ -1,5 +1,9 @@
-import ConAgua.Arena.FreezeRel
-import ConAgua.Compiler.AbiSim
+module
+
+public import ConAgua.Arena.FreezeRel
+public import ConAgua.Compiler.AbiSim
+
+@[expose] public section
 
 /-!
 # The threads' entry 2: `ca_check_b`'s layout and memory (lane parmode)

@@ -1,8 +1,12 @@
-import ConAgua.Arena.LoopT
-import ConAgua.Arena.PhaseWorker
-import ConAgua.Arena.GrindAttr
-import ConAgua.L.GrindAttr
-import ConAgua.Verdict.DeclValE
+module
+
+public import ConAgua.Arena.LoopT
+public import ConAgua.Arena.PhaseWorker
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.L.GrindAttr
+public import ConAgua.Verdict.DeclValE
+
+@[expose] public section
 
 /-!
 # Phase B under `StageT` (lane `loopt3`, items 12 and 12a)

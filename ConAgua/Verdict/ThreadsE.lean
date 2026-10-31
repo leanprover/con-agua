@@ -1,4 +1,8 @@
-import ConAgua.Checker.ParThreadTwin
+module
+
+public import ConAgua.Checker.ParThreadTwin
+
+@[expose] public section
 
 /-!
 # A thread's failing call is the twin pool's failure (lane verdicts-b)

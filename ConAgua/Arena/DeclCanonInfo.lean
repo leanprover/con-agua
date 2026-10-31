@@ -1,9 +1,13 @@
-import ConAgua.Arena.DeclCanonRules
-import ConAgua.Arena.DeclCanonConst
-import ConAgua.Arena.DeclCanonSpec2
-import ConAgua.Arena.GrindAttr
-import ConAgua.Arena.IndGrindAttr
-import ConAgua.L.GrindAttr
+module
+
+public import ConAgua.Arena.DeclCanonRules
+public import ConAgua.Arena.DeclCanonConst
+public import ConAgua.Arena.DeclCanonSpec2
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.Arena.IndGrindAttr
+public import ConAgua.L.GrindAttr
+
+@[expose] public section
 
 /-!
 # `ci_canon_defn`, `ci_canon_rec`, `ci_canon_eq`, `canon_eq_list` (lane `decls3`, helper `decls3-canon`)

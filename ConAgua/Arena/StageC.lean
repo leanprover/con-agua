@@ -1,5 +1,9 @@
-import ConAgua.Arena.TwinStep
-import ConAgua.Arena.LeafFns
+module
+
+public import ConAgua.Arena.TwinStep
+public import ConAgua.Arena.LeafFns
+
+@[expose] public section
 
 /-!
 # Carrying `StageC` (lane `loopt2`)

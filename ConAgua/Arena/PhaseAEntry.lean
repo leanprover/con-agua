@@ -1,5 +1,9 @@
-import ConAgua.Arena.LoopStart
-import ConAgua.Arena.FreezeRel
+module
+
+public import ConAgua.Arena.LoopStart
+public import ConAgua.Arena.FreezeRel
+
+@[expose] public section
 
 /-!
 # Phase A as entry 1 runs it: `install_fold_go(0, cnt, 0)` ending in `PhaseBStart` (lane parmode)

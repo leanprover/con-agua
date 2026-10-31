@@ -1,5 +1,9 @@
-import ConAgua.Arena.IndPosSpec.NestOccGo
-import ConAgua.Arena.IndPosSpec.PiBWStage
+module
+
+public import ConAgua.Arena.IndPosSpec.NestOccGo
+public import ConAgua.Arena.IndPosSpec.PiBWStage
+
+@[expose] public section
 
 /-!
 # NoConstWf

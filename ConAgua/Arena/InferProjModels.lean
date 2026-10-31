@@ -1,11 +1,15 @@
-import ConAgua.Arena.Verdict
-import ConAgua.Arena.Infer
-import ConAgua.Arena.GrindAttr
-import ConAgua.L.GrindAttr
-import ConAgua.L.ModelGen
-import ConAgua.Checker.NoVerdictTree
-import Std.Tactic.BVDecide.Normalize.BitVec
-import Std.Tactic.BVDecide.Normalize.Prop
+module
+
+public import ConAgua.Arena.Verdict
+public import ConAgua.Arena.Infer
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.L.GrindAttr
+public import ConAgua.L.ModelGen
+public import ConAgua.Checker.NoVerdictTree
+public import Std.Tactic.BVDecide.Normalize.BitVec
+public import Std.Tactic.BVDecide.Normalize.Prop
+
+@[expose] public section
 
 /-!
 # The generated models of `InferProj.lean`

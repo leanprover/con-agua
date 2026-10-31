@@ -1,6 +1,10 @@
-import ConAgua.Arena.IndInstallSpec.Icvg
-import ConAgua.Arena.RecCheckSpec.RcLook
-import ConAgua.Arena.RecStab
+module
+
+public import ConAgua.Arena.IndInstallSpec.Icvg
+public import ConAgua.Arena.RecCheckSpec.RcLook
+public import ConAgua.Arena.RecStab
+
+@[expose] public section
 
 /-!
 # OfClosed

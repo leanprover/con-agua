@@ -1,4 +1,8 @@
-import ConRon.Arena.ExprOps
+module
+
+public import ConRon.Arena.ExprOps
+
+@[expose] public section
 
 /-! `lake exe instbenchlean N K VAL D [build]`: con-ron's compiled arena (`instantiate1Fast`) on
 the term `Inst1BenchComp.lean`'s `inst1_bench(N, K, …)` builds, the baseline for the compiled L

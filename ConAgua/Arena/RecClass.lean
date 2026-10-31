@@ -1,4 +1,8 @@
-import ConAgua.Arena.IndIface
+module
+
+public import ConAgua.Arena.IndIface
+
+@[expose] public section
 
 /-!
 # The generated-recursor stage in L: the pre-pass and the generator (lane `induct`)

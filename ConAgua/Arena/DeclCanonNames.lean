@@ -1,8 +1,12 @@
-import ConAgua.Arena.DeclCanonExpr2
-import ConAgua.Arena.DeclMasterStage
-import ConAgua.Arena.GrindAttr
-import ConAgua.Arena.IndGrindAttr
-import ConAgua.L.GrindAttr
+module
+
+public import ConAgua.Arena.DeclCanonExpr2
+public import ConAgua.Arena.DeclMasterStage
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.Arena.IndGrindAttr
+public import ConAgua.L.GrindAttr
+
+@[expose] public section
 
 /-!
 # `canon_names_go`, `canon_names` (lane `decls3`, helper `decls3-canon`)

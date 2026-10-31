@@ -1,9 +1,13 @@
-import ConAgua.Checker.PipeStages
-import ConAgua.Checker.HoistRefBase
-import ConAgua.Front.DeclsPre
-import ConRon.Bridge.Frontend.Prepare
-import ConAgua.Arena.GrindAttr
-import ConAgua.L.GrindAttr
+module
+
+public import ConAgua.Checker.PipeStages
+public import ConAgua.Checker.HoistRefBase
+public import ConAgua.Front.DeclsPre
+public import ConRon.Bridge.Frontend.Prepare
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.L.GrindAttr
+
+@[expose] public section
 
 /-!
 # The stage `builtin_prelude` at `checkerProg` (lane `pipeline`)

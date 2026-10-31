@@ -1,6 +1,10 @@
-import ConAgua.Arena.InferBodyBindPi
-import ConAgua.Arena.InferBodySpineF
-import ConAgua.Arena.InferBodyDispModels
+module
+
+public import ConAgua.Arena.InferBodyBindPi
+public import ConAgua.Arena.InferBodySpineF
+public import ConAgua.Arena.InferBodyDispModels
+
+@[expose] public section
 
 /-!
 # The bodies' dispatchers: `infer_body`, `infer_body_io` (lane `defeq`)

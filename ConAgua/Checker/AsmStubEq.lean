@@ -1,7 +1,11 @@
-import ConAgua.Checker.AsmStub
-import ConAgua.Checker.ProgTab
-import ConAgua.Compiler.Abi
-import ConAgua.AsmFile.ListEq
+module
+
+public import ConAgua.Checker.AsmStub
+public import ConAgua.Checker.ProgTab
+public import ConAgua.Compiler.Abi
+public import ConAgua.AsmFile.ListEq
+
+@[expose] public section
 
 /-!
 # The committed file's stub is the entry stub

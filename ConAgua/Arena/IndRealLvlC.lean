@@ -1,6 +1,10 @@
-import ConAgua.Arena.IndRealLvlT
-import ConAgua.Arena.IndT.Lift
-import ConRon.Bridge.Inductives.RecCheck
+module
+
+public import ConAgua.Arena.IndRealLvlT
+public import ConAgua.Arena.IndT.Lift
+public import ConRon.Bridge.Inductives.RecCheck
+
+@[expose] public section
 
 /-!
 # The level callees under `StageC` (lane `indproofs4`, helper `lvl`)

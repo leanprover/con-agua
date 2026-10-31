@@ -1,9 +1,13 @@
-import ConRon.Arena.Inductives.BlockInstall
-import Std.Tactic.BVDecide.Normalize.Prop
-import ConAgua.Arena.GrindAttr
-import ConAgua.L.GrindAttr
-import Std.WP.Tactic
-import ConAgua.L.Examples
+module
+
+public import ConRon.Arena.Inductives.BlockInstall
+public import Std.Tactic.BVDecide.Normalize.Prop
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.L.GrindAttr
+public import Std.WP.Tactic
+public import ConAgua.L.Examples
+
+@[expose] public section
 
 /-!
 # LvlEqFueledSpecC

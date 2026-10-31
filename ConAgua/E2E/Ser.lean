@@ -1,4 +1,8 @@
-import ConAgua.L.Syntax
+module
+
+public import ConAgua.L.Syntax
+
+@[expose] public section
 
 /-!
 # A text form of L programs (lane `e2e`)

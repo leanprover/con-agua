@@ -1,6 +1,10 @@
-import ConAgua.Checker.HoistOrderRef3
-import ConAgua.Checker.HoistTargetsRef
-import ConAgua.Checker.Prelude
+module
+
+public import ConAgua.Checker.HoistOrderRef3
+public import ConAgua.Checker.HoistTargetsRef
+public import ConAgua.Checker.Prelude
+
+@[expose] public section
 
 /-!
 # `prepare_prelude`'s rewrite of `DECL` (lane `front4`)

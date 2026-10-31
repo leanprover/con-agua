@@ -1,6 +1,10 @@
-import ConAgua.Arena.Inst1Spec
-import ConAgua.Arena.LiftRefine
-import Std.Tactic.BVDecide.Normalize.Prop
+module
+
+public import ConAgua.Arena.Inst1Spec
+public import ConAgua.Arena.LiftRefine
+public import Std.Tactic.BVDecide.Normalize.Prop
+
+@[expose] public section
 
 /-!
 # `inst_go` refines the arena's `instantiate1Go`

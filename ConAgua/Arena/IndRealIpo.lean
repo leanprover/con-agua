@@ -1,8 +1,12 @@
-import ConAgua.Front.IndApplyRefine
-import ConAgua.Arena.IndPartsSpec.BlockSplitRecs
-import ConAgua.Arena.GrindAttr
-import ConAgua.Arena.IndGrindAttr
-import ConAgua.L.GrindAttr
+module
+
+public import ConAgua.Front.IndApplyRefine
+public import ConAgua.Arena.IndPartsSpec.BlockSplitRecs
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.Arena.IndGrindAttr
+public import ConAgua.L.GrindAttr
+
+@[expose] public section
 
 /-!
 # `ind_params_ok(nP, off, len)` refines `indParamsOk` (lane `indproofs4`)

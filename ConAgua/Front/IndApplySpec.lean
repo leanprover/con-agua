@@ -1,15 +1,19 @@
-import ConAgua.Front.IndApply
-import ConAgua.L.ModelGen
-import ConAgua.Arena.LevelEquiv
-import ConAgua.Front.IndAlloc
-import ConAgua.Arena.IndView
-import ConAgua.Front.ApplyDecl
-import ConAgua.Arena.GrindAttr
-import ConAgua.Arena.LdRd
-import ConAgua.L.GrindAttr
-import Std.Tactic.BVDecide.Normalize.BitVec
-import Std.Tactic.BVDecide.Normalize.Prop
-import Std.WP.Tactic
+module
+
+public import ConAgua.Front.IndApply
+public import ConAgua.L.ModelGen
+public import ConAgua.Arena.LevelEquiv
+public import ConAgua.Front.IndAlloc
+public import ConAgua.Arena.IndView
+public import ConAgua.Front.ApplyDecl
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.Arena.LdRd
+public import ConAgua.L.GrindAttr
+public import Std.Tactic.BVDecide.Normalize.BitVec
+public import Std.Tactic.BVDecide.Normalize.Prop
+public import Std.WP.Tactic
+
+@[expose] public section
 
 /-!
 # The apply step of an `inductive` line: word models and specs, I (`validateIndD`'s side)

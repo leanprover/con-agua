@@ -1,4 +1,8 @@
-import ConAgua.Arena.WhnfBase
+module
+
+public import ConAgua.Arena.WhnfBase
+
+@[expose] public section
 
 /-!
 # The prop-ness readers `notProofFast` / `isProofFast` in L (lane `defeq2`, helper `defeq2-prop`)

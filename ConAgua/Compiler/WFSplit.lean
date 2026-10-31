@@ -1,5 +1,9 @@
-import Lean
-import ConAgua.Compiler.WFFast
+module
+
+public import Lean
+public import ConAgua.Compiler.WFFast
+
+@[expose] public section
 
 /-!
 # Program well-formedness, one function at a time

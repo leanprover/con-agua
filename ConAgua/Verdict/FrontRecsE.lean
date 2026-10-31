@@ -1,9 +1,13 @@
-import ConAgua.Verdict.FrontE
-import ConRon.Bridge.Frontend.Lines
-import ConAgua.Front.IndValidTwin
-import ConAgua.Arena.GrindAttr
-import ConAgua.L.GrindAttr
-import ConAgua.L.ModelGen
+module
+
+public import ConAgua.Verdict.FrontE
+public import ConRon.Bridge.Frontend.Lines
+public import ConAgua.Front.IndValidTwin
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.L.GrindAttr
+public import ConAgua.L.ModelGen
+
+@[expose] public section
 
 /-!
 # The recursor checks of `validateIndD`, twin side

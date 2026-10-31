@@ -1,5 +1,9 @@
-import ConAgua.Arena.PropReadRefine3
-import ConAgua.Arena.DefEqLeaves2
+module
+
+public import ConAgua.Arena.PropReadRefine3
+public import ConAgua.Arena.DefEqLeaves2
+
+@[expose] public section
 
 /-!
 # The prop-ness readers: `headProofPW`, `proofPW`, `notProofFast`, `isProofFast` (helper `defeq2-prop`)

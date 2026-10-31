@@ -1,6 +1,10 @@
-import ConAgua.Checker.Prog
-import ConAgua.Checker.LoopProgTac
-import ConAgua.Front.FrontRun
+module
+
+public import ConAgua.Checker.Prog
+public import ConAgua.Checker.LoopProgTac
+public import ConAgua.Front.FrontRun
+
+@[expose] public section
 
 /-!
 # `checkerProg` agrees with `frontAllProg` on what `front_run` reaches (lane `pipeline`)

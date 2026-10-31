@@ -1,5 +1,9 @@
-import ConAgua.Checker.ProgTab
-import ConAgua.Final.Abi
+module
+
+public import ConAgua.Checker.ProgTab
+public import ConAgua.Final.Abi
+
+@[expose] public section
 
 /-!
 # The committed assembler file `checker.s`: the checker's facts the final theorems use

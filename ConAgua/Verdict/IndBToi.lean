@@ -1,9 +1,13 @@
-import ConAgua.Arena.RecGenSpec.DecCIIndCv
-import ConAgua.Arena.RecClassSpec.ClassNPcOf
-import ConAgua.Arena.IlpRdReal
-import ConAgua.Arena.RecGenSpec.OcW
-import ConAgua.Arena.GrindAttr
-import ConAgua.L.ModelGen
+module
+
+public import ConAgua.Arena.RecGenSpec.DecCIIndCv
+public import ConAgua.Arena.RecClassSpec.ClassNPcOf
+public import ConAgua.Arena.IlpRdReal
+public import ConAgua.Arena.RecGenSpec.OcW
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.L.ModelGen
+
+@[expose] public section
 
 /-!
 # `target_outside_inst`: one model and one refinement for both outcomes

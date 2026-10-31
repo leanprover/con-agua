@@ -1,7 +1,11 @@
-import ConAgua.Verdict.DeclDefnE
-import ConAgua.Verdict.DeclArmsE
-import ConAgua.Verdict.DeclAxiomE
-import ConAgua.Verdict.DeclQuotE
+module
+
+public import ConAgua.Verdict.DeclDefnE
+public import ConAgua.Verdict.DeclArmsE
+public import ConAgua.Verdict.DeclAxiomE
+public import ConAgua.Verdict.DeclQuotE
+
+@[expose] public section
 /-!
 # Phase A's fold: what its error arms assume, from the leaves' claims
 

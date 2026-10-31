@@ -1,6 +1,10 @@
-import ConAgua.Final.Abi
-import ConAgua.Compiler.MainRef
-import Kraken.X64.Registers
+module
+
+public import ConAgua.Final.Abi
+public import ConAgua.Compiler.MainRef
+public import Kraken.X64.Registers
+
+@[expose] public section
 
 /-!
 # The parallel mode's entry 1 on the machine (lane parmode)

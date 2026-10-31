@@ -1,5 +1,9 @@
-import ConAgua.Checker.LoopDecl
-import ConAgua.Arena.CheckerT
+module
+
+public import ConAgua.Checker.LoopDecl
+public import ConAgua.Arena.CheckerT
+
+@[expose] public section
 
 /-!
 # The inductive records' path has a step's write set in the checker's program (lane `loopt3`)

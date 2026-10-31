@@ -1,8 +1,12 @@
-import ConAgua.Arena.IndPosSpec.CrLook
-import ConAgua.Arena.IndPosSpec.NestOccAny
-import ConAgua.Arena.IndPosSpec.NkcW
-import ConAgua.Arena.IndPosSpec.PfLook
-import ConAgua.Arena.IndPosSpec.RootHoles
+module
+
+public import ConAgua.Arena.IndPosSpec.CrLook
+public import ConAgua.Arena.IndPosSpec.NestOccAny
+public import ConAgua.Arena.IndPosSpec.NkcW
+public import ConAgua.Arena.IndPosSpec.PfLook
+public import ConAgua.Arena.IndPosSpec.RootHoles
+
+@[expose] public section
 
 /-!
 # U4W

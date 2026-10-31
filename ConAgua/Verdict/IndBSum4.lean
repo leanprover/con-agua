@@ -1,9 +1,13 @@
-import ConAgua.Arena.IndSumSpec.CtorX
-import ConAgua.Arena.IndSumSpec.SoaW
-import ConAgua.Arena.GrindAttr
-import ConAgua.L.GrindAttr
-import ConAgua.L.ModelGen
-import ConAgua.Arena.IndT.Sum4
+module
+
+public import ConAgua.Arena.IndSumSpec.CtorX
+public import ConAgua.Arena.IndSumSpec.SoaW
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.L.GrindAttr
+public import ConAgua.L.ModelGen
+public import ConAgua.Arena.IndT.Sum4
+
+@[expose] public section
 /-!
 # `check_sum_ctors`: one model and one refinement for both outcomes
 

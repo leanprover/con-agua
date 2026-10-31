@@ -1,4 +1,8 @@
-import ConAgua.Arena.InstLPRef
+module
+
+public import ConAgua.Arena.InstLPRef
+
+@[expose] public section
 
 /-!
 # `rec_fire_levels` refines `recFireLevels`

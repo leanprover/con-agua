@@ -1,7 +1,11 @@
-import ConAgua.Arena.IndPartsSpec.Bf
-import ConAgua.Arena.IndPartsSpec.BrsW
-import ConAgua.Arena.GrindAttr
-import ConAgua.L.GrindAttr
+module
+
+public import ConAgua.Arena.IndPartsSpec.Bf
+public import ConAgua.Arena.IndPartsSpec.BrsW
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.L.GrindAttr
+
+@[expose] public section
 
 /-!
 # BpW

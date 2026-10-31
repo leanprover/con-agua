@@ -1,7 +1,11 @@
-import ConAgua.Arena.PromoteTblRef
-import ConAgua.Arena.PromoteCIRef.Promoted
-import ConAgua.Arena.PromoteCIRef.TakeDropMin
-import ConAgua.Arena.PromoteCIRef.OfFrame
+module
+
+public import ConAgua.Arena.PromoteTblRef
+public import ConAgua.Arena.PromoteCIRef.Promoted
+public import ConAgua.Arena.PromoteCIRef.TakeDropMin
+public import ConAgua.Arena.PromoteCIRef.OfFrame
+
+@[expose] public section
 
 /-!
 # `promote_new_tables` refines `promoteNewTables` under the loop's relation

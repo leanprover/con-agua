@@ -1,10 +1,14 @@
-import ConAgua.Arena.IndInstallSpec.PartsShapeFacts
-import ConAgua.Arena.IndPartsSpec.PartsSliceCopy
-import ConAgua.Arena.IndPartsSpec.PlW
-import ConAgua.Arena.IndPartsSpec.PartsPSlCons
-import ConAgua.Arena.IndPosSpec.Pos2CvLpsWStage
-import ConAgua.Arena.GrindAttr
-import ConAgua.L.GrindAttr
+module
+
+public import ConAgua.Arena.IndInstallSpec.PartsShapeFacts
+public import ConAgua.Arena.IndPartsSpec.PartsSliceCopy
+public import ConAgua.Arena.IndPartsSpec.PlW
+public import ConAgua.Arena.IndPartsSpec.PartsPSlCons
+public import ConAgua.Arena.IndPosSpec.Pos2CvLpsWStage
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.L.GrindAttr
+
+@[expose] public section
 
 /-!
 # NestCtx: `ConRon.Arena.BlockShape.nestCtx`

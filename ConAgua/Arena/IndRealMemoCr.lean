@@ -1,5 +1,9 @@
-import ConAgua.Arena.IndRealCrF
-import ConAgua.Arena.ConstsResolveFRefine2
+module
+
+public import ConAgua.Arena.IndRealCrF
+public import ConAgua.Arena.ConstsResolveFRefine2
+
+@[expose] public section
 
 /-!
 # `consts_resolve_ffast` under the stage relation and the walk memos (lane `indproofs4`, helper `memo`)

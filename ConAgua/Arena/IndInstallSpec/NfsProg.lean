@@ -1,4 +1,8 @@
-import ConAgua.Arena.IndInstall
+module
+
+public import ConAgua.Arena.IndInstall
+
+@[expose] public section
 
 /-!
 # NfsProg

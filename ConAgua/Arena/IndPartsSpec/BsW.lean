@@ -1,6 +1,10 @@
-import ConAgua.Arena.IndPartsSpec.PartsConsPL
-import ConAgua.Arena.IndPartsSpec.BlockRecNamesUnreserved
-import ConAgua.Arena.IndPosSpec.RootHoles
+module
+
+public import ConAgua.Arena.IndPartsSpec.PartsConsPL
+public import ConAgua.Arena.IndPartsSpec.BlockRecNamesUnreserved
+public import ConAgua.Arena.IndPosSpec.RootHoles
+
+@[expose] public section
 
 /-!
 # BsW

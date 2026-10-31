@@ -1,5 +1,9 @@
-import ConAgua.Arena.IndTwin
-import ConAgua.Verdict.UnresolvedE
+module
+
+public import ConAgua.Arena.IndTwin
+public import ConAgua.Verdict.UnresolvedE
+
+@[expose] public section
 
 /-!
 # What the error claims assume about the program

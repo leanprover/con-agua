@@ -1,11 +1,15 @@
-import ConAgua.Arena.IndSumSpec.SumRules
-import ConAgua.Arena.RecCheckSpec.TruncSl
-import ConAgua.Arena.RecGenSpec.StabDecCRDecB
-import ConAgua.Arena.IndPartsSpec.PartsConsPL
-import ConAgua.Arena.RecGenSpec.Set64
-import ConAgua.Arena.GrindAttr
-import ConAgua.Arena.IndGrindAttr
-import ConAgua.L.GrindAttr
+module
+
+public import ConAgua.Arena.IndSumSpec.SumRules
+public import ConAgua.Arena.RecCheckSpec.TruncSl
+public import ConAgua.Arena.RecGenSpec.StabDecCRDecB
+public import ConAgua.Arena.IndPartsSpec.PartsConsPL
+public import ConAgua.Arena.RecGenSpec.Set64
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.Arena.IndGrindAttr
+public import ConAgua.L.GrindAttr
+
+@[expose] public section
 
 /-!
 # CnfW

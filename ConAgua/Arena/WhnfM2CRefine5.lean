@@ -1,4 +1,8 @@
-import ConAgua.Arena.WhnfM2CRefine4
+module
+
+public import ConAgua.Arena.WhnfM2CRefine4
+
+@[expose] public section
 
 /-!
 # `major_to_ctor`: the dispatch (`m2c_arms`), the family (`m2c_ctor`), the header (`m2c_head`)

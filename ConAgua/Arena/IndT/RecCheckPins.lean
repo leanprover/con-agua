@@ -1,9 +1,13 @@
-import ConAgua.Arena.RecClassSpec.IhW
-import ConAgua.Arena.RecGenSpec.DecCIIndCv
-import ConAgua.Arena.RecGenSpec.CkcW
-import ConAgua.Arena.RecClassSpec.ReadProg
-import ConAgua.Verdict.IndBPins
-import ConAgua.Arena.IndPosSpec.NestCrest
+module
+
+public import ConAgua.Arena.RecClassSpec.IhW
+public import ConAgua.Arena.RecGenSpec.DecCIIndCv
+public import ConAgua.Arena.RecGenSpec.CkcW
+public import ConAgua.Arena.RecClassSpec.ReadProg
+public import ConAgua.Verdict.IndBPins
+public import ConAgua.Arena.IndPosSpec.NestCrest
+
+@[expose] public section
 
 /-!
 # `target_major_pins`: one refinement for both outcomes

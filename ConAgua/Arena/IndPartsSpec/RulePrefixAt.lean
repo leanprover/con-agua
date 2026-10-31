@@ -1,10 +1,14 @@
-import ConAgua.Arena.IndCopy2
-import ConAgua.Arena.IndParts
-import ConAgua.Arena.GrindAttr
-import ConAgua.Arena.IndGrindAttr
-import ConAgua.L.GrindAttr
-import Std.Tactic.BVDecide.Normalize.Prop
-import Std.WP.Tactic
+module
+
+public import ConAgua.Arena.IndCopy2
+public import ConAgua.Arena.IndParts
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.Arena.IndGrindAttr
+public import ConAgua.L.GrindAttr
+public import Std.Tactic.BVDecide.Normalize.Prop
+public import Std.WP.Tactic
+
+@[expose] public section
 
 /-!
 # RulePrefixAt: `ConRon.Arena.BlockShape.k`, `ConRon.Arena.BlockShape.majorIdxAt`, `ConRon.Arena.BlockShape.nIdxs`, `ConRon.Arena.BlockShape.numCtors`, `ConRon.Arena.BlockShape.rulePrefixAt`, `ConRon.Arena.numCtorsOf`

@@ -1,11 +1,15 @@
-import ConAgua.Arena.Env
-import ConAgua.Arena.PinsNatOp
-import ConAgua.Arena.WhnfSpineArgs
-import ConAgua.Arena.GrindAttr
-import ConAgua.L.GrindAttr
-import Std.Tactic.BVDecide.Normalize.BitVec
-import Std.Tactic.BVDecide.Normalize.Prop
-import Std.WP.Tactic
+module
+
+public import ConAgua.Arena.Env
+public import ConAgua.Arena.PinsNatOp
+public import ConAgua.Arena.WhnfSpineArgs
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.L.GrindAttr
+public import Std.Tactic.BVDecide.Normalize.BitVec
+public import Std.Tactic.BVDecide.Normalize.Prop
+public import Std.WP.Tactic
+
+@[expose] public section
 
 /-!
 # The `whnf` half of the whnf family: `whnf`, its loop, the literal/delta step, and their helpers

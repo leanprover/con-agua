@@ -1,4 +1,8 @@
-import ConAgua.Arena.FreezeRel
+module
+
+public import ConAgua.Arena.FreezeRel
+
+@[expose] public section
 
 /-!
 # The truncation theorem, part 1: what `truncFrozen` does to each array (lane parmode)

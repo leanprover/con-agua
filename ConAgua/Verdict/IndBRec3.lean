@@ -1,8 +1,12 @@
-import ConAgua.Verdict.IndBRec2
-import ConAgua.Arena.RecGenSpec.ClassRecTysOk
-import ConAgua.Arena.GrindAttr
-import ConAgua.L.ModelGen
-import ConRon.Bridge.Inductives.GenRec
+module
+
+public import ConAgua.Verdict.IndBRec2
+public import ConAgua.Arena.RecGenSpec.ClassRecTysOk
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.L.ModelGen
+public import ConRon.Bridge.Inductives.GenRec
+
+@[expose] public section
 /-!
 # `class_rec_tys_ok`: one model and one refinement for both outcomes
 

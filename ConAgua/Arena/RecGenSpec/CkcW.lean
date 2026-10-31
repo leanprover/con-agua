@@ -1,9 +1,13 @@
-import ConAgua.Arena.IndRealWalk
-import ConAgua.Arena.RecGen
-import ConAgua.Arena.GrindAttr
-import ConAgua.Arena.IndGrindAttr
-import ConAgua.L.GrindAttr
-import ConAgua.L.ModelGen
+module
+
+public import ConAgua.Arena.IndRealWalk
+public import ConAgua.Arena.RecGen
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.Arena.IndGrindAttr
+public import ConAgua.L.GrindAttr
+public import ConAgua.L.ModelGen
+
+@[expose] public section
 
 /-!
 # CkcW

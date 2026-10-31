@@ -1,4 +1,8 @@
-import ConAgua.Arena.ConsLibRel
+module
+
+public import ConAgua.Arena.ConsLibRel
+
+@[expose] public section
 
 /-!
 # A cons table sized up front: `X_presize(n)` (lane presize)

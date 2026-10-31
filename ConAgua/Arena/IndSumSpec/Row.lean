@@ -1,9 +1,13 @@
-import ConAgua.Arena.IndSumSpec.ColW
-import ConAgua.Arena.IndSumSpec.StructProjArgP
-import ConAgua.Arena.GrindAttr
-import ConAgua.Arena.IndGrindAttr
-import ConAgua.L.GrindAttr
-import ConAgua.Arena.IndInstallSpec.DomsW
+module
+
+public import ConAgua.Arena.IndSumSpec.ColW
+public import ConAgua.Arena.IndSumSpec.StructProjArgP
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.Arena.IndGrindAttr
+public import ConAgua.L.GrindAttr
+public import ConAgua.Arena.IndInstallSpec.DomsW
+
+@[expose] public section
 
 /-!
 # Row: `ConRon.Arena.paramLevels.go`, `ConRon.Arena.structProjGuards.col`, `ConRon.Arena.structProjGuards.row`

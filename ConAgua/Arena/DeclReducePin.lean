@@ -1,9 +1,13 @@
-import ConAgua.Arena.DeclReduceSpec2
-import ConAgua.Arena.IndRealApdT
-import ConAgua.Arena.GrindAttr
-import ConAgua.Arena.IndGrindAttr
-import ConAgua.L.GrindAttr
-import ConAgua.L.ModelGen
+module
+
+public import ConAgua.Arena.DeclReduceSpec2
+public import ConAgua.Arena.IndRealApdT
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.Arena.IndGrindAttr
+public import ConAgua.L.GrindAttr
+public import ConAgua.L.ModelGen
+
+@[expose] public section
 
 /-!
 # `check_reduce_pin(vis, vis2, c, v)` refines `checkReducePin` (lane `decls3`)

@@ -1,8 +1,12 @@
-import ConAgua.Verdict.IndBRec5
-import ConAgua.Arena.IndSumSpec.ConsBlockRecsTF
-import ConAgua.Arena.GrindAttr
-import ConAgua.L.GrindAttr
-import ConAgua.L.ModelGen
+module
+
+public import ConAgua.Verdict.IndBRec5
+public import ConAgua.Arena.IndSumSpec.ConsBlockRecsTF
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.L.GrindAttr
+public import ConAgua.L.ModelGen
+
+@[expose] public section
 /-!
 # `class_recs_rules_ok_go`, `class_recs_rules_ok`: one model and one refinement for both outcomes
 

@@ -1,4 +1,8 @@
-import ConAgua.Arena.IndPartsSpec.BsW
+module
+
+public import ConAgua.Arena.IndPartsSpec.BsW
+
+@[expose] public section
 
 /-!
 # BlockSplitRecs: `ConRon.Arena.blockSplitCtors`, `ConRon.Arena.blockSplitRecs`, `ConRon.Arena.blockSplit`

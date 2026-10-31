@@ -1,5 +1,9 @@
-import ConAgua.Arena.WhnfIotaRefine4
-import ConAgua.Arena.DefEqStuck
+module
+
+public import ConAgua.Arena.WhnfIotaRefine4
+public import ConAgua.Arena.DefEqStuck
+
+@[expose] public section
 /-!
 # `proof_irrel`'s verdict claims (lane `verdicts-b`, helper `k2`)
 

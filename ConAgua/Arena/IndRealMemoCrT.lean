@@ -1,6 +1,10 @@
-import ConAgua.Arena.IndRealMemoCr
-import ConAgua.Arena.StageTLift
-import ConAgua.Arena.DeclNatCv
+module
+
+public import ConAgua.Arena.IndRealMemoCr
+public import ConAgua.Arena.StageTLift
+public import ConAgua.Arena.DeclNatCv
+
+@[expose] public section
 
 /-!
 # `consts_resolve_ffast` under `StageT` (lane `indproofs4`, helper `wkt`)

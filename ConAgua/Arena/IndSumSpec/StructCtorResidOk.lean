@@ -1,10 +1,14 @@
-import ConAgua.Arena.IndSumSpec.DecHLTake
-import ConAgua.Arena.IndSumSpec.Row
-import ConAgua.Arena.IndPartsSpec.EqW
-import ConAgua.Arena.IndRealAbs
-import ConAgua.Arena.GrindAttr
-import ConAgua.Arena.IndGrindAttr
-import ConAgua.L.GrindAttr
+module
+
+public import ConAgua.Arena.IndSumSpec.DecHLTake
+public import ConAgua.Arena.IndSumSpec.Row
+public import ConAgua.Arena.IndPartsSpec.EqW
+public import ConAgua.Arena.IndRealAbs
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.Arena.IndGrindAttr
+public import ConAgua.L.GrindAttr
+
+@[expose] public section
 
 /-!
 # StructCtorResidOk: `ConRon.Arena.structCtorResidOk`

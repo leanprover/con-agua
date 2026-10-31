@@ -1,4 +1,8 @@
-import ConAgua.E2E.Dump
+module
+
+public import ConAgua.E2E.Dump
+
+@[expose] public section
 
 /-!
 # Where each L function of the checker comes from (lane `integrate`)

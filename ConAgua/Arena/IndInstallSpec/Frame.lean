@@ -1,5 +1,9 @@
-import ConAgua.Arena.IndInstallSpec.OfClosed
-import ConAgua.Arena.IndPosSpec.FgW
+module
+
+public import ConAgua.Arena.IndInstallSpec.OfClosed
+public import ConAgua.Arena.IndPosSpec.FgW
+
+@[expose] public section
 
 /-!
 # Frame

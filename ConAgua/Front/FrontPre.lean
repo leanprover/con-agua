@@ -1,5 +1,9 @@
-import ConAgua.Front.FrontRun
-import ConAgua.Front.DeclsPre
+module
+
+public import ConAgua.Front.FrontRun
+public import ConAgua.Front.DeclsPre
+
+@[expose] public section
 
 /-!
 # The frontend after the prelude: records already in `DECL` (lane `pipeline`)

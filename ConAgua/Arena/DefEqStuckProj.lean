@@ -1,7 +1,11 @@
-import ConAgua.Arena.DefEqStuck
-import ConAgua.Arena.GrindAttr
-import ConAgua.L.GrindAttr
-import ConAgua.L.ModelGen
+module
+
+public import ConAgua.Arena.DefEqStuck
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.L.GrindAttr
+public import ConAgua.L.ModelGen
+
+@[expose] public section
 
 /-!
 # `ldpr_exit`, `lazy_delta_proj_reduction`, `defeq_proj_pair` (lane `defeq`, helper `defeq-top`)

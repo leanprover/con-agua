@@ -1,5 +1,9 @@
-import ConAgua.Final.VerdictFinal
-import ConAgua.Verdict.IndArmTopE
+module
+
+public import ConAgua.Final.VerdictFinal
+public import ConAgua.Verdict.IndArmTopE
+
+@[expose] public section
 
 /-!
 # The end-to-end theorems

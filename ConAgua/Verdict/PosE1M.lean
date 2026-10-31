@@ -1,10 +1,14 @@
-import ConAgua.Arena.IndPosSpec.NestContParamsClosed
-import ConAgua.Arena.IndPosSpec.GgW2
-import ConAgua.Verdict.LefRef
-import ConAgua.Arena.GrindAttr
-import ConAgua.L.GrindAttr
-import ConAgua.L.ModelGen
-import Std.Tactic.BVDecide.Normalize.Prop
+module
+
+public import ConAgua.Arena.IndPosSpec.NestContParamsClosed
+public import ConAgua.Arena.IndPosSpec.GgW2
+public import ConAgua.Verdict.LefRef
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.L.GrindAttr
+public import ConAgua.L.ModelGen
+public import Std.Tactic.BVDecide.Normalize.Prop
+
+@[expose] public section
 
 /-!
 # Error models of `nest_pos`, `nest_pos_bind`, `nest_pos_app`, `nest_cont`, their leaves

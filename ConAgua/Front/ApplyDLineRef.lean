@@ -1,6 +1,10 @@
-import ConAgua.Front.FrontPreOK2
-import ConAgua.Front.IndApplySpec3
-import ConAgua.Front.FieldsDeclSpec
+module
+
+public import ConAgua.Front.FrontPreOK2
+public import ConAgua.Front.IndApplySpec3
+public import ConAgua.Front.FieldsDeclSpec
+
+@[expose] public section
 
 /-!
 # A declaration line, both outcomes: `decl_kind`, `apply_decl`, `apply_dline`

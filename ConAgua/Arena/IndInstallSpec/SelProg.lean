@@ -1,4 +1,8 @@
-import ConAgua.Arena.IndSum
+module
+
+public import ConAgua.Arena.IndSum
+
+@[expose] public section
 
 /-!
 # SelProg

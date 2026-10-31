@@ -1,7 +1,11 @@
-import ConAgua.Arena.IndT.WalkC
-import ConAgua.Verdict.DeclValE
-import ConAgua.Arena.GrindAttr
-import ConAgua.L.ModelGen
+module
+
+public import ConAgua.Arena.IndT.WalkC
+public import ConAgua.Verdict.DeclValE
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.L.ModelGen
+
+@[expose] public section
 /-!
 # `install_header`'s refinement
 

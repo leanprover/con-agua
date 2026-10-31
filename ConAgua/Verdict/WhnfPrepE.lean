@@ -1,4 +1,8 @@
-import ConAgua.Arena.WhnfIotaRecRefine2
+module
+
+public import ConAgua.Arena.WhnfIotaRecRefine2
+
+@[expose] public section
 /-!
 # `prepare_major`'s verdict claims (lane `verdicts-b`, helper `k2`)
 

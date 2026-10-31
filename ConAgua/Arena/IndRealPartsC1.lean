@@ -1,8 +1,12 @@
-import ConAgua.Arena.IndRealAbsPos
-import ConAgua.Arena.IndPartsSpec.BmgW
-import ConAgua.Arena.IndPartsSpec.BmoW
-import ConAgua.Arena.IndPartsSpec.BpcW
-import ConAgua.Arena.IndPartsSpec.BsoK2
+module
+
+public import ConAgua.Arena.IndRealAbsPos
+public import ConAgua.Arena.IndPartsSpec.BmgW
+public import ConAgua.Arena.IndPartsSpec.BmoW
+public import ConAgua.Arena.IndPartsSpec.BpcW
+public import ConAgua.Arena.IndPartsSpec.BsoK2
+
+@[expose] public section
 
 /-!
 # `blockShape?` under `StageC`, part 1: the walk memos across `block_shape`'s first callees

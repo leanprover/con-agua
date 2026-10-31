@@ -1,4 +1,8 @@
-import ConAgua.Arena.DefEqStuckStr
+module
+
+public import ConAgua.Arena.DefEqStuckStr
+
+@[expose] public section
 
 /-!
 # `stuck_app_cong`, `stuck_app` refine `defeqStuck`'s application arm (lane `defeq`, helper `defeq-top`)

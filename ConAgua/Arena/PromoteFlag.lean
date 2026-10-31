@@ -1,6 +1,10 @@
-import ConAgua.Arena.DerRel
-import ConAgua.Arena.PromoteTwin
-import Std.Tactic.BVDecide.Normalize.Prop
+module
+
+public import ConAgua.Arena.DerRel
+public import ConAgua.Arena.PromoteTwin
+public import Std.Tactic.BVDecide.Normalize.Prop
+
+@[expose] public section
 
 /-!
 # The scratch flag `CTL[1]` written: the arena relation at the flags `onA b`

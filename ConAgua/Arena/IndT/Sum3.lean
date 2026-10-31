@@ -1,8 +1,12 @@
-import ConAgua.Arena.IndSumSpec.SumRules
-import ConAgua.Verdict.VCtx
-import ConAgua.Arena.IndRealLvlC
-import ConAgua.Arena.IndSumSpec.CheckStructFieldSortsISucc
-import ConAgua.L.ModelGen
+module
+
+public import ConAgua.Arena.IndSumSpec.SumRules
+public import ConAgua.Verdict.VCtx
+public import ConAgua.Arena.IndRealLvlC
+public import ConAgua.Arena.IndSumSpec.CheckStructFieldSortsISucc
+public import ConAgua.L.ModelGen
+
+@[expose] public section
 
 /-!
 # `checkStructFieldSortsI` under `StageC` (lane `indstaget`)

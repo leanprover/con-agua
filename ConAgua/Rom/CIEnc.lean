@@ -1,4 +1,8 @@
-import ConAgua.Arena.RomExpr
+module
+
+public import ConAgua.Arena.RomExpr
+
+@[expose] public section
 
 /-!
 # The constants of the ROM stubs, encoded with their structure (lane `integrate`)

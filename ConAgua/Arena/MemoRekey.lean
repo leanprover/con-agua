@@ -1,4 +1,8 @@
-import ConAgua.Arena.MemoLibRel
+module
+
+public import ConAgua.Arena.MemoLibRel
+
+@[expose] public section
 
 /-!
 # A memo read under another key codec (lane `indproofs4`, helper `wkt`)

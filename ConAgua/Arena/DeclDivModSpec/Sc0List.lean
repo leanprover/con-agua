@@ -1,9 +1,13 @@
-import ConAgua.Arena.DeclDivModSpec.DmCgW
-import ConAgua.Arena.DeclDivModSpec.EqAt1
-import ConAgua.Arena.IndRealApdT
-import ConAgua.Arena.GrindAttr
-import ConAgua.L.GrindAttr
-import ConAgua.L.ModelGen
+module
+
+public import ConAgua.Arena.DeclDivModSpec.DmCgW
+public import ConAgua.Arena.DeclDivModSpec.EqAt1
+public import ConAgua.Arena.IndRealApdT
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.L.GrindAttr
+public import ConAgua.L.ModelGen
+
+@[expose] public section
 
 /-!
 # Sc0List

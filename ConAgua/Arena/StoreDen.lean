@@ -1,5 +1,9 @@
-import ConAgua.Arena.Tiers
-import Std.Tactic.BVDecide.Normalize.Prop
+module
+
+public import ConAgua.Arena.Tiers
+public import Std.Tactic.BVDecide.Normalize.Prop
+
+@[expose] public section
 
 /-!
 # Stored levels read back: the invariant the knot's level readers need (lane `defeq2`)

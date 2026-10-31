@@ -1,13 +1,17 @@
-import ConAgua.Front.IndApply
-import ConAgua.Arena.DeclArmsNat
-import ConAgua.L.ProgHas
-import ConAgua.Arena.IndCopy
-import ConAgua.Arena.WhnfBase
-import Std.Tactic.BVDecide.Normalize.BitVec
-import Std.Tactic.BVDecide.Normalize.Prop
-import ConAgua.Arena.GrindAttr
-import ConAgua.L.GrindAttr
-import ConAgua.L.ModelGen
+module
+
+public import ConAgua.Front.IndApply
+public import ConAgua.Arena.DeclArmsNat
+public import ConAgua.L.ProgHas
+public import ConAgua.Arena.IndCopy
+public import ConAgua.Arena.WhnfBase
+public import Std.Tactic.BVDecide.Normalize.BitVec
+public import Std.Tactic.BVDecide.Normalize.Prop
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.L.GrindAttr
+public import ConAgua.L.ModelGen
+
+@[expose] public section
 
 /-!
 # The ground hoist: `hoistNatOpGround` in L (lane `front3`)

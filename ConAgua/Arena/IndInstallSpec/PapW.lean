@@ -1,10 +1,14 @@
-import ConAgua.Arena.IndInstallSpec.SelProg
-import ConAgua.Arena.DeclNatSub
-import ConAgua.Arena.RecGenSpec.ClassFeR
-import ConAgua.Arena.GrindAttr
-import ConAgua.Arena.IndGrindAttr
-import ConAgua.L.GrindAttr
-import ConAgua.L.ModelGen
+module
+
+public import ConAgua.Arena.IndInstallSpec.SelProg
+public import ConAgua.Arena.DeclNatSub
+public import ConAgua.Arena.RecGenSpec.ClassFeR
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.Arena.IndGrindAttr
+public import ConAgua.L.GrindAttr
+public import ConAgua.L.ModelGen
+
+@[expose] public section
 
 /-!
 # PapW

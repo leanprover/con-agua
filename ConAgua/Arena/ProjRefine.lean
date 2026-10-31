@@ -1,7 +1,11 @@
-import ConAgua.Arena.ConsLibRel
-import ConAgua.Arena.ProjStore
-import Std.Tactic.BVDecide.Normalize.BitVec
-import Std.Tactic.BVDecide.Normalize.Prop
+module
+
+public import ConAgua.Arena.ConsLibRel
+public import ConAgua.Arena.ProjStore
+public import Std.Tactic.BVDecide.Normalize.BitVec
+public import Std.Tactic.BVDecide.Normalize.Prop
+
+@[expose] public section
 
 /-!
 # The `proj` store refines the arena's `proj` tables

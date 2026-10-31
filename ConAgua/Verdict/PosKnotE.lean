@@ -1,5 +1,9 @@
-import ConAgua.Verdict.DefEqBaseE
-import ConAgua.Arena.IndT.Lift
+module
+
+public import ConAgua.Verdict.DefEqBaseE
+public import ConAgua.Arena.IndT.Lift
+
+@[expose] public section
 
 /-!
 # `whnf_top`'s error claim under `StageT`

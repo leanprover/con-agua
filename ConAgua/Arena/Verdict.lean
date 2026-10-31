@@ -1,5 +1,9 @@
-import ConAgua.L.ErrSpec
-import ConAgua.Arena.WhnfBase
+module
+
+public import ConAgua.L.ErrSpec
+public import ConAgua.Arena.WhnfBase
+
+@[expose] public section
 
 /-!
 # The verdict claim: what an L error says about the twin

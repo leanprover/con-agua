@@ -1,5 +1,9 @@
-import ConAgua.Arena.IndPosSpec.NcnW
-import ConAgua.Arena.IndPosSpec.DepthGo
+module
+
+public import ConAgua.Arena.IndPosSpec.NcnW
+public import ConAgua.Arena.IndPosSpec.DepthGo
+
+@[expose] public section
 
 /-!
 # NbKeyK2

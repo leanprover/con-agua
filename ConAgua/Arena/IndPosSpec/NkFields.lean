@@ -1,5 +1,9 @@
-import ConAgua.Arena.IndPosSpec.CtxFields
-import ConAgua.Arena.IndPosSpec.PiBWStage
+module
+
+public import ConAgua.Arena.IndPosSpec.CtxFields
+public import ConAgua.Arena.IndPosSpec.PiBWStage
+
+@[expose] public section
 
 /-!
 # NkFields

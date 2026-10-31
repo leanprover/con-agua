@@ -1,5 +1,9 @@
-import ConAgua.Arena.IndPosSpec.PfLook
-import ConAgua.Arena.IndPosSpec.PosBindT
+module
+
+public import ConAgua.Arena.IndPosSpec.PfLook
+public import ConAgua.Arena.IndPosSpec.PosBindT
+
+@[expose] public section
 
 /-!
 # OneK

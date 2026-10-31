@@ -1,8 +1,12 @@
-import ConAgua.Verdict.IndBTmn
-import ConAgua.Arena.GrindAttr
-import ConAgua.Arena.IndGrindAttr
-import ConAgua.L.GrindAttr
-import ConAgua.Arena.IndT.RecGen28Models
+module
+
+public import ConAgua.Verdict.IndBTmn
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.Arena.IndGrindAttr
+public import ConAgua.L.GrindAttr
+public import ConAgua.Arena.IndT.RecGen28Models
+
+@[expose] public section
 
 /-!
 # `classes_nfs`' loop refinement

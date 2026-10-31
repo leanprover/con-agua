@@ -1,4 +1,8 @@
-import ConAgua.Arena.RecClassSpec.MjW
+module
+
+public import ConAgua.Arena.RecClassSpec.MjW
+
+@[expose] public section
 
 /-!
 # Major: `ConRon.Arena.ClassGen.major`, `ConRon.Arena.ClassGen.motiveTy`

@@ -1,4 +1,8 @@
-import ConAgua.Arena.IndPosSpec.CanonW
+module
+
+public import ConAgua.Arena.IndPosSpec.CanonW
+
+@[expose] public section
 
 /-!
 # SnocWDecK

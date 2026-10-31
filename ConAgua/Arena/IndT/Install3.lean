@@ -1,8 +1,12 @@
-import ConAgua.Arena.IndT.Sum2
-import ConAgua.Arena.IndT.Install1
-import ConAgua.Arena.IndInstallSpec.InstallSimCall
-import ConAgua.Arena.IndInstallSpec.Cons
-import ConAgua.L.ModelGen
+module
+
+public import ConAgua.Arena.IndT.Sum2
+public import ConAgua.Arena.IndT.Install1
+public import ConAgua.Arena.IndInstallSpec.InstallSimCall
+public import ConAgua.Arena.IndInstallSpec.Cons
+public import ConAgua.L.ModelGen
+
+@[expose] public section
 
 /-!
 # `checkBlockTele`, `checkBlockTeles` under `StageC` (lane `indstaget`)

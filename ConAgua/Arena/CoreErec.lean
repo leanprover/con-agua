@@ -1,5 +1,9 @@
-import ConAgua.Arena.WhnfBase
-import ConAgua.Arena.Frame
+module
+
+public import ConAgua.Arena.WhnfBase
+public import ConAgua.Arena.Frame
+
+@[expose] public section
 
 /-!
 # The core leaves the record pool alone: a write set from the program text (lane `whnf3`)

@@ -1,4 +1,8 @@
-import ConRon.Arena.Inductives.Positivity
+module
+
+public import ConRon.Arena.Inductives.Positivity
+
+@[expose] public section
 
 /-!
 # PosBindT

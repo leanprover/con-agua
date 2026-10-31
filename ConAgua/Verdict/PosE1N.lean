@@ -1,8 +1,12 @@
-import ConAgua.Arena.IndPosSpec.NtyW
-import ConAgua.Arena.IndPosSpec.Grow
-import ConAgua.Verdict.PosNty
-import ConAgua.Arena.IlpRdReal
-import ConAgua.Arena.IndRealAbsPos
+module
+
+public import ConAgua.Arena.IndPosSpec.NtyW
+public import ConAgua.Arena.IndPosSpec.Grow
+public import ConAgua.Verdict.PosNty
+public import ConAgua.Arena.IlpRdReal
+public import ConAgua.Arena.IndRealAbsPos
+
+@[expose] public section
 /-!
 # `nest_inst_type`: one refinement for both outcomes
 

@@ -1,4 +1,8 @@
-import ConAgua.Arena.WhnfCore
+module
+
+public import ConAgua.Arena.WhnfCore
+
+@[expose] public section
 
 /-!
 # ι-reduction: `ConRon.Arena.Core.lean`, the recursor rule fire

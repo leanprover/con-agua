@@ -1,5 +1,9 @@
-import ConAgua.Arena.IndPosSpec.BvbWMfr
-import ConAgua.Arena.IndSumSpec.TblProg
+module
+
+public import ConAgua.Arena.IndPosSpec.BvbWMfr
+public import ConAgua.Arena.IndSumSpec.TblProg
+
+@[expose] public section
 
 /-!
 # TabsProg

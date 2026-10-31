@@ -1,6 +1,10 @@
-import ConAgua.Arena.IndT.Base
-import ConAgua.Arena.StageC
-import ConRon.Bridge.Inductives.Rel
+module
+
+public import ConAgua.Arena.IndT.Base
+public import ConAgua.Arena.StageC
+public import ConRon.Bridge.Inductives.Rel
+
+@[expose] public section
 
 /-!
 # Lifting stage facts to `StageC` by con-ron's specs (lane `indstaget`)

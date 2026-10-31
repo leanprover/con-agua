@@ -1,5 +1,9 @@
-import ConAgua.Arena.PromoteCIRef.PmDecRuleWords
-import ConRon.Bridge.Grind
+module
+
+public import ConAgua.Arena.PromoteCIRef.PmDecRuleWords
+public import ConRon.Bridge.Grind
+
+@[expose] public section
 
 /-!
 # TdecJoin

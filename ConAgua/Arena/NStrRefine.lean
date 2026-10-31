@@ -1,7 +1,11 @@
 
-import ConAgua.Arena.NStrStore
-import ConAgua.Arena.LitRefine
-import Std.Tactic.BVDecide.Normalize.Prop
+module
+
+public import ConAgua.Arena.NStrStore
+public import ConAgua.Arena.LitRefine
+public import Std.Tactic.BVDecide.Normalize.Prop
+
+@[expose] public section
 
 /-!
 # The name store's `str` table refines the arena's `str` tables

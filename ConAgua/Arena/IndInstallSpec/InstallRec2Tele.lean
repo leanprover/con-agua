@@ -1,10 +1,14 @@
-import ConAgua.Arena.IndInstallSpec.InstallCvDecB
-import ConAgua.Arena.IndPartsSpec.PartsConsPL
-import ConAgua.Arena.RecClassSpec.MjProg
-import ConAgua.Arena.RecClassSpec.PiBWRoom
-import ConAgua.Arena.RecStab
-import ConAgua.Arena.IndGrindAttr
-import ConAgua.L.GrindAttr
+module
+
+public import ConAgua.Arena.IndInstallSpec.InstallCvDecB
+public import ConAgua.Arena.IndPartsSpec.PartsConsPL
+public import ConAgua.Arena.RecClassSpec.MjProg
+public import ConAgua.Arena.RecClassSpec.PiBWRoom
+public import ConAgua.Arena.RecStab
+public import ConAgua.Arena.IndGrindAttr
+public import ConAgua.L.GrindAttr
+
+@[expose] public section
 
 /-!
 # InstallRec2Tele

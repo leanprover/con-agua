@@ -1,8 +1,12 @@
-import ConAgua.Arena.IndPos2
-import ConAgua.Arena.Verdict
-import ConAgua.Arena.GrindAttr
-import ConAgua.L.GrindAttr
-import ConAgua.L.ModelGen
+module
+
+public import ConAgua.Arena.IndPos2
+public import ConAgua.Arena.Verdict
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.L.GrindAttr
+public import ConAgua.L.ModelGen
+
+@[expose] public section
 
 /-!
 # `nest_cont_key`'s unified model

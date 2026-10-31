@@ -1,7 +1,11 @@
-import ConAgua.Arena.Frame
-import ConAgua.Arena.Tiers
-import ConAgua.Arena.WhnfBase
-import ConRon.Bridge.Promote.Pers
+module
+
+public import ConAgua.Arena.Frame
+public import ConAgua.Arena.Tiers
+public import ConAgua.Arena.WhnfBase
+public import ConRon.Bridge.Promote.Pers
+
+@[expose] public section
 
 /-!
 # The declaration loop's call closure and its write set (lane `loopt2`)

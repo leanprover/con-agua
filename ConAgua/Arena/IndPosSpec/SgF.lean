@@ -1,5 +1,9 @@
-import ConRon.Arena.Inductives.Positivity
-import ConAgua.Arena.Reasons
+module
+
+public import ConRon.Arena.Inductives.Positivity
+public import ConAgua.Arena.Reasons
+
+@[expose] public section
 
 /-!
 # SgF

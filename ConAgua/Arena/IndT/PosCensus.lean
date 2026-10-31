@@ -1,4 +1,8 @@
-import ConAgua.Arena.IndT.PosAll
+module
+
+public import ConAgua.Arena.IndT.PosAll
+
+@[expose] public section
 
 /-!
 # The positivity walk's census links under `StageC` (lane `indstaget`, helper `indstaget-pos`)

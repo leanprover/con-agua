@@ -1,7 +1,11 @@
-import ConAgua.Checker.Prog
-import ConAgua.Arena.LeafFns
-import ConAgua.Arena.LevelIntern
-import ConAgua.Arena.LevelSubstLP
+module
+
+public import ConAgua.Checker.Prog
+public import ConAgua.Arena.LeafFns
+public import ConAgua.Arena.LevelIntern
+public import ConAgua.Arena.LevelSubstLP
+
+@[expose] public section
 
 /-!
 # The leaves' write set in the checker's program (lane `loopt2`)

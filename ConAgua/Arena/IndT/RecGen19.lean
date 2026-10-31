@@ -1,8 +1,12 @@
-import ConAgua.Arena.IndT.RecGenTmf
-import ConAgua.Arena.IndT.RecCheckPins
-import ConAgua.Verdict.IndBClm
-import ConAgua.Arena.RecGenSpec.CntW
-import ConRon.Bridge.Inductives.GenRec
+module
+
+public import ConAgua.Arena.IndT.RecGenTmf
+public import ConAgua.Arena.IndT.RecCheckPins
+public import ConAgua.Verdict.IndBClm
+public import ConAgua.Arena.RecGenSpec.CntW
+public import ConRon.Bridge.Inductives.GenRec
+
+@[expose] public section
 
 /-!
 # `classMajors` under `StageC`, both outcomes (lane `indstaget`, helper `indstaget-tpt`)

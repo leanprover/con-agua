@@ -1,7 +1,11 @@
-import ConAgua.Verdict.PosE
-import ConAgua.Verdict.PosE2
-import ConAgua.Arena.IndPosSpec.Pos2DecHLSplit
-import ConAgua.Arena.IndPosSpec.Snoc
+module
+
+public import ConAgua.Verdict.PosE
+public import ConAgua.Verdict.PosE2
+public import ConAgua.Arena.IndPosSpec.Pos2DecHLSplit
+public import ConAgua.Arena.IndPosSpec.Snoc
+
+@[expose] public section
 
 /-!
 # `nest_cont_new` refines `nestContNew`, both outcomes (lane `indstaget`, helper `indstaget-pos`)

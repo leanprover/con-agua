@@ -1,7 +1,11 @@
-import ConAgua.L.Semantics
-import ConRon.Arena.Handle
-import Std.WP.Assertion
-import ConAgua.Arena.Reasons
+module
+
+public import ConAgua.L.Semantics
+public import ConRon.Arena.Handle
+public import Std.WP.Assertion
+public import ConAgua.Arena.Reasons
+
+@[expose] public section
 
 /-!
 # PcrK3

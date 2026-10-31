@@ -1,6 +1,10 @@
-import ConAgua.Arena.DeclNatGateT
-import ConAgua.Arena.DeclArmLoop
-import ConAgua.Arena.DeclDivGateT
+module
+
+public import ConAgua.Arena.DeclNatGateT
+public import ConAgua.Arena.DeclArmLoop
+public import ConAgua.Arena.DeclDivGateT
+
+@[expose] public section
 
 /-!
 # The definition arm under `StageT` (lane `loopt3`, helper `loopt3-nat`)

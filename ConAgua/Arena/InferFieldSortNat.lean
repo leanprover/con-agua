@@ -1,6 +1,10 @@
-import ConAgua.Arena.DefEqMid
-import ConAgua.Arena.WhnfDeltaRefine3
-import ConAgua.Arena.DefEqLeaves2
+module
+
+public import ConAgua.Arena.DefEqMid
+public import ConAgua.Arena.WhnfDeltaRefine3
+public import ConAgua.Arena.DefEqLeaves2
+
+@[expose] public section
 
 /-!
 # `NatPredW` from `natPred_refines` (lane `defeq2`)

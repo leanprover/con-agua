@@ -1,6 +1,10 @@
-import ConAgua.Arena.DeclCrpT
-import ConAgua.Arena.GrindAttr
-import ConAgua.L.GrindAttr
+module
+
+public import ConAgua.Arena.DeclCrpT
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.L.GrindAttr
+
+@[expose] public section
 
 /-!
 # The verdict claim of `check_reduce_pin`

@@ -1,4 +1,8 @@
-import ConAgua.Arena.IndSumSpec.StructProjGuards
+module
+
+public import ConAgua.Arena.IndSumSpec.StructProjGuards
+
+@[expose] public section
 
 /-!
 # SpgWZero

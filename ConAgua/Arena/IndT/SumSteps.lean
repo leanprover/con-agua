@@ -1,8 +1,12 @@
-import ConAgua.Arena.IndT.Install1
-import ConAgua.Arena.IndSumSpec.CheckSumCtor
-import ConAgua.Arena.IndSumSpec.SumRules
-import ConRon.Bridge.Inductives.SumInstall
-import ConRon.Bridge.Inductives.StructParts
+module
+
+public import ConAgua.Arena.IndT.Install1
+public import ConAgua.Arena.IndSumSpec.CheckSumCtor
+public import ConAgua.Arena.IndSumSpec.SumRules
+public import ConRon.Bridge.Inductives.SumInstall
+public import ConRon.Bridge.Inductives.StructParts
+
+@[expose] public section
 
 /-!
 # The sum family's walk steps

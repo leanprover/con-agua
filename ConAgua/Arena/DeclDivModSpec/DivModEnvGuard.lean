@@ -1,7 +1,11 @@
-import ConAgua.Arena.DeclBasisSpec2
-import ConAgua.Arena.DeclDivModSpec.BoolCtorTyped
-import ConAgua.Arena.GrindAttr
-import ConAgua.L.ModelGen
+module
+
+public import ConAgua.Arena.DeclBasisSpec2
+public import ConAgua.Arena.DeclDivModSpec.BoolCtorTyped
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.L.ModelGen
+
+@[expose] public section
 
 /-!
 # DivModEnvGuard: `ConRon.Arena.divModEnvGuard`

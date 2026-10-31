@@ -1,8 +1,12 @@
-import ConAgua.Arena.IndRealWalk
-import ConAgua.Arena.DeclStep
-import ConAgua.Arena.GrindAttr
-import ConAgua.Arena.IndGrindAttr
-import ConAgua.L.GrindAttr
+module
+
+public import ConAgua.Arena.IndRealWalk
+public import ConAgua.Arena.DeclStep
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.Arena.IndGrindAttr
+public import ConAgua.L.GrindAttr
+
+@[expose] public section
 
 /-!
 # `install_header`'s callees (lane `decls2`, helper `decls2-header`)

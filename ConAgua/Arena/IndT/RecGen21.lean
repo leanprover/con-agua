@@ -1,8 +1,12 @@
-import ConAgua.Arena.IndT.RecGen19
-import ConAgua.Arena.IndInstallSpec.PosFreeMfr
-import ConAgua.Arena.GrindAttr
-import ConAgua.L.GrindAttr
-import ConAgua.L.ModelGen
+module
+
+public import ConAgua.Arena.IndT.RecGen19
+public import ConAgua.Arena.IndInstallSpec.PosFreeMfr
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.L.GrindAttr
+public import ConAgua.L.ModelGen
+
+@[expose] public section
 
 /-!
 # `check_block_classes`: one model, one refinement

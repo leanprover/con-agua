@@ -1,4 +1,8 @@
-import ConAgua.Front.LineRef
+module
+
+public import ConAgua.Front.LineRef
+
+@[expose] public section
 
 
 /-!

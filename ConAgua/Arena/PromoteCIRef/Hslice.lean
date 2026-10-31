@@ -1,4 +1,8 @@
-import ConAgua.Arena.PromoteCIRef.DecRuleMk
+module
+
+public import ConAgua.Arena.PromoteCIRef.DecRuleMk
+
+@[expose] public section
 
 /-!
 # Hslice

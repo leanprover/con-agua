@@ -1,9 +1,13 @@
-import ConAgua.Arena.DeclCheckLoop
-import ConAgua.Arena.CheckerL
-import ConAgua.Arena.PromoteCIRef.PromoteNew
-import ConAgua.Arena.DeclAndPin
-import ConAgua.Arena.GrindAttr
-import ConAgua.L.GrindAttr
+module
+
+public import ConAgua.Arena.DeclCheckLoop
+public import ConAgua.Arena.CheckerL
+public import ConAgua.Arena.PromoteCIRef.PromoteNew
+public import ConAgua.Arena.DeclAndPin
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.L.GrindAttr
+
+@[expose] public section
 
 /-!
 # The declaration loop in L, top down: `installFold`, `checkPendingList`

@@ -1,5 +1,9 @@
-import ConAgua.Arena.PromoteCIRef.Proj
-import ConRon.Bridge.Grind
+module
+
+public import ConAgua.Arena.PromoteCIRef.Proj
+public import ConRon.Bridge.Grind
+
+@[expose] public section
 
 /-!
 # Caps

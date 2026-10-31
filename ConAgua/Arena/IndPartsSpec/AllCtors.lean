@@ -1,5 +1,9 @@
-import ConAgua.Arena.IndPartsSpec.BlockShapeAllCtorsGo
-import ConAgua.Arena.IndPartsSpec.BlockRecNamesUnreserved
+module
+
+public import ConAgua.Arena.IndPartsSpec.BlockShapeAllCtorsGo
+public import ConAgua.Arena.IndPartsSpec.BlockRecNamesUnreserved
+
+@[expose] public section
 
 /-!
 # AllCtors: `ConRon.Arena.BlockShape.allCtors`

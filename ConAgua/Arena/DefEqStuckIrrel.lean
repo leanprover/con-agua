@@ -1,5 +1,9 @@
-import ConAgua.Arena.DefEqStuckUnit
-import ConAgua.Arena.DefEqModels
+module
+
+public import ConAgua.Arena.DefEqStuckUnit
+public import ConAgua.Arena.DefEqModels
+
+@[expose] public section
 
 /-!
 # `stuck_irrel` refines `stuckIrrel` (lane `defeq`, helper `defeq-top`)

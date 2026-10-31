@@ -1,11 +1,15 @@
-import ConAgua.Arena.IndSumSpec.PBDecA
-import ConAgua.Arena.IndSumSpec.StructCtorResidOk
-import ConAgua.Arena.IndPosSpec.MatesW
-import ConAgua.Arena.IndRealIlpP
-import ConAgua.Arena.GrindAttr
-import ConAgua.Arena.IndGrindAttr
-import ConAgua.L.GrindAttr
-import ConAgua.L.ModelGen
+module
+
+public import ConAgua.Arena.IndSumSpec.PBDecA
+public import ConAgua.Arena.IndSumSpec.StructCtorResidOk
+public import ConAgua.Arena.IndPosSpec.MatesW
+public import ConAgua.Arena.IndRealIlpP
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.Arena.IndGrindAttr
+public import ConAgua.L.GrindAttr
+public import ConAgua.L.ModelGen
+
+@[expose] public section
 
 /-!
 # StructProjBodies: `ConRon.Arena.structProjBodiesGo`, `ConRon.Arena.structProjBodies`

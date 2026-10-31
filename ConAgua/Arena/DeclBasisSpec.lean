@@ -1,10 +1,14 @@
-import ConAgua.Arena.DeclValRef
-import ConAgua.Arena.IndPartsSpec.BlockRecNamesUnreserved
-import ConAgua.Arena.DeclRec
-import ConAgua.Arena.GrindAttr
-import ConAgua.Arena.IndGrindAttr
-import ConAgua.L.GrindAttr
-import ConAgua.L.ModelGen
+module
+
+public import ConAgua.Arena.DeclValRef
+public import ConAgua.Arena.IndPartsSpec.BlockRecNamesUnreserved
+public import ConAgua.Arena.DeclRec
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.Arena.IndGrindAttr
+public import ConAgua.L.GrindAttr
+public import ConAgua.L.ModelGen
+
+@[expose] public section
 
 /-!
 # Pin reads, `of_reduce_op`, `install_basis_decl(s)` (lane `decls3`)

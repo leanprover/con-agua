@@ -1,7 +1,11 @@
-import ConAgua.Arena.Promote
-import ConAgua.Arena.LevelEquiv
-import ConAgua.Arena.Env
-import ConAgua.L.ProgHas
+module
+
+public import ConAgua.Arena.Promote
+public import ConAgua.Arena.LevelEquiv
+public import ConAgua.Arena.Env
+public import ConAgua.L.ProgHas
+
+@[expose] public section
 
 /-!
 # The promotion's program: every function it calls, by name

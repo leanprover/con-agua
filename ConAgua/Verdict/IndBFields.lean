@@ -1,11 +1,15 @@
-import ConAgua.Arena.RecGenSpec.CfhW
-import ConAgua.Arena.RecClassSpec.ClassNPcOf
-import ConAgua.Arena.RecGenSpec.ClassFieldsOf
-import ConAgua.Arena.IndRealAbsPos
-import ConAgua.Arena.IndRealAbsSim
-import ConAgua.Arena.RecClassSpec.SlotProg
-import ConAgua.Arena.GrindAttr
-import ConAgua.L.ModelGen
+module
+
+public import ConAgua.Arena.RecGenSpec.CfhW
+public import ConAgua.Arena.RecClassSpec.ClassNPcOf
+public import ConAgua.Arena.RecGenSpec.ClassFieldsOf
+public import ConAgua.Arena.IndRealAbsPos
+public import ConAgua.Arena.IndRealAbsSim
+public import ConAgua.Arena.RecClassSpec.SlotProg
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.L.ModelGen
+
+@[expose] public section
 
 /-!
 # `class_fields_of_go`, `class_fields_of`: one model and one refinement for both outcomes

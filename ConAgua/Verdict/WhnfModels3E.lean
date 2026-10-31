@@ -1,12 +1,16 @@
-import ConAgua.Arena.Verdict
-import ConAgua.Arena.WhnfIotaRec
-import ConAgua.Arena.WhnfIota
-import ConAgua.Arena.GrindAttr
-import ConAgua.L.GrindAttr
-import ConAgua.L.ModelGen
-import ConAgua.Checker.NoVerdictTree
-import Std.Tactic.BVDecide.Normalize.BitVec
-import Std.Tactic.BVDecide.Normalize.Prop
+module
+
+public import ConAgua.Arena.Verdict
+public import ConAgua.Arena.WhnfIotaRec
+public import ConAgua.Arena.WhnfIota
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.L.GrindAttr
+public import ConAgua.L.ModelGen
+public import ConAgua.Checker.NoVerdictTree
+public import Std.Tactic.BVDecide.Normalize.BitVec
+public import Std.Tactic.BVDecide.Normalize.Prop
+
+@[expose] public section
 
 /-!
 # Error models of the ι family (lane `verdicts-b`, helper `k2`)

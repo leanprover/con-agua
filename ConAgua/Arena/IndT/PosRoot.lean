@@ -1,4 +1,8 @@
-import ConAgua.Verdict.PosTopE4
+module
+
+public import ConAgua.Verdict.PosTopE4
+
+@[expose] public section
 
 /-!
 # `nest_root` and `nest_seeds` under `StageC` (lane `indstaget`, helper `indstaget-pos`)

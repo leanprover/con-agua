@@ -1,6 +1,10 @@
-import Lean
-import ConAgua.L.WriteSet
-import ConAgua.Compiler.WFSplit
+module
+
+public import Lean
+public import ConAgua.L.WriteSet
+public import ConAgua.Compiler.WFSplit
+
+@[expose] public section
 
 /-!
 # Write sets of a large program, one function at a time (lane `erecfix`)

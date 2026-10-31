@@ -1,5 +1,9 @@
-import ConAgua.Arena.IndMaster
-import Std.Tactic.BVDecide.Normalize.Prop
+module
+
+public import ConAgua.Arena.IndMaster
+public import Std.Tactic.BVDecide.Normalize.Prop
+
+@[expose] public section
 
 /-!
 # Name and `succ` interning under the stage relation (lane `decls3`, helper `decls3-canon`)

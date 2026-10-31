@@ -1,4 +1,8 @@
-import ConAgua.Arena.IndRealAbs
+module
+
+public import ConAgua.Arena.IndRealAbs
+
+@[expose] public section
 
 /-!
 # SlotProg

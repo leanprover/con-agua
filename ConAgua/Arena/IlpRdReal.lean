@@ -1,5 +1,9 @@
-import ConAgua.Arena.IlpRd
-import ConAgua.Arena.IndRealIlpL
+module
+
+public import ConAgua.Arena.IlpRd
+public import ConAgua.Arena.IndRealIlpL
+
+@[expose] public section
 
 /-!
 # The program's own reading of `inst_lp_fast` meets `IlpRd` (lane `indstaget`, helper `rcC`)

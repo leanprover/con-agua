@@ -1,5 +1,9 @@
-import ConAgua.Arena.RomCI
-import ConAgua.Rom.CIEnc
+module
+
+public import ConAgua.Arena.RomCI
+public import ConAgua.Rom.CIEnc
+
+@[expose] public section
 
 /-!
 # The program's ROM: the pinned names, then the startup walk's item stream

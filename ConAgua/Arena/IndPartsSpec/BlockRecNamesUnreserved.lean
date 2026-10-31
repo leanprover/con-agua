@@ -1,11 +1,15 @@
-import ConAgua.Arena.IndCallM
-import ConAgua.Arena.IndDecStab
-import ConAgua.Arena.IndPosSpec.MatesW
-import ConAgua.Arena.IndReal
-import ConAgua.Arena.GrindAttr
-import ConAgua.Arena.LdRd
-import ConAgua.Arena.IndGrindAttr
-import ConAgua.L.GrindAttr
+module
+
+public import ConAgua.Arena.IndCallM
+public import ConAgua.Arena.IndDecStab
+public import ConAgua.Arena.IndPosSpec.MatesW
+public import ConAgua.Arena.IndReal
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.Arena.LdRd
+public import ConAgua.Arena.IndGrindAttr
+public import ConAgua.L.GrindAttr
+
+@[expose] public section
 
 /-!
 # BlockRecNamesUnreserved: `ConRon.Arena.blockRecNamesUnreserved`

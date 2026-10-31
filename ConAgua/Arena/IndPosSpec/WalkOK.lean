@@ -1,5 +1,9 @@
-import ConAgua.Arena.IndStubs
-import ConAgua.Arena.IndDecStab
+module
+
+public import ConAgua.Arena.IndStubs
+public import ConAgua.Arena.IndDecStab
+
+@[expose] public section
 
 /-!
 # WalkOK

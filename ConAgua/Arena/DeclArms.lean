@@ -1,5 +1,9 @@
-import ConAgua.Arena.DeclArmsNat
-import ConAgua.Arena.IndProg
+module
+
+public import ConAgua.Arena.DeclArmsNat
+public import ConAgua.Arena.IndProg
+
+@[expose] public section
 
 /-!
 # `checkDecl`'s one-constant arms in L, part 3: the arms (lane `decls2`)

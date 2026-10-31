@@ -1,8 +1,12 @@
-import ConAgua.Arena.LdRd
-import ConAgua.Arena.RecFireEnv
-import ConAgua.Arena.WhnfIotaRefine6
-import ConAgua.Arena.GrindAttr
-import ConAgua.L.GrindAttr
+module
+
+public import ConAgua.Arena.LdRd
+public import ConAgua.Arena.RecFireEnv
+public import ConAgua.Arena.WhnfIotaRefine6
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.L.GrindAttr
+
+@[expose] public section
 
 /-!
 # `iota_rec_at`'s pieces, part 2: the certificate family, the fire, the major, the recursor

@@ -1,13 +1,17 @@
-import ConAgua.Arena.IndPartsSpec.BlockRecNameSetOk
-import ConAgua.Arena.IndPartsSpec.BmgW
-import ConAgua.Arena.IndPartsSpec.BmoW
-import ConAgua.Arena.IndPartsSpec.BpcW
-import ConAgua.Arena.IndPartsSpec.BsoK2
-import ConAgua.Arena.IndSumSpec.ColW
-import ConAgua.Arena.GrindAttr
-import ConAgua.Arena.IndGrindAttr
-import ConAgua.L.GrindAttr
-import ConAgua.L.ModelGen
+module
+
+public import ConAgua.Arena.IndPartsSpec.BlockRecNameSetOk
+public import ConAgua.Arena.IndPartsSpec.BmgW
+public import ConAgua.Arena.IndPartsSpec.BmoW
+public import ConAgua.Arena.IndPartsSpec.BpcW
+public import ConAgua.Arena.IndPartsSpec.BsoK2
+public import ConAgua.Arena.IndSumSpec.ColW
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.Arena.IndGrindAttr
+public import ConAgua.L.GrindAttr
+public import ConAgua.L.ModelGen
+
+@[expose] public section
 
 /-!
 # Bsp

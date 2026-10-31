@@ -1,5 +1,9 @@
-import ConAgua.Arena.IndRealAbs
-import ConAgua.Arena.IndRealNames
+module
+
+public import ConAgua.Arena.IndRealAbs
+public import ConAgua.Arena.IndRealNames
+
+@[expose] public section
 
 /-!
 # `AFr` in model chains (`RSim`) (lane `indproofs4`, helper `abs`)

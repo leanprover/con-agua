@@ -1,4 +1,8 @@
-import ConAgua.Checker.PipeRest
+module
+
+public import ConAgua.Checker.PipeRest
+
+@[expose] public section
 
 /-!
 # The seven stages before the declaration loop, at the checker's program (lane `pipeline`)

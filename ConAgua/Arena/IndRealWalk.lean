@@ -1,8 +1,12 @@
-import ConAgua.Arena.StageInst1
-import ConAgua.Arena.CoreWalks
-import ConAgua.Arena.StubNames
-import ConAgua.Arena.GrindAttr
-import ConAgua.L.GrindAttr
+module
+
+public import ConAgua.Arena.StageInst1
+public import ConAgua.Arena.CoreWalks
+public import ConAgua.Arena.StubNames
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.L.GrindAttr
+
+@[expose] public section
 
 /-!
 # The walk reads `bvar_b`, `fvar_b`, `has_fvar_fast`, `loose_bvars_bounded_fast` under the stage relation (lane `indproofs4`)

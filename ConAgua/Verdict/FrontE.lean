@@ -1,11 +1,15 @@
-import ConAgua.Arena.Verdict
-import ConAgua.Front.ApplyDeclRefine
-import ConAgua.Arena.GrindAttr
-import ConAgua.L.GrindAttr
-import Std.Tactic.BVDecide.Normalize.BitVec
-import Std.Tactic.BVDecide.Normalize.Prop
-import ConLeche.Frontend.ExportC
-import ConLeche.Frontend.Scan.Types
+module
+
+public import ConAgua.Arena.Verdict
+public import ConAgua.Front.ApplyDeclRefine
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.L.GrindAttr
+public import Std.Tactic.BVDecide.Normalize.BitVec
+public import Std.Tactic.BVDecide.Normalize.Prop
+public import ConLeche.Frontend.ExportC
+public import ConLeche.Frontend.Scan.Types
+
+@[expose] public section
 
 /-!
 # The claim of a frontend step with a record verdict; `decl_kind`'s declines (lane `verdicts-b`,

@@ -1,7 +1,11 @@
-import ConAgua.Checker.Prelude
-import ConAgua.L.FuelMono
-import ConAgua.L.Blocks
-import ConRon.Bridge.Grind
+module
+
+public import ConAgua.Checker.Prelude
+public import ConAgua.L.FuelMono
+public import ConAgua.L.Blocks
+public import ConRon.Bridge.Grind
+
+@[expose] public section
 
 /-!
 # The prelude's copies of the frontend are the frontend on the prelude's bytes (lane `pipeline`)

@@ -1,5 +1,9 @@
-import ConLeche.Kernel.NatOpPins
-import ConAgua.Rom.PinStream
+module
+
+public import ConLeche.Kernel.NatOpPins
+public import ConAgua.Rom.PinStream
+
+@[expose] public section
 
 /-!
 # `romgen OUT`: write the pin-data buffer (lane `romload`)

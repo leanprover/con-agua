@@ -1,7 +1,11 @@
-import ConAgua.Front.FrontPreOK
-import ConAgua.Arena.DeclAndPinIndDec
-import ConAgua.Checker.Pipeline
-import ConRon.Bridge.Frontend.Prepare
+module
+
+public import ConAgua.Front.FrontPreOK
+public import ConAgua.Arena.DeclAndPinIndDec
+public import ConAgua.Checker.Pipeline
+public import ConRon.Bridge.Frontend.Prepare
+
+@[expose] public section
 
 /-!
 # The twin's prepared records have the front's shape (lane `pipeline`)

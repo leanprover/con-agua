@@ -1,5 +1,9 @@
-import ConAgua.Arena.IndInstallSpec.DomsW
-import ConAgua.Arena.IndPosSpec.NestBlockOfKey
+module
+
+public import ConAgua.Arena.IndInstallSpec.DomsW
+public import ConAgua.Arena.IndPosSpec.NestBlockOfKey
+
+@[expose] public section
 
 /-!
 # InstW

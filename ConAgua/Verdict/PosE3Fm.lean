@@ -1,9 +1,13 @@
-import ConAgua.Arena.IndPos2
-import ConAgua.L.ErrSpec
-import ConAgua.Arena.GrindAttr
-import ConAgua.L.GrindAttr
-import Std.WP.Tactic
-import ConAgua.Arena.Verdict
+module
+
+public import ConAgua.Arena.IndPos2
+public import ConAgua.L.ErrSpec
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.L.GrindAttr
+public import Std.WP.Tactic
+public import ConAgua.Arena.Verdict
+
+@[expose] public section
 
 /-!
 # `nest_fields`' unified model (lane `verdicts-b`, helper `ia2`, fork `kn2b`)

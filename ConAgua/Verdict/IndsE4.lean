@@ -1,7 +1,11 @@
-import ConAgua.Arena.IndT.Install1
-import ConAgua.Verdict.LefRef
-import ConAgua.Arena.IndInstallSpec.IagW
-import ConRon.Bridge.Inductives.BlockInstall
+module
+
+public import ConAgua.Arena.IndT.Install1
+public import ConAgua.Verdict.LefRef
+public import ConAgua.Arena.IndInstallSpec.IagW
+public import ConRon.Bridge.Inductives.BlockInstall
+
+@[expose] public section
 /-!
 # `check_block_agree_one`: one model and one refinement for both outcomes
 

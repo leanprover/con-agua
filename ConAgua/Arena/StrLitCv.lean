@@ -1,7 +1,11 @@
-import ConAgua.Arena.StrLitBase
-import ConAgua.Arena.DeclCanonEq
-import ConAgua.Arena.GrindAttr
-import ConAgua.L.GrindAttr
+module
+
+public import ConAgua.Arena.StrLitBase
+public import ConAgua.Arena.DeclCanonEq
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.L.GrindAttr
+
+@[expose] public section
 
 /-!
 # `str_cv`: `IConstantInfo.toConstantVal` under `CoreS` (helper `defeq2-str`)

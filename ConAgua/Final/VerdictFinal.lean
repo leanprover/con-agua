@@ -1,5 +1,9 @@
-import ConAgua.Final.DrvFinal
-import ConAgua.Checker.VerdictTop
+module
+
+public import ConAgua.Final.DrvFinal
+public import ConAgua.Checker.VerdictTop
+
+@[expose] public section
 
 /-!
 # The verdict theorem for the sequential driver of the committed file

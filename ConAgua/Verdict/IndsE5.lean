@@ -1,6 +1,10 @@
-import ConAgua.Verdict.IndsE4
-import ConAgua.Arena.IndInstallSpec.InstallRec2Tele
-import ConAgua.Arena.IndPartsSpec.PartsPSlCons
+module
+
+public import ConAgua.Verdict.IndsE4
+public import ConAgua.Arena.IndInstallSpec.InstallRec2Tele
+public import ConAgua.Arena.IndPartsSpec.PartsPSlCons
+
+@[expose] public section
 /-!
 # `check_block_agree`: one model and one refinement for both outcomes
 

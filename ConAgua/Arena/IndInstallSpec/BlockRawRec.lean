@@ -1,8 +1,12 @@
-import ConAgua.Arena.IndInstallSpec.PartsAt
-import ConAgua.Arena.IndPartsSpec.PartsPSlCons
-import ConAgua.Arena.GrindAttr
-import ConAgua.Arena.IndGrindAttr
-import ConAgua.L.GrindAttr
+module
+
+public import ConAgua.Arena.IndInstallSpec.PartsAt
+public import ConAgua.Arena.IndPartsSpec.PartsPSlCons
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.Arena.IndGrindAttr
+public import ConAgua.L.GrindAttr
+
+@[expose] public section
 
 /-!
 # BlockRawRec: `ConRon.Arena.blockRawRec`, `ConRon.Arena.piDomsMentionAny`

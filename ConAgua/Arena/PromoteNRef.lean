@@ -1,8 +1,12 @@
-import ConAgua.Arena.PromoteN
-import ConAgua.Arena.PromoteMemo
-import ConAgua.Arena.PromotePi
-import ConAgua.Arena.SimLib
-import Std.Tactic.BVDecide.Normalize.Prop
+module
+
+public import ConAgua.Arena.PromoteN
+public import ConAgua.Arena.PromoteMemo
+public import ConAgua.Arena.PromotePi
+public import ConAgua.Arena.SimLib
+public import Std.Tactic.BVDecide.Normalize.Prop
+
+@[expose] public section
 
 /-!
 # `promote_n` refines `promoteN`

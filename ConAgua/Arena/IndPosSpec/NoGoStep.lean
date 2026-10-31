@@ -1,8 +1,12 @@
-import ConAgua.Arena.IndPosSpec.CanonW
-import ConAgua.Arena.IndPosSpec.SlRCongr
-import ConAgua.Arena.GrindAttr
-import ConAgua.Arena.IndGrindAttr
-import ConAgua.L.GrindAttr
+module
+
+public import ConAgua.Arena.IndPosSpec.CanonW
+public import ConAgua.Arena.IndPosSpec.SlRCongr
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.Arena.IndGrindAttr
+public import ConAgua.L.GrindAttr
+
+@[expose] public section
 
 /-!
 # NoGoStep

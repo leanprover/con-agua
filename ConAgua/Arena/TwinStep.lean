@@ -1,4 +1,8 @@
-import ConAgua.Arena.IndTwin
+module
+
+public import ConAgua.Arena.IndTwin
+
+@[expose] public section
 
 /-!
 # `TwinOK` across a twin step that only grows the store (lane `loopt2`)

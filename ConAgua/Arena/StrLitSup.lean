@@ -1,7 +1,11 @@
-import ConAgua.Arena.StrLitChar
-import ConAgua.Arena.StrLitList
-import ConAgua.Arena.GrindAttr
-import ConAgua.L.GrindAttr
+module
+
+public import ConAgua.Arena.StrLitChar
+public import ConAgua.Arena.StrLitList
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.L.GrindAttr
+
+@[expose] public section
 
 /-!
 # `str_lit_supported` under `CoreS` (helper `defeq2-str-sup`)

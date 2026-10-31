@@ -1,4 +1,8 @@
-import ConAgua.Arena.DefEqStuckCert
+module
+
+public import ConAgua.Arena.DefEqStuckCert
+
+@[expose] public section
 
 /-!
 # `struct_unit_cert` refines `structUnitCert` (lane `defeq`, helper `defeq-top`)

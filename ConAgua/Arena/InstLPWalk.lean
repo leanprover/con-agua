@@ -1,11 +1,15 @@
-import ConAgua.Arena.InstLP
-import ConAgua.L.ModelGen
-import ConAgua.Arena.LdRd
-import ConAgua.Arena.GrindAttr
-import ConAgua.L.GrindAttr
-import Std.Tactic.BVDecide.Normalize.BitVec
-import Std.Tactic.BVDecide.Normalize.Prop
-import Std.WP.Tactic
+module
+
+public import ConAgua.Arena.InstLP
+public import ConAgua.L.ModelGen
+public import ConAgua.Arena.LdRd
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.L.GrindAttr
+public import Std.Tactic.BVDecide.Normalize.BitVec
+public import Std.Tactic.BVDecide.Normalize.Prop
+public import Std.WP.Tactic
+
+@[expose] public section
 
 /-!
 # The `instLP` walk: models and specs

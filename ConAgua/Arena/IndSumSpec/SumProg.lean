@@ -1,6 +1,10 @@
-import ConAgua.Arena.IndRealCrF
-import ConAgua.Arena.IndRealNames
-import ConAgua.Arena.IndRealSpine
+module
+
+public import ConAgua.Arena.IndRealCrF
+public import ConAgua.Arena.IndRealNames
+public import ConAgua.Arena.IndRealSpine
+
+@[expose] public section
 
 /-!
 # SumProg

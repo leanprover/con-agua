@@ -1,5 +1,9 @@
-import ConAgua.Arena.DefEqStuckApp
-import ConAgua.Arena.InferBodyDisp
+module
+
+public import ConAgua.Arena.DefEqStuckApp
+public import ConAgua.Arena.InferBodyDisp
+
+@[expose] public section
 
 /-!
 # `defeq_stuck` refines `defeqStuck` (lane `defeq`, helper `defeq-top`)

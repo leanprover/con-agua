@@ -1,4 +1,8 @@
-import ConAgua.Arena.IndTwin
+module
+
+public import ConAgua.Arena.IndTwin
+
+@[expose] public section
 
 /-!
 # `lvl_eq_c`, `lvls_eq_c` under `StageT` with the exact verdict word (lane `indproofs4`, helper `lvl`)

@@ -1,6 +1,10 @@
-import ConAgua.Front.IndFields
-import ConAgua.Front.ApplyDecl
-import ConAgua.Census.Attr
+module
+
+public import ConAgua.Front.IndFields
+public import ConAgua.Front.ApplyDecl
+public import ConAgua.Census.Attr
+
+@[expose] public section
 
 /-!
 # `inductive` lines into the parse state: `validateIndD`, `installIndD` (lane `induct`, worker I)

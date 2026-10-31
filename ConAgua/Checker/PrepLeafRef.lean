@@ -1,6 +1,10 @@
-import ConAgua.Checker.Prelude
-import ConAgua.Checker.HoistIndexRef
-import ConRon.Arena.Frontend.Prepare
+module
+
+public import ConAgua.Checker.Prelude
+public import ConAgua.Checker.HoistIndexRef
+public import ConRon.Arena.Frontend.Prepare
+
+@[expose] public section
 
 /-!
 # `prepare_prelude`'s leaves: `decl_declares`, `decl_key`, `prep_find` (lane `front4`)

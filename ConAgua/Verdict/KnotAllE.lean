@@ -1,9 +1,13 @@
-import ConAgua.Verdict.InferKnotE
-import ConAgua.Verdict.InferLeavesE
-import ConAgua.Verdict.WhnfKnotE
-import ConAgua.Verdict.DefEqAllE
-import ConAgua.Checker.LoopProg
-import ConAgua.Checker.NoVerdictClosed
+module
+
+public import ConAgua.Verdict.InferKnotE
+public import ConAgua.Verdict.InferLeavesE
+public import ConAgua.Verdict.WhnfKnotE
+public import ConAgua.Verdict.DefEqAllE
+public import ConAgua.Checker.LoopProg
+public import ConAgua.Checker.NoVerdictClosed
+
+@[expose] public section
 
 /-!
 # The error knot, assembled (lane `verdicts-b`, helper `ka`)

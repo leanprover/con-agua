@@ -1,6 +1,10 @@
-import ConAgua.Arena.IndIface
-import ConRon.Arena.DeclCheck
-import Std.Tactic.BVDecide.Normalize.Prop
+module
+
+public import ConAgua.Arena.IndIface
+public import ConRon.Arena.DeclCheck
+public import Std.Tactic.BVDecide.Normalize.Prop
+
+@[expose] public section
 
 /-!
 # `checkDecl`'s value checks: the relational lemmas (lane `decls3`)

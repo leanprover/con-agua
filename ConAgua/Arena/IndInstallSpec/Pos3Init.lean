@@ -1,11 +1,15 @@
-import ConAgua.Arena.IndInstallSpec.InstallCtxWord9
-import ConAgua.Arena.IndInstallSpec.NfsProg
-import ConAgua.Arena.IndInstallSpec.PartsShapeFacts
-import ConAgua.Arena.IndPosSpec.CfW
-import ConAgua.Arena.IndPosSpec.RsLook
-import ConAgua.Arena.IndPartsSpec.BlockRecNamesUnreserved
-import ConAgua.Arena.IndGrindAttr
-import ConAgua.L.GrindAttr
+module
+
+public import ConAgua.Arena.IndInstallSpec.InstallCtxWord9
+public import ConAgua.Arena.IndInstallSpec.NfsProg
+public import ConAgua.Arena.IndInstallSpec.PartsShapeFacts
+public import ConAgua.Arena.IndPosSpec.CfW
+public import ConAgua.Arena.IndPosSpec.RsLook
+public import ConAgua.Arena.IndPartsSpec.BlockRecNamesUnreserved
+public import ConAgua.Arena.IndGrindAttr
+public import ConAgua.L.GrindAttr
+
+@[expose] public section
 
 /-!
 # Pos3Init

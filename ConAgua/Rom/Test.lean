@@ -1,8 +1,12 @@
-import ConLeche.Kernel.NatOpPins
-import ConAgua.Arena.RomPins
-import ConAgua.Rom.PinRead
-import ConAgua.Arena.PromoteProg
-import ConAgua.Arena.LiftSpec
+module
+
+public import ConLeche.Kernel.NatOpPins
+public import ConAgua.Arena.RomPins
+public import ConAgua.Rom.PinRead
+public import ConAgua.Arena.PromoteProg
+public import ConAgua.Arena.LiftSpec
+
+@[expose] public section
 
 /-!
 # `romtest BUF`: the L pin stages against the twin's, on a pin-data buffer (lane `romload`)

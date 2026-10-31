@@ -1,4 +1,8 @@
-import ConAgua.Checker.RomProgA
+module
+
+public import ConAgua.Checker.RomProgA
+
+@[expose] public section
 
 /-!
 # The checker's program under the pin-data substitution: expressions, items, pin sets

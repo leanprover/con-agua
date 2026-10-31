@@ -1,10 +1,14 @@
-import ConAgua.Arena.DeclStep
-import ConAgua.Arena.IndRealWalk
-import ConAgua.Arena.CoreLevels
-import ConAgua.Arena.IndPartsSpec.MemberNames
-import ConAgua.Arena.GrindAttr
-import ConAgua.Arena.IndGrindAttr
-import ConAgua.L.GrindAttr
+module
+
+public import ConAgua.Arena.DeclStep
+public import ConAgua.Arena.IndRealWalk
+public import ConAgua.Arena.CoreLevels
+public import ConAgua.Arena.IndPartsSpec.MemberNames
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.Arena.IndGrindAttr
+public import ConAgua.L.GrindAttr
+
+@[expose] public section
 
 /-!
 # Phase B's check, `check_value_group`: its write set from the text

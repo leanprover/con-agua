@@ -1,4 +1,8 @@
-import ConRon.Arena.ExprOps
+module
+
+public import ConRon.Arena.ExprOps
+
+@[expose] public section
 
 /-! `lake exe liftbenchlean N K SHIFT CUTOFF [build]`: con-ron's compiled arena
 (`liftLooseBVarsFast`) on the term `LiftBenchComp.lean`'s `lift_bench(N, K, …)` builds, the

@@ -1,5 +1,9 @@
-import ConAgua.Compiler.Run
-import ConAgua.Scan.Validator
+module
+
+public import ConAgua.Compiler.Run
+public import ConAgua.Scan.Validator
+
+@[expose] public section
 
 /-! `lake env lean --run ConAgua/Scan/EmitValidator.lean OUT.s` writes the compiled validator
 (`L.Scan.Validator.valProg`, entry `validate`) for `ConAgua/Compiler/harness/run.c`:

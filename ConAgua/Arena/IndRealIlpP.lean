@@ -1,7 +1,11 @@
-import ConAgua.Arena.IndRealMemo
-import ConAgua.Arena.IndPosSpec.NestBlockOfKey
-import ConAgua.Arena.GrindAttr
-import ConAgua.L.GrindAttr
+module
+
+public import ConAgua.Arena.IndRealMemo
+public import ConAgua.Arena.IndPosSpec.NestBlockOfKey
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.L.GrindAttr
+
+@[expose] public section
 
 /-!
 # `inst_pis_at_lift` under the stage relation and the walk memos (lane `indproofs4`, helper `ilp`)

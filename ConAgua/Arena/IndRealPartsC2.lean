@@ -1,5 +1,9 @@
-import ConAgua.Arena.IndRealLvlC
-import ConAgua.Arena.IndPartsSpec.BpW
+module
+
+public import ConAgua.Arena.IndRealLvlC
+public import ConAgua.Arena.IndPartsSpec.BpW
+
+@[expose] public section
 
 /-!
 # `blockShape?`, `blockParts?` under `StageC`, `lvl_eq_c` the real call (lane `indproofs4`, helper `bp`)

@@ -1,7 +1,11 @@
-import ConAgua.Arena.IndPosSpec.OneK
-import ConAgua.Arena.IndT.PosDefs
-import ConAgua.Arena.IndT.RecGen19
-import ConAgua.Verdict.PosE3Cm
+module
+
+public import ConAgua.Arena.IndPosSpec.OneK
+public import ConAgua.Arena.IndT.PosDefs
+public import ConAgua.Arena.IndT.RecGen19
+public import ConAgua.Verdict.PosE3Cm
+
+@[expose] public section
 
 /-!
 # `nest_ctors_crest`: one refinement for both outcomes

@@ -1,8 +1,12 @@
-import ConAgua.Arena.RecClassSpec.IhW
-import ConAgua.Arena.IlpRd
-import ConAgua.Arena.GrindAttr
-import ConAgua.Arena.IndGrindAttr
-import ConAgua.L.GrindAttr
+module
+
+public import ConAgua.Arena.RecClassSpec.IhW
+public import ConAgua.Arena.IlpRd
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.Arena.IndGrindAttr
+public import ConAgua.L.GrindAttr
+
+@[expose] public section
 
 /-!
 # TargetMajorAt: `ConRon.Arena.abstractPrefixList`, `ConRon.Arena.abstractPrefix`, `ConRon.Arena.targetHoles`, `ConRon.Arena.targetMajorAt` (hit), `ConRon.Arena.targetPiDomsWith`

@@ -1,5 +1,9 @@
-import ConAgua.Arena.IndGrindAttr
-import ConAgua.Arena.IndPosSpec.NestGroupCtors
+module
+
+public import ConAgua.Arena.IndGrindAttr
+public import ConAgua.Arena.IndPosSpec.NestGroupCtors
+
+@[expose] public section
 
 /-!
 # NbPosW

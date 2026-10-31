@@ -1,8 +1,12 @@
-import ConAgua.Arena.RecClassSpec.CloseLams
-import ConAgua.Arena.GrindAttr
-import ConAgua.L.GrindAttr
-import ConAgua.L.ModelGen
-import ConAgua.Arena.IndCallM
+module
+
+public import ConAgua.Arena.RecClassSpec.CloseLams
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.L.GrindAttr
+public import ConAgua.L.ModelGen
+public import ConAgua.Arena.IndCallM
+
+@[expose] public section
 
 /-!
 # Classes: `ConRon.Arena.ClassRead.classes`

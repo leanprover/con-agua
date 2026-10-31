@@ -1,9 +1,13 @@
-import ConAgua.Arena.InferFieldSort
-import ConAgua.Arena.DefEqLeaves2
-import ConAgua.Arena.CoreDen
-import ConAgua.Arena.InferBodySpine
-import ConAgua.Arena.WhnfCoreProj
-import ConAgua.Arena.InferProjModels
+module
+
+public import ConAgua.Arena.InferFieldSort
+public import ConAgua.Arena.DefEqLeaves2
+public import ConAgua.Arena.CoreDen
+public import ConAgua.Arena.InferBodySpine
+public import ConAgua.Arena.WhnfCoreProj
+public import ConAgua.Arena.InferProjModels
+
+@[expose] public section
 
 /-!
 # `inferProj`: `proj_type_at` and `infer_proj_at` (lane `defeq2`, helper `defeq2-proj`)

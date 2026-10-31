@@ -1,10 +1,14 @@
-import ConAgua.Checker.ParEntryA
-import ConAgua.Checker.IndArm
-import ConAgua.Arena.PhaseAEntry
-import ConAgua.Checker.LoopStage
-import ConAgua.Checker.PipeFinal
-import ConAgua.Checker.TwinShapeQuot
-import ConAgua.Checker.PresizeStage
+module
+
+public import ConAgua.Checker.ParEntryA
+public import ConAgua.Checker.IndArm
+public import ConAgua.Arena.PhaseAEntry
+public import ConAgua.Checker.LoopStage
+public import ConAgua.Checker.PipeFinal
+public import ConAgua.Checker.TwinShapeQuot
+public import ConAgua.Checker.PresizeStage
+
+@[expose] public section
 
 /-!
 # Entry 1 at the checker's program: `checkA_run` (lane parmode)

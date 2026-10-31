@@ -1,4 +1,8 @@
-import ConAgua.Arena.WhnfBase
+module
+
+public import ConAgua.Arena.WhnfBase
+
+@[expose] public section
 
 /-!
 # Type inference: `inferBody`, `inferBodyIO` and their clauses (phase 7, lane `defeq`)

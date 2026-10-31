@@ -1,4 +1,8 @@
-import ConAgua.Rom.CIReadRefCV
+module
+
+public import ConAgua.Rom.CIReadRefCV
+
+@[expose] public section
 
 /-!
 # The ROM constant readers: an inductive's capabilities (helper `decls4-rom`)

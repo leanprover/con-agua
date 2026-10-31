@@ -1,5 +1,9 @@
-import ConAgua.Arena.IndRealWalkT
-import ConRon.Bridge.Checker.Hyp
+module
+
+public import ConAgua.Arena.IndRealWalkT
+public import ConRon.Bridge.Checker.Hyp
+
+@[expose] public section
 
 /-!
 # `check_value_group` under `StageT` (lane `loopt2`)

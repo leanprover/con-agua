@@ -1,4 +1,8 @@
-import ConAgua.Arena.RecClassSpec.PbProg
+module
+
+public import ConAgua.Arena.RecClassSpec.PbProg
+
+@[expose] public section
 
 /-!
 # RuProg

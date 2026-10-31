@@ -1,5 +1,9 @@
-import ConAgua.Arena.StubNamesRefine
-import ConAgua.Arena.StubIndRefine
+module
+
+public import ConAgua.Arena.StubNamesRefine
+public import ConAgua.Arena.StubIndRefine
+
+@[expose] public section
 
 /-!
 # Stub contracts discharged by real refinements (lane `indproofs4`)

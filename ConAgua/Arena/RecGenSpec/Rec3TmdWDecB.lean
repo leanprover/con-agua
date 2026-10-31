@@ -1,13 +1,17 @@
-import ConAgua.Arena.RecClassSpec.ClassGenRule
-import ConAgua.Arena.RecGenSpec.CrsProg
-import ConAgua.Arena.RecGenSpec.DecRR
-import ConAgua.Arena.RecGenSpec.Rec3CVX
-import ConAgua.Arena.RecGenSpec.RgW
-import ConAgua.Arena.IndSumSpec.Row
-import ConAgua.Arena.GrindAttr
-import ConAgua.Arena.LdRd
-import ConAgua.Arena.IndGrindAttr
-import ConAgua.L.GrindAttr
+module
+
+public import ConAgua.Arena.RecClassSpec.ClassGenRule
+public import ConAgua.Arena.RecGenSpec.CrsProg
+public import ConAgua.Arena.RecGenSpec.DecRR
+public import ConAgua.Arena.RecGenSpec.Rec3CVX
+public import ConAgua.Arena.RecGenSpec.RgW
+public import ConAgua.Arena.IndSumSpec.Row
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.Arena.LdRd
+public import ConAgua.Arena.IndGrindAttr
+public import ConAgua.L.GrindAttr
+
+@[expose] public section
 
 /-!
 # Rec3TmdWDecB

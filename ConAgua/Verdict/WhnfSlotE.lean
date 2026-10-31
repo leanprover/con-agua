@@ -1,4 +1,8 @@
-import ConAgua.Arena.DefEqKnot
+module
+
+public import ConAgua.Arena.DefEqKnot
+
+@[expose] public section
 
 /-!
 # The knot's `whnf_core` and `whnf` slots' verdict claims (lane `verdicts-b`, helper `k2`)

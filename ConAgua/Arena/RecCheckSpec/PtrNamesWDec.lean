@@ -1,9 +1,13 @@
-import ConAgua.Arena.IndInstallSpec.InstallCtxWord9
-import ConAgua.Arena.IndPosSpec.NkcW
-import ConAgua.Arena.IndPartsSpec.BlockRecNamesUnreserved
-import ConAgua.Arena.GrindAttr
-import ConAgua.Arena.IndGrindAttr
-import ConAgua.L.GrindAttr
+module
+
+public import ConAgua.Arena.IndInstallSpec.InstallCtxWord9
+public import ConAgua.Arena.IndPosSpec.NkcW
+public import ConAgua.Arena.IndPartsSpec.BlockRecNamesUnreserved
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.Arena.IndGrindAttr
+public import ConAgua.L.GrindAttr
+
+@[expose] public section
 
 /-!
 # PtrNamesWDec

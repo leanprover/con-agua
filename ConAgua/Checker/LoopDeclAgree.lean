@@ -1,5 +1,9 @@
-import ConAgua.Checker.LoopProgTac
-import ConAgua.Arena.DeclStepGo
+module
+
+public import ConAgua.Checker.LoopProgTac
+public import ConAgua.Arena.DeclStepGo
+
+@[expose] public section
 
 /-!
 # The declaration texts' agreement halves for the checker's program (lane `loopt2`)

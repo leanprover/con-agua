@@ -1,9 +1,13 @@
-import ConAgua.Arena.IndRealAbs
-import ConAgua.Arena.RecGenSpec.ClassMinorSlotHit
-import ConAgua.Arena.IndInstallSpec.DomsW
-import ConAgua.Arena.GrindAttr
-import ConAgua.Arena.IndGrindAttr
-import ConAgua.L.GrindAttr
+module
+
+public import ConAgua.Arena.IndRealAbs
+public import ConAgua.Arena.RecGenSpec.ClassMinorSlotHit
+public import ConAgua.Arena.IndInstallSpec.DomsW
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.Arena.IndGrindAttr
+public import ConAgua.L.GrindAttr
+
+@[expose] public section
 
 /-!
 # CloseLams: `ConRon.Arena.ClassGen.binder`, `ConRon.Arena.classBinder`, `ConRon.Arena.classOfMotiveVar`, `ConRon.Arena.closeLams`, `ConRon.Arena.exprGetD`, `ConRon.Arena.fvarHead`

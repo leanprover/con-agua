@@ -1,12 +1,16 @@
-import ConAgua.Arena.RecGenSpec.CruleProg
-import ConAgua.Verdict.VCtx
-import ConAgua.Arena.IndT.Lift
-import ConAgua.Arena.IndT.WalkC
-import ConAgua.Arena.IndRealMemoCrT
-import ConAgua.Arena.RecGenSpec.FlushStage
-import ConAgua.Arena.GrindAttr
-import ConAgua.L.ModelGen
-import ConRon.Bridge.Inductives.GenRec
+module
+
+public import ConAgua.Arena.RecGenSpec.CruleProg
+public import ConAgua.Verdict.VCtx
+public import ConAgua.Arena.IndT.Lift
+public import ConAgua.Arena.IndT.WalkC
+public import ConAgua.Arena.IndRealMemoCrT
+public import ConAgua.Arena.RecGenSpec.FlushStage
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.L.ModelGen
+public import ConRon.Bridge.Inductives.GenRec
+
+@[expose] public section
 
 /-!
 # `class_rule_ok_guards`: one model and one refinement for both outcomes

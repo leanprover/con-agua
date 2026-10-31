@@ -1,4 +1,8 @@
-import ConAgua.Arena.ArenaRel
+module
+
+public import ConAgua.Arena.ArenaRel
+
+@[expose] public section
 
 /-!
 # The arena side of the expression view: what every walk's refinement shares

@@ -1,6 +1,10 @@
-import ConAgua.Arena.InstLPWalkRef3
-import ConAgua.Arena.InstLPKeys
-import ConAgua.Arena.RecFireCore
+module
+
+public import ConAgua.Arena.InstLPWalkRef3
+public import ConAgua.Arena.InstLPKeys
+public import ConAgua.Arena.RecFireCore
+
+@[expose] public section
 
 /-!
 # `inst_lp` refines `instLPFast coreWalkFuel` under `CoreS` (`InstLPOK`)

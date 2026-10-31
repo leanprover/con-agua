@@ -1,9 +1,13 @@
-import ConAgua.Arena.PromoteN
-import ConAgua.Arena.GrindAttr
-import ConAgua.L.GrindAttr
-import Std.Tactic.BVDecide.Normalize.BitVec
-import Std.Tactic.BVDecide.Normalize.Prop
-import Std.WP.Tactic
+module
+
+public import ConAgua.Arena.PromoteN
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.L.GrindAttr
+public import Std.Tactic.BVDecide.Normalize.BitVec
+public import Std.Tactic.BVDecide.Normalize.Prop
+public import Std.WP.Tactic
+
+@[expose] public section
 
 /-!
 # `promote_l`, `pl_arm`, `promote_l_pool`, `pls_arm`, `promote_ls`: models and specs

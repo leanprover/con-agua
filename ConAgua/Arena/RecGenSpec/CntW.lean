@@ -1,10 +1,14 @@
-import ConAgua.Verdict.IndBRec1
-import ConAgua.Arena.RecGenSpec.KeysProg
-import ConAgua.Arena.IndPartsSpec.PartsPSlCons
-import ConAgua.Arena.GrindAttr
-import ConAgua.Arena.IndGrindAttr
-import ConAgua.L.GrindAttr
-import ConAgua.L.ModelGen
+module
+
+public import ConAgua.Verdict.IndBRec1
+public import ConAgua.Arena.RecGenSpec.KeysProg
+public import ConAgua.Arena.IndPartsSpec.PartsPSlCons
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.Arena.IndGrindAttr
+public import ConAgua.L.GrindAttr
+public import ConAgua.L.ModelGen
+
+@[expose] public section
 
 /-!
 # CntW

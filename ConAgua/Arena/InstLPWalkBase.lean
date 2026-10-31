@@ -1,7 +1,11 @@
-import ConAgua.Arena.CoreWalks
-import ConAgua.Arena.InstLP
-import ConAgua.Arena.LevelInternRef
-import Std.Tactic.BVDecide.Normalize.Prop
+module
+
+public import ConAgua.Arena.CoreWalks
+public import ConAgua.Arena.InstLP
+public import ConAgua.Arena.LevelInternRef
+public import Std.Tactic.BVDecide.Normalize.Prop
+
+@[expose] public section
 
 /-!
 # The `instLP` walk under `CoreS`: the invariants and the steps

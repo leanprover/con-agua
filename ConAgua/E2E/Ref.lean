@@ -1,4 +1,8 @@
-import ConRon.Arena.Main
+module
+
+public import ConRon.Arena.Main
+
+@[expose] public section
 
 /-!
 # The e2e reference: the twin's pipeline, whole or without the prelude (lane `e2e`)

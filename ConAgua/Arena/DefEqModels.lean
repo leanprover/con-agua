@@ -1,4 +1,8 @@
-import ConAgua.Verdict.WhnfModels7E
+module
+
+public import ConAgua.Verdict.WhnfModels7E
+
+@[expose] public section
 
 /-!
 # The generated models of `stuck_irrel`, `stuck_str` and `defeq_body`

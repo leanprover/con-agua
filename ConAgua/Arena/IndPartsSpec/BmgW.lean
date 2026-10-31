@@ -1,11 +1,15 @@
-import ConAgua.Arena.IndPartsSpec.BlockCounts
-import ConAgua.Arena.IndPartsSpec.BmfK2
-import ConAgua.Arena.IndPartsSpec.PartsPSlCons
-import ConAgua.Arena.IndPartsSpec.SetEqW
-import ConAgua.Arena.GrindAttr
-import ConAgua.Arena.IndGrindAttr
-import ConAgua.L.GrindAttr
-import ConAgua.L.ModelGen
+module
+
+public import ConAgua.Arena.IndPartsSpec.BlockCounts
+public import ConAgua.Arena.IndPartsSpec.BmfK2
+public import ConAgua.Arena.IndPartsSpec.PartsPSlCons
+public import ConAgua.Arena.IndPartsSpec.SetEqW
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.Arena.IndGrindAttr
+public import ConAgua.L.GrindAttr
+public import ConAgua.L.ModelGen
+
+@[expose] public section
 
 /-!
 # BmgW

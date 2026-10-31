@@ -1,7 +1,11 @@
-import ConAgua.Arena.DefEqMidSpine
-import ConAgua.Arena.GrindAttr
-import ConAgua.L.GrindAttr
-import ConAgua.L.ModelGen
+module
+
+public import ConAgua.Arena.DefEqMidSpine
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.L.GrindAttr
+public import ConAgua.L.ModelGen
+
+@[expose] public section
 
 /-!
 # Lazy delta: the step and the loop (lane `defeq`)

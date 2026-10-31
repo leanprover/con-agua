@@ -1,9 +1,13 @@
-import ConAgua.Arena.LdRd
-import ConAgua.Arena.RecCheckSpec.K53Look
-import ConAgua.Arena.RecCheckSpec.EeW
-import ConAgua.Arena.GrindAttr
-import ConAgua.Arena.IndGrindAttr
-import ConAgua.L.GrindAttr
+module
+
+public import ConAgua.Arena.LdRd
+public import ConAgua.Arena.RecCheckSpec.K53Look
+public import ConAgua.Arena.RecCheckSpec.EeW
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.Arena.IndGrindAttr
+public import ConAgua.L.GrindAttr
+
+@[expose] public section
 
 /-!
 # Tka

@@ -1,5 +1,9 @@
-import ConAgua.Verdict.DivModPinE
-import ConAgua.Arena.DeclArmDefn
+module
+
+public import ConAgua.Verdict.DivModPinE
+public import ConAgua.Arena.DeclArmDefn
+
+@[expose] public section
 
 /-!
 # The `Nat.div`-family pin gate under `StageC` (lane `loopt3`, helper `loopt3-div`)

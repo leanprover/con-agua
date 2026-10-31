@@ -1,5 +1,9 @@
-import ConAgua.Arena.RecGenSpec.CruleProg
-import ConAgua.Arena.RecClassSpec.RuProg
+module
+
+public import ConAgua.Arena.RecGenSpec.CruleProg
+public import ConAgua.Arena.RecClassSpec.RuProg
+
+@[expose] public section
 
 /-!
 # CrsProg

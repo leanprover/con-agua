@@ -1,6 +1,10 @@
-import ConAgua.Checker.Pipeline
-import ConRon.Bridge.Checker.Pins
-import ConRon.Bridge.Frontend.Prepare
+module
+
+public import ConAgua.Checker.Pipeline
+public import ConRon.Bridge.Checker.Pins
+public import ConRon.Bridge.Frontend.Prepare
+
+@[expose] public section
 
 /-!
 # The twin's prefix interns the universe name `u` (lane `pipeline`)

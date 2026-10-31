@@ -1,8 +1,12 @@
-import ConAgua.Arena.RecCheckSpec.RpLook
-import ConAgua.Arena.IndPartsSpec.AllCtors
-import ConAgua.Arena.IndPartsSpec.BlockSplitRecs
-import ConAgua.Arena.IndInstallSpec.InstallRec2Tele
-import ConAgua.Arena.IndGrindAttr
+module
+
+public import ConAgua.Arena.RecCheckSpec.RpLook
+public import ConAgua.Arena.IndPartsSpec.AllCtors
+public import ConAgua.Arena.IndPartsSpec.BlockSplitRecs
+public import ConAgua.Arena.IndInstallSpec.InstallRec2Tele
+public import ConAgua.Arena.IndGrindAttr
+
+@[expose] public section
 
 /-!
 # TpsW

@@ -1,4 +1,8 @@
-import ConRon.Arena.ExprOps
+module
+
+public import ConRon.Arena.ExprOps
+
+@[expose] public section
 
 /-! `lake exe walkbench N K [build]`: con-ron's compiled arena (`bvarBoundMemo`) on the term
 `WalkBench.lean`'s `bb_bench(N, K)` builds, the baseline for the compiled L walk

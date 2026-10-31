@@ -1,4 +1,8 @@
-import ConAgua.Arena.PromoteCIInfra
+module
+
+public import ConAgua.Arena.PromoteCIInfra
+
+@[expose] public section
 
 /-!
 # PreECongr

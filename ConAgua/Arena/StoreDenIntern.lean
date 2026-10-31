@@ -1,5 +1,9 @@
-import ConAgua.Arena.StoreDen
-import ConRon.Arena.WFProofs
+module
+
+public import ConAgua.Arena.StoreDen
+public import ConRon.Arena.WFProofs
+
+@[expose] public section
 
 /-!
 # `StoreDen` across the interning of a `sort` or a `const` node (lane `defeq2`)

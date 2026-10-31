@@ -1,7 +1,11 @@
-import ConAgua.Arena.DeclNatSpec
-import ConAgua.Arena.GrindAttr
-import ConAgua.Arena.LdRd
-import ConAgua.L.GrindAttr
+module
+
+public import ConAgua.Arena.DeclNatSpec
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.Arena.LdRd
+public import ConAgua.L.GrindAttr
+
+@[expose] public section
 
 /-!
 # `nat_op_deps` refines `natOpDeps` (lane `decls3`, helper `decls3-nat`)

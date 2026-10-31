@@ -1,7 +1,11 @@
-import ConAgua.Arena.LdRd
-import ConAgua.Arena.DeclDivModSpec.Sc0List
-import ConAgua.Arena.GrindAttr
-import ConAgua.L.GrindAttr
+module
+
+public import ConAgua.Arena.LdRd
+public import ConAgua.Arena.DeclDivModSpec.Sc0List
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.L.GrindAttr
+
+@[expose] public section
 
 /-!
 # SubstConst0List: `ConRon.Arena.divModCertApplied`, `ConRon.Arena.substConst0List`

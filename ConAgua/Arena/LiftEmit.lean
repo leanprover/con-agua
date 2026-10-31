@@ -1,6 +1,10 @@
-import ConAgua.Compiler.Run
-import ConAgua.Compiler.WF
-import ConAgua.Arena.LiftBenchComp
+module
+
+public import ConAgua.Compiler.Run
+public import ConAgua.Compiler.WF
+public import ConAgua.Arena.LiftBenchComp
+
+@[expose] public section
 
 /-! `lake env lean --run ConAgua/Arena/LiftEmit.lean OUT.s` writes the compiled `liftBenchProg`
 (entry `lift_bench`, 62 word arrays: the full layout through the level-parameter columns and the

@@ -1,4 +1,8 @@
-import ConAgua.Final.Twin
+module
+
+public import ConAgua.Final.Twin
+
+@[expose] public section
 
 /-!
 # The twin's pipeline with phase B as con-ron's pool (lane parmode)

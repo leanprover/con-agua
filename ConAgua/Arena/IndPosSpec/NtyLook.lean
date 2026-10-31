@@ -1,6 +1,10 @@
-import ConAgua.Arena.IndPosSpec.PiBWStage
-import ConAgua.Arena.GrindAttr
-import ConAgua.L.GrindAttr
+module
+
+public import ConAgua.Arena.IndPosSpec.PiBWStage
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.L.GrindAttr
+
+@[expose] public section
 
 /-!
 # NtyLook

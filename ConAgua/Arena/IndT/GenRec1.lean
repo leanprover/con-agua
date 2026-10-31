@@ -1,6 +1,10 @@
-import ConAgua.Arena.IndT.RecGen28
-import ConAgua.Arena.IndInstallSpec.GpbWSimF
-import ConRon.Bridge.Inductives.GenRec
+module
+
+public import ConAgua.Arena.IndT.RecGen28
+public import ConAgua.Arena.IndInstallSpec.GpbWSimF
+public import ConRon.Bridge.Inductives.GenRec
+
+@[expose] public section
 
 /-!
 # `genRecCheck` under `StageC`, part 1 (lane `indstaget`, helper `grc`)

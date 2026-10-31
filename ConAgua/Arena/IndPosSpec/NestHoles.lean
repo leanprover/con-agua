@@ -1,10 +1,14 @@
-import ConAgua.Arena.IndPosSpec.DepthGo
-import ConAgua.Arena.IndPosSpec.NcGoW
-import ConAgua.Arena.IndPosSpec.NoConstWf
-import ConAgua.Arena.IndPosSpec.SnocWStage
-import ConAgua.Arena.GrindAttr
-import ConAgua.Arena.IndGrindAttr
-import ConAgua.L.GrindAttr
+module
+
+public import ConAgua.Arena.IndPosSpec.DepthGo
+public import ConAgua.Arena.IndPosSpec.NcGoW
+public import ConAgua.Arena.IndPosSpec.NoConstWf
+public import ConAgua.Arena.IndPosSpec.SnocWStage
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.Arena.IndGrindAttr
+public import ConAgua.L.GrindAttr
+
+@[expose] public section
 
 /-!
 # NestHoles: `ConRon.Arena.nestHoles.go`, `ConRon.Arena.nestHoles`

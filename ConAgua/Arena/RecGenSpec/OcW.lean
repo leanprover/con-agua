@@ -1,15 +1,19 @@
-import ConAgua.Arena.IlpRd
-import ConAgua.Arena.RecCheckSpec.ToiW
-import ConAgua.Arena.RecClassSpec.ReadProg
-import ConAgua.Arena.RecGenSpec.DecTMDecBOf
-import ConAgua.Arena.RecGenSpec.KcW
-import ConAgua.Arena.RecGenSpec.KeysProg
-import ConAgua.Arena.RecGenSpec.StabDecCRDecB
-import ConAgua.Arena.IndInstallSpec.InstallRec2Tele
-import ConAgua.Arena.IndInstallSpec.PartsAt
-import ConAgua.Arena.GrindAttr
-import ConAgua.Arena.IndGrindAttr
-import ConAgua.L.GrindAttr
+module
+
+public import ConAgua.Arena.IlpRd
+public import ConAgua.Arena.RecCheckSpec.ToiW
+public import ConAgua.Arena.RecClassSpec.ReadProg
+public import ConAgua.Arena.RecGenSpec.DecTMDecBOf
+public import ConAgua.Arena.RecGenSpec.KcW
+public import ConAgua.Arena.RecGenSpec.KeysProg
+public import ConAgua.Arena.RecGenSpec.StabDecCRDecB
+public import ConAgua.Arena.IndInstallSpec.InstallRec2Tele
+public import ConAgua.Arena.IndInstallSpec.PartsAt
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.Arena.IndGrindAttr
+public import ConAgua.L.GrindAttr
+
+@[expose] public section
 
 /-!
 # OcW

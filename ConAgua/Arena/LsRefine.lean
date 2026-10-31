@@ -1,7 +1,11 @@
-import ConAgua.Arena.LsStore
-import ConAgua.Arena.LpColRel
-import ConAgua.Arena.LitRefine
-import Std.Tactic.BVDecide.Normalize.Prop
+module
+
+public import ConAgua.Arena.LsStore
+public import ConAgua.Arena.LpColRel
+public import ConAgua.Arena.LitRefine
+public import Std.Tactic.BVDecide.Normalize.Prop
+
+@[expose] public section
 
 /-!
 # The level-list store refines the arena's level-list tables

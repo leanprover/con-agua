@@ -1,8 +1,12 @@
-import ConAgua.AsmFile.Parse
-import ConAgua.AsmFile.Term
-import Kraken.X64.PrintATT
-import Lean.Elab.Term.TermElabM
-import Std.Do.Triple.SpecLemmas
+module
+
+public import ConAgua.AsmFile.Parse
+public import ConAgua.AsmFile.Term
+public import Kraken.X64.PrintATT
+public import Lean.Elab.Term.TermElabM
+public import Std.Do.Triple.SpecLemmas
+
+@[expose] public section
 
 /-!
 # `include_asm "path"`: an assembler file as a `Program` (TRUSTED)

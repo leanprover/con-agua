@@ -1,5 +1,9 @@
-import ConAgua.Arena.IndRealOpf
-import ConAgua.Arena.IndRealAbs
+module
+
+public import ConAgua.Arena.IndRealOpf
+public import ConAgua.Arena.IndRealAbs
+
+@[expose] public section
 
 /-!
 # `open_pis_at_fvars_f`'s callees under the stage relation (lane `indproofs4`, helper `opf`)

@@ -1,4 +1,8 @@
-import ConAgua.Checker.PipeStages
+module
+
+public import ConAgua.Checker.PipeStages
+
+@[expose] public section
 
 /-!
 # The presize stage of entry 1 (lane presize)

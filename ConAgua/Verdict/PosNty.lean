@@ -1,7 +1,11 @@
-import ConAgua.Arena.IndPosSpec.BvbWMfr
-import ConAgua.Arena.IndPosSpec.NitW
-import ConAgua.Arena.IlpRd
-import ConAgua.Verdict.PosE1M
+module
+
+public import ConAgua.Arena.IndPosSpec.BvbWMfr
+public import ConAgua.Arena.IndPosSpec.NitW
+public import ConAgua.Arena.IlpRd
+public import ConAgua.Verdict.PosE1M
+
+@[expose] public section
 
 /-!
 # `nest_inst_type_ty`: one model and one refinement for both outcomes

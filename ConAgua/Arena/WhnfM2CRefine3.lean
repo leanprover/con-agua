@@ -1,5 +1,9 @@
-import ConAgua.Arena.WhnfM2CRefine2
-import ConAgua.Arena.RecFireCore
+module
+
+public import ConAgua.Arena.WhnfM2CRefine2
+public import ConAgua.Arena.RecFireCore
+
+@[expose] public section
 
 /-!
 # `major_to_ctor`: refinements of the `And` arm (`m2c_and`, `m2c_and2`)

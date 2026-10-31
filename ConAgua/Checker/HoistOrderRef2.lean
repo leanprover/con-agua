@@ -1,5 +1,9 @@
-import ConAgua.Checker.HoistRefBase
-import ConRon.Arena.Frontend.NatOpGround
+module
+
+public import ConAgua.Checker.HoistRefBase
+public import ConRon.Arena.Frontend.NatOpGround
+
+@[expose] public section
 
 /-!
 # The hoist's order, on lists (lane `front4`)

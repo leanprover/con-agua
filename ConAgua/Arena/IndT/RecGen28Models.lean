@@ -1,8 +1,12 @@
-import ConAgua.Arena.RecGenSpec.DecB
-import ConAgua.Checker.NoVerdictTree
-import ConAgua.Arena.GrindAttr
-import ConAgua.Arena.IndGrindAttr
-import ConAgua.L.GrindAttr
+module
+
+public import ConAgua.Arena.RecGenSpec.DecB
+public import ConAgua.Checker.NoVerdictTree
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.Arena.IndGrindAttr
+public import ConAgua.L.GrindAttr
+
+@[expose] public section
 
 /-!
 # `classes_nfs`' hand model and its `unified` specs

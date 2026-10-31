@@ -1,5 +1,9 @@
-import ConAgua.Arena.IndPosSpec.NestHoles
-import ConAgua.Arena.IndGrindAttr
+module
+
+public import ConAgua.Arena.IndPosSpec.NestHoles
+public import ConAgua.Arena.IndGrindAttr
+
+@[expose] public section
 
 /-!
 # UnW

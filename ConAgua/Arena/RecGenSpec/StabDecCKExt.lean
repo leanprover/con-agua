@@ -1,5 +1,9 @@
-import ConAgua.Arena.RecGenSpec.SlRGrow
-import ConAgua.Arena.RecStab
+module
+
+public import ConAgua.Arena.RecGenSpec.SlRGrow
+public import ConAgua.Arena.RecStab
+
+@[expose] public section
 
 /-!
 # StabDecCKExt

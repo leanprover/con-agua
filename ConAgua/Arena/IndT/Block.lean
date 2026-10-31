@@ -1,8 +1,12 @@
-import ConAgua.Arena.IndT.Pass
-import ConAgua.Arena.IndInstallSpec.BlockRawRec
-import ConAgua.Arena.GrindAttr
-import ConAgua.L.GrindAttr
-import ConAgua.L.ModelGen
+module
+
+public import ConAgua.Arena.IndT.Pass
+public import ConAgua.Arena.IndInstallSpec.BlockRawRec
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.L.GrindAttr
+public import ConAgua.L.ModelGen
+
+@[expose] public section
 
 /-!
 # `checkBlock` under `StageC` (lane `indstaget`)

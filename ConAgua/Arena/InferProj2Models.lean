@@ -1,4 +1,8 @@
-import ConAgua.Arena.InferProjModels
+module
+
+public import ConAgua.Arena.InferProjModels
+
+@[expose] public section
 
 /-!
 # The generated models of `InferProj2.lean`

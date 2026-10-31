@@ -1,8 +1,12 @@
-import ConAgua.Arena.InstLPSpec
-import ConAgua.Arena.LevelInternRef
-import ConRon.Bridge.SpecsL
-import ConAgua.Arena.CoreLevels
-import ConAgua.Front.ApplyExprRefine
+module
+
+public import ConAgua.Arena.InstLPSpec
+public import ConAgua.Arena.LevelInternRef
+public import ConRon.Bridge.SpecsL
+public import ConAgua.Arena.CoreLevels
+public import ConAgua.Front.ApplyExprRefine
+
+@[expose] public section
 
 /-!
 # The level-list functions refine the twin's: `substLevelsAt`, `substParamLevels`, `recFireLevels`

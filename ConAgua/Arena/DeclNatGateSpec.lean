@@ -1,7 +1,11 @@
-import ConAgua.Arena.DeclArmDefn
-import ConAgua.Arena.DeclNatEq
-import ConAgua.Arena.GrindAttr
-import ConAgua.L.GrindAttr
+module
+
+public import ConAgua.Arena.DeclArmDefn
+public import ConAgua.Arena.DeclNatEq
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.L.GrindAttr
+
+@[expose] public section
 
 /-!
 # `defn_nat_gate` refines `natGateT` (lane `decls3`, helper `decls3-nat`)

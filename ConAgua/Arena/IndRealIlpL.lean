@@ -1,8 +1,12 @@
-import ConAgua.Arena.InstLPEntry
-import ConAgua.Arena.IndRealAbsT
-import ConAgua.Arena.StageTLift
-import ConAgua.Arena.GrindAttr
-import ConAgua.L.GrindAttr
+module
+
+public import ConAgua.Arena.InstLPEntry
+public import ConAgua.Arena.IndRealAbsT
+public import ConAgua.Arena.StageTLift
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.L.GrindAttr
+
+@[expose] public section
 
 /-!
 # `inst_lp_fast` under `CoreS` and under `StageT` (lane `indproofs4`, helper `ilp`)

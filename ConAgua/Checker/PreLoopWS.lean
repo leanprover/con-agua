@@ -1,6 +1,10 @@
-import ConAgua.Checker.Prog
-import ConAgua.Arena.Frame
-import ConAgua.Compiler.WriteSetSplit
+module
+
+public import ConAgua.Checker.Prog
+public import ConAgua.Arena.Frame
+public import ConAgua.Compiler.WriteSetSplit
+
+@[expose] public section
 
 /-!
 # The write set of everything `check` runs before the declaration loop (lane `pipeline`)

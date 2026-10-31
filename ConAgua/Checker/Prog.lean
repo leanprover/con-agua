@@ -1,142 +1,146 @@
-import ConAgua.Compiler.WFSplit
-import ConAgua.Checker.Entry
-import ConAgua.Checker.Prelude
-import ConAgua.Arena.Abs1
-import ConAgua.Arena.AppStore
-import ConAgua.Arena.ArRange
-import ConAgua.Arena.ArRangeSpec
-import ConAgua.Arena.BVarStore
-import ConAgua.Arena.BvarB
-import ConAgua.Arena.CheckerL
-import ConAgua.Arena.ConstStore
-import ConAgua.Arena.ConstsResolveF
-import ConAgua.Arena.CoreCaches
-import ConAgua.Arena.CoreLevels
-import ConAgua.Arena.DeclAndPin
-import ConAgua.Arena.DeclApd
-import ConAgua.Arena.DeclArms
-import ConAgua.Arena.DeclArmsCanon
-import ConAgua.Arena.DeclArmsNat
-import ConAgua.Arena.DeclStep
-import ConAgua.Arena.DefEq
-import ConAgua.Arena.Env
-import ConAgua.Arena.ExprMk
-import ConAgua.Arena.FVarRange
-import ConAgua.Arena.FVarStore
-import ConAgua.Arena.ForallStore
-import ConAgua.Arena.Freeze
-import ConAgua.Arena.HasFvar
-import ConAgua.Arena.ImaxStore
-import ConAgua.Arena.IndIface
-import ConAgua.Arena.IndInstall
-import ConAgua.Arena.IndParts
-import ConAgua.Arena.IndPos
-import ConAgua.Arena.IndPos2
-import ConAgua.Arena.IndSum
-import ConAgua.Arena.Infer
-import ConAgua.Arena.InferFieldSort
-import ConAgua.Arena.Inst1
-import ConAgua.Arena.Inst1Spec
-import ConAgua.Arena.InstLP
-import ConAgua.Arena.InstList
-import ConAgua.Arena.InstListSpec
-import ConAgua.Arena.Knot
-import ConAgua.Arena.LamStore
-import ConAgua.Arena.LetStore
-import ConAgua.Arena.LevelApd
-import ConAgua.Arena.LevelEquiv
-import ConAgua.Arena.LevelHeap
-import ConAgua.Arena.LevelIntern
-import ConAgua.Arena.LevelLeq
-import ConAgua.Arena.LevelSimp
-import ConAgua.Arena.LevelStore
-import ConAgua.Arena.LevelSubst
-import ConAgua.Arena.LevelSubstL
-import ConAgua.Arena.LevelSubstLP
-import ConAgua.Arena.LevelZero
-import ConAgua.Arena.LiftL
-import ConAgua.Arena.LsStore
-import ConAgua.Arena.MaxStore
-import ConAgua.Arena.MemoLib
-import ConAgua.Arena.NAnonStore
-import ConAgua.Arena.NNumStore
-import ConAgua.Arena.NStrStore
-import ConAgua.Arena.NatAdd
-import ConAgua.Arena.NatArms
-import ConAgua.Arena.NatBits
-import ConAgua.Arena.NatCmp
-import ConAgua.Arena.NatDiv
-import ConAgua.Arena.NatGcd
-import ConAgua.Arena.NatMul
-import ConAgua.Arena.NatPow
-import ConAgua.Arena.NatShl
-import ConAgua.Arena.NatShr
-import ConAgua.Arena.NatSub
-import ConAgua.Arena.ParamStore
-import ConAgua.Arena.Pins
-import ConAgua.Arena.ProjStore
-import ConAgua.Arena.Promote
-import ConAgua.Arena.PropRead
-import ConAgua.Arena.RecCheck
-import ConAgua.Arena.RecClass
-import ConAgua.Arena.RecGen
-import ConAgua.Arena.Refine
-import ConAgua.Arena.Rom
-import ConAgua.Arena.RomExpr
-import ConAgua.Arena.RomItems
-import ConAgua.Arena.RomLevel
-import ConAgua.Arena.RomLevels
-import ConAgua.Arena.RomPins
-import ConAgua.Arena.Scratch
-import ConAgua.Arena.SortStore
-import ConAgua.Arena.Store
-import ConAgua.Arena.StrLit
-import ConAgua.Arena.StripTele
-import ConAgua.Arena.StubInd
-import ConAgua.Arena.StubNames
-import ConAgua.Arena.TeleLift
-import ConAgua.Arena.Walk
-import ConAgua.Arena.WalkLeaves
-import ConAgua.Arena.WalkLift
-import ConAgua.Arena.WalkScope
-import ConAgua.Arena.WhnfCore
-import ConAgua.Arena.WhnfDelta
-import ConAgua.Arena.WhnfEntry
-import ConAgua.Arena.WhnfIota
-import ConAgua.Arena.WhnfIotaRec
-import ConAgua.Arena.WhnfM2C
-import ConAgua.Arena.WhnfProj
-import ConAgua.Arena.WhnfSpineArgs
-import ConAgua.Arena.WhnfSpineRefine
-import ConAgua.Arena.ZeroStore
-import ConAgua.Checker.Hoist
-import ConAgua.Checker.Presize
-import ConAgua.Front.Apply
-import ConAgua.Front.ApplyDecl
-import ConAgua.Front.ApplyExpr
-import ConAgua.Front.Driver
-import ConAgua.Front.Fields
-import ConAgua.Front.FieldsDecl
-import ConAgua.Front.IdTable
-import ConAgua.Front.IndApply
-import ConAgua.Front.IndFields
-import ConAgua.Front.Line
-import ConAgua.Front.LineRec
-import ConAgua.Front.NatDec
-import ConAgua.Front.Unescape
-import ConAgua.L.Examples
-import ConAgua.L.Syntax
-import ConAgua.Layout
-import ConAgua.Rom.CIRead
-import ConAgua.Rom.PinRead
-import ConAgua.Scan.Key
-import ConAgua.Scan.Leaves
-import ConAgua.Scan.Lit
-import ConAgua.Scan.Member
-import ConAgua.Scan.Records
-import ConAgua.Scan.Str
-import ConAgua.Scan.Utf8
-import ConAgua.Scan.Values
+module
+
+public import ConAgua.Compiler.WFSplit
+public import ConAgua.Checker.Entry
+public import ConAgua.Checker.Prelude
+public import ConAgua.Arena.Abs1
+public import ConAgua.Arena.AppStore
+public import ConAgua.Arena.ArRange
+public import ConAgua.Arena.ArRangeSpec
+public import ConAgua.Arena.BVarStore
+public import ConAgua.Arena.BvarB
+public import ConAgua.Arena.CheckerL
+public import ConAgua.Arena.ConstStore
+public import ConAgua.Arena.ConstsResolveF
+public import ConAgua.Arena.CoreCaches
+public import ConAgua.Arena.CoreLevels
+public import ConAgua.Arena.DeclAndPin
+public import ConAgua.Arena.DeclApd
+public import ConAgua.Arena.DeclArms
+public import ConAgua.Arena.DeclArmsCanon
+public import ConAgua.Arena.DeclArmsNat
+public import ConAgua.Arena.DeclStep
+public import ConAgua.Arena.DefEq
+public import ConAgua.Arena.Env
+public import ConAgua.Arena.ExprMk
+public import ConAgua.Arena.FVarRange
+public import ConAgua.Arena.FVarStore
+public import ConAgua.Arena.ForallStore
+public import ConAgua.Arena.Freeze
+public import ConAgua.Arena.HasFvar
+public import ConAgua.Arena.ImaxStore
+public import ConAgua.Arena.IndIface
+public import ConAgua.Arena.IndInstall
+public import ConAgua.Arena.IndParts
+public import ConAgua.Arena.IndPos
+public import ConAgua.Arena.IndPos2
+public import ConAgua.Arena.IndSum
+public import ConAgua.Arena.Infer
+public import ConAgua.Arena.InferFieldSort
+public import ConAgua.Arena.Inst1
+public import ConAgua.Arena.Inst1Spec
+public import ConAgua.Arena.InstLP
+public import ConAgua.Arena.InstList
+public import ConAgua.Arena.InstListSpec
+public import ConAgua.Arena.Knot
+public import ConAgua.Arena.LamStore
+public import ConAgua.Arena.LetStore
+public import ConAgua.Arena.LevelApd
+public import ConAgua.Arena.LevelEquiv
+public import ConAgua.Arena.LevelHeap
+public import ConAgua.Arena.LevelIntern
+public import ConAgua.Arena.LevelLeq
+public import ConAgua.Arena.LevelSimp
+public import ConAgua.Arena.LevelStore
+public import ConAgua.Arena.LevelSubst
+public import ConAgua.Arena.LevelSubstL
+public import ConAgua.Arena.LevelSubstLP
+public import ConAgua.Arena.LevelZero
+public import ConAgua.Arena.LiftL
+public import ConAgua.Arena.LsStore
+public import ConAgua.Arena.MaxStore
+public import ConAgua.Arena.MemoLib
+public import ConAgua.Arena.NAnonStore
+public import ConAgua.Arena.NNumStore
+public import ConAgua.Arena.NStrStore
+public import ConAgua.Arena.NatAdd
+public import ConAgua.Arena.NatArms
+public import ConAgua.Arena.NatBits
+public import ConAgua.Arena.NatCmp
+public import ConAgua.Arena.NatDiv
+public import ConAgua.Arena.NatGcd
+public import ConAgua.Arena.NatMul
+public import ConAgua.Arena.NatPow
+public import ConAgua.Arena.NatShl
+public import ConAgua.Arena.NatShr
+public import ConAgua.Arena.NatSub
+public import ConAgua.Arena.ParamStore
+public import ConAgua.Arena.Pins
+public import ConAgua.Arena.ProjStore
+public import ConAgua.Arena.Promote
+public import ConAgua.Arena.PropRead
+public import ConAgua.Arena.RecCheck
+public import ConAgua.Arena.RecClass
+public import ConAgua.Arena.RecGen
+public import ConAgua.Arena.Refine
+public import ConAgua.Arena.Rom
+public import ConAgua.Arena.RomExpr
+public import ConAgua.Arena.RomItems
+public import ConAgua.Arena.RomLevel
+public import ConAgua.Arena.RomLevels
+public import ConAgua.Arena.RomPins
+public import ConAgua.Arena.Scratch
+public import ConAgua.Arena.SortStore
+public import ConAgua.Arena.Store
+public import ConAgua.Arena.StrLit
+public import ConAgua.Arena.StripTele
+public import ConAgua.Arena.StubInd
+public import ConAgua.Arena.StubNames
+public import ConAgua.Arena.TeleLift
+public import ConAgua.Arena.Walk
+public import ConAgua.Arena.WalkLeaves
+public import ConAgua.Arena.WalkLift
+public import ConAgua.Arena.WalkScope
+public import ConAgua.Arena.WhnfCore
+public import ConAgua.Arena.WhnfDelta
+public import ConAgua.Arena.WhnfEntry
+public import ConAgua.Arena.WhnfIota
+public import ConAgua.Arena.WhnfIotaRec
+public import ConAgua.Arena.WhnfM2C
+public import ConAgua.Arena.WhnfProj
+public import ConAgua.Arena.WhnfSpineArgs
+public import ConAgua.Arena.WhnfSpineRefine
+public import ConAgua.Arena.ZeroStore
+public import ConAgua.Checker.Hoist
+public import ConAgua.Checker.Presize
+public import ConAgua.Front.Apply
+public import ConAgua.Front.ApplyDecl
+public import ConAgua.Front.ApplyExpr
+public import ConAgua.Front.Driver
+public import ConAgua.Front.Fields
+public import ConAgua.Front.FieldsDecl
+public import ConAgua.Front.IdTable
+public import ConAgua.Front.IndApply
+public import ConAgua.Front.IndFields
+public import ConAgua.Front.Line
+public import ConAgua.Front.LineRec
+public import ConAgua.Front.NatDec
+public import ConAgua.Front.Unescape
+public import ConAgua.L.Examples
+public import ConAgua.L.Syntax
+public import ConAgua.Layout
+public import ConAgua.Rom.CIRead
+public import ConAgua.Rom.PinRead
+public import ConAgua.Scan.Key
+public import ConAgua.Scan.Leaves
+public import ConAgua.Scan.Lit
+public import ConAgua.Scan.Member
+public import ConAgua.Scan.Records
+public import ConAgua.Scan.Str
+public import ConAgua.Scan.Utf8
+public import ConAgua.Scan.Values
+
+@[expose] public section
 
 /-!
 # The checker: one program (generated by `scripts/checker_prog.py`; do not edit)

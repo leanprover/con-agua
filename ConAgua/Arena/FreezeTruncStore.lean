@@ -1,4 +1,8 @@
-import ConAgua.Arena.FreezeTruncBase
+module
+
+public import ConAgua.Arena.FreezeTruncBase
+
+@[expose] public section
 
 /-!
 # The truncation theorem, part 3: a store under truncation of its tier 0 (lane parmode)

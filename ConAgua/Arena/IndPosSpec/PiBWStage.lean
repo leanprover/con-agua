@@ -1,6 +1,10 @@
-import ConAgua.Arena.IndPartsSpec.RecTW
-import ConAgua.Arena.GrindAttr
-import ConAgua.L.GrindAttr
+module
+
+public import ConAgua.Arena.IndPartsSpec.RecTW
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.L.GrindAttr
+
+@[expose] public section
 
 /-!
 # PiBWStage

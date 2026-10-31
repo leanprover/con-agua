@@ -1,6 +1,10 @@
-import ConAgua.AsmFile.Term
-import Lean.Elab.Command
-import Std.Do.Triple.SpecLemmas
+module
+
+public import ConAgua.AsmFile.Term
+public import Lean.Elab.Command
+public import Std.Do.Triple.SpecLemmas
+
+@[expose] public section
 
 /-!
 # `a = lit` for a long program literal, in kernel-sized pieces (not trusted)

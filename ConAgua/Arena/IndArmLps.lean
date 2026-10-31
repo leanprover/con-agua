@@ -1,4 +1,8 @@
-import ConRon.Arena.Env
+module
+
+public import ConRon.Arena.Env
+
+@[expose] public section
 
 /-!
 # The block's level-parameter handles have decoder names (lane `indproofs4`)

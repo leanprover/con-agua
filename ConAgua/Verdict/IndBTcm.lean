@@ -1,11 +1,15 @@
-import ConAgua.Arena.IndRealLvlC
-import ConAgua.Arena.IndSumSpec.StructCtorResidOk
-import ConAgua.Arena.IndInstallSpec.InstallRec2PSl
-import ConAgua.Arena.IndInstallSpec.NestCtx
-import ConAgua.Verdict.IndBTpd
-import ConAgua.Arena.GrindAttr
-import ConAgua.L.GrindAttr
-import ConAgua.L.ModelGen
+module
+
+public import ConAgua.Arena.IndRealLvlC
+public import ConAgua.Arena.IndSumSpec.StructCtorResidOk
+public import ConAgua.Arena.IndInstallSpec.InstallRec2PSl
+public import ConAgua.Arena.IndInstallSpec.NestCtx
+public import ConAgua.Verdict.IndBTpd
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.L.GrindAttr
+public import ConAgua.L.ModelGen
+
+@[expose] public section
 /-!
 # `target_class_match`: one model and one refinement for both outcomes
 

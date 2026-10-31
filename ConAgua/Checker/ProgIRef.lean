@@ -1,6 +1,10 @@
-import ConAgua.Checker.ProgI
-import ConAgua.Compiler.InlineCorrect
-import ConAgua.Compiler.MainRef
+module
+
+public import ConAgua.Checker.ProgI
+public import ConAgua.Compiler.InlineCorrect
+public import ConAgua.Compiler.MainRef
+
+@[expose] public section
 
 /-!
 # The inlined checker refines the checker

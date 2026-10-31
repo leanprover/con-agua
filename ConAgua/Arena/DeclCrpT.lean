@@ -1,6 +1,10 @@
-import ConAgua.Arena.DeclArmT
-import ConAgua.Arena.RecGenSpec.CruleProg
-import ConAgua.Arena.DeclReducePin
+module
+
+public import ConAgua.Arena.DeclArmT
+public import ConAgua.Arena.RecGenSpec.CruleProg
+public import ConAgua.Arena.DeclReducePin
+
+@[expose] public section
 
 /-!
 # The reduce-pin gate and the opaque arm under `StageC` (lane `loopt2`)

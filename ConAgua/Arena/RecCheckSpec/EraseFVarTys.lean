@@ -1,10 +1,14 @@
-import ConAgua.Arena.RecCheckSpec.RcLook
-import ConAgua.Arena.IndPosSpec.NestCrest
-import ConAgua.Arena.IndPosSpec.SgGoW
-import ConAgua.Arena.GrindAttr
-import ConAgua.Arena.IndGrindAttr
-import ConAgua.L.GrindAttr
-import ConAgua.L.ModelGen
+module
+
+public import ConAgua.Arena.RecCheckSpec.RcLook
+public import ConAgua.Arena.IndPosSpec.NestCrest
+public import ConAgua.Arena.IndPosSpec.SgGoW
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.Arena.IndGrindAttr
+public import ConAgua.L.GrindAttr
+public import ConAgua.L.ModelGen
+
+@[expose] public section
 
 /-!
 # EraseFVarTys: `ConRon.Arena.eraseFVarTys`, `ConRon.Arena.targetCanonParams`, `ConRon.Arena.targetCtorsOf`

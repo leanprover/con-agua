@@ -1,5 +1,9 @@
-import ConAgua.Arena.DeclNatSpec
-import ConAgua.Arena.DeclCanonSpec2
+module
+
+public import ConAgua.Arena.DeclNatSpec
+public import ConAgua.Arena.DeclCanonSpec2
+
+@[expose] public section
 
 /-!
 # `ci_to_cv` refines `IConstantInfo.toConstantVal` (lane `decls3`, helper `decls3-nat`)

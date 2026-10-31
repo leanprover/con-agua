@@ -1,7 +1,11 @@
-import ConAgua.Arena.Abs1Spec
-import ConAgua.Arena.Inst1Refine
-import ConAgua.Arena.Keeps
-import Std.Tactic.BVDecide.Normalize.Prop
+module
+
+public import ConAgua.Arena.Abs1Spec
+public import ConAgua.Arena.Inst1Refine
+public import ConAgua.Arena.Keeps
+public import Std.Tactic.BVDecide.Normalize.Prop
+
+@[expose] public section
 
 /-!
 # `abs_go` refines the arena's `abstract1Go`

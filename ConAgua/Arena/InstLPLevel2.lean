@@ -1,6 +1,10 @@
-import ConAgua.Arena.InstLPLevel
-import ConAgua.Arena.InstLPRef2
-import ConAgua.Arena.StrLitBase
+module
+
+public import ConAgua.Arena.InstLPLevel
+public import ConAgua.Arena.InstLPRef2
+public import ConAgua.Arena.StrLitBase
+
+@[expose] public section
 
 /-!
 # `sls_memo` under `CoreS` (helper `whnf4-ilp-lev`)

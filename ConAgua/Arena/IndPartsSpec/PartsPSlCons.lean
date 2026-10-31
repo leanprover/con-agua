@@ -1,5 +1,9 @@
-import ConAgua.Arena.IndPartsSpec.BsW
-import ConAgua.Arena.IndPartsSpec.IndPartsProg2
+module
+
+public import ConAgua.Arena.IndPartsSpec.BsW
+public import ConAgua.Arena.IndPartsSpec.IndPartsProg2
+
+@[expose] public section
 
 /-!
 # PartsPSlCons

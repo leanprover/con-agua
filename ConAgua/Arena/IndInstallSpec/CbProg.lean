@@ -1,9 +1,13 @@
-import ConAgua.Arena.IndInstallSpec.GrcProg
-import ConAgua.Arena.IndInstallSpec.IagW
-import ConAgua.Arena.IndInstallSpec.Pos3Init
-import ConAgua.Arena.IndSumSpec.ConsBlockRecsTF
-import ConAgua.Arena.RecGenSpec.ClassSeeds
-import ConAgua.Arena.RecGenSpec.OcW
+module
+
+public import ConAgua.Arena.IndInstallSpec.GrcProg
+public import ConAgua.Arena.IndInstallSpec.IagW
+public import ConAgua.Arena.IndInstallSpec.Pos3Init
+public import ConAgua.Arena.IndSumSpec.ConsBlockRecsTF
+public import ConAgua.Arena.RecGenSpec.ClassSeeds
+public import ConAgua.Arena.RecGenSpec.OcW
+
+@[expose] public section
 
 /-!
 # CbProg

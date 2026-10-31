@@ -1,4 +1,8 @@
-import ConAgua.Arena.IndIface
+module
+
+public import ConAgua.Arena.IndIface
+
+@[expose] public section
 
 /-!
 # The uniform inductive install, at k members (lane `induct`, module `IndInstall`)

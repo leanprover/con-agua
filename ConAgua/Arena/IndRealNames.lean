@@ -1,10 +1,14 @@
-import ConAgua.Arena.StubNames
-import ConAgua.Arena.RecSim
-import ConAgua.Arena.DeclMasterStage
-import ConAgua.Arena.StageInst1
-import ConAgua.Arena.InstLPRef
-import ConAgua.Arena.GrindAttr
-import ConAgua.L.GrindAttr
+module
+
+public import ConAgua.Arena.StubNames
+public import ConAgua.Arena.RecSim
+public import ConAgua.Arena.DeclMasterStage
+public import ConAgua.Arena.StageInst1
+public import ConAgua.Arena.InstLPRef
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.L.GrindAttr
+
+@[expose] public section
 
 /-!
 # Name and level-list interning stubs discharged (lane `indproofs4`, helper `indproofs4-names`)

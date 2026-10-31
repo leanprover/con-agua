@@ -1,5 +1,9 @@
-import ConAgua.Rom.CIRead
-import ConAgua.Arena.DeclRomStubs
+module
+
+public import ConAgua.Rom.CIRead
+public import ConAgua.Arena.DeclRomStubs
+
+@[expose] public section
 
 /-!
 # The ROM constant readers' refinements: the statements (lane `decls4`)

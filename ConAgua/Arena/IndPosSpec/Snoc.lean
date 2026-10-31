@@ -1,7 +1,11 @@
-import ConAgua.Arena.IndPosSpec.CfW
-import ConAgua.Arena.IndPosSpec.Grow
-import ConAgua.Arena.IndPosSpec.KlB
-import ConAgua.Arena.IndPosSpec.WCtx
+module
+
+public import ConAgua.Arena.IndPosSpec.CfW
+public import ConAgua.Arena.IndPosSpec.Grow
+public import ConAgua.Arena.IndPosSpec.KlB
+public import ConAgua.Arena.IndPosSpec.WCtx
+
+@[expose] public section
 
 /-!
 # Snoc

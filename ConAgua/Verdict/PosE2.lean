@@ -1,6 +1,10 @@
-import ConAgua.Verdict.PosE2M
-import ConAgua.Verdict.PosE1N
-import ConAgua.Arena.IndT.RecGen19
+module
+
+public import ConAgua.Verdict.PosE2M
+public import ConAgua.Verdict.PosE1N
+public import ConAgua.Arena.IndT.RecGen19
+
+@[expose] public section
 /-!
 # `nest_grow_group`: one refinement for both outcomes
 

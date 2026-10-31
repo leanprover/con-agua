@@ -1,9 +1,13 @@
-import ConAgua.E2E.Ser
-import ConAgua.E2E.Trace
-import ConAgua.Compiler.Run
-import ConAgua.Compiler.Abi
-import ConAgua.Compiler.WF
-import ConAgua.Final.Statement
+module
+
+public import ConAgua.E2E.Ser
+public import ConAgua.E2E.Trace
+public import ConAgua.Compiler.Run
+public import ConAgua.Compiler.Abi
+public import ConAgua.Compiler.WF
+public import ConAgua.Final.Statement
+
+@[expose] public section
 
 /-!
 # `e2e-l`: compile or interpret an assembled program file (lane `e2e`)

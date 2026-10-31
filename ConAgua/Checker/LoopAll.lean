@@ -1,8 +1,12 @@
-import ConAgua.Checker.Prog
-import ConAgua.Arena.LoopFns
-import ConAgua.Compiler.WriteSetSplit
-import ConAgua.Arena.LevelIntern
-import ConAgua.Arena.LevelSubstLP
+module
+
+public import ConAgua.Checker.Prog
+public import ConAgua.Arena.LoopFns
+public import ConAgua.Compiler.WriteSetSplit
+public import ConAgua.Arena.LevelIntern
+public import ConAgua.Arena.LevelSubstLP
+
+@[expose] public section
 
 /-!
 # The loop's write set in the checker's program (lane `loopt2`)

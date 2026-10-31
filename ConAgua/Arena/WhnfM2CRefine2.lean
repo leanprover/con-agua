@@ -1,8 +1,12 @@
-import ConAgua.Arena.WhnfM2CRefine
-import ConAgua.Arena.WhnfIotaRefine4
-import ConRon.Bridge.Grind
-import ConAgua.Verdict.WhnfModels6E
-import ConAgua.Arena.DefEqStuck
+module
+
+public import ConAgua.Arena.WhnfM2CRefine
+public import ConAgua.Arena.WhnfIotaRefine4
+public import ConRon.Bridge.Grind
+public import ConAgua.Verdict.WhnfModels6E
+public import ConAgua.Arena.DefEqStuck
+
+@[expose] public section
 
 /-!
 # `major_to_ctor`: refinements of `m2c_pre`, `m2c_check` and the K arm

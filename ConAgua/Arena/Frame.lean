@@ -1,5 +1,9 @@
-import ConAgua.Arena.StoreLib
-import Std.Tactic.BVDecide.Normalize.Prop
+module
+
+public import ConAgua.Arena.StoreLib
+public import Std.Tactic.BVDecide.Normalize.Prop
+
+@[expose] public section
 
 /-!
 # Frames between tables

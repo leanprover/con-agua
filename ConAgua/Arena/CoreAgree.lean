@@ -1,4 +1,8 @@
-import ConAgua.L.WriteSet
+module
+
+public import ConAgua.L.WriteSet
+
+@[expose] public section
 
 /-!
 # Programs that agree on a call-closed set of functions run them alike

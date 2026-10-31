@@ -1,12 +1,16 @@
-import ConAgua.Arena.IndInstallSpec.CapsProg
-import ConAgua.Arena.IndInstallSpec.IcbiW
-import ConAgua.Arena.IndInstallSpec.InstallRec2Tele
-import ConAgua.Arena.IndInstallSpec.PartsShapeFacts
-import ConAgua.Arena.IndPartsSpec.PartsPSlCons
-import ConAgua.Arena.IndSumSpec.ConsSumCtors
-import ConAgua.Arena.GrindAttr
-import ConAgua.Arena.IndGrindAttr
-import ConAgua.L.GrindAttr
+module
+
+public import ConAgua.Arena.IndInstallSpec.CapsProg
+public import ConAgua.Arena.IndInstallSpec.IcbiW
+public import ConAgua.Arena.IndInstallSpec.InstallRec2Tele
+public import ConAgua.Arena.IndInstallSpec.PartsShapeFacts
+public import ConAgua.Arena.IndPartsSpec.PartsPSlCons
+public import ConAgua.Arena.IndSumSpec.ConsSumCtors
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.Arena.IndGrindAttr
+public import ConAgua.L.GrindAttr
+
+@[expose] public section
 
 /-!
 # IcaW

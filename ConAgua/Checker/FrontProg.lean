@@ -1,6 +1,10 @@
-import ConAgua.Checker.FrontProgAgree
-import ConAgua.Arena.LevelIntern
-import ConAgua.Arena.LevelSubstLP
+module
+
+public import ConAgua.Checker.FrontProgAgree
+public import ConAgua.Arena.LevelIntern
+public import ConAgua.Arena.LevelSubstLP
+
+@[expose] public section
 
 /-!
 # The frontend's refinement at the checker's program (lane `pipeline`)

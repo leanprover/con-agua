@@ -1,5 +1,9 @@
-import ConAgua.Verdict.TopE
-import ConAgua.Verdict.PosKnotE
+module
+
+public import ConAgua.Verdict.TopE
+public import ConAgua.Verdict.PosKnotE
+
+@[expose] public section
 
 /-!
 # The inductive arm's verdict claim, proved (lane `verdicts-b`, helper `fin`)

@@ -1,4 +1,8 @@
-import ConAgua.Arena.StoreRel
+module
+
+public import ConAgua.Arena.StoreRel
+
+@[expose] public section
 
 /-!
 # `Sim`: relational lemmas as composable facts (lane `prooftools`)

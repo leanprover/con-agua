@@ -1,4 +1,8 @@
-import ConAgua.Arena.WhnfBase
+module
+
+public import ConAgua.Arena.WhnfBase
+
+@[expose] public section
 
 /-!
 # Definitional equality: `defeqBody` and everything below it (phase 6, lane `defeq`)

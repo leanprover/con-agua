@@ -1,6 +1,10 @@
-import ConAgua.Arena.IndSumSpec.ColW
-import ConAgua.Arena.RecCheckSpec.TaGoWMfr
-import ConAgua.Arena.IndGrindAttr
+module
+
+public import ConAgua.Arena.IndSumSpec.ColW
+public import ConAgua.Arena.RecCheckSpec.TaGoWMfr
+public import ConAgua.Arena.IndGrindAttr
+
+@[expose] public section
 
 /-!
 # TcmLook

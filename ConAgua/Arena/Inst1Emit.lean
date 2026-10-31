@@ -1,6 +1,10 @@
-import ConAgua.Compiler.Run
-import ConAgua.Compiler.WF
-import ConAgua.Arena.Inst1BenchComp
+module
+
+public import ConAgua.Compiler.Run
+public import ConAgua.Compiler.WF
+public import ConAgua.Arena.Inst1BenchComp
+
+@[expose] public section
 
 /-! `lake env lean --run ConAgua/Arena/Inst1Emit.lean OUT.s` writes the compiled `inst1BenchProg`
 (entry `inst1_bench`, 62 word arrays: the full layout through the level-parameter columns and both

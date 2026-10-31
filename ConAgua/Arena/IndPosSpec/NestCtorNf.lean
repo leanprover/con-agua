@@ -1,4 +1,8 @@
-import ConAgua.Arena.IndPosSpec.NcnW2
+module
+
+public import ConAgua.Arena.IndPosSpec.NcnW2
+
+@[expose] public section
 
 /-!
 # NestCtorNf: `ConRon.Arena.nestCtorNf`

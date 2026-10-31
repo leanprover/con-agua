@@ -1,14 +1,18 @@
-import ConRon.Bridge.Frontend.Capstone
-import ConRon.Arena.Frontend.Prepare
-import ConRon.Arena.Frontend.Prelude
-import ConRon.Bridge.Checker.Pins
-import ConRon.Bridge.Frontend.Prepare
-import ConLeche.Verify.Frontend.Prepare
-import ConRon.Bridge.Checker.Phased
-import ConRon.Bridge.Inductives.Decl
-import ConLeche.Model.Denotes
-import ConLeche.Model.Fold
-import ConLeche.Verify.Frontend.FileFalse
+module
+
+public import ConRon.Bridge.Frontend.Capstone
+public import ConRon.Arena.Frontend.Prepare
+public import ConRon.Arena.Frontend.Prelude
+public import ConRon.Bridge.Checker.Pins
+public import ConRon.Bridge.Frontend.Prepare
+public import ConLeche.Verify.Frontend.Prepare
+public import ConRon.Bridge.Checker.Phased
+public import ConRon.Bridge.Inductives.Decl
+public import ConLeche.Model.Denotes
+public import ConLeche.Model.Fold
+public import ConLeche.Verify.Frontend.FileFalse
+
+@[expose] public section
 
 /-!
 # The twin's pipeline, from the start state to con-leche

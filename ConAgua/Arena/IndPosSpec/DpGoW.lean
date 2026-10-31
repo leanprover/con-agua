@@ -1,5 +1,9 @@
-import ConAgua.Arena.IndPosSpec.MatesW
-import ConAgua.Arena.IndView
+module
+
+public import ConAgua.Arena.IndPosSpec.MatesW
+public import ConAgua.Arena.IndView
+
+@[expose] public section
 
 /-!
 # DpGoW

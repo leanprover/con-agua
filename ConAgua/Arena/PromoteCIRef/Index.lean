@@ -1,8 +1,12 @@
-import ConAgua.Arena.PromoteCIInfra
-import ConAgua.Arena.PromoteCIRef.ConstsAt
-import ConAgua.Arena.PromoteCIRef.Promoted
-import Std.Tactic.BVDecide.Normalize.Prop
-import ConRon.Bridge.Grind
+module
+
+public import ConAgua.Arena.PromoteCIInfra
+public import ConAgua.Arena.PromoteCIRef.ConstsAt
+public import ConAgua.Arena.PromoteCIRef.Promoted
+public import Std.Tactic.BVDecide.Normalize.Prop
+public import ConRon.Bridge.Grind
+
+@[expose] public section
 
 /-!
 # Index

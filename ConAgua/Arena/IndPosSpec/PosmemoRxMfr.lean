@@ -1,5 +1,9 @@
-import ConAgua.Arena.IndPosSpec.CrLook
-import ConAgua.Arena.IndPosSpec.RpGoStep
+module
+
+public import ConAgua.Arena.IndPosSpec.CrLook
+public import ConAgua.Arena.IndPosSpec.RpGoStep
+
+@[expose] public section
 
 /-!
 # PosmemoRxMfr

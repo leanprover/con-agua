@@ -1,6 +1,10 @@
-import ConAgua.Arena.IndT.Lift
-import ConAgua.Arena.IndRealOpf3
-import ConAgua.Verdict.VCtx
+module
+
+public import ConAgua.Arena.IndT.Lift
+public import ConAgua.Arena.IndRealOpf3
+public import ConAgua.Verdict.VCtx
+
+@[expose] public section
 
 /-!
 # `check_block_doms_at`, `check_struct_doms_at`: one model and one refinement each

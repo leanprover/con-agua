@@ -1,6 +1,10 @@
-import ConAgua.Arena.ArRangeSpec
-import ConAgua.Arena.Abs1Refine
-import Std.Tactic.BVDecide.Normalize.Prop
+module
+
+public import ConAgua.Arena.ArRangeSpec
+public import ConAgua.Arena.Abs1Refine
+public import Std.Tactic.BVDecide.Normalize.Prop
+
+@[expose] public section
 
 /-!
 # `ar_entry` refines the arena's `abstractRangeFast`

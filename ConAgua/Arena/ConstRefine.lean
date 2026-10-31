@@ -1,7 +1,11 @@
-import ConAgua.Arena.ConstStore
-import ConAgua.Arena.LpColRel
-import Std.Tactic.BVDecide.Normalize.BitVec
-import Std.Tactic.BVDecide.Normalize.Prop
+module
+
+public import ConAgua.Arena.ConstStore
+public import ConAgua.Arena.LpColRel
+public import Std.Tactic.BVDecide.Normalize.BitVec
+public import Std.Tactic.BVDecide.Normalize.Prop
+
+@[expose] public section
 
 /-!
 # The `const` store refines the arena's `const` tables

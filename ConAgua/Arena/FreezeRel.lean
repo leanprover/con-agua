@@ -1,4 +1,8 @@
-import ConAgua.Arena.PhaseBT
+module
+
+public import ConAgua.Arena.PhaseBT
+
+@[expose] public section
 
 /-!
 # What phase B starts from, and the frozen arrays cut to their extents (lane parmode)

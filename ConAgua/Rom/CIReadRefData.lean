@@ -1,5 +1,9 @@
-import ConAgua.Rom.CIReadRefLayout
-import ConAgua.Rom.CIReadRefBlock
+module
+
+public import ConAgua.Rom.CIReadRefLayout
+public import ConAgua.Rom.CIReadRefBlock
+
+@[expose] public section
 
 /-!
 # The ROM constant readers: the pinned values fit (helper `decls4-rom`)

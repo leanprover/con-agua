@@ -1,5 +1,9 @@
-import ConAgua.Arena.RecCheckSpec.PtrNamesWDec
-import ConAgua.Arena.IndSumSpec.StructProjArgP
+module
+
+public import ConAgua.Arena.RecCheckSpec.PtrNamesWDec
+public import ConAgua.Arena.IndSumSpec.StructProjArgP
+
+@[expose] public section
 
 /-!
 # TargetMajorDefault: `ConRon.Arena.targetMajorDefault`

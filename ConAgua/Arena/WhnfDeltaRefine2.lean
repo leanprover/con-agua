@@ -1,9 +1,13 @@
-import ConAgua.Arena.WhnfDeltaRefine
-import ConAgua.Arena.GrindAttr
-import ConAgua.L.GrindAttr
-import Std.Tactic.BVDecide.Normalize.BitVec
-import Std.Tactic.BVDecide.Normalize.Prop
-import Std.WP.Tactic
+module
+
+public import ConAgua.Arena.WhnfDeltaRefine
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.L.GrindAttr
+public import Std.Tactic.BVDecide.Normalize.BitVec
+public import Std.Tactic.BVDecide.Normalize.Prop
+public import Std.WP.Tactic
+
+@[expose] public section
 
 /-!
 # δ and `Nat` literals: proofs of `WhnfDelta.lean`'s specs, part 2 (`raw_nat_lit` … `unfold_definition`)

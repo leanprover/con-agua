@@ -1,8 +1,12 @@
-import ConAgua.Arena.IndPartsSpec.EqW
-import ConAgua.Arena.IndPartsSpec.IndPartsProg2
-import ConAgua.Arena.GrindAttr
-import ConAgua.L.GrindAttr
-import ConAgua.L.ModelGen
+module
+
+public import ConAgua.Arena.IndPartsSpec.EqW
+public import ConAgua.Arena.IndPartsSpec.IndPartsProg2
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.L.GrindAttr
+public import ConAgua.L.ModelGen
+
+@[expose] public section
 
 /-!
 # SetEqW

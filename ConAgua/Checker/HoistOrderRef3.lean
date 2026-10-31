@@ -1,4 +1,8 @@
-import ConAgua.Checker.HoistOrderRef2
+module
+
+public import ConAgua.Checker.HoistOrderRef2
+
+@[expose] public section
 
 /-!
 # The hoist's reorder loops, on memory (lane `front4`)

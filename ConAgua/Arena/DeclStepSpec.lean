@@ -1,5 +1,9 @@
-import ConAgua.Arena.DeclCvg
-import ConAgua.Arena.DeclPins
+module
+
+public import ConAgua.Arena.DeclCvg
+public import ConAgua.Arena.DeclPins
+
+@[expose] public section
 
 /-!
 # The specs of phase A's step and phase B's check (`install_step_go`, `check_value_group`)

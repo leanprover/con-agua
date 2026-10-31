@@ -1,11 +1,15 @@
-import ConAgua.Arena.RecClassSpec.ClassGenRecTy
-import ConAgua.Verdict.IndBHdr
-import ConAgua.Verdict.IndBRec1
-import ConAgua.Arena.IndT.Lift
-import ConAgua.Arena.RecGenSpec.ClassFeR
-import ConAgua.Arena.GrindAttr
-import ConAgua.L.ModelGen
-import ConRon.Bridge.Inductives.GenRec
+module
+
+public import ConAgua.Arena.RecClassSpec.ClassGenRecTy
+public import ConAgua.Verdict.IndBHdr
+public import ConAgua.Verdict.IndBRec1
+public import ConAgua.Arena.IndT.Lift
+public import ConAgua.Arena.RecGenSpec.ClassFeR
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.L.ModelGen
+public import ConRon.Bridge.Inductives.GenRec
+
+@[expose] public section
 
 /-!
 # `class_rec_ty_ok`: one model and one refinement for both outcomes

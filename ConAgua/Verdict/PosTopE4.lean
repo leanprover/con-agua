@@ -1,7 +1,11 @@
-import ConAgua.L.ModelGen
-import ConAgua.Verdict.PosTopE1
-import ConAgua.Arena.IndPosSpec.UnW2
-import ConAgua.Arena.IndT.PosAll
+module
+
+public import ConAgua.L.ModelGen
+public import ConAgua.Verdict.PosTopE1
+public import ConAgua.Arena.IndPosSpec.UnW2
+public import ConAgua.Arena.IndT.PosAll
+
+@[expose] public section
 /-!
 # `nest_root`'s and `nest_seeds`' refinements (lane `verdicts-b`, helper `ia2`, fork `top`)
 

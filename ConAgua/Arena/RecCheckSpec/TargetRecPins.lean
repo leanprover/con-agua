@@ -1,9 +1,13 @@
-import ConAgua.Arena.RecCheckSpec.TpsW
-import ConAgua.Arena.RecCheckSpec.TpnB
-import ConAgua.Arena.IndPartsSpec.BlockRecLpsOk
-import ConAgua.Arena.GrindAttr
-import ConAgua.Arena.IndGrindAttr
-import ConAgua.L.GrindAttr
+module
+
+public import ConAgua.Arena.RecCheckSpec.TpsW
+public import ConAgua.Arena.RecCheckSpec.TpnB
+public import ConAgua.Arena.IndPartsSpec.BlockRecLpsOk
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.Arena.IndGrindAttr
+public import ConAgua.L.GrindAttr
+
+@[expose] public section
 
 /-!
 # TargetRecPins: `ConRon.Arena.targetRecPins`

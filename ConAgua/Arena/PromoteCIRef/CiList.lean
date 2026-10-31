@@ -1,5 +1,9 @@
-import ConAgua.Arena.PromoteCIRef.Ci
-import ConAgua.Arena.PromoteCIRef.ConstsAt
+module
+
+public import ConAgua.Arena.PromoteCIRef.Ci
+public import ConAgua.Arena.PromoteCIRef.ConstsAt
+
+@[expose] public section
 
 /-!
 # CiList

@@ -1,13 +1,17 @@
-import ConAgua.Arena.IndT.IdxSorts
-import ConAgua.Arena.IndT.GenRec3
-import ConAgua.Arena.IndT.ArmMemos
-import ConAgua.Arena.IndRealSctC
-import ConAgua.Arena.RecCheckSpec.BlockNestedBit
-import ConAgua.Arena.IndInstallSpec.BpRecBpassR
-import ConAgua.Arena.IndInstallSpec.ConsRecsTFSimOf
-import ConAgua.Arena.GrindAttr
-import ConAgua.L.GrindAttr
-import ConAgua.L.ModelGen
+module
+
+public import ConAgua.Arena.IndT.IdxSorts
+public import ConAgua.Arena.IndT.GenRec3
+public import ConAgua.Arena.IndT.ArmMemos
+public import ConAgua.Arena.IndRealSctC
+public import ConAgua.Arena.RecCheckSpec.BlockNestedBit
+public import ConAgua.Arena.IndInstallSpec.BpRecBpassR
+public import ConAgua.Arena.IndInstallSpec.ConsRecsTFSimOf
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.L.GrindAttr
+public import ConAgua.L.ModelGen
+
+@[expose] public section
 
 /-!
 # `checkBlockTail` under `StageC` (lane `indstaget`)

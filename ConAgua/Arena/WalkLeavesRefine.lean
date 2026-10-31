@@ -1,6 +1,10 @@
-import ConAgua.Arena.WalkLeaves
-import ConAgua.Arena.WalkScopeRefine
-import Std.Tactic.BVDecide.Normalize.Prop
+module
+
+public import ConAgua.Arena.WalkLeaves
+public import ConAgua.Arena.WalkScopeRefine
+public import Std.Tactic.BVDecide.Normalize.Prop
+
+@[expose] public section
 
 /-!
 # `leaf_guard` refines `leafGuard` (lane `whnf3`)

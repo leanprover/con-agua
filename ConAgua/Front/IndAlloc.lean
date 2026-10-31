@@ -1,9 +1,13 @@
-import ConAgua.Front.IndFields
-import ConAgua.Arena.GrindAttr
-import ConAgua.L.GrindAttr
-import Std.Tactic.BVDecide.Normalize.Prop
-import Std.WP.Tactic
-import ConAgua.L.Examples
+module
+
+public import ConAgua.Front.IndFields
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.L.GrindAttr
+public import Std.Tactic.BVDecide.Normalize.Prop
+public import Std.WP.Tactic
+public import ConAgua.L.Examples
+
+@[expose] public section
 
 /-!
 # The scratch arrays' allocators: models and specs

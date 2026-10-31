@@ -1,10 +1,14 @@
-import ConAgua.Arena.RecGenSpec.RgW
-import ConAgua.Arena.RecGenSpec.DecCVX
-import ConAgua.Arena.RecStab
-import ConAgua.Arena.RecGenSpec.ClassMinorSlot
-import ConAgua.Arena.GrindAttr
-import ConAgua.Arena.IndGrindAttr
-import ConAgua.L.GrindAttr
+module
+
+public import ConAgua.Arena.RecGenSpec.RgW
+public import ConAgua.Arena.RecGenSpec.DecCVX
+public import ConAgua.Arena.RecStab
+public import ConAgua.Arena.RecGenSpec.ClassMinorSlot
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.Arena.IndGrindAttr
+public import ConAgua.L.GrindAttr
+
+@[expose] public section
 
 /-!
 # ClassRecTysOk

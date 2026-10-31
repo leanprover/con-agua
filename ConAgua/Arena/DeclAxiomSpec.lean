@@ -1,7 +1,11 @@
-import ConAgua.Arena.DeclReduceSpec2
-import ConAgua.Arena.GrindAttr
-import ConAgua.Arena.IndGrindAttr
-import ConAgua.L.GrindAttr
+module
+
+public import ConAgua.Arena.DeclReduceSpec2
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.Arena.IndGrindAttr
+public import ConAgua.L.GrindAttr
+
+@[expose] public section
 
 /-!
 # The `ofReduce*` axioms: `of_reduce_ax_ok(vis, q)` refines `ofReduceAxOk` (lane `decls3`)

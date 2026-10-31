@@ -1,5 +1,9 @@
-import ConAgua.Arena.LoopFns
-import ConAgua.Compiler.WriteSetSplit
+module
+
+public import ConAgua.Arena.LoopFns
+public import ConAgua.Compiler.WriteSetSplit
+
+@[expose] public section
 
 /-!
 # The declaration loop's leaves: the functions that leave the core's memos alone (lane `loopt2`)

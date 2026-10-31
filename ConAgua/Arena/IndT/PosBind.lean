@@ -1,6 +1,10 @@
-import ConAgua.Arena.IndT.PosFields
-import ConAgua.Arena.IndPosSpec.NestCrest
-import ConAgua.Arena.IndRealAbsPos
+module
+
+public import ConAgua.Arena.IndT.PosFields
+public import ConAgua.Arena.IndPosSpec.NestCrest
+public import ConAgua.Arena.IndRealAbsPos
+
+@[expose] public section
 
 /-!
 # `nest_pos_bind` under `StageC` (lane `indstaget`, helper `indstaget-pos`)

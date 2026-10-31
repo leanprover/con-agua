@@ -1,6 +1,10 @@
-import ConAgua.Compiler.WriteSetSplit
-import ConAgua.Layout
-import ConAgua.Front.Preserve
+module
+
+public import ConAgua.Compiler.WriteSetSplit
+public import ConAgua.Layout
+public import ConAgua.Front.Preserve
+
+@[expose] public section
 
 /-!
 # Write sets with trusted leaves (lane `indproofs4`, helper `lm`)

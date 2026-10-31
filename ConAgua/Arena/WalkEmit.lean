@@ -1,6 +1,10 @@
-import ConAgua.Compiler.Run
-import ConAgua.Compiler.WF
-import ConAgua.Arena.WalkBench
+module
+
+public import ConAgua.Compiler.Run
+public import ConAgua.Compiler.WF
+public import ConAgua.Arena.WalkBench
+
+@[expose] public section
 
 /-! `lake env lean --run ConAgua/Arena/WalkEmit.lean OUT.s` writes the compiled `benchProg`
 (entry `bb_bench`, no byte arrays, the 318 word arrays of the arena layout, through the level-parameter columns and their tier-1 arrays) for `harness/walk.c`.

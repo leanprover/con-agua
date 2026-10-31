@@ -1,7 +1,11 @@
-import ConAgua.Arena.LoopStart
-import ConAgua.Checker.TwinShapeFront
-import ConAgua.Checker.TwinCaches
-import ConAgua.Arena.InitLink
+module
+
+public import ConAgua.Arena.LoopStart
+public import ConAgua.Checker.TwinShapeFront
+public import ConAgua.Checker.TwinCaches
+public import ConAgua.Arena.InitLink
+
+@[expose] public section
 
 /-!
 # The declaration loop's start, from the stages before it (lane `loopt3`)

@@ -1,4 +1,8 @@
-import ConAgua.Arena.IndDecStab
+module
+
+public import ConAgua.Arena.IndDecStab
+
+@[expose] public section
 
 /-!
 # Rec3IwSlice

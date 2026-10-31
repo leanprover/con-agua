@@ -1,6 +1,10 @@
-import ConAgua.Arena.DeclCvg
-import ConAgua.Arena.IndGrindAttr
-import ConAgua.Arena.DeclCvg
+module
+
+public import ConAgua.Arena.DeclCvg
+public import ConAgua.Arena.IndGrindAttr
+public import ConAgua.Arena.DeclCvg
+
+@[expose] public section
 
 /-!
 # FlushStage

@@ -1,7 +1,11 @@
-import ConAgua.Arena.Verdict
-import ConAgua.Arena.SimLib
-import ConAgua.Arena.CallF
-import ConAgua.Verdict.PosTopEMono
+module
+
+public import ConAgua.Arena.Verdict
+public import ConAgua.Arena.SimLib
+public import ConAgua.Arena.CallF
+public import ConAgua.Verdict.PosTopEMono
+
+@[expose] public section
 
 /-!
 # The lockstep walk of a unified model against its twin

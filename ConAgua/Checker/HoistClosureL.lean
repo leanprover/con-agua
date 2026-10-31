@@ -1,7 +1,11 @@
-import ConAgua.Checker.HoistWalkRef
-import ConAgua.Checker.HoistIndexRef
-import ConAgua.Checker.HoistClosureTwin
-import ConRon.Bridge.Grind
+module
+
+public import ConAgua.Checker.HoistWalkRef
+public import ConAgua.Checker.HoistIndexRef
+public import ConAgua.Checker.HoistClosureTwin
+public import ConRon.Bridge.Grind
+
+@[expose] public section
 
 /-!
 # L's closure marks at push: the records it marks form a closed set (lane `front4`)

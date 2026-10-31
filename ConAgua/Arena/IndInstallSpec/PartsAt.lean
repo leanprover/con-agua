@@ -1,4 +1,8 @@
-import ConAgua.Arena.IndPartsSpec.IndPartsProg2
+module
+
+public import ConAgua.Arena.IndPartsSpec.IndPartsProg2
+
+@[expose] public section
 
 /-!
 # PartsAt

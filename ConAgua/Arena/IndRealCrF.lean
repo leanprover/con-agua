@@ -1,6 +1,10 @@
-import ConAgua.Arena.ConstsResolveF
-import ConAgua.Arena.StageInst1
-import ConAgua.Arena.WhnfIota
+module
+
+public import ConAgua.Arena.ConstsResolveF
+public import ConAgua.Arena.StageInst1
+public import ConAgua.Arena.WhnfIota
+
+@[expose] public section
 
 /-!
 # `consts_resolve_ffast`'s model (lane `indproofs4`, helper `memo`)

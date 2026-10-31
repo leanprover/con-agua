@@ -1,6 +1,10 @@
-import ConAgua.Arena.IndRealBph
-import ConAgua.Arena.IndPartsSpec.BlockSplitRecs
-import ConAgua.Arena.DeclAndPinIndRef
+module
+
+public import ConAgua.Arena.IndRealBph
+public import ConAgua.Arena.IndPartsSpec.BlockSplitRecs
+public import ConAgua.Arena.DeclAndPinIndRef
+
+@[expose] public section
 
 /-!
 # `basis_pin_hit(off, len)` refines `basisPinHit` (lane `indproofs4`, helper `bph`)

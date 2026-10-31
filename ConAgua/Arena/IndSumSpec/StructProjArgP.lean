@@ -1,9 +1,13 @@
-import ConAgua.Arena.IndRealCrF
-import ConAgua.Arena.IndSumSpec.StructElimLevel
-import ConAgua.Arena.GrindAttr
-import ConAgua.Arena.IndGrindAttr
-import ConAgua.L.GrindAttr
-import ConAgua.Arena.IndRealFvtD
+module
+
+public import ConAgua.Arena.IndRealCrF
+public import ConAgua.Arena.IndSumSpec.StructElimLevel
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.Arena.IndGrindAttr
+public import ConAgua.L.GrindAttr
+public import ConAgua.Arena.IndRealFvtD
+
+@[expose] public section
 
 /-!
 # StructProjArgP: `ConRon.Arena.structProjArgP`, `ConRon.Arena.structProjPs`, `ConRon.Arena.structPsAt`

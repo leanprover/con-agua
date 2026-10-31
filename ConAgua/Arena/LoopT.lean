@@ -1,7 +1,11 @@
-import ConAgua.Arena.Checker
-import ConAgua.Arena.CrOKFrame
-import ConAgua.Arena.IndPosSpec.FgW
-import ConAgua.Arena.RecCheckSpec.TaCW
+module
+
+public import ConAgua.Arena.Checker
+public import ConAgua.Arena.CrOKFrame
+public import ConAgua.Arena.IndPosSpec.FgW
+public import ConAgua.Arena.RecCheckSpec.TaCW
+
+@[expose] public section
 
 /-!
 # The declaration loop with the core's invariants: `LoopT` (lane `loopt`)

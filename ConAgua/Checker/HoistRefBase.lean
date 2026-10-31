@@ -1,5 +1,9 @@
-import ConAgua.Checker.Hoist
-import ConAgua.Front.StateDR
+module
+
+public import ConAgua.Checker.Hoist
+public import ConAgua.Front.StateDR
+
+@[expose] public section
 
 /-!
 # The ground hoist's refinement: shared relations (lane `front4`)

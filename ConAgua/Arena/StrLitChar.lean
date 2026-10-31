@@ -1,8 +1,12 @@
-import ConAgua.Arena.LdRd
-import ConAgua.Arena.StrLitTy
-import ConAgua.Arena.GrindAttr
-import ConAgua.L.ModelGen
-import ConAgua.L.GrindAttr
+module
+
+public import ConAgua.Arena.LdRd
+public import ConAgua.Arena.StrLitTy
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.L.ModelGen
+public import ConAgua.L.GrindAttr
+
+@[expose] public section
 
 /-!
 # `char_of_nat_ty_ok`, `string_of_list_ty_ok` under `CoreS` (helper `defeq2-str-sup`)

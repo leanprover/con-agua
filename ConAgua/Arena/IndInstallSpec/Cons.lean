@@ -1,5 +1,9 @@
-import ConAgua.Arena.IndInstallSpec.InstallRec2Tele
-import ConAgua.Arena.IndPartsSpec.PartsPSlCons
+module
+
+public import ConAgua.Arena.IndInstallSpec.InstallRec2Tele
+public import ConAgua.Arena.IndPartsSpec.PartsPSlCons
+
+@[expose] public section
 
 /-!
 # Cons

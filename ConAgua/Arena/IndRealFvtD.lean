@@ -1,7 +1,11 @@
-import ConAgua.Arena.TeleLift
-import ConAgua.Arena.StageInst1
-import ConAgua.Arena.GrindAttr
-import ConAgua.L.GrindAttr
+module
+
+public import ConAgua.Arena.TeleLift
+public import ConAgua.Arena.StageInst1
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.L.GrindAttr
+
+@[expose] public section
 
 /-!
 # `fvar_type_d`: the stub contract discharged (lane `indproofs4`, helper `fvt`)

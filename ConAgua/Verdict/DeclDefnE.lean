@@ -1,5 +1,9 @@
-import ConAgua.Arena.CheckerT
-import ConAgua.Arena.GrindAttr
+module
+
+public import ConAgua.Arena.CheckerT
+public import ConAgua.Arena.GrindAttr
+
+@[expose] public section
 
 /-!
 # The verdict claim of the definition arm `check_decl_defn` (lane `verdicts-b`, helper `d`)

@@ -1,8 +1,12 @@
-import ConAgua.Arena.IndInstallSpec.TabsProg
-import ConAgua.Arena.IndSumSpec.ConsBlockRecsTF
-import ConAgua.Arena.IndSumSpec.StructProjBodies
-import ConAgua.Arena.IndSumSpec.StructProjGuards
-import ConAgua.Arena.IndPosSpec.NestCrest
+module
+
+public import ConAgua.Arena.IndInstallSpec.TabsProg
+public import ConAgua.Arena.IndSumSpec.ConsBlockRecsTF
+public import ConAgua.Arena.IndSumSpec.StructProjBodies
+public import ConAgua.Arena.IndSumSpec.StructProjGuards
+public import ConAgua.Arena.IndPosSpec.NestCrest
+
+@[expose] public section
 
 /-!
 # TabSimSpg

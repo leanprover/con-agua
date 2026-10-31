@@ -1,8 +1,12 @@
-import ConAgua.Arena.IndRealOpf3
-import ConAgua.Arena.RecCheckSpec.ErToIwWStage
-import ConAgua.Arena.GrindAttr
-import ConAgua.Arena.IndGrindAttr
-import ConAgua.L.GrindAttr
+module
+
+public import ConAgua.Arena.IndRealOpf3
+public import ConAgua.Arena.RecCheckSpec.ErToIwWStage
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.Arena.IndGrindAttr
+public import ConAgua.L.GrindAttr
+
+@[expose] public section
 
 /-!
 # IhW

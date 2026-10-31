@@ -1,4 +1,8 @@
-import ConAgua.Arena.IndPosSpec.NbKeyK2
+module
+
+public import ConAgua.Arena.IndPosSpec.NbKeyK2
+
+@[expose] public section
 
 /-!
 # Pos2WfWfSome

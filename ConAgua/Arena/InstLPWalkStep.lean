@@ -1,4 +1,8 @@
-import ConAgua.Arena.InstLPWalkBase
+module
+
+public import ConAgua.Arena.InstLPWalkBase
+
+@[expose] public section
 
 /-!
 # The `instLP` walk: the expression-interning steps and the memo write under `CoreS`

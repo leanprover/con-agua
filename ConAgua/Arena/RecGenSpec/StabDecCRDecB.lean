@@ -1,5 +1,9 @@
-import ConAgua.Arena.RecGenSpec.DecNLAt
-import ConAgua.Arena.RecGenSpec.StabDecCKExt
+module
+
+public import ConAgua.Arena.RecGenSpec.DecNLAt
+public import ConAgua.Arena.RecGenSpec.StabDecCKExt
+
+@[expose] public section
 
 /-!
 # StabDecCRDecB

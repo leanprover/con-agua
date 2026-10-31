@@ -1,5 +1,9 @@
-import ConAgua.Arena.FreezeTruncStore
-import ConAgua.Arena.FreezeTruncKeep
+module
+
+public import ConAgua.Arena.FreezeTruncStore
+public import ConAgua.Arena.FreezeTruncKeep
+
+@[expose] public section
 
 /-!
 # The truncation theorem, part 4: the store tier (`ArenaR`, `DerR`) (lane parmode)

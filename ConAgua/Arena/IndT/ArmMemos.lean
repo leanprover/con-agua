@@ -1,6 +1,10 @@
-import ConAgua.Arena.LoopT
-import ConAgua.Arena.IndInstallSpec.TabsProg
-import ConAgua.Arena.IndInstallSpec.Frame
+module
+
+public import ConAgua.Arena.LoopT
+public import ConAgua.Arena.IndInstallSpec.TabsProg
+public import ConAgua.Arena.IndInstallSpec.Frame
+
+@[expose] public section
 
 /-!
 # The inductive arm's memos across its calls (lane `indstaget`)

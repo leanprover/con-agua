@@ -1,6 +1,10 @@
-import ConAgua.Arena.RecGenSpec.ClassMinorSlot
-import ConAgua.Arena.RecGenSpec.Rec3IwSlice
-import ConAgua.Arena.RecGenSpec.RgW
+module
+
+public import ConAgua.Arena.RecGenSpec.ClassMinorSlot
+public import ConAgua.Arena.RecGenSpec.Rec3IwSlice
+public import ConAgua.Arena.RecGenSpec.RgW
+
+@[expose] public section
 
 /-!
 # Classes: `ConRon.Arena.ClassRead.classes`

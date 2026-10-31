@@ -1,7 +1,11 @@
-import ConAgua.Arena.InstListSpec
-import ConAgua.Arena.Abs1Refine
-import ConAgua.Arena.WhnfBase
-import Std.Tactic.BVDecide.Normalize.Prop
+module
+
+public import ConAgua.Arena.InstListSpec
+public import ConAgua.Arena.Abs1Refine
+public import ConAgua.Arena.WhnfBase
+public import Std.Tactic.BVDecide.Normalize.Prop
+
+@[expose] public section
 
 /-!
 # `inst_list` refines the arena's `instantiateListFast`

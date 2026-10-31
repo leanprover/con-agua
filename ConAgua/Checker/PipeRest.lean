@@ -1,8 +1,12 @@
-import ConAgua.Checker.PreludeRef
-import ConAgua.Checker.PrepRef
-import ConAgua.Checker.TwinPins
-import ConAgua.Checker.PreLoopWSStages
-import ConAgua.Checker.PrepProgExt
+module
+
+public import ConAgua.Checker.PreludeRef
+public import ConAgua.Checker.PrepRef
+public import ConAgua.Checker.TwinPins
+public import ConAgua.Checker.PreLoopWSStages
+public import ConAgua.Checker.PrepProgExt
+
+@[expose] public section
 
 /-!
 # The stages after `intern_reserved_pins` (lane `pipeline`)

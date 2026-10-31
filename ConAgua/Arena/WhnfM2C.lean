@@ -1,4 +1,8 @@
-import ConAgua.Arena.WhnfBase
+module
+
+public import ConAgua.Arena.WhnfBase
+
+@[expose] public section
 
 /-!
 # `major_to_ctor` split into small functions

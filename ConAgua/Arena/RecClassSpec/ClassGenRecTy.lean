@@ -1,11 +1,15 @@
-import ConAgua.Arena.RecClassSpec.GtProg
-import ConAgua.Arena.RecClassSpec.IhW
-import ConAgua.Arena.RecClassSpec.MjW
-import ConAgua.Arena.RecClassSpec.SlotsProg
-import ConAgua.Arena.IndPosSpec.SnocWStage
-import ConAgua.Arena.GrindAttr
-import ConAgua.L.GrindAttr
-import ConAgua.L.ModelGen
+module
+
+public import ConAgua.Arena.RecClassSpec.GtProg
+public import ConAgua.Arena.RecClassSpec.IhW
+public import ConAgua.Arena.RecClassSpec.MjW
+public import ConAgua.Arena.RecClassSpec.SlotsProg
+public import ConAgua.Arena.IndPosSpec.SnocWStage
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.L.GrindAttr
+public import ConAgua.L.ModelGen
+
+@[expose] public section
 
 /-!
 # ClassGenRecTy: `ConRon.Arena.classGenRecTy`

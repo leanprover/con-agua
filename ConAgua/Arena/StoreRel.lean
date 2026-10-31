@@ -1,8 +1,12 @@
-import ConAgua.Arena.Refine
-import ConAgua.Arena.Handle
-import ConAgua.Arena.SlotGrow
-import ConAgua.Arena.GrindAttr
-import Std.Tactic.BVDecide.Normalize.Prop
+module
+
+public import ConAgua.Arena.Refine
+public import ConAgua.Arena.Handle
+public import ConAgua.Arena.SlotGrow
+public import ConAgua.Arena.GrindAttr
+public import Std.Tactic.BVDecide.Normalize.Prop
+
+@[expose] public section
 
 /-!
 # What the store relations share

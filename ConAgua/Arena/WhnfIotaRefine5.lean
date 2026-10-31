@@ -1,10 +1,14 @@
-import ConAgua.Arena.WhnfIotaRefine4
-import ConAgua.L.ModelGen
-import ConAgua.Arena.GrindAttr
-import ConAgua.L.GrindAttr
-import Std.Tactic.BVDecide.Normalize.BitVec
-import Std.Tactic.BVDecide.Normalize.Prop
-import Std.WP.Tactic
+module
+
+public import ConAgua.Arena.WhnfIotaRefine4
+public import ConAgua.L.ModelGen
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.L.GrindAttr
+public import Std.Tactic.BVDecide.Normalize.BitVec
+public import Std.Tactic.BVDecide.Normalize.Prop
+public import Std.WP.Tactic
+
+@[expose] public section
 
 /-!
 # ι-reduction: proofs of `WhnfIota.lean`'s specs, part 5 (`iota_certs_full_aux`, `iota_certs_full`)

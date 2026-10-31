@@ -1,6 +1,10 @@
-import ConAgua.Verdict.PhaseBE
-import ConAgua.Checker.VerdictTop
-import ConAgua.Checker.CheckARun
+module
+
+public import ConAgua.Verdict.PhaseBE
+public import ConAgua.Checker.VerdictTop
+public import ConAgua.Checker.CheckARun
+
+@[expose] public section
 
 /-!
 # Entry 2's `check_b` fails only where phase B on the worker does (lane verdicts-b, calibration)

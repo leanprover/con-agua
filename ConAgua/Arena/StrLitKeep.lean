@@ -1,6 +1,10 @@
-import ConAgua.Arena.WhnfBase
-import ConAgua.Arena.Keeps
-import ConRon.Bridge.ExprOps.MemoSpecs
+module
+
+public import ConAgua.Arena.WhnfBase
+public import ConAgua.Arena.Keeps
+public import ConRon.Bridge.ExprOps.MemoSpecs
+
+@[expose] public section
 
 /-!
 # `strLitSupported` keeps every stored node's view

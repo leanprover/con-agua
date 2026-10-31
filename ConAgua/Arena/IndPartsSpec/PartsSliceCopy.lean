@@ -1,6 +1,10 @@
-import ConAgua.Arena.IndPartsSpec.BpcW
-import ConAgua.Arena.IndPartsSpec.BsW
-import ConAgua.Arena.IndGrindAttr
+module
+
+public import ConAgua.Arena.IndPartsSpec.BpcW
+public import ConAgua.Arena.IndPartsSpec.BsW
+public import ConAgua.Arena.IndGrindAttr
+
+@[expose] public section
 
 /-!
 # PartsSliceCopy

@@ -1,6 +1,10 @@
-import ConAgua.Arena.RecCheckSpec.EqWDec
-import ConAgua.Arena.RecCheckSpec.TruncSl
-import ConAgua.Arena.RecCheckSpec.EeW2
+module
+
+public import ConAgua.Arena.RecCheckSpec.EqWDec
+public import ConAgua.Arena.RecCheckSpec.TruncSl
+public import ConAgua.Arena.RecCheckSpec.EeW2
+
+@[expose] public section
 
 /-!
 # TmFields

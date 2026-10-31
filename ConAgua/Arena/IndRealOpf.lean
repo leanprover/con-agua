@@ -1,7 +1,11 @@
-import ConAgua.Arena.StubInd
-import ConAgua.Arena.IndRealFvt
-import ConAgua.Arena.GrindAttr
-import ConAgua.L.GrindAttr
+module
+
+public import ConAgua.Arena.StubInd
+public import ConAgua.Arena.IndRealFvt
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.L.GrindAttr
+
+@[expose] public section
 
 /-!
 # `open_pis_at_fvars_f`'s model (lane `indproofs4`, helper `opf`)

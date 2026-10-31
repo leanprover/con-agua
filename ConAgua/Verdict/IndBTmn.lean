@@ -1,11 +1,15 @@
-import ConAgua.Arena.IndSumSpec.ConsBlockRecsTF
-import ConAgua.Arena.IndSumSpec.SoaW
-import ConAgua.Arena.RecCheckSpec.CnfW
-import ConAgua.Arena.RecCheckSpec.TargetMajorDefault
-import ConAgua.Arena.RecCheckSpec.Tmn
-import ConAgua.Verdict.IndBTcm
-import ConAgua.Arena.GrindAttr
-import ConAgua.L.ModelGen
+module
+
+public import ConAgua.Arena.IndSumSpec.ConsBlockRecsTF
+public import ConAgua.Arena.IndSumSpec.SoaW
+public import ConAgua.Arena.RecCheckSpec.CnfW
+public import ConAgua.Arena.RecCheckSpec.TargetMajorDefault
+public import ConAgua.Arena.RecCheckSpec.Tmn
+public import ConAgua.Verdict.IndBTcm
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.L.ModelGen
+
+@[expose] public section
 /-!
 # `target_major_nfs`: one model and one refinement for both outcomes
 

@@ -1,7 +1,11 @@
-import ConAgua.Front.IndApplyRefine
-import ConAgua.Front.ApplyDeclRefine
-import ConAgua.Front.IndRel
-import Std.Tactic.BVDecide.Normalize.Prop
+module
+
+public import ConAgua.Front.IndApplyRefine
+public import ConAgua.Front.ApplyDeclRefine
+public import ConAgua.Front.IndRel
+public import Std.Tactic.BVDecide.Normalize.Prop
+
+@[expose] public section
 
 /-!
 # The apply step of an `inductive` line against the twin, II: the scratch pool and the lookups

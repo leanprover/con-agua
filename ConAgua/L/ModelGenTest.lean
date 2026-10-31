@@ -1,9 +1,13 @@
-import ConAgua.Arena.LdRd
-import ConAgua.Arena.P32
-import ConAgua.Arena.GrindAttr
-import ConAgua.L.GrindAttr
-import ConAgua.L.ModelGen
-import ConAgua.Front.Preserve
+module
+
+public import ConAgua.Arena.LdRd
+public import ConAgua.Arena.P32
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.L.GrindAttr
+public import ConAgua.L.ModelGen
+public import ConAgua.Front.Preserve
+
+@[expose] public section
 
 /-!
 # Tests of `l_model` (`L/ModelGen.lean`)

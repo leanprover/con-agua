@@ -1,6 +1,10 @@
-import ConAgua.Arena.IndRealNames
-import ConAgua.Arena.GrindAttr
-import ConAgua.L.GrindAttr
+module
+
+public import ConAgua.Arena.IndRealNames
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.L.GrindAttr
+
+@[expose] public section
 
 /-!
 # `name_rec_i` discharged (lane `indproofs4`, helper `indproofs4-ilp`)

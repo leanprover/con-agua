@@ -1,8 +1,12 @@
-import ConAgua.Verdict.FrontPreSimE
-import ConAgua.Verdict.FrontSafeE
-import ConAgua.Front.FrontRunRef
-import ConAgua.Checker.FrontReset
-import ConAgua.Checker.PrepProgHoist
+module
+
+public import ConAgua.Verdict.FrontPreSimE
+public import ConAgua.Verdict.FrontSafeE
+public import ConAgua.Front.FrontRunRef
+public import ConAgua.Checker.FrontReset
+public import ConAgua.Checker.PrepProgHoist
+
+@[expose] public section
 
 /-!
 # The prelude, both outcomes: `builtin_prelude`

@@ -1,5 +1,9 @@
-import ConAgua.Arena.IndTwin
-import ConAgua.Arena.InferBodyDisp
+module
+
+public import ConAgua.Arena.IndTwin
+public import ConAgua.Arena.InferBodyDisp
+
+@[expose] public section
 /-!
 # Error claims of the inference family's entries
 

@@ -1,8 +1,12 @@
-import ConAgua.Arena.IndCallM
-import ConAgua.Arena.IndPosSpec.NestBlockOfKey
-import ConAgua.Arena.GrindAttr
-import ConAgua.Arena.IndGrindAttr
-import ConAgua.L.GrindAttr
+module
+
+public import ConAgua.Arena.IndCallM
+public import ConAgua.Arena.IndPosSpec.NestBlockOfKey
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.Arena.IndGrindAttr
+public import ConAgua.L.GrindAttr
+
+@[expose] public section
 
 /-!
 # CheckStructFieldSortsISucc

@@ -1,7 +1,11 @@
-import ConAgua.Arena.ConsLibRel
-import ConAgua.Arena.LetStore
-import Std.Tactic.BVDecide.Normalize.BitVec
-import Std.Tactic.BVDecide.Normalize.Prop
+module
+
+public import ConAgua.Arena.ConsLibRel
+public import ConAgua.Arena.LetStore
+public import Std.Tactic.BVDecide.Normalize.BitVec
+public import Std.Tactic.BVDecide.Normalize.Prop
+
+@[expose] public section
 
 /-!
 # The `letE` store refines the arena's `letE` tables

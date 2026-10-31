@@ -1,5 +1,9 @@
-import ConAgua.Checker.Prog
-import ConAgua.E2E.Ser
+module
+
+public import ConAgua.Checker.Prog
+public import ConAgua.E2E.Ser
+
+@[expose] public section
 
 /-!
 # The e2e lane's test entries, and the program file `e2e-l` runs (lanes `e2e`, `integrate`)

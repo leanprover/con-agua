@@ -1,8 +1,12 @@
-import ConAgua.Arena.DeclNatLit
-import ConAgua.Arena.DeclNatDeps
-import ConAgua.Arena.GrindAttr
-import ConAgua.L.GrindAttr
-import ConAgua.L.ModelGen
+module
+
+public import ConAgua.Arena.DeclNatLit
+public import ConAgua.Arena.DeclNatDeps
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.L.GrindAttr
+public import ConAgua.L.ModelGen
+
+@[expose] public section
 
 /-!
 # The structural-`Nat` gate: `bool_ctor_ok` and `nat_op_guard` (lane `decls3`, helper `decls3-nat`)

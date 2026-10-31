@@ -1,8 +1,12 @@
-import ConAgua.Verdict.IndBSum4
-import ConAgua.Arena.IndInstallSpec.InstallRec2PSl
-import ConAgua.Arena.IndInstallSpec.ConsBlockCtors
-import ConAgua.Arena.IndInstallSpec.NestCtx
-import ConAgua.L.ModelGen
+module
+
+public import ConAgua.Verdict.IndBSum4
+public import ConAgua.Arena.IndInstallSpec.InstallRec2PSl
+public import ConAgua.Arena.IndInstallSpec.ConsBlockCtors
+public import ConAgua.Arena.IndInstallSpec.NestCtx
+public import ConAgua.L.ModelGen
+
+@[expose] public section
 
 /-!
 # `checkBlockCtors` under `StageC` (lane `indstaget`)

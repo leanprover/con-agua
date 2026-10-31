@@ -1,4 +1,8 @@
-import ConAgua.Arena.WhnfM2CRefine5
+module
+
+public import ConAgua.Arena.WhnfM2CRefine5
+
+@[expose] public section
 /-!
 # `major_to_ctor`'s verdict claims
 

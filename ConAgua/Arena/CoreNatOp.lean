@@ -1,6 +1,10 @@
-import ConAgua.Arena.WhnfDeltaRefine3
-import ConAgua.Arena.CoreAgree
-import Std.Tactic.BVDecide.Normalize.Prop
+module
+
+public import ConAgua.Arena.WhnfDeltaRefine3
+public import ConAgua.Arena.CoreAgree
+public import Std.Tactic.BVDecide.Normalize.Prop
+
+@[expose] public section
 
 /-!
 # `nat_op_result` under `CoreS` (the first of `WhnfDelta`'s two assumed facts)

@@ -1,4 +1,8 @@
-import ConAgua.L.Syntax
+module
+
+public import ConAgua.L.Syntax
+
+@[expose] public section
 
 /-!
 # The inductive arm's callees, closed under calls in `checkerProg` (lane `indproofs4`)

@@ -1,9 +1,13 @@
-import ConAgua.Verdict.DeclValsE
-import ConAgua.Arena.IndT.Sum1
-import ConAgua.Arena.RecGenSpec.ClassFeR
-import ConAgua.Arena.RecGenSpec.Rec3TmdWDecB
-import ConRon.Bridge.Inductives.SumInstall
-import ConAgua.L.ModelGen
+module
+
+public import ConAgua.Verdict.DeclValsE
+public import ConAgua.Arena.IndT.Sum1
+public import ConAgua.Arena.RecGenSpec.ClassFeR
+public import ConAgua.Arena.RecGenSpec.Rec3TmdWDecB
+public import ConRon.Bridge.Inductives.SumInstall
+public import ConAgua.L.ModelGen
+
+@[expose] public section
 
 /-!
 # `checkSumTele.checkSumTeleSlow`, `checkSumTele` under `StageC`, both outcomes (lane `indstaget`)

@@ -1,7 +1,11 @@
-import ConAgua.Verdict.IndBTka
-import ConAgua.Arena.IndT.RecGen19
-import ConAgua.Arena.GrindAttr
-import ConAgua.L.ModelGen
+module
+
+public import ConAgua.Verdict.IndBTka
+public import ConAgua.Arena.IndT.RecGen19
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.L.ModelGen
+
+@[expose] public section
 
 /-!
 # `target_k53_heads`, `target_k53`: one model and one refinement each, for both outcomes

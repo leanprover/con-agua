@@ -1,9 +1,13 @@
-import ConAgua.Verdict.DeclValsE
-import ConAgua.Arena.RecClassSpec.CrW
-import ConAgua.Arena.RecGenSpec.ClassFeR
-import ConAgua.Arena.RecGenSpec.ClassMinorSlot
-import ConAgua.Arena.RecGenSpec.Rec3TmdWDecB
-import ConAgua.L.ModelGen
+module
+
+public import ConAgua.Verdict.DeclValsE
+public import ConAgua.Arena.RecClassSpec.CrW
+public import ConAgua.Arena.RecGenSpec.ClassFeR
+public import ConAgua.Arena.RecGenSpec.ClassMinorSlot
+public import ConAgua.Arena.RecGenSpec.Rec3TmdWDecB
+public import ConAgua.L.ModelGen
+
+@[expose] public section
 
 /-!
 # `classStreamRecs` under `StageC`, both outcomes (lane `indstaget`)

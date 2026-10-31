@@ -1,11 +1,15 @@
-import ConAgua.Verdict.IndBRec4
-import ConAgua.Arena.IndSumSpec.StructCtorResidOk
-import ConAgua.Arena.RecClassSpec.RuW
-import ConAgua.Arena.IndPartsSpec.PlW
-import ConAgua.Arena.IndRealAbsPos
-import ConAgua.Arena.GrindAttr
-import ConAgua.L.GrindAttr
-import ConAgua.L.ModelGen
+module
+
+public import ConAgua.Verdict.IndBRec4
+public import ConAgua.Arena.IndSumSpec.StructCtorResidOk
+public import ConAgua.Arena.RecClassSpec.RuW
+public import ConAgua.Arena.IndPartsSpec.PlW
+public import ConAgua.Arena.IndRealAbsPos
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.L.GrindAttr
+public import ConAgua.L.ModelGen
+
+@[expose] public section
 /-!
 # `class_rules_ok`: one model and one refinement for both outcomes
 

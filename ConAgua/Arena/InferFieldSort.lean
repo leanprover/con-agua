@@ -1,12 +1,16 @@
-import ConAgua.Arena.LevelSubstL
-import ConAgua.Arena.Knot
-import ConAgua.Arena.CoreLevels
-import ConAgua.Arena.GrindAttr
-import ConAgua.Arena.LevelGrindAttr
-import ConAgua.L.GrindAttr
-import Std.Tactic.BVDecide.Normalize.Prop
-import Std.WP.Tactic
-import ConAgua.Arena.Env
+module
+
+public import ConAgua.Arena.LevelSubstL
+public import ConAgua.Arena.Knot
+public import ConAgua.Arena.CoreLevels
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.Arena.LevelGrindAttr
+public import ConAgua.L.GrindAttr
+public import Std.Tactic.BVDecide.Normalize.Prop
+public import Std.WP.Tactic
+public import ConAgua.Arena.Env
+
+@[expose] public section
 
 /-!
 # `field_sort_zero`: `inferProj`'s propositional-structure test (lane `defeq2`)

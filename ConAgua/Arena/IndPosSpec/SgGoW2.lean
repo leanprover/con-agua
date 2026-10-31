@@ -1,6 +1,10 @@
-import ConAgua.Arena.IndPosSpec.RpGoStep
-import ConAgua.Arena.IndPosSpec.RxMapW
-import ConAgua.Arena.IndGrindAttr
+module
+
+public import ConAgua.Arena.IndPosSpec.RpGoStep
+public import ConAgua.Arena.IndPosSpec.RxMapW
+public import ConAgua.Arena.IndGrindAttr
+
+@[expose] public section
 
 /-!
 # SgGoW2

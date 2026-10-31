@@ -1,6 +1,10 @@
-import ConAgua.Verdict.WhnfNatE
-import ConAgua.Arena.WhnfDeltaSlot
-import ConAgua.Arena.WhnfCoreLoop
+module
+
+public import ConAgua.Verdict.WhnfNatE
+public import ConAgua.Arena.WhnfDeltaSlot
+public import ConAgua.Arena.WhnfCoreLoop
+
+@[expose] public section
 
 /-!
 # The knot's `whnf` slot: `whnf_step`, `whnf_loop`, `whnf`, both outcomes

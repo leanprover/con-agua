@@ -1,6 +1,10 @@
-import ConAgua.Checker.VerdictTop
-import ConAgua.Checker.CheckARun
-import ConAgua.L.GrindAttr
+module
+
+public import ConAgua.Checker.VerdictTop
+public import ConAgua.Checker.CheckARun
+public import ConAgua.L.GrindAttr
+
+@[expose] public section
 
 /-!
 # Entry 1's verdict claim from its stages

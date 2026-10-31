@@ -1,5 +1,9 @@
-import ConAgua.Arena.WhnfM2CRefine3
-import ConAgua.Arena.WhnfIotaRefine6
+module
+
+public import ConAgua.Arena.WhnfM2CRefine3
+public import ConAgua.Arena.WhnfIotaRefine6
+
+@[expose] public section
 
 /-!
 # `major_to_ctor`: refinements of the η arm (`m2c_eta`, `m2c_eta2`)

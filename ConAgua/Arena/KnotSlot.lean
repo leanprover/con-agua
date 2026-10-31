@@ -1,15 +1,19 @@
-import ConAgua.Arena.Knot
-import ConAgua.Arena.WhnfDeltaSlot
-import ConAgua.Arena.SimLib
-import ConAgua.Arena.KnotE
-import ConAgua.Arena.RefECore
-import ConAgua.Arena.RefWalk
-import ConAgua.Checker.NoVerdictTree
-import ConAgua.Arena.GrindAttr
-import ConAgua.L.GrindAttr
-import Std.Tactic.BVDecide.Normalize.BitVec
-import Std.Tactic.BVDecide.Normalize.Prop
-import Std.WP.Tactic
+module
+
+public import ConAgua.Arena.Knot
+public import ConAgua.Arena.WhnfDeltaSlot
+public import ConAgua.Arena.SimLib
+public import ConAgua.Arena.KnotE
+public import ConAgua.Arena.RefECore
+public import ConAgua.Arena.RefWalk
+public import ConAgua.Checker.NoVerdictTree
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.L.GrindAttr
+public import Std.Tactic.BVDecide.Normalize.BitVec
+public import Std.Tactic.BVDecide.Normalize.Prop
+public import Std.WP.Tactic
+
+@[expose] public section
 
 /-!
 # The knot's `infer`, `infer_io`, `defeq`, `defeq_e` slots one level up (lane `defeq`)

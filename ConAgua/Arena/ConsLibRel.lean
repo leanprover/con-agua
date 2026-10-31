@@ -1,7 +1,11 @@
-import ConAgua.Arena.ConsLibSpec
-import ConAgua.Arena.Frame
-import ConAgua.Arena.StoreGrow
-import Std.Tactic.BVDecide.Normalize.Prop
+module
+
+public import ConAgua.Arena.ConsLibSpec
+public import ConAgua.Arena.Frame
+public import ConAgua.Arena.StoreGrow
+public import Std.Tactic.BVDecide.Normalize.Prop
+
+@[expose] public section
 
 /-!
 # The cons-table library: the relation and the user API (lane conslib)

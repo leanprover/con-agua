@@ -1,5 +1,9 @@
-import ConAgua.Compiler.Rel
-import ConAgua.Layout
+module
+
+public import ConAgua.Compiler.Rel
+public import ConAgua.Layout
+
+@[expose] public section
 
 /-!
 # The final theorem's vocabulary: the verdict, the loaded memory, the calls

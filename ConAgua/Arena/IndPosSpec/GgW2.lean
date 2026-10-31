@@ -1,11 +1,15 @@
-import ConAgua.Arena.IndPosSpec.CfW
-import ConAgua.Arena.IndPosSpec.NcnW2
-import ConAgua.Arena.GrindAttr
-import ConAgua.Arena.IndGrindAttr
-import ConAgua.L.GrindAttr
-import ConAgua.Arena.IndPosSpec.NbPosW
-import ConAgua.Arena.IndPosSpec.NbKeyK2
-import ConAgua.Arena.IndPosSpec.NbLook
+module
+
+public import ConAgua.Arena.IndPosSpec.CfW
+public import ConAgua.Arena.IndPosSpec.NcnW2
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.Arena.IndGrindAttr
+public import ConAgua.L.GrindAttr
+public import ConAgua.Arena.IndPosSpec.NbPosW
+public import ConAgua.Arena.IndPosSpec.NbKeyK2
+public import ConAgua.Arena.IndPosSpec.NbLook
+
+@[expose] public section
 
 /-!
 # GgW2

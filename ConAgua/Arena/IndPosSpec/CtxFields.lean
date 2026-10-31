@@ -1,9 +1,13 @@
-import ConAgua.Arena.IndPosSpec.NestKeyMap
-import ConAgua.Arena.IndStubs
-import ConAgua.Arena.GrindAttr
-import ConAgua.L.GrindAttr
-import Std.Tactic.BVDecide.Normalize.Prop
-import Std.WP.Tactic
+module
+
+public import ConAgua.Arena.IndPosSpec.NestKeyMap
+public import ConAgua.Arena.IndStubs
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.L.GrindAttr
+public import Std.Tactic.BVDecide.Normalize.Prop
+public import Std.WP.Tactic
+
+@[expose] public section
 
 /-!
 # CtxFields

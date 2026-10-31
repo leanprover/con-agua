@@ -1,8 +1,12 @@
-import ConAgua.Arena.RecGenSpec.IwNLtSize
-import ConAgua.Arena.RecGenSpec.PdWMfr
-import ConAgua.Arena.GrindAttr
-import ConAgua.Arena.IndGrindAttr
-import ConAgua.L.GrindAttr
+module
+
+public import ConAgua.Arena.RecGenSpec.IwNLtSize
+public import ConAgua.Arena.RecGenSpec.PdWMfr
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.Arena.IndGrindAttr
+public import ConAgua.L.GrindAttr
+
+@[expose] public section
 
 /-!
 # CfaFv

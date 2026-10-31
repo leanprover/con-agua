@@ -1,10 +1,14 @@
-import ConAgua.Front.ApplyDecl
-import ConAgua.Arena.DerRel
-import ConAgua.Arena.EnvRec
-import ConAgua.Front.IndFields
-import ConRon.Arena.Frontend.ExportC
-import ConAgua.Census.Attr
-import Std.Tactic.BVDecide.Normalize.Prop
+module
+
+public import ConAgua.Front.ApplyDecl
+public import ConAgua.Arena.DerRel
+public import ConAgua.Arena.EnvRec
+public import ConAgua.Front.IndFields
+public import ConRon.Arena.Frontend.ExportC
+public import ConAgua.Census.Attr
+public import Std.Tactic.BVDecide.Normalize.Prop
+
+@[expose] public section
 
 /-!
 # The parse state relation `StateDR`, and the refinement of the front functions

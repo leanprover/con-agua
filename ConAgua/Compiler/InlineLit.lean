@@ -1,7 +1,11 @@
-import Lean
-import ConAgua.Compiler.WFSplit
-import ConAgua.Compiler.AsmLit
-import ConAgua.Compiler.Inline
+module
+
+public import Lean
+public import ConAgua.Compiler.WFSplit
+public import ConAgua.Compiler.AsmLit
+public import ConAgua.Compiler.Inline
+
+@[expose] public section
 
 /-!
 # The inlined program as a kernel-checked literal

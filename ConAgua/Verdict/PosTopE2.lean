@@ -1,6 +1,10 @@
-import ConAgua.Verdict.PosTopE1
-import ConAgua.Arena.IndPosSpec.UnW2
-import ConAgua.Arena.RefWalk
+module
+
+public import ConAgua.Verdict.PosTopE1
+public import ConAgua.Arena.IndPosSpec.UnW2
+public import ConAgua.Arena.RefWalk
+
+@[expose] public section
 
 /-!
 # `nest_uniform`: one model and one refinement for both outcomes

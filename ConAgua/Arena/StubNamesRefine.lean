@@ -1,7 +1,11 @@
-import ConAgua.Arena.DeclNatSpec
-import ConAgua.Arena.GrindAttr
-import ConAgua.Arena.IndGrindAttr
-import ConAgua.L.GrindAttr
+module
+
+public import ConAgua.Arena.DeclNatSpec
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.Arena.IndGrindAttr
+public import ConAgua.L.GrindAttr
+
+@[expose] public section
 
 /-!
 # `reserved_rec_name` refines `reservedRecName`; `lit_guard_has` is `litGuardNames.contains`

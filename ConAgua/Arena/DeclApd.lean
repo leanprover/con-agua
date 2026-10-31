@@ -1,5 +1,9 @@
-import ConAgua.Arena.IndIface
-import ConAgua.Arena.LevelApd
+module
+
+public import ConAgua.Arena.IndIface
+public import ConAgua.Arena.LevelApd
+
+@[expose] public section
 
 /-!
 # `all_level_params_defined(o, l, e)`: the twin's memoized `allLevelParamsDefined` (lane `decls3`)

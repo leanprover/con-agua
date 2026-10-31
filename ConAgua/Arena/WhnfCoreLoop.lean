@@ -1,13 +1,17 @@
-import ConAgua.Arena.WhnfCoreStep
-import ConAgua.Arena.GrindAttr
-import ConAgua.L.GrindAttr
-import Std.Tactic.BVDecide.Normalize.BitVec
-import Std.Tactic.BVDecide.Normalize.Prop
-import Std.WP.Tactic
-import ConAgua.Arena.WhnfCoreProj
-import ConAgua.Arena.WhnfCoreSlot
-import ConAgua.L.ModelGen
-import ConAgua.Verdict.WhnfModelsE
+module
+
+public import ConAgua.Arena.WhnfCoreStep
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.L.GrindAttr
+public import Std.Tactic.BVDecide.Normalize.BitVec
+public import Std.Tactic.BVDecide.Normalize.Prop
+public import Std.WP.Tactic
+public import ConAgua.Arena.WhnfCoreProj
+public import ConAgua.Arena.WhnfCoreSlot
+public import ConAgua.L.ModelGen
+public import ConAgua.Verdict.WhnfModelsE
+
+@[expose] public section
 
 /-!
 # The `whnf_core` loop and slot (phase 5, lane `whnf`)

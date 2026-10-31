@@ -1,4 +1,8 @@
-import ConAgua.Checker.LoopDeclArm1
+module
+
+public import ConAgua.Checker.LoopDeclArm1
+
+@[expose] public section
 
 /-!
 # The arms' text agreement for the checker's program (lane `loopt2`)

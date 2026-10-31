@@ -1,6 +1,10 @@
-import ConAgua.Verdict.DeclValsE
-import ConAgua.Arena.DeclStepGo
-import ConRon.Bridge.Checker.Split
+module
+
+public import ConAgua.Verdict.DeclValsE
+public import ConAgua.Arena.DeclStepGo
+public import ConRon.Bridge.Checker.Split
+
+@[expose] public section
 
 /-!
 # The declaration arms under `StageT` (lane `loopt2`)

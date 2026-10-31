@@ -1,5 +1,9 @@
-import ConAgua.Arena.Tiers
-import ConRon.Arena.Inductives.GenRec
+module
+
+public import ConAgua.Arena.Tiers
+public import ConRon.Arena.Inductives.GenRec
+
+@[expose] public section
 
 /-!
 # The inductive stage in L: the interface (lane `induct`)

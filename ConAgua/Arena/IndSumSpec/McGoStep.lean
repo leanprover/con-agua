@@ -1,13 +1,17 @@
-import ConAgua.Arena.LdRd
-import ConAgua.Arena.IndPosSpec.NodeV
-import ConAgua.Arena.IndPosSpec.MatesW
-import ConAgua.Arena.BvarBRefine
-import ConAgua.Arena.IndStubs
-import ConAgua.Arena.IndView
-import ConAgua.Arena.IndSum
-import ConAgua.Arena.GrindAttr
-import ConAgua.Arena.IndGrindAttr
-import ConAgua.L.GrindAttr
+module
+
+public import ConAgua.Arena.LdRd
+public import ConAgua.Arena.IndPosSpec.NodeV
+public import ConAgua.Arena.IndPosSpec.MatesW
+public import ConAgua.Arena.BvarBRefine
+public import ConAgua.Arena.IndStubs
+public import ConAgua.Arena.IndView
+public import ConAgua.Arena.IndSum
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.Arena.IndGrindAttr
+public import ConAgua.L.GrindAttr
+
+@[expose] public section
 
 /-!
 # McGoStep

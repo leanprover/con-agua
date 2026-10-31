@@ -1,6 +1,10 @@
-import ConAgua.Arena.IndDecStab
-import ConAgua.Arena.RecClassSpec.SlotsProg
-import ConAgua.Arena.RecStab
+module
+
+public import ConAgua.Arena.IndDecStab
+public import ConAgua.Arena.RecClassSpec.SlotsProg
+public import ConAgua.Arena.RecStab
+
+@[expose] public section
 
 /-!
 # ReadProg

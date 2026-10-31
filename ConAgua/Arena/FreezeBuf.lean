@@ -1,5 +1,9 @@
-import ConAgua.Arena.FreezeSpec
-import ConAgua.Arena.FreezeTruncBase
+module
+
+public import ConAgua.Arena.FreezeSpec
+public import ConAgua.Arena.FreezeTruncBase
+
+@[expose] public section
 
 /-!
 # The buffer is the images (lane parmode, the threads)

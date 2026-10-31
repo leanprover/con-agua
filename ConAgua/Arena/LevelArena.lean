@@ -1,8 +1,12 @@
-import ConAgua.Arena.View
-import ConAgua.Arena.LevelEquivRel
-import ConRon.Arena.Core
-import ConRon.Arena.WFProofs
-import Std.Tactic.BVDecide.Normalize.Prop
+module
+
+public import ConAgua.Arena.View
+public import ConAgua.Arena.LevelEquivRel
+public import ConRon.Arena.Core
+public import ConRon.Arena.WFProofs
+public import Std.Tactic.BVDecide.Normalize.Prop
+
+@[expose] public section
 
 /-!
 # Level handles under `ArenaR`: the store's levels are related by `LvR`

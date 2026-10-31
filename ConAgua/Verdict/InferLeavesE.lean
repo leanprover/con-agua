@@ -1,4 +1,8 @@
-import ConAgua.Arena.InferProj2
+module
+
+public import ConAgua.Arena.InferProj2
+
+@[expose] public section
 
 /-!
 # Error claims of `infer_const`, `infer_proj`

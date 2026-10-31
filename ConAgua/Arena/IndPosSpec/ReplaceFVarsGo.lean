@@ -1,4 +1,8 @@
-import ConAgua.Arena.IndPosSpec.MapOKStep
+module
+
+public import ConAgua.Arena.IndPosSpec.MapOKStep
+
+@[expose] public section
 
 /-!
 # ReplaceFVarsGo: `ConRon.Arena.fvMapAt`, `ConRon.Arena.nestHoleImg`, `ConRon.Arena.replaceFVarsGo`, `ConRon.Arena.replaceFVars`

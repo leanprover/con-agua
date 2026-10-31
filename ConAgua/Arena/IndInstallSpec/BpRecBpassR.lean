@@ -1,9 +1,13 @@
-import ConAgua.Arena.IndInstallSpec.DecCNS
-import ConAgua.Arena.IndInstallSpec.DecISS
-import ConAgua.Arena.IndInstallSpec.HbFreeMfr
-import ConAgua.Arena.IndInstallSpec.Icp
-import ConAgua.Arena.IndInstallSpec.Pos3MapMProj
-import ConAgua.Arena.RecGenSpec.Classes
+module
+
+public import ConAgua.Arena.IndInstallSpec.DecCNS
+public import ConAgua.Arena.IndInstallSpec.DecISS
+public import ConAgua.Arena.IndInstallSpec.HbFreeMfr
+public import ConAgua.Arena.IndInstallSpec.Icp
+public import ConAgua.Arena.IndInstallSpec.Pos3MapMProj
+public import ConAgua.Arena.RecGenSpec.Classes
+
+@[expose] public section
 
 /-!
 # BpRecBpassR

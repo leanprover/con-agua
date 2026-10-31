@@ -1,6 +1,10 @@
-import ConAgua.Checker.PrepLoopRef
-import ConAgua.Checker.PrepCopyRef
-import ConAgua.Checker.HoistRef
+module
+
+public import ConAgua.Checker.PrepLoopRef
+public import ConAgua.Checker.PrepCopyRef
+public import ConAgua.Checker.HoistRef
+
+@[expose] public section
 
 /-!
 # `prepare_prelude` refines `preparePrelude` (lane `front4`)

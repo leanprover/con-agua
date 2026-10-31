@@ -1,4 +1,8 @@
-import ConAgua.Arena.WhnfIotaRecRefine2
+module
+
+public import ConAgua.Arena.WhnfIotaRecRefine2
+
+@[expose] public section
 
 /-!
 # The fire's verdict claim: `iota_rec_fire` (lane `verdicts-b`, helper `k2`)

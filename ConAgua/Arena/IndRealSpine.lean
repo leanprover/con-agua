@@ -1,6 +1,10 @@
-import ConAgua.Arena.IndRealFvt
-import ConAgua.Arena.GrindAttr
-import ConAgua.L.GrindAttr
+module
+
+public import ConAgua.Arena.IndRealFvt
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.L.GrindAttr
+
+@[expose] public section
 
 /-!
 # The spine adapters' stub contracts discharged (lane `indproofs4`, helper `spine`)

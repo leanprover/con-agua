@@ -1,10 +1,14 @@
-import ConAgua.Arena.IndT.StreamRecs
-import ConAgua.Verdict.IndBRecPins
-import ConAgua.Arena.IndT.GenRec2
-import ConAgua.Verdict.IndBRec6
-import ConAgua.Arena.GrindAttr
-import ConAgua.L.GrindAttr
-import ConAgua.L.ModelGen
+module
+
+public import ConAgua.Arena.IndT.StreamRecs
+public import ConAgua.Verdict.IndBRecPins
+public import ConAgua.Arena.IndT.GenRec2
+public import ConAgua.Verdict.IndBRec6
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.L.GrindAttr
+public import ConAgua.L.ModelGen
+
+@[expose] public section
 
 /-!
 # `gen_rec_check_prep`, `gen_rec_check`: one model, one refinement each; `checkBlockRec`

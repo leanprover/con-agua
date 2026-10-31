@@ -1,7 +1,11 @@
-import ConAgua.Arena.IndSumSpec.McGoStep
-import ConAgua.Arena.GrindAttr
-import ConAgua.Arena.IndGrindAttr
-import ConAgua.L.GrindAttr
+module
+
+public import ConAgua.Arena.IndSumSpec.McGoStep
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.Arena.IndGrindAttr
+public import ConAgua.L.GrindAttr
+
+@[expose] public section
 
 /-!
 # MentionsConst: `ConRon.Arena.hasLooseBVarBFast`, `ConRon.Arena.hasLooseBVarBGo`, `ConRon.Arena.hasLooseBVarBIns`, `ConRon.Arena.mentionsConstGo`, `ConRon.Arena.mentionsConst`

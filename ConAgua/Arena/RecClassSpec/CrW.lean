@@ -1,15 +1,19 @@
-import ConAgua.Arena.LdRd
-import ConAgua.Arena.IndSumSpec.DecHLTake
-import ConAgua.Arena.RecClassSpec.ClassNPcOf
-import ConAgua.Arena.RecClassSpec.IhW
-import ConAgua.Arena.RecClassSpec.PiBWRoom
-import ConAgua.Arena.RecClassSpec.ReadProg
-import ConAgua.Arena.IndPartsSpec.BlockCounts
-import ConAgua.Arena.IndRealAbsSim
-import ConAgua.Arena.GrindAttr
-import ConAgua.Arena.IndGrindAttr
-import ConAgua.L.GrindAttr
-import ConAgua.L.ModelGen
+module
+
+public import ConAgua.Arena.LdRd
+public import ConAgua.Arena.IndSumSpec.DecHLTake
+public import ConAgua.Arena.RecClassSpec.ClassNPcOf
+public import ConAgua.Arena.RecClassSpec.IhW
+public import ConAgua.Arena.RecClassSpec.PiBWRoom
+public import ConAgua.Arena.RecClassSpec.ReadProg
+public import ConAgua.Arena.IndPartsSpec.BlockCounts
+public import ConAgua.Arena.IndRealAbsSim
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.Arena.IndGrindAttr
+public import ConAgua.L.GrindAttr
+public import ConAgua.L.ModelGen
+
+@[expose] public section
 
 /-!
 # CrW

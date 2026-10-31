@@ -1,7 +1,11 @@
-import ConAgua.Final.BufChain
-import ConAgua.Final.DrvFinal
-import ConAgua.Checker.ParThreadTwin
-import ConAgua.Final.BufAbi
+module
+
+public import ConAgua.Final.BufChain
+public import ConAgua.Final.DrvFinal
+public import ConAgua.Checker.ParThreadTwin
+public import ConAgua.Final.BufAbi
+
+@[expose] public section
 
 /-!
 # The threads end to end, for the committed file

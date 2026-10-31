@@ -1,7 +1,11 @@
-import ConAgua.Arena.DeclArmT
-import ConAgua.Arena.DeclCanonInfo
-import ConAgua.Arena.DeclArmAxiom
-import ConAgua.L.ModelGen
+module
+
+public import ConAgua.Arena.DeclArmT
+public import ConAgua.Arena.DeclCanonInfo
+public import ConAgua.Arena.DeclArmAxiom
+public import ConAgua.L.ModelGen
+
+@[expose] public section
 
 /-!
 # The axiom arm, both outcomes, under `StageT` (lane `loopt3`, helper `loopt3-axq`)

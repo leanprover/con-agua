@@ -1,7 +1,11 @@
-import ConAgua.Arena.PromoteCIRef.Caps
-import ConAgua.Arena.PromoteCIRef.PreESizeLe
-import ConAgua.Arena.PromoteCIRef.Rules
-import ConAgua.Arena.PromoteCIRef.Of
+module
+
+public import ConAgua.Arena.PromoteCIRef.Caps
+public import ConAgua.Arena.PromoteCIRef.PreESizeLe
+public import ConAgua.Arena.PromoteCIRef.Rules
+public import ConAgua.Arena.PromoteCIRef.Of
+
+@[expose] public section
 
 /-!
 # Ci

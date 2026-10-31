@@ -1,15 +1,19 @@
-import ConAgua.Arena.IndT.KeepC
-import ConAgua.Verdict.PosTopE2
-import ConAgua.Verdict.PosTopE4
-import ConAgua.Arena.IndT.BncAfr
-import ConAgua.Arena.IndT.Install6
-import ConAgua.Arena.IndInstallSpec.Pos3Init
-import ConAgua.Arena.IndInstallSpec.Pos3NhGoWMfr
-import ConAgua.Arena.IndPartsSpec.BrsW
-import ConAgua.Arena.GrindAttr
-import ConAgua.Arena.IndGrindAttr
-import ConAgua.L.GrindAttr
-import ConAgua.L.ModelGen
+module
+
+public import ConAgua.Arena.IndT.KeepC
+public import ConAgua.Verdict.PosTopE2
+public import ConAgua.Verdict.PosTopE4
+public import ConAgua.Arena.IndT.BncAfr
+public import ConAgua.Arena.IndT.Install6
+public import ConAgua.Arena.IndInstallSpec.Pos3Init
+public import ConAgua.Arena.IndInstallSpec.Pos3NhGoWMfr
+public import ConAgua.Arena.IndPartsSpec.BrsW
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.Arena.IndGrindAttr
+public import ConAgua.L.GrindAttr
+public import ConAgua.L.ModelGen
+
+@[expose] public section
 
 /-!
 # `check_block_positivity` under `StageC` (lane `indstaget`, helper `indstaget-cbpos`)

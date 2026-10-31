@@ -1,5 +1,9 @@
-import ConAgua.Arena.IndDecStab
-import ConAgua.Arena.IndInstallSpec.DomsW
+module
+
+public import ConAgua.Arena.IndDecStab
+public import ConAgua.Arena.IndInstallSpec.DomsW
+
+@[expose] public section
 
 /-!
 # DecHLTruncMBound

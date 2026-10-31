@@ -1,6 +1,10 @@
-import ConAgua.Arena.IndPosSpec.Snoc
-import ConAgua.Verdict.PosE
-import ConAgua.Arena.IndT.PosCrest
+module
+
+public import ConAgua.Arena.IndPosSpec.Snoc
+public import ConAgua.Verdict.PosE
+public import ConAgua.Arena.IndT.PosCrest
+
+@[expose] public section
 
 /-!
 # `nest_ctors_one` refines `oneT`, both outcomes

@@ -1,10 +1,14 @@
-import ConAgua.Arena.RecClassSpec.Classes
-import ConAgua.Arena.RecClassSpec.IhW
-import ConAgua.Arena.RecClassSpec.MjProg
-import ConAgua.Arena.RecGenSpec.IwNLtSize
-import ConAgua.Arena.GrindAttr
-import ConAgua.Arena.IndGrindAttr
-import ConAgua.L.GrindAttr
+module
+
+public import ConAgua.Arena.RecClassSpec.Classes
+public import ConAgua.Arena.RecClassSpec.IhW
+public import ConAgua.Arena.RecClassSpec.MjProg
+public import ConAgua.Arena.RecGenSpec.IwNLtSize
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.Arena.IndGrindAttr
+public import ConAgua.L.GrindAttr
+
+@[expose] public section
 
 /-!
 # ClassMinorSlot: `ConRon.Arena.ClassSlot.isMinor`, `ConRon.Arena.classLeafAt`, `class_minor_slot`'s scan

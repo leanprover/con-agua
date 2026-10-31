@@ -1,6 +1,10 @@
-import ConAgua.Final.SeqLayout
-import ConAgua.Final.ParAbi
-import Kraken.X64.Registers
+module
+
+public import ConAgua.Final.SeqLayout
+public import ConAgua.Final.ParAbi
+public import Kraken.X64.Registers
+
+@[expose] public section
 
 /-!
 # `ca_check_seq` on the machine (lane parmode)

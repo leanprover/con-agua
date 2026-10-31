@@ -1,10 +1,14 @@
-import ConAgua.Arena.IndPosSpec.MkLook
-import ConAgua.Arena.IndPosSpec.NestOccGo
-import ConAgua.Arena.IndInstallSpec.DomsW
-import ConAgua.Arena.GrindAttr
-import ConAgua.Arena.IndGrindAttr
-import ConAgua.L.GrindAttr
-import ConAgua.L.ModelGen
+module
+
+public import ConAgua.Arena.IndPosSpec.MkLook
+public import ConAgua.Arena.IndPosSpec.NestOccGo
+public import ConAgua.Arena.IndInstallSpec.DomsW
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.Arena.IndGrindAttr
+public import ConAgua.L.GrindAttr
+public import ConAgua.L.ModelGen
+
+@[expose] public section
 
 /-!
 # RpGoStep

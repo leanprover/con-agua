@@ -1,8 +1,12 @@
-import ConAgua.Arena.RecCheckSpec.TargetRecPins
-import ConAgua.Arena.IndSumSpec.SoaW
-import ConAgua.Verdict.VCtx
-import ConAgua.Arena.GrindAttr
-import ConAgua.L.ModelGen
+module
+
+public import ConAgua.Arena.RecCheckSpec.TargetRecPins
+public import ConAgua.Arena.IndSumSpec.SoaW
+public import ConAgua.Verdict.VCtx
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.L.ModelGen
+
+@[expose] public section
 
 /-!
 # `target_rec_pins`: one model and one refinement for both outcomes

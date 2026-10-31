@@ -1,7 +1,11 @@
-import ConAgua.Arena.DeclBase
-import ConAgua.Arena.WhnfBase
-import ConAgua.Arena.GrindAttr
-import ConAgua.L.GrindAttr
+module
+
+public import ConAgua.Arena.DeclBase
+public import ConAgua.Arena.WhnfBase
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.L.GrindAttr
+
+@[expose] public section
 
 /-!
 # The fold's `And` pin: `and_pin_ok(i)` refines `andPinOk` (con-leche's ANDPIN)

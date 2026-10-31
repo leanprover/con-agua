@@ -1,4 +1,8 @@
-import ConAgua.Arena.Pins
+module
+
+public import ConAgua.Arena.Pins
+
+@[expose] public section
 
 /-!
 # The twin's fuel constants in L (lane `tails`)

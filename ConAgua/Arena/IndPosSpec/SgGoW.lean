@@ -1,8 +1,12 @@
-import ConAgua.Arena.IndPosSpec.FgW
-import ConAgua.Arena.IndPosSpec.MapOKStep
-import ConAgua.Arena.IndPosSpec.SgF
-import ConAgua.Arena.IndPosSpec.SgGoW2
-import ConAgua.Arena.IndGrindAttr
+module
+
+public import ConAgua.Arena.IndPosSpec.FgW
+public import ConAgua.Arena.IndPosSpec.MapOKStep
+public import ConAgua.Arena.IndPosSpec.SgF
+public import ConAgua.Arena.IndPosSpec.SgGoW2
+public import ConAgua.Arena.IndGrindAttr
+
+@[expose] public section
 
 /-!
 # SgGoW

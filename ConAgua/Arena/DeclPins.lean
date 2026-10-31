@@ -1,4 +1,8 @@
-import ConAgua.Rom.PinSets
+module
+
+public import ConAgua.Rom.PinSets
+
+@[expose] public section
 
 /-!
 # The pin variant list across the declaration loop (lane `decls3`)

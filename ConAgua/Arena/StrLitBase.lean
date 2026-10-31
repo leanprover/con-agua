@@ -1,9 +1,13 @@
-import ConAgua.Arena.StrLit
-import ConAgua.Arena.DefEqStuckEta
-import ConAgua.Arena.DefEqLeaves2
-import ConAgua.Arena.WhnfDeltaRefine3
-import ConAgua.Arena.GrindAttr
-import ConAgua.L.GrindAttr
+module
+
+public import ConAgua.Arena.StrLit
+public import ConAgua.Arena.DefEqStuckEta
+public import ConAgua.Arena.DefEqLeaves2
+public import ConAgua.Arena.WhnfDeltaRefine3
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.L.GrindAttr
+
+@[expose] public section
 
 /-!
 # The string-literal functions' leaves under `CoreS` (helper `defeq2-str`)

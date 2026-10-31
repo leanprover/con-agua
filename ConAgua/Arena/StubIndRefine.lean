@@ -1,9 +1,13 @@
-import ConAgua.Arena.StubInd
-import ConAgua.Arena.DeclCanonEq
-import ConAgua.Arena.WhnfM2CRefine5
-import ConAgua.Arena.GrindAttr
-import ConAgua.Arena.IndGrindAttr
-import ConAgua.L.GrindAttr
+module
+
+public import ConAgua.Arena.StubInd
+public import ConAgua.Arena.DeclCanonEq
+public import ConAgua.Arena.WhnfM2CRefine5
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.Arena.IndGrindAttr
+public import ConAgua.L.GrindAttr
+
+@[expose] public section
 
 /-!
 # `rec_rule_bits` refines `recRuleBits` (lane `tails`)

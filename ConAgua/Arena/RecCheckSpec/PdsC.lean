@@ -1,4 +1,8 @@
-import ConRon.Arena.Inductives.RecCheck
+module
+
+public import ConRon.Arena.Inductives.RecCheck
+
+@[expose] public section
 
 /-!
 # PdsC

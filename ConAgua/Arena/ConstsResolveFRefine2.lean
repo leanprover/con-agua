@@ -1,4 +1,8 @@
-import ConAgua.Arena.ConstsResolveFRefine
+module
+
+public import ConAgua.Arena.ConstsResolveFRefine
+
+@[expose] public section
 
 /-!
 # `consts_resolve_ffast` refines `constsResolveFFast`: the walk (lane `tails`)

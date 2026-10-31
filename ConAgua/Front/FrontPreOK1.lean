@@ -1,6 +1,10 @@
-import ConAgua.Front.ApplyDeclRefine
-import ConAgua.Front.Line
-import Std.Tactic.BVDecide.Normalize.Prop
+module
+
+public import ConAgua.Front.ApplyDeclRefine
+public import ConAgua.Front.Line
+public import Std.Tactic.BVDecide.Normalize.Prop
+
+@[expose] public section
 
 /-!
 # The frontend's records, word by word, I: what one line writes to `DECL`/`DLP` (lane `pipeline`)

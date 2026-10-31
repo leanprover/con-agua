@@ -1,6 +1,10 @@
-import ConAgua.Arena.RecClassSpec.Classes
-import ConAgua.Arena.RecClassSpec.GtProg
-import ConAgua.Arena.IndGrindAttr
+module
+
+public import ConAgua.Arena.RecClassSpec.Classes
+public import ConAgua.Arena.RecClassSpec.GtProg
+public import ConAgua.Arena.IndGrindAttr
+
+@[expose] public section
 
 /-!
 # RgW

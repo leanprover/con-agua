@@ -1,5 +1,9 @@
-import ConAgua.Checker.HoistClosureL
-import ConAgua.Arena.DeclNatDeps
+module
+
+public import ConAgua.Checker.HoistClosureL
+public import ConAgua.Arena.DeclNatDeps
+
+@[expose] public section
 
 /-!
 # The hoist's `Nat` operation tests refine the twin's name lists (lane `front4`)

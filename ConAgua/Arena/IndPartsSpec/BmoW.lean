@@ -1,5 +1,9 @@
-import ConAgua.Arena.IndPartsSpec.IndPartsProg2
-import ConAgua.Arena.IndGrindAttr
+module
+
+public import ConAgua.Arena.IndPartsSpec.IndPartsProg2
+public import ConAgua.Arena.IndGrindAttr
+
+@[expose] public section
 
 /-!
 # BmoW

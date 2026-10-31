@@ -1,15 +1,19 @@
-import ConAgua.Arena.ProjView
-import ConAgua.Arena.WhnfCoreApp
-import ConAgua.Arena.WhnfCoreSlot
-import ConAgua.Arena.GrindAttr
-import ConAgua.Arena.RefECore
-import ConAgua.Arena.RefWalk
-import ConAgua.Arena.KnotE
-import ConAgua.Verdict.WhnfModels2E
-import ConAgua.L.GrindAttr
-import Std.Tactic.BVDecide.Normalize.BitVec
-import Std.Tactic.BVDecide.Normalize.Prop
-import Std.WP.Tactic
+module
+
+public import ConAgua.Arena.ProjView
+public import ConAgua.Arena.WhnfCoreApp
+public import ConAgua.Arena.WhnfCoreSlot
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.Arena.RefECore
+public import ConAgua.Arena.RefWalk
+public import ConAgua.Arena.KnotE
+public import ConAgua.Verdict.WhnfModels2E
+public import ConAgua.L.GrindAttr
+public import Std.Tactic.BVDecide.Normalize.BitVec
+public import Std.Tactic.BVDecide.Normalize.Prop
+public import Std.WP.Tactic
+
+@[expose] public section
 
 /-!
 # Refinements of `WhnfCore.lean`'s projection functions

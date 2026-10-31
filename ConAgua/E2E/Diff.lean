@@ -1,6 +1,10 @@
-import ConRon.Arena.Main
-import ConAgua.E2E.Ser
-import ConAgua.Final.Statement
+module
+
+public import ConRon.Arena.Main
+public import ConAgua.E2E.Ser
+public import ConAgua.Final.Statement
+
+@[expose] public section
 
 /-!
 # Per-function differential tests against the twin (lane `e2e`)

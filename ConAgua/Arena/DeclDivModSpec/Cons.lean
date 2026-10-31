@@ -1,6 +1,10 @@
-import ConAgua.Arena.IndCallM
-import ConAgua.Arena.DeclDivModSpec.PureRun
-import ConAgua.Arena.DeclNatBase
+module
+
+public import ConAgua.Arena.IndCallM
+public import ConAgua.Arena.DeclDivModSpec.PureRun
+public import ConAgua.Arena.DeclNatBase
+
+@[expose] public section
 
 /-!
 # Cons

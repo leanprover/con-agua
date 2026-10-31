@@ -1,4 +1,8 @@
-import ConAgua.Arena.RecClassSpec.Classes
+module
+
+public import ConAgua.Arena.RecClassSpec.Classes
+
+@[expose] public section
 
 /-!
 # Stable decodings (lane `indproofs2`, helper `rec`)

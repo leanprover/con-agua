@@ -1,7 +1,11 @@
-import ConAgua.Arena.IndDecStab
-import ConAgua.Arena.IndMaster
-import ConAgua.Arena.RomExprRef
-import Std.Tactic.BVDecide.Normalize.Prop
+module
+
+public import ConAgua.Arena.IndDecStab
+public import ConAgua.Arena.IndMaster
+public import ConAgua.Arena.RomExprRef
+public import Std.Tactic.BVDecide.Normalize.Prop
+
+@[expose] public section
 
 /-!
 # The ROM constant readers' refinements: the invariant and the decoding frame (helper `decls4-rom`)

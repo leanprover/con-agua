@@ -1,6 +1,10 @@
-import ConAgua.Arena.CheckerT
-import ConAgua.Arena.GrindAttr
-import ConAgua.L.GrindAttr
+module
+
+public import ConAgua.Arena.CheckerT
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.L.GrindAttr
+
+@[expose] public section
 
 /-!
 # The verdict claim of the axiom arm `check_decl_axiom`, from `cda_ref` through the run

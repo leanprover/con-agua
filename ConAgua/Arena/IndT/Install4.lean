@@ -1,13 +1,17 @@
-import ConAgua.Verdict.IndsE5
-import ConAgua.Arena.IndT.KeepC
-import ConAgua.Arena.IndT.Install3
-import ConAgua.Arena.IndRealSortDn
-import ConAgua.Arena.IndInstallSpec.CbProg
-import ConAgua.Arena.IndInstallSpec.IcvgW
-import ConAgua.Arena.IndInstallSpec.IndsOut
-import ConAgua.Arena.GrindAttr
-import ConAgua.L.GrindAttr
-import ConAgua.L.ModelGen
+module
+
+public import ConAgua.Verdict.IndsE5
+public import ConAgua.Arena.IndT.KeepC
+public import ConAgua.Arena.IndT.Install3
+public import ConAgua.Arena.IndRealSortDn
+public import ConAgua.Arena.IndInstallSpec.CbProg
+public import ConAgua.Arena.IndInstallSpec.IcvgW
+public import ConAgua.Arena.IndInstallSpec.IndsOut
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.L.GrindAttr
+public import ConAgua.L.ModelGen
+
+@[expose] public section
 
 /-!
 # `check_block_inds`: one model, one refinement

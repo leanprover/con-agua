@@ -1,4 +1,8 @@
-import ConAgua.Arena.IndTwin
+module
+
+public import ConAgua.Arena.IndTwin
+
+@[expose] public section
 
 /-!
 # `AbsOK` from the twin's invariants (lane `indproofs4`, helpers `abs`, `memo`)

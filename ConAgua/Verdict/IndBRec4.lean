@@ -1,11 +1,15 @@
-import ConAgua.Arena.RecGenSpec.CfhW
-import ConAgua.Verdict.IndBCrg
-import ConAgua.Arena.RecGenSpec.Rec3TmdWDecB
-import ConAgua.Arena.RecGenSpec.ClassFeR
-import ConAgua.Arena.IndSumSpec.FieldDomsResolve
-import ConRon.Bridge.Inductives.GenRec
-import ConAgua.Arena.GrindAttr
-import ConAgua.L.ModelGen
+module
+
+public import ConAgua.Arena.RecGenSpec.CfhW
+public import ConAgua.Verdict.IndBCrg
+public import ConAgua.Arena.RecGenSpec.Rec3TmdWDecB
+public import ConAgua.Arena.RecGenSpec.ClassFeR
+public import ConAgua.Arena.IndSumSpec.FieldDomsResolve
+public import ConRon.Bridge.Inductives.GenRec
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.L.ModelGen
+
+@[expose] public section
 /-!
 # `class_rule_ok`, `class_rules_ok_one`: one model and one refinement for both outcomes
 

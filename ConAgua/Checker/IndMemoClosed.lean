@@ -1,7 +1,11 @@
-import ConAgua.Checker.Prog
-import ConAgua.Arena.IndMemoFns
-import ConAgua.Arena.LevelIntern
-import ConAgua.Arena.LevelSubstLP
+module
+
+public import ConAgua.Checker.Prog
+public import ConAgua.Arena.IndMemoFns
+public import ConAgua.Arena.LevelIntern
+public import ConAgua.Arena.LevelSubstLP
+
+@[expose] public section
 
 /-!
 # The loop's non-inductive callees leave the inductive stage's memos alone (lane `indproofs4`)

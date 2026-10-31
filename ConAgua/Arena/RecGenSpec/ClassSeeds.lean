@@ -1,13 +1,17 @@
-import ConAgua.Arena.IndPosSpec.Grow
-import ConAgua.Arena.RecGenSpec.DecNLAt
-import ConAgua.Arena.RecGenSpec.KcW
-import ConAgua.Arena.RecGenSpec.KeysProg
-import ConAgua.Arena.IndInstallSpec.InstallRec2Tele
-import ConAgua.Arena.IndPartsSpec.PartsPSlCons
-import ConAgua.Arena.IndPosSpec.NestSeedOf
-import ConAgua.Arena.GrindAttr
-import ConAgua.L.GrindAttr
-import ConAgua.L.ModelGen
+module
+
+public import ConAgua.Arena.IndPosSpec.Grow
+public import ConAgua.Arena.RecGenSpec.DecNLAt
+public import ConAgua.Arena.RecGenSpec.KcW
+public import ConAgua.Arena.RecGenSpec.KeysProg
+public import ConAgua.Arena.IndInstallSpec.InstallRec2Tele
+public import ConAgua.Arena.IndPartsSpec.PartsPSlCons
+public import ConAgua.Arena.IndPosSpec.NestSeedOf
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.L.GrindAttr
+public import ConAgua.L.ModelGen
+
+@[expose] public section
 
 /-!
 # ClassSeeds: `ConRon.Arena.classSeeds`

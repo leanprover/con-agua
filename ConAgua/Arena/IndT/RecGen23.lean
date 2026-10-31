@@ -1,8 +1,12 @@
-import ConAgua.Arena.IndSumSpec.ConsBlockRecsTF
-import ConAgua.Verdict.IndBK53
-import ConAgua.Arena.GrindAttr
-import ConAgua.L.GrindAttr
-import ConAgua.L.ModelGen
+module
+
+public import ConAgua.Arena.IndSumSpec.ConsBlockRecsTF
+public import ConAgua.Verdict.IndBK53
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.L.GrindAttr
+public import ConAgua.L.ModelGen
+
+@[expose] public section
 
 /-!
 # `class_nodes_agree`: one model, one refinement

@@ -1,8 +1,12 @@
-import ConAgua.Arena.IndPartsSpec.IndPartsProg5
-import ConAgua.Arena.IndPartsSpec.PartsSliceCopy
-import ConAgua.Arena.IndPartsSpec.PlW
-import ConAgua.Arena.IndRealPartsC1
-import ConAgua.Arena.IndSim
+module
+
+public import ConAgua.Arena.IndPartsSpec.IndPartsProg5
+public import ConAgua.Arena.IndPartsSpec.PartsSliceCopy
+public import ConAgua.Arena.IndPartsSpec.PlW
+public import ConAgua.Arena.IndRealPartsC1
+public import ConAgua.Arena.IndSim
+
+@[expose] public section
 
 /-!
 # BrsW

@@ -1,5 +1,9 @@
-import ConAgua.Arena.IndInstallSpec.TabsProg
-import ConAgua.Arena.IndPartsSpec.IndPartsProg2
+module
+
+public import ConAgua.Arena.IndInstallSpec.TabsProg
+public import ConAgua.Arena.IndPartsSpec.IndPartsProg2
+
+@[expose] public section
 
 /-!
 # HbFreeMfr

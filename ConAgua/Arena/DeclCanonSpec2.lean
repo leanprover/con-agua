@@ -1,5 +1,9 @@
-import ConAgua.Arena.DeclCanonEq
-import ConAgua.Arena.DeclRec
+module
+
+public import ConAgua.Arena.DeclCanonEq
+public import ConAgua.Arena.DeclRec
+
+@[expose] public section
 
 /-!
 # `ci_to_cv` in L (lane `decls3`, helper `decls3-canon`)

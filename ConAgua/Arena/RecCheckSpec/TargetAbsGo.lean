@@ -1,4 +1,8 @@
-import ConAgua.Arena.RecCheckSpec.TaCW
+module
+
+public import ConAgua.Arena.RecCheckSpec.TaCW
+
+@[expose] public section
 
 /-!
 # TargetAbsGo: `ConRon.Arena.targetAbsGo`, `ConRon.Arena.targetAbs`

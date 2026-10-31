@@ -1,4 +1,8 @@
-import ConAgua.Arena.PromoteCIRef.PromoteNew
+module
+
+public import ConAgua.Arena.PromoteCIRef.PromoteNew
+
+@[expose] public section
 
 /-!
 # Census tags for the constant side of the promotion

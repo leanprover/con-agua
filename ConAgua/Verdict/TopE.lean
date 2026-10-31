@@ -1,8 +1,12 @@
-import ConAgua.Verdict.DeclTopE
-import ConAgua.Verdict.KnotAllE
-import ConAgua.Verdict.CheckBE
-import ConAgua.Verdict.FrontStageE
-import ConAgua.Final.ThreadsVerdict
+module
+
+public import ConAgua.Verdict.DeclTopE
+public import ConAgua.Verdict.KnotAllE
+public import ConAgua.Verdict.CheckBE
+public import ConAgua.Verdict.FrontStageE
+public import ConAgua.Final.ThreadsVerdict
+
+@[expose] public section
 /-!
 # The verdict claims from the inductive arm's (lane `verdicts-b`, helper `sg`)
 

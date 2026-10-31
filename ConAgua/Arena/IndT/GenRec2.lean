@@ -1,14 +1,18 @@
-import ConAgua.Arena.IndInstallSpec.PosFreeMfr
-import ConAgua.Arena.IndT.KeepC
-import ConAgua.Arena.RecGenSpec.Classes
-import ConAgua.Verdict.IndBGrpM
-import ConAgua.Arena.IndT.GenRec1
-import ConAgua.Verdict.IndBRec3
-import ConAgua.Arena.IndT.RecGen27
-import ConAgua.Arena.RecGenSpec.CftW
-import ConAgua.Arena.IndInstallSpec.GfcW
-import ConAgua.Arena.IndInstallSpec.IcvgW
-import ConAgua.Arena.IndInstallSpec.PapW
+module
+
+public import ConAgua.Arena.IndInstallSpec.PosFreeMfr
+public import ConAgua.Arena.IndT.KeepC
+public import ConAgua.Arena.RecGenSpec.Classes
+public import ConAgua.Verdict.IndBGrpM
+public import ConAgua.Arena.IndT.GenRec1
+public import ConAgua.Verdict.IndBRec3
+public import ConAgua.Arena.IndT.RecGen27
+public import ConAgua.Arena.RecGenSpec.CftW
+public import ConAgua.Arena.IndInstallSpec.GfcW
+public import ConAgua.Arena.IndInstallSpec.IcvgW
+public import ConAgua.Arena.IndInstallSpec.PapW
+
+@[expose] public section
 
 /-!
 # `gen_rec_check_prep`, parts B and C (one model, `grpE`; one refinement per part)

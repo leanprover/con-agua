@@ -1,6 +1,10 @@
-import ConAgua.Arena.IndInstallSpec.HbFreeMfr
-import ConAgua.Arena.IndSumSpec.ConsBlockRecsTF
-import ConAgua.Arena.RecGenSpec.Rec3TmdWDecB
+module
+
+public import ConAgua.Arena.IndInstallSpec.HbFreeMfr
+public import ConAgua.Arena.IndSumSpec.ConsBlockRecsTF
+public import ConAgua.Arena.RecGenSpec.Rec3TmdWDecB
+
+@[expose] public section
 
 /-!
 # ConsRecsTFSimOf

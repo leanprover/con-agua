@@ -1,4 +1,8 @@
-import ConAgua.Arena.RecClassSpec.RuW
+module
+
+public import ConAgua.Arena.RecClassSpec.RuW
+
+@[expose] public section
 
 /-!
 # ClassGenRule2: `ConRon.Arena.classGenRule`

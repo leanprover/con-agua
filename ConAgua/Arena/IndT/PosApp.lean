@@ -1,7 +1,11 @@
-import ConAgua.Verdict.PosE1L
-import ConAgua.Arena.IndPosSpec.Pos2DecHLSplit
-import ConAgua.Arena.IndPosSpec.Snoc
-import ConAgua.Verdict.PosE
+module
+
+public import ConAgua.Verdict.PosE1L
+public import ConAgua.Arena.IndPosSpec.Pos2DecHLSplit
+public import ConAgua.Arena.IndPosSpec.Snoc
+public import ConAgua.Verdict.PosE
+
+@[expose] public section
 
 /-!
 # `nest_pos_app` under `StageC` (lane `indstaget`, helper `indstaget-pos`)

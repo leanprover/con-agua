@@ -1,10 +1,14 @@
-import ConAgua.Arena.PromoteCIRef.Alloc
-import ConAgua.Arena.PromoteCIRef.HlistUnfold
-import ConAgua.Arena.PromoteCIRef.Hslice
-import ConAgua.Arena.PromoteCIRef.NatMove
-import ConAgua.Arena.PromoteCIRef.PreECongr
-import ConAgua.Arena.PromoteCIRef.PmDecRuleWords
-import ConRon.Bridge.Grind
+module
+
+public import ConAgua.Arena.PromoteCIRef.Alloc
+public import ConAgua.Arena.PromoteCIRef.HlistUnfold
+public import ConAgua.Arena.PromoteCIRef.Hslice
+public import ConAgua.Arena.PromoteCIRef.NatMove
+public import ConAgua.Arena.PromoteCIRef.PreECongr
+public import ConAgua.Arena.PromoteCIRef.PmDecRuleWords
+public import ConRon.Bridge.Grind
+
+@[expose] public section
 
 /-!
 # Proj

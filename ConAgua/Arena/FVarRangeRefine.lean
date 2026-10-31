@@ -1,8 +1,12 @@
-import ConAgua.Arena.FVarRange
-import ConAgua.Arena.View
-import ConRon.Arena.Core
-import ConAgua.Arena.SimLib
-import Std.Tactic.BVDecide.Normalize.Prop
+module
+
+public import ConAgua.Arena.FVarRange
+public import ConAgua.Arena.View
+public import ConRon.Arena.Core
+public import ConAgua.Arena.SimLib
+public import Std.Tactic.BVDecide.Normalize.Prop
+
+@[expose] public section
 
 /-!
 # `fr_go` refines the arena's `fvarRangeGo`

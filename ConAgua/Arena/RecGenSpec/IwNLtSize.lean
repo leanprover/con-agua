@@ -1,5 +1,9 @@
-import ConAgua.Arena.IndIface
-import ConAgua.Arena.WhnfBase
+module
+
+public import ConAgua.Arena.IndIface
+public import ConAgua.Arena.WhnfBase
+
+@[expose] public section
 
 /-!
 # IwNLtSize

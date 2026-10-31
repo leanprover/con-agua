@@ -1,11 +1,15 @@
-import ConAgua.Arena.RecClassSpec.ClassNPcOf
-import ConAgua.Arena.RecClassSpec.IhW
-import ConAgua.Arena.RecGenSpec.CkcW
-import ConAgua.Arena.RecGenSpec.DecCIIndCv
-import ConAgua.Arena.IlpRd
-import ConAgua.Arena.GrindAttr
-import ConAgua.Arena.IndGrindAttr
-import ConAgua.L.GrindAttr
+module
+
+public import ConAgua.Arena.RecClassSpec.ClassNPcOf
+public import ConAgua.Arena.RecClassSpec.IhW
+public import ConAgua.Arena.RecGenSpec.CkcW
+public import ConAgua.Arena.RecGenSpec.DecCIIndCv
+public import ConAgua.Arena.IlpRd
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.Arena.IndGrindAttr
+public import ConAgua.L.GrindAttr
+
+@[expose] public section
 
 /-!
 # CftW

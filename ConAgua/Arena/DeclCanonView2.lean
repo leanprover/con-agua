@@ -1,9 +1,13 @@
-import ConAgua.Arena.LevelArena
-import ConAgua.Arena.DeclRec
-import ConAgua.Arena.GrindAttr
-import ConAgua.Arena.IndGrindAttr
-import ConAgua.L.GrindAttr
-import ConRon.Bridge.Grind
+module
+
+public import ConAgua.Arena.LevelArena
+public import ConAgua.Arena.DeclRec
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.Arena.IndGrindAttr
+public import ConAgua.L.GrindAttr
+public import ConRon.Bridge.Grind
+
+@[expose] public section
 
 /-!
 # `view_ls` in L: the level-list handle's slice copied into the pool (lane `decls3`)

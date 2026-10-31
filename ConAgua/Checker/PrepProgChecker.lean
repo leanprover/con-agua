@@ -1,5 +1,9 @@
-import ConAgua.Checker.PrepProgHoist
-import ConAgua.Checker.PrepProgExt
+module
+
+public import ConAgua.Checker.PrepProgHoist
+public import ConAgua.Checker.PrepProgExt
+
+@[expose] public section
 
 /-!
 # The prelude stages' and the hoist's lookups at `checkerProg` (lane `pipeline`)

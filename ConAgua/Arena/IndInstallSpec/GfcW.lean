@@ -1,11 +1,15 @@
-import ConAgua.Arena.RecGenSpec.DecB
-import ConAgua.Arena.RecGenSpec.DecCIIndCv
-import ConAgua.Arena.IndPartsSpec.PartsConsPL
-import ConAgua.Arena.GrindAttr
-import ConAgua.Arena.IndGrindAttr
-import ConAgua.L.GrindAttr
-import ConAgua.Arena.LdRd
-import ConAgua.L.ModelGen
+module
+
+public import ConAgua.Arena.RecGenSpec.DecB
+public import ConAgua.Arena.RecGenSpec.DecCIIndCv
+public import ConAgua.Arena.IndPartsSpec.PartsConsPL
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.Arena.IndGrindAttr
+public import ConAgua.L.GrindAttr
+public import ConAgua.Arena.LdRd
+public import ConAgua.L.ModelGen
+
+@[expose] public section
 
 /-!
 # GfcW

@@ -1,6 +1,10 @@
-import ConAgua.Arena.RecCheckSpec.ArfW
-import ConAgua.Arena.RecCheckSpec.RcLook
-import ConAgua.Arena.IndReal
+module
+
+public import ConAgua.Arena.RecCheckSpec.ArfW
+public import ConAgua.Arena.RecCheckSpec.RcLook
+public import ConAgua.Arena.IndReal
+
+@[expose] public section
 
 /-!
 # TsrLook

@@ -1,9 +1,13 @@
-import ConAgua.Arena.IndSumSpec.StructProjArgP
-import ConAgua.Arena.RecClassSpec.CloseLams
-import ConAgua.Arena.RecGenSpec.CkcW
-import ConAgua.Arena.GrindAttr
-import ConAgua.Arena.IndGrindAttr
-import ConAgua.L.GrindAttr
+module
+
+public import ConAgua.Arena.IndSumSpec.StructProjArgP
+public import ConAgua.Arena.RecClassSpec.CloseLams
+public import ConAgua.Arena.RecGenSpec.CkcW
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.Arena.IndGrindAttr
+public import ConAgua.L.GrindAttr
+
+@[expose] public section
 
 /-!
 # CfhW

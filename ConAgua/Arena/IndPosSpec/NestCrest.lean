@@ -1,8 +1,12 @@
-import ConAgua.Arena.IndPosSpec.CfW
-import ConAgua.Arena.IndPosSpec.Grow
-import ConAgua.Arena.IndPosSpec.MapOKStep
-import ConAgua.Arena.IndPosSpec.NcnW
-import ConAgua.Arena.IndPosSpec.NtyW
+module
+
+public import ConAgua.Arena.IndPosSpec.CfW
+public import ConAgua.Arena.IndPosSpec.Grow
+public import ConAgua.Arena.IndPosSpec.MapOKStep
+public import ConAgua.Arena.IndPosSpec.NcnW
+public import ConAgua.Arena.IndPosSpec.NtyW
+
+@[expose] public section
 
 /-!
 # NestCrest: `ConRon.Arena.nestCanonCrest`, `ConRon.Arena.nestCrest`

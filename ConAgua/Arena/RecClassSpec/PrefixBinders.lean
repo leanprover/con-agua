@@ -1,9 +1,13 @@
-import ConAgua.Arena.RecClassSpec.MnW
-import ConAgua.Arena.RecClassSpec.RuProg
-import ConAgua.Arena.GrindAttr
-import ConAgua.Arena.IndGrindAttr
-import ConAgua.L.GrindAttr
-import ConAgua.L.ModelGen
+module
+
+public import ConAgua.Arena.RecClassSpec.MnW
+public import ConAgua.Arena.RecClassSpec.RuProg
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.Arena.IndGrindAttr
+public import ConAgua.L.GrindAttr
+public import ConAgua.L.ModelGen
+
+@[expose] public section
 
 /-!
 # PrefixBinders: `ConRon.Arena.ClassGen.prefixBinders`

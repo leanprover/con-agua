@@ -1,5 +1,9 @@
-import ConAgua.Verdict.FrontOrderE
-import Std.Tactic.BVDecide.Normalize.Prop
+module
+
+public import ConAgua.Verdict.FrontOrderE
+public import Std.Tactic.BVDecide.Normalize.Prop
+
+@[expose] public section
 
 /-!
 # The apply step of an `inductive` line against the twin, VIII: `vi_order`

@@ -1,6 +1,10 @@
-import Lean
-import ConAgua.Compiler.Compile
-import ConAgua.AsmFile.Term
+module
+
+public import Lean
+public import ConAgua.Compiler.Compile
+public import ConAgua.AsmFile.Term
+
+@[expose] public section
 
 /-!
 # The compiler's output as a kernel-checked literal

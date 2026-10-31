@@ -1,8 +1,12 @@
-import ConAgua.Arena.IndPosSpec.CrLook
-import ConAgua.Arena.IndPosSpec.EnvFindWHit
-import ConAgua.Arena.IndPosSpec.PiBWStage
-import ConAgua.Arena.IndSumSpec.McGoStep
-import ConAgua.Arena.RecCheckSpec.ErToIwWStage
+module
+
+public import ConAgua.Arena.IndPosSpec.CrLook
+public import ConAgua.Arena.IndPosSpec.EnvFindWHit
+public import ConAgua.Arena.IndPosSpec.PiBWStage
+public import ConAgua.Arena.IndSumSpec.McGoStep
+public import ConAgua.Arena.RecCheckSpec.ErToIwWStage
+
+@[expose] public section
 
 /-!
 # BvbWMfr

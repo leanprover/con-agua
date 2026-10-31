@@ -1,5 +1,9 @@
-import ConAgua.Arena.DeclArmLoop
-import ConAgua.Checker.LoopProgTac
+module
+
+public import ConAgua.Arena.DeclArmLoop
+public import ConAgua.Checker.LoopProgTac
+
+@[expose] public section
 
 /-!
 # The arms' text agreement for the checker's program, parts 0‥5 (lane `loopt2`)

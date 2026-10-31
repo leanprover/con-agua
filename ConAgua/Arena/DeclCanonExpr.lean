@@ -1,7 +1,11 @@
-import ConAgua.Arena.DeclCanonLvl
-import ConAgua.Arena.GrindAttr
-import ConAgua.Arena.IndGrindAttr
-import ConAgua.L.GrindAttr
+module
+
+public import ConAgua.Arena.DeclCanonLvl
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.Arena.IndGrindAttr
+public import ConAgua.L.GrindAttr
+
+@[expose] public section
 
 /-!
 # The canonical expression comparison in L (lane `decls3`, helper `decls3-canon`)

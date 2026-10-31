@@ -1,6 +1,10 @@
-import ConAgua.Arena.ZeroStore
-import ConAgua.Arena.LpColRel
-import Std.Tactic.BVDecide.Normalize.Prop
+module
+
+public import ConAgua.Arena.ZeroStore
+public import ConAgua.Arena.LpColRel
+public import Std.Tactic.BVDecide.Normalize.Prop
+
+@[expose] public section
 
 /-!
 # The level `zero` store refines the arena's `zero` tables

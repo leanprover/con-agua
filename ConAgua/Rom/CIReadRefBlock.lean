@@ -1,4 +1,8 @@
-import ConAgua.Rom.CIReadRefCI
+module
+
+public import ConAgua.Rom.CIReadRefCI
+
+@[expose] public section
 
 /-!
 # The ROM constant readers: blocks (helper `decls4-rom`)

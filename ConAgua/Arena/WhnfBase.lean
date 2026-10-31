@@ -1,13 +1,17 @@
-import ConAgua.Arena.CoreRefine
-import ConAgua.Arena.View
-import ConAgua.Arena.NatArms
-import ConAgua.Arena.Pins
-import ConAgua.Arena.LevelArena
-import ConRon.Arena.Core
-import ConAgua.Census.Attr
-import ConAgua.Arena.StoreDen
-import Std.Tactic.BVDecide.Normalize.Prop
-import ConAgua.Layout
+module
+
+public import ConAgua.Arena.CoreRefine
+public import ConAgua.Arena.View
+public import ConAgua.Arena.NatArms
+public import ConAgua.Arena.Pins
+public import ConAgua.Arena.LevelArena
+public import ConRon.Arena.Core
+public import ConAgua.Census.Attr
+public import ConAgua.Arena.StoreDen
+public import Std.Tactic.BVDecide.Normalize.Prop
+public import ConAgua.Layout
+
+@[expose] public section
 
 /-!
 # The whnf family's shared statements: arguments, the spine stack, the relation, the knot

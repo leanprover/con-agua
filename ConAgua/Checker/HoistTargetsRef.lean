@@ -1,4 +1,8 @@
-import ConAgua.Checker.HoistNatRef
+module
+
+public import ConAgua.Checker.HoistNatRef
+
+@[expose] public section
 
 /-!
 # `hoist_targets_go` is the twin's `hoistTargetsGo` (lane `front4`)

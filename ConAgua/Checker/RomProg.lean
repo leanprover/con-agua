@@ -1,4 +1,8 @@
-import ConAgua.Checker.RomProgB
+module
+
+public import ConAgua.Checker.RomProgB
+
+@[expose] public section
 
 /-!
 # The ROM stages of `check` for the checker's program (lane `pipeline`)

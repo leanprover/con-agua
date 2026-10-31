@@ -1,13 +1,17 @@
-import ConAgua.Arena.RecClassSpec.PiBWRoom
-import ConAgua.Arena.LdRd
-import ConAgua.Arena.IndSumSpec.ConsSumCtors
-import ConAgua.Arena.RecClassSpec.ClassNPcOf
-import ConAgua.Arena.RecGenSpec.Rec3CVX
-import ConAgua.Arena.RecGenSpec.RgW
-import ConAgua.Arena.GrindAttr
-import ConAgua.Arena.IndGrindAttr
-import ConAgua.L.GrindAttr
-import ConAgua.L.ModelGen
+module
+
+public import ConAgua.Arena.RecClassSpec.PiBWRoom
+public import ConAgua.Arena.LdRd
+public import ConAgua.Arena.IndSumSpec.ConsSumCtors
+public import ConAgua.Arena.RecClassSpec.ClassNPcOf
+public import ConAgua.Arena.RecGenSpec.Rec3CVX
+public import ConAgua.Arena.RecGenSpec.RgW
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.Arena.IndGrindAttr
+public import ConAgua.L.GrindAttr
+public import ConAgua.L.ModelGen
+
+@[expose] public section
 
 /-!
 # ClassFeR: `ConRon.Arena.classFeR`

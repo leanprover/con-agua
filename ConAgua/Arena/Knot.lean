@@ -1,4 +1,8 @@
-import ConAgua.Arena.WhnfBase
+module
+
+public import ConAgua.Arena.WhnfBase
+
+@[expose] public section
 
 /-!
 # The knot's `infer`, `infer_io`, `defeq` and eager slots, and the fueled entry points (lane `defeq`)

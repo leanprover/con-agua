@@ -1,7 +1,11 @@
-import ConAgua.Front.DeclsPre
-import ConAgua.Front.FrontRun
-import ConAgua.Checker.NoVerdictClosed
-import ConAgua.L.ModelGen
+module
+
+public import ConAgua.Front.DeclsPre
+public import ConAgua.Front.FrontRun
+public import ConAgua.Checker.NoVerdictClosed
+public import ConAgua.L.ModelGen
+
+@[expose] public section
 /-!
 # The front's error arms' assumptions at the driver's program
 

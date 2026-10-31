@@ -1,7 +1,11 @@
-import ConAgua.Arena.InstLPWalkRef2
-import ConAgua.Arena.InstLPLevel2
-import ConAgua.Arena.InstLPWalkArms
-import ConAgua.Arena.InstLPWalkGo
+module
+
+public import ConAgua.Arena.InstLPWalkRef2
+public import ConAgua.Arena.InstLPLevel2
+public import ConAgua.Arena.InstLPWalkArms
+public import ConAgua.Arena.InstLPWalkGo
+
+@[expose] public section
 
 /-!
 # The `instLP` walk refines `instLPGo`: the dispatcher, by induction on the L fuel

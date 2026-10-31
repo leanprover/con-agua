@@ -1,4 +1,8 @@
-import ConAgua.Checker.PreLoopWSBase
+module
+
+public import ConAgua.Checker.PreLoopWSBase
+
+@[expose] public section
 
 /-!
 # The pre-loop stages' write sets, part 1 (lane `pipeline`)

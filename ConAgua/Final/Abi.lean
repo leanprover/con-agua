@@ -1,6 +1,10 @@
-import ConAgua.Final.Statement
-import ConAgua.Compiler.AbiSim
-import Kraken.X64.Registers
+module
+
+public import ConAgua.Final.Statement
+public import ConAgua.Compiler.AbiSim
+public import Kraken.X64.Registers
+
+@[expose] public section
 
 /-!
 # The setup stub on the machine: `ca_setup` (called with `ca_start`'s arguments)

@@ -1,9 +1,13 @@
-import ConAgua.Arena.IndPosSpec.CfW
-import ConAgua.Checker.NoVerdictTree
-import ConAgua.Arena.Verdict
-import ConAgua.Arena.GrindAttr
-import ConAgua.L.ModelGen
-import Std.WP.Tactic
+module
+
+public import ConAgua.Arena.IndPosSpec.CfW
+public import ConAgua.Checker.NoVerdictTree
+public import ConAgua.Arena.Verdict
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.L.ModelGen
+public import Std.WP.Tactic
+
+@[expose] public section
 
 /-!
 # `nest_ctors`' unified model (lane `verdicts-b`, helper `ia2`, fork `kn2b`)

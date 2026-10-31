@@ -1,8 +1,12 @@
-import ConAgua.Arena.DeclNatGuard
-import ConAgua.Arena.IndInstallSpec.DomsW
-import ConAgua.Arena.GrindAttr
-import ConAgua.L.GrindAttr
-import ConAgua.L.ModelGen
+module
+
+public import ConAgua.Arena.DeclNatGuard
+public import ConAgua.Arena.IndInstallSpec.DomsW
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.L.GrindAttr
+public import ConAgua.L.ModelGen
+
+@[expose] public section
 
 /-!
 # The structural-`Nat` gate: the pinned types (lane `decls3`, helper `decls3-nat`)

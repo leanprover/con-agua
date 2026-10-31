@@ -1,7 +1,11 @@
-import ConAgua.Arena.IndT.PosFields
-import ConAgua.Arena.IndPosSpec.NestCrest
-import ConAgua.Arena.IndPosSpec.P2sfW
-import ConAgua.Arena.IndRealAbsPos
+module
+
+public import ConAgua.Arena.IndT.PosFields
+public import ConAgua.Arena.IndPosSpec.NestCrest
+public import ConAgua.Arena.IndPosSpec.P2sfW
+public import ConAgua.Arena.IndRealAbsPos
+
+@[expose] public section
 
 /-!
 # `nest_ctors_walk` refines `walkT`, both outcomes

@@ -1,11 +1,15 @@
-import ConAgua.Arena.IndPosSpec.BvbWMfr
-import ConAgua.Arena.IndPosSpec.EntryW
-import ConAgua.Arena.IndPosSpec.GgW
-import ConAgua.Arena.IndPosSpec.Mfr
-import ConAgua.Arena.IndPosSpec.NestContParamsClosed
-import ConAgua.Arena.IndPosSpec.SnocWMfr
-import ConAgua.Arena.IndPosSpec.U4W
-import ConAgua.Arena.IndGrindAttr
+module
+
+public import ConAgua.Arena.IndPosSpec.BvbWMfr
+public import ConAgua.Arena.IndPosSpec.EntryW
+public import ConAgua.Arena.IndPosSpec.GgW
+public import ConAgua.Arena.IndPosSpec.Mfr
+public import ConAgua.Arena.IndPosSpec.NestContParamsClosed
+public import ConAgua.Arena.IndPosSpec.SnocWMfr
+public import ConAgua.Arena.IndPosSpec.U4W
+public import ConAgua.Arena.IndGrindAttr
+
+@[expose] public section
 
 /-!
 # FgW

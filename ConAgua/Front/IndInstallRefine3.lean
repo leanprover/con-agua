@@ -1,5 +1,9 @@
-import ConAgua.Front.IndInstallRefine2
-import ConAgua.L.WordOff
+module
+
+public import ConAgua.Front.IndInstallRefine2
+public import ConAgua.L.WordOff
+
+@[expose] public section
 
 /-!
 # `install_ind_d` refines `installIndD`, III: the recursor records

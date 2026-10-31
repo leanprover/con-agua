@@ -1,6 +1,10 @@
-import ConAgua.Arena.ImaxStore
-import ConAgua.Arena.LpColRel
-import Std.Tactic.BVDecide.Normalize.Prop
+module
+
+public import ConAgua.Arena.ImaxStore
+public import ConAgua.Arena.LpColRel
+public import Std.Tactic.BVDecide.Normalize.Prop
+
+@[expose] public section
 
 /-!
 # The level `imax` store refines the arena's `imax` tables

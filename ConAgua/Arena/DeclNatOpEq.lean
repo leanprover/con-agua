@@ -1,7 +1,11 @@
-import ConAgua.Arena.DeclNatSub
-import ConAgua.Arena.GrindAttr
-import ConAgua.L.GrindAttr
-import ConAgua.L.ModelGen
+module
+
+public import ConAgua.Arena.DeclNatSub
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.L.GrindAttr
+public import ConAgua.L.ModelGen
+
+@[expose] public section
 
 /-!
 # `nat_op_equations` refines `natOpEquations` (lane `decls3`, helper `decls3-nat`)

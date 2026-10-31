@@ -1,7 +1,11 @@
-import ConAgua.Arena.DefEqMid
-import ConAgua.Arena.GrindAttr
-import ConAgua.L.GrindAttr
-import ConAgua.L.ModelGen
+module
+
+public import ConAgua.Arena.DefEqMid
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.L.GrindAttr
+public import ConAgua.L.ModelGen
+
+@[expose] public section
 
 /-!
 # `defeq_lst`, `defeq_list_rev`: the twin's `defEqList` over two stack slices (lane `defeq`)

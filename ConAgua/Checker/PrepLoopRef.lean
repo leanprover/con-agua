@@ -1,6 +1,10 @@
-import ConAgua.Checker.PrepLeafRef
-import ConAgua.Checker.HoistClosureL
-import ConAgua.Checker.HoistOrderRef3
+module
+
+public import ConAgua.Checker.PrepLeafRef
+public import ConAgua.Checker.HoistClosureL
+public import ConAgua.Checker.HoistOrderRef3
+
+@[expose] public section
 
 /-!
 # `prepare_prelude`'s loops: `prep_front` refines `frontOf`, `prep_rest` its rest (lane `front4`)

@@ -1,5 +1,9 @@
-import ConAgua.Front.IndInstallRefine
-import Std.Tactic.BVDecide.Normalize.Prop
+module
+
+public import ConAgua.Front.IndInstallRefine
+public import Std.Tactic.BVDecide.Normalize.Prop
+
+@[expose] public section
 
 /-!
 # `install_ind_d` refines `installIndD`, II: the type and constructor records

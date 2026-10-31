@@ -1,7 +1,11 @@
-import ConAgua.Checker.PhaseBReads
-import ConAgua.Arena.FreezeRel
-import ConAgua.Checker.LoopProgTac
-import ConAgua.Final.Statement
+module
+
+public import ConAgua.Checker.PhaseBReads
+public import ConAgua.Arena.FreezeRel
+public import ConAgua.Checker.LoopProgTac
+public import ConAgua.Final.Statement
+
+@[expose] public section
 
 /-!
 # Entry 2 of the sequential driver, in L (lane parmode)

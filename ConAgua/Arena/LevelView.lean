@@ -1,4 +1,8 @@
-import ConAgua.Arena.LevelArena
+module
+
+public import ConAgua.Arena.LevelArena
+
+@[expose] public section
 
 /-!
 # `lv_node` against the twin's level view, converse direction (lane `decls3`)

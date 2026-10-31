@@ -1,5 +1,9 @@
-import ConAgua.Arena.PhaseBStep
-import ConAgua.L.GrindAttr
+module
+
+public import ConAgua.Arena.PhaseBStep
+public import ConAgua.L.GrindAttr
+
+@[expose] public section
 
 /-!
 # Phase B's loop over one group: `check_pending_go(j, j + 1, v)` (lane parmode)

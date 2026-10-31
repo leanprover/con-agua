@@ -1,7 +1,11 @@
-import ConAgua.Front.NatDecLink
-import ConAgua.Front.UnescapeLink
-import ConAgua.Front.StateDR
-import Std.Tactic.BVDecide.Normalize.Prop
+module
+
+public import ConAgua.Front.NatDecLink
+public import ConAgua.Front.UnescapeLink
+public import ConAgua.Front.StateDR
+public import Std.Tactic.BVDecide.Normalize.Prop
+
+@[expose] public section
 
 /-!
 # `apply_expr` refines con-ron's `parseExprEntryD`

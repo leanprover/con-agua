@@ -1,7 +1,11 @@
-import ConAgua.Arena.ConstsResolveF
-import ConAgua.Arena.RecClassSpec.ClassNPcOf
-import ConAgua.Arena.GrindAttr
-import ConAgua.L.GrindAttr
+module
+
+public import ConAgua.Arena.ConstsResolveF
+public import ConAgua.Arena.RecClassSpec.ClassNPcOf
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.L.GrindAttr
+
+@[expose] public section
 
 /-!
 # `consts_resolve_ffast` refines `constsResolveFFast` (lane `tails`)

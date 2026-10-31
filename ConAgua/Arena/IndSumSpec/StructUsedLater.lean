@@ -1,10 +1,14 @@
-import ConAgua.Arena.IndSumSpec.Bnums
-import ConAgua.Arena.IndSumSpec.McGoStep
-import ConAgua.Arena.IndSumSpec.StructProjArgP
-import ConAgua.Arena.RecClassSpec.Classes
-import ConAgua.Arena.GrindAttr
-import ConAgua.Arena.IndGrindAttr
-import ConAgua.L.GrindAttr
+module
+
+public import ConAgua.Arena.IndSumSpec.Bnums
+public import ConAgua.Arena.IndSumSpec.McGoStep
+public import ConAgua.Arena.IndSumSpec.StructProjArgP
+public import ConAgua.Arena.RecClassSpec.Classes
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.Arena.IndGrindAttr
+public import ConAgua.L.GrindAttr
+
+@[expose] public section
 
 /-!
 # StructUsedLater: `ConRon.Arena.structUsedLaterGo`, `ConRon.Arena.structUsedLaterList`, `ConRon.Arena.structUsedLater`

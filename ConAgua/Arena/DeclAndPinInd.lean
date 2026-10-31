@@ -1,6 +1,10 @@
-import ConAgua.Arena.DeclAndPin
-import ConAgua.Arena.GrindAttr
-import ConAgua.L.GrindAttr
+module
+
+public import ConAgua.Arena.DeclAndPin
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.L.GrindAttr
+
+@[expose] public section
 
 /-!
 # The `And` pin's inductive arm, part 1: `and_block_named(bo, bl)` refines `blockAndNamed`

@@ -1,7 +1,11 @@
-import ConAgua.Arena.IndPosSpec.CtxFields
-import ConAgua.Arena.IndPosSpec.PiBWStage
-import ConAgua.Arena.IndSumSpec.StructUsedLater
-import ConAgua.Arena.IndDecStab
+module
+
+public import ConAgua.Arena.IndPosSpec.CtxFields
+public import ConAgua.Arena.IndPosSpec.PiBWStage
+public import ConAgua.Arena.IndSumSpec.StructUsedLater
+public import ConAgua.Arena.IndDecStab
+
+@[expose] public section
 
 /-!
 # PfLook

@@ -1,10 +1,14 @@
-import ConAgua.Arena.DeclCanonView2
-import ConAgua.Arena.IndInstallSpec.DomsW
-import ConAgua.Arena.DeclCanonSpec
-import ConAgua.Arena.LevelView
-import ConAgua.Arena.GrindAttr
-import ConAgua.Arena.IndGrindAttr
-import ConAgua.L.GrindAttr
+module
+
+public import ConAgua.Arena.DeclCanonView2
+public import ConAgua.Arena.IndInstallSpec.DomsW
+public import ConAgua.Arena.DeclCanonSpec
+public import ConAgua.Arena.LevelView
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.Arena.IndGrindAttr
+public import ConAgua.L.GrindAttr
+
+@[expose] public section
 
 /-!
 # The canonical level comparison in L (lane `decls3`, helper `decls3-canon`)

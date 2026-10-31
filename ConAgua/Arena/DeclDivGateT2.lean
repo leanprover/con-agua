@@ -1,6 +1,10 @@
-import ConAgua.Arena.DeclDivGateT1
-import ConAgua.Arena.DeclDivModSpec.RomPinSets
-import ConAgua.Arena.DeclCrpT
+module
+
+public import ConAgua.Arena.DeclDivGateT1
+public import ConAgua.Arena.DeclDivModSpec.RomPinSets
+public import ConAgua.Arena.DeclCrpT
+
+@[expose] public section
 
 /-!
 # The `Nat.div`-family pin gate under `StageC`, part 2: the attempt (lane `loopt3`, `loopt3-div`)

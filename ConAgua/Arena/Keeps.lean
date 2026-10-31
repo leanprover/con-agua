@@ -1,4 +1,8 @@
-import ConRon.Arena.ExprOps
+module
+
+public import ConRon.Arena.ExprOps
+
+@[expose] public section
 
 /-!
 # Twin-side frames by composition: what an `ExprOps` walk keeps

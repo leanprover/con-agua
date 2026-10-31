@@ -1,8 +1,12 @@
-import ConAgua.Arena.IndT.PosCrest
-import ConAgua.Verdict.PosE
-import ConAgua.Verdict.PosNgc
-import ConAgua.Arena.IndPosSpec.Pos2DecHLSplit
-import ConAgua.Arena.IndPosSpec.Snoc
+module
+
+public import ConAgua.Arena.IndT.PosCrest
+public import ConAgua.Verdict.PosE
+public import ConAgua.Verdict.PosNgc
+public import ConAgua.Arena.IndPosSpec.Pos2DecHLSplit
+public import ConAgua.Arena.IndPosSpec.Snoc
+
+@[expose] public section
 
 /-!
 # `nest_frame` refines `nestFrame`, both outcomes (lane `indstaget`, helper `indstaget-pos`)

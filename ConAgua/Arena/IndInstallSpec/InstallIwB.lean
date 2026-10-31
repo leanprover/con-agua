@@ -1,5 +1,9 @@
-import ConAgua.Arena.IndInstallSpec.InstallCvDecB
-import ConAgua.Arena.IndSumSpec.SumProg
+module
+
+public import ConAgua.Arena.IndInstallSpec.InstallCvDecB
+public import ConAgua.Arena.IndSumSpec.SumProg
+
+@[expose] public section
 
 /-!
 # InstallIwB

@@ -1,5 +1,9 @@
-import ConAgua.Arena.WhnfDeltaRefine4
-import ConAgua.Arena.CoreNatOp
+module
+
+public import ConAgua.Arena.WhnfDeltaRefine4
+public import ConAgua.Arena.CoreNatOp
+
+@[expose] public section
 /-!
 # `reduce_nat`'s family: one model and one refinement for both outcomes
 

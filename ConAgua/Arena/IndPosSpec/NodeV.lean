@@ -1,6 +1,10 @@
-import ConRon.Arena.Store
-import Std.WP.Assertion
-import ConAgua.Arena.Reasons
+module
+
+public import ConRon.Arena.Store
+public import Std.WP.Assertion
+public import ConAgua.Arena.Reasons
+
+@[expose] public section
 
 /-!
 # NodeV

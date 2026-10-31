@@ -1,5 +1,9 @@
-import ConAgua.Arena.IndPosSpec.BvbWMfr
-import ConAgua.Arena.RecCheckSpec.TaCW
+module
+
+public import ConAgua.Arena.IndPosSpec.BvbWMfr
+public import ConAgua.Arena.RecCheckSpec.TaCW
+
+@[expose] public section
 
 /-!
 # BvbWStageC

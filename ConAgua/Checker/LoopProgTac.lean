@@ -1,5 +1,9 @@
-import ConAgua.Checker.PreludeSimProg
-import ConAgua.Checker.RomProg0
+module
+
+public import ConAgua.Checker.PreludeSimProg
+public import ConAgua.Checker.RomProg0
+
+@[expose] public section
 
 /-!
 # Program bundles at `checkerProg` by indexed lookups (lane `loopt3`)

@@ -1,5 +1,9 @@
-import ConAgua.Arena.InstLPLevel2
-import ConAgua.Arena.CapsNeverZeroCore
+module
+
+public import ConAgua.Arena.InstLPLevel2
+public import ConAgua.Arena.CapsNeverZeroCore
+
+@[expose] public section
 
 /-!
 # `rec_fire_levels` under `CoreS` (lane `defeq2`)

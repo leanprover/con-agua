@@ -1,11 +1,15 @@
-import ConAgua.Verdict.IndBFields
-import ConAgua.Arena.RecCheckSpec.CnfW
-import ConAgua.Arena.IndT.RecGen24
-import ConAgua.Arena.RecCheckSpec.TargetMajorAt
-import ConAgua.Arena.RecGenSpec.DecTMSlices
-import ConAgua.Arena.GrindAttr
-import ConAgua.L.GrindAttr
-import ConAgua.Arena.IndT.RecGen27Models
+module
+
+public import ConAgua.Verdict.IndBFields
+public import ConAgua.Arena.RecCheckSpec.CnfW
+public import ConAgua.Arena.IndT.RecGen24
+public import ConAgua.Arena.RecCheckSpec.TargetMajorAt
+public import ConAgua.Arena.RecGenSpec.DecTMSlices
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.L.GrindAttr
+public import ConAgua.Arena.IndT.RecGen27Models
+
+@[expose] public section
 
 /-!
 # `class_ctor_of`, `class_ctors_of`, `classes_ctors`: one model, one refinement each

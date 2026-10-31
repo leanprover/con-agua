@@ -1,5 +1,9 @@
-import ConAgua.Checker.Prog
-import ConAgua.Arena.IndTwin
+module
+
+public import ConAgua.Checker.Prog
+public import ConAgua.Arena.IndTwin
+
+@[expose] public section
 
 /-!
 # The core leaves the stage's pools and the pins alone (lane `indproofs3`)
