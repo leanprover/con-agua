@@ -495,6 +495,9 @@ theorem rowArr_inj {w w' : Word} (h : rowTag w ≤ 2) (h' : rowTag w' ≤ 2)
 /-- The first word of a name handle's row in its array. -/
 def rowIx (w : Word) : Nat := 2 * (idxW w).toNat
 
+theorem rowIx_lt (w : Word) : rowIx w < 2 ^ 32 := by
+  have := UInt64.lt_iff_toNat_lt.mp (idxW_lt w); simp only [rowIx]; simp at this; omega
+
 /-- The row's first word: the counter plus one, `0` for no row. -/
 def rowC (m : Mem) (w : Word) : Word :=
   if rowTag w ≤ 2 then (m.arr64 (rowArr w))[rowIx w]?.getD 0 else 0
@@ -569,6 +572,9 @@ theorem tblArr_spec (w : Word) (ht : rowTag w ≤ 2) :
 
 /-- The table row's index: the handle's index. -/
 def tblIx (w : Word) : Nat := (idxW w).toNat
+
+theorem tblIx_lt (w : Word) : tblIx w < 2 ^ 31 := by
+  have := UInt64.lt_iff_toNat_lt.mp (idxW_lt w); simp only [tblIx]; simp at this; omega
 
 /-- The table row of a name handle: the table record's pointer plus one, `0` for none. -/
 def tblRow (m : Mem) (w : Word) : Word :=
