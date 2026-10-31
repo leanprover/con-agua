@@ -1,5 +1,4 @@
 import ConAgua.Arena.DefEqLeaves2
-import ConAgua.Arena.RefWalk
 import ConAgua.Arena.InferLeaves
 import ConAgua.Arena.DefEqLeaves
 import ConAgua.Arena.GrindAttr

@@ -1,5 +1,4 @@
 import ConAgua.Arena.WhnfIotaRefine5
-import ConAgua.Arena.RefWalk
 import Std.Tactic.BVDecide.Normalize.BitVec
 import Std.Tactic.BVDecide.Normalize.Prop
 import ConAgua.Arena.GrindAttr

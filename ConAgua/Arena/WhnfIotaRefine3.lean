@@ -1,5 +1,4 @@
 import ConAgua.Arena.WhnfIotaRefine2
-import ConAgua.Arena.RefWalk
 import ConAgua.Verdict.WhnfModels3E
 import ConAgua.Arena.Abs1Refine
 import ConAgua.Arena.Rom
