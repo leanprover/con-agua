@@ -75,15 +75,15 @@ variable {α δ : Type} {k : IdxKind} [BEq α] [Hashable α]
 
 /-- The run of `protoRun`: a hit (state unchanged), or an append to the tier the store is in,
 returning the handle of the new node (`DerRel.lean`'s `protoRun_cases`, for any lens). -/
-theorem protoRun_casesG (L : Lens α δ k) (key : α) (tag : UInt32) (pf : Option (Idx k))
+theorem protoRun_casesG (L : Lens α δ k) (key : α) (tag : UInt32) (wide : Bool) (pf : Option (Idx k))
     (d : δ) (err : CheckError) (a a' : AState) (y : Idx k)
-    (h : protoRun L key tag pf d err a = .ok (y, a')) :
+    (h : protoRun L key tag wide pf d err a = .ok (y, a')) :
     a' = a ∨
-    (L.on a = false ∧ (L.getP a).nodes.size < 2 ^ 27 ∧
-      y = decI (hdW tag.toUInt64 0 (UInt64.ofNat (L.getP a).nodes.size)) ∧
+    (L.on a = false ∧ (L.getP a).nodes.size < capS wide ∧
+      y = decI (hdS tag wide 0 (UInt64.ofNat (L.getP a).nodes.size)) ∧
       a' = L.setP a ((L.getP a).push key d y)) ∨
-    (L.on a = true ∧ (L.getS a).nodes.size < 2 ^ 27 ∧
-      y = decI (hdW tag.toUInt64 1 (UInt64.ofNat (L.getS a).nodes.size)) ∧
+    (L.on a = true ∧ (L.getS a).nodes.size < capS wide ∧
+      y = decI (hdS tag wide 1 (UInt64.ofNat (L.getS a).nodes.size)) ∧
       a' = L.setS a ((L.getS a).push key d y)) := by
   unfold protoRun at h
   split at h
@@ -109,17 +109,17 @@ theorem protoRun_casesG (L : Lens α δ k) (key : α) (tag : UInt32) (pf : Optio
       · simp at h
 
 /-- The same through an operation's run equation. -/
-theorem AM.proto_casesG (L : Lens α δ k) (op : AM (Idx k)) (key : α) (tag : UInt32)
+theorem AM.proto_casesG (L : Lens α δ k) (op : AM (Idx k)) (key : α) (tag : UInt32) (wide : Bool)
     (pf : Option (Idx k)) (d : δ) (err : CheckError) (a : AState)
-    (hrun : op.run a = protoRun L key tag pf d err a) (hok : AM.ok op a) :
+    (hrun : op.run a = protoRun L key tag wide pf d err a) (hok : AM.ok op a) :
     AM.st op a = a ∨
-    (L.on a = false ∧ (L.getP a).nodes.size < 2 ^ 27 ∧
-      AM.res op a = decI (hdW tag.toUInt64 0 (UInt64.ofNat (L.getP a).nodes.size)) ∧
+    (L.on a = false ∧ (L.getP a).nodes.size < capS wide ∧
+      AM.res op a = decI (hdS tag wide 0 (UInt64.ofNat (L.getP a).nodes.size)) ∧
       AM.st op a = L.setP a ((L.getP a).push key d (AM.res op a))) ∨
-    (L.on a = true ∧ (L.getS a).nodes.size < 2 ^ 27 ∧
-      AM.res op a = decI (hdW tag.toUInt64 1 (UInt64.ofNat (L.getS a).nodes.size)) ∧
+    (L.on a = true ∧ (L.getS a).nodes.size < capS wide ∧
+      AM.res op a = decI (hdS tag wide 1 (UInt64.ofNat (L.getS a).nodes.size)) ∧
       AM.st op a = L.setS a ((L.getS a).push key d (AM.res op a))) :=
-  protoRun_casesG L key tag pf d err a _ _ (hrun.symm.trans (AM.run_of_ok op a hok))
+  protoRun_casesG L key tag wide pf d err a _ _ (hrun.symm.trans (AM.run_of_ok op a hok))
 
 end proto
 
@@ -284,13 +284,13 @@ theorem constT_empty (pr : δ → Prop) : ConstT pr (Tbl.empty : Tbl α (Idx k) 
 
 /-- **A constant bit across an interning** (`zero`, `param`). -/
 theorem constMk (L : Lens α δ k) (pr : δ → Prop) (a a' : AState) (key : α) (d : δ) (y : Idx k)
-    (tag : UInt32) (hc : ConstT2 L pr a) (hd : pr d)
+    (tag : UInt32) (wide : Bool) (hc : ConstT2 L pr a) (hd : pr d)
     (hst : a' = a ∨
-      (L.on a = false ∧ (L.getP a).nodes.size < 2 ^ 27 ∧
-        y = decI (hdW tag.toUInt64 0 (UInt64.ofNat (L.getP a).nodes.size)) ∧
+      (L.on a = false ∧ (L.getP a).nodes.size < capS wide ∧
+        y = decI (hdS tag wide 0 (UInt64.ofNat (L.getP a).nodes.size)) ∧
         a' = L.setP a ((L.getP a).push key d y)) ∨
-      (L.on a = true ∧ (L.getS a).nodes.size < 2 ^ 27 ∧
-        y = decI (hdW tag.toUInt64 1 (UInt64.ofNat (L.getS a).nodes.size)) ∧
+      (L.on a = true ∧ (L.getS a).nodes.size < capS wide ∧
+        y = decI (hdS tag wide 1 (UInt64.ofNat (L.getS a).nodes.size)) ∧
         a' = L.setS a ((L.getS a).push key d y))) : ConstT2 L pr a' := by
   rcases hst with rfl | ⟨-, -, -, rfl⟩ | ⟨-, -, -, rfl⟩
   · exact hc
@@ -366,11 +366,11 @@ theorem colMkC {C : ConsSch} (hW : C.WF) {A : ArrId} (hA : C.col = some A)
     (hR' : ConsR C R m' (L.on a') (L.getP a') (L.getS a'))
     (hc : ColT2 L A f m a) (hI : consInternM C m ks = some (w, m'))
     (hst : a' = a ∨
-      (L.on a = false ∧ (L.getP a).nodes.size < 2 ^ 27 ∧
-        y = decI (hdW C.tag.toUInt64 0 (UInt64.ofNat (L.getP a).nodes.size)) ∧
+      (L.on a = false ∧ (L.getP a).nodes.size < capS wide ∧
+        y = decI (hdS C.tag C.wide 0 (UInt64.ofNat (L.getP a).nodes.size)) ∧
         a' = L.setP a ((L.getP a).push key d y)) ∨
-      (L.on a = true ∧ (L.getS a).nodes.size < 2 ^ 27 ∧
-        y = decI (hdW C.tag.toUInt64 1 (UInt64.ofNat (L.getS a).nodes.size)) ∧
+      (L.on a = true ∧ (L.getS a).nodes.size < capS wide ∧
+        y = decI (hdS C.tag C.wide 1 (UInt64.ofNat (L.getS a).nodes.size)) ∧
         a' = L.setS a ((L.getS a).push key d y)))
     (hdd : C.colM m (pushArgs C ks (C.qhM m ks)) = f d) : ColT2 L A f m' a' := by
   obtain ⟨-, hAsa, -, -⟩ := hW.col A hA

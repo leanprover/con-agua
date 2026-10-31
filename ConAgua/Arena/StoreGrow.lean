@@ -149,7 +149,7 @@ theorem storeR_kgrow (hS : S.WF) (hfr : RFrame S R hs) (hkf : KFrame S hs KP)
     · simpa using hT1
   generalize htb : (if t = 0 then tbP else tbS) = tb at hTt
   obtain ⟨hc', hcap, hrs, hrec, hsome, hback, hsl, hkp, hrun⟩ := hTt
-  have hc27 : (cntW S m t).toNat ≤ 2 ^ 27 := by rw [hc']; exact hcap
+  have hc27 : (cntW S m t).toNat ≤ 2 ^ 30 := by rw [hc']; exact Nat.le_trans hcap (capS_le _)
   have hbt63 : bt.toNat + (cntW S m t).toNat + 1 < 2 ^ 63 := by
     rw [← hbt]
     rcases le_one_cases t ht with rfl | rfl

@@ -168,8 +168,11 @@ structure ConsSch where
   ca : Word
   P : Word
   S : Word
-  /-- The handle tag (`P = tag · 2^28`, `S = P + 2^27`). -/
+  /-- The handle tag (narrow: `P = tag · 2^26`, `S = P + 2^31`; wide: `P = 2^30`, `S = P + 2^31`,
+  `tag = 4`). -/
   tag : UInt32
+  /-- Wide handles: the expression `app` store (con-ron task #133), whose cap is `2^30`. -/
+  wide : Bool := false
   fname : String
   pname : String
   nk : Nat
@@ -280,10 +283,14 @@ def consFindG (C : ConsSch) : FunDecl :=
 /-- The first variable of the push's growth block. -/
 def gO (C : ConsSch) : Nat := 4 + C.xloc + C.np
 
+/-- The per-tier node capacity, as a word (con-ron's `ENodeView.cap`: `Idx.wideCap = 2^30` for
+the wide store, else `Idx.idxCap = 2^26`; `capS` in `Handle.lean`). -/
+def ConsSch.capW (C : ConsSch) : Word := if C.wide then 1073741824 else 67108864
+
 /-- The template's push variables `t j c k`. -/
 def cpHead (C : ConsSch) : List Stmt :=
   [lblk (t, j, c, k) { c := CTL.u64[⟪C.ca⟫ + t] },
-   lblk (t, j, c, k) { if c >= 134217728 { abort } }]
+   lblk (t, j, c, k) { if c >= ⟪C.capW⟫ { abort } }]
 def cpMid (C : ConsSch) : List Stmt :=
   [mapS (lvF C.np) (if C.w = 1 then lblk (t, j, c, k) { k := c } else lblk (t, j, c, k) { k := c * ⟪C.w⟫ }),
    .set (gO C + 1) (.ld64t C.sa (.var 0) (.const 0))]

@@ -83,7 +83,10 @@ end frame
 /-! ## The schema as a store schema -/
 
 /-- The store schema of a cons table (`StoreLib.lean`). -/
-def ConsSch.sch (C : ConsSch) : Schema := ⟨C.ra, C.sa, C.w, C.ca, C.tag⟩
+def ConsSch.sch (C : ConsSch) : Schema := ⟨C.ra, C.sa, C.w, C.ca, C.tag, C.wide⟩
+
+theorem ConsSch.capW_toNat (C : ConsSch) : C.capW.toNat = capS C.wide := by
+  cases h : C.wide <;> simp [ConsSch.capW, capS, h]
 
 /-- Key word `f` of node `i` of tier `t`: record word `f`, or (a packed record, `kpk`) the low
 (`f = 0`) or high half of record word `0`. -/
@@ -118,8 +121,10 @@ structure ExactOK (C : ConsSch) : Prop where
 /-- **What the generic lemmas need of a cons table.** -/
 structure ConsSch.WF (C : ConsSch) : Prop where
   sch : C.sch.WF
-  P : C.P = hdW C.tag.toUInt64 0 0
-  S : C.S = hdW C.tag.toUInt64 1 0
+  P : C.P = hdS C.tag C.wide 0 0
+  S : C.S = hdS C.tag C.wide 1 0
+  /-- The wide store is the `app` store, tag `4` (a wide word reads tag `4`). -/
+  wtag : C.wide = true → C.tag = 4
   col : ∀ A, C.col = some A → A ≠ C.ra ∧ A ≠ C.sa ∧ A ≠ CTL ∧
     ∀ (m : Mem) (u k x t i : Word), C.hsM (m.set64 (tierA A u) k x) t i = C.hsM m t i
   room : ∀ (m : Mem) (t : Word), pushOKC C m t = true →
@@ -147,21 +152,25 @@ theorem ConsSch.WF.tag16 : C.tag.toUInt64.toNat < 16 := by
   have := hW.sch.tag; simpa [ConsSch.sch] using this
 
 theorem ConsSch.WF.base (t : Word) (ht : t ≤ 1) (i : Word) :
-    (if t = 0 then C.P else C.S) + i = hdW C.tag.toUInt64 t i := by
+    (if t = 0 then C.P else C.S) + i = hdS C.tag C.wide t i := by
   rcases word_le_one t ht with rfl | rfl
-  · simp only [↓reduceIte, hW.P, hdW]; grind
-  · simp only [show (1 : Word) ≠ 0 by decide, ↓reduceIte, hW.S, hdW]; grind
+  · simp only [↓reduceIte, hW.P]; cases C.wide <;> simp only [hdS, hdW, hdA] <;> grind
+  · simp only [show (1 : Word) ≠ 0 by decide, ↓reduceIte, hW.S]
+    cases C.wide <;> simp only [hdS, hdW, hdA] <;> grind
 
-theorem ConsSch.WF.base0 (i : Word) : C.P + i = hdW C.tag.toUInt64 0 i := by
+theorem ConsSch.WF.base0 (i : Word) : C.P + i = hdS C.tag C.wide 0 i := by
   simpa using hW.base 0 (by decide) i
 
-theorem ConsSch.WF.base1 (i : Word) : C.S + i = hdW C.tag.toUInt64 1 i := by
+theorem ConsSch.WF.base1 (i : Word) : C.S + i = hdS C.tag C.wide 1 i := by
   simpa using hW.base 1 (by decide) i
 
 theorem ConsSch.WF.room' (m : Mem) (t : Word) (h : pushOKC C m t = true) : PushRoom C.sch m t := by
   have h1 := hW.room m t h
   simp only [pushOKC, Bool.and_eq_true, decide_eq_true_eq] at h
-  exact ⟨by have := h.1; simp only [cntC] at this; exact this, h1⟩
+  refine ⟨?_, h1⟩
+  have := UInt64.lt_iff_toNat_lt.mp h.1
+  rw [C.capW_toNat] at this
+  exact this
 
 end shape
 
@@ -267,7 +276,7 @@ theorem ConsR.cntS (h : ConsR C R m on P Q) : (cntC C m 1).toNat = Q.nodes.size 
   simpa using h.cnt 1 (by decide)
 
 theorem ConsR.cap (h : ConsR C R m on P Q) (t : Word) (ht : t ≤ 1) :
-    (if t = 0 then P else Q).nodes.size ≤ 134217728 := (h.tier t ht).2.1
+    (if t = 0 then P else Q).nodes.size ≤ capS C.wide := (h.tier t ht).2.1
 
 theorem ConsR.recSize (h : ConsR C R m on P Q) (t : Word) (ht : t ≤ 1) :
     C.w.toNat * (if t = 0 then P else Q).nodes.size ≤ (m.arr64 (tierA C.ra t)).size :=
@@ -281,7 +290,7 @@ theorem ConsR.rec (h : ConsR C R m on P Q) (t : Word) (ht : t ≤ 1) (i : Word) 
 /-- The table maps node `i`'s key to its handle. -/
 theorem ConsR.cons (h : ConsR C R m on P Q) (t : Word) (ht : t ≤ 1) (i : Word) (a : α)
     (hi : (if t = 0 then P else Q).nodes[i.toNat]? = some a) :
-    (if t = 0 then P else Q).cons[a]? = some (decI (hdW C.tag.toUInt64 t i)) :=
+    (if t = 0 then P else Q).cons[a]? = some (decI (hdS C.tag C.wide t i)) :=
   (h.tier t ht).2.2.2.2.1 i a hi
 
 /-- Every entry of the table's map points at a node with its key. -/
@@ -308,32 +317,20 @@ theorem ConsR.cons_hit (hW : C.WF) (h : ConsR C R m on P Q) (t : Word) (ht : t �
   have h6 := h.back t ht a x hc
   have hix_nat : (hix x).toNat = x.idxNat := by
     simp only [hix]
-    have : x.idxNat < 2 ^ 27 := by
-      simp only [Idx.idxNat, Idx.index]; have := UInt32.toNat_mod x.word 134217728
-      simp at this ⊢; omega
+    have : x.idxNat < 2 ^ 32 := by simp only [Idx.idxNat]; exact (Idx.index _).toNat_lt
     simp; omega
   rw [hix_nat] at h6
   refine ⟨h6, ?_⟩
   have h5 := h.cons t ht (hix x) a (by rw [hix_nat]; exact h6)
   rw [hc] at h5
   have hx := Option.some.inj h5
-  have hi : x.idxNat < 2 ^ 27 := by
-    simp only [Idx.idxNat, Idx.index]; simp; omega
-  have ht' : t.toNat ≤ 1 := by rw [UInt64.le_iff_toNat_le] at ht; simpa using ht
-  have hw : x.word.toNat = C.tag.toNat * 268435456 + t.toNat * 134217728 + x.idxNat := by
-    have := congrArg Idx.word hx
-    rw [this]
-    simp only [decI, hdW, hix]
-    simp [UInt64.toNat_toUInt32]
-    omega
-  constructor
-  · apply UInt32.toNat_inj.mp
-    simp only [Idx.tag, UInt32.toNat_div]; simp; omega
-  · simp only [Idx.isPersistent, Idx.tier]
-    have e1 : (x.word / 134217728 % 2 = 0) ↔ (t = 0) := by
-      rw [← UInt32.toNat_inj, ← UInt64.toNat_inj]
-      simp only [UInt32.toNat_mod, UInt32.toNat_div]; simp; omega
-    rw [Bool.eq_iff_iff]; simp only [beq_iff_eq]; exact e1
+  have hi : (hix x).toNat < capS C.wide := by
+    have := (Array.getElem?_eq_some_iff.mp h6).1
+    have := h.cap t ht
+    rw [hix_nat]; omega
+  rw [hx]
+  exact ⟨decI_hdS_tag C.tag C.wide t (hix x) hg ht hi hW.wtag,
+    decI_hdS_pers C.tag C.wide t (hix x) hg ht hi⟩
 
 theorem ConsR.cons_hitP (hW : C.WF) (h : ConsR C R m on P Q) {a : α} {x : Idx k}
     (hc : P.cons[a]? = some x) : P.nodes[x.idxNat]? = some a ∧ x.tag = C.tag ∧ x.isPersistent = true := by
@@ -347,8 +344,8 @@ theorem ConsR.cons_hitS (hW : C.WF) (h : ConsR C R m on P Q) {a : α} {x : Idx k
 
 /-- Both tiers' counts: the sizes, at most `2^27`. -/
 theorem ConsR.sizes (h : ConsR C R m on P Q) :
-    (rdW (m.arr64 CTL) (C.ca + 0)).toNat = P.size ∧ P.size ≤ 134217728 ∧
-      (rdW (m.arr64 CTL) (C.ca + 1)).toNat = Q.size ∧ Q.size ≤ 134217728 := by
+    (rdW (m.arr64 CTL) (C.ca + 0)).toNat = P.size ∧ P.size ≤ capS C.wide ∧
+      (rdW (m.arr64 CTL) (C.ca + 1)).toNat = Q.size ∧ Q.size ≤ capS C.wide := by
   have c0 := h.cnt 0 (by decide); have c1 := h.cnt 1 (by decide)
   have k0 := h.cap 0 (by decide); have k1 := h.cap 1 (by decide)
   simp only [ite_true, show (1 : Word) ≠ 0 by decide, ite_false, cntC] at c0 c1 k0 k1
@@ -582,7 +579,7 @@ def NewOKR (S : Schema) (R : Mem → Word → Word → α → Prop) (hs : Mem �
 
 /-- A field of the new record, or the old. -/
 theorem fld_newRecM (S : Schema) (hS : S.WF) (m : Mem) (t : Word) (vs : List Word) (t' i f : Word)
-    (ht : t ≤ 1) (hc : (cntW S m t).toNat < 2 ^ 27) (ht' : t' ≤ 1) (hi : i.toNat < 2 ^ 27)
+    (ht : t ≤ 1) (hc : (cntW S m t).toNat < 2 ^ 30) (ht' : t' ≤ 1) (hi : i.toNat < 2 ^ 30)
     (hf : f < S.w) (hl : vs.length = S.w.toNat) :
     fld S (newRecM S m t vs) t' i f =
       if t' = t ∧ i = cntW S m t ∧ (S.ad (cntW S m t) f).toNat < (m.arr64 (tierA S.ra t)).size then
@@ -745,13 +742,14 @@ theorem newOK_of {C : ConsSch} (hW : C.WF) (hfr : RFrame C.sch R C.hsM) (m : Mem
       have hfw : UInt64.ofNat g < C.sch.w := by
         rw [UInt64.lt_iff_toNat_lt, UInt64.toNat_ofNat_of_lt' (by simp only [UInt64.size]; omega)]
         have := hE.nkw; simp only [ConsSch.sch] at hw ⊢; omega
-      rw [hfl _ hfw, fld_newRecM C.sch hS m t vs t _ _ ht hroom.1 ht hroom.1 hfw hl]
+      have h30 := Nat.lt_of_lt_of_le hroom.1 (capS_le _)
+      rw [hfl _ hfw, fld_newRecM C.sch hS m t vs t _ _ ht h30 ht h30 hfw hl]
       have hfn : (UInt64.ofNat g).toNat = g :=
         UInt64.toNat_ofNat_of_lt' (by simp only [UInt64.size]; omega)
       have had : (C.sch.ad (cntW C.sch m t) (UInt64.ofNat g)).toNat <
           (m.arr64 (tierA C.sch.ra t)).size := by
         have hr2 := hroom.2
-        rw [C.sch.ad_toNat hS _ _ hroom.1 hfw, hfn]
+        rw [C.sch.ad_toNat hS _ _ h30 hfw, hfn]
         have hwf : g < C.sch.w.toNat := by have := UInt64.lt_iff_toNat_lt.mp hfw; rwa [hfn] at this
         have : (cntW C.sch m t).toNat * C.sch.w.toNat + g <
             C.sch.w.toNat * ((cntW C.sch m t).toNat + 1) := by
@@ -942,9 +940,9 @@ variable (hW : C.WF) (hR : ConsR C R m on P Q)
 include hW hR
 
 omit hW in
-/-- A hit's index is below the tier's node count, so below `2^27`. -/
+/-- A hit's index is below the tier's node count, so below the cap. -/
 theorem probeC_hit_lt (ks : List Word) (h t : Word) (ht : t ≤ 1) (hr : probeC C m ks h t ≠ [])
-    (hh : (probeC C m ks h t).headD 0 ≠ 0) : ((probeC C m ks h t).tail.headD 0).toNat < 2 ^ 27 := by
+    (hh : (probeC C m ks h t).headD 0 ≠ 0) : ((probeC C m ks h t).tail.headD 0).toNat < capS C.wide := by
   have hn0 : 0 < nSl C.sch m t := UInt64.lt_iff_toNat_lt.mpr (by
     have := (lay C.sch m hR.2.2.2.2 t ht).1; simp; omega)
   obtain ⟨-, hs2, hs3, hj⟩ := ((probeC_ok C m ks h t hn0) hr).1 hh
@@ -956,17 +954,18 @@ theorem probeC_hit_lt (ks : List Word) (h t : Word) (ht : t ≤ 1) (hr : probeC 
   rw [UInt64.toNat_add] at h1 h3
   simp only [UInt64.toNat_one] at h1 h3
   have := ((probeC C m ks h t).tail.headD 0).toNat_lt
+  have : (if t = 0 then P else Q).nodes.size ≤ capS C.wide := hcap
   omega
 
-/-- **The handle word of an interning**: tag, tier `t` (`1` only with the scratch flag set),
-index below `2^27`. -/
+/-- **The handle word of an interning**: tag and shape, tier `t` (`1` only with the scratch flag
+set), index below the cap. -/
 theorem consInternM_word {ks : List Word} {w : Word} {m' : Mem}
     (h : consInternM C m ks = some (w, m')) :
-    ∃ t i, t ≤ 1 ∧ i.toNat < 2 ^ 27 ∧ w = hdW C.tag.toUInt64 t i ∧
+    ∃ t i, t ≤ 1 ∧ i.toNat < capS C.wide ∧ w = hdS C.tag C.wide t i ∧
       (rdW (m.arr64 CTL) 1 = 0 → t = 0) := by
-  have hc : ∀ t, pushOKC C m t = true → (cntC C m t).toNat < 2 ^ 27 := fun t hp => by
+  have hc : ∀ t, pushOKC C m t = true → (cntC C m t).toNat < capS C.wide := fun t hp => by
     simp only [pushOKC, Bool.and_eq_true, decide_eq_true_eq] at hp
-    exact hp.1
+    rw [← C.capW_toNat]; exact hp.1
   have b0 := hW.base0
   have b1 := hW.base1
   simp only [consInternM, pushC] at h
@@ -1011,10 +1010,7 @@ theorem consInternM_word {ks : List Word} {w : Word} {m' : Mem}
 theorem consInternM_lt {ks : List Word} {w : Word} {m' : Mem}
     (h : consInternM C m ks = some (w, m')) : w.toNat < 2 ^ 32 := by
   obtain ⟨t, i, ht, hi, rfl, -⟩ := consInternM_word hW hR h
-  rw [hdW_toNat _ _ _ hW.tag16 ht hi]
-  have := hW.tag16
-  have ht' : t.toNat ≤ 1 := ht
-  omega
+  exact hdS_lt _ _ _ _ (by simpa using hW.tag16) ht hi
 
 /-- **With the flag clear, an interned handle word is persistent** (`PW`). -/
 theorem consInternM_pw (hfl : rdW (m.arr64 CTL) 1 = 0) {ks : List Word} {w : Word} {m' : Mem}
@@ -1022,13 +1018,7 @@ theorem consInternM_pw (hfl : rdW (m.arr64 CTL) 1 = 0) {ks : List Word} {w : Wor
   refine ⟨consInternM_lt hW hR h, ?_⟩
   obtain ⟨t, i, ht, hi, rfl, h0⟩ := consInternM_word hW hR h
   obtain rfl := h0 hfl
-  have e := hdW_toNat _ _ _ hW.tag16 ht hi
-  have := hW.tag16
-  apply UInt64.toNat_inj.mp
-  rw [show tierW (hdW C.tag.toUInt64 0 i) = (hdW C.tag.toUInt64 0 i >>> 31) &&& 1 from rfl,
-    bit31_toNat, e]
-  simp only [UInt64.toNat_zero]
-  omega
+  exact hdS_tier _ _ _ _ (by simpa using hW.tag16) ht hi
 
 end word
 
@@ -1041,7 +1031,7 @@ theorem consIntern_correct [LawfulBEq α] (hW : C.WF) (hfr : RFrame C.sch R C.hs
     (hcR : ColFree C R) (L : Lens α δ k) (a : AState)
     (hR : ConsR C R m (L.on a) (L.getP a) (L.getS a))
     (op : AM (Idx k)) (key : α) (pf : Option (Idx k)) (d : δ) (err : CheckError)
-    (hrun : op.run a = protoRun L key C.tag pf d err a)
+    (hrun : op.run a = protoRun L key C.tag C.wide pf d err a)
     (skB : Bool) (hpf : pf = if skB then none else (L.getP a).cons[key]?)
     (ks : List Word) (hsk : (skipC C m ks = 0) = (skB = false)) (hskon : skB = true → L.on a = true)
     (hK : ConsKeyOK C R m ks key) (w : Word) (m' : Mem) (hI : consInternM C m ks = some (w, m')) :
@@ -1097,7 +1087,7 @@ theorem consIntern_correct [LawfulBEq α] (hW : C.WF) (hfr : RFrame C.sch R C.hs
     simp only [Option.some.injEq, Prod.mk.injEq] at hI
     obtain ⟨rfl, rfl⟩ := hI
     have hskB : skB = false := by rw [← hsk]; exact hh0.1
-    have hpf' : pf = some (decI (hdW C.sch.tag.toUInt64 0
+    have hpf' : pf = some (decI (hdS C.sch.tag C.sch.wide 0
         ((probeC C m ks (C.qhM m ks) 0).tail.headD 0))) := by
       rw [hpf, hskB]; exact hit0 (fun e => hn0 ⟨hh0.1, e⟩) hh0.2
     obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ (hrun.trans (by rw [hpf']; rfl))
@@ -1124,7 +1114,7 @@ theorem consIntern_correct [LawfulBEq α] (hW : C.WF) (hfr : RFrame C.sch R C.hs
       simp only [Option.some.injEq, Prod.mk.injEq] at hI
       obtain ⟨rfl, rfl⟩ := hI
       obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _
-        (hrun.trans (protoRun_hitS L key C.tag d err a _ hon (hit1 hn1 hh1)))
+        (hrun.trans (protoRun_hitS L key C.tag C.wide d err a _ hon (hit1 hn1 hh1)))
       refine ⟨hok, by rw [hst]; exact hR, by rw [hres, e1]; rfl⟩
     rename_i hh1
     have hz1 : (probeC C m ks (C.qhM m ks) 1).headD 0 = 0 := by simpa using hh1
@@ -1136,10 +1126,10 @@ theorem consIntern_correct [LawfulBEq α] (hW : C.WF) (hfr : RFrame C.sch R C.hs
         simp only [Option.some.injEq, Prod.mk.injEq] at hI
         obtain ⟨rfl, rfl⟩ := hI
         have hroom := hW.room' m 1 hpk
-        have hsz : (L.getS a).nodes.size < 134217728 := by
-          have := hroom.1; rw [hT1.1] at this; simpa using this
+        have hsz : (L.getS a).nodes.size < capS C.wide := by
+          have := hroom.1; rw [hT1.1] at this; exact this
         obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _
-          (hrun.trans (protoRun_pushS L key C.tag d err a hon (miss1 hn1 hz1) hsz))
+          (hrun.trans (protoRun_pushS L key C.tag C.wide d err a hon (miss1 hn1 hz1) hsz))
         have e : UInt64.ofNat (L.getS a).nodes.size = cntC C m 1 := by
           rw [← hT1.1]; exact UInt64.ofNat_toNat
         rw [e] at hst hres
@@ -1171,10 +1161,10 @@ theorem consIntern_correct [LawfulBEq α] (hW : C.WF) (hfr : RFrame C.sch R C.hs
       simp only [Option.some.injEq, Prod.mk.injEq] at hI
       obtain ⟨rfl, rfl⟩ := hI
       have hroom := hW.room' m 0 hpk
-      have hsz : (L.getP a).nodes.size < 134217728 := by
-        have := hroom.1; rw [hT0.1] at this; simpa using this
+      have hsz : (L.getP a).nodes.size < capS C.wide := by
+        have := hroom.1; rw [hT0.1] at this; exact this
       obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _
-        (hrun.trans (protoRun_pushP L key C.tag d err a hon hsz))
+        (hrun.trans (protoRun_pushP L key C.tag C.wide d err a hon hsz))
       have e : UInt64.ofNat (L.getP a).nodes.size = cntC C m 0 := by
         rw [← hT0.1]; exact UInt64.ofNat_toNat
       rw [e] at hst hres

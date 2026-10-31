@@ -287,6 +287,35 @@ theorem decE_tierW (h : Word) : (decE h).isPersistent = (tierW h == 0) := by
   apply UInt64.toNat_inj.mp
   rw [tierW_toNat', tierW_toNat', mask32_toNat]; omega
 
+/-! ## Decoding a store's handle -/
+
+section hdSdec
+variable (g : UInt32) (wide : Bool) (t i : Word) (hg : g.toNat < 16) (ht : t ≤ 1)
+  (hi : i.toNat < capS wide)
+include hg ht hi
+
+theorem decI_hdS_idx {k : IdxKind} : (decI (hdS g wide t i) : Idx k).idxNat = i.toNat := by
+  have := congrArg UInt64.toNat (hix_hdS (k := k) g wide t i hg ht hi)
+  have hlt : (decI (hdS g wide t i) : Idx k).idxNat < 2 ^ 32 := by
+    simp only [Idx.idxNat]; exact (Idx.index _).toNat_lt
+  simp only [hix, UInt64.toNat_ofNat'] at this
+  omega
+
+theorem decI_hdS_pers {k : IdxKind} :
+    (decI (hdS g wide t i) : Idx k).isPersistent = (t == 0) := by
+  rw [decI_pers _ (hdS_lt g wide t i hg ht hi), hdS_tier g wide t i hg ht hi]
+
+theorem decI_hdS_tag {k : IdxKind} (hwt : wide = true → g = 4) :
+    (decI (hdS g wide t i) : Idx k).tag = g := by
+  rw [decI_tag _ (hdS_lt g wide t i hg ht hi)]
+  cases wide
+  · simp only [hdS, Bool.false_eq_true, ↓reduceIte]
+    rw [hdW_tag _ t i (by simpa using hg) ht (by simpa [capS] using hi)]; simp
+  · simp only [hdS, ↓reduceIte]
+    rw [hdA_tag t i ht (by simpa [capS] using hi), hwt rfl]; rfl
+
+end hdSdec
+
 /-! ## Tags of expression handles (`decE`, the `ETag` constants) -/
 
 theorem decE_tag (h : Word) (hh : h.toNat < 2 ^ 32) : (decE h).tag = (tagW h).toUInt32 :=

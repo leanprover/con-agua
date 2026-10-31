@@ -234,9 +234,9 @@ callee's facts at the cleared flags (`hrun`, `hok`, `hR₁`, `hres`, the frame `
 twin's equation `heq`, the persistent interning `opP` succeeds at `a` with the flags put back,
 and the relation holds after the flag word is restored. -/
 theorem pi_lens {β δ : Type} {k : IdxKind} [BEq β] [Hashable β] {L : Lens β δ k}
-    {op opP : AM (Idx k)} {key : β} {tag : UInt32} {pf : Option (Idx k)} {d : δ}
+    {op opP : AM (Idx k)} {key : β} {tag : UInt32} {wide : Bool} {pf : Option (Idx k)} {d : δ}
     {err : CheckError} {A : List TieredArray} {C : List Word} {m m₁ : Mem} {a : AState} {r : Word}
-    (hD : ArenaD m a) (hrun : op.run (onA false a) = protoRun L key tag pf d err (onA false a))
+    (hD : ArenaD m a) (hrun : op.run (onA false a) = protoRun L key tag wide pf d err (onA false a))
     (hok : AM.ok op (onA false a)) (hR₁ : ArenaR m₁ (AM.st op (onA false a)))
     (hres : AM.res op (onA false a) = decI r) (hf : MemFrame A C (m.set64 CTL 1 0) m₁)
     (hA : ∀ b ∈ A, b.arr < 42 ∨ 46 < b.arr)

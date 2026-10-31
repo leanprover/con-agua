@@ -22,15 +22,15 @@ variable {α : Type} [BEq α] [Hashable α]
 
 /-- The run of `protoRun`: a hit (state unchanged), or an append to the tier the store is in,
 returning the handle of the new node. -/
-theorem protoRun_cases (L : Lens α UInt64 .expr) (key : α) (tag : UInt32) (pf : Option EIdx)
+theorem protoRun_cases (L : Lens α UInt64 .expr) (key : α) (tag : UInt32) (wide : Bool) (pf : Option EIdx)
     (d : UInt64) (err : CheckError) (a a' : AState) (y : EIdx)
-    (h : protoRun L key tag pf d err a = .ok (y, a')) :
+    (h : protoRun L key tag wide pf d err a = .ok (y, a')) :
     a' = a ∨
-    (L.on a = false ∧ (L.getP a).nodes.size < 2 ^ 27 ∧
-      y = decI (hdW tag.toUInt64 0 (UInt64.ofNat (L.getP a).nodes.size)) ∧
+    (L.on a = false ∧ (L.getP a).nodes.size < capS wide ∧
+      y = decI (hdS tag wide 0 (UInt64.ofNat (L.getP a).nodes.size)) ∧
       a' = L.setP a ((L.getP a).push key d y)) ∨
-    (L.on a = true ∧ (L.getS a).nodes.size < 2 ^ 27 ∧
-      y = decI (hdW tag.toUInt64 1 (UInt64.ofNat (L.getS a).nodes.size)) ∧
+    (L.on a = true ∧ (L.getS a).nodes.size < capS wide ∧
+      y = decI (hdS tag wide 1 (UInt64.ofNat (L.getS a).nodes.size)) ∧
       a' = L.setS a ((L.getS a).push key d y)) := by
   unfold protoRun at h
   split at h
@@ -313,11 +313,11 @@ theorem derMk (A : ArrId) (m m₁ m' : Mem) (a a' : AState) (key : α) (d : UInt
     (hT₁ : ConsR C R m₁ a'.store.scratchOn (g a'.store.pers) (g a'.store.scr))
     (hd : DerT2 a g (cP A m)) (hfr : ∀ t, m₁.arr64 (tierA A t) = m.arr64 (tierA A t))
     (hst : a' = a ∨
-      (L.on a = false ∧ (L.getP a).nodes.size < 2 ^ 27 ∧
-        y = decI (hdW C.tag.toUInt64 0 (UInt64.ofNat (L.getP a).nodes.size)) ∧
+      (L.on a = false ∧ (L.getP a).nodes.size < capS wide ∧
+        y = decI (hdS C.tag C.wide 0 (UInt64.ofNat (L.getP a).nodes.size)) ∧
         a' = L.setP a ((L.getP a).push key d y)) ∨
-      (L.on a = true ∧ (L.getS a).nodes.size < 2 ^ 27 ∧
-        y = decI (hdW C.tag.toUInt64 1 (UInt64.ofNat (L.getS a).nodes.size)) ∧
+      (L.on a = true ∧ (L.getS a).nodes.size < capS wide ∧
+        y = decI (hdS C.tag C.wide 1 (UInt64.ofNat (L.getS a).nodes.size)) ∧
         a' = L.setS a ((L.getS a).push key d y)))
     (hres : decE r = y) (hdd : dd = packBFL (bvarOfData d) (fvarOfData d) (lpW d))
     (hput : derPutW A C.ca m₁ (cnt2 m C.ca) r dd = some m') :
@@ -447,16 +447,16 @@ end derMk
 
 /-- The twin's run of an interning, by cases (`protoRun_cases` through the run equation). -/
 theorem AM.proto_cases {α : Type} [BEq α] [Hashable α] (L : Lens α UInt64 .expr) (op : AM EIdx)
-    (key : α) (tag : UInt32) (pf : Option EIdx) (d : UInt64) (err : CheckError) (a : AState)
-    (hrun : op.run a = protoRun L key tag pf d err a) (hok : AM.ok op a) :
+    (key : α) (tag : UInt32) (wide : Bool) (pf : Option EIdx) (d : UInt64) (err : CheckError) (a : AState)
+    (hrun : op.run a = protoRun L key tag wide pf d err a) (hok : AM.ok op a) :
     AM.st op a = a ∨
-    (L.on a = false ∧ (L.getP a).nodes.size < 2 ^ 27 ∧
-      AM.res op a = decI (hdW tag.toUInt64 0 (UInt64.ofNat (L.getP a).nodes.size)) ∧
+    (L.on a = false ∧ (L.getP a).nodes.size < capS wide ∧
+      AM.res op a = decI (hdS tag wide 0 (UInt64.ofNat (L.getP a).nodes.size)) ∧
       AM.st op a = L.setP a ((L.getP a).push key d (AM.res op a))) ∨
-    (L.on a = true ∧ (L.getS a).nodes.size < 2 ^ 27 ∧
-      AM.res op a = decI (hdW tag.toUInt64 1 (UInt64.ofNat (L.getS a).nodes.size)) ∧
+    (L.on a = true ∧ (L.getS a).nodes.size < capS wide ∧
+      AM.res op a = decI (hdS tag wide 1 (UInt64.ofNat (L.getS a).nodes.size)) ∧
       AM.st op a = L.setS a ((L.getS a).push key d (AM.res op a))) :=
-  protoRun_cases L key tag pf d err a _ _ (hrun.symm.trans (AM.run_of_ok op a hok))
+  protoRun_cases L key tag wide pf d err a _ _ (hrun.symm.trans (AM.run_of_ok op a hok))
 
 theorem cP_other {α : Type} [BEq α] [Hashable α] {a : AState} {g : ETables → Tbl α EIdx UInt64}
     {B : ArrId} {m m' : Mem} (hd : DerT2 a g (cP B m)) (h : m'.arr64 B = m.arr64 B)

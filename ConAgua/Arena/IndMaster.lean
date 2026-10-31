@@ -203,9 +203,9 @@ variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m m' : 
 /-- A level interning (a proto run over a level lens) from the stage relation: the expression
 tables, caches and pins are untouched, so `DerR` and `cp` carry over. -/
 theorem stage_of_level {β : Type} [BEq β] [Hashable β] {L : Lens β LDer .level} {op : AM LIdx}
-    {key : β} {tag : UInt32} {pf : Option LIdx} {d : LDer} {err : CheckError}
+    {key : β} {tag : UInt32} {wide : Bool} {pf : Option LIdx} {d : LDer} {err : CheckError}
     {A : List TieredArray} {C : List Word}
-    (hS : StageR dn vis fe m a) (hrun : op.run a = protoRun L key tag pf d err a) (hok : AM.ok op a)
+    (hS : StageR dn vis fe m a) (hrun : op.run a = protoRun L key tag wide pf d err a) (hok : AM.ok op a)
     (hR : ArenaR m' (AM.st op a)) (hres : AM.res op a = decI r) (hf : MemFrame A C m m')
     (hA : ∀ b ∈ A, b.arr < 42 ∨ (54 < b.arr ∧ b.arr < 64)) (hC : ∀ x ∈ C, x.toNat < 64)
     (hset : ∀ t, (DerR m' a → DerR m' (L.setP a t)) ∧ cp (L.setP a t) = cp a)
