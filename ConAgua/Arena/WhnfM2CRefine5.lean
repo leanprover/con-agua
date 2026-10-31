@@ -175,12 +175,12 @@ theorem m2cCtor_ref (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N �
     fun r2 m2 ⟨t2, ht2, hm2, _, hh2, hga⟩ => ?_
   have hm2' : m2 = m := ht2.symm.trans hm2
   rw [hm2']
-  by_cases g2 : r2.headD 0 >>> 28 ≠ 3
+  by_cases g2 : tagW (r2.headD 0) ≠ 3
   · rw [m2cCtorE.k_get_app_fn.arm1 _ _ _ _ _ _ _ _ _ _ g2]
     have ht : ((decE (r2.headD 0)).tag == ETag.const) = false := by
       rw [decE_const_tag _ hh2]; simpa using g2
     exact RefE.ret (by simp only [m2cCtorT, StateT.run_bind, hpr', except_ok_bind, hga, ht]; rfl) hA0
-  have g2' : r2.headD 0 >>> 28 = 3 := by simpa using g2
+  have g2' : tagW (r2.headD 0) = 3 := by simpa using g2
   rw [m2cCtorE.k_get_app_fn.arm2 _ _ _ _ _ _ _ _ _ _ g2']
   have ht : ((decE (r2.headD 0)).tag == ETag.const) = true := by
     rw [decE_const_tag _ hh2]; simpa using g2'

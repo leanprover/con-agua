@@ -26,7 +26,7 @@ again for this record:
 * **Cons table.** Word array `LASLOT`, the same open addressing as `SLOT`/`ASLOT`.
 * **The scratch skip.** `internE (.lam ty body)` does not probe the persistent tier when the
   scratch tier is open and a child is a scratch handle (`EStore.persFindBindMaybe`,
-  `bindHasScratchChild`): bit 27 of `ty | body`.
+  `bindHasScratchChild`): bit 31 of `ty | body`.
 
 Unlike `app`, `internE` at `lam` does **not** go through `internNodeE`: it is `internLamE`
 (`ConRon/Arena/Monad.lean`), which probes with `EStore.findBind ETag.lam ty body`, tests
@@ -62,11 +62,11 @@ def lahash (m : Mem) (t i : Word) : Word :=
 /-! ## The schema -/
 
 /-- The handle word of node `0` of the persistent / scratch `lam` tier (tag `5`). -/
-def lamP : Word := 0x50000000
-def lamS : Word := 0x58000000
+def lamP : Word := 0x14000000
+def lamS : Word := 0x94000000
 
 /-- The `lam` table as a cons schema: two key words `ty body`, stored as the record; the match
-is two word comparisons; the scratch skip is bit 27 of `ty | body`. -/
+is two word comparisons; the scratch skip is bit 31 of `ty | body`. -/
 def lamCS : ConsSch where
   ra := LAREC
   sa := LASLOT
@@ -86,17 +86,17 @@ def lamCS : ConsSch where
   room := condOf (lblk (t, ty, body, j, c) { if len(LAREC⟨t⟩) <= c { skip } })
   recW := [.bin .or (.var 1) (.bin .shl (.var 2) (.const 32))]
   ihash := lblk (ty, body, h) { h := ((⟪fnvBasis⟫ ^ ty) * ⟪fnvPrime⟫ ^ body) * ⟪fnvPrime⟫ }
-  skipW := some (rhsOf (lblk (ty, body, h, sk) { sk := ((ty | body) >> 27) & 1 }))
+  skipW := some (rhsOf (lblk (ty, body, h, sk) { sk := ((ty | body) >> 31) & 1 }))
   mtM m ks t i := lamatchW (m.arr64 (tierA LAREC t)) t i (ks.getD 0 0) (ks.getD 1 0)
   qhM _ ks := lamHashW (ks.getD 0 0) (ks.getD 1 0)
   hsM := lahash
   vsM as := [as.getD 0 0 ||| as.getD 1 0 <<< 32]
   roomM m t c := decide (m.len64 (tierA LAREC t) ≤ c)
-  skM ks := ((ks.getD 0 0 ||| ks.getD 1 0) >>> 27) &&& 1
+  skM ks := ((ks.getD 0 0 ||| ks.getD 1 0) >>> 31) &&& 1
 
 /-! ## `lam_find(t, ty, body, h)`: the probe -/
 
-/-- con-ron: ConRon/Arena/Store.lean:90-91 ConRon.Arena.Tbl.find? -/
+/-- con-ron: ConRon/Arena/Store.lean:94-95 ConRon.Arena.Tbl.find? -/
 def lamFind : FunDecl := consFindG lamCS
 
 /-! ## `lam_push(t, ty, body, j)`: append a node to tier `t`, register it at slot `j` -/
@@ -106,9 +106,9 @@ def lacnt (m : Mem) (t : Word) : Word := rdW (m.arr64 CTL) (28 + t)
 
 /-- `lam_push`'s room checks: the handle index, the record array. -/
 def lapushOK (m : Mem) (t : Word) : Bool :=
-  decide (lacnt m t < (134217728 : Word)) && decide (lacnt m t < m.len64 (tierA LAREC t))
+  decide (lacnt m t < (67108864 : Word)) && decide (lacnt m t < m.len64 (tierA LAREC t))
 
-/-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
+/-- con-ron: ConRon/Arena/Store.lean:97-102 ConRon.Arena.Tbl.push -/
 def lamPush : FunDecl := consPushG lamCS
 
 /-! ## `intern_lam(ty, body)`: hash-cons the `lam` binder with binder type `ty` and body `body`
@@ -120,7 +120,7 @@ scratch tier is open, the append to the tier the store is in. Same L shape as `a
 
 /-- The scratch skip: the scratch tier is open and `ty` or `body` is a scratch handle. -/
 def laskipW (m : Mem) (ty body : Word) : Word :=
-  if rdW (m.arr64 CTL) 1 ≠ 0 then ((ty ||| body) >>> 27) &&& 1 else 0
+  if rdW (m.arr64 CTL) 1 ≠ 0 then ((ty ||| body) >>> 31) &&& 1 else 0
 
 /-- The model of `intern_lam`: the handle and the memory after, or `none` where the L code
 aborts (the library's `consInternM`). -/
@@ -129,8 +129,8 @@ def lainternW (m : Mem) (ty body : Word) : Option (Word × Mem) := consInternM l
 /-- The L FunDecl for `intern_lam`. Named `internLamL`, not `internLam`: con-ron's
 `EStore.internLam` (`ConRon/Arena/Store.lean`) is a sibling name in a different namespace, but the
 `L`-suffix keeps the two visually apart in this file, which `open`s `ConRon.Arena`. -/
--- con-ron: ConRon/Arena/Monad.lean:246-264 ConRon.Arena.internE
--- con-ron: ConRon/Arena/Monad.lean:169-197 ConRon.Arena.internLamE
+-- con-ron: ConRon/Arena/Monad.lean:249-267 ConRon.Arena.internE
+-- con-ron: ConRon/Arena/Monad.lean:172-200 ConRon.Arena.internLamE
 @[l_impl ConRon.Arena.internE ConRon.Arena.internLamE]
 def internLamL : FunDecl := consInternG lamCS
 
@@ -153,12 +153,12 @@ def internLams (m : Mem) : List (Word × Word) → Option (List Word)
     | .error _ => none
 
 /- `(1, 2)`, `(2, 1)`, `(1, 2)`: persistent handles 0, 1, 0. -/
-#guard internLams (lamMem 0) [(1, 2), (2, 1), (1, 2)] == some [0x50000000, 0x50000001, 0x50000000]
+#guard internLams (lamMem 0) [(1, 2), (2, 1), (1, 2)] == some [0x14000000, 0x14000001, 0x14000000]
 
 /- Scratch open: persistent children are probed in the persistent tier (empty), the nodes go to
 the scratch tier; a scratch child (`0x58000000`) skips the persistent probe. -/
-#guard internLams (lamMem 1) [(1, 2), (0x58000000, 1), (1, 2), (0x58000000, 1)] ==
-  some [0x58000000, 0x58000001, 0x58000000, 0x58000001]
+#guard internLams (lamMem 1) [(1, 2), (0x94000000, 1), (1, 2), (0x94000000, 1)] ==
+  some [0x94000000, 0x94000001, 0x94000000, 0x94000001]
 
 /-! ## The specs: the library's, from this table's obligations -/
 

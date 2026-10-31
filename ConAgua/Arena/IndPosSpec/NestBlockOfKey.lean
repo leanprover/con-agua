@@ -304,7 +304,7 @@ def entryK3 (C : Word) (r : List Word) (m2 : Mem) (v : List Word) : Option (List
 def entryK2 (C : Word) (r : List Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r2, m2) =>
-    if r2.headD 0 >>> 28 ≠ 3 then some ([0, 0, 0, 0], m2)
+    if tagW (r2.headD 0) ≠ 3 then some ([0, 0, 0, 0], m2)
     else entryK3 C r m2 (eViewW m2 (r2.headD 0))
 
 def entryK1 (C : Word) : Option (List Word × Mem) → Option (List Word × Mem)
@@ -322,9 +322,9 @@ theorem entryK3_miss (h : v ≠ []) (h2 : v.tail.headD 0 ≠ C) : entryK3 C r m2
 theorem entryK3_hit (h : v ≠ []) (h2 : ¬ v.tail.headD 0 ≠ C) :
     entryK3 C r m2 v = some ([1, r.tail.headD 0, r.tail.tail.headD 0, r.tail.tail.tail.headD 0], m2) := by
   simp only [entryK3]; rw [ite_eq_right h, ite_eq_right h2]
-theorem entryK2_notconst (h : r2.headD 0 >>> 28 ≠ 3) : entryK2 C r (some (r2, m2)) = some ([0, 0, 0, 0], m2) := by
+theorem entryK2_notconst (h : tagW (r2.headD 0) ≠ 3) : entryK2 C r (some (r2, m2)) = some ([0, 0, 0, 0], m2) := by
   simp only [entryK2]; rw [ite_eq_left h]
-theorem entryK2_const (h : ¬ r2.headD 0 >>> 28 ≠ 3) :
+theorem entryK2_const (h : ¬ tagW (r2.headD 0) ≠ 3) :
     entryK2 C r (some (r2, m2)) = entryK3 C r m2 (eViewW m2 (r2.headD 0)) := by
   simp only [entryK2]; rw [ite_eq_right h]
 theorem entryK1_fail (h : r.headD 0 = 0) : entryK1 C (some (r, m1)) = some ([0, 0, 0, 0], m1) := by
@@ -366,7 +366,7 @@ theorem EStore.view_const (st : EStore) (i : EIdx) (ht : i.tag = ETag.const) (v 
 
 def resHeadK : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (r, m1) => some ([if r.headD 0 >>> 28 = 1 then 1 else 0], m1)
+  | some (r, m1) => some ([if tagW (r.headD 0) = 1 then 1 else 0], m1)
 
 def resHeadW (m : Mem) (e : Word) : Option (List Word × Mem) :=
   resHeadK (gafF m [CWF, e])
@@ -378,7 +378,7 @@ def instW : Nat → Mem → Word → Word → Word → Option (List Word × Mem)
   | 0, _, _, _, _ => none
   | n + 1, m, ao, al, e =>
     if al = 0 then some ([1, e], m)
-    else if e >>> 28 ≠ 6 then some ([0, 0], m)
+    else if tagW e ≠ 6 then some ([0, 0], m)
     else instK1 n m ao al (eViewW m e)
 def instK1 (n : Nat) (m : Mem) (ao al : Word) (v : List Word) : Option (List Word × Mem) :=
   if v = [] then none
@@ -395,9 +395,9 @@ end
 section arms
 variable (n : Nat) (m m1 m2 : Mem) (ao al e : Word) (v rb r : List Word)
 theorem instW_nil (h : al = 0) : instW (n + 1) m ao al e = some ([1, e], m) := by simp [instW, h]
-theorem instW_nopi (h : al ≠ 0) (h2 : e >>> 28 ≠ 6) : instW (n + 1) m ao al e = some ([0, 0], m) := by
+theorem instW_nopi (h : al ≠ 0) (h2 : tagW e ≠ 6) : instW (n + 1) m ao al e = some ([0, 0], m) := by
   simp [instW, h, h2]
-theorem instW_pi (h : al ≠ 0) (h2 : ¬ e >>> 28 ≠ 6) :
+theorem instW_pi (h : al ≠ 0) (h2 : ¬ tagW e ≠ 6) :
     instW (n + 1) m ao al e = instK1 n m ao al (eViewW m e) := by simp only [instW]; rw [ite_eq_right h, ite_eq_right h2]
 theorem instK1_ok (h : v ≠ []) : instK1 n m ao al v = instK2 n ao al
     (i1F m [CWF, v.tail.tail.headD 0, rdW (m.arr64 IW) ao, 0]) := by simp [instK1, h]
@@ -424,7 +424,7 @@ theorem instPisWith_spec (p : Prog) (hv : p.lookup "e_view" = some eView)
     intro s₀ ao al e
     simp only [invoke_eq _ hp, callFn, instPisWith]
     sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         eView_spec p hv n, i1F_spec p hi1 n, ih] <;> finish (gen := 20)
 
 theorem ETables.get_forall (t : ETables) (i : EIdx) (ht : i.tag = ETag.forallE) (v : ENodeView)
@@ -534,7 +534,7 @@ theorem closeTelescope_spec (n : Nat) : ∀ (s₀ : St) (dO dl i body : Word),
     intro s₀ dO dl i body
     simp only [invoke_eq _ hp, callFn, closeTelescope]
     sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         abF_spec p hab n, mkForall_spec p hd hpf hpp hpi hmk n, ih] <;>
       finish (gen := 20)
 

@@ -13,10 +13,22 @@ equation over tags and projections (`isCtorApp_eq`, `litToCtorIfNat_eq`,
 `∀`-shaped posts restated as named answers (`leafGuard_specA`,
 `projAnsAt`, `IProjEntry.fireOk_specA`).
 -/
-import ConRon.Bridge.Core.Walks.Stuck
+module
+
 import ConRon.Bridge.Core.Walks.ProjLit
-import ConRon.Bridge.ExprOps.Guards
+public import ConRon.Bridge.ExprOps.Guards
 import ConRon.Bridge.ExprOps.Ranges
+import ConRon.Bridge.Core.Walks.Eta
+import ConRon.Bridge.Core.Walks.Nat
+import ConRon.Bridge.Core.Walks.Proj
+import ConRon.Bridge.ExprOps.Spine
+import ConRon.Bridge.Core.Memo
+import ConRon.Bridge.Specs
+public import ConRon.Bridge.Grind
+import ConRon.Bridge.GrindAttr
+public import ConRon.Arena.Core
+
+public section
 
 namespace ConRon.Bridge.Core
 
@@ -148,7 +160,7 @@ theorem looseBVarsBoundedFast_specC (fuel k : Nat) (s₀ : AState) (e : EIdx)
 
 /-- con-leche: none — the leaf guard's answer at the base's denotation (a
 named predicate on the denotation term). -/
-def LeafAns (st : EStore) (fab : EIdx) (r : Bool) : Option Expr → Prop
+@[expose] def LeafAns (st : EStore) (fab : EIdx) (r : Bool) : Option Expr → Prop
   | some eb => RelV (ExprOps.leavesSubSpec (Expr.fvarLeaves eb)) st fab r
   | none => True
 

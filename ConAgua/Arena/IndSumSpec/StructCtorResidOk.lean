@@ -119,7 +119,7 @@ theorem srW_spec (k : Nat) (s₀ : St) (T lo ll nP o nIdx cbody : Word) :
   | zero => vcgen [exec] <;> grind
   | succ k =>
     sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
         plW_spec p ha hc hsc hg hpf hpp hip hplg hpl hil k, internConst_spec p hcf hcp hic k,
         gafF_spec p had k, gaaF_spec p had k,
         psAtW_spec p ha hc hsc hbf hbp hib hpg hps k, slEq_spec p heq k] <;>

@@ -58,7 +58,7 @@ l_model installValueGuards_specE (p : Prog) (hP : CvgProg p)
   fns [hP.ivg ↦ installValueGuardsE]
   specs [cvLps_specW p hP.alloc hP.copy hP.eti hP.lps n, lbbF_spec p hP.bvb n, hffF_spec p hP.hf n]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
   heartbeats 400000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
@@ -164,7 +164,7 @@ l_model checkThmVal_specE (p : Prog) (hV : ValProg p)
   fns [hV.tv ↦ checkThmValE]
   specs [pinWord_specW p hV.cvg.pin n, callW_spec p n "env_push"]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
   heartbeats 400000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
@@ -326,7 +326,7 @@ l_model checkValueGroup_specE (p : Prog) (hP : CvgProg p)
   fns [hP.cvg ↦ checkValueGroupE]
   specs [iwReset_specW p hP.reset n, pinWord_specW p hP.pin n, callW_spec p n "lvl_eq_c"]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
   unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 

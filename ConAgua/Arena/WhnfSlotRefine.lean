@@ -137,7 +137,7 @@ theorem whnf_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (s₀ : St) (a₀ : ASt
   have heb := hS.core.eb1
   have hkey : ((mode >>> 1) &&& 1) <<< 32 = genW 0 eb := ebKey_eq mode eb hs.eb_mode
   simp only [whnfE]
-  by_cases hst : e >>> 28 = 2 ∨ e >>> 28 = 1 ∨ e >>> 28 = 5 ∨ e >>> 28 = 6 ∨ e >>> 28 = 8
+  by_cases hst : tagW e = 2 ∨ tagW e = 1 ∨ tagW e = 5 ∨ tagW e = 6 ∨ tagW e = 8
   · rw [ite_eq_left hst]
     have ht : whnfStuckTag (decE e) = true := by rw [whnfStuck_iff e he]; simpa using hst
     exact RefE.ret (knot_whnf_stuck _ fe F' d.toNat _ a₀ ht) (CorePost.ret hS rfl he)

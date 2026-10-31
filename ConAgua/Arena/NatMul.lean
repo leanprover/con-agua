@@ -90,7 +90,7 @@ def rowLoop : Stmt := lblk (oa, la, ob, lb, top, n, i, j, c, x, y, t, pt, pb) {
   }
 }
 
-/-- con-ron: ConRon/Arena/Core.lean:994-1035 ConRon.Arena.natOpResult -/
+/-- con-ron: ConRon/Arena/Core.lean:999-1040 ConRon.Arena.natOpResult -/
 @[l_impl ConRon.Arena.natOpResult]
 def natMul : FunDecl := lfn (oa, la, ob, lb) locals (top, n, i, j, c, x, y, t, pt, pb) {
   top := CTL.u64[0];

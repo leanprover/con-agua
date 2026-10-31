@@ -49,7 +49,7 @@ theorem nestArity_spec (p : Prog) (hl : NaLook p) (n : Nat) (s₀ : St) (vis c :
     ⦃fun r s' => LocEq s' s₀ ∧ naW n s₀.mem vis c = some (r, s'.mem); ⊤⦄ := by
   simp only [invoke_eq _ hl.hp, callFn, nestArityL]
   sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       envFind_specW p hl.hx hl.hg hl.hf n,
       piBinders_spec p hl.ha hl.hc hl.hv hl.hs hl.hpb n] <;>
     finish (gen := 20) [naW, rdW_eq, List.getD_cons_zero, List.getD_cons_succ]
@@ -178,7 +178,7 @@ theorem dcGo_spec (p : Prog) (hf : HfF p) (hp : p.lookup "nest_ds_closed_go" = s
     intro s₀ hi off l
     simp only [invoke_eq _ hp, callFn, nestDsClosedGoL]
     sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         fvbF_spec p hf n, ih] <;>
       finish (gen := 20) [rdW_eq]
 
@@ -189,7 +189,7 @@ theorem dc_spec (p : Prog) (hf : HfF p) (hh : p.lookup "nest_ctx_hi_at" = some n
     ⦃fun r s' => LocEq s' s₀ ∧ dcW n s₀.mem ctx off l = some ([r.headD 0], s'.mem); ⊤⦄ := by
   simp only [invoke_eq _ hp, callFn, nestDsClosedL]
   sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
       nestCtxHiAt_specE p hh n, dcGo_spec p hf hg n] <;>
     finish (gen := 20) [dcW]
 
@@ -293,7 +293,7 @@ theorem nestWalkStack_spec (p : Prog) (hl : DcLook p)
     ⦃fun r s' => LocEq s' s₀ ∧ nwsW n s₀.mem ctx off l po pl = some (r, s'.mem); ⊤⦄ := by
   simp only [invoke_eq _ hp, callFn, nestWalkStackL]
   sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
       dc_spec' p hl.hf hl.hh hl.hg hl.hp n] <;>
     finish (gen := 20) [nwsW]
 
@@ -356,12 +356,12 @@ end census
 section arms
 variable (k : Nat) (m m1 : Mem) (no nl lo hi n e r : Word) (v : List Word)
 theorem pdoW_zero (h : n = 0) : pdoW (k + 1) m no nl lo hi n e = some ([0], m) := by simp [pdoW, h]
-theorem pdoW_notpi (h : ¬ n = 0) (h6 : e >>> 28 ≠ 6) : pdoW (k + 1) m no nl lo hi n e = some ([0], m) := by
+theorem pdoW_notpi (h : ¬ n = 0) (h6 : tagW e ≠ 6) : pdoW (k + 1) m no nl lo hi n e = some ([0], m) := by
   simp [pdoW, h, h6]
-theorem pdoW_empty (h : ¬ n = 0) (h6 : ¬ e >>> 28 ≠ 6) (hv : eViewW m e = []) :
+theorem pdoW_empty (h : ¬ n = 0) (h6 : ¬ tagW e ≠ 6) (hv : eViewW m e = []) :
     pdoW (k + 1) m no nl lo hi n e = none := by
   simp only [pdoW]; rw [ite_eq_right h, ite_eq_right h6, ite_eq_left hv]
-theorem pdoW_pi (h : ¬ n = 0) (h6 : ¬ e >>> 28 ≠ 6) (hv : eViewW m e ≠ []) : pdoW (k + 1) m no nl lo hi n e =
+theorem pdoW_pi (h : ¬ n = 0) (h6 : ¬ tagW e ≠ 6) (hv : eViewW m e ≠ []) : pdoW (k + 1) m no nl lo hi n e =
     pdoK1 k no nl lo hi n (eViewW m e) (noConstWf k m no nl lo hi ((eViewW m e).tail.headD 0)) := by
   simp only [pdoW]; rw [ite_eq_right h, ite_eq_right h6, ite_eq_right hv]
 theorem pdoK1_hit (h : r ≠ 0) : pdoK1 k no nl lo hi n v (some (r, m1)) = some ([1], m1) := by
@@ -383,7 +383,7 @@ theorem piDomsOcc_spec (p : Prog) (hl : NoLook p) (hp : p.lookup "pi_doms_occ" =
     intro s₀ no nl lo hi n e
     simp only [invoke_eq _ hp, callFn, piDomsOccL]
     sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
         eView_spec p hl.hv k, nestOcc_spec' p hl k, ih] <;>
       finish (gen := 20)
 
@@ -407,14 +407,14 @@ theorem pdoW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis no nl lo 
       exact ⟨false, a, mp, rfl, hS, IWGrow.refl _, rfl, hM, MFr.refl _ _ _⟩
     have hn0 : n.toNat ≠ 0 := fun e' => h0 (UInt64.toNat_inj.mp (by simpa using e'))
     have hsucc : n.toNat = (n.toNat - 1) + 1 := by omega
-    by_cases h6 : e >>> 28 ≠ 6
+    by_cases h6 : tagW e ≠ 6
     · rw [pdoW_notpi (h := h0) (h6 := h6)] at h
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       refine ⟨false, a, mp, ?_, hS, IWGrow.refl _, rfl, hM, MFr.refl _ _ _⟩
       have htag : ¬ (decE e).tag = ETag.forallE := fun h' => h6 ((decE_tag_forallE e he).mp h')
       rw [hsucc, ConRon.Arena.piDomsOcc.eq_2]
       simp [htag]; rfl
-    have hg6 : e >>> 28 = 6 := by simpa using h6
+    have hg6 : tagW e = 6 := by simpa using h6
     have hR := hS.check.arena.base
     by_cases hr : eViewW m e = []
     · rw [pdoW_empty (h := h0) (h6 := h6) (hv := hr)] at h; simp at h

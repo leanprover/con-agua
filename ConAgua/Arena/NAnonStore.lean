@@ -52,7 +52,7 @@ def nahash (_m : Mem) (_t _i : Word) : Word := nahashW
 
 /-- The handle word of node `0` of the persistent / scratch `anonymous` tier (tag `0`). -/
 def naP : Word := 0x00000000
-def naS : Word := 0x08000000
+def naS : Word := 0x80000000
 
 /-- The `nanon` table as a cons schema: no key word, a dummy record word `0`; every node matches;
 no scratch skip. -/
@@ -82,7 +82,7 @@ def nanonCS : ConsSch where
 
 /-! ## `nanon_find(t, h)`: the probe -/
 
-/-- con-ron: ConRon/Arena/Store.lean:90-91 ConRon.Arena.Tbl.find? -/
+/-- con-ron: ConRon/Arena/Store.lean:94-95 ConRon.Arena.Tbl.find? -/
 def nanonFind : FunDecl := consFindG nanonCS
 
 /-! ## `nanon_push(t, j)`: append a node to tier `t`, register it at slot `j` -/
@@ -92,9 +92,9 @@ def nacnt (m : Mem) (t : Word) : Word := rdW (m.arr64 CTL) (34 + t)
 
 /-- `nanon_push`'s room checks: the handle index, the record array. -/
 def napushOK (m : Mem) (t : Word) : Bool :=
-  decide (nacnt m t < (134217728 : Word)) && decide (nacnt m t < m.len64 (tierA NAREC t))
+  decide (nacnt m t < (67108864 : Word)) && decide (nacnt m t < m.len64 (tierA NAREC t))
 
-/-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
+/-- con-ron: ConRon/Arena/Store.lean:97-102 ConRon.Arena.Tbl.push -/
 def nanonPush : FunDecl := consPushG nanonCS
 
 /-! ## `intern_nanon()`: hash-cons the name `anonymous`
@@ -106,7 +106,7 @@ probe, the scratch probe if the scratch tier is open, the append to the tier the
 aborts (the library's `consInternM`). -/
 def nainternW (m : Mem) : Option (Word × Mem) := consInternM nanonCS m []
 
-/-- con-ron: ConRon/Arena/Monad.lean:381-397 ConRon.Arena.internNNode -/
+/-- con-ron: ConRon/Arena/Monad.lean:384-400 ConRon.Arena.internNNode -/
 @[l_impl ConRon.Arena.internNNode]
 def internNAnon : FunDecl := consInternG nanonCS
 
@@ -133,7 +133,7 @@ def internNAnons (m : Mem) : Nat → Option (List Word)
 #guard internNAnons (nanonMem 0) 3 == some [0x00000000, 0x00000000, 0x00000000]
 
 /- Scratch open: the one node goes to the scratch tier (the persistent tier is empty). -/
-#guard internNAnons (nanonMem 1) 2 == some [0x08000000, 0x08000000]
+#guard internNAnons (nanonMem 1) 2 == some [0x80000000, 0x80000000]
 
 /-! ## The specs: the library's, from this table's obligations -/
 

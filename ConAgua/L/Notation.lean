@@ -35,8 +35,11 @@ lfn (b_dummy, j) locals (c) {
 * The node stores' records (`L/TRec.lean`, the stores in `Arena/StoreFields.lean`; lane tieracc):
   `R⟨t, i⟩.f` is field `f` of node `i` of tier `t` of the store `R : L.TRec` (`R⟨t, i⟩` a one-word
   column), `R⟦h⟧.f` / `R⟦h⟧` the node the handle word `h` names, `R⟨t⟩.count` the node count of
-  tier `t`, `⟦h⟧.tier` / `⟦h⟧.idx` a handle's tier bit and index; `R⟨t, i⟩.f := e` writes a field
-  (the store library only).
+  tier `t`, `⟦h⟧.tier` / `⟦h⟧.tag` / `⟦h⟧.idx` / `⟦h⟧.aidx` a handle's tier bit, constructor tag,
+  narrow index, wide (`app`) index and the twin's own index `idxNat` (`⟦h⟧.gidx`, for derived
+  reads; `L/TRec.lean`, "Handle words"); `R⟨t, i⟩.f := e` writes a
+  field (the store library only). `APP⟦h⟧` reads through the wide index, every other store
+  through the narrow one.
 * `⦃x⦄.tier`, `⦃x⦄.idx`, `⦃x⦄.base` are the tier (bit 40), the index (the low 40 bits) and the
   tier's base address (`(x >> 40) << 40`) of a tier-tagged address `x`, and `A⦃x⦄` reads the word
   at the tagged address `x` of the tiered word array `A` (`A⟨⦃x⦄.tier⟩[⦃x⦄.idx]`). The limb
@@ -62,7 +65,7 @@ lfn (b_dummy, j) locals (c) {
   the enclosing ones is an error).
 * Two statements are shorthand for plain ones (`desugar`): `(t, i) := node R⟦h⟧`, the checked
   node read (`t := ⟦h⟧.tier; i := ⟦h⟧.idx; if t != 0 && CTL.u64[1] == 0 { abort };
-  if R⟨t⟩.count <= i { abort }`), and `for j < n { … }`, the counted loop
+  if R⟨t⟩.count <= i { abort }`, with `⟦h⟧.aidx` for `R = APP`), and `for j < n { … }`, the counted loop
   (`while j < n { …; j += 1 }`; the body assigns neither `j` nor `n`, and `L/For.lean` has its
   loop rule).
 -/
@@ -249,15 +252,20 @@ meta partial def transExpr (env : Array Name) : TSyntax `lexpr → MacroM Term
     `(L.TRec.cntE $r $(← transExpr env t))
   | `(lexpr| $r:ident⟦$h:lexpr⟧.$f:ident) => do
     let h ← transExpr env h
-    `(L.TRec.ld $r (L.tierE $h) (L.idxE $h) $(trecField r f))
+    if r.getId == `APP then `(L.TRec.ld $r (L.tierE $h) (L.idxAE $h) $(trecField r f))
+    else `(L.TRec.ld $r (L.tierE $h) (L.idxE $h) $(trecField r f))
   | `(lexpr| $r:ident⟦$h:lexpr⟧) => do
     let h ← transExpr env h
-    `(L.TRec.ld $r (L.tierE $h) (L.idxE $h) 0)
+    if r.getId == `APP then `(L.TRec.ld $r (L.tierE $h) (L.idxAE $h) 0)
+    else `(L.TRec.ld $r (L.tierE $h) (L.idxE $h) 0)
   | `(lexpr| ⟦$h:lexpr⟧.$c:ident) => do
     match c.getId with
     | `tier => `(L.tierE $(← transExpr env h))
+    | `tag => `(L.tagE $(← transExpr env h))
     | `idx => `(L.idxE $(← transExpr env h))
-    | _ => Macro.throwErrorAt c "expected `⟦h⟧.tier` or `⟦h⟧.idx`"
+    | `aidx => `(L.idxAE $(← transExpr env h))
+    | `gidx => `(L.idxGE $(← transExpr env h))
+    | _ => Macro.throwErrorAt c "expected `⟦h⟧.tier`, `⟦h⟧.tag`, `⟦h⟧.idx`, `⟦h⟧.aidx` or `⟦h⟧.gidx`"
   | `(lexpr| $a:ident[$i:lexpr]) => do
     let (arr, k) ← splitArr a
     let i ← transExpr env i
@@ -332,7 +340,7 @@ this function, so a function written with them is the term, and has the models, 
 written without them.
 
 * `(t, i) := node R⟦h⟧` is `t := ⟦h⟧.tier; i := ⟦h⟧.idx; if t != 0 && CTL.u64[1] == 0 { abort };
-  if R⟨t⟩.count <= i { abort }`;
+  if R⟨t⟩.count <= i { abort }` (`⟦h⟧.aidx` for `R = APP`);
 * `for j < n { body }` is `while j < n { body; j += 1 }`.
 
 Other statements are returned unchanged. -/
@@ -340,7 +348,8 @@ meta def desugar (s : TSyntax `lstmt) : MacroM (Array (TSyntax `lstmt)) := withR
   match s with
   | `(lstmt| ($t:ident, $i:ident) := node $r:ident⟦$h:lexpr⟧) =>
     -- built with `mkIdent`: hygiene would rename them, and the accessors compare names
-    let (ctl, tier, idx, cnt) := (mkIdent `CTL.u64, mkIdent `tier, mkIdent `idx, mkIdent `count)
+    let (ctl, tier, cnt) := (mkIdent `CTL.u64, mkIdent `tier, mkIdent `count)
+    let idx := mkIdent (if r.getId == `APP then `aidx else `idx)
     return #[← `(lstmt| $t:ident := ⟦$h⟧.$tier:ident), ← `(lstmt| $i:ident := ⟦$h⟧.$idx:ident),
       ← `(lstmt| if $t:ident != 0 && $ctl:ident[1] == 0 { abort }),
       ← `(lstmt| if $r:ident⟨$t:ident⟩.$cnt:ident <= $i:ident { abort })]

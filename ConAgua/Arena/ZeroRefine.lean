@@ -53,7 +53,7 @@ def zeroLens : Lens ZeroNode LDer .level where
 /-- `internLNode` at a `zero` node is the library's protocol, with no skip. -/
 theorem internLNode_zero_run (a : AState) :
     (internLNode .zero).run a =
-      protoRun zeroLens zeroKey LTag.zero a.store.lss.ls.pers.zeros.cons[zeroKey]?
+      protoRun zeroLens zeroKey LTag.zero false a.store.lss.ls.pers.zeros.cons[zeroKey]?
         (a.store.lss.ls.derOfView .zero) (.native "arena: level constructor array full") a := by
   simp only [internLNode, LStore.find?, LTables.find?, Tbl.find?, LTables.sizeOf, EStore.ls,
     EStore.internLevel, LsStore.internLevel, LStore.intern, LTables.push]
@@ -63,12 +63,12 @@ theorem internLNode_zero_run (a : AState) :
       ↓reduceIte, zeroKey, protoRun, zeroLens] <;>
     (try split) <;> simp_all [withScrZeros, withPersZeros, fail,
       throwThe, MonadExceptOf.throw, StateT.run, set, StateT.set,
-      StateT.lift, bind, Except.bind, pure, Except.pure, StateT.bind, StateT.pure]
+      StateT.lift, bind, Except.bind, pure, Except.pure, StateT.bind, StateT.pure, mkS, capS, Idx.idxCap]
 
 /-! ## The relation between L memory and the arena's `zero` tables -/
 
 /-- The `zero` schema: `ZREC`, `ZSLOT`, one dummy word per node, the counts at `CTL[8 + t]`. -/
-def zeroSch : Schema := ⟨ZREC, ZSLOT, 1, 8, LTag.zero⟩
+def zeroSch : Schema := ⟨ZREC, ZSLOT, 1, 8, LTag.zero, false⟩
 
 theorem zeroSch_wf : zeroSch.WF :=
   ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide⟩
@@ -110,7 +110,7 @@ theorem zeroNewOK (m : Mem) : NewOKR zeroSch ZRecRel zhash m [0] zeroKey zeroHas
 theorem zpushOK_room (m : Mem) (t : Word) (h : zpushOK m t = true) : PushRoom zeroSch m t := by
   simp only [zpushOK, Bool.and_eq_true, decide_eq_true_eq] at h
   have := UInt64.toNat_shiftRight (m.len64 (tierA ZREC t)) 0
-  simp only [PushRoom, cntW, zcnt, zeroSch, len64_eq] at *
+  simp only [PushRoom, Schema.cap, capS, cntW, zcnt, zeroSch, len64_eq] at *
   grind
 
 /-- **The `zero` table's shape.** -/
@@ -118,6 +118,7 @@ theorem zeroCS_wf : zeroCS.WF where
   sch := zeroSch_wf
   P := by decide
   S := by decide
+  wtag h := by simp [zeroCS] at h
   col A h := by simp [zeroCS] at h
   colRoom A h := by simp [zeroCS] at h
   room m t h := (zpushOK_room m t ((zpushOK_eqC m t).trans h)).2
@@ -155,8 +156,8 @@ theorem zintern_hp (hC : ConstT2 zeroLens (fun d : LDer => hpW d = 0) a) (w : Wo
     (hI : zinternW m = some (w, m')) :
     ConstT2 zeroLens (fun d : LDer => hpW d = 0) (AM.st (internLNode .zero) a) := by
   obtain ⟨hok, -, -⟩ := zintern_correct m a hR w m' hI
-  exact constMk zeroLens _ a _ _ _ _ _ hC rfl
-    (AM.proto_casesG zeroLens _ _ _ _ _ _ a (internLNode_zero_run a) hok)
+  exact constMk zeroLens _ a _ _ _ _ _ _ hC rfl
+    (AM.proto_casesG zeroLens _ _ _ _ _ _ _ a (internLNode_zero_run a) hok)
 end intern
 
 end L.Arena

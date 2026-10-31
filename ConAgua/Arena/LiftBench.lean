@@ -56,8 +56,8 @@ def mk2 (f : FnName) (x y : Mem → Option (Word × Mem)) (m : Mem) : Option (Wo
 
 /- A closed term is returned unchanged (the cutoff): `lam (bvar 0) (bvar 0)` is not closed, its
 type is; `forallE (sort u) (bvar 0)` is. -/
-#guard liftCheck (mk2 "mk_forall" (fun m => liftRun "intern_sort" [0x10000000] m) (bv 0)) 5 0
-  (mk2 "mk_forall" (fun m => liftRun "intern_sort" [0x10000000] m) (bv 0))
+#guard liftCheck (mk2 "mk_forall" (fun m => liftRun "intern_sort" [0x04000000] m) (bv 0)) 5 0
+  (mk2 "mk_forall" (fun m => liftRun "intern_sort" [0x04000000] m) (bv 0))
 
 /- `letE (bvar 1) (bvar 0) (app (bvar 2) (bvar 0))` lifted by 1 at 1:
 `letE (bvar 2) (bvar 0) (app (bvar 3) (bvar 0))`. -/
@@ -75,7 +75,7 @@ type is; `forallE (sort u) (bvar 0)` is. -/
 
 /- `proj s 0 (bvar 4)` lifted by 3 at 2: `proj s 0 (bvar 7)`. -/
 #guard liftCheck
-  (fun m => do let (e, m) ← bv 4 m; liftRun "mk_proj" [0x10000000, 0, e] m) 3 2
-  (fun m => do let (e, m) ← bv 7 m; liftRun "mk_proj" [0x10000000, 0, e] m)
+  (fun m => do let (e, m) ← bv 4 m; liftRun "mk_proj" [0x04000000, 0, e] m) 3 2
+  (fun m => do let (e, m) ← bv 7 m; liftRun "mk_proj" [0x04000000, 0, e] m)
 
 end L.Arena

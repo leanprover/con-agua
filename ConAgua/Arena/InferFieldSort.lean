@@ -41,7 +41,7 @@ open ConLeche
 /-- `inferProj`'s propositional-structure test: `1` iff the field's sort `fs`, its level parameters
 (the `EREC` name slice `(po, pl)`) substituted by the universe arguments `us`, is equivalent to
 `zero` (`some true`). -/
--- con-ron: ConRon/Arena/Core.lean:2694-2736 ConRon.Arena.inferProj
+-- con-ron: ConRon/Arena/Core.lean:2699-2741 ConRon.Arena.inferProj
 @[l_impl ConRon.Arena.inferProj]
 def fieldSortZeroL : FunDecl := lfn (po, pl, us, fs) locals (o, k, x, z, r) {
   (o, k) := call ls_node(us);
@@ -95,7 +95,7 @@ theorem fieldSortZero_spec (p : Prog) (hp : FieldSortZeroProg p) (n : Nat) (s₀
   rw [invoke_eq _ hp.fsz]
   simp only [callFn, fieldSortZeroL]
   sym only [lang_grind, arena_grind, level_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, st64, lsNode_spec p hp.lsn n,
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, st64, lsNode_spec p hp.lsn n,
       lvSubstL_spec EREC POOL p hp.lookup hp.lv.node hp.lv.alloc hp.substl n,
       lhMk_spec p hp.lv.alloc n, lvEquiv_spec p hp.lv hp.equiv n] <;>
     finish (gen := 20) [fszW, fszK₁_some, fszK₂_some, fszK₃_some]

@@ -26,7 +26,7 @@ The arena's `app` constructor is a `Tbl AppNode EIdx UInt64` per tier, `AppNode 
   per tier, the key word the key itself (an exact table), linear probing from `homeW`.
 * **The scratch skip.** `internE (.app f a)` does not probe the persistent tier when the scratch
   tier is open and a child is a scratch handle (`EStore.persFindMaybe`,
-  `eViewHasScratchChild`): bit 27 of `f | a`.
+  `eViewHasScratchChild`): bit 31 of `f | a`.
 
 The functions `app_find(t, f, a, h)` (the probe, the match inline: two half-word comparisons),
 `app_push(t, f, a, j)` and `intern_app(f, a)` are the cons-table library's templates
@@ -56,10 +56,10 @@ def amatchW (r : Array Word) (_t i f a : Word) : Bool :=
 
 /-- The handle word of node `0` of the persistent / scratch `app` tier (tag `4`). -/
 def appP : Word := 0x40000000
-def appS : Word := 0x48000000
+def appS : Word := 0xC0000000
 
 /-- The `app` table as a cons schema: two key words `f a`, packed into the record word; the match compares
-its two halves; the scratch skip is bit 27 of `f | a`. -/
+its two halves; the scratch skip is bit 31 of `f | a`. Its handles are wide (con-ron task #133). -/
 def appCS : ConsSch where
   ra := AREC
   sa := ASLOT
@@ -68,6 +68,7 @@ def appCS : ConsSch where
   P := appP
   S := appS
   tag := 4
+  wide := true
   fname := "app_find"
   pname := "app_push"
   nk := 2
@@ -79,17 +80,17 @@ def appCS : ConsSch where
   room := condOf (lblk (t, f, a, j, c) { if len(AREC⟨t⟩) <= c { skip } })
   recW := [.bin .or (.var 1) (.bin .shl (.var 2) (.const 32))]
   ihash := lblk (f, a, h) { h := ((⟪fnvBasis⟫ ^ f) * ⟪fnvPrime⟫ ^ a) * ⟪fnvPrime⟫ }
-  skipW := some (rhsOf (lblk (f, a, h, sk) { sk := ((f | a) >> 27) & 1 }))
+  skipW := some (rhsOf (lblk (f, a, h, sk) { sk := ((f | a) >> 31) & 1 }))
   mtM m ks t i := amatchW (m.arr64 (tierA AREC t)) t i (ks.getD 0 0) (ks.getD 1 0)
   qhM _ ks := appHashW (ks.getD 0 0) (ks.getD 1 0)
   hsM := ahash
   vsM as := [as.getD 0 0 ||| as.getD 1 0 <<< 32]
   roomM m t c := decide (m.len64 (tierA AREC t) ≤ c)
-  skM ks := ((ks.getD 0 0 ||| ks.getD 1 0) >>> 27) &&& 1
+  skM ks := ((ks.getD 0 0 ||| ks.getD 1 0) >>> 31) &&& 1
 
 /-! ## `app_find(t, f, a, h)`: the probe -/
 
-/-- con-ron: ConRon/Arena/Store.lean:90-91 ConRon.Arena.Tbl.find? -/
+/-- con-ron: ConRon/Arena/Store.lean:94-95 ConRon.Arena.Tbl.find? -/
 def appFind : FunDecl := consFindG appCS
 
 /-! ## `app_push(t, f, a, j)`: append a node to tier `t`, register it at slot `j` -/
@@ -99,9 +100,9 @@ def acnt (m : Mem) (t : Word) : Word := rdW (m.arr64 CTL) (4 + t)
 
 /-- `app_push`'s room checks: the handle index, the record array. -/
 def apushOK (m : Mem) (t : Word) : Bool :=
-  decide (acnt m t < (134217728 : Word)) && decide (acnt m t < m.len64 (tierA AREC t))
+  decide (acnt m t < (1073741824 : Word)) && decide (acnt m t < m.len64 (tierA AREC t))
 
-/-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
+/-- con-ron: ConRon/Arena/Store.lean:97-102 ConRon.Arena.Tbl.push -/
 def appPush : FunDecl := consPushG appCS
 
 /-! ## `intern_app(f, a)`: hash-cons the `app` node with children `f` and `a`
@@ -112,14 +113,14 @@ scratch tier is open, the append to the tier the store is in. -/
 
 /-- The scratch skip: the scratch tier is open and `f` or `a` is a scratch handle. -/
 def askipW (m : Mem) (f a : Word) : Word :=
-  if rdW (m.arr64 CTL) 1 ≠ 0 then ((f ||| a) >>> 27) &&& 1 else 0
+  if rdW (m.arr64 CTL) 1 ≠ 0 then ((f ||| a) >>> 31) &&& 1 else 0
 
 /-- The model of `intern_app`: the handle and the memory after, or `none` where the L code
 aborts (the library's `consInternM`). -/
 def ainternW (m : Mem) (f a : Word) : Option (Word × Mem) := consInternM appCS m [f, a]
 
-/-- con-ron: ConRon/Arena/Monad.lean:246-264 ConRon.Arena.internE
-con-ron: ConRon/Arena/Monad.lean:218-244 ConRon.Arena.internNodeE -/
+/-- con-ron: ConRon/Arena/Monad.lean:249-267 ConRon.Arena.internE
+con-ron: ConRon/Arena/Monad.lean:221-247 ConRon.Arena.internNodeE -/
 @[l_impl ConRon.Arena.internE ConRon.Arena.internNodeE]
 def internApp : FunDecl := consInternG appCS
 
@@ -144,9 +145,9 @@ def internApps (m : Mem) : List (Word × Word) → Option (List Word)
 #guard internApps (appMem 0) [(1, 2), (2, 1), (1, 2)] == some [0x40000000, 0x40000001, 0x40000000]
 
 /- Scratch open: persistent children are probed in the persistent tier (empty), the nodes go to
-the scratch tier; a scratch child (`0x48000000`) skips the persistent probe. -/
-#guard internApps (appMem 1) [(1, 2), (0x48000000, 1), (1, 2), (0x48000000, 1)] ==
-  some [0x48000000, 0x48000001, 0x48000000, 0x48000001]
+the scratch tier; a scratch child (`0xC0000000`) skips the persistent probe. -/
+#guard internApps (appMem 1) [(1, 2), (0xC0000000, 1), (1, 2), (0xC0000000, 1)] ==
+  some [0xC0000000, 0xC0000001, 0xC0000000, 0xC0000001]
 
 /-! ## The specs: the library's, from this table's obligations -/
 

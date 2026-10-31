@@ -22,7 +22,14 @@ one" — that travels in and out of the walk: `LooseMemoOK`, con-leche's
 `LooseBVarMemoInv` (`StructParts.lean:171-172`) at handle keys, through
 `denoteE`.
 -/
+module
+
 import ConRon.Bridge.Inductives.Rel
+public import ConRon.Bridge.Inductives.Run
+import ConRon.Bridge.ExprOps.Ranges
+import ConRon.Bridge.Specs
+
+public section
 
 namespace ConRon.Bridge.Inductives
 
@@ -249,7 +256,7 @@ theorem structProjPs_eq (nP : Nat) :
   congr 1
   funext k
   congr 1
-  omega
+  grind
 
 /-- con-leche: ConLeche/Kernel/Inductives/StructParts.lean:92-93 structProjPs
 The projection types' parameter spine. -/

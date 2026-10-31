@@ -25,7 +25,12 @@ twin is `arena::inductives::block_tail`.
   `check_block_pass_classes`, the latter "part of" the former); here it is
   one, with the same binds in the same order.
 -/
-import ConRon.Arena.Inductives.GenRec
+module
+
+public import ConRon.Arena.Inductives.GenRec
+public import ConRon.Arena.Inductives.BlockInstall
+
+@[expose] public section
 
 namespace ConRon.Arena
 

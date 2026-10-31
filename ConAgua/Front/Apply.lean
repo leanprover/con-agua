@@ -47,19 +47,19 @@ namespace L.Front
 
 /-! ## `name_get`, `level_get`, `name_fresh`, `level_fresh`, `name_put`, `level_put` -/
 
-/-- con-ron: ConRon/Arena/Frontend/ExportC.lean:113-118 ConRon.Arena.Frontend.StateD.name
+/-- con-ron: ConRon/Arena/Frontend/ExportC.lean:117-122 ConRon.Arena.Frontend.StateD.name
 con-leche: ConLeche/Frontend/Scan/Types.lean:334-336 ConLeche.Frontend.IdTable.get? -/
 def nameGet : FunDecl := tblGetG NID "nsp_find"
 
-/-- con-ron: ConRon/Arena/Frontend/ExportC.lean:120-125 ConRon.Arena.Frontend.StateD.level
+/-- con-ron: ConRon/Arena/Frontend/ExportC.lean:124-129 ConRon.Arena.Frontend.StateD.level
 con-leche: ConLeche/Frontend/Scan/Types.lean:334-336 ConLeche.Frontend.IdTable.get? -/
 def levelGet : FunDecl := tblGetG LID "lsp_find"
 
-/-- con-ron: ConRon/Arena/Frontend/ExportC.lean:147-152 ConRon.Arena.Frontend.StateD.freshName
+/-- con-ron: ConRon/Arena/Frontend/ExportC.lean:151-156 ConRon.Arena.Frontend.StateD.freshName
 con-leche: ConLeche/Frontend/Scan/Types.lean:351-360 ConLeche.Frontend.IdTable.bound -/
 def nameFresh : FunDecl := tblFreshG NID "nsp_find"
 
-/-- con-ron: ConRon/Arena/Frontend/ExportC.lean:154-157 ConRon.Arena.Frontend.StateD.freshLevel
+/-- con-ron: ConRon/Arena/Frontend/ExportC.lean:158-161 ConRon.Arena.Frontend.StateD.freshLevel
 con-leche: ConLeche/Frontend/Scan/Types.lean:351-360 ConLeche.Frontend.IdTable.bound -/
 def levelFresh : FunDecl := tblFreshG LID "lsp_find"
 
@@ -71,7 +71,7 @@ def levelPut : FunDecl := tblPutG LID "lsp_find" "lsp_put"
 
 /-! ## `front_init()` -/
 
-/-- con-ron: ConRon/Arena/Frontend/ExportC.lean:490-499 ConRon.Arena.Frontend.StateD.init -/
+/-- con-ron: ConRon/Arena/Frontend/ExportC.lean:494-503 ConRon.Arena.Frontend.StateD.init -/
 @[l_impl ConRon.Arena.Frontend.StateD.init]
 def frontInit : FunDecl := lfn () locals (h, z) {
   h := call intern_nanon();
@@ -95,7 +95,7 @@ def frontInitW (m : Mem) : Option Mem := initK (putK NID 0 (nainternW m))
 
 /-! ## `apply_nstr(i, pre, o, l)`, `apply_nnum(i, pre, x)` -/
 
-/-- con-ron: ConRon/Arena/Frontend/ExportC.lean:166-178 ConRon.Arena.Frontend.parseNameEntryD -/
+/-- con-ron: ConRon/Arena/Frontend/ExportC.lean:170-182 ConRon.Arena.Frontend.parseNameEntryD -/
 @[l_impl ConRon.Arena.Frontend.parseNameEntryD]
 def applyNStr : FunDecl := lfn (i, pre, o, l) locals (q, z, h) {
   q := call name_get(pre);
@@ -112,7 +112,7 @@ def applyNStrW (m : Mem) (i pre o l : Word) : Option Mem :=
     putK NID i (nsinternW m (tblW m NID pre) o l)
   else none
 
-/-- con-ron: ConRon/Arena/Frontend/ExportC.lean:166-178 ConRon.Arena.Frontend.parseNameEntryD -/
+/-- con-ron: ConRon/Arena/Frontend/ExportC.lean:170-182 ConRon.Arena.Frontend.parseNameEntryD -/
 @[l_impl ConRon.Arena.Frontend.parseNameEntryD]
 def applyNNum : FunDecl := lfn (i, pre, x) locals (q, z, h) {
   q := call name_get(pre);
@@ -131,7 +131,7 @@ def applyNNumW (m : Mem) (i pre x : Word) : Option Mem :=
 
 /-! ## `apply_level(i, k, a, c)` -/
 
-/-- con-ron: ConRon/Arena/Frontend/ExportC.lean:180-189 ConRon.Arena.Frontend.parseLevelEntryD -/
+/-- con-ron: ConRon/Arena/Frontend/ExportC.lean:184-193 ConRon.Arena.Frontend.parseLevelEntryD -/
 @[l_impl ConRon.Arena.Frontend.parseLevelEntryD]
 def applyLevel : FunDecl := lfn (i, k, a, c) locals (u, v, h, z) {
   z := call level_fresh(i);
@@ -184,7 +184,7 @@ def putLoop : Stmt := lblk (vs, ve, top, n, j, pt, pb) {
   for j < n { POOL⟨pt⟩[pb + j] := IN.u8[vs + j] }
 }
 
-/-- con-ron: ConRon/Arena/Frontend/ExportC.lean:166-178 ConRon.Arena.Frontend.parseNameEntryD -/
+/-- con-ron: ConRon/Arena/Frontend/ExportC.lean:170-182 ConRon.Arena.Frontend.parseNameEntryD -/
 def strPut : FunDecl := lfn (vs, ve) locals (top, n, j, pt, pb) {
   if ve < vs { abort };
   if len(IN.u8) < ve { abort };
@@ -240,8 +240,8 @@ handles of names 0‥3 and levels 0‥3 (tag in bits 28‥31, tier bit 27). -/
    ("name_get", [0]), ("name_get", [1]), ("name_get", [2]), ("name_get", [3]),
    ("level_get", [0]), ("level_get", [1]), ("level_get", [2]), ("level_get", [3])] ==
   some [[0], [0, 3], [0], [3, 2], [0], [0], [0], [0], [0],
-    [0], [0x10000000], [0x10000001], [0x20000000],
-    [0], [0x10000000], [0x40000000], [0x20000000]]
+    [0], [0x04000000], [0x04000001], [0x08000000],
+    [0], [0x04000000], [0x10000000], [0x08000000]]
 
 /- A rebound id aborts, an unbound one aborts, an unknown level kind aborts. -/
 #guard (frontRuns frontMem [("front_init", []), ("apply_nnum", [0, 0, 1])]).isNone
@@ -255,7 +255,7 @@ id aborts. -/
    ("apply_nnum", [200, 3000000000000000, 8]), ("apply_nnum", [130, 200, 9]),
    ("apply_nnum", [129, 0, 9]), ("name_get", [3000000000000000]), ("name_get", [200]),
    ("name_get", [130]), ("name_get", [129])] ==
-  some [[0], [0], [0], [0], [0], [0x20000000], [0x20000001], [0x20000002], [0x20000003]]
+  some [[0], [0], [0], [0], [0], [0x08000000], [0x08000001], [0x08000002], [0x08000003]]
 #guard (frontRuns frontMem [("front_init", []), ("apply_nnum", [300, 0, 1]),
   ("apply_nnum", [300, 0, 2])]).isNone
 #guard (frontRuns frontMem [("front_init", []), ("name_get", [300])]).isNone

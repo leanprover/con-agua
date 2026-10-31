@@ -49,12 +49,22 @@ environment clause at all — they are the cheapest statements of the tier and
 the most expensive proofs, because the certificates they check are pinned
 terms the core must run on.
 -/
-import ConRon.Bridge.Checker.Base
-import ConRon.Bridge.Checker.Decl
-import ConRon.Bridge.Checker.Basis
+module
+
+public import ConRon.Bridge.Checker.Basis
 import ConRon.Bridge.Core.Walks.Cached
 import ConLeche.Verify.CheckerSplit
 import ConLeche.Verify.Extend.Inversions
+import ConLeche.Verify.BridgeDecl
+import ConRon.Bridge.Checker.Canon
+import ConRon.Bridge.Checker.Names
+public import ConRon.Bridge.Checker.Hyp
+import ConRon.Bridge.Core.Walks.Nat
+import ConRon.Bridge.ExprOps.Ranges
+import ConRon.Bridge.Specs
+public import ConLeche.Kernel.CheckerSplit
+
+public section
 
 open ConLeche ConRon.Arena
 

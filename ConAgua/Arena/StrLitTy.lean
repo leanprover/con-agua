@@ -46,7 +46,7 @@ def faEqT (ty X Y : EIdx) : AM Bool :=
 
 /-- The L code's tail: the tag test, `e_view`, the comparison. -/
 def faEqW (p : Prog) (n : Nat) (m : Mem) (ty X Y : Word) : Option (Word × Mem) :=
-  if ty >>> 28 ≠ 6 then some (0, m)
+  if tagW ty ≠ 6 then some (0, m)
   else match callW p n "e_view" [ty] m with
     | none => none
     | some (g, m₁) =>
@@ -57,7 +57,7 @@ theorem faEqW_ok {p : Prog} (hp : p.lookup "e_view" = some L.Ind.eView) {n : Nat
     (h : faEqW p n m ty X Y = some (w, m')) :
     (faEqT (decI ty) (decE X) (decE Y)).run a = .ok (w != 0, a) ∧ m' = m ∧ ResH [w] := by
   unfold faEqW at h
-  by_cases g6 : ty >>> 28 ≠ 6
+  by_cases g6 : tagW ty ≠ 6
   · rw [ite_eq_left g6] at h
     simp only [Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl⟩ := h
@@ -68,7 +68,7 @@ theorem faEqW_ok {p : Prog} (hp : p.lookup "e_view" = some L.Ind.eView) {n : Nat
     refine ⟨?_, rfl, by unfold ResH HW; decide⟩
     simp only [faEqT, ht]; rfl
   rw [ite_eq_right g6] at h
-  have g6' : ty >>> 28 = 6 := by simpa using g6
+  have g6' : tagW ty = 6 := by simpa using g6
   cases hc : callW p n "e_view" [ty] m with
   | none => rw [hc] at h; cases h
   | some q =>
@@ -116,7 +116,7 @@ theorem sTy_spec (p : Prog) (f : FnName) (hp : p.lookup f = some stringTyOkL) (n
   rw [invoke_eq _ hp]
   simp only [callFn, stringTyOkL]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       callW_spec p n "str_cv", callW_spec p n "pin_word"] <;>
     finish [sTyW]
 

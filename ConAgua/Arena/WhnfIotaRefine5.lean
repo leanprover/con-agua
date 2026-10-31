@@ -40,7 +40,7 @@ theorem icfParts_spec (p : Prog) (hp : p.lookup "iota_certs_full_parts" = some i
   simp only [callFn, iotaCertsFullPartsL]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt,
-      tcntM, evalE_tierE, evalE_idxE] <;>
+      tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] <;>
     finish [icfPartsW, tierW, idxW]
 
 /-- Model of `spn_get`. -/
@@ -54,7 +54,7 @@ theorem spnGet_spec (p : Prog) (hp : p.lookup "spn_get" = some spnGetL) (n : Nat
   rw [invoke_eq _ hp]
   simp only [callFn, spnGetL]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64] <;>
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64] <;>
     finish [spnGetW, rdW]
 
 
@@ -65,12 +65,15 @@ def evoCnt (g : Word) : Option TRec :=
   else if g = 6 then some FORALL else if g = 7 then some LET else if g = 8 then some LIT
   else if g = 9 then some PROJ else none
 
+/-- The index `expr_view_ok` checks against the count: the wide index for an `app`, else narrow. -/
+def evoIx (h : Word) : Word := if tagW h = 4 then idxA h else idxW h
+
 /-- Model of `expr_view_ok`. -/
 def evoW (m : Mem) (h : Word) : Option Word :=
   if tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
-  else match evoCnt (h >>> 28) with
+  else match evoCnt (tagW h) with
     | none => none
-    | some c => if tcnt m c (tierW h) ≤ idxW h then none else some 0
+    | some c => if tcnt m c (tierW h) ≤ evoIx h then none else some 0
 
 theorem exprViewOk_spec (p : Prog) (hp : p.lookup "expr_view_ok" = some exprViewOkL) (n : Nat)
     (s₀ : St) (h : Word) :
@@ -80,8 +83,8 @@ theorem exprViewOk_spec (p : Prog) (hp : p.lookup "expr_view_ok" = some exprView
   simp only [callFn, exprViewOkL]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt,
-      tcntM, evalE_tierE, evalE_idxE] <;>
-    finish [evoW, evoCnt, tierW, idxW]
+      tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] <;>
+    finish [evoW, evoCnt, evoIx, tierW, idxW]
 
 
 /-- Model of `ctl_get`. -/
@@ -95,7 +98,7 @@ theorem ctlGet_spec (p : Prog) (hp : p.lookup "ctl_get" = some ctlGetL) (n : Nat
   rw [invoke_eq _ hp]
   simp only [callFn, ctlGetL]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64] <;>
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64] <;>
     finish [ctlGetW, rdW]
 
 
@@ -119,83 +122,94 @@ theorem spine_entry (m : Mem) (ao an i : Word) (args : Array EIdx) (hargs : Spin
 theorem evo_view (m : Mem) (a : AState) (hR : ArenaR m a) (h : Word) (hh : HW h) (w : Word)
     (hev : evoW m h = some w) :
     (∃ v, a.store.view (decE h) = some v) ∧
-    (h >>> 28 = 0 → ∃ x, a.store.view (decE h) = some (.bvar x)) ∧
-    (h >>> 28 = 6 → ∃ ty body, a.store.view (decE h) = some (.forallE ty body)) ∧
-    (h >>> 28 ≠ 0 → h >>> 28 ≠ 6 → ∀ v, a.store.view (decE h) = some v →
+    (tagW h = 0 → ∃ x, a.store.view (decE h) = some (.bvar x)) ∧
+    (tagW h = 6 → ∃ ty body, a.store.view (decE h) = some (.forallE ty body)) ∧
+    (tagW h ≠ 0 → tagW h ≠ 6 → ∀ v, a.store.view (decE h) = some v →
       (∀ ty body, v ≠ .forallE ty body) ∧ (∀ x, v ≠ .bvar x)) := by
   simp only [evoW] at hev
   obtain ⟨g1, hev⟩ := of_ite_none hev
-  cases hc : evoCnt (h >>> 28) with
+  cases hc : evoCnt (tagW h) with
   | none => rw [hc] at hev; cases hev
   | some c =>
   rw [hc] at hev
   simp only at hev
-  by_cases g2 : tcnt m c (tierW h) ≤ idxW h
+  by_cases g2 : tcnt m c (tierW h) ≤ evoIx h
   · rw [ite_eq_left g2] at hev; cases hev
-  have hv : viewOK m h c := ⟨g1, UInt64.not_le.mp g2⟩
+  have hvn : tagW h ≠ 4 → viewOK m h c := fun t => ⟨g1, UInt64.not_le.mp (by simpa [evoIx, t] using g2)⟩
+  have hva : tagW h = 4 → ¬ tcnt m c (tierW h) ≤ idxA h := fun t => by simpa [evoIx, t] using g2
   simp only [evoCnt] at hc
-  by_cases t0 : h >>> 28 = 0
+  by_cases t0 : tagW h = 0
   · simp [t0] at hc
     subst hc
+    have hv := hvn (by rw [t0]; decide)
     have := view_bvar m a hR h hh hv t0
     refine ⟨⟨_, this⟩, fun _ => ⟨_, this⟩, fun h6 => by rw [t0] at h6; exact absurd h6 (by decide),
       fun h0 => absurd t0 h0⟩
-  by_cases t1 : h >>> 28 = 1
+  by_cases t1 : tagW h = 1
   · simp [t1] at hc
     subst hc
+    have hv := hvn (by rw [t1]; decide)
     obtain ⟨i, ty, hvw⟩ := view_fvar m a hR h hh hv t1
     refine ⟨⟨_, hvw⟩, fun h0 => absurd h0 t0, fun h6 => by rw [t1] at h6; exact absurd h6 (by decide),
       fun _ _ v hv' => ?_⟩
     rw [hvw] at hv'; cases hv'; exact ⟨fun _ _ => by simp, fun _ => by simp⟩
-  by_cases t2 : h >>> 28 = 2
+  by_cases t2 : tagW h = 2
   · simp [t2] at hc
     subst hc
+    have hv := hvn (by rw [t2]; decide)
     obtain ⟨u, hvw⟩ := view_sort m a hR h hh hv t2
     refine ⟨⟨_, hvw⟩, fun h0 => absurd h0 t0, fun h6 => by rw [t2] at h6; exact absurd h6 (by decide),
       fun _ _ v hv' => ?_⟩
     rw [hvw] at hv'; cases hv'; exact ⟨fun _ _ => by simp, fun _ => by simp⟩
-  by_cases t3 : h >>> 28 = 3
+  by_cases t3 : tagW h = 3
   · simp [t3] at hc
     subst hc
+    have hv := hvn (by rw [t3]; decide)
     obtain ⟨n, us, hvw⟩ := view_const m a hR h hh hv t3
     refine ⟨⟨_, hvw⟩, fun h0 => absurd h0 t0, fun h6 => by rw [t3] at h6; exact absurd h6 (by decide),
       fun _ _ v hv' => ?_⟩
     rw [hvw] at hv'; cases hv'; exact ⟨fun _ _ => by simp, fun _ => by simp⟩
-  by_cases t4 : h >>> 28 = 4
+  by_cases t4 : tagW h = 4
   · simp [t4] at hc
     subst hc
+    have hv : viewOKA m h := ⟨g1, UInt64.not_le.mp (hva t4)⟩
     obtain ⟨hvw, -⟩ := view_app m a hR h hh hv t4
     refine ⟨⟨_, hvw⟩, fun h0 => absurd h0 t0, fun h6 => by rw [t4] at h6; exact absurd h6 (by decide),
       fun _ _ v hv' => ?_⟩
     rw [hvw] at hv'; cases hv'; exact ⟨fun _ _ => by simp, fun _ => by simp⟩
-  by_cases t5 : h >>> 28 = 5
+  by_cases t5 : tagW h = 5
   · simp [t5] at hc
     subst hc
+    have hv := hvn (by rw [t5]; decide)
     obtain ⟨hvw, -⟩ := view_lam m a hR h hh hv t5
     refine ⟨⟨_, hvw⟩, fun h0 => absurd h0 t0, fun h6 => by rw [t5] at h6; exact absurd h6 (by decide),
       fun _ _ v hv' => ?_⟩
     rw [hvw] at hv'; cases hv'; exact ⟨fun _ _ => by simp, fun _ => by simp⟩
-  by_cases t6 : h >>> 28 = 6
+  by_cases t6 : tagW h = 6
   · simp [t6] at hc
     subst hc
+    have hv := hvn (by rw [t6]; decide)
     obtain ⟨hvw, -⟩ := view_forall m a hR h hh hv t6
     exact ⟨⟨_, hvw⟩, fun h0 => absurd t6 (by rw [h0]; decide), fun _ => ⟨_, _, hvw⟩,
       fun _ h6 => absurd t6 h6⟩
-  by_cases t7 : h >>> 28 = 7
+  by_cases t7 : tagW h = 7
   · simp [t7] at hc
     subst hc
+    have hv := hvn (by rw [t7]; decide)
     obtain ⟨hvw, -⟩ := view_let m a hR h hh hv t7
     refine ⟨⟨_, hvw⟩, fun h0 => absurd h0 t0, fun h6 => absurd h6 t6, fun _ _ v hv' => ?_⟩
     rw [hvw] at hv'; cases hv'; exact ⟨fun _ _ => by simp, fun _ => by simp⟩
-  by_cases t8 : h >>> 28 = 8
+  by_cases t8 : tagW h = 8
   · simp [t8] at hc
     subst hc
+    have hv := hvn (by rw [t8]; decide)
     obtain ⟨l, hvw⟩ := view_lit m a hR h hh hv t8
     refine ⟨⟨_, hvw⟩, fun h0 => absurd h0 t0, fun h6 => absurd h6 t6, fun _ _ v hv' => ?_⟩
     rw [hvw] at hv'; cases hv'; exact ⟨fun _ _ => by simp, fun _ => by simp⟩
-  by_cases t9 : h >>> 28 = 9
+  by_cases t9 : tagW h = 9
   · simp [t9] at hc
     subst hc
+    have hv := hvn (by rw [t9]; decide)
     obtain ⟨hvw, -⟩ := view_proj m a hR h hh hv t9
     refine ⟨⟨_, hvw⟩, fun h0 => absurd h0 t0, fun h6 => absurd h6 t6, fun _ _ v hv' => ?_⟩
     rw [hvw] at hv'; cases hv'; exact ⟨fun _ _ => by simp, fun _ => by simp⟩
@@ -213,7 +227,7 @@ l_model icfE_spec (p : Prog) (hp : IotaProg4 p)
   specs [callW_spec p n "inst_list", callW_spec p n "iota_certs_full_parts", callW_spec p n "spn_get",
     callW_spec p n "expr_view_ok", callW_spec p n "ctl_get"]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] unified
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 /-! ### The twin, by arms -/
@@ -325,7 +339,7 @@ def ICFRef (p : Prog) (fE : Prog → Nat → Mem → Word → Word → Word → 
 
 theorem icfForall_ref (p : Prog) (hp : IotaProg4 p) (hil : InstListOK p) (N F : Nat)
     (hA : ∀ N', N = N' + 1 → ICFRef p icfAuxE (fun _ _ _ => True) N' F) :
-    ICFRef p icfForallE (fun h an i => h >>> 28 = 6 ∧ i < an) N F := by
+    ICFRef p icfForallE (fun h an i => tagW h = 6 ∧ i < an) N F := by
   intro hk hnF hn62 s₀ a₀ dn vis fe MM eb mode d h aco acn ao an i acc args hS hm4 hebm hh
     ⟨h6, hi⟩ hacc hargs htop hao
   rw [icfForallE.eq_2]
@@ -426,7 +440,7 @@ theorem icfForall_ref (p : Prog) (hp : IotaProg4 p) (hil : InstListOK p) (N F : 
 
 theorem icfFlush_ref (p : Prog) (hp : IotaProg4 p) (hil : InstListOK p) (N F : Nat)
     (hA : ∀ N', N = N' + 1 → ICFRef p icfAuxE (fun _ _ _ => True) N' F) :
-    ICFRef p icfFlushE (fun h an i => h >>> 28 = 0 ∧ i < an) N F := by
+    ICFRef p icfFlushE (fun h an i => tagW h = 0 ∧ i < an) N F := by
   intro hk hnF hn62 s₀ a₀ dn vis fe MM eb mode d h aco acn ao an i acc args hS hm4 hebm hh
     ⟨h0, hi⟩ hacc hargs htop hao
   rw [icfFlushE.eq_2]
@@ -476,8 +490,8 @@ theorem icfFlush_ref (p : Prog) (hp : IotaProg4 p) (hil : InstListOK p) (N F : N
     (fun _ _ _ h => ⟨h.after, h.res, h.valid⟩) hE
 
 theorem icfAux_ref (p : Prog) (hp : IotaProg4 p) (N F : Nat)
-    (hFo : ∀ N', N = N' + 1 → ICFRef p icfForallE (fun h an i => h >>> 28 = 6 ∧ i < an) N' F)
-    (hFl : ∀ N', N = N' + 1 → ICFRef p icfFlushE (fun h an i => h >>> 28 = 0 ∧ i < an) N' F) :
+    (hFo : ∀ N', N = N' + 1 → ICFRef p icfForallE (fun h an i => tagW h = 6 ∧ i < an) N' F)
+    (hFl : ∀ N', N = N' + 1 → ICFRef p icfFlushE (fun h an i => tagW h = 0 ∧ i < an) N' F) :
     ICFRef p icfAuxE (fun _ _ _ => True) N F := by
   intro hk hnF hn62 s₀ a₀ dn vis fe MM eb mode d h aco acn ao an i acc args hS hm4 hebm hh
     _ hacc hargs htop hao
@@ -489,7 +503,7 @@ theorem icfAux_ref (p : Prog) (hp : IotaProg4 p) (N F : Nat)
       (GrowPost.of_core (CorePost.ret hS rfl (by unfold ResH HW; decide)))
   have hi := Classical.not_not.mp hi
   rw [ite_eq_left hi]
-  by_cases h6 : h >>> 28 = 6
+  by_cases h6 : tagW h = 6
   · rw [ite_eq_left h6]
     cases N with
     | zero => rw [icfForallE.eq_1, icfCheckE.k_defeq.eq_1]; exact RefE.of_cls0 rfl
@@ -499,7 +513,7 @@ theorem icfAux_ref (p : Prog) (hp : IotaProg4 p) (N F : Nat)
       (hFo N' rfl (hk.mono (by omega)) (by omega) (by omega) s₀ a₀ dn vis fe MM eb mode d h aco acn ao
         an i acc args hS hm4 hebm hh ⟨h6, hi⟩ hacc hargs htop hao)
   rw [ite_eq_right h6]
-  by_cases h0 : h >>> 28 = 0
+  by_cases h0 : tagW h = 0
   · rw [ite_eq_left h0]
     cases N with
     | zero => rw [icfFlushE.eq_1, icfCheckE.k_defeq.eq_1]; exact RefE.of_cls0 rfl
@@ -527,8 +541,8 @@ theorem icfAux_ref (p : Prog) (hp : IotaProg4 p) (N F : Nat)
 
 theorem icf_all (p : Prog) (hp : IotaProg4 p) (hil : InstListOK p) (F N : Nat) :
     ICFRef p icfAuxE (fun _ _ _ => True) N F ∧
-    ICFRef p icfForallE (fun h an i => h >>> 28 = 6 ∧ i < an) N F ∧
-    ICFRef p icfFlushE (fun h an i => h >>> 28 = 0 ∧ i < an) N F := by
+    ICFRef p icfForallE (fun h an i => tagW h = 6 ∧ i < an) N F ∧
+    ICFRef p icfFlushE (fun h an i => tagW h = 0 ∧ i < an) N F := by
   induction N with
   | zero =>
     exact ⟨icfAux_ref p hp 0 F (fun _ h => absurd h (by simp)) (fun _ h => absurd h (by simp)),

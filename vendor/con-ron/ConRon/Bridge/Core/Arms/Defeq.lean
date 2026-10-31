@@ -38,9 +38,19 @@ it reaches `quickDefEq`'s ∀ arm on the pair itself (`isDefEqCore_forallE`).
 The λ arm is con-leche's own `defeqLams` (task #342), run level by level by
 the twin as well (`defeqLams_spec`).
 -/
-import ConRon.Bridge.Core.Arms.DefeqLazy
+module
+
+public import ConRon.Bridge.Core.Arms.DefeqLazy
 import ConRon.Bridge.Core.Arms.DefeqStuck
 import ConRon.Bridge.Core.Walks.ProjCore
+import ConRon.Bridge.Core.Walks.Guards
+import ConRon.Bridge.ExprOps.Ranges
+import ConRon.Bridge.Core.Walks.Mono
+import ConRon.Bridge.Core.Memo
+import ConRon.Bridge.Specs
+import ConRon.Bridge.Core.Arms.DefeqPeel -- shake: keep (`#print axioms` names it; no proof term does)
+
+public section
 
 namespace ConRon.Bridge.Core
 

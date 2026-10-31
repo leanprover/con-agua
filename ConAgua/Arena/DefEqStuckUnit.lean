@@ -114,7 +114,7 @@ theorem sut_ref (p : Prog) (n : Nat) (hk : KnotUpTo p n) (F : Nat)
     fun r₂ m₂ _ h₂ => RefE.after_core (w := id) h₂ fun M₂ hS₂ _ => ?_
   have hh2 : HW (r₂.headD 0) := h₂.resOk
   simp only [sutE.k_whnf, isForallE, decH, tag_beq_w _ hh2 6 (by decide) ETag.forallE rfl 6 rfl]
-  by_cases h6 : r₂.headD 0 >>> 28 = 6
+  by_cases h6 : tagW (r₂.headD 0) = 6
   · simp only [h6, decide_true, ↓reduceIte]
     exact RefE.ret rfl (CorePost.ret hS₂ rfl hw0)
   simp only [h6, decide_false, Bool.false_eq_true, ↓reduceIte]
@@ -149,12 +149,12 @@ theorem suh_ref (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (n : Nat)
   subst e1
   dsimp only [suhE.k_get_app_fn]
   generalize r₁.headD 0 = h at hh hgaf
-  by_cases h3 : h >>> 28 ≠ 3
+  by_cases h3 : tagW h ≠ 3
   · rw [ite_eq_left h3]
     exact RefE.ret (suHead_nonconst _ fe _ _ _ a₀ _ hgaf (by rw [decE_tag_const_beq _ hh]; simpa using h3))
       (CorePost.ret hS rfl hw0)
   rw [ite_eq_right h3]
-  have h3' : h >>> 28 = 3 := by simpa using h3
+  have h3' : tagW h = 3 := by simpa using h3
   refine RefE.abort0 (by decide) fun hsc => ?_
   refine RefE.abort0 (by decide) fun hcc => ?_
   have hvo : viewOK s₀.mem h CONST := ⟨hsc, by simpa using hcc⟩

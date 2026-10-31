@@ -120,7 +120,7 @@ theorem reduceOpCvA_specW (hp : p.lookup "reduce_op_cv_a" = some reduceOpCvAL) (
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, pinAt_specW p hpa n,
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, pinAt_specW p hpa n,
         callW_spec p n "rom_cv"] <;>
       finish (gen := 20) [selW]
 
@@ -134,7 +134,7 @@ theorem ofReducePinA_specW (hp : p.lookup "of_reduce_pin_a" = some ofReducePinAL
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, pinAt_specW p hpa n,
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, pinAt_specW p hpa n,
         callW_spec p n "rom_cv"] <;>
       finish (gen := 20) [selW]
 
@@ -148,7 +148,7 @@ theorem reduceDeclPin_specW (hp : p.lookup "reduce_decl_pin" = some reduceDeclPi
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, pinAt_specW p hpa n,
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, pinAt_specW p hpa n,
         callW_spec p n "rom_expr_pin"] <;>
       finish (gen := 20) [selW]
 
@@ -329,7 +329,7 @@ theorem rcv_specW (h : RcvProg p) (n : Nat) (s₀ : St) (c : Word) :
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, pinAt_specW p h.pa n,
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, pinAt_specW p h.pa n,
         callW_spec p n "const_e", internFVar_spec p h.ff h.fp h.fi n] <;>
       finish (gen := 20)
 
@@ -491,7 +491,7 @@ theorem rpg_specW (hb : BvbProg p) (hf : HfF p) (hp : p.lookup "reduce_pin_guard
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
         callW_spec p n "reduce_decl_pin", lbbF_spec p hb n,
         hffF_spec p hf n, hcl n "all_level_params_defined",
         hcl n "consts_resolve_ffast"] <;>

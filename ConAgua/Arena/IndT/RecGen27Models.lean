@@ -33,7 +33,7 @@ l_model cxoE_spec (p : Prog) (P : CxoProg p)
     classMinorSlotE_spec p P.cms n, callW_spec p n "open_pis_at_fvars_f", callW_spec p n "target_ctor_at",
     callW_spec p n "inst_pis_with", callW_spec p n "rec6"]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
   heartbeats 4000000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
@@ -42,7 +42,7 @@ loop's ok half reads the call's array sizes, `callW_keepW`). -/
 l_model cosE_spec (p : Prog) (P : CosProg p)
   fns [P.cos ↦ cosE] specs [callW_spec p n "iw_alloc"]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
   heartbeats 4000000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
@@ -51,7 +51,7 @@ run (`callW_keepW`). -/
 l_model ccsE_spec (p : Prog) (P : CcsProg p)
   fns [P.ccs ↦ ccsE] specs [callW_spec p n "iw_alloc", callW_spec p n "rec2"]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
   heartbeats 4000000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 

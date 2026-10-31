@@ -460,7 +460,7 @@ theorem internSuccN_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe 
   have hfr := sinternW_frame m u _ _ hI
   exact stage_of_level hS (internLNode_succ_run _ a) hok
     (hR.lift_succ _ _ _ _ ⟨hX, sintern_hp m a hR.succ u hu hR.succHp (lvlHPW_ok m a hR u hu) _ _ hI⟩
-      hfr (AM.st_proto succLens _ _ _ _ _ _ a (internLNode_succ_run _ a) hok))
+      hfr (AM.st_proto succLens _ _ _ _ _ _ _ a (internLNode_succ_run _ a) hok))
     hres hfr (by simp [tier1, SREC, SSLOT, SHP]) (by simp) (fun _ => ⟨DerR.lvl, rfl⟩)
     (fun _ => ⟨DerR.lvl, rfl⟩)
     (hS.check.mode.frame hfr (by decide) (by decide))
@@ -602,7 +602,7 @@ theorem constE_specW (p : Prog) (hp : p.lookup "const_e" = some constEL) (n : Na
   rw [invoke_eq _ hp]
   simp only [callFn, constEL]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       callW_spec p n "pin_word", callW_spec p n "intern_const"] <;>
     finish [constEW, ntBW]
 
@@ -686,12 +686,12 @@ end slc
 
 theorem ntRowPW_eq (m : Mem) (w : Word) (hw : w.toNat < 2 ^ 32) (ht : tagW w ≤ 2) :
     rowPW m w = rowP m w := by
-  have h1 := tagW_toNat w
+  have h1 := tagW_toNat_row w
   have h2 := ixW_toNat w hw
   have ht' : rowTag w ≤ 2 := by rw [← h1]; exact UInt64.le_iff_toNat_le.mp ht
   have hix : rowIx w < 2 ^ 30 := by
-    simp only [rowIx]; have : w.toNat % 2 ^ 27 < 2 ^ 27 := Nat.mod_lt _ (by decide)
-    have : w.toNat / 2 ^ 27 % 2 < 2 := Nat.mod_lt _ (by decide)
+    simp only [rowIx]; rw [idxW_toNat_narrow w (rowTag_narrow ht')]
+    have : w.toNat % 2 ^ 26 < 2 ^ 26 := Nat.mod_lt _ (by decide)
     omega
   have h3 : (ixW w + 1).toNat = rowIx w + 1 := by
     rw [UInt64.toNat_add, h2]; simp; omega
@@ -732,7 +732,7 @@ theorem envFind_call {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFE
   have ht2 : tagW w ≤ 2 := by
     have : ¬ (2 : Word).toNat < (tagW w).toNat := fun e => ht (UInt64.lt_iff_toNat_lt.mpr e)
     exact UInt64.le_iff_toNat_le.mpr (by omega)
-  have htag : rowTag w ≤ 2 := by rw [← tagW_toNat]; exact UInt64.le_iff_toNat_le.mp ht2
+  have htag : rowTag w ≤ 2 := by rw [← tagW_toNat_row]; exact UInt64.le_iff_toNat_le.mp ht2
   rw [EnvR.find?_eq hE w hw htag, ← rowCW_eq m w hw ht2]
   by_cases hc : rowCW m w = 0
   · rw [ite_eq_left hc] at hmod; simp only [Option.some.injEq, Prod.mk.injEq] at hmod

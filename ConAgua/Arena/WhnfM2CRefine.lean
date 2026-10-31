@@ -180,7 +180,7 @@ theorem m2cConstView_spec (p : Prog) (hp : p.lookup "m2c_const_view" = some m2cC
   | succ n =>
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt,
-        tcntM, evalE_tierE, evalE_idxE] <;>
+        tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] <;>
       finish [cvwW, tierW, idxW]
 
 /-- Model of `m2c_eta2`. -/
@@ -218,7 +218,7 @@ theorem m2cEta2_spec (p : Prog) (hp : p.lookup "m2c_eta2" = some m2cEta2L) (n : 
       m2cEta2W p n s₀.mem vis d T ec ef to tn ust major = some (r.headD 0, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, m2cEta2L]
-  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+  vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
     callW_spec p n "reserved_contains_w", callW_spec p n "tower_slots_all",
     callW_spec p n "eta_fab_args", callW_spec p n "intern_const", callW_spec p n "mk_app_n",
     callW_spec p n "fab_scope_ok"] <;>
@@ -283,7 +283,7 @@ theorem resContLoop_spec (p : Prog) (k : Nat) (s₀ : St) :
   | succ k ih =>
     rw [exec, step_while (w := resContLoop) rfl]
     sym only [lang_grind, arena_grind] =>
-      vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih] <;>
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih] <;>
       finish [rcLoopW_end, rcLoopW_hit, rcLoopW_cont, rdW]
 
 /-- Model of `reserved_contains`. -/
@@ -298,7 +298,7 @@ theorem reservedContains_spec (p : Prog) (hp : p.lookup "reserved_contains_w" = 
   rw [invoke_eq _ hp, reservedContainsL_eq]
   simp only [callFn]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, fun s₀ => Triple.step_exec (resContLoop_spec p (k + 1) s₀)] <;>
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, fun s₀ => Triple.step_exec (resContLoop_spec p (k + 1) s₀)] <;>
     finish [rcW_m2c, rdW]
 
 /-- The loop's answer: a hit from `j` on, or none. -/

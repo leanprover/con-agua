@@ -36,7 +36,7 @@ l_model crgE_spec (p : Prog) (hp : CruleProg p)
   fns [hp.guards ↦ crgE]
   specs [lbbF_spec p hp.bvb n, hffF_spec p hp.hf n, crfF_spec p hp.hcr n]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
   unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 

@@ -155,7 +155,7 @@ theorem noGo_step (n : Nat) (ih : NoNodeSpec p n) : NoGoSpec p (n + 1) := by
   unfold NoNodeSpec at ih
   intro s₀ no nl lo hi f h
   simp only [invoke_eq _ hgo, callFn, nestOccGo]
-  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rd_spec,
+  vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rd_spec,
     eView_spec p hv n, slContains_spec p hc n, memoFindG_spec noSch p _ hf n,
     memoPutG_spec noSch p _ hput n, ih]
   all_goals subst_vars
@@ -170,7 +170,7 @@ theorem noNode_step (n : Nat) (ih : NoGoSpec p n) : NoNodeSpec p (n + 1) := by
   unfold NoGoSpec at ih
   intro s₀ no nl lo hi f1 g x y z
   simp only [invoke_eq _ hnode, callFn, nestOccNode]
-  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rd_spec,
+  vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rd_spec,
     ih]
   all_goals subst_vars
   all_goals (try simp only [LocEq] at *)

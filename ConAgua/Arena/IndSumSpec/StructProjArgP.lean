@@ -164,7 +164,7 @@ theorem fdrW_spec (hp : p.lookup "field_doms_resolve" = some fieldDomsResolveL) 
     rw [invoke_eq _ hp]
     simp only [callFn, fieldDomsResolveL]
     sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         ftdF_spec0 p hftd n, crfF_spec p hcr n, ih] <;>
       finish (gen := 20)
 
@@ -181,7 +181,7 @@ theorem iarW_spec (hp : p.lookup "idx_args_resolve" = some idxArgsResolveL) (hcr
     rw [invoke_eq _ hp]
     simp only [callFn, idxArgsResolveL]
     sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         crfF_spec p hcr n, ih] <;>
       finish (gen := 20)
 
@@ -238,7 +238,7 @@ theorem spaW_spec (p : Prog) (hd : p.lookup "der_b" = some derB)
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
         internBVar_spec p hpf hpp hib n, mkProj_spec p hd hjf hjp hji hmp n] <;>
       finish [spaW]
 
@@ -318,7 +318,7 @@ theorem psAtW_spec (n : Nat) (s₀ : St) (o nP : Word) :
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
         structPsAtGo_spec p ha hc hsc hpf hpp hib hg n] <;>
       finish
 
@@ -332,7 +332,7 @@ theorem projPsW_spec (hq : p.lookup "struct_proj_ps" = some structProjPsL) (n : 
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
         psAtW_spec p ha hc hsc hpf hpp hib hg hp n] <;>
       finish
 

@@ -234,9 +234,9 @@ callee's facts at the cleared flags (`hrun`, `hok`, `hR₁`, `hres`, the frame `
 twin's equation `heq`, the persistent interning `opP` succeeds at `a` with the flags put back,
 and the relation holds after the flag word is restored. -/
 theorem pi_lens {β δ : Type} {k : IdxKind} [BEq β] [Hashable β] {L : Lens β δ k}
-    {op opP : AM (Idx k)} {key : β} {tag : UInt32} {pf : Option (Idx k)} {d : δ}
+    {op opP : AM (Idx k)} {key : β} {tag : UInt32} {wide : Bool} {pf : Option (Idx k)} {d : δ}
     {err : CheckError} {A : List TieredArray} {C : List Word} {m m₁ : Mem} {a : AState} {r : Word}
-    (hD : ArenaD m a) (hrun : op.run (onA false a) = protoRun L key tag pf d err (onA false a))
+    (hD : ArenaD m a) (hrun : op.run (onA false a) = protoRun L key tag wide pf d err (onA false a))
     (hok : AM.ok op (onA false a)) (hR₁ : ArenaR m₁ (AM.st op (onA false a)))
     (hres : AM.res op (onA false a) = decI r) (hf : MemFrame A C (m.set64 CTL 1 0) m₁)
     (hA : ∀ b ∈ A, b.arr < 42 ∨ 46 < b.arr)
@@ -247,7 +247,7 @@ theorem pi_lens {β δ : Type} {k : IdxKind} [BEq β] [Hashable β] {L : Lens β
     (heq : opP.run a = (op.run (onA false a)).map (fun r => (r.1, onA a.store.scratchOn r.2))) :
     ∃ a', opP.run a = .ok (decI r, a') ∧
       ArenaD (m₁.set64 CTL 1 (rdW (m.arr64 CTL) 1)) a' ∧ cp a' = cp a := by
-  have hcs := AM.st_proto L op key tag pf d err (onA false a) hrun hok
+  have hcs := AM.st_proto L op key tag wide pf d err (onA false a) hrun hok
   have hk : (AM.st op (onA false a)).store.pers = a.store.pers ∧
       (AM.st op (onA false a)).store.scr = a.store.scr ∧ cp (AM.st op (onA false a)) = cp a := by
     rcases hcs with h | ⟨t, h⟩ | ⟨t, h⟩ <;> rw [h]
@@ -328,7 +328,7 @@ theorem piNAnon_rel (m : Mem) (a : AState) (hD : ArenaD m a) (r : Word) (m' : Me
   obtain ⟨hok, hX, hres⟩ := naintern_correct _ (onA false a) hR₀.nanon _ _ hI
   have hf := consInternM_frame nanonCS_wf hI
   have hR₁ := hR₀.lift_nanon _ _ _ _ hX hf
-    (AM.st_proto nanonLens _ _ _ _ _ _ _ (internNNode_anon_run _) hok)
+    (AM.st_proto nanonLens _ _ _ _ _ _ _ _ (internNNode_anon_run _) hok)
   have hpw := consInternM_pw nanonCS_wf hR₀.nanon (by rw [rdW_set64]; simp [hc]) hI
   have hsz : 1 < (s'.mem.arr64 CTL).size := by rw [hf.size]; simpa [size_set64] using hc
   rw [piK_some _ _ _ hsz] at h
@@ -357,7 +357,7 @@ theorem piNNum_rel (m : Mem) (a : AState) (hD : ArenaD m a) (q u : Word) (hq : P
   obtain ⟨hok, hX, hres⟩ := nnintern_correct _ (onA false a) hR₀.nnum q u hq.1 _ _ hI
   have hf := consInternM_frame nnumCS_wf hI
   have hR₁ := hR₀.lift_nnum _ _ _ _ hX hf
-    (AM.st_proto nnumLens _ _ _ _ _ _ _ (internNNode_num_run _ _ _) hok)
+    (AM.st_proto nnumLens _ _ _ _ _ _ _ _ (internNNode_num_run _ _ _) hok)
   have hpw := consInternM_pw nnumCS_wf hR₀.nnum (by rw [rdW_set64]; simp [hc]) hI
   have hsz : 1 < (s'.mem.arr64 CTL).size := by rw [hf.size]; simpa [size_set64] using hc
   rw [piK_some _ _ _ hsz] at h
@@ -400,7 +400,7 @@ theorem piNStr_rel0 (m : Mem) (a : AState) (hD : ArenaD m a) (q o l : Word) (hq 
     (by rw [hpoolv]; exact hk) (fun _ => ho) _ _ hI
   have hf := consInternM_frame nstrCS_wf hI
   have hR₁ := hR₀.lift_nstr _ _ _ _ hX hf
-    (AM.st_proto nstrLens _ _ _ _ _ _ _ (internNNode_str_run _ _ _) hok)
+    (AM.st_proto nstrLens _ _ _ _ _ _ _ _ (internNNode_str_run _ _ _) hok)
   have hpw := consInternM_pw nstrCS_wf hR₀.nstr (by rw [rdW_set64]; simp [hc]) hI
   have hsz : 1 < (s'.mem.arr64 CTL).size := by rw [hf.size]; simpa [size_set64] using hc
   rw [piK_some _ _ _ hsz] at h
@@ -451,7 +451,7 @@ theorem piZero_rel (m : Mem) (a : AState) (hD : ArenaD m a) (r : Word) (m' : Mem
   have hL := zintern_hp _ (onA false a) hR₀.zero hR₀.zeroHp _ _ hI
   have hf := consInternM_frame zeroCS_wf hI
   have hR₁ := hR₀.lift_zero _ _ _ _ ⟨hX, hL⟩ hf
-    (AM.st_proto zeroLens _ _ _ _ _ _ _ (internLNode_zero_run _) hok)
+    (AM.st_proto zeroLens _ _ _ _ _ _ _ _ (internLNode_zero_run _) hok)
   have hpw := consInternM_pw zeroCS_wf hR₀.zero (by rw [rdW_set64]; simp [hc]) hI
   have hsz : 1 < (s'.mem.arr64 CTL).size := by rw [hf.size]; simpa [size_set64] using hc
   rw [piK_some _ _ _ hsz] at h
@@ -481,7 +481,7 @@ theorem piSucc_rel (m : Mem) (a : AState) (hD : ArenaD m a) (u : Word) (hu : PW 
   have hL := sintern_hp _ (onA false a) hR₀.succ u hu.1 hR₀.succHp (lvlHPW_ok _ _ hR₀ u hu.1) _ _ hI
   have hf := sinternW_frame _ u _ _ hI
   have hR₁ := hR₀.lift_succ _ _ _ _ ⟨hX, hL⟩ hf
-    (AM.st_proto succLens _ _ _ _ _ _ _ (internLNode_succ_run _ _) hok)
+    (AM.st_proto succLens _ _ _ _ _ _ _ _ (internLNode_succ_run _ _) hok)
   have hpw := consInternM_pw succCS_wf hR₀.succ (by rw [rdW_set64]; simp [hc]) hI
   have hsz : 1 < (s'.mem.arr64 CTL).size := by rw [hf.size]; simpa [size_set64] using hc
   rw [piK_some _ _ _ hsz] at h
@@ -511,7 +511,7 @@ theorem piMax_rel (m : Mem) (a : AState) (hD : ArenaD m a) (u v : Word) (hu : PW
   have hL := mintern_hp _ (onA false a) hR₀.max u v hu.1 hv.1 hR₀.maxHp (lvlHPW_or _ _ hR₀ u v hu.1 hv.1) _ _ hI
   have hf := minternW_frame _ u v _ _ hI
   have hR₁ := hR₀.lift_max _ _ _ _ ⟨hX, hL⟩ hf
-    (AM.st_proto maxLens _ _ _ _ _ _ _ (internLNode_max_run _ _ _) hok)
+    (AM.st_proto maxLens _ _ _ _ _ _ _ _ (internLNode_max_run _ _ _) hok)
   have hpw := consInternM_pw maxCS_wf hR₀.max (by rw [rdW_set64]; simp [hc]) hI
   have hsz : 1 < (s'.mem.arr64 CTL).size := by rw [hf.size]; simpa [size_set64] using hc
   rw [piK_some _ _ _ hsz] at h
@@ -541,7 +541,7 @@ theorem piImax_rel (m : Mem) (a : AState) (hD : ArenaD m a) (u v : Word) (hu : P
   have hL := imintern_hp _ (onA false a) hR₀.imax u v hu.1 hv.1 hR₀.imaxHp (lvlHPW_or _ _ hR₀ u v hu.1 hv.1) _ _ hI
   have hf := iminternW_frame _ u v _ _ hI
   have hR₁ := hR₀.lift_imax _ _ _ _ ⟨hX, hL⟩ hf
-    (AM.st_proto imaxLens _ _ _ _ _ _ _ (internLNode_imax_run _ _ _) hok)
+    (AM.st_proto imaxLens _ _ _ _ _ _ _ _ (internLNode_imax_run _ _ _) hok)
   have hpw := consInternM_pw imaxCS_wf hR₀.imax (by rw [rdW_set64]; simp [hc]) hI
   have hsz : 1 < (s'.mem.arr64 CTL).size := by rw [hf.size]; simpa [size_set64] using hc
   rw [piK_some _ _ _ hsz] at h
@@ -571,7 +571,7 @@ theorem piParam_rel (m : Mem) (a : AState) (hD : ArenaD m a) (u : Word) (hu : PW
   have hL := pintern_hp _ (onA false a) hR₀.param u hu.1 hR₀.paramHp _ _ hI
   have hf := consInternM_frame paramCS_wf hI
   have hR₁ := hR₀.lift_param _ _ _ _ ⟨hX, hL⟩ hf
-    (AM.st_proto paramLens _ _ _ _ _ _ _ (internLNode_param_run _ _) hok)
+    (AM.st_proto paramLens _ _ _ _ _ _ _ _ (internLNode_param_run _ _) hok)
   have hpw := consInternM_pw paramCS_wf hR₀.param (by rw [rdW_set64]; simp [hc]) hI
   have hsz : 1 < (s'.mem.arr64 CTL).size := by rw [hf.size]; simpa [size_set64] using hc
   rw [piK_some _ _ _ hsz] at h
@@ -617,7 +617,7 @@ theorem piLs_rel0 (m : Mem) (a : AState) (hD : ArenaD m a) (o l : Word) (hsl : S
     (lsOrW_ok _ _ hR₀ o l hsl₀ us (by rw [hpoolv]; exact hk)) _ _ hI
   have hf := lsinternW_frame _ o l _ _ hI
   have hR₁ := hR₀.lift_ls _ _ _ _ ⟨hX, hL⟩ hf
-    (AM.st_proto lsLens _ _ _ _ _ _ _ (internLsNode_run _ _) hok)
+    (AM.st_proto lsLens _ _ _ _ _ _ _ _ (internLsNode_run _ _) hok)
   have hpw := consInternM_pw lsCS_wf hR₀.ls (by rw [rdW_set64]; simp [hc]) hI
   have hsz : 1 < (s'.mem.arr64 CTL).size := by rw [hf.size]; simpa [size_set64] using hc
   rw [piK_some _ _ _ hsz] at h

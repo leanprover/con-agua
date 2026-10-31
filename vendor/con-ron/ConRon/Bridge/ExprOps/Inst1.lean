@@ -55,8 +55,14 @@ equations — so the arm's step is congruence closure, with no step lemma and
 no case split.  The cutoff and the catch-all are one equation each
 (`inst1_cut`, `inst1_leaf`), keyed on the term they rewrite.
 -/
+module
+
 import ConRon.Bridge.Specs
-import ConRon.Bridge.Grind
+public import ConRon.Bridge.Grind
+import ConRon.Bridge.GrindAttr
+public import ConRon.Arena.ExprOps
+
+public section
 
 namespace ConRon.Bridge.ExprOps
 

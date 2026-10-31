@@ -43,7 +43,7 @@ open L.Arena
 
 /-- A returning `e_view` of a `forallE` handle: the view checks hold and the words are the
 binder's. -/
-theorem eViewW_forall (m : Mem) (h : Word) (hg : h >>> 28 = 6) (hne : eViewW m h ≠ []) :
+theorem eViewW_forall (m : Mem) (h : Word) (hg : tagW h = 6) (hne : eViewW m h ≠ []) :
     viewOK m h FORALL ∧ eViewW m h = [6, tfld m FORALL (tierW h) (idxW h) 0,
       tfld m FORALL (tierW h) (idxW h) 1, 0] := by
   unfold eViewW at hne ⊢
@@ -52,12 +52,12 @@ theorem eViewW_forall (m : Mem) (h : Word) (hg : h >>> 28 = 6) (hne : eViewW m h
   by_cases hs : tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0
   · simp [hs] at hne
   simp only [hs, ite_false] at hne ⊢
-  have n0 : ¬ h >>> 28 = 0 := by rw [hg]; decide
-  have n1 : ¬ h >>> 28 = 1 := by rw [hg]; decide
-  have n2 : ¬ h >>> 28 = 2 := by rw [hg]; decide
-  have n3 : ¬ h >>> 28 = 3 := by rw [hg]; decide
-  have n4 : ¬ h >>> 28 = 4 := by rw [hg]; decide
-  have n5 : ¬ h >>> 28 = 5 := by rw [hg]; decide
+  have n0 : ¬ tagW h = 0 := by rw [hg]; decide
+  have n1 : ¬ tagW h = 1 := by rw [hg]; decide
+  have n2 : ¬ tagW h = 2 := by rw [hg]; decide
+  have n3 : ¬ tagW h = 3 := by rw [hg]; decide
+  have n4 : ¬ tagW h = 4 := by rw [hg]; decide
+  have n5 : ¬ tagW h = 5 := by rw [hg]; decide
   simp only [hg, ite_true] at hne ⊢
   by_cases c : tcnt m FORALL (tierW h) ≤ idxW h
   · simp [c] at hne
@@ -65,7 +65,7 @@ theorem eViewW_forall (m : Mem) (h : Word) (hg : h >>> 28 = 6) (hne : eViewW m h
   exact ⟨⟨hs, by simpa using c⟩, rfl⟩
 
 /-- A returning `e_view` of a `lam` handle. -/
-theorem eViewW_lamS (m : Mem) (h : Word) (hg : h >>> 28 = 5) (hne : eViewW m h ≠ []) :
+theorem eViewW_lamS (m : Mem) (h : Word) (hg : tagW h = 5) (hne : eViewW m h ≠ []) :
     viewOK m h LAM ∧ eViewW m h = [5, tfld m LAM (tierW h) (idxW h) 0,
       tfld m LAM (tierW h) (idxW h) 1, 0] := by
   unfold eViewW at hne ⊢
@@ -74,11 +74,11 @@ theorem eViewW_lamS (m : Mem) (h : Word) (hg : h >>> 28 = 5) (hne : eViewW m h �
   by_cases hs : tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0
   · simp [hs] at hne
   simp only [hs, ite_false] at hne ⊢
-  have n0 : ¬ h >>> 28 = 0 := by rw [hg]; decide
-  have n1 : ¬ h >>> 28 = 1 := by rw [hg]; decide
-  have n2 : ¬ h >>> 28 = 2 := by rw [hg]; decide
-  have n3 : ¬ h >>> 28 = 3 := by rw [hg]; decide
-  have n4 : ¬ h >>> 28 = 4 := by rw [hg]; decide
+  have n0 : ¬ tagW h = 0 := by rw [hg]; decide
+  have n1 : ¬ tagW h = 1 := by rw [hg]; decide
+  have n2 : ¬ tagW h = 2 := by rw [hg]; decide
+  have n3 : ¬ tagW h = 3 := by rw [hg]; decide
+  have n4 : ¬ tagW h = 4 := by rw [hg]; decide
   simp only [hg, ite_true] at hne ⊢
   by_cases c : tcnt m LAM (tierW h) ≤ idxW h
   · simp [c] at hne
@@ -94,7 +94,7 @@ def stripGoW (tg k o : Word) : Nat → Mem → Word → Word → Option (List Wo
   | 0, _, _, _ => none
   | f + 1, m, n, h =>
     if n < k then
-      if h >>> 28 ≠ tg then some ([0, 0, 0, 0], m.set64 CTL 200 o)
+      if tagW h ≠ tg then some ([0, 0, 0, 0], m.set64 CTL 200 o)
       else match eViewW m h with
         | [] => none
         | v => match allocW m 1 with
@@ -115,11 +115,11 @@ variable (tg k o : Word) (f : Nat) (m m1 : Mem) (n h q : Word)
 theorem stripGoW_ge (hn : ¬ n < k) : stripGoW tg k o (f + 1) m n h = some ([1, o, k, h], m) := by
   simp only [stripGoW, hn, ite_false]
 
-theorem stripGoW_tag (hn : n < k) (hg : h >>> 28 ≠ tg) :
+theorem stripGoW_tag (hn : n < k) (hg : tagW h ≠ tg) :
     stripGoW tg k o (f + 1) m n h = some ([0, 0, 0, 0], m.set64 CTL 200 o) := by
   simp only [stripGoW, ite_eq_left hn, ite_eq_left hg]
 
-theorem stripGoW_step (hn : n < k) (hg : ¬ h >>> 28 ≠ tg) (hv : eViewW m h ≠ [])
+theorem stripGoW_step (hn : n < k) (hg : ¬ tagW h ≠ tg) (hv : eViewW m h ≠ [])
     (ha : allocW m 1 = some (q, m1)) :
     stripGoW tg k o (f + 1) m n h = stripGoW tg k o f (m1.set64 IW q ((eViewW m h).tail.headD 0))
       (n + 1) ((eViewW m h).tail.tail.headD 0) := by
@@ -148,7 +148,7 @@ theorem stripPisLoop_spec (p : Prog) (hp : StripProg p) (f : Nat) (s₀ : St) :
   | succ f ih =>
     rw [exec, step_while (w := stripPisLoop) rfl]
     sym only [lang_grind, arena_grind] =>
-      vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, st64, ih,
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, step, evalE, evalC, evalArgs, setLoc, setLocs, st64, ih,
         eView_spec p (hp.get "e_view") f, iwAlloc_specW p (hp.get "iw_alloc") f] <;>
       finish [stripGoW_ge, stripGoW_tag, stripGoW_step]
 
@@ -162,7 +162,7 @@ theorem stripLamsLoop_spec (p : Prog) (hp : StripProg p) (f : Nat) (s₀ : St) :
   | succ f ih =>
     rw [exec, step_while (w := stripLamsLoop) rfl]
     sym only [lang_grind, arena_grind] =>
-      vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, st64, ih,
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, step, evalE, evalC, evalArgs, setLoc, setLocs, st64, ih,
         eView_spec p (hp.get "e_view") f, iwAlloc_specW p (hp.get "iw_alloc") f] <;>
       finish [stripGoW_ge, stripGoW_tag, stripGoW_step]
 
@@ -179,7 +179,7 @@ theorem stripPis_specW (p : Prog) (hp : StripProg p) (n : Nat) (s₀ : St) (k e 
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         fun s => Triple.step_exec (stripPisLoop_spec p hp (n + 1) s)] <;>
       finish [stripTW_succ]
 
@@ -193,7 +193,7 @@ theorem stripLams_specW (p : Prog) (hp : StripProg p) (n : Nat) (s₀ : St) (k e
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         fun s => Triple.step_exec (stripLamsLoop_spec p hp (n + 1) s)] <;>
       finish [stripTW_succ]
 
@@ -261,10 +261,10 @@ def StripRes (o k n : Word) (m' : Mem) (r : List Word) : Option (List EIdx × EI
       decE (r.getD 3 0) = b ∧ iwTop m' = o.toNat + k.toNat
 
 theorem tag_beq_iff (w : Word) (hw : H w) (t : Word) (ht : t.toNat < 16) :
-    ((decE w).tag == t.toUInt32) = decide (w >>> 28 = t) := by
+    ((decE w).tag == t.toUInt32) = decide (tagW w = t) := by
   rw [decE_tag w hw]
-  have hlt : (w >>> 28).toNat < 16 := shr28_lt w hw
-  by_cases h : w >>> 28 = t
+  have hlt : (tagW w).toNat < 16 := tagW_lt w hw
+  by_cases h : tagW w = t
   · simp [h]
   · simp only [h, decide_false]
     apply beq_false_of_ne
@@ -280,8 +280,8 @@ variable (tg : Word) (T : UInt32)
   (tw : Nat → EIdx → AM (Option (List EIdx × EIdx)))
   (h0 : ∀ h, tw 0 h = pure (some ([], h)))
   (hs : ∀ j h, tw (j + 1) h = stripStepT T (tw j) h)
-  (hT : ∀ w : Word, H w → ((decE w).tag == T) = decide (w >>> 28 = tg))
-  (hvb : ∀ (m : Mem) (a : AState) (w : Word), ArenaR m a → H w → eViewW m w ≠ [] → w >>> 28 = tg →
+  (hT : ∀ w : Word, H w → ((decE w).tag == T) = decide (tagW w = tg))
+  (hvb : ∀ (m : Mem) (a : AState) (w : Word), ArenaR m a → H w → eViewW m w ≠ [] → tagW w = tg →
     (viewBind (decE w)).run a = .ok (some (decE ((eViewW m w).tail.headD 0),
       decE ((eViewW m w).tail.tail.headD 0)), a) ∧
     H ((eViewW m w).tail.headD 0) ∧ H ((eViewW m w).tail.tail.headD 0))
@@ -320,7 +320,7 @@ theorem stripGoW_ok : ∀ (f : Nat) (m m' : Mem) (n h : Word) (r : List Word),
   have hj : k.toNat - n.toNat = (k.toNat - (n + 1).toNat) + 1 := by
     rw [UInt64.toNat_add]; simp; rw [Nat.mod_eq_of_lt (by have := k.toNat_lt; omega)]; omega
   rw [hj, hs]
-  by_cases hg : h >>> 28 ≠ tg
+  by_cases hg : tagW h ≠ tg
   · rw [stripGoW_tag tg k o f m n h hn hg] at hm
     simp only [Option.some.injEq, Prod.mk.injEq] at hm
     obtain ⟨rfl, rfl⟩ := hm
@@ -329,7 +329,7 @@ theorem stripGoW_ok : ∀ (f : Nat) (m m' : Mem) (n h : Word) (r : List Word),
       MemFrame.mono (MemFrame.setCtl m 200 o) (by simp) (by simp)
     refine ⟨none, ?_, hS', hf, fun i _ => by rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)], rfl, ht'⟩
     simp only [stripStepT, hT h hh, decide_eq_true_iff, hg, ite_false]; rfl
-  have hg' : h >>> 28 = tg := Classical.not_not.mp hg
+  have hg' : tagW h = tg := Classical.not_not.mp hg
   by_cases hv : eViewW m h = []
   · simp [stripGoW, hn, hg, hv] at hm
   cases ha : allocW m 1 with
@@ -393,8 +393,8 @@ theorem stripTW_ok (tg : Word) (T : UInt32)
     (tw : Nat → EIdx → AM (Option (List EIdx × EIdx)))
     (h0 : ∀ h, tw 0 h = pure (some ([], h)))
     (hs : ∀ j h, tw (j + 1) h = stripStepT T (tw j) h)
-    (hT : ∀ w : Word, H w → ((decE w).tag == T) = decide (w >>> 28 = tg))
-    (hvb : ∀ (m : Mem) (a : AState) (w : Word), ArenaR m a → H w → eViewW m w ≠ [] → w >>> 28 = tg →
+    (hT : ∀ w : Word, H w → ((decE w).tag == T) = decide (tagW w = tg))
+    (hvb : ∀ (m : Mem) (a : AState) (w : Word), ArenaR m a → H w → eViewW m w ≠ [] → tagW w = tg →
       (viewBind (decE w)).run a = .ok (some (decE ((eViewW m w).tail.headD 0),
         decE ((eViewW m w).tail.tail.headD 0)), a) ∧
       H ((eViewW m w).tail.headD 0) ∧ H ((eViewW m w).tail.tail.headD 0))
@@ -476,7 +476,7 @@ theorem stripGoW_fuel (tg k o : Word) : ∀ (f : Nat) (m : Mem) (n h : Word) (x 
   | f'' + 1, hf' =>
   by_cases hn : n < k
   · have hnk' : n.toNat < k.toNat := UInt64.lt_iff_toNat_lt.mp hn
-    by_cases hg : h >>> 28 ≠ tg
+    by_cases hg : tagW h ≠ tg
     · rw [stripGoW_tag tg k o f m n h hn hg] at hm; rw [stripGoW_tag tg k o f'' m n h hn hg, hm]
     by_cases hv : eViewW m h = []
     · simp [stripGoW, hn, hg, hv] at hm
@@ -574,7 +574,7 @@ theorem stripGoW_frame (tg k o : Word) : ∀ (f : Nat) (m m' : Mem) (n h : Word)
   | succ f ih =>
   intro m m' n h r hm
   by_cases hn : n < k
-  · by_cases hg : h >>> 28 ≠ tg
+  · by_cases hg : tagW h ≠ tg
     · rw [stripGoW_tag tg k o f m n h hn hg] at hm
       simp only [Option.some.injEq, Prod.mk.injEq] at hm
       obtain ⟨-, rfl⟩ := hm

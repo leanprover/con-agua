@@ -28,7 +28,7 @@ open L.Arena
 
 /-- The model of `fvar_type_d(e)` over `e_view`. -/
 def ftdW (m : Mem) (e : Word) : Option (List Word × Mem) :=
-  if e >>> 28 ≠ 1 then some ([e], m)
+  if tagW e ≠ 1 then some ([e], m)
   else if eViewW m e = [] then none
   else some ([(eViewW m e).tail.tail.headD 0], m)
 
@@ -41,7 +41,7 @@ theorem ftdAd_spec (p : Prog) (hp : p.lookup "fvar_type_d" = some fvarTypeDL)
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, eView_spec p hv n] <;>
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, eView_spec p hv n] <;>
       finish [ftdW]
 
 /-- `fvar_type_d` and its callee. -/
@@ -98,7 +98,7 @@ theorem EStore.viewFVarTy_of_view (st : EStore) (i : EIdx) (k : Nat) (ty : EIdx)
     · simp only [*, ite_true]; split <;> simp_all [ETables.getFVarTy_of_get _ _ _ _ h]
     · simp at h
 
-theorem eViewW_head1 (m : Mem) (w : Word) (hne : eViewW m w ≠ []) (hg : w >>> 28 = 1) :
+theorem eViewW_head1 (m : Mem) (w : Word) (hne : eViewW m w ≠ []) (hg : tagW w = 1) :
     (eViewW m w).headD 0 = 1 := by
   unfold eViewW at hne ⊢
   simp (config := {decide := true}) only [hg, ite_true, ite_false] at hne ⊢
@@ -116,7 +116,7 @@ theorem ftdW_ok (m m' : Mem) (a : AState) (hR : ArenaR m a) (e : Word) (he : H e
     (h : ftdW m e = some (r, m')) :
     m' = m ∧ (fvarTypeD (decI e)).run a = .ok (decI (r.headD 0), a) ∧ (r.headD 0).toNat < 2 ^ 32 := by
   simp only [ftdW] at h
-  by_cases hf : e >>> 28 ≠ 1
+  by_cases hf : tagW e ≠ 1
   · rw [ite_eq_left hf] at h
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     have htag : ¬ (decE e).tag = ETag.fvar := by
@@ -129,7 +129,7 @@ theorem ftdW_ok (m m' : Mem) (a : AState) (hR : ArenaR m a) (e : Word) (he : H e
     simp only [htag', Bool.false_eq_true, ite_false, List.headD_cons]
     rfl
   rw [ite_eq_right hf] at h
-  have hf' : e >>> 28 = 1 := Decidable.not_not.mp hf
+  have hf' : tagW e = 1 := Decidable.not_not.mp hf
   obtain ⟨hne, h⟩ := of_ite_none h
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   obtain ⟨v, hv, hV⟩ := eViewW_ok m a hR e hne

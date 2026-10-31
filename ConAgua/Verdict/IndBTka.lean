@@ -39,7 +39,7 @@ l_model tkaE_spec (p : Prog) (hL : K53Look p)
     blockShapeMemberNames_spec p hL.tmn.tcm.ha hL.tmn.tcm.mnc hL.tmn.tcm.mn n, noF_spec p hL n,
     tcmE_spec p hL.tmn.tcm n]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
   finish [] gen 20 heartbeats 4000000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem] cut 3
 

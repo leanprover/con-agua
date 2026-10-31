@@ -199,7 +199,7 @@ theorem appLoop_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn :
     have hvv : (spW m (ao + i)).toNat < 2 ^ 32 := by
       have h := har.lt i.toNat (by rw [← har.size]; exact hlt')
       rwa [hit] at h
-    by_cases hlam : v >>> 28 = 5
+    by_cases hlam : tagW v = 5
     · rw [ite_eq_left hlam]
       refine RefE.underIf (fun _ => rfl) (RefE.abort0 (by decide) fun c1 => ?_)
       refine RefE.underIf (fun _ => rfl) (RefE.abort0 (by decide) fun c2 => ?_)
@@ -335,7 +335,7 @@ theorem appLoop_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn :
         rw [← evalW_eq_ne ap _ hapW hnW]; simp [Cmp.evalW, Cmp.eval]
       generalize hm₂ : ((m₁.set64 SPN (vo + vn) (rdW (m.arr64 SPN) (ao + i))).set64 CTL 136
         (vo + (vn + 1))) = m₂ at hS₂ hva₂ htop₂ hb₂ hsz₂ hbk₂ hpg₂
-      by_cases hconst : hd >>> 28 = 3
+      by_cases hconst : tagW hd = 3
       · rw [ite_eq_left hconst]
         have hctag : ((decE hd).tag == ETag.const) = true := by
           rw [decE_tag_const_beq hd hhd]; simp [hconst]

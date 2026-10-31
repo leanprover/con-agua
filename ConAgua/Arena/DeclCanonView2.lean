@@ -57,7 +57,7 @@ theorem poolCopy_spec (p : Prog) (hp : p.lookup "pool_copy" = some poolCopy) (n 
     rw [invoke_eq _ hp]
     simp only [callFn, poolCopy]
     sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64, ih] <;>
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64, ih] <;>
       finish (gen := 20)
 
 
@@ -151,7 +151,7 @@ theorem viewLs_specW (p : Prog) (hn : p.lookup "ls_node" = some lsNode)
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
         lsNode_spec p hn n, iwAlloc_specW p ha n, poolCopy_spec p hc n] <;>
       finish (gen := 20) [viewLsW]
 
@@ -159,7 +159,7 @@ theorem viewLs_specW (p : Prog) (hn : p.lookup "ls_node" = some lsNode)
 theorem lsView_of_lsNodeW {m : Mem} {a : AState} (hR : ArenaR m a) {h : Word}
     (hh : h.toNat < 2 ^ 32) (hne : lsNodeW m h ≠ []) :
     ∃ ids : List LIdx, a.store.lss.view (decI h) = some ids := by
-  have hg : h >>> 28 = 0 := Classical.byContradiction fun c => hne (by simp [lsNodeW, c])
+  have hg : tagW h = 0 := Classical.byContradiction fun c => hne (by simp [lsNodeW, c])
   have hsc : ¬ (tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0) := fun c => hne (by simp [lsNodeW, hg, c])
   have hc : ¬ tcnt m LVLS (tierW h) ≤ idxW h := fun c => hne (by
     rw [lsNodeW, ite_eq_right (by simpa using hg), ite_eq_right hsc, ite_eq_left c])
@@ -172,7 +172,7 @@ theorem lsView_of_lsNodeW {m : Mem} {a : AState} (hR : ArenaR m a) {h : Word}
   have hget : ∀ T : LsTables, T.lists.nodes[(idxW h).toNat]? = some x →
       T.get (decI h) = some x.us := fun T hT => by
     simp only [LsTables.get, decLs_tag0 h hh, hg, beq_self_eq_true, ↓reduceIte, Tbl.node?,
-      decI_idx h, hT, Option.map_some]
+      decI_idx h (narrow_of_tagW h (by rw [hg]; decide)), hT, Option.map_some]
   unfold LsStore.view
   rw [hpers]
   by_cases ht : tierW h = 0

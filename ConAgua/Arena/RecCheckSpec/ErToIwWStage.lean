@@ -79,7 +79,7 @@ theorem abstractPrefix_spec (p : Prog) (hp : p.lookup "abstract_prefix" = some a
     rw [invoke_eq _ hp]
     simp only [callFn, abstractPrefix]
     sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         abF_spec p hab n, ih] <;>
       finish (gen := 20)
 
@@ -261,7 +261,7 @@ theorem targetHoles_spec (p : Prog) (hff : p.lookup "fvar_find" = some fvarFind)
     rw [invoke_eq _ hp]
     simp only [callFn, targetHoles]
     sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         internFVar_spec p hff hfp hif n, slCons_specW p ha hc hsc n, ih] <;>
       finish (gen := 20)
 
@@ -324,7 +324,7 @@ def pdW : Nat → Mem → Word → Word → Word → Option (List Word × Mem)
   | 0, _, _, _, _ => none
   | n + 1, m, xo, xl, e =>
     if xl = 0 then some ([1, 0, 0], m)
-    else if e >>> 28 ≠ 6 then some ([0, 0, 0], m)
+    else if tagW e ≠ 6 then some ([0, 0, 0], m)
     else if eViewW m e = [] then none
     else pdK1 n xo xl ((eViewW m e).tail.headD 0)
       (i1F m [CWF, (eViewW m e).tail.tail.headD 0, rdW (m.arr64 IW) xo, 0])
@@ -350,12 +350,12 @@ end
 section arms
 variable (n : Nat) (m m1 m2 m3 : Mem) (xo xl e d : Word) (r : List Word)
 theorem pdW_nil (h : xl = 0) : pdW (n + 1) m xo xl e = some ([1, 0, 0], m) := by simp [pdW, h]
-theorem pdW_nf (h : xl ≠ 0) (h1 : e >>> 28 ≠ 6) : pdW (n + 1) m xo xl e = some ([0, 0, 0], m) := by
+theorem pdW_nf (h : xl ≠ 0) (h1 : tagW e ≠ 6) : pdW (n + 1) m xo xl e = some ([0, 0, 0], m) := by
   simp [pdW, h, h1]
-theorem pdW_ev (h : xl ≠ 0) (h1 : ¬ e >>> 28 ≠ 6) (h2 : eViewW m e = []) :
+theorem pdW_ev (h : xl ≠ 0) (h1 : ¬ tagW e ≠ 6) (h2 : eViewW m e = []) :
     pdW (n + 1) m xo xl e = none := by
   simp only [pdW, h, h1, h2, ite_false, ite_true]
-theorem pdW_cons (h : xl ≠ 0) (h1 : ¬ e >>> 28 ≠ 6) (h2 : eViewW m e ≠ []) : pdW (n + 1) m xo xl e =
+theorem pdW_cons (h : xl ≠ 0) (h1 : ¬ tagW e ≠ 6) (h2 : eViewW m e ≠ []) : pdW (n + 1) m xo xl e =
     pdK1 n xo xl ((eViewW m e).tail.headD 0)
       (i1F m [CWF, (eViewW m e).tail.tail.headD 0, rdW (m.arr64 IW) xo, 0]) := by
   simp only [pdW, h, h1, h2, ite_false]
@@ -394,7 +394,7 @@ theorem targetPiDomsWith_spec (p : Prog) (hv : p.lookup "e_view" = some eView)
     rw [invoke_eq _ hp]
     simp only [callFn, targetPiDomsWith]
     sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         eView_spec p hv n, i1F_spec p hi1 n, slCons_specW p ha hc hsc n, ih] <;>
       finish (gen := 20)
 
@@ -475,7 +475,7 @@ theorem cvLps_spec (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         erToIw_specW2 p ha hc he n] <;>
       finish (gen := 20) [cvLpsW, rdW_eq]
 

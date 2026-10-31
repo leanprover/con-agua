@@ -45,7 +45,7 @@ theorem fieldsRef_step (n : Nat) (ih : NbRef p dn vis fe env n) : FieldsRef p dn
         ConRon.Bridge.CoreStep.refl hC.check⟩
   obtain ⟨nF', hnF'⟩ : ∃ nF', nF.toNat = nF' + 1 := ⟨nF.toNat - 1, by
     have : nF.toNat ≠ 0 := fun e => h0 (UInt64.toNat_inj.mp (by simpa using e)); omega⟩
-  by_cases h6 : cur >>> 28 ≠ 6
+  by_cases h6 : tagW cur ≠ 6
   · rw [nfE.abort1 p n m vis ctx fu po pl base nF j cur ns kO kL dO dL h0 h6]
     have htag : ¬ (decI cur : EIdx).tag = ETag.forallE := by
       rw [← decE_eq]; exact fun e' => h6 ((decE_tag_forallE _ hcur).mp e')
@@ -53,7 +53,7 @@ theorem fieldsRef_step (n : Nat) (ih : NbRef p dn vis fe env n) : FieldsRef p dn
     rw [hnF', ConRon.Arena.nestFields.eq_def]
     simp only [htag, beq_iff_eq, ite_false]
     exact ErrClaim.fail _ _ (by decide)
-  have h6' : cur >>> 28 = 6 := by simpa using h6
+  have h6' : tagW cur = 6 := by simpa using h6
   by_cases hov : base + j < base
   · rw [nfE.abort2 p n m vis ctx fu po pl base nF j cur ns kO kL dO dL h0 h6' hov]; exact RefE.of_cls0 rfl
   by_cases hov1 : base + j + 1 = 0

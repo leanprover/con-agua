@@ -173,8 +173,8 @@ def scrTail : Stmt := lblk (f, b, t) {
   return 0
 }
 
-/-- con-ron: ConRon/Arena/Store.lean:1413-1416 ConRon.Arena.EStore.enableScratch
-con-ron: ConRon/Arena/Store.lean:1418-1422 ConRon.Arena.EStore.dropScratch -/
+/-- con-ron: ConRon/Arena/Store.lean:1431-1434 ConRon.Arena.EStore.enableScratch
+con-ron: ConRon/Arena/Store.lean:1436-1440 ConRon.Arena.EStore.dropScratch -/
 @[l_impl ConRon.Arena.EStore.enableScratch ConRon.Arena.EStore.dropScratch]
 def scratchReset : FunDecl := { nparams := 1, nlocals := 16, body := lblk (f, b, t) {
   ⟪scrHead⟫;
@@ -266,7 +266,7 @@ theorem scratchReset_spec (n : Nat) (s₀ : St) (f : Word) :
 
 end reset
 
-/-- con-ron: ConRon/Arena/Core.lean:3692-3699 ConRon.Arena.enterScratch -/
+/-- con-ron: ConRon/Arena/Core.lean:3697-3704 ConRon.Arena.enterScratch -/
 @[l_impl ConRon.Arena.enterScratch]
 def scratchEnter : FunDecl := lfn () locals (r) {
   r := call scratch_reset(1);
@@ -277,7 +277,7 @@ def scratchEnter : FunDecl := lfn () locals (r) {
   return 0
 }
 
-/-- con-ron: ConRon/Arena/Core.lean:3682-3690 ConRon.Arena.dropScratch -/
+/-- con-ron: ConRon/Arena/Core.lean:3687-3695 ConRon.Arena.dropScratch -/
 @[l_impl ConRon.Arena.dropScratch]
 def scratchDrop : FunDecl := lfn () locals (r) {
   r := call flush_caches();

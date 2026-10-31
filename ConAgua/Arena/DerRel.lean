@@ -22,15 +22,15 @@ variable {α : Type} [BEq α] [Hashable α]
 
 /-- The run of `protoRun`: a hit (state unchanged), or an append to the tier the store is in,
 returning the handle of the new node. -/
-theorem protoRun_cases (L : Lens α UInt64 .expr) (key : α) (tag : UInt32) (pf : Option EIdx)
+theorem protoRun_cases (L : Lens α UInt64 .expr) (key : α) (tag : UInt32) (wide : Bool) (pf : Option EIdx)
     (d : UInt64) (err : CheckError) (a a' : AState) (y : EIdx)
-    (h : protoRun L key tag pf d err a = .ok (y, a')) :
+    (h : protoRun L key tag wide pf d err a = .ok (y, a')) :
     a' = a ∨
-    (L.on a = false ∧ (L.getP a).nodes.size < 2 ^ 27 ∧
-      y = decI (hdW tag.toUInt64 0 (UInt64.ofNat (L.getP a).nodes.size)) ∧
+    (L.on a = false ∧ (L.getP a).nodes.size < capS wide ∧
+      y = decI (hdS tag wide 0 (UInt64.ofNat (L.getP a).nodes.size)) ∧
       a' = L.setP a ((L.getP a).push key d y)) ∨
-    (L.on a = true ∧ (L.getS a).nodes.size < 2 ^ 27 ∧
-      y = decI (hdW tag.toUInt64 1 (UInt64.ofNat (L.getS a).nodes.size)) ∧
+    (L.on a = true ∧ (L.getS a).nodes.size < capS wide ∧
+      y = decI (hdS tag wide 1 (UInt64.ofNat (L.getS a).nodes.size)) ∧
       a' = L.setS a ((L.getS a).push key d y)) := by
   unfold protoRun at h
   split at h
@@ -43,16 +43,16 @@ theorem protoRun_cases (L : Lens α UInt64 .expr) (key : α) (tag : UInt32) (pf 
         · rename_i hc
           simp only [Except.ok.injEq, Prod.mk.injEq] at h
           obtain ⟨rfl, rfl⟩ := h
-          refine .inr (.inr ⟨hon, by simpa [Tbl.size, Idx.idxCap] using hc, ?_, ?_⟩) <;>
-            simp only [show Idx.tierS = UInt32.ofNat 1 from rfl, mk_eq, Tbl.size] <;> rfl
+          refine .inr (.inr ⟨hon, by simpa [Tbl.size] using hc, ?_, ?_⟩) <;>
+            simp only [show Idx.tierS = UInt32.ofNat 1 from rfl, mkS_eq, Tbl.size] <;> rfl
         · simp at h
     · rename_i hon
       split at h
       · rename_i hc
         simp only [Except.ok.injEq, Prod.mk.injEq] at h
         obtain ⟨rfl, rfl⟩ := h
-        refine .inr (.inl ⟨by simpa using hon, by simpa [Tbl.size, Idx.idxCap] using hc, ?_, ?_⟩) <;>
-          simp only [show Idx.tierP = UInt32.ofNat 0 from rfl, mk_eq, Tbl.size] <;> rfl
+        refine .inr (.inl ⟨by simpa using hon, by simpa [Tbl.size] using hc, ?_, ?_⟩) <;>
+          simp only [show Idx.tierP = UInt32.ofNat 0 from rfl, mkS_eq, Tbl.size] <;> rfl
       · simp at h
 
 end proto
@@ -71,14 +71,44 @@ theorem idxW_tierW_of_decE (r w : Word) (h : decE r = decE w) :
   · apply UInt64.toNat_inj.mp
     rw [tierW_toNat', tierW_toNat']; omega
 
-/-- The handle words of the node an append made: its index and tier. -/
+/-- The same for the wide index. -/
+theorem idxA_tierW_of_decE (r w : Word) (h : decE r = decE w) :
+    idxA r = idxA w ∧ tierW r = tierW w := by
+  have e : r.toUInt32 = w.toUInt32 := by
+    simp only [decE] at h; exact Idx.ofWord.inj h
+  have e' : r.toNat % 2 ^ 32 = w.toNat % 2 ^ 32 := by
+    have := congrArg UInt32.toNat e; simpa [UInt64.toNat_toUInt32] using this
+  constructor
+  · apply UInt64.toNat_inj.mp
+    rw [idxA_toNat, idxA_toNat]; omega
+  · apply UInt64.toNat_inj.mp
+    rw [tierW_toNat', tierW_toNat']; omega
+
+/-- The handle words of the node an append made: its index and tier (narrow). -/
 theorem new_handle (r : Word) (g : UInt32) (t : Word) (n : Nat) (hg : g.toNat < 16) (ht : t ≤ 1)
-    (hn : n < 2 ^ 27) (h : decE r = decI (hdW g.toUInt64 t (UInt64.ofNat n))) :
+    (hn : n < 2 ^ 26) (h : decE r = decI (hdW g.toUInt64 t (UInt64.ofNat n))) :
     idxW r = UInt64.ofNat n ∧ tierW r = t := by
   obtain ⟨h1, h2⟩ := idxW_tierW_of_decE r _ h
-  have hn' : (UInt64.ofNat n).toNat < 2 ^ 27 := by simp; omega
+  have hn' : (UInt64.ofNat n).toNat < 2 ^ 26 := by simp; omega
   exact ⟨h1.trans (hdW_idx _ t _ (by simpa using hg) ht hn'),
     h2.trans (hdW_tier _ t _ (by simpa using hg) ht hn')⟩
+
+/-- The handle words of the `app` node an append made (wide). -/
+theorem new_handleA (r : Word) (t : Word) (n : Nat) (ht : t ≤ 1)
+    (hn : n < 2 ^ 30) (h : decE r = decI (hdA t (UInt64.ofNat n))) :
+    idxA r = UInt64.ofNat n ∧ tierW r = t := by
+  obtain ⟨h1, h2⟩ := idxA_tierW_of_decE r _ h
+  have hn' : (UInt64.ofNat n).toNat < 2 ^ 30 := by simp; omega
+  exact ⟨h1.trans (hdA_idx t _ ht hn'), h2.trans (hdA_tier t _ ht hn')⟩
+
+/-- The handle words of the node an append made, by the store's shape: the shape's index
+(`idxA` for the wide `app` store, `idxW` else) and the tier. -/
+theorem new_handleS (r : Word) (g : UInt32) (wide : Bool) (t : Word) (n : Nat) (hg : g.toNat < 16)
+    (ht : t ≤ 1) (hn : n < capS wide) (h : decE r = decI (hdS g wide t (UInt64.ofNat n))) :
+    (if wide then idxA r else idxW r) = UInt64.ofNat n ∧ tierW r = t := by
+  cases wide
+  · exact new_handle r g t n hg ht (by simpa [capS] using hn) h
+  · exact new_handleA r t n ht (by simpa [capS] using hn) h
 
 /-! ## One tier's derived words across a change -/
 
@@ -313,13 +343,14 @@ theorem derMk (A : ArrId) (m m₁ m' : Mem) (a a' : AState) (key : α) (d : UInt
     (hT₁ : ConsR C R m₁ a'.store.scratchOn (g a'.store.pers) (g a'.store.scr))
     (hd : DerT2 a g (cP A m)) (hfr : ∀ t, m₁.arr64 (tierA A t) = m.arr64 (tierA A t))
     (hst : a' = a ∨
-      (L.on a = false ∧ (L.getP a).nodes.size < 2 ^ 27 ∧
-        y = decI (hdW C.tag.toUInt64 0 (UInt64.ofNat (L.getP a).nodes.size)) ∧
+      (L.on a = false ∧ (L.getP a).nodes.size < capS C.wide ∧
+        y = decI (hdS C.tag C.wide 0 (UInt64.ofNat (L.getP a).nodes.size)) ∧
         a' = L.setP a ((L.getP a).push key d y)) ∨
-      (L.on a = true ∧ (L.getS a).nodes.size < 2 ^ 27 ∧
-        y = decI (hdW C.tag.toUInt64 1 (UInt64.ofNat (L.getS a).nodes.size)) ∧
+      (L.on a = true ∧ (L.getS a).nodes.size < capS C.wide ∧
+        y = decI (hdS C.tag C.wide 1 (UInt64.ofNat (L.getS a).nodes.size)) ∧
         a' = L.setS a ((L.getS a).push key d y)))
     (hres : decE r = y) (hdd : dd = packBFL (bvarOfData d) (fvarOfData d) (lpW d))
+    (hix : derIxW A r = if C.wide then idxA r else idxW r)
     (hput : derPutW A C.ca m₁ (cnt2 m C.ca) r dd = some m') :
     DerT2 a' g (cP A m') := by
   have hfrA : ∀ i t, p32Get (m₁.arr64 (tierA A t)) (UInt64.ofNat i) =
@@ -333,6 +364,8 @@ theorem derMk (A : ArrId) (m m₁ m' : Mem) (a a' : AState) (key : α) (d : UInt
   have b0 := ConsR.cap hT 0 (by decide)
   have b1 := ConsR.cap hT 1 (by decide)
   simp only [ite_true, show (1 : Word) ≠ 0 by decide, ite_false] at c0 c1 d0 d1 b0 b1
+  have b0' := Nat.le_trans b0 (capS_le _)
+  have b1' := Nat.le_trans b1 (capS_le _)
   have htag : C.tag.toNat < 16 := by have := hW.sch.tag; simpa [ConsSch.sch] using this
   rcases hst with rfl | ⟨hoff, hsz, hy, rfl⟩ | ⟨hon', hsz, hy, rfl⟩
   · -- a hit: the counts did not move, nothing is written
@@ -354,8 +387,8 @@ theorem derMk (A : ArrId) (m m₁ m' : Mem) (a a' : AState) (key : α) (d : UInt
       rw [UInt64.toNat_add, UInt64.toNat_add, d0, d1] at e'
       simp only [hpsz] at e'
       have := (cntC C m 0).toNat_lt; have := (cntC C m 1).toNat_lt; omega
-    obtain ⟨hi, ht⟩ := new_handle r C.tag 0 _ htag (by decide) hsz (hres.trans hy)
-    simp only [derPutW, ne, ite_false, hi, ht] at hput
+    obtain ⟨hi, ht⟩ := new_handleS r C.tag C.wide 0 _ htag (by decide) hsz (hres.trans hy)
+    simp only [derPutW, ne, ite_false, hix, hi, ht] at hput
     split at hput
     · cases hput
     rename_i hlen
@@ -372,7 +405,7 @@ theorem derMk (A : ArrId) (m m₁ m' : Mem) (a a' : AState) (key : α) (d : UInt
       have := Nat.mod_le ((m₁.arr64 (tierA A 0)).size % 2 ^ 64 * 2) (2 ^ 64)
       simp only [UInt64.toNat_ofNat'] at h1 ⊢
       omega
-    have rd : ∀ i, i < 2 ^ 27 → i ≠ (g a.store.pers).nodes.size →
+    have rd : ∀ i, i < 2 ^ 30 → i ≠ (g a.store.pers).nodes.size →
         p32Get ((m₁.set32 (tierA A 0) (UInt64.ofNat (g a.store.pers).nodes.size) dd).arr64 (tierA A 0))
           (UInt64.ofNat i) = p32Get (m.arr64 (tierA A 0)) (UInt64.ofNat i) := by
       intro i hi hne
@@ -403,8 +436,8 @@ theorem derMk (A : ArrId) (m m₁ m' : Mem) (a a' : AState) (key : α) (d : UInt
       rw [UInt64.toNat_add, UInt64.toNat_add, d0, d1] at e'
       simp only [hpsz] at e'
       have := (cntC C m 0).toNat_lt; have := (cntC C m 1).toNat_lt; omega
-    obtain ⟨hi, ht⟩ := new_handle r C.tag 1 _ htag (by decide) hsz (hres.trans hy)
-    simp only [derPutW, ne, ite_false, hi, ht] at hput
+    obtain ⟨hi, ht⟩ := new_handleS r C.tag C.wide 1 _ htag (by decide) hsz (hres.trans hy)
+    simp only [derPutW, ne, ite_false, hix, hi, ht] at hput
     split at hput
     · cases hput
     rename_i hlen
@@ -421,7 +454,7 @@ theorem derMk (A : ArrId) (m m₁ m' : Mem) (a a' : AState) (key : α) (d : UInt
       have := Nat.mod_le ((m₁.arr64 (tierA A 1)).size % 2 ^ 64 * 2) (2 ^ 64)
       simp only [UInt64.toNat_ofNat'] at h1 ⊢
       omega
-    have rd : ∀ i, i < 2 ^ 27 → i ≠ (g a.store.scr).nodes.size →
+    have rd : ∀ i, i < 2 ^ 30 → i ≠ (g a.store.scr).nodes.size →
         p32Get ((m₁.set32 (tierA A 1) (UInt64.ofNat (g a.store.scr).nodes.size) dd).arr64 (tierA A 1))
           (UInt64.ofNat i) = p32Get (m.arr64 (tierA A 1)) (UInt64.ofNat i) := by
       intro i hi hne
@@ -447,16 +480,16 @@ end derMk
 
 /-- The twin's run of an interning, by cases (`protoRun_cases` through the run equation). -/
 theorem AM.proto_cases {α : Type} [BEq α] [Hashable α] (L : Lens α UInt64 .expr) (op : AM EIdx)
-    (key : α) (tag : UInt32) (pf : Option EIdx) (d : UInt64) (err : CheckError) (a : AState)
-    (hrun : op.run a = protoRun L key tag pf d err a) (hok : AM.ok op a) :
+    (key : α) (tag : UInt32) (wide : Bool) (pf : Option EIdx) (d : UInt64) (err : CheckError) (a : AState)
+    (hrun : op.run a = protoRun L key tag wide pf d err a) (hok : AM.ok op a) :
     AM.st op a = a ∨
-    (L.on a = false ∧ (L.getP a).nodes.size < 2 ^ 27 ∧
-      AM.res op a = decI (hdW tag.toUInt64 0 (UInt64.ofNat (L.getP a).nodes.size)) ∧
+    (L.on a = false ∧ (L.getP a).nodes.size < capS wide ∧
+      AM.res op a = decI (hdS tag wide 0 (UInt64.ofNat (L.getP a).nodes.size)) ∧
       AM.st op a = L.setP a ((L.getP a).push key d (AM.res op a))) ∨
-    (L.on a = true ∧ (L.getS a).nodes.size < 2 ^ 27 ∧
-      AM.res op a = decI (hdW tag.toUInt64 1 (UInt64.ofNat (L.getS a).nodes.size)) ∧
+    (L.on a = true ∧ (L.getS a).nodes.size < capS wide ∧
+      AM.res op a = decI (hdS tag wide 1 (UInt64.ofNat (L.getS a).nodes.size)) ∧
       AM.st op a = L.setS a ((L.getS a).push key d (AM.res op a))) :=
-  protoRun_cases L key tag pf d err a _ _ (hrun.symm.trans (AM.run_of_ok op a hok))
+  protoRun_cases L key tag wide pf d err a _ _ (hrun.symm.trans (AM.run_of_ok op a hok))
 
 theorem cP_other {α : Type} [BEq α] [Hashable α] {a : AState} {g : ETables → Tbl α EIdx UInt64}
     {B : ArrId} {m m' : Mem} (hd : DerT2 a g (cP B m)) (h : m'.arr64 B = m.arr64 B)
@@ -484,8 +517,8 @@ theorem mkApp_ok (m : Mem) (a : AState) (hA : ArenaD m a) (f x r : Word) (m' : M
   obtain ⟨rfl, rfl⟩ := hI
   obtain ⟨hok, hX, hres⟩ := aintern_correct m a hR.app f x hf hx _ _ hI₁
   have hfr := consInternM_frame appCS_wf hI₁
-  have hcs := AM.proto_cases appLens _ _ _ _ _ _ a (internE_app_run _ _ a) hok
-  have hR₁ := hR.lift_app _ _ _ _ hX hfr (AM.st_proto appLens _ _ _ _ _ _ a (internE_app_run _ _ a) hok)
+  have hcs := AM.proto_cases appLens _ _ _ _ _ _ _ a (internE_app_run _ _ a) hok
+  have hR₁ := hR.lift_app _ _ _ _ hX hfr (AM.st_proto appLens _ _ _ _ _ _ _ a (internE_app_run _ _ a) hok)
   have hD₁ : DerR m₁ a := DerR.frameM _ _ m m₁ hfr (by simp [tier1, ConsSch.wset, appCS, AREC, ASLOT]) a hD
   have hfr₂ := derPutW_frame ADER (by decide) _ _ _ _ _ _ hP
   have hnew := derMk appCS appCS_wf ARecRel appLens (·.apps) (fun _ => rfl) (fun _ => rfl)
@@ -493,7 +526,8 @@ theorem mkApp_ok (m : Mem) (a : AState) (hA : ArenaD m a) (f x r : Word) (m' : M
     hR.app hR₁.app hD.app (hfr.tier ADER (by simp [tier1, ConsSch.wset, appCS, ADER, AREC, ASLOT]) (by simp [tier1, ConsSch.wset, appCS, ADER, AREC, ASLOT]) (by decide)) hcs hres.symm
     (by rw [maxW_eq, maxW_eq, derBW_ok m a hR hD f hf, derBW_ok m a hR hD x hx,
       derFW_ok m a hR hD f hf, derFW_ok m a hR hD x hx, bvar_derApp, fvar_derApp,
-      derLW_ok m a hR hD f hf, derLW_ok m a hR hD x hx]; simp only [lpW, lp_derApp, b2w_or]) hP
+      derLW_ok m a hR hD f hf, derLW_ok m a hR hD x hx]; simp only [lpW, lp_derApp, b2w_or])
+    (by simp [derIxW, appCS, ADER]) hP
   have o := fun (B : TieredArray) (hB : B ≠ ADER) (hB' : B ≠ tier1 ADER) (hC : B ≠ CTL) =>
     hfr₂.arr B (by simp [hB, hB']) hC
   refine ⟨hok, ⟨ArenaR.frame_above _ _ (by simp [tier1, ADER]) (by simp) _ _ hfr₂ _ hR₁, ?_⟩, hres⟩
@@ -526,8 +560,8 @@ theorem mkLam_ok (m : Mem) (a : AState) (hA : ArenaD m a) (t b r : Word) (m' : M
   obtain ⟨rfl, rfl⟩ := hI
   obtain ⟨hok, hX, hres⟩ := laintern_correct m a hR.lam t b ht hb _ _ hI₁
   have hfr := consInternM_frame lamCS_wf hI₁
-  have hcs := AM.proto_cases lamLens _ _ _ _ _ _ a (internE_lam_run _ _ a) hok
-  have hR₁ := hR.lift_lam _ _ _ _ hX hfr (AM.st_proto lamLens _ _ _ _ _ _ a (internE_lam_run _ _ a) hok)
+  have hcs := AM.proto_cases lamLens _ _ _ _ _ _ _ a (internE_lam_run _ _ a) hok
+  have hR₁ := hR.lift_lam _ _ _ _ hX hfr (AM.st_proto lamLens _ _ _ _ _ _ _ a (internE_lam_run _ _ a) hok)
   have hD₁ : DerR m₁ a := DerR.frameM _ _ m m₁ hfr (by simp [tier1, ConsSch.wset, lamCS, LAREC, LASLOT]) a hD
   have hfr₂ := derPutW_frame LADER (by decide) _ _ _ _ _ _ hP
   have hnew := derMk lamCS lamCS_wf LaRecRel lamLens (·.lams) (fun _ => rfl) (fun _ => rfl)
@@ -535,7 +569,8 @@ theorem mkLam_ok (m : Mem) (a : AState) (hA : ArenaD m a) (t b r : Word) (m' : M
     hR.lam hR₁.lam hD.lam (hfr.tier LADER (by simp [tier1, ConsSch.wset, lamCS, LADER, LAREC, LASLOT]) (by simp [tier1, ConsSch.wset, lamCS, LADER, LAREC, LASLOT]) (by decide)) hcs
     hres.symm (by rw [maxW_eq, maxW_eq, satPredW_eq, derBW_ok m a hR hD t ht, derBW_ok m a hR hD b hb,
       derFW_ok m a hR hD t ht, derFW_ok m a hR hD b hb, bvar_derBind, fvar_derBind, derLW_ok m a hR hD t ht, derLW_ok m a hR hD b hb] <;>
-      simp only [lpW, lp_derBind, b2w_or]) hP
+      simp only [lpW, lp_derBind, b2w_or])
+    (by simp [derIxW, lamCS, ADER, LADER]) hP
   have o := fun (B : TieredArray) (hB : B ≠ LADER) (hB' : B ≠ tier1 LADER) (hC : B ≠ CTL) =>
     hfr₂.arr B (by simp [hB, hB']) hC
   refine ⟨hok, ⟨ArenaR.frame_above _ _ (by simp [tier1, LADER]) (by simp) _ _ hfr₂ _ hR₁, ?_⟩, hres⟩
@@ -570,8 +605,8 @@ theorem mkForall_ok (m : Mem) (a : AState) (hA : ArenaD m a) (t b r : Word) (m' 
   obtain ⟨rfl, rfl⟩ := hI
   obtain ⟨hok, hX, hres⟩ := faintern_correct m a hR.forallE t b ht hb _ _ hI₁
   have hfr := consInternM_frame forallCS_wf hI₁
-  have hcs := AM.proto_cases forallLens _ _ _ _ _ _ a (internE_forall_run _ _ a) hok
-  have hR₁ := hR.lift_forallE _ _ _ _ hX hfr (AM.st_proto forallLens _ _ _ _ _ _ a (internE_forall_run _ _ a) hok)
+  have hcs := AM.proto_cases forallLens _ _ _ _ _ _ _ a (internE_forall_run _ _ a) hok
+  have hR₁ := hR.lift_forallE _ _ _ _ hX hfr (AM.st_proto forallLens _ _ _ _ _ _ _ a (internE_forall_run _ _ a) hok)
   have hD₁ : DerR m₁ a := DerR.frameM _ _ m m₁ hfr (by simp [tier1, ConsSch.wset, forallCS, FAREC, FASLOT]) a hD
   have hfr₂ := derPutW_frame FADER (by decide) _ _ _ _ _ _ hP
   have hnew := derMk forallCS forallCS_wf FaRecRel forallLens (·.foralls) (fun _ => rfl) (fun _ => rfl)
@@ -579,7 +614,8 @@ theorem mkForall_ok (m : Mem) (a : AState) (hA : ArenaD m a) (t b r : Word) (m' 
     hR.forallE hR₁.forallE hD.forallE (hfr.tier FADER (by simp [tier1, ConsSch.wset, forallCS, FADER, FAREC, FASLOT]) (by simp [tier1, ConsSch.wset, forallCS, FADER, FAREC, FASLOT]) (by decide)) hcs
     hres.symm (by rw [maxW_eq, maxW_eq, satPredW_eq, derBW_ok m a hR hD t ht, derBW_ok m a hR hD b hb,
       derFW_ok m a hR hD t ht, derFW_ok m a hR hD b hb, bvar_derBind, fvar_derBind, derLW_ok m a hR hD t ht, derLW_ok m a hR hD b hb] <;>
-      simp only [lpW, lp_derBind, b2w_or]) hP
+      simp only [lpW, lp_derBind, b2w_or])
+    (by simp [derIxW, forallCS, ADER, FADER]) hP
   have o := fun (B : TieredArray) (hB : B ≠ FADER) (hB' : B ≠ tier1 FADER) (hC : B ≠ CTL) =>
     hfr₂.arr B (by simp [hB, hB']) hC
   refine ⟨hok, ⟨ArenaR.frame_above _ _ (by simp [tier1, FADER]) (by simp) _ _ hfr₂ _ hR₁, ?_⟩, hres⟩
@@ -616,9 +652,9 @@ theorem mkLet_ok (m : Mem) (a : AState) (hA : ArenaD m a) (t v b r : Word) (m' :
   obtain ⟨rfl, rfl⟩ := hI
   obtain ⟨hok, hX, hres⟩ := leintern_correct m a hR.letE t v b ht hv hb _ _ hI₁
   have hfr := consInternM_frame letCS_wf hI₁
-  have hcs := AM.proto_cases letLens _ _ _ _ _ _ a (internE_let_run _ _ _ a) hok
+  have hcs := AM.proto_cases letLens _ _ _ _ _ _ _ a (internE_let_run _ _ _ a) hok
   have hR₁ := hR.lift_letE _ _ _ _ hX hfr
-    (AM.st_proto letLens _ _ _ _ _ _ a (internE_let_run _ _ _ a) hok)
+    (AM.st_proto letLens _ _ _ _ _ _ _ a (internE_let_run _ _ _ a) hok)
   have hD₁ : DerR m₁ a := DerR.frameM _ _ m m₁ hfr (by simp [tier1, ConsSch.wset, letCS, LEREC, LESLOT]) a hD
   have hfr₂ := derPutW_frame LEDER (by decide) _ _ _ _ _ _ hP
   have hnew := derMk letCS letCS_wf LeRecRel letLens (·.lets) (fun _ => rfl) (fun _ => rfl)
@@ -628,7 +664,8 @@ theorem mkLet_ok (m : Mem) (a : AState) (hA : ArenaD m a) (t v b r : Word) (m' :
       derBW_ok m a hR hD v hv, derBW_ok m a hR hD b hb, derFW_ok m a hR hD t ht,
       derFW_ok m a hR hD v hv, derFW_ok m a hR hD b hb, bvar_derLet, fvar_derLet,
       derLW_ok m a hR hD t ht, derLW_ok m a hR hD v hv, derLW_ok m a hR hD b hb] <;>
-      simp only [lpW, lp_derLet, b2w_or]) hP
+      simp only [lpW, lp_derLet, b2w_or])
+    (by simp [derIxW, letCS, ADER, LEDER]) hP
   have o := fun (B : TieredArray) (hB : B ≠ LEDER) (hB' : B ≠ tier1 LEDER) (hC : B ≠ CTL) =>
     hfr₂.arr B (by simp [hB, hB']) hC
   refine ⟨hok, ⟨ArenaR.frame_above _ _ (by simp [tier1, LEDER]) (by simp) _ _ hfr₂ _ hR₁, ?_⟩, hres⟩
@@ -660,9 +697,9 @@ theorem mkProj_ok (m : Mem) (a : AState) (hA : ArenaD m a) (n i e r : Word) (m' 
   obtain ⟨rfl, rfl⟩ := hI
   obtain ⟨hok, hX, hres⟩ := pjintern_correct m a hR.proj n i e hn he _ _ hI₁
   have hfr := consInternM_frame projCS_wf hI₁
-  have hcs := AM.proto_cases projLens _ _ _ _ _ _ a (internE_proj_run _ _ _ a) hok
+  have hcs := AM.proto_cases projLens _ _ _ _ _ _ _ a (internE_proj_run _ _ _ a) hok
   have hR₁ := hR.lift_proj _ _ _ _ hX hfr
-    (AM.st_proto projLens _ _ _ _ _ _ a (internE_proj_run _ _ _ a) hok)
+    (AM.st_proto projLens _ _ _ _ _ _ _ a (internE_proj_run _ _ _ a) hok)
   have hD₁ : DerR m₁ a := DerR.frameM _ _ m m₁ hfr (by simp [tier1, ConsSch.wset, projCS, PJREC, PJSLOT]) a hD
   have hfr₂ := derPutW_frame PJDER (by decide) _ _ _ _ _ _ hP
   have hnew := derMk projCS projCS_wf PJRecRel projLens (·.projs) (fun _ => rfl)
@@ -670,7 +707,8 @@ theorem mkProj_ok (m : Mem) (a : AState) (hA : ArenaD m a) (n i e r : Word) (m' 
     a _ _ _ _ r₁ _ hR.proj hR₁.proj hD.proj
     (hfr.tier PJDER (by simp [tier1, ConsSch.wset, projCS, PJDER, PJREC, PJSLOT]) (by simp [tier1, ConsSch.wset, projCS, PJDER, PJREC, PJSLOT]) (by decide)) hcs
     hres.symm (by rw [derBW_ok m a hR hD e he, derFW_ok m a hR hD e he, bvar_derProj,
-      fvar_derProj, derLW_ok m a hR hD e he]; simp only [lpW, lp_derProj]) hP
+      fvar_derProj, derLW_ok m a hR hD e he]; simp only [lpW, lp_derProj])
+    (by simp [derIxW, projCS, ADER, PJDER]) hP
   have o := fun (B : TieredArray) (hB : B ≠ PJDER) (hB' : B ≠ tier1 PJDER) (hC : B ≠ CTL) =>
     hfr₂.arr B (by simp [hB, hB']) hC
   refine ⟨hok, ⟨ArenaR.frame_above _ _ (by simp [tier1, PJDER]) (by simp) _ _ hfr₂ _ hR₁, ?_⟩, hres⟩
@@ -694,9 +732,9 @@ theorem internBVar_D (m : Mem) (a : AState) (hA : ArenaD m a) (u r : Word) (m' :
   obtain ⟨hR, hD⟩ := hA
   obtain ⟨hok, hX, hres⟩ := bintern_correct m a hR.bvar u _ _ hI
   have hfr := consInternM_frame bvarCS_wf hI
-  have hcs := AM.proto_cases bvarLens _ _ _ _ _ _ a (internE_bvar_run _ a) hok
+  have hcs := AM.proto_cases bvarLens _ _ _ _ _ _ _ a (internE_bvar_run _ a) hok
   have hR₁ := hR.lift_bvar _ _ _ _ hX hfr
-    (AM.st_proto bvarLens _ _ _ _ _ _ a (internE_bvar_run _ a) hok)
+    (AM.st_proto bvarLens _ _ _ _ _ _ _ a (internE_bvar_run _ a) hok)
   have hD₁ : DerR m' a := DerR.frameM _ _ m m' hfr (by simp [tier1, ConsSch.wset, bvarCS, BREC, BSLOT]) a hD
   refine ⟨hok, ⟨hR₁, ?_⟩, hres⟩
   rcases hcs with h | ⟨-, -, -, h⟩ | ⟨-, -, -, h⟩ <;> rw [h]
@@ -715,10 +753,10 @@ theorem internFVar_D (m : Mem) (a : AState) (hA : ArenaD m a) (u ty r : Word)
   obtain ⟨hR, hD⟩ := hA
   obtain ⟨hok, hX, hres⟩ := fvintern_correct m a hR.fvar u ty hty _ _ hI
   have hfr := fvinternW_frame m u ty _ _ hI
-  have hcs := AM.proto_cases fvarLens _ _ _ _ _ _ a (internE_fvar_run _ _ a) hok
+  have hcs := AM.proto_cases fvarLens _ _ _ _ _ _ _ a (internE_fvar_run _ _ a) hok
   have hR₁ := hR.lift_fvar _ _ _ _
     ⟨hX, fvintern_lp m a hR.fvar u ty hty hR.fvarLp (derLW_ok m a hR hD ty hty) _ _ hI⟩ hfr
-    (AM.st_proto fvarLens _ _ _ _ _ _ a (internE_fvar_run _ _ a) hok)
+    (AM.st_proto fvarLens _ _ _ _ _ _ _ a (internE_fvar_run _ _ a) hok)
   have hD₁ : DerR m' a := DerR.frameM _ _ m m' hfr (by simp [tier1, FVREC, FVSLOT, FVLP]) a hD
   refine ⟨hok, ⟨hR₁, ?_⟩, hres⟩
   rcases hcs with h | ⟨-, -, -, h⟩ | ⟨-, -, -, h⟩ <;> rw [h]
@@ -736,10 +774,10 @@ theorem internSort_D (m : Mem) (a : AState) (hA : ArenaD m a) (u r : Word)
   obtain ⟨hR, hD⟩ := hA
   obtain ⟨hok, hX, hres⟩ := sointern_correct m a hR.sort u hu _ _ hI
   have hfr := sointernW_frame m u _ _ hI
-  have hcs := AM.proto_cases sortLens _ _ _ _ _ _ a (internE_sort_run _ a) hok
+  have hcs := AM.proto_cases sortLens _ _ _ _ _ _ _ a (internE_sort_run _ a) hok
   have hR₁ := hR.lift_sort _ _ _ _
     ⟨hX, sointern_lp m a hR.sort u hu hR.sortLp (lvlHPW_ok m a hR u hu) _ _ hI⟩ hfr
-    (AM.st_proto sortLens _ _ _ _ _ _ a (internE_sort_run _ a) hok)
+    (AM.st_proto sortLens _ _ _ _ _ _ _ a (internE_sort_run _ a) hok)
   have hD₁ : DerR m' a := DerR.frameM _ _ m m' hfr (by simp [tier1, SOREC, SOSLOT, SOLP]) a hD
   refine ⟨hok, ⟨hR₁, ?_⟩, hres⟩
   rcases hcs with h | ⟨-, -, -, h⟩ | ⟨-, -, -, h⟩ <;> rw [h]
@@ -759,10 +797,10 @@ theorem internConst_D (m : Mem) (a : AState) (hA : ArenaD m a) (f x r : Word)
   obtain ⟨hR, hD⟩ := hA
   obtain ⟨hok, hX, hres⟩ := ceintern_correct m a hR.const f x hf hx _ _ hI
   have hfr := ceinternW_frame m f x _ _ hI
-  have hcs := AM.proto_cases constLens _ _ _ _ _ _ a (internE_const_run _ _ a) hok
+  have hcs := AM.proto_cases constLens _ _ _ _ _ _ _ a (internE_const_run _ _ a) hok
   have hR₁ := hR.lift_const _ _ _ _
     ⟨hX, ceintern_lp m a hR.const f x hf hx hR.constLp (lsHPW_ok m a hR x hx) _ _ hI⟩ hfr
-    (AM.st_proto constLens _ _ _ _ _ _ a (internE_const_run _ _ a) hok)
+    (AM.st_proto constLens _ _ _ _ _ _ _ a (internE_const_run _ _ a) hok)
   have hD₁ : DerR m' a := DerR.frameM _ _ m m' hfr (by simp [tier1, CREC, CSLOT, CLP]) a hD
   refine ⟨hok, ⟨hR₁, ?_⟩, hres⟩
   rcases hcs with h | ⟨-, -, -, h⟩ | ⟨-, -, -, h⟩ <;> rw [h]
@@ -784,9 +822,9 @@ theorem internLit_D (m : Mem) (a : AState) (hA : ArenaD m a) (o l r : Word)
   obtain ⟨hR, hD⟩ := hA
   obtain ⟨hok, hX, hres⟩ := intern_correct m a hR.lit o l hq hn hq0 _ _ hI
   have hfr := consInternM_frame litCS_wf hI
-  have hcs := AM.proto_cases litLens _ _ _ _ _ _ a (internE_lit_run _ a) hok
+  have hcs := AM.proto_cases litLens _ _ _ _ _ _ _ a (internE_lit_run _ a) hok
   have hR₁ := hR.lift_lit _ _ _ _ hX hfr
-    (AM.st_proto litLens _ _ _ _ _ _ a (internE_lit_run _ a) hok)
+    (AM.st_proto litLens _ _ _ _ _ _ _ a (internE_lit_run _ a) hok)
   have hD₁ : DerR m' a := DerR.frameM _ _ m m' hfr (by simp [tier1, ConsSch.wset, litCS, litCSk, REC, SLOT]) a hD
   refine ⟨hok, ⟨hR₁, ?_⟩, hres⟩
   rcases hcs with h | ⟨-, -, -, h⟩ | ⟨-, -, -, h⟩ <;> rw [h]

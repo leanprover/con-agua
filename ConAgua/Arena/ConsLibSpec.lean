@@ -39,7 +39,7 @@ def cntC (C : ConsSch) (m : Mem) (t : Word) : Word := rdW (m.arr64 CTL) (C.ca + 
 
 /-- The push's room checks: the handle index, the table's own test. -/
 def pushOKC (C : ConsSch) (m : Mem) (t : Word) : Bool :=
-  decide (cntC C m t < (134217728 : Word)) && !C.roomM m t (cntC C m t)
+  decide (cntC C m t < C.capW) && !C.roomM m t (cntC C m t)
 
 /-- Write the words `vs` into array `ra` from word `k + f`. -/
 def wrRecK (ra : TieredArray) (k : Word) : Mem → Word → List Word → Mem

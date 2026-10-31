@@ -335,7 +335,7 @@ theorem abAdapter_spec (n : Nat) (s₀ : St) (f e d k : Word) :
   rw [invoke_eq _ (show abProg.lookup "abstract1_fast" = some L.Checker.abstract1FastA from rfl)]
   simp only [callFn, L.Checker.abstract1FastA]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
       callW_spec abProg n "abs_entry"] <;>
     finish [fwd1_some]
 

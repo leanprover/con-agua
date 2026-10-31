@@ -26,7 +26,7 @@ namespace L.Arena
 /-! ## `app_count(e)`: the number of `.app` nodes on the spine -/
 
 /-- `app_count(e)`: `get_app_fn`'s loop; the count is the fuel spent.
-con-ron: ConRon/Arena/ExprOps.lean:1292-1303 ConRon.Arena.getAppArgs -/
+con-ron: ConRon/Arena/ExprOps.lean:1297-1308 ConRon.Arena.getAppArgs -/
 def appCountL : FunDecl := lfn (e) locals (f, t, x) {
   f := 4000000000;
   ⟪getAppFnLoop⟫;
@@ -51,7 +51,7 @@ theorem appCount_spec (p : Prog) (hp : p.lookup "app_count" = some appCountL) (n
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, getAppFnLoop_step_spec p n] <;>
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, getAppFnLoop_step_spec p n] <;>
       finish [appCntW]
 
 /-! ## `app_fill(e, o, n)`: the arguments into `SPN[o ‥ o + n)`, last first -/
@@ -60,22 +60,22 @@ def appFillLoop : Stmt := lblk (e, o, n, t, x) {
   while n != 0 {
     n -= 1;
     t := ⟦e⟧.tier;
-    x := ⟦e⟧.idx;
+    x := ⟦e⟧.aidx;
     SPN.u64[o + n] := APP⟨t, x⟩.a;
     e := APP⟨t, x⟩.f
   }
 }
 
 /-- `app_fill(e, o, n)`.
-con-ron: ConRon/Arena/ExprOps.lean:1292-1303 ConRon.Arena.getAppArgs -/
+con-ron: ConRon/Arena/ExprOps.lean:1297-1308 ConRon.Arena.getAppArgs -/
 def appFillL : FunDecl := lfn (e, o, n) locals (t, x) {
   ⟪appFillLoop⟫;
   return 0
 }
 
 /-- The function child and the argument child of an `.app` handle word. -/
-def fnW (m : Mem) (e : Word) : Word := tfld m APP (tierW e) (idxW e) 0
-def argW (m : Mem) (e : Word) : Word := tfld m APP (tierW e) (idxW e) 1
+def fnW (m : Mem) (e : Word) : Word := tfld m APP (tierW e) (idxA e) 0
+def argW (m : Mem) (e : Word) : Word := tfld m APP (tierW e) (idxA e) 1
 
 /-- The fills' stack writes do not touch the `app` records (either tier). -/
 theorem tfld_set64_SPN_app (m : Mem) (k v t i f : Word) :
@@ -108,7 +108,7 @@ theorem appFillLoop_spec (p : Prog) (k : Nat) (s₀ : St) :
     rw [exec, step_while (w := appFillLoop) rfl]
     sym only [lang_grind, arena_grind] =>
       vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt, tcntM,
-        evalE_tierE, evalE_idxE, st64, ih] <;>
+        evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE, st64, ih] <;>
       finish [fillW_zero, fillW_succ, fnW, argW, tierW, idxW, tfld_set64_SPN_app, tcnt]
 
 
@@ -120,7 +120,7 @@ theorem appFill_spec (p : Prog) (hp : p.lookup "app_fill" = some appFillL) (k : 
   rw [invoke_eq _ hp]
   simp only [callFn, appFillL]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, fun s₀ => Triple.step_exec (appFillLoop_spec p (k + 1) s₀)] <;>
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, fun s₀ => Triple.step_exec (appFillLoop_spec p (k + 1) s₀)] <;>
     finish
 
 theorem toUInt64_succ_sub_one (j : Nat) : ((j + 1).toUInt64 - 1) = j.toUInt64 := by
@@ -227,14 +227,14 @@ def appFillNLoop : Stmt := lblk (e, o, n, t, x) {
   while n != 0 {
     n -= 1;
     t := ⟦e⟧.tier;
-    x := ⟦e⟧.idx;
+    x := ⟦e⟧.aidx;
     SPN.u64[o + n] := e;
     e := APP⟨t, x⟩.f
   }
 }
 
 /-- `app_fill_n(e, o, n)`.
-con-ron: ConRon/Arena/Core.lean:2110-2124 ConRon.Arena.getAppSpineGo -/
+con-ron: ConRon/Arena/Core.lean:2115-2129 ConRon.Arena.getAppSpineGo -/
 def appFillNL : FunDecl := lfn (e, o, n) locals (t, x) {
   ⟪appFillNLoop⟫;
   return 0
@@ -266,7 +266,7 @@ theorem appFillNLoop_spec (p : Prog) (k : Nat) (s₀ : St) :
     rw [exec, step_while (w := appFillNLoop) rfl]
     sym only [lang_grind, arena_grind] =>
       vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt, tcntM,
-        evalE_tierE, evalE_idxE, st64, ih] <;>
+        evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE, st64, ih] <;>
       finish [fillNW_zero, fillNW_succ, fnW, tierW, idxW, tfld_set64_SPN_app, tcnt]
 
 
@@ -278,7 +278,7 @@ theorem appFillN_spec (p : Prog) (hp : p.lookup "app_fill_n" = some appFillNL) (
   rw [invoke_eq _ hp]
   simp only [callFn, appFillNL]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, fun s₀ => Triple.step_exec (appFillNLoop_spec p (k + 1) s₀)] <;>
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, fun s₀ => Triple.step_exec (appFillNLoop_spec p (k + 1) s₀)] <;>
     finish
 
 /-- A fill that succeeds had fuel for every node. -/
@@ -370,7 +370,7 @@ theorem fillNW_ok (o : Word) : ∀ (j k : Nat) (m : Mem) (e : Word), j < k →
 
 /-- A count loop at fuel zero ends with fuel zero. -/
 theorem gafLoopW_f0 {m : Mem} {e e' f' : Word} (hL : gafLoopW m e 0 = some (e', f')) : f' = 0 := by
-  by_cases hc : e >>> 28 = 4
+  by_cases hc : tagW e = 4
   · rw [gafLoopW] at hL; simp [hc] at hL
   · rw [gafLoopW_done m e 0 hc] at hL
     exact (Prod.mk.inj (Option.some.inj hL)).2.symm
@@ -378,9 +378,9 @@ theorem gafLoopW_f0 {m : Mem} {e e' f' : Word} (hL : gafLoopW m e 0 = some (e', 
 /-- **One step of the count loop at an `app` node**: the guards pass and the loop goes on at the
 function. -/
 theorem gafLoopW_app {m : Mem} {e f e' f' : Word} (hL : gafLoopW m e f = some (e', f'))
-    (hc : e >>> 28 = 4) :
+    (hc : tagW e = 4) :
     f.toNat ≠ 0 ∧ ¬ (tierW e ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0) ∧
-      idxW e < tcnt m APP (tierW e) ∧ gafLoopW m (fnW m e) (f - 1) = some (e', f') ∧
+      idxA e < tcnt m APP (tierW e) ∧ gafLoopW m (fnW m e) (f - 1) = some (e', f') ∧
       (f - 1).toNat = f.toNat - 1 := by
   have hf0 : f ≠ 0 := by
     intro hf0; rw [hf0, gafLoopW] at hL; simp [hc] at hL
@@ -390,10 +390,10 @@ theorem gafLoopW_app {m : Mem} {e f e' f' : Word} (hL : gafLoopW m e f = some (e
     by_cases hv : (tierW e ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0)
     · simp [hv] at hL
     · exact hv
-  have hv2 : ¬ tcnt m APP (tierW e) ≤ idxW e := by
+  have hv2 : ¬ tcnt m APP (tierW e) ≤ idxA e := by
     rw [gafLoopW] at hL
     simp only [hc, ↓reduceIte, hf0, hv1] at hL
-    by_cases hv : tcnt m APP (tierW e) ≤ idxW e
+    by_cases hv : tcnt m APP (tierW e) ≤ idxA e
     · simp [hv] at hL
     · exact hv
   have hf0' : f.toNat ≠ 0 := fun h => hf0 (UInt64.toNat_inj.mp (by simpa using h))
@@ -418,7 +418,7 @@ theorem gaaTwin (m : Mem) (a : AState) (hR : ArenaR m a) :
     exact absurd (gafLoopW_f0 hL) hf'
   | succ N ih =>
     intro e f e' f' hfN he hL hf'
-    by_cases hc : e >>> 28 = 4
+    by_cases hc : tagW e = 4
     · obtain ⟨hf0', hv1, hcnt, hL', hfm1⟩ := gafLoopW_app hL hc
       have hfm1N : (f - 1).toNat ≤ N := by rw [hfm1]; omega
       have hva := viewApp_ok m a hR e he ⟨hv1, hcnt⟩
@@ -466,7 +466,7 @@ theorem gasTwin (m : Mem) (a : AState) (hR : ArenaR m a) :
     exact absurd (gafLoopW_f0 hL) hf'
   | succ N ih =>
     intro e f e' f' hfN he hL hf'
-    by_cases hc : e >>> 28 = 4
+    by_cases hc : tagW e = 4
     · obtain ⟨hf0', hv1, hcnt, hL', hfm1⟩ := gafLoopW_app hL hc
       have hfm1N : (f - 1).toNat ≤ N := by rw [hfm1]; omega
       have hva := viewApp_ok m a hR e he ⟨hv1, hcnt⟩
@@ -501,7 +501,7 @@ theorem gasTwin (m : Mem) (a : AState) (hR : ArenaR m a) :
 
 /-! ## `get_app_args(e)`: count, check room, fill, push -/
 
-/-- con-ron: ConRon/Arena/ExprOps.lean:1292-1303 ConRon.Arena.getAppArgs -/
+/-- con-ron: ConRon/Arena/ExprOps.lean:1297-1308 ConRon.Arena.getAppArgs -/
 @[l_impl ConRon.Arena.getAppArgs]
 def getAppArgsL : FunDecl := lfn (e) locals (n, o, z) {
   n := call app_count(e);
@@ -536,7 +536,7 @@ theorem gaa_spec (p : Prog) (hp : p.lookup "get_app_args" = some getAppArgsL) (n
   rw [invoke_eq _ hp]
   simp only [callFn, getAppArgsL]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
       callW_spec p n "app_count", callW_spec p n "app_fill"] <;>
     finish [gaaW]
 
@@ -660,8 +660,8 @@ theorem nodesW_congr {m m' : Mem} (h : m'.arr64 AREC = m.arr64 AREC)
   | 0, _ => rfl
   | c + 1, e => by simp only [nodesW, fnW, nodesW_congr h h' c, tfld_arr_eq (R := APP) h h']
 
-/-- con-ron: ConRon/Arena/Core.lean:2126-2129 ConRon.Arena.getAppSpine
-con-ron: ConRon/Arena/Core.lean:2110-2124 ConRon.Arena.getAppSpineGo -/
+/-- con-ron: ConRon/Arena/Core.lean:2131-2134 ConRon.Arena.getAppSpine
+con-ron: ConRon/Arena/Core.lean:2115-2129 ConRon.Arena.getAppSpineGo -/
 @[l_impl ConRon.Arena.getAppSpine ConRon.Arena.getAppSpineGo]
 def getAppSpineL : FunDecl := lfn (e) locals (n, h, o, z) {
   (n, h) := call app_count(e);
@@ -700,7 +700,7 @@ theorem gas_spec (p : Prog) (hp : p.lookup "get_app_spine" = some getAppSpineL) 
   rw [invoke_eq _ hp]
   simp only [callFn, getAppSpineL]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
       callW_spec p n "app_count", callW_spec p n "app_fill", callW_spec p n "app_fill_n"] <;>
     finish [gasW]
 
@@ -879,10 +879,10 @@ theorem getAppSpine_refines' (p : Prog) (hg : p.lookup "get_app_spine" = some ge
 
 /-! ## `head_and_args(v)` -/
 
-/-- con-ron: ConRon/Arena/Core.lean:2131-2139 ConRon.Arena.headAndArgs -/
+/-- con-ron: ConRon/Arena/Core.lean:2136-2144 ConRon.Arena.headAndArgs -/
 @[l_impl ConRon.Arena.headAndArgs]
 def headAndArgsL : FunDecl := lfn (v) locals (h, o, n) {
-  if v >> 28 == 4 {
+  if ⟦v⟧.tag == 4 {
     h := call get_app_fn(v);
     (o, n) := call get_app_args(v);
     return (h, o, n)
@@ -892,7 +892,7 @@ def headAndArgsL : FunDecl := lfn (v) locals (h, o, n) {
 
 /-- The model of `head_and_args`. -/
 def haaW (p : Prog) (n : Nat) (m : Mem) (v : Word) : Option (Word × Word × Word × Mem) :=
-  if v >>> 28 = 4 then
+  if tagW v = 4 then
     match callW p n "get_app_fn" [v] m with
     | none => none
     | some (r₁, m₁) =>
@@ -910,7 +910,7 @@ theorem haa_spec (p : Prog) (hp : p.lookup "head_and_args" = some headAndArgsL) 
   rw [invoke_eq _ hp]
   simp only [callFn, headAndArgsL]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       callW_spec p n "get_app_fn", callW_spec p n "get_app_args"] <;>
     finish [haaW]
 
@@ -938,7 +938,7 @@ theorem headAndArgs_refines' (p : Prog) (hh : p.lookup "head_and_args" = some he
   rw [ht] at hW
   refine ⟨hloc, ?_⟩
   simp only [haaW] at hW
-  by_cases h4 : v >>> 28 = 4
+  by_cases h4 : tagW v = 4
   · rw [ite_eq_left h4] at hW
     rcases h1 : callW p n "get_app_fn" [v] s.mem with _ | ⟨r₁, m₁⟩ <;>
       simp only [h1, reduceCtorEq] at hW

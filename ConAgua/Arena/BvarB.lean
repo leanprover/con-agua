@@ -60,7 +60,7 @@ grind_pattern [arena_grind] bvbW_sat => bvbW (n + 1) m h f
 grind_pattern [arena_grind] bvbW_pk => bvbW (n + 1) m h f
 attribute [arena_grind =] lbbK_some
 
-/-- con-ron: ConRon/Arena/ExprOps.lean:1565-1572 ConRon.Arena.bvarB -/
+/-- con-ron: ConRon/Arena/ExprOps.lean:1570-1577 ConRon.Arena.bvarB -/
 @[l_impl ConRon.Arena.bvarB]
 def bvarBL : FunDecl := lfn (f, e) locals (x, r) {
   x := call der_bv(e);
@@ -68,7 +68,7 @@ def bvarBL : FunDecl := lfn (f, e) locals (x, r) {
   return x
 }
 
-/-- con-ron: ConRon/Arena/ExprOps.lean:1588-1592 ConRon.Arena.looseBVarsBoundedFast -/
+/-- con-ron: ConRon/Arena/ExprOps.lean:1593-1597 ConRon.Arena.looseBVarsBoundedFast -/
 @[l_impl ConRon.Arena.looseBVarsBoundedFast]
 def lbbFastL : FunDecl := lfn (f, k, e) locals (x) {
   x := call bvar_b(f, e);

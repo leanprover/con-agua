@@ -38,7 +38,7 @@ theorem envFind_found (p : Prog) (hx : p.lookup "env_ix" = some envIxL)
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, envRowGet_spec p hx hg n] <;>
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, envRowGet_spec p hx hg n] <;>
       finish
 
 /-- **Every row of the index decodes.** -/
@@ -144,7 +144,7 @@ theorem projCert_spec (p : Prog) (hp : WhnfCoreProg p) (n : Nat) (s₀ : St) (vi
   rw [invoke_eq _ hp.cert]
   simp only [callFn, projCertL]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       callW_spec p n "env_find", callW_spec p n "peel_pis"] <;>
     finish [projCertW_none, projCertW_kind, projCertW_peel]
 

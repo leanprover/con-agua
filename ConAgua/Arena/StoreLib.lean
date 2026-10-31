@@ -48,13 +48,20 @@ namespace L.Arena
 
 /-- A record schema: the record array, the slot array (both tiered: tier `t` is `tierA ra t`,
 `tierA sa t`), the words per record `w`, the `CTL` index of tier 0's node count, the handle
-tag. -/
+tag and shape (`wide`: the expression `app` store's wide handles, con-ron task #133). -/
 structure Schema where
   ra : ArrId
   sa : ArrId
   w : Word
   ca : Word
   tag : UInt32
+  wide : Bool
+
+/-- The handle word of node `i` of tier `t`. -/
+abbrev Schema.hd (S : Schema) (t i : Word) : Word := hdS S.tag S.wide t i
+
+/-- The per-tier node capacity. -/
+abbrev Schema.cap (S : Schema) : Nat := capS S.wide
 
 /-- What the generic lemmas need of a schema. -/
 structure Schema.WF (S : Schema) : Prop where
@@ -70,18 +77,18 @@ structure Schema.WF (S : Schema) : Prop where
 def Schema.ad (S : Schema) (i f : Word) : Word := i * S.w + f
 
 theorem Schema.ad_toNat (S : Schema) (hS : S.WF) (i f : Word)
-    (hi : i.toNat < 2 ^ 27) (hf : f < S.w) :
+    (hi : i.toNat < 2 ^ 30) (hf : f < S.w) :
     (S.ad i f).toNat = i.toNat * S.w.toNat + f.toNat := by
   have h2 := hS.w_le
   have : f.toNat < S.w.toNat := by grind
-  have a1 : i.toNat * S.w.toNat ≤ 2 ^ 27 * 256 := Nat.mul_le_mul (by omega) (by omega)
+  have a1 : i.toNat * S.w.toNat ≤ 2 ^ 30 * 256 := Nat.mul_le_mul (by omega) (by omega)
   simp only [Schema.ad, UInt64.toNat_add, UInt64.toNat_mul]
   rw [Nat.mod_eq_of_lt (a := i.toNat * S.w.toNat) (by omega), Nat.mod_eq_of_lt (by omega)]
 
 /-- **Addresses are injective** on the fields of a schema: the fact `grind` cannot find itself
 when the stride is a variable. -/
 theorem Schema.ad_inj (S : Schema) (hS : S.WF) (i f i' f' : Word)
-    (hi : i.toNat < 2 ^ 27) (hf : f < S.w) (hi' : i'.toNat < 2 ^ 27)
+    (hi : i.toNat < 2 ^ 30) (hf : f < S.w) (hi' : i'.toNat < 2 ^ 30)
     (hf' : f' < S.w) (h : S.ad i f = S.ad i' f') : i = i' ∧ f = f' := by
   have e := congrArg UInt64.toNat h
   rw [S.ad_toNat hS i f hi hf, S.ad_toNat hS i' f' hi' hf'] at e
@@ -127,7 +134,7 @@ def homeS (t h : Word) : Word := homeW h (nSl S m t)
 
 /-- The room an append needs: a handle index and a record. -/
 def PushRoom (t : Word) : Prop :=
-  (cntW S m t).toNat < 2 ^ 27 ∧ S.w.toNat * ((cntW S m t).toNat + 1) ≤ (m.arr64 (tierA S.ra t)).size
+  (cntW S m t).toNat < S.cap ∧ S.w.toNat * ((cntW S m t).toNat + 1) ≤ (m.arr64 (tierA S.ra t)).size
 
 /-- **Tier `t`'s table in its slot array**: the array below `2^61` words (so the growth's
 addresses do not wrap), a multiple of 8 slots (at least 8), from word `2 + o` on (`o` the
@@ -251,8 +258,8 @@ theorem wrRec_size (S : Schema) (t c : Word) (b : TieredArray) :
   | nil => intro m f; rfl
   | cons v vs ih => intro m f; rw [wrRec, ih, size_set64]
 
-theorem wrRec_read (S : Schema) (hS : S.WF) (t c i f : Word) (hc : c.toNat < 2 ^ 27)
-    (hi : i.toNat < 2 ^ 27) (hf : f < S.w) :
+theorem wrRec_read (S : Schema) (hS : S.WF) (t c i f : Word) (hc : c.toNat < 2 ^ 30)
+    (hi : i.toNat < 2 ^ 30) (hf : f < S.w) :
     ∀ (vs : List Word) (m : Mem) (f₀ : Word), f₀.toNat + vs.length ≤ S.w.toNat →
       rdW ((wrRec S t c m f₀ vs).arr64 (tierA S.ra t)) (S.ad i f) =
         if i = c ∧ f₀.toNat ≤ f.toNat ∧ f.toNat < f₀.toNat + vs.length ∧
@@ -340,7 +347,7 @@ include hS in
 /-- The new slot reads `c + 1` against its own base, when the base leaves room for the index
 (`CTL[62] < 2^62 + 2^32`, a clause of `StoreR`). -/
 @[store_grind =] theorem slotV_new (ht : t ≤ 1) (hb : (rdW (m.arr64 CTL) SCB).toNat < 2 ^ 62 + 2 ^ 32)
-    (hc : c.toNat < 2 ^ 27) : slotRd (baseW m t + c + 1) (baseW m t) = c + 1 := by
+    (hc : c.toNat < 2 ^ 30) : slotRd (baseW m t + c + 1) (baseW m t) = c + 1 := by
   simp only [slotRd]
   have : (baseW m t).toNat < 2 ^ 63 := by
     simp only [baseW]
@@ -349,8 +356,8 @@ include hS in
 
 include hS in
 /-- A field after the append: the new record's, or the old. -/
-@[store_grind =] theorem fld_pushG (t' i f : Word) (ht : t ≤ 1) (hc : c.toNat < 2 ^ 27)
-    (ht' : t' ≤ 1) (hi : i.toNat < 2 ^ 27) (hf : f < S.w) (hl : vs.length = S.w.toNat) :
+@[store_grind =] theorem fld_pushG (t' i f : Word) (ht : t ≤ 1) (hc : c.toNat < 2 ^ 30)
+    (ht' : t' ≤ 1) (hi : i.toNat < 2 ^ 30) (hf : f < S.w) (hl : vs.length = S.w.toNat) :
     fld S (pushG S m t vs j c q) t' i f =
       if t' = t ∧ i = c ∧ (S.ad c f).toNat < (m.arr64 (tierA S.ra t)).size then vs.getD f.toNat 0
       else fld S m t' i f := by
@@ -397,7 +404,7 @@ theorem growR_pushG : GrowR S (pushG S m t vs j c q) := by
   · simpa only [TierLay, e1.1, e1.2, pushG_size] using h1
 
 /-- **A slot after an append**: the new node's at slot `j` of tier `t`, else the old. -/
-theorem slotW_pushG (hb : (rdW (m.arr64 CTL) SCB).toNat < 2 ^ 62 + 2 ^ 32) (hc : c.toNat < 2 ^ 27)
+theorem slotW_pushG (hb : (rdW (m.arr64 CTL) SCB).toNat < 2 ^ 62 + 2 ^ 32) (hc : c.toNat < 2 ^ 30)
     (t' j' : Word) (ht' : t' ≤ 1) (hj' : j' < nSl S m t') :
     slotW S (pushG S m t vs j c q) t' j' = if t' = t ∧ j' = j then c + 1 else slotW S m t' j' := by
   by_cases htt : t' = t
@@ -538,11 +545,11 @@ def SlotsOKG (m : Mem) (t : Word) (c : Nat) : Prop :=
 (node `i` holds `tb.nodes[i]` by `R`), the same key → handle map (each node's key maps to its
 handle, each entry points at a node with its key), and the slots index the nodes. -/
 def TierR (m : Mem) (t : Word) (tb : Tbl α (Idx k) δ) : Prop :=
-  (cntW S m t).toNat = tb.nodes.size ∧ tb.nodes.size ≤ 134217728 ∧
+  (cntW S m t).toNat = tb.nodes.size ∧ tb.nodes.size ≤ S.cap ∧
   S.w.toNat * tb.nodes.size ≤ (m.arr64 (tierA S.ra t)).size ∧
   (∀ (i : Word) a, tb.nodes[i.toNat]? = some a → R m t i a) ∧
   (∀ (i : Word) a, tb.nodes[i.toNat]? = some a →
-    tb.cons[a]? = some (decI (hdW S.tag.toUInt64 t i))) ∧
+    tb.cons[a]? = some (decI (S.hd t i))) ∧
   (∀ a x, tb.cons[a]? = some x → tb.nodes[(hix x).toNat]? = some a) ∧
   SlotsOKG S hs KP m t tb.nodes.size
 
@@ -612,9 +619,10 @@ include hT hM hQ in
 /-- A probe hit is the arena's cons hit, at the same handle. -/
 theorem tierR_hit (x : Word) (rs : List Word) (hP : ProbeOKG S m t (mt t) ex q x rs)
     (hr : rs ≠ []) (hh : rs.headD 0 ≠ 0) :
-    tb.cons[key]? = some (decI (hdW S.tag.toUInt64 t (rs.tail.headD 0))) := by
+    tb.cons[key]? = some (decI (S.hd t (rs.tail.headD 0))) := by
   obtain ⟨⟨hk, hm⟩, hs1, hs2, hj⟩ := (hP hr).1 hh
   obtain ⟨-, hcap, -, hrec, hsome, -, ⟨hsl, hkp, -⟩⟩ := hT
+  have hcap30 : _ ≤ 2 ^ 30 := Nat.le_trans hcap (capS_le _)
   have h1 := hsl _ hj
   rw [hs1] at h1
   have hi : (rs.tail.headD 0).toNat < tb.nodes.size := by grind
@@ -640,6 +648,7 @@ theorem tierR_miss (qh : Word) (hH : HomeOK hs mt m qh) (rs : List Word)
   | some x =>
     exfalso
     obtain ⟨-, hcap, -, hrec, -, hback, ⟨-, hkp, hrun⟩⟩ := hT
+    have hcap30 : _ ≤ 2 ^ 30 := Nat.le_trans hcap (capS_le _)
     have hn := hback key x hc
     have hR := hrec (hix x) key hn
     have hm := (hM t (hix x) key hR).mpr rfl
@@ -689,7 +698,7 @@ theorem tierR_push [LawfulBEq α] (hS : S.WF) (hfr : RFrame S R hs) (hkf : KFram
     (hl : vs.length = S.w.toNat) (hN : NewOK S R hs KP m vs key qh q)
     (ht0 : t = 0 → rdW (m.arr64 CTL) 1 = 0) (dd : δ) (hG : GrowR S m) :
     TierR S R hs KP (pushG S m t vs (rs.tail.tail.headD 0) (cntW S m t) q) t
-      (tb.push key dd (decI (hdW S.tag.toUInt64 t (cntW S m t)))) := by
+      (tb.push key dd (decI (S.hd t (cntW S m t)))) := by
   have hmiss := tierR_miss S R hs KP m t tb hT mt key hM ex q hQ qh hH rs hP hr hh
   obtain ⟨hJ, hjn, hJ0, hnm⟩ := (hP hr).2 hh
   generalize rs.tail.tail.tail.headD 0 = D at hJ hnm
@@ -698,11 +707,13 @@ theorem tierR_push [LawfulBEq α] (hS : S.WF) (hfr : RFrame S R hs) (hkf : KFram
   have hnew := hN t J ht hroom ht0
   have hca := hS.ca
   have htag : S.tag.toUInt64 < 16 := by have := hS.tag; grind
+  have htag' : S.tag.toNat < 16 := hS.tag
   have hout := outEq_pushG S hS m t ht vs J (cntW S m t) q
-  have hcnt : (cntW S m t).toNat < 2 ^ 27 := hroom.1
+  have hcnt : (cntW S m t).toNat < 2 ^ 30 := Nat.lt_of_lt_of_le hroom.1 (capS_le _)
   have hsw := slotW_pushG S hS m t vs J (cntW S m t) q hG ht hjn hb hcnt t
   have hsk := slotK_pushG S hS m t vs J (cntW S m t) q hG ht hjn t
   obtain ⟨hc, hcap, hrs, hrec, hsome, hback, hsl, hkp, hrun⟩ := hT
+  have hcap30 : _ ≤ 2 ^ 30 := Nat.le_trans hcap (capS_le _)
   simp only [TierR, SlotsOKG, Tbl.push_nodes, Tbl.push_cons, Array.size_push]
   have hctr : (S.ca + t).toNat < (m.arr64 CTL).size := by grind
   have hfe : ∀ i : Word, i.toNat < tb.nodes.size → ∀ f, f < S.w →
@@ -796,9 +807,10 @@ theorem tierR_other (hS : S.WF) (hfr : RFrame S R hs) (hkf : KFrame S hs KP) (m 
   have hca := hS.ca
   have hnS := nSl_pushG S hS m t vs J (cntW S m t) q hG ht hJ t' ht'
   have hout := outEq_pushG S hS m t ht vs J (cntW S m t) q
-  have hsw := slotW_pushG S hS m t vs J (cntW S m t) q hG ht hJ hb hroom.1 t'
+  have hsw := slotW_pushG S hS m t vs J (cntW S m t) q hG ht hJ hb (Nat.lt_of_lt_of_le hroom.1 (capS_le _)) t'
   have hsk := slotK_pushG S hS m t vs J (cntW S m t) q hG ht hJ t'
   obtain ⟨hc, hcap, hrs, hrec, hsome, hback, hsl, hkp, hrun⟩ := hT
+  have hcap30 : _ ≤ 2 ^ 30 := Nat.le_trans hcap (capS_le _)
   have hfe : ∀ i : Word, i.toNat < tb.nodes.size → ∀ f, f < S.w →
       fld S (pushG S m t vs J (cntW S m t) q) t' i f = fld S m t' i f := by
     intro i hi f hf; rw [fld_pushG S hS] <;> grind [PushRoom]
@@ -844,6 +856,7 @@ theorem tierR_mono (m m' : Mem) (t : Word) (tb : Tbl α (Idx k) δ)
     (hh : ∀ i, hs m' t i = hs m t i) (hKP : ∀ i K, KP m t i K → KP m' t i K)
     (hT : TierR S R hs KP m t tb) : TierR S R hs KP m' t tb := by
   obtain ⟨hc', hcap, hrs, hrec, hsome, hback, hsl, hkp, hrun⟩ := hT
+  have hcap30 : _ ≤ 2 ^ 30 := Nat.le_trans hcap (capS_le _)
   have hk : krW S.sa m' t = krW S.sa m t := by simp only [krW, koW, hsa]
   have hn : nSl S m' t = nSl S m t := by simp only [nSl, knW, hsa]
   have hsl' : ∀ j, slotW S m' t j = slotW S m t j := fun j => by simp only [slotW, hsa, hbase, hk]
@@ -868,6 +881,7 @@ theorem tierR_mono' (m m' : Mem) (t : Word) (tb : Tbl α (Idx k) δ)
     (hh : ∀ i, hs m' t i = hs m t i) (hKP : ∀ i K, KP m t i K → KP m' t i K)
     (hT : TierR S R hs KP m t tb) : TierR S R hs KP m' t tb := by
   obtain ⟨hc', hcap, hrs, hrec, hsome, hback, hsl, hkp, hrun⟩ := hT
+  have hcap30 : _ ≤ 2 ^ 30 := Nat.le_trans hcap (capS_le _)
   have hk : krW S.sa m' t = krW S.sa m t := by simp only [krW, koW, hsa]
   have hn : nSl S m' t = nSl S m t := by simp only [nSl, knW, hsa]
   have hsl' : ∀ j, slotW S m' t j = slotW S m t j := fun j => by simp only [slotW, hsa, hbase, hk]
@@ -896,7 +910,7 @@ theorem tierR_empty (m : Mem) (hc : cntW S m 1 = 0)
   intro i hi; simp [Tbl.empty] at hi
 
 /-- **Raising the slot base frees every scratch slot**: a slot of tier 1 holds at most
-`B + 2^27` (`SlotsOKG`, the cap `134217728`), so against a base raised by `2^32` (from below
+`B + 2^30` (`SlotsOKG`, the cap `S.cap`), so against a base raised by `2^32` (from below
 `2^62`) it reads free. -/
 theorem slotW_free_raise (m m' : Mem) (tbS : Tbl α (Idx k) δ) (hT1 : TierR S R hs KP m 1 tbS)
     (hsa : m'.arr64 (tierA S.sa 1) = m.arr64 (tierA S.sa 1))
@@ -907,9 +921,10 @@ theorem slotW_free_raise (m m' : Mem) (tbS : Tbl α (Idx k) δ) (hT1 : TierR S R
   have hB : (rdW (m'.arr64 CTL) SCB).toNat = (rdW (m.arr64 CTL) SCB).toNat + 4294967296 := by
     rw [hb, UInt64.toNat_add]; simp; omega
   obtain ⟨hc, hcap, -, -, -, -, hsl, -, -⟩ := hT1
+  have hcap30 : _ ≤ 2 ^ 30 := Nat.le_trans hcap (capS_le _)
   intro j hj
   have h1 := hsl j hj
-  have hc' : (cntW S m 1).toNat ≤ 134217728 := by omega
+  have hc' : (cntW S m 1).toNat ≤ 2 ^ 30 := by have := capS_le S.wide; omega
   simp only [slotW, slotV, slotRd, baseW, hsa, hb, hk] at h1 ⊢
   simp only [UInt64.mul_one] at h1 ⊢
   split at h1 <;> split <;> first | rfl | (exfalso; grind)
@@ -1003,11 +1018,12 @@ structure Lens (α δ : Type) (k : IdxKind) [BEq α] [Hashable α] where
   getP_setS : ∀ a t, getP (setS a t) = getP a
   getS_setS : ∀ a t, getS (setS a t) = t
 
-/-- **The run of the arena's hash-consing** of key `key` with tag `tag`: the persistent probe
-`pf` (`none` when skipped), the scratch probe when the scratch tier is open, the capacity test,
-the append (derived word `d`) to the tier the store is in. `internNodeE`, `internLNode`, … are
+/-- **The run of the arena's hash-consing** of key `key` into a store with tag `tag` and shape
+`wide`: the persistent probe `pf` (`none` when skipped), the scratch probe when the scratch tier
+is open, the capacity test (`capS`: con-ron's `ENodeView.cap`), the append (derived word `d`) to
+the tier the store is in, under the shape's handle (`mkS`). `internNodeE`, `internLNode`, … are
 this, by an instance's unfolding lemma. -/
-def protoRun (L : Lens α δ k) (key : α) (tag : UInt32) (pf : Option (Idx k)) (d : δ)
+def protoRun (L : Lens α δ k) (key : α) (tag : UInt32) (wide : Bool) (pf : Option (Idx k)) (d : δ)
     (err : CheckError) (a : AState) : Except CheckError (Idx k × AState) :=
   match pf with
   | some h => .ok (h, a)
@@ -1016,43 +1032,43 @@ def protoRun (L : Lens α δ k) (key : α) (tag : UInt32) (pf : Option (Idx k)) 
       match (L.getS a).cons[key]? with
       | some h => .ok (h, a)
       | none =>
-        if (L.getS a).size < Idx.idxCap then
-          .ok (Idx.mk tag Idx.tierS (UInt32.ofNat (L.getS a).size),
-            L.setS a ((L.getS a).push key d (Idx.mk tag Idx.tierS (UInt32.ofNat (L.getS a).size))))
+        if (L.getS a).size < capS wide then
+          .ok (mkS tag wide Idx.tierS (UInt32.ofNat (L.getS a).size),
+            L.setS a ((L.getS a).push key d (mkS tag wide Idx.tierS (UInt32.ofNat (L.getS a).size))))
         else .error err
     else
-      if (L.getP a).size < Idx.idxCap then
-        .ok (Idx.mk tag Idx.tierP (UInt32.ofNat (L.getP a).size),
-          L.setP a ((L.getP a).push key d (Idx.mk tag Idx.tierP (UInt32.ofNat (L.getP a).size))))
+      if (L.getP a).size < capS wide then
+        .ok (mkS tag wide Idx.tierP (UInt32.ofNat (L.getP a).size),
+          L.setP a ((L.getP a).push key d (mkS tag wide Idx.tierP (UInt32.ofNat (L.getP a).size))))
       else .error err
 
 section protocol
-variable (L : Lens α δ k) (key : α) (tag : UInt32) (d : δ) (err : CheckError)
+variable (L : Lens α δ k) (key : α) (tag : UInt32) (wide : Bool) (d : δ) (err : CheckError)
   (a : AState) (y : Idx k)
 
-theorem protoRun_hitP : protoRun L key tag (some y) d err a = .ok (y, a) := rfl
+theorem protoRun_hitP : protoRun L key tag wide (some y) d err a = .ok (y, a) := rfl
 
 theorem protoRun_hitS (hs : L.on a = true) (h1 : (L.getS a).cons[key]? = some y) :
-    protoRun L key tag none d err a = .ok (y, a) := by
+    protoRun L key tag wide none d err a = .ok (y, a) := by
   simp [protoRun, hs, h1]
 
 theorem protoRun_pushS (hs : L.on a = true) (h1 : (L.getS a).cons[key]? = none)
-    (hc : (L.getS a).nodes.size < 134217728) :
-    protoRun L key tag none d err a =
-      .ok (decI (hdW tag.toUInt64 1 (UInt64.ofNat (L.getS a).nodes.size)),
+    (hc : (L.getS a).nodes.size < capS wide) :
+    protoRun L key tag wide none d err a =
+      .ok (decI (hdS tag wide 1 (UInt64.ofNat (L.getS a).nodes.size)),
         L.setS a ((L.getS a).push key d
-          (decI (hdW tag.toUInt64 1 (UInt64.ofNat (L.getS a).nodes.size))))) := by
-  simp only [protoRun, hs, h1, ↓reduceIte, Tbl.size, Idx.idxCap, hc,
-    show Idx.tierS = UInt32.ofNat 1 from rfl, mk_eq]
+          (decI (hdS tag wide 1 (UInt64.ofNat (L.getS a).nodes.size))))) := by
+  simp only [protoRun, hs, h1, ↓reduceIte, Tbl.size, hc,
+    show Idx.tierS = UInt32.ofNat 1 from rfl, mkS_eq]
   rfl
 
-theorem protoRun_pushP (hs : L.on a = false) (hc : (L.getP a).nodes.size < 134217728) :
-    protoRun L key tag none d err a =
-      .ok (decI (hdW tag.toUInt64 0 (UInt64.ofNat (L.getP a).nodes.size)),
+theorem protoRun_pushP (hs : L.on a = false) (hc : (L.getP a).nodes.size < capS wide) :
+    protoRun L key tag wide none d err a =
+      .ok (decI (hdS tag wide 0 (UInt64.ofNat (L.getP a).nodes.size)),
         L.setP a ((L.getP a).push key d
-          (decI (hdW tag.toUInt64 0 (UInt64.ofNat (L.getP a).nodes.size))))) := by
-  simp only [protoRun, hs, Bool.false_eq_true, ↓reduceIte, Tbl.size, Idx.idxCap, hc,
-    show Idx.tierP = UInt32.ofNat 0 from rfl, mk_eq]
+          (decI (hdS tag wide 0 (UInt64.ofNat (L.getP a).nodes.size))))) := by
+  simp only [protoRun, hs, Bool.false_eq_true, ↓reduceIte, Tbl.size, hc,
+    show Idx.tierP = UInt32.ofNat 0 from rfl, mkS_eq]
   rfl
 
 end protocol

@@ -184,7 +184,7 @@ section prog
 variable (rom : List UInt8)
 
 /-- `rom_ex_ref(pos)`: a back reference: memo entry `u64 at pos + 1`. -/
--- con-ron: ConRon/Arena/Frontend/Readback.lean:194-256 ConRon.Arena.Frontend.internExprGo
+-- con-ron: ConRon/Arena/Frontend/Readback.lean:198-260 ConRon.Arena.Frontend.internExprGo
 def romExRef : FunDecl := lfn (pos) locals (k, h) {
   k := call rom_u64(pos + 1);
   h := call memo_get(k);
@@ -202,7 +202,7 @@ def litWordMem (m : Mem) (k : Word) : Mem :=
   (m.set64 (tierA POOL (m.top >>> 40)) (m.top &&& 1099511627775) k).set64 CTL 0 (m.top + 1)
 
 /-- `rom_lit(k)`: intern the `natVal` literal `k` (its one limb at the pool top, none for `0`). -/
--- con-ron: ConRon/Arena/Frontend/Readback.lean:194-256 ConRon.Arena.Frontend.internExprGo
+-- con-ron: ConRon/Arena/Frontend/Readback.lean:198-260 ConRon.Arena.Frontend.internExprGo
 def romLit : FunDecl := lfn (k) locals (o, h, pt, pb) {
   o := CTL.u64[0];
   pt := ⦃o⦄.tier;
@@ -273,7 +273,7 @@ theorem romLitW_eq (m : Mem) (k : Word) : romLitW m k =
     else if k = 0 then internW m m.top 0 else internW (litWordMem m k) m.top 1 := rfl
 
 /-- `rom_ex_leaf(pos, t)`: a `bvar` (`t = 0`), `sort` (`1`), `const` (`2`) or literal (`3`) node. -/
--- con-ron: ConRon/Arena/Frontend/Readback.lean:194-256 ConRon.Arena.Frontend.internExprGo
+-- con-ron: ConRon/Arena/Frontend/Readback.lean:198-260 ConRon.Arena.Frontend.internExprGo
 def romExLeaf : FunDecl := lfn (pos, t) locals (h, q, a, b, k) {
   if t == 0 {
     k := call rom_u64(pos + 1);
@@ -301,7 +301,7 @@ def romExLeaf : FunDecl := lfn (pos, t) locals (h, q, a, b, k) {
   return (h, q)
 }
 
-/-- con-ron: ConRon/Arena/Frontend/Readback.lean:194-256 ConRon.Arena.Frontend.internExprGo -/
+/-- con-ron: ConRon/Arena/Frontend/Readback.lean:198-260 ConRon.Arena.Frontend.internExprGo -/
 def romExpr : FunDecl := lfn (pos) locals (t, h, q, k) {
   t := rom.c8[pos];
   if t == 9 {
@@ -321,7 +321,7 @@ def romExpr : FunDecl := lfn (pos) locals (t, h, q, k) {
 }
 
 /-- `rom_ex_one(pos, t)`: an `fvar` (`t = 4`) or a `proj` (`t = 10`) node. -/
--- con-ron: ConRon/Arena/Frontend/Readback.lean:194-256 ConRon.Arena.Frontend.internExprGo
+-- con-ron: ConRon/Arena/Frontend/Readback.lean:198-260 ConRon.Arena.Frontend.internExprGo
 def romExOne : FunDecl := lfn (pos, t) locals (h, q, a, b, k, z) {
   if t == 4 {
     k := call rom_u64(pos + 1);
@@ -342,7 +342,7 @@ def romExOne : FunDecl := lfn (pos, t) locals (h, q, a, b, k, z) {
 }
 
 /-- `rom_ex_two(pos, t)`: an `app`/`lam`/`forallE` (`t` = 5, 6, 7) or `letE` (`8`) node. -/
--- con-ron: ConRon/Arena/Frontend/Readback.lean:194-256 ConRon.Arena.Frontend.internExprGo
+-- con-ron: ConRon/Arena/Frontend/Readback.lean:198-260 ConRon.Arena.Frontend.internExprGo
 def romExTwo : FunDecl := lfn (pos, t) locals (h, q, a, b, c, z) {
   (a, q) := call rom_expr(pos + 1);
   (b, q) := call rom_expr(q);

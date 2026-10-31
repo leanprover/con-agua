@@ -53,7 +53,7 @@ open scoped Lean.Order
 
 namespace L.Arena
 
-/-- con-ron: ConRon/Arena/ExprOps.lean:1483-1505 ConRon.Arena.fvarRangeGo -/
+/-- con-ron: ConRon/Arena/ExprOps.lean:1488-1510 ConRon.Arena.fvarRangeGo -/
 @[l_impl ConRon.Arena.fvarRangeGo]
 def frGo : FunDecl := lfn (h, c) locals (fd, j, d, r, u) {
   if c == 0 { abort };
@@ -65,10 +65,10 @@ def frGo : FunDecl := lfn (h, c) locals (fd, j, d, r, u) {
   return r
 }
 
-/-- con-ron: ConRon/Arena/ExprOps.lean:1483-1505 ConRon.Arena.fvarRangeGo -/
+/-- con-ron: ConRon/Arena/ExprOps.lean:1488-1510 ConRon.Arena.fvarRangeGo -/
 @[l_impl ConRon.Arena.fvarRangeGo]
 def frNode : FunDecl := lfn (h, c) locals (g, t, i, f, a, b, x, y, z) {
-  g := h >> 28;
+  g := ⟦h⟧.tag;
   t := ⟦h⟧.tier;
   i := ⟦h⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
@@ -80,6 +80,7 @@ def frNode : FunDecl := lfn (h, c) locals (g, t, i, f, a, b, x, y, z) {
     return x
   };
   if g == 4 {
+    i := ⟦h⟧.aidx;
     if APP⟨t⟩.count <= i { abort };
     f := APP⟨t, i⟩.f;
     a := APP⟨t, i⟩.a;
@@ -133,7 +134,7 @@ l_model frGo_spec (p : Prog) (hpf : p.lookup "fm_find" = some (memoFindG frSch))
   fns [hp ↦ frW, hpn ↦ frNodeW]
   specs [memoFindG_spec frSch p _ hpf n, memoPutG_spec frSch p _ hps n]
   grind [arena_grind] fold [tierW, idxW]
-  extra [evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
+  extra [evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
   finish [tierW, idxW] gen 20 heartbeats 1000000
 
 /-! ## `fr_memo(h, c)`: the entry, between two clears -/
@@ -156,7 +157,7 @@ theorem frClrK_some (r : Word) (m₁ : Mem) (h0 : rdW (m₁.arr64 CTL) 46 + 2 �
 grind_pattern [arena_grind] frMemoW_eq => frMemoW n m h c
 grind_pattern [arena_grind] frClrK_some => frClrK (some (r, m₁))
 
-/-- con-ron: ConRon/Arena/ExprOps.lean:1557-1563 ConRon.Arena.fvarRangeMemo -/
+/-- con-ron: ConRon/Arena/ExprOps.lean:1562-1568 ConRon.Arena.fvarRangeMemo -/
 @[l_impl ConRon.Arena.fvarRangeMemo]
 def frMemo : FunDecl := lfn (h, c) locals (r, u) {
   u := call fm_clear();
@@ -176,7 +177,7 @@ theorem frMemo_spec (p : Prog) (hpf : p.lookup "fm_find" = some (memoFindG frSch
   rw [invoke_eq _ hpm]
   simp only [callFn, frMemo]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, memoClearG_spec frSch p _ hpc n, ih] <;>
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, memoClearG_spec frSch p _ hpc n, ih] <;>
     finish
 
 /-- The walk and the memo, as one program. -/

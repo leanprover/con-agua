@@ -53,11 +53,11 @@ namespace L.Front
 
 /-! ## `expr_get`, `expr_fresh`, `expr_put` -/
 
-/-- con-ron: ConRon/Arena/Frontend/ExportC.lean:127-132 ConRon.Arena.Frontend.StateD.expr
+/-- con-ron: ConRon/Arena/Frontend/ExportC.lean:131-136 ConRon.Arena.Frontend.StateD.expr
 con-leche: ConLeche/Frontend/Scan/Types.lean:334-336 ConLeche.Frontend.IdTable.get? -/
 def exprGet : FunDecl := tblGetG EID "esp_find"
 
-/-- con-ron: ConRon/Arena/Frontend/ExportC.lean:159-162 ConRon.Arena.Frontend.StateD.freshExpr
+/-- con-ron: ConRon/Arena/Frontend/ExportC.lean:163-166 ConRon.Arena.Frontend.StateD.freshExpr
 con-leche: ConLeche/Frontend/Scan/Types.lean:351-360 ConLeche.Frontend.IdTable.bound -/
 def exprFresh : FunDecl := tblFreshG EID "esp_find"
 
@@ -87,7 +87,7 @@ def lsLoop : Stmt := lblk (v, i, top, cnt, c, e, x, h, pt, pb) {
   }
 }
 
-/-- con-ron: ConRon/Arena/Frontend/ExportC.lean:191-222 ConRon.Arena.Frontend.parseExprEntryD -/
+/-- con-ron: ConRon/Arena/Frontend/ExportC.lean:195-226 ConRon.Arena.Frontend.parseExprEntryD -/
 def lsPut : FunDecl := lfn (v) locals (i, top, cnt, c, e, x, h, pt, pb) {
   top := CTL.u64[0];
   pt := ⦃top⦄.tier;
@@ -365,7 +365,7 @@ grind_pattern [arena_grind] natDecW_top => natDecW b m c d, some (r, m')
 
 /-! ## The nodes -/
 
-/-- con-ron: ConRon/Arena/Frontend/ExportC.lean:191-222 ConRon.Arena.Frontend.parseExprEntryD -/
+/-- con-ron: ConRon/Arena/Frontend/ExportC.lean:195-226 ConRon.Arena.Frontend.parseExprEntryD -/
 def nodeBin : FunDecl := lfn (k, a, c) locals (f, x, h) {
   f := call expr_get(a);
   x := call expr_get(c);
@@ -387,7 +387,7 @@ def binW (m : Mem) (k a c : Word) : Option (Word × Mem) :=
     else mkForallW m (tblW m EID a) (tblW m EID c)
   else none
 
-/-- con-ron: ConRon/Arena/Frontend/ExportC.lean:191-222 ConRon.Arena.Frontend.parseExprEntryD -/
+/-- con-ron: ConRon/Arena/Frontend/ExportC.lean:195-226 ConRon.Arena.Frontend.parseExprEntryD -/
 def nodeLet : FunDecl := lfn (a, c, d) locals (t, v, x, h) {
   t := call expr_get(a);
   v := call expr_get(c);
@@ -402,7 +402,7 @@ def letW (m : Mem) (a c d : Word) : Option (Word × Mem) :=
     mkLetW m (tblW m EID a) (tblW m EID c) (tblW m EID d)
   else none
 
-/-- con-ron: ConRon/Arena/Frontend/ExportC.lean:191-222 ConRon.Arena.Frontend.parseExprEntryD -/
+/-- con-ron: ConRon/Arena/Frontend/ExportC.lean:195-226 ConRon.Arena.Frontend.parseExprEntryD -/
 def nodeProj : FunDecl := lfn (a, c, d) locals (n, e, h) {
   if c == 18446744073709551615 { abort R_LONG_NUMBER };
   n := call name_get(a);
@@ -417,7 +417,7 @@ def projW (m : Mem) (a c d : Word) : Option (Word × Mem) :=
     mkProjW m (tblW m NID a) c (tblW m EID d)
   else none
 
-/-- con-ron: ConRon/Arena/Frontend/ExportC.lean:191-222 ConRon.Arena.Frontend.parseExprEntryD -/
+/-- con-ron: ConRon/Arena/Frontend/ExportC.lean:195-226 ConRon.Arena.Frontend.parseExprEntryD -/
 def nodeConst : FunDecl := lfn (a, c) locals (n, o, l, g, h) {
   n := call name_get(a);
   (o, l) := call ls_put(c);
@@ -448,7 +448,7 @@ def constK (n o l : Word) : Option Mem → Option (Word × Mem)
 def constW (b : Array UInt8) (m : Mem) (a c : Word) : Option (Word × Mem) :=
   if tblOK m NID a = true then constK (tblW m NID a) m.top (lsPutL b c) (lsPutW b m c) else none
 
-/-- con-ron: ConRon/Arena/Frontend/ExportC.lean:191-222 ConRon.Arena.Frontend.parseExprEntryD -/
+/-- con-ron: ConRon/Arena/Frontend/ExportC.lean:195-226 ConRon.Arena.Frontend.parseExprEntryD -/
 def nodeLit : FunDecl := lfn (c, d) locals (o, l, h) {
   (o, l) := call nat_dec(c, d);
   if len(POOL⟨⦃o⦄.tier⟩) < o - ⦃o⦄.base { abort };
@@ -489,7 +489,7 @@ Shares the pattern of a `str` name line (`apply_str`, `Line.lean`): `str_put_esc
 body `[c, d)` into the pool at the old top, then `intern_lit_str` hash-conses the slice. A `c`
 of `0` aborts (as `apply_str`'s), the sentinel for "no body". -/
 
-/-- con-ron: ConRon/Arena/Frontend/ExportC.lean:191-222 ConRon.Arena.Frontend.parseExprEntryD -/
+/-- con-ron: ConRon/Arena/Frontend/ExportC.lean:195-226 ConRon.Arena.Frontend.parseExprEntryD -/
 def nodeLitStr : FunDecl := lfn (c, d) locals (o, l, h) {
   if c == 0 { abort };
   (o, l) := call str_put_esc(c, d);
@@ -530,7 +530,7 @@ def litStrW (b : Array UInt8) (m : Mem) (c d : Word) : Option (Word × Mem) :=
 
 /-! ## `expr_node`, `apply_expr` -/
 
-/-- con-ron: ConRon/Arena/Frontend/ExportC.lean:191-222 ConRon.Arena.Frontend.parseExprEntryD -/
+/-- con-ron: ConRon/Arena/Frontend/ExportC.lean:195-226 ConRon.Arena.Frontend.parseExprEntryD -/
 def exprNode : FunDecl := lfn (pl, a, c, d) locals (u, h) {
   if pl == 8 {
     if a == 18446744073709551615 { abort R_LONG_NUMBER };
@@ -566,7 +566,7 @@ def nodeW (b : Array UInt8) (m : Mem) (pl a c d : Word) : Option (Word × Mem) :
   else if pl = 17 then litStrW b m c d
   else none
 
-/-- con-ron: ConRon/Arena/Frontend/ExportC.lean:191-222 ConRon.Arena.Frontend.parseExprEntryD -/
+/-- con-ron: ConRon/Arena/Frontend/ExportC.lean:195-226 ConRon.Arena.Frontend.parseExprEntryD -/
 @[l_impl ConRon.Arena.Frontend.parseExprEntryD]
 def applyExpr : FunDecl := lfn (pl, idx, a, c, d) locals (z, h) {
   z := call expr_fresh(idx);
@@ -636,8 +636,8 @@ def exprRuns (m : Mem) : List (FnName × List Word) → Option (List (List Word)
    ("expr_get", [4]), ("expr_get", [5]), ("expr_get", [6]), ("expr_get", [7]),
    ("expr_get", [8]), ("expr_get", [9]), ("expr_get", [10])] ==
   some [[0], [0], [0], [0], [0], [0], [0], [0], [0], [0], [0], [0], [0],
-    [0x20000000], [0], [0x40000000], [0x50000000], [0x60000000], [0x70000000], [0x90000000],
-    [0x30000000], [0x80000000], [0x80000001], [0x40000000]]
+    [0x08000000], [0], [0x40000000], [0x14000000], [0x18000000], [0x1C000000], [0x24000000],
+    [0x0C000000], [0x20000000], [0x20000001], [0x40000000]]
 
 /- A rebound id aborts; an unbound child aborts; a `strVal` aborts. -/
 #guard (exprRuns exprMem [("front_init", []), ("apply_expr", [8, 0, 0, 0, 0]),
@@ -649,12 +649,12 @@ def exprRuns (m : Mem) : List (FnName × List Word) → Option (List (List Word)
 def exprStrMem : Mem :=
   (Mem.ofWords (ArrTable.zeroWords (checkerArrays.filter (·.id ≤ Front.EIDS)) fun _ => 128)).putBytes IN "\"ab\"\"cd\"".toUTF8.data
 
-/- `"ab"` interned twice (the same handle, `0x80000000`), `"cd"` a different one (`0x80000001`). -/
+/- `"ab"` interned twice (the same handle, `0x20000000`), `"cd"` a different one (`0x20000001`). -/
 #guard exprRuns exprStrMem
   [("front_init", []), ("apply_expr", [17, 0, 0, 1, 3]), ("apply_expr", [17, 1, 0, 1, 3]),
    ("apply_expr", [17, 2, 0, 5, 7]),
    ("expr_get", [0]), ("expr_get", [1]), ("expr_get", [2])] ==
-  some [[0], [0], [0], [0], [0x80000000], [0x80000000], [0x80000001]]
+  some [[0], [0], [0], [0], [0x20000000], [0x20000000], [0x20000001]]
 
 /-! ## The specs -/
 

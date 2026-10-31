@@ -98,9 +98,15 @@ conditions are the derived-word cutoff and the catch-all leaf
   that `BvarBSpec` asks for), so the entry points and `instPisAtLift_spec`
   are callable with no hypothesis about `bvarB` at all.
 -/
+module
+
 import ConRon.Bridge.Specs
 import ConRon.Bridge.ExprOps.Ranges
-import ConRon.Bridge.Grind
+public import ConRon.Bridge.Grind
+import ConRon.Bridge.GrindAttr
+public import ConRon.Arena.ExprOps
+
+public section
 
 namespace ConRon.Bridge.ExprOps
 
@@ -315,7 +321,7 @@ one place that reversal appears. -/
 
 /-- con-leche: ConLeche/Kernel/ExprOps.lean:211-235 instantiateList (the `vs`
 argument) — the push-order vector `vs` denotes the pure walk's list `ws`. -/
-def InstLVec (st : EStore) (vs : Array EIdx) (ws : List Expr) : Prop :=
+@[expose] def InstLVec (st : EStore) (vs : Array EIdx) (ws : List Expr) : Prop :=
   Frontend.denoteEList st vs.toList = some ws.reverse
 
 /-- con-leche: none — the vector's length is the list's. -/

@@ -101,7 +101,12 @@ con-leche's own `Level.subst` on the transient trees, and
 re-interns the result.  `Level.hasParam` and `Expr.hasLevelParam` are not
 walks at all here: both are exactly the derived bit the store already carries.
 -/
-import ConRon.Arena.Monad
+module
+
+public import ConRon.Arena.Monad
+public import ConLeche.Kernel.Level
+
+@[expose] public section
 
 namespace ConRon.Arena
 

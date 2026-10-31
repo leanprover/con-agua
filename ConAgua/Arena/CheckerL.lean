@@ -14,7 +14,7 @@ namespace L.Arena
 
 /-- `is_none(vis, v2, nt)`: `installStep`'s `none` arm (`isNoneT`; `nt` the tables list's length
 before the step). -/
--- con-ron: ConRon/Arena/Checker.lean:153-210 ConRon.Arena.installStep
+-- con-ron: ConRon/Arena/Checker.lean:157-214 ConRon.Arena.installStep
 @[l_impl ConRon.Arena.installStep]
 def isNoneL : FunDecl := lfn (vis, v2, nt) locals (k, kt, z) {
   k := 0;
@@ -40,7 +40,7 @@ def pendPushL : FunDecl := lfn (g, i, v) locals (c) {
 /-- `is_some(i, vis, v2, nt, g)`: `installStep`'s `some` arm (`isSomeT`); the pending check is
 written right after `promote_vg` (where its record is known to decode), the twin pushes it at
 the end (a value, so the order is invisible). -/
--- con-ron: ConRon/Arena/Checker.lean:153-210 ConRon.Arena.installStep
+-- con-ron: ConRon/Arena/Checker.lean:157-214 ConRon.Arena.installStep
 @[l_impl ConRon.Arena.installStep]
 def isSomeL : FunDecl := lfn (i, vis, v2, nt, g) locals (k, kt, z, g2) {
   k := 0;
@@ -55,7 +55,7 @@ def isSomeL : FunDecl := lfn (i, vis, v2, nt, g) locals (k, kt, z, g2) {
 
 /-- `install_step(i, vis)`: `installStep` (the tables list's length read first, the bracket,
 `installStepGo`, then one of the arms). -/
--- con-ron: ConRon/Arena/Checker.lean:153-210 ConRon.Arena.installStep
+-- con-ron: ConRon/Arena/Checker.lean:157-214 ConRon.Arena.installStep
 @[l_impl ConRon.Arena.installStep]
 def installStepL : FunDecl := lfn (i, vis) locals (nt, v2, f, g, z) {
   nt := call tbl_cnt();
@@ -68,7 +68,7 @@ def installStepL : FunDecl := lfn (i, vis) locals (nt, v2, f, g, z) {
 
 /-- `install_decl_step(i, vis)`: `installDeclStep` (the `And` pin, then the step; a rejected pin
 or a failing step is an `abort`). -/
--- con-ron: ConRon/Arena/Checker.lean:212-239 ConRon.Arena.installDeclStep
+-- con-ron: ConRon/Arena/Checker.lean:216-243 ConRon.Arena.installDeclStep
 @[l_impl ConRon.Arena.installDeclStep]
 def installDeclStepL : FunDecl := lfn (i, vis) locals (ok, v) {
   ok := call and_pin_ok(i);
@@ -78,7 +78,7 @@ def installDeclStepL : FunDecl := lfn (i, vis) locals (ok, v) {
 }
 
 /-- `install_fold_go(i, cnt, vis)`: `installFold` over records `i`‥`cnt - 1`. -/
--- con-ron: ConRon/Arena/Checker.lean:241-252 ConRon.Arena.installFold
+-- con-ron: ConRon/Arena/Checker.lean:245-256 ConRon.Arena.installFold
 @[l_impl ConRon.Arena.installFold]
 def installFoldGoL : FunDecl := lfn (i, cnt, vis) locals (r) {
   if i == cnt { return vis };
@@ -87,7 +87,7 @@ def installFoldGoL : FunDecl := lfn (i, cnt, vis) locals (r) {
 }
 
 /-- `install_fold_next(i, cnt, vis)`: one step of `installFold` (`i < cnt`), then the rest. -/
--- con-ron: ConRon/Arena/Checker.lean:241-252 ConRon.Arena.installFold
+-- con-ron: ConRon/Arena/Checker.lean:245-256 ConRon.Arena.installFold
 @[l_impl ConRon.Arena.installFold]
 def installFoldNextL : FunDecl := lfn (i, cnt, vis) locals (v, r) {
   v := call install_decl_step(i, vis);
@@ -97,7 +97,7 @@ def installFoldNextL : FunDecl := lfn (i, cnt, vis) locals (v, r) {
 
 /-- `check_pending(j, vis)`: `checkPending` on pending check `j`, the environment seen at its
 recorded view. -/
--- con-ron: ConRon/Arena/Checker.lean:254-270 ConRon.Arena.checkPending
+-- con-ron: ConRon/Arena/Checker.lean:258-274 ConRon.Arena.checkPending
 @[l_impl ConRon.Arena.checkPending]
 def checkPendingL : FunDecl := lfn (j, vis) locals (g, v, z) {
   if 4611686018427387904 <= j { abort };
@@ -110,7 +110,7 @@ def checkPendingL : FunDecl := lfn (j, vis) locals (g, v, z) {
 }
 
 /-- `check_pending_go(j, cnt, vis)`: `checkPendingList` over pending checks `j`‥`cnt - 1`. -/
--- con-ron: ConRon/Arena/Checker.lean:272-281 ConRon.Arena.checkPendingList
+-- con-ron: ConRon/Arena/Checker.lean:276-285 ConRon.Arena.checkPendingList
 @[l_impl ConRon.Arena.checkPendingList]
 def checkPendingGoL : FunDecl := lfn (j, cnt, vis) locals (z) {
   if j == cnt { return 0 };
@@ -119,7 +119,7 @@ def checkPendingGoL : FunDecl := lfn (j, cnt, vis) locals (z) {
 }
 
 /-- `check_pending_next(j, cnt, vis)`: one pending check (`j < cnt`), then the rest. -/
--- con-ron: ConRon/Arena/Checker.lean:272-281 ConRon.Arena.checkPendingList
+-- con-ron: ConRon/Arena/Checker.lean:276-285 ConRon.Arena.checkPendingList
 @[l_impl ConRon.Arena.checkPendingList]
 def checkPendingNextL : FunDecl := lfn (j, cnt, vis) locals (z) {
   if 4611686018427387904 <= j { abort };

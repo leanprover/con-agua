@@ -34,33 +34,41 @@ namespace L.Arena
 
 /-! ## Row addresses -/
 
-theorem tagW_toNat (w : Word) : (tagW w).toNat = rowTag w := by
-  rw [tagW, shr28_toNat]; rfl
-
-/-- `w`'s row index as an L expression computes it: `2 (w mod 2^27)`. -/
-def ixW (w : Word) : Word := (w &&& 134217727) <<< 1
+/-- `w`'s row index as an L expression computes it: `2 ⟦w⟧.idx`. -/
+def ixW (w : Word) : Word := idxW w <<< 1
 
 theorem ixW_toNat (w : Word) (_hw : w.toNat < 2 ^ 32) : (ixW w).toNat = rowIx w := by
-  have h1 : (w &&& 134217727).toNat = w.toNat % 2 ^ 27 := idxW_toNat w
-  rw [ixW, UInt64.toNat_shiftLeft, h1]; simp [Nat.shiftLeft_eq, rowIx]; omega
-
-theorem nat_split27 (a : Nat) :
-    a = 2 ^ 28 * (a / 2 ^ 28) + 2 ^ 27 * (a / 2 ^ 27 % 2) + a % 2 ^ 27 := by
-  have := Nat.div_add_mod a (2 ^ 27); have := Nat.div_add_mod (a / 2 ^ 27) 2
-  rw [Nat.div_div_eq_div_mul] at this; omega
-
-theorem nat_rowIx_inj (a b : Nat) (ht : a / 2 ^ 28 = b / 2 ^ 28)
-    (hr : a / 2 ^ 27 % 2 = b / 2 ^ 27 % 2) (hi : 2 * (a % 2 ^ 27) = 2 * (b % 2 ^ 27)) :
-    a = b := by
-  have e1 := nat_split27 a; have e2 := nat_split27 b
+  have h1 : (idxW w).toNat < 0x44000000 := UInt64.lt_iff_toNat_lt.mp (idxW_lt w)
+  rw [ixW, UInt64.toNat_shiftLeft, Nat.shiftLeft_eq, show (1 : Word).toNat % 64 = 1 from rfl, rowIx]
   omega
 
-/-- Two name words (tags at most `2`) with the same row array and row index are equal. -/
-theorem rowIx_inj {w w' : Word} (ht : rowTag w ≤ 2) (ht' : rowTag w' ≤ 2)
+/-- A narrow word below `2^32` is its tier, tag and index. -/
+theorem nat_split27 (a : Nat) (ha : a < 2 ^ 32) (hn : a / 2 ^ 30 % 2 = 0) :
+    a = 2 ^ 31 * (a / 2 ^ 31 % 2) + 2 ^ 26 * (a / 2 ^ 26 % 16) + a % 2 ^ 26 := by
+  omega
+
+theorem nat_rowIx_inj (a b : Nat) (ha : a < 2 ^ 32) (hb : b < 2 ^ 32)
+    (hna : a / 2 ^ 30 % 2 = 0) (hnb : b / 2 ^ 30 % 2 = 0)
+    (ht : a / 2 ^ 26 % 16 = b / 2 ^ 26 % 16) (hr : a / 2 ^ 31 % 2 = b / 2 ^ 31 % 2)
+    (hi : 2 * (a % 2 ^ 26) = 2 * (b % 2 ^ 26)) : a = b := by
+  have e1 := nat_split27 a ha hna; have e2 := nat_split27 b hb hnb
+  omega
+
+/-- Two name words (below `2^32`, tags at most `2`) with the same row array and row index are
+equal. -/
+theorem rowIx_inj {w w' : Word} (hw : w.toNat < 2 ^ 32) (hw' : w'.toNat < 2 ^ 32)
+    (ht : rowTag w ≤ 2) (ht' : rowTag w' ≤ 2)
     (ha : rowArr w = rowArr w') (hi : rowIx w = rowIx w') : w = w' := by
   have h := rowArr_inj ht ht' ha
-  exact UInt64.toNat_inj.mp (nat_rowIx_inj _ _ (by simp only [rowTag] at *; omega)
-    (by simp only [rowTier, rowTag] at *; omega) hi)
+  have hn := rowTag_narrow ht; have hn' := rowTag_narrow ht'
+  have e := rowTag_eq ht; have e' := rowTag_eq ht'
+  simp only [rowIx, idxW_toNat_narrow w hn, idxW_toNat_narrow w' hn'] at hi
+  exact UInt64.toNat_inj.mp (nat_rowIx_inj _ _ hw hw' hn hn' (by omega)
+    (by simp only [rowTier] at h; omega) hi)
+
+/-- A handle's word is below `2^32`. -/
+theorem word_lt32 {k : IdxKind} (n : Idx k) : n.word.toUInt64.toNat < 2 ^ 32 := by
+  simp; exact UInt32.toNat_lt _
 
 /-! ## The models of a row write -/
 
@@ -87,6 +95,7 @@ theorem rowP_eq (m : Mem) (w : Word) (h : rowTag w ≤ 2) :
     rowP m w = rdN (m.arr64 (rowArr w)) (rowIx w + 1) := by simp [rowP, h, rdN]
 
 theorem ixW_succ (w : Word) (hw : w.toNat < 2 ^ 32) : (ixW w + 1).toNat = rowIx w + 1 := by
+  have h1 : (idxW w).toNat < 0x44000000 := UInt64.lt_iff_toNat_lt.mp (idxW_lt w)
   rw [UInt64.toNat_add, ixW_toNat w hw]; simp [rowIx]; omega
 
 section rowSet
@@ -94,7 +103,7 @@ variable {m : Mem} {w c p w' : Word} (hw : w.toNat < 2 ^ 32) (ht : rowTag w ≤ 
   (hb : rowIx w + 1 < (m.arr64 (rowArr w)).size)
 include hw ht hb
 
-theorem rowC_rowSet (ht' : rowTag w' ≤ 2) :
+theorem rowC_rowSet (hw' : w'.toNat < 2 ^ 32) (ht' : rowTag w' ≤ 2) :
     rowC (rowSet m w c p) w' = if w' = w then c else rowC m w' := by
   have e1 : rowIx w % 2 = 0 := by simp only [rowIx]; omega
   have e2 : rowIx w' % 2 = 0 := by simp only [rowIx]; omega
@@ -103,7 +112,7 @@ theorem rowC_rowSet (ht' : rowTag w' ≤ 2) :
   by_cases he : w' = w
   · subst he; simp; omega
   · have hk : rowArr w' = rowArr w → rowIx w ≠ rowIx w' := fun h1 h2 =>
-      he (rowIx_inj ht' ht h1 h2.symm)
+      he (rowIx_inj hw' hw ht' ht h1 h2.symm)
     simp only [he, ite_false]
     split
     · rename_i h1; exfalso; have := h1.2.1; omega
@@ -111,7 +120,7 @@ theorem rowC_rowSet (ht' : rowTag w' ≤ 2) :
       · rename_i h2; exact absurd h2.2.1 (hk h2.1)
       · rfl
 
-theorem rowP_rowSet (ht' : rowTag w' ≤ 2) :
+theorem rowP_rowSet (hw' : w'.toNat < 2 ^ 32) (ht' : rowTag w' ≤ 2) :
     rowP (rowSet m w c p) w' = if w' = w then p else rowP m w' := by
   have e1 : rowIx w % 2 = 0 := by simp only [rowIx]; omega
   have e2 : rowIx w' % 2 = 0 := by simp only [rowIx]; omega
@@ -120,7 +129,7 @@ theorem rowP_rowSet (ht' : rowTag w' ≤ 2) :
   by_cases he : w' = w
   · subst he; simp; omega
   · have hk : rowArr w' = rowArr w → rowIx w ≠ rowIx w' := fun h1 h2 =>
-      he (rowIx_inj ht' ht h1 h2.symm)
+      he (rowIx_inj hw' hw ht' ht h1 h2.symm)
     simp only [he, ite_false]
     split
     · rename_i h1; exact absurd (by have := h1.2.1; omega) (hk h1.1)
@@ -173,7 +182,7 @@ theorem TblSame.rowSet (m : Mem) (w c p : Word) (_hw : rowTag w ≤ 2) : TblSame
 /-- `env_ix(w)`: the row array selector (`2 tag + tier`) and the row index of name handle `w`. -/
 -- con-ron: none — row access of L's environment table (the twin's `IFEnv` map)
 def envIxL : FunDecl := lfn (w) locals () {
-  return (w >> 27, (w & 134217727) << 1)
+  return ((⟦w⟧.tag << 1) + ⟦w⟧.tier, ⟦w⟧.idx << 1)
 }
 
 /-- `env_row_get(w)`: the row of name handle `w`, `(counter + 1, record)`. -/
@@ -214,7 +223,7 @@ theorem envIx_spec (hp : p.lookup "env_ix" = some envIxL) (n : Nat) (s₀ : St) 
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs] <;>
+    vcgen [evalE_tagE, evalE_tierE, evalE_idxE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs] <;>
       simp_all [rowSelW, ixW, LocEq, BinOp.eval, Sig.retVal, Sig.retOr, Locals.init]
 
 theorem envRowGet_spec (hx : p.lookup "env_ix" = some envIxL)
@@ -242,7 +251,7 @@ theorem envRowGet_spec (hx : p.lookup "env_ix" = some envIxL)
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, envIx_spec p hx n] <;>
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, envIx_spec p hx n] <;>
       finish
 
 theorem envRowSet_spec (hx : p.lookup "env_ix" = some envIxL)
@@ -263,7 +272,7 @@ theorem envRowSet_spec (hx : p.lookup "env_ix" = some envIxL)
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64, envIx_spec p hx n] <;>
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64, envIx_spec p hx n] <;>
       finish [rowSet]
 
 end specs
@@ -312,7 +321,7 @@ end rel
 /-! ## `env_find` -/
 
 /-- `env_find(w, vis)`: `(1, record)` if name `w` has a row below the view `vis`, else `(0, 0)`. -/
--- con-ron: ConRon/Arena/Env.lean:254-259 ConRon.Arena.IFEnv.find?
+-- con-ron: ConRon/Arena/Env.lean:258-263 ConRon.Arena.IFEnv.find?
 @[l_impl ConRon.Arena.IFEnv.find?]
 def envFindL : FunDecl := lfn (w, vis) locals (c, q) {
   (c, q) := call env_row_get(w);
@@ -338,7 +347,7 @@ theorem envFind_refines (p : Prog) (hx : p.lookup "env_ix" = some envIxL)
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, envRowGet_spec p hx hg n] <;>
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, envRowGet_spec p hx hg n] <;>
       finish [decFound]
 
 /-! ## `env_push` -/
@@ -428,8 +437,8 @@ theorem EnvR.push {dn : NIdx → Option ConLeche.Name} {m : Mem} {vis : Word} {f
       rowW (envPushMem m vis q) n.word.toUInt64 =
         if n.word.toUInt64 = w then some (vis.toNat, q) else rowW m n.word.toUInt64 := by
     intro n hn
-    have e1 := rowC_rowSet (c := vis + 1) (p := q) (w' := n.word.toUInt64) hw2 ht hb hn
-    have e2 := rowP_rowSet (c := vis + 1) (p := q) (w' := n.word.toUInt64) hw2 ht hb hn
+    have e1 := rowC_rowSet (c := vis + 1) (p := q) (w' := n.word.toUInt64) hw2 ht hb (word_lt32 n) hn
+    have e2 := rowP_rowSet (c := vis + 1) (p := q) (w' := n.word.toUInt64) hw2 ht hb (word_lt32 n) hn
     simp only [rowW, hC _ hn, hP _ hn, e1, e2]
     split
     · have : (vis + 1).toNat = vis.toNat + 1 := by
@@ -470,15 +479,15 @@ theorem EnvR.push {dn : NIdx → Option ConLeche.Name} {m : Mem} {vis : Word} {f
     by_cases e : n.word.toUInt64 = w
     · simp only [e, decide_true, ite_true, Option.map_some]
       have : rowP (envPushMem m vis q) w = q := by
-        have := rowP_rowSet (c := vis + 1) (p := q) (w' := w) hw2 ht hb ht
+        have := rowP_rowSet (c := vis + 1) (p := q) (w' := w) hw2 ht hb hw2 ht
         rw [hP _ ht, this]; simp
       rw [this, hci]
     · simp only [e, decide_false]
       have hc0 : rowC m n.word.toUInt64 ≠ 0 := by
         intro hc0; apply h0
-        have := rowC_rowSet (c := vis + 1) (p := q) (w' := n.word.toUInt64) hw2 ht hb hn
+        have := rowC_rowSet (c := vis + 1) (p := q) (w' := n.word.toUInt64) hw2 ht hb (word_lt32 n) hn
         rw [hC _ hn, this]; simp [e, hc0]
-      have := rowP_rowSet (c := vis + 1) (p := q) (w' := n.word.toUInt64) hw2 ht hb hn
+      have := rowP_rowSet (c := vis + 1) (p := q) (w' := n.word.toUInt64) hw2 ht hb (word_lt32 n) hn
       rw [hP _ hn, this]; simp only [e, ite_false]
       exact h.vals n hn hc0
   · have hK : (rdW (m.arr64 CTL) 128 + 1).toNat = (rdW (m.arr64 CTL) 128).toNat + 1 := by
@@ -512,7 +521,7 @@ theorem EnvR.push {dn : NIdx → Option ConLeche.Name} {m : Mem} {vis : Word} {f
 
 /-- `env_push(vis, q)`: install the record at `q` (its name is word `q + 1`) at counter `vis`:
 its row, its slot in `ECON`; returns the new view `vis + 1`. -/
--- con-ron: ConRon/Arena/Env.lean:266-271 ConRon.Arena.IFEnv.push
+-- con-ron: ConRon/Arena/Env.lean:270-275 ConRon.Arena.IFEnv.push
 @[l_impl ConRon.Arena.IFEnv.push]
 def envPushL : FunDecl := lfn (vis, q) locals (w, k, z) {
   if vis + 1 == 0 { abort };
@@ -563,7 +572,7 @@ theorem envPush_refines (p : Prog) (hx : p.lookup "env_ix" = some envIxL)
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
         envRowSet_spec p hx hs n] <;>
       finish
 
@@ -587,8 +596,8 @@ theorem EnvR.setRow {dn : NIdx → Option ConLeche.Name} {m : Mem} {vis : Word} 
     (TblSame.rowSet m w c q ht) hE' rfl rfl
   refine ⟨h.vis, ?_, ?_, ?_, htk, htv, hts⟩
   · intro n hn
-    have e1 := rowC_rowSet (c := c) (p := q) (w' := n.word.toUInt64) hw2 ht hb hn
-    have e2 := rowP_rowSet (c := c) (p := q) (w' := n.word.toUInt64) hw2 ht hb hn
+    have e1 := rowC_rowSet (c := c) (p := q) (w' := n.word.toUInt64) hw2 ht hb (word_lt32 n) hn
+    have e2 := rowP_rowSet (c := c) (p := q) (w' := n.word.toUInt64) hw2 ht hb (word_lt32 n) hn
     simp only [hidx]
     by_cases e : n.word.toUInt64 = w
     · simp only [e, ite_true] at e1 e2 ⊢
@@ -596,8 +605,8 @@ theorem EnvR.setRow {dn : NIdx → Option ConLeche.Name} {m : Mem} {vis : Word} 
     · simp only [e, ite_false] at e1 e2 ⊢
       rw [h.keys n hn]; simp only [rowW, e1, e2]
   · intro n hn h0
-    have e1 := rowC_rowSet (c := c) (p := q) (w' := n.word.toUInt64) hw2 ht hb hn
-    have e2 := rowP_rowSet (c := c) (p := q) (w' := n.word.toUInt64) hw2 ht hb hn
+    have e1 := rowC_rowSet (c := c) (p := q) (w' := n.word.toUInt64) hw2 ht hb (word_lt32 n) hn
+    have e2 := rowP_rowSet (c := c) (p := q) (w' := n.word.toUInt64) hw2 ht hb (word_lt32 n) hn
     simp only [hidx, hE']
     by_cases e : n.word.toUInt64 = w
     · simp only [e, ite_true] at e1 e2 h0 ⊢
@@ -609,7 +618,7 @@ theorem EnvR.setRow {dn : NIdx → Option ConLeche.Name} {m : Mem} {vis : Word} 
       rowSet_arr0 _ _ _ _ _ (Ne.symm hre), rowSet_arr0 _ _ _ _ _ (Ne.symm hra)]
 
 /-- `env_erase(w)`: drop the row of name `w` (one step of `eraseInstalled`). -/
--- con-ron: ConRon/Arena/Promote.lean:343-352 ConRon.Arena.eraseInstalled
+-- con-ron: ConRon/Arena/Promote.lean:347-356 ConRon.Arena.eraseInstalled
 def envEraseL : FunDecl := lfn (w) locals (z) {
   z := call env_row_set(w, 0, 0);
   return 0
@@ -638,7 +647,7 @@ theorem envErase_spec (p : Prog) (hx : p.lookup "env_ix" = some envIxL)
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, envRowSet_spec p hx hs n] <;>
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, envRowSet_spec p hx hs n] <;>
       finish
 
 /-- The memory after `env_pop_temp`'s count update: `CTL[128] - 1` (none at `0`). -/
@@ -729,7 +738,7 @@ def prevD (dn : NIdx → Option ConLeche.Name) (m : Mem) (c q : Word) :
 
 /-- `env_pop_temp(vis, w, c, q)`: undo a temporary push of name `w`: its row put back to
 `(c, q)` (`IFEnv.popTemp`'s `prev`), the newest constant dropped, the view lowered. -/
--- con-ron: ConRon/Arena/Env.lean:280-289 ConRon.Arena.IFEnv.popTemp
+-- con-ron: ConRon/Arena/Env.lean:284-293 ConRon.Arena.IFEnv.popTemp
 @[l_impl ConRon.Arena.IFEnv.popTemp]
 def envPopTempL : FunDecl := lfn (vis, w, c, q) locals (k, z) {
   z := call env_row_set(w, c, q);
@@ -794,7 +803,7 @@ theorem envPopTemp_refines (p : Prog) (hx : p.lookup "env_ix" = some envIxL)
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
         envRowSet_spec p hx hs n] <;>
       finish [IFEnv.popTemp]
 
@@ -820,7 +829,7 @@ component"). Promotion and lookup reach them only through these functions. -/
 /-- `tbl_ix(w)`: the tag, the tier and the index of name handle `w`. -/
 -- con-ron: none — row access of L's table map (the twin's `IFEnv.tbls`)
 def tblIxL : FunDecl := lfn (w) locals () {
-  return (w >> 28, (w >> 27) & 1, w & 134217727)
+  return (⟦w⟧.tag, ⟦w⟧.tier, ⟦w⟧.idx)
 }
 
 /-- `tbl_row_get(w)`: the table row of name handle `w` (the table record's pointer plus one, `0`
@@ -863,32 +872,30 @@ def tblPutL : FunDecl := lfn (j, q) locals () {
   return 0
 }
 
-/-- The table row's index word: `w mod 2^27`. -/
-def tixW (w : Word) : Word := w &&& 134217727
+/-- The table row's index word: `⟦w⟧.idx`. -/
+def tixW (w : Word) : Word := idxW w
 
-theorem tixW_toNat (w : Word) : (tixW w).toNat = tblIx w := by
-  rw [tixW]; exact idxW_toNat w
+theorem tixW_toNat (w : Word) : (tixW w).toNat = tblIx w := rfl
 
 /-- The memory after `tbl_row_set(w, v)`. -/
 def tblSet (m : Mem) (w v : Word) : Mem := m.set64 (tblArr w) (tixW w) v
 
-theorem tagW28_toNat (w : Word) : (w >>> 28).toNat = rowTag w := by
-  rw [shr28_toNat]; rfl
+theorem tagW28_toNat (w : Word) : (tagW w).toNat = rowTag w := rfl
 
-theorem tierW_toNat (w : Word) : ((w >>> 27) &&& 1).toNat = rowTier w := bit27_toNat w
+theorem tierW_toNat (w : Word) : ((w >>> 31) &&& 1).toNat = rowTier w := bit31_toNat w
 
 theorem tierA_tbl (w : Word) (g : Nat) (hg : rowTag w = g) (hg2 : g ≤ 2) :
-    tierA (129 + g) ((w >>> 27) &&& 1) = tblArr w := by
+    tierA (129 + g) ((w >>> 31) &&& 1) = tblArr w := by
   have hx : tixArr g = 129 + g := by
     rcases (by omega : g = 0 ∨ g = 1 ∨ g = 2) with h | h | h <;> subst h <;> rfl
   have ht2 : rowTier w < 2 := Nat.mod_lt _ (by decide)
   have h2 : (UInt64.ofNat (rowTier w) &&& (1 : Word)).toNat = rowTier w := by
     rcases (by omega : rowTier w = 0 ∨ rowTier w = 1) with h | h <;> rw [h] <;> decide
-  have h1 : (((w >>> 27) &&& 1) &&& (1 : Word)).toNat = rowTier w := by
+  have h1 : (((w >>> 31) &&& 1) &&& (1 : Word)).toNat = rowTier w := by
     rw [UInt64.toNat_and, tierW_toNat]
     have : rowTier w < 2 := Nat.mod_lt _ (by decide)
     rw [show (1 : Word).toNat = 1 from rfl, Nat.and_one_is_mod]; omega
-  have e : ((w >>> 27) &&& 1) &&& (1 : Word) = UInt64.ofNat (rowTier w) &&& 1 :=
+  have e : ((w >>> 31) &&& 1) &&& (1 : Word) = UInt64.ofNat (rowTier w) &&& 1 :=
     UInt64.toNat_inj.mp (h1.trans h2.symm)
   simp only [tierA, tblArr, hg, hx, e]
 
@@ -898,15 +905,15 @@ variable (p : Prog)
 theorem tblIx_spec (hp : p.lookup "tbl_ix" = some tblIxL) (n : Nat) (s₀ : St) (w : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "tbl_ix" [w]
-    ⦃fun r s' => s'.mem = s₀.mem ∧ LocEq s' s₀ ∧ r.headD 0 = w >>> 28 ∧
-      r.tail.headD 0 = (w >>> 27) &&& 1 ∧ r.tail.tail.headD 0 = tixW w; ⊤⦄ := by
+    ⦃fun r s' => s'.mem = s₀.mem ∧ LocEq s' s₀ ∧ r.headD 0 = tagW w ∧
+      r.tail.headD 0 = (w >>> 31) &&& 1 ∧ r.tail.tail.headD 0 = tixW w; ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, tblIxL]
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs] <;>
-      simp_all [tixW, LocEq, BinOp.eval, Sig.retVal, Sig.retOr, Locals.init]
+    vcgen [evalE_tagE, evalE_tierE, evalE_idxE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs] <;>
+      simp_all [tixW, tierW, LocEq, Sig.retVal, Sig.retOr, Locals.init]
 
 theorem tblRowGet_spec (hx : p.lookup "tbl_ix" = some tblIxL)
     (hp : p.lookup "tbl_row_get" = some tblRowGetL) (n : Nat) (s₀ : St) (w : Word) :
@@ -916,7 +923,7 @@ theorem tblRowGet_spec (hx : p.lookup "tbl_ix" = some tblIxL)
   have hg := tagW28_toNat w
   have hi := tixW_toNat w
   have hc : ∀ g, rowTag w = g → g ≤ 2 →
-      tblRow s₀.mem w = rdN (s₀.mem.arr64 (tierA (129 + g) ((w >>> 27) &&& 1))) (tblIx w) := by
+      tblRow s₀.mem w = rdN (s₀.mem.arr64 (tierA (129 + g) ((w >>> 31) &&& 1))) (tblIx w) := by
     intro g hk hk2; rw [tierA_tbl w g hk hk2, tblRow_eq _ _ (by omega)]
   have hrd : ∀ (a : Array Word) (k : Nat) (h : k < a.size), rdN a k = a[k] := by
     intro a k h; simp [rdN, h]
@@ -926,7 +933,7 @@ theorem tblRowGet_spec (hx : p.lookup "tbl_ix" = some tblIxL)
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, tblIx_spec p hx n] <;>
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, tblIx_spec p hx n] <;>
       finish
 
 theorem tblRowSet_spec (hx : p.lookup "tbl_ix" = some tblIxL)
@@ -937,7 +944,7 @@ theorem tblRowSet_spec (hx : p.lookup "tbl_ix" = some tblIxL)
       tblIx w < (s₀.mem.arr64 (tblArr w)).size; ⊤⦄ := by
   have hg := tagW28_toNat w
   have hi := tixW_toNat w
-  have ha : ∀ g, rowTag w = g → g ≤ 2 → tierA (129 + g) ((w >>> 27) &&& 1) = tblArr w :=
+  have ha : ∀ g, rowTag w = g → g ≤ 2 → tierA (129 + g) ((w >>> 31) &&& 1) = tblArr w :=
     fun g hk hk2 => tierA_tbl w g hk hk2
   rw [invoke_eq _ hp]
   simp only [callFn, tblRowSetL]
@@ -945,7 +952,7 @@ theorem tblRowSet_spec (hx : p.lookup "tbl_ix" = some tblIxL)
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64, tblIx_spec p hx n] <;>
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64, tblIx_spec p hx n] <;>
       finish [tblSet]
 
 theorem tblCnt_spec (hp : p.lookup "tbl_cnt" = some tblCntL) (n : Nat) (s₀ : St) :
@@ -960,7 +967,7 @@ theorem tblCnt_spec (hp : p.lookup "tbl_cnt" = some tblCntL) (n : Nat) (s₀ : S
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64] <;>
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64] <;>
       finish
 
 theorem tblAt_spec (hp : p.lookup "tbl_at" = some tblAtL) (n : Nat) (s₀ : St) (j : Word) :
@@ -976,7 +983,7 @@ theorem tblAt_spec (hp : p.lookup "tbl_at" = some tblAtL) (n : Nat) (s₀ : St) 
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64] <;>
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64] <;>
       finish
 
 theorem tblPut_spec (hp : p.lookup "tbl_put" = some tblPutL) (n : Nat) (s₀ : St) (j q : Word) :
@@ -990,7 +997,7 @@ theorem tblPut_spec (hp : p.lookup "tbl_put" = some tblPutL) (n : Nat) (s₀ : S
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64] <;>
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64] <;>
       finish
 
 end specs
@@ -1005,9 +1012,10 @@ theorem toNat_succ_of_ne' (x : Word) (h : x + 1 ≠ 0) : (x + 1).toNat = x.toNat
     · exfalso; apply h; apply UInt64.toNat_inj.mp; rw [UInt64.toNat_add]; simp; omega
   rw [UInt64.toNat_add]; simp; omega
 
-theorem tblIx_inj {w w' : Word} (ht : rowTag w ≤ 2) (ht' : rowTag w' ≤ 2)
+theorem tblIx_inj {w w' : Word} (hw : w.toNat < 2 ^ 32) (hw' : w'.toNat < 2 ^ 32)
+    (ht : rowTag w ≤ 2) (ht' : rowTag w' ≤ 2)
     (ha : tblArr w = tblArr w') (hi : tblIx w = tblIx w') : w = w' :=
-  rowIx_inj ht ht' (let h := tblArr_inj ht ht' ha; rowArr_congr h.1 h.2)
+  rowIx_inj hw hw' ht ht' (let h := tblArr_inj ht ht' ha; rowArr_congr h.1 h.2)
     (by simp only [tblIx, rowIx] at hi ⊢; omega)
 
 theorem rowArr_bnd (w : Word) : rowArr w ≠ TIXA ∧ rowArr w ≠ TIXS ∧ rowArr w ≠ TIXN := by
@@ -1038,24 +1046,25 @@ theorem EnvR.setTblRow {dn : NIdx → Option ConLeche.Name} {m : Mem} {vis : Wor
     · rename_i h'; rw [hne _ (rowArr_bnd w')]
     · rfl
   have hW : ∀ w', rowW (tblSet m w v) w' = rowW m w' := fun w' => by simp only [rowW, hC, hP]
-  have hTr : ∀ w', rowTag w' ≤ 2 → tblRow (tblSet m w v) w' = if w' = w then v else tblRow m w' := by
-    intro w' ht'
+  have hTr : ∀ w', w'.toNat < 2 ^ 32 → rowTag w' ≤ 2 →
+      tblRow (tblSet m w v) w' = if w' = w then v else tblRow m w' := by
+    intro w' hw' ht'
     rw [tblRow_eq _ _ ht', tblRow_eq _ _ ht', tblSet, rdN_set64, tixW_toNat]
     by_cases e : w' = w
     · subst e; simp [hb]
     · rw [ite_eq_right e, ite_eq_right]
       rintro ⟨h1, h2, -⟩
-      exact e (tblIx_inj ht' ht h1 h2.symm)
+      exact e (tblIx_inj hw' hw2 ht' ht h1 h2.symm)
   refine ⟨h.vis, fun n hn => (hW _).symm ▸ h.keys n hn, fun n hn h0 => ?_, ?_, fun n hn => ?_,
     fun n hn h0 => ?_, ?_⟩
   · rw [hP, hR]; exact h.vals n hn (by rwa [← hC])
   · rw [← h.consts]
     simp only [envConsts, envLen, hR, hne ECON (by decide), hne CTL (by decide)]
-  · simp only [hT, hTr _ hn]
+  · simp only [hT, hTr _ (word_lt32 n) hn]
     by_cases e : n.word.toUInt64 = w
     · simp only [e, ite_true]; exact hR1
     · simp only [e, ite_false]; exact h.tkeys n hn
-  · rw [hTr _ hn] at h0 ⊢; rw [hR, hT]
+  · rw [hTr _ (word_lt32 n) hn] at h0 ⊢; rw [hR, hT]
     by_cases e : n.word.toUInt64 = w
     · simp only [e, ite_true] at h0 ⊢; exact hR2 h0
     · simp only [e, ite_false] at h0 ⊢; exact h.tvals n hn h0
@@ -1195,7 +1204,7 @@ theorem EnvR.findTable?_eq {dn : NIdx → Option ConLeche.Name} {m : Mem} {vis :
 
 /-- `find_table(vis, t)`: the table row of structure `t` if `t` is visible below `vis`, else `0`
 (`IFEnv.findTable?`). -/
--- con-ron: ConRon/Arena/Env.lean:297-301 ConRon.Arena.IFEnv.findTable?
+-- con-ron: ConRon/Arena/Env.lean:301-305 ConRon.Arena.IFEnv.findTable?
 @[l_impl ConRon.Arena.IFEnv.findTable?]
 def findTableL : FunDecl := lfn (vis, t) locals (c, q, r) {
   (c, q) := call env_row_get(t);
@@ -1228,13 +1237,13 @@ theorem findTable_refines (p : Prog) (hx : p.lookup "env_ix" = some envIxL)
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, envRowGet_spec p hx hg n,
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, envRowGet_spec p hx hg n,
         tblRowGet_spec p htx htg n] <;>
       finish
 
 /-- `env_push_table(q)`: install the table record at `q` (its structure name is word `q + 2`): its
 slot in `ETAB`, the count, its structure's table row (`IFEnv.pushTable`). -/
--- con-ron: ConRon/Arena/Env.lean:273-278 ConRon.Arena.IFEnv.pushTable
+-- con-ron: ConRon/Arena/Env.lean:277-282 ConRon.Arena.IFEnv.pushTable
 @[l_impl ConRon.Arena.IFEnv.pushTable]
 def envPushTableL : FunDecl := lfn (q) locals (w, k, z) {
   if 4294967295 < q { abort };
@@ -1313,7 +1322,7 @@ theorem envPushTable_refines (p : Prog) (htx : p.lookup "tbl_ix" = some tblIxL)
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
         tblRowSet_spec p htx hs n] <;>
       finish
 
@@ -1327,17 +1336,17 @@ def envProg : Prog :=
    ("tbl_cnt", tblCntL), ("tbl_at", tblAtL), ("tbl_put", tblPutL),
    ("find_table", findTableL), ("env_push_table", envPushTableL)]
 
-/- Push the axiom record at `EREC[0]` (name `0x10000005`, a `str` name) at counter 0, then find
+/- Push the axiom record at `EREC[0]` (name `0x4000005`, a `str` name) at counter 0, then find
 it in view 1 and miss it in view 0. -/
 #guard
   let m : Mem := Mem.ofWords
     ((ArrTable.zeroWords (checkerArrays.filter (·.id < EIXA)) fun _ => 140) ++
       [((EIXA : TieredArray), Array.replicate 8 0), (EIXS, Array.replicate 32 0), (EIXN, Array.replicate 8 0),
-       (ECON, Array.replicate 4 0), (EREC, #[0, 0x10000005, 0, 0, 0, 0, 0, 0])])
+       (ECON, Array.replicate 4 0), (EREC, #[0, 0x4000005, 0, 0, 0, 0, 0, 0])])
   match run envProg 100 "env_push" [0, 0] m with
   | .ok (r, m) =>
     r == [1] &&
-    (match run envProg 100 "env_find" [0x10000005, 1] m, run envProg 100 "env_find" [0x10000005, 0] m with
+    (match run envProg 100 "env_find" [0x4000005, 1] m, run envProg 100 "env_find" [0x4000005, 0] m with
       | .ok (r1, _), .ok (r0, _) => r1 == [1, 0] && r0 == [0, 0]
       | _, _ => false)
   | .error _ => false

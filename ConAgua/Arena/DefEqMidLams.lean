@@ -125,7 +125,7 @@ l_model loE_spec (p : Prog) (hf : p.lookup "lams_open" = some lamsOpenL)
   fns [hf ↦ loE list]
   specs [callW_spec p n "lams_inst"]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] unified
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 /-- **`lams_open` refines `lamsOpenT`, both outcomes**: the errors are the domains' `defeq` slot
@@ -191,18 +191,18 @@ theorem lamPair_refines (p : Prog) (hp : LamsProg p) (n : Nat) (s₀ : St) (a₀
   refine ⟨hloc, ?_⟩
   unfold lamPair?
   simp only [decE_tag_lam_beq a ha, decE_tag_lam_beq b hb, Bool.and_eq_true, decide_eq_true_eq]
-  by_cases hno : a >>> 28 ≠ 5 ∨ b >>> 28 ≠ 5
+  by_cases hno : tagW a ≠ 5 ∨ tagW b ≠ 5
   · rw [lpeelW.arm1 (hc1 := hno), Option.some.injEq] at hW
     simp only [Prod.mk.injEq] at hW
     obtain ⟨g1, g2, g3, g4, g5, hm⟩ := hW
-    have hc : ¬ (a >>> 28 = 5 ∧ b >>> 28 = 5) := fun h => hno.elim (fun h' => h' h.1) (fun h' => h' h.2)
+    have hc : ¬ (tagW a = 5 ∧ tagW b = 5) := fun h => hno.elim (fun h' => h' h.1) (fun h' => h' h.2)
     simp only [hc, ↓reduceIte]
     rw [← hm]
     exact coreRef_ret hS (by simp only [decLP, ← g1, ↓reduceIte])
       ⟨g1 ▸ hw0, g2 ▸ hw0, g3 ▸ hw0, g4 ▸ hw0, g5 ▸ hw0⟩
   rw [lpeelW.arm2 (hc1 := hno)] at hW
-  have h5a : a >>> 28 = 5 := Classical.byContradiction fun h => hno (.inl h)
-  have h5b : b >>> 28 = 5 := Classical.byContradiction fun h => hno (.inr h)
+  have h5a : tagW a = 5 := Classical.byContradiction fun h => hno (.inl h)
+  have h5b : tagW b = 5 := Classical.byContradiction fun h => hno (.inr h)
   simp only [h5a, h5b, and_self, ↓reduceIte]
   cases hc1 : callW p n "e_view" [a] s.mem with
   | none => rw [hc1] at hW; cases hW
@@ -291,7 +291,7 @@ theorem lamsLvl_succ (mode : ConLeche.CheckMode) (r : CoreFnsA) (f : Nat)
 `defeq_lams_inner` through their runs, `callE`). -/
 l_model defeqLams_specE (p : Prog) (hf : p.lookup "defeq_lams" = some defeqLamsL)
   fns [hf ↦ lamsE] grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] unified
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
 
 /-! ## The loop refines `defeqLams` -/
 

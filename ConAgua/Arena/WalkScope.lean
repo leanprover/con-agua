@@ -48,7 +48,7 @@ namespace L.Arena
 /-- Its schema: array 151, stamp/count `CTL[152]`/`CTL[153]`. -/
 abbrev wsSch : MemoSch := ⟨WSM, 152⟩
 
-/-- con-ron: ConRon/Arena/ExprOps.lean:953-981 ConRon.Arena.wscopedBGo -/
+/-- con-ron: ConRon/Arena/ExprOps.lean:958-986 ConRon.Arena.wscopedBGo -/
 @[l_impl ConRon.Arena.wscopedBGo]
 def wsGo : FunDecl := lfn (h, d, c) locals (b, x, fd, j, e, r, u) {
   if c == 0 { abort };
@@ -62,14 +62,14 @@ def wsGo : FunDecl := lfn (h, d, c) locals (b, x, fd, j, e, r, u) {
   return r
 }
 
-/-- con-ron: ConRon/Arena/ExprOps.lean:953-981 ConRon.Arena.wscopedBGo
-con-ron: ConRon/Arena/ExprOps.lean:983-989 ConRon.Arena.wscopedBGoArmApp
-con-ron: ConRon/Arena/ExprOps.lean:991-998 ConRon.Arena.wscopedBGoArmBind
-con-ron: ConRon/Arena/ExprOps.lean:1000-1010 ConRon.Arena.wscopedBGoArmLet -/
+/-- con-ron: ConRon/Arena/ExprOps.lean:958-986 ConRon.Arena.wscopedBGo
+con-ron: ConRon/Arena/ExprOps.lean:988-994 ConRon.Arena.wscopedBGoArmApp
+con-ron: ConRon/Arena/ExprOps.lean:996-1003 ConRon.Arena.wscopedBGoArmBind
+con-ron: ConRon/Arena/ExprOps.lean:1005-1015 ConRon.Arena.wscopedBGoArmLet -/
 @[l_impl ConRon.Arena.wscopedBGo ConRon.Arena.wscopedBGoArmApp ConRon.Arena.wscopedBGoArmBind
   ConRon.Arena.wscopedBGoArmLet]
 def wsNode : FunDecl := lfn (h, d, c) locals (g, t, i, f, a, b, x) {
-  g := h >> 28;
+  g := ⟦h⟧.tag;
   t := ⟦h⟧.tier;
   i := ⟦h⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
@@ -82,6 +82,7 @@ def wsNode : FunDecl := lfn (h, d, c) locals (g, t, i, f, a, b, x) {
     return 0
   };
   if g == 4 {
+    i := ⟦h⟧.aidx;
     if APP⟨t⟩.count <= i { abort };
     f := APP⟨t, i⟩.f;
     a := APP⟨t, i⟩.a;
@@ -140,7 +141,7 @@ l_model wsGo_spec (p : Prog) (hpd : p.lookup "der_b" = some derB)
   fns [hp ↦ wscW, hpn ↦ wsNodeW]
   specs [derB_spec p hpd n, memoFindG_spec wsSch p _ hpf n, memoPutG_spec wsSch p _ hps n]
   grind [arena_grind] fold [tierW, idxW]
-  extra [evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
+  extra [evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
   finish [tierW, idxW] gen 20 heartbeats 1000000
 
 /-! ## `wscoped_bfast(d, e)`: the entry -/
@@ -154,7 +155,7 @@ theorem wsFastW_eq (n : Nat) (m : Mem) (d e : Word) (h0 : rdW (m.arr64 CTL) 152 
 
 grind_pattern [arena_grind] wsFastW_eq => wsFastW n m d e
 
-/-- con-ron: ConRon/Arena/ExprOps.lean:1043-1047 ConRon.Arena.wscopedBFast -/
+/-- con-ron: ConRon/Arena/ExprOps.lean:1048-1052 ConRon.Arena.wscopedBFast -/
 @[l_impl ConRon.Arena.wscopedBFast]
 def wscopedBFastL : FunDecl := lfn (d, e) locals (r, u) {
   u := call ws_clear();
@@ -174,7 +175,7 @@ theorem wscopedBFast_spec (p : Prog) (hpd : p.lookup "der_b" = some derB)
   rw [invoke_eq _ hpm]
   simp only [callFn, wscopedBFastL]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, memoClearG_spec wsSch p _ hpc n, ih] <;>
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, memoClearG_spec wsSch p _ hpc n, ih] <;>
     finish
 
 /-- What the specs need of the program. -/

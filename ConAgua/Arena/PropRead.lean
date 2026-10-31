@@ -43,7 +43,7 @@ namespace L.Arena
 
 /-- `binder_dom(k, e)`'s loop: `k` ∀ binders down, the domain at `k = 0`. -/
 def binderDomLoop : Stmt := lblk (k, e, t, x) {
-  while e >> 28 == 6 {
+  while ⟦e⟧.tag == 6 {
     (t, x) := node FORALL⟦e⟧;
     if k == 0 { return (1, FORALL⟨t, x⟩.ty) };
     e := FORALL⟨t, x⟩.b;
@@ -51,7 +51,7 @@ def binderDomLoop : Stmt := lblk (k, e, t, x) {
   }
 }
 
-/-- con-ron: ConRon/Arena/PropRead.lean:59-74 ConRon.Arena.binderDom -/
+/-- con-ron: ConRon/Arena/PropRead.lean:63-78 ConRon.Arena.binderDom -/
 @[l_impl ConRon.Arena.binderDom]
 def binderDomL : FunDecl := lfn (k, e) locals (t, x) {
   ⟪binderDomLoop⟫;
@@ -60,7 +60,7 @@ def binderDomL : FunDecl := lfn (k, e) locals (t, x) {
 
 /-- `app_count_at(e, f)`'s loop: `get_app_fn`'s (`getAppFnLoop`), the start counter `f0` kept. -/
 def appCountAtLoop : Stmt := lblk (e, f, t, x, f0) {
-  while e >> 28 == 4 {
+  while ⟦e⟧.tag == 4 {
     if f == 0 { abort };
     f -= 1;
     (t, x) := node APP⟦e⟧;
@@ -70,8 +70,8 @@ def appCountAtLoop : Stmt := lblk (e, f, t, x, f0) {
 
 /-- `app_count_at(e, f)`: `getAppFn f e` and `numArgs f e` in one walk at the counter `f`:
 `(count, head)`. -/
--- con-ron: ConRon/Arena/PropRead.lean:76-89 ConRon.Arena.numArgs
--- con-ron: ConRon/Arena/ExprOps.lean:1281-1290 ConRon.Arena.getAppFn
+-- con-ron: ConRon/Arena/PropRead.lean:80-93 ConRon.Arena.numArgs
+-- con-ron: ConRon/Arena/ExprOps.lean:1286-1295 ConRon.Arena.getAppFn
 @[l_impl ConRon.Arena.numArgs ConRon.Arena.getAppFn]
 def appCountAtL : FunDecl := lfn (e, f) locals (t, x, f0) {
   f0 := f;
@@ -80,11 +80,11 @@ def appCountAtL : FunDecl := lfn (e, f) locals (t, x, f0) {
   return (f0 - f, e)
 }
 
-/-- con-ron: ConRon/Arena/PropRead.lean:91-105 ConRon.Arena.residualPW -/
+/-- con-ron: ConRon/Arena/PropRead.lean:95-109 ConRon.Arena.residualPW -/
 @[l_impl ConRon.Arena.residualPW]
 def residualPWL : FunDecl := lfn (fl, h) locals (t, x, t0, z) {
   if fl == 0 { return (0, 0, 0) };
-  if h >> 28 != 2 { return (0, 0, 0) };
+  if ⟦h⟧.tag != 2 { return (0, 0, 0) };
   (t, x) := node SORT⟦h⟧;
   t0 := CTL.u64[192];
   z := call lv_zero(SORT⟨t, x⟩.u);
@@ -96,7 +96,7 @@ def residualPWL : FunDecl := lfn (fl, h) locals (t, x, t0, z) {
 
 /-- `lam_proj(f, k, e)`'s loop: down the λ chain, counting the binders. -/
 def lamProjLoop : Stmt := lblk (f, k, e, t, x) {
-  while e >> 28 == 5 {
+  while ⟦e⟧.tag == 5 {
     if f == 0 { abort };
     f -= 1;
     (t, x) := node LAM⟦e⟧;
@@ -106,12 +106,12 @@ def lamProjLoop : Stmt := lblk (f, k, e, t, x) {
 }
 
 /-- `lam_proj(f, k, e)`: `(1, k', j)` for `some (k', j)`, else `(0, 0, 0)`. -/
--- con-ron: ConRon/Arena/PropRead.lean:109-123 ConRon.Arena.lamProj?
+-- con-ron: ConRon/Arena/PropRead.lean:113-127 ConRon.Arena.lamProj?
 @[l_impl ConRon.Arena.lamProj?]
 def lamProjL : FunDecl := lfn (f, k, e) locals (t, x, j) {
   ⟪lamProjLoop⟫;
   if f == 0 { abort };
-  if e >> 28 != 0 { return (0, 0, 0) };
+  if ⟦e⟧.tag != 0 { return (0, 0, 0) };
   (t, x) := node BVAR⟦e⟧;
   j := BVAR⟨t, x⟩.i;
   if j < k { return (1, k, j) };
@@ -120,12 +120,12 @@ def lamProjL : FunDecl := lfn (f, k, e) locals (t, x, j) {
 
 /-- `unwrap_step(vis, f, e)`: one step of `unwrapIdDefs` (`(1, e')`), or `(0, 0)` where the twin
 answers `e` itself. The argument slice `get_app_args` pushes is dropped (the top put back). -/
--- con-ron: ConRon/Arena/PropRead.lean:125-148 ConRon.Arena.unwrapIdDefs
+-- con-ron: ConRon/Arena/PropRead.lean:129-152 ConRon.Arena.unwrapIdDefs
 @[l_impl ConRon.Arena.unwrapIdDefs]
 def unwrapStepL : FunDecl :=
     lfn (vis, f, e) locals (cnt, hh, t, x, fd, p, lf, k, j, top, ao, an, r) {
   (cnt, hh) := call app_count_at(e, f);
-  if hh >> 28 != 3 { return (0, 0) };
+  if ⟦hh⟧.tag != 3 { return (0, 0) };
   (t, x) := node CONST⟦hh⟧;
   (fd, p) := call env_find(CONST⟨t, x⟩.n, vis);
   if fd == 0 { return (0, 0) };
@@ -141,7 +141,7 @@ def unwrapStepL : FunDecl :=
 }
 
 /-- `unwrap_id_defs(vis, f, n, e)`: at most `n` steps. -/
--- con-ron: ConRon/Arena/PropRead.lean:125-148 ConRon.Arena.unwrapIdDefs
+-- con-ron: ConRon/Arena/PropRead.lean:129-152 ConRon.Arena.unwrapIdDefs
 @[l_impl ConRon.Arena.unwrapIdDefs]
 def unwrapIdDefsL : FunDecl := lfn (vis, f, n, e) locals (fl, e2, r) {
   if n == 0 { return e };
@@ -152,7 +152,7 @@ def unwrapIdDefsL : FunDecl := lfn (vis, f, n, e) locals (fl, e2, r) {
 }
 
 /-- `peel_pis_w(vis, f, k, e)`: `(1, e')` for `some e'`, `(0, 0)` for `none`. -/
--- con-ron: ConRon/Arena/PropRead.lean:150-168 ConRon.Arena.peelPisW
+-- con-ron: ConRon/Arena/PropRead.lean:154-172 ConRon.Arena.peelPisW
 @[l_impl ConRon.Arena.peelPisW]
 def peelPisWL : FunDecl := lfn (vis, f, k, e) locals (u, t, x, r1, r2) {
   if k == 0 {
@@ -160,9 +160,9 @@ def peelPisWL : FunDecl := lfn (vis, f, k, e) locals (u, t, x, r1, r2) {
     return (1, u)
   };
   u := e;
-  if e >> 28 != 6 {
+  if ⟦e⟧.tag != 6 {
     u := call unwrap_id_defs(vis, f, 4, e);
-    if u >> 28 != 6 { return (0, 0) }
+    if ⟦u⟧.tag != 6 { return (0, 0) }
   };
   (t, x) := node FORALL⟦u⟧;
   (r1, r2) := call peel_pis_w(vis, f, k - 1, FORALL⟨t, x⟩.b);
@@ -173,7 +173,7 @@ def peelPisWL : FunDecl := lfn (vis, f, k, e) locals (u, t, x, r1, r2) {
 
 /-- `subst_pw_at(lo, lc, us, k, o, c)`: `Level.substPW` at a constant's level parameters (the
 `EREC` slice `(lo, lc)`) and a use's level list `us`, only at a datum `ifAllZero (_ :: _)`. -/
--- con-ron: ConRon/Arena/PropRead.lean:172-184 ConRon.Arena.substPWAt
+-- con-ron: ConRon/Arena/PropRead.lean:176-188 ConRon.Arena.substPWAt
 @[l_impl ConRon.Arena.substPWAt]
 def substPWAtL : FunDecl := lfn (lo, lc, us, k, o, c) locals (vo, vc, t0, x) {
   if k != 2 { return (k, o, c) };
@@ -187,7 +187,7 @@ def substPWAtL : FunDecl := lfn (lo, lc, us, k, o, c) locals (vo, vc, t0, x) {
 
 /-- `head_type_res(vis, f, n, ty)`: the residual's datum after `n` binders (`peelPisW`, then
 `residualPW`). -/
--- con-ron: ConRon/Arena/PropRead.lean:186-219 ConRon.Arena.headTypePW
+-- con-ron: ConRon/Arena/PropRead.lean:190-223 ConRon.Arena.headTypePW
 @[l_impl ConRon.Arena.headTypePW]
 def headTypeResL : FunDecl := lfn (vis, f, n, ty) locals (pf, pv, k, o, c) {
   (pf, pv) := call peel_pis_w(vis, f, n, ty);
@@ -196,7 +196,7 @@ def headTypeResL : FunDecl := lfn (vis, f, n, ty) locals (pf, pv, k, o, c) {
 }
 
 /-- `head_type_const(vis, f, n, cn, us)`: `headTypePW`'s `.const` arm. -/
--- con-ron: ConRon/Arena/PropRead.lean:186-219 ConRon.Arena.headTypePW
+-- con-ron: ConRon/Arena/PropRead.lean:190-223 ConRon.Arena.headTypePW
 @[l_impl ConRon.Arena.headTypePW]
 def headTypeConstL : FunDecl := lfn (vis, f, n, cn, us) locals (fd, p, lo, l, k, o, c) {
   (fd, p) := call env_find(cn, vis);
@@ -210,7 +210,7 @@ def headTypeConstL : FunDecl := lfn (vis, f, n, cn, us) locals (fd, p, lo, l, k,
 }
 
 /-- `head_type_pw(vis, f, root, d, h, n)`: the dispatch on the head's view. -/
--- con-ron: ConRon/Arena/PropRead.lean:186-219 ConRon.Arena.headTypePW
+-- con-ron: ConRon/Arena/PropRead.lean:190-223 ConRon.Arena.headTypePW
 @[l_impl ConRon.Arena.headTypePW]
 def headTypePWL : FunDecl :=
     lfn (vis, f, root, d, h, n) locals (g, x1, x2, x3, bf, bd, k, o, c) {
@@ -234,7 +234,7 @@ def headTypePWL : FunDecl :=
 
 /-- `type_sort_pw`'s loop: down the ∀ telescope, counting the binders. -/
 def typeSortPWLoop : Stmt := lblk (vis, f, rt, r, d, t, x) {
-  while r >> 28 == 6 {
+  while ⟦r⟧.tag == 6 {
     if f == 0 { abort };
     f -= 1;
     (t, x) := node FORALL⟦r⟧;
@@ -244,8 +244,8 @@ def typeSortPWLoop : Stmt := lblk (vis, f, rt, r, d, t, x) {
 }
 
 /-- `type_sort_pw(vis, f, rt)`: `typeSortPW` (`typeSortPWGo` from the root `rt`, depth `0`). -/
--- con-ron: ConRon/Arena/PropRead.lean:221-237 ConRon.Arena.typeSortPWGo
--- con-ron: ConRon/Arena/PropRead.lean:239-242 ConRon.Arena.typeSortPW
+-- con-ron: ConRon/Arena/PropRead.lean:225-241 ConRon.Arena.typeSortPWGo
+-- con-ron: ConRon/Arena/PropRead.lean:243-246 ConRon.Arena.typeSortPW
 @[l_impl ConRon.Arena.typeSortPWGo ConRon.Arena.typeSortPW]
 def typeSortPWL : FunDecl := lfn (vis, f, rt) locals (r, d, t, x, cnt, fn, k, o, c) {
   r := rt;
@@ -253,14 +253,14 @@ def typeSortPWL : FunDecl := lfn (vis, f, rt) locals (r, d, t, x, cnt, fn, k, o,
   ⟪typeSortPWLoop⟫;
   if f == 0 { abort };
   f -= 1;
-  if r >> 28 == 2 { return (1, 0, 0) };
+  if ⟦r⟧.tag == 2 { return (1, 0, 0) };
   (cnt, fn) := call app_count_at(r, f);
   (k, o, c) := call head_type_pw(vis, f, rt, d, fn, cnt);
   return (k, o, c)
 }
 
 /-- `head_proof_const(vis, f, cn, us)`: `headProofPW`'s `.const` arm. -/
--- con-ron: ConRon/Arena/PropRead.lean:244-275 ConRon.Arena.headProofPW
+-- con-ron: ConRon/Arena/PropRead.lean:248-279 ConRon.Arena.headProofPW
 @[l_impl ConRon.Arena.headProofPW]
 def headProofConstL : FunDecl := lfn (vis, f, cn, us) locals (fd, p, lo, l, k, o, c) {
   (fd, p) := call env_find(cn, vis);
@@ -275,7 +275,7 @@ def headProofConstL : FunDecl := lfn (vis, f, cn, us) locals (fd, p, lo, l, k, o
 
 /-- `head_proof_proj(vis, f, sn, i)`: `headProofPW`'s `.proj` arm (the table's body at field `i`,
 the `Inhabited` handle `0` past the bodies, as `Array.getD`). -/
--- con-ron: ConRon/Arena/PropRead.lean:244-275 ConRon.Arena.headProofPW
+-- con-ron: ConRon/Arena/PropRead.lean:248-279 ConRon.Arena.headProofPW
 @[l_impl ConRon.Arena.headProofPW]
 def headProofProjL : FunDecl := lfn (vis, f, sn, i) locals (fd, q, b, k, o, c) {
   (fd, q) := call find_proj(vis, sn, i);
@@ -288,7 +288,7 @@ def headProofProjL : FunDecl := lfn (vis, f, sn, i) locals (fd, q, b, k, o, c) {
 }
 
 /-- `head_proof_pw(vis, f, h)`: the dispatch on the head's view. -/
--- con-ron: ConRon/Arena/PropRead.lean:244-275 ConRon.Arena.headProofPW
+-- con-ron: ConRon/Arena/PropRead.lean:248-279 ConRon.Arena.headProofPW
 @[l_impl ConRon.Arena.headProofPW]
 def headProofPWL : FunDecl := lfn (vis, f, h) locals (g, x1, x2, x3, k, o, c) {
   (g, x1, x2, x3) := call e_view(h);
@@ -312,20 +312,21 @@ def headProofPWL : FunDecl := lfn (vis, f, h) locals (g, x1, x2, x3, k, o, c) {
 
 /-- `proof_pw`'s loop: through λ bodies, `let` bodies and application heads. -/
 def proofPWLoop : Stmt := lblk (vis, f, e, t, x) {
-  while e >> 28 == 5 || e >> 28 == 7 || e >> 28 == 4 {
+  while ⟦e⟧.tag == 5 || ⟦e⟧.tag == 7 || ⟦e⟧.tag == 4 {
     if f == 0 { abort };
     f -= 1;
     t := ⟦e⟧.tier;
     x := ⟦e⟧.idx;
     if t != 0 && CTL.u64[1] == 0 { abort };
-    if e >> 28 == 5 {
+    if ⟦e⟧.tag == 5 {
       if LAM⟨t⟩.count <= x { abort };
       e := LAM⟨t, x⟩.b
     } else {
-      if e >> 28 == 7 {
+      if ⟦e⟧.tag == 7 {
         if LET⟨t⟩.count <= x { abort };
         e := LET⟨t, x⟩.b
       } else {
+        x := ⟦e⟧.aidx;
         if APP⟨t⟩.count <= x { abort };
         e := APP⟨t, x⟩.f
       }
@@ -333,7 +334,7 @@ def proofPWLoop : Stmt := lblk (vis, f, e, t, x) {
   }
 }
 
-/-- con-ron: ConRon/Arena/PropRead.lean:277-298 ConRon.Arena.proofPW -/
+/-- con-ron: ConRon/Arena/PropRead.lean:281-302 ConRon.Arena.proofPW -/
 @[l_impl ConRon.Arena.proofPW]
 def proofPWL : FunDecl := lfn (vis, f, e) locals (t, x, k, o, c) {
   ⟪proofPWLoop⟫;
@@ -346,7 +347,7 @@ def proofPWL : FunDecl := lfn (vis, f, e) locals (t, x, k, o, c) {
 /-! ## The two arms -/
 
 /-- `not_proof_fast(vis, a)`: the heap reset, then `proof_pw` at `coreWalkFuel`. -/
--- con-ron: ConRon/Arena/PropRead.lean:302-308 ConRon.Arena.notProofFast
+-- con-ron: ConRon/Arena/PropRead.lean:306-312 ConRon.Arena.notProofFast
 @[l_impl ConRon.Arena.notProofFast]
 def notProofFastL : FunDecl := lfn (vis, a) locals (k, o, c) {
   CTL.u64[192] := 0;
@@ -357,7 +358,7 @@ def notProofFastL : FunDecl := lfn (vis, a) locals (k, o, c) {
 }
 
 /-- `is_proof_fast(vis, a)`. -/
--- con-ron: ConRon/Arena/PropRead.lean:310-316 ConRon.Arena.isProofFast
+-- con-ron: ConRon/Arena/PropRead.lean:314-320 ConRon.Arena.isProofFast
 @[l_impl ConRon.Arena.isProofFast]
 def isProofFastL : FunDecl := lfn (vis, a) locals (k, o, c) {
   CTL.u64[192] := 0;

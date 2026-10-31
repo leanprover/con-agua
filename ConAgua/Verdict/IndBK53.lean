@@ -36,7 +36,7 @@ l_model tkhE_spec (p : Prog) (hL : K53Look p)
   fns [hL.tkh ↦ tkhE]
   specs [gafF_spec p hL.ad n, gaaF_spec p hL.ad n, eView_spec p hL.hv n, tkaE_spec p hL n]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
   finish [] gen 20 heartbeats 4000000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
@@ -44,7 +44,7 @@ l_model tkE_spec (p : Prog) (hL : K53Look p)
   fns [hL.tk ↦ tkE]
   specs [stripPis_specF p hL.strip n, tte_spec p hL n, tkhE_spec p hL n]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
   heartbeats 4000000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
@@ -97,20 +97,20 @@ theorem tkh_ref (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState} {q fto ftl 
   have hC2 := hC1.of_pstep hS2 hA2 (PStep.refl hC.check.state)
   have hg12 := hg1.trans hg2
   -- the heads' tags
-  by_cases t1 : rl.headD 0 >>> 28 ≠ 3
+  by_cases t1 : tagW (rl.headD 0) ≠ 3
   · rw [tkhE.k_get_app_fn_f_2.arm1 (hc1 := t1)]
     have : ¬ (decE (rl.headD 0)).tag = ETag.const := fun e => t1 ((decE_tag_const _ hlhH).mp e)
     have hb : ((decE (rl.headD 0)).tag == ETag.const) = false := by rw [beq_eq_false_iff_ne]; exact this
     rw [hb, Bool.false_and]
     exact RefE.ret (y := false) rfl ⟨rfl, hC2, hg12, hP2, hA2⟩
-  have t1' : rl.headD 0 >>> 28 = 3 := by simpa using t1
-  by_cases t2 : rm.headD 0 >>> 28 ≠ 3
+  have t1' : tagW (rl.headD 0) = 3 := by simpa using t1
+  by_cases t2 : tagW (rm.headD 0) ≠ 3
   · rw [tkhE.k_get_app_fn_f_2.arm2 (hc1 := t1') (hc2 := t2)]
     have : ¬ (decE (rm.headD 0)).tag = ETag.const := fun e => t2 ((decE_tag_const _ hmhH).mp e)
     have hb : ((decE (rm.headD 0)).tag == ETag.const) = false := by rw [beq_eq_false_iff_ne]; exact this
     rw [hb, Bool.and_false]
     exact RefE.ret (y := false) rfl ⟨rfl, hC2, hg12, hP2, hA2⟩
-  have t2' : rm.headD 0 >>> 28 = 3 := by simpa using t2
+  have t2' : tagW (rm.headD 0) = 3 := by simpa using t2
   -- `e_view` of both heads
   by_cases v1 : eViewW m2 (rl.headD 0) = []
   · rw [tkhE.k_get_app_fn_f_2.arm3 (hc1 := t1') (hc2 := t2') (hc3 := v1)]; exact RefE.of_cls0 (by simp)

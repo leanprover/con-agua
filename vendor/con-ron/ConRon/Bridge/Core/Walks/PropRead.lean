@@ -49,9 +49,22 @@ meet the same `grind` limitation (`_tmp/corpus/vcgen-grind/
 nested-ctor-fallthrough-hyp.lean`) and the same workaround: `vcgen` runs on
 the twin with the nested pattern as a `Bool` test (`substPWAt_split`).
 -/
-import ConRon.Bridge.Core.Walks.Nat
+module
+
 import ConRon.Bridge.Core.Walks.Proj
-import ConRon.Bridge.Grind
+public import ConRon.Bridge.Grind
+import ConRon.Bridge.Core.Walks.Spine
+import ConRon.Bridge.Core.Walks.Cached
+public import ConRon.Bridge.Core.Walks.Spec
+import ConRon.Bridge.Core.Memo
+public import ConRon.Bridge.Core.Knot
+import ConLeche.Verify.Mono
+public import ConLeche.Verify.Knot
+import ConRon.Bridge.SpecsL
+import ConRon.Bridge.Specs
+import ConRon.Bridge.GrindAttr
+
+public section
 
 namespace ConRon.Bridge.Core
 
@@ -194,7 +207,7 @@ theorem entryAt (st : EStore) (en : IProjEntry) : EntryAt st en (denoteProjEntry
 grind_pattern [bridge_grind] entryAt => denoteProjEntry st en
 
 /-- con-leche: none — a projection entry, or a default. -/
-def projOf : Option ProjEntry → ProjEntry | some p => p | none => default
+@[expose] def projOf : Option ProjEntry → ProjEntry | some p => p | none => default
 
 /-- con-leche: none — the index's projection-table answer against the
 environment's: found together, and a found entry's body denotes. -/

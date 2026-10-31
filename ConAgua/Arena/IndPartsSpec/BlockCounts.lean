@@ -40,7 +40,7 @@ theorem piBinders_spec (n : Nat) : ∀ (s₀ : St) (fuel h : Word),
     rw [invoke_eq _ hp]
     simp only [callFn, piBinders]
     sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
         eViewSpec4 p hv n, slConsSpec2 p ha hc hs n, ih] <;>
       finish (gen := 20) [List.getD_cons_zero, List.getD_cons_succ, Sig.retVal]
 
@@ -116,7 +116,7 @@ theorem blockCountsPure_spec (n : Nat) (s₀ : St) (nPd k nC nR bl g rOk rMI rRP
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs] <;>
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs] <;>
       finish (gen := 20)
 
 theorem blockCountsPure_spec' (n : Nat) (s₀ : St) (nPd k nC nR bl g rOk rMI rRP : Word) :
@@ -159,7 +159,7 @@ theorem blockCountsHead_spec (n : Nat) (s₀ : St) (cvT : Word) :
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         piBinders_spec p ha hc hv hs hpb n, eViewSpec4 p hv n] <;>
       finish (gen := 20) [rdW_eq, CWF, List.getD_cons_zero, List.getD_cons_succ, List.tail_cons]
 
@@ -190,7 +190,7 @@ theorem blockCounts_spec (n : Nat) (s₀ : St) (nPd k nC nR cvT rOk rMI rRP : Wo
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
         blockCountsHead_spec' p ha hc hv hs hpb hh n, blockCountsPure_spec' p hpp n] <;>
       finish (gen := 20)
 

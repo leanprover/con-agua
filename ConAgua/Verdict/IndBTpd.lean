@@ -38,7 +38,7 @@ l_model pdsE_spec (p : Prog) (hL : TpLook p)
   fns [hL.step ↦ pdsE]
   specs [bvarBL_spec p hL.bvb n, fvbF_spec p hL.hf n, tcp_specF p hL.rc n, ta_specF p hL.ta n]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
   heartbeats 4000000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
@@ -46,7 +46,7 @@ l_model pdeE_spec (p : Prog) (hL : TpLook p)
   fns [hL.tpd ↦ pdeE]
   specs [pdsE_spec p hL n]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
   heartbeats 4000000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 

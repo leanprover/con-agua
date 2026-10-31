@@ -47,10 +47,16 @@ single place the declaration checker reaches it.  So the whole inductive
 install is one hypothesis, exactly as `RefineOld/Main.lean`'s
 `hind : IndRoutesSpec .Verified` was.
 -/
-import ConRon.Bridge.Checker.Inv
+module
+
+public import ConRon.Bridge.Checker.Inv
 import ConRon.Bridge.Core.Induction
 import ConRon.Bridge.Core.EnsureSort
-import ConRon.Arena.CheckDecl
+public import ConRon.Arena.CheckDecl
+public import ConRon.Bridge.Core.Knot
+public import ConLeche.Kernel.CheckDecl
+
+public section
 
 open ConLeche ConRon.Arena Std.WP
 open scoped Lean.Order
@@ -168,7 +174,7 @@ theorem IFEnvOK.find?_none {env : Env} {fe : IFEnv} {s : AState}
 /-- con-leche: none — the LEVEL-valued answer relation, for `ensureSort`.
 `Bridge/Core/Knot.lean`'s `SimE` at a `Level` answer; no well-scopedness
 conjunct, because a level has no binder depth. -/
-def SimL (op : Nat → Nat → Expr → CheckM Level) (d : Nat) (e : Expr)
+@[expose] def SimL (op : Nat → Nat → Expr → CheckM Level) (d : Nat) (e : Expr)
     (st' : EStore) (r : LIdx) : Prop :=
   ∃ u, denoteL st'.ls r = some u ∧ ∃ F, op F d e = .ok u
 
@@ -179,7 +185,7 @@ the declaration front door calls it at every constant, so this tier needs it.
 
 Stated in `BodySpec`'s shape — a `Std.WP` triple — like everything else the
 Core tier owns. -/
-def EnsureSortSpec (mode : CheckMode) (env : Env) (fe : IFEnv) (f : Nat) :
+@[expose] def EnsureSortSpec (mode : CheckMode) (env : Env) (fe : IFEnv) (f : Nat) :
     Prop :=
   ∀ (s₀ : AState) (d : Nat) (i : EIdx) (e : Expr),
     CheckOK mode env fe s₀ → denoteE s₀.store i = some e →
@@ -239,7 +245,7 @@ theorem CoreSpec.of_core {μ : CheckMode} (hμ : μ.verifiedChecks = true) :
 `Arena/CheckDecl.lean`'s `checkDecl` arm after the pin recogniser declined,
 verbatim: con-leche's uniform inductive route (DESIGN `### Task #105`).
 `checkDecl`'s `.indDecl` arm unfolds to it by `rfl`. -/
-def checkIndRoute (mode : CheckMode) (fe : IFEnv) (block : List IConstantInfo)
+@[expose] def checkIndRoute (mode : CheckMode) (fe : IFEnv) (block : List IConstantInfo)
     (nP : Nat) : AM IFEnv := do
   if !(← indParamsOk nP block) then
     fail (.invalid "number of parameters mismatch")

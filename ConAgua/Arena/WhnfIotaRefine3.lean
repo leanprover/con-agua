@@ -150,7 +150,7 @@ theorem andRescueLoop_spec (p : Prog) (k : Nat) (s₀ : St) :
   | succ k ih =>
     rw [exec, step_while (w := andRescueLoop) rfl]
     sym only [lang_grind, arena_grind] =>
-      vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         callW_spec p k "find_proj", callW_spec p k "fire_ok", ih] <;>
       finish (gen := 20) [iotaArW, ldE]
 
@@ -169,7 +169,7 @@ theorem andRescueSlots_spec (p : Prog) (hp : p.lookup "and_rescue_slots" = some 
   rw [invoke_eq _ hp]
   simp only [callFn, andRescueSlotsL]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
       callW_spec p k "pin_at", fun s₀ => Triple.step_exec (andRescueLoop_spec p (k + 1) s₀)] <;>
     finish [arTop]
 
@@ -502,14 +502,14 @@ theorem fabScopeOk_refines' (p : Prog) (hp : IotaProg' p) (hc : IotaCallees p) :
 /-! ## `lit_major_to_ctor(mode, vis, d, h)` -/
 
 theorem viewLit_ok' (m : Mem) (a : AState) (hR : ArenaR m a) (h : Word) (hh : h.toNat < 2 ^ 32)
-    (hv : viewOK m h LIT) (hg : h >>> 28 = 8) :
+    (hv : viewOK m h LIT) (hg : tagW h = 8) :
     ∃ l, a.store.viewLit (decE h) = some l ∧ a.store.view (decE h) = some (.lit l) ∧
       RecRel m (tierW h) (idxW h) ⟨l⟩ := by
   obtain ⟨k, hk, hkr⟩ := node_of m a h litCS RecRel (·.lits) _ hR.lit.2 hv.2
   refine ⟨k.l, ?_, ?_, hkr⟩
   · simp only [EStore.viewLit, EStore.persGetLit]
     rw [proj_tier m a hR h hh (fun t i => t.getLit i) hv.1]
-    simp only [ETables.getLit, Tbl.node?, decE_idx]
+    simp only [ETables.getLit, Tbl.node?, decE_idx h (narrow_of_cnt m h hR.lit.2 rfl hv.2)]
     rw [hk]; rfl
   · rw [view_tier m a hR h hh hv.1, get_lit _ h hh hg, Tbl.node?, hk]; rfl
 
@@ -598,12 +598,12 @@ theorem lmtc_ref (p : Prog) (hc : IotaCallees p)
     obtain ⟨hrun, hP⟩ := (CoreSpec.of_callW (hc.litToCtorIfNat n ⟨s₀.mem, Locals.init []⟩ a₀ dn vis fe
       MM eb h hS hh) c1).post
     exact RefE.of_run_eq hT (RefE.ret hrun ⟨hP.after, hP.res, hP.valid⟩)
-  by_cases h8 : h >>> 28 ≠ 8
+  by_cases h8 : tagW h ≠ 8
   · rw [ite_eq_left h8]
     exact hnat (litMajorToCtor_run_nolit _ fe d.toNat (decE h) a₀
       (fun ht => h8 ((decE_tag_lit h hh).mp ht)))
   rw [ite_eq_right h8]
-  have h8' : h >>> 28 = 8 := by simpa using h8
+  have h8' : tagW h = 8 := by simpa using h8
   refine RefE.abort0 (by decide) fun hv1 => ?_
   refine RefE.abort0 (by decide) fun hv2 => ?_
   obtain ⟨l, hl, hview, hrel⟩ := viewLit_ok' s₀.mem a₀ hR h hh ⟨hv1, UInt64.not_le.mp hv2⟩ h8'
@@ -778,7 +778,7 @@ theorem etaProjsLoop_spec (p : Prog) (k : Nat) (s₀ : St) :
   | succ k ih =>
     rw [exec, step_while (w := etaProjsLoop) rfl]
     sym only [lang_grind, arena_grind] =>
-      vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
         callW_spec p k "mk_proj", ih] <;>
       finish (gen := 20) [etpW_end, etpW_cont, etpW_bad]
 
@@ -804,7 +804,7 @@ theorem etaProjs_spec (p : Prog) (hp : p.lookup "eta_projs" = some etaProjsL) (k
   rw [invoke_eq _ hp]
   simp only [callFn, etaProjsL]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
       fun s₀ => Triple.step_exec (etaProjsLoop_spec p (k + 1) s₀)] <;>
     finish (gen := 20) [etpTop, rdW, Mem.len64]
 

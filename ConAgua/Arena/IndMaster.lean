@@ -203,9 +203,9 @@ variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m m' : 
 /-- A level interning (a proto run over a level lens) from the stage relation: the expression
 tables, caches and pins are untouched, so `DerR` and `cp` carry over. -/
 theorem stage_of_level {β : Type} [BEq β] [Hashable β] {L : Lens β LDer .level} {op : AM LIdx}
-    {key : β} {tag : UInt32} {pf : Option LIdx} {d : LDer} {err : CheckError}
+    {key : β} {tag : UInt32} {wide : Bool} {pf : Option LIdx} {d : LDer} {err : CheckError}
     {A : List TieredArray} {C : List Word}
-    (hS : StageR dn vis fe m a) (hrun : op.run a = protoRun L key tag pf d err a) (hok : AM.ok op a)
+    (hS : StageR dn vis fe m a) (hrun : op.run a = protoRun L key tag wide pf d err a) (hok : AM.ok op a)
     (hR : ArenaR m' (AM.st op a)) (hres : AM.res op a = decI r) (hf : MemFrame A C m m')
     (hA : ∀ b ∈ A, b.arr < 42 ∨ (54 < b.arr ∧ b.arr < 64)) (hC : ∀ x ∈ C, x.toNat < 64)
     (hset : ∀ t, (DerR m' a → DerR m' (L.setP a t)) ∧ cp (L.setP a t) = cp a)
@@ -214,7 +214,7 @@ theorem stage_of_level {β : Type} [BEq β] [Hashable β] {L : Lens β LDer .lev
     ∃ a', op.run a = .ok (decI r, a') ∧ StageR dn vis fe m' a' ∧ IWGrow m m' := by
   have hD₁ : DerR m' a := DerR.frameM _ _ m m' hf (fun b hb => by have := hA b hb; omega) a
     hS.check.arena.der
-  have hcs := AM.st_proto L op key tag pf d err a hrun hok
+  have hcs := AM.st_proto L op key tag wide pf d err a hrun hok
   have hDk : DerR m' (AM.st op a) ∧ cp (AM.st op a) = cp a := by
     rcases hcs with h | ⟨t, h⟩ | ⟨t, h⟩ <;> rw [h]
     · exact ⟨hD₁, rfl⟩
@@ -236,7 +236,7 @@ theorem internParam_stage (hS : StageR dn vis fe m a) (u : Word) (hu : u.toNat <
   have hI₂ := hI
   have hfr := consInternM_frame paramCS_wf hI₂
   exact stage_of_level hS (internLNode_param_run _ a) hok
-    (hR.lift_param _ _ _ _ ⟨hX, hL⟩ hfr (AM.st_proto paramLens _ _ _ _ _ _ a (internLNode_param_run _ a) hok))
+    (hR.lift_param _ _ _ _ ⟨hX, hL⟩ hfr (AM.st_proto paramLens _ _ _ _ _ _ _ a (internLNode_param_run _ a) hok))
     hres hfr (by simp [tier1, ConsSch.wset, paramCS, PREC, PSLOT]) (by simp [paramCS]) (fun _ => ⟨DerR.lvl, rfl⟩)
     (fun _ => ⟨DerR.lvl, rfl⟩)
     (hS.check.mode.frame hfr (by decide) (by decide))
@@ -250,7 +250,7 @@ theorem internZero_stage (hS : StageR dn vis fe m a) (hI : zinternW m = some (r,
   have hI₂ := hI
   have hfr := consInternM_frame zeroCS_wf hI₂
   exact stage_of_level hS (internLNode_zero_run a) hok
-    (hR.lift_zero _ _ _ _ ⟨hX, hL⟩ hfr (AM.st_proto zeroLens _ _ _ _ _ _ a (internLNode_zero_run a) hok))
+    (hR.lift_zero _ _ _ _ ⟨hX, hL⟩ hfr (AM.st_proto zeroLens _ _ _ _ _ _ _ a (internLNode_zero_run a) hok))
     hres hfr (by simp [tier1, ConsSch.wset, zeroCS, ZREC, ZSLOT]) (by simp [zeroCS]) (fun _ => ⟨DerR.lvl, rfl⟩)
     (fun _ => ⟨DerR.lvl, rfl⟩)
     (hS.check.mode.frame hfr (by decide) (by decide))
@@ -264,7 +264,7 @@ theorem internMax_stage (hS : StageR dn vis fe m a) (u v : Word) (hu : u.toNat <
   have hfr := minternW_frame m u v _ _ hI
   exact stage_of_level hS (internLNode_max_run _ _ a) hok
     (hR.lift_max _ _ _ _ ⟨hX, mintern_hp m a hR.max u v hu hv hR.maxHp (lvlHPW_or m a hR u v hu hv) _ _ hI⟩
-      hfr (AM.st_proto maxLens _ _ _ _ _ _ a (internLNode_max_run _ _ a) hok))
+      hfr (AM.st_proto maxLens _ _ _ _ _ _ _ a (internLNode_max_run _ _ a) hok))
     hres hfr (by simp [tier1, MREC, MSLOT, MHP]) (by simp) (fun _ => ⟨DerR.lvl, rfl⟩)
     (fun _ => ⟨DerR.lvl, rfl⟩)
     (hS.check.mode.frame hfr (by decide) (by decide))
@@ -316,7 +316,7 @@ theorem erecAlloc_specW (p : Prog) (hp : p.lookup "erec_alloc" = some erecAlloc)
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64] <;>
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64] <;>
       finish [erAllocW, erAllocMem]
 
 /-- Write `ws` into `EREC` at `q, q + 1, …`. -/
@@ -512,7 +512,7 @@ theorem cvNew_specW (p : Prog) (ha : p.lookup "erec_alloc" = some erecAlloc)
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
         erecAlloc_specW p ha n] <;>
       finish [cvNewW, cvNewMem]
 

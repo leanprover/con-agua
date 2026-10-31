@@ -11,7 +11,7 @@ The tenth table on the store library, `app`'s shape at three fields instead of t
 `letSch` (`LEREC`, `LESLOT`, two words per node, counts at `CTL[20 + t]`, tag `7`), the record
 relation `LeRecRel` (the three fields are the children's handle words), the node hash `lehash`,
 the lens `letLens`; the scratch skip (`skLe`, `leskipW_eq`), `app`'s pattern at three fields
-(two applications of `bit27_or`, since `|||` is left-associative: `ty ||| val ||| body` is
+(two applications of `bit31_or`, since `|||` is left-associative: `ty ||| val ||| body` is
 `(ty ||| val) ||| body`). `LetR m a` is the library's `ConsR` for the two `letE` tables.
 `internLet_refines`: `intern_letE(ty, val, body)` refines
 `internE (.letE (decE ty) (decE val) (decE body))` under `LetR`.
@@ -66,7 +66,7 @@ theorem persFindMaybe_let (a : AState) (ty val body : EIdx) :
 /-- `internE` at a `letE` node is the library's protocol, the persistent probe after the skip. -/
 theorem internE_let_run (ty val body : EIdx) (a : AState) :
     (internE (.letE ty val body)).run a =
-      protoRun letLens (letKey ty val body) ETag.letE (pfLe a ty val body)
+      protoRun letLens (letKey ty val body) ETag.letE false (pfLe a ty val body)
         (a.store.derOfView (.letE ty val body)) (.native "arena: expression constructor array full")
         a := by
   simp only [internE, internNodeE, EStore.find?, EStore.intern, ETables.find?, Tbl.find?,
@@ -76,12 +76,13 @@ theorem internE_let_run (ty val body : EIdx) (a : AState) :
     simp only [hs, hc, Bool.false_eq_true, ↓reduceIte, letKey, protoRun, letLens] <;>
     (try split) <;> simp_all [withScrLets, withPersLets, fail,
       throwThe, MonadExceptOf.throw, StateT.run, set, StateT.set,
-      StateT.lift, bind, Except.bind, pure, Except.pure, StateT.bind, StateT.pure]
+      StateT.lift, bind, Except.bind, pure, Except.pure, StateT.bind, StateT.pure, mkS, capS,
+      ENodeView.cap, Idx.idxCap]
 
 /-! ## The relation between L memory and the arena's `letE` tables -/
 
 /-- The `letE` schema: `LEREC`, `LESLOT`, two words per node, the counts at `CTL[20 + t]`. -/
-def letSch : Schema := ⟨LEREC, LESLOT, 2, 20, ETag.letE⟩
+def letSch : Schema := ⟨LEREC, LESLOT, 2, 20, ETag.letE, false⟩
 
 theorem letSch_wf : letSch.WF :=
   ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide⟩
@@ -176,7 +177,7 @@ end query
 
 theorem lepushOK_room (m : Mem) (t : Word) (h : lepushOK m t = true) : PushRoom letSch m t := by
   simp only [lepushOK, Bool.and_eq_true, decide_eq_true_eq] at h
-  simp only [PushRoom, cntW, lecnt, letSch, len64_eq] at *
+  simp only [PushRoom, Schema.cap, capS, cntW, lecnt, letSch, len64_eq] at *
   grind
 
 /-- **The `let` table's shape.** -/
@@ -184,20 +185,21 @@ theorem letCS_wf : letCS.WF where
   sch := letSch_wf
   P := by decide
   S := by decide
+  wtag h := by simp [letCS] at h
   col A h := by simp [letCS] at h
   colRoom A h := by simp [letCS] at h
   room m t h := (lepushOK_room m t ((lepushOK_eqC m t).trans h)).2
   vs ks h hk := by simp [pushArgs, letCS, hk]
   ex h := by simp [letCS] at h
 
-/-- The L skip test is the arena's (two applications of `bit27_or`, matching `|||`'s left
+/-- The L skip test is the arena's (two applications of `bit31_or`, matching `|||`'s left
 associativity). -/
 theorem leskipW_eq (m : Mem) (a : AState) (ty val body : Word) (hty : ty.toNat < 2 ^ 32)
     (hval : val.toNat < 2 ^ 32) (hbody : body.toNat < 2 ^ 32)
     (hfl : (rdW (m.arr64 CTL) 1 != 0) = a.store.scratchOn) :
     (leskipW m ty val body = 0) = (skLe a (decE ty) (decE val) (decE body) = false) := by
-  have h1 := bit27_or ty val
-  have h2 := bit27_or (ty ||| val) body
+  have h1 := bit31_or ty val
+  have h2 := bit31_or (ty ||| val) body
   simp only [leskipW, skLe, isPersistent_decE ty hty, isPersistent_decE val hval,
     isPersistent_decE body hbody, ← hfl]
   grind

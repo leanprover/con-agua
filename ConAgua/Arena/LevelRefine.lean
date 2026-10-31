@@ -52,7 +52,7 @@ def succLens : Lens SuccNode LDer .level where
 /-- `internLNode` at a `succ` node is the library's protocol, with no skip. -/
 theorem internLNode_succ_run (u : LIdx) (a : AState) :
     (internLNode (.succ u)).run a =
-      protoRun succLens (succKey u) LTag.succ a.store.lss.ls.pers.succs.cons[succKey u]?
+      protoRun succLens (succKey u) LTag.succ false a.store.lss.ls.pers.succs.cons[succKey u]?
         (a.store.lss.ls.derOfView (.succ u)) (.native "arena: level constructor array full") a := by
   simp only [internLNode, LStore.find?, LTables.find?, Tbl.find?, LTables.sizeOf, EStore.ls,
     EStore.internLevel, LsStore.internLevel, LStore.intern, LTables.push]
@@ -62,12 +62,13 @@ theorem internLNode_succ_run (u : LIdx) (a : AState) :
       ↓reduceIte, succKey, protoRun, succLens] <;>
     (try split) <;> simp_all [withScrSuccs, withPersSuccs, fail,
       throwThe, MonadExceptOf.throw, StateT.run, set, StateT.set,
-      StateT.lift, bind, Except.bind, pure, Except.pure, StateT.bind, StateT.pure]
+      StateT.lift, bind, Except.bind, pure, Except.pure, StateT.bind, StateT.pure, mkS, capS,
+      Idx.idxCap]
 
 /-! ## The relation between L memory and the arena's `succ` tables -/
 
 /-- The `succ` schema: `SREC`, `SSLOT`, one word per node, the counts at `CTL[6 + t]`. -/
-def succSch : Schema := ⟨SREC, SSLOT, 1, 6, LTag.succ⟩
+def succSch : Schema := ⟨SREC, SSLOT, 1, 6, LTag.succ, false⟩
 
 theorem succSch_wf : succSch.WF :=
   ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide⟩
@@ -139,7 +140,7 @@ end query
 theorem spushOK_room (m : Mem) (t : Word) (h : spushOK m t = true) : PushRoom succSch m t := by
   simp only [spushOK, Bool.and_eq_true, decide_eq_true_eq] at h
   have := UInt64.toNat_shiftRight (m.len64 (tierA SREC t)) 0
-  simp only [PushRoom, cntW, scnt, succSch, len64_eq] at *
+  simp only [PushRoom, Schema.cap, capS, cntW, scnt, succSch, len64_eq] at *
   grind
 
 /-- **The `succ` table's shape.** -/
@@ -147,6 +148,7 @@ theorem succCS_wf : succCS.WF where
   sch := succSch_wf
   P := by decide
   S := by decide
+  wtag h := by simp [succCS] at h
   col A h := by
     simp only [succCS, Option.some.injEq] at h; subst h
     exact ⟨by decide, by decide, by decide, fun m u k x t i => by
@@ -208,7 +210,7 @@ theorem sintern_hp (hC : ColT2 succLens SHP hpW m a)
     (hI : sinternW m u = some (w, m')) :
     ColT2 succLens SHP hpW m' (AM.st (internLNode (.succ (decI u))) a) := by
   obtain ⟨hok, hX, hres⟩ := sintern_correct m a hR u hu w m' hI
-  have hcs := AM.proto_casesG succLens _ _ _ _ _ _ a (internLNode_succ_run _ a) hok
+  have hcs := AM.proto_casesG succLens _ _ _ _ _ _ _ a (internLNode_succ_run _ a) hok
   exact colMkC succCS_wf rfl succLens hpW hR hX hC hI hcs
     (by show lvlHPW m u = _; rw [hb]; rfl)
 

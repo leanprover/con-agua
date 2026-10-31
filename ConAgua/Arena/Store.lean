@@ -309,8 +309,8 @@ arrays, `litCS` (`natVal`, kind word `0`, `lit_match`) and `litStrCS` (`strVal`,
 hash; the match is a call; the key's hash is `lit_hash`'s (it reads the pool: `litKeyOK`). -/
 
 /-- The handle word of node `0` of the persistent / scratch `lit` tier. -/
-def litP : Word := 0x80000000
-def litS : Word := 0x88000000
+def litP : Word := 0x20000000
+def litS : Word := 0xA0000000
 
 /-- The hash of node `i` of tier `t`: its word 3. -/
 def litH (m : Mem) (t i : Word) : Word := rdW (m.arr64 (tierA REC t)) (i * 4 + 3)
@@ -359,7 +359,7 @@ after `d` steps), `(0, 0, j, d)` if slot `j` is free; `lit_push` appends a node 
 `internE (.lit _)`. The handle is the arena's word: tag `8` (`ETag.lit`) in bits 31…28, the
 tier in bit 27, the index below. -/
 
-/-- con-ron: ConRon/Arena/Store.lean:90-91 ConRon.Arena.Tbl.find? -/
+/-- con-ron: ConRon/Arena/Store.lean:94-95 ConRon.Arena.Tbl.find? -/
 def litFind : FunDecl := consFindG litCS
 
 /-- The node count of tier `t`, `CTL[2 + t]`. -/
@@ -367,17 +367,17 @@ def cnt (m : Mem) (t : Word) : Word := rdW (m.arr64 CTL) (2 + t)
 
 /-- `lit_push`'s room checks: the handle index, the record array. -/
 def pushOK (m : Mem) (t : Word) : Bool :=
-  decide (cnt m t < (134217728 : Word)) && decide (cnt m t < m.len64 (tierA REC t) >>> (2 : Word))
+  decide (cnt m t < (67108864 : Word)) && decide (cnt m t < m.len64 (tierA REC t) >>> (2 : Word))
 
-/-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
+/-- con-ron: ConRon/Arena/Store.lean:97-102 ConRon.Arena.Tbl.push -/
 def litPush : FunDecl := consPushG litCS
 
 /-- The model of `intern_lit`: the handle and the memory after, or `none` where the L code
 aborts. `rs₀`, `rs₁`: the two probes (`[]`: the probe aborted). -/
 def internW (m : Mem) (o l : Word) : Option (Word × Mem) := consInternM litCS m [o, l]
 
-/-- con-ron: ConRon/Arena/Monad.lean:246-264 ConRon.Arena.internE
-con-ron: ConRon/Arena/Monad.lean:218-244 ConRon.Arena.internNodeE -/
+/-- con-ron: ConRon/Arena/Monad.lean:249-267 ConRon.Arena.internE
+con-ron: ConRon/Arena/Monad.lean:221-247 ConRon.Arena.internNodeE -/
 @[l_impl ConRon.Arena.internE ConRon.Arena.internNodeE]
 def internLit : FunDecl := consInternG litCS
 
@@ -402,10 +402,10 @@ def internAll (m : Mem) : List (Word × Word) → Option (List Word)
 
 /- `5`, `7`, `5` (another copy), `1 2`, `7`: the persistent handles 0, 1, 0, 2, 1. -/
 #guard internAll (litMem 0) [(0, 1), (1, 1), (2, 1), (3, 2), (1, 1)] ==
-  some [0x80000000, 0x80000001, 0x80000000, 0x80000002, 0x80000001]
+  some [0x20000000, 0x20000001, 0x20000000, 0x20000002, 0x20000001]
 
 /- With the scratch tier open the nodes go there (the persistent tier is empty). -/
-#guard internAll (litMem 1) [(0, 1), (1, 1), (2, 1)] == some [0x88000000, 0x88000001, 0x88000000]
+#guard internAll (litMem 1) [(0, 1), (1, 1), (2, 1)] == some [0xA0000000, 0xA0000001, 0xA0000000]
 
 /-- 13 limbs in the pool, the slot array `slots`. -/
 def litGrowMem (slots : Array Word) : Mem :=
@@ -421,7 +421,7 @@ nodes are found again). -/
 #guard (internAll (litGrowMem (Array.replicate consTestWords 0)) ((List.range 12).map fun i => (UInt64.ofNat i, 1))).isSome
 #guard internAll (litGrowMem (Array.replicate consGrowWords 0))
     ((List.range 13 ++ List.range 13).map fun i => (UInt64.ofNat i, 1)) ==
-  some ((List.range 13 ++ List.range 13).map fun i => 0x80000000 + UInt64.ofNat i)
+  some ((List.range 13 ++ List.range 13).map fun i => 0x20000000 + UInt64.ofNat i)
 
 /-! ## The `strVal` arm: `lit_match_str`, `lit_find_str`, `lit_push_str`, `intern_lit_str`
 
@@ -472,10 +472,10 @@ end matchStr
 
 def litStrCS : ConsSch := litCSk 1 "lit_match_str" "lit_find_str" "lit_push_str" matchWStr
 
-/-- con-ron: ConRon/Arena/Store.lean:90-91 ConRon.Arena.Tbl.find? -/
+/-- con-ron: ConRon/Arena/Store.lean:94-95 ConRon.Arena.Tbl.find? -/
 def litFindStr : FunDecl := consFindG litStrCS
 
-/-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
+/-- con-ron: ConRon/Arena/Store.lean:97-102 ConRon.Arena.Tbl.push -/
 def litPushStr : FunDecl := consPushG litStrCS
 
 /-- The model of `intern_lit_str`: the handle and the memory after, or `none` where the L code
@@ -483,8 +483,8 @@ aborts. Shares the `natVal` arm's handle words (`litP`, `litS`): the two literal
 the same table. -/
 def internWStr (m : Mem) (o l : Word) : Option (Word × Mem) := consInternM litStrCS m [o, l]
 
-/-- con-ron: ConRon/Arena/Monad.lean:246-264 ConRon.Arena.internE
-con-ron: ConRon/Arena/Monad.lean:218-244 ConRon.Arena.internNodeE -/
+/-- con-ron: ConRon/Arena/Monad.lean:249-267 ConRon.Arena.internE
+con-ron: ConRon/Arena/Monad.lean:221-247 ConRon.Arena.internNodeE -/
 @[l_impl ConRon.Arena.internE ConRon.Arena.internNodeE]
 def internLitStr : FunDecl := consInternG litStrCS
 

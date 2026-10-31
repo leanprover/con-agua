@@ -68,7 +68,7 @@ theorem structUsedLaterGo_spec (hp : p.lookup "struct_used_later_go" = some stru
   rw [invoke_eq _ hp]
   simp only [callFn, structUsedLaterGoL]
   sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, stripPis_specF p hst n, ih] <;>
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, stripPis_specF p hst n, ih] <;>
     finish [usgW]
 
 include hv hf hput hins hgo hbp hst in
@@ -81,7 +81,7 @@ theorem structUsedLater_spec (hcl : p.lookup "hb_clear" = some (memoClearG hbSch
   rw [invoke_eq _ hp]
   simp only [callFn, structUsedLaterL]
   sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, stripPis_specF p hst (n + 1),
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, stripPis_specF p hst (n + 1),
       hbFast_spec p hv hf hput hins hgo hbp hcl hfast n] <;>
     finish [ustW]
 
@@ -302,7 +302,7 @@ theorem ulW_spec (n : Nat) : ∀ (s₀ : St) (cty nP m base : Word),
     rw [invoke_eq _ hp]
     simp only [callFn, structUsedLaterListL]
     sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
         structUsedLaterGo_spec0 p hv hf hput hins hgo hbp hst hsg n, iwAlloc_specW p ha n,
         slCons_specW p ha hc hsc n, ih] <;> finish (gen := 20)
 

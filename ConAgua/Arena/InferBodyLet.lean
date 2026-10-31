@@ -293,7 +293,7 @@ l_model ifaE_spec (p : Prog) (hf : p.lookup "infer_forall_io" = some inferForall
   specs [callW_spec p n "intern_fvar", callW_spec p n "inst1", callW_spec p n "intern_imax",
     callW_spec p n "intern_sort"]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
   unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
@@ -336,7 +336,7 @@ theorem ifa_ref (p : Prog) (hp : InferLeafProg p) (hb : InferBodyProg p)
     (fun hb g => Bool.noConfusion ((tag_sort_beq _ h₂.resOk g).symm.trans hb)) fun g1 _ => ?_
   refine RefE.abort0 (by rfl) fun g2 => ?_
   refine RefE.abort0 (by rfl) fun g3 => ?_
-  have hg : r₂.headD 0 >>> 28 = 2 := by simpa using g1
+  have hg : tagW (r₂.headD 0) = 2 := by simpa using g1
   obtain ⟨hv, hu⟩ := L.Ind.view_sort_f m₂ _ hS₂.arena.base (r₂.headD 0) h₂.resOk ⟨g2, by simpa using g3⟩ hg
   refine RefE.bind_right (view_run _ _ _ hv) ?_
   refine RefE.bind_callW (fun _ => rfl) (internFVar_coreSpec hb n ⟨m₂, Locals.init []⟩ hS₂ d ty hty)

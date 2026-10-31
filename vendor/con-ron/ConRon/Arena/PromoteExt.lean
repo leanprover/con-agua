@@ -49,8 +49,13 @@ failed termination check.  With the rename the leaf for a walk exists only
 AFTER that walk is proved, and `first` skips an alternative naming a constant
 that does not exist yet.
 -/
-import ConRon.Arena.Promote
+module
+
+public import ConRon.Arena.Promote
 import ConRon.Arena.PersistentRun
+import ConRon.Arena.WFProofs
+
+@[expose] public section
 
 namespace ConRon.Arena
 

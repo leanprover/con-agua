@@ -273,12 +273,12 @@ theorem m2cPre_ref (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤
   subst hm3'
   have hKA : KeptAll M M2 eb := hK1.trans hK2
   have hStA : StackKept m m3 := hSt1.trans hSt2
-  by_cases g3 : r3.headD 0 >>> 28 ≠ 3
+  by_cases g3 : tagW (r3.headD 0) ≠ 3
   · rw [m2cPreE.k_get_app_fn.arm1 _ _ _ _ _ g3]
     refine ⟨_, ⟨⟨_, _, _, _, hrun1, hrun2, hga, fun _ => ?_, fun h => absurd rfl h⟩,
       ⟨M2, hS2, hKA, hStA⟩, e2.trans e1, fun h => absurd rfl h⟩⟩
     exact fun ht => g3 ((decE_tag_eq _ hh3 3 (by decide)).mp ht)
-  have g3' : r3.headD 0 >>> 28 = 3 := by simpa using g3
+  have g3' : tagW (r3.headD 0) = 3 := by simpa using g3
   rw [m2cPreE.k_get_app_fn.arm2 _ _ _ _ _ g3']
   rcases c4 : callW p N "m2c_const_view" [r3.headD 0] m3 with _ | ⟨r4, m4⟩
   · rw [liftE_none, m2cPreE.k_m2c_const_view.none]; exact fun _ _ => ErrClaim.of_cls0 (by simp)

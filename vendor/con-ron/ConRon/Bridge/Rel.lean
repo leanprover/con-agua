@@ -27,9 +27,13 @@ The groups, in order:
    `MapRel`;
 6. `ViewOK` — `intern`'s precondition, one lemma per node shape.
 -/
-import ConRon.Arena
-import ConLeche.Kernel.ExprOps
-import Std.WP
+module
+
+public import Std.WP
+public import ConRon.Arena.Frontend.Readback
+public import ConRon.Arena.WFProofs
+
+public section
 
 namespace ConRon.Bridge
 
@@ -209,11 +213,13 @@ the tag the caller has already tested off the handle word: a projection that
 answers `some fields` at a handle whose tag is that constructor's fixes
 `view`.
 
-The tag hypothesis is not decoration.  `ETables.getApp` reads
-`t.apps.node? i.idxNat` **without** testing the tag (that is the whole point
-of a projection — the caller tested it already), so without `i.tag = ETag.app`
-the conclusion is false: a `lit` handle whose index happens to be in range of
-the `apps` array projects an `app`.  The twins always test first (DESIGN
+The tag hypothesis is not decoration.  A projection reads its array
+**without** testing the tag (that is the whole point of a projection — the
+caller tested it already), so without it the conclusion is false: a `bvar`
+handle whose index happens to be in range of the `sorts` array projects a
+`sort`.  (`ETables.getApp` alone tests something, the handle's wide shape, as
+`get`'s `app` arm does, DESIGN §8.3; a wide handle's tag is `app`, so there
+the hypothesis is implied, and it is kept for the uniform shape.)  The twins always test first (DESIGN
 `### Task #97-P6-13`: "a clause that is one constructor plus a fallthrough tests
 the handle's own tag word BEFORE reading the store"), so the hypothesis is
 always available. -/
@@ -278,10 +284,14 @@ theorem ETables.get_of_getConst {t : ETables} {i : EIdx} {n : NIdx} {us : LsIdx}
 theorem ETables.get_of_getApp {t : ETables} {i : EIdx} {f a : EIdx}
     (htg : i.tag = ETag.app) (h : t.getApp i = some (f, a)) :
     t.get i = some (.app f a) := by
-  simp only [ETables.getApp, Option.map_eq_some_iff, Prod.mk.injEq] at h
-  obtain ⟨r, hr, rfl, rfl⟩ := h
-  simp [ETables.get, htg, hr, ETag.app, ETag.bvar, ETag.fvar, ETag.sort,
-    ETag.const]
+  simp only [ETables.getApp] at h
+  by_cases hw : i.isWide = true
+  · rw [ite_eq_left hw] at h
+    simp only [Option.map_eq_some_iff, Prod.mk.injEq] at h
+    obtain ⟨r, hr, rfl, rfl⟩ := h
+    simp [ETables.get, htg, hw, hr, ETag.app, ETag.bvar, ETag.fvar, ETag.sort,
+      ETag.const]
+  · rw [ite_eq_right hw] at h; simp at h
 
 theorem ETables.get_of_getLet {t : ETables} {i : EIdx} {ty val b : EIdx}
     (htg : i.tag = ETag.letE) (h : t.getLet i = some (ty, val, b)) :
@@ -788,7 +798,7 @@ hypothesis between the two sides.
 of one projection-table entry**: the six handle fields denote, the three
 scalar fields (`idx`, `numParams`, `numFields`) are shared by the two tiers and
 are copied.  `Frontend.denoteProjTable`'s shape exactly. -/
-def denoteProjEntry (st : EStore) (e : IProjEntry) : Option ProjEntry :=
+@[expose] def denoteProjEntry (st : EStore) (e : IProjEntry) : Option ProjEntry :=
   match denoteN st.ns e.structName, Frontend.denoteNList st.ns e.levelParams,
         denoteN st.ns e.ctor with
   | some sn, some lps, some c =>
@@ -1091,42 +1101,42 @@ Written as a bare `∀ e, denoteE st c = some e → …` at every call site it w
 cost the automation dearly: a `∀`-hypothesis has no head symbol, so `grind`
 cannot ematch on it and every use has to be supplied by hand.  Behind a `def`
 it has one, and `Bridge/Grind.lean`'s `relE_eq_mapRel` reads it as `MapRel`. -/
-def RelE (f : Expr → Expr) (st : EStore) (c : EIdx) (st' : EStore) (r : EIdx) :
+@[expose] def RelE (f : Expr → Expr) (st : EStore) (c : EIdx) (st' : EStore) (r : EIdx) :
     Prop :=
   ∀ e, denoteE st c = some e → denoteE st' r = some (f e)
 
 /-- con-leche: ConLeche/Verify/SimI.lean:252 RelV — the answer relation at a
 representation-free result. -/
-def RelV {α : Type} (f : Expr → α) (st : EStore) (c : EIdx) (x : α) : Prop :=
+@[expose] def RelV {α : Type} (f : Expr → α) (st : EStore) (c : EIdx) (x : α) : Prop :=
   ∀ e, denoteE st c = some e → x = f e
 
 /-- con-leche: none — the denotation of an OPTIONAL handle, so that `RelEO`
 has `RelE`'s shape exactly. -/
-def denoteEO (st : EStore) : Option EIdx → Option (Option Expr)
+@[expose] def denoteEO (st : EStore) : Option EIdx → Option (Option Expr)
   | none => some none
   | some j => (denoteE st j).map some
 
 /-- con-leche: ConLeche/Verify/SimI.lean:250 RelE — the answer relation at an
 `Option` result. -/
-def RelEO (f : Expr → Option Expr) (st : EStore) (c : EIdx) (st' : EStore)
+@[expose] def RelEO (f : Expr → Option Expr) (st : EStore) (c : EIdx) (st' : EStore)
     (r : Option EIdx) : Prop :=
   ∀ e, denoteE st c = some e → denoteEO st' r = some (f e)
 
 /-- con-leche: ConLeche/Verify/SimI.lean:250 RelE — the answer relation at a
 LIST result. -/
-def RelEL (f : Expr → List Expr) (st : EStore) (c : EIdx) (st' : EStore)
+@[expose] def RelEL (f : Expr → List Expr) (st : EStore) (c : EIdx) (st' : EStore)
     (rs : List EIdx) : Prop :=
   ∀ e, denoteE st c = some e → Frontend.denoteEList st' rs = some (f e)
 
 /-- con-leche: ConLeche/Verify/SimI.lean:254 RelL — the answer relation whose
 SUBJECT is a level handle and whose answer is one too (`substLMemoAt`). -/
-def RelL (f : Level → Level) (st : EStore) (c : LIdx) (st' : EStore) (r : LIdx) :
+@[expose] def RelL (f : Level → Level) (st : EStore) (c : LIdx) (st' : EStore) (r : LIdx) :
     Prop :=
   ∀ u, denoteL st.ls c = some u → denoteL st'.ls r = some (f u)
 
 /-- con-leche: none — the same at an interned universe-argument LIST
 (`substLsMemoAt`). -/
-def RelLs (f : List Level → List Level) (st : EStore) (c : LsIdx) (st' : EStore)
+@[expose] def RelLs (f : List Level → List Level) (st : EStore) (c : LsIdx) (st' : EStore)
     (r : LsIdx) : Prop :=
   ∀ us, denoteLs st.lss c = some us → denoteLs st'.lss r = some (f us)
 

@@ -93,74 +93,74 @@ theorem pdm_spec (p : Prog) (hM : MaProg p) (hp : p.lookup "pi_doms_mention_any"
     rw [invoke_eq _ hp]
     simp only [callFn, piDomsMentionAny]
     sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, eViewSpec4 p hM.view n,
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, eViewSpec4 p hM.view n,
         mentionsAnyConst_specK p hM.view hM.cont hM.find hM.put hM.go hM.node hM.clr hM.ma n, ih] <;>
       finish (gen := 20)
 
 /-- `e_view`'s first word is the handle's tag (lane `defeq`'s `quick_eViewW_head`). -/
 theorem partsEView_head (m : Mem) (h : Word) (hne : L.Ind.eViewW m h ≠ []) :
-    (L.Ind.eViewW m h).headD 0 = h >>> 28 := by
+    (L.Ind.eViewW m h).headD 0 = tagW h := by
   unfold L.Ind.eViewW at hne ⊢
   by_cases c1 : (4294967295 : Word) < h
   · simp [c1] at hne
   by_cases c2 : tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0
   · simp [c1, c2] at hne
   simp only [c1, c2, ite_false] at hne ⊢
-  by_cases g0 : h >>> 28 = 0
+  by_cases g0 : tagW h = 0
   · simp only [g0, ite_true] at hne ⊢
     split at hne
     · exact absurd rfl hne
     · rename_i hh; simp only [hh, ite_false, List.headD_cons]
   simp only [g0, ite_false] at hne ⊢
-  by_cases g1 : h >>> 28 = 1
+  by_cases g1 : tagW h = 1
   · simp only [g1, ite_true] at hne ⊢
     split at hne
     · exact absurd rfl hne
     · rename_i hh; simp only [hh, ite_false, List.headD_cons]
   simp only [g1, ite_false] at hne ⊢
-  by_cases g2 : h >>> 28 = 2
+  by_cases g2 : tagW h = 2
   · simp only [g2, ite_true] at hne ⊢
     split at hne
     · exact absurd rfl hne
     · rename_i hh; simp only [hh, ite_false, List.headD_cons]
   simp only [g2, ite_false] at hne ⊢
-  by_cases g3 : h >>> 28 = 3
+  by_cases g3 : tagW h = 3
   · simp only [g3, ite_true] at hne ⊢
     split at hne
     · exact absurd rfl hne
     · rename_i hh; simp only [hh, ite_false, List.headD_cons]
   simp only [g3, ite_false] at hne ⊢
-  by_cases g4 : h >>> 28 = 4
+  by_cases g4 : tagW h = 4
   · simp only [g4, ite_true] at hne ⊢
     split at hne
     · exact absurd rfl hne
     · rename_i hh; simp only [hh, ite_false, List.headD_cons]
   simp only [g4, ite_false] at hne ⊢
-  by_cases g5 : h >>> 28 = 5
+  by_cases g5 : tagW h = 5
   · simp only [g5, ite_true] at hne ⊢
     split at hne
     · exact absurd rfl hne
     · rename_i hh; simp only [hh, ite_false, List.headD_cons]
   simp only [g5, ite_false] at hne ⊢
-  by_cases g6 : h >>> 28 = 6
+  by_cases g6 : tagW h = 6
   · simp only [g6, ite_true] at hne ⊢
     split at hne
     · exact absurd rfl hne
     · rename_i hh; simp only [hh, ite_false, List.headD_cons]
   simp only [g6, ite_false] at hne ⊢
-  by_cases g7 : h >>> 28 = 7
+  by_cases g7 : tagW h = 7
   · simp only [g7, ite_true] at hne ⊢
     split at hne
     · exact absurd rfl hne
     · rename_i hh; simp only [hh, ite_false, List.headD_cons]
   simp only [g7, ite_false] at hne ⊢
-  by_cases g8 : h >>> 28 = 8
+  by_cases g8 : tagW h = 8
   · simp only [g8, ite_true] at hne ⊢
     split at hne
     · exact absurd rfl hne
     · rename_i hh; simp only [hh, ite_false, List.headD_cons]
   simp only [g8, ite_false] at hne ⊢
-  by_cases g9 : h >>> 28 = 9
+  by_cases g9 : tagW h = 9
   · simp only [g9, ite_true] at hne ⊢
     split at hne
     · exact absurd rfl hne
@@ -196,7 +196,7 @@ theorem pdmW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
         simp only [beq_iff_eq]; rw [decE_tag_forallE _ he]; rw [← hhd]; exact h6
       refine ⟨false, a, ?_, rfl, rfl, ⟨mp, hM⟩, hS, IWGrow.refl _⟩
       simp only [ConRon.Arena.piDomsMentionAny, htag]; rfl
-    have hg6 : e >>> 28 = 6 := by rw [← hhd]; simpa using h6
+    have hg6 : tagW e = 6 := by rw [← hhd]; simpa using h6
     rw [pdmK_f (h := hv) (h6 := h6)] at h
     obtain ⟨hvok, hew⟩ := eViewW_forall m e hg6 hv
     have hR := hS.check.arena.base
@@ -311,7 +311,7 @@ theorem brm_spec (p : Prog) (hM : MaProg p) (hpd : p.lookup "pi_doms_mention_any
     rw [invoke_eq _ hp]
     simp only [callFn, blockRawRecMember]
     sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, pdm_spec p hM hpd n, ih] <;>
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, pdm_spec p hM hpd n, ih] <;>
       finish (gen := 20) [rdW_eq, CWF]
 
 theorem brgo_spec (p : Prog) (hM : MaProg p) (hpd : p.lookup "pi_doms_mention_any" = some piDomsMentionAny)
@@ -327,7 +327,7 @@ theorem brgo_spec (p : Prog) (hM : MaProg p) (hpd : p.lookup "pi_doms_mention_an
     rw [invoke_eq _ hp]
     simp only [callFn, blockRawRecGo]
     sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, brm_spec p hM hpd hm n, ih] <;>
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, brm_spec p hM hpd hm n, ih] <;>
       finish (gen := 20) [rdW_eq]
 
 /-- The post of the memo walks: the result a `Bool` word, the twin's state kept, a memo left. -/
@@ -452,7 +452,7 @@ theorem brr_spec (p : Prog) (hM : MaProg p) (ha : p.lookup "iw_alloc" = some iwA
   rw [invoke_eq _ hp]
   simp only [callFn, blockRawRec]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       blockShapeMemberNames_spec p ha hc hn n, brgo_spec p hM hpd hm hg n] <;>
     finish (gen := 20) [brrW, rdW_eq]
 

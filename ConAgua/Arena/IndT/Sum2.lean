@@ -62,7 +62,7 @@ l_model ctsE_spec (p : Prog) (hV : ValProg p) (hP : CtsProg p)
     closeTelescope_spec p hP.d hP.pf hP.pp hP.pi hP.mkf hP.ct hP.ab n, cvNew_specW p hP.ea hP.cn n,
     checkConstantVal_specE p hV n]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
   heartbeats 4000000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
@@ -73,7 +73,7 @@ l_model ctE_spec (p : Prog) (hV : ValProg p) (hP : CtProg p)
   fns [hP.cst ↦ ctE]
   specs [stripPis_specF p hP.st n, eView_spec p hP.view n, ctsE_spec p hV hP.toCtsProg n]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
   heartbeats 4000000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
@@ -259,7 +259,7 @@ theorem ct_ref (k : Nat) (hk : k ≤ 2 ^ 62)
   have hnat : ∀ q : Word, q.toNat + 4 ≤ erTop m → ∀ j, j < 4 →
       nat? (erA m1) (q.toNat + j) = nat? (erA m) (q.toNat + j) := fun q hq j hj => by
     simp only [nat?, erA]; rw [hg1.erGet _ (by omega)]
-  by_cases hf : r1.headD 0 = 1 ∧ r1.tail.tail.tail.headD 0 >>> 28 = 2
+  by_cases hf : r1.headD 0 = 1 ∧ tagW (r1.tail.tail.tail.headD 0) = 2
   · cases x with
     | none => simp only [decOLE] at hdec; rw [hf.1] at hdec; cases hdec
     | some le =>

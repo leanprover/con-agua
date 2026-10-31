@@ -283,7 +283,7 @@ theorem rdpcol_trunc (m : Mem) {c : ArrId} {ca : Nat} (hB : (c, ca) ∈ fzPCols)
 theorem DerT2.trunc {α : Type} [BEq α] [Hashable α] {g : ETables → Tbl α EIdx UInt64}
     {c : ArrId} {ca : Nat} {m : Mem} {a : AState} (hB : (c, ca) ∈ fzPCols) (h1 : tier1 c ∉ fzSrcs)
     (hc : (rdW (m.arr64 CTL) (UInt64.ofNat ca)).toNat = (g a.store.pers).nodes.size)
-    (hcap : (g a.store.pers).nodes.size ≤ 134217728)
+    (hcap : (g a.store.pers).nodes.size ≤ 2 ^ 30)
     (h : DerT2 a g (cP c m)) : DerT2 a g (cP c (truncFrozen m)) := by
   obtain ⟨⟨s0, h0⟩, ⟨s1, h1'⟩⟩ := h
   refine ⟨⟨s0, fun i x hx => ?_⟩, ⟨s1, fun i x hx => ?_⟩⟩
@@ -336,15 +336,15 @@ theorem ArenaD.trunc (h : ArenaD m a) : ArenaD (truncFrozen m) a := by
   obtain ⟨hA, hD⟩ := h
   refine ⟨hA.trunc htop, ⟨hD.bvar, hD.fvar, hD.sort, hD.const, hD.lit, ?_, ?_, ?_, ?_, ?_⟩⟩
   · exact hD.app.trunc (ca := 4) (by decide) (by decide) (ConsR.cnt0 hA.app (by decide))
-      (by simpa using ConsR.cap hA.app 0 (by decide))
+      (Nat.le_trans (by simpa using ConsR.cap hA.app 0 (by decide)) (capS_le _))
   · exact hD.lam.trunc (ca := 28) (by decide) (by decide) (ConsR.cnt0 hA.lam (by decide))
-      (by simpa using ConsR.cap hA.lam 0 (by decide))
+      (Nat.le_trans (by simpa using ConsR.cap hA.lam 0 (by decide)) (capS_le _))
   · exact hD.forallE.trunc (ca := 30) (by decide) (by decide) (ConsR.cnt0 hA.forallE (by decide))
-      (by simpa using ConsR.cap hA.forallE 0 (by decide))
+      (Nat.le_trans (by simpa using ConsR.cap hA.forallE 0 (by decide)) (capS_le _))
   · exact hD.letE.trunc (ca := 20) (by decide) (by decide) (ConsR.cnt0 hA.letE (by decide))
-      (by simpa using ConsR.cap hA.letE 0 (by decide))
+      (Nat.le_trans (by simpa using ConsR.cap hA.letE 0 (by decide)) (capS_le _))
   · exact hD.proj.trunc (ca := 32) (by decide) (by decide) (ConsR.cnt0 hA.proj (by decide))
-      (by simpa using ConsR.cap hA.proj 0 (by decide))
+      (Nat.le_trans (by simpa using ConsR.cap hA.proj 0 (by decide)) (capS_le _))
 
 end arena
 

@@ -30,7 +30,7 @@ same width-2, scratch-skipping shape:
   per tier, the key word the key itself (an exact table), linear probing from `homeW`.
 * **The scratch skip.** `internE (.const n us)` does not probe the persistent tier when the
   scratch tier is open and a child is a scratch handle (`EStore.persFindMaybe`,
-  `eViewHasScratchChild`): bit 27 of `n | us`.
+  `eViewHasScratchChild`): bit 31 of `n | us`.
 
 The functions: `const_find(t, n, us, h)` (the probe, the match inline: two half-word comparisons),
 `const_push(t, n, us, j)` and `intern_const(n, us)`. They are the cons-table library's templates
@@ -55,8 +55,8 @@ def cematchW (r : Array Word) (_t i f a : Word) : Bool :=
 /-! ## The schema -/
 
 /-- The handle word of node `0` of the persistent / scratch `const` tier (tag `3`). -/
-def constP : Word := 0x30000000
-def constS : Word := 0x38000000
+def constP : Word := 0x0C000000
+def constS : Word := 0x8C000000
 
 /-- The hash of node `i` of tier `t`. -/
 def cehash (m : Mem) (t i : Word) : Word :=
@@ -84,7 +84,7 @@ def constCS : ConsSch where
     if len(CREC⟨t⟩) <= c || len(CLP⟨t⟩) <= c { skip } })
   recW := [.bin .or (.var 1) (.bin .shl (.var 2) (.const 32))]
   ihash := lblk (f, a, h) { h := ((⟪fnvBasis⟫ ^ f) * ⟪fnvPrime⟫ ^ a) * ⟪fnvPrime⟫ }
-  skipW := some (rhsOf (lblk (f, a, h, sk) { sk := ((f | a) >> 27) & 1 }))
+  skipW := some (rhsOf (lblk (f, a, h, sk) { sk := ((f | a) >> 31) & 1 }))
   xloc := 4
   pre := some lsBlkC
   col := some CLP
@@ -94,11 +94,11 @@ def constCS : ConsSch where
   hsM := cehash
   vsM as := [as.getD 0 0 ||| as.getD 1 0 <<< 32]
   roomM m t c := decide (m.len64 (tierA CREC t) ≤ c) || decide (m.len64 (tierA CLP t) ≤ c)
-  skM ks := ((ks.getD 0 0 ||| ks.getD 1 0) >>> 27) &&& 1
+  skM ks := ((ks.getD 0 0 ||| ks.getD 1 0) >>> 31) &&& 1
 
 /-! ## `const_find(t, n, us, h)`: the probe -/
 
-/-- con-ron: ConRon/Arena/Store.lean:90-91 ConRon.Arena.Tbl.find? -/
+/-- con-ron: ConRon/Arena/Store.lean:94-95 ConRon.Arena.Tbl.find? -/
 def constFind : FunDecl := consFindG constCS
 
 /-! ## `const_push(t, n, us, j)`: append a node to tier `t`, register it at slot `j` -/
@@ -108,10 +108,10 @@ def cecnt (m : Mem) (t : Word) : Word := rdW (m.arr64 CTL) (18 + t)
 
 /-- `const_push`'s room checks: the handle index, the record array. -/
 def cepushOK (m : Mem) (t : Word) : Bool :=
-  decide (cecnt m t < (134217728 : Word)) && decide (cecnt m t < m.len64 (tierA CREC t)) &&
+  decide (cecnt m t < (67108864 : Word)) && decide (cecnt m t < m.len64 (tierA CREC t)) &&
     decide (cecnt m t < m.len64 (tierA CLP t))
 
-/-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
+/-- con-ron: ConRon/Arena/Store.lean:97-102 ConRon.Arena.Tbl.push -/
 def constPush : FunDecl := consPushG constCS
 
 /-! ## `intern_const(n, us)`: hash-cons the `const` node with children `n` and `us`
@@ -122,14 +122,14 @@ scratch tier is open, the append to the tier the store is in. -/
 
 /-- The scratch skip: the scratch tier is open and `f` or `a` is a scratch handle. -/
 def ceskipW (m : Mem) (f a : Word) : Word :=
-  if rdW (m.arr64 CTL) 1 ≠ 0 then ((f ||| a) >>> 27) &&& 1 else 0
+  if rdW (m.arr64 CTL) 1 ≠ 0 then ((f ||| a) >>> 31) &&& 1 else 0
 
 /-- The model of `intern_const`: the handle and the memory after, or `none` where the L code
 aborts (the library's `consInternM`). -/
 def ceinternW (m : Mem) (f a : Word) : Option (Word × Mem) := consInternM constCS m [f, a]
 
-/-- con-ron: ConRon/Arena/Monad.lean:246-264 ConRon.Arena.internE
-con-ron: ConRon/Arena/Monad.lean:218-244 ConRon.Arena.internNodeE -/
+/-- con-ron: ConRon/Arena/Monad.lean:249-267 ConRon.Arena.internE
+con-ron: ConRon/Arena/Monad.lean:221-247 ConRon.Arena.internNodeE -/
 @[l_impl ConRon.Arena.internE ConRon.Arena.internNodeE]
 def internConst : FunDecl := consInternG constCS
 
@@ -153,12 +153,12 @@ def internConsts (m : Mem) : List (Word × Word) → Option (List Word)
     | .error _ => none
 
 /- `(1, 2)`, `(2, 1)`, `(1, 2)`: persistent handles 0, 1, 0. -/
-#guard internConsts (constMem 0) [(1, 2), (2, 1), (1, 2)] == some [0x30000000, 0x30000001, 0x30000000]
+#guard internConsts (constMem 0) [(1, 2), (2, 1), (1, 2)] == some [0x0C000000, 0x0C000001, 0x0C000000]
 
 /- Scratch open: persistent children are probed in the persistent tier (empty), the nodes go to
 the scratch tier; a scratch child (`0x38000000`) skips the persistent probe. -/
-#guard internConsts (constMem 1) [(1, 2), (0x38000000, 1), (1, 2), (0x38000000, 1)] ==
-  some [0x38000000, 0x38000001, 0x38000000, 0x38000001]
+#guard internConsts (constMem 1) [(1, 2), (0x8C000000, 1), (1, 2), (0x8C000000, 1)] ==
+  some [0x8C000000, 0x8C000001, 0x8C000000, 0x8C000001]
 
 /-! ## The specs: the library's, from this table's obligations -/
 

@@ -42,7 +42,7 @@ theorem pinAt_specW (p : Prog) (hp : p.lookup "pin_at" = some pinAtL) (n : Nat) 
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64] <;>
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64] <;>
       finish [pinAtW, pinW_eq, rdW_eq]
 
 /-- **A pin read is the twin's** (`pinAt`), the memory unchanged. -/
@@ -94,7 +94,7 @@ theorem oro_specW (p : Prog) (hpa : p.lookup "pin_at" = some pinAtL)
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, pinAt_specW p hpa n] <;>
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, pinAt_specW p hpa n] <;>
       finish (gen := 20) [oroW, pinAtW]
 
 theorem oroW_ok {m m' : Mem} {a : AState} {w : Word} {r : List Word}
@@ -168,7 +168,7 @@ l_model installBasisDecl_specE (p : Prog) (hB : BasisProg p)
   fns [hB.ibd ↦ installBasisDeclE]
   specs [envFind_specW p hB.ih.ix hB.ih.rowGet hB.ih.find n, callW_spec p n "env_push"]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
   heartbeats 400000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
@@ -240,7 +240,7 @@ l_model installBasisDecls_specE (p : Prog) (hB : BasisProg p)
   fns [hB.ibds ↦ installBasisDeclsE]
   specs [installBasisDecl_specE p hB n]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
   heartbeats 400000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 

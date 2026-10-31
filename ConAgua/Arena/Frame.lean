@@ -201,8 +201,8 @@ section proto
 variable {α δ : Type} {k : IdxKind} [BEq α] [Hashable α]
 
 /-- The state after `protoRun` is the old one, or one of the lens's two tables replaced. -/
-theorem protoRun_st (L : Lens α δ k) (key : α) (tag : UInt32) (pf : Option (Idx k)) (d : δ)
-    (err : CheckError) (a a' : AState) (y : Idx k) (h : protoRun L key tag pf d err a = .ok (y, a')) :
+theorem protoRun_st (L : Lens α δ k) (key : α) (tag : UInt32) (wide : Bool) (pf : Option (Idx k)) (d : δ)
+    (err : CheckError) (a a' : AState) (y : Idx k) (h : protoRun L key tag wide pf d err a = .ok (y, a')) :
     a' = a ∨ (∃ t, a' = L.setP a t) ∨ (∃ t, a' = L.setS a t) := by
   unfold protoRun at h
   split at h
@@ -218,11 +218,11 @@ theorem protoRun_st (L : Lens α δ k) (key : α) (tag : UInt32) (pf : Option (I
       · simp at h
 
 /-- The same for the final state of an arena operation that runs as `protoRun`. -/
-theorem AM.st_proto (L : Lens α δ k) (op : AM (Idx k)) (key : α) (tag : UInt32)
+theorem AM.st_proto (L : Lens α δ k) (op : AM (Idx k)) (key : α) (tag : UInt32) (wide : Bool)
     (pf : Option (Idx k)) (d : δ) (err : CheckError) (a : AState)
-    (hrun : op.run a = protoRun L key tag pf d err a) (hok : AM.ok op a) :
+    (hrun : op.run a = protoRun L key tag wide pf d err a) (hok : AM.ok op a) :
     AM.st op a = a ∨ (∃ t, AM.st op a = L.setP a t) ∨ (∃ t, AM.st op a = L.setS a t) :=
-  protoRun_st L key tag pf d err a _ _ (hrun.symm.trans (AM.run_of_ok op a hok))
+  protoRun_st L key tag wide pf d err a _ _ (hrun.symm.trans (AM.run_of_ok op a hok))
 
 end proto
 

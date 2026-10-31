@@ -104,7 +104,7 @@ theorem pmGetD3 (r : List Word) : r.getD 3 0 = r.tail.tail.tail.headD 0 := by
 
 /-- `e_view`'s tag `8`: the checks of a literal handle. -/
 theorem eViewW_lit {m : Mem} {h : Word} (h8 : (eViewW m h).headD 0 = 8) :
-    h.toNat < 2 ^ 32 ∧ viewOK m h LIT ∧ h >>> 28 = 8 := by
+    h.toNat < 2 ^ 32 ∧ viewOK m h LIT ∧ tagW h = 8 := by
   unfold eViewW at h8
   by_cases c1 : 4294967295 < h
   · simp [c1] at h8
@@ -114,7 +114,7 @@ theorem eViewW_lit {m : Mem} {h : Word} (h8 : (eViewW m h).headD 0 = 8) :
   by_cases c2 : tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0
   · simp [c1, c2] at h8
   simp only [c1, c2, ite_false] at h8
-  by_cases g8 : h >>> 28 = 8
+  by_cases g8 : tagW h = 8
   · simp only [g8] at h8
     simp (config := { decide := true }) only [↓reduceIte] at h8
     by_cases c : tcnt m LIT (tierW h) ≤ idxW h
@@ -123,11 +123,11 @@ theorem eViewW_lit {m : Mem} {h : Word} (h8 : (eViewW m h).headD 0 = 8) :
   exfalso
   simp only [apply_ite (fun l : List Word => l.headD 0), List.headD_cons, List.headD_nil] at h8
   repeat' split at h8
-  all_goals first | (simp at h8; done) | exact absurd ‹h >>> 28 = 8› g8
+  all_goals first | (simp at h8; done) | exact absurd ‹tagW h = 8› g8
 
 /-- A literal handle's record: kind word, pool slice, the literal it holds. -/
 theorem promote_lit_rec {m : Mem} {a : AState} (hR : ArenaR m a) {h : Word} (hh : h.toNat < 2 ^ 32)
-    (hv : viewOK m h LIT) (hg : h >>> 28 = 8) :
+    (hv : viewOK m h LIT) (hg : tagW h = 8) :
     ∃ k : LitNode, a.store.view (decE h) = some (.lit k.l) ∧ RecRel m (tierW h) (idxW h) k := by
   obtain ⟨k, hk, hkr⟩ := node_of m a h litCS RecRel (·.lits) _ hR.lit.2 hv.2
   refine ⟨k, ?_, hkr⟩
@@ -195,7 +195,7 @@ include hp
 /-- **`pe_lit` refines the literal arm** (`internPersistentE (.lit l)`, the memo untouched). -/
 theorem peLit_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (h : Word) (r : List Word)
     (m' : Mem) (hD : ArenaD m a) (hP : PMemoR m pm) (hh : h.toNat < 2 ^ 32) (hv : viewOK m h LIT)
-    (hg : h >>> 28 = 8) (l : ConLeche.Literal) (hl : a.store.view (decE h) = some (.lit l))
+    (hg : tagW h = 8) (l : ConLeche.Literal) (hl : a.store.view (decE h) = some (.lit l))
     (hc : callW p n "pe_lit" [h] m = some (r, m')) :
     PEOk (do pure (pm, ← internPersistentE (.lit l))) m a pm (r.headD 0) m' := by
   cases n with

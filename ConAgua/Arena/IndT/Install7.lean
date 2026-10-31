@@ -39,7 +39,7 @@ l_model icboE_spec (p : Prog) (hP : CtorsProg p)
   fns [hP.one ↦ icboE]
   specs [rec2_specW p hP.alloc n hP.rec2]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] unified
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 /-- **`check_block_ctors_go`'s unified model**: the head through `icboE`, the `sl_cons` lifted. -/
@@ -47,7 +47,7 @@ l_model icbgE_spec (p : Prog) (hP : CtorsProg p)
   fns [hP.go ↦ icbgE]
   specs [icboE_spec p hP n, slCons_specW p hP.alloc hP.copy hP.cons n]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] unified
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 /-- **`check_block_ctors`' unified model**: `block_shape_lps` (outside the verdict closure) lifted,
@@ -56,7 +56,7 @@ l_model ictE_spec (p : Prog) (hP : CtorsProg p)
   fns [hP.ctors ↦ ictE]
   specs [blockShapeLps_spec p hP.alloc hP.erCopy hP.erToIw hP.lps n, icbgE_spec p hP n]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] unified
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 

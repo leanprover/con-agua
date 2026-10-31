@@ -218,12 +218,12 @@ theorem ec_ref (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (n : Nat)
     fun r₃ m₃ _ h₃ => RefE.after_core (w := id) h₃ fun M₃ hS₃ _ => ?_
   have hh3 : HW (r₃.headD 0) := h₃.resOk
   simp only [ecE.k_whnf, decH, tag_beq_w _ hh3 6 (by decide) ETag.forallE rfl 6 rfl]
-  by_cases h6 : r₃.headD 0 >>> 28 ≠ 6
+  by_cases h6 : tagW (r₃.headD 0) ≠ 6
   · rw [ite_eq_left h6]
     simp only [h6, decide_false, Bool.false_eq_true, ↓reduceIte]
     exact RefE.ret rfl (CorePost.ret hS₃ rfl hw0)
   rw [ite_eq_right h6]
-  have h6' : r₃.headD 0 >>> 28 = 6 := by simpa using h6
+  have h6' : tagW (r₃.headD 0) = 6 := by simpa using h6
   refine RefE.abort0 (by decide) fun ht => ?_
   refine RefE.abort0 (by decide) fun hi => ?_
   have hi' : idxW (r₃.headD 0) < tcnt m₃ FORALL (tierW (r₃.headD 0)) := by simpa using hi

@@ -264,7 +264,7 @@ theorem classOfMotiveVar_spec (p : Prog) (hf : p.lookup "sl_find" = some slFind)
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, slFind_spec p hf n] <;>
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, slFind_spec p hf n] <;>
       finish (gen := 20) [cmvW]
 
 theorem cmvW_ok (n : Nat) (m : Mem) (nP o l pv : Word) (r : List Word) (ns : List Nat)
@@ -324,7 +324,7 @@ theorem classBinder_spec (p : Prog) (hp : p.lookup "class_binder" = some classBi
     ⦃fun r s' => LocEq s' s₀ ∧ fvarTypeDW1 s₀.mem x = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hp]; simp only [callFn, classBinder]
   sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ftdF_spec p had n] <;>
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ftdF_spec p had n] <;>
     finish [fvarTypeDW1]
 
 theorem classGenBinder_spec (p : Prog) (hp : p.lookup "class_gen_binder" = some classGenBinder)
@@ -333,7 +333,7 @@ theorem classGenBinder_spec (p : Prog) (hp : p.lookup "class_gen_binder" = some 
     ⦃fun r s' => LocEq s' s₀ ∧ fvarTypeDW1 s₀.mem x = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hp]; simp only [callFn, classGenBinder]
   sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ftdF_spec p had n] <;>
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ftdF_spec p had n] <;>
     finish [fvarTypeDW1]
 
 /-- The relational lemma of `fvarTypeDW1`. -/
@@ -401,7 +401,7 @@ theorem exprGetD_spec (p : Prog) (hpf : p.lookup "bvar_find" = some bvarFind)
     ⦃fun r s' => LocEq s' s₀ ∧ exprGetDW s₀.mem o l i = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hp]; simp only [callFn, exprGetD]
   sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       internBVar_spec p hpf hpp hib n] <;>
     finish [exprGetDW]
 
@@ -487,7 +487,7 @@ def fvarHeadW (m : Mem) (e : Word) : Option (List Word × Mem) :=
   match gafF m [CWF, e] with
   | none => none
   | some (r, m1) =>
-    if r.headD 0 >>> 28 = 1 then
+    if tagW (r.headD 0) = 1 then
       (if eViewW m1 (r.headD 0) = [] then none
        else some ([1, (eViewW m1 (r.headD 0)).tail.headD 0], m1))
     else some ([0, 0], m1)
@@ -501,7 +501,7 @@ theorem fvarHead_spec (p : Prog) (hp : p.lookup "fvar_head" = some fvarHead)
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         gafF_spec p had n, eView_spec p hv n] <;>
       finish [fvarHeadW]
 
@@ -521,7 +521,7 @@ theorem fvarHeadW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFE
   obtain ⟨t, a1, hrun1, hS1, hg1, hd1, hd2⟩ := gafF_ok dn vis fe CWF e he m m1 a r1 hs hS
   rw [CWF_eq] at hrun1
   generalize r1.headD 0 = w at hd1 hd2 h
-  by_cases hf : w >>> 28 = 1
+  by_cases hf : tagW w = 1
   · rw [ite_eq_left hf] at h
     obtain ⟨hne, h⟩ := of_ite_none h
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
@@ -551,16 +551,8 @@ theorem fvarHeadW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFE
     all_goals (have := eViewW_head1 m1 w hne hf; simp only [ViewR] at hR; first | exact absurd (this.symm.trans hR) (by decide) | exact absurd (this.symm.trans hR.1) (by decide))
   · rw [ite_eq_right hf] at h
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-    have htag : ¬ (decE w).tag = ETag.fvar := by
-      rw [decE_tag w hd1]
-      intro hc
-      apply hf
-      have := congrArg UInt32.toNat hc
-      simp [ETag.fvar] at this
-      apply UInt64.toNat_inj.mp
-      simp only [UInt64.toNat_shiftRight]
-      simp
-      omega
+    have htag : ¬ (decE w).tag = ETag.fvar := fun hc => hf (by
+      simpa using (decE_tag_eq w hd1 1 (by decide)).mp (by simpa [ETag.fvar] using hc))
     refine ⟨none, a1, ?_, hS1, hg1, rfl, fun i hi => by simp at hi⟩
     simp only [ConRon.Arena.fvarHead]
     rw [StateT.run_bind, hrun1]
@@ -660,7 +652,7 @@ theorem closeLams_spec (p : Prog) (hd : p.lookup "der_b" = some derB)
     rw [invoke_eq _ hp]
     simp only [callFn, closeLams]
     sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         abF_spec p hab n, mkLam_spec p hd hpf hpp hpi hml n, ih] <;>
       finish (gen := 20)
 

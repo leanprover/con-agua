@@ -50,10 +50,10 @@ without reading the store; `fvar` inline). -/
 def arNodeW : Nat → Mem → Word → Word → Word → Word → Word → Option (Word × Mem)
   | 0, _, _, _, _, _, _ => none
   | n + 1, m, h, c, d, k, fu =>
-    if h >>> 28 = 4 then arAppW n m h c d k fu
-    else if h >>> 28 = 5 then arLamW n m h c d k fu
-    else if h >>> 28 = 6 then arForallW n m h c d k fu
-    else if h >>> 28 = 1 then
+    if tagW h = 4 then arAppW n m h c d k fu
+    else if tagW h = 5 then arLamW n m h c d k fu
+    else if tagW h = 6 then arForallW n m h c d k fu
+    else if tagW h = 1 then
       if tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
       else if tcnt m FVAR (tierW h) ≤ idxW h then none
       else if d + k < d then none
@@ -61,8 +61,8 @@ def arNodeW : Nat → Mem → Word → Word → Word → Word → Word → Optio
         if c + (d + k - 1 - tfld m FVAR (tierW h) (idxW h) 0) < c then none
         else binternW m (c + (d + k - 1 - tfld m FVAR (tierW h) (idxW h) 0))
       else some (h, m)
-    else if h >>> 28 = 7 then arLetW n m h c d k fu
-    else if h >>> 28 = 9 then arProjW n m h c d k fu
+    else if tagW h = 7 then arLetW n m h c d k fu
+    else if tagW h = 9 then arProjW n m h c d k fu
     else some (h, m)
 
 /-- **The model of `abs_app`.** -/
@@ -73,16 +73,16 @@ def arAppW : Nat → Mem → Word → Word → Word → Word → Word → Option
     else if (mfindG abSch m h c).headD 0 ≠ 0 then
       some (rdW (m.arr64 ABMEMO) ((mfindG abSch m h c).tail.headD 0 * 4 + 3), m)
     else if tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
-    else if tcnt m APP (tierW h) ≤ idxW h then none
+    else if tcnt m APP (tierW h) ≤ idxA h then none
     else
-      match arW n m (tfld m APP (tierW h) (idxW h) 0) c d k fu with
+      match arW n m (tfld m APP (tierW h) (idxA h) 0) c d k fu with
       | none => none
       | some (x, m₁) =>
-        match arW n m₁ (tfld m APP (tierW h) (idxW h) 1) c d k fu with
+        match arW n m₁ (tfld m APP (tierW h) (idxA h) 1) c d k fu with
         | none => none
         | some (y, m₂) =>
-          asetK h c (rbAppW m₂ h (tfld m APP (tierW h) (idxW h) 0)
-            (tfld m APP (tierW h) (idxW h) 1) x y)
+          asetK h c (rbAppW m₂ h (tfld m APP (tierW h) (idxA h) 0)
+            (tfld m APP (tierW h) (idxA h) 1) x y)
 
 /-- **The model of `abs_lam`.** -/
 def arLamW : Nat → Mem → Word → Word → Word → Word → Word → Option (Word × Mem)
@@ -247,35 +247,35 @@ theorem arW_eq (hf : fu ≠ 0) :
     arW (n + 1) m h c d k fu = rcutK n h c d k (fu - 1) (fvbW n m h (fu - 1)) := by
   rw [arW]; simp only [hf, ↓reduceIte]; cases fvbW n m h (fu - 1) <;> rfl
 
-theorem arNodeW_app (hg : h >>> 28 = 4) : arNodeW (n + 1) m h c d k fu = arAppW n m h c d k fu := by
+theorem arNodeW_app (hg : tagW h = 4) : arNodeW (n + 1) m h c d k fu = arAppW n m h c d k fu := by
   rw [arNodeW]; simp [hg]
 
-theorem arNodeW_lam (hg : h >>> 28 = 5) : arNodeW (n + 1) m h c d k fu = arLamW n m h c d k fu := by
+theorem arNodeW_lam (hg : tagW h = 5) : arNodeW (n + 1) m h c d k fu = arLamW n m h c d k fu := by
   rw [arNodeW]; simp [hg]
 
-theorem arNodeW_forall (hg : h >>> 28 = 6) : arNodeW (n + 1) m h c d k fu = arForallW n m h c d k fu := by
+theorem arNodeW_forall (hg : tagW h = 6) : arNodeW (n + 1) m h c d k fu = arForallW n m h c d k fu := by
   rw [arNodeW]; simp [hg]
 
-theorem arNodeW_let (hg : h >>> 28 = 7) : arNodeW (n + 1) m h c d k fu = arLetW n m h c d k fu := by
+theorem arNodeW_let (hg : tagW h = 7) : arNodeW (n + 1) m h c d k fu = arLetW n m h c d k fu := by
   rw [arNodeW]; simp [hg]
 
-theorem arNodeW_proj (hg : h >>> 28 = 9) : arNodeW (n + 1) m h c d k fu = arProjW n m h c d k fu := by
+theorem arNodeW_proj (hg : tagW h = 9) : arNodeW (n + 1) m h c d k fu = arProjW n m h c d k fu := by
   rw [arNodeW]; simp [hg]
 
-theorem arNodeW_fvar_in (hv : viewOK m h FVAR) (hg : h >>> 28 = 1)
+theorem arNodeW_fvar_in (hv : viewOK m h FVAR) (hg : tagW h = 1)
     (hdk : ¬ d + k < d) (hi : d ≤ tfld m FVAR (tierW h) (idxW h) 0 ∧ tfld m FVAR (tierW h) (idxW h) 0 < d + k)
     (ho : ¬ c + (d + k - 1 - tfld m FVAR (tierW h) (idxW h) 0) < c) :
     arNodeW (n + 1) m h c d k fu = binternW m (c + (d + k - 1 - tfld m FVAR (tierW h) (idxW h) 0)) := by
   rw [arNodeW]; simp only [hv.1, hg, ↓reduceIte, UInt64.not_le.mpr hv.2, hdk, hi, ho]; simp
 
-theorem arNodeW_fvar_out (hv : viewOK m h FVAR) (hg : h >>> 28 = 1)
+theorem arNodeW_fvar_out (hv : viewOK m h FVAR) (hg : tagW h = 1)
     (hdk : ¬ d + k < d) (hi : ¬ (d ≤ tfld m FVAR (tierW h) (idxW h) 0 ∧ tfld m FVAR (tierW h) (idxW h) 0 < d + k)) :
     arNodeW (n + 1) m h c d k fu = some (h, m) := by
   rw [arNodeW]; simp only [hv.1, hg, ↓reduceIte, UInt64.not_le.mpr hv.2, hdk, hi]; simp
 
-theorem arNodeW_leaf (h1 : h >>> 28 ≠ 1)
-    (h4 : h >>> 28 ≠ 4) (h5 : h >>> 28 ≠ 5) (h6 : h >>> 28 ≠ 6) (h7 : h >>> 28 ≠ 7)
-    (h9 : h >>> 28 ≠ 9) : arNodeW (n + 1) m h c d k fu = some (h, m) := by
+theorem arNodeW_leaf (h1 : tagW h ≠ 1)
+    (h4 : tagW h ≠ 4) (h5 : tagW h ≠ 5) (h6 : tagW h ≠ 6) (h7 : tagW h ≠ 7)
+    (h9 : tagW h ≠ 9) : arNodeW (n + 1) m h c d k fu = some (h, m) := by
   rw [arNodeW]; simp [h1, h4, h5, h6, h7, h9]
 
 theorem arAppW_hit (hr : mfindG abSch m h c ≠ []) (hh : (mfindG abSch m h c).headD 0 ≠ 0) :
@@ -284,13 +284,13 @@ theorem arAppW_hit (hr : mfindG abSch m h c ≠ []) (hh : (mfindG abSch m h c).h
   rw [arAppW]; simp only [hr, hh, ↓reduceIte, ne_eq, not_false_eq_true]
 
 theorem arAppW_miss (hr : mfindG abSch m h c ≠ []) (hh : (mfindG abSch m h c).headD 0 = 0)
-    (hvk : viewOK m h APP) :
+    (hvk : viewOKA m h) :
     arAppW (n + 1) m h c d k fu =
-      rappK₁ n h c d k fu (tfld m APP (tierW h) (idxW h) 0)
-        (tfld m APP (tierW h) (idxW h) 1)
-        (arW n m (tfld m APP (tierW h) (idxW h) 0) c d k fu) := by
+      rappK₁ n h c d k fu (tfld m APP (tierW h) (idxA h) 0)
+        (tfld m APP (tierW h) (idxA h) 1)
+        (arW n m (tfld m APP (tierW h) (idxA h) 0) c d k fu) := by
   rw [arAppW]; simp only [hr, hh, ↓reduceIte, ne_eq, not_true_eq_false, hvk.1, ↓reduceIte, UInt64.not_le.mpr hvk.2]
-  cases arW n m (tfld m APP (tierW h) (idxW h) 0) c d k fu <;> rfl
+  cases arW n m (tfld m APP (tierW h) (idxA h) 0) c d k fu <;> rfl
 
 theorem arLamW_hit (h1 : c + 1 ≠ 0) (hr : mfindG abSch m h c ≠ [])
     (hh : (mfindG abSch m h c).headD 0 ≠ 0) :
@@ -379,7 +379,7 @@ grind_pattern [arena_grind] arLetW_miss => arLetW (n + 1) m h c d k fu
 grind_pattern [arena_grind] arProjW_hit => arProjW (n + 1) m h c d k fu
 grind_pattern [arena_grind] arProjW_miss => arProjW (n + 1) m h c d k fu
 
-/-- con-ron: ConRon/Arena/ExprOps.lean:1758-1779 ConRon.Arena.abstractRangeGo -/
+/-- con-ron: ConRon/Arena/ExprOps.lean:1763-1784 ConRon.Arena.abstractRangeGo -/
 @[l_impl ConRon.Arena.abstractRangeGo]
 def arGo : FunDecl := lfn (h, c, d, k, fu) locals (x, r) {
   if fu == 0 { abort };
@@ -389,11 +389,11 @@ def arGo : FunDecl := lfn (h, c, d, k, fu) locals (x, r) {
   return r
 }
 
-/-- con-ron: ConRon/Arena/ExprOps.lean:1758-1779 ConRon.Arena.abstractRangeGo
-con-ron: ConRon/Arena/ExprOps.lean:1747-1754 ConRon.Arena.absRangeArmFVar -/
+/-- con-ron: ConRon/Arena/ExprOps.lean:1763-1784 ConRon.Arena.abstractRangeGo
+con-ron: ConRon/Arena/ExprOps.lean:1752-1759 ConRon.Arena.absRangeArmFVar -/
 @[l_impl ConRon.Arena.absRangeArmFVar]
 def arNode : FunDecl := lfn (h, c, d, k, fu) locals (x, g, t, i, v, r) {
-  g := h >> 28;
+  g := ⟦h⟧.tag;
   if g == 4 { r := call ar_app(h, c, d, k, fu); return r };
   if g == 5 { r := call ar_lam(h, c, d, k, fu); return r };
   if g == 6 { r := call ar_forall(h, c, d, k, fu); return r };
@@ -414,7 +414,7 @@ def arNode : FunDecl := lfn (h, c, d, k, fu) locals (x, g, t, i, v, r) {
   return h
 }
 
-/-- con-ron: ConRon/Arena/ExprOps.lean:1781-1796 ConRon.Arena.absRangeGoArmApp -/
+/-- con-ron: ConRon/Arena/ExprOps.lean:1786-1801 ConRon.Arena.absRangeGoArmApp -/
 @[l_impl ConRon.Arena.absRangeGoArmApp]
 def arApp : FunDecl := lfn (h, c, d, k, fu) locals (fd, j, e0, t, i, f, a, x, y, r, u) {
   (fd, j, e0) := call ab_find(h, c);
@@ -430,7 +430,7 @@ def arApp : FunDecl := lfn (h, c, d, k, fu) locals (fd, j, e0, t, i, f, a, x, y,
   return r
 }
 
-/-- con-ron: ConRon/Arena/ExprOps.lean:1798-1813 ConRon.Arena.absRangeGoArmBind -/
+/-- con-ron: ConRon/Arena/ExprOps.lean:1803-1818 ConRon.Arena.absRangeGoArmBind -/
 @[l_impl ConRon.Arena.absRangeGoArmBind]
 def arLam : FunDecl := lfn (h, c, d, k, fu) locals (fd, j, e0, t, i, f, a, x, y, r, u) {
   if c + 1 == 0 { abort };
@@ -447,7 +447,7 @@ def arLam : FunDecl := lfn (h, c, d, k, fu) locals (fd, j, e0, t, i, f, a, x, y,
   return r
 }
 
-/-- con-ron: ConRon/Arena/ExprOps.lean:1798-1813 ConRon.Arena.absRangeGoArmBind -/
+/-- con-ron: ConRon/Arena/ExprOps.lean:1803-1818 ConRon.Arena.absRangeGoArmBind -/
 @[l_impl ConRon.Arena.absRangeGoArmBind]
 def arForall : FunDecl := lfn (h, c, d, k, fu) locals (fd, j, e0, t, i, f, a, x, y, r, u) {
   if c + 1 == 0 { abort };
@@ -464,7 +464,7 @@ def arForall : FunDecl := lfn (h, c, d, k, fu) locals (fd, j, e0, t, i, f, a, x,
   return r
 }
 
-/-- con-ron: ConRon/Arena/ExprOps.lean:1815-1831 ConRon.Arena.absRangeGoArmLet -/
+/-- con-ron: ConRon/Arena/ExprOps.lean:1820-1836 ConRon.Arena.absRangeGoArmLet -/
 @[l_impl ConRon.Arena.absRangeGoArmLet]
 def arLet : FunDecl := lfn (h, c, d, k, fu) locals (fd, j, e0, t, i, f, a, b, x, y, z, r, u) {
   if c + 1 == 0 { abort };
@@ -483,7 +483,7 @@ def arLet : FunDecl := lfn (h, c, d, k, fu) locals (fd, j, e0, t, i, f, a, b, x,
   return r
 }
 
-/-- con-ron: ConRon/Arena/ExprOps.lean:1833-1847 ConRon.Arena.absRangeGoArmProj -/
+/-- con-ron: ConRon/Arena/ExprOps.lean:1838-1852 ConRon.Arena.absRangeGoArmProj -/
 @[l_impl ConRon.Arena.absRangeGoArmProj]
 def arProj : FunDecl := lfn (h, c, d, k, fu) locals (fd, j, e0, t, i, nm, ix, e, x, r, u) {
   (fd, j, e0) := call ab_find(h, c);
@@ -548,7 +548,7 @@ theorem arGo_step (n : Nat) (ih : ArNodeSpec p n) : ArGoSpec p (n + 1) := by
   rw [invoke_eq _ (hp.get "ar_go")]
   simp only [callFn, arGo]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, abFvb_spec p hp.base n, ih] <;>
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, abFvb_spec p hp.base n, ih] <;>
     finish
 
 include hp in
@@ -563,7 +563,7 @@ theorem arNode_step (n : Nat) (ih : ArArmSpec p n) : ArNodeSpec p (n + 1) := by
   simp only [callFn, arNode]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt,
-      tcntM, evalE_tierE, evalE_idxE,
+      tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE,
       internBVar_spec p (hp.get "bvar_find") (hp.get "bvar_push") (hp.get "intern_bvar") n, ihA,
           ihL, ihF, ihE, ihP] <;>
     finish [viewOK, tierW, idxW]

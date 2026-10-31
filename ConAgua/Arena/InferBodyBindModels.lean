@@ -28,7 +28,7 @@ l_model ilfE_spec (p : Prog) (hf : p.lookup "infer_lams_leaf" = some inferLamsLe
   fns [hf ↦ ilfE list]
   specs [callW_spec p n "inst_list", callW_spec p n "ar_entry", callW_spec p n "mk_forall"]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
   finish [tierW, idxW] heartbeats 400000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
@@ -38,7 +38,7 @@ l_model ilsE_spec (p : Prog) (hf : p.lookup "infer_lams" = some inferLamsL)
   fns [hf ↦ ilsE list]
   specs [callW_spec p n "inst_list", callW_spec p n "intern_fvar"]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
   heartbeats 400000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
@@ -48,7 +48,7 @@ l_model ilmE_spec (p : Prog) (hf : p.lookup "infer_lam" = some inferLamL)
   fns [hf ↦ ilmE list]
   specs [callW_spec p n "intern_fvar"]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
   heartbeats 400000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 

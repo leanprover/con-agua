@@ -104,7 +104,7 @@ theorem promoteL_spec (f h : Word) :
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       memoFindG_spec plSch p _ (hp.get "pl_find") n, memoPutG_spec plSch p _ (hp.get "pl_put") n,
-      callW_spec p n "pl_arm", evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] <;>
+      callW_spec p n "pl_arm", evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] <;>
     finish [plW_pers, plW_hit, plW_miss, memoK_some, mvG, tierW]
 
 theorem plArm_spec (f h : Word) :
@@ -113,7 +113,7 @@ theorem plArm_spec (f h : Word) :
   rw [invoke_eq _ (hp.get "pl_arm")]
   simp only [callFn, plArm]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       lvNode_spec p (hp.get "lv_node") n, callW_spec p n "pi_zero", callW_spec p n "promote_l",
       callW_spec p n "pi_succ", callW_spec p n "pi_max", callW_spec p n "pi_imax",
       callW_spec p n "promote_n", callW_spec p n "pi_param"] <;>
@@ -221,7 +221,7 @@ theorem promoteLPool_spec (f o l q : Word) :
   rw [invoke_eq _ (hp.get "promote_l_pool")]
   simp only [callFn, promoteLPool]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
       callW_spec p n "promote_l", callW_spec p n "promote_l_pool"] <;>
     finish [plPoolW_nil, plPoolW_cons, poolK_some, memK_some, prd]
 
@@ -231,7 +231,7 @@ theorem plsArm_spec (f h : Word) :
   rw [invoke_eq _ (hp.get "pls_arm")]
   simp only [callFn, plsArm]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
       lsNode_spec p (hp.get "ls_node") n, callW_spec p n "promote_l_pool", callW_spec p n "pi_ls"] <;>
     finish [plsArmW_eq, plsK_some, hd1_some, Mem.top]
 
@@ -243,7 +243,7 @@ theorem promoteLs_spec (f h : Word) :
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       memoFindG_spec plsSch p _ (hp.get "pls_find") n, memoPutG_spec plsSch p _ (hp.get "pls_put") n,
-      callW_spec p n "pls_arm", evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] <;>
+      callW_spec p n "pls_arm", evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] <;>
     finish [plsW_pers, plsW_hit, plsW_miss, memoK_some, mvG, tierW]
 
 end specs2

@@ -33,20 +33,20 @@ namespace L.Arena
 
 /-! ## Sorts, constants, literals -/
 
-/-- con-ron: ConRon/Arena/Core.lean:2438-2447 ConRon.Arena.ensureSort -/
+/-- con-ron: ConRon/Arena/Core.lean:2443-2452 ConRon.Arena.ensureSort -/
 @[l_impl ConRon.Arena.ensureSort]
 def ensureSortL : FunDecl := lfn (mode, vis, d, e) locals (hh, t, i) {
   hh := call whnf(mode, vis, d, e);
-  if hh >> 28 != 2 { fail R_EXPECTED_A_SORT };
+  if ⟦hh⟧.tag != 2 { fail R_EXPECTED_A_SORT };
   (t, i) := node SORT⟦hh⟧;
   return SORT⟨t, i⟩.u
 }
 
 /-- The `.const n us` clause of both bodies: the stored constant, the level count, `constTyAt` (`const_ty_at`, lane `whnf`, with its cache) at the record's own name
 (word `p + 1`, the twin's `cv.name`; the cache key). -/
--- con-ron: ConRon/Arena/Core.lean:2738-2796 ConRon.Arena.inferBody
--- con-ron: ConRon/Arena/Core.lean:2798-2866 ConRon.Arena.inferBodyIO
--- con-ron: ConRon/Arena/Core.lean:228-242 ConRon.Arena.unknownConstError
+-- con-ron: ConRon/Arena/Core.lean:2743-2801 ConRon.Arena.inferBody
+-- con-ron: ConRon/Arena/Core.lean:2803-2871 ConRon.Arena.inferBodyIO
+-- con-ron: ConRon/Arena/Core.lean:233-247 ConRon.Arena.unknownConstError
 @[l_impl ConRon.Arena.inferBody ConRon.Arena.inferBodyIO ConRon.Arena.unknownConstError]
 def inferConstL : FunDecl := lfn (vis, n, us) locals (f, p, lo, l, r) {
   (f, p) := call env_find(n, vis);
@@ -64,8 +64,8 @@ def inferConstL : FunDecl := lfn (vis, n, us) locals (f, p, lo, l, r) {
 
 /-- The two `.lit` clauses of both bodies: `Nat` (`pinNat`) or `String` (`pinString`), each
 behind its basis guard. -/
--- con-ron: ConRon/Arena/Core.lean:2738-2796 ConRon.Arena.inferBody
--- con-ron: ConRon/Arena/Core.lean:2798-2866 ConRon.Arena.inferBodyIO
+-- con-ron: ConRon/Arena/Core.lean:2743-2801 ConRon.Arena.inferBody
+-- con-ron: ConRon/Arena/Core.lean:2803-2871 ConRon.Arena.inferBodyIO
 @[l_impl ConRon.Arena.inferBody ConRon.Arena.inferBodyIO]
 def inferLitL : FunDecl := lfn (vis, e) locals (t, i, s, c, r) {
   (t, i) := node LIT⟦e⟧;
@@ -83,7 +83,7 @@ def inferLitL : FunDecl := lfn (vis, e) locals (t, i, s, c, r) {
   return r
 }
 
-/-- con-ron: ConRon/Arena/Core.lean:2449-2455 ConRon.Arena.inferLamResult -/
+/-- con-ron: ConRon/Arena/Core.lean:2454-2460 ConRon.Arena.inferLamResult -/
 @[l_impl ConRon.Arena.inferLamResult]
 def inferLamResultL : FunDecl := lfn (ty, bt, d) locals (ab, r) {
   ab := call abs_entry(bt, d, 0);
@@ -99,8 +99,8 @@ and `infer_forall` abort at `d ≥ 2^63`, so `d + k` does not wrap). The twin's 
 is the exact counter `peel`. -/
 
 /-- The λ loop's leaf and its outward rebuild. -/
--- con-ron: ConRon/Arena/Core.lean:2494-2502 ConRon.Arena.inferLamsLeaf
--- con-ron: ConRon/Arena/Core.lean:2481-2492 ConRon.Arena.inferLamsOut
+-- con-ron: ConRon/Arena/Core.lean:2499-2507 ConRon.Arena.inferLamsLeaf
+-- con-ron: ConRon/Arena/Core.lean:2486-2497 ConRon.Arena.inferLamsOut
 @[l_impl ConRon.Arena.inferLamsLeaf ConRon.Arena.inferLamsOut]
 def inferLamsLeafL : FunDecl := lfn (mode, vis, d, t, k, fo, lo) locals (ob, bt, cur, n, ta) {
   ob := call inst_list(t, fo, k, 0);
@@ -115,18 +115,18 @@ def inferLamsLeafL : FunDecl := lfn (mode, vis, d, t, k, fo, lo) locals (ob, bt,
   return cur
 }
 
-/-- con-ron: ConRon/Arena/Core.lean:2504-2528 ConRon.Arena.inferLams -/
+/-- con-ron: ConRon/Arena/Core.lean:2509-2533 ConRon.Arena.inferLams -/
 @[l_impl ConRon.Arena.inferLams]
 def inferLamsL : FunDecl :=
     lfn (mode, vis, d, peel, t, k, fo, lo) locals (s, i, ty, body, tyo, tty, w, fv, r) {
-  while peel != 0 && t >> 28 == 5 {
+  while peel != 0 && ⟦t⟧.tag == 5 {
     (s, i) := node LAM⟦t⟧;
     ty := LAM⟨s, i⟩.ty;
     body := LAM⟨s, i⟩.b;
     tyo := call inst_list(ty, fo, k, 0);
     tty := call infer(mode, vis, d + k, tyo);
     w := call whnf(mode, vis, d + k, tty);
-    if w >> 28 != 2 { fail R_EXPECTED_A_SORT };
+    if ⟦w⟧.tag != 2 { fail R_EXPECTED_A_SORT };
     fv := call intern_fvar(d + k, tyo);
     if len(SPN.u64) <= fo + k { abort };
     if len(BSTK.u64) <= lo + k { abort };
@@ -143,8 +143,8 @@ def inferLamsL : FunDecl :=
 }
 
 /-- The ∀ loop's leaf and its outward `imax` fold. -/
--- con-ron: ConRon/Arena/Core.lean:2541-2551 ConRon.Arena.inferPisLeaf
--- con-ron: ConRon/Arena/Core.lean:2530-2539 ConRon.Arena.inferPisOut
+-- con-ron: ConRon/Arena/Core.lean:2546-2556 ConRon.Arena.inferPisLeaf
+-- con-ron: ConRon/Arena/Core.lean:2535-2544 ConRon.Arena.inferPisOut
 @[l_impl ConRon.Arena.inferPisLeaf ConRon.Arena.inferPisOut]
 def inferPisLeafL : FunDecl := lfn (mode, vis, d, t, k, fo, lo) locals (ob, bt, v, n, r) {
   ob := call inst_list(t, fo, k, 0);
@@ -159,18 +159,18 @@ def inferPisLeafL : FunDecl := lfn (mode, vis, d, t, k, fo, lo) locals (ob, bt, 
   return r
 }
 
-/-- con-ron: ConRon/Arena/Core.lean:2553-2574 ConRon.Arena.inferPis -/
+/-- con-ron: ConRon/Arena/Core.lean:2558-2579 ConRon.Arena.inferPis -/
 @[l_impl ConRon.Arena.inferPis]
 def inferPisL : FunDecl :=
     lfn (mode, vis, d, peel, t, k, fo, lo) locals (s, i, ty, body, tyo, tty, w, u, fv, r) {
-  while peel != 0 && t >> 28 == 6 {
+  while peel != 0 && ⟦t⟧.tag == 6 {
     (s, i) := node FORALL⟦t⟧;
     ty := FORALL⟨s, i⟩.ty;
     body := FORALL⟨s, i⟩.b;
     tyo := call inst_list(ty, fo, k, 0);
     tty := call infer(mode, vis, d + k, tyo);
     w := call whnf(mode, vis, d + k, tty);
-    if w >> 28 != 2 { fail R_EXPECTED_A_SORT };
+    if ⟦w⟧.tag != 2 { fail R_EXPECTED_A_SORT };
     (s, i) := node SORT⟦w⟧;
     u := SORT⟨s, i⟩.u;
     fv := call intern_fvar(d + k, tyo);
@@ -188,13 +188,13 @@ def inferPisL : FunDecl :=
   return r
 }
 
-/-- con-ron: ConRon/Arena/Core.lean:2576-2586 ConRon.Arena.inferLam -/
+/-- con-ron: ConRon/Arena/Core.lean:2581-2591 ConRon.Arena.inferLam -/
 @[l_impl ConRon.Arena.inferLam]
 def inferLamL : FunDecl := lfn (mode, vis, d, ty, body) locals (tty, w, fv, so, lo, r) {
   if d >> 63 != 0 { abort };
   tty := call infer(mode, vis, d, ty);
   w := call whnf(mode, vis, d, tty);
-  if w >> 28 != 2 { fail R_EXPECTED_A_SORT };
+  if ⟦w⟧.tag != 2 { fail R_EXPECTED_A_SORT };
   fv := call intern_fvar(d, ty);
   so := CTL.u64[136];
   lo := CTL.u64[137];
@@ -210,13 +210,13 @@ def inferLamL : FunDecl := lfn (mode, vis, d, ty, body) locals (tty, w, fv, so, 
   return r
 }
 
-/-- con-ron: ConRon/Arena/Core.lean:2588-2600 ConRon.Arena.inferForall -/
+/-- con-ron: ConRon/Arena/Core.lean:2593-2605 ConRon.Arena.inferForall -/
 @[l_impl ConRon.Arena.inferForall]
 def inferForallL : FunDecl := lfn (mode, vis, d, ty, body) locals (tty, w, t, i, u, fv, so, lo, r) {
   if d >> 63 != 0 { abort };
   tty := call infer(mode, vis, d, ty);
   w := call whnf(mode, vis, d, tty);
-  if w >> 28 != 2 { fail R_EXPECTED_A_SORT };
+  if ⟦w⟧.tag != 2 { fail R_EXPECTED_A_SORT };
   (t, i) := node SORT⟦w⟧;
   u := SORT⟨t, i⟩.u;
   fv := call intern_fvar(d, ty);
@@ -240,7 +240,7 @@ The arguments are the slice `(ao, an)` `head_and_args` left on the stack; the ac
 slice `(co, cn)` above it (`co` the top on entry; a top past the stack's end is a capacity
 abort, so that the empty accumulator is a slice). The `whnf` re-entry resets it to `#[a]`. -/
 
-/-- con-ron: ConRon/Arena/Core.lean:2616-2622 ConRon.Arena.defeqArg -/
+/-- con-ron: ConRon/Arena/Core.lean:2621-2627 ConRon.Arena.defeqArg -/
 @[l_impl ConRon.Arena.defeqArg]
 def defeqArgL : FunDecl := lfn (mode, vis, d, a, ta, ty) locals (er, r) {
   er := call is_eager_reduce(a);
@@ -254,7 +254,7 @@ def defeqArgL : FunDecl := lfn (mode, vis, d, a, ta, ty) locals (er, r) {
 
 /-- One argument of the full-grade spine at a `∀` type `(dom, body)`, its domain already opened
 (`dom2`): infer the argument, compare its type, push it. -/
--- con-ron: ConRon/Arena/Core.lean:2624-2652 ConRon.Arena.inferSpine
+-- con-ron: ConRon/Arena/Core.lean:2629-2657 ConRon.Arena.inferSpine
 @[l_impl ConRon.Arena.inferSpine]
 def inferSpineArgL : FunDecl := lfn (mode, vis, d, a, dom2) locals (ta, ok) {
   ta := call infer(mode, vis, d, a);
@@ -263,7 +263,7 @@ def inferSpineArgL : FunDecl := lfn (mode, vis, d, a, dom2) locals (ta, ok) {
   return 0
 }
 
-/-- con-ron: ConRon/Arena/Core.lean:2624-2652 ConRon.Arena.inferSpine -/
+/-- con-ron: ConRon/Arena/Core.lean:2629-2657 ConRon.Arena.inferSpine -/
 @[l_impl ConRon.Arena.inferSpine]
 def inferSpineL : FunDecl :=
     lfn (mode, vis, d, ty, ao, an) locals (co, cn, i, a, t, x, dom, dom2, ty2, w, z, r) {
@@ -273,7 +273,7 @@ def inferSpineL : FunDecl :=
   i := 0;
   for i < an {
     a := SPN.u64[ao + i];
-    if ty >> 28 == 6 {
+    if ⟦ty⟧.tag == 6 {
       (t, x) := node FORALL⟦ty⟧;
       dom := FORALL⟨t, x⟩.ty;
       ty := FORALL⟨t, x⟩.b;
@@ -286,7 +286,7 @@ def inferSpineL : FunDecl :=
     } else {
       ty2 := call inst_list(ty, co, cn, 0);
       w := call whnf(mode, vis, d, ty2);
-      if w >> 28 != 6 { fail R_FUNCTION_EXPECTED_2 };
+      if ⟦w⟧.tag != 6 { fail R_FUNCTION_EXPECTED_2 };
       (t, x) := node FORALL⟦w⟧;
       dom := FORALL⟨t, x⟩.ty;
       ty := FORALL⟨t, x⟩.b;
@@ -302,7 +302,7 @@ def inferSpineL : FunDecl :=
   return r
 }
 
-/-- con-ron: ConRon/Arena/Core.lean:2654-2661 ConRon.Arena.inferApp -/
+/-- con-ron: ConRon/Arena/Core.lean:2659-2666 ConRon.Arena.inferApp -/
 @[l_impl ConRon.Arena.inferApp]
 def inferAppL : FunDecl := lfn (mode, vis, d, e) locals (top, hd, ao, an, tf, r) {
   top := CTL.u64[136];
@@ -313,7 +313,7 @@ def inferAppL : FunDecl := lfn (mode, vis, d, e) locals (top, hd, ao, an, tf, r)
   return r
 }
 
-/-- con-ron: ConRon/Arena/Core.lean:2663-2684 ConRon.Arena.inferSpineIO -/
+/-- con-ron: ConRon/Arena/Core.lean:2668-2689 ConRon.Arena.inferSpineIO -/
 @[l_impl ConRon.Arena.inferSpineIO]
 def inferSpineIOL : FunDecl :=
     lfn (mode, vis, d, ty, ao, an) locals (co, cn, i, a, t, x, ty2, w, r) {
@@ -323,7 +323,7 @@ def inferSpineIOL : FunDecl :=
   i := 0;
   for i < an {
     a := SPN.u64[ao + i];
-    if ty >> 28 == 6 {
+    if ⟦ty⟧.tag == 6 {
       (t, x) := node FORALL⟦ty⟧;
       if len(SPN.u64) <= co + cn { abort };
       SPN.u64[co + cn] := a;
@@ -333,7 +333,7 @@ def inferSpineIOL : FunDecl :=
     } else {
       ty2 := call inst_list(ty, co, cn, 0);
       w := call whnf(mode, vis, d, ty2);
-      if w >> 28 != 6 { fail R_FUNCTION_EXPECTED_2 };
+      if ⟦w⟧.tag != 6 { fail R_FUNCTION_EXPECTED_2 };
       (t, x) := node FORALL⟦w⟧;
       if len(SPN.u64) <= co { abort };
       SPN.u64[co] := a;
@@ -347,7 +347,7 @@ def inferSpineIOL : FunDecl :=
   return r
 }
 
-/-- con-ron: ConRon/Arena/Core.lean:2686-2692 ConRon.Arena.inferAppIOAt -/
+/-- con-ron: ConRon/Arena/Core.lean:2691-2697 ConRon.Arena.inferAppIOAt -/
 @[l_impl ConRon.Arena.inferAppIOAt]
 def inferAppIOL : FunDecl := lfn (mode, vis, d, e) locals (top, hd, ao, an, tf, r) {
   top := CTL.u64[136];
@@ -363,7 +363,7 @@ def inferAppIOL : FunDecl := lfn (mode, vis, d, e) locals (top, hd, ao, an, tf, 
 /-- The entry's type at the subject's levels and arguments: `instLPFast` of the entry's body,
 then ONE `instantiateList` against `targs ++ [pe]` (the arguments' slice `(to, tn)` is at the
 stack top, so `pe` is pushed right after it). `q` is the table record, `i` the field. -/
--- con-ron: ConRon/Arena/Core.lean:2260-2271 ConRon.Arena.IProjEntry.typeAt
+-- con-ron: ConRon/Arena/Core.lean:2265-2276 ConRon.Arena.IProjEntry.typeAt
 @[l_impl ConRon.Arena.IProjEntry.typeAt]
 def projTypeAtL : FunDecl := lfn (q, i, us, to, tn, pe) locals (body, b, r) {
   body := 0;
@@ -379,7 +379,7 @@ def projTypeAtL : FunDecl := lfn (q, i, us, to, tn, pe) locals (body, b, r) {
 
 /-- `inferProj` from the subject type's head constant `T.{us}` on (`te` the head-normal subject
 type, `q` the table record of field `i`). -/
--- con-ron: ConRon/Arena/Core.lean:2694-2736 ConRon.Arena.inferProj
+-- con-ron: ConRon/Arena/Core.lean:2699-2741 ConRon.Arena.inferProj
 @[l_impl ConRon.Arena.inferProj]
 def inferProjAtL : FunDecl :=
     lfn (vis, sn, i, pe, te, T, us, q) locals (top, to, tn, lo, usl, z, ok, fs, r) {
@@ -402,15 +402,15 @@ def inferProjAtL : FunDecl :=
   return r
 }
 
-/-- con-ron: ConRon/Arena/Core.lean:2694-2736 ConRon.Arena.inferProj
-con-ron: ConRon/Arena/Core.lean:296-307 ConRon.Arena.projMissError -/
+/-- con-ron: ConRon/Arena/Core.lean:2699-2741 ConRon.Arena.inferProj
+con-ron: ConRon/Arena/Core.lean:301-312 ConRon.Arena.projMissError -/
 @[l_impl ConRon.Arena.inferProj ConRon.Arena.projMissError]
 def inferProjL : FunDecl :=
     lfn (mode, io, vis, d, sn, i, pe) locals (it, te, hh, t, x, f, q, r, cT, cu, to, tn) {
   if io != 0 { it := call infer_io(mode, vis, d, pe) } else { it := call infer(mode, vis, d, pe) };
   te := call whnf(mode, vis, d, it);
   hh := call get_app_fn(te);
-  if hh >> 28 != 3 { fail R_INVALID_PROJECTION_NOT };
+  if ⟦hh⟧.tag != 3 { fail R_INVALID_PROJECTION_NOT };
   (t, x) := node CONST⟦hh⟧;
   cT := CONST⟨t, x⟩.n;
   cu := CONST⟨t, x⟩.us;
@@ -438,7 +438,7 @@ def inferProjL : FunDecl :=
 /-! ## The bodies -/
 
 /-- The full body's `.letE` clause (official `infer_let`). -/
--- con-ron: ConRon/Arena/Core.lean:2738-2796 ConRon.Arena.inferBody
+-- con-ron: ConRon/Arena/Core.lean:2743-2801 ConRon.Arena.inferBody
 @[l_impl ConRon.Arena.inferBody]
 def inferLetL : FunDecl := lfn (mode, vis, d, ty, v, b) locals (tty, u, tv, ok, ob, r) {
   tty := call infer(mode, vis, d, ty);
@@ -451,7 +451,7 @@ def inferLetL : FunDecl := lfn (mode, vis, d, ty, v, b) locals (tty, u, tv, ok, 
   return r
 }
 
-/-- con-ron: ConRon/Arena/Core.lean:2738-2796 ConRon.Arena.inferBody -/
+/-- con-ron: ConRon/Arena/Core.lean:2743-2801 ConRon.Arena.inferBody -/
 @[l_impl ConRon.Arena.inferBody]
 def inferBodyL : FunDecl := lfn (mode, vis, d, e) locals (g, x1, x2, x3, su, r) {
   (g, x1, x2, x3) := call e_view(e);
@@ -497,13 +497,13 @@ def inferBodyL : FunDecl := lfn (mode, vis, d, e) locals (g, x1, x2, x3, su, r) 
 
 /-- The io body's `.forallE` clause (chained, one binder). The depth capacity: the body runs at
 `d + 1`, which must not wrap (the twin's depth is a `Nat`). -/
--- con-ron: ConRon/Arena/Core.lean:2798-2866 ConRon.Arena.inferBodyIO
+-- con-ron: ConRon/Arena/Core.lean:2803-2871 ConRon.Arena.inferBodyIO
 @[l_impl ConRon.Arena.inferBodyIO]
 def inferForallIOL : FunDecl := lfn (mode, vis, d, ty, body) locals (tt, hh, t, i, u, fv, ob, bt, v, iu, r) {
   if d + 1 == 0 { abort };
   tt := call infer_io(mode, vis, d, ty);
   hh := call whnf(mode, vis, d, tt);
-  if hh >> 28 != 2 { fail R_EXPECTED_A_SORT };
+  if ⟦hh⟧.tag != 2 { fail R_EXPECTED_A_SORT };
   (t, i) := node SORT⟦hh⟧;
   u := SORT⟨t, i⟩.u;
   fv := call intern_fvar(d, ty);
@@ -516,7 +516,7 @@ def inferForallIOL : FunDecl := lfn (mode, vis, d, ty, body) locals (tt, hh, t, 
 }
 
 /-- The io body's `.lam` clause (no domain-sort run; the depth capacity as `infer_forall_io`'s). -/
--- con-ron: ConRon/Arena/Core.lean:2798-2866 ConRon.Arena.inferBodyIO
+-- con-ron: ConRon/Arena/Core.lean:2803-2871 ConRon.Arena.inferBodyIO
 @[l_impl ConRon.Arena.inferBodyIO]
 def inferLamIOL : FunDecl := lfn (mode, vis, d, ty, body) locals (fv, ob, bt, r) {
   if d + 1 == 0 { abort };
@@ -527,7 +527,7 @@ def inferLamIOL : FunDecl := lfn (mode, vis, d, ty, body) locals (fv, ob, bt, r)
   return r
 }
 
-/-- con-ron: ConRon/Arena/Core.lean:2798-2866 ConRon.Arena.inferBodyIO -/
+/-- con-ron: ConRon/Arena/Core.lean:2803-2871 ConRon.Arena.inferBodyIO -/
 @[l_impl ConRon.Arena.inferBodyIO]
 def inferBodyIOL : FunDecl := lfn (mode, vis, d, e) locals (g, x1, x2, x3, su, ob, r) {
   (g, x1, x2, x3) := call e_view(e);

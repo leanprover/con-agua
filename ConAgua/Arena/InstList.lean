@@ -59,12 +59,12 @@ def ilW : Nat → Mem → Word → Word → Word → Word → Word → Option (W
   | n + 1, m, h, d, o, l, fu =>
     if fu = 0 then none
     else if derBW m h < 32767 ∧ derBW m h ≤ d then some (h, m)
-    else if h >>> 28 = 4 then ilAppW n m h d o l (fu - 1)
-    else if h >>> 28 = 5 then ilLamW n m h d o l (fu - 1)
-    else if h >>> 28 = 6 then ilForallW n m h d o l (fu - 1)
-    else if h >>> 28 = 7 then ilLetW n m h d o l (fu - 1)
-    else if h >>> 28 = 9 then ilProjW n m h d o l (fu - 1)
-    else if h >>> 28 = 0 then ilBVarW n m h d o l (fu - 1)
+    else if tagW h = 4 then ilAppW n m h d o l (fu - 1)
+    else if tagW h = 5 then ilLamW n m h d o l (fu - 1)
+    else if tagW h = 6 then ilForallW n m h d o l (fu - 1)
+    else if tagW h = 7 then ilLetW n m h d o l (fu - 1)
+    else if tagW h = 9 then ilProjW n m h d o l (fu - 1)
+    else if tagW h = 0 then ilBVarW n m h d o l (fu - 1)
     else some (h, m)
 
 /-- **The model of `il_app`.** -/
@@ -72,12 +72,12 @@ def ilAppW : Nat → Mem → Word → Word → Word → Word → Word → Option
   | 0, _, _, _, _, _, _ => none
   | n + 1, m, h, d, o, l, fu =>
     if tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
-    else if tcnt m APP (tierW h) ≤ idxW h then none
+    else if tcnt m APP (tierW h) ≤ idxA h then none
     else
-      match ilW n m (tfld m APP (tierW h) (idxW h) 0) d o l fu with
+      match ilW n m (tfld m APP (tierW h) (idxA h) 0) d o l fu with
       | none => none
       | some (x, m₁) =>
-        match ilW n m₁ (tfld m APP (tierW h) (idxW h) 1) d o l fu with
+        match ilW n m₁ (tfld m APP (tierW h) (idxA h) 1) d o l fu with
         | none => none
         | some (y, m₂) => mkAppW m₂ x y
 
@@ -177,12 +177,12 @@ def ilgW : Nat → Mem → Word → Word → Word → Word → Word → Option (
   | n + 1, m, h, d, o, l, fu =>
     if fu = 0 then none
     else if derBW m h < 32767 ∧ derBW m h ≤ d then some (h, m)
-    else if h >>> 28 = 4 then ilgAppW n m h d o l (fu - 1)
-    else if h >>> 28 = 5 then ilgLamW n m h d o l (fu - 1)
-    else if h >>> 28 = 6 then ilgForallW n m h d o l (fu - 1)
-    else if h >>> 28 = 7 then ilgLetW n m h d o l (fu - 1)
-    else if h >>> 28 = 9 then ilgProjW n m h d o l (fu - 1)
-    else if h >>> 28 = 0 then ilW n m h d o l (fu - 1)
+    else if tagW h = 4 then ilgAppW n m h d o l (fu - 1)
+    else if tagW h = 5 then ilgLamW n m h d o l (fu - 1)
+    else if tagW h = 6 then ilgForallW n m h d o l (fu - 1)
+    else if tagW h = 7 then ilgLetW n m h d o l (fu - 1)
+    else if tagW h = 9 then ilgProjW n m h d o l (fu - 1)
+    else if tagW h = 0 then ilW n m h d o l (fu - 1)
     else some (h, m)
 
 /-- **The model of `ilg_app`.** -/
@@ -193,12 +193,12 @@ def ilgAppW : Nat → Mem → Word → Word → Word → Word → Word → Optio
     else if (mfindG ilSch m h d).headD 0 ≠ 0 then
       some (rdW (m.arr64 ILMEMO) ((mfindG ilSch m h d).tail.headD 0 * 4 + 3), m)
     else if tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
-    else if tcnt m APP (tierW h) ≤ idxW h then none
+    else if tcnt m APP (tierW h) ≤ idxA h then none
     else
-      match ilgW n m (tfld m APP (tierW h) (idxW h) 0) d o l fu with
+      match ilgW n m (tfld m APP (tierW h) (idxA h) 0) d o l fu with
       | none => none
       | some (x, m₁) =>
-        match ilgW n m₁ (tfld m APP (tierW h) (idxW h) 1) d o l fu with
+        match ilgW n m₁ (tfld m APP (tierW h) (idxA h) 1) d o l fu with
         | none => none
         | some (y, m₂) => ilsetK h d (mkAppW m₂ x y)
 
@@ -397,57 +397,57 @@ abbrev ilCut (m : Mem) (h d : Word) : Prop := derBW m h < 32767 ∧ derBW m h �
 
 theorem ilW_cut (hf : fu ≠ 0) (hc : ilCut m h d) : ilW (n + 1) m h d o l fu = some (h, m) := by
   rw [ilW]; simp only [hf, hc, and_self, ↓reduceIte]
-theorem ilW_app (hf : fu ≠ 0) (hc : ¬ ilCut m h d) (hg : h >>> 28 = 4) : ilW (n + 1) m h d o l fu = ilAppW n m h d o l (fu - 1) := by
+theorem ilW_app (hf : fu ≠ 0) (hc : ¬ ilCut m h d) (hg : tagW h = 4) : ilW (n + 1) m h d o l fu = ilAppW n m h d o l (fu - 1) := by
   rw [ilW]; simp [hf, hc, hg]
-theorem ilW_lam (hf : fu ≠ 0) (hc : ¬ ilCut m h d) (hg : h >>> 28 = 5) : ilW (n + 1) m h d o l fu = ilLamW n m h d o l (fu - 1) := by
+theorem ilW_lam (hf : fu ≠ 0) (hc : ¬ ilCut m h d) (hg : tagW h = 5) : ilW (n + 1) m h d o l fu = ilLamW n m h d o l (fu - 1) := by
   rw [ilW]; simp [hf, hc, hg]
-theorem ilW_forall (hf : fu ≠ 0) (hc : ¬ ilCut m h d) (hg : h >>> 28 = 6) :
+theorem ilW_forall (hf : fu ≠ 0) (hc : ¬ ilCut m h d) (hg : tagW h = 6) :
     ilW (n + 1) m h d o l fu = ilForallW n m h d o l (fu - 1) := by
   rw [ilW]; simp [hf, hc, hg]
-theorem ilW_let (hf : fu ≠ 0) (hc : ¬ ilCut m h d) (hg : h >>> 28 = 7) : ilW (n + 1) m h d o l fu = ilLetW n m h d o l (fu - 1) := by
+theorem ilW_let (hf : fu ≠ 0) (hc : ¬ ilCut m h d) (hg : tagW h = 7) : ilW (n + 1) m h d o l fu = ilLetW n m h d o l (fu - 1) := by
   rw [ilW]; simp [hf, hc, hg]
-theorem ilW_proj (hf : fu ≠ 0) (hc : ¬ ilCut m h d) (hg : h >>> 28 = 9) :
+theorem ilW_proj (hf : fu ≠ 0) (hc : ¬ ilCut m h d) (hg : tagW h = 9) :
     ilW (n + 1) m h d o l fu = ilProjW n m h d o l (fu - 1) := by
   rw [ilW]; simp [hf, hc, hg]
-theorem ilW_bvar (hf : fu ≠ 0) (hc : ¬ ilCut m h d) (hg : h >>> 28 = 0) :
+theorem ilW_bvar (hf : fu ≠ 0) (hc : ¬ ilCut m h d) (hg : tagW h = 0) :
     ilW (n + 1) m h d o l fu = ilBVarW n m h d o l (fu - 1) := by
   rw [ilW]; simp [hf, hc, hg]
-theorem ilW_leaf (hf : fu ≠ 0) (hc : ¬ ilCut m h d) (h0 : h >>> 28 ≠ 0) (h4 : h >>> 28 ≠ 4) (h5 : h >>> 28 ≠ 5)
-    (h6 : h >>> 28 ≠ 6) (h7 : h >>> 28 ≠ 7) (h9 : h >>> 28 ≠ 9) :
+theorem ilW_leaf (hf : fu ≠ 0) (hc : ¬ ilCut m h d) (h0 : tagW h ≠ 0) (h4 : tagW h ≠ 4) (h5 : tagW h ≠ 5)
+    (h6 : tagW h ≠ 6) (h7 : tagW h ≠ 7) (h9 : tagW h ≠ 9) :
     ilW (n + 1) m h d o l fu = some (h, m) := by
   rw [ilW]; simp [hf, hc, h0, h4, h5, h6, h7, h9]
 
 theorem ilgW_cut (hf : fu ≠ 0) (hc : ilCut m h d) : ilgW (n + 1) m h d o l fu = some (h, m) := by
   rw [ilgW]; simp only [hf, hc, and_self, ↓reduceIte]
-theorem ilgW_app (hf : fu ≠ 0) (hc : ¬ ilCut m h d) (hg : h >>> 28 = 4) :
+theorem ilgW_app (hf : fu ≠ 0) (hc : ¬ ilCut m h d) (hg : tagW h = 4) :
     ilgW (n + 1) m h d o l fu = ilgAppW n m h d o l (fu - 1) := by
   rw [ilgW]; simp [hf, hc, hg]
-theorem ilgW_lam (hf : fu ≠ 0) (hc : ¬ ilCut m h d) (hg : h >>> 28 = 5) :
+theorem ilgW_lam (hf : fu ≠ 0) (hc : ¬ ilCut m h d) (hg : tagW h = 5) :
     ilgW (n + 1) m h d o l fu = ilgLamW n m h d o l (fu - 1) := by
   rw [ilgW]; simp [hf, hc, hg]
-theorem ilgW_forall (hf : fu ≠ 0) (hc : ¬ ilCut m h d) (hg : h >>> 28 = 6) :
+theorem ilgW_forall (hf : fu ≠ 0) (hc : ¬ ilCut m h d) (hg : tagW h = 6) :
     ilgW (n + 1) m h d o l fu = ilgForallW n m h d o l (fu - 1) := by
   rw [ilgW]; simp [hf, hc, hg]
-theorem ilgW_let (hf : fu ≠ 0) (hc : ¬ ilCut m h d) (hg : h >>> 28 = 7) :
+theorem ilgW_let (hf : fu ≠ 0) (hc : ¬ ilCut m h d) (hg : tagW h = 7) :
     ilgW (n + 1) m h d o l fu = ilgLetW n m h d o l (fu - 1) := by
   rw [ilgW]; simp [hf, hc, hg]
-theorem ilgW_proj (hf : fu ≠ 0) (hc : ¬ ilCut m h d) (hg : h >>> 28 = 9) :
+theorem ilgW_proj (hf : fu ≠ 0) (hc : ¬ ilCut m h d) (hg : tagW h = 9) :
     ilgW (n + 1) m h d o l fu = ilgProjW n m h d o l (fu - 1) := by
   rw [ilgW]; simp [hf, hc, hg]
-theorem ilgW_bvar (hf : fu ≠ 0) (hc : ¬ ilCut m h d) (hg : h >>> 28 = 0) :
+theorem ilgW_bvar (hf : fu ≠ 0) (hc : ¬ ilCut m h d) (hg : tagW h = 0) :
     ilgW (n + 1) m h d o l fu = ilW n m h d o l (fu - 1) := by
   rw [ilgW]; simp [hf, hc, hg]
-theorem ilgW_leaf (hf : fu ≠ 0) (hc : ¬ ilCut m h d) (h0 : h >>> 28 ≠ 0) (h4 : h >>> 28 ≠ 4) (h5 : h >>> 28 ≠ 5)
-    (h6 : h >>> 28 ≠ 6) (h7 : h >>> 28 ≠ 7) (h9 : h >>> 28 ≠ 9) :
+theorem ilgW_leaf (hf : fu ≠ 0) (hc : ¬ ilCut m h d) (h0 : tagW h ≠ 0) (h4 : tagW h ≠ 4) (h5 : tagW h ≠ 5)
+    (h6 : tagW h ≠ 6) (h7 : tagW h ≠ 7) (h9 : tagW h ≠ 9) :
     ilgW (n + 1) m h d o l fu = some (h, m) := by
   rw [ilgW]; simp [hf, hc, h0, h4, h5, h6, h7, h9]
 
-theorem ilAppW_miss (hvk : viewOK m h APP) :
+theorem ilAppW_miss (hvk : viewOKA m h) :
     ilAppW (n + 1) m h d o l fu =
-      lappK₁ n d o l fu (tfld m APP (tierW h) (idxW h) 1)
-        (ilW n m (tfld m APP (tierW h) (idxW h) 0) d o l fu) := by
+      lappK₁ n d o l fu (tfld m APP (tierW h) (idxA h) 1)
+        (ilW n m (tfld m APP (tierW h) (idxA h) 0) d o l fu) := by
   rw [ilAppW]; simp only [hvk.1, ↓reduceIte, UInt64.not_le.mpr hvk.2]
-  cases ilW n m (tfld m APP (tierW h) (idxW h) 0) d o l fu <;> rfl
+  cases ilW n m (tfld m APP (tierW h) (idxA h) 0) d o l fu <;> rfl
 theorem ilLamW_miss (h1 : d + 1 ≠ 0) (hvk : viewOK m h LAM) :
     ilLamW (n + 1) m h d o l fu =
       llamK₁ n d o l fu (tfld m LAM (tierW h) (idxW h) 1)
@@ -503,12 +503,12 @@ theorem ilgAppW_hit (hr : mfindG ilSch m h d ≠ []) (hh : (mfindG ilSch m h d).
       some (rdW (m.arr64 ILMEMO) ((mfindG ilSch m h d).tail.headD 0 * 4 + 3), m) := by
   rw [ilgAppW]; simp only [hr, hh, ↓reduceIte, ne_eq, not_false_eq_true]
 theorem ilgAppW_miss (hr : mfindG ilSch m h d ≠ []) (hh : (mfindG ilSch m h d).headD 0 = 0)
-    (hvk : viewOK m h APP) :
+    (hvk : viewOKA m h) :
     ilgAppW (n + 1) m h d o l fu =
-      gappK₁ n h d o l fu (tfld m APP (tierW h) (idxW h) 1)
-        (ilgW n m (tfld m APP (tierW h) (idxW h) 0) d o l fu) := by
+      gappK₁ n h d o l fu (tfld m APP (tierW h) (idxA h) 1)
+        (ilgW n m (tfld m APP (tierW h) (idxA h) 0) d o l fu) := by
   rw [ilgAppW]; simp only [hr, hh, ↓reduceIte, ne_eq, not_true_eq_false, hvk.1, ↓reduceIte, UInt64.not_le.mpr hvk.2]
-  cases ilgW n m (tfld m APP (tierW h) (idxW h) 0) d o l fu <;> rfl
+  cases ilgW n m (tfld m APP (tierW h) (idxA h) 0) d o l fu <;> rfl
 theorem ilgLamW_hit (h1 : d + 1 ≠ 0) (hr : mfindG ilSch m h d ≠ [])
     (hh : (mfindG ilSch m h d).headD 0 ≠ 0) :
     ilgLamW (n + 1) m h d o l fu =
@@ -604,13 +604,13 @@ grind_pattern [arena_grind] ilgProjW_miss => ilgProjW (n + 1) m h d o l fu
 
 /-! ## The L code: the pure walk -/
 
-/-- con-ron: ConRon/Arena/ExprOps.lean:394-420 ConRon.Arena.instantiateList -/
+/-- con-ron: ConRon/Arena/ExprOps.lean:399-425 ConRon.Arena.instantiateList -/
 @[l_impl ConRon.Arena.instantiateList]
 def ilGo : FunDecl := lfn (h, d, o, l, fu) locals (x, g, r) {
   if fu == 0 { abort };
   x := call der_bv(h);
   if x < 32767 && x <= d { return h };
-  g := h >> 28;
+  g := ⟦h⟧.tag;
   if g == 4 { r := call il_app(h, d, o, l, fu - 1); return r };
   if g == 5 { r := call il_lam(h, d, o, l, fu - 1); return r };
   if g == 6 { r := call il_forall(h, d, o, l, fu - 1); return r };
@@ -620,7 +620,7 @@ def ilGo : FunDecl := lfn (h, d, o, l, fu) locals (x, g, r) {
   return h
 }
 
-/-- con-ron: ConRon/Arena/ExprOps.lean:422-432 ConRon.Arena.instListArmApp -/
+/-- con-ron: ConRon/Arena/ExprOps.lean:427-437 ConRon.Arena.instListArmApp -/
 @[l_impl ConRon.Arena.instListArmApp]
 def ilApp : FunDecl := lfn (h, d, o, l, fu) locals (t, i, f, a, x, y, r) {
   (t, i) := node APP⟦h⟧;
@@ -632,7 +632,7 @@ def ilApp : FunDecl := lfn (h, d, o, l, fu) locals (t, i, f, a, x, y, r) {
   return r
 }
 
-/-- con-ron: ConRon/Arena/ExprOps.lean:434-444 ConRon.Arena.instListArmBind -/
+/-- con-ron: ConRon/Arena/ExprOps.lean:439-449 ConRon.Arena.instListArmBind -/
 @[l_impl ConRon.Arena.instListArmBind]
 def ilLam : FunDecl := lfn (h, d, o, l, fu) locals (t, i, f, a, x, y, r) {
   if d + 1 == 0 { abort };
@@ -645,7 +645,7 @@ def ilLam : FunDecl := lfn (h, d, o, l, fu) locals (t, i, f, a, x, y, r) {
   return r
 }
 
-/-- con-ron: ConRon/Arena/ExprOps.lean:434-444 ConRon.Arena.instListArmBind -/
+/-- con-ron: ConRon/Arena/ExprOps.lean:439-449 ConRon.Arena.instListArmBind -/
 @[l_impl ConRon.Arena.instListArmBind]
 def ilForall : FunDecl := lfn (h, d, o, l, fu) locals (t, i, f, a, x, y, r) {
   if d + 1 == 0 { abort };
@@ -658,7 +658,7 @@ def ilForall : FunDecl := lfn (h, d, o, l, fu) locals (t, i, f, a, x, y, r) {
   return r
 }
 
-/-- con-ron: ConRon/Arena/ExprOps.lean:446-457 ConRon.Arena.instListArmLet -/
+/-- con-ron: ConRon/Arena/ExprOps.lean:451-462 ConRon.Arena.instListArmLet -/
 @[l_impl ConRon.Arena.instListArmLet]
 def ilLet : FunDecl := lfn (h, d, o, l, fu) locals (t, i, f, a, b, x, y, z, r) {
   if d + 1 == 0 { abort };
@@ -673,7 +673,7 @@ def ilLet : FunDecl := lfn (h, d, o, l, fu) locals (t, i, f, a, b, x, y, z, r) {
   return r
 }
 
-/-- con-ron: ConRon/Arena/ExprOps.lean:459-468 ConRon.Arena.instListArmProj -/
+/-- con-ron: ConRon/Arena/ExprOps.lean:464-473 ConRon.Arena.instListArmProj -/
 @[l_impl ConRon.Arena.instListArmProj]
 def ilProj : FunDecl := lfn (h, d, o, l, fu) locals (t, i, nm, ix, e, x, r) {
   (t, i) := node PROJ⟦h⟧;
@@ -685,7 +685,7 @@ def ilProj : FunDecl := lfn (h, d, o, l, fu) locals (t, i, nm, ix, e, x, r) {
   return r
 }
 
-/-- con-ron: ConRon/Arena/ExprOps.lean:470-495 ConRon.Arena.instListArmBVar -/
+/-- con-ron: ConRon/Arena/ExprOps.lean:475-500 ConRon.Arena.instListArmBVar -/
 @[l_impl ConRon.Arena.instListArmBVar]
 def ilBVar : FunDecl := lfn (h, d, o, l, fu) locals (t, i, j, q, v, x, r) {
   (t, i) := node BVAR⟦h⟧;
@@ -705,13 +705,13 @@ def ilBVar : FunDecl := lfn (h, d, o, l, fu) locals (t, i, j, q, v, x, r) {
 
 /-! ## The L code: the memo walk -/
 
-/-- con-ron: ConRon/Arena/ExprOps.lean:524-547 ConRon.Arena.instantiateListGo -/
+/-- con-ron: ConRon/Arena/ExprOps.lean:529-552 ConRon.Arena.instantiateListGo -/
 @[l_impl ConRon.Arena.instantiateListGo]
 def ilgGo : FunDecl := lfn (h, d, o, l, fu) locals (x, g, r) {
   if fu == 0 { abort };
   x := call der_bv(h);
   if x < 32767 && x <= d { return h };
-  g := h >> 28;
+  g := ⟦h⟧.tag;
   if g == 4 { r := call ilg_app(h, d, o, l, fu - 1); return r };
   if g == 5 { r := call ilg_lam(h, d, o, l, fu - 1); return r };
   if g == 6 { r := call ilg_forall(h, d, o, l, fu - 1); return r };
@@ -721,7 +721,7 @@ def ilgGo : FunDecl := lfn (h, d, o, l, fu) locals (x, g, r) {
   return h
 }
 
-/-- con-ron: ConRon/Arena/ExprOps.lean:549-564 ConRon.Arena.instListGoArmApp -/
+/-- con-ron: ConRon/Arena/ExprOps.lean:554-569 ConRon.Arena.instListGoArmApp -/
 @[l_impl ConRon.Arena.instListGoArmApp]
 def ilgApp : FunDecl := lfn (h, d, o, l, fu) locals (fd, j, e0, t, i, f, a, x, y, r, u) {
   (fd, j, e0) := call ilm_find(h, d);
@@ -737,7 +737,7 @@ def ilgApp : FunDecl := lfn (h, d, o, l, fu) locals (fd, j, e0, t, i, f, a, x, y
   return r
 }
 
-/-- con-ron: ConRon/Arena/ExprOps.lean:566-581 ConRon.Arena.instListGoArmBind -/
+/-- con-ron: ConRon/Arena/ExprOps.lean:571-586 ConRon.Arena.instListGoArmBind -/
 @[l_impl ConRon.Arena.instListGoArmBind]
 def ilgLam : FunDecl := lfn (h, d, o, l, fu) locals (fd, j, e0, t, i, f, a, x, y, r, u) {
   if d + 1 == 0 { abort };
@@ -754,7 +754,7 @@ def ilgLam : FunDecl := lfn (h, d, o, l, fu) locals (fd, j, e0, t, i, f, a, x, y
   return r
 }
 
-/-- con-ron: ConRon/Arena/ExprOps.lean:566-581 ConRon.Arena.instListGoArmBind -/
+/-- con-ron: ConRon/Arena/ExprOps.lean:571-586 ConRon.Arena.instListGoArmBind -/
 @[l_impl ConRon.Arena.instListGoArmBind]
 def ilgForall : FunDecl := lfn (h, d, o, l, fu) locals (fd, j, e0, t, i, f, a, x, y, r, u) {
   if d + 1 == 0 { abort };
@@ -771,7 +771,7 @@ def ilgForall : FunDecl := lfn (h, d, o, l, fu) locals (fd, j, e0, t, i, f, a, x
   return r
 }
 
-/-- con-ron: ConRon/Arena/ExprOps.lean:583-599 ConRon.Arena.instListGoArmLet -/
+/-- con-ron: ConRon/Arena/ExprOps.lean:588-604 ConRon.Arena.instListGoArmLet -/
 @[l_impl ConRon.Arena.instListGoArmLet]
 def ilgLet : FunDecl := lfn (h, d, o, l, fu) locals (fd, j, e0, t, i, f, a, b, x, y, z, r, u) {
   if d + 1 == 0 { abort };
@@ -790,7 +790,7 @@ def ilgLet : FunDecl := lfn (h, d, o, l, fu) locals (fd, j, e0, t, i, f, a, b, x
   return r
 }
 
-/-- con-ron: ConRon/Arena/ExprOps.lean:601-615 ConRon.Arena.instListGoArmProj -/
+/-- con-ron: ConRon/Arena/ExprOps.lean:606-620 ConRon.Arena.instListGoArmProj -/
 @[l_impl ConRon.Arena.instListGoArmProj]
 def ilgProj : FunDecl := lfn (h, d, o, l, fu) locals (fd, j, e0, t, i, nm, ix, e, x, r, u) {
   (fd, j, e0) := call ilm_find(h, d);
@@ -879,7 +879,7 @@ theorem ilGo_step (n : Nat) (ih : IlArmSpec p n) : IlGoSpec p (n + 1) := by
   rw [invoke_eq _ (hp.get "il_go")]
   simp only [callFn, ilGo]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, derBv_spec p (hp.get "der_bv") n,
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, derBv_spec p (hp.get "der_bv") n,
       ihA, ihL, ihF, ihE, ihP, ihB] <;>
     finish
 
@@ -895,7 +895,7 @@ theorem ilgGo_step (n : Nat) (ih : IlgArmSpec p n) (ihl : IlGoSpec p n) : IlgGoS
   rw [invoke_eq _ (hp.get "ilg_go")]
   simp only [callFn, ilgGo]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, derBv_spec p (hp.get "der_bv") n,
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, derBv_spec p (hp.get "der_bv") n,
       ihA, ihL, ihF, ihE, ihP, ihl] <;>
     finish
 

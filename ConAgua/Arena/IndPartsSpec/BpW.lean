@@ -34,7 +34,7 @@ theorem bpa_spec (p : Prog) (hP : IndPartsProg5 p) (c : CallM) (hc : CallSpec p 
   rw [invoke_eq _ hP.parts]
   simp only [callFn, blockParts]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, bsh_spec p hP c hc n] <;>
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, bsh_spec p hP c hc n] <;>
     finish (gen := 20) [bgoK3_some]
 
 /-- **`block_parts`' model refines `blockParts?`** (`bshW_sim`). -/

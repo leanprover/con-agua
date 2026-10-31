@@ -26,13 +26,25 @@ slot.  So every `r.infer` below is `ConLeche.inferTypeIO mode env F`, which
 is what the hypotheses say.  This is official's `infer_type_core` passing
 `infer_only` down, without a textual twin.
 -/
+module
+
 import ConRon.Bridge.Core.Memo
 import ConRon.Bridge.Core.Walks.Proj
-import ConRon.Bridge.Core.Walks.Frame
 import ConRon.Bridge.Core.Arms.Infer
 import ConRon.Bridge.Core.Walks.FvarB
-import ConRon.Bridge.ExprOps.Walks
-import ConRon.Bridge.Grind
+public import ConRon.Bridge.Grind
+import ConRon.Bridge.Core.Walks.BinderLoop
+import ConRon.Bridge.Core.Walks.InferSpine
+import ConRon.Bridge.Core.Walks.StrLit
+import ConRon.Bridge.Core.Walks.Spine
+import ConRon.Bridge.Core.Walks.Cached
+import ConRon.Bridge.ExprOps.Owed
+public import ConRon.Bridge.Core.Knot
+public import ConLeche.Verify.EnvWF
+import ConRon.Bridge.Specs
+import ConRon.Bridge.GrindAttr
+
+public section
 
 namespace ConRon.Bridge.Core
 

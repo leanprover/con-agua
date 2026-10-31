@@ -27,14 +27,21 @@ vcgen […] <;> finish` (the folds against con-leche's mirror as functions,
 recursive call); the peel and leaf walks are staged over the twin's program
 order.
 -/
+module
+
 import ConRon.Bridge.Core.Memo
-import ConRon.Bridge.Core.Walks.Frame
 import ConRon.Bridge.ExprOps.Owed
-import ConRon.Bridge.ExprOps.Subst
+public import ConRon.Bridge.ExprOps.Subst
 import ConRon.Bridge.Core.Walks.Proj
 import ConRon.Bridge.ExprOps.Walks
 import ConRon.Bridge.Core.Walks.FvarB
-import ConLeche.Verify.BinderLoop
+public import ConLeche.Verify.BinderLoop
+public import ConRon.Bridge.ExprOps.Abs
+public import ConRon.Bridge.Core.Knot
+import ConRon.Bridge.Specs
+import ConRon.Bridge.GrindAttr
+
+public section
 
 namespace ConRon.Bridge.Core
 

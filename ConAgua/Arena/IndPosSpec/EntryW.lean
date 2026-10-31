@@ -67,7 +67,7 @@ theorem nestCtorEntryStrip_spec (p : Prog) (hp : p.lookup "nest_ctor_entry_strip
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         stripPis_specF p hst n] <;> finish (gen := 20)
 
 theorem erec_nat {m : Mem} {w : Word} {c : Nat} {k : Nat} (h : nat? (erecP m) (w.toNat + c) = some k)
@@ -206,7 +206,7 @@ theorem nestCtorEntry_spec (p : Prog) (hs : p.lookup "nest_ctor_entry_strip" = s
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         nestCtorEntryStrip_spec p hs hst n, gafF_spec p had n, eView_spec p hv n] <;>
       finish (gen := 20) [entryW]
 
@@ -247,7 +247,7 @@ theorem entryW_ok {dn : NIdx → Option ConLeche.Name} {fe : IFEnv} {vis : Word}
       rw [CWF_eq, hwd] at hrun2
       have htagiff := decI_tag_const_beq (r2.headD 0) hlt2
       rw [hdec2] at htagiff
-      by_cases hk : r2.headD 0 >>> 28 ≠ 3
+      by_cases hk : tagW (r2.headD 0) ≠ 3
       · rw [entryK2_notconst _ _ _ _ hk] at h
         obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
         refine ⟨none, a2, ?_, hS2, hg1.trans hg2, rfl⟩
@@ -255,7 +255,7 @@ theorem entryW_ok {dn : NIdx → Option ConLeche.Name} {fe : IFEnv} {vis : Word}
         have ht : ¬ (x2.tag == ETag.const) = true := by rw [htagiff]; simpa using hk
         simp only [ht]; rfl
       · rw [entryK2_const _ _ _ _ hk] at h
-        have hk3 : r2.headD 0 >>> 28 = 3 := by simpa using hk
+        have hk3 : tagW (r2.headD 0) = 3 := by simpa using hk
         cases hvl : eViewW m2 (r2.headD 0) with
         | nil => rw [hvl] at h; simp [entryK3] at h
         | cons g vt =>
@@ -266,7 +266,7 @@ theorem entryW_ok {dn : NIdx → Option ConLeche.Name} {fe : IFEnv} {vis : Word}
           have hdE : decE (r2.headD 0) = x2 := hdec2
           have ht : x2.tag = ETag.const := by
             have := htagiff
-            rw [show decide (r2.headD 0 >>> 28 = 3) = true by rw [hk3]; decide] at this
+            rw [show decide (tagW (r2.headD 0) = 3) = true by rw [hk3]; decide] at this
             simpa using this
           obtain ⟨n0, us0, rfl⟩ := EStore.view_const a2.store x2 ht v (hdE ▸ hv)
           simp only [ViewR, getD1_eq] at hvr
@@ -302,7 +302,7 @@ theorem entryW_ok {dn : NIdx → Option ConLeche.Name} {fe : IFEnv} {vis : Word}
     | _ => rfl
 
 theorem resHeadK_some (r : List Word) (m1 : Mem) :
-    resHeadK (some (r, m1)) = some ([if r.headD 0 >>> 28 = 1 then 1 else 0], m1) := rfl
+    resHeadK (some (r, m1)) = some ([if tagW (r.headD 0) = 1 then 1 else 0], m1) := rfl
 grind_pattern [ind_grind] resHeadK_some => resHeadK (some (r, m1))
 
 theorem nestResHead_spec (p : Prog) (hg : p.lookup "nest_res_head" = some nestResHeadL) (had : AdF p) (n : Nat) (s₀ : St) (e : Word) :
@@ -313,7 +313,7 @@ theorem nestResHead_spec (p : Prog) (hg : p.lookup "nest_res_head" = some nestRe
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         gafF_spec p had n] <;> finish [resHeadW]
 
 theorem resHeadW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word) (m m' : Mem) (a : AState)
@@ -327,7 +327,7 @@ theorem resHeadW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Wor
   obtain ⟨x, a1, hrun, hS1, hg, hlt, hdec⟩ := gafF_ok dn vis fe CWF e he m m1 a r1 hs hS
   refine ⟨a1, ?_, hS1, hg⟩
   rw [CWF_eq] at hrun
-  have htag : (x.tag == ETag.fvar) = decide (r1.headD 0 >>> 28 = 1) := by
+  have htag : (x.tag == ETag.fvar) = decide (tagW (r1.headD 0) = 1) := by
     rw [← hdec]
     have := decE_tag_eq (r1.headD 0) hlt 1 (by decide)
     have e1 : (ETag.fvar : UInt32) = UInt32.ofNat 1 := rfl
@@ -337,9 +337,9 @@ theorem resHeadW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Wor
   simp only [ConRon.Arena.nestResHead, StateT.run_bind]
   rw [hrun]
   simp only [bind, Except.bind, pure, htag]
-  show (StateT.pure (decide (r1.headD 0 >>> 28 = 1))).run a1 = _
+  show (StateT.pure (decide (tagW (r1.headD 0) = 1))).run a1 = _
   generalize r1.headD 0 = w
-  by_cases hc : w >>> 28 = 1 <;> simp [hc, StateT.pure, StateT.run, pure, Except.pure]
+  by_cases hc : tagW w = 1 <;> simp [hc, StateT.pure, StateT.run, pure, Except.pure]
 
 end L.Ind
 

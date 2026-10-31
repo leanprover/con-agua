@@ -56,7 +56,7 @@ l_model ckkE_spec (p : Prog) (hP : KeysProg p)
   fns [hP.keys ↦ ckkE]
   specs [classKeyOfE_spec p hP.toKofProg n, slCons_specW p hP.rx.ha hP.copy hP.cons n]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] unified
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 /-- What `check_block_classes_keys` gives besides the twin's keys `ks` (from `m`): the keys'
@@ -159,7 +159,7 @@ theorem cnt_spec (p : Prog) (hp : p.lookup "check_block_classes_count" = some ch
     rw [invoke_eq _ hp]
     simp only [callFn, checkBlockClassesCount]
     sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih] <;>
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih] <;>
       finish (gen := 20)
 
 /-- The twin's per-member count. -/
@@ -273,7 +273,7 @@ theorem opm_spec (p : Prog) (hc : p.lookup "check_block_classes_count" = some ch
     rw [invoke_eq _ hp]
     simp only [callFn, checkBlockClassesOnePerMember]
     sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, cnt_spec p hc n, ih] <;>
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, cnt_spec p hc n, ih] <;>
       finish (gen := 20)
 
 theorem opmW_ok (n : Nat) : ∀ (m : Mem) (j k o l r : Word) (ms : List TargetMajor),

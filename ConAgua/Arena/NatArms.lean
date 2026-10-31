@@ -52,7 +52,7 @@ def litArm (F : Nat → Nat → Nat) (a b : Nat) : AM (Option EIdx) := do
 
 /-- `natAddLit` with `f` for `nat_add`: `o := CTL[0]; l := call f(oa, la, ob, lb);
 h := call intern_lit(o, l); return h`. -/
--- con-ron: ConRon/Arena/Core.lean:994-1035 ConRon.Arena.natOpResult
+-- con-ron: ConRon/Arena/Core.lean:999-1040 ConRon.Arena.natOpResult
 def topLit (f : FnName) : FunDecl :=
   ⟨4, 7, .seq (.set 4 (.ld64 CTL (.const 0)))
     (.seq (.call [5] f [.var 0, .var 1, .var 2, .var 3])
@@ -145,7 +145,7 @@ theorem topLit_refines (g f : FnName) (F : Nat → Nat → Nat) (hg : p.lookup g
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalArgs, setLoc, setLocs, ld64, hF n, hI a₀ n] <;>
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalArgs, setLoc, setLocs, ld64, hF n, hI a₀ n] <;>
       finish [litArm]
 
 end generic
@@ -153,7 +153,7 @@ end generic
 /-! ## The arms with a slice result: `/`, `%` -/
 
 /-- `nat_div_lit(oa, la, ob, lb)`: the quotient slice of `nat_divmod`, interned. -/
--- con-ron: ConRon/Arena/Core.lean:994-1035 ConRon.Arena.natOpResult
+-- con-ron: ConRon/Arena/Core.lean:999-1040 ConRon.Arena.natOpResult
 @[l_impl ConRon.Arena.natOpResult]
 def natDivLit : FunDecl := lfn (oa, la, ob, lb) locals (o, l, h) {
   (o, l) := call nat_divmod(oa, la, ob, lb);
@@ -162,7 +162,7 @@ def natDivLit : FunDecl := lfn (oa, la, ob, lb) locals (o, l, h) {
 }
 
 /-- `nat_mod_lit(oa, la, ob, lb)`: the remainder slice of `nat_divmod`, interned. -/
--- con-ron: ConRon/Arena/Core.lean:994-1035 ConRon.Arena.natOpResult
+-- con-ron: ConRon/Arena/Core.lean:999-1040 ConRon.Arena.natOpResult
 @[l_impl ConRon.Arena.natOpResult]
 def natModLit : FunDecl := lfn (oa, la, ob, lb) locals (q, ql, o, l, h) {
   (q, ql, o, l) := call nat_divmod(oa, la, ob, lb);
@@ -201,7 +201,7 @@ theorem natDivLit_refines (hg : p.lookup "nat_div_lit" = some natDivLit) (n : Na
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalArgs, setLoc, setLocs,
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalArgs, setLoc, setLocs,
         natDivmod_spec p hpl hps hpc hp1 hp2 hp3 hp4 hpt hpd n, hI a₀ n] <;>
       finish [litArm]
 
@@ -226,7 +226,7 @@ theorem natModLit_refines (hg : p.lookup "nat_mod_lit" = some natModLit) (n : Na
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalArgs, setLoc, setLocs,
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalArgs, setLoc, setLocs,
         natDivmod_spec p hpl hps hpc hp1 hp2 hp3 hp4 hpt hpd n, hI a₀ n] <;>
       finish [litArm]
 
@@ -235,7 +235,7 @@ end divmod
 /-! ## `pred`: `-` with a one-limb `1` -/
 
 /-- `nat_pred_lit(oa, la)`: write the limb `1` at the top, subtract it, intern the result. -/
--- con-ron: ConRon/Arena/Core.lean:994-1035 ConRon.Arena.natOpResult
+-- con-ron: ConRon/Arena/Core.lean:999-1040 ConRon.Arena.natOpResult
 @[l_impl ConRon.Arena.natOpResult]
 def natPredLit : FunDecl := lfn (oa, la) locals (o, l, h, pt, pb) {
   o := CTL.u64[0];
@@ -294,7 +294,7 @@ theorem natPredLit_refines (hg : p.lookup "nat_pred_lit" = some natPredLit) (n :
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
       natSub_spec p hpl hps hpt hpn n, hI a₀ n]
     all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, Cmp.eval, BinOp.eval,
       Nat.reduceEqDiff, reduceIte, decide_eq_true_eq] at *)
@@ -307,7 +307,7 @@ end pred
 /-- `nat_pow_lit(oa, la, ob, lb)`: `(0, 0)` (the arm's `none`) for an exponent above `2^24`,
 else `(1, h)` with `h` the interned power. An exponent of two or more limbs is at least `2^64`
 (`b` normalised). -/
--- con-ron: ConRon/Arena/Core.lean:994-1035 ConRon.Arena.natOpResult
+-- con-ron: ConRon/Arena/Core.lean:999-1040 ConRon.Arena.natOpResult
 @[l_impl ConRon.Arena.natOpResult]
 def natPowLit : FunDecl := lfn (oa, la, ob, lb) locals (e, o, l, h) {
   if 1 < lb { return (0, 0) };
@@ -378,7 +378,7 @@ theorem natPowLit_refines (hg : p.lookup "nat_pow_lit" = some natPowLit) (n : Na
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind, natop_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         natPow_spec p hph hpt hpm hpn n, hI a₀ n] <;>
       finish (gen := 20) [natPowArm, pv_of_lt_one, pow_of_eq_zero]
 
@@ -389,7 +389,7 @@ end pow
 /-- `nat_beq_lit(oa, la, ob, lb, t, f, us)`: intern the constant `t` (`Bool.true`'s name) if the
 two values are equal, else `f`, at the level list `us` (the empty one). The three handles are
 the pins `boolTrueName`, `boolFalseName`, `emptyLevels`, which the caller reads. -/
--- con-ron: ConRon/Arena/Core.lean:994-1035 ConRon.Arena.natOpResult
+-- con-ron: ConRon/Arena/Core.lean:999-1040 ConRon.Arena.natOpResult
 @[l_impl ConRon.Arena.natOpResult]
 def natBeqLit : FunDecl := lfn (oa, la, ob, lb, t, f, us) locals (c, h) {
   c := call nat_cmp(oa, la, ob, lb);
@@ -399,7 +399,7 @@ def natBeqLit : FunDecl := lfn (oa, la, ob, lb, t, f, us) locals (c, h) {
 }
 
 /-- `nat_ble_lit`: as `nat_beq_lit`, `t` unless `a > b`. -/
--- con-ron: ConRon/Arena/Core.lean:994-1035 ConRon.Arena.natOpResult
+-- con-ron: ConRon/Arena/Core.lean:999-1040 ConRon.Arena.natOpResult
 @[l_impl ConRon.Arena.natOpResult]
 def natBleLit : FunDecl := lfn (oa, la, ob, lb, t, f, us) locals (c, h) {
   c := call nat_cmp(oa, la, ob, lb);
@@ -423,7 +423,7 @@ def natBleArm (a b : Nat) : AM (Option EIdx) := do
 /-! ## `gcd` -/
 
 /-- `nat_gcd_lit(oa, la, ob, lb)`: `nat_gcd`'s slice, interned. -/
--- con-ron: ConRon/Arena/Core.lean:994-1035 ConRon.Arena.natOpResult
+-- con-ron: ConRon/Arena/Core.lean:999-1040 ConRon.Arena.natOpResult
 @[l_impl ConRon.Arena.natOpResult]
 def natGcdLit : FunDecl := lfn (oa, la, ob, lb) locals (o, l, h) {
   (o, l) := call nat_gcd(oa, la, ob, lb);
@@ -467,7 +467,7 @@ theorem natGcdLit_refines (hg : p.lookup "nat_gcd_lit" = some natGcdLit) (n : Na
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalArgs, setLoc, setLocs,
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalArgs, setLoc, setLocs,
         natGcd_spec p hpl hps hpc hp1 hp2 hp3 hp4 hpt hpd hps' hpg n, hI a₀ n] <;>
       finish [natGcdArm]
 
@@ -499,7 +499,7 @@ def natModArm (a b : Nat) : AM (Option EIdx) := do
 `nat_op_result(c, oa, la, ob, lb)`: `natOpResult` (`Arena/Core.lean:998`) with the fifteen pin
 reads as reads of `PINS` (word `1 + PIN_*`, after the flag) and the arms in the twin's order.
 Returns `(1, h)` for `some h`, `(0, 0)` for `none` (`decOpt`). Refined in `PinsNatOp.lean`. -/
-/-- con-ron: ConRon/Arena/Core.lean:994-1035 ConRon.Arena.natOpResult -/
+/-- con-ron: ConRon/Arena/Core.lean:999-1040 ConRon.Arena.natOpResult -/
 @[l_impl ConRon.Arena.natOpResult]
 def natOpResultL : FunDecl := lfn (c, oa, la, ob, lb) locals (f, h) {
   if PINS.u64[0] == 0 { abort };
@@ -560,7 +560,7 @@ the quotient finds `7`'s node again. -/
   | some (h₁, m) => match go m "nat_mod_lit" [1, 1, 3, 1] with
     | some (h₂, m) => match go m "nat_mul_lit" [1, 1, 0, 1] with
       | some (h₃, m) => match go m "nat_div_lit" [9, 1, 0, 1] with
-        | some (h₄, _) => [h₁, h₂, h₃, h₄] == [0x80000000, 0x80000001, 0x80000002, 0x80000001]
+        | some (h₄, _) => [h₁, h₂, h₃, h₄] == [0x20000000, 0x20000001, 0x20000002, 0x20000001]
         | none => false
       | none => false
     | none => false
@@ -738,7 +738,7 @@ theorem natBeqLit_refinesA (n : Nat) (s₀ : St) (a₀ : AState) (hR : ArenaR s�
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind, natcmp_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
         natCmp_spec natArmProg rfl n, internConst_refinesA natArmProg rfl rfl rfl a₀ n] <;>
       finish [natBeqArm, constE, decE_eq]
 
@@ -772,7 +772,7 @@ theorem natBleLit_refinesA (n : Nat) (s₀ : St) (a₀ : AState) (hR : ArenaR s�
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind, natcmp_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
         natCmp_spec natArmProg rfl n, internConst_refinesA natArmProg rfl rfl rfl a₀ n] <;>
       finish [natBleArm, constE, decE_eq]
 

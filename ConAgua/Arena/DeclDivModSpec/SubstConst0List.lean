@@ -61,7 +61,7 @@ theorem cra_specW (p : Prog) (hp : p.lookup "consts_resolve_all" = some constsRe
   rw [invoke_eq _ hp]
   simp only [callFn, constsResolveAllL]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       hcl n "consts_resolve_ffast", callW_spec p n "consts_resolve_all"] <;>
     finish (gen := 30) (instances := 10000) [craW, ntBW, rdW_eq]
 
@@ -72,7 +72,7 @@ theorem cg_specW (p : Prog) (hb : BvbProg p) (hf : HfF p) (hp : p.lookup "div_mo
     ⦃fun res s' => LocEq s' s₀ ∧ dmCgW p cl n s₀.mem vs c annVal ho hl eqE proof = some (res, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, divModCertGuardL]
-  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rd_spec, lbbF_spec p hb n, hffF_spec p hf n,
+  vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rd_spec, lbbF_spec p hb n, hffF_spec p hf n,
     hcl n "all_level_params_defined", hcl n "consts_resolve_ffast", callW_spec p n "subst_const_all",
     callW_spec p n "subst_const0_list", callW_spec p n "consts_resolve_all", callW_spec p n "subst_const0"]
   all_goals subst_vars

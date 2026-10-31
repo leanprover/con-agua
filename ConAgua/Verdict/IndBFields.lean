@@ -37,7 +37,7 @@ l_model cfgE_spec (p : Prog) (hP : CfoProg p)
     iwAlloc_specW p hP.alloc n, piBinders_spec p hP.alloc hP.copy hP.no.hv hP.cons hP.pb n,
     rec3_specW p hP.alloc n hP.r3, slCons_specW p hP.alloc hP.copy hP.cons n]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
   heartbeats 4000000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
@@ -230,7 +230,7 @@ l_model cfoE_spec (p : Prog) (hP : CfoProg p)
   fns [hP.cfo ↦ cfoE]
   specs [blockShapeMemberNames_spec p hP.alloc hP.mnc hP.mn n, cfgE_spec p hP n]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
   heartbeats 4000000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 

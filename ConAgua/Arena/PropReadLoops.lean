@@ -32,7 +32,7 @@ theorem pr_word_ne0 (f : Word) (hf : f ≠ 0) : f.toNat ≠ 0 :=
 
 /-- **The model of `binder_dom`**: `(flag, domain)`, `none` where the L code aborts. -/
 def bdW (m : Mem) (k e : Word) : Option (Word × Word) :=
-  if e >>> 28 ≠ 6 then some (0, 0)
+  if tagW e ≠ 6 then some (0, 0)
   else if tierW e ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
   else if tcnt m FORALL (tierW e) ≤ idxW e then none
   else if k = 0 then some (1, tfld m FORALL (tierW e) (idxW e) 0)
@@ -44,16 +44,16 @@ decreasing_by
   have := pr_word_ne0 k hk0
   omega
 
-theorem bdW_miss (m : Mem) (k e : Word) (h : e >>> 28 ≠ 6) : bdW m k e = some (0, 0) := by
+theorem bdW_miss (m : Mem) (k e : Word) (h : tagW e ≠ 6) : bdW m k e = some (0, 0) := by
   rw [bdW]; simp [h]
 
-theorem bdW_hit (m : Mem) (e : Word) (h : e >>> 28 = 6)
+theorem bdW_hit (m : Mem) (e : Word) (h : tagW e = 6)
     (hv1 : ¬ (tierW e ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0))
     (hv2 : ¬ tcnt m FORALL (tierW e) ≤ idxW e) :
     bdW m 0 e = some (1, tfld m FORALL (tierW e) (idxW e) 0) := by
   rw [bdW]; simp only [h, ne_eq, not_true_eq_false, ↓reduceIte, hv1, hv2]
 
-theorem bdW_step (m : Mem) (k e e' : Word) (h : e >>> 28 = 6) (hk : k ≠ 0)
+theorem bdW_step (m : Mem) (k e e' : Word) (h : tagW e = 6) (hk : k ≠ 0)
     (hv1 : ¬ (tierW e ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0))
     (hv2 : ¬ tcnt m FORALL (tierW e) ≤ idxW e)
     (he' : e' = tfld m FORALL (tierW e) (idxW e) 1) :
@@ -79,7 +79,7 @@ theorem binderDomLoop_spec (n : Nat) (s₀ : St) :
     rw [exec, step_while (w := binderDomLoop) rfl]
     sym only [lang_grind, arena_grind] =>
       vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih, evalE_tld, tld, evalE_cnt,
-        tcntM, evalE_tierE, evalE_idxE] <;> finish [tierW, idxW]
+        tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] <;> finish [tierW, idxW]
 
 theorem binderDomLoop_step_spec (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀⦄
@@ -101,7 +101,7 @@ theorem binderDomL_spec (hp : p.lookup "binder_dom" = some binderDomL) (n : Nat)
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalArgs, setLocs, binderDomLoop_step_spec p n] <;> finish [LocEq]
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalArgs, setLocs, binderDomLoop_step_spec p n] <;> finish [LocEq]
 
 end bdLoop
 
@@ -116,7 +116,7 @@ theorem bdW_ok (m : Mem) (a : AState) (hR : ArenaR m a) :
     intro k e fl v hkN he hL
     have hk0 : k = 0 := UInt64.toNat_inj.mp (by simp; omega)
     subst hk0
-    by_cases hc : e >>> 28 = 6
+    by_cases hc : tagW e = 6
     · have hv1 : ¬ (tierW e ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0) := by
         intro hv; rw [bdW] at hL; simp [hc, hv] at hL
       have hv2 : ¬ tcnt m FORALL (tierW e) ≤ idxW e := by
@@ -142,7 +142,7 @@ theorem bdW_ok (m : Mem) (a : AState) (hR : ArenaR m a) :
     by_cases hk0 : k = 0
     · exact ih k e fl v (by subst hk0; simp) he hL
     obtain ⟨j, hj⟩ := Nat.exists_eq_succ_of_ne_zero (pr_word_ne0 k hk0)
-    by_cases hc : e >>> 28 = 6
+    by_cases hc : tagW e = 6
     · have hv1 : ¬ (tierW e ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0) := by
         intro hv; rw [bdW] at hL; simp [hc, hv] at hL
       have hv2 : ¬ tcnt m FORALL (tierW e) ≤ idxW e := by
@@ -188,7 +188,7 @@ theorem appCountAtLoop_spec (n : Nat) (s₀ : St) :
     rw [exec, step_while (w := appCountAtLoop) rfl]
     sym only [lang_grind, arena_grind] =>
       vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih, evalE_tld, tld, evalE_cnt,
-        tcntM, evalE_tierE, evalE_idxE] <;> finish [tierW, idxW]
+        tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] <;> finish [tierW, idxW]
 
 theorem appCountAtLoop_step_spec (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀⦄
@@ -211,7 +211,7 @@ theorem appCountAtL_spec (p : Prog) (hp : p.lookup "app_count_at" = some appCoun
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, appCountAtLoop_step_spec p n] <;>
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, appCountAtLoop_step_spec p n] <;>
       finish [acaW, LocEq]
 
 /-- **The loop's count is `numArgs`.** -/
@@ -225,23 +225,23 @@ theorem gafLoopW_numArgs (m : Mem) (a : AState) (hR : ArenaR m a) :
     intro e f e' f' hfN he hL hf'
     have hf0 : f = 0 := UInt64.toNat_inj.mp (by simp; omega)
     subst hf0
-    by_cases hc : e >>> 28 = 4
+    by_cases hc : tagW e = 4
     · rw [gafLoopW] at hL; simp [hc] at hL
     · rw [gafLoopW_done m e 0 hc] at hL
       obtain ⟨-, rfl⟩ := Prod.mk.inj (Option.some.inj hL)
       exact absurd rfl hf'
   | succ N ih =>
     intro e f e' f' hfN he hL hf'
-    by_cases hc : e >>> 28 = 4
+    by_cases hc : tagW e = 4
     · have hf0 : f ≠ 0 := by
         intro hf0; rw [hf0, gafLoopW] at hL; simp [hc] at hL
       have hv1 : ¬ (tierW e ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0) := by
         intro hv; rw [gafLoopW] at hL; simp [hc, hf0, hv] at hL
-      have hv2 : ¬ tcnt m APP (tierW e) ≤ idxW e := by
+      have hv2 : ¬ tcnt m APP (tierW e) ≤ idxA e := by
         intro hv; rw [gafLoopW] at hL; simp [hc, hf0, hv1, hv] at hL
       rw [gafLoopW_step m e f _ hc hf0 hv1 hv2 rfl] at hL
       have hfm1 := pr_word_sub1 f hf0
-      have hcnt : idxW e < tcnt m APP (tierW e) := UInt64.not_le.mp hv2
+      have hcnt : idxA e < tcnt m APP (tierW e) := UInt64.not_le.mp hv2
       have hva := viewApp_ok m a hR e he ⟨hv1, hcnt⟩
       have h1 := (view_app m a hR e he ⟨hv1, hcnt⟩ hc).2.1
       obtain ⟨ihr, ihb⟩ := ih _ (f - 1) e' f' (by rw [hfm1]; omega) h1 hL hf'
@@ -296,23 +296,23 @@ theorem gafLoopW_args (m : Mem) (a : AState) (hR : ArenaR m a) :
     intro e f e' f' F hfN he hL hf' hF
     have hf0 : f = 0 := UInt64.toNat_inj.mp (by simp; omega)
     subst hf0
-    by_cases hc : e >>> 28 = 4
+    by_cases hc : tagW e = 4
     · rw [gafLoopW] at hL; simp [hc] at hL
     · rw [gafLoopW_done m e 0 hc] at hL
       obtain ⟨-, rfl⟩ := Prod.mk.inj (Option.some.inj hL)
       exact absurd rfl hf'
   | succ N ih =>
     intro e f e' f' F hfN he hL hf' hF
-    by_cases hc : e >>> 28 = 4
+    by_cases hc : tagW e = 4
     · have hf0 : f ≠ 0 := by
         intro hf0; rw [hf0, gafLoopW] at hL; simp [hc] at hL
       have hv1 : ¬ (tierW e ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0) := by
         intro hv; rw [gafLoopW] at hL; simp [hc, hf0, hv] at hL
-      have hv2 : ¬ tcnt m APP (tierW e) ≤ idxW e := by
+      have hv2 : ¬ tcnt m APP (tierW e) ≤ idxA e := by
         intro hv; rw [gafLoopW] at hL; simp [hc, hf0, hv1, hv] at hL
       rw [gafLoopW_step m e f _ hc hf0 hv1 hv2 rfl] at hL
       have hfm1 := pr_word_sub1 f hf0
-      have hcnt : idxW e < tcnt m APP (tierW e) := UInt64.not_le.mp hv2
+      have hcnt : idxA e < tcnt m APP (tierW e) := UInt64.not_le.mp hv2
       have hva := viewApp_ok m a hR e he ⟨hv1, hcnt⟩
       have h1 := (view_app m a hR e he ⟨hv1, hcnt⟩ hc).2.1
       have hf1 := pr_word_ne0 f hf0
@@ -340,7 +340,7 @@ theorem gafLoopW_args (m : Mem) (a : AState) (hR : ArenaR m a) :
 
 /-- **The model of `lam_proj`'s loop**: the final `(f, k, e)`. -/
 def lpLoopW (m : Mem) (f k e : Word) : Option (Word × Word × Word) :=
-  if e >>> 28 = 5 then
+  if tagW e = 5 then
     if f = 0 then none
     else if tierW e ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
     else if tcnt m LAM (tierW e) ≤ idxW e then none
@@ -353,11 +353,11 @@ decreasing_by
   have := pr_word_ne0 f hf0
   omega
 
-theorem lpLoopW_done (m : Mem) (f k e : Word) (h : e >>> 28 ≠ 5) :
+theorem lpLoopW_done (m : Mem) (f k e : Word) (h : tagW e ≠ 5) :
     lpLoopW m f k e = some (f, k, e) := by
   rw [lpLoopW]; simp [h]
 
-theorem lpLoopW_step (m : Mem) (f k e e' : Word) (h : e >>> 28 = 5) (hf : f ≠ 0)
+theorem lpLoopW_step (m : Mem) (f k e e' : Word) (h : tagW e = 5) (hf : f ≠ 0)
     (hv1 : ¬ (tierW e ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0))
     (hv2 : ¬ tcnt m LAM (tierW e) ≤ idxW e)
     (he' : e' = tfld m LAM (tierW e) (idxW e) 1) :
@@ -381,7 +381,7 @@ theorem lamProjLoop_spec (n : Nat) (s₀ : St) :
     rw [exec, step_while (w := lamProjLoop) rfl]
     sym only [lang_grind, arena_grind] =>
       vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih, evalE_tld, tld, evalE_cnt,
-        tcntM, evalE_tierE, evalE_idxE] <;> finish [tierW, idxW]
+        tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] <;> finish [tierW, idxW]
 
 theorem lamProjLoop_step_spec (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀⦄
@@ -398,7 +398,7 @@ def lamProjW (m : Mem) (f k e : Word) : Option (Word × Word × Word) :=
   | none => none
   | some (f', k', e') =>
     if f' = 0 then none
-    else if e' >>> 28 ≠ 0 then some (0, 0, 0)
+    else if tagW e' ≠ 0 then some (0, 0, 0)
     else if tierW e' ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
     else if tcnt m BVAR (tierW e') ≤ idxW e' then none
     else if tfld m BVAR (tierW e') (idxW e') 0 < k' then
@@ -418,7 +418,7 @@ theorem lamProjL_spec (p : Prog) (hp : p.lookup "lam_proj" = some lamProjL) (n :
   | succ n =>
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        lamProjLoop_step_spec p n, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] <;>
+        lamProjLoop_step_spec p n, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] <;>
       finish [lamProjW, LocEq, tierW, idxW]
 
 /-- **The loop's model refines `lamProj?`'s descent** (`k + f` does not wrap). -/
@@ -426,14 +426,14 @@ theorem lpLoopW_ok (m : Mem) (a : AState) (hR : ArenaR m a) :
     ∀ (N : Nat) (f k e f' k' e' : Word), f.toNat ≤ N → HW e → k.toNat + f.toNat < 2 ^ 64 →
       lpLoopW m f k e = some (f', k', e') →
       (lamProj? f.toNat k.toNat (decE e)).run a = (lamProj? f'.toNat k'.toNat (decE e')).run a ∧
-        HW e' ∧ k'.toNat + f'.toNat = k.toNat + f.toNat ∧ e' >>> 28 ≠ 5 := by
+        HW e' ∧ k'.toNat + f'.toNat = k.toNat + f.toNat ∧ tagW e' ≠ 5 := by
   intro N
   induction N with
   | zero =>
     intro f k e f' k' e' hfN he hkf hL
     have hf0 : f = 0 := UInt64.toNat_inj.mp (by simp; omega)
     subst hf0
-    by_cases hc : e >>> 28 = 5
+    by_cases hc : tagW e = 5
     · rw [lpLoopW] at hL; simp [hc] at hL
     · rw [lpLoopW_done m 0 k e hc] at hL
       simp only [Option.some.injEq, Prod.mk.injEq] at hL
@@ -441,7 +441,7 @@ theorem lpLoopW_ok (m : Mem) (a : AState) (hR : ArenaR m a) :
       exact ⟨rfl, he, rfl, hc⟩
   | succ N ih =>
     intro f k e f' k' e' hfN he hkf hL
-    by_cases hc : e >>> 28 = 5
+    by_cases hc : tagW e = 5
     · have hf0 : f ≠ 0 := by
         intro hf0; rw [hf0, lpLoopW] at hL; simp [hc] at hL
       have hv1 : ¬ (tierW e ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0) := by
@@ -489,7 +489,7 @@ theorem lamProjW_ok {m : Mem} {a : AState} (hR : ArenaR m a) {f k e r0 r1 r2 : W
   obtain ⟨j, hj⟩ := Nat.exists_eq_succ_of_ne_zero (pr_word_ne0 f' hf0)
   have hlam : ((decE e').tag == ETag.lam) = false := by
     rw [tag_beq_w e' he' 5 (by decide) ETag.lam rfl 5 rfl]; simp [hn5]
-  by_cases hg : e' >>> 28 = 0
+  by_cases hg : tagW e' = 0
   · simp only [hg, ne_eq, not_true_eq_false, ↓reduceIte] at hW
     have hbv : ((decE e').tag == ETag.bvar) = true := by
       rw [tag_beq_w e' he' 0 (by decide) ETag.bvar rfl 0 rfl]; simp [hg]
@@ -529,7 +529,7 @@ theorem lamProjW_ok {m : Mem} {a : AState} (hR : ArenaR m a) {f k e r0 r1 r2 : W
 
 /-- **The model of `type_sort_pw`'s loop**: the final `(f, r, d)`. -/
 def tsLoopW (m : Mem) (f r d : Word) : Option (Word × Word × Word) :=
-  if r >>> 28 = 6 then
+  if tagW r = 6 then
     if f = 0 then none
     else if tierW r ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
     else if tcnt m FORALL (tierW r) ≤ idxW r then none
@@ -542,11 +542,11 @@ decreasing_by
   have := pr_word_ne0 f hf0
   omega
 
-theorem tsLoopW_done (m : Mem) (f r d : Word) (h : r >>> 28 ≠ 6) :
+theorem tsLoopW_done (m : Mem) (f r d : Word) (h : tagW r ≠ 6) :
     tsLoopW m f r d = some (f, r, d) := by
   rw [tsLoopW]; simp [h]
 
-theorem tsLoopW_step (m : Mem) (f r d r' : Word) (h : r >>> 28 = 6) (hf : f ≠ 0)
+theorem tsLoopW_step (m : Mem) (f r d r' : Word) (h : tagW r = 6) (hf : f ≠ 0)
     (hv1 : ¬ (tierW r ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0))
     (hv2 : ¬ tcnt m FORALL (tierW r) ≤ idxW r)
     (hr' : r' = tfld m FORALL (tierW r) (idxW r) 1) :
@@ -570,7 +570,7 @@ theorem typeSortPWLoop_spec (n : Nat) (s₀ : St) :
     rw [exec, step_while (w := typeSortPWLoop) rfl]
     sym only [lang_grind, arena_grind] =>
       vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih, evalE_tld, tld, evalE_cnt,
-        tcntM, evalE_tierE, evalE_idxE] <;> finish [tierW, idxW]
+        tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] <;> finish [tierW, idxW]
 
 theorem typeSortPWLoop_step_spec (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀⦄
@@ -587,14 +587,14 @@ theorem tsLoopW_ok (m : Mem) (a : AState) (hR : ArenaR m a) (fe : IFEnv) (root :
       tsLoopW m f r d = some (f', r', d') →
       (typeSortPWGo fe root f.toNat (decE r) d.toNat).run a =
         (typeSortPWGo fe root f'.toNat (decE r') d'.toNat).run a ∧
-        HW r' ∧ d'.toNat + f'.toNat = d.toNat + f.toNat ∧ r' >>> 28 ≠ 6 := by
+        HW r' ∧ d'.toNat + f'.toNat = d.toNat + f.toNat ∧ tagW r' ≠ 6 := by
   intro N
   induction N with
   | zero =>
     intro f r d f' r' d' hfN he hkf hL
     have hf0 : f = 0 := UInt64.toNat_inj.mp (by simp; omega)
     subst hf0
-    by_cases hc : r >>> 28 = 6
+    by_cases hc : tagW r = 6
     · rw [tsLoopW] at hL; simp [hc] at hL
     · rw [tsLoopW_done m 0 r d hc] at hL
       simp only [Option.some.injEq, Prod.mk.injEq] at hL
@@ -602,7 +602,7 @@ theorem tsLoopW_ok (m : Mem) (a : AState) (hR : ArenaR m a) (fe : IFEnv) (root :
       exact ⟨rfl, he, rfl, hc⟩
   | succ N ih =>
     intro f r d f' r' d' hfN he hkf hL
-    by_cases hc : r >>> 28 = 6
+    by_cases hc : tagW r = 6
     · have hf0 : f ≠ 0 := by
         intro hf0; rw [hf0, tsLoopW] at hL; simp [hc] at hL
       have hv1 : ¬ (tierW r ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0) := by
@@ -635,17 +635,17 @@ theorem tsLoopW_ok (m : Mem) (a : AState) (hR : ArenaR m a) (fe : IFEnv) (root :
 
 /-- **The model of `proof_pw`'s loop**: the final `(f, e)`. -/
 def ppLoopW (m : Mem) (f e : Word) : Option (Word × Word) :=
-  if e >>> 28 = 5 ∨ e >>> 28 = 7 ∨ e >>> 28 = 4 then
+  if tagW e = 5 ∨ tagW e = 7 ∨ tagW e = 4 then
     if f = 0 then none
     else if tierW e ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
-    else if e >>> 28 = 5 then
+    else if tagW e = 5 then
       if tcnt m LAM (tierW e) ≤ idxW e then none
       else ppLoopW m (f - 1) (tfld m LAM (tierW e) (idxW e) 1)
-    else if e >>> 28 = 7 then
+    else if tagW e = 7 then
       if tcnt m LET (tierW e) ≤ idxW e then none
       else ppLoopW m (f - 1) (tfld m LET (tierW e) (idxW e) 2)
-    else if tcnt m APP (tierW e) ≤ idxW e then none
-      else ppLoopW m (f - 1) (tfld m APP (tierW e) (idxW e) 0)
+    else if tcnt m APP (tierW e) ≤ idxA e then none
+      else ppLoopW m (f - 1) (tfld m APP (tierW e) (idxA e) 0)
   else some (f, e)
 termination_by f.toNat
 decreasing_by
@@ -655,18 +655,18 @@ decreasing_by
     have := pr_word_ne0 f hf0
     omega
 
-theorem ppLoopW_done (m : Mem) (f e : Word) (h5 : e >>> 28 ≠ 5) (h7 : e >>> 28 ≠ 7)
-    (h4 : e >>> 28 ≠ 4) : ppLoopW m f e = some (f, e) := by
+theorem ppLoopW_done (m : Mem) (f e : Word) (h5 : tagW e ≠ 5) (h7 : tagW e ≠ 7)
+    (h4 : tagW e ≠ 4) : ppLoopW m f e = some (f, e) := by
   rw [ppLoopW]; simp [h5, h7, h4]
 
-theorem ppLoopW_lam (m : Mem) (f e e' : Word) (h : e >>> 28 = 5) (hf : f ≠ 0)
+theorem ppLoopW_lam (m : Mem) (f e e' : Word) (h : tagW e = 5) (hf : f ≠ 0)
     (hv1 : ¬ (tierW e ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0))
     (hv2 : ¬ tcnt m LAM (tierW e) ≤ idxW e)
     (he' : e' = tfld m LAM (tierW e) (idxW e) 1) :
     ppLoopW m f e = ppLoopW m (f - 1) e' := by
   subst he'; rw [ppLoopW]; simp only [h, true_or, ↓reduceIte, hf, hv1, hv2]
 
-theorem ppLoopW_let (m : Mem) (f e e' : Word) (h : e >>> 28 = 7) (hf : f ≠ 0)
+theorem ppLoopW_let (m : Mem) (f e e' : Word) (h : tagW e = 7) (hf : f ≠ 0)
     (hv1 : ¬ (tierW e ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0))
     (hv2 : ¬ tcnt m LET (tierW e) ≤ idxW e)
     (he' : e' = tfld m LET (tierW e) (idxW e) 2) :
@@ -675,10 +675,10 @@ theorem ppLoopW_let (m : Mem) (f e e' : Word) (h : e >>> 28 = 7) (hf : f ≠ 0)
   simp only [h, or_true, true_or, ↓reduceIte, hf, hv1, hv2,
     show ¬ ((7 : Word) = 5) by decide]
 
-theorem ppLoopW_app (m : Mem) (f e e' : Word) (h : e >>> 28 = 4) (hf : f ≠ 0)
+theorem ppLoopW_app (m : Mem) (f e e' : Word) (h : tagW e = 4) (hf : f ≠ 0)
     (hv1 : ¬ (tierW e ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0))
-    (hv2 : ¬ tcnt m APP (tierW e) ≤ idxW e)
-    (he' : e' = tfld m APP (tierW e) (idxW e) 0) :
+    (hv2 : ¬ tcnt m APP (tierW e) ≤ idxA e)
+    (he' : e' = tfld m APP (tierW e) (idxA e) 0) :
     ppLoopW m f e = ppLoopW m (f - 1) e' := by
   subst he'; rw [ppLoopW]
   simp only [h, or_true, ↓reduceIte, hf, hv1, hv2, show ¬ ((4 : Word) = 5) by decide,
@@ -703,7 +703,7 @@ theorem proofPWLoop_spec (n : Nat) (s₀ : St) :
     rw [exec, step_while (w := proofPWLoop) rfl]
     sym only [lang_grind, arena_grind] =>
       vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih, evalE_tld, tld, evalE_cnt,
-        tcntM, evalE_tierE, evalE_idxE] <;> finish [tierW, idxW]
+        tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] <;> finish [tierW, idxW]
 
 theorem proofPWLoop_step_spec (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀⦄
@@ -718,14 +718,14 @@ end ppLoop
 theorem ppLoopW_ok (m : Mem) (a : AState) (hR : ArenaR m a) (fe : IFEnv) :
     ∀ (N : Nat) (f e f' e' : Word), f.toNat ≤ N → HW e → ppLoopW m f e = some (f', e') →
       (proofPW fe f.toNat (decE e)).run a = (proofPW fe f'.toNat (decE e')).run a ∧
-        HW e' ∧ e' >>> 28 ≠ 5 ∧ e' >>> 28 ≠ 7 ∧ e' >>> 28 ≠ 4 := by
+        HW e' ∧ tagW e' ≠ 5 ∧ tagW e' ≠ 7 ∧ tagW e' ≠ 4 := by
   intro N
   induction N with
   | zero =>
     intro f e f' e' hfN he hL
     have hf0 : f = 0 := UInt64.toNat_inj.mp (by simp; omega)
     subst hf0
-    by_cases hc : e >>> 28 = 5 ∨ e >>> 28 = 7 ∨ e >>> 28 = 4
+    by_cases hc : tagW e = 5 ∨ tagW e = 7 ∨ tagW e = 4
     · rw [ppLoopW] at hL; simp [hc] at hL
     · simp only [not_or] at hc
       rw [ppLoopW_done m 0 e hc.1 hc.2.1 hc.2.2] at hL
@@ -734,7 +734,7 @@ theorem ppLoopW_ok (m : Mem) (a : AState) (hR : ArenaR m a) (fe : IFEnv) :
       exact ⟨rfl, he, hc.1, hc.2.1, hc.2.2⟩
   | succ N ih =>
     intro f e f' e' hfN he hL
-    by_cases hc : e >>> 28 = 5 ∨ e >>> 28 = 7 ∨ e >>> 28 = 4
+    by_cases hc : tagW e = 5 ∨ tagW e = 7 ∨ tagW e = 4
     · have hf0 : f ≠ 0 := by
         intro hf0; rw [hf0, ppLoopW] at hL; simp [hc] at hL
       have hv1 : ¬ (tierW e ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0) := by
@@ -775,12 +775,12 @@ theorem ppLoopW_ok (m : Mem) (a : AState) (hR : ArenaR m a) (fe : IFEnv) :
         simp only [ht, ht7, Bool.false_eq_true, ↓reduceIte, StateT.run_bind,
           show ∀ x, (viewLet x).run a = .ok (a.store.viewLet x, a) from fun _ => rfl, hvl,
           except_ok_bind]
-      · have hv2 : ¬ tcnt m APP (tierW e) ≤ idxW e := by
+      · have hv2 : ¬ tcnt m APP (tierW e) ≤ idxA e := by
           intro hv; rw [ppLoopW] at hL
           simp [h4, hf0, hv1, hv, show ¬ ((4 : Word) = 5) by decide,
             show ¬ ((4 : Word) = 7) by decide] at hL
         rw [ppLoopW_app m f e _ h4 hf0 hv1 hv2 rfl] at hL
-        have hcnt : idxW e < tcnt m APP (tierW e) := UInt64.not_le.mp hv2
+        have hcnt : idxA e < tcnt m APP (tierW e) := UInt64.not_le.mp hv2
         have hva := viewApp_ok m a hR e he ⟨hv1, hcnt⟩
         have h1 := (view_app m a hR e he ⟨hv1, hcnt⟩ h4).2.1
         obtain ⟨ihr, ihb⟩ := ih (f - 1) _ f' e' (by rw [hfm1]; omega) h1 hL

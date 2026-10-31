@@ -14,7 +14,7 @@ tag `9`); the record relation `PJRecRel` (the first and third words are the chil
 words, decoded at their own kinds `.name`/`.expr`; the middle word is the index, as for `bvar`);
 the node hash `pjhash`; the lens `projLens`; the scratch skip (`skPj`, `pjskipW_eq`) tests only
 `n` and `e` (`eViewHasScratchChild (.proj n _ e) = if n.isPersistent then !e.isPersistent else
-true`), one application of `bit27_or` as `app`'s two-field skip does (the index `i` is not a
+true`), one application of `bit31_or` as `app`'s two-field skip does (the index `i` is not a
 handle and is not tested). `ProjR m a` is the library's `ConsR` for the two `proj` tables.
 `internProj_refines`: `intern_proj(n, u, e)` refines
 `internE (.proj (decI (k := .name) n) u.toNat (decE e))` under `ProjR`.
@@ -68,7 +68,7 @@ theorem persFindMaybe_proj (a : AState) (n : NIdx) (i : Nat) (e : EIdx) :
 /-- `internE` at a `proj` node is the library's protocol, the persistent probe after the skip. -/
 theorem internE_proj_run (n : NIdx) (i : Nat) (e : EIdx) (a : AState) :
     (internE (.proj n i e)).run a =
-      protoRun projLens (pjKey n i e) ETag.proj (pfPj a n i e) (a.store.derOfView (.proj n i e))
+      protoRun projLens (pjKey n i e) ETag.proj false (pfPj a n i e) (a.store.derOfView (.proj n i e))
         (.native "arena: expression constructor array full") a := by
   simp only [internE, internNodeE, EStore.find?, EStore.intern, ETables.find?, Tbl.find?,
     ETables.sizeOf, ETables.push, StateT.run_bind, StateT.run_get, pure_bind, persFindMaybe_proj]
@@ -77,12 +77,13 @@ theorem internE_proj_run (n : NIdx) (i : Nat) (e : EIdx) (a : AState) :
     simp only [hs, hc, Bool.false_eq_true, ↓reduceIte, pjKey, protoRun, projLens] <;>
     (try split) <;> simp_all [withScrProjs, withPersProjs, fail,
       throwThe, MonadExceptOf.throw, StateT.run, set, StateT.set,
-      StateT.lift, bind, Except.bind, pure, Except.pure, StateT.bind, StateT.pure]
+      StateT.lift, bind, Except.bind, pure, Except.pure, StateT.bind, StateT.pure, mkS, capS,
+      ENodeView.cap, Idx.idxCap]
 
 /-! ## The relation between L memory and the arena's `proj` tables -/
 
 /-- The `proj` schema: `PJREC`, `PJSLOT`, two words per node, the counts at `CTL[32 + t]`. -/
-def projSch : Schema := ⟨PJREC, PJSLOT, 2, 32, ETag.proj⟩
+def projSch : Schema := ⟨PJREC, PJSLOT, 2, 32, ETag.proj, false⟩
 
 theorem projSch_wf : projSch.WF :=
   ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide⟩
@@ -176,7 +177,7 @@ end query
 
 theorem pjpushOK_room (m : Mem) (t : Word) (h : pjpushOK m t = true) : PushRoom projSch m t := by
   simp only [pjpushOK, Bool.and_eq_true, decide_eq_true_eq] at h
-  simp only [PushRoom, cntW, pjcnt, projSch, len64_eq] at *
+  simp only [PushRoom, Schema.cap, capS, cntW, pjcnt, projSch, len64_eq] at *
   grind
 
 /-- **The `proj` table's shape.** -/
@@ -184,17 +185,18 @@ theorem projCS_wf : projCS.WF where
   sch := projSch_wf
   P := by decide
   S := by decide
+  wtag h := by simp [projCS] at h
   col A h := by simp [projCS] at h
   colRoom A h := by simp [projCS] at h
   room m t h := (pjpushOK_room m t ((pjpushOK_eqC m t).trans h)).2
   vs ks h hk := by simp [pushArgs, projCS, hk]
   ex h := by simp [projCS] at h
 
-/-- The L skip test is the arena's (one application of `bit27_or`, the index `i` not tested). -/
+/-- The L skip test is the arena's (one application of `bit31_or`, the index `i` not tested). -/
 theorem pjskipW_eq (m : Mem) (a : AState) (n e : Word) (hn : n.toNat < 2 ^ 32)
     (he : e.toNat < 2 ^ 32) (hfl : (rdW (m.arr64 CTL) 1 != 0) = a.store.scratchOn) :
     (pjskipW m n e = 0) = (skPj a (decI (k := .name) n) (decE e) = false) := by
-  have := bit27_or n e
+  have := bit31_or n e
   simp only [pjskipW, skPj, isPersistent_decI (k := .name) n hn, isPersistent_decE e he, ← hfl]
   grind
 

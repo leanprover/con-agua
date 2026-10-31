@@ -42,15 +42,28 @@ The stored-family statements (`sumRules_spec`, `tgtStoredRules_spec`,
 read at the constructors' view while the caches serve whatever index the
 recursor stage ended on.
 -/
-import ConRon.Bridge.Inductives.Rel
+module
+
+public import ConRon.Bridge.Inductives.Rel
 import ConRon.Bridge.Inductives.PosWalks
 import ConRon.Bridge.Inductives.StructParts
 import ConRon.Bridge.Inductives.FieldTele
 import ConRon.Bridge.Inductives.SumInstall
 import ConRon.Bridge.Inductives.BlockParts
-import ConRon.Bridge.Inductives.Positivity
+public import ConRon.Bridge.Inductives.Positivity
 import ConLeche.Verify.Inductives.RecCheckScope
-import ConLeche.Verify.Cached.TargetRecC
+public import ConLeche.Verify.Cached.TargetRecC
+import ConRon.Bridge.Checker.Base
+import ConRon.Bridge.Checker.Names
+import ConRon.Bridge.Core.Walks.FvarB
+import ConRon.Bridge.ExprOps.Ranges
+import ConRon.Bridge.Core.Walks.Cached
+import ConRon.Bridge.ExprOps.Owed
+import ConRon.Bridge.Promote.WalkDecl
+import ConRon.Bridge.ExprOps.Inst1
+import ConRon.Bridge.Specs
+
+public section
 
 namespace ConRon.Bridge.Inductives
 
@@ -65,7 +78,7 @@ open ConLeche ConRon.Arena ConRon.Bridge
 parameters, its constructors (`dCtors`), the walk's recorded normal forms
 (`dCtorNf`) and the recursor prefix's openers; the counts and the member index
 are carried verbatim. -/
-def dMajor (st : EStore) (m : Arena.TargetMajor) : Option ConLeche.TargetMajor := do
+@[expose] def dMajor (st : EStore) (m : Arena.TargetMajor) : Option ConLeche.TargetMajor := do
   let ind ← denoteN st.ns m.ind
   let lvls ← denoteLs st.lss m.lvls
   let ds ← Frontend.denoteEList st m.ds
@@ -1520,7 +1533,7 @@ theorem blockNestedBit_eq {st : EStore} {p : Arena.BlockShape} {pP : ConLeche.Bl
 /-- con-leche: ConLeche/Kernel/Inductives/RecCheck.lean:607-617 consBlockRecsTF
 (its list) — a checked recursor with its class and right-hand sides,
 denoted. -/
-def dRecOut (st : EStore) (t : IConstantVal × Arena.TargetMajor × List EIdx) :
+@[expose] def dRecOut (st : EStore) (t : IConstantVal × Arena.TargetMajor × List EIdx) :
     Option (ConstantVal × ConLeche.TargetMajor × List Expr) := do
   let cv ← Frontend.denoteCV st t.1
   let M ← dMajor st t.2.1

@@ -55,8 +55,8 @@ def fvmatchW (r : Array Word) (_t i u ty : Word) : Bool :=
 /-! ## The schema -/
 
 /-- The handle word of node `0` of the persistent / scratch `fvar` tier (tag `1`). -/
-def fvarP : Word := 0x10000000
-def fvarS : Word := 0x18000000
+def fvarP : Word := 0x04000000
+def fvarS : Word := 0x84000000
 
 /-- The hash of node `i` of tier `t`. -/
 def fvhash (m : Mem) (t i : Word) : Word :=
@@ -83,7 +83,7 @@ def fvarCS : ConsSch where
     if len(FVREC⟨t⟩) >> 1 <= c || len(FVLP⟨t⟩) <= c { skip } })
   recW := [.var 1, .var 2]
   ihash := lblk (u, ty, h) { h := ((⟪fnvBasis⟫ ^ u) * ⟪fnvPrime⟫ ^ ty) * ⟪fnvPrime⟫ }
-  skipW := some (rhsOf (lblk (u, ty, h, sk) { sk := (ty >> 27) & 1 }))
+  skipW := some (rhsOf (lblk (u, ty, h, sk) { sk := (ty >> 31) & 1 }))
   xloc := 4
   pre := some lpBlkF
   col := some FVLP
@@ -93,11 +93,11 @@ def fvarCS : ConsSch where
   hsM := fvhash
   vsM as := as
   roomM m t c := decide (m.len64 (tierA FVREC t) >>> (1 : Word) ≤ c) || decide (m.len64 (tierA FVLP t) ≤ c)
-  skM ks := (ks.getD 1 0 >>> 27) &&& 1
+  skM ks := (ks.getD 1 0 >>> 31) &&& 1
 
 /-! ## `fvar_find(t, u, ty, h)`: the probe -/
 
-/-- con-ron: ConRon/Arena/Store.lean:90-91 ConRon.Arena.Tbl.find? -/
+/-- con-ron: ConRon/Arena/Store.lean:94-95 ConRon.Arena.Tbl.find? -/
 def fvarFind : FunDecl := consFindG fvarCS
 
 /-! ## `fvar_push(t, u, ty, j)`: append a node to tier `t`, register it at slot `j` -/
@@ -107,10 +107,10 @@ def fvcnt (m : Mem) (t : Word) : Word := rdW (m.arr64 CTL) (26 + t)
 
 /-- `fvar_push`'s room checks: the handle index, the record array. -/
 def fvpushOK (m : Mem) (t : Word) : Bool :=
-  decide (fvcnt m t < (134217728 : Word)) && decide (fvcnt m t < m.len64 (tierA FVREC t) >>> (1 : Word)) &&
+  decide (fvcnt m t < (67108864 : Word)) && decide (fvcnt m t < m.len64 (tierA FVREC t) >>> (1 : Word)) &&
     decide (fvcnt m t < m.len64 (tierA FVLP t))
 
-/-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
+/-- con-ron: ConRon/Arena/Store.lean:97-102 ConRon.Arena.Tbl.push -/
 def fvarPush : FunDecl := consPushG fvarCS
 
 /-! ## `intern_fvar(u, ty)`: hash-cons the expression `fvar u ty`
@@ -122,14 +122,14 @@ scratch tier is open, the append to the tier the store is in. -/
 /-- The scratch skip: the scratch tier is open and `ty` is a scratch handle. The index `u` is not
 a handle, so only `ty` is tested. -/
 def fvskipW (m : Mem) (ty : Word) : Word :=
-  if rdW (m.arr64 CTL) 1 ≠ 0 then (ty >>> 27) &&& 1 else 0
+  if rdW (m.arr64 CTL) 1 ≠ 0 then (ty >>> 31) &&& 1 else 0
 
 /-- The model of `intern_fvar`: the handle and the memory after, or `none` where the L code
 aborts (the library's `consInternM`). -/
 def fvinternW (m : Mem) (u ty : Word) : Option (Word × Mem) := consInternM fvarCS m [u, ty]
 
-/-- con-ron: ConRon/Arena/Monad.lean:246-264 ConRon.Arena.internE
-con-ron: ConRon/Arena/Monad.lean:218-244 ConRon.Arena.internNodeE -/
+/-- con-ron: ConRon/Arena/Monad.lean:249-267 ConRon.Arena.internE
+con-ron: ConRon/Arena/Monad.lean:221-247 ConRon.Arena.internNodeE -/
 @[l_impl ConRon.Arena.internE ConRon.Arena.internNodeE]
 def internFVar : FunDecl := consInternG fvarCS
 
@@ -155,12 +155,12 @@ def internFVars (m : Mem) : List (Word × Word) → Option (List Word)
 /- `fvar 0 1`, `fvar 1 1`, `fvar 0 2`, `fvar 0 1`: persistent handles 0, 1, 2, 0 (sharing is on the
 whole pair, not the index alone or the type alone). -/
 #guard internFVars (fvarMem 0) [(0, 1), (1, 1), (0, 2), (0, 1)] ==
-  some [0x10000000, 0x10000001, 0x10000002, 0x10000000]
+  some [0x04000000, 0x04000001, 0x04000002, 0x04000000]
 
 /- Scratch open: a persistent `ty` is probed in the persistent tier (empty); the nodes go to the
 scratch tier; a scratch `ty` (`0x08000000`) skips the persistent probe. -/
-#guard internFVars (fvarMem 1) [(0, 1), (0, 0x08000000), (0, 1), (0, 0x08000000)] ==
-  some [0x18000000, 0x18000001, 0x18000000, 0x18000001]
+#guard internFVars (fvarMem 1) [(0, 1), (0, 0x80000000), (0, 1), (0, 0x80000000)] ==
+  some [0x84000000, 0x84000001, 0x84000000, 0x84000001]
 
 /-! ## The specs: the library's, from this table's obligations -/
 

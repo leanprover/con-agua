@@ -31,7 +31,7 @@ theorem erSliceEqLoop_spec (p : Prog) (n : Nat) (s₀ : St) :
   | succ n ih =>
     rw [exec, step_while (w := erSliceEqLoop) rfl]
     sym only [lang_grind, arena_grind] =>
-      vcgen [step, evalE, evalC, evalArgs, setLoc, ld64, ih] <;> finish
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, step, evalE, evalC, evalArgs, setLoc, ld64, ih] <;> finish
 
 
 theorem erSliceEq_spec (p : Prog) (hp : p.lookup "er_slice_eq" = some erSliceEqL) (n : Nat)
@@ -43,7 +43,7 @@ theorem erSliceEq_spec (p : Prog) (hp : p.lookup "er_slice_eq" = some erSliceEqL
   rw [invoke_eq _ hp]
   simp only [callFn, erSliceEqL]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, fun s₀ => Triple.step_exec (erSliceEqLoop_spec p (n + 1) s₀)] <;> finish
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, fun s₀ => Triple.step_exec (erSliceEqLoop_spec p (n + 1) s₀)] <;> finish
 
 theorem mapM_get {α β : Type} {f : α → Option β} :
     ∀ {xs : List α} {l : List β}, xs.mapM f = some l →
@@ -309,7 +309,7 @@ theorem natPredLit_refines_hw (hg : p.lookup "nat_pred_lit" = some natPredLit) (
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind, natop_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
         natSub_spec p hpl hps hpt hpn n, hI a₀ n] <;>
       finish (gen := 20) [natPredArm]
 
@@ -320,24 +320,24 @@ def npLitF (x : List Word × Mem) : Option (Word × Word × Mem) := some (1, x.1
 
 /-- The model of `nat_pred`. -/
 def natPredW (p : Prog) (n : Nat) (m : Mem) (e : Word) : Option (Word × Word × Mem) :=
-  if e >>> 28 = 8 then
+  if tagW e = 8 then
     if tierW e ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
     else if tcnt m LIT (tierW e) ≤ idxW e then none
     else if tfld m LIT (tierW e) (idxW e) 0 ≠ 0 then some (0, 0, m)
     else if tfld m LIT (tierW e) (idxW e) 2 = 0 then some (0, 0, m)
     else (callW p n "nat_pred_lit" [tfld m LIT (tierW e) (idxW e) 1,
       tfld m LIT (tierW e) (idxW e) 2] m).bind npLitF
-  else if e >>> 28 = 4 then
+  else if tagW e = 4 then
     if tierW e ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
-    else if tcnt m APP (tierW e) ≤ idxW e then none
-    else if tfld m APP (tierW e) (idxW e) 0 >>> 28 ≠ 3 then some (0, 0, m)
-    else if tierW (tfld m APP (tierW e) (idxW e) 0) ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0
+    else if tcnt m APP (tierW e) ≤ idxA e then none
+    else if tagW (tfld m APP (tierW e) (idxA e) 0) ≠ 3 then some (0, 0, m)
+    else if tierW (tfld m APP (tierW e) (idxA e) 0) ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0
       then none
-    else if tcnt m CONST (tierW (tfld m APP (tierW e) (idxW e) 0)) ≤
-      idxW (tfld m APP (tierW e) (idxW e) 0) then none
-    else if tfld m CONST (tierW (tfld m APP (tierW e) (idxW e) 0)) (idxW (tfld m APP (tierW e) (idxW e) 0)) 0 = rdW (m.arr64 PINS) (1 + 3) ∧
-      tfld m CONST (tierW (tfld m APP (tierW e) (idxW e) 0)) (idxW (tfld m APP (tierW e) (idxW e) 0)) 1 = rdW (m.arr64 PINS) 52
-      then some (1, tfld m APP (tierW e) (idxW e) 1, m)
+    else if tcnt m CONST (tierW (tfld m APP (tierW e) (idxA e) 0)) ≤
+      idxW (tfld m APP (tierW e) (idxA e) 0) then none
+    else if tfld m CONST (tierW (tfld m APP (tierW e) (idxA e) 0)) (idxW (tfld m APP (tierW e) (idxA e) 0)) 0 = rdW (m.arr64 PINS) (1 + 3) ∧
+      tfld m CONST (tierW (tfld m APP (tierW e) (idxA e) 0)) (idxW (tfld m APP (tierW e) (idxA e) 0)) 1 = rdW (m.arr64 PINS) 52
+      then some (1, tfld m APP (tierW e) (idxA e) 1, m)
     else some (0, 0, m)
   else some (0, 0, m)
 
@@ -351,7 +351,7 @@ theorem natPred_spec (p : Prog) (hp : NatPredProg p) (n : Nat) (s₀ : St) (e : 
   simp only [callFn, natPredL]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt,
-      tcntM, evalE_tierE, evalE_idxE,
+      tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE,
       callW_spec p n "nat_pred_lit", pinAt_rd p hp.leaf.pinat n, pinWord_rd p hp.leaf.pinword n] <;>
     finish [natPredW, npLitF, Option.bind_some, tierW, idxW]
 
@@ -381,7 +381,7 @@ theorem natPred_refines (p : Prog) (hp : NatPredProg p) (hlw : LitInternHW) (n :
     · rw [hst]; exact ⟨MM, hS, KeptAll.refl _ _, StackKept.refl _⟩
     · unfold ResW; rw [← h1, ← h2]; exact ⟨hx, hy⟩
   unfold natPredW at hW
-  by_cases h8 : e >>> 28 = 8
+  by_cases h8 : tagW e = 8
   · simp only [h8, ↓reduceIte] at hW
     by_cases hs : tierW e ≠ 0 ∧ rdW (s₀.mem.arr64 CTL) 1 = 0
     · simp [hs] at hW
@@ -446,7 +446,7 @@ theorem natPred_refines (p : Prog) (hp : NatPredProg p) (hlw : LitInternHW) (n :
   -- the `app` arm
   have htl : ((decE e).tag == ETag.lit) = false := by rw [decE_tag_lit_beq e he]; simp [h8]
   simp only [h8, ↓reduceIte] at hW
-  rcases (Classical.em (e >>> 28 = 4)).symm with h4 | h4
+  rcases (Classical.em (tagW e = 4)).symm with h4 | h4
   · simp only [h4, ↓reduceIte] at hW
     refine hres 0 0 hW hw0 hw0 ?_
     simp only [natPred?, htl, decE_tag_app_beq e he, h4, decide_false, Bool.false_eq_true, ↓reduceIte]
@@ -454,29 +454,29 @@ theorem natPred_refines (p : Prog) (hp : NatPredProg p) (hlw : LitInternHW) (n :
   simp only [h4, ↓reduceIte] at hW
   by_cases hs : tierW e ≠ 0 ∧ rdW (s₀.mem.arr64 CTL) 1 = 0
   · simp [hs] at hW
-  by_cases hc : tcnt s₀.mem APP (tierW e) ≤ idxW e
+  by_cases hc : tcnt s₀.mem APP (tierW e) ≤ idxA e
   · simp [hs, hc] at hW
   simp only [hs, hc, ↓reduceIte] at hW
-  have hvo : viewOK s₀.mem e APP := ⟨hs, by simpa using hc⟩
+  have hvo : viewOKA s₀.mem e := ⟨hs, by simpa using hc⟩
   obtain ⟨-, hf, hx⟩ := view_app s₀.mem a₀ hR e he hvo h4
   have hpre : (natPred? (decE e)).run a₀ = (do
-      let f := decE (tfld s₀.mem APP (tierW e) (idxW e) 0)
+      let f := decE (tfld s₀.mem APP (tierW e) (idxA e) 0)
       if f.tag == ETag.const then
         match ← view f with
         | .const c us => do
           let el ← emptyLevels
           let ns ← pinNatSucc
           if c == ns && us == el then
-            pure (some (decE (tfld s₀.mem APP (tierW e) (idxW e) 1)))
+            pure (some (decE (tfld s₀.mem APP (tierW e) (idxA e) 1)))
           else pure none
         | _ => pure none
       else pure none : AM (Option EIdx)).run a₀ := by
     simp only [natPred?, htl, decE_tag_app_beq e he, h4, decide_true, Bool.false_eq_true, ↓reduceIte,
       StateT.run_bind, viewApp_run', viewApp_ok s₀.mem a₀ hR e he hvo, except_ok_bind]
     rfl
-  generalize tfld s₀.mem APP (tierW e) (idxW e) 0 = f at hf hW hpre
-  generalize tfld s₀.mem APP (tierW e) (idxW e) 1 = x at hx hW hpre
-  rcases (Classical.em (f >>> 28 = 3)).symm with f3 | f3
+  generalize tfld s₀.mem APP (tierW e) (idxA e) 0 = f at hf hW hpre
+  generalize tfld s₀.mem APP (tierW e) (idxA e) 1 = x at hx hW hpre
+  rcases (Classical.em (tagW f = 3)).symm with f3 | f3
   · simp only [ne_eq, f3, not_false_eq_true, ↓reduceIte] at hW
     refine hres 0 0 hW hw0 hw0 ?_
     rw [hpre]
@@ -549,13 +549,13 @@ theorem litEq_spec (p : Prog) (hle : p.lookup "lit_eq" = some litEqL)
   simp only [callFn, litEqL]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt,
-      tcntM, evalE_tierE, evalE_idxE, limbsEq_spec p hlq n] <;>
+      tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE, limbsEq_spec p hlq n] <;>
     finish [litEqW, tierW, idxW]
 
 /-- **A `lit` node's record**, past the view checks: a `natVal` is a normalised slice of its value,
 a `strVal` a slice of its bytes; kind word `0`/`1`; the slice below the pool top. -/
 theorem lit_rec (m : Mem) (a : AState) (hR : ArenaR m a) (h : Word) (hh : HW h)
-    (hv : viewOK m h LIT) (hg : h >>> 28 = 8) (l : ConLeche.Literal)
+    (hv : viewOK m h LIT) (hg : tagW h = 8) (l : ConLeche.Literal)
     (hl : a.store.view (decE h) = some (.lit l)) :
     (tfld m LIT (tierW h) (idxW h) 1).toNat +
       (tfld m LIT (tierW h) (idxW h) 2).toNat ≤ m.top.toNat ∧
@@ -587,8 +587,8 @@ theorem lit_rec (m : Mem) (a : AState) (hR : ArenaR m a) (h : Word) (hh : HW h)
 @[refines_part ConRon.Arena.quickDefEq "literal comparison"]
 theorem litEq_refines (p : Prog) (hle : p.lookup "lit_eq" = some litEqL)
     (hlq : p.lookup "limbs_eq" = some limbsEq) (n : Nat) (s₀ : St) (a₀ : AState)
-    (hR : ArenaR s₀.mem a₀) (a b : Word) (ha : HW a) (hb : HW b) (ha8 : a >>> 28 = 8)
-    (hb8 : b >>> 28 = 8) (l₁ l₂ : ConLeche.Literal)
+    (hR : ArenaR s₀.mem a₀) (a b : Word) (ha : HW a) (hb : HW b) (ha8 : tagW a = 8)
+    (hb8 : tagW b = 8) (l₁ l₂ : ConLeche.Literal)
     (hv₁ : a₀.store.view (decE a) = some (.lit l₁)) (hv₂ : a₀.store.view (decE b) = some (.lit l₂)) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "lit_eq" [a, b]
     ⦃fun r s' => s'.mem = s₀.mem ∧ LocEq s' s₀ ∧ decBool r = (l₁ == l₂) ∧ ResH r; ⊤⦄ := by

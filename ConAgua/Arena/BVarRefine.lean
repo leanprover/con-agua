@@ -53,7 +53,7 @@ theorem persFindMaybe_bvar (a : AState) (i : Nat) :
 /-- `internE` at a `bvar` node is the library's protocol, with no skip. -/
 theorem internE_bvar_run (i : Nat) (a : AState) :
     (internE (.bvar i)).run a =
-      protoRun bvarLens (bvarKey i) ETag.bvar a.store.pers.bvars.cons[bvarKey i]?
+      protoRun bvarLens (bvarKey i) ETag.bvar false a.store.pers.bvars.cons[bvarKey i]?
         (a.store.derOfView (.bvar i)) (.native "arena: expression constructor array full") a := by
   simp only [internE, internNodeE, EStore.find?, EStore.intern, ETables.find?, Tbl.find?,
     ETables.sizeOf, ETables.push, StateT.run_bind, StateT.run_get, pure_bind, persFindMaybe_bvar]
@@ -62,12 +62,13 @@ theorem internE_bvar_run (i : Nat) (a : AState) :
     simp only [hs, hc, Bool.false_eq_true, ↓reduceIte, bvarKey, protoRun, bvarLens] <;>
     (try split) <;> simp_all [withScrBVars, withPersBVars, fail,
       throwThe, MonadExceptOf.throw, StateT.run, set, StateT.set,
-      StateT.lift, bind, Except.bind, pure, Except.pure, StateT.bind, StateT.pure]
+      StateT.lift, bind, Except.bind, pure, Except.pure, StateT.bind, StateT.pure, mkS, capS,
+      ENodeView.cap, Idx.idxCap]
 
 /-! ## The relation between L memory and the arena's `bvar` tables -/
 
 /-- The `bvar` schema: `BREC`, `BSLOT`, one word per node, the counts at `CTL[22 + t]`. -/
-def bvarSch : Schema := ⟨BREC, BSLOT, 1, 22, ETag.bvar⟩
+def bvarSch : Schema := ⟨BREC, BSLOT, 1, 22, ETag.bvar, false⟩
 
 theorem bvarSch_wf : bvarSch.WF :=
   ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide⟩
@@ -136,7 +137,7 @@ end query
 theorem bpushOK_room (m : Mem) (t : Word) (h : bpushOK m t = true) : PushRoom bvarSch m t := by
   simp only [bpushOK, Bool.and_eq_true, decide_eq_true_eq] at h
   have := UInt64.toNat_shiftRight (m.len64 (tierA BREC t)) 0
-  simp only [PushRoom, cntW, bcnt, bvarSch, len64_eq] at *
+  simp only [PushRoom, Schema.cap, capS, cntW, bcnt, bvarSch, len64_eq] at *
   grind
 
 /-- **The `bvar` table's shape.** -/
@@ -144,6 +145,7 @@ theorem bvarCS_wf : bvarCS.WF where
   sch := bvarSch_wf
   P := by decide
   S := by decide
+  wtag h := by simp [bvarCS] at h
   col A h := by simp [bvarCS] at h
   colRoom A h := by simp [bvarCS] at h
   room m t h := (bpushOK_room m t ((bpushOK_eqC m t).trans h)).2

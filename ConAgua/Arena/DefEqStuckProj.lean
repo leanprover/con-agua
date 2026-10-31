@@ -57,7 +57,7 @@ through their runs). -/
 l_model exE_spec (p : Prog) (hf : p.lookup "ldpr_exit" = some ldprExitL)
   fns [hf ↦ exE list]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] unified
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
 
 theorem decOptR_someS {r : List Word} (h : r.headD 0 ≠ 0) : decOptR r = some (decE (r.tail.headD 0)) := by
   simp only [decOptR, decOpt, h, ↓reduceIte]
@@ -171,7 +171,7 @@ theorem ldprExit_refines (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (n 
 `lazy_delta_step` run per iteration, a final `ldpr_exit`, both `callE`). -/
 l_model ldpr_specE (p : Prog) (hf : p.lookup "lazy_delta_proj_reduction" = some lazyDeltaProjReductionL)
   fns [hf ↦ ldprE] grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] unified
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
 
 /-- **What the projection loop's errors claim from**: `lazy_delta_step`'s claims at every L fuel up
 to `n` (its refinement is outside the stuck side), the `defeq` slot's and `reduce_proj_core`'s
@@ -279,7 +279,7 @@ l_model ppE_spec (p : Prog) (hf : p.lookup "defeq_proj_pair" = some defeqProjPai
   fns [hf ↦ ppE list]
   specs [ldpr_specE p hl n]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] unified
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
 
 section ppRuns
 variable (mode : ConLeche.CheckMode) (r : CoreFnsA) (fe : IFEnv) (depth : Nat) (a b : EIdx)
@@ -314,7 +314,7 @@ theorem pp_ref (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (n : Nat)
       (CorePost decBool dn s₀.mem vis fe M eb ResH) := by
   have hS := hs.rel
   have hR := hS.arena.base
-  have htag : ∀ h : Word, HW h → ((decE h).tag == ETag.proj) = decide (h >>> 28 = 9) :=
+  have htag : ∀ h : Word, HW h → ((decE h).tag == ETag.proj) = decide (tagW h = 9) :=
     fun h hh => tag_beq_w _ hh 9 (by decide) ETag.proj rfl 9 rfl
   have hfalse : (((decE a).tag == ETag.proj && (decE b).tag == ETag.proj) = false) →
       RefE (LdprG p n) (.ok ([0], s₀.mem) : Except Err (List Word × Mem))
@@ -322,16 +322,16 @@ theorem pp_ref (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (n : Nat)
         a₀ (CorePost decBool dn s₀.mem vis fe M eb ResH) := fun hno =>
     RefE.ret (pp_no _ _ fe _ _ _ a₀ hno) (CorePost.ret hS rfl hw0)
   simp only [ppE]
-  by_cases g1 : a >>> 28 ≠ 9
+  by_cases g1 : tagW a ≠ 9
   · rw [ite_eq_left g1]
     exact hfalse (by rw [htag a ha]; simp [g1])
   rw [ite_eq_right g1]
-  by_cases g2 : b >>> 28 ≠ 9
+  by_cases g2 : tagW b ≠ 9
   · rw [ite_eq_left g2]
     exact hfalse (by rw [htag a ha, htag b hb]; simp [g2])
   rw [ite_eq_right g2]
-  have g1' : a >>> 28 = 9 := by simpa using g1
-  have g2' : b >>> 28 = 9 := by simpa using g2
+  have g1' : tagW a = 9 := by simpa using g1
+  have g2' : tagW b = 9 := by simpa using g2
   refine RefE.abort0 (by rfl) fun c1 => ?_
   refine RefE.abort0 (by rfl) fun c2 => ?_
   refine RefE.abort0 (by rfl) fun c3 => ?_

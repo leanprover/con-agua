@@ -83,7 +83,7 @@ theorem dl_exit (r : CoreFnsA) (fe : IFEnv) (d : Nat) (an bn i : Word) (aas bs :
 through its run). -/
 l_model defeqList_specE (p : Prog) (hp : p.lookup "defeq_list" = some defeqListL)
   fns [hp ↦ dlE] grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] unified
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
 
 /-- **The `defeq_list` loop refines `defEqList`, both outcomes**, on the spines from index `i`: the
 errors are the `defeq` slot's. -/
@@ -187,7 +187,7 @@ l_model ioE_spec (p : Prog) (hp : p.lookup "iota_index_ok" = some iotaIndexOkL)
   fns [hp ↦ ioE list]
   specs [callW_spec p n "pi_residual", callW_spec p n "get_app_args", defeqList_specE p hd n]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] unified
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 /-- The slice after the first `c` words, as `iota_index_ok` computes it. -/
@@ -593,7 +593,7 @@ theorem instSpinePinsLoop_spec (p : Prog) (k : Nat) (s₀ : St) :
   | succ k ih =>
     rw [exec, step_while (w := instSpinePinsLoop) rfl]
     sym only [lang_grind, arena_grind] =>
-      vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
         callW_spec p k "inst_lp", callW_spec p k "inst_spine", ih] <;>
       finish [ispW_end, ispW_cont, ispW_bad]
 
@@ -664,7 +664,7 @@ theorem instSpinePins_spec (p : Prog) (hp : p.lookup "inst_spine_pins" = some in
     ⦃fun r s' => LocEq s' s₀ ∧ ispTop p k s₀.mem po pl us ao an rP pvo pvc = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, instSpinePinsL]
-  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+  vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
     fun s₀ => Triple.step_exec (instSpinePinsLoop_spec p (k + 1) s₀)] <;>
   simp_all [ispTop, Cmp.eval, BinOp.eval, Mem.len64, LocEq, St.setLoc_loc,
     St.setLoc_mem, Locals.init_cons_zero, Locals.init_cons_succ, Sig.retVal,

@@ -110,7 +110,7 @@ theorem sortTele_specI (p : Prog) (hps : p.lookup "pi_sort_tele_len" = some L.Fr
     rw [invoke_eq _ hps]
     simp only [callFn, L.Front.Ind.piSortTeleLen]
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ih,
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ih,
         eView_spec p hev n] <;> finish [L.Front.Ind.sortTeleW]
 
 theorem ipoLoop_spec (p : Prog) (hps : p.lookup "pi_sort_tele_len" = some L.Front.Ind.piSortTeleLen)
@@ -123,7 +123,7 @@ theorem ipoLoop_spec (p : Prog) (hps : p.lookup "pi_sort_tele_len" = some L.Fron
   | succ k ih =>
     rw [exec, step_while (w := ipoLoop) rfl]
     sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rdW_spec, ih,
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rdW_spec, ih,
         sortTele_specI p hps hev k] <;>
       finish (gen := 40) (instances := 20000) [CWF]
 
@@ -166,7 +166,7 @@ theorem ipo_spec (p : Prog) (hps : p.lookup "pi_sort_tele_len" = some L.Front.In
   rw [invoke_eq _ hp, indParamsOkL_eq]
   simp only [callFn, indParamsOkL']
   sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
       fun s => Triple.step_exec (ipoLoop_spec p hps hev (k + 1) s)] <;>
     finish (gen := 40) (instances := 20000) [ipoR_normal, ipoR_ret, loc_init4, ipoW_ne_brk]
 

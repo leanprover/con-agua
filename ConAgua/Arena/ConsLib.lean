@@ -99,6 +99,15 @@ theorem mapE_tierE (f : Var → Var) (h : Expr) : mapE f (tierE h) = tierE (mapE
 theorem mapE_idxE (f : Var → Var) (h : Expr) : mapE f (idxE h) = idxE (mapE f h) := by
   simp [idxE, mapE]
 
+theorem mapE_idxAE (f : Var → Var) (h : Expr) : mapE f (idxAE h) = idxAE (mapE f h) := by
+  simp [idxAE, mapE]
+
+theorem mapE_idxGE (f : Var → Var) (h : Expr) : mapE f (idxGE h) = idxGE (mapE f h) := by
+  simp [idxGE, mapE]
+
+theorem mapE_tagE (f : Var → Var) (h : Expr) : mapE f (tagE h) = tagE (mapE f h) := by
+  simp [tagE, mapE]
+
 /-- Condition `c` with every variable renamed by `f`. -/
 def mapC (f : Var → Var) : Cond → Cond
   | .cmp c a b => .cmp c (mapE f a) (mapE f b)
@@ -168,8 +177,11 @@ structure ConsSch where
   ca : Word
   P : Word
   S : Word
-  /-- The handle tag (`P = tag · 2^28`, `S = P + 2^27`). -/
+  /-- The handle tag (narrow: `P = tag · 2^26`, `S = P + 2^31`; wide: `P = 2^30`, `S = P + 2^31`,
+  `tag = 4`). -/
   tag : UInt32
+  /-- Wide handles: the expression `app` store (con-ron task #133), whose cap is `2^30`. -/
+  wide : Bool := false
   fname : String
   pname : String
   nk : Nat
@@ -269,7 +281,7 @@ def cfLoop (C : ConsSch) : Stmt :=
     (.seq (mapS (fvF C) (kfLoad C.sa))
       (.seq (.ite (mapC (fvF C) (kfKey C.sa)) (kfMatch C) .skip) (mapS (lvF C.nk) cfAdv)))
 
-/-- con-ron: ConRon/Arena/Store.lean:90-91 ConRon.Arena.Tbl.find? -/
+/-- con-ron: ConRon/Arena/Store.lean:94-95 ConRon.Arena.Tbl.find? -/
 def consFindG (C : ConsSch) : FunDecl :=
   { nparams := 2 + C.nk, nlocals := 10 + C.nk + C.mloc,
     body := .seq (mapS (fvF C) (kfHead C.sa))
@@ -280,10 +292,14 @@ def consFindG (C : ConsSch) : FunDecl :=
 /-- The first variable of the push's growth block. -/
 def gO (C : ConsSch) : Nat := 4 + C.xloc + C.np
 
+/-- The per-tier node capacity, as a word (con-ron's `ENodeView.cap`: `Idx.wideCap = 2^30` for
+the wide store, else `Idx.idxCap = 2^26`; `capS` in `Handle.lean`). -/
+def ConsSch.capW (C : ConsSch) : Word := if C.wide then 1073741824 else 67108864
+
 /-- The template's push variables `t j c k`. -/
 def cpHead (C : ConsSch) : List Stmt :=
   [lblk (t, j, c, k) { c := CTL.u64[⟪C.ca⟫ + t] },
-   lblk (t, j, c, k) { if c >= 134217728 { abort } }]
+   lblk (t, j, c, k) { if c >= ⟪C.capW⟫ { abort } }]
 def cpMid (C : ConsSch) : List Stmt :=
   [mapS (lvF C.np) (if C.w = 1 then lblk (t, j, c, k) { k := c } else lblk (t, j, c, k) { k := c * ⟪C.w⟫ }),
    .set (gO C + 1) (.ld64t C.sa (.var 0) (.const 0))]
@@ -580,7 +596,7 @@ def cpRest (C : ConsSch) : Stmt :=
   seqs [cpKey C, cpSlot C, cpCnt C]
     (seqO (cpColW C) (.seq (cpGrowIf C) (.ret [.var (2 + C.np)])))
 
-/-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
+/-- con-ron: ConRon/Arena/Store.lean:97-102 ConRon.Arena.Tbl.push -/
 def consPushG (C : ConsSch) : FunDecl :=
   { nparams := 2 + C.np, nlocals := gO C + 21 + C.nk,
     body := seqO C.pre (seqs ((cpHead C).map (mapS (lvF C.np)))
@@ -631,8 +647,8 @@ def ciChk (C : ConsSch) : List Stmt :=
     [.ite (.cmp .ne (.bin .shr (.bin .or (.var 0) (.var 1)) (.const 32)) (.const 0)) (.abort (.const R_CAP_KEY)) .skip]
   else []
 
-/-- con-ron: ConRon/Arena/Monad.lean:246-264 ConRon.Arena.internE
-con-ron: ConRon/Arena/Monad.lean:218-244 ConRon.Arena.internNodeE -/
+/-- con-ron: ConRon/Arena/Monad.lean:249-267 ConRon.Arena.internE
+con-ron: ConRon/Arena/Monad.lean:221-247 ConRon.Arena.internNodeE -/
 def consInternG (C : ConsSch) : FunDecl :=
   match C.skipW with
   | some sk =>

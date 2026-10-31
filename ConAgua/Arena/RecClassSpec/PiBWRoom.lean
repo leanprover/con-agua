@@ -76,12 +76,12 @@ theorem piBW_room (n : Nat) (m m' : Mem) (a : AState) (fuel h : Word) (rs : List
   · simp [piBW] at hp
   by_cases hf : fuel = 0
   · rw [piBW_fuel0 n m fuel h hf] at hp; simp at hp
-  by_cases hg : h >>> 28 ≠ 6
+  by_cases hg : tagW h ≠ 6
   · rw [piBW_leaf n m fuel h hf hg] at hp
     simp only [Option.some.injEq, Prod.mk.injEq] at hp
     obtain ⟨-, rfl⟩ := hp; exact htop
   rw [piBW_node n m fuel h hf hg] at hp
-  have hg6 : h >>> 28 = 6 := by simpa using hg
+  have hg6 : tagW h = 6 := by simpa using hg
   by_cases hr : eViewW m h = []
   · rw [hr, piBK1_nil] at hp; simp at hp
   obtain ⟨hvok, hew⟩ := eViewW_forall m h hg6 hr

@@ -35,8 +35,13 @@ survives the next `dropScratch`:
   theorem is stated AT a well-formed environment, so the fold has to carry
   one.
 -/
-import ConRon.Bridge.Promote.Exact
-import ConLeche.Verify.EnvWF
+module
+
+public import ConRon.Bridge.Promote.Exact
+public import ConLeche.Verify.EnvWF
+import ConRon.Bridge.Promote.WalkDecl
+
+public section
 
 namespace ConRon.Bridge
 
@@ -465,7 +470,7 @@ frontend tier will state against this definition. -/
 
 /-- con-leche: none — the denotation of a declaration STREAM, record by
 record.  DESIGN §8.2's `denoteDecls`. -/
-def denoteDecls (st : EStore) : List IDeclaration → Option (List Declaration)
+@[expose] def denoteDecls (st : EStore) : List IDeclaration → Option (List Declaration)
   | [] => some []
   | d :: ds =>
     match Frontend.denoteDecl st d, denoteDecls st ds with

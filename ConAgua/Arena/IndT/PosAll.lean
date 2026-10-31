@@ -152,7 +152,7 @@ theorem posRef_step (L : NbLook p) (n : Nat) (hn : n ≤ 2 ^ 62) (ih : NbRef p d
   subst hbo'
   have hwP' : denoteE a1.store (decI (rw.headD 0)) = some wP := by rw [hwd]; exact hwP
   simp only [Bool.not_true, Bool.false_eq_true, ite_false]
-  by_cases h6 : rw.headD 0 >>> 28 = 6
+  by_cases h6 : tagW (rw.headD 0) = 6
   · -- a binder
     rw [ite_eq_left h6]
     have htag : w.tag = ETag.forallE := by rw [← hwd]; exact (decE_tag_forallE _ hwH).mpr h6

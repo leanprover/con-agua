@@ -66,7 +66,7 @@ def faGuardT (k : EIdx → AM Bool) (ty X : EIdx) : AM Bool :=
 /-- The L code's `∀`-guard: the tag test, `e_view`, the domain test, then `k` on the body. -/
 def faGuardW (k : Word → Mem → Option (Word × Mem)) (p : Prog) (n : Nat) (m : Mem) (ty X : Word) :
     Option (Word × Mem) :=
-  if ty >>> 28 ≠ 6 then some (0, m)
+  if tagW ty ≠ 6 then some (0, m)
   else match callW p n "e_view" [ty] m with
     | none => none
     | some (g, m₁) => if g.tail.headD 0 ≠ X then some (0, m₁) else k (g.tail.tail.headD 0) m₁
@@ -78,7 +78,7 @@ theorem faGuard_ok {p : Prog} (hp : p.lookup "e_view" = some L.Ind.eView) {n : N
     {ty X w : Word} (hty : HW ty) (hX : HW X) (h : faGuardW k p n m ty X = some (w, m')) :
     (faGuardT kT (decE ty) (decE X)).run a = .ok (w != 0, a) ∧ m' = m ∧ ResH [w] := by
   unfold faGuardW at h
-  by_cases g6 : ty >>> 28 ≠ 6
+  by_cases g6 : tagW ty ≠ 6
   · rw [ite_eq_left g6] at h
     simp only [Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl⟩ := h
@@ -87,7 +87,7 @@ theorem faGuard_ok {p : Prog} (hp : p.lookup "e_view" = some L.Ind.eView) {n : N
     refine ⟨?_, rfl, by unfold ResH HW; decide⟩
     simp only [faGuardT, ht]; rfl
   rw [ite_eq_right g6] at h
-  have g6' : ty >>> 28 = 6 := by simpa using g6
+  have g6' : tagW ty = 6 := by simpa using g6
   rcases hc : callW p n "e_view" [ty] m with _ | ⟨g, m₁⟩ <;> simp only [hc, reduceCtorEq] at h
   obtain ⟨rfl, v, hv, hvr, hg⟩ := eView_callW_view hp hR hc
   obtain ⟨rfl, h1, h2⟩ := viewR_forall hvr (by rw [hg, g6'])
@@ -156,7 +156,7 @@ theorem strParamSort_spec (p : Prog) (hp : p.lookup "str_param_sort" = some strP
   rw [invoke_eq _ hp]
   simp only [callFn, strParamSortL]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
       callW_spec p n "intern_param", callW_spec p n "intern_succ", callW_spec p n "intern_sort"] <;>
     finish [psW]
 
@@ -177,7 +177,7 @@ def faEqK (X Y : Word) : Option (List Word × Mem) → Option (Word × Mem)
 
 /-- The `∀`-type comparison: `faEqW` as a guard and a continuation. -/
 def faEqA (m : Mem) (ty X Y : Word) : Option (Word × Mem) :=
-  if ty >>> 28 ≠ 6 then some (0, m) else faEqK X Y (callW p n "e_view" [ty] m)
+  if tagW ty ≠ 6 then some (0, m) else faEqK X Y (callW p n "e_view" [ty] m)
 
 /-! ### `list_nil_ty_ok`'s tail: `∀ (_ : so), List.{u} #0` -/
 
@@ -189,7 +189,7 @@ def nilDK (l1 u1 li ps : Word) : Option (List Word × Mem) → Option (Word × M
 
 /-- The argument `x` is a bound variable. -/
 def nilD (m : Mem) (x l1 u1 li ps : Word) : Option (Word × Mem) :=
-  if x >>> 28 ≠ 0 then some (0, m) else nilDK l1 u1 li ps (callW p n "e_view" [x] m)
+  if tagW x ≠ 0 then some (0, m) else nilDK l1 u1 li ps (callW p n "e_view" [x] m)
 
 /-- After the head's view. -/
 def nilCK (x li ps : Word) : Option (List Word × Mem) → Option (Word × Mem)
@@ -198,7 +198,7 @@ def nilCK (x li ps : Word) : Option (List Word × Mem) → Option (Word × Mem)
 
 /-- The head `f` is a constant. -/
 def nilC (m : Mem) (f x li ps : Word) : Option (Word × Mem) :=
-  if f >>> 28 ≠ 3 then some (0, m) else nilCK p n x li ps (callW p n "e_view" [f] m)
+  if tagW f ≠ 3 then some (0, m) else nilCK p n x li ps (callW p n "e_view" [f] m)
 
 /-- After the body's view. -/
 def nilBK (li ps : Word) : Option (List Word × Mem) → Option (Word × Mem)
@@ -207,7 +207,7 @@ def nilBK (li ps : Word) : Option (List Word × Mem) → Option (Word × Mem)
 
 /-- The body `b` is an application. -/
 def nilB (m : Mem) (b li ps : Word) : Option (Word × Mem) :=
-  if b >>> 28 ≠ 4 then some (0, m) else nilBK p n li ps (callW p n "e_view" [b] m)
+  if tagW b ≠ 4 then some (0, m) else nilBK p n li ps (callW p n "e_view" [b] m)
 
 /-- After the type's view: the domain is `so`. -/
 def nilAK (so li ps : Word) : Option (List Word × Mem) → Option (Word × Mem)
@@ -216,7 +216,7 @@ def nilAK (so li ps : Word) : Option (List Word × Mem) → Option (Word × Mem)
 
 /-- The type `ty` is a `∀`. -/
 def nilA (m : Mem) (ty so li ps : Word) : Option (Word × Mem) :=
-  if ty >>> 28 ≠ 6 then some (0, m) else nilAK p n so li ps (callW p n "e_view" [ty] m)
+  if tagW ty ≠ 6 then some (0, m) else nilAK p n so li ps (callW p n "e_view" [ty] m)
 
 /-! ### `list_cons_ty_ok`'s tail: `∀ (_ : so) (_ : #0), dom3 → cod3` -/
 
@@ -227,7 +227,7 @@ def consBK (b0 d3 c3 : Word) : Option (List Word × Mem) → Option (Word × Mem
 
 /-- The second binder. -/
 def consB (m : Mem) (r b0 d3 c3 : Word) : Option (Word × Mem) :=
-  if r >>> 28 ≠ 6 then some (0, m) else consBK p n b0 d3 c3 (callW p n "e_view" [r] m)
+  if tagW r ≠ 6 then some (0, m) else consBK p n b0 d3 c3 (callW p n "e_view" [r] m)
 
 /-- After the type's view: the domain is `so`. -/
 def consAK (so b0 d3 c3 : Word) : Option (List Word × Mem) → Option (Word × Mem)
@@ -237,7 +237,7 @@ def consAK (so b0 d3 c3 : Word) : Option (List Word × Mem) → Option (Word × 
 
 /-- The type `ty` is a `∀`. -/
 def consA (m : Mem) (ty so b0 d3 c3 : Word) : Option (Word × Mem) :=
-  if ty >>> 28 ≠ 6 then some (0, m) else consAK p n so b0 d3 c3 (callW p n "e_view" [ty] m)
+  if tagW ty ≠ 6 then some (0, m) else consAK p n so b0 d3 c3 (callW p n "e_view" [ty] m)
 
 /-! ### The prefixes -/
 
@@ -345,9 +345,9 @@ variable (m : Mem) (g : List Word) (found q ty so li ps x l1 u1 f b r b0 b1 b2 d
 
 theorem faEqK_s : faEqK X Y (some (g, m)) =
     some (if g.tail.headD 0 = X ∧ g.tail.tail.headD 0 = Y then 1 else 0, m) := rfl
-theorem faEqA_f (h : ty >>> 28 ≠ 6) : faEqA p n m ty X Y = some (0, m) := by
+theorem faEqA_f (h : tagW ty ≠ 6) : faEqA p n m ty X Y = some (0, m) := by
   simp only [faEqA, h, ne_eq, not_false_eq_true, ↓reduceIte]
-theorem faEqA_t (h : ty >>> 28 = 6) : faEqA p n m ty X Y = faEqK X Y (callW p n "e_view" [ty] m) := by
+theorem faEqA_t (h : tagW ty = 6) : faEqA p n m ty X Y = faEqK X Y (callW p n "e_view" [ty] m) := by
   simp only [faEqA, h, ne_eq, not_true_eq_false, ↓reduceIte]
 
 theorem listK2_s : listK2 p n ty (some (g, m)) = faEqA p n m ty (g.tail.headD 0) (g.tail.headD 0) := rfl
@@ -396,7 +396,7 @@ theorem listTy_spec (p : Prog) (hp : p.lookup "list_ty_ok" = some listTyOkL) (n 
   rw [invoke_eq _ hp]
   simp only [callFn, listTyOkL]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       callW_spec p n "str_cv", callW_spec p n "str_param_sort", callW_spec p n "e_view"] <;>
     finish (gen := 20) [listK0_f, listK0_t, listK1_f, listK1_t, listK2_s, faEqA_f, faEqA_t, faEqK_s,
       rdW_eq,
@@ -409,11 +409,11 @@ theorem listNil_spec (p : Prog) (hp : p.lookup "list_nil_ty_ok" = some listNilTy
     ⦃fun r s' => LocEq s' s₀ ∧ nilK0 p n s₀.mem found q = some (r.headD 0, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, listNilTyOkL]
-  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+  vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
     callW_spec p n "str_cv", callW_spec p n "str_param_sort", callW_spec p n "str_ls1",
     callW_spec p n "pin_at", callW_spec p n "e_view"] <;>
   simp_all [-UInt64.toNat_add, nilK0, nilK1, nilK2, nilK3, nilK4, nilA, nilAK, nilB, nilBK, nilC,
-      nilCK, nilD, nilDK, EREC, BinOp.eval, getElem_rdW', Cmp.eval, LocEq,
+      nilCK, nilD, nilDK, EREC, getElem_rdW', Cmp.eval, LocEq,
       St.setLocs_cons, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Locals.init_cons_zero,
       Locals.init_cons_succ, Sig.retVal, Sig.retOr]
 
@@ -424,12 +424,12 @@ theorem listCons_spec (p : Prog) (hp : p.lookup "list_cons_ty_ok" = some listCon
     ⦃fun r s' => LocEq s' s₀ ∧ consK0 p n s₀.mem found q = some (r.headD 0, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, listConsTyOkL]
-  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+  vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
     callW_spec p n "str_cv", callW_spec p n "str_param_sort", callW_spec p n "str_ls1",
     callW_spec p n "pin_at", callW_spec p n "intern_bvar", callW_spec p n "intern_const",
     callW_spec p n "mk_app", callW_spec p n "e_view"] <;>
   simp_all [-UInt64.toNat_add, consK0, consK1, consK2, consK3, consK4, consK5, consK6, consK7,
-      consK8, consK9, consK10, consA, consAK, consB, consBK, faEqA, faEqK, EREC, BinOp.eval,
+      consK8, consK9, consK10, consA, consAK, consB, consBK, faEqA, faEqK, EREC,
       getElem_rdW', Cmp.eval, LocEq,
       St.setLocs_cons, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Locals.init_cons_zero,
       Locals.init_cons_succ, Sig.retVal, Sig.retOr]
@@ -474,7 +474,7 @@ theorem nilD_ok {x l1 u1 li ps w : Word} (hx : HW x) (hl1 : HW l1) (hu1 : HW u1)
     (nilDT (decE x) ((decI l1 : NIdx) == decI li && (decI u1 : LsIdx) == decI ps)).run a =
       .ok (w != 0, a) ∧ m' = m ∧ ResH [w] := by
   unfold nilD at h
-  by_cases g0 : x >>> 28 ≠ 0
+  by_cases g0 : tagW x ≠ 0
   · rw [ite_eq_left g0] at h
     simp only [Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl⟩ := h
@@ -483,7 +483,7 @@ theorem nilD_ok {x l1 u1 li ps w : Word} (hx : HW x) (hl1 : HW l1) (hu1 : HW u1)
     refine ⟨?_, rfl, by unfold ResH HW; decide⟩
     simp only [nilDT, ht]; rfl
   rw [ite_eq_right g0] at h
-  have g0' : x >>> 28 = 0 := by simpa using g0
+  have g0' : tagW x = 0 := by simpa using g0
   cases hc : callW p n "e_view" [x] m with
   | none => rw [hc] at h; cases h
   | some q =>
@@ -518,7 +518,7 @@ theorem nilC_ok {f x li ps w : Word} (hf : HW f) (hx : HW x) (hli : HW li) (hps 
     (h : nilC p n m f x li ps = some (w, m')) :
     (nilCT (decE f) (decE x) (decI li) (decI ps)).run a = .ok (w != 0, a) ∧ m' = m ∧ ResH [w] := by
   unfold nilC at h
-  by_cases g3 : f >>> 28 ≠ 3
+  by_cases g3 : tagW f ≠ 3
   · rw [ite_eq_left g3] at h
     simp only [Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl⟩ := h
@@ -527,7 +527,7 @@ theorem nilC_ok {f x li ps w : Word} (hf : HW f) (hx : HW x) (hli : HW li) (hps 
     refine ⟨?_, rfl, by unfold ResH HW; decide⟩
     simp only [nilCT, ht]; rfl
   rw [ite_eq_right g3] at h
-  have g3' : f >>> 28 = 3 := by simpa using g3
+  have g3' : tagW f = 3 := by simpa using g3
   cases hc : callW p n "e_view" [f] m with
   | none => rw [hc] at h; cases h
   | some q =>
@@ -546,7 +546,7 @@ theorem nilB_ok {b li ps w : Word} (hb : HW b) (hli : HW li) (hps : HW ps)
     (h : nilB p n m b li ps = some (w, m')) :
     (nilBT (decE b) (decI li) (decI ps)).run a = .ok (w != 0, a) ∧ m' = m ∧ ResH [w] := by
   unfold nilB at h
-  by_cases g4 : b >>> 28 ≠ 4
+  by_cases g4 : tagW b ≠ 4
   · rw [ite_eq_left g4] at h
     simp only [Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl⟩ := h
@@ -555,7 +555,7 @@ theorem nilB_ok {b li ps w : Word} (hb : HW b) (hli : HW li) (hps : HW ps)
     refine ⟨?_, rfl, by unfold ResH HW; decide⟩
     simp only [nilBT, ht]; rfl
   rw [ite_eq_right g4] at h
-  have g4' : b >>> 28 = 4 := by simpa using g4
+  have g4' : tagW b = 4 := by simpa using g4
   cases hc : callW p n "e_view" [b] m with
   | none => rw [hc] at h; cases h
   | some q =>

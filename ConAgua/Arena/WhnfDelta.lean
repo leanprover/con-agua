@@ -57,7 +57,7 @@ set_option experimental.vcgen true
 /-! ## The L code -/
 
 /-- `const_e(n)`: `intern_const(n, pin_word(52))` (the empty level list). -/
--- con-ron: ConRon/Arena/Core.lean:120-124 ConRon.Arena.constE
+-- con-ron: ConRon/Arena/Core.lean:125-129 ConRon.Arena.constE
 @[l_impl ConRon.Arena.constE]
 def constEL : FunDecl := lfn (n) locals (us, r) {
   us := call pin_word(52);
@@ -70,7 +70,7 @@ one layer: `Nat.zero` at `cnt == 0`, else `Nat.succ (lit (n - 1))` with `n - 1` 
 `nat_pred_lit` (`NatArms.lean`: push a one-limb `1` at the pool top, `nat_sub`, `intern_lit`; this
 function had those three steps inline, whnf-delta2 replaced them by the call, a behaviour-preserving
 split that reuses `natPredLit`'s proof). -/
--- con-ron: ConRon/Arena/Core.lean:458-469 ConRon.Arena.natLitToConstructor
+-- con-ron: ConRon/Arena/Core.lean:463-474 ConRon.Arena.natLitToConstructor
 @[l_impl ConRon.Arena.natLitToConstructor]
 def natLitToCtorL : FunDecl := lfn (o, cnt) locals (z, r, s, sc, lh) {
   if cnt == 0 {
@@ -87,7 +87,7 @@ def natLitToCtorL : FunDecl := lfn (o, cnt) locals (z, r, s, sc, lh) {
 
 /-- `nat_ind_ok(found, p)`: the stored `Nat` declaration at record `p` (`found == 0` is `none`) has
 the expected shape: an `indInfo`, no level parameters, type `Sort 1`. -/
--- con-ron: ConRon/Arena/Core.lean:471-477 ConRon.Arena.natIndOk
+-- con-ron: ConRon/Arena/Core.lean:476-482 ConRon.Arena.natIndOk
 @[l_impl ConRon.Arena.natIndOk]
 def natIndOkL : FunDecl := lfn (found, p) locals (s1) {
   if found == 0 { return 0 };
@@ -101,7 +101,7 @@ def natIndOkL : FunDecl := lfn (found, p) locals (s1) {
 no level parameters, type `Nat`. The twin interns `Nat` (`constE`) BEFORE it tests the level
 parameters, so `const_e` is called before that test (an earlier version tested first and skipped the
 interning, a divergence of the arena from the twin's state; whnf-delta2 reordered it). -/
--- con-ron: ConRon/Arena/Core.lean:479-486 ConRon.Arena.natZeroOk
+-- con-ron: ConRon/Arena/Core.lean:484-491 ConRon.Arena.natZeroOk
 @[l_impl ConRon.Arena.natZeroOk]
 def natZeroOkL : FunDecl := lfn (found, p) locals (nt, nc) {
   if found == 0 { return 0 };
@@ -114,7 +114,7 @@ def natZeroOkL : FunDecl := lfn (found, p) locals (nt, nc) {
 
 /-- `nat_succ_ok(found, p)`: the stored `Nat.succ` declaration has the expected (annotated) shape: a
 `ctorInfo`, no level parameters, type `Nat → Nat`. -/
--- con-ron: ConRon/Arena/Core.lean:488-500 ConRon.Arena.natSuccOk
+-- con-ron: ConRon/Arena/Core.lean:493-505 ConRon.Arena.natSuccOk
 @[l_impl ConRon.Arena.natSuccOk]
 def natSuccOkL : FunDecl := lfn (found, p) locals (nt, nc, ty, t, i, dom, body) {
   if found == 0 { return 0 };
@@ -123,7 +123,7 @@ def natSuccOkL : FunDecl := lfn (found, p) locals (nt, nc, ty, t, i, dom, body) 
   nt := call pin_at(1);
   nc := call const_e(nt);
   ty := EREC.u64[p + 4];
-  if ty >> 28 != 6 { return 0 };
+  if ⟦ty⟧.tag != 6 { return 0 };
   (t, i) := node FORALL⟦ty⟧;
   dom := FORALL⟨t, i⟩.ty;
   body := FORALL⟨t, i⟩.b;
@@ -132,7 +132,7 @@ def natSuccOkL : FunDecl := lfn (found, p) locals (nt, nc, ty, t, i, dom, body) 
 }
 
 /-- `nat_lit_supported(vis)`: `Nat`/`Nat.zero`/`Nat.succ` are all stored with the expected shape. -/
--- con-ron: ConRon/Arena/Core.lean:502-512 ConRon.Arena.natLitSupported
+-- con-ron: ConRon/Arena/Core.lean:507-517 ConRon.Arena.natLitSupported
 @[l_impl ConRon.Arena.natLitSupported]
 def natLitSupportedL : FunDecl :=
   lfn (vis) locals (nt, f, p, r, nz, f2, p2, r2, ns, f3, p3, r3) {
@@ -153,11 +153,11 @@ def natLitSupportedL : FunDecl :=
 /-- `lit_to_ctor_if_nat(vis, h)`: a `Nat`-literal major premise, converted to constructor form one
 layer (`lit_to_ctor_if_nat`'s cheap tag test, as the twin's does, so no bound check is paid for a
 non-`lit` handle). -/
--- con-ron: ConRon/Arena/Core.lean:562-570 ConRon.Arena.litToCtorIfNat
+-- con-ron: ConRon/Arena/Core.lean:567-575 ConRon.Arena.litToCtorIfNat
 @[l_impl ConRon.Arena.litToCtorIfNat]
 def litToCtorIfNatL : FunDecl :=
   lfn (vis, h) locals (tag, t, i, k, sup, o, cnt, r) {
-  tag := h >> 28;
+  tag := ⟦h⟧.tag;
   if tag != 8 { return h };
   (t, i) := node LIT⟦h⟧;
   k := LIT⟨t, i⟩.kind;
@@ -177,10 +177,10 @@ unconditional), so every one of the ten tags gets its own bound check; only `lit
 further. A handle with a tag above `9` is no node (the twin's `view` fails on it): the last arm is
 `proj` only, `abort` otherwise (whnf-delta2: added, so that the L code refines the twin on every
 handle word; before, the last arm answered "no match" for the tags `10`‥`15` too). -/
--- con-ron: ConRon/Arena/Core.lean:572-582 ConRon.Arena.rawNatLit?
+-- con-ron: ConRon/Arena/Core.lean:577-587 ConRon.Arena.rawNatLit?
 @[l_impl ConRon.Arena.rawNatLit?]
 def rawNatLitL : FunDecl := lfn (h) locals (tag, t, i, k, nz, el) {
-  tag := h >> 28;
+  tag := ⟦h⟧.tag;
   t := ⟦h⟧.tier;
   i := ⟦h⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
@@ -196,7 +196,7 @@ def rawNatLitL : FunDecl := lfn (h) locals (tag, t, i, k, nz, el) {
     };
     return (0, 0, 0)
   };
-  if tag == 4 { if APP⟨t⟩.count <= i { abort }; return (0, 0, 0) };
+  if tag == 4 { i := ⟦h⟧.aidx; if APP⟨t⟩.count <= i { abort }; return (0, 0, 0) };
   if tag == 5 { if LAM⟨t⟩.count <= i { abort }; return (0, 0, 0) };
   if tag == 6 { if FORALL⟨t⟩.count <= i { abort }; return (0, 0, 0) };
   if tag == 7 { if LET⟨t⟩.count <= i { abort }; return (0, 0, 0) };
@@ -215,7 +215,7 @@ def rawNatLitL : FunDecl := lfn (h) locals (tag, t, i, k, nz, el) {
 `pred`, is unary and not tested here)? The pin table read inline (`PINS.u64[1 + k]`), as
 `nat_op_result`'s own dispatch does (`NatArms.lean`), rather than fourteen `pin_at` calls: the
 same values, one bound check instead of fourteen. -/
--- con-ron: ConRon/Arena/Core.lean:1209-1221 ConRon.Arena.natBinOpName
+-- con-ron: ConRon/Arena/Core.lean:1214-1226 ConRon.Arena.natBinOpName
 @[l_impl ConRon.Arena.natBinOpName]
 def natBinOpNameL : FunDecl := lfn (c) locals () {
   if PINS.u64[0] == 0 { abort };
@@ -228,7 +228,7 @@ def natBinOpNameL : FunDecl := lfn (c) locals () {
 
 /-- `nat_op_stored(vis, c)`: is `c` stored as a definition at all (the reduction-time half of
 `natOpGuard`)? -/
--- con-ron: ConRon/Arena/Core.lean:1199-1207 ConRon.Arena.natOpStored
+-- con-ron: ConRon/Arena/Core.lean:1204-1212 ConRon.Arena.natOpStored
 @[l_impl ConRon.Arena.natOpStored]
 def natOpStoredL : FunDecl := lfn (vis, c) locals (f, p) {
   (f, p) := call env_find(c, vis);
@@ -239,7 +239,7 @@ def natOpStoredL : FunDecl := lfn (vis, c) locals (f, p) {
 /-- `const_val_at(n, po, pl, value, us)`: a stored definition's value at the universe instantiation
 `us`, memoized on `(n, us)` (`cv_find`/`cv_put`, array 103); a miss calls the stub `inst_lp(po, pl,
 us, value)` (the level parameters `(po, pl)` the slice of name handles at the constant's record). -/
--- con-ron: ConRon/Arena/Core.lean:193-207 ConRon.Arena.constValAt
+-- con-ron: ConRon/Arena/Core.lean:198-212 ConRon.Arena.constValAt
 @[l_impl ConRon.Arena.constValAt]
 def constValAtL : FunDecl := lfn (n, po, pl, value, us) locals (fd, j, dd, r, z) {
   (fd, j, dd) := call cv_find(n, us);
@@ -255,13 +255,13 @@ def constValAtL : FunDecl := lfn (n, po, pl, value, us) locals (fd, j, dd, r, z)
 (through `const_val_at`) is applied to the spine. The level-argument list's length is read directly
 off `LSREC` (no `view_ls`/`view_ls_len` L function exists yet), after `ls_node`'s own tag test (a
 level-list handle has tag `0`; the twin's `viewLs` fails on any other tag, so the L code aborts
-there: whnf-delta2 added the `us >> 28` test). The argument slice `get_app_args` pushes is dropped
+there: whnf-delta2 added the `⟦us⟧.tag` test). The argument slice `get_app_args` pushes is dropped
 again before returning (`CTL[136]` put back, the `StackKept` contract of a core function; before,
 every unfolding leaked its spine onto the stack: whnf-delta2). -/
--- con-ron: ConRon/Arena/Core.lean:378-398 ConRon.Arena.unfoldDefinition
+-- con-ron: ConRon/Arena/Core.lean:383-403 ConRon.Arena.unfoldDefinition
 def unfoldDefnAtL : FunDecl :=
   lfn (e, n, us, p) locals (tu, iu, usl, lpl, po, value, v, top, ao, an, r) {
-  if us >> 28 != 0 { abort };
+  if ⟦us⟧.tag != 0 { abort };
   (tu, iu) := node LVLS⟦us⟧;
   usl := LVLS⟨tu, iu⟩.l;
   lpl := EREC.u64[p + 3];
@@ -279,12 +279,12 @@ def unfoldDefnAtL : FunDecl :=
 /-- `unfold_definition(vis, e)`: unfold the application of a definition at the head, one step, its
 value instantiated through `const_val_at` (the second half is `unfold_defn_at`, a
 behaviour-preserving split, whnf-delta2). -/
--- con-ron: ConRon/Arena/Core.lean:378-398 ConRon.Arena.unfoldDefinition
+-- con-ron: ConRon/Arena/Core.lean:383-403 ConRon.Arena.unfoldDefinition
 @[l_impl ConRon.Arena.unfoldDefinition]
 def unfoldDefinitionL : FunDecl :=
   lfn (vis, e) locals (hh, t, i, n, us, found, p, fl, r) {
   hh := call get_app_fn(e);
-  if hh >> 28 != 3 { return (0, 0) };
+  if ⟦hh⟧.tag != 3 { return (0, 0) };
   (t, i) := node CONST⟦hh⟧;
   n := CONST⟨t, i⟩.n;
   us := CONST⟨t, i⟩.us;
@@ -298,7 +298,7 @@ def unfoldDefinitionL : FunDecl :=
 /-- `nat_succ_lit(o, cnt)`: the literal `n + 1`, for the POOL slice `(o, cnt)` of `n`: push a
 one-limb `1` at the pool top, `nat_add_lit`. (`reduce_nat`'s `Nat.succ` arm, as its own function:
 a behaviour-preserving split, whnf-delta2.) -/
--- con-ron: ConRon/Arena/Core.lean:1223-1277 ConRon.Arena.reduceNat
+-- con-ron: ConRon/Arena/Core.lean:1228-1282 ConRon.Arena.reduceNat
 def natSuccLitL : FunDecl := lfn (o, cnt) locals (oo, xh, pt, pb) {
   oo := CTL.u64[0];
   pt := ⦃oo⦄.tier;
@@ -314,7 +314,7 @@ def natSuccLitL : FunDecl := lfn (o, cnt) locals (oo, xh, pt, pb) {
 `c` (at the empty levels) of `c b` is known: `c` must be `Nat.succ` and the literals supported, then
 `b` is head-normalised and, if a literal `n`, answered by the literal `n + 1`. (A behaviour-preserving
 split of `reduce_nat`, whnf-delta2.) -/
--- con-ron: ConRon/Arena/Core.lean:1223-1277 ConRon.Arena.reduceNat
+-- con-ron: ConRon/Arena/Core.lean:1228-1282 ConRon.Arena.reduceNat
 def reduceNatSuccL : FunDecl :=
   lfn (mode, vis, d, c, b) locals (sup, ns, wb, fl1, o1, cnt1, xh) {
   sup := call nat_lit_supported(vis);
@@ -333,7 +333,7 @@ def reduceNatSuccL : FunDecl :=
 `reduce_nat`, whnf-delta2.) The result is normalised to a flag word `0`/`1` and a 32-bit handle
 word (`decOpt` reads the same value): `nat_op_result`'s refinement says nothing about its words'
 high bits, and the callers compute with them (lane `whnf2`). -/
--- con-ron: ConRon/Arena/Core.lean:1223-1277 ConRon.Arena.reduceNat
+-- con-ron: ConRon/Arena/Core.lean:1228-1282 ConRon.Arena.reduceNat
 def reduceNatOpL : FunDecl :=
   lfn (mode, vis, d, c, a, b) locals (wa, fl1, o1, cnt1, wb, fl2, o2, cnt2, rf, rh) {
   wa := call whnf(mode, vis, d, a);
@@ -350,7 +350,7 @@ def reduceNatOpL : FunDecl :=
 `div`, `mod`, `gcd`, `land`, `lor`, `xor`, `shiftLeft`, `shiftRight`, the pin words `22‥29`)? The pin
 table read inline as `nat_bin_op_name` does, instead of eight `pin_at` calls. (Written for the proof,
 whnf-delta2: the eight `pin_at` reads and the comparison chain were inline in `reduce_nat_wf`.) -/
--- con-ron: ConRon/Arena/Core.lean:1086-1092 ConRon.Arena.natOpWfNames
+-- con-ron: ConRon/Arena/Core.lean:1091-1097 ConRon.Arena.natOpWfNames
 def natOpIsWfL : FunDecl := lfn (c) locals () {
   if PINS.u64[0] == 0 { abort };
   if c == PINS.u64[22] || c == PINS.u64[23] || c == PINS.u64[24] || c == PINS.u64[25] ||
@@ -361,7 +361,7 @@ def natOpIsWfL : FunDecl := lfn (c) locals () {
 /-- `reduce_nat_wf(mode, vis, d, c, a, b)`: the pinned "safety net" operations (division, `mod`, …)
 whose native computation declines: on two literals, an `abort`, else no match. (A split of
 `reduce_nat`, whnf-delta2.) -/
--- con-ron: ConRon/Arena/Core.lean:1223-1277 ConRon.Arena.reduceNat
+-- con-ron: ConRon/Arena/Core.lean:1228-1282 ConRon.Arena.reduceNat
 def reduceNatWfL : FunDecl :=
   lfn (mode, vis, d, c, a, b) locals
     (iswf, sup2, wa, fl1, o1, cnt1, wb, fl2, o2, cnt2) {
@@ -383,7 +383,7 @@ def reduceNatWfL : FunDecl :=
 
 /-- `reduce_nat_k(mode, vis, d, f, b)`: `reduce_nat`'s arm for an application `f b` whose head `f` is a
 constant: at the empty levels, `reduce_nat_succ`. (A split of `reduce_nat`, whnf-delta2.) -/
--- con-ron: ConRon/Arena/Core.lean:1223-1277 ConRon.Arena.reduceNat
+-- con-ron: ConRon/Arena/Core.lean:1228-1282 ConRon.Arena.reduceNat
 def reduceNatKL : FunDecl :=
   lfn (mode, vis, d, f, b) locals (t2, i2, c, us, el, rf, rh) {
   t2 := ⟦f⟧.tier;
@@ -400,15 +400,15 @@ def reduceNatKL : FunDecl :=
 /-- `reduce_nat_ap(mode, vis, d, f, b)`: `reduce_nat`'s arm for an application `f b` whose head `f`
 is itself an application `g a`: for a constant `g` at the empty levels, `reduce_nat_op` (a certified
 binary operation) or `reduce_nat_wf`. (A split of `reduce_nat`, whnf-delta2.) -/
--- con-ron: ConRon/Arena/Core.lean:1223-1277 ConRon.Arena.reduceNat
+-- con-ron: ConRon/Arena/Core.lean:1228-1282 ConRon.Arena.reduceNat
 def reduceNatApL : FunDecl :=
   lfn (mode, vis, d, f, b) locals (t2, i2, g, a, t3, i3, c, us, el, isbin, stored, rf, rh) {
   t2 := ⟦f⟧.tier;
-  i2 := ⟦f⟧.idx;
+  i2 := ⟦f⟧.aidx;
   if APP⟨t2⟩.count <= i2 { abort };
   g := APP⟨t2, i2⟩.f;
   a := APP⟨t2, i2⟩.a;
-  if g >> 28 != 3 { return (0, 0) };
+  if ⟦g⟧.tag != 3 { return (0, 0) };
   (t3, i3) := node CONST⟦g⟧;
   c := CONST⟨t3, i3⟩.n;
   us := CONST⟨t3, i3⟩.us;
@@ -428,10 +428,10 @@ def reduceNatApL : FunDecl :=
 head `f` (`view f` is not tag-tested first, so all ten tags get their bound check; only `const` and
 `app` do more). A handle with a tag above `9` is no node: `abort`. (A split of `reduce_nat`,
 whnf-delta2.) -/
--- con-ron: ConRon/Arena/Core.lean:1223-1277 ConRon.Arena.reduceNat
+-- con-ron: ConRon/Arena/Core.lean:1228-1282 ConRon.Arena.reduceNat
 def reduceNatHeadL : FunDecl :=
   lfn (mode, vis, d, f, b) locals (tag2, t2, i2, rf, rh) {
-  tag2 := f >> 28;
+  tag2 := ⟦f⟧.tag;
   t2 := ⟦f⟧.tier;
   i2 := ⟦f⟧.idx;
   if t2 != 0 && CTL.u64[1] == 0 { abort };
@@ -467,11 +467,11 @@ equal to the twin's; the cost is three `env_find`s per level-less constant appli
 after the application test is `reduce_nat_head`, whose arms are `reduce_nat_k` / `reduce_nat_ap`, and
 those `reduce_nat_succ`, `reduce_nat_op`, `reduce_nat_wf` (behaviour-preserving splits,
 whnf-delta2). -/
--- con-ron: ConRon/Arena/Core.lean:1223-1277 ConRon.Arena.reduceNat
+-- con-ron: ConRon/Arena/Core.lean:1228-1282 ConRon.Arena.reduceNat
 @[l_impl ConRon.Arena.reduceNat]
 def reduceNatL : FunDecl :=
   lfn (mode, vis, d, e) locals (t, i, f, b, rf, rh) {
-  if e >> 28 != 4 { return (0, 0) };
+  if ⟦e⟧.tag != 4 { return (0, 0) };
   (t, i) := node APP⟦e⟧;
   f := APP⟨t, i⟩.f;
   b := APP⟨t, i⟩.a;
@@ -481,7 +481,7 @@ def reduceNatL : FunDecl :=
 
 /-- `whnf_step(mode, vis, d, e)`: one iteration of the reduction loop (`decStep`): head-normalize
 without delta, try literal acceleration, unfold one definition. -/
--- con-ron: ConRon/Arena/Core.lean:2405-2420 ConRon.Arena.whnfStep
+-- con-ron: ConRon/Arena/Core.lean:2410-2425 ConRon.Arena.whnfStep
 @[l_impl ConRon.Arena.whnfStep]
 def whnfStepL : FunDecl := lfn (mode, vis, d, e) locals (e1, fl, e2, fl2, e3) {
   e1 := call whnf_core(mode, 0, vis, d, e);
@@ -504,7 +504,7 @@ def whnfLoopB : Stmt := lblk (mode, vis, d, e, fl, x) {
 /-- `whnf_loop(mode, vis, d, e)`: the reduction loop, iterating `whnf_step` on its own (effectively
 unbounded, `2^62`) step budget — an uncounted L `while` (the convention: the twin's loop fuels are
 not counted in L, since an L `while` already costs L fuel per iteration). -/
--- con-ron: ConRon/Arena/Core.lean:2433-2436 ConRon.Arena.whnfBody
+-- con-ron: ConRon/Arena/Core.lean:2438-2441 ConRon.Arena.whnfBody
 @[l_impl ConRon.Arena.whnfBody]
 def whnfLoopL : FunDecl := lfn (mode, vis, d, e) locals (fl, x) {
   ⟪whnfLoopB⟫;
@@ -515,10 +515,10 @@ def whnfLoopL : FunDecl := lfn (mode, vis, d, e) locals (fl, x) {
 `forallE`, `lit`; `whnfStuckTag`) return `e` untouched; else the `whnfC` memo at the current
 eager bit (the mode's, `((mode >> 1) & 1) << 32`, array 98): a hit returns the stored handle, a miss runs `whnf_loop`,
 probes again (the loop may have changed the table) and inserts. -/
--- con-ron: ConRon/Arena/Core.lean:2155-2167 ConRon.Arena.whnfStuckTag
+-- con-ron: ConRon/Arena/Core.lean:2160-2172 ConRon.Arena.whnfStuckTag
 @[l_impl ConRon.Arena.whnfStuckTag]
 def whnfL : FunDecl := lfn (mode, vis, d, e) locals (t, fd, j, dd, x, z) {
-  t := e >> 28;
+  t := ⟦e⟧.tag;
   if t == 2 || t == 1 || t == 5 || t == 6 || t == 8 { return e };
   (fd, j, dd) := call wh_find(e, ((mode >> 1) & 1) << 32);
   if fd != 0 { return WH.u64[j * 4 + 3] };
@@ -668,7 +668,7 @@ theorem natBinOpNameL_spec (p : Prog) (hp : p.lookup "nat_bin_op_name" = some na
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64] <;>
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64] <;>
       finish [natBinOpSel, pinW_eq, HW]
 
 /-- **`nat_bin_op_name` refines `natBinOpName`.** `hflag` (the pin table's filled flag) is not

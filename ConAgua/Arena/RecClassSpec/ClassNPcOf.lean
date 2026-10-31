@@ -93,10 +93,12 @@ theorem memberNamesW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe
 
 theorem rowPW_eq (m : Mem) (w : Word) (hw : w.toNat < 2 ^ 32) (ht : tagW w ≤ 2) :
     rowPW m w = rowP m w := by
-  have h1 := tagW_toNat w
+  have h1 := tagW_toNat_row w
   have h2 := ixW_toNat w hw
   have ht' : rowTag w ≤ 2 := by rw [← h1]; exact UInt64.le_iff_toNat_le.mp ht
   have hix : (ixW w + 1).toNat = rowIx w + 1 := by
+    have : (idxW w).toNat < 2 ^ 26 := by
+      rw [idxW_toNat_narrow w (rowTag_narrow ht')]; exact Nat.mod_lt _ (by decide)
     rw [UInt64.toNat_add, h2]; simp [rowIx]; omega
   simp only [rowPW, rowP, ht', ite_true, rdW, hix]
   simp [selArr_rowSelW w ht']
@@ -113,7 +115,7 @@ theorem envFindW_found {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : I
   have ht2 : tagW w ≤ 2 := by
     have : ¬ (2 : Word).toNat < (tagW w).toNat := fun e => ht (UInt64.lt_iff_toNat_lt.mpr e)
     exact UInt64.le_iff_toNat_le.mpr (by omega)
-  have htag : rowTag w ≤ 2 := by rw [← tagW_toNat]; exact UInt64.le_iff_toNat_le.mp ht2
+  have htag : rowTag w ≤ 2 := by rw [← tagW_toNat_row]; exact UInt64.le_iff_toNat_le.mp ht2
   have key := EnvR.find?_eq hE w hw htag
   have key2 := EnvR.row_dec hE w hw htag
   rw [rowCW_eq m w hw ht2, rowPW_eq m w hw ht2] at h
@@ -223,7 +225,7 @@ theorem classNPcOf_spec (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
   rcases n with _ | n
   · vcgen [exec] <;> grind
   sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       blockShapeMemberNames_spec p ha hmc hmn n, slContains_spec p hct n,
       envFind_specW p hx hg hef n] <;>
     finish (gen := 20) [rdW_eq]

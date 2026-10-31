@@ -25,7 +25,7 @@ tier (`Arena/Store.lean:294`, `ETables.lets`). Its L representation is `app`'s/`
 * **Cons table.** Word array `LESLOT`, the same open addressing as `SLOT`/`ASLOT`.
 * **The scratch skip.** `internE (.letE ty val body)` does not probe the persistent tier when the
   scratch tier is open and a child is a scratch handle (`EStore.persFindMaybe`,
-  `eViewHasScratchChild`): bit 27 of `ty | val | body`.
+  `eViewHasScratchChild`): bit 31 of `ty | val | body`.
 
 The functions `letE_find(t, ty, val, body, h)` (the probe, the match inline: three word
 comparisons), `letE_push(t, ty, val, body, j)` and `intern_letE(ty, val, body)` are the cons-table
@@ -56,11 +56,11 @@ def lehash (m : Mem) (t i : Word) : Word :=
 /-! ## The schema -/
 
 /-- The handle word of node `0` of the persistent / scratch `letE` tier (tag `7`). -/
-def letP : Word := 0x70000000
-def letS : Word := 0x78000000
+def letP : Word := 0x1C000000
+def letS : Word := 0x9C000000
 
 /-- The `letE` table as a cons schema: three key words `ty val body`, packed into the record (lane
-memlay); the match is three field comparisons; the scratch skip is bit 27 of `ty | val | body`. -/
+memlay); the match is three field comparisons; the scratch skip is bit 31 of `ty | val | body`. -/
 def letCS : ConsSch where
   ra := LEREC
   sa := LESLOT
@@ -80,17 +80,17 @@ def letCS : ConsSch where
   recW := [.bin .or (.var 1) (.bin .shl (.var 2) (.const 32)), .var 3]
   ihash := lblk (ty, val, body, h) {
     h := (((⟪fnvBasis⟫ ^ ty) * ⟪fnvPrime⟫ ^ val) * ⟪fnvPrime⟫ ^ body) * ⟪fnvPrime⟫ }
-  skipW := some (rhsOf (lblk (ty, val, body, h, sk) { sk := ((ty | val | body) >> 27) & 1 }))
+  skipW := some (rhsOf (lblk (ty, val, body, h, sk) { sk := ((ty | val | body) >> 31) & 1 }))
   mtM m ks t i := lematchW (m.arr64 (tierA LEREC t)) t i (ks.getD 0 0) (ks.getD 1 0) (ks.getD 2 0)
   qhM _ ks := letHashW (ks.getD 0 0) (ks.getD 1 0) (ks.getD 2 0)
   hsM := lehash
   vsM as := [as.getD 0 0 ||| as.getD 1 0 <<< 32, as.getD 2 0]
   roomM m t c := decide (m.len64 (tierA LEREC t) < (c + 1) * 2)
-  skM ks := ((ks.getD 0 0 ||| ks.getD 1 0 ||| ks.getD 2 0) >>> 27) &&& 1
+  skM ks := ((ks.getD 0 0 ||| ks.getD 1 0 ||| ks.getD 2 0) >>> 31) &&& 1
 
 /-! ## `letE_find(t, ty, val, body, h)`: the probe -/
 
-/-- con-ron: ConRon/Arena/Store.lean:90-91 ConRon.Arena.Tbl.find? -/
+/-- con-ron: ConRon/Arena/Store.lean:94-95 ConRon.Arena.Tbl.find? -/
 def letFind : FunDecl := consFindG letCS
 
 /-! ## `letE_push(t, ty, val, body, j)`: append a node to tier `t`, register it at slot `j` -/
@@ -103,9 +103,9 @@ width (3) is not a power of two, so (unlike `app`'s `>> 2`) the record-room chec
 multiplication, `(c + 1) * 6 ≤ len`, matching `PushRoom`'s own shape directly (L has no division:
 `PLAN.md`, "the language L"). -/
 def lepushOK (m : Mem) (t : Word) : Bool :=
-  decide (lecnt m t < (134217728 : Word)) && decide ((lecnt m t + 1) * 2 ≤ m.len64 (tierA LEREC t))
+  decide (lecnt m t < (67108864 : Word)) && decide ((lecnt m t + 1) * 2 ≤ m.len64 (tierA LEREC t))
 
-/-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
+/-- con-ron: ConRon/Arena/Store.lean:97-102 ConRon.Arena.Tbl.push -/
 def letPush : FunDecl := consPushG letCS
 
 /-! ## `intern_letE(ty, val, body)`: hash-cons the expression `letE ty val body`
@@ -116,14 +116,14 @@ probe if the scratch tier is open, the append to the tier the store is in. -/
 
 /-- The scratch skip: the scratch tier is open and `ty`, `val` or `body` is a scratch handle. -/
 def leskipW (m : Mem) (ty val body : Word) : Word :=
-  if rdW (m.arr64 CTL) 1 ≠ 0 then ((ty ||| val ||| body) >>> 27) &&& 1 else 0
+  if rdW (m.arr64 CTL) 1 ≠ 0 then ((ty ||| val ||| body) >>> 31) &&& 1 else 0
 
 /-- The model of `intern_letE`: the handle and the memory after, or `none` where the L code
 aborts (the library's `consInternM`). -/
 def leinternW (m : Mem) (ty val body : Word) : Option (Word × Mem) := consInternM letCS m [ty, val, body]
 
-/-- con-ron: ConRon/Arena/Monad.lean:246-264 ConRon.Arena.internE
-con-ron: ConRon/Arena/Monad.lean:218-244 ConRon.Arena.internNodeE -/
+/-- con-ron: ConRon/Arena/Monad.lean:249-267 ConRon.Arena.internE
+con-ron: ConRon/Arena/Monad.lean:221-247 ConRon.Arena.internNodeE -/
 @[l_impl ConRon.Arena.internE ConRon.Arena.internNodeE]
 def internLet : FunDecl := consInternG letCS
 
@@ -147,11 +147,11 @@ def internLets (m : Mem) : List (Word × Word × Word) → Option (List Word)
 
 /- `(1, 2, 3)`, `(3, 2, 1)`, `(1, 2, 3)`: persistent handles 0, 1, 0. -/
 #guard internLets (letMem 0) [(1, 2, 3), (3, 2, 1), (1, 2, 3)] ==
-  some [0x70000000, 0x70000001, 0x70000000]
+  some [0x1C000000, 0x1C000001, 0x1C000000]
 
 /- Scratch open: a scratch child (`0x78000000`) skips the persistent probe. -/
-#guard internLets (letMem 1) [(1, 2, 3), (0x78000000, 2, 3), (1, 2, 3), (0x78000000, 2, 3)] ==
-  some [0x78000000, 0x78000001, 0x78000000, 0x78000001]
+#guard internLets (letMem 1) [(1, 2, 3), (0x9C000000, 2, 3), (1, 2, 3), (0x9C000000, 2, 3)] ==
+  some [0x9C000000, 0x9C000001, 0x9C000000, 0x9C000001]
 
 /-! ## The specs: the library's, from this table's obligations -/
 

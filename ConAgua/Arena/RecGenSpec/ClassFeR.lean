@@ -121,7 +121,7 @@ theorem cfrRec_specW (p : Prog) (ha : p.lookup "erec_alloc" = some erecAlloc)
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
         erecAlloc_specW p ha n] <;>
       finish [cfrRecW, cfrMem]
 
@@ -229,7 +229,7 @@ theorem classFeRGo_spec (p : Prog) (h : CfrProg p) (n : Nat) :
     intro s₀ cvo cvl rcl ro rl vis M
     rw [invoke_eq _ h.go]
     simp only [callFn, classFeRGo]
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rd_spec, rowGet_specW p h.ix h.rg n,
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rd_spec, rowGet_specW p h.ix h.rg n,
       cfrRec_specW p h.rp.alloc h.frec n, callW_spec p n "env_push", rec3_specW p h.ia n h.rec3,
       slCons_specW p h.ia h.copy h.cons n, ih]
     all_goals subst_vars
@@ -457,7 +457,7 @@ theorem ferW_ok (p : Prog) (hp : CfrProg p) (dn : NIdx → Option ConLeche.Name)
   have ht2 : tagW w ≤ 2 := by
     have : ¬ (2 : Word).toNat < (tagW w).toNat := fun e => htg (UInt64.lt_iff_toNat_lt.mpr e)
     exact UInt64.le_iff_toNat_le.mpr (by omega)
-  have htag : rowTag w ≤ 2 := by rw [← tagW_toNat]; exact UInt64.le_iff_toNat_le.mp ht2
+  have htag : rowTag w ≤ 2 := by rw [← tagW_toNat_row]; exact UInt64.le_iff_toNat_le.mp ht2
   rw [rowCW_eq m w hwH ht2, rowPW_eq m w hwH ht2] at h
   have hprev := rec3PrevD hS.check.env hwH htag
   obtain ⟨hmi, hrp⟩ := rec3FerMiRp (M := M) hrecs hsz

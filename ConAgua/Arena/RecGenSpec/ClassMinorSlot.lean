@@ -42,7 +42,7 @@ theorem classSlotIsMinor_refines (p : Prog) (hp : p.lookup "class_slot_is_minor"
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64] <;>
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64] <;>
       finish [UInt64.ofNat_toNat]
 
 section arms
@@ -80,7 +80,7 @@ theorem classMinorSlotGo_spec (p : Prog) (hp : p.lookup "class_minor_slot_go" = 
     -- post, where E-matching does not find it
     have hb := classMinorSlotGoW_base n s₀.mem off rem j c cc cnt rS rOff rLen
     sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih] <;>
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih] <;>
       finish (gen := 20)
 
 theorem hitsFrom_eq (c : Nat) (C : NIdx) : ∀ (j : Nat) (sls : List ClassSlot),
@@ -114,7 +114,7 @@ theorem leafAt_spec (p : Prog) (hp : p.lookup "class_leaf_at" = some classLeafAt
     ⦃fun r s' => LocEq s' s₀ ∧ leafAtW s₀.mem mm leaf = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hp]; simp only [callFn, classLeafAtL]
   sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       gafF_spec p had n, eView_spec p hv n] <;>
     finish (gen := 20) [leafAtW, rdW_eq]
 
@@ -130,7 +130,7 @@ theorem leafAtW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv
   rw [CWF_eq] at hrun1
   generalize hw : r1.headD 0 = w at hd1 hd2 h
   have e1 : (decI leaf : EIdx) = decE leaf := rfl
-  by_cases hf : w >>> 28 ≠ 3
+  by_cases hf : tagW w ≠ 3
   · rw [ite_eq_left hf] at h
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     refine ⟨false, a1, ?_, hS1, hg1, by simp, by simp⟩
@@ -143,7 +143,7 @@ theorem leafAtW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv
     rw [← hd2, show (decI w : EIdx) = decE w from rfl]
     simp only [htag', Bool.false_eq_true, ite_false]
     rfl
-  · have hf3 : w >>> 28 = 3 := by simpa using hf
+  · have hf3 : tagW w = 3 := by simpa using hf
     rw [ite_eq_right hf] at h
     obtain ⟨hev, h⟩ := of_ite_none h
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)

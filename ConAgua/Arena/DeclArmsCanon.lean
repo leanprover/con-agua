@@ -138,7 +138,7 @@ def capsEq : FunDecl := lfn (q, r) locals (e) {
 }
 
 /-- `rule_eq_a(q, q')`: `ctor`, `nfields`, `ctorParams`, the fire kind (words `0‥3`). -/
--- con-ron: ConRon/Arena/Canon.lean:176-190 ConRon.Arena.canonRulesEq
+-- con-ron: ConRon/Arena/Canon.lean:180-194 ConRon.Arena.canonRulesEq
 def ruleEqA : FunDecl := lfn (q, r) locals () {
   if EREC.u64[q] != EREC.u64[r] { return 0 };
   if EREC.u64[q + 1] != EREC.u64[r + 1] { return 0 };
@@ -147,7 +147,7 @@ def ruleEqA : FunDecl := lfn (q, r) locals () {
 }
 
 /-- `rule_eq_b(q, q')`: a nested fire's two slices (words `4‥7`); a plain fire has none. -/
--- con-ron: ConRon/Arena/Canon.lean:176-190 ConRon.Arena.canonRulesEq
+-- con-ron: ConRon/Arena/Canon.lean:180-194 ConRon.Arena.canonRulesEq
 def ruleEqB : FunDecl := lfn (q, r) locals (e) {
   if EREC.u64[q + 3] == 1 {
     e := call er_sl_at(q, r, 4);
@@ -160,7 +160,7 @@ def ruleEqB : FunDecl := lfn (q, r) locals (e) {
 
 /-- `rule_eq_but_rhs(q, q')`: two recursor rules (`decRule`, 11 words) agree on every field but
 `rhs` (the twin's `{ r with rhs := default } == { r' with rhs := default }`). -/
--- con-ron: ConRon/Arena/Canon.lean:176-190 ConRon.Arena.canonRulesEq
+-- con-ron: ConRon/Arena/Canon.lean:180-194 ConRon.Arena.canonRulesEq
 def ruleEqButRhs : FunDecl := lfn (q, r) locals (e) {
   e := call rule_eq_a(q, r);
   if e == 0 { return 0 };
@@ -236,7 +236,7 @@ def findIs : FunDecl := lfn (vis, n, pin) locals (f, r, e) {
 
 /-- `ci_to_cv(p)`: `IConstantInfo.toConstantVal` → the constant value pointer: the inline one at
 `p + 1` (every constant record has it there). -/
--- con-ron: ConRon/Arena/Env.lean:176-180 ConRon.Arena.IConstantInfo.toConstantVal
+-- con-ron: ConRon/Arena/Env.lean:180-184 ConRon.Arena.IConstantInfo.toConstantVal
 @[l_impl ConRon.Arena.IConstantInfo.toConstantVal]
 def ciToCv : FunDecl := lfn (p) locals () {
   return p + 1
@@ -245,7 +245,7 @@ def ciToCv : FunDecl := lfn (p) locals () {
 /-! ## The renaming -/
 
 /-- `canon_names_go(i, n)`: the numbered names `⟨i⟩ … ⟨i + n - 1⟩`, interned, as an `IW` slice. -/
--- con-ron: ConRon/Arena/Canon.lean:48-59 ConRon.Arena.canonNamesGo
+-- con-ron: ConRon/Arena/Canon.lean:52-63 ConRon.Arena.canonNamesGo
 @[l_impl ConRon.Arena.canonNamesGo]
 def canonNamesGo : FunDecl := lfn (i, n) locals (a, h, o, l, q, m) {
   if n == 0 { return (0, 0) };
@@ -259,7 +259,7 @@ def canonNamesGo : FunDecl := lfn (i, n) locals (a, h, o, l, q, m) {
 }
 
 /-- `canon_names(n)`. -/
--- con-ron: ConRon/Arena/Canon.lean:61-63 ConRon.Arena.canonNames
+-- con-ron: ConRon/Arena/Canon.lean:65-67 ConRon.Arena.canonNames
 @[l_impl ConRon.Arena.canonNames]
 def canonNames : FunDecl := lfn (n) locals (o, l) {
   (o, l) := call canon_names_go(0, n);
@@ -268,7 +268,7 @@ def canonNames : FunDecl := lfn (n) locals (o, l) {
 
 /-- `canon_name_map(po, pl, co, cl, n)`: the `i`-th parameter of `ps` becomes `cs[i]` (or stays,
 past `cs`), anything else stays. -/
--- con-ron: ConRon/Arena/Canon.lean:65-73 ConRon.Arena.canonNameMap
+-- con-ron: ConRon/Arena/Canon.lean:69-77 ConRon.Arena.canonNameMap
 @[l_impl ConRon.Arena.canonNameMap]
 def canonNameMap : FunDecl := lfn (po, pl, co, cl, n) locals (f, i, r) {
   (f, i) := call sl_find(po, pl, n);
@@ -281,7 +281,7 @@ def canonNameMap : FunDecl := lfn (po, pl, co, cl, n) locals (f, i, r) {
 
 /-- `canon_level_eq(po, pl, qo, ql, co, cl, fuel, u, v)`: `canonLevelEq`, in lockstep on the two
 level handles (`lv_node`'s tags: `0` zero, `1` succ, `2` max, `3` imax, `4` param). -/
--- con-ron: ConRon/Arena/Canon.lean:77-99 ConRon.Arena.canonLevelEq
+-- con-ron: ConRon/Arena/Canon.lean:81-103 ConRon.Arena.canonLevelEq
 @[l_impl ConRon.Arena.canonLevelEq]
 def canonLevelEq : FunDecl :=
     lfn (po, pl, qo, ql, co, cl, fuel, u, v) locals (ta, a1, a2, tb, b1, b2, r, x, y) {
@@ -310,7 +310,7 @@ def canonLevelEq : FunDecl :=
 
 /-- `canon_level_list_eq(po, pl, qo, ql, co, cl, fuel, ao, al, bo, bl)`: two `IW` slices of level
 handles, pairwise. -/
--- con-ron: ConRon/Arena/Canon.lean:101-111 ConRon.Arena.canonLevelListEq
+-- con-ron: ConRon/Arena/Canon.lean:105-115 ConRon.Arena.canonLevelListEq
 @[l_impl ConRon.Arena.canonLevelListEq]
 def canonLevelListEq : FunDecl :=
     lfn (po, pl, qo, ql, co, cl, fuel, ao, al, bo, bl) locals (r, u, v) {
@@ -325,7 +325,7 @@ def canonLevelListEq : FunDecl :=
 }
 
 /-- `canon_levels_eq(po, pl, qo, ql, co, cl, fuel, us, vs)`: at two level-list handles. -/
--- con-ron: ConRon/Arena/Canon.lean:113-117 ConRon.Arena.canonLevelsEq
+-- con-ron: ConRon/Arena/Canon.lean:117-121 ConRon.Arena.canonLevelsEq
 @[l_impl ConRon.Arena.canonLevelsEq]
 def canonLevelsEq : FunDecl :=
     lfn (po, pl, qo, ql, co, cl, fuel, us, vs) locals (ao, al, bo, bl, r) {
@@ -338,7 +338,7 @@ def canonLevelsEq : FunDecl :=
 /-! ## Terms -/
 
 /-- `canon_expr_eq(po, pl, qo, ql, co, cl, fuel, a, b)`: `canonExprEq`, both views first. -/
--- con-ron: ConRon/Arena/Canon.lean:121-159 ConRon.Arena.canonExprEq
+-- con-ron: ConRon/Arena/Canon.lean:125-163 ConRon.Arena.canonExprEq
 @[l_impl ConRon.Arena.canonExprEq]
 def canonExprEq : FunDecl :=
     lfn (po, pl, qo, ql, co, cl, fuel, a, b) locals (t, x, y, z, s, x2, y2, z2, r) {
@@ -385,7 +385,7 @@ def canonExprEq : FunDecl :=
 
 /-- `canon_ctx(cp, cq)`: the renaming context of two constant values: the interned numerals for
 `cp`'s parameter count, then both parameter lists, as `(po, pl, qo, ql, co, cl)`. -/
--- con-ron: ConRon/Arena/Canon.lean:48-59 ConRon.Arena.canonNamesGo
+-- con-ron: ConRon/Arena/Canon.lean:52-63 ConRon.Arena.canonNamesGo
 def canonCtx : FunDecl := lfn (cp, cq) locals (n, co, cl, po, pl, qo, ql) {
   n := EREC.u64[cp + 2];
   (co, cl) := call canon_names(n);
@@ -396,7 +396,7 @@ def canonCtx : FunDecl := lfn (cp, cq) locals (n, co, cl, po, pl, qo, ql) {
 
 /-- `cv_canon_eq(q, q')`: `IConstantVal.canonEq`: the names and the parameter counts first, then
 the types under the renaming. -/
--- con-ron: ConRon/Arena/Canon.lean:163-174 ConRon.Arena.IConstantVal.canonEq
+-- con-ron: ConRon/Arena/Canon.lean:167-178 ConRon.Arena.IConstantVal.canonEq
 @[l_impl ConRon.Arena.IConstantVal.canonEq]
 def cvCanonEq : FunDecl := lfn (q, r) locals (co, cl, po, pl, qo, ql, e, a, b) {
   if EREC.u64[q] != EREC.u64[r] || EREC.u64[q + 2] != EREC.u64[r + 2] { return 0 };
@@ -409,7 +409,7 @@ def cvCanonEq : FunDecl := lfn (q, r) locals (co, cl, po, pl, qo, ql, e, a, b) {
 
 /-- `canon_rules_eq(po, pl, qo, ql, co, cl, fuel, o, l, o', l')`: two `EREC` rule slices, every
 field but the right-hand side compared as it stands, the right-hand sides canonically. -/
--- con-ron: ConRon/Arena/Canon.lean:176-190 ConRon.Arena.canonRulesEq
+-- con-ron: ConRon/Arena/Canon.lean:180-194 ConRon.Arena.canonRulesEq
 @[l_impl ConRon.Arena.canonRulesEq]
 def canonRulesEq : FunDecl :=
     lfn (po, pl, qo, ql, co, cl, fuel, o1, l1, o2, l2) locals (e, a, b) {
@@ -426,7 +426,7 @@ def canonRulesEq : FunDecl :=
 }
 
 /-- `ci_canon_defn(p, p')`: two definitions, hints first, then the common data, then the values. -/
--- con-ron: ConRon/Arena/Canon.lean:192-217 ConRon.Arena.IConstantInfo.canonEq
+-- con-ron: ConRon/Arena/Canon.lean:196-221 ConRon.Arena.IConstantInfo.canonEq
 def ciCanonDefn : FunDecl := lfn (p, q) locals (e, co, cl, po, pl, qo, ql, a, b) {
   e := call hint_eq(p + 6, q + 6);
   if e == 0 { return 0 };
@@ -441,7 +441,7 @@ def ciCanonDefn : FunDecl := lfn (p, q) locals (e, co, cl, po, pl, qo, ql, a, b)
 
 /-- `ci_canon_rec(p, p')`: two recursors, the two counts first, then the common data, then the
 rules. -/
--- con-ron: ConRon/Arena/Canon.lean:192-217 ConRon.Arena.IConstantInfo.canonEq
+-- con-ron: ConRon/Arena/Canon.lean:196-221 ConRon.Arena.IConstantInfo.canonEq
 def ciCanonRec : FunDecl := lfn (p, q) locals (e, co, cl, po, pl, qo, ql, o1, l1, o2, l2) {
   if EREC.u64[p + 5] != EREC.u64[q + 5] || EREC.u64[p + 6] != EREC.u64[q + 6] { return 0 };
   e := call cv_canon_eq(p + 1, q + 1);
@@ -457,7 +457,7 @@ def ciCanonRec : FunDecl := lfn (p, q) locals (e, co, cl, po, pl, qo, ql, o1, l1
 
 /-- `ci_canon_eq(p, p')`: `IConstantInfo.canonEq`, kind by kind (a definition's hints first, a
 recursor's two counts first; an inductive's capabilities are not compared). -/
--- con-ron: ConRon/Arena/Canon.lean:192-217 ConRon.Arena.IConstantInfo.canonEq
+-- con-ron: ConRon/Arena/Canon.lean:196-221 ConRon.Arena.IConstantInfo.canonEq
 @[l_impl ConRon.Arena.IConstantInfo.canonEq]
 def ciCanonEq : FunDecl := lfn (p, q) locals (k, e) {
   k := EREC.u64[p];
@@ -473,7 +473,7 @@ def ciCanonEq : FunDecl := lfn (p, q) locals (k, e) {
 }
 
 /-- `canon_eq_list(o, l, o', l')`: two `IW` slices of constant records, member for member. -/
--- con-ron: ConRon/Arena/Canon.lean:219-226 ConRon.Arena.canonEqList
+-- con-ron: ConRon/Arena/Canon.lean:223-230 ConRon.Arena.canonEqList
 @[l_impl ConRon.Arena.canonEqList]
 def canonEqListL : FunDecl := lfn (o1, l1, o2, l2) locals (e, a, b) {
   if l1 == 0 && l2 == 0 { return 1 };

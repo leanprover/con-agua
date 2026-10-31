@@ -10,7 +10,11 @@ run off once, for both theorems: `Bridge/Promote/Walk.lean` (Theorem 1) and
 wrapper.  It imports nothing but `Monad.lean` so that `Refine2` can import it
 without reaching `Bridge`.
 -/
-import ConRon.Arena.Monad
+module
+
+public import ConRon.Arena.Monad
+
+@[expose] public section
 
 namespace ConRon.Arena
 
@@ -44,7 +48,7 @@ theorem internPersistentE_ok {v : ENodeView} {s : AState} {r : EIdx} {s' : AStat
     obtain ⟨rfl, rfl⟩ := h
     simp [EStore.internPersistent, hf]
   | none =>
-    by_cases hc : s.store.pers.sizeOf v < Idx.idxCap
+    by_cases hc : s.store.pers.sizeOf v < v.cap
     · simp only [internPersistentE, bind, StateT.bind, get, getThe, MonadStateOf.get,
         StateT.get, pure, StateT.pure, set, StateT.set, Except.bind, Except.pure, hf,
         ite_eq_left hc, Except.ok.injEq, Prod.mk.injEq] at h
@@ -68,7 +72,7 @@ theorem internPersistentE_run_eq {v : ENodeView} {s : AState}
       StateT.get, pure, StateT.pure, Except.bind, Except.pure, hf,
       EStore.internPersistent]
   | none =>
-    have hc : s.store.pers.sizeOf v < Idx.idxCap := hn hf
+    have hc : s.store.pers.sizeOf v < v.cap := hn hf
     simp only [internPersistentE, bind, StateT.bind, get, getThe, MonadStateOf.get,
       StateT.get, pure, StateT.pure, set, StateT.set, Except.bind, Except.pure, hf,
       ite_eq_left hc]
@@ -96,7 +100,7 @@ theorem internNodeE_ok {v : ENodeView} {s : AState} {r : EIdx} {s' : AState}
     exact Or.inl ⟨rfl, rfl⟩
   | none =>
     by_cases hc : (if s.store.scratchOn then s.store.scr.sizeOf v
-        else s.store.pers.sizeOf v) < Idx.idxCap
+        else s.store.pers.sizeOf v) < v.cap
     · simp only [internNodeE, bind, StateT.bind, get, getThe, MonadStateOf.get,
         StateT.get, pure, StateT.pure, set, StateT.set, Except.bind, Except.pure, hf,
         ite_eq_left hc, Except.ok.injEq, Prod.mk.injEq] at h

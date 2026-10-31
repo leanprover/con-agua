@@ -19,7 +19,12 @@ not for the operation (`internPersistent` breaks `fresh` transiently, and it
 is `promote … dropScratch` as a whole that takes `StoreWF` to `StoreWF`), so
 their specs belong to the `Promote` tier's statement.
 -/
+module
+
 import ConRon.Bridge.Specs
+public import ConRon.Bridge.Grind
+
+public section
 
 namespace ConRon.Bridge
 

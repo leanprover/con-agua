@@ -368,7 +368,7 @@ several views of one index are live at once (`restrictTo`: the same index, a sma
 `visibleBelow`). In L there is **one destructive index** and a view is a word `vis`:
 
 * **The index, directly addressed by the name handle** (no hashing, no tombstones): a name
-  handle is `tag · 2^28 + tier · 2^27 + i` with `tag` 0 (`anonymous`), 1 (`str`), 2 (`num`), so
+  handle is narrow, `tier · 2^31 + tag · 2^26 + i` with `tag` 0 (`anonymous`), 1 (`str`), 2 (`num`), so
   its row is words `2 i`, `2 i + 1` of array `EIXA`/`EIXS`/`EIXN` for tier 0 and
   `EIXA1`/`EIXS1`/`EIXN1` for tier 1 (`rowArr`, by `selArr`): the counter plus one (`0`: no row)
   and the record pointer. `erase` writes `0`. The arrays are sized like the name tables (an index
@@ -386,20 +386,36 @@ and the constants list decodes in order. `find?` follows (`EnvR.find?`); a raw r
 name handles back (`EnvRec.lean`).
 -/
 
-/-- The constructor tag of a name handle word. -/
-def rowTag (w : Word) : Nat := w.toNat / 2 ^ 28
-/-- The tier bit of a name handle word. -/
-def rowTier (w : Word) : Nat := w.toNat / 2 ^ 27 % 2
-/-- `w`'s row array selector as an L expression computes it: `2 tag + tier` (`w >> 27`). -/
-def rowSelW (w : Word) : Word := w >>> 27
+/-- The constructor tag of a name handle word (`⟦w⟧.tag`). -/
+def rowTag (w : Word) : Nat := (tagW w).toNat
+/-- The tier bit of a name handle word (`⟦w⟧.tier`). -/
+def rowTier (w : Word) : Nat := w.toNat / 2 ^ 31 % 2
+/-- `w`'s row array selector as an L expression computes it: `2 tag + tier`. -/
+def rowSelW (w : Word) : Word := (tagW w <<< 1) + tierW w
+
+theorem tagW_toNat_row (w : Word) : (tagW w).toNat = rowTag w := rfl
+
+theorem tierW_toNat_row (w : Word) : (tierW w).toNat = rowTier w := tierW_toNat' w
+
+/-- A name handle word (tag at most `2`) is narrow. -/
+theorem rowTag_narrow {w : Word} (h : rowTag w ≤ 2) : w.toNat / 2 ^ 30 % 2 = 0 :=
+  narrow_of_tagW w fun e => by simp only [rowTag, e] at h; revert h; decide
+
+/-- The tag of a narrow word as a number. -/
+theorem rowTag_eq {w : Word} (h : rowTag w ≤ 2) : rowTag w = w.toNat / 2 ^ 26 % 16 := by
+  have hn := rowTag_narrow h
+  have := tagW_toNat w; rw [ite_eq_right (by omega)] at this; exact this
+
+theorem rowTag_lt (w : Word) : rowTag w < 16 := by
+  have := tagW_toNat w; simp only [rowTag]; split at this <;> omega
 
 theorem rowSelW_toNat (w : Word) : (rowSelW w).toNat = 2 * rowTag w + rowTier w := by
-  have h0 : (w >>> 27).toNat = w.toNat / 2 ^ 27 := by
-    simp [UInt64.toNat_shiftRight, Nat.shiftRight_eq_div_pow]
-  simp only [rowSelW, rowTag, rowTier, h0]
-  have h1 := Nat.div_add_mod (w.toNat / 2 ^ 27) 2
-  have h2 : w.toNat / 2 ^ 28 = w.toNat / 2 ^ 27 / 2 := by rw [Nat.div_div_eq_div_mul]
-  omega
+  have h1 := rowTag_lt w
+  have h2 : rowTier w < 2 := Nat.mod_lt _ (by decide)
+  have h3 : (tagW w <<< 1).toNat = 2 * rowTag w := by
+    rw [UInt64.toNat_shiftLeft]; simp only [rowTag, Nat.shiftLeft_eq]
+    simp only [rowTag] at h1; simp; omega
+  rw [rowSelW, UInt64.toNat_add, h3, tierW_toNat_row]; omega
 
 /-- The row array of selector `g` (`rowSelW`): tier 0's `EIXA`, `EIXS`, `EIXN` at `0, 2, 4`, tier 1's
 at `1, 3, 5`. -/
@@ -477,7 +493,10 @@ theorem rowArr_inj {w w' : Word} (h : rowTag w ≤ 2) (h' : rowTag w' ≤ 2)
   rcases rowArr_spec w' h' with ⟨a', b', c'⟩ | ⟨a', b', c'⟩ | ⟨a', b', c'⟩ | ⟨a', b', c'⟩ | ⟨a', b', c'⟩ | ⟨a', b', c'⟩ <;>
   first | exact ⟨by omega, by omega⟩ | (exfalso; rw [c, c'] at ha; revert ha; decide)
 /-- The first word of a name handle's row in its array. -/
-def rowIx (w : Word) : Nat := 2 * (w.toNat % 2 ^ 27)
+def rowIx (w : Word) : Nat := 2 * (idxW w).toNat
+
+theorem rowIx_lt (w : Word) : rowIx w < 2 ^ 32 := by
+  have := UInt64.lt_iff_toNat_lt.mp (idxW_lt w); simp only [rowIx]; simp at this; omega
 
 /-- The row's first word: the counter plus one, `0` for no row. -/
 def rowC (m : Mem) (w : Word) : Word :=
@@ -552,7 +571,10 @@ theorem tblArr_spec (w : Word) (ht : rowTag w ≤ 2) :
   · simp [tblArr, tixArr, tierA, tier1, h1, h2, TIXA, TIXS, TIXN]
 
 /-- The table row's index: the handle's index. -/
-def tblIx (w : Word) : Nat := w.toNat % 2 ^ 27
+def tblIx (w : Word) : Nat := (idxW w).toNat
+
+theorem tblIx_lt (w : Word) : tblIx w < 2 ^ 31 := by
+  have := UInt64.lt_iff_toNat_lt.mp (idxW_lt w); simp only [tblIx]; simp at this; omega
 
 /-- The table row of a name handle: the table record's pointer plus one, `0` for none. -/
 def tblRow (m : Mem) (w : Word) : Word :=

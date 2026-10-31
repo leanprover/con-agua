@@ -96,7 +96,7 @@ def nfE (p : Prog) (n : Nat) (m : L.Mem) (vis : L.Word) (ctx : L.Word) (fuel : L
   | n + 1 =>
     if (nF) = 0 then Except.ok ([(ksOff), (ksLen), (ndsOff), (ndsLen), (cur), (ns)], (m))
     else
-      if ((cur) >>> (28 : L.Word) : L.Word) ≠ 6 then Except.error (L.Err.abort (R_NESTED_POSITIVITY_INVALID_NESTED))
+      if (tagW cur) ≠ 6 then Except.error (L.Err.abort (R_NESTED_POSITIVITY_INVALID_NESTED))
       else
         if ((base) + (j)) < (base) then Except.error (L.Err.abort 0)
         else
@@ -115,7 +115,7 @@ grind_pattern [arena_grind]nfE.arm1 =>
 theorem nfE.arm2 (p : Prog) (n : Nat) (m : L.Mem) (vis : L.Word) (ctx : L.Word) (fuel : L.Word) (progOff : L.Word)
     (progLen : L.Word) (base : L.Word) (nF : L.Word) (j : L.Word) (cur : L.Word) (ns : L.Word) (ksOff : L.Word)
     (ksLen : L.Word) (ndsOff : L.Word) (ndsLen : L.Word) (hc1 : (nF) ≠ 0)
-    (hc2 : ((cur) >>> (28 : L.Word) : L.Word) = 6) (hc3 : ¬((base) + (j)) < (base))
+    (hc2 : (tagW cur) = 6) (hc3 : ¬((base) + (j)) < (base))
     (hc4 : (((base) + (j)) + (1 : L.Word)) ≠ 0) :
     nfE p (n + 1) m vis ctx fuel progOff progLen base nF j cur ns ksOff ksLen ndsOff ndsLen =
       (nfE.k_e_view (p) (n) (vis) (ctx) (fuel) (progOff) (progLen) (base) (nF) (j) (ns) (ksOff) (ksLen) (ndsOff)
@@ -126,7 +126,7 @@ grind_pattern [arena_grind]nfE.arm2 =>
 theorem nfE.abort1 (p : Prog) (n : Nat) (m : L.Mem) (vis : L.Word) (ctx : L.Word) (fuel : L.Word)
     (progOff : L.Word) (progLen : L.Word) (base : L.Word) (nF : L.Word) (j : L.Word) (cur : L.Word) (ns : L.Word)
     (ksOff : L.Word) (ksLen : L.Word) (ndsOff : L.Word) (ndsLen : L.Word) (hc1 : (nF) ≠ 0)
-    (hc2 : ((cur) >>> (28 : L.Word) : L.Word) ≠ 6) :
+    (hc2 : (tagW cur) ≠ 6) :
     nfE p (n + 1) m vis ctx fuel progOff progLen base nF j cur ns ksOff ksLen ndsOff ndsLen =
       Except.error (L.Err.abort (R_NESTED_POSITIVITY_INVALID_NESTED)) :=
   by rw [nfE.eq_2, ite_eq_right hc1, ite_eq_left hc2]
@@ -135,7 +135,7 @@ grind_pattern [arena_grind]nfE.abort1 =>
 theorem nfE.abort2 (p : Prog) (n : Nat) (m : L.Mem) (vis : L.Word) (ctx : L.Word) (fuel : L.Word)
     (progOff : L.Word) (progLen : L.Word) (base : L.Word) (nF : L.Word) (j : L.Word) (cur : L.Word) (ns : L.Word)
     (ksOff : L.Word) (ksLen : L.Word) (ndsOff : L.Word) (ndsLen : L.Word) (hc1 : (nF) ≠ 0)
-    (hc2 : ((cur) >>> (28 : L.Word) : L.Word) = 6) (hc3 : ((base) + (j)) < (base)) :
+    (hc2 : (tagW cur) = 6) (hc3 : ((base) + (j)) < (base)) :
     nfE p (n + 1) m vis ctx fuel progOff progLen base nF j cur ns ksOff ksLen ndsOff ndsLen =
       Except.error (L.Err.abort 0) :=
   by rw [nfE.eq_2, ite_eq_right hc1, ite_eq_right (not_not_intro hc2), ite_eq_left hc3]
@@ -144,7 +144,7 @@ grind_pattern [arena_grind]nfE.abort2 =>
 theorem nfE.abort3 (p : Prog) (n : Nat) (m : L.Mem) (vis : L.Word) (ctx : L.Word) (fuel : L.Word)
     (progOff : L.Word) (progLen : L.Word) (base : L.Word) (nF : L.Word) (j : L.Word) (cur : L.Word) (ns : L.Word)
     (ksOff : L.Word) (ksLen : L.Word) (ndsOff : L.Word) (ndsLen : L.Word) (hc1 : (nF) ≠ 0)
-    (hc2 : ((cur) >>> (28 : L.Word) : L.Word) = 6) (hc3 : ¬((base) + (j)) < (base))
+    (hc2 : (tagW cur) = 6) (hc3 : ¬((base) + (j)) < (base))
     (hc4 : (((base) + (j)) + (1 : L.Word)) = 0) :
     nfE p (n + 1) m vis ctx fuel progOff progLen base nF j cur ns ksOff ksLen ndsOff ndsLen =
       Except.error (L.Err.abort 0) :=
@@ -302,12 +302,12 @@ theorem nfE_spec (p : Prog) (hf : p.lookup "nest_fields" = some nestFieldsL) (n 
   cases n with
   | zero =>
     rw [_root_.L.invoke_eq _ (hf)]; simp only [_root_.L.callFn, _root_.L.Ind.nestFieldsL]
-    vcgen [_root_.L.exec] <;> grind
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, _root_.L.exec] <;> grind
   | succ n =>
     rw [_root_.L.invoke_eq _ (hf)]; simp only [_root_.L.callFn, _root_.L.Ind.nestFieldsL]
     vcgen [_root_.L.exec, _root_.L.step, _root_.L.evalE, _root_.L.evalC, _root_.L.evalArgs, _root_.L.setLoc,
             _root_.L.setLocs, _root_.L.ld8_specE, _root_.L.st64, _root_.L.setG, ld64_rdW_specE, evalE_tld, tld,
-            evalE_cnt, tcntM, evalE_tierE, evalE_idxE, callE_spec p n "nest_fields", _root_.L.callE_spec p n "e_view",
+            evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE, callE_spec p n "nest_fields", _root_.L.callE_spec p n "e_view",
             _root_.L.callE_spec p n "nest_pos", _root_.L.callE_spec p n "intern_fvar",
             _root_.L.callE_spec p n "instantiate1_fast", _root_.L.callE_spec p n "sl_snoc"] <;>
           (try

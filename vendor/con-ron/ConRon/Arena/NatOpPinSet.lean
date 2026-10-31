@@ -15,8 +15,12 @@ walk", which is `internPinSets` below, called by `Arena/Checker.lean`'s
 `internAllPins`.  `Modeller`-style indirection is explicitly NOT wanted here:
 the pins are data the checker reads, not a seam.
 -/
-import ConRon.Arena.Basis
-import ConLeche.Kernel.NatOpPins
+module
+
+public import ConLeche.Kernel.NatOpPinSet
+public import ConRon.Arena.Intern
+
+@[expose] public section
 
 namespace ConRon.Arena
 

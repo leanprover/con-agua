@@ -39,9 +39,20 @@ fall-through hypothesis with a NESTED constructor pattern
 `rawNatLit?_spec` runs `vcgen` on `rawNatLit?_split`, the twin with its
 literal arm one constructor deep.
 -/
+module
+
 import ConRon.Bridge.Core.Walks.Spine
 import ConRon.Bridge.Core.Walks.Proj
-import ConRon.Bridge.Grind
+public import ConRon.Bridge.Grind
+public import ConRon.Bridge.Core.Walks.Spec
+import ConRon.Bridge.Core.Memo
+public import ConRon.Bridge.Core.Knot
+import ConLeche.Verify.Mono
+public import ConLeche.Verify.Knot
+import ConRon.Bridge.Specs
+import ConRon.Bridge.GrindAttr
+
+public section
 
 namespace ConRon.Bridge.Core
 
@@ -141,7 +152,7 @@ theorem pinAt_specE (s₀ : AState) (i : Nat) (hp : PinsOK s₀) :
 
 /-- con-leche: none — the index's answer at a name, against the
 environment's, as ONE relation: a miss is a miss and a hit denotes the hit. -/
-def OptCI (st : EStore) : Option IConstantInfo → Option ConstantInfo → Prop
+@[expose] def OptCI (st : EStore) : Option IConstantInfo → Option ConstantInfo → Prop
   | none, oc' => oc' = none
   | some ci, oc' => ∃ c, Frontend.denoteCI st ci = some c ∧ oc' = some c
 
@@ -431,7 +442,7 @@ theorem constE_spec (s₀ : AState) (n : NIdx) (nm : ConLeche.Name)
       internE_specC (mode := mode) (env := env) (fe := fe)] <;> finish
 
 /-- con-leche: none — the level-monomorphic constant at a name. -/
-def const0 (nm : ConLeche.Name) : Expr := .const nm []
+@[expose] def const0 (nm : ConLeche.Name) : Expr := .const nm []
 
 /-- con-leche: none — `const0` unfolded. -/
 @[bridge_grind =] theorem const0_eq (nm : ConLeche.Name) : const0 nm = .const nm [] := rfl
@@ -901,7 +912,7 @@ def NatRed (mode : CheckMode) (env : Env) (d : Nat) (x : Expr) (st : EStore) (r 
 
 /-- con-leche: ConLeche/Kernel/Core.lean:156-208 reduceNat — the `Nat.succ`
 reduct of a literal. -/
-def succLit (n : Nat) : Expr := .lit (.natVal (n + 1))
+@[expose] def succLit (n : Nat) : Expr := .lit (.natVal (n + 1))
 /-- con-leche: none — `succLit` unfolded. -/
 @[bridge_grind =] theorem succLit_eq (n : Nat) : succLit n = .lit (.natVal (n + 1)) := rfl
 

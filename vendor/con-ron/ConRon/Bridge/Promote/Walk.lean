@@ -17,8 +17,14 @@ records is a promoted pair whether or not the caller cared.
 `Ext` and the frame are not re-proved: `Arena/PromoteExt.lean`'s `AExtOf`
 gives them for every run, unconditionally.
 -/
-import ConRon.Bridge.Promote.Memo
+module
+
+public import ConRon.Bridge.Promote.Memo
 import ConRon.Bridge.Promote.Weak
+import ConRon.Bridge.Rel
+import ConRon.Arena.PersistentRun
+
+public section
 
 namespace ConRon.Bridge
 
@@ -33,7 +39,7 @@ theorem denoteN_of_view' {st : NStore} {rk : NIdx → Nat} (h : NWFAt' st rk) :
       ∃ x, denoteN st i = some x := by
   intro n
   induction n with
-  | zero => intro i hn; omega
+  | zero => intro i hn; grind
   | succ n ih =>
     intro i hn hv
     obtain ⟨v, hv'⟩ := Option.isSome_iff_exists.mp hv
@@ -252,7 +258,7 @@ theorem denoteL_of_view' {st : LStore} {rk : LIdx → Nat} (h : LWFAt' st rk) :
       ∃ x, denoteL st i = some x := by
   intro n
   induction n with
-  | zero => intro i hn; omega
+  | zero => intro i hn; grind
   | succ n ih =>
     intro i hn hv
     obtain ⟨v, hv'⟩ := Option.isSome_iff_exists.mp hv

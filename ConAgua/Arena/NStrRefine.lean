@@ -56,7 +56,7 @@ def nstrLens : Lens StrNode UInt64 .name where
 /-- `internNNode` at a `str` node is the library's protocol, with no skip. -/
 theorem internNNode_str_run (pre : NIdx) (s : String) (a : AState) :
     (internNNode (.str pre s)).run a =
-      protoRun nstrLens (nstrKey pre s) NTag.str a.store.lss.ls.ns.pers.strs.cons[nstrKey pre s]?
+      protoRun nstrLens (nstrKey pre s) NTag.str false a.store.lss.ls.ns.pers.strs.cons[nstrKey pre s]?
         (a.store.lss.ls.ns.derOfView (.str pre s)) (.native "arena: name constructor array full")
         a := by
   simp only [internNNode, EStore.ns, NStore.find?, NTables.find?, Tbl.find?, NTables.sizeOf,
@@ -68,12 +68,12 @@ theorem internNNode_str_run (pre : NIdx) (s : String) (a : AState) :
       ↓reduceIte, nstrKey, protoRun, nstrLens] <;>
     (try split) <;> simp_all [withScrNStrs, withPersNStrs, fail,
       throwThe, MonadExceptOf.throw, StateT.run, set, StateT.set,
-      StateT.lift, bind, Except.bind, pure, Except.pure, StateT.bind, StateT.pure]
+      StateT.lift, bind, Except.bind, pure, Except.pure, StateT.bind, StateT.pure, mkS, capS, Idx.idxCap]
 
 /-! ## The relation between L memory and the arena's name `str` tables -/
 
 /-- The name `str` schema: `NSREC`, `NSSLOT`, four words per node, the counts at `CTL[36 + t]`. -/
-def nstrSch : Schema := ⟨NSREC, NSSLOT, 4, 36, NTag.str⟩
+def nstrSch : Schema := ⟨NSREC, NSSLOT, 4, 36, NTag.str, false⟩
 
 theorem nstrSch_wf : nstrSch.WF :=
   ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide⟩
@@ -233,7 +233,7 @@ end query
 
 theorem nspushOK_room (m : Mem) (t : Word) (h : nspushOK m t = true) : PushRoom nstrSch m t := by
   simp only [nspushOK, Bool.and_eq_true, decide_eq_true_eq] at h
-  simp only [PushRoom, cntW, nscnt, nstrSch, len64_eq] at *
+  simp only [PushRoom, Schema.cap, capS, cntW, nscnt, nstrSch, len64_eq] at *
   grind
 
 /-- **The `nstr` table's shape.** -/
@@ -241,6 +241,7 @@ theorem nstrCS_wf : nstrCS.WF where
   sch := nstrSch_wf
   P := by decide
   S := by decide
+  wtag h := by simp [nstrCS] at h
   col A h := by simp [nstrCS] at h
   colRoom A h := by simp [nstrCS] at h
   room m t h := (nspushOK_room m t ((nspushOK_eqC m t).trans h)).2

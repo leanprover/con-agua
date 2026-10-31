@@ -26,7 +26,7 @@ namespace L.Arena
 /-! ## `get_app_fn(e)`: chase `.app` nodes' `f` child, counting down a 64-bit fuel word -/
 
 def getAppFnLoop : Stmt := lblk (e, f, t, x) {
-  while e >> 28 == 4 {
+  while ⟦e⟧.tag == 4 {
     if f == 0 { abort };
     f -= 1;
     (t, x) := node APP⟦e⟧;
@@ -34,7 +34,7 @@ def getAppFnLoop : Stmt := lblk (e, f, t, x) {
   }
 }
 
-/-- con-ron: ConRon/Arena/ExprOps.lean:1281-1290 ConRon.Arena.getAppFn -/
+/-- con-ron: ConRon/Arena/ExprOps.lean:1286-1295 ConRon.Arena.getAppFn -/
 @[l_impl ConRon.Arena.getAppFn]
 def getAppFnL : FunDecl := lfn (e) locals (f, t, x) {
   f := 4000000000;
@@ -46,11 +46,11 @@ def getAppFnL : FunDecl := lfn (e) locals (f, t, x) {
 /-- **The model of the `get_app_fn` loop**: from `(e, f)`, the final `(e, f)` or `none` where the
 L code aborts. Terminates because `f` strictly decreases (checked `≠ 0` before each decrement). -/
 def gafLoopW (m : Mem) (e f : Word) : Option (Word × Word) :=
-  if e >>> 28 = 4 then
+  if tagW e = 4 then
     if f = 0 then none
     else if tierW e ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
-    else if tcnt m APP (tierW e) ≤ idxW e then none
-    else gafLoopW m (tfld m APP (tierW e) (idxW e) 0) (f - 1)
+    else if tcnt m APP (tierW e) ≤ idxA e then none
+    else gafLoopW m (tfld m APP (tierW e) (idxA e) 0) (f - 1)
   else some (e, f)
 termination_by f.toNat
 decreasing_by
@@ -63,13 +63,13 @@ decreasing_by
     simp; omega
   exact hlt
 
-theorem gafLoopW_done (m : Mem) (e f : Word) (h : e >>> 28 ≠ 4) : gafLoopW m e f = some (e, f) := by
+theorem gafLoopW_done (m : Mem) (e f : Word) (h : tagW e ≠ 4) : gafLoopW m e f = some (e, f) := by
   rw [gafLoopW]; simp [h]
 
-theorem gafLoopW_step (m : Mem) (e f e' : Word) (h : e >>> 28 = 4) (hf : f ≠ 0)
+theorem gafLoopW_step (m : Mem) (e f e' : Word) (h : tagW e = 4) (hf : f ≠ 0)
     (hv1 : ¬ (tierW e ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0))
-    (hv2 : ¬ tcnt m APP (tierW e) ≤ idxW e)
-    (he' : e' = tfld m APP (tierW e) (idxW e) 0) :
+    (hv2 : ¬ tcnt m APP (tierW e) ≤ idxA e)
+    (he' : e' = tfld m APP (tierW e) (idxA e) 0) :
     gafLoopW m e f = gafLoopW m e' (f - 1) := by
   subst he'; rw [gafLoopW]
   simp only [h, ↓reduceIte, hf, hv2, hv1]
@@ -91,7 +91,7 @@ theorem getAppFnLoop_spec (n : Nat) (s₀ : St) :
     rw [exec, step_while (w := getAppFnLoop) rfl]
     sym only [lang_grind, arena_grind] =>
       vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih, evalE_tld, tld, evalE_cnt,
-        tcntM, evalE_tierE, evalE_idxE] <;> finish [tierW, idxW]
+        tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] <;> finish [tierW, idxW]
 
 theorem getAppFnLoop_step_spec (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀⦄
@@ -119,7 +119,7 @@ theorem getAppFnL_spec (p : Prog) (hp : p.lookup "get_app_fn" = some getAppFnL) 
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, getAppFnLoop_step_spec p n] <;>
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, getAppFnLoop_step_spec p n] <;>
       finish [gafW]
 
 /-! ## `get_app_fn` refines `getAppFn` -/
@@ -140,13 +140,13 @@ theorem gafLoopW_ok (m : Mem) (a : AState) (hR : ArenaR m a) :
     intro e f e' f' hfN he hL hf'
     have hf0 : f = 0 := UInt64.toNat_inj.mp (by simp; omega)
     subst hf0
-    have hc : ¬ e >>> 28 = 4 := fun hc => by rw [gafLoopW] at hL; simp [hc] at hL
+    have hc : ¬ tagW e = 4 := fun hc => by rw [gafLoopW] at hL; simp [hc] at hL
     · rw [gafLoopW_done m e 0 hc] at hL
       obtain ⟨-, rfl⟩ := Prod.mk.inj (Option.some.inj hL)
       exact absurd rfl hf'
   | succ N ih =>
     intro e f e' f' hfN he hL hf'
-    by_cases hc : e >>> 28 = 4
+    by_cases hc : tagW e = 4
     · have hf0 : f ≠ 0 := by
         intro hf0; rw [hf0, gafLoopW] at hL; simp [hc] at hL
       have hv1 : ¬ (tierW e ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0) := by
@@ -154,20 +154,20 @@ theorem gafLoopW_ok (m : Mem) (a : AState) (hR : ArenaR m a) :
         simp only [hc, ↓reduceIte, hf0] at hL
         have hv : ¬ ((tierW e ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0)) := fun hv => by simp [hv] at hL
         · exact hv
-      have hv2 : ¬ tcnt m APP (tierW e) ≤ idxW e := by
+      have hv2 : ¬ tcnt m APP (tierW e) ≤ idxA e := by
         rw [gafLoopW] at hL
         simp only [hc, ↓reduceIte, hf0, hv1] at hL
-        have hv : ¬ tcnt m APP (tierW e) ≤ idxW e := fun hv => by simp [hv] at hL
+        have hv : ¬ tcnt m APP (tierW e) ≤ idxA e := fun hv => by simp [hv] at hL
         · exact hv
-      have hL' : gafLoopW m (tfld m APP (tierW e) (idxW e) 0) (f - 1) = some (e', f') := by
+      have hL' : gafLoopW m (tfld m APP (tierW e) (idxA e) 0) (f - 1) = some (e', f') := by
         rw [← gafLoopW_step m e f _ hc hf0 hv1 hv2 rfl]; exact hL
       have hf0' : f.toNat ≠ 0 := fun h => hf0 (UInt64.toNat_inj.mp (by simpa using h))
       have hfm1 : (f - 1).toNat = f.toNat - 1 := by
         rw [UInt64.toNat_sub_of_le _ _ (by simp [UInt64.le_iff_toNat_le]; omega)]; simp
       have hfm1N : (f - 1).toNat ≤ N := by rw [hfm1]; omega
-      have hcnt : idxW e < tcnt m APP (tierW e) := UInt64.not_le.mp hv2
+      have hcnt : idxA e < tcnt m APP (tierW e) := UInt64.not_le.mp hv2
       have hva := viewApp_ok m a hR e he ⟨hv1, hcnt⟩
-      have h1 : (tfld m APP (tierW e) (idxW e) 0).toNat < 2 ^ 32 :=
+      have h1 : (tfld m APP (tierW e) (idxA e) 0).toNat < 2 ^ 32 :=
         (view_app m a hR e he ⟨hv1, hcnt⟩ hc).2.1
       obtain ⟨ihr, ihb⟩ := ih _ (f - 1) e' f' hfm1N h1 hL' hf'
       have heq : getAppFn f.toNat (decE e) = getAppFn ((f.toNat - 1) + 1) (decE e) := by
@@ -219,7 +219,7 @@ Same shape as `get_app_fn`, chasing tag `6` (`forallE`) off `FAREC`'s second wor
 tag `4` off `AREC`'s first. -/
 
 def piResultLoop : Stmt := lblk (e, f, t, x) {
-  while e >> 28 == 6 {
+  while ⟦e⟧.tag == 6 {
     if f == 0 { abort };
     f -= 1;
     (t, x) := node FORALL⟦e⟧;
@@ -227,7 +227,7 @@ def piResultLoop : Stmt := lblk (e, f, t, x) {
   }
 }
 
-/-- con-ron: ConRon/Arena/ExprOps.lean:1357-1367 ConRon.Arena.piResult -/
+/-- con-ron: ConRon/Arena/ExprOps.lean:1362-1372 ConRon.Arena.piResult -/
 @[l_impl ConRon.Arena.piResult]
 def piResultL : FunDecl := lfn (e) locals (f, t, x) {
   f := 4000000000;
@@ -238,7 +238,7 @@ def piResultL : FunDecl := lfn (e) locals (f, t, x) {
 
 /-- **The model of the `pi_result` loop.** -/
 def priLoopW (m : Mem) (e f : Word) : Option (Word × Word) :=
-  if e >>> 28 = 6 then
+  if tagW e = 6 then
     if f = 0 then none
     else if tierW e ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
     else if tcnt m FORALL (tierW e) ≤ idxW e then none
@@ -255,10 +255,10 @@ decreasing_by
     simp; omega
   exact hlt
 
-theorem priLoopW_done (m : Mem) (e f : Word) (h : e >>> 28 ≠ 6) : priLoopW m e f = some (e, f) := by
+theorem priLoopW_done (m : Mem) (e f : Word) (h : tagW e ≠ 6) : priLoopW m e f = some (e, f) := by
   rw [priLoopW]; simp [h]
 
-theorem priLoopW_step (m : Mem) (e f e' : Word) (h : e >>> 28 = 6) (hf : f ≠ 0)
+theorem priLoopW_step (m : Mem) (e f e' : Word) (h : tagW e = 6) (hf : f ≠ 0)
     (hv1 : ¬ (tierW e ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0))
     (hv2 : ¬ tcnt m FORALL (tierW e) ≤ idxW e)
     (he' : e' = tfld m FORALL (tierW e) (idxW e) 1) :
@@ -283,7 +283,7 @@ theorem piResultLoop_spec (n : Nat) (s₀ : St) :
     rw [exec, step_while (w := piResultLoop) rfl]
     sym only [lang_grind, arena_grind] =>
       vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih, evalE_tld, tld, evalE_cnt,
-        tcntM, evalE_tierE, evalE_idxE] <;> finish [tierW, idxW]
+        tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] <;> finish [tierW, idxW]
 
 theorem piResultLoop_step_spec (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀⦄
@@ -311,7 +311,7 @@ theorem piResultL_spec (p : Prog) (hp : p.lookup "pi_result" = some piResultL) (
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, piResultLoop_step_spec p n] <;>
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, piResultLoop_step_spec p n] <;>
       finish [priW]
 
 theorem viewBind_run' (h : EIdx) (a : AState) :
@@ -327,13 +327,13 @@ theorem priLoopW_ok (m : Mem) (a : AState) (hR : ArenaR m a) :
     intro e f e' f' hfN he hL hf'
     have hf0 : f = 0 := UInt64.toNat_inj.mp (by simp; omega)
     subst hf0
-    have hc : ¬ e >>> 28 = 6 := fun hc => by rw [priLoopW] at hL; simp [hc] at hL
+    have hc : ¬ tagW e = 6 := fun hc => by rw [priLoopW] at hL; simp [hc] at hL
     · rw [priLoopW_done m e 0 hc] at hL
       obtain ⟨-, rfl⟩ := Prod.mk.inj (Option.some.inj hL)
       exact absurd rfl hf'
   | succ N ih =>
     intro e f e' f' hfN he hL hf'
-    by_cases hc : e >>> 28 = 6
+    by_cases hc : tagW e = 6
     · have hf0 : f ≠ 0 := by
         intro hf0; rw [hf0, priLoopW] at hL; simp [hc] at hL
       have hv1 : ¬ (tierW e ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0) := by
@@ -408,14 +408,14 @@ non-`∀`, the trailing `return (1, e)` at `k = 0`. -/
 
 def peelPisLoop : Stmt := lblk (k, e, t, x) {
   while k != 0 {
-    if e >> 28 != 6 { return (0, 0) };
+    if ⟦e⟧.tag != 6 { return (0, 0) };
     (t, x) := node FORALL⟦e⟧;
     e := FORALL⟨t, x⟩.b;
     k -= 1
   }
 }
 
-/-- con-ron: ConRon/Arena/PropRead.lean:45-57 ConRon.Arena.peelPis -/
+/-- con-ron: ConRon/Arena/PropRead.lean:49-61 ConRon.Arena.peelPis -/
 @[l_impl ConRon.Arena.peelPis]
 def peelPisL : FunDecl := lfn (k, e) locals (t, x) {
   ⟪peelPisLoop⟫;
@@ -426,7 +426,7 @@ def peelPisL : FunDecl := lfn (k, e) locals (t, x) {
 `k = 0` base case): `(flag, value)`, `none` where the L code aborts. -/
 def peelPisW (m : Mem) (k e : Word) : Option (Word × Word) :=
   if k = 0 then some (1, e)
-  else if e >>> 28 ≠ 6 then some (0, 0)
+  else if tagW e ≠ 6 then some (0, 0)
   else if tierW e ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
   else if tcnt m FORALL (tierW e) ≤ idxW e then none
   else peelPisW m (k - 1) (tfld m FORALL (tierW e) (idxW e) 1)
@@ -444,11 +444,11 @@ decreasing_by
 theorem peelPisW_zero (m : Mem) (e : Word) : peelPisW m 0 e = some (1, e) := by
   rw [peelPisW]; simp
 
-theorem peelPisW_miss (m : Mem) (k e : Word) (hk : k ≠ 0) (h : e >>> 28 ≠ 6) :
+theorem peelPisW_miss (m : Mem) (k e : Word) (hk : k ≠ 0) (h : tagW e ≠ 6) :
     peelPisW m k e = some (0, 0) := by
   rw [peelPisW]; simp [hk, h]
 
-theorem peelPisW_step (m : Mem) (k e e' : Word) (hk : k ≠ 0) (h : e >>> 28 = 6)
+theorem peelPisW_step (m : Mem) (k e e' : Word) (hk : k ≠ 0) (h : tagW e = 6)
     (hv1 : ¬ (tierW e ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0))
     (hv2 : ¬ tcnt m FORALL (tierW e) ≤ idxW e)
     (he' : e' = tfld m FORALL (tierW e) (idxW e) 1) :
@@ -476,7 +476,7 @@ theorem peelPisLoop_spec (n : Nat) (s₀ : St) :
     rw [exec, step_while (w := peelPisLoop) rfl]
     sym only [lang_grind, arena_grind] =>
       vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih, evalE_tld, tld, evalE_cnt,
-        tcntM, evalE_tierE, evalE_idxE] <;> finish [tierW, idxW]
+        tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] <;> finish [tierW, idxW]
 
 theorem peelPisLoop_step_spec (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀⦄
@@ -500,7 +500,7 @@ theorem peelPisL_spec (p : Prog) (hp : p.lookup "peel_pis" = some peelPisL) (n :
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalArgs, setLocs, peelPisLoop_step_spec p n] <;> finish [peelPisW]
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalArgs, setLocs, peelPisLoop_step_spec p n] <;> finish [peelPisW]
 
 /-- **The model of `peel_pis` refines `peelPis`**: by induction on (a bound on) `k.toNat`, as
 `gafLoopW_ok`. -/
@@ -531,7 +531,7 @@ theorem peelPisW_ok (m : Mem) (a : AState) (hR : ArenaR m a) :
       rfl
     · have hk0' : k.toNat ≠ 0 := fun h => hk0 (UInt64.toNat_inj.mp (by simpa using h))
       obtain ⟨j, hj⟩ := Nat.exists_eq_succ_of_ne_zero hk0'
-      by_cases hc : e >>> 28 = 6
+      by_cases hc : tagW e = 6
       · have hv1 : ¬ (tierW e ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0) := by
           rw [peelPisW] at hL
           simp only [hk0, ↓reduceIte, hc] at hL
@@ -595,7 +595,7 @@ def mkAppNFromLoop : Stmt := lblk (f, o, n, i) {
   for i < n { f := call mk_app(f, SPN.u64[o + i]) }
 }
 
-/-- con-ron: ConRon/Arena/ExprOps.lean:1305-1311 ConRon.Arena.mkAppN -/
+/-- con-ron: ConRon/Arena/ExprOps.lean:1310-1316 ConRon.Arena.mkAppN -/
 @[l_impl ConRon.Arena.mkAppN]
 def mkAppNL : FunDecl := lfn (f, o, n) locals (i) {
   i := 0;
@@ -603,7 +603,7 @@ def mkAppNL : FunDecl := lfn (f, o, n) locals (i) {
   return f
 }
 
-/-- con-ron: ConRon/Arena/ExprOps.lean:1313-1323 ConRon.Arena.mkAppNFrom -/
+/-- con-ron: ConRon/Arena/ExprOps.lean:1318-1328 ConRon.Arena.mkAppNFrom -/
 @[l_impl ConRon.Arena.mkAppNFrom]
 def mkAppNFromL : FunDecl := lfn (f, o, n, i) locals () {
   ⟪mkAppNFromLoop⟫;
@@ -664,7 +664,7 @@ theorem mkAppNFromLoop_spec (n' : Nat) (s₀ : St) :
   | succ n' ih =>
     rw [exec, step_while (w := mkAppNFromLoop) rfl]
     sym only [lang_grind, arena_grind] =>
-      vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         mkApp_spec p hpd hpf hpp hpi hp n', ih] <;> finish [mkAppNFromW, spW]
 
 theorem mkAppNFromLoop_step_spec (n' : Nat) (s₀ : St) :
@@ -690,7 +690,7 @@ theorem mkAppNFromL_spec (p : Prog) (hpd : p.lookup "der_b" = some derB)
   | zero => vcgen [exec] <;> grind
   | succ n' =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalArgs,
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalArgs,
         mkAppNFromLoop_step_spec p hpd hpf hpp hpi hp n'] <;> finish
 
 theorem mkAppNL_spec (p : Prog) (hpd : p.lookup "der_b" = some derB)
@@ -706,7 +706,7 @@ theorem mkAppNL_spec (p : Prog) (hpd : p.lookup "der_b" = some derB)
   | zero => vcgen [exec] <;> grind
   | succ n' =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalArgs, setLoc,
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalArgs, setLoc,
         mkAppNFromLoop_step_spec p hpd hpf hpp hpi hp n'] <;> finish
 
 /-- **What `mk_app` changes** (the app tables and their derived-range cache): the `Grows`

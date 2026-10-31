@@ -34,14 +34,14 @@ local notation "V" => ConLeche.CheckMode.verified
 
 l_model tptE_spec (p : Prog) (hf : p.lookup "target_pin_tys" = some targetPinTys)
   fns [hf ↦ tptE] grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
   heartbeats 4000000 unified
 
 l_model tmpE_spec (p : Prog) (P : TmpProg p)
   fns [P.tmp ↦ tmpE]
   specs [tptE_spec p P.tpt n, internConst_spec p P.cf P.cp P.ic n, mknF_spec p P.ad n]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
   heartbeats 4000000 unified nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 /-- What `target_pin_tys` gives besides the twin's run (from `m`): the stage invariant, the growth,

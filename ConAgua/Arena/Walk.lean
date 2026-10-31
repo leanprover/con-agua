@@ -27,7 +27,7 @@ explicit work stack, as in con-ron). The checker calls it on the saturated branc
 probe the memo (`bm_find`, the memo library's `memoFindG bmSch`); on a hit return the
 value. Otherwise `bb_node(h, c - 1)` (every child at the same `c - 1`, as the twin's `fuel + 1`
 clause runs its arms at `fuel`) decodes the handle
-word (tag `h >> 28`, tier bit 27, index `h & (2^27 - 1)`), refuse a scratch handle while the
+word (tag `⟦h⟧.tag`, tier bit 27, index `h & (2^27 - 1)`), refuse a scratch handle while the
 scratch tier is closed and an index at or past the tier's count (the arena's `view` fails there:
 a dangling handle), and dispatch on the tag:
 
@@ -78,20 +78,20 @@ def bbNodeW : Nat → Mem → Word → Word → Option (Word × Mem)
   | 0, _, _, _ => none
   | n + 1, m, h, c =>
     if tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
-    else if h >>> 28 = 0 then
+    else if tagW h = 0 then
       if tcnt m BVAR (tierW h) ≤ idxW h then none
       else if tfld m BVAR (tierW h) (idxW h) 0 + 1 = 0 then none
       else some (tfld m BVAR (tierW h) (idxW h) 0 + 1, m)
-    else if h >>> 28 = 4 then
-      if tcnt m APP (tierW h) ≤ idxW h then none
+    else if tagW h = 4 then
+      if tcnt m APP (tierW h) ≤ idxA h then none
       else
-        match bbW n m (tfld m APP (tierW h) (idxW h) 0) c with
+        match bbW n m (tfld m APP (tierW h) (idxA h) 0) c with
         | none => none
         | some (x, m₁) =>
-          match bbW n m₁ (tfld m APP (tierW h) (idxW h) 1) c with
+          match bbW n m₁ (tfld m APP (tierW h) (idxA h) 1) c with
           | none => none
           | some (y, m₂) => some (maxW x y, m₂)
-    else if h >>> 28 = 5 then
+    else if tagW h = 5 then
       if tcnt m LAM (tierW h) ≤ idxW h then none
       else
         match bbW n m (tfld m LAM (tierW h) (idxW h) 0) c with
@@ -100,7 +100,7 @@ def bbNodeW : Nat → Mem → Word → Word → Option (Word × Mem)
           match bbW n m₁ (tfld m LAM (tierW h) (idxW h) 1) c with
           | none => none
           | some (y, m₂) => some (maxW x (predW y), m₂)
-    else if h >>> 28 = 6 then
+    else if tagW h = 6 then
       if tcnt m FORALL (tierW h) ≤ idxW h then none
       else
         match bbW n m (tfld m FORALL (tierW h) (idxW h) 0) c with
@@ -109,10 +109,10 @@ def bbNodeW : Nat → Mem → Word → Word → Option (Word × Mem)
           match bbW n m₁ (tfld m FORALL (tierW h) (idxW h) 1) c with
           | none => none
           | some (y, m₂) => some (maxW x (predW y), m₂)
-    else if h >>> 28 = 9 then
+    else if tagW h = 9 then
       if tcnt m PROJ (tierW h) ≤ idxW h then none
       else bbW n m (tfld m PROJ (tierW h) (idxW h) 2) c
-    else if h >>> 28 = 7 then
+    else if tagW h = 7 then
       if tcnt m LET (tierW h) ≤ idxW h then none
       else
         match bbW n m (tfld m LET (tierW h) (idxW h) 0) c with
@@ -124,13 +124,13 @@ def bbNodeW : Nat → Mem → Word → Word → Option (Word × Mem)
             match bbW n m₂ (tfld m LET (tierW h) (idxW h) 2) c with
             | none => none
             | some (z, m₃) => some (maxW (maxW x y) (predW z), m₃)
-    else if h >>> 28 = 1 then
+    else if tagW h = 1 then
       if tcnt m FVAR (tierW h) ≤ idxW h then none else some (0, m)
-    else if h >>> 28 = 2 then
+    else if tagW h = 2 then
       if tcnt m SORT (tierW h) ≤ idxW h then none else some (0, m)
-    else if h >>> 28 = 3 then
+    else if tagW h = 3 then
       if tcnt m CONST (tierW h) ≤ idxW h then none else some (0, m)
-    else if h >>> 28 = 8 then
+    else if tagW h = 8 then
       if tcnt m LIT (tierW h) ≤ idxW h then none else some (0, m)
     else none
 end
@@ -204,46 +204,46 @@ theorem bbW_miss (hc : c ≠ 0) (hr : mfindG bmSch m h 0 ≠ []) (hh : (mfindG b
     bbW (n + 1) m h c = bbK h (bbNodeW n m h (c - 1)) := by
   rw [bbW]; simp only [hc, hr, hh, ↓reduceIte, ne_eq, not_true_eq_false, bbK]
 
-theorem bbNodeW_bvar (hv : viewOK m h BVAR) (hg : h >>> 28 = 0)
+theorem bbNodeW_bvar (hv : viewOK m h BVAR) (hg : tagW h = 0)
     (h1 : tfld m BVAR (tierW h) (idxW h) 0 + 1 ≠ 0) :
     bbNodeW (n + 1) m h c = some (tfld m BVAR (tierW h) (idxW h) 0 + 1, m) := by
   rw [bbNodeW]; simp only [hv.1, hg, ↓reduceIte, h1]; simp [UInt64.not_le.mpr hv.2]
 
-theorem bbNodeW_sort (hg : h >>> 28 = 2) (hv : viewOK m h SORT) : bbNodeW (n + 1) m h c = some (0, m) := by
+theorem bbNodeW_sort (hg : tagW h = 2) (hv : viewOK m h SORT) : bbNodeW (n + 1) m h c = some (0, m) := by
   rw [bbNodeW]; simp [hv.1, hg, UInt64.not_le.mpr hv.2]
 
-theorem bbNodeW_const (hg : h >>> 28 = 3) (hv : viewOK m h CONST) : bbNodeW (n + 1) m h c = some (0, m) := by
+theorem bbNodeW_const (hg : tagW h = 3) (hv : viewOK m h CONST) : bbNodeW (n + 1) m h c = some (0, m) := by
   rw [bbNodeW]; simp [hv.1, hg, UInt64.not_le.mpr hv.2]
 
-theorem bbNodeW_fvar (hg : h >>> 28 = 1) (hv : viewOK m h FVAR) : bbNodeW (n + 1) m h c = some (0, m) := by
+theorem bbNodeW_fvar (hg : tagW h = 1) (hv : viewOK m h FVAR) : bbNodeW (n + 1) m h c = some (0, m) := by
   rw [bbNodeW]; simp [hv.1, hg, UInt64.not_le.mpr hv.2]
 
-theorem bbNodeW_lit (hg : h >>> 28 = 8) (hv : viewOK m h LIT) : bbNodeW (n + 1) m h c = some (0, m) := by
+theorem bbNodeW_lit (hg : tagW h = 8) (hv : viewOK m h LIT) : bbNodeW (n + 1) m h c = some (0, m) := by
   rw [bbNodeW]; simp [hv.1, hg, UInt64.not_le.mpr hv.2]
 
-theorem bbNodeW_app (hv : viewOK m h APP) (hg : h >>> 28 = 4) :
-    bbNodeW (n + 1) m h c = bbAppK₁ n c (tfld m APP (tierW h) (idxW h) 1)
-      (bbW n m (tfld m APP (tierW h) (idxW h) 0) c) := by
+theorem bbNodeW_app (hv : viewOKA m h) (hg : tagW h = 4) :
+    bbNodeW (n + 1) m h c = bbAppK₁ n c (tfld m APP (tierW h) (idxA h) 1)
+      (bbW n m (tfld m APP (tierW h) (idxA h) 0) c) := by
   rw [bbNodeW]; simp only [hv.1, hg, ↓reduceIte, UInt64.not_le.mpr hv.2, bbAppK₁, bbAppK₁.bbAppK₂]
   simp
 
-theorem bbNodeW_lam (hv : viewOK m h LAM) (hg : h >>> 28 = 5) :
+theorem bbNodeW_lam (hv : viewOK m h LAM) (hg : tagW h = 5) :
     bbNodeW (n + 1) m h c = bbBindK₁ n c (tfld m LAM (tierW h) (idxW h) 1)
       (bbW n m (tfld m LAM (tierW h) (idxW h) 0) c) := by
   rw [bbNodeW]; simp only [hv.1, hg, ↓reduceIte, UInt64.not_le.mpr hv.2, bbBindK₁, bbBindK₁.bbBindK₂]
   simp
 
-theorem bbNodeW_forall (hv : viewOK m h FORALL) (hg : h >>> 28 = 6) :
+theorem bbNodeW_forall (hv : viewOK m h FORALL) (hg : tagW h = 6) :
     bbNodeW (n + 1) m h c = bbBindK₁ n c (tfld m FORALL (tierW h) (idxW h) 1)
       (bbW n m (tfld m FORALL (tierW h) (idxW h) 0) c) := by
   rw [bbNodeW]; simp only [hv.1, hg, ↓reduceIte, UInt64.not_le.mpr hv.2, bbBindK₁, bbBindK₁.bbBindK₂]
   simp
 
-theorem bbNodeW_proj (hv : viewOK m h PROJ) (hg : h >>> 28 = 9) :
+theorem bbNodeW_proj (hv : viewOK m h PROJ) (hg : tagW h = 9) :
     bbNodeW (n + 1) m h c = bbW n m (tfld m PROJ (tierW h) (idxW h) 2) c := by
   rw [bbNodeW]; simp [hv.1, hg, UInt64.not_le.mpr hv.2]
 
-theorem bbNodeW_let (hv : viewOK m h LET) (hg : h >>> 28 = 7) :
+theorem bbNodeW_let (hv : viewOK m h LET) (hg : tagW h = 7) :
     bbNodeW (n + 1) m h c = bbLetK₁ n c (tfld m LET (tierW h) (idxW h) 1)
       (tfld m LET (tierW h) (idxW h) 2)
       (bbW n m (tfld m LET (tierW h) (idxW h) 0) c) := by
@@ -268,7 +268,7 @@ grind_pattern [arena_grind] bbNodeW_proj => bbNodeW (n + 1) m h c
 grind_pattern [arena_grind] bbNodeW_app => bbNodeW (n + 1) m h c
 grind_pattern [arena_grind] bbNodeW_let => bbNodeW (n + 1) m h c
 
-/-- con-ron: ConRon/Arena/ExprOps.lean:1396-1421 ConRon.Arena.bvarBoundGo -/
+/-- con-ron: ConRon/Arena/ExprOps.lean:1401-1426 ConRon.Arena.bvarBoundGo -/
 @[l_impl ConRon.Arena.bvarBoundGo]
 def bbGo : FunDecl := lfn (h, c) locals (fd, j, d, r, u) {
   if c == 0 { abort };
@@ -280,10 +280,10 @@ def bbGo : FunDecl := lfn (h, c) locals (fd, j, d, r, u) {
   return r
 }
 
-/-- con-ron: ConRon/Arena/ExprOps.lean:1396-1421 ConRon.Arena.bvarBoundGo -/
+/-- con-ron: ConRon/Arena/ExprOps.lean:1401-1426 ConRon.Arena.bvarBoundGo -/
 @[l_impl ConRon.Arena.bvarBoundGo]
 def bbNode : FunDecl := lfn (h, c) locals (g, t, i, f, a, b, x, y, z) {
-  g := h >> 28;
+  g := ⟦h⟧.tag;
   t := ⟦h⟧.tier;
   i := ⟦h⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
@@ -294,6 +294,7 @@ def bbNode : FunDecl := lfn (h, c) locals (g, t, i, f, a, b, x, y, z) {
     return x
   };
   if g == 4 {
+    i := ⟦h⟧.aidx;
     if APP⟨t⟩.count <= i { abort };
     f := APP⟨t, i⟩.f;
     a := APP⟨t, i⟩.a;
@@ -368,7 +369,7 @@ theorem bbGo_step (n : Nat) (ih : BbNodeSpec p n) : BbGoSpec p (n + 1) := by
   rw [invoke_eq _ hp]
   simp only [callFn, bbGo]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       memoFindG_spec bmSch p _ hpf n, memoPutG_spec bmSch p _ hps n, ih] <;>
     finish
 
@@ -381,8 +382,8 @@ theorem bbNode_step (n : Nat) (ih : BbGoSpec p n) : BbNodeSpec p (n + 1) := by
   simp only [callFn, bbNode]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt,
-      tcntM, evalE_tierE, evalE_idxE, ih] <;>
-    finish [viewOK, tierW, idxW, maxW, predW]
+      tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE, ih] <;>
+    finish [viewOK, viewOKA, tierW, idxW, maxW, predW]
 
 include hpf hps hp hpn in
 /-- **`bb_go` and `bb_node` are their models**, at every fuel: by induction on the fuel, the
@@ -415,7 +416,7 @@ theorem clrK_some (r : Word) (m₁ : Mem) (h0 : rdW (m₁.arr64 CTL) 24 + 2 ≠ 
 grind_pattern [arena_grind] bbMemoW_eq => bbMemoW n m h c
 grind_pattern [arena_grind] clrK_some => clrK (some (r, m₁))
 
-/-- con-ron: ConRon/Arena/ExprOps.lean:1473-1479 ConRon.Arena.bvarBoundMemo -/
+/-- con-ron: ConRon/Arena/ExprOps.lean:1478-1484 ConRon.Arena.bvarBoundMemo -/
 @[l_impl ConRon.Arena.bvarBoundMemo]
 def bbMemo : FunDecl := lfn (h, c) locals (r, u) {
   u := call bm_clear();
@@ -435,7 +436,7 @@ theorem bbMemo_spec (hpc : p.lookup "bm_clear" = some (memoClearG bmSch))
   rw [invoke_eq _ hpm]
   simp only [callFn, bbMemo]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, memoClearG_spec bmSch p _ hpc n, ih] <;>
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, memoClearG_spec bmSch p _ hpc n, ih] <;>
     finish
 
 end go

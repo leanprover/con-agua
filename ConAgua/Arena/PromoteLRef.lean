@@ -90,48 +90,56 @@ theorem lvNodeW_view {m : Mem} {a : AState} (hR : ArenaR m a) {h : Word} (hh : h
         rw [← hfl]; simp only [bne_iff_ne, ne_eq]; exact fun e => hsc ⟨ht, e⟩
       simp [ht, hon]
   rw [hview]
-  have e0 : ((decI h : LIdx).tag = 0 ↔ h >>> 28 = 0) := decI_tag_eq h hh 0 (by decide)
-  have e1 : ((decI h : LIdx).tag = 1 ↔ h >>> 28 = 1) := decI_tag_eq h hh 1 (by decide)
-  have e2 : ((decI h : LIdx).tag = 2 ↔ h >>> 28 = 2) := decI_tag_eq h hh 2 (by decide)
-  have e3 : ((decI h : LIdx).tag = 3 ↔ h >>> 28 = 3) := decI_tag_eq h hh 3 (by decide)
-  have e4 : ((decI h : LIdx).tag = 4 ↔ h >>> 28 = 4) := decI_tag_eq h hh 4 (by decide)
+  have e0 : ((decI h : LIdx).tag = 0 ↔ tagW h = 0) := decI_tag_eq h hh 0 (by decide)
+  have e1 : ((decI h : LIdx).tag = 1 ↔ tagW h = 1) := decI_tag_eq h hh 1 (by decide)
+  have e2 : ((decI h : LIdx).tag = 2 ↔ tagW h = 2) := decI_tag_eq h hh 2 (by decide)
+  have e3 : ((decI h : LIdx).tag = 3 ↔ tagW h = 3) := decI_tag_eq h hh 3 (by decide)
+  have e4 : ((decI h : LIdx).tag = 4 ↔ tagW h = 4) := decI_tag_eq h hh 4 (by decide)
   simp only [LTables.get, LTag.zero, LTag.succ, LTag.max, LTag.imax, LTag.param, beq_iff_eq,
     e0, e1, e2, e3, e4]
-  by_cases g0 : h >>> 28 = 0
+  by_cases g0 : tagW h = 0
   · simp (config := { decide := true }) only [g0, ↓reduceIte] at hne ⊢
     by_cases hc : tcnt m ZERO (tierW h) ≤ idxW h
     · simp [hc] at hne
     obtain ⟨x, hx, -⟩ := ConsR.node hR.zero (tierW h) ht1
       (idxW h) (UInt64.not_le.mp hc)
-    exact ⟨_, by rw [Tbl.node?, hidx, apply_ite LTables.zeros, hx]; rfl⟩
-  by_cases g1 : h >>> 28 = 1
+    exact ⟨_, by rw [Tbl.node?, hidx (narrow_of_tagW h (by rw [g0]; decide)), apply_ite LTables.zeros, hx]; rfl⟩
+  by_cases g1 : tagW h = 1
   · simp (config := { decide := true }) only [g1, ↓reduceIte] at hne ⊢
     by_cases hc : tcnt m SUCC (tierW h) ≤ idxW h
     · simp [hc] at hne
     obtain ⟨x, hx, -⟩ := ConsR.node hR.succ (tierW h) ht1
       (idxW h) (UInt64.not_le.mp hc)
-    exact ⟨_, by rw [Tbl.node?, hidx, apply_ite LTables.succs, hx]; rfl⟩
-  by_cases g2 : h >>> 28 = 2
+    exact ⟨_, by rw [Tbl.node?, hidx (narrow_of_tagW h (by rw [g1]; decide)), apply_ite LTables.succs, hx]; rfl⟩
+  by_cases g2 : tagW h = 2
   · simp (config := { decide := true }) only [g2, ↓reduceIte] at hne ⊢
     by_cases hc : tcnt m MAX (tierW h) ≤ idxW h
     · simp [hc] at hne
     obtain ⟨x, hx, -⟩ := ConsR.node hR.max (tierW h) ht1
       (idxW h) (UInt64.not_le.mp hc)
-    exact ⟨_, by rw [Tbl.node?, hidx, apply_ite LTables.maxs, hx]; rfl⟩
-  by_cases g3 : h >>> 28 = 3
+    exact ⟨_, by rw [Tbl.node?, hidx (narrow_of_tagW h (by rw [g2]; decide)), apply_ite LTables.maxs, hx]; rfl⟩
+  by_cases g3 : tagW h = 3
   · simp (config := { decide := true }) only [g3, ↓reduceIte] at hne ⊢
     by_cases hc : tcnt m IMAX (tierW h) ≤ idxW h
     · simp [hc] at hne
     obtain ⟨x, hx, -⟩ := ConsR.node hR.imax (tierW h) ht1
       (idxW h) (UInt64.not_le.mp hc)
-    exact ⟨_, by rw [Tbl.node?, hidx, apply_ite LTables.imaxs, hx]; rfl⟩
-  by_cases g4 : h >>> 28 = 4
+    exact ⟨_, by rw [Tbl.node?, hidx (narrow_of_tagW h (by rw [g3]; decide)), apply_ite LTables.imaxs, hx]; rfl⟩
+  by_cases g4 : tagW h = 4
   · simp (config := { decide := true }) only [g4, ↓reduceIte] at hne ⊢
     by_cases hc : tcnt m PARAM (tierW h) ≤ idxW h
     · simp [hc] at hne
     obtain ⟨x, hx, -⟩ := ConsR.node hR.param (tierW h) ht1
       (idxW h) (UInt64.not_le.mp hc)
-    exact ⟨_, by rw [Tbl.node?, hidx, apply_ite LTables.params, hx]; rfl⟩
+    have hn : h.toNat / 2 ^ 30 % 2 = 0 := by
+      have e := ConsR.cnt hR.param (tierW h) ht1
+      have c := ConsR.cap hR.param (tierW h) ht1
+      have hc' : idxW h < cntC paramCS m (tierW h) := UInt64.not_le.mp hc
+      have := UInt64.lt_iff_toNat_lt.mp hc'
+      simp only [show paramCS.wide = false from rfl, capS, Bool.false_eq_true, ↓reduceIte] at c
+      exact narrow_of_idxW_lt h (by omega)
+    simp only [decI_isWide_false h hn, Bool.false_eq_true, ↓reduceIte]
+    exact ⟨_, by rw [Tbl.node?, hidx hn, apply_ite LTables.params, hx]; rfl⟩
   simp [g0, g1, g2, g3, g4] at hne
 
 /-! ## The relation for levels -/

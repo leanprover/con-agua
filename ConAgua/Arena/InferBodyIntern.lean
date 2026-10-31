@@ -224,7 +224,7 @@ theorem internSucc_core (hS : CoreS dn m a vis fe M eb) (u : Word) (hu : HW u)
   have hI₂ := hI
   have hR' := hS.arena.base.lift_succ _ _ _ _
     ⟨hX, sintern_hp m a hS.arena.base.succ u hu hS.arena.base.succHp (lvlHPW_ok m a hS.arena.base u hu) _ _ hI⟩ hf
-    (AM.st_proto succLens _ _ _ _ _ _ a (internLNode_succ_run _ a) hok)
+    (AM.st_proto succLens _ _ _ _ _ _ _ a (internLNode_succ_run _ a) hok)
   have hL := internLNode_step _ a _ _ (AM.run_of_ok _ _ hok)
   obtain ⟨hS', hst⟩ := hS.of_level hL hR' hf
     (fun b hb => by simp only [List.mem_cons, List.mem_nil_iff, or_false] at hb
@@ -250,7 +250,7 @@ theorem internImax_core (hS : CoreS dn m a vis fe M eb) (u v : Word) (hu : HW u)
   have hI₂ := hI
   have hR' := hS.arena.base.lift_imax _ _ _ _
     ⟨hX, imintern_hp m a hS.arena.base.imax u v hu hv hS.arena.base.imaxHp (lvlHPW_or m a hS.arena.base u v hu hv) _ _ hI⟩ hf
-    (AM.st_proto imaxLens _ _ _ _ _ _ a (internLNode_imax_run _ _ a) hok)
+    (AM.st_proto imaxLens _ _ _ _ _ _ _ a (internLNode_imax_run _ _ a) hok)
   have hL := internLNode_step _ a _ _ (AM.run_of_ok _ _ hok)
   obtain ⟨hS', hst⟩ := hS.of_level hL hR' hf
     (fun b hb => by simp only [List.mem_cons, List.mem_nil_iff, or_false] at hb

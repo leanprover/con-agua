@@ -35,7 +35,7 @@ theorem mentionsAnyConst_spec (p : Prog) (hv : p.lookup "e_view" = some eView)
   unfold MaGoSpec at ih
   simp only [invoke_eq _ hp, callFn, mentionsAnyConst]
   sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, memoClearG_spec maSch p _ hcl n, ih] <;>
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, memoClearG_spec maSch p _ hcl n, ih] <;>
     finish
 
 theorem maConstW_ok (n : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word)
@@ -154,7 +154,7 @@ theorem nestOcc_spec (p : Prog) (hv : p.lookup "e_view" = some eView)
   unfold NoGoSpec at ih
   simp only [invoke_eq _ hp, callFn, nestOcc]
   sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, memoClearG_spec noSch p _ hcl n, ih] <;>
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, memoClearG_spec noSch p _ hcl n, ih] <;>
     finish
 
 theorem noConstW_ok (n : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word)
@@ -225,11 +225,11 @@ theorem nestOcc_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Opt
 end census3
 
 def memW (n : Nat) (m : Mem) (no nl lvls e : Word) : Option (List Word × Mem) :=
-  if e >>> 28 ≠ 3 then some ([0, 0], m) else memK n m no nl lvls (eViewW m e)
+  if tagW e ≠ 3 then some ([0, 0], m) else memK n m no nl lvls (eViewW m e)
 
-theorem memW_not (n : Nat) (m : Mem) (no nl lvls e : Word) (h : e >>> 28 ≠ 3) :
+theorem memW_not (n : Nat) (m : Mem) (no nl lvls e : Word) (h : tagW e ≠ 3) :
     memW n m no nl lvls e = some ([0, 0], m) := by simp [memW, h]
-theorem memW_const (n : Nat) (m : Mem) (no nl lvls e : Word) (h : ¬ e >>> 28 ≠ 3) :
+theorem memW_const (n : Nat) (m : Mem) (no nl lvls e : Word) (h : ¬ tagW e ≠ 3) :
     memW n m no nl lvls e = memK n m no nl lvls (eViewW m e) := by simp only [memW]; rw [ite_eq_right h]
 attribute [ind_grind] memW_not memW_const
 
@@ -240,7 +240,7 @@ theorem memberIdxAt_spec (p : Prog) (hv : p.lookup "e_view" = some eView)
     ⦃fun r s' => LocEq s' s₀ ∧ memW n s₀.mem no nl lvls e = some (r, s'.mem); ⊤⦄ := by
   simp only [invoke_eq _ hp, callFn, memberIdxAt]
   sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, eView_spec p hv n,
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, eView_spec p hv n,
       slFind_spec p hf n] <;> finish (gen := 20)
 
 theorem memW_ok (n : Nat) (m m' : Mem) (a : AState) (no nl lvls e : Word) (r : List Word)
@@ -250,14 +250,14 @@ theorem memW_ok (n : Nat) (m m' : Mem) (a : AState) (no nl lvls e : Word) (r : L
     m' = m ∧ ∃ o, (ConRon.Arena.memberIdxAt? (ws.map (fun w => (decI w : NIdx))) (decI lvls)
       (decI e)).run a = .ok (o, a) ∧ MemIdxOut r o := by
   have htag := decI_tag_const_beq e he
-  by_cases hd : e >>> 28 ≠ 3
+  by_cases hd : tagW e ≠ 3
   · rw [memW_not n m no nl lvls e hd] at h
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     refine ⟨rfl, none, ?_, rfl⟩
     have : ¬ ((decI e : EIdx).tag == ETag.const) = true := by rw [htag]; simpa using hd
     simp only [ConRon.Arena.memberIdxAt?, this]; rfl
   · rw [memW_const n m no nl lvls e hd] at h
-    have he3 : e >>> 28 = 3 := by simpa using hd
+    have he3 : tagW e = 3 := by simpa using hd
     cases hvl : eViewW m e with
     | nil => rw [hvl] at h; simp [memK] at h
     | cons g vt =>
@@ -331,7 +331,7 @@ theorem ETables.get_app (t : ETables) (i : EIdx) (ht : i.tag = ETag.app) (v : EN
   simp only [ETables.get, ht, ETag.bvar, ETag.fvar, ETag.sort, ETag.const, ETag.app] at h
   cases hn : t.apps.node? i.idxNat with
   | none => simp [hn] at h
-  | some x => simp [hn] at h; exact ⟨_, _, h.symm⟩
+  | some x => simp [hn] at h; exact ⟨x.f, x.a, by grind⟩
 
 theorem EStore.view_app (st : EStore) (i : EIdx) (ht : i.tag = ETag.app) (v : ENodeView)
     (h : st.view i = some v) : ∃ f x, v = .app f x := by
@@ -424,14 +424,14 @@ theorem phW_ok (k : Nat) : ∀ (m : Mem) (a : AState) (b e n : Word) (N : Nat) (
     by_cases hn0 : n = 0
     · have hN0 : N = 0 := by rw [← hN, hn0]; rfl
       subst hN0
-      by_cases hd : e >>> 28 ≠ 3
+      by_cases hd : tagW e ≠ 3
       · rw [phW.arm1 k m b e n hn0 hd] at h
         simp only [Option.some.injEq] at h
         subst h
         refine ⟨none, ?_, rfl⟩
         have : ¬ ((decI e : EIdx).tag == ETag.const) = true := by rw [decI_tag_const_beq e he]; simpa using hd
         simp only [ConRon.Arena.phApp?, this]; rfl
-      · have he3 : e >>> 28 = 3 := by simpa using hd
+      · have he3 : tagW e = 3 := by simpa using hd
         cases hvl : eViewW m e with
         | nil => rw [phW.abort1 k m b e n hn0 he3 hvl] at h; cases h
         | cons g vt =>
@@ -456,14 +456,14 @@ theorem phW_ok (k : Nat) : ∀ (m : Mem) (a : AState) (b e n : Word) (N : Nat) (
             rfl
           · exact ⟨_, _, rfl, hx, hdx, hy, hdy⟩
     · obtain ⟨N', rfl⟩ : ∃ N', N = N' + 1 := ⟨N - 1, by have := toNat_ne_zero' hn0; omega⟩
-      by_cases hd : e >>> 28 ≠ 4
+      by_cases hd : tagW e ≠ 4
       · rw [phW.arm3 k m b e n hn0 hd] at h
         simp only [Option.some.injEq] at h
         subst h
         refine ⟨none, ?_, rfl⟩
         have : ¬ ((decI e : EIdx).tag == ETag.app) = true := by rw [decI_tag_app_beq e he]; simpa using hd
         simp only [ConRon.Arena.phApp?, this]; rfl
-      · have he4 : e >>> 28 = 4 := by simpa using hd
+      · have he4 : tagW e = 4 := by simpa using hd
         cases hvl : eViewW m e with
         | nil => rw [phW.abort2 k m b e n hn0 he4 hvl] at h; cases h
         | cons g vt =>
@@ -479,7 +479,7 @@ theorem phW_ok (k : Nat) : ∀ (m : Mem) (a : AState) (b e n : Word) (N : Nat) (
           have hview : a.store.viewApp (decE e) = some (f', a') :=
             EStore.viewApp_of_view _ _ ht f' a' hv
           have htg : ((decI e : EIdx).tag == ETag.app) = true := by rw [decI_tag_app_beq e he, he4]; decide
-          by_cases hy1 : (g :: vt).tail.tail.headD 0 >>> 28 ≠ 1
+          by_cases hy1 : tagW ((g :: vt).tail.tail.headD 0) ≠ 1
           · rw [phW.arm4 k m b e n hn0 he4 hne (by rw [hvl]; exact hy1)] at h
             simp only [Option.some.injEq] at h
             subst h
@@ -491,7 +491,7 @@ theorem phW_ok (k : Nat) : ∀ (m : Mem) (a : AState) (b e n : Word) (N : Nat) (
             simp only [ConRon.Arena.phApp?, htg, ite_true, StateT.run_bind]
             rw [show (decI e : EIdx) = decE e from rfl, viewApp_run', except_ok_bind, hview]
             simp only [this]; rfl
-          · have hy1' : (g :: vt).tail.tail.headD 0 >>> 28 = 1 := by simpa using hy1
+          · have hy1' : tagW ((g :: vt).tail.tail.headD 0) = 1 := by simpa using hy1
             cases hvl2 : eViewW m ((g :: vt).tail.tail.headD 0) with
             | nil => rw [phW.abort3 k m b e n hn0 he4 hne (by rw [hvl]; exact hy1') (by rw [hvl]; exact hvl2)] at h; cases h
             | cons g2 vt2 =>

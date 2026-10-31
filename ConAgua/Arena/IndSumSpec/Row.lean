@@ -52,7 +52,7 @@ theorem plgW_spec (k : Nat) : ∀ (s₀ : St) (o l : Word),
     rw [invoke_eq _ hp]
     simp only [callFn, paramLevelsGoL]
     sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
         iwAlloc_specW p ha k, slGet_specW p hg k, internParam_spec p hpf hpp hip k,
         slCons_specW p ha hc hsc k, ih] <;>
       finish (gen := 20) [getW]
@@ -137,7 +137,7 @@ theorem plW_spec (hq : p.lookup "param_levels" = some paramLevelsL) (hil : IlF p
   | zero => vcgen [exec] <;> grind
   | succ k =>
     sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
         plgW_spec p ha hc hsc hg hpf hpp hip hp k, ilF_spec p hil k] <;>
       finish
 
@@ -193,7 +193,7 @@ theorem colW_spec (n : Nat) : ∀ (s₀ : St) (uo ul so sl z j k acc : Word),
     rw [invoke_eq _ hp]
     simp only [callFn, structProjGuardsColL]
     sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
         slGetD_specW p hgd n, internMax_spec p hmf hmp him n, ih] <;>
       finish (gen := 20)
 
@@ -388,7 +388,7 @@ theorem rowW_spec (n : Nat) : ∀ (s₀ : St) (uo ul so sl z i k : Word),
     rw [invoke_eq _ hp]
     simp only [callFn, structProjGuardsRowL]
     sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
         iwAlloc_specW p ha n, slGetD_specW p hgd n, colW_spec p hgd hmf hmp him hcol n,
         slCons_specW p ha hc hsc n, ih] <;>
       finish (gen := 20)

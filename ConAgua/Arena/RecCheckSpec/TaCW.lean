@@ -172,7 +172,7 @@ theorem taConst_spec (n : Nat) (s₀ : St) (no nl lvls ho hl h nn vus : Word) :
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, slFind_spec p L.hf n] <;>
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, slFind_spec p L.hf n] <;>
       finish (gen := 20) [rdW_eq]
 
 def TaGoSpec (n : Nat) : Prop := ∀ (s₀ : St) (no nl lvls ho hl f h : Word),
@@ -190,7 +190,7 @@ theorem taGo_step (n : Nat) (ih : TaNodeSpec p n) : TaGoSpec p (n + 1) := by
   rw [invoke_eq _ L.go]
   simp only [callFn, targetAbsGo]
   sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       eView_spec p L.hv n, taConst_spec p L n, memoFindG_spec taSch p _ L.tf n,
       memoPutG_spec taSch p _ L.tp n, ih] <;> finish (gen := 20) [St.setLocs_mem']
 
@@ -202,7 +202,7 @@ theorem taNode_step (n : Nat) (ih : TaGoSpec p n) : TaNodeSpec p (n + 1) := by
   rw [invoke_eq _ L.node]
   simp only [callFn, targetAbsNode]
   sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ih,
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ih,
       mkApp_spec p hk.hd hk.appF hk.appP hk.appI hk.appM n,
       mkLam_spec p hk.hd hk.lamF hk.lamP hk.lamI hk.lamM n,
       mkForall_spec p hk.hd hk.forF hk.forP hk.forI hk.forM n,
@@ -239,7 +239,7 @@ theorem targetAbs_spec (p : Prog) (L : TaLook p) (n : Nat) (s₀ : St) (no nl lv
   rw [invoke_eq _ L.top]
   simp only [callFn, targetAbs]
   sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, memoClearG_spec taSch p _ L.tc n, ih] <;>
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, memoClearG_spec taSch p _ L.tc n, ih] <;>
     finish
 
 /-! ## The relational side -/

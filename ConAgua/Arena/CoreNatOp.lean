@@ -88,7 +88,7 @@ theorem leafOp_internLit (l : ConLeche.Literal) : LeafOp (internE (.lit l)) := b
   have hk : cpl a' = cpl a := Keeps.run (keeps_cpl_internNodeE _) (by simpa [internE] using h)
   refine ⟨hk, fun m hD => ?_, fun x w hw hv => .inl (internNodeE_views (v := .lit l)
     (by rintro (⟨_, h⟩ | ⟨_, _, h⟩) <;> cases h) (by simpa [internE] using h) x w hw hv)⟩
-  have hcs := AM.proto_cases litLens _ _ _ _ _ _ a (internE_lit_run _ a) hok
+  have hcs := AM.proto_cases litLens _ _ _ _ _ _ _ a (internE_lit_run _ a) hok
   rw [← hst]
   rcases hcs with h | ⟨-, -, -, h⟩ | ⟨-, -, -, h⟩ <;> rw [h]
   · exact hD
@@ -113,7 +113,7 @@ theorem leafOp_internConst (n : NIdx) (us : LsIdx) : LeafOpU us (internE (.const
     rcases hsc x w hw hv with h' | rfl
     · exact .inl h'
     · exact .inr ⟨n, by rw [hus]⟩⟩
-  have hcs := AM.proto_cases constLens _ _ _ _ _ _ a (internE_const_run _ _ a) hok
+  have hcs := AM.proto_cases constLens _ _ _ _ _ _ _ a (internE_const_run _ _ a) hok
   rw [← hst]
   rcases hcs with h | ⟨-, -, -, h⟩ | ⟨-, -, -, h⟩ <;> rw [h]
   · exact hD

@@ -92,7 +92,7 @@ writes the derived column `LSHP` (the list's has-param word, `lsOrW`, computed b
 
 /-- The handle word of node `0` of the persistent / scratch level-list tier. -/
 def lsP : Word := 0x00000000
-def lsS : Word := 0x08000000
+def lsS : Word := 0x80000000
 
 /-- The hash of node `i` of tier `t`: its word 2. -/
 def lshash (m : Mem) (t i : Word) : Word := rdW (m.arr64 (tierA LSREC t)) (i * 3 + 2)
@@ -140,7 +140,7 @@ def lsCS : ConsSch where
 The arena's `internLsNode us`: the persistent probe, the scratch probe if the scratch tier is
 open, the append to the tier the store is in. Handle tag `0` (`LsTag.list`). -/
 
-/-- con-ron: ConRon/Arena/Store.lean:90-91 ConRon.Arena.Tbl.find? -/
+/-- con-ron: ConRon/Arena/Store.lean:94-95 ConRon.Arena.Tbl.find? -/
 def lsFind : FunDecl := consFindG lsCS
 
 /-- The node count of tier `t` of the level-list table, `CTL[40 + t]`. -/
@@ -149,17 +149,17 @@ def lscnt (m : Mem) (t : Word) : Word := rdW (m.arr64 CTL) (40 + t)
 /-- `ls_push`'s room checks: the handle index, the record array (width 3: by multiplication,
 as `letE`'s), the load limit. -/
 def lspushOK (m : Mem) (t : Word) : Bool :=
-  decide (lscnt m t < (134217728 : Word)) && decide ((lscnt m t + 1) * 3 ≤ m.len64 (tierA LSREC t)) &&
+  decide (lscnt m t < (67108864 : Word)) && decide ((lscnt m t + 1) * 3 ≤ m.len64 (tierA LSREC t)) &&
     decide (lscnt m t < m.len64 (tierA LSHP t))
 
-/-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
+/-- con-ron: ConRon/Arena/Store.lean:97-102 ConRon.Arena.Tbl.push -/
 def lsPush : FunDecl := consPushG lsCS
 
 /-- The model of `intern_ls`: the handle and the memory after, or `none` where the L code
 aborts (the library's `consInternM`). -/
 def lsinternW (m : Mem) (o l : Word) : Option (Word × Mem) := consInternM lsCS m [o, l]
 
-/-- con-ron: ConRon/Arena/Monad.lean:499-515 ConRon.Arena.internLsNode -/
+/-- con-ron: ConRon/Arena/Monad.lean:502-518 ConRon.Arena.internLsNode -/
 @[l_impl ConRon.Arena.internLsNode]
 def internLs : FunDecl := consInternG lsCS
 
@@ -188,7 +188,7 @@ def internLss (m : Mem) : List (Word × Word) → Option (List Word)
   some [0, 1, 0, 2, 3, 3]
 
 /- With the scratch tier open the nodes go there. -/
-#guard internLss (lsMem 1) [(0, 1), (1, 1), (2, 1)] == some [0x08000000, 0x08000001, 0x08000000]
+#guard internLss (lsMem 1) [(0, 1), (1, 1), (2, 1)] == some [0x80000000, 0x80000001, 0x80000000]
 
 /-! ## The specs: the library's, from the table's obligations -/
 

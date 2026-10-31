@@ -36,7 +36,7 @@ lifted, `target_k53` by its unified model. -/
 l_model cnaE_spec (p : Prog) (P : CnaProg p)
   fns [P.cna ↦ cnaE] specs [callW_spec p n "target_pi_doms_with", tkE_spec p P.k53 n]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
   heartbeats 4000000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 

@@ -70,7 +70,7 @@ theorem mentionsConst_spec (p : Prog) (hv : p.lookup "e_view" = some eView)
   unfold McGoSpec at ih
   rw [invoke_eq _ hp]
   simp only [callFn, mentionsConstL]
-  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, memoClearG_spec mcSch p _ hcl n, ih]
+  vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, memoClearG_spec mcSch p _ hcl n, ih]
   all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons, Nat.reduceEqDiff, reduceIte] at *)
   all_goals grind [lang_grind, arena_grind, ind_grind]
 

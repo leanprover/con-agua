@@ -27,8 +27,13 @@ takes exactly two declarations — `checkDecl_datF` and `FueledM`'s subtype
 property — and the capstone module takes `Model/Fold.lean`.  Both are
 prebuilt in con-leche's `.lake`, so neither costs elaboration here.
 -/
-import ConRon.Bridge.Checker.Decl
+module
+
 import ConLeche.Verify.BridgeDecl
+public import ConLeche.Kernel.CheckDecl
+import ConRon.Arena.Handle -- shake: keep (`open ConRon.Arena` needs the namespace to exist)
+
+public section
 
 open ConLeche ConRon.Arena
 

@@ -166,7 +166,7 @@ theorem promoteE_spec (f h : Word) :
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       memoFindG_spec peSch p _ (hp.get "pe_find") n, memoPutG_spec peSch p _ (hp.get "pe_put") n,
-      callW_spec p n "pe_arm", evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] <;>
+      callW_spec p n "pe_arm", evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] <;>
     finish [peW_pers, peW_hit, peW_miss, memoK_some, mvG, tierW]
 
 theorem peArm_spec (f h : Word) :
@@ -175,7 +175,7 @@ theorem peArm_spec (f h : Word) :
   rw [invoke_eq _ (hp.get "pe_arm")]
   simp only [callFn, peArm]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
       eView_spec p (hp.get "e_view") n, callW_spec p n "pi_bvar", callW_spec p n "promote_e",
       callW_spec p n "pi_fvar", callW_spec p n "promote_l", callW_spec p n "pi_sort",
       callW_spec p n "pe_const", callW_spec p n "pe_app", callW_spec p n "pe_lam",
@@ -191,7 +191,7 @@ theorem peLit_spec (h : Word) :
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       callW_spec p n "pi_lit_str", callW_spec p n "pi_lit", evalE_tld, tld, evalE_cnt, tcntM,
-      evalE_tierE, evalE_idxE] <;>
+      evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] <;>
     finish [peLitW, hd1_some, tierW, idxW]
 
 theorem peConst_spec (f a b : Word) :
@@ -201,7 +201,7 @@ theorem peConst_spec (f a b : Word) :
   rw [invoke_eq _ (hp.get "pe_const")]
   simp only [callFn, peConst]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
       callW_spec p n "promote_n", callW_spec p n "promote_ls", callW_spec p n "pi_const"] <;>
     finish [pe2W, pe2K_some, pl2K₂_some, hd1_some]
 
@@ -211,7 +211,7 @@ local macro "pe2_spec " fn:term ", " d:ident : tactic => `(tactic| (
   rw [invoke_eq _ $fn]
   simp only [callFn, $d:ident]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, callW_spec] <;>
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, callW_spec] <;>
     finish [pe2W, pe2K_some, pl2K₂_some, hd1_some]))
 
 theorem peApp_spec (f a b : Word) :
@@ -238,7 +238,7 @@ theorem peLet_spec (f a b c : Word) :
   rw [invoke_eq _ (hp.get "pe_let")]
   simp only [callFn, peLet]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, callW_spec p n "promote_e",
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, callW_spec p n "promote_e",
       callW_spec p n "pi_let"] <;>
     finish [peLetW, pe3K_some, pe3K₂_some, pe3K₃_some, hd1_some]
 
@@ -248,7 +248,7 @@ theorem peProj_spec (f a b c : Word) :
   rw [invoke_eq _ (hp.get "pe_proj")]
   simp only [callFn, peProj]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, callW_spec p n "promote_n",
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, callW_spec p n "promote_n",
       callW_spec p n "promote_e", callW_spec p n "pi_proj"] <;>
     finish [peProjW, pePjK_some, pePjK₂_some, hd1_some]
 

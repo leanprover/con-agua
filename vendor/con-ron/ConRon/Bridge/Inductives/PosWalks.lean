@@ -19,7 +19,14 @@ pin) with an exact answer.  The memo invariants are con-leche's
 
 The module imports `Bridge/Inductives/Run.lean` only.
 -/
-import ConRon.Bridge.Inductives.Run
+module
+
+public import ConRon.Bridge.Inductives.Run
+import ConLeche.Verify.Inductives.NestScope
+import ConRon.Bridge.Promote.Pers
+import ConRon.Bridge.Specs
+
+public section
 
 namespace ConRon.Bridge.Inductives
 
@@ -949,7 +956,7 @@ instantiation con-leche writes:
 
 The lookup `fnd` a `holeImg` context denotes at is existential: `nestHoleImg`
 reads no environment. -/
-def FvMapRel (st : EStore) : Arena.FvMap → (Nat → Option Expr) → Prop
+@[expose] def FvMapRel (st : EStore) : Arena.FvMap → (Nat → Option Expr) → Prop
   | .holeImg ctx prog n, fP => ∃ fnd ctxP progP, dCtx st fnd ctx = some ctxP ∧
       dProg st (prog.take n) = some progP ∧ n ≤ prog.length ∧
       fP = ConLeche.nestHoleImg ctxP progP

@@ -81,7 +81,7 @@ def walkRun (fuel : Nat) (f : FnName) (args : List Word) (m : Mem) : Option (Wor
 #guard
   match walkRun 100 "intern_bvar" [0] (walkMem 64) with
   | some (b0, m) => match walkRun 100 "intern_bvar" [2] m with
-    | some (b2, m) => match walkRun 100 "intern_sort" [0x10000000] m with
+    | some (b2, m) => match walkRun 100 "intern_sort" [0x04000000] m with
       | some (s, m) => match walkRun 100 "intern_app" [b2, b0] m with
         | some (ap, m) => match walkRun 100 "intern_letE" [b0, s, ap] m with
           | some (le, m) => (walkRun 100 "bb_memo" [le, 100] m).map (·.1) == some 2
@@ -94,11 +94,11 @@ def walkRun (fuel : Nat) (f : FnName) (args : List Word) (m : Mem) : Option (Wor
 /- `lam (fvar 0 (sort u)) (forallE (bvar 1) (proj c 0 (bvar 3)))`: the `forallE`'s bound is
 `max 2 (4 - 1) = 3`, the `lam`'s `max 0 (3 - 1) = 2`. -/
 #guard
-  match walkRun 100 "intern_sort" [0x10000000] (walkMem 64) with
+  match walkRun 100 "intern_sort" [0x04000000] (walkMem 64) with
   | some (s, m) => match walkRun 100 "intern_fvar" [0, s] m with
     | some (fv, m) => match walkRun 100 "intern_bvar" [1] m with
       | some (b1, m) => match walkRun 100 "intern_bvar" [3] m with
-        | some (b3, m) => match walkRun 100 "intern_proj" [0x10000000, 0, b3] m with
+        | some (b3, m) => match walkRun 100 "intern_proj" [0x04000000, 0, b3] m with
           | some (pj, m) => match walkRun 100 "intern_forall" [b1, pj] m with
             | some (fa, m) => match walkRun 100 "intern_lam" [fv, fa] m with
               | some (la, m) => (walkRun 100 "bb_memo" [la, 100] m).map (·.1) == some 2

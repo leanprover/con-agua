@@ -49,7 +49,7 @@ theorem structElimLevel_refines (p : Prog) (hpf1 : p.lookup "param_find" = some 
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
         internParam_refinesA p hpf1 hpp1 hp1 a₀ n,
         internZero_refinesA p hpf2 hpp2 hp2 a₀ n] <;>
       finish [structElimLevel]
@@ -147,7 +147,7 @@ theorem structPsAtGo_spec (n : Nat) : ∀ (s₀ : St) (o nP N k : Word),
     rw [invoke_eq _ hp]
     simp only [callFn, structPsAtGoL]
     sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
         iwAlloc_specW p ha n, slCons_specW p ha hc hsc n, internBVar_spec p hpf hpp hib n, ih] <;>
       finish (gen := 20)
 
@@ -228,7 +228,7 @@ theorem psGoW_ok (n : Nat) : ∀ (m m' : Mem) (a : AState) (o nP N k : Word) (r 
       have hI' := hI
       have hfr := consInternM_frame bvarCS_wf hI'
       have hR1 := hR.lift_bvar _ _ _ _ hX hfr
-        (AM.st_proto bvarLens _ _ _ _ _ _ a (internE_bvar_run _ a) hok)
+        (AM.st_proto bvarLens _ _ _ _ _ _ _ a (internE_bvar_run _ a) hok)
       have hg1 := IWGrow.of_frame hfr (by decide) (by decide)
       have hs1 : ∀ b, (m1.arr64 b).size = (m.arr64 b).size := hfr.size
       have hiw1 : m1.arr64 IW = m.arr64 IW := hfr.arr IW (by decide) (by decide)

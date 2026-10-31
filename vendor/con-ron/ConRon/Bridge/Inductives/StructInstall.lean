@@ -18,7 +18,14 @@ con-leche has a second copy of `checkStructDomsAtF` over `Array Expr`
 list version serves both (deviation 1), and the `Array` statement is the list
 one at `hs.toList` — which is what `Frontend.denoteEArray` is defined as.
 -/
+module
+
 import ConRon.Bridge.Inductives.StructParts
+public import ConRon.Bridge.Inductives.Rel
+import ConRon.Bridge.Checker.Names
+import ConRon.Bridge.ExprOps.Ranges
+
+public section
 
 namespace ConRon.Bridge.Inductives
 

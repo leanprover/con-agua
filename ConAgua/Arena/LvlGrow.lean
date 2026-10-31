@@ -104,27 +104,27 @@ theorem lvNodeW_mono {m m' : Mem} (hl : LvlCnt m m') {u : Word} (hu : HW u)
   by_cases hs : tierW u ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0
   · rw [ite_eq_left hs] at h; exact absurd rfl h
   rw [ite_eq_right hs] at h ⊢
-  by_cases g0 : u >>> 28 = 0
+  by_cases g0 : tagW u = 0
   · simp only [g0, ↓reduceIte] at h ⊢
     by_cases c : tcnt m ZERO (tierW u) ≤ idxW u
     · rw [ite_eq_left c] at h; exact absurd rfl h
     · rw [ite_eq_right (show ¬ tcnt m' ZERO (tierW u) ≤ idxW u from key 8 (by simp) c)]; simp
-  by_cases g1 : u >>> 28 = 1
+  by_cases g1 : tagW u = 1
   · simp only [g1, ↓reduceIte] at h ⊢
     by_cases c : tcnt m SUCC (tierW u) ≤ idxW u
     · rw [ite_eq_left c] at h; exact absurd rfl h
     · rw [ite_eq_right (show ¬ tcnt m' SUCC (tierW u) ≤ idxW u from key 6 (by simp) c)]; simp
-  by_cases g2 : u >>> 28 = 2
+  by_cases g2 : tagW u = 2
   · simp only [g2, ↓reduceIte] at h ⊢
     by_cases c : tcnt m MAX (tierW u) ≤ idxW u
     · rw [ite_eq_left c] at h; exact absurd rfl h
     · rw [ite_eq_right (show ¬ tcnt m' MAX (tierW u) ≤ idxW u from key 10 (by simp) c)]; simp
-  by_cases g3 : u >>> 28 = 3
+  by_cases g3 : tagW u = 3
   · simp only [g3, ↓reduceIte] at h ⊢
     by_cases c : tcnt m IMAX (tierW u) ≤ idxW u
     · rw [ite_eq_left c] at h; exact absurd rfl h
     · rw [ite_eq_right (show ¬ tcnt m' IMAX (tierW u) ≤ idxW u from key 12 (by simp) c)]; simp
-  by_cases g4 : u >>> 28 = 4
+  by_cases g4 : tagW u = 4
   · simp only [g4, ↓reduceIte] at h ⊢
     by_cases c : tcnt m PARAM (tierW u) ≤ idxW u
     · rw [ite_eq_left c] at h; exact absurd rfl h

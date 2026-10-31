@@ -83,8 +83,14 @@ weakening: `leafGuard`, the one consumer, uses the list only as a membership
 base (`leafMem`), and `Guards.lean`'s `leavesSubSpec_congr` is what makes
 that formally so.
 -/
+module
+
 import ConRon.Bridge.Specs
-import ConRon.Bridge.Grind
+import ConRon.Bridge.GrindAttr
+public import ConRon.Bridge.StateOK
+public import ConRon.Arena.ExprOps
+
+public section
 
 namespace ConRon.Bridge.ExprOps
 
@@ -98,7 +104,7 @@ open scoped Lean.Order
 /-! ## 1. The leaf list's denotation -/
 
 /-- con-leche: none — a list of `fvar` leaves denotes, pointwise. -/
-def denoteLeaves (st : EStore) : List (Nat × EIdx) → Option (List (Nat × Expr))
+@[expose] def denoteLeaves (st : EStore) : List (Nat × EIdx) → Option (List (Nat × Expr))
   | [] => some []
   | (i, t) :: rest =>
     match denoteE st t, denoteLeaves st rest with
@@ -548,7 +554,7 @@ walk's ANSWER relation: the result list has exactly the members of the
 accumulator plus the subject's leaves.  Membership and not list equality,
 because the `seen` set collects a shared subterm's leaves once where
 `Expr.fvarLeaves` re-concatenates them per occurrence. -/
-def LeavesEq (st : EStore) (acc : List (Nat × EIdx)) (c : EIdx)
+@[expose] def LeavesEq (st : EStore) (acc : List (Nat × EIdx)) (c : EIdx)
     (res : List (Nat × EIdx)) : Prop :=
   ∀ e ea r, denoteE st c = some e → denoteLeaves st acc = some ea →
     denoteLeaves st res = some r →

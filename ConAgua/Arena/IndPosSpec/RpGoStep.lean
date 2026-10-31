@@ -259,7 +259,7 @@ theorem rpGo_step (n : Nat) (ih : RpNodeSpec p n) : RpGoSpec p (n + 1) := by
   unfold RpNodeSpec at ih
   intro s₀ no nl us b nn f h
   simp only [invoke_eq _ hgo, callFn, replaceAppsGo]
-  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rd_spec,
+  vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rd_spec,
     eView_spec p hl.hv n, appHole_spec' p hl n, memoFindG_spec raSch p _ hf n,
     memoPutG_spec raSch p _ hput n, ih]
   all_goals subst_vars
@@ -274,7 +274,7 @@ theorem rpNode_step (n : Nat) (ih : RpGoSpec p n) : RpNodeSpec p (n + 1) := by
   unfold RpGoSpec at ih
   intro s₀ no nl us b nn f1 h g x y z
   simp only [invoke_eq _ hnode, callFn, replaceAppsNode]
-  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rd_spec,
+  vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rd_spec,
     appHole_spec' p hl n, ih,
     mkApp_spec p hk.hd hk.appF hk.appP hk.appI hk.appM n,
     mkLam_spec p hk.hd hk.lamF hk.lamP hk.lamI hk.lamM n,
@@ -326,7 +326,7 @@ theorem replaceApps_spec (p : Prog) (hl : AhLook p) (hk : MkLook p)
   unfold RpGoSpec at ih
   simp only [invoke_eq _ hp, callFn, replaceApps]
   sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, memoClearG_spec raSch p _ hcl n, ih] <;>
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, memoClearG_spec raSch p _ hcl n, ih] <;>
     finish
 
 /-! ### The relational side -/

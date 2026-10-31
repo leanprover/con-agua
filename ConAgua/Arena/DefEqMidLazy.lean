@@ -138,7 +138,7 @@ l_model llE_spec (p : Prog) (hf : p.lookup "lds_left" = some ldsLeftL)
   fns [hf ↦ llE list]
   specs [callW_spec p n "unfold_definition", dqE_spec p hq n]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] unified
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 /-- **`lds_right`'s model, both outcomes** (as `lds_left`'s). -/
@@ -147,7 +147,7 @@ l_model lrE_spec (p : Prog) (hf : p.lookup "lds_right" = some ldsRightL)
   fns [hf ↦ lrE list]
   specs [callW_spec p n "unfold_definition", dqE_spec p hq n]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] unified
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 /-- **`lds_left` refines the left unfolding of `lazyDeltaStep`, both outcomes**: the errors are
@@ -223,7 +223,7 @@ l_model u2E_spec (p : Prog) (hf : p.lookup "lds_unfold2" = some ldsUnfold2L)
   fns [hf ↦ u2E list]
   specs [callW_spec p n "unfold_definition", dqE_spec p hq n]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] unified
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 /-- **`lds_unfold2` refines `unfold2T`, both outcomes**: the errors are the `whnf_core` slot's and
@@ -291,7 +291,7 @@ l_model smE_spec (p : Prog) (hf : p.lookup "lds_same" = some ldsSameL)
   fns [hf ↦ smE list]
   specs [callW_spec p n "same_const_heads", spE_spec p h1 h2 hc hr n, u2E_spec p hu hq n]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] unified
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 theorem sameRegular_w (ka ha kb hb : Word) :
@@ -388,7 +388,7 @@ l_model boE_spec (p : Prog) (hf : p.lookup "lds_both" = some ldsBothL)
   specs [callW_spec p n "head_hint", callW_spec p n "hint_lt", llE_spec p hl hq n, lrE_spec p hr' hq n,
     smE_spec p hs hu hq h1 h2 hc hr n]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] unified
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 /-- **`lds_both` refines `bothT`, both outcomes**: the errors are the arms'. -/
@@ -487,7 +487,7 @@ l_model ldsE_spec (p : Prog) (hf : p.lookup "lazy_delta_step" = some lazyDeltaSt
   specs [callW_spec p n "unfoldable_head", tupaE_spec p ht n, dqE_spec p hq n, llE_spec p hl hq n,
     lrE_spec p hr' hq n, boE_spec p hbo hl hr' hs hu hq h1 h2 hc hr n]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] unified
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 /-- **`lazy_delta_step` refines `lazyDeltaStep`, both outcomes**: the errors are

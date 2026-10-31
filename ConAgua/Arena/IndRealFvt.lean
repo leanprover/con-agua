@@ -132,7 +132,7 @@ theorem ftdsLoop_spec (p : Prog) (hp : FtdF p) (f : Nat) (s₀ : St) :
   | succ f ih =>
     rw [exec, step_while (w := ftdsLoop) rfl]
     sym only [lang_grind, arena_grind] =>
-      vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64, ih, ftdF_spec0 p hp f] <;>
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64, ih, ftdF_spec0 p hp f] <;>
       finish [ftdsGoW_ge, ftdsGoW_none, ftdsGoW_step]
 
 /-- The model of `fvar_type_ds(o, l)` at the call's L fuel. -/
@@ -158,7 +158,7 @@ theorem ftds_specW (p : Prog) (hp : FtdsF p) (n : Nat) (s₀ : St) (o l : Word) 
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         iwAlloc_specW p (hp.get "iw_alloc") n,
         fun s => Triple.step_exec (ftdsLoop_spec p hp.right (n + 1) s)] <;>
       finish [ftdsW_some]
@@ -474,7 +474,7 @@ theorem s2i_spec (p : Prog) (hp : p.lookup "spn_to_iw" = some spnToIwL) (k : Nat
     rw [invoke_eq _ hp]
     simp only [callFn, spnToIwL]
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64, ih] <;>
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64, ih] <;>
       finish (gen := 20) [s2iW_nil, s2iW_cons, ntBW]
 
 /-- The stack words `s, s + 1, …` (`j` of them). -/

@@ -31,16 +31,16 @@ namespace L.Arena
 /-- `whnfStuckTag` off the handle word: `sort` (2), `fvar` (1), `lam` (5), `forallE` (6), `lit` (8). -/
 theorem whnfStuck_iff (e : Word) (he : HW e) :
     whnfStuckTag (decE e) =
-      decide (e >>> 28 = 2 ∨ e >>> 28 = 1 ∨ e >>> 28 = 5 ∨ e >>> 28 = 6 ∨ e >>> 28 = 8) := by
-  have h : (e >>> 28).toNat < 2 ^ 32 := Nat.lt_trans (shr28_lt e he) (by decide)
+      decide (tagW e = 2 ∨ tagW e = 1 ∨ tagW e = 5 ∨ tagW e = 6 ∨ tagW e = 8) := by
+  have h : (tagW e).toNat < 2 ^ 32 := Nat.lt_trans (tagW_lt e he) (by decide)
   simp only [whnfStuckTag, decE_tag e he, ETag.sort, ETag.fvar, ETag.lam, ETag.forallE, ETag.lit]
   rw [show (2 : UInt32) = (2 : Word).toUInt32 from rfl, toUInt32_beq _ _ h (by decide)]
   rw [show (1 : UInt32) = (1 : Word).toUInt32 from rfl, toUInt32_beq _ _ h (by decide)]
   rw [show (5 : UInt32) = (5 : Word).toUInt32 from rfl, toUInt32_beq _ _ h (by decide)]
   rw [show (6 : UInt32) = (6 : Word).toUInt32 from rfl, toUInt32_beq _ _ h (by decide)]
   rw [show (8 : UInt32) = (8 : Word).toUInt32 from rfl, toUInt32_beq _ _ h (by decide)]
-  by_cases h2 : e >>> 28 = 2 <;> by_cases h1 : e >>> 28 = 1 <;> by_cases h5 : e >>> 28 = 5 <;>
-    by_cases h6 : e >>> 28 = 6 <;> by_cases h8 : e >>> 28 = 8 <;> simp_all
+  by_cases h2 : tagW e = 2 <;> by_cases h1 : tagW e = 1 <;> by_cases h5 : tagW e = 5 <;>
+    by_cases h6 : tagW e = 6 <;> by_cases h8 : tagW e = 8 <;> simp_all
 
 /-! ## The relation across the `whnf` memo's `find; put` -/
 

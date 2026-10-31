@@ -9,7 +9,12 @@ binder view its tag spells
 (`Arena/WFProofs.lean`'s `EStore.internBind_eq_intern`), and its spec is
 `EStore.intern_spec` read through that equation.
 -/
-import ConRon.Bridge.Rel
+module
+
+import ConRon.Arena.WFProofs
+public import ConRon.Arena.WF
+
+public section
 
 namespace ConRon.Bridge
 
@@ -124,6 +129,9 @@ theorem EStore.internBind_spec {st : EStore} {tag : UInt32} {ty b : EIdx}
   have hcap' : st.capOK (eBindView tag ty b) := by
     simp only [EStore.capOK]
     rw [ETables.sizeOf_eBindView _ htag, ETables.sizeOf_eBindView _ htag]
+    have hc : (eBindView tag ty b).cap = Idx.idxCap := by
+      unfold eBindView; split <;> rfl
+    rw [hc]
     exact hcap
   obtain ⟨h1, h2, h3, h4⟩ := EStore.intern_spec h hv hcap'
   exact ⟨h1, h2, EStore.lss_intern st _, EStore.scratchOn_intern st _, h3, h4⟩

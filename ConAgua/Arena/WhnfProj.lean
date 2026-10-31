@@ -30,7 +30,7 @@ namespace L.Arena
 
 /-- `find_proj(vis, t, i)`: the projection table of structure `t` below the view `vis`
 (`find_table`), if it has a field `i`: `(1, q)` the table record `q`, else `(0, 0)`. -/
--- con-ron: ConRon/Arena/Env.lean:303-308 ConRon.Arena.IFEnv.findProj?
+-- con-ron: ConRon/Arena/Env.lean:307-312 ConRon.Arena.IFEnv.findProj?
 @[l_impl ConRon.Arena.IFEnv.findProj?]
 def findProjL : FunDecl := lfn (vis, t, i) locals (r, q) {
   if 4294967295 < t { abort };
@@ -43,7 +43,7 @@ def findProjL : FunDecl := lfn (vis, t, i) locals (r, q) {
 
 /-- `fire_ok(q, i, us)`: the tower-fire guard of field `i` of the table record `q` at the
 universe arguments `us`. -/
--- con-ron: ConRon/Arena/Core.lean:1646-1657 ConRon.Arena.IProjEntry.fireOk
+-- con-ron: ConRon/Arena/Core.lean:1651-1662 ConRon.Arena.IProjEntry.fireOk
 @[l_impl ConRon.Arena.IProjEntry.fireOk]
 def fireOkL : FunDecl := lfn (q, i, us) locals (z, ok, fs) {
   z := call pin_word(53);

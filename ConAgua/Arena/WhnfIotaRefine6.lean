@@ -32,7 +32,7 @@ theorem eRecGet_spec (p : Prog) (hp : p.lookup "e_rec_get" = some eRecGetL) (n :
   rw [invoke_eq _ hp]
   simp only [callFn, eRecGetL]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64] <;>
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64] <;>
     finish [eRecGetW, rdW]
 
 /-- Model of `const_name_of`. -/
@@ -49,7 +49,7 @@ theorem constNameOf_spec (p : Prog) (hp : p.lookup "const_name_of" = some constN
   simp only [callFn, constNameOfL]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt,
-      tcntM, evalE_tierE, evalE_idxE] <;>
+      tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] <;>
     finish [cnoW, tierW, idxW]
 
 /-- Model of `ind_caps_check` (callees at fuel `n`). -/
@@ -88,7 +88,7 @@ theorem indCapsCheck_spec (p : Prog) (hp : p.lookup "ind_caps_check" = some indC
     ⦃fun r s' => LocEq s' s₀ ∧ iccW p n s₀.mem indP us = some (r.headD 0, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, indCapsCheckL]
-  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+  vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
     callW_spec p n "e_rec_get", callW_spec p n "ls_node", callW_spec p n "caps_never_zero"] <;>
   simp_all [iccW, Cmp.eval, BinOp.eval, LocEq, St.setLocs_cons,
     St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Locals.init_cons_zero, Locals.init_cons_succ,
@@ -105,7 +105,7 @@ def inpW (p : Prog) (n : Nat) (m : Mem) (vis ctorP us : Word) : Option (Word × 
   match callW p n "get_app_fn" [r1.headD 0] m1 with
   | none => none
   | some (r2, m2) =>
-  if r2.headD 0 >>> 28 ≠ 3 then some (0, m2) else
+  if tagW (r2.headD 0) ≠ 3 then some (0, m2) else
   match callW p n "const_name_of" [r2.headD 0] m2 with
   | none => none
   | some (r3, m3) =>
@@ -124,7 +124,7 @@ theorem iotaCtorNeverProp_spec (p : Prog)
     ⦃fun r s' => LocEq s' s₀ ∧ inpW p n s₀.mem vis ctorP us = some (r.headD 0, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, iotaCtorNeverPropL]
-  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+  vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
     callW_spec p n "e_rec_get", callW_spec p n "pi_result", callW_spec p n "get_app_fn",
     callW_spec p n "const_name_of", callW_spec p n "env_find",
     callW_spec p n "ind_caps_check"] <;>
@@ -203,7 +203,7 @@ theorem decCI_ind_fields (b : Array Word) (dn : NIdx → Option ConLeche.Name) (
 /-! ## The head name of a `const` handle -/
 
 theorem viewConstName_f (m : Mem) (a : AState) (hR : ArenaR m a) (h : Word) (hh : h.toNat < 2 ^ 32)
-    (hv : viewOK m h CONST) (_hg : h >>> 28 = 3) :
+    (hv : viewOK m h CONST) (_hg : tagW h = 3) :
     a.store.viewConstName (decE h) = some (decI (tfld m CONST (tierW h) (idxW h) 0)) := by
   obtain ⟨k, hk, hn, hu⟩ := node_of m a h constCS CeRecRel (·.consts) _ hR.const hv.2
   have hfl := ConsR.flag hR.app
@@ -213,10 +213,10 @@ theorem viewConstName_f (m : Mem) (a : AState) (hR : ArenaR m a) (h : Word) (hh 
     unfold EStore.viewConstName EStore.persGetConstName
     rw [decE_pers h hh]
     by_cases ht : tierW h = 0
-    · simp [ht, ETables.getConstName, decE_idx h]
+    · simp [ht, ETables.getConstName, decE_idx h (narrow_of_cnt m h hR.const rfl hv.2)]
     · have hon : a.store.scratchOn = true := by
         rw [← hfl]; simp only [bne_iff_ne, ne_eq]; exact fun h1 => hv.1 ⟨ht, h1⟩
-      simp [ht, hon, ETables.getConstName, decE_idx h]
+      simp [ht, hon, ETables.getConstName, decE_idx h (narrow_of_cnt m h hR.const rfl hv.2)]
   rw [e, Tbl.node?, hk]
   simp [hn, decI_word]
 
@@ -477,7 +477,7 @@ theorem iotaCtorNeverProp_refines (p : Prog) (hp : IotaProg4 p) (hcn : CapsNever
   have hpr : (piResult coreWalkFuel cvj.type).run a₀ = .ok (decE (r1.headD 0), a₀) := by
     rw [hty, ← hty0]; exact hrun1
   have hga : (getAppFn coreWalkFuel (decE (r1.headD 0))).run a₀ = .ok (decE (r2.headD 0), a₀) := hrun2
-  by_cases h3 : r2.headD 0 >>> 28 ≠ 3
+  by_cases h3 : tagW (r2.headD 0) ≠ 3
   · rw [ite_eq_left h3] at hW
     obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
     have hrun := inp_run_not fe cvj (decI us) a₀ _ _ hpr hga
@@ -486,7 +486,7 @@ theorem iotaCtorNeverProp_refines (p : Prog) (hp : IotaProg4 p) (hcn : CapsNever
     · show false = decBool r; simp only [decBool]; rw [← hr]; rfl
     · unfold ResH HW; rw [← hr]; decide
   rw [ite_eq_right h3] at hW
-  have h3' : r2.headD 0 >>> 28 = 3 := by simpa using h3
+  have h3' : tagW (r2.headD 0) = 3 := by simpa using h3
   rcases c3 : callW p (n' + 1) "const_name_of" [r2.headD 0] s₀.mem with _ | ⟨r3, m3⟩ <;>
     simp only [c3, reduceCtorEq] at hW
   obtain ⟨t3, ht3, -, hmem3, hcno⟩ := triple_of_callW
@@ -575,7 +575,7 @@ theorem iotaCase3_spec (p : Prog) (hp : p.lookup "iota_case3" = some iotaCase3L)
   rw [invoke_eq _ hp]
   simp only [callFn, iotaCase3L]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       callW_spec p n "iota_ctor_never_prop"] <;>
     finish [icW]
 

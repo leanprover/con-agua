@@ -10,9 +10,15 @@ structural recursion, with the `EMemo` invariant
 (`EMemoOK st m : ∀ e h, m[e]? = some h → denoteE st h = some e`) carried
 along.
 -/
-import ConRon.Bridge.Frontend.Rel
+module
+
+public import ConRon.Bridge.Frontend.Rel
 import ConRon.Bridge.SpecsL
-import ConRon.Arena.Frontend.Readback
+public import ConRon.Arena.Frontend.Readback
+import ConRon.Bridge.Specs
+public import ConRon.Bridge.Grind
+
+public section
 
 namespace ConRon.Bridge.Frontend
 

@@ -210,7 +210,7 @@ theorem lvLeqTop_spec (hpt : p.lookup "lv_leq_top" = some lvLeqTop) (n : Nat) (s
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind, level_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
         lvSimp_spec p hp.node hp.alloc hp.comb hp.simp n, (leqSpecs p hp n).1] <;>
       finish (gen := 20)
 
@@ -224,7 +224,7 @@ theorem lvEquiv_spec (hpe : p.lookup "lv_equiv" = some lvEquiv) (n : Nat) (s₀ 
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind, level_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, lvEq_spec p hp.node hp.eq n,
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, lvEq_spec p hp.node hp.eq n,
         lvSimp_spec p hp.node hp.alloc hp.comb hp.simp n, (leqSpecs p hp n).1] <;>
       finish (gen := 20)
 
@@ -241,7 +241,7 @@ theorem lvEquivs_spec (hpe : p.lookup "lv_equiv" = some lvEquiv)
     rw [invoke_eq _ hps]
     simp only [callFn, lvEquivs]
     sym only [lang_grind, arena_grind, level_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         lvEquiv_spec p hp hpe n, ih] <;>
       finish (gen := 20)
 
@@ -256,7 +256,7 @@ def lvlEqW : Nat → Mem → Word → Word → Option (Word × Mem)
 fresh heap (the top reset to `0`). The verdict cache `lvlEqC` is `lvl_eq_c`'s, in front of this
 function (`CoreLevels.lean`); this is the uncached computation (`LevelArena.lean`,
 `lvlEq_refines`). -/
--- con-ron: ConRon/Arena/Core.lean:132-149 ConRon.Arena.lvlEq?
+-- con-ron: ConRon/Arena/Core.lean:137-154 ConRon.Arena.lvlEq?
 @[l_impl ConRon.Arena.lvlEq?]
 def lvlEqL : FunDecl := lfn (u, v) locals (z) {
   CTL.u64[192] := 0;
@@ -275,7 +275,7 @@ theorem lvlEq_spec (hpe : p.lookup "lv_equiv" = some lvEquiv) (hpl : p.lookup "l
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind, level_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, st64, lvEquiv_spec p hp hpe n] <;>
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, st64, lvEquiv_spec p hp hpe n] <;>
       finish (gen := 20) [lvlEqW]
 
 end specs
@@ -285,14 +285,14 @@ end specs
 /-- **The model of `ls_node`**: the slice `[offset, length]` of a level-list handle, `[]` where the
 L code aborts (a tag other than `0`, a closed scratch tier, an index past the count). -/
 def lsNodeW (m : Mem) (h : Word) : List Word :=
-  if h >>> 28 ≠ 0 then []
+  if tagW h ≠ 0 then []
   else if tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then []
   else if tcnt m LVLS (tierW h) ≤ idxW h then []
   else [tfld m LVLS (tierW h) (idxW h) 0, tfld m LVLS (tierW h) (idxW h) 1]
 
-/-- con-ron: ConRon/Arena/Monad.lean:491-497 ConRon.Arena.viewLs -/
+/-- con-ron: ConRon/Arena/Monad.lean:494-500 ConRon.Arena.viewLs -/
 def lsNode : FunDecl := lfn (h) locals (t, i) {
-  if h >> 28 != 0 { abort };
+  if ⟦h⟧.tag != 0 { abort };
   (t, i) := node LVLS⟦h⟧;
   return (LVLS⟨t, i⟩.o, LVLS⟨t, i⟩.l)
 }
@@ -309,7 +309,7 @@ theorem lsNode_spec (p : Prog) (hp : p.lookup "ls_node" = some lsNode) (n : Nat)
   | succ n =>
     sym only [lang_grind, arena_grind, level_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld,
-        evalE_cnt, tcntM, evalE_tierE, evalE_idxE] <;>
+        evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] <;>
       finish [lsNodeW, tierW, idxW]
 
 /-- **The model of `lvls_eq`**: the two slices (none on a handle `ls_node` aborts on), the heap
@@ -323,7 +323,7 @@ def lvlsEqW : Nat → Mem → Word → Word → Option (Word × Mem)
 
 /-- con-ron's `lvlsEq?` (`Arena/Core.lean:155`) on two level-list handles: `isEquivList` on their
 slices, on a fresh heap; the verdict cache `lvlsEqC` is not represented (as for `lvl_eq`). -/
--- con-ron: ConRon/Arena/Core.lean:151-168 ConRon.Arena.lvlsEq?
+-- con-ron: ConRon/Arena/Core.lean:156-173 ConRon.Arena.lvlsEq?
 @[l_impl ConRon.Arena.lvlsEq?]
 def lvlsEqL : FunDecl := lfn (us, vs) locals (a, n, b, k, z) {
   (a, n) := call ls_node(us);
@@ -348,7 +348,7 @@ theorem lvlsEq_spec (hpe : p.lookup "lv_equiv" = some lvEquiv)
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind, level_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, st64, lsNode_spec p hpn n,
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, st64, lsNode_spec p hpn n,
         lvEquivs_spec p hp hpe hps n] <;>
       finish (gen := 20) [lvlsEqW]
 

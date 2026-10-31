@@ -92,12 +92,12 @@ def RArmRef (n : Nat) (armW : Nat → Mem → Word → Word → Word → Word �
 def RArmOK (n : Nat) : Prop :=
   ∀ (m m' : Mem) (a : AState) (h c d k fu r : Word), ArenaA m a →
     h.toNat < 2 ^ 32 →
-    (h >>> 28 = 4 → RArmRef n arAppW (absRangeGoArmApp d.toNat k.toNat fu.toNat (decE h) c.toNat) m m' a h c d k fu r) ∧
-    (h >>> 28 = 5 → RArmRef n arLamW (absRangeGoArmBind d.toNat k.toNat fu.toNat (decE h) c.toNat) m m' a h c d k fu r) ∧
-    (h >>> 28 = 6 →
+    (tagW h = 4 → RArmRef n arAppW (absRangeGoArmApp d.toNat k.toNat fu.toNat (decE h) c.toNat) m m' a h c d k fu r) ∧
+    (tagW h = 5 → RArmRef n arLamW (absRangeGoArmBind d.toNat k.toNat fu.toNat (decE h) c.toNat) m m' a h c d k fu r) ∧
+    (tagW h = 6 →
       RArmRef n arForallW (absRangeGoArmBind d.toNat k.toNat fu.toNat (decE h) c.toNat) m m' a h c d k fu r) ∧
-    (h >>> 28 = 7 → RArmRef n arLetW (absRangeGoArmLet d.toNat k.toNat fu.toNat (decE h) c.toNat) m m' a h c d k fu r) ∧
-    (h >>> 28 = 9 → RArmRef n arProjW (absRangeGoArmProj d.toNat k.toNat fu.toNat (decE h) c.toNat) m m' a h c d k fu r)
+    (tagW h = 7 → RArmRef n arLetW (absRangeGoArmLet d.toNat k.toNat fu.toNat (decE h) c.toNat) m m' a h c d k fu r) ∧
+    (tagW h = 9 → RArmRef n arProjW (absRangeGoArmProj d.toNat k.toNat fu.toNat (decE h) c.toNat) m m' a h c d k fu r)
 
 theorem rgoOK_succ (n : Nat) (ih : RNodeOK n) : RGoOK (n + 1) := by
   intro m m' a h c d k fu r hA hh hb
@@ -115,33 +115,33 @@ theorem rgoOK_succ (n : Nat) (ih : RNodeOK n) : RGoOK (n + 1) := by
 theorem rnodeOK_succ (n : Nat) (ih : RArmOK n) : RNodeOK (n + 1) := by
   intro m m' a h c d k fu r hA hh hb
   have arm := ih m m' a h c d k fu r hA hh
-  have t4 : h >>> 28 = 4 ↔ (h >>> 28).toUInt32 = 4 := by simpa using tag_iff h 4 hh (by decide)
-  have t5 : h >>> 28 = 5 ↔ (h >>> 28).toUInt32 = 5 := by simpa using tag_iff h 5 hh (by decide)
-  have t6 : h >>> 28 = 6 ↔ (h >>> 28).toUInt32 = 6 := by simpa using tag_iff h 6 hh (by decide)
-  have t1 : h >>> 28 = 1 ↔ (h >>> 28).toUInt32 = 1 := by simpa using tag_iff h 1 hh (by decide)
-  have t7 : h >>> 28 = 7 ↔ (h >>> 28).toUInt32 = 7 := by simpa using tag_iff h 7 hh (by decide)
-  have t9 : h >>> 28 = 9 ↔ (h >>> 28).toUInt32 = 9 := by simpa using tag_iff h 9 hh (by decide)
+  have t4 : tagW h = 4 ↔ (tagW h).toUInt32 = 4 := by simpa using tag_iff h 4 hh (by decide)
+  have t5 : tagW h = 5 ↔ (tagW h).toUInt32 = 5 := by simpa using tag_iff h 5 hh (by decide)
+  have t6 : tagW h = 6 ↔ (tagW h).toUInt32 = 6 := by simpa using tag_iff h 6 hh (by decide)
+  have t1 : tagW h = 1 ↔ (tagW h).toUInt32 = 1 := by simpa using tag_iff h 1 hh (by decide)
+  have t7 : tagW h = 7 ↔ (tagW h).toUInt32 = 7 := by simpa using tag_iff h 7 hh (by decide)
+  have t9 : tagW h = 9 ↔ (tagW h).toUInt32 = 9 := by simpa using tag_iff h 9 hh (by decide)
   simp only [arNodeA, decE_tag h hh]
   simp only [ETag.app, ETag.isBind, ETag.lam, ETag.forallE, ETag.fvar, ETag.letE, ETag.proj,
     beq_iff_eq, Bool.or_eq_true] at *
-  by_cases g4 : h >>> 28 = 4
+  by_cases g4 : tagW h = 4
   · rw [arNodeW_app n m h c d k fu g4] at hb
-    simp only [show (h >>> 28).toUInt32 = 4 from (t4.mp g4), ↓reduceIte]
+    simp only [show (tagW h).toUInt32 = 4 from (t4.mp g4), ↓reduceIte]
     exact arm.1 g4 hb
-  have g4' : ¬ (h >>> 28).toUInt32 = 4 := fun e => g4 (t4.mpr e)
-  by_cases g5 : h >>> 28 = 5
+  have g4' : ¬ (tagW h).toUInt32 = 4 := fun e => g4 (t4.mpr e)
+  by_cases g5 : tagW h = 5
   · rw [arNodeW_lam n m h c d k fu g5] at hb
-    simp only [show (h >>> 28).toUInt32 = 5 from (t5.mp g5), true_or, ↓reduceIte]
+    simp only [show (tagW h).toUInt32 = 5 from (t5.mp g5), true_or, ↓reduceIte]
     exact arm.2.1 g5 hb
-  have g5' : ¬ (h >>> 28).toUInt32 = 5 := fun e => g5 (t5.mpr e)
-  by_cases g6 : h >>> 28 = 6
+  have g5' : ¬ (tagW h).toUInt32 = 5 := fun e => g5 (t5.mpr e)
+  by_cases g6 : tagW h = 6
   · rw [arNodeW_forall n m h c d k fu g6] at hb
-    simp only [show (h >>> 28).toUInt32 = 6 from (t6.mp g6), or_true, ↓reduceIte]
+    simp only [show (tagW h).toUInt32 = 6 from (t6.mp g6), or_true, ↓reduceIte]
     exact arm.2.2.1 g6 hb
-  have g6' : ¬ (h >>> 28).toUInt32 = 6 := fun e => g6 (t6.mpr e)
+  have g6' : ¬ (tagW h).toUInt32 = 6 := fun e => g6 (t6.mpr e)
   simp only [g4', g5', g6', or_self, ↓reduceIte]
-  by_cases g1 : h >>> 28 = 1
-  · simp only [show (h >>> 28).toUInt32 = 1 from (t1.mp g1), ↓reduceIte]
+  by_cases g1 : tagW h = 1
+  · simp only [show (tagW h).toUInt32 = 1 from (t1.mp g1), ↓reduceIte]
     have hs : ¬ (tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0) := fun hs => by rw [arNodeW] at hb; simp [g1, hs] at hb
     by_cases hc : tcnt m FVAR (tierW h) ≤ idxW h
     · rw [arNodeW] at hb; simp [g1, hs, hc] at hb
@@ -162,19 +162,19 @@ theorem rnodeOK_succ (n : Nat) (ih : RArmOK n) : RNodeOK (n + 1) := by
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hb)
       have hi' := fun e => hi ((rng_iff d k _ hdk).mpr e)
       simp only [Bool.eq_false_iff.mpr hi', Bool.false_eq_true, ↓reduceIte]; exact ⟨a, rfl, hA⟩
-  have g1' : ¬ (h >>> 28).toUInt32 = 1 := fun e => g1 (t1.mpr e)
+  have g1' : ¬ (tagW h).toUInt32 = 1 := fun e => g1 (t1.mpr e)
   simp only [g1', ↓reduceIte]
-  by_cases g7 : h >>> 28 = 7
+  by_cases g7 : tagW h = 7
   · rw [arNodeW_let n m h c d k fu g7] at hb
-    simp only [show (h >>> 28).toUInt32 = 7 from (t7.mp g7), ↓reduceIte]
+    simp only [show (tagW h).toUInt32 = 7 from (t7.mp g7), ↓reduceIte]
     exact arm.2.2.2.1 g7 hb
-  have g7' : ¬ (h >>> 28).toUInt32 = 7 := fun e => g7 (t7.mpr e)
+  have g7' : ¬ (tagW h).toUInt32 = 7 := fun e => g7 (t7.mpr e)
   simp only [g7', ↓reduceIte]
-  by_cases g9 : h >>> 28 = 9
+  by_cases g9 : tagW h = 9
   · rw [arNodeW_proj n m h c d k fu g9] at hb
-    simp only [show (h >>> 28).toUInt32 = 9 from (t9.mp g9), ↓reduceIte]
+    simp only [show (tagW h).toUInt32 = 9 from (t9.mp g9), ↓reduceIte]
     exact arm.2.2.2.2 g9 hb
-  have g9' : ¬ (h >>> 28).toUInt32 = 9 := fun e => g9 (t9.mpr e)
+  have g9' : ¬ (tagW h).toUInt32 = 9 := fun e => g9 (t9.mpr e)
   simp only [g9', ↓reduceIte]
   rw [arNodeW_leaf n m h c d k fu g1 g4 g5 g6 g7 g9] at hb
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hb)
@@ -187,7 +187,7 @@ variable (n : Nat) (ih : RGoOK n) (m m' : Mem) (a : AState) (hA : ArenaA m a)
   (h c d k fu r : Word) (hh : h.toNat < 2 ^ 32)
 include ih hA hh
 
-theorem rappArm_ok (hg : h >>> 28 = 4) :
+theorem rappArm_ok (hg : tagW h = 4) :
     RArmRef (n + 1) arAppW (absRangeGoArmApp d.toNat k.toNat fu.toNat (decE h) c.toNat) m m' a h c d k fu r := by
   intro hb
   rw [absRangeGoArmApp]
@@ -195,7 +195,7 @@ theorem rappArm_ok (hg : h >>> 28 = 4) :
     (fun hr => by rw [arAppW]; simp [hr]) (fun hr hh0 hb => ?_) hb
   by_cases hs : tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0
   · rw [arAppW] at hb; simp only [ne_eq] at hs; simp only [hr, hh0, ne_eq, not_true_eq_false, ↓reduceIte, hs, not_false_eq_true, and_self, reduceCtorEq] at hb
-  have hv : viewOK m h APP := ⟨hs, UInt64.not_le.mp fun hc => by
+  have hv : viewOKA m h := ⟨hs, UInt64.not_le.mp fun hc => by
     rw [arAppW] at hb; simp only [ne_eq] at hs; simp only [hr, hh0, ne_eq, not_true_eq_false, ↓reduceIte, hs, hc, reduceCtorEq] at hb⟩
   obtain ⟨-, hfw, haw⟩ := view_app m a hA.1.1 h hh hv hg
   rw [arAppW_miss n m h c d k fu hr hh0 hv] at hb
@@ -205,19 +205,19 @@ theorem rappArm_ok (hg : h >>> 28 = 4) :
   refine Sim.bindD (K := rappK₁.rappK₂ h c _ _ x) rfl (fun _ _ => rfl)
     (Sim.ofD fun y m₂ e => ih m₁ m₂ a₁ _ c d k fu y hA₁ haw e) fun y m₂ a₂ hA₂ => ?_
   refine Sim.ofD fun r m' hb => atail_ok (internRebuiltApp (decE h)
-      (decE x == decE (tfld m APP (tierW h) (idxW h) 0) && decE y == decE (tfld m APP (tierW h) (idxW h) 1)) (decE x) (decE y))
+      (decE x == decE (tfld m APP (tierW h) (idxA h) 0) && decE y == decE (tfld m APP (tierW h) (idxA h) 1)) (decE x) (decE y))
       _ a₂ h c r m' hh (fun r₃ m₃ hr₃ => by
     unfold internRebuiltApp
     refine rb_ok _ _ _ _ m₂ a₂ hA₂ h r₃ m₃ (fun ⟨e1, e2⟩ => by simp [e1, e2]) (fun hn hI => ?_) hr₃
     obtain ⟨hx, hy⟩ := mkAppW_lt m₂ x y r₃ m₃ hI
     refine ⟨?_, mkApp_okA m₂ a₂ hA₂ x y r₃ m₃ hI⟩
-    rcases Decidable.em (decE x = decE (tfld m APP (tierW h) (idxW h) 0)) with e1 | e1
-    · have e2 : decE y ≠ decE (tfld m APP (tierW h) (idxW h) 1) :=
+    rcases Decidable.em (decE x = decE (tfld m APP (tierW h) (idxA h) 0)) with e1 | e1
+    · have e2 : decE y ≠ decE (tfld m APP (tierW h) (idxA h) 1) :=
         fun e2 => hn ⟨decI_inj hx hfw e1, decI_inj hy haw e2⟩
       simp [e1, e2]
     · simp [e1]) hb
 
-theorem rlamArm_ok (hg : h >>> 28 = 5) :
+theorem rlamArm_ok (hg : tagW h = 5) :
     RArmRef (n + 1) arLamW (absRangeGoArmBind d.toNat k.toNat fu.toNat (decE h) c.toNat) m m' a h c d k fu r := by
   intro hb
   have hk1 : ¬ c + 1 = 0 := fun hk1 => by rw [arLamW] at hb; simp [hk1] at hb
@@ -253,7 +253,7 @@ theorem rlamArm_ok (hg : h >>> 28 = 5) :
       simp [e1, e2]
     · simp [e1]) hb
 
-theorem rforallArm_ok (hg : h >>> 28 = 6) :
+theorem rforallArm_ok (hg : tagW h = 6) :
     RArmRef (n + 1) arForallW (absRangeGoArmBind d.toNat k.toNat fu.toNat (decE h) c.toNat) m m' a h c d k fu r := by
   intro hb
   have hk1 : ¬ c + 1 = 0 := fun hk1 => by rw [arForallW] at hb; simp [hk1] at hb
@@ -289,7 +289,7 @@ theorem rforallArm_ok (hg : h >>> 28 = 6) :
       simp [e1, e2]
     · simp [e1]) hb
 
-theorem rletArm_ok (hg : h >>> 28 = 7) :
+theorem rletArm_ok (hg : tagW h = 7) :
     RArmRef (n + 1) arLetW (absRangeGoArmLet d.toNat k.toNat fu.toNat (decE h) c.toNat) m m' a h c d k fu r := by
   intro hb
   have hk1 : ¬ c + 1 = 0 := fun hk1 => by rw [arLetW] at hb; simp [hk1] at hb
@@ -328,7 +328,7 @@ theorem rletArm_ok (hg : h >>> 28 = 7) :
       · simp [e1, e2]
     · simp [e1]) hb
 
-theorem rprojArm_ok (hg : h >>> 28 = 9) :
+theorem rprojArm_ok (hg : tagW h = 9) :
     RArmRef (n + 1) arProjW (absRangeGoArmProj d.toNat k.toNat fu.toNat (decE h) c.toNat) m m' a h c d k fu r := by
   intro hb
   rw [absRangeGoArmProj]

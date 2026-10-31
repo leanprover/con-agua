@@ -39,8 +39,13 @@ concrete lambda whose only metavariables are first-order, where the generic
 insert's spec.  `abbrev` and not `def`, so the generic lemmas still match
 syntactically.
 -/
-import ConRon.Bridge.Rel
-import ConLeche.Kernel.TypeChecker
+module
+
+public import ConRon.Bridge.Rel
+public import ConLeche.Kernel.TypeChecker
+public import ConRon.Arena.Pins
+
+public section
 
 namespace ConRon.Bridge
 
@@ -319,7 +324,7 @@ carries no ambient depth because a handle determines its own typing context
 
 /-- con-leche: ConLeche/Verify/SimI.lean:54 ISOK (the `whnfC` clause) — the
 generic unary entry-point cache clause, at a fuel-indexed pure operation. -/
-def EntryCacheOK (op : Nat → Nat → Expr → CheckM Expr)
+@[expose] def EntryCacheOK (op : Nat → Nat → Expr → CheckM Expr)
     (tbl : Std.HashMap EIdx EIdx) (st : EStore) : Prop :=
   ∀ (i j : EIdx), tbl[i]? = some j →
     ∃ a b, denoteE st i = some a ∧ denoteE st j = some b ∧
@@ -328,7 +333,7 @@ def EntryCacheOK (op : Nat → Nat → Expr → CheckM Expr)
 /-- con-leche: ConLeche/Verify/SimI.lean:54 ISOK (the `defeqC` clause) — the
 `defeq` verdict cache, BOTH SIGNS: the pure run at the fixed fuel answered
 `r`, and the memo answers `r`.  This is what makes a negative memo sound. -/
-def DefeqCacheOK (op : Nat → Nat → Expr → Expr → CheckM Bool)
+@[expose] def DefeqCacheOK (op : Nat → Nat → Expr → Expr → CheckM Bool)
     (tbl : Std.HashMap (EIdx × EIdx) Bool) (st : EStore) : Prop :=
   ∀ (k : EIdx × EIdx) (r : Bool), tbl[k]? = some r →
     ∃ a b, denoteE st k.1 = some a ∧ denoteE st k.2 = some b ∧
@@ -337,14 +342,14 @@ def DefeqCacheOK (op : Nat → Nat → Expr → Expr → CheckM Bool)
 
 /-- con-leche: ConLeche/Verify/SimI.lean:54 ISOK (the `lsimp`/`eqv` clauses) —
 the level-verdict cache: a recorded verdict is `Level.isEquiv`'s. -/
-def LvlEqCacheOK (tbl : Std.HashMap (LIdx × LIdx) Bool) (st : EStore) : Prop :=
+@[expose] def LvlEqCacheOK (tbl : Std.HashMap (LIdx × LIdx) Bool) (st : EStore) : Prop :=
   ∀ (k : LIdx × LIdx) (r : Bool), tbl[k]? = some r →
     ∃ u v, denoteL st.ls k.1 = some u ∧ denoteL st.ls k.2 = some v ∧
       Level.isEquiv u v = some r
 
 /-- con-leche: ConLeche/Verify/SimI.lean:54 ISOK — the same at two
 universe-argument lists. -/
-def LvlsEqCacheOK (tbl : Std.HashMap (LsIdx × LsIdx) Bool) (st : EStore) :
+@[expose] def LvlsEqCacheOK (tbl : Std.HashMap (LsIdx × LsIdx) Bool) (st : EStore) :
     Prop :=
   ∀ (k : LsIdx × LsIdx) (r : Bool), tbl[k]? = some r →
     ∃ us vs, denoteLs st.lss k.1 = some us ∧ denoteLs st.lss k.2 = some vs ∧
@@ -355,7 +360,7 @@ row of the lazy instantiated-constant TYPE cache is the environment's own
 constant at the key's universe arguments.  The environment is what makes the
 key `(name, levels)` determine the subject; without it the clause would be
 vacuous (`Arena/Core.lean`'s `constTyAt` takes the subject as an argument). -/
-def ConstTyCacheOK (env : Env) (tbl : Std.HashMap (NIdx × LsIdx) EIdx)
+@[expose] def ConstTyCacheOK (env : Env) (tbl : Std.HashMap (NIdx × LsIdx) EIdx)
     (st : EStore) : Prop :=
   ∀ (k : NIdx × LsIdx) (i : EIdx), tbl[k]? = some i →
     ∃ nm ls ci, denoteN st.ns k.1 = some nm ∧ denoteLs st.lss k.2 = some ls ∧
@@ -366,7 +371,7 @@ def ConstTyCacheOK (env : Env) (tbl : Std.HashMap (NIdx × LsIdx) EIdx)
 /-- con-leche: ConLeche/Verify/SimI.lean:54 ISOK — the same for a stored
 definition's VALUE.  The environment entry must be one that HAS a value, so
 the clause names it. -/
-def ConstValCacheOK (env : Env) (tbl : Std.HashMap (NIdx × LsIdx) EIdx)
+@[expose] def ConstValCacheOK (env : Env) (tbl : Std.HashMap (NIdx × LsIdx) EIdx)
     (st : EStore) : Prop :=
   ∀ (k : NIdx × LsIdx) (i : EIdx), tbl[k]? = some i →
     ∃ nm ls cv value hint,
@@ -379,7 +384,7 @@ right-hand side at the recursor's universe instantiation.  The key's three
 data determine the subject through the environment: the recursor's stored
 rules, the rule whose constructor is the key's second name, and that rule's
 `rhs`. -/
-def RuleRhsCacheOK (env : Env) (tbl : Std.HashMap (NIdx × NIdx × LsIdx) EIdx)
+@[expose] def RuleRhsCacheOK (env : Env) (tbl : Std.HashMap (NIdx × NIdx × LsIdx) EIdx)
     (st : EStore) : Prop :=
   ∀ (k : NIdx × NIdx × LsIdx) (i : EIdx), tbl[k]? = some i →
     ∃ rn cn ls cv mi rp rules rl,
@@ -392,15 +397,15 @@ def RuleRhsCacheOK (env : Env) (tbl : Std.HashMap (NIdx × NIdx × LsIdx) EIdx)
 /-- con-leche: none — the READBACK memos (DESIGN `### Task #97-P6-13`) are
 the identity on the denotation, so their clause is an equation and not a
 simulation. -/
-def ReadLCacheOK (tbl : Std.HashMap LIdx Level) (st : EStore) : Prop :=
+@[expose] def ReadLCacheOK (tbl : Std.HashMap LIdx Level) (st : EStore) : Prop :=
   ∀ (k : LIdx) (u : Level), tbl[k]? = some u → denoteL st.ls k = some u
 
 /-- con-leche: none — the same for a NAME handle. -/
-def ReadNCacheOK (tbl : Std.HashMap NIdx ConLeche.Name) (st : EStore) : Prop :=
+@[expose] def ReadNCacheOK (tbl : Std.HashMap NIdx ConLeche.Name) (st : EStore) : Prop :=
   ∀ (k : NIdx) (x : ConLeche.Name), tbl[k]? = some x → denoteN st.ns k = some x
 
 /-- con-leche: none — the same for an interned universe-argument list. -/
-def ReadLsCacheOK (tbl : Std.HashMap LsIdx (List Level)) (st : EStore) :
+@[expose] def ReadLsCacheOK (tbl : Std.HashMap LsIdx (List Level)) (st : EStore) :
     Prop :=
   ∀ (k : LsIdx) (us : List Level), tbl[k]? = some us →
     denoteLs st.lss k = some us
@@ -449,7 +454,7 @@ structure CacheOK (mode : CheckMode) (env : Env) (s : AState) : Prop where
 
 /-- con-leche: none — a list of name handles denotes a list of names,
 pointwise. -/
-def denoteNL (st : EStore) : List NIdx → List ConLeche.Name → Prop
+@[expose] def denoteNL (st : EStore) : List NIdx → List ConLeche.Name → Prop
   | [], [] => True
   | h :: hs, x :: xs => denoteN st.ns h = some x ∧ denoteNL st hs xs
   | _, _ => False

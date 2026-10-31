@@ -129,7 +129,7 @@ theorem classReadRecCls_spec (p : Prog) (hfh : p.lookup "fvar_head" = some fvarH
     rw [invoke_eq _ hp]
     simp only [callFn, classReadRecCls]
     sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         hcR n "open_pis_at_fvars_f", fvarHead_spec p hfh hv had n,
         classOfMotiveVar_spec p hf hcm n, slCons_specW p ha hc hsc n, ih] <;>
       finish (gen := 20) [rdW_eq]
@@ -744,7 +744,7 @@ theorem ihsW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
 
 /-- A `const` handle's view, through `e_view`'s words. -/
 theorem viewConstW {m : Mem} {a : AState} (hR : ArenaR m a) {w : Word} (hne : eViewW m w ≠ [])
-    (hg : w >>> 28 = 3) :
+    (hg : tagW w = 3) :
     (ConRon.Arena.viewConst (decE w)).run a = .ok (some (decI ((eViewW m w).tail.headD 0),
       decI ((eViewW m w).tail.tail.headD 0)), a) ∧ H ((eViewW m w).tail.headD 0) ∧
       H ((eViewW m w).tail.tail.headD 0) := by
@@ -811,7 +811,7 @@ theorem finW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
       (KP dn vis fe m decSlot) := by
   rcases n with _ | n
   · exact RSim.none
-  by_cases hg : hd >>> 28 ≠ 3
+  by_cases hg : tagW hd ≠ 3
   · rw [finW.arm1 (hc1 := hg)]
     have ht : ¬ (((decI hd : EIdx)).tag == ETag.const) = true := by
       have : ¬ (decE hd).tag = ETag.const := fun h => hg ((decE_tag_const hd hH).mp h)
@@ -822,7 +822,7 @@ theorem finW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
   by_cases hne : eViewW m hd = []
   · rw [finW.abort1 (hc1 := Decidable.of_not_not hg) (hc2 := hne)]; exact RSim.none
   rw [finW.arm2 (hc1 := Decidable.of_not_not hg) (hc2 := hne)]
-  have hg3 : hd >>> 28 = 3 := by simpa using hg
+  have hg3 : tagW hd = 3 := by simpa using hg
   have ht : (((decI hd : EIdx)).tag == ETag.const) = true := by
     have : (decE hd).tag = ETag.const := (decE_tag_const hd hH).mpr hg3
     simp only [beq_iff_eq]; exact this
@@ -1062,7 +1062,7 @@ def slK2 : Option (List Word × Mem) → Option (List Word × Mem)
 def slK1 (cR : CallM) (n : Nat) (p vis np mo ml d dom : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r1, m1) =>
-    if r1.headD 0 >>> 28 = 2 then slK2 (slotMotW n m1 p vis dom)
+    if tagW (r1.headD 0) = 2 then slK2 (slotMotW n m1 p vis dom)
     else slK2 (minorW cR n m1 np mo ml d dom)
 
 /-- **The model of `class_read_slot`.** -/
@@ -1075,9 +1075,9 @@ variable (n : Nat) (m m1 m2 m3 m4 m5 m6 : Mem) (p vis np mo ml d dom mdom iName 
   (r r1 r2 r3 r4 r5 r6 : List Word) (cR : CallM)
 theorem slotW_eq : slotW cR (n + 1) m p vis np mo ml d dom =
     slK1 cR n p vis np mo ml d dom (pirF m [CWF, dom]) := rfl
-theorem slK1_mot (h : r1.headD 0 >>> 28 = 2) : slK1 cR n p vis np mo ml d dom (some (r1, m1)) =
+theorem slK1_mot (h : tagW (r1.headD 0) = 2) : slK1 cR n p vis np mo ml d dom (some (r1, m1)) =
     slK2 (slotMotW n m1 p vis dom) := by rw [slK1, ite_eq_left h]
-theorem slK1_min (h : ¬ r1.headD 0 >>> 28 = 2) : slK1 cR n p vis np mo ml d dom (some (r1, m1)) =
+theorem slK1_min (h : ¬ tagW (r1.headD 0) = 2) : slK1 cR n p vis np mo ml d dom (some (r1, m1)) =
     slK2 (minorW cR n m1 np mo ml d dom) := by rw [slK1, ite_eq_right h]
 theorem slK2_some : slK2 (some (r, m)) = some ([r.headD 0, r.tail.headD 0], m) := rfl
 end arms
@@ -1095,7 +1095,7 @@ theorem classReadSlot_spec (p : Prog) (hP : SlotProg p) (cR : CallM) (hcR : Call
   rcases n with _ | n
   · vcgen [exec] <;> grind
   sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       pirF_spec p hP.ad n, classReadSlotMotive_spec p hP n,
       classReadMinor_spec p hP.fh hP.v hP.f hP.cm hP.c hP.a hP.sc hP.r2 hP.r5 hP.i1 hP.is hP.fin
         hP.pb hP.min hP.tl hP.ad cR hcR n] <;>
@@ -1104,7 +1104,7 @@ theorem classReadSlot_spec (p : Prog) (hP : SlotProg p) (cR : CallM) (hcR : Call
 /-! ## Relational lemmas -/
 
 theorem tag_beq (e : Word) (hh : H e) (t : UInt32) (k : Nat) (hk : k < 16) (ht : t = UInt32.ofNat k) :
-    (((decI e : EIdx).tag == t) = true) ↔ e >>> 28 = UInt64.ofNat k := by
+    (((decI e : EIdx).tag == t) = true) ↔ tagW e = UInt64.ofNat k := by
   subst ht
   have := decE_tag_eq e hh k hk
   simp only [beq_iff_eq]; exact this
@@ -1159,7 +1159,7 @@ theorem slotMotW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFE
   rintro ⟨r2, m2⟩ hd a2 - ⟨hS2, hg2, hb2, rfl⟩
   dsimp only at hS2 hg2 hb2
   have hg12 := hg1.trans hg2
-  by_cases hg : r2.headD 0 >>> 28 ≠ 3
+  by_cases hg : tagW (r2.headD 0) ≠ 3
   · rw [slotMotW.k_get_app_fn_f.arm1 (hc1 := hg)]
     have ht : ¬ (((decI (r2.headD 0) : EIdx)).tag == ETag.const) = true :=
       fun e => hg ((tag_beq _ hb2 _ 3 (by decide) rfl).mp e)
@@ -1168,7 +1168,7 @@ theorem slotMotW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFE
   by_cases hne : eViewW m2 (r2.headD 0) = []
   · rw [slotMotW.k_get_app_fn_f.abort1 (hc1 := Decidable.of_not_not hg) (hc2 := hne)]; exact RSim.none
   rw [slotMotW.k_get_app_fn_f.arm2 (hc1 := Decidable.of_not_not hg) (hc2 := hne)]
-  have hg3 : r2.headD 0 >>> 28 = 3 := by simpa using hg
+  have hg3 : tagW (r2.headD 0) = 3 := by simpa using hg
   have ht : (((decI (r2.headD 0) : EIdx)).tag == ETag.const) = true :=
     (tag_beq _ hb2 _ 3 (by decide) rfl).mpr hg3
   obtain ⟨hvc, hnH, huH⟩ := viewConstW hS2.check.arena.base hne hg3
@@ -1275,7 +1275,7 @@ theorem slotW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (RSim.withJ hO.1 (simPiResult hS hH) (fun _ _ hb => pirF_afrR hb) hJ) ?_
   rintro ⟨r1, m1⟩ r a1 - ⟨⟨hS1, hg1, hb1, rfl⟩, hJ1⟩
   dsimp only at hS1 hg1 hb1 hJ1
-  by_cases ht : r1.headD 0 >>> 28 = 2
+  by_cases ht : tagW (r1.headD 0) = 2
   · rw [slK1_mot (h := ht)]
     have ht' : (((decI (r1.headD 0) : EIdx)).tag == ETag.sort) = true :=
       (tag_beq _ hb1 _ 2 (by decide) rfl).mpr ht
@@ -1373,7 +1373,7 @@ def slotsW (cR : CallM) : Nat → Mem → Word → Word → Word → Word → Wo
   | 0, _, _, _, _, _, _, _, _, _ => none
   | N + 1, m, p, vis, np, n, mo, ml, d, e =>
     if n = 0 then some ([1, 0, 0], m)
-    else if e >>> 28 ≠ 6 then some ([0, 0, 0], m)
+    else if tagW e ≠ 6 then some ([0, 0, 0], m)
     else if eViewW m e = [] then none
     else ssK1 cR N p vis np n mo ml d ((eViewW m e).tail.headD 0) ((eViewW m e).tail.tail.headD 0)
       (slotW cR N m p vis np mo ml d ((eViewW m e).tail.headD 0))
@@ -1442,13 +1442,13 @@ variable (N : Nat) (m m1 m2 m3 m4 m5 m6 : Mem) (p vis np n mo ml d e dom body sl
   (r1 r2 r4 r5 r6 : List Word) (cR : CallM)
 theorem slotsW_zero (h : n = 0) : slotsW cR (N + 1) m p vis np n mo ml d e = some ([1, 0, 0], m) := by
   rw [slotsW, ite_eq_left h]
-theorem slotsW_tag (h : n ≠ 0) (h2 : e >>> 28 ≠ 6) :
+theorem slotsW_tag (h : n ≠ 0) (h2 : tagW e ≠ 6) :
     slotsW cR (N + 1) m p vis np n mo ml d e = some ([0, 0, 0], m) := by
   rw [slotsW, ite_eq_right h, ite_eq_left h2]
-theorem slotsW_nil (h : n ≠ 0) (h2 : ¬ e >>> 28 ≠ 6) (h3 : eViewW m e = []) :
+theorem slotsW_nil (h : n ≠ 0) (h2 : ¬ tagW e ≠ 6) (h3 : eViewW m e = []) :
     slotsW cR (N + 1) m p vis np n mo ml d e = none := by
   rw [slotsW, ite_eq_right h, ite_eq_right h2, ite_eq_left h3]
-theorem slotsW_ok (h : n ≠ 0) (h2 : ¬ e >>> 28 ≠ 6) (h3 : eViewW m e ≠ []) :
+theorem slotsW_ok (h : n ≠ 0) (h2 : ¬ tagW e ≠ 6) (h3 : eViewW m e ≠ []) :
     slotsW cR (N + 1) m p vis np n mo ml d e =
       ssK1 cR N p vis np n mo ml d ((eViewW m e).tail.headD 0) ((eViewW m e).tail.tail.headD 0)
         (slotW cR N m p vis np mo ml d ((eViewW m e).tail.headD 0)) := by
@@ -1520,17 +1520,17 @@ theorem classReadSlots_specs (p : Prog) (hP : SlotsProg p) (cR : CallM) (hcR : C
     obtain ⟨ih1, ih2⟩ := ih
     refine ⟨fun s₀ q vis np n mo ml d e => ?_, fun s₀ q vis np n mo ml d dom body slot => ?_⟩
     · rw [invoke_eq _ hP.slots]; simp only [callFn, classReadSlots]
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rd_spec, eView_spec p hP.v N,
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rd_spec, eView_spec p hP.v N,
         classReadSlot_spec p hP.toSlotProg cR hcR N, ih2]
       all_goals subst_vars
       all_goals (try simp only [LocEq] at *)
       all_goals (try simp only [*, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
-        Locals.init_nil, Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval, Nat.reduceEqDiff,
+        Locals.init_nil, Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, Nat.reduceEqDiff,
         reduceIte, beq_iff_eq, bne_iff_ne, ne_eq] at *)
       all_goals grind (gen := 20) [lang_grind, arena_grind, ind_grind, rdW_eq, loc_init4, loc_init5, loc_init6,
         loc_init7]
     · rw [invoke_eq _ hP.next]; simp only [callFn, classReadSlotsNext]
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rd_spec,
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rd_spec,
         classReadSlotsSnoc_spec p hP.a hP.c hP.sn hP.msn N, internFVar_spec p hP.ff hP.fp hP.ifv N,
         i1F_spec p hP.hi1 N, slCons_specW p hP.a hP.c hP.sc N, ih1]
       all_goals subst_vars
@@ -1550,7 +1550,7 @@ open L.Arena
 /-! ## Relational lemma -/
 
 theorem viewBindW {m : Mem} {a : AState} (hR : ArenaR m a) {w : Word} (hH : H w)
-    (hne : eViewW m w ≠ []) (hg : w >>> 28 = 6) :
+    (hne : eViewW m w ≠ []) (hg : tagW w = 6) :
     (viewBind (decE w)).run a = .ok (some (decE ((eViewW m w).tail.headD 0),
       decE ((eViewW m w).tail.tail.headD 0)), a) ∧
       H ((eViewW m w).tail.headD 0) ∧ H ((eViewW m w).tail.tail.headD 0) := by
@@ -1689,7 +1689,7 @@ theorem slots_sims (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv
     obtain ⟨k, hk⟩ : ∃ k, n.toNat = k + 1 :=
       ⟨n.toNat - 1, by have : n.toNat ≠ 0 := fun e => hn (UInt64.toNat_inj.mp (by simpa using e)); omega⟩
     rw [hk, ConRon.Arena.classReadSlots]
-    by_cases hg : e >>> 28 ≠ 6
+    by_cases hg : tagW e ≠ 6
     · rw [slotsW_tag (h := hn) (h2 := hg)]
       have ht : ¬ (((decI e : EIdx)).tag == ETag.forallE) = true :=
         fun h => hg ((tag_beq _ hH _ 6 (by decide) rfl).mp h)
@@ -1698,7 +1698,7 @@ theorem slots_sims (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv
     by_cases hne : eViewW m e = []
     · rw [slotsW_nil (h := hn) (h2 := hg) (h3 := hne)]; exact RSim.none
     rw [slotsW_ok (h := hn) (h2 := hg) (h3 := hne)]
-    have hg6 : e >>> 28 = 6 := by simpa using hg
+    have hg6 : tagW e = 6 := by simpa using hg
     have ht : (((decI e : EIdx)).tag == ETag.forallE) = true := (tag_beq _ hH _ 6 (by decide) rfl).mpr hg6
     rw [ite_eq_left ht]
     obtain ⟨hvb, hdomH, hbodyH⟩ := viewBindW hS.check.arena.base hH hne hg6
@@ -1869,7 +1869,7 @@ theorem classReadFinish_spec (p : Prog) (hP : ReadProg p) (cR : CallM) (hcR : Ca
   rcases N with _ | N
   · vcgen [exec] <;> grind
   sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       classReadMotPos_spec p hP N,
       classReadRecCls_spec p hP.fh hP.v hP.f hP.cm hP.c hP.a hP.sc hP.rcl hP.ad cR hcR N,
       rec4_specW p hP.a N hP.r4] <;>
@@ -1882,7 +1882,7 @@ theorem classReadNSlots_spec (p : Prog) (hP : ReadProg p) (N : Nat) (s₀ : St) 
   rcases N with _ | N
   · vcgen [exec] <;> grind
   sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs] <;>
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs] <;>
     finish (gen := 20)
 
 theorem classRead_spec (p : Prog) (hP : ReadProg p) (cR : CallM) (hcR : CallSpec p cR) (N : Nat) (s₀ : St)
@@ -1893,7 +1893,7 @@ theorem classRead_spec (p : Prog) (hP : ReadProg p) (cR : CallM) (hcR : CallSpec
   rcases N with _ | N
   · vcgen [exec] <;> grind
   sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       hcR N "open_pis_at_fvars_f", classReadNSlots_spec p hP N,
       (classReadSlots_specs p hP.toSlotsProg cR hcR N).1, classReadFinish_spec p hP cR hcR N] <;>
     finish (gen := 20) [rdW_eq, loc_init4, loc_init5, loc_init6, loc_init7]

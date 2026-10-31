@@ -17,13 +17,13 @@ namespace L.Ind
 
 open L.Arena
 
-/-- con-ron: ConRon/Arena/ExprOps.lean:2038-2050 ConRon.Arena.instPisAtLift -/
+/-- con-ron: ConRon/Arena/ExprOps.lean:2043-2055 ConRon.Arena.instPisAtLift -/
 @[l_impl ConRon.Arena.instPisAtLift]
 def instPisAtLiftL : FunDecl := lfn (f, o, l, e) locals (h, k, g, x, y, z) {
   h := e;
   k := 0;
   while k < l {
-    if h >> 28 != 6 { return (0, 0) };
+    if ⟦h⟧.tag != 6 { return (0, 0) };
     (g, x, y, z) := call e_view(h);
     h := call instantiate1_lift_fast(f, y, IW.u64[o + k], 0);
     k := k + 1
@@ -31,15 +31,15 @@ def instPisAtLiftL : FunDecl := lfn (f, o, l, e) locals (h, k, g, x, y, z) {
   return (1, h)
 }
 
-/-- con-ron: ConRon/Arena/ExprOps.lean:1369-1377 ConRon.Arena.fvarTypeD -/
+/-- con-ron: ConRon/Arena/ExprOps.lean:1374-1382 ConRon.Arena.fvarTypeD -/
 @[l_impl ConRon.Arena.fvarTypeD]
 def fvarTypeDL : FunDecl := lfn (e) locals (g, x, y, z) {
-  if e >> 28 != 1 { return e };
+  if ⟦e⟧.tag != 1 { return e };
   (g, x, y, z) := call e_view(e);
   return y
 }
 
-/-- con-ron: ConRon/Arena/CheckerBase.lean:157-165 ConRon.Arena.fvarTypeDs -/
+/-- con-ron: ConRon/Arena/CheckerBase.lean:160-168 ConRon.Arena.fvarTypeDs -/
 @[l_impl ConRon.Arena.fvarTypeDs]
 def fvarTypeDsL : FunDecl := lfn (o, l) locals (q, k, t) {
   q := call iw_alloc(l);

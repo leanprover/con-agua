@@ -145,7 +145,7 @@ def ecsK1 (res : Option (List Word × Mem)) : Option (Word × Mem) :=
   match res with
   | none => none
   | some (r, m) =>
-    if r.headD 0 >>> 28 ≠ 3 then some (0, m)
+    if tagW (r.headD 0) ≠ 3 then some (0, m)
     else if tierW (r.headD 0) ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
     else if tcnt m CONST (tierW (r.headD 0)) ≤ idxW (r.headD 0) then none
     else ecsK2 p n a (callW p n "env_find"
@@ -160,7 +160,7 @@ theorem etaCtorShape_spec (p : Prog) (hq : StuckProg p) (n : Nat) (s₀ : St) (v
   rw [invoke_eq _ hq.etaCtorShape]
   simp only [callFn, etaCtorShapeL]
   vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rdW_spec, evalE_tld, tld,
-    evalE_cnt, tcntM, evalE_tierE, evalE_idxE, st64_spec,
+    evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE, st64_spec,
       callW_spec p n "get_app_fn", callW_spec p n "env_find", callW_spec p n "get_app_args"] <;>
   simp_all [ecsK1, ecsK2, ecsK3, tierW, idxW, LocEq, BinOp.eval,
     St.setLocs_cons, CTL, EREC, Cmp.eval, Cmp.evalW,
@@ -246,7 +246,7 @@ theorem etaCtorShape_refines (p : Prog) (hq : StuckProg p) (n : Nat) (s₀ : St)
   obtain ⟨rfl, hh, hgaf⟩ := getAppFn_callW hq.leaf hS.arena.base he hc
   simp only [ecsK1] at hW
   generalize r₁.headD 0 = h at hh hgaf hW
-  rcases (Classical.em (h >>> 28 = 3)).symm with h3 | h3
+  rcases (Classical.em (tagW h = 3)).symm with h3 | h3
   · simp only [ne_eq, h3, not_false_eq_true, ↓reduceIte] at hW
     exact hres 0 hW hw0 _
       (etaCtorShape_run_nonconst fe _ a₀ _ hgaf (by rw [decE_tag_const_beq _ hh]; simp [h3])) rfl

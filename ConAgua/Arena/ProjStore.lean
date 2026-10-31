@@ -60,11 +60,11 @@ def pjhash (m : Mem) (t i : Word) : Word :=
 /-! ## The schema -/
 
 /-- The handle word of node `0` of the persistent / scratch `proj` tier (tag `9`). -/
-def projP : Word := 0x90000000
-def projS : Word := 0x98000000
+def projP : Word := 0x24000000
+def projS : Word := 0xA4000000
 
 /-- The `proj` table as a cons schema: three key words `n u e`, packed into the record; the match
-is three field comparisons; the scratch skip is bit 27 of `n | e` (the index `u` is not a handle). -/
+is three field comparisons; the scratch skip is bit 31 of `n | e` (the index `u` is not a handle). -/
 def projCS : ConsSch where
   ra := PJREC
   sa := PJSLOT
@@ -84,17 +84,17 @@ def projCS : ConsSch where
   recW := [.bin .or (.var 1) (.bin .shl (.var 3) (.const 32)), .var 2]
   ihash := lblk (n, u, e, h) {
     h := (((⟪fnvBasis⟫ ^ n) * ⟪fnvPrime⟫ ^ u) * ⟪fnvPrime⟫ ^ e) * ⟪fnvPrime⟫ }
-  skipW := some (rhsOf (lblk (n, u, e, h, sk) { sk := ((n | e) >> 27) & 1 }))
+  skipW := some (rhsOf (lblk (n, u, e, h, sk) { sk := ((n | e) >> 31) & 1 }))
   mtM m ks t i := pjmatchW (m.arr64 (tierA PJREC t)) t i (ks.getD 0 0) (ks.getD 1 0) (ks.getD 2 0)
   qhM _ ks := projHashW (ks.getD 0 0) (ks.getD 1 0) (ks.getD 2 0)
   hsM := pjhash
   vsM as := [as.getD 0 0 ||| as.getD 2 0 <<< 32, as.getD 1 0]
   roomM m t c := decide (m.len64 (tierA PJREC t) < (c + 1) * 2)
-  skM ks := ((ks.getD 0 0 ||| ks.getD 2 0) >>> 27) &&& 1
+  skM ks := ((ks.getD 0 0 ||| ks.getD 2 0) >>> 31) &&& 1
 
 /-! ## `proj_find(t, n, u, e, h)`: the probe -/
 
-/-- con-ron: ConRon/Arena/Store.lean:90-91 ConRon.Arena.Tbl.find? -/
+/-- con-ron: ConRon/Arena/Store.lean:94-95 ConRon.Arena.Tbl.find? -/
 def projFind : FunDecl := consFindG projCS
 
 /-! ## `proj_push(t, n, u, e, j)`: append a node to tier `t`, register it at slot `j` -/
@@ -107,9 +107,9 @@ width (3) is not a power of two, so (as for `letE`) the record-room check is sta
 multiplication, `(c + 1) * 6 ≤ len`, matching `PushRoom`'s own shape directly (`L` has no
 division). -/
 def pjpushOK (m : Mem) (t : Word) : Bool :=
-  decide (pjcnt m t < (134217728 : Word)) && decide ((pjcnt m t + 1) * 2 ≤ m.len64 (tierA PJREC t))
+  decide (pjcnt m t < (67108864 : Word)) && decide ((pjcnt m t + 1) * 2 ≤ m.len64 (tierA PJREC t))
 
-/-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
+/-- con-ron: ConRon/Arena/Store.lean:97-102 ConRon.Arena.Tbl.push -/
 def projPush : FunDecl := consPushG projCS
 
 /-! ## `intern_proj(n, u, e)`: hash-cons the expression `proj n u e`
@@ -121,14 +121,14 @@ scratch tier is open, the append to the tier the store is in. -/
 /-- The scratch skip: the scratch tier is open and `n` or `e` is a scratch handle. The index `u`
 is not a handle, so it is not tested. -/
 def pjskipW (m : Mem) (n e : Word) : Word :=
-  if rdW (m.arr64 CTL) 1 ≠ 0 then ((n ||| e) >>> 27) &&& 1 else 0
+  if rdW (m.arr64 CTL) 1 ≠ 0 then ((n ||| e) >>> 31) &&& 1 else 0
 
 /-- The model of `intern_proj`: the handle and the memory after, or `none` where the L code
 aborts (the library's `consInternM`). -/
 def pjinternW (m : Mem) (n u e : Word) : Option (Word × Mem) := consInternM projCS m [n, u, e]
 
-/-- con-ron: ConRon/Arena/Monad.lean:246-264 ConRon.Arena.internE
-con-ron: ConRon/Arena/Monad.lean:218-244 ConRon.Arena.internNodeE -/
+/-- con-ron: ConRon/Arena/Monad.lean:249-267 ConRon.Arena.internE
+con-ron: ConRon/Arena/Monad.lean:221-247 ConRon.Arena.internNodeE -/
 @[l_impl ConRon.Arena.internE ConRon.Arena.internNodeE]
 def internProj : FunDecl := consInternG projCS
 
@@ -153,12 +153,12 @@ def internProjs (m : Mem) : List (Word × Word × Word) → Option (List Word)
 /- `proj 1 0 2`, `proj 2 0 1`, `proj 1 1 2`, `proj 1 0 2`: persistent handles 0, 1, 2, 0 (sharing
 is on the whole triple, not any one field). -/
 #guard internProjs (projMem 0) [(1, 0, 2), (2, 0, 1), (1, 1, 2), (1, 0, 2)] ==
-  some [0x90000000, 0x90000001, 0x90000002, 0x90000000]
+  some [0x24000000, 0x24000001, 0x24000002, 0x24000000]
 
 /- Scratch open: a scratch `e` (`0x98000000`) skips the persistent probe; the index `u` alone
 being a bit-27 word does not (it is not tested). -/
-#guard internProjs (projMem 1) [(1, 0, 2), (1, 0, 0x98000000), (1, 0, 2), (1, 0, 0x98000000)] ==
-  some [0x98000000, 0x98000001, 0x98000000, 0x98000001]
+#guard internProjs (projMem 1) [(1, 0, 2), (1, 0, 0xA4000000), (1, 0, 2), (1, 0, 0xA4000000)] ==
+  some [0xA4000000, 0xA4000001, 0xA4000000, 0xA4000001]
 
 /-! ## The specs: the library's, from this table's obligations -/
 

@@ -21,7 +21,7 @@ set_option experimental.vcgen true
 namespace L.Arena
 
 theorem view_sort_f (m : Mem) (a : AState) (hR : ArenaR m a) (h : Word) (hh : h.toNat < 2 ^ 32)
-    (hv : viewOK m h SORT) (hg : h >>> 28 = 2) :
+    (hv : viewOK m h SORT) (hg : tagW h = 2) :
     a.store.view (decE h) = some (.sort (decI (tfld m SORT (tierW h) (idxW h) 0))) ∧
     (tfld m SORT (tierW h) (idxW h) 0).toNat < 2 ^ 32 := by
   obtain ⟨k, hk, hu⟩ := node_of m a h sortCS SoRecRel (·.sorts) _ hR.sort hv.2
@@ -35,7 +35,7 @@ theorem view_sort_f (m : Mem) (a : AState) (hR : ArenaR m a) (h : Word) (hh : h.
 `lvl_eq_c` through their runs (`callE`). -/
 l_model pihE_spec (p : Prog) (hf : p.lookup "proof_irrel_half" = some proofIrrelHalfL)
   fns [hf ↦ pihE list] grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] unified
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
 
 /-- **`proof_irrel`'s model, for both outcomes**: its halves through `proof_irrel_half`'s. -/
 l_model pirrE_spec (p : Prog) (hf : p.lookup "proof_irrel" = some proofIrrelL)
@@ -43,7 +43,7 @@ l_model pirrE_spec (p : Prog) (hf : p.lookup "proof_irrel" = some proofIrrelL)
   fns [hf ↦ pirrE list]
   specs [pihE_spec p hh n]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE] unified
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
 
 /-! ### The refinement -/
 
@@ -90,7 +90,7 @@ theorem lvlEqC_small (p : Prog) (hp : p.lookup "lvl_eq_c" = some lvlEqCL) (n : N
         (s₀ := ⟨m, Locals.init []⟩) (Q := fun _ _ => False) (by
           rw [invoke_eq _ hp]
           simp only [callFn, lvlEqCL]
-          vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+          vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
             callW_spec p 0 "lq_find", callW_spec p 0 "lvl_eq_rec"] <;>
           simp_all [callW_zero]) hc
       exact hF
@@ -163,7 +163,7 @@ theorem pinWord_specM (p : Prog) (hp : p.lookup "pin_word" = some pinWordL) (n :
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64] <;>
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64] <;>
       finish [pinWordM, pinW_eq, rdW_eq]
 
 /-- **What `proof_irrel_half`'s errors claim from**: the knot's error half up to `n`, `pin_word`
@@ -202,14 +202,14 @@ theorem pih_ref (p : Prog) (hp : IotaProg4 p) (hld : LvlDen) (n F : Nat) (hknot 
   dsimp only [pihE.k_whnf]
   have hr3 : HW (r3.headD 0) := e3.resOk
   rw [show decH r3 = decE (r3.headD 0) from rfl]
-  by_cases h2 : r3.headD 0 >>> 28 ≠ 2
+  by_cases h2 : tagW (r3.headD 0) ≠ 2
   · rw [ite_eq_left h2]
     have htn : (decE (r3.headD 0)).tag ≠ ETag.sort :=
       fun ht => h2 ((decE_tag_eq _ hr3 2 (by decide)).mp ht)
     rw [beq_eq_false_iff_ne.mpr htn]
     exact RefE.ret rfl (CorePost.ret hS3 rfl (by unfold ResH HW; simp))
   rw [ite_eq_right h2]
-  have h2' : r3.headD 0 >>> 28 = 2 := by simpa using h2
+  have h2' : tagW (r3.headD 0) = 2 := by simpa using h2
   refine RefE.abort0 (by rfl) fun hv1 => ?_
   refine RefE.abort0 (by rfl) fun hv2 => ?_
   generalize ha3 : AM.st _ _ = a3 at hS3

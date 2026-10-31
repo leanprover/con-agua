@@ -41,7 +41,7 @@ theorem opf_view_run {a : AState} {h : EIdx} {v : ENodeView} (hv : a.store.view 
 
 /-- **`e_view` at a `∀`**: the memory kept, the binder's words, the twin's `view`. -/
 theorem opfV_ok {k : Nat} {m m' : Mem} {a : AState} (hS : StageR dn vis fe m a) {e : Word}
-    (hg : e >>> 28 = 6) {r : List Word} (hc : callW opfP k "e_view" [e] m = some (r, m')) :
+    (hg : tagW e = 6) {r : List Word} (hc : callW opfP k "e_view" [e] m = some (r, m')) :
     m' = m ∧ (r.tail.headD 0).toNat < 2 ^ 32 ∧ (r.tail.tail.headD 0).toNat < 2 ^ 32 ∧
       (view (decE e)).run a = .ok (.forallE (decE (r.tail.headD 0)) (decE (r.tail.tail.headD 0)), a) := by
   obtain ⟨s', hm, hs', hne, hr⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)

@@ -227,7 +227,7 @@ errors are `reduce_nat_succ`'s). -/
 theorem reduceNatK_ref (n F : Nat) (hF : n ≤ F) (hn2 : n ≤ 2 ^ 62)
     (hk : KnotUpTo p n) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word)
     (fe : IFEnv) (MM : ModeMaps) (eb mode d f b : Word) (hS : SlotPre s₀ a₀ dn vis fe MM eb mode)
-    (hf : HW f) (hb : HW b) (hg3 : f >>> 28 = 3)
+    (hf : HW f) (hb : HW b) (hg3 : tagW f = 3)
     (hsc : ¬(tierW f ≠ 0 ∧ rdW (s₀.mem.arr64 CTL) 1 = 0)) :
     RefE (KnotUpToE p n) (reduceNatKE p n s₀.mem mode vis d f b)
       (redHeadT (coreKnot (decMode mode) fe id F) fe d.toNat (decE f) (decE b)) a₀
@@ -265,7 +265,7 @@ errors are `reduce_nat_op`'s or `reduce_nat_wf`'s). -/
 theorem reduceNatAp_ref (hno : NatOpResultOK p) (n F : Nat) (hF : n ≤ F) (hn2 : n ≤ 2 ^ 62)
     (hk : KnotUpTo p n) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word)
     (fe : IFEnv) (MM : ModeMaps) (eb mode d f b : Word) (hS : SlotPre s₀ a₀ dn vis fe MM eb mode)
-    (hf : HW f) (hb : HW b) (hg4 : f >>> 28 = 4)
+    (hf : HW f) (hb : HW b) (hg4 : tagW f = 4)
     (hsc : ¬(tierW f ≠ 0 ∧ rdW (s₀.mem.arr64 CTL) 1 = 0)) :
     RefE (KnotUpToE p n) (reduceNatApE p n s₀.mem mode vis d f b)
       (redHeadT (coreKnot (decMode mode) fe id F) fe d.toNat (decE f) (decE b)) a₀
@@ -277,8 +277,8 @@ theorem reduceNatAp_ref (hno : NatOpResultOK p) (n F : Nat) (hF : n ≤ F) (hn2 
   rw [reduceNatApE.eq_2]
   refine RefE.abort0 (by simp) fun hbd => ?_
   obtain ⟨hviewf, hgw, hxw⟩ := view_app s₀.mem a₀ hC.arena.base f hf ⟨hsc, by simpa using hbd⟩ hg4
-  generalize tfld s₀.mem APP (tierW f) (idxW f) 0 = gw at hgw hviewf ⊢
-  generalize tfld s₀.mem APP (tierW f) (idxW f) 1 = xw at hxw hviewf ⊢
+  generalize tfld s₀.mem APP (tierW f) (idxA f) 0 = gw at hgw hviewf ⊢
+  generalize tfld s₀.mem APP (tierW f) (idxA f) 1 = xw at hxw hviewf ⊢
   unfold redHeadT redAppT
   refine RefE.bind_right (view_run _ _ _ hviewf) ?_
   refine RefE.retIf (fun g3 => by rw [decE_const_tag _ hgw]; exact beq_eq_false_iff_ne.mpr g3)
@@ -345,9 +345,9 @@ theorem reduceNatHead_ref (hno : NatOpResultOK p) (n F : Nat) (hF : n ≤ F) (hn
   rw [reduceNatHeadE.eq_2]
   refine RefE.abort0 (by simp) fun hsc => ?_
   -- the tags that only check a bound
-  have simple : ∀ (c : TRec), (f >>> 28 = 0 ∧ c = BVAR) ∨ (f >>> 28 = 1 ∧ c = FVAR) ∨
-      (f >>> 28 = 2 ∧ c = SORT) ∨ (f >>> 28 = 5 ∧ c = LAM) ∨ (f >>> 28 = 6 ∧ c = FORALL) ∨
-      (f >>> 28 = 7 ∧ c = LET) ∨ (f >>> 28 = 8 ∧ c = LIT) ∨ (f >>> 28 = 9 ∧ c = PROJ) →
+  have simple : ∀ (c : TRec), (tagW f = 0 ∧ c = BVAR) ∨ (tagW f = 1 ∧ c = FVAR) ∨
+      (tagW f = 2 ∧ c = SORT) ∨ (tagW f = 5 ∧ c = LAM) ∨ (tagW f = 6 ∧ c = FORALL) ∨
+      (tagW f = 7 ∧ c = LET) ∨ (tagW f = 8 ∧ c = LIT) ∨ (tagW f = 9 ∧ c = PROJ) →
       RefE (KnotUpToE p (n + 1)) (if tcnt s₀.mem c (tierW f) ≤ idxW f then .error (Err.abort 0) else
         .ok ([0, 0], s₀.mem))
         (redHeadT (coreKnot (decMode mode) fe id F) fe d.toNat (decE f) (decE b)) a₀
@@ -362,7 +362,7 @@ theorem reduceNatHead_ref (hno : NatOpResultOK p) (n F : Nat) (hF : n ≤ F) (hn
     | app g x => exact absurd rfl (hp' g x)
     | _ => exact RefE.ret rfl (CorePost.ret hC rfl resW_zero)
   have hmono : KnotUpToE p (n + 1) → KnotUpToE p n := fun h => h.mono (by omega)
-  by_cases g3 : f >>> 28 = 3
+  by_cases g3 : tagW f = 3
   · rw [ite_eq_left g3]
     exact RefE.tail_eq (reduceNatHeadE.k_reduce_nat_k.none p)
       (fun v => reduceNatHeadE.k_reduce_nat_k.arm1 p v.1 v.2) hmono rfl
@@ -370,7 +370,7 @@ theorem reduceNatHead_ref (hno : NatOpResultOK p) (n F : Nat) (hF : n ≤ F) (hn
       (reduceNatK_ref p hp n F (by omega) (by omega) (hk.mono (by omega)) s₀ a₀ dn vis fe MM eb mode d f b
         hS hf hb g3 hsc)
   rw [ite_eq_right g3]
-  by_cases g4 : f >>> 28 = 4
+  by_cases g4 : tagW f = 4
   · rw [ite_eq_left g4]
     exact RefE.tail_eq (reduceNatHeadE.k_reduce_nat_k.none p)
       (fun v => reduceNatHeadE.k_reduce_nat_k.arm1 p v.1 v.2) hmono rfl
@@ -378,26 +378,26 @@ theorem reduceNatHead_ref (hno : NatOpResultOK p) (n F : Nat) (hF : n ≤ F) (hn
       (reduceNatAp_ref p hp hno n F (by omega) (by omega) (hk.mono (by omega)) s₀ a₀ dn vis fe MM eb mode d
         f b hS hf hb g4 hsc)
   rw [ite_eq_right g4]
-  by_cases g0 : f >>> 28 = 0
+  by_cases g0 : tagW f = 0
   · rw [ite_eq_left g0]; exact simple BVAR (Or.inl ⟨g0, rfl⟩)
   rw [ite_eq_right g0]
-  by_cases g1 : f >>> 28 = 1
+  by_cases g1 : tagW f = 1
   · rw [ite_eq_left g1]; exact simple FVAR (Or.inr (Or.inl ⟨g1, rfl⟩))
   rw [ite_eq_right g1]
-  by_cases g2 : f >>> 28 = 2
+  by_cases g2 : tagW f = 2
   · rw [ite_eq_left g2]; exact simple SORT (Or.inr (Or.inr (Or.inl ⟨g2, rfl⟩)))
   rw [ite_eq_right g2]
-  by_cases g5 : f >>> 28 = 5
+  by_cases g5 : tagW f = 5
   · rw [ite_eq_left g5]; exact simple LAM (Or.inr (Or.inr (Or.inr (Or.inl ⟨g5, rfl⟩))))
   rw [ite_eq_right g5]
-  by_cases g6 : f >>> 28 = 6
+  by_cases g6 : tagW f = 6
   · rw [ite_eq_left g6]; exact simple FORALL (Or.inr (Or.inr (Or.inr (Or.inr (Or.inl ⟨g6, rfl⟩)))))
   rw [ite_eq_right g6]
-  by_cases g7 : f >>> 28 = 7
+  by_cases g7 : tagW f = 7
   · rw [ite_eq_left g7]
     exact simple LET (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inl ⟨g7, rfl⟩))))))
   rw [ite_eq_right g7]
-  by_cases g8 : f >>> 28 = 8
+  by_cases g8 : tagW f = 8
   · rw [ite_eq_left g8]
     exact simple LIT (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inl ⟨g8, rfl⟩)))))))
   rw [ite_eq_right g8]
@@ -418,8 +418,8 @@ theorem reduceNat_ref (hno : NatOpResultOK p) (n F : Nat) (hF : n ≤ F) (hn2 : 
   | zero => rw [reduceNatE.eq_1]; exact RefE.of_cls0 (by simp)
   | succ n =>
   rw [reduceNatE.eq_2]; unfold reduceNat
-  have hap : ((decE e).tag == ETag.app) = (e >>> 28 == 4) := by
-    by_cases g : e >>> 28 = 4
+  have hap : ((decE e).tag == ETag.app) = (tagW e == 4) := by
+    by_cases g : tagW e = 4
     · have := (decE_tag_app e he).mpr g
       rw [beq_iff_eq.mpr this, beq_iff_eq.mpr g]
     · have : ¬ (decE e).tag = ETag.app := fun h' => g ((decE_tag_app e he).mp h')

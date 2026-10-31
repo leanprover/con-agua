@@ -37,16 +37,32 @@ The headlines are `genRecCheck_spec` (at the constructors' environment) and
 `checkBlockClasses_spec` (at the formers'); `classSeeds_spec` is the pass's
 seeds.
 -/
-import ConRon.Arena.Inductives.GenRec
-import ConRon.Bridge.Inductives.RecCheck
-import ConRon.Bridge.Inductives.ClassRead
+module
+
+public import ConRon.Arena.Inductives.GenRec
+public import ConRon.Bridge.Inductives.RecCheck
+public import ConRon.Bridge.Inductives.ClassRead
 import ConRon.Bridge.Inductives.FieldTele
-import ConRon.Bridge.Inductives.Positivity
+public import ConRon.Bridge.Inductives.Positivity
 import ConRon.Bridge.Inductives.BlockRec
-import ConLeche.Verify.Cached.GenRecC
-import ConLeche.Verify.Inductives.GenRecRun
-import ConLeche.Verify.Extend.Inversions
-import ConLeche.Verify.Cached.BlockRunC
+public import ConLeche.Verify.Cached.GenRecC
+public import ConLeche.Verify.Inductives.GenRecRun
+public import ConLeche.Verify.Cached.BlockRunC
+/- `simp only` unfolds the toolchain's monadic list functions (`List.filterM`,
+`List.findM?`, …), whose bodies `Init.Data.List.Control` does not expose. -/
+import all Init.Data.List.Control
+import ConRon.Bridge.Inductives.BlockParts
+import ConRon.Bridge.Inductives.PosWalks
+import ConRon.Bridge.Inductives.StructParts
+import ConLeche.Verify.Inductives.RecCheckScope
+import ConRon.Bridge.Checker.Base
+import ConRon.Bridge.Checker.Names
+import ConRon.Bridge.Core.Walks.FvarB
+import ConRon.Bridge.Core.Walks.Cached
+import ConRon.Bridge.ExprOps.Owed
+import ConRon.Bridge.Specs
+
+public section
 
 namespace ConRon.Bridge.Inductives
 
@@ -2806,7 +2822,7 @@ namespace GR
 
 /-- con-leche: none — two indexes that answer alike: the same list, the same
 bound, the same row at every key, the same table map. -/
-def FEq (a b : IFEnv) : Prop :=
+@[expose] def FEq (a b : IFEnv) : Prop :=
   a.env = b.env ∧ a.visibleBelow = b.visibleBelow ∧ (∀ n : NIdx, a.idx[n]? = b.idx[n]?) ∧
     a.tbls = b.tbls
 
@@ -2836,7 +2852,7 @@ theorem FEq.popTemp {a b : IFEnv} (h : FEq a b) (n : NIdx) (prev : Option (Nat �
 port's `ifenv_pop_temp`): the list, the bound and every row as before. -/
 theorem popTemp_push (fe : IFEnv) (ci : IConstantInfo) :
     FEq ((fe.push ci).popTemp ci.name fe.idx[ci.name]?) fe := by
-  refine ⟨rfl, by simp only [IFEnv.popTemp, IFEnv.push]; omega, fun k => ?_, rfl⟩
+  refine ⟨rfl, by simp only [IFEnv.popTemp, IFEnv.push]; grind, fun k => ?_, rfl⟩
   simp only [IFEnv.popTemp, IFEnv.push]
   cases hprev : fe.idx[ci.name]? with
   | none =>
@@ -3461,7 +3477,7 @@ theorem checkBlockClasses_spec {μ : CheckMode} {env₁ : Env} (fe₁ : IFEnv)
 
 /-- con-leche: none — a seed (a positivity key with its parameter count),
 denoted. -/
-def dSeed (st : EStore) (q : Arena.NestKey × Nat) : Option (ConLeche.NestKey × Nat) :=
+@[expose] def dSeed (st : EStore) (q : Arena.NestKey × Nat) : Option (ConLeche.NestKey × Nat) :=
   (dKey st q.1).map (·, q.2)
 
 /-- con-leche: ConLeche/Kernel/Inductives/GenRec.lean:494-499 classSeeds — **the

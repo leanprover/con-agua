@@ -40,7 +40,7 @@ theorem rowGet_specW (p : Prog) (hx : p.lookup "env_ix" = some envIxL)
     ⦃fun r s' => s'.mem = s₀.mem ∧ LocEq s' s₀ ∧ tagW w ≤ 2 ∧ r.headD 0 = rowCW s₀.mem w ∧
       r.tail.headD 0 = rowPW s₀.mem w; ⊤⦄ := by
   have hts : (rowSelW w).toNat = 2 * (tagW w).toNat + rowTier w := by
-    rw [rowSelW_toNat, tagW_toNat]
+    rw [rowSelW_toNat, tagW_toNat_row]
   have htr : rowTier w < 2 := Nat.mod_lt _ (by decide)
   rw [invoke_eq _ hp]
   simp only [callFn, envRowGetL]
@@ -48,7 +48,7 @@ theorem rowGet_specW (p : Prog) (hx : p.lookup "env_ix" = some envIxL)
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, envIx_spec p hx n] <;>
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, envIx_spec p hx n] <;>
       finish [rowCW, rowPW, rdW_eq, selArr]
 
 /-- **The model of `env_find(w, vis)`** (it leaves the memory alone). -/
@@ -69,12 +69,12 @@ theorem envFind_specW (p : Prog) (hx : p.lookup "env_ix" = some envIxL)
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, rowGet_specW p hx hg n] <;>
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, rowGet_specW p hx hg n] <;>
       finish [envFindW]
 
 theorem rowCW_eq (m : Mem) (w : Word) (hw : w.toNat < 2 ^ 32) (ht : tagW w ≤ 2) :
     rowCW m w = rowC m w := by
-  have h1 := tagW_toNat w
+  have h1 := tagW_toNat_row w
   have h2 := ixW_toNat w hw
   have ht' : rowTag w ≤ 2 := by rw [← h1]; exact UInt64.le_iff_toNat_le.mp ht
   simp only [rowCW, rowC, ht', ite_true, rdW, h2]
@@ -91,7 +91,7 @@ theorem envFindW_miss {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IF
   have ht2 : tagW w ≤ 2 := by
     have : ¬ (2 : Word).toNat < (tagW w).toNat := fun e => ht (UInt64.lt_iff_toNat_lt.mpr e)
     exact UInt64.le_iff_toNat_le.mpr (by omega)
-  have htag : rowTag w ≤ 2 := by rw [← tagW_toNat]; exact UInt64.le_iff_toNat_le.mp ht2
+  have htag : rowTag w ≤ 2 := by rw [← tagW_toNat_row]; exact UInt64.le_iff_toNat_le.mp ht2
   rw [EnvR.find?_eq hE w hw htag, ← rowCW_eq m w hw ht2]
   by_cases hc : rowCW m w = 0
   · rw [ite_eq_left hc] at h; simp only [Option.some.injEq, Prod.mk.injEq] at h
@@ -119,7 +119,7 @@ theorem envFindW_hitSome {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe :
   have ht2 : tagW w ≤ 2 := by
     have : ¬ (2 : Word).toNat < (tagW w).toNat := fun e => ht (UInt64.lt_iff_toNat_lt.mpr e)
     exact UInt64.le_iff_toNat_le.mpr (by omega)
-  have htag : rowTag w ≤ 2 := by rw [← tagW_toNat]; exact UInt64.le_iff_toNat_le.mp ht2
+  have htag : rowTag w ≤ 2 := by rw [← tagW_toNat_row]; exact UInt64.le_iff_toNat_le.mp ht2
   by_cases hc : rowCW m w = 0
   · rw [ite_eq_left hc] at h; simp only [Option.some.injEq, Prod.mk.injEq] at h
     rw [← h.1] at h0; simp at h0
@@ -188,7 +188,7 @@ theorem resFrom_spec (p : Prog) (hp : p.lookup "reserved_from" = some reservedFr
     rw [invoke_eq _ hp]
     simp only [callFn, reservedFrom]
     sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih] <;>
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih] <;>
       finish (gen := 20) [rdW_eq]
 
 theorem resCont_spec (p : Prog) (hf : p.lookup "reserved_from" = some reservedFrom)
@@ -201,7 +201,7 @@ theorem resCont_spec (p : Prog) (hf : p.lookup "reserved_from" = some reservedFr
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, resFrom_spec p hf n] <;>
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, resFrom_spec p hf n] <;>
       finish (gen := 20) [pinW_eq]
 
 /-- A miss of `reserved_from` from `j`: none of the reserved words from `j` on is `x`. -/

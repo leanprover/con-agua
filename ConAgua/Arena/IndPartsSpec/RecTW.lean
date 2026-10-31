@@ -33,7 +33,7 @@ theorem eViewShape (p : Prog) (hp : p.lookup "e_view" = some eView) (n : Nat) (s
   | succ n =>
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld,
-        evalE_cnt, tcntM, evalE_tierE, evalE_idxE] <;>
+        evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] <;>
       finish [List.getD_cons_zero, List.getD_cons_succ]
 
 /-- `e_view`'s spec with its four result words spelt out. -/
@@ -55,7 +55,7 @@ def piBW : Nat → Mem → Word → Word → Option (List Word × Mem)
   | 0, _, _, _ => none
   | n + 1, m, fuel, h =>
     if fuel = 0 then none
-    else if h >>> 28 ≠ 6 then some ([0, 0, h], m)
+    else if tagW h ≠ 6 then some ([0, 0, h], m)
     else piBK1 n m fuel (eViewW m h)
 
 /-- After `e_view`. -/
@@ -77,9 +77,9 @@ end
 section arms
 variable (n : Nat) (m m1 m2 : Mem) (fuel h ty be : Word) (r rs : List Word)
 theorem piBW_fuel0 (hf : fuel = 0) : piBW (n + 1) m fuel h = none := by simp [piBW, hf]
-theorem piBW_leaf (hf : fuel ≠ 0) (hg : h >>> 28 ≠ 6) :
+theorem piBW_leaf (hf : fuel ≠ 0) (hg : tagW h ≠ 6) :
     piBW (n + 1) m fuel h = some ([0, 0, h], m) := by simp [piBW, hf, hg]
-theorem piBW_node (hf : fuel ≠ 0) (hg : ¬ h >>> 28 ≠ 6) :
+theorem piBW_node (hf : fuel ≠ 0) (hg : ¬ tagW h ≠ 6) :
     piBW (n + 1) m fuel h = piBK1 n m fuel (eViewW m h) := by simp [piBW, hf, hg]
 theorem piBK1_nil : piBK1 n m fuel [] = none := by simp [piBK1]
 theorem piBK1_ne (hr : r ≠ []) :
@@ -135,7 +135,7 @@ theorem piBW_ok (n : Nat) : ∀ (m m' : Mem) (a : AState) (fuel h : Word) (rs : 
     intro m m' a fuel h rs hR hpb hh hsz hc
     by_cases hf : fuel = 0
     · rw [piBW_fuel0 n m fuel h hf] at hpb; simp at hpb
-    by_cases hg : h >>> 28 ≠ 6
+    by_cases hg : tagW h ≠ 6
     · rw [piBW_leaf n m fuel h hf hg] at hpb
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hpb)
       obtain ⟨k, hk⟩ := Nat.exists_eq_succ_of_ne_zero
@@ -145,7 +145,7 @@ theorem piBW_ok (n : Nat) : ∀ (m m' : Mem) (a : AState) (fuel h : Word) (rs : 
       · rw [hk, ConRon.Arena.piBinders]; simp [htag]; rfl
       · simp [decHL, hslice?]
     · rw [piBW_node n m fuel h hf hg] at hpb
-      have hg6 : h >>> 28 = 6 := by simpa using hg
+      have hg6 : tagW h = 6 := by simpa using hg
       by_cases hr : eViewW m h = []
       · rw [hr, piBK1_nil] at hpb; simp at hpb
       obtain ⟨hvok, hew⟩ := eViewW_forall m h hg6 hr
@@ -217,7 +217,7 @@ theorem decHL_grow3 {k : IdxKind} {m m' : Mem} (hg : IWGrow m m') {o l : Nat}
   rw [hg.iwGet (o + j) (by omega)]
 
 /-- A returning `e_view` of a `const` handle. -/
-theorem eViewW_const (m : Mem) (h : Word) (hg : h >>> 28 = 3) (hne : eViewW m h ≠ []) :
+theorem eViewW_const (m : Mem) (h : Word) (hg : tagW h = 3) (hne : eViewW m h ≠ []) :
     viewOK m h CONST ∧ eViewW m h = [3, tfld m CONST (tierW h) (idxW h) 0,
       tfld m CONST (tierW h) (idxW h) 1, 0] := by
   unfold eViewW at hne ⊢
@@ -226,9 +226,9 @@ theorem eViewW_const (m : Mem) (h : Word) (hg : h >>> 28 = 3) (hne : eViewW m h 
   by_cases hs : tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0
   · simp [hs] at hne
   simp only [hs, ite_false] at hne ⊢
-  have n0 : ¬ h >>> 28 = 0 := by rw [hg]; decide
-  have n1 : ¬ h >>> 28 = 1 := by rw [hg]; decide
-  have n2 : ¬ h >>> 28 = 2 := by rw [hg]; decide
+  have n0 : ¬ tagW h = 0 := by rw [hg]; decide
+  have n1 : ¬ tagW h = 1 := by rw [hg]; decide
+  have n2 : ¬ tagW h = 2 := by rw [hg]; decide
   simp only [hg, ite_true] at hne ⊢
   by_cases c : tcnt m CONST (tierW h) ≤ idxW h
   · simp [c] at hne
@@ -243,7 +243,7 @@ theorem viewConst_ok (m : Mem) (a : AState) (hR : ArenaR m a) (h : Word) (hh : h
   obtain ⟨k, hk, hn, hu⟩ := node_of m a h constCS CeRecRel (·.consts) _ hR.const hv.2
   simp only [EStore.viewConst, EStore.persGetConst]
   rw [proj_tier m a hR h hh (fun t i => t.getConst i) hv.1]
-  simp only [ETables.getConst, Tbl.node?, decE_idx]
+  simp only [ETables.getConst, Tbl.node?, decE_idx h (narrow_of_cnt m h hR.const rfl hv.2)]
   rw [hk]
   simp [hn, hu, decI_word]
 
@@ -260,7 +260,7 @@ def recTK1 (n : Nat) (no nl : Word) : Option (List Word × Mem) → Option (List
   | none => none
   | some (r, m1) =>
     if r.headD 0 = 0 then some ([nl], m1)
-    else if r.tail.tail.tail.headD 0 >>> 28 ≠ 6 then some ([nl], m1)
+    else if tagW (r.tail.tail.tail.headD 0) ≠ 6 then some ([nl], m1)
     else recTK2 n no nl m1 (eViewW m1 (r.tail.tail.tail.headD 0))
 
 /-- After the major's `e_view`. -/
@@ -272,7 +272,7 @@ def recTK2 (n : Nat) (no nl : Word) (m1 : Mem) : List Word → Option (List Word
 def recTK3 (n : Nat) (no nl : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r, m3) =>
-    if r.headD 0 >>> 28 ≠ 3 then some ([nl], m3)
+    if tagW (r.headD 0) ≠ 3 then some ([nl], m3)
     else recTK4 n no nl m3 (eViewW m3 (r.headD 0))
 
 /-- After the head's `e_view`. -/
@@ -291,10 +291,10 @@ variable (n : Nat) (m m1 m3 : Mem) (no nl mI ty : Word) (r v rf : List Word)
 theorem recTW_step : recTW (n + 1) m no nl mI ty = recTK1 n no nl (stripF 6 m [mI, ty]) := rfl
 theorem recTK1_some_nil (h : r.headD 0 = 0) : recTK1 n no nl (some (r, m1)) = some ([nl], m1) := by
   simp only [recTK1]; rw [ite_eq_left h]
-theorem recTK1_some_nf (h : r.headD 0 ≠ 0) (h2 : r.tail.tail.tail.headD 0 >>> 28 ≠ 6) :
+theorem recTK1_some_nf (h : r.headD 0 ≠ 0) (h2 : tagW (r.tail.tail.tail.headD 0) ≠ 6) :
     recTK1 n no nl (some (r, m1)) = some ([nl], m1) := by
   simp only [recTK1]; rw [ite_eq_right h, ite_eq_left h2]
-theorem recTK1_some_f (h : r.headD 0 ≠ 0) (h2 : ¬ r.tail.tail.tail.headD 0 >>> 28 ≠ 6) :
+theorem recTK1_some_f (h : r.headD 0 ≠ 0) (h2 : ¬ tagW (r.tail.tail.tail.headD 0) ≠ 6) :
     recTK1 n no nl (some (r, m1)) =
       recTK2 n no nl m1 (eViewW m1 (r.tail.tail.tail.headD 0)) := by
   simp only [recTK1]; rw [ite_eq_right h, ite_eq_right h2]
@@ -304,9 +304,9 @@ theorem recTK2_ne (h : v ≠ []) :
   cases v with
   | nil => exact absurd rfl h
   | cons a as => rfl
-theorem recTK3_some_nc (h : r.headD 0 >>> 28 ≠ 3) : recTK3 n no nl (some (r, m3)) = some ([nl], m3) := by
+theorem recTK3_some_nc (h : tagW (r.headD 0) ≠ 3) : recTK3 n no nl (some (r, m3)) = some ([nl], m3) := by
   simp only [recTK3]; rw [ite_eq_left h]
-theorem recTK3_some_c (h : ¬ r.headD 0 >>> 28 ≠ 3) :
+theorem recTK3_some_c (h : ¬ tagW (r.headD 0) ≠ 3) :
     recTK3 n no nl (some (r, m3)) = recTK4 n no nl m3 (eViewW m3 (r.headD 0)) := by
   simp only [recTK3]; rw [ite_eq_right h]
 theorem recTK4_nil : recTK4 n no nl m3 [] = none := rfl
@@ -346,7 +346,7 @@ theorem recTargetOf_spec (n : Nat) (s₀ : St) (no nl mI ty : Word) :
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         stripPis_specF p hst n, gafF_spec p had n, eViewSpec4 p hv n,
         slFind_spec p hf n] <;>
       finish (gen := 20)
@@ -387,7 +387,7 @@ theorem recTW_ok (n : Nat) : ∀ (dn : NIdx → Option ConLeche.Name) (fe : IFEn
     rw [hd3] at hbl hbe
     have hR1 : ArenaR m1 a1 := hS1.check.arena.base
     have hnamesz : names.length = nl.toNat := hnl.symm
-    by_cases hg6 : r1.tail.tail.tail.headD 0 >>> 28 ≠ 6
+    by_cases hg6 : tagW (r1.tail.tail.tail.headD 0) ≠ 6
     · rw [recTK1_some_nf n m1 no nl r1 h1ne hg6] at hrt
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hrt)
       have htag : e1.tag ≠ ETag.forallE := by
@@ -396,7 +396,7 @@ theorem recTW_ok (n : Nat) : ∀ (dn : NIdx → Option ConLeche.Name) (fe : IFEn
       · simp only [ConRon.Arena.recTargetOf, StateT.run_bind, hrun1, except_ok_bind]
         simp [htag]
         rfl
-    · have hg6' : r1.tail.tail.tail.headD 0 >>> 28 = 6 := by simpa using hg6
+    · have hg6' : tagW (r1.tail.tail.tail.headD 0) = 6 := by simpa using hg6
       rw [recTK1_some_f n m1 no nl r1 h1ne hg6] at hrt
       by_cases hr : eViewW m1 (r1.tail.tail.tail.headD 0) = []
       · rw [hr, recTK2_nil] at hrt; simp at hrt
@@ -422,7 +422,7 @@ theorem recTW_ok (n : Nat) : ∀ (dn : NIdx → Option ConLeche.Name) (fe : IFEn
         rw [hew]; exact hvb
       have hftag : ((decI (r1.tail.tail.tail.headD 0) : EIdx).tag == ETag.forallE) = true := by
         simp only [beq_iff_eq]; exact (decE_tag_forallE _ hbl).mpr hg6'
-      by_cases hc : r3.headD 0 >>> 28 ≠ 3
+      by_cases hc : tagW (r3.headD 0) ≠ 3
       · rw [recTK3_some_nc n m3 no nl r3 hc] at hrt
         obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hrt)
         have htag : x3.tag ≠ ETag.const := by
@@ -434,7 +434,7 @@ theorem recTW_ok (n : Nat) : ∀ (dn : NIdx → Option ConLeche.Name) (fe : IFEn
             simpa using htag
           simp only [hrun3', except_ok_bind, hctag]
           rfl
-      · have hc3 : r3.headD 0 >>> 28 = 3 := by simpa using hc
+      · have hc3 : tagW (r3.headD 0) = 3 := by simpa using hc
         rw [recTK3_some_c n m3 no nl r3 hc] at hrt
         by_cases hr2 : eViewW m3 (r3.headD 0) = []
         · rw [hr2, recTK4_nil] at hrt; simp at hrt

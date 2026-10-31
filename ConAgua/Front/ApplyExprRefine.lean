@@ -84,9 +84,9 @@ theorem internLit_D (o l : Word) (hq : SliceOK m o l) (hn : Norm (vpool m) o.toN
   obtain ⟨hok, hX, hres⟩ := intern_correct m a hR.lit o l hq hn hq0 _ _ hI
   have hI₂ := hI
   have hfr := consInternM_frame litCS_wf hI₂
-  have hcs := AM.proto_cases litLens _ _ _ _ _ _ a (internE_lit_run _ a) hok
+  have hcs := AM.proto_cases litLens _ _ _ _ _ _ _ a (internE_lit_run _ a) hok
   have hR₁ := hR.lift_lit _ _ _ _ hX hfr
-    (AM.st_proto litLens _ _ _ _ _ _ a (internE_lit_run _ a) hok)
+    (AM.st_proto litLens _ _ _ _ _ _ _ a (internE_lit_run _ a) hok)
   have hD₁ : DerR m' a := DerR.frameM _ _ m m' hfr (by simp [tier1, ConsSch.wset, litCS, litCSk, REC, SLOT]) a hD
   refine ⟨hok, ⟨hR₁, ?_⟩, hres, hfr⟩
   rcases hcs with h | ⟨-, -, -, h⟩ | ⟨-, -, -, h⟩ <;> rw [h]
@@ -109,9 +109,9 @@ theorem internLitStr_D (o l : Word) (hq : SliceOK m o l) (s : String)
   obtain ⟨hok, hX, hres⟩ := internStr_correct m a hR.lit o l hq s hk hq0 _ _ hI
   have hI₂ := hI
   have hfr := consInternM_frame litStrCS_wf hI₂
-  have hcs := AM.proto_cases litLens _ _ _ _ _ _ a (internE_lit_run _ a) hok
+  have hcs := AM.proto_cases litLens _ _ _ _ _ _ _ a (internE_lit_run _ a) hok
   have hR₁ := hR.lift_lit _ _ _ _ hX hfr
-    (AM.st_proto litLens _ _ _ _ _ _ a (internE_lit_run _ a) hok)
+    (AM.st_proto litLens _ _ _ _ _ _ _ a (internE_lit_run _ a) hok)
   have hD₁ : DerR m' a := DerR.frameM _ _ m m' hfr (by simp [tier1, ConsSch.wset, litStrCS, litCSk, REC, SLOT]) a hD
   refine ⟨hok, ⟨hR₁, ?_⟩, hres, hfr⟩
   rcases hcs with h | ⟨-, -, -, h⟩ | ⟨-, -, -, h⟩ <;> rw [h]
@@ -133,7 +133,7 @@ theorem internLs_D (o l : Word) (hq : SliceOK m o l) (us : List LIdx)
   obtain ⟨hok, hX, hres⟩ := lsintern_correct m a hR.lit.1 hR.ls o l hq us hk hq0 _ _ hI
   have hLp := lsintern_hp m a hR.lit.1 hR.ls o l hq us hk hq0 hR.lsHp (lsOrW_ok m a hR o l hq us hk) _ _ hI
   have hfr := (lsinternW_frame (hI := hI))
-  have hst := AM.st_proto lsLens _ _ _ _ _ _ a (internLsNode_run us a) hok
+  have hst := AM.st_proto lsLens _ _ _ _ _ _ _ a (internLsNode_run us a) hok
   exact ⟨hok, ⟨hR.lift_ls _ _ _ _ ⟨hX, hLp⟩ hfr hst, derR_lss _ (fun _ _ => ⟨rfl, rfl⟩)
     (fun _ _ => ⟨rfl, rfl⟩) hst (DerR.frameT hfr (by tapart) hD)⟩, hres, hfr⟩
 

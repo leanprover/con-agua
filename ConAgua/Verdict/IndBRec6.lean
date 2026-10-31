@@ -35,14 +35,14 @@ l_model crrE_spec (p : Prog) (hP : CrrProg p)
   specs [crsE_spec p hP.crs n, targetMajorAt_spec p hP.crs.alloc hP.pw hP.mtm hP.tmd hP.tma hP.na n,
     rec4_specW p hP.crs.alloc n hP.rec4, slCons_specW p hP.crs.alloc hP.crs.copy hP.crs.cons n]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
   heartbeats 4000000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 l_model crraE_spec (p : Prog) (hP : CrrProg p)
   fns [hP.top ↦ crraE] specs [crrE_spec p hP n]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
   heartbeats 4000000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 

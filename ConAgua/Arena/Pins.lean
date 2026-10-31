@@ -1,4 +1,6 @@
 import ConAgua.Arena.Tiers
+import ConRon.Arena.StdAxioms
+import ConRon.Arena.TrustAxioms
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import Std.Tactic.BVDecide.Normalize.BitVec
@@ -69,7 +71,7 @@ theorem pinReserved_run {m : Mem} {a : AState} (h : PinsFull m a.pins) :
 /-! ## The L readers -/
 
 /-- `pin_at(i)`: `PINS[1 + i]`, after the flag and the bound. -/
--- con-ron: ConRon/Arena/Pins.lean:250-257 ConRon.Arena.pinAt
+-- con-ron: ConRon/Arena/Pins.lean:254-261 ConRon.Arena.pinAt
 @[l_impl ConRon.Arena.pinAt]
 def pinAtL : FunDecl := lfn (i) locals () {
   if PINS.u64[0] == 0 { abort };
@@ -78,7 +80,7 @@ def pinAtL : FunDecl := lfn (i) locals () {
 }
 
 /-- `pin_word(k)`: `PINS[k]`, after the flag (the three interned values, `k` = 52, 53, 54). -/
--- con-ron: ConRon/Arena/Pins.lean:250-257 ConRon.Arena.pinAt
+-- con-ron: ConRon/Arena/Pins.lean:254-261 ConRon.Arena.pinAt
 def pinWordL : FunDecl := lfn (k) locals () {
   if PINS.u64[0] == 0 { abort };
   return PINS.u64[k]

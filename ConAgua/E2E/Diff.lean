@@ -75,7 +75,8 @@ def handles (a : AState) (n : Nat) : List Nat := Id.run do
     let k := if total ≤ n then c else max 1 (c * n / max total 1)
     let step := max 1 (c / max k 1)
     for j in List.range (min k c) do
-      out := out.push (t * 268435456 + j * step)
+      -- the persistent handle word of node `j * step` (con-ron's layout: `app` wide, the rest narrow)
+      out := out.push ((if t = 4 then 1073741824 else t * 67108864) + j * step)
   return out.toList
 
 structure Tally where

@@ -49,8 +49,8 @@ def mmatchW (r : Array Word) (_t i u v : Word) : Bool :=
 /-! ## The schema -/
 
 /-- The handle word of node `0` of the persistent / scratch `max` tier (tag `2`). -/
-def maxP : Word := 0x20000000
-def maxS : Word := 0x28000000
+def maxP : Word := 0x08000000
+def maxS : Word := 0x88000000
 
 /-- The hash of node `i` of tier `t`. -/
 def mhash (m : Mem) (t i : Word) : Word :=
@@ -95,7 +95,7 @@ def maxCS : ConsSch where
 
 /-! ## `max_find(t, u, v, h)`: the probe -/
 
-/-- con-ron: ConRon/Arena/Store.lean:90-91 ConRon.Arena.Tbl.find? -/
+/-- con-ron: ConRon/Arena/Store.lean:94-95 ConRon.Arena.Tbl.find? -/
 def maxFind : FunDecl := consFindG maxCS
 
 /-! ## `max_push(t, u, v, j)`: append a node to tier `t`, register it at slot `j` -/
@@ -105,10 +105,10 @@ def mcnt (m : Mem) (t : Word) : Word := rdW (m.arr64 CTL) (10 + t)
 
 /-- `max_push`'s room checks: the handle index, the record array. -/
 def mpushOK (m : Mem) (t : Word) : Bool :=
-  decide (mcnt m t < (134217728 : Word)) && decide (mcnt m t < m.len64 (tierA MREC t)) &&
+  decide (mcnt m t < (67108864 : Word)) && decide (mcnt m t < m.len64 (tierA MREC t)) &&
     decide (mcnt m t < m.len64 (tierA MHP t))
 
-/-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
+/-- con-ron: ConRon/Arena/Store.lean:97-102 ConRon.Arena.Tbl.push -/
 def maxPush : FunDecl := consPushG maxCS
 
 /-! ## `intern_max(u, v)`: hash-cons the level `max u v`
@@ -120,7 +120,7 @@ probe, the scratch probe if the scratch tier is open, the append to the tier the
 aborts (the library's `consInternM`). -/
 def minternW (m : Mem) (u v : Word) : Option (Word × Mem) := consInternM maxCS m [u, v]
 
-/-- con-ron: ConRon/Arena/Monad.lean:441-457 ConRon.Arena.internLNode -/
+/-- con-ron: ConRon/Arena/Monad.lean:444-460 ConRon.Arena.internLNode -/
 @[l_impl ConRon.Arena.internLNode]
 def internMax : FunDecl := consInternG maxCS
 
@@ -143,10 +143,10 @@ def internMaxs (m : Mem) : List (Word × Word) → Option (List Word)
     | .error _ => none
 
 /- `(1, 2)`, `(2, 1)`, `(1, 2)`: persistent handles 0, 1, 0. -/
-#guard internMaxs (maxMem 0) [(1, 2), (2, 1), (1, 2)] == some [0x20000000, 0x20000001, 0x20000000]
+#guard internMaxs (maxMem 0) [(1, 2), (2, 1), (1, 2)] == some [0x08000000, 0x08000001, 0x08000000]
 
 /- Scratch open: the nodes go to the scratch tier (the persistent tier is empty). -/
-#guard internMaxs (maxMem 1) [(1, 2), (2, 1), (1, 2)] == some [0x28000000, 0x28000001, 0x28000000]
+#guard internMaxs (maxMem 1) [(1, 2), (2, 1), (1, 2)] == some [0x88000000, 0x88000001, 0x88000000]
 
 /-! ## The specs: the library's, from this table's obligations -/
 

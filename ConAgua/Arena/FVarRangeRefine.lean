@@ -204,13 +204,13 @@ theorem frNodeOK_succ (n : Nat) (ih : FrGoOK n) : FrNodeOK (n + 1) := by
       ∃ a', (frNodeA F (decE h)).run a = .ok (r.toNat, a') ∧ ArenaR m' a' := by
     intro v hv hx hr hm; subst hr hm
     exact ⟨a, by rw [frNodeA_run F _ a _ hv, hx]; rfl, hR⟩
-  by_cases g0 : h >>> 28 = 0
+  by_cases g0 : tagW h = 0
   · by_cases hc : tcnt m BVAR (tierW h) ≤ idxW h
     · rw [frNodeW.abort2 n m h c hs g0 hc] at hb; cases hb
     rw [frNodeW.arm1 n m h c hs g0 hc] at hb
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hb)
     exact zero _ (view_bvar m a hR h hh (vok BVAR hc) g0) rfl rfl rfl
-  by_cases g1 : h >>> 28 = 1
+  by_cases g1 : tagW h = 1
   · by_cases hc : tcnt m FVAR (tierW h) ≤ idxW h
     · rw [frNodeW.abort3 n m h c hs g0 g1 hc] at hb; cases hb
     by_cases h1 : tfld m FVAR (tierW h) (idxW h) 0 + 1 = 0
@@ -222,56 +222,56 @@ theorem frNodeOK_succ (n : Nat) (ih : FrGoOK n) : FrNodeOK (n + 1) := by
     rw [frNodeA_run F _ a _ hv, show frArm F (.fvar _ _) = pure (_ + 1) from rfl,
       succW_toNat _ h1]
     rfl
-  by_cases g4 : h >>> 28 = 4
-  · by_cases hc : tcnt m APP (tierW h) ≤ idxW h
+  by_cases g4 : tagW h = 4
+  · by_cases hc : tcnt m APP (tierW h) ≤ idxA h
     · rw [frNodeW.abort5 n m h c hs g0 g1 g4 hc] at hb; cases hb
-    obtain ⟨hv, hf, ha⟩ := view_app m a hR h hh (vok APP hc) g4
+    obtain ⟨hv, hf, ha⟩ := view_app m a hR h hh ⟨hs, UInt64.not_le.mp hc⟩ g4
     rw [frNodeW.arm3 n m h c hs g0 g1 g4 hc] at hb
     obtain ⟨a', h1, h2⟩ := frAppArm_ok n ih F m m' a hR c _ _ r hf ha hF' hb
     exact ⟨a', (frNodeA_run F _ a _ hv).trans h1, h2⟩
-  by_cases g5 : h >>> 28 = 5
+  by_cases g5 : tagW h = 5
   · by_cases hc : tcnt m LAM (tierW h) ≤ idxW h
     · rw [frNodeW.abort6 n m h c hs g0 g1 g4 g5 hc] at hb; cases hb
     obtain ⟨hv, hf, ha⟩ := view_lam m a hR h hh (vok LAM hc) g5
     rw [frNodeW.arm4 n m h c hs g0 g1 g4 g5 hc] at hb
     obtain ⟨a', h1, h2⟩ := frBindArm_ok n ih F m m' a hR c _ _ r hf ha hF' hb
     exact ⟨a', (frNodeA_run F _ a _ hv).trans h1, h2⟩
-  by_cases g6 : h >>> 28 = 6
+  by_cases g6 : tagW h = 6
   · by_cases hc : tcnt m FORALL (tierW h) ≤ idxW h
     · rw [frNodeW.abort7 n m h c hs g0 g1 g4 g5 g6 hc] at hb; cases hb
     obtain ⟨hv, hf, ha⟩ := view_forall m a hR h hh (vok FORALL hc) g6
     rw [frNodeW.arm5 n m h c hs g0 g1 g4 g5 g6 hc] at hb
     obtain ⟨a', h1, h2⟩ := frBindArm_ok n ih F m m' a hR c _ _ r hf ha hF' hb
     exact ⟨a', (frNodeA_run F _ a _ hv).trans h1, h2⟩
-  by_cases g9 : h >>> 28 = 9
+  by_cases g9 : tagW h = 9
   · by_cases hc : tcnt m PROJ (tierW h) ≤ idxW h
     · rw [frNodeW.abort8 n m h c hs g0 g1 g4 g5 g6 g9 hc] at hb; cases hb
     obtain ⟨hv, -, he⟩ := view_proj m a hR h hh (vok PROJ hc) g9
     rw [frNodeW.arm6 n m h c hs g0 g1 g4 g5 g6 g9 hc] at hb
     obtain ⟨a', h1, h2⟩ := ih F m m' a _ c r hF' hR he hb
     exact ⟨a', (frNodeA_run F _ a _ hv).trans h1, h2⟩
-  by_cases g7 : h >>> 28 = 7
+  by_cases g7 : tagW h = 7
   · by_cases hc : tcnt m LET (tierW h) ≤ idxW h
     · rw [frNodeW.abort9 n m h c hs g0 g1 g4 g5 g6 g9 g7 hc] at hb; cases hb
     obtain ⟨hv, ht, hv', hb'⟩ := view_let m a hR h hh (vok LET hc) g7
     rw [frNodeW.arm7 n m h c hs g0 g1 g4 g5 g6 g9 g7 hc] at hb
     obtain ⟨a', h1, h2⟩ := frLetArm_ok n ih F m m' a hR c _ _ _ r ht hv' hb' hF' hb
     exact ⟨a', (frNodeA_run F _ a _ hv).trans h1, h2⟩
-  by_cases g2 : h >>> 28 = 2
+  by_cases g2 : tagW h = 2
   · by_cases hc : tcnt m SORT (tierW h) ≤ idxW h
     · rw [frNodeW.abort10 n m h c hs g0 g1 g4 g5 g6 g9 g7 g2 hc] at hb; cases hb
     rw [frNodeW.arm8 n m h c hs g0 g1 g4 g5 g6 g9 g7 g2 hc] at hb
     obtain ⟨_, hv⟩ := view_sort m a hR h hh (vok SORT hc) g2
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hb)
     exact zero _ hv rfl rfl rfl
-  by_cases g3 : h >>> 28 = 3
+  by_cases g3 : tagW h = 3
   · by_cases hc : tcnt m CONST (tierW h) ≤ idxW h
     · rw [frNodeW.abort11 n m h c hs g0 g1 g4 g5 g6 g9 g7 g2 g3 hc] at hb; cases hb
     rw [frNodeW.arm9 n m h c hs g0 g1 g4 g5 g6 g9 g7 g2 g3 hc] at hb
     obtain ⟨_, _, hv⟩ := view_const m a hR h hh (vok CONST hc) g3
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hb)
     exact zero _ hv rfl rfl rfl
-  by_cases g8 : h >>> 28 = 8
+  by_cases g8 : tagW h = 8
   · by_cases hc : tcnt m LIT (tierW h) ≤ idxW h
     · rw [frNodeW.abort12 n m h c hs g0 g1 g4 g5 g6 g9 g7 g2 g3 g8 hc] at hb; cases hb
     rw [frNodeW.arm10 n m h c hs g0 g1 g4 g5 g6 g9 g7 g2 g3 g8 hc] at hb

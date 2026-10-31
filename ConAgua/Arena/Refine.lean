@@ -127,7 +127,7 @@ def natAddArm (a b : Nat) : AM (Option EIdx) := do
   pure (some x)
 
 /-- `nat_add_lit(oa, la, ob, lb)`: add two literal slices and intern the sum. -/
--- con-ron: ConRon/Arena/Core.lean:994-1035 ConRon.Arena.natOpResult
+-- con-ron: ConRon/Arena/Core.lean:999-1040 ConRon.Arena.natOpResult
 @[l_impl ConRon.Arena.natOpResult]
 def natAddLit : FunDecl := lfn (oa, la, ob, lb) locals (o, l, h) {
   o := CTL.u64[0];

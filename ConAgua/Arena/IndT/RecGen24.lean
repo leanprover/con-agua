@@ -37,7 +37,7 @@ l_model cfaE_spec (p : Prog) (P : CfaProg p)
   specs [callW_spec p n "intern_bvar", callW_spec p n "fvar_type_d", callW_spec p n "strip_pis",
     callW_spec p n "target_major_at", callW_spec p n "class_leaf_at", cnaE_spec p P.toCnaProg n]
   grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
   heartbeats 4000000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 

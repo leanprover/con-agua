@@ -93,8 +93,8 @@ hash (`lit_hash`'s of the slice, then one FNV step with `q`; it reads the pool: 
 match is a call of `nstr_match`. No scratch skip. Handle tag `1` (`NTag.str`). -/
 
 /-- The handle word of node `0` of the persistent / scratch name `str` tier. -/
-def nsP : Word := 0x10000000
-def nsS : Word := 0x18000000
+def nsP : Word := 0x04000000
+def nsS : Word := 0x84000000
 
 /-- The hash of a name `str` record: the slice's, then one FNV step with the prefix. -/
 def nstrHashW (q hs : Word) : Word := (hs ^^^ q) * fnvPrime
@@ -142,7 +142,7 @@ def nstrCS : ConsSch where
 The arena's `internNNode (.str pre s)`: the persistent probe, the scratch probe if the scratch
 tier is open, the append to the tier the store is in. -/
 
-/-- con-ron: ConRon/Arena/Store.lean:90-91 ConRon.Arena.Tbl.find? -/
+/-- con-ron: ConRon/Arena/Store.lean:94-95 ConRon.Arena.Tbl.find? -/
 def nsFind : FunDecl := consFindG nstrCS
 
 /-- The node count of tier `t` of the name `str` table, `CTL[36 + t]`. -/
@@ -151,16 +151,16 @@ def nscnt (m : Mem) (t : Word) : Word := rdW (m.arr64 CTL) (36 + t)
 /-- `nstr_push`'s room checks: the handle index, the record array (by multiplication, as
 `letE`'s), the load limit. -/
 def nspushOK (m : Mem) (t : Word) : Bool :=
-  decide (nscnt m t < (134217728 : Word)) && decide ((nscnt m t + 1) * 4 ≤ m.len64 (tierA NSREC t))
+  decide (nscnt m t < (67108864 : Word)) && decide ((nscnt m t + 1) * 4 ≤ m.len64 (tierA NSREC t))
 
-/-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
+/-- con-ron: ConRon/Arena/Store.lean:97-102 ConRon.Arena.Tbl.push -/
 def nsPush : FunDecl := consPushG nstrCS
 
 /-- The model of `intern_nstr`: the handle and the memory after, or `none` where the L code
 aborts (the library's `consInternM`). -/
 def nsinternW (m : Mem) (q o l : Word) : Option (Word × Mem) := consInternM nstrCS m [q, o, l]
 
-/-- con-ron: ConRon/Arena/Monad.lean:381-397 ConRon.Arena.internNNode -/
+/-- con-ron: ConRon/Arena/Monad.lean:384-400 ConRon.Arena.internNNode -/
 @[l_impl ConRon.Arena.internNNode]
 def internNStr : FunDecl := consInternG nstrCS
 
@@ -185,11 +185,11 @@ def internNStrs (m : Mem) : List (Word × Word × Word) → Option (List Word)
 
 /- `0.a`, `0.b`, `0.a` (another copy), `0.ab`, `1.a`: persistent handles 0, 1, 0, 2, 3. -/
 #guard internNStrs (nstrMem 0) [(0, 0, 1), (0, 1, 1), (0, 2, 1), (0, 3, 2), (1, 0, 1)] ==
-  some [0x10000000, 0x10000001, 0x10000000, 0x10000002, 0x10000003]
+  some [0x04000000, 0x04000001, 0x04000000, 0x04000002, 0x04000003]
 
 /- With the scratch tier open the nodes go there. -/
 #guard internNStrs (nstrMem 1) [(0, 0, 1), (0, 1, 1), (0, 2, 1)] ==
-  some [0x18000000, 0x18000001, 0x18000000]
+  some [0x84000000, 0x84000001, 0x84000000]
 
 /-! ## The specs: the library's, from the table's obligations -/
 

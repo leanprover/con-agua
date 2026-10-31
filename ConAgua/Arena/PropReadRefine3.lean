@@ -429,7 +429,7 @@ theorem tsp_call {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a 
         headTypePW fe (f' - 1).toNat (decE rt) d.toNat fn n : AM (Option PropWhen)).run a := by
     rw [typeSortPW, hrun, hj, typeSortPWGo, ← hj']
     simp only [hnf, Bool.false_eq_true, ↓reduceIte]
-  by_cases h2 : rr >>> 28 = 2
+  by_cases h2 : tagW rr = 2
   · simp only [h2, ↓reduceIte, Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨rfl, rfl, rfl, rfl⟩ := hW
     have hs : ((decE rr).tag == ETag.sort) = true := by

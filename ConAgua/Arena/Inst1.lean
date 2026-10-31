@@ -40,13 +40,13 @@ namespace L.Arena
 
 /-! ## The L code -/
 
-/-- con-ron: ConRon/Arena/ExprOps.lean:251-277 ConRon.Arena.instantiate1Go -/
+/-- con-ron: ConRon/Arena/ExprOps.lean:256-282 ConRon.Arena.instantiate1Go -/
 @[l_impl ConRon.Arena.instantiate1Go]
 def instGo : FunDecl := lfn (h, d, v, fu) locals (x, g, t, i, r) {
   if fu == 0 { abort };
   x := call der_bv(h);
   if x < 32767 && x <= d { return h };
-  g := h >> 28;
+  g := ⟦h⟧.tag;
   if g == 4 { r := call inst_app(h, d, v, fu - 1); return r };
   if g == 5 { r := call inst_lam(h, d, v, fu - 1); return r };
   if g == 6 { r := call inst_forall(h, d, v, fu - 1); return r };
@@ -62,7 +62,7 @@ def instGo : FunDecl := lfn (h, d, v, fu) locals (x, g, t, i, r) {
   return h
 }
 
-/-- con-ron: ConRon/Arena/ExprOps.lean:279-294 ConRon.Arena.instantiate1ArmApp -/
+/-- con-ron: ConRon/Arena/ExprOps.lean:284-299 ConRon.Arena.instantiate1ArmApp -/
 @[l_impl ConRon.Arena.instantiate1ArmApp]
 def instApp : FunDecl := lfn (h, d, v, fu) locals (fd, j, e0, t, i, f, a, x, y, r, u) {
   (fd, j, e0) := call if_find(h, d);
@@ -78,7 +78,7 @@ def instApp : FunDecl := lfn (h, d, v, fu) locals (fd, j, e0, t, i, f, a, x, y, 
   return r
 }
 
-/-- con-ron: ConRon/Arena/ExprOps.lean:296-312 ConRon.Arena.instantiate1ArmBind -/
+/-- con-ron: ConRon/Arena/ExprOps.lean:301-317 ConRon.Arena.instantiate1ArmBind -/
 @[l_impl ConRon.Arena.instantiate1ArmBind]
 def instLam : FunDecl := lfn (h, d, v, fu) locals (fd, j, e0, t, i, f, a, x, y, r, u) {
   if d + 1 == 0 { abort };
@@ -95,7 +95,7 @@ def instLam : FunDecl := lfn (h, d, v, fu) locals (fd, j, e0, t, i, f, a, x, y, 
   return r
 }
 
-/-- con-ron: ConRon/Arena/ExprOps.lean:296-312 ConRon.Arena.instantiate1ArmBind -/
+/-- con-ron: ConRon/Arena/ExprOps.lean:301-317 ConRon.Arena.instantiate1ArmBind -/
 @[l_impl ConRon.Arena.instantiate1ArmBind]
 def instForall : FunDecl := lfn (h, d, v, fu) locals (fd, j, e0, t, i, f, a, x, y, r, u) {
   if d + 1 == 0 { abort };
@@ -112,7 +112,7 @@ def instForall : FunDecl := lfn (h, d, v, fu) locals (fd, j, e0, t, i, f, a, x, 
   return r
 }
 
-/-- con-ron: ConRon/Arena/ExprOps.lean:314-330 ConRon.Arena.instantiate1ArmLet -/
+/-- con-ron: ConRon/Arena/ExprOps.lean:319-335 ConRon.Arena.instantiate1ArmLet -/
 @[l_impl ConRon.Arena.instantiate1ArmLet]
 def instLet : FunDecl := lfn (h, d, v, fu) locals (fd, j, e0, t, i, f, a, b, x, y, z, r, u) {
   if d + 1 == 0 { abort };
@@ -131,7 +131,7 @@ def instLet : FunDecl := lfn (h, d, v, fu) locals (fd, j, e0, t, i, f, a, b, x, 
   return r
 }
 
-/-- con-ron: ConRon/Arena/ExprOps.lean:332-346 ConRon.Arena.instantiate1ArmProj -/
+/-- con-ron: ConRon/Arena/ExprOps.lean:337-351 ConRon.Arena.instantiate1ArmProj -/
 @[l_impl ConRon.Arena.instantiate1ArmProj]
 def instProj : FunDecl := lfn (h, d, v, fu) locals (fd, j, e0, t, i, nm, ix, e, x, r, u) {
   (fd, j, e0) := call if_find(h, d);
@@ -176,7 +176,7 @@ l_model instGo_spec (p : Prog) (hp : InstProg p)
     mkLet_spec p (hp.base.get "der_b") (hp.base.get "letE_find") (hp.base.get "letE_push") (hp.base.get "intern_letE") (hp.base.get "mk_let") n,
     mkProj_spec p (hp.base.get "der_b") (hp.base.get "proj_find") (hp.base.get "proj_push") (hp.base.get "intern_proj") (hp.base.get "mk_proj") n]
   grind [arena_grind] fold [tierW, idxW]
-  extra [evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE]
+  extra [evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
   finish [tierW, idxW] gen 20 heartbeats 1000000
 
 end L.Arena

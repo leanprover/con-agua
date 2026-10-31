@@ -62,7 +62,7 @@ theorem pr_envFind {p : Prog} (hp : PropReadProg p) {n : Nat} {dn : NIdx → Opt
 
 /-- The head name of a `const` handle (the store's projection). -/
 theorem pr_viewConstName (m : Mem) (a : AState) (hR : ArenaR m a) (h : Word) (hh : h.toNat < 2 ^ 32)
-    (hv : viewOK m h CONST) (_hg : h >>> 28 = 3) :
+    (hv : viewOK m h CONST) (_hg : tagW h = 3) :
     a.store.viewConstName (decE h) = some (decI (tfld m CONST (tierW h) (idxW h) 0)) := by
   obtain ⟨k, hk, hn, hu⟩ := node_of m a h constCS CeRecRel (·.consts) _ hR.const hv.2
   have hfl := ConsR.flag hR.app
@@ -72,10 +72,10 @@ theorem pr_viewConstName (m : Mem) (a : AState) (hR : ArenaR m a) (h : Word) (hh
     unfold EStore.viewConstName EStore.persGetConstName
     rw [decE_pers h hh]
     by_cases ht : tierW h = 0
-    · simp [ht, ETables.getConstName, decE_idx h]
+    · simp [ht, ETables.getConstName, decE_idx h (narrow_of_cnt m h hR.const rfl hv.2)]
     · have hon : a.store.scratchOn = true := by
         rw [← hfl]; simp only [bne_iff_ne, ne_eq]; exact fun h1 => hv.1 ⟨ht, h1⟩
-      simp [ht, hon, ETables.getConstName, decE_idx h]
+      simp [ht, hon, ETables.getConstName, decE_idx h (narrow_of_cnt m h hR.const rfl hv.2)]
   rw [e]; simp only [Tbl.node?, hk, Option.map_some]; rw [hn, decI_word]
 
 /-- `getAppArgs` at the counter of a successful `app_count_at` is `getAppArgs` at any larger one. -/
@@ -119,7 +119,7 @@ theorem uws_ok {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : 
   · cases hW
   simp only at hW
   obtain ⟨hgaf, -, hhh, -⟩ := acaW_ok hR he hA
-  by_cases h3 : hh >>> 28 = 3
+  by_cases h3 : tagW hh = 3
   rotate_left
   · simp only [h3, ne_eq, not_false_eq_true, ↓reduceIte, Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨rfl, -, rfl⟩ := hW
@@ -347,7 +347,7 @@ theorem ppw_ok : ∀ (n : Nat) {dn : NIdx → Option ConLeche.Name} {m m' : Mem}
   generalize r.headD 0 = x at hW ⊢
   generalize r.tail.headD 0 = y at hW ⊢
   -- the step at a `∀` node `u`, from memory `m₁`
-  have step : ∀ {m₁ : Mem} (u : Word), RdAfter dn m m₁ a a vis fe M eb → HW u → u >>> 28 = 6 →
+  have step : ∀ {m₁ : Mem} (u : Word), RdAfter dn m m₁ a a vis fe M eb → HW u → tagW u = 6 →
       k ≠ 0 → ppwK2 p n vis f k u m₁ = some (x, y, m') →
       (do match ← viewBind (decE u) with
           | none => failDanglingE
@@ -392,7 +392,7 @@ theorem ppw_ok : ∀ (n : Nat) {dn : NIdx → Option ConLeche.Name} {m m' : Mem}
   simp only [hk, ↓reduceIte] at hW
   obtain ⟨j, hj⟩ := Nat.exists_eq_succ_of_ne_zero (pr_word_ne0 k hk)
   have hj' : j = k.toNat - 1 := by omega
-  by_cases h6 : e >>> 28 = 6
+  by_cases h6 : tagW e = 6
   · simp only [h6, ne_eq, not_true_eq_false, ↓reduceIte] at hW
     obtain ⟨hrun, hRd, hb⟩ := step e (RdAfter.refl _hS) _he h6 hk hW
     refine ⟨?_, hRd, hb⟩
@@ -421,7 +421,7 @@ theorem ppw_ok : ∀ (n : Nat) {dn : NIdx → Option ConLeche.Name} {m m' : Mem}
     simp only [ht, Bool.false_eq_true, ↓reduceIte, StateT.run_bind,
       hrun₁, except_ok_bind, Nat.succ_sub_one]
     rfl
-  by_cases hu6 : u >>> 28 = 6
+  by_cases hu6 : tagW u = 6
   · simp only [hu6, ne_eq, not_true_eq_false, ↓reduceIte] at hW
     obtain ⟨hrun, hRd, hb⟩ := step u hRd₁ hb₁ hu6 hk hW
     have htu : ((decE u).tag == ETag.forallE) = true := by

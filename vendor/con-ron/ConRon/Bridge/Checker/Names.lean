@@ -38,9 +38,14 @@ read, with their cone:
 
 `Base.lean` imports this module, so its readers see all of it.
 -/
-import ConRon.Bridge.Checker.Inv
+module
+
 import ConRon.Bridge.Specs
-import ConRon.Bridge.Checker.Hyp
+import ConRon.Bridge.Promote.Pers
+public import ConRon.Bridge.StateOK
+public import ConRon.Arena.CheckerBase
+
+public section
 
 open ConLeche ConRon.Arena
 

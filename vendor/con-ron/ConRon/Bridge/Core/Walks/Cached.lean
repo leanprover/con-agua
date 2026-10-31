@@ -54,10 +54,21 @@ Read off `lvlEq?_spec` below; every cached walk follows it.
    an equation.  That is the one structural difference between this group and
    every other group of the tier, and it is why this group is the cheap one.
 -/
+module
+
 import ConRon.Bridge.Core.Walks.Frame
 import ConRon.Bridge.Promote.Pers
 import ConRon.Bridge.ExprOps.Owed
-import ConRon.Bridge.Grind
+public import ConRon.Bridge.Grind
+import ConRon.Bridge.ExprOps.MemoSpecs
+import ConRon.Bridge.Core.Memo
+import ConLeche.Verify.InstLevels
+public import ConLeche.Verify.EnvWF
+import ConRon.Bridge.Specs
+import ConRon.Bridge.GrindAttr
+public import ConRon.Arena.Core
+
+public section
 
 namespace ConRon.Bridge.Core
 
