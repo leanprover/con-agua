@@ -247,9 +247,8 @@ theorem cdq_ref {p : Prog} (hQ : QuotProg p) {dn : NIdx → Option ConLeche.Name
     by_cases h1 : kw = 1 <;> by_cases h2 : kw = 2 <;> by_cases h3 : kw = 3 <;> simp [h1, h2, h3]
   rw [hsel (dw (m.arr64 DECL) i.toNat 6) (fun ks => checkDeclQuotE.j1 p n i vis ks m),
     slotOfW_eq, hk, checkDeclQuotE.j1.arm1, checkDecl_quot_shape]
-  rcases h1 : erecCiW n m i 0 with _ | ⟨r1, m1⟩
-  · rw [liftE_none, checkDeclQuotE.k_erec_ci.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some, checkDeclQuotE.k_erec_ci.arm1]
+  refine RefE.onlySim (fun _ => checkDeclQuotE.k_erec_ci.none ..) (fun _ _ h => h) fun r1 m1 h1 => ?_
+  rw [checkDeclQuotE.k_erec_ci.arm1]
   obtain ⟨hS1, hg1, -, hcv1, htop1⟩ := erecCiW_okA h1 hS hD hi hcvAt
   have hqb : (r1.headD 0).toNat + 8 < 2 ^ 64 := by
     have := hS1.iw.er; have := hS1.iw.erSize; omega
