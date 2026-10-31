@@ -4,7 +4,6 @@ import ConAgua.Arena.RecGenSpec.Classes
 import ConAgua.Arena.RecGenSpec.Rec3TmdWDecB
 import ConAgua.Arena.RecGenSpec.ClassFeR
 import ConAgua.Arena.IndT.SumSteps
-import ConAgua.Arena.RefWalk
 
 
 /-!

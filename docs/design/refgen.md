@@ -261,6 +261,7 @@ Which rule for which pair of shapes:
 | `K (liftE c)` | no step (an L helper, `sl_find`, `sl_cons`, a record writer) | `RefE.onlySim (fun _ => rfl) (fun _ _ h => h)` |
 | `K x`, a unified callee | `op >>= g` / `op` last | `RefE.bindE` / `RefE.lastE` |
 | `K (callE p n f args s₀.mem)`, a unified callee through its spec | `op >>= g` | `RefE.bindRun` (pass `s₀`) |
+| `K (callE p n f args m)`, a knot callee (`whnf_top`, `infer_type_core`): its error a claim of `G`, its ok an `RSim` | `op >>= g` | `RefE.bindCall` |
 | `if c then .error e else rest` | `if b = true then jp () else fail ce >>= jp` (`unless`) | `RefE.guard` |
 | same | `if b = true then T else fail ce` / `if b = true then fail ce else T` | `RefE.guardIf` / `RefE.guardThen` |
 | same | `unwrapOr o ce >>= g` | `RefE.guardOpt` |
@@ -368,9 +369,81 @@ By `reflen.py` lines (master after this lane), lifted-call density first:
   plumbing and `liftE_none` arms (14 `rcases … callW`); one package; `fvar_type_d` (Install1, two
   sites) and `open_pis_at_fvars_f` / `strip_pis` (shared with the sum steps) are step candidates.
   Expect −15 %, 2–3 h.
-* **`IndT/Sum1–3` (6 theorems, ~700 lines)**: `SumAt` and the pilot's steps exist (`opf` 3 further
-  sites, `strip` 2, `ic` 2); the cheapest next landing. −15 to −20 %, 1–2 h.
+* ~~`IndT/Sum1–3`~~: done (refwalk2, §6.7).
+* **The knot callers** (the 11 files of §6.7 with a `callE` split on `whnf_top`/`infer_type_core`/
+  `ensure_sort_core`/`is_def_eq_core`): `RefE.bindCall` per site, plus whatever lifted callees they
+  have; `Verdict/IndB*` and the `Decl*T` gates first, by `reflen.py`.
 * **`IndT/Positivity`, `PosCrest`, `Tail`, `Pass`, `Block`, `CheckIndDecl` (~1.5 k lines)**: mostly
   unified callees and guards; `bindE`/`bindRun` and the guard rules only. −10 %, 2–3 h.
 * **`Verdict/IndB*` and the declaration arms**: not looked at; check `reflen.py` and the share of
   `rcases … callW` first.
+
+### 6.7 Sum1–3 (lane refwalk2)
+
+Converted: `wt_ref` (`Sum1.lean`), `cts_ref`, `ct_ref` (`Sum2.lean`), `cfb_ref`, `csfGo_ref`,
+`fsorts_ref` (`Sum3.lean`). Statements unchanged. New kit rule `RefE.bindCall` (a knot callee read
+through its call: `whnf_top` in `wt_ref`, `infer_type_core` and `ensure_sort_core` in `csfGo_ref`;
+11 other files have the same `rcases … callE … "whnf_top"/"infer_type_core"/…` split: `Install1`,
+`RecCheckPins`, `DeclCrpT`, `DeclNatGateT`, `DeclDivGateT2`, `Verdict/DeclValE`, `DeclValsE`,
+`IndBHdr`, `IndBTpd`, `IndBRec2`, `IndBRec4`).
+
+**No package and no steps.** §6.6 expected `SumAt` and the pilot's steps to apply; they do not. The
+further sites of `opf`, `strip` and `ic` are in `Install3`/`Install6`, not here, and every lifted
+callee of Sum1–3 has one call site (`intern_fvar`, `instantiate1_fast`, `sl_cons`, `intern_sort`,
+`close_telescope`, `cv_new`, `strip_pis`, `lv_leq_top`, `pin_word`, `lvl_eq_true`, `sl_contains`,
+`sl_get`, `fvar_type_d`, `iw_alloc`). The posts carry no core step (only `csfGo_ref` composes two
+`CoreStep.ext`s), so `SumAt`'s `core` would be dead weight, and the threading is short. The
+conversion is the rules alone: `bindLift`/`bindSim` (a `Sim` that is not a step, such as
+`sumSim_of_relW (ftdF_ok …)`, goes into `bindSim` directly), `onlySim`, `bindE`/`lastE`, `bindCall`,
+`abort0`, `ofArms`, `abortAt`/`pass`, `guardIf`.
+
+Pitfalls (add to §6.4):
+
+* **`RefE.lastE (fun _ => rfl) (fun _ => rfl) …` can unify `K` with `Except.ok`** when the model is
+  `K (callee …)` of a continuation applied to arguments (`fsortsE.k_… p nW res`, `ctE.k_… p`):
+  "type mismatch `rfl` … `Except.ok (Except.error e) = Except.error e`". Name it:
+  `RefE.lastE (K := fsortsE.k_check_struct_field_sorts_i_go p nW res) …`.
+* **`RefE.onlySim`'s `Q` is not inferred from an anonymous constructor** (`fun r m h => ⟨…, …⟩`):
+  pass `(fun _ _ h => h)` and destructure in the rest.
+* **`bindLift` takes the twin's run before the model's guard**: for a class-`0` guard after the
+  callee (`4294967296 ≤ fv`), give `⟨_, _, hrun, ?_⟩` first, then `RefE.abort0` (or
+  `RefE.ofArms … (RefE.abort0 …)` for a recursive model).
+* **Rewrite the goal, not the claims**: where a knot claim or an `RSim` states the twin at
+  `(nP + (j - 1)).toNat` and `decI (rt.headD 0)` and the goal at `nP.toNat + J` and `t`, a
+  `rw [← hdep]` and `subst ht` on the goal before the rule let `bindCall` take
+  `hV.core.inferTypeCore …` and `inferC_rsim …` as they are (no `rwa … at this`).
+* **`subst a1` for a run that leaves the twin state (`ha1 : a1 = a`)**: `subst ha1` eliminates
+  `a` instead, which the rest of the proof still names.
+* **A three-way decoded result** (`decLvlEq`: `0`/`1`/`2` for `none`/`some false`/`some true`):
+  `rcases x with _ | _ | _ <;> simp only [decLvlEq] at hx`, then `RefE.abortAt`/`RefE.pass` per
+  case with `by rw [hx]; decide`.
+* **`grind` on a guard over `List.contains`** got lost in `List.contains_append` instances (1000
+  instances, failed). State the two flags as iffs first (`rq.headD 0 = 0 ↔ x ≠ some true`,
+  `r3.headD 0 = 0 ↔ ws.contains fv = false`) and close the implications with `rw` and `simpa`.
+
+Numbers, against master 28b855fc (`reflen.py`, `ncl.py`; elaboration `lake env lean` on the file,
+median of 3 interleaved runs, load 12–14):
+
+| theorem | before | after |
+|---|---:|---:|
+| `wt_ref` | 135 | 121 |
+| `cts_ref` | 120 | 106 |
+| `ct_ref` | 108 | 104 |
+| `cfb_ref` | 151 | 96 |
+| `csfGo_ref` | 153 | 126 |
+| `fsorts_ref` | 29 | 23 |
+| **Sum1–3** | 696 | 576 (**−17 %**) |
+
+| file (code lines) | before | after | wall before → after | max RSS |
+|---|---:|---:|---:|---:|
+| `IndT/Sum1.lean` | 205 | 192 | 3.60 → 3.92 s | 2.46 → 2.46 GB |
+| `IndT/Sum2.lean` | 374 | 357 | 2.63 → 2.40 s | 2.60 → 2.59 GB |
+| `IndT/Sum3.lean` | 505 | 415 | 2.96 → 3.05 s | 2.58 → 2.59 GB |
+| `RefWalk.lean` (`bindCall`) | 130 | 142 | | |
+
+Sum1–3: 1084 → 964 code lines (**−11 %**), time and memory unchanged (Sum1's +0.3 s is noise: the
+profiler's categories agree within 0.1 s, and most of the file is `wtE`'s `l_model`). The gain sits
+where the twin and L walk in lockstep with guards (`cfb_ref` −36 %, `csfGo_ref` −18 %); `ct_ref`
+(−4 %) is mostly the twin's own branches on `strip_pis`'s result and the view, which no rule
+covers.
+
