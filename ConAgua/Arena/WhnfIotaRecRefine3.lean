@@ -127,9 +127,7 @@ theorem c_ref (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
       exact RefE.ret hrunT (CorePost.ret hS rfl
         ⟨by show HW (0 : Word); unfold HW; decide, by show HW (0 : Word); unfold HW; decide⟩)
   -- the recursor's record
-  rcases c1 : callW p n "env_find" [c, vis] s₀.mem with _ | ⟨re, m1⟩
-  · rw [liftE_none, irCE.k_env_find.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]
+  refine RefE.onlySim (fun _ => irCE.k_env_find.none ..) (fun _ _ h => h) fun re m1 c1 => ?_
   obtain ⟨hm1, hfnone, hfsome⟩ := irEnvFind p hp.toIotaProg' n dn s₀.mem vis fe hS.env c hcw re m1 c1
   subst m1
   simp only [irCE.k_env_find]
@@ -168,9 +166,7 @@ theorem c_ref (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
     have := congrArg UInt64.toNat (Classical.not_not.mp a1); rw [hsn1] at this; omega
   -- the levels' length and the telescope
   obtain ⟨-, hname, hlps, hlen, htyw, htype⟩ := decCV_rd1 herec hcv
-  rcases c2 : callW p n "ls_node" [us] s₀.mem with _ | ⟨rl, m2⟩
-  · rw [liftE_none, irCE.k_ls_node.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]
+  refine RefE.onlySim (fun _ => irCE.k_ls_node.none ..) (fun _ _ h => h) fun rl m2 c2 => ?_
   obtain ⟨t2, ht2, hs2, hne2, hr2⟩ := triple_of_callW (lsNode_spec p hp.lvl.lsnode n
     ⟨s₀.mem, Locals.init []⟩ us) c2
   have hm2 : m2 = s₀.mem := by rw [← ht2, hs2]
@@ -182,9 +178,7 @@ theorem c_ref (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
   have hvl := lsNodeW_viewLen hS.arena.base hus (by rw [← hr2, hol])
   subst hol
   simp only [irCE.k_ls_node, hE0]
-  rcases c3 : callW p n "peel_pis" [sn, rdW E (recP + 4)] s₀.mem with _ | ⟨rp, m3⟩
-  · rw [liftE_none, irCE.k_peel_pis.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]
+  refine RefE.onlySim (fun _ => irCE.k_peel_pis.none ..) (fun _ _ h => h) fun rp m3 c3 => ?_
   obtain ⟨t3, ht3, hm3, -, -, hrunP⟩ := triple_of_callW
     (peelPis_refines' p hp.spine.peel n ⟨s₀.mem, Locals.init []⟩ a₀ hS.arena.base sn _ htyw) c3
   have hm3' : s₀.mem = m3 := hm3.symm.trans ht3
@@ -278,9 +272,7 @@ theorem at_ref (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
       (CorePost decOptR dn s₀.mem vis fe M eb ResW) := by
   have hS := hpre.rel
   simp only [irAtE]
-  rcases c1 : callW p n "iota_rec_head" [hd] s₀.mem with _ | ⟨rv, m1⟩
-  · rw [liftE_none, irAtE.k_iota_rec_head.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]
+  refine RefE.onlySim (fun _ => irAtE.k_iota_rec_head.none ..) (fun _ _ h => h) fun rv m1 c1 => ?_
   obtain ⟨hm1, hnot, hyes⟩ := irCallW_head p hp.head n s₀.mem a₀ hS.arena.base hd hhd rv m1 c1
   subst m1
   simp only [irAtE.k_iota_rec_head]
