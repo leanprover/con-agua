@@ -866,7 +866,9 @@ array access loads the base and length from the table and branches to
 `ca_error` when out of bounds; a constant index below the array's minimum length
 (a hint in the array table, `min k`) needs no bounds check, nor does an index that the
 bounds-check analysis proves in range (§8.7), and the array marked
-`at table` is addressed from `r15` at a fixed offset, with no load of its base. The trampoline saves the callee-saved registers
+`at table` is addressed from `r15` at a fixed offset, with no load of its base; so is a byte of
+the constant data (`ldc`), checked only when the analysis does not bound its index below the
+string's length. The trampoline saves the callee-saved registers
 (`rbp`, `r14` and the table address on the machine stack; `r15`, `rbx`, `r12`,
 `r13` in the 32 bytes past the table), restores them on every exit, and maps
 the outcomes to `rdx`, so the code generator may use any register

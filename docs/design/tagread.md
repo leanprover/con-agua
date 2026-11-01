@@ -79,3 +79,29 @@ untouched (no row in `docs/deviations.md`); Audit and Final statements unchanged
   `param` arms.
 
 ## 5. Numbers
+
+Binaries: 860b0632 (`_tmp/ronsync/perf/base`), master 7d1169fc, this branch (`checker.s` here,
+identical to the prototype's last row). Init, every run accepting.
+
+| | 860b0632 | master | tagread | vs master | vs 860b0632 |
+|---|---:|---:|---:|---:|---:|
+| `instructions:u`, one thread | 214.47 G | 243.44 G | **221.70 G** | **−8.9 %** | +3.4 % |
+| `cycles:u`, one thread (mean of 5 interleaved, load ~70) | 103.88 G | 105.91 G | 102.62 G | −3.1 % | −1.2 % |
+| wall, one thread (CPUs 44,92; 32 paired rounds, load 12–48, median 25 s) | | | | −2.4 % (Wilcoxon p 0.25; [−5.1, +3.2]) | +3.3 % (p 0.02) |
+| wall, `--jobs=16` (CPUs 24–39; 80 paired rounds, load 20–65, median 4.9 s) | | | | −0.1 % (p 0.72; [−2.7, +1.8]) | +1.5 % (p 0.02) |
+
+(`_tmp/bce/wb2.py`, `wstats.py`; data in `_tmp/tagread/perf/`.) The machine was loaded the
+whole time (Init took 23–30 s at one thread against 17 s on ronsync's quieter run, with a ±27 %
+spread), so the wall numbers are weak; master's own regression against 860b0632 reads +5.6 %
+(one thread) and +2.4 % (16 threads) in the same runs. The instructions are exact, the cycles
+follow ronsync's observation (the removed ALU work ran mostly beside loads). What is left
+against 860b0632 (+3.4 % instructions) is not in the readers: the cons probes (`app_find`,
+`app_push`, …) run more often on the new words, as in the twin, whose own cost was +1.65 %.
+
+Verdicts: `scripts/diff-e2e.py --refs --parallel 16`: 634 fixtures agree (406 accepted, 228 not),
+0 UNSOUND / INCOMPLETE / CRASH / TIMEOUT / REFDIFF.
+
+Not done: `idxAE` with `h` first (`(h + 2^30) & …`, one `lea` instead of `mov` + `add`) measured
+−0.2 % more instructions in the prototype; `idxA` itself must keep the constant first (ronsync's
+`WhnfModels2E` trap), so it would be one more bridging lemma like `idxG_eq`. Left out for the
+rebuild it costs.
