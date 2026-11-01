@@ -1,5 +1,6 @@
 module
 
+public import ConRon.Bridge.Inductives.BlockParts
 public import ConRon.Bridge.Inductives.BlockInstall
 public import ConRon.Bridge.Inductives.StructParts
 public import ConAgua.Arena.RecCheckSpec.DecHLTruncMBound

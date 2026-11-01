@@ -1,5 +1,6 @@
 module
 
+public import ConRon.Bridge.Inductives.PosWalks
 public import ConAgua.Verdict.PosE1L
 public import ConAgua.Arena.IndPosSpec.Pos2DecHLSplit
 public import ConAgua.Arena.IndPosSpec.Snoc

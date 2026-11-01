@@ -1,5 +1,6 @@
 module
 
+public import ConRon.Bridge.Inductives.FieldTele
 public import ConAgua.Verdict.DeclValsE
 public import ConAgua.Arena.IndT.Sum1
 public import ConAgua.Arena.RecGenSpec.ClassFeR

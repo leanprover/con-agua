@@ -1,5 +1,6 @@
 module
 
+public import ConRon.Bridge.Inductives.SumInstall
 public import ConAgua.Arena.IndT.Sum3
 public import ConAgua.Arena.IndInstallSpec.InstallRec2PSl
 public import ConAgua.Arena.GrindAttr

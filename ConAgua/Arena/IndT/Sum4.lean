@@ -1,5 +1,6 @@
 module
 
+public import ConRon.Bridge.Checker.Base
 public import ConAgua.Arena.IndT.Sum3
 public import ConAgua.Verdict.DeclValsE
 public import ConAgua.Arena.RecGenSpec.Classes

@@ -1,5 +1,6 @@
 module
 
+public import ConRon.Bridge.Core.Walks.Cached
 public import ConAgua.Arena.IndPosSpec.OneK
 public import ConAgua.Arena.IndT.PosDefs
 public import ConAgua.Arena.IndT.RecGen19

@@ -1,5 +1,6 @@
 module
 
+public import ConRon.Bridge.Inductives.FieldTele
 public import ConAgua.Arena.IndT.PosFields
 public import ConAgua.Arena.IndPosSpec.NestCrest
 public import ConAgua.Arena.IndPosSpec.P2sfW
