@@ -10,6 +10,7 @@ public import ConAgua.Verdict.IndBTpd
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.L.GrindAttr
 public import ConAgua.L.ModelGen
+import all ConRon.Bridge.Inductives.RecCheck
 
 @[expose] public section
 /-!
