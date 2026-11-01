@@ -57,7 +57,7 @@ theorem instPisAtLiftL_eq : instPisAtLiftL = lfn (f, o, l, e) locals (h, k, g, x
   k := 0;
   ⟪ipalLoop⟫;
   return (1, h)
-} := rfl
+} := by rfl
 
 /-! ## The program and the model -/
 

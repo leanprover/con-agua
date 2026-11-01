@@ -216,9 +216,10 @@ meta unsafe def declInlFns (name : Name) (envE : Lean.Expr) (elems : Array Lean.
   for i in todo do
     let (_, _, fdE) ← progElem i elems[i]!
     let n := name ++ Name.mkSimple s!"f{i}"
-    let v := q[i]!
-    let same := reprStr v == reprStr p[i]!.2
-    let lit := if same then fdE else funDeclE rom v
+    -- always a literal, also where the round changed nothing: the source term's L functions are
+    -- `@[no_expose]`, and the whole-program checks over the literal (`ProgNrt`, `ProgSkt`,
+    -- `ProgWf`, the asm parts) unfold it without `import all` of their modules
+    let lit := funDeclE rom q[i]!
     withExporting <| addDecl (.defnDecl (mkDefinitionValEx n [] funDeclTy lit .abbrev .safe []))
     -- compiled code runs `n` as the inlining itself (the literal is not compiled)
     withExporting <| addAndCompile (.defnDecl (mkDefinitionValEx (n ++ `impl) [] funDeclTy (mkApp2 (mkConst ``inlFn) envE fdE)

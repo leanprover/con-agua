@@ -12,6 +12,12 @@ import ConAgua.Front.ApplyExprRefine
 public import ConAgua.Arena.CallF
 public import ConAgua.Arena.StripTeleSpec
 import all ConAgua.Arena.StubNames
+import all ConAgua.Arena.ConsLib
+import all ConAgua.Arena.IndIface
+import all ConAgua.Arena.LsStore
+import all ConAgua.Arena.NAnonStore
+import all ConAgua.Arena.NStrStore
+import all ConAgua.Arena.Store
 
 @[expose] public section
 

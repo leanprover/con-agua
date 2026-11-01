@@ -262,7 +262,7 @@ theorem reservedContainsL_eq : reservedContainsL = lfn (x) locals (j) {
   j := 0;
   ⟪resContLoop⟫;
   return 0
-} := rfl
+} := by rfl
 
 /-- Model of the loop at L fuel `k`. -/
 def rcLoopW (m : Mem) (x : Word) : Nat → Word → Option (List Word × Mem)

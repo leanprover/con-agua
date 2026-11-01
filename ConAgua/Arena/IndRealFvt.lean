@@ -100,7 +100,7 @@ theorem fvarTypeDsL_eq : fvarTypeDsL = lfn (o, l) locals (q, k, t) {
   k := 0;
   ⟪ftdsLoop⟫;
   return (q, l)
-} := rfl
+} := by rfl
 
 /-- The model of `fvar_type_ds`' loop at the loop's fuel, from index `k`; `q` the fresh slice. -/
 noncomputable def ftdsGoW (o l q : Word) : Nat → Mem → Word → Option (List Word × Mem)
