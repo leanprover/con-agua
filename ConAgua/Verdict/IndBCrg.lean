@@ -1,5 +1,6 @@
 module
 
+public import ConRon.Bridge.Core.Walks.Cached
 public import ConAgua.Arena.RecGenSpec.CruleProg
 public import ConAgua.Verdict.VCtx
 public import ConAgua.Arena.IndT.Lift

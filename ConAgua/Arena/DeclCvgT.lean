@@ -1,5 +1,6 @@
 module
 
+public import ConRon.Bridge.Core.Walks.Cached
 public import ConAgua.Arena.IndRealWalkT
 public import ConRon.Bridge.Checker.Hyp
 

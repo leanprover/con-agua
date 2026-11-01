@@ -1,5 +1,7 @@
 module
 
+public import ConRon.Bridge.Checker.DeclVal
+public import ConRon.Bridge.Checker.TypePins
 public import ConAgua.Arena.DeclDivModSpec.BoolCtorTyped
 public import ConAgua.Arena.DeclDivModSpec.CertDivModEqs
 public import ConAgua.Arena.DeclDivModSpec.CertTwoEqs
@@ -9,6 +11,7 @@ public import ConAgua.Arena.IndRealMemoCrT
 public import ConAgua.Arena.IndRealWalkT
 public import ConAgua.Arena.StageC
 public import ConRon.Bridge.Checker.DivMod
+import all ConRon.Bridge.Checker.DivMod
 
 @[expose] public section
 

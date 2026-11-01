@@ -1,5 +1,7 @@
 module
 
+public import ConRon.Bridge.Inductives.BlockParts
+public import ConRon.Bridge.Inductives.PosWalks
 public import ConAgua.Arena.IndRealLvlC
 public import ConAgua.Arena.RecClassSpec.CrW
 public import ConAgua.Arena.RecGenSpec.ClassKeyCanon

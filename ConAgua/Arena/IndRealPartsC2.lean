@@ -1,5 +1,6 @@
 module
 
+public import ConRon.Bridge.Inductives.BlockParts
 public import ConAgua.Arena.IndRealLvlC
 public import ConAgua.Arena.IndPartsSpec.BpW
 

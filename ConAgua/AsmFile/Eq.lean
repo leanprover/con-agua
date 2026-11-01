@@ -115,8 +115,11 @@ syntax (name := asmFileEq) (docComment)? "asm_file_eq " ident " : " ident " = " 
                         type := eqTy (mkConst fileN) (mkApp2 appC (mkConst stubN) (mkConst codeN)),
                         value := mkApp2 (mkConst ``Eq.refl [1]) progTy (mkConst fileN) })
     -- `name : file = stub ++ rhs`, from `code_eq : rhs = code`
-    let some (.thmInfo ci) := (← getEnv).find? codeEqN | throwError "asm_file_eq: {codeEqN} is not a theorem"
-    let some (_, rhs, _) := ci.type.eq? | throwError "asm_file_eq: {codeEqN} is not an equation"
+    -- an imported theorem of a module is seen as an axiom (its statement without its proof)
+    let ty ← match (← getEnv).find? codeEqN with
+      | some (.thmInfo ci) | some (.axiomInfo ci) => pure ci.type
+      | _ => throwError "asm_file_eq: {codeEqN} is not a theorem"
+    let some (_, rhs, _) := ty.eq? | throwError "asm_file_eq: {codeEqN} is not an equation"
     -- `stub ++ code = stub ++ rhs`
     let h := mkApp6 (mkConst ``congrArg [1, 1]) progTy progTy (mkConst codeN) rhs (mkApp appC (mkConst stubN))
       (mkApp4 (mkConst ``Eq.symm [1]) progTy rhs (mkConst codeN) (mkConst codeEqN))

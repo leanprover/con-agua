@@ -5,6 +5,7 @@ public import ConAgua.Checker.PrepRef
 public import ConAgua.Checker.TwinPins
 public import ConAgua.Checker.PreLoopWSStages
 public import ConAgua.Checker.PrepProgExt
+import all ConRon.Bridge.Frontend.Prepare
 
 @[expose] public section
 

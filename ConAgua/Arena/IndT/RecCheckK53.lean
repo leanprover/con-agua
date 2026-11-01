@@ -1,5 +1,6 @@
 module
 
+public import ConRon.Bridge.Inductives.PosWalks
 public import ConAgua.Arena.RecCheckSpec.EqWDec
 public import ConAgua.Arena.IndRealAbsPos
 public import ConAgua.Arena.RecCheckSpec.EeW

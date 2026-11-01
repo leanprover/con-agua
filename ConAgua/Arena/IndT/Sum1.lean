@@ -1,5 +1,6 @@
 module
 
+public import ConRon.Bridge.ExprOps.Inst1
 public import ConAgua.Arena.IndT.Lift
 public import ConAgua.Arena.IndSumSpec.StructProjArgP
 

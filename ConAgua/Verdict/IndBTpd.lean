@@ -1,5 +1,6 @@
 module
 
+public import ConLeche.Verify.Inductives.RecCheckScope
 public import ConAgua.Arena.IndT.RecCheckTpd
 public import ConAgua.Arena.IndT.Lift
 public import ConAgua.Arena.RecCheckSpec.Tpd

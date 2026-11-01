@@ -1,5 +1,6 @@
 module
 
+public import ConRon.Bridge.Inductives.SumInstall
 public import ConAgua.Arena.IndT.Install1
 public import ConAgua.Verdict.LefRef
 public import ConAgua.Arena.IndInstallSpec.IagW
