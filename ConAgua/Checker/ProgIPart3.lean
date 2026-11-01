@@ -2,6 +2,7 @@ module
 
 public import ConAgua.Checker.ProgIdx
 meta import ConAgua.Checker.ProgIdx
+import all Init.Data.Repr
 
 @[expose] public section
 
