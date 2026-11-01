@@ -1,7 +1,6 @@
 module
 
 public import Lean.Compiler.NoncomputableAttr
-public import ConAgua.E2E.Ser
 public import Lean.Elab.Command
 public import Lean.Meta.Eval
 public import Std.Do.Triple.SpecLemmas

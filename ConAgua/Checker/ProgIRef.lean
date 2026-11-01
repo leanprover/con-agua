@@ -6,7 +6,6 @@ public import ConAgua.Compiler.MainRef
 meta import ConAgua.Checker.ProgI
 meta import ConAgua.Compiler.InlineCorrect
 meta import ConAgua.Compiler.MainRef
-import ConAgua.Compiler.InlineLit
 
 @[expose] public section
 

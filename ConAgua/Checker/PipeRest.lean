@@ -6,7 +6,6 @@ import ConAgua.Checker.TwinPins
 public import ConAgua.Checker.PreLoopWSStages
 import ConAgua.Checker.PrepProgExt
 import all ConRon.Bridge.Frontend.Prepare
-import ConAgua.Checker.PreLoopWSBase
 import ConAgua.Checker.PrepProgHoist
 import ConAgua.Checker.RomProg
 import ConAgua.Checker.RomProgInit

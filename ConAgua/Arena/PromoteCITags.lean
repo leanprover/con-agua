@@ -18,7 +18,6 @@ public import ConAgua.Arena.PromoteCIRef.StPNat
 public import ConAgua.Arena.PromoteCIRef.TdecJoin
 public import ConAgua.Arena.PromoteRecRef
 public import ConAgua.Arena.TblFrame
-public import ConAgua.Arena.PromoteCIRef.Proj
 
 @[expose] public section
 
