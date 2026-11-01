@@ -644,8 +644,8 @@ Their semantics are ordinary Lean functions
 ([`le64`, `Mem.copy64`, `scanN`](https://github.com/leanprover/con-agua/blob/master/ConAgua/L/Semantics.lean#L207-L226)),
 and the compiler emits a tight loop for each: six instructions per copied word,
 seven per scanned byte
-([`copy64Code`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Compile.lean#L1037-L1048),
-[`scanLoop`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Compile.lean#L1070-L1077)).
+([`copy64Code`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Compile.lean#L1046-L1057),
+[`scanLoop`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Compile.lean#L1079-L1086)).
 
 ## 6. Data structures and memory layout
 
@@ -659,7 +659,7 @@ says how (§7).
 A handle is con-ron's 32-bit word, held in a 64-bit word, in one of two shapes: the tier in
 bit 31; bit 30 set for an expression `app` (wide: the node index in bits 29–0), clear for every
 other node (narrow: the constructor tag in bits 29–26, the node index in bits 25–0)
-([`tierE`, `idxE`, `idxAE`, `tagE`](https://github.com/leanprover/con-agua/blob/master/ConAgua/L/TRec.lean#L113-L142)).
+([`tierE`, `idxE`, `idxAE`, `tagE`](https://github.com/leanprover/con-agua/blob/master/ConAgua/L/TRec.lean#L113-L148)).
 Equal terms have equal handles (hash-consing), so comparing two terms is
 comparing two words.
 
@@ -870,7 +870,7 @@ bounds-check analysis proves in range (§8.7), and the array marked
 (`rbp`, `r14` and the table address on the machine stack; `r15`, `rbx`, `r12`,
 `r13` in the 32 bytes past the table), restores them on every exit, and maps
 the outcomes to `rdx`, so the code generator may use any register
-([`trampoline`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Compile.lean#L2134-L2155)).
+([`trampoline`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Compile.lean#L2138-L2159)).
 
 The local optimisations, all inside the proof: a comparison of two simple
 operands (a register, a memory word, a constant) is one `cmp`, its operands
@@ -880,7 +880,7 @@ function keeps its locals in nine registers
 ([`allocRegs`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Compile.lean#L804));
 the tier local of a leaf stays in `rsi`; a leaf with a frame, other than the
 entry, checks no stack limit: its callers' checks leave room for its frame
-([`compileFn`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Compile.lean#L2105-L2117)); a tiered access finds tier 1's
+([`compileFn`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Compile.lean#L2109-L2121)); a tiered access finds tier 1's
 descriptor at a fixed offset after tier 0's.
 
 **The layout map.** Only the compiler knows where arrays live. Byte and word

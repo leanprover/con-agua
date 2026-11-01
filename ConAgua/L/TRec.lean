@@ -141,9 +141,9 @@ field): the field itself for a narrow word (`0 … 15`), `4` (`app`) for a wide 
    4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4]
 
 /-- The constructor tag of a handle word, the twin's `Idx.tag`: `4` (`app`) for a wide word,
-bits 29…26 of a narrow one. One read of the constant table `tagTbl` at bits 30…26 (lane
-tagread; the arithmetic form `f + w * (4 - f)`, `f = (h >> 26) & 15`, `w = (h >> 30) & 1`, is
-`tagW`, `StoreFields.lean`, and cost eleven operations on every dispatch). -/
+bits 29…26 of a narrow one: one read of the constant table `tagTbl` at bits 30…26. (Its value
+`tagW`, `StoreFields.lean`, is the arithmetic form `f + w * (4 - f)`, `f = (h >> 26) & 15`,
+`w = (h >> 30) & 1`; as an expression that is nine operations, `h` read three times.) -/
 @[expose] def tagE (h : Expr) : Expr :=
   .ldc tagTbl (.bin .and (.bin .shr h (.const 26)) (.const 31))
 
