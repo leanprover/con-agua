@@ -9,6 +9,7 @@ import ConRon.Bridge.Grind
 import ConAgua.Arena.IndCopy2
 public import ConAgua.Arena.IndCopy
 public import ConAgua.Arena.LevelEquiv
+import all ConAgua.Arena.IndIface
 
 @[expose] public section
 

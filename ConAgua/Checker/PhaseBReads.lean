@@ -8,6 +8,144 @@ meta import ConAgua.Checker.Prog
 meta import ConAgua.Compiler.ReadSetSplit
 meta import ConAgua.Arena.LevelIntern
 meta import ConAgua.Arena.LevelSubstLP
+import all ConAgua.Arena.Abs1
+import all ConAgua.Arena.AppStore
+import all ConAgua.Arena.ArRange
+import all ConAgua.Arena.ArRangeSpec
+import all ConAgua.Arena.BVarStore
+import all ConAgua.Arena.BvarB
+import all ConAgua.Arena.CheckerL
+import all ConAgua.Arena.ConsLib
+import all ConAgua.Arena.ConsPresize
+import all ConAgua.Arena.ConstStore
+import all ConAgua.Arena.ConstsResolveF
+import all ConAgua.Arena.CoreCaches
+import all ConAgua.Arena.CoreLevels
+import all ConAgua.Arena.DeclAndPin
+import all ConAgua.Arena.DeclApd
+import all ConAgua.Arena.DeclArms
+import all ConAgua.Arena.DeclArmsCanon
+import all ConAgua.Arena.DeclArmsNat
+import all ConAgua.Arena.DeclStep
+import all ConAgua.Arena.DefEq
+import all ConAgua.Arena.Env
+import all ConAgua.Arena.ExprMk
+import all ConAgua.Arena.FVarRange
+import all ConAgua.Arena.FVarStore
+import all ConAgua.Arena.ForallStore
+import all ConAgua.Arena.Freeze
+import all ConAgua.Arena.HasFvar
+import all ConAgua.Arena.ImaxStore
+import all ConAgua.Arena.IndIface
+import all ConAgua.Arena.IndInstall
+import all ConAgua.Arena.IndParts
+import all ConAgua.Arena.IndPos
+import all ConAgua.Arena.IndPos2
+import all ConAgua.Arena.IndSum
+import all ConAgua.Arena.Infer
+import all ConAgua.Arena.InferFieldSort
+import all ConAgua.Arena.Inst1
+import all ConAgua.Arena.Inst1Spec
+import all ConAgua.Arena.InstLP
+import all ConAgua.Arena.InstList
+import all ConAgua.Arena.InstListSpec
+import all ConAgua.Arena.Knot
+import all ConAgua.Arena.LamStore
+import all ConAgua.Arena.LetStore
+import all ConAgua.Arena.LevelApd
+import all ConAgua.Arena.LevelEquiv
+import all ConAgua.Arena.LevelHeap
+import all ConAgua.Arena.LevelIntern
+import all ConAgua.Arena.LevelLeq
+import all ConAgua.Arena.LevelSimp
+import all ConAgua.Arena.LevelStore
+import all ConAgua.Arena.LevelSubst
+import all ConAgua.Arena.LevelSubstL
+import all ConAgua.Arena.LevelSubstLP
+import all ConAgua.Arena.LevelZero
+import all ConAgua.Arena.LiftL
+import all ConAgua.Arena.LsStore
+import all ConAgua.Arena.MaxStore
+import all ConAgua.Arena.MemoLib
+import all ConAgua.Arena.NAnonStore
+import all ConAgua.Arena.NNumStore
+import all ConAgua.Arena.NStrStore
+import all ConAgua.Arena.NatAdd
+import all ConAgua.Arena.NatArms
+import all ConAgua.Arena.NatBits
+import all ConAgua.Arena.NatCmp
+import all ConAgua.Arena.NatDiv
+import all ConAgua.Arena.NatGcd
+import all ConAgua.Arena.NatMul
+import all ConAgua.Arena.NatPow
+import all ConAgua.Arena.NatShl
+import all ConAgua.Arena.NatShr
+import all ConAgua.Arena.NatSub
+import all ConAgua.Arena.ParamStore
+import all ConAgua.Arena.Pins
+import all ConAgua.Arena.ProjStore
+import all ConAgua.Arena.Promote
+import all ConAgua.Arena.PropRead
+import all ConAgua.Arena.RecCheck
+import all ConAgua.Arena.RecClass
+import all ConAgua.Arena.RecGen
+import all ConAgua.Arena.Refine
+import all ConAgua.Arena.Rom
+import all ConAgua.Arena.RomExpr
+import all ConAgua.Arena.RomItems
+import all ConAgua.Arena.RomLevel
+import all ConAgua.Arena.RomLevels
+import all ConAgua.Arena.RomPins
+import all ConAgua.Arena.Scratch
+import all ConAgua.Arena.SortStore
+import all ConAgua.Arena.Store
+import all ConAgua.Arena.StrLit
+import all ConAgua.Arena.StripTele
+import all ConAgua.Arena.StubInd
+import all ConAgua.Arena.StubNames
+import all ConAgua.Arena.TeleLift
+import all ConAgua.Arena.Walk
+import all ConAgua.Arena.WalkLeaves
+import all ConAgua.Arena.WalkLift
+import all ConAgua.Arena.WalkScope
+import all ConAgua.Arena.WhnfCore
+import all ConAgua.Arena.WhnfDelta
+import all ConAgua.Arena.WhnfEntry
+import all ConAgua.Arena.WhnfIota
+import all ConAgua.Arena.WhnfIotaRec
+import all ConAgua.Arena.WhnfM2C
+import all ConAgua.Arena.WhnfProj
+import all ConAgua.Arena.WhnfSpineArgs
+import all ConAgua.Arena.WhnfSpineRefine
+import all ConAgua.Arena.ZeroStore
+import all ConAgua.Checker.Entry
+import all ConAgua.Checker.Hoist
+import all ConAgua.Checker.Prelude
+import all ConAgua.Checker.Presize
+import all ConAgua.Front.Apply
+import all ConAgua.Front.ApplyDecl
+import all ConAgua.Front.ApplyExpr
+import all ConAgua.Front.Driver
+import all ConAgua.Front.Fields
+import all ConAgua.Front.FieldsDecl
+import all ConAgua.Front.IdTable
+import all ConAgua.Front.IndApply
+import all ConAgua.Front.IndFields
+import all ConAgua.Front.Line
+import all ConAgua.Front.LineRec
+import all ConAgua.Front.NatDec
+import all ConAgua.Front.Unescape
+import all ConAgua.L.Examples
+import all ConAgua.Rom.CIRead
+import all ConAgua.Rom.PinRead
+import all ConAgua.Scan.Key
+import all ConAgua.Scan.Leaves
+import all ConAgua.Scan.Lit
+import all ConAgua.Scan.Member
+import all ConAgua.Scan.Records
+import all ConAgua.Scan.Str
+import all ConAgua.Scan.Utf8
+import all ConAgua.Scan.Values
 
 @[expose] public section
 
@@ -15,7 +153,7 @@ meta import ConAgua.Arena.LevelSubstLP
 # Phase B's read set in the checker's program (lane parmode)
 
 `phaseBFns`: every function `check_pending_go` (phase B's loop) reaches in `checkerProg`, as a
-literal computed from the program's call graph (581 names; `scripts/phaseb_fns.py` regenerates
+literal computed from the program's call graph (582 names; `scripts/phaseb_fns.py` regenerates
 it, and the check below fails if a callee is missing). None of them names the frozen buffer's
 arrays `OUT`, `HDRF`, `CTLF` (`Arena/Freeze.lean`) or any byte array: `checkerProg_phaseBReads`,
 so by `L.invoke_agree` (`L/Agree.lean`) a worker's run of `check_pending_go` is the run on any
@@ -56,8 +194,8 @@ def phaseBFns : List FnName :=
    "head_and_args", "head_hint", "head_is_proj", "head_proof_const", "head_proof_proj",
    "head_proof_pw", "head_type_const", "head_type_pw", "head_type_res", "hint_lt", "if_clear",
    "if_find", "if_put", "il_app", "il_bvar", "il_forall", "il_go", "il_lam", "il_let", "il_proj",
-   "ilg_app", "ilg_forall", "ilg_go", "ilg_lam", "ilg_let", "ilg_proj", "ilm_clear", "ilm_fit", "ilm_find",
-   "ilm_put", "ilp_clear", "ilp_find", "ilp_put", "ilpl_clear", "ilpl_find", "ilpl_put",
+   "ilg_app", "ilg_forall", "ilg_go", "ilg_lam", "ilg_let", "ilg_proj", "ilm_clear", "ilm_find",
+   "ilm_fit", "ilm_put", "ilp_clear", "ilp_find", "ilp_put", "ilpl_clear", "ilpl_find", "ilpl_put",
    "ilpls_clear", "ilpls_find", "ilpls_put", "imax_find", "imax_push", "in_clear", "in_find",
    "in_put", "ind_caps_check", "infer", "infer_app", "infer_app_io", "infer_body", "infer_body_io",
    "infer_const", "infer_forall", "infer_forall_io", "infer_io", "infer_lam", "infer_lam_io",

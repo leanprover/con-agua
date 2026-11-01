@@ -68,30 +68,30 @@ namespace L.Front
 
 /-- con-ron: ConRon/Arena/Frontend/ExportC.lean:117-122 ConRon.Arena.Frontend.StateD.name
 con-leche: ConLeche/Frontend/Scan/Types.lean:334-336 ConLeche.Frontend.IdTable.get? -/
-def nameGet : FunDecl := tblGetG NID "nsp_find"
+@[no_expose] def nameGet : FunDecl := tblGetG NID "nsp_find"
 
 /-- con-ron: ConRon/Arena/Frontend/ExportC.lean:124-129 ConRon.Arena.Frontend.StateD.level
 con-leche: ConLeche/Frontend/Scan/Types.lean:334-336 ConLeche.Frontend.IdTable.get? -/
-def levelGet : FunDecl := tblGetG LID "lsp_find"
+@[no_expose] def levelGet : FunDecl := tblGetG LID "lsp_find"
 
 /-- con-ron: ConRon/Arena/Frontend/ExportC.lean:151-156 ConRon.Arena.Frontend.StateD.freshName
 con-leche: ConLeche/Frontend/Scan/Types.lean:351-360 ConLeche.Frontend.IdTable.bound -/
-def nameFresh : FunDecl := tblFreshG NID "nsp_find"
+@[no_expose] def nameFresh : FunDecl := tblFreshG NID "nsp_find"
 
 /-- con-ron: ConRon/Arena/Frontend/ExportC.lean:158-161 ConRon.Arena.Frontend.StateD.freshLevel
 con-leche: ConLeche/Frontend/Scan/Types.lean:351-360 ConLeche.Frontend.IdTable.bound -/
-def levelFresh : FunDecl := tblFreshG LID "lsp_find"
+@[no_expose] def levelFresh : FunDecl := tblFreshG LID "lsp_find"
 
 /-- con-leche: ConLeche/Frontend/Scan/Types.lean:338-345 ConLeche.Frontend.IdTable.insert -/
-def namePut : FunDecl := tblPutG NID "nsp_find" "nsp_put"
+@[no_expose] def namePut : FunDecl := tblPutG NID "nsp_find" "nsp_put"
 
 /-- con-leche: ConLeche/Frontend/Scan/Types.lean:338-345 ConLeche.Frontend.IdTable.insert -/
-def levelPut : FunDecl := tblPutG LID "lsp_find" "lsp_put"
+@[no_expose] def levelPut : FunDecl := tblPutG LID "lsp_find" "lsp_put"
 
 /-! ## `front_init()` -/
 
 /-- con-ron: ConRon/Arena/Frontend/ExportC.lean:494-503 ConRon.Arena.Frontend.StateD.init -/
-@[l_impl ConRon.Arena.Frontend.StateD.init]
+@[no_expose, l_impl ConRon.Arena.Frontend.StateD.init]
 def frontInit : FunDecl := lfn () locals (h, z) {
   h := call intern_nanon();
   if h >= 4294967296 { abort };
@@ -107,7 +107,7 @@ def initK : Option Mem → Option Mem
   | some m₁ => putK LID 0 (zinternW m₁)
   | none => none
 
-@[arena_grind =] theorem initK_some (m₁ : Mem) : initK (some m₁) = putK LID 0 (zinternW m₁) := rfl
+@[arena_grind =] theorem initK_some (m₁ : Mem) : initK (some m₁) = putK LID 0 (zinternW m₁) := by rfl
 
 /-- The model of `front_init`: the memory after, or `none` where the L code aborts. -/
 def frontInitW (m : Mem) : Option Mem := initK (putK NID 0 (nainternW m))
@@ -115,7 +115,7 @@ def frontInitW (m : Mem) : Option Mem := initK (putK NID 0 (nainternW m))
 /-! ## `apply_nstr(i, pre, o, l)`, `apply_nnum(i, pre, x)` -/
 
 /-- con-ron: ConRon/Arena/Frontend/ExportC.lean:170-182 ConRon.Arena.Frontend.parseNameEntryD -/
-@[l_impl ConRon.Arena.Frontend.parseNameEntryD]
+@[no_expose, l_impl ConRon.Arena.Frontend.parseNameEntryD]
 def applyNStr : FunDecl := lfn (i, pre, o, l) locals (q, z, h) {
   q := call name_get(pre);
   z := call name_fresh(i);
@@ -132,7 +132,7 @@ def applyNStrW (m : Mem) (i pre o l : Word) : Option Mem :=
   else none
 
 /-- con-ron: ConRon/Arena/Frontend/ExportC.lean:170-182 ConRon.Arena.Frontend.parseNameEntryD -/
-@[l_impl ConRon.Arena.Frontend.parseNameEntryD]
+@[no_expose, l_impl ConRon.Arena.Frontend.parseNameEntryD]
 def applyNNum : FunDecl := lfn (i, pre, x) locals (q, z, h) {
   q := call name_get(pre);
   z := call name_fresh(i);
@@ -151,7 +151,7 @@ def applyNNumW (m : Mem) (i pre x : Word) : Option Mem :=
 /-! ## `apply_level(i, k, a, c)` -/
 
 /-- con-ron: ConRon/Arena/Frontend/ExportC.lean:184-193 ConRon.Arena.Frontend.parseLevelEntryD -/
-@[l_impl ConRon.Arena.Frontend.parseLevelEntryD]
+@[no_expose, l_impl ConRon.Arena.Frontend.parseLevelEntryD]
 def applyLevel : FunDecl := lfn (i, k, a, c) locals (u, v, h, z) {
   z := call level_fresh(i);
   if k == 1 {
@@ -204,7 +204,7 @@ def putLoop : Stmt := lblk (vs, ve, top, n, j, pt, pb) {
 }
 
 /-- con-ron: ConRon/Arena/Frontend/ExportC.lean:170-182 ConRon.Arena.Frontend.parseNameEntryD -/
-def strPut : FunDecl := lfn (vs, ve) locals (top, n, j, pt, pb) {
+@[no_expose] def strPut : FunDecl := lfn (vs, ve) locals (top, n, j, pt, pb) {
   if ve < vs { abort };
   if len(IN.u8) < ve { abort };
   top := CTL.u64[0];

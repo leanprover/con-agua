@@ -56,7 +56,7 @@ def nsmatchW (r p : Array Word) (_t i q o l h : Word) : Bool :=
     rdW r (i * 4 + 2) == l && eqW p (rdW r (i * 4 + 1)) o l 0
 
 /-- con-ron: none — the open-addressing table's own key hash/compare (the twin's `Std.HashMap`) -/
-def nsMatch : FunDecl := lfn (t, i, q, o, l, h) locals (k, e) {
+@[no_expose] def nsMatch : FunDecl := lfn (t, i, q, o, l, h) locals (k, e) {
   k := i * 4;
   if NSREC⟨t⟩[k] != q { return 0 };
   if NSREC⟨t⟩[k + 3] != h { return 0 };
@@ -143,7 +143,7 @@ The arena's `internNNode (.str pre s)`: the persistent probe, the scratch probe 
 tier is open, the append to the tier the store is in. -/
 
 /-- con-ron: ConRon/Arena/Store.lean:94-95 ConRon.Arena.Tbl.find? -/
-def nsFind : FunDecl := consFindG nstrCS
+@[no_expose] def nsFind : FunDecl := consFindG nstrCS
 
 /-- The node count of tier `t` of the name `str` table, `CTL[36 + t]`. -/
 def nscnt (m : Mem) (t : Word) : Word := rdW (m.arr64 CTL) (36 + t)
@@ -154,14 +154,14 @@ def nspushOK (m : Mem) (t : Word) : Bool :=
   decide (nscnt m t < (67108864 : Word)) && decide ((nscnt m t + 1) * 4 ≤ m.len64 (tierA NSREC t))
 
 /-- con-ron: ConRon/Arena/Store.lean:97-102 ConRon.Arena.Tbl.push -/
-def nsPush : FunDecl := consPushG nstrCS
+@[no_expose] def nsPush : FunDecl := consPushG nstrCS
 
 /-- The model of `intern_nstr`: the handle and the memory after, or `none` where the L code
 aborts (the library's `consInternM`). -/
 def nsinternW (m : Mem) (q o l : Word) : Option (Word × Mem) := consInternM nstrCS m [q, o, l]
 
 /-- con-ron: ConRon/Arena/Monad.lean:384-400 ConRon.Arena.internNNode -/
-@[l_impl ConRon.Arena.internNNode]
+@[no_expose, l_impl ConRon.Arena.internNNode]
 def internNStr : FunDecl := consInternG nstrCS
 
 /-- The name `str` store functions, as one `#eval`-able program. -/

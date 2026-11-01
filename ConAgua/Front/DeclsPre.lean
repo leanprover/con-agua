@@ -37,8 +37,8 @@ theorem StateD.freshLevel_pre : StateD.freshLevel (st.pre D) = StateD.freshLevel
 theorem StateD.freshExpr_pre : StateD.freshExpr (st.pre D) = StateD.freshExpr st := rfl
 theorem getDeclD_pre : getDeclD (st.pre D) = getDeclD st := rfl
 theorem parseCVD_pre : parseCVD (st.pre D) = parseCVD st := rfl
-theorem parseRuleD_pre : parseRuleD (st.pre D) = parseRuleD st := rfl
-theorem validateIndD_pre : validateIndD (st.pre D) = validateIndD st := rfl
+theorem parseRuleD_pre : parseRuleD (st.pre D) = parseRuleD st := by rfl
+theorem validateIndD_pre : validateIndD (st.pre D) = validateIndD st := by rfl
 
 theorem pushDecl_pre (d : IDeclaration) :
     pushDecl (st.pre D) d = StateD.pre D <$> pushDecl st d := by

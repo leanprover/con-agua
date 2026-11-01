@@ -11,6 +11,9 @@ import ConAgua.Arena.CoreErec
 import Std.Tactic.BVDecide.Normalize.BitVec
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
+import all ConAgua.Arena.IndSum
+import all ConAgua.Arena.RecGen
+import all ConAgua.Arena.Env
 
 @[expose] public section
 

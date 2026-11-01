@@ -5,6 +5,7 @@ public import ConAgua.Arena.IndPosSpec.PiBWStage
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
 public import ConAgua.Arena.IndPosSpec.NoGoStep
+import all ConAgua.Arena.IndPos
 
 @[expose] public section
 

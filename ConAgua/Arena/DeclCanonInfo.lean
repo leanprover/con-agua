@@ -11,6 +11,7 @@ import ConAgua.Arena.DeclRec
 import ConAgua.Arena.IndPartsSpec.RulePrefixAt
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
+import all ConAgua.Arena.DeclArmsCanon
 
 @[expose] public section
 

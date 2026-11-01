@@ -99,7 +99,7 @@ def constCS : ConsSch where
 /-! ## `const_find(t, n, us, h)`: the probe -/
 
 /-- con-ron: ConRon/Arena/Store.lean:94-95 ConRon.Arena.Tbl.find? -/
-def constFind : FunDecl := consFindG constCS
+@[no_expose] def constFind : FunDecl := consFindG constCS
 
 /-! ## `const_push(t, n, us, j)`: append a node to tier `t`, register it at slot `j` -/
 
@@ -112,7 +112,7 @@ def cepushOK (m : Mem) (t : Word) : Bool :=
     decide (cecnt m t < m.len64 (tierA CLP t))
 
 /-- con-ron: ConRon/Arena/Store.lean:97-102 ConRon.Arena.Tbl.push -/
-def constPush : FunDecl := consPushG constCS
+@[no_expose] def constPush : FunDecl := consPushG constCS
 
 /-! ## `intern_const(n, us)`: hash-cons the `const` node with children `n` and `us`
 
@@ -130,7 +130,7 @@ def ceinternW (m : Mem) (f a : Word) : Option (Word × Mem) := consInternM const
 
 /-- con-ron: ConRon/Arena/Monad.lean:249-267 ConRon.Arena.internE
 con-ron: ConRon/Arena/Monad.lean:221-247 ConRon.Arena.internNodeE -/
-@[l_impl ConRon.Arena.internE ConRon.Arena.internNodeE]
+@[no_expose, l_impl ConRon.Arena.internE ConRon.Arena.internNodeE]
 def internConst : FunDecl := consInternG constCS
 
 /-- The `const` store functions, as one `#eval`-able program. -/

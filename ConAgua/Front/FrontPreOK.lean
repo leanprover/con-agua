@@ -4,6 +4,7 @@ public import ConAgua.Front.FrontPre
 public import ConAgua.Checker.HoistWalkRef
 import ConAgua.Front.IndInstallRefine
 import ConRon.Bridge.Grind
+import all ConAgua.Front.IndApply
 
 @[expose] public section
 

@@ -9,6 +9,8 @@ import ConAgua.Arena.DerRel
 import ConAgua.Arena.IndView
 import ConAgua.Front.Preserve
 import ConRon.Bridge.Grind
+import all ConAgua.Arena.DefEq
+import all ConAgua.Arena.NatArms
 
 @[expose] public section
 

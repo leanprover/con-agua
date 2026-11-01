@@ -12,6 +12,7 @@ import Std.WP.Tactic
 import ConAgua.Arena.Env
 import ConAgua.Arena.IndPartsSpec.RulePrefixAt
 import Std.WP.Triple.SpecLemmas
+import all ConAgua.Arena.RecCheck
 
 @[expose] public section
 

@@ -13,6 +13,11 @@ import Std.WP.Triple.SpecLemmas
 public import ConAgua.Arena.CallF
 public import ConAgua.Arena.StripTeleSpec
 public import ConAgua.Arena.StubNames
+import all ConAgua.Arena.ConsLib
+import all ConAgua.Arena.IndIface
+import all ConAgua.Arena.NStrStore
+import all ConAgua.Arena.Store
+import all ConAgua.Arena.StubNames
 
 @[expose] public section
 
@@ -108,7 +113,7 @@ theorem decLen_eq : L.Stubs.decLen = lfn (x) locals (k) {
   k := 1;
   ⟪dlLoop⟫;
   return k
-} := rfl
+} := by rfl
 
 /-- The model of `dec_len`'s loop at the loop's fuel. -/
 def dlW : Nat → Word → Word → Option Word
@@ -192,7 +197,7 @@ theorem nameRecI_eq : L.Stubs.nameRecIL = lfn (n, i) locals (k, o, j, x, q, s, p
   s := call intern_nstr(n, o, k + 4);
   if s >= 4294967296 { abort };
   return s
-} := rfl
+} := by rfl
 
 /-- The model of the digit loop at the loop's fuel: the words of tier `pt` below the relative
 index `j` down to `pb + 4`. -/

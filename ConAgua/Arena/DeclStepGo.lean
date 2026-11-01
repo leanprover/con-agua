@@ -9,6 +9,7 @@ import ConAgua.L.GrindAttr
 import ConAgua.Arena.IndPartsSpec.RulePrefixAt
 public import ConAgua.Arena.DeclBase
 public import ConAgua.Arena.DeclCvg
+import all ConAgua.Arena.DeclStep
 
 @[expose] public section
 

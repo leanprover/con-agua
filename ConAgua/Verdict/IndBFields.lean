@@ -19,6 +19,7 @@ public import ConAgua.Arena.IndRealAbs
 public import ConAgua.Arena.RecGenSpec.CkcW
 public import ConAgua.Arena.Verdict
 public import ConAgua.Checker.NoVerdictFns
+import all ConAgua.Arena.RecGen
 
 @[expose] public section
 

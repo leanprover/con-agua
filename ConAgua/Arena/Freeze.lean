@@ -131,7 +131,7 @@ def hdrW : Nat := 10 + 2 * frozen.length
 
 `fz_i(o, c)` for the prefix image of `src` with extent `e` in header entry `i`: writes `(o, e)` into
 the header and, if `c ≠ 0`, the image at `OUT[o‥o+e)`; returns `o + e`. Locals `o c e`. -/
-def fzPreG (src : ArrId) (e : Expr) (i : Nat) : FunDecl :=
+@[no_expose] def fzPreG (src : ArrId) (e : Expr) (i : Nat) : FunDecl :=
   let body : Stmt :=
     .seq (.set 2 e) <|
     .seq (.ite (.cmp .ne (.var 1) (fzC 0))
@@ -147,7 +147,7 @@ def fzName (i : Nat) : FnName := "fz_" ++ toString i
 /-- con-ron: none — the phase boundary's copy (con-ron moves its tables, `freeze_tier`)
 
 The image function of frozen entry `i` (`entryProg` binds `fz_i` to it). -/
-def fzF (i : Nat) : FunDecl :=
+@[no_expose] def fzF (i : Nat) : FunDecl :=
   match frozen[i]? with
   | some (_, z) => fzPreG z.src z.e i
   | none => { nparams := 2, nlocals := 2, body := .abort (.const 0) }
@@ -159,7 +159,7 @@ def fzCalls : List Stmt := (List.range frozen.length).map fun i => .call [2] (fz
 
 `par_compact(vis, c)`: the frozen buffer (the images if `c ≠ 0`, then the header); returns its
 length. Locals `vis c o`. -/
-def parCompactL : FunDecl :=
+@[no_expose] def parCompactL : FunDecl :=
   let tail : Stmt :=
     .seq (.st64 OUT (fzC 0) (.const fzMagic)) <|
     .seq (.st64 OUT (fzC 1) (.var 2)) <|

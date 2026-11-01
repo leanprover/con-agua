@@ -20,6 +20,7 @@ import ConAgua.Arena.RefWalk
 import ConAgua.Checker.NoVerdictTree
 public import ConAgua.Arena.RecCheckSpec.TcmLook
 public import ConAgua.Arena.RecClassSpec.ClassNPcOf
+import all ConAgua.Arena.RecCheck
 
 @[expose] public section
 /-!

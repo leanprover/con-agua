@@ -8,6 +8,7 @@ import ConAgua.Arena.DeclCvg
 import ConAgua.Arena.WhnfDeltaRefine
 public import ConAgua.Arena.IndCallM
 public import ConAgua.Arena.WhnfDelta
+import all ConAgua.Arena.DeclArms
 
 @[expose] public section
 

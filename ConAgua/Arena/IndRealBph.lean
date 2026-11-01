@@ -8,6 +8,7 @@ import ConAgua.L.GrindAttr
 import ConAgua.Arena.LdRd
 import ConAgua.L.ModelGen
 import Std.Tactic.BVDecide.Normalize.BitVec
+import all ConAgua.Checker.Entry
 
 @[expose] public section
 

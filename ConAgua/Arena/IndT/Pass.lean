@@ -31,6 +31,7 @@ public import ConAgua.Arena.IndRealLvlZ
 public import ConAgua.Arena.IndT.KeepC
 public import ConAgua.Arena.IndT.Sum2
 public import ConRon.Bridge.Inductives.BlockTail
+import all ConAgua.Arena.IndInstall
 
 @[expose] public section
 

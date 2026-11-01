@@ -10,6 +10,8 @@ import ConAgua.Arena.IndMaster
 import ConAgua.Arena.IndPartsSpec.MemberNames
 import ConRon.Bridge.Grind
 public import ConAgua.Arena.SimLib
+import all ConAgua.Arena.IndIface
+import all ConAgua.Arena.WhnfDelta
 
 @[expose] public section
 

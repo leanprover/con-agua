@@ -6,6 +6,7 @@ import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import Std.WP.Triple.SpecLemmas
 public import ConAgua.Arena.StrLitBase
+import all ConAgua.Arena.StrLit
 
 @[expose] public section
 

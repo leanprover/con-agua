@@ -14,6 +14,7 @@ import ConAgua.Arena.IndSumSpec.StructProjArgP
 import ConAgua.Arena.RecClassSpec.Classes
 import ConAgua.Arena.RecClassSpec.MjProg
 import ConAgua.L.WordOff
+import all ConAgua.Arena.RecCheck
 
 @[expose] public section
 

@@ -28,7 +28,7 @@ namespace L.Stubs
 open L.Arena L.Ind
 
 /-- con-ron: ConRon/Arena/ExprOps.lean:1579-1585 ConRon.Arena.fvarB -/
-@[l_impl ConRon.Arena.fvarB]
+@[no_expose, l_impl ConRon.Arena.fvarB]
 def fvarBL : FunDecl := lfn (f, e) locals (r) {
   r := call ab_fvb(e, f);
   return r
@@ -39,7 +39,7 @@ def fvarBL : FunDecl := lfn (f, e) locals (r) {
 /-- `pin_range_has(n, k, hi)`: `n` is one of the pins `k ‥ hi - 1` (`pin_at`, in order). -/
 -- con-ron: ConRon/Arena/Core.lean:881-887 ConRon.Arena.natOpNames
 -- con-ron: ConRon/Arena/Core.lean:889-895 ConRon.Arena.natDivModNames
-def pinRangeHas : FunDecl := lfn (n, k, hi) locals (w, r) {
+@[no_expose] def pinRangeHas : FunDecl := lfn (n, k, hi) locals (w, r) {
   if hi <= k { return 0 };
   w := call pin_at(k);
   if w == n { return 1 };
@@ -51,7 +51,7 @@ def pinRangeHas : FunDecl := lfn (n, k, hi) locals (w, r) {
 `String`, `String.ofList`, `List`, `List.nil`, `List.cons`, `Char`, `Char.ofNat` (slots 1, 2, 3,
 5‥10, 12), all read first, as the twin builds its list. -/
 -- con-ron: ConRon/Arena/Core.lean:1463-1479 ConRon.Arena.litGuardNames
-@[l_impl ConRon.Arena.litGuardNames]
+@[no_expose, l_impl ConRon.Arena.litGuardNames]
 def litGuardHas : FunDecl := lfn (n) locals (a, b, c, d, f, g, h, i, j, k) {
   a := call pin_at(1); b := call pin_at(2); c := call pin_at(3); d := call pin_at(5);
   f := call pin_at(6); g := call pin_at(7); h := call pin_at(8); i := call pin_at(9);
@@ -62,7 +62,7 @@ def litGuardHas : FunDecl := lfn (n) locals (a, b, c, d, f, g, h, i, j, k) {
 }
 
 /-- con-ron: ConRon/Arena/Core.lean:1481-1496 ConRon.Arena.reservedRecName -/
-@[l_impl ConRon.Arena.reservedRecName]
+@[no_expose, l_impl ConRon.Arena.reservedRecName]
 def reservedRecNameL : FunDecl := lfn (n) locals (r) {
   r := call reserved_contains(n);
   if r != 0 { return 1 };
@@ -78,7 +78,7 @@ def reservedRecNameL : FunDecl := lfn (n) locals (r) {
 
 /-- `pool_room(k)`: `k` words at the pool top, reserved (the top raised): their offset. -/
 -- con-ron: none — L scratch-array plumbing (the twin's strings are values)
-def poolRoom : FunDecl := lfn (k) locals (o) {
+@[no_expose] def poolRoom : FunDecl := lfn (k) locals (o) {
   o := CTL.u64[0];
   if o + k < o { abort };
   if len(POOL⟨⦃o⦄.tier⟩) < ⦃o⦄.idx + k { abort };
@@ -88,7 +88,7 @@ def poolRoom : FunDecl := lfn (k) locals (o) {
 
 /-- `name_rec(n)`: the name `n.rec`. -/
 -- con-ron: ConRon/Arena/Inductives/BlockParts.lean:291-299 ConRon.Arena.blockRecNameSetOk
-def nameRecL : FunDecl := lfn (n) locals (o, s, pt, pb) {
+@[no_expose] def nameRecL : FunDecl := lfn (n) locals (o, s, pt, pb) {
   o := call pool_room(3);
   pt := ⦃o⦄.tier;
   pb := ⦃o⦄.idx;
@@ -103,7 +103,7 @@ def nameRecL : FunDecl := lfn (n) locals (o, s, pt, pb) {
 /-- `dec_len(x)`: the number of decimal digits of `x` (`1` for `0`); `x / 10` is
 `mulhi(x, ⌈2^67 / 10⌉) >> 3`, exact on every word. -/
 -- con-ron: none — `Nat.repr`'s length (the twin's `s!"rec_{i + 1}"`)
-def decLen : FunDecl := lfn (x) locals (k) {
+@[no_expose] def decLen : FunDecl := lfn (x) locals (k) {
   k := 1;
   while 9 < x {
     x := mulhi(x, 14757395258967641293) >> 3;
@@ -114,7 +114,7 @@ def decLen : FunDecl := lfn (x) locals (k) {
 
 /-- `name_rec_i(n, i)`: the name `n.rec_i` (`i` in decimal). -/
 -- con-ron: ConRon/Arena/Inductives/RecCheck.lean:367-402 ConRon.Arena.targetRecPins
-def nameRecIL : FunDecl := lfn (n, i) locals (k, o, j, x, q, s, pt, pb) {
+@[no_expose] def nameRecIL : FunDecl := lfn (n, i) locals (k, o, j, x, q, s, pt, pb) {
   k := call dec_len(i);
   o := call pool_room(k + 4);
   pt := ⦃o⦄.tier;
@@ -140,7 +140,7 @@ def nameRecIL : FunDecl := lfn (n, i) locals (k, o, j, x, q, s, pt, pb) {
 
 /-- `iw_pool(s, d, l)`: `POOL[d + j] := IW[s + j]` for `j < l`. -/
 -- con-ron: none — L scratch-array plumbing (the twin's list is a value)
-def iwPool : FunDecl := lfn (s, d, l) locals (u, pt, pb) {
+@[no_expose] def iwPool : FunDecl := lfn (s, d, l) locals (u, pt, pb) {
   if l == 0 { return 0 };
   pt := ⦃d⦄.tier;
   pb := ⦃d⦄.idx;
@@ -152,7 +152,7 @@ def iwPool : FunDecl := lfn (s, d, l) locals (u, pt, pb) {
 /-- `intern_ls_iw(o, l)`: the `IW` slice of level handles, copied to the pool top and interned
 as a list node. -/
 -- con-ron: ConRon/Arena/Monad.lean:502-518 ConRon.Arena.internLsNode
-def internLsIwL : FunDecl := lfn (o, l) locals (top, u, h) {
+@[no_expose] def internLsIwL : FunDecl := lfn (o, l) locals (top, u, h) {
   top := call pool_room(l);
   u := call iw_pool(o, top, l);
   h := call intern_ls(top, l);

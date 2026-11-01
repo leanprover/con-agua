@@ -232,6 +232,14 @@ fact is that the regions are disjoint and in bounds, proved once in the compiler
   bridge, con-leche, Lean's core library) write `import all` of that module (`import all
   Init.Data.List.Control` for `List.allM`, `import all Init.Data.Repr` for `toString` on a number).
   Generated files get their header from `scripts/lean_module.py`.
+  **L functions are `@[no_expose]`** (lane lcutoff, `docs/design/lcutoff.md`): every `def f : FunDecl`
+  (and every schema-generic `def fooG (S : …) : FunDecl`), so an edit of its body rebuilds only the
+  modules that `import all` its module, the `meta` importers, and what the changed compiled program
+  reaches, not the public import closure. A proof that unfolds an L function of another module
+  (`simp only [callFn, fooL]`, an `l_model` group with it, `decide` or `rfl` over its body, a
+  whole-program kernel check over `checkerProg`) writes `import all` of that module (the generators
+  take the list from `lean_module.body_modules`); an equation about an L function is
+  `theorem … := by rfl`, not `:= rfl` (an exported `rfl` theorem is checked in the public view).
 - **Memory hygiene for new modules:** first elaborate a new or heavily changed module alone (`lake env lean F.lean`) under an RSS guard of ~6 GB, then `lake build`. Never pass `by decide +kernel` (or `decide` on string/list lookups) inline as an argument over program-sized data: state it as its own small lemma (`simp only [defs]; decide`) or use per-function lookups (ProgHas, prog_wf). Past offenders: whole-program Prog.wf (19 GB), CoreErec (20 GB), LoopCore (16 GB), StageInst1 (17 GB, inline `∀ b ∈ instA, b < 64`). Also: many chained `(c + k).toNat = c.toNat + k` hypotheses in context make every later `omega` exponential (CIReadRefCaps, >15 GB): don't state them; use `off_omega` or `simp (disch := omega) only [off_toNat]` from `ConAgua/L/WordOff.lean` (natsurvey.md §4), or keep one `∀` fact.
 - **e2e in a worktree:** run `scripts/e2e.py --latest ''` (or `--no-perf`), so a branch run does not overwrite the shared baseline `_tmp/e2e/latest/results.json` (only the census watcher refreshes it, from master).
 - **Emergency fixes: when the coordinator says a fix landed (e.g. a memory hog, like erecfix: IndCore/CoreErec from ~22 GB to ~3 GB), merge master before your next build.** Otherwise merging only before landing is fine. A coordinator watchdog (`_tmp/memwatch.sh`) kills any single `lean` process above 16 GB.

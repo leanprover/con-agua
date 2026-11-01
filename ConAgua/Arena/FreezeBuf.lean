@@ -241,7 +241,7 @@ theorem bufMem_arr (B : Array Word) (r : Mem) (j : Word) (b : TieredArray) :
     (bufMem B r j).arr64 b =
       (match frozenIdsL.idxOf? b with
        | some i => bufImg B i
-       | none => if parOwnedL.contains b then r.arr64 b else #[]) := rfl
+       | none => if parOwnedL.contains b then r.arr64 b else #[]) := by rfl
 
 theorem bufMem_glob_init (B : Array Word) (r : Mem) (j : Word) :
     (bufMem B r j).glob INIT = r.glob INIT := rfl

@@ -94,7 +94,7 @@ def u64W (i : Word) : Word :=
     romB rom (i + 6) * 281474976710656 + romB rom (i + 7) * 72057594037927936
 
 /-- con-ron: none — the ROM reader (L has constant bytes where the twin has con-leche values) -/
-def romU64 : FunDecl := lfn (i) locals (x) {
+@[no_expose] def romU64 : FunDecl := lfn (i) locals (x) {
   if len(rom.c8) < i + 8 || i + 8 < i { abort };
   x := le64!(rom.c8, i);
   return x
@@ -286,7 +286,7 @@ variable (rom : List UInt8)
 -- The names' strings must be ASCII (`scan!` for a byte `≥ 128`): then the bytes are some
 -- `String`'s UTF-8 (the pin data is untrusted, DESIGN.md "The pin data as an input"); they go to
 -- the pool top as one block (`copy!`; lane blkcopy2).
-def romPut : FunDecl := lfn (i, l) locals (top, j, pt, pb, e) {
+@[no_expose] def romPut : FunDecl := lfn (i, l) locals (top, j, pt, pb, e) {
   if len(rom.c8) < i + l || i + l < i { abort };
   e := i + l;
   j := scan!(rom.c8, i, e, hiC);
@@ -622,7 +622,7 @@ theorem romNameW_rec (n : Nat) (m : Mem) (pos : Word) (h0 : romB rom pos ≠ 0) 
   simp [romNameW, h0]
 
 /-- con-ron: none — the ROM reader (L has constant bytes where the twin has con-leche values) -/
-def romName : FunDecl := lfn (pos) locals (t, h, q, l, o) {
+@[no_expose] def romName : FunDecl := lfn (pos) locals (t, h, q, l, o) {
   t := rom.c8[pos];
   if t == 0 {
     h := call intern_nanon();
@@ -649,7 +649,7 @@ section nameArms
 variable (rom : List UInt8) (h q l t pos o h' : Word) (m m₁ m₂ m₃ : Mem)
 theorem nmAnonK_some (hh : ¬ 4294967296 ≤ h) : nmAnonK pos (some (h, m)) = some (h, pos + 1, m) := by
   simp [nmAnonK, hh]
-theorem nmStrK_some : nmStrK h q l (some (o, m₂)) = nmStr2K q l (nsinternW m₂ h o l) := rfl
+theorem nmStrK_some : nmStrK h q l (some (o, m₂)) = nmStr2K q l (nsinternW m₂ h o l) := by rfl
 theorem nmStr2K_some (hh : ¬ 4294967296 ≤ h') : nmStr2K q l (some (h', m₃)) = some (h', q + 8 + l, m₃) := by
   simp [nmStr2K, hh]
 theorem nmNumK_some (hh : ¬ 4294967296 ≤ h') : nmNumK q (some (h', m₂)) = some (h', q + 8, m₂) := by

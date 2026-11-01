@@ -11,6 +11,7 @@ import Std.Tactic.BVDecide.Normalize.Bool
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
 public import ConAgua.Arena.StrLitBase
+import all ConAgua.Arena.StrLit
 
 @[expose] public section
 

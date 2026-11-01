@@ -6,6 +6,7 @@ public import ConLeche.Frontend.Scan.Fast
 import ConAgua.Scan.Link
 import ConAgua.Scan.WordLink
 import Std.Tactic.BVDecide.Normalize.Prop
+import all ConAgua.Scan.Leaves
 
 @[expose] public section
 

@@ -61,7 +61,7 @@ theorem lookupW_next (n : Nat) (m : Mem) (ko kc vo vc w : Word) (h : ¬ (kc = 0 
   rw [lookupW]; simp only [h, hw, ↓reduceIte]
 
 /-- con-leche: ConLeche/Kernel/Level.lean:31-42 ConLeche.Level.subst -/
-def lvLookupG : FunDecl := lfn (ko, kc, vo, vc, w) locals (f, v) {
+@[no_expose] def lvLookupG : FunDecl := lfn (ko, kc, vo, vc, w) locals (f, v) {
   if kc == 0 || vc == 0 { return (0, 0) };
   if KA.u64[ko] == w { return (1, VA⦃vo⦄) };
   (f, v) := call lv_lookup(ko + 1, kc - 1, vo + 1, vc - 1, w);
@@ -111,7 +111,7 @@ end arms
 
 /-- con-leche: ConLeche/Kernel/Level.lean:31-42 ConLeche.Level.subst
 con-leche: ConLeche/Kernel/Level.lean:31-42 ConLeche.Level.subst.go -/
-@[l_impl ConLeche.Level.subst ConLeche.Level.subst.go]
+@[no_expose, l_impl ConLeche.Level.subst ConLeche.Level.subst.go]
 def lvSubstL : FunDecl := lfn (l, ko, kc, vo, vc) locals (g, a, b, x, y, f, v) {
   (g, a, b) := call lv_node(l);
   if g == 0 { return l };
@@ -164,7 +164,7 @@ theorem spK_zero : spK KA VA PA n po pc ko kc vo vc (some (0, m₁)) =
 end arms2
 
 /-- con-leche: ConLeche/Kernel/Level.lean:199-205 ConLeche.Level.substPW -/
-def lvSpwG : FunDecl := lfn (po, pc, ko, kc, vo, vc) locals (f, v, x, w) {
+@[no_expose] def lvSpwG : FunDecl := lfn (po, pc, ko, kc, vo, vc) locals (f, v, x, w) {
   if pc == 0 { return 0 };
   w := PA.u64[po];
   (f, v) := call lv_lookup(ko, kc, vo, vc, w);
@@ -181,7 +181,7 @@ def substPWW (n : Nat) (m : Mem) (kd po pc ko kc vo vc : Word) : Option (Word ×
   | n + 1 => if kd = 0 then some (1, m) else spwW KA VA PA n m po pc ko kc vo vc
 
 /-- con-leche: ConLeche/Kernel/Level.lean:199-205 ConLeche.Level.substPW -/
-@[l_impl ConLeche.Level.substPW]
+@[no_expose, l_impl ConLeche.Level.substPW]
 def lvSubstPW : FunDecl := lfn (kd, po, pc, ko, kc, vo, vc) locals (x) {
   if kd == 0 { return 1 };
   x := call lv_spw(po, pc, ko, kc, vo, vc);

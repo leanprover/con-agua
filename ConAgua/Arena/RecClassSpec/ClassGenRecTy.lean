@@ -15,6 +15,7 @@ import ConAgua.Arena.RecClassSpec.PiBWRoom
 import ConAgua.Arena.RecClassSpec.Rec2AppendWDec
 import ConAgua.Arena.RecStab
 public import ConAgua.Arena.RecClassSpec.ClassGenMajorCi
+import all ConAgua.Arena.RecClass
 
 @[expose] public section
 
@@ -107,7 +108,7 @@ theorem rec2RecTy_eq (G : ClassGen) (c : Nat) : ConRon.Arena.classGenRecTy G c =
     | none => pure none
     | some (ifs, maj) => do
       let t ← internE (.fvar (G.pre.length + ifs.length) maj)
-      rec2RecTyTail G c ifs maj t) := rfl
+      rec2RecTyTail G c ifs maj t) := by rfl
 
 section sims
 variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}

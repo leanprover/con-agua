@@ -9,6 +9,7 @@ import ConAgua.Arena.IndInstallSpec.DomsW
 import ConAgua.Arena.IndMaster
 import ConRon.Bridge.Grind
 import Std.Tactic.BVDecide.Normalize.BitVec
+import all ConAgua.Arena.IndSum
 
 @[expose] public section
 

@@ -7,6 +7,8 @@ public import ConAgua.L.GrindAttr
 import Std.Tactic.BVDecide.Normalize.BitVec
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
+import all ConAgua.Arena.IndPos
+import all ConAgua.Arena.IndPos2
 
 @[expose] public section
 

@@ -15,6 +15,7 @@ import ConAgua.Arena.RefWalk
 import ConAgua.Arena.StageC
 import ConAgua.Checker.NoVerdictTree
 public import ConAgua.Arena.IndPosSpec.NestBlockOfKey
+import all ConAgua.Arena.IndSum
 
 @[expose] public section
 

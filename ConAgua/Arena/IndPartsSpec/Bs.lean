@@ -11,6 +11,8 @@ public import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
 public import ConAgua.Arena.IndParts
+import all ConAgua.Arena.IndIface
+import all ConAgua.Arena.IndParts
 
 @[expose] public section
 

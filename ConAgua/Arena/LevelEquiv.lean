@@ -67,7 +67,7 @@ grind_pattern [level_grind] ltK₂_some => ltK₁.ltK₂ n x (some (y, m₁))
 
 /-- con-leche: ConLeche/Kernel/Level.lean:144-146 ConLeche.Level.leq
 con-leche: ConLeche/Kernel/Level.lean:139-142 ConLeche.Level.defaultFuel -/
-@[l_impl ConLeche.Level.leq ConLeche.Level.defaultFuel]
+@[no_expose, l_impl ConLeche.Level.leq ConLeche.Level.defaultFuel]
 def lvLeqTop : FunDecl := lfn (l, r) locals (x, y) {
   x := call lv_simp(l);
   y := call lv_simp(r);
@@ -132,7 +132,7 @@ grind_pattern [level_grind] evK₅_stop => evK₁.evK₅ n x y (some (z, m₁))
 grind_pattern [level_grind] evK₅_go => evK₁.evK₅ n x y (some (2, m₁))
 
 /-- con-leche: ConLeche/Kernel/Level.lean:148-167 ConLeche.Level.isEquiv -/
-@[l_impl ConLeche.Level.isEquiv]
+@[no_expose, l_impl ConLeche.Level.isEquiv]
 def lvEquiv : FunDecl := lfn (l, r) locals (x, y, z) {
   z := call lv_eq(l, r);
   if z != 0 { return 2 };
@@ -185,7 +185,7 @@ grind_pattern [level_grind] esK_stop => esK n a ln b k (some (z, m₁))
 grind_pattern [level_grind] esK_go => esK n a ln b k (some (2, m₁))
 
 /-- con-leche: ConLeche/Kernel/Level.lean:169-175 ConLeche.Level.isEquivList -/
-@[l_impl ConLeche.Level.isEquivList]
+@[no_expose, l_impl ConLeche.Level.isEquivList]
 def lvEquivs : FunDecl := lfn (a, n, b, k) locals (z) {
   if n == 0 || k == 0 { if n == k { return 2 }; return 1 };
   z := call lv_equiv(POOL⦃a⦄, POOL⦃b⦄);
@@ -257,7 +257,7 @@ fresh heap (the top reset to `0`). The verdict cache `lvlEqC` is `lvl_eq_c`'s, i
 function (`CoreLevels.lean`); this is the uncached computation (`LevelArena.lean`,
 `lvlEq_refines`). -/
 -- con-ron: ConRon/Arena/Core.lean:137-154 ConRon.Arena.lvlEq?
-@[l_impl ConRon.Arena.lvlEq?]
+@[no_expose, l_impl ConRon.Arena.lvlEq?]
 def lvlEqL : FunDecl := lfn (u, v) locals (z) {
   CTL.u64[192] := 0;
   z := call lv_equiv(u, v);
@@ -291,7 +291,7 @@ def lsNodeW (m : Mem) (h : Word) : List Word :=
   else [tfld m LVLS (tierW h) (idxW h) 0, tfld m LVLS (tierW h) (idxW h) 1]
 
 /-- con-ron: ConRon/Arena/Monad.lean:494-500 ConRon.Arena.viewLs -/
-def lsNode : FunDecl := lfn (h) locals (t, i) {
+@[no_expose] def lsNode : FunDecl := lfn (h) locals (t, i) {
   if ⟦h⟧.tag != 0 { abort };
   (t, i) := node LVLS⟦h⟧;
   return (LVLS⟨t, i⟩.o, LVLS⟨t, i⟩.l)
@@ -324,7 +324,7 @@ def lvlsEqW : Nat → Mem → Word → Word → Option (Word × Mem)
 /-- con-ron's `lvlsEq?` (`Arena/Core.lean:155`) on two level-list handles: `isEquivList` on their
 slices, on a fresh heap; the verdict cache `lvlsEqC` is not represented (as for `lvl_eq`). -/
 -- con-ron: ConRon/Arena/Core.lean:156-173 ConRon.Arena.lvlsEq?
-@[l_impl ConRon.Arena.lvlsEq?]
+@[no_expose, l_impl ConRon.Arena.lvlsEq?]
 def lvlsEqL : FunDecl := lfn (us, vs) locals (a, n, b, k, z) {
   (a, n) := call ls_node(us);
   (b, k) := call ls_node(vs);

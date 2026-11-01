@@ -9,6 +9,7 @@ import ConAgua.Checker.NoVerdictTree
 public import ConAgua.Arena.Verdict
 public import ConAgua.Checker.NoVerdictFns
 public import ConAgua.Checker.PipePrelude
+import all ConAgua.Checker.Prelude
 
 @[expose] public section
 

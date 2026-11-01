@@ -9,6 +9,7 @@ import ConAgua.L.GrindAttr
 import ConRon.Bridge.Grind
 import ConAgua.Arena.PromoteNRef
 public import ConAgua.Arena.LevelApd
+import all ConAgua.Arena.InstLP
 
 @[expose] public section
 

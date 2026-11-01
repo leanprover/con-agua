@@ -4,6 +4,8 @@ public import ConAgua.Arena.DeclNatBase
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConRon.Bridge.Grind
+import all ConAgua.Arena.DeclArmsNat
+import all ConAgua.Arena.Pins
 
 @[expose] public section
 

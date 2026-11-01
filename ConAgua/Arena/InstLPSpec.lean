@@ -9,6 +9,7 @@ import Std.Tactic.BVDecide.Normalize.BitVec
 public import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
+import all ConAgua.Arena.InstLP
 
 @[expose] public section
 
@@ -254,7 +255,7 @@ def spnLsK (l : Word) (top : Word) : Option Mem → Option (Word × Mem)
 @[arena_grind =] theorem spnLsK_some (l top : Word) (m₁ : Mem) :
     spnLsK l top (some m₁) = match lsinternW (m₁.set64 CTL 0 (top + l)) top l with
       | none => none
-      | some (h, m₂) => if 4294967296 ≤ h then none else some (h, m₂) := rfl
+      | some (h, m₂) => if 4294967296 ≤ h then none else some (h, m₂) := by rfl
 
 /-- **The model of `spn_ls`.** -/
 def spnLsW : Nat → Mem → Word → Word → Option (Word × Mem)

@@ -21,6 +21,9 @@ import Std.Tactic.BVDecide.Normalize.BitVec
 public import ConAgua.Arena.IndPartsSpec.RecTW
 public import ConAgua.Arena.IndRealOpf
 public import ConAgua.Arena.RecClassSpec.Classes
+import all ConAgua.Arena.IndIface
+import all ConAgua.Arena.IndParts
+import all ConAgua.Arena.RecClass
 
 @[expose] public section
 

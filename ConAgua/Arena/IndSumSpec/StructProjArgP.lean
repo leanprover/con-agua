@@ -8,6 +8,7 @@ import ConAgua.L.GrindAttr
 public import ConAgua.Arena.IndRealFvtD
 import ConAgua.Arena.IndMaster
 import ConRon.Bridge.Grind
+import all ConAgua.Arena.IndSum
 
 @[expose] public section
 
@@ -225,7 +226,7 @@ def spaK (T j : Word) : Option (Word × Mem) → Option (List Word × Mem)
 /-- **The model of `struct_proj_arg_p`.** -/
 def spaW (m : Mem) (T j : Word) : Option (List Word × Mem) := spaK T j (binternW m 0)
 
-theorem spaK_some (T j b : Word) (m1 : Mem) : spaK T j (some (b, m1)) = spaK2 (mkProjW m1 T j b) := rfl
+theorem spaK_some (T j b : Word) (m1 : Mem) : spaK T j (some (b, m1)) = spaK2 (mkProjW m1 T j b) := by rfl
 theorem spaK2_some (e : Word) (m2 : Mem) : spaK2 (some (e, m2)) = some ([e], m2) := rfl
 grind_pattern [ind_grind] spaK_some => spaK T j (some (b, m1))
 grind_pattern [ind_grind] spaK2_some => spaK2 (some (e, m2))

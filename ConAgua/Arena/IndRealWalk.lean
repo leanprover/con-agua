@@ -10,6 +10,20 @@ public import ConAgua.Arena.HasFvar
 public import ConAgua.Arena.StripTeleSpec
 public import ConAgua.Arena.WhnfCoreApp
 public import ConAgua.Arena.WriteSets
+import all ConAgua.Arena.StubNames
+import all ConAgua.Arena.Abs1
+import all ConAgua.Arena.AppStore
+import all ConAgua.Arena.BVarStore
+import all ConAgua.Arena.ConsLib
+import all ConAgua.Arena.ExprMk
+import all ConAgua.Arena.FVarRange
+import all ConAgua.Arena.ForallStore
+import all ConAgua.Arena.HasFvar
+import all ConAgua.Arena.LamStore
+import all ConAgua.Arena.LetStore
+import all ConAgua.Arena.LiftL
+import all ConAgua.Arena.MemoLib
+import all ConAgua.Arena.ProjStore
 
 @[expose] public section
 

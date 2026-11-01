@@ -2,6 +2,7 @@ module
 
 public import ConAgua.Arena.FreezeRel
 import ConAgua.L.Blocks
+import all ConAgua.Arena.Freeze
 
 @[expose] public section
 
@@ -208,7 +209,7 @@ def pcOK (c : Word) : List Nat → Mem → Word → Bool
 /-- The call `o := fz_i(o, c)`. -/
 def fzCall (i : Nat) : Stmt := .call [2] (fzName i) [.var 2, .var 1]
 
-theorem fzCalls_eq : fzCalls = (List.range frozen.length).map fzCall := rfl
+theorem fzCalls_eq : fzCalls = (List.range frozen.length).map fzCall := by rfl
 
 theorem St.setLoc_setLoc_same (s : St) (x : Var) (a b : Word) :
     (s.setLoc x a).setLoc x b = s.setLoc x b := by
@@ -342,7 +343,7 @@ def pcTailS : Stmt :=
     .ret [.var 2]
 
 theorem parCompactL_eq : parCompactL =
-    { nparams := 2, nlocals := 3, body := .seq (.set 2 (fzC hdrW)) (fzCalls.foldr .seq pcTailS) } := rfl
+    { nparams := 2, nlocals := 3, body := .seq (.set 2 (fzC hdrW)) (fzCalls.foldr .seq pcTailS) } := by rfl
 
 theorem fzCalls_lookup {p : Prog} (hfz : ∀ i < frozen.length, p.lookup (fzName i) = some (fzF i)) :
     ∀ i ∈ List.range frozen.length, i < frozen.length ∧ p.lookup (fzName i) = some (fzF i) :=

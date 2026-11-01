@@ -7,6 +7,7 @@ import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.Arena.IndPartsSpec.MemberNames
+import all ConAgua.Rom.PinRead
 
 @[expose] public section
 

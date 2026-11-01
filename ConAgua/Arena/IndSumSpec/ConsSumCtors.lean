@@ -11,6 +11,7 @@ import ConAgua.L.WordOff
 import ConRon.Bridge.Grind
 public import ConAgua.Arena.IndDecStab
 public import ConAgua.Arena.WhnfBase
+import all ConAgua.Arena.IndSum
 
 @[expose] public section
 

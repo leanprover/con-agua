@@ -126,7 +126,7 @@ def shl1Loop : Stmt := lblk (r, n, bit, i, c, x, rt, rb) {
 
 /-- `div_shl1(r, n, bit)`: `R := 2 R + bit` in place; returns the carry out. -/
 -- con-ron: none — limb arithmetic of the bignum (con-ron `ron/nat.rs`); the twin computes on `Nat`
-def divShl1 : FunDecl := lfn (r, n, bit) locals (i, c, x, rt, rb) {
+@[no_expose] def divShl1 : FunDecl := lfn (r, n, bit) locals (i, c, x, rt, rb) {
   rt := ⦃r⦄.tier;
   rb := ⦃r⦄.idx;
   c := bit;
@@ -145,7 +145,7 @@ def dsubLoop : Stmt := lblk (r, n, ob, lb, i, c, x, y, rt, rb) {
 
 /-- `div_sub(r, n, ob, lb)`: `R := R - b` in place (`b` zero-extended); returns the borrow. -/
 -- con-ron: none — limb arithmetic of the bignum (con-ron `ron/nat.rs`); the twin computes on `Nat`
-def divSub : FunDecl := lfn (r, n, ob, lb) locals (i, c, x, y, rt, rb) {
+@[no_expose] def divSub : FunDecl := lfn (r, n, ob, lb) locals (i, c, x, y, rt, rb) {
   rt := ⦃r⦄.tier;
   rb := ⦃r⦄.idx;
   ⟪dsubLoop⟫;
@@ -163,7 +163,7 @@ def daddLoop : Stmt := lblk (r, n, ob, lb, i, c, x, y, rt, rb) {
 
 /-- `div_add(r, n, ob, lb)`: `R := R + b` in place (`b` zero-extended); returns the carry. -/
 -- con-ron: none — limb arithmetic of the bignum (con-ron `ron/nat.rs`); the twin computes on `Nat`
-def divAdd : FunDecl := lfn (r, n, ob, lb) locals (i, c, x, y, rt, rb) {
+@[no_expose] def divAdd : FunDecl := lfn (r, n, ob, lb) locals (i, c, x, y, rt, rb) {
   rt := ⦃r⦄.tier;
   rb := ⦃r⦄.idx;
   ⟪daddLoop⟫;
@@ -551,7 +551,7 @@ grind_pattern [arena_grind] SliceOK.top0 => SliceOK m o 0
 /-- One bit of the dividend: `R := 2 R + bit`, then subtract `b`, restoring on a borrow; returns
 the quotient bit (the body of con-ron's `dm_bits`). -/
 -- con-ron: none — limb arithmetic of the bignum (con-ron `ron/nat.rs`); the twin computes on `Nat`
-def divStep : FunDecl := lfn (r, n, ob, lb, bit) locals (c) {
+@[no_expose] def divStep : FunDecl := lfn (r, n, ob, lb, bit) locals (c) {
   c := call div_shl1(r, n, bit);
   c := call div_sub(r, n, ob, lb);
   if c != 0 {
@@ -590,7 +590,7 @@ def rzLoop : Stmt := lblk (oa, la, ob, lb, top, n, ro, i, x, q, j, c, pa, pq, pt
 }
 
 /-- con-ron: ConRon/Arena/Core.lean:999-1040 ConRon.Arena.natOpResult -/
-@[l_impl ConRon.Arena.natOpResult]
+@[no_expose, l_impl ConRon.Arena.natOpResult]
 def natDivmod : FunDecl := lfn (oa, la, ob, lb) locals (top, n, ro, i, x, q, j, c, pa, pq, pt, pb) {
   top := CTL.u64[0];
   pt := ⦃top⦄.tier;

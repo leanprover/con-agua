@@ -86,6 +86,6 @@ theorem isCopied_front_run : isCopied preTree "front_run" = true := by
   rw [← inT_preCT]; decide
 
 set_option maxRecDepth 100000 in
-theorem checkerProg_builtin : checkerProg.lookup "builtin_prelude" = some builtinPreludeL := rfl
+theorem checkerProg_builtin : checkerProg.lookup "builtin_prelude" = some builtinPreludeL := by rfl
 
 end L.Checker

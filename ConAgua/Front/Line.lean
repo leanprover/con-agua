@@ -43,7 +43,7 @@ open L.Front.Unescape (strPutEscW strPutEsc_specW escSur escOne utf8Put strPutEs
 namespace L.Front
 
 /-- con-ron: ConRon/Arena/Frontend/ExportC.lean:468-481 ConRon.Arena.Frontend.applyLine -/
-@[l_impl ConRon.Arena.Frontend.applyLine]
+@[no_expose, l_impl ConRon.Arena.Frontend.applyLine]
 -- con-leche: ConLeche/Frontend/Scan/Fast.lean:2576-2599 ConLeche.Frontend.scanLineFwd
 def frontLine : FunDecl := lfn (i) locals (ok, nx, s, pl, idx, a, c, d, j, q) {
   s := call skip_ws(i);
@@ -65,7 +65,7 @@ def frontLine : FunDecl := lfn (i) locals (ok, nx, s, pl, idx, a, c, d, j, q) {
 /-- A declaration line: its fields, applied (an inductive block by `apply_ind` at its value's
 position `nm`, `IndApply.lean`; a line that does not read aborts). -/
 -- con-ron: ConRon/Arena/Frontend/ExportC.lean:468-481 ConRon.Arena.Frontend.applyLine
-def applyDLine : FunDecl := lfn (j) locals (pl, nm, lps, ty, vl, hk, hn, fl, z) {
+@[no_expose] def applyDLine : FunDecl := lfn (j) locals (pl, nm, lps, ty, vl, hk, hn, fl, z) {
   (pl, nm, lps, ty, vl, hk, hn, fl) := call rec_decl_line(j);
   if pl == 0 { abort };
   if pl == 25 {
@@ -78,7 +78,7 @@ def applyDLine : FunDecl := lfn (j) locals (pl, nm, lps, ty, vl, hk, hn, fl, z) 
 
 /-- A name or level line with fields `(pl, idx, a, c, d)`, applied. -/
 -- con-ron: ConRon/Arena/Frontend/ExportC.lean:468-481 ConRon.Arena.Frontend.applyLine
-def applyRec : FunDecl := lfn (pl, idx, a, c, d) locals (z) {
+@[no_expose] def applyRec : FunDecl := lfn (pl, idx, a, c, d) locals (z) {
   if pl == 0 { abort };
   if pl == 7 { return 0 };
   if idx == 18446744073709551615 || a == 18446744073709551615 { abort R_LONG_NUMBER };
@@ -97,7 +97,7 @@ def applyRec : FunDecl := lfn (pl, idx, a, c, d) locals (z) {
 
 /-- A `str` name line: the body `[c, d)`, unescaped into the pool and applied. -/
 -- con-ron: ConRon/Arena/Frontend/ExportC.lean:468-481 ConRon.Arena.Frontend.applyLine
-def applyStr : FunDecl := lfn (idx, a, c, d) locals (z, o, l) {
+@[no_expose] def applyStr : FunDecl := lfn (idx, a, c, d) locals (z, o, l) {
   if c == 0 { abort };
   (o, l) := call str_put_esc(c, d);
   if len(POOL⟨⦃o⦄.tier⟩) < o - ⦃o⦄.base { abort };
@@ -116,11 +116,11 @@ def strK (idx a o : Word) : Option (Word × Mem) → Option Mem
     else if m₁.len64 (tierA POOL (o >>> 40)) - (o - (o >>> 40) <<< 40) < l then none
     else applyNStrW m₁ idx a o l
 
-@[arena_grind =] theorem strK_none (idx a o : Word) : strK idx a o none = none := rfl
+@[arena_grind =] theorem strK_none (idx a o : Word) : strK idx a o none = none := by rfl
 @[arena_grind =] theorem strK_some (idx a o l : Word) (m₁ : Mem) : strK idx a o (some (l, m₁)) =
     if m₁.len64 (tierA POOL (o >>> 40)) < o - (o >>> 40) <<< 40 then none
     else if m₁.len64 (tierA POOL (o >>> 40)) - (o - (o >>> 40) <<< 40) < l then none
-    else applyNStrW m₁ idx a o l := rfl
+    else applyNStrW m₁ idx a o l := by rfl
 
 theorem strK_intern {idx a o l : Word} {m₁ m' : Mem} (h : strK idx a o (some (l, m₁)) = some m') :
     applyNStrW m₁ idx a o l = some m' := by

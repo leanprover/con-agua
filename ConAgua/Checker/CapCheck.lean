@@ -1,6 +1,7 @@
 module
 
 public import ConAgua.Checker.Entry
+import all ConAgua.Checker.Entry
 
 @[expose] public section
 

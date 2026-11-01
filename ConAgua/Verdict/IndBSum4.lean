@@ -17,6 +17,7 @@ import ConAgua.Arena.IndT.Lift
 import ConAgua.Arena.RecClassSpec.Classes
 import ConAgua.Arena.RefWalk
 import ConAgua.Checker.NoVerdictTree
+import all ConAgua.Arena.IndSum
 
 @[expose] public section
 /-!

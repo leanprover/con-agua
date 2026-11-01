@@ -9,6 +9,7 @@ import ConAgua.Arena.IndGrindAttr
 public import ConAgua.L.GrindAttr
 import ConAgua.Arena.IndPosSpec.DpGoW
 import ConRon.Bridge.Grind
+import all ConAgua.Arena.IndPos
 
 @[expose] public section
 

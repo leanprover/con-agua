@@ -9,6 +9,7 @@ import ConAgua.Arena.IndCopy2
 import ConRon.Bridge.Grind
 import Std.Tactic.BVDecide.Normalize.Bool
 public import ConAgua.Arena.IndStubs
+import all ConAgua.Arena.IndIface
 
 @[expose] public section
 

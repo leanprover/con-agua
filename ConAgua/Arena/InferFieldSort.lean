@@ -48,7 +48,7 @@ open ConLeche
 (the `EREC` name slice `(po, pl)`) substituted by the universe arguments `us`, is equivalent to
 `zero` (`some true`). -/
 -- con-ron: ConRon/Arena/Core.lean:2699-2741 ConRon.Arena.inferProj
-@[l_impl ConRon.Arena.inferProj]
+@[no_expose, l_impl ConRon.Arena.inferProj]
 def fieldSortZeroL : FunDecl := lfn (po, pl, us, fs) locals (o, k, x, z, r) {
   (o, k) := call ls_node(us);
   CTL.u64[192] := 0;

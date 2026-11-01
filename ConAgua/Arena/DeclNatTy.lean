@@ -9,6 +9,7 @@ import ConAgua.Arena.DeclNatGate
 import Std.Tactic.BVDecide.Normalize.BitVec
 import Std.WP.Triple.SpecLemmas
 public import ConRon.Arena.DeclCheck
+import all ConAgua.Arena.DeclArmsNat
 
 @[expose] public section
 

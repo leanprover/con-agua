@@ -6,6 +6,7 @@ import ConAgua.Front.ChunkBridge
 public import ConAgua.Checker.FrontProg
 import ConAgua.Verdict.FrontValidE
 import ConAgua.Final.TwinVerdict
+import all ConAgua.Front.Driver
 
 @[expose] public section
 

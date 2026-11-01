@@ -18,6 +18,8 @@ import ConLeche.Verify.BridgeWfImp
 import ConRon.Bridge.Checker.Base
 import ConRon.Bridge.Inductives.SumInstall
 public import ConAgua.Arena.IndInstallSpec.InstallRec2Tele
+import all ConAgua.Arena.IndIface
+import all ConAgua.Arena.IndInstall
 
 @[expose] public section
 

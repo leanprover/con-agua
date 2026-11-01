@@ -95,7 +95,7 @@ def succCS : ConsSch where
 /-! ## `succ_find(t, u, h)`: the probe -/
 
 /-- con-ron: ConRon/Arena/Store.lean:94-95 ConRon.Arena.Tbl.find? -/
-def succFind : FunDecl := consFindG succCS
+@[no_expose] def succFind : FunDecl := consFindG succCS
 
 /-! ## `succ_push(t, u, j)`: append a node to tier `t`, register it at slot `j` -/
 
@@ -108,7 +108,7 @@ def spushOK (m : Mem) (t : Word) : Bool :=
     decide (scnt m t < m.len64 (tierA SHP t))
 
 /-- con-ron: ConRon/Arena/Store.lean:97-102 ConRon.Arena.Tbl.push -/
-def succPush : FunDecl := consPushG succCS
+@[no_expose] def succPush : FunDecl := consPushG succCS
 
 /-! ## `intern_succ(u)`: hash-cons the level `succ u`
 
@@ -120,7 +120,7 @@ aborts (the library's `consInternM`). -/
 def sinternW (m : Mem) (u : Word) : Option (Word × Mem) := consInternM succCS m [u]
 
 /-- con-ron: ConRon/Arena/Monad.lean:444-460 ConRon.Arena.internLNode -/
-@[l_impl ConRon.Arena.internLNode]
+@[no_expose, l_impl ConRon.Arena.internLNode]
 def internSucc : FunDecl := consInternG succCS
 
 /-- The `succ` store functions, as one `#eval`-able program. -/

@@ -590,10 +590,14 @@ def main():
             os.remove(p)
     # modules: every file but the program literal runs an elaborator over the imported program
     # (`meta import`); the inliner's parts' kernel checks unfold `toString` on function names
-    # (`Nat.repr`, which `Init.Data.Repr` does not expose)
+    # (`Nat.repr`, which `Init.Data.Repr` does not expose); they and the name tree's (`progTree`
+    # reads each function's parameter count) unfold the L functions, which are `@[no_expose]`
+    # (`import all` of their modules, `lean_module.body_modules`)
     inl_parts = {os.path.join(chk, f"ProgIPart{k}.lean") for k in range(ninl)}
+    bodies = lean_module.body_modules(imports + ["ConAgua.Checker.Entry", "ConAgua.Checker.Prelude"])
     outs = [(path, lean_module.modularize(t, meta=path != OUT,
-                                          import_all=["Init.Data.Repr"] if path in inl_parts else []))
+                                          import_all=(["Init.Data.Repr"] if path in inl_parts else [])
+                                          + (bodies if path in inl_parts or path == TREE_OUT else [])))
             for path, t in outs]
     for path, t in outs:
         old = open(path, encoding="utf-8").read() if os.path.exists(path) else None

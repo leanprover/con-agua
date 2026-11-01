@@ -12,6 +12,8 @@ import ConAgua.Arena.IndT.Lift
 import ConAgua.Arena.RefWalk
 import ConAgua.Arena.StageC
 import ConAgua.Checker.NoVerdictTree
+import all ConAgua.Arena.IndIface
+import all ConAgua.Arena.RecGen
 
 @[expose] public section
 

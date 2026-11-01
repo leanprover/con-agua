@@ -8,6 +8,7 @@ import ConAgua.Arena.FreezeFresh
 import ConAgua.Arena.PhaseBOne
 import ConAgua.Checker.RomProg0
 import ConAgua.L.Blocks
+import all ConAgua.Checker.Entry
 
 @[expose] public section
 

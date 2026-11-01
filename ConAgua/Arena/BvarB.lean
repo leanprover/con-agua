@@ -11,6 +11,7 @@ import ConAgua.L.GrindAttr
 import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
+import all ConAgua.Arena.Walk
 
 @[expose] public section
 
@@ -61,7 +62,7 @@ grind_pattern [arena_grind] bvbW_pk => bvbW (n + 1) m h f
 attribute [arena_grind =] lbbK_some
 
 /-- con-ron: ConRon/Arena/ExprOps.lean:1570-1577 ConRon.Arena.bvarB -/
-@[l_impl ConRon.Arena.bvarB]
+@[no_expose, l_impl ConRon.Arena.bvarB]
 def bvarBL : FunDecl := lfn (f, e) locals (x, r) {
   x := call der_bv(e);
   if x == 32767 { r := call bb_memo(e, f); return r };
@@ -69,7 +70,7 @@ def bvarBL : FunDecl := lfn (f, e) locals (x, r) {
 }
 
 /-- con-ron: ConRon/Arena/ExprOps.lean:1593-1597 ConRon.Arena.looseBVarsBoundedFast -/
-@[l_impl ConRon.Arena.looseBVarsBoundedFast]
+@[no_expose, l_impl ConRon.Arena.looseBVarsBoundedFast]
 def lbbFastL : FunDecl := lfn (f, k, e) locals (x) {
   x := call bvar_b(f, e);
   return u64(x <= k)

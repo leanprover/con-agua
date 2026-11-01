@@ -13,6 +13,7 @@ import ConAgua.Arena.IndPosSpec.NestKeyMap
 import ConAgua.Arena.LdRd
 import Std.Tactic.BVDecide.Normalize.BitVec
 public import ConAgua.Arena.IndPosSpec.Pos2CvLpsWStage
+import all ConAgua.Arena.IndPos2
 
 @[expose] public section
 

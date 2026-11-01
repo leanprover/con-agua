@@ -7,6 +7,7 @@ import ConAgua.Checker.ProgIRef
 import ConAgua.Checker.ProgWf
 import ConAgua.Final.DrvFinal
 public import ConAgua.Final.ThreadsVerdict
+import all ConAgua.Checker.Entry
 
 @[expose] public section
 

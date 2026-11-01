@@ -13,6 +13,7 @@ import ConAgua.Arena.IndPartsSpec.BlockSplitRecs
 import ConAgua.Arena.RefWalk
 import ConAgua.Checker.NoVerdictTree
 public import ConAgua.Arena.RecCheckSpec.TpsW
+import all ConAgua.Arena.RecCheck
 
 @[expose] public section
 

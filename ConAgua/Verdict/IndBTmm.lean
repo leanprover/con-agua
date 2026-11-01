@@ -19,6 +19,7 @@ public import ConAgua.Arena.IndPartsSpec.EqW
 public import ConAgua.Arena.IndPosSpec.BvbWMfr
 public import ConAgua.Arena.Verdict
 public import ConAgua.Checker.NoVerdictFns
+import all ConAgua.Arena.RecCheck
 
 @[expose] public section
 

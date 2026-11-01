@@ -21,6 +21,7 @@ public import ConAgua.Arena.IndRealApdT
 public import ConAgua.Arena.KnotEntry
 public import ConAgua.Verdict.VCtx
 public import ConRon.Bridge.Inductives.Rel
+import all ConAgua.Arena.IndInstall
 
 @[expose] public section
 

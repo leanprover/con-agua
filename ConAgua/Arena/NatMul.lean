@@ -37,7 +37,7 @@ namespace L.Arena
 /-- `mac_hi(x, y, t, c)`: the high word of `x * y + t + c` (con-ron's `u128` accumulator `t` in
 `mul_u64_from`). Straight-line: `mulhi` and two carries as `u64(…)` words. -/
 -- con-ron: none — limb arithmetic of the bignum (con-ron `ron/nat.rs`); the twin computes on `Nat`
-def macHi : FunDecl := lfn (x, y, t, c) locals (lo, hi) {
+@[no_expose] def macHi : FunDecl := lfn (x, y, t, c) locals (lo, hi) {
   lo := x * y + t;
   hi := mulhi(x, y) + u64(lo < t);
   lo := lo + c;
@@ -91,7 +91,7 @@ def rowLoop : Stmt := lblk (oa, la, ob, lb, top, n, i, j, c, x, y, t, pt, pb) {
 }
 
 /-- con-ron: ConRon/Arena/Core.lean:999-1040 ConRon.Arena.natOpResult -/
-@[l_impl ConRon.Arena.natOpResult]
+@[no_expose, l_impl ConRon.Arena.natOpResult]
 def natMul : FunDecl := lfn (oa, la, ob, lb) locals (top, n, i, j, c, x, y, t, pt, pb) {
   top := CTL.u64[0];
   pt := ⦃top⦄.tier;

@@ -81,7 +81,7 @@ theorem defeqBody_eq (mode : ConLeche.CheckMode) (r : CoreFnsA) (fe : IFEnv) (de
         let x ← isBoolTrue b
         let y ← hasFvarFast coreWalkFuel a
         let sc ← if x && (mode.eager || !y) then boolTrueShortcut r depth a else pure false
-        if sc then pure true else defeqBodyRestT mode r fe depth a b) := rfl
+        if sc then pure true else defeqBodyRestT mode r fe depth a b) := by rfl
 
 theorem decMode_eager (mode : Word) (h : mode < 4) :
     (decMode mode).eager = decide ((mode >>> 1) &&& 1 ≠ 0) := by

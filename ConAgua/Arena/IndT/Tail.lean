@@ -25,6 +25,7 @@ public import ConAgua.Arena.IndInstallSpec.GpbWSimF
 public import ConAgua.Arena.IndPartsSpec.BlockRecNamesUnreserved
 public import ConAgua.Arena.IndT.GenRec2
 public import ConRon.Bridge.Inductives.BlockTail
+import all ConAgua.Arena.IndInstall
 
 @[expose] public section
 

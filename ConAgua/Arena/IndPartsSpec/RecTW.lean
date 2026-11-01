@@ -7,6 +7,8 @@ import ConAgua.L.GrindAttr
 import ConAgua.Arena.IndPartsSpec.RulePrefixAt
 import ConRon.Bridge.Grind
 import Std.Tactic.BVDecide.Normalize.BitVec
+import all ConAgua.Arena.IndIface
+import all ConAgua.Arena.IndParts
 
 @[expose] public section
 

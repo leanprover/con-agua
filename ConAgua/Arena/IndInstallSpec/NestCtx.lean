@@ -11,6 +11,7 @@ import ConAgua.Arena.IndInstallSpec.PartsAt
 import ConAgua.Arena.IndPartsSpec.BlockRecNamesUnreserved
 import ConAgua.Arena.IndPartsSpec.IndPartsProg2
 import ConAgua.Arena.IndSumSpec.Row
+import all ConAgua.Arena.IndInstall
 
 @[expose] public section
 

@@ -14,6 +14,9 @@ import ConAgua.Arena.IndPartsSpec.RulePrefixAt
 import ConAgua.Arena.RecClassSpec.CloseLams
 import ConRon.Bridge.Grind
 import Std.Tactic.BVDecide.Normalize.BitVec
+import all ConAgua.Arena.IndIface
+import all ConAgua.Arena.IndParts
+import all ConAgua.Arena.IndPos
 
 @[expose] public section
 

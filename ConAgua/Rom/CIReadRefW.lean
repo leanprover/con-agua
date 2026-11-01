@@ -5,6 +5,7 @@ public import ConAgua.Rom.CIReadSpec
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 public import ConAgua.Arena.DeclNatBase
+import all ConAgua.Rom.CIRead
 
 @[expose] public section
 

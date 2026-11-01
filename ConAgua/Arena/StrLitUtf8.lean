@@ -8,6 +8,7 @@ public import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
 public import ConAgua.Scan.Utf8
+import all ConAgua.Arena.StrLit
 
 @[expose] public section
 

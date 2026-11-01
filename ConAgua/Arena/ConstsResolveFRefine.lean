@@ -9,6 +9,7 @@ import ConRon.Bridge.Grind
 import Std.Tactic.BVDecide.Normalize.BitVec
 public import ConAgua.Arena.DeclNatBase
 public import ConAgua.Arena.WhnfIota
+import all ConAgua.Arena.ConstsResolveF
 
 @[expose] public section
 

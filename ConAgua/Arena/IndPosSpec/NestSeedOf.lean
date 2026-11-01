@@ -14,6 +14,8 @@ public import ConAgua.Arena.IndPosSpec.BvbWMfr
 public import ConAgua.Arena.IndPosSpec.CrLook
 public import ConAgua.Arena.IndPosSpec.Pos2CvLpsWStage
 public import ConAgua.Arena.IndPosSpec.SgGoW2
+import all ConAgua.Arena.IndPos
+import all ConAgua.Arena.IndPos2
 
 @[expose] public section
 

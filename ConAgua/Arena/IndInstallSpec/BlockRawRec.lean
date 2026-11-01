@@ -17,6 +17,8 @@ import Std.Tactic.BVDecide.Normalize.BitVec
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
 public import ConAgua.Arena.IndPosSpec.NoGoStep
+import all ConAgua.Arena.IndInstall
+import all ConAgua.Arena.IndPos
 
 @[expose] public section
 

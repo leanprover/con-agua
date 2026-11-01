@@ -9,6 +9,8 @@ public import ConAgua.Arena.WhnfIotaRefine
 import ConAgua.Arena.RefWalk
 import ConAgua.Arena.WhnfCoreRefine
 import ConAgua.Checker.NoVerdictTree
+import all ConAgua.Arena.CoreLevels
+import all ConAgua.Arena.DefEq
 
 @[expose] public section
 

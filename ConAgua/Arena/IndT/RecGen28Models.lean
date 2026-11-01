@@ -8,6 +8,7 @@ public import ConAgua.L.GrindAttr
 import ConAgua.L.Records
 public import ConAgua.Checker.NoVerdictFns
 public import ConAgua.L.ErrSpec
+import all ConAgua.Arena.RecGenSpec.DecB
 
 @[expose] public section
 
@@ -88,7 +89,7 @@ theorem cnsEK3_bad (h : ¬ ((nm + 9).toNat < (m.arr64 IW).size ∧ (nm + 10).toN
   simp only [cnsEK3]; rw [ite_eq_right h]
 theorem cnsEK2_none : cnsEK2 k mw eo el qr j rest none = .error .oob := rfl
 theorem cnsEK2_some : cnsEK2 k mw eo el qr j rest (some (r, m)) =
-    cnsEK3 (r.headD 0) mw eo el qr j rest (ncpW (k + 1) m (r.headD 0) mw 0) := rfl
+    cnsEK3 (r.headD 0) mw eo el qr j rest (ncpW (k + 1) m (r.headD 0) mw 0) := by rfl
 theorem cnsEK1_err : cnsEK1 p k mw qr j rest (.error ε) = .error ε := rfl
 theorem cnsEK1_ok : cnsEK1 p k mw qr j rest (.ok (r, m)) =
     cnsEK2 k mw (r.headD 0) (r.tail.headD 0) qr j rest (callW p k "iw_alloc" [13] m) := rfl

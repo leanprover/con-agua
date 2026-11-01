@@ -6,6 +6,21 @@ public import Std.Tactic.BVDecide.Normalize.Prop
 import ConAgua.Arena.DerRel
 public import ConAgua.Arena.PinsNatOp
 public import ConAgua.Arena.StoreDenIntern
+import all ConAgua.Arena.ConsLib
+import all ConAgua.Arena.ConstStore
+import all ConAgua.Arena.NatAdd
+import all ConAgua.Arena.NatArms
+import all ConAgua.Arena.NatBits
+import all ConAgua.Arena.NatCmp
+import all ConAgua.Arena.NatDiv
+import all ConAgua.Arena.NatGcd
+import all ConAgua.Arena.NatMul
+import all ConAgua.Arena.NatPow
+import all ConAgua.Arena.NatShl
+import all ConAgua.Arena.NatShr
+import all ConAgua.Arena.NatSub
+import all ConAgua.Arena.Refine
+import all ConAgua.Arena.Store
 
 @[expose] public section
 

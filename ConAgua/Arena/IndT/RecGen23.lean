@@ -15,6 +15,7 @@ import ConAgua.Checker.NoVerdictTree
 import ConRon.Bridge.Inductives.GenRec
 public import ConAgua.Arena.IndPartsSpec.PartsConsPL
 public import ConAgua.Arena.RecGenSpec.PdWMfr
+import all ConAgua.Arena.RecGen
 
 @[expose] public section
 

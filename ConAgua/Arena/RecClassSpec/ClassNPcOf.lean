@@ -13,6 +13,7 @@ import Std.WP.Triple.SpecLemmas
 public import ConAgua.Arena.DeclHeader
 public import ConAgua.Arena.IndDecStab
 public import ConAgua.Arena.IndPartsSpec.MemberNames
+import all ConAgua.Arena.RecClass
 
 @[expose] public section
 

@@ -10,6 +10,10 @@ public import ConAgua.Arena.IndPosSpec.NbKeyK2
 public import ConAgua.Arena.IndPosSpec.NbLook
 import ConAgua.Arena.IndPosSpec.EntryW
 import ConAgua.Arena.IndPosSpec.UnW
+import all ConAgua.Arena.IndIface
+import all ConAgua.Arena.IndPos
+import all ConAgua.Arena.IndPos2
+import all ConAgua.Arena.IndSum
 
 @[expose] public section
 

@@ -20,6 +20,7 @@ public import ConAgua.Arena.RecClassSpec.ClassNPcOf
 public import ConAgua.Verdict.IndBClm
 public import ConRon.Bridge.Checker.Hyp
 public import ConRon.Bridge.Inductives.Records
+import all ConAgua.Arena.RecGen
 
 @[expose] public section
 

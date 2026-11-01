@@ -86,7 +86,7 @@ def hashLoop : Stmt := lblk (o, l, i, h, t, x) {
 }
 
 /-- con-ron: none — the open-addressing table's own key hash/compare (the twin's `Std.HashMap`) -/
-def litHash : FunDecl := lfn (o, l) locals (i, h, t, x) {
+@[no_expose] def litHash : FunDecl := lfn (o, l) locals (i, h, t, x) {
   h := ⟪fnvBasis⟫;
   ⟪sliceRes 0 1 4 5⟫;
   ⟪hashLoop⟫;
@@ -206,7 +206,7 @@ def eqLoop : Stmt := lblk (a, b, l, i, ta, xa, tb, xb) {
 }
 
 /-- con-ron: none — the open-addressing table's own key hash/compare (the twin's `Std.HashMap`) -/
-def limbsEq : FunDecl := lfn (a, b, l) locals (i, ta, xa, tb, xb) {
+@[no_expose] def limbsEq : FunDecl := lfn (a, b, l) locals (i, ta, xa, tb, xb) {
   ⟪sliceRes 0 2 4 5⟫;
   ⟪sliceRes 1 2 6 7⟫;
   ⟪eqLoop⟫;
@@ -272,7 +272,7 @@ def matchW (r p : Array Word) (_t i o l h : Word) : Bool :=
     rdW r (i * 4 + 2) == l && eqW p (rdW r (i * 4 + 1)) o l 0
 
 /-- con-ron: none — the open-addressing table's own key hash/compare (the twin's `Std.HashMap`) -/
-def litMatch : FunDecl := lfn (t, i, o, l, h) locals (k, e) {
+@[no_expose] def litMatch : FunDecl := lfn (t, i, o, l, h) locals (k, e) {
   k := i * 4;
   if REC⟨t⟩[k] != 0 { return 0 };
   if REC⟨t⟩[k + 3] != h { return 0 };
@@ -361,7 +361,7 @@ after `d` steps), `(0, 0, j, d)` if slot `j` is free; `lit_push` appends a node 
 tier in bit 27, the index below. -/
 
 /-- con-ron: ConRon/Arena/Store.lean:94-95 ConRon.Arena.Tbl.find? -/
-def litFind : FunDecl := consFindG litCS
+@[no_expose] def litFind : FunDecl := consFindG litCS
 
 /-- The node count of tier `t`, `CTL[2 + t]`. -/
 def cnt (m : Mem) (t : Word) : Word := rdW (m.arr64 CTL) (2 + t)
@@ -371,7 +371,7 @@ def pushOK (m : Mem) (t : Word) : Bool :=
   decide (cnt m t < (67108864 : Word)) && decide (cnt m t < m.len64 (tierA REC t) >>> (2 : Word))
 
 /-- con-ron: ConRon/Arena/Store.lean:97-102 ConRon.Arena.Tbl.push -/
-def litPush : FunDecl := consPushG litCS
+@[no_expose] def litPush : FunDecl := consPushG litCS
 
 /-- The model of `intern_lit`: the handle and the memory after, or `none` where the L code
 aborts. `rs₀`, `rs₁`: the two probes (`[]`: the probe aborted). -/
@@ -379,7 +379,7 @@ def internW (m : Mem) (o l : Word) : Option (Word × Mem) := consInternM litCS m
 
 /-- con-ron: ConRon/Arena/Monad.lean:249-267 ConRon.Arena.internE
 con-ron: ConRon/Arena/Monad.lean:221-247 ConRon.Arena.internNodeE -/
-@[l_impl ConRon.Arena.internE ConRon.Arena.internNodeE]
+@[no_expose, l_impl ConRon.Arena.internE ConRon.Arena.internNodeE]
 def internLit : FunDecl := consInternG litCS
 
 /-- The store functions, as one `#eval`-able program. -/
@@ -441,7 +441,7 @@ def matchWStr (r p : Array Word) (_t i o l h : Word) : Bool :=
     rdW r (i * 4 + 2) == l && eqW p (rdW r (i * 4 + 1)) o l 0
 
 /-- con-ron: none — the open-addressing table's own key hash/compare (the twin's `Std.HashMap`) -/
-def litMatchStr : FunDecl := lfn (t, i, o, l, h) locals (k, e) {
+@[no_expose] def litMatchStr : FunDecl := lfn (t, i, o, l, h) locals (k, e) {
   k := i * 4;
   if REC⟨t⟩[k] != 1 { return 0 };
   if REC⟨t⟩[k + 3] != h { return 0 };
@@ -474,10 +474,10 @@ end matchStr
 def litStrCS : ConsSch := litCSk 1 "lit_match_str" "lit_find_str" "lit_push_str" matchWStr
 
 /-- con-ron: ConRon/Arena/Store.lean:94-95 ConRon.Arena.Tbl.find? -/
-def litFindStr : FunDecl := consFindG litStrCS
+@[no_expose] def litFindStr : FunDecl := consFindG litStrCS
 
 /-- con-ron: ConRon/Arena/Store.lean:97-102 ConRon.Arena.Tbl.push -/
-def litPushStr : FunDecl := consPushG litStrCS
+@[no_expose] def litPushStr : FunDecl := consPushG litStrCS
 
 /-- The model of `intern_lit_str`: the handle and the memory after, or `none` where the L code
 aborts. Shares the `natVal` arm's handle words (`litP`, `litS`): the two literal kinds cons into
@@ -486,7 +486,7 @@ def internWStr (m : Mem) (o l : Word) : Option (Word × Mem) := consInternM litS
 
 /-- con-ron: ConRon/Arena/Monad.lean:249-267 ConRon.Arena.internE
 con-ron: ConRon/Arena/Monad.lean:221-247 ConRon.Arena.internNodeE -/
-@[l_impl ConRon.Arena.internE ConRon.Arena.internNodeE]
+@[no_expose, l_impl ConRon.Arena.internE ConRon.Arena.internNodeE]
 def internLitStr : FunDecl := consInternG litStrCS
 
 /-- The `strVal` store functions, as one `#eval`-able program. -/

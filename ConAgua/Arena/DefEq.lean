@@ -54,7 +54,7 @@ instance : Inhabited LazyResA := ⟨.verdict false⟩
 /-! ## Small readers -/
 
 /-- con-ron: ConRon/Arena/Core.lean:845-857 ConRon.Arena.isBoolTrue -/
-@[l_impl ConRon.Arena.isBoolTrue]
+@[no_expose, l_impl ConRon.Arena.isBoolTrue]
 def isBoolTrueL : FunDecl := lfn (h) locals (t, i, el, bt) {
   if ⟦h⟧.tag != 3 { return 0 };
   (t, i) := node CONST⟦h⟧;
@@ -65,7 +65,7 @@ def isBoolTrueL : FunDecl := lfn (h) locals (t, i, el, bt) {
 }
 
 /-- con-ron: ConRon/Arena/Core.lean:859-879 ConRon.Arena.isEagerReduce -/
-@[l_impl ConRon.Arena.isEagerReduce]
+@[no_expose, l_impl ConRon.Arena.isEagerReduce]
 def isEagerReduceL : FunDecl := lfn (h) locals (t, i, f, g, er) {
   if ⟦h⟧.tag != 4 { return 0 };
   (t, i) := node APP⟦h⟧;
@@ -83,7 +83,7 @@ def isEagerReduceL : FunDecl := lfn (h) locals (t, i, f, g, er) {
 views): the same kind, the same length, the same limbs/bytes (`limbs_eq` on the pool slices;
 `Nat` literals are trimmed, so equal values have equal slices). -/
 -- con-ron: ConRon/Arena/Core.lean:3069-3095 ConRon.Arena.quickDefEq
-@[l_impl ConRon.Arena.quickDefEq]
+@[no_expose, l_impl ConRon.Arena.quickDefEq]
 def litEqL : FunDecl := lfn (a, b) locals (ta, xa, tb, xb, la, lb, r) {
   (ta, xa) := node LIT⟦a⟧;
   (tb, xb) := node LIT⟦b⟧;
@@ -96,7 +96,7 @@ def litEqL : FunDecl := lfn (a, b) locals (ta, xa, tb, xb, la, lb, r) {
 }
 
 /-- con-ron: ConRon/Arena/Core.lean:321-330 ConRon.Arena.ioNeutral -/
-@[l_impl ConRon.Arena.ioNeutral]
+@[no_expose, l_impl ConRon.Arena.ioNeutral]
 def ioNeutralL : FunDecl := lfn (e) locals (h, t) {
   h := call get_app_fn(e);
   t := ⟦h⟧.tag;
@@ -105,7 +105,7 @@ def ioNeutralL : FunDecl := lfn (e) locals (h, t) {
 }
 
 /-- con-ron: ConRon/Arena/Core.lean:405-421 ConRon.Arena.unfoldableHead -/
-@[l_impl ConRon.Arena.unfoldableHead]
+@[no_expose, l_impl ConRon.Arena.unfoldableHead]
 def unfoldableHeadL : FunDecl := lfn (vis, e) locals (hh, t, i, f, p, lo, l) {
   hh := call get_app_fn(e);
   if ⟦hh⟧.tag != 3 { return 0 };
@@ -118,7 +118,7 @@ def unfoldableHeadL : FunDecl := lfn (vis, e) locals (hh, t, i, f, p, lo, l) {
 }
 
 /-- con-ron: ConRon/Arena/Core.lean:423-434 ConRon.Arena.headHint -/
-@[l_impl ConRon.Arena.headHint]
+@[no_expose, l_impl ConRon.Arena.headHint]
 def headHintL : FunDecl := lfn (vis, e) locals (hh, t, i, f, p) {
   hh := call get_app_fn(e);
   if ⟦hh⟧.tag != 3 { return (0, 0) };
@@ -132,7 +132,7 @@ def headHintL : FunDecl := lfn (vis, e) locals (hh, t, i, f, p) {
 /-- `hint_lt(k1, h1, k2, h2)`: `ReducibilityHint.lt` on two `(kind, height)` hints (con-leche's
 `Env.lean:206-211`, a pure function: `opaque < regular h < abbrev`). -/
 -- con-ron: ConRon/Arena/Core.lean:3192-3249 ConRon.Arena.lazyDeltaStep
-@[l_impl ConRon.Arena.lazyDeltaStep]
+@[no_expose, l_impl ConRon.Arena.lazyDeltaStep]
 def hintLtL : FunDecl := lfn (k1, h1, k2, h2) locals () {
   if k2 == 0 { return 0 };
   if k1 == 1 { return 0 };
@@ -142,7 +142,7 @@ def hintLtL : FunDecl := lfn (k1, h1, k2, h2) locals () {
 }
 
 /-- con-ron: ConRon/Arena/Core.lean:436-461 ConRon.Arena.sameConstHeads -/
-@[l_impl ConRon.Arena.sameConstHeads]
+@[no_expose, l_impl ConRon.Arena.sameConstHeads]
 def sameConstHeadsL : FunDecl := lfn (a, b) locals (t, i, f1, f2, hh, n1) {
   if ⟦a⟧.tag != 4 { return 0 };
   (t, i) := node APP⟦a⟧;
@@ -168,7 +168,7 @@ def erSliceEqLoop : Stmt := lblk (o1, n1, o2, n2, i) {
 /-- `er_slice_eq(o1, n1, o2, n2)`: two `EREC` slices of handles are the same list (the twin's
 `cvc.levelParams = cvT.levelParams`). -/
 -- con-ron: ConRon/Arena/Core.lean:1498-1544 ConRon.Arena.structEtaCertWith
-@[l_impl ConRon.Arena.structEtaCertWith]
+@[no_expose, l_impl ConRon.Arena.structEtaCertWith]
 def erSliceEqL : FunDecl := lfn (o1, n1, o2, n2) locals (i) {
   if n1 != n2 { return 0 };
   i := 0;
@@ -192,7 +192,7 @@ def defeqLstLoop : Stmt := lblk (mode, vis, d, ao, an, bo, bn, i, ok) {
 pair from the front **until either list ends** (a length mismatch is `false` only after the
 common prefix compared equal, as the twin's list recursion). -/
 -- con-ron: ConRon/Arena/Core.lean:1344-1351 ConRon.Arena.defEqList
-@[l_impl ConRon.Arena.defEqList]
+@[no_expose, l_impl ConRon.Arena.defEqList]
 def defeqLstL : FunDecl := lfn (mode, vis, d, ao, an, bo, bn) locals (i, ok) {
   i := 0;
   ⟪defeqLstLoop⟫;
@@ -213,7 +213,7 @@ def defeqListRevLoop : Stmt := lblk (mode, vis, d, ao, an, bo, bn, i, j, ok) {
 /-- `defeq_list_rev(mode, vis, d, ao, an, bo, bn)`: `defEqList` on the two REVERSED slices (from
 the last pair to the first), `defeqSpine`'s order. -/
 -- con-ron: ConRon/Arena/Core.lean:2884-2910 ConRon.Arena.defeqSpine
-@[l_impl ConRon.Arena.defeqSpine]
+@[no_expose, l_impl ConRon.Arena.defeqSpine]
 def defeqListRevL : FunDecl := lfn (mode, vis, d, ao, an, bo, bn) locals (i, j, ok) {
   i := an;
   j := bn;
@@ -222,7 +222,7 @@ def defeqListRevL : FunDecl := lfn (mode, vis, d, ao, an, bo, bn) locals (i, j, 
 }
 
 /-- con-ron: ConRon/Arena/Core.lean:2877-2882 ConRon.Arena.boolTrueShortcut -/
-@[l_impl ConRon.Arena.boolTrueShortcut]
+@[no_expose, l_impl ConRon.Arena.boolTrueShortcut]
 def boolTrueShortcutL : FunDecl := lfn (mode, vis, d, a) locals (w, r) {
   w := call whnf(mode, vis, d, a);
   r := call is_bool_true(w);
@@ -231,7 +231,7 @@ def boolTrueShortcutL : FunDecl := lfn (mode, vis, d, a) locals (w, r) {
 
 /-- The constant head of a spine: `(1, n, us)`, or `(0, 0, 0)` when the head is not a constant. -/
 -- con-ron: ConRon/Arena/Core.lean:2884-2910 ConRon.Arena.defeqSpine
-@[l_impl ConRon.Arena.defeqSpine]
+@[no_expose, l_impl ConRon.Arena.defeqSpine]
 def spineHeadL : FunDecl := lfn (e) locals (hh, g, n, us, x) {
   hh := call get_app_fn(e);
   if ⟦hh⟧.tag != 3 { return (0, 0, 0) };
@@ -242,7 +242,7 @@ def spineHeadL : FunDecl := lfn (e) locals (hh, g, n, us, x) {
 /-- `defeqSpine` past the two heads: the arguments, the names and lengths, the levels, the
 reversed argument lists. -/
 -- con-ron: ConRon/Arena/Core.lean:2884-2910 ConRon.Arena.defeqSpine
-@[l_impl ConRon.Arena.defeqSpine]
+@[no_expose, l_impl ConRon.Arena.defeqSpine]
 def defeqSpine2L : FunDecl :=
     lfn (mode, vis, d, a, b, n, us, n2, us2) locals (top, ao, an, bo, bn, r) {
   top := CTL.u64[136];
@@ -256,7 +256,7 @@ def defeqSpine2L : FunDecl :=
 /-- `defeqSpine`'s comparison on the argument slices (`some true` is any answer word `≥ 2`, as
 `decO` reads it). -/
 -- con-ron: ConRon/Arena/Core.lean:2884-2910 ConRon.Arena.defeqSpine
-@[l_impl ConRon.Arena.defeqSpine]
+@[no_expose, l_impl ConRon.Arena.defeqSpine]
 def spineCmpL : FunDecl :=
     lfn (mode, vis, d, n, us, n2, us2, ao, an, bo, bn) locals (z, r) {
   if n == n2 && an == bn {
@@ -270,7 +270,7 @@ def spineCmpL : FunDecl :=
 }
 
 /-- con-ron: ConRon/Arena/Core.lean:2884-2910 ConRon.Arena.defeqSpine -/
-@[l_impl ConRon.Arena.defeqSpine]
+@[no_expose, l_impl ConRon.Arena.defeqSpine]
 def defeqSpineL : FunDecl :=
     lfn (mode, vis, d, a, b) locals (fa, n, us, fb, n2, us2, r) {
   (fa, n, us) := call spine_head(a);
@@ -282,7 +282,7 @@ def defeqSpineL : FunDecl :=
 }
 
 /-- con-ron: ConRon/Arena/Core.lean:2912-2920 ConRon.Arena.defeqNoFvars -/
-@[l_impl ConRon.Arena.defeqNoFvars]
+@[no_expose, l_impl ConRon.Arena.defeqNoFvars]
 def defeqNoFvarsL : FunDecl := lfn (a, b) locals (x, y) {
   x := call has_fvar(a);
   if x != 0 { return 0 };
@@ -291,7 +291,7 @@ def defeqNoFvarsL : FunDecl := lfn (a, b) locals (x, y) {
 }
 
 /-- con-ron: ConRon/Arena/Core.lean:2922-2928 ConRon.Arena.lazyFoldOk -/
-@[l_impl ConRon.Arena.lazyFoldOk]
+@[no_expose, l_impl ConRon.Arena.lazyFoldOk]
 def lazyFoldOkL : FunDecl := lfn (mode, a, b) locals (r) {
   if (mode >> 1) & 1 != 0 { return 1 };
   r := call defeq_no_fvars(a, b);
@@ -303,7 +303,7 @@ def lazyFoldOkL : FunDecl := lfn (mode, a, b) locals (r) {
 /-- The batched descent's leaf: both residuals opened against the slice `(fo, k)`, compared at
 depth `d + k`. -/
 -- con-ron: ConRon/Arena/Core.lean:2940-2947 ConRon.Arena.defeqPeelLeaf
-@[l_impl ConRon.Arena.defeqPeelLeaf]
+@[no_expose, l_impl ConRon.Arena.defeqPeelLeaf]
 def peelLeafL : FunDecl := lfn (mode, vis, d, a, b, k, fo) locals (o1, o2, dq) {
   o1 := call inst_list(a, fo, k, 0);
   o2 := call inst_list(b, fo, k, 0);
@@ -314,7 +314,7 @@ def peelLeafL : FunDecl := lfn (mode, vis, d, a, b, k, fo) locals (o1, o2, dq) {
 /-- One peeled level's domains: `(dq, t2)`, the verdict and the opened second domain (the first,
 when the raw domains are the same handle). -/
 -- con-ron: ConRon/Arena/Core.lean:2949-3014 ConRon.Arena.defeqPeel
-@[l_impl ConRon.Arena.defeqPeel]
+@[no_expose, l_impl ConRon.Arena.defeqPeel]
 def peelDomL : FunDecl := lfn (mode, vis, d, da, db, k, fo) locals (t1, t2, dq) {
   t1 := call inst_list(da, fo, k, 0);
   if da == db { return (1, t1) };
@@ -325,7 +325,7 @@ def peelDomL : FunDecl := lfn (mode, vis, d, da, db, k, fo) locals (t1, t2, dq) 
 
 /-- One peeled level, the second binder's view and the domains: `(dq, t2, bb)`. -/
 -- con-ron: ConRon/Arena/Core.lean:2949-3014 ConRon.Arena.defeqPeel
-@[l_impl ConRon.Arena.defeqPeel]
+@[no_expose, l_impl ConRon.Arena.defeqPeel]
 def peelStep2L : FunDecl := lfn (mode, vis, d, da, b, k, fo) locals (g, db, bb, x, dq, t2) {
   (g, db, bb, x) := call e_view(b);
   (dq, t2) := call peel_dom(mode, vis, d, da, db, k, fo);
@@ -334,7 +334,7 @@ def peelStep2L : FunDecl := lfn (mode, vis, d, da, b, k, fo) locals (g, db, bb, 
 
 /-- One peeled level: the two binders' views, then the domains: `(dq, t2, ba, bb)`. -/
 -- con-ron: ConRon/Arena/Core.lean:2949-3014 ConRon.Arena.defeqPeel
-@[l_impl ConRon.Arena.defeqPeel]
+@[no_expose, l_impl ConRon.Arena.defeqPeel]
 def peelStepL : FunDecl := lfn (mode, vis, d, a, b, k, fo) locals (g, da, ba, x, dq, t2, bb) {
   (g, da, ba, x) := call e_view(a);
   (dq, t2, bb) := call peel_step2(mode, vis, d, da, b, k, fo);
@@ -343,7 +343,7 @@ def peelStepL : FunDecl := lfn (mode, vis, d, a, b, k, fo) locals (g, da, ba, x,
 
 /-- The fresh free variable of a peeled level, pushed on the stack at `fo + k` (the top). -/
 -- con-ron: ConRon/Arena/Core.lean:2949-3014 ConRon.Arena.defeqPeel
-@[l_impl ConRon.Arena.defeqPeel]
+@[no_expose, l_impl ConRon.Arena.defeqPeel]
 def peelPushL : FunDecl := lfn (d, k, fo, t2) locals (fv) {
   fv := call intern_fvar(d + k, t2);
   if len(SPN.u64) <= fo + k { abort };
@@ -372,7 +372,7 @@ def defeqPeelLoop : Stmt := lblk (mode, vis, d, peel, a, b, k, fo, dq, t2, ba, b
 
 /-- The batched ∀ descent: `fvs` is the stack slice `(fo, k)` (`CTL[136] = fo + k`). -/
 -- con-ron: ConRon/Arena/Core.lean:2949-3014 ConRon.Arena.defeqPeel
-@[l_impl ConRon.Arena.defeqPeel]
+@[no_expose, l_impl ConRon.Arena.defeqPeel]
 def defeqPeelL : FunDecl :=
     lfn (mode, vis, d, peel, a, b, k, fo) locals (dq, t2, ba, bb, fv) {
   ⟪defeqPeelLoop⟫;
@@ -380,7 +380,7 @@ def defeqPeelL : FunDecl :=
 }
 
 /-- con-ron: ConRon/Arena/Core.lean:3016-3025 ConRon.Arena.defeqBinders -/
-@[l_impl ConRon.Arena.defeqBinders]
+@[no_expose, l_impl ConRon.Arena.defeqBinders]
 def defeqBindersL : FunDecl := lfn (mode, vis, d, ty1, body1, ty2, body2) locals (ok, fv, so, r) {
   ok := call defeq(mode, vis, d, ty1, ty2);
   if ok == 0 { return 0 };
@@ -392,7 +392,7 @@ def defeqBindersL : FunDecl := lfn (mode, vis, d, ty1, body1, ty2, body2) locals
 }
 
 /-- con-ron: ConRon/Arena/Core.lean:3033-3044 ConRon.Arena.defeqLamsInner -/
-@[l_impl ConRon.Arena.defeqLamsInner]
+@[no_expose, l_impl ConRon.Arena.defeqLamsInner]
 def defeqLamsInnerL : FunDecl := lfn (mode, vis, d, b1, b2) locals (ok, t1, t2, r) {
   ok := call defeq(mode, vis, d + 1, b1, b2);
   if ok == 0 { return 0 };
@@ -408,7 +408,7 @@ def defeqLamsInnerL : FunDecl := lfn (mode, vis, d, b1, b2) locals (ok, t1, t2, 
 /-- One λ level opened: the domains compared, the fresh free variable, both bodies instantiated:
 `(ok, b1, b2)` (`(0, 0, 0)` when the domains differ). -/
 -- con-ron: ConRon/Arena/Core.lean:3046-3067 ConRon.Arena.defeqLams
-@[l_impl ConRon.Arena.defeqLams]
+@[no_expose, l_impl ConRon.Arena.defeqLams]
 def lamsOpenL : FunDecl := lfn (mode, vis, d, ty1, body1, ty2, body2) locals (ok, b1, b2) {
   ok := call defeq(mode, vis, d, ty1, ty2);
   if ok == 0 { return (0, 0, 0) };
@@ -418,7 +418,7 @@ def lamsOpenL : FunDecl := lfn (mode, vis, d, ty1, body1, ty2, body2) locals (ok
 
 /-- The fresh free variable `fvar d ty2`, both bodies instantiated with it: `(b1, b2)`. -/
 -- con-ron: ConRon/Arena/Core.lean:3046-3067 ConRon.Arena.defeqLams
-@[l_impl ConRon.Arena.defeqLams]
+@[no_expose, l_impl ConRon.Arena.defeqLams]
 def lamsInstL : FunDecl := lfn (d, ty2, body1, body2) locals (fv, b1, b2) {
   fv := call intern_fvar(d, ty2);
   b1 := call inst1(body1, fv, 0);
@@ -428,7 +428,7 @@ def lamsInstL : FunDecl := lfn (d, ty2, body1, body2) locals (fv, b1, b2) {
 
 /-- `lamPair?`: `(1, ty1, body1, ty2, body2)` when both handles are λs, else `(0, 0, 0, 0, 0)`. -/
 -- con-ron: ConRon/Arena/ExprOps.lean:1271-1282 ConRon.Arena.lamPair?
-@[l_impl ConRon.Arena.lamPair?]
+@[no_expose, l_impl ConRon.Arena.lamPair?]
 def lamPairL : FunDecl := lfn (a, b) locals (g, x1, y1, x2, y2, z) {
   if ⟦a⟧.tag != 5 || ⟦b⟧.tag != 5 { return (0, 0, 0, 0, 0) };
   (g, x1, y1, z) := call e_view(a);
@@ -455,7 +455,7 @@ def defeqLamsLoop : Stmt := lblk (mode, vis, d, ty1, body1, ty2, body2, ok, b1, 
 of its own fuel, which is below `2^62`):
 an uncounted loop over the λ pairs. -/
 -- con-ron: ConRon/Arena/Core.lean:3046-3067 ConRon.Arena.defeqLams
-@[l_impl ConRon.Arena.defeqLams]
+@[no_expose, l_impl ConRon.Arena.defeqLams]
 def defeqLamsL : FunDecl :=
     lfn (mode, vis, d, ty1, body1, ty2, body2) locals (ok, b1, b2, f, r) {
   ⟪defeqLamsLoop⟫;
@@ -466,7 +466,7 @@ def defeqLamsL : FunDecl :=
 
 /-- `quickDefEq`'s sort pair: the two levels compared (`lvl_eq_c`; `none` aborts). -/
 -- con-ron: ConRon/Arena/Core.lean:3069-3095 ConRon.Arena.quickDefEq
-@[l_impl ConRon.Arena.quickDefEq]
+@[no_expose, l_impl ConRon.Arena.quickDefEq]
 def quickSortL : FunDecl := lfn (a, b) locals (g, u, v, x, y, z) {
   (g, u, x, y) := call e_view(a);
   (g, v, x, y) := call e_view(b);
@@ -477,7 +477,7 @@ def quickSortL : FunDecl := lfn (a, b) locals (g, u, v, x, y, z) {
 
 /-- `quickDefEq`'s `∀` pair: binder congruence (`defeq_binders`). -/
 -- con-ron: ConRon/Arena/Core.lean:3069-3095 ConRon.Arena.quickDefEq
-@[l_impl ConRon.Arena.quickDefEq]
+@[no_expose, l_impl ConRon.Arena.quickDefEq]
 def quickForallL : FunDecl := lfn (mode, vis, d, a, b) locals (g, x1, y1, x2, y2, z, r) {
   (g, x1, y1, z) := call e_view(a);
   (g, x2, y2, z) := call e_view(b);
@@ -487,7 +487,7 @@ def quickForallL : FunDecl := lfn (mode, vis, d, a, b) locals (g, x1, y1, x2, y2
 
 /-- `quickDefEq`'s `λ` pair: the telescope (`defeq_lams`). -/
 -- con-ron: ConRon/Arena/Core.lean:3069-3095 ConRon.Arena.quickDefEq
-@[l_impl ConRon.Arena.quickDefEq]
+@[no_expose, l_impl ConRon.Arena.quickDefEq]
 def quickLamL : FunDecl := lfn (mode, vis, d, a, b) locals (g, x1, y1, x2, y2, z, r) {
   (g, x1, y1, z) := call e_view(a);
   (g, x2, y2, z) := call e_view(b);
@@ -496,7 +496,7 @@ def quickLamL : FunDecl := lfn (mode, vis, d, a, b) locals (g, x1, y1, x2, y2, z
 }
 
 /-- con-ron: ConRon/Arena/Core.lean:3069-3095 ConRon.Arena.quickDefEq -/
-@[l_impl ConRon.Arena.quickDefEq]
+@[no_expose, l_impl ConRon.Arena.quickDefEq]
 def quickDefeqL : FunDecl := lfn (mode, vis, d, a, b) locals (g, r) {
   if a == b { return (1, 1) };
   g := ⟦a⟧.tag;
@@ -521,7 +521,7 @@ def quickDefeqL : FunDecl := lfn (mode, vis, d, a, b) locals (g, r) {
 }
 
 /-- con-ron: ConRon/Arena/Core.lean:3097-3111 ConRon.Arena.isNatZero -/
-@[l_impl ConRon.Arena.isNatZero]
+@[no_expose, l_impl ConRon.Arena.isNatZero]
 def isNatZeroL : FunDecl := lfn (e) locals (t, i, el, nz) {
   t := ⟦e⟧.tier;
   i := ⟦e⟧.idx;
@@ -544,7 +544,7 @@ def isNatZeroL : FunDecl := lfn (e) locals (t, i, el, nz) {
 
 /-- `nat_pred(e)`: `(1, x)` when `natPred? e = some x`, else `(0, 0)`. -/
 -- con-ron: ConRon/Arena/Core.lean:3113-3135 ConRon.Arena.natPred?
-@[l_impl ConRon.Arena.natPred?]
+@[no_expose, l_impl ConRon.Arena.natPred?]
 def natPredL : FunDecl := lfn (e) locals (t, i, l, f, x, el, ns) {
   t := ⟦e⟧.tier;
   i := ⟦e⟧.idx;
@@ -573,7 +573,7 @@ def natPredL : FunDecl := lfn (e) locals (t, i, l, f, x, el, ns) {
 }
 
 /-- con-ron: ConRon/Arena/Core.lean:3137-3155 ConRon.Arena.defeqOffset -/
-@[l_impl ConRon.Arena.defeqOffset]
+@[no_expose, l_impl ConRon.Arena.defeqOffset]
 def defeqOffsetL : FunDecl := lfn (mode, vis, d, a, b) locals (za, zb, fa, x, fb, y, ok) {
   za := call is_nat_zero(a);
   zb := call is_nat_zero(b);
@@ -590,7 +590,7 @@ def defeqOffsetL : FunDecl := lfn (mode, vis, d, a, b) locals (za, zb, fa, x, fb
 /-! ## Lazy delta -/
 
 /-- con-ron: ConRon/Arena/Core.lean:3157-3161 ConRon.Arena.headIsProj -/
-@[l_impl ConRon.Arena.headIsProj]
+@[no_expose, l_impl ConRon.Arena.headIsProj]
 def headIsProjL : FunDecl := lfn (e) locals (h) {
   h := call get_app_fn(e);
   return u64(⟦h⟧.tag == 9)
@@ -598,7 +598,7 @@ def headIsProjL : FunDecl := lfn (e) locals (h) {
 
 /-- `try_unfold_proj_app(mode, vis, d, e)`: `(1, e')` when `tryUnfoldProjApp` is `some e'`. -/
 -- con-ron: ConRon/Arena/Core.lean:3163-3172 ConRon.Arena.tryUnfoldProjApp
-@[l_impl ConRon.Arena.tryUnfoldProjApp]
+@[no_expose, l_impl ConRon.Arena.tryUnfoldProjApp]
 def tryUnfoldProjAppL : FunDecl := lfn (mode, vis, d, e) locals (p, e2) {
   p := call head_is_proj(e);
   if p == 0 { return (0, 0) };
@@ -608,7 +608,7 @@ def tryUnfoldProjAppL : FunDecl := lfn (mode, vis, d, e) locals (p, e2) {
 }
 
 /-- con-ron: ConRon/Arena/Core.lean:3182-3190 ConRon.Arena.deltaQuick -/
-@[l_impl ConRon.Arena.deltaQuick]
+@[no_expose, l_impl ConRon.Arena.deltaQuick]
 def deltaQuickL : FunDecl := lfn (mode, vis, d, a, b) locals (f, v) {
   (f, v) := call quick_defeq(mode, vis, d, a, b);
   if f == 0 { return (0, a, b) };
@@ -619,7 +619,7 @@ def deltaQuickL : FunDecl := lfn (mode, vis, d, a, b) locals (f, v) {
 /-- One unfolding of the LEFT side: `unfoldDefinition`, the cheap `whnfCore`, `deltaQuick`
 (`.unknown` when nothing unfolds). -/
 -- con-ron: ConRon/Arena/Core.lean:3192-3249 ConRon.Arena.lazyDeltaStep
-@[l_impl ConRon.Arena.lazyDeltaStep]
+@[no_expose, l_impl ConRon.Arena.lazyDeltaStep]
 def ldsLeftL : FunDecl := lfn (mode, vis, d, a, b) locals (f, a2, a3, k, x, y) {
   (f, a2) := call unfold_definition(vis, a);
   if f == 0 { return (3, 0, 0) };
@@ -630,7 +630,7 @@ def ldsLeftL : FunDecl := lfn (mode, vis, d, a, b) locals (f, a2, a3, k, x, y) {
 
 /-- One unfolding of the RIGHT side. -/
 -- con-ron: ConRon/Arena/Core.lean:3192-3249 ConRon.Arena.lazyDeltaStep
-@[l_impl ConRon.Arena.lazyDeltaStep]
+@[no_expose, l_impl ConRon.Arena.lazyDeltaStep]
 def ldsRightL : FunDecl := lfn (mode, vis, d, a, b) locals (f, b2, b3, k, x, y) {
   (f, b2) := call unfold_definition(vis, b);
   if f == 0 { return (3, 0, 0) };
@@ -642,7 +642,7 @@ def ldsRightL : FunDecl := lfn (mode, vis, d, a, b) locals (f, b2, b3, k, x, y) 
 /-- Both sides unfolded, through the cheap `whnfCore`, then `deltaQuick` (`.unknown` unless both
 unfold). -/
 -- con-ron: ConRon/Arena/Core.lean:3192-3249 ConRon.Arena.lazyDeltaStep
-@[l_impl ConRon.Arena.lazyDeltaStep]
+@[no_expose, l_impl ConRon.Arena.lazyDeltaStep]
 def ldsUnfold2L : FunDecl := lfn (mode, vis, d, a, b) locals (fa, a2, fb, b2, a3, b3, k, x, y) {
   (fa, a2) := call unfold_definition(vis, a);
   (fb, b2) := call unfold_definition(vis, b);
@@ -656,7 +656,7 @@ def ldsUnfold2L : FunDecl := lfn (mode, vis, d, a, b) locals (fa, a2, fb, b2, a3
 /-- Equal hints: the same-head shortcut at equal regular hints (a kind word `≥ 2` is regular, as
 `head_hint`'s decoding reads it), else both unfolds. -/
 -- con-ron: ConRon/Arena/Core.lean:3192-3249 ConRon.Arena.lazyDeltaStep
-@[l_impl ConRon.Arena.lazyDeltaStep]
+@[no_expose, l_impl ConRon.Arena.lazyDeltaStep]
 def ldsSameL : FunDecl := lfn (mode, vis, d, a, b, ka, ha, kb, hb) locals (sch, sp, k, x, y) {
   sch := call same_const_heads(a, b);
   sp := 0;
@@ -669,7 +669,7 @@ def ldsSameL : FunDecl := lfn (mode, vis, d, a, b, ka, ha, kb, hb) locals (sch, 
 /-- The `true, true` arm of `lazyDeltaStep`: the hints, the greater side unfolded, else
 `lds_same`. -/
 -- con-ron: ConRon/Arena/Core.lean:3192-3249 ConRon.Arena.lazyDeltaStep
-@[l_impl ConRon.Arena.lazyDeltaStep]
+@[no_expose, l_impl ConRon.Arena.lazyDeltaStep]
 def ldsBothL : FunDecl := lfn (mode, vis, d, a, b) locals (ka, ha, kb, hb, lt, k, x, y) {
   (ka, ha) := call head_hint(vis, a);
   (kb, hb) := call head_hint(vis, b);
@@ -688,7 +688,7 @@ def ldsBothL : FunDecl := lfn (mode, vis, d, a, b) locals (ka, ha, kb, hb, lt, k
 }
 
 /-- con-ron: ConRon/Arena/Core.lean:3192-3249 ConRon.Arena.lazyDeltaStep -/
-@[l_impl ConRon.Arena.lazyDeltaStep]
+@[no_expose, l_impl ConRon.Arena.lazyDeltaStep]
 def lazyDeltaStepL : FunDecl := lfn (mode, vis, d, a, b) locals (ua, ub, f, e2, k, x, y) {
   ua := call unfoldable_head(vis, a);
   ub := call unfoldable_head(vis, b);
@@ -719,7 +719,7 @@ def lazyDeltaStepL : FunDecl := lfn (mode, vis, d, a, b) locals (ua, ub, f, e2, 
 (the comparison restarted on the reduct; `v` normalised to `0`/`1`), `(3, 0, 0)` when neither
 does. -/
 -- con-ron: ConRon/Arena/Core.lean:3262-3290 ConRon.Arena.lazyDeltaReduction
-@[l_impl ConRon.Arena.lazyDeltaReduction]
+@[no_expose, l_impl ConRon.Arena.lazyDeltaReduction]
 def lazyNatL : FunDecl := lfn (mode, vis, d, a, b) locals (fa, a2, fb, b2, v) {
   (fa, a2) := call reduce_nat(mode, vis, d, a);
   if fa != 0 {
@@ -737,7 +737,7 @@ def lazyNatL : FunDecl := lfn (mode, vis, d, a, b) locals (fa, a2, fb, b2, v) {
 /-- One lazy-delta iteration: `(k, x, y)` with `k` = `0` `.verdict false`, `1` `.verdict true`, `2`
 `.unknown a b`, `3` continue with `(x, y)`. -/
 -- con-ron: ConRon/Arena/Core.lean:3262-3290 ConRon.Arena.lazyDeltaReduction
-@[l_impl ConRon.Arena.lazyDeltaReduction]
+@[no_expose, l_impl ConRon.Arena.lazyDeltaReduction]
 def lazyIterL : FunDecl := lfn (mode, vis, d, a, b) locals (of, ov, nf, k, x, y) {
   (of, ov) := call defeq_offset(mode, vis, d, a, b);
   if of != 0 { return (u64(ov != 0), 0, 0) };
@@ -766,7 +766,7 @@ def lazyDeltaLoop : Stmt := lblk (mode, vis, d, a, b, k, x, y) {
 /-- The lazy-delta loop on its uncounted `2^62` budget (`defeqLoopFuel`; each step costs L a unit of its own fuel, which
 is below `2^62`). -/
 -- con-ron: ConRon/Arena/Core.lean:3262-3290 ConRon.Arena.lazyDeltaReduction
-@[l_impl ConRon.Arena.lazyDeltaReduction]
+@[no_expose, l_impl ConRon.Arena.lazyDeltaReduction]
 def lazyDeltaReductionL : FunDecl := lfn (mode, vis, d, a, b) locals (k, x, y) {
   ⟪lazyDeltaLoop⟫;
   abort
@@ -775,7 +775,7 @@ def lazyDeltaReductionL : FunDecl := lfn (mode, vis, d, a, b) locals (k, x, y) {
 /-- The projection loop's exit on a verdict `k` (`1` equal, else the projections tried on both
 sides; split off for the proofs). -/
 -- con-ron: ConRon/Arena/Core.lean:3292-3312 ConRon.Arena.lazyDeltaProjReduction
-@[l_impl ConRon.Arena.lazyDeltaProjReduction]
+@[no_expose, l_impl ConRon.Arena.lazyDeltaProjReduction]
 def ldprExitL : FunDecl := lfn (mode, vis, d, sn, i, a, b, k) locals (fx, px, fy, py, r) {
   if k == 1 { return 1 };
   (fx, px) := call reduce_proj_core(mode, vis, d, sn, i, a);
@@ -805,7 +805,7 @@ def ldprLoopB : Stmt := lblk (mode, vis, d, sn, i, a, b, k, x, y, r) {
 
 /-- The projection loop on its uncounted budget. -/
 -- con-ron: ConRon/Arena/Core.lean:3292-3312 ConRon.Arena.lazyDeltaProjReduction
-@[l_impl ConRon.Arena.lazyDeltaProjReduction]
+@[no_expose, l_impl ConRon.Arena.lazyDeltaProjReduction]
 def lazyDeltaProjReductionL : FunDecl :=
     lfn (mode, vis, d, sn, i, a, b) locals (k, x, y, r) {
   ⟪ldprLoopB⟫;
@@ -815,7 +815,7 @@ def lazyDeltaProjReductionL : FunDecl :=
 /-- Each test its own `if`, the second record's words loaded before the tests (the proof's
 paths).
 con-ron: ConRon/Arena/Core.lean:3314-3327 ConRon.Arena.defeqProjPair -/
-@[l_impl ConRon.Arena.defeqProjPair]
+@[no_expose, l_impl ConRon.Arena.defeqProjPair]
 def defeqProjPairL : FunDecl := lfn (mode, vis, d, a, b) locals (t, i, s, x1, x2, x3, y1, y2, y3, r) {
   if ⟦a⟧.tag != 9 { return 0 };
   if ⟦b⟧.tag != 9 { return 0 };
@@ -836,7 +836,7 @@ def defeqProjPairL : FunDecl := lfn (mode, vis, d, a, b) locals (t, i, s, x1, x2
 /-! ## Proof irrelevance, η, the stuck fallbacks -/
 
 /-- con-ron: ConRon/Arena/Core.lean:1392-1423 ConRon.Arena.propIrrel -/
-@[l_impl ConRon.Arena.propIrrel]
+@[no_expose, l_impl ConRon.Arena.propIrrel]
 def propIrrelL : FunDecl := lfn (mode, vis, d, a, b) locals (na, nb, ia, ib, r) {
   na := call not_proof_fast(vis, a);
   nb := call not_proof_fast(vis, b);
@@ -851,7 +851,7 @@ def propIrrelL : FunDecl := lfn (mode, vis, d, a, b) locals (na, nb, ia, ib, r) 
 /-- `etaCert`'s verified-mode check: the λ body's full-grade type against the ∀'s codomain at
 the fresh variable `fv` (split off for the proofs). -/
 -- con-ron: ConRon/Arena/Core.lean:1605-1631 ConRon.Arena.etaCert
-@[l_impl ConRon.Arena.etaCert]
+@[no_expose, l_impl ConRon.Arena.etaCert]
 def etaCertTyL : FunDecl := lfn (mode, vis, d, lhs, cod2, fv) locals (t1, t2, ok) {
   t1 := call infer(mode, vis, d + 1, lhs);
   t2 := call inst1(cod2, fv, 0);
@@ -862,7 +862,7 @@ def etaCertTyL : FunDecl := lfn (mode, vis, d, lhs, cod2, fv) locals (t1, t2, ok
 /-- `etaCert` once the domains agree: the bodies at a fresh variable (split off for the
 proofs). The depth capacity: the word `d + 1` must not wrap where the twin's `Nat` does not. -/
 -- con-ron: ConRon/Arena/Core.lean:1605-1631 ConRon.Arena.etaCert
-@[l_impl ConRon.Arena.etaCert]
+@[no_expose, l_impl ConRon.Arena.etaCert]
 def etaCertBodyL : FunDecl := lfn (mode, vis, d, ty1, body1, b, cod2) locals (fv, lhs, rhs, ok) {
   if d + 1 == 0 { abort };
   fv := call intern_fvar(d, ty1);
@@ -878,7 +878,7 @@ def etaCertBodyL : FunDecl := lfn (mode, vis, d, ty1, body1, b, cod2) locals (fv
 }
 
 /-- con-ron: ConRon/Arena/Core.lean:1605-1631 ConRon.Arena.etaCert -/
-@[l_impl ConRon.Arena.etaCert]
+@[no_expose, l_impl ConRon.Arena.etaCert]
 def etaCertL : FunDecl :=
     lfn (mode, vis, d, ty1, body1, b) locals (nt, tb, hh, t, i, ty2, cod2, ok) {
   nt := call io_neutral(b);
@@ -896,7 +896,7 @@ def etaCertL : FunDecl :=
 }
 
 /-- con-ron: ConRon/Arena/Core.lean:1546-1561 ConRon.Arena.etaCtorShape -/
-@[l_impl ConRon.Arena.etaCtorShape]
+@[no_expose, l_impl ConRon.Arena.etaCtorShape]
 def etaCtorShapeL : FunDecl := lfn (vis, a) locals (top, hh, t, i, f, p, ao, an, nf) {
   hh := call get_app_fn(a);
   if ⟦hh⟧.tag != 3 { return 0 };
@@ -915,7 +915,7 @@ def etaCtorShapeL : FunDecl := lfn (vis, a) locals (top, hh, t, i, f, p, ao, an,
 /-- The η certificate's level comparison and the two spine comparisons (`ep` the parameters, `nf`
 the fields; split off for the proofs). Leaves the projections' slice on the stack. -/
 -- con-ron: ConRon/Arena/Core.lean:1498-1544 ConRon.Arena.structEtaCertWith
-@[l_impl ConRon.Arena.structEtaCertWith]
+@[no_expose, l_impl ConRon.Arena.structEtaCertWith]
 def structEtaCertTailL : FunDecl :=
     lfn (mode, vis, d, b, us, T, us2, ao, an, to, tn, ep, nf) locals (z, tk, ok, po, pn) {
   z := call lvls_eq_c(us, us2);
@@ -936,7 +936,7 @@ read before the first call, and the twin's pure tests (`er_slice_eq`, `reserved_
 level list's length) run before `tower_slots_all`: the twin's condition has no effect, so nothing
 moves across an effect. -/
 -- con-ron: ConRon/Arena/Core.lean:1498-1544 ConRon.Arena.structEtaCertWith
-@[l_impl ConRon.Arena.structEtaCertWith]
+@[no_expose, l_impl ConRon.Arena.structEtaCertWith]
 def structEtaCertGoL : FunDecl :=
     lfn (mode, vis, d, b, us, c, p, T, q, us2, ao, an, to, tn)
     locals (eta, ec, ep, nf, lpn, lpo, cpo, cpn, lpe, r1, r2, lo, uslen, slots, r) {
@@ -968,7 +968,7 @@ def structEtaCertGoL : FunDecl :=
 /-- `structEtaCertWith` past the constructor's spine: the type's head and spine, then the keys
 (split off for the proofs). Leaves its slices on the stack. -/
 -- con-ron: ConRon/Arena/Core.lean:1498-1544 ConRon.Arena.structEtaCertWith
-@[l_impl ConRon.Arena.structEtaCertWith]
+@[no_expose, l_impl ConRon.Arena.structEtaCertWith]
 def structEtaCertWtbL : FunDecl :=
     lfn (mode, vis, d, b, us, c, p, ao, an, wtb) locals (hh, t, i, T, us2, f, q, to, tn, r) {
   hh := call get_app_fn(wtb);
@@ -985,7 +985,7 @@ def structEtaCertWtbL : FunDecl :=
 }
 
 /-- con-ron: ConRon/Arena/Core.lean:1498-1544 ConRon.Arena.structEtaCertWith -/
-@[l_impl ConRon.Arena.structEtaCertWith]
+@[no_expose, l_impl ConRon.Arena.structEtaCertWith]
 def structEtaCertWithL : FunDecl :=
     lfn (mode, vis, d, a, b, wtb) locals (top, hh, t, i, c, us, f, p, ao, an, nf, r) {
   hh := call get_app_fn(a);
@@ -1009,7 +1009,7 @@ def structEtaCertWithL : FunDecl :=
 }
 
 /-- con-ron: ConRon/Arena/Core.lean:1563-1572 ConRon.Arena.structEtaCert -/
-@[l_impl ConRon.Arena.structEtaCert]
+@[no_expose, l_impl ConRon.Arena.structEtaCert]
 def structEtaCertL : FunDecl := lfn (mode, vis, d, a, b) locals (s, tb, wtb, r) {
   s := call eta_ctor_shape(vis, a);
   if s == 0 { return 0 };
@@ -1022,7 +1022,7 @@ def structEtaCertL : FunDecl := lfn (mode, vis, d, a, b) locals (s, tb, wtb, r) 
 /-- `structUnitCert` once the family is certified: `b`'s type against `wta` (split off for the
 proofs). -/
 -- con-ron: ConRon/Arena/Core.lean:1574-1603 ConRon.Arena.structUnitCert
-@[l_impl ConRon.Arena.structUnitCert]
+@[no_expose, l_impl ConRon.Arena.structUnitCert]
 def structUnitTailL : FunDecl := lfn (mode, vis, d, b, wta) locals (tb, wtb, r) {
   tb := call infer_io(mode, vis, d, b);
   wtb := call whnf(mode, vis, d, tb);
@@ -1035,7 +1035,7 @@ def structUnitTailL : FunDecl := lfn (mode, vis, d, b, wta) locals (tb, wtb, r) 
 The record words are read before the first call after `env_find`, and the twin's pure tests
 (`ls_node`, `reserved_contains`) run before the tests. -/
 -- con-ron: ConRon/Arena/Core.lean:1574-1603 ConRon.Arena.structUnitCert
-@[l_impl ConRon.Arena.structUnitCert]
+@[no_expose, l_impl ConRon.Arena.structUnitCert]
 def structUnitHeadL : FunDecl :=
     lfn (mode, vis, d, b, wta) locals (top, hh, t, i, T, us2, f, q, ul, up, lpn, to, tn, lo, uslen, rc, r) {
   hh := call get_app_fn(wta);
@@ -1063,7 +1063,7 @@ def structUnitHeadL : FunDecl :=
 }
 
 /-- con-ron: ConRon/Arena/Core.lean:1574-1603 ConRon.Arena.structUnitCert -/
-@[l_impl ConRon.Arena.structUnitCert]
+@[no_expose, l_impl ConRon.Arena.structUnitCert]
 def structUnitCertL : FunDecl := lfn (mode, vis, d, a, b) locals (ta, wta, r) {
   ta := call infer_io(mode, vis, d, a);
   wta := call whnf(mode, vis, d, ta);
@@ -1072,7 +1072,7 @@ def structUnitCertL : FunDecl := lfn (mode, vis, d, a, b) locals (ta, wta, r) {
 }
 
 /-- con-ron: ConRon/Arena/Core.lean:1633-1641 ConRon.Arena.stuckIrrel -/
-@[l_impl ConRon.Arena.stuckIrrel]
+@[no_expose, l_impl ConRon.Arena.stuckIrrel]
 def stuckIrrelL : FunDecl := lfn (mode, vis, d, a, b) locals (r) {
   r := call struct_eta_cert(mode, vis, d, a, b);
   if r != 0 { return 1 };
@@ -1090,7 +1090,7 @@ def stuckIrrelL : FunDecl := lfn (mode, vis, d, a, b) locals (r) {
 `fo`; `side` `0` when the literal is on the left (`a`). The head's record words are read before
 the first call. -/
 -- con-ron: ConRon/Arena/Core.lean:3329-3398 ConRon.Arena.defeqStuck
-@[l_impl ConRon.Arena.defeqStuck]
+@[no_expose, l_impl ConRon.Arena.defeqStuck]
 def stuckStrL : FunDecl :=
     lfn (mode, vis, d, a, b, side, lt, fo) locals (t, i, co, uo, el, sl, ss, c, r) {
   (t, i) := node LIT⟦lt⟧;
@@ -1114,7 +1114,7 @@ def stuckStrL : FunDecl :=
 /-- `defeqStuck`'s application arm, its congruence (split off for the proofs): `1` when the heads
 and the spines agree pairwise; the top put back. -/
 -- con-ron: ConRon/Arena/Core.lean:3329-3398 ConRon.Arena.defeqStuck
-@[l_impl ConRon.Arena.defeqStuck]
+@[no_expose, l_impl ConRon.Arena.defeqStuck]
 def stuckAppCongL : FunDecl := lfn (mode, vis, d, a, b) locals (top, ao, an, bo, bn, fa, fb, ok) {
   top := CTL.u64[136];
   (ao, an) := call get_app_args(a);
@@ -1132,7 +1132,7 @@ def stuckAppCongL : FunDecl := lfn (mode, vis, d, a, b) locals (top, ao, an, bo,
 
 /-- `defeqStuck`'s application arm: spine-wise congruence, else the stuck fallbacks. -/
 -- con-ron: ConRon/Arena/Core.lean:3329-3398 ConRon.Arena.defeqStuck
-@[l_impl ConRon.Arena.defeqStuck]
+@[no_expose, l_impl ConRon.Arena.defeqStuck]
 def stuckAppL : FunDecl := lfn (mode, vis, d, a, b) locals (ok, r) {
   ok := call stuck_app_cong(mode, vis, d, a, b);
   if ok != 0 { return 1 };
@@ -1143,7 +1143,7 @@ def stuckAppL : FunDecl := lfn (mode, vis, d, a, b) locals (ok, r) {
 /-- `defeqStuck`'s free-variable, constant and λ arms and the fallback, by the two views' words
 (split off for the proofs). -/
 -- con-ron: ConRon/Arena/Core.lean:3329-3398 ConRon.Arena.defeqStuck
-@[l_impl ConRon.Arena.defeqStuck]
+@[no_expose, l_impl ConRon.Arena.defeqStuck]
 def stuckRestL : FunDecl :=
     lfn (mode, vis, d, a, b, ga, a1, a2, gb, b1, b2) locals (z, ok, r) {
   if ga == 1 {
@@ -1183,7 +1183,7 @@ def stuckRestL : FunDecl :=
 /-- The tags tested one at a time (no `&&` chains: the proof's paths); the twin's pairs are
 disjoint, so grouping by `a`'s tag keeps its match order.
 con-ron: ConRon/Arena/Core.lean:3329-3398 ConRon.Arena.defeqStuck -/
-@[l_impl ConRon.Arena.defeqStuck]
+@[no_expose, l_impl ConRon.Arena.defeqStuck]
 def defeqStuckL : FunDecl :=
     lfn (mode, vis, d, a, b) locals (ga, a1, a2, a3, gb, b1, b2, b3, r) {
   (ga, a1, a2, a3) := call e_view(a);
@@ -1210,7 +1210,7 @@ def defeqStuckL : FunDecl :=
 
 /-- The second half of `defeqBody`, from the lazy-delta loop's `.unknown` pair on. -/
 -- con-ron: ConRon/Arena/Core.lean:3400-3438 ConRon.Arena.defeqBody
-@[l_impl ConRon.Arena.defeqBody]
+@[no_expose, l_impl ConRon.Arena.defeqBody]
 def defeqTailL : FunDecl := lfn (mode, vis, d, a1, b1) locals (pp, pa, pb, a2, b2, r) {
   pp := call defeq_proj_pair(mode, vis, d, a1, b1);
   if pp != 0 { return 1 };
@@ -1233,7 +1233,7 @@ def defeqTailL : FunDecl := lfn (mode, vis, d, a1, b1) locals (pp, pa, pb, a2, b
 /-- A depth word `≥ 2^63` aborts (the binder descents below add to it, the twin's `Nat` does not
 wrap); the lazy loop's verdict words `0`/`1` are tested one by one (`decLR`: any other is `.unknown`).
 con-ron: ConRon/Arena/Core.lean:3400-3438 ConRon.Arena.defeqBody -/
-@[l_impl ConRon.Arena.defeqBody]
+@[no_expose, l_impl ConRon.Arena.defeqBody]
 def defeqBodyL : FunDecl :=
     lfn (mode, vis, d, a, b) locals (bt, hf, sc, qf, qv, pi, a1, b1, lk, la, lb, r) {
   if a == b { return 1 };

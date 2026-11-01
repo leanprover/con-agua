@@ -22,6 +22,7 @@ import ConRon.Bridge.Inductives.PosWalks
 public import ConAgua.Arena.IndPosSpec.NestSeeds
 public import ConAgua.Arena.IndRealIlpL
 public import ConAgua.Verdict.PosE
+import all ConAgua.Arena.IndPos2
 
 @[expose] public section
 /-!

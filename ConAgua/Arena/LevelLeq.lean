@@ -4,6 +4,7 @@ meta import ConAgua.L.Semantics
 public import ConAgua.Arena.LevelSubst
 import ConAgua.Census.Attr
 import ConAgua.Arena.LevelGrindAttr
+import all ConAgua.Arena.LevelSimp
 
 @[expose] public section
 
@@ -354,7 +355,7 @@ grind_pattern [level_grind] caK₂_some => caK₂ n f d x (some (y, m₁))
 /-! ## The L code -/
 
 /-- con-leche: ConLeche/Kernel/Level.lean:86-93 ConLeche.Level.leqCore -/
-@[l_impl ConLeche.Level.leqCore]
+@[no_expose, l_impl ConLeche.Level.leqCore]
 def lvLeq : FunDecl := lfn (f, l, r, d) locals (g, a, b, h, c, e, x) {
   if f == 0 { return 0 };
   (g, a, b) := call lv_node(l);
@@ -366,7 +367,7 @@ def lvLeq : FunDecl := lfn (f, l, r, d) locals (g, a, b, h, c, e, x) {
 }
 
 /-- con-leche: ConLeche/Kernel/Level.lean:95-113 ConLeche.Level.rest -/
-@[l_impl ConLeche.Level.rest]
+@[no_expose, l_impl ConLeche.Level.rest]
 def lvRest : FunDecl := lfn (f, l, r, d) locals (g, a, b, h, c, e, x) {
   (g, a, b) := call lv_node(l);
   (h, c, e) := call lv_node(r);
@@ -396,7 +397,7 @@ def lvRest : FunDecl := lfn (f, l, r, d) locals (g, a, b, h, c, e, x) {
 }
 
 /-- con-leche: ConLeche/Kernel/Level.lean:115-125 ConLeche.Level.imaxRules -/
-@[l_impl ConLeche.Level.imaxRules]
+@[no_expose, l_impl ConLeche.Level.imaxRules]
 def lvImax : FunDecl := lfn (f, l, r, d) locals (g, a, b, h, c, e, i, j, k, x) {
   (g, a, b) := call lv_node(l);
   if g == 3 {
@@ -413,7 +414,7 @@ def lvImax : FunDecl := lfn (f, l, r, d) locals (g, a, b, h, c, e, i, j, k, x) {
 }
 
 /-- con-leche: ConLeche/Kernel/Level.lean:115-125 ConLeche.Level.imaxRules -/
-@[l_impl ConLeche.Level.imaxRules]
+@[no_expose, l_impl ConLeche.Level.imaxRules]
 def lvImaxL : FunDecl := lfn (f, l, r, d) locals (g, a, b, i, j, k, x) {
   (g, a, b) := call lv_node(l);
   if g == 3 {
@@ -426,7 +427,7 @@ def lvImaxL : FunDecl := lfn (f, l, r, d) locals (g, a, b, i, j, k, x) {
 }
 
 /-- con-leche: ConLeche/Kernel/Level.lean:115-125 ConLeche.Level.imaxRules -/
-@[l_impl ConLeche.Level.imaxRules]
+@[no_expose, l_impl ConLeche.Level.imaxRules]
 def lvImaxR : FunDecl := lfn (f, l, r, d) locals (h, c, e, i, j, k, x) {
   (h, c, e) := call lv_node(r);
   if h == 3 {
@@ -438,7 +439,7 @@ def lvImaxR : FunDecl := lfn (f, l, r, d) locals (h, c, e, i, j, k, x) {
 }
 
 /-- con-leche: ConLeche/Kernel/Level.lean:127-135 ConLeche.Level.byCases -/
-@[l_impl ConLeche.Level.byCases]
+@[no_expose, l_impl ConLeche.Level.byCases]
 def lvCases : FunDecl := lfn (f, p, l, r, d) locals (z, x) {
   z := call lh_mk(0, 0, 0);
   x := call lv_cases_at(f, p, l, r, d, z);
@@ -450,7 +451,7 @@ def lvCases : FunDecl := lfn (f, p, l, r, d) locals (z, x) {
 }
 
 /-- con-leche: ConLeche/Kernel/Level.lean:127-135 ConLeche.Level.byCases -/
-@[l_impl ConLeche.Level.byCases]
+@[no_expose, l_impl ConLeche.Level.byCases]
 def lvCasesAt : FunDecl := lfn (f, p, l, r, d, v) locals (x, y) {
   x := call lv_subsimp(l, p, v);
   y := call lv_subsimp(r, p, v);

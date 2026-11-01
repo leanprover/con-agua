@@ -14,6 +14,9 @@ public import ConAgua.Arena.DeclCanonSpec
 public import ConAgua.Arena.DeclNatBase
 public import ConAgua.Arena.WhnfEntry
 public import ConAgua.Arena.WhnfIota
+import all ConAgua.Arena.DeclArmsCanon
+import all ConAgua.Arena.StubInd
+import all ConAgua.Arena.WhnfEntry
 
 @[expose] public section
 

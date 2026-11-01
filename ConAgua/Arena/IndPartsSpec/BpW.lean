@@ -8,6 +8,7 @@ import ConRon.Bridge.Grind
 public import ConAgua.Arena.IndPartsSpec.BlockRecNamesUnreserved
 public import ConAgua.Arena.IndPartsSpec.IndPartsProg5
 public import ConAgua.Arena.IndPartsSpec.PlW
+import all ConAgua.Arena.IndParts
 
 @[expose] public section
 

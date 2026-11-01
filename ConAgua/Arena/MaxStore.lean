@@ -96,7 +96,7 @@ def maxCS : ConsSch where
 /-! ## `max_find(t, u, v, h)`: the probe -/
 
 /-- con-ron: ConRon/Arena/Store.lean:94-95 ConRon.Arena.Tbl.find? -/
-def maxFind : FunDecl := consFindG maxCS
+@[no_expose] def maxFind : FunDecl := consFindG maxCS
 
 /-! ## `max_push(t, u, v, j)`: append a node to tier `t`, register it at slot `j` -/
 
@@ -109,7 +109,7 @@ def mpushOK (m : Mem) (t : Word) : Bool :=
     decide (mcnt m t < m.len64 (tierA MHP t))
 
 /-- con-ron: ConRon/Arena/Store.lean:97-102 ConRon.Arena.Tbl.push -/
-def maxPush : FunDecl := consPushG maxCS
+@[no_expose] def maxPush : FunDecl := consPushG maxCS
 
 /-! ## `intern_max(u, v)`: hash-cons the level `max u v`
 
@@ -121,7 +121,7 @@ aborts (the library's `consInternM`). -/
 def minternW (m : Mem) (u v : Word) : Option (Word × Mem) := consInternM maxCS m [u, v]
 
 /-- con-ron: ConRon/Arena/Monad.lean:444-460 ConRon.Arena.internLNode -/
-@[l_impl ConRon.Arena.internLNode]
+@[no_expose, l_impl ConRon.Arena.internLNode]
 def internMax : FunDecl := consInternG maxCS
 
 /-- The `max` store functions, as one `#eval`-able program. -/

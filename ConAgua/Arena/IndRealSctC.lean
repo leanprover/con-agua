@@ -34,6 +34,9 @@ public import ConAgua.Arena.IndInstallSpec.DecCNS
 public import ConAgua.Arena.IndInstallSpec.DecISS
 public import ConAgua.Arena.IndSumSpec.ConsBlockRecsTF
 public import ConAgua.Arena.IndSumSpec.StructProjBodies
+import all ConAgua.Arena.Env
+import all ConAgua.Arena.IndInstall
+import all ConAgua.Arena.IndSum
 
 @[expose] public section
 

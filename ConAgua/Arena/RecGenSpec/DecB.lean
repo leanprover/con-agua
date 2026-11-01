@@ -9,6 +9,7 @@ import ConAgua.Arena.IndInstallSpec.DomsW
 import ConAgua.Arena.RecClassSpec.Classes
 public import ConAgua.Arena.IndDecStab
 public import ConAgua.Arena.RecCheckSpec.TcmF
+import all ConAgua.Arena.RecGen
 
 @[expose] public section
 
@@ -63,7 +64,7 @@ def cnsLoop : Stmt := lblk (vis, p, ftOff, ftLen, tblOff, tblLen, msOff, msLen, 
 
 /-- `classesNfsL`, with its loop spliced from `cnsLoop`. -/
 -- con-ron: none — `classesNfsL` itself (`rfl`), its loops named blocks for the proof
-def classesNfsL' : FunDecl := lfn (vis, p, ftOff, ftLen, tblOff, tblLen, msOff, msLen)
+@[no_expose] def classesNfsL' : FunDecl := lfn (vis, p, ftOff, ftLen, tblOff, tblLen, msOff, msLen)
     locals (q, j, m, esOff, esLen, nm, k) {
   q := call iw_alloc(msLen);
   j := 0;
@@ -71,7 +72,7 @@ def classesNfsL' : FunDecl := lfn (vis, p, ftOff, ftLen, tblOff, tblLen, msOff, 
   return (q, msLen)
 }
 
-theorem classesNfsL_eq : classesNfsL = classesNfsL' := rfl
+theorem classesNfsL_eq : classesNfsL = classesNfsL' := by rfl
 
 /-! ## The models -/
 

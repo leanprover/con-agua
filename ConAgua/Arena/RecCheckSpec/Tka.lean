@@ -6,6 +6,7 @@ public import ConAgua.Arena.RecCheckSpec.EeW
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.Arena.IndGrindAttr
 public import ConAgua.L.GrindAttr
+import all ConAgua.Arena.RecCheck
 
 @[expose] public section
 
@@ -87,7 +88,7 @@ section arms
 variable (n : Nat) (m : Mem) (bso bsl teo tel e : Word) (r1 r2 : List Word)
 theorem tteK1_some : tteK1 n teo tel (some (r1, m)) = tteK2 n r1 (eeW n m teo tel) := rfl
 theorem tteK2_some : tteK2 n r1 (some (r2, m)) =
-    tteK3 m (eqW n m (r1.headD 0) (r1.tail.headD 0) (r2.headD 0) (r2.tail.headD 0)) := rfl
+    tteK3 m (eqW n m (r1.headD 0) (r1.tail.headD 0) (r2.headD 0) (r2.tail.headD 0)) := by rfl
 theorem tteK3_some : tteK3 m (some e) = some ([e], m) := rfl
 end arms
 attribute [ind_grind] tteK1_some tteK2_some tteK3_some

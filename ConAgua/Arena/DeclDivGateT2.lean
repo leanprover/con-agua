@@ -19,6 +19,7 @@ public import ConAgua.Arena.LeafFns
 public import ConAgua.Arena.TwinStep
 public import ConAgua.Verdict.VCtx
 public import ConRon.Bridge.Checker.DivMod
+import all ConAgua.Arena.DeclArmsNat
 
 @[expose] public section
 

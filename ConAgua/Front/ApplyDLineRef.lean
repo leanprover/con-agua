@@ -6,6 +6,9 @@ public import ConAgua.Front.FieldsDeclSpec
 import ConAgua.Checker.NoVerdictTree
 import ConAgua.Front.FieldsDeclLink
 public import ConAgua.Front.ApplyDeclRefine
+import all ConAgua.Front.ApplyDecl
+import all ConAgua.Front.IndApply
+import all ConAgua.Front.Line
 
 @[expose] public section
 

@@ -49,7 +49,7 @@ def matchLitLoop : Stmt := lblk (i, o, n, k, c) {
 }
 
 /-- con-leche: ConLeche/Frontend/Scan/Fast.lean:121-131 ConLeche.Frontend.matchLit -/
-@[l_impl ConLeche.Frontend.matchLit]
+@[no_expose, l_impl ConLeche.Frontend.matchLit]
 def matchLit : FunDecl := lfn (i, o, n) locals (k, c) { ⟪matchLitLoop⟫; return 1 }
 
 /-- Rust's `byte_at`: the byte at `i`, `0` past the end. -/
@@ -141,7 +141,7 @@ end matchLit
 /-! ## `scan_bool` -/
 
 /-- con-leche: ConLeche/Frontend/Scan/Fast.lean:460-464 ConLeche.Frontend.scanBool -/
-@[l_impl ConLeche.Frontend.scanBool]
+@[no_expose, l_impl ConLeche.Frontend.scanBool]
 def scanBool : FunDecl := lfn (i) locals (m) {
   m := call match_lit(i, 0, 4);
   if m != 0 { return (1, 1, i + 4) };

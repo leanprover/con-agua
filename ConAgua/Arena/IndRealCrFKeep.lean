@@ -8,6 +8,12 @@ import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
 public import ConAgua.Arena.ConstsResolveFRefine2
 public import ConAgua.Arena.IndRealCrF
+import all ConAgua.Arena.ConstsResolveF
+import all ConAgua.Arena.Env
+import all ConAgua.Arena.IndIface
+import all ConAgua.Arena.MemoLib
+import all ConAgua.Arena.Pins
+import all ConAgua.Arena.WhnfIota
 
 @[expose] public section
 

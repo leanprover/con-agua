@@ -11,6 +11,7 @@ import ConAgua.Checker.NoVerdictTree
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
 public import ConAgua.Arena.DefEqStuckIrrel
+import all ConAgua.Arena.DefEq
 
 @[expose] public section
 

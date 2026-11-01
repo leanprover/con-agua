@@ -9,6 +9,21 @@ import Std.Tactic.BVDecide.Normalize.BitVec
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
 public import ConAgua.Arena.TeleLift
+import all ConAgua.Arena.AppStore
+import all ConAgua.Arena.BVarStore
+import all ConAgua.Arena.BvarB
+import all ConAgua.Arena.ConsLib
+import all ConAgua.Arena.ExprMk
+import all ConAgua.Arena.ForallStore
+import all ConAgua.Arena.IndIface
+import all ConAgua.Arena.LamStore
+import all ConAgua.Arena.LetStore
+import all ConAgua.Arena.LiftL
+import all ConAgua.Arena.MemoLib
+import all ConAgua.Arena.ProjStore
+import all ConAgua.Arena.TeleLift
+import all ConAgua.Arena.Walk
+import all ConAgua.Arena.WalkLift
 
 @[expose] public section
 
@@ -57,7 +72,7 @@ theorem instPisAtLiftL_eq : instPisAtLiftL = lfn (f, o, l, e) locals (h, k, g, x
   k := 0;
   ⟪ipalLoop⟫;
   return (1, h)
-} := rfl
+} := by rfl
 
 /-! ## The program and the model -/
 

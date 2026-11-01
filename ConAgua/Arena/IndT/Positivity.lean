@@ -45,6 +45,7 @@ public import ConAgua.Arena.IndRealIlpL
 public import ConAgua.Arena.IndRealOpf
 public import ConAgua.Verdict.PosE
 public import ConAgua.Verdict.PosTopE1
+import all ConAgua.Arena.IndInstall
 
 @[expose] public section
 

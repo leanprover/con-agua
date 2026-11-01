@@ -282,7 +282,7 @@ def cfLoop (C : ConsSch) : Stmt :=
       (.seq (.ite (mapC (fvF C) (kfKey C.sa)) (kfMatch C) .skip) (mapS (lvF C.nk) cfAdv)))
 
 /-- con-ron: ConRon/Arena/Store.lean:94-95 ConRon.Arena.Tbl.find? -/
-def consFindG (C : ConsSch) : FunDecl :=
+@[no_expose] def consFindG (C : ConsSch) : FunDecl :=
   { nparams := 2 + C.nk, nlocals := 10 + C.nk + C.mloc,
     body := .seq (mapS (fvF C) (kfHead C.sa))
       (.seq (.set (7 + C.nk + C.mloc) (kwE C)) (.seq (cfLoop C) (.abort (.const 0)))) }
@@ -597,7 +597,7 @@ def cpRest (C : ConsSch) : Stmt :=
     (seqO (cpColW C) (.seq (cpGrowIf C) (.ret [.var (2 + C.np)])))
 
 /-- con-ron: ConRon/Arena/Store.lean:97-102 ConRon.Arena.Tbl.push -/
-def consPushG (C : ConsSch) : FunDecl :=
+@[no_expose] def consPushG (C : ConsSch) : FunDecl :=
   { nparams := 2 + C.np, nlocals := gO C + 21 + C.nk,
     body := seqO C.pre (seqs ((cpHead C).map (mapS (lvF C.np)))
       (.seq (.ite C.room (.abort (.const R_CAP_STORE)) .skip)
@@ -649,7 +649,7 @@ def ciChk (C : ConsSch) : List Stmt :=
 
 /-- con-ron: ConRon/Arena/Monad.lean:249-267 ConRon.Arena.internE
 con-ron: ConRon/Arena/Monad.lean:221-247 ConRon.Arena.internNodeE -/
-def consInternG (C : ConsSch) : FunDecl :=
+@[no_expose] def consInternG (C : ConsSch) : FunDecl :=
   match C.skipW with
   | some sk =>
     { nparams := C.nk, nlocals := 6 + C.nk,

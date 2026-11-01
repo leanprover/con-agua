@@ -8,6 +8,7 @@ import ConAgua.Arena.RefWalk
 public import ConAgua.Arena.IndPosSpec.NoGoStep
 public import ConAgua.Arena.TwinStep
 public import ConRon.Bridge.Inductives.Run
+import all ConAgua.Arena.IndIface
 
 @[expose] public section
 

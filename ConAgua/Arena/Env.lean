@@ -192,13 +192,13 @@ theorem TblSame.rowSet (m : Mem) (w c p : Word) (_hw : rowTag w ≤ 2) : TblSame
 
 /-- `env_ix(w)`: the row array selector (`2 tag + tier`) and the row index of name handle `w`. -/
 -- con-ron: none — row access of L's environment table (the twin's `IFEnv` map)
-def envIxL : FunDecl := lfn (w) locals () {
+@[no_expose] def envIxL : FunDecl := lfn (w) locals () {
   return ((⟦w⟧.tag << 1) + ⟦w⟧.tier, ⟦w⟧.idx << 1)
 }
 
 /-- `env_row_get(w)`: the row of name handle `w`, `(counter + 1, record)`. -/
 -- con-ron: none — row access of L's environment table (the twin's `IFEnv` map)
-def envRowGetL : FunDecl := lfn (w) locals (g, ix) {
+@[no_expose] def envRowGetL : FunDecl := lfn (w) locals (g, ix) {
   (g, ix) := call env_ix(w);
   if g == 0 { return (EIXA.u64[ix], EIXA.u64[ix + 1]) };
   if g == 1 { return (EIXA1.u64[ix], EIXA1.u64[ix + 1]) };
@@ -211,7 +211,7 @@ def envRowGetL : FunDecl := lfn (w) locals (g, ix) {
 
 /-- `env_row_set(w, c, p)`: write the row of name handle `w`. -/
 -- con-ron: none — row access of L's environment table (the twin's `IFEnv` map)
-def envRowSetL : FunDecl := lfn (w, c, p) locals (g, ix) {
+@[no_expose] def envRowSetL : FunDecl := lfn (w, c, p) locals (g, ix) {
   (g, ix) := call env_ix(w);
   if g == 0 { EIXA.u64[ix] := c; EIXA.u64[ix + 1] := p; return 0 };
   if g == 1 { EIXA1.u64[ix] := c; EIXA1.u64[ix + 1] := p; return 0 };
@@ -333,7 +333,7 @@ end rel
 
 /-- `env_find(w, vis)`: `(1, record)` if name `w` has a row below the view `vis`, else `(0, 0)`. -/
 -- con-ron: ConRon/Arena/Env.lean:258-263 ConRon.Arena.IFEnv.find?
-@[l_impl ConRon.Arena.IFEnv.find?]
+@[no_expose, l_impl ConRon.Arena.IFEnv.find?]
 def envFindL : FunDecl := lfn (w, vis) locals (c, q) {
   (c, q) := call env_row_get(w);
   if c == 0 { return (0, 0) };
@@ -533,7 +533,7 @@ theorem EnvR.push {dn : NIdx → Option ConLeche.Name} {m : Mem} {vis : Word} {f
 /-- `env_push(vis, q)`: install the record at `q` (its name is word `q + 1`) at counter `vis`:
 its row, its slot in `ECON`; returns the new view `vis + 1`. -/
 -- con-ron: ConRon/Arena/Env.lean:270-275 ConRon.Arena.IFEnv.push
-@[l_impl ConRon.Arena.IFEnv.push]
+@[no_expose, l_impl ConRon.Arena.IFEnv.push]
 def envPushL : FunDecl := lfn (vis, q) locals (w, k, z) {
   if vis + 1 == 0 { abort };
   if 4294967295 < q { abort };
@@ -630,7 +630,7 @@ theorem EnvR.setRow {dn : NIdx → Option ConLeche.Name} {m : Mem} {vis : Word} 
 
 /-- `env_erase(w)`: drop the row of name `w` (one step of `eraseInstalled`). -/
 -- con-ron: ConRon/Arena/Promote.lean:347-356 ConRon.Arena.eraseInstalled
-def envEraseL : FunDecl := lfn (w) locals (z) {
+@[no_expose] def envEraseL : FunDecl := lfn (w) locals (z) {
   z := call env_row_set(w, 0, 0);
   return 0
 }
@@ -750,7 +750,7 @@ def prevD (dn : NIdx → Option ConLeche.Name) (m : Mem) (c q : Word) :
 /-- `env_pop_temp(vis, w, c, q)`: undo a temporary push of name `w`: its row put back to
 `(c, q)` (`IFEnv.popTemp`'s `prev`), the newest constant dropped, the view lowered. -/
 -- con-ron: ConRon/Arena/Env.lean:284-293 ConRon.Arena.IFEnv.popTemp
-@[l_impl ConRon.Arena.IFEnv.popTemp]
+@[no_expose, l_impl ConRon.Arena.IFEnv.popTemp]
 def envPopTempL : FunDecl := lfn (vis, w, c, q) locals (k, z) {
   z := call env_row_set(w, c, q);
   k := CTL.u64[128];
@@ -839,14 +839,14 @@ component"). Promotion and lookup reach them only through these functions. -/
 
 /-- `tbl_ix(w)`: the tag, the tier and the index of name handle `w`. -/
 -- con-ron: none — row access of L's table map (the twin's `IFEnv.tbls`)
-def tblIxL : FunDecl := lfn (w) locals () {
+@[no_expose] def tblIxL : FunDecl := lfn (w) locals () {
   return (⟦w⟧.tag, ⟦w⟧.tier, ⟦w⟧.idx)
 }
 
 /-- `tbl_row_get(w)`: the table row of name handle `w` (the table record's pointer plus one, `0`
 for none). -/
 -- con-ron: none — row access of L's table map (the twin's `IFEnv.tbls`)
-def tblRowGetL : FunDecl := lfn (w) locals (g, t, i) {
+@[no_expose] def tblRowGetL : FunDecl := lfn (w) locals (g, t, i) {
   (g, t, i) := call tbl_ix(w);
   if g == 0 { return TIXA⟨t⟩[i] };
   if g == 1 { return TIXS⟨t⟩[i] };
@@ -856,7 +856,7 @@ def tblRowGetL : FunDecl := lfn (w) locals (g, t, i) {
 
 /-- `tbl_row_set(w, v)`: write the table row of name handle `w`. -/
 -- con-ron: none — row access of L's table map (the twin's `IFEnv.tbls`)
-def tblRowSetL : FunDecl := lfn (w, v) locals (g, t, i) {
+@[no_expose] def tblRowSetL : FunDecl := lfn (w, v) locals (g, t, i) {
   (g, t, i) := call tbl_ix(w);
   if g == 0 { TIXA⟨t⟩[i] := v; return 0 };
   if g == 1 { TIXS⟨t⟩[i] := v; return 0 };
@@ -866,19 +866,19 @@ def tblRowSetL : FunDecl := lfn (w, v) locals (g, t, i) {
 
 /-- `tbl_cnt()`: the number of tables (`env.tables.length`). -/
 -- con-ron: none — the length of L's tables list (the twin's `IEnv.tables`)
-def tblCntL : FunDecl := lfn () locals () {
+@[no_expose] def tblCntL : FunDecl := lfn () locals () {
   return CTL.u64[133]
 }
 
 /-- `tbl_at(j)`: the record pointer of the table at slot `j` (oldest first). -/
 -- con-ron: none — slot access of L's tables list (the twin's `IEnv.tables`)
-def tblAtL : FunDecl := lfn (j) locals () {
+@[no_expose] def tblAtL : FunDecl := lfn (j) locals () {
   return ETAB.u64[j]
 }
 
 /-- `tbl_put(j, q)`: the table at slot `j` becomes the record at `q`. -/
 -- con-ron: none — slot access of L's tables list (the twin's `IEnv.tables`)
-def tblPutL : FunDecl := lfn (j, q) locals () {
+@[no_expose] def tblPutL : FunDecl := lfn (j, q) locals () {
   ETAB.u64[j] := q;
   return 0
 }
@@ -886,7 +886,7 @@ def tblPutL : FunDecl := lfn (j, q) locals () {
 /-- The table row's index word: `⟦w⟧.idx`. -/
 def tixW (w : Word) : Word := idxW w
 
-theorem tixW_toNat (w : Word) : (tixW w).toNat = tblIx w := rfl
+theorem tixW_toNat (w : Word) : (tixW w).toNat = tblIx w := by rfl
 
 /-- The memory after `tbl_row_set(w, v)`. -/
 def tblSet (m : Mem) (w v : Word) : Mem := m.set64 (tblArr w) (tixW w) v
@@ -1216,7 +1216,7 @@ theorem EnvR.findTable?_eq {dn : NIdx → Option ConLeche.Name} {m : Mem} {vis :
 /-- `find_table(vis, t)`: the table row of structure `t` if `t` is visible below `vis`, else `0`
 (`IFEnv.findTable?`). -/
 -- con-ron: ConRon/Arena/Env.lean:301-305 ConRon.Arena.IFEnv.findTable?
-@[l_impl ConRon.Arena.IFEnv.findTable?]
+@[no_expose, l_impl ConRon.Arena.IFEnv.findTable?]
 def findTableL : FunDecl := lfn (vis, t) locals (c, q, r) {
   (c, q) := call env_row_get(t);
   if c == 0 { return 0 };
@@ -1255,7 +1255,7 @@ theorem findTable_refines (p : Prog) (hx : p.lookup "env_ix" = some envIxL)
 /-- `env_push_table(q)`: install the table record at `q` (its structure name is word `q + 2`): its
 slot in `ETAB`, the count, its structure's table row (`IFEnv.pushTable`). -/
 -- con-ron: ConRon/Arena/Env.lean:277-282 ConRon.Arena.IFEnv.pushTable
-@[l_impl ConRon.Arena.IFEnv.pushTable]
+@[no_expose, l_impl ConRon.Arena.IFEnv.pushTable]
 def envPushTableL : FunDecl := lfn (q) locals (w, k, z) {
   if 4294967295 < q { abort };
   k := CTL.u64[133];

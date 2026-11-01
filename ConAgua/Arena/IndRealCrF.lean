@@ -5,6 +5,12 @@ import ConAgua.Arena.StageInst1
 public import ConAgua.Arena.WhnfIota
 public import ConAgua.Arena.CallF
 public import ConAgua.L.ProgHas
+import all ConAgua.Arena.ConstsResolveF
+import all ConAgua.Arena.Env
+import all ConAgua.Arena.IndIface
+import all ConAgua.Arena.MemoLib
+import all ConAgua.Arena.Pins
+import all ConAgua.Arena.WhnfIota
 
 @[expose] public section
 

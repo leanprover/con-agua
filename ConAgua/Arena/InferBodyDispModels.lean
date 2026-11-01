@@ -9,6 +9,7 @@ import ConAgua.Checker.NoVerdictTree
 public import Std.Tactic.BVDecide.Normalize.BitVec
 public import Std.Tactic.BVDecide.Normalize.Prop
 public import ConAgua.Checker.NoVerdictFns
+import all ConAgua.Arena.Infer
 
 @[expose] public section
 

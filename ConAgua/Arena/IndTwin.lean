@@ -10,6 +10,7 @@ import ConAgua.L.ModelGen
 import ConAgua.Arena.DeclBase
 public import ConAgua.Arena.CoreErec
 public import ConAgua.Arena.WhnfEntry
+import all ConAgua.Arena.WhnfEntry
 
 @[expose] public section
 

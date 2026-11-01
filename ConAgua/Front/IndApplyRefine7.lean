@@ -6,6 +6,7 @@ public import Std.Tactic.BVDecide.Normalize.Prop
 import ConAgua.Checker.NoVerdictTree
 import ConAgua.Front.IndApplyRefine
 import ConAgua.L.ModelGen
+import all ConAgua.Front.IndApply
 
 @[expose] public section
 

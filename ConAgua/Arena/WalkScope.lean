@@ -12,6 +12,8 @@ import Std.Tactic.BVDecide.Normalize.BitVec
 import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
+import all ConAgua.Arena.ExprMk
+import all ConAgua.Arena.MemoLib
 
 @[expose] public section
 
@@ -49,7 +51,7 @@ namespace L.Arena
 abbrev wsSch : MemoSch := ⟨WSM, 152⟩
 
 /-- con-ron: ConRon/Arena/ExprOps.lean:958-986 ConRon.Arena.wscopedBGo -/
-@[l_impl ConRon.Arena.wscopedBGo]
+@[no_expose, l_impl ConRon.Arena.wscopedBGo]
 def wsGo : FunDecl := lfn (h, d, c) locals (b, x, fd, j, e, r, u) {
   if c == 0 { abort };
   (b, x) := call der_b(h);
@@ -66,7 +68,7 @@ def wsGo : FunDecl := lfn (h, d, c) locals (b, x, fd, j, e, r, u) {
 con-ron: ConRon/Arena/ExprOps.lean:988-994 ConRon.Arena.wscopedBGoArmApp
 con-ron: ConRon/Arena/ExprOps.lean:996-1003 ConRon.Arena.wscopedBGoArmBind
 con-ron: ConRon/Arena/ExprOps.lean:1005-1015 ConRon.Arena.wscopedBGoArmLet -/
-@[l_impl ConRon.Arena.wscopedBGo ConRon.Arena.wscopedBGoArmApp ConRon.Arena.wscopedBGoArmBind
+@[no_expose, l_impl ConRon.Arena.wscopedBGo ConRon.Arena.wscopedBGoArmApp ConRon.Arena.wscopedBGoArmBind
   ConRon.Arena.wscopedBGoArmLet]
 def wsNode : FunDecl := lfn (h, d, c) locals (g, t, i, f, a, b, x) {
   g := ⟦h⟧.tag;
@@ -156,7 +158,7 @@ theorem wsFastW_eq (n : Nat) (m : Mem) (d e : Word) (h0 : rdW (m.arr64 CTL) 152 
 grind_pattern [arena_grind] wsFastW_eq => wsFastW n m d e
 
 /-- con-ron: ConRon/Arena/ExprOps.lean:1048-1052 ConRon.Arena.wscopedBFast -/
-@[l_impl ConRon.Arena.wscopedBFast]
+@[no_expose, l_impl ConRon.Arena.wscopedBFast]
 def wscopedBFastL : FunDecl := lfn (d, e) locals (r, u) {
   u := call ws_clear();
   r := call ws_go(e, d, 4000000000);

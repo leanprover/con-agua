@@ -13,6 +13,7 @@ import ConAgua.Checker.NoVerdictTree
 import ConAgua.L.ModelGen
 public import ConAgua.Arena.WhnfCoreApp
 public import ConAgua.Arena.WhnfIotaRecRefine
+import all ConAgua.Arena.WhnfIotaRec
 
 @[expose] public section
 

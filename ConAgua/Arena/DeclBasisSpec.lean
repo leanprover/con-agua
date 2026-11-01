@@ -15,6 +15,8 @@ public import ConAgua.Arena.DeclHeader
 public import ConAgua.Arena.IndDecStab
 public import ConAgua.Arena.Verdict
 public import ConAgua.Checker.NoVerdictFns
+import all ConAgua.Arena.DeclArms
+import all ConAgua.Arena.Pins
 
 @[expose] public section
 

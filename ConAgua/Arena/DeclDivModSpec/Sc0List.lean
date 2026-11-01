@@ -8,6 +8,7 @@ import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
 import ConAgua.Arena.DeclNatGate
 import ConAgua.Arena.IndInstallSpec.DomsW
+import all ConAgua.Arena.DeclArmsNat
 
 @[expose] public section
 

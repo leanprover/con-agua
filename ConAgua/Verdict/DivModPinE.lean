@@ -9,6 +9,7 @@ import ConAgua.Arena.RecGenSpec.CruleProg
 import ConAgua.Arena.RefWalk
 import ConAgua.Arena.StageC
 import ConAgua.Checker.NoVerdictTree
+import all ConAgua.Arena.DeclArmsNat
 
 @[expose] public section
 

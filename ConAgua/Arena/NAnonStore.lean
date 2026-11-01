@@ -83,7 +83,7 @@ def nanonCS : ConsSch where
 /-! ## `nanon_find(t, h)`: the probe -/
 
 /-- con-ron: ConRon/Arena/Store.lean:94-95 ConRon.Arena.Tbl.find? -/
-def nanonFind : FunDecl := consFindG nanonCS
+@[no_expose] def nanonFind : FunDecl := consFindG nanonCS
 
 /-! ## `nanon_push(t, j)`: append a node to tier `t`, register it at slot `j` -/
 
@@ -95,7 +95,7 @@ def napushOK (m : Mem) (t : Word) : Bool :=
   decide (nacnt m t < (67108864 : Word)) && decide (nacnt m t < m.len64 (tierA NAREC t))
 
 /-- con-ron: ConRon/Arena/Store.lean:97-102 ConRon.Arena.Tbl.push -/
-def nanonPush : FunDecl := consPushG nanonCS
+@[no_expose] def nanonPush : FunDecl := consPushG nanonCS
 
 /-! ## `intern_nanon()`: hash-cons the name `anonymous`
 
@@ -107,7 +107,7 @@ aborts (the library's `consInternM`). -/
 def nainternW (m : Mem) : Option (Word × Mem) := consInternM nanonCS m []
 
 /-- con-ron: ConRon/Arena/Monad.lean:384-400 ConRon.Arena.internNNode -/
-@[l_impl ConRon.Arena.internNNode]
+@[no_expose, l_impl ConRon.Arena.internNNode]
 def internNAnon : FunDecl := consInternG nanonCS
 
 /-- The `anonymous` store functions, as one `#eval`-able program. -/

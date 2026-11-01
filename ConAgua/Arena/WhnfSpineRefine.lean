@@ -41,7 +41,7 @@ def getAppFnLoop : Stmt := lblk (e, f, t, x) {
 }
 
 /-- con-ron: ConRon/Arena/ExprOps.lean:1286-1295 ConRon.Arena.getAppFn -/
-@[l_impl ConRon.Arena.getAppFn]
+@[no_expose, l_impl ConRon.Arena.getAppFn]
 def getAppFnL : FunDecl := lfn (e) locals (f, t, x) {
   f := 4000000000;
   ⟪getAppFnLoop⟫;
@@ -234,7 +234,7 @@ def piResultLoop : Stmt := lblk (e, f, t, x) {
 }
 
 /-- con-ron: ConRon/Arena/ExprOps.lean:1362-1372 ConRon.Arena.piResult -/
-@[l_impl ConRon.Arena.piResult]
+@[no_expose, l_impl ConRon.Arena.piResult]
 def piResultL : FunDecl := lfn (e) locals (f, t, x) {
   f := 4000000000;
   ⟪piResultLoop⟫;
@@ -422,7 +422,7 @@ def peelPisLoop : Stmt := lblk (k, e, t, x) {
 }
 
 /-- con-ron: ConRon/Arena/PropRead.lean:49-61 ConRon.Arena.peelPis -/
-@[l_impl ConRon.Arena.peelPis]
+@[no_expose, l_impl ConRon.Arena.peelPis]
 def peelPisL : FunDecl := lfn (k, e) locals (t, x) {
   ⟪peelPisLoop⟫;
   return (1, e)
@@ -602,7 +602,7 @@ def mkAppNFromLoop : Stmt := lblk (f, o, n, i) {
 }
 
 /-- con-ron: ConRon/Arena/ExprOps.lean:1310-1316 ConRon.Arena.mkAppN -/
-@[l_impl ConRon.Arena.mkAppN]
+@[no_expose, l_impl ConRon.Arena.mkAppN]
 def mkAppNL : FunDecl := lfn (f, o, n) locals (i) {
   i := 0;
   ⟪mkAppNFromLoop⟫;
@@ -610,7 +610,7 @@ def mkAppNL : FunDecl := lfn (f, o, n) locals (i) {
 }
 
 /-- con-ron: ConRon/Arena/ExprOps.lean:1318-1328 ConRon.Arena.mkAppNFrom -/
-@[l_impl ConRon.Arena.mkAppNFrom]
+@[no_expose, l_impl ConRon.Arena.mkAppNFrom]
 def mkAppNFromL : FunDecl := lfn (f, o, n, i) locals () {
   ⟪mkAppNFromLoop⟫;
   return f

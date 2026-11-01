@@ -7,6 +7,7 @@ public import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
 public import ConAgua.L.GrindAttr
 import ConRon.Bridge.Grind
+import all ConAgua.Arena.RecClass
 
 @[expose] public section
 

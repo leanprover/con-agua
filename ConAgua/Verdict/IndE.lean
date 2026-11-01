@@ -8,6 +8,7 @@ import ConAgua.L.ModelGen
 import Std.Tactic.BVDecide.Normalize.BitVec
 import Std.WP.Triple.SpecLemmas
 public import ConAgua.L.ErrSpec
+import all ConAgua.Arena.IndPos2
 
 @[expose] public section
 

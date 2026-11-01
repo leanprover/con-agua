@@ -354,7 +354,7 @@ def decOE (m : Mem) (r : List Word) : Option EIdx → Prop
 
 /-- `iw_alloc(n)`: `n` fresh words of `IW` (zero or garbage), returns their offset. -/
 -- con-ron: none — L scratch-array plumbing (the twin builds `List`s/`Array`s)
-def iwAlloc : FunDecl := lfn (n) locals (o) {
+@[no_expose] def iwAlloc : FunDecl := lfn (n) locals (o) {
   o := CTL.u64[200];
   if len(IW.u64) < o { abort };
   if len(IW.u64) - o < n { abort };
@@ -364,13 +364,13 @@ def iwAlloc : FunDecl := lfn (n) locals (o) {
 
 /-- `iw_reset()`: empty the pool (the stage's entry). -/
 -- con-ron: none — L scratch-array plumbing (the twin builds `List`s/`Array`s)
-def iwReset : FunDecl := lfn () locals () {
+@[no_expose] def iwReset : FunDecl := lfn () locals () {
   CTL.u64[200] := 0
 }
 
 /-- `erec_alloc(n)`: `n` fresh words of `EREC`, returns their offset. -/
 -- con-ron: none — L scratch-array plumbing (the twin builds `List`s/`Array`s)
-def erecAlloc : FunDecl := lfn (n) locals (o) {
+@[no_expose] def erecAlloc : FunDecl := lfn (n) locals (o) {
   o := CTL.u64[129];
   if len(EREC.u64) < o { abort };
   if len(EREC.u64) - o < n { abort };
@@ -380,7 +380,7 @@ def erecAlloc : FunDecl := lfn (n) locals (o) {
 
 /-- `er_to_iw(off, len)`: the `EREC` slice copied into `IW`. -/
 -- con-ron: none — L scratch-array plumbing (the twin builds `List`s/`Array`s)
-def erToIw : FunDecl := lfn (o, l) locals (q, u) {
+@[no_expose] def erToIw : FunDecl := lfn (o, l) locals (q, u) {
   q := call iw_alloc(l);
   u := call er_copy(q, o, l);
   return (q, l)
@@ -388,7 +388,7 @@ def erToIw : FunDecl := lfn (o, l) locals (q, u) {
 
 /-- `er_copy(d, s, l)`: `IW[d + j] := EREC[s + j]` for `j < l`, recursively. -/
 -- con-ron: none — L scratch-array plumbing (the twin builds `List`s/`Array`s)
-def erCopy : FunDecl := lfn (d, s, l) locals (u) {
+@[no_expose] def erCopy : FunDecl := lfn (d, s, l) locals (u) {
   if l == 0 { return 0 };
   IW.u64[d] := EREC.u64[s];
   u := call er_copy(d + 1, s + 1, l - 1);
@@ -397,7 +397,7 @@ def erCopy : FunDecl := lfn (d, s, l) locals (u) {
 
 /-- `iw_copy(d, s, l)`: `IW[d + j] := IW[s + j]` for `j < l` (ascending, recursively). -/
 -- con-ron: none — L scratch-array plumbing (the twin builds `List`s/`Array`s)
-def iwCopy : FunDecl := lfn (d, s, l) locals (u) {
+@[no_expose] def iwCopy : FunDecl := lfn (d, s, l) locals (u) {
   if l == 0 { return 0 };
   IW.u64[d] := IW.u64[s];
   u := call iw_copy(d + 1, s + 1, l - 1);
@@ -406,7 +406,7 @@ def iwCopy : FunDecl := lfn (d, s, l) locals (u) {
 
 /-- `pool_copy(d, s, l)`: `IW[d + j] := POOL[s + j]` for `j < l`. -/
 -- con-ron: none — L scratch-array plumbing (the twin builds `List`s/`Array`s)
-def poolCopy : FunDecl := lfn (d, s, l) locals (u) {
+@[no_expose] def poolCopy : FunDecl := lfn (d, s, l) locals (u) {
   if l == 0 { return 0 };
   IW.u64[d] := POOL⦃s⦄;
   u := call pool_copy(d + 1, s + 1, l - 1);
@@ -415,7 +415,7 @@ def poolCopy : FunDecl := lfn (d, s, l) locals (u) {
 
 /-- `sl_new1(x)`: the one-element list `[x]`. -/
 -- con-ron: none — L scratch-array plumbing (the twin builds `List`s/`Array`s)
-def slNew1 : FunDecl := lfn (x) locals (q) {
+@[no_expose] def slNew1 : FunDecl := lfn (x) locals (q) {
   q := call iw_alloc(1);
   IW.u64[q] := x;
   return (q, 1)
@@ -423,7 +423,7 @@ def slNew1 : FunDecl := lfn (x) locals (q) {
 
 /-- `sl_append(o1, l1, o2, l2)`: `xs ++ ys`, a copy. -/
 -- con-ron: none — L scratch-array plumbing (the twin builds `List`s/`Array`s)
-def slAppend : FunDecl := lfn (o1, l1, o2, l2) locals (q, u) {
+@[no_expose] def slAppend : FunDecl := lfn (o1, l1, o2, l2) locals (q, u) {
   if l1 + l2 < l1 { abort };
   q := call iw_alloc(l1 + l2);
   u := call iw_copy(q, o1, l1);
@@ -433,7 +433,7 @@ def slAppend : FunDecl := lfn (o1, l1, o2, l2) locals (q, u) {
 
 /-- `sl_snoc(o, l, x)`: `xs ++ [x]`, a copy. -/
 -- con-ron: none — L scratch-array plumbing (the twin builds `List`s/`Array`s)
-def slSnoc : FunDecl := lfn (o, l, x) locals (q, u) {
+@[no_expose] def slSnoc : FunDecl := lfn (o, l, x) locals (q, u) {
   if l + 1 == 0 { abort };
   q := call iw_alloc(l + 1);
   u := call iw_copy(q, o, l);
@@ -443,7 +443,7 @@ def slSnoc : FunDecl := lfn (o, l, x) locals (q, u) {
 
 /-- `sl_cons(x, o, l)`: `x :: xs`, a copy. -/
 -- con-ron: none — L scratch-array plumbing (the twin builds `List`s/`Array`s)
-def slCons : FunDecl := lfn (x, o, l) locals (q, u) {
+@[no_expose] def slCons : FunDecl := lfn (x, o, l) locals (q, u) {
   if l + 1 == 0 { abort };
   q := call iw_alloc(l + 1);
   IW.u64[q] := x;
@@ -453,7 +453,7 @@ def slCons : FunDecl := lfn (x, o, l) locals (q, u) {
 
 /-- `sl_contains(o, l, x)`: `xs.contains x` (word equality). -/
 -- con-ron: none — L scratch-array plumbing (the twin builds `List`s/`Array`s)
-def slContains : FunDecl := lfn (o, l, x) locals (r) {
+@[no_expose] def slContains : FunDecl := lfn (o, l, x) locals (r) {
   if l == 0 { return 0 };
   if IW.u64[o] == x { return 1 };
   r := call sl_contains(o + 1, l - 1, x);
@@ -462,7 +462,7 @@ def slContains : FunDecl := lfn (o, l, x) locals (r) {
 
 /-- `sl_find(o, l, x)`: `xs.findIdx? (· == x)` as `(ok, i)`. -/
 -- con-ron: none — L scratch-array plumbing (the twin builds `List`s/`Array`s)
-def slFind : FunDecl := lfn (o, l, x) locals (f, i) {
+@[no_expose] def slFind : FunDecl := lfn (o, l, x) locals (f, i) {
   if l == 0 { return (0, 0) };
   if IW.u64[o] == x { return (1, 0) };
   (f, i) := call sl_find(o + 1, l - 1, x);
@@ -472,7 +472,7 @@ def slFind : FunDecl := lfn (o, l, x) locals (f, i) {
 
 /-- `sl_eq(o1, l1, o2, l2)`: word-wise list equality. -/
 -- con-ron: none — L scratch-array plumbing (the twin builds `List`s/`Array`s)
-def slEq : FunDecl := lfn (o1, l1, o2, l2) locals (r) {
+@[no_expose] def slEq : FunDecl := lfn (o1, l1, o2, l2) locals (r) {
   if l1 != l2 { return 0 };
   if l1 == 0 { return 1 };
   if IW.u64[o1] != IW.u64[o2] { return 0 };
@@ -482,7 +482,7 @@ def slEq : FunDecl := lfn (o1, l1, o2, l2) locals (r) {
 
 /-- `sl_nodup(o, l)`: `nameNodup` (no word twice). -/
 -- con-ron: ConRon/Arena/CheckerBase.lean:38-43 ConRon.Arena.nameNodup
-@[l_impl ConRon.Arena.nameNodup]
+@[no_expose, l_impl ConRon.Arena.nameNodup]
 def slNodup : FunDecl := lfn (o, l) locals (b, r) {
   if l == 0 { return 1 };
   b := call sl_contains(o + 1, l - 1, IW.u64[o]);
@@ -493,14 +493,14 @@ def slNodup : FunDecl := lfn (o, l) locals (b, r) {
 
 /-- `sl_get(o, l, i)`: `xs[i]`, aborting off the list. -/
 -- con-ron: none — L scratch-array plumbing (the twin builds `List`s/`Array`s)
-def slGet : FunDecl := lfn (o, l, i) locals () {
+@[no_expose] def slGet : FunDecl := lfn (o, l, i) locals () {
   if l <= i { abort };
   return IW.u64[o + i]
 }
 
 /-- `sl_getd(o, l, i, d)`: `xs.getD i d`. -/
 -- con-ron: none — L scratch-array plumbing (the twin builds `List`s/`Array`s)
-def slGetD : FunDecl := lfn (o, l, i, d) locals () {
+@[no_expose] def slGetD : FunDecl := lfn (o, l, i, d) locals () {
   if l <= i { return d };
   return IW.u64[o + i]
 }
@@ -508,7 +508,7 @@ def slGetD : FunDecl := lfn (o, l, i, d) locals () {
 /-- `sl_set_eq(o1, l1, o2, l2)`: the same length, and every element of each is in the other
 (`blockRecNameSetOk`'s test). -/
 -- con-ron: none — L scratch-array plumbing (the twin builds `List`s/`Array`s)
-def slSetEq : FunDecl := lfn (o1, l1, o2, l2) locals (b) {
+@[no_expose] def slSetEq : FunDecl := lfn (o1, l1, o2, l2) locals (b) {
   if l1 != l2 { return 0 };
   b := call sl_all_in(o1, l1, o2, l2);
   if b == 0 { return 0 };
@@ -518,7 +518,7 @@ def slSetEq : FunDecl := lfn (o1, l1, o2, l2) locals (b) {
 
 /-- `sl_all_in(o1, l1, o2, l2)`: every element of the first list is in the second. -/
 -- con-ron: none — L scratch-array plumbing (the twin builds `List`s/`Array`s)
-def slAllIn : FunDecl := lfn (o1, l1, o2, l2) locals (b) {
+@[no_expose] def slAllIn : FunDecl := lfn (o1, l1, o2, l2) locals (b) {
   if l1 == 0 { return 1 };
   b := call sl_contains(o2, l2, IW.u64[o1]);
   if b == 0 { return 0 };
@@ -528,7 +528,7 @@ def slAllIn : FunDecl := lfn (o1, l1, o2, l2) locals (b) {
 
 /-- `rec2(a, b)`: a fresh 2-word record. -/
 -- con-ron: none — L scratch-array plumbing (the twin builds `List`s/`Array`s)
-def rec2 : FunDecl := lfn (a, b) locals (q) {
+@[no_expose] def rec2 : FunDecl := lfn (a, b) locals (q) {
   q := call iw_alloc(2);
   IW.u64[q] := a;
   IW.u64[q + 1] := b;
@@ -537,7 +537,7 @@ def rec2 : FunDecl := lfn (a, b) locals (q) {
 
 /-- `rec3(a, b, c)`. -/
 -- con-ron: none — L scratch-array plumbing (the twin builds `List`s/`Array`s)
-def rec3 : FunDecl := lfn (a, b, c) locals (q) {
+@[no_expose] def rec3 : FunDecl := lfn (a, b, c) locals (q) {
   q := call iw_alloc(3);
   IW.u64[q] := a;
   IW.u64[q + 1] := b;
@@ -547,7 +547,7 @@ def rec3 : FunDecl := lfn (a, b, c) locals (q) {
 
 /-- `rec4(a, b, c, d)`. -/
 -- con-ron: none — L scratch-array plumbing (the twin builds `List`s/`Array`s)
-def rec4 : FunDecl := lfn (a, b, c, d) locals (q) {
+@[no_expose] def rec4 : FunDecl := lfn (a, b, c, d) locals (q) {
   q := call iw_alloc(4);
   IW.u64[q] := a;
   IW.u64[q + 1] := b;
@@ -558,7 +558,7 @@ def rec4 : FunDecl := lfn (a, b, c, d) locals (q) {
 
 /-- `rec5(a, b, c, d, e)`. -/
 -- con-ron: none — L scratch-array plumbing (the twin builds `List`s/`Array`s)
-def rec5 : FunDecl := lfn (a, b, c, d, e) locals (q) {
+@[no_expose] def rec5 : FunDecl := lfn (a, b, c, d, e) locals (q) {
   q := call iw_alloc(5);
   IW.u64[q] := a;
   IW.u64[q + 1] := b;
@@ -570,7 +570,7 @@ def rec5 : FunDecl := lfn (a, b, c, d, e) locals (q) {
 
 /-- `rec6(a, b, c, d, e, f)`. -/
 -- con-ron: none — L scratch-array plumbing (the twin builds `List`s/`Array`s)
-def rec6 : FunDecl := lfn (a, b, c, d, e, f) locals (q) {
+@[no_expose] def rec6 : FunDecl := lfn (a, b, c, d, e, f) locals (q) {
   q := call iw_alloc(6);
   IW.u64[q] := a;
   IW.u64[q + 1] := b;
@@ -583,7 +583,7 @@ def rec6 : FunDecl := lfn (a, b, c, d, e, f) locals (q) {
 
 /-- `cv_new(name, lo, ll, ty)`: a fresh constant value in `EREC` (`lo`, `ll` an `EREC` slice). -/
 -- con-ron: none — constant-value records in `EREC` (the twin's `ConstantVal` structure)
-def cvNew : FunDecl := lfn (nm, lo, ll, ty) locals (q) {
+@[no_expose] def cvNew : FunDecl := lfn (nm, lo, ll, ty) locals (q) {
   q := call erec_alloc(4);
   EREC.u64[q] := nm;
   EREC.u64[q + 1] := lo;
@@ -594,7 +594,7 @@ def cvNew : FunDecl := lfn (nm, lo, ll, ty) locals (q) {
 
 /-- `cv_lps(cv)`: a constant's level parameters, copied into `IW`. -/
 -- con-ron: none — constant-value records in `EREC` (the twin's `ConstantVal` structure)
-def cvLps : FunDecl := lfn (q) locals (o, l) {
+@[no_expose] def cvLps : FunDecl := lfn (q) locals (o, l) {
   (o, l) := call er_to_iw(EREC.u64[q + 1], EREC.u64[q + 2]);
   return (o, l)
 }
@@ -602,7 +602,7 @@ def cvLps : FunDecl := lfn (q) locals (o, l) {
 /-- `reserved_contains(n)`: `(← reservedBasisNames).contains n` (the 16 reserved names,
 `PINS[55‥70]`). -/
 -- con-ron: ConRon/Arena/Core.lean:1457-1461 ConRon.Arena.reservedBasisNames
-def reservedContains : FunDecl := lfn (n) locals (r) {
+@[no_expose] def reservedContains : FunDecl := lfn (n) locals (r) {
   if PINS.u64[0] == 0 { abort };
   r := call reserved_from(n, 0);
   return r
@@ -610,7 +610,7 @@ def reservedContains : FunDecl := lfn (n) locals (r) {
 
 /-- `reserved_from(n, j)`: `n` among `PINS[55 + j‥70]`. -/
 -- con-ron: ConRon/Arena/Core.lean:1457-1461 ConRon.Arena.reservedBasisNames
-def reservedFrom : FunDecl := lfn (n, j) locals (r) {
+@[no_expose] def reservedFrom : FunDecl := lfn (n, j) locals (r) {
   if 16 <= j { return 0 };
   if PINS.u64[55 + j] == n { return 1 };
   r := call reserved_from(n, j + 1);
@@ -619,7 +619,7 @@ def reservedFrom : FunDecl := lfn (n, j) locals (r) {
 
 /-- `lvl_eq_true(u, v)`: `lvlEq? u v == some true` as `0`/`1`. -/
 -- con-ron: ConRon/Arena/Core.lean:137-154 ConRon.Arena.lvlEq?
-def lvlEqTrue : FunDecl := lfn (u, v) locals (r) {
+@[no_expose] def lvlEqTrue : FunDecl := lfn (u, v) locals (r) {
   r := call lvl_eq_c(u, v);
   return u64(r == 2)
 }
@@ -627,7 +627,7 @@ def lvlEqTrue : FunDecl := lfn (u, v) locals (r) {
 /-- `lvl_eq_fueled(u, v)`: `liftFueled (← lvlEq? u v)`: `none` declines. -/
 -- con-ron: ConRon/Arena/Core.lean:137-154 ConRon.Arena.lvlEq?
 -- con-ron: ConRon/Arena/Core.lean:314-319 ConRon.Arena.liftFueled
-def lvlEqFueled : FunDecl := lfn (u, v) locals (r) {
+@[no_expose] def lvlEqFueled : FunDecl := lfn (u, v) locals (r) {
   r := call lvl_eq_c(u, v);
   if r == 0 { fail R_RESOURCE_LIMIT_FUEL };
   return u64(r == 2)
@@ -640,7 +640,7 @@ def lvlEqFueled : FunDecl := lfn (u, v) locals (r) {
 count, an unknown tag) aborts, as the twin's `view` fails. The projections `viewBind`,
 `viewApp`, … are reads of this (the twin tests the tag first). -/
 -- con-ron: ConRon/Arena/Monad.lean:156-163 ConRon.Arena.view
-def eView : FunDecl := lfn (h) locals (g, t, i) {
+@[no_expose] def eView : FunDecl := lfn (h) locals (g, t, i) {
   g := ⟦h⟧.tag;
   t := ⟦h⟧.tier;
   i := ⟦h⟧.idx;
@@ -683,7 +683,7 @@ def eView : FunDecl := lfn (h) locals (g, t, i) {
 
 /-- `view_ls(us)`: the level handles of a level list (`viewLs`), copied from `POOL` into `IW`. -/
 -- con-ron: ConRon/Arena/Monad.lean:494-500 ConRon.Arena.viewLs
-def viewLsL : FunDecl := lfn (us) locals (o, l, q, u) {
+@[no_expose] def viewLsL : FunDecl := lfn (us) locals (o, l, q, u) {
   (o, l) := call ls_node(us);
   q := call iw_alloc(l);
   u := call pool_copy(q, o, l);
@@ -693,7 +693,7 @@ def viewLsL : FunDecl := lfn (us) locals (o, l, q, u) {
 /-- `view_ls_len(us)`: `viewLsLen us` as `(1, n)` (a dangling list aborts in `ls_node`, where the
 twin answers `none` and its callers fail). -/
 -- con-ron: ConRon/Arena/Monad.lean:542-547 ConRon.Arena.viewLsLen
-def viewLsLenL : FunDecl := lfn (us) locals (o, l) {
+@[no_expose] def viewLsLenL : FunDecl := lfn (us) locals (o, l) {
   (o, l) := call ls_node(us);
   return (1, l)
 }

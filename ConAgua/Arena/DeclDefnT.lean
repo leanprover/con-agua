@@ -13,6 +13,7 @@ import ConRon.Bridge.Checker.Base
 public import ConAgua.Arena.DeclNatGateSpec
 public import ConAgua.Arena.DeclNatOpEq
 public import ConAgua.Verdict.DeclValE
+import all ConAgua.Arena.DeclArms
 
 @[expose] public section
 

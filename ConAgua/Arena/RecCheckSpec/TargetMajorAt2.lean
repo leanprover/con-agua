@@ -8,6 +8,7 @@ import ConAgua.Arena.RecClassSpec.CloseLams
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
 public import ConAgua.Arena.RecSim
+import all ConAgua.Arena.RecCheck
 
 @[expose] public section
 

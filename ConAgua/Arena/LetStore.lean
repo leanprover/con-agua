@@ -91,7 +91,7 @@ def letCS : ConsSch where
 /-! ## `letE_find(t, ty, val, body, h)`: the probe -/
 
 /-- con-ron: ConRon/Arena/Store.lean:94-95 ConRon.Arena.Tbl.find? -/
-def letFind : FunDecl := consFindG letCS
+@[no_expose] def letFind : FunDecl := consFindG letCS
 
 /-! ## `letE_push(t, ty, val, body, j)`: append a node to tier `t`, register it at slot `j` -/
 
@@ -106,7 +106,7 @@ def lepushOK (m : Mem) (t : Word) : Bool :=
   decide (lecnt m t < (67108864 : Word)) && decide ((lecnt m t + 1) * 2 ≤ m.len64 (tierA LEREC t))
 
 /-- con-ron: ConRon/Arena/Store.lean:97-102 ConRon.Arena.Tbl.push -/
-def letPush : FunDecl := consPushG letCS
+@[no_expose] def letPush : FunDecl := consPushG letCS
 
 /-! ## `intern_letE(ty, val, body)`: hash-cons the expression `letE ty val body`
 
@@ -124,7 +124,7 @@ def leinternW (m : Mem) (ty val body : Word) : Option (Word × Mem) := consInter
 
 /-- con-ron: ConRon/Arena/Monad.lean:249-267 ConRon.Arena.internE
 con-ron: ConRon/Arena/Monad.lean:221-247 ConRon.Arena.internNodeE -/
-@[l_impl ConRon.Arena.internE ConRon.Arena.internNodeE]
+@[no_expose, l_impl ConRon.Arena.internE ConRon.Arena.internNodeE]
 def internLet : FunDecl := consInternG letCS
 
 /-- The `letE` store functions, as one `#eval`-able program. -/

@@ -159,7 +159,7 @@ theorem targetMajorOf_eq (fe : IFEnv) (p : BlockShape) (ctorsAs : List (List (IC
           | none => tmoOutT fe p pfvs args I us
       else
         fail (.invalid "target rec: the recursor's major premise is not an inductive's \
-          application")) := rfl
+          application")) := by rfl
 
 end ConRon.Arena
 

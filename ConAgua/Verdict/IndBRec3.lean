@@ -8,6 +8,7 @@ public import ConRon.Bridge.Inductives.GenRec
 import ConAgua.Arena.IndT.Lift
 import ConAgua.Arena.RefWalk
 import ConAgua.Checker.NoVerdictTree
+import all ConAgua.Arena.RecGen
 
 @[expose] public section
 /-!

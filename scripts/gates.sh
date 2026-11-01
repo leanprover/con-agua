@@ -18,7 +18,7 @@
 #   warnings    scripts/lean_warnings.py --base BASE   no Lean warning in the changed .lean files (vendor/
 #               excluded), also for modules restored from the shared cache (their logs are in the log store)
 #   shake       scripts/shake.py                     every import `lake shake` finds unused is allowlisted
-#   core-fns, loop-fns, leaf-fns, preloop-ws         the generated call closures are current
+#   core-fns, loop-fns, leaf-fns, phaseb-fns, preloop-ws   the generated call closures are current
 #   checker-prog  scripts/checker_prog.py --no-build --check   the generated program files are current
 #   e2e         make checker; scripts/diff-e2e.py --parallel 16   verdicts on every fixture
 #
@@ -88,6 +88,7 @@ run shake      timeout 900 python3 scripts/shake.py
 run core-fns   timeout 600 python3 scripts/core_fns.py --check
 run loop-fns   timeout 600 python3 scripts/loop_fns.py --check
 run leaf-fns   timeout 600 python3 scripts/leaf_fns.py --check
+run phaseb-fns timeout 600 python3 scripts/phaseb_fns.py --check
 run preloop-ws timeout 900 python3 scripts/preloop_ws.py --check
 run checker-prog timeout 1800 python3 scripts/checker_prog.py --no-build --check
 run e2e        e2e

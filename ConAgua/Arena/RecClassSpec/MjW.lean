@@ -70,7 +70,7 @@ theorem rec2Major_eq (g : ClassGen) (c d : Nat) : ConRon.Arena.ClassGen.major g 
     let fty ← ConRon.Arena.exprGetD g.formerTys c
     match ← ConRon.Arena.instPisWith ci.ds fty with
     | none => pure none
-    | some ty => rec2MajOpen ci.ind ci.lvls ci.ds ci.nIdx ty d) := rfl
+    | some ty => rec2MajOpen ci.ind ci.lvls ci.ds ci.nIdx ty d) := by rfl
 
 section sims
 variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}

@@ -15,6 +15,7 @@ import ConAgua.Arena.Env
 import ConAgua.Arena.IndCopy2
 import Std.WP.Triple.SpecLemmas
 public import ConAgua.Arena.IndCopy
+import all ConAgua.Arena.StripTele
 
 @[expose] public section
 

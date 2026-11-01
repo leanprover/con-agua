@@ -25,7 +25,7 @@ namespace L.Arena
 /-! ## The L code -/
 
 /-- con-ron: ConRon/Arena/ExprOps.lean:660-693 ConRon.Arena.liftLooseBVarsGo -/
-@[l_impl ConRon.Arena.liftLooseBVarsGo]
+@[no_expose, l_impl ConRon.Arena.liftLooseBVarsGo]
 def liftGo : FunDecl := lfn (h, c, k, fu) locals (x, g, t, i, r) {
   if fu == 0 { abort };
   x := call der_bv(h);
@@ -55,7 +55,7 @@ def liftGo : FunDecl := lfn (h, c, k, fu) locals (x, g, t, i, r) {
 }
 
 /-- con-ron: ConRon/Arena/ExprOps.lean:695-707 ConRon.Arena.liftArmApp -/
-@[l_impl ConRon.Arena.liftArmApp]
+@[no_expose, l_impl ConRon.Arena.liftArmApp]
 def liftApp : FunDecl := lfn (h, c, k, fu) locals (fd, j, d, t, i, f, a, x, y, r, u) {
   (fd, j, d) := call lf_find(h, c);
   if fd != 0 { return LMEMO.u64[j * 4 + 3] };
@@ -72,7 +72,7 @@ def liftApp : FunDecl := lfn (h, c, k, fu) locals (fd, j, d, t, i, f, a, x, y, r
 }
 
 /-- con-ron: ConRon/Arena/ExprOps.lean:709-721 ConRon.Arena.liftArmLam -/
-@[l_impl ConRon.Arena.liftArmLam]
+@[no_expose, l_impl ConRon.Arena.liftArmLam]
 def liftLam : FunDecl := lfn (h, c, k, fu) locals (fd, j, d, t, i, f, a, x, y, r, u) {
   if c + 1 == 0 { abort };
   (fd, j, d) := call lf_find(h, c);
@@ -90,7 +90,7 @@ def liftLam : FunDecl := lfn (h, c, k, fu) locals (fd, j, d, t, i, f, a, x, y, r
 }
 
 /-- con-ron: ConRon/Arena/ExprOps.lean:723-735 ConRon.Arena.liftArmForallE -/
-@[l_impl ConRon.Arena.liftArmForallE]
+@[no_expose, l_impl ConRon.Arena.liftArmForallE]
 def liftForall : FunDecl := lfn (h, c, k, fu) locals (fd, j, d, t, i, f, a, x, y, r, u) {
   if c + 1 == 0 { abort };
   (fd, j, d) := call lf_find(h, c);
@@ -108,7 +108,7 @@ def liftForall : FunDecl := lfn (h, c, k, fu) locals (fd, j, d, t, i, f, a, x, y
 }
 
 /-- con-ron: ConRon/Arena/ExprOps.lean:737-750 ConRon.Arena.liftArmLet -/
-@[l_impl ConRon.Arena.liftArmLet]
+@[no_expose, l_impl ConRon.Arena.liftArmLet]
 def liftLet : FunDecl := lfn (h, c, k, fu) locals (fd, j, d, t, i, f, a, b, x, y, z, r, u) {
   if c + 1 == 0 { abort };
   (fd, j, d) := call lf_find(h, c);
@@ -128,7 +128,7 @@ def liftLet : FunDecl := lfn (h, c, k, fu) locals (fd, j, d, t, i, f, a, b, x, y
 }
 
 /-- con-ron: ConRon/Arena/ExprOps.lean:752-763 ConRon.Arena.liftArmProj -/
-@[l_impl ConRon.Arena.liftArmProj]
+@[no_expose, l_impl ConRon.Arena.liftArmProj]
 def liftProj : FunDecl := lfn (h, c, k, fu) locals (fd, j, d, t, i, nm, ix, e, x, r, u) {
   (fd, j, d) := call lf_find(h, c);
   if fd != 0 { return LMEMO.u64[j * 4 + 3] };
@@ -163,7 +163,7 @@ def liftProgFns : Prog :=
 abbrev LiftProg (p : Prog) : Prop := ProgHas p liftProgFns
 
 /-- con-ron: ConRon/Arena/ExprOps.lean:794-800 ConRon.Arena.liftLooseBVarsFast -/
-@[l_impl ConRon.Arena.liftLooseBVarsFast]
+@[no_expose, l_impl ConRon.Arena.liftLooseBVarsFast]
 def liftEntry : FunDecl := lfn (h, k, c, f) locals (r, u) {
   u := call lf_clear();
   r := call lift_go(h, c, k, f);

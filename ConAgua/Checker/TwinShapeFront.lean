@@ -5,6 +5,7 @@ public import ConAgua.Arena.DeclAndPinIndDec
 public import ConAgua.Checker.Pipeline
 import ConRon.Bridge.Frontend.Prepare
 import all Init.Data.Array.Basic
+import all ConAgua.Front.IndApply
 
 @[expose] public section
 

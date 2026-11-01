@@ -11,6 +11,8 @@ public import ConAgua.Arena.WhnfCoreProj
 public import ConAgua.Arena.WhnfIotaRefine
 import ConAgua.Arena.WhnfCoreRefine
 import ConRon.Bridge.Grind
+import all ConAgua.Arena.DefEq
+import all ConAgua.Arena.Pins
 
 @[expose] public section
 

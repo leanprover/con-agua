@@ -12,6 +12,8 @@ import Std.WP.Tactic
 import ConAgua.Arena.Env
 import ConAgua.Arena.IndPartsSpec.RulePrefixAt
 import Std.WP.Triple.SpecLemmas
+import all ConAgua.Arena.IndIface
+import all ConAgua.Arena.IndInstall
 
 @[expose] public section
 

@@ -15,6 +15,7 @@ import ConAgua.Arena.RefWalk
 import ConAgua.Checker.NoVerdictTree
 public import ConAgua.Arena.IndRealAbs
 public import ConAgua.Arena.IndRealApdT
+import all ConAgua.Arena.RecGen
 
 @[expose] public section
 /-!

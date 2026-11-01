@@ -17,6 +17,7 @@ import ConAgua.Arena.WhnfCoreRefine
 import ConAgua.Checker.NoVerdictTree
 import ConAgua.Front.Preserve
 public import ConAgua.Checker.NoVerdictFns
+import all ConAgua.Arena.WhnfIota
 
 @[expose] public section
 

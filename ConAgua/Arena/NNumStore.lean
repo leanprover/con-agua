@@ -86,7 +86,7 @@ def nnumCS : ConsSch where
 /-! ## `nnum_find(t, pre, u, h)`: the probe -/
 
 /-- con-ron: ConRon/Arena/Store.lean:94-95 ConRon.Arena.Tbl.find? -/
-def nnumFind : FunDecl := consFindG nnumCS
+@[no_expose] def nnumFind : FunDecl := consFindG nnumCS
 
 /-! ## `nnum_push(t, pre, u, j)`: append a node to tier `t`, register it at slot `j` -/
 
@@ -98,7 +98,7 @@ def nnpushOK (m : Mem) (t : Word) : Bool :=
   decide (nncnt m t < (67108864 : Word)) && decide (nncnt m t < m.len64 (tierA NNREC t) >>> (1 : Word))
 
 /-- con-ron: ConRon/Arena/Store.lean:97-102 ConRon.Arena.Tbl.push -/
-def nnumPush : FunDecl := consPushG nnumCS
+@[no_expose] def nnumPush : FunDecl := consPushG nnumCS
 
 /-! ## `intern_nnum(pre, u)`: hash-cons the name `num pre u`
 
@@ -110,7 +110,7 @@ aborts (the library's `consInternM`). -/
 def nninternW (m : Mem) (pre u : Word) : Option (Word × Mem) := consInternM nnumCS m [pre, u]
 
 /-- con-ron: ConRon/Arena/Monad.lean:384-400 ConRon.Arena.internNNode -/
-@[l_impl ConRon.Arena.internNNode]
+@[no_expose, l_impl ConRon.Arena.internNNode]
 def internNNum : FunDecl := consInternG nnumCS
 
 /-- The `num` store functions, as one `#eval`-able program. -/

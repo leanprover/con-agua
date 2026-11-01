@@ -15,6 +15,8 @@ public import ConAgua.Arena.IndRealOpf
 public import ConAgua.Arena.KnotEntry
 public import ConAgua.Verdict.VCtx
 public import ConRon.Bridge.Checker.Hyp
+import all ConAgua.Arena.IndIface
+import all ConAgua.Arena.IndInstall
 
 @[expose] public section
 /-!

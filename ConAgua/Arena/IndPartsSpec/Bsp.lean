@@ -13,6 +13,8 @@ import ConAgua.L.ModelGen
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
 public import ConAgua.Arena.IndCallM
+import all ConAgua.Arena.IndIface
+import all ConAgua.Arena.IndParts
 
 @[expose] public section
 

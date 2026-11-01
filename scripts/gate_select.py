@@ -25,22 +25,23 @@ The table (first match per path; "cheap" = links, vendor, modules, provenance, r
   checker.s, pins.bin                                         build, e2e (checker.s is an input file
                                                               of ConAguaAsm; both go into ./checker)
   main.c, Makefile, reasons.h, scripts/diff-e2e.py            e2e
-  scripts/{core,loop,leaf}_fns.{py,lean}, preloop_ws.py       build + that closure check
+  scripts/{core,loop,leaf,phaseb}_fns.{py,lean}, preloop_ws.py  build + that closure check
   scripts/shake{.py,-setup.sh,-allowlist.txt,-keep.txt}       build, shake
   scripts/checker_prog.py; ConAgua/E2E/Dump.lean,             build, checker-prog (`checker_prog.py
     ConAgua/Checker/{Sources,Entry,Prelude}.lean and the        --no-build --check`: the generator still
     generated ConAgua/Checker/{Prog,ProgTab,ProgNrt,ProgSkt,    runs and writes the committed text);
     ProgWf,Asm,AsmPart*}.lean; scripts/e2e.py                   .lean files also shake + the closures,
                                                               e2e.py also e2e
-  ConAgua.lean, ConAgua/**.lean, ConAguaAsm/**                build, shake; + the four closure checks if
+  ConAgua.lean, ConAgua/**.lean, ConAguaAsm/**                build, shake; + the five closure checks if
                                                               the module is in the import closure of
                                                               ConAgua.Checker.Prog or of a closure's
                                                               generated file (CoreErec, LoopFns,
-                                                              LeafFns, PreLoopWS, PreLoopWSStages)
+                                                              LeafFns, PhaseBReads, PreLoopWS,
+                                                              PreLoopWSStages)
   other scripts/** (not run by a gate)                        cheap
   anything else                                               ALL (when unsure, everything)
 
-The closure checks (`core_fns.py`, `loop_fns.py`, `leaf_fns.py`, `preloop_ws.py --check`) run
+The closure checks (`core_fns.py`, `loop_fns.py`, `leaf_fns.py`, `phaseb_fns.py`, `preloop_ws.py --check`) run
 `lake env lean` against ConAgua.Checker.Prog, so they imply `build`. `e2e` is `make checker` and
 `scripts/diff-e2e.py`: the binary is exactly main.c + checker.s + pins.bin (a change to L code, the
 compiler or the stubs that changes the program changes checker.s, or the build's `checkerFile_eq`
@@ -56,7 +57,7 @@ import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CHEAP = ["links", "vendor", "modules", "provenance", "reasons"]
-CLOSURES = ["core-fns", "loop-fns", "leaf-fns", "preloop-ws"]
+CLOSURES = ["core-fns", "loop-fns", "leaf-fns", "phaseb-fns", "preloop-ws"]
 ORDER = CHEAP + ["build", "warnings", "shake"] + CLOSURES + ["checker-prog", "e2e"]
 
 ALL_EXACT = {"lakefile.toml", "lake-manifest.json", "lean-toolchain", "scripts/lake",
@@ -67,6 +68,7 @@ CLOSURE_SCRIPTS = {
     "scripts/core_fns.py": "core-fns", "scripts/core_fns.lean": "core-fns",
     "scripts/loop_fns.py": "loop-fns", "scripts/loop_fns.lean": "loop-fns",
     "scripts/leaf_fns.py": "leaf-fns", "scripts/leaf_fns.lean": "leaf-fns",
+    "scripts/phaseb_fns.py": "phaseb-fns", "scripts/phaseb_fns.lean": "phaseb-fns",
     "scripts/preloop_ws.py": "preloop-ws",
 }
 # `scripts/checker_prog.py --no-build --check`: the generator, its inputs' readers and its outputs
@@ -76,7 +78,8 @@ SHAKE_FILES = {"scripts/shake.py", "scripts/shake-setup.sh", "scripts/shake-allo
                "scripts/shake-keep.txt"}
 # the closure checks read checkerProg (ConAgua.Checker.Prog) and rewrite these files
 CLOSURE_ROOTS = ["ConAgua.Checker.Prog", "ConAgua.Arena.CoreErec", "ConAgua.Arena.LoopFns",
-                 "ConAgua.Arena.LeafFns", "ConAgua.Checker.PreLoopWS", "ConAgua.Checker.PreLoopWSStages"]
+                 "ConAgua.Arena.LeafFns", "ConAgua.Checker.PhaseBReads", "ConAgua.Checker.PreLoopWS",
+                 "ConAgua.Checker.PreLoopWSStages"]
 IMP = re.compile(r"^(?:public |private )?(?:meta )?import (?:all )?(ConAgua[\w.]*)", re.M)
 
 

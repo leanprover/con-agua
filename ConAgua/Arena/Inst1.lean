@@ -41,7 +41,7 @@ namespace L.Arena
 /-! ## The L code -/
 
 /-- con-ron: ConRon/Arena/ExprOps.lean:256-282 ConRon.Arena.instantiate1Go -/
-@[l_impl ConRon.Arena.instantiate1Go]
+@[no_expose, l_impl ConRon.Arena.instantiate1Go]
 def instGo : FunDecl := lfn (h, d, v, fu) locals (x, g, t, i, r) {
   if fu == 0 { abort };
   x := call der_bv(h);
@@ -63,7 +63,7 @@ def instGo : FunDecl := lfn (h, d, v, fu) locals (x, g, t, i, r) {
 }
 
 /-- con-ron: ConRon/Arena/ExprOps.lean:284-299 ConRon.Arena.instantiate1ArmApp -/
-@[l_impl ConRon.Arena.instantiate1ArmApp]
+@[no_expose, l_impl ConRon.Arena.instantiate1ArmApp]
 def instApp : FunDecl := lfn (h, d, v, fu) locals (fd, j, e0, t, i, f, a, x, y, r, u) {
   (fd, j, e0) := call if_find(h, d);
   if fd != 0 { return IMEMO.u64[j * 4 + 3] };
@@ -79,7 +79,7 @@ def instApp : FunDecl := lfn (h, d, v, fu) locals (fd, j, e0, t, i, f, a, x, y, 
 }
 
 /-- con-ron: ConRon/Arena/ExprOps.lean:301-317 ConRon.Arena.instantiate1ArmBind -/
-@[l_impl ConRon.Arena.instantiate1ArmBind]
+@[no_expose, l_impl ConRon.Arena.instantiate1ArmBind]
 def instLam : FunDecl := lfn (h, d, v, fu) locals (fd, j, e0, t, i, f, a, x, y, r, u) {
   if d + 1 == 0 { abort };
   (fd, j, e0) := call if_find(h, d);
@@ -96,7 +96,7 @@ def instLam : FunDecl := lfn (h, d, v, fu) locals (fd, j, e0, t, i, f, a, x, y, 
 }
 
 /-- con-ron: ConRon/Arena/ExprOps.lean:301-317 ConRon.Arena.instantiate1ArmBind -/
-@[l_impl ConRon.Arena.instantiate1ArmBind]
+@[no_expose, l_impl ConRon.Arena.instantiate1ArmBind]
 def instForall : FunDecl := lfn (h, d, v, fu) locals (fd, j, e0, t, i, f, a, x, y, r, u) {
   if d + 1 == 0 { abort };
   (fd, j, e0) := call if_find(h, d);
@@ -113,7 +113,7 @@ def instForall : FunDecl := lfn (h, d, v, fu) locals (fd, j, e0, t, i, f, a, x, 
 }
 
 /-- con-ron: ConRon/Arena/ExprOps.lean:319-335 ConRon.Arena.instantiate1ArmLet -/
-@[l_impl ConRon.Arena.instantiate1ArmLet]
+@[no_expose, l_impl ConRon.Arena.instantiate1ArmLet]
 def instLet : FunDecl := lfn (h, d, v, fu) locals (fd, j, e0, t, i, f, a, b, x, y, z, r, u) {
   if d + 1 == 0 { abort };
   (fd, j, e0) := call if_find(h, d);
@@ -132,7 +132,7 @@ def instLet : FunDecl := lfn (h, d, v, fu) locals (fd, j, e0, t, i, f, a, b, x, 
 }
 
 /-- con-ron: ConRon/Arena/ExprOps.lean:337-351 ConRon.Arena.instantiate1ArmProj -/
-@[l_impl ConRon.Arena.instantiate1ArmProj]
+@[no_expose, l_impl ConRon.Arena.instantiate1ArmProj]
 def instProj : FunDecl := lfn (h, d, v, fu) locals (fd, j, e0, t, i, nm, ix, e, x, r, u) {
   (fd, j, e0) := call if_find(h, d);
   if fd != 0 { return IMEMO.u64[j * 4 + 3] };

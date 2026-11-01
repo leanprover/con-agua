@@ -3,6 +3,7 @@ module
 import ConAgua.Arena.PhaseBStep
 public import ConAgua.L.GrindAttr
 public import ConAgua.Arena.FreezeRel
+import all ConAgua.Arena.CheckerL
 
 @[expose] public section
 

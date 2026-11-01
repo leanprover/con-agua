@@ -7,6 +7,7 @@ import ConAgua.L.GrindAttr
 import ConAgua.Front.Preserve
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
+import all ConAgua.Arena.PropRead
 
 @[expose] public section
 

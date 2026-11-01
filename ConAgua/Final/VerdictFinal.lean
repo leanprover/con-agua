@@ -8,6 +8,7 @@ import ConAgua.Checker.ProgWf
 public import ConAgua.Checker.ProgTab
 public import ConAgua.Final.DrvAbi
 public import ConAguaAsm.Checker
+import all ConAgua.Checker.Entry
 
 @[expose] public section
 

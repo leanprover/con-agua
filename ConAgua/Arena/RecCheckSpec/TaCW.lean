@@ -9,6 +9,7 @@ public import ConAgua.L.GrindAttr
 import ConAgua.Arena.IndInstallSpec.DomsW
 import ConAgua.Arena.IndPosSpec.NestKeyMap
 import Std.Tactic.BVDecide.Normalize.BitVec
+import all ConAgua.Arena.RecCheck
 
 @[expose] public section
 

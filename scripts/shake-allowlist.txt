@@ -61,7 +61,6 @@ ConAgua/Arena/RecGenSpec/Rec3TmdWDecB.lean	public import ConAgua.Arena.LdRd	# th
 ConAgua/Arena/RecGenSpec/Rec3TmdWDecB.lean	public import ConAgua.Arena.RecClassSpec.ClassGenRule	# the build needs it: the modules above (IndBRec4, GpbWSimF, …) reach `rec2CC_parts`, `gpbW` through it
 ConAgua/Arena/RecGenSpec/StabDecCKExt.lean	public import ConAgua.Arena.RecGenSpec.SlRGrow	# the build needs it: its dependents reach the handle lemmas and this module's other names through it
 ConAgua/Arena/SlotGrow.lean	public import ConAgua.Arena.Pool	# the build needs it: the array names moved to ConAgua.Layout, the modules above reach the pool lemmas through it
-ConAgua/Arena/Store.lean	public import ConAgua.Arena.Pool	# kept from before the shake; the first run of the tool kept it, a second run proposes it (not tried)
 ConAgua/Arena/Store.lean	public import ConAgua.Arena.SlotGrowSpec	# kept from before the shake; the first run of the tool kept it, a second run proposes it (not tried)
 ConAgua/Arena/Store.lean	public import ConAgua.L.Notation	# kept from before the shake; the first run of the tool kept it, a second run proposes it (not tried)
 ConAgua/Arena/StoreDen.lean	public import ConAgua.Arena.Tiers	# the build needs it: the array names moved to ConAgua.Layout, its other names (L notation, the stores) still come through it

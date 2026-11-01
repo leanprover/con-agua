@@ -87,7 +87,7 @@ grind_pattern [level_grind] subK₂_some => subK₂ g x (some (y, m₁))
 
 /-- con-leche: ConLeche/Kernel/Level.lean:31-42 ConLeche.Level.subst
 con-leche: ConLeche/Kernel/Level.lean:31-42 ConLeche.Level.subst.go -/
-@[l_impl ConLeche.Level.subst ConLeche.Level.subst.go]
+@[no_expose, l_impl ConLeche.Level.subst ConLeche.Level.subst.go]
 def lvSubst : FunDecl := lfn (l, k, v) locals (g, a, b, x, y) {
   (g, a, b) := call lv_node(l);
   if g == 0 { return l };
@@ -142,7 +142,7 @@ grind_pattern [level_grind] ssK_some => ssK n (some (x, m₁))
 grind_pattern [level_grind] ssW_succ => ssW (n + 1) m l k v
 
 /-- con-leche: ConLeche/Kernel/Level.lean:127-135 ConLeche.Level.byCases -/
-def lvSubsimp : FunDecl := lfn (l, k, v) locals (x) {
+@[no_expose] def lvSubsimp : FunDecl := lfn (l, k, v) locals (x) {
   x := call lv_subst(l, k, v);
   x := call lv_simp(x);
   return x
@@ -158,14 +158,14 @@ def d1K (b : Word) : Option (Word × Mem) → Option (Word × Mem)
 /-- **The model of `lv_dist1`** (no fuel: it calls only `lh_mk`, below any fuel `n + 1`). -/
 def dist1W (m : Mem) (a k b : Word) : Option (Word × Mem) := d1K b (lhMkW m 3 a k)
 
-theorem d1K_some (b x : Word) (m₁ : Mem) : d1K b (some (x, m₁)) = lhMkW m₁ 2 x b := rfl
-theorem dist1W_eq (m : Mem) (a k b : Word) : dist1W m a k b = d1K b (lhMkW m 3 a k) := rfl
+theorem d1K_some (b x : Word) (m₁ : Mem) : d1K b (some (x, m₁)) = lhMkW m₁ 2 x b := by rfl
+theorem dist1W_eq (m : Mem) (a k b : Word) : dist1W m a k b = d1K b (lhMkW m 3 a k) := by rfl
 
 grind_pattern [level_grind] d1K_some => d1K b (some (x, m₁))
 grind_pattern [level_grind] dist1W_eq => dist1W m a k b
 
 /-- con-leche: ConLeche/Kernel/Level.lean:115-125 ConLeche.Level.imaxRules -/
-def lvDist1 : FunDecl := lfn (a, k, b) locals (x) {
+@[no_expose] def lvDist1 : FunDecl := lfn (a, k, b) locals (x) {
   x := call lh_mk(3, a, k);
   x := call lh_mk(2, x, b);
   return x
@@ -188,18 +188,18 @@ def dist2W : Nat → Mem → Word → Word → Word → Option (Word × Mem)
   | n + 1, m, a, j, k => d2K₁ n a k (lhMkW m 3 a j)
 
 theorem d2K₁_some (n : Nat) (a k x : Word) (m₁ : Mem) :
-    d2K₁ n a k (some (x, m₁)) = d2K₁.d2K₂ n x (lhMkW m₁ 3 a k) := rfl
+    d2K₁ n a k (some (x, m₁)) = d2K₁.d2K₂ n x (lhMkW m₁ 3 a k) := by rfl
 theorem d2K₂_some (n : Nat) (x y : Word) (m₂ : Mem) :
-    d2K₁.d2K₂ n x (some (y, m₂)) = ssK n (lhMkW m₂ 2 x y) := rfl
+    d2K₁.d2K₂ n x (some (y, m₂)) = ssK n (lhMkW m₂ 2 x y) := by rfl
 theorem dist2W_succ (n : Nat) (m : Mem) (a j k : Word) :
-    dist2W (n + 1) m a j k = d2K₁ n a k (lhMkW m 3 a j) := rfl
+    dist2W (n + 1) m a j k = d2K₁ n a k (lhMkW m 3 a j) := by rfl
 
 grind_pattern [level_grind] d2K₁_some => d2K₁ n a k (some (x, m₁))
 grind_pattern [level_grind] d2K₂_some => d2K₁.d2K₂ n x (some (y, m₂))
 grind_pattern [level_grind] dist2W_succ => dist2W (n + 1) m a j k
 
 /-- con-leche: ConLeche/Kernel/Level.lean:115-125 ConLeche.Level.imaxRules -/
-def lvDist2 : FunDecl := lfn (a, j, k) locals (x, y) {
+@[no_expose] def lvDist2 : FunDecl := lfn (a, j, k) locals (x, y) {
   x := call lh_mk(3, a, j);
   y := call lh_mk(3, a, k);
   x := call lh_mk(2, x, y);

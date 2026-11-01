@@ -20,6 +20,7 @@ public import ConAgua.Arena.RecCheckSpec.PdsC
 public import ConAgua.Arena.RecCheckSpec.TaGoWMfr
 public import ConAgua.Arena.TwinStep
 public import ConRon.Bridge.Inductives.RecCheck
+import all ConAgua.Arena.RecCheck
 
 @[expose] public section
 

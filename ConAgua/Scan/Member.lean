@@ -80,7 +80,7 @@ def nextMemberLoop : Stmt := lblk (i, w, c, ke, v, k) {
 }
 
 /-- con-leche: ConLeche/Frontend/Scan/Fast.lean:2427-2574 ConLeche.Frontend.scanLineLoop -/
-def nextMember : FunDecl := lfn (i, w) locals (c, ke, v, k) {
+@[no_expose] def nextMember : FunDecl := lfn (i, w) locals (c, ke, v, k) {
   ⟪nextMemberLoop⟫;
   return (0, 0, 0, 0, 0)
 }

@@ -3,6 +3,10 @@ module
 public import ConAgua.Rom.DataLit
 public import ConAgua.Rom.Subst
 public import ConAgua.Arena.IndIface
+import all ConAgua.Arena.Rom
+import all ConAgua.Arena.RomExpr
+import all ConAgua.Arena.RomItems
+import all ConAgua.Arena.RomLevel
 
 @[expose] public section
 
@@ -97,7 +101,7 @@ open L.Arena L.Ind
 
 /-- `rom_u64(i)` over `PB`. -/
 -- con-ron: none — the ROM reader (L has constant bytes where the twin has con-leche values)
-def romU64PB : FunDecl := lfn (i) locals (x) {
+@[no_expose] def romU64PB : FunDecl := lfn (i) locals (x) {
   if len(PB.u8) < i + 8 || i + 8 < i { abort };
   x := le64!(PB.u8, i);
   return x
@@ -105,7 +109,7 @@ def romU64PB : FunDecl := lfn (i) locals (x) {
 
 /-- `rom_put(i, l)` over `PB`. -/
 -- con-ron: none — the ROM reader (L has constant bytes where the twin has con-leche values)
-def romPutPB : FunDecl := lfn (i, l) locals (top, j, pt, pb, e) {
+@[no_expose] def romPutPB : FunDecl := lfn (i, l) locals (top, j, pt, pb, e) {
   if len(PB.u8) < i + l || i + l < i { abort };
   e := i + l;
   j := scan!(PB.u8, i, e, hiC);
@@ -120,18 +124,18 @@ def romPutPB : FunDecl := lfn (i, l) locals (top, j, pt, pb, e) {
   return top
 }
 
-theorem romU64PB_subPB (bs : List UInt8) : romU64PB.subPB bs = romU64 bs := rfl
-theorem romPutPB_subPB (bs : List UInt8) : romPutPB.subPB bs = romPut bs := rfl
-theorem romName_subPB (bs : List UInt8) : (romName []).toPB.subPB bs = romName bs := rfl
-theorem romLevel_subPB (bs : List UInt8) : (romLevel []).toPB.subPB bs = romLevel bs := rfl
-theorem romExpr_subPB (bs : List UInt8) : (romExpr []).toPB.subPB bs = romExpr bs := rfl
-theorem romItems_subPB (bs : List UInt8) : (romItems []).toPB.subPB bs = romItems bs := rfl
+theorem romU64PB_subPB (bs : List UInt8) : romU64PB.subPB bs = romU64 bs := by rfl
+theorem romPutPB_subPB (bs : List UInt8) : romPutPB.subPB bs = romPut bs := by rfl
+theorem romName_subPB (bs : List UInt8) : (romName []).toPB.subPB bs = romName bs := by rfl
+theorem romLevel_subPB (bs : List UInt8) : (romLevel []).toPB.subPB bs = romLevel bs := by rfl
+theorem romExpr_subPB (bs : List UInt8) : (romExpr []).toPB.subPB bs = romExpr bs := by rfl
+theorem romItems_subPB (bs : List UInt8) : (romItems []).toPB.subPB bs = romItems bs := by rfl
 
 /-! ## `pb_check()` -/
 
 /-- `pb_check()`: the buffer starts with `romData`. -/
 -- con-ron: none — the pin-data buffer's header (the startup data the twin interns exactly)
-def pbCheck : FunDecl := lfn () locals (i) {
+@[no_expose] def pbCheck : FunDecl := lfn () locals (i) {
   if len(PB.u8) < len(romDataLit.c8) { abort };
   while i < len(romDataLit.c8) {
     if PB.u8[i] != romDataLit.c8[i] { abort };
@@ -146,7 +150,7 @@ def pbCheck : FunDecl := lfn () locals (i) {
 the position after. -/
 -- con-ron: ConRon/Arena/Intern.lean:54-56 ConRon.Arena.internExprList
 -- con-ron: ConRon/Arena/Frontend/Readback.lean:266-272 ConRon.Arena.Frontend.internExprList
-@[l_impl ConRon.Arena.Frontend.internExprList ConRon.Arena.internExprList]
+@[no_expose, l_impl ConRon.Arena.Frontend.internExprList ConRon.Arena.internExprList]
 def romExprsTo : FunDecl := lfn (q, o, k) locals (h, r) {
   if k == 0 { return q };
   (h, q) := call rom_expr(q);
@@ -159,7 +163,7 @@ def romExprsTo : FunDecl := lfn (q, o, k) locals (h, r) {
 -- con-ron: ConRon/Arena/Intern.lean:51-52 ConRon.Arena.internExpr
 -- con-ron: ConRon/Arena/Frontend/Readback.lean:262-264 ConRon.Arena.Frontend.internExpr
 -- con-ron: ConRon/Arena/NatOpPinSet.lean:97-118 ConRon.Arena.internPinSet
-@[l_impl ConRon.Arena.internPinSet ConRon.Arena.internExpr ConRon.Arena.Frontend.internExpr]
+@[no_expose, l_impl ConRon.Arena.internPinSet ConRon.Arena.internExpr ConRon.Arena.Frontend.internExpr]
 def romPinsTo : FunDecl := lfn (q, r, k) locals (z) {
   if k == 8 { return q };
   CTL.u64[132] := 0;
@@ -172,7 +176,7 @@ def romPinsTo : FunDecl := lfn (q, r, k) locals (z) {
 /-- `rom_lists_to(q, r, j)`: the variant's certificate lists `j ‥ 7`, each at a fresh memo, as
 `EREC` slices whose offset and length go to `EREC[r + 8 + 2j]`, `EREC[r + 9 + 2j]`. -/
 -- con-ron: ConRon/Arena/NatOpPinSet.lean:97-118 ConRon.Arena.internPinSet
-@[l_impl ConRon.Arena.internPinSet]
+@[no_expose, l_impl ConRon.Arena.internPinSet]
 def romListsTo : FunDecl := lfn (q, r, j) locals (l, o, z) {
   if j == 8 { return q };
   l := call rom_u64(q);
@@ -189,7 +193,7 @@ def romListsTo : FunDecl := lfn (q, r, j) locals (l, o, z) {
 /-- `rom_tpairs_to(q, o, k)`: `k` type pins, each its name, then its type at a fresh memo, to
 `EREC[o + 2i]`, `EREC[o + 2i + 1]`; the position after. -/
 -- con-ron: ConRon/Arena/NatOpPinSet.lean:65-73 ConRon.Arena.internTypePins
-@[l_impl ConRon.Arena.internTypePins]
+@[no_expose, l_impl ConRon.Arena.internTypePins]
 def romTPairsTo : FunDecl := lfn (q, o, k) locals (h, z) {
   if k == 0 { return q };
   (h, q) := call rom_name(q);
@@ -205,7 +209,7 @@ def romTPairsTo : FunDecl := lfn (q, o, k) locals (h, z) {
 pairs whose offset and length go to `EREC[r + 24 + 2j]`, `EREC[r + 25 + 2j]` (a count of `2^32`
 or more aborts: the slice's size `2 * len` stays in a word). -/
 -- con-ron: ConRon/Arena/NatOpPinSet.lean:75-95 ConRon.Arena.internPinSetTypePins
-@[l_impl ConRon.Arena.internPinSetTypePins]
+@[no_expose, l_impl ConRon.Arena.internPinSetTypePins]
 def romTPinsTo : FunDecl := lfn (q, r, j) locals (l, o, z) {
   if j == 8 { return q };
   l := call rom_u64(q);
@@ -220,7 +224,7 @@ def romTPinsTo : FunDecl := lfn (q, r, j) locals (l, o, z) {
 
 /-- `rom_sets_to(q, o, k)`: `k` variants, the pointers to their records to `EREC[o ‥]`. -/
 -- con-ron: ConRon/Arena/NatOpPinSet.lean:120-127 ConRon.Arena.internPinSets
-def romSetsTo : FunDecl := lfn (q, o, k) locals (r, z) {
+@[no_expose] def romSetsTo : FunDecl := lfn (q, o, k) locals (r, z) {
   if k == 0 { return q };
   r := call erec_alloc(40);
   q := call rom_pins_to(q, r, 0);
@@ -234,7 +238,7 @@ def romSetsTo : FunDecl := lfn (q, o, k) locals (r, z) {
 /-- `intern_pin_sets(q)`: the variant count, then the variants; the list of records at
 `CTL[150]` (offset) and `CTL[151]` (count). -/
 -- con-ron: ConRon/Arena/NatOpPinSet.lean:120-127 ConRon.Arena.internPinSets
-@[l_impl ConRon.Arena.internPinSets]
+@[no_expose, l_impl ConRon.Arena.internPinSets]
 def internPinSetsL : FunDecl := lfn (q) locals (c, o) {
   c := call rom_u64(q);
   o := call erec_alloc(c);
@@ -246,7 +250,7 @@ def internPinSetsL : FunDecl := lfn (q) locals (c, o) {
 
 /-- `rom_pin_sets()`: the variant list, an `IW` slice of pointers to the records. -/
 -- con-ron: none — the interned pin list `internAllPins` returns, read where `checkDecl` takes it
-def romPinSetsL : FunDecl := lfn () locals (o, l, q) {
+@[no_expose] def romPinSetsL : FunDecl := lfn () locals (o, l, q) {
   o := CTL.u64[150];
   l := CTL.u64[151];
   (q, l) := call er_to_iw(o, l);
@@ -256,7 +260,7 @@ def romPinSetsL : FunDecl := lfn () locals (o, l, q) {
 /-- `intern_all_pins()` over the buffer: the memo reset, the startup walk's items at
 `allPinsOff`, then the variant list right after them. -/
 -- con-ron: ConRon/Arena/Checker.lean:316-346 ConRon.Arena.internAllPins
-@[l_impl ConRon.Arena.internAllPins]
+@[no_expose, l_impl ConRon.Arena.internAllPins]
 def internAllPinsPB : FunDecl := lfn () locals (q, z) {
   CTL.u64[132] := 0;
   z := call rset_clear();

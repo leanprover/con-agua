@@ -11,6 +11,7 @@ import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
 import ConAgua.Arena.LdRd
+import all ConAgua.Arena.ArRange
 
 @[expose] public section
 
@@ -176,7 +177,7 @@ grind_pattern [arena_grind] arEntryW_zero => arEntryW n m e d k c
 grind_pattern [arena_grind] arEntryW_eq => arEntryW n m e d k c
 
 /-- con-ron: ConRon/Arena/ExprOps.lean:1879-1890 ConRon.Arena.abstractRangeFast -/
-@[l_impl ConRon.Arena.abstractRangeFast]
+@[no_expose, l_impl ConRon.Arena.abstractRangeFast]
 def arEntry : FunDecl := lfn (e, d, k, c) locals (r, u) {
   if k == 0 { return e & 4294967295 };
   u := call ab_clear();

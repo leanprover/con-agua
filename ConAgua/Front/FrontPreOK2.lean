@@ -12,6 +12,7 @@ import ConAgua.Front.IndInstallRefine3
 import ConAgua.Front.IndInstallRefine4
 public import ConAgua.Front.IndApplySpec2
 public import ConAgua.Front.IndFieldsSpec
+import all ConAgua.Front.IndApply
 
 @[expose] public section
 

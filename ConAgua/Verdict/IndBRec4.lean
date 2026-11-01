@@ -18,6 +18,7 @@ public import ConAgua.Arena.IndSumSpec.StructProjArgP
 public import ConAgua.Arena.KnotEntry
 public import ConAgua.Arena.RecClassSpec.Classes
 public import ConAgua.Arena.RecGenSpec.CrsProg
+import all ConAgua.Arena.RecGen
 
 @[expose] public section
 /-!

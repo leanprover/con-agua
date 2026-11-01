@@ -10,6 +10,7 @@ import ConAgua.Arena.InferBodyLet
 import ConAgua.Arena.StrLitCv
 import Std.Tactic.BVDecide.Normalize.BitVec
 import Std.WP.Triple.SpecLemmas
+import all ConAgua.Arena.StrLit
 
 @[expose] public section
 

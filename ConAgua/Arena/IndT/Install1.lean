@@ -13,6 +13,8 @@ public import ConAgua.Arena.KnotEntry
 public import ConAgua.Arena.TwinStep
 public import ConRon.Bridge.Checker.Hyp
 public import ConRon.Bridge.Inductives.Run
+import all ConAgua.Arena.IndInstall
+import all ConAgua.Arena.IndSum
 
 @[expose] public section
 

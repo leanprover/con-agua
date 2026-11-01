@@ -499,7 +499,7 @@ def bufMemG (fz own : List TieredArray) (plo phi mode : GVar) (B : Array Word) (
     glob := fun g => if g = plo then j else if g = phi then j + 1 else if g = mode then 2 else r.glob g }
 
 theorem bufMem_eq (B : Array Word) (r : Mem) (j : Word) :
-    bufMem B r j = bufMemG frozenIdsL parOwnedL PLO PHI MODE B r j := rfl
+    bufMem B r j = bufMemG frozenIdsL parOwnedL PLO PHI MODE B r j := by rfl
 
 /-- `bufMemG` is the stub's three global stores on `bufMem0`, for distinct globals. -/
 theorem bufMemG_eq_setG {fz own : List TieredArray} {plo phi mode : GVar} (h1 : plo ≠ phi) (h2 : plo ≠ mode)

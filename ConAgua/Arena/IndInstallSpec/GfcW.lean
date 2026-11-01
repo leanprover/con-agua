@@ -14,6 +14,7 @@ import ConAgua.Arena.RecClassSpec.CloseLams
 import ConAgua.Arena.RecClassSpec.MjProg
 import ConRon.Bridge.Grind
 public import ConAgua.Arena.IndPosSpec.NoGoStep
+import all ConAgua.Arena.RecGen
 
 @[expose] public section
 

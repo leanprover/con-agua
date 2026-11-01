@@ -8,6 +8,8 @@ import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
 import ConAgua.Arena.IndInstallSpec.DomsW
 import Std.Tactic.BVDecide.Normalize.BitVec
+import all ConAgua.Arena.DeclArmsNat
+import all ConAgua.Arena.IndIface
 
 @[expose] public section
 

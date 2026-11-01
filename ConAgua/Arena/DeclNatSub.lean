@@ -8,6 +8,8 @@ import ConAgua.L.ModelGen
 import ConAgua.Arena.IndPartsSpec.RulePrefixAt
 import ConRon.Bridge.Grind
 import Std.Tactic.BVDecide.Normalize.BitVec
+import all ConAgua.Arena.DeclArmsNat
+import all ConAgua.Arena.IndIface
 
 @[expose] public section
 

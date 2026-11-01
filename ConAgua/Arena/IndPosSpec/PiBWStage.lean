@@ -6,6 +6,7 @@ import ConAgua.L.GrindAttr
 import ConAgua.Arena.IndMaster
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
+import all ConAgua.Arena.IndPos
 
 @[expose] public section
 

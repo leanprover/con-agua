@@ -6,6 +6,9 @@ import ConAgua.Scan.LeafLink
 import Std.Data.DTreeMap.Internal.Operations
 import Std.Tactic.BVDecide.Normalize.BitVec
 import Std.Tactic.BVDecide.Normalize.Prop
+import all ConAgua.Scan.Leaves
+import all ConAgua.Scan.Line
+import all ConAgua.Scan.Values
 
 @[expose] public section
 

@@ -10,6 +10,9 @@ import ConAgua.Scan.Link
 import ConAgua.Scan.LitLink
 import ConLeche.Frontend.Scan.Equiv.Scalars
 import Std.Tactic.BVDecide.Normalize.Prop
+import all ConAgua.Scan.Key
+import all ConAgua.Scan.Leaves
+import all ConAgua.Scan.Values
 
 @[expose] public section
 

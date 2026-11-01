@@ -5,6 +5,7 @@ public import ConAgua.Arena.DefEqStuckDisp
 import ConAgua.Arena.DefEqStuckEta
 import ConAgua.Checker.NoVerdictTree
 import ConAgua.L.ModelGen
+import all ConAgua.Arena.DefEq
 
 @[expose] public section
 

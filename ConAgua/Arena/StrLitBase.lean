@@ -16,6 +16,7 @@ public import ConAgua.Arena.IndIface
 public import ConAgua.Arena.KnotSlot
 public import ConAgua.Arena.RomExpr
 public import ConAgua.Arena.WhnfDeltaRefine
+import all ConAgua.Arena.StrLit
 
 @[expose] public section
 

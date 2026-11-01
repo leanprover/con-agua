@@ -5,6 +5,12 @@ import ConAgua.Arena.MemoRekey
 public import ConAgua.Arena.StageTLift
 import ConAgua.Arena.StageInst1
 import ConAgua.Arena.TwinStep
+import all ConAgua.Arena.DeclApd
+import all ConAgua.Arena.IndIface
+import all ConAgua.Arena.LevelApd
+import all ConAgua.Arena.LevelEquiv
+import all ConAgua.Arena.LevelHeap
+import all ConAgua.Arena.MemoLib
 
 @[expose] public section
 

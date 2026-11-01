@@ -7,6 +7,26 @@ public import ConAgua.Arena.InstListSpec
 public import ConAgua.Arena.BvarB
 public import ConAgua.Arena.Frame
 import Std.Tactic.BVDecide.Normalize.Prop
+import all ConAgua.Arena.Abs1
+import all ConAgua.Arena.AppStore
+import all ConAgua.Arena.ArRange
+import all ConAgua.Arena.ArRangeSpec
+import all ConAgua.Arena.BVarStore
+import all ConAgua.Arena.BvarB
+import all ConAgua.Arena.ConsLib
+import all ConAgua.Arena.ExprMk
+import all ConAgua.Arena.FVarRange
+import all ConAgua.Arena.ForallStore
+import all ConAgua.Arena.Inst1
+import all ConAgua.Arena.Inst1Spec
+import all ConAgua.Arena.InstList
+import all ConAgua.Arena.InstListSpec
+import all ConAgua.Arena.LamStore
+import all ConAgua.Arena.LetStore
+import all ConAgua.Arena.LiftL
+import all ConAgua.Arena.MemoLib
+import all ConAgua.Arena.ProjStore
+import all ConAgua.Arena.Walk
 
 @[expose] public section
 

@@ -17,6 +17,7 @@ public import ConAgua.Arena.RecCheckSpec.TargetMajorAt2
 public import ConAgua.Arena.RecGenSpec.KcW
 public import ConAgua.Arena.Verdict
 public import ConAgua.Checker.NoVerdictFns
+import all ConAgua.Arena.RecGen
 
 @[expose] public section
 

@@ -48,7 +48,7 @@ namespace L.Arena
 /-! ## `lv_intern(p)` -/
 
 /-- con-ron: ConRon/Arena/Monad.lean:473-490 ConRon.Arena.internLevel -/
-@[l_impl ConRon.Arena.internLevel]
+@[no_expose, l_impl ConRon.Arena.internLevel]
 def lvIntern : FunDecl := lfn (p) locals (g, a, b, x, y, h) {
   (g, a, b) := call lv_node(p);
   if g == 0 {
@@ -188,7 +188,7 @@ end spec
 
 /-- con-ron: ConRon/Arena/ExprOps.lean:2076-2091 ConRon.Arena.substLMemoAt
 con-ron: ConRon/Arena/Core.lean:1945-1955 ConRon.Arena.substLevelsAt -/
-def lvSubInt : FunDecl := lfn (u, ko, kc, vo, vc) locals (x, h) {
+@[no_expose] def lvSubInt : FunDecl := lfn (u, ko, kc, vo, vc) locals (x, h) {
   CTL.u64[192] := 0;
   x := call lp_substl(u, ko, kc, vo, vc);
   h := call lv_intern(x);
@@ -201,7 +201,7 @@ def subIntK (n : Nat) : Option (Word × Mem) → Option (Word × Mem)
   | some (x, m₁) => lvInternW n m₁ x
 
 @[arena_grind =] theorem subIntK_some (n : Nat) (x : Word) (m₁ : Mem) :
-    subIntK n (some (x, m₁)) = lvInternW n m₁ x := rfl
+    subIntK n (some (x, m₁)) = lvInternW n m₁ x := by rfl
 
 /-- **The model of `lv_sub_int`.** -/
 def lvSubIntW : Nat → Mem → Word → Word → Word → Word → Word → Option (Word × Mem)
@@ -211,7 +211,7 @@ def lvSubIntW : Nat → Mem → Word → Word → Word → Word → Word → Opt
 /-! ## `keys_push(src, l)`: a record-pool name slice onto the spine stack -/
 
 /-- con-ron: none — the substitution's keys copied onto the spine stack (`lp_lookup`'s key array) -/
-def ekCopy : FunDecl := lfn (s, d, l) locals (r) {
+@[no_expose] def ekCopy : FunDecl := lfn (s, d, l) locals (r) {
   if l == 0 { return 0 };
   SPN.u64[d] := EREC.u64[s];
   r := call ek_copy(s + 1, d + 1, l - 1);
@@ -233,7 +233,7 @@ grind_pattern [arena_grind] ekCopyW_zero => ekCopyW (n + 1) m s d l
 grind_pattern [arena_grind] ekCopyW_succ => ekCopyW (n + 1) m s d l
 
 /-- con-ron: none — the substitution's keys copied onto the spine stack (`lp_lookup`'s key array) -/
-def keysPush : FunDecl := lfn (po, pc) locals (b, r) {
+@[no_expose] def keysPush : FunDecl := lfn (po, pc) locals (b, r) {
   b := CTL.u64[136];
   if len(SPN.u64) < b { abort };
   if len(SPN.u64) - b < pc { abort };
@@ -248,7 +248,7 @@ def kpK (b pc : Word) : Option Mem → Option (Word × Mem)
   | some m₁ => some (b, m₁.set64 CTL 136 (b + pc))
 
 @[arena_grind =] theorem kpK_some (b pc : Word) (m₁ : Mem) :
-    kpK b pc (some m₁) = some (b, m₁.set64 CTL 136 (b + pc)) := rfl
+    kpK b pc (some m₁) = some (b, m₁.set64 CTL 136 (b + pc)) := by rfl
 
 /-- **The model of `keys_push`.** -/
 def keysPushW : Nat → Mem → Word → Word → Option (Word × Mem)
@@ -266,7 +266,7 @@ attribute [arena_grind =] lvSubIntW_succ
 /-! ## `caps_never_zero(po, pc, us, swd, so, sc)` -/
 
 /-- con-ron: ConRon/Arena/Core.lean:345-351 ConRon.Arena.capsNeverZero -/
-@[l_impl ConRon.Arena.capsNeverZero]
+@[no_expose, l_impl ConRon.Arena.capsNeverZero]
 def capsNeverZeroL : FunDecl := lfn (po, pc, us, swd, so, sc) locals (vo, vc, b, x) {
   (vo, vc) := call ls_node(us);
   b := call keys_push(po, pc);
@@ -290,7 +290,7 @@ def capsK1 (n : Nat) (swd so sc pc vo vc : Word) : Option (Word × Mem) → Opti
     capsK2 b (some (x, m₂)) = some (x, m₂.set64 CTL 136 b) := rfl
 @[arena_grind =] theorem capsK1_some (n : Nat) (swd so sc pc vo vc b : Word) (m₁ : Mem) :
     capsK1 n swd so sc pc vo vc (some (b, m₁)) =
-      capsK2 b (substPWW SPN POOL EREC n (m₁.set64 CTL 192 0) swd so sc b pc vo vc) := rfl
+      capsK2 b (substPWW SPN POOL EREC n (m₁.set64 CTL 192 0) swd so sc b pc vo vc) := by rfl
 
 /-- **The model of `caps_never_zero`** (none on a handle `ls_node` aborts on). -/
 def capsNeverZeroW : Nat → Mem → Word → Word → Word → Word → Word → Word → Option (Word × Mem)

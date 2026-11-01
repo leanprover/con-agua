@@ -100,7 +100,7 @@ def xorLoop : Stmt := lblk (oa, la, ob, lb, top, n, i, x, y, pt, pb) {
 }
 
 /-- con-ron: ConRon/Arena/Core.lean:999-1040 ConRon.Arena.natOpResult -/
-@[l_impl ConRon.Arena.natOpResult]
+@[no_expose, l_impl ConRon.Arena.natOpResult]
 def natLand : FunDecl := lfn (oa, la, ob, lb) locals (top, n, i, x, y, pt, pb) {
   top := CTL.u64[0];
   pt := ⦃top⦄.tier;
@@ -115,7 +115,7 @@ def natLand : FunDecl := lfn (oa, la, ob, lb) locals (top, n, i, x, y, pt, pb) {
 }
 
 /-- con-ron: ConRon/Arena/Core.lean:999-1040 ConRon.Arena.natOpResult -/
-@[l_impl ConRon.Arena.natOpResult]
+@[no_expose, l_impl ConRon.Arena.natOpResult]
 def natLor : FunDecl := lfn (oa, la, ob, lb) locals (top, n, i, x, y, pt, pb) {
   top := CTL.u64[0];
   pt := ⦃top⦄.tier;
@@ -130,7 +130,7 @@ def natLor : FunDecl := lfn (oa, la, ob, lb) locals (top, n, i, x, y, pt, pb) {
 }
 
 /-- con-ron: ConRon/Arena/Core.lean:999-1040 ConRon.Arena.natOpResult -/
-@[l_impl ConRon.Arena.natOpResult]
+@[no_expose, l_impl ConRon.Arena.natOpResult]
 def natXor : FunDecl := lfn (oa, la, ob, lb) locals (top, n, i, x, y, pt, pb) {
   top := CTL.u64[0];
   pt := ⦃top⦄.tier;

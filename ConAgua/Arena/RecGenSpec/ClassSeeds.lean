@@ -21,6 +21,8 @@ import ConAgua.Arena.IndPosSpec.SnocWStage
 import Std.Tactic.BVDecide.Normalize.BitVec
 public import ConAgua.Arena.IndPartsSpec.PartsConsPL
 public import ConAgua.Arena.IndPosSpec.UCtx
+import all ConAgua.Arena.IndIface
+import all ConAgua.Arena.RecGen
 
 @[expose] public section
 

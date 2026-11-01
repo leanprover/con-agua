@@ -55,7 +55,7 @@ grind_pattern [arena_grind] sbbHi_le => sbbHi x y c
 /-- The borrow out of `x - y - c` for a borrow-in `c ≤ 1` (the two `overflowing_sub`s of
 `sub_from`, `ron/nat.rs:288-296`). -/
 -- con-ron: none — limb arithmetic of the bignum (con-ron `ron/nat.rs`); the twin computes on `Nat`
-def subBorrow : FunDecl := lfn (x, y, c) locals (d) {
+@[no_expose] def subBorrow : FunDecl := lfn (x, y, c) locals (d) {
   if x < y { return 1 };
   d := x - y;
   if d < c { return 1 };
@@ -74,7 +74,7 @@ def subLoop : Stmt := lblk (oa, la, ob, lb, top, n, i, c, x, y, pt, pb) {
 }
 
 /-- con-ron: ConRon/Arena/Core.lean:999-1040 ConRon.Arena.natOpResult -/
-@[l_impl ConRon.Arena.natOpResult]
+@[no_expose, l_impl ConRon.Arena.natOpResult]
 def natSub : FunDecl := lfn (oa, la, ob, lb) locals (top, n, i, c, x, y, pt, pb) {
   top := CTL.u64[0];
   pt := ⦃top⦄.tier;

@@ -21,7 +21,7 @@ open L
 
 /-- `check_np()`: the pipeline without the prelude, both phases in one run (a test entry). -/
 -- con-ron: none — the e2e lane's partial pipeline (no prelude), reference `e2e-ref --no-prelude`
-def checkNpL : FunDecl := lfn () locals (r, z, cnt, v, c) {
+@[no_expose] def checkNpL : FunDecl := lfn () locals (r, z, cnt, v, c) {
   z := call pb_check();
   z := call intern_reserved_pins();
   r := call front_run();
@@ -36,7 +36,7 @@ def checkNpL : FunDecl := lfn () locals (r, z, cnt, v, c) {
 
 /-- `e2e_front()`: the stages before the fold (`e2e-diff`'s starting state, `ConAgua/E2E/Diff.lean`). -/
 -- con-ron: none — the e2e lane's test entry (the first stages of `e2e-ref --no-prelude`)
-def e2eFrontL : FunDecl := lfn () locals (r, z) {
+@[no_expose] def e2eFrontL : FunDecl := lfn () locals (r, z) {
   z := call pb_check();
   z := call intern_reserved_pins();
   r := call front_run();

@@ -11,6 +11,8 @@ import Std.Tactic.BVDecide.Normalize.BitVec
 import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
+import all ConAgua.Front.FieldsDecl
+import all ConAgua.Scan.Str
 
 @[expose] public section
 

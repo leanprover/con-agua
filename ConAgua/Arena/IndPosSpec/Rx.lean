@@ -6,6 +6,7 @@ public import ConAgua.Arena.GrindAttr
 public import ConAgua.Arena.IndGrindAttr
 public import ConAgua.L.GrindAttr
 import Std.Tactic.BVDecide.Normalize.BitVec
+import all ConAgua.Arena.IndPos
 
 @[expose] public section
 

@@ -10,6 +10,11 @@ import ConAgua.L.ModelGen
 import ConAgua.Arena.IndPosSpec.NestKeyMap
 import ConAgua.Arena.LdRd
 import Std.Tactic.BVDecide.Normalize.BitVec
+import all ConAgua.Arena.FVarStore
+import all ConAgua.Arena.IndIface
+import all ConAgua.Arena.IndPos
+import all ConAgua.Arena.Pins
+import all ConAgua.Arena.SortStore
 
 @[expose] public section
 

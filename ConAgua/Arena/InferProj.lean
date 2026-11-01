@@ -13,6 +13,8 @@ import Std.WP.Triple.SpecLemmas
 public import ConAgua.Arena.CoreLevels
 public import ConAgua.Arena.CoreWalks
 public import ConAgua.Arena.DefEqLeaves
+import all ConAgua.Arena.CoreLevels
+import all ConAgua.Arena.Infer
 
 @[expose] public section
 

@@ -20,6 +20,8 @@ import ConRon.Bridge.Checker.Fold
 import ConRon.Bridge.Checker.Split
 public import ConAgua.Arena.DeclArmT
 public import ConAgua.Arena.DeclTwin
+import all ConAgua.Arena.CheckerL
+import all ConAgua.Arena.DeclStep
 
 @[expose] public section
 

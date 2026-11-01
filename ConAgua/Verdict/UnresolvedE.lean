@@ -14,6 +14,8 @@ public import ConAgua.Arena.IndStubs
 public import ConAgua.Arena.IndView
 public import ConAgua.Arena.Verdict
 public import ConAgua.Checker.NoVerdictFns
+import all ConAgua.Arena.ConstsResolveF
+import all ConAgua.Arena.IndIface
 
 @[expose] public section
 

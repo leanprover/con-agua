@@ -10,6 +10,7 @@ import ConAgua.Arena.IndPartsSpec.RulePrefixAt
 import ConRon.Bridge.Grind
 public import ConAgua.Arena.IndPartsSpec.MemberNames
 public import ConAgua.Arena.IndPosSpec.MatesW
+import all ConAgua.Arena.RecCheck
 
 @[expose] public section
 

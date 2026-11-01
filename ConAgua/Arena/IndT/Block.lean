@@ -26,6 +26,7 @@ public import ConAgua.Arena.IndRealLvlZ
 public import ConAgua.Arena.IndT.ArmMemos
 public import ConAgua.Arena.IndT.GenRec2
 public import ConAgua.Arena.IndT.Sum2
+import all ConAgua.Arena.IndInstall
 
 @[expose] public section
 

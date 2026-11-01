@@ -12,6 +12,10 @@ import ConAgua.Arena.StageInst1
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
 public import ConAgua.Arena.DeclNatBase
+import all ConAgua.Arena.IndIface
+import all ConAgua.Arena.WhnfEntry
+import all ConAgua.Arena.TeleLift
+import all ConAgua.Arena.WhnfSpineArgs
 
 @[expose] public section
 
@@ -98,7 +102,7 @@ theorem fvarTypeDsL_eq : fvarTypeDsL = lfn (o, l) locals (q, k, t) {
   k := 0;
   ⟪ftdsLoop⟫;
   return (q, l)
-} := rfl
+} := by rfl
 
 /-- The model of `fvar_type_ds`' loop at the loop's fuel, from index `k`; `q` the fresh slice. -/
 noncomputable def ftdsGoW (o l q : Word) : Nat → Mem → Word → Option (List Word × Mem)

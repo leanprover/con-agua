@@ -625,7 +625,7 @@ theorem simZ_internAllPins (pins : List ConLeche.NatOpPinSet) :
 
 /-- `intern_all_pins_rom()` (the ROM-only pin stage, superseded by `L.Rom.internAllPinsPB`) for the ROM offset `off` of the startup walk's item stream.
 con-ron: none — the offset-generic body of `internAllPinsL` (`Prelude.lean`, which cites the twin). -/
-def internAllPinsAt (off : Word) : FunDecl := lfn () locals (q, z) {
+@[no_expose] def internAllPinsAt (off : Word) : FunDecl := lfn () locals (q, z) {
   CTL.u64[132] := 0;
   z := call rset_clear();
   q := call rom_items(⟪off⟫);

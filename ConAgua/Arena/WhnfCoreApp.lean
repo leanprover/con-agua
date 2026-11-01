@@ -11,6 +11,7 @@ import ConAgua.Front.Preserve
 import ConRon.Arena.WFProofs
 import Std.WP.Triple.SpecLemmas
 public import ConAgua.Arena.WhnfCore
+import all ConAgua.Arena.WhnfCore
 
 @[expose] public section
 
@@ -358,7 +359,7 @@ def betaPeelW : Stmt := lblk (t, a, ao, an, i, co, cn, tt, x, e2, e3) {
 
 /-- `betaPeelL`, with its loop spliced from `betaPeelW`.
 con-ron: ConRon/Arena/Core.lean:2207-2226 ConRon.Arena.betaPeel -/
-def betaPeelL' : FunDecl := lfn (t, a, ao, an, i) locals (co, cn, tt, x, e2, e3) {
+@[no_expose] def betaPeelL' : FunDecl := lfn (t, a, ao, an, i) locals (co, cn, tt, x, e2, e3) {
   co := CTL.u64[136];
   if len(SPN.u64) <= co { abort };
   SPN.u64[co] := a;
@@ -370,7 +371,7 @@ def betaPeelL' : FunDecl := lfn (t, a, ao, an, i) locals (co, cn, tt, x, e2, e3)
   return (1, e2)
 }
 
-theorem betaPeelL_eq : betaPeelL = betaPeelL' := rfl
+theorem betaPeelL_eq : betaPeelL = betaPeelL' := by rfl
 
 /-- How a loop ends: by a `return` (`st`, `r`, the memory) or by its condition failing (the
 locals the tail reads: `t`, `cn`, and the memory). -/

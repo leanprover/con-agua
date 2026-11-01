@@ -14,6 +14,7 @@ import ConRon.Bridge.Checker.Base
 import ConRon.Bridge.Checker.DeclVal
 public import ConAgua.Arena.LeafFns
 public import ConRon.Bridge.Core.Knot
+import all ConAgua.Arena.DeclArms
 
 @[expose] public section
 

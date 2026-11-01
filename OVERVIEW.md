@@ -95,7 +95,7 @@ status word or unset register reads as accept
 
 ### 2.1 The final theorem
 
-[`checkerFile_accepts`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/EndToEnd.lean#L89-L96):
+[`checkerFile_accepts`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/EndToEnd.lean#L90-L97):
 
 ```lean
 theorem checkerFile_accepts [Host]
@@ -139,8 +139,8 @@ failure of a line or a record. There is no converse: a run that the twin
 rejects may still end in `error` or `exhausted` here.
 
 Two corollaries put this in con-leche's terms
-([`checkerFile_model_exists`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/EndToEnd.lean#L109-L121),
-[`checkerFile_no_False`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/EndToEnd.lean#L135-L142)):
+([`checkerFile_model_exists`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/EndToEnd.lean#L110-L122),
+[`checkerFile_no_False`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/EndToEnd.lean#L136-L143)):
 on accept, con-leche's own parser reads `b`, con-leche's pure fold accepts the
 parsed records (prepared with some prelude, at some pin list), and the accepted
 environment has a model in every `ConLeche.SetTheory V`; and a file in
@@ -148,7 +148,7 @@ environment has a model in every `ConLeche.SetTheory V`; and a file in
 capstone, restated on the vendored Theorem 1
 ([`twinAccepts_pure`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/Twin.lean#L135-L151)).
 A fourth variant,
-[`checkerFile_accepts_regs`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/EndToEnd.lean#L70-L78),
+[`checkerFile_accepts_regs`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/EndToEnd.lean#L71-L79),
 adds that the caller's callee-saved registers (System V: `rsp`, `rbp`, `rbx`,
 `r12` to `r15`) are intact on return, on every path
 ([`RegsRestored`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/Statement.lean#L127-L134)).
@@ -157,7 +157,7 @@ the compiled code uses (§8.1).
 
 **Axioms.** All four, and the five threaded theorems (§9.3), depend on `propext`, `Classical.choice` and `Quot.sound`
 only, pinned by `#guard_msgs`
-([here](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/EndToEnd.lean#L198-L215)),
+([here](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/EndToEnd.lean#L199-L216)),
 and so do the links of the chain
 ([`ConAgua/Audit/Final.lean`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Audit/Final.lean#L20-L37)).
 No `sorry`, no `native_decide`, no axiom of our own. The model corollary is
@@ -215,8 +215,8 @@ not accepted
 
 **The threaded mode** (`--jobs=N`, §9.3) has its own theorem, and its harness
 assumptions are the fields of
-[`ThreadsRun`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/ThreadsFinal.lean#L137-L161)
-([listed in words](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/ThreadsFinal.lean#L28-L47)):
+[`ThreadsRun`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/ThreadsFinal.lean#L138-L162)
+([listed in words](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/ThreadsFinal.lean#L29-L48)):
 
 * entry 1 is called as `AbiCall` says, and the harness regains control at each
   call's return address in a state the machine is guaranteed to reach there
@@ -234,8 +234,8 @@ assumptions are the fields of
 
 The threaded verdict theorem (`checkerFile_threads_verdict`) has its own,
 smaller set, the cases of
-[`ThreadsFail`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/ThreadsVerdict.lean#L61-L100)
-([listed in words](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/ThreadsVerdict.lean#L35-L50)):
+[`ThreadsFail`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/ThreadsVerdict.lean#L62-L101)
+([listed in words](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/ThreadsVerdict.lean#L36-L51)):
 either entry 1 is called as `AbiCall` says and returns (`FirstReturn`) with
 `rdx = 2`, and the code reported is its `rax`; or, for one thread and one of
 its calls `i`, the facts above hold for that thread's calls up to `i` (entry 1
@@ -436,7 +436,7 @@ it is proved from a word model that keeps the errors (`l_model … unified`:
 through the twin's `bind` and at a reject or decline site the L guard is the
 twin's failure condition. Functions whose call closure aborts only with class
 `0` (1537 of 1838) claim nothing, by a check of the program text
-([`checkerProg_nv`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Checker/NoVerdictClosed.lean#L81-L82)).
+([`checkerProg_nv`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Checker/NoVerdictClosed.lean#L219-L220)).
 
 ### 4.5 The composition
 
@@ -447,7 +447,7 @@ the layout and enters the trampoline, so `compile_correct` gives one L run of
 the program, §8.6); if that returns `2^63 + k`, it calls entry 2 in place, a
 second L run in mode 2 on the memory the first left; if the machine reports
 accept, both L runs did.
-[`checkerFile_drv_accepts_regs`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/DrvFinal.lean#L102-L108)
+[`checkerFile_drv_accepts_regs`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/DrvFinal.lean#L103-L109)
 composes it with `drv_twinAccepts` for the committed file, and
 `EndToEnd.lean` states the four final theorems from it, and the threaded mode's three.
 
@@ -716,7 +716,7 @@ header slot
 ([`X_clear_fit`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Arena/MemoLib.lean#L649-L660)),
 and the caller makes the common case (no mark, a small call) the epoch bump
 alone
-([`inst_list`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Arena/InstListSpec.lean#L277-L282)).
+([`inst_list`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Arena/InstListSpec.lean#L278-L283)).
 
 ### 6.3 The limb pool
 
@@ -1081,7 +1081,7 @@ Accept iff every call accepted; otherwise the verdict is that of the failing
 group with the smallest index, as the sequential run reports it. L has no atomics: each call is an ordinary
 sequential L run, and the claiming is the harness's.
 
-[`checkerFile_threads_accept`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/EndToEnd.lean#L150-L154)
+[`checkerFile_threads_accept`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/EndToEnd.lean#L151-L155)
 covers this mode for the committed file: if the harness behaves as
 `ThreadsRun` says (§2.3), every call accepts and the threads claim every group
 index, then the twin's pipeline accepts `b` with phase B as con-ron's pool
@@ -1090,10 +1090,10 @@ and the model and no-`False` corollaries follow as in §2.1. Its pieces: entry
 1's run with the frozen buffer it leaves, a fresh worker's start state over the
 buffer and a zero region, and one group per call of entry 2, each a sequential
 L run related to con-ron's worker by non-interference (§7.3).
-[`checkerFile_threads_regs`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/EndToEnd.lean#L158-L163)
+[`checkerFile_threads_regs`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/EndToEnd.lean#L159-L164)
 adds that entry 1 and every `ca_check_b` call return with the caller's
 callee-saved registers intact.
-[`checkerFile_threads_verdict`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/EndToEnd.lean#L170-L173)
+[`checkerFile_threads_verdict`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/EndToEnd.lean#L171-L174)
 covers a failing run: if the harness behaves as `ThreadsFail` says (§2.3) and
 the reported code has class `1` or `2`, the twin's pool fails with that class
 ([`TwinVerdictPooled`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/TwinVerdict.lean#L177-L189)):
@@ -1170,7 +1170,7 @@ import that Lean's import minimizer, `lake shake`, finds unused is listed in
 `scripts/lean_warnings.py` (no Lean warning in the changed modules, including those restored from the
 shared build cache, whose warnings are kept in a log store beside it), and this document's link gate.
 Each merge runs the gates its change can affect
-([the table](https://github.com/leanprover/con-agua/blob/master/scripts/gate_select.py#L17-L43)).
+([the table](https://github.com/leanprover/con-agua/blob/master/scripts/gate_select.py#L17-L44)).
 `scripts/overview-links.sh` extracts every line-anchored link of OVERVIEW.md
 and README.md with the cited lines into
 `scripts/overview-links-expected.txt`, and fails when they move or change.

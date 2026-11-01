@@ -98,7 +98,7 @@ def fvarCS : ConsSch where
 /-! ## `fvar_find(t, u, ty, h)`: the probe -/
 
 /-- con-ron: ConRon/Arena/Store.lean:94-95 ConRon.Arena.Tbl.find? -/
-def fvarFind : FunDecl := consFindG fvarCS
+@[no_expose] def fvarFind : FunDecl := consFindG fvarCS
 
 /-! ## `fvar_push(t, u, ty, j)`: append a node to tier `t`, register it at slot `j` -/
 
@@ -111,7 +111,7 @@ def fvpushOK (m : Mem) (t : Word) : Bool :=
     decide (fvcnt m t < m.len64 (tierA FVLP t))
 
 /-- con-ron: ConRon/Arena/Store.lean:97-102 ConRon.Arena.Tbl.push -/
-def fvarPush : FunDecl := consPushG fvarCS
+@[no_expose] def fvarPush : FunDecl := consPushG fvarCS
 
 /-! ## `intern_fvar(u, ty)`: hash-cons the expression `fvar u ty`
 
@@ -130,7 +130,7 @@ def fvinternW (m : Mem) (u ty : Word) : Option (Word × Mem) := consInternM fvar
 
 /-- con-ron: ConRon/Arena/Monad.lean:249-267 ConRon.Arena.internE
 con-ron: ConRon/Arena/Monad.lean:221-247 ConRon.Arena.internNodeE -/
-@[l_impl ConRon.Arena.internE ConRon.Arena.internNodeE]
+@[no_expose, l_impl ConRon.Arena.internE ConRon.Arena.internNodeE]
 def internFVar : FunDecl := consInternG fvarCS
 
 /-- The `fvar` store functions, as one `#eval`-able program. -/

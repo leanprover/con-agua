@@ -41,7 +41,7 @@ abbrev OUT : ArrId := 0
 /-! ## `utf8_char`: one code point -/
 
 /-- con-leche: ConLeche/Frontend/Scan/Fast.lean:624-644 ConLeche.Frontend.scanString -/
-def utf8Char : FunDecl := lfn (k, n) locals (c0, c1, c2, c3, v) {
+@[no_expose] def utf8Char : FunDecl := lfn (k, n) locals (c0, c1, c2, c3, v) {
   c0 := IN.u8[k];
   if c0 < 0x80 { return (c0, 1) };
   if c0 < 0xC2 { return (0, 0) };
@@ -157,7 +157,7 @@ def utf8DecodeLoop : Stmt := lblk (j, e, n, k, cnt, cp, l) {
 }
 
 /-- con-leche: ConLeche/Frontend/Scan/Fast.lean:624-644 ConLeche.Frontend.scanString -/
-def utf8Decode : FunDecl := lfn (j, e) locals (n, k, cnt, cp, l) {
+@[no_expose] def utf8Decode : FunDecl := lfn (j, e) locals (n, k, cnt, cp, l) {
   if e < len(IN.u8) { n := e } else { n := len(IN.u8) };
   k := j;
   ⟪utf8DecodeLoop⟫;

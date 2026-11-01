@@ -9,6 +9,7 @@ import ConAgua.L.GrindAttr
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
 public import ConAgua.Arena.IndCopy2
+import all ConAgua.Rom.PinRead
 
 @[expose] public section
 
@@ -48,7 +49,7 @@ def pbLoop (bs d : List UInt8) : Stmt := lblk (i) {
 
 /-- `pb_check` over the buffer `bs`, expecting the prefix `d`. -/
 -- con-ron: none — the pin-data buffer's header (the startup data the twin interns exactly)
-def pbCheckG (bs d : List UInt8) : FunDecl := lfn () locals (i) {
+@[no_expose] def pbCheckG (bs d : List UInt8) : FunDecl := lfn () locals (i) {
   if len(bs.c8) < len(d.c8) { abort };
   ⟪pbLoop bs d⟫;
   return 0
@@ -181,7 +182,7 @@ end pbSpec
 
 /-! ## The functions without `PB` reads -/
 
-theorem internAllPinsPB_subPB (bs : List UInt8) : internAllPinsPB.subPB bs = internAllPinsPB := rfl
+theorem internAllPinsPB_subPB (bs : List UInt8) : internAllPinsPB.subPB bs = internAllPinsPB := by rfl
 
 /-! ## The models -/
 

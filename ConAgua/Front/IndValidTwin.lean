@@ -58,7 +58,7 @@ structure VFacts (st : StateD) (a : AState) (tys : List IndTypeRec) (cts : List 
     RecOK st a TN TT nPd tys.length ordered.length KE fuel r
 
 theorem storeFuel_run (a : AState) :
-    (ConRon.Arena.Frontend.storeFuel).run a = .ok (a.store.nodeCount + 1, a) := rfl
+    (ConRon.Arena.Frontend.storeFuel).run a = .ok (a.store.nodeCount + 1, a) := by rfl
 
 /-- A read-only `forIn` that yields at every element, from any initial state equal to `S 0`. -/
 theorem forIn_yield' {α β : Type} (f : α → β → AM (ForInStep β)) (a : AState) (xs : List α)

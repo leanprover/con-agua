@@ -9,6 +9,7 @@ import ConAgua.L.ModelGen
 import ConAgua.Arena.IndPartsSpec.IndPartsProg2
 import ConAgua.Arena.RecStab
 import Std.WP.Triple.SpecLemmas
+import all ConAgua.Arena.IndInstall
 
 @[expose] public section
 

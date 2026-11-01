@@ -9,6 +9,7 @@ import ConAgua.Arena.LdRd
 import ConAgua.L.ModelGen
 import ConAgua.Arena.DeclBasisSpec2
 import ConAgua.Arena.WhnfDeltaRefine
+import all ConAgua.Arena.DeclArms
 
 @[expose] public section
 

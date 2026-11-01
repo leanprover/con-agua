@@ -9,6 +9,7 @@ import ConAgua.L.ModelGen
 public import ConAgua.Arena.WhnfBase
 public import ConAgua.Checker.NoVerdictFns
 public import ConAgua.L.ErrSpec
+import all ConAgua.Arena.RecGen
 
 @[expose] public section
 

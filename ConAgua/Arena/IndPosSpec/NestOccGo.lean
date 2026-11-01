@@ -9,6 +9,8 @@ import ConAgua.L.ModelGen
 import ConAgua.Arena.IndPosSpec.NestKeyMap
 import ConRon.Bridge.Grind
 import Std.Tactic.BVDecide.Normalize.BitVec
+import all ConAgua.Arena.IndIface
+import all ConAgua.Arena.IndPos
 
 @[expose] public section
 

@@ -11,6 +11,7 @@ public import ConAgua.Arena.IndGrindAttr
 public import ConAgua.L.GrindAttr
 import ConAgua.Arena.IndPosSpec.NestKeyMap
 public import ConAgua.Arena.IndPosSpec.GrpAt
+import all ConAgua.Arena.IndPos
 
 @[expose] public section
 

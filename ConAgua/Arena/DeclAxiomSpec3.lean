@@ -10,6 +10,7 @@ import ConAgua.Arena.DeclCvg
 import ConAgua.Arena.DeclValRef
 import ConAgua.L.LocNF
 import Std.Tactic.BVDecide.Normalize.BitVec
+import all ConAgua.Arena.DeclArms
 
 @[expose] public section
 
