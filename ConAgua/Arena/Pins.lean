@@ -77,7 +77,7 @@ theorem pinReserved_run {m : Mem} {a : AState} (h : PinsFull m a.pins) :
 
 /-- `pin_at(i)`: `PINS[1 + i]`, after the flag and the bound. -/
 -- con-ron: ConRon/Arena/Pins.lean:254-261 ConRon.Arena.pinAt
-@[l_impl ConRon.Arena.pinAt]
+@[no_expose, l_impl ConRon.Arena.pinAt]
 def pinAtL : FunDecl := lfn (i) locals () {
   if PINS.u64[0] == 0 { abort };
   if 51 <= i { abort };
@@ -86,7 +86,7 @@ def pinAtL : FunDecl := lfn (i) locals () {
 
 /-- `pin_word(k)`: `PINS[k]`, after the flag (the three interned values, `k` = 52, 53, 54). -/
 -- con-ron: ConRon/Arena/Pins.lean:254-261 ConRon.Arena.pinAt
-def pinWordL : FunDecl := lfn (k) locals () {
+@[no_expose] def pinWordL : FunDecl := lfn (k) locals () {
   if PINS.u64[0] == 0 { abort };
   return PINS.u64[k]
 }

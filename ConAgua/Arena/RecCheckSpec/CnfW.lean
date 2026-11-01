@@ -173,7 +173,7 @@ def cnfLoop : Stmt := lblk (nfsOff, nfsLen, name, q, j, nf, rp) {
 
 /-- `classCtorOfNfs`, with its loop spliced from `cnfLoop`. -/
 -- con-ron: none — `classCtorOfNfs` itself (`rfl`), its loop a named block for the proof
-def classCtorOfNfs' : FunDecl := lfn (nfsOff, nfsLen, name) locals (q, j, nf, rp) {
+@[no_expose] def classCtorOfNfs' : FunDecl := lfn (nfsOff, nfsLen, name) locals (q, j, nf, rp) {
   q := call iw_alloc(nfsLen);
   j := 0;
   rp := 0;

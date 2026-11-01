@@ -87,7 +87,7 @@ grind_pattern [level_grind] subK₂_some => subK₂ g x (some (y, m₁))
 
 /-- con-leche: ConLeche/Kernel/Level.lean:31-42 ConLeche.Level.subst
 con-leche: ConLeche/Kernel/Level.lean:31-42 ConLeche.Level.subst.go -/
-@[l_impl ConLeche.Level.subst ConLeche.Level.subst.go]
+@[no_expose, l_impl ConLeche.Level.subst ConLeche.Level.subst.go]
 def lvSubst : FunDecl := lfn (l, k, v) locals (g, a, b, x, y) {
   (g, a, b) := call lv_node(l);
   if g == 0 { return l };
@@ -142,7 +142,7 @@ grind_pattern [level_grind] ssK_some => ssK n (some (x, m₁))
 grind_pattern [level_grind] ssW_succ => ssW (n + 1) m l k v
 
 /-- con-leche: ConLeche/Kernel/Level.lean:127-135 ConLeche.Level.byCases -/
-def lvSubsimp : FunDecl := lfn (l, k, v) locals (x) {
+@[no_expose] def lvSubsimp : FunDecl := lfn (l, k, v) locals (x) {
   x := call lv_subst(l, k, v);
   x := call lv_simp(x);
   return x
@@ -165,7 +165,7 @@ grind_pattern [level_grind] d1K_some => d1K b (some (x, m₁))
 grind_pattern [level_grind] dist1W_eq => dist1W m a k b
 
 /-- con-leche: ConLeche/Kernel/Level.lean:115-125 ConLeche.Level.imaxRules -/
-def lvDist1 : FunDecl := lfn (a, k, b) locals (x) {
+@[no_expose] def lvDist1 : FunDecl := lfn (a, k, b) locals (x) {
   x := call lh_mk(3, a, k);
   x := call lh_mk(2, x, b);
   return x
@@ -199,7 +199,7 @@ grind_pattern [level_grind] d2K₂_some => d2K₁.d2K₂ n x (some (y, m₂))
 grind_pattern [level_grind] dist2W_succ => dist2W (n + 1) m a j k
 
 /-- con-leche: ConLeche/Kernel/Level.lean:115-125 ConLeche.Level.imaxRules -/
-def lvDist2 : FunDecl := lfn (a, j, k) locals (x, y) {
+@[no_expose] def lvDist2 : FunDecl := lfn (a, j, k) locals (x, y) {
   x := call lh_mk(3, a, j);
   y := call lh_mk(3, a, k);
   x := call lh_mk(2, x, y);

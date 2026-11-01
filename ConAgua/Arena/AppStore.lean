@@ -91,7 +91,7 @@ def appCS : ConsSch where
 /-! ## `app_find(t, f, a, h)`: the probe -/
 
 /-- con-ron: ConRon/Arena/Store.lean:94-95 ConRon.Arena.Tbl.find? -/
-def appFind : FunDecl := consFindG appCS
+@[no_expose] def appFind : FunDecl := consFindG appCS
 
 /-! ## `app_push(t, f, a, j)`: append a node to tier `t`, register it at slot `j` -/
 
@@ -103,7 +103,7 @@ def apushOK (m : Mem) (t : Word) : Bool :=
   decide (acnt m t < (1073741824 : Word)) && decide (acnt m t < m.len64 (tierA AREC t))
 
 /-- con-ron: ConRon/Arena/Store.lean:97-102 ConRon.Arena.Tbl.push -/
-def appPush : FunDecl := consPushG appCS
+@[no_expose] def appPush : FunDecl := consPushG appCS
 
 /-! ## `intern_app(f, a)`: hash-cons the `app` node with children `f` and `a`
 
@@ -121,7 +121,7 @@ def ainternW (m : Mem) (f a : Word) : Option (Word × Mem) := consInternM appCS 
 
 /-- con-ron: ConRon/Arena/Monad.lean:249-267 ConRon.Arena.internE
 con-ron: ConRon/Arena/Monad.lean:221-247 ConRon.Arena.internNodeE -/
-@[l_impl ConRon.Arena.internE ConRon.Arena.internNodeE]
+@[no_expose, l_impl ConRon.Arena.internE ConRon.Arena.internNodeE]
 def internApp : FunDecl := consInternG appCS
 
 /-- The `app` store functions, as one `#eval`-able program. -/

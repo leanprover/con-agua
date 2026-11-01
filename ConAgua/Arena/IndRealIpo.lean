@@ -56,7 +56,7 @@ def ipoLoop : Stmt := lblk (np, o, l, j, p, k, ok, n) {
 
 /-- `indParamsOkL`, with its loop spliced from `ipoLoop`. -/
 -- con-ron: none — `indParamsOkL` itself (`rfl`), its loop a named block for the proof
-def indParamsOkL' : FunDecl := lfn (np, o, l) locals (j, p, k, ok, n) {
+@[no_expose] def indParamsOkL' : FunDecl := lfn (np, o, l) locals (j, p, k, ok, n) {
   j := 0;
   ⟪ipoLoop⟫;
   return 1

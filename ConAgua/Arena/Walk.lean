@@ -269,7 +269,7 @@ grind_pattern [arena_grind] bbNodeW_app => bbNodeW (n + 1) m h c
 grind_pattern [arena_grind] bbNodeW_let => bbNodeW (n + 1) m h c
 
 /-- con-ron: ConRon/Arena/ExprOps.lean:1401-1426 ConRon.Arena.bvarBoundGo -/
-@[l_impl ConRon.Arena.bvarBoundGo]
+@[no_expose, l_impl ConRon.Arena.bvarBoundGo]
 def bbGo : FunDecl := lfn (h, c) locals (fd, j, d, r, u) {
   if c == 0 { abort };
   (fd, j, d) := call bm_find(h, 0);
@@ -281,7 +281,7 @@ def bbGo : FunDecl := lfn (h, c) locals (fd, j, d, r, u) {
 }
 
 /-- con-ron: ConRon/Arena/ExprOps.lean:1401-1426 ConRon.Arena.bvarBoundGo -/
-@[l_impl ConRon.Arena.bvarBoundGo]
+@[no_expose, l_impl ConRon.Arena.bvarBoundGo]
 def bbNode : FunDecl := lfn (h, c) locals (g, t, i, f, a, b, x, y, z) {
   g := ⟦h⟧.tag;
   t := ⟦h⟧.tier;
@@ -417,7 +417,7 @@ grind_pattern [arena_grind] bbMemoW_eq => bbMemoW n m h c
 grind_pattern [arena_grind] clrK_some => clrK (some (r, m₁))
 
 /-- con-ron: ConRon/Arena/ExprOps.lean:1478-1484 ConRon.Arena.bvarBoundMemo -/
-@[l_impl ConRon.Arena.bvarBoundMemo]
+@[no_expose, l_impl ConRon.Arena.bvarBoundMemo]
 def bbMemo : FunDecl := lfn (h, c) locals (r, u) {
   u := call bm_clear();
   r := call bb_go(h, c);

@@ -97,7 +97,7 @@ def capCheckBody : Stmt := capSlots.foldr capStep capTail
 /-- `cap_check()`: aborts unless the harness's capacities meet `ArenaR`'s minimums (a capacity
 the checker cannot work with declines; any larger one is fine). -/
 -- con-ron: none — the L memory's capacities (the twin's arrays grow; L's are fixed by the harness)
-def capCheckL : FunDecl := { nparams := 0, nlocals := 0, body := capCheckBody }
+@[no_expose] def capCheckL : FunDecl := { nparams := 0, nlocals := 0, body := capCheckBody }
 
 /-! ## The parallel mode's entries (lane parmode, docs/design/parmode.md)
 
@@ -111,7 +111,7 @@ entry 1) is `check_a(0)`, the same with the buffer's header only; `2` (`ca_check
 /-- `check_a(c)`: `check`'s stages, then phase A and the frozen buffer (`c ≠ 0`: header and images;
 `c = 0`: the header only); returns `2^63 + k` (`1` if a line did not scan). -/
 -- con-ron: ConRon/Arena/Main.lean:135-167 ConRon.Arena.runPipelineHead
-def checkAL : FunDecl := lfn (c) locals (r, z, cnt, v) {
+@[no_expose] def checkAL : FunDecl := lfn (c) locals (r, z, cnt, v) {
   z := call cap_check();
   z := call pb_check();
   z := call presize_tables();
@@ -132,7 +132,7 @@ pending groups `PLO‥PHI-1` (`PHI` at most the count) at phase A's final view, 
 B's loop (`check_pending_go`); returns `ACCEPT`. -/
 -- con-ron: ConRon/Arena/Phased.lean:33-40 ConRon.Arena.AState.worker
 -- con-ron: ConRon/Arena/Pooled.lean:34-47 ConRon.Arena.PooledAccepts
-def checkBL : FunDecl := lfn () locals (z, n) {
+@[no_expose] def checkBL : FunDecl := lfn () locals (z, n) {
   if INIT == 0 {
     n := len(CTLF.u64);
     copy!(CTL.u64, 0, CTLF.u64, 0, n);
@@ -146,7 +146,7 @@ def checkBL : FunDecl := lfn () locals (z, n) {
 
 /-- `check()`: one of the parallel mode's entries, by the mode word; any other mode aborts. -/
 -- con-ron: none — the dispatch on the mode word the entry stubs write (`Compiler/Abi.lean`)
-def checkL : FunDecl := lfn () locals (r) {
+@[no_expose] def checkL : FunDecl := lfn () locals (r) {
   if MODE == 1 { r := call check_a(1); return r };
   if MODE == 3 { r := call check_a(0); return r };
   if MODE == 2 { r := call check_b(); return r };
@@ -162,21 +162,21 @@ Lane `induct`'s callers pass the walk fuel first (`abstract1_fast(fuel, e, d, k)
 
 /-- `abstract1_fast(fuel, e, d, k)`: `abs_entry(e, d, k)`. -/
 -- con-ron: ConRon/Arena/ExprOps.lean:1724-1730 ConRon.Arena.abstract1Fast
-def abstract1FastA : FunDecl := lfn (f, e, d, k) locals (r) {
+@[no_expose] def abstract1FastA : FunDecl := lfn (f, e, d, k) locals (r) {
   r := call abs_entry(e, d, k);
   return r
 }
 
 /-- `instantiate1_fast(fuel, e, v, d)`: `inst_entry(e, v, d)`. -/
 -- con-ron: ConRon/Arena/ExprOps.lean:382-389 ConRon.Arena.instantiate1Fast
-def instantiate1FastA : FunDecl := lfn (f, e, v, d) locals (r) {
+@[no_expose] def instantiate1FastA : FunDecl := lfn (f, e, v, d) locals (r) {
   r := call inst_entry(e, v, d);
   return r
 }
 
 /-- `inst1(e, v, d)`: `inst_entry(e, v, d)`. -/
 -- con-ron: ConRon/Arena/ExprOps.lean:382-389 ConRon.Arena.instantiate1Fast
-def inst1A : FunDecl := lfn (e, v, d) locals (r) {
+@[no_expose] def inst1A : FunDecl := lfn (e, v, d) locals (r) {
   r := call inst_entry(e, v, d);
   return r
 }
@@ -191,7 +191,7 @@ record's name is its word `1`, `decCI`) decides by `canon_eq_list` (over `IW` sl
 copied there, `er_to_iw`); no such kind is `(0, 0)`. -/
 -- con-ron: ConRon/Arena/Basis.lean:58-74 ConRon.Arena.basisPinHitGo
 -- con-ron: ConRon/Arena/Basis.lean:76-84 ConRon.Arena.basisPinHit
-@[l_impl ConRon.Arena.basisPinHit]
+@[no_expose, l_impl ConRon.Arena.basisPinHit]
 def basisPinHitL : FunDecl := lfn (bo, bl) locals (k, o, l, j, e, q, ql) {
   k := 0;
   while k < 4 {
@@ -218,7 +218,7 @@ constant records (`decCI`: an `indInfo` is `3, name, lps.off, lps.len, type, …
 `4, name, lps.off, lps.len, type, nP, nF`): a type former's telescope to a sort has at least `nP`
 binders (no such telescope: fine), a constructor declares exactly `nP` parameters. -/
 -- con-ron: ConRon/Arena/CheckerBase.lean:330-343 ConRon.Arena.indParamsOk
-@[l_impl ConRon.Arena.indParamsOk]
+@[no_expose, l_impl ConRon.Arena.indParamsOk]
 def indParamsOkL : FunDecl := lfn (np, o, l) locals (j, p, k, ok, n) {
   j := 0;
   for j < l {

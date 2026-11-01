@@ -63,7 +63,7 @@ def cnsLoop : Stmt := lblk (vis, p, ftOff, ftLen, tblOff, tblLen, msOff, msLen, 
 
 /-- `classesNfsL`, with its loop spliced from `cnsLoop`. -/
 -- con-ron: none — `classesNfsL` itself (`rfl`), its loops named blocks for the proof
-def classesNfsL' : FunDecl := lfn (vis, p, ftOff, ftLen, tblOff, tblLen, msOff, msLen)
+@[no_expose] def classesNfsL' : FunDecl := lfn (vis, p, ftOff, ftLen, tblOff, tblLen, msOff, msLen)
     locals (q, j, m, esOff, esLen, nm, k) {
   q := call iw_alloc(msLen);
   j := 0;

@@ -495,6 +495,19 @@ def lean_str(s):
     return '"' + s.replace("\\", "\\\\").replace('"', '\\"') + '"'
 
 
+def body_modules(imports):
+    """The modules in the import closure of `imports` that declare an `@[no_expose]` L function
+    (`FunDecl`): a kernel check that evaluates the program unfolds their bodies (`import all`)."""
+    out = []
+    for m in sorted(set().union(*(e2e.closure(i) for i in imports))):
+        path = os.path.join(ROOT, *m.split(".")) + ".lean"
+        if m.startswith("ConAgua.") and os.path.exists(path):
+            with open(path, encoding="utf-8") as fh:
+                if re.search(r"^@\[no_expose\b", fh.read(), re.M):
+                    out.append(m)
+    return out
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--no-build", action="store_true")
@@ -590,10 +603,13 @@ def main():
             os.remove(p)
     # modules: every file but the program literal runs an elaborator over the imported program
     # (`meta import`); the inliner's parts' kernel checks unfold `toString` on function names
-    # (`Nat.repr`, which `Init.Data.Repr` does not expose)
+    # (`Nat.repr`, which `Init.Data.Repr` does not expose) and the L functions' bodies (`FunDecl`s
+    # are `@[no_expose]`, PLAN.md "New files are modules": `import all` of every module of the
+    # program's closure that declares one)
     inl_parts = {os.path.join(chk, f"ProgIPart{k}.lean") for k in range(ninl)}
+    bodies = body_modules(imports)
     outs = [(path, lean_module.modularize(t, meta=path != OUT,
-                                          import_all=["Init.Data.Repr"] if path in inl_parts else []))
+                                          import_all=["Init.Data.Repr"] + bodies if path in inl_parts else []))
             for path, t in outs]
     for path, t in outs:
         old = open(path, encoding="utf-8").read() if os.path.exists(path) else None

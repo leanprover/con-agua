@@ -37,7 +37,7 @@ if tier 0's table is still the fresh one (count word `0`), `n` is a multiple of 
 zeroed and no page is touched up front. -/
 
 -- con-ron: none — `HashMap2::with_capacity` (`ron/hashmap2.rs`); con-ron's tables start empty (D42)
-def consPresizeG (C : ConsSch) : FunDecl := lfn (n) {
+@[no_expose] def consPresizeG (C : ConsSch) : FunDecl := lfn (n) {
   if n & 7 == 0 && 8 <= n && n <= 1152921504606846976 && n * 2 + 2 <= len(C.sa⟨0⟩) &&
       C.sa⟨0⟩[0] == 0 {
     C.sa⟨0⟩[0] := n - ⟪SN0⟫

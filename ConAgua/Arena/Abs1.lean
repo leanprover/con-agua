@@ -79,7 +79,7 @@ def rbProjW (m : Mem) (h nw iw e x : Word) : Option (Word × Mem) :=
   if x = e then some (h, m) else mkProjW m nw iw x
 
 /-- con-ron: ConRon/Arena/ExprOps.lean:1579-1585 ConRon.Arena.fvarB -/
-@[l_impl ConRon.Arena.fvarB]
+@[no_expose, l_impl ConRon.Arena.fvarB]
 def abFvb : FunDecl := lfn (h, fu) locals (x, xf, r) {
   (x, xf) := call der_b(h);
   if xf == 32767 { r := call fr_memo(h, fu); return r };
@@ -87,7 +87,7 @@ def abFvb : FunDecl := lfn (h, fu) locals (x, xf, r) {
 }
 
 /-- con-ron: ConRon/Arena/ExprOps.lean:1613-1633 ConRon.Arena.abstract1Go -/
-@[l_impl ConRon.Arena.abstract1Go]
+@[no_expose, l_impl ConRon.Arena.abstract1Go]
 def absGo : FunDecl := lfn (h, k, d, fu) locals (x, r) {
   if fu == 0 { abort };
   x := call ab_fvb(h, fu - 1);
@@ -98,7 +98,7 @@ def absGo : FunDecl := lfn (h, k, d, fu) locals (x, r) {
 
 /-- con-ron: ConRon/Arena/ExprOps.lean:1613-1633 ConRon.Arena.abstract1Go
 con-ron: ConRon/Arena/ExprOps.lean:1604-1609 ConRon.Arena.abstract1ArmFVar -/
-@[l_impl ConRon.Arena.abstract1ArmFVar]
+@[no_expose, l_impl ConRon.Arena.abstract1ArmFVar]
 def absNode : FunDecl := lfn (h, k, d, fu) locals (x, g, t, i, r) {
   g := ⟦h⟧.tag;
   if g == 4 { r := call abs_app(h, k, d, fu); return r };
@@ -116,7 +116,7 @@ def absNode : FunDecl := lfn (h, k, d, fu) locals (x, g, t, i, r) {
 }
 
 /-- con-ron: ConRon/Arena/ExprOps.lean:1635-1649 ConRon.Arena.abstract1ArmApp -/
-@[l_impl ConRon.Arena.abstract1ArmApp]
+@[no_expose, l_impl ConRon.Arena.abstract1ArmApp]
 def absApp : FunDecl := lfn (h, k, d, fu) locals (fd, j, e0, t, i, f, a, x, y, r, u) {
   (fd, j, e0) := call ab_find(h, k);
   if fd != 0 { return ABMEMO.u64[j * 4 + 3] };
@@ -132,7 +132,7 @@ def absApp : FunDecl := lfn (h, k, d, fu) locals (fd, j, e0, t, i, f, a, x, y, r
 }
 
 /-- con-ron: ConRon/Arena/ExprOps.lean:1651-1666 ConRon.Arena.abstract1ArmBind -/
-@[l_impl ConRon.Arena.abstract1ArmBind]
+@[no_expose, l_impl ConRon.Arena.abstract1ArmBind]
 def absLam : FunDecl := lfn (h, k, d, fu) locals (fd, j, e0, t, i, f, a, x, y, r, u) {
   if k + 1 == 0 { abort };
   (fd, j, e0) := call ab_find(h, k);
@@ -149,7 +149,7 @@ def absLam : FunDecl := lfn (h, k, d, fu) locals (fd, j, e0, t, i, f, a, x, y, r
 }
 
 /-- con-ron: ConRon/Arena/ExprOps.lean:1651-1666 ConRon.Arena.abstract1ArmBind -/
-@[l_impl ConRon.Arena.abstract1ArmBind]
+@[no_expose, l_impl ConRon.Arena.abstract1ArmBind]
 def absForall : FunDecl := lfn (h, k, d, fu) locals (fd, j, e0, t, i, f, a, x, y, r, u) {
   if k + 1 == 0 { abort };
   (fd, j, e0) := call ab_find(h, k);
@@ -166,7 +166,7 @@ def absForall : FunDecl := lfn (h, k, d, fu) locals (fd, j, e0, t, i, f, a, x, y
 }
 
 /-- con-ron: ConRon/Arena/ExprOps.lean:1668-1683 ConRon.Arena.abstract1ArmLet -/
-@[l_impl ConRon.Arena.abstract1ArmLet]
+@[no_expose, l_impl ConRon.Arena.abstract1ArmLet]
 def absLet : FunDecl := lfn (h, k, d, fu) locals (fd, j, e0, t, i, f, a, b, x, y, z, r, u) {
   if k + 1 == 0 { abort };
   (fd, j, e0) := call ab_find(h, k);
@@ -185,7 +185,7 @@ def absLet : FunDecl := lfn (h, k, d, fu) locals (fd, j, e0, t, i, f, a, b, x, y
 }
 
 /-- con-ron: ConRon/Arena/ExprOps.lean:1685-1699 ConRon.Arena.abstract1ArmProj -/
-@[l_impl ConRon.Arena.abstract1ArmProj]
+@[no_expose, l_impl ConRon.Arena.abstract1ArmProj]
 def absProj : FunDecl := lfn (h, k, d, fu) locals (fd, j, e0, t, i, nm, ix, e, x, r, u) {
   (fd, j, e0) := call ab_find(h, k);
   if fd != 0 { return ABMEMO.u64[j * 4 + 3] };
@@ -201,7 +201,7 @@ def absProj : FunDecl := lfn (h, k, d, fu) locals (fd, j, e0, t, i, nm, ix, e, x
 }
 
 /-- con-ron: ConRon/Arena/ExprOps.lean:1724-1730 ConRon.Arena.abstract1Fast -/
-@[l_impl ConRon.Arena.abstract1Fast]
+@[no_expose, l_impl ConRon.Arena.abstract1Fast]
 def absEntry : FunDecl := lfn (e, d, k) locals (r, u) {
   u := call ab_clear();
   r := call abs_go(e, k, d, 4000000000);

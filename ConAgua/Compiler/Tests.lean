@@ -61,7 +61,7 @@ def B : ArrId := IN
 
 /-- Sums `W.u64[0..n)` into `W.u64[n]`, doubles every byte of `B`, mixes some arithmetic. -/
 -- con-ron: none — a compiler test program
-def mix : FunDecl := lfn (n) locals (i, s, t) {
+@[no_expose] def mix : FunDecl := lfn (n) locals (i, s, t) {
   while i < n {
     s := s + W.u64[i];
     i += 1
@@ -86,14 +86,14 @@ def mixMem : Mem := (Mem.ofWords [(W, #[5, 0xffffffffffffff00, 7, 0])]).putBytes
 #guard (rk [("mix", mix)] "mix" [4] mixMem 100000).toOption == some .error
 
 /-- con-ron: none — a compiler test program -/
-def sumTo : FunDecl := lfn (n) locals (r) {
+@[no_expose] def sumTo : FunDecl := lfn (n) locals (r) {
   if n == 0 { return 0 };
   r := call sum_to(n - 1);
   return r + n
 }
 
 /-- con-ron: none — a compiler test program -/
-def boom : FunDecl := lfn (n) {
+@[no_expose] def boom : FunDecl := lfn (n) {
   if n == 7 { abort };
   return n
 }
@@ -117,7 +117,7 @@ def LITS : List UInt8 := "truefalse".toUTF8.toList
 
 /-- `mulhi(x, y)`, the carry of `x + y`, and whether `IN[i..]` starts with `"false"`. -/
 -- con-ron: none — a compiler test program
-def ext : FunDecl := lfn (x, y, i) locals (k, ok) {
+@[no_expose] def ext : FunDecl := lfn (x, y, i) locals (k, ok) {
   ok := 1;
   while k < 5 {
     if i + k >= len(B.u8) { ok := 0; break };
@@ -137,7 +137,7 @@ def extProg : Prog := [("ext", ext)]
 #guard agrees extProg "ext" [0x8000000000000000, 5, 0] (inp "falsy")
 /-- con-ron: none — a compiler test program -/
 -- `LITS.c8[9]` is out of bounds.
-def oobC : FunDecl := lfn (i) { return LITS.c8[i] }
+@[no_expose] def oobC : FunDecl := lfn (i) { return LITS.c8[i] }
 #guard agrees [("c", oobC)] "c" [8] {}
 #guard (rk [("c", oobC)] "c" [9] {} 100000).toOption == some .error
 
@@ -145,20 +145,20 @@ def oobC : FunDecl := lfn (i) { return LITS.c8[i] }
 
 /-- The 128-bit product, the carry of a sum, and a third value. -/
 -- con-ron: none — a compiler test program
-def wide : FunDecl := lfn (x, y) {
+@[no_expose] def wide : FunDecl := lfn (x, y) {
   return (x * y, mulhi(x, y), u64(x + y < x))
 }
 
 /-- Returns one value: a caller reading three gets `0` for the other two. -/
 -- con-ron: none — a compiler test program
-def one : FunDecl := lfn (x) { return x + 1 }
+@[no_expose] def one : FunDecl := lfn (x) { return x + 1 }
 
 /-- Returns nothing (falls off the end). -/
 -- con-ron: none — a compiler test program
-def none' : FunDecl := lfn (x) { skip }
+@[no_expose] def none' : FunDecl := lfn (x) { skip }
 
 /-- con-ron: none — a compiler test program -/
-def useWide : FunDecl := lfn (x, y) locals (lo, hi, c, a, b, z) {
+@[no_expose] def useWide : FunDecl := lfn (x, y) locals (lo, hi, c, a, b, z) {
   (lo, hi, c) := call wide(x, y);
   (a, b, z) := call one(lo);
   (b, z) := call none'(a);
@@ -183,18 +183,18 @@ def wideProg : Prog := [("use", useWide), ("wide", wide), ("one", one), ("none'"
 area. -/
 
 /-- con-ron: none — a compiler test program -/
-def nine : FunDecl := lfn (x) {
+@[no_expose] def nine : FunDecl := lfn (x) {
   return (x, x + 1, x + 2, x + 3, x + 4, x + 5, x + 6, x + 7, x + 8)
 }
 
 /-- Returns seven of nine: the caller reads `0` for results 7 and 8. -/
 -- con-ron: none — a compiler test program
-def seven : FunDecl := lfn (x) {
+@[no_expose] def seven : FunDecl := lfn (x) {
   return (x, x * 2, x * 3, x * 4, x * 5, x * 6, x * 7)
 }
 
 /-- con-ron: none — a compiler test program -/
-def useNine : FunDecl := lfn (x) locals (a, b, c, d, e, f, g, h, i, z) {
+@[no_expose] def useNine : FunDecl := lfn (x) locals (a, b, c, d, e, f, g, h, i, z) {
   (a, b, c, d, e, f, g, h, i) := call nine(x);
   z := a ^ (b << 4) ^ (c << 8) ^ (d << 12) ^ (e << 16) ^ (f << 20) ^ (g << 24) ^ (h << 28) ^ (i << 32);
   (a, b, c, d, e, f, g, h, i) := call seven(i);
@@ -242,9 +242,9 @@ abbrev GA : GVar := ⟨0⟩
 abbrev GB : GVar := ⟨2⟩
 
 /-- con-ron: none — a compiler test program -/
-def gbump : FunDecl := lfn (x) { GA += x; GB := GB + 1; return GA }
+@[no_expose] def gbump : FunDecl := lfn (x) { GA += x; GB := GB + 1; return GA }
 /-- con-ron: none — a compiler test program -/
-def gmain : FunDecl := lfn (n) locals (i, r) {
+@[no_expose] def gmain : FunDecl := lfn (n) locals (i, r) {
   GA := 10;
   while i < n { r := call gbump(i); i += 1 };
   if GB == n { W.u64[0] := GA };
@@ -277,7 +277,7 @@ tier is simple. -/
 
 /-- Writes `i * 3 + t` to `W⟨t⟩[i]` for `i < n`, then reads both tiers and their lengths. -/
 -- con-ron: none — a compiler test program
-def tiers : FunDecl := lfn (h, n) locals (t, i, s) {
+@[no_expose] def tiers : FunDecl := lfn (h, n) locals (t, i, s) {
   t := h >> 27;
   while i < n {
     W⟨t⟩[i] := i * 3 + t;
@@ -323,7 +323,7 @@ does not exist is out of bounds. -/
 
 Writes `i * 65537 + t + 2^40 (i + 1)` (the high bits dropped) to `W⟨t⟩.u32[i]` for `i < n`, then
 reads elements back (a loop-carried index, a computed tier, a computed index) and a whole word. -/
-def p32 : FunDecl := lfn (h, n) locals (t, i, s, x) {
+@[no_expose] def p32 : FunDecl := lfn (h, n) locals (t, i, s, x) {
   t := (h >> 27) & 1;
   i := 0;
   while i < n {
@@ -357,7 +357,7 @@ a word load, then the 4-byte load of the low or the high half. -/
 
 `lo + 1000 hi` of word `i` of tier `t` of `W`, each half by its own 32-bit load (the register
 stack's code and, under a call's argument, the fallback's). -/
-def p32h : FunDecl :=
+@[no_expose] def p32h : FunDecl :=
   { nparams := 2, nlocals := 3,
     body := .seq (.set 2 (.bin .add (.ld32h W (.var 0) (.var 1) false)
         (.bin .mul (.ld32h W (.var 0) (.var 1) true) (.const 1000))))

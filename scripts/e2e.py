@@ -210,7 +210,7 @@ def imports_of(m, cache={}):
         out = []
         if os.path.exists(p):
             for l in open(p, encoding="utf-8"):
-                mm = re.match(r"\s*(?:public\s+|meta\s+)*import\s+(\S+)", l)
+                mm = re.match(r"\s*(?:public\s+|meta\s+)*import\s+(?:all\s+)?(\S+)", l)
                 if mm and mm.group(1).startswith("ConAgua"):
                     out.append(mm.group(1))
         cache[m] = out

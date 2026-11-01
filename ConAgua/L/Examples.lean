@@ -51,7 +51,7 @@ def findLoop : Stmt := lblk (i, c) {
 }
 
 /-- con-ron: none — an example program of L -/
-def findByte : FunDecl := lfn (i, c) {
+@[no_expose] def findByte : FunDecl := lfn (i, c) {
   ⟪findLoop⟫;
   return len(IN.u8)
 }
@@ -155,7 +155,7 @@ def strCloseLoop : Stmt := lblk (j, c) {
 }
 
 /-- con-leche: ConLeche/Frontend/Scan/Fast.lean:499-520 ConLeche.Frontend.strClose -/
-@[l_impl ConLeche.Frontend.strClose]
+@[no_expose, l_impl ConLeche.Frontend.strClose]
 def strClose : FunDecl := lfn (j) locals (c) {
   ⟪strCloseLoop⟫;
   return 0
@@ -184,7 +184,7 @@ def skipBracedLoop : Stmt := lblk (i, depth, c, e) {
 }
 
 /-- con-leche: ConLeche/Frontend/Scan/Fast.lean:737-761 ConLeche.Frontend.skipBraced -/
-@[l_impl ConLeche.Frontend.skipBraced]
+@[no_expose, l_impl ConLeche.Frontend.skipBraced]
 def skipBraced : FunDecl := lfn (i, depth) locals (c, e) {
   ⟪skipBracedLoop⟫;
   return 0
@@ -201,7 +201,7 @@ def scanProg : Prog := [("str_close", strClose), ("skip_braced", skipBraced)]
 abbrev HIST : ArrId := 0
 
 /-- con-ron: none — an example program of L -/
-def histogram : FunDecl := lfn () locals (i, c) {
+@[no_expose] def histogram : FunDecl := lfn () locals (i, c) {
   while i < len(IN.u8) {
     c := IN.u8[i];
     HIST.u64[c] := HIST.u64[c] + 1;
@@ -489,9 +489,9 @@ abbrev CALLS : GVar := ⟨1⟩
 abbrev MARK : GVar := ⟨2⟩
 
 /-- con-ron: none — an example program of L -/
-def bump : FunDecl := lfn (i) { LAST := i; CALLS += 1; return 0 }
+@[no_expose] def bump : FunDecl := lfn (i) { LAST := i; CALLS += 1; return 0 }
 /-- con-ron: none — an example program of L -/
-def bumpUser : FunDecl := lfn (i) locals (z) {
+@[no_expose] def bumpUser : FunDecl := lfn (i) locals (z) {
   MARK := i;
   z := call bump(i + 1);
   return MARK + LAST + z
@@ -540,7 +540,7 @@ abbrev NODE.a : Field := ⟨1⟩
 abbrev NODE.b : Field := ⟨2⟩
 
 /-- con-ron: none — an example program of L -/
-def nodeMk : FunDecl := lfn (i, j, t, x) locals (r) {
+@[no_expose] def nodeMk : FunDecl := lfn (i, j, t, x) locals (r) {
   NODE[i].tag := t;
   NODE[i].a := x;
   NODE[i].b := x + 1;

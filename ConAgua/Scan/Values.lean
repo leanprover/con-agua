@@ -49,7 +49,7 @@ open L.Scan.Key (keyAtN valueAtN)
 /-! ## `slot_nat` -/
 
 /-- con-leche: ConLeche/Frontend/Scan/Fast.lean:2427-2574 ConLeche.Frontend.scanLineLoop -/
-def slotNat : FunDecl := lfn (ks, v) locals (e) {
+@[no_expose] def slotNat : FunDecl := lfn (ks, v) locals (e) {
   e := call num_end(v);
   if e == v { return 0 };
   if ks < e { return e };
@@ -65,7 +65,7 @@ def slotNatN (b : Array UInt8) (ks v : Word) : Word :=
 /-! ## `scan_quoted_nat` -/
 
 /-- con-leche: ConLeche/Frontend/Scan/Fast.lean:646-652 ConLeche.Frontend.scanQuotedNat -/
-@[l_impl ConLeche.Frontend.scanQuotedNat]
+@[no_expose, l_impl ConLeche.Frontend.scanQuotedNat]
 def scanQuotedNat : FunDecl := lfn (i) locals (e) {
   if i < len(IN.u8) && IN.u8[i] == 34 {
     e := call skip_digits(i + 1);
@@ -106,10 +106,10 @@ def matchWordLoop : Stmt := lblk (i, o, n, k, c) {
 
 /-- `match_lit` against a slice `(o, n)` of `WORDS`. -/
 -- con-leche: ConLeche/Frontend/Scan/Fast.lean:121-131 ConLeche.Frontend.matchLit
-def matchWord : FunDecl := lfn (i, o, n) locals (k, c) { ⟪matchWordLoop⟫; return 1 }
+@[no_expose] def matchWord : FunDecl := lfn (i, o, n) locals (k, c) { ⟪matchWordLoop⟫; return 1 }
 
 /-- con-leche: ConLeche/Frontend/Scan/Fast.lean:654-663 ConLeche.Frontend.scanBinderInfo -/
-@[l_impl ConLeche.Frontend.scanBinderInfo]
+@[no_expose, l_impl ConLeche.Frontend.scanBinderInfo]
 def scanBinderInfo : FunDecl := lfn (i) locals (m) {
   if i < len(IN.u8) && IN.u8[i] == 34 {
     m := call match_word(i + 1, 0, 8);
@@ -137,7 +137,7 @@ def binderInfoN (b : Array UInt8) (i : Word) : Word :=
 
 /-- The number of `{"regular":n}` at `v`, and the closing brace. -/
 -- con-leche: ConLeche/Frontend/Scan/Fast.lean:703-728 ConLeche.Frontend.scanHints
-def hintsNum : FunDecl := lfn (v) locals (e, q) {
+@[no_expose] def hintsNum : FunDecl := lfn (v) locals (e, q) {
   e := call num_end(v);
   if e == v { return 0 };
   q := call skip_ws(e);
@@ -148,7 +148,7 @@ def hintsNum : FunDecl := lfn (v) locals (e, q) {
 /-- `{"regular":n}` from the key's opening quote at `p`. Rust's `scan_hints` has this inline; it is
 a function of its own here so that each verification condition stays short. -/
 -- con-leche: ConLeche/Frontend/Scan/Fast.lean:703-728 ConLeche.Frontend.scanHints
-def hintsObj : FunDecl := lfn (p) locals (ke, k, v, e) {
+@[no_expose] def hintsObj : FunDecl := lfn (p) locals (ke, k, v, e) {
   if !(p < len(IN.u8) && IN.u8[p] == 34) { return 0 };
   ke := call key_end(p + 1);
   if ke == 0 { return 0 };
@@ -161,7 +161,7 @@ def hintsObj : FunDecl := lfn (p) locals (ke, k, v, e) {
 }
 
 /-- con-leche: ConLeche/Frontend/Scan/Fast.lean:703-728 ConLeche.Frontend.scanHints -/
-@[l_impl ConLeche.Frontend.scanHints]
+@[no_expose, l_impl ConLeche.Frontend.scanHints]
 def scanHints : FunDecl := lfn (i) locals (m, p, e) {
   if i < len(IN.u8) && IN.u8[i] == 34 {
     m := call match_word(i + 1, 45, 7);
@@ -232,7 +232,7 @@ def natListLoop : Stmt := lblk (i, cnt, w, c, e) {
 
 /-- con-leche: ConLeche/Frontend/Scan/Fast.lean:697-699 ConLeche.Frontend.scanNatList -/
 -- con-leche: ConLeche/Frontend/Scan/Fast.lean:667-695 ConLeche.Frontend.scanNatListLoop
-@[l_impl ConLeche.Frontend.scanNatList ConLeche.Frontend.scanNatListLoop]
+@[no_expose, l_impl ConLeche.Frontend.scanNatList ConLeche.Frontend.scanNatListLoop]
 def scanNatList : FunDecl := lfn (i) locals (cnt, w, c, e) {
   if i < len(IN.u8) && IN.u8[i] == 91 {
     i += 1;

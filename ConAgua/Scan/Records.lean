@@ -71,7 +71,7 @@ def strNameLoop : Stmt := lblk (i, w, seen, tag, ks, k, v, e, ok, x) {
 
 /-- con-leche: ConLeche/Frontend/Scan/Fast.lean:831-835 ConLeche.Frontend.scanStrName -/
 -- con-leche: ConLeche/Frontend/Scan/Fast.lean:781-829 ConLeche.Frontend.scanStrNameLoop
-@[l_impl ConLeche.Frontend.scanStrName ConLeche.Frontend.scanStrNameLoop]
+@[no_expose, l_impl ConLeche.Frontend.scanStrName ConLeche.Frontend.scanStrNameLoop]
 def scanStrName : FunDecl := lfn (i) locals (w, seen, tag, ks, k, v, e, ok, x) {
   if i < len(IN.u8) && IN.u8[i] == 123 {
     i += 1;
@@ -121,7 +121,7 @@ def numNameLoop : Stmt := lblk (i, w, seen, tag, ks, k, v, e, ok, x) {
 
 /-- con-leche: ConLeche/Frontend/Scan/Fast.lean:886-890 ConLeche.Frontend.scanNumName -/
 -- con-leche: ConLeche/Frontend/Scan/Fast.lean:837-884 ConLeche.Frontend.scanNumNameLoop
-@[l_impl ConLeche.Frontend.scanNumName ConLeche.Frontend.scanNumNameLoop]
+@[no_expose, l_impl ConLeche.Frontend.scanNumName ConLeche.Frontend.scanNumNameLoop]
 def scanNumName : FunDecl := lfn (i) locals (w, seen, tag, ks, k, v, e, ok, x) {
   if i < len(IN.u8) && IN.u8[i] == 123 {
     i += 1;
@@ -171,7 +171,7 @@ def appLoop : Stmt := lblk (i, w, seen, tag, ks, k, v, e, ok, x) {
 
 /-- con-leche: ConLeche/Frontend/Scan/Fast.lean:941-945 ConLeche.Frontend.scanAppExpr -/
 -- con-leche: ConLeche/Frontend/Scan/Fast.lean:892-939 ConLeche.Frontend.scanAppExprLoop
-@[l_impl ConLeche.Frontend.scanAppExpr ConLeche.Frontend.scanAppExprLoop]
+@[no_expose, l_impl ConLeche.Frontend.scanAppExpr ConLeche.Frontend.scanAppExprLoop]
 def scanApp : FunDecl := lfn (i) locals (w, seen, tag, ks, k, v, e, ok, x) {
   if i < len(IN.u8) && IN.u8[i] == 123 {
     i += 1;
@@ -234,7 +234,7 @@ def binderLoop : Stmt := lblk (i, w, seen, tag, ks, k, v, e, ok, x) {
 con-leche: ConLeche/Frontend/Scan/Fast.lean:1084-1088 ConLeche.Frontend.scanForallExpr -/
 -- con-leche: ConLeche/Frontend/Scan/Fast.lean:947-1010 ConLeche.Frontend.scanLamExprLoop
 -- con-leche: ConLeche/Frontend/Scan/Fast.lean:1019-1082 ConLeche.Frontend.scanForallExprLoop
-@[l_impl ConLeche.Frontend.scanLamExpr ConLeche.Frontend.scanForallExpr ConLeche.Frontend.scanLamExprLoop ConLeche.Frontend.scanForallExprLoop]
+@[no_expose, l_impl ConLeche.Frontend.scanLamExpr ConLeche.Frontend.scanForallExpr ConLeche.Frontend.scanLamExprLoop ConLeche.Frontend.scanForallExprLoop]
 def scanBinder : FunDecl := lfn (i) locals (w, seen, tag, ks, k, v, e, ok, x) {
   if i < len(IN.u8) && IN.u8[i] == 123 {
     i += 1;
@@ -300,7 +300,7 @@ def letELoop : Stmt := lblk (i, w, seen, tag, ks, k, v, e, ok, x) {
 
 /-- con-leche: ConLeche/Frontend/Scan/Fast.lean:1165-1169 ConLeche.Frontend.scanLetExpr -/
 -- con-leche: ConLeche/Frontend/Scan/Fast.lean:1090-1163 ConLeche.Frontend.scanLetExprLoop
-@[l_impl ConLeche.Frontend.scanLetExpr ConLeche.Frontend.scanLetExprLoop]
+@[no_expose, l_impl ConLeche.Frontend.scanLetExpr ConLeche.Frontend.scanLetExprLoop]
 def scanLetE : FunDecl := lfn (i) locals (w, seen, tag, ks, k, v, e, ok, x) {
   if i < len(IN.u8) && IN.u8[i] == 123 {
     i += 1;
@@ -351,7 +351,7 @@ def constELoop : Stmt := lblk (i, w, seen, tag, ks, k, v, e, ok, x) {
 
 /-- con-leche: ConLeche/Frontend/Scan/Fast.lean:1221-1225 ConLeche.Frontend.scanConstExpr -/
 -- con-leche: ConLeche/Frontend/Scan/Fast.lean:1171-1219 ConLeche.Frontend.scanConstExprLoop
-@[l_impl ConLeche.Frontend.scanConstExpr ConLeche.Frontend.scanConstExprLoop]
+@[no_expose, l_impl ConLeche.Frontend.scanConstExpr ConLeche.Frontend.scanConstExprLoop]
 def scanConstE : FunDecl := lfn (i) locals (w, seen, tag, ks, k, v, e, ok, x) {
   if i < len(IN.u8) && IN.u8[i] == 123 {
     i += 1;
@@ -406,7 +406,7 @@ def projLoop : Stmt := lblk (i, w, seen, tag, ks, k, v, e, ok, x) {
 
 /-- con-leche: ConLeche/Frontend/Scan/Fast.lean:1285-1289 ConLeche.Frontend.scanProjExpr -/
 -- con-leche: ConLeche/Frontend/Scan/Fast.lean:1227-1283 ConLeche.Frontend.scanProjExprLoop
-@[l_impl ConLeche.Frontend.scanProjExpr ConLeche.Frontend.scanProjExprLoop]
+@[no_expose, l_impl ConLeche.Frontend.scanProjExpr ConLeche.Frontend.scanProjExprLoop]
 def scanProj : FunDecl := lfn (i) locals (w, seen, tag, ks, k, v, e, ok, x) {
   if i < len(IN.u8) && IN.u8[i] == 123 {
     i += 1;
@@ -461,7 +461,7 @@ def ruleLoop : Stmt := lblk (i, w, seen, tag, ks, k, v, e, ok, x) {
 
 /-- con-leche: ConLeche/Frontend/Scan/Fast.lean:1349-1353 ConLeche.Frontend.scanRule -/
 -- con-leche: ConLeche/Frontend/Scan/Fast.lean:1291-1347 ConLeche.Frontend.scanRuleLoop
-@[l_impl ConLeche.Frontend.scanRule ConLeche.Frontend.scanRuleLoop]
+@[no_expose, l_impl ConLeche.Frontend.scanRule ConLeche.Frontend.scanRuleLoop]
 def scanRule : FunDecl := lfn (i) locals (w, seen, tag, ks, k, v, e, ok, x) {
   if i < len(IN.u8) && IN.u8[i] == 123 {
     i += 1;
@@ -510,7 +510,7 @@ def rulesLoop : Stmt := lblk (i, cnt, w, c, e) {
 
 /-- con-leche: ConLeche/Frontend/Scan/Fast.lean:1383-1387 ConLeche.Frontend.scanRules -/
 -- con-leche: ConLeche/Frontend/Scan/Fast.lean:1355-1381 ConLeche.Frontend.scanRuleListLoop
-@[l_impl ConLeche.Frontend.scanRules ConLeche.Frontend.scanRuleListLoop]
+@[no_expose, l_impl ConLeche.Frontend.scanRules ConLeche.Frontend.scanRuleListLoop]
 def scanRules : FunDecl := lfn (i) locals (cnt, w, c, e) {
   if i < len(IN.u8) && IN.u8[i] == 91 {
     i += 1;
@@ -604,7 +604,7 @@ def indRecLoop : Stmt := lblk (i, w, seen, tag, ks, k, v, e, ok, x) {
 
 /-- con-leche: ConLeche/Frontend/Scan/Fast.lean:1523-1527 ConLeche.Frontend.scanIndRec -/
 -- con-leche: ConLeche/Frontend/Scan/Fast.lean:1389-1521 ConLeche.Frontend.scanIndRecLoop
-@[l_impl ConLeche.Frontend.scanIndRec ConLeche.Frontend.scanIndRecLoop]
+@[no_expose, l_impl ConLeche.Frontend.scanIndRec ConLeche.Frontend.scanIndRecLoop]
 def scanIndRec : FunDecl := lfn (i) locals (w, seen, tag, ks, k, v, e, ok, x) {
   if i < len(IN.u8) && IN.u8[i] == 123 {
     i += 1;
@@ -653,7 +653,7 @@ def indRecsLoop : Stmt := lblk (i, cnt, w, c, e) {
 
 /-- con-leche: ConLeche/Frontend/Scan/Fast.lean:1557-1561 ConLeche.Frontend.scanIndRecs -/
 -- con-leche: ConLeche/Frontend/Scan/Fast.lean:1529-1555 ConLeche.Frontend.scanIndRecListLoop
-@[l_impl ConLeche.Frontend.scanIndRecs ConLeche.Frontend.scanIndRecListLoop]
+@[no_expose, l_impl ConLeche.Frontend.scanIndRecs ConLeche.Frontend.scanIndRecListLoop]
 def scanIndRecs : FunDecl := lfn (i) locals (cnt, w, c, e) {
   if i < len(IN.u8) && IN.u8[i] == 91 {
     i += 1;
@@ -748,7 +748,7 @@ def indTypeLoop : Stmt := lblk (i, w, seen, tag, ks, k, v, e, ok, x) {
 
 /-- con-leche: ConLeche/Frontend/Scan/Fast.lean:1698-1702 ConLeche.Frontend.scanIndType -/
 -- con-leche: ConLeche/Frontend/Scan/Fast.lean:1563-1696 ConLeche.Frontend.scanIndTypeLoop
-@[l_impl ConLeche.Frontend.scanIndType ConLeche.Frontend.scanIndTypeLoop]
+@[no_expose, l_impl ConLeche.Frontend.scanIndType ConLeche.Frontend.scanIndTypeLoop]
 def scanIndType : FunDecl := lfn (i) locals (w, seen, tag, ks, k, v, e, ok, x) {
   if i < len(IN.u8) && IN.u8[i] == 123 {
     i += 1;
@@ -797,7 +797,7 @@ def indTypesLoop : Stmt := lblk (i, cnt, w, c, e) {
 
 /-- con-leche: ConLeche/Frontend/Scan/Fast.lean:1732-1736 ConLeche.Frontend.scanIndTypes -/
 -- con-leche: ConLeche/Frontend/Scan/Fast.lean:1704-1730 ConLeche.Frontend.scanIndTypeListLoop
-@[l_impl ConLeche.Frontend.scanIndTypes ConLeche.Frontend.scanIndTypeListLoop]
+@[no_expose, l_impl ConLeche.Frontend.scanIndTypes ConLeche.Frontend.scanIndTypeListLoop]
 def scanIndTypes : FunDecl := lfn (i) locals (cnt, w, c, e) {
   if i < len(IN.u8) && IN.u8[i] == 91 {
     i += 1;
@@ -873,7 +873,7 @@ def indCtorLoop : Stmt := lblk (i, w, seen, tag, ks, k, v, e, ok, x) {
 
 /-- con-leche: ConLeche/Frontend/Scan/Fast.lean:1845-1851 ConLeche.Frontend.scanIndCtor -/
 -- con-leche: ConLeche/Frontend/Scan/Fast.lean:1738-1843 ConLeche.Frontend.scanIndCtorLoop
-@[l_impl ConLeche.Frontend.scanIndCtor ConLeche.Frontend.scanIndCtorLoop]
+@[no_expose, l_impl ConLeche.Frontend.scanIndCtor ConLeche.Frontend.scanIndCtorLoop]
 def scanIndCtor : FunDecl := lfn (i) locals (w, seen, tag, ks, k, v, e, ok, x) {
   if i < len(IN.u8) && IN.u8[i] == 123 {
     i += 1;
@@ -922,7 +922,7 @@ def indCtorsLoop : Stmt := lblk (i, cnt, w, c, e) {
 
 /-- con-leche: ConLeche/Frontend/Scan/Fast.lean:1881-1885 ConLeche.Frontend.scanIndCtors -/
 -- con-leche: ConLeche/Frontend/Scan/Fast.lean:1853-1879 ConLeche.Frontend.scanIndCtorListLoop
-@[l_impl ConLeche.Frontend.scanIndCtors ConLeche.Frontend.scanIndCtorListLoop]
+@[no_expose, l_impl ConLeche.Frontend.scanIndCtors ConLeche.Frontend.scanIndCtorListLoop]
 def scanIndCtors : FunDecl := lfn (i) locals (cnt, w, c, e) {
   if i < len(IN.u8) && IN.u8[i] == 91 {
     i += 1;
@@ -978,7 +978,7 @@ def axiomDLoop : Stmt := lblk (i, w, seen, tag, ks, k, v, e, ok, x) {
 
 /-- con-leche: ConLeche/Frontend/Scan/Fast.lean:1956-1960 ConLeche.Frontend.scanAxiomDecl -/
 -- con-leche: ConLeche/Frontend/Scan/Fast.lean:1887-1954 ConLeche.Frontend.scanAxiomDeclLoop
-@[l_impl ConLeche.Frontend.scanAxiomDecl ConLeche.Frontend.scanAxiomDeclLoop]
+@[no_expose, l_impl ConLeche.Frontend.scanAxiomDecl ConLeche.Frontend.scanAxiomDeclLoop]
 def scanAxiomD : FunDecl := lfn (i) locals (w, seen, tag, ks, k, v, e, ok, x) {
   if i < len(IN.u8) && IN.u8[i] == 123 {
     i += 1;
@@ -1057,7 +1057,7 @@ def defDLoop : Stmt := lblk (i, w, seen, tag, ks, k, v, e, ok, x) {
 
 /-- con-leche: ConLeche/Frontend/Scan/Fast.lean:2059-2065 ConLeche.Frontend.scanDefDecl -/
 -- con-leche: ConLeche/Frontend/Scan/Fast.lean:1962-2057 ConLeche.Frontend.scanDefDeclLoop
-@[l_impl ConLeche.Frontend.scanDefDecl ConLeche.Frontend.scanDefDeclLoop]
+@[no_expose, l_impl ConLeche.Frontend.scanDefDecl ConLeche.Frontend.scanDefDeclLoop]
 def scanDefD : FunDecl := lfn (i) locals (w, seen, tag, ks, k, v, e, ok, x) {
   if i < len(IN.u8) && IN.u8[i] == 123 {
     i += 1;
@@ -1124,7 +1124,7 @@ def thmDLoop : Stmt := lblk (i, w, seen, tag, ks, k, v, e, ok, x) {
 
 /-- con-leche: ConLeche/Frontend/Scan/Fast.lean:2144-2148 ConLeche.Frontend.scanThmDecl -/
 -- con-leche: ConLeche/Frontend/Scan/Fast.lean:2067-2142 ConLeche.Frontend.scanThmDeclLoop
-@[l_impl ConLeche.Frontend.scanThmDecl ConLeche.Frontend.scanThmDeclLoop]
+@[no_expose, l_impl ConLeche.Frontend.scanThmDecl ConLeche.Frontend.scanThmDeclLoop]
 def scanThmD : FunDecl := lfn (i) locals (w, seen, tag, ks, k, v, e, ok, x) {
   if i < len(IN.u8) && IN.u8[i] == 123 {
     i += 1;
@@ -1197,7 +1197,7 @@ def opaqueDLoop : Stmt := lblk (i, w, seen, tag, ks, k, v, e, ok, x) {
 
 /-- con-leche: ConLeche/Frontend/Scan/Fast.lean:2237-2241 ConLeche.Frontend.scanOpaqueDecl -/
 -- con-leche: ConLeche/Frontend/Scan/Fast.lean:2150-2235 ConLeche.Frontend.scanOpaqueDeclLoop
-@[l_impl ConLeche.Frontend.scanOpaqueDecl ConLeche.Frontend.scanOpaqueDeclLoop]
+@[no_expose, l_impl ConLeche.Frontend.scanOpaqueDecl ConLeche.Frontend.scanOpaqueDeclLoop]
 def scanOpaqueD : FunDecl := lfn (i) locals (w, seen, tag, ks, k, v, e, ok, x) {
   if i < len(IN.u8) && IN.u8[i] == 123 {
     i += 1;
@@ -1259,7 +1259,7 @@ def quotDLoop : Stmt := lblk (i, w, seen, tag, ks, k, v, e, ok, x) {
 
 /-- con-leche: ConLeche/Frontend/Scan/Fast.lean:2312-2316 ConLeche.Frontend.scanQuotDecl -/
 -- con-leche: ConLeche/Frontend/Scan/Fast.lean:2243-2310 ConLeche.Frontend.scanQuotDeclLoop
-@[l_impl ConLeche.Frontend.scanQuotDecl ConLeche.Frontend.scanQuotDeclLoop]
+@[no_expose, l_impl ConLeche.Frontend.scanQuotDecl ConLeche.Frontend.scanQuotDeclLoop]
 def scanQuotD : FunDecl := lfn (i) locals (w, seen, tag, ks, k, v, e, ok, x) {
   if i < len(IN.u8) && IN.u8[i] == 123 {
     i += 1;
@@ -1329,7 +1329,7 @@ def indDLoop : Stmt := lblk (i, w, seen, tag, ks, k, v, e, ok, x) {
 
 /-- con-leche: ConLeche/Frontend/Scan/Fast.lean:2397-2401 ConLeche.Frontend.scanIndDecl -/
 -- con-leche: ConLeche/Frontend/Scan/Fast.lean:2318-2395 ConLeche.Frontend.scanIndDeclLoop
-@[l_impl ConLeche.Frontend.scanIndDecl ConLeche.Frontend.scanIndDeclLoop]
+@[no_expose, l_impl ConLeche.Frontend.scanIndDecl ConLeche.Frontend.scanIndDeclLoop]
 def scanIndD : FunDecl := lfn (i) locals (w, seen, tag, ks, k, v, e, ok, x) {
   if i < len(IN.u8) && IN.u8[i] == 123 {
     i += 1;

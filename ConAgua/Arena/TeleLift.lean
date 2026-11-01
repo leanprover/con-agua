@@ -23,7 +23,7 @@ namespace L.Ind
 open L.Arena
 
 /-- con-ron: ConRon/Arena/ExprOps.lean:2043-2055 ConRon.Arena.instPisAtLift -/
-@[l_impl ConRon.Arena.instPisAtLift]
+@[no_expose, l_impl ConRon.Arena.instPisAtLift]
 def instPisAtLiftL : FunDecl := lfn (f, o, l, e) locals (h, k, g, x, y, z) {
   h := e;
   k := 0;
@@ -37,7 +37,7 @@ def instPisAtLiftL : FunDecl := lfn (f, o, l, e) locals (h, k, g, x, y, z) {
 }
 
 /-- con-ron: ConRon/Arena/ExprOps.lean:1374-1382 ConRon.Arena.fvarTypeD -/
-@[l_impl ConRon.Arena.fvarTypeD]
+@[no_expose, l_impl ConRon.Arena.fvarTypeD]
 def fvarTypeDL : FunDecl := lfn (e) locals (g, x, y, z) {
   if ⟦e⟧.tag != 1 { return e };
   (g, x, y, z) := call e_view(e);
@@ -45,7 +45,7 @@ def fvarTypeDL : FunDecl := lfn (e) locals (g, x, y, z) {
 }
 
 /-- con-ron: ConRon/Arena/CheckerBase.lean:160-168 ConRon.Arena.fvarTypeDs -/
-@[l_impl ConRon.Arena.fvarTypeDs]
+@[no_expose, l_impl ConRon.Arena.fvarTypeDs]
 def fvarTypeDsL : FunDecl := lfn (o, l) locals (q, k, t) {
   q := call iw_alloc(l);
   k := 0;

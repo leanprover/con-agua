@@ -42,7 +42,7 @@ namespace L.Scan.Leaves
 
 /-- con-leche: ConLeche/Frontend/Scan/Fast.lean:84-91 ConLeche.Frontend.skipWs -/
 -- con-leche: ConLeche/Frontend/Scan/Fast.lean:78-80 ConLeche.Frontend.isWs
-@[l_impl ConLeche.Frontend.skipWs ConLeche.Frontend.isWs]
+@[no_expose, l_impl ConLeche.Frontend.skipWs ConLeche.Frontend.isWs]
 def skipWs : FunDecl := lfn (i) {
   if i < len(IN.u8) { i := scan!(IN.u8, i, len(IN.u8), notWsC) };
   return i
@@ -116,7 +116,7 @@ end skipWs
 
 /-- con-leche: ConLeche/Frontend/Scan/Fast.lean:93-101 ConLeche.Frontend.skipDigits -/
 -- con-leche: ConLeche/Frontend/Scan/Fast.lean:82-82 ConLeche.Frontend.isDigit
-@[l_impl ConLeche.Frontend.skipDigits ConLeche.Frontend.isDigit]
+@[no_expose, l_impl ConLeche.Frontend.skipDigits ConLeche.Frontend.isDigit]
 def skipDigits : FunDecl := lfn (i) {
   if i < len(IN.u8) { i := scan!(IN.u8, i, len(IN.u8), notDigitC) };
   return i
@@ -219,7 +219,7 @@ def newlineFromLoop : Stmt := lblk (k) {
 }
 
 /-- con-leche: ConLeche/Frontend/Scan/Fast.lean:2601-2610 ConLeche.Frontend.newlineFrom -/
-@[l_impl ConLeche.Frontend.newlineFrom]
+@[no_expose, l_impl ConLeche.Frontend.newlineFrom]
 def newlineFrom : FunDecl := lfn (k) { ⟪newlineFromLoop⟫; return 0 }
 
 /-- The model: `1` if there is a newline at or after `i`, else `0`. -/
@@ -277,7 +277,7 @@ end newlineFrom
 /-! ## `key_end` (`scan_fast.rs:149`) -/
 
 /-- con-leche: ConLeche/Frontend/Scan/Fast.lean:133-146 ConLeche.Frontend.keyEnd -/
-@[l_impl ConLeche.Frontend.keyEnd]
+@[no_expose, l_impl ConLeche.Frontend.keyEnd]
 def keyEnd : FunDecl := lfn (j) locals (c) {
   if len(IN.u8) <= j { return 0 };
   j := scan!(IN.u8, j, len(IN.u8), strStopC);
@@ -370,7 +370,7 @@ end keyEnd
 /-! ## `has_escape` (`scan_fast.rs:818`) -/
 
 /-- con-leche: ConLeche/Frontend/Scan/Fast.lean:522-531 ConLeche.Frontend.hasEscape -/
-@[l_impl ConLeche.Frontend.hasEscape]
+@[no_expose, l_impl ConLeche.Frontend.hasEscape]
 def hasEscape : FunDecl := lfn (j, e) {
   if len(IN.u8) < e { e := len(IN.u8) };
   if e <= j { return 0 };
@@ -474,7 +474,7 @@ end hasEscape
 No loop: a call to `skip_digits` and two comparisons. -/
 
 /-- con-leche: ConLeche/Frontend/Scan/Fast.lean:480-491 ConLeche.Frontend.numEnd -/
-@[l_impl ConLeche.Frontend.numEnd]
+@[no_expose, l_impl ConLeche.Frontend.numEnd]
 def numEnd : FunDecl := lfn (i) locals (e) {
   e := call skip_digits(i);
   if e == i { return i }

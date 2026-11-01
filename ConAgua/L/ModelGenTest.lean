@@ -47,23 +47,23 @@ abbrev R8 : Word := 8
 def digC : List UInt8 := (List.range 256).map fun i => if 48 ≤ i ∧ i ≤ 57 then 1 else 0
 
 -- con-ron: none — an `l_model` test function
-def tPool : FunDecl := lfn (x) {
+@[no_expose] def tPool : FunDecl := lfn (x) {
   return TP⦃x⦄ + ⦃x⦄.tier + ⦃x⦄.idx + ⦃x⦄.base
 }
 
 -- con-ron: none — an `l_model` test function
-def tLe : FunDecl := lfn (i) {
+@[no_expose] def tLe : FunDecl := lfn (i) {
   return le64!(TB.u8, i) + 1
 }
 
 -- con-ron: none — an `l_model` test function
-def tScan : FunDecl := lfn (i, e) locals (j) {
+@[no_expose] def tScan : FunDecl := lfn (i, e) locals (j) {
   j := scan!(TB.u8, i, e, digC);
   return j + 1
 }
 
 -- con-ron: none — an `l_model` test function
-def tCopy : FunDecl := lfn (d, s, k) {
+@[no_expose] def tCopy : FunDecl := lfn (d, s, k) {
   copy!(TW.u64, d, TP.u64⟨1⟩, s, k);
   copy!(TP.u64⟨0⟩, d + k, TB.u8, s, k);
   copy!(TW.u64, d, TW.u64, s + 1, 2);
@@ -71,14 +71,14 @@ def tCopy : FunDecl := lfn (d, s, k) {
 }
 
 -- con-ron: none — an `l_model` test function
-def tSt8 : FunDecl := lfn (i, v) {
+@[no_expose] def tSt8 : FunDecl := lfn (i, v) {
   TB.u8[i] := v;
   TB.u8[i + 1] := v >> 8;
   return 0
 }
 
 -- con-ron: none — an `l_model` test function
-def tSeq : FunDecl := lfn (n) locals (i, s) {
+@[no_expose] def tSeq : FunDecl := lfn (n) locals (i, s) {
   i := 0;
   while i < n { s += 1; i += 1 };
   i := 0;
@@ -87,7 +87,7 @@ def tSeq : FunDecl := lfn (n) locals (i, s) {
 }
 
 -- con-ron: none — an `l_model` test function
-def tNest : FunDecl := lfn (n) locals (i, j, s) {
+@[no_expose] def tNest : FunDecl := lfn (n) locals (i, j, s) {
   i := 0;
   while i < n {
     j := 0;
@@ -99,7 +99,7 @@ def tNest : FunDecl := lfn (n) locals (i, j, s) {
 
 /-- A `break` and a `return` in the inner loop; the outer loop is fused (`return 99` after it). -/
 -- con-ron: none — an `l_model` test function
-def tNestR : FunDecl := lfn (n) locals (i, j) {
+@[no_expose] def tNestR : FunDecl := lfn (n) locals (i, j) {
   i := 0;
   while i < n {
     j := 0;
@@ -115,7 +115,7 @@ def tNestR : FunDecl := lfn (n) locals (i, j) {
 
 /-- The outer loop not fused: code after it reads a local it assigns. -/
 -- con-ron: none — an `l_model` test function
-def tNestR2 : FunDecl := lfn (n) locals (i, j, r) {
+@[no_expose] def tNestR2 : FunDecl := lfn (n) locals (i, j, r) {
   i := 0;
   while i < n {
     j := 0;
@@ -132,7 +132,7 @@ def tNestR2 : FunDecl := lfn (n) locals (i, j, r) {
 
 /-- Packed 32-bit elements (lane p32): a store, then loads of it and of its neighbour. -/
 -- con-ron: none — an `l_model` test function
-def tP32 : FunDecl := lfn (t, i, v) locals (x) {
+@[no_expose] def tP32 : FunDecl := lfn (t, i, v) locals (x) {
   TP⟨t⟩.u32[i] := v;
   x := TP⟨t⟩.u32[i + 1];
   return TP⟨t⟩.u32[i] + x
@@ -187,7 +187,7 @@ l_model tNestR_spec (p : Prog) (hp : p.lookup "t_nest_r" = some tNestR)
 /-- `tNestR` with the counted-loop sugar (`for`): the same function, and `l_model` reads it as the
 plain text (`L.Notation.desugarAll`), so its models and loop blocks are `tNestR`'s. -/
 -- con-ron: none — an `l_model` test function
-def tNestF : FunDecl := lfn (n) locals (i, j) {
+@[no_expose] def tNestF : FunDecl := lfn (n) locals (i, j) {
   i := 0;
   for i < n {
     j := 0;
@@ -210,7 +210,7 @@ example : tNestFW.loop2.stmt = tNestRW.loop2.stmt := rfl
 
 /-- `unified` mode: the aborts' codes kept, through the nested loops and the block operations. -/
 -- con-ron: none — an `l_model` test function
-def tNestE : FunDecl := lfn (n, d) locals (i, j) {
+@[no_expose] def tNestE : FunDecl := lfn (n, d) locals (i, j) {
   i := 0;
   while i < n {
     j := 0;
@@ -231,7 +231,7 @@ l_model tNestE_spec (p : Prog) (hp : p.lookup "t_nest_e" = some tNestE)
 
 /-- A loop that never exits normally, then `abort`: fused (the loop's model is the function's). -/
 -- con-ron: none — an `l_model` test function
-def tFor : FunDecl := lfn (n) locals (i) {
+@[no_expose] def tFor : FunDecl := lfn (n) locals (i) {
   i := 0;
   while 0 == 0 {
     if i == n { return i };
@@ -246,7 +246,7 @@ l_model tFor_spec (p : Prog) (hp : p.lookup "t_for" = some tFor)
 
 /-- A loop that may exit normally, then `abort`: not fused (`unified` mode). -/
 -- con-ron: none — an `l_model` test function
-def tExit : FunDecl := lfn (n, d) locals (i) {
+@[no_expose] def tExit : FunDecl := lfn (n, d) locals (i) {
   i := 0;
   while i < n {
     if i + d == 5 { abort R7 };
@@ -262,7 +262,7 @@ l_model tExit_spec (p : Prog) (hp : p.lookup "t_exit" = some tExit)
 
 /-- A function that only changes the memory (no `return`: the result `0`). -/
 -- con-ron: none — an `l_model` test function
-def tMem : FunDecl := lfn (i, v) {
+@[no_expose] def tMem : FunDecl := lfn (i, v) {
   TW.u64[i] := v;
   TB.u8[i] := v
 }
@@ -283,7 +283,7 @@ def tOutLoop : Stmt := lblk (n, i, j, s) {
 }
 
 -- con-ron: none — an `l_model` test function
-def tBlk : FunDecl := lfn (n) locals (i, j, s) {
+@[no_expose] def tBlk : FunDecl := lfn (n) locals (i, j, s) {
   i := 0;
   ⟪tOutLoop⟫;
   return s
@@ -297,26 +297,26 @@ l_model tBlk_spec (p : Prog) (hp : p.lookup "t_blk" = some tBlk)
 (`Option Unit`, read-only), a caller of both through their specs, and a group whose member
 calls a `void` member. -/
 -- con-ron: none — an `l_model` test function
-def tVSt : FunDecl := lfn (i, v) {
+@[no_expose] def tVSt : FunDecl := lfn (i, v) {
   if v == 9 { abort };
   TW.u64[i] := v;
   return 0
 }
 
 -- con-ron: none — an `l_model` test function
-def tVChk : FunDecl := lfn (i) {
+@[no_expose] def tVChk : FunDecl := lfn (i) {
   if TW.u64[i] == 7 { abort }
 }
 
 -- con-ron: none — an `l_model` test function
-def tVUse : FunDecl := lfn (i, v) locals (x, y) {
+@[no_expose] def tVUse : FunDecl := lfn (i, v) locals (x, y) {
   x := call t_v_chk(i);
   y := call t_v_st(i, v + 1);
   return TW.u64[i]
 }
 
 -- con-ron: none — an `l_model` test function
-def tVGrp : FunDecl := lfn (i, v) locals (x) {
+@[no_expose] def tVGrp : FunDecl := lfn (i, v) locals (x) {
   x := call t_v_st(i, v);
   return v
 }
@@ -352,12 +352,12 @@ l_model tVGrp_spec (p : Prog) (hp : p.lookup "t_v_grp" = some tVGrp)
 /-- Preconditions (`pre [...]`): the spec takes the hypothesis, and a call to a callee whose
 spec has one leaves it as a side goal of the step. -/
 -- con-ron: none — an `l_model` test function
-def tPreC : FunDecl := lfn (i) {
+@[no_expose] def tPreC : FunDecl := lfn (i) {
   return TW.u64[i] + i
 }
 
 -- con-ron: none — an `l_model` test function
-def tPre : FunDecl := lfn (i) locals (x) {
+@[no_expose] def tPre : FunDecl := lfn (i) locals (x) {
   x := call t_pre_c(i);
   TW.u64[i] := x;
   return x
@@ -383,13 +383,13 @@ l_model tNestR2_spec (p : Prog) (hp : p.lookup "t_nest_r2" = some tNestR2)
 `Triple.keep`, whose conjunct `Keep s₀.mem s'.mem` is a fact, not the model; the precondition
 over an array's size holds again after each call, for the next call's side goal. -/
 -- con-ron: none — an `l_model` test function
-def tKeepC : FunDecl := lfn (i) {
+@[no_expose] def tKeepC : FunDecl := lfn (i) {
   TW.u64[i & 7] := i;
   return i + 1
 }
 
 -- con-ron: none — an `l_model` test function
-def tKeep : FunDecl := lfn (i) locals (x, y) {
+@[no_expose] def tKeep : FunDecl := lfn (i) locals (x, y) {
   x := call t_keep_c(i);
   y := call t_keep_c(x);
   return x + y
@@ -397,7 +397,7 @@ def tKeep : FunDecl := lfn (i) locals (x, y) {
 
 /-- Recursive: the second recursive call's precondition from the first one's `Keep`. -/
 -- con-ron: none — an `l_model` test function
-def tKeepR : FunDecl := lfn (i) locals (x, y) {
+@[no_expose] def tKeepR : FunDecl := lfn (i) locals (x, y) {
   if i == 0 { return 0 };
   x := call t_keep_r(i - 1);
   y := call t_keep_r(i - 1);
@@ -426,7 +426,7 @@ l_model tKeepR_spec (p : Prog) (hn : p.noSt8 = true) (hp : p.lookup "t_keep_r" =
 /-- `defs` / `nodefs`: the models first, then a fact about them, then the specs, whose steps use
 the fact (the second recursive call's precondition after the first call). -/
 -- con-ron: none — an `l_model` test function
-def tTwo : FunDecl := lfn (i) locals (x, y) {
+@[no_expose] def tTwo : FunDecl := lfn (i) locals (x, y) {
   if i == 0 { return 0 };
   x := call t_two(i - 1);
   y := call t_two(i - 1);
@@ -477,18 +477,18 @@ by `L.liftE`), aborts, calls itself (its error passes through) and calls a `unif
 (`t_uni_c`, through its `Except` model). -/
 
 -- con-ron: none — an `l_model` test function
-def tLeafU : FunDecl := lfn (x) {
+@[no_expose] def tLeafU : FunDecl := lfn (x) {
   return TW.u64[x] + 1
 }
 
 -- con-ron: none — an `l_model` test function
-def tUniC : FunDecl := lfn (y) {
+@[no_expose] def tUniC : FunDecl := lfn (y) {
   if y == 3 { abort R8 };
   return y + 1
 }
 
 -- con-ron: none — an `l_model` test function
-def tUni : FunDecl := lfn (k, x) locals (a, b) {
+@[no_expose] def tUni : FunDecl := lfn (k, x) locals (a, b) {
   if k == 0 { return 0 };
   a := call t_leaf_u(x);
   if a == 7 { abort R7 };
@@ -529,12 +529,12 @@ l_model tUniF_spec (p : Prog) (fs : List FnName)
 /-- A total callee outside the verdict closure (a list post `r ≠ [] ∧ r = F`, as `e_view`'s; its
 `[]` an error of class `0`) and a pure one (`r.headD 0 = F`), both lifted in `unified` mode. -/
 -- con-ron: none — an `l_model` test function
-def tPair : FunDecl := lfn (x) {
+@[no_expose] def tPair : FunDecl := lfn (x) {
   return (x, TW.u64[x])
 }
 
 -- con-ron: none — an `l_model` test function
-def tUniL : FunDecl := lfn (x) locals (a, b) {
+@[no_expose] def tUniL : FunDecl := lfn (x) locals (a, b) {
   (a, b) := call t_pair(x);
   if b == 7 { abort R7 };
   return a + b
@@ -559,7 +559,7 @@ example (p : Prog) (m : Mem) (h : rdW (m.arr64 TW) 2 = 3) : tUniLE p m 2 = .ok (
 
 /-- A callee whose spec states its one result as a list (`some ([r.headD 0], s'.mem)`). -/
 -- con-ron: none — an `l_model` test function
-def tOne : FunDecl := lfn (x) {
+@[no_expose] def tOne : FunDecl := lfn (x) {
   if x == 9 { abort };
   TW.u64[0] := x;
   return x + 1
@@ -580,7 +580,7 @@ theorem tOne_spec (p : Prog) (hp : p.lookup "t_one" = some tOne) (n : Nat) (s₀
       simp_all [tOneL, Sig.retVal, Sig.retOr, Locals.init, LocEq, BinOp.eval, Cmp.eval]
 
 -- con-ron: none — an `l_model` test function
-def tUseOne : FunDecl := lfn (x) locals (a) {
+@[no_expose] def tUseOne : FunDecl := lfn (x) locals (a) {
   a := call t_one(x);
   return a + a
 }
@@ -606,7 +606,7 @@ def tTupLoop : Stmt := lblk (n, k, x, y) {
 }
 
 -- con-ron: none — an `l_model` test function
-def tTup3 : FunDecl := lfn (n) locals (k, x, y) {
+@[no_expose] def tTup3 : FunDecl := lfn (n) locals (k, x, y) {
   ⟪tTupLoop⟫;
   abort
 }
@@ -623,7 +623,7 @@ decides it classically (and is `noncomputable`), it does not hold `sorry`. -/
 def UG (_m : Mem) : Prop := ∀ k : Nat, k = k
 
 -- con-ron: none — an `l_model` test function
-def tUg : FunDecl := lfn (x) {
+@[no_expose] def tUg : FunDecl := lfn (x) {
   TW.u64[0] := x;
   return 0
 }
@@ -639,7 +639,7 @@ theorem tUg_spec (p : Prog) (hp : p.lookup "t_ug" = some tUg) (n : Nat) (s₀ : 
       simp_all [UG, Locals.init, LocEq]
 
 -- con-ron: none — an `l_model` test function
-def tUseUg : FunDecl := lfn (x) locals (a) {
+@[no_expose] def tUseUg : FunDecl := lfn (x) locals (a) {
   a := call t_ug(x);
   return x + 1
 }
@@ -657,7 +657,7 @@ example (p : Prog) (m : Mem) : tUseUgE p m 1 = .ok (2, m.set64 TW 0 1) := by
 shape; also as `r.tail.headD 0`): the model reads it as the list, and `simp_all` takes it apart
 (`L.List.eq_headD_cons`) instead of looping on it. -/
 -- con-ron: none — an `l_model` test function
-def tLen : FunDecl := lfn (x) locals (a, b) {
+@[no_expose] def tLen : FunDecl := lfn (x) locals (a, b) {
   if x == 9 { abort };
   a := x;
   b := x + 1;
@@ -687,7 +687,7 @@ theorem tLen_specT (p : Prog) (hp : p.lookup "t_len" = some tLen) (n : Nat) (s�
     exact ⟨h1, h2, by rw [h3]; rfl⟩
 
 -- con-ron: none — an `l_model` test function
-def tUseLen : FunDecl := lfn (x) locals (a, b) {
+@[no_expose] def tUseLen : FunDecl := lfn (x) locals (a, b) {
   (a, b) := call t_len(x);
   TW.u64[0] := b;
   return a + b
@@ -737,7 +737,7 @@ example (p : Prog) (m : Mem) : tUseLenPE p m 1 = .ok (3, m.set64 TW 0 2) := by
 `j2`) gets its own step theorem `tCut_spec.tail`, so the step's paths are not four copies of the
 call's. -/
 -- con-ron: none — an `l_model` test function
-def tCut : FunDecl := lfn (x, y) locals (a, b, c) {
+@[no_expose] def tCut : FunDecl := lfn (x, y) locals (a, b, c) {
   if x < 5 { a := x } else { a := x + 1 };
   if y < 5 { b := y } else { b := y - 1 };
   c := call t_len(a);

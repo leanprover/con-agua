@@ -74,7 +74,7 @@ def lvNodeW (m : Mem) (p : Word) : List Word :=
   else []
 
 /-- con-ron: none — the level scratch heap (the twin reads `ConLeche.Level` trees back, `readLevelM`) -/
-def lvNode : FunDecl := lfn (p) locals (o, g, t, i) {
+@[no_expose] def lvNode : FunDecl := lfn (p) locals (o, g, t, i) {
   if p >> 32 != 0 {
     o := p - 4294967296;
     if CTL.u64[192] < o + 3 { abort };
@@ -128,7 +128,7 @@ def lhMkW (m : Mem) (g a b : Word) : Option (Word × Mem) :=
   else some (htop m + 4294967296, lhMem m (htop m) g a b)
 
 /-- con-ron: none — the level scratch heap (the twin reads `ConLeche.Level` trees back, `readLevelM`) -/
-def lhMk : FunDecl := lfn (g, a, b) locals (o) {
+@[no_expose] def lhMk : FunDecl := lfn (g, a, b) locals (o) {
   o := CTL.u64[192];
   if o >> 40 != 0 || len(LH.u64) <= o + 2 { abort };
   LH.u64[o] := g;
@@ -207,7 +207,7 @@ grind_pattern [level_grind] eqK_zero => eqK n m b d (some 0)
 grind_pattern [level_grind] eqK_ne => eqK n m b d (some x)
 
 /-- con-leche: ConLeche/Kernel/Expr.lean:75-78 ConLeche.Level.beq -/
-@[l_impl ConLeche.Level.beq]
+@[no_expose, l_impl ConLeche.Level.beq]
 def lvEq : FunDecl := lfn (p, q) locals (g, a, b, h, c, d, x) {
   if p == q { return 1 };
   (g, a, b) := call lv_node(p);

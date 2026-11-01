@@ -54,7 +54,7 @@ open scoped Lean.Order
 namespace L.Arena
 
 /-- con-ron: ConRon/Arena/ExprOps.lean:1488-1510 ConRon.Arena.fvarRangeGo -/
-@[l_impl ConRon.Arena.fvarRangeGo]
+@[no_expose, l_impl ConRon.Arena.fvarRangeGo]
 def frGo : FunDecl := lfn (h, c) locals (fd, j, d, r, u) {
   if c == 0 { abort };
   (fd, j, d) := call fm_find(h, 0);
@@ -66,7 +66,7 @@ def frGo : FunDecl := lfn (h, c) locals (fd, j, d, r, u) {
 }
 
 /-- con-ron: ConRon/Arena/ExprOps.lean:1488-1510 ConRon.Arena.fvarRangeGo -/
-@[l_impl ConRon.Arena.fvarRangeGo]
+@[no_expose, l_impl ConRon.Arena.fvarRangeGo]
 def frNode : FunDecl := lfn (h, c) locals (g, t, i, f, a, b, x, y, z) {
   g := ⟦h⟧.tag;
   t := ⟦h⟧.tier;
@@ -158,7 +158,7 @@ grind_pattern [arena_grind] frMemoW_eq => frMemoW n m h c
 grind_pattern [arena_grind] frClrK_some => frClrK (some (r, m₁))
 
 /-- con-ron: ConRon/Arena/ExprOps.lean:1562-1568 ConRon.Arena.fvarRangeMemo -/
-@[l_impl ConRon.Arena.fvarRangeMemo]
+@[no_expose, l_impl ConRon.Arena.fvarRangeMemo]
 def frMemo : FunDecl := lfn (h, c) locals (r, u) {
   u := call fm_clear();
   r := call fr_go(h, c);

@@ -48,7 +48,7 @@ def pbLoop (bs d : List UInt8) : Stmt := lblk (i) {
 
 /-- `pb_check` over the buffer `bs`, expecting the prefix `d`. -/
 -- con-ron: none — the pin-data buffer's header (the startup data the twin interns exactly)
-def pbCheckG (bs d : List UInt8) : FunDecl := lfn () locals (i) {
+@[no_expose] def pbCheckG (bs d : List UInt8) : FunDecl := lfn () locals (i) {
   if len(bs.c8) < len(d.c8) { abort };
   ⟪pbLoop bs d⟫;
   return 0

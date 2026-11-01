@@ -95,7 +95,7 @@ def projCS : ConsSch where
 /-! ## `proj_find(t, n, u, e, h)`: the probe -/
 
 /-- con-ron: ConRon/Arena/Store.lean:94-95 ConRon.Arena.Tbl.find? -/
-def projFind : FunDecl := consFindG projCS
+@[no_expose] def projFind : FunDecl := consFindG projCS
 
 /-! ## `proj_push(t, n, u, e, j)`: append a node to tier `t`, register it at slot `j` -/
 
@@ -110,7 +110,7 @@ def pjpushOK (m : Mem) (t : Word) : Bool :=
   decide (pjcnt m t < (67108864 : Word)) && decide ((pjcnt m t + 1) * 2 ≤ m.len64 (tierA PJREC t))
 
 /-- con-ron: ConRon/Arena/Store.lean:97-102 ConRon.Arena.Tbl.push -/
-def projPush : FunDecl := consPushG projCS
+@[no_expose] def projPush : FunDecl := consPushG projCS
 
 /-! ## `intern_proj(n, u, e)`: hash-cons the expression `proj n u e`
 
@@ -129,7 +129,7 @@ def pjinternW (m : Mem) (n u e : Word) : Option (Word × Mem) := consInternM pro
 
 /-- con-ron: ConRon/Arena/Monad.lean:249-267 ConRon.Arena.internE
 con-ron: ConRon/Arena/Monad.lean:221-247 ConRon.Arena.internNodeE -/
-@[l_impl ConRon.Arena.internE ConRon.Arena.internNodeE]
+@[no_expose, l_impl ConRon.Arena.internE ConRon.Arena.internNodeE]
 def internProj : FunDecl := consInternG projCS
 
 /-- The `proj` store functions, as one `#eval`-able program. -/

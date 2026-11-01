@@ -42,7 +42,7 @@ open L.Arena
 /-- `er_from_iw(o, l)`: an `IW` slice copied into a fresh `EREC` allocation, so that a list built
 while processing (in `IW`) can be stored in a persistent record (in `EREC`). -/
 -- con-ron: none — L scratch-array plumbing (the twin builds `List`s/`Array`s)
-def erFromIw : FunDecl := lfn (o, l) locals (q, z) {
+@[no_expose] def erFromIw : FunDecl := lfn (o, l) locals (q, z) {
   q := call erec_alloc(l);
   z := call er_from_iw_go(q, o, l);
   return (q, l)
@@ -51,7 +51,7 @@ def erFromIw : FunDecl := lfn (o, l) locals (q, z) {
 /-- `er_from_iw_go(q, o, l)`: copy the `IW` slice `(o, l)` to `EREC[q ‥]`, word by word, first to
 last. Self-recursive (lane `indproofs2`: split off `er_from_iw`'s `while` loop for the proof). -/
 -- con-ron: none — L scratch-array plumbing (the twin builds `List`s/`Array`s)
-def erFromIwGo : FunDecl := lfn (q, o, l) locals (z) {
+@[no_expose] def erFromIwGo : FunDecl := lfn (q, o, l) locals (z) {
   if l == 0 { return 0 };
   EREC.u64[q] := IW.u64[o];
   z := call er_from_iw_go(q + 1, o + 1, l - 1);
@@ -63,7 +63,7 @@ def erFromIwGo : FunDecl := lfn (q, o, l) locals (z) {
 /-- `whnf_telescope(vis, i, n, e)`: peel `n` Π binders off `e`'s whnf, reducing before each binder
 and at the end, where it must be a sort. Returns `(bs.off, bs.len, s)`. -/
 -- con-ron: ConRon/Arena/Inductives/SumInstall.lean:41-59 ConRon.Arena.whnfTelescope
-@[l_impl ConRon.Arena.whnfTelescope]
+@[no_expose, l_impl ConRon.Arena.whnfTelescope]
 def whnfTelescopeL : FunDecl := lfn (vis, i, n, e) locals (e', g, x, y, z, fv, b, bo, bl, s, o, l) {
   e' := call whnf_top(vis, i, e);
   (g, x, y, z) := call e_view(e');
@@ -83,7 +83,7 @@ def whnfTelescopeL : FunDecl := lfn (vis, i, n, e) locals (e', g, x, y, z, fv, b
 telescope ending in a sort): the whnf'd telescope, closed and checked in `cvTa0`'s place; `cv`'s
 name and level parameters carry over (`{cv with type := ty}`). Returns `(cvTa, s)`. -/
 -- con-ron: ConRon/Arena/Inductives/SumInstall.lean:61-89 ConRon.Arena.checkSumTele.checkSumTeleSlow
-@[l_impl ConRon.Arena.checkSumTele.checkSumTeleSlow]
+@[no_expose, l_impl ConRon.Arena.checkSumTele.checkSumTeleSlow]
 def checkSumTeleSlowL : FunDecl := lfn (vis, cv, n, cvTa0) locals (bo, bl, s, sortS, ty, cvTaNew, u) {
   (bo, bl, s) := call whnf_telescope(vis, 0, n, EREC.u64[cvTa0 + 3]);
   sortS := call intern_sort(s);
@@ -97,7 +97,7 @@ def checkSumTeleSlowL : FunDecl := lfn (vis, cv, n, cvTa0) locals (bo, bl, s, so
 /-- `check_sum_tele(vis, cv, n, cvTa0)`: the checked declared type when it is already a syntactic
 telescope of `n` Π binders ending in a sort, else the slow arm. Returns `(cvTa, s)`. -/
 -- con-ron: ConRon/Arena/Inductives/SumInstall.lean:61-89 ConRon.Arena.checkSumTele
-@[l_impl ConRon.Arena.checkSumTele]
+@[no_expose, l_impl ConRon.Arena.checkSumTele]
 def checkSumTeleL : FunDecl := lfn (vis, cv, n, cvTa0) locals (ok, bso, bsl, body, g, x, y, z, cvTaOut, s) {
   (ok, bso, bsl, body) := call strip_pis(n, EREC.u64[cvTa0 + 3]);
   if ok == 1 && (⟦body⟧.tag) == 2 {
@@ -117,7 +117,7 @@ unless the family is propositional). The twin walks the fields from the last to 
 field `j`'s sort at position `j` of a pre-sized result while the recursion counts down
 (`check_struct_field_sorts_i_go`). -/
 -- con-ron: ConRon/Arena/Inductives/SumInstall.lean:93-117 ConRon.Arena.checkStructFieldSortsI
-@[l_impl ConRon.Arena.checkStructFieldSortsI]
+@[no_expose, l_impl ConRon.Arena.checkStructFieldSortsI]
 def checkStructFieldSortsIL : FunDecl :=
   lfn (vis, isProp, large, s, nP, fvsOff, fvsLen, idxOff, idxLen, n)
   locals (res, z) {
@@ -132,7 +132,7 @@ in `check_struct_field_sorts_i_go`: `u ≤ s` unless the family is propositional
 elimination) `u` is zero or `fv` is an index argument; aborts otherwise (lane `indproofs2`: split
 off for the proof). -/
 -- con-ron: ConRon/Arena/Inductives/SumInstall.lean:93-117 ConRon.Arena.checkStructFieldSortsI
-@[l_impl ConRon.Arena.checkStructFieldSortsI]
+@[no_expose, l_impl ConRon.Arena.checkStructFieldSortsI]
 def checkFieldSortBoundL : FunDecl :=
   lfn (isProp, large, s, idxOff, idxLen, fv, u) locals (r, z, eq, ct) {
   if isProp == 0 {
@@ -153,7 +153,7 @@ j)`: the twin's recursion at `j`: field `j - 1` first (its sort written at `res 
 the fields below it. Self-recursive, as the twin is (lane `indproofs2`: split off
 `check_struct_field_sorts_i`'s `while` loop for the proof). -/
 -- con-ron: ConRon/Arena/Inductives/SumInstall.lean:93-117 ConRon.Arena.checkStructFieldSortsI
-@[l_impl ConRon.Arena.checkStructFieldSortsI]
+@[no_expose, l_impl ConRon.Arena.checkStructFieldSortsI]
 def checkStructFieldSortsIGoL : FunDecl :=
   lfn (vis, isProp, large, s, nP, fvsOff, fvsLen, idxOff, idxLen, res, j)
   locals (fv, t, ty, u, z, w) {
@@ -173,7 +173,7 @@ def checkStructFieldSortsIGoL : FunDecl :=
 environment (stops at the first that does not). Self-recursive on the slice, as the twin is on
 the list (lane `indproofs`: rewritten from a `while` loop for the refinement). -/
 -- con-ron: ConRon/Arena/Inductives/SumInstall.lean:119-125 ConRon.Arena.fieldDomsResolve
-@[l_impl ConRon.Arena.fieldDomsResolve]
+@[no_expose, l_impl ConRon.Arena.fieldDomsResolve]
 def fieldDomsResolveL : FunDecl := lfn (vis0, off, n) locals (t, r) {
   if n == 0 { return 1 };
   t := call fvar_type_d(IW.u64[off]);
@@ -187,7 +187,7 @@ def fieldDomsResolveL : FunDecl := lfn (vis0, off, n) locals (t, r) {
 the first that does). Self-recursive on the slice, as the twin is on the list (lane `indproofs`:
 rewritten from a `while` loop for the refinement). -/
 -- con-ron: ConRon/Arena/Inductives/SumInstall.lean:127-132 ConRon.Arena.idxArgsResolve
-@[l_impl ConRon.Arena.idxArgsResolve]
+@[no_expose, l_impl ConRon.Arena.idxArgsResolve]
 def idxArgsResolveL : FunDecl := lfn (vis0, off, n) locals (r) {
   if n == 0 { return 1 };
   r := call consts_resolve_ffast(vis0, IW.u64[off]);
@@ -201,7 +201,7 @@ cqLen, cqBody)`: the second half of `checkSumCtor` (split off to keep each L fun
 constructor's field telescope, the opened residual's shape, the pre-block field/index resolution,
 and the per-field sorts. Returns `(sortsOff, sortsLen)`. -/
 -- con-ron: ConRon/Arena/Inductives/SumInstall.lean:134-178 ConRon.Arena.checkSumCtor
-@[l_impl ConRon.Arena.checkSumCtor]
+@[no_expose, l_impl ConRon.Arena.checkSumCtor]
 def checkSumCtorTailL : FunDecl :=
   lfn (vis0, vis, T, lpsOff, lpsLen, nP, nIdx, resSort, isProp, large, nF, cqOff, cqLen, cqBody)
   locals (xqOk, xqOff, xqLen, xqBody, us, hd, xfn, xargsOff, xargsLen, eqFn, eqLen, leOk, eqTake,
@@ -236,7 +236,7 @@ shape, the parameter pins against the opened type-former telescope); the rest is
 `check_sum_ctor_tail`. Returns `(cvCa, sortsOff, sortsLen)` (`cvCa` is `cvC` itself: the twin's
 `cvCa := cvC` is a pure rename). -/
 -- con-ron: ConRon/Arena/Inductives/SumInstall.lean:134-178 ConRon.Arena.checkSumCtor
-@[l_impl ConRon.Arena.checkSumCtor]
+@[no_expose, l_impl ConRon.Arena.checkSumCtor]
 def checkSumCtorL : FunDecl :=
   lfn (vis0, vis, T, lpsOff, lpsLen, nP, nIdx, resSort, isProp, large, cvC, nF, cvTa)
   locals (u1, ok1, bso1, bsl1, cbody, resOk, cqOk, cqOff, cqLen, cqBody, tqOk, tqOff, tqLen, tqBody,
@@ -266,7 +266,7 @@ the list; the head's records are consed onto the rest's slices (`sl_cons`, a cop
 written word lies above the old pool top, docs/deviations.md D18; lane `indproofs2`: rewritten from a
 `while` loop writing into pre-allocated slices). -/
 -- con-ron: ConRon/Arena/Inductives/SumInstall.lean:180-194 ConRon.Arena.checkSumCtors
-@[l_impl ConRon.Arena.checkSumCtors]
+@[no_expose, l_impl ConRon.Arena.checkSumCtors]
 def checkSumCtorsL : FunDecl :=
   lfn (vis0, vis, T, lpsOff, lpsLen, nP, nIdx, resSort, isProp, large, cvTa, ctorsOff, ctorsLen)
   locals (c, cv, nF, cvCaOut, sOff, sLen, newC, sHead, rO, rL, sO, sL, o1, l1, o2, l2) {
@@ -291,7 +291,7 @@ def checkSumCtorsL : FunDecl :=
 4: `[4, cv's 4 words copied inline, nP, nF]`, 7 words). The name word is checked to be a handle
 (lane `indproofs2`: `env_push`'s spec needs it; a decoded constant's name always is). -/
 -- con-ron: ConRon/Arena/Inductives/SumInstall.lean:196-202 ConRon.Arena.consSumCtors
-@[l_impl ConRon.Arena.consSumCtors]
+@[no_expose, l_impl ConRon.Arena.consSumCtors]
 def ctorInfoRecL : FunDecl := lfn (cv, nP, nF) locals (rec) {
   rec := call erec_alloc(7);
   EREC.u64[rec] := 4;
@@ -310,7 +310,7 @@ processes the head before recursing on the tail). Pure (the index push touches n
 effect is the environment push. Returns the new view. Self-recursive on the slice, as the twin is on
 the list (lane `indproofs2`: rewritten from a `while` loop for the refinement). -/
 -- con-ron: ConRon/Arena/Inductives/SumInstall.lean:196-202 ConRon.Arena.consSumCtors
-@[l_impl ConRon.Arena.consSumCtors]
+@[no_expose, l_impl ConRon.Arena.consSumCtors]
 def consSumCtorsL : FunDecl := lfn (nP, ctorsOff, ctorsLen, vis) locals (c, cv, nF, rec, v, r) {
   if ctorsLen == 0 { return vis };
   c := IW.u64[ctorsOff];
@@ -328,7 +328,7 @@ constructor `j`'s with the generated right-hand side `j`, `.plain` fire, and the
 shorter of the two lists, as the twin's paired match does. Returns the `EREC` rule pointers as an
 `IW` list. -/
 -- con-ron: ConRon/Arena/Inductives/SumInstall.lean:204-215 ConRon.Arena.sumRules
-@[l_impl ConRon.Arena.sumRules]
+@[no_expose, l_impl ConRon.Arena.sumRules]
 def sumRulesL : FunDecl :=
   lfn (vis, recName, nP, ctorsOff, ctorsLen, rhssOff, rhssLen)
   locals (n, o, z) {
@@ -343,7 +343,7 @@ def sumRulesL : FunDecl :=
 `(rO, rL)`, their pointers written at `o, o + 1, …`; stops at the shorter. Self-recursive, as the
 twin is (lane `indproofs2`: split off `sum_rules`' `while` loop for the proof). -/
 -- con-ron: ConRon/Arena/Inductives/SumInstall.lean:204-215 ConRon.Arena.sumRules
-@[l_impl ConRon.Arena.sumRules]
+@[no_expose, l_impl ConRon.Arena.sumRules]
 def sumRulesGoL : FunDecl :=
   lfn (vis, nP, cO, cL, rO, rL, o) locals (c, cv, nF, ctorN, rhs, k, eta, rec, z) {
   if cL == 0 || rL == 0 { return 0 };
@@ -378,7 +378,7 @@ the first (`n` the twin's own recursion count, `j = n - 1` the index it checks b
 `n - 1`). No result (`Unit`): self-recursive, as the twin is, so the proof is a plain induction on
 `n` (round 2: rewritten from a `while` loop to make the refinement tractable). -/
 -- con-ron: ConRon/Arena/Inductives/StructInstall.lean:26-41 ConRon.Arena.checkStructDomsAt
-@[l_impl ConRon.Arena.checkStructDomsAt]
+@[no_expose, l_impl ConRon.Arena.checkStructDomsAt]
 def checkStructDomsAtL : FunDecl := lfn (vis, off, fvsOff, fvsLen, domsOff, domsLen, n)
   locals (a, b, t, r, z) {
   if n != 0 {
@@ -397,7 +397,7 @@ body, all four checks run (`&&` on already-fetched values), and the scan stops a
 that fails any of them. Self-recursive on the slice, as `List.allM` is on the list (lane
 `indproofs2`: rewritten from a `while` loop for the proof). -/
 -- con-ron: ConRon/Arena/Inductives/StructInstall.lean:43-69 ConRon.Arena.checkStructProjTable
-@[l_impl ConRon.Arena.checkStructProjTable]
+@[no_expose, l_impl ConRon.Arena.checkStructProjTable]
 def checkStructProjTableScopedL : FunDecl :=
   lfn (vis, nP, lpsOff, lpsLen, bodiesOff, bodiesLen) locals (b, r1, r2, r3, r4, r) {
   if bodiesLen == 0 { return 1 };
@@ -422,7 +422,7 @@ which the next declaration's `iw_reset` would invalidate. The record (13 words, 
 word `rec + 1` unused, `0`) is pushed (`env_push_table`, the twin's `IFEnv.pushTable`); the view
 is unchanged and returned. -/
 -- con-ron: ConRon/Arena/Inductives/StructInstall.lean:43-69 ConRon.Arena.checkStructProjTable
-@[l_impl ConRon.Arena.checkStructProjTable]
+@[no_expose, l_impl ConRon.Arena.checkStructProjTable]
 def checkStructProjTableL : FunDecl :=
   lfn (T, C, lpsOff, lpsLen, nP, nF, resSort, guardsOff, guardsLen, cvCa, vis)
   locals (bOk, bOff, bLen, scopedOk, found, q, r, lo2, ll2, bo2, bl2, go2, gl2, rec, z) {
@@ -462,7 +462,7 @@ def checkStructProjTableL : FunDecl :=
 remaining length; the head at `off` is interned, then the tail `(off + 1, n - 1)`, then consed).
 Self-recursive, as the twin's `go` is (round 2: rewritten from a `while` loop). -/
 -- con-ron: ConRon/Arena/Inductives/StructParts.lean:58-69 ConRon.Arena.paramLevels.go
-@[l_impl ConRon.Arena.paramLevels.go]
+@[no_expose, l_impl ConRon.Arena.paramLevels.go]
 def paramLevelsGoL : FunDecl := lfn (off, n) locals (res, nm, u, ro, rl, res2, len2) {
   if n == 0 { res := call iw_alloc(0); return (res, 0) };
   nm := call sl_get(off, n, 0);
@@ -475,7 +475,7 @@ def paramLevelsGoL : FunDecl := lfn (off, n) locals (res, nm, u, ro, rl, res2, l
 
 /-- `param_levels(off, len)`: the interned level list `lps.map .param`. -/
 -- con-ron: ConRon/Arena/Inductives/StructParts.lean:58-69 ConRon.Arena.paramLevels
-@[l_impl ConRon.Arena.paramLevels]
+@[no_expose, l_impl ConRon.Arena.paramLevels]
 def paramLevelsL : FunDecl := lfn (off, n) locals (lo, ll, us) {
   (lo, ll) := call param_levels_go(off, n);
   us := call intern_ls_iw(lo, ll);
@@ -487,7 +487,7 @@ def paramLevelsL : FunDecl := lfn (off, n) locals (lo, ll, us) {
 the whole spine). Self-recursive, as the twin's `go` is (round 2: rewritten from a `while` loop):
 `bvar (o + nP - 1 - k)` interned first, then the rest at `(n - 1, k + 1)`, then consed. -/
 -- con-ron: ConRon/Arena/Inductives/StructParts.lean:73-83 ConRon.Arena.structPsAt.go
-@[l_impl ConRon.Arena.structPsAt.go]
+@[no_expose, l_impl ConRon.Arena.structPsAt.go]
 def structPsAtGoL : FunDecl := lfn (o, nP, n, k) locals (res, b, ro, rl, res2, len2) {
   if n == 0 { res := call iw_alloc(0); return (res, 0) };
   b := call intern_bvar(o + nP - 1 - k);
@@ -499,7 +499,7 @@ def structPsAtGoL : FunDecl := lfn (o, nP, n, k) locals (res, b, ro, rl, res2, l
 
 /-- `struct_ps_at(o, nP)`: the parameter variables as seen from under `o` extra binders. -/
 -- con-ron: ConRon/Arena/Inductives/StructParts.lean:73-83 ConRon.Arena.structPsAt
-@[l_impl ConRon.Arena.structPsAt]
+@[no_expose, l_impl ConRon.Arena.structPsAt]
 def structPsAtL : FunDecl := lfn (o, nP) locals (ro, rl) {
   (ro, rl) := call struct_ps_at_go(o, nP, nP, 0);
   return (ro, rl)
@@ -508,7 +508,7 @@ def structPsAtL : FunDecl := lfn (o, nP) locals (ro, rl) {
 /-- `struct_elim_level(elim, large)`: the recursor's elimination level: the fresh parameter at the
 large eliminator, `zero` at the small one. -/
 -- con-ron: ConRon/Arena/Inductives/StructParts.lean:85-89 ConRon.Arena.structElimLevel
-@[l_impl ConRon.Arena.structElimLevel]
+@[no_expose, l_impl ConRon.Arena.structElimLevel]
 def structElimLevelL : FunDecl := lfn (elim, large) locals (u) {
   if large != 0 { u := call intern_param(elim); return u };
   u := call intern_zero();
@@ -520,7 +520,7 @@ at an indexed family: the family at exactly the parameter variables (`o` binders
 parameter frame) followed by `nIdx` index expressions. The length guard before `sl_eq` avoids
 reading past the (possibly shorter) `args` slice — the twin's `take` never reads out of bounds. -/
 -- con-ron: ConRon/Arena/Inductives/StructParts.lean:93-104 ConRon.Arena.structCtorResidOk
-@[l_impl ConRon.Arena.structCtorResidOk]
+@[no_expose, l_impl ConRon.Arena.structCtorResidOk]
 def structCtorResidOkL : FunDecl :=
   lfn (T, lpsOff, lpsLen, nP, o, nIdx, cbody)
   locals (us, hd, fn, argsOff, argsLen, psOff, psLen, eq1, eq2, le, eq3) {
@@ -541,7 +541,7 @@ def structCtorResidOkL : FunDecl :=
 /-- `struct_proj_ps(nP)`: the parameter spine of the generated projection types, at the frame of
 the final `∀ p⃗ (t : T p⃗), _` telescope. -/
 -- con-ron: ConRon/Arena/Inductives/StructParts.lean:108-111 ConRon.Arena.structProjPs
-@[l_impl ConRon.Arena.structProjPs]
+@[no_expose, l_impl ConRon.Arena.structProjPs]
 def structProjPsL : FunDecl := lfn (nP) locals (o, l) {
   (o, l) := call struct_ps_at(1, nP);
   return (o, l)
@@ -550,7 +550,7 @@ def structProjPsL : FunDecl := lfn (nP) locals (o, l) {
 /-- `struct_proj_arg_p(T, j)`: the `j`-th earlier-field substitute `t.j` (`.proj T j` of the
 subject). -/
 -- con-ron: ConRon/Arena/Inductives/StructParts.lean:113-118 ConRon.Arena.structProjArgP
-@[l_impl ConRon.Arena.structProjArgP]
+@[no_expose, l_impl ConRon.Arena.structProjArgP]
 def structProjArgPL : FunDecl := lfn (T, j) locals (b, e) {
   b := call intern_bvar(0);
   e := call mk_proj(T, j, b);
@@ -562,7 +562,7 @@ def structProjArgPL : FunDecl := lfn (T, j) locals (b, e) {
 /-- `has_loose_b_var_b_ins(e, i, r)`: record the answer `r` for `(e, i)` in the `hb` memo and
 return it (probes again right before the put, as every insert does). -/
 -- con-ron: ConRon/Arena/Inductives/StructParts.lean:122-127 ConRon.Arena.hasLooseBVarBIns
-@[l_impl ConRon.Arena.hasLooseBVarBIns]
+@[no_expose, l_impl ConRon.Arena.hasLooseBVarBIns]
 def hasLooseBVarBInsL : FunDecl := lfn (e, i, r) locals (fd, j, d, u) {
   (fd, j, d) := call hb_find(e, i);
   u := call hb_put(e, i, r, fd, j);
@@ -576,7 +576,7 @@ the tag: `bvar`/`fvar`/`sort`/`const`/`lit` direct answers, the rest (`app`, `la
 `match` does for `app`/`lam`/`forallE`/`letE`). The twin's `memo` is dropped (the memo is the `hb`
 array, per `IndIface`'s per-call-memo convention). -/
 -- con-ron: ConRon/Arena/Inductives/StructParts.lean:129-175 ConRon.Arena.hasLooseBVarBGo
-@[l_impl ConRon.Arena.hasLooseBVarBGo]
+@[no_expose, l_impl ConRon.Arena.hasLooseBVarBGo]
 def hasLooseBVarBGoL : FunDecl :=
   lfn (f, i, h) locals (bb, g, x, y, z, fd, j, d, r1, r) {
   if f == 0 { abort };
@@ -608,7 +608,7 @@ def hasLooseBVarBGoL : FunDecl :=
 
 /-- `has_loose_b_var_b_fast(i, e)`: the executed `hasLooseBVarB` — clear the `hb` memo, walk. -/
 -- con-ron: ConRon/Arena/Inductives/StructParts.lean:177-180 ConRon.Arena.hasLooseBVarBFast
-@[l_impl ConRon.Arena.hasLooseBVarBFast]
+@[no_expose, l_impl ConRon.Arena.hasLooseBVarBFast]
 def hasLooseBVarBFastL : FunDecl := lfn (i, e) locals (u, r) {
   u := call hb_clear();
   r := call has_loose_b_var_b_go(⟪CWF⟫, i, e);
@@ -618,7 +618,7 @@ def hasLooseBVarBFastL : FunDecl := lfn (i, e) locals (u, r) {
 /-- `struct_used_later(cty, nP, j)`: field `j` is used by a later field (official's `infer_proj`'s
 `has_loose_bvars(binding_body(r))` at step `j`). Its own top call (clears `hb`). -/
 -- con-ron: ConRon/Arena/Inductives/StructParts.lean:182-188 ConRon.Arena.structUsedLater
-@[l_impl ConRon.Arena.structUsedLater]
+@[no_expose, l_impl ConRon.Arena.structUsedLater]
 def structUsedLaterL : FunDecl := lfn (cty, nP, j) locals (ok, bo, bl, body, r) {
   (ok, bo, bl, body) := call strip_pis(nP + j + 1, cty);
   if ok == 0 { return 0 };
@@ -629,7 +629,7 @@ def structUsedLaterL : FunDecl := lfn (cty, nP, j) locals (ok, bo, bl, body, r) 
 /-- `struct_used_later_go(cty, nP, j)`: memoized `structUsedLater`, sharing the caller's `hb`
 memo (no clear). -/
 -- con-ron: ConRon/Arena/Inductives/StructParts.lean:190-196 ConRon.Arena.structUsedLaterGo
-@[l_impl ConRon.Arena.structUsedLaterGo]
+@[no_expose, l_impl ConRon.Arena.structUsedLaterGo]
 def structUsedLaterGoL : FunDecl := lfn (cty, nP, j) locals (ok, bo, bl, body, r) {
   (ok, bo, bl, body) := call strip_pis(nP + j + 1, cty);
   if ok == 0 { return 0 };
@@ -642,7 +642,7 @@ n - 1`, in order, through one shared `hb` memo (no clear: the caller owns it). S
 twin is (lane `indproofs`: rewritten from a `while` loop for the refinement; the conses copy,
 quadratic in the field count). -/
 -- con-ron: ConRon/Arena/Inductives/StructParts.lean:198-207 ConRon.Arena.structUsedLaterList
-@[l_impl ConRon.Arena.structUsedLaterList]
+@[no_expose, l_impl ConRon.Arena.structUsedLaterList]
 def structUsedLaterListL : FunDecl := lfn (cty, nP, n, base) locals (res, r, ro, rl, o, l) {
   if n == 0 { res := call iw_alloc(0); return (res, 0) };
   r := call struct_used_later_go(cty, nP, base);
@@ -656,7 +656,7 @@ k acc` (the join of `acc` with the sorts of the used fields `j, …, j + k - 1`)
 the twin is (lane `indproofs`: rewritten from a `while` loop for the refinement; `used` read with
 the twin's `getD _ false`, the joined level guarded below `2^32`). -/
 -- con-ron: ConRon/Arena/Inductives/StructParts.lean:209-234 ConRon.Arena.structProjGuards.col
-@[l_impl ConRon.Arena.structProjGuards.col]
+@[no_expose, l_impl ConRon.Arena.structProjGuards.col]
 def structProjGuardsColL : FunDecl :=
   lfn (usedOff, usedLen, sortsOff, sortsLen, z, j, k, acc) locals (u, sj, m, r) {
   if k == 0 { return acc };
@@ -676,7 +676,7 @@ def structProjGuardsColL : FunDecl :=
 field `i'`s guard for `i' = i, …, i + k - 1`. Self-recursive, as the twin is (lane `indproofs`:
 rewritten from a `while` loop; the conses copy, quadratic in the field count). -/
 -- con-ron: ConRon/Arena/Inductives/StructParts.lean:209-234 ConRon.Arena.structProjGuards.row
-@[l_impl ConRon.Arena.structProjGuards.row]
+@[no_expose, l_impl ConRon.Arena.structProjGuards.row]
 def structProjGuardsRowL : FunDecl :=
   lfn (usedOff, usedLen, sortsOff, sortsLen, z, i, k) locals (res, acc, g, ro, rl, o, l) {
   if k == 0 { res := call iw_alloc(0); return (res, 0) };
@@ -691,7 +691,7 @@ def structProjGuardsRowL : FunDecl :=
 field: its own sort joined with the sorts of the earlier fields a later field uses. Its own top
 call (clears `hb` once, the shared `∅` of the twin's `structUsedLaterList ... ∅ ...`). -/
 -- con-ron: ConRon/Arena/Inductives/StructParts.lean:209-234 ConRon.Arena.structProjGuards
-@[l_impl ConRon.Arena.structProjGuards]
+@[no_expose, l_impl ConRon.Arena.structProjGuards]
 def structProjGuardsL : FunDecl :=
   lfn (cty, nP, nF, sortsOff, sortsLen) locals (z, u, usedOff, usedLen, ro, rl) {
   z := call pin_word(53);
@@ -705,7 +705,7 @@ def structProjGuardsL : FunDecl :=
 the constructor telescope: field `i`'s domain is body `i`, the field replaced by the subject's
 projection before the walk continues. Returns `(ok, off, len)` (`Option (List EIdx)`). -/
 -- con-ron: ConRon/Arena/Inductives/StructParts.lean:236-252 ConRon.Arena.structProjBodiesGo
-@[l_impl ConRon.Arena.structProjBodiesGo]
+@[no_expose, l_impl ConRon.Arena.structProjBodiesGo]
 def structProjBodiesGoL : FunDecl :=
   lfn (T, k, i, h) locals (g, x, y, z, a, b, ok2, ro, rl, no, nl) {
   if k == 0 { return (1, 0, 0) };
@@ -723,7 +723,7 @@ def structProjBodiesGoL : FunDecl :=
 /-- `struct_proj_bodies(T, nP, nF, cty)`: the block's projection bodies, as the table stores
 them. Returns `(ok, off, len)` (`Option (Array EIdx)`, an `IW` slice either way). -/
 -- con-ron: ConRon/Arena/Inductives/StructParts.lean:254-263 ConRon.Arena.structProjBodies
-@[l_impl ConRon.Arena.structProjBodies]
+@[no_expose, l_impl ConRon.Arena.structProjBodies]
 def structProjBodiesL : FunDecl :=
   lfn (T, nP, nF, cty) locals (psOff, psLen, ok1, e1, ok2, bo, bl) {
   (psOff, psLen) := call struct_proj_ps(nP);
@@ -743,7 +743,7 @@ names its structure), through the `mc` memo for every kind but `bvar`/`sort`/`li
 here combines two/three already-computed results). The twin's `memo` is dropped (the memo is the
 `mc` array, as in `hasLooseBVarBGo`). -/
 -- con-ron: ConRon/Arena/Inductives/StructParts.lean:267-308 ConRon.Arena.mentionsConstGo
-@[l_impl ConRon.Arena.mentionsConstGo]
+@[no_expose, l_impl ConRon.Arena.mentionsConstGo]
 def mentionsConstGoL : FunDecl :=
   lfn (f, T, h) locals (g, x, y, z, fd, j, d, r, b1, b2, b3, fd2, j2, d2, u2) {
   if f == 0 { abort };
@@ -773,7 +773,7 @@ def mentionsConstGoL : FunDecl :=
 
 /-- `mentions_const(T, e)`: the executed `mentionsConst` — clear the `mc` memo, walk. -/
 -- con-ron: ConRon/Arena/Inductives/StructParts.lean:310-313 ConRon.Arena.mentionsConst
-@[l_impl ConRon.Arena.mentionsConst]
+@[no_expose, l_impl ConRon.Arena.mentionsConst]
 def mentionsConstL : FunDecl := lfn (T, e) locals (u, r) {
   u := call mc_clear();
   r := call mentions_const_go(⟪CWF⟫, T, e);

@@ -75,7 +75,7 @@ def readNatLoop : Stmt := lblk (v, e, x) {
 }
 
 /-- con-leche: ConLeche/Frontend/Scan/Fast.lean:493-497 ConLeche.Frontend.readNatAt -/
-@[l_impl ConLeche.Frontend.readNatAt]
+@[no_expose, l_impl ConLeche.Frontend.readNatAt]
 def readNat : FunDecl := lfn (v, e) locals (x, w, h, y) {
   if v + 18 < e { return 0xFFFFFFFFFFFFFFFF };
   w := e - v - 1;
@@ -300,7 +300,7 @@ def pairLoop : Stmt := lblk (i, cnt, x0, x1, c, e, x) {
 }
 
 /-- con-leche: ConLeche/Frontend/Scan/Fast.lean:697-699 ConLeche.Frontend.scanNatList -/
-@[l_impl ConLeche.Frontend.scanNatList]
+@[no_expose, l_impl ConLeche.Frontend.scanNatList]
 def recNatList : FunDecl := lfn (i) locals (cnt, x0, x1, c, e, x) {
   i += 1;
   ⟪pairLoop⟫;

@@ -84,7 +84,7 @@ def zeroCS : ConsSch where
 /-! ## `zero_find(t, h)`: the probe -/
 
 /-- con-ron: ConRon/Arena/Store.lean:94-95 ConRon.Arena.Tbl.find? -/
-def zeroFind : FunDecl := consFindG zeroCS
+@[no_expose] def zeroFind : FunDecl := consFindG zeroCS
 
 /-! ## `zero_push(t, j)`: append a node to tier `t`, register it at slot `j` -/
 
@@ -96,7 +96,7 @@ def zpushOK (m : Mem) (t : Word) : Bool :=
   decide (zcnt m t < (67108864 : Word)) && decide (zcnt m t < m.len64 (tierA ZREC t))
 
 /-- con-ron: ConRon/Arena/Store.lean:97-102 ConRon.Arena.Tbl.push -/
-def zeroPush : FunDecl := consPushG zeroCS
+@[no_expose] def zeroPush : FunDecl := consPushG zeroCS
 
 /-! ## `intern_zero()`: hash-cons the level `zero`
 
@@ -108,7 +108,7 @@ aborts (the library's `consInternM`). -/
 def zinternW (m : Mem) : Option (Word × Mem) := consInternM zeroCS m []
 
 /-- con-ron: ConRon/Arena/Monad.lean:444-460 ConRon.Arena.internLNode -/
-@[l_impl ConRon.Arena.internLNode]
+@[no_expose, l_impl ConRon.Arena.internLNode]
 def internZero : FunDecl := consInternG zeroCS
 
 /-- The `zero` store functions, as one `#eval`-able program. -/

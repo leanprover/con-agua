@@ -67,7 +67,7 @@ def utf8ValidLoop : Stmt := lblk (k, n, cp, l) {
 }
 
 /-- con-leche: ConLeche/Frontend/Scan/Fast.lean:624-644 ConLeche.Frontend.scanString -/
-def utf8Valid : FunDecl := lfn (k, n) locals (cp, l) {
+@[no_expose] def utf8Valid : FunDecl := lfn (k, n) locals (cp, l) {
   ⟪utf8ValidLoop⟫;
   return 1
 }
@@ -205,7 +205,7 @@ grind_pattern [lang_grind] utf8CharN_no_wrap => utf8CharN b k n
 def byteE (b : Array UInt8) (e k : Word) : Word := if k < e then byteW b k else 0
 
 /-- con-leche: ConLeche/Frontend/Scan/Fast.lean:72-76 ConLeche.Frontend.byteAt -/
-def byteIn : FunDecl := lfn (k, e) {
+@[no_expose] def byteIn : FunDecl := lfn (k, e) {
   if k < e { return IN.u8[k] };
   return 0
 }
@@ -218,7 +218,7 @@ def hexValN (c : Word) : Word × Word :=
   else (0, 0)
 
 /-- con-leche: ConLeche/Frontend/Scan/Fast.lean:533-538 ConLeche.Frontend.hexVal -/
-@[l_impl ConLeche.Frontend.hexVal]
+@[no_expose, l_impl ConLeche.Frontend.hexVal]
 def hexVal : FunDecl := lfn (c) {
   if 48 <= c && c <= 57 { return (1, c - 48) };
   if 97 <= c && c <= 102 { return (1, c - 87) };
@@ -236,7 +236,7 @@ def hex4N (b : Array UInt8) (e j : Word) : Word × Word :=
   else (1, (a.2 <<< 12) ||| (x.2 <<< 8) ||| (y.2 <<< 4) ||| z.2)
 
 /-- con-leche: ConLeche/Frontend/Scan/Fast.lean:540-546 ConLeche.Frontend.hex4 -/
-@[l_impl ConLeche.Frontend.hex4]
+@[no_expose, l_impl ConLeche.Frontend.hex4]
 def hex4 : FunDecl := lfn (j, e) locals (c, ok, a, x, y, z) {
   c := call byte_in(j, e);
   (ok, a) := call hex_val(c);
@@ -262,7 +262,7 @@ def hex3N (b : Array UInt8) (e j : Word) : Word × Word :=
   else (1, (a.2 <<< 8) ||| (x.2 <<< 4) ||| y.2)
 
 /-- con-leche: ConLeche/Frontend/Scan/Fast.lean:548-554 ConLeche.Frontend.hex3 -/
-@[l_impl ConLeche.Frontend.hex3]
+@[no_expose, l_impl ConLeche.Frontend.hex3]
 def hex3 : FunDecl := lfn (j, e) locals (c, ok, a, x, y) {
   c := call byte_in(j, e);
   (ok, a) := call hex_val(c);
@@ -304,7 +304,7 @@ def unescapeLoop : Stmt := lblk (j, e, r, c, d, ok, v) {
 function to keep the loop body short): `j + 6`, or `j + 12` for a high surrogate followed by a
 `\uDxxx` low one. -/
 -- con-leche: ConLeche/Frontend/Scan/Fast.lean:563-622 ConLeche.Frontend.unescape
-def uNext : FunDecl := lfn (j, e, v) locals (c, d, f, ok, w) {
+@[no_expose] def uNext : FunDecl := lfn (j, e, v) locals (c, d, f, ok, w) {
   if v < 0xD800 || 0xE000 <= v { return j + 6 };
   if 0xDC00 <= v { return j + 6 };
   -- a high surrogate: look for a `\uDxxx` continuation, else U+FFFD
@@ -319,7 +319,7 @@ def uNext : FunDecl := lfn (j, e, v) locals (c, d, f, ok, w) {
 }
 
 /-- con-leche: ConLeche/Frontend/Scan/Fast.lean:563-622 ConLeche.Frontend.unescape -/
-@[l_impl ConLeche.Frontend.unescape]
+@[no_expose, l_impl ConLeche.Frontend.unescape]
 def unescape : FunDecl := lfn (j, e) locals (r, c, d, ok, v) {
   r := j;
   ⟪unescapeLoop⟫;
@@ -481,7 +481,7 @@ end
 /-! ## `scan_string` -/
 
 /-- con-leche: ConLeche/Frontend/Scan/Fast.lean:624-644 ConLeche.Frontend.scanString -/
-@[l_impl ConLeche.Frontend.scanString]
+@[no_expose, l_impl ConLeche.Frontend.scanString]
 def scanString : FunDecl := lfn (i) locals (e, h, ok) {
   if i < len(IN.u8) && IN.u8[i] == 34 {
     e := call str_close(i + 1);

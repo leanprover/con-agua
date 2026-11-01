@@ -82,7 +82,7 @@ def bvarCS : ConsSch where
 /-! ## `bvar_find(t, u, h)`: the probe -/
 
 /-- con-ron: ConRon/Arena/Store.lean:94-95 ConRon.Arena.Tbl.find? -/
-def bvarFind : FunDecl := consFindG bvarCS
+@[no_expose] def bvarFind : FunDecl := consFindG bvarCS
 
 /-! ## `bvar_push(t, u, j)`: append a node to tier `t`, register it at slot `j` -/
 
@@ -94,7 +94,7 @@ def bpushOK (m : Mem) (t : Word) : Bool :=
   decide (bcnt m t < (67108864 : Word)) && decide (bcnt m t < m.len64 (tierA BREC t))
 
 /-- con-ron: ConRon/Arena/Store.lean:97-102 ConRon.Arena.Tbl.push -/
-def bvarPush : FunDecl := consPushG bvarCS
+@[no_expose] def bvarPush : FunDecl := consPushG bvarCS
 
 /-! ## `intern_bvar(u)`: hash-cons the expression `bvar u`
 
@@ -107,7 +107,7 @@ def binternW (m : Mem) (u : Word) : Option (Word × Mem) := consInternM bvarCS m
 
 /-- con-ron: ConRon/Arena/Monad.lean:249-267 ConRon.Arena.internE
 con-ron: ConRon/Arena/Monad.lean:221-247 ConRon.Arena.internNodeE -/
-@[l_impl ConRon.Arena.internE ConRon.Arena.internNodeE]
+@[no_expose, l_impl ConRon.Arena.internE ConRon.Arena.internNodeE]
 def internBVar : FunDecl := consInternG bvarCS
 
 /-- The `bvar` store functions, as one `#eval`-able program. -/

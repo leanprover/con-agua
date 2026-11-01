@@ -35,7 +35,7 @@ for `harness/walk.c`, which runs it natively.
 namespace L.Arena
 
 /-- con-ron: none — a benchmark driver -/
-def bbBench : FunDecl := lfn (n, k) locals (b, x, i, r) {
+@[no_expose] def bbBench : FunDecl := lfn (n, k) locals (b, x, i, r) {
   b := call intern_bvar(k & 9223372036854775807);
   x := b;
   i := 0;

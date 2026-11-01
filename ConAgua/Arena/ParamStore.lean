@@ -81,7 +81,7 @@ def paramCS : ConsSch where
 /-! ## `param_find(t, u, h)`: the probe -/
 
 /-- con-ron: ConRon/Arena/Store.lean:94-95 ConRon.Arena.Tbl.find? -/
-def paramFind : FunDecl := consFindG paramCS
+@[no_expose] def paramFind : FunDecl := consFindG paramCS
 
 /-! ## `param_push(t, u, j)`: append a node to tier `t`, register it at slot `j` -/
 
@@ -93,7 +93,7 @@ def ppushOK (m : Mem) (t : Word) : Bool :=
   decide (pcnt m t < (67108864 : Word)) && decide (pcnt m t < m.len64 (tierA PREC t))
 
 /-- con-ron: ConRon/Arena/Store.lean:97-102 ConRon.Arena.Tbl.push -/
-def paramPush : FunDecl := consPushG paramCS
+@[no_expose] def paramPush : FunDecl := consPushG paramCS
 
 /-! ## `intern_param(u)`: hash-cons the level `param n`
 
@@ -105,7 +105,7 @@ aborts (the library's `consInternM`). -/
 def pinternW (m : Mem) (u : Word) : Option (Word × Mem) := consInternM paramCS m [u]
 
 /-- con-ron: ConRon/Arena/Monad.lean:444-460 ConRon.Arena.internLNode -/
-@[l_impl ConRon.Arena.internLNode]
+@[no_expose, l_impl ConRon.Arena.internLNode]
 def internParam : FunDecl := consInternG paramCS
 
 /-- The `param` store functions, as one `#eval`-able program. -/

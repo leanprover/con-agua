@@ -40,7 +40,7 @@ def lhPushW (m : Mem) (w : Word) : Option (Word × Mem) :=
   else some (htop m, (m.set64 LH (htop m) w).set64 CTL 192 (htop m + 1))
 
 /-- con-ron: none — the level scratch heap (the twin reads `ConLeche.Level` trees back, `readLevelM`) -/
-def lhPush : FunDecl := lfn (w) locals (o) {
+@[no_expose] def lhPush : FunDecl := lfn (w) locals (o) {
   o := CTL.u64[192];
   if o >> 40 != 0 || len(LH.u64) <= o { abort };
   LH.u64[o] := w;
@@ -112,7 +112,7 @@ grind_pattern [level_grind] zK_ne => zK n b (some (x, m₁))
 grind_pattern [level_grind] zK_zero => zK n b (some (0, m₁))
 
 /-- con-leche: ConLeche/Kernel/Level.lean:187-197 ConLeche.Level.zeronessOf -/
-@[l_impl ConLeche.Level.zeronessOf]
+@[no_expose, l_impl ConLeche.Level.zeronessOf]
 def lvZero : FunDecl := lfn (l) locals (g, a, b, x) {
   (g, a, b) := call lv_node(l);
   if g == 0 { return 0 };

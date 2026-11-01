@@ -50,7 +50,7 @@ attribute [level_grind =] succK_some
 /-! ## `lv_comb(l, r)`: `combining` -/
 
 /-- con-leche: ConLeche/Kernel/Level.lean:62-67 ConLeche.Level.combining -/
-@[l_impl ConLeche.Level.combining]
+@[no_expose, l_impl ConLeche.Level.combining]
 def lvComb : FunDecl := lfn (l, r) locals (g, a, b, h, c, d, x) {
   (g, a, b) := call lv_node(l);
   if g == 0 { return r };
@@ -75,7 +75,7 @@ l_model lvComb_spec (p : Prog) (hpn : p.lookup "lv_node" = some lvNode)
 /-! ## `lv_simp(p)`: `simplify` -/
 
 /-- con-leche: ConLeche/Kernel/Level.lean:69-82 ConLeche.Level.simplify -/
-@[l_impl ConLeche.Level.simplify]
+@[no_expose, l_impl ConLeche.Level.simplify]
 def lvSimp : FunDecl := lfn (p) locals (g, a, b, x, y, h, c, d) {
   (g, a, b) := call lv_node(p);
   if g == 0 || g == 4 { return p };
@@ -104,7 +104,7 @@ l_model lvSimp_spec (p : Prog) (hpn : p.lookup "lv_node" = some lvNode)
 /-! ## `lv_nz(p)`: `isNeverZero` -/
 
 /-- con-leche: ConLeche/Kernel/Level.lean:51-60 ConLeche.Level.isNeverZero -/
-@[l_impl ConLeche.Level.isNeverZero]
+@[no_expose, l_impl ConLeche.Level.isNeverZero]
 def lvNz : FunDecl := lfn (p) locals (g, a, b, x) {
   (g, a, b) := call lv_node(p);
   if g == 1 { return 1 };

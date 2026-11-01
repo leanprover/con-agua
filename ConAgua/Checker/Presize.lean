@@ -24,17 +24,17 @@ namespace L.Checker
 open L L.Arena
 
 -- con-ron: none — `HashMap2::with_capacity` (`ron/hashmap2.rs`) at the `app` table; con-ron's starts empty (D42)
-def appPresizeL : FunDecl := consPresizeG appCS
+@[no_expose] def appPresizeL : FunDecl := consPresizeG appCS
 -- con-ron: none — `HashMap2::with_capacity` (`ron/hashmap2.rs`) at the `lam` table; con-ron's starts empty (D42)
-def lamPresizeL : FunDecl := consPresizeG lamCS
+@[no_expose] def lamPresizeL : FunDecl := consPresizeG lamCS
 -- con-ron: none — `HashMap2::with_capacity` (`ron/hashmap2.rs`) at the `forallE` table; con-ron's starts empty (D42)
-def forallPresizeL : FunDecl := consPresizeG forallCS
+@[no_expose] def forallPresizeL : FunDecl := consPresizeG forallCS
 
 /-- `pow2_at_least(q)`: the least power of two `≥ q` (`0` for `q = 0` or `q > 2^63`, which
 `X_presize` refuses): `q - 1` with its bits smeared right, plus one (con-ron's `pow2_at_least`,
 `ron/hashmap2.rs`, by a loop). -/
 -- con-ron: none — `pow2_at_least` (`ron/hashmap2.rs`), for `HashMap2::with_capacity` (D42)
-def pow2AtLeastL : FunDecl := lfn (q) locals (x) {
+@[no_expose] def pow2AtLeastL : FunDecl := lfn (q) locals (x) {
   x := q - 1;
   x := x | (x >> 1);
   x := x | (x >> 2);
@@ -48,7 +48,7 @@ def pow2AtLeastL : FunDecl := lfn (q) locals (x) {
 /-- `presize_tables()`: the `app`, `lam`, `forallE` tables' persistent tiers at the least power of
 two `≥ len(IN0) / 64`, `/ 512`, `/ 1024` slots (lane internspeed's `szall`). -/
 -- con-ron: none — sizes three cons tables up front (`HashMap2::with_capacity`); con-ron's start empty (D42)
-def presizeTablesL : FunDecl := lfn () locals (n, z) {
+@[no_expose] def presizeTablesL : FunDecl := lfn () locals (n, z) {
   n := call pow2_at_least(len(L.Front.IN0.u8) >> 6);
   z := call app_presize(n);
   n := call pow2_at_least(len(L.Front.IN0.u8) >> 9);

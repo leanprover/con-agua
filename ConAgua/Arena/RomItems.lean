@@ -83,7 +83,7 @@ variable (rom : List UInt8)
 
 /-- `rom_items(pos)`: run the item stream at `pos`; returns the position after its end tag. -/
 -- con-ron: ConRon/Arena/Checker.lean:316-346 ConRon.Arena.internAllPins
-def romItems : FunDecl := lfn (pos) locals (t, h, q, r) {
+@[no_expose] def romItems : FunDecl := lfn (pos) locals (t, h, q, r) {
   t := rom.c8[pos];
   if t == 5 { return pos + 1 };
   if t == 4 {

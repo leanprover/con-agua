@@ -122,7 +122,7 @@ bvar range and, as a second result, the fvar range (`derFW`; lane `exprops3`), a
 level-parameter bit (`exprLPW`, the twin's `lpOfData (derived h)`; helper `whnf4-d23`). The tags
 are tested in order of frequency on Init (`app` 4, `bvar` 0, `const` 3, `lam` 5, `fvar` 1, `forallE` 6,
 `sort` 2, `proj` 9, `letE` 7; lane `derb`); the tests are disjoint, so the order changes no result. -/
-def derB : FunDecl := lfn (h) locals (g, t, i, x) {
+@[no_expose] def derB : FunDecl := lfn (h) locals (g, t, i, x) {
   g := ⟦h⟧.tag;
   t := ⟦h⟧.tier;
   i := ⟦h⟧.idx;
@@ -153,7 +153,7 @@ def derB : FunDecl := lfn (h) locals (g, t, i, x) {
 the bvar range (`il_go`, `ilg_go`, `il_bvar`, `inst_go`, `lift_go`, `bvar_b`): one result
 register, and the `const`, `fvar` and `sort` arms fall through to the final `0` without a read.
 The `bvar` arm saturates by a branch, as `der_b`'s does. -/
-def derBv : FunDecl := lfn (h) locals (g, t, i, x) {
+@[no_expose] def derBv : FunDecl := lfn (h) locals (g, t, i, x) {
   g := ⟦h⟧.tag;
   t := ⟦h⟧.tier;
   i := ⟦h⟧.idx;
@@ -798,7 +798,7 @@ def mkAppW (m : Mem) (f a : Word) : Option (Word × Mem) :=
       (exprLPW m f ||| exprLPW m a)) (ainternW m f a)
 
 /-- con-ron: ConRon/Arena/Monad.lean:221-247 ConRon.Arena.internNodeE -/
-def mkApp : FunDecl := lfn (f, a) locals (x, y, s, r, q, xf, yf, xl, yl, tr) {
+@[no_expose] def mkApp : FunDecl := lfn (f, a) locals (x, y, s, r, q, xf, yf, xl, yl, tr) {
   if (f | a) >> 32 != 0 { abort };
   s := CTL.u64[4] + CTL.u64[5];
   r := call intern_app(f, a);
@@ -828,7 +828,7 @@ def mkLamW (m : Mem) (t b : Word) : Option (Word × Mem) :=
     (lainternW m t b)
 
 /-- con-ron: ConRon/Arena/Monad.lean:221-247 ConRon.Arena.internNodeE -/
-def mkLam : FunDecl := lfn (t, b) locals (x, y, s, r, q, xf, yf, xl, yl, tr) {
+@[no_expose] def mkLam : FunDecl := lfn (t, b) locals (x, y, s, r, q, xf, yf, xl, yl, tr) {
   if (t | b) >> 32 != 0 { abort };
   s := CTL.u64[28] + CTL.u64[29];
   r := call intern_lam(t, b);
@@ -856,7 +856,7 @@ def mkForallW (m : Mem) (t b : Word) : Option (Word × Mem) :=
     (fainternW m t b)
 
 /-- con-ron: ConRon/Arena/Monad.lean:221-247 ConRon.Arena.internNodeE -/
-def mkForall : FunDecl := lfn (t, b) locals (x, y, s, r, q, xf, yf, xl, yl, tr) {
+@[no_expose] def mkForall : FunDecl := lfn (t, b) locals (x, y, s, r, q, xf, yf, xl, yl, tr) {
   if (t | b) >> 32 != 0 { abort };
   s := CTL.u64[30] + CTL.u64[31];
   r := call intern_forall(t, b);
@@ -887,7 +887,7 @@ def mkLetW (m : Mem) (t v b : Word) : Option (Word × Mem) :=
     (leinternW m t v b)
 
 /-- con-ron: ConRon/Arena/Monad.lean:221-247 ConRon.Arena.internNodeE -/
-def mkLet : FunDecl := lfn (t, v, b) locals (x, y, z, s, r, q, xf, yf, zf, xl, yl, zl, tr) {
+@[no_expose] def mkLet : FunDecl := lfn (t, v, b) locals (x, y, z, s, r, q, xf, yf, zf, xl, yl, zl, tr) {
   if (t | v | b) >> 32 != 0 { abort };
   (x, xf, xl) := call der_b(t);
   (y, yf, yl) := call der_b(v);
@@ -916,7 +916,7 @@ def mkProjW (m : Mem) (n i e : Word) : Option (Word × Mem) :=
   else mkK PJDER 32 (cnt2 m 32) (packBFL (derBW m e) (derFW m e) (exprLPW m e)) (pjinternW m n i e)
 
 /-- con-ron: ConRon/Arena/Monad.lean:221-247 ConRon.Arena.internNodeE -/
-def mkProj : FunDecl := lfn (n, i, e) locals (x, s, r, q, xf, xl, tr) {
+@[no_expose] def mkProj : FunDecl := lfn (n, i, e) locals (x, s, r, q, xf, xl, tr) {
   if (n | e) >> 32 != 0 { abort };
   (x, xf, xl) := call der_b(e);
   s := CTL.u64[32] + CTL.u64[33];

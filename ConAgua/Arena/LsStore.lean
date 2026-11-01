@@ -54,7 +54,7 @@ def lsmatchW (r p : Array Word) (_t i o l h : Word) : Bool :=
     eqW p (rdW r (i * 3)) o l 0
 
 /-- con-ron: none — the open-addressing table's own key hash/compare (the twin's `Std.HashMap`) -/
-def lsMatch : FunDecl := lfn (t, i, o, l, h) locals (k, e) {
+@[no_expose] def lsMatch : FunDecl := lfn (t, i, o, l, h) locals (k, e) {
   k := i * 3;
   if LSREC⟨t⟩[k + 2] != h { return 0 };
   if LSREC⟨t⟩[k + 1] != l { return 0 };
@@ -141,7 +141,7 @@ The arena's `internLsNode us`: the persistent probe, the scratch probe if the sc
 open, the append to the tier the store is in. Handle tag `0` (`LsTag.list`). -/
 
 /-- con-ron: ConRon/Arena/Store.lean:94-95 ConRon.Arena.Tbl.find? -/
-def lsFind : FunDecl := consFindG lsCS
+@[no_expose] def lsFind : FunDecl := consFindG lsCS
 
 /-- The node count of tier `t` of the level-list table, `CTL[40 + t]`. -/
 def lscnt (m : Mem) (t : Word) : Word := rdW (m.arr64 CTL) (40 + t)
@@ -153,14 +153,14 @@ def lspushOK (m : Mem) (t : Word) : Bool :=
     decide (lscnt m t < m.len64 (tierA LSHP t))
 
 /-- con-ron: ConRon/Arena/Store.lean:97-102 ConRon.Arena.Tbl.push -/
-def lsPush : FunDecl := consPushG lsCS
+@[no_expose] def lsPush : FunDecl := consPushG lsCS
 
 /-- The model of `intern_ls`: the handle and the memory after, or `none` where the L code
 aborts (the library's `consInternM`). -/
 def lsinternW (m : Mem) (o l : Word) : Option (Word × Mem) := consInternM lsCS m [o, l]
 
 /-- con-ron: ConRon/Arena/Monad.lean:502-518 ConRon.Arena.internLsNode -/
-@[l_impl ConRon.Arena.internLsNode]
+@[no_expose, l_impl ConRon.Arena.internLsNode]
 def internLs : FunDecl := consInternG lsCS
 
 /-- The level-list store functions, as one `#eval`-able program. -/

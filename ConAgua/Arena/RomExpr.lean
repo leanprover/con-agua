@@ -95,7 +95,7 @@ def rsetOK (m : Mem) (h : Word) : Prop :=
 
 /-- con-ron: none — the L memo of the ROM expression interner (the twin's `EMemo` insert), with the
 canonical-encoding check. -/
-def memoPush : FunDecl := lfn (h) locals (o, f, j, d, z) {
+@[no_expose] def memoPush : FunDecl := lfn (h) locals (o, f, j, d, z) {
   (f, j, d) := call rset_find(h, 0);
   if f != 0 { abort };
   z := call rset_put(h, 0, 1, f, j);
@@ -168,7 +168,7 @@ instance (m : Mem) (k : Word) : Decidable (memoOk m k) := by unfold memoOk; infe
 
 /-- `memo_get(k)`: memo entry `k` (abort past the count).
 con-ron: none — the L memo's lookup (the twin's `EMemo` hit). -/
-def memoGet : FunDecl := lfn (k) locals () {
+@[no_expose] def memoGet : FunDecl := lfn (k) locals () {
   if CTL.u64[132] <= k { abort };
   return RMEMO.u64[k]
 }
@@ -191,7 +191,7 @@ variable (rom : List UInt8)
 
 /-- `rom_ex_ref(pos)`: a back reference: memo entry `u64 at pos + 1`. -/
 -- con-ron: ConRon/Arena/Frontend/Readback.lean:198-260 ConRon.Arena.Frontend.internExprGo
-def romExRef : FunDecl := lfn (pos) locals (k, h) {
+@[no_expose] def romExRef : FunDecl := lfn (pos) locals (k, h) {
   k := call rom_u64(pos + 1);
   h := call memo_get(k);
   return (h, pos + 9)
@@ -209,7 +209,7 @@ def litWordMem (m : Mem) (k : Word) : Mem :=
 
 /-- `rom_lit(k)`: intern the `natVal` literal `k` (its one limb at the pool top, none for `0`). -/
 -- con-ron: ConRon/Arena/Frontend/Readback.lean:198-260 ConRon.Arena.Frontend.internExprGo
-def romLit : FunDecl := lfn (k) locals (o, h, pt, pb) {
+@[no_expose] def romLit : FunDecl := lfn (k) locals (o, h, pt, pb) {
   o := CTL.u64[0];
   pt := ⦃o⦄.tier;
   pb := ⦃o⦄.idx;
@@ -280,7 +280,7 @@ theorem romLitW_eq (m : Mem) (k : Word) : romLitW m k =
 
 /-- `rom_ex_leaf(pos, t)`: a `bvar` (`t = 0`), `sort` (`1`), `const` (`2`) or literal (`3`) node. -/
 -- con-ron: ConRon/Arena/Frontend/Readback.lean:198-260 ConRon.Arena.Frontend.internExprGo
-def romExLeaf : FunDecl := lfn (pos, t) locals (h, q, a, b, k) {
+@[no_expose] def romExLeaf : FunDecl := lfn (pos, t) locals (h, q, a, b, k) {
   if t == 0 {
     k := call rom_u64(pos + 1);
     h := call intern_bvar(k);
@@ -308,7 +308,7 @@ def romExLeaf : FunDecl := lfn (pos, t) locals (h, q, a, b, k) {
 }
 
 /-- con-ron: ConRon/Arena/Frontend/Readback.lean:198-260 ConRon.Arena.Frontend.internExprGo -/
-def romExpr : FunDecl := lfn (pos) locals (t, h, q, k) {
+@[no_expose] def romExpr : FunDecl := lfn (pos) locals (t, h, q, k) {
   t := rom.c8[pos];
   if t == 9 {
     (h, q) := call rom_ex_ref(pos);
@@ -328,7 +328,7 @@ def romExpr : FunDecl := lfn (pos) locals (t, h, q, k) {
 
 /-- `rom_ex_one(pos, t)`: an `fvar` (`t = 4`) or a `proj` (`t = 10`) node. -/
 -- con-ron: ConRon/Arena/Frontend/Readback.lean:198-260 ConRon.Arena.Frontend.internExprGo
-def romExOne : FunDecl := lfn (pos, t) locals (h, q, a, b, k, z) {
+@[no_expose] def romExOne : FunDecl := lfn (pos, t) locals (h, q, a, b, k, z) {
   if t == 4 {
     k := call rom_u64(pos + 1);
     (a, q) := call rom_expr(pos + 9);
@@ -349,7 +349,7 @@ def romExOne : FunDecl := lfn (pos, t) locals (h, q, a, b, k, z) {
 
 /-- `rom_ex_two(pos, t)`: an `app`/`lam`/`forallE` (`t` = 5, 6, 7) or `letE` (`8`) node. -/
 -- con-ron: ConRon/Arena/Frontend/Readback.lean:198-260 ConRon.Arena.Frontend.internExprGo
-def romExTwo : FunDecl := lfn (pos, t) locals (h, q, a, b, c, z) {
+@[no_expose] def romExTwo : FunDecl := lfn (pos, t) locals (h, q, a, b, c, z) {
   (a, q) := call rom_expr(pos + 1);
   (b, q) := call rom_expr(q);
   if t == 5 {

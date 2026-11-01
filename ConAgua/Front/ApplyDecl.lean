@@ -87,7 +87,7 @@ def lpLoop : Stmt := lblk (v, i, top, cnt, c, e, x, h) {
 }
 
 /-- con-ron: ConRon/Arena/Frontend/ExportC.lean:409-459 ConRon.Arena.Frontend.processLineCoreD -/
-def lpPut : FunDecl := lfn (v) locals (i, top, cnt, c, e, x, h) {
+@[no_expose] def lpPut : FunDecl := lfn (v) locals (i, top, cnt, c, e, x, h) {
   if len(DLP.u64) == 0 { abort };
   top := DLP.u64[0];
   i := v + 1;
@@ -162,7 +162,7 @@ def lpPutW (b : Array UInt8) (m : Mem) (v : Word) : Option Mem :=
 /-! ## `decl_kind`, `decl_push`, `apply_decl` -/
 
 /-- con-ron: ConRon/Arena/Frontend/ExportC.lean:409-459 ConRon.Arena.Frontend.processLineCoreD -/
-def declKind : FunDecl := lfn (pl, hk, hn, flag) {
+@[no_expose] def declKind : FunDecl := lfn (pl, hk, hn, flag) {
   if pl == 20 { if flag != 0 { if flag == 1 { fail R_UNSAFE_AXIOM_2 }; abort }; return (1, 0) };
   if pl == 21 {
     if flag != 1 { if flag == 2 { abort R_ESCAPED_STRING }; if flag == 0 { fail R_DEFINITION_WITH_SAFETY }; abort };
@@ -177,7 +177,7 @@ def declKind : FunDecl := lfn (pl, hk, hn, flag) {
 }
 
 /-- con-ron: ConRon/Arena/Frontend/ExportC.lean:409-459 ConRon.Arena.Frontend.processLineCoreD -/
-def declPush : FunDecl := lfn (k, n, o, l, t, v, q, h) locals (c, x) {
+@[no_expose] def declPush : FunDecl := lfn (k, n, o, l, t, v, q, h) locals (c, x) {
   if len(DECL.u64) == 0 { abort };
   c := DECL.u64[0];
   if 1152921504606846976 <= c { abort R_CAP_WORD };
@@ -209,7 +209,7 @@ def pushW (m : Mem) (k n o l t v q h : Word) : Option Mem :=
     (rdW (m.arr64 DECL) 0 + 1))
 
 /-- con-ron: ConRon/Arena/Frontend/ExportC.lean:409-459 ConRon.Arena.Frontend.processLineCoreD -/
-def declCv : FunDecl := lfn (name, lps, type) locals (n, t, o, l) {
+@[no_expose] def declCv : FunDecl := lfn (name, lps, type) locals (n, t, o, l) {
   n := call name_get(name);
   t := call expr_get(type);
   (o, l) := call lp_put(lps);
@@ -217,7 +217,7 @@ def declCv : FunDecl := lfn (name, lps, type) locals (n, t, o, l) {
 }
 
 /-- con-ron: ConRon/Arena/Frontend/ExportC.lean:409-459 ConRon.Arena.Frontend.processLineCoreD -/
-@[l_impl ConRon.Arena.Frontend.processLineCoreD]
+@[no_expose, l_impl ConRon.Arena.Frontend.processLineCoreD]
 def applyDecl : FunDecl :=
     lfn (pl, name, lps, type, value, hk, hn, flag) locals (n, t, o, l, k, q, v, z) {
   (n, t, o, l) := call decl_cv(name, lps, type);

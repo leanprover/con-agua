@@ -54,7 +54,7 @@ open L.Scan.Str (byteE hex4N hex3N)
 /-! ## `esc_one`, `esc_sur` -/
 
 /-- con-leche: ConLeche/Frontend/Scan/Fast.lean:563-622 ConLeche.Frontend.unescape -/
-def escSur : FunDecl := lfn (j, e, v) locals (c, d, f, ok, w) {
+@[no_expose] def escSur : FunDecl := lfn (j, e, v) locals (c, d, f, ok, w) {
   c := call byte_in(j + 6, e);
   d := call byte_in(j + 7, e);
   f := call byte_in(j + 8, e);
@@ -70,7 +70,7 @@ def escSur : FunDecl := lfn (j, e, v) locals (c, d, f, ok, w) {
 
 /-- con-leche: ConLeche/Frontend/Scan/Fast.lean:563-622 ConLeche.Frontend.unescape -/
 -- con-leche: ConLeche/Frontend/Scan/Fast.lean:559-561 ConLeche.Frontend.replacementChar
-@[l_impl ConLeche.Frontend.replacementChar]
+@[no_expose, l_impl ConLeche.Frontend.replacementChar]
 def escOne : FunDecl := lfn (j, e) locals (d, ok, v, cp, jn) {
   d := call byte_in(j + 1, e);
   if d == 34 || d == 92 || d == 47 { return (1, d, j + 2) };
@@ -120,7 +120,7 @@ def escOneN (b : Array UInt8) (e j : Word) : Word × Word × Word :=
 
 /-- con-leche: ConLeche/Frontend/Scan/Fast.lean:563-622 ConLeche.Frontend.unescape -/
 -- con-leche: ConLeche/Frontend/Scan/Fast.lean:556-557 ConLeche.Frontend.utf8Of
-@[l_impl ConLeche.Frontend.utf8Of]
+@[no_expose, l_impl ConLeche.Frontend.utf8Of]
 def utf8Put : FunDecl := lfn (top, k, cp) locals (q, pt, pb) {
   q := top + k;
   pt := ⦃top⦄.tier;
@@ -216,7 +216,7 @@ def escLoop : Stmt := lblk (vs, ve, top, k, j, c, ok, cp, jn, pt, pb, d, n) {
 }
 
 /-- con-leche: ConLeche/Frontend/Scan/Fast.lean:563-622 ConLeche.Frontend.unescape -/
-@[l_impl ConLeche.Frontend.unescape]
+@[no_expose, l_impl ConLeche.Frontend.unescape]
 def strPutEsc : FunDecl := lfn (vs, ve) locals (top, k, j, c, ok, cp, jn, pt, pb, d, n) {
   if ve < vs { abort };
   if len(IN.u8) < ve { abort };

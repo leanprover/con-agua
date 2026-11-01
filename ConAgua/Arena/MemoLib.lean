@@ -197,7 +197,7 @@ def mfindLoopG (S : MemoSch) : Stmt := lblk (k1, k2, n, e, j, d, b) {
 }
 
 /-- con-ron: none — the memo library (open addressing over fixed arrays; the twin's `Std.HashMap` caches) -/
-def memoFindG (S : MemoSch) : FunDecl := lfn (k1, k2) locals (n, e, j, d, b) {
+@[no_expose] def memoFindG (S : MemoSch) : FunDecl := lfn (k1, k2) locals (n, e, j, d, b) {
   e := CTL.u64[⟪S.cs⟫] + 1;
   if S.arr.u64[0] == e {
     b := S.arr.u64[1];
@@ -437,7 +437,7 @@ def mgrowBlkG (S : MemoSch) : Stmt :=
 A leaf with 13 locals: the growth reuses `fd`, `j` and the region's `b`, `n`, so that the leaf
 register allocation keeps the common path (no growth) in registers; `fd` also holds `4 j` for the
 key's three stores. -/
-def memoPutG (S : MemoSch) : FunDecl :=
+@[no_expose] def memoPutG (S : MemoSch) : FunDecl :=
   lfn (k1, k2, v, fd, j) locals (c, e, b, n, d, x, y, w) {
   if fd == 0 {
     c := CTL.u64[⟪S.cs + 1⟫];
@@ -624,7 +624,7 @@ def mclearG (S : MemoSch) (m : Mem) : Mem :=
   (m.set64 CTL S.cs (rdW (m.arr64 CTL) S.cs + 1)).set64 CTL (S.cs + 1) 0
 
 /-- con-ron: none — the memo library (open addressing over fixed arrays; the twin's `Std.HashMap` caches) -/
-def memoClearG (S : MemoSch) : FunDecl := lfn () locals () {
+@[no_expose] def memoClearG (S : MemoSch) : FunDecl := lfn () locals () {
   if CTL.u64[⟪S.cs⟫] + 2 == 0 { abort };
   CTL.u64[⟪S.cs⟫] := CTL.u64[⟪S.cs⟫] + 1;
   CTL.u64[⟪S.cs + 1⟫] := 0;
@@ -747,7 +747,7 @@ def mfitTailG (S : MemoSch) : Stmt := lblk (s, c, h, n, w, l) {
 }
 
 /-- con-ron: none — the memo library (open addressing over fixed arrays; the twin's `Std.HashMap` caches) -/
-def memoClearFitG (S : MemoSch) : FunDecl := lfn () locals (s, c, h, n, w, l) {
+@[no_expose] def memoClearFitG (S : MemoSch) : FunDecl := lfn () locals (s, c, h, n, w, l) {
   s := CTL.u64[⟪S.cs⟫];
   if s + 2 == 0 { abort };
   c := CTL.u64[⟪S.cs + 1⟫];
@@ -867,7 +867,7 @@ def benterG (c : Word) (m : Mem) : Mem :=
   (m.set64 CTL c (rdW (m.arr64 CTL) c + 1)).set64 CTL (c + 1) (rdW (m.arr64 CTL) c + 1)
 
 /-- con-ron: none — the memo library (open addressing over fixed arrays; the twin's `Std.HashMap` caches) -/
-def bankEnterG (c : Word) : FunDecl := lfn () locals (s, g) {
+@[no_expose] def bankEnterG (c : Word) : FunDecl := lfn () locals (s, g) {
   s := CTL.u64[⟪c + 1⟫];
   g := CTL.u64[⟪c⟫] + 1;
   if g >= 4294967296 { abort };
@@ -877,7 +877,7 @@ def bankEnterG (c : Word) : FunDecl := lfn () locals (s, g) {
 }
 
 /-- con-ron: none — the memo library (open addressing over fixed arrays; the twin's `Std.HashMap` caches) -/
-def bankLeaveG (c : Word) : FunDecl := lfn (s) locals () {
+@[no_expose] def bankLeaveG (c : Word) : FunDecl := lfn (s) locals () {
   CTL.u64[⟪c + 1⟫] := s;
   return 0
 }

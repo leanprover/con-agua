@@ -299,7 +299,7 @@ def keyAtN (b : Array UInt8) (i kl : Word) : Word :=
   else 0
 
 /-- con-leche: ConLeche/Frontend/Scan/Fast.lean:224-443 ConLeche.Frontend.keyAt -/
-@[l_impl ConLeche.Frontend.keyAt]
+@[no_expose, l_impl ConLeche.Frontend.keyAt]
 def keyAtG1 : FunDecl := lfn (i, kl, c) {
   if c == 105 {  -- 'i'
       if kl == 2 {
@@ -352,7 +352,7 @@ def keyAtG1 : FunDecl := lfn (i, kl, c) {
 }
 
 /-- con-leche: ConLeche/Frontend/Scan/Fast.lean:224-443 ConLeche.Frontend.keyAt -/
-@[l_impl ConLeche.Frontend.keyAt]
+@[no_expose, l_impl ConLeche.Frontend.keyAt]
 def keyAtG2 : FunDecl := lfn (i, kl, c) {
   if c == 110 {  -- 'n'
       if kl == 4 {
@@ -404,7 +404,7 @@ def keyAtG2 : FunDecl := lfn (i, kl, c) {
 }
 
 /-- con-leche: ConLeche/Frontend/Scan/Fast.lean:224-443 ConLeche.Frontend.keyAt -/
-@[l_impl ConLeche.Frontend.keyAt]
+@[no_expose, l_impl ConLeche.Frontend.keyAt]
 def keyAtG3 : FunDecl := lfn (i, kl, c) {
   if c == 115 {  -- 's'
       if kl == 3 {
@@ -454,7 +454,7 @@ def keyAtG3 : FunDecl := lfn (i, kl, c) {
 }
 
 /-- con-leche: ConLeche/Frontend/Scan/Fast.lean:224-443 ConLeche.Frontend.keyAt -/
-@[l_impl ConLeche.Frontend.keyAt]
+@[no_expose, l_impl ConLeche.Frontend.keyAt]
 def keyAtG4 : FunDecl := lfn (i, kl, c) {
   if c == 114 {  -- 'r'
       if kl == 4 {
@@ -503,7 +503,7 @@ def keyAtG4 : FunDecl := lfn (i, kl, c) {
 }
 
 /-- con-leche: ConLeche/Frontend/Scan/Fast.lean:224-443 ConLeche.Frontend.keyAt -/
-@[l_impl ConLeche.Frontend.keyAt]
+@[no_expose, l_impl ConLeche.Frontend.keyAt]
 def keyAtG5 : FunDecl := lfn (i, kl, c) {
   if c == 112 {  -- 'p'
       if kl == 3 {
@@ -552,7 +552,7 @@ def keyAtG5 : FunDecl := lfn (i, kl, c) {
 }
 
 /-- con-leche: ConLeche/Frontend/Scan/Fast.lean:224-443 ConLeche.Frontend.keyAt -/
-@[l_impl ConLeche.Frontend.keyAt]
+@[no_expose, l_impl ConLeche.Frontend.keyAt]
 def keyAtG6 : FunDecl := lfn (i, kl, c) {
   if c == 97 {  -- 'a'
       if kl == 3 {
@@ -606,7 +606,7 @@ def keyAtG6 : FunDecl := lfn (i, kl, c) {
 
 /-- `key_at(i, kl)`, split into the six groups above (same reason as `keyAtN`). -/
 -- con-leche: ConLeche/Frontend/Scan/Fast.lean:224-443 ConLeche.Frontend.keyAt
-@[l_impl ConLeche.Frontend.keyAt]
+@[no_expose, l_impl ConLeche.Frontend.keyAt]
 def keyAt : FunDecl := lfn (i, kl) locals (c, g) {
   c := IN.u8[i + 1];
   if c == 105 || c == 100 { g := call key_at_g1(i, kl, c); return g };
@@ -627,7 +627,7 @@ def valueAtN (b : Array UInt8) (i ke : Word) : Word :=
   if p < UInt64.ofNat b.size ∧ byteW b p = 58 then UInt64.ofNat (skipWsN b (p + 1).toNat) else i
 
 /-- con-leche: ConLeche/Frontend/Scan/Fast.lean:445-450 ConLeche.Frontend.valueAt -/
-@[l_impl ConLeche.Frontend.valueAt]
+@[no_expose, l_impl ConLeche.Frontend.valueAt]
 def valueAt : FunDecl := lfn (i, ke) locals (p, v) {
   p := call skip_ws(ke + 1);
   if p < len(IN.u8) && IN.u8[p] == 58 {

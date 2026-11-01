@@ -73,7 +73,7 @@ def litArm (F : Nat → Nat → Nat) (a b : Nat) : AM (Option EIdx) := do
 /-- `natAddLit` with `f` for `nat_add`: `o := CTL[0]; l := call f(oa, la, ob, lb);
 h := call intern_lit(o, l); return h`. -/
 -- con-ron: ConRon/Arena/Core.lean:999-1040 ConRon.Arena.natOpResult
-def topLit (f : FnName) : FunDecl :=
+@[no_expose] def topLit (f : FnName) : FunDecl :=
   ⟨4, 7, .seq (.set 4 (.ld64 CTL (.const 0)))
     (.seq (.call [5] f [.var 0, .var 1, .var 2, .var 3])
       (.seq (.call [6] "intern_lit" [.var 4, .var 5]) (.ret [.var 6])))⟩
@@ -174,7 +174,7 @@ end generic
 
 /-- `nat_div_lit(oa, la, ob, lb)`: the quotient slice of `nat_divmod`, interned. -/
 -- con-ron: ConRon/Arena/Core.lean:999-1040 ConRon.Arena.natOpResult
-@[l_impl ConRon.Arena.natOpResult]
+@[no_expose, l_impl ConRon.Arena.natOpResult]
 def natDivLit : FunDecl := lfn (oa, la, ob, lb) locals (o, l, h) {
   (o, l) := call nat_divmod(oa, la, ob, lb);
   h := call intern_lit(o, l);
@@ -183,7 +183,7 @@ def natDivLit : FunDecl := lfn (oa, la, ob, lb) locals (o, l, h) {
 
 /-- `nat_mod_lit(oa, la, ob, lb)`: the remainder slice of `nat_divmod`, interned. -/
 -- con-ron: ConRon/Arena/Core.lean:999-1040 ConRon.Arena.natOpResult
-@[l_impl ConRon.Arena.natOpResult]
+@[no_expose, l_impl ConRon.Arena.natOpResult]
 def natModLit : FunDecl := lfn (oa, la, ob, lb) locals (q, ql, o, l, h) {
   (q, ql, o, l) := call nat_divmod(oa, la, ob, lb);
   h := call intern_lit(o, l);
@@ -256,7 +256,7 @@ end divmod
 
 /-- `nat_pred_lit(oa, la)`: write the limb `1` at the top, subtract it, intern the result. -/
 -- con-ron: ConRon/Arena/Core.lean:999-1040 ConRon.Arena.natOpResult
-@[l_impl ConRon.Arena.natOpResult]
+@[no_expose, l_impl ConRon.Arena.natOpResult]
 def natPredLit : FunDecl := lfn (oa, la) locals (o, l, h, pt, pb) {
   o := CTL.u64[0];
   pt := ⦃o⦄.tier;
@@ -328,7 +328,7 @@ end pred
 else `(1, h)` with `h` the interned power. An exponent of two or more limbs is at least `2^64`
 (`b` normalised). -/
 -- con-ron: ConRon/Arena/Core.lean:999-1040 ConRon.Arena.natOpResult
-@[l_impl ConRon.Arena.natOpResult]
+@[no_expose, l_impl ConRon.Arena.natOpResult]
 def natPowLit : FunDecl := lfn (oa, la, ob, lb) locals (e, o, l, h) {
   if 1 < lb { return (0, 0) };
   if lb == 1 { e := POOL⦃ob⦄ };
@@ -410,7 +410,7 @@ end pow
 two values are equal, else `f`, at the level list `us` (the empty one). The three handles are
 the pins `boolTrueName`, `boolFalseName`, `emptyLevels`, which the caller reads. -/
 -- con-ron: ConRon/Arena/Core.lean:999-1040 ConRon.Arena.natOpResult
-@[l_impl ConRon.Arena.natOpResult]
+@[no_expose, l_impl ConRon.Arena.natOpResult]
 def natBeqLit : FunDecl := lfn (oa, la, ob, lb, t, f, us) locals (c, h) {
   c := call nat_cmp(oa, la, ob, lb);
   if c != 1 { t := f };
@@ -420,7 +420,7 @@ def natBeqLit : FunDecl := lfn (oa, la, ob, lb, t, f, us) locals (c, h) {
 
 /-- `nat_ble_lit`: as `nat_beq_lit`, `t` unless `a > b`. -/
 -- con-ron: ConRon/Arena/Core.lean:999-1040 ConRon.Arena.natOpResult
-@[l_impl ConRon.Arena.natOpResult]
+@[no_expose, l_impl ConRon.Arena.natOpResult]
 def natBleLit : FunDecl := lfn (oa, la, ob, lb, t, f, us) locals (c, h) {
   c := call nat_cmp(oa, la, ob, lb);
   if c == 2 { t := f };
@@ -444,7 +444,7 @@ def natBleArm (a b : Nat) : AM (Option EIdx) := do
 
 /-- `nat_gcd_lit(oa, la, ob, lb)`: `nat_gcd`'s slice, interned. -/
 -- con-ron: ConRon/Arena/Core.lean:999-1040 ConRon.Arena.natOpResult
-@[l_impl ConRon.Arena.natOpResult]
+@[no_expose, l_impl ConRon.Arena.natOpResult]
 def natGcdLit : FunDecl := lfn (oa, la, ob, lb) locals (o, l, h) {
   (o, l) := call nat_gcd(oa, la, ob, lb);
   h := call intern_lit(o, l);
@@ -520,7 +520,7 @@ def natModArm (a b : Nat) : AM (Option EIdx) := do
 reads as reads of `PINS` (word `1 + PIN_*`, after the flag) and the arms in the twin's order.
 Returns `(1, h)` for `some h`, `(0, 0)` for `none` (`decOpt`). Refined in `PinsNatOp.lean`. -/
 /-- con-ron: ConRon/Arena/Core.lean:999-1040 ConRon.Arena.natOpResult -/
-@[l_impl ConRon.Arena.natOpResult]
+@[no_expose, l_impl ConRon.Arena.natOpResult]
 def natOpResultL : FunDecl := lfn (c, oa, la, ob, lb) locals (f, h) {
   if PINS.u64[0] == 0 { abort };
   if c == PINS.u64[15] { h := call nat_pred_lit(oa, la); return (1, h) };

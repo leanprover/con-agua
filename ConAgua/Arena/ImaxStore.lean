@@ -96,7 +96,7 @@ def imaxCS : ConsSch where
 /-! ## `imax_find(t, u, v, h)`: the probe -/
 
 /-- con-ron: ConRon/Arena/Store.lean:94-95 ConRon.Arena.Tbl.find? -/
-def imaxFind : FunDecl := consFindG imaxCS
+@[no_expose] def imaxFind : FunDecl := consFindG imaxCS
 
 /-! ## `imax_push(t, u, v, j)`: append a node to tier `t`, register it at slot `j` -/
 
@@ -109,7 +109,7 @@ def impushOK (m : Mem) (t : Word) : Bool :=
     decide (imcnt m t < m.len64 (tierA IHP t))
 
 /-- con-ron: ConRon/Arena/Store.lean:97-102 ConRon.Arena.Tbl.push -/
-def imaxPush : FunDecl := consPushG imaxCS
+@[no_expose] def imaxPush : FunDecl := consPushG imaxCS
 
 /-! ## `intern_imax(u, v)`: hash-cons the level `imax u v`
 
@@ -121,7 +121,7 @@ aborts (the library's `consInternM`). -/
 def iminternW (m : Mem) (u v : Word) : Option (Word × Mem) := consInternM imaxCS m [u, v]
 
 /-- con-ron: ConRon/Arena/Monad.lean:444-460 ConRon.Arena.internLNode -/
-@[l_impl ConRon.Arena.internLNode]
+@[no_expose, l_impl ConRon.Arena.internLNode]
 def internImax : FunDecl := consInternG imaxCS
 
 /-- The `imax` store functions, as one `#eval`-able program. -/

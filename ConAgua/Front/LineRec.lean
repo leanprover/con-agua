@@ -50,7 +50,7 @@ open L.Scan.Line (idxCode lineVal)
 
 /-- The key bit of key `k` in the object of payload key `kd`, `0` if the object has no key `k`. -/
 -- con-leche: ConLeche/Frontend/Scan/Fast.lean:2427-2574 ConLeche.Frontend.scanLineLoop
-def subBitF : FunDecl := lfn (kd, k) {
+@[no_expose] def subBitF : FunDecl := lfn (kd, k) {
   if kd == 2 {  -- `app`: `arg`, `fn`
     if k == 3 { return 1 };
     if k == 13 { return 2 };
@@ -97,7 +97,7 @@ def subBitF : FunDecl := lfn (kd, k) {
 
 /-- The end of key `k`'s value at `v` (its quote at `ks`), `0` if it does not scan. -/
 -- con-leche: ConLeche/Frontend/Scan/Fast.lean:2427-2574 ConLeche.Frontend.scanLineLoop
-def subValF : FunDecl := lfn (ks, k, v) locals (e, ok, x) {
+@[no_expose] def subValF : FunDecl := lfn (ks, k, v) locals (e, ok, x) {
   if k == 5 {  -- `binderInfo`
     e := call scan_binder_info(v);
     return e
@@ -155,7 +155,7 @@ def subLoop : Stmt := lblk (o, kd, mk, i, w, seen, x0, x1, x2, x3, tag, ks, k, v
 
 /-- The object of payload key `kd` at `o`, its required keys `mk`: `(end, x0, x1, x2, x3)`. -/
 -- con-leche: ConLeche/Frontend/Scan/Fast.lean:2427-2574 ConLeche.Frontend.scanLineLoop
-def subRec : FunDecl := lfn (o, kd, mk) locals (i, w, seen, x0, x1, x2, x3, tag, ks, k, v, e, x, bt) {
+@[no_expose] def subRec : FunDecl := lfn (o, kd, mk) locals (i, w, seen, x0, x1, x2, x3, tag, ks, k, v, e, x, bt) {
   if !(o < len(IN.u8) && IN.u8[o] == 123) { return (0, 0, 0, 0, 0) };
   i := o + 1;
   w := 1;
@@ -298,7 +298,7 @@ def lrLoop : Stmt := lblk (i, w, ik, pk, pl, idx, a, c, d, tag, ks, k, v, e, x, 
 closing brace (`0` if the line does not scan), the fields as the record passes read them (`pl`
 `1`–`7` a name, a level or the header, `8`–`17` an expression, `0` a declaration). -/
 -- con-leche: ConLeche/Frontend/Scan/Fast.lean:2427-2574 ConLeche.Frontend.scanLineLoop
-def lineRec : FunDecl := lfn (i) locals (w, ik, pk, pl, idx, a, c, d, tag, ks, k, v, e, x, t0, t1, t2, t3, y) {
+@[no_expose] def lineRec : FunDecl := lfn (i) locals (w, ik, pk, pl, idx, a, c, d, tag, ks, k, v, e, x, t0, t1, t2, t3, y) {
   w := 1;
   ⟪lrLoop⟫;
   return (0, 0, 0, 0, 0, 0)

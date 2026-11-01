@@ -53,7 +53,7 @@ open L.Front
 
 /-- `if_reset()`: both scratch arrays empty. -/
 -- con-ron: none — L scratch-array plumbing (the twin builds `List`s/`Array`s)
-def ifReset : FunDecl := lfn () {
+@[no_expose] def ifReset : FunDecl := lfn () {
   if len(IFR.u64) == 0 || len(IFL.u64) == 0 { abort };
   IFR.u64[0] := 0;
   IFL.u64[0] := 0;
@@ -62,7 +62,7 @@ def ifReset : FunDecl := lfn () {
 
 /-- `ifr_alloc(n)`: `n` words of `IFR` (not cleared); their absolute index. -/
 -- con-ron: none — L scratch-array plumbing (the twin builds `List`s/`Array`s)
-def ifrAlloc : FunDecl := lfn (n) locals (o) {
+@[no_expose] def ifrAlloc : FunDecl := lfn (n) locals (o) {
   if len(IFR.u64) == 0 { abort };
   o := IFR.u64[0] + 1;
   if len(IFR.u64) < o { abort R_CAP_TABLE };
@@ -73,7 +73,7 @@ def ifrAlloc : FunDecl := lfn (n) locals (o) {
 
 /-- `ifl_alloc(n)`: `n` words of `IFL` (not cleared); their absolute index. -/
 -- con-ron: none — L scratch-array plumbing (the twin builds `List`s/`Array`s)
-def iflAlloc : FunDecl := lfn (n) locals (o) {
+@[no_expose] def iflAlloc : FunDecl := lfn (n) locals (o) {
   if len(IFL.u64) == 0 { abort };
   o := IFL.u64[0] + 1;
   if len(IFL.u64) < o { abort R_CAP_TABLE };
@@ -84,7 +84,7 @@ def iflAlloc : FunDecl := lfn (n) locals (o) {
 
 /-- `ifl_push(x)`: `x` appended to `IFL`; its index. -/
 -- con-ron: none — L scratch-array plumbing (the twin builds `List`s/`Array`s)
-def iflPush : FunDecl := lfn (x) locals (o) {
+@[no_expose] def iflPush : FunDecl := lfn (x) locals (o) {
   o := call ifl_alloc(1);
   IFL.u64[o] := x;
   return o
@@ -92,7 +92,7 @@ def iflPush : FunDecl := lfn (x) locals (o) {
 
 /-- `fld_alloc(kind, n)`: a record of kind `kind` (`3`, a rule, in `IFL`; else in `IFR`). -/
 -- con-ron: none — L scratch-array plumbing (the twin builds `List`s/`Array`s)
-def fldAlloc : FunDecl := lfn (kind, n) locals (o) {
+@[no_expose] def fldAlloc : FunDecl := lfn (kind, n) locals (o) {
   if kind == 3 { o := call ifl_alloc(n); return o };
   o := call ifr_alloc(n);
   return o
@@ -100,7 +100,7 @@ def fldAlloc : FunDecl := lfn (kind, n) locals (o) {
 
 /-- `fld_put(kind, p, s, x)`: word `s` of the record of kind `kind` at `p` is `x`. -/
 -- con-ron: none — L scratch-array plumbing (the twin builds `List`s/`Array`s)
-def fldPut : FunDecl := lfn (kind, p, s, x) {
+@[no_expose] def fldPut : FunDecl := lfn (kind, p, s, x) {
   if kind == 3 { IFL.u64[p + s] := x; return 0 };
   IFR.u64[p + s] := x;
   return 0
@@ -108,7 +108,7 @@ def fldPut : FunDecl := lfn (kind, p, s, x) {
 
 /-- `ind_size(kind)`: the record size of each kind. -/
 -- con-leche: ConLeche/Frontend/Scan/Fast.lean:2397-2401 ConLeche.Frontend.scanIndDecl
-def indSize : FunDecl := lfn (kind) {
+@[no_expose] def indSize : FunDecl := lfn (kind) {
   if kind == 0 || kind == 2 { return 11 };
   if kind == 1 { return 10 };
   if kind == 3 { return 3 };
@@ -124,7 +124,7 @@ record of kind `kind` is read, and where it goes. `how`: `1` a number, `2` a Boo
 `slot + 1`), `7` a list of records of kind `sub` (slots `slot`, `slot + 1`), `8` a Boolean read
 past; `0` a key the record cannot have (aborts). -/
 /-- con-leche: ConLeche/Frontend/Scan/Fast.lean:2397-2401 ConLeche.Frontend.scanIndDecl -/
-def indSlot : FunDecl := lfn (kind, k) {
+@[no_expose] def indSlot : FunDecl := lfn (kind, k) {
   if k == 34 { if kind <= 2 { return (1, 0, 0) } };  -- `name`
   if k == 61 { if kind <= 2 { return (1, 2, 0) } };  -- `type`
   if k == 31 { if kind <= 2 { return (3, 1, 0) } };  -- `levelParams`
@@ -196,7 +196,7 @@ def iflIdsLoop : Stmt := lblk (v, i, o, cnt, c, e, x) {
 /-- `ifl_ids(v)`: the number list whose `[` is at `v`, its items appended to `IFL`;
 `(off, cnt)`. -/
 -- con-leche: ConLeche/Frontend/Scan/Fast.lean:2397-2401 ConLeche.Frontend.scanIndDecl
-def iflIds : FunDecl := lfn (v) locals (i, o, cnt, c, e, x) {
+@[no_expose] def iflIds : FunDecl := lfn (v) locals (i, o, cnt, c, e, x) {
   o := call ifl_alloc(0);
   i := v + 1;
   ⟪iflIdsLoop⟫;
@@ -206,7 +206,7 @@ def iflIds : FunDecl := lfn (v) locals (i, o, cnt, c, e, x) {
 /-- `ind_num(kind, p, ks, v, h, s)`: a number value at `v` (key quote at `ks`) into slot `s` of the
 record (`h = 6`: an optional number, its flag at `s`, the number at `s + 1`); the end. -/
 -- con-leche: ConLeche/Frontend/Scan/Fast.lean:2397-2401 ConLeche.Frontend.scanIndDecl
-def indNum : FunDecl := lfn (kind, p, ks, v, h, s) locals (e, x, o) {
+@[no_expose] def indNum : FunDecl := lfn (kind, p, ks, v, h, s) locals (e, x, o) {
   e := call slot_nat(ks, v);
   x := call read_nat(v, e);
   if x == 18446744073709551615 { abort R_LONG_NUMBER };
@@ -218,7 +218,7 @@ def indNum : FunDecl := lfn (kind, p, ks, v, h, s) locals (e, x, o) {
 /-- `ind_bool(kind, p, v, h, s)`: a Boolean value at `v` into slot `s` (`h = 8`: read past);
 the end. -/
 -- con-leche: ConLeche/Frontend/Scan/Fast.lean:2397-2401 ConLeche.Frontend.scanIndDecl
-def indBool : FunDecl := lfn (kind, p, v, h, s) locals (o, x, e) {
+@[no_expose] def indBool : FunDecl := lfn (kind, p, v, h, s) locals (o, x, e) {
   (o, x, e) := call scan_bool(v);
   if o == 0 { abort };
   if h == 2 { o := call fld_put(kind, p, s, x) };
@@ -229,7 +229,7 @@ def indBool : FunDecl := lfn (kind, p, v, h, s) locals (o, x, e) {
 read past (`h = 4`), or its items appended to `IFL` and the slice into slots `s`, `s + 1`
 (`h = 5`); the end. -/
 -- con-leche: ConLeche/Frontend/Scan/Fast.lean:2397-2401 ConLeche.Frontend.scanIndDecl
-def indNList : FunDecl := lfn (kind, p, v, h, s) locals (e, x, o, c) {
+@[no_expose] def indNList : FunDecl := lfn (kind, p, v, h, s) locals (e, x, o, c) {
   (e, x) := call scan_nat_list(v);
   if h == 3 { o := call fld_put(kind, p, s, v) };
   if h == 5 {
@@ -247,7 +247,7 @@ the record of kind `kind` at `p`, read into it; the end of the value. -/
 -- con-leche: ConLeche/Frontend/Scan/Fast.lean:1845-1851 ConLeche.Frontend.scanIndCtor
 -- con-leche: ConLeche/Frontend/Scan/Fast.lean:1523-1527 ConLeche.Frontend.scanIndRec
 -- con-leche: ConLeche/Frontend/Scan/Fast.lean:1349-1353 ConLeche.Frontend.scanRule
-@[l_impl ConLeche.Frontend.scanIndDecl ConLeche.Frontend.scanIndType ConLeche.Frontend.scanIndCtor
+@[no_expose, l_impl ConLeche.Frontend.scanIndDecl ConLeche.Frontend.scanIndType ConLeche.Frontend.scanIndCtor
   ConLeche.Frontend.scanIndRec ConLeche.Frontend.scanRule]
 def indMember : FunDecl := lfn (kind, p, ks, k, v) locals (h, s, sub, e, x, o, c) {
   (h, s, sub) := call ind_slot(kind, k);
@@ -279,7 +279,7 @@ def indObjLoop : Stmt := lblk (i, kind, p, w, tag, ks, k, v, e) {
 /-- `ind_obj(i, kind, p)`: the object whose `{` is at `i`, read into the record of kind `kind`
 at `p`; the position after its `}`. -/
 -- con-leche: ConLeche/Frontend/Scan/Fast.lean:2397-2401 ConLeche.Frontend.scanIndDecl
-def indObj : FunDecl := lfn (i, kind, p) locals (w, tag, ks, k, v, e) {
+@[no_expose] def indObj : FunDecl := lfn (i, kind, p) locals (w, tag, ks, k, v, e) {
   i += 1;
   w := 1;
   ⟪indObjLoop⟫;
@@ -311,7 +311,7 @@ flags `0`); `(off, cnt, end)`. -/
 -- con-leche: ConLeche/Frontend/Scan/Fast.lean:1881-1885 ConLeche.Frontend.scanIndCtors
 -- con-leche: ConLeche/Frontend/Scan/Fast.lean:1557-1561 ConLeche.Frontend.scanIndRecs
 -- con-leche: ConLeche/Frontend/Scan/Fast.lean:1383-1387 ConLeche.Frontend.scanRules
-@[l_impl ConLeche.Frontend.scanIndTypes ConLeche.Frontend.scanIndCtors
+@[no_expose, l_impl ConLeche.Frontend.scanIndTypes ConLeche.Frontend.scanIndCtors
   ConLeche.Frontend.scanIndRecs ConLeche.Frontend.scanRules]
 def indList : FunDecl := lfn (v, sub) locals (i, o, cnt, c, e, q, sz) {
   if len(IN.u8) <= v { abort };
@@ -326,7 +326,7 @@ def indList : FunDecl := lfn (v, sub) locals (i, o, cnt, c, e, q, sz) {
 /-- `ind_fields(v)`: the `inductive` object whose `{` is at `v`, read (the scratch arrays reset
 first); its three lists `(types.off, types.cnt, ctors.off, ctors.cnt, recs.off, recs.cnt)`. -/
 -- con-leche: ConLeche/Frontend/Scan/Fast.lean:2397-2401 ConLeche.Frontend.scanIndDecl
-@[l_impl ConLeche.Frontend.scanIndDecl]
+@[no_expose, l_impl ConLeche.Frontend.scanIndDecl]
 def indFields : FunDecl := lfn (v) locals (p, e) {
   e := call if_reset();
   p := call ifr_alloc(6);

@@ -45,7 +45,7 @@ section namesTo
 variable (rom : List UInt8)
 
 /-- con-ron: none — the ROM reader (L has constant bytes where the twin has con-leche values) -/
-def romNamesTo : FunDecl := lfn (q, k, d) locals (h, r) {
+@[no_expose] def romNamesTo : FunDecl := lfn (q, k, d) locals (h, r) {
   if k == 0 { return q };
   (h, q) := call rom_name(q);
   PINS.u64[d] := h;
@@ -254,7 +254,7 @@ end namesToRef
 /-- `intern_reserved_pins()` for the ROM offset `off` of `encNames pinNames ++ encNames
 reservedBasisNameValues`. -/
 -- con-ron: ConRon/Arena/Pins.lean:232-246 ConRon.Arena.internReservedPins
-def internReservedPinsAt (off : Word) : FunDecl := lfn () locals (q, us, z, o, s1) {
+@[no_expose] def internReservedPinsAt (off : Word) : FunDecl := lfn () locals (q, us, z, o, s1) {
   if len(PINS.u64) < 71 { abort };
   q := call rom_names_to(⟪off⟫, 51, 1);
   q := call rom_names_to(q, 16, 55);
@@ -275,7 +275,7 @@ def internReservedPinsAt (off : Word) : FunDecl := lfn () locals (q, us, z, o, s
 
 /-- `intern_reserved_pins()` as the program has it: the ROM starts with the two name lists. -/
 -- con-ron: ConRon/Arena/Pins.lean:232-246 ConRon.Arena.internReservedPins
-@[l_impl ConRon.Arena.internReservedPins]
+@[no_expose, l_impl ConRon.Arena.internReservedPins]
 def internReservedPinsL : FunDecl := internReservedPinsAt 0
 
 section irpModel

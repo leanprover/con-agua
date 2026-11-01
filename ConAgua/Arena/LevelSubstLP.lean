@@ -41,7 +41,7 @@ namespace L.Arena
 
 /-- `lv_lookup` with the keys on the spine stack and the values in the limb pool.
 con-leche: ConLeche/Kernel/Level.lean:31-42 ConLeche.Level.subst -/
-def lpLookup : FunDecl := lfn (ko, kc, vo, vc, w) locals (f, v) {
+@[no_expose] def lpLookup : FunDecl := lfn (ko, kc, vo, vc, w) locals (f, v) {
   if kc == 0 || vc == 0 { return (0, 0) };
   if SPN.u64[ko] == w { return (1, POOL⦃vo⦄) };
   (f, v) := call lp_lookup(ko + 1, kc - 1, vo + 1, vc - 1, w);
@@ -51,7 +51,7 @@ def lpLookup : FunDecl := lfn (ko, kc, vo, vc, w) locals (f, v) {
 /-- `lv_substl` over `lp_lookup`.
 con-leche: ConLeche/Kernel/Level.lean:31-42 ConLeche.Level.subst
 con-leche: ConLeche/Kernel/Level.lean:31-42 ConLeche.Level.subst.go -/
-def lpSubstL : FunDecl := lfn (l, ko, kc, vo, vc) locals (g, a, b, x, y, f, v) {
+@[no_expose] def lpSubstL : FunDecl := lfn (l, ko, kc, vo, vc) locals (g, a, b, x, y, f, v) {
   (g, a, b) := call lv_node(l);
   if g == 0 { return l };
   if g == 4 {
@@ -68,7 +68,7 @@ def lpSubstL : FunDecl := lfn (l, ko, kc, vo, vc) locals (g, a, b, x, y, f, v) {
 
 /-- `lv_spw` over `lp_lookup`, the datum's names in the record pool.
 con-leche: ConLeche/Kernel/Level.lean:199-205 ConLeche.Level.substPW -/
-def lpSpw : FunDecl := lfn (po, pc, ko, kc, vo, vc) locals (f, v, x, w) {
+@[no_expose] def lpSpw : FunDecl := lfn (po, pc, ko, kc, vo, vc) locals (f, v, x, w) {
   if pc == 0 { return 0 };
   w := EREC.u64[po];
   (f, v) := call lp_lookup(ko, kc, vo, vc, w);
@@ -80,7 +80,7 @@ def lpSpw : FunDecl := lfn (po, pc, ko, kc, vo, vc) locals (f, v, x, w) {
 
 /-- `lv_substpw` over `lp_spw`.
 con-leche: ConLeche/Kernel/Level.lean:199-205 ConLeche.Level.substPW -/
-def lpSubstPW : FunDecl := lfn (kd, po, pc, ko, kc, vo, vc) locals (x) {
+@[no_expose] def lpSubstPW : FunDecl := lfn (kd, po, pc, ko, kc, vo, vc) locals (x) {
   if kd == 0 { return 1 };
   x := call lp_spw(po, pc, ko, kc, vo, vc);
   return x
