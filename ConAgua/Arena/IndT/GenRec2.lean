@@ -11,6 +11,7 @@ public import ConAgua.Arena.RecGenSpec.CftW
 public import ConAgua.Arena.IndInstallSpec.GfcW
 public import ConAgua.Arena.IndInstallSpec.IcvgW
 public import ConAgua.Arena.IndInstallSpec.PapW
+import all ConRon.Bridge.Inductives.GenRec
 
 @[expose] public section
 
