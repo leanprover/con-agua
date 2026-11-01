@@ -8,6 +8,10 @@ import Std.Tactic.BVDecide.Normalize.BitVec
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
 import all ConAgua.Arena.WhnfEntry
+import all ConAgua.Arena.AppStore
+import all ConAgua.Arena.ConsLib
+import all ConAgua.Arena.ExprMk
+import all ConAgua.Arena.WhnfSpineRefine
 
 @[expose] public section
 
