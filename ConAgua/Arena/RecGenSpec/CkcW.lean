@@ -8,6 +8,7 @@ import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
 import ConAgua.Arena.LdRd
 import Std.WP.Triple.SpecLemmas
+import all ConAgua.Arena.RecGen
 
 @[expose] public section
 

@@ -10,6 +10,7 @@ import ConAgua.Arena.IndRealAbs
 import ConAgua.Arena.InferFieldSort
 import ConAgua.Arena.WhnfCoreRefine
 import ConAgua.Arena.WhnfDeltaRefine
+import all ConAgua.Arena.InstLP
 
 @[expose] public section
 

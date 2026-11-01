@@ -14,6 +14,7 @@ import ConAgua.Arena.IndPartsSpec.RulePrefixAt
 import ConAgua.Arena.RefWalk
 import ConAgua.Checker.NoVerdictTree
 public import ConAgua.Arena.DeclCanonView2
+import all ConAgua.Arena.DeclArms
 
 @[expose] public section
 

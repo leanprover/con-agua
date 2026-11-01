@@ -9,6 +9,7 @@ public import ConAgua.L.GrindAttr
 import all Init.Data.List.Control
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
+import all ConAgua.Arena.RecGen
 
 @[expose] public section
 

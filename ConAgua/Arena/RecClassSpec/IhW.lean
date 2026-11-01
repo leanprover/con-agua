@@ -10,6 +10,8 @@ import ConRon.Bridge.Grind
 import Std.Tactic.BVDecide.Normalize.BitVec
 public import ConAgua.Arena.IndRealOpf
 public import ConAgua.Arena.RecClassSpec.CloseLams
+import all ConAgua.Arena.Pins
+import all ConAgua.Arena.RecClass
 
 @[expose] public section
 

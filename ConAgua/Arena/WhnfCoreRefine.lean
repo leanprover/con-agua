@@ -8,6 +8,8 @@ public import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
 import ConAgua.Arena.DerRel
 import Std.WP.Triple.SpecLemmas
+import all ConAgua.Arena.Env
+import all ConAgua.Arena.WhnfCore
 
 @[expose] public section
 

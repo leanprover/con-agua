@@ -11,6 +11,7 @@ import ConAgua.Arena.SimLib
 import ConAgua.Front.ApplyExprRefine
 public import ConAgua.Arena.CallF
 public import ConAgua.Arena.StripTeleSpec
+import all ConAgua.Arena.StubNames
 
 @[expose] public section
 

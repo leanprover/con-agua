@@ -10,6 +10,7 @@ public import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
 import ConAgua.Arena.Env
 import Std.WP.Triple.SpecLemmas
+import all ConAgua.Arena.IndSum
 
 @[expose] public section
 

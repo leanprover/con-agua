@@ -13,6 +13,7 @@ import ConRon.Bridge.Grind
 public import ConAgua.Arena.IndPartsSpec.BlockRecNamesUnreserved
 public import ConAgua.Checker.Entry
 public import ConAgua.Front.IndApplySpec
+import all ConAgua.Front.IndApply
 
 @[expose] public section
 

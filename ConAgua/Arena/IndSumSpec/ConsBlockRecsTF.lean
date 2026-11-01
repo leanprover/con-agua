@@ -14,6 +14,9 @@ import ConAgua.Arena.IndSumSpec.ConsSumCtors
 import ConAgua.Arena.RecClassSpec.CloseLams
 import ConAgua.Arena.RecClassSpec.MjProg
 import ConAgua.L.WordOff
+import all ConAgua.Arena.IndParts
+import all ConAgua.Arena.IndSum
+import all ConAgua.Arena.RecCheck
 
 @[expose] public section
 

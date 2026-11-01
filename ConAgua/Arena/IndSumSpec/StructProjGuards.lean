@@ -10,6 +10,7 @@ import ConAgua.L.GrindAttr
 import ConAgua.Arena.IndInstallSpec.DomsW
 import ConRon.Bridge.Grind
 public import ConAgua.Arena.IndPosSpec.MatesW
+import all ConAgua.Arena.IndSum
 
 @[expose] public section
 

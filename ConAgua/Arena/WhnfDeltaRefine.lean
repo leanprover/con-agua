@@ -14,6 +14,8 @@ import ConAgua.L.ModelGen
 import Std.WP.Triple.SpecLemmas
 public import ConAgua.Arena.WhnfCoreApp
 public import ConAgua.Arena.WhnfDelta
+import all ConAgua.Arena.Pins
+import all ConAgua.Arena.WhnfDelta
 
 @[expose] public section
 

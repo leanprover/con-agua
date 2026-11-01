@@ -13,6 +13,7 @@ import ConAgua.Arena.SimLib
 public import ConAgua.Arena.DeclAndPinInd
 public import ConAgua.Arena.DeclCanonSpec
 public import ConAgua.Rom.CIReadSpec
+import all ConAgua.Arena.DeclAndPin
 
 @[expose] public section
 

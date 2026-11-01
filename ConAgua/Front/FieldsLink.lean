@@ -7,6 +7,9 @@ import ConAgua.Scan.LineLink
 import ConAgua.Scan.Link
 import Std.Tactic.BVDecide.Normalize.Bool
 import Std.Tactic.BVDecide.Normalize.Prop
+import all ConAgua.Scan.Line
+import all ConAgua.Scan.Records
+import all ConAgua.Scan.Values
 
 @[expose] public section
 

@@ -11,6 +11,7 @@ import ConAgua.Arena.DeclCvg
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
 public import ConRon.Arena.Canon
+import all ConAgua.Arena.DeclArmsCanon
 
 @[expose] public section
 

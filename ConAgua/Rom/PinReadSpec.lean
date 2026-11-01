@@ -9,6 +9,7 @@ import ConAgua.L.GrindAttr
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
 public import ConAgua.Arena.IndCopy2
+import all ConAgua.Rom.PinRead
 
 @[expose] public section
 

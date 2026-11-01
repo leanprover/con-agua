@@ -25,6 +25,7 @@ public import ConAgua.Arena.IndPosSpec.NestGroupCtors
 public import ConAgua.Arena.RecCheckSpec.DecHLTruncMBound
 public import ConAgua.Arena.RecClassSpec.Classes
 public import ConAgua.Arena.RecGenSpec.SlRGrow
+import all ConAgua.Arena.RecCheck
 
 @[expose] public section
 

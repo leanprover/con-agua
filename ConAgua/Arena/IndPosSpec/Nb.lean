@@ -3,6 +3,7 @@ module
 import ConAgua.Arena.IndPosSpec.UnW
 public import ConAgua.Arena.IndPosSpec.NbLook
 public import ConAgua.Arena.IndPosSpec.NbKeyK2
+import all ConAgua.Arena.IndPos
 
 @[expose] public section
 

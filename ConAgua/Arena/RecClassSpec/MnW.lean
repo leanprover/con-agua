@@ -19,6 +19,7 @@ import ConAgua.Arena.RecClassSpec.Rec2AppendWDec
 import ConAgua.Arena.RecClassSpec.Rec2SimTMA
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
+import all ConAgua.Arena.RecClass
 
 @[expose] public section
 

@@ -15,6 +15,7 @@ import ConAgua.Arena.RefWalk
 import ConAgua.Checker.NoVerdictTree
 public import ConAgua.Arena.KnotEntry
 public import ConAgua.Arena.TwinStep
+import all ConAgua.Arena.RecCheck
 
 @[expose] public section
 

@@ -15,6 +15,7 @@ public import Std.WP.Tactic
 import ConAgua.Arena.WhnfCoreSlot
 import ConAgua.L.ModelGen
 public import ConAgua.Checker.NoVerdictFns
+import all ConAgua.Arena.Knot
 
 @[expose] public section
 

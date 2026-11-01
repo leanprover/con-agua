@@ -12,6 +12,8 @@ import Std.Tactic.BVDecide.Normalize.BitVec
 import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
+import all ConAgua.Arena.ExprMk
+import all ConAgua.Arena.MemoLib
 
 @[expose] public section
 

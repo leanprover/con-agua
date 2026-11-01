@@ -11,6 +11,8 @@ public import ConAgua.Arena.IndPosSpec.RsLook
 public import ConAgua.Arena.IndPosSpec.UnW
 public import ConAgua.Checker.NoVerdictFns
 public import ConAgua.L.ErrSpec
+import all ConAgua.Arena.IndInstall
+import all ConAgua.Arena.IndPos2
 
 @[expose] public section
 

@@ -21,6 +21,7 @@ public import ConAgua.Arena.IndInstallSpec.BlockCapsAt
 public import ConAgua.Arena.IndPartsSpec.PartsConsPL
 public import ConAgua.Arena.RecSim
 public import ConRon.Arena.Inductives.BlockInstall
+import all ConAgua.Arena.IndInstall
 
 @[expose] public section
 

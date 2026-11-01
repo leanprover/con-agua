@@ -10,6 +10,7 @@ import ConAgua.Arena.DeclReduceSpec
 import ConAgua.Arena.WhnfDeltaRefine
 import ConAgua.L.LocNF
 import Std.Tactic.BVDecide.Normalize.Bool
+import all ConAgua.Arena.DeclArms
 
 @[expose] public section
 

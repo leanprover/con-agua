@@ -9,6 +9,7 @@ import ConAgua.Arena.InferBodyLet
 import Lean.Elab.Tactic.RCases
 import Std.Tactic.BVDecide.Normalize.BitVec
 public import ConAgua.Arena.DefEqMid
+import all ConAgua.Arena.StrLit
 
 @[expose] public section
 

@@ -11,6 +11,7 @@ import ConAgua.Arena.IndPosSpec.FgW
 import ConAgua.Arena.IndSumSpec.StructProjArgP
 import ConAgua.Arena.RefWalk
 import ConAgua.Checker.NoVerdictTree
+import all ConAgua.Arena.RecGen
 
 @[expose] public section
 

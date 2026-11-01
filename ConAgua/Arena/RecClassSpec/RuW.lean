@@ -9,6 +9,7 @@ import ConAgua.Arena.IndSim
 import ConAgua.Arena.RecClassSpec.PdWAfr
 import ConAgua.Arena.RecClassSpec.PiBWRoom
 import ConAgua.Arena.RecClassSpec.Rec2AppendWDec
+import all ConAgua.Arena.RecClass
 
 @[expose] public section
 

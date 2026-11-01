@@ -6,6 +6,7 @@ public import ConRon.Bridge.Inductives.Rel
 import ConRon.Bridge.Checker.Pins
 import ConRon.Bridge.Frontend.Prepare
 import ConRon.Bridge.Specs
+import all ConAgua.Front.IndApply
 
 @[expose] public section
 

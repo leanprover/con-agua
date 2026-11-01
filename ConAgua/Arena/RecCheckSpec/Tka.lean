@@ -6,6 +6,7 @@ public import ConAgua.Arena.RecCheckSpec.EeW
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.Arena.IndGrindAttr
 public import ConAgua.L.GrindAttr
+import all ConAgua.Arena.RecCheck
 
 @[expose] public section
 

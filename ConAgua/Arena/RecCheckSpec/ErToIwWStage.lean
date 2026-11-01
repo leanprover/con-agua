@@ -13,6 +13,8 @@ import Std.Tactic.BVDecide.Normalize.BitVec
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
 public import ConAgua.Arena.IndRealAbs
+import all ConAgua.Arena.IndIface
+import all ConAgua.Arena.RecCheck
 
 @[expose] public section
 

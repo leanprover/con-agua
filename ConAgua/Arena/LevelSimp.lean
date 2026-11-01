@@ -9,6 +9,7 @@ import ConAgua.L.ModelGen
 import Std.Tactic.BVDecide.Normalize.BitVec
 import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Triple.SpecLemmas
+import all ConAgua.Arena.LevelHeap
 
 @[expose] public section
 

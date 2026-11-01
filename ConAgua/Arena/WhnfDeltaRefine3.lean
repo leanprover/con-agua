@@ -11,6 +11,8 @@ import ConAgua.Arena.DerRel
 import ConAgua.L.LocNF
 import Std.WP.Triple.SpecLemmas
 public import ConAgua.Arena.WhnfDeltaRefine
+import all ConAgua.Arena.Refine
+import all ConAgua.Arena.WhnfDelta
 
 @[expose] public section
 

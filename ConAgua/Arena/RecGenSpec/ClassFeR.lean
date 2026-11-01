@@ -18,6 +18,7 @@ public import ConAgua.Arena.IndDecStab
 public import ConAgua.Arena.RecGenSpec.DecCVX
 public import ConAgua.Arena.RecSim
 public import ConAgua.Arena.RecStab
+import all ConAgua.Arena.RecGen
 
 @[expose] public section
 

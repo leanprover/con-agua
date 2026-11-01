@@ -8,6 +8,7 @@ import ConAgua.Arena.IndPartsSpec.RulePrefixAt
 import Std.Tactic.BVDecide.Normalize.BitVec
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
+import all ConAgua.Arena.IndParts
 
 @[expose] public section
 

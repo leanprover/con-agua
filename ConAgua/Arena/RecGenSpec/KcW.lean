@@ -14,6 +14,8 @@ import ConAgua.Arena.IndPosSpec.MapOKStep
 import ConAgua.Arena.IndPosSpec.PosmemoRxMfr
 import ConAgua.Arena.IndPosSpec.Rx
 public import ConAgua.Arena.IndPosSpec.BvbWMfr
+import all ConAgua.Arena.RecCheck
+import all ConAgua.Arena.RecGen
 
 @[expose] public section
 

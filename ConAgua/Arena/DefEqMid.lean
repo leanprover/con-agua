@@ -10,6 +10,7 @@ import ConAgua.Arena.WhnfCoreProj
 public import ConAgua.Verdict.WhnfModels7E
 import ConAgua.Arena.RefWalk
 import ConAgua.Checker.NoVerdictTree
+import all ConAgua.Arena.DefEq
 
 @[expose] public section
 

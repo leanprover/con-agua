@@ -10,6 +10,7 @@ import ConAgua.Checker.NoVerdictTree
 public import Std.Tactic.BVDecide.Normalize.Prop
 public import ConAgua.Checker.NoVerdictFns
 public import ConAgua.L.ErrSpec
+import all ConAgua.Arena.WhnfIota
 
 @[expose] public section
 

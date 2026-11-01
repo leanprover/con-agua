@@ -6,6 +6,7 @@ import ConAgua.Checker.NoVerdictTree
 import all ConAgua.Front.IndApplyRefine3
 import ConAgua.L.ModelGen
 public import ConAgua.Checker.NoVerdictFns
+import all ConAgua.Front.IndApply
 
 @[expose] public section
 

@@ -13,6 +13,7 @@ import ConAgua.Arena.RecClassSpec.CrW
 import ConAgua.Arena.RefWalk
 import ConAgua.Checker.NoVerdictTree
 public import ConAgua.Arena.RecCheckSpec.TmFields
+import all ConAgua.Arena.IndPos
 
 @[expose] public section
 

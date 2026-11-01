@@ -9,6 +9,7 @@ public import ConAgua.Arena.GrindAttr
 import ConAgua.L.ModelGen
 import ConAgua.Arena.RefWalk
 public import ConAgua.Arena.IndPartsSpec.BlockRecNamesUnreserved
+import all ConAgua.Arena.IndParts
 
 @[expose] public section
 

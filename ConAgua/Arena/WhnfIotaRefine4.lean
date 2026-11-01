@@ -16,6 +16,9 @@ public import ConAgua.Arena.KnotE
 public import ConAgua.Arena.RefECore
 public import ConAgua.Arena.WhnfIotaRefine
 public import ConAgua.Verdict.WhnfModels3E
+import all ConAgua.Arena.CoreLevels
+import all ConAgua.Arena.Pins
+import all ConAgua.Arena.WhnfIota
 
 @[expose] public section
 

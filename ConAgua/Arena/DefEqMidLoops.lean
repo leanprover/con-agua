@@ -9,6 +9,7 @@ import Std.WP.Triple.SpecLemmas
 public import ConAgua.Arena.DefEq
 public import ConAgua.Arena.KnotE
 public import ConAgua.Arena.RefECore
+import all ConAgua.Arena.DefEq
 
 @[expose] public section
 

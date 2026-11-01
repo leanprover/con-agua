@@ -14,6 +14,8 @@ import ConAgua.Arena.RecClassSpec.CloseLams
 import Std.Tactic.BVDecide.Normalize.BitVec
 public import ConAgua.Arena.IndPosSpec.BvbWMfr
 public import ConAgua.Arena.IndPosSpec.UCtx
+import all ConAgua.Arena.IndIface
+import all ConAgua.Arena.IndPos2
 
 @[expose] public section
 

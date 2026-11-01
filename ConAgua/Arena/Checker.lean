@@ -14,6 +14,7 @@ import ConAgua.Arena.PromoteRecRef
 import ConAgua.Arena.ScratchRefine
 public import ConAgua.Arena.PromoteProg
 public import ConAgua.Arena.Scratch
+import all ConAgua.Arena.CheckerL
 
 @[expose] public section
 

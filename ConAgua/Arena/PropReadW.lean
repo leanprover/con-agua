@@ -8,6 +8,7 @@ import Std.WP.Triple.SpecLemmas
 public import ConAgua.Arena.IndView
 public import ConAgua.Arena.KnotSlot
 public import ConAgua.L.ProgHas
+import all ConAgua.Arena.PropRead
 
 @[expose] public section
 

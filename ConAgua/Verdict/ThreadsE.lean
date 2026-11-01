@@ -11,6 +11,7 @@ import ConAgua.Checker.TwinShapeQuot
 import ConAgua.L.Blocks
 public import ConAgua.Arena.DeclAxQuotT
 public import ConAgua.Final.TwinVerdict
+import all ConAgua.Checker.Entry
 
 @[expose] public section
 

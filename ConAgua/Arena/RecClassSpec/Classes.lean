@@ -7,6 +7,8 @@ import ConAgua.L.ModelGen
 public import ConAgua.Arena.IndCallM
 import ConAgua.Arena.IndInstallSpec.DomsW
 import ConRon.Bridge.Grind
+import all ConAgua.Arena.IndIface
+import all ConAgua.Arena.RecClass
 
 @[expose] public section
 

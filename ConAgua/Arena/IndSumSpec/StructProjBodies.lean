@@ -14,6 +14,11 @@ import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
 public import ConAgua.Arena.IndRealAbs
 public import ConAgua.Arena.IndSumSpec.StructProjArgP
+import all ConAgua.Arena.BVarStore
+import all ConAgua.Arena.ExprMk
+import all ConAgua.Arena.IndIface
+import all ConAgua.Arena.IndSum
+import all ConAgua.Arena.ProjStore
 
 @[expose] public section
 

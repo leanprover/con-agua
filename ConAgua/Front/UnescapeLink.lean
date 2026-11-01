@@ -6,6 +6,7 @@ public import ConAgua.Front.FieldsLink
 import ConAgua.Scan.Link
 public import Std.Tactic.BVDecide.Normalize.Prop
 public import ConAgua.Arena.DerRelBase
+import all ConAgua.L.Examples
 
 @[expose] public section
 

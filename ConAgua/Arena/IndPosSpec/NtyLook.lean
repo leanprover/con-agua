@@ -6,6 +6,7 @@ import ConAgua.L.GrindAttr
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
 public import ConAgua.Arena.StageInst1
+import all ConAgua.Arena.IndIface
 
 @[expose] public section
 

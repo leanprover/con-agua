@@ -12,6 +12,7 @@ import Std.WP.Triple.SpecLemmas
 public import ConAgua.Arena.PromoteProg
 public import ConAgua.Arena.WhnfBase
 public import ConRon.Arena.Promote
+import all ConAgua.Arena.Env
 
 @[expose] public section
 

@@ -3,6 +3,7 @@ module
 public import ConAgua.Front.LineRef
 import ConAgua.Scan.Link
 public import ConAgua.Front.FieldsDeclLink
+import all ConAgua.Scan.Line
 
 @[expose] public section
 

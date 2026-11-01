@@ -8,6 +8,7 @@ import ConAgua.L.GrindAttr
 public import ConAgua.Arena.IndRealFvtD
 import ConAgua.Arena.IndMaster
 import ConRon.Bridge.Grind
+import all ConAgua.Arena.IndSum
 
 @[expose] public section
 

@@ -12,6 +12,8 @@ import ConAgua.Arena.StageInst1
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
 public import ConAgua.Arena.DeclNatBase
+import all ConAgua.Arena.IndIface
+import all ConAgua.Arena.WhnfEntry
 
 @[expose] public section
 

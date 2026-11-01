@@ -11,6 +11,7 @@ import ConAgua.Arena.DeclValT
 import ConAgua.Arena.RefWalk
 import ConAgua.Checker.NoVerdictTree
 import ConAgua.L.ModelGen
+import all ConAgua.Arena.DeclArms
 
 @[expose] public section
 

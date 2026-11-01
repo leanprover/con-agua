@@ -14,6 +14,7 @@ public import ConAgua.Arena.IndInstallSpec.CapsProg
 public import ConAgua.Arena.IndPartsSpec.RulePrefixAt
 public import ConAgua.Arena.TwinStep
 public import ConRon.Bridge.Inductives.Run
+import all ConAgua.Arena.IndParts
 
 @[expose] public section
 

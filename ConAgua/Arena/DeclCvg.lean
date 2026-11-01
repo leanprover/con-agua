@@ -11,6 +11,8 @@ import ConAgua.Arena.IndMaster
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
 public import ConAgua.Arena.IndCopy2
+import all ConAgua.Arena.IndIface
+import all ConAgua.Arena.Pins
 
 @[expose] public section
 

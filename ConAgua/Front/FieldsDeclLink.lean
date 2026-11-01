@@ -9,6 +9,8 @@ import Std.Data.DTreeMap.Internal.Operations
 import Std.Tactic.BVDecide.Normalize.Bool
 import Std.Tactic.BVDecide.Normalize.Prop
 public import ConLeche.Frontend.Scan.Equiv.Objects
+import all ConAgua.Scan.Line
+import all ConAgua.Scan.Values
 
 @[expose] public section
 

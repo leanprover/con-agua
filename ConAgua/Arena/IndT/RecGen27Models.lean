@@ -6,6 +6,7 @@ public import ConAgua.Arena.GrindAttr
 public import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
 import ConAgua.Checker.NoVerdictTree
+import all ConAgua.Arena.IndIface
 
 @[expose] public section
 

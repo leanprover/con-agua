@@ -6,6 +6,7 @@ public import ConAgua.Front.ExprIface
 import ConAgua.Scan.LeafLink
 import ConAgua.Scan.Link
 import ConAgua.Census.Attr
+import all ConAgua.Front.Fields
 
 @[expose] public section
 

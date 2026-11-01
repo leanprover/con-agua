@@ -9,6 +9,7 @@ import ConAgua.Arena.DeclCvg
 import ConAgua.Arena.DeclValRef
 public import ConAgua.Arena.DeclCanonEq
 public import ConAgua.Rom.CIReadSpec
+import all ConAgua.Arena.DeclArms
 
 @[expose] public section
 

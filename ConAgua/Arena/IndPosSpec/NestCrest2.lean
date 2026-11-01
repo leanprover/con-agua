@@ -6,6 +6,7 @@ public import ConAgua.Arena.GrindAttr
 public import ConAgua.Arena.IndGrindAttr
 public import ConAgua.L.GrindAttr
 public import ConAgua.Arena.IndPosSpec.CrLook
+import all ConAgua.Arena.IndPos
 
 @[expose] public section
 

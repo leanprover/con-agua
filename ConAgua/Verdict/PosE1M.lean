@@ -11,6 +11,7 @@ import ConAgua.Arena.IndPartsSpec.BlockCounts
 import ConAgua.Checker.NoVerdictTree
 public import ConAgua.Arena.IndPosSpec.CfW
 public import ConAgua.Arena.IndPosSpec.NbLook
+import all ConAgua.Arena.IndPos2
 
 @[expose] public section
 

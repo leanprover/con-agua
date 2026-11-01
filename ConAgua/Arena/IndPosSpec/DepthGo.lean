@@ -13,6 +13,7 @@ public import ConAgua.Arena.IndPosSpec.DpGoW
 public import ConAgua.Arena.IndPosSpec.NestBlockOfKey
 public import ConAgua.Arena.IndPosSpec.RpGoStep
 public import ConAgua.Arena.IndPosSpec.RxMapW
+import all ConAgua.Arena.IndPos
 
 @[expose] public section
 

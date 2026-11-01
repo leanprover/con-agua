@@ -7,6 +7,7 @@ import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
 public import ConAgua.L.Examples
 import Std.WP.Triple.SpecLemmas
+import all ConAgua.Front.IndFields
 
 @[expose] public section
 

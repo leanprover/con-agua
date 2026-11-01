@@ -9,6 +9,7 @@ import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
 import ConAgua.Scan.Common
 import Std.WP.Triple.SpecLemmas
+import all ConAgua.Front.IndFields
 
 @[expose] public section
 

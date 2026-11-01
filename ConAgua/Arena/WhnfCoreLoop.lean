@@ -13,6 +13,7 @@ public import ConAgua.Verdict.WhnfModelsE
 import ConAgua.Arena.RefWalk
 import ConAgua.Front.Preserve
 import Std.WP.Triple.SpecLemmas
+import all ConAgua.Arena.WhnfCore
 
 @[expose] public section
 

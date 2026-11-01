@@ -4,6 +4,7 @@ meta import ConAgua.L.Semantics
 public import ConAgua.Arena.LevelSubst
 import ConAgua.Census.Attr
 import ConAgua.Arena.LevelGrindAttr
+import all ConAgua.Arena.LevelSimp
 
 @[expose] public section
 

@@ -5,6 +5,7 @@ public import Std.Tactic.BVDecide.Normalize.Bool
 public import Std.Tactic.BVDecide.Normalize.Prop
 import ConAgua.Front.FieldsDeclLink
 import ConAgua.Scan.Common
+import all ConAgua.Scan.Records
 
 @[expose] public section
 

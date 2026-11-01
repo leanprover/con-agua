@@ -7,6 +7,7 @@ import ConAgua.Arena.CoreWalks
 import Std.WP.Triple.SpecLemmas
 public import ConAgua.Arena.IndMaster
 public import ConAgua.Arena.StageInst1
+import all ConAgua.Checker.Entry
 
 @[expose] public section
 

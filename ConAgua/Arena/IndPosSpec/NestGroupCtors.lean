@@ -10,6 +10,8 @@ import all Init.Data.List.Control
 import ConAgua.Arena.DeclRec
 import ConRon.Bridge.Grind
 import Std.Tactic.BVDecide.Normalize.BitVec
+import all ConAgua.Arena.IndPos
+import all ConAgua.Arena.IndPos2
 
 @[expose] public section
 

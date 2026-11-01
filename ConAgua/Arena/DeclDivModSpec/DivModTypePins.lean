@@ -6,6 +6,8 @@ public import ConAgua.Arena.GrindAttr
 public import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
 public import ConAgua.Rom.PinSets
+import all ConAgua.Arena.DeclArmsNat
+import all ConAgua.Arena.IndIface
 
 @[expose] public section
 

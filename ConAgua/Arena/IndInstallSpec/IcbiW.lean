@@ -10,6 +10,7 @@ import ConAgua.L.GrindAttr
 import Std.WP.Tactic
 public import ConAgua.L.Examples
 import Std.WP.Triple.SpecLemmas
+import all ConAgua.Arena.IndInstall
 
 @[expose] public section
 

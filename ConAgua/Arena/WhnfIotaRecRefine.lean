@@ -15,6 +15,8 @@ import ConAgua.Arena.WhnfIotaRefine3
 import ConAgua.L.Records
 public import ConAgua.Arena.WhnfIotaRefine2
 public import ConAgua.Arena.WhnfIotaRefine4
+import all ConAgua.Arena.CoreLevels
+import all ConAgua.Arena.WhnfIotaRec
 
 @[expose] public section
 

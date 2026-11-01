@@ -7,6 +7,7 @@ import ConAgua.Arena.StageInst1
 import Std.Tactic.BVDecide.Normalize.BitVec
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
+import all ConAgua.Arena.WhnfEntry
 
 @[expose] public section
 

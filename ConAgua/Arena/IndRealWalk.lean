@@ -10,6 +10,7 @@ public import ConAgua.Arena.HasFvar
 public import ConAgua.Arena.StripTeleSpec
 public import ConAgua.Arena.WhnfCoreApp
 public import ConAgua.Arena.WriteSets
+import all ConAgua.Arena.StubNames
 
 @[expose] public section
 

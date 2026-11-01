@@ -11,6 +11,7 @@ import ConAgua.Arena.IndPartsSpec.RecTW
 import ConAgua.Arena.IndPartsSpec.RulePrefixAt
 import Std.Tactic.BVDecide.Normalize.BitVec
 import Std.WP.Triple.SpecLemmas
+import all ConAgua.Arena.RecCheck
 
 @[expose] public section
 

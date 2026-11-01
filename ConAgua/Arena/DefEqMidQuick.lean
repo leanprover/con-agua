@@ -9,6 +9,8 @@ import ConAgua.Arena.RefWalk
 import ConAgua.Checker.NoVerdictTree
 import ConAgua.L.ModelGen
 public import ConAgua.Arena.CoreLevels
+import all ConAgua.Arena.CoreLevels
+import all ConAgua.Arena.DefEq
 
 @[expose] public section
 

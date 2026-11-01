@@ -9,6 +9,7 @@ meta import ConAgua.Arena.FreezeRel
 meta import ConAgua.Checker.LoopProgTac
 meta import ConAgua.Final.Statement
 import ConAgua.L.Blocks
+import all ConAgua.Checker.Entry
 
 @[expose] public section
 

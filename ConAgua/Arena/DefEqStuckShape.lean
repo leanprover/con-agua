@@ -7,6 +7,7 @@ import ConAgua.Arena.IndView
 import ConAgua.Arena.InferBodyIntern
 import ConAgua.Arena.WhnfCoreRefine
 import ConRon.Bridge.Grind
+import all ConAgua.Arena.DefEq
 
 @[expose] public section
 

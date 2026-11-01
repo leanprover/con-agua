@@ -14,6 +14,8 @@ import ConAgua.Arena.RefWalk
 import ConAgua.Checker.NoVerdictTree
 public import ConAgua.Arena.LeafFns
 public import ConAgua.Arena.TwinStep
+import all ConAgua.Arena.DeclArms
+import all ConAgua.Arena.DeclArmsNat
 
 @[expose] public section
 

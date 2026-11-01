@@ -8,6 +8,7 @@ public import ConAgua.L.GrindAttr
 import ConAgua.L.Records
 public import ConAgua.Checker.NoVerdictFns
 public import ConAgua.L.ErrSpec
+import all ConAgua.Arena.RecGenSpec.DecB
 
 @[expose] public section
 

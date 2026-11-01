@@ -15,6 +15,7 @@ public import ConAgua.Arena.IndMaster
 public import ConAgua.Arena.IndReal
 public import ConAgua.Arena.IndSum
 public import ConAgua.Arena.SimLib
+import all ConAgua.Arena.IndSum
 
 @[expose] public section
 

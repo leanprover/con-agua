@@ -6,6 +6,7 @@ import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
 import Std.WP.Triple.SpecLemmas
+import all ConAgua.Arena.DeclArmsNat
 
 @[expose] public section
 

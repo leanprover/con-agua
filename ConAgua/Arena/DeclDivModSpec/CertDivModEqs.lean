@@ -5,6 +5,7 @@ import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
 import Std.Tactic.BVDecide.Normalize.BitVec
+import all ConAgua.Arena.DeclArmsNat
 
 @[expose] public section
 

@@ -10,6 +10,7 @@ import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
 public import ConAgua.Arena.DefEqStuckStr
 public import ConAgua.Arena.IndView
+import all ConAgua.Arena.DefEq
 
 @[expose] public section
 

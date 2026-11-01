@@ -8,6 +8,7 @@ import ConAgua.Arena.SimLib
 import Std.Tactic.BVDecide.Normalize.BitVec
 public import ConAgua.Arena.CallF
 public import ConAgua.Arena.StripTeleSpec
+import all ConAgua.Arena.TeleLift
 
 @[expose] public section
 

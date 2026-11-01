@@ -15,6 +15,7 @@ import Std.Tactic.BVDecide.Normalize.BitVec
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
 public import ConAgua.Arena.SimLib
+import all ConAgua.Arena.IndSum
 
 @[expose] public section
 

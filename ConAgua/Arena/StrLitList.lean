@@ -12,6 +12,7 @@ import ConAgua.L.LocNF
 import ConRon.Bridge.Grind
 import Std.Tactic.BVDecide.Normalize.BitVec
 public import ConAgua.Arena.IndView
+import all ConAgua.Arena.StrLit
 
 @[expose] public section
 

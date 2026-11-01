@@ -8,6 +8,8 @@ import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
 public import ConAgua.L.Examples
 import Std.WP.Triple.SpecLemmas
+import all ConAgua.Arena.IndIface
+import all ConAgua.Arena.IndInstall
 
 @[expose] public section
 

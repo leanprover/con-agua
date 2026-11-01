@@ -14,6 +14,7 @@ import ConAgua.Arena.IndPartsSpec.RulePrefixAt
 import ConAgua.Arena.RecClassSpec.Classes
 import ConRon.Bridge.Grind
 public import ConAgua.Arena.IndPartsSpec.RecTW
+import all ConAgua.Arena.IndParts
 
 @[expose] public section
 

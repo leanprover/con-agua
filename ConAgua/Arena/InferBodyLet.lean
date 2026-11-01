@@ -12,6 +12,7 @@ import ConAgua.Arena.RefWalk
 import ConAgua.Checker.NoVerdictTree
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
+import all ConAgua.Arena.Infer
 
 @[expose] public section
 

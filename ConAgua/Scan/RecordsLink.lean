@@ -10,6 +10,8 @@ import ConAgua.Scan.LeafLink
 import ConAgua.Scan.Link
 import Std.Tactic.BVDecide.Normalize.Bool
 import Std.Tactic.BVDecide.Normalize.Prop
+import all ConAgua.Scan.Leaves
+import all ConAgua.Scan.Values
 
 @[expose] public section
 

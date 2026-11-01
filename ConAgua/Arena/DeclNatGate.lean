@@ -6,6 +6,7 @@ import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
 import ConRon.Bridge.Grind
 public import ConAgua.Arena.DeclNatSpec
+import all ConAgua.Arena.DeclArmsNat
 
 @[expose] public section
 

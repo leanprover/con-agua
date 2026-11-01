@@ -14,6 +14,7 @@ import ConAgua.L.LocNF
 import ConAgua.L.ModelGen
 import Std.WP.Triple.SpecLemmas
 public import ConAgua.Arena.StoreDenIntern
+import all ConAgua.Arena.WhnfDelta
 
 @[expose] public section
 

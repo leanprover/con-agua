@@ -6,6 +6,7 @@ import ConAgua.L.GrindAttr
 import ConAgua.Arena.Env
 import ConAgua.Arena.Pins
 import Std.Tactic.BVDecide.Normalize.BitVec
+import all ConAgua.Arena.DeclAndPin
 
 @[expose] public section
 

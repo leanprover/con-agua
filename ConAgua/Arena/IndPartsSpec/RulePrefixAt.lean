@@ -10,6 +10,7 @@ import Std.WP.Tactic
 import ConAgua.Arena.Env
 import Std.WP.Triple.SpecLemmas
 public import ConAgua.Arena.IndCopy
+import all ConAgua.Arena.IndParts
 
 @[expose] public section
 

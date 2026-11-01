@@ -13,6 +13,7 @@ public import ConAgua.Arena.CoreDen
 public import ConAgua.Arena.Knot
 public import ConAgua.Arena.WhnfIotaRefine
 public import ConAgua.Arena.WhnfProjRefine
+import all ConAgua.Arena.WhnfProj
 
 @[expose] public section
 

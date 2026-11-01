@@ -7,6 +7,7 @@ import ConAgua.L.GrindAttr
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
 public import ConAgua.Arena.DeclHeader
+import all ConAgua.Arena.StubNames
 
 @[expose] public section
 

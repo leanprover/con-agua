@@ -8,6 +8,7 @@ import ConAgua.Arena.InferBodyLet
 import ConAgua.Arena.RefWalk
 import ConAgua.Checker.NoVerdictTree
 import ConAgua.Front.Preserve
+import all ConAgua.Arena.DefEq
 
 @[expose] public section
 

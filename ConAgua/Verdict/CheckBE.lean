@@ -9,6 +9,7 @@ import ConAgua.Checker.LoopStage
 import ConAgua.Checker.RomProg0
 import ConAgua.Checker.TwinShapeQuot
 import ConAgua.L.Blocks
+import all ConAgua.Checker.Entry
 
 @[expose] public section
 

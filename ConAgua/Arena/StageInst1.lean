@@ -7,6 +7,7 @@ public import ConAgua.Arena.StripTeleSpec
 public import ConAgua.Checker.Entry
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
+import all ConAgua.Checker.Entry
 
 @[expose] public section
 

@@ -9,6 +9,7 @@ public import Std.Tactic.BVDecide.Normalize.Prop
 import ConAgua.Arena.Verdict
 import ConAgua.Checker.NoVerdictTree
 import ConAgua.Front.Preserve
+import all ConAgua.Arena.WhnfCore
 
 @[expose] public section
 

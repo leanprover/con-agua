@@ -8,6 +8,9 @@ import ConAgua.Arena.Env
 import ConAgua.Checker.NoVerdictTree
 import ConAgua.Front.FieldsExprLink
 import ConAgua.Scan.LeafLink
+import all ConAgua.Front.ApplyDecl
+import all ConAgua.Front.IndApply
+import all ConAgua.Front.Line
 
 @[expose] public section
 

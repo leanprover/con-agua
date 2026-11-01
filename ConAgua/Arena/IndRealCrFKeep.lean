@@ -8,6 +8,7 @@ import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
 public import ConAgua.Arena.ConstsResolveFRefine2
 public import ConAgua.Arena.IndRealCrF
+import all ConAgua.Arena.ConstsResolveF
 
 @[expose] public section
 

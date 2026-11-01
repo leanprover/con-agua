@@ -9,6 +9,7 @@ import ConAgua.Arena.DeclCvg
 import ConAgua.Arena.IndMaster
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
+import all ConAgua.Arena.DeclArmsCanon
 
 @[expose] public section
 

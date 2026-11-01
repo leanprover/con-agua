@@ -11,6 +11,7 @@ import ConAgua.Checker.NoVerdictTree
 import ConAgua.Front.Preserve
 import ConAgua.L.ModelGen
 public import ConAgua.Arena.IndView
+import all ConAgua.Arena.DefEq
 
 @[expose] public section
 

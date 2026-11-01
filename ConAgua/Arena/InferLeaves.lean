@@ -19,6 +19,9 @@ import ConAgua.Checker.NoVerdictTree
 import ConAgua.L.WordOff
 import ConAgua.Arena.DerRel
 import ConAgua.Arena.RefWalk
+import all ConAgua.Arena.Infer
+import all ConAgua.Arena.Knot
+import all ConAgua.Arena.LevelEquiv
 
 @[expose] public section
 

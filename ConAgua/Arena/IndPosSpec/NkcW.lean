@@ -12,6 +12,7 @@ import ConRon.Bridge.Grind
 import Std.Tactic.BVDecide.Normalize.BitVec
 public import ConAgua.Arena.IndPos2
 public import ConAgua.Arena.IndPosSpec.CtxFields
+import all ConAgua.Arena.IndPos2
 
 @[expose] public section
 

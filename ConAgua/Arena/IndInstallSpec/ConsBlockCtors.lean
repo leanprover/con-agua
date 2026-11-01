@@ -12,6 +12,7 @@ import Std.WP.Triple.SpecLemmas
 public import ConAgua.Arena.DeclRec
 public import ConAgua.Arena.IndPartsSpec.PartsConsPL
 public import ConRon.Arena.Inductives.BlockInstall
+import all ConAgua.Arena.IndInstall
 
 @[expose] public section
 

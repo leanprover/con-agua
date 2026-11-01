@@ -10,6 +10,7 @@ public import ConAgua.Arena.IndPosSpec.P2ctK1
 public import ConAgua.Arena.RecCheckSpec.ErToIwWStage
 public import ConAgua.Checker.NoVerdictFns
 public import ConAgua.L.ErrSpec
+import all ConAgua.Arena.IndPos2
 
 @[expose] public section
 

@@ -12,6 +12,8 @@ import ConAgua.Checker.NoVerdictTree
 import ConAgua.L.ModelGen
 import ConRon.Bridge.Inductives.SumInstall
 public import ConRon.Bridge.Inductives.BlockInstall
+import all ConAgua.Arena.IndIface
+import all ConAgua.Arena.IndInstall
 
 @[expose] public section
 /-!

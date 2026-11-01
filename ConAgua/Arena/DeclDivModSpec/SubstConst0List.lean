@@ -4,6 +4,7 @@ public import ConAgua.Arena.LdRd
 public import ConAgua.Arena.DeclDivModSpec.Sc0List
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
+import all ConAgua.Arena.DeclArmsNat
 
 @[expose] public section
 

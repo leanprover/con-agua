@@ -14,6 +14,8 @@ import ConAgua.Checker.NoVerdictTree
 public import ConAgua.Arena.KnotEntry
 public import ConAgua.Arena.TwinStep
 public import ConRon.Bridge.Checker.Hyp
+import all ConAgua.Arena.IndIface
+import all ConAgua.Arena.IndSum
 
 @[expose] public section
 

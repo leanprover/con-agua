@@ -15,6 +15,7 @@ import ConAgua.Arena.RefWalk
 import ConAgua.Arena.WhnfCoreRefine
 import ConAgua.L.ModelGen
 import Std.WP.Triple.SpecLemmas
+import all ConAgua.Arena.WhnfIota
 
 @[expose] public section
 

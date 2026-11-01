@@ -11,6 +11,7 @@ import ConAgua.Arena.Env
 import ConAgua.Arena.StripTeleSpec
 import ConRon.Bridge.Grind
 public import ConAgua.Arena.IndPos
+import all ConAgua.Arena.IndPos
 
 @[expose] public section
 

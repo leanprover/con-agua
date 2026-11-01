@@ -14,6 +14,8 @@ import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
 import ConAgua.Front.Preserve
+import all ConAgua.Arena.ExprMk
+import all ConAgua.Arena.MemoLib
 
 @[expose] public section
 
