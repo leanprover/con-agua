@@ -3,8 +3,10 @@ module
 import ConAgua.Verdict.InferKnotE
 import ConAgua.Verdict.InferLeavesE
 import ConAgua.Verdict.WhnfKnotE
+public import ConAgua.Checker.LoopDeclArm
+public import ConAgua.Checker.LoopDecl
 public import ConAgua.Verdict.DefEqAllE
-import ConAgua.Checker.LoopProg
+public import ConAgua.Checker.LoopProg
 import ConAgua.Checker.NoVerdictClosed
 meta import ConAgua.Verdict.InferKnotE
 meta import ConAgua.Verdict.InferLeavesE
