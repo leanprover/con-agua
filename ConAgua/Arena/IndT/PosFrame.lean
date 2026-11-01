@@ -5,6 +5,7 @@ public import ConAgua.Verdict.PosE
 public import ConAgua.Verdict.PosNgc
 public import ConAgua.Arena.IndPosSpec.Pos2DecHLSplit
 public import ConAgua.Arena.IndPosSpec.Snoc
+import all ConRon.Bridge.Inductives.Positivity
 
 @[expose] public section
 

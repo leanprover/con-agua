@@ -1,5 +1,6 @@
 module
 
+public import ConRon.Bridge.Inductives.StructParts
 public import ConAgua.Verdict.IndBRec4
 public import ConAgua.Arena.IndSumSpec.StructCtorResidOk
 public import ConAgua.Arena.RecClassSpec.RuW

@@ -4,6 +4,7 @@ public import ConRon.Bridge.ExprOps.Inst1
 public import ConAgua.Arena.IndT.PosFields
 public import ConAgua.Arena.IndPosSpec.NestCrest
 public import ConAgua.Arena.IndRealAbsPos
+import all ConRon.Bridge.Inductives.Positivity
 
 @[expose] public section
 

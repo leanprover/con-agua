@@ -1,5 +1,7 @@
 module
 
+public import ConRon.Bridge.Inductives.PosWalks
+public import ConRon.Bridge.Inductives.SumInstall
 public import ConAgua.Arena.IndT.Sum3
 public import ConAgua.Arena.IndRealSctC
 public import ConAgua.Arena.IndInstallSpec.PnfW

@@ -1,5 +1,6 @@
 module
 
+public import ConRon.Bridge.Inductives.StructParts
 public import ConAgua.Arena.IndPosSpec.Snoc
 public import ConAgua.Verdict.PosE
 public import ConAgua.Arena.IndT.PosCrest
