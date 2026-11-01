@@ -1,4 +1,25 @@
-import ConAgua.Arena.PromoteCIRef.PromoteNew
+module
+
+public import ConAgua.Arena.PromoteCIRef.PromoteNew
+public import ConAgua.Arena.PromoteCIRef.Caps
+public import ConAgua.Arena.PromoteCIRef.Ci
+public import ConAgua.Arena.PromoteCIRef.CiList
+public import ConAgua.Arena.PromoteCIRef.Erase
+public import ConAgua.Arena.PromoteCIRef.Fire
+public import ConAgua.Arena.PromoteCIRef.Index
+public import ConAgua.Arena.PromoteCIRef.PnewMain
+public import ConAgua.Arena.PromoteCIRef.Rule
+public import ConAgua.Arena.PromoteCIRef.Rules
+public import ConAgua.Arena.PromoteTblRef
+public import ConAgua.Arena.DeclBase
+public import ConAgua.Arena.PromoteCIExt
+public import ConAgua.Arena.PromoteCIRef.ConstsAt
+public import ConAgua.Arena.PromoteCIRef.StPNat
+public import ConAgua.Arena.PromoteCIRef.TdecJoin
+public import ConAgua.Arena.PromoteRecRef
+public import ConAgua.Arena.TblFrame
+
+@[expose] public section
 
 /-!
 # Census tags for the constant side of the promotion

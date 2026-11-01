@@ -1,10 +1,17 @@
-import ConAgua.Arena.TblFrame
+module
+
+public import ConAgua.Arena.TblFrame
 import ConAgua.Arena.PromoteCIRef.PmDecTblBound
 import ConAgua.Arena.PromoteCIRef.PreESizeLe
 import ConAgua.Arena.PromoteCIRef.Proj
-import ConAgua.Arena.PromoteCIRef.TdecJoin
+public import ConAgua.Arena.PromoteCIRef.TdecJoin
 import ConAgua.Arena.PromoteCIRef.Of
 import ConRon.Bridge.Grind
+import ConAgua.Arena.DerRel
+public import ConAgua.Arena.PromoteCIInfra
+public import ConAgua.Arena.PromoteERef
+
+@[expose] public section
 
 /-!
 # The table side of the promotion: `erase_installed_tables`, `promote_proj_tables`,

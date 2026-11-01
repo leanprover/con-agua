@@ -1,5 +1,11 @@
+module
+
 import ConAgua.Arena.ScratchRefine
-import Std.Tactic.BVDecide.Normalize.Prop
+public import Std.Tactic.BVDecide.Normalize.Prop
+import ConAgua.Arena.DerRel
+public import ConAgua.Arena.Tiers
+
+@[expose] public section
 
 /-!
 # The core tier's primitives under `CoreR`

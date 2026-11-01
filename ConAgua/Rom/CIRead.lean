@@ -1,4 +1,8 @@
-import ConAgua.Arena.Prelude
+module
+
+public import ConAgua.Arena.Prelude
+
+@[expose] public section
 
 /-!
 # The ROM stubs' readers (lane `integrate`)

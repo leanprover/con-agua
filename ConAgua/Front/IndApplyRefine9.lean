@@ -1,8 +1,14 @@
-import ConAgua.Front.IndApplyRefine8
+module
+
+public import ConAgua.Front.IndApplyRefine8
 import ConAgua.Front.IndApplyRefine6
-import ConAgua.Verdict.FrontRecsE
-import Std.Tactic.BVDecide.Normalize.BitVec
-import Std.Tactic.BVDecide.Normalize.Prop
+public import ConAgua.Verdict.FrontRecsE
+public import Std.Tactic.BVDecide.Normalize.BitVec
+public import Std.Tactic.BVDecide.Normalize.Prop
+import ConAgua.Checker.NoVerdictTree
+import ConAgua.Front.IndApplyRefine
+
+@[expose] public section
 
 /-!
 # The apply step of an `inductive` line against the twin, IX: `validate_ind_d` refines `validateIndD`

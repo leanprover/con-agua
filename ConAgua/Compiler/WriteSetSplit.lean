@@ -1,6 +1,13 @@
-import Lean
-import ConAgua.L.WriteSet
-import ConAgua.Compiler.WFSplit
+module
+
+public import Lean
+public import ConAgua.L.WriteSet
+public import ConAgua.Compiler.WFSplit
+public meta import Lean
+public meta import ConAgua.L.WriteSet
+public meta import ConAgua.Compiler.WFSplit
+
+@[expose] public section
 
 /-!
 # Write sets of a large program, one function at a time (lane `erecfix`)
@@ -162,7 +169,7 @@ open Lean.Elab.Term (elabTermEnsuringType synthesizeSyntheticMVarsNoPostponing)
 compiled code), and `t.eq : namesTree fs = some t` (one kernel check over the names). -/
 syntax (name := namesTreeCmd) (docComment)? "names_tree " ident " : " term : command
 
-@[command_elab namesTreeCmd] unsafe def elabNamesTree : CommandElab := fun stx => do
+@[command_elab namesTreeCmd] meta unsafe def elabNamesTree : CommandElab := fun stx => do
   let `($[$doc?:docComment]? names_tree $n:ident : $fsS) := stx | throwUnsupportedSyntax
   let name := (← getCurrNamespace) ++ n.getId
   liftTermElabM <| withTheReader Core.Context (fun c => { c with maxRecDepth := max c.maxRecDepth 100000 }) do
@@ -172,7 +179,7 @@ syntax (name := namesTreeCmd) (docComment)? "names_tree " ident " : " term : com
     let some tree ← evalTree (mkApp (mkConst ``namesTree) fsE)
       | throwError "names_tree: the tree does not evaluate"
     let treeTy := mkConst ``NTree
-    addAndCompile (.defnDecl (mkDefinitionValEx name [] treeTy (ntreeToExpr tree) .abbrev .safe []))
+    withExporting <| addAndCompile (.defnDecl (mkDefinitionValEx name [] treeTy (ntreeToExpr tree) .abbrev .safe []))
     addDocString' name .missing doc?
     let someTree := mkApp2 (mkConst ``Option.some [0]) treeTy (mkConst name)
     let optTy := mkApp (mkConst ``Option [0]) treeTy
@@ -185,7 +192,7 @@ syntax (name := namesTreeCmd) (docComment)? "names_tree " ident " : " term : com
 evaluation). `p` must reduce to a list literal by `whnf`. -/
 syntax (name := progAll) (docComment)? "prog_all " ident " : " term:max term:max : command
 
-@[command_elab progAll] unsafe def elabProgAll : CommandElab := fun stx => do
+@[command_elab progAll] meta unsafe def elabProgAll : CommandElab := fun stx => do
   let `($[$doc?:docComment]? prog_all $n:ident : $progS $chkS) := stx | throwUnsupportedSyntax
   let name := (← getCurrNamespace) ++ n.getId
   liftTermElabM <| withTheReader Core.Context (fun c => { c with maxRecDepth := max c.maxRecDepth 100000 }) do

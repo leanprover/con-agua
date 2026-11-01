@@ -1,5 +1,11 @@
+module
+
 import ConAgua.Arena.IndPartsSpec.BsW
 import ConAgua.Arena.IndPartsSpec.IndPartsProg2
+import ConAgua.Arena.RecClassSpec.CloseLams
+public import ConAgua.Arena.IndPartsSpec.PartsConsPL
+
+@[expose] public section
 
 /-!
 # PartsPSlCons

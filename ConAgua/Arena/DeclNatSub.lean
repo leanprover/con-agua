@@ -1,8 +1,15 @@
-import ConAgua.Arena.DeclNatEq
+module
+
+public import ConAgua.Arena.DeclNatEq
 import ConAgua.Arena.RecClassSpec.Classes
-import ConAgua.Arena.GrindAttr
-import ConAgua.L.GrindAttr
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
+import ConAgua.Arena.IndPartsSpec.RulePrefixAt
+import ConRon.Bridge.Grind
+import Std.Tactic.BVDecide.Normalize.BitVec
+
+@[expose] public section
 
 /-!
 # The structural-`Nat` gate: constant substitution (lane `decls3`, helper `decls3-nat`)

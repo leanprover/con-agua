@@ -1,10 +1,14 @@
-import ConAgua.Arena.IndRealIpo
-import ConAgua.Arena.IndArmBridge2
-import ConAgua.Arena.IndRealIlpL
-import ConAgua.Arena.IndRealSctC
-import ConAgua.Arena.IndRealPartsC2
-import ConAgua.Arena.IndRealSortDn
-import ConAgua.Arena.IndArmLps
+module
+
+public import ConAgua.Arena.IndRealIpo
+public import ConAgua.Arena.IndArmBridge2
+public import ConAgua.Arena.IndRealIlpL
+public import ConAgua.Arena.IndRealSctC
+public import ConAgua.Arena.IndRealPartsC2
+public import ConAgua.Arena.IndRealSortDn
+public import ConAgua.Arena.IndArmLps
+
+@[expose] public section
 
 
 /-! # Every refinement file of the inductive stage together (lane `indproofs`): an import check that

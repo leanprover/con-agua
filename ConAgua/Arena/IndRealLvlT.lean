@@ -1,4 +1,10 @@
-import ConAgua.Arena.IndTwin
+module
+
+public import ConAgua.Arena.IndTwin
+import ConAgua.Arena.WhnfIotaRefine4
+import Std.WP.Triple.SpecLemmas
+
+@[expose] public section
 
 /-!
 # `lvl_eq_c`, `lvls_eq_c` under `StageT` with the exact verdict word (lane `indproofs4`, helper `lvl`)

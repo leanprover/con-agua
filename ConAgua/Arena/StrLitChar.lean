@@ -1,8 +1,17 @@
-import ConAgua.Arena.LdRd
-import ConAgua.Arena.StrLitTy
+module
+
+public import ConAgua.Arena.LdRd
+public import ConAgua.Arena.StrLitTy
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.ModelGen
 import ConAgua.L.GrindAttr
+import ConAgua.Arena.DefEqMid
+import ConAgua.Arena.InferBodyLet
+import ConAgua.Arena.StrLitCv
+import Std.Tactic.BVDecide.Normalize.BitVec
+import Std.WP.Triple.SpecLemmas
+
+@[expose] public section
 
 /-!
 # `char_of_nat_ty_ok`, `string_of_list_ty_ok` under `CoreS` (helper `defeq2-str-sup`)

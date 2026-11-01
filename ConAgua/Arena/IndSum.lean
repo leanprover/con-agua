@@ -1,4 +1,9 @@
-import ConAgua.Arena.IndIface
+module
+
+public import ConAgua.Arena.IndIface
+meta import ConAgua.Arena.IndIface
+
+@[expose] public section
 
 /-!
 # `IndSum`: the direct-sum install's L translation (lane `induct`, worker C)

@@ -1,10 +1,16 @@
-import ConAgua.Arena.IndArmLps
+module
+
+public import ConAgua.Arena.IndArmLps
 import ConAgua.Arena.IndPartsSpec.BlockSplitRecs
 import ConAgua.Arena.DeclNatLit
 import ConAgua.Arena.DeclReduceSpec2
-import ConAgua.Verdict.DeclValsE
-import ConAgua.Arena.GrindAttr
+public import ConAgua.Verdict.DeclValsE
+public import ConAgua.Arena.GrindAttr
 import ConAgua.L.ModelGen
+import ConAgua.Arena.RefWalk
+public import ConAgua.Arena.IndPartsSpec.BlockRecNamesUnreserved
+
+@[expose] public section
 
 /-!
 # `check_shapeless_formers` and `check_shapeless`: one model and one refinement each

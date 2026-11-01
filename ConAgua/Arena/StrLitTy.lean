@@ -1,7 +1,13 @@
+module
+
 import ConAgua.Arena.StrLitCv
 import ConAgua.Arena.DefEqMidQuick
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
+import Std.WP.Triple.SpecLemmas
+public import ConAgua.Arena.StrLitBase
+
+@[expose] public section
 
 /-!
 # The string-support declaration tests under `CoreS` (helper `defeq2-str`)

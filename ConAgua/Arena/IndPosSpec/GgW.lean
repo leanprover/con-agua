@@ -1,6 +1,11 @@
+module
+
 import ConAgua.Arena.IndPosSpec.CanonW
 import ConAgua.Arena.IndPosSpec.SnocWStage
-import ConAgua.Arena.IndGrindAttr
+public import ConAgua.Arena.IndGrindAttr
+public import ConAgua.Arena.IndCopy2
+
+@[expose] public section
 
 /-!
 # GgW

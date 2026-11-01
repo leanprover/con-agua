@@ -1,7 +1,14 @@
-import ConAgua.Arena.DefEqStuck
+module
+
+public import ConAgua.Arena.DefEqStuck
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
+import ConAgua.Arena.RefWalk
+import ConAgua.Front.Preserve
+import Std.WP.Triple.SpecLemmas
+
+@[expose] public section
 
 /-!
 # `ldpr_exit`, `lazy_delta_proj_reduction`, `defeq_proj_pair` (lane `defeq`, helper `defeq-top`)

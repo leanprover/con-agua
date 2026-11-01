@@ -1,11 +1,38 @@
+module
+
 import ConAgua.Arena.IndT.Tail
 import ConAgua.Arena.IndT.Install4
 import ConAgua.Arena.IndT.Positivity
 import ConAgua.Arena.IndT.RecGen21
 import ConAgua.Arena.IndT.Install7
-import ConAgua.Arena.GrindAttr
-import ConAgua.L.GrindAttr
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
+import all ConRon.Bridge.Inductives.BlockTail
+import ConAgua.Arena.IndInstallSpec.ConsBlockCtors
+import ConAgua.Arena.IndInstallSpec.IcvgW
+import ConAgua.Arena.IndInstallSpec.InstallRec2PSl
+import ConAgua.Arena.IndInstallSpec.PnfW
+import ConAgua.Arena.IndInstallSpec.PosFreeMfr
+import ConAgua.Arena.IndPosSpec.FgW
+import ConAgua.Arena.IndPosSpec.Grow
+import ConAgua.Arena.IndPosSpec.NestKeyMap
+import ConAgua.Arena.IndT.Install1
+import ConAgua.Arena.RecGenSpec.FlushStage
+import ConAgua.Arena.RefWalk
+import ConAgua.Arena.ScratchRefine
+import ConAgua.Checker.NoVerdictTree
+import ConAgua.Verdict.PosTopE4
+public import ConAgua.Arena.IndInstallSpec.BpRecBpassR
+public import ConAgua.Arena.IndInstallSpec.CbProg
+public import ConAgua.Arena.IndInstallSpec.Icvg
+public import ConAgua.Arena.IndRealIlpL
+public import ConAgua.Arena.IndRealLvlZ
+public import ConAgua.Arena.IndT.KeepC
+public import ConAgua.Arena.IndT.Sum2
+public import ConRon.Bridge.Inductives.BlockTail
+
+@[expose] public section
 
 /-!
 # `check_block_pass`: one model, one refinement

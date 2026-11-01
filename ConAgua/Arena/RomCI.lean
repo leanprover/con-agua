@@ -1,10 +1,18 @@
-import ConAgua.Arena.RomItems
-import ConRon.Arena.Checker
+module
+
+public import ConAgua.Arena.RomItems
+public import ConRon.Arena.Checker
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import Std.Tactic.BVDecide.Normalize.BitVec
-import Std.Tactic.BVDecide.Normalize.Prop
+public import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
+import ConAgua.L.LocNF
+import ConLeche.Verify.Cached.Erase
+import Std.WP.Triple.SpecLemmas
+public import ConAgua.Arena.Keeps
+
+@[expose] public section
 
 /-!
 # The twin's constant interners have the store effect of their item streams

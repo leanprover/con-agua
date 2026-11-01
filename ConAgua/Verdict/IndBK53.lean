@@ -1,7 +1,20 @@
-import ConAgua.Verdict.IndBTka
+module
+
+public import ConAgua.Verdict.IndBTka
 import ConAgua.Arena.IndT.RecGen19
-import ConAgua.Arena.GrindAttr
+public import ConAgua.Arena.GrindAttr
 import ConAgua.L.ModelGen
+import ConAgua.Arena.IndInstallSpec.DomsW
+import ConAgua.Arena.IndPosSpec.NestCrest
+import ConAgua.Arena.IndT.Lift
+import ConAgua.Arena.IndT.RecCheckK53
+import ConAgua.Arena.RecCheckSpec.Tka
+import ConAgua.Arena.RecClassSpec.CrW
+import ConAgua.Arena.RefWalk
+import ConAgua.Checker.NoVerdictTree
+public import ConAgua.Arena.RecCheckSpec.TmFields
+
+@[expose] public section
 
 /-!
 # `target_k53_heads`, `target_k53`: one model and one refinement each, for both outcomes

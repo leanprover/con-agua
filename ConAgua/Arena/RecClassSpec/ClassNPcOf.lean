@@ -1,10 +1,20 @@
+module
+
 import ConAgua.Arena.IndPosSpec.EntryW
 import ConAgua.Arena.RecStab
 import ConAgua.Arena.IndPartsSpec.BlockRecNamesUnreserved
 import ConAgua.Arena.RecSim
-import ConAgua.Arena.GrindAttr
+public import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
-import ConAgua.L.GrindAttr
+public import ConAgua.L.GrindAttr
+import ConAgua.Arena.IndPartsSpec.RulePrefixAt
+import Std.WP.Tactic
+import Std.WP.Triple.SpecLemmas
+public import ConAgua.Arena.DeclHeader
+public import ConAgua.Arena.IndDecStab
+public import ConAgua.Arena.IndPartsSpec.MemberNames
+
+@[expose] public section
 
 /-!
 # ClassNPcOf: `ConRon.Arena.classNPcOf`

@@ -1,7 +1,14 @@
-import ConAgua.Arena.PropRead
-import ConAgua.Arena.DefEqLeaves
+module
+
+public import ConAgua.Arena.PropRead
+public import ConAgua.Arena.DefEqLeaves
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
+import ConAgua.Front.Preserve
+import Std.WP.Tactic
+import Std.WP.Triple.SpecLemmas
+
+@[expose] public section
 
 /-!
 # The prop-ness readers' loops: models, specs, and the twin's walks (helper `defeq2-prop`)

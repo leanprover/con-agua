@@ -1,10 +1,18 @@
-import ConAgua.Arena.IndPosSpec.CtxFields
+module
+
+public import ConAgua.Arena.IndPosSpec.CtxFields
 import ConAgua.Arena.IndPosSpec.DpGoW
 import ConAgua.Arena.IndInstallSpec.BlockCapsAt
 import ConAgua.Arena.IndInstallSpec.DomsW
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr
+import ConAgua.Arena.Env
+import ConAgua.Arena.StripTeleSpec
+import ConRon.Bridge.Grind
+public import ConAgua.Arena.IndPos
+
+@[expose] public section
 
 /-!
 # RootHoles: `ConRon.Arena.NestCtx.rootHoles`, `ConRon.Arena.nestHoleAt`

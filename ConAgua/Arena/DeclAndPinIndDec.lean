@@ -1,6 +1,11 @@
+module
+
 import ConAgua.Arena.IndLibSpec
-import Std.Tactic.BVDecide.Normalize.Prop
+public import Std.Tactic.BVDecide.Normalize.Prop
 import ConRon.Bridge.Grind
+public import ConAgua.Arena.EnvRec
+
+@[expose] public section
 
 /-!
 # The `And` pin's inductive arm, part 2a: relocating a front constant record

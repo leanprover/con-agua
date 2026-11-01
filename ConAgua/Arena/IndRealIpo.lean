@@ -1,8 +1,20 @@
+module
+
 import ConAgua.Front.IndApplyRefine
 import ConAgua.Arena.IndPartsSpec.BlockSplitRecs
-import ConAgua.Arena.GrindAttr
+public import ConAgua.Arena.RecSim
+public import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
-import ConAgua.L.GrindAttr
+public import ConAgua.L.GrindAttr
+import ConAgua.Arena.DeclCanonEq
+import ConAgua.Arena.InferBodyIntern
+import ConAgua.Arena.RecClassSpec.CloseLams
+import ConRon.Bridge.Grind
+public import ConAgua.Arena.IndPartsSpec.BlockRecNamesUnreserved
+public import ConAgua.Checker.Entry
+public import ConAgua.Front.IndApplySpec
+
+@[expose] public section
 
 /-!
 # `ind_params_ok(nP, off, len)` refines `indParamsOk` (lane `indproofs4`)

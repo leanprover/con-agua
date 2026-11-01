@@ -1,6 +1,10 @@
-import ConAgua.Rom.DataLit
-import ConAgua.Rom.Subst
-import ConAgua.Arena.IndIface
+module
+
+public import ConAgua.Rom.DataLit
+public import ConAgua.Rom.Subst
+public import ConAgua.Arena.IndIface
+
+@[expose] public section
 
 /-!
 # Reading the pin-data buffer in L (lane `romload`)

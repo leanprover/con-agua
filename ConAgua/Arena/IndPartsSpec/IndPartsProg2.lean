@@ -1,8 +1,14 @@
-import ConAgua.Arena.IndPartsSpec.PartsConsPL
-import ConAgua.Arena.IndPosSpec.NestOccGo
-import ConAgua.Arena.IndGrindAttr
-import ConAgua.L.GrindAttr
+module
+
+public import ConAgua.Arena.IndPartsSpec.PartsConsPL
+public import ConAgua.Arena.IndPosSpec.NestOccGo
+public import ConAgua.Arena.IndGrindAttr
+public import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
+import Std.WP.Tactic
+import Std.WP.Triple.SpecLemmas
+
+@[expose] public section
 
 /-!
 # IndPartsProg2

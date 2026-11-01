@@ -1,9 +1,14 @@
-import ConAgua.Arena.LevelIntern
+module
+
+public import ConAgua.Arena.LevelIntern
 import ConAgua.Arena.PromoteLRef
 import ConAgua.Arena.MemoTree
 import ConAgua.Front.StateDR
-import Std.Tactic.BVDecide.Normalize.Prop
-import ConAgua.Arena.Rom
+public import Std.Tactic.BVDecide.Normalize.Prop
+public import ConAgua.Arena.Rom
+import ConRon.Arena.WFProofs
+
+@[expose] public section
 
 /-!
 # `lv_intern` refines `internLevel` of the level its pointer denotes

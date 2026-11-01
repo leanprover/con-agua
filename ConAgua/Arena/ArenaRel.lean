@@ -1,25 +1,29 @@
-import ConAgua.Arena.LitRefine
-import ConAgua.Arena.AppRefine
-import ConAgua.Arena.SortRefine
-import ConAgua.Arena.ConstRefine
-import ConAgua.Arena.LetRefine
-import ConAgua.Arena.BVarRefine
-import ConAgua.Arena.FVarRefine
-import ConAgua.Arena.LamRefine
-import ConAgua.Arena.ForallRefine
-import ConAgua.Arena.ProjRefine
-import ConAgua.Arena.ZeroRefine
-import ConAgua.Arena.LevelRefine
-import ConAgua.Arena.MaxRefine
-import ConAgua.Arena.ImaxRefine
-import ConAgua.Arena.ParamRefine
-import ConAgua.Arena.LsRefine
-import ConAgua.Arena.NAnonRefine
-import ConAgua.Arena.NStrRefine
-import ConAgua.Arena.NNumRefine
-import ConAgua.Arena.MemoLibRel
-import ConAgua.Census.Attr
-import Std.Tactic.BVDecide.Normalize.Prop
+module
+
+public import ConAgua.Arena.LitRefine
+public import ConAgua.Arena.AppRefine
+public import ConAgua.Arena.SortRefine
+public import ConAgua.Arena.ConstRefine
+public import ConAgua.Arena.LetRefine
+public import ConAgua.Arena.BVarRefine
+public import ConAgua.Arena.FVarRefine
+public import ConAgua.Arena.LamRefine
+public import ConAgua.Arena.ForallRefine
+public import ConAgua.Arena.ProjRefine
+public import ConAgua.Arena.ZeroRefine
+public import ConAgua.Arena.LevelRefine
+public import ConAgua.Arena.MaxRefine
+public import ConAgua.Arena.ImaxRefine
+public import ConAgua.Arena.ParamRefine
+public import ConAgua.Arena.LsRefine
+public import ConAgua.Arena.NAnonRefine
+public import ConAgua.Arena.NStrRefine
+public import ConAgua.Arena.NNumRefine
+public import ConAgua.Arena.MemoLibRel
+public import ConAgua.Census.Attr
+public import Std.Tactic.BVDecide.Normalize.Prop
+
+@[expose] public section
 
 /-!
 # The arena relation: one relation for the whole L memory

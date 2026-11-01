@@ -1,7 +1,15 @@
-import ConAgua.Arena.IndPartsSpec.RecTW
+module
+
+public import ConAgua.Arena.IndPartsSpec.RecTW
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr
+import ConAgua.Arena.IndPartsSpec.RulePrefixAt
+import Std.Tactic.BVDecide.Normalize.BitVec
+import Std.WP.Tactic
+import Std.WP.Triple.SpecLemmas
+
+@[expose] public section
 
 /-!
 # BlockCounts: `ConRon.Arena.blockCounts`, `ConRon.Arena.piBinders`, `ConRon.Arena.recTargetOf`

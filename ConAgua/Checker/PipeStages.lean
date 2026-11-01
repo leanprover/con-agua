@@ -1,7 +1,14 @@
-import ConAgua.Checker.Pipeline
+module
+
+public import ConAgua.Checker.Pipeline
 import ConAgua.Checker.RomProg
 import ConAgua.Checker.RomProgInit
-import ConAgua.Checker.PreLoopWS
+public import ConAgua.Checker.PreLoopWS
+import ConAgua.Checker.RomProg0
+import ConRon.Bridge.Checker.Pins
+public import ConAgua.Checker.CapCheck
+
+@[expose] public section
 
 /-!
 # The relations between `check`'s stages, and the first stages (lane `pipeline`)

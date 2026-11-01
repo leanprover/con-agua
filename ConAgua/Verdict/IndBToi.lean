@@ -1,9 +1,24 @@
+module
+
 import ConAgua.Arena.RecGenSpec.DecCIIndCv
 import ConAgua.Arena.RecClassSpec.ClassNPcOf
 import ConAgua.Arena.IlpRdReal
 import ConAgua.Arena.RecGenSpec.OcW
-import ConAgua.Arena.GrindAttr
+public import ConAgua.Arena.GrindAttr
 import ConAgua.L.ModelGen
+import ConAgua.Arena.IndPartsSpec.BlockCounts
+import ConAgua.Arena.IndPosSpec.EntryW
+import ConAgua.Arena.IndPosSpec.FgW
+import ConAgua.Arena.IndRealAbsPos
+import ConAgua.Arena.RefWalk
+import ConAgua.Checker.NoVerdictTree
+public import ConAgua.Arena.IndPartsSpec.RecTW
+public import ConAgua.Arena.IndPosSpec.NoGoStep
+public import ConAgua.Arena.IndRealIlpL
+public import ConAgua.Arena.RecCheckSpec.ToiW
+public import ConAgua.Arena.TwinStep
+
+@[expose] public section
 
 /-!
 # `target_outside_inst`: one model and one refinement for both outcomes

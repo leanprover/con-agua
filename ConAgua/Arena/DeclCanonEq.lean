@@ -1,4 +1,10 @@
-import ConAgua.Arena.DeclCanonSpec
+module
+
+public import ConAgua.Arena.DeclCanonSpec
+import ConAgua.Arena.SimLib
+import ConRon.Bridge.Grind
+
+@[expose] public section
 
 /-!
 # Record equalities in L, the relational lemmas (lane `decls3`, helper `decls3-canon`)

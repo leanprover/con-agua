@@ -1,11 +1,31 @@
+module
+
+import ConRon.Bridge.Inductives.FieldTele
 import ConAgua.Verdict.IndBFields
-import ConAgua.Arena.RecCheckSpec.CnfW
+public import ConAgua.Arena.RecCheckSpec.CnfW
 import ConAgua.Arena.IndT.RecGen24
 import ConAgua.Arena.RecCheckSpec.TargetMajorAt
 import ConAgua.Arena.RecGenSpec.DecTMSlices
-import ConAgua.Arena.GrindAttr
-import ConAgua.L.GrindAttr
-import ConAgua.Arena.IndT.RecGen27Models
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.L.GrindAttr
+public import ConAgua.Arena.IndT.RecGen27Models
+import ConAgua.Arena.IlpRdReal
+import ConAgua.Arena.IndInstallSpec.DomsW
+import ConAgua.Arena.IndInstallSpec.PartsShapeFacts
+import ConAgua.Arena.IndPartsSpec.BlockRecNamesUnreserved
+import ConAgua.Arena.IndRealAbsPos
+import ConAgua.Arena.IndRealOpf3
+import ConAgua.Arena.IndSim
+import ConAgua.Arena.IndSumSpec.ConsBlockRecsTF
+import ConAgua.Arena.IndT.Lift
+import ConAgua.Arena.RefWalk
+public import ConAgua.Arena.IndRealIlpL
+public import ConAgua.Arena.KnotEntry
+public import ConAgua.Arena.RecClassSpec.ClassNPcOf
+public import ConAgua.Arena.TwinStep
+public import ConAgua.Verdict.VCtx
+
+@[expose] public section
 
 /-!
 # `class_ctor_of`, `class_ctors_of`, `classes_ctors`: one model, one refinement each

@@ -1,4 +1,11 @@
+module
+
 import ConAgua.Checker.RomProgB
+import ConAgua.Checker.RomProg0
+import ConAgua.Checker.RomProgA
+public import ConAgua.Checker.Prog
+
+@[expose] public section
 
 /-!
 # The ROM stages of `check` for the checker's program (lane `pipeline`)

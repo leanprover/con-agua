@@ -1,4 +1,10 @@
+module
+
 import ConAgua.Arena.RecClassSpec.RuW
+public import ConAgua.Arena.RecClassSpec.RuProg
+public import ConAgua.Arena.RecSim
+
+@[expose] public section
 
 /-!
 # ClassGenRule2: `ConRon.Arena.classGenRule`

@@ -1,4 +1,8 @@
-import ConAgua.Arena.FreezeRel
+module
+
+public import ConAgua.Arena.FreezeRel
+
+@[expose] public section
 
 /-!
 # One pending group from `PhaseBStart` (lane parmode, from lane parallel's `PhaseBEntry`)

@@ -1,5 +1,11 @@
+module
+
 import ConAgua.Arena.IndRealMemoCr
-import ConAgua.Arena.IndSumSpec.StructProjArgP
+public import ConAgua.Arena.IndSumSpec.StructProjArgP
+import ConAgua.Arena.IndInstallSpec.DomsW
+import ConAgua.Arena.IndRealAbs
+
+@[expose] public section
 
 /-!
 # FieldDomsResolve: `ConRon.Arena.fieldDomsResolve`, `ConRon.Arena.idxArgsResolve`

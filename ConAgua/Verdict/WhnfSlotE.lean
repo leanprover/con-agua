@@ -1,4 +1,12 @@
-import ConAgua.Arena.DefEqKnot
+module
+
+public import ConAgua.Arena.DefEqKnot
+import ConAgua.Arena.CoreNatOp
+import ConAgua.Arena.StrLitKeep
+import ConAgua.Arena.WhnfSlotRefine
+public import ConAgua.Arena.WhnfCoreLoop
+
+@[expose] public section
 
 /-!
 # The knot's `whnf_core` and `whnf` slots' verdict claims (lane `verdicts-b`, helper `k2`)

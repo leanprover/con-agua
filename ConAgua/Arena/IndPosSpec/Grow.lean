@@ -1,5 +1,10 @@
+module
+
 import ConAgua.Arena.IndPosSpec.SnocWStage
-import ConAgua.Arena.IndPosSpec.UCtx
+public import ConAgua.Arena.IndPosSpec.UCtx
+import ConAgua.Arena.IndPosSpec.RootHoles
+
+@[expose] public section
 
 /-!
 # Grow

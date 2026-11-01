@@ -1,7 +1,13 @@
-import ConAgua.Arena.PromoteCIInfra
+module
+
+public import ConAgua.Arena.PromoteCIInfra
 import ConAgua.Arena.PromoteRecRef
-import Std.Tactic.BVDecide.Normalize.Prop
+public import Std.Tactic.BVDecide.Normalize.Prop
 import ConRon.Bridge.Grind
+import ConAgua.Arena.DerRel
+public import ConAgua.Arena.PromoteMemo
+
+@[expose] public section
 
 /-!
 # DecRuleMk

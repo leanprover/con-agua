@@ -1,6 +1,11 @@
-import ConAgua.Arena.DefEqMid
+module
+
+public import ConAgua.Arena.DefEqMid
 import ConAgua.Arena.WhnfDeltaRefine3
-import ConAgua.Arena.DefEqLeaves2
+public import ConAgua.Arena.DefEqLeaves2
+import Std.WP.Triple.SpecLemmas
+
+@[expose] public section
 
 /-!
 # `NatPredW` from `natPred_refines` (lane `defeq2`)

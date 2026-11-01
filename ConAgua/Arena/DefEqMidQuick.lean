@@ -1,8 +1,16 @@
-import ConAgua.Arena.DefEqMidLams
-import ConAgua.Arena.CoreDen
-import ConAgua.Arena.DefEqLeaves2
+module
+
+public import ConAgua.Arena.DefEqMidLams
+public import ConAgua.Arena.CoreDen
+public import ConAgua.Arena.DefEqLeaves2
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
+import ConAgua.Arena.RefWalk
+import ConAgua.Checker.NoVerdictTree
+import ConAgua.L.ModelGen
+public import ConAgua.Arena.CoreLevels
+
+@[expose] public section
 
 /-!
 # The easy cases: `quick_defeq` (lane `defeq`)

@@ -1,4 +1,8 @@
-import ConAgua.Arena.RecCheckSpec.ErToIwWStage
+module
+
+public import ConAgua.Arena.RecCheckSpec.ErToIwWStage
+
+@[expose] public section
 
 /-!
 # PdWAfr

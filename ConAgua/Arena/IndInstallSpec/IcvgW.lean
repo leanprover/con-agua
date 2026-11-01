@@ -1,9 +1,16 @@
-import ConAgua.Arena.IndInstallSpec.Icvg
-import ConAgua.Arena.IndInstallSpec.InstallRec2Tele
+module
+
+public import ConAgua.Arena.IndInstallSpec.Icvg
+public import ConAgua.Arena.IndInstallSpec.InstallRec2Tele
 import ConAgua.Arena.IndPartsSpec.PartsPSlCons
-import ConAgua.Arena.IndGrindAttr
-import ConAgua.L.GrindAttr
+public import ConAgua.Arena.IndGrindAttr
+public import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
+import ConAgua.Arena.IndPartsSpec.IndPartsProg2
+import ConAgua.Arena.RecStab
+import Std.WP.Triple.SpecLemmas
+
+@[expose] public section
 
 /-!
 # IcvgW

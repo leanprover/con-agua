@@ -1,7 +1,12 @@
-import ConAgua.Arena.DeclBase
+module
+
+public import ConAgua.Arena.DeclBase
 import ConAgua.Arena.WhnfBase
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
+import Std.Tactic.BVDecide.Normalize.BitVec
+
+@[expose] public section
 
 /-!
 # The fold's `And` pin: `and_pin_ok(i)` refines `andPinOk` (con-leche's ANDPIN)

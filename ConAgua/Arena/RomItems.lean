@@ -1,8 +1,15 @@
-import ConAgua.Arena.RomExprRef
+module
+
+public import ConAgua.Arena.RomExprRef
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
-import Std.Tactic.BVDecide.Normalize.Prop
+public import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
+import ConAgua.L.LocNF
+import ConLeche.Verify.Cached.Erase
+import Std.WP.Triple.SpecLemmas
+
+@[expose] public section
 
 /-!
 # The ROM's item streams: one interpreter for every constant datum's store effect

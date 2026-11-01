@@ -1,6 +1,13 @@
+module
+
 import ConAgua.Arena.IndSumSpec.DecHLTake
-import ConAgua.Arena.RecCheckSpec.EeW
+public import ConAgua.Arena.RecCheckSpec.EeW
 import ConAgua.Arena.RecClassSpec.IhW
+import ConAgua.Arena.IndInstallSpec.DomsW
+import ConAgua.Arena.IndSim
+import ConAgua.Arena.IndSumSpec.StructProjArgP
+
+@[expose] public section
 
 /-!
 # EeW2

@@ -1,4 +1,11 @@
-import ConAgua.Arena.DefEqStuckIrrel
+module
+
+public import ConAgua.Arena.DefEqStuckIrrel
+import ConAgua.Arena.DefEqStuckEta
+import ConAgua.Arena.IndView
+import ConAgua.Arena.RefWalk
+
+@[expose] public section
 
 /-!
 # `stuck_str` refines `defeqStuck`'s string-literal arms (lane `defeq`, helper `defeq-top`)

@@ -1,8 +1,13 @@
-import ConAgua.Arena.DeclNatEq
+module
+
+public import ConAgua.Arena.DeclNatEq
 import ConAgua.Arena.RecCheckSpec.ErToIwWStage
-import ConAgua.Arena.GrindAttr
-import ConAgua.L.GrindAttr
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
+public import ConAgua.Rom.PinSets
+
+@[expose] public section
 
 /-!
 # DivModTypePins: `ConRon.Arena.divModCertProofs`, `ConRon.Arena.divModDeclPin`, `ConRon.Arena.divModTypePins`

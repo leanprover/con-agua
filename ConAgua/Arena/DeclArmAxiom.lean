@@ -1,11 +1,16 @@
-import ConAgua.Arena.DeclArmQuot
-import ConAgua.Arena.DeclAxiomSpec
-import ConAgua.Arena.DeclAxiomSpec2
-import ConAgua.Arena.DeclAxiomSpec4
-import ConAgua.Arena.DeclValSpec
-import ConAgua.Arena.GrindAttr
-import ConAgua.Arena.IndGrindAttr
-import ConAgua.L.GrindAttr
+module
+
+public import ConAgua.Arena.DeclArmQuot
+public import ConAgua.Arena.DeclAxiomSpec
+public import ConAgua.Arena.DeclAxiomSpec2
+public import ConAgua.Arena.DeclAxiomSpec4
+public import ConAgua.Arena.DeclValSpec
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.Arena.IndGrindAttr
+public import ConAgua.L.GrindAttr
+import ConAgua.Arena.DeclValRef
+
+@[expose] public section
 
 /-!
 # The axiom arm `check_decl_axiom(i, vis)`: its lookups and leaves (lane `decls3`)

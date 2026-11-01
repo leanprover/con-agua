@@ -1,6 +1,14 @@
-import ConAgua.Arena.DefEqStuckTail
+module
+
+public import ConAgua.Arena.DefEqStuckTail
 import ConAgua.Arena.DefEqMidLazy2
-import ConAgua.Arena.LdRd
+public import ConAgua.Arena.LdRd
+import ConAgua.Arena.DefEqStuckEta
+import ConAgua.Arena.RefWalk
+public import ConAgua.Arena.DefEqMidLazy
+public import ConAgua.Verdict.WhnfNatE
+
+@[expose] public section
 
 /-!
 # `defeq_body` refines `defeqBody`; the knot's `defeq` slot one level up (lane `defeq`)

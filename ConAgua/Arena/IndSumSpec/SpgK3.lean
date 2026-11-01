@@ -1,5 +1,9 @@
-import ConAgua.Arena.IndSumSpec.ColW
+module
+
+public import ConAgua.Arena.IndSumSpec.ColW
 import ConAgua.Arena.IndGrindAttr
+
+@[expose] public section
 
 /-!
 # SpgK3

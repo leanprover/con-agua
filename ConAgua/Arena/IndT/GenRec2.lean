@@ -1,7 +1,9 @@
+module
+
 import ConAgua.Arena.IndInstallSpec.PosFreeMfr
-import ConAgua.Arena.IndT.KeepC
+public import ConAgua.Arena.IndT.KeepC
 import ConAgua.Arena.RecGenSpec.Classes
-import ConAgua.Verdict.IndBGrpM
+public import ConAgua.Verdict.IndBGrpM
 import ConAgua.Arena.IndT.GenRec1
 import ConAgua.Verdict.IndBRec3
 import ConAgua.Arena.IndT.RecGen27
@@ -9,6 +11,29 @@ import ConAgua.Arena.RecGenSpec.CftW
 import ConAgua.Arena.IndInstallSpec.GfcW
 import ConAgua.Arena.IndInstallSpec.IcvgW
 import ConAgua.Arena.IndInstallSpec.PapW
+import all ConRon.Bridge.Inductives.GenRec
+import ConAgua.Arena.IlpRdReal
+import ConAgua.Arena.IndInstallSpec.GpbWSimF
+import ConAgua.Arena.IndInstallSpec.InstallIwB
+import ConAgua.Arena.IndInstallSpec.PartsShapeFacts
+import ConAgua.Arena.IndSim
+import ConAgua.Arena.IndT.Lift
+import ConAgua.Arena.IndT.RecGen19
+import ConAgua.Arena.RecCheckSpec.EraseFVarTys
+import ConAgua.Arena.RecGenSpec.ClassFieldsOf
+public import ConAgua.Arena.CrOKFrame
+public import ConAgua.Arena.IndInstallSpec.GenRecCheckPrep
+public import ConAgua.Arena.IndInstallSpec.GrcProg
+public import ConAgua.Arena.IndInstallSpec.GrcTwinA
+public import ConAgua.Arena.IndInstallSpec.Icvg
+public import ConAgua.Arena.IndRealApdT
+public import ConAgua.Arena.IndRealIlpL
+public import ConAgua.Arena.KnotEntry
+public import ConAgua.Arena.RecClassSpec.ClassNPcOf
+public import ConAgua.Verdict.VCtx
+public import ConRon.Bridge.Inductives.GenRec
+
+@[expose] public section
 
 /-!
 # `gen_rec_check_prep`, parts B and C (one model, `grpE`; one refinement per part)
@@ -534,7 +559,8 @@ theorem grpB_ref (P : GrcProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {dn : NIdx → Op
     have e3 := ConRon.Bridge.denoteEList_ext p7.ext _ _ (ConRon.Bridge.Inductives.mapM_denoteE hfTC)
     have e4 := ConRon.Bridge.Inductives.dSlot_ext.list c18.ext _ _ hslP
     have e5 := ConRon.Bridge.Inductives.dClassCtors_ext (c6.ext.trans p7.ext) _ _ hctors
-    simp only [dClassGen, e1, e2, e3, e4, e5, helim, Frontend.denoteEList, hnPe, Option.bind_eq_bind,
+    rw [dClassGen]
+    simp only [e1, e2, e3, e4, e5, helim, Frontend.denoteEList, hnPe, Option.bind_eq_bind,
       Option.bind_some, Option.pure_def]
   -- part C
   refine RefC.mono (grpC_ref hkp henv hApd hCrk P n hn hC6 (hbs.grow hg16)

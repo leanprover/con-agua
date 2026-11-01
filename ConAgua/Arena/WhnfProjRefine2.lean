@@ -1,10 +1,16 @@
-import ConAgua.Arena.WhnfProjRefine
+module
+
+public import ConAgua.Arena.WhnfProjRefine
 import ConAgua.Arena.CoreWalks
 import ConAgua.Arena.WhnfDelta
-import ConAgua.Arena.GrindAttr
-import ConAgua.L.GrindAttr
-import Std.Tactic.BVDecide.Normalize.Prop
-import Std.WP.Tactic
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.L.GrindAttr
+public import Std.Tactic.BVDecide.Normalize.Prop
+public import Std.WP.Tactic
+import Std.WP.Triple.SpecLemmas
+public import ConAgua.Arena.WhnfCore
+
+@[expose] public section
 
 /-!
 # `find_proj` refines `IFEnv.findProj?` under `CoreS` (lane `whnf3`, helper `whnf3-proj`)

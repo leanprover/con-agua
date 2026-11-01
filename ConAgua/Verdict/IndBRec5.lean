@@ -1,11 +1,26 @@
-import ConAgua.Verdict.IndBRec4
+module
+
+import ConRon.Bridge.Inductives.StructParts
+public import ConAgua.Verdict.IndBRec4
 import ConAgua.Arena.IndSumSpec.StructCtorResidOk
 import ConAgua.Arena.RecClassSpec.RuW
 import ConAgua.Arena.IndPartsSpec.PlW
 import ConAgua.Arena.IndRealAbsPos
-import ConAgua.Arena.GrindAttr
-import ConAgua.L.GrindAttr
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
+import ConAgua.Arena.IndRealAbsSim
+import ConAgua.Arena.IndSumSpec.Row
+import ConAgua.Arena.IndT.Lift
+import ConAgua.Arena.RecGenSpec.FlushStage
+import ConAgua.Arena.RefWalk
+import ConAgua.Checker.NoVerdictTree
+import ConRon.Bridge.Core.Walks.Cached
+public import ConAgua.Arena.IndSumSpec.ColW
+public import ConAgua.Arena.RecClassSpec.ClassGenRule
+public import ConAgua.Arena.RecGenSpec.Rec3TmdWDecB
+
+@[expose] public section
 /-!
 # `class_rules_ok`: one model and one refinement for both outcomes
 

@@ -1,9 +1,16 @@
-import ConAgua.Arena.IndPosSpec.CtxFields
-import ConAgua.Arena.IndPosSpec.MkLook
-import ConAgua.Arena.IndPosSpec.PiBWStage
-import ConAgua.Arena.RecCheckSpec.ErToIwWStage
-import ConAgua.Arena.IndPosSpec.NestBlockOfKey
+module
+
+public import ConAgua.Arena.IndPosSpec.CtxFields
+public import ConAgua.Arena.IndPosSpec.MkLook
+public import ConAgua.Arena.IndPosSpec.PiBWStage
+public import ConAgua.Arena.RecCheckSpec.ErToIwWStage
+public import ConAgua.Arena.IndPosSpec.NestBlockOfKey
 import ConAgua.Arena.IndGrindAttr
+import ConAgua.Arena.IndPartsSpec.MemberNames
+import ConAgua.Arena.IndPosSpec.NestKeyMap
+import ConAgua.Arena.RecClassSpec.CloseLams
+
+@[expose] public section
 
 /-!
 # Pos2CvLpsWStage

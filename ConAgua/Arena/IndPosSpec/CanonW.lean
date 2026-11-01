@@ -1,8 +1,20 @@
-import ConAgua.Arena.IndPosSpec.NestBlockOfKey
-import ConAgua.Arena.IndPosSpec.MatesW
+module
+
+public import ConAgua.Arena.IndPosSpec.NestBlockOfKey
+public import ConAgua.Arena.IndPosSpec.MatesW
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr
+import ConAgua.Arena.IndMaster
+import Std.Tactic.BVDecide.Normalize.BitVec
+import Std.WP.Tactic
+import Std.WP.Triple.SpecLemmas
+public import ConAgua.Arena.IndPos
+public import ConAgua.Arena.IndPos2
+public import ConAgua.Arena.IndStubs
+public import ConAgua.Arena.IndView
+
+@[expose] public section
 
 /-!
 # CanonW

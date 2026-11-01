@@ -1,6 +1,10 @@
-import ConRon.Arena.Basis
-import ConRon.Bridge.Promote.Pers
-import ConRon.Bridge.Checker.Basis
+module
+
+public import ConRon.Arena.Basis
+public import ConRon.Bridge.Promote.Pers
+public import ConRon.Bridge.Checker.Basis
+
+@[expose] public section
 
 /-!
 # `andPinOk` keeps the scratch tier's flag (lane `loopt3`)

@@ -1,6 +1,17 @@
-import ConAgua.Final.ThreadsFinal
-import ConAgua.Verdict.ThreadsE
-import ConAgua.Checker.VerdictTop
+module
+
+public import ConAgua.Final.ThreadsFinal
+public import ConAgua.Verdict.ThreadsE
+public import ConAgua.Checker.VerdictTop
+import ConAgua.Checker.AsmFinal
+import ConAgua.Checker.ProgIRef
+import ConAgua.Checker.ProgWf
+import ConAgua.Final.BufAbi
+import ConAgua.Final.BufChain
+import ConAgua.Final.DrvFinal
+public import ConAgua.Compiler.Main
+
+@[expose] public section
 
 /-!
 # The verdict theorem for the threaded harness of the committed file

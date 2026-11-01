@@ -1,12 +1,23 @@
+module
+
 import ConAgua.Arena.WhnfIotaRefine3
-import ConAgua.Arena.CoreLevels
-import ConAgua.Arena.CoreDen
+public import ConAgua.Arena.CoreLevels
+public import ConAgua.Arena.CoreDen
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
 import Std.Tactic.BVDecide.Normalize.BitVec
-import Std.Tactic.BVDecide.Normalize.Prop
+public import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
+import ConAgua.Arena.RefWalk
+import Std.WP.Triple.SpecLemmas
+public import ConAgua.Arena.CoreErec
+public import ConAgua.Arena.KnotE
+public import ConAgua.Arena.RefECore
+public import ConAgua.Arena.WhnfIotaRefine
+public import ConAgua.Verdict.WhnfModels3E
+
+@[expose] public section
 
 /-!
 # ι-reduction: proofs of `WhnfIota.lean`'s specs, part 4 (`proof_irrel`, `prepare_major`, …)

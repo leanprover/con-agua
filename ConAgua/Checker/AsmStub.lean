@@ -1,5 +1,11 @@
-import ConAguaAsm.Checker
+module
+
+public import ConAguaAsm.Checker
 import ConAgua.AsmFile.Eq
+meta import ConAguaAsm.Checker
+meta import ConAgua.AsmFile.Eq
+
+@[expose] public section
 
 /-!
 # The committed file's stub

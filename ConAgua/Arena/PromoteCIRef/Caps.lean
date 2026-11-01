@@ -1,5 +1,15 @@
+module
+
 import ConAgua.Arena.PromoteCIRef.Proj
 import ConRon.Bridge.Grind
+import ConAgua.Arena.PromoteCIRef.Hslice
+import ConAgua.Arena.PromoteCIRef.NatMove
+import ConAgua.Arena.PromoteCIRef.PmDecRuleWords
+import ConAgua.Arena.PromoteCIRef.PreECongr
+public import ConAgua.Arena.PromoteCIRef.DecRuleMk
+public import ConAgua.Arena.PromoteERef
+
+@[expose] public section
 
 /-!
 # Caps

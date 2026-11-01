@@ -1,6 +1,10 @@
-import ConAgua.Rom.PinSets
+module
+
+public import ConAgua.Rom.PinSets
 import ConRon.Bridge.Checker.Pins
-import ConAgua.Arena.RomPins
+public import ConAgua.Arena.RomPins
+
+@[expose] public section
 
 open ConRon.Arena
 open Std.WP

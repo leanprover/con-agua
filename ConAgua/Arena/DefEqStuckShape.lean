@@ -1,6 +1,14 @@
-import ConAgua.Arena.DefEqStuck
+module
+
+public import ConAgua.Arena.DefEqStuck
 import ConAgua.Arena.InferBodySpine
-import ConAgua.Arena.WhnfIotaRefine
+public import ConAgua.Arena.WhnfIotaRefine
+import ConAgua.Arena.IndView
+import ConAgua.Arena.InferBodyIntern
+import ConAgua.Arena.WhnfCoreRefine
+import ConRon.Bridge.Grind
+
+@[expose] public section
 
 /-!
 # `eta_ctor_shape` refines `etaCtorShape` (lane `defeq`, helper `defeq-top`)

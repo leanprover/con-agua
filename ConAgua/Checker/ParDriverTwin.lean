@@ -1,5 +1,15 @@
-import ConAgua.Checker.ParDriverL
+module
+
+public import ConAgua.Checker.ParDriverL
 import ConAgua.Checker.CheckARun
+import ConAgua.Checker.IndArm
+import ConAgua.Checker.LoopProg
+import ConAgua.Checker.LoopStage
+import ConAgua.Checker.TwinShapeQuot
+public import ConAgua.Checker.PresizeStage
+public import ConAgua.Final.Twin
+
+@[expose] public section
 
 /-!
 # The sequential driver's two runs give `TwinAccepts` (lane parmode)

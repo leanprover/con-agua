@@ -1,4 +1,8 @@
-import ConAgua.Arena.DeclRec
+module
+
+public import ConAgua.Arena.DeclRec
+
+@[expose] public section
 
 /-!
 # CapsProg

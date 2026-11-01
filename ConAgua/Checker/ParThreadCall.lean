@@ -1,8 +1,15 @@
-import ConAgua.Checker.ParThreadL
-import ConAgua.Checker.ParThreadReads
-import ConAgua.Arena.FreezeBuf
+module
+
+public import ConAgua.Checker.ParThreadL
+public import ConAgua.Checker.ParThreadReads
+public import ConAgua.Arena.FreezeBuf
 import ConAgua.Checker.CheckARun
 import ConAgua.Arena.FreezeFresh
+import ConAgua.Arena.PhaseBOne
+import ConAgua.Checker.RomProg0
+import ConAgua.L.Blocks
+
+@[expose] public section
 
 /-!
 # The threads' entry 2, one call (lane parmode)

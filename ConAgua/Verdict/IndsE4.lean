@@ -1,7 +1,22 @@
+module
+
+import ConRon.Bridge.Inductives.SumInstall
 import ConAgua.Arena.IndT.Install1
-import ConAgua.Verdict.LefRef
-import ConAgua.Arena.IndInstallSpec.IagW
+public import ConAgua.Verdict.LefRef
+public import ConAgua.Arena.IndInstallSpec.IagW
 import ConRon.Bridge.Inductives.BlockInstall
+import ConAgua.Arena.IndInstallSpec.DomsW
+import ConAgua.Arena.IndRealAbs
+import ConAgua.Arena.IndT.Lift
+import ConAgua.Arena.RefWalk
+import ConAgua.Checker.NoVerdictTree
+import ConAgua.L.ModelGen
+public import ConAgua.Arena.IndRealOpf
+public import ConAgua.Arena.KnotEntry
+public import ConAgua.Verdict.VCtx
+public import ConRon.Bridge.Checker.Hyp
+
+@[expose] public section
 /-!
 # `check_block_agree_one`: one model and one refinement for both outcomes
 

@@ -1,9 +1,15 @@
-import ConAgua.Arena.DeclDivModSpec.DivModTypePins
-import ConAgua.Arena.DeclDivModSpec.PureRun
-import ConAgua.Arena.IndRealNames
+module
+
+public import ConAgua.Arena.DeclDivModSpec.DivModTypePins
+public import ConAgua.Arena.DeclDivModSpec.PureRun
+public import ConAgua.Arena.IndRealNames
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
+import ConAgua.Arena.IndInstallSpec.DomsW
+import Std.Tactic.BVDecide.Normalize.BitVec
+
+@[expose] public section
 
 /-!
 # EqAt1: `ConRon.Arena.certCtx`, `ConRon.Arena.eqAt1`, `ConRon.Arena.natOne`, `ConRon.Arena.natVar`

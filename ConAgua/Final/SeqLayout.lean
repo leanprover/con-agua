@@ -1,7 +1,11 @@
-import ConAgua.Compiler.AbiSim
-import Std.Tactic.BVDecide.Normalize.BitVec
+module
+
+public import ConAgua.Compiler.AbiSim
+public import Std.Tactic.BVDecide.Normalize.BitVec
 import Std.Tactic.BVDecide.Normalize.Prop
 import ConRon.Bridge.Grind
+
+@[expose] public section
 
 /-!
 # `ca_check_seq`'s layout (lane parmode)

@@ -1,5 +1,9 @@
-import ConAgua.Compiler.WriteSetSplit
-import ConAgua.Layout
+module
+
+public import ConAgua.Compiler.WriteSetSplit
+public import ConAgua.Layout
+
+@[expose] public section
 
 /-! The tests behind `Checker/IndArmClosed.lean`'s per-function checks: an arm's array and `CTL`
 tests, all arms' checks on one function (`wsChkM`). -/

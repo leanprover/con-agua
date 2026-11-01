@@ -1,10 +1,15 @@
-import ConAgua.Arena.IndPosSpec.CtxFields
-import ConAgua.Arena.IndPosSpec.GrpAt
-import ConAgua.Arena.DeclHeader
-import ConAgua.Arena.IndPosSpec.MatesW
+module
+
+public import ConAgua.Arena.IndPosSpec.CtxFields
+public import ConAgua.Arena.IndPosSpec.GrpAt
+public import ConAgua.Arena.DeclHeader
+public import ConAgua.Arena.IndPosSpec.MatesW
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
+import Std.WP.Triple.SpecLemmas
+
+@[expose] public section
 
 /-!
 # FgW2

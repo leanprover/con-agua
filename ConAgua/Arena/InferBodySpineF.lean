@@ -1,10 +1,16 @@
+module
+
 import ConAgua.Arena.InferBodySpine
 import Std.Tactic.BVDecide.Normalize.BitVec
-import Std.Tactic.BVDecide.Normalize.Prop
-import Std.WP.Tactic
-import ConAgua.Arena.WhnfCoreApp
+public import Std.Tactic.BVDecide.Normalize.Prop
+public import Std.WP.Tactic
+public import ConAgua.Arena.WhnfCoreApp
 import ConAgua.Arena.WhnfCoreRefine
-import ConAgua.Arena.InferBodySpineFModels
+public import ConAgua.Arena.InferBodySpineFModels
+import ConAgua.Arena.RefWalk
+public import ConAgua.Arena.InferLeaves
+
+@[expose] public section
 
 /-!
 # The full-grade application spine (lane `defeq`)

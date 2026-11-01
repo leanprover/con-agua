@@ -1,10 +1,14 @@
-import ConAgua.Arena.DeclCvg
-import ConAgua.Arena.DeclHeader
-import ConAgua.Arena.DeclRec
+module
+
+public import ConAgua.Arena.DeclCvg
+public import ConAgua.Arena.DeclHeader
+public import ConAgua.Arena.DeclRec
 import ConAgua.Arena.Verdict
-import ConAgua.Arena.GrindAttr
-import ConAgua.Arena.IndGrindAttr
-import ConAgua.L.GrindAttr
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.Arena.IndGrindAttr
+public import ConAgua.L.GrindAttr
+
+@[expose] public section
 
 noncomputable section
 

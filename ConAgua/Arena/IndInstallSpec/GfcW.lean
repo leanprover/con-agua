@@ -1,11 +1,21 @@
+module
+
 import ConAgua.Arena.RecGenSpec.DecB
-import ConAgua.Arena.RecGenSpec.DecCIIndCv
-import ConAgua.Arena.IndPartsSpec.PartsConsPL
-import ConAgua.Arena.GrindAttr
-import ConAgua.Arena.IndGrindAttr
-import ConAgua.L.GrindAttr
+public import ConAgua.Arena.RecGenSpec.DecCIIndCv
+public import ConAgua.Arena.IndPartsSpec.PartsConsPL
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.Arena.IndGrindAttr
+public import ConAgua.L.GrindAttr
 import ConAgua.Arena.LdRd
 import ConAgua.L.ModelGen
+import ConAgua.Arena.IndInstallSpec.DomsW
+import ConAgua.Arena.IndPosSpec.CrLook
+import ConAgua.Arena.RecClassSpec.CloseLams
+import ConAgua.Arena.RecClassSpec.MjProg
+import ConRon.Bridge.Grind
+public import ConAgua.Arena.IndPosSpec.NoGoStep
+
+@[expose] public section
 
 /-!
 # GfcW

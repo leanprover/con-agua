@@ -1,5 +1,10 @@
+module
+
 import ConAgua.Arena.WhnfIotaRecRefine
 import ConRon.Bridge.Grind
+public import ConAgua.Arena.WhnfIota
+
+@[expose] public section
 
 /-!
 # Where a firing rule's names and levels read back (lane `defeq2`)

@@ -1,4 +1,8 @@
-import ConAgua.Arena.WhnfSpineArgs
+module
+
+public import ConAgua.Arena.WhnfSpineArgs
+
+@[expose] public section
 
 /-!
 # Application spines and ∀-telescopes in L, on the spine stack

@@ -1,10 +1,23 @@
-import ConAgua.Front.ApplyExpr
+module
+
+public import ConAgua.Front.ApplyExpr
 import ConAgua.Arena.GrindAttr
 import ConAgua.Census.Attr
 import ConAgua.L.GrindAttr
-import Std.Tactic.BVDecide.Normalize.BitVec
+public import Std.Tactic.BVDecide.Normalize.BitVec
 import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
+meta import ConAgua.Front.ApplyExpr
+meta import ConAgua.Arena.GrindAttr
+meta import ConAgua.Census.Attr
+meta import ConAgua.L.GrindAttr
+meta import Std.Tactic.BVDecide.Normalize.BitVec
+meta import Std.Tactic.BVDecide.Normalize.Prop
+meta import Std.WP.Tactic
+import ConAgua.Scan.Common
+import Std.WP.Triple.SpecLemmas
+
+@[expose] public section
 
 /-!
 # Declaration lines into the parse state: `apply_decl`

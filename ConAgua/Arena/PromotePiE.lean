@@ -1,5 +1,10 @@
-import ConAgua.Arena.PromotePi
-import Std.Tactic.BVDecide.Normalize.Prop
+module
+
+public import ConAgua.Arena.PromotePi
+public import Std.Tactic.BVDecide.Normalize.Prop
+import ConAgua.Arena.DerRel
+
+@[expose] public section
 
 /-!
 # The expression interners `pi_*` under `ArenaD`

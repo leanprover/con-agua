@@ -1,4 +1,9 @@
+module
+
 import ConAgua.Checker.HoistNatRef
+public import ConAgua.Checker.HoistClosureL
+
+@[expose] public section
 
 /-!
 # `hoist_targets_go` is the twin's `hoistTargetsGo` (lane `front4`)

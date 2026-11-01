@@ -1,6 +1,10 @@
+module
+
 import ConAgua.Verdict.DefEqBaseE
-import ConAgua.Arena.DefEqBody
-import ConAgua.Arena.IndTwin
+public import ConAgua.Arena.DefEqBody
+public import ConAgua.Arena.IndTwin
+
+@[expose] public section
 
 /-!
 # The knot's `defeq` slot and `is_def_eq_core`: their error claims

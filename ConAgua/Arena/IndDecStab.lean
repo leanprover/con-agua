@@ -1,5 +1,10 @@
+module
+
 import ConAgua.Arena.IndLibSpec
-import Std.Tactic.BVDecide.Normalize.Prop
+public import Std.Tactic.BVDecide.Normalize.Prop
+public import ConAgua.Arena.IndIface
+
+@[expose] public section
 
 /-!
 # Decoders stay decoded as the pools grow: one lemma for every decoder (lane `indproofs2`)

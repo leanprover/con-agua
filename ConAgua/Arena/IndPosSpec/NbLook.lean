@@ -1,8 +1,12 @@
-import ConAgua.Arena.IndPosSpec.EnvFindWHit
-import ConAgua.Arena.IndPosSpec.FgW2
-import ConAgua.Arena.IndPosSpec.NtyLook
-import ConAgua.Arena.IndPosSpec.U4W
-import ConAgua.Arena.IndRealNames
+module
+
+public import ConAgua.Arena.IndPosSpec.EnvFindWHit
+public import ConAgua.Arena.IndPosSpec.FgW2
+public import ConAgua.Arena.IndPosSpec.NtyLook
+public import ConAgua.Arena.IndPosSpec.U4W
+public import ConAgua.Arena.IndRealNames
+
+@[expose] public section
 
 /-!
 # NbLook

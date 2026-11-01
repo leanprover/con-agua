@@ -1,6 +1,15 @@
-import ConAgua.Arena.PropReadLoops
+module
+
+public import ConAgua.Arena.PropReadLoops
 import ConAgua.Arena.InferBodySpine
-import ConAgua.Arena.LevelSubstL
+public import ConAgua.Arena.LevelSubstL
+import ConAgua.Arena.InferBodyIntern
+import Std.WP.Triple.SpecLemmas
+public import ConAgua.Arena.IndView
+public import ConAgua.Arena.KnotSlot
+public import ConAgua.L.ProgHas
+
+@[expose] public section
 
 /-!
 # The prop-ness readers: word-level models of the functions with calls (helper `defeq2-prop`)

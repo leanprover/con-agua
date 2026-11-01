@@ -1,12 +1,21 @@
-import ConAgua.Arena.IndSumSpec.TsrW
+module
+
+public import ConAgua.Arena.IndSumSpec.TsrW
 import ConAgua.Arena.RecGenSpec.CruleProg
-import ConAgua.Arena.RecGenSpec.DecRR
+public import ConAgua.Arena.RecGenSpec.DecRR
 import ConAgua.Arena.IndInstallSpec.IcbiW
-import ConAgua.Arena.IndPartsSpec.PartsConsPL
-import ConAgua.Arena.GrindAttr
-import ConAgua.Arena.IndGrindAttr
-import ConAgua.L.GrindAttr
+public import ConAgua.Arena.IndPartsSpec.PartsConsPL
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.Arena.IndGrindAttr
+public import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
+import ConAgua.Arena.IndPartsSpec.RulePrefixAt
+import ConAgua.Arena.IndSumSpec.ConsSumCtors
+import ConAgua.Arena.RecClassSpec.CloseLams
+import ConAgua.Arena.RecClassSpec.MjProg
+import ConAgua.L.WordOff
+
+@[expose] public section
 
 /-!
 # ConsBlockRecsTF: `ConRon.Arena.consBlockRecsTF`

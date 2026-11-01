@@ -1,6 +1,12 @@
-import ConAgua.Verdict.IndBToi
-import ConAgua.Arena.GrindAttr
+module
+
+public import ConAgua.Verdict.IndBToi
+public import ConAgua.Arena.GrindAttr
 import ConAgua.L.ModelGen
+import ConAgua.Checker.NoVerdictTree
+public import ConAgua.Arena.RecGenSpec.OcW
+
+@[expose] public section
 /-!
 # `target_major_of_outside_tail`: the model for both outcomes
 

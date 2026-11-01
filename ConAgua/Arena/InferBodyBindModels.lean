@@ -1,11 +1,17 @@
+module
+
 import ConAgua.Arena.Verdict
-import ConAgua.Arena.Infer
+public import ConAgua.Arena.Infer
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
 import ConAgua.Checker.NoVerdictTree
-import Std.Tactic.BVDecide.Normalize.BitVec
-import Std.Tactic.BVDecide.Normalize.Prop
+public import Std.Tactic.BVDecide.Normalize.BitVec
+public import Std.Tactic.BVDecide.Normalize.Prop
+public import ConAgua.Checker.NoVerdictFns
+public import ConAgua.L.ErrSpec
+
+@[expose] public section
 
 /-!
 # The generated models of `InferBodyBind.lean`

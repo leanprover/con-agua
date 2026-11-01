@@ -1,8 +1,13 @@
-import ConAgua.Arena.PromoteL
+module
+
+public import ConAgua.Arena.PromoteL
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
-import Std.Tactic.BVDecide.Normalize.Prop
+public import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
+import Std.WP.Triple.SpecLemmas
+
+@[expose] public section
 
 /-!
 # The record side of the promotion: models and specs

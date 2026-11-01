@@ -4,6 +4,8 @@ meta import ConAgua.L.Semantics
 public import ConAgua.Arena.SlotGrow
 public import ConAgua.L.Logic
 import ConAgua.L.GrindAttr
+import Std.Data.DTreeMap.Internal.Operations
+import Std.Tactic.BVDecide.Normalize.Prop
 
 @[expose] public section
 

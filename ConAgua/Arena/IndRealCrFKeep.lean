@@ -1,6 +1,15 @@
+module
+
 import ConAgua.Arena.IndRealMemoCr
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
+import ConAgua.Arena.StageInst1
+import Std.WP.Tactic
+import Std.WP.Triple.SpecLemmas
+public import ConAgua.Arena.ConstsResolveFRefine2
+public import ConAgua.Arena.IndRealCrF
+
+@[expose] public section
 
 /-!
 # `consts_resolve_ffast` keeps its memo well formed, from any memory (lane `indproofs4`, helper `kc`)

@@ -1,6 +1,10 @@
-import ConAgua.Checker.PresizeStage
-import ConAgua.Final.TwinVerdict
-import ConAgua.Checker.ParDriverL
+module
+
+public import ConAgua.Checker.PresizeStage
+public import ConAgua.Final.TwinVerdict
+public import ConAgua.Checker.ParDriverL
+
+@[expose] public section
 
 /-!
 # The verdict claim at the entries of `check`

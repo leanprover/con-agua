@@ -1,8 +1,19 @@
-import ConAgua.Front.FrontPreOK1
-import ConAgua.Front.IndApplyRefine9
+module
+
+public import ConAgua.Front.FrontPreOK1
+public import ConAgua.Front.IndApplyRefine9
 import ConAgua.Front.IndFieldsLink3
 import ConAgua.Front.IndInstallRefine5
-import Std.Tactic.BVDecide.Normalize.Prop
+public import Std.Tactic.BVDecide.Normalize.Prop
+import ConAgua.Checker.NoVerdictTree
+import ConAgua.Front.ApplyDeclRefine
+import ConAgua.Front.IndApplyRefine
+import ConAgua.Front.IndInstallRefine3
+import ConAgua.Front.IndInstallRefine4
+public import ConAgua.Front.IndApplySpec2
+public import ConAgua.Front.IndFieldsSpec
+
+@[expose] public section
 
 /-!
 # The frontend's records, word by word, II: an inductive line (lane `pipeline`)

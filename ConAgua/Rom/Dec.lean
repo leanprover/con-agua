@@ -1,6 +1,10 @@
-import ConAgua.Arena.RomLevels
+module
+
+public import ConAgua.Arena.RomLevels
 import Std.Tactic.BVDecide.Normalize.BitVec
-import Std.Tactic.BVDecide.Normalize.Prop
+public import Std.Tactic.BVDecide.Normalize.Prop
+
+@[expose] public section
 
 /-!
 # The decoder direction of the ROM readers' models (lane `romload`)

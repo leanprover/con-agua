@@ -1,10 +1,19 @@
-import ConAgua.Arena.RecClassSpec.Classes
+module
+
+public import ConAgua.Arena.RecClassSpec.Classes
 import ConAgua.Arena.RecClassSpec.IhW
 import ConAgua.Arena.RecClassSpec.MjProg
 import ConAgua.Arena.RecGenSpec.IwNLtSize
-import ConAgua.Arena.GrindAttr
+public import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
-import ConAgua.L.GrindAttr
+public import ConAgua.L.GrindAttr
+import ConAgua.Arena.RecSim
+import Std.Tactic.BVDecide.Normalize.BitVec
+import Std.WP.Tactic
+import Std.WP.Triple.SpecLemmas
+public import ConAgua.Arena.IndDecStab
+
+@[expose] public section
 
 /-!
 # ClassMinorSlot: `ConRon.Arena.ClassSlot.isMinor`, `ConRon.Arena.classLeafAt`, `class_minor_slot`'s scan
@@ -103,7 +112,7 @@ theorem hitsFrom_eq (c : Nat) (C : NIdx) : ∀ (j : Nat) (sls : List ClassSlot),
       simp only [Function.comp, List.getElem?_cons_succ]
       have : j + (s + 1) = j + 1 + s := by omega
       simp only [this, Nat.succ_eq_add_one]
-    rw [← e, ih (j + 1)]
+    erw [← e, ih (j + 1)]
     cases sl with
     | motive k => simp [hitsFrom]
     | minor c' C' ihs => by_cases hh : (c' == c && C' == C) = true <;> simp [hitsFrom, hh]

@@ -1,6 +1,12 @@
-import ConAgua.Arena.WhnfCoreAppLoop
-import Std.Tactic.BVDecide.Normalize.Prop
-import Std.WP.Tactic
+module
+
+public import ConAgua.Arena.WhnfCoreAppLoop
+public import Std.Tactic.BVDecide.Normalize.Prop
+public import Std.WP.Tactic
+import ConAgua.Arena.RefWalk
+public import ConAgua.Arena.WhnfCoreRefine
+
+@[expose] public section
 
 /-!
 # `whnf_core_step` and its `app` arm refine `whnfCoreStep`

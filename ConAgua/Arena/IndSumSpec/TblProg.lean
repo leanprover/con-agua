@@ -1,9 +1,16 @@
-import ConAgua.Arena.IndRealCrF
-import ConAgua.Arena.IndRealIlpP
-import ConAgua.Arena.DeclRec
+module
+
+public import ConAgua.Arena.IndRealCrF
+public import ConAgua.Arena.IndRealIlpP
+public import ConAgua.Arena.DeclRec
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr
+import Std.WP.Tactic
+import Std.WP.Triple.SpecLemmas
+public import ConAgua.Arena.IndRealWalk
+
+@[expose] public section
 
 /-!
 # TblProg

@@ -1,5 +1,11 @@
-import ConAgua.Front.FrontPre
-import ConAgua.Checker.HoistWalkRef
+module
+
+public import ConAgua.Front.FrontPre
+public import ConAgua.Checker.HoistWalkRef
+import ConAgua.Front.IndInstallRefine
+import ConRon.Bridge.Grind
+
+@[expose] public section
 
 /-!
 # The frontend after the prelude, with the records' words (lane `pipeline`)

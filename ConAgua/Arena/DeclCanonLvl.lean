@@ -1,10 +1,18 @@
-import ConAgua.Arena.DeclCanonView2
+module
+
+public import ConAgua.Arena.DeclCanonView2
 import ConAgua.Arena.IndInstallSpec.DomsW
-import ConAgua.Arena.DeclCanonSpec
+public import ConAgua.Arena.DeclCanonSpec
 import ConAgua.Arena.LevelView
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr
+import ConAgua.Arena.DeclCvg
+import Std.WP.Tactic
+import Std.WP.Triple.SpecLemmas
+public import ConRon.Arena.Canon
+
+@[expose] public section
 
 /-!
 # The canonical level comparison in L (lane `decls3`, helper `decls3-canon`)

@@ -1,4 +1,11 @@
-import ConAgua.Checker.PipeStages
+module
+
+public import ConAgua.Checker.PipeStages
+import ConAgua.Checker.RomProg
+import ConAgua.Checker.RomProgInit
+import ConRon.Bridge.Checker.Pins
+
+@[expose] public section
 
 /-!
 # The presize stage of entry 1 (lane presize)

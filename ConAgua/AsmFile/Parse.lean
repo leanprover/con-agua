@@ -1,6 +1,7 @@
 module
 
 public import Kraken.X64.Syntax
+meta import Kraken.X64.Syntax
 
 @[expose] public section
 

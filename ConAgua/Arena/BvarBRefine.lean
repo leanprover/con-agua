@@ -1,10 +1,17 @@
-import ConAgua.Arena.BvarB
+module
+
+public import ConAgua.Arena.BvarB
 import ConAgua.Arena.WalkRefine
 import ConAgua.Arena.DerRel
-import ConAgua.Arena.Keeps
+public import ConAgua.Arena.Keeps
 import ConAgua.Arena.LiftRefine
 import Std.Tactic.BVDecide.Normalize.BitVec
-import Std.Tactic.BVDecide.Normalize.Prop
+public import Std.Tactic.BVDecide.Normalize.Prop
+import ConAgua.Arena.SimLib
+import ConAgua.Arena.View
+public import ConAgua.Arena.DerRelBase
+
+@[expose] public section
 
 /-!
 # `bvar_b` refines `bvarB`, `loose_bvars_bounded_fast` refines `looseBVarsBoundedFast`

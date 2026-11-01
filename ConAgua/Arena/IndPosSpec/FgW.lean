@@ -1,11 +1,21 @@
-import ConAgua.Arena.IndPosSpec.BvbWMfr
+module
+
+public import ConAgua.Arena.IndPosSpec.BvbWMfr
 import ConAgua.Arena.IndPosSpec.EntryW
 import ConAgua.Arena.IndPosSpec.GgW
 import ConAgua.Arena.IndPosSpec.Mfr
 import ConAgua.Arena.IndPosSpec.NestContParamsClosed
 import ConAgua.Arena.IndPosSpec.SnocWMfr
-import ConAgua.Arena.IndPosSpec.U4W
-import ConAgua.Arena.IndGrindAttr
+public import ConAgua.Arena.IndPosSpec.U4W
+public import ConAgua.Arena.IndGrindAttr
+import ConAgua.Arena.IndPosSpec.DepthGo
+import ConAgua.Arena.IndPosSpec.EnvFindWHit
+import ConAgua.Arena.IndPosSpec.MentionsAnyGo
+import ConAgua.Arena.IndPosSpec.SnocWDecK
+import ConAgua.Arena.IndPosSpec.SnocWStage
+public import ConAgua.Arena.IndPosSpec.FgW2
+
+@[expose] public section
 
 /-!
 # FgW

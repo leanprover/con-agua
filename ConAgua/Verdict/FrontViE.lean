@@ -1,6 +1,13 @@
-import ConAgua.Verdict.FrontE
-import ConAgua.Front.IndApplyRefine3
+module
+
+public import ConAgua.Verdict.FrontE
+public import ConAgua.Front.IndApplyRefine3
 import ConAgua.Checker.NoVerdictTree
+import all ConAgua.Front.IndApplyRefine3
+import ConAgua.L.ModelGen
+public import ConAgua.Checker.NoVerdictFns
+
+@[expose] public section
 
 /-!
 # `validateIndD`'s leaf checks: one model and one refinement each (lane `unify-kit`, helper `vi`)

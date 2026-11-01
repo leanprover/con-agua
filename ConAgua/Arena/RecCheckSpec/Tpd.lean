@@ -1,8 +1,13 @@
-import ConAgua.Arena.RecCheckSpec.TaGoWMfr
-import ConAgua.Arena.GrindAttr
-import ConAgua.Arena.IndGrindAttr
-import ConAgua.L.GrindAttr
-import ConAgua.Arena.RecClassSpec.MnW
+module
+
+public import ConAgua.Arena.RecCheckSpec.TaGoWMfr
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.Arena.IndGrindAttr
+public import ConAgua.L.GrindAttr
+public import ConAgua.Arena.RecClassSpec.MnW
+import ConAgua.Arena.RecCheckSpec.EraseFVarTys
+
+@[expose] public section
 
 /-!
 # Tpd

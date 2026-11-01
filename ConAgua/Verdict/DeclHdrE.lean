@@ -1,7 +1,19 @@
+module
+
 import ConAgua.Arena.IndT.WalkC
-import ConAgua.Verdict.DeclValE
-import ConAgua.Arena.GrindAttr
+public import ConAgua.Verdict.DeclValE
+public import ConAgua.Arena.GrindAttr
 import ConAgua.L.ModelGen
+import ConAgua.Arena.DeclCvgT
+import ConAgua.Arena.IndInstallSpec.DomsW
+import ConAgua.Arena.IndPartsSpec.MemberNames
+import ConAgua.Arena.IndRealMemoCrT
+import ConAgua.Arena.IndRealWalkT
+import ConAgua.Arena.RefWalk
+import ConAgua.Checker.NoVerdictTree
+public import ConAgua.Arena.IndRealAbs
+
+@[expose] public section
 /-!
 # `install_header`'s refinement
 

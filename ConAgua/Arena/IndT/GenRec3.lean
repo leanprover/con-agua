@@ -1,10 +1,33 @@
+module
+
 import ConAgua.Arena.IndT.StreamRecs
 import ConAgua.Verdict.IndBRecPins
-import ConAgua.Arena.IndT.GenRec2
+public import ConAgua.Arena.IndT.GenRec2
 import ConAgua.Verdict.IndBRec6
-import ConAgua.Arena.GrindAttr
-import ConAgua.L.GrindAttr
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
+import ConAgua.Arena.IndInstallSpec.IcvgW
+import ConAgua.Arena.IndInstallSpec.InstallIwB
+import ConAgua.Arena.IndInstallSpec.PapW
+import ConAgua.Arena.IndInstallSpec.PartsShapeFacts
+import ConAgua.Arena.IndInstallSpec.PosFreeMfr
+import ConAgua.Arena.IndSim
+import ConAgua.Arena.IndT.GenRec1
+import ConAgua.Arena.IndT.Lift
+import ConAgua.Arena.RecCheckSpec.CnfW
+import ConAgua.Arena.RecGenSpec.CfhW
+import ConAgua.Arena.RecGenSpec.Classes
+import ConAgua.Arena.RecGenSpec.FlushStage
+import ConAgua.Arena.RefWalk
+import ConAgua.Arena.ScratchRefine
+import ConAgua.Checker.NoVerdictTree
+public import ConAgua.Arena.DeclBase
+public import ConAgua.Arena.DeclValSpec
+public import ConAgua.Arena.IndInstallSpec.GpbWSimF
+public import ConAgua.Arena.IndPartsSpec.BlockRecNamesUnreserved
+
+@[expose] public section
 
 /-!
 # `gen_rec_check_prep`, `gen_rec_check`: one model, one refinement each; `checkBlockRec`

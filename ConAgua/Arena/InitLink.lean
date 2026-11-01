@@ -1,4 +1,10 @@
+module
+
 import ConAgua.Arena.Env
+import ConAgua.Arena.DerRel
+public import ConAgua.Arena.Tiers
+
+@[expose] public section
 
 /-!
 # The initial store (lane `front3`)

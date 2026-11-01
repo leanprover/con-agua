@@ -1,4 +1,8 @@
-import ConAgua.Arena.IndInstallSpec.GrcProg
+module
+
+public import ConAgua.Arena.IndInstallSpec.GrcProg
+
+@[expose] public section
 
 /-!
 # DecISS

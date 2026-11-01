@@ -1,4 +1,8 @@
-import ConAgua.Arena.Tiers
+module
+
+public import ConAgua.Arena.Tiers
+
+@[expose] public section
 
 /-!
 # Of

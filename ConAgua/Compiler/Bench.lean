@@ -1,4 +1,8 @@
-import ConLeche.Frontend.Scan.Fast
+module
+
+public import ConLeche.Frontend.Scan.Fast
+
+@[expose] public section
 
 /-! `lake exe skipbench FILE`: con-leche's compiled `skipBraced` on every line of a lean4export
 file that starts with `{`, as `harness/run.c --lines` does with the compiled L code (the baseline

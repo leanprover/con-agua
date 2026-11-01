@@ -1,5 +1,9 @@
-import ConAgua.Arena.IndPosSpec.NoGoStep
-import ConAgua.Arena.IndPartsSpec.EqW
+module
+
+public import ConAgua.Arena.IndPosSpec.NoGoStep
+public import ConAgua.Arena.IndPartsSpec.EqW
+
+@[expose] public section
 
 /-!
 # EeK2

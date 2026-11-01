@@ -1,4 +1,9 @@
+module
+
 import ConAgua.Arena.PromoteCIInfra
+public import ConAgua.Arena.PromoteCI
+
+@[expose] public section
 
 /-!
 # StPNat

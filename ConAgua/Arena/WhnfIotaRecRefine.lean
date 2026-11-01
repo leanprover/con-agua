@@ -1,11 +1,22 @@
+module
+
 import ConAgua.Arena.WhnfIotaRefine5
 import Std.Tactic.BVDecide.Normalize.BitVec
-import Std.Tactic.BVDecide.Normalize.Prop
+public import Std.Tactic.BVDecide.Normalize.Prop
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConRon.Bridge.Grind
-import ConRon.Bridge.Specs
-import ConAgua.Arena.WhnfIotaRecRefineModels
+public import ConRon.Bridge.Specs
+public import ConAgua.Arena.WhnfIotaRecRefineModels
+import ConAgua.Arena.RefWalk
+import ConAgua.Arena.WhnfCoreProj
+import ConAgua.Arena.WhnfCoreRefine
+import ConAgua.Arena.WhnfIotaRefine3
+import ConAgua.L.Records
+public import ConAgua.Arena.WhnfIotaRefine2
+public import ConAgua.Arena.WhnfIotaRefine4
+
+@[expose] public section
 
 /-!
 # `iota_rec_at`'s pieces: the twin split the same way, and the inner pieces' proofs

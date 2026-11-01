@@ -1,9 +1,20 @@
+module
+
 import ConAgua.Arena.RecClassSpec.CloseLams
-import ConAgua.Arena.GrindAttr
+public import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
-import ConAgua.L.GrindAttr
+public import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
-import ConAgua.Arena.IndCallM
+public import ConAgua.Arena.IndCallM
+import ConAgua.Arena.IndInstallSpec.DomsW
+import ConAgua.Arena.IndPartsSpec.MemberNames
+import ConAgua.Arena.LdRd
+import Std.Tactic.BVDecide.Normalize.BitVec
+import Std.WP.Tactic
+import Std.WP.Triple.SpecLemmas
+public import ConAgua.Arena.IndRealAbs
+
+@[expose] public section
 
 /-!
 # ErToIwWStage

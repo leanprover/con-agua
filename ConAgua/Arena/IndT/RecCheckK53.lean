@@ -1,7 +1,14 @@
-import ConAgua.Arena.RecCheckSpec.EqWDec
+module
+
+import ConRon.Bridge.Inductives.PosWalks
+public import ConAgua.Arena.RecCheckSpec.EqWDec
 import ConAgua.Arena.IndRealAbsPos
-import ConAgua.Arena.RecCheckSpec.EeW
+public import ConAgua.Arena.RecCheckSpec.EeW
 import ConRon.Bridge.Inductives.RecCheck
+public import ConRon.Bridge.Checker.Hyp
+public import ConRon.Bridge.Inductives.Run
+
+@[expose] public section
 
 /-!
 # `targetK53`'s steps under `StageC`: frames and erasures (lane `indstaget`, helper `pds`)

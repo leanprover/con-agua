@@ -1,5 +1,9 @@
-import ConAgua.Arena.WhnfSpine
-import ConAgua.Arena.Env
+module
+
+public import ConAgua.Arena.WhnfSpine
+public import ConAgua.Arena.Env
+
+@[expose] public section
 
 /-!
 # `whnfCore`: the knot's slot, the loop, the step, the batched β spine, projections

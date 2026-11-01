@@ -1,9 +1,15 @@
-import ConAgua.Arena.CoreDen
-import ConAgua.Arena.DefEqLeaves
-import ConAgua.Arena.InferBodyLet
-import ConAgua.Arena.GrindAttr
-import ConAgua.L.GrindAttr
-import ConAgua.Verdict.WhnfModels7E
+module
+
+public import ConAgua.Arena.CoreDen
+public import ConAgua.Arena.DefEqLeaves
+public import ConAgua.Arena.InferBodyLet
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.L.GrindAttr
+public import ConAgua.Verdict.WhnfModels7E
+public import ConAgua.Arena.CoreLevels
+public import ConAgua.Arena.IndIface
+
+@[expose] public section
 
 /-!
 # The stuck and irrelevance side of `DefEq.lean`: `prop_irrel` (lane `defeq`, helper `defeq-top`)

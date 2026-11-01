@@ -1,5 +1,12 @@
-import ConAgua.Arena.DefEqStuckWith
+module
+
+public import ConAgua.Arena.DefEqStuckWith
 import ConAgua.Arena.DefEqLeaves2
+import ConAgua.Arena.RefWalk
+import ConAgua.Arena.WhnfCoreRefine
+import ConRon.Bridge.Grind
+
+@[expose] public section
 
 /-!
 # `struct_eta_cert_go` refines `structEtaCertWith`'s keys (lane `defeq`, helper `defeq-top`)

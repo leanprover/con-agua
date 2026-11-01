@@ -1,10 +1,18 @@
+module
+
 import ConAgua.Arena.IndPosSpec.MapOKStep
-import ConAgua.Arena.IndPosSpec.NcnW
-import ConAgua.Arena.IndDecStab
+public import ConAgua.Arena.IndPosSpec.NcnW
+public import ConAgua.Arena.IndDecStab
 import ConAgua.Arena.IndPosSpec.EnvFindWHit
-import ConAgua.Arena.GrindAttr
-import ConAgua.Arena.IndGrindAttr
-import ConAgua.L.GrindAttr
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.Arena.IndGrindAttr
+public import ConAgua.L.GrindAttr
+import ConAgua.Arena.IndInstallSpec.DomsW
+import ConAgua.Arena.IndPosSpec.DecNHFields
+import ConAgua.Arena.IndPosSpec.RootHoles
+import ConAgua.Arena.IndPosSpec.Rx
+
+@[expose] public section
 
 /-!
 # NcnW2

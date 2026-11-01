@@ -1,5 +1,11 @@
-import ConAgua.Arena.RecCheckSpec.TargetMajorAt2
+module
+
+public import ConAgua.Arena.RecCheckSpec.TargetMajorAt2
 import ConAgua.Arena.RecStab
+import ConAgua.Arena.RecClassSpec.CloseLams
+public import ConAgua.Arena.RecClassSpec.MjProg
+
+@[expose] public section
 
 /-!
 # Rec2SimTMA

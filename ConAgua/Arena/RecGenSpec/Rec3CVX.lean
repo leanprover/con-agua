@@ -1,5 +1,9 @@
-import ConAgua.Arena.RecGenSpec.DecCVX
-import ConAgua.Arena.RecStab
+module
+
+public import ConAgua.Arena.RecGenSpec.DecCVX
+public import ConAgua.Arena.RecStab
+
+@[expose] public section
 
 /-!
 # Rec3CVX

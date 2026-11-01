@@ -1,11 +1,17 @@
-import ConAgua.Arena.DefEqLeaves2
-import ConAgua.Arena.InferLeaves
-import ConAgua.Arena.DefEqLeaves
+module
+
+public import ConAgua.Arena.DefEqLeaves2
+public import ConAgua.Arena.InferLeaves
+public import ConAgua.Arena.DefEqLeaves
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
 import ConAgua.Arena.WhnfCoreProj
-import ConAgua.Verdict.WhnfModels7E
+public import ConAgua.Verdict.WhnfModels7E
+import ConAgua.Arena.RefWalk
+import ConAgua.Checker.NoVerdictTree
+
+@[expose] public section
 
 /-!
 # Refinements of `DefEq.lean`'s middle layer (lane `defeq`, helper `defeq-mid`)

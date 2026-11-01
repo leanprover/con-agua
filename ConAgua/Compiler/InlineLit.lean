@@ -1,7 +1,15 @@
-import Lean
-import ConAgua.Compiler.WFSplit
-import ConAgua.Compiler.AsmLit
-import ConAgua.Compiler.Inline
+module
+
+public import Lean
+public import ConAgua.Compiler.WFSplit
+public import ConAgua.Compiler.AsmLit
+public import ConAgua.Compiler.Inline
+public meta import Lean
+public meta import ConAgua.Compiler.WFSplit
+public meta import ConAgua.Compiler.AsmLit
+public meta import ConAgua.Compiler.Inline
+
+@[expose] public section
 
 /-!
 # The inlined program as a kernel-checked literal
@@ -44,12 +52,12 @@ theorem inlRound_cons {env : Env} {f : FnName} {fd fd' : FunDecl} {tl tl' : Prog
     ((f, fd) :: tl).map (fun x => (x.1, inlFn env x.2)) = (f, fd') :: tl' := by
   simp only [List.map_cons, h, h']
 
-unsafe def evalOptNTree (e : Lean.Expr) : MetaM (Option NTree) :=
+meta unsafe def evalOptNTree (e : Lean.Expr) : MetaM (Option NTree) :=
   evalExpr (Option NTree) (mkApp (mkConst ``Option [0]) (mkConst ``NTree)) e
 
 syntax (name := idxLit) "idx_lit " ident " : " term:max : command
 
-@[command_elab idxLit] unsafe def elabIdxLit : CommandElab := fun stx => do
+@[command_elab idxLit] meta unsafe def elabIdxLit : CommandElab := fun stx => do
   let `(idx_lit $n:ident : $progS) := stx | throwUnsupportedSyntax
   let name := (← getCurrNamespace) ++ n.getId
   liftTermElabM <| withTheReader Core.Context (fun c => { c with maxRecDepth := max c.maxRecDepth 100000 }) do
@@ -57,13 +65,13 @@ syntax (name := idxLit) "idx_lit " ident " : " term:max : command
     synthesizeSyntheticMVarsNoPostponing
     let pE ← instantiateMVars pE
     let some t ← evalOptNTree (mkApp (mkConst ``Prog.idxTree) pE) | throwError "idx_lit: a name occurs twice"
-    addAndCompile (.defnDecl (mkDefinitionValEx name [] (mkConst ``NTree) (ntreeToExpr t) .abbrev .safe []))
+    withExporting <| addAndCompile (.defnDecl (mkDefinitionValEx name [] (mkConst ``NTree) (ntreeToExpr t) .abbrev .safe []))
 
 /-- `idx_lit_eq name : p` (after `idx_lit name : p`): `name_eq : Prog.idxTree p = some name`, one
 kernel check over the names. Only the correctness theorem needs it, not the literals. -/
 syntax (name := idxLitEq) "idx_lit_eq " ident " : " term:max : command
 
-@[command_elab idxLitEq] unsafe def elabIdxLitEq : CommandElab := fun stx => do
+@[command_elab idxLitEq] meta unsafe def elabIdxLitEq : CommandElab := fun stx => do
   let `(idx_lit_eq $n:ident : $progS) := stx | throwUnsupportedSyntax
   let name := (← getCurrNamespace) ++ n.getId
   liftTermElabM <| withTheReader Core.Context (fun c => { c with maxRecDepth := max c.maxRecDepth 100000 }) do
@@ -80,7 +88,7 @@ syntax (name := idxLitEq) "idx_lit_eq " ident " : " term:max : command
 /-! ## Statements as terms -/
 
 /-- The constants of the environment that hold a byte string, by value. -/
-unsafe def romConsts : MetaM (Std.HashMap (List UInt8) Name) := do
+meta unsafe def romConsts : MetaM (Std.HashMap (List UInt8) Name) := do
   let env ← getEnv
   let ty := mkApp (mkConst ``List [0]) (mkConst ``UInt8)
   let mut m : Std.HashMap (List UInt8) Name := {}
@@ -96,32 +104,32 @@ unsafe def romConsts : MetaM (Std.HashMap (List UInt8) Name) := do
 section
 variable (rom : Std.HashMap (List UInt8) Name)
 
-def wordE (w : Word) : Lean.Expr := mkApp (mkConst ``UInt64.ofNat) (mkNatLit w.toNat)
+meta def wordE (w : Word) : Lean.Expr := mkApp (mkConst ``UInt64.ofNat) (mkNatLit w.toNat)
 
-def bytesE (d : List UInt8) : Lean.Expr :=
+meta def bytesE (d : List UInt8) : Lean.Expr :=
   match rom.get? d with
   | some n => mkConst n
   | none => bytesToExpr d.toArray
 
-def listE (ty : Lean.Expr) (xs : List Lean.Expr) : Lean.Expr :=
+meta def listE (ty : Lean.Expr) (xs : List Lean.Expr) : Lean.Expr :=
   xs.foldr (fun x acc => mkApp3 (mkConst ``List.cons [0]) ty x acc) (mkApp (mkConst ``List.nil [0]) ty)
 
-def binOpE : BinOp → Lean.Expr
+meta def binOpE : BinOp → Lean.Expr
   | .add => mkConst ``BinOp.add | .sub => mkConst ``BinOp.sub | .mul => mkConst ``BinOp.mul
   | .and => mkConst ``BinOp.and | .or => mkConst ``BinOp.or | .xor => mkConst ``BinOp.xor
   | .shl => mkConst ``BinOp.shl | .shr => mkConst ``BinOp.shr | .mulhi => mkConst ``BinOp.mulhi
 
-def cmpE : Cmp → Lean.Expr
+meta def cmpE : Cmp → Lean.Expr
   | .eq => mkConst ``Cmp.eq | .ne => mkConst ``Cmp.ne | .ult => mkConst ``Cmp.ult
   | .ule => mkConst ``Cmp.ule | .slt => mkConst ``Cmp.slt | .sle => mkConst ``Cmp.sle
 
-def boolE (b : Bool) : Lean.Expr := if b then mkConst ``Bool.true else mkConst ``Bool.false
+meta def boolE (b : Bool) : Lean.Expr := if b then mkConst ``Bool.true else mkConst ``Bool.false
 
-def bsrcE : BSrc → Lean.Expr
+meta def bsrcE : BSrc → Lean.Expr
   | .arr a => mkApp (mkConst ``BSrc.arr) (mkNatLit a)
   | .rom d => mkApp (mkConst ``BSrc.rom) (bytesE rom d)
 
-def exprE : Expr → Lean.Expr
+meta def exprE : Expr → Lean.Expr
   | .const w => mkApp (mkConst ``Expr.const) (wordE w)
   | .var x => mkApp (mkConst ``Expr.var) (mkNatLit x)
   | .bin op a b => mkApp3 (mkConst ``Expr.bin) (binOpE op) (exprE a) (exprE b)
@@ -138,17 +146,17 @@ def exprE : Expr → Lean.Expr
   | .ld32t a t i => mkApp3 (mkConst ``Expr.ld32t) (mkNatLit a) (exprE t) (exprE i)
   | .ld32h a t i h => mkApp4 (mkConst ``Expr.ld32h) (mkNatLit a) (exprE t) (exprE i) (boolE h)
 
-def warrE : WArr → Lean.Expr
+meta def warrE : WArr → Lean.Expr
   | .plain a => mkApp (mkConst ``WArr.plain) (mkNatLit a)
   | .tier a t => mkApp2 (mkConst ``WArr.tier) (mkNatLit a) (exprE rom t)
 
-def condE : Cond → Lean.Expr
+meta def condE : Cond → Lean.Expr
   | .cmp c a b => mkApp3 (mkConst ``Cond.cmp) (cmpE c) (exprE rom a) (exprE rom b)
   | .and p q => mkApp2 (mkConst ``Cond.and) (condE p) (condE q)
   | .or p q => mkApp2 (mkConst ``Cond.or) (condE p) (condE q)
   | .not p => mkApp (mkConst ``Cond.not) (condE p)
 
-def stmtE : Stmt → Lean.Expr
+meta def stmtE : Stmt → Lean.Expr
   | .skip => mkConst ``Stmt.skip
   | .set x e => mkApp2 (mkConst ``Stmt.set) (mkNatLit x) (exprE rom e)
   | .st8 a i e => mkApp3 (mkConst ``Stmt.st8) (mkNatLit a) (exprE rom i) (exprE rom e)
@@ -171,23 +179,23 @@ def stmtE : Stmt → Lean.Expr
       (bytesE rom c)
   | .st32t a t i e => mkApp4 (mkConst ``Stmt.st32t) (mkNatLit a) (exprE rom t) (exprE rom i) (exprE rom e)
 
-def funDeclE (fd : FunDecl) : Lean.Expr :=
+meta def funDeclE (fd : FunDecl) : Lean.Expr :=
   mkApp3 (mkConst ``FunDecl.mk) (mkNatLit fd.nparams) (mkNatLit fd.nlocals) (stmtE rom fd.body)
 end
 
 /-! ## The commands -/
 
-register_option inlLitBatch : Nat := {
+meta register_option inlLitBatch : Nat := {
   defValue := 8
   descr := "inl_round: functions per kernel check"
 }
 
-unsafe def evalProg (e : Lean.Expr) : MetaM Prog := evalExpr Prog (mkConst ``Prog) e
+meta unsafe def evalProg (e : Lean.Expr) : MetaM Prog := evalExpr Prog (mkConst ``Prog) e
 
-def funDeclTy : Lean.Expr := mkConst ``FunDecl
+meta def funDeclTy : Lean.Expr := mkConst ``FunDecl
 
 /-- Declare `name.f<i>`, `name.f<i>_eq` for `lo ≤ i < hi` (those not declared yet). -/
-unsafe def declInlFns (name : Name) (envE : Lean.Expr) (elems : Array Lean.Expr) (lo hi : Nat)
+meta unsafe def declInlFns (name : Name) (envE : Lean.Expr) (elems : Array Lean.Expr) (lo hi : Nat)
     (viaE : Lean.Expr) : MetaM Unit := do
   let hi := min hi elems.size
   let env ← getEnv
@@ -211,9 +219,9 @@ unsafe def declInlFns (name : Name) (envE : Lean.Expr) (elems : Array Lean.Expr)
     let v := q[i]!
     let same := reprStr v == reprStr p[i]!.2
     let lit := if same then fdE else funDeclE rom v
-    addDecl (.defnDecl (mkDefinitionValEx n [] funDeclTy lit .abbrev .safe []))
+    withExporting <| addDecl (.defnDecl (mkDefinitionValEx n [] funDeclTy lit .abbrev .safe []))
     -- compiled code runs `n` as the inlining itself (the literal is not compiled)
-    addAndCompile (.defnDecl (mkDefinitionValEx (n ++ `impl) [] funDeclTy (mkApp2 (mkConst ``inlFn) envE fdE)
+    withExporting <| addAndCompile (.defnDecl (mkDefinitionValEx (n ++ `impl) [] funDeclTy (mkApp2 (mkConst ``inlFn) envE fdE)
       .opaque .safe []))
     match Compiler.implementedByAttr.setParam (← getEnv) n (n ++ `impl) with
     | .ok env => setEnv env
@@ -245,7 +253,7 @@ where
       if j < k then h := mkApp3 (mkConst ``And.right) tys[j]! (tail (j + 1)) h
 
 /-- The terms `S`, `t`, `p` and `envOf S t p`. -/
-def elabRoundArgs (sS tS pS : Syntax) : TermElabM (Lean.Expr × Lean.Expr × Lean.Expr × Lean.Expr) := do
+meta def elabRoundArgs (sS tS pS : Syntax) : TermElabM (Lean.Expr × Lean.Expr × Lean.Expr × Lean.Expr) := do
   let sE ← elabTermEnsuringType sS (mkConst ``Nat)
   let tE ← elabTermEnsuringType tS (mkConst ``NTree)
   let pE ← elabTermEnsuringType pS (mkConst ``Prog)
@@ -256,7 +264,7 @@ def elabRoundArgs (sS tS pS : Syntax) : TermElabM (Lean.Expr × Lean.Expr × Lea
   return (sE, tE, pE, mkApp3 (mkConst ``envOf) sE tE pE)
 
 /-- The term to evaluate `p` with: `via e`, else `p` itself. -/
-def elabVia (pE : Lean.Expr) : Option Syntax → TermElabM Lean.Expr
+meta def elabVia (pE : Lean.Expr) : Option Syntax → TermElabM Lean.Expr
   | none => pure pE
   | some v => do
     let e ← elabTermEnsuringType v (mkConst ``Prog)
@@ -265,7 +273,7 @@ def elabVia (pE : Lean.Expr) : Option Syntax → TermElabM Lean.Expr
 
 syntax (name := inlRoundFns) "inl_round_fns " ident " : " term:max term:max term:max (" via " term:max)? num num : command
 
-@[command_elab inlRoundFns] unsafe def elabInlRoundFns : CommandElab := fun stx => do
+@[command_elab inlRoundFns] meta unsafe def elabInlRoundFns : CommandElab := fun stx => do
   let `(inl_round_fns $n:ident : $sS $tS $pS $[via $v?]? $lo $hi) := stx | throwUnsupportedSyntax
   let name := (← getCurrNamespace) ++ n.getId
   liftTermElabM <| withTheReader Core.Context (fun c => { c with maxRecDepth := max c.maxRecDepth 100000, maxHeartbeats := 0 }) do
@@ -274,7 +282,7 @@ syntax (name := inlRoundFns) "inl_round_fns " ident " : " term:max term:max term
 
 syntax (name := inlRoundCmd) (docComment)? "inl_round " ident " : " term:max term:max term:max (" via " term:max)? : command
 
-@[command_elab inlRoundCmd] unsafe def elabInlRound : CommandElab := fun stx => do
+@[command_elab inlRoundCmd] meta unsafe def elabInlRound : CommandElab := fun stx => do
   let `($[$doc?:docComment]? inl_round $n:ident : $sS $tS $pS $[via $v?]?) := stx | throwUnsupportedSyntax
   let name := (← getCurrNamespace) ++ n.getId
   liftTermElabM <| withTheReader Core.Context (fun c => { c with maxRecDepth := max c.maxRecDepth 100000, maxHeartbeats := 0 }) do
@@ -288,11 +296,11 @@ syntax (name := inlRoundCmd) (docComment)? "inl_round " ident " : " term:max ter
       let (_, fE, _) ← progElem i elems[i]!
       let fi := mkConst (name ++ Name.mkSimple s!"f{i}")
       lit := mkApp3 (mkConst ``List.cons [0]) elemTy (mkApp4 (mkConst ``Prod.mk [0, 0]) (mkConst ``String) funDeclTy fE fi) lit
-    addDecl (.defnDecl (mkDefinitionValEx name [] progT lit .abbrev .safe []))
+    withExporting <| addDecl (.defnDecl (mkDefinitionValEx name [] progT lit .abbrev .safe []))
     addDocString' name .missing doc?
     -- compiled code runs `name` as the round itself (the literal's functions are not compiled)
     let implN := name ++ `impl
-    addAndCompile (.defnDecl (mkDefinitionValEx implN [] progT
+    withExporting <| addAndCompile (.defnDecl (mkDefinitionValEx implN [] progT
       (mkApp3 (mkConst ``inlRound) sE tE (← elabVia pE (v?.map (·.raw)))) .opaque .safe []))
     match Compiler.implementedByAttr.setParam (← getEnv) name implN with
     | .ok env => setEnv env
@@ -302,7 +310,7 @@ syntax (name := inlRoundCmd) (docComment)? "inl_round " ident " : " term:max ter
 from the per-function equations by congruence (`inlRound_cons`), without evaluation. -/
 syntax (name := inlRoundEqCmd) "inl_round_eq " ident " : " term:max term:max term:max : command
 
-@[command_elab inlRoundEqCmd] unsafe def elabInlRoundEq : CommandElab := fun stx => do
+@[command_elab inlRoundEqCmd] meta unsafe def elabInlRoundEq : CommandElab := fun stx => do
   let `(inl_round_eq $n:ident : $sS $tS $pS) := stx | throwUnsupportedSyntax
   let name := (← getCurrNamespace) ++ n.getId
   liftTermElabM <| withTheReader Core.Context (fun c => { c with maxRecDepth := max c.maxRecDepth 100000, maxHeartbeats := 0 }) do

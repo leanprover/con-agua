@@ -1,4 +1,9 @@
-import ConAgua.Arena.IndIface
+module
+
+public import ConAgua.Arena.IndIface
+meta import ConAgua.Arena.IndIface
+
+@[expose] public section
 
 /-!
 # The positivity walk in L (lane `induct`, module `IndPos`)

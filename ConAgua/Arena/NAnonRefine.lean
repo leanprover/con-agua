@@ -1,6 +1,10 @@
-import ConAgua.Arena.ConsLibRel
-import ConAgua.Arena.NAnonStore
+module
+
+public import ConAgua.Arena.ConsLibRel
+public import ConAgua.Arena.NAnonStore
 import Std.Tactic.BVDecide.Normalize.Prop
+
+@[expose] public section
 
 /-!
 # The name store's `anonymous` store refines the arena's `anonymous` tables

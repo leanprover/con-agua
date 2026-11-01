@@ -1,8 +1,16 @@
+module
+
 import ConAgua.Arena.PromoteCIInfra
-import ConAgua.Arena.PromoteCIRef.ConstsAt
+public import ConAgua.Arena.PromoteCIRef.ConstsAt
 import ConAgua.Arena.PromoteCIRef.Promoted
-import Std.Tactic.BVDecide.Normalize.Prop
+public import Std.Tactic.BVDecide.Normalize.Prop
 import ConRon.Bridge.Grind
+import ConAgua.Arena.PromoteLsRef
+public import ConAgua.Arena.PromoteProg
+public import ConAgua.Arena.WhnfBase
+public import ConRon.Arena.Promote
+
+@[expose] public section
 
 /-!
 # Index

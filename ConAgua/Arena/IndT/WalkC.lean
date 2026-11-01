@@ -1,5 +1,10 @@
-import ConAgua.Arena.IndRealApdT
-import ConAgua.Arena.IndRealCrF
+module
+
+public import ConAgua.Arena.IndRealApdT
+public import ConAgua.Arena.IndRealCrF
+import ConAgua.Arena.IndRealAbs
+
+@[expose] public section
 
 /-!
 # `AbsOK` across the real `all_level_params_defined` and `consts_resolve_ffast` (lane `indstaget`)

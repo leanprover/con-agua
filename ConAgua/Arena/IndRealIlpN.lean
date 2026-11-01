@@ -1,6 +1,20 @@
+module
+
 import ConAgua.Arena.IndRealNames
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
+import all Init.Data.Repr
+import ConAgua.Arena.DeclMasterStage
+import ConAgua.Arena.IndMaster
+import ConAgua.Arena.Rom
+import ConAgua.Arena.SimLib
+import Std.WP.Tactic
+import Std.WP.Triple.SpecLemmas
+public import ConAgua.Arena.CallF
+public import ConAgua.Arena.StripTeleSpec
+public import ConAgua.Arena.StubNames
+
+@[expose] public section
 
 /-!
 # `name_rec_i` discharged (lane `indproofs4`, helper `indproofs4-ilp`)

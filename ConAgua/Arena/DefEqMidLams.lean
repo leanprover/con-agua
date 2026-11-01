@@ -1,7 +1,15 @@
-import ConAgua.Arena.DefEqMidPeel
+module
+
+public import ConAgua.Arena.DefEqMidPeel
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
+import ConAgua.Arena.InferBodyLet
+import ConAgua.Arena.RefWalk
+import ConAgua.Checker.NoVerdictTree
+import ConAgua.Front.Preserve
+
+@[expose] public section
 
 /-!
 # The λ-telescope: `defeq_lams` (lane `defeq`)

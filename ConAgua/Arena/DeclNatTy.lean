@@ -1,8 +1,16 @@
-import ConAgua.Arena.DeclNatGuard
+module
+
+public import ConAgua.Arena.DeclNatGuard
 import ConAgua.Arena.IndInstallSpec.DomsW
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
+import ConAgua.Arena.DeclNatGate
+import Std.Tactic.BVDecide.Normalize.BitVec
+import Std.WP.Triple.SpecLemmas
+public import ConRon.Arena.DeclCheck
+
+@[expose] public section
 
 /-!
 # The structural-`Nat` gate: the pinned types (lane `decls3`, helper `decls3-nat`)

@@ -1,7 +1,14 @@
+module
+
 import ConAgua.Arena.IndPosSpec.FgW
-import ConAgua.Arena.GrindAttr
-import ConAgua.Arena.IndGrindAttr
-import ConAgua.L.GrindAttr
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.Arena.IndGrindAttr
+public import ConAgua.L.GrindAttr
+import all Init.Data.List.Control
+public import ConAgua.Arena.IndPosSpec.BvbWMfr
+public import ConAgua.Arena.IndPosSpec.NestOccAny
+
+@[expose] public section
 
 /-!
 # NtyW

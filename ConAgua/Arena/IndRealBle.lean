@@ -1,11 +1,21 @@
+module
+
 import ConAgua.Arena.IndRealCapsC
 import ConAgua.Arena.IndT.Lift
 import ConAgua.Arena.IndInstallSpec.InstallIwB
 import ConAgua.Arena.LevelSimpRel
 import ConRon.Bridge.Inductives.BlockRec
-import ConAgua.Arena.GrindAttr
+public import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
-import ConAgua.L.GrindAttr
+public import ConAgua.L.GrindAttr
+import ConAgua.Arena.IndInstallSpec.PartsShapeFacts
+public import ConAgua.Arena.IndDecStab
+public import ConAgua.Arena.IndInstallSpec.CapsProg
+public import ConAgua.Arena.IndPartsSpec.RulePrefixAt
+public import ConAgua.Arena.TwinStep
+public import ConRon.Bridge.Inductives.Run
+
+@[expose] public section
 
 /-!
 # `block_large_elim_allowed` refines `blockLargeElimAllowed` (lane `indproofs4`, helper `lz`)

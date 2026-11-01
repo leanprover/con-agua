@@ -1,7 +1,14 @@
+module
+
 import ConAgua.Arena.DeclNatSpec
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr
+import Std.WP.Tactic
+import Std.WP.Triple.SpecLemmas
+public import ConAgua.Arena.DeclHeader
+
+@[expose] public section
 
 /-!
 # `reserved_rec_name` refines `reservedRecName`; `lit_guard_has` is `litGuardNames.contains`

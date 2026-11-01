@@ -1,9 +1,15 @@
-import ConAgua.Arena.WhnfBase
+module
+
+public import ConAgua.Arena.WhnfBase
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import Std.Tactic.BVDecide.Normalize.BitVec
-import Std.Tactic.BVDecide.Normalize.Prop
+public import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
+import ConAgua.Arena.DerRel
+import Std.WP.Triple.SpecLemmas
+
+@[expose] public section
 
 /-!
 # The level-verdict caches in front of the level algorithms

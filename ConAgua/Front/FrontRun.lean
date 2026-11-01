@@ -1,7 +1,16 @@
-import ConAgua.Front.LineRef
-import ConAgua.Front.Driver
-import ConAgua.Scan.Validator
+module
+
+public import ConAgua.Front.LineRef
+public import ConAgua.Front.Driver
+public import ConAgua.Scan.Validator
 import ConRon.Bridge.Frontend.Chunks
+meta import ConAgua.Front.LineRef
+meta import ConAgua.Front.Driver
+meta import ConAgua.Scan.Validator
+meta import ConRon.Bridge.Frontend.Chunks
+import all ConRon.Bridge.Frontend.Lines
+
+@[expose] public section
 
 /-!
 # The frontend's driver: the twin's invariant, `front_init`, the whole program

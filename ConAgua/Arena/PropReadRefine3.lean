@@ -1,6 +1,12 @@
+module
+
 import ConAgua.Arena.PropReadRefine2
 import ConAgua.Arena.InferBodyDisp
 import ConAgua.Arena.WhnfCoreProj
+import ConAgua.Arena.DefEqStuckShape
+public import ConAgua.Arena.PropReadRefine
+
+@[expose] public section
 
 /-!
 # The prop-ness readers: `headTypePW`, `typeSortPW` (helper `defeq2-prop`)

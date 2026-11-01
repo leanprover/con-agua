@@ -1,9 +1,15 @@
-import ConAgua.Arena.DeclReduceSpec2
-import ConAgua.Arena.IndRealApdT
+module
+
+public import ConAgua.Arena.DeclReduceSpec2
+public import ConAgua.Arena.IndRealApdT
 import ConAgua.Arena.GrindAttr
-import ConAgua.Arena.IndGrindAttr
+public import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
+import ConAgua.Checker.NoVerdictTree
+public import ConAgua.Arena.DeclReduceSpec
+
+@[expose] public section
 
 /-!
 # `check_reduce_pin(vis, vis2, c, v)` refines `checkReducePin` (lane `decls3`)

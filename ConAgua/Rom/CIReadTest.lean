@@ -1,6 +1,16 @@
-import ConAgua.Rom.CIRead
-import ConAgua.Arena.DeclRomStubs
-import ConAgua.Rom.PinStream
+module
+
+public import ConAgua.Compiler.WF
+public import ConAgua.Rom.CIRead
+public import ConAgua.Arena.DeclRomStubs
+public import ConAgua.Rom.PinStream
+meta import ConAgua.Rom.CIRead
+meta import ConAgua.Arena.DeclRomStubs
+meta import ConAgua.Rom.PinStream
+public import ConAgua.Arena.PromoteProg
+public import ConAgua.Arena.RomPins
+
+@[expose] public section
 
 /-!
 # The ROM stubs' readers against the twin (lane `integrate`)

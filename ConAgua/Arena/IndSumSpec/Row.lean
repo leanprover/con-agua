@@ -1,9 +1,16 @@
-import ConAgua.Arena.IndSumSpec.ColW
-import ConAgua.Arena.IndSumSpec.StructProjArgP
+module
+
+public import ConAgua.Arena.IndSumSpec.ColW
+public import ConAgua.Arena.IndSumSpec.StructProjArgP
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.Arena.IndInstallSpec.DomsW
+import ConAgua.Arena.IndMaster
+import ConRon.Bridge.Grind
+import Std.Tactic.BVDecide.Normalize.BitVec
+
+@[expose] public section
 
 /-!
 # Row: `ConRon.Arena.paramLevels.go`, `ConRon.Arena.structProjGuards.col`, `ConRon.Arena.structProjGuards.row`

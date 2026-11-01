@@ -1,10 +1,17 @@
-import ConAgua.Arena.DeclLvlStage
+module
+
+public import ConAgua.Arena.DeclLvlStage
 import ConAgua.Arena.IndInstallSpec.NhW
-import ConAgua.Arena.InferLeaves
+public import ConAgua.Arena.InferLeaves
 import ConAgua.Arena.WhnfIotaRefine4
-import ConAgua.Arena.GrindAttr
-import ConAgua.L.GrindAttr
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
+import ConAgua.Arena.DeclBase
+public import ConAgua.Arena.CoreErec
+public import ConAgua.Arena.WhnfEntry
+
+@[expose] public section
 
 /-!
 # The stage relation with the twin's invariants: `StageT` (lane `indproofs3`)

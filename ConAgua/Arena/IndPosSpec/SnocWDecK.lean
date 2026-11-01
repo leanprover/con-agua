@@ -1,4 +1,10 @@
+module
+
 import ConAgua.Arena.IndPosSpec.CanonW
+import ConRon.Bridge.Grind
+public import ConAgua.Arena.IndCopy2
+
+@[expose] public section
 
 /-!
 # SnocWDecK

@@ -1,11 +1,22 @@
+module
+
 import ConAgua.Arena.IndRealMemoCrT
-import ConAgua.Arena.CrOKFrame
+public import ConAgua.Arena.CrOKFrame
 import ConAgua.Arena.DeclCvgT
 import ConAgua.Arena.IndT.WalkC
-import ConAgua.Verdict.VCtx
-import ConAgua.Arena.IndT.Base
-import ConAgua.Arena.GrindAttr
+public import ConAgua.Verdict.VCtx
+public import ConAgua.Arena.IndT.Base
+public import ConAgua.Arena.GrindAttr
 import ConAgua.L.ModelGen
+import ConAgua.Arena.IndInstallSpec.DomsW
+import ConAgua.Arena.IndPartsSpec.MemberNames
+import ConAgua.Arena.IndRealWalkT
+import ConAgua.Arena.RefWalk
+import ConAgua.Checker.NoVerdictTree
+public import ConAgua.Arena.IndRealAbs
+public import ConAgua.Arena.IndRealApdT
+
+@[expose] public section
 /-!
 # `class_const_ok_header`, `class_const_ok`: one model and one refinement for both outcomes
 

@@ -1,5 +1,11 @@
-import ConAgua.Arena.PropReadRefine3
+module
+
+public import ConAgua.Arena.PropReadRefine3
 import ConAgua.Arena.DefEqLeaves2
+import ConRon.Bridge.Grind
+public import ConAgua.Arena.WhnfCore
+
+@[expose] public section
 
 /-!
 # The prop-ness readers: `headProofPW`, `proofPW`, `notProofFast`, `isProofFast` (helper `defeq2-prop`)

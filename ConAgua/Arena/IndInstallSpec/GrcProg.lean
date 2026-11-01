@@ -1,19 +1,24 @@
-import ConAgua.Arena.RecGenSpec.ClassFeR
-import ConAgua.Arena.GrindAttr
-import ConAgua.Arena.IndGrindAttr
-import ConAgua.L.GrindAttr
-import Std.Tactic.BVDecide.Normalize.BitVec
-import Std.Tactic.BVDecide.Normalize.Prop
-import Std.WP.Tactic
-import ConAgua.Arena.IndInstallSpec.TabsProg
-import ConAgua.Arena.IndRealBle
-import ConAgua.Arena.RecCheckSpec.RpLook
-import ConAgua.Arena.RecGenSpec.ClassRecTysOk
-import ConAgua.Arena.RecGenSpec.DecB
-import ConAgua.Arena.RecGenSpec.DecCIIndCv
-import ConAgua.Arena.RecGenSpec.DecCNWords
-import ConAgua.Arena.RecGenSpec.Rec3TmdWDecB
-import ConAgua.Arena.IndInstallSpec.SelProg
+module
+
+public import ConAgua.Arena.RecGenSpec.ClassFeR
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.Arena.IndGrindAttr
+public import ConAgua.L.GrindAttr
+public import Std.Tactic.BVDecide.Normalize.BitVec
+public import Std.Tactic.BVDecide.Normalize.Prop
+public import Std.WP.Tactic
+public import ConAgua.Arena.IndInstallSpec.TabsProg
+public import ConAgua.Arena.IndRealBle
+public import ConAgua.Arena.RecCheckSpec.RpLook
+public import ConAgua.Arena.RecGenSpec.ClassRecTysOk
+public import ConAgua.Arena.RecGenSpec.DecB
+public import ConAgua.Arena.RecGenSpec.DecCIIndCv
+public import ConAgua.Arena.RecGenSpec.DecCNWords
+public import ConAgua.Arena.RecGenSpec.Rec3TmdWDecB
+public import ConAgua.Arena.IndInstallSpec.SelProg
+public import ConAgua.Arena.IndInstallSpec.InstallCvDecB
+
+@[expose] public section
 
 /-!
 # GrcProg

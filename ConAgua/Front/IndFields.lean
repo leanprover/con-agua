@@ -1,6 +1,10 @@
-import ConAgua.Front.Apply
+module
+
+public import ConAgua.Front.Apply
 import ConAgua.Census.Attr
-import ConAgua.Layout
+public import ConAgua.Layout
+
+@[expose] public section
 
 /-!
 # The fields of an `inductive` line (lane `induct`, worker I)

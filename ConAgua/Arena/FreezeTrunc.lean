@@ -1,4 +1,10 @@
+module
+
 import ConAgua.Arena.FreezeTruncArena
+import ConAgua.Arena.FreezeTruncKeep
+public import ConAgua.Arena.FreezeRel
+
+@[expose] public section
 
 /-!
 # The truncation theorem (lane parmode, docs/design/parmode.md, "Redesign", "Step 4")

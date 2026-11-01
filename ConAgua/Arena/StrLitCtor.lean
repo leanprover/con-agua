@@ -1,8 +1,16 @@
-import ConAgua.Arena.StrLitTy
-import ConAgua.Arena.StrLitUtf8
-import ConAgua.Arena.StrLitKeep
-import ConAgua.Arena.GrindAttr
-import ConAgua.L.GrindAttr
+module
+
+public import ConAgua.Arena.StrLitTy
+public import ConAgua.Arena.StrLitUtf8
+public import ConAgua.Arena.StrLitKeep
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.L.GrindAttr
+import ConAgua.Arena.InferBodyLet
+import Lean.Elab.Tactic.RCases
+import Std.Tactic.BVDecide.Normalize.BitVec
+public import ConAgua.Arena.DefEqMid
+
+@[expose] public section
 
 /-!
 # `str_lit_ctor` refines `strLitToConstructor` (helper `defeq2-str`)

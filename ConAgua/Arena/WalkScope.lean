@@ -4,7 +4,7 @@ meta import ConAgua.L.Semantics
 meta import ConAgua.Arena.Store
 public import ConAgua.Arena.MemoLib
 public import ConAgua.Arena.ExprMk
-public import ConAgua.L.ModelGen
+import ConAgua.L.ModelGen
 import ConAgua.Census.Attr
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr

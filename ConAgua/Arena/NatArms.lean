@@ -1,16 +1,36 @@
-import ConAgua.Arena.Tiers
-import ConAgua.Arena.NatGcd
-import ConAgua.Arena.NatCmp
+module
+
+public import ConAgua.Arena.Tiers
+public import ConAgua.Arena.NatGcd
+public import ConAgua.Arena.NatCmp
 import ConAgua.Arena.NatBitsNat
-import ConAgua.Arena.NatPow
-import ConAgua.Arena.NatShr
-import ConAgua.Arena.NatShl
+public import ConAgua.Arena.NatPow
+public import ConAgua.Arena.NatShr
+public import ConAgua.Arena.NatShl
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.NatGrindAttr
 import ConAgua.L.GrindAttr
 import Std.Tactic.BVDecide.Normalize.BitVec
-import Std.Tactic.BVDecide.Normalize.Prop
+public import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
+meta import ConAgua.Arena.Tiers
+meta import ConAgua.Arena.NatGcd
+meta import ConAgua.Arena.NatCmp
+meta import ConAgua.Arena.NatBitsNat
+meta import ConAgua.Arena.NatPow
+meta import ConAgua.Arena.NatShr
+meta import ConAgua.Arena.NatShl
+meta import ConAgua.Arena.GrindAttr
+meta import ConAgua.Arena.NatGrindAttr
+meta import ConAgua.L.GrindAttr
+meta import Std.Tactic.BVDecide.Normalize.BitVec
+meta import Std.Tactic.BVDecide.Normalize.Prop
+meta import Std.WP.Tactic
+import Std.WP.Triple.SpecLemmas
+public import ConAgua.Arena.ArenaRel
+public import ConAgua.Arena.NatBits
+
+@[expose] public section
 
 /-!
 # The `Nat` arms of `natOpResult`, refined under `ArenaR`

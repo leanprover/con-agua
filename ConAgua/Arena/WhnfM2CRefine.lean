@@ -1,11 +1,19 @@
-import ConAgua.Arena.WhnfM2C
+module
+
+public import ConAgua.Arena.WhnfM2C
 import ConAgua.Arena.WhnfIotaRefine
 import Std.Tactic.BVDecide.Normalize.BitVec
-import Std.Tactic.BVDecide.Normalize.Prop
+public import Std.Tactic.BVDecide.Normalize.Prop
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import Std.WP.Tactic
-import ConAgua.L.Examples
+public import ConAgua.L.Examples
+import ConAgua.Arena.SimLib
+import ConAgua.Front.Preserve
+import Std.WP.Triple.SpecLemmas
+public import ConAgua.Arena.WhnfIota
+
+@[expose] public section
 
 /-!
 # `major_to_ctor`: the twin split along the L pieces, and the leaf specs

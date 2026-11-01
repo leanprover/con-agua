@@ -1,5 +1,14 @@
+module
+
 import ConAgua.Arena.IndRealAbs
 import ConAgua.Arena.WalkLiftRefine
+import ConAgua.Arena.CoreWalks
+public import ConAgua.Arena.CallF
+public import ConAgua.Arena.StripTeleSpec
+public import ConAgua.Arena.WalkLift
+public import ConAgua.Arena.WriteSets
+
+@[expose] public section
 
 /-!
 # `instantiate1_lift_fast` under the stage relation and the walk memos (lane `indproofs4`, helper `memo`)

@@ -1,7 +1,22 @@
+module
+
 import ConAgua.Arena.PromoteCIRef.Caps
 import ConAgua.Arena.PromoteCIRef.PreESizeLe
 import ConAgua.Arena.PromoteCIRef.Rules
 import ConAgua.Arena.PromoteCIRef.Of
+import ConAgua.Arena.DerRel
+import ConAgua.Arena.PromoteCIRef.Alloc
+import ConAgua.Arena.PromoteCIRef.Fire
+import ConAgua.Arena.PromoteCIRef.HlistUnfold
+import ConAgua.Arena.PromoteCIRef.Hslice
+import ConAgua.Arena.PromoteCIRef.NatMove
+import ConAgua.Arena.PromoteCIRef.PmDecRuleWords
+import ConAgua.Arena.PromoteCIRef.PreECongr
+import ConAgua.Arena.PromoteCIRef.Rule
+public import ConAgua.Arena.PromoteCIRef.DecRuleMk
+public import ConAgua.Arena.PromoteRecRef
+
+@[expose] public section
 
 /-!
 # Ci

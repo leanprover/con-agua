@@ -1,7 +1,14 @@
+module
+
 import ConAgua.Verdict.DeclDefnE
 import ConAgua.Verdict.DeclArmsE
 import ConAgua.Verdict.DeclAxiomE
 import ConAgua.Verdict.DeclQuotE
+import ConAgua.Arena.DeclNatSubAll
+import ConAgua.Arena.StrLitSup
+public import ConAgua.Arena.CheckerT
+
+@[expose] public section
 /-!
 # Phase A's fold: what its error arms assume, from the leaves' claims
 

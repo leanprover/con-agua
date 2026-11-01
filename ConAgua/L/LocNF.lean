@@ -2,6 +2,7 @@ module
 
 public import ConAgua.L.Semantics
 public meta import Lean
+import Lean.Expr
 
 public section
 

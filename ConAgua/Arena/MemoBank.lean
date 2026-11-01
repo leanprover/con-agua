@@ -1,5 +1,11 @@
-import ConAgua.Arena.MemoLibRel
+module
+
+public import ConAgua.Arena.MemoLibRel
 import Std.Tactic.BVDecide.Normalize.Prop
+meta import ConAgua.Arena.MemoLibRel
+meta import Std.Tactic.BVDecide.Normalize.Prop
+
+@[expose] public section
 
 /-!
 # Memo banks: generation-tagged keys (the mode-memo bank stack)

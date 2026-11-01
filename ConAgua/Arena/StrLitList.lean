@@ -1,6 +1,19 @@
-import ConAgua.Arena.StrLitTy
+module
+
+public import ConAgua.Arena.StrLitTy
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
+import ConAgua.Arena.DefEqMidQuick
+import ConAgua.Arena.InferBodyIntern
+import ConAgua.Arena.InferBodyLet
+import ConAgua.Arena.StrLitCv
+import ConAgua.Arena.WhnfCoreProj
+import ConAgua.L.LocNF
+import ConRon.Bridge.Grind
+import Std.Tactic.BVDecide.Normalize.BitVec
+public import ConAgua.Arena.IndView
+
+@[expose] public section
 
 /-!
 # The `List` declaration tests under `CoreS` (helper `defeq2-str-list`)

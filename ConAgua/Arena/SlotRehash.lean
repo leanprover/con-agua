@@ -1,6 +1,10 @@
-import ConAgua.Arena.SlotGrowSpec
-import ConAgua.Arena.StoreRel
+module
+
+public import ConAgua.Arena.SlotGrowSpec
+public import ConAgua.Arena.StoreRel
 import Std.Tactic.BVDecide.Normalize.Prop
+
+@[expose] public section
 
 /-!
 # The in-place growth's re-insertion keeps every node findable (lane memlay)

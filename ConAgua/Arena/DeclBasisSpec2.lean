@@ -1,9 +1,16 @@
-import ConAgua.Rom.CIReadSpec
+module
+
+public import ConAgua.Rom.CIReadSpec
 import ConRon.Bridge.Checker.Basis
 import ConAgua.Arena.GrindAttr
-import ConAgua.Arena.IndGrindAttr
+public import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
+import ConAgua.Arena.RefWalk
+import ConAgua.Checker.NoVerdictTree
+public import ConAgua.Arena.DeclCanonEq
+
+@[expose] public section
 
 /-!
 # `check_basis_decl(vis, kind)` refines `checkBasisDecl` (lane `decls3`)

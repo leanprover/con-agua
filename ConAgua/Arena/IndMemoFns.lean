@@ -1,4 +1,9 @@
-import ConAgua.Arena.LeafFrame
+module
+
+public import ConAgua.Arena.LeafFrame
+meta import ConAgua.Arena.LeafFrame
+
+@[expose] public section
 
 /-!
 # The loop's callees outside the inductive arm (lane `indproofs4`, helper `lm`)

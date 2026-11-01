@@ -1,9 +1,15 @@
-import ConAgua.Arena.WhnfCore
+module
+
+public import ConAgua.Arena.WhnfCore
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import Std.Tactic.BVDecide.Normalize.BitVec
-import Std.Tactic.BVDecide.Normalize.Prop
+public import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
+import ConAgua.Arena.DerRel
+import Std.WP.Triple.SpecLemmas
+
+@[expose] public section
 
 /-!
 # Refinements of `WhnfCore.lean`'s functions (other than the slot and the loop)

@@ -1,9 +1,20 @@
-import ConAgua.Arena.DeclAndPinIndCopy2
+module
+
+public import ConAgua.Arena.DeclAndPinIndCopy2
 import ConAgua.Arena.DeclCanonInfo
 import ConAgua.Arena.DeclArmQuot
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr
+import ConAgua.Arena.DeclStepSpec
+import ConAgua.Arena.DeclTwin
+import ConAgua.Arena.IndPartsSpec.RulePrefixAt
+import ConAgua.Arena.SimLib
+public import ConAgua.Arena.DeclAndPinInd
+public import ConAgua.Arena.DeclCanonSpec
+public import ConAgua.Rom.CIReadSpec
+
+@[expose] public section
 
 /-!
 # The `And` pin's inductive arm, part 3: `and_pin_ok(i)` refines `andPinOk (.indDecl block nP)`

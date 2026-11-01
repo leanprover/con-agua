@@ -1,6 +1,10 @@
-import ConAgua.Checker.Pipeline
-import ConAgua.Arena.FreezeSpec
-import ConAgua.L.GrindAttr
+module
+
+public import ConAgua.Checker.Pipeline
+public import ConAgua.Arena.FreezeSpec
+public import ConAgua.L.GrindAttr
+
+@[expose] public section
 
 /-!
 # Entry 1 of the parallel mode: `check` with `MODE` `1` or `3` (lane parmode)

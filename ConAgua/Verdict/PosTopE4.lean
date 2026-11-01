@@ -1,7 +1,29 @@
+module
+
 import ConAgua.L.ModelGen
-import ConAgua.Verdict.PosTopE1
-import ConAgua.Arena.IndPosSpec.UnW2
+public import ConAgua.Verdict.PosTopE1
+public import ConAgua.Arena.IndPosSpec.UnW2
 import ConAgua.Arena.IndT.PosAll
+import ConAgua.Arena.IndPosSpec.FgW
+import ConAgua.Arena.IndPosSpec.GgW
+import ConAgua.Arena.IndPosSpec.Grow
+import ConAgua.Arena.IndPosSpec.P2sfW
+import ConAgua.Arena.IndPosSpec.Pos2DecHLSplit
+import ConAgua.Arena.IndPosSpec.Pos2RdGrow
+import ConAgua.Arena.IndPosSpec.Snoc
+import ConAgua.Arena.IndPosSpec.SnocWMfr
+import ConAgua.Arena.IndRealAbsPos
+import ConAgua.Arena.IndT.PosFields
+import ConAgua.Arena.IndT.RecGen19
+import ConAgua.Arena.RefWalk
+import ConAgua.Checker.NoVerdictTree
+import ConAgua.Verdict.PosE1N
+import ConRon.Bridge.Inductives.PosWalks
+public import ConAgua.Arena.IndPosSpec.NestSeeds
+public import ConAgua.Arena.IndRealIlpL
+public import ConAgua.Verdict.PosE
+
+@[expose] public section
 /-!
 # `nest_root`'s and `nest_seeds`' refinements (lane `verdicts-b`, helper `ia2`, fork `top`)
 

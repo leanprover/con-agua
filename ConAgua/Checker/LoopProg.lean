@@ -1,3 +1,5 @@
+module
+
 import ConAgua.Checker.LoopProgInd
 import ConAgua.Checker.LoopDeclArm
 import ConAgua.Checker.LoopDeclAgree
@@ -7,8 +9,24 @@ import ConAgua.Checker.LeafAll
 import ConAgua.Checker.LoopAll
 import ConAgua.Checker.RomProgB
 import ConAgua.Rom.CIReadRefs
-import ConAgua.Arena.LoopStart
+public import ConAgua.Arena.LoopStart
 import ConAgua.Checker.IndMemoClosed
+meta import ConAgua.Checker.LoopProgInd
+meta import ConAgua.Checker.LoopDeclArm
+meta import ConAgua.Checker.LoopDeclAgree
+meta import ConAgua.Checker.IndCore
+meta import ConAgua.Checker.CoreErec
+meta import ConAgua.Checker.LeafAll
+meta import ConAgua.Checker.LoopAll
+meta import ConAgua.Checker.RomProgB
+meta import ConAgua.Rom.CIReadRefs
+meta import ConAgua.Arena.LoopStart
+meta import ConAgua.Checker.IndMemoClosed
+import ConAgua.Checker.LoopProgTac
+public import ConAgua.Checker.Prog
+public import ConAgua.Rom.Stage
+
+@[expose] public section
 
 /-!
 # The declaration loop's program hypotheses at the substituted checker program (lane `loopt3`)

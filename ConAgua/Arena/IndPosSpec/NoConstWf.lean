@@ -1,5 +1,12 @@
+module
+
 import ConAgua.Arena.IndPosSpec.NestOccGo
-import ConAgua.Arena.IndPosSpec.PiBWStage
+public import ConAgua.Arena.IndPosSpec.PiBWStage
+import Std.WP.Tactic
+import Std.WP.Triple.SpecLemmas
+public import ConAgua.Arena.IndPosSpec.NoGoStep
+
+@[expose] public section
 
 /-!
 # NoConstWf

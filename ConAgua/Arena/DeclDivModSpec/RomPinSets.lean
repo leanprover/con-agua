@@ -1,9 +1,14 @@
-import ConAgua.Arena.DeclDivModSpec.DecCIDefnValue
-import ConAgua.Arena.DeclDivModSpec.DivModEnvGuard
+module
+
+public import ConAgua.Arena.DeclDivModSpec.DecCIDefnValue
+public import ConAgua.Arena.DeclDivModSpec.DivModEnvGuard
 import ConAgua.Arena.DeclPins
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr
+import ConAgua.Arena.IndPartsSpec.MemberNames
+
+@[expose] public section
 
 /-!
 # RomPinSets

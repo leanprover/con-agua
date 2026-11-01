@@ -1,12 +1,18 @@
-import ConAgua.Arena.DefEq
+module
+
+public import ConAgua.Arena.DefEq
 import ConAgua.Arena.IndPartsSpec.RecTW
 import ConAgua.Arena.DefEqGrindAttr
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.Arena.LdRd
 import ConAgua.L.ModelGen
-import ConAgua.Arena.WhnfCoreProj
-import ConAgua.Arena.WhnfIotaRefine
+public import ConAgua.Arena.WhnfCoreProj
+public import ConAgua.Arena.WhnfIotaRefine
+import ConAgua.Arena.WhnfCoreRefine
+import ConRon.Bridge.Grind
+
+@[expose] public section
 
 /-!
 # Refinements of `DefEq.lean`'s small leaves

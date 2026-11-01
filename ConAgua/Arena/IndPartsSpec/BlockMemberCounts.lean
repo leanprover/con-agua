@@ -1,4 +1,8 @@
-import ConAgua.Arena.IndPartsSpec.BmgW
+module
+
+public import ConAgua.Arena.IndPartsSpec.BmgW
+
+@[expose] public section
 
 /-!
 # BlockMemberCounts: `ConRon.Arena.blockMemberCounts`

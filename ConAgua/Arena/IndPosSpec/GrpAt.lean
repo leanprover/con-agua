@@ -1,4 +1,8 @@
-import ConAgua.Arena.IndStubs
+module
+
+public import ConAgua.Arena.IndStubs
+
+@[expose] public section
 
 /-!
 # GrpAt

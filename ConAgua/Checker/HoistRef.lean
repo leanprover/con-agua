@@ -1,5 +1,12 @@
-import ConAgua.Checker.HoistTargetsRef
-import ConAgua.Checker.HoistOrderRef
+module
+
+public import ConAgua.Checker.HoistTargetsRef
+public import ConAgua.Checker.HoistOrderRef
+public import ConAgua.Checker.HoistIndexRef
+public import ConAgua.Checker.HoistNatRef
+public import ConAgua.Checker.HoistWalkRef
+
+@[expose] public section
 
 /-!
 # `hoist_nat_op_ground` refines `hoistNatOpGround` (lane `front4`)

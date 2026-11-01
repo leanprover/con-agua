@@ -1,5 +1,9 @@
-import ConAgua.Arena.PromoteCIRef.DecRuleMk
+module
+
+public import ConAgua.Arena.PromoteCIRef.DecRuleMk
 import ConAgua.Arena.PromoteCIRef.PmDecRuleWords
+
+@[expose] public section
 
 /-!
 # Hd

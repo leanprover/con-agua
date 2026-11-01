@@ -1,5 +1,13 @@
+module
+
 import ConAgua.Arena.IndRealOpf2
 import ConAgua.Arena.DeclNatCv
+import ConAgua.Arena.IndRealAbs
+import ConAgua.Arena.InstListRefine
+import ConRon.Bridge.Grind
+public import ConAgua.Arena.IndRealOpf
+
+@[expose] public section
 
 /-!
 # `opf_go`, `opa_go` under the stage relation (lane `indproofs4`, helper `opf`)

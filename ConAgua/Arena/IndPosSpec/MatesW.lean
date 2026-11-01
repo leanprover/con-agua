@@ -1,9 +1,14 @@
-import ConAgua.Arena.IndCopy2
-import ConAgua.Arena.Pins
+module
+
+public import ConAgua.Arena.IndCopy2
+public import ConAgua.Arena.Pins
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
-import Std.Tactic.BVDecide.Normalize.Prop
+public import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
+import Std.WP.Triple.SpecLemmas
+
+@[expose] public section
 
 /-!
 # MatesW

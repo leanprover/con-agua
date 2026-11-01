@@ -1,6 +1,14 @@
-import ConAgua.Arena.IndRealSpine
-import ConAgua.Arena.GrindAttr
-import ConAgua.L.GrindAttr
+module
+
+public import ConAgua.Arena.IndRealSpine
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.L.GrindAttr
+import ConAgua.Arena.CoreWalks
+import Std.WP.Triple.SpecLemmas
+public import ConAgua.Arena.IndMaster
+public import ConAgua.Arena.StageInst1
+
+@[expose] public section
 
 /-!
 # `abstract1_fast` under the stage relation and the `abstract1` memo (lane `indproofs4`, helper `abs`)

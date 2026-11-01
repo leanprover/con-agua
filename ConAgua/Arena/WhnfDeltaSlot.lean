@@ -1,9 +1,15 @@
+module
+
 import ConAgua.Arena.WhnfCoreSlot
-import ConAgua.Arena.GrindAttr
-import ConAgua.L.GrindAttr
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.L.GrindAttr
 import Std.Tactic.BVDecide.Normalize.BitVec
-import Std.Tactic.BVDecide.Normalize.Prop
-import Std.WP.Tactic
+public import Std.Tactic.BVDecide.Normalize.Prop
+public import Std.WP.Tactic
+import ConAgua.Arena.DerRel
+public import ConAgua.Arena.WhnfBase
+
+@[expose] public section
 
 /-!
 # The knot's `whnf` slot and the `whnf` loop

@@ -1,4 +1,8 @@
-import ConRon.Arena.Frontend.ExportC
+module
+
+public import ConRon.Arena.Frontend.ExportC
+
+@[expose] public section
 
 /-!
 # The twin's parse only appends to `decls` (lane `pipeline`)

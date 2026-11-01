@@ -1,6 +1,13 @@
-import ConAgua.Arena.IndPosSpec.PiBWStage
+module
+
+public import ConAgua.Arena.IndPosSpec.PiBWStage
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
+import Std.WP.Tactic
+import Std.WP.Triple.SpecLemmas
+public import ConAgua.Arena.StageInst1
+
+@[expose] public section
 
 /-!
 # NtyLook

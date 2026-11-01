@@ -2,8 +2,10 @@ module
 
 public import ConAgua.L.Syntax
 public meta import Lean
+import Std.Data.DTreeMap.Internal.Operations
+import Std.Tactic.BVDecide.Normalize.Prop
 
-public section
+@[expose] public section
 
 /-!
 # Array tables: names, kinds and tiers of a program's arrays

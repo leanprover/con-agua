@@ -1,7 +1,11 @@
+module
+
 import ConAgua.Arena.DefEqMidLoops
-import ConAgua.Arena.DefEqStuckWith
-import ConAgua.Arena.GrindAttr
-import ConAgua.L.GrindAttr
+public import ConAgua.Arena.DefEqStuckWith
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.L.GrindAttr
+
+@[expose] public section
 
 /-!
 # The `defeq` loops' error claims: `defeq_lst`, `defeq_list_rev`

@@ -1,6 +1,10 @@
-import ConAgua.Arena.InstLPWalkStep
-import ConAgua.Arena.InstLPLevel
+module
+
+public import ConAgua.Arena.InstLPWalkStep
+public import ConAgua.Arena.InstLPLevel
 import Std.Tactic.BVDecide.Normalize.BitVec
+
+@[expose] public section
 
 /-!
 # The `instLP` walk refines `instLPGo`: the arms

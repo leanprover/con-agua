@@ -1,6 +1,10 @@
-import ConAgua.L.Agree
-import ConAgua.L.GKeep
-import ConAgua.Compiler.WriteSetSplit
+module
+
+public import ConAgua.L.Agree
+public import ConAgua.L.GKeep
+public import ConAgua.Compiler.WriteSetSplit
+
+@[expose] public section
 
 /-!
 # Read sets of a large program, one function at a time (lane parmode)

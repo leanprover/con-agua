@@ -1,5 +1,13 @@
+module
+
 import ConAgua.Arena.IndPosSpec.FgW
-import ConAgua.Arena.RecCheckSpec.TpnB
+public import ConAgua.Arena.RecCheckSpec.TpnB
+import ConAgua.Arena.IndPartsSpec.PartsPSlCons
+import ConAgua.Arena.IndPartsSpec.RulePrefixAt
+import ConAgua.Arena.RecClassSpec.Classes
+import Std.Tactic.BVDecide.Normalize.Bool
+
+@[expose] public section
 
 /-!
 # SoaW

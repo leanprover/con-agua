@@ -1,8 +1,15 @@
+module
+
 import ConAgua.Arena.LvlGrow
-import ConAgua.Arena.KnotSlot
+public import ConAgua.Arena.KnotSlot
 import ConAgua.Arena.StoreDenIntern
-import Std.Tactic.BVDecide.Normalize.Prop
-import ConAgua.Arena.WhnfCoreApp
+public import Std.Tactic.BVDecide.Normalize.Prop
+public import ConAgua.Arena.WhnfCoreApp
+import ConAgua.Arena.DerRel
+import ConAgua.Arena.StoreDenLvl
+import ConRon.Arena.WFProofs
+
+@[expose] public section
 
 /-!
 # Interning under `CoreS`: the leaves the inference bodies build (lane `defeq`)

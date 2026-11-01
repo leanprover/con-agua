@@ -1,12 +1,19 @@
+module
+
 import ConAgua.Arena.Verdict
-import ConAgua.Arena.WhnfCore
-import ConAgua.Arena.WhnfDelta
+public import ConAgua.Arena.WhnfCore
+public import ConAgua.Arena.WhnfDelta
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
 import ConAgua.Checker.NoVerdictTree
-import Std.Tactic.BVDecide.Normalize.BitVec
-import Std.Tactic.BVDecide.Normalize.Prop
+public import Std.Tactic.BVDecide.Normalize.BitVec
+public import Std.Tactic.BVDecide.Normalize.Prop
+import ConAgua.Front.Preserve
+public import ConAgua.Checker.NoVerdictFns
+public import ConAgua.L.ErrSpec
+
+@[expose] public section
 
 /-!
 # The models of `reduce_nat`'s family (both outcomes) and the `whnf_core` arms' error models

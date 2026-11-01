@@ -1,10 +1,15 @@
-import ConAgua.Arena.WhnfBase
-import ConAgua.Checker.Entry
+module
+
+public import ConAgua.Arena.WhnfBase
+public import ConAgua.Checker.Entry
 import ConAgua.Arena.GrindAttr
-import ConAgua.Arena.IndGrindAttr
+public import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.Arena.LdRd
 import ConAgua.L.ModelGen
+import Std.Tactic.BVDecide.Normalize.BitVec
+
+@[expose] public section
 
 /-!
 # `basis_pin_hit(off, len)`: the loops and their models (lane `indproofs4`, helper `bph`)

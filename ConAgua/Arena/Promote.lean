@@ -1,4 +1,8 @@
-import ConAgua.Arena.IndIface
+module
+
+public import ConAgua.Arena.IndIface
+
+@[expose] public section
 
 /-!
 # Promotion in L: the scratch → persistent copy (`Arena/Promote.lean` of the twin)

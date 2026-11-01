@@ -1,5 +1,11 @@
-import ConAgua.Arena.CheckerT
-import ConAgua.Arena.GrindAttr
+module
+
+public import ConAgua.Arena.CheckerT
+public import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.DeclCrpT
+import ConAgua.Arena.StrLitSup
+
+@[expose] public section
 
 /-!
 # The verdict claims of the `check_decl` arms (lane `verdicts-b`, helper `d`)

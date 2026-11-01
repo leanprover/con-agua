@@ -1,4 +1,10 @@
+module
+
 import ConAgua.Rom.CIReadRefData
+import ConAgua.Rom.CIReadRefNames
+public import ConAgua.Rom.CIReadRefBlock
+
+@[expose] public section
 
 /-!
 # The ROM constant readers refine the twin (helper `decls4-rom`)

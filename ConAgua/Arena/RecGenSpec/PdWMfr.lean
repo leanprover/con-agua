@@ -1,8 +1,14 @@
-import ConAgua.Arena.RecCheckSpec.K53Look
+module
+
+public import ConAgua.Arena.RecCheckSpec.K53Look
 import ConAgua.Arena.RecCheckSpec.TruncSl
-import ConAgua.Arena.GrindAttr
-import ConAgua.Arena.IndGrindAttr
-import ConAgua.L.GrindAttr
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.Arena.IndGrindAttr
+public import ConAgua.L.GrindAttr
+import ConAgua.Arena.IndPosSpec.FgW
+public import ConAgua.Arena.IndDecStab
+
+@[expose] public section
 
 /-!
 # PdWMfr

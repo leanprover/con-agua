@@ -1,10 +1,16 @@
+module
+
 import ConAgua.L.ModelGen
-import ConAgua.Arena.RomLevels
+public import ConAgua.Arena.RomLevels
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import Std.Tactic.BVDecide.Normalize.BitVec
-import Std.Tactic.BVDecide.Normalize.Prop
+public import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
+import ConAgua.Front.IdTable
+import Std.WP.Triple.SpecLemmas
+
+@[expose] public section
 
 /-!
 # The ROM's expressions: `rom_expr(pos)` refines `internExprGo`, its memo mirrored

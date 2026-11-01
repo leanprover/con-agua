@@ -1,9 +1,18 @@
-import ConAgua.Arena.InferBodyLet
-import Std.Tactic.BVDecide.Normalize.BitVec
-import Std.Tactic.BVDecide.Normalize.Prop
-import Std.WP.Tactic
-import ConAgua.Arena.WhnfCoreApp
+module
+
+public import ConAgua.Arena.InferBodyLet
+public import Std.Tactic.BVDecide.Normalize.BitVec
+public import Std.Tactic.BVDecide.Normalize.Prop
+public import Std.WP.Tactic
+public import ConAgua.Arena.WhnfCoreApp
 import ConAgua.Arena.WhnfCoreRefine
+import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.RefWalk
+import ConAgua.Checker.NoVerdictTree
+import ConAgua.L.GrindAttr
+import ConAgua.L.ModelGen
+
+@[expose] public section
 
 /-!
 # The application spines of both bodies (lane `defeq`)

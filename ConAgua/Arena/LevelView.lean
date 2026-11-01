@@ -1,4 +1,10 @@
+module
+
 import ConAgua.Arena.LevelArena
+public import ConAgua.Arena.ArenaRel
+public import ConAgua.Arena.LevelHeap
+
+@[expose] public section
 
 /-!
 # `lv_node` against the twin's level view, converse direction (lane `decls3`)

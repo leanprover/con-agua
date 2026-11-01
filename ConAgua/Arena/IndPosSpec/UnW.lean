@@ -1,5 +1,11 @@
-import ConAgua.Arena.IndPosSpec.NestHoles
-import ConAgua.Arena.IndGrindAttr
+module
+
+public import ConAgua.Arena.IndPosSpec.NestHoles
+public import ConAgua.Arena.IndGrindAttr
+import Std.WP.Tactic
+import Std.WP.Triple.SpecLemmas
+
+@[expose] public section
 
 /-!
 # UnW

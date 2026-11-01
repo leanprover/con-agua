@@ -1,4 +1,11 @@
-import ConAgua.Arena.KnotEntry
+module
+
+public import ConAgua.Arena.KnotEntry
+import ConAgua.Arena.IndRealAbs
+public import ConAgua.Arena.IndCallM
+public import ConAgua.Arena.RecSim
+
+@[expose] public section
 
 /-!
 # The inductive stage under `StageT`: the shared pieces (lane `indstaget`)

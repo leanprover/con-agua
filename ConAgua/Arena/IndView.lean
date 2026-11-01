@@ -1,10 +1,16 @@
+module
+
 import ConAgua.Arena.Env
-import ConAgua.Arena.IndIface
+public import ConAgua.Arena.IndIface
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import Std.Tactic.BVDecide.Normalize.BitVec
-import Std.Tactic.BVDecide.Normalize.Prop
+public import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
+import ConAgua.Arena.View
+import Std.WP.Triple.SpecLemmas
+
+@[expose] public section
 
 /-!
 # `e_view` refines the twin's `view` (lane `induct`)

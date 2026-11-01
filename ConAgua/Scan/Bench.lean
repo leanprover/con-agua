@@ -1,4 +1,8 @@
-import ConLeche.Frontend.Scan.Fast
+module
+
+public import ConLeche.Frontend.Scan.Fast
+
+@[expose] public section
 
 /-! `lake exe valbench FILE`: con-leche's compiled `scanLineFwd` over a whole lean4export file,
 with the driver of the Stage B validator (`L.Scan.Line.validN`): prints `ok 0` if every line

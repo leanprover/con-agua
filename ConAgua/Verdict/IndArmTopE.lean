@@ -1,5 +1,23 @@
-import ConAgua.Verdict.TopE
+module
+
+public import ConAgua.Verdict.TopE
 import ConAgua.Verdict.PosKnotE
+import ConAgua.Arena.IndArmBridge2
+import ConAgua.Arena.IndT.CheckIndDecl
+import ConAgua.Arena.StrLitSup
+import ConAgua.Checker.IndArm
+import ConAgua.Checker.LoopProg
+import ConAgua.Verdict.KnotAllE
+public import ConAgua.Arena.IndInstallSpec.BpRecBpassR
+public import ConAgua.Arena.IndInstallSpec.ConsRecsTFSimOf
+public import ConAgua.Arena.IndInstallSpec.OfClosed
+public import ConAgua.Arena.IndInstallSpec.ShapeCVOfDecB
+public import ConAgua.Arena.IndRealLvlZ
+public import ConAgua.Arena.IndT.ArmMemos
+public import ConAgua.Arena.IndT.GenRec2
+public import ConAgua.Arena.IndT.Lift
+
+@[expose] public section
 
 /-!
 # The inductive arm's verdict claim, proved (lane `verdicts-b`, helper `fin`)

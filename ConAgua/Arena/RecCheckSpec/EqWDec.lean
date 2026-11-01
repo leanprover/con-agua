@@ -1,5 +1,9 @@
-import ConAgua.Arena.IndPartsSpec.EqW
+module
+
+public import ConAgua.Arena.IndPartsSpec.EqW
 import ConRon.Bridge.Grind
+
+@[expose] public section
 
 /-!
 # EqWDec

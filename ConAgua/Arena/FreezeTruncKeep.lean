@@ -1,4 +1,8 @@
-import ConAgua.Arena.FreezeTruncBase
+module
+
+public import ConAgua.Arena.FreezeTruncBase
+
+@[expose] public section
 
 /-!
 # The truncation theorem, part 2: the relations over arrays that are not frozen (lane parmode)

@@ -1,6 +1,14 @@
+module
+
 import ConAgua.Arena.PropReadRefine
-import ConAgua.Arena.LevelIntern
+public import ConAgua.Arena.LevelIntern
 import ConAgua.Arena.LevelInternRef
+import ConAgua.Arena.CoreLevels
+import ConAgua.Arena.DerRel
+import ConAgua.Arena.InferFieldSort
+public import ConAgua.Arena.WhnfIota
+
+@[expose] public section
 
 /-!
 # `caps_never_zero` under `CoreS` (lane `defeq2`)

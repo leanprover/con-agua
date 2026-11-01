@@ -1,11 +1,22 @@
+module
+
 import ConAgua.Arena.RecClassSpec.ClassNPcOf
 import ConAgua.Arena.RecClassSpec.IhW
 import ConAgua.Arena.RecGenSpec.CkcW
-import ConAgua.Arena.RecGenSpec.DecCIIndCv
-import ConAgua.Arena.IlpRd
-import ConAgua.Arena.GrindAttr
+public import ConAgua.Arena.RecGenSpec.DecCIIndCv
+public import ConAgua.Arena.IlpRd
+public import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
-import ConAgua.L.GrindAttr
+public import ConAgua.L.GrindAttr
+import ConAgua.Arena.IndPartsSpec.RecTW
+import ConAgua.Arena.IndPosSpec.EntryW
+import ConAgua.Arena.RecSim
+import Std.Tactic.BVDecide.Normalize.BitVec
+import Std.WP.Tactic
+import Std.WP.Triple.SpecLemmas
+public import ConAgua.Arena.IndDecStab
+
+@[expose] public section
 
 /-!
 # CftW

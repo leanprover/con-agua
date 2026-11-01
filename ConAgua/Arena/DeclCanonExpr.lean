@@ -1,7 +1,13 @@
-import ConAgua.Arena.DeclCanonLvl
+module
+
+public import ConAgua.Arena.DeclCanonLvl
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr
+import Std.WP.Tactic
+import Std.WP.Triple.SpecLemmas
+
+@[expose] public section
 
 /-!
 # The canonical expression comparison in L (lane `decls3`, helper `decls3-canon`)

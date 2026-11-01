@@ -1,8 +1,13 @@
-import ConAgua.Front.IndApplySpec
+module
+
+public import ConAgua.Front.IndApplySpec
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
-import Std.Tactic.BVDecide.Normalize.Prop
+public import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
+import Std.WP.Triple.SpecLemmas
+
+@[expose] public section
 
 /-!
 # The apply step of an `inductive` line: word models and specs, II (`installIndD`'s side)

@@ -1,6 +1,18 @@
+module
+
 import ConAgua.Arena.IndT.RecGen28
 import ConAgua.Arena.IndInstallSpec.GpbWSimF
-import ConRon.Bridge.Inductives.GenRec
+public import ConRon.Bridge.Inductives.GenRec
+import ConAgua.Arena.IndT.Lift
+import ConAgua.Arena.RecCheckSpec.EraseFVarTys
+public import ConAgua.Arena.IndT.RecGen28Models
+public import ConAgua.Arena.KnotEntry
+public import ConAgua.Arena.RecClassSpec.ClassNPcOf
+public import ConAgua.Arena.RecGenSpec.DecCNWords
+public import ConAgua.Arena.TwinStep
+public import ConAgua.Verdict.VCtx
+
+@[expose] public section
 
 /-!
 # `genRecCheck` under `StageC`, part 1 (lane `indstaget`, helper `grc`)

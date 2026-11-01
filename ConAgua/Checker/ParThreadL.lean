@@ -1,5 +1,10 @@
-import ConAgua.Checker.ParDriverL
+module
+
+public import ConAgua.Checker.ParDriverL
 import ConAgua.Arena.PhaseBOne
+import ConAgua.Checker.RomProg0
+
+@[expose] public section
 
 /-!
 # The threads' entry 2, in L: one pending group per call (lane parmode)

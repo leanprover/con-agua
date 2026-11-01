@@ -1,14 +1,19 @@
-import ConAgua.Verdict.PosE3Fm
-import ConAgua.Arena.IndPosSpec.BvbWMfr
-import ConAgua.Arena.IndPosSpec.KlB
-import ConAgua.Arena.IndPosSpec.WCtx
-import ConAgua.Arena.IndPosSpec.OneK
-import ConAgua.Arena.IndPosSpec.WalkOK
-import ConAgua.Verdict.IndE
-import ConAgua.Verdict.VCtx
-import ConAgua.Verdict.PosE2M
-import ConAgua.Verdict.PosE3Cm
-import ConAgua.Arena.IndT.PosDefs
+module
+
+public import ConAgua.Verdict.PosE3Fm
+public import ConAgua.Arena.IndPosSpec.BvbWMfr
+public import ConAgua.Arena.IndPosSpec.KlB
+public import ConAgua.Arena.IndPosSpec.WCtx
+public import ConAgua.Arena.IndPosSpec.OneK
+public import ConAgua.Arena.IndPosSpec.WalkOK
+public import ConAgua.Verdict.IndE
+public import ConAgua.Verdict.VCtx
+public import ConAgua.Verdict.PosE2M
+public import ConAgua.Verdict.PosE3Cm
+public import ConAgua.Arena.IndT.PosDefs
+public import ConAgua.Arena.IndT.Lift
+
+@[expose] public section
 
 /-!
 # The positivity walk: one refinement per function, the statements

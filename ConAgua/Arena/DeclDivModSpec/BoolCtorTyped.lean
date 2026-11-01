@@ -1,8 +1,12 @@
-import ConAgua.Arena.DeclDivModSpec.Sc0List
-import ConAgua.Arena.DeclDivModSpec.Cons
+module
+
+public import ConAgua.Arena.DeclDivModSpec.Sc0List
+public import ConAgua.Arena.DeclDivModSpec.Cons
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
+
+@[expose] public section
 
 /-!
 # BoolCtorTyped: `ConRon.Arena.boolCtorTyped`, `ConRon.Arena.typePinStored`

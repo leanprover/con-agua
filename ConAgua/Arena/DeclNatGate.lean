@@ -1,7 +1,13 @@
+module
+
 import ConAgua.Arena.DeclNatCv
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
+import ConRon.Bridge.Grind
+public import ConAgua.Arena.DeclNatSpec
+
+@[expose] public section
 
 /-!
 # The structural-`Nat` gate: stored definitions and the guard (lane `decls3`, helper `decls3-nat`)

@@ -1,10 +1,17 @@
-import ConAgua.Arena.IndPosSpec.MkLook
-import ConAgua.Arena.IndPosSpec.NestOccGo
+module
+
+public import ConAgua.Arena.IndPosSpec.MkLook
+public import ConAgua.Arena.IndPosSpec.NestOccGo
 import ConAgua.Arena.IndInstallSpec.DomsW
-import ConAgua.Arena.GrindAttr
-import ConAgua.Arena.IndGrindAttr
-import ConAgua.L.GrindAttr
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.Arena.IndGrindAttr
+public import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
+import ConAgua.Arena.IndPosSpec.NestKeyMap
+import ConAgua.Arena.LdRd
+import Std.Tactic.BVDecide.Normalize.BitVec
+
+@[expose] public section
 
 /-!
 # RpGoStep

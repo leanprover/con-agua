@@ -1,6 +1,16 @@
+module
+
 import ConAgua.Verdict.PhaseBE
-import ConAgua.Checker.VerdictTop
+public import ConAgua.Checker.VerdictTop
 import ConAgua.Checker.CheckARun
+import ConAgua.Checker.IndArm
+import ConAgua.Checker.LoopProg
+import ConAgua.Checker.LoopStage
+import ConAgua.Checker.RomProg0
+import ConAgua.Checker.TwinShapeQuot
+import ConAgua.L.Blocks
+
+@[expose] public section
 
 /-!
 # Entry 2's `check_b` fails only where phase B on the worker does (lane verdicts-b, calibration)

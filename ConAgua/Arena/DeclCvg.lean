@@ -1,10 +1,18 @@
-import ConAgua.Arena.DeclStep
-import ConAgua.Arena.IndRealWalk
-import ConAgua.Arena.CoreLevels
+module
+
+public import ConAgua.Arena.DeclStep
+public import ConAgua.Arena.IndRealWalk
+public import ConAgua.Arena.CoreLevels
 import ConAgua.Arena.IndPartsSpec.MemberNames
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr
+import ConAgua.Arena.IndMaster
+import Std.WP.Tactic
+import Std.WP.Triple.SpecLemmas
+public import ConAgua.Arena.IndCopy2
+
+@[expose] public section
 
 /-!
 # Phase B's check, `check_value_group`: its write set from the text

@@ -1,5 +1,7 @@
+module
+
 import ConAgua.Arena.DeclTwin
-import ConAgua.Arena.DeclBasisSpec2
+public import ConAgua.Arena.DeclBasisSpec2
 import ConAgua.Arena.DeclCanonConst
 import ConAgua.Arena.DeclCanonSpec2
 import ConAgua.Arena.DeclStepSpec
@@ -7,6 +9,13 @@ import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
+import ConAgua.Arena.DeclValRef
+import ConAgua.Arena.IndPartsSpec.RulePrefixAt
+import ConAgua.Arena.RefWalk
+import ConAgua.Checker.NoVerdictTree
+public import ConAgua.Arena.DeclCanonView2
+
+@[expose] public section
 
 /-!
 # The quotient pin: `quot_pin_hit(k, q)` (lane `decls3`)

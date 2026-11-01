@@ -1,12 +1,18 @@
-import ConAgua.Arena.PromoteFlag
-import ConAgua.Arena.WhnfBase
-import ConAgua.Arena.PromoteCopy
-import ConAgua.Arena.PromoteProg
+module
+
+public import ConAgua.Arena.PromoteFlag
+public import ConAgua.Arena.WhnfBase
+public import ConAgua.Arena.PromoteCopy
+public import ConAgua.Arena.PromoteProg
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import Std.Tactic.BVDecide.Normalize.BitVec
-import Std.Tactic.BVDecide.Normalize.Prop
+public import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
+import ConAgua.Arena.DerRel
+import Std.WP.Triple.SpecLemmas
+
+@[expose] public section
 
 /-!
 # The persistent interners `pi_*`: the flag bracket

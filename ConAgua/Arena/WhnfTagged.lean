@@ -1,5 +1,10 @@
-import ConAgua.Arena.CoreWalks
-import ConAgua.Arena.WhnfIotaRefine5
+module
+
+public import ConAgua.Arena.CoreWalks
+public import ConAgua.Arena.WhnfIotaRefine5
+import ConAgua.Arena.WhnfIotaRefine2
+
+@[expose] public section
 
 /-!
 # The census-tagged statements whose stubs the verified walks discharge (lane `whnf2`)

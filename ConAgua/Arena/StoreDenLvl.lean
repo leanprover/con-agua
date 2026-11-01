@@ -1,6 +1,11 @@
-import ConAgua.Arena.StoreDen
+module
+
+public import ConAgua.Arena.StoreDen
 import ConRon.Arena.WFProofs
-import Std.Tactic.BVDecide.Normalize.Prop
+public import Std.Tactic.BVDecide.Normalize.Prop
+public import ConRon.Arena.WF
+
+@[expose] public section
 
 /-!
 # Interned levels read back (lane `defeq2`)

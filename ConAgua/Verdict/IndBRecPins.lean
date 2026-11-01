@@ -1,8 +1,20 @@
+module
+
 import ConAgua.Arena.RecCheckSpec.TargetRecPins
 import ConAgua.Arena.IndSumSpec.SoaW
-import ConAgua.Verdict.VCtx
-import ConAgua.Arena.GrindAttr
+public import ConAgua.Verdict.VCtx
+public import ConAgua.Arena.GrindAttr
 import ConAgua.L.ModelGen
+import ConAgua.Arena.IndInstallSpec.NhW
+import ConAgua.Arena.IndInstallSpec.PartsAt
+import ConAgua.Arena.IndPartsSpec.BlockRecLpsOk
+import ConAgua.Arena.IndPartsSpec.BlockRecNameSetOk
+import ConAgua.Arena.IndPartsSpec.BlockSplitRecs
+import ConAgua.Arena.RefWalk
+import ConAgua.Checker.NoVerdictTree
+public import ConAgua.Arena.RecCheckSpec.TpsW
+
+@[expose] public section
 
 /-!
 # `target_rec_pins`: one model and one refinement for both outcomes

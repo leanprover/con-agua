@@ -1,9 +1,16 @@
-import ConAgua.Arena.IndPosSpec.EntryW
+module
+
+public import ConAgua.Arena.IndPosSpec.EntryW
 import ConAgua.Arena.IndPosSpec.InstW
 import ConAgua.Arena.IndPosSpec.MentionsAnyGo
-import ConAgua.Arena.GrindAttr
+public import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
-import ConAgua.L.GrindAttr
+public import ConAgua.L.GrindAttr
+import Std.Tactic.BVDecide.Normalize.BitVec
+import Std.WP.Tactic
+import Std.WP.Triple.SpecLemmas
+
+@[expose] public section
 
 /-!
 # CloseTelescope: `ConRon.Arena.closeTelescope`, `ConRon.Arena.instPisWith`, `ConRon.Arena.nestBlockOf`, `ConRon.Arena.nestCtorEntry`, `ConRon.Arena.nestFrameMates.go`, `ConRon.Arena.nestFrameMates`, `ConRon.Arena.nestResHead`

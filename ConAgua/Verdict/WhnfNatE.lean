@@ -1,5 +1,17 @@
-import ConAgua.Arena.WhnfDeltaRefine4
+module
+
+public import ConAgua.Arena.WhnfDeltaRefine4
 import ConAgua.Arena.CoreNatOp
+import ConAgua.Arena.RefWalk
+import ConAgua.Arena.WhnfCoreProj
+import ConAgua.Arena.WhnfDeltaRefine2
+import ConAgua.L.LocNF
+import Std.Tactic.BVDecide.Normalize.BitVec
+public import ConAgua.Arena.KnotE
+public import ConAgua.Arena.RefECore
+public import ConAgua.Verdict.WhnfModels2E
+
+@[expose] public section
 /-!
 # `reduce_nat`'s family: one model and one refinement for both outcomes
 

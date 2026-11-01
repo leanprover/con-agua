@@ -1,4 +1,8 @@
-import ConAgua.Front.ExprIface
+module
+
+public import ConAgua.Front.ExprIface
+
+@[expose] public section
 
 /-!
 # The records of an `inductive` line in `IFR`/`IFL`, related to con-leche's

@@ -1,9 +1,15 @@
-import ConAgua.Arena.IndLibSpec
+module
+
+public import ConAgua.Arena.IndLibSpec
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr
-import Std.Tactic.BVDecide.Normalize.Prop
+public import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
+import ConAgua.Arena.Env
+import Std.WP.Triple.SpecLemmas
+
+@[expose] public section
 
 /-!
 # Copying slices (`iw_copy`) and building lists (`sl_cons`, `sl_snoc`, `sl_append`) (lane `induct`)

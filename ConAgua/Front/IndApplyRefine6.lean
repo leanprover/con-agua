@@ -1,7 +1,16 @@
+module
+
+import ConRon.Bridge.Promote.Walk
 import ConRon.Bridge.Frontend.Rel
 import ConAgua.Front.IndApplyRefine
 import ConAgua.Arena.LevelArena
-import Std.Tactic.BVDecide.Normalize.Prop
+public import Std.Tactic.BVDecide.Normalize.Prop
+public import ConAgua.Arena.LevelLeqRel
+public import ConAgua.Front.IndApplySpec
+public import ConRon.Arena.Frontend.ExportC
+public import ConRon.Bridge.StateOK
+
+@[expose] public section
 
 /-!
 # The apply step of an `inductive` line against the twin, VI: `kExpected?`

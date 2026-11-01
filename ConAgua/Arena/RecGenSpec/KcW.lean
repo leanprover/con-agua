@@ -1,10 +1,21 @@
-import ConAgua.Arena.RecGenSpec.CkcW
-import ConAgua.Arena.RecGenSpec.KofProg
+module
+
+public import ConAgua.Arena.RecGenSpec.CkcW
+public import ConAgua.Arena.RecGenSpec.KofProg
 import ConAgua.Arena.IndPosSpec.GgW2
 import ConAgua.Arena.IndPosSpec.SgGoW
-import ConAgua.Arena.GrindAttr
-import ConAgua.Arena.IndGrindAttr
-import ConAgua.L.GrindAttr
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.Arena.IndGrindAttr
+public import ConAgua.L.GrindAttr
+import ConAgua.Arena.IndInstallSpec.DomsW
+import ConAgua.Arena.IndPosSpec.DecNHFields
+import ConAgua.Arena.IndPosSpec.FgW
+import ConAgua.Arena.IndPosSpec.MapOKStep
+import ConAgua.Arena.IndPosSpec.PosmemoRxMfr
+import ConAgua.Arena.IndPosSpec.Rx
+public import ConAgua.Arena.IndPosSpec.BvbWMfr
+
+@[expose] public section
 
 /-!
 # KcW

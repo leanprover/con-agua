@@ -1,12 +1,19 @@
-import ConAgua.Arena.IndPosSpec.NestKeyMap
-import ConAgua.Arena.RecCheck
+module
+
+public import ConAgua.Arena.IndPosSpec.NestKeyMap
+public import ConAgua.Arena.RecCheck
 import ConAgua.Arena.RecSim
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr
 import Std.Tactic.BVDecide.Normalize.Bool
-import Std.Tactic.BVDecide.Normalize.Prop
+public import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
+import ConAgua.Arena.Env
+import ConAgua.Arena.IndPartsSpec.RulePrefixAt
+import Std.WP.Triple.SpecLemmas
+
+@[expose] public section
 
 /-!
 # BlockNestedBit: `ConRon.Arena.blockNestedBit`

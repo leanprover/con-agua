@@ -1,8 +1,14 @@
-import ConAgua.Arena.RecClassSpec.PrefixBinders
-import ConAgua.Arena.GrindAttr
+module
+
+public import ConAgua.Arena.RecClassSpec.PrefixBinders
+public import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
-import ConAgua.L.GrindAttr
+public import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
+import Std.WP.Tactic
+import Std.WP.Triple.SpecLemmas
+
+@[expose] public section
 
 /-!
 # ClassGenRule

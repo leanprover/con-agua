@@ -1,4 +1,10 @@
-import ConAgua.Arena.IndTwin
+module
+
+import ConRon.Bridge.Promote.Walk
+public import ConAgua.Arena.IndTwin
+public import ConRon.Bridge.Frontend.Shared
+
+@[expose] public section
 
 /-!
 # `TwinOK` across a twin step that only grows the store (lane `loopt2`)

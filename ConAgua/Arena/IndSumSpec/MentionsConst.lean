@@ -1,7 +1,15 @@
-import ConAgua.Arena.IndSumSpec.McGoStep
+module
+
+public import ConAgua.Arena.IndSumSpec.McGoStep
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr
+import ConAgua.Arena.Env
+import ConAgua.Arena.IndPosSpec.MatesW
+import Std.WP.Tactic
+import Std.WP.Triple.SpecLemmas
+
+@[expose] public section
 
 /-!
 # MentionsConst: `ConRon.Arena.hasLooseBVarBFast`, `ConRon.Arena.hasLooseBVarBGo`, `ConRon.Arena.hasLooseBVarBIns`, `ConRon.Arena.mentionsConstGo`, `ConRon.Arena.mentionsConst`

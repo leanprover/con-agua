@@ -1,7 +1,12 @@
-import ConAgua.Arena.LdRd
-import ConAgua.Rom.CIReadSpec
+module
+
+public import ConAgua.Arena.LdRd
+public import ConAgua.Rom.CIReadSpec
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
+public import ConAgua.Arena.DeclNatBase
+
+@[expose] public section
 
 /-!
 # The ROM constant readers' word models (helper `decls4-rom`)

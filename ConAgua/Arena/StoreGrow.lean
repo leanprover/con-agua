@@ -1,7 +1,11 @@
+module
+
 import ConAgua.Arena.SlotTop
-import ConAgua.Arena.StoreLib
+public import ConAgua.Arena.StoreLib
 import Std.Tactic.BVDecide.Normalize.BitVec
 import Std.Tactic.BVDecide.Normalize.Prop
+
+@[expose] public section
 
 /-!
 # The store library: the growth keeps the relation (lane kstp)

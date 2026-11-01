@@ -1,7 +1,12 @@
-import ConAgua.Arena.DeclDivModSpec.EqAt1
+module
+
+public import ConAgua.Arena.DeclDivModSpec.EqAt1
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
+import Std.Tactic.BVDecide.Normalize.BitVec
+
+@[expose] public section
 
 /-!
 # CertDivModEqs: `ConRon.Arena.certDivModEqs`, `ConRon.Arena.certDivModGuards`, `ConRon.Arena.certDivMod`, `ConRon.Arena.certGcd`, `ConRon.Arena.certLand`, `ConRon.Arena.certLorRhs`, `ConRon.Arena.certLor`, `ConRon.Arena.certRecRhs`, `ConRon.Arena.certShiftLeft`, `ConRon.Arena.certShiftRight`, `ConRon.Arena.certXorRhs`, `ConRon.Arena.certXor`, `ConRon.Arena.divModCertStmtsAt`, `ConRon.Arena.divModCertStmts`

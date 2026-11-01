@@ -1,11 +1,17 @@
-import ConAgua.Arena.IndIface
+module
+
+public import ConAgua.Arena.IndIface
 import ConAgua.Arena.Env
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr
 import Std.Tactic.BVDecide.Normalize.BitVec
-import Std.Tactic.BVDecide.Normalize.Prop
+public import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
+import ConAgua.Arena.DerRel
+import Std.WP.Triple.SpecLemmas
+
+@[expose] public section
 
 /-!
 # The slice library's specs (lane `induct`)

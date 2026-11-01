@@ -1,9 +1,21 @@
-import ConAgua.Arena.WhnfDeltaRefine
+module
+
+public import ConAgua.Arena.WhnfDeltaRefine
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import Std.Tactic.BVDecide.Normalize.BitVec
-import Std.Tactic.BVDecide.Normalize.Prop
+public import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
+import ConAgua.Arena.DerRel
+import ConAgua.Arena.PinsNatOp
+import ConAgua.Arena.WhnfCoreProj
+import ConAgua.Arena.WhnfCoreRefine
+import ConAgua.L.LocNF
+import ConAgua.L.ModelGen
+import Std.WP.Triple.SpecLemmas
+public import ConAgua.Arena.StoreDenIntern
+
+@[expose] public section
 
 /-!
 # δ and `Nat` literals: proofs of `WhnfDelta.lean`'s specs, part 2 (`raw_nat_lit` … `unfold_definition`)

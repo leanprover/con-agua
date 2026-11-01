@@ -1,4 +1,13 @@
+module
+
 import ConAgua.Rom.CIReadRefCaps
+import ConAgua.L.WordOff
+import ConAgua.Rom.CIReadRefCV
+import ConAgua.Rom.CIReadRefNames
+public import ConAgua.Rom.CIReadRefBase
+public import ConAgua.Rom.CIReadSpec
+
+@[expose] public section
 
 /-!
 # The ROM constant readers: recursor rules (helper `decls4-rom`)

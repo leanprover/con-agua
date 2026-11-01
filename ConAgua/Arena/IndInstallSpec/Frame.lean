@@ -1,5 +1,13 @@
+module
+
 import ConAgua.Arena.IndInstallSpec.OfClosed
 import ConAgua.Arena.IndPosSpec.FgW
+import ConAgua.Arena.IndPartsSpec.RulePrefixAt
+import ConAgua.Arena.RecCheckSpec.RcLook
+public import ConAgua.Arena.IndPosSpec.BvbWMfr
+public import ConAgua.Arena.RecCheckSpec.TaCW
+
+@[expose] public section
 
 /-!
 # Frame

@@ -1,16 +1,25 @@
-import ConAgua.Arena.IndInstallSpec.GenRecCheckPrep
-import ConAgua.Arena.IndInstallSpec.GrcTwinA
+module
+
+public import ConAgua.Arena.IndInstallSpec.GenRecCheckPrep
+public import ConAgua.Arena.IndInstallSpec.GrcTwinA
 import ConAgua.Arena.IndInstallSpec.HbFreeMfr
 import ConAgua.Arena.IndSumSpec.ConsBlockRecsTF
 import ConAgua.Arena.IndInstallSpec.InstallCvDecB
 import ConAgua.Arena.RecClassSpec.ReadProg
-import ConAgua.Arena.RecGenSpec.ClassMinorSlot
-import ConAgua.Arena.RecGenSpec.DecB
-import ConAgua.Arena.RecGenSpec.DecCNWords
-import ConAgua.Arena.RecGenSpec.Rec3TmdWDecB
-import ConAgua.Arena.GrindAttr
-import ConAgua.Arena.IndGrindAttr
-import ConAgua.L.GrindAttr
+public import ConAgua.Arena.RecGenSpec.ClassMinorSlot
+public import ConAgua.Arena.RecGenSpec.DecB
+public import ConAgua.Arena.RecGenSpec.DecCNWords
+public import ConAgua.Arena.RecGenSpec.Rec3TmdWDecB
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.Arena.IndGrindAttr
+public import ConAgua.L.GrindAttr
+import ConAgua.Arena.IndInstallSpec.DomsW
+import ConAgua.Arena.IndPosSpec.FgW
+import ConAgua.Arena.IndRealAbsSim
+import ConAgua.Arena.RecClassSpec.PiBWRoom
+import ConAgua.Arena.RecClassSpec.Rec2AppendWDec
+
+@[expose] public section
 
 /-!
 # GpbWSimF

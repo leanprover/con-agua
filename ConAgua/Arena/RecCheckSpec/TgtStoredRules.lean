@@ -1,4 +1,10 @@
+module
+
 import ConAgua.Arena.IndSumSpec.TsrW
+public import ConAgua.Arena.IndSumSpec.SumRules
+public import ConAgua.Arena.RecCheckSpec.TsrLook
+
+@[expose] public section
 
 /-!
 # TgtStoredRules: `ConRon.Arena.tgtStoredRules`

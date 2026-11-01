@@ -1,7 +1,12 @@
-import ConAgua.Arena.DeclNatTy
+module
+
+public import ConAgua.Arena.DeclNatTy
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
+import Std.WP.Triple.SpecLemmas
+
+@[expose] public section
 
 /-!
 # The structural-`Nat` gate: the recurrence equations (lane `decls3`, helper `decls3-nat`)

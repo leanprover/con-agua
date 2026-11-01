@@ -1,6 +1,16 @@
+module
+
+public import ConRon.Bridge.ExprOps.Inst1
 import ConAgua.Arena.IndT.PosFields
 import ConAgua.Arena.IndPosSpec.NestCrest
 import ConAgua.Arena.IndRealAbsPos
+import all ConRon.Bridge.Inductives.Positivity
+import ConAgua.Arena.IndPosSpec.Pos2DecHLSplit
+import ConAgua.Arena.IndPosSpec.Snoc
+import ConAgua.Checker.NoVerdictTree
+public import ConAgua.Verdict.PosE
+
+@[expose] public section
 
 /-!
 # `nest_pos_bind` under `StageC` (lane `indstaget`, helper `indstaget-pos`)

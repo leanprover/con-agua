@@ -1,4 +1,18 @@
+module
+
 import ConAgua.Arena.DefEqStuckStr
+import ConAgua.Arena.DefEqStuckCert
+import ConAgua.Arena.DefEqStuckEta
+import ConAgua.Arena.DefEqStuckShape
+import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.RefWalk
+import ConAgua.Arena.WhnfCoreRefine
+import ConAgua.Checker.NoVerdictTree
+import ConAgua.L.GrindAttr
+import ConAgua.L.ModelGen
+public import ConAgua.Arena.DefEqStuckIrrel
+
+@[expose] public section
 
 /-!
 # `stuck_app_cong`, `stuck_app` refine `defeqStuck`'s application arm (lane `defeq`, helper `defeq-top`)

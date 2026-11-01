@@ -1,4 +1,8 @@
-import ConAgua.Front.StateDR
+module
+
+public import ConAgua.Front.StateDR
+
+@[expose] public section
 
 /-!
 # The twin's driver, one line at a time

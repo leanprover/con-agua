@@ -1,9 +1,20 @@
-import ConAgua.Arena.Tiers
+module
+
+public import ConAgua.Arena.Tiers
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import Std.Tactic.BVDecide.Normalize.BitVec
-import Std.Tactic.BVDecide.Normalize.Prop
+public import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
+meta import ConAgua.Arena.Tiers
+meta import ConAgua.Arena.GrindAttr
+meta import ConAgua.L.GrindAttr
+meta import Std.Tactic.BVDecide.Normalize.BitVec
+meta import Std.Tactic.BVDecide.Normalize.Prop
+meta import Std.WP.Tactic
+import Std.WP.Triple.SpecLemmas
+
+@[expose] public section
 
 /-!
 # The environment index in L: rows, `find?`, `push`, `popTemp`, `erase`

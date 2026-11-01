@@ -1,9 +1,16 @@
-import ConAgua.Arena.DeclHeader
-import ConAgua.Arena.DeclRec
+module
+
+public import ConAgua.Arena.DeclHeader
+public import ConAgua.Arena.DeclRec
 import ConAgua.Arena.DeclStepSpec
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr
+import ConAgua.Arena.IndPartsSpec.RulePrefixAt
+public import ConAgua.Arena.DeclBase
+public import ConAgua.Arena.DeclCvg
+
+@[expose] public section
 
 noncomputable section
 

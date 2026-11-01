@@ -1,10 +1,19 @@
+module
+
 import ConAgua.Arena.IndSumSpec.DecHLTake
 import ConAgua.Arena.IndSumSpec.Row
-import ConAgua.Arena.IndPartsSpec.EqW
-import ConAgua.Arena.IndRealAbs
-import ConAgua.Arena.GrindAttr
+public import ConAgua.Arena.IndPartsSpec.EqW
+public import ConAgua.Arena.IndRealAbs
+public import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
-import ConAgua.L.GrindAttr
+public import ConAgua.L.GrindAttr
+import ConAgua.Arena.IndInstallSpec.DomsW
+import Std.WP.Tactic
+import Std.WP.Triple.SpecLemmas
+public import ConAgua.Arena.IndSumSpec.ColW
+public import ConAgua.Arena.IndSumSpec.StructProjArgP
+
+@[expose] public section
 
 /-!
 # StructCtorResidOk: `ConRon.Arena.structCtorResidOk`

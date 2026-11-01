@@ -1,12 +1,21 @@
-import ConAgua.Arena.KnotEntry
-import ConAgua.Verdict.VCtx
-import ConAgua.Arena.DeclNatGateSpec
-import ConAgua.Arena.DeclNatOpEq
+module
+
+public import ConAgua.Arena.KnotEntry
+public import ConAgua.Verdict.VCtx
+public import ConAgua.Arena.DeclNatGateSpec
+public import ConAgua.Arena.DeclNatOpEq
 import ConAgua.Arena.DeclReducePin
 import ConAgua.Arena.RecGenSpec.CruleProg
 import ConAgua.Arena.StageC
-import ConRon.Bridge.Checker.DeclVal
+public import ConRon.Bridge.Checker.DeclVal
 import ConAgua.L.ModelGen
+import ConAgua.Arena.DeclNatGate
+import ConAgua.Arena.RefWalk
+import ConAgua.Checker.NoVerdictTree
+public import ConAgua.Arena.LeafFns
+public import ConAgua.Arena.TwinStep
+
+@[expose] public section
 
 /-!
 # The structural-`Nat` gate under `StageC` (lane `loopt3`, helper `loopt3-nat`)

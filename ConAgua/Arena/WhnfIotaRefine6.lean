@@ -1,8 +1,16 @@
-import ConAgua.Arena.WhnfIotaRefine4
+module
+
+public import ConAgua.Arena.WhnfIotaRefine4
 import ConAgua.Arena.IndPosSpec.NestBlockOfKey
-import ConAgua.Arena.GrindAttr
-import ConAgua.L.GrindAttr
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.L.GrindAttr
 import ConAgua.L.WordOff
+import ConAgua.Arena.WhnfCoreProj
+import ConAgua.Arena.WhnfCoreRefine
+import ConRon.Bridge.Grind
+import Std.Tactic.BVDecide.Normalize.BitVec
+
+@[expose] public section
 
 /-!
 # ι-reduction: proofs of `WhnfIota.lean`'s specs, part 6 (`iota_ctor_never_prop`, `iota_case3`)

@@ -1,5 +1,9 @@
-import ConAgua.Arena.IndPosSpec.PcrW
-import ConAgua.Arena.IndPosSpec.U4W
+module
+
+public import ConAgua.Arena.IndPosSpec.PcrW
+public import ConAgua.Arena.IndPosSpec.U4W
+
+@[expose] public section
 
 /-!
 # P2ctK1

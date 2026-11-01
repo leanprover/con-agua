@@ -1,11 +1,24 @@
+module
+
 import ConAgua.Arena.IndSumSpec.ConsBlockRecsTF
 import ConAgua.Arena.IndSumSpec.SoaW
 import ConAgua.Arena.RecCheckSpec.CnfW
 import ConAgua.Arena.RecCheckSpec.TargetMajorDefault
 import ConAgua.Arena.RecCheckSpec.Tmn
-import ConAgua.Verdict.IndBTcm
-import ConAgua.Arena.GrindAttr
+public import ConAgua.Verdict.IndBTcm
+public import ConAgua.Arena.GrindAttr
 import ConAgua.L.ModelGen
+import ConAgua.Arena.IndInstallSpec.DomsW
+import ConAgua.Arena.IndSim
+import ConAgua.Arena.IndT.Lift
+import ConAgua.Arena.RecCheckSpec.TmFields
+import ConAgua.Arena.RecClassSpec.Classes
+import ConAgua.Arena.RefWalk
+import ConAgua.Checker.NoVerdictTree
+public import ConAgua.Arena.RecCheckSpec.PtrNamesWDec
+public import ConAgua.Arena.RecGenSpec.DecB
+
+@[expose] public section
 /-!
 # `target_major_nfs`: one model and one refinement for both outcomes
 

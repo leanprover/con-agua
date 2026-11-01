@@ -1,10 +1,26 @@
-import ConAgua.Arena.RecGenSpec.DecTMDecBOf
+module
+
+public import ConAgua.Arena.RecGenSpec.DecTMDecBOf
 import ConAgua.Arena.IndInstallSpec.NestCtx
-import ConAgua.Arena.IndSumSpec.ParamLevels
+public import ConAgua.Arena.IndSumSpec.ParamLevels
 import ConAgua.L.ModelGen
-import ConRon.Bridge.Inductives.RecCheck
+public import ConRon.Bridge.Inductives.RecCheck
 import ConAgua.Arena.IndSumSpec.StructCtorResidOk
 import ConAgua.Arena.IndInstallSpec.InstallRec2PSl
+import ConAgua.Arena.IndInstallSpec.PartsAt
+import ConAgua.Arena.IndPosSpec.FgW
+import ConAgua.Arena.IndSumSpec.DecHLTake
+import ConAgua.Arena.RecClassSpec.MkTMWAfr
+import ConAgua.Arena.RefWalk
+import ConAgua.Checker.NoVerdictTree
+public import ConAgua.Arena.IndInstallSpec.CapsProg
+public import ConAgua.Arena.IndInstallSpec.DecCNS
+public import ConAgua.Arena.IndPartsSpec.EqW
+public import ConAgua.Arena.IndPosSpec.BvbWMfr
+public import ConAgua.Arena.Verdict
+public import ConAgua.Checker.NoVerdictFns
+
+@[expose] public section
 
 /-!
 # `target_major_of_member`: one model and one refinement for both outcomes

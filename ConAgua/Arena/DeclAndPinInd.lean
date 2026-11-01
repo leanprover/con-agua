@@ -1,6 +1,13 @@
-import ConAgua.Arena.DeclAndPin
+module
+
+public import ConAgua.Arena.DeclAndPin
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
+import ConAgua.Arena.Env
+import ConAgua.Arena.Pins
+import Std.Tactic.BVDecide.Normalize.BitVec
+
+@[expose] public section
 
 /-!
 # The `And` pin's inductive arm, part 1: `and_block_named(bo, bl)` refines `blockAndNamed`

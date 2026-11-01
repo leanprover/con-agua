@@ -1,6 +1,13 @@
+module
+
 import ConAgua.Arena.CoreWalks
 import ConAgua.Arena.WalkLeavesRefine
-import Std.Tactic.BVDecide.Normalize.Prop
+public import Std.Tactic.BVDecide.Normalize.Prop
+public import ConAgua.Arena.WalkLeaves
+public import ConAgua.Arena.WalkScope
+public import ConAgua.Arena.WhnfIota
+
+@[expose] public section
 
 /-!
 # The scope walk and the leaf guard as the core's callees (lane `whnf3`)

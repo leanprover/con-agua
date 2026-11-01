@@ -1,8 +1,15 @@
-import ConAgua.Arena.IndPos2
+module
+
+public import ConAgua.Arena.IndPos2
 import ConAgua.Arena.Verdict
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
+import Std.Tactic.BVDecide.Normalize.BitVec
+import Std.WP.Triple.SpecLemmas
+public import ConAgua.L.ErrSpec
+
+@[expose] public section
 
 /-!
 # `nest_cont_key`'s unified model

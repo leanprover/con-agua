@@ -1,7 +1,15 @@
-import ConAgua.AsmFile.Term
-import ConAgua.Compiler.Compile
-import Lean.Elab.Command
-import Std.Do.Triple.SpecLemmas
+module
+
+public import ConAgua.AsmFile.Term
+public import ConAgua.Compiler.Compile
+public import Lean.Elab.Command
+public import Std.Do.Triple.SpecLemmas
+public meta import ConAgua.AsmFile.Term
+public meta import ConAgua.Compiler.Compile
+public meta import Lean.Elab.Command
+public meta import Std.Do.Triple.SpecLemmas
+
+@[expose] public section
 
 /-!
 # The file's code is the compiler's output (kernel-checked; not trusted)
@@ -31,12 +39,12 @@ namespace L.Compiler
 open Lean Elab Command Meta
 
 /-- The operands of `a ++ b` at `Program`, if `e` is one. -/
-def appendArgs? (e : Lean.Expr) : Option (Lean.Expr × Lean.Expr) :=
+meta def appendArgs? (e : Lean.Expr) : Option (Lean.Expr × Lean.Expr) :=
   if e.isAppOfArity ``HAppend.hAppend 6 then some (e.appFn!.appArg!, e.appArg!) else none
 
 /-- The segments of a right-nested `s₀ ++ (s₁ ++ … ++ [])`, each constant unfolded once, so that
 `asm_lit`'s `code.f<i>` and the file's literals compare as terms. -/
-partial def segmentsOf (e : Lean.Expr) (acc : Array Lean.Expr := #[]) : MetaM (Array Lean.Expr) := do
+meta partial def segmentsOf (e : Lean.Expr) (acc : Array Lean.Expr := #[]) : MetaM (Array Lean.Expr) := do
   let unfold (e : Lean.Expr) : MetaM Lean.Expr := do
     if e.isConst then return (← getConstInfo e.constName!).value?.getD e else return e
   match appendArgs? e with
@@ -47,7 +55,7 @@ partial def segmentsOf (e : Lean.Expr) (acc : Array Lean.Expr := #[]) : MetaM (A
     else throwError "asm_file_eq: not a list of segments: {e}"
 
 /-- The function a segment belongs to (its entry label `fnL g`), for messages. -/
-def segName (e : Lean.Expr) : String :=
+meta def segName (e : Lean.Expr) : String :=
   match e.find? fun x => x.isAppOfArity ``fnL 1 with
   | some x => match x.appArg! with | .lit (.strVal g) => g | _ => "?"
   | none => "the trampoline"
@@ -57,20 +65,20 @@ before the trampoline (`S`), as `asm_file_eq` does, in a module of its own: what
 the stub (`checkerStub_eq`) then does not wait for the compiled code (`checkerAsm`). -/
 syntax (name := asmStub) (docComment)? "asm_stub " ident " : " ident : command
 
-@[command_elab asmStub] def elabAsmStub : CommandElab := fun stx => do
+@[command_elab asmStub] meta def elabAsmStub : CommandElab := fun stx => do
   let `($[$doc?:docComment]? asm_stub $stubS:ident : $fileS:ident) := stx | throwUnsupportedSyntax
   let stubN := (← getCurrNamespace) ++ stubS.getId
   liftTermElabM do
     let fileN ← realizeGlobalConstNoOverload fileS
     let some fileV := (← getConstInfo fileN).value? | throwError "asm_stub: {fileN} has no value"
     let some (sLit, _) := appendArgs? fileV | throwError "asm_stub: {fileN} is not `stub ++ code`"
-    addDecl (.defnDecl (mkDefinitionValEx stubN [] progTy sLit .abbrev .safe []))
+    withExporting <| addDecl (.defnDecl (mkDefinitionValEx stubN [] progTy sLit .abbrev .safe []))
     addDocString' stubN .missing doc?
 
 syntax (name := asmFileEq) (docComment)? "asm_file_eq " ident " : " ident " = " ident " ++ " ident
   " via " ident : command
 
-@[command_elab asmFileEq] def elabAsmFileEq : CommandElab := fun stx => do
+@[command_elab asmFileEq] meta def elabAsmFileEq : CommandElab := fun stx => do
   let `($[$doc?:docComment]? asm_file_eq $n:ident : $fileS:ident = $stubS:ident ++ $codeS:ident via $codeEqS:ident) := stx
     | throwUnsupportedSyntax
   let ns ← getCurrNamespace
@@ -97,7 +105,7 @@ syntax (name := asmFileEq) (docComment)? "asm_file_eq " ident " : " ident " = " 
     | some ci =>
       unless ci.value? == some sLit do
         throwError "asm_file_eq: {stubN} is not the stub of {fileN} (rebuild its `asm_stub` module)"
-    | none => addDecl (.defnDecl (mkDefinitionValEx stubN [] progTy sLit .abbrev .safe []))
+    | none => withExporting <| addDecl (.defnDecl (mkDefinitionValEx stubN [] progTy sLit .abbrev .safe []))
     let eqTy (a b : Lean.Expr) := mkApp3 (mkConst ``Eq [1]) progTy a b
     let appC := mkApp4 (mkConst ``HAppend.hAppend [0, 0, 0]) progTy progTy progTy
       (mkApp2 (mkConst ``instHAppendOfAppend [0]) progTy (mkApp (mkConst ``List.instAppend [0]) dirTy))
@@ -107,8 +115,11 @@ syntax (name := asmFileEq) (docComment)? "asm_file_eq " ident " : " ident " = " 
                         type := eqTy (mkConst fileN) (mkApp2 appC (mkConst stubN) (mkConst codeN)),
                         value := mkApp2 (mkConst ``Eq.refl [1]) progTy (mkConst fileN) })
     -- `name : file = stub ++ rhs`, from `code_eq : rhs = code`
-    let some (.thmInfo ci) := (← getEnv).find? codeEqN | throwError "asm_file_eq: {codeEqN} is not a theorem"
-    let some (_, rhs, _) := ci.type.eq? | throwError "asm_file_eq: {codeEqN} is not an equation"
+    -- an imported theorem of a module is seen as an axiom (its statement without its proof)
+    let ty ← match (← getEnv).find? codeEqN with
+      | some (.thmInfo ci) | some (.axiomInfo ci) => pure ci.type
+      | _ => throwError "asm_file_eq: {codeEqN} is not a theorem"
+    let some (_, rhs, _) := ty.eq? | throwError "asm_file_eq: {codeEqN} is not an equation"
     -- `stub ++ code = stub ++ rhs`
     let h := mkApp6 (mkConst ``congrArg [1, 1]) progTy progTy (mkConst codeN) rhs (mkApp appC (mkConst stubN))
       (mkApp4 (mkConst ``Eq.symm [1]) progTy rhs (mkConst codeN) (mkConst codeEqN))

@@ -1,6 +1,20 @@
+module
+
 import ConAgua.Arena.DeclNatGateT
-import ConAgua.Arena.DeclArmLoop
-import ConAgua.Arena.DeclDivGateT
+public import ConAgua.Arena.DeclArmLoop
+public import ConAgua.Arena.DeclDivGateT
+import ConAgua.Arena.DeclArmT
+import ConAgua.Arena.DeclStepSpec
+import ConAgua.Arena.RecGenSpec.CruleProg
+import ConAgua.Arena.RefWalk
+import ConAgua.L.ModelGen
+import ConRon.Bridge.Checker.Arms
+import ConRon.Bridge.Checker.Base
+public import ConAgua.Arena.DeclNatGateSpec
+public import ConAgua.Arena.DeclNatOpEq
+public import ConAgua.Verdict.DeclValE
+
+@[expose] public section
 
 /-!
 # The definition arm under `StageT` (lane `loopt3`, helper `loopt3-nat`)

@@ -1,5 +1,14 @@
+module
+
 import ConAgua.Final.VerdictFinal
 import ConAgua.Verdict.IndArmTopE
+import ConAgua.Checker.AsmFinal
+import ConAgua.Checker.ProgIRef
+import ConAgua.Checker.ProgWf
+import ConAgua.Final.DrvFinal
+public import ConAgua.Final.ThreadsVerdict
+
+@[expose] public section
 
 /-!
 # The end-to-end theorems

@@ -1,11 +1,16 @@
-import ConAgua.Arena.IndInstallSpec.CbProg
-import ConAgua.Arena.IndInstallSpec.Frame
-import ConAgua.Arena.IndPartsSpec.IndPartsProg5
-import ConAgua.Arena.IndRealBph2
+module
+
+public import ConAgua.Arena.IndInstallSpec.CbProg
+public import ConAgua.Arena.IndInstallSpec.Frame
+public import ConAgua.Arena.IndPartsSpec.IndPartsProg5
+public import ConAgua.Arena.IndRealBph2
 import ConAgua.Arena.RecGenSpec.Classes
-import ConAgua.Arena.GrindAttr
-import ConAgua.Arena.IndGrindAttr
-import ConAgua.L.GrindAttr
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.Arena.IndGrindAttr
+public import ConAgua.L.GrindAttr
+public import ConAgua.Arena.IndInstallSpec.Icvg
+
+@[expose] public section
 
 /-!
 # ShapeCVOfDecB

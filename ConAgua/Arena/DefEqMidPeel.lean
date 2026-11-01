@@ -1,6 +1,18 @@
-import ConAgua.Arena.DefEqMid
+module
+
+public import ConAgua.Arena.DefEqMid
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
+import ConAgua.Arena.DerRel
+import ConAgua.Arena.RefWalk
+import ConAgua.Arena.StripTeleSpec
+import ConAgua.Arena.WhnfCoreRefine
+import ConAgua.Checker.NoVerdictTree
+import ConAgua.Front.Preserve
+import ConAgua.L.ModelGen
+public import ConAgua.Arena.IndView
+
+@[expose] public section
 
 /-!
 # The batched ∀ descent: `defeq_peel` and `defeq_binders` (lane `defeq`)

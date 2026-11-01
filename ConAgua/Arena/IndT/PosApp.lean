@@ -1,7 +1,15 @@
+module
+
+import ConRon.Bridge.Inductives.PosWalks
 import ConAgua.Verdict.PosE1L
 import ConAgua.Arena.IndPosSpec.Pos2DecHLSplit
 import ConAgua.Arena.IndPosSpec.Snoc
-import ConAgua.Verdict.PosE
+public import ConAgua.Verdict.PosE
+import ConAgua.Arena.IndPosSpec.NestCrest
+import ConAgua.Arena.RecClassSpec.Classes
+import ConAgua.Checker.NoVerdictTree
+
+@[expose] public section
 
 /-!
 # `nest_pos_app` under `StageC` (lane `indstaget`, helper `indstaget-pos`)

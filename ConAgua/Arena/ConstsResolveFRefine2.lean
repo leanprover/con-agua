@@ -1,4 +1,12 @@
-import ConAgua.Arena.ConstsResolveFRefine
+module
+
+public import ConAgua.Arena.ConstsResolveFRefine
+import ConAgua.Arena.FVarRangeRefine
+import ConAgua.Arena.IndPosSpec.MatesW
+import ConAgua.Arena.InferLeaves
+import ConAgua.Arena.WhnfIotaRefine
+
+@[expose] public section
 
 /-!
 # `consts_resolve_ffast` refines `constsResolveFFast`: the walk (lane `tails`)

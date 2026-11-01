@@ -1,8 +1,20 @@
+module
+
 import ConAgua.Checker.PreludeRef
 import ConAgua.Checker.PrepRef
 import ConAgua.Checker.TwinPins
-import ConAgua.Checker.PreLoopWSStages
+public import ConAgua.Checker.PreLoopWSStages
 import ConAgua.Checker.PrepProgExt
+import all ConRon.Bridge.Frontend.Prepare
+import ConAgua.Checker.PrepProgHoist
+import ConAgua.Checker.RomProg
+import ConAgua.Checker.RomProgInit
+import ConAgua.Front.ChunkBridge
+import ConAgua.Front.FrontRunRef
+import ConRon.Bridge.Checker.Pins
+public import ConAgua.Checker.PipePrelude
+
+@[expose] public section
 
 /-!
 # The stages after `intern_reserved_pins` (lane `pipeline`)

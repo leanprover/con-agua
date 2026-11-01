@@ -1,7 +1,12 @@
-import ConAgua.Arena.WhnfBase
+module
+
+public import ConAgua.Arena.WhnfBase
 import ConAgua.Arena.StoreDenLvl
 import ConAgua.Arena.LevelView
-import Std.Tactic.BVDecide.Normalize.Prop
+public import Std.Tactic.BVDecide.Normalize.Prop
+import ConRon.Arena.WFProofs
+
+@[expose] public section
 
 /-!
 # The level tables only grow (lane `defeq2`)

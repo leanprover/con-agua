@@ -1,7 +1,17 @@
+module
+
 import ConAgua.Arena.IndPosSpec.FgW
-import ConAgua.Verdict.PosE
+public import ConAgua.Verdict.PosE
 import ConAgua.Arena.IndPosSpec.Pos2DecHLSplit
 import ConAgua.Arena.IndPosSpec.Snoc
+import all ConRon.Bridge.Inductives.Positivity
+import ConAgua.Arena.IndPosSpec.GgW
+import ConAgua.Arena.IndPosSpec.SnocWDecK
+import ConAgua.Arena.IndPosSpec.SnocWMfr
+import ConAgua.Arena.IndPosSpec.SnocWStage
+import ConAgua.Checker.NoVerdictTree
+
+@[expose] public section
 
 /-!
 # `nest_fields` refines `nestFields`, both outcomes

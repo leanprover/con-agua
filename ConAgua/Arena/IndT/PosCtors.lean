@@ -1,8 +1,17 @@
+module
+
 import ConAgua.Arena.IndPosSpec.FgW
-import ConAgua.Verdict.PosE
+public import ConAgua.Verdict.PosE
 import ConAgua.Arena.IndPosSpec.Pos2DecHLSplit
 import ConAgua.Arena.IndRealAbsPos
 import ConAgua.Arena.IndPosSpec.Snoc
+import ConAgua.Arena.IndPosSpec.GgW
+import ConAgua.Arena.IndPosSpec.GgW2
+import ConAgua.Arena.IndPosSpec.SnocWMfr
+import ConAgua.Arena.RecClassSpec.CloseLams
+import ConAgua.Checker.NoVerdictTree
+
+@[expose] public section
 
 /-!
 # `nest_ctors` refines `nestCtors`, both outcomes

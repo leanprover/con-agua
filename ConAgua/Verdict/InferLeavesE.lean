@@ -1,4 +1,11 @@
+module
+
 import ConAgua.Arena.InferProj2
+public import ConAgua.Arena.InferBodyDisp
+public import ConAgua.Arena.InferProj
+public import ConAgua.Arena.WhnfProjRefine
+
+@[expose] public section
 
 /-!
 # Error claims of `infer_const`, `infer_proj`

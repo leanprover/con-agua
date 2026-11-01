@@ -1,5 +1,15 @@
+module
+
 import ConAgua.Arena.PromoteCIRef.PnewMain
 import ConAgua.Arena.PromoteTblRef2
+import ConAgua.Arena.PromoteCIRef.Of
+import ConAgua.Arena.PromoteCIRef.OfFrame
+import ConAgua.Arena.PromoteRecRef
+public import ConAgua.Arena.DeclBase
+public import ConAgua.Arena.PromoteProg
+public import ConAgua.Arena.WhnfBase
+
+@[expose] public section
 
 /-!
 # PromoteNew

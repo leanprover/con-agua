@@ -1,8 +1,18 @@
-import ConAgua.Arena.RecCheckSpec.TargetMajorAt2
-import ConAgua.Arena.GrindAttr
+module
+
+public import ConAgua.Arena.RecCheckSpec.TargetMajorAt2
+public import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
-import ConAgua.L.GrindAttr
+public import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
+import ConAgua.Arena.IndInstallSpec.DomsW
+import Std.WP.Tactic
+import Std.WP.Triple.SpecLemmas
+public import ConAgua.Arena.IndPosSpec.NestBlockOfKey
+public import ConAgua.Arena.RecClassSpec.CloseLams
+public import ConAgua.Arena.RecClassSpec.MjProg
+
+@[expose] public section
 
 /-!
 # ClassGenMajorCi

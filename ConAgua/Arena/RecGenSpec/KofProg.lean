@@ -1,5 +1,9 @@
-import ConAgua.Arena.IndDecStab
-import ConAgua.Arena.IndPosSpec.RxMapW
+module
+
+public import ConAgua.Arena.IndDecStab
+public import ConAgua.Arena.IndPosSpec.RxMapW
+
+@[expose] public section
 
 /-!
 # KofProg

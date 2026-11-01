@@ -1,7 +1,13 @@
-import ConAgua.Arena.StrLitBase
+module
+
+public import ConAgua.Arena.StrLitBase
 import ConAgua.Arena.DeclCanonEq
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
+import Std.WP.Tactic
+import Std.WP.Triple.SpecLemmas
+
+@[expose] public section
 
 /-!
 # `str_cv`: `IConstantInfo.toConstantVal` under `CoreS` (helper `defeq2-str`)

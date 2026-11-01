@@ -1,5 +1,11 @@
-import ConAgua.Checker.PreludeSimProg
-import ConAgua.Checker.RomProg0
+module
+
+public import ConAgua.Checker.PreludeSimProg
+public import ConAgua.Checker.RomProg0
+public meta import ConAgua.Checker.PreludeSimProg
+public meta import ConAgua.Checker.RomProg0
+
+@[expose] public section
 
 /-!
 # Program bundles at `checkerProg` by indexed lookups (lane `loopt3`)
@@ -30,7 +36,7 @@ theorem lk_of_idx {i : Nat} {f : FnName} {fd : FunDecl} (h : checkerProg[i]? = s
 /-! ## `checkerProg` in chunks -/
 
 /-- The functions per chunk of `checkerChunks`. -/
-def chkChunk : Nat := 32
+meta def chkChunk : Nat := 32
 
 open Lean Meta Elab Command in
 /-- Declares `checkerProg.chunk<j>` (the functions `chkChunk * j, …` of `checkerProg`, the same
@@ -46,13 +52,13 @@ elab "chunk_checker_prog" : command => liftTermElabM <|
   while i < elems.size do
     let n := ``checkerProg ++ Name.mkSimple s!"chunk{cs.size}"
     let lit ← mkListLit elemTy (elems.extract i (i + chkChunk)).toList
-    addDecl (.defnDecl (mkDefinitionValEx n [] progTy lit (.regular 0) .safe []))
+    withExporting <| addDecl (.defnDecl (mkDefinitionValEx n [] progTy lit (.regular 0) .safe []))
     -- no code: a view of `checkerProg` for the kernel (the program dump skips it)
     modifyEnv (addNoncomputable · n)
     cs := cs.push (mkConst n)
     i := i + chkChunk
   let csLit ← mkListLit progTy cs.toList
-  addDecl (.defnDecl (mkDefinitionValEx `L.Checker.checkerChunks [] (mkApp (mkConst ``List [0]) progTy) csLit
+  withExporting <| addDecl (.defnDecl (mkDefinitionValEx `L.Checker.checkerChunks [] (mkApp (mkConst ``List [0]) progTy) csLit
     (.regular 0) .safe []))
   modifyEnv (addNoncomputable · `L.Checker.checkerChunks)
   let rhs := mkApp2 (mkConst ``List.flatten [0]) elemTy (mkConst `L.Checker.checkerChunks)
@@ -89,12 +95,12 @@ open Lean Meta Elab Tactic
 
 /-- `checkerProg`'s names: their positions and whether the function reads no pin data, by
 compiled code. -/
-structure ChkIdx where
+meta structure ChkIdx where
   pos : Std.HashMap String Nat
   noPB : Std.HashMap String Bool
 
 /-- The index of `checkerProg`'s names. -/
-unsafe def chkIdx : MetaM ChkIdx := do
+meta unsafe def chkIdx : MetaM ChkIdx := do
   let e := mkApp (mkConst ``chkNames) (mkConst ``checkerProg)
   let ns ← evalExpr (List (String × Bool)) (← inferType e) e
   let mut m : Std.HashMap String Nat := {}
@@ -105,7 +111,7 @@ unsafe def chkIdx : MetaM ChkIdx := do
 
 /-- A goal `P.lookup "f" = some fd` for `P` `checkerProg` or `Prog.subPB bs checkerProg`, as
 `(f, fd, bs?)`. -/
-def lookupGoal? (ty : Lean.Expr) : Option (String × Lean.Expr × Lean.Expr × Option Lean.Expr) := do
+meta def lookupGoal? (ty : Lean.Expr) : Option (String × Lean.Expr × Lean.Expr × Option Lean.Expr) := do
   let some (_, lhs, rhs) := ty.eq? | none
   guard (lhs.isAppOfArity ``List.lookup 5)
   let P := lhs.appArg!
@@ -119,7 +125,7 @@ def lookupGoal? (ty : Lean.Expr) : Option (String × Lean.Expr × Lean.Expr × O
   return (f, fE, rhs.appArg!, bs?)
 
 /-- `checkerProg`'s element at position `n`, by `whnf` of its chunk. -/
-def chkElem (n : Nat) : MetaM Lean.Expr := do
+meta def chkElem (n : Nat) : MetaM Lean.Expr := do
   let c := mkConst (``checkerProg ++ Name.mkSimple s!"chunk{n / chkChunk}")
   let mut l ← whnfD c
   for _ in [0:n % chkChunk] do l ← whnfD l.appArg!
@@ -129,7 +135,7 @@ def chkElem (n : Nat) : MetaM Lean.Expr := do
 /-- Close a lookup goal by its position: in `checkerProg` (`lk_of_idx`); in the substituted
 program, a function that reads no pin data by `lkN` (its `noPB` decided), a reader by `lkR` (its
 substituted body by `rfl`). -/
-def chkLookup (idx : ChkIdx) (g : MVarId) (f : String) (fE fd : Lean.Expr)
+meta def chkLookup (idx : ChkIdx) (g : MVarId) (f : String) (fE fd : Lean.Expr)
     (bs? : Option Lean.Expr) : MetaM Unit := do
   let some n := idx.pos[f]? | throwError "chk_lk: {f} is not a function of checkerProg"
   let elemTy := mkApp2 (mkConst ``Prod [0, 0]) (mkConst ``String) (mkConst ``FunDecl)
@@ -161,7 +167,7 @@ elab "chk_lk" : tactic => withMainContext do
   replaceMainGoal []
 
 /-- Close a bundle goal (see the module doc). -/
-partial def bundle (idx : ChkIdx) (hs : Array Lean.Expr)
+meta partial def bundle (idx : ChkIdx) (hs : Array Lean.Expr)
     (memo : IO.Ref (Std.HashMap Lean.Expr Lean.Expr)) (g : MVarId) : MetaM Unit := do
   let ty ← instantiateMVars (← g.getType)
   let ty := ty.cleanupAnnotations.headBeta

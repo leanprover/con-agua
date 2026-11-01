@@ -1,10 +1,22 @@
+module
+
 import ConAgua.Arena.DeclValRef
 import ConAgua.Arena.IndPartsSpec.BlockRecNamesUnreserved
-import ConAgua.Arena.DeclRec
+public import ConAgua.Arena.DeclRec
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
+import ConAgua.Arena.DeclCvg
+import ConAgua.Arena.RefWalk
+import ConAgua.Checker.NoVerdictTree
+public import ConAgua.Arena.DeclBase
+public import ConAgua.Arena.DeclHeader
+public import ConAgua.Arena.IndDecStab
+public import ConAgua.Arena.Verdict
+public import ConAgua.Checker.NoVerdictFns
+
+@[expose] public section
 
 /-!
 # Pin reads, `of_reduce_op`, `install_basis_decl(s)` (lane `decls3`)

@@ -1,4 +1,9 @@
+module
+
 import ConAgua.L.FuelMono
+public import ConAgua.L.Logic
+
+@[expose] public section
 
 /-!
 # A call's run and the caller's locals

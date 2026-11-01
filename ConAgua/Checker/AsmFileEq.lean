@@ -1,6 +1,13 @@
-import ConAgua.Checker.Asm
-import ConAgua.Checker.AsmStub
+module
+
+public import ConAgua.Checker.Asm
+public import ConAgua.Checker.AsmStub
 import ConAgua.AsmFile.Eq
+meta import ConAgua.Checker.Asm
+meta import ConAgua.Checker.AsmStub
+meta import ConAgua.AsmFile.Eq
+
+@[expose] public section
 
 /-!
 # The committed file is the compiler's output

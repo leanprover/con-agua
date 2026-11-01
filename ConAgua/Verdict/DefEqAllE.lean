@@ -1,6 +1,10 @@
+module
+
 import ConAgua.Verdict.DefEqLoopsE
-import ConAgua.Arena.DefEqKnot
+public import ConAgua.Arena.DefEqKnot
 import ConAgua.Verdict.DefEqSlotE
+
+@[expose] public section
 
 /-!
 # The `defeq` slot's error half one level up, assembled

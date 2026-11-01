@@ -1,4 +1,8 @@
-import ConAgua.Checker.Entry
+module
+
+public import ConAgua.Checker.Entry
+
+@[expose] public section
 
 /-!
 # `cap_check()` checks the capacities (lane `pipeline`)

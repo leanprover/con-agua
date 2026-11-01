@@ -1,18 +1,39 @@
-import ConAgua.Front.Apply
-import ConAgua.Front.ExprIface
-import ConAgua.Arena.ExprMk
-import ConAgua.Front.NatDec
-import ConAgua.Front.Preserve
-import ConAgua.Front.Unescape
-import ConAgua.Arena.BVarStore
-import ConAgua.Arena.ConstStore
-import ConAgua.Arena.LsStore
-import ConAgua.Arena.SortStore
+module
+
+public import ConAgua.Front.Apply
+public import ConAgua.Front.ExprIface
+public import ConAgua.Arena.ExprMk
+public import ConAgua.Front.NatDec
+public import ConAgua.Front.Preserve
+public import ConAgua.Front.Unescape
+public import ConAgua.Arena.BVarStore
+public import ConAgua.Arena.ConstStore
+public import ConAgua.Arena.LsStore
+public import ConAgua.Arena.SortStore
 import ConAgua.Arena.GrindAttr
 import ConAgua.Census.Attr
 import ConAgua.L.GrindAttr
 import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
+meta import ConAgua.Front.Apply
+meta import ConAgua.Front.ExprIface
+meta import ConAgua.Arena.ExprMk
+meta import ConAgua.Front.NatDec
+meta import ConAgua.Front.Preserve
+meta import ConAgua.Front.Unescape
+meta import ConAgua.Arena.BVarStore
+meta import ConAgua.Arena.ConstStore
+meta import ConAgua.Arena.LsStore
+meta import ConAgua.Arena.SortStore
+meta import ConAgua.Arena.GrindAttr
+meta import ConAgua.Census.Attr
+meta import ConAgua.L.GrindAttr
+meta import Std.Tactic.BVDecide.Normalize.Prop
+meta import Std.WP.Tactic
+import ConAgua.Scan.Common
+import Std.WP.Triple.SpecLemmas
+
+@[expose] public section
 
 /-!
 # Expression lines into the stores: `apply_expr`

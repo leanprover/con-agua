@@ -1,11 +1,16 @@
-import ConAgua.Arena.InstLP
-import ConAgua.Arena.LevelIntern
+module
+
+public import ConAgua.Arena.InstLP
+public import ConAgua.Arena.LevelIntern
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.LevelGrindAttr
 import ConAgua.L.GrindAttr
 import Std.Tactic.BVDecide.Normalize.BitVec
-import Std.Tactic.BVDecide.Normalize.Prop
+public import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
+import Std.WP.Triple.SpecLemmas
+
+@[expose] public section
 
 /-!
 # The level-list functions of `InstLP.lean`: models and specs

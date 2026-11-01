@@ -1,8 +1,25 @@
-import ConAgua.Arena.IndT.Sum2
+module
+
+public import ConAgua.Arena.IndT.Sum2
 import ConAgua.Arena.IndT.Install1
 import ConAgua.Arena.IndInstallSpec.InstallSimCall
 import ConAgua.Arena.IndInstallSpec.Cons
 import ConAgua.L.ModelGen
+import ConAgua.Arena.IndPartsSpec.IndPartsProg2
+import ConAgua.Arena.IndPartsSpec.RulePrefixAt
+import ConAgua.Arena.IndRealAbsSim
+import ConAgua.Arena.IndRealMemoCrT
+import ConAgua.Arena.RecGenSpec.ClassFeR
+import ConAgua.Arena.RecGenSpec.Rec3TmdWDecB
+import ConAgua.Arena.RefWalk
+import ConAgua.Arena.StageC
+import ConAgua.Checker.NoVerdictTree
+import ConLeche.Verify.BridgeWfImp
+import ConRon.Bridge.Checker.Base
+import ConRon.Bridge.Inductives.SumInstall
+public import ConAgua.Arena.IndInstallSpec.InstallRec2Tele
+
+@[expose] public section
 
 /-!
 # `checkBlockTele`, `checkBlockTeles` under `StageC` (lane `indstaget`)

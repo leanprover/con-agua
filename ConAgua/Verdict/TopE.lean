@@ -1,8 +1,27 @@
+module
+
 import ConAgua.Verdict.DeclTopE
 import ConAgua.Verdict.KnotAllE
 import ConAgua.Verdict.CheckBE
 import ConAgua.Verdict.FrontStageE
-import ConAgua.Final.ThreadsVerdict
+public import ConAgua.Final.ThreadsVerdict
+meta import ConAgua.Verdict.DeclTopE
+meta import ConAgua.Verdict.KnotAllE
+meta import ConAgua.Verdict.CheckBE
+meta import ConAgua.Verdict.FrontStageE
+meta import ConAgua.Final.ThreadsVerdict
+import ConAgua.Arena.DeclNatSubAll
+import ConAgua.Arena.StrLitSup
+import ConAgua.Checker.IndArm
+import ConAgua.Checker.LoopProg
+import ConAgua.Checker.LoopProgTac
+import ConAgua.Checker.LoopStage
+import ConAgua.Checker.RomProgInit
+import ConAgua.Checker.TwinShapeQuot
+public import ConAgua.Arena.CheckerT
+public import ConAgua.Checker.PipeFinal
+
+@[expose] public section
 /-!
 # The verdict claims from the inductive arm's (lane `verdicts-b`, helper `sg`)
 

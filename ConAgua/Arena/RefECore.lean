@@ -1,5 +1,9 @@
-import ConAgua.Arena.Verdict
+module
+
+public import ConAgua.Arena.Verdict
 import ConAgua.Arena.WhnfCoreRefine
+
+@[expose] public section
 
 /-!
 # The unified refinements of core functions

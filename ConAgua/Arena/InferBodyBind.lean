@@ -1,10 +1,16 @@
+module
+
 import ConAgua.Arena.InferBodySpine
 import Std.Tactic.BVDecide.Normalize.BitVec
-import Std.Tactic.BVDecide.Normalize.Prop
-import Std.WP.Tactic
-import ConAgua.Arena.WhnfCoreApp
+public import Std.Tactic.BVDecide.Normalize.Prop
+public import Std.WP.Tactic
+public import ConAgua.Arena.WhnfCoreApp
 import ConAgua.Arena.WhnfCoreRefine
-import ConAgua.Arena.InferBodyBindModels
+public import ConAgua.Arena.InferBodyBindModels
+import ConAgua.Arena.RefWalk
+public import ConAgua.Arena.InferBodyLet
+
+@[expose] public section
 
 /-!
 # The binder telescopes: `infer_lams`, `infer_pis`, their leaves, `infer_lam`, `infer_forall`

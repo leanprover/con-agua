@@ -1,7 +1,13 @@
-import ConAgua.Arena.IndPosSpec.FgW2
+module
+
+public import ConAgua.Arena.IndPosSpec.FgW2
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr
+import Std.WP.Tactic
+import Std.WP.Triple.SpecLemmas
+
+@[expose] public section
 
 /-!
 # NestContParamsClosed

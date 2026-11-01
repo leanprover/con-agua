@@ -1,9 +1,18 @@
-import ConAgua.Arena.DeclCanonRules
-import ConAgua.Arena.DeclCanonConst
+module
+
+public import ConAgua.Arena.DeclCanonRules
+public import ConAgua.Arena.DeclCanonConst
 import ConAgua.Arena.DeclCanonSpec2
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr
+import ConAgua.Arena.DeclCanonEq
+import ConAgua.Arena.DeclRec
+import ConAgua.Arena.IndPartsSpec.RulePrefixAt
+import Std.WP.Tactic
+import Std.WP.Triple.SpecLemmas
+
+@[expose] public section
 
 /-!
 # `ci_canon_defn`, `ci_canon_rec`, `ci_canon_eq`, `canon_eq_list` (lane `decls3`, helper `decls3-canon`)

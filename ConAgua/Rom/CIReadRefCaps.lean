@@ -1,4 +1,13 @@
+module
+
 import ConAgua.Rom.CIReadRefCV
+import ConAgua.Arena.LevelInternRef
+import ConAgua.L.WordOff
+import ConAgua.Rom.CIReadRefNames
+public import ConAgua.Rom.CIReadRefBase
+public import ConAgua.Rom.CIReadRefW
+
+@[expose] public section
 
 /-!
 # The ROM constant readers: an inductive's capabilities (helper `decls4-rom`)

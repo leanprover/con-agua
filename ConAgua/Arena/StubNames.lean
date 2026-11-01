@@ -1,4 +1,9 @@
-import ConAgua.Arena.IndIface
+module
+
+public import ConAgua.Arena.IndIface
+import ConAgua.Census.Attr
+
+@[expose] public section
 
 /-!
 # Former stubs: names, level lists, the fvar-range read (lane `stubs`)

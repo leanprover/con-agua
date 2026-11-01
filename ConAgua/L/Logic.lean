@@ -5,7 +5,9 @@ public import ConAgua.L.LocNF
 public import Std.Do.Triple.SpecLemmas
 public import Std.WP.Monad.Instances
 public import Std.WP.Triple.Basic
-public import ConAgua.L.GrindAttr
+import ConAgua.L.GrindAttr
+import Std.Data.DTreeMap.Internal.Operations
+import Std.Tactic.BVDecide.Normalize.Prop
 @[expose] public section
 
 /-!

@@ -1,6 +1,10 @@
-import ConAgua.Arena.LevelStore
-import ConAgua.Arena.LpColRel
+module
+
+public import ConAgua.Arena.LevelStore
+public import ConAgua.Arena.LpColRel
 import Std.Tactic.BVDecide.Normalize.Prop
+
+@[expose] public section
 
 /-!
 # The level `succ` store refines the arena's `succ` tables

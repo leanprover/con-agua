@@ -1,4 +1,8 @@
-import ConAgua.Arena.DeclBasisSpec
+module
+
+public import ConAgua.Arena.DeclBasisSpec
+
+@[expose] public section
 
 /-!
 # The ROM stubs' specs (lane `decls3`)

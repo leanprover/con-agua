@@ -1,11 +1,17 @@
+module
+
 import ConAgua.Arena.Verdict
-import ConAgua.Arena.WhnfM2C
-import ConAgua.Arena.WhnfIota
+public import ConAgua.Arena.WhnfM2C
+public import ConAgua.Arena.WhnfIota
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
 import ConAgua.Checker.NoVerdictTree
-import Std.Tactic.BVDecide.Normalize.Prop
+public import Std.Tactic.BVDecide.Normalize.Prop
+public import ConAgua.Checker.NoVerdictFns
+public import ConAgua.L.ErrSpec
+
+@[expose] public section
 
 /-!
 # The models of `major_to_ctor`'s pieces, for both outcomes

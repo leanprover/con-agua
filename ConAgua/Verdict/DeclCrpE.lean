@@ -1,6 +1,20 @@
+module
+
 import ConAgua.Arena.DeclCrpT
-import ConAgua.Arena.GrindAttr
-import ConAgua.L.GrindAttr
+public import ConRon.Bridge.StateOK
+public import ConRon.Bridge.Checker.Hyp
+public import ConRon.Bridge.Checker.Inv
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.L.GrindAttr
+public import ConAgua.Arena.CrOKFrame
+public import ConAgua.Arena.DeclReducePin
+public import ConAgua.Arena.KnotEntry
+public import ConAgua.Arena.LeafFns
+public import ConAgua.Arena.TwinStep
+public import ConAgua.Verdict.VCtx
+public import ConLeche.Verify.Shift
+
+@[expose] public section
 
 /-!
 # The verdict claim of `check_reduce_pin`

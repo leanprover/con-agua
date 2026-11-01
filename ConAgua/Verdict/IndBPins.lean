@@ -1,11 +1,22 @@
-import ConAgua.Arena.RecCheckSpec.DecHLTruncMBound
+module
+
+public import ConAgua.Arena.RecCheckSpec.DecHLTruncMBound
 import ConAgua.Arena.IndT.Lift
-import ConRon.Bridge.Inductives.RecCheck
-import ConAgua.Verdict.VCtx
-import ConAgua.Arena.RecCheckSpec.RcLook
-import ConAgua.Arena.GrindAttr
-import ConAgua.L.GrindAttr
+public import ConRon.Bridge.Inductives.RecCheck
+public import ConAgua.Verdict.VCtx
+public import ConAgua.Arena.RecCheckSpec.RcLook
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
+import ConAgua.Arena.IndInstallSpec.DomsW
+import ConAgua.Arena.IndSim
+import ConAgua.Arena.RecClassSpec.CloseLams
+import ConAgua.Arena.RefWalk
+import ConAgua.Checker.NoVerdictTree
+public import ConAgua.Arena.KnotEntry
+public import ConAgua.Arena.TwinStep
+
+@[expose] public section
 
 /-!
 # `target_pin_tys` (one model and one refinement for both outcomes), `target_major_pins`' model

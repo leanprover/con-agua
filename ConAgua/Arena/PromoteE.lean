@@ -1,10 +1,15 @@
-import ConAgua.Arena.PromoteL
-import ConAgua.Arena.IndView
+module
+
+public import ConAgua.Arena.PromoteL
+public import ConAgua.Arena.IndView
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import Std.Tactic.BVDecide.Normalize.BitVec
-import Std.Tactic.BVDecide.Normalize.Prop
+public import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
+import Std.WP.Triple.SpecLemmas
+
+@[expose] public section
 
 /-!
 # `promote_e`, `pe_arm` and the arms: models and specs

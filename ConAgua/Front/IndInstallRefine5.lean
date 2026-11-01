@@ -1,7 +1,14 @@
+module
+
 import ConAgua.Front.IndInstallRefine4
 import ConAgua.Front.IndApplyRefine5
 import ConAgua.Front.IndInstallRefine3
-import Std.Tactic.BVDecide.Normalize.Prop
+public import Std.Tactic.BVDecide.Normalize.Prop
+import ConAgua.Front.ApplyDeclRefine
+import ConAgua.Front.IndApplyRefine
+public import ConAgua.Front.IndInstallRefine2
+
+@[expose] public section
 
 /-!
 # `install_ind_d` refines `installIndD`, V: the block

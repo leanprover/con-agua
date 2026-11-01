@@ -1,6 +1,10 @@
+module
+
 import ConAgua.Arena.IndLibSpec
-import ConAgua.Front.StateDR
+public import ConAgua.Front.StateDR
 import ConRon.Bridge.Grind
+
+@[expose] public section
 
 /-!
 # Decoding facts for the hoist's walk refinement (lane `front4`)

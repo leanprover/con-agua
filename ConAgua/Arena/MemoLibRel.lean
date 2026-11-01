@@ -1,7 +1,11 @@
-import ConAgua.Arena.Frame
-import ConAgua.Arena.MemoLib
+module
+
+public import ConAgua.Arena.Frame
+public import ConAgua.Arena.MemoLib
 import ConAgua.Arena.StoreGrow
 import Std.Tactic.BVDecide.Normalize.Prop
+
+@[expose] public section
 
 /-!
 # The memo library's relation: an L memo represents a `Std.HashMap κ ν`

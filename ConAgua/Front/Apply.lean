@@ -1,17 +1,36 @@
-import ConAgua.Front.IdTable
-import ConAgua.Arena.ImaxStore
-import ConAgua.Arena.LevelStore
-import ConAgua.Arena.MaxStore
-import ConAgua.Arena.NAnonStore
-import ConAgua.Arena.NNumStore
-import ConAgua.Arena.NStrStore
-import ConAgua.Arena.ParamStore
-import ConAgua.Arena.ZeroStore
+module
+
+public import ConAgua.Front.IdTable
+public import ConAgua.Arena.ImaxStore
+public import ConAgua.Arena.LevelStore
+public import ConAgua.Arena.MaxStore
+public import ConAgua.Arena.NAnonStore
+public import ConAgua.Arena.NNumStore
+public import ConAgua.Arena.NStrStore
+public import ConAgua.Arena.ParamStore
+public import ConAgua.Arena.ZeroStore
 import ConAgua.Arena.GrindAttr
 import ConAgua.Census.Attr
 import ConAgua.L.GrindAttr
 import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
+meta import ConAgua.Front.IdTable
+meta import ConAgua.Arena.ImaxStore
+meta import ConAgua.Arena.LevelStore
+meta import ConAgua.Arena.MaxStore
+meta import ConAgua.Arena.NAnonStore
+meta import ConAgua.Arena.NNumStore
+meta import ConAgua.Arena.NStrStore
+meta import ConAgua.Arena.ParamStore
+meta import ConAgua.Arena.ZeroStore
+meta import ConAgua.Arena.GrindAttr
+meta import ConAgua.Census.Attr
+meta import ConAgua.L.GrindAttr
+meta import Std.Tactic.BVDecide.Normalize.Prop
+meta import Std.WP.Tactic
+import Std.WP.Triple.SpecLemmas
+
+@[expose] public section
 
 /-!
 # The parse state's id tables in L: `front_init`, `apply_nstr`, `apply_nnum`, `apply_level`

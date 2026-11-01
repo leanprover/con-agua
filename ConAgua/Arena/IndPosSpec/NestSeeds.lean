@@ -1,7 +1,16 @@
+module
+
 import ConAgua.Arena.IndPosSpec.P2sfW
 import ConAgua.Arena.IndPosSpec.Pos2RdGrow
-import ConAgua.Arena.IndPosSpec.KlB
+public import ConAgua.Arena.IndPosSpec.KlB
 import ConAgua.Arena.IndRealAbsPos
+import ConAgua.Arena.IndPosSpec.Pos2WfWfSome
+public import ConAgua.Arena.IndPosSpec.BvbWMfr
+public import ConAgua.Arena.IndPosSpec.NkFields
+public import ConAgua.Arena.IndPosSpec.P2rtW
+public import ConAgua.Arena.IndPosSpec.RootOutsB
+
+@[expose] public section
 
 /-!
 # NestSeeds: `ConRon.Arena.nestSeeds` (the seed's fuel fold (nest_seeds_fuel))

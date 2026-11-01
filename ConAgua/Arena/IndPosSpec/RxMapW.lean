@@ -1,8 +1,12 @@
-import ConAgua.Arena.IndPosSpec.CtxFields
-import ConAgua.Arena.IndPosSpec.MkLook
-import ConAgua.Arena.IndRealSpine
-import ConAgua.Arena.IndPosSpec.MatesW
+module
+
+public import ConAgua.Arena.IndPosSpec.CtxFields
+public import ConAgua.Arena.IndPosSpec.MkLook
+public import ConAgua.Arena.IndRealSpine
+public import ConAgua.Arena.IndPosSpec.MatesW
 import ConAgua.Arena.IndGrindAttr
+
+@[expose] public section
 
 /-!
 # RxMapW

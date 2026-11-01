@@ -1,9 +1,16 @@
-import ConAgua.Arena.Rom
+module
+
+public import ConAgua.Arena.Rom
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import Std.Tactic.BVDecide.Normalize.BitVec
-import Std.Tactic.BVDecide.Normalize.Prop
+public import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
+import ConAgua.Front.StateDR
+import ConAgua.L.LocNF
+import Std.WP.Triple.SpecLemmas
+
+@[expose] public section
 
 /-!
 # The ROM's levels: `rom_level(pos)` refines `internLevel`

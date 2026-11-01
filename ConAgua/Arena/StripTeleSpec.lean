@@ -1,14 +1,22 @@
-import ConAgua.Arena.IndView
+module
+
+public import ConAgua.Arena.IndView
 import ConAgua.Arena.IndMaster
-import ConAgua.Arena.StripTele
-import ConAgua.L.ProgHas
-import ConAgua.Arena.IndStubs
+public import ConAgua.Arena.StripTele
+public import ConAgua.L.ProgHas
+public import ConAgua.Arena.IndStubs
 import ConAgua.Front.Preserve
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import Std.Tactic.BVDecide.Normalize.BitVec
-import Std.Tactic.BVDecide.Normalize.Prop
+public import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
+import ConAgua.Arena.Env
+import ConAgua.Arena.IndCopy2
+import Std.WP.Triple.SpecLemmas
+public import ConAgua.Arena.IndCopy
+
+@[expose] public section
 
 /-!
 # `strip_pis`, `strip_lams` refine `stripPis`, `stripLams` (lane `indproofs3`, helper `stubs`)

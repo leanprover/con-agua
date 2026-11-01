@@ -1,11 +1,27 @@
+module
+
+import ConLeche.Verify.Inductives.RecCheckScope
 import ConAgua.Arena.IndT.RecCheckTpd
 import ConAgua.Arena.IndT.Lift
 import ConAgua.Arena.RecCheckSpec.Tpd
 import ConAgua.Arena.RecCheckSpec.TmFields
-import ConAgua.Verdict.VCtx
-import ConAgua.Arena.GrindAttr
-import ConAgua.L.GrindAttr
+public import ConAgua.Verdict.VCtx
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
+import ConAgua.Arena.IndInstallSpec.DomsW
+import ConAgua.Arena.IndRealAbsPos
+import ConAgua.Arena.IndSim
+import ConAgua.Arena.IndSumSpec.StructProjArgP
+import ConAgua.Arena.RefWalk
+import ConAgua.Checker.NoVerdictTree
+public import ConAgua.Arena.KnotEntry
+public import ConAgua.Arena.RecCheckSpec.PdsC
+public import ConAgua.Arena.RecCheckSpec.TaGoWMfr
+public import ConAgua.Arena.TwinStep
+public import ConRon.Bridge.Inductives.RecCheck
+
+@[expose] public section
 
 /-!
 # `target_params_def_eq` and its head step: one model and one refinement for both outcomes

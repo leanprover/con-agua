@@ -1,8 +1,14 @@
-import ConAgua.Arena.DeclNatLit
+module
+
+public import ConAgua.Arena.DeclNatLit
 import ConAgua.Arena.DeclNatDeps
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
+import ConAgua.Arena.DeclNatGate
+import Std.WP.Triple.SpecLemmas
+
+@[expose] public section
 
 /-!
 # The structural-`Nat` gate: `bool_ctor_ok` and `nat_op_guard` (lane `decls3`, helper `decls3-nat`)

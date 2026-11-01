@@ -1,8 +1,12 @@
-import ConAgua.Arena.DeclStepGo
-import ConAgua.Arena.WhnfDelta
-import ConAgua.Arena.GrindAttr
-import ConAgua.Arena.IndGrindAttr
-import ConAgua.L.GrindAttr
+module
+
+public import ConAgua.Arena.DeclStepGo
+public import ConAgua.Arena.WhnfDelta
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.Arena.IndGrindAttr
+public import ConAgua.L.GrindAttr
+
+@[expose] public section
 
 /-!
 # The `checkDecl` arms at the loop's relation: the text (lane `decls3`)

@@ -1,11 +1,16 @@
-import ConAgua.Arena.Tiers
-import ConRon.Arena.StdAxioms
-import ConRon.Arena.TrustAxioms
+module
+
+public import ConAgua.Arena.Tiers
+public import ConRon.Arena.StdAxioms
+public import ConRon.Arena.TrustAxioms
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import Std.Tactic.BVDecide.Normalize.BitVec
-import Std.Tactic.BVDecide.Normalize.Prop
+public import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
+import Std.WP.Triple.SpecLemmas
+
+@[expose] public section
 
 /-!
 # The pin table in L: the readers

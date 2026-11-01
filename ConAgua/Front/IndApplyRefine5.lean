@@ -1,5 +1,11 @@
-import ConAgua.Verdict.FrontViE
-import Std.Tactic.BVDecide.Normalize.Prop
+module
+
+public import ConAgua.Verdict.FrontViE
+public import Std.Tactic.BVDecide.Normalize.Prop
+import ConAgua.L.ModelGen
+import Std.WP.Triple.SpecLemmas
+
+@[expose] public section
 
 /-!
 # The apply step of an `inductive` line against the twin, V: the constructors in the block's order

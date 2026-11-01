@@ -1,4 +1,15 @@
-import ConAgua.Final.Twin
+module
+
+public import ConAgua.Final.Twin
+import ConLeche.Model.Denotes
+import ConLeche.Model.Fold
+import ConLeche.Verify.Frontend.FileFalse
+import ConLeche.Verify.Frontend.Prepare
+import ConRon.Bridge.Checker.Phased
+import ConRon.Bridge.Frontend.Capstone
+import ConRon.Bridge.Inductives.Decl
+
+@[expose] public section
 
 /-!
 # The twin's pipeline with phase B as con-ron's pool (lane parmode)

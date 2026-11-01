@@ -1,5 +1,11 @@
-import ConAgua.Arena.IndMemoFns
+module
+
+public import ConAgua.Arena.IndMemoFns
 import ConAgua.Arena.IndRealCrFKeep
+public import ConAgua.Arena.ConstsResolveFRefine2
+public import ConAgua.Arena.IndRealCrF
+
+@[expose] public section
 
 /-!
 # `consts_resolve_ffast`'s walk memo across the checker's calls (lane `indproofs4`, helper `sw2`)

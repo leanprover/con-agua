@@ -1,7 +1,14 @@
+module
+
 import ConAgua.Arena.RecClassSpec.PiBWRoom
-import ConAgua.Arena.GrindAttr
-import ConAgua.Arena.IndGrindAttr
-import ConAgua.L.GrindAttr
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.Arena.IndGrindAttr
+public import ConAgua.L.GrindAttr
+import ConRon.Bridge.Grind
+public import ConAgua.Arena.IndDecStab
+public import ConAgua.Arena.RecSim
+
+@[expose] public section
 
 /-!
 # CtorX

@@ -1,9 +1,18 @@
+module
+
 import ConAgua.Verdict.WhnfM2CE
 import ConAgua.Verdict.WhnfPrepE
 import ConAgua.Verdict.WhnfIotaRecE
 import ConAgua.Verdict.WhnfIotaE
 import ConAgua.Verdict.WhnfSlotE
 import ConAgua.Verdict.WhnfPirrE
+import ConAgua.Arena.StrLitKeep
+import ConAgua.Arena.WhnfM2CRefine5
+public import ConAgua.Arena.DefEqKnot
+public import ConAgua.Arena.WhnfCoreAppLoop
+public import ConAgua.Arena.WhnfIotaRecRefine2
+
+@[expose] public section
 
 /-!
 # The `whnf` family's part of the error knot (lane `verdicts-b`, helper `k2`)

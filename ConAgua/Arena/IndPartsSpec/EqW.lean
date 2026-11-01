@@ -1,10 +1,17 @@
-import ConAgua.Arena.IndPartsSpec.MemberNames
+module
+
+public import ConAgua.Arena.IndPartsSpec.MemberNames
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr
 import Std.Tactic.BVDecide.Normalize.BitVec
-import Std.Tactic.BVDecide.Normalize.Prop
+public import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
+import ConAgua.Arena.Env
+import ConAgua.L.LocNF
+import Std.WP.Triple.SpecLemmas
+
+@[expose] public section
 
 /-!
 # EqW

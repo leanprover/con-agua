@@ -1,8 +1,20 @@
+module
+
 import ConAgua.Arena.IndPosSpec.FgW
 import ConAgua.Arena.IndPosSpec.MapOKStep
-import ConAgua.Arena.IndPosSpec.SgF
-import ConAgua.Arena.IndPosSpec.SgGoW2
-import ConAgua.Arena.IndGrindAttr
+public import ConAgua.Arena.IndPosSpec.SgF
+public import ConAgua.Arena.IndPosSpec.SgGoW2
+public import ConAgua.Arena.IndGrindAttr
+import ConAgua.Arena.IndInstallSpec.DomsW
+import ConAgua.Arena.IndPosSpec.DepthGo
+import ConAgua.Arena.IndPosSpec.NestKeyMap
+import ConAgua.Arena.IndPosSpec.PosmemoRxMfr
+import ConAgua.Arena.IndPosSpec.SnocWStage
+public import ConAgua.Arena.IndPosSpec.BvbWMfr
+public import ConAgua.Arena.IndPosSpec.CrLook
+public import ConAgua.Arena.IndPosSpec.Pos2CvLpsWStage
+
+@[expose] public section
 
 /-!
 # SgGoW

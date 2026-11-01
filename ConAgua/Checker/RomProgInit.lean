@@ -1,6 +1,11 @@
-import ConAgua.Final.Statement
+module
+
+public import ConAgua.Final.Statement
 import ConAgua.Rom.Stage
-import ConAgua.Checker.CapCheck
+public import ConAgua.Checker.CapCheck
+public import ConAgua.Front.StateDR
+
+@[expose] public section
 
 /-!
 # The loaded memory at the start of `check` (lane `pipeline`)

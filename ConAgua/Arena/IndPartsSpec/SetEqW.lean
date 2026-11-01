@@ -1,8 +1,15 @@
+module
+
 import ConAgua.Arena.IndPartsSpec.EqW
-import ConAgua.Arena.IndPartsSpec.IndPartsProg2
-import ConAgua.Arena.GrindAttr
-import ConAgua.L.GrindAttr
+public import ConAgua.Arena.IndPartsSpec.IndPartsProg2
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
+import ConAgua.Arena.IndPartsSpec.RulePrefixAt
+import Std.Tactic.BVDecide.Normalize.BitVec
+import Std.WP.Triple.SpecLemmas
+
+@[expose] public section
 
 /-!
 # SetEqW

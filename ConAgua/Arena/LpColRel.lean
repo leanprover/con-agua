@@ -1,6 +1,10 @@
-import ConAgua.Arena.ConsLibRel
-import ConAgua.Arena.LpCol
+module
+
+public import ConAgua.Arena.ConsLibRel
+public import ConAgua.Arena.LpCol
 import Std.Tactic.BVDecide.Normalize.Prop
+
+@[expose] public section
 
 /-!
 # The level-parameter columns: the relation, generically (helper `whnf4-d23`)

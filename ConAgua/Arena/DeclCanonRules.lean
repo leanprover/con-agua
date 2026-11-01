@@ -1,8 +1,15 @@
+module
+
 import ConAgua.Arena.DeclCanonEq
-import ConAgua.Arena.DeclCanonExpr2
+public import ConAgua.Arena.DeclCanonExpr2
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr
+import ConAgua.Arena.DeclRec
+import Std.WP.Tactic
+import Std.WP.Triple.SpecLemmas
+
+@[expose] public section
 
 /-!
 # `canon_rules_eq` (lane `decls3`, helper `decls3-canon`)

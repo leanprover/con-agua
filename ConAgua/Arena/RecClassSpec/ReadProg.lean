@@ -1,6 +1,11 @@
-import ConAgua.Arena.IndDecStab
-import ConAgua.Arena.RecClassSpec.SlotsProg
-import ConAgua.Arena.RecStab
+module
+
+public import ConAgua.Arena.IndDecStab
+public import ConAgua.Arena.RecClassSpec.SlotsProg
+public import ConAgua.Arena.RecStab
+import ConRon.Bridge.Grind
+
+@[expose] public section
 
 /-!
 # ReadProg

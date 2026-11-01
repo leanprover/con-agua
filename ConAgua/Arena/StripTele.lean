@@ -1,4 +1,9 @@
-import ConAgua.Arena.IndIface
+module
+
+public import ConAgua.Arena.IndIface
+import ConAgua.Census.Attr
+
+@[expose] public section
 
 /-!
 # `stripPis`, `stripLams` in L (lane `whnf3`)

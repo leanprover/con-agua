@@ -1,15 +1,28 @@
+module
+
 import ConAgua.Arena.LdRd
 import ConAgua.Arena.IndSumSpec.DecHLTake
-import ConAgua.Arena.RecClassSpec.ClassNPcOf
+public import ConAgua.Arena.RecClassSpec.ClassNPcOf
 import ConAgua.Arena.RecClassSpec.IhW
 import ConAgua.Arena.RecClassSpec.PiBWRoom
-import ConAgua.Arena.RecClassSpec.ReadProg
+public import ConAgua.Arena.RecClassSpec.ReadProg
 import ConAgua.Arena.IndPartsSpec.BlockCounts
 import ConAgua.Arena.IndRealAbsSim
-import ConAgua.Arena.GrindAttr
+public import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
-import ConAgua.L.GrindAttr
+public import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
+import ConAgua.Arena.IndInstallSpec.DomsW
+import ConAgua.Arena.IndPartsSpec.BlockRecNamesUnreserved
+import ConAgua.Arena.IndPosSpec.NestBlockOfKey
+import ConAgua.Arena.IndRealOpf3
+import ConRon.Bridge.Grind
+import Std.Tactic.BVDecide.Normalize.BitVec
+public import ConAgua.Arena.IndPartsSpec.RecTW
+public import ConAgua.Arena.IndRealOpf
+public import ConAgua.Arena.RecClassSpec.Classes
+
+@[expose] public section
 
 /-!
 # CrW

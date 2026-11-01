@@ -1,6 +1,12 @@
-import ConAgua.Arena.IndPosSpec.NoConstWf
-import ConAgua.Arena.RecStab
-import ConAgua.Arena.RecSim
+module
+
+public import ConAgua.Arena.IndPosSpec.NoConstWf
+public import ConAgua.Arena.RecStab
+public import ConAgua.Arena.RecSim
+import ConAgua.Arena.IndInstallSpec.DomsW
+import ConAgua.Arena.RecClassSpec.Classes
+
+@[expose] public section
 
 /-!
 # CfoProg

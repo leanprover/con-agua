@@ -1,4 +1,8 @@
-import ConAgua.Arena.IndIface
+module
+
+public import ConAgua.Arena.IndIface
+
+@[expose] public section
 
 /-!
 # `consts_resolve_ffast(vis, e)`: the twin's memoized `constsResolve` (lane `stubs`)

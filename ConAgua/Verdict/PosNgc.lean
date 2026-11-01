@@ -1,6 +1,11 @@
-import ConAgua.Verdict.PosE2M
+module
+
+public import ConAgua.Verdict.PosE2M
 import ConAgua.Arena.IndRealAbsPos
 import ConAgua.Arena.IndPosSpec.NestCrest
+import ConAgua.Arena.RefWalk
+
+@[expose] public section
 
 /-!
 # `nest_group_ctors`: one model and one refinement for both outcomes

@@ -1,9 +1,21 @@
-import ConAgua.Arena.StubInd
+module
+
+public import ConAgua.Arena.StubInd
 import ConAgua.Arena.DeclCanonEq
 import ConAgua.Arena.WhnfM2CRefine5
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr
+import ConAgua.Arena.WhnfCoreRefine
+import ConAgua.Arena.WhnfIotaRefine6
+import Std.WP.Tactic
+import Std.WP.Triple.SpecLemmas
+public import ConAgua.Arena.DeclCanonSpec
+public import ConAgua.Arena.DeclNatBase
+public import ConAgua.Arena.WhnfEntry
+public import ConAgua.Arena.WhnfIota
+
+@[expose] public section
 
 /-!
 # `rec_rule_bits` refines `recRuleBits` (lane `tails`)

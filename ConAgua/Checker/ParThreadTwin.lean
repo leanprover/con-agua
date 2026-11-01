@@ -1,5 +1,16 @@
-import ConAgua.Checker.ParThreadCall
-import ConAgua.Final.TwinPooled
+module
+
+public import ConAgua.Checker.ParThreadCall
+public import ConAgua.Final.TwinPooled
+import ConAgua.Checker.CheckARun
+import ConAgua.Checker.IndArm
+import ConAgua.Checker.LoopProg
+import ConAgua.Checker.LoopStage
+import ConAgua.Checker.RomProg0
+import ConAgua.Checker.TwinShapeQuot
+public import ConAgua.Checker.PresizeStage
+
+@[expose] public section
 
 /-!
 # The threads' runs give `TwinAcceptsPooled` (lane parmode)

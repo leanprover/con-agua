@@ -1,13 +1,27 @@
-import ConAgua.Arena.LoopT
-import ConAgua.Arena.IndArmLps
-import ConAgua.Arena.DeclAndPinIndRef
+module
+
+public import ConAgua.Arena.LoopT
+public import ConAgua.Arena.IndArmLps
+public import ConAgua.Arena.DeclAndPinIndRef
 import ConAgua.Arena.AndPinScratch
-import ConAgua.Arena.DeclDefnT
-import ConAgua.Arena.DeclAxQuotT
+public import ConAgua.Arena.DeclDefnT
+public import ConAgua.Arena.DeclAxQuotT
 import ConAgua.Arena.DeclNatSubAll
-import ConAgua.Arena.GrindAttr
-import ConAgua.L.GrindAttr
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
+import ConAgua.Arena.DeclCrpT
+import ConAgua.Arena.DeclStepSpec
+import ConAgua.Arena.PromoteCIRef.TdecJoin
+import ConAgua.Arena.RefWalk
+import ConAgua.Arena.ScratchRefine
+import ConAgua.Checker.NoVerdictTree
+import ConRon.Bridge.Checker.Fold
+import ConRon.Bridge.Checker.Split
+public import ConAgua.Arena.DeclArmT
+public import ConAgua.Arena.DeclTwin
+
+@[expose] public section
 
 /-!
 # Phase A under `StageT` (lane `loopt2`)

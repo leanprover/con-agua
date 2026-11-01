@@ -5,6 +5,7 @@ public import ConAgua.L.PureEval
 public import ConAgua.L.TRec
 import ConAgua.L.GrindAttr
 import ConAgua.L.ErrSpec
+import Std.Tactic.BVDecide.Normalize.BitVec
 
 @[expose] public section
 

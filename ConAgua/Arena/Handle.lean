@@ -1,6 +1,12 @@
-import ConAgua.Arena.Refine
-import ConAgua.Arena.StoreFields
+module
+
+public import ConAgua.Arena.Refine
+public import ConAgua.Arena.StoreFields
 import ConAgua.Arena.GrindAttr
+import Std.Tactic.BVDecide.Normalize.BitVec
+import Std.Tactic.BVDecide.Normalize.Prop
+
+@[expose] public section
 
 /-!
 # Handle words: encoding, decoding, and the bridge to the twin's `Idx`, proved once

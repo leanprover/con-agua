@@ -1,7 +1,23 @@
-import ConAgua.Arena.IndT.RecGen23
-import ConAgua.Arena.GrindAttr
-import ConAgua.L.GrindAttr
+module
+
+public import ConAgua.Arena.IndT.RecGen23
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
+import ConAgua.Arena.IndInstallSpec.DomsW
+import ConAgua.Arena.IndPosSpec.NestCrest
+import ConAgua.Arena.IndSim
+import ConAgua.Arena.RecClassSpec.CrW
+import ConAgua.Arena.RecClassSpec.MkTMWAfr
+import ConAgua.Arena.RecGenSpec.ClassMinorSlot
+import ConAgua.Arena.RecGenSpec.Rec3TmdWDecB
+import ConAgua.Arena.RefWalk
+import ConAgua.Checker.NoVerdictTree
+import ConRon.Bridge.Inductives.GenRec
+public import ConAgua.Arena.RecGenSpec.CfaFv
+public import ConAgua.Arena.RecStab
+
+@[expose] public section
 
 /-!
 # `class_fields_agree`: one model, one refinement

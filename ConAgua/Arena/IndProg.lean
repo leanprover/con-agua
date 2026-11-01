@@ -1,11 +1,15 @@
-import ConAgua.Arena.IndParts
-import ConAgua.Arena.IndInstall
-import ConAgua.Arena.IndSum
-import ConAgua.Arena.IndPos
-import ConAgua.Arena.IndPos2
-import ConAgua.Arena.RecClass
-import ConAgua.Arena.RecGen
-import ConAgua.Arena.RecCheck
+module
+
+public import ConAgua.Arena.IndParts
+public import ConAgua.Arena.IndInstall
+public import ConAgua.Arena.IndSum
+public import ConAgua.Arena.IndPos
+public import ConAgua.Arena.IndPos2
+public import ConAgua.Arena.RecClass
+public import ConAgua.Arena.RecGen
+public import ConAgua.Arena.RecCheck
+
+@[expose] public section
 
 /-!
 # The inductive stage's whole program (lane `induct`)

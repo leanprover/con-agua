@@ -1,5 +1,10 @@
-import ConAgua.Rom.CIReadRefBase
+module
+
+public import ConAgua.Rom.CIReadRefBase
 import ConAgua.Rom.CIReadRefW
+public import ConAgua.Rom.CIReadSpec
+
+@[expose] public section
 
 /-!
 # The ROM constant readers: the callees under the invariant, and name slices (helper `decls4-rom`)

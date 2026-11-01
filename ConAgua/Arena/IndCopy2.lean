@@ -1,9 +1,14 @@
-import ConAgua.Arena.IndCopy
+module
+
+public import ConAgua.Arena.IndCopy
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr
-import Std.Tactic.BVDecide.Normalize.Prop
+public import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
+import Std.WP.Triple.SpecLemmas
+
+@[expose] public section
 
 /-!
 # More slice-library models: `rec3`…`rec6`, `er_to_iw`, `sl_append`, `sl_snoc` (lane `induct`)

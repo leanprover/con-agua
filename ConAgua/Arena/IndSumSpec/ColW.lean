@@ -1,6 +1,10 @@
-import ConAgua.Arena.IndRealNames
+module
+
+public import ConAgua.Arena.IndRealNames
 import ConAgua.Arena.IndGrindAttr
-import ConAgua.Arena.IndSum
+public import ConAgua.Arena.IndSum
+
+@[expose] public section
 
 /-!
 # ColW

@@ -1,6 +1,15 @@
-import ConAgua.Verdict.DeclHdrE
-import ConAgua.Arena.GrindAttr
+module
+
+public import ConAgua.Verdict.DeclHdrE
+public import ConAgua.Arena.GrindAttr
 import ConAgua.L.ModelGen
+import ConAgua.Arena.DeclStepSpec
+import ConAgua.Arena.DeclValT
+import ConAgua.Arena.IndT.Base
+import ConAgua.Arena.RefWalk
+public import ConAgua.Arena.DeclValRef
+
+@[expose] public section
 
 /-!
 # `check_constant_val`'s refinement; the verdict claims of `check_defn_val`, `check_opaque_val`

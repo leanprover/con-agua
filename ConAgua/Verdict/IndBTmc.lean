@@ -1,7 +1,12 @@
-import ConAgua.Verdict.IndBTmm
-import ConAgua.Verdict.IndBTmo
-import ConAgua.Arena.GrindAttr
+module
+
+public import ConAgua.Verdict.IndBTmm
+public import ConAgua.Verdict.IndBTmo
+public import ConAgua.Arena.GrindAttr
 import ConAgua.L.ModelGen
+import ConAgua.Checker.NoVerdictTree
+
+@[expose] public section
 /-!
 # `target_major_of_const`: the model for both outcomes
 

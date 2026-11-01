@@ -1,4 +1,13 @@
-import ConAgua.Verdict.WhnfModels7E
+module
+
+public import ConAgua.Verdict.WhnfModels7E
+import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.Verdict
+import ConAgua.Checker.NoVerdictTree
+import ConAgua.L.GrindAttr
+import ConAgua.L.ModelGen
+
+@[expose] public section
 
 /-!
 # The generated models of `stuck_irrel`, `stuck_str` and `defeq_body`

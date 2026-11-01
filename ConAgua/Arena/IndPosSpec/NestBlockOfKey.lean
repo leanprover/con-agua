@@ -1,8 +1,14 @@
+module
+
 import ConAgua.Arena.IndPosSpec.NestKeyMap
-import ConAgua.Arena.IndRealAbs
-import ConAgua.Arena.GrindAttr
+public import ConAgua.Arena.IndRealAbs
+public import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
-import ConAgua.L.GrindAttr
+public import ConAgua.L.GrindAttr
+import ConRon.Bridge.Grind
+import Std.Tactic.BVDecide.Normalize.BitVec
+
+@[expose] public section
 
 /-!
 # NestBlockOfKey

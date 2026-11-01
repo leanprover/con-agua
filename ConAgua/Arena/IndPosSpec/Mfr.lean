@@ -1,4 +1,10 @@
+module
+
 import ConAgua.Arena.IndPosSpec.DepthGo
+public import ConAgua.Arena.IndPosSpec.NoGoStep
+public import ConAgua.Arena.IndPosSpec.RxMapW
+
+@[expose] public section
 
 /-!
 # Mfr

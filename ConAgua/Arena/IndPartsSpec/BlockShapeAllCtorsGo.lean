@@ -1,10 +1,15 @@
-import ConAgua.Arena.IndPartsSpec.RulePrefixAt
+module
+
+public import ConAgua.Arena.IndPartsSpec.RulePrefixAt
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
-import Std.Tactic.BVDecide.Normalize.Prop
+public import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
+import Std.WP.Triple.SpecLemmas
+
+@[expose] public section
 
 /-!
 # BlockShapeAllCtorsGo

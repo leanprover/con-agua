@@ -1,7 +1,8 @@
 module
 
-public import ConAgua.L.Logic
+import ConAgua.L.Logic
 public meta import Lean
+import Lean.Meta.Tactic.Cases
 
 public section
 

@@ -1,6 +1,13 @@
-import Lean
-import ConAgua.Compiler.Compile
-import ConAgua.AsmFile.Term
+module
+
+public import Lean
+public import ConAgua.Compiler.Compile
+public import ConAgua.AsmFile.Term
+public meta import Lean
+public meta import ConAgua.Compiler.Compile
+public meta import ConAgua.AsmFile.Term
+
+@[expose] public section
 
 /-!
 # The compiler's output as a kernel-checked literal
@@ -38,19 +45,19 @@ namespace L.Compiler
 open Lean Elab Command Meta
 open Lean.Elab.Term (elabTermEnsuringType synthesizeSyntheticMVarsNoPostponing)
 
-unsafe def evalProgramU (e : Lean.Expr) : MetaM Program :=
+meta unsafe def evalProgramU (e : Lean.Expr) : MetaM Program :=
   evalExpr Program (mkApp (mkConst ``List [0]) (mkConst ``Directive)) e
-@[implemented_by evalProgramU] opaque evalProgram (e : Lean.Expr) : MetaM Program
+@[implemented_by evalProgramU] meta opaque evalProgram (e : Lean.Expr) : MetaM Program
 
 /-- The code of every function of `p`. -/
 def progCode (tab : Tab) (t sk : NTree) (p : Prog) : List Program := p.map fun x => compileFn tab t sk x.1 x.2
 
-unsafe def evalProgramsU (e : Lean.Expr) : MetaM (List Program) :=
+meta unsafe def evalProgramsU (e : Lean.Expr) : MetaM (List Program) :=
   evalExpr (List Program) (mkApp (mkConst ``List [0]) (mkApp (mkConst ``List [0]) (mkConst ``Directive))) e
-@[implemented_by evalProgramsU] opaque evalPrograms (e : Lean.Expr) : MetaM (List Program)
+@[implemented_by evalProgramsU] meta opaque evalPrograms (e : Lean.Expr) : MetaM (List Program)
 
 /-- The elements of a list expression, by `whnf`. -/
-partial def listElemsW (e : Lean.Expr) (acc : Array Lean.Expr := #[]) : MetaM (Array Lean.Expr) := do
+meta partial def listElemsW (e : Lean.Expr) (acc : Array Lean.Expr := #[]) : MetaM (Array Lean.Expr) := do
   let e ← whnfD e
   if e.isAppOfArity ``List.cons 3 then listElemsW e.appArg! (acc.push e.appFn!.appArg!)
   else if e.isAppOfArity ``List.nil 1 then return acc
@@ -58,17 +65,17 @@ partial def listElemsW (e : Lean.Expr) (acc : Array Lean.Expr := #[]) : MetaM (A
 
 /-- Declare `n : Program := lit` (not compiled: nothing runs it); the equation `lhs = n` is left to
 the caller. -/
-def declLitDef (n : Name) (f : String) (v : Program) : MetaM Unit := do
+meta def declLitDef (n : Name) (f : String) (v : Program) : MetaM Unit := do
   let lit := programExpr (v.toArray.map (directiveExpr f))
-  addDecl (.defnDecl (mkDefinitionValEx n [] progTy lit .abbrev .safe []))
+  withExporting <| addDecl (.defnDecl (mkDefinitionValEx n [] progTy lit .abbrev .safe []))
 
 /-- Declare `n : Program := lit` and `n_eq : lhs = n` by `Eq.refl` (the kernel evaluates `lhs`). -/
-def declLit (n : Name) (lhs : Lean.Expr) (f : String) (v : Program) : MetaM Unit := do
+meta def declLit (n : Name) (lhs : Lean.Expr) (f : String) (v : Program) : MetaM Unit := do
   declLitDef n f v
   addDecl (.thmDecl { name := n.appendAfter "_eq", levelParams := [], type := mkApp3 (mkConst ``Eq [1]) progTy lhs (mkConst n)
                       value := mkApp2 (mkConst ``Eq.refl [1]) progTy lhs })
 
-register_option asmLitBatch : Nat := {
+meta register_option asmLitBatch : Nat := {
   defValue := 16
   descr := "asm_lit: functions per kernel check (one conjunction; the kernel evaluates what the \
     functions share, such as a long `ldc` string's `romIdx`, once per check)"
@@ -76,7 +83,7 @@ register_option asmLitBatch : Nat := {
 
 /-- Declare the equations `lhsᵢ = nᵢ` (`nᵢ_eq`) of a batch by one kernel check: `name` proves
 their conjunction by `Eq.refl`s, and each `nᵢ_eq` is a projection of it (no evaluation). -/
-def declEqBatch (name : Name) (eqs : Array (Name × Lean.Expr)) : MetaM Unit := do
+meta def declEqBatch (name : Name) (eqs : Array (Name × Lean.Expr)) : MetaM Unit := do
   if eqs.isEmpty then return
   let tys := eqs.map fun (n, lhs) => mkApp3 (mkConst ``Eq [1]) progTy lhs (mkConst n)
   let pfs := eqs.map fun (_, lhs) => mkApp2 (mkConst ``Eq.refl [1]) progTy lhs
@@ -99,7 +106,7 @@ def declEqBatch (name : Name) (eqs : Array (Name × Lean.Expr)) : MetaM Unit := 
     if j < k then h := mkApp3 (mkConst ``And.right) tys[j]! (tail (j + 1)) h
 
 /-- The element `x` of a program literal: its name (a string literal) and its pair. -/
-def progElem (i : Nat) (x : Lean.Expr) : MetaM (String × Lean.Expr × Lean.Expr) := do
+meta def progElem (i : Nat) (x : Lean.Expr) : MetaM (String × Lean.Expr × Lean.Expr) := do
   let x ← whnfD x
   unless x.isAppOfArity ``Prod.mk 4 do throwError "asm_lit: element {i} is not a pair: {x}"
   let fE := x.appFn!.appArg!
@@ -108,7 +115,7 @@ def progElem (i : Nat) (x : Lean.Expr) : MetaM (String × Lean.Expr × Lean.Expr
 
 /-- Declare `name.f<i>` and `name.f<i>_eq` for the functions `lo ≤ i < hi` of `p` (`elems`), except
 those already declared (by `asm_lit_fns` in an imported module). -/
-def declFns (name : Name) (tabE nrtE sktE pE : Lean.Expr) (elems : Array Lean.Expr) (lo hi : Nat) :
+meta def declFns (name : Name) (tabE nrtE sktE pE : Lean.Expr) (elems : Array Lean.Expr) (lo hi : Nat) :
     MetaM (Array Name) := do
   let hi := min hi elems.size
   let env ← getEnv
@@ -139,7 +146,7 @@ for the functions `lo ≤ i < hi` only, so that a large program's checks can be 
 modules (built in parallel); `asm_lit` then skips them. -/
 syntax (name := asmLitFns) "asm_lit_fns " ident " : " term:max term:max term:max term:max num num : command
 
-@[command_elab asmLitFns] def elabAsmLitFns : CommandElab := fun stx => do
+@[command_elab asmLitFns] meta def elabAsmLitFns : CommandElab := fun stx => do
   let `(asm_lit_fns $n:ident : $tabS $nrtS $sktS $progS $lo $hi) := stx | throwUnsupportedSyntax
   let name := (← getCurrNamespace) ++ n.getId
   liftTermElabM <| withTheReader Core.Context (fun c => { c with maxRecDepth := max c.maxRecDepth 100000, maxHeartbeats := 0 }) do
@@ -158,7 +165,7 @@ syntax (name := asmLitFns) "asm_lit_fns " ident " : " term:max term:max term:max
 constant, with `skt_eq : Prog.skt p entry = skt`) -/
 syntax (name := asmLit) (docComment)? "asm_lit " ident " : " term:max ident ident term:max term:max : command
 
-@[command_elab asmLit] def elabAsmLit : CommandElab := fun stx => do
+@[command_elab asmLit] meta def elabAsmLit : CommandElab := fun stx => do
   let `($[$doc?:docComment]? asm_lit $n:ident : $tabS $nrtS:ident $sktS:ident $progS $entryS) := stx | throwUnsupportedSyntax
   let name := (← getCurrNamespace) ++ n.getId
   liftTermElabM <| withTheReader Core.Context (fun c => { c with maxRecDepth := max c.maxRecDepth 100000, maxHeartbeats := 0 }) do
@@ -216,7 +223,7 @@ syntax (name := asmLit) (docComment)? "asm_lit " ident " : " term:max ident iden
       rhs := appE appC fi rhs
       tl := consTl
     let whole := appendE (mkConst trampN) rhs
-    addDecl (.defnDecl (mkDefinitionValEx name [] progTy whole .abbrev .safe []))
+    withExporting <| addDecl (.defnDecl (mkDefinitionValEx name [] progTy whole .abbrev .safe []))
     addDocString' name .missing doc?
     -- `compileProgT tab nrt skt p entry = name`: `p` unfolds to the literal `tl`
     let appC := mkApp4 (mkConst ``HAppend.hAppend [0, 0, 0]) progTy progTy progTy

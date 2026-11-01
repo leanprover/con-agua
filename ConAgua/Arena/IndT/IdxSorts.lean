@@ -1,9 +1,25 @@
+module
+
+import ConRon.Bridge.Inductives.SumInstall
 import ConAgua.Arena.IndT.Sum3
 import ConAgua.Arena.IndInstallSpec.InstallRec2PSl
-import ConAgua.Arena.GrindAttr
-import ConAgua.L.GrindAttr
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
 import ConAgua.Arena.IndT.Install1
+import ConAgua.Arena.IndInstallSpec.PartsShapeFacts
+import ConAgua.Arena.IndPartsSpec.PartsPSlCons
+import ConAgua.Arena.IndRealAbsSim
+import ConAgua.Arena.IndT.Lift
+import ConAgua.Arena.RecClassSpec.PiBWRoom
+import ConAgua.Arena.RefWalk
+import ConAgua.Checker.NoVerdictTree
+public import ConAgua.Arena.IndInstallSpec.GrcProg
+public import ConAgua.Arena.KnotEntry
+public import ConAgua.Verdict.VCtx
+public import ConRon.Bridge.Checker.Hyp
+
+@[expose] public section
 
 /-!
 # `check_block_idx_sorts`: one model and one refinement for both outcomes

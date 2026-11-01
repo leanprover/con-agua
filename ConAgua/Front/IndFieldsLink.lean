@@ -1,9 +1,13 @@
-import ConAgua.Front.IndFieldsSpec
+module
+
+public import ConAgua.Front.IndFieldsSpec
 import ConAgua.Front.FieldsDeclLink
-import ConAgua.Front.IndRel
+public import ConAgua.Front.IndRel
 import ConAgua.Scan.LeafLink
 import ConAgua.Scan.Link
 import Std.Tactic.BVDecide.Normalize.Prop
+
+@[expose] public section
 
 /-!
 # The fields pass of an `inductive` line, linked to con-leche

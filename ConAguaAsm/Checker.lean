@@ -1,4 +1,9 @@
-import ConAgua.AsmFile.Include
+module
+
+public import ConAgua.AsmFile.Include
+meta import ConAgua.AsmFile.Include
+
+@[expose] public section
 
 /-!
 # The checker's code: the file `checker.s`

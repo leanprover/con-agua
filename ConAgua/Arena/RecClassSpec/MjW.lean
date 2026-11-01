@@ -1,9 +1,18 @@
+module
+
 import ConAgua.Arena.RecClassSpec.MkTMWAfr
 import ConAgua.Arena.RecClassSpec.Rec2AppendWDec
 import ConAgua.Arena.RecClassSpec.Rec2SimTMA
 import ConAgua.Arena.RecClassSpec.PiBWRoom
 import ConAgua.Arena.IndPosSpec.InstW
 import ConAgua.Arena.IndSim
+import ConAgua.Arena.IndInstallSpec.DomsW
+import ConAgua.Arena.IndPartsSpec.RulePrefixAt
+import ConAgua.Arena.IndRealAbsSim
+import ConAgua.Arena.RecStab
+public import ConAgua.Arena.RecClassSpec.ClassGenMajorCi
+
+@[expose] public section
 
 /-!
 # MjW

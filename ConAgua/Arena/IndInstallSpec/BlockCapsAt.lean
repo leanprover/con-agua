@@ -1,12 +1,19 @@
-import ConAgua.Arena.IndInstall
-import ConAgua.Arena.IndMaster
-import ConAgua.Arena.IndPartsSpec.MemberNames
+module
+
+public import ConAgua.Arena.IndInstall
+public import ConAgua.Arena.IndMaster
+public import ConAgua.Arena.IndPartsSpec.MemberNames
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
-import Std.Tactic.BVDecide.Normalize.Prop
+public import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
+import ConAgua.Arena.Env
+import ConAgua.Arena.IndPartsSpec.RulePrefixAt
+import Std.WP.Triple.SpecLemmas
+
+@[expose] public section
 
 /-!
 # BlockCapsAt: `ConRon.Arena.blockCapsAt` (an IW slice copied into fresh EREC words), `ConRon.Arena.blockCapsAt` (the ctor-name list), `ConRon.Arena.checkBlockPositivity` (the empty NestState)

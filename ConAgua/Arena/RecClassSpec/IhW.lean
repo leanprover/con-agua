@@ -1,8 +1,17 @@
+module
+
 import ConAgua.Arena.IndRealOpf3
-import ConAgua.Arena.RecCheckSpec.ErToIwWStage
-import ConAgua.Arena.GrindAttr
+public import ConAgua.Arena.RecCheckSpec.ErToIwWStage
+public import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
-import ConAgua.L.GrindAttr
+public import ConAgua.L.GrindAttr
+import ConAgua.Arena.IndInstallSpec.DomsW
+import ConRon.Bridge.Grind
+import Std.Tactic.BVDecide.Normalize.BitVec
+public import ConAgua.Arena.IndRealOpf
+public import ConAgua.Arena.RecClassSpec.CloseLams
+
+@[expose] public section
 
 /-!
 # IhW
@@ -257,12 +266,7 @@ theorem motIdx_eq : ∀ (j : Nat) (sls : List ClassSlot),
   | nil => simp [motIdx]
   | cons sl sls ih =>
     rw [List.length_cons, List.range_succ_eq_map, List.filter_cons, List.filter_map]
-    have e : (fun s : Nat => match ((sl :: sls)[s]? : Option ClassSlot) with
-        | some (.motive _) => true | _ => false) ∘ Nat.succ =
-        (fun s : Nat => match (sls[s]? : Option ClassSlot) with
-        | some (.motive _) => true | _ => false) := by
-      funext s; simp
-    rw [e]
+    simp only [Function.comp_def, List.getElem?_cons_succ]
     have ih' := ih (j + 1)
     have e2 : ∀ L : List Nat, (L.map Nat.succ).map (j + ·) = L.map ((j + 1) + ·) := by
       intro L; simp [List.map_map, Function.comp_def]; intro x _; omega

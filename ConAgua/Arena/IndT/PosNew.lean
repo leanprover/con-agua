@@ -1,7 +1,23 @@
-import ConAgua.Verdict.PosE
+module
+
+public import ConAgua.Verdict.PosE
 import ConAgua.Verdict.PosE2
 import ConAgua.Arena.IndPosSpec.Pos2DecHLSplit
 import ConAgua.Arena.IndPosSpec.Snoc
+import all ConRon.Bridge.Inductives.Positivity
+import ConAgua.Arena.IndPosSpec.GgW2
+import ConAgua.Arena.IndPosSpec.Grow
+import ConAgua.Arena.IndPosSpec.NestAcceptGroup
+import ConAgua.Arena.IndPosSpec.NestContParamsClosed
+import ConAgua.Arena.IndPosSpec.NestCrest
+import ConAgua.Arena.IndPosSpec.Pos2RdGrow
+import ConAgua.Arena.IndRealAbsPos
+import ConAgua.Arena.IndT.RecGen19
+import ConAgua.Checker.NoVerdictTree
+public import ConAgua.Arena.IndPosSpec.NbPosW
+public import ConAgua.Arena.IndRealIlpL
+
+@[expose] public section
 
 /-!
 # `nest_cont_new` refines `nestContNew`, both outcomes (lane `indstaget`, helper `indstaget-pos`)

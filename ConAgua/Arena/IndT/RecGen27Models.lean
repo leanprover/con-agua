@@ -1,8 +1,13 @@
-import ConAgua.Arena.RecGenSpec.DecCNWords
-import ConAgua.Verdict.IndBRec1
-import ConAgua.Arena.GrindAttr
-import ConAgua.L.GrindAttr
+module
+
+public import ConAgua.Arena.RecGenSpec.DecCNWords
+public import ConAgua.Verdict.IndBRec1
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
+import ConAgua.Checker.NoVerdictTree
+
+@[expose] public section
 
 /-!
 # The generated models of `class_ctor_of`, `class_ctors_of`, `classes_ctors`

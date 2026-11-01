@@ -1,7 +1,15 @@
-import ConAgua.Arena.DeclReduceSpec2
+module
+
+public import ConAgua.Arena.DeclReduceSpec2
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr
+import ConAgua.Arena.DeclCvg
+import ConAgua.Arena.DeclValRef
+import ConAgua.L.LocNF
+import Std.Tactic.BVDecide.Normalize.BitVec
+
+@[expose] public section
 
 /-!
 # `Lean.trustCompiler`: `find_pinned_cv`, `trust_compiler_ok` (lane `decls3`)

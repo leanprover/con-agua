@@ -1,10 +1,16 @@
-import ConAgua.Arena.NatArms
+module
+
+public import ConAgua.Arena.NatArms
 import ConAgua.Arena.Pins
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
-import Std.Tactic.BVDecide.Normalize.BitVec
-import Std.Tactic.BVDecide.Normalize.Prop
+public import Std.Tactic.BVDecide.Normalize.BitVec
+public import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
+import ConAgua.Arena.LdRd
+import Std.WP.Triple.SpecLemmas
+
+@[expose] public section
 
 /-!
 # `natOpResult`, the whole dispatch, under `ArenaR` and `PinsR`

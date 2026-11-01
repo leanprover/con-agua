@@ -1,6 +1,16 @@
-import ConAgua.Arena.InferBodyBind
+module
+
+public import ConAgua.Arena.InferBodyBind
 import ConAgua.Arena.IndSumSpec.DecCVpGrow
-import ConAgua.Arena.InferBodyBindPiModels
+public import ConAgua.Arena.InferBodyBindPiModels
+import ConAgua.Arena.InferBodyIntern
+import ConAgua.Arena.InferBodySpine
+import ConAgua.Arena.LevelView
+import ConAgua.Arena.LvlGrow
+import ConAgua.Arena.RefWalk
+import ConAgua.Arena.WhnfCoreRefine
+
+@[expose] public section
 
 /-!
 # The ∀ telescope: `infer_pis_leaf`, `infer_pis`, `infer_forall` (lane `defeq`)

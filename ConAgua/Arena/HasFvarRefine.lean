@@ -1,5 +1,11 @@
-import ConAgua.Arena.HasFvar
-import ConAgua.Arena.Abs1Refine
+module
+
+public import ConAgua.Arena.HasFvar
+public import ConAgua.Arena.Abs1Refine
+import ConAgua.Arena.FVarRangeRefine
+public import ConAgua.Arena.SimLib
+
+@[expose] public section
 
 /-!
 # `has_fvar_fast`/`has_fvar` refine `hasFvarFast`

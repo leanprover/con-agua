@@ -1,6 +1,11 @@
+module
+
 import ConAgua.Front.ApplyExprRefine
-import ConAgua.Front.DeclIface
-import Std.Tactic.BVDecide.Normalize.Prop
+public import ConAgua.Front.DeclIface
+public import Std.Tactic.BVDecide.Normalize.Prop
+public import ConAgua.Front.StateDR
+
+@[expose] public section
 
 /-!
 # `apply_decl` refines con-ron's `processLineCoreD`

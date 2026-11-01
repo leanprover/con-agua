@@ -1,4 +1,9 @@
-import ConAgua.Arena.IndIface
+module
+
+public import ConAgua.Arena.IndIface
+meta import ConAgua.Arena.IndIface
+
+@[expose] public section
 
 /-!
 # `checkDecl`'s one-constant arms in L, part 1: comparisons of constants (lane `decls2`)

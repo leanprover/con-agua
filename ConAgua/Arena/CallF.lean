@@ -1,6 +1,10 @@
-import ConAgua.Arena.WhnfBase
+module
+
+public import ConAgua.Arena.WhnfBase
 import ConAgua.L.FuelMono
 import ConAgua.Arena.Env
+
+@[expose] public section
 
 /-!
 # A real callee as a program-free, fuel-free word model (`callF`)

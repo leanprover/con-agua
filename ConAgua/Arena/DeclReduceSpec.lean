@@ -1,7 +1,15 @@
-import ConAgua.Rom.CIReadSpec
+module
+
+public import ConAgua.Rom.CIReadSpec
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr
+import ConAgua.Arena.DeclCvg
+import ConAgua.Arena.WhnfDeltaRefine
+public import ConAgua.Arena.IndCallM
+public import ConAgua.Arena.WhnfDelta
+
+@[expose] public section
 
 /-!
 # Pin-selected ROM values: `reduceOpCvA`, `ofReducePinA`, `reduceDeclPin` (lane `decls3`)

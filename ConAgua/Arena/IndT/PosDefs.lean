@@ -1,4 +1,8 @@
-import ConRon.Bridge.Inductives.Positivity
+module
+
+public import ConRon.Bridge.Inductives.Positivity
+
+@[expose] public section
 
 /-!
 # The positivity walk under `StageC`: the constructors' shared preconditions

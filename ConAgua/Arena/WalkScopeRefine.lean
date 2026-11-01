@@ -1,6 +1,15 @@
-import ConAgua.Arena.WalkScope
+module
+
+public import ConAgua.Arena.WalkScope
 import ConAgua.Arena.LiftRefine
-import Std.Tactic.BVDecide.Normalize.Prop
+public import Std.Tactic.BVDecide.Normalize.Prop
+import ConAgua.Arena.DerRel
+import ConAgua.Arena.FVarRangeRefine
+import ConAgua.Arena.View
+public import ConAgua.Arena.DerRelBase
+public import ConRon.Arena.Core
+
+@[expose] public section
 
 /-!
 # `ws_go` refines `wscopedBGo`, `wscoped_bfast` refines `wscopedBFast` (lane `whnf3`)

@@ -1,4 +1,9 @@
-import ConAgua.Front.IndInstallRefine2
+module
+
+public import ConAgua.Front.IndInstallRefine2
+import ConAgua.Front.IndApplyRefine2
+
+@[expose] public section
 
 /-!
 # `install_ind_d` refines `installIndD`, IV: the three install loops

@@ -1,7 +1,21 @@
+module
+
 import ConAgua.Arena.IndPosSpec.SgGoW
-import ConAgua.Arena.GrindAttr
-import ConAgua.Arena.IndGrindAttr
-import ConAgua.L.GrindAttr
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.Arena.IndGrindAttr
+public import ConAgua.L.GrindAttr
+import ConAgua.Arena.IndInstallSpec.DomsW
+import ConAgua.Arena.IndPosSpec.DecNHFields
+import ConAgua.Arena.IndPosSpec.FgW
+import ConAgua.Arena.IndPosSpec.NestKeyMap
+import ConAgua.Arena.IndPosSpec.Rx
+import ConAgua.Arena.IndPosSpec.SnocWStage
+public import ConAgua.Arena.IndPosSpec.BvbWMfr
+public import ConAgua.Arena.IndPosSpec.CrLook
+public import ConAgua.Arena.IndPosSpec.Pos2CvLpsWStage
+public import ConAgua.Arena.IndPosSpec.SgGoW2
+
+@[expose] public section
 
 /-!
 # NestSeedOf: `ConRon.Arena.nestSeedOf`

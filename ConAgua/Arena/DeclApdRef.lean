@@ -1,10 +1,16 @@
-import ConAgua.Arena.DeclApdSpec
+module
+
+public import ConAgua.Arena.DeclApdSpec
 import ConAgua.Arena.IndPosSpec.MatesW
-import ConAgua.Arena.IndStubs
+public import ConAgua.Arena.IndStubs
 import ConAgua.Arena.SimLib
 import Std.Tactic.BVDecide.Normalize.Bool
-import Std.Tactic.BVDecide.Normalize.Prop
+public import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
+import ConAgua.Arena.Env
+import Std.WP.Triple.SpecLemmas
+
+@[expose] public section
 
 /-!
 # `all_level_params_defined` refines `allLevelParamsDefined` (lane `decls3`)

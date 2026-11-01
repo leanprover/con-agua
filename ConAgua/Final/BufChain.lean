@@ -1,5 +1,9 @@
-import ConAgua.Final.BufLayout
-import ConAgua.Final.ParAbi
+module
+
+public import ConAgua.Final.BufLayout
+public import ConAgua.Final.ParAbi
+
+@[expose] public section
 
 /-!
 # A thread's chain of `ca_check_b` calls (lane parmode)

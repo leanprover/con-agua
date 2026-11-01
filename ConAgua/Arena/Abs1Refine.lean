@@ -1,7 +1,18 @@
-import ConAgua.Arena.Abs1Spec
+module
+
+public import ConAgua.Arena.Abs1Spec
 import ConAgua.Arena.Inst1Refine
-import ConAgua.Arena.Keeps
-import Std.Tactic.BVDecide.Normalize.Prop
+public import ConAgua.Arena.Keeps
+public import Std.Tactic.BVDecide.Normalize.Prop
+import ConAgua.Arena.DerRel
+import ConAgua.Arena.FVarRangeRefine
+import ConAgua.Arena.LiftRefine
+import ConAgua.Arena.SimLib
+import ConAgua.Arena.View
+public import ConAgua.Arena.DerRelBase
+public import ConRon.Arena.Core
+
+@[expose] public section
 
 /-!
 # `abs_go` refines the arena's `abstract1Go`

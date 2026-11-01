@@ -1,4 +1,8 @@
-import ConAgua.Checker.Prog
+module
+
+public import ConAgua.Checker.Prog
+
+@[expose] public section
 
 /-!
 # The prelude stages' and the hoist's lookups at `checkerProg`, part 1 (lane `pipeline`)

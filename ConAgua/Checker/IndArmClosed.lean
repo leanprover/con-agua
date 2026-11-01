@@ -1,6 +1,13 @@
-import ConAgua.Checker.Prog
-import ConAgua.Checker.IndArmTrees1
-import ConAgua.Checker.IndArmTrees2
+module
+
+public import ConAgua.Checker.Prog
+public import ConAgua.Checker.IndArmTrees1
+public import ConAgua.Checker.IndArmTrees2
+meta import ConAgua.Checker.Prog
+meta import ConAgua.Checker.IndArmTrees1
+meta import ConAgua.Checker.IndArmTrees2
+
+@[expose] public section
 
 /-!
 # The write sets of the inductive arm's callees in `checkerProg` (lane `indproofs4`)

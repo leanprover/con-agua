@@ -1,4 +1,13 @@
+module
+
 import ConAgua.Arena.IndPartsSpec.IndPartsProg2
+import all Init.Data.List.Control
+import ConAgua.Arena.RecClassSpec.CloseLams
+public import ConAgua.Arena.IndDecStab
+public import ConAgua.Arena.IndPartsSpec.MemberNames
+public import ConAgua.Arena.IndPos
+
+@[expose] public section
 
 /-!
 # PartsAt

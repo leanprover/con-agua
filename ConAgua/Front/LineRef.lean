@@ -1,7 +1,15 @@
-import ConAgua.Front.LineRefine
-import ConAgua.Front.ApplyDLineRef
+module
+
+public import ConAgua.Front.LineRefine
+public import ConAgua.Front.ApplyDLineRef
 import ConAgua.Front.LineRecLink
-import ConAgua.Scan.LineLink
+public import ConAgua.Scan.LineLink
+import ConAgua.Arena.Env
+import ConAgua.Checker.NoVerdictTree
+import ConAgua.Front.FieldsExprLink
+import ConAgua.Scan.LeafLink
+
+@[expose] public section
 
 /-!
 # One line, both outcomes: `front_line`

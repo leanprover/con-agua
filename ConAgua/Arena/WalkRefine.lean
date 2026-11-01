@@ -1,6 +1,13 @@
-import ConAgua.Arena.Walk
+module
+
+public import ConAgua.Arena.Walk
 import ConAgua.Arena.FVarRangeRefine
-import Std.Tactic.BVDecide.Normalize.Prop
+public import Std.Tactic.BVDecide.Normalize.Prop
+import ConAgua.Arena.View
+public import ConAgua.Arena.ArenaRel
+public import ConRon.Arena.ExprOps
+
+@[expose] public section
 
 /-!
 # `bb_go` refines the arena's `bvarBoundGo`

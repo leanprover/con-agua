@@ -1,10 +1,15 @@
-import ConAgua.Arena.IndInstall
-import ConAgua.Arena.WhnfBase
-import Std.Tactic.BVDecide.Normalize.Prop
+module
+
+public import ConAgua.Arena.IndInstall
+public import ConAgua.Arena.WhnfBase
+public import Std.Tactic.BVDecide.Normalize.Prop
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
-import ConAgua.L.Examples
+public import ConAgua.L.Examples
+import Std.WP.Triple.SpecLemmas
+
+@[expose] public section
 
 /-!
 # Pos3MapMProj

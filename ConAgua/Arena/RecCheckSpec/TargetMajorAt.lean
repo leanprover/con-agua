@@ -1,8 +1,16 @@
+module
+
 import ConAgua.Arena.RecClassSpec.IhW
-import ConAgua.Arena.IlpRd
-import ConAgua.Arena.GrindAttr
+public import ConAgua.Arena.IlpRd
+public import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
-import ConAgua.L.GrindAttr
+public import ConAgua.L.GrindAttr
+import Std.Tactic.BVDecide.Normalize.BitVec
+import Std.WP.Tactic
+import Std.WP.Triple.SpecLemmas
+public import ConAgua.Arena.RecCheckSpec.ErToIwWStage
+
+@[expose] public section
 
 /-!
 # TargetMajorAt: `ConRon.Arena.abstractPrefixList`, `ConRon.Arena.abstractPrefix`, `ConRon.Arena.targetHoles`, `ConRon.Arena.targetMajorAt` (hit), `ConRon.Arena.targetPiDomsWith`

@@ -1,8 +1,16 @@
+module
+
 import ConAgua.Arena.RecCheckSpec.TruncSl
-import ConAgua.Arena.RecStab
-import ConAgua.Arena.GrindAttr
-import ConAgua.Arena.IndGrindAttr
-import ConAgua.L.GrindAttr
+public import ConAgua.Arena.RecStab
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.Arena.IndGrindAttr
+public import ConAgua.L.GrindAttr
+import ConAgua.Arena.IndInstallSpec.DomsW
+import ConAgua.Arena.RecClassSpec.Classes
+public import ConAgua.Arena.IndDecStab
+public import ConAgua.Arena.RecCheckSpec.TcmF
+
+@[expose] public section
 
 /-!
 # DecB

@@ -3,8 +3,8 @@ module
 public import ConAgua.Scan.Str
 import ConAgua.Census.Attr
 public import ConLeche.Frontend.Scan.Fast
-public import ConAgua.Scan.Link
-public import ConAgua.Scan.Utf8Link
+import ConAgua.Scan.Link
+import ConAgua.Scan.Utf8Link
 import Std.Tactic.BVDecide.Normalize.Prop
 
 @[expose] public section

@@ -1,9 +1,25 @@
+module
+
+import ConRon.Bridge.Inductives.BlockParts
+import ConRon.Bridge.Inductives.PosWalks
 import ConAgua.Arena.IndRealLvlC
 import ConAgua.Arena.RecClassSpec.CrW
 import ConAgua.Arena.RecGenSpec.ClassKeyCanon
-import ConAgua.Verdict.IndBTmf
+public import ConAgua.Verdict.IndBTmf
 import ConAgua.Arena.IndInstallSpec.ConsBlockCtors
 import ConAgua.Arena.DeclBasisSpec
+import ConAgua.Arena.IndInstallSpec.DomsW
+import ConAgua.Arena.IndInstallSpec.PartsAt
+import ConAgua.Arena.IndInstallSpec.PartsShapeFacts
+import ConAgua.Arena.IndPartsSpec.BlockRecNamesUnreserved
+import ConAgua.Arena.IndPosSpec.NestCrest
+import ConAgua.Arena.IndRealAbsPos
+import ConAgua.Arena.IndSumSpec.DecHLTake
+import ConAgua.Arena.IndT.Lift
+import ConAgua.Arena.RecClassSpec.MkTMWAfr
+import ConAgua.Arena.RefWalk
+
+@[expose] public section
 
 /-!
 # `target_major_of` under `StageC` with the real `inst_lp_fast` (lane `indstaget`, helper `rcC`)

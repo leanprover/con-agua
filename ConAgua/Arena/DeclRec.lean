@@ -1,11 +1,16 @@
-import ConAgua.Arena.DeclStep
-import ConAgua.Arena.IndMaster
-import ConAgua.Front.StateDR
-import Std.Tactic.BVDecide.Normalize.Prop
+module
+
+public import ConAgua.Arena.DeclStep
+public import ConAgua.Arena.IndMaster
+public import ConAgua.Front.StateDR
+public import Std.Tactic.BVDecide.Normalize.Prop
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr
 import ConRon.Bridge.Grind
+public import ConAgua.Arena.Env
+
+@[expose] public section
 
 /-!
 # Phase A's record builders: `erec_ci`, `erec_vg`, `env_push` (lane `decls2`, helper `decls2-rec`)

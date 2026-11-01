@@ -1,5 +1,13 @@
-import ConAgua.Arena.WhnfIotaRecRefine2
-import ConAgua.Arena.GrindAttr
+module
+
+public import ConAgua.Arena.WhnfIotaRecRefine2
+public import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.IndPosSpec.NestBlockOfKey
+import ConAgua.Arena.RefWalk
+import ConAgua.Arena.WhnfCoreProj
+import ConRon.Bridge.Grind
+
+@[expose] public section
 
 /-!
 # `iota_rec_at`'s pieces, part 3: the recursor's block and the top

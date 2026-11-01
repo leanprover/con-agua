@@ -1,6 +1,13 @@
-import ConAgua.AsmFile.Term
-import Lean.Elab.Command
-import Std.Do.Triple.SpecLemmas
+module
+
+public import ConAgua.AsmFile.Term
+public import Lean.Elab.Command
+public import Std.Do.Triple.SpecLemmas
+public meta import ConAgua.AsmFile.Term
+public meta import Lean.Elab.Command
+public meta import Std.Do.Triple.SpecLemmas
+
+@[expose] public section
 
 /-!
 # `a = lit` for a long program literal, in kernel-sized pieces (not trusted)
@@ -18,7 +25,7 @@ namespace L.Compiler
 open Lean Elab Command Meta
 
 /-- The number of directives of a literal tree. -/
-partial def litLen (e : Lean.Expr) : Nat :=
+meta partial def litLen (e : Lean.Expr) : Nat :=
   if e.isAppOfArity ``HAppend.hAppend 6 then litLen e.appFn!.appArg! + litLen e.appArg!
   else if e.isAppOfArity ``List.cons 3 then 1 + litLen e.appArg!
   else 0
@@ -26,7 +33,7 @@ partial def litLen (e : Lean.Expr) : Nat :=
 /-- A proof of `t = lit`, split along `lit`'s `++` tree into pieces of at most `leaf` elements;
 the pieces of the top `sep` levels are separate theorems `base.i` (so that the kernel's caches do
 not pile up across the whole list). -/
-partial def listEqProof (base : Name) (leaf sep : Nat) (t lit : Lean.Expr) : StateT Nat CoreM Lean.Expr := do
+meta partial def listEqProof (base : Name) (leaf sep : Nat) (t lit : Lean.Expr) : StateT Nat CoreM Lean.Expr := do
   let appC := mkApp4 (mkConst ``HAppend.hAppend [0, 0, 0]) progTy progTy progTy
     (mkApp2 (mkConst ``instHAppendOfAppend [0]) progTy (mkApp (mkConst ``List.instAppend [0]) dirTy))
   let refl := mkApp2 (mkConst ``Eq.refl [1]) progTy t
@@ -55,7 +62,7 @@ partial def listEqProof (base : Name) (leaf sep : Nat) (t lit : Lean.Expr) : Sta
 
 syntax (name := listEqCmd) (docComment)? "list_eq " ident " : " ident " = " term : command
 
-@[command_elab listEqCmd] def elabListEq : CommandElab := fun stx => do
+@[command_elab listEqCmd] meta def elabListEq : CommandElab := fun stx => do
   let `($[$doc?:docComment]? list_eq $n:ident : $litS:ident = $a:term) := stx | throwUnsupportedSyntax
   let name := (← getCurrNamespace) ++ n.getId
   liftTermElabM do

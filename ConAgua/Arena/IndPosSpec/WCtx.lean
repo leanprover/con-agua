@@ -1,4 +1,8 @@
-import ConAgua.Arena.IndPosSpec.UCtx
+module
+
+public import ConAgua.Arena.IndPosSpec.UCtx
+
+@[expose] public section
 
 /-!
 # WCtx

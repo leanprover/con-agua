@@ -1,6 +1,16 @@
+module
+
 import ConAgua.Arena.InferBodyBindPi
-import ConAgua.Arena.InferBodySpineF
-import ConAgua.Arena.InferBodyDispModels
+public import ConAgua.Arena.InferBodySpineF
+public import ConAgua.Arena.InferBodyDispModels
+import ConAgua.Arena.InferBodyIntern
+import ConAgua.Arena.RefWalk
+import ConRon.Bridge.Grind
+public import ConAgua.Arena.IndView
+public import ConAgua.Arena.InferBodyBind
+public import ConAgua.Arena.InferBodySpine
+
+@[expose] public section
 
 /-!
 # The bodies' dispatchers: `infer_body`, `infer_body_io` (lane `defeq`)

@@ -1,8 +1,13 @@
-import ConAgua.Front.Unescape
+module
+
+public import ConAgua.Front.Unescape
 import ConAgua.Arena.DerRel
-import ConAgua.Front.FieldsLink
+public import ConAgua.Front.FieldsLink
 import ConAgua.Scan.Link
-import Std.Tactic.BVDecide.Normalize.Prop
+public import Std.Tactic.BVDecide.Normalize.Prop
+public import ConAgua.Arena.DerRelBase
+
+@[expose] public section
 
 /-!
 # `str_put_esc` against con-leche's `scanString`

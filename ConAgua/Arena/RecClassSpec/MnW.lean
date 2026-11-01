@@ -1,11 +1,26 @@
-import ConAgua.Arena.RecClassSpec.ClassGenRecTy
-import ConAgua.Arena.RecClassSpec.MnProg
+module
+
+public import ConAgua.Arena.RecClassSpec.ClassGenRecTy
+public import ConAgua.Arena.RecClassSpec.MnProg
 import ConAgua.Arena.RecClassSpec.PdWAfr
-import ConAgua.Arena.GrindAttr
+public import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.LdRd
 import ConAgua.Arena.IndGrindAttr
-import ConAgua.L.GrindAttr
+public import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
+import ConAgua.Arena.IndInstallSpec.DomsW
+import ConAgua.Arena.IndPartsSpec.RulePrefixAt
+import ConAgua.Arena.IndPosSpec.SnocWStage
+import ConAgua.Arena.IndRealAbsSim
+import ConAgua.Arena.IndSim
+import ConAgua.Arena.RecClassSpec.MkTMWAfr
+import ConAgua.Arena.RecClassSpec.PiBWRoom
+import ConAgua.Arena.RecClassSpec.Rec2AppendWDec
+import ConAgua.Arena.RecClassSpec.Rec2SimTMA
+import Std.WP.Tactic
+import Std.WP.Triple.SpecLemmas
+
+@[expose] public section
 
 /-!
 # MnW

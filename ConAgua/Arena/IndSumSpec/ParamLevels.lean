@@ -1,8 +1,15 @@
+module
+
 import ConAgua.Arena.IndSumSpec.Row
 import ConAgua.Arena.IndPartsSpec.IndPartsProg2
-import ConAgua.Arena.RecCheckSpec.PtrNamesWDec
+public import ConAgua.Arena.RecCheckSpec.PtrNamesWDec
 import ConAgua.Arena.IndPosSpec.FgW
-import ConAgua.Arena.IndGrindAttr
+public import ConAgua.Arena.IndGrindAttr
+import ConAgua.Arena.IndPosSpec.RpGoStep
+public import ConAgua.Arena.IndPosSpec.NoGoStep
+public import ConAgua.Arena.IndSumSpec.ColW
+
+@[expose] public section
 
 /-!
 # ParamLevels: `ConRon.Arena.paramLevels`

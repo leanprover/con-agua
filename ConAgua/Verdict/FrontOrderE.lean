@@ -1,9 +1,14 @@
-import ConAgua.Front.IndValidTwin
-import Std.Tactic.BVDecide.Normalize.BitVec
-import Std.Tactic.BVDecide.Normalize.Prop
-import ConAgua.Arena.GrindAttr
-import ConAgua.L.GrindAttr
-import ConRon.Bridge.Frontend.Lines
+module
+
+public import ConAgua.Front.IndValidTwin
+public import Std.Tactic.BVDecide.Normalize.BitVec
+public import Std.Tactic.BVDecide.Normalize.Prop
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.L.GrindAttr
+public import ConRon.Bridge.Frontend.Lines
+import ConAgua.Front.IndApplyRefine
+
+@[expose] public section
 
 /-!
 # The early checks and the constructor order of `validateIndD`, twin side

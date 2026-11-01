@@ -1,4 +1,8 @@
-import ConAgua.Arena.IndPosSpec.NbLook
+module
+
+public import ConAgua.Arena.IndPosSpec.NbLook
+
+@[expose] public section
 
 /-!
 # RsLook

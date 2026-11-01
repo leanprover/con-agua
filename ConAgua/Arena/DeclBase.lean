@@ -1,5 +1,10 @@
-import ConAgua.Arena.PromoteMemo
-import ConAgua.Rom.PinSets
+module
+
+public import ConAgua.Arena.PromoteMemo
+public import ConAgua.Rom.PinSets
+public import ConAgua.Front.StateDR
+
+@[expose] public section
 
 /-!
 # The declaration loop's relation (`LoopR`) and the pending checks (`PendR`)

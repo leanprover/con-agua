@@ -1,6 +1,10 @@
-import ConAgua.Arena.PhaseBT
-import ConAgua.Arena.GrindAttr
-import ConAgua.L.GrindAttr
+module
+
+public import ConAgua.Arena.PhaseBT
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.L.GrindAttr
+
+@[expose] public section
 
 /-!
 # Phase B's loop fails only where the twin does (lane verdicts-b, calibration)

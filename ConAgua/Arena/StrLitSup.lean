@@ -1,7 +1,18 @@
+module
+
 import ConAgua.Arena.StrLitChar
 import ConAgua.Arena.StrLitList
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
+import ConAgua.Arena.DefEqMid
+import ConAgua.Arena.InferBodyLet
+import ConAgua.L.LocNF
+import Std.Tactic.BVDecide.Normalize.Bool
+import Std.WP.Tactic
+import Std.WP.Triple.SpecLemmas
+public import ConAgua.Arena.StrLitBase
+
+@[expose] public section
 
 /-!
 # `str_lit_supported` under `CoreS` (helper `defeq2-str-sup`)

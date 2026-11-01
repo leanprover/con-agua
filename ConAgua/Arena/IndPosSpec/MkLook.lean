@@ -1,6 +1,10 @@
-import ConAgua.Arena.IndPos
-import ConAgua.Arena.StageInst1
+module
+
+public import ConAgua.Arena.IndPos
+public import ConAgua.Arena.StageInst1
 import ConAgua.Arena.IndGrindAttr
+
+@[expose] public section
 
 /-!
 # MkLook

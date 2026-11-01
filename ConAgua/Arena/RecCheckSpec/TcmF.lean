@@ -1,4 +1,8 @@
-import ConAgua.Arena.RecCheckSpec.TcmLook
+module
+
+public import ConAgua.Arena.RecCheckSpec.TcmLook
+
+@[expose] public section
 
 /-!
 # TcmF

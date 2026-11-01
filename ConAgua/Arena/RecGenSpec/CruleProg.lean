@@ -1,6 +1,10 @@
-import ConAgua.Arena.IndRealCrF
-import ConAgua.Arena.IndRealWalk
-import ConAgua.Arena.RecGen
+module
+
+public import ConAgua.Arena.IndRealCrF
+public import ConAgua.Arena.IndRealWalk
+public import ConAgua.Arena.RecGen
+
+@[expose] public section
 
 /-!
 # CruleProg

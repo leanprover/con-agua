@@ -1,5 +1,9 @@
-import ConAgua.Arena.DefEqKnot
-import ConAgua.Arena.IndTwin
+module
+
+public import ConAgua.Arena.DefEqKnot
+public import ConAgua.Arena.IndTwin
+
+@[expose] public section
 
 /-!
 # The knot's entry points, for callers (lane `knotwire`)

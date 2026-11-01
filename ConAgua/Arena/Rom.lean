@@ -1,10 +1,18 @@
+module
+
 import ConAgua.Front.StateDR
 import ConAgua.L.Blocks
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import Std.Tactic.BVDecide.Normalize.BitVec
-import Std.Tactic.BVDecide.Normalize.Prop
+public import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
+import Std.WP.Triple.SpecLemmas
+public import ConAgua.Arena.DerRelBase
+public import ConAgua.Front.Preserve
+public import ConAgua.L.ByteClass
+
+@[expose] public section
 
 /-!
 # The ROM: constant con-leche data as bytes, and the L readers

@@ -1,9 +1,16 @@
-import ConAgua.Arena.DefEqMidQuick
-import ConAgua.Arena.DefEqMidLoops
+module
+
+public import ConAgua.Arena.DefEqMidQuick
+public import ConAgua.Arena.DefEqMidLoops
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
-import ConAgua.Arena.WhnfIotaRefine
+public import ConAgua.Arena.WhnfIotaRefine
+import ConAgua.Arena.RefWalk
+import ConAgua.Arena.WhnfCoreRefine
+import ConAgua.Checker.NoVerdictTree
+
+@[expose] public section
 
 /-!
 # The same-head spine comparison: `defeq_spine` (lane `defeq`)
@@ -91,7 +98,7 @@ theorem spineHead_run {p : Prog} (hp : SpineDProg p) {n : Nat} {m m' : Mem} {a�
       | .const n us => pure (some (n, us))
       | _ => pure none
     else pure none : AM (Option (NIdx × LsIdx))).run a₀ := by
-    simp only [spineHeadT, StateT.run_bind, hgaf, except_ok_bind]
+    simp only [spineHeadT, StateT.run_bind, hgaf, except_ok_bind]; rfl
   rw [tag_beq_w _ hh 3 (by decide) ETag.const rfl 3 rfl] at hT
   by_cases h3 : tagW (r₁.headD 0) ≠ 3
   · rw [shW.k_get_app_fn.arm1 (hc1 := h3), Option.some.injEq, Prod.mk.injEq, Prod.mk.injEq, Prod.mk.injEq] at hW

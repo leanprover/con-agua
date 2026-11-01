@@ -1,9 +1,13 @@
-import ConAgua.Front.NatDec
+module
+
+public import ConAgua.Front.NatDec
 import ConAgua.Arena.LitRefine
-import ConAgua.Front.ExprIface
+public import ConAgua.Front.ExprIface
 import ConAgua.Scan.LeafLink
 import ConAgua.Scan.Link
 import ConAgua.Census.Attr
+
+@[expose] public section
 
 /-!
 # `nat_dec` reads con-leche's `natVal`

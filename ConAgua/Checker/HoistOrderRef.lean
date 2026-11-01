@@ -1,5 +1,9 @@
-import ConAgua.Checker.HoistOrderRef3
+module
+
+public import ConAgua.Checker.HoistOrderRef3
 import ConAgua.Arena.DeclNatBase
+
+@[expose] public section
 
 /-!
 # The hoist's reorder refines `applyHoist`'s sort (lane `front4`)

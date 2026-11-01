@@ -1,3 +1,8 @@
+module
+
+import ConRon.Bridge.Inductives.BlockParts
+import ConRon.Bridge.Inductives.BlockInstall
+import ConRon.Bridge.Inductives.StructParts
 import ConAgua.Arena.RecCheckSpec.DecHLTruncMBound
 import ConAgua.Arena.IndRealMemoCrT
 import ConAgua.Arena.IndRealWalkT
@@ -8,12 +13,29 @@ import ConAgua.L.ModelGen
 import ConAgua.Arena.IndInstallSpec.InstallRec2PSl
 import ConAgua.Arena.IndInstallSpec.NestCtx
 import ConAgua.Arena.IndInstallSpec.PosFreeMfr
-import ConAgua.Arena.IndInstallSpec.SpgWZero
+public import ConAgua.Arena.IndInstallSpec.SpgWZero
 import ConAgua.Arena.IndInstallSpec.TabSimSpg
-import ConAgua.Arena.IndRealApdT
+public import ConAgua.Arena.IndRealApdT
 import ConRon.Bridge.Inductives.BlockTail
-import ConAgua.Arena.GrindAttr
-import ConAgua.L.GrindAttr
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.L.GrindAttr
+import all Init.Data.List.Control
+import ConAgua.Arena.IndInstallSpec.BlockCapsAt
+import ConAgua.Arena.IndInstallSpec.DomsW
+import ConAgua.Arena.IndInstallSpec.PartsAt
+import ConAgua.Arena.IndPartsSpec.EqW
+import ConAgua.Arena.IndPartsSpec.PartsPSlCons
+import ConAgua.Arena.IndRealMemoCr
+import ConAgua.Arena.IndSim
+import ConAgua.Arena.RefWalk
+import ConAgua.Checker.NoVerdictTree
+import ConRon.Bridge.Promote.Walk
+public import ConAgua.Arena.IndInstallSpec.DecCNS
+public import ConAgua.Arena.IndInstallSpec.DecISS
+public import ConAgua.Arena.IndSumSpec.ConsBlockRecsTF
+public import ConAgua.Arena.IndSumSpec.StructProjBodies
+
+@[expose] public section
 
 /-!
 # `check_struct_proj_table_scoped` through the real `all_level_params_defined` (lane `indproofs4`, helper `sct`)

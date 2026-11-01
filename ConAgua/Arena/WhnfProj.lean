@@ -1,4 +1,9 @@
-import ConAgua.Arena.Tiers
+module
+
+public import ConAgua.Arena.Tiers
+import ConAgua.Census.Attr
+
+@[expose] public section
 
 /-!
 # Projection tables: `find_proj`, `fire_ok` (lane `whnf3`)

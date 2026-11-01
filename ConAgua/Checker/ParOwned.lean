@@ -1,4 +1,9 @@
-import ConAgua.Checker.Prog
+module
+
+public import ConAgua.Checker.Prog
+meta import ConAgua.Checker.Prog
+
+@[expose] public section
 
 /-!
 # The parallel mode's owned arrays, checked against the program (lane parmode)

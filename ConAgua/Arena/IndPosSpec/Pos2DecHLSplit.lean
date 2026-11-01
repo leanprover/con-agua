@@ -1,5 +1,13 @@
+module
+
 import ConAgua.Arena.IndPosSpec.Pos2RdGrow
 import ConAgua.Arena.IndPosSpec.NkcW
+import ConAgua.Arena.StripTeleSpec
+import ConAgua.Arena.WhnfSpineRefine
+public import ConAgua.Arena.IndStubs
+public import ConAgua.Arena.IndView
+
+@[expose] public section
 
 /-!
 # Pos2DecHLSplit

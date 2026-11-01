@@ -1,4 +1,8 @@
-import ConRon.Arena.Phased
+module
+
+public import ConRon.Arena.Phased
+
+@[expose] public section
 
 /-!
 # Phase B on the worker (lane `tails`)

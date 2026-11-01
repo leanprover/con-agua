@@ -1,4 +1,8 @@
-import ConAgua.Arena.IndIface
+module
+
+public import ConAgua.Arena.IndIface
+
+@[expose] public section
 
 /-!
 # Former stubs: the inductive stage's telescopes, zero-ness, rule bits (lane `stubs`)

@@ -1,6 +1,16 @@
-import ConAgua.Arena.InstLPLevel
+module
+
+public import ConAgua.Arena.InstLPLevel
 import ConAgua.Arena.InstLPRef2
 import ConAgua.Arena.StrLitBase
+import ConAgua.Arena.CoreLevels
+import ConAgua.Arena.InstLPRef
+import ConAgua.Arena.LvlGrow
+import ConAgua.Arena.StoreDenLvl
+import ConAgua.Arena.WhnfCoreRefine
+import ConAgua.Front.ApplyExprRefine
+
+@[expose] public section
 
 /-!
 # `sls_memo` under `CoreS` (helper `whnf4-ilp-lev`)

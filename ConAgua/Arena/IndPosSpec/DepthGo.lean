@@ -1,9 +1,20 @@
+module
+
 import ConAgua.Arena.IndPosSpec.InstW
-import ConAgua.Arena.IndPosSpec.PcrK3
+public import ConAgua.Arena.IndPosSpec.PcrK3
 import ConAgua.Arena.IndPosSpec.PosmemoRxMfr
-import ConAgua.Arena.GrindAttr
-import ConAgua.Arena.IndGrindAttr
-import ConAgua.L.GrindAttr
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.Arena.IndGrindAttr
+public import ConAgua.L.GrindAttr
+import ConAgua.Arena.IndInstallSpec.DomsW
+import ConAgua.Arena.IndPosSpec.NestKeyMap
+import Std.Tactic.BVDecide.Normalize.BitVec
+public import ConAgua.Arena.IndPosSpec.DpGoW
+public import ConAgua.Arena.IndPosSpec.NestBlockOfKey
+public import ConAgua.Arena.IndPosSpec.RpGoStep
+public import ConAgua.Arena.IndPosSpec.RxMapW
+
+@[expose] public section
 
 /-!
 # DepthGo: `ConRon.Arena.depthGo`, `ConRon.Arena.depth`, `ConRon.Arena.nestPhs`, `ConRon.Arena.whnfWalkFuel`

@@ -1,6 +1,13 @@
-import ConAgua.AsmFile.Parse
-import ConAgua.Compiler.Compile
-import Kraken.X64.Parser.Basic
+module
+
+public import ConAgua.AsmFile.Parse
+public import ConAgua.Compiler.Compile
+public import Kraken.X64.Parser.Basic
+meta import ConAgua.AsmFile.Parse
+meta import ConAgua.Compiler.Compile
+meta import Kraken.X64.Parser.Basic
+
+@[expose] public section
 
 /-! `lake env lean --run ConAgua/AsmFile/CrossCheck.lean FILE.s`: reads the file's code with both
 parsers, the trusted one (`parseAsmFile`, `ConAgua/AsmFile/Parse.lean`, which the final theorems'

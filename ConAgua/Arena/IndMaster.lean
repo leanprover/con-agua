@@ -1,8 +1,15 @@
+module
+
 import ConAgua.Arena.IndCopy2
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
-import Std.Tactic.BVDecide.Normalize.Prop
+public import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
+import ConAgua.Arena.DerRel
+import Std.WP.Triple.SpecLemmas
+public import ConAgua.Arena.IndCopy
+
+@[expose] public section
 
 /-!
 # The master callees of the inductive stage, under the stage relation (lane `indproofs`)

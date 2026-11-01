@@ -1,10 +1,15 @@
-import ConAgua.Arena.Rom
-import ConAgua.Arena.Tiers
+module
+
+public import ConAgua.Arena.Rom
+public import ConAgua.Arena.Tiers
 import ConAgua.Front.ApplyExprRefine
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
-import Std.Tactic.BVDecide.Normalize.Prop
+public import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
+import Std.WP.Triple.SpecLemmas
+
+@[expose] public section
 
 /-!
 # `internReservedPins` in L: the pin table filled from the ROM

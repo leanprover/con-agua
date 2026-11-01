@@ -1,7 +1,16 @@
-import ConAgua.Checker.Prog
-import ConAgua.Arena.DeclArmLoop
-import ConAgua.Arena.DeclDivModSpec.RomPinSets
-import ConAgua.Arena.DeclNatGateSpec
+module
+
+public import ConAgua.Checker.Prog
+public import ConAgua.Arena.DeclArmLoop
+public import ConAgua.Arena.DeclDivModSpec.RomPinSets
+public import ConAgua.Arena.DeclNatGateSpec
+meta import ConAgua.Checker.Prog
+meta import ConAgua.Arena.DeclArmLoop
+meta import ConAgua.Arena.DeclDivModSpec.RomPinSets
+meta import ConAgua.Arena.DeclNatGateSpec
+public import ConAgua.Compiler.WriteSetSplit
+
+@[expose] public section
 
 /-!
 # The declaration texts' write set in the checker's program (lane `loopt2`)

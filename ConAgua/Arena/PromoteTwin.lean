@@ -1,7 +1,11 @@
-import ConRon.Arena.Monad
+module
+
+public import ConRon.Arena.Monad
 import Std.Data.DTreeMap.Internal.Operations
-import Std.Do.Triple.SpecLemmas
+public import Std.Do.Triple.SpecLemmas
 import Std.Tactic.BVDecide.Normalize.Prop
+
+@[expose] public section
 
 /-!
 # `internPersistent` is the ordinary interner with the scratch flags cleared

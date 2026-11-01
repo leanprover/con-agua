@@ -1,6 +1,20 @@
+module
+
 import ConAgua.Arena.IndT.Lift
 import ConAgua.Arena.IndRealOpf3
-import ConAgua.Verdict.VCtx
+public import ConAgua.Verdict.VCtx
+import ConAgua.Arena.IndInstallSpec.DomsW
+import ConAgua.Arena.IndRealAbs
+import ConAgua.Arena.RefWalk
+import ConAgua.Checker.NoVerdictTree
+import ConAgua.L.ModelGen
+public import ConAgua.Arena.IndRealOpf
+public import ConAgua.Arena.KnotEntry
+public import ConAgua.Arena.TwinStep
+public import ConRon.Bridge.Checker.Hyp
+public import ConRon.Bridge.Inductives.Run
+
+@[expose] public section
 
 /-!
 # `check_block_doms_at`, `check_struct_doms_at`: one model and one refinement each

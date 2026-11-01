@@ -1,7 +1,13 @@
-import ConAgua.Arena.PropReadW
+module
+
+public import ConAgua.Arena.PropReadW
 import ConAgua.Arena.InferFieldSort
-import ConAgua.Arena.CoreDen
+public import ConAgua.Arena.CoreDen
 import ConAgua.Arena.LevelInternRef
+import ConAgua.Arena.CoreLevels
+import ConRon.Bridge.Grind
+
+@[expose] public section
 
 /-!
 # The prop-ness readers: the relations, `residual_pw`, `subst_pw_at` (helper `defeq2-prop`)

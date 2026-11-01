@@ -1,8 +1,27 @@
+module
+
 import ConAgua.Verdict.IndBTmn
-import ConAgua.Arena.GrindAttr
-import ConAgua.Arena.IndGrindAttr
-import ConAgua.L.GrindAttr
-import ConAgua.Arena.IndT.RecGen28Models
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.Arena.IndGrindAttr
+public import ConAgua.L.GrindAttr
+public import ConAgua.Arena.IndT.RecGen28Models
+import ConAgua.Arena.IndInstallSpec.DomsW
+import ConAgua.Arena.IndSim
+import ConAgua.Arena.IndSumSpec.SoaW
+import ConAgua.Arena.IndT.Lift
+import ConAgua.Arena.RecCheckSpec.EraseFVarTys
+import ConAgua.Arena.RecClassSpec.Classes
+import ConAgua.Arena.RecClassSpec.MjProg
+import ConAgua.Arena.RecGenSpec.DecCNWords
+import ConAgua.Arena.RefWalk
+public import ConAgua.Arena.IndPartsSpec.PartsConsPL
+public import ConAgua.Arena.KnotEntry
+public import ConAgua.Arena.RecClassSpec.ClassNPcOf
+public import ConAgua.Arena.TwinStep
+public import ConAgua.Verdict.VCtx
+public import ConRon.Bridge.Inductives.RecCheck
+
+@[expose] public section
 
 /-!
 # `classes_nfs`' loop refinement

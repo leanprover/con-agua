@@ -1,5 +1,9 @@
-import ConAgua.Arena.WhnfProj
-import ConAgua.Arena.Env
+module
+
+public import ConAgua.Arena.WhnfProj
+public import ConAgua.Arena.Env
+
+@[expose] public section
 
 /-!
 # The projection lookups' programs (lane `whnf3`, helper `whnf3-proj`)

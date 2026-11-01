@@ -1,14 +1,20 @@
-import ConAgua.Arena.StubInd
-import ConAgua.Arena.CallF
+module
+
+public import ConAgua.Arena.StubInd
+public import ConAgua.Arena.CallF
 import ConAgua.Arena.IndInstallSpec.BlockCapsAt
-import ConAgua.Arena.LevelZero
-import ConAgua.L.ProgHas
+public import ConAgua.Arena.LevelZero
+public import ConAgua.L.ProgHas
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr
 import Std.Tactic.BVDecide.Normalize.BitVec
-import Std.Tactic.BVDecide.Normalize.Prop
+public import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
+import Std.WP.Triple.SpecLemmas
+public import ConAgua.Arena.IndMaster
+
+@[expose] public section
 
 /-!
 # `lv_zero_caps`' model (lane `indproofs4`, helper `lvl`)

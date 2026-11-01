@@ -1,10 +1,16 @@
-import ConAgua.Arena.DeclAxiomSpec3
+module
+
+public import ConAgua.Arena.DeclAxiomSpec3
 import ConAgua.Arena.DeclStepSpec
 import ConAgua.Arena.GrindAttr
-import ConAgua.Arena.IndGrindAttr
+public import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.Arena.LdRd
 import ConAgua.L.ModelGen
+import ConAgua.Arena.DeclBasisSpec2
+import ConAgua.Arena.WhnfDeltaRefine
+
+@[expose] public section
 
 /-!
 # `std_axiom_ok(vis, q)` refines `stdAxiomOk` (lane `decls3`)

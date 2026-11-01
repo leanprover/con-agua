@@ -1,11 +1,17 @@
+module
+
 import ConAgua.Arena.Verdict
-import ConAgua.Arena.DefEq
+public import ConAgua.Arena.DefEq
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
 import ConAgua.Checker.NoVerdictTree
-import Std.Tactic.BVDecide.Normalize.BitVec
-import Std.Tactic.BVDecide.Normalize.Prop
+public import Std.Tactic.BVDecide.Normalize.BitVec
+public import Std.Tactic.BVDecide.Normalize.Prop
+public import ConAgua.Checker.NoVerdictFns
+public import ConAgua.L.ErrSpec
+
+@[expose] public section
 
 /-!
 # Error models of the `whnf` family's `defeq` helpers (lane `verdicts-b`, helper `k2`)

@@ -1,8 +1,13 @@
-import ConAgua.Front.Line
-import ConAgua.Front.UnescapeLink
-import ConAgua.Front.StateDR
-import ConLeche.Frontend.ExportC
-import Std.Tactic.BVDecide.Normalize.Prop
+module
+
+public import ConAgua.Front.Line
+public import ConAgua.Front.UnescapeLink
+public import ConAgua.Front.StateDR
+public import ConLeche.Frontend.ExportC
+public import Std.Tactic.BVDecide.Normalize.Prop
+import ConAgua.Scan.LineLink
+
+@[expose] public section
 
 /-!
 # The pieces of con-ron's per-line step

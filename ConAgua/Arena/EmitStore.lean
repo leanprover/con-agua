@@ -1,6 +1,13 @@
-import ConAgua.Compiler.Run
-import ConAgua.Compiler.WF
-import ConAgua.Arena.LitRefine
+module
+
+public import ConAgua.Compiler.Run
+public import ConAgua.Compiler.WF
+public import ConAgua.Arena.LitRefine
+meta import ConAgua.Compiler.Run
+meta import ConAgua.Compiler.WF
+meta import ConAgua.Arena.LitRefine
+
+@[expose] public section
 
 /-! `lake env lean --run ConAgua/Arena/EmitStore.lean OUT.s` writes the compiled `storeProg`
 (entry `nat_add_lit`, no byte arrays, 25 word arrays, the same arena layout as the walk) for

@@ -1,4 +1,8 @@
-import ConAgua.Arena.StageTLift
+module
+
+public import ConAgua.Arena.StageTLift
+
+@[expose] public section
 
 /-!
 # `has_fvar_fast`, `loose_bvars_bounded_fast` under `StageT` (lane `indproofs4`)

@@ -1,11 +1,18 @@
+module
+
 import ConAgua.Arena.Verdict
 import ConAgua.Arena.IndPosSpec.NuW
 import ConAgua.Checker.NoVerdictTree
-import Std.Tactic.BVDecide.Normalize.Prop
-import ConAgua.Arena.GrindAttr
-import ConAgua.L.GrindAttr
+public import Std.Tactic.BVDecide.Normalize.Prop
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
-import ConAgua.Arena.IndPosSpec.RsLook
+public import ConAgua.Arena.IndPosSpec.RsLook
+public import ConAgua.Arena.IndPosSpec.UnW
+public import ConAgua.Checker.NoVerdictFns
+public import ConAgua.L.ErrSpec
+
+@[expose] public section
 
 /-!
 # The positivity pass's entry points: unified models (lane `verdicts-b`, helper `ia2`, fork `top`)

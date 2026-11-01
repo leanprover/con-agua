@@ -1,11 +1,19 @@
+module
+
 import ConAgua.Arena.IndPosSpec.NkFields
 import ConAgua.Arena.RecClassSpec.CloseLams
 import ConAgua.Arena.IndInstallSpec.BlockCapsAt
-import ConAgua.Arena.IndPartsSpec.EqW
-import ConAgua.Arena.IndDecStab
-import ConAgua.Arena.GrindAttr
+public import ConAgua.Arena.IndPartsSpec.EqW
+public import ConAgua.Arena.IndDecStab
+public import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
-import ConAgua.L.GrindAttr
+public import ConAgua.L.GrindAttr
+import ConRon.Bridge.Grind
+import Std.Tactic.BVDecide.Normalize.BitVec
+public import ConAgua.Arena.IndPos2
+public import ConAgua.Arena.IndPosSpec.CtxFields
+
+@[expose] public section
 
 /-!
 # NkcW

@@ -1,9 +1,14 @@
-import ConAgua.Verdict.PosE1M
-import ConAgua.Arena.GrindAttr
-import ConAgua.L.GrindAttr
+module
+
+public import ConAgua.Verdict.PosE1M
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
-import Std.Tactic.BVDecide.Normalize.BitVec
-import Std.Tactic.BVDecide.Normalize.Prop
+public import Std.Tactic.BVDecide.Normalize.BitVec
+public import Std.Tactic.BVDecide.Normalize.Prop
+import ConAgua.Checker.NoVerdictTree
+
+@[expose] public section
 
 /-!
 # Error models of `nest_cont_new`, `nest_frame`, `nest_grow_group`, `nest_group_ctors` (lane

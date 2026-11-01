@@ -1,8 +1,15 @@
-import ConAgua.Arena.DefEqMidLazy
-import ConAgua.Verdict.WhnfNatE
+module
+
+public import ConAgua.Arena.DefEqMidLazy
+public import ConAgua.Verdict.WhnfNatE
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
+import ConAgua.Arena.RefWalk
+import ConAgua.Checker.NoVerdictTree
+import ConAgua.Front.Preserve
+
+@[expose] public section
 
 /-!
 # The lazy-delta loop: `lazy_nat`, `lazy_iter`, `lazy_delta_reduction` (lane `defeq`)

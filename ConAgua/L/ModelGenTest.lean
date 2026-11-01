@@ -1,9 +1,19 @@
+module
+
 import ConAgua.Arena.LdRd
-import ConAgua.Arena.P32
+public import ConAgua.Arena.P32
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
-import ConAgua.Front.Preserve
+public import ConAgua.Front.Preserve
+import ConAgua.L.For
+import Std.Tactic.BVDecide.Normalize.Prop
+import Std.WP.Tactic
+import Std.WP.Triple.SpecLemmas
+public import ConAgua.L.ErrSpec
+public import ConAgua.L.Notation
+
+@[expose] public section
 
 /-!
 # Tests of `l_model` (`L/ModelGen.lean`)

@@ -1,10 +1,17 @@
-import ConAgua.Arena.IndSumSpec.Row
-import ConAgua.Arena.IndSumSpec.SpgK3
-import ConAgua.Arena.IndSumSpec.StructUsedLater
+module
+
+public import ConAgua.Arena.IndSumSpec.Row
+public import ConAgua.Arena.IndSumSpec.SpgK3
+public import ConAgua.Arena.IndSumSpec.StructUsedLater
 import ConAgua.Arena.IndSim
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr
+import ConAgua.Arena.IndInstallSpec.DomsW
+import ConRon.Bridge.Grind
+public import ConAgua.Arena.IndPosSpec.MatesW
+
+@[expose] public section
 
 /-!
 # StructProjGuards: `ConRon.Arena.structProjGuards`

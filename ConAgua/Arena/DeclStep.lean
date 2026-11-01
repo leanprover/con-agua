@@ -1,5 +1,9 @@
-import ConAgua.Arena.DeclArms
-import ConAgua.Front.IndApply
+module
+
+public import ConAgua.Arena.DeclArms
+public import ConAgua.Front.IndApply
+
+@[expose] public section
 
 /-!
 # Phase A's step body in L: `install_step_go`, `check_decl`, the header and value guards

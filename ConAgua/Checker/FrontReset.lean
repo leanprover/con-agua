@@ -1,9 +1,14 @@
-import ConAgua.Checker.Prelude
-import ConAgua.Front.DeclsPre
-import ConAgua.Front.StateDR
+module
+
+public import ConAgua.Checker.Prelude
+public import ConAgua.Front.DeclsPre
+public import ConAgua.Front.StateDR
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import Std.WP.Tactic
+import Std.WP.Triple.SpecLemmas
+
+@[expose] public section
 
 /-!
 # `front_reset()`: the id tables emptied (lane `pipeline`)

@@ -1,15 +1,22 @@
-import ConAgua.Arena.WhnfCoreApp
-import ConAgua.Arena.InstListRefine
-import ConAgua.Arena.ArRangeRefine
-import ConAgua.Arena.HasFvarRefine
-import ConAgua.Arena.BvarBRefine
-import ConAgua.Arena.Inst1Refine
-import ConAgua.Arena.WriteSets
-import ConAgua.Arena.WhnfIota
-import ConAgua.Arena.GrindAttr
-import ConAgua.L.GrindAttr
-import Std.Tactic.BVDecide.Normalize.Prop
-import Std.WP.Tactic
+module
+
+public import ConAgua.Arena.WhnfCoreApp
+public import ConAgua.Arena.InstListRefine
+public import ConAgua.Arena.ArRangeRefine
+public import ConAgua.Arena.HasFvarRefine
+public import ConAgua.Arena.BvarBRefine
+public import ConAgua.Arena.Inst1Refine
+public import ConAgua.Arena.WriteSets
+public import ConAgua.Arena.WhnfIota
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.L.GrindAttr
+public import Std.Tactic.BVDecide.Normalize.Prop
+public import Std.WP.Tactic
+import ConAgua.Arena.DerRel
+import ConAgua.Arena.FVarRangeRefine
+import Std.WP.Triple.SpecLemmas
+
+@[expose] public section
 
 /-!
 # The verified walks as the core's callees (lane `whnf2`)

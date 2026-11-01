@@ -1,5 +1,9 @@
-import ConAgua.Arena.IndInstallSpec.CapsProg
-import ConAgua.Arena.IndPartsSpec.PartsConsPL
+module
+
+public import ConAgua.Arena.IndInstallSpec.CapsProg
+public import ConAgua.Arena.IndPartsSpec.PartsConsPL
+
+@[expose] public section
 
 /-!
 # IndsOut

@@ -1,5 +1,9 @@
-import ConAgua.L.Syntax
-import ConAgua.Arena.Reasons
+module
+
+public import ConAgua.L.Syntax
+public import ConAgua.Arena.Reasons
+
+@[expose] public section
 
 /-!
 # The `AbsKeep` callees of the inductive stage under `StageC` (lane `indstaget`)

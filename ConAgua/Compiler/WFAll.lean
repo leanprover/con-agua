@@ -1,60 +1,121 @@
-import ConAgua.Compiler.WF
-import ConAgua.Arena.AppStore
-import ConAgua.Arena.BVarStore
-import ConAgua.Arena.ConstStore
-import ConAgua.Arena.CoreCaches
-import ConAgua.Arena.Env
-import ConAgua.Arena.FVarRange
-import ConAgua.Arena.FVarStore
-import ConAgua.Arena.ForallStore
-import ConAgua.Arena.ImaxStore
-import ConAgua.Arena.Inst1Spec
-import ConAgua.Arena.LamStore
-import ConAgua.Arena.LetStore
-import ConAgua.Arena.LevelEquiv
-import ConAgua.Arena.LevelStore
-import ConAgua.Arena.LiftSpec
-import ConAgua.Arena.LitRefine
-import ConAgua.Arena.LsStore
-import ConAgua.Arena.MaxStore
-import ConAgua.Arena.MemoBank
-import ConAgua.Arena.NAnonStore
-import ConAgua.Arena.NNumStore
-import ConAgua.Arena.NStrStore
-import ConAgua.Arena.NatAdd
-import ConAgua.Arena.NatArms
-import ConAgua.Arena.NatBits
-import ConAgua.Arena.NatCmp
-import ConAgua.Arena.NatDiv
-import ConAgua.Arena.NatGcd
-import ConAgua.Arena.NatMul
-import ConAgua.Arena.NatPow
-import ConAgua.Arena.NatShl
-import ConAgua.Arena.NatShr
-import ConAgua.Arena.NatSub
-import ConAgua.Arena.ParamStore
-import ConAgua.Arena.ProjStore
-import ConAgua.Arena.Scratch
-import ConAgua.Arena.SortStore
-import ConAgua.Arena.Store
-import ConAgua.Arena.Walk
-import ConAgua.Arena.WalkBench
-import ConAgua.Arena.ZeroStore
-import ConAgua.Compiler.Tests
-import ConAgua.Final.Statement
-import ConAgua.Front.Apply
-import ConAgua.Front.ApplyDecl
-import ConAgua.Front.ApplyExpr
-import ConAgua.Front.FrontRun
-import ConAgua.Front.NatDec
-import ConAgua.Front.Unescape
-import ConAgua.L.Examples
-import ConAgua.Scan.Key
-import ConAgua.Scan.Lit
-import ConAgua.Scan.Str
-import ConAgua.Scan.Utf8
-import ConAgua.Scan.Validator
-import ConAgua.Scan.Values
+module
+
+public import ConAgua.Compiler.WF
+public import ConAgua.Arena.AppStore
+public import ConAgua.Arena.BVarStore
+public import ConAgua.Arena.ConstStore
+public import ConAgua.Arena.CoreCaches
+public import ConAgua.Arena.Env
+public import ConAgua.Arena.FVarRange
+public import ConAgua.Arena.FVarStore
+public import ConAgua.Arena.ForallStore
+public import ConAgua.Arena.ImaxStore
+public import ConAgua.Arena.Inst1Spec
+public import ConAgua.Arena.LamStore
+public import ConAgua.Arena.LetStore
+public import ConAgua.Arena.LevelEquiv
+public import ConAgua.Arena.LevelStore
+public import ConAgua.Arena.LiftSpec
+public import ConAgua.Arena.LitRefine
+public import ConAgua.Arena.LsStore
+public import ConAgua.Arena.MaxStore
+public import ConAgua.Arena.MemoBank
+public import ConAgua.Arena.NAnonStore
+public import ConAgua.Arena.NNumStore
+public import ConAgua.Arena.NStrStore
+public import ConAgua.Arena.NatAdd
+public import ConAgua.Arena.NatArms
+public import ConAgua.Arena.NatBits
+public import ConAgua.Arena.NatCmp
+public import ConAgua.Arena.NatDiv
+public import ConAgua.Arena.NatGcd
+public import ConAgua.Arena.NatMul
+public import ConAgua.Arena.NatPow
+public import ConAgua.Arena.NatShl
+public import ConAgua.Arena.NatShr
+public import ConAgua.Arena.NatSub
+public import ConAgua.Arena.ParamStore
+public import ConAgua.Arena.ProjStore
+public import ConAgua.Arena.Scratch
+public import ConAgua.Arena.SortStore
+public import ConAgua.Arena.Store
+public import ConAgua.Arena.Walk
+public import ConAgua.Arena.WalkBench
+public import ConAgua.Arena.ZeroStore
+public import ConAgua.Compiler.Tests
+public import ConAgua.Final.Statement
+public import ConAgua.Front.Apply
+public import ConAgua.Front.ApplyDecl
+public import ConAgua.Front.ApplyExpr
+public import ConAgua.Front.FrontRun
+public import ConAgua.Front.NatDec
+public import ConAgua.Front.Unescape
+public import ConAgua.L.Examples
+public import ConAgua.Scan.Key
+public import ConAgua.Scan.Lit
+public import ConAgua.Scan.Str
+public import ConAgua.Scan.Utf8
+public import ConAgua.Scan.Validator
+public import ConAgua.Scan.Values
+meta import ConAgua.Compiler.WF
+meta import ConAgua.Arena.AppStore
+meta import ConAgua.Arena.BVarStore
+meta import ConAgua.Arena.ConstStore
+meta import ConAgua.Arena.CoreCaches
+meta import ConAgua.Arena.Env
+meta import ConAgua.Arena.FVarRange
+meta import ConAgua.Arena.FVarStore
+meta import ConAgua.Arena.ForallStore
+meta import ConAgua.Arena.ImaxStore
+meta import ConAgua.Arena.Inst1Spec
+meta import ConAgua.Arena.LamStore
+meta import ConAgua.Arena.LetStore
+meta import ConAgua.Arena.LevelEquiv
+meta import ConAgua.Arena.LevelStore
+meta import ConAgua.Arena.LiftSpec
+meta import ConAgua.Arena.LitRefine
+meta import ConAgua.Arena.LsStore
+meta import ConAgua.Arena.MaxStore
+meta import ConAgua.Arena.MemoBank
+meta import ConAgua.Arena.NAnonStore
+meta import ConAgua.Arena.NNumStore
+meta import ConAgua.Arena.NStrStore
+meta import ConAgua.Arena.NatAdd
+meta import ConAgua.Arena.NatArms
+meta import ConAgua.Arena.NatBits
+meta import ConAgua.Arena.NatCmp
+meta import ConAgua.Arena.NatDiv
+meta import ConAgua.Arena.NatGcd
+meta import ConAgua.Arena.NatMul
+meta import ConAgua.Arena.NatPow
+meta import ConAgua.Arena.NatShl
+meta import ConAgua.Arena.NatShr
+meta import ConAgua.Arena.NatSub
+meta import ConAgua.Arena.ParamStore
+meta import ConAgua.Arena.ProjStore
+meta import ConAgua.Arena.Scratch
+meta import ConAgua.Arena.SortStore
+meta import ConAgua.Arena.Store
+meta import ConAgua.Arena.Walk
+meta import ConAgua.Arena.WalkBench
+meta import ConAgua.Arena.ZeroStore
+meta import ConAgua.Compiler.Tests
+meta import ConAgua.Final.Statement
+meta import ConAgua.Front.Apply
+meta import ConAgua.Front.ApplyDecl
+meta import ConAgua.Front.ApplyExpr
+meta import ConAgua.Front.FrontRun
+meta import ConAgua.Front.NatDec
+meta import ConAgua.Front.Unescape
+meta import ConAgua.L.Examples
+meta import ConAgua.Scan.Key
+meta import ConAgua.Scan.Lit
+meta import ConAgua.Scan.Str
+meta import ConAgua.Scan.Utf8
+meta import ConAgua.Scan.Validator
+meta import ConAgua.Scan.Values
+
+@[expose] public section
 
 /-!
 # Every program passes the compiler's static check

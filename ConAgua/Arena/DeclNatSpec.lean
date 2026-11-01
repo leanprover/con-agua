@@ -1,6 +1,11 @@
-import ConAgua.Arena.DeclNatBase
+module
+
+public import ConAgua.Arena.DeclNatBase
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
+import ConRon.Bridge.Grind
+
+@[expose] public section
 
 /-!
 # The structural-`Nat` gate: the name lists and the dependency tables (lane `decls3`, helper `decls3-nat`)

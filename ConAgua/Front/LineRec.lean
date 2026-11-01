@@ -10,6 +10,9 @@ import ConAgua.Scan.Common
 import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
+import ConAgua.L.For
+import ConAgua.Scan.RecordsSpec
+import Std.Tactic.BVDecide.Normalize.BitVec
 
 @[expose] public section
 

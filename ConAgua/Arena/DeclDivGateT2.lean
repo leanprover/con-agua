@@ -1,6 +1,26 @@
+module
+
 import ConAgua.Arena.DeclDivGateT1
-import ConAgua.Arena.DeclDivModSpec.RomPinSets
+public import ConAgua.Arena.DeclDivModSpec.RomPinSets
 import ConAgua.Arena.DeclCrpT
+import all ConRon.Bridge.Checker.DivMod
+import ConAgua.Arena.DeclDivModSpec.CertDivModEqs
+import ConAgua.Arena.DeclDivModSpec.CertTwoEqs
+import ConAgua.Arena.DeclNatGate
+import ConAgua.Arena.IndInstallSpec.DomsW
+import ConAgua.Arena.RefWalk
+import ConAgua.Arena.StageC
+import ConAgua.Checker.NoVerdictTree
+import ConAgua.L.ModelGen
+public import ConAgua.Arena.CrOKFrame
+public import ConAgua.Arena.DeclDivModSpec.SubstConst0List
+public import ConAgua.Arena.KnotEntry
+public import ConAgua.Arena.LeafFns
+public import ConAgua.Arena.TwinStep
+public import ConAgua.Verdict.VCtx
+public import ConRon.Bridge.Checker.DivMod
+
+@[expose] public section
 
 /-!
 # The `Nat.div`-family pin gate under `StageC`, part 2: the attempt (lane `loopt3`, `loopt3-div`)

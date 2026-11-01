@@ -1,5 +1,12 @@
-import ConAgua.Arena.DefEqStuckProj
-import ConAgua.Arena.DefEqStuckDisp
+module
+
+public import ConAgua.Arena.DefEqStuckProj
+public import ConAgua.Arena.DefEqStuckDisp
+import ConAgua.Arena.DefEqStuckEta
+import ConAgua.Checker.NoVerdictTree
+import ConAgua.L.ModelGen
+
+@[expose] public section
 
 /-!
 # `defeq_tail` refines `defeqBody`'s tail (lane `defeq`, helper `defeq-top`)

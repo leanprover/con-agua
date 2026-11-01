@@ -1,7 +1,15 @@
-import ConAgua.Arena.DeclNatSub
+module
+
+public import ConAgua.Arena.DeclNatSub
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
+import Std.Tactic.BVDecide.Normalize.BitVec
+import Std.WP.Tactic
+import Std.WP.Triple.SpecLemmas
+public import ConAgua.Arena.DeclNatDeps
+
+@[expose] public section
 
 /-!
 # `nat_op_equations` refines `natOpEquations` (lane `decls3`, helper `decls3-nat`)

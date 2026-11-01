@@ -1,5 +1,11 @@
-import ConAgua.Arena.IndDecStab
+module
+
+public import ConAgua.Arena.IndDecStab
 import ConAgua.Arena.IndInstallSpec.DomsW
+import ConRon.Bridge.Grind
+public import ConAgua.Arena.IndRealSpine
+
+@[expose] public section
 
 /-!
 # DecHLTruncMBound

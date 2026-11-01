@@ -1,6 +1,12 @@
-import ConAgua.Arena.IndPartsSpec.Bs
-import ConAgua.Arena.IndRealNames
+module
+
+public import ConAgua.Arena.IndPartsSpec.Bs
+public import ConAgua.Arena.IndRealNames
 import ConAgua.Arena.RecClassSpec.Classes
+import ConRon.Bridge.Grind
+public import ConAgua.Arena.IndRealSpine
+
+@[expose] public section
 
 /-!
 # PartsConsPL

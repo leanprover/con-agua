@@ -1,9 +1,21 @@
+module
+
 import ConAgua.Arena.IndPartsSpec.PartsPSlCons
-import ConAgua.Arena.IndPartsSpec.SetEqW
-import ConAgua.Arena.GrindAttr
-import ConAgua.Arena.IndGrindAttr
-import ConAgua.L.GrindAttr
+public import ConAgua.Arena.IndPartsSpec.SetEqW
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.Arena.IndGrindAttr
+public import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
+import all Init.Data.List.Control
+import ConAgua.Arena.IndInstallSpec.BlockCapsAt
+import ConAgua.Arena.IndPartsSpec.BsW
+import ConAgua.Arena.IndPartsSpec.RecTW
+import ConAgua.Arena.IndPartsSpec.RulePrefixAt
+import ConAgua.Arena.RecClassSpec.CloseLams
+import ConRon.Bridge.Grind
+import Std.Tactic.BVDecide.Normalize.BitVec
+
+@[expose] public section
 
 /-!
 # BlockRecNameSetOk: `ConRon.Arena.blockGroups`, `ConRon.Arena.blockRecNameSetOk`, `ConRon.Arena.ctorMember`

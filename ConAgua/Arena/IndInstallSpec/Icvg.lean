@@ -1,7 +1,12 @@
-import ConAgua.Arena.RecClassSpec.Classes
+module
+
+public import ConAgua.Arena.RecClassSpec.Classes
 import ConAgua.Arena.IndGrindAttr
-import ConAgua.L.GrindAttr
+public import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
+import Std.WP.Triple.SpecLemmas
+
+@[expose] public section
 
 /-!
 # Icvg

@@ -1,4 +1,8 @@
-import ConAgua.Verdict.InferArmsE
+module
+
+public import ConAgua.Verdict.InferArmsE
+
+@[expose] public section
 
 /-!
 # The knot's `infer`, `infer_io` steps, error halves

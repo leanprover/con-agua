@@ -1,4 +1,9 @@
-import ConAgua.Arena.IndIface
+module
+
+public import ConAgua.Arena.IndIface
+import ConAgua.Census.Attr
+
+@[expose] public section
 
 /-!
 # `instPisAtLift`, `fvarTypeD`, `fvarTypeDs` in L (lane `whnf3`)

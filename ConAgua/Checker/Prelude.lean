@@ -1,9 +1,14 @@
-import ConAgua.Checker.Hoist
-import ConRon.Arena.Frontend.PreludeText
-import ConAgua.Compiler.Compile
+module
+
+public import ConAgua.Checker.Hoist
+public import ConRon.Arena.Frontend.PreludeText
+public import ConAgua.Compiler.Compile
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
+import Std.WP.Triple.SpecLemmas
+
+@[expose] public section
 
 /-!
 # The prelude stages: `builtin_prelude()`, `prepare_prelude()` (lane `integrate`)

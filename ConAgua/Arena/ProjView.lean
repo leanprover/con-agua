@@ -1,5 +1,9 @@
-import ConRon.Arena.Core
-import Std.Do.Triple.SpecLemmas
+module
+
+public import ConRon.Arena.Core
+public import Std.Do.Triple.SpecLemmas
+
+@[expose] public section
 
 /-!
 # What the twin's `findProj?` and `IProjEntry.fireOk` leave alone (helper `whnf4-leaves`)

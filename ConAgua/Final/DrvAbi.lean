@@ -1,6 +1,13 @@
+module
+
 import ConAgua.Final.SeqAbi
 import ConAgua.L.Logic
 import Kraken.X64.Registers
+public import ConAgua.Compiler.MainRef
+public import ConAgua.Final.Abi
+public import ConAgua.Final.SeqLayout
+
+@[expose] public section
 
 /-!
 # The sequential driver `ca_start` on the machine (lane parmode)

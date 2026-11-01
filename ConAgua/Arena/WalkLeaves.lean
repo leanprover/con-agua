@@ -7,12 +7,13 @@ public import ConAgua.Arena.ExprMk
 public import ConAgua.Arena.MemoLib
 import ConAgua.Census.Attr
 import ConAgua.Arena.GrindAttr
-public import ConAgua.L.ModelGen
+import ConAgua.L.ModelGen
 import ConAgua.L.GrindAttr
 import Std.Tactic.BVDecide.Normalize.BitVec
 import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
+import ConAgua.Front.Preserve
 
 @[expose] public section
 

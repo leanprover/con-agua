@@ -1,8 +1,13 @@
-import ConAgua.Arena.IndPosSpec.PcrW
+module
+
+public import ConAgua.Arena.IndPosSpec.PcrW
 import ConAgua.Arena.IndPosSpec.Rx
-import ConAgua.Arena.GrindAttr
-import ConAgua.Arena.IndGrindAttr
-import ConAgua.L.GrindAttr
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.Arena.IndGrindAttr
+public import ConAgua.L.GrindAttr
+public import ConAgua.Arena.IndPosSpec.CrLook
+
+@[expose] public section
 
 /-!
 # NestCrest2

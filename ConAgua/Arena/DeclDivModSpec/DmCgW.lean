@@ -1,8 +1,13 @@
-import ConAgua.Arena.IndCallM
-import ConAgua.Arena.DeclNatBase
+module
+
+public import ConAgua.Arena.IndCallM
+public import ConAgua.Arena.DeclNatBase
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
+import Std.WP.Triple.SpecLemmas
+
+@[expose] public section
 
 /-!
 # DmCgW

@@ -1,4 +1,8 @@
-import ConAgua.Arena.Verdict
+module
+
+public import ConAgua.Arena.Verdict
+
+@[expose] public section
 
 /-!
 # The knot's error half: the five slots' verdict claims

@@ -1,9 +1,14 @@
-import ConAgua.Arena.IndStubs
-import ConAgua.Arena.IndCopy2
+module
+
+public import ConAgua.Arena.IndStubs
+public import ConAgua.Arena.IndCopy2
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
-import Std.Tactic.BVDecide.Normalize.Prop
+public import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
+import Std.WP.Triple.SpecLemmas
+
+@[expose] public section
 
 /-!
 # A word model simulates a twin run (lane `indproofs2`, helper `rec`)

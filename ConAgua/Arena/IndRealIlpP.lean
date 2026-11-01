@@ -1,7 +1,16 @@
-import ConAgua.Arena.IndRealMemo
+module
+
+public import ConAgua.Arena.IndRealMemo
 import ConAgua.Arena.IndPosSpec.NestBlockOfKey
-import ConAgua.Arena.GrindAttr
-import ConAgua.L.GrindAttr
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.L.GrindAttr
+import ConAgua.Arena.IndPosSpec.NestKeyMap
+import Std.Tactic.BVDecide.Normalize.BitVec
+import Std.WP.Tactic
+import Std.WP.Triple.SpecLemmas
+public import ConAgua.Arena.TeleLift
+
+@[expose] public section
 
 /-!
 # `inst_pis_at_lift` under the stage relation and the walk memos (lane `indproofs4`, helper `ilp`)

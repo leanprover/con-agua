@@ -1,10 +1,16 @@
-import ConAgua.Arena.IndSumSpec.SumProg
+module
+
+public import ConAgua.Arena.IndSumSpec.SumProg
 import ConAgua.Arena.IndSumSpec.FieldDomsResolve
 import ConAgua.Arena.IndSumSpec.StructCtorResidOk
 import ConAgua.Arena.RecGenSpec.CruleProg
 import ConAgua.Arena.IndSim
-import ConAgua.Arena.IndGrindAttr
+public import ConAgua.Arena.IndGrindAttr
 import ConAgua.Arena.IndSumSpec.CheckStructFieldSortsISucc
+public import ConAgua.Arena.IndSumSpec.ColW
+public import ConAgua.Arena.IndSumSpec.StructProjArgP
+
+@[expose] public section
 
 /-!
 # CheckSumCtor

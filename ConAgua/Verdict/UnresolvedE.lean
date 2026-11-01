@@ -1,10 +1,21 @@
+module
+
 import ConAgua.Arena.IndSumSpec.McGoStep
-import ConAgua.Arena.ConstsResolveF
+public import ConAgua.Arena.ConstsResolveF
 import ConAgua.Arena.DeclBasisSpec
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
+import ConAgua.Arena.DefEqLeaves
+import ConAgua.Arena.IndPosSpec.MatesW
+import ConAgua.Checker.NoVerdictTree
+public import ConAgua.Arena.IndStubs
+public import ConAgua.Arena.IndView
+public import ConAgua.Arena.Verdict
+public import ConAgua.Checker.NoVerdictFns
+
+@[expose] public section
 
 /-!
 # The verdict at a term whose constants do not resolve (lane `verdicts-b`, helper `ue`)

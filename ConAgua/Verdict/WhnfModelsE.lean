@@ -1,9 +1,16 @@
-import ConAgua.Verdict.WhnfModels2E
+module
+
+public import ConAgua.Verdict.WhnfModels2E
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
-import Std.Tactic.BVDecide.Normalize.BitVec
-import Std.Tactic.BVDecide.Normalize.Prop
+public import Std.Tactic.BVDecide.Normalize.BitVec
+public import Std.Tactic.BVDecide.Normalize.Prop
+import ConAgua.Arena.Verdict
+import ConAgua.Checker.NoVerdictTree
+import ConAgua.Front.Preserve
+
+@[expose] public section
 
 /-!
 # Error models of the `whnf` family's slot bodies (lane `verdicts-b`, helper `k2`)

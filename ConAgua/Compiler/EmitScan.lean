@@ -1,5 +1,11 @@
-import ConAgua.Compiler.Run
-import ConAgua.L.Examples
+module
+
+public import ConAgua.Compiler.Run
+public import ConAgua.L.Examples
+meta import ConAgua.Compiler.Run
+meta import ConAgua.L.Examples
+
+@[expose] public section
 
 /-! `lake env lean --run ConAgua/Compiler/EmitScan.lean OUT.s` writes the compiled `scanProg`
 (entry `skip_braced`) for `harness/run.c`. -/

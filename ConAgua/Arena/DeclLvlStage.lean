@@ -1,4 +1,8 @@
-import ConAgua.Arena.DeclCvg
+module
+
+public import ConAgua.Arena.DeclCvg
+
+@[expose] public section
 
 /-!
 # `lvl_eq_c` under the stage relation, given the core's twin invariants (lane `decls3`)

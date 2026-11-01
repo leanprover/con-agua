@@ -1,7 +1,11 @@
-import ConAgua.Arena.AppStore
-import ConAgua.Arena.LamStore
-import ConAgua.Arena.ForallStore
-import ConAgua.Arena.ConsPresize
+module
+
+public import ConAgua.Arena.AppStore
+public import ConAgua.Arena.LamStore
+public import ConAgua.Arena.ForallStore
+public import ConAgua.Arena.ConsPresize
+
+@[expose] public section
 
 /-!
 # The parse's large cons tables sized from the input length: `presize_tables()` (lane presize)

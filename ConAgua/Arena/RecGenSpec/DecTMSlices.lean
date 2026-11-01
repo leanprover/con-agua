@@ -1,8 +1,17 @@
-import ConAgua.Arena.IlpRd
+module
+
+public import ConAgua.Arena.IlpRd
 import ConAgua.Arena.RecCheckSpec.TruncSl
-import ConAgua.Arena.GrindAttr
-import ConAgua.Arena.IndGrindAttr
-import ConAgua.L.GrindAttr
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.Arena.IndGrindAttr
+public import ConAgua.L.GrindAttr
+import ConAgua.Arena.IndPosSpec.InstW
+import ConAgua.Arena.IndSim
+import ConAgua.Arena.RecClassSpec.CloseLams
+public import ConAgua.Arena.IndDecStab
+public import ConAgua.Arena.RecCheckSpec.RcLook
+
+@[expose] public section
 
 /-!
 # DecTMSlices

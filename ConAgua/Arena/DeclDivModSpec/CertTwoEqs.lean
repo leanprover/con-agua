@@ -1,4 +1,8 @@
-import ConAgua.Arena.DeclDivModSpec.EqAt1
+module
+
+public import ConAgua.Arena.DeclDivModSpec.EqAt1
+
+@[expose] public section
 
 /-!
 # CertTwoEqs: `ConRon.Arena.certEq`, `ConRon.Arena.certGuard`, `ConRon.Arena.certHalves`, `ConRon.Arena.certTwoEqs`

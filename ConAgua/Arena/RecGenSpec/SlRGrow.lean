@@ -1,5 +1,9 @@
-import ConAgua.Arena.IndLibSpec
-import ConAgua.Arena.IndPos
+module
+
+public import ConAgua.Arena.IndLibSpec
+public import ConAgua.Arena.IndPos
+
+@[expose] public section
 
 /-!
 # SlRGrow

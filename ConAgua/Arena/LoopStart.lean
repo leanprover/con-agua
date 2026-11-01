@@ -1,4 +1,8 @@
-import ConAgua.Arena.CheckerT
+module
+
+public import ConAgua.Arena.CheckerT
+
+@[expose] public section
 
 /-!
 # The declaration loop's start (lane `loopt3`)

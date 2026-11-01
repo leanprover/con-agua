@@ -1,7 +1,17 @@
-import ConAgua.Arena.DeclReduceSpec2
+module
+
+public import ConAgua.Arena.DeclReduceSpec2
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr
+import ConAgua.Arena.DeclBasisSpec2
+import ConAgua.Arena.DeclCvg
+import ConAgua.Arena.DeclReduceSpec
+import ConAgua.Arena.WhnfDeltaRefine
+import ConAgua.L.LocNF
+import Std.Tactic.BVDecide.Normalize.Bool
+
+@[expose] public section
 
 /-!
 # The `ofReduce*` axioms: `of_reduce_ax_ok(vis, q)` refines `ofReduceAxOk` (lane `decls3`)

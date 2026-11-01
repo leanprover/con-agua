@@ -1,8 +1,14 @@
+module
+
 import ConAgua.Arena.IndPosSpec.FgW
-import ConAgua.Verdict.PosE
+public import ConAgua.Verdict.PosE
 import ConAgua.Arena.IndPosSpec.Pos2DecHLSplit
 import ConAgua.Arena.IndRealAbsPos
 import ConAgua.Arena.IndPosSpec.Snoc
+import ConAgua.Arena.IndPosSpec.Pos2RdGrow
+import ConAgua.Checker.NoVerdictTree
+
+@[expose] public section
 
 /-!
 # `nest_cont_key` refines `nestContKey`, both outcomes (lane `indstaget`, helper `indstaget-pos`)

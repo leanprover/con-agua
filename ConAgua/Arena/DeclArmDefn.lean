@@ -1,8 +1,15 @@
+module
+
 import ConAgua.Arena.DeclStepSpec
 import ConAgua.Arena.Verdict
-import ConAgua.Arena.GrindAttr
-import ConAgua.Arena.IndGrindAttr
-import ConAgua.L.GrindAttr
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.Arena.IndGrindAttr
+public import ConAgua.L.GrindAttr
+import ConAgua.Arena.DeclPins
+public import ConAgua.Arena.DeclCvg
+public import ConAgua.Rom.PinSets
+
+@[expose] public section
 
 /-!
 # The definition arm `check_decl_defn(i, vis)` (lane `decls3`)

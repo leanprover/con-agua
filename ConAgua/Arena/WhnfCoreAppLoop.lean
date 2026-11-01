@@ -1,13 +1,18 @@
+module
+
 import ConAgua.Arena.WhnfCoreApp
-import ConAgua.Arena.RefECore
+public import ConAgua.Arena.RefECore
 import ConAgua.Arena.RefWalk
-import ConAgua.Arena.KnotE
-import ConAgua.Verdict.WhnfModels2E
-import ConAgua.Arena.GrindAttr
-import ConAgua.L.GrindAttr
+public import ConAgua.Arena.KnotE
+public import ConAgua.Verdict.WhnfModels2E
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.L.GrindAttr
 import Std.Tactic.BVDecide.Normalize.BitVec
-import Std.Tactic.BVDecide.Normalize.Prop
-import Std.WP.Tactic
+public import Std.Tactic.BVDecide.Normalize.Prop
+public import Std.WP.Tactic
+import ConAgua.Arena.WhnfCoreRefine
+
+@[expose] public section
 
 /-!
 # `whnf_app` refines `whnfApp` (split from `WhnfCoreApp.lean`)

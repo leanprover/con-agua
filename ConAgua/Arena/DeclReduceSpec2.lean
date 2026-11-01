@@ -1,8 +1,16 @@
+module
+
 import ConAgua.Arena.DeclReduceSpec
 import ConAgua.Arena.DeclBasisSpec2
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr
+import ConAgua.Arena.DeclCvg
+import ConAgua.Arena.DeclValRef
+public import ConAgua.Arena.DeclCanonEq
+public import ConAgua.Rom.CIReadSpec
+
+@[expose] public section
 
 /-!
 # `matchesPin`, `reduceStoredOk`, `reduceElemOk` (lane `decls3`)

@@ -1,5 +1,10 @@
-import ConAgua.Arena.DerRelBase
-import Std.Tactic.BVDecide.Normalize.Prop
+module
+
+public import ConAgua.Arena.DerRelBase
+public import Std.Tactic.BVDecide.Normalize.Prop
+import ConAgua.Arena.View
+
+@[expose] public section
 
 /-!
 # `DerR` across the interning and the `mk_*` constructors

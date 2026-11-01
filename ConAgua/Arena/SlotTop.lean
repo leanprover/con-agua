@@ -1,4 +1,8 @@
-import ConAgua.Arena.SlotRehash
+module
+
+public import ConAgua.Arena.SlotRehash
+
+@[expose] public section
 
 /-!
 # The growth's top-down sweep keeps every node findable (lane growtop)

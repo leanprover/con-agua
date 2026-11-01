@@ -1,5 +1,10 @@
+module
+
 import ConAgua.Arena.View
-import ConAgua.Arena.ExprMk
+public import ConAgua.Arena.ExprMk
+public import ConAgua.Arena.ArenaRel
+
+@[expose] public section
 
 /-!
 # The derived range relation `DerR`, and the `mk_*` constructors under `ArenaR ∧ DerR`

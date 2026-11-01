@@ -1,8 +1,17 @@
-import ConAgua.Arena.WhnfM2CRefine
-import ConAgua.Arena.WhnfIotaRefine4
+module
+
+public import ConAgua.Arena.WhnfM2CRefine
+public import ConAgua.Arena.WhnfIotaRefine4
 import ConRon.Bridge.Grind
-import ConAgua.Verdict.WhnfModels6E
-import ConAgua.Arena.DefEqStuck
+public import ConAgua.Verdict.WhnfModels6E
+public import ConAgua.Arena.DefEqStuck
+import ConAgua.Arena.DerRel
+import ConAgua.Arena.RefWalk
+import ConAgua.Arena.StoreDenIntern
+import ConAgua.Arena.WhnfCoreRefine
+import ConAgua.Arena.WhnfIotaRefine3
+
+@[expose] public section
 
 /-!
 # `major_to_ctor`: refinements of `m2c_pre`, `m2c_check` and the K arm

@@ -1,4 +1,8 @@
-import ConAgua.Arena.IndLibSpec
+module
+
+public import ConAgua.Arena.IndLibSpec
+
+@[expose] public section
 
 /-!
 # SlRCongr

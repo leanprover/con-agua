@@ -1,4 +1,8 @@
-import ConAgua.Arena.EnvRec
+module
+
+public import ConAgua.Arena.EnvRec
+
+@[expose] public section
 
 /-!
 # HlistUnfold

@@ -1,8 +1,13 @@
+module
+
 import ConAgua.Front.RunModel
-import ConAgua.Final.Statement
-import ConRon.Arena.Checker
-import ConRon.Arena.Frontend.Prelude
-import ConAgua.Arena.Reasons
+public import ConAgua.Final.Statement
+public import ConRon.Arena.Checker
+public import ConRon.Arena.Frontend.Prelude
+public import ConAgua.Arena.Reasons
+public import ConAgua.L.Logic
+
+@[expose] public section
 
 /-!
 # `check`'s stages composed (lane `pipeline`)

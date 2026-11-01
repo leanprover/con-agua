@@ -1,7 +1,12 @@
-import ConAgua.Front.IndFieldsLink2
-import ConAgua.Census.Attr
-import Std.Tactic.BVDecide.Normalize.Bool
-import Std.Tactic.BVDecide.Normalize.Prop
+module
+
+public import ConAgua.Front.IndFieldsLink2
+public import ConAgua.Census.Attr
+public import Std.Tactic.BVDecide.Normalize.Bool
+public import Std.Tactic.BVDecide.Normalize.Prop
+import ConAgua.Front.FieldsDeclLink
+
+@[expose] public section
 
 /-!
 # The fields pass of an `inductive` line, linked to con-leche: the block, and `ind_fields`

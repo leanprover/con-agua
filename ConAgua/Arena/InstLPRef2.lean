@@ -1,4 +1,12 @@
+module
+
 import ConAgua.Arena.InstLPRef
+import ConAgua.Front.IdTable
+import ConRon.Arena.WFProofs
+public import ConAgua.Arena.InstLPSpec
+public import ConAgua.Arena.LevelInternRef
+
+@[expose] public section
 
 /-!
 # `rec_fire_levels` refines `recFireLevels`

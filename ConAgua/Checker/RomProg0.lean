@@ -1,9 +1,19 @@
-import ConAgua.Checker.Prog
-import ConAgua.Rom.Stage
-import ConAgua.Compiler.WFFast
+module
+
+public import ConAgua.Checker.Prog
+public import ConAgua.Rom.Stage
+public import ConAgua.Compiler.WFFast
 import ConAgua.Compiler.WriteSetSplit
-import ConAgua.Arena.LevelIntern
-import ConAgua.Arena.LevelSubstLP
+public import ConAgua.Arena.LevelIntern
+public import ConAgua.Arena.LevelSubstLP
+meta import ConAgua.Checker.Prog
+meta import ConAgua.Rom.Stage
+meta import ConAgua.Compiler.WFFast
+meta import ConAgua.Compiler.WriteSetSplit
+meta import ConAgua.Arena.LevelIntern
+meta import ConAgua.Arena.LevelSubstLP
+
+@[expose] public section
 
 /-!
 # The checker's program under the pin-data substitution: the tools (lane `pipeline`)

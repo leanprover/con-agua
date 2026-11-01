@@ -1,10 +1,17 @@
-import ConAgua.Arena.IndSumSpec.Bnums
-import ConAgua.Arena.IndSumSpec.McGoStep
+module
+
+public import ConAgua.Arena.IndSumSpec.Bnums
+public import ConAgua.Arena.IndSumSpec.McGoStep
 import ConAgua.Arena.IndSumSpec.StructProjArgP
 import ConAgua.Arena.RecClassSpec.Classes
-import ConAgua.Arena.GrindAttr
+public import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
-import ConAgua.L.GrindAttr
+public import ConAgua.L.GrindAttr
+import Std.WP.Tactic
+import Std.WP.Triple.SpecLemmas
+public import ConAgua.Arena.StripTeleSpec
+
+@[expose] public section
 
 /-!
 # StructUsedLater: `ConRon.Arena.structUsedLaterGo`, `ConRon.Arena.structUsedLaterList`, `ConRon.Arena.structUsedLater`

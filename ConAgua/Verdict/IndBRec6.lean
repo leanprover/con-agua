@@ -1,8 +1,21 @@
-import ConAgua.Verdict.IndBRec5
+module
+
+import ConRon.Bridge.Inductives.PosWalks
+public import ConAgua.Verdict.IndBRec5
 import ConAgua.Arena.IndSumSpec.ConsBlockRecsTF
-import ConAgua.Arena.GrindAttr
-import ConAgua.L.GrindAttr
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
+import ConAgua.Arena.IndRealAbsSim
+import ConAgua.Arena.IndT.Lift
+import ConAgua.Arena.RecClassSpec.MkTMWAfr
+import ConAgua.Arena.RecClassSpec.PiBWRoom
+import ConAgua.Arena.RecGenSpec.ClassFeR
+import ConAgua.Arena.RecGenSpec.Rec3CVX
+import ConAgua.Arena.RefWalk
+import ConAgua.Checker.NoVerdictTree
+
+@[expose] public section
 /-!
 # `class_recs_rules_ok_go`, `class_recs_rules_ok`: one model and one refinement for both outcomes
 

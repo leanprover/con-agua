@@ -1,6 +1,12 @@
+module
+
 import ConAgua.Arena.IndPosSpec.GgW
-import ConAgua.Arena.IndPosSpec.GrpAt
-import ConAgua.Arena.IndPosSpec.NkcW
+public import ConAgua.Arena.IndPosSpec.GrpAt
+public import ConAgua.Arena.IndPosSpec.NkcW
+import ConAgua.Arena.Env
+import ConAgua.Arena.IndPosSpec.RootHoles
+
+@[expose] public section
 
 /-!
 # NestAcceptGroup: `ConRon.Arena.nestAcceptGroup`

@@ -1,5 +1,9 @@
-import ConAgua.Arena.IndPosSpec.RxMapW
+module
+
+public import ConAgua.Arena.IndPosSpec.RxMapW
 import ConAgua.Arena.IndGrindAttr
+
+@[expose] public section
 
 /-!
 # NcnW

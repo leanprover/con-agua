@@ -1,5 +1,11 @@
+module
+
 import ConAgua.Arena.WhnfIotaRecRefine3
-import ConAgua.Arena.WhnfCoreAppLoop
+public import ConAgua.Arena.WhnfCoreAppLoop
+import ConAgua.Checker.NoVerdictTree
+public import ConAgua.Arena.WhnfIotaRecRefine2
+
+@[expose] public section
 /-!
 # `iota_rec_at`'s verdict claims, the top (lane `verdicts-b`, helper `k2`)
 

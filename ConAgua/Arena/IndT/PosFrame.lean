@@ -1,8 +1,19 @@
+module
+
 import ConAgua.Arena.IndT.PosCrest
-import ConAgua.Verdict.PosE
+public import ConAgua.Verdict.PosE
 import ConAgua.Verdict.PosNgc
 import ConAgua.Arena.IndPosSpec.Pos2DecHLSplit
 import ConAgua.Arena.IndPosSpec.Snoc
+import all ConRon.Bridge.Inductives.Positivity
+import ConAgua.Arena.IndPosSpec.GgW2
+import ConAgua.Arena.IndPosSpec.Grow
+import ConAgua.Arena.IndPosSpec.NestCrest
+import ConAgua.Arena.IndRealAbsPos
+import ConAgua.Arena.IndRealAbsSim
+import ConAgua.Checker.NoVerdictTree
+
+@[expose] public section
 
 /-!
 # `nest_frame` refines `nestFrame`, both outcomes (lane `indstaget`, helper `indstaget-pos`)

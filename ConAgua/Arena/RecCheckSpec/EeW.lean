@@ -1,6 +1,10 @@
-import ConAgua.Arena.RecCheckSpec.EeK2
-import ConAgua.Arena.RecCheckSpec.EraseFVarTys
-import ConAgua.Arena.IndGrindAttr
+module
+
+public import ConAgua.Arena.RecCheckSpec.EeK2
+public import ConAgua.Arena.RecCheckSpec.EraseFVarTys
+public import ConAgua.Arena.IndGrindAttr
+
+@[expose] public section
 
 /-!
 # EeW

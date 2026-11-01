@@ -1,5 +1,9 @@
-import ConAgua.Arena.RecClassSpec.SlotProg
-import ConAgua.Arena.RecSim
+module
+
+public import ConAgua.Arena.RecClassSpec.SlotProg
+public import ConAgua.Arena.RecSim
+
+@[expose] public section
 
 /-!
 # SlotsProg

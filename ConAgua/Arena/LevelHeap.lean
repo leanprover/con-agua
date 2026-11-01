@@ -5,7 +5,7 @@ import ConAgua.Census.Attr
 public import ConAgua.Arena.StoreFields
 public import ConAgua.L.Notation
 import ConAgua.Arena.GrindAttr
-public import ConAgua.Arena.LevelGrindAttr
+import ConAgua.Arena.LevelGrindAttr
 import ConAgua.L.GrindAttr
 import Std.Tactic.BVDecide.Normalize.BitVec
 import Std.Tactic.BVDecide.Normalize.Prop

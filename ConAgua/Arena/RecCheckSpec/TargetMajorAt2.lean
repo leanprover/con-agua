@@ -1,7 +1,15 @@
-import ConAgua.Arena.RecCheckSpec.PtrNamesWDec
-import ConAgua.Arena.GrindAttr
+module
+
+public import ConAgua.Arena.RecCheckSpec.PtrNamesWDec
+public import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
-import ConAgua.L.GrindAttr
+public import ConAgua.L.GrindAttr
+import ConAgua.Arena.RecClassSpec.CloseLams
+import Std.WP.Tactic
+import Std.WP.Triple.SpecLemmas
+public import ConAgua.Arena.RecSim
+
+@[expose] public section
 
 /-!
 # TargetMajorAt2: `ConRon.Arena.targetMajorAt`

@@ -1,7 +1,16 @@
+module
+
 import ConAgua.Arena.DefEqMid
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
+import ConAgua.Front.Preserve
+import Std.WP.Triple.SpecLemmas
+public import ConAgua.Arena.DefEq
+public import ConAgua.Arena.KnotE
+public import ConAgua.Arena.RefECore
+
+@[expose] public section
 
 /-!
 # `defeq_lst`, `defeq_list_rev`: the twin's `defEqList` over two stack slices (lane `defeq`)

@@ -1,6 +1,13 @@
+module
+
 import ConAgua.Arena.IndSumSpec.StructCtorResidOk
 import ConAgua.Arena.IndInstallSpec.InstallRec2PSl
 import ConAgua.Arena.IndRealAbsPos
+import ConAgua.Arena.RecClassSpec.SlotProg
+public import ConAgua.Arena.IndInstallSpec.PartsShapeFacts
+public import ConAgua.Arena.IndPosSpec.Pos2CvLpsWStage
+
+@[expose] public section
 
 /-!
 # `block_nest_ctx`'s pure parts keep the walk memos (lane `indstaget`)

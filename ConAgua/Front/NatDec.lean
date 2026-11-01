@@ -1,6 +1,8 @@
-import ConAgua.Arena.SlotGrow
-import ConAgua.Front.Fields
-import Std.Data.DTreeMap.Internal.Operations
+module
+
+public import ConAgua.Arena.SlotGrow
+public import ConAgua.Front.Fields
+public import Std.Data.DTreeMap.Internal.Operations
 import Std.WP.Triple.SpecLemmas
 import ConAgua.Arena.GrindAttr
 import ConAgua.Census.Attr
@@ -8,6 +10,18 @@ import ConAgua.L.GrindAttr
 import Std.Tactic.BVDecide.Normalize.BitVec
 import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
+meta import ConAgua.Arena.SlotGrow
+meta import ConAgua.Front.Fields
+meta import Std.Data.DTreeMap.Internal.Operations
+meta import Std.WP.Triple.SpecLemmas
+meta import ConAgua.Arena.GrindAttr
+meta import ConAgua.Census.Attr
+meta import ConAgua.L.GrindAttr
+meta import Std.Tactic.BVDecide.Normalize.BitVec
+meta import Std.Tactic.BVDecide.Normalize.Prop
+meta import Std.WP.Tactic
+
+@[expose] public section
 
 /-!
 # Decimal `Nat` literals into the limb pool: `nat_dec(c, d)`

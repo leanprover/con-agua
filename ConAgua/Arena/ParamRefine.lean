@@ -1,6 +1,10 @@
-import ConAgua.Arena.ParamStore
-import ConAgua.Arena.LpColRel
+module
+
+public import ConAgua.Arena.ParamStore
+public import ConAgua.Arena.LpColRel
 import Std.Tactic.BVDecide.Normalize.Prop
+
+@[expose] public section
 
 /-!
 # The level `param` store refines the arena's `param` tables

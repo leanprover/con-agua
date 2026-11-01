@@ -1,7 +1,14 @@
-import ConAgua.Arena.LiftSpec
+module
+
+public import ConAgua.Arena.LiftSpec
 import ConAgua.Arena.DerRel
 import ConAgua.Arena.FVarRangeRefine
-import Std.Tactic.BVDecide.Normalize.Prop
+public import Std.Tactic.BVDecide.Normalize.Prop
+import ConAgua.Arena.View
+public import ConAgua.Arena.DerRelBase
+public import ConRon.Arena.ExprOps
+
+@[expose] public section
 
 /-!
 # `lift_go` refines the arena's `liftLooseBVarsGo`

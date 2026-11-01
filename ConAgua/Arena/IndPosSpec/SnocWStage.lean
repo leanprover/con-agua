@@ -1,5 +1,10 @@
-import ConAgua.Arena.IndPosSpec.Pos2CvLpsWStage
+module
+
+public import ConAgua.Arena.IndPosSpec.Pos2CvLpsWStage
 import ConAgua.Arena.IndPosSpec.RootHoles
+import ConAgua.Arena.IndPosSpec.DpGoW
+
+@[expose] public section
 
 /-!
 # SnocWStage

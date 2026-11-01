@@ -1,9 +1,15 @@
-import ConAgua.Arena.IndPartsSpec.IndPartsProg5
+module
+
+public import ConAgua.Arena.IndPartsSpec.IndPartsProg5
 import ConAgua.Arena.IndPartsSpec.PartsSliceCopy
 import ConAgua.Arena.IndSumSpec.Row
-import ConAgua.Arena.GrindAttr
-import ConAgua.Arena.IndGrindAttr
-import ConAgua.L.GrindAttr
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.Arena.IndGrindAttr
+public import ConAgua.L.GrindAttr
+import Std.WP.Tactic
+import Std.WP.Triple.SpecLemmas
+
+@[expose] public section
 
 /-!
 # Bf

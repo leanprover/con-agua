@@ -1,5 +1,9 @@
-import ConAgua.Arena.Handle
-import ConRon.Arena.CheckerSplit
+module
+
+public import ConAgua.Arena.Handle
+public import ConRon.Arena.CheckerSplit
+
+@[expose] public section
 
 /-!
 # Environment records in a word pool, and their decoders

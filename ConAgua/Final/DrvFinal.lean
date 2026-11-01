@@ -1,10 +1,19 @@
-import ConAgua.Final.DrvAbi
+module
+
+public import ConAgua.Final.DrvAbi
 import ConAgua.Checker.ParDriverTwin
 import ConAgua.Checker.AsmFinal
 import ConAgua.Checker.AsmStubEq
 import ConAgua.Checker.AsmFileEq
 import ConAgua.Checker.ProgIRef
 import ConAgua.Checker.ProgWf
+import ConAgua.Checker.CheckARun
+public import ConAgua.Checker.ProgI
+public import ConAgua.Checker.ProgTab
+public import ConAgua.Final.Twin
+public import ConAguaAsm.Checker
+
+@[expose] public section
 
 /-!
 # The final theorem for the sequential driver of the committed file (lane parmode)

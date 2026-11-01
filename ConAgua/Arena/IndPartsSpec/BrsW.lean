@@ -1,8 +1,18 @@
-import ConAgua.Arena.IndPartsSpec.IndPartsProg5
+module
+
+public import ConAgua.Arena.IndPartsSpec.IndPartsProg5
 import ConAgua.Arena.IndPartsSpec.PartsSliceCopy
-import ConAgua.Arena.IndPartsSpec.PlW
+public import ConAgua.Arena.IndPartsSpec.PlW
 import ConAgua.Arena.IndRealPartsC1
 import ConAgua.Arena.IndSim
+import ConAgua.Arena.IndPartsSpec.BsW
+import ConAgua.Arena.IndPartsSpec.PartsPSlCons
+import ConAgua.Arena.IndPartsSpec.RulePrefixAt
+import ConAgua.Arena.RecClassSpec.CloseLams
+import ConRon.Bridge.Grind
+public import ConAgua.Arena.IndPartsSpec.BlockRecNamesUnreserved
+
+@[expose] public section
 
 /-!
 # BrsW

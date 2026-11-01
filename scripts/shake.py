@@ -32,6 +32,10 @@ What the tool cannot see (each found by building, docs/design/shake.md):
     (`register_grind_attr` needs `Lean.Meta.Tactic.Grind.Attr` at meta level);
   * auxiliaries realized in several modules (`_sparseCasesOn_N.else_eq`, `match_N`): in the joint
     environment one copy wins, so the tool can name the wrong module.
+The tool also proposes demotions (`remove public import X` with `add import X`: the module's
+statements and exposed definitions do not need `X`, only its proofs do). The gate does not judge
+them; a new file should take them (PLAN.md, "New files are modules": a private import keeps a
+change of `X` from rebuilding the file's importers).
 Top modules that cannot be loaded with the others (an executable's `main`, `JOINT_SEPARATE`) are not
 loaded; the modules only they reach are not checked.
 """

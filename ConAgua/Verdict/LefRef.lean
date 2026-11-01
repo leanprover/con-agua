@@ -1,6 +1,15 @@
+module
+
 import ConAgua.Arena.IndRealLvlC
-import ConAgua.Arena.GrindAttr
+public import ConAgua.Arena.GrindAttr
 import ConAgua.L.ModelGen
+import ConAgua.Arena.IndRealLvlT
+import ConAgua.Arena.RefWalk
+public import ConAgua.Arena.IndPosSpec.NoGoStep
+public import ConAgua.Arena.TwinStep
+public import ConRon.Bridge.Inductives.Run
+
+@[expose] public section
 
 /-!
 # `lvl_eq_fueled`: one model and one refinement for both outcomes

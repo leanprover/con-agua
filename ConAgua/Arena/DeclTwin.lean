@@ -1,11 +1,18 @@
-import ConAgua.Arena.Refine
+module
+
+import ConRon.Bridge.Specs
+public import ConAgua.Arena.Refine
 import ConRon.Bridge.Inductives.Decl
 import ConRon.Bridge.Frontend.Capstone
-import ConRon.Bridge.Checker.Decl
-import ConRon.Arena.Checker
-import ConRon.Bridge.Checker.Basis
+public import ConRon.Bridge.Checker.Decl
+public import ConRon.Arena.Checker
+public import ConRon.Bridge.Checker.Basis
 import ConRon.Bridge.Checker.Fold
 import ConRon.Bridge.Checker.Split
+import Std.Tactic.BVDecide.Normalize.Prop
+public import ConLeche.Verify.EnvBound
+
+@[expose] public section
 
 /-!
 # The twin's fold invariant, step by step (lane `decls4`)

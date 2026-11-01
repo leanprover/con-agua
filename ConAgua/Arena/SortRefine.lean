@@ -1,7 +1,11 @@
-import ConAgua.Arena.SortStore
-import ConAgua.Arena.LpColRel
+module
+
+public import ConAgua.Arena.SortStore
+public import ConAgua.Arena.LpColRel
 import Std.Tactic.BVDecide.Normalize.BitVec
 import Std.Tactic.BVDecide.Normalize.Prop
+
+@[expose] public section
 
 /-!
 # The `sort` store refines the arena's `sort` tables

@@ -1,7 +1,15 @@
-import ConAgua.Checker.ProgTab
-import ConAgua.Checker.ProgI
-import ConAgua.Compiler.Run
-import ConAgua.Compiler.Abi
+module
+
+public import ConAgua.Checker.ProgTab
+public import ConAgua.Checker.ProgI
+public import ConAgua.Compiler.Run
+public import ConAgua.Compiler.Abi
+meta import ConAgua.Checker.ProgTab
+meta import ConAgua.Checker.ProgI
+meta import ConAgua.Compiler.Run
+meta import ConAgua.Compiler.Abi
+
+@[expose] public section
 
 /-! `lake env lean --run ConAgua/Checker/AsmEmit.lean OUT.s` prints the checker's code: the entry
 stub (`ConAgua/Compiler/Abi.lean`, lane `abi`), then `compileProg checkerTab checkerProgI "check"`

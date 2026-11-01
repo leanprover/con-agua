@@ -1,10 +1,16 @@
+module
+
 import ConAgua.Arena.IndPosSpec.EntryW
-import ConAgua.Arena.IndPosSpec.EnvFindWHit
-import ConAgua.Arena.IndPosSpec.RootHoles
+public import ConAgua.Arena.IndPosSpec.EnvFindWHit
+public import ConAgua.Arena.IndPosSpec.RootHoles
 import ConAgua.Arena.DeclRec
-import ConAgua.Arena.GrindAttr
+public import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
-import ConAgua.L.GrindAttr
+public import ConAgua.L.GrindAttr
+import ConAgua.Arena.IndPosSpec.DpGoW
+import ConRon.Bridge.Grind
+
+@[expose] public section
 
 /-!
 # NcGoW

@@ -1,9 +1,19 @@
-import ConAgua.Arena.IndInstallSpec.DecCNS
+module
+
+public import ConAgua.Arena.IndInstallSpec.DecCNS
 import ConAgua.Arena.IndPartsSpec.PartsPSlCons
 import ConAgua.Arena.IndSumSpec.ConsSumCtors
-import ConAgua.Arena.GrindAttr
-import ConAgua.Arena.IndGrindAttr
-import ConAgua.L.GrindAttr
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.Arena.IndGrindAttr
+public import ConAgua.L.GrindAttr
+import ConAgua.Arena.IndPartsSpec.IndPartsProg2
+import Std.WP.Tactic
+import Std.WP.Triple.SpecLemmas
+public import ConAgua.Arena.DeclRec
+public import ConAgua.Arena.IndPartsSpec.PartsConsPL
+public import ConRon.Arena.Inductives.BlockInstall
+
+@[expose] public section
 
 /-!
 # ConsBlockCtors: `ConRon.Arena.consBlockCtors`

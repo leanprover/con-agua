@@ -1,4 +1,8 @@
-import ConAgua.Arena.RecGenSpec.KofProg
+module
+
+public import ConAgua.Arena.RecGenSpec.KofProg
+
+@[expose] public section
 
 /-!
 # KeysProg

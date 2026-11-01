@@ -1,13 +1,22 @@
+module
+
 import ConAgua.Arena.LdRd
-import ConAgua.Arena.IndPosSpec.NodeV
+public import ConAgua.Arena.IndPosSpec.NodeV
 import ConAgua.Arena.IndPosSpec.MatesW
-import ConAgua.Arena.BvarBRefine
-import ConAgua.Arena.IndStubs
-import ConAgua.Arena.IndView
-import ConAgua.Arena.IndSum
+public import ConAgua.Arena.BvarBRefine
+public import ConAgua.Arena.IndStubs
+public import ConAgua.Arena.IndView
+public import ConAgua.Arena.IndSum
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr
+import ConAgua.Arena.Env
+import Std.Tactic.BVDecide.Normalize.BitVec
+import Std.WP.Tactic
+import Std.WP.Triple.SpecLemmas
+public import ConAgua.Arena.SimLib
+
+@[expose] public section
 
 /-!
 # McGoStep

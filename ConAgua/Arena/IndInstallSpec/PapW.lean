@@ -1,10 +1,18 @@
-import ConAgua.Arena.IndInstallSpec.SelProg
+module
+
+public import ConAgua.Arena.IndInstallSpec.SelProg
 import ConAgua.Arena.DeclNatSub
-import ConAgua.Arena.RecGenSpec.ClassFeR
-import ConAgua.Arena.GrindAttr
+public import ConAgua.Arena.RecGenSpec.ClassFeR
+public import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
-import ConAgua.L.GrindAttr
+public import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
+import ConAgua.Arena.CoreErec
+import Std.Tactic.BVDecide.Normalize.BitVec
+import Std.WP.Tactic
+import Std.WP.Triple.SpecLemmas
+
+@[expose] public section
 
 /-!
 # PapW

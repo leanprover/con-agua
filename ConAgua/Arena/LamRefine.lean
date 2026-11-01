@@ -1,7 +1,11 @@
-import ConAgua.Arena.ConsLibRel
-import ConAgua.Arena.LamStore
+module
+
+public import ConAgua.Arena.ConsLibRel
+public import ConAgua.Arena.LamStore
 import Std.Tactic.BVDecide.Normalize.BitVec
 import Std.Tactic.BVDecide.Normalize.Prop
+
+@[expose] public section
 
 /-!
 # The `lam` store refines the arena's `lam` tables

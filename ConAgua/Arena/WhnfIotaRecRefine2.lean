@@ -1,8 +1,20 @@
+module
+
 import ConAgua.Arena.LdRd
 import ConAgua.Arena.RecFireEnv
 import ConAgua.Arena.WhnfIotaRefine6
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
+import ConAgua.Arena.DerRel
+import ConAgua.Arena.RefWalk
+import ConAgua.Arena.WhnfCoreProj
+import ConAgua.Arena.WhnfCoreRefine
+import ConAgua.Checker.NoVerdictTree
+import ConAgua.L.ModelGen
+public import ConAgua.Arena.WhnfCoreApp
+public import ConAgua.Arena.WhnfIotaRecRefine
+
+@[expose] public section
 
 /-!
 # `iota_rec_at`'s pieces, part 2: the certificate family, the fire, the major, the recursor

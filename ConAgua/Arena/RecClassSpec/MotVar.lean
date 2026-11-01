@@ -1,4 +1,8 @@
-import ConAgua.Arena.RecClassSpec.IhW
+module
+
+public import ConAgua.Arena.RecClassSpec.IhW
+
+@[expose] public section
 
 /-!
 # MotVar: `ConRon.Arena.ClassGen.ihParts`, `ConRon.Arena.ClassGen.motVar`, `ConRon.Arena.ClassGen.slotVar`, `ConRon.Arena.ClassRead.motiveSlot`, `ConRon.Arena.classRecOf`

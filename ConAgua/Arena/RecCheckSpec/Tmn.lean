@@ -1,7 +1,13 @@
-import ConAgua.Arena.RecCheckSpec.PtrNamesWDec
+module
+
+public import ConAgua.Arena.RecCheckSpec.PtrNamesWDec
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr
+import Std.WP.Tactic
+import Std.WP.Triple.SpecLemmas
+
+@[expose] public section
 
 /-!
 # Tmn

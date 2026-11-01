@@ -1,8 +1,16 @@
-import ConAgua.Arena.DefEqLeaves
+module
+
+public import ConAgua.Arena.DefEqLeaves
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.NatGrindAttr
 import ConAgua.L.GrindAttr
-import ConAgua.Arena.WhnfCoreProj
+public import ConAgua.Arena.WhnfCoreProj
+import ConAgua.Arena.DerRel
+import ConAgua.Arena.IndView
+import ConAgua.Front.Preserve
+import ConRon.Bridge.Grind
+
+@[expose] public section
 
 /-!
 # Refinements of `DefEq.lean`'s small leaves, continued

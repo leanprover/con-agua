@@ -1,4 +1,11 @@
+module
+
 import ConAgua.Arena.DefEqMid
+import ConAgua.Checker.NoVerdictTree
+public import ConAgua.Arena.Verdict
+public import ConAgua.Checker.NoVerdictFns
+
+@[expose] public section
 
 /-!
 # The defeq family's error claims: the kit (lane `verdicts-b`, helper `k3`)

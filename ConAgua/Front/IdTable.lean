@@ -1,10 +1,15 @@
-import ConAgua.Arena.MemoLibRel
-import ConLeche.Frontend.Scan.Types
+module
+
+public import ConAgua.Arena.MemoLibRel
+public import ConLeche.Frontend.Scan.Types
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import Std.Tactic.BVDecide.Normalize.BitVec
 import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
+import Std.WP.Triple.SpecLemmas
+
+@[expose] public section
 
 /-!
 # The parse state's id tables: a dense array plus a sparse overflow (`IdTable`)

@@ -1,10 +1,21 @@
+module
+
 import ConAgua.Arena.WhnfCoreProj
 import ConAgua.Arena.StoreDenIntern
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import Std.Tactic.BVDecide.Normalize.BitVec
-import Std.Tactic.BVDecide.Normalize.Prop
+public import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
+import ConAgua.Arena.DerRel
+import ConAgua.Arena.PinsNatOp
+import ConAgua.Arena.WhnfCoreRefine
+import ConAgua.L.ModelGen
+import Std.WP.Triple.SpecLemmas
+public import ConAgua.Arena.WhnfCoreApp
+public import ConAgua.Arena.WhnfDelta
+
+@[expose] public section
 
 open ConRon.Arena
 open Std.WP

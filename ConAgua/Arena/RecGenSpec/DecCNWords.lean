@@ -1,10 +1,18 @@
-import ConAgua.Arena.RecGenSpec.CfaFv
-import ConAgua.Arena.RecGenSpec.CtorLp
-import ConAgua.Arena.RecGenSpec.CfoProg
-import ConAgua.Arena.RecGenSpec.Set64
-import ConAgua.Arena.GrindAttr
-import ConAgua.Arena.IndGrindAttr
-import ConAgua.L.GrindAttr
+module
+
+public import ConAgua.Arena.RecGenSpec.CfaFv
+public import ConAgua.Arena.RecGenSpec.CtorLp
+public import ConAgua.Arena.RecGenSpec.CfoProg
+public import ConAgua.Arena.RecGenSpec.Set64
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.Arena.IndGrindAttr
+public import ConAgua.L.GrindAttr
+import ConAgua.Arena.IndInstallSpec.BlockCapsAt
+import ConAgua.Arena.IndInstallSpec.DomsW
+import ConAgua.Arena.RecClassSpec.CloseLams
+import ConAgua.Arena.RecClassSpec.MjProg
+
+@[expose] public section
 
 /-!
 # DecCNWords

@@ -1,6 +1,13 @@
-import ConAgua.L.Logic
+module
+
+public import ConAgua.L.Logic
 import ConAgua.L.Blocks
-import ConAgua.Layout
+public import ConAgua.Layout
+meta import ConAgua.L.Logic
+meta import ConAgua.L.Blocks
+meta import ConAgua.Layout
+
+@[expose] public section
 
 /-!
 # The pin-data substitution lemma (lane `romload`)

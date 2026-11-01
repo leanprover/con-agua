@@ -1,12 +1,18 @@
+module
+
 import ConAgua.Arena.IndPosSpec.NestAcceptGroup
 import ConAgua.Arena.IndPosSpec.NestCrest2
-import ConAgua.Arena.IndPosSpec.NestGroupCtors
-import ConAgua.Arena.IndPosSpec.P2ctK1
-import ConAgua.Arena.IndPosSpec.UCtx
+public import ConAgua.Arena.IndPosSpec.NestGroupCtors
+public import ConAgua.Arena.IndPosSpec.P2ctK1
+public import ConAgua.Arena.IndPosSpec.UCtx
 import ConAgua.Arena.IndPosSpec.UnW
-import ConAgua.Arena.GrindAttr
-import ConAgua.Arena.IndGrindAttr
-import ConAgua.L.GrindAttr
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.Arena.IndGrindAttr
+public import ConAgua.L.GrindAttr
+import ConAgua.Arena.IndPosSpec.NestKeyMap
+public import ConAgua.Arena.IndPosSpec.GrpAt
+
+@[expose] public section
 
 /-!
 # CfW

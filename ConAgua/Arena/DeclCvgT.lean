@@ -1,5 +1,14 @@
+module
+
+import ConRon.Bridge.Core.Walks.Cached
 import ConAgua.Arena.IndRealWalkT
 import ConRon.Bridge.Checker.Hyp
+public import ConAgua.Arena.IndTwin
+public import ConLeche.Verify.EnvWF
+public import ConLeche.Verify.Shift
+public import ConRon.Bridge.StateOK
+
+@[expose] public section
 
 /-!
 # `check_value_group` under `StageT` (lane `loopt2`)

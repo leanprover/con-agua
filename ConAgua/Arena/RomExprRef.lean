@@ -1,8 +1,13 @@
-import ConAgua.Arena.RomExpr
-import ConRon.Arena.Frontend.Readback
+module
+
+public import ConAgua.Arena.RomExpr
+public import ConRon.Arena.Frontend.Readback
 import ConAgua.Arena.NatArms
 import ConLeche.Verify.Cached.Erase
-import Std.Tactic.BVDecide.Normalize.Prop
+public import Std.Tactic.BVDecide.Normalize.Prop
+import ConAgua.Front.ApplyExprRefine
+
+@[expose] public section
 
 /-!
 # `rom_expr` refines `internExprGo`, the memo mirrored

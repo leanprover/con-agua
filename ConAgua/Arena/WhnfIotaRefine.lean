@@ -1,13 +1,22 @@
-import ConAgua.Arena.WhnfIota
+module
+
+public import ConAgua.Arena.WhnfIota
 import ConAgua.Arena.WhnfCoreRefine
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import Std.Tactic.BVDecide.Normalize.BitVec
-import Std.Tactic.BVDecide.Normalize.Prop
+public import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
-import ConAgua.Arena.WhnfCoreProj
-import ConAgua.L.Examples
-import ConAgua.L.For
+public import ConAgua.Arena.WhnfCoreProj
+public import ConAgua.L.Examples
+public import ConAgua.L.For
+import ConAgua.Arena.DerRel
+import ConAgua.Arena.LdRd
+import ConAgua.Arena.SimLib
+import ConAgua.Front.Preserve
+import Std.WP.Triple.SpecLemmas
+
+@[expose] public section
 
 /-!
 # ι-reduction: proofs of `WhnfIota.lean`'s specs (primed)

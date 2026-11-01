@@ -1,7 +1,13 @@
-import ConAgua.Arena.DeclAndPinIndCopy
+module
+
+public import ConAgua.Arena.DeclAndPinIndCopy
 import ConAgua.Arena.DeclAndPinInd
-import ConAgua.Arena.DeclAndPinIndDec
+public import ConAgua.Arena.DeclAndPinIndDec
 import ConAgua.Arena.SimLib
+public import ConAgua.Arena.WhnfBase
+public import ConAgua.Front.StateDR
+
+@[expose] public section
 
 /-!
 # The `And` pin's inductive arm, part 2c: what the copy's pieces leave

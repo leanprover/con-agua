@@ -1,6 +1,10 @@
-import ConAgua.Arena.IndPosSpec.NoGoStep
-import ConAgua.Arena.IndRealAbs
-import ConAgua.Arena.IndGrindAttr
+module
+
+public import ConAgua.Arena.IndPosSpec.NoGoStep
+public import ConAgua.Arena.IndRealAbs
+public import ConAgua.Arena.IndGrindAttr
+
+@[expose] public section
 
 /-!
 # NitW

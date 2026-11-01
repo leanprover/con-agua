@@ -1,4 +1,8 @@
-import ConAgua.Arena.IndPosSpec.NestSeeds
+module
+
+public import ConAgua.Arena.IndPosSpec.NestSeeds
+
+@[expose] public section
 
 /-!
 # DecNLAt

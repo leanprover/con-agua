@@ -1,9 +1,13 @@
-import ConAgua.Arena.StoreRel
-import ConAgua.Arena.SlotGrowSpec
+module
+
+public import ConAgua.Arena.StoreRel
+public import ConAgua.Arena.SlotGrowSpec
 import ConAgua.L.WriteSet
 import ConAgua.Arena.GrindAttr
 import Std.Tactic.BVDecide.Normalize.BitVec
 import Std.Tactic.BVDecide.Normalize.Prop
+
+@[expose] public section
 
 /-!
 # The store library: one relation for every open-addressing node table

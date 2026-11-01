@@ -1,4 +1,9 @@
-import ConAgua.Arena.FreezeTruncStore
+module
+
+public import ConAgua.Arena.FreezeTruncStore
+public import ConAgua.Arena.FreezeTruncBase
+
+@[expose] public section
 
 /-!
 # A fresh worker memory, part 1: what `freshMem` does to each array (lane parmode)

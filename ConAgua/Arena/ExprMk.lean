@@ -9,7 +9,7 @@ public import ConAgua.Arena.LamStore
 public import ConAgua.Arena.ForallStore
 public import ConAgua.Arena.ProjStore
 import ConAgua.Arena.GrindAttr
-public import ConAgua.Arena.LdRd
+import ConAgua.Arena.LdRd
 import ConAgua.L.GrindAttr
 import Std.Data.DTreeMap.Internal.Operations
 import Std.Tactic.BVDecide.Normalize.BitVec

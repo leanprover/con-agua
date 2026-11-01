@@ -1,6 +1,13 @@
-import ConAgua.Arena.RecCheckSpec.BvbWStageC
+module
+
+public import ConAgua.Arena.RecCheckSpec.BvbWStageC
 import ConAgua.Arena.RecCheckSpec.EraseFVarTys
-import ConAgua.Arena.IndGrindAttr
+public import ConAgua.Arena.IndGrindAttr
+import ConAgua.Arena.IndPosSpec.FgW
+import ConAgua.Arena.IndPosSpec.PosmemoRxMfr
+public import ConAgua.Arena.RecCheckSpec.RcLook
+
+@[expose] public section
 
 /-!
 # TaGoWMfr

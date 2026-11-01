@@ -1,9 +1,13 @@
+module
+
 import ConAgua.Arena.IndMaster
-import ConAgua.Arena.IndView
+public import ConAgua.Arena.IndView
 import ConRon.Bridge.Grind
-import ConAgua.Arena.GrindAttr
-import ConAgua.Arena.IndGrindAttr
-import ConAgua.L.GrindAttr
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.Arena.IndGrindAttr
+public import ConAgua.L.GrindAttr
+
+@[expose] public section
 
 /-!
 # DecCVpGrow

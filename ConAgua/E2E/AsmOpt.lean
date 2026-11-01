@@ -1,8 +1,12 @@
-import ConAgua.E2E.Ser
-import ConAgua.Compiler.Run
-import ConAgua.Compiler.Abi
-import ConAgua.Compiler.WF
-import ConAgua.Layout
+module
+
+public import ConAgua.E2E.Ser
+public import ConAgua.Compiler.Run
+public import ConAgua.Compiler.Abi
+public import ConAgua.Compiler.WF
+public import ConAgua.Layout
+
+@[expose] public section
 
 /-!
 # `compopt-asm PROG ENTRY OUT.s` (lane `compopt`)

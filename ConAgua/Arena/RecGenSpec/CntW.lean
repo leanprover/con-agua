@@ -1,10 +1,18 @@
-import ConAgua.Verdict.IndBRec1
-import ConAgua.Arena.RecGenSpec.KeysProg
+module
+
+public import ConAgua.Verdict.IndBRec1
+public import ConAgua.Arena.RecGenSpec.KeysProg
 import ConAgua.Arena.IndPartsSpec.PartsPSlCons
-import ConAgua.Arena.GrindAttr
-import ConAgua.Arena.IndGrindAttr
-import ConAgua.L.GrindAttr
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.Arena.IndGrindAttr
+public import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
+import ConAgua.Arena.IndPosSpec.FgW
+import ConAgua.Arena.IndSumSpec.StructProjArgP
+import ConAgua.Arena.RefWalk
+import ConAgua.Checker.NoVerdictTree
+
+@[expose] public section
 
 /-!
 # CntW

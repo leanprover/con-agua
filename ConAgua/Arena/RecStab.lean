@@ -1,4 +1,11 @@
+module
+
 import ConAgua.Arena.RecClassSpec.Classes
+import ConAgua.Arena.IndInstallSpec.DomsW
+import ConRon.Bridge.Grind
+public import ConAgua.Arena.IndCopy2
+
+@[expose] public section
 
 /-!
 # Stable decodings (lane `indproofs2`, helper `rec`)

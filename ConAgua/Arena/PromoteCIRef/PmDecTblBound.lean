@@ -1,5 +1,10 @@
+module
+
 import ConAgua.Arena.PromoteCIRef.HlistUnfold
 import ConAgua.Arena.PromoteCIRef.PmDecRuleWords
+public import ConAgua.Arena.EnvRec
+
+@[expose] public section
 
 /-!
 # PmDecTblBound

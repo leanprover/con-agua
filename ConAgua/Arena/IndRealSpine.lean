@@ -1,6 +1,14 @@
-import ConAgua.Arena.IndRealFvt
+module
+
+public import ConAgua.Arena.IndRealFvt
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
+import ConAgua.Arena.StageInst1
+import Std.Tactic.BVDecide.Normalize.BitVec
+import Std.WP.Tactic
+import Std.WP.Triple.SpecLemmas
+
+@[expose] public section
 
 /-!
 # The spine adapters' stub contracts discharged (lane `indproofs4`, helper `spine`)

@@ -1,7 +1,11 @@
-import ConAgua.Arena.Freeze
-import ConAgua.Arena.Globals
-import ConAgua.Arena.RomPins
-import ConAgua.Checker.Presize
+module
+
+public import ConAgua.Arena.Freeze
+public import ConAgua.Arena.Globals
+public import ConAgua.Arena.RomPins
+public import ConAgua.Checker.Presize
+
+@[expose] public section
 
 /-!
 # The checker's entry `check()` and the integration glue (lane `integrate`)

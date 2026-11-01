@@ -1,4 +1,9 @@
-import ConAgua.Arena.PromoteProg
+module
+
+public import ConAgua.Arena.PromoteProg
+meta import ConAgua.Arena.PromoteProg
+
+@[expose] public section
 
 /-!
 # Tests of the promotion in the L interpreter

@@ -1,6 +1,10 @@
-import ConAgua.Arena.DeclHeader
-import ConAgua.Arena.IndPartsSpec.EqW
+module
+
+public import ConAgua.Arena.DeclHeader
+public import ConAgua.Arena.IndPartsSpec.EqW
 import ConAgua.Arena.IndGrindAttr
+
+@[expose] public section
 
 /-!
 # BpcW

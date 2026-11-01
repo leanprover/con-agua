@@ -1,9 +1,19 @@
-import ConAgua.Arena.WhnfEntry
+module
+
+public import ConAgua.Arena.WhnfEntry
 import ConAgua.Arena.DeclNatSpec
-import ConAgua.Arena.IndRealFvtD
+public import ConAgua.Arena.IndRealFvtD
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
+import ConAgua.Arena.IndMaster
+import ConAgua.Arena.IndPartsSpec.MemberNames
+import ConAgua.Arena.StageInst1
+import Std.WP.Tactic
+import Std.WP.Triple.SpecLemmas
+public import ConAgua.Arena.DeclNatBase
+
+@[expose] public section
 
 /-!
 # `fvar_type_ds`, `get_app_args_f`: stub contracts discharged (lane `indproofs4`, helper `fvt`)

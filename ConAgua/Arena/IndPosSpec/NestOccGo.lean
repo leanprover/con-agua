@@ -1,9 +1,16 @@
+module
+
 import ConAgua.Arena.IndPosSpec.MentionsAnyGo
-import ConAgua.Arena.IndPosSpec.NoGoStep
-import ConAgua.Arena.GrindAttr
-import ConAgua.Arena.IndGrindAttr
-import ConAgua.L.GrindAttr
+public import ConAgua.Arena.IndPosSpec.NoGoStep
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.Arena.IndGrindAttr
+public import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
+import ConAgua.Arena.IndPosSpec.NestKeyMap
+import ConRon.Bridge.Grind
+import Std.Tactic.BVDecide.Normalize.BitVec
+
+@[expose] public section
 
 /-!
 # NestOccGo: `ConRon.Arena.memberIdxAt`, `ConRon.Arena.mentionsAnyConst`, `ConRon.Arena.nestOccGo`, `ConRon.Arena.nestOcc`, `ConRon.Arena.phApp`

@@ -1,10 +1,14 @@
-import ConAgua.Arena.CallF
+module
+
+public import ConAgua.Arena.CallF
 import ConAgua.Arena.Inst1Refine
-import ConAgua.Arena.WriteSets
-import ConAgua.Arena.StripTeleSpec
-import ConAgua.Checker.Entry
+public import ConAgua.Arena.WriteSets
+public import ConAgua.Arena.StripTeleSpec
+public import ConAgua.Checker.Entry
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
+
+@[expose] public section
 
 /-!
 # `instantiate1_fast` under the stage relation (lane `indproofs3`, helper `stubs`)

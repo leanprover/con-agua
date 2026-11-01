@@ -1,9 +1,18 @@
+module
+
 import ConAgua.Arena.IndInstallSpec.BlockCapsAt
 import ConAgua.Arena.IndPartsSpec.BlockRecNamesUnreserved
-import ConAgua.Arena.DeclRec
-import ConAgua.Arena.GrindAttr
+public import ConAgua.Arena.DeclRec
+public import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
-import ConAgua.L.GrindAttr
+public import ConAgua.L.GrindAttr
+import ConAgua.Arena.IndPosSpec.NestBlockOfKey
+import ConAgua.L.WordOff
+import ConRon.Bridge.Grind
+public import ConAgua.Arena.IndDecStab
+public import ConAgua.Arena.WhnfBase
+
+@[expose] public section
 
 /-!
 # ConsSumCtors: `ConRon.Arena.consSumCtors`

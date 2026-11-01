@@ -1,8 +1,14 @@
+module
+
 import ConAgua.Arena.IndPosSpec.InstW
 import ConAgua.Arena.RecCheckSpec.DecHLTruncMBound
-import ConAgua.Arena.GrindAttr
-import ConAgua.Arena.IndGrindAttr
-import ConAgua.L.GrindAttr
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.Arena.IndGrindAttr
+public import ConAgua.L.GrindAttr
+public import ConAgua.Arena.IndDecStab
+public import ConAgua.Arena.IndPosSpec.NestBlockOfKey
+
+@[expose] public section
 
 /-!
 # ToiW

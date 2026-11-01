@@ -1,6 +1,10 @@
-import ConAgua.Arena.MaxStore
-import ConAgua.Arena.LpColRel
+module
+
+public import ConAgua.Arena.MaxStore
+public import ConAgua.Arena.LpColRel
 import Std.Tactic.BVDecide.Normalize.Prop
+
+@[expose] public section
 
 /-!
 # The level `max` store refines the arena's `max` tables

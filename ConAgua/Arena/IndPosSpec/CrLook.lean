@@ -1,6 +1,10 @@
-import ConAgua.Arena.IndPosSpec.DpGoW
-import ConAgua.Arena.IndPosSpec.NoGoStep
-import ConAgua.Arena.IndPosSpec.RxMapW
+module
+
+public import ConAgua.Arena.IndPosSpec.DpGoW
+public import ConAgua.Arena.IndPosSpec.NoGoStep
+public import ConAgua.Arena.IndPosSpec.RxMapW
+
+@[expose] public section
 
 /-!
 # CrLook

@@ -1,5 +1,11 @@
-import ConAgua.Arena.PropReadRefine
+module
+
+public import ConAgua.Arena.PropReadRefine
 import ConAgua.Arena.DefEqStuckShape
+import ConAgua.Arena.WhnfCoreRefine
+import ConRon.Bridge.Grind
+
+@[expose] public section
 
 /-!
 # The prop-ness readers: the identity-like wrappers and `peelPisW` (helper `defeq2-prop`)

@@ -1,12 +1,22 @@
-import ConAgua.Arena.WhnfIotaRefine2
-import ConAgua.Verdict.WhnfModels3E
+module
+
+public import ConAgua.Arena.WhnfIotaRefine2
+public import ConAgua.Verdict.WhnfModels3E
 import ConAgua.Arena.Abs1Refine
-import ConAgua.Arena.Rom
+public import ConAgua.Arena.Rom
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import Std.Tactic.BVDecide.Normalize.BitVec
-import Std.Tactic.BVDecide.Normalize.Prop
+public import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
+import ConAgua.Arena.DerRel
+import ConAgua.Arena.ProjView
+import ConAgua.Arena.RefWalk
+import ConAgua.Arena.WhnfCoreRefine
+import ConAgua.L.ModelGen
+import Std.WP.Triple.SpecLemmas
+
+@[expose] public section
 
 /-!
 # ι-reduction: proofs of `WhnfIota.lean`'s specs, part 3 (`rec_fire_args` … `eta_fab_args`)

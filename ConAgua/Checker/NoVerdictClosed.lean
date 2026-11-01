@@ -1,8 +1,18 @@
-import ConAgua.Checker.Prog
-import ConAgua.L.ErrSpec
-import ConAgua.Checker.NoVerdictTree
-import ConAgua.Arena.LevelIntern
-import ConAgua.Arena.LevelSubstLP
+module
+
+public import ConAgua.Checker.Prog
+public import ConAgua.L.ErrSpec
+public import ConAgua.Checker.NoVerdictTree
+public import ConAgua.Arena.LevelIntern
+public import ConAgua.Arena.LevelSubstLP
+meta import ConAgua.Checker.Prog
+meta import ConAgua.L.ErrSpec
+meta import ConAgua.Checker.NoVerdictTree
+meta import ConAgua.Arena.LevelIntern
+meta import ConAgua.Arena.LevelSubstLP
+import all Init.Data.Repr
+
+@[expose] public section
 
 /-!
 # The functions of `checkerProg` that claim no verdict

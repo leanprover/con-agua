@@ -1,4 +1,14 @@
-import ConAgua.Checker.VerdictEntry1
+module
+
+public import ConAgua.Checker.VerdictEntry1
+import ConAgua.Checker.NoVerdictClosed
+import ConAgua.Checker.PreludeRef
+import ConAgua.Checker.RomProgInit
+import ConAgua.Front.ChunkBridge
+import ConAgua.Front.FrontRunRef
+import ConAgua.Verdict.FrontSafeE
+
+@[expose] public section
 
 /-!
 # The frontend's two stages' error specs: `builtin_prelude`, `front_run`

@@ -1,9 +1,13 @@
-import ConAgua.Front.FrontPreOK
-import ConAgua.Front.DriverRefine
+module
+
+public import ConAgua.Front.FrontPreOK
+public import ConAgua.Front.DriverRefine
 import ConAgua.Front.ChunkBridge
-import ConAgua.Checker.FrontProg
+public import ConAgua.Checker.FrontProg
 import ConAgua.Verdict.FrontValidE
 import ConAgua.Final.TwinVerdict
+
+@[expose] public section
 
 /-!
 # Bytes → stores, both outcomes: `front_run`

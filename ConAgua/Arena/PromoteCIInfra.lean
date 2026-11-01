@@ -1,7 +1,11 @@
-import ConAgua.Arena.PromoteCI
+module
+
+public import ConAgua.Arena.PromoteCI
 import ConAgua.Arena.PromoteLsRef
 import ConAgua.L.WordOff
-import Std.Tactic.BVDecide.Normalize.Prop
+public import Std.Tactic.BVDecide.Normalize.Prop
+
+@[expose] public section
 
 /-!
 # Facts about the record pool's reads, writes and copies

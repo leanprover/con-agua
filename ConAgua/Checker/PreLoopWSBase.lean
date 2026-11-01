@@ -1,5 +1,9 @@
-import ConAgua.Checker.Prog
-import ConAgua.Compiler.WriteSetSplit
+module
+
+public import ConAgua.Checker.Prog
+public import ConAgua.Compiler.WriteSetSplit
+
+@[expose] public section
 
 /-!
 # The pre-loop stages' write sets: the lemmas (lane `pipeline`)

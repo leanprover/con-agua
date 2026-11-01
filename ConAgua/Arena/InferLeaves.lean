@@ -1,20 +1,26 @@
-import ConAgua.Arena.KnotSlot
+module
+
+public import ConAgua.Arena.KnotSlot
 import ConAgua.Arena.IndView
 import ConAgua.Arena.IndMaster
-import ConAgua.Arena.Infer
-import ConAgua.Arena.WhnfIota
+public import ConAgua.Arena.Infer
+public import ConAgua.Arena.WhnfIota
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
-import Std.Tactic.BVDecide.Normalize.BitVec
-import Std.Tactic.BVDecide.Normalize.Prop
-import Std.WP.Tactic
-import ConAgua.Arena.WhnfCoreApp
+public import Std.Tactic.BVDecide.Normalize.BitVec
+public import Std.Tactic.BVDecide.Normalize.Prop
+public import Std.WP.Tactic
+public import ConAgua.Arena.WhnfCoreApp
 import ConAgua.Arena.WhnfCoreRefine
-import ConAgua.Arena.RefECore
-import ConAgua.Arena.KnotE
+public import ConAgua.Arena.RefECore
+public import ConAgua.Arena.KnotE
 import ConAgua.L.ModelGen
 import ConAgua.Checker.NoVerdictTree
 import ConAgua.L.WordOff
+import ConAgua.Arena.DerRel
+import ConAgua.Arena.RefWalk
+
+@[expose] public section
 
 /-!
 # The leaf inference functions of `Infer.lean` (lane `defeq`)

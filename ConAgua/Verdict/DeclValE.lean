@@ -1,15 +1,29 @@
+module
+
 import ConAgua.Arena.DeclCvgT
-import ConAgua.Arena.CrOKFrame
+public import ConAgua.Arena.CrOKFrame
 import ConAgua.Arena.IndRealMemoCrT
-import ConAgua.Arena.IndRealApdT
-import ConAgua.Arena.DeclValSpec
+public import ConAgua.Arena.IndRealApdT
+public import ConAgua.Arena.DeclValSpec
 import ConAgua.Arena.DeclValT
 import ConAgua.Arena.DeclStepSpec
-import ConAgua.Verdict.LefRef
-import ConAgua.Verdict.VCtx
-import ConAgua.Arena.GrindAttr
-import ConAgua.L.GrindAttr
+public import ConAgua.Verdict.LefRef
+public import ConAgua.Verdict.VCtx
+public import ConAgua.Arena.GrindAttr
+public import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
+import ConAgua.Arena.DeclValRef
+import ConAgua.Arena.IndInstallSpec.DomsW
+import ConAgua.Arena.IndPartsSpec.MemberNames
+import ConAgua.Arena.IndRealLvlT
+import ConAgua.Arena.IndRealWalkT
+import ConAgua.Arena.LvlGrow
+import ConAgua.Arena.RefWalk
+import ConAgua.Checker.NoVerdictTree
+import ConRon.Bridge.Core.Walks.Cached
+public import ConAgua.Arena.KnotEntry
+
+@[expose] public section
 
 /-!
 # The verdict claims of `check_thm_val` and `check_value_group` (lane `verdicts-b`)

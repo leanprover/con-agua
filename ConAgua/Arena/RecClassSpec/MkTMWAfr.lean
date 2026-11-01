@@ -1,5 +1,10 @@
-import ConAgua.Arena.RecCheckSpec.TargetMajorAt2
+module
+
+public import ConAgua.Arena.RecCheckSpec.TargetMajorAt2
 import ConAgua.Arena.IndRealAbsSim
+public import ConAgua.Arena.IndRealAbs
+
+@[expose] public section
 
 /-!
 # MkTMWAfr

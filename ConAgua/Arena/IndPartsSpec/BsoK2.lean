@@ -1,5 +1,9 @@
-import ConAgua.Arena.IndPosSpec.MatesW
-import ConAgua.Arena.StripTeleSpec
+module
+
+public import ConAgua.Arena.IndPosSpec.MatesW
+public import ConAgua.Arena.StripTeleSpec
+
+@[expose] public section
 
 /-!
 # BsoK2

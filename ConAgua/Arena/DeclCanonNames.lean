@@ -1,8 +1,16 @@
-import ConAgua.Arena.DeclCanonExpr2
+module
+
+public import ConAgua.Arena.DeclCanonExpr2
 import ConAgua.Arena.DeclMasterStage
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr
+import ConAgua.Arena.DeclCvg
+import ConAgua.Arena.IndMaster
+import Std.WP.Tactic
+import Std.WP.Triple.SpecLemmas
+
+@[expose] public section
 
 /-!
 # `canon_names_go`, `canon_names` (lane `decls3`, helper `decls3-canon`)

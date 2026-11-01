@@ -1,4 +1,9 @@
-import ConAgua.Arena.DeclCanonExpr
+module
+
+public import ConAgua.Arena.DeclCanonExpr
+import ConAgua.Arena.DeclCvg
+
+@[expose] public section
 
 /-!
 # The canonical expression comparison, relational lemma (lane `decls3`, helper `decls3-canon`)

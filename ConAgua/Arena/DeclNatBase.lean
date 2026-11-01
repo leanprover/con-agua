@@ -1,9 +1,17 @@
-import ConAgua.Arena.DeclCvg
-import ConAgua.Arena.DeclHeader
-import ConAgua.Arena.WhnfDelta
+module
+
+public import ConAgua.Arena.DeclCvg
+public import ConAgua.Arena.DeclHeader
+public import ConAgua.Arena.WhnfDelta
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
+import ConAgua.Arena.IndMaster
+import ConAgua.Arena.IndPartsSpec.MemberNames
+import ConRon.Bridge.Grind
+public import ConAgua.Arena.SimLib
+
+@[expose] public section
 
 /-!
 # The structural-`Nat` gate: shared pieces (lane `decls3`, helper `decls3-nat`)
