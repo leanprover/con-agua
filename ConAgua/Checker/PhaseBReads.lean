@@ -153,7 +153,7 @@ import all ConAgua.Scan.Values
 # Phase B's read set in the checker's program (lane parmode)
 
 `phaseBFns`: every function `check_pending_go` (phase B's loop) reaches in `checkerProg`, as a
-literal computed from the program's call graph (581 names; `scripts/phaseb_fns.py` regenerates
+literal computed from the program's call graph (582 names; `scripts/phaseb_fns.py` regenerates
 it, and the check below fails if a callee is missing). None of them names the frozen buffer's
 arrays `OUT`, `HDRF`, `CTLF` (`Arena/Freeze.lean`) or any byte array: `checkerProg_phaseBReads`,
 so by `L.invoke_agree` (`L/Agree.lean`) a worker's run of `check_pending_go` is the run on any
@@ -194,8 +194,8 @@ def phaseBFns : List FnName :=
    "head_and_args", "head_hint", "head_is_proj", "head_proof_const", "head_proof_proj",
    "head_proof_pw", "head_type_const", "head_type_pw", "head_type_res", "hint_lt", "if_clear",
    "if_find", "if_put", "il_app", "il_bvar", "il_forall", "il_go", "il_lam", "il_let", "il_proj",
-   "ilg_app", "ilg_forall", "ilg_go", "ilg_lam", "ilg_let", "ilg_proj", "ilm_clear", "ilm_fit", "ilm_find",
-   "ilm_put", "ilp_clear", "ilp_find", "ilp_put", "ilpl_clear", "ilpl_find", "ilpl_put",
+   "ilg_app", "ilg_forall", "ilg_go", "ilg_lam", "ilg_let", "ilg_proj", "ilm_clear", "ilm_find",
+   "ilm_fit", "ilm_put", "ilp_clear", "ilp_find", "ilp_put", "ilpl_clear", "ilpl_find", "ilpl_put",
    "ilpls_clear", "ilpls_find", "ilpls_put", "imax_find", "imax_push", "in_clear", "in_find",
    "in_put", "ind_caps_check", "infer", "infer_app", "infer_app_io", "infer_body", "infer_body_io",
    "infer_const", "infer_forall", "infer_forall_io", "infer_io", "infer_lam", "infer_lam_io",
