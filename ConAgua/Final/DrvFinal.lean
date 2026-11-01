@@ -12,6 +12,7 @@ public import ConAgua.Checker.ProgI
 public import ConAgua.Checker.ProgTab
 public import ConAgua.Final.Twin
 public import ConAguaAsm.Checker
+import all ConAgua.Checker.Entry
 
 @[expose] public section
 
