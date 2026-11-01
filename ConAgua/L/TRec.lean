@@ -2,7 +2,7 @@ module
 
 public import ConAgua.L.Syntax
 
-@[expose] public section
+public section
 
 /-!
 # Tiered store records (surface syntax)

@@ -539,7 +539,8 @@ theorem grpB_ref (P : GrcProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {dn : NIdx → Op
     have e3 := ConRon.Bridge.denoteEList_ext p7.ext _ _ (ConRon.Bridge.Inductives.mapM_denoteE hfTC)
     have e4 := ConRon.Bridge.Inductives.dSlot_ext.list c18.ext _ _ hslP
     have e5 := ConRon.Bridge.Inductives.dClassCtors_ext (c6.ext.trans p7.ext) _ _ hctors
-    simp only [dClassGen, e1, e2, e3, e4, e5, helim, Frontend.denoteEList, hnPe, Option.bind_eq_bind,
+    rw [dClassGen]
+    simp only [e1, e2, e3, e4, e5, helim, Frontend.denoteEList, hnPe, Option.bind_eq_bind,
       Option.bind_some, Option.pure_def]
   -- part C
   refine RefC.mono (grpC_ref hkp henv hApd hCrk P n hn hC6 (hbs.grow hg16)

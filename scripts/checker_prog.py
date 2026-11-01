@@ -34,6 +34,7 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import e2e  # noqa: E402
 import arr_names  # noqa: E402
+import lean_module  # noqa: E402
 
 ROOT = e2e.ROOT
 OUT = os.path.join(ROOT, "ConAgua", "Checker", "Prog.lean")
@@ -587,6 +588,13 @@ def main():
     for p in stale:
         if not a.check:
             os.remove(p)
+    # modules: every file but the program literal runs an elaborator over the imported program
+    # (`meta import`); the inliner's parts' kernel checks unfold `toString` on function names
+    # (`Nat.repr`, which `Init.Data.Repr` does not expose)
+    inl_parts = {os.path.join(chk, f"ProgIPart{k}.lean") for k in range(ninl)}
+    outs = [(path, lean_module.modularize(t, meta=path != OUT,
+                                          import_all=["Init.Data.Repr"] if path in inl_parts else []))
+            for path, t in outs]
     for path, t in outs:
         old = open(path, encoding="utf-8").read() if os.path.exists(path) else None
         if a.check:

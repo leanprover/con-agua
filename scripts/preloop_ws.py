@@ -11,6 +11,7 @@ import os, re, subprocess, sys, tempfile
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(ROOT, "scripts"))
 from arr_names import arr_term
+from lean_module import modularize
 STAGES = ["cap_check", "pb_check", "intern_reserved_pins", "builtin_prelude", "front_run",
           "prepare_prelude", "intern_all_pins"]
 # the stages' modules `PreLoopWSPart<k>` (each a whole-program check per stage, ~5 s; built in
@@ -258,8 +259,10 @@ a stage does not write survives it (the pins `PINS` across `builtin_prelude`, `f
 """
 
 chk = os.path.join(ROOT, "ConAgua", "Checker")
-outs = [(os.path.join(chk, "PreLoopWSStages.lean"), stagesSrc), (os.path.join(chk, "PreLoopWSBase.lean"), baseSrc)]
-outs += [(os.path.join(chk, f"PreLoopWSPart{k}.lean"), t) for k, t in enumerate(partSrcs)]
+# the parts run `prog_all`/`names_tree` (compiled code over the imported program: `meta import`)
+outs = [(os.path.join(chk, "PreLoopWSStages.lean"), modularize(stagesSrc)),
+        (os.path.join(chk, "PreLoopWSBase.lean"), modularize(baseSrc))]
+outs += [(os.path.join(chk, f"PreLoopWSPart{k}.lean"), modularize(t, meta=True)) for k, t in enumerate(partSrcs)]
 stale = [q for q in (os.path.join(chk, f"PreLoopWSPart{k}.lean") for k in range(len(STAGE_PARTS), len(STAGE_PARTS) + 8))
          if os.path.exists(q)]
 def cur(q):
