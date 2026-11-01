@@ -7,6 +7,19 @@ public import ConAgua.Arena.CallF
 public import ConAgua.Arena.StripTeleSpec
 public import ConAgua.Arena.WalkLift
 public import ConAgua.Arena.WriteSets
+import all ConAgua.Arena.AppStore
+import all ConAgua.Arena.BVarStore
+import all ConAgua.Arena.BvarB
+import all ConAgua.Arena.ConsLib
+import all ConAgua.Arena.ExprMk
+import all ConAgua.Arena.ForallStore
+import all ConAgua.Arena.LamStore
+import all ConAgua.Arena.LetStore
+import all ConAgua.Arena.LiftL
+import all ConAgua.Arena.MemoLib
+import all ConAgua.Arena.ProjStore
+import all ConAgua.Arena.Walk
+import all ConAgua.Arena.WalkLift
 
 @[expose] public section
 

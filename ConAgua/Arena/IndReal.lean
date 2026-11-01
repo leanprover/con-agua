@@ -10,6 +10,15 @@ public import ConAgua.Arena.StubInd
 public import ConAgua.Arena.StubNames
 public import ConAgua.Arena.WhnfEntry
 public import ConAgua.Arena.WhnfIota
+import all ConAgua.Arena.DeclArmsCanon
+import all ConAgua.Arena.Env
+import all ConAgua.Arena.IndIface
+import all ConAgua.Arena.Pins
+import all ConAgua.Arena.StubInd
+import all ConAgua.Arena.StubNames
+import all ConAgua.Arena.WhnfEntry
+import all ConAgua.Arena.WhnfIota
+import all ConAgua.Arena.WhnfSpineRefine
 
 @[expose] public section
 

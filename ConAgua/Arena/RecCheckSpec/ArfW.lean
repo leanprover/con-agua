@@ -12,6 +12,7 @@ import ConAgua.Arena.IndInstallSpec.DomsW
 import Std.WP.Triple.SpecLemmas
 public import ConAgua.Arena.IndDecStab
 public import ConAgua.Arena.RecSim
+import all ConAgua.Arena.RecCheck
 
 @[expose] public section
 

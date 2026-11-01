@@ -8,6 +8,7 @@ import ConAgua.Arena.RefWalk
 import ConAgua.Checker.NoVerdictTree
 import ConAgua.L.ModelGen
 public import ConAgua.Arena.StageInst1
+import all ConAgua.Arena.IndSum
 
 @[expose] public section
 
