@@ -1,10 +1,13 @@
 module
 
 public import ConAgua.Arena.IndPos2
-public import ConAgua.Arena.Verdict
-public import ConAgua.Arena.GrindAttr
-public import ConAgua.L.GrindAttr
-public import ConAgua.L.ModelGen
+import ConAgua.Arena.Verdict
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
+import ConAgua.L.ModelGen
+import Std.Tactic.BVDecide.Normalize.BitVec
+import Std.WP.Triple.SpecLemmas
+public import ConAgua.L.ErrSpec
 
 @[expose] public section
 

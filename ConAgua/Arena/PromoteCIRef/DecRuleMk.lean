@@ -1,9 +1,11 @@
 module
 
 public import ConAgua.Arena.PromoteCIInfra
-public import ConAgua.Arena.PromoteRecRef
+import ConAgua.Arena.PromoteRecRef
 public import Std.Tactic.BVDecide.Normalize.Prop
-public import ConRon.Bridge.Grind
+import ConRon.Bridge.Grind
+import ConAgua.Arena.DerRel
+public import ConAgua.Arena.PromoteMemo
 
 @[expose] public section
 

@@ -1,6 +1,7 @@
 module
 
-public import ConAgua.Arena.RecClassSpec.CloseLams
+import ConAgua.Arena.RecClassSpec.CloseLams
+public import ConAgua.Arena.RecGenSpec.ClassMinorSlotHit
 
 @[expose] public section
 

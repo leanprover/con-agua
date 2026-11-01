@@ -3,6 +3,7 @@ module
 public import ConAgua.Front.IndApplyRefine7
 public import ConAgua.Front.IndApplyRefine5
 public import Std.Tactic.BVDecide.Normalize.Prop
+import ConAgua.Front.IndApplyRefine
 
 @[expose] public section
 

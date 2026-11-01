@@ -1,7 +1,7 @@
 module
 
 public import ConAgua.Arena.IndPosSpec.CtxFields
-public import ConAgua.Arena.IndPosSpec.PiBWStage
+import ConAgua.Arena.IndPosSpec.PiBWStage
 
 @[expose] public section
 

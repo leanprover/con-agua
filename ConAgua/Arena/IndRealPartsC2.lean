@@ -3,6 +3,11 @@ module
 public import ConRon.Bridge.Inductives.BlockParts
 public import ConAgua.Arena.IndRealLvlC
 public import ConAgua.Arena.IndPartsSpec.BpW
+import ConAgua.Arena.IndPartsSpec.Bf
+import ConAgua.Arena.IndPartsSpec.BrsW
+import ConAgua.Arena.IndSim
+import ConAgua.Arena.IndT.Lift
+import ConRon.Bridge.Specs
 
 @[expose] public section
 

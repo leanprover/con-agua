@@ -2,6 +2,7 @@ module
 
 public import ConAgua.Arena.CoreWalks
 public import ConAgua.Arena.WhnfIotaRefine5
+import ConAgua.Arena.WhnfIotaRefine2
 
 @[expose] public section
 

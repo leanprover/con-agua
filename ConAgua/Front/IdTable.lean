@@ -2,11 +2,12 @@ module
 
 public import ConAgua.Arena.MemoLibRel
 public import ConLeche.Frontend.Scan.Types
-public import ConAgua.Arena.GrindAttr
-public import ConAgua.L.GrindAttr
-public import Std.Tactic.BVDecide.Normalize.BitVec
-public import Std.Tactic.BVDecide.Normalize.Prop
-public import Std.WP.Tactic
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
+import Std.Tactic.BVDecide.Normalize.BitVec
+import Std.Tactic.BVDecide.Normalize.Prop
+import Std.WP.Tactic
+import Std.WP.Triple.SpecLemmas
 
 @[expose] public section
 

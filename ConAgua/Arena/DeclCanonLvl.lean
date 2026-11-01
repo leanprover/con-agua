@@ -1,12 +1,16 @@
 module
 
 public import ConAgua.Arena.DeclCanonView2
-public import ConAgua.Arena.IndInstallSpec.DomsW
+import ConAgua.Arena.IndInstallSpec.DomsW
 public import ConAgua.Arena.DeclCanonSpec
-public import ConAgua.Arena.LevelView
-public import ConAgua.Arena.GrindAttr
-public import ConAgua.Arena.IndGrindAttr
-public import ConAgua.L.GrindAttr
+import ConAgua.Arena.LevelView
+import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.IndGrindAttr
+import ConAgua.L.GrindAttr
+import ConAgua.Arena.DeclCvg
+import Std.WP.Tactic
+import Std.WP.Triple.SpecLemmas
+public import ConRon.Arena.Canon
 
 @[expose] public section
 

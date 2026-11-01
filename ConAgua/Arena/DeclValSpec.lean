@@ -3,7 +3,7 @@ module
 public import ConAgua.Arena.DeclCvg
 public import ConAgua.Arena.DeclHeader
 public import ConAgua.Arena.DeclRec
-public import ConAgua.Arena.Verdict
+import ConAgua.Arena.Verdict
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.Arena.IndGrindAttr
 public import ConAgua.L.GrindAttr

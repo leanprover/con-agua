@@ -2,6 +2,7 @@ module
 
 public import ConAgua.Arena.IndRealAbs
 public import ConAgua.Arena.IndRealNames
+public import ConAgua.Arena.RecSim
 
 @[expose] public section
 

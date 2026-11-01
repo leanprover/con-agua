@@ -2,6 +2,7 @@ module
 
 public import ConAgua.Arena.DerRelBase
 public import Std.Tactic.BVDecide.Normalize.Prop
+import ConAgua.Arena.View
 
 @[expose] public section
 

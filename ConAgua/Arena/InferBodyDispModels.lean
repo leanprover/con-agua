@@ -2,12 +2,13 @@ module
 
 public import ConAgua.Arena.Verdict
 public import ConAgua.Arena.Infer
-public import ConAgua.Arena.GrindAttr
-public import ConAgua.L.GrindAttr
-public import ConAgua.L.ModelGen
-public import ConAgua.Checker.NoVerdictTree
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
+import ConAgua.L.ModelGen
+import ConAgua.Checker.NoVerdictTree
 public import Std.Tactic.BVDecide.Normalize.BitVec
 public import Std.Tactic.BVDecide.Normalize.Prop
+public import ConAgua.Checker.NoVerdictFns
 
 @[expose] public section
 

@@ -1,10 +1,14 @@
 module
 
 public import ConRon.Bridge.ExprOps.Inst1
-public import ConAgua.Arena.IndT.PosFields
-public import ConAgua.Arena.IndPosSpec.NestCrest
-public import ConAgua.Arena.IndRealAbsPos
+import ConAgua.Arena.IndT.PosFields
+import ConAgua.Arena.IndPosSpec.NestCrest
+import ConAgua.Arena.IndRealAbsPos
 import all ConRon.Bridge.Inductives.Positivity
+import ConAgua.Arena.IndPosSpec.Pos2DecHLSplit
+import ConAgua.Arena.IndPosSpec.Snoc
+import ConAgua.Checker.NoVerdictTree
+public import ConAgua.Verdict.PosE
 
 @[expose] public section
 

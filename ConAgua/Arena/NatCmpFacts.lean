@@ -1,7 +1,7 @@
 module
 
 public import ConAgua.Arena.Pool
-public import ConAgua.Arena.NatGrindAttr
+import ConAgua.Arena.NatGrindAttr
 import ConAgua.Arena.GrindAttr
 
 @[expose] public section

@@ -1,6 +1,13 @@
 module
 
 public import ConAgua.Arena.DefEqKnot
+import ConAgua.Arena.CoreNatOp
+import ConAgua.Arena.StrLitKeep
+import ConAgua.Arena.WhnfCoreLoop
+import ConAgua.Arena.WhnfDeltaRefine2
+import ConAgua.Arena.WhnfIotaRefine3
+import ConAgua.Arena.WhnfM2CRefine5
+import ConAgua.Arena.WhnfSlotRefine
 
 @[expose] public section
 

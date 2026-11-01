@@ -1,7 +1,11 @@
 module
 
-public import ConAgua.Arena.WhnfIotaRefine3
-public import ConAgua.Arena.DefEqStuckEta
+import ConAgua.Arena.WhnfIotaRefine3
+import ConAgua.Arena.DefEqStuckEta
+import ConAgua.Arena.RefWalk
+import ConAgua.Arena.WhnfCoreRefine
+public import ConAgua.Arena.DefEqStuck
+public import ConAgua.Arena.WhnfIotaRefine
 
 @[expose] public section
 

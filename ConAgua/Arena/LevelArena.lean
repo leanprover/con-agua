@@ -1,10 +1,12 @@
 module
 
-public import ConAgua.Arena.View
+import ConAgua.Arena.View
 public import ConAgua.Arena.LevelEquivRel
 public import ConRon.Arena.Core
-public import ConRon.Arena.WFProofs
+import ConRon.Arena.WFProofs
 public import Std.Tactic.BVDecide.Normalize.Prop
+public import ConAgua.Arena.ArenaRel
+public import ConRon.Arena.WF
 
 @[expose] public section
 

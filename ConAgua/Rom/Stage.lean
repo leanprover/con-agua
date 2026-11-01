@@ -1,7 +1,7 @@
 module
 
 public import ConAgua.Rom.PinSets
-public import ConRon.Bridge.Checker.Pins
+import ConRon.Bridge.Checker.Pins
 public import ConAgua.Arena.RomPins
 
 @[expose] public section

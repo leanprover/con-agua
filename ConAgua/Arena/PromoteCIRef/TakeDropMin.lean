@@ -1,6 +1,7 @@
 module
 
-public import ConAgua.Arena.PromoteRecRef
+import ConAgua.Arena.PromoteRecRef
+public import ConAgua.Arena.PromoteERef
 
 @[expose] public section
 

@@ -2,10 +2,10 @@ module
 
 public import ConAgua.Front.FrontPreOK
 public import ConAgua.Front.DriverRefine
-public import ConAgua.Front.ChunkBridge
+import ConAgua.Front.ChunkBridge
 public import ConAgua.Checker.FrontProg
-public import ConAgua.Verdict.FrontValidE
-public import ConAgua.Final.TwinVerdict
+import ConAgua.Verdict.FrontValidE
+import ConAgua.Final.TwinVerdict
 
 @[expose] public section
 

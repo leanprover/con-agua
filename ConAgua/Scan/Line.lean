@@ -5,12 +5,13 @@ public import ConAgua.Scan.Records
 import ConAgua.Census.Attr
 import ConAgua.Front.Preserve
 import ConAgua.L.GrindAttr
-public import ConAgua.Scan.Common
-public import ConAgua.Scan.RecordsSpec
+import ConAgua.Scan.Common
+import ConAgua.Scan.RecordsSpec
 import Std.Tactic.BVDecide.Normalize.BitVec
 import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
+import ConAgua.L.For
 
 @[expose] public section
 

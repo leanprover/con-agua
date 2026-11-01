@@ -3,6 +3,8 @@ module
 public import ConAgua.Arena.WhnfCoreAppLoop
 public import Std.Tactic.BVDecide.Normalize.Prop
 public import Std.WP.Tactic
+import ConAgua.Arena.RefWalk
+public import ConAgua.Arena.WhnfCoreRefine
 
 @[expose] public section
 

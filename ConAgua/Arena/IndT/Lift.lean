@@ -1,8 +1,12 @@
 module
 
-public import ConAgua.Arena.IndT.Base
-public import ConAgua.Arena.StageC
+import ConAgua.Arena.IndT.Base
+import ConAgua.Arena.StageC
 public import ConRon.Bridge.Inductives.Rel
+public import ConAgua.Arena.IndCallM
+public import ConAgua.Arena.KnotEntry
+public import ConAgua.Arena.RecSim
+public import ConAgua.Arena.TwinStep
 
 @[expose] public section
 

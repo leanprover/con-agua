@@ -2,7 +2,7 @@ module
 
 public import ConAgua.Arena.DeclHeader
 public import ConAgua.Arena.IndPartsSpec.EqW
-public import ConAgua.Arena.IndGrindAttr
+import ConAgua.Arena.IndGrindAttr
 
 @[expose] public section
 

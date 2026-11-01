@@ -3,8 +3,10 @@ module
 public import ConAgua.Arena.RecClassSpec.CloseLams
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.L.GrindAttr
-public import ConAgua.L.ModelGen
+import ConAgua.L.ModelGen
 public import ConAgua.Arena.IndCallM
+import ConAgua.Arena.IndInstallSpec.DomsW
+import ConRon.Bridge.Grind
 
 @[expose] public section
 

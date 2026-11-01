@@ -1,10 +1,17 @@
 module
 
-public import ConAgua.Front.IndApplyRefine
-public import ConAgua.Arena.IndPartsSpec.BlockSplitRecs
+import ConAgua.Front.IndApplyRefine
+import ConAgua.Arena.IndPartsSpec.BlockSplitRecs
 public import ConAgua.Arena.GrindAttr
-public import ConAgua.Arena.IndGrindAttr
+import ConAgua.Arena.IndGrindAttr
 public import ConAgua.L.GrindAttr
+import ConAgua.Arena.DeclCanonEq
+import ConAgua.Arena.InferBodyIntern
+import ConAgua.Arena.RecClassSpec.CloseLams
+import ConRon.Bridge.Grind
+public import ConAgua.Arena.IndPartsSpec.BlockRecNamesUnreserved
+public import ConAgua.Checker.Entry
+public import ConAgua.Front.IndApplySpec
 
 @[expose] public section
 

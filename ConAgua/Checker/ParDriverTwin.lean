@@ -1,7 +1,13 @@
 module
 
 public import ConAgua.Checker.ParDriverL
-public import ConAgua.Checker.CheckARun
+import ConAgua.Checker.CheckARun
+import ConAgua.Checker.IndArm
+import ConAgua.Checker.LoopProg
+import ConAgua.Checker.LoopStage
+import ConAgua.Checker.TwinShapeQuot
+public import ConAgua.Checker.PresizeStage
+public import ConAgua.Final.Twin
 
 @[expose] public section
 

@@ -1,11 +1,13 @@
 module
 
 public import ConAgua.Arena.IndPartsSpec.IndPartsProg5
-public import ConAgua.Arena.IndPartsSpec.PartsSliceCopy
-public import ConAgua.Arena.IndSumSpec.Row
+import ConAgua.Arena.IndPartsSpec.PartsSliceCopy
+import ConAgua.Arena.IndSumSpec.Row
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.Arena.IndGrindAttr
 public import ConAgua.L.GrindAttr
+import Std.WP.Tactic
+import Std.WP.Triple.SpecLemmas
 
 @[expose] public section
 

@@ -2,12 +2,19 @@ module
 
 public import ConAgua.Arena.RecClassSpec.GtProg
 public import ConAgua.Arena.RecClassSpec.IhW
-public import ConAgua.Arena.RecClassSpec.MjW
-public import ConAgua.Arena.RecClassSpec.SlotsProg
-public import ConAgua.Arena.IndPosSpec.SnocWStage
+import ConAgua.Arena.RecClassSpec.MjW
+import ConAgua.Arena.RecClassSpec.SlotsProg
+import ConAgua.Arena.IndPosSpec.SnocWStage
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.L.GrindAttr
-public import ConAgua.L.ModelGen
+import ConAgua.L.ModelGen
+import ConAgua.Arena.IndInstallSpec.DomsW
+import ConAgua.Arena.IndRealAbsSim
+import ConAgua.Arena.IndSim
+import ConAgua.Arena.RecClassSpec.PiBWRoom
+import ConAgua.Arena.RecClassSpec.Rec2AppendWDec
+import ConAgua.Arena.RecStab
+public import ConAgua.Arena.RecClassSpec.ClassGenMajorCi
 
 @[expose] public section
 

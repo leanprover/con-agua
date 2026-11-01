@@ -1,6 +1,6 @@
 module
 
-public import ConAgua.Verdict.DefEqBaseE
+import ConAgua.Verdict.DefEqBaseE
 public import ConAgua.Arena.IndT.Lift
 
 @[expose] public section

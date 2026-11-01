@@ -2,9 +2,14 @@ module
 
 public import ConAgua.Arena.WhnfM2CRefine
 public import ConAgua.Arena.WhnfIotaRefine4
-public import ConRon.Bridge.Grind
+import ConRon.Bridge.Grind
 public import ConAgua.Verdict.WhnfModels6E
 public import ConAgua.Arena.DefEqStuck
+import ConAgua.Arena.DerRel
+import ConAgua.Arena.RefWalk
+import ConAgua.Arena.StoreDenIntern
+import ConAgua.Arena.WhnfCoreRefine
+import ConAgua.Arena.WhnfIotaRefine3
 
 @[expose] public section
 

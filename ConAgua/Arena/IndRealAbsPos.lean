@@ -1,10 +1,13 @@
 module
 
 public import ConAgua.Arena.IndPosSpec.NcnW
-public import ConAgua.Arena.IndPosSpec.NestContParamsClosed
+import ConAgua.Arena.IndPosSpec.NestContParamsClosed
 public import ConAgua.Arena.IndPosSpec.P2ctK1
 public import ConAgua.Arena.IndPosSpec.NestGroupCtors
 public import ConAgua.Arena.IndPosSpec.NestHoles
+import ConAgua.Arena.IndPosSpec.PosmemoRxMfr
+import ConAgua.Arena.RecClassSpec.Classes
+public import ConAgua.Arena.IndPosSpec.FgW2
 
 @[expose] public section
 

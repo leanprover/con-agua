@@ -1,8 +1,8 @@
 module
 
-public import ConAgua.Verdict.DefEqLoopsE
+import ConAgua.Verdict.DefEqLoopsE
 public import ConAgua.Arena.DefEqKnot
-public import ConAgua.Verdict.DefEqSlotE
+import ConAgua.Verdict.DefEqSlotE
 
 @[expose] public section
 

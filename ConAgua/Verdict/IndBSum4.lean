@@ -1,11 +1,22 @@
 module
 
 public import ConAgua.Arena.IndSumSpec.CtorX
-public import ConAgua.Arena.IndSumSpec.SoaW
+import ConAgua.Arena.IndSumSpec.SoaW
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.L.GrindAttr
-public import ConAgua.L.ModelGen
+import ConAgua.L.ModelGen
 public import ConAgua.Arena.IndT.Sum4
+import ConAgua.Arena.IndInstallSpec.BlockCapsAt
+import ConAgua.Arena.IndInstallSpec.DomsW
+import ConAgua.Arena.IndPartsSpec.BlockRecNamesUnreserved
+import ConAgua.Arena.IndRealAbsSim
+import ConAgua.Arena.IndSim
+import ConAgua.Arena.IndSumSpec.ConsSumCtors
+import ConAgua.Arena.IndSumSpec.SumRules
+import ConAgua.Arena.IndT.Lift
+import ConAgua.Arena.RecClassSpec.Classes
+import ConAgua.Arena.RefWalk
+import ConAgua.Checker.NoVerdictTree
 
 @[expose] public section
 /-!

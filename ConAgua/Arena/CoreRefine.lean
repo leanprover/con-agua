@@ -1,7 +1,9 @@
 module
 
-public import ConAgua.Arena.ScratchRefine
+import ConAgua.Arena.ScratchRefine
 public import Std.Tactic.BVDecide.Normalize.Prop
+import ConAgua.Arena.DerRel
+public import ConAgua.Arena.Tiers
 
 @[expose] public section
 

@@ -1,10 +1,11 @@
 module
 
-public import ConAgua.Arena.IndPosSpec.RpGoStep
+import ConAgua.Arena.IndPosSpec.RpGoStep
 public import ConAgua.Arena.IndPosSpec.RxMapW
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.Arena.IndGrindAttr
 public import ConAgua.L.GrindAttr
+import Std.Tactic.BVDecide.Normalize.BitVec
 
 @[expose] public section
 

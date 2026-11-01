@@ -1,7 +1,7 @@
 module
 
 public import ConAgua.Checker.HoistOrderRef3
-public import ConAgua.Arena.DeclNatBase
+import ConAgua.Arena.DeclNatBase
 
 @[expose] public section
 

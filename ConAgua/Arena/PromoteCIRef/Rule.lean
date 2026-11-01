@@ -1,9 +1,13 @@
 module
 
-public import ConAgua.Arena.PromoteCIRef.Fire
+import ConAgua.Arena.PromoteCIRef.Fire
 public import ConAgua.Arena.PromoteCIRef.Proj
 public import ConAgua.Arena.PromoteCIExt
-public import ConRon.Bridge.Grind
+import ConRon.Bridge.Grind
+import ConAgua.Arena.PromoteCIRef.Hslice
+import ConAgua.Arena.PromoteCIRef.PmDecRuleWords
+import ConAgua.Arena.PromoteCIRef.PreECongr
+public import ConAgua.Arena.PromoteCIRef.StPNat
 
 @[expose] public section
 

@@ -9,11 +9,11 @@ public import ConAgua.Arena.NNumStore
 public import ConAgua.Arena.NStrStore
 public import ConAgua.Arena.ParamStore
 public import ConAgua.Arena.ZeroStore
-public import ConAgua.Arena.GrindAttr
-public import ConAgua.Census.Attr
-public import ConAgua.L.GrindAttr
-public import Std.Tactic.BVDecide.Normalize.Prop
-public import Std.WP.Tactic
+import ConAgua.Arena.GrindAttr
+import ConAgua.Census.Attr
+import ConAgua.L.GrindAttr
+import Std.Tactic.BVDecide.Normalize.Prop
+import Std.WP.Tactic
 meta import ConAgua.Front.IdTable
 meta import ConAgua.Arena.ImaxStore
 meta import ConAgua.Arena.LevelStore
@@ -28,6 +28,7 @@ meta import ConAgua.Census.Attr
 meta import ConAgua.L.GrindAttr
 meta import Std.Tactic.BVDecide.Normalize.Prop
 meta import Std.WP.Tactic
+import Std.WP.Triple.SpecLemmas
 
 @[expose] public section
 

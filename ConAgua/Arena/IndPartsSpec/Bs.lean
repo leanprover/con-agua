@@ -2,13 +2,15 @@ module
 
 public import ConAgua.Arena.IndDecStab
 public import ConAgua.Arena.IndPosSpec.CtxFields
-public import ConAgua.Arena.GrindAttr
-public import ConAgua.Arena.IndGrindAttr
-public import ConAgua.L.GrindAttr
-public import ConAgua.L.ModelGen
-public import Std.Tactic.BVDecide.Normalize.BitVec
+import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.IndGrindAttr
+import ConAgua.L.GrindAttr
+import ConAgua.L.ModelGen
+import Std.Tactic.BVDecide.Normalize.BitVec
 public import Std.Tactic.BVDecide.Normalize.Prop
-public import Std.WP.Tactic
+import Std.WP.Tactic
+import Std.WP.Triple.SpecLemmas
+public import ConAgua.Arena.IndParts
 
 @[expose] public section
 

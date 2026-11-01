@@ -1,10 +1,14 @@
 module
 
-public import ConRon.Bridge.Inductives.FieldTele
-public import ConAgua.Arena.IndT.PosFields
-public import ConAgua.Arena.IndPosSpec.NestCrest
-public import ConAgua.Arena.IndPosSpec.P2sfW
-public import ConAgua.Arena.IndRealAbsPos
+import ConRon.Bridge.Inductives.FieldTele
+import ConAgua.Arena.IndT.PosFields
+import ConAgua.Arena.IndPosSpec.NestCrest
+import ConAgua.Arena.IndPosSpec.P2sfW
+import ConAgua.Arena.IndRealAbsPos
+import ConAgua.Arena.IndPosSpec.Nb
+import ConAgua.Arena.IndPosSpec.Snoc
+import ConAgua.Checker.NoVerdictTree
+public import ConAgua.Verdict.PosE
 
 @[expose] public section
 

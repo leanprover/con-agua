@@ -3,12 +3,12 @@ module
 public import ConRon.Arena.Monad
 public import ConAgua.Arena.NatAdd
 public import Std.Data.DTreeMap.Internal.Operations
-public import Std.WP.Triple.SpecLemmas
-public import ConAgua.Arena.GrindAttr
-public import ConAgua.Census.Attr
-public import ConAgua.L.GrindAttr
-public import Std.Tactic.BVDecide.Normalize.Prop
-public import Std.WP.Tactic
+import Std.WP.Triple.SpecLemmas
+import ConAgua.Arena.GrindAttr
+import ConAgua.Census.Attr
+import ConAgua.L.GrindAttr
+import Std.Tactic.BVDecide.Normalize.Prop
+import Std.WP.Tactic
 
 @[expose] public section
 

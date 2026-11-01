@@ -1,11 +1,15 @@
 module
 
-public import ConAgua.Arena.IndPosSpec.CfW
-public import ConAgua.Checker.NoVerdictTree
-public import ConAgua.Arena.Verdict
+import ConAgua.Arena.IndPosSpec.CfW
+import ConAgua.Checker.NoVerdictTree
+import ConAgua.Arena.Verdict
 public import ConAgua.Arena.GrindAttr
-public import ConAgua.L.ModelGen
+import ConAgua.L.ModelGen
 public import Std.WP.Tactic
+public import ConAgua.Arena.IndPosSpec.P2ctK1
+public import ConAgua.Arena.RecCheckSpec.ErToIwWStage
+public import ConAgua.Checker.NoVerdictFns
+public import ConAgua.L.ErrSpec
 
 @[expose] public section
 

@@ -1,8 +1,10 @@
 module
 
-public import ConAgua.Arena.IndPosSpec.GgW
+import ConAgua.Arena.IndPosSpec.GgW
 public import ConAgua.Arena.IndPosSpec.GrpAt
 public import ConAgua.Arena.IndPosSpec.NkcW
+import ConAgua.Arena.Env
+import ConAgua.Arena.IndPosSpec.RootHoles
 
 @[expose] public section
 

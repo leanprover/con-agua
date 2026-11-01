@@ -1,7 +1,7 @@
 module
 
 public import ConAgua.Arena.StoreDen
-public import ConRon.Arena.WFProofs
+import ConRon.Arena.WFProofs
 
 @[expose] public section
 

@@ -1,9 +1,11 @@
 module
 
 public import ConAgua.Arena.PropReadW
-public import ConAgua.Arena.InferFieldSort
+import ConAgua.Arena.InferFieldSort
 public import ConAgua.Arena.CoreDen
-public import ConAgua.Arena.LevelInternRef
+import ConAgua.Arena.LevelInternRef
+import ConAgua.Arena.CoreLevels
+import ConRon.Bridge.Grind
 
 @[expose] public section
 

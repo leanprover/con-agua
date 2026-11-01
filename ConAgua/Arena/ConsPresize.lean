@@ -1,6 +1,9 @@
 module
 
 public import ConAgua.Arena.ConsLibRel
+import Std.Tactic.BVDecide.Normalize.BitVec
+import Std.WP.Tactic
+import Std.WP.Triple.SpecLemmas
 
 @[expose] public section
 

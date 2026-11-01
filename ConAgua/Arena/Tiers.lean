@@ -1,11 +1,12 @@
 module
 
-public import ConAgua.Arena.DerRel
+import ConAgua.Arena.DerRel
 public import ConAgua.Arena.Keeps
 public import ConAgua.Arena.EnvRec
 public import ConAgua.Arena.MemoBank
 public import ConAgua.Arena.CoreCaches
 public import Std.Tactic.BVDecide.Normalize.Prop
+public import ConAgua.Arena.DerRelBase
 
 @[expose] public section
 

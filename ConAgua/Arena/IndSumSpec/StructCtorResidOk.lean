@@ -1,12 +1,17 @@
 module
 
-public import ConAgua.Arena.IndSumSpec.DecHLTake
-public import ConAgua.Arena.IndSumSpec.Row
+import ConAgua.Arena.IndSumSpec.DecHLTake
+import ConAgua.Arena.IndSumSpec.Row
 public import ConAgua.Arena.IndPartsSpec.EqW
 public import ConAgua.Arena.IndRealAbs
 public import ConAgua.Arena.GrindAttr
-public import ConAgua.Arena.IndGrindAttr
+import ConAgua.Arena.IndGrindAttr
 public import ConAgua.L.GrindAttr
+import ConAgua.Arena.IndInstallSpec.DomsW
+import Std.WP.Tactic
+import Std.WP.Triple.SpecLemmas
+public import ConAgua.Arena.IndSumSpec.ColW
+public import ConAgua.Arena.IndSumSpec.StructProjArgP
 
 @[expose] public section
 

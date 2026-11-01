@@ -1,9 +1,14 @@
 module
 
-public import ConAgua.Arena.DefEqMid
-public import ConAgua.Arena.GrindAttr
-public import ConAgua.L.GrindAttr
-public import ConAgua.L.ModelGen
+import ConAgua.Arena.DefEqMid
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
+import ConAgua.L.ModelGen
+import ConAgua.Front.Preserve
+import Std.WP.Triple.SpecLemmas
+public import ConAgua.Arena.DefEq
+public import ConAgua.Arena.KnotE
+public import ConAgua.Arena.RefECore
 
 @[expose] public section
 

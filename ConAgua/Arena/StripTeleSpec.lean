@@ -1,16 +1,20 @@
 module
 
 public import ConAgua.Arena.IndView
-public import ConAgua.Arena.IndMaster
+import ConAgua.Arena.IndMaster
 public import ConAgua.Arena.StripTele
 public import ConAgua.L.ProgHas
 public import ConAgua.Arena.IndStubs
-public import ConAgua.Front.Preserve
-public import ConAgua.Arena.GrindAttr
-public import ConAgua.L.GrindAttr
-public import Std.Tactic.BVDecide.Normalize.BitVec
+import ConAgua.Front.Preserve
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
+import Std.Tactic.BVDecide.Normalize.BitVec
 public import Std.Tactic.BVDecide.Normalize.Prop
-public import Std.WP.Tactic
+import Std.WP.Tactic
+import ConAgua.Arena.Env
+import ConAgua.Arena.IndCopy2
+import Std.WP.Triple.SpecLemmas
+public import ConAgua.Arena.IndCopy
 
 @[expose] public section
 

@@ -1,6 +1,8 @@
 module
 
-public import ConAgua.Arena.RecClassSpec.RuW
+import ConAgua.Arena.RecClassSpec.RuW
+public import ConAgua.Arena.RecClassSpec.RuProg
+public import ConAgua.Arena.RecSim
 
 @[expose] public section
 

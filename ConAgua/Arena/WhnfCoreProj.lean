@@ -1,17 +1,20 @@
 module
 
-public import ConAgua.Arena.ProjView
+import ConAgua.Arena.ProjView
 public import ConAgua.Arena.WhnfCoreApp
-public import ConAgua.Arena.WhnfCoreSlot
-public import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.WhnfCoreSlot
+import ConAgua.Arena.GrindAttr
 public import ConAgua.Arena.RefECore
-public import ConAgua.Arena.RefWalk
+import ConAgua.Arena.RefWalk
 public import ConAgua.Arena.KnotE
 public import ConAgua.Verdict.WhnfModels2E
-public import ConAgua.L.GrindAttr
-public import Std.Tactic.BVDecide.Normalize.BitVec
+import ConAgua.L.GrindAttr
+import Std.Tactic.BVDecide.Normalize.BitVec
 public import Std.Tactic.BVDecide.Normalize.Prop
-public import Std.WP.Tactic
+import Std.WP.Tactic
+import ConAgua.Arena.DerRel
+import ConAgua.Arena.WhnfCoreRefine
+import Std.WP.Triple.SpecLemmas
 
 @[expose] public section
 

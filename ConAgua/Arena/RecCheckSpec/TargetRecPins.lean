@@ -1,11 +1,15 @@
 module
 
 public import ConAgua.Arena.RecCheckSpec.TpsW
-public import ConAgua.Arena.RecCheckSpec.TpnB
-public import ConAgua.Arena.IndPartsSpec.BlockRecLpsOk
+import ConAgua.Arena.RecCheckSpec.TpnB
+import ConAgua.Arena.IndPartsSpec.BlockRecLpsOk
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.Arena.IndGrindAttr
 public import ConAgua.L.GrindAttr
+import Std.Tactic.BVDecide.Normalize.BitVec
+import Std.WP.Tactic
+import Std.WP.Triple.SpecLemmas
+public import ConAgua.Arena.IndPartsSpec.EqW
 
 @[expose] public section
 

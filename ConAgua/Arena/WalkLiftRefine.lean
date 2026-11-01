@@ -8,6 +8,9 @@ public import ConAgua.Arena.Keeps
 public import ConAgua.Arena.WriteSets
 public import ConAgua.Census.Attr
 public import Std.Tactic.BVDecide.Normalize.Prop
+import ConAgua.Arena.DerRel
+import ConAgua.Arena.FVarRangeRefine
+import ConAgua.Arena.View
 
 @[expose] public section
 

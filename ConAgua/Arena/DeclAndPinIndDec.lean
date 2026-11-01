@@ -1,8 +1,9 @@
 module
 
-public import ConAgua.Arena.IndLibSpec
+import ConAgua.Arena.IndLibSpec
 public import Std.Tactic.BVDecide.Normalize.Prop
-public import ConRon.Bridge.Grind
+import ConRon.Bridge.Grind
+public import ConAgua.Arena.EnvRec
 
 @[expose] public section
 

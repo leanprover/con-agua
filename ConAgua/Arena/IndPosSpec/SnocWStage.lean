@@ -1,7 +1,8 @@
 module
 
 public import ConAgua.Arena.IndPosSpec.Pos2CvLpsWStage
-public import ConAgua.Arena.IndPosSpec.RootHoles
+import ConAgua.Arena.IndPosSpec.RootHoles
+import ConAgua.Arena.IndPosSpec.DpGoW
 
 @[expose] public section
 

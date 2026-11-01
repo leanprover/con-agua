@@ -1,9 +1,11 @@
 module
 
 public import ConAgua.Arena.DeclNatSpec
-public import ConAgua.Arena.GrindAttr
-public import ConAgua.Arena.LdRd
-public import ConAgua.L.GrindAttr
+import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.LdRd
+import ConAgua.L.GrindAttr
+import Std.WP.Tactic
+import Std.WP.Triple.SpecLemmas
 
 @[expose] public section
 

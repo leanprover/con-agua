@@ -2,6 +2,7 @@ module
 
 public import ConAgua.Rom.PinReadSpec
 public import ConAgua.Rom.DecExpr
+import ConAgua.Rom.Dec
 
 @[expose] public section
 

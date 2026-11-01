@@ -10,6 +10,7 @@ public import ConAgua.Census.Attr
 public import ConAgua.Arena.StoreDen
 public import Std.Tactic.BVDecide.Normalize.Prop
 public import ConAgua.Layout
+import ConAgua.Arena.DerRel
 
 @[expose] public section
 

@@ -1,9 +1,16 @@
 module
 
-public import ConAgua.Arena.IndPosSpec.BvbWMfr
+import ConAgua.Arena.IndPosSpec.BvbWMfr
 public import ConAgua.Arena.IndPosSpec.NitW
 public import ConAgua.Arena.IlpRd
 public import ConAgua.Verdict.PosE1M
+import ConAgua.Arena.DeclRec
+import ConAgua.Arena.IndPosSpec.InstW
+import ConAgua.Arena.RecClassSpec.CloseLams
+import ConAgua.Arena.RefWalk
+import ConAgua.Arena.WhnfCoreProj
+import ConAgua.L.WordOff
+public import ConAgua.Arena.IndPosSpec.NkFields
 
 @[expose] public section
 

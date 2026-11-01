@@ -2,9 +2,10 @@ module
 
 public import ConAgua.Arena.RomExpr
 public import ConRon.Arena.Frontend.Readback
-public import ConAgua.Arena.NatArms
-public import ConLeche.Verify.Cached.Erase
+import ConAgua.Arena.NatArms
+import ConLeche.Verify.Cached.Erase
 public import Std.Tactic.BVDecide.Normalize.Prop
+import ConAgua.Front.ApplyExprRefine
 
 @[expose] public section
 

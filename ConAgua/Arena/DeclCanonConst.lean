@@ -1,10 +1,16 @@
 module
 
 public import ConAgua.Arena.DeclCanonNames
-public import ConAgua.Arena.DeclCanonEq
-public import ConAgua.Arena.GrindAttr
-public import ConAgua.Arena.IndGrindAttr
-public import ConAgua.L.GrindAttr
+import ConAgua.Arena.DeclCanonEq
+import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.IndGrindAttr
+import ConAgua.L.GrindAttr
+import ConAgua.Arena.DeclRec
+import ConAgua.Arena.IndInstallSpec.DomsW
+import ConAgua.Arena.IndPartsSpec.MemberNames
+import Std.WP.Tactic
+import Std.WP.Triple.SpecLemmas
+public import ConAgua.Arena.DeclCvg
 
 @[expose] public section
 

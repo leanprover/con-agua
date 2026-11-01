@@ -4,7 +4,8 @@ public import ConAgua.Verdict.IndBTmf
 public import ConAgua.Verdict.IndBPins
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.L.GrindAttr
-public import ConAgua.L.ModelGen
+import ConAgua.L.ModelGen
+import ConAgua.Checker.NoVerdictTree
 
 @[expose] public section
 /-!

@@ -1,17 +1,21 @@
 module
 
 public import ConAgua.Arena.Knot
-public import ConAgua.Arena.WhnfDeltaSlot
+import ConAgua.Arena.WhnfDeltaSlot
 public import ConAgua.Arena.SimLib
 public import ConAgua.Arena.KnotE
 public import ConAgua.Arena.RefECore
-public import ConAgua.Arena.RefWalk
-public import ConAgua.Checker.NoVerdictTree
-public import ConAgua.Arena.GrindAttr
-public import ConAgua.L.GrindAttr
+import ConAgua.Arena.RefWalk
+import ConAgua.Checker.NoVerdictTree
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
 public import Std.Tactic.BVDecide.Normalize.BitVec
 public import Std.Tactic.BVDecide.Normalize.Prop
 public import Std.WP.Tactic
+import ConAgua.Arena.WhnfCoreProj
+import ConAgua.Arena.WhnfCoreSlot
+import ConAgua.L.ModelGen
+public import ConAgua.Checker.NoVerdictFns
 
 @[expose] public section
 

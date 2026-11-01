@@ -4,10 +4,11 @@ public import ConAgua.Arena.DeclStep
 public import ConAgua.Arena.IndMaster
 public import ConAgua.Front.StateDR
 public import Std.Tactic.BVDecide.Normalize.Prop
-public import ConAgua.Arena.GrindAttr
-public import ConAgua.Arena.IndGrindAttr
-public import ConAgua.L.GrindAttr
-public import ConRon.Bridge.Grind
+import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.IndGrindAttr
+import ConAgua.L.GrindAttr
+import ConRon.Bridge.Grind
+public import ConAgua.Arena.Env
 
 @[expose] public section
 

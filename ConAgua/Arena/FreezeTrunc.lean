@@ -1,6 +1,8 @@
 module
 
-public import ConAgua.Arena.FreezeTruncArena
+import ConAgua.Arena.FreezeTruncArena
+import ConAgua.Arena.FreezeTruncKeep
+public import ConAgua.Arena.FreezeRel
 
 @[expose] public section
 

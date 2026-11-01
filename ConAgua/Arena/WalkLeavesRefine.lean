@@ -3,6 +3,9 @@ module
 public import ConAgua.Arena.WalkLeaves
 public import ConAgua.Arena.WalkScopeRefine
 public import Std.Tactic.BVDecide.Normalize.Prop
+import ConAgua.Arena.FVarRangeRefine
+import ConAgua.Arena.LiftRefine
+import ConAgua.Arena.View
 
 @[expose] public section
 

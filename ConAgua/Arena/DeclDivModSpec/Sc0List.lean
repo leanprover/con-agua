@@ -3,9 +3,11 @@ module
 public import ConAgua.Arena.DeclDivModSpec.DmCgW
 public import ConAgua.Arena.DeclDivModSpec.EqAt1
 public import ConAgua.Arena.IndRealApdT
-public import ConAgua.Arena.GrindAttr
-public import ConAgua.L.GrindAttr
-public import ConAgua.L.ModelGen
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
+import ConAgua.L.ModelGen
+import ConAgua.Arena.DeclNatGate
+import ConAgua.Arena.IndInstallSpec.DomsW
 
 @[expose] public section
 

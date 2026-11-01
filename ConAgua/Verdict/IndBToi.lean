@@ -1,11 +1,22 @@
 module
 
-public import ConAgua.Arena.RecGenSpec.DecCIIndCv
-public import ConAgua.Arena.RecClassSpec.ClassNPcOf
-public import ConAgua.Arena.IlpRdReal
-public import ConAgua.Arena.RecGenSpec.OcW
+import ConAgua.Arena.RecGenSpec.DecCIIndCv
+import ConAgua.Arena.RecClassSpec.ClassNPcOf
+import ConAgua.Arena.IlpRdReal
+import ConAgua.Arena.RecGenSpec.OcW
 public import ConAgua.Arena.GrindAttr
-public import ConAgua.L.ModelGen
+import ConAgua.L.ModelGen
+import ConAgua.Arena.IndPartsSpec.BlockCounts
+import ConAgua.Arena.IndPosSpec.EntryW
+import ConAgua.Arena.IndPosSpec.FgW
+import ConAgua.Arena.IndRealAbsPos
+import ConAgua.Arena.RefWalk
+import ConAgua.Checker.NoVerdictTree
+public import ConAgua.Arena.IndPartsSpec.RecTW
+public import ConAgua.Arena.IndPosSpec.NoGoStep
+public import ConAgua.Arena.IndRealIlpL
+public import ConAgua.Arena.RecCheckSpec.ToiW
+public import ConAgua.Arena.TwinStep
 
 @[expose] public section
 

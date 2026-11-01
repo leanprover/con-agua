@@ -1,9 +1,14 @@
 module
 
-public import ConAgua.Arena.IndPosSpec.P2sfW
-public import ConAgua.Arena.IndPosSpec.Pos2RdGrow
+import ConAgua.Arena.IndPosSpec.P2sfW
+import ConAgua.Arena.IndPosSpec.Pos2RdGrow
 public import ConAgua.Arena.IndPosSpec.KlB
-public import ConAgua.Arena.IndRealAbsPos
+import ConAgua.Arena.IndRealAbsPos
+import ConAgua.Arena.IndPosSpec.Pos2WfWfSome
+public import ConAgua.Arena.IndPosSpec.BvbWMfr
+public import ConAgua.Arena.IndPosSpec.NkFields
+public import ConAgua.Arena.IndPosSpec.P2rtW
+public import ConAgua.Arena.IndPosSpec.RootOutsB
 
 @[expose] public section
 

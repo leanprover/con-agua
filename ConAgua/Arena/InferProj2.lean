@@ -2,11 +2,15 @@ module
 
 public import ConAgua.Arena.InferProj
 public import ConAgua.Arena.InferBodyDisp
-public import ConAgua.Arena.ProjView
-public import ConAgua.Arena.WhnfCoreProj
-public import ConAgua.Arena.DefEqStuckCert
+import ConAgua.Arena.ProjView
+import ConAgua.Arena.WhnfCoreProj
+import ConAgua.Arena.DefEqStuckCert
 public import ConAgua.Arena.WhnfProjRefine
 public import ConAgua.Arena.InferProj2Models
+import ConAgua.Arena.DefEqStuckShape
+import ConAgua.Arena.RefWalk
+import ConAgua.Arena.WhnfCoreRefine
+import ConRon.Bridge.Grind
 
 @[expose] public section
 

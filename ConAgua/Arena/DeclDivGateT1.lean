@@ -3,15 +3,19 @@ module
 public import ConRon.Bridge.Checker.DeclVal
 public import ConRon.Bridge.Checker.TypePins
 public import ConAgua.Arena.DeclDivModSpec.BoolCtorTyped
-public import ConAgua.Arena.DeclDivModSpec.CertDivModEqs
-public import ConAgua.Arena.DeclDivModSpec.CertTwoEqs
+import ConAgua.Arena.DeclDivModSpec.CertDivModEqs
+import ConAgua.Arena.DeclDivModSpec.CertTwoEqs
 public import ConAgua.Arena.DeclDivModSpec.SubstConst0List
 public import ConAgua.Arena.CrOKFrame
-public import ConAgua.Arena.IndRealMemoCrT
-public import ConAgua.Arena.IndRealWalkT
-public import ConAgua.Arena.StageC
+import ConAgua.Arena.IndRealMemoCrT
+import ConAgua.Arena.IndRealWalkT
+import ConAgua.Arena.StageC
 public import ConRon.Bridge.Checker.DivMod
 import all ConRon.Bridge.Checker.DivMod
+import ConAgua.Arena.DeclNatGate
+import ConAgua.Arena.IndInstallSpec.DomsW
+public import ConAgua.Arena.LeafFns
+public import ConAgua.Arena.TwinStep
 
 @[expose] public section
 

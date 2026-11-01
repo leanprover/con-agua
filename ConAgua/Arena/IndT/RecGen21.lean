@@ -1,10 +1,25 @@
 module
 
-public import ConAgua.Arena.IndT.RecGen19
-public import ConAgua.Arena.IndInstallSpec.PosFreeMfr
+import ConAgua.Arena.IndT.RecGen19
+import ConAgua.Arena.IndInstallSpec.PosFreeMfr
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.L.GrindAttr
-public import ConAgua.L.ModelGen
+import ConAgua.L.ModelGen
+import ConAgua.Arena.IndInstallSpec.ConsBlockCtors
+import ConAgua.Arena.IndInstallSpec.PartsShapeFacts
+import ConAgua.Arena.IndT.Lift
+import ConAgua.Arena.RecClassSpec.CrW
+import ConAgua.Arena.RecGenSpec.CntW
+import ConAgua.Arena.RecGenSpec.StabDecCRDecB
+import ConAgua.Arena.RefWalk
+import ConAgua.Checker.NoVerdictTree
+import ConRon.Bridge.Inductives.GenRec
+public import ConAgua.Arena.IndInstallSpec.HbFreeMfr
+public import ConAgua.Arena.IndRealOpf
+public import ConAgua.Arena.RecClassSpec.ClassNPcOf
+public import ConAgua.Verdict.IndBClm
+public import ConRon.Bridge.Checker.Hyp
+public import ConRon.Bridge.Inductives.Records
 
 @[expose] public section
 

@@ -2,8 +2,8 @@ module
 
 public import ConAgua.Compiler.AbiSim
 public import Std.Tactic.BVDecide.Normalize.BitVec
-public import Std.Tactic.BVDecide.Normalize.Prop
-public import ConRon.Bridge.Grind
+import Std.Tactic.BVDecide.Normalize.Prop
+import ConRon.Bridge.Grind
 
 @[expose] public section
 

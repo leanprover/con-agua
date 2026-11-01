@@ -1,10 +1,20 @@
 module
 
-public import ConRon.Bridge.Inductives.SumInstall
-public import ConAgua.Arena.IndT.Install1
+import ConRon.Bridge.Inductives.SumInstall
+import ConAgua.Arena.IndT.Install1
 public import ConAgua.Verdict.LefRef
 public import ConAgua.Arena.IndInstallSpec.IagW
-public import ConRon.Bridge.Inductives.BlockInstall
+import ConRon.Bridge.Inductives.BlockInstall
+import ConAgua.Arena.IndInstallSpec.DomsW
+import ConAgua.Arena.IndRealAbs
+import ConAgua.Arena.IndT.Lift
+import ConAgua.Arena.RefWalk
+import ConAgua.Checker.NoVerdictTree
+import ConAgua.L.ModelGen
+public import ConAgua.Arena.IndRealOpf
+public import ConAgua.Arena.KnotEntry
+public import ConAgua.Verdict.VCtx
+public import ConRon.Bridge.Checker.Hyp
 
 @[expose] public section
 /-!

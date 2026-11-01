@@ -1,10 +1,18 @@
 module
 
-public import ConAgua.Arena.RecCheckSpec.TargetRecPins
-public import ConAgua.Arena.IndSumSpec.SoaW
+import ConAgua.Arena.RecCheckSpec.TargetRecPins
+import ConAgua.Arena.IndSumSpec.SoaW
 public import ConAgua.Verdict.VCtx
 public import ConAgua.Arena.GrindAttr
-public import ConAgua.L.ModelGen
+import ConAgua.L.ModelGen
+import ConAgua.Arena.IndInstallSpec.NhW
+import ConAgua.Arena.IndInstallSpec.PartsAt
+import ConAgua.Arena.IndPartsSpec.BlockRecLpsOk
+import ConAgua.Arena.IndPartsSpec.BlockRecNameSetOk
+import ConAgua.Arena.IndPartsSpec.BlockSplitRecs
+import ConAgua.Arena.RefWalk
+import ConAgua.Checker.NoVerdictTree
+public import ConAgua.Arena.RecCheckSpec.TpsW
 
 @[expose] public section
 

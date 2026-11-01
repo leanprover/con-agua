@@ -1,9 +1,10 @@
 module
 
 public import ConAgua.Arena.WhnfBase
-public import ConAgua.Arena.StoreDenLvl
-public import ConAgua.Arena.LevelView
+import ConAgua.Arena.StoreDenLvl
+import ConAgua.Arena.LevelView
 public import Std.Tactic.BVDecide.Normalize.Prop
+import ConRon.Arena.WFProofs
 
 @[expose] public section
 

@@ -3,6 +3,8 @@ module
 public import ConAgua.Arena.IndSumSpec.ColW
 public import ConAgua.Arena.RecCheckSpec.TaGoWMfr
 public import ConAgua.Arena.IndGrindAttr
+import ConAgua.Arena.IndPosSpec.FgW
+public import ConAgua.Arena.IndPartsSpec.MemberNames
 
 @[expose] public section
 

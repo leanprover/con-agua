@@ -1,6 +1,14 @@
 module
 
 public import ConAgua.Arena.RecClassSpec.ClassGenRule
+import ConAgua.Arena.IndInstallSpec.DomsW
+import ConAgua.Arena.IndPartsSpec.RulePrefixAt
+import ConAgua.Arena.IndPosSpec.SnocWStage
+import ConAgua.Arena.IndRealAbsSim
+import ConAgua.Arena.IndSim
+import ConAgua.Arena.RecClassSpec.PdWAfr
+import ConAgua.Arena.RecClassSpec.PiBWRoom
+import ConAgua.Arena.RecClassSpec.Rec2AppendWDec
 
 @[expose] public section
 

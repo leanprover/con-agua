@@ -1,9 +1,13 @@
 module
 
 public import ConAgua.Arena.IndPosSpec.NodeV
-public import ConAgua.Arena.IndPosSpec.SlRCongr
-public import ConAgua.Arena.IndPosSpec.SnocWDecK
-public import ConAgua.Arena.IndGrindAttr
+import ConAgua.Arena.IndPosSpec.SlRCongr
+import ConAgua.Arena.IndPosSpec.SnocWDecK
+import ConAgua.Arena.IndGrindAttr
+import ConAgua.Arena.Env
+import ConAgua.Arena.IndPosSpec.NestKeyMap
+import Std.Tactic.BVDecide.Normalize.BitVec
+public import ConAgua.Arena.IndPosSpec.CanonW
 
 @[expose] public section
 

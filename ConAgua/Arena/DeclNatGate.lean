@@ -1,9 +1,11 @@
 module
 
-public import ConAgua.Arena.DeclNatCv
-public import ConAgua.Arena.GrindAttr
-public import ConAgua.L.GrindAttr
-public import ConAgua.L.ModelGen
+import ConAgua.Arena.DeclNatCv
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
+import ConAgua.L.ModelGen
+import ConRon.Bridge.Grind
+public import ConAgua.Arena.DeclNatSpec
 
 @[expose] public section
 

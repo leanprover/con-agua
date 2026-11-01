@@ -7,7 +7,7 @@ public import ConAgua.Scan.Utf8
 import ConAgua.Census.Attr
 public import ConAgua.L.PureEval
 import ConAgua.L.GrindAttr
-public import ConAgua.Scan.Common
+import ConAgua.Scan.Common
 import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas

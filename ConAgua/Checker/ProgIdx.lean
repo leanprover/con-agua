@@ -1,7 +1,7 @@
 module
 
 public import ConAgua.Checker.Prog
-public import ConAgua.Compiler.InlineLit
+import ConAgua.Compiler.InlineLit
 meta import ConAgua.Checker.Prog
 meta import ConAgua.Compiler.InlineLit
 

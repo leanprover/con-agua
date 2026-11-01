@@ -1,12 +1,14 @@
 module
 
 public import ConAgua.Arena.IndSumSpec.StructProjArgP
-public import ConAgua.Arena.RecClassSpec.CloseLams
+import ConAgua.Arena.RecClassSpec.CloseLams
 public import ConAgua.Arena.RecGenSpec.CkcW
 public import ConAgua.Arena.GrindAttr
-public import ConAgua.Arena.IndGrindAttr
+import ConAgua.Arena.IndGrindAttr
 public import ConAgua.L.GrindAttr
 import all Init.Data.List.Control
+import Std.WP.Tactic
+import Std.WP.Triple.SpecLemmas
 
 @[expose] public section
 

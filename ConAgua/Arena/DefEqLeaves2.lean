@@ -1,10 +1,14 @@
 module
 
 public import ConAgua.Arena.DefEqLeaves
-public import ConAgua.Arena.GrindAttr
-public import ConAgua.Arena.NatGrindAttr
-public import ConAgua.L.GrindAttr
+import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.NatGrindAttr
+import ConAgua.L.GrindAttr
 public import ConAgua.Arena.WhnfCoreProj
+import ConAgua.Arena.DerRel
+import ConAgua.Arena.IndView
+import ConAgua.Front.Preserve
+import ConRon.Bridge.Grind
 
 @[expose] public section
 

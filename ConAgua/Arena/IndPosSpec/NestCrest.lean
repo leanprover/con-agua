@@ -1,11 +1,24 @@
 module
 
-public import ConAgua.Arena.IndPosSpec.CfW
-public import ConAgua.Arena.IndPosSpec.Grow
-public import ConAgua.Arena.IndPosSpec.MapOKStep
+import ConAgua.Arena.IndPosSpec.CfW
+import ConAgua.Arena.IndPosSpec.Grow
+import ConAgua.Arena.IndPosSpec.MapOKStep
 public import ConAgua.Arena.IndPosSpec.NcnW
-public import ConAgua.Arena.IndPosSpec.NtyW
+import ConAgua.Arena.IndPosSpec.NtyW
 import all Init.Data.List.Control
+import ConAgua.Arena.CoreWalks
+import ConAgua.Arena.IndInstallSpec.DomsW
+import ConAgua.Arena.IndPosSpec.DecNHFields
+import ConAgua.Arena.IndPosSpec.EntryW
+import ConAgua.Arena.IndPosSpec.Mfr
+import ConAgua.Arena.IndPosSpec.NestCrest2
+import ConAgua.Arena.IndPosSpec.NkFields
+import ConAgua.Arena.IndPosSpec.PosmemoRxMfr
+import ConAgua.Arena.IndPosSpec.Rx
+public import ConAgua.Arena.IndPosSpec.FgW
+public import ConAgua.Arena.IndPosSpec.NestGroupCtors
+public import ConAgua.Arena.IndPosSpec.P2ctK1
+public import ConAgua.Arena.IndPosSpec.UCtx
 
 @[expose] public section
 

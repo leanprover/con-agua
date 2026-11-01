@@ -1,7 +1,8 @@
 module
 
-public import ConAgua.Arena.PhaseBStep
+import ConAgua.Arena.PhaseBStep
 public import ConAgua.L.GrindAttr
+public import ConAgua.Arena.FreezeRel
 
 @[expose] public section
 

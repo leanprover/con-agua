@@ -1,10 +1,20 @@
 module
 
-public import ConAgua.Arena.IndSumSpec.ConsSumCtors
-public import ConAgua.Arena.IndSim
-public import ConAgua.Arena.GrindAttr
-public import ConAgua.Arena.IndGrindAttr
-public import ConAgua.L.GrindAttr
+import ConAgua.Arena.IndSumSpec.ConsSumCtors
+import ConAgua.Arena.IndSim
+import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.IndGrindAttr
+import ConAgua.L.GrindAttr
+import ConAgua.Arena.DeclCvg
+import ConAgua.Arena.IndInstallSpec.BlockCapsAt
+import ConAgua.Arena.IndPartsSpec.BlockRecNamesUnreserved
+import ConAgua.Arena.IndPartsSpec.RulePrefixAt
+import ConRon.Bridge.Grind
+public import ConAgua.Arena.IndDecStab
+public import ConAgua.Arena.IndMaster
+public import ConAgua.Arena.IndReal
+public import ConAgua.Arena.IndSum
+public import ConAgua.Arena.SimLib
 
 @[expose] public section
 

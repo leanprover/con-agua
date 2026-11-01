@@ -1,11 +1,15 @@
 module
 
-public import ConAgua.Arena.IndPosSpec.DecNHFields
-public import ConAgua.Arena.IndPosSpec.DepthGo
-public import ConAgua.Arena.IndPosSpec.RootHoles
-public import ConAgua.Arena.IndPosSpec.Rx
-public import ConAgua.Arena.IndSim
+import ConAgua.Arena.IndPosSpec.DecNHFields
+import ConAgua.Arena.IndPosSpec.DepthGo
+import ConAgua.Arena.IndPosSpec.RootHoles
+import ConAgua.Arena.IndPosSpec.Rx
+import ConAgua.Arena.IndSim
 public import ConAgua.Arena.IndGrindAttr
+import ConAgua.Arena.IndInstallSpec.DomsW
+import ConAgua.Arena.IndPosSpec.NestKeyMap
+public import ConAgua.Arena.IndPosSpec.RpGoStep
+public import ConAgua.Arena.IndPosSpec.RxMapW
 
 @[expose] public section
 

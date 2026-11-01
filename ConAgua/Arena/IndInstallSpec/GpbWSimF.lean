@@ -2,10 +2,10 @@ module
 
 public import ConAgua.Arena.IndInstallSpec.GenRecCheckPrep
 public import ConAgua.Arena.IndInstallSpec.GrcTwinA
-public import ConAgua.Arena.IndInstallSpec.HbFreeMfr
-public import ConAgua.Arena.IndSumSpec.ConsBlockRecsTF
-public import ConAgua.Arena.IndInstallSpec.InstallCvDecB
-public import ConAgua.Arena.RecClassSpec.ReadProg
+import ConAgua.Arena.IndInstallSpec.HbFreeMfr
+import ConAgua.Arena.IndSumSpec.ConsBlockRecsTF
+import ConAgua.Arena.IndInstallSpec.InstallCvDecB
+import ConAgua.Arena.RecClassSpec.ReadProg
 public import ConAgua.Arena.RecGenSpec.ClassMinorSlot
 public import ConAgua.Arena.RecGenSpec.DecB
 public import ConAgua.Arena.RecGenSpec.DecCNWords
@@ -13,6 +13,11 @@ public import ConAgua.Arena.RecGenSpec.Rec3TmdWDecB
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.Arena.IndGrindAttr
 public import ConAgua.L.GrindAttr
+import ConAgua.Arena.IndInstallSpec.DomsW
+import ConAgua.Arena.IndPosSpec.FgW
+import ConAgua.Arena.IndRealAbsSim
+import ConAgua.Arena.RecClassSpec.PiBWRoom
+import ConAgua.Arena.RecClassSpec.Rec2AppendWDec
 
 @[expose] public section
 

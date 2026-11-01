@@ -1,7 +1,7 @@
 module
 
 public import ConAgua.Arena.IndPosSpec.CrLook
-public import ConAgua.Arena.IndPosSpec.RpGoStep
+import ConAgua.Arena.IndPosSpec.RpGoStep
 
 @[expose] public section
 

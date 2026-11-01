@@ -1,6 +1,7 @@
 module
 
 public import ConAgua.Arena.IndSumSpec.StructProjGuards
+public import ConRon.Arena.Inductives.BlockTail
 
 @[expose] public section
 

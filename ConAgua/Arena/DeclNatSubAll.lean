@@ -2,9 +2,9 @@ module
 
 public import ConAgua.Arena.DeclNatSub
 public import ConAgua.Arena.DeclDivModSpec.SubstConst0List
-public import ConAgua.Arena.GrindAttr
-public import ConAgua.L.GrindAttr
-public import ConAgua.L.ModelGen
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
+import ConAgua.L.ModelGen
 
 @[expose] public section
 

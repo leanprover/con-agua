@@ -4,7 +4,9 @@ public import ConAgua.Arena.IndPartsSpec.PartsConsPL
 public import ConAgua.Arena.IndPosSpec.NestOccGo
 public import ConAgua.Arena.IndGrindAttr
 public import ConAgua.L.GrindAttr
-public import ConAgua.L.ModelGen
+import ConAgua.L.ModelGen
+import Std.WP.Tactic
+import Std.WP.Triple.SpecLemmas
 
 @[expose] public section
 

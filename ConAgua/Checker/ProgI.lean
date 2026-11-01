@@ -24,6 +24,7 @@ meta import ConAgua.Checker.ProgIPart8
 meta import ConAgua.Checker.ProgIPart9
 meta import ConAgua.Checker.ProgIPart10
 meta import ConAgua.Checker.ProgIPart11
+import ConAgua.Compiler.InlineLit
 
 @[expose] public section
 

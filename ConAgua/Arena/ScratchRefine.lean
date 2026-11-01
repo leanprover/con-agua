@@ -6,6 +6,8 @@ public import Std.Tactic.BVDecide.Normalize.Prop
 meta import ConAgua.Arena.Scratch
 meta import ConAgua.Arena.Tiers
 meta import Std.Tactic.BVDecide.Normalize.Prop
+import ConAgua.Arena.DerRel
+import ConAgua.Arena.StoreGrow
 
 @[expose] public section
 

@@ -1,7 +1,7 @@
 module
 
 public import ConAgua.Arena.Prelude
-public import ConAgua.Compiler.WFSplit
+import ConAgua.Compiler.WFSplit
 meta import ConAgua.Arena.Prelude
 meta import ConAgua.Compiler.WFSplit
 

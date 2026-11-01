@@ -3,8 +3,9 @@ module
 public import ConAgua.Arena.DefEqStuck
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.L.GrindAttr
-public import ConAgua.Arena.WhnfCoreProj
+import ConAgua.Arena.WhnfCoreProj
 public import ConAgua.Arena.LdRd
+import ConAgua.Arena.RefWalk
 
 @[expose] public section
 

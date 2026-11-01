@@ -1,6 +1,12 @@
 module
 
-public import ConAgua.Arena.DefEqStuckCert
+import ConAgua.Arena.DefEqStuckCert
+import ConAgua.Arena.DefEqStuckShape
+import ConAgua.Arena.IndView
+import ConAgua.Arena.RefWalk
+import ConAgua.Arena.WhnfCoreProj
+import Std.Tactic.BVDecide.Normalize.BitVec
+public import ConAgua.Arena.DefEqStuck
 
 @[expose] public section
 

@@ -1,8 +1,13 @@
 module
 
-public import ConAgua.Front.IndApplyRefine2
+import ConAgua.Front.IndApplyRefine2
 public import ConAgua.Front.IndApplySpec2
 public import Std.Tactic.BVDecide.Normalize.Prop
+import ConAgua.Front.ApplyDeclRefine
+import ConAgua.Front.ApplyExprRefine
+import ConAgua.Front.IndApplyRefine
+public import ConAgua.Front.IndRel
+public import ConAgua.Front.StateDR
 
 @[expose] public section
 

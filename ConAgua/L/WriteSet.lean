@@ -1,12 +1,13 @@
 module
 
 public import ConAgua.L.Logic
-public import ConAgua.Front.Preserve
+import ConAgua.Front.Preserve
 import ConAgua.L.Blocks
 import ConAgua.L.GrindAttr
 import Std.Data.DTreeMap.Internal.Operations
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
+import Std.Tactic.BVDecide.Normalize.Prop
 
 @[expose] public section
 

@@ -3,12 +3,13 @@ module
 public import ConAgua.Front.ApplyExpr
 public import ConAgua.L.ProgHas
 public import ConAgua.Front.LineRec
-public import ConAgua.Arena.GrindAttr
-public import ConAgua.Census.Attr
-public import ConAgua.L.GrindAttr
+import ConAgua.Arena.GrindAttr
+import ConAgua.Census.Attr
+import ConAgua.L.GrindAttr
 public import Std.Tactic.BVDecide.Normalize.BitVec
-public import Std.Tactic.BVDecide.Normalize.Prop
-public import Std.WP.Tactic
+import Std.Tactic.BVDecide.Normalize.Prop
+import Std.WP.Tactic
+import Std.WP.Triple.SpecLemmas
 
 @[expose] public section
 

@@ -1,8 +1,8 @@
 module
 
 public import ConRon.Arena.Frontend.NatOpGround
-public import Std.Tactic.BVDecide.Normalize.BitVec
-public import Std.Tactic.BVDecide.Normalize.Prop
+import Std.Tactic.BVDecide.Normalize.BitVec
+import Std.Tactic.BVDecide.Normalize.Prop
 
 @[expose] public section
 

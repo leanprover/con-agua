@@ -1,8 +1,12 @@
 module
 
 public import ConAgua.Arena.DefEqStuckTail
-public import ConAgua.Arena.DefEqMidLazy2
+import ConAgua.Arena.DefEqMidLazy2
 public import ConAgua.Arena.LdRd
+import ConAgua.Arena.DefEqStuckEta
+import ConAgua.Arena.RefWalk
+public import ConAgua.Arena.DefEqMidLazy
+public import ConAgua.Verdict.WhnfNatE
 
 @[expose] public section
 

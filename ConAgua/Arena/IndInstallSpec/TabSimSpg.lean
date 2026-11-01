@@ -4,7 +4,11 @@ public import ConAgua.Arena.IndInstallSpec.TabsProg
 public import ConAgua.Arena.IndSumSpec.ConsBlockRecsTF
 public import ConAgua.Arena.IndSumSpec.StructProjBodies
 public import ConAgua.Arena.IndSumSpec.StructProjGuards
-public import ConAgua.Arena.IndPosSpec.NestCrest
+import ConAgua.Arena.IndPosSpec.NestCrest
+import ConAgua.Arena.CoreWalks
+import ConAgua.Arena.IndSumSpec.StructCtorResidOk
+import ConAgua.Arena.WhnfCoreProj
+public import ConAgua.Arena.IndPartsSpec.MemberNames
 
 @[expose] public section
 

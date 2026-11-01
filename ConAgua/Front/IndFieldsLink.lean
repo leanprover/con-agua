@@ -1,11 +1,11 @@
 module
 
 public import ConAgua.Front.IndFieldsSpec
-public import ConAgua.Front.FieldsDeclLink
+import ConAgua.Front.FieldsDeclLink
 public import ConAgua.Front.IndRel
-public import ConAgua.Scan.LeafLink
-public import ConAgua.Scan.Link
-public import Std.Tactic.BVDecide.Normalize.Prop
+import ConAgua.Scan.LeafLink
+import ConAgua.Scan.Link
+import Std.Tactic.BVDecide.Normalize.Prop
 
 @[expose] public section
 

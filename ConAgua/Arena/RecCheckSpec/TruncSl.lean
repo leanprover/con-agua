@@ -2,12 +2,13 @@ module
 
 public import ConAgua.Arena.RecCheckSpec.TcmF
 public import ConAgua.Arena.RecCheckSpec.Tpd
-public import ConAgua.Arena.RecGenSpec.Rec3IwSlice
+import ConAgua.Arena.RecGenSpec.Rec3IwSlice
 public import ConAgua.Arena.IndSumSpec.Row
-public import ConAgua.Arena.RecClassSpec.MjProg
+import ConAgua.Arena.RecClassSpec.MjProg
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.Arena.IndGrindAttr
 public import ConAgua.L.GrindAttr
+public import ConAgua.Arena.RecCheckSpec.RcLook
 
 @[expose] public section
 

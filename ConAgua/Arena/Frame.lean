@@ -1,7 +1,8 @@
 module
 
 public import ConAgua.Arena.StoreLib
-public import Std.Tactic.BVDecide.Normalize.Prop
+import Std.Tactic.BVDecide.Normalize.Prop
+public import ConAgua.L.WriteSet
 
 @[expose] public section
 

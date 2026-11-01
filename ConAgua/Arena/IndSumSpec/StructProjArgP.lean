@@ -2,10 +2,12 @@ module
 
 public import ConAgua.Arena.IndRealCrF
 public import ConAgua.Arena.IndSumSpec.StructElimLevel
-public import ConAgua.Arena.GrindAttr
-public import ConAgua.Arena.IndGrindAttr
-public import ConAgua.L.GrindAttr
+import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.IndGrindAttr
+import ConAgua.L.GrindAttr
 public import ConAgua.Arena.IndRealFvtD
+import ConAgua.Arena.IndMaster
+import ConRon.Bridge.Grind
 
 @[expose] public section
 

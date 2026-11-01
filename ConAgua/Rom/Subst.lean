@@ -1,7 +1,7 @@
 module
 
 public import ConAgua.L.Logic
-public import ConAgua.L.Blocks
+import ConAgua.L.Blocks
 public import ConAgua.Layout
 meta import ConAgua.L.Logic
 meta import ConAgua.L.Blocks

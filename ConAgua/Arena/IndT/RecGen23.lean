@@ -1,10 +1,20 @@
 module
 
-public import ConAgua.Arena.IndSumSpec.ConsBlockRecsTF
+import ConAgua.Arena.IndSumSpec.ConsBlockRecsTF
 public import ConAgua.Verdict.IndBK53
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.L.GrindAttr
-public import ConAgua.L.ModelGen
+import ConAgua.L.ModelGen
+import ConAgua.Arena.IndInstallSpec.DomsW
+import ConAgua.Arena.IndSim
+import ConAgua.Arena.IndT.Lift
+import ConAgua.Arena.RecClassSpec.IhW
+import ConAgua.Arena.RecClassSpec.PdWAfr
+import ConAgua.Arena.RefWalk
+import ConAgua.Checker.NoVerdictTree
+import ConRon.Bridge.Inductives.GenRec
+public import ConAgua.Arena.IndPartsSpec.PartsConsPL
+public import ConAgua.Arena.RecGenSpec.PdWMfr
 
 @[expose] public section
 

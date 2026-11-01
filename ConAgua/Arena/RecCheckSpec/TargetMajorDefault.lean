@@ -1,7 +1,8 @@
 module
 
 public import ConAgua.Arena.RecCheckSpec.PtrNamesWDec
-public import ConAgua.Arena.IndSumSpec.StructProjArgP
+import ConAgua.Arena.IndSumSpec.StructProjArgP
+import ConAgua.Arena.RecClassSpec.CloseLams
 
 @[expose] public section
 

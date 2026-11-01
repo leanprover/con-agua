@@ -1,6 +1,7 @@
 module
 
-public import ConAgua.L.FuelMono
+import ConAgua.L.FuelMono
+public import ConAgua.L.Logic
 
 @[expose] public section
 

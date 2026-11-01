@@ -1,7 +1,8 @@
 module
 
 public import ConAgua.Arena.IndInstallSpec.TabsProg
-public import ConAgua.Arena.IndPartsSpec.IndPartsProg2
+import ConAgua.Arena.IndPartsSpec.IndPartsProg2
+public import ConAgua.Arena.IndDecStab
 
 @[expose] public section
 

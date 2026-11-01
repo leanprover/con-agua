@@ -2,6 +2,8 @@ module
 
 public import ConAgua.Arena.FreezeFreshBase
 public import ConAgua.Arena.FreezeTrunc
+import ConAgua.Arena.DeclPins
+import ConAgua.Arena.DeclStepSpec
 
 @[expose] public section
 

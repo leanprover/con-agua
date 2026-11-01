@@ -1,14 +1,19 @@
 module
 
 public import ConAgua.Arena.IndSumSpec.TsrW
-public import ConAgua.Arena.RecGenSpec.CruleProg
+import ConAgua.Arena.RecGenSpec.CruleProg
 public import ConAgua.Arena.RecGenSpec.DecRR
-public import ConAgua.Arena.IndInstallSpec.IcbiW
+import ConAgua.Arena.IndInstallSpec.IcbiW
 public import ConAgua.Arena.IndPartsSpec.PartsConsPL
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.Arena.IndGrindAttr
 public import ConAgua.L.GrindAttr
-public import ConAgua.L.ModelGen
+import ConAgua.L.ModelGen
+import ConAgua.Arena.IndPartsSpec.RulePrefixAt
+import ConAgua.Arena.IndSumSpec.ConsSumCtors
+import ConAgua.Arena.RecClassSpec.CloseLams
+import ConAgua.Arena.RecClassSpec.MjProg
+import ConAgua.L.WordOff
 
 @[expose] public section
 

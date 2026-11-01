@@ -1,12 +1,15 @@
 module
 
 public import ConAgua.Arena.DeclLvlStage
-public import ConAgua.Arena.IndInstallSpec.NhW
+import ConAgua.Arena.IndInstallSpec.NhW
 public import ConAgua.Arena.InferLeaves
-public import ConAgua.Arena.WhnfIotaRefine4
+import ConAgua.Arena.WhnfIotaRefine4
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.L.GrindAttr
-public import ConAgua.L.ModelGen
+import ConAgua.L.ModelGen
+import ConAgua.Arena.DeclBase
+public import ConAgua.Arena.CoreErec
+public import ConAgua.Arena.WhnfEntry
 
 @[expose] public section
 

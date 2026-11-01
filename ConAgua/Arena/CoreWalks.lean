@@ -12,6 +12,9 @@ public import ConAgua.Arena.GrindAttr
 public import ConAgua.L.GrindAttr
 public import Std.Tactic.BVDecide.Normalize.Prop
 public import Std.WP.Tactic
+import ConAgua.Arena.DerRel
+import ConAgua.Arena.FVarRangeRefine
+import Std.WP.Triple.SpecLemmas
 
 @[expose] public section
 

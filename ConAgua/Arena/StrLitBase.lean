@@ -1,11 +1,21 @@
 module
 
 public import ConAgua.Arena.StrLit
-public import ConAgua.Arena.DefEqStuckEta
+import ConAgua.Arena.DefEqStuckEta
 public import ConAgua.Arena.DefEqLeaves2
-public import ConAgua.Arena.WhnfDeltaRefine3
-public import ConAgua.Arena.GrindAttr
-public import ConAgua.L.GrindAttr
+import ConAgua.Arena.WhnfDeltaRefine3
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
+import ConAgua.Arena.DerRel
+import ConAgua.Arena.InferBodyIntern
+import ConAgua.Arena.LvlGrow
+import ConAgua.Arena.StoreDenLvl
+import ConRon.Arena.WFProofs
+import Std.WP.Triple.SpecLemmas
+public import ConAgua.Arena.IndIface
+public import ConAgua.Arena.KnotSlot
+public import ConAgua.Arena.RomExpr
+public import ConAgua.Arena.WhnfDeltaRefine
 
 @[expose] public section
 

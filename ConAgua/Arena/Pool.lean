@@ -1,9 +1,10 @@
 module
 
 public import ConAgua.L.Semantics
-public import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.GrindAttr
 import Std.Data.DTreeMap.Internal.Operations
 public import ConAgua.Layout
+import Std.Tactic.BVDecide.Normalize.Prop
 
 @[expose] public section
 

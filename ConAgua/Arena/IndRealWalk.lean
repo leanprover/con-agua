@@ -1,10 +1,15 @@
 module
 
-public import ConAgua.Arena.StageInst1
-public import ConAgua.Arena.CoreWalks
+import ConAgua.Arena.StageInst1
+import ConAgua.Arena.CoreWalks
 public import ConAgua.Arena.StubNames
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.L.GrindAttr
+public import ConAgua.Arena.CallF
+public import ConAgua.Arena.HasFvar
+public import ConAgua.Arena.StripTeleSpec
+public import ConAgua.Arena.WhnfCoreApp
+public import ConAgua.Arena.WriteSets
 
 @[expose] public section
 

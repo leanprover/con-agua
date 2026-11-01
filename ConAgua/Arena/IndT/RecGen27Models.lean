@@ -4,7 +4,8 @@ public import ConAgua.Arena.RecGenSpec.DecCNWords
 public import ConAgua.Verdict.IndBRec1
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.L.GrindAttr
-public import ConAgua.L.ModelGen
+import ConAgua.L.ModelGen
+import ConAgua.Checker.NoVerdictTree
 
 @[expose] public section
 

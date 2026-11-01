@@ -3,10 +3,14 @@ module
 public import ConAgua.Arena.DeclStep
 public import ConAgua.Arena.IndRealWalk
 public import ConAgua.Arena.CoreLevels
-public import ConAgua.Arena.IndPartsSpec.MemberNames
-public import ConAgua.Arena.GrindAttr
-public import ConAgua.Arena.IndGrindAttr
-public import ConAgua.L.GrindAttr
+import ConAgua.Arena.IndPartsSpec.MemberNames
+import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.IndGrindAttr
+import ConAgua.L.GrindAttr
+import ConAgua.Arena.IndMaster
+import Std.WP.Tactic
+import Std.WP.Triple.SpecLemmas
+public import ConAgua.Arena.IndCopy2
 
 @[expose] public section
 

@@ -1,6 +1,8 @@
 module
 
-public import ConAgua.Arena.IndSumSpec.TsrW
+import ConAgua.Arena.IndSumSpec.TsrW
+public import ConAgua.Arena.IndSumSpec.SumRules
+public import ConAgua.Arena.RecCheckSpec.TsrLook
 
 @[expose] public section
 

@@ -2,6 +2,9 @@ module
 
 public import ConAgua.Arena.DefEqStuckProj
 public import ConAgua.Arena.DefEqStuckDisp
+import ConAgua.Arena.DefEqStuckEta
+import ConAgua.Checker.NoVerdictTree
+import ConAgua.L.ModelGen
 
 @[expose] public section
 

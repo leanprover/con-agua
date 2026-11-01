@@ -1,6 +1,8 @@
 module
 
-public import ConAgua.Arena.IndPosSpec.DepthGo
+import ConAgua.Arena.IndPosSpec.DepthGo
+import ConAgua.Arena.IndPosSpec.CrLook
+public import ConAgua.Arena.IndPosSpec.NoGoStep
 
 @[expose] public section
 

@@ -5,7 +5,10 @@ public import ConAgua.Arena.IndPosSpec.MkLook
 public import ConAgua.Arena.IndPosSpec.PiBWStage
 public import ConAgua.Arena.RecCheckSpec.ErToIwWStage
 public import ConAgua.Arena.IndPosSpec.NestBlockOfKey
-public import ConAgua.Arena.IndGrindAttr
+import ConAgua.Arena.IndGrindAttr
+import ConAgua.Arena.IndPartsSpec.MemberNames
+import ConAgua.Arena.IndPosSpec.NestKeyMap
+import ConAgua.Arena.RecClassSpec.CloseLams
 
 @[expose] public section
 

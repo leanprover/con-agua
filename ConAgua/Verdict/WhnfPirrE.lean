@@ -2,6 +2,7 @@ module
 
 public import ConAgua.Arena.WhnfIotaRefine4
 public import ConAgua.Arena.DefEqStuck
+import ConAgua.Checker.NoVerdictTree
 
 @[expose] public section
 /-!

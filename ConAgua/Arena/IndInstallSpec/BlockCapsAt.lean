@@ -3,12 +3,15 @@ module
 public import ConAgua.Arena.IndInstall
 public import ConAgua.Arena.IndMaster
 public import ConAgua.Arena.IndPartsSpec.MemberNames
-public import ConAgua.Arena.GrindAttr
-public import ConAgua.Arena.IndGrindAttr
-public import ConAgua.L.GrindAttr
-public import ConAgua.L.ModelGen
+import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.IndGrindAttr
+import ConAgua.L.GrindAttr
+import ConAgua.L.ModelGen
 public import Std.Tactic.BVDecide.Normalize.Prop
-public import Std.WP.Tactic
+import Std.WP.Tactic
+import ConAgua.Arena.Env
+import ConAgua.Arena.IndPartsSpec.RulePrefixAt
+import Std.WP.Triple.SpecLemmas
 
 @[expose] public section
 

@@ -1,9 +1,12 @@
 module
 
-public import ConAgua.Arena.DeclBasisSpec2
+import ConAgua.Arena.DeclBasisSpec2
 public import ConAgua.Arena.DeclDivModSpec.BoolCtorTyped
-public import ConAgua.Arena.GrindAttr
-public import ConAgua.L.ModelGen
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.ModelGen
+import ConAgua.Arena.DeclNatDeps
+public import ConAgua.Arena.DeclCanonEq
+public import ConAgua.Rom.CIReadSpec
 
 @[expose] public section
 

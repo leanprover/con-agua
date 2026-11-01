@@ -1,8 +1,9 @@
 module
 
-public import ConAgua.Checker.HoistOrderRef3
-public import ConAgua.Checker.HoistTargetsRef
+import ConAgua.Checker.HoistOrderRef3
+import ConAgua.Checker.HoistTargetsRef
 public import ConAgua.Checker.Prelude
+public import ConAgua.Front.StateDR
 
 @[expose] public section
 

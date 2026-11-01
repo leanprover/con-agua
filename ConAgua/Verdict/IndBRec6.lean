@@ -1,11 +1,19 @@
 module
 
-public import ConRon.Bridge.Inductives.PosWalks
+import ConRon.Bridge.Inductives.PosWalks
 public import ConAgua.Verdict.IndBRec5
-public import ConAgua.Arena.IndSumSpec.ConsBlockRecsTF
+import ConAgua.Arena.IndSumSpec.ConsBlockRecsTF
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.L.GrindAttr
-public import ConAgua.L.ModelGen
+import ConAgua.L.ModelGen
+import ConAgua.Arena.IndRealAbsSim
+import ConAgua.Arena.IndT.Lift
+import ConAgua.Arena.RecClassSpec.MkTMWAfr
+import ConAgua.Arena.RecClassSpec.PiBWRoom
+import ConAgua.Arena.RecGenSpec.ClassFeR
+import ConAgua.Arena.RecGenSpec.Rec3CVX
+import ConAgua.Arena.RefWalk
+import ConAgua.Checker.NoVerdictTree
 
 @[expose] public section
 /-!

@@ -2,10 +2,11 @@ module
 
 public import ConAgua.Arena.IndRealAbs
 public import ConAgua.Arena.RecGenSpec.ClassMinorSlotHit
-public import ConAgua.Arena.IndInstallSpec.DomsW
+import ConAgua.Arena.IndInstallSpec.DomsW
 public import ConAgua.Arena.GrindAttr
-public import ConAgua.Arena.IndGrindAttr
+import ConAgua.Arena.IndGrindAttr
 public import ConAgua.L.GrindAttr
+import ConRon.Bridge.Grind
 
 @[expose] public section
 

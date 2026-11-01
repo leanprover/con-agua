@@ -1,9 +1,11 @@
 module
 
-public import ConAgua.Arena.CoreWalks
+import ConAgua.Arena.CoreWalks
 public import ConAgua.Arena.InstLP
-public import ConAgua.Arena.LevelInternRef
+import ConAgua.Arena.LevelInternRef
 public import Std.Tactic.BVDecide.Normalize.Prop
+import ConAgua.Arena.DerRel
+public import ConAgua.Arena.LevelApd
 
 @[expose] public section
 

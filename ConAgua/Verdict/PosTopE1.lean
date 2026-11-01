@@ -1,13 +1,16 @@
 module
 
-public import ConAgua.Arena.Verdict
-public import ConAgua.Arena.IndPosSpec.NuW
-public import ConAgua.Checker.NoVerdictTree
+import ConAgua.Arena.Verdict
+import ConAgua.Arena.IndPosSpec.NuW
+import ConAgua.Checker.NoVerdictTree
 public import Std.Tactic.BVDecide.Normalize.Prop
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.L.GrindAttr
-public import ConAgua.L.ModelGen
+import ConAgua.L.ModelGen
 public import ConAgua.Arena.IndPosSpec.RsLook
+public import ConAgua.Arena.IndPosSpec.UnW
+public import ConAgua.Checker.NoVerdictFns
+public import ConAgua.L.ErrSpec
 
 @[expose] public section
 

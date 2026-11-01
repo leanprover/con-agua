@@ -1,10 +1,13 @@
 module
 
-public import ConAgua.Arena.LvlGrow
+import ConAgua.Arena.LvlGrow
 public import ConAgua.Arena.KnotSlot
-public import ConAgua.Arena.StoreDenIntern
+import ConAgua.Arena.StoreDenIntern
 public import Std.Tactic.BVDecide.Normalize.Prop
 public import ConAgua.Arena.WhnfCoreApp
+import ConAgua.Arena.DerRel
+import ConAgua.Arena.StoreDenLvl
+import ConRon.Arena.WFProofs
 
 @[expose] public section
 

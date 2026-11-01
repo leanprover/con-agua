@@ -1,6 +1,7 @@
 module
 
 public import ConAgua.Rom.CIReadRefCI
+import ConAgua.Rom.CIReadRefNames
 
 @[expose] public section
 

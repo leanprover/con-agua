@@ -1,9 +1,12 @@
 module
 
-public import ConAgua.Verdict.DeclDefnE
-public import ConAgua.Verdict.DeclArmsE
-public import ConAgua.Verdict.DeclAxiomE
-public import ConAgua.Verdict.DeclQuotE
+import ConAgua.Verdict.DeclDefnE
+import ConAgua.Verdict.DeclArmsE
+import ConAgua.Verdict.DeclAxiomE
+import ConAgua.Verdict.DeclQuotE
+import ConAgua.Arena.DeclNatSubAll
+import ConAgua.Arena.StrLitSup
+public import ConAgua.Arena.CheckerT
 
 @[expose] public section
 /-!

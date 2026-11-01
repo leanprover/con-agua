@@ -5,6 +5,7 @@ public import ConAgua.Arena.PromoteMemo
 public import ConAgua.Arena.PromotePi
 public import ConAgua.Arena.SimLib
 public import Std.Tactic.BVDecide.Normalize.Prop
+import ConAgua.Arena.DerRel
 
 @[expose] public section
 

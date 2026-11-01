@@ -1,6 +1,7 @@
 module
 
-public import ConAgua.Arena.IndPosSpec.NcnW2
+import ConAgua.Arena.IndPosSpec.NcnW2
+public import ConAgua.Arena.IndPosSpec.RxMapW
 
 @[expose] public section
 

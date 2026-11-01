@@ -8,6 +8,7 @@ meta import ConAgua.Checker.Prog
 meta import ConAgua.Arena.DeclArmLoop
 meta import ConAgua.Arena.DeclDivModSpec.RomPinSets
 meta import ConAgua.Arena.DeclNatGateSpec
+public import ConAgua.Compiler.WriteSetSplit
 
 @[expose] public section
 

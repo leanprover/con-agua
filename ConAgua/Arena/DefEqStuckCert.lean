@@ -1,7 +1,12 @@
 module
 
 public import ConAgua.Arena.DefEqStuckGo
-public import ConAgua.Arena.DefEqStuckShape
+import ConAgua.Arena.DefEqStuckShape
+import ConAgua.Arena.DefEqStuckEta
+import ConAgua.Arena.IndView
+import ConAgua.Arena.RefWalk
+import ConAgua.Arena.WhnfCoreRefine
+import ConRon.Bridge.Grind
 
 @[expose] public section
 

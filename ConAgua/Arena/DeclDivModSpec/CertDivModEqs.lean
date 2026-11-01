@@ -1,9 +1,10 @@
 module
 
 public import ConAgua.Arena.DeclDivModSpec.EqAt1
-public import ConAgua.Arena.GrindAttr
-public import ConAgua.L.GrindAttr
-public import ConAgua.L.ModelGen
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
+import ConAgua.L.ModelGen
+import Std.Tactic.BVDecide.Normalize.BitVec
 
 @[expose] public section
 

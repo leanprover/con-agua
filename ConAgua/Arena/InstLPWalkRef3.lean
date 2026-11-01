@@ -1,9 +1,15 @@
 module
 
-public import ConAgua.Arena.InstLPWalkRef2
-public import ConAgua.Arena.InstLPLevel2
-public import ConAgua.Arena.InstLPWalkArms
-public import ConAgua.Arena.InstLPWalkGo
+import ConAgua.Arena.InstLPWalkRef2
+import ConAgua.Arena.InstLPLevel2
+import ConAgua.Arena.InstLPWalkArms
+import ConAgua.Arena.InstLPWalkGo
+import ConAgua.Arena.FVarRangeRefine
+import ConAgua.Arena.IndView
+import ConAgua.Arena.InstLPWalkLet
+import ConAgua.Arena.LiftRefine
+import ConAgua.Arena.WhnfDeltaRefine
+public import ConAgua.Arena.InstLPWalkRef
 
 @[expose] public section
 

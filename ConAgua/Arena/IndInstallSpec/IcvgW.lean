@@ -2,10 +2,13 @@ module
 
 public import ConAgua.Arena.IndInstallSpec.Icvg
 public import ConAgua.Arena.IndInstallSpec.InstallRec2Tele
-public import ConAgua.Arena.IndPartsSpec.PartsPSlCons
+import ConAgua.Arena.IndPartsSpec.PartsPSlCons
 public import ConAgua.Arena.IndGrindAttr
 public import ConAgua.L.GrindAttr
-public import ConAgua.L.ModelGen
+import ConAgua.L.ModelGen
+import ConAgua.Arena.IndPartsSpec.IndPartsProg2
+import ConAgua.Arena.RecStab
+import Std.WP.Triple.SpecLemmas
 
 @[expose] public section
 

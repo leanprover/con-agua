@@ -1,9 +1,9 @@
 module
 
 public import ConRon.Arena.Monad
-public import Std.Data.DTreeMap.Internal.Operations
+import Std.Data.DTreeMap.Internal.Operations
 public import Std.Do.Triple.SpecLemmas
-public import Std.Tactic.BVDecide.Normalize.Prop
+import Std.Tactic.BVDecide.Normalize.Prop
 
 @[expose] public section
 

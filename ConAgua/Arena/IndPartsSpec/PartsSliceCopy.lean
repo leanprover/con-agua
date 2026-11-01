@@ -1,8 +1,9 @@
 module
 
 public import ConAgua.Arena.IndPartsSpec.BpcW
-public import ConAgua.Arena.IndPartsSpec.BsW
-public import ConAgua.Arena.IndGrindAttr
+import ConAgua.Arena.IndPartsSpec.BsW
+import ConAgua.Arena.IndGrindAttr
+public import ConAgua.Arena.IndDecStab
 
 @[expose] public section
 

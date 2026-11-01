@@ -1,7 +1,7 @@
 module
 
 public import ConAgua.Arena.PromoteCIRef.DecRuleMk
-public import ConAgua.Arena.PromoteCIRef.PmDecRuleWords
+import ConAgua.Arena.PromoteCIRef.PmDecRuleWords
 
 @[expose] public section
 

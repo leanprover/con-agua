@@ -1,8 +1,9 @@
 module
 
 public import ConAgua.Checker.Prelude
-public import ConAgua.Checker.HoistIndexRef
+import ConAgua.Checker.HoistIndexRef
 public import ConRon.Arena.Frontend.Prepare
+public import ConAgua.Checker.HoistRefBase
 
 @[expose] public section
 

@@ -1,11 +1,16 @@
 module
 
 public import ConAgua.Arena.RecCheckSpec.RpLook
-public import ConAgua.Arena.IndInstallSpec.InstallRec2Tele
-public import ConAgua.Arena.IndPartsSpec.BlockRecNameSetOk
+import ConAgua.Arena.IndInstallSpec.InstallRec2Tele
+import ConAgua.Arena.IndPartsSpec.BlockRecNameSetOk
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.L.GrindAttr
-public import ConAgua.L.ModelGen
+import ConAgua.L.ModelGen
+import ConAgua.Arena.IndPartsSpec.PartsPSlCons
+import ConAgua.Arena.IndPartsSpec.RecTW
+import ConAgua.Arena.IndPartsSpec.RulePrefixAt
+import Std.Tactic.BVDecide.Normalize.BitVec
+import Std.WP.Triple.SpecLemmas
 
 @[expose] public section
 

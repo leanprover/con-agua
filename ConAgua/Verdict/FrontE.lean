@@ -1,13 +1,16 @@
 module
 
 public import ConAgua.Arena.Verdict
-public import ConAgua.Front.ApplyDeclRefine
+import ConAgua.Front.ApplyDeclRefine
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.L.GrindAttr
 public import Std.Tactic.BVDecide.Normalize.BitVec
 public import Std.Tactic.BVDecide.Normalize.Prop
 public import ConLeche.Frontend.ExportC
 public import ConLeche.Frontend.Scan.Types
+import ConAgua.Front.ApplyExprRefine
+public import ConAgua.Front.DeclIface
+public import ConAgua.Front.StateDR
 
 @[expose] public section
 

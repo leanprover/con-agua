@@ -1,10 +1,11 @@
 module
 
 public import ConAgua.Arena.IndPosSpec.PcrW
-public import ConAgua.Arena.IndPosSpec.Rx
+import ConAgua.Arena.IndPosSpec.Rx
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.Arena.IndGrindAttr
 public import ConAgua.L.GrindAttr
+public import ConAgua.Arena.IndPosSpec.CrLook
 
 @[expose] public section
 

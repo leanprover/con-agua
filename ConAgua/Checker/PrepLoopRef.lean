@@ -1,8 +1,8 @@
 module
 
 public import ConAgua.Checker.PrepLeafRef
-public import ConAgua.Checker.HoistClosureL
-public import ConAgua.Checker.HoistOrderRef3
+import ConAgua.Checker.HoistClosureL
+import ConAgua.Checker.HoistOrderRef3
 
 @[expose] public section
 

@@ -2,6 +2,8 @@ module
 
 public import ConAgua.Verdict.FrontViE
 public import Std.Tactic.BVDecide.Normalize.Prop
+import ConAgua.L.ModelGen
+import Std.WP.Triple.SpecLemmas
 
 @[expose] public section
 

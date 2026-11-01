@@ -3,7 +3,7 @@ module
 public import ConAgua.Front.FrontPreOK
 public import ConAgua.Arena.DeclAndPinIndDec
 public import ConAgua.Checker.Pipeline
-public import ConRon.Bridge.Frontend.Prepare
+import ConRon.Bridge.Frontend.Prepare
 import all Init.Data.Array.Basic
 
 @[expose] public section

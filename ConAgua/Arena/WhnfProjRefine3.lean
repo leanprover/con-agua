@@ -1,11 +1,18 @@
 module
 
-public import ConAgua.Arena.WhnfProjRefine2
+import ConAgua.Arena.WhnfProjRefine2
 public import ConAgua.Arena.DeclLvlStage
-public import ConAgua.Arena.InferProj
-public import ConAgua.Arena.WhnfIotaRefine4
+import ConAgua.Arena.InferProj
+import ConAgua.Arena.WhnfIotaRefine4
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.L.GrindAttr
+import ConAgua.Arena.WhnfCoreProj
+import ConAgua.Arena.WhnfIotaRefine2
+import Std.WP.Triple.SpecLemmas
+public import ConAgua.Arena.CoreDen
+public import ConAgua.Arena.Knot
+public import ConAgua.Arena.WhnfIotaRefine
+public import ConAgua.Arena.WhnfProjRefine
 
 @[expose] public section
 

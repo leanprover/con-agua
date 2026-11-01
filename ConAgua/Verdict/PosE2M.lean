@@ -3,9 +3,10 @@ module
 public import ConAgua.Verdict.PosE1M
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.L.GrindAttr
-public import ConAgua.L.ModelGen
+import ConAgua.L.ModelGen
 public import Std.Tactic.BVDecide.Normalize.BitVec
 public import Std.Tactic.BVDecide.Normalize.Prop
+import ConAgua.Checker.NoVerdictTree
 
 @[expose] public section
 

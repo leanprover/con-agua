@@ -1,6 +1,10 @@
 module
 
 public import ConAgua.Arena.DefEqKnot
+import ConAgua.Arena.CoreNatOp
+import ConAgua.Arena.StrLitKeep
+import ConAgua.Arena.WhnfSlotRefine
+public import ConAgua.Arena.WhnfCoreLoop
 
 @[expose] public section
 

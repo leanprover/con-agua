@@ -4,7 +4,7 @@ public import ConAgua.Arena.IndMaster
 public import ConAgua.Arena.LevelApd
 public import ConAgua.Arena.LevelArena
 public import Std.Tactic.BVDecide.Normalize.Prop
-public import ConRon.Bridge.Grind
+import ConRon.Bridge.Grind
 
 @[expose] public section
 

@@ -1,10 +1,13 @@
 module
 
-public import ConAgua.Arena.IndPartsSpec.EqW
+import ConAgua.Arena.IndPartsSpec.EqW
 public import ConAgua.Arena.IndPartsSpec.IndPartsProg2
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.L.GrindAttr
-public import ConAgua.L.ModelGen
+import ConAgua.L.ModelGen
+import ConAgua.Arena.IndPartsSpec.RulePrefixAt
+import Std.Tactic.BVDecide.Normalize.BitVec
+import Std.WP.Triple.SpecLemmas
 
 @[expose] public section
 

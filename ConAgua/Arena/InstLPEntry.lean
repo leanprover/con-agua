@@ -1,8 +1,20 @@
 module
 
-public import ConAgua.Arena.InstLPWalkRef3
-public import ConAgua.Arena.InstLPKeys
+import ConAgua.Arena.InstLPWalkRef3
+import ConAgua.Arena.InstLPKeys
 public import ConAgua.Arena.RecFireCore
+import ConAgua.Arena.CoreWalks
+import ConAgua.Arena.DerRel
+import ConAgua.Arena.InferFieldSort
+import ConAgua.Arena.InstLPRef
+import ConAgua.Arena.LiftRefine
+import ConAgua.Arena.PropReadRefine
+import ConAgua.Arena.WhnfCoreRefine
+import ConAgua.Arena.WhnfDeltaRefine
+import ConAgua.Front.IdTable
+import ConRon.Bridge.Grind
+import Std.Tactic.BVDecide.Normalize.Bool
+public import ConAgua.Arena.InstLPWalkRef
 
 @[expose] public section
 

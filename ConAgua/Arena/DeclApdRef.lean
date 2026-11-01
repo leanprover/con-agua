@@ -1,12 +1,14 @@
 module
 
 public import ConAgua.Arena.DeclApdSpec
-public import ConAgua.Arena.IndPosSpec.MatesW
+import ConAgua.Arena.IndPosSpec.MatesW
 public import ConAgua.Arena.IndStubs
-public import ConAgua.Arena.SimLib
-public import Std.Tactic.BVDecide.Normalize.Bool
+import ConAgua.Arena.SimLib
+import Std.Tactic.BVDecide.Normalize.Bool
 public import Std.Tactic.BVDecide.Normalize.Prop
-public import Std.WP.Tactic
+import Std.WP.Tactic
+import ConAgua.Arena.Env
+import Std.WP.Triple.SpecLemmas
 
 @[expose] public section
 

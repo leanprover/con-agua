@@ -1,6 +1,8 @@
 module
 
-public import ConAgua.Arena.DeclStepSpec
+import ConAgua.Arena.DeclStepSpec
+import ConAgua.Arena.DeclPins
+public import ConAgua.Arena.DeclBase
 
 @[expose] public section
 

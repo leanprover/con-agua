@@ -1,8 +1,12 @@
 module
 
 public import ConAgua.Arena.RecCheckSpec.EqWDec
-public import ConAgua.Arena.RecCheckSpec.TruncSl
-public import ConAgua.Arena.RecCheckSpec.EeW2
+import ConAgua.Arena.RecCheckSpec.TruncSl
+import ConAgua.Arena.RecCheckSpec.EeW2
+import ConAgua.Arena.IndInstallSpec.DomsW
+import ConAgua.Arena.IndSim
+public import ConAgua.Arena.IndDecStab
+public import ConAgua.Arena.RecCheckSpec.EeW
 
 @[expose] public section
 

@@ -1,6 +1,6 @@
 module
 
-public import ConAgua.Arena.DefEqMidLoops
+import ConAgua.Arena.DefEqMidLoops
 public import ConAgua.Arena.DefEqStuckWith
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.L.GrindAttr

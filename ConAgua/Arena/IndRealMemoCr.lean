@@ -1,7 +1,10 @@
 module
 
 public import ConAgua.Arena.IndRealCrF
-public import ConAgua.Arena.ConstsResolveFRefine2
+import ConAgua.Arena.ConstsResolveFRefine2
+import ConAgua.Arena.IndReal
+import ConAgua.Arena.IndRealAbs
+public import ConAgua.Arena.ConstsResolveFRefine
 
 @[expose] public section
 

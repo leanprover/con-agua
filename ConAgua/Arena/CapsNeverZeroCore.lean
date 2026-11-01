@@ -1,8 +1,12 @@
 module
 
-public import ConAgua.Arena.PropReadRefine
+import ConAgua.Arena.PropReadRefine
 public import ConAgua.Arena.LevelIntern
-public import ConAgua.Arena.LevelInternRef
+import ConAgua.Arena.LevelInternRef
+import ConAgua.Arena.CoreLevels
+import ConAgua.Arena.DerRel
+import ConAgua.Arena.InferFieldSort
+public import ConAgua.Arena.WhnfIota
 
 @[expose] public section
 

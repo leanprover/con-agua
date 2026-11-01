@@ -2,7 +2,12 @@ module
 
 public import ConAgua.Verdict.DeclHdrE
 public import ConAgua.Arena.GrindAttr
-public import ConAgua.L.ModelGen
+import ConAgua.L.ModelGen
+import ConAgua.Arena.DeclStepSpec
+import ConAgua.Arena.DeclValT
+import ConAgua.Arena.IndT.Base
+import ConAgua.Arena.RefWalk
+public import ConAgua.Arena.DeclValRef
 
 @[expose] public section
 

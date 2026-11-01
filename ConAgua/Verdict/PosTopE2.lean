@@ -2,7 +2,13 @@ module
 
 public import ConAgua.Verdict.PosTopE1
 public import ConAgua.Arena.IndPosSpec.UnW2
-public import ConAgua.Arena.RefWalk
+import ConAgua.Arena.RefWalk
+import ConAgua.Arena.IndPosSpec.Grow
+import ConAgua.Arena.IndPosSpec.NuW
+public import ConAgua.Arena.IlpRd
+public import ConAgua.Arena.IndPosSpec.BvbWMfr
+public import ConAgua.Arena.IndPosSpec.UCtx
+public import ConAgua.Arena.Verdict
 
 @[expose] public section
 

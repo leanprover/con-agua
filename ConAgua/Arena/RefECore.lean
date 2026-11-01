@@ -1,7 +1,7 @@
 module
 
 public import ConAgua.Arena.Verdict
-public import ConAgua.Arena.WhnfCoreRefine
+import ConAgua.Arena.WhnfCoreRefine
 
 @[expose] public section
 

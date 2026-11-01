@@ -1,17 +1,30 @@
 module
 
 public import ConAgua.Arena.DefEqBody
-public import ConAgua.Arena.InferFieldSortNat
-public import ConAgua.Arena.PropReadRefine4
-public import ConAgua.Arena.InferProj2
-public import ConAgua.Arena.StrLitSup
-public import ConAgua.Arena.StrLitCtor
+import ConAgua.Arena.InferFieldSortNat
+import ConAgua.Arena.PropReadRefine4
+import ConAgua.Arena.InferProj2
+import ConAgua.Arena.StrLitSup
+import ConAgua.Arena.StrLitCtor
 public import ConAgua.Arena.WhnfProjRefine3
-public import ConAgua.Arena.WhnfIotaRecRefine3
-public import ConAgua.Arena.WalkCore
+import ConAgua.Arena.WhnfIotaRecRefine3
+import ConAgua.Arena.WalkCore
 public import ConAgua.Arena.InstLPEntry
-public import ConAgua.Arena.WhnfM2CRefine5
-public import ConAgua.Arena.WhnfSlotRefine
+import ConAgua.Arena.WhnfM2CRefine5
+import ConAgua.Arena.WhnfSlotRefine
+import ConAgua.Arena.CapsNeverZeroCore
+import ConAgua.Arena.CoreNatOp
+import ConAgua.Arena.DefEqStuckGo
+import ConAgua.Arena.WhnfDeltaRefine2
+import ConAgua.Arena.WhnfProjRefine2
+public import ConAgua.Arena.InferBodyDisp
+public import ConAgua.Arena.InferProj
+public import ConAgua.Arena.PropReadRefine3
+public import ConAgua.Arena.StrLitBase
+public import ConAgua.Arena.WalkLeaves
+public import ConAgua.Arena.WalkScope
+public import ConAgua.Arena.WhnfIotaRecRefine
+public import ConAgua.Arena.WhnfM2CRefine2
 
 @[expose] public section
 

@@ -1,7 +1,12 @@
 module
 
-public import ConAgua.Arena.PromoteCIRef.Ci
+import ConAgua.Arena.PromoteCIRef.Ci
 public import ConAgua.Arena.PromoteCIRef.ConstsAt
+import ConAgua.Arena.DerRel
+import ConAgua.Arena.PromoteCIRef.Of
+import ConAgua.Arena.PromoteCIRef.PreECongr
+public import ConAgua.Arena.PromoteCIInfra
+public import ConAgua.Arena.PromoteERef
 
 @[expose] public section
 

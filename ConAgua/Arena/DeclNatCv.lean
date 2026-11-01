@@ -1,7 +1,8 @@
 module
 
 public import ConAgua.Arena.DeclNatSpec
-public import ConAgua.Arena.DeclCanonSpec2
+import ConAgua.Arena.DeclCanonSpec2
+public import ConAgua.Arena.DeclCanonSpec
 
 @[expose] public section
 

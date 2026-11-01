@@ -2,7 +2,7 @@ module
 
 public import ConAgua.Arena.IndPos
 public import ConAgua.Arena.StageInst1
-public import ConAgua.Arena.IndGrindAttr
+import ConAgua.Arena.IndGrindAttr
 
 @[expose] public section
 

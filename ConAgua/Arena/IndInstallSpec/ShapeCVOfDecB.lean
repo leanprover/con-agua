@@ -4,10 +4,11 @@ public import ConAgua.Arena.IndInstallSpec.CbProg
 public import ConAgua.Arena.IndInstallSpec.Frame
 public import ConAgua.Arena.IndPartsSpec.IndPartsProg5
 public import ConAgua.Arena.IndRealBph2
-public import ConAgua.Arena.RecGenSpec.Classes
+import ConAgua.Arena.RecGenSpec.Classes
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.Arena.IndGrindAttr
 public import ConAgua.L.GrindAttr
+public import ConAgua.Arena.IndInstallSpec.Icvg
 
 @[expose] public section
 

@@ -3,7 +3,7 @@ module
 meta import ConAgua.L.Semantics
 meta import ConAgua.Arena.SlotGrow
 public import ConAgua.Arena.ConsLibSpecFind
-public import ConAgua.Arena.ConsLibSpecGrow
+import ConAgua.Arena.ConsLibSpecGrow
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import Std.Data.DTreeMap.Internal.Operations

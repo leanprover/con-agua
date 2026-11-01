@@ -1,7 +1,8 @@
 module
 
-public import ConAgua.Arena.WhnfIotaRecRefine
-public import ConRon.Bridge.Grind
+import ConAgua.Arena.WhnfIotaRecRefine
+import ConRon.Bridge.Grind
+public import ConAgua.Arena.WhnfIota
 
 @[expose] public section
 

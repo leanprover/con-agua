@@ -1,8 +1,8 @@
 module
 
 public import ConAgua.Arena.IndRealCapsC
-public import ConLeche.Verify.Inductives.BlockInv
-public import ConLeche.Verify.PropWhen
+import ConLeche.Verify.Inductives.BlockInv
+import ConLeche.Verify.PropWhen
 
 @[expose] public section
 

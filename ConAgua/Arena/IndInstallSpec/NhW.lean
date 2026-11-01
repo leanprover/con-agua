@@ -1,8 +1,9 @@
 module
 
 public import ConAgua.Arena.IndInstallSpec.PartsShapeFacts
-public import ConAgua.Arena.IndPosSpec.NestHoles
+import ConAgua.Arena.IndPosSpec.NestHoles
 public import ConAgua.Arena.IndGrindAttr
+public import ConAgua.Arena.IndPosSpec.Pos2CvLpsWStage
 
 @[expose] public section
 

@@ -1,8 +1,11 @@
 module
 
 public import ConAgua.Arena.IndPosSpec.PiBWStage
-public import ConAgua.Arena.GrindAttr
-public import ConAgua.L.GrindAttr
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
+import Std.WP.Tactic
+import Std.WP.Triple.SpecLemmas
+public import ConAgua.Arena.StageInst1
 
 @[expose] public section
 

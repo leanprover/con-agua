@@ -1,6 +1,8 @@
 module
 
-public import ConAgua.Arena.PromoteRecRef
+import ConAgua.Arena.PromoteRecRef
+public import ConAgua.Arena.PromoteProg
+public import ConAgua.Arena.WhnfBase
 
 @[expose] public section
 

@@ -3,6 +3,13 @@ module
 public import ConAgua.Final.ThreadsFinal
 public import ConAgua.Verdict.ThreadsE
 public import ConAgua.Checker.VerdictTop
+import ConAgua.Checker.AsmFinal
+import ConAgua.Checker.ProgIRef
+import ConAgua.Checker.ProgWf
+import ConAgua.Final.BufAbi
+import ConAgua.Final.BufChain
+import ConAgua.Final.DrvFinal
+public import ConAgua.Compiler.Main
 
 @[expose] public section
 

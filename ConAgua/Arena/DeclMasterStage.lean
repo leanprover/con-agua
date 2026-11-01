@@ -1,7 +1,9 @@
 module
 
-public import ConAgua.Arena.IndMaster
+import ConAgua.Arena.IndMaster
 public import Std.Tactic.BVDecide.Normalize.Prop
+import ConAgua.Arena.DerRel
+public import ConAgua.Arena.IndIface
 
 @[expose] public section
 

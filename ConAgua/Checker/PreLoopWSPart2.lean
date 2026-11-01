@@ -1,7 +1,10 @@
 module
 
-public import ConAgua.Checker.PreLoopWSBase
+import ConAgua.Checker.PreLoopWSBase
 meta import ConAgua.Checker.PreLoopWSBase
+import ConAgua.Checker.IndArm
+public import ConAgua.Checker.Prog
+public import ConAgua.Compiler.WriteSetSplit
 
 @[expose] public section
 

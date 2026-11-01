@@ -1,7 +1,14 @@
 module
 
-public import ConAgua.Arena.IndInstallSpec.PartsAt
+import ConAgua.Arena.IndInstallSpec.PartsAt
 public import ConAgua.Arena.IndSumSpec.ColW
+import ConAgua.Arena.IndPartsSpec.IndPartsProg2
+import ConAgua.Arena.RecClassSpec.CloseLams
+public import ConAgua.Arena.IndDecStab
+public import ConAgua.Arena.IndInstall
+public import ConAgua.Arena.IndPartsSpec.MemberNames
+public import ConAgua.Arena.IndPartsSpec.RulePrefixAt
+public import ConAgua.Arena.IndPosSpec.CtxFields
 
 @[expose] public section
 

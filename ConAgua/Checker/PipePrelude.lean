@@ -3,9 +3,11 @@ module
 public import ConAgua.Checker.PipeStages
 public import ConAgua.Checker.HoistRefBase
 public import ConAgua.Front.DeclsPre
-public import ConRon.Bridge.Frontend.Prepare
+import ConRon.Bridge.Frontend.Prepare
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.L.GrindAttr
+import ConAgua.Checker.PreludeSimProg
+public import ConAgua.Checker.PreludeSim
 
 @[expose] public section
 

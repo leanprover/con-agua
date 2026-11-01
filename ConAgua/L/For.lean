@@ -5,6 +5,9 @@ import ConAgua.L.Notation
 -- (the interpreter's equation lemmas, realized there: a second copy here would make the import
 -- gate credit this module for them in every module that uses them)
 import ConAgua.Front.Preserve
+import Std.Tactic.BVDecide.Normalize.Prop
+import Std.WP.Tactic
+import Std.WP.Triple.SpecLemmas
 
 @[expose] public section
 

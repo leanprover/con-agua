@@ -1,12 +1,16 @@
 module
 
 public import ConAgua.Arena.IndInstallSpec.PartsShapeFacts
-public import ConAgua.Arena.IndPartsSpec.PartsSliceCopy
-public import ConAgua.Arena.IndPartsSpec.PlW
-public import ConAgua.Arena.IndPartsSpec.PartsPSlCons
+import ConAgua.Arena.IndPartsSpec.PartsSliceCopy
+import ConAgua.Arena.IndPartsSpec.PlW
+import ConAgua.Arena.IndPartsSpec.PartsPSlCons
 public import ConAgua.Arena.IndPosSpec.Pos2CvLpsWStage
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.L.GrindAttr
+import ConAgua.Arena.IndInstallSpec.PartsAt
+import ConAgua.Arena.IndPartsSpec.BlockRecNamesUnreserved
+import ConAgua.Arena.IndPartsSpec.IndPartsProg2
+import ConAgua.Arena.IndSumSpec.Row
 
 @[expose] public section
 

@@ -1,6 +1,8 @@
 module
 
-public import ConAgua.Arena.Env
+import ConAgua.Arena.Env
+import ConAgua.Arena.DerRel
+public import ConAgua.Arena.Tiers
 
 @[expose] public section
 

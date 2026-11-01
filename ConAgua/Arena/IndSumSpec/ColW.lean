@@ -1,7 +1,7 @@
 module
 
 public import ConAgua.Arena.IndRealNames
-public import ConAgua.Arena.IndGrindAttr
+import ConAgua.Arena.IndGrindAttr
 public import ConAgua.Arena.IndSum
 
 @[expose] public section

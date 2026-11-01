@@ -1,8 +1,9 @@
 module
 
 public import ConAgua.Arena.DefEqMid
-public import ConAgua.Arena.WhnfDeltaRefine3
+import ConAgua.Arena.WhnfDeltaRefine3
 public import ConAgua.Arena.DefEqLeaves2
+import Std.WP.Triple.SpecLemmas
 
 @[expose] public section
 

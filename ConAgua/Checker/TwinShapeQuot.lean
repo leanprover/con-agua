@@ -5,9 +5,10 @@ public import ConRon.Bridge.Checker.DeclVal
 public import ConRon.Bridge.Frontend.Chunks
 public import ConRon.Bridge.Checker.Basis
 public import ConAgua.Checker.Pipeline
-public import ConRon.Bridge.Checker.Pins
+import ConRon.Bridge.Checker.Pins
 public import ConRon.Bridge.Frontend.Prepare
 import all ConRon.Bridge.Frontend.Prepare
+import Std.Tactic.BVDecide.Normalize.Prop
 
 @[expose] public section
 

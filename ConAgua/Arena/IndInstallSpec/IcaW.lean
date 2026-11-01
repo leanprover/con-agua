@@ -2,13 +2,25 @@ module
 
 public import ConAgua.Arena.IndInstallSpec.CapsProg
 public import ConAgua.Arena.IndInstallSpec.IcbiW
-public import ConAgua.Arena.IndInstallSpec.InstallRec2Tele
-public import ConAgua.Arena.IndInstallSpec.PartsShapeFacts
-public import ConAgua.Arena.IndPartsSpec.PartsPSlCons
-public import ConAgua.Arena.IndSumSpec.ConsSumCtors
+import ConAgua.Arena.IndInstallSpec.InstallRec2Tele
+import ConAgua.Arena.IndInstallSpec.PartsShapeFacts
+import ConAgua.Arena.IndPartsSpec.PartsPSlCons
+import ConAgua.Arena.IndSumSpec.ConsSumCtors
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.Arena.IndGrindAttr
 public import ConAgua.L.GrindAttr
+import ConAgua.Arena.IndInstallSpec.PartsAt
+import ConAgua.Arena.IndPartsSpec.BlockRecNamesUnreserved
+import ConAgua.Arena.IndPartsSpec.IndPartsProg2
+import ConAgua.Arena.IndPosSpec.NestBlockOfKey
+import ConAgua.Arena.RecClassSpec.MjProg
+import ConAgua.Arena.RecClassSpec.PiBWRoom
+import ConAgua.L.WordOff
+import ConRon.Bridge.Grind
+public import ConAgua.Arena.IndInstallSpec.BlockCapsAt
+public import ConAgua.Arena.IndPartsSpec.PartsConsPL
+public import ConAgua.Arena.RecSim
+public import ConRon.Arena.Inductives.BlockInstall
 
 @[expose] public section
 

@@ -2,7 +2,7 @@ module
 
 public import ConAgua.Compiler.WriteSetSplit
 public import ConAgua.Layout
-public import ConAgua.Front.Preserve
+import ConAgua.Front.Preserve
 
 @[expose] public section
 

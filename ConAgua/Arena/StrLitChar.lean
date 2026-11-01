@@ -2,9 +2,14 @@ module
 
 public import ConAgua.Arena.LdRd
 public import ConAgua.Arena.StrLitTy
-public import ConAgua.Arena.GrindAttr
-public import ConAgua.L.ModelGen
-public import ConAgua.L.GrindAttr
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.ModelGen
+import ConAgua.L.GrindAttr
+import ConAgua.Arena.DefEqMid
+import ConAgua.Arena.InferBodyLet
+import ConAgua.Arena.StrLitCv
+import Std.Tactic.BVDecide.Normalize.BitVec
+import Std.WP.Triple.SpecLemmas
 
 @[expose] public section
 

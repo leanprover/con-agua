@@ -2,8 +2,10 @@ module
 
 public import ConAgua.Verdict.FrontE
 public import ConAgua.Front.IndApplyRefine3
-public import ConAgua.Checker.NoVerdictTree
+import ConAgua.Checker.NoVerdictTree
 import all ConAgua.Front.IndApplyRefine3
+import ConAgua.L.ModelGen
+public import ConAgua.Checker.NoVerdictFns
 
 @[expose] public section
 

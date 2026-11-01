@@ -1,6 +1,23 @@
 module
 
-public import ConAgua.Arena.PromoteCIRef.PromoteNew
+import ConAgua.Arena.PromoteCIRef.PromoteNew
+import ConAgua.Arena.PromoteCIRef.Caps
+import ConAgua.Arena.PromoteCIRef.Ci
+import ConAgua.Arena.PromoteCIRef.CiList
+import ConAgua.Arena.PromoteCIRef.Erase
+import ConAgua.Arena.PromoteCIRef.Fire
+import ConAgua.Arena.PromoteCIRef.Index
+import ConAgua.Arena.PromoteCIRef.PnewMain
+import ConAgua.Arena.PromoteCIRef.Rule
+import ConAgua.Arena.PromoteCIRef.Rules
+import ConAgua.Arena.PromoteTblRef
+public import ConAgua.Arena.DeclBase
+public import ConAgua.Arena.PromoteCIExt
+public import ConAgua.Arena.PromoteCIRef.ConstsAt
+public import ConAgua.Arena.PromoteCIRef.StPNat
+public import ConAgua.Arena.PromoteCIRef.TdecJoin
+public import ConAgua.Arena.PromoteRecRef
+public import ConAgua.Arena.TblFrame
 
 @[expose] public section
 

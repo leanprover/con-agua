@@ -1,8 +1,10 @@
 module
 
-public import ConAgua.Arena.DeclDivModSpec.DivModTypePins
+import ConAgua.Arena.DeclDivModSpec.DivModTypePins
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.L.GrindAttr
+import ConAgua.Arena.DeclNatGate
+public import ConAgua.Rom.PinSets
 
 @[expose] public section
 

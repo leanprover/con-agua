@@ -1,8 +1,9 @@
 module
 
 public import ConAgua.Arena.StoreDen
-public import ConRon.Arena.WFProofs
+import ConRon.Arena.WFProofs
 public import Std.Tactic.BVDecide.Normalize.Prop
+public import ConRon.Arena.WF
 
 @[expose] public section
 

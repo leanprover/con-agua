@@ -1,7 +1,7 @@
 module
 
 public import ConAgua.Arena.PromoteCIRef.StPNat
-public import ConRon.Bridge.Grind
+import ConRon.Bridge.Grind
 
 @[expose] public section
 

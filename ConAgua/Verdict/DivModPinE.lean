@@ -1,7 +1,14 @@
 module
 
 public import ConAgua.Arena.DeclDivGateT2
-public import ConAgua.L.ModelGen
+import ConAgua.L.ModelGen
+import ConAgua.Arena.DeclDivGateT1
+import ConAgua.Arena.DeclNatGate
+import ConAgua.Arena.DeclReducePin
+import ConAgua.Arena.RecGenSpec.CruleProg
+import ConAgua.Arena.RefWalk
+import ConAgua.Arena.StageC
+import ConAgua.Checker.NoVerdictTree
 
 @[expose] public section
 

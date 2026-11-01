@@ -1,9 +1,13 @@
 module
 
 public import ConAgua.Arena.IndSumSpec.McGoStep
-public import ConAgua.Arena.GrindAttr
-public import ConAgua.Arena.IndGrindAttr
-public import ConAgua.L.GrindAttr
+import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.IndGrindAttr
+import ConAgua.L.GrindAttr
+import ConAgua.Arena.Env
+import ConAgua.Arena.IndPosSpec.MatesW
+import Std.WP.Tactic
+import Std.WP.Triple.SpecLemmas
 
 @[expose] public section
 

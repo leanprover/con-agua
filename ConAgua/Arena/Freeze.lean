@@ -2,6 +2,24 @@ module
 
 public import ConAgua.Arena.DeclBase
 meta import ConAgua.Arena.DeclBase
+public import ConAgua.Arena.AppStore
+public import ConAgua.Arena.BVarStore
+public import ConAgua.Arena.ConstStore
+public import ConAgua.Arena.FVarStore
+public import ConAgua.Arena.ForallStore
+public import ConAgua.Arena.ImaxStore
+public import ConAgua.Arena.LamStore
+public import ConAgua.Arena.LetStore
+public import ConAgua.Arena.LevelStore
+public import ConAgua.Arena.LsStore
+public import ConAgua.Arena.MaxStore
+public import ConAgua.Arena.NAnonStore
+public import ConAgua.Arena.NNumStore
+public import ConAgua.Arena.NStrStore
+public import ConAgua.Arena.ParamStore
+public import ConAgua.Arena.ProjStore
+public import ConAgua.Arena.SortStore
+public import ConAgua.Arena.ZeroStore
 
 @[expose] public section
 

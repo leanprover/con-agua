@@ -1,7 +1,11 @@
 module
 
-public import ConAgua.Arena.RecGenSpec.DecNLAt
-public import ConAgua.Arena.RecGenSpec.StabDecCKExt
+import ConAgua.Arena.RecGenSpec.DecNLAt
+import ConAgua.Arena.RecGenSpec.StabDecCKExt
+import ConRon.Bridge.Grind
+public import ConAgua.Arena.IndDecStab
+public import ConAgua.Arena.RecClassSpec.Classes
+public import ConAgua.Arena.RecStab
 
 @[expose] public section
 

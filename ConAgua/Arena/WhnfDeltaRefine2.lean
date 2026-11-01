@@ -1,11 +1,19 @@
 module
 
 public import ConAgua.Arena.WhnfDeltaRefine
-public import ConAgua.Arena.GrindAttr
-public import ConAgua.L.GrindAttr
-public import Std.Tactic.BVDecide.Normalize.BitVec
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
+import Std.Tactic.BVDecide.Normalize.BitVec
 public import Std.Tactic.BVDecide.Normalize.Prop
-public import Std.WP.Tactic
+import Std.WP.Tactic
+import ConAgua.Arena.DerRel
+import ConAgua.Arena.PinsNatOp
+import ConAgua.Arena.WhnfCoreProj
+import ConAgua.Arena.WhnfCoreRefine
+import ConAgua.L.LocNF
+import ConAgua.L.ModelGen
+import Std.WP.Triple.SpecLemmas
+public import ConAgua.Arena.StoreDenIntern
 
 @[expose] public section
 

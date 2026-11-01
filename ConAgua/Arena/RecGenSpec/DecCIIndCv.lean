@@ -4,7 +4,8 @@ public import ConAgua.Arena.IndCallM
 public import ConAgua.Arena.IndCopy2
 public import ConAgua.Arena.RecGen
 public import Std.Tactic.BVDecide.Normalize.Prop
-public import ConAgua.Arena.IndGrindAttr
+import ConAgua.Arena.IndGrindAttr
+public import ConAgua.Arena.Env
 
 @[expose] public section
 

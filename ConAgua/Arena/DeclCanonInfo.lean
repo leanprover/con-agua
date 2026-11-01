@@ -2,10 +2,15 @@ module
 
 public import ConAgua.Arena.DeclCanonRules
 public import ConAgua.Arena.DeclCanonConst
-public import ConAgua.Arena.DeclCanonSpec2
-public import ConAgua.Arena.GrindAttr
-public import ConAgua.Arena.IndGrindAttr
-public import ConAgua.L.GrindAttr
+import ConAgua.Arena.DeclCanonSpec2
+import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.IndGrindAttr
+import ConAgua.L.GrindAttr
+import ConAgua.Arena.DeclCanonEq
+import ConAgua.Arena.DeclRec
+import ConAgua.Arena.IndPartsSpec.RulePrefixAt
+import Std.WP.Tactic
+import Std.WP.Triple.SpecLemmas
 
 @[expose] public section
 

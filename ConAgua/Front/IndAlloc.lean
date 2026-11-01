@@ -1,11 +1,12 @@
 module
 
 public import ConAgua.Front.IndFields
-public import ConAgua.Arena.GrindAttr
-public import ConAgua.L.GrindAttr
-public import Std.Tactic.BVDecide.Normalize.Prop
-public import Std.WP.Tactic
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
+import Std.Tactic.BVDecide.Normalize.Prop
+import Std.WP.Tactic
 public import ConAgua.L.Examples
+import Std.WP.Triple.SpecLemmas
 
 @[expose] public section
 

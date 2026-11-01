@@ -3,7 +3,7 @@ module
 public import ConAgua.Arena.LsStore
 public import ConAgua.Arena.LpColRel
 public import ConAgua.Arena.LitRefine
-public import Std.Tactic.BVDecide.Normalize.Prop
+import Std.Tactic.BVDecide.Normalize.Prop
 
 @[expose] public section
 

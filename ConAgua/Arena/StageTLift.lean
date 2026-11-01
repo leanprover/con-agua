@@ -1,6 +1,7 @@
 module
 
-public import ConAgua.Arena.TwinStep
+import ConAgua.Arena.TwinStep
+public import ConAgua.Arena.IndTwin
 
 @[expose] public section
 

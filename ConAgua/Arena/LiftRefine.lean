@@ -1,9 +1,12 @@
 module
 
 public import ConAgua.Arena.LiftSpec
-public import ConAgua.Arena.DerRel
-public import ConAgua.Arena.FVarRangeRefine
+import ConAgua.Arena.DerRel
+import ConAgua.Arena.FVarRangeRefine
 public import Std.Tactic.BVDecide.Normalize.Prop
+import ConAgua.Arena.View
+public import ConAgua.Arena.DerRelBase
+public import ConRon.Arena.ExprOps
 
 @[expose] public section
 

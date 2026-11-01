@@ -2,7 +2,9 @@ module
 
 public import ConAgua.Arena.PromoteCIRef.DecRuleMk
 public import ConAgua.Arena.PromoteCIRef.StPNat
-public import ConRon.Bridge.Grind
+import ConRon.Bridge.Grind
+import ConAgua.Arena.PromoteRecRef
+public import ConAgua.Arena.PromoteERef
 
 @[expose] public section
 

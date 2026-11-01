@@ -1,10 +1,17 @@
 module
 
-public import ConAgua.Arena.IndT.RecGenTmf
-public import ConAgua.Arena.IndT.RecCheckPins
+import ConAgua.Arena.IndT.RecGenTmf
+import ConAgua.Arena.IndT.RecCheckPins
 public import ConAgua.Verdict.IndBClm
-public import ConAgua.Arena.RecGenSpec.CntW
-public import ConRon.Bridge.Inductives.GenRec
+import ConAgua.Arena.RecGenSpec.CntW
+import ConRon.Bridge.Inductives.GenRec
+import ConAgua.Arena.IndInstallSpec.ConsBlockCtors
+import ConAgua.Arena.IndInstallSpec.PartsShapeFacts
+import ConAgua.Arena.IndPartsSpec.PartsPSlCons
+import ConAgua.Arena.IndPosSpec.NestCrest
+import ConAgua.Arena.IndT.Lift
+import ConAgua.Arena.RefWalk
+public import ConRon.Bridge.Inductives.ClassRead
 
 @[expose] public section
 

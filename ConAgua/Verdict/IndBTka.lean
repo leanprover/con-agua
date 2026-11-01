@@ -1,11 +1,22 @@
 module
 
-public import ConAgua.Arena.IndT.RecCheckK53
-public import ConAgua.Arena.RecCheckSpec.Tka
+import ConAgua.Arena.IndT.RecCheckK53
+import ConAgua.Arena.RecCheckSpec.Tka
 public import ConAgua.Verdict.IndBTcm
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.L.GrindAttr
-public import ConAgua.L.ModelGen
+import ConAgua.L.ModelGen
+import ConAgua.Arena.IndInstallSpec.DomsW
+import ConAgua.Arena.IndPosSpec.NestCrest
+import ConAgua.Arena.IndSim
+import ConAgua.Arena.IndT.Lift
+import ConAgua.Arena.RecCheckSpec.EeW2
+import ConAgua.Arena.RecCheckSpec.TmFields
+import ConAgua.Arena.RefWalk
+import ConAgua.Checker.NoVerdictTree
+public import ConAgua.Arena.RecCheckSpec.EeW
+public import ConAgua.Arena.RecCheckSpec.EqWDec
+public import ConAgua.Arena.RecCheckSpec.K53Look
 
 @[expose] public section
 /-!

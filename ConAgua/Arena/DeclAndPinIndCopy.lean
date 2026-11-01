@@ -3,10 +3,11 @@ module
 public import ConAgua.Arena.DeclStep
 public import ConAgua.Arena.IndMaster
 public import Std.Tactic.BVDecide.Normalize.Prop
-public import ConAgua.Arena.GrindAttr
-public import ConAgua.Arena.IndGrindAttr
-public import ConAgua.L.GrindAttr
-public import Std.WP.Tactic
+import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.IndGrindAttr
+import ConAgua.L.GrindAttr
+import Std.WP.Tactic
+import Std.WP.Triple.SpecLemmas
 
 @[expose] public section
 

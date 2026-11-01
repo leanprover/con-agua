@@ -1,7 +1,8 @@
 module
 
-public import ConAgua.Arena.IndInstallSpec.DomsW
+import ConAgua.Arena.IndInstallSpec.DomsW
 public import ConAgua.Arena.IndPosSpec.NestBlockOfKey
+import ConAgua.Arena.IndPosSpec.NestKeyMap
 
 @[expose] public section
 

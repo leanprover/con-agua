@@ -1,8 +1,9 @@
 module
 
-public import ConAgua.Front.ApplyDeclRefine
+import ConAgua.Front.ApplyDeclRefine
 public import ConAgua.Front.Line
 public import Std.Tactic.BVDecide.Normalize.Prop
+public import ConAgua.Front.ApplyExprRefine
 
 @[expose] public section
 

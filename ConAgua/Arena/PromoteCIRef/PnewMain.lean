@@ -1,11 +1,19 @@
 module
 
-public import ConAgua.Arena.PromoteCIRef.CiList
-public import ConAgua.Arena.PromoteCIRef.Erase
-public import ConAgua.Arena.PromoteCIRef.Index
-public import ConAgua.Arena.PromoteCIRef.OfFrame
-public import ConAgua.Arena.PromoteCIRef.TakeDropMin
+import ConAgua.Arena.PromoteCIRef.CiList
+import ConAgua.Arena.PromoteCIRef.Erase
+import ConAgua.Arena.PromoteCIRef.Index
+import ConAgua.Arena.PromoteCIRef.OfFrame
+import ConAgua.Arena.PromoteCIRef.TakeDropMin
 public import ConAgua.Arena.PromoteCIRef.TdecJoin
+import ConAgua.Arena.PromoteCIRef.Of
+import ConAgua.Arena.PromoteCIRef.PmDecRuleWords
+import ConAgua.Arena.PromoteCIRef.PreECongr
+import ConAgua.Arena.PromoteCIRef.Promoted
+public import ConAgua.Arena.DeclBase
+public import ConAgua.Arena.PromoteCI
+public import ConAgua.Arena.PromoteCIRef.ConstsAt
+public import ConAgua.Arena.PromoteERef
 
 @[expose] public section
 

@@ -4,7 +4,7 @@ public import ConAgua.Arena.IndPosSpec.CtxFields
 public import ConAgua.Arena.IndPosSpec.MkLook
 public import ConAgua.Arena.IndRealSpine
 public import ConAgua.Arena.IndPosSpec.MatesW
-public import ConAgua.Arena.IndGrindAttr
+import ConAgua.Arena.IndGrindAttr
 
 @[expose] public section
 

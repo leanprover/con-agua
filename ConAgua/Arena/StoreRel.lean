@@ -3,8 +3,8 @@ module
 public import ConAgua.Arena.Refine
 public import ConAgua.Arena.Handle
 public import ConAgua.Arena.SlotGrow
-public import ConAgua.Arena.GrindAttr
-public import Std.Tactic.BVDecide.Normalize.Prop
+import ConAgua.Arena.GrindAttr
+import Std.Tactic.BVDecide.Normalize.Prop
 
 @[expose] public section
 

@@ -1,7 +1,8 @@
 module
 
 public import ConAgua.Arena.IndRealOpf
-public import ConAgua.Arena.IndRealAbs
+import ConAgua.Arena.IndRealAbs
+import ConAgua.Arena.CoreWalks
 
 @[expose] public section
 

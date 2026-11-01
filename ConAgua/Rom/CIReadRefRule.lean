@@ -1,6 +1,11 @@
 module
 
-public import ConAgua.Rom.CIReadRefCaps
+import ConAgua.Rom.CIReadRefCaps
+import ConAgua.L.WordOff
+import ConAgua.Rom.CIReadRefCV
+import ConAgua.Rom.CIReadRefNames
+public import ConAgua.Rom.CIReadRefBase
+public import ConAgua.Rom.CIReadSpec
 
 @[expose] public section
 

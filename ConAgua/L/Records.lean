@@ -3,6 +3,7 @@ module
 public import ConAgua.L.PureEval
 import ConAgua.L.GrindAttr
 import Std.Data.DTreeMap.Internal.Balancing
+import Std.Tactic.BVDecide.Normalize.Prop
 
 @[expose] public section
 

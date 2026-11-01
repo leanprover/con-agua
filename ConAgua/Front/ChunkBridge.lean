@@ -1,7 +1,8 @@
 module
 
-public import ConLeche.Verify.Frontend.Chunks
+import ConLeche.Verify.Frontend.Chunks
 public import ConRon.Arena.Frontend.ExportC
+public import ConLeche.Frontend.Scan.Equiv.Kit
 
 @[expose] public section
 

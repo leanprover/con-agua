@@ -3,6 +3,10 @@ module
 public import ConAgua.Arena.ArRangeSpec
 public import ConAgua.Arena.Abs1Refine
 public import Std.Tactic.BVDecide.Normalize.Prop
+import ConAgua.Arena.FVarRangeRefine
+import ConAgua.Arena.Inst1Refine
+import ConAgua.Arena.SimLib
+import ConAgua.Arena.View
 
 @[expose] public section
 

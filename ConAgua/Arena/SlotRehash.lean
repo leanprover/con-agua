@@ -2,7 +2,7 @@ module
 
 public import ConAgua.Arena.SlotGrowSpec
 public import ConAgua.Arena.StoreRel
-public import Std.Tactic.BVDecide.Normalize.Prop
+import Std.Tactic.BVDecide.Normalize.Prop
 
 @[expose] public section
 

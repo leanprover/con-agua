@@ -1,6 +1,7 @@
 module
 
 public import ConAgua.Arena.PromoteCIRef.DecRuleMk
+import ConAgua.Arena.PromoteRecRef
 
 @[expose] public section
 

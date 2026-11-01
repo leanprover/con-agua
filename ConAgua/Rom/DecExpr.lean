@@ -1,9 +1,11 @@
 module
 
-public import ConAgua.Rom.Dec
+import ConAgua.Rom.Dec
 public import ConRon.Bridge.Frontend.Shared
 public import ConAgua.Arena.RomExprRef
 import all ConRon.Bridge.Frontend.Shared
+import ConAgua.Arena.DerRel
+import Std.Tactic.BVDecide.Normalize.BitVec
 
 @[expose] public section
 

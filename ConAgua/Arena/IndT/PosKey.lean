@@ -1,10 +1,12 @@
 module
 
-public import ConAgua.Arena.IndPosSpec.FgW
+import ConAgua.Arena.IndPosSpec.FgW
 public import ConAgua.Verdict.PosE
-public import ConAgua.Arena.IndPosSpec.Pos2DecHLSplit
-public import ConAgua.Arena.IndRealAbsPos
-public import ConAgua.Arena.IndPosSpec.Snoc
+import ConAgua.Arena.IndPosSpec.Pos2DecHLSplit
+import ConAgua.Arena.IndRealAbsPos
+import ConAgua.Arena.IndPosSpec.Snoc
+import ConAgua.Arena.IndPosSpec.Pos2RdGrow
+import ConAgua.Checker.NoVerdictTree
 
 @[expose] public section
 

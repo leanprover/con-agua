@@ -1,15 +1,20 @@
 module
 
 public import ConAgua.Arena.WhnfIota
-public import ConAgua.Arena.WhnfCoreRefine
-public import ConAgua.Arena.GrindAttr
-public import ConAgua.L.GrindAttr
-public import Std.Tactic.BVDecide.Normalize.BitVec
+import ConAgua.Arena.WhnfCoreRefine
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
+import Std.Tactic.BVDecide.Normalize.BitVec
 public import Std.Tactic.BVDecide.Normalize.Prop
-public import Std.WP.Tactic
+import Std.WP.Tactic
 public import ConAgua.Arena.WhnfCoreProj
 public import ConAgua.L.Examples
 public import ConAgua.L.For
+import ConAgua.Arena.DerRel
+import ConAgua.Arena.LdRd
+import ConAgua.Arena.SimLib
+import ConAgua.Front.Preserve
+import Std.WP.Triple.SpecLemmas
 
 @[expose] public section
 

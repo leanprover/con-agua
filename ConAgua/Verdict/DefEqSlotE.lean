@@ -1,6 +1,6 @@
 module
 
-public import ConAgua.Verdict.DefEqBaseE
+import ConAgua.Verdict.DefEqBaseE
 public import ConAgua.Arena.DefEqBody
 public import ConAgua.Arena.IndTwin
 

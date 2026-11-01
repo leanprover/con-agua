@@ -1,7 +1,9 @@
 module
 
 public import ConAgua.Arena.IndDecStab
-public import ConAgua.Arena.IndInstallSpec.DomsW
+import ConAgua.Arena.IndInstallSpec.DomsW
+import ConRon.Bridge.Grind
+public import ConAgua.Arena.IndRealSpine
 
 @[expose] public section
 

@@ -2,9 +2,9 @@ module
 
 public import ConAgua.Arena.InstLPSpec
 public import ConAgua.Arena.LevelInternRef
-public import ConRon.Bridge.SpecsL
-public import ConAgua.Arena.CoreLevels
-public import ConAgua.Front.ApplyExprRefine
+import ConRon.Bridge.SpecsL
+import ConAgua.Arena.CoreLevels
+import ConAgua.Front.ApplyExprRefine
 
 @[expose] public section
 

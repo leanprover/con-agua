@@ -2,8 +2,8 @@ module
 
 public import ConAgua.Arena.LdRd
 public import ConAgua.Arena.DeclDivModSpec.Sc0List
-public import ConAgua.Arena.GrindAttr
-public import ConAgua.L.GrindAttr
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
 
 @[expose] public section
 

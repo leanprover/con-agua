@@ -2,8 +2,12 @@ module
 
 public import ConAgua.Front.LineRefine
 public import ConAgua.Front.ApplyDLineRef
-public import ConAgua.Front.LineRecLink
+import ConAgua.Front.LineRecLink
 public import ConAgua.Scan.LineLink
+import ConAgua.Arena.Env
+import ConAgua.Checker.NoVerdictTree
+import ConAgua.Front.FieldsExprLink
+import ConAgua.Scan.LeafLink
 
 @[expose] public section
 

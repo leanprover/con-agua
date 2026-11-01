@@ -1,8 +1,11 @@
 module
 
-public import ConAgua.Arena.IndSumSpec.StructCtorResidOk
-public import ConAgua.Arena.IndInstallSpec.InstallRec2PSl
-public import ConAgua.Arena.IndRealAbsPos
+import ConAgua.Arena.IndSumSpec.StructCtorResidOk
+import ConAgua.Arena.IndInstallSpec.InstallRec2PSl
+import ConAgua.Arena.IndRealAbsPos
+import ConAgua.Arena.RecClassSpec.SlotProg
+public import ConAgua.Arena.IndInstallSpec.PartsShapeFacts
+public import ConAgua.Arena.IndPosSpec.Pos2CvLpsWStage
 
 @[expose] public section
 

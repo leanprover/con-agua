@@ -1,7 +1,8 @@
 module
 
 public import ConAgua.Arena.DeclCvg
-public import ConAgua.Arena.DeclPins
+import ConAgua.Arena.DeclPins
+public import ConAgua.Arena.DeclBase
 
 @[expose] public section
 

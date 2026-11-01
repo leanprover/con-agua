@@ -5,6 +5,9 @@ public import ConAgua.Arena.GrindAttr
 public import ConAgua.Arena.IndGrindAttr
 public import ConAgua.L.GrindAttr
 import all Init.Data.List.Control
+import ConAgua.Arena.IndInstallSpec.DomsW
+import ConAgua.Arena.IndSumSpec.StructProjArgP
+import Std.Tactic.BVDecide.Normalize.BitVec
 
 @[expose] public section
 

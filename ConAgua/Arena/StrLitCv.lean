@@ -1,9 +1,11 @@
 module
 
 public import ConAgua.Arena.StrLitBase
-public import ConAgua.Arena.DeclCanonEq
-public import ConAgua.Arena.GrindAttr
-public import ConAgua.L.GrindAttr
+import ConAgua.Arena.DeclCanonEq
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
+import Std.WP.Tactic
+import Std.WP.Triple.SpecLemmas
 
 @[expose] public section
 

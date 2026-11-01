@@ -1,8 +1,8 @@
 module
 
 public import ConAgua.Compiler.StepGen
-public import ConAgua.Compiler.Mem32
-public import ConAgua.Compiler.Rel
+import ConAgua.Compiler.Mem32
+import ConAgua.Compiler.Rel
 import Kraken.X64.Registers
 
 @[expose] public section

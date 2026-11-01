@@ -11,6 +11,7 @@ public import ConAgua.Verdict.VCtx
 public import ConAgua.Verdict.PosE2M
 public import ConAgua.Verdict.PosE3Cm
 public import ConAgua.Arena.IndT.PosDefs
+public import ConAgua.Arena.IndT.Lift
 
 @[expose] public section
 

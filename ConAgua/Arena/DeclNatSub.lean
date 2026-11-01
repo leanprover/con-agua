@@ -1,10 +1,13 @@
 module
 
 public import ConAgua.Arena.DeclNatEq
-public import ConAgua.Arena.RecClassSpec.Classes
+import ConAgua.Arena.RecClassSpec.Classes
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.L.GrindAttr
-public import ConAgua.L.ModelGen
+import ConAgua.L.ModelGen
+import ConAgua.Arena.IndPartsSpec.RulePrefixAt
+import ConRon.Bridge.Grind
+import Std.Tactic.BVDecide.Normalize.BitVec
 
 @[expose] public section
 

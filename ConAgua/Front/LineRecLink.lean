@@ -1,6 +1,8 @@
 module
 
 public import ConAgua.Front.LineRec
+import Std.Data.DTreeMap.Internal.Operations
+import Std.Tactic.BVDecide.Normalize.Prop
 
 @[expose] public section
 

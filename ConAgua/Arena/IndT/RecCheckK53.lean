@@ -1,10 +1,12 @@
 module
 
-public import ConRon.Bridge.Inductives.PosWalks
+import ConRon.Bridge.Inductives.PosWalks
 public import ConAgua.Arena.RecCheckSpec.EqWDec
-public import ConAgua.Arena.IndRealAbsPos
+import ConAgua.Arena.IndRealAbsPos
 public import ConAgua.Arena.RecCheckSpec.EeW
-public import ConRon.Bridge.Inductives.RecCheck
+import ConRon.Bridge.Inductives.RecCheck
+public import ConRon.Bridge.Checker.Hyp
+public import ConRon.Bridge.Inductives.Run
 
 @[expose] public section
 

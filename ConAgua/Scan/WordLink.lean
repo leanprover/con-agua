@@ -2,7 +2,7 @@ module
 
 public import ConAgua.Scan.Utf8
 public import ConLeche.Frontend.Scan.Fast
-public import ConAgua.Scan.Link
+import ConAgua.Scan.Link
 @[expose] public section
 
 /-!

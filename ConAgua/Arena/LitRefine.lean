@@ -2,8 +2,8 @@ module
 
 public import ConAgua.Arena.ConsLibRel
 public import ConAgua.Arena.Store
-public import ConAgua.Arena.GrindAttr
-public import Std.Tactic.BVDecide.Normalize.Prop
+import ConAgua.Arena.GrindAttr
+import Std.Tactic.BVDecide.Normalize.Prop
 meta import ConAgua.Arena.ConsLibRel
 meta import ConAgua.Arena.Store
 meta import ConAgua.Arena.GrindAttr

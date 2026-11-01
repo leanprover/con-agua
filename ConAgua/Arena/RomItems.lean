@@ -1,10 +1,13 @@
 module
 
 public import ConAgua.Arena.RomExprRef
-public import ConAgua.Arena.GrindAttr
-public import ConAgua.L.GrindAttr
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
 public import Std.Tactic.BVDecide.Normalize.Prop
-public import Std.WP.Tactic
+import Std.WP.Tactic
+import ConAgua.L.LocNF
+import ConLeche.Verify.Cached.Erase
+import Std.WP.Triple.SpecLemmas
 
 @[expose] public section
 

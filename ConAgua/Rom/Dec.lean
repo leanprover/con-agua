@@ -1,7 +1,7 @@
 module
 
 public import ConAgua.Arena.RomLevels
-public import Std.Tactic.BVDecide.Normalize.BitVec
+import Std.Tactic.BVDecide.Normalize.BitVec
 public import Std.Tactic.BVDecide.Normalize.Prop
 
 @[expose] public section

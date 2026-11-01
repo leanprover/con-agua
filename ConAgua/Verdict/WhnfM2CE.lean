@@ -1,6 +1,7 @@
 module
 
-public import ConAgua.Arena.WhnfM2CRefine5
+import ConAgua.Arena.WhnfM2CRefine5
+public import ConAgua.Arena.WhnfM2CRefine2
 
 @[expose] public section
 /-!

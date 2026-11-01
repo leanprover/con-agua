@@ -3,9 +3,10 @@ module
 public import ConAgua.Checker.Prelude
 public import ConAgua.Front.DeclsPre
 public import ConAgua.Front.StateDR
-public import ConAgua.Arena.GrindAttr
-public import ConAgua.L.GrindAttr
-public import Std.WP.Tactic
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
+import Std.WP.Tactic
+import Std.WP.Triple.SpecLemmas
 
 @[expose] public section
 

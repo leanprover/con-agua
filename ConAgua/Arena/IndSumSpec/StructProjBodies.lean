@@ -1,13 +1,19 @@
 module
 
 public import ConAgua.Arena.IndSumSpec.PBDecA
-public import ConAgua.Arena.IndSumSpec.StructCtorResidOk
-public import ConAgua.Arena.IndPosSpec.MatesW
+import ConAgua.Arena.IndSumSpec.StructCtorResidOk
+import ConAgua.Arena.IndPosSpec.MatesW
 public import ConAgua.Arena.IndRealIlpP
 public import ConAgua.Arena.GrindAttr
-public import ConAgua.Arena.IndGrindAttr
+import ConAgua.Arena.IndGrindAttr
 public import ConAgua.L.GrindAttr
-public import ConAgua.L.ModelGen
+import ConAgua.L.ModelGen
+import ConAgua.Arena.IndSumSpec.Row
+import Std.Tactic.BVDecide.Normalize.BitVec
+import Std.WP.Tactic
+import Std.WP.Triple.SpecLemmas
+public import ConAgua.Arena.IndRealAbs
+public import ConAgua.Arena.IndSumSpec.StructProjArgP
 
 @[expose] public section
 

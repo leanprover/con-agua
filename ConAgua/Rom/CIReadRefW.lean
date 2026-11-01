@@ -2,8 +2,9 @@ module
 
 public import ConAgua.Arena.LdRd
 public import ConAgua.Rom.CIReadSpec
-public import ConAgua.Arena.GrindAttr
-public import ConAgua.L.GrindAttr
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
+public import ConAgua.Arena.DeclNatBase
 
 @[expose] public section
 

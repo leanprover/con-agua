@@ -1,7 +1,9 @@
 module
 
 public import ConAgua.Arena.IndMemoFns
-public import ConAgua.Arena.IndRealCrFKeep
+import ConAgua.Arena.IndRealCrFKeep
+public import ConAgua.Arena.ConstsResolveFRefine2
+public import ConAgua.Arena.IndRealCrF
 
 @[expose] public section
 

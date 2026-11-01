@@ -3,7 +3,8 @@ module
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.Arena.IndGrindAttr
 public import ConAgua.L.GrindAttr
-public import ConAgua.Arena.IndPosSpec.NcGoW
+import ConAgua.Arena.IndPosSpec.NcGoW
+public import ConAgua.Arena.IndPosSpec.EnvFindWHit
 
 @[expose] public section
 

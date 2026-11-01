@@ -1,8 +1,11 @@
 module
 
-public import ConAgua.Arena.IndRealOpf3
-public import ConAgua.Arena.IndPartsSpec.BlockRecNamesUnreserved
+import ConAgua.Arena.IndRealOpf3
+import ConAgua.Arena.IndPartsSpec.BlockRecNamesUnreserved
 public import ConAgua.Arena.RecSim
+import ConAgua.Arena.IndMaster
+public import ConAgua.Arena.IndPartsSpec.RecTW
+public import ConAgua.Arena.IndRealOpf
 
 @[expose] public section
 

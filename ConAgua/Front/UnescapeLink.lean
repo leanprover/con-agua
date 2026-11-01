@@ -1,10 +1,11 @@
 module
 
 public import ConAgua.Front.Unescape
-public import ConAgua.Arena.DerRel
+import ConAgua.Arena.DerRel
 public import ConAgua.Front.FieldsLink
-public import ConAgua.Scan.Link
+import ConAgua.Scan.Link
 public import Std.Tactic.BVDecide.Normalize.Prop
+public import ConAgua.Arena.DerRelBase
 
 @[expose] public section
 

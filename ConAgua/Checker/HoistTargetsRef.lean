@@ -1,6 +1,7 @@
 module
 
-public import ConAgua.Checker.HoistNatRef
+import ConAgua.Checker.HoistNatRef
+public import ConAgua.Checker.HoistClosureL
 
 @[expose] public section
 

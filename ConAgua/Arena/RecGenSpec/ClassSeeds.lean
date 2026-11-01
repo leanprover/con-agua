@@ -1,15 +1,26 @@
 module
 
-public import ConAgua.Arena.IndPosSpec.Grow
+import ConAgua.Arena.IndPosSpec.Grow
 public import ConAgua.Arena.RecGenSpec.DecNLAt
-public import ConAgua.Arena.RecGenSpec.KcW
+import ConAgua.Arena.RecGenSpec.KcW
 public import ConAgua.Arena.RecGenSpec.KeysProg
-public import ConAgua.Arena.IndInstallSpec.InstallRec2Tele
-public import ConAgua.Arena.IndPartsSpec.PartsPSlCons
+import ConAgua.Arena.IndInstallSpec.InstallRec2Tele
+import ConAgua.Arena.IndPartsSpec.PartsPSlCons
 public import ConAgua.Arena.IndPosSpec.NestSeedOf
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.L.GrindAttr
-public import ConAgua.L.ModelGen
+import ConAgua.L.ModelGen
+import ConAgua.Arena.IndInstallSpec.DomsW
+import ConAgua.Arena.IndPartsSpec.IndPartsProg2
+import ConAgua.Arena.IndPosSpec.DecNHFields
+import ConAgua.Arena.IndPosSpec.FgW
+import ConAgua.Arena.IndPosSpec.NestKeyMap
+import ConAgua.Arena.IndPosSpec.Rx
+import ConAgua.Arena.IndPosSpec.SgGoW
+import ConAgua.Arena.IndPosSpec.SnocWStage
+import Std.Tactic.BVDecide.Normalize.BitVec
+public import ConAgua.Arena.IndPartsSpec.PartsConsPL
+public import ConAgua.Arena.IndPosSpec.UCtx
 
 @[expose] public section
 

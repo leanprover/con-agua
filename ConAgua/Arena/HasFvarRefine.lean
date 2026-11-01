@@ -2,6 +2,8 @@ module
 
 public import ConAgua.Arena.HasFvar
 public import ConAgua.Arena.Abs1Refine
+import ConAgua.Arena.FVarRangeRefine
+public import ConAgua.Arena.SimLib
 
 @[expose] public section
 

@@ -2,7 +2,9 @@ module
 
 public import ConAgua.Arena.IndPartsSpec.PartsConsPL
 public import ConAgua.Arena.IndPartsSpec.BlockRecNamesUnreserved
-public import ConAgua.Arena.IndPosSpec.RootHoles
+import ConAgua.Arena.IndPosSpec.RootHoles
+import ConAgua.Arena.IndPartsSpec.RulePrefixAt
+import ConRon.Bridge.Grind
 
 @[expose] public section
 

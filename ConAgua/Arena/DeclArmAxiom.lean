@@ -8,6 +8,7 @@ public import ConAgua.Arena.DeclValSpec
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.Arena.IndGrindAttr
 public import ConAgua.L.GrindAttr
+import ConAgua.Arena.DeclValRef
 
 @[expose] public section
 

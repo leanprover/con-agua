@@ -5,6 +5,12 @@ public import ConAgua.Arena.IndPosSpec.SlRCongr
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.Arena.IndGrindAttr
 public import ConAgua.L.GrindAttr
+import ConAgua.Arena.IndPosSpec.NestKeyMap
+import ConAgua.Arena.LdRd
+import Std.Tactic.BVDecide.Normalize.BitVec
+import Std.WP.Tactic
+import Std.WP.Triple.SpecLemmas
+public import ConAgua.Arena.StageInst1
 
 @[expose] public section
 

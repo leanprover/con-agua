@@ -1,10 +1,10 @@
 module
 
-public import ConAgua.Checker.HoistDecode
-public import ConAgua.Arena.IndView
+import ConAgua.Checker.HoistDecode
+import ConAgua.Arena.IndView
 public import ConAgua.Checker.HoistRefBase
 public import ConRon.Arena.Frontend.NatOpGround
-public import ConAgua.L.WordOff
+import ConAgua.L.WordOff
 
 @[expose] public section
 

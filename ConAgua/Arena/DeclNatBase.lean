@@ -3,9 +3,13 @@ module
 public import ConAgua.Arena.DeclCvg
 public import ConAgua.Arena.DeclHeader
 public import ConAgua.Arena.WhnfDelta
-public import ConAgua.Arena.GrindAttr
-public import ConAgua.L.GrindAttr
-public import ConAgua.L.ModelGen
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
+import ConAgua.L.ModelGen
+import ConAgua.Arena.IndMaster
+import ConAgua.Arena.IndPartsSpec.MemberNames
+import ConRon.Bridge.Grind
+public import ConAgua.Arena.SimLib
 
 @[expose] public section
 

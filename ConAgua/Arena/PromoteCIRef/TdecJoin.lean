@@ -1,7 +1,8 @@
 module
 
-public import ConAgua.Arena.PromoteCIRef.PmDecRuleWords
-public import ConRon.Bridge.Grind
+import ConAgua.Arena.PromoteCIRef.PmDecRuleWords
+import ConRon.Bridge.Grind
+public import ConAgua.Arena.Tiers
 
 @[expose] public section
 

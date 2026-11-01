@@ -1,8 +1,9 @@
 module
 
 public import ConAgua.Final.Statement
-public import ConAgua.Rom.Stage
+import ConAgua.Rom.Stage
 public import ConAgua.Checker.CapCheck
+public import ConAgua.Front.StateDR
 
 @[expose] public section
 

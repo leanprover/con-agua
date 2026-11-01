@@ -1,9 +1,12 @@
 module
 
 public import ConAgua.Arena.DefEqStuck
-public import ConAgua.Arena.GrindAttr
-public import ConAgua.L.GrindAttr
-public import ConAgua.L.ModelGen
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
+import ConAgua.L.ModelGen
+import ConAgua.Arena.RefWalk
+import ConAgua.Front.Preserve
+import Std.WP.Triple.SpecLemmas
 
 @[expose] public section
 

@@ -1,10 +1,13 @@
 module
 
 public import ConAgua.Arena.RecGenSpec.DecB
-public import ConAgua.Checker.NoVerdictTree
+import ConAgua.Checker.NoVerdictTree
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.Arena.IndGrindAttr
 public import ConAgua.L.GrindAttr
+import ConAgua.L.Records
+public import ConAgua.Checker.NoVerdictFns
+public import ConAgua.L.ErrSpec
 
 @[expose] public section
 

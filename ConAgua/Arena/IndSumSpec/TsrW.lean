@@ -3,10 +3,17 @@ module
 public import ConAgua.Arena.IndSumSpec.SumRules
 public import ConAgua.Arena.IndSumSpec.TblProg
 public import ConAgua.Arena.RecCheckSpec.TsrLook
-public import ConAgua.Arena.IndPosSpec.FgW
+import ConAgua.Arena.IndPosSpec.FgW
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.L.GrindAttr
-public import ConAgua.L.ModelGen
+import ConAgua.L.ModelGen
+import ConAgua.Arena.IndInstallSpec.DomsW
+import ConAgua.Arena.IndSim
+import ConAgua.Arena.IndSumSpec.ConsSumCtors
+import ConAgua.Arena.IndSumSpec.StructProjArgP
+import ConAgua.Arena.RecClassSpec.Classes
+import ConAgua.Arena.RecClassSpec.MjProg
+import ConAgua.L.WordOff
 
 @[expose] public section
 

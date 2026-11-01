@@ -2,6 +2,8 @@ module
 
 public import ConAgua.Arena.RecGenSpec.SlRGrow
 public import ConAgua.Arena.RecStab
+import ConAgua.Arena.IndInstallSpec.DomsW
+public import ConAgua.Arena.RecClassSpec.Classes
 
 @[expose] public section
 

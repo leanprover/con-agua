@@ -7,13 +7,14 @@ public import ConAgua.Scan.Utf8
 meta import ConAgua.L.Semantics
 public import ConAgua.Scan.Key
 import ConAgua.L.GrindAttr
-public import ConAgua.Scan.Common
-public import ConAgua.Scan.Values
+import ConAgua.Scan.Common
+import ConAgua.Scan.Values
 import Std.Data.DTreeMap.Internal.Operations
 import Std.Tactic.BVDecide.Normalize.BitVec
 import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
+import ConAgua.Front.Preserve
 
 @[expose] public section
 

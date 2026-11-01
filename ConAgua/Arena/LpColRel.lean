@@ -2,7 +2,7 @@ module
 
 public import ConAgua.Arena.ConsLibRel
 public import ConAgua.Arena.LpCol
-public import Std.Tactic.BVDecide.Normalize.Prop
+import Std.Tactic.BVDecide.Normalize.Prop
 
 @[expose] public section
 

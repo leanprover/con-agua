@@ -2,8 +2,9 @@ module
 
 public import ConAgua.Arena.PromoteRec
 public import ConAgua.Arena.PromoteERef
-public import ConAgua.Arena.IndLibSpec
+import ConAgua.Arena.IndLibSpec
 public import Std.Tactic.BVDecide.Normalize.Prop
+import ConAgua.Arena.DerRel
 
 @[expose] public section
 

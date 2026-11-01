@@ -2,7 +2,7 @@ module
 
 public import ConAgua.Front.IndFields
 public import ConAgua.Front.ApplyDecl
-public import ConAgua.Census.Attr
+import ConAgua.Census.Attr
 
 @[expose] public section
 

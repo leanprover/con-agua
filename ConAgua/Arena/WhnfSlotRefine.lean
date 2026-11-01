@@ -1,8 +1,12 @@
 module
 
-public import ConAgua.Verdict.WhnfNatE
-public import ConAgua.Arena.WhnfDeltaSlot
+import ConAgua.Verdict.WhnfNatE
+import ConAgua.Arena.WhnfDeltaSlot
 public import ConAgua.Arena.WhnfCoreLoop
+import ConAgua.Arena.RefWalk
+import ConAgua.Arena.WhnfCoreSlot
+import ConAgua.Arena.WhnfDeltaRefine2
+public import ConAgua.Arena.WhnfDeltaRefine4
 
 @[expose] public section
 

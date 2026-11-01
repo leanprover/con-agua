@@ -2,15 +2,24 @@ module
 
 public import ConRon.Bridge.Inductives.BlockParts
 public import ConRon.Bridge.Inductives.StructParts
-public import ConAgua.Arena.IndRealLvlC
-public import ConAgua.Arena.IndSumSpec.StructCtorResidOk
-public import ConAgua.Arena.IndInstallSpec.InstallRec2PSl
-public import ConAgua.Arena.IndInstallSpec.NestCtx
+import ConAgua.Arena.IndRealLvlC
+import ConAgua.Arena.IndSumSpec.StructCtorResidOk
+import ConAgua.Arena.IndInstallSpec.InstallRec2PSl
+import ConAgua.Arena.IndInstallSpec.NestCtx
 public import ConAgua.Verdict.IndBTpd
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.L.GrindAttr
-public import ConAgua.L.ModelGen
+import ConAgua.L.ModelGen
 import all ConRon.Bridge.Inductives.RecCheck
+import ConAgua.Arena.IndInstallSpec.DomsW
+import ConAgua.Arena.IndSim
+import ConAgua.Arena.IndT.Lift
+import ConAgua.Arena.IndT.RecCheckTpd
+import ConAgua.Arena.RecCheckSpec.TmFields
+import ConAgua.Arena.RefWalk
+import ConAgua.Checker.NoVerdictTree
+public import ConAgua.Arena.RecCheckSpec.TcmLook
+public import ConAgua.Arena.RecClassSpec.ClassNPcOf
 
 @[expose] public section
 /-!

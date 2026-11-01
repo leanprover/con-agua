@@ -4,6 +4,7 @@ public import ConAgua.Checker.Prog
 public import ConAgua.Arena.IndTwin
 meta import ConAgua.Checker.Prog
 meta import ConAgua.Arena.IndTwin
+public import ConAgua.Compiler.WriteSetSplit
 
 @[expose] public section
 

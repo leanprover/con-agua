@@ -1,7 +1,8 @@
 module
 
-public import ConAgua.Arena.PromoteCIRef.HlistUnfold
-public import ConAgua.Arena.PromoteCIRef.PmDecRuleWords
+import ConAgua.Arena.PromoteCIRef.HlistUnfold
+import ConAgua.Arena.PromoteCIRef.PmDecRuleWords
+public import ConAgua.Arena.EnvRec
 
 @[expose] public section
 

@@ -1,7 +1,9 @@
 module
 
-public import ConAgua.Arena.IndRealMemoCr
+import ConAgua.Arena.IndRealMemoCr
 public import ConAgua.Arena.IndSumSpec.StructProjArgP
+import ConAgua.Arena.IndInstallSpec.DomsW
+import ConAgua.Arena.IndRealAbs
 
 @[expose] public section
 

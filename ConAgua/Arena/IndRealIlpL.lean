@@ -1,10 +1,15 @@
 module
 
 public import ConAgua.Arena.InstLPEntry
-public import ConAgua.Arena.IndRealAbsT
+import ConAgua.Arena.IndRealAbsT
 public import ConAgua.Arena.StageTLift
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.L.GrindAttr
+import ConAgua.Arena.DeclBase
+import ConAgua.Arena.IndRealAbs
+import ConAgua.Arena.InferFieldSort
+import ConAgua.Arena.WhnfCoreRefine
+import ConAgua.Arena.WhnfDeltaRefine
 
 @[expose] public section
 

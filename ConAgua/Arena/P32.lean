@@ -1,12 +1,17 @@
 module
 
 public import ConAgua.Arena.SlotGrow
-public import ConAgua.Arena.Pool
-public import ConAgua.L.Logic
+import ConAgua.Arena.Pool
+import ConAgua.L.Logic
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
+import Std.Data.DTreeMap.Internal.Operations
+import Std.Tactic.BVDecide.Normalize.Prop
+public import Std.Do.Triple.SpecLemmas
+public import Std.WP.Monad.Instances
+public import Std.WP.Triple.Basic
 
 @[expose] public section
 

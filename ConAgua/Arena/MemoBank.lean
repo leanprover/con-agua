@@ -1,7 +1,7 @@
 module
 
 public import ConAgua.Arena.MemoLibRel
-public import Std.Tactic.BVDecide.Normalize.Prop
+import Std.Tactic.BVDecide.Normalize.Prop
 meta import ConAgua.Arena.MemoLibRel
 meta import Std.Tactic.BVDecide.Normalize.Prop
 

@@ -1,6 +1,7 @@
 module
 
 public import ConAgua.Arena.IndIface
+import ConAgua.Census.Attr
 
 @[expose] public section
 

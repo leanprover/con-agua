@@ -2,10 +2,11 @@ module
 
 public import ConAgua.Arena.IndPos2
 public import ConAgua.L.ErrSpec
-public import ConAgua.Arena.GrindAttr
-public import ConAgua.L.GrindAttr
-public import Std.WP.Tactic
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
+import Std.WP.Tactic
 public import ConAgua.Arena.Verdict
+import Std.WP.Triple.SpecLemmas
 
 @[expose] public section
 

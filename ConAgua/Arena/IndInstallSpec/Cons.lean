@@ -1,7 +1,10 @@
 module
 
 public import ConAgua.Arena.IndInstallSpec.InstallRec2Tele
-public import ConAgua.Arena.IndPartsSpec.PartsPSlCons
+import ConAgua.Arena.IndPartsSpec.PartsPSlCons
+import ConAgua.Arena.IndPartsSpec.BlockRecNamesUnreserved
+import ConAgua.Arena.IndPartsSpec.IndPartsProg2
+import ConAgua.Arena.RecClassSpec.MjProg
 
 @[expose] public section
 

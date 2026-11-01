@@ -3,13 +3,13 @@ module
 public import ConAgua.Arena.SlotGrow
 public import ConAgua.Front.Fields
 public import Std.Data.DTreeMap.Internal.Operations
-public import Std.WP.Triple.SpecLemmas
-public import ConAgua.Arena.GrindAttr
-public import ConAgua.Census.Attr
-public import ConAgua.L.GrindAttr
-public import Std.Tactic.BVDecide.Normalize.BitVec
-public import Std.Tactic.BVDecide.Normalize.Prop
-public import Std.WP.Tactic
+import Std.WP.Triple.SpecLemmas
+import ConAgua.Arena.GrindAttr
+import ConAgua.Census.Attr
+import ConAgua.L.GrindAttr
+import Std.Tactic.BVDecide.Normalize.BitVec
+import Std.Tactic.BVDecide.Normalize.Prop
+import Std.WP.Tactic
 meta import ConAgua.Arena.SlotGrow
 meta import ConAgua.Front.Fields
 meta import Std.Data.DTreeMap.Internal.Operations

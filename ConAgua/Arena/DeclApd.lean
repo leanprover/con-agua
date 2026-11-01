@@ -2,6 +2,7 @@ module
 
 public import ConAgua.Arena.IndIface
 public import ConAgua.Arena.LevelApd
+import ConAgua.Census.Attr
 
 @[expose] public section
 

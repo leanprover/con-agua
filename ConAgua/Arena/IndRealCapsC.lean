@@ -1,10 +1,15 @@
 module
 
-public import ConAgua.Arena.IndRealLvlZT
+import ConAgua.Arena.IndRealLvlZT
 public import ConAgua.Arena.IndRealLvlZ
-public import ConAgua.Arena.IndInstallSpec.IcaW
+import ConAgua.Arena.IndInstallSpec.IcaW
 public import ConAgua.Arena.TwinStep
 public import ConRon.Bridge.Inductives.Records
+import ConAgua.Arena.IndInstallSpec.PartsShapeFacts
+import ConAgua.Arena.IndPosSpec.MatesW
+public import ConAgua.Arena.DeclBase
+public import ConAgua.Arena.IndInstallSpec.CapsProg
+public import ConAgua.Arena.IndPartsSpec.PartsConsPL
 
 @[expose] public section
 

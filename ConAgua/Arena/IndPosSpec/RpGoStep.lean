@@ -2,11 +2,14 @@ module
 
 public import ConAgua.Arena.IndPosSpec.MkLook
 public import ConAgua.Arena.IndPosSpec.NestOccGo
-public import ConAgua.Arena.IndInstallSpec.DomsW
+import ConAgua.Arena.IndInstallSpec.DomsW
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.Arena.IndGrindAttr
 public import ConAgua.L.GrindAttr
-public import ConAgua.L.ModelGen
+import ConAgua.L.ModelGen
+import ConAgua.Arena.IndPosSpec.NestKeyMap
+import ConAgua.Arena.LdRd
+import Std.Tactic.BVDecide.Normalize.BitVec
 
 @[expose] public section
 

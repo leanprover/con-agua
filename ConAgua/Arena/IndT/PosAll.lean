@@ -1,14 +1,23 @@
 module
 
-public import ConAgua.Arena.IndT.PosBind
-public import ConAgua.Arena.IndT.PosApp
-public import ConAgua.Arena.IndT.PosCont
-public import ConAgua.Arena.IndT.PosCtors
-public import ConAgua.Arena.IndT.PosFrame
-public import ConAgua.Arena.IndT.PosKey
-public import ConAgua.Arena.IndT.PosNew
-public import ConAgua.Arena.IndT.PosOne
-public import ConAgua.Arena.IndT.PosWalk
+import ConAgua.Arena.IndT.PosBind
+import ConAgua.Arena.IndT.PosApp
+import ConAgua.Arena.IndT.PosCont
+import ConAgua.Arena.IndT.PosCtors
+import ConAgua.Arena.IndT.PosFrame
+import ConAgua.Arena.IndT.PosKey
+import ConAgua.Arena.IndT.PosNew
+import ConAgua.Arena.IndT.PosOne
+import ConAgua.Arena.IndT.PosWalk
+import ConAgua.Arena.IndPosSpec.FgW
+import ConAgua.Arena.IndPosSpec.Pos2DecHLSplit
+import ConAgua.Arena.IndPosSpec.Snoc
+import ConAgua.Arena.IndRealAbsPos
+import ConAgua.Arena.IndT.PosCrest
+import ConAgua.Arena.IndT.PosFields
+import ConAgua.Checker.NoVerdictTree
+public import ConAgua.Arena.IndRealIlpL
+public import ConAgua.Verdict.PosE
 
 @[expose] public section
 

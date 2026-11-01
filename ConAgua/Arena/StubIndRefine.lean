@@ -1,11 +1,19 @@
 module
 
 public import ConAgua.Arena.StubInd
-public import ConAgua.Arena.DeclCanonEq
-public import ConAgua.Arena.WhnfM2CRefine5
-public import ConAgua.Arena.GrindAttr
-public import ConAgua.Arena.IndGrindAttr
-public import ConAgua.L.GrindAttr
+import ConAgua.Arena.DeclCanonEq
+import ConAgua.Arena.WhnfM2CRefine5
+import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.IndGrindAttr
+import ConAgua.L.GrindAttr
+import ConAgua.Arena.WhnfCoreRefine
+import ConAgua.Arena.WhnfIotaRefine6
+import Std.WP.Tactic
+import Std.WP.Triple.SpecLemmas
+public import ConAgua.Arena.DeclCanonSpec
+public import ConAgua.Arena.DeclNatBase
+public import ConAgua.Arena.WhnfEntry
+public import ConAgua.Arena.WhnfIota
 
 @[expose] public section
 

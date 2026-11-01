@@ -1,8 +1,8 @@
 module
 
 public import ConAgua.Arena.WhnfBase
-public import ConAgua.L.FuelMono
-public import ConAgua.Arena.Env
+import ConAgua.L.FuelMono
+import ConAgua.Arena.Env
 
 @[expose] public section
 

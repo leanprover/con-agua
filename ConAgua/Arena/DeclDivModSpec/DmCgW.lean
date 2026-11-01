@@ -2,9 +2,10 @@ module
 
 public import ConAgua.Arena.IndCallM
 public import ConAgua.Arena.DeclNatBase
-public import ConAgua.Arena.GrindAttr
-public import ConAgua.L.GrindAttr
-public import ConAgua.L.ModelGen
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
+import ConAgua.L.ModelGen
+import Std.WP.Triple.SpecLemmas
 
 @[expose] public section
 

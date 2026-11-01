@@ -1,10 +1,12 @@
 module
 
 public import ConAgua.Front.IndApplyRefine8
-public import ConAgua.Front.IndApplyRefine6
+import ConAgua.Front.IndApplyRefine6
 public import ConAgua.Verdict.FrontRecsE
 public import Std.Tactic.BVDecide.Normalize.BitVec
 public import Std.Tactic.BVDecide.Normalize.Prop
+import ConAgua.Checker.NoVerdictTree
+import ConAgua.Front.IndApplyRefine
 
 @[expose] public section
 

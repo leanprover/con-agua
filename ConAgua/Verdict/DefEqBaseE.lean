@@ -1,6 +1,9 @@
 module
 
-public import ConAgua.Arena.DefEqMid
+import ConAgua.Arena.DefEqMid
+import ConAgua.Checker.NoVerdictTree
+public import ConAgua.Arena.Verdict
+public import ConAgua.Checker.NoVerdictFns
 
 @[expose] public section
 

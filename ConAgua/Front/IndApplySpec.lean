@@ -1,17 +1,18 @@
 module
 
 public import ConAgua.Front.IndApply
-public import ConAgua.L.ModelGen
+import ConAgua.L.ModelGen
 public import ConAgua.Arena.LevelEquiv
 public import ConAgua.Front.IndAlloc
 public import ConAgua.Arena.IndView
 public import ConAgua.Front.ApplyDecl
-public import ConAgua.Arena.GrindAttr
-public import ConAgua.Arena.LdRd
-public import ConAgua.L.GrindAttr
-public import Std.Tactic.BVDecide.Normalize.BitVec
+import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.LdRd
+import ConAgua.L.GrindAttr
+import Std.Tactic.BVDecide.Normalize.BitVec
 public import Std.Tactic.BVDecide.Normalize.Prop
-public import Std.WP.Tactic
+import Std.WP.Tactic
+import Std.WP.Triple.SpecLemmas
 
 @[expose] public section
 

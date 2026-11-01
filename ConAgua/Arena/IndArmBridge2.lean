@@ -1,7 +1,8 @@
 module
 
-public import ConAgua.Arena.DeclRec
+import ConAgua.Arena.DeclRec
 public import ConAgua.Arena.IndPartsSpec.BlockRecNamesUnreserved
+public import ConAgua.Front.StateDR
 
 @[expose] public section
 

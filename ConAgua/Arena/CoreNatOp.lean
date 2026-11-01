@@ -1,8 +1,11 @@
 module
 
 public import ConAgua.Arena.WhnfDeltaRefine3
-public import ConAgua.Arena.CoreAgree
+import ConAgua.Arena.CoreAgree
 public import Std.Tactic.BVDecide.Normalize.Prop
+import ConAgua.Arena.DerRel
+public import ConAgua.Arena.PinsNatOp
+public import ConAgua.Arena.StoreDenIntern
 
 @[expose] public section
 

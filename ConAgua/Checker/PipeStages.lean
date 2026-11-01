@@ -1,9 +1,12 @@
 module
 
 public import ConAgua.Checker.Pipeline
-public import ConAgua.Checker.RomProg
-public import ConAgua.Checker.RomProgInit
+import ConAgua.Checker.RomProg
+import ConAgua.Checker.RomProgInit
 public import ConAgua.Checker.PreLoopWS
+import ConAgua.Checker.RomProg0
+import ConRon.Bridge.Checker.Pins
+public import ConAgua.Checker.CapCheck
 
 @[expose] public section
 

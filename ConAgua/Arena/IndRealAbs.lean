@@ -3,6 +3,10 @@ module
 public import ConAgua.Arena.IndRealSpine
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.L.GrindAttr
+import ConAgua.Arena.CoreWalks
+import Std.WP.Triple.SpecLemmas
+public import ConAgua.Arena.IndMaster
+public import ConAgua.Arena.StageInst1
 
 @[expose] public section
 

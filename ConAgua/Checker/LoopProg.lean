@@ -1,16 +1,16 @@
 module
 
-public import ConAgua.Checker.LoopProgInd
-public import ConAgua.Checker.LoopDeclArm
-public import ConAgua.Checker.LoopDeclAgree
-public import ConAgua.Checker.IndCore
-public import ConAgua.Checker.CoreErec
-public import ConAgua.Checker.LeafAll
-public import ConAgua.Checker.LoopAll
-public import ConAgua.Checker.RomProgB
-public import ConAgua.Rom.CIReadRefs
+import ConAgua.Checker.LoopProgInd
+import ConAgua.Checker.LoopDeclArm
+import ConAgua.Checker.LoopDeclAgree
+import ConAgua.Checker.IndCore
+import ConAgua.Checker.CoreErec
+import ConAgua.Checker.LeafAll
+import ConAgua.Checker.LoopAll
+import ConAgua.Checker.RomProgB
+import ConAgua.Rom.CIReadRefs
 public import ConAgua.Arena.LoopStart
-public import ConAgua.Checker.IndMemoClosed
+import ConAgua.Checker.IndMemoClosed
 meta import ConAgua.Checker.LoopProgInd
 meta import ConAgua.Checker.LoopDeclArm
 meta import ConAgua.Checker.LoopDeclAgree
@@ -22,6 +22,9 @@ meta import ConAgua.Checker.RomProgB
 meta import ConAgua.Rom.CIReadRefs
 meta import ConAgua.Arena.LoopStart
 meta import ConAgua.Checker.IndMemoClosed
+import ConAgua.Checker.LoopProgTac
+public import ConAgua.Checker.Prog
+public import ConAgua.Rom.Stage
 
 @[expose] public section
 

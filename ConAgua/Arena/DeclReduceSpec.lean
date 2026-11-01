@@ -1,9 +1,13 @@
 module
 
 public import ConAgua.Rom.CIReadSpec
-public import ConAgua.Arena.GrindAttr
-public import ConAgua.Arena.IndGrindAttr
-public import ConAgua.L.GrindAttr
+import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.IndGrindAttr
+import ConAgua.L.GrindAttr
+import ConAgua.Arena.DeclCvg
+import ConAgua.Arena.WhnfDeltaRefine
+public import ConAgua.Arena.IndCallM
+public import ConAgua.Arena.WhnfDelta
 
 @[expose] public section
 

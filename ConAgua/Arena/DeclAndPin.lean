@@ -1,9 +1,10 @@
 module
 
 public import ConAgua.Arena.DeclBase
-public import ConAgua.Arena.WhnfBase
-public import ConAgua.Arena.GrindAttr
-public import ConAgua.L.GrindAttr
+import ConAgua.Arena.WhnfBase
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
+import Std.Tactic.BVDecide.Normalize.BitVec
 
 @[expose] public section
 

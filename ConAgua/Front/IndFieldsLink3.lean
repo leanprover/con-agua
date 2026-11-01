@@ -4,6 +4,7 @@ public import ConAgua.Front.IndFieldsLink2
 public import ConAgua.Census.Attr
 public import Std.Tactic.BVDecide.Normalize.Bool
 public import Std.Tactic.BVDecide.Normalize.Prop
+import ConAgua.Front.FieldsDeclLink
 
 @[expose] public section
 

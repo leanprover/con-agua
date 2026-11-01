@@ -1,7 +1,15 @@
 module
 
 public import ConAgua.Arena.DefEqStuckApp
-public import ConAgua.Arena.InferBodyDisp
+import ConAgua.Arena.InferBodyDisp
+import ConAgua.Arena.DefEqStuckEta
+import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.RefWalk
+import ConAgua.Checker.NoVerdictTree
+import ConAgua.L.GrindAttr
+import ConAgua.L.ModelGen
+public import ConAgua.Arena.DefEqStuckStr
+public import ConAgua.Arena.IndView
 
 @[expose] public section
 

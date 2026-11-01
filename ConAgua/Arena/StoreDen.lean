@@ -2,6 +2,7 @@ module
 
 public import ConAgua.Arena.Tiers
 public import Std.Tactic.BVDecide.Normalize.Prop
+public import ConAgua.Arena.ArenaRel
 
 @[expose] public section
 

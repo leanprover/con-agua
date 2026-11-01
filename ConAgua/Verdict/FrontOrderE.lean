@@ -6,6 +6,7 @@ public import Std.Tactic.BVDecide.Normalize.Prop
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.L.GrindAttr
 public import ConRon.Bridge.Frontend.Lines
+import ConAgua.Front.IndApplyRefine
 
 @[expose] public section
 

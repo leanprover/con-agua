@@ -1,7 +1,7 @@
 module
 
 public import ConAgua.Front.Apply
-public import ConAgua.Census.Attr
+import ConAgua.Census.Attr
 public import ConAgua.Layout
 
 @[expose] public section

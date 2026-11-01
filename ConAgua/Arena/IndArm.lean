@@ -1,8 +1,15 @@
 module
 
 public import ConAgua.Arena.CheckerT
-public import ConAgua.Arena.IndT.CheckIndDecl
-public import ConAgua.Arena.IndArmBridge2
+import ConAgua.Arena.IndT.CheckIndDecl
+import ConAgua.Arena.IndArmBridge2
+public import ConAgua.Arena.IndInstallSpec.BpRecBpassR
+public import ConAgua.Arena.IndInstallSpec.ConsRecsTFSimOf
+public import ConAgua.Arena.IndInstallSpec.OfClosed
+public import ConAgua.Arena.IndInstallSpec.ShapeCVOfDecB
+public import ConAgua.Arena.IndRealLvlZ
+public import ConAgua.Arena.IndT.ArmMemos
+public import ConAgua.Arena.IndT.GenRec2
 
 @[expose] public section
 

@@ -5,7 +5,8 @@ public import ConAgua.Arena.IndInstallSpec.DecISS
 public import ConAgua.Arena.IndInstallSpec.HbFreeMfr
 public import ConAgua.Arena.IndInstallSpec.Icp
 public import ConAgua.Arena.IndInstallSpec.Pos3MapMProj
-public import ConAgua.Arena.RecGenSpec.Classes
+import ConAgua.Arena.RecGenSpec.Classes
+import ConAgua.Arena.IndPosSpec.FgW
 
 @[expose] public section
 

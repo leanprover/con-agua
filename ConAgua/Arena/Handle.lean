@@ -2,7 +2,9 @@ module
 
 public import ConAgua.Arena.Refine
 public import ConAgua.Arena.StoreFields
-public import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.GrindAttr
+import Std.Tactic.BVDecide.Normalize.BitVec
+import Std.Tactic.BVDecide.Normalize.Prop
 
 @[expose] public section
 

@@ -2,11 +2,14 @@ module
 
 public import ConAgua.Arena.IndSumSpec.Bnums
 public import ConAgua.Arena.IndSumSpec.McGoStep
-public import ConAgua.Arena.IndSumSpec.StructProjArgP
-public import ConAgua.Arena.RecClassSpec.Classes
+import ConAgua.Arena.IndSumSpec.StructProjArgP
+import ConAgua.Arena.RecClassSpec.Classes
 public import ConAgua.Arena.GrindAttr
-public import ConAgua.Arena.IndGrindAttr
+import ConAgua.Arena.IndGrindAttr
 public import ConAgua.L.GrindAttr
+import Std.WP.Tactic
+import Std.WP.Triple.SpecLemmas
+public import ConAgua.Arena.StripTeleSpec
 
 @[expose] public section
 

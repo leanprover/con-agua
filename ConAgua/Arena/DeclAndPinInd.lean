@@ -1,8 +1,11 @@
 module
 
 public import ConAgua.Arena.DeclAndPin
-public import ConAgua.Arena.GrindAttr
-public import ConAgua.L.GrindAttr
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
+import ConAgua.Arena.Env
+import ConAgua.Arena.Pins
+import Std.Tactic.BVDecide.Normalize.BitVec
 
 @[expose] public section
 

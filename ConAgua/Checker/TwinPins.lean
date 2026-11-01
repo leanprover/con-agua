@@ -1,9 +1,10 @@
 module
 
-public import ConRon.Bridge.Checker.Names
-public import ConRon.Bridge.Checker.DeclVal
+import ConRon.Bridge.Checker.Names
+import ConRon.Bridge.Checker.DeclVal
 public import ConRon.Bridge.Checker.Basis
-public import ConRon.Bridge.Checker.Pins
+import ConRon.Bridge.Checker.Pins
+public import ConRon.Arena.Checker
 
 @[expose] public section
 

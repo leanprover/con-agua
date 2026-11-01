@@ -1,8 +1,9 @@
 module
 
 public import ConAgua.Arena.RecGenSpec.ClassMinorSlot
-public import ConAgua.Arena.RecGenSpec.Rec3IwSlice
-public import ConAgua.Arena.RecGenSpec.RgW
+import ConAgua.Arena.RecGenSpec.Rec3IwSlice
+import ConAgua.Arena.RecGenSpec.RgW
+import ConRon.Bridge.Grind
 
 @[expose] public section
 

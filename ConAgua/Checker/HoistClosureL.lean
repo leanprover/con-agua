@@ -1,9 +1,10 @@
 module
 
-public import ConAgua.Checker.HoistWalkRef
-public import ConAgua.Checker.HoistIndexRef
+import ConAgua.Checker.HoistWalkRef
+import ConAgua.Checker.HoistIndexRef
 public import ConAgua.Checker.HoistClosureTwin
-public import ConRon.Bridge.Grind
+import ConRon.Bridge.Grind
+public import ConAgua.Checker.HoistRefBase
 
 @[expose] public section
 

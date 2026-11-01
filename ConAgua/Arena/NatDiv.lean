@@ -7,13 +7,15 @@ import ConAgua.Census.Attr
 public import ConAgua.Arena.NatShiftFacts
 public import ConAgua.Arena.NatSub
 import ConAgua.Arena.GrindAttr
-public import ConAgua.Arena.NatCmpFacts
+import ConAgua.Arena.NatCmpFacts
 import ConAgua.Arena.NatGrindAttr
 import ConAgua.L.GrindAttr
 import Std.Tactic.BVDecide.Normalize.BitVec
 import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
+import ConAgua.Front.Preserve
+import ConAgua.L.For
 
 @[expose] public section
 

@@ -1,12 +1,14 @@
 module
 
 public import ConAgua.Arena.IndArmLps
-public import ConAgua.Arena.IndPartsSpec.BlockSplitRecs
-public import ConAgua.Arena.DeclNatLit
-public import ConAgua.Arena.DeclReduceSpec2
+import ConAgua.Arena.IndPartsSpec.BlockSplitRecs
+import ConAgua.Arena.DeclNatLit
+import ConAgua.Arena.DeclReduceSpec2
 public import ConAgua.Verdict.DeclValsE
 public import ConAgua.Arena.GrindAttr
-public import ConAgua.L.ModelGen
+import ConAgua.L.ModelGen
+import ConAgua.Arena.RefWalk
+public import ConAgua.Arena.IndPartsSpec.BlockRecNamesUnreserved
 
 @[expose] public section
 

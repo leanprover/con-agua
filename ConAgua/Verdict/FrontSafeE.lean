@@ -1,6 +1,8 @@
 module
 
 public import ConAgua.Front.LineRef
+import ConAgua.Scan.Link
+public import ConAgua.Front.FieldsDeclLink
 
 @[expose] public section
 

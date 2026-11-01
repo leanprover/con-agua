@@ -1,7 +1,9 @@
 module
 
 public import ConAgua.Arena.RecCheckSpec.TargetMajorAt2
-public import ConAgua.Arena.RecStab
+import ConAgua.Arena.RecStab
+import ConAgua.Arena.RecClassSpec.CloseLams
+public import ConAgua.Arena.RecClassSpec.MjProg
 
 @[expose] public section
 

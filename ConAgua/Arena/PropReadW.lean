@@ -1,8 +1,13 @@
 module
 
 public import ConAgua.Arena.PropReadLoops
-public import ConAgua.Arena.InferBodySpine
+import ConAgua.Arena.InferBodySpine
 public import ConAgua.Arena.LevelSubstL
+import ConAgua.Arena.InferBodyIntern
+import Std.WP.Triple.SpecLemmas
+public import ConAgua.Arena.IndView
+public import ConAgua.Arena.KnotSlot
+public import ConAgua.L.ProgHas
 
 @[expose] public section
 

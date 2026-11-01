@@ -2,7 +2,16 @@ module
 
 public import ConAgua.Verdict.IndsE4
 public import ConAgua.Arena.IndInstallSpec.InstallRec2Tele
-public import ConAgua.Arena.IndPartsSpec.PartsPSlCons
+import ConAgua.Arena.IndPartsSpec.PartsPSlCons
+import ConAgua.Arena.IndPartsSpec.IndPartsProg2
+import ConAgua.Arena.IndT.Install1
+import ConAgua.Arena.IndT.Lift
+import ConAgua.Arena.RecClassSpec.MjProg
+import ConAgua.Arena.RefWalk
+import ConAgua.Checker.NoVerdictTree
+import ConAgua.L.ModelGen
+import ConRon.Bridge.Inductives.SumInstall
+public import ConRon.Bridge.Inductives.BlockInstall
 
 @[expose] public section
 /-!

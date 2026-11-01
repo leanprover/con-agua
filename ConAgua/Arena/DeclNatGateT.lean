@@ -4,11 +4,16 @@ public import ConAgua.Arena.KnotEntry
 public import ConAgua.Verdict.VCtx
 public import ConAgua.Arena.DeclNatGateSpec
 public import ConAgua.Arena.DeclNatOpEq
-public import ConAgua.Arena.DeclReducePin
-public import ConAgua.Arena.RecGenSpec.CruleProg
-public import ConAgua.Arena.StageC
+import ConAgua.Arena.DeclReducePin
+import ConAgua.Arena.RecGenSpec.CruleProg
+import ConAgua.Arena.StageC
 public import ConRon.Bridge.Checker.DeclVal
-public import ConAgua.L.ModelGen
+import ConAgua.L.ModelGen
+import ConAgua.Arena.DeclNatGate
+import ConAgua.Arena.RefWalk
+import ConAgua.Checker.NoVerdictTree
+public import ConAgua.Arena.LeafFns
+public import ConAgua.Arena.TwinStep
 
 @[expose] public section
 

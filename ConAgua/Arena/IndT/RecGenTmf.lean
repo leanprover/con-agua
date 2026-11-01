@@ -1,13 +1,23 @@
 module
 
-public import ConRon.Bridge.Inductives.BlockParts
-public import ConRon.Bridge.Inductives.PosWalks
-public import ConAgua.Arena.IndRealLvlC
-public import ConAgua.Arena.RecClassSpec.CrW
-public import ConAgua.Arena.RecGenSpec.ClassKeyCanon
+import ConRon.Bridge.Inductives.BlockParts
+import ConRon.Bridge.Inductives.PosWalks
+import ConAgua.Arena.IndRealLvlC
+import ConAgua.Arena.RecClassSpec.CrW
+import ConAgua.Arena.RecGenSpec.ClassKeyCanon
 public import ConAgua.Verdict.IndBTmf
-public import ConAgua.Arena.IndInstallSpec.ConsBlockCtors
-public import ConAgua.Arena.DeclBasisSpec
+import ConAgua.Arena.IndInstallSpec.ConsBlockCtors
+import ConAgua.Arena.DeclBasisSpec
+import ConAgua.Arena.IndInstallSpec.DomsW
+import ConAgua.Arena.IndInstallSpec.PartsAt
+import ConAgua.Arena.IndInstallSpec.PartsShapeFacts
+import ConAgua.Arena.IndPartsSpec.BlockRecNamesUnreserved
+import ConAgua.Arena.IndPosSpec.NestCrest
+import ConAgua.Arena.IndRealAbsPos
+import ConAgua.Arena.IndSumSpec.DecHLTake
+import ConAgua.Arena.IndT.Lift
+import ConAgua.Arena.RecClassSpec.MkTMWAfr
+import ConAgua.Arena.RefWalk
 
 @[expose] public section
 

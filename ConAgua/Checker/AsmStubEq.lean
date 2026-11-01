@@ -3,7 +3,7 @@ module
 public import ConAgua.Checker.AsmStub
 public import ConAgua.Checker.ProgTab
 public import ConAgua.Compiler.Abi
-public import ConAgua.AsmFile.ListEq
+import ConAgua.AsmFile.ListEq
 meta import ConAgua.Checker.AsmStub
 meta import ConAgua.Checker.ProgTab
 meta import ConAgua.Compiler.Abi

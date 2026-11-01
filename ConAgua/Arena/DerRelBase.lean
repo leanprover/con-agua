@@ -1,7 +1,8 @@
 module
 
-public import ConAgua.Arena.View
+import ConAgua.Arena.View
 public import ConAgua.Arena.ExprMk
+public import ConAgua.Arena.ArenaRel
 
 @[expose] public section
 

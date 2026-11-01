@@ -2,9 +2,10 @@ module
 
 public import ConAgua.Arena.IndRealWalk
 public import ConAgua.Arena.DeclStep
-public import ConAgua.Arena.GrindAttr
-public import ConAgua.Arena.IndGrindAttr
-public import ConAgua.L.GrindAttr
+import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.IndGrindAttr
+import ConAgua.L.GrindAttr
+import ConRon.Bridge.Grind
 
 @[expose] public section
 

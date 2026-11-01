@@ -2,6 +2,8 @@ module
 
 public import ConAgua.L.Syntax
 public meta import Lean
+import Std.Data.DTreeMap.Internal.Operations
+import Std.Tactic.BVDecide.Normalize.Prop
 
 @[expose] public section
 

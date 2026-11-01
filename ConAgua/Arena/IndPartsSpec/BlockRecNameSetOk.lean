@@ -1,12 +1,19 @@
 module
 
-public import ConAgua.Arena.IndPartsSpec.PartsPSlCons
+import ConAgua.Arena.IndPartsSpec.PartsPSlCons
 public import ConAgua.Arena.IndPartsSpec.SetEqW
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.Arena.IndGrindAttr
 public import ConAgua.L.GrindAttr
-public import ConAgua.L.ModelGen
+import ConAgua.L.ModelGen
 import all Init.Data.List.Control
+import ConAgua.Arena.IndInstallSpec.BlockCapsAt
+import ConAgua.Arena.IndPartsSpec.BsW
+import ConAgua.Arena.IndPartsSpec.RecTW
+import ConAgua.Arena.IndPartsSpec.RulePrefixAt
+import ConAgua.Arena.RecClassSpec.CloseLams
+import ConRon.Bridge.Grind
+import Std.Tactic.BVDecide.Normalize.BitVec
 
 @[expose] public section
 

@@ -1,7 +1,7 @@
 module
 
 public import ConAgua.Arena.IndPosSpec.RxMapW
-public import ConAgua.Arena.IndGrindAttr
+import ConAgua.Arena.IndGrindAttr
 
 @[expose] public section
 

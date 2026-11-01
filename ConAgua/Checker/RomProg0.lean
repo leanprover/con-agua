@@ -3,7 +3,7 @@ module
 public import ConAgua.Checker.Prog
 public import ConAgua.Rom.Stage
 public import ConAgua.Compiler.WFFast
-public import ConAgua.Compiler.WriteSetSplit
+import ConAgua.Compiler.WriteSetSplit
 public import ConAgua.Arena.LevelIntern
 public import ConAgua.Arena.LevelSubstLP
 meta import ConAgua.Checker.Prog

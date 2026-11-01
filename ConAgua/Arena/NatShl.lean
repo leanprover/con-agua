@@ -5,13 +5,14 @@ meta import ConAgua.Arena.NatAdd
 import ConAgua.Census.Attr
 public import ConAgua.Arena.NatAdd
 import ConAgua.Arena.GrindAttr
-public import ConAgua.Arena.NatGrindAttr
+import ConAgua.Arena.NatGrindAttr
 public import ConAgua.Arena.NatShiftFacts
 import ConAgua.L.GrindAttr
 import Std.Tactic.BVDecide.Normalize.BitVec
 import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
+import ConAgua.Front.Preserve
 
 @[expose] public section
 

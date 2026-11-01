@@ -1,7 +1,9 @@
 module
 
-public import ConAgua.Arena.RecClassSpec.ClassGenMajorCi
-public import ConAgua.Arena.IndPosSpec.RootHoles
+import ConAgua.Arena.RecClassSpec.ClassGenMajorCi
+import ConAgua.Arena.IndPosSpec.RootHoles
+public import ConAgua.Arena.IndCopy2
+public import ConAgua.Arena.IndDecStab
 
 @[expose] public section
 

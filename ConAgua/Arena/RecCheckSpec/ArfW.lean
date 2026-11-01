@@ -2,12 +2,16 @@ module
 
 public import ConAgua.Arena.DeclCanonView2
 public import ConAgua.Arena.RecCheckSpec.ErToIwWStage
-public import ConAgua.Arena.RecClassSpec.MjProg
-public import ConAgua.Arena.RecGenSpec.Rec3IwSlice
-public import ConAgua.Arena.RecStab
+import ConAgua.Arena.RecClassSpec.MjProg
+import ConAgua.Arena.RecGenSpec.Rec3IwSlice
+import ConAgua.Arena.RecStab
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.L.GrindAttr
-public import ConAgua.L.ModelGen
+import ConAgua.L.ModelGen
+import ConAgua.Arena.IndInstallSpec.DomsW
+import Std.WP.Triple.SpecLemmas
+public import ConAgua.Arena.IndDecStab
+public import ConAgua.Arena.RecSim
 
 @[expose] public section
 

@@ -1,8 +1,16 @@
 module
 
 public import ConAgua.Arena.DefEqMid
-public import ConAgua.Arena.GrindAttr
-public import ConAgua.L.GrindAttr
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
+import ConAgua.Arena.DerRel
+import ConAgua.Arena.RefWalk
+import ConAgua.Arena.StripTeleSpec
+import ConAgua.Arena.WhnfCoreRefine
+import ConAgua.Checker.NoVerdictTree
+import ConAgua.Front.Preserve
+import ConAgua.L.ModelGen
+public import ConAgua.Arena.IndView
 
 @[expose] public section
 

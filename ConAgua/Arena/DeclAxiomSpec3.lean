@@ -1,11 +1,15 @@
 module
 
-public import ConAgua.Arena.DeclCanonSpec2
+import ConAgua.Arena.DeclCanonSpec2
 public import ConAgua.Arena.DeclReduceSpec2
-public import ConAgua.Arena.GrindAttr
-public import ConAgua.Arena.IndGrindAttr
-public import ConAgua.L.GrindAttr
+import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.IndGrindAttr
+import ConAgua.L.GrindAttr
 public import ConAgua.Arena.DeclAxiomSpec2
+import ConAgua.Arena.DeclCvg
+import ConAgua.Arena.DeclValRef
+import ConAgua.L.LocNF
+import Std.Tactic.BVDecide.Normalize.BitVec
 
 @[expose] public section
 

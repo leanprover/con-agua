@@ -3,9 +3,12 @@ module
 public import ConAgua.Arena.IndRealCrF
 public import ConAgua.Arena.IndRealIlpP
 public import ConAgua.Arena.DeclRec
-public import ConAgua.Arena.GrindAttr
-public import ConAgua.Arena.IndGrindAttr
-public import ConAgua.L.GrindAttr
+import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.IndGrindAttr
+import ConAgua.L.GrindAttr
+import Std.WP.Tactic
+import Std.WP.Triple.SpecLemmas
+public import ConAgua.Arena.IndRealWalk
 
 @[expose] public section
 

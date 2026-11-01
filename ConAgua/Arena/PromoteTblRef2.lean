@@ -1,9 +1,15 @@
 module
 
-public import ConAgua.Arena.PromoteTblRef
-public import ConAgua.Arena.PromoteCIRef.Promoted
-public import ConAgua.Arena.PromoteCIRef.TakeDropMin
-public import ConAgua.Arena.PromoteCIRef.OfFrame
+import ConAgua.Arena.PromoteTblRef
+import ConAgua.Arena.PromoteCIRef.Promoted
+import ConAgua.Arena.PromoteCIRef.TakeDropMin
+import ConAgua.Arena.PromoteCIRef.OfFrame
+import ConAgua.Arena.PromoteCIRef.Of
+import ConAgua.Arena.PromoteCIRef.PreECongr
+public import ConAgua.Arena.DeclBase
+public import ConAgua.Arena.PromoteCI
+public import ConAgua.Arena.PromoteERef
+public import ConAgua.Arena.TblFrame
 
 @[expose] public section
 

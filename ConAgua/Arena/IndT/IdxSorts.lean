@@ -1,12 +1,23 @@
 module
 
-public import ConRon.Bridge.Inductives.SumInstall
-public import ConAgua.Arena.IndT.Sum3
-public import ConAgua.Arena.IndInstallSpec.InstallRec2PSl
+import ConRon.Bridge.Inductives.SumInstall
+import ConAgua.Arena.IndT.Sum3
+import ConAgua.Arena.IndInstallSpec.InstallRec2PSl
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.L.GrindAttr
-public import ConAgua.L.ModelGen
-public import ConAgua.Arena.IndT.Install1
+import ConAgua.L.ModelGen
+import ConAgua.Arena.IndT.Install1
+import ConAgua.Arena.IndInstallSpec.PartsShapeFacts
+import ConAgua.Arena.IndPartsSpec.PartsPSlCons
+import ConAgua.Arena.IndRealAbsSim
+import ConAgua.Arena.IndT.Lift
+import ConAgua.Arena.RecClassSpec.PiBWRoom
+import ConAgua.Arena.RefWalk
+import ConAgua.Checker.NoVerdictTree
+public import ConAgua.Arena.IndInstallSpec.GrcProg
+public import ConAgua.Arena.KnotEntry
+public import ConAgua.Verdict.VCtx
+public import ConRon.Bridge.Checker.Hyp
 
 @[expose] public section
 

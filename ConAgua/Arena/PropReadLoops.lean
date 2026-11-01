@@ -2,8 +2,11 @@ module
 
 public import ConAgua.Arena.PropRead
 public import ConAgua.Arena.DefEqLeaves
-public import ConAgua.Arena.GrindAttr
-public import ConAgua.L.GrindAttr
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
+import ConAgua.Front.Preserve
+import Std.WP.Tactic
+import Std.WP.Triple.SpecLemmas
 
 @[expose] public section
 

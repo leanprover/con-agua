@@ -1,9 +1,15 @@
 module
 
 public import ConAgua.Verdict.PosE1M
-public import ConAgua.Arena.IndRealAbsPos
-public import ConAgua.Arena.IndPosSpec.NestCrest
+import ConAgua.Arena.IndRealAbsPos
+import ConAgua.Arena.IndPosSpec.NestCrest
 import all Init.Data.List.Control
+import ConAgua.Arena.IndPosSpec.Grow
+import ConAgua.Arena.IndPosSpec.NestContParamsClosed
+import ConAgua.Arena.IndPosSpec.NtyW
+import ConAgua.Arena.RefWalk
+import Std.Tactic.BVDecide.Normalize.BitVec
+public import ConAgua.Arena.IndPosSpec.FgW
 
 @[expose] public section
 

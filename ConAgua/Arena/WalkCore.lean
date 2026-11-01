@@ -1,8 +1,11 @@
 module
 
-public import ConAgua.Arena.CoreWalks
-public import ConAgua.Arena.WalkLeavesRefine
+import ConAgua.Arena.CoreWalks
+import ConAgua.Arena.WalkLeavesRefine
 public import Std.Tactic.BVDecide.Normalize.Prop
+public import ConAgua.Arena.WalkLeaves
+public import ConAgua.Arena.WalkScope
+public import ConAgua.Arena.WhnfIota
 
 @[expose] public section
 

@@ -6,6 +6,8 @@ public import ConAgua.Rom.PinStream
 meta import ConAgua.Rom.CIRead
 meta import ConAgua.Arena.DeclRomStubs
 meta import ConAgua.Rom.PinStream
+public import ConAgua.Arena.PromoteProg
+public import ConAgua.Arena.RomPins
 
 @[expose] public section
 

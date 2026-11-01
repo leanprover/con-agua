@@ -6,6 +6,8 @@ public import ConAgua.Arena.LevelSubstLP
 meta import ConAgua.Checker.PipePrelude
 meta import ConAgua.Arena.LevelIntern
 meta import ConAgua.Arena.LevelSubstLP
+import ConAgua.Checker.PreludeSimProg
+public import ConAgua.L.ErrSpec
 
 @[expose] public section
 

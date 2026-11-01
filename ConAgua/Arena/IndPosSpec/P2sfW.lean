@@ -1,9 +1,9 @@
 module
 
 public import ConAgua.Arena.IndPosSpec.BvbWMfr
-public import ConAgua.Arena.IndPosSpec.Mfr
+import ConAgua.Arena.IndPosSpec.Mfr
 public import ConAgua.Arena.IndPosSpec.P2rtW
-public import ConAgua.Arena.IndPosSpec.Pos2WfWfSome
+import ConAgua.Arena.IndPosSpec.Pos2WfWfSome
 public import ConAgua.Arena.IndPosSpec.RootOutsB
 
 @[expose] public section

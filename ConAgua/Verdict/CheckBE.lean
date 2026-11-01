@@ -1,8 +1,14 @@
 module
 
-public import ConAgua.Verdict.PhaseBE
+import ConAgua.Verdict.PhaseBE
 public import ConAgua.Checker.VerdictTop
-public import ConAgua.Checker.CheckARun
+import ConAgua.Checker.CheckARun
+import ConAgua.Checker.IndArm
+import ConAgua.Checker.LoopProg
+import ConAgua.Checker.LoopStage
+import ConAgua.Checker.RomProg0
+import ConAgua.Checker.TwinShapeQuot
+import ConAgua.L.Blocks
 
 @[expose] public section
 

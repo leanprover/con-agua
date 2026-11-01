@@ -1,11 +1,14 @@
 module
 
 public import ConAgua.Arena.RecGen
-public import ConAgua.Arena.Verdict
-public import ConAgua.Checker.NoVerdictTree
-public import ConAgua.Arena.GrindAttr
-public import ConAgua.L.GrindAttr
-public import ConAgua.L.ModelGen
+import ConAgua.Arena.Verdict
+import ConAgua.Checker.NoVerdictTree
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
+import ConAgua.L.ModelGen
+public import ConAgua.Arena.WhnfBase
+public import ConAgua.Checker.NoVerdictFns
+public import ConAgua.L.ErrSpec
 
 @[expose] public section
 

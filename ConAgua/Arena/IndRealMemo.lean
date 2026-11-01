@@ -1,7 +1,12 @@
 module
 
-public import ConAgua.Arena.IndRealAbs
-public import ConAgua.Arena.WalkLiftRefine
+import ConAgua.Arena.IndRealAbs
+import ConAgua.Arena.WalkLiftRefine
+import ConAgua.Arena.CoreWalks
+public import ConAgua.Arena.CallF
+public import ConAgua.Arena.StripTeleSpec
+public import ConAgua.Arena.WalkLift
+public import ConAgua.Arena.WriteSets
 
 @[expose] public section
 

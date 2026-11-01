@@ -1,11 +1,14 @@
 module
 
-public import ConAgua.Arena.LevelArena
-public import ConAgua.Arena.DeclRec
-public import ConAgua.Arena.GrindAttr
-public import ConAgua.Arena.IndGrindAttr
-public import ConAgua.L.GrindAttr
-public import ConRon.Bridge.Grind
+import ConAgua.Arena.LevelArena
+import ConAgua.Arena.DeclRec
+import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.IndGrindAttr
+import ConAgua.L.GrindAttr
+import ConRon.Bridge.Grind
+import ConAgua.Arena.IndCopy2
+public import ConAgua.Arena.IndCopy
+public import ConAgua.Arena.LevelEquiv
 
 @[expose] public section
 

@@ -5,11 +5,12 @@ public import ConAgua.Arena.DeclArmsNat
 public import ConAgua.L.ProgHas
 public import ConAgua.Arena.IndCopy
 public import ConAgua.Arena.WhnfBase
-public import Std.Tactic.BVDecide.Normalize.BitVec
+import Std.Tactic.BVDecide.Normalize.BitVec
 public import Std.Tactic.BVDecide.Normalize.Prop
-public import ConAgua.Arena.GrindAttr
-public import ConAgua.L.GrindAttr
-public import ConAgua.L.ModelGen
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
+import ConAgua.L.ModelGen
+import Std.WP.Triple.SpecLemmas
 
 @[expose] public section
 

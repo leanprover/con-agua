@@ -1,11 +1,14 @@
 module
 
-public import ConAgua.Arena.IndPosSpec.CtxFields
+import ConAgua.Arena.IndPosSpec.CtxFields
 public import ConAgua.Arena.IndPosSpec.RpGoStep
-public import ConAgua.Arena.IndSim
+import ConAgua.Arena.IndSim
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.Arena.IndGrindAttr
 public import ConAgua.L.GrindAttr
+import ConAgua.Arena.IndInstallSpec.DomsW
+import ConAgua.Arena.IndPosSpec.NestKeyMap
+import Std.Tactic.BVDecide.Normalize.BitVec
 
 @[expose] public section
 

@@ -1,6 +1,7 @@
 module
 
-public import ConAgua.Arena.FreezeTruncBase
+import ConAgua.Arena.FreezeTruncBase
+public import ConAgua.Arena.Frame
 
 @[expose] public section
 

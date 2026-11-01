@@ -2,7 +2,8 @@ module
 
 public import ConAgua.Verdict.IndBTmc
 public import ConAgua.Arena.GrindAttr
-public import ConAgua.L.ModelGen
+import ConAgua.L.ModelGen
+import ConAgua.Checker.NoVerdictTree
 
 @[expose] public section
 /-!

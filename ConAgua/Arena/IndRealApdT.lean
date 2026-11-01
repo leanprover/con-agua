@@ -1,8 +1,10 @@
 module
 
 public import ConAgua.Arena.DeclApdRef
-public import ConAgua.Arena.MemoRekey
+import ConAgua.Arena.MemoRekey
 public import ConAgua.Arena.StageTLift
+import ConAgua.Arena.StageInst1
+import ConAgua.Arena.TwinStep
 
 @[expose] public section
 

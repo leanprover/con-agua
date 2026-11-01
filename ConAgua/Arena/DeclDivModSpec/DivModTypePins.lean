@@ -1,10 +1,11 @@
 module
 
 public import ConAgua.Arena.DeclNatEq
-public import ConAgua.Arena.RecCheckSpec.ErToIwWStage
+import ConAgua.Arena.RecCheckSpec.ErToIwWStage
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.L.GrindAttr
-public import ConAgua.L.ModelGen
+import ConAgua.L.ModelGen
+public import ConAgua.Rom.PinSets
 
 @[expose] public section
 

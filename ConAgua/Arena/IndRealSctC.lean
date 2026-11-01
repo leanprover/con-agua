@@ -1,25 +1,39 @@
 module
 
-public import ConRon.Bridge.Inductives.BlockParts
-public import ConRon.Bridge.Inductives.BlockInstall
-public import ConRon.Bridge.Inductives.StructParts
-public import ConAgua.Arena.RecCheckSpec.DecHLTruncMBound
-public import ConAgua.Arena.IndRealMemoCrT
-public import ConAgua.Arena.IndRealWalkT
-public import ConAgua.Arena.TblFrame
-public import ConAgua.Arena.IndSumSpec.CheckSumCtor
-public import ConAgua.Arena.IndInstallSpec.ConsBlockCtors
-public import ConAgua.L.ModelGen
-public import ConAgua.Arena.IndInstallSpec.InstallRec2PSl
-public import ConAgua.Arena.IndInstallSpec.NestCtx
-public import ConAgua.Arena.IndInstallSpec.PosFreeMfr
+import ConRon.Bridge.Inductives.BlockParts
+import ConRon.Bridge.Inductives.BlockInstall
+import ConRon.Bridge.Inductives.StructParts
+import ConAgua.Arena.RecCheckSpec.DecHLTruncMBound
+import ConAgua.Arena.IndRealMemoCrT
+import ConAgua.Arena.IndRealWalkT
+import ConAgua.Arena.TblFrame
+import ConAgua.Arena.IndSumSpec.CheckSumCtor
+import ConAgua.Arena.IndInstallSpec.ConsBlockCtors
+import ConAgua.L.ModelGen
+import ConAgua.Arena.IndInstallSpec.InstallRec2PSl
+import ConAgua.Arena.IndInstallSpec.NestCtx
+import ConAgua.Arena.IndInstallSpec.PosFreeMfr
 public import ConAgua.Arena.IndInstallSpec.SpgWZero
-public import ConAgua.Arena.IndInstallSpec.TabSimSpg
+import ConAgua.Arena.IndInstallSpec.TabSimSpg
 public import ConAgua.Arena.IndRealApdT
-public import ConRon.Bridge.Inductives.BlockTail
+import ConRon.Bridge.Inductives.BlockTail
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.L.GrindAttr
 import all Init.Data.List.Control
+import ConAgua.Arena.IndInstallSpec.BlockCapsAt
+import ConAgua.Arena.IndInstallSpec.DomsW
+import ConAgua.Arena.IndInstallSpec.PartsAt
+import ConAgua.Arena.IndPartsSpec.EqW
+import ConAgua.Arena.IndPartsSpec.PartsPSlCons
+import ConAgua.Arena.IndRealMemoCr
+import ConAgua.Arena.IndSim
+import ConAgua.Arena.RefWalk
+import ConAgua.Checker.NoVerdictTree
+import ConRon.Bridge.Promote.Walk
+public import ConAgua.Arena.IndInstallSpec.DecCNS
+public import ConAgua.Arena.IndInstallSpec.DecISS
+public import ConAgua.Arena.IndSumSpec.ConsBlockRecsTF
+public import ConAgua.Arena.IndSumSpec.StructProjBodies
 
 @[expose] public section
 

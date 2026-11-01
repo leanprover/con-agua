@@ -1,11 +1,18 @@
 module
 
-public import ConAgua.Arena.IndPosSpec.InstW
+import ConAgua.Arena.IndPosSpec.InstW
 public import ConAgua.Arena.IndPosSpec.PcrK3
-public import ConAgua.Arena.IndPosSpec.PosmemoRxMfr
+import ConAgua.Arena.IndPosSpec.PosmemoRxMfr
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.Arena.IndGrindAttr
 public import ConAgua.L.GrindAttr
+import ConAgua.Arena.IndInstallSpec.DomsW
+import ConAgua.Arena.IndPosSpec.NestKeyMap
+import Std.Tactic.BVDecide.Normalize.BitVec
+public import ConAgua.Arena.IndPosSpec.DpGoW
+public import ConAgua.Arena.IndPosSpec.NestBlockOfKey
+public import ConAgua.Arena.IndPosSpec.RpGoStep
+public import ConAgua.Arena.IndPosSpec.RxMapW
 
 @[expose] public section
 

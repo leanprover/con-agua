@@ -1,7 +1,13 @@
 module
 
-public import ConAgua.Arena.WhnfM2CRefine3
-public import ConAgua.Arena.WhnfIotaRefine6
+import ConAgua.Arena.WhnfM2CRefine3
+import ConAgua.Arena.WhnfIotaRefine6
+import ConAgua.Arena.IndPosSpec.NestBlockOfKey
+import ConAgua.Arena.RefWalk
+import ConAgua.Arena.StoreDenIntern
+import ConAgua.Arena.WhnfCoreRefine
+import ConAgua.Arena.WhnfIotaRefine3
+public import ConAgua.Arena.WhnfM2CRefine2
 
 @[expose] public section
 

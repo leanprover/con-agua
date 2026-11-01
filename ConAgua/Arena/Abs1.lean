@@ -6,7 +6,7 @@ public import ConAgua.Arena.FVarRange
 import ConAgua.Census.Attr
 public import ConAgua.Arena.LiftL
 import ConAgua.Arena.GrindAttr
-public import ConAgua.L.ModelGen
+import ConAgua.L.ModelGen
 import ConAgua.L.GrindAttr
 import Std.Tactic.BVDecide.Normalize.BitVec
 import Std.Tactic.BVDecide.Normalize.Prop

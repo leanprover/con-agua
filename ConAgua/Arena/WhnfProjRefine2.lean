@@ -1,12 +1,14 @@
 module
 
 public import ConAgua.Arena.WhnfProjRefine
-public import ConAgua.Arena.CoreWalks
-public import ConAgua.Arena.WhnfDelta
+import ConAgua.Arena.CoreWalks
+import ConAgua.Arena.WhnfDelta
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.L.GrindAttr
 public import Std.Tactic.BVDecide.Normalize.Prop
 public import Std.WP.Tactic
+import Std.WP.Triple.SpecLemmas
+public import ConAgua.Arena.WhnfCore
 
 @[expose] public section
 

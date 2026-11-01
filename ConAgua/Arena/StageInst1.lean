@@ -1,12 +1,12 @@
 module
 
 public import ConAgua.Arena.CallF
-public import ConAgua.Arena.Inst1Refine
+import ConAgua.Arena.Inst1Refine
 public import ConAgua.Arena.WriteSets
 public import ConAgua.Arena.StripTeleSpec
 public import ConAgua.Checker.Entry
-public import ConAgua.Arena.GrindAttr
-public import ConAgua.L.GrindAttr
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
 
 @[expose] public section
 

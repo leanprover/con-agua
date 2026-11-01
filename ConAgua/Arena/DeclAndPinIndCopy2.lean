@@ -1,9 +1,11 @@
 module
 
 public import ConAgua.Arena.DeclAndPinIndCopy
-public import ConAgua.Arena.DeclAndPinInd
+import ConAgua.Arena.DeclAndPinInd
 public import ConAgua.Arena.DeclAndPinIndDec
-public import ConAgua.Arena.SimLib
+import ConAgua.Arena.SimLib
+public import ConAgua.Arena.WhnfBase
+public import ConAgua.Front.StateDR
 
 @[expose] public section
 

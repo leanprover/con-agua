@@ -2,11 +2,13 @@ module
 
 public import ConAgua.Front.IndAlloc
 public import ConAgua.Front.ApplyExpr
-public import ConAgua.Arena.GrindAttr
-public import ConAgua.L.GrindAttr
-public import Std.Tactic.BVDecide.Normalize.BitVec
-public import Std.Tactic.BVDecide.Normalize.Prop
-public import Std.WP.Tactic
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
+import Std.Tactic.BVDecide.Normalize.BitVec
+import Std.Tactic.BVDecide.Normalize.Prop
+import Std.WP.Tactic
+import ConAgua.Scan.Common
+import Std.WP.Triple.SpecLemmas
 
 @[expose] public section
 

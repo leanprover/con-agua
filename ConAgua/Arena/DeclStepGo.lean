@@ -2,10 +2,13 @@ module
 
 public import ConAgua.Arena.DeclHeader
 public import ConAgua.Arena.DeclRec
-public import ConAgua.Arena.DeclStepSpec
-public import ConAgua.Arena.GrindAttr
-public import ConAgua.Arena.IndGrindAttr
-public import ConAgua.L.GrindAttr
+import ConAgua.Arena.DeclStepSpec
+import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.IndGrindAttr
+import ConAgua.L.GrindAttr
+import ConAgua.Arena.IndPartsSpec.RulePrefixAt
+public import ConAgua.Arena.DeclBase
+public import ConAgua.Arena.DeclCvg
 
 @[expose] public section
 

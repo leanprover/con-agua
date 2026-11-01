@@ -5,6 +5,12 @@ public import ConAgua.Arena.RecGenSpec.PdWMfr
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.Arena.IndGrindAttr
 public import ConAgua.L.GrindAttr
+import ConAgua.Arena.IndInstallSpec.DomsW
+import ConAgua.Arena.IndPosSpec.NestCrest
+import ConAgua.Arena.RecCheckSpec.EraseFVarTys
+import ConAgua.Arena.WhnfCoreProj
+public import ConAgua.Arena.RecCheckSpec.TargetMajorAt2
+public import ConAgua.Arena.RecGenSpec.ClassMinorSlotHit
 
 @[expose] public section
 

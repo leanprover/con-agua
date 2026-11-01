@@ -1,22 +1,25 @@
 module
 
 public import ConAgua.Arena.KnotSlot
-public import ConAgua.Arena.IndView
-public import ConAgua.Arena.IndMaster
+import ConAgua.Arena.IndView
+import ConAgua.Arena.IndMaster
 public import ConAgua.Arena.Infer
 public import ConAgua.Arena.WhnfIota
-public import ConAgua.Arena.GrindAttr
-public import ConAgua.L.GrindAttr
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
 public import Std.Tactic.BVDecide.Normalize.BitVec
 public import Std.Tactic.BVDecide.Normalize.Prop
 public import Std.WP.Tactic
 public import ConAgua.Arena.WhnfCoreApp
-public import ConAgua.Arena.WhnfCoreRefine
+import ConAgua.Arena.WhnfCoreRefine
 public import ConAgua.Arena.RefECore
 public import ConAgua.Arena.KnotE
-public import ConAgua.L.ModelGen
-public import ConAgua.Checker.NoVerdictTree
-public import ConAgua.L.WordOff
+import ConAgua.L.ModelGen
+import ConAgua.Checker.NoVerdictTree
+import ConAgua.L.WordOff
+import ConAgua.Arena.DerRel
+import ConAgua.Arena.RefWalk
+import ConAgua.Arena.WhnfCoreProj
 
 @[expose] public section
 

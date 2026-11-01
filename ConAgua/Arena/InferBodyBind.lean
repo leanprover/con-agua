@@ -1,12 +1,14 @@
 module
 
-public import ConAgua.Arena.InferBodySpine
-public import Std.Tactic.BVDecide.Normalize.BitVec
+import ConAgua.Arena.InferBodySpine
+import Std.Tactic.BVDecide.Normalize.BitVec
 public import Std.Tactic.BVDecide.Normalize.Prop
 public import Std.WP.Tactic
 public import ConAgua.Arena.WhnfCoreApp
-public import ConAgua.Arena.WhnfCoreRefine
+import ConAgua.Arena.WhnfCoreRefine
 public import ConAgua.Arena.InferBodyBindModels
+import ConAgua.Arena.RefWalk
+public import ConAgua.Arena.InferBodyLet
 
 @[expose] public section
 

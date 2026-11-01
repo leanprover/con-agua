@@ -2,7 +2,7 @@ module
 
 public import ConAgua.Compiler.Inline
 public import ConAgua.L.DefAssignSim
-public import ConAgua.Compiler.WFFast
+import ConAgua.Compiler.WFFast
 
 @[expose] public section
 

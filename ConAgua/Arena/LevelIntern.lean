@@ -1,12 +1,13 @@
 module
 
 public import ConAgua.Arena.LevelSubstLP
-public import ConAgua.Arena.GrindAttr
-public import ConAgua.Arena.LevelGrindAttr
-public import ConAgua.L.GrindAttr
-public import Std.Tactic.BVDecide.Normalize.BitVec
+import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.LevelGrindAttr
+import ConAgua.L.GrindAttr
+import Std.Tactic.BVDecide.Normalize.BitVec
 public import Std.Tactic.BVDecide.Normalize.Prop
-public import Std.WP.Tactic
+import Std.WP.Tactic
+import Std.WP.Triple.SpecLemmas
 
 @[expose] public section
 

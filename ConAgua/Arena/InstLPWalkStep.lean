@@ -1,6 +1,9 @@
 module
 
 public import ConAgua.Arena.InstLPWalkBase
+import ConAgua.Arena.CoreWalks
+import ConAgua.Arena.DerRel
+public import ConAgua.Arena.WhnfSpine
 
 @[expose] public section
 

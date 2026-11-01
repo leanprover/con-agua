@@ -2,13 +2,16 @@ module
 
 public import ConAgua.Arena.LevelSubstL
 public import ConAgua.Arena.Knot
-public import ConAgua.Arena.CoreLevels
-public import ConAgua.Arena.GrindAttr
-public import ConAgua.Arena.LevelGrindAttr
-public import ConAgua.L.GrindAttr
+import ConAgua.Arena.CoreLevels
+import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.LevelGrindAttr
+import ConAgua.L.GrindAttr
 public import Std.Tactic.BVDecide.Normalize.Prop
-public import Std.WP.Tactic
+import Std.WP.Tactic
 public import ConAgua.Arena.Env
+import ConAgua.Arena.DerRel
+import ConAgua.Arena.LevelInternRef
+import Std.WP.Triple.SpecLemmas
 
 @[expose] public section
 

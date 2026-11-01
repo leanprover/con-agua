@@ -1,9 +1,11 @@
 module
 
-public import ConAgua.Arena.StrLitCv
-public import ConAgua.Arena.DefEqMidQuick
-public import ConAgua.Arena.GrindAttr
-public import ConAgua.L.GrindAttr
+import ConAgua.Arena.StrLitCv
+import ConAgua.Arena.DefEqMidQuick
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
+import Std.WP.Triple.SpecLemmas
+public import ConAgua.Arena.StrLitBase
 
 @[expose] public section
 

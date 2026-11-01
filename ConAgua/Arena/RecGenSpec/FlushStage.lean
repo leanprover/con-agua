@@ -3,6 +3,9 @@ module
 public import ConAgua.Arena.DeclCvg
 public import ConAgua.Arena.IndGrindAttr
 public import ConAgua.Arena.DeclCvg
+import ConAgua.Arena.DerRel
+import ConAgua.Arena.IndPartsSpec.MemberNames
+import ConAgua.Arena.ScratchRefine
 
 @[expose] public section
 

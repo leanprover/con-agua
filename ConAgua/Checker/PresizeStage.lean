@@ -1,6 +1,9 @@
 module
 
 public import ConAgua.Checker.PipeStages
+import ConAgua.Checker.RomProg
+import ConAgua.Checker.RomProgInit
+import ConRon.Bridge.Checker.Pins
 
 @[expose] public section
 

@@ -2,11 +2,12 @@ module
 
 public import ConAgua.Arena.WhnfBase
 public import ConAgua.Checker.Entry
-public import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.GrindAttr
 public import ConAgua.Arena.IndGrindAttr
-public import ConAgua.L.GrindAttr
-public import ConAgua.Arena.LdRd
-public import ConAgua.L.ModelGen
+import ConAgua.L.GrindAttr
+import ConAgua.Arena.LdRd
+import ConAgua.L.ModelGen
+import Std.Tactic.BVDecide.Normalize.BitVec
 
 @[expose] public section
 

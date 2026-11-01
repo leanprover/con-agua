@@ -2,6 +2,7 @@ module
 
 public import ConAgua.Arena.IndRealApdT
 public import ConAgua.Arena.IndRealCrF
+import ConAgua.Arena.IndRealAbs
 
 @[expose] public section
 

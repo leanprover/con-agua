@@ -2,13 +2,16 @@ module
 
 public import ConAgua.Arena.IndPosSpec.NestKeyMap
 public import ConAgua.Arena.RecCheck
-public import ConAgua.Arena.RecSim
-public import ConAgua.Arena.GrindAttr
-public import ConAgua.Arena.IndGrindAttr
-public import ConAgua.L.GrindAttr
-public import Std.Tactic.BVDecide.Normalize.Bool
+import ConAgua.Arena.RecSim
+import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.IndGrindAttr
+import ConAgua.L.GrindAttr
+import Std.Tactic.BVDecide.Normalize.Bool
 public import Std.Tactic.BVDecide.Normalize.Prop
-public import Std.WP.Tactic
+import Std.WP.Tactic
+import ConAgua.Arena.Env
+import ConAgua.Arena.IndPartsSpec.RulePrefixAt
+import Std.WP.Triple.SpecLemmas
 
 @[expose] public section
 

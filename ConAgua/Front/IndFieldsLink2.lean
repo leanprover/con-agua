@@ -3,6 +3,8 @@ module
 public import ConAgua.Front.IndFieldsLink
 public import Std.Tactic.BVDecide.Normalize.Bool
 public import Std.Tactic.BVDecide.Normalize.Prop
+import ConAgua.Front.FieldsDeclLink
+import ConAgua.Scan.Common
 
 @[expose] public section
 

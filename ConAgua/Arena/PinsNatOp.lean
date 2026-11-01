@@ -1,12 +1,14 @@
 module
 
 public import ConAgua.Arena.NatArms
-public import ConAgua.Arena.Pins
-public import ConAgua.Arena.GrindAttr
-public import ConAgua.L.GrindAttr
+import ConAgua.Arena.Pins
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
 public import Std.Tactic.BVDecide.Normalize.BitVec
 public import Std.Tactic.BVDecide.Normalize.Prop
-public import Std.WP.Tactic
+import Std.WP.Tactic
+import ConAgua.Arena.LdRd
+import Std.WP.Triple.SpecLemmas
 
 @[expose] public section
 

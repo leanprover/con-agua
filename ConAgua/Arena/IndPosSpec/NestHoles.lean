@@ -1,12 +1,18 @@
 module
 
 public import ConAgua.Arena.IndPosSpec.DepthGo
-public import ConAgua.Arena.IndPosSpec.NcGoW
+import ConAgua.Arena.IndPosSpec.NcGoW
 public import ConAgua.Arena.IndPosSpec.NoConstWf
-public import ConAgua.Arena.IndPosSpec.SnocWStage
+import ConAgua.Arena.IndPosSpec.SnocWStage
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.Arena.IndGrindAttr
 public import ConAgua.L.GrindAttr
+import ConAgua.Arena.DeclRec
+import ConAgua.Arena.IndPosSpec.InstW
+import ConAgua.Arena.IndPosSpec.NestKeyMap
+import ConAgua.Arena.LdRd
+import Std.Tactic.BVDecide.Normalize.BitVec
+public import ConAgua.Arena.IndPosSpec.Pos2CvLpsWStage
 
 @[expose] public section
 

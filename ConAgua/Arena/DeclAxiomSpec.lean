@@ -1,9 +1,15 @@
 module
 
 public import ConAgua.Arena.DeclReduceSpec2
-public import ConAgua.Arena.GrindAttr
-public import ConAgua.Arena.IndGrindAttr
-public import ConAgua.L.GrindAttr
+import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.IndGrindAttr
+import ConAgua.L.GrindAttr
+import ConAgua.Arena.DeclBasisSpec2
+import ConAgua.Arena.DeclCvg
+import ConAgua.Arena.DeclReduceSpec
+import ConAgua.Arena.WhnfDeltaRefine
+import ConAgua.L.LocNF
+import Std.Tactic.BVDecide.Normalize.Bool
 
 @[expose] public section
 

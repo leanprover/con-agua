@@ -7,7 +7,7 @@ public import ConAgua.Arena.LiftSpec
 import ConAgua.Census.Attr
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
-public import ConAgua.L.ModelGen
+import ConAgua.L.ModelGen
 import Std.Tactic.BVDecide.Normalize.BitVec
 import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Triple.SpecLemmas

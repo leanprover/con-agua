@@ -1,12 +1,17 @@
 module
 
 public import ConAgua.Arena.RecClassSpec.Classes
-public import ConAgua.Arena.RecClassSpec.IhW
-public import ConAgua.Arena.RecClassSpec.MjProg
-public import ConAgua.Arena.RecGenSpec.IwNLtSize
+import ConAgua.Arena.RecClassSpec.IhW
+import ConAgua.Arena.RecClassSpec.MjProg
+import ConAgua.Arena.RecGenSpec.IwNLtSize
 public import ConAgua.Arena.GrindAttr
-public import ConAgua.Arena.IndGrindAttr
+import ConAgua.Arena.IndGrindAttr
 public import ConAgua.L.GrindAttr
+import ConAgua.Arena.RecSim
+import Std.Tactic.BVDecide.Normalize.BitVec
+import Std.WP.Tactic
+import Std.WP.Triple.SpecLemmas
+public import ConAgua.Arena.IndDecStab
 
 @[expose] public section
 

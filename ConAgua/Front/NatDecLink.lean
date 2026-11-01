@@ -1,11 +1,11 @@
 module
 
 public import ConAgua.Front.NatDec
-public import ConAgua.Arena.LitRefine
+import ConAgua.Arena.LitRefine
 public import ConAgua.Front.ExprIface
-public import ConAgua.Scan.LeafLink
-public import ConAgua.Scan.Link
-public import ConAgua.Census.Attr
+import ConAgua.Scan.LeafLink
+import ConAgua.Scan.Link
+import ConAgua.Census.Attr
 
 @[expose] public section
 

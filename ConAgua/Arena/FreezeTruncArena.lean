@@ -1,7 +1,8 @@
 module
 
 public import ConAgua.Arena.FreezeTruncStore
-public import ConAgua.Arena.FreezeTruncKeep
+import ConAgua.Arena.FreezeTruncKeep
+public import ConAgua.Arena.FreezeTruncBase
 
 @[expose] public section
 

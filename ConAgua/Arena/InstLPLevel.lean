@@ -1,11 +1,16 @@
 module
 
 public import ConAgua.Arena.InstLPWalkBase
-public import ConAgua.Arena.CoreLevels
+import ConAgua.Arena.CoreLevels
 public import ConAgua.Arena.InferBodyIntern
 public import ConAgua.Arena.InstLPSpec
 public import ConAgua.Arena.InstLPWalk
-public import ConRon.Bridge.Specs
+import ConRon.Bridge.Specs
+import ConAgua.Arena.LvlGrow
+import ConAgua.Arena.MemoTree
+import ConAgua.Arena.StoreDenLvl
+import ConAgua.Front.StateDR
+public import ConAgua.Arena.LevelInternRef
 
 @[expose] public section
 

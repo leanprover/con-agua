@@ -2,8 +2,8 @@ module
 
 public import ConAgua.Arena.ConsLibRel
 public import ConAgua.Arena.LamStore
-public import Std.Tactic.BVDecide.Normalize.BitVec
-public import Std.Tactic.BVDecide.Normalize.Prop
+import Std.Tactic.BVDecide.Normalize.BitVec
+import Std.Tactic.BVDecide.Normalize.Prop
 
 @[expose] public section
 

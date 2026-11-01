@@ -3,7 +3,7 @@ module
 public import ConAgua.Front.LineRef
 public import ConAgua.Front.Driver
 public import ConAgua.Scan.Validator
-public import ConRon.Bridge.Frontend.Chunks
+import ConRon.Bridge.Frontend.Chunks
 meta import ConAgua.Front.LineRef
 meta import ConAgua.Front.Driver
 meta import ConAgua.Scan.Validator

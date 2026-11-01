@@ -2,7 +2,7 @@ module
 
 public import ConAgua.Final.Abi
 public import ConAgua.Compiler.MainRef
-public import Kraken.X64.Registers
+import Kraken.X64.Registers
 
 @[expose] public section
 

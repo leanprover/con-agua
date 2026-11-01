@@ -1,17 +1,29 @@
 module
 
-public import ConAgua.Verdict.InferKnotE
-public import ConAgua.Verdict.InferLeavesE
-public import ConAgua.Verdict.WhnfKnotE
+import ConAgua.Verdict.InferKnotE
+import ConAgua.Verdict.InferLeavesE
+import ConAgua.Verdict.WhnfKnotE
 public import ConAgua.Verdict.DefEqAllE
-public import ConAgua.Checker.LoopProg
-public import ConAgua.Checker.NoVerdictClosed
+import ConAgua.Checker.LoopProg
+import ConAgua.Checker.NoVerdictClosed
 meta import ConAgua.Verdict.InferKnotE
 meta import ConAgua.Verdict.InferLeavesE
 meta import ConAgua.Verdict.WhnfKnotE
 meta import ConAgua.Verdict.DefEqAllE
 meta import ConAgua.Checker.LoopProg
 meta import ConAgua.Checker.NoVerdictClosed
+import ConAgua.Arena.StrLitCtor
+import ConAgua.Arena.StrLitSup
+import ConAgua.Arena.WhnfProjRefine2
+import ConAgua.Checker.CoreErec
+import ConAgua.Checker.LoopDeclAgree
+import ConAgua.Checker.LoopProgTac
+import ConAgua.Verdict.DefEqSlotE
+import ConAgua.Verdict.WhnfPirrE
+public import ConAgua.Arena.KnotEntry
+public import ConAgua.Checker.Prog
+public import ConAgua.Verdict.InferArmsE
+public import ConAgua.Verdict.VCtx
 
 @[expose] public section
 

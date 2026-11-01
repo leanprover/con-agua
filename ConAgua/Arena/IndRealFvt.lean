@@ -1,11 +1,17 @@
 module
 
 public import ConAgua.Arena.WhnfEntry
-public import ConAgua.Arena.DeclNatSpec
+import ConAgua.Arena.DeclNatSpec
 public import ConAgua.Arena.IndRealFvtD
-public import ConAgua.Arena.GrindAttr
-public import ConAgua.L.GrindAttr
-public import ConAgua.L.ModelGen
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
+import ConAgua.L.ModelGen
+import ConAgua.Arena.IndMaster
+import ConAgua.Arena.IndPartsSpec.MemberNames
+import ConAgua.Arena.StageInst1
+import Std.WP.Tactic
+import Std.WP.Triple.SpecLemmas
+public import ConAgua.Arena.DeclNatBase
 
 @[expose] public section
 

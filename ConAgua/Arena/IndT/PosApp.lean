@@ -1,10 +1,13 @@
 module
 
-public import ConRon.Bridge.Inductives.PosWalks
-public import ConAgua.Verdict.PosE1L
-public import ConAgua.Arena.IndPosSpec.Pos2DecHLSplit
-public import ConAgua.Arena.IndPosSpec.Snoc
+import ConRon.Bridge.Inductives.PosWalks
+import ConAgua.Verdict.PosE1L
+import ConAgua.Arena.IndPosSpec.Pos2DecHLSplit
+import ConAgua.Arena.IndPosSpec.Snoc
 public import ConAgua.Verdict.PosE
+import ConAgua.Arena.IndPosSpec.NestCrest
+import ConAgua.Arena.RecClassSpec.Classes
+import ConAgua.Checker.NoVerdictTree
 
 @[expose] public section
 

@@ -1,8 +1,8 @@
 module
 
 public import ConAgua.Arena.PromoteCI
-public import ConAgua.Arena.PromoteLsRef
-public import ConAgua.L.WordOff
+import ConAgua.Arena.PromoteLsRef
+import ConAgua.L.WordOff
 public import Std.Tactic.BVDecide.Normalize.Prop
 
 @[expose] public section

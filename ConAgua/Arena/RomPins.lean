@@ -2,11 +2,12 @@ module
 
 public import ConAgua.Arena.Rom
 public import ConAgua.Arena.Tiers
-public import ConAgua.Front.ApplyExprRefine
-public import ConAgua.Arena.GrindAttr
-public import ConAgua.L.GrindAttr
+import ConAgua.Front.ApplyExprRefine
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
 public import Std.Tactic.BVDecide.Normalize.Prop
-public import Std.WP.Tactic
+import Std.WP.Tactic
+import Std.WP.Triple.SpecLemmas
 
 @[expose] public section
 

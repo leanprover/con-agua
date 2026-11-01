@@ -1,6 +1,8 @@
 module
 
 public import ConAgua.Arena.DeclBase
+import ConAgua.Census.Attr
+public import ConAgua.Arena.Reasons
 
 @[expose] public section
 

@@ -3,6 +3,9 @@ module
 public import ConAgua.Checker.PipeRest
 public import ConAgua.Checker.TwinPins
 public import ConRon.Bridge.Inductives.Rel
+import ConRon.Bridge.Checker.Pins
+import ConRon.Bridge.Frontend.Prepare
+import ConRon.Bridge.Specs
 
 @[expose] public section
 

@@ -1,11 +1,18 @@
 module
 
 public import ConAgua.Arena.InferFieldSort
-public import ConAgua.Arena.DefEqLeaves2
+import ConAgua.Arena.DefEqLeaves2
 public import ConAgua.Arena.CoreDen
 public import ConAgua.Arena.InferBodySpine
-public import ConAgua.Arena.WhnfCoreProj
+import ConAgua.Arena.WhnfCoreProj
 public import ConAgua.Arena.InferProjModels
+import ConAgua.Arena.InferBodyIntern
+import ConAgua.Arena.RefWalk
+import ConAgua.Arena.WhnfCoreRefine
+import Std.WP.Triple.SpecLemmas
+public import ConAgua.Arena.CoreLevels
+public import ConAgua.Arena.CoreWalks
+public import ConAgua.Arena.DefEqLeaves
 
 @[expose] public section
 

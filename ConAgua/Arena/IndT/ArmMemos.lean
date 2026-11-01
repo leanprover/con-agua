@@ -3,6 +3,10 @@ module
 public import ConAgua.Arena.LoopT
 public import ConAgua.Arena.IndInstallSpec.TabsProg
 public import ConAgua.Arena.IndInstallSpec.Frame
+import ConAgua.Arena.IndPartsSpec.RulePrefixAt
+import ConAgua.Arena.IndPosSpec.CrLook
+import ConAgua.Arena.IndPosSpec.Mfr
+public import ConAgua.Arena.RecCheckSpec.RcLook
 
 @[expose] public section
 

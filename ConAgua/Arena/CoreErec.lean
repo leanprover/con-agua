@@ -2,6 +2,7 @@ module
 
 public import ConAgua.Arena.WhnfBase
 public import ConAgua.Arena.Frame
+import Std.Tactic.BVDecide.Normalize.BitVec
 
 @[expose] public section
 

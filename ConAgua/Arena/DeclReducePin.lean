@@ -2,10 +2,12 @@ module
 
 public import ConAgua.Arena.DeclReduceSpec2
 public import ConAgua.Arena.IndRealApdT
-public import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.GrindAttr
 public import ConAgua.Arena.IndGrindAttr
-public import ConAgua.L.GrindAttr
-public import ConAgua.L.ModelGen
+import ConAgua.L.GrindAttr
+import ConAgua.L.ModelGen
+import ConAgua.Checker.NoVerdictTree
+public import ConAgua.Arena.DeclReduceSpec
 
 @[expose] public section
 

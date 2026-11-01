@@ -1,6 +1,8 @@
 module
 
-public import ConAgua.Arena.LevelArena
+import ConAgua.Arena.LevelArena
+public import ConAgua.Arena.ArenaRel
+public import ConAgua.Arena.LevelHeap
 
 @[expose] public section
 

@@ -5,6 +5,10 @@ public import ConAgua.Arena.StrLitUtf8
 public import ConAgua.Arena.StrLitKeep
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.L.GrindAttr
+import ConAgua.Arena.InferBodyLet
+import Lean.Elab.Tactic.RCases
+import Std.Tactic.BVDecide.Normalize.BitVec
+public import ConAgua.Arena.DefEqMid
 
 @[expose] public section
 

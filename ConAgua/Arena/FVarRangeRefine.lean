@@ -1,10 +1,11 @@
 module
 
 public import ConAgua.Arena.FVarRange
-public import ConAgua.Arena.View
+import ConAgua.Arena.View
 public import ConRon.Arena.Core
-public import ConAgua.Arena.SimLib
+import ConAgua.Arena.SimLib
 public import Std.Tactic.BVDecide.Normalize.Prop
+public import ConAgua.Arena.ArenaRel
 
 @[expose] public section
 

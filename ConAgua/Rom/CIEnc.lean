@@ -1,6 +1,7 @@
 module
 
 public import ConAgua.Arena.RomExpr
+public import ConLeche.Kernel.TrustAxioms
 
 @[expose] public section
 

@@ -2,7 +2,7 @@ module
 
 public import ConAgua.Checker.Asm
 public import ConAgua.Checker.AsmStub
-public import ConAgua.AsmFile.Eq
+import ConAgua.AsmFile.Eq
 meta import ConAgua.Checker.Asm
 meta import ConAgua.Checker.AsmStub
 meta import ConAgua.AsmFile.Eq

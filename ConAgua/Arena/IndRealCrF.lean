@@ -1,8 +1,10 @@
 module
 
 public import ConAgua.Arena.ConstsResolveF
-public import ConAgua.Arena.StageInst1
+import ConAgua.Arena.StageInst1
 public import ConAgua.Arena.WhnfIota
+public import ConAgua.Arena.CallF
+public import ConAgua.L.ProgHas
 
 @[expose] public section
 

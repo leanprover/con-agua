@@ -4,9 +4,10 @@ public import ConAgua.Arena.IndPosSpec.CtxFields
 public import ConAgua.Arena.IndPosSpec.GrpAt
 public import ConAgua.Arena.DeclHeader
 public import ConAgua.Arena.IndPosSpec.MatesW
-public import ConAgua.Arena.IndGrindAttr
-public import ConAgua.L.GrindAttr
-public import ConAgua.L.ModelGen
+import ConAgua.Arena.IndGrindAttr
+import ConAgua.L.GrindAttr
+import ConAgua.L.ModelGen
+import Std.WP.Triple.SpecLemmas
 
 @[expose] public section
 

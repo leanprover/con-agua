@@ -2,8 +2,8 @@ module
 
 public import ConAgua.Arena.Frame
 public import ConAgua.Arena.MemoLib
-public import ConAgua.Arena.StoreGrow
-public import Std.Tactic.BVDecide.Normalize.Prop
+import ConAgua.Arena.StoreGrow
+import Std.Tactic.BVDecide.Normalize.Prop
 
 @[expose] public section
 

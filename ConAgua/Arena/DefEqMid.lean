@@ -3,11 +3,14 @@ module
 public import ConAgua.Arena.DefEqLeaves2
 public import ConAgua.Arena.InferLeaves
 public import ConAgua.Arena.DefEqLeaves
-public import ConAgua.Arena.GrindAttr
-public import ConAgua.L.GrindAttr
-public import ConAgua.L.ModelGen
-public import ConAgua.Arena.WhnfCoreProj
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
+import ConAgua.L.ModelGen
+import ConAgua.Arena.WhnfCoreProj
 public import ConAgua.Verdict.WhnfModels7E
+import ConAgua.Arena.InferBodyLet
+import ConAgua.Arena.RefWalk
+import ConAgua.Checker.NoVerdictTree
 
 @[expose] public section
 

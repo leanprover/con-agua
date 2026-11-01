@@ -1,10 +1,13 @@
 module
 
-public import ConAgua.Arena.IndCopy2
-public import ConAgua.Arena.GrindAttr
-public import ConAgua.L.GrindAttr
+import ConAgua.Arena.IndCopy2
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
 public import Std.Tactic.BVDecide.Normalize.Prop
-public import Std.WP.Tactic
+import Std.WP.Tactic
+import ConAgua.Arena.DerRel
+import Std.WP.Triple.SpecLemmas
+public import ConAgua.Arena.IndCopy
 
 @[expose] public section
 

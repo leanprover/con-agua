@@ -3,9 +3,11 @@ module
 public import ConAgua.Arena.DeclDivModSpec.DivModTypePins
 public import ConAgua.Arena.DeclDivModSpec.PureRun
 public import ConAgua.Arena.IndRealNames
-public import ConAgua.Arena.GrindAttr
-public import ConAgua.L.GrindAttr
-public import ConAgua.L.ModelGen
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
+import ConAgua.L.ModelGen
+import ConAgua.Arena.IndInstallSpec.DomsW
+import Std.Tactic.BVDecide.Normalize.BitVec
 
 @[expose] public section
 

@@ -3,9 +3,10 @@ module
 public import ConAgua.Checker.Hoist
 public import ConRon.Arena.Frontend.PreludeText
 public import ConAgua.Compiler.Compile
-public import ConAgua.Arena.GrindAttr
-public import ConAgua.L.GrindAttr
-public import ConAgua.L.ModelGen
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
+import ConAgua.L.ModelGen
+import Std.WP.Triple.SpecLemmas
 
 @[expose] public section
 

@@ -1,11 +1,14 @@
 module
 
 public import ConAgua.Arena.IndPosSpec.EntryW
-public import ConAgua.Arena.IndPosSpec.InstW
-public import ConAgua.Arena.IndPosSpec.MentionsAnyGo
+import ConAgua.Arena.IndPosSpec.InstW
+import ConAgua.Arena.IndPosSpec.MentionsAnyGo
 public import ConAgua.Arena.GrindAttr
-public import ConAgua.Arena.IndGrindAttr
+import ConAgua.Arena.IndGrindAttr
 public import ConAgua.L.GrindAttr
+import Std.Tactic.BVDecide.Normalize.BitVec
+import Std.WP.Tactic
+import Std.WP.Triple.SpecLemmas
 
 @[expose] public section
 

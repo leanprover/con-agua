@@ -1,11 +1,12 @@
 module
 
-public import ConRon.Bridge.Inductives.RecCheck
+import ConRon.Bridge.Inductives.RecCheck
 public import ConAgua.Arena.RecCheckSpec.PdsC
 public import ConAgua.Arena.RecCheckSpec.TaGoWMfr
-public import ConAgua.Arena.IndRealAbsPos
-public import ConAgua.Arena.IndRealAbsSim
+import ConAgua.Arena.IndRealAbsPos
+import ConAgua.Arena.IndRealAbsSim
 public import ConAgua.Arena.IndTwin
+public import ConRon.Bridge.Inductives.Run
 
 @[expose] public section
 

@@ -1,6 +1,7 @@
 module
 
 public import ConAgua.Arena.FreezeRel
+import ConAgua.L.Blocks
 
 @[expose] public section
 

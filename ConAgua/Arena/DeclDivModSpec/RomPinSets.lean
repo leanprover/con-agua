@@ -2,10 +2,11 @@ module
 
 public import ConAgua.Arena.DeclDivModSpec.DecCIDefnValue
 public import ConAgua.Arena.DeclDivModSpec.DivModEnvGuard
-public import ConAgua.Arena.DeclPins
-public import ConAgua.Arena.GrindAttr
-public import ConAgua.Arena.IndGrindAttr
-public import ConAgua.L.GrindAttr
+import ConAgua.Arena.DeclPins
+import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.IndGrindAttr
+import ConAgua.L.GrindAttr
+import ConAgua.Arena.IndPartsSpec.MemberNames
 
 @[expose] public section
 

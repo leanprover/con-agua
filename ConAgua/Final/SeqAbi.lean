@@ -2,7 +2,7 @@ module
 
 public import ConAgua.Final.SeqLayout
 public import ConAgua.Final.ParAbi
-public import Kraken.X64.Registers
+import Kraken.X64.Registers
 
 @[expose] public section
 

@@ -1,14 +1,16 @@
 module
 
-public import ConRon.Bridge.Specs
+import ConRon.Bridge.Specs
 public import ConAgua.Arena.Refine
-public import ConRon.Bridge.Inductives.Decl
-public import ConRon.Bridge.Frontend.Capstone
+import ConRon.Bridge.Inductives.Decl
+import ConRon.Bridge.Frontend.Capstone
 public import ConRon.Bridge.Checker.Decl
 public import ConRon.Arena.Checker
 public import ConRon.Bridge.Checker.Basis
-public import ConRon.Bridge.Checker.Fold
-public import ConRon.Bridge.Checker.Split
+import ConRon.Bridge.Checker.Fold
+import ConRon.Bridge.Checker.Split
+import Std.Tactic.BVDecide.Normalize.Prop
+public import ConLeche.Verify.EnvBound
 
 @[expose] public section
 

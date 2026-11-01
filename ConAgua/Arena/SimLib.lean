@@ -1,6 +1,7 @@
 module
 
-public import ConAgua.Arena.StoreRel
+import ConAgua.Arena.StoreRel
+public import ConAgua.Arena.Refine
 
 @[expose] public section
 

@@ -2,9 +2,12 @@ module
 
 public import ConAgua.Arena.DefEqMidLazy
 public import ConAgua.Verdict.WhnfNatE
-public import ConAgua.Arena.GrindAttr
-public import ConAgua.L.GrindAttr
-public import ConAgua.L.ModelGen
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
+import ConAgua.L.ModelGen
+import ConAgua.Arena.RefWalk
+import ConAgua.Checker.NoVerdictTree
+import ConAgua.Front.Preserve
 
 @[expose] public section
 

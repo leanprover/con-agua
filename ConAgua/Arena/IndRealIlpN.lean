@@ -1,9 +1,18 @@
 module
 
-public import ConAgua.Arena.IndRealNames
-public import ConAgua.Arena.GrindAttr
-public import ConAgua.L.GrindAttr
+import ConAgua.Arena.IndRealNames
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
 import all Init.Data.Repr
+import ConAgua.Arena.DeclMasterStage
+import ConAgua.Arena.IndMaster
+import ConAgua.Arena.Rom
+import ConAgua.Arena.SimLib
+import Std.WP.Tactic
+import Std.WP.Triple.SpecLemmas
+public import ConAgua.Arena.CallF
+public import ConAgua.Arena.StripTeleSpec
+public import ConAgua.Arena.StubNames
 
 @[expose] public section
 

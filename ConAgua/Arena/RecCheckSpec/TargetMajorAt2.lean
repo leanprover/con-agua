@@ -2,8 +2,12 @@ module
 
 public import ConAgua.Arena.RecCheckSpec.PtrNamesWDec
 public import ConAgua.Arena.GrindAttr
-public import ConAgua.Arena.IndGrindAttr
+import ConAgua.Arena.IndGrindAttr
 public import ConAgua.L.GrindAttr
+import ConAgua.Arena.RecClassSpec.CloseLams
+import Std.WP.Tactic
+import Std.WP.Triple.SpecLemmas
+public import ConAgua.Arena.RecSim
 
 @[expose] public section
 

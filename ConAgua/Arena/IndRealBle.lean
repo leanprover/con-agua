@@ -1,13 +1,19 @@
 module
 
-public import ConAgua.Arena.IndRealCapsC
-public import ConAgua.Arena.IndT.Lift
-public import ConAgua.Arena.IndInstallSpec.InstallIwB
-public import ConAgua.Arena.LevelSimpRel
-public import ConRon.Bridge.Inductives.BlockRec
+import ConAgua.Arena.IndRealCapsC
+import ConAgua.Arena.IndT.Lift
+import ConAgua.Arena.IndInstallSpec.InstallIwB
+import ConAgua.Arena.LevelSimpRel
+import ConRon.Bridge.Inductives.BlockRec
 public import ConAgua.Arena.GrindAttr
-public import ConAgua.Arena.IndGrindAttr
+import ConAgua.Arena.IndGrindAttr
 public import ConAgua.L.GrindAttr
+import ConAgua.Arena.IndInstallSpec.PartsShapeFacts
+public import ConAgua.Arena.IndDecStab
+public import ConAgua.Arena.IndInstallSpec.CapsProg
+public import ConAgua.Arena.IndPartsSpec.RulePrefixAt
+public import ConAgua.Arena.TwinStep
+public import ConRon.Bridge.Inductives.Run
 
 @[expose] public section
 

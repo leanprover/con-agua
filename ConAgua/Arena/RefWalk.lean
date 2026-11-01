@@ -2,8 +2,8 @@ module
 
 public import ConAgua.Arena.Verdict
 public import ConAgua.Arena.SimLib
-public import ConAgua.Arena.CallF
-public import ConAgua.Verdict.PosTopEMono
+import ConAgua.Arena.CallF
+import ConAgua.Verdict.PosTopEMono
 
 @[expose] public section
 

@@ -6,6 +6,9 @@ public import ConAgua.Arena.IndInstallSpec.Pos3Init
 public import ConAgua.Arena.IndSumSpec.ConsBlockRecsTF
 public import ConAgua.Arena.RecGenSpec.ClassSeeds
 public import ConAgua.Arena.RecGenSpec.OcW
+public import ConAgua.Arena.IndInstallSpec.InstallIwB
+public import ConAgua.Arena.IndInstallSpec.InstallRec2Tele
+public import ConAgua.Arena.IndInstallSpec.PartsAt
 
 @[expose] public section
 

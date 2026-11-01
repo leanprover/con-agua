@@ -1,6 +1,7 @@
 module
 
-public import ConAgua.Arena.Pins
+import ConAgua.Arena.Pins
+public import ConAgua.Arena.Tiers
 
 @[expose] public section
 

@@ -2,10 +2,12 @@ module
 
 public import ConAgua.Arena.IndDecStab
 public import ConAgua.Arena.IndPartsSpec.BsoK2
-public import ConAgua.Arena.IndPosSpec.RootHoles
+import ConAgua.Arena.IndPosSpec.RootHoles
 public import ConAgua.Arena.IndRealAbs
-public import ConAgua.Arena.IndSumSpec.Row
+import ConAgua.Arena.IndSumSpec.Row
 public import ConAgua.Arena.IndCallM
+public import ConAgua.Arena.IndPosSpec.CtxFields
+public import ConAgua.Arena.IndSumSpec.ColW
 
 @[expose] public section
 

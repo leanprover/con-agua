@@ -2,6 +2,9 @@ module
 
 public import ConAgua.Checker.HoistTargetsRef
 public import ConAgua.Checker.HoistOrderRef
+public import ConAgua.Checker.HoistIndexRef
+public import ConAgua.Checker.HoistNatRef
+public import ConAgua.Checker.HoistWalkRef
 
 @[expose] public section
 

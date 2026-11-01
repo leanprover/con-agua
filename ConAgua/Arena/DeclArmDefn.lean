@@ -1,10 +1,13 @@
 module
 
-public import ConAgua.Arena.DeclStepSpec
-public import ConAgua.Arena.Verdict
+import ConAgua.Arena.DeclStepSpec
+import ConAgua.Arena.Verdict
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.Arena.IndGrindAttr
 public import ConAgua.L.GrindAttr
+import ConAgua.Arena.DeclPins
+public import ConAgua.Arena.DeclCvg
+public import ConAgua.Rom.PinSets
 
 @[expose] public section
 

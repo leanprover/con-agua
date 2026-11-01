@@ -1,8 +1,8 @@
 module
 
-public import ConAgua.Arena.IndLibSpec
+import ConAgua.Arena.IndLibSpec
 public import ConAgua.Front.StateDR
-public import ConRon.Bridge.Grind
+import ConRon.Bridge.Grind
 
 @[expose] public section
 

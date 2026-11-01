@@ -1,10 +1,15 @@
 module
 
 public import ConAgua.Arena.RecCheckSpec.RpLook
-public import ConAgua.Arena.IndPartsSpec.AllCtors
-public import ConAgua.Arena.IndPartsSpec.BlockSplitRecs
-public import ConAgua.Arena.IndInstallSpec.InstallRec2Tele
+import ConAgua.Arena.IndPartsSpec.AllCtors
+import ConAgua.Arena.IndPartsSpec.BlockSplitRecs
+import ConAgua.Arena.IndInstallSpec.InstallRec2Tele
 public import ConAgua.Arena.IndGrindAttr
+import ConAgua.Arena.IndInstallSpec.BlockCapsAt
+import ConAgua.Arena.IndPartsSpec.EqW
+import ConAgua.Arena.IndPartsSpec.RecTW
+import Std.Tactic.BVDecide.Normalize.BitVec
+public import ConAgua.Arena.IndPartsSpec.BlockRecNamesUnreserved
 
 @[expose] public section
 

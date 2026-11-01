@@ -1,8 +1,15 @@
 module
 
-public import ConAgua.Arena.DeclCrpT
+import ConAgua.Arena.DeclCrpT
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.L.GrindAttr
+public import ConAgua.Arena.CrOKFrame
+public import ConAgua.Arena.DeclReducePin
+public import ConAgua.Arena.KnotEntry
+public import ConAgua.Arena.LeafFns
+public import ConAgua.Arena.TwinStep
+public import ConAgua.Verdict.VCtx
+public import ConLeche.Verify.Shift
 
 @[expose] public section
 

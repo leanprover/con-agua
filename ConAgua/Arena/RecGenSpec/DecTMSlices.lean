@@ -1,10 +1,15 @@
 module
 
 public import ConAgua.Arena.IlpRd
-public import ConAgua.Arena.RecCheckSpec.TruncSl
+import ConAgua.Arena.RecCheckSpec.TruncSl
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.Arena.IndGrindAttr
 public import ConAgua.L.GrindAttr
+import ConAgua.Arena.IndPosSpec.InstW
+import ConAgua.Arena.IndSim
+import ConAgua.Arena.RecClassSpec.CloseLams
+public import ConAgua.Arena.IndDecStab
+public import ConAgua.Arena.RecCheckSpec.RcLook
 
 @[expose] public section
 

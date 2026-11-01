@@ -3,8 +3,11 @@ module
 public import ConAgua.Verdict.IndBRec2
 public import ConAgua.Arena.RecGenSpec.ClassRecTysOk
 public import ConAgua.Arena.GrindAttr
-public import ConAgua.L.ModelGen
+import ConAgua.L.ModelGen
 public import ConRon.Bridge.Inductives.GenRec
+import ConAgua.Arena.IndT.Lift
+import ConAgua.Arena.RefWalk
+import ConAgua.Checker.NoVerdictTree
 
 @[expose] public section
 /-!

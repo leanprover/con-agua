@@ -1,7 +1,8 @@
 module
 
-public import ConRon.Bridge.Promote.Walk
+import ConRon.Bridge.Promote.Walk
 public import ConAgua.Arena.IndTwin
+public import ConRon.Bridge.Frontend.Shared
 
 @[expose] public section
 

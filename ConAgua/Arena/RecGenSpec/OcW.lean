@@ -6,13 +6,25 @@ public import ConAgua.Arena.RecClassSpec.ReadProg
 public import ConAgua.Arena.RecGenSpec.DecTMDecBOf
 public import ConAgua.Arena.RecGenSpec.KcW
 public import ConAgua.Arena.RecGenSpec.KeysProg
-public import ConAgua.Arena.RecGenSpec.StabDecCRDecB
-public import ConAgua.Arena.IndInstallSpec.InstallRec2Tele
-public import ConAgua.Arena.IndInstallSpec.PartsAt
+import ConAgua.Arena.RecGenSpec.StabDecCRDecB
+import ConAgua.Arena.IndInstallSpec.InstallRec2Tele
+import ConAgua.Arena.IndInstallSpec.PartsAt
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.Arena.IndGrindAttr
 public import ConAgua.L.GrindAttr
 import all Init.Data.List.Control
+import ConAgua.Arena.DeclRec
+import ConAgua.Arena.IndInstallSpec.DomsW
+import ConAgua.Arena.IndPosSpec.FgW
+import ConAgua.Arena.IndSumSpec.StructProjArgP
+import ConAgua.Arena.RecGenSpec.DecNLAt
+import ConAgua.Arena.RecGenSpec.StabDecCKExt
+import Std.Tactic.BVDecide.Normalize.BitVec
+public import ConAgua.Arena.IndPartsSpec.PartsConsPL
+public import ConAgua.Arena.IndPosSpec.NestGroupCtors
+public import ConAgua.Arena.RecCheckSpec.DecHLTruncMBound
+public import ConAgua.Arena.RecClassSpec.Classes
+public import ConAgua.Arena.RecGenSpec.SlRGrow
 
 @[expose] public section
 

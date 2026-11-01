@@ -3,10 +3,13 @@ module
 public import ConAgua.Arena.IndSumSpec.Row
 public import ConAgua.Arena.IndSumSpec.SpgK3
 public import ConAgua.Arena.IndSumSpec.StructUsedLater
-public import ConAgua.Arena.IndSim
-public import ConAgua.Arena.GrindAttr
-public import ConAgua.Arena.IndGrindAttr
-public import ConAgua.L.GrindAttr
+import ConAgua.Arena.IndSim
+import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.IndGrindAttr
+import ConAgua.L.GrindAttr
+import ConAgua.Arena.IndInstallSpec.DomsW
+import ConRon.Bridge.Grind
+public import ConAgua.Arena.IndPosSpec.MatesW
 
 @[expose] public section
 

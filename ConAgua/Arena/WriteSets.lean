@@ -6,7 +6,7 @@ public import ConAgua.Arena.Abs1Spec
 public import ConAgua.Arena.InstListSpec
 public import ConAgua.Arena.BvarB
 public import ConAgua.Arena.Frame
-public import Std.Tactic.BVDecide.Normalize.Prop
+import Std.Tactic.BVDecide.Normalize.Prop
 
 @[expose] public section
 

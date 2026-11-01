@@ -1,9 +1,9 @@
 module
 
 public import ConAgua.Checker.Prelude
-public import ConAgua.L.FuelMono
-public import ConAgua.L.Blocks
-public import ConRon.Bridge.Grind
+import ConAgua.L.FuelMono
+import ConAgua.L.Blocks
+import ConRon.Bridge.Grind
 
 @[expose] public section
 

@@ -1,11 +1,14 @@
 module
 
-public import ConAgua.Arena.IndPosSpec.NestKeyMap
+import ConAgua.Arena.IndPosSpec.NestKeyMap
 public import ConAgua.Arena.IndStubs
-public import ConAgua.Arena.GrindAttr
-public import ConAgua.L.GrindAttr
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
 public import Std.Tactic.BVDecide.Normalize.Prop
-public import Std.WP.Tactic
+import Std.WP.Tactic
+import ConAgua.Arena.Env
+import Std.WP.Triple.SpecLemmas
+public import ConAgua.Arena.IndCopy2
 
 @[expose] public section
 

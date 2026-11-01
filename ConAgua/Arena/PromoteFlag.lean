@@ -1,8 +1,9 @@
 module
 
-public import ConAgua.Arena.DerRel
+import ConAgua.Arena.DerRel
 public import ConAgua.Arena.PromoteTwin
 public import Std.Tactic.BVDecide.Normalize.Prop
+public import ConAgua.Arena.DerRelBase
 
 @[expose] public section
 

@@ -1,12 +1,15 @@
 module
 
 public import ConAgua.Arena.BvarB
-public import ConAgua.Arena.WalkRefine
-public import ConAgua.Arena.DerRel
+import ConAgua.Arena.WalkRefine
+import ConAgua.Arena.DerRel
 public import ConAgua.Arena.Keeps
-public import ConAgua.Arena.LiftRefine
-public import Std.Tactic.BVDecide.Normalize.BitVec
+import ConAgua.Arena.LiftRefine
+import Std.Tactic.BVDecide.Normalize.BitVec
 public import Std.Tactic.BVDecide.Normalize.Prop
+import ConAgua.Arena.SimLib
+import ConAgua.Arena.View
+public import ConAgua.Arena.DerRelBase
 
 @[expose] public section
 

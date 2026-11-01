@@ -1,8 +1,11 @@
 module
 
 public import ConAgua.Arena.IndPartsSpec.RecTW
-public import ConAgua.Arena.GrindAttr
-public import ConAgua.L.GrindAttr
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
+import ConAgua.Arena.IndMaster
+import Std.WP.Tactic
+import Std.WP.Triple.SpecLemmas
 
 @[expose] public section
 

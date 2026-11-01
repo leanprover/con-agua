@@ -1,10 +1,13 @@
 module
 
-public import ConAgua.Arena.IndPosSpec.CrLook
-public import ConAgua.Arena.IndPosSpec.EnvFindWHit
+import ConAgua.Arena.IndPosSpec.CrLook
+import ConAgua.Arena.IndPosSpec.EnvFindWHit
 public import ConAgua.Arena.IndPosSpec.PiBWStage
 public import ConAgua.Arena.IndSumSpec.McGoStep
 public import ConAgua.Arena.RecCheckSpec.ErToIwWStage
+public import ConAgua.Arena.IndPosSpec.DpGoW
+public import ConAgua.Arena.IndPosSpec.NoGoStep
+public import ConAgua.Arena.IndPosSpec.RxMapW
 
 @[expose] public section
 

@@ -1,7 +1,7 @@
 module
 
 public import ConAguaAsm.Checker
-public import ConAgua.AsmFile.Eq
+import ConAgua.AsmFile.Eq
 meta import ConAguaAsm.Checker
 meta import ConAgua.AsmFile.Eq
 

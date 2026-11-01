@@ -5,6 +5,7 @@ public import ConAgua.Arena.GrindAttr
 public import ConAgua.Arena.IndGrindAttr
 public import ConAgua.L.GrindAttr
 public import ConAgua.Arena.RecClassSpec.MnW
+import ConAgua.Arena.RecCheckSpec.EraseFVarTys
 
 @[expose] public section
 

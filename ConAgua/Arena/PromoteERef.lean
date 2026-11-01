@@ -2,7 +2,7 @@ module
 
 public import ConAgua.Arena.PromoteE
 public import ConAgua.Arena.PromoteLsRef
-public import ConAgua.Arena.PromotePiE
+import ConAgua.Arena.PromotePiE
 public import Std.Tactic.BVDecide.Normalize.Prop
 
 @[expose] public section

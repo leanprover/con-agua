@@ -1,16 +1,30 @@
 module
 
-public import ConAgua.Arena.IndT.IdxSorts
-public import ConAgua.Arena.IndT.GenRec3
+import ConAgua.Arena.IndT.IdxSorts
+import ConAgua.Arena.IndT.GenRec3
 public import ConAgua.Arena.IndT.ArmMemos
-public import ConAgua.Arena.IndRealSctC
-public import ConAgua.Arena.RecCheckSpec.BlockNestedBit
+import ConAgua.Arena.IndRealSctC
+import ConAgua.Arena.RecCheckSpec.BlockNestedBit
 public import ConAgua.Arena.IndInstallSpec.BpRecBpassR
 public import ConAgua.Arena.IndInstallSpec.ConsRecsTFSimOf
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.L.GrindAttr
-public import ConAgua.L.ModelGen
+import ConAgua.L.ModelGen
 import all ConRon.Bridge.Inductives.BlockTail
+import ConAgua.Arena.IndInstallSpec.ConsBlockCtors
+import ConAgua.Arena.IndInstallSpec.IcvgW
+import ConAgua.Arena.IndInstallSpec.InstallRec2PSl
+import ConAgua.Arena.IndInstallSpec.PartsShapeFacts
+import ConAgua.Arena.IndInstallSpec.PosFreeMfr
+import ConAgua.Arena.IndPartsSpec.BlockSplitRecs
+import ConAgua.Arena.RecCheckSpec.CnfW
+import ConAgua.Arena.RefWalk
+import ConAgua.Arena.ScratchRefine
+import ConAgua.Checker.NoVerdictTree
+public import ConAgua.Arena.IndInstallSpec.GpbWSimF
+public import ConAgua.Arena.IndPartsSpec.BlockRecNamesUnreserved
+public import ConAgua.Arena.IndT.GenRec2
+public import ConRon.Bridge.Inductives.BlockTail
 
 @[expose] public section
 

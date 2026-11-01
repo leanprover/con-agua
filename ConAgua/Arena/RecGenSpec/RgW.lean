@@ -3,6 +3,8 @@ module
 public import ConAgua.Arena.RecClassSpec.Classes
 public import ConAgua.Arena.RecClassSpec.GtProg
 public import ConAgua.Arena.IndGrindAttr
+import ConRon.Bridge.Grind
+public import ConAgua.Arena.RecSim
 
 @[expose] public section
 

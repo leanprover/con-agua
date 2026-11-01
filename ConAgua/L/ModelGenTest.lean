@@ -1,11 +1,17 @@
 module
 
-public import ConAgua.Arena.LdRd
+import ConAgua.Arena.LdRd
 public import ConAgua.Arena.P32
-public import ConAgua.Arena.GrindAttr
-public import ConAgua.L.GrindAttr
-public import ConAgua.L.ModelGen
+import ConAgua.Arena.GrindAttr
+import ConAgua.L.GrindAttr
+import ConAgua.L.ModelGen
 public import ConAgua.Front.Preserve
+import ConAgua.L.For
+import Std.Tactic.BVDecide.Normalize.Prop
+import Std.WP.Tactic
+import Std.WP.Triple.SpecLemmas
+public import ConAgua.L.ErrSpec
+public import ConAgua.L.Notation
 
 @[expose] public section
 

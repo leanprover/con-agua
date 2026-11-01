@@ -1,13 +1,23 @@
 module
 
-public import ConAgua.Arena.RecGenSpec.CfhW
+import ConAgua.Arena.RecGenSpec.CfhW
 public import ConAgua.Verdict.IndBCrg
-public import ConAgua.Arena.RecGenSpec.Rec3TmdWDecB
-public import ConAgua.Arena.RecGenSpec.ClassFeR
-public import ConAgua.Arena.IndSumSpec.FieldDomsResolve
-public import ConRon.Bridge.Inductives.GenRec
+import ConAgua.Arena.RecGenSpec.Rec3TmdWDecB
+import ConAgua.Arena.RecGenSpec.ClassFeR
+import ConAgua.Arena.IndSumSpec.FieldDomsResolve
+import ConRon.Bridge.Inductives.GenRec
 public import ConAgua.Arena.GrindAttr
-public import ConAgua.L.ModelGen
+import ConAgua.L.ModelGen
+import ConAgua.Arena.IndT.Lift
+import ConAgua.Arena.RecClassSpec.PdWAfr
+import ConAgua.Arena.RecGenSpec.FlushStage
+import ConAgua.Arena.RefWalk
+import ConAgua.Arena.ScratchRefine
+import ConAgua.Checker.NoVerdictTree
+public import ConAgua.Arena.IndSumSpec.StructProjArgP
+public import ConAgua.Arena.KnotEntry
+public import ConAgua.Arena.RecClassSpec.Classes
+public import ConAgua.Arena.RecGenSpec.CrsProg
 
 @[expose] public section
 /-!

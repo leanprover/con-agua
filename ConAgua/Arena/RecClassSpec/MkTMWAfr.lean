@@ -1,7 +1,8 @@
 module
 
 public import ConAgua.Arena.RecCheckSpec.TargetMajorAt2
-public import ConAgua.Arena.IndRealAbsSim
+import ConAgua.Arena.IndRealAbsSim
+public import ConAgua.Arena.IndRealAbs
 
 @[expose] public section
 

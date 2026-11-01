@@ -1,6 +1,7 @@
 module
 
-public import ConAgua.Arena.PromoteCIInfra
+import ConAgua.Arena.PromoteCIInfra
+public import ConAgua.Arena.PromoteCI
 
 @[expose] public section
 

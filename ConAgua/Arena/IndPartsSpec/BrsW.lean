@@ -1,10 +1,16 @@
 module
 
 public import ConAgua.Arena.IndPartsSpec.IndPartsProg5
-public import ConAgua.Arena.IndPartsSpec.PartsSliceCopy
+import ConAgua.Arena.IndPartsSpec.PartsSliceCopy
 public import ConAgua.Arena.IndPartsSpec.PlW
-public import ConAgua.Arena.IndRealPartsC1
-public import ConAgua.Arena.IndSim
+import ConAgua.Arena.IndRealPartsC1
+import ConAgua.Arena.IndSim
+import ConAgua.Arena.IndPartsSpec.BsW
+import ConAgua.Arena.IndPartsSpec.PartsPSlCons
+import ConAgua.Arena.IndPartsSpec.RulePrefixAt
+import ConAgua.Arena.RecClassSpec.CloseLams
+import ConRon.Bridge.Grind
+public import ConAgua.Arena.IndPartsSpec.BlockRecNamesUnreserved
 
 @[expose] public section
 

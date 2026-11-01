@@ -2,7 +2,9 @@ module
 
 public import ConAgua.Arena.IndPartsSpec.Bs
 public import ConAgua.Arena.IndRealNames
-public import ConAgua.Arena.RecClassSpec.Classes
+import ConAgua.Arena.RecClassSpec.Classes
+import ConRon.Bridge.Grind
+public import ConAgua.Arena.IndRealSpine
 
 @[expose] public section
 

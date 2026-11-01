@@ -2,10 +2,12 @@ module
 
 public import ConAgua.Arena.StrLit
 public import ConAgua.Arena.WhnfBase
-public import ConAgua.Scan.Utf8Link
-public import ConAgua.L.GrindAttr
+import ConAgua.Scan.Utf8Link
+import ConAgua.L.GrindAttr
 public import Std.Tactic.BVDecide.Normalize.Prop
-public import Std.WP.Tactic
+import Std.WP.Tactic
+import Std.WP.Triple.SpecLemmas
+public import ConAgua.Scan.Utf8
 
 @[expose] public section
 

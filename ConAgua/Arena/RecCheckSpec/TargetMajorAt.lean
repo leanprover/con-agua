@@ -1,10 +1,14 @@
 module
 
-public import ConAgua.Arena.RecClassSpec.IhW
+import ConAgua.Arena.RecClassSpec.IhW
 public import ConAgua.Arena.IlpRd
 public import ConAgua.Arena.GrindAttr
-public import ConAgua.Arena.IndGrindAttr
+import ConAgua.Arena.IndGrindAttr
 public import ConAgua.L.GrindAttr
+import Std.Tactic.BVDecide.Normalize.BitVec
+import Std.WP.Tactic
+import Std.WP.Triple.SpecLemmas
+public import ConAgua.Arena.RecCheckSpec.ErToIwWStage
 
 @[expose] public section
 

@@ -2,6 +2,7 @@ module
 
 public import ConAgua.Checker.LoopDeclArm1
 meta import ConAgua.Checker.LoopDeclArm1
+import ConAgua.Checker.LoopProgTac
 
 @[expose] public section
 

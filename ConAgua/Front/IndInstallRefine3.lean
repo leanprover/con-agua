@@ -1,7 +1,9 @@
 module
 
 public import ConAgua.Front.IndInstallRefine2
-public import ConAgua.L.WordOff
+import ConAgua.L.WordOff
+import ConAgua.Front.IndApplyRefine
+import ConAgua.Front.IndApplyRefine2
 
 @[expose] public section
 

@@ -1,7 +1,10 @@
 module
 
 public import ConAgua.Arena.SlotGrow
-public import ConAgua.L.Logic
+import ConAgua.L.Logic
+public import Std.Do.Triple.SpecLemmas
+public import Std.WP.Monad.Instances
+public import Std.WP.Triple.Basic
 
 @[expose] public section
 

@@ -2,6 +2,8 @@ module
 
 public import ConAgua.Arena.CheckerT
 public import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.DeclCrpT
+import ConAgua.Arena.StrLitSup
 
 @[expose] public section
 

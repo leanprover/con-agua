@@ -1,8 +1,8 @@
 module
 
 public import ConAgua.Checker.PrepLoopRef
-public import ConAgua.Checker.PrepCopyRef
-public import ConAgua.Checker.HoistRef
+import ConAgua.Checker.PrepCopyRef
+import ConAgua.Checker.HoistRef
 
 @[expose] public section
 
