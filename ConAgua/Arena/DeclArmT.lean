@@ -12,6 +12,7 @@ import ConAgua.Arena.RefWalk
 import ConAgua.Checker.NoVerdictTree
 import ConAgua.L.ModelGen
 import all ConAgua.Arena.DeclArms
+import all ConAgua.Arena.DeclStep
 
 @[expose] public section
 
