@@ -3,6 +3,7 @@ module
 public import ConAgua.Verdict.FrontE
 public import ConAgua.Front.IndApplyRefine3
 public import ConAgua.Checker.NoVerdictTree
+import all ConAgua.Front.IndApplyRefine3
 
 @[expose] public section
 

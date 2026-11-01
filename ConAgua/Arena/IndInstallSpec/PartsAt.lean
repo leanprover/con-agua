@@ -1,6 +1,7 @@
 module
 
 public import ConAgua.Arena.IndPartsSpec.IndPartsProg2
+import all Init.Data.List.Control
 
 @[expose] public section
 

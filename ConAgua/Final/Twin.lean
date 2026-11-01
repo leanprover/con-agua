@@ -13,6 +13,7 @@ public import ConRon.Bridge.Inductives.Decl
 public import ConLeche.Model.Denotes
 public import ConLeche.Model.Fold
 public import ConLeche.Verify.Frontend.FileFalse
+import all ConRon.Bridge.Frontend.Prepare
 
 @[expose] public section
 

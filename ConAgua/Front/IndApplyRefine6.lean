@@ -1,5 +1,6 @@
 module
 
+public import ConRon.Bridge.Promote.Walk
 public import ConRon.Bridge.Frontend.Rel
 public import ConAgua.Front.IndApplyRefine
 public import ConAgua.Arena.LevelArena

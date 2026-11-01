@@ -7,6 +7,7 @@ public import ConRon.Bridge.Checker.Basis
 public import ConAgua.Checker.Pipeline
 public import ConRon.Bridge.Checker.Pins
 public import ConRon.Bridge.Frontend.Prepare
+import all ConRon.Bridge.Frontend.Prepare
 
 @[expose] public section
 

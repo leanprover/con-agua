@@ -3,6 +3,7 @@ module
 public import ConAgua.Arena.IndRealNames
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.L.GrindAttr
+import all Init.Data.Repr
 
 @[expose] public section
 
