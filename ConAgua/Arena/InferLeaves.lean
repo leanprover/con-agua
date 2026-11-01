@@ -19,7 +19,6 @@ import ConAgua.Checker.NoVerdictTree
 import ConAgua.L.WordOff
 import ConAgua.Arena.DerRel
 import ConAgua.Arena.RefWalk
-import ConAgua.Arena.WhnfCoreProj
 
 @[expose] public section
 
