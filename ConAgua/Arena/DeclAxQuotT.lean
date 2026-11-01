@@ -15,6 +15,7 @@ import ConRon.Bridge.Checker.Base
 import ConRon.Bridge.Checker.Basis
 public import ConAgua.Arena.LeafFns
 public import ConAgua.Verdict.DeclValsE
+import all ConAgua.Arena.DeclArms
 
 @[expose] public section
 

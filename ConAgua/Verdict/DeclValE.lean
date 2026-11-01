@@ -22,6 +22,7 @@ import ConAgua.Arena.RefWalk
 import ConAgua.Checker.NoVerdictTree
 import ConRon.Bridge.Core.Walks.Cached
 public import ConAgua.Arena.KnotEntry
+import all ConAgua.Arena.DeclArms
 
 @[expose] public section
 

@@ -8,6 +8,7 @@ import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
 import ConAgua.Checker.NoVerdictTree
 public import ConAgua.Arena.DeclReduceSpec
+import all ConAgua.Arena.DeclArms
 
 @[expose] public section
 

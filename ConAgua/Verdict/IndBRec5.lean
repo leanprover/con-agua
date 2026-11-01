@@ -19,6 +19,7 @@ import ConRon.Bridge.Core.Walks.Cached
 public import ConAgua.Arena.IndSumSpec.ColW
 public import ConAgua.Arena.RecClassSpec.ClassGenRule
 public import ConAgua.Arena.RecGenSpec.Rec3TmdWDecB
+import all ConAgua.Arena.RecGen
 
 @[expose] public section
 /-!

@@ -17,6 +17,7 @@ public import ConAgua.Arena.IndPosSpec.NoGoStep
 public import ConAgua.Arena.IndRealIlpL
 public import ConAgua.Arena.RecCheckSpec.ToiW
 public import ConAgua.Arena.TwinStep
+import all ConAgua.Arena.RecCheck
 
 @[expose] public section
 

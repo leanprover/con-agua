@@ -14,6 +14,7 @@ import ConAgua.Arena.RecGenSpec.ClassFeR
 import ConAgua.Arena.RecGenSpec.Rec3CVX
 import ConAgua.Arena.RefWalk
 import ConAgua.Checker.NoVerdictTree
+import all ConAgua.Arena.RecGen
 
 @[expose] public section
 /-!

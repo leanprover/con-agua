@@ -17,6 +17,7 @@ import ConAgua.Arena.StageC
 import ConAgua.Checker.NoVerdictTree
 public import ConAgua.Arena.IndRealApdT
 public import ConAgua.Arena.TwinStep
+import all ConAgua.Arena.RecGen
 
 @[expose] public section
 

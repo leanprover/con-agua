@@ -19,6 +19,7 @@ import ConAgua.Arena.RefWalk
 import ConAgua.Checker.NoVerdictTree
 public import ConAgua.Arena.IndInstallSpec.Icvg
 public import ConAgua.Arena.IndRealLvlZ
+import all ConAgua.Arena.IndInstall
 
 @[expose] public section
 

@@ -13,6 +13,7 @@ import ConAgua.Arena.StageC
 import ConAgua.Checker.NoVerdictTree
 import ConRon.Bridge.Core.Walks.Cached
 public import ConAgua.Arena.TwinStep
+import all ConAgua.Arena.RecGen
 
 @[expose] public section
 

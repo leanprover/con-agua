@@ -14,6 +14,7 @@ public import ConAgua.Arena.IndPartsSpec.BlockRecNamesUnreserved
 public import ConAgua.Checker.Entry
 public import ConAgua.Front.IndApplySpec
 import all ConAgua.Front.IndApply
+import all ConAgua.Checker.Entry
 
 @[expose] public section
 

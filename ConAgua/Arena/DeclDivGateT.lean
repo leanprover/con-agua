@@ -9,6 +9,7 @@ import ConAgua.Arena.StageC
 import ConAgua.Checker.NoVerdictTree
 import ConAgua.L.ModelGen
 import ConRon.Bridge.Checker.DeclVal
+import all ConAgua.Arena.DeclArms
 
 @[expose] public section
 

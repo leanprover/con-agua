@@ -17,6 +17,7 @@ import ConAgua.Checker.NoVerdictTree
 public import ConAgua.Arena.RecCheckSpec.EeW
 public import ConAgua.Arena.RecCheckSpec.EqWDec
 public import ConAgua.Arena.RecCheckSpec.K53Look
+import all ConAgua.Arena.RecCheck
 
 @[expose] public section
 /-!

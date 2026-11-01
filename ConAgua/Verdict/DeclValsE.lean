@@ -8,6 +8,7 @@ import ConAgua.Arena.DeclValT
 import ConAgua.Arena.IndT.Base
 import ConAgua.Arena.RefWalk
 public import ConAgua.Arena.DeclValRef
+import all ConAgua.Arena.DeclArms
 
 @[expose] public section
 

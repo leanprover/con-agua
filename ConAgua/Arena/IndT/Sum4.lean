@@ -22,6 +22,7 @@ public import ConAgua.Arena.IndDecStab
 public import ConAgua.Arena.IndSumSpec.SumProg
 public import ConAgua.Arena.IndT.Install1
 public import ConRon.Bridge.Inductives.Rel
+import all ConAgua.Arena.IndSum
 
 @[expose] public section
 

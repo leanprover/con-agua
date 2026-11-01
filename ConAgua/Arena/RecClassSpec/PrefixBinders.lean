@@ -12,6 +12,7 @@ import ConAgua.Arena.RecClassSpec.MjW
 import ConAgua.Arena.RecClassSpec.PiBWRoom
 import ConAgua.Arena.RecClassSpec.Rec2AppendWDec
 import Std.WP.Triple.SpecLemmas
+import all ConAgua.Arena.RecClass
 
 @[expose] public section
 
