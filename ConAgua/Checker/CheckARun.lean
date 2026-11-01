@@ -14,6 +14,7 @@ meta import ConAgua.Checker.LoopStage
 meta import ConAgua.Checker.PipeFinal
 meta import ConAgua.Checker.TwinShapeQuot
 meta import ConAgua.Checker.PresizeStage
+import all Init.Data.Repr
 
 @[expose] public section
 
