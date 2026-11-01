@@ -218,7 +218,7 @@ theorem structEtaCertWith_eq (r : CoreFnsA) (fe : IFEnv) (depth : Nat) (a b wtb 
               else pure false
             | _ => pure false
           | _ => pure false
-      else pure false) := rfl
+      else pure false) := by rfl
 
 /-- The top put back, then the verdict `v` (a model step of `stuck_app_cong`, `DefEqStuckApp.lean`). -/
 def swRet (top v : Word) (m : Mem) : Option (Word × Mem) :=

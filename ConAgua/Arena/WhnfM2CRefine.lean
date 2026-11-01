@@ -13,6 +13,7 @@ import ConAgua.Front.Preserve
 import Std.WP.Triple.SpecLemmas
 public import ConAgua.Arena.WhnfIota
 import all ConAgua.Arena.WhnfM2C
+import all ConAgua.Arena.WhnfIota
 
 @[expose] public section
 
@@ -165,7 +166,7 @@ def m2cHeadT (mode : ConLeche.CheckMode) (r : CoreFnsA) (fe : IFEnv) (depth : Na
 /-- **The twin is its pieces.** -/
 theorem majorToCtor_eq (mode : ConLeche.CheckMode) (r : CoreFnsA) (fe : IFEnv) (depth : Nat)
     (recName : NIdx) (rules : List IRecRule) (major : EIdx) :
-    majorToCtor mode r fe depth recName rules major = m2cHeadT mode r fe depth rules major := rfl
+    majorToCtor mode r fe depth recName rules major = m2cHeadT mode r fe depth rules major := by rfl
 
 /-! ## Word models and L specs
 

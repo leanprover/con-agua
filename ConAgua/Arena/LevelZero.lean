@@ -88,7 +88,7 @@ end
 
 section arms
 variable (n : Nat) (m m₁ : Mem) (l b x o : Word)
-theorem pushK_some : pushK (some (o, m₁)) = some (0, m₁) := rfl
+theorem pushK_some : pushK (some (o, m₁)) = some (0, m₁) := by rfl
 theorem zeroW_z (h : lvG m l = 0) : zeroW (n + 1) m l = some (0, m) := by rw [zeroW]; simp [h]
 theorem zeroW_s (_h0 : lvG m l ≠ 0) (h : lvG m l = 1) : zeroW (n + 1) m l = some (1, m) := by
   rw [zeroW]; simp [h]

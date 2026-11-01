@@ -62,7 +62,7 @@ theorem structUnitCert_eq (r : CoreFnsA) (fe : IFEnv) (depth : Nat) (a b : EIdx)
     structUnitCert r fe depth a b = (do
       let ta ← r.inferIO depth a
       let wta ← r.whnf depth ta
-      suHeadT r fe depth b wta) := rfl
+      suHeadT r fe depth b wta) := by rfl
 
 section headRuns
 variable (r : CoreFnsA) (fe : IFEnv) (depth : Nat) (b wta : EIdx) (st : AState) (hh : EIdx)

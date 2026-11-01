@@ -356,30 +356,30 @@ theorem lappK₁_some : lappK₁ n d o l fu aw (some (x, m₁)) = lappK₁.lappK
 theorem lappK₂_some : lappK₁.lappK₂ x (some (y, m₂)) = mkAppW m₂ x y := rfl
 theorem llamK₁_some : llamK₁ n d o l fu bw (some (x, m₁)) = llamK₁.llamK₂ x (ilW n m₁ bw (d + 1) o l fu) :=
   rfl
-theorem llamK₂_some : llamK₁.llamK₂ x (some (y, m₂)) = mkLamW m₂ x y := rfl
+theorem llamK₂_some : llamK₁.llamK₂ x (some (y, m₂)) = mkLamW m₂ x y := by rfl
 theorem lfaK₁_some : lfaK₁ n d o l fu bw (some (x, m₁)) = lfaK₁.lfaK₂ x (ilW n m₁ bw (d + 1) o l fu) := rfl
-theorem lfaK₂_some : lfaK₁.lfaK₂ x (some (y, m₂)) = mkForallW m₂ x y := rfl
+theorem lfaK₂_some : lfaK₁.lfaK₂ x (some (y, m₂)) = mkForallW m₂ x y := by rfl
 theorem lleK₁_some : lleK₁ n d o l fu vw bw (some (x, m₁)) = lleK₁.lleK₂ n d o l fu bw x (ilW n m₁ vw d o l fu) :=
   rfl
 theorem lleK₂_some :
     lleK₁.lleK₂ n d o l fu bw x (some (y, m₂)) = lleK₁.lleK₃ x y (ilW n m₂ bw (d + 1) o l fu) := rfl
-theorem lleK₃_some : lleK₁.lleK₃ x y (some (z, m₃)) = mkLetW m₃ x y z := rfl
-theorem lpjK₁_some : lpjK₁ nw iw (some (x, m₁)) = mkProjW m₁ nw iw x := rfl
+theorem lleK₃_some : lleK₁.lleK₃ x y (some (z, m₃)) = mkLetW m₃ x y z := by rfl
+theorem lpjK₁_some : lpjK₁ nw iw (some (x, m₁)) = mkProjW m₁ nw iw x := by rfl
 theorem gappK₁_some : gappK₁ n h d o l fu aw (some (x, m₁)) = gappK₁.gappK₂ h d x (ilgW n m₁ aw d o l fu) :=
   rfl
 theorem gappK₂_some : gappK₁.gappK₂ h d x (some (y, m₂)) = ilsetK h d (mkAppW m₂ x y) := rfl
 theorem glamK₁_some :
     glamK₁ n h d o l fu bw (some (x, m₁)) = glamK₁.glamK₂ h d x (ilgW n m₁ bw (d + 1) o l fu) := rfl
-theorem glamK₂_some : glamK₁.glamK₂ h d x (some (y, m₂)) = ilsetK h d (mkLamW m₂ x y) := rfl
+theorem glamK₂_some : glamK₁.glamK₂ h d x (some (y, m₂)) = ilsetK h d (mkLamW m₂ x y) := by rfl
 theorem gfaK₁_some :
     gfaK₁ n h d o l fu bw (some (x, m₁)) = gfaK₁.gfaK₂ h d x (ilgW n m₁ bw (d + 1) o l fu) := rfl
-theorem gfaK₂_some : gfaK₁.gfaK₂ h d x (some (y, m₂)) = ilsetK h d (mkForallW m₂ x y) := rfl
+theorem gfaK₂_some : gfaK₁.gfaK₂ h d x (some (y, m₂)) = ilsetK h d (mkForallW m₂ x y) := by rfl
 theorem gleK₁_some :
     gleK₁ n h d o l fu vw bw (some (x, m₁)) = gleK₁.gleK₂ n h d o l fu bw x (ilgW n m₁ vw d o l fu) := rfl
 theorem gleK₂_some :
     gleK₁.gleK₂ n h d o l fu bw x (some (y, m₂)) = gleK₁.gleK₃ h d x y (ilgW n m₂ bw (d + 1) o l fu) := rfl
-theorem gleK₃_some : gleK₁.gleK₃ h d x y (some (z, m₃)) = ilsetK h d (mkLetW m₃ x y z) := rfl
-theorem gpjK₁_some : gpjK₁ h d nw iw (some (x, m₁)) = ilsetK h d (mkProjW m₁ nw iw x) := rfl
+theorem gleK₃_some : gleK₁.gleK₃ h d x y (some (z, m₃)) = ilsetK h d (mkLetW m₃ x y z) := by rfl
+theorem gpjK₁_some : gpjK₁ h d nw iw (some (x, m₁)) = ilsetK h d (mkProjW m₁ nw iw x) := by rfl
 theorem ilsetK_some (r : Word) :
     ilsetK h d (some (r, m₁)) =
       (match msetG ilSch m₁ h d r with | none => none | some m₂ => some (r, m₂)) := rfl

@@ -975,7 +975,7 @@ def rpCoreT (mode : ConLeche.CheckMode) (r : CoreFnsA) (fe : IFEnv) (depth : Nat
 
 theorem reduceProjCore_eq (mode : ConLeche.CheckMode) (r : CoreFnsA) (fe : IFEnv) (depth : Nat)
     (sn : NIdx) (i : Nat) (c : EIdx) :
-    reduceProjCore mode r fe depth sn i c = rpCoreT mode r fe depth sn i c := rfl
+    reduceProjCore mode r fe depth sn i c = rpCoreT mode r fe depth sn i c := by rfl
 
 /-! ## `reduce_proj_core` -/
 

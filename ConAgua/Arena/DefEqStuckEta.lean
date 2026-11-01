@@ -97,7 +97,7 @@ theorem etaCert_eq (mode : ConLeche.CheckMode) (r : CoreFnsA) (fe : IFEnv) (dept
             if ← r.defeq depth ty₂ ty₁ then etaBodyT mode r depth ty₁ body₁ b cod₂
             else pure false
           | _ => pure false
-      else pure false) := rfl
+      else pure false) := by rfl
 
 /-! ## The refinements -/
 

@@ -478,7 +478,7 @@ theorem lazyDeltaStep_eq (mode : ConLeche.CheckMode) (r : CoreFnsA) (fe : IFEnv)
         match ← tryUnfoldProjApp r depth a with
         | some a₂ => deltaQuick mode r depth a₂ b
         | none => ldsOneT mode r fe depth false a b
-      | true, true => bothT mode r fe depth a b) := rfl
+      | true, true => bothT mode r fe depth a b) := by rfl
 
 /-- **`lazy_delta_step`'s model, both outcomes** (generated; `unfoldable_head` lifted, the other
 callees by their unified models). -/

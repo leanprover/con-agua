@@ -182,7 +182,7 @@ end pbSpec
 
 /-! ## The functions without `PB` reads -/
 
-theorem internAllPinsPB_subPB (bs : List UInt8) : internAllPinsPB.subPB bs = internAllPinsPB := rfl
+theorem internAllPinsPB_subPB (bs : List UInt8) : internAllPinsPB.subPB bs = internAllPinsPB := by rfl
 
 /-! ## The models -/
 

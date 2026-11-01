@@ -201,7 +201,7 @@ def subIntK (n : Nat) : Option (Word × Mem) → Option (Word × Mem)
   | some (x, m₁) => lvInternW n m₁ x
 
 @[arena_grind =] theorem subIntK_some (n : Nat) (x : Word) (m₁ : Mem) :
-    subIntK n (some (x, m₁)) = lvInternW n m₁ x := rfl
+    subIntK n (some (x, m₁)) = lvInternW n m₁ x := by rfl
 
 /-- **The model of `lv_sub_int`.** -/
 def lvSubIntW : Nat → Mem → Word → Word → Word → Word → Word → Option (Word × Mem)
@@ -248,7 +248,7 @@ def kpK (b pc : Word) : Option Mem → Option (Word × Mem)
   | some m₁ => some (b, m₁.set64 CTL 136 (b + pc))
 
 @[arena_grind =] theorem kpK_some (b pc : Word) (m₁ : Mem) :
-    kpK b pc (some m₁) = some (b, m₁.set64 CTL 136 (b + pc)) := rfl
+    kpK b pc (some m₁) = some (b, m₁.set64 CTL 136 (b + pc)) := by rfl
 
 /-- **The model of `keys_push`.** -/
 def keysPushW : Nat → Mem → Word → Word → Option (Word × Mem)
@@ -290,7 +290,7 @@ def capsK1 (n : Nat) (swd so sc pc vo vc : Word) : Option (Word × Mem) → Opti
     capsK2 b (some (x, m₂)) = some (x, m₂.set64 CTL 136 b) := rfl
 @[arena_grind =] theorem capsK1_some (n : Nat) (swd so sc pc vo vc b : Word) (m₁ : Mem) :
     capsK1 n swd so sc pc vo vc (some (b, m₁)) =
-      capsK2 b (substPWW SPN POOL EREC n (m₁.set64 CTL 192 0) swd so sc b pc vo vc) := rfl
+      capsK2 b (substPWW SPN POOL EREC n (m₁.set64 CTL 192 0) swd so sc b pc vo vc) := by rfl
 
 /-- **The model of `caps_never_zero`** (none on a handle `ls_node` aborts on). -/
 def capsNeverZeroW : Nat → Mem → Word → Word → Word → Word → Word → Word → Option (Word × Mem)

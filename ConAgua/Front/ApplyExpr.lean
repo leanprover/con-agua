@@ -458,12 +458,12 @@ def constK (n o l : Word) : Option Mem → Option (Word × Mem)
   | some m₁ => constK2 n (lsinternW m₁ o l)
   | none => none
 
-@[arena_grind =] theorem constK2_none (n : Word) : constK2 n none = none := rfl
+@[arena_grind =] theorem constK2_none (n : Word) : constK2 n none = none := by rfl
 @[arena_grind =] theorem constK2_some (n g : Word) (m₂ : Mem) :
-    constK2 n (some (g, m₂)) = if g < 0x100000000 then ceinternW m₂ n g else none := rfl
+    constK2 n (some (g, m₂)) = if g < 0x100000000 then ceinternW m₂ n g else none := by rfl
 @[arena_grind =] theorem constK_none (n o l : Word) : constK n o l none = none := rfl
 @[arena_grind =] theorem constK_some (n o l : Word) (m₁ : Mem) :
-    constK n o l (some m₁) = constK2 n (lsinternW m₁ o l) := rfl
+    constK n o l (some m₁) = constK2 n (lsinternW m₁ o l) := by rfl
 
 /-- The model of `node_const(a, c)`. -/
 def constW (b : Array UInt8) (m : Mem) (a c : Word) : Option (Word × Mem) :=
@@ -486,11 +486,11 @@ def litK : Option (List Word × Mem) → Option (Word × Mem)
     else if m₁.len64 (tierA POOL (r.headD 0 >>> 40)) - (r.headD 0 - (r.headD 0 >>> 40) <<< 40) < r.tail.headD 0 then none
     else internW m₁ (r.headD 0) (r.tail.headD 0)
 
-@[arena_grind =] theorem litK_none : litK none = none := rfl
+@[arena_grind =] theorem litK_none : litK none = none := by rfl
 @[arena_grind =] theorem litK_some (r : List Word) (m₁ : Mem) : litK (some (r, m₁)) =
     if m₁.len64 (tierA POOL (r.headD 0 >>> 40)) < r.headD 0 - (r.headD 0 >>> 40) <<< 40 then none
     else if m₁.len64 (tierA POOL (r.headD 0 >>> 40)) - (r.headD 0 - (r.headD 0 >>> 40) <<< 40) < r.tail.headD 0 then none
-    else internW m₁ (r.headD 0) (r.tail.headD 0) := rfl
+    else internW m₁ (r.headD 0) (r.tail.headD 0) := by rfl
 
 theorem litK_intern {r : List Word} {m₁ m' : Mem} {w : Word} (h : litK (some (r, m₁)) = some (w, m')) :
     internW m₁ (r.headD 0) (r.tail.headD 0) = some (w, m') := by
@@ -529,11 +529,11 @@ def litStrK (o : Word) : Option (Word × Mem) → Option (Word × Mem)
     else if m₁.len64 (tierA POOL (o >>> 40)) - (o - (o >>> 40) <<< 40) < l then none
     else internWStr m₁ o l
 
-@[arena_grind =] theorem litStrK_none (o : Word) : litStrK o none = none := rfl
+@[arena_grind =] theorem litStrK_none (o : Word) : litStrK o none = none := by rfl
 @[arena_grind =] theorem litStrK_some (o l : Word) (m₁ : Mem) : litStrK o (some (l, m₁)) =
     if m₁.len64 (tierA POOL (o >>> 40)) < o - (o >>> 40) <<< 40 then none
     else if m₁.len64 (tierA POOL (o >>> 40)) - (o - (o >>> 40) <<< 40) < l then none
-    else internWStr m₁ o l := rfl
+    else internWStr m₁ o l := by rfl
 
 theorem litStrK_intern {o l : Word} {m₁ m' : Mem} {w : Word}
     (h : litStrK o (some (l, m₁)) = some (w, m')) : internWStr m₁ o l = some (w, m') := by

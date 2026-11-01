@@ -10,6 +10,7 @@ import ConAgua.Arena.Verdict
 import ConAgua.Checker.NoVerdictTree
 import ConAgua.Front.Preserve
 import all ConAgua.Arena.WhnfCore
+import all ConAgua.Arena.WhnfDelta
 
 @[expose] public section
 

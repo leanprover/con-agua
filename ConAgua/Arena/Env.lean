@@ -886,7 +886,7 @@ for none). -/
 /-- The table row's index word: `⟦w⟧.idx`. -/
 def tixW (w : Word) : Word := idxW w
 
-theorem tixW_toNat (w : Word) : (tixW w).toNat = tblIx w := rfl
+theorem tixW_toNat (w : Word) : (tixW w).toNat = tblIx w := by rfl
 
 /-- The memory after `tbl_row_set(w, v)`. -/
 def tblSet (m : Mem) (w v : Word) : Mem := m.set64 (tblArr w) (tixW w) v

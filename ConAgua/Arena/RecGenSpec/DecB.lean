@@ -71,7 +71,7 @@ def cnsLoop : Stmt := lblk (vis, p, ftOff, ftLen, tblOff, tblLen, msOff, msLen, 
   return (q, msLen)
 }
 
-theorem classesNfsL_eq : classesNfsL = classesNfsL' := rfl
+theorem classesNfsL_eq : classesNfsL = classesNfsL' := by rfl
 
 /-! ## The models -/
 

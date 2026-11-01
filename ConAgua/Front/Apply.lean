@@ -107,7 +107,7 @@ def initK : Option Mem → Option Mem
   | some m₁ => putK LID 0 (zinternW m₁)
   | none => none
 
-@[arena_grind =] theorem initK_some (m₁ : Mem) : initK (some m₁) = putK LID 0 (zinternW m₁) := rfl
+@[arena_grind =] theorem initK_some (m₁ : Mem) : initK (some m₁) = putK LID 0 (zinternW m₁) := by rfl
 
 /-- The model of `front_init`: the memory after, or `none` where the L code aborts. -/
 def frontInitW (m : Mem) : Option Mem := initK (putK NID 0 (nainternW m))

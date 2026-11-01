@@ -199,7 +199,7 @@ theorem quickDefEq_eq (mode : ConLeche.CheckMode) (r : CoreFnsA) (depth : Nat) (
       else if a.tag != b.tag then pure none
       else if a.tag == ETag.sort || a.tag == ETag.lit || a.tag == ETag.forallE ||
           a.tag == ETag.lam then quickPairT mode r depth a b
-      else pure none := rfl
+      else pure none := by rfl
 
 section qp
 variable (mode : ConLeche.CheckMode) (r : CoreFnsA) (depth : Nat) (a b : EIdx) (s : AState)

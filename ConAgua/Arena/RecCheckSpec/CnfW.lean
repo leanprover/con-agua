@@ -181,7 +181,7 @@ def cnfLoop : Stmt := lblk (nfsOff, nfsLen, name, q, j, nf, rp) {
   return (q, rp)
 }
 
-theorem classCtorOfNfs_eq : classCtorOfNfs = classCtorOfNfs' := rfl
+theorem classCtorOfNfs_eq : classCtorOfNfs = classCtorOfNfs' := by rfl
 
 /-- **The model of `class_ctor_of_nfs`' loop** at L fuel `k`: the kept count and the memory. -/
 def cnfW : Nat → Mem → Word → Word → Word → Word → Word → Word → Option (Word × Mem)
@@ -222,7 +222,7 @@ def cnfF (n : Nat) (m : Mem) (nfo nfl nm : Word) : Option (List Word × Mem) :=
 
 theorem cnfK2_some (q rp : Word) (m : Mem) : cnfK2 q (some (rp, m)) = some ([q, rp], m) := rfl
 theorem cnfK1_some (n : Nat) (nfo nfl nm q : Word) (m : Mem) :
-    cnfK1 n nfo nfl nm (some (q, m)) = cnfK2 q (cnfW (n + 1) m nfo nfl nm q 0 0) := rfl
+    cnfK1 n nfo nfl nm (some (q, m)) = cnfK2 q (cnfW (n + 1) m nfo nfl nm q 0 0) := by rfl
 
 attribute [ind_grind] cnfW_exit cnfW_hit cnfW_oob cnfW_miss cnfK2_some cnfK1_some
 

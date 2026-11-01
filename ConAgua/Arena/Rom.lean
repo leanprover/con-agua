@@ -649,7 +649,7 @@ section nameArms
 variable (rom : List UInt8) (h q l t pos o h' : Word) (m m₁ m₂ m₃ : Mem)
 theorem nmAnonK_some (hh : ¬ 4294967296 ≤ h) : nmAnonK pos (some (h, m)) = some (h, pos + 1, m) := by
   simp [nmAnonK, hh]
-theorem nmStrK_some : nmStrK h q l (some (o, m₂)) = nmStr2K q l (nsinternW m₂ h o l) := rfl
+theorem nmStrK_some : nmStrK h q l (some (o, m₂)) = nmStr2K q l (nsinternW m₂ h o l) := by rfl
 theorem nmStr2K_some (hh : ¬ 4294967296 ≤ h') : nmStr2K q l (some (h', m₃)) = some (h', q + 8 + l, m₃) := by
   simp [nmStr2K, hh]
 theorem nmNumK_some (hh : ¬ 4294967296 ≤ h') : nmNumK q (some (h', m₂)) = some (h', q + 8, m₂) := by

@@ -127,7 +127,7 @@ section arms
 variable (rom : List UInt8) (n : Nat) (m m₁ : Mem) (pos q t u v h : Word)
 theorem lvNodeK_some (hh : ¬ 4294967296 ≤ h) : lvNodeK q (some (h, m)) = some (h, q, m) := by
   simp [lvNodeK, hh]
-theorem lvParamK_some : lvParamK (some (u, q, m)) = lvNodeK q (pinternW m u) := rfl
+theorem lvParamK_some : lvParamK (some (u, q, m)) = lvNodeK q (pinternW m u) := by rfl
 theorem lvTwoK_max (ht : t = 2) : lvTwoK t u (some (v, q, m)) = lvNodeK q (minternW m u v) := by
   simp [lvTwoK, ht]
 theorem lvTwoK_imax (ht : t = 3) : lvTwoK t u (some (v, q, m)) = lvNodeK q (iminternW m u v) := by

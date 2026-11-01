@@ -124,7 +124,7 @@ def piHalfT (r : CoreFnsA) (depth : Nat) (x : EIdx) (k : Bool → AM Bool) : AM 
 
 theorem proofIrrel_eq_halves (r : CoreFnsA) (fe : IFEnv) (depth : Nat) (a b : EIdx) :
     proofIrrel r fe depth a b =
-      piHalfT r depth a (fun okA => piHalfT r depth b (fun okB => pure (okA && okB))) := rfl
+      piHalfT r depth a (fun okA => piHalfT r depth b (fun okB => pure (okA && okB))) := by rfl
 
 /-- **One half of the twin's `proofIrrel` as a computation** (the twin side of
 `proof_irrel_half`): `none` the type's head is not a sort, else the level comparison's verdict. -/

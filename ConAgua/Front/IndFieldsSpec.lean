@@ -321,14 +321,14 @@ variable (b : Array UInt8) (kind p ks s sub sz o cnt i v e c q : Word) (m₁ : M
 @[arena_grind =] theorem listK0_none : listK0 b sub v none = none := rfl
 @[arena_grind =] theorem listK0_some :
     listK0 b sub v (some (o, m₁)) = listLoopW b m₁ sub (indSizeN sub) o 0 (v + 1) := rfl
-@[arena_grind =] theorem listK2_none : listK2 b sub sz o cnt i none = none := rfl
+@[arena_grind =] theorem listK2_none : listK2 b sub sz o cnt i none = none := by rfl
 @[arena_grind =] theorem listK2_some :
     listK2 b sub sz o cnt i (some (e, m₁)) =
-      if i < e then listLoopW b m₁ sub sz o (cnt + 1) e else none := rfl
-@[arena_grind =] theorem listK1_none : listK1 b sub sz o cnt i none = none := rfl
+      if i < e then listLoopW b m₁ sub sz o (cnt + 1) e else none := by rfl
+@[arena_grind =] theorem listK1_none : listK1 b sub sz o cnt i none = none := by rfl
 @[arena_grind =] theorem listK1_some :
     listK1 b sub sz o cnt i (some (q, m₁)) =
-      listK2 b sub sz o cnt i (objW b (flagsW m₁ sub q) i sub q) := rfl
+      listK2 b sub sz o cnt i (objW b (flagsW m₁ sub q) i sub q) := by rfl
 end kArms
 
 section mArms

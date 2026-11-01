@@ -278,7 +278,7 @@ l_model romLit_spec (p : Prog) (hph : p.lookup "lit_hash" = some litHash)
 /-- The generated `romLitW`, with the pool top as `m.top` and the limb write as `litWordMem`. -/
 theorem romLitW_eq (m : Mem) (k : Word) : romLitW m k =
     if m.len64 (tierA POOL (m.top >>> 40)) ≤ (m.top &&& 1099511627775) then none
-    else if k = 0 then internW m m.top 0 else internW (litWordMem m k) m.top 1 := rfl
+    else if k = 0 then internW m m.top 0 else internW (litWordMem m k) m.top 1 := by rfl
 
 /-- `rom_ex_leaf(pos, t)`: a `bvar` (`t = 0`), `sort` (`1`), `const` (`2`) or literal (`3`) node. -/
 -- con-ron: ConRon/Arena/Frontend/Readback.lean:198-260 ConRon.Arena.Frontend.internExprGo
@@ -495,8 +495,8 @@ theorem exLeafK_some (hh : ¬ 4294967296 ≤ h) : exLeafK q (some (h, m)) = some
 theorem exNodeK_some (hh : ¬ 4294967296 ≤ h) :
     exNodeK q (some (h, m)) = (mpushW m h).map (fun m' => (h, q, m')) := by
   simp only [exNodeK, hh, ite_false]; cases mpushW m h <;> rfl
-theorem exSortK_some : exSortK (some (a, q, m)) = exLeafK q (sointernW m a) := rfl
-theorem exConst2K_some : exConst2K a (some (b, q, m)) = exLeafK q (ceinternW m a b) := rfl
+theorem exSortK_some : exSortK (some (a, q, m)) = exLeafK q (sointernW m a) := by rfl
+theorem exConst2K_some : exConst2K a (some (b, q, m)) = exLeafK q (ceinternW m a b) := by rfl
 theorem exTwoK_app (ht : t = 5) : exTwoK t a (some (b, q, m)) = exNodeK q (mkAppW m a b) := by
   simp [exTwoK, ht]
 theorem exTwoK_lam (ht : t = 6) : exTwoK t a (some (b, q, m)) = exNodeK q (mkLamW m a b) := by

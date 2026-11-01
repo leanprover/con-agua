@@ -63,7 +63,7 @@ def ipoLoop : Stmt := lblk (np, o, l, j, p, k, ok, n) {
   return 1
 }
 
-theorem indParamsOkL_eq : L.Checker.indParamsOkL = indParamsOkL' := rfl
+theorem indParamsOkL_eq : L.Checker.indParamsOkL = indParamsOkL' := by rfl
 
 /-! ## The model -/
 

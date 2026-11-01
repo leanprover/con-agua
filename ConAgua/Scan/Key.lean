@@ -650,7 +650,7 @@ grind_pattern [lang_grind] skipWsN_le => skipWsN b i
 /-! ## Specs -/
 
 /-- `rd8` (`L.PureEval`) on the input is `byteW`. -/
-theorem rd8_byteW (m : Mem) (a : ArrId) (k : Word) : L.rd8 m a k = byteW (m.arr8 a) k := rfl
+theorem rd8_byteW (m : Mem) (a : ArrId) (k : Word) : L.rd8 m a k = byteW (m.arr8 a) k := by rfl
 
 section keyAtGroups
 variable (p : Prog) (b : Array UInt8)

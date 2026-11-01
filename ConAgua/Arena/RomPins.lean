@@ -321,8 +321,8 @@ theorem irp4K_some (h : ¬ 4294967296 ≤ z) : irp4K us (some (z, m)) = irp5K us
   simp [irp4K, h]
 theorem irp3K_some (h : ¬ 4294967296 ≤ us) : irp3K (some (us, m)) = irp4K us (zinternW m) := by
   simp [irp3K, h]
-theorem irp2K_some : irp2K (some (q, m)) = irp3K (lsinternW m 0 0) := rfl
-theorem irp1K_some : irp1K rom n (some (q, m)) = irp2K (romNamesToW rom n m q 16 55) := rfl
+theorem irp2K_some : irp2K (some (q, m)) = irp3K (lsinternW m 0 0) := by rfl
+theorem irp1K_some : irp1K rom n (some (q, m)) = irp2K (romNamesToW rom n m q 16 55) := by rfl
 theorem irpW_eq (off : Word) (h : ¬ m.len64 PINS < 71) :
     irpW rom (n + 1) off m = irp1K rom n (romNamesToW rom n m off 51 1) := by simp [irpW, h]
 end irpArms

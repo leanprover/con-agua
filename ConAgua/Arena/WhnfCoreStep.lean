@@ -43,7 +43,7 @@ theorem whnfCoreAppT_eq (mode : ConLeche.CheckMode) (r : CoreFnsA) (fe : IFEnv) 
     whnfCoreAppT mode r fe cheap depth e = (do
       let sp ← getAppSpine coreWalkFuel e
       let v ← r.whnfCore cheap depth sp.1
-      whnfCoreApp2T mode r fe depth v sp.1 sp.2.1 sp.2.2) := rfl
+      whnfCoreApp2T mode r fe depth v sp.1 sp.2.1 sp.2.2) := by rfl
 
 section app
 variable (p : Prog) (hp : WhnfCoreProg p) (hwc : WhnfCallees p) (hcc : CoreCallees p)

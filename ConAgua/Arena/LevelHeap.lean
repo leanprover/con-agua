@@ -159,7 +159,7 @@ def lvG (m : Mem) (p : Word) : Word := (lvNodeW m p).headD 0
 def lvA (m : Mem) (p : Word) : Word := (lvNodeW m p).tail.headD 0
 def lvB (m : Mem) (p : Word) : Word := (lvNodeW m p).tail.tail.headD 0
 
-theorem lvG_eq (m : Mem) (p : Word) : lvG m p = (lvNodeW m p).headD 0 := rfl
+theorem lvG_eq (m : Mem) (p : Word) : lvG m p = (lvNodeW m p).headD 0 := by rfl
 theorem lvA_eq (m : Mem) (p : Word) : lvA m p = (lvNodeW m p).tail.headD 0 := rfl
 theorem lvB_eq (m : Mem) (p : Word) : lvB m p = (lvNodeW m p).tail.tail.headD 0 := rfl
 attribute [level_grind =] lvG_eq lvA_eq lvB_eq

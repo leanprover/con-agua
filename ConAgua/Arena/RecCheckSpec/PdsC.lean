@@ -65,7 +65,7 @@ theorem tpd_nil (fe : IFEnv) (d : Nat) (names : List NIdx) (lvls : LsIdx) (holes
 
 theorem tpd_nilr (fe : IFEnv) (d : Nat) (names : List NIdx) (lvls : LsIdx) (holes pfvs : List EIdx)
     (a : EIdx) (as : List EIdx) :
-    ConRon.Arena.targetParamsDefEq V fe d names lvls holes pfvs (a :: as) [] = pure false := rfl
+    ConRon.Arena.targetParamsDefEq V fe d names lvls holes pfvs (a :: as) [] = pure false := by rfl
 
 theorem word_lt_iff {a b : UInt64} : a < b ↔ a.toNat < b.toNat := UInt64.lt_iff_toNat_lt
 

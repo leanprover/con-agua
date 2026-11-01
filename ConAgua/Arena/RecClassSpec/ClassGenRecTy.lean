@@ -107,7 +107,7 @@ theorem rec2RecTy_eq (G : ClassGen) (c : Nat) : ConRon.Arena.classGenRecTy G c =
     | none => pure none
     | some (ifs, maj) => do
       let t ← internE (.fvar (G.pre.length + ifs.length) maj)
-      rec2RecTyTail G c ifs maj t) := rfl
+      rec2RecTyTail G c ifs maj t) := by rfl
 
 section sims
 variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
