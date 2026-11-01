@@ -123,12 +123,12 @@ statement-level dependencies of the refinement proofs reach almost everything ab
 A model of the rule (the public-closure rule of §1 on the current headers) predicts 650 for this
 edit; the build rebuilt 632.
 
-**Cold build** (fresh worktree, `LAKE_COLD=1`, 4 jobs): before 2,103 modules, 6,247 module-s,
-1,664 s, peak 17.2 GB; after: see §3.1.
-
-### 3.1 Cold build after
-
-(filled in below)
+**Cold build** (fresh worktree, `LAKE_COLD=1`, 4 jobs, 2,103 modules both): before 6,247
+module-s, 1,664 s, peak 17.2 GB (load ~10); after 6,375 module-s, 1,689 s, peak 12.9 GB (load
+50–78). The vendored and Kraken modules, whose sources did not change, took 944 → 1,009 module-s
+(+7 %, the load); ConAgua's 5,302 → 5,366 (+1 %): the module system costs no elaboration time
+measurably, and a build peaks lower (an import loads only the public part of its closure; the
+incremental builds of §3 peaked at 10 GB instead of 17.8).
 
 ## 4. Statement changes
 
@@ -158,4 +158,8 @@ code modules (it then also rebuilds on proof edits there).
 * The header fixers ran in a loop (build, parse the errors, fix, commit): 9 full builds before
   the demotions, 7 after, 15 to 30 minutes each at 4 jobs while most of the tree rebuilt.
 * `lean --run` on a module needs `meta import` of what `main` runs; compiled executables (`lake
-  exe romgen`, `census`, …) are unaffected.
+  exe romgen`, `census`, …) are unaffected. `scripts/census.py` gives the same report.
+* **Left classic:** `ConAgua/Audit/Final.lean` (the task: unchanged) and `ConAgua/Census/Main.lean`
+  (the census executable's root: as a module its non-`meta` code may not read the `meta`
+  attribute data of `Census/Attr`; nothing imports it, so it costs no cutoff). The other
+  executables' roots (`E2E/*`, `Rom/Test`, the benchmarks) are modules.
