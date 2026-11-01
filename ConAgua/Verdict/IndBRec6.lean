@@ -1,5 +1,6 @@
 module
 
+public import ConRon.Bridge.Inductives.PosWalks
 public import ConAgua.Verdict.IndBRec5
 public import ConAgua.Arena.IndSumSpec.ConsBlockRecsTF
 public import ConAgua.Arena.GrindAttr

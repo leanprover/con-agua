@@ -1,5 +1,6 @@
 module
 
+public import ConRon.Bridge.Checker.Names
 public import ConRon.Bridge.Inductives.PosWalks
 public import ConRon.Bridge.Inductives.SumInstall
 public import ConAgua.Arena.IndT.Sum3
