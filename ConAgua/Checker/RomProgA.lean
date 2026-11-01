@@ -3,6 +3,11 @@ module
 import ConAgua.Checker.LoopProgTac
 meta import ConAgua.Checker.LoopProgTac
 public import ConAgua.Checker.Prog
+import all ConAgua.Arena.ConsLib
+import all ConAgua.Arena.NNumStore
+import all ConAgua.Arena.ParamStore
+import all ConAgua.Arena.RomLevels
+import all ConAgua.Arena.RomPins
 
 @[expose] public section
 

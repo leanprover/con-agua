@@ -1,6 +1,16 @@
 module
 
 public import ConAgua.Arena.DeclCvg
+import all ConAgua.Arena.CoreLevels
+import all ConAgua.Arena.DeclStep
+import all ConAgua.Arena.IndIface
+import all ConAgua.Arena.LevelEquiv
+import all ConAgua.Arena.LevelHeap
+import all ConAgua.Arena.LevelLeq
+import all ConAgua.Arena.LevelSimp
+import all ConAgua.Arena.LevelSubst
+import all ConAgua.Arena.MemoLib
+import all ConAgua.Arena.Pins
 
 @[expose] public section
 

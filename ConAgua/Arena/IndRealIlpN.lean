@@ -13,6 +13,11 @@ import Std.WP.Triple.SpecLemmas
 public import ConAgua.Arena.CallF
 public import ConAgua.Arena.StripTeleSpec
 public import ConAgua.Arena.StubNames
+import all ConAgua.Arena.ConsLib
+import all ConAgua.Arena.IndIface
+import all ConAgua.Arena.NStrStore
+import all ConAgua.Arena.Store
+import all ConAgua.Arena.StubNames
 
 @[expose] public section
 

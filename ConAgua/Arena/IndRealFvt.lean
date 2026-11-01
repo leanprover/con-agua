@@ -14,6 +14,8 @@ import Std.WP.Triple.SpecLemmas
 public import ConAgua.Arena.DeclNatBase
 import all ConAgua.Arena.IndIface
 import all ConAgua.Arena.WhnfEntry
+import all ConAgua.Arena.TeleLift
+import all ConAgua.Arena.WhnfSpineArgs
 
 @[expose] public section
 
