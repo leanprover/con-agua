@@ -2,6 +2,7 @@ module
 
 import ConAgua.Front.IndApplyRefine
 import ConAgua.Arena.IndPartsSpec.BlockSplitRecs
+public import ConAgua.Arena.RecSim
 public import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
 public import ConAgua.L.GrindAttr

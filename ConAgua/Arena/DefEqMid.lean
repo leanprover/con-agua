@@ -8,7 +8,6 @@ import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
 import ConAgua.Arena.WhnfCoreProj
 public import ConAgua.Verdict.WhnfModels7E
-import ConAgua.Arena.InferBodyLet
 import ConAgua.Arena.RefWalk
 import ConAgua.Checker.NoVerdictTree
 

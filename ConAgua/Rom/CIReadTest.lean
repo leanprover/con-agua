@@ -1,5 +1,6 @@
 module
 
+public import ConAgua.Compiler.WF
 public import ConAgua.Rom.CIRead
 public import ConAgua.Arena.DeclRomStubs
 public import ConAgua.Rom.PinStream

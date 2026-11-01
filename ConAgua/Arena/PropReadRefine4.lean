@@ -2,7 +2,6 @@ module
 
 public import ConAgua.Arena.PropReadRefine3
 import ConAgua.Arena.DefEqLeaves2
-import ConAgua.Arena.FuelConsts
 import ConRon.Bridge.Grind
 public import ConAgua.Arena.WhnfCore
 
