@@ -3,6 +3,10 @@ module
 public import ConAgua.Rom.DataLit
 public import ConAgua.Rom.Subst
 public import ConAgua.Arena.IndIface
+import all ConAgua.Arena.Rom
+import all ConAgua.Arena.RomExpr
+import all ConAgua.Arena.RomItems
+import all ConAgua.Arena.RomLevel
 
 @[expose] public section
 
@@ -120,12 +124,12 @@ open L.Arena L.Ind
   return top
 }
 
-theorem romU64PB_subPB (bs : List UInt8) : romU64PB.subPB bs = romU64 bs := rfl
-theorem romPutPB_subPB (bs : List UInt8) : romPutPB.subPB bs = romPut bs := rfl
-theorem romName_subPB (bs : List UInt8) : (romName []).toPB.subPB bs = romName bs := rfl
-theorem romLevel_subPB (bs : List UInt8) : (romLevel []).toPB.subPB bs = romLevel bs := rfl
-theorem romExpr_subPB (bs : List UInt8) : (romExpr []).toPB.subPB bs = romExpr bs := rfl
-theorem romItems_subPB (bs : List UInt8) : (romItems []).toPB.subPB bs = romItems bs := rfl
+theorem romU64PB_subPB (bs : List UInt8) : romU64PB.subPB bs = romU64 bs := by rfl
+theorem romPutPB_subPB (bs : List UInt8) : romPutPB.subPB bs = romPut bs := by rfl
+theorem romName_subPB (bs : List UInt8) : (romName []).toPB.subPB bs = romName bs := by rfl
+theorem romLevel_subPB (bs : List UInt8) : (romLevel []).toPB.subPB bs = romLevel bs := by rfl
+theorem romExpr_subPB (bs : List UInt8) : (romExpr []).toPB.subPB bs = romExpr bs := by rfl
+theorem romItems_subPB (bs : List UInt8) : (romItems []).toPB.subPB bs = romItems bs := by rfl
 
 /-! ## `pb_check()` -/
 

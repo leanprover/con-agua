@@ -11,6 +11,7 @@ import ConAgua.Front.Preserve
 import ConRon.Arena.WFProofs
 import Std.WP.Triple.SpecLemmas
 public import ConAgua.Arena.WhnfCore
+import all ConAgua.Arena.WhnfCore
 
 @[expose] public section
 
@@ -370,7 +371,7 @@ con-ron: ConRon/Arena/Core.lean:2207-2226 ConRon.Arena.betaPeel -/
   return (1, e2)
 }
 
-theorem betaPeelL_eq : betaPeelL = betaPeelL' := rfl
+theorem betaPeelL_eq : betaPeelL = betaPeelL' := by rfl
 
 /-- How a loop ends: by a `return` (`st`, `r`, the memory) or by its condition failing (the
 locals the tail reads: `t`, `cn`, and the memory). -/

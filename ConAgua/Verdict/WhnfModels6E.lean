@@ -11,6 +11,7 @@ public import Std.Tactic.BVDecide.Normalize.Prop
 public import ConAgua.Checker.NoVerdictFns
 public import ConAgua.L.ErrSpec
 import all ConAgua.Arena.WhnfIota
+import all ConAgua.Arena.WhnfM2C
 
 @[expose] public section
 

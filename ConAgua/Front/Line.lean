@@ -43,9 +43,9 @@ open L.Front.Unescape (strPutEscW strPutEsc_specW escSur escOne utf8Put strPutEs
 namespace L.Front
 
 /-- con-ron: ConRon/Arena/Frontend/ExportC.lean:468-481 ConRon.Arena.Frontend.applyLine -/
-@[l_impl ConRon.Arena.Frontend.applyLine]
+@[no_expose, l_impl ConRon.Arena.Frontend.applyLine]
 -- con-leche: ConLeche/Frontend/Scan/Fast.lean:2576-2599 ConLeche.Frontend.scanLineFwd
-@[no_expose] def frontLine : FunDecl := lfn (i) locals (ok, nx, s, pl, idx, a, c, d, j, q) {
+def frontLine : FunDecl := lfn (i) locals (ok, nx, s, pl, idx, a, c, d, j, q) {
   s := call skip_ws(i);
   if s < len(IN.u8) && IN.u8[s] == 10 { return (1, s + 1) };
   if len(IN.u8) <= s { return (1, 0) };
