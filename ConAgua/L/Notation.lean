@@ -5,7 +5,7 @@ public import ConAgua.L.TRec
 public meta import Lean
 import Lean.Exception
 
-public section
+@[expose] public section
 
 /-!
 # L: concrete syntax

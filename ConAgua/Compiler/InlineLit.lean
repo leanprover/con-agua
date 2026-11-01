@@ -65,7 +65,7 @@ syntax (name := idxLit) "idx_lit " ident " : " term:max : command
     synthesizeSyntheticMVarsNoPostponing
     let pE ← instantiateMVars pE
     let some t ← evalOptNTree (mkApp (mkConst ``Prog.idxTree) pE) | throwError "idx_lit: a name occurs twice"
-    addAndCompile (.defnDecl (mkDefinitionValEx name [] (mkConst ``NTree) (ntreeToExpr t) .abbrev .safe []))
+    withExporting <| addAndCompile (.defnDecl (mkDefinitionValEx name [] (mkConst ``NTree) (ntreeToExpr t) .abbrev .safe []))
 
 /-- `idx_lit_eq name : p` (after `idx_lit name : p`): `name_eq : Prog.idxTree p = some name`, one
 kernel check over the names. Only the correctness theorem needs it, not the literals. -/
@@ -219,9 +219,9 @@ meta unsafe def declInlFns (name : Name) (envE : Lean.Expr) (elems : Array Lean.
     let v := q[i]!
     let same := reprStr v == reprStr p[i]!.2
     let lit := if same then fdE else funDeclE rom v
-    addDecl (.defnDecl (mkDefinitionValEx n [] funDeclTy lit .abbrev .safe []))
+    withExporting <| addDecl (.defnDecl (mkDefinitionValEx n [] funDeclTy lit .abbrev .safe []))
     -- compiled code runs `n` as the inlining itself (the literal is not compiled)
-    addAndCompile (.defnDecl (mkDefinitionValEx (n ++ `impl) [] funDeclTy (mkApp2 (mkConst ``inlFn) envE fdE)
+    withExporting <| addAndCompile (.defnDecl (mkDefinitionValEx (n ++ `impl) [] funDeclTy (mkApp2 (mkConst ``inlFn) envE fdE)
       .opaque .safe []))
     match Compiler.implementedByAttr.setParam (← getEnv) n (n ++ `impl) with
     | .ok env => setEnv env
@@ -296,11 +296,11 @@ syntax (name := inlRoundCmd) (docComment)? "inl_round " ident " : " term:max ter
       let (_, fE, _) ← progElem i elems[i]!
       let fi := mkConst (name ++ Name.mkSimple s!"f{i}")
       lit := mkApp3 (mkConst ``List.cons [0]) elemTy (mkApp4 (mkConst ``Prod.mk [0, 0]) (mkConst ``String) funDeclTy fE fi) lit
-    addDecl (.defnDecl (mkDefinitionValEx name [] progT lit .abbrev .safe []))
+    withExporting <| addDecl (.defnDecl (mkDefinitionValEx name [] progT lit .abbrev .safe []))
     addDocString' name .missing doc?
     -- compiled code runs `name` as the round itself (the literal's functions are not compiled)
     let implN := name ++ `impl
-    addAndCompile (.defnDecl (mkDefinitionValEx implN [] progT
+    withExporting <| addAndCompile (.defnDecl (mkDefinitionValEx implN [] progT
       (mkApp3 (mkConst ``inlRound) sE tE (← elabVia pE (v?.map (·.raw)))) .opaque .safe []))
     match Compiler.implementedByAttr.setParam (← getEnv) name implN with
     | .ok env => setEnv env

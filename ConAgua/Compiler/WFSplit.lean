@@ -149,7 +149,7 @@ syntax (name := nrtLit) "nrt_lit " ident " : " term:max : command
     let lhs := mkApp (mkConst ``Prog.nrt) pE
     let t ← evalNTree lhs
     let treeTy := mkConst ``NTree
-    addAndCompile (.defnDecl (mkDefinitionValEx name [] treeTy (ntreeToExpr t) .abbrev .safe []))
+    withExporting <| addAndCompile (.defnDecl (mkDefinitionValEx name [] treeTy (ntreeToExpr t) .abbrev .safe []))
     addDecl (thm (name.appendAfter "_eq") (mkApp3 (mkConst ``Eq [1]) treeTy lhs (mkConst name))
       (mkApp2 (mkConst ``Eq.refl [1]) treeTy lhs) [])
 
@@ -241,7 +241,7 @@ syntax (name := sktLit) "skt_lit " ident " : " term:max term:max : command
     let lhs := mkApp2 (mkConst ``Prog.skt) pE entryE
     let t ← evalNTree lhs
     let treeTy := mkConst ``NTree
-    addAndCompile (.defnDecl (mkDefinitionValEx name [] treeTy (ntreeToExpr t) .abbrev .safe []))
+    withExporting <| addAndCompile (.defnDecl (mkDefinitionValEx name [] treeTy (ntreeToExpr t) .abbrev .safe []))
     let eqTy := mkApp3 (mkConst ``Eq [1]) treeTy lhs (mkConst name)
     let partN (i : Nat) := name ++ Name.mkSimple s!"part{i}"
     if !(← getEnv).contains (partN 0) then
@@ -308,7 +308,7 @@ meta unsafe def declProgTree (name : Name) (pE : Lean.Expr) : MetaM Unit := do
     | throwError "prog_wf: two functions have the same name"
   let treeN := name ++ `tree
   let treeTy := mkConst ``NTree
-  addAndCompile (.defnDecl (mkDefinitionValEx treeN [] treeTy (ntreeToExpr tree) .abbrev .safe []))
+  withExporting <| addAndCompile (.defnDecl (mkDefinitionValEx treeN [] treeTy (ntreeToExpr tree) .abbrev .safe []))
   let someTree := mkApp2 (mkConst ``Option.some [0]) treeTy (mkConst treeN)
   let optTy := mkApp (mkConst ``Option [0]) treeTy
   addDecl ((thm (name ++ `tree_eq)

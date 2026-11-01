@@ -179,7 +179,7 @@ syntax (name := namesTreeCmd) (docComment)? "names_tree " ident " : " term : com
     let some tree ← evalTree (mkApp (mkConst ``namesTree) fsE)
       | throwError "names_tree: the tree does not evaluate"
     let treeTy := mkConst ``NTree
-    addAndCompile (.defnDecl (mkDefinitionValEx name [] treeTy (ntreeToExpr tree) .abbrev .safe []))
+    withExporting <| addAndCompile (.defnDecl (mkDefinitionValEx name [] treeTy (ntreeToExpr tree) .abbrev .safe []))
     addDocString' name .missing doc?
     let someTree := mkApp2 (mkConst ``Option.some [0]) treeTy (mkConst name)
     let optTy := mkApp (mkConst ``Option [0]) treeTy

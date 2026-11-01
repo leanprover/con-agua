@@ -1,6 +1,7 @@
 module
 
 public import ConAgua.E2E.Dump
+public meta import ConAgua.E2E.Dump
 
 @[expose] public section
 
@@ -23,7 +24,7 @@ open Lean Meta Elab Command
 
 /-- The `(name, FunDecl term)` entries of a `Prog`-valued term, by weak-head reduction of the list
 (first binding of a name first, as in `List.lookup`). -/
-partial def progEntries (e : Lean.Expr) (acc : Array (String × Lean.Expr) := #[]) :
+meta partial def progEntries (e : Lean.Expr) (acc : Array (String × Lean.Expr) := #[]) :
     MetaM (Array (String × Lean.Expr)) := do
   let e ← whnfD e
   match e.getAppFnArgs with
@@ -40,7 +41,7 @@ partial def progEntries (e : Lean.Expr) (acc : Array (String × Lean.Expr) := #[
   | _ => throwError "not a list: {e}"
 
 /-- The FunDecl term `SOURCE` binds to `name`. -/
-def sourceTerm (src name : String) : MetaM Lean.Expr := do
+meta def sourceTerm (src name : String) : MetaM Lean.Expr := do
   let env ← getEnv
   let rom := src.endsWith "@rom"
   let c := (if rom then src.dropEnd 4 else src).toName
@@ -65,7 +66,7 @@ def sourceTerm (src name : String) : MetaM Lean.Expr := do
     | some (_, d) => pure d
     | none => throwError "no lookup of {name} in {c}"
 
-def writeSourcesImpl (inp out : System.FilePath) : CommandElabM Unit := liftTermElabM do
+meta def writeSourcesImpl (inp out : System.FilePath) : CommandElabM Unit := liftTermElabM do
   let env ← getEnv
   let mut lines : Array String := #[]
   for l in (← IO.FS.lines inp) do
@@ -85,6 +86,6 @@ def writeSourcesImpl (inp out : System.FilePath) : CommandElabM Unit := liftTerm
   IO.FS.writeFile out ("\n".intercalate lines.toList ++ "\n")
 
 /-- Run from a generated file (`scripts/checker_prog.py`). -/
-def writeSources (inp out : System.FilePath) : CommandElabM Unit := writeSourcesImpl inp out
+meta def writeSources (inp out : System.FilePath) : CommandElabM Unit := writeSourcesImpl inp out
 
 end L.Checker

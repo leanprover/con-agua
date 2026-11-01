@@ -721,22 +721,42 @@ meta partial def shiftPos (s : Syntax) (off : Nat) : Syntax :=
   | .ident i raw v pre => .ident (sh i) raw v pre
   | .missing => .missing
 
+/-- The text of the declaration of `c` in the module source `src`: from the column-0 line that
+declares `c`'s last component (`def`/`abbrev`, after attributes and modifiers) up to the next line
+that starts a command at column 0 (anything but a closing bracket). -/
+meta def declText? (src : String) (c : Name) : Option String := do
+  let short := c.getString!
+  let lines := (src.splitOn "\n").toArray
+  let declares (l : String) : Bool :=
+    let ws := (l.splitOn " ").filter (· ≠ "")
+    !l.startsWith " " && !l.startsWith "-" &&
+      (ws.zip ws.tail).any fun (k, n) => (k == "def" || k == "abbrev") && (n.dropEndWhile (· == ':')).toString == short
+  let some i := lines.findIdx? declares | none
+  let mut j := i + 1
+  while j < lines.size do
+    let l := lines[j]!
+    if !l.isEmpty && !l.front.isWhitespace && l.front != '}' && l.front != ')' then break
+    j := j + 1
+  return "\n".intercalate (lines.extract i j).toList
+
 /-- The `lfn` term of `c`, read back from its source file (this file, or the `.lean` file of the
 module that declares it, found from the module name relative to the working directory), with the
 sugar statements expanded as the notation expands them (`L.Notation.desugarAll`). -/
 meta def declSyntax (c : Name) (kw : String := "lfn") : TermElabM Syntax := do
-  let some rs ← findDeclarationRanges? c | throwError "l_model: no source for {c}"
   let env ← getEnv
-  let (fm, here) ← match env.getModuleIdxFor? c with
-    | none => pure ((← getFileMap), true)
+  let (txt, p1, here) ← match env.getModuleIdxFor? c with
+    | none =>
+      let some rs ← findDeclarationRanges? c | throwError "l_model: no source for {c}"
+      let fm ← getFileMap
+      let p1 := fm.ofPosition rs.range.pos
+      pure (String.Pos.Raw.extract fm.source p1 (fm.ofPosition rs.range.endPos), p1, true)
     | some idx =>
+      -- a module's importers do not get its declaration ranges (server data): find the text
       let mod := env.header.moduleNames[idx.toNat]!
       let path : System.FilePath := (mod.toString.replace "." "/") ++ ".lean"
-      pure (FileMap.ofString (← IO.FS.readFile path), false)
-  let src := fm.source
-  let p1 := fm.ofPosition rs.range.pos
-  let p2 := fm.ofPosition rs.range.endPos
-  let txt := (String.Pos.Raw.extract src p1 p2)
+      let some txt := declText? (← IO.FS.readFile path) c
+        | throwError "l_model: no source for {c} in {path}"
+      pure (txt, ⟨0⟩, false)
   -- the text after the first `:=` that is followed (after white space) by `kw`
   let parts := txt.splitOn ":="
   let mut pos := parts.head!.utf8ByteSize

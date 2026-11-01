@@ -72,7 +72,7 @@ syntax (name := asmStub) (docComment)? "asm_stub " ident " : " ident : command
     let fileN ← realizeGlobalConstNoOverload fileS
     let some fileV := (← getConstInfo fileN).value? | throwError "asm_stub: {fileN} has no value"
     let some (sLit, _) := appendArgs? fileV | throwError "asm_stub: {fileN} is not `stub ++ code`"
-    addDecl (.defnDecl (mkDefinitionValEx stubN [] progTy sLit .abbrev .safe []))
+    withExporting <| addDecl (.defnDecl (mkDefinitionValEx stubN [] progTy sLit .abbrev .safe []))
     addDocString' stubN .missing doc?
 
 syntax (name := asmFileEq) (docComment)? "asm_file_eq " ident " : " ident " = " ident " ++ " ident
@@ -105,7 +105,7 @@ syntax (name := asmFileEq) (docComment)? "asm_file_eq " ident " : " ident " = " 
     | some ci =>
       unless ci.value? == some sLit do
         throwError "asm_file_eq: {stubN} is not the stub of {fileN} (rebuild its `asm_stub` module)"
-    | none => addDecl (.defnDecl (mkDefinitionValEx stubN [] progTy sLit .abbrev .safe []))
+    | none => withExporting <| addDecl (.defnDecl (mkDefinitionValEx stubN [] progTy sLit .abbrev .safe []))
     let eqTy (a b : Lean.Expr) := mkApp3 (mkConst ``Eq [1]) progTy a b
     let appC := mkApp4 (mkConst ``HAppend.hAppend [0, 0, 0]) progTy progTy progTy
       (mkApp2 (mkConst ``instHAppendOfAppend [0]) progTy (mkApp (mkConst ``List.instAppend [0]) dirTy))

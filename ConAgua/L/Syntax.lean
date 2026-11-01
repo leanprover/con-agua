@@ -1,6 +1,6 @@
 module
 
-public section
+@[expose] public section
 
 /-!
 # L: abstract syntax

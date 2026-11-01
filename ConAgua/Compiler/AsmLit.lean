@@ -67,7 +67,7 @@ meta partial def listElemsW (e : Lean.Expr) (acc : Array Lean.Expr := #[]) : Met
 the caller. -/
 meta def declLitDef (n : Name) (f : String) (v : Program) : MetaM Unit := do
   let lit := programExpr (v.toArray.map (directiveExpr f))
-  addDecl (.defnDecl (mkDefinitionValEx n [] progTy lit .abbrev .safe []))
+  withExporting <| addDecl (.defnDecl (mkDefinitionValEx n [] progTy lit .abbrev .safe []))
 
 /-- Declare `n : Program := lit` and `n_eq : lhs = n` by `Eq.refl` (the kernel evaluates `lhs`). -/
 meta def declLit (n : Name) (lhs : Lean.Expr) (f : String) (v : Program) : MetaM Unit := do
@@ -223,7 +223,7 @@ syntax (name := asmLit) (docComment)? "asm_lit " ident " : " term:max ident iden
       rhs := appE appC fi rhs
       tl := consTl
     let whole := appendE (mkConst trampN) rhs
-    addDecl (.defnDecl (mkDefinitionValEx name [] progTy whole .abbrev .safe []))
+    withExporting <| addDecl (.defnDecl (mkDefinitionValEx name [] progTy whole .abbrev .safe []))
     addDocString' name .missing doc?
     -- `compileProgT tab nrt skt p entry = name`: `p` unfolds to the literal `tl`
     let appC := mkApp4 (mkConst ``HAppend.hAppend [0, 0, 0]) progTy progTy progTy

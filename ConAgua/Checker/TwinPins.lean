@@ -1,5 +1,7 @@
 module
 
+public import ConRon.Bridge.Checker.Names
+public import ConRon.Bridge.Checker.DeclVal
 public import ConRon.Bridge.Checker.Basis
 public import ConRon.Bridge.Checker.Pins
 

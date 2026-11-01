@@ -3,6 +3,7 @@ module
 public import ConAgua.Rom.Dec
 public import ConRon.Bridge.Frontend.Shared
 public import ConAgua.Arena.RomExprRef
+import all ConRon.Bridge.Frontend.Shared
 
 @[expose] public section
 

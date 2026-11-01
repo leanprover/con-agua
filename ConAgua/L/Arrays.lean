@@ -3,7 +3,7 @@ module
 public import ConAgua.L.Syntax
 public meta import Lean
 
-public section
+@[expose] public section
 
 /-!
 # Array tables: names, kinds and tiers of a program's arrays
