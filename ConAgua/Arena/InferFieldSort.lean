@@ -10,7 +10,6 @@ public import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
 public import ConAgua.Arena.Env
 import ConAgua.Arena.DerRel
-import ConAgua.Arena.LevelInternRef
 import Std.WP.Triple.SpecLemmas
 
 @[expose] public section

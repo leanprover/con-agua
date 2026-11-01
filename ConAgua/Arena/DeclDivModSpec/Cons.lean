@@ -1,5 +1,6 @@
 module
 
+public import ConAgua.Rom.PinSets
 public import ConAgua.Arena.IndCallM
 public import ConAgua.Arena.DeclDivModSpec.PureRun
 public import ConAgua.Arena.DeclNatBase

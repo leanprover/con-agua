@@ -12,7 +12,6 @@ import ConAgua.L.GrindAttr
 public import Std.Tactic.BVDecide.Normalize.BitVec
 public import Std.Tactic.BVDecide.Normalize.Prop
 public import Std.WP.Tactic
-import ConAgua.Arena.WhnfCoreProj
 import ConAgua.Arena.WhnfCoreSlot
 import ConAgua.L.ModelGen
 public import ConAgua.Checker.NoVerdictFns
