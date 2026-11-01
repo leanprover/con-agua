@@ -128,17 +128,23 @@ constant comes first (`idxA`, `StoreFields.lean`, says why). -/
 /-- The node index of any handle word, con-ron's `Idx.idxNat` itself (bits 29…0 of a wide word,
 25…0 of a narrow one): `h & (2^26 - 1 + w · (2^30 - 2^26))`, `w` the shape bit. The twin's
 `derived` (`ETables.derAt`, `LTables.derAt`) reads the derived column at this index without a
-shape test, so the derived reads of the `app` and `param` arms use it. -/
+shape test, so the derived reads of the `app` and `param` arms use it. Every right operand is a
+constant or `h`: the code generator then needs no frame temporary for it (`tempsE`). -/
 @[expose] def idxGE (h : Expr) : Expr :=
-  .bin .and h (.bin .add (.const 0x3ffffff)
-    (.bin .mul (.bin .and (.bin .shr h (.const 30)) (.const 1)) (.const 0x3c000000)))
+  .bin .and (.bin .add (.bin .mul (.bin .and (.bin .shr h (.const 30)) (.const 1)) (.const 0x3c000000))
+    (.const 0x3ffffff)) h
+
+/-- The constructor tag of each value of a handle word's bits 30…26 (the shape bit, then the tag
+field): the field itself for a narrow word (`0 … 15`), `4` (`app`) for a wide one (`16 … 31`). -/
+@[expose] def tagTbl : List UInt8 :=
+  [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
+   4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4]
 
 /-- The constructor tag of a handle word, the twin's `Idx.tag`: `4` (`app`) for a wide word,
-bits 29…26 of a narrow one; branch-free, `f + w * (4 - f)` with `f = (h >> 26) & 15` and the
-shape bit `w = (h >> 30) & 1`. -/
+bits 29…26 of a narrow one: one read of the constant table `tagTbl` at bits 30…26. (Its value
+`tagW`, `StoreFields.lean`, is the arithmetic form `f + w * (4 - f)`, `f = (h >> 26) & 15`,
+`w = (h >> 30) & 1`; as an expression that is nine operations, `h` read three times.) -/
 @[expose] def tagE (h : Expr) : Expr :=
-  .bin .add (.bin .and (.bin .shr h (.const 26)) (.const 15))
-    (.bin .mul (.bin .and (.bin .shr h (.const 30)) (.const 1))
-      (.bin .sub (.const 4) (.bin .and (.bin .shr h (.const 26)) (.const 15))))
+  .ldc tagTbl (.bin .and (.bin .shr h (.const 26)) (.const 31))
 
 end L
