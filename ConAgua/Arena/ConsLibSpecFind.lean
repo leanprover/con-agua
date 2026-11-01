@@ -11,6 +11,7 @@ import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
 import ConAgua.Front.Preserve
+import all ConAgua.Arena.ConsLib
 
 @[expose] public section
 
