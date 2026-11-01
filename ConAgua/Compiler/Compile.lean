@@ -843,6 +843,15 @@ def Ctx.ck (ctx : Ctx) (k : Option AKey) (i : Expr) (mn : Nat) : Bool := !safeId
 def chkR (ck : Bool) (r : Reg64) (ln : AddrExpr) : Program :=
   if ck then [i64 (.cmp (.reg (rr r)) (oM ln)), jccL .nc errorL] else []
 
+/-- The bounds check of index register `r` against the constant length `n`, if `ck`. -/
+def chkI (ck : Bool) (r : Reg64) (n : Nat) : Program :=
+  if ck then [i64 (.cmp (.reg (rr r)) (oI n)), jccL .nc errorL] else []
+
+/-- `d := byte [r15 + d + off]`, zero-extended: a read of the constant data at `off` from the
+table (`ldc`, indexed by `d`). -/
+abbrev ldcA (d : Reg64) (off : Int) : Directive :=
+  i64 (.movzx (.reg (rr d)) (w' := .W8) (.mem ⟨some (.reg .r15), some ⟨d, .W8⟩, .int64 (Int64.ofInt off)⟩))
+
 def binInstr : BinOp → Directive
   | .add => i64 (.add (.reg (rr .rax)) (oR .rcx))
   | .sub => i64 (.sub (.reg (rr .rax)) (oR .rcx))
@@ -1309,13 +1318,8 @@ def gen (ctx : Ctx) : Expr → Reg64 → List Reg64 → Option Program
   | .len64t a t, d, fr =>
     if ctx.isT t then some [movRM d (tdesc .rsi (ctx.tab.len64 a))]
     else (gen ctx t d fr).map fun ct => ct ++ tierDesc d ++ [movRM d (tdesc d (ctx.tab.len64 a))]
-  | .ldc dd i, d, fr =>
-    match fr with
-    | t :: _ => (gen ctx i d fr).map fun ci => ci ++
-        [i64 (.cmp (.reg (rr d)) (oI dd.length)), jccL .nc errorL,
-         i64 (.lea (rr t) (mb .r15 (ctx.tab.romBase + romIdx dd ctx.tab.rom))),
-         i64 (.movzx (.reg (rr d)) (w' := .W8) (.mem ⟨some (.reg t), some ⟨d, .W8⟩, .int64 0⟩))]
-    | [] => none
+  | .ldc dd i, d, fr => (gen ctx i d fr).map fun ci =>
+    ci ++ (chkI (ctx.ck none i dd.length) d dd.length ++ [ldcA d (ctx.tab.romBase + romIdx dd ctx.tab.rom)])
   | .cmpw op a b, d, fr =>
     match fr with
     | t :: _ => (genCmp ctx op a b (gen ctx a) (gen ctx b) (d :: fr)).map fun (cc, code) =>

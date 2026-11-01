@@ -171,6 +171,39 @@ theorem tagW_toNat (h : Word) :
   · have : w = 0 := UInt64.toNat_inj.mp (by simp; omega)
     subst this; simp; exact hf
 
+/-- Bits 30…26 of a word, the index of `tagE`'s table read. -/
+theorem tagIx_toNat (h : Word) : ((h >>> 26) &&& 31).toNat = h.toNat / 2 ^ 26 % 32 := by
+  simp only [UInt64.toNat_and, UInt64.toNat_shiftRight]
+  rw [show (31 : Word).toNat = 2 ^ 5 - 1 from rfl, Nat.and_two_pow_sub_one_eq_mod]
+  simp [Nat.shiftRight_eq_div_pow]
+
+/-- `tagTbl` is `tagW` on bits 30…26. -/
+theorem tagTbl_getElem (n : Nat) (hn : n < tagTbl.length) :
+    tagTbl[n].toNat = if n / 16 % 2 = 1 then 4 else n % 16 := by
+  have key : ∀ n, (hn : n < tagTbl.length) →
+      tagTbl[n].toNat = if n / 16 % 2 = 1 then 4 else n % 16 := by decide
+  exact key n hn
+
+/-- The table read of `tagE` is the tag. -/
+theorem tagTbl_tag (h : Word) (hl : ((h >>> 26) &&& 31).toNat < tagTbl.length) :
+    tagTbl[((h >>> 26) &&& 31).toNat].toUInt64 = tagW h := by
+  apply UInt64.toNat_inj.mp
+  rw [UInt8.toNat_toUInt64, tagTbl_getElem _ hl, tagW_toNat, tagIx_toNat]
+  have e1 : h.toNat / 2 ^ 26 % 32 / 16 % 2 = h.toNat / 2 ^ 30 % 2 := by omega
+  have e2 : h.toNat / 2 ^ 26 % 32 % 16 = h.toNat / 2 ^ 26 % 16 := by omega
+  rw [e1, e2]
+
+theorem tagIx_lt (h : Word) : ((h >>> 26) &&& 31).toNat < tagTbl.length := by
+  rw [tagIx_toNat]; simp only [tagTbl, List.length_cons, List.length_nil]; omega
+
+theorem ldc_tagTbl (h : Word) : ldc tagTbl ((h >>> 26) &&& 31) = pure (tagW h) := by
+  unfold ldc; rw [dite_eq_left (tagIx_lt h), tagTbl_tag h (tagIx_lt h)]
+
+theorem rdc_tagTbl (h : Word) : rdc tagTbl ((h >>> 26) &&& 31) = tagW h := by
+  unfold rdc
+  rw [List.getD_eq_getElem?_getD, List.getElem?_eq_getElem (tagIx_lt h), Option.getD_some,
+    tagTbl_tag h (tagIx_lt h)]
+
 theorem tagW_lt (h : Word) (_hh : h.toNat < 2 ^ 32) : (tagW h).toNat < 16 := by
   rw [tagW_toNat]; split <;> omega
 
@@ -522,7 +555,11 @@ theorem evalE_idxE (h : Expr) : evalE (idxE h) = (do let x ← evalE h; pure (id
 theorem evalE_idxAE (h : Expr) : evalE (idxAE h) = (do let x ← evalE h; pure (idxA x)) := by
   simp [idxAE, evalE, BinOp.eval, idxA, bind_pure_comp]
 
-/-- `tagE` reads `h` three times; an expression's value does not depend on how often it is read
+/-- `idxGE`'s value: `idxG` with the operands in code-generator order. -/
+theorem idxG_eq (h : Word) : (((h >>> 30) &&& 1) * 0x3c000000 + 0x3ffffff) &&& h = idxG h := by
+  rw [UInt64.and_comm, UInt64.add_comm]; rfl
+
+/-- `idxGE` reads `h` twice; an expression's value does not depend on how often it is read
 (`evalE_spec`: it leaves the state alone). -/
 theorem evalE_idxGE (h : Expr) : evalE (idxGE h) = (do let x ← evalE h; pure (idxG x)) := by
   apply StateT.ext; intro s
@@ -533,20 +570,11 @@ theorem evalE_idxGE (h : Expr) : evalE (idxGE h) = (do let x ← evalE h; pure (
     obtain ⟨v, s'⟩ := p
     obtain ⟨hs, -⟩ := M.of_run' (P := fun t => t = s) rfl hr (evalE_spec h s)
     subst hs
-    simp [idxGE, evalE, StateT.run_bind, hr, BinOp.eval, idxG]
-    simp only [bind, Except.bind, hr, Functor.map, Except.map]
+    simp [idxGE, evalE, StateT.run_bind, hr, BinOp.eval]
+    simp only [bind, Except.bind, hr, Functor.map, Except.map, idxG_eq]
 
 theorem evalE_tagE (h : Expr) : evalE (tagE h) = (do let x ← evalE h; pure (tagW x)) := by
-  apply StateT.ext; intro s
-  cases hr : (evalE h).run s with
-  | error err =>
-    simp only [tagE, evalE, StateT.run_bind, hr]; rfl
-  | ok p =>
-    obtain ⟨v, s'⟩ := p
-    obtain ⟨hs, -⟩ := M.of_run' (P := fun t => t = s) rfl hr (evalE_spec h s)
-    subst hs
-    simp [tagE, evalE, StateT.run_bind, hr, BinOp.eval, tagW]
-    simp only [bind, Except.bind, hr, Functor.map, Except.map]
+  simp only [tagE, evalE, BinOp.eval, bind_assoc, pure_bind, ldc_tagTbl]
 
 theorem pval_ld_ex (s : St) (R : TRec) (t i : Expr) (f : Word) :
     Expr.pval s (R.ld t i f) = Expr.pval s (R.exE f (.ld64t R.arr (TRec.tierX t) (R.adE i f))) := by
@@ -582,11 +610,11 @@ theorem pval_ld_ex (s : St) (R : TRec) (t i : Expr) (f : Word) :
 
 @[lang_grind =] theorem Expr.pval_idxGE (s : St) (h : Expr) :
     Expr.pval s (idxGE h) = idxG (Expr.pval s h) := by
-  simp [idxGE, Expr.pval, BinOp.eval, idxG]
+  simp only [idxGE, Expr.pval, BinOp.eval, idxG_eq]
 
 @[lang_grind =] theorem Expr.pval_tagE (s : St) (h : Expr) :
     Expr.pval s (tagE h) = tagW (Expr.pval s h) := by
-  simp [tagE, Expr.pval, BinOp.eval, tagW]
+  simp only [tagE, Expr.pval, BinOp.eval, rdc_tagTbl]
 
 /-! ## Frames -/
 
