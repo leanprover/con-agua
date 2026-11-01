@@ -10,6 +10,7 @@ import ConAgua.Final.BufAbi
 import ConAgua.Final.BufChain
 import ConAgua.Final.DrvFinal
 public import ConAgua.Compiler.Main
+import all ConAgua.Checker.Entry
 
 @[expose] public section
 
