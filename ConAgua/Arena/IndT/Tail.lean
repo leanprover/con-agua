@@ -10,6 +10,7 @@ public import ConAgua.Arena.IndInstallSpec.ConsRecsTFSimOf
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.L.GrindAttr
 public import ConAgua.L.ModelGen
+import all ConRon.Bridge.Inductives.BlockTail
 
 @[expose] public section
 
