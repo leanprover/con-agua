@@ -3,6 +3,7 @@ module
 public import ConAgua.Arena.DeclDivGateT1
 public import ConAgua.Arena.DeclDivModSpec.RomPinSets
 public import ConAgua.Arena.DeclCrpT
+import all ConRon.Bridge.Checker.DivMod
 
 @[expose] public section
 

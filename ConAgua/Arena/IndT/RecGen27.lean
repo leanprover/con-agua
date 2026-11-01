@@ -1,5 +1,6 @@
 module
 
+public import ConRon.Bridge.Inductives.FieldTele
 public import ConAgua.Verdict.IndBFields
 public import ConAgua.Arena.RecCheckSpec.CnfW
 public import ConAgua.Arena.IndT.RecGen24
