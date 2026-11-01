@@ -10,6 +10,7 @@ public import ConAgua.Arena.IndGrindAttr
 public import ConAgua.L.GrindAttr
 import ConAgua.Arena.IndPosSpec.CrLook
 public import ConAgua.Arena.RecCheckSpec.RcLook
+import all ConAgua.Arena.RecGen
 
 @[expose] public section
 

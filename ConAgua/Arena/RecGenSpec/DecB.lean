@@ -9,6 +9,7 @@ import ConAgua.Arena.IndInstallSpec.DomsW
 import ConAgua.Arena.RecClassSpec.Classes
 public import ConAgua.Arena.IndDecStab
 public import ConAgua.Arena.RecCheckSpec.TcmF
+import all ConAgua.Arena.RecGen
 
 @[expose] public section
 

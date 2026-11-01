@@ -5,6 +5,7 @@ public import ConAgua.Arena.GrindAttr
 import ConAgua.L.ModelGen
 import ConAgua.Checker.NoVerdictTree
 public import ConAgua.Arena.RecGenSpec.OcW
+import all ConAgua.Arena.RecCheck
 
 @[expose] public section
 /-!
