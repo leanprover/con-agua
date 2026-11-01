@@ -27,6 +27,7 @@ public import ConAgua.Arena.DeclValSpec
 public import ConAgua.Arena.IndInstallSpec.GpbWSimF
 public import ConAgua.Arena.IndPartsSpec.BlockRecNamesUnreserved
 import all ConAgua.Arena.IndInstall
+import all ConAgua.Arena.RecGen
 
 @[expose] public section
 
