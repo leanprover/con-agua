@@ -2,6 +2,8 @@ module
 
 public import ConAgua.Compiler.Run
 public import ConAgua.Scan.Validator
+meta import ConAgua.Compiler.Run
+meta import ConAgua.Scan.Validator
 
 @[expose] public section
 

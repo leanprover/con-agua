@@ -2,6 +2,8 @@ module
 
 public import ConAgua.Compiler.Run
 public import ConAgua.L.Examples
+meta import ConAgua.Compiler.Run
+meta import ConAgua.L.Examples
 
 @[expose] public section
 
