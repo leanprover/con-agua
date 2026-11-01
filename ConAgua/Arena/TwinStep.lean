@@ -1,5 +1,6 @@
 module
 
+public import ConRon.Bridge.Promote.Walk
 public import ConAgua.Arena.IndTwin
 
 @[expose] public section

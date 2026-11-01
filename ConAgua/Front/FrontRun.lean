@@ -8,6 +8,7 @@ meta import ConAgua.Front.LineRef
 meta import ConAgua.Front.Driver
 meta import ConAgua.Scan.Validator
 meta import ConRon.Bridge.Frontend.Chunks
+import all ConRon.Bridge.Frontend.Lines
 
 @[expose] public section
 

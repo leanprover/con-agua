@@ -107,7 +107,7 @@ theorem hitsFrom_eq (c : Nat) (C : NIdx) : ∀ (j : Nat) (sls : List ClassSlot),
       simp only [Function.comp, List.getElem?_cons_succ]
       have : j + (s + 1) = j + 1 + s := by omega
       simp only [this, Nat.succ_eq_add_one]
-    rw [← e, ih (j + 1)]
+    erw [← e, ih (j + 1)]
     cases sl with
     | motive k => simp [hitsFrom]
     | minor c' C' ihs => by_cases hh : (c' == c && C' == C) = true <;> simp [hitsFrom, hh]

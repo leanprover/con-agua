@@ -10,6 +10,7 @@ meta import ConAgua.L.ErrSpec
 meta import ConAgua.Checker.NoVerdictTree
 meta import ConAgua.Arena.LevelIntern
 meta import ConAgua.Arena.LevelSubstLP
+import all Init.Data.Repr
 
 @[expose] public section
 
