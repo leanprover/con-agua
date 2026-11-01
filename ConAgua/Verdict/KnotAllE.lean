@@ -164,6 +164,12 @@ import all ConAgua.Scan.Records
 import all ConAgua.Scan.Str
 import all ConAgua.Scan.Utf8
 import all ConAgua.Scan.Values
+import all ConAgua.Arena.CoreWalks
+import all ConAgua.Arena.Prelude
+import all ConAgua.Arena.RomCI
+import all ConAgua.Arena.WhnfCoreApp
+import all ConAgua.Rom.PinReadSpec
+import all ConAgua.Scan.Line
 
 @[expose] public section
 
