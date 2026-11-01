@@ -1,6 +1,6 @@
 module
 
-import ConAgua.Compiler.AsmLit
+public import ConAgua.Compiler.AsmLit
 public import ConAgua.Checker.ProgTab
 public import ConAgua.Checker.ProgNrt
 public import ConAgua.Checker.ProgSkt

@@ -219,6 +219,19 @@ fact is that the regions are disjoint and in bounds, proved once in the compiler
 - **Commit work in progress often.** Commit to your own branch at least every ~30 minutes and before every long build, even if it doesn't build yet (WIP commits are fine; squash nothing). Machine restarts and rate limits have lost uncommitted work twice. Landing on master can stay less frequent, but keep landings small: one function family or one fix per landing.
 - **Worktrees and disk:** every worktree carries a ~2.5 GB `.lake` build. A lane keeps at most one worktree of its own plus one per running helper; remove a helper's worktree (`git worktree remove`; the branch may stay) as soon as the helper has landed or stopped, and scratch/base worktrees as soon as their measurement is done. The disk is shared: keep no duplicates or finished intermediates, but there is no fixed size limit.
 - **Waiting on background work:** wait on the job you started (run the job itself with `run_in_background`, or `wait $PID`, or a sentinel/output file it writes at the end). Never wait with `until ! pgrep -f "<pattern>"`: the waiting shell's own command line contains the pattern, so it never ends (and other lanes run the same scripts). Lane tierarr idled 2 h this way (2026-10-24).
+- **New files are modules** (lane modconv, `docs/design/modconv.md`): `module`, then `public import X`
+  when the file's statements or definitions mention `X`'s names, plain `import X` when only proofs
+  use them (`scripts/shake.py --proposals` lists the imports that can drop their `public`), then
+  `@[expose] public section` (definitions keep their bodies for importers that unfold, `decide` or
+  `rfl` through them). A proof is never exported, so an edit inside a proof rebuilds only its own
+  module; a changed statement or definition rebuilds every module that reaches it through
+  `public import`s. A lemma no other file uses can be `private` (adding one then rebuilds nothing
+  else). An elaborator's code is `meta def`; a file that evaluates code at elaboration time
+  (`#guard`, `#eval`, `prog_wf`, `asm_lit`, `chk_lk`, …, or `lean --run`) also has `meta import X` for
+  the modules whose code it runs. To unfold a definition its module does not expose (con-ron's
+  bridge, con-leche, Lean's core library) write `import all` of that module (`import all
+  Init.Data.List.Control` for `List.allM`, `import all Init.Data.Repr` for `toString` on a number).
+  Generated files get their header from `scripts/lean_module.py`.
 - **Memory hygiene for new modules:** first elaborate a new or heavily changed module alone (`lake env lean F.lean`) under an RSS guard of ~6 GB, then `lake build`. Never pass `by decide +kernel` (or `decide` on string/list lookups) inline as an argument over program-sized data: state it as its own small lemma (`simp only [defs]; decide`) or use per-function lookups (ProgHas, prog_wf). Past offenders: whole-program Prog.wf (19 GB), CoreErec (20 GB), LoopCore (16 GB), StageInst1 (17 GB, inline `∀ b ∈ instA, b < 64`). Also: many chained `(c + k).toNat = c.toNat + k` hypotheses in context make every later `omega` exponential (CIReadRefCaps, >15 GB): don't state them; use `off_omega` or `simp (disch := omega) only [off_toNat]` from `ConAgua/L/WordOff.lean` (natsurvey.md §4), or keep one `∀` fact.
 - **e2e in a worktree:** run `scripts/e2e.py --latest ''` (or `--no-perf`), so a branch run does not overwrite the shared baseline `_tmp/e2e/latest/results.json` (only the census watcher refreshes it, from master).
 - **Emergency fixes: when the coordinator says a fix landed (e.g. a memory hog, like erecfix: IndCore/CoreErec from ~22 GB to ~3 GB), merge master before your next build.** Otherwise merging only before landing is fine. A coordinator watchdog (`_tmp/memwatch.sh`) kills any single `lean` process above 16 GB.

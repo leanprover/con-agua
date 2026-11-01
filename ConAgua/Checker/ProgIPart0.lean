@@ -3,8 +3,6 @@ module
 public import ConAgua.Checker.ProgIdx
 meta import ConAgua.Checker.ProgIdx
 import all Init.Data.Repr
-import ConAgua.Compiler.InlineLit
-public import ConAgua.Compiler.Inline
 
 @[expose] public section
 
