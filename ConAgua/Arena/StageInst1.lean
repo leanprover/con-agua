@@ -8,6 +8,18 @@ public import ConAgua.Checker.Entry
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import all ConAgua.Checker.Entry
+import all ConAgua.Arena.AppStore
+import all ConAgua.Arena.BVarStore
+import all ConAgua.Arena.ConsLib
+import all ConAgua.Arena.ExprMk
+import all ConAgua.Arena.ForallStore
+import all ConAgua.Arena.Inst1
+import all ConAgua.Arena.Inst1Spec
+import all ConAgua.Arena.LamStore
+import all ConAgua.Arena.LetStore
+import all ConAgua.Arena.LiftL
+import all ConAgua.Arena.MemoLib
+import all ConAgua.Arena.ProjStore
 
 @[expose] public section
 

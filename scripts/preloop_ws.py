@@ -11,7 +11,7 @@ import os, re, subprocess, sys, tempfile
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(ROOT, "scripts"))
 from arr_names import arr_term
-from lean_module import modularize
+from lean_module import modularize, body_modules
 STAGES = ["cap_check", "pb_check", "intern_reserved_pins", "builtin_prelude", "front_run",
           "prepare_prelude", "intern_all_pins"]
 # the stages' modules `PreLoopWSPart<k>` (each a whole-program check per stage, ~5 s; built in
@@ -262,7 +262,10 @@ chk = os.path.join(ROOT, "ConAgua", "Checker")
 # the parts run `prog_all`/`names_tree` (compiled code over the imported program: `meta import`)
 outs = [(os.path.join(chk, "PreLoopWSStages.lean"), modularize(stagesSrc)),
         (os.path.join(chk, "PreLoopWSBase.lean"), modularize(baseSrc))]
-outs += [(os.path.join(chk, f"PreLoopWSPart{k}.lean"), modularize(t, meta=True)) for k, t in enumerate(partSrcs)]
+# and their write-set checks unfold the L functions (`@[no_expose]`: `import all` of their modules)
+bodies = body_modules(["ConAgua.Checker.PreLoopWSBase"])
+outs += [(os.path.join(chk, f"PreLoopWSPart{k}.lean"), modularize(t, meta=True, import_all=bodies))
+         for k, t in enumerate(partSrcs)]
 stale = [q for q in (os.path.join(chk, f"PreLoopWSPart{k}.lean") for k in range(len(STAGE_PARTS), len(STAGE_PARTS) + 8))
          if os.path.exists(q)]
 def cur(q):

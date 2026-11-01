@@ -8,6 +8,8 @@ meta import ConAgua.Checker.Prog
 meta import ConAgua.Arena.IndMemoFns
 meta import ConAgua.Arena.LevelIntern
 meta import ConAgua.Arena.LevelSubstLP
+import all ConAgua.Arena.DeclArmsNat
+import all ConAgua.Arena.IndIface
 
 @[expose] public section
 

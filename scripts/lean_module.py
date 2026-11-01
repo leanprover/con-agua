@@ -11,8 +11,39 @@ imported at the meta level. `import_all` lists modules imported with `import all
 private part too), for definitions whose bodies a kernel check unfolds although their module
 does not expose them (e.g. `Init.Data.Repr`'s `Nat.repr`, which `toString` on a function name
 reaches). A text that is already a module is returned unchanged.
+
+`body_modules(roots)` lists the modules that a kernel check evaluating the L program needs with
+`import all`: the L functions (`FunDecl`s) are `@[no_expose]` (PLAN.md, "New files are modules"),
+so a check that unfolds their bodies imports every module of its closure that declares one.
 """
+import os
 import re
+
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+_IMP = re.compile(r"^\s*(?:public\s+|meta\s+)*import\s+(?:all\s+)?(ConAgua[\w.]*)", re.M)
+
+
+def _src(m):
+    p = os.path.join(ROOT, *m.split(".")) + ".lean"
+    return open(p, encoding="utf-8").read() if os.path.exists(p) else None
+
+
+def body_modules(roots):
+    """The ConAgua modules in the import closure of `roots` (roots included) that declare an
+    `@[no_expose]` definition, sorted."""
+    seen, todo, out = set(), list(roots), []
+    while todo:
+        m = todo.pop()
+        if m in seen:
+            continue
+        seen.add(m)
+        t = _src(m)
+        if t is None:
+            continue
+        todo += _IMP.findall(t)
+        if re.search(r"^@\[no_expose\b", t, re.M):
+            out.append(m)
+    return sorted(out)
 
 IMPORT = re.compile(r"^import\s+([\w.]+)\s*$")
 

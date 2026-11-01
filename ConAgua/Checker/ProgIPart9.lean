@@ -115,7 +115,9 @@ import all ConAgua.Arena.WhnfProj
 import all ConAgua.Arena.WhnfSpineArgs
 import all ConAgua.Arena.WhnfSpineRefine
 import all ConAgua.Arena.ZeroStore
+import all ConAgua.Checker.Entry
 import all ConAgua.Checker.Hoist
+import all ConAgua.Checker.Prelude
 import all ConAgua.Checker.Presize
 import all ConAgua.Front.Apply
 import all ConAgua.Front.ApplyDecl
