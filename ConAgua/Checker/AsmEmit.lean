@@ -4,6 +4,10 @@ public import ConAgua.Checker.ProgTab
 public import ConAgua.Checker.ProgI
 public import ConAgua.Compiler.Run
 public import ConAgua.Compiler.Abi
+meta import ConAgua.Checker.ProgTab
+meta import ConAgua.Checker.ProgI
+meta import ConAgua.Compiler.Run
+meta import ConAgua.Compiler.Abi
 
 @[expose] public section
 
