@@ -3,6 +3,9 @@ module
 public import ConAgua.Checker.Prog
 public import ConAgua.Arena.Frame
 public import ConAgua.Compiler.WriteSetSplit
+meta import ConAgua.Checker.Prog
+meta import ConAgua.Arena.Frame
+meta import ConAgua.Compiler.WriteSetSplit
 
 @[expose] public section
 

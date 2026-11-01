@@ -4,6 +4,10 @@ public import ConAgua.Checker.ParOwned
 public import ConAgua.Checker.CapCheck
 public import ConAgua.Arena.ArenaRel
 public import ConAgua.Checker.ProgTab
+meta import ConAgua.Checker.ParOwned
+meta import ConAgua.Checker.CapCheck
+meta import ConAgua.Arena.ArenaRel
+meta import ConAgua.Checker.ProgTab
 
 @[expose] public section
 

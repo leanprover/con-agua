@@ -4,6 +4,10 @@ public import ConAgua.Front.DeclsPre
 public import ConAgua.Front.FrontRun
 public import ConAgua.Checker.NoVerdictClosed
 public import ConAgua.L.ModelGen
+meta import ConAgua.Front.DeclsPre
+meta import ConAgua.Front.FrontRun
+meta import ConAgua.Checker.NoVerdictClosed
+meta import ConAgua.L.ModelGen
 
 @[expose] public section
 /-!

@@ -3,6 +3,9 @@ module
 public import ConAgua.Checker.IndArmTests
 public import ConAgua.Checker.IndArmFns
 public import ConAgua.Arena.IndRealAbs
+meta import ConAgua.Checker.IndArmTests
+meta import ConAgua.Checker.IndArmFns
+meta import ConAgua.Arena.IndRealAbs
 
 @[expose] public section
 

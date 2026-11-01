@@ -1,6 +1,7 @@
 module
 
 public import ConAgua.Arena.IndIface
+meta import ConAgua.Arena.IndIface
 
 @[expose] public section
 

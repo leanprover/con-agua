@@ -3,6 +3,9 @@ module
 public import ConAgua.Rom.CIRead
 public import ConAgua.Arena.DeclRomStubs
 public import ConAgua.Rom.PinStream
+meta import ConAgua.Rom.CIRead
+meta import ConAgua.Arena.DeclRomStubs
+meta import ConAgua.Rom.PinStream
 
 @[expose] public section
 

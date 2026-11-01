@@ -5,6 +5,11 @@ public import ConAgua.Verdict.KnotAllE
 public import ConAgua.Verdict.CheckBE
 public import ConAgua.Verdict.FrontStageE
 public import ConAgua.Final.ThreadsVerdict
+meta import ConAgua.Verdict.DeclTopE
+meta import ConAgua.Verdict.KnotAllE
+meta import ConAgua.Verdict.CheckBE
+meta import ConAgua.Verdict.FrontStageE
+meta import ConAgua.Final.ThreadsVerdict
 
 @[expose] public section
 /-!

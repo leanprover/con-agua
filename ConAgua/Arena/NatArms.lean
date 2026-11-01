@@ -13,6 +13,19 @@ public import ConAgua.L.GrindAttr
 public import Std.Tactic.BVDecide.Normalize.BitVec
 public import Std.Tactic.BVDecide.Normalize.Prop
 public import Std.WP.Tactic
+meta import ConAgua.Arena.Tiers
+meta import ConAgua.Arena.NatGcd
+meta import ConAgua.Arena.NatCmp
+meta import ConAgua.Arena.NatBitsNat
+meta import ConAgua.Arena.NatPow
+meta import ConAgua.Arena.NatShr
+meta import ConAgua.Arena.NatShl
+meta import ConAgua.Arena.GrindAttr
+meta import ConAgua.Arena.NatGrindAttr
+meta import ConAgua.L.GrindAttr
+meta import Std.Tactic.BVDecide.Normalize.BitVec
+meta import Std.Tactic.BVDecide.Normalize.Prop
+meta import Std.WP.Tactic
 
 @[expose] public section
 

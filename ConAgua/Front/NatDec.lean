@@ -10,6 +10,16 @@ public import ConAgua.L.GrindAttr
 public import Std.Tactic.BVDecide.Normalize.BitVec
 public import Std.Tactic.BVDecide.Normalize.Prop
 public import Std.WP.Tactic
+meta import ConAgua.Arena.SlotGrow
+meta import ConAgua.Front.Fields
+meta import Std.Data.DTreeMap.Internal.Operations
+meta import Std.WP.Triple.SpecLemmas
+meta import ConAgua.Arena.GrindAttr
+meta import ConAgua.Census.Attr
+meta import ConAgua.L.GrindAttr
+meta import Std.Tactic.BVDecide.Normalize.BitVec
+meta import Std.Tactic.BVDecide.Normalize.Prop
+meta import Std.WP.Tactic
 
 @[expose] public section
 

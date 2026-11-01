@@ -1,6 +1,8 @@
 module
 
 public import Lean
+public meta import Lean
+public meta import ConAgua.Compiler.WFFast
 public import ConAgua.Compiler.WFFast
 
 @[expose] public section
@@ -43,7 +45,7 @@ namespace L.Compiler
 open Lean Elab Command Meta
 open Lean.Elab.Term (TermElab elabTermEnsuringType synthesizeSyntheticMVarsNoPostponing)
 
-def ntreeToExpr : NTree → Lean.Expr
+meta def ntreeToExpr : NTree → Lean.Expr
   | .leaf => mkConst ``NTree.leaf
   | .node l k v r => mkApp4 (mkConst ``NTree.node) (ntreeToExpr l) (mkNatLit k) (mkNatLit v) (ntreeToExpr r)
 
@@ -52,7 +54,7 @@ literal is a term of linear depth, which the kernel and the compiler reject); ab
 balanced `++` of such. The kernel walks it about three times faster than a balanced `++` tree of
 64-byte chunks (each element passes one `flatten`, not ~10 `++`s): `romIdx` of the prelude's
 15 700 bytes in the checker's ROM 5 s -> 2 s, of the pin data 14 s -> 5 s. -/
-partial def bytesToExpr (bs : Array UInt8) : Lean.Expr :=
+meta partial def bytesToExpr (bs : Array UInt8) : Lean.Expr :=
   let ty := mkApp (mkConst ``List [0]) (mkConst ``UInt8)
   let k := 256
   let n := (bs.size + k - 1) / k
@@ -67,45 +69,45 @@ partial def bytesToExpr (bs : Array UInt8) : Lean.Expr :=
       (bytesToExpr (bs.extract 0 h)) (bytesToExpr (bs.extract h bs.size))
 
 /-- A list of number pairs as a term. -/
-def natPairsToExpr (l : List (Nat × Nat)) : Lean.Expr :=
+meta def natPairsToExpr (l : List (Nat × Nat)) : Lean.Expr :=
   let ty := mkApp2 (mkConst ``Prod [0, 0]) (mkConst ``Nat) (mkConst ``Nat)
   l.foldr (fun (a, b) acc => mkApp3 (mkConst ``List.cons [0]) ty
     (mkApp4 (mkConst ``Prod.mk [0, 0]) (mkConst ``Nat) (mkConst ``Nat) (mkNatLit a) (mkNatLit b)) acc)
     (mkApp (mkConst ``List.nil [0]) ty)
 
 /-- `Tab.tbl` as a term. -/
-def tblToExpr : Option (Nat × Nat) → Lean.Expr
+meta def tblToExpr : Option (Nat × Nat) → Lean.Expr
   | none => mkApp (mkConst ``Option.none [0]) (mkApp2 (mkConst ``Prod [0, 0]) (mkConst ``Nat) (mkConst ``Nat))
   | some (a, c) => mkApp2 (mkConst ``Option.some [0]) (mkApp2 (mkConst ``Prod [0, 0]) (mkConst ``Nat) (mkConst ``Nat))
       (mkApp4 (mkConst ``Prod.mk [0, 0]) (mkConst ``Nat) (mkConst ``Nat) (mkNatLit a) (mkNatLit c))
 
 /-- A list of arrays (`Tab.arrAt`) as a term. -/
-def arrsToExpr (l : List TieredArray) : Lean.Expr :=
+meta def arrsToExpr (l : List TieredArray) : Lean.Expr :=
   let ty := mkConst ``TieredArray
   l.foldr (fun s acc => mkApp3 (mkConst ``List.cons [0]) ty
     (mkApp2 (mkConst ``TieredArray.mk) (mkNatLit s.arr) (toExpr s.hi)) acc)
     (mkApp (mkConst ``List.nil [0]) ty)
 
-def tabToExpr (t : Tab) : Lean.Expr :=
+meta def tabToExpr (t : Tab) : Lean.Expr :=
   mkAppN (mkConst ``Tab.mk) #[mkNatLit t.nb, mkNatLit t.nw, arrsToExpr t.arrAt, ntreeToExpr t.lmap,
     mkApp2 (mkConst ``Eq.refl [1]) (mkConst ``Bool) (mkConst ``Bool.true), bytesToExpr t.rom.toArray, mkNatLit t.nres,
     mkNatLit t.ng, natPairsToExpr t.mins, tblToExpr t.tbl, mkNatLit t.rom.length,
     mkApp2 (mkConst ``Eq.refl [1]) (mkConst ``Nat) (mkNatLit t.rom.length)]
 
-unsafe def evalNats (e : Lean.Expr) : MetaM (List Nat) :=
+meta unsafe def evalNats (e : Lean.Expr) : MetaM (List Nat) :=
   evalExpr (List Nat) (mkApp (mkConst ``List [0]) (mkConst ``Nat)) e
 
 /-- How many byte strings each function of `p` reads. -/
 def progRomCounts (p : Prog) : List Nat := p.map fun x => (Stmt.roms x.2.body).length
 
-unsafe def evalTab (e : Lean.Expr) : MetaM Tab := evalExpr Tab (mkConst ``Tab) e
-unsafe def evalTree (e : Lean.Expr) : MetaM (Option NTree) :=
+meta unsafe def evalTab (e : Lean.Expr) : MetaM Tab := evalExpr Tab (mkConst ``Tab) e
+meta unsafe def evalTree (e : Lean.Expr) : MetaM (Option NTree) :=
   evalExpr (Option NTree) (mkApp (mkConst ``Option [0]) (mkConst ``NTree)) e
 
 /-- `tab_lit% e`: the table `e`, evaluated (by compiled code) and inserted as a literal. -/
 syntax (name := tabLit) "tab_lit% " term:max : term
 
-@[term_elab tabLit] unsafe def elabTabLit : TermElab := fun stx _ => do
+@[term_elab tabLit] meta unsafe def elabTabLit : TermElab := fun stx _ => do
   let `(tab_lit% $t) := stx | throwUnsupportedSyntax
   -- evaluating a large program's table recurses deeper than the default limit
   withTheReader Core.Context (fun c => { c with maxRecDepth := max c.maxRecDepth 100000 }) do
@@ -118,7 +120,7 @@ syntax (name := tabLit) "tab_lit% " term:max : term
 (`bytesToExpr`), for constant data the kernel would otherwise compute from its definition. -/
 syntax (name := bytesLit) "bytes_lit% " term:max : term
 
-@[term_elab bytesLit] unsafe def elabBytesLit : TermElab := fun stx _ => do
+@[term_elab bytesLit] meta unsafe def elabBytesLit : TermElab := fun stx _ => do
   let `(bytes_lit% $t) := stx | throwUnsupportedSyntax
   let ty := mkApp (mkConst ``List [0]) (mkConst ``UInt8)
   let e ← elabTermEnsuringType t ty
@@ -127,17 +129,17 @@ syntax (name := bytesLit) "bytes_lit% " term:max : term
   return bytesToExpr bs.toArray
 
 /-- A theorem declaration. -/
-def thm (n : Name) (ty v : Lean.Expr) (_ : List Name) : Declaration :=
+meta def thm (n : Name) (ty v : Lean.Expr) (_ : List Name) : Declaration :=
   .thmDecl { name := n, levelParams := [], type := ty, value := v }
 
-unsafe def evalNTree (e : Lean.Expr) : MetaM NTree := evalExpr NTree (mkConst ``NTree) e
+meta unsafe def evalNTree (e : Lean.Expr) : MetaM NTree := evalExpr NTree (mkConst ``NTree) e
 
 /-- `nrt_lit name : p` declares `name : NTree`, the literal of `Prog.nrt p` (the result counts of
 `p`'s functions, evaluated by compiled code), and `name_eq : Prog.nrt p = name`, checked by the
 kernel (once; the per-function checks of `asm_lit` then read the literal). -/
 syntax (name := nrtLit) "nrt_lit " ident " : " term:max : command
 
-@[command_elab nrtLit] unsafe def elabNrtLit : CommandElab := fun stx => do
+@[command_elab nrtLit] meta unsafe def elabNrtLit : CommandElab := fun stx => do
   let `(nrt_lit $n:ident : $progS) := stx | throwUnsupportedSyntax
   let name := (← getCurrNamespace) ++ n.getId
   liftTermElabM <| withTheReader Core.Context (fun c => { c with maxRecDepth := max c.maxRecDepth 100000 }) do
@@ -152,7 +154,7 @@ syntax (name := nrtLit) "nrt_lit " ident " : " term:max : command
       (mkApp2 (mkConst ``Eq.refl [1]) treeTy lhs) [])
 
 /-- The elements of a list expression, by `whnf`. -/
-partial def listElems (e : Lean.Expr) (acc : Array Lean.Expr := #[]) : MetaM (Array Lean.Expr) := do
+meta partial def listElems (e : Lean.Expr) (acc : Array Lean.Expr := #[]) : MetaM (Array Lean.Expr) := do
   let e ← whnfD e
   if e.isAppOfArity ``List.cons 3 then listElems e.appArg! (acc.push e.appFn!.appArg!)
   else if e.isAppOfArity ``List.nil 1 then return acc
@@ -186,7 +188,7 @@ theorem map_cons_of {α β : Type} {f : α → β} {a : α} {b : β} {l : List �
     (h : f a = b) (hr : l.map f = r) : (a :: l).map f = b :: r := by
   simp [h, hr]
 
-unsafe def evalPairs (e : Lean.Expr) : MetaM (List (Nat × Nat)) :=
+meta unsafe def evalPairs (e : Lean.Expr) : MetaM (List (Nat × Nat)) :=
   evalExpr (List (Nat × Nat)) (mkApp (mkConst ``List [0])
     (mkApp2 (mkConst ``Prod [0, 0]) (mkConst ``Nat) (mkConst ``Nat))) e
 
@@ -196,7 +198,7 @@ compiled code: a part of `skt_lit name`'s kernel check, in a module of its own (
 parts in parallel). -/
 syntax (name := sktPart) "skt_part " ident " : " term:max term:max num num : command
 
-@[command_elab sktPart] unsafe def elabSktPart : CommandElab := fun stx => do
+@[command_elab sktPart] meta unsafe def elabSktPart : CommandElab := fun stx => do
   let `(skt_part $n:ident : $progS $entryS $lo $hi) := stx | throwUnsupportedSyntax
   let name := (← getCurrNamespace) ++ n.getId
   liftTermElabM <| withTheReader Core.Context (fun c => { c with maxRecDepth := max c.maxRecDepth 100000 }) do
@@ -216,7 +218,7 @@ syntax (name := sktPart) "skt_part " ident " : " term:max term:max num num : com
       (mkApp2 (mkConst ``Eq.refl [1]) lpTy lhs) [])
 
 /-- The length of a list literal. -/
-partial def litLength (e : Lean.Expr) : Nat :=
+meta partial def litLength (e : Lean.Expr) : Nat :=
   if e.isAppOfArity ``List.cons 3 then 1 + litLength e.appArg! else 0
 
 /-- `skt_lit name : p entry` declares `name : NTree`, the literal of `Prog.skt p entry` (the frames of
@@ -227,7 +229,7 @@ If parts `name.part0`, `name.part<i>`, … (`skt_part`, consecutive, covering `p
 the tree, without evaluating a function's frame. -/
 syntax (name := sktLit) "skt_lit " ident " : " term:max term:max : command
 
-@[command_elab sktLit] unsafe def elabSktLit : CommandElab := fun stx => do
+@[command_elab sktLit] meta unsafe def elabSktLit : CommandElab := fun stx => do
   let `(skt_lit $n:ident : $progS $entryS) := stx | throwUnsupportedSyntax
   let name := (← getCurrNamespace) ++ n.getId
   liftTermElabM <| withTheReader Core.Context (fun c => { c with maxRecDepth := max c.maxRecDepth 100000 }) do
@@ -282,13 +284,13 @@ syntax (name := sktLit) "skt_lit " ident " : " term:max term:max : command
     let pf := mkAppN (mkConst ``skt_of_parts) #[pE, entryE, mkConst name, csE, lsE, hp, hl, ht]
     addDecl (thm (name.appendAfter "_eq") eqTy pf [])
 
-register_option progWfChunk : Nat := {
+meta register_option progWfChunk : Nat := {
   defValue := 32
   descr := "prog_wf: functions per kernel check"
 }
 
 /-- A proof of `xs[k] ∈ [xs[0], …]` (`List.Mem.tail` `k` times, then `List.Mem.head`). -/
-def memProof (α : Lean.Expr) (xs : Array Lean.Expr) (k : Nat) : Lean.Expr := Id.run do
+meta def memProof (α : Lean.Expr) (xs : Array Lean.Expr) (k : Nat) : Lean.Expr := Id.run do
   -- the tails `xs[i:]`, sharing their common parts
   let mut tails : Array Lean.Expr := #[mkApp (mkConst ``List.nil [0]) α]
   for i in (List.range xs.size).reverse do
@@ -301,7 +303,7 @@ def memProof (α : Lean.Expr) (xs : Array Lean.Expr) (k : Nat) : Lean.Expr := Id
 
 /-- `name.tree` and `name.tree_eq : progTree p = some name.tree` (the name tree as a literal,
 evaluated by compiled code; the kernel check reads the names only). -/
-unsafe def declProgTree (name : Name) (pE : Lean.Expr) : MetaM Unit := do
+meta unsafe def declProgTree (name : Name) (pE : Lean.Expr) : MetaM Unit := do
   let some tree ← evalTree (mkApp (mkConst ``progTree) pE)
     | throwError "prog_wf: two functions have the same name"
   let treeN := name ++ `tree
@@ -316,7 +318,7 @@ unsafe def declProgTree (name : Name) (pE : Lean.Expr) : MetaM Unit := do
 /-- `name.c<j> : ∀ x ∈ chunk j, FunOk name.tree tab x` for the chunks `js` of `elems` (chunks of
 `k` functions), each one kernel check, after the `romOk` theorems of the byte strings they read
 (`name.rom<r>`, or `name.p<lo>.rom<r>` with `pre`), one per distinct string. -/
-unsafe def declWfChunks (name pre : Name) (tabE pE : Lean.Expr) (elems : Array Lean.Expr) (k : Nat)
+meta unsafe def declWfChunks (name pre : Name) (tabE pE : Lean.Expr) (elems : Array Lean.Expr) (k : Nat)
     (js : List Nat) : MetaM Unit := do
   let treeC := mkConst (name ++ `tree)
   let bTrue := mkConst ``Bool.true
@@ -380,7 +382,7 @@ unsafe def declWfChunks (name pre : Name) (tabE pE : Lean.Expr) (elems : Array L
 a module of their own: they read the names only, not the table. -/
 syntax (name := progTreeCmd) "prog_tree " ident " : " term:max : command
 
-@[command_elab progTreeCmd] unsafe def elabProgTree : CommandElab := fun stx => do
+@[command_elab progTreeCmd] meta unsafe def elabProgTree : CommandElab := fun stx => do
   let `(prog_tree $n:ident : $progS) := stx | throwUnsupportedSyntax
   let name := (← getCurrNamespace) ++ n.getId
   liftTermElabM <| withTheReader Core.Context (fun c => { c with maxRecDepth := max c.maxRecDepth 100000 }) do
@@ -393,7 +395,7 @@ chunks `lo ≤ j < hi`, in a module of their own (Lake builds the parts in paral
 checks of one module run one after the other). Needs `name.tree` (`prog_tree`). -/
 syntax (name := progWfPart) "prog_wf_part " ident " : " term:max term:max num num : command
 
-@[command_elab progWfPart] unsafe def elabProgWfPart : CommandElab := fun stx => do
+@[command_elab progWfPart] meta unsafe def elabProgWfPart : CommandElab := fun stx => do
   let `(prog_wf_part $n:ident : $tabS $progS $lo $hi) := stx | throwUnsupportedSyntax
   let name := (← getCurrNamespace) ++ n.getId
   liftTermElabM <| withTheReader Core.Context (fun c => { c with maxRecDepth := max c.maxRecDepth 100000 }) do
@@ -414,7 +416,7 @@ syntax (name := progWfPart) "prog_wf_part " ident " : " term:max term:max num nu
 `prog_tree`, `prog_wf_part` in imported modules) are used, the others declared here. -/
 syntax (name := progWf) (docComment)? "prog_wf " ident " : " term:max term:max : command
 
-@[command_elab progWf] unsafe def elabProgWf : CommandElab := fun stx => do
+@[command_elab progWf] meta unsafe def elabProgWf : CommandElab := fun stx => do
   let `($[$doc?:docComment]? prog_wf $n:ident : $tabS $progS) := stx | throwUnsupportedSyntax
   let name := (← getCurrNamespace) ++ n.getId
   liftTermElabM <| withTheReader Core.Context (fun c => { c with maxRecDepth := max c.maxRecDepth 100000 }) do

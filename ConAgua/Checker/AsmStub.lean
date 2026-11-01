@@ -2,6 +2,8 @@ module
 
 public import ConAguaAsm.Checker
 public import ConAgua.AsmFile.Eq
+meta import ConAguaAsm.Checker
+meta import ConAgua.AsmFile.Eq
 
 @[expose] public section
 

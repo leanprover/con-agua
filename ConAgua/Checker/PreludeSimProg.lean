@@ -7,6 +7,13 @@ public import ConAgua.Compiler.WriteSetSplit
 public import ConAgua.Compiler.WFSplit
 public import ConAgua.Arena.LevelIntern
 public import ConAgua.Arena.LevelSubstLP
+meta import ConAgua.Checker.Prog
+meta import ConAgua.Checker.ProgTree
+meta import ConAgua.Checker.PreludeSim
+meta import ConAgua.Compiler.WriteSetSplit
+meta import ConAgua.Compiler.WFSplit
+meta import ConAgua.Arena.LevelIntern
+meta import ConAgua.Arena.LevelSubstLP
 
 @[expose] public section
 

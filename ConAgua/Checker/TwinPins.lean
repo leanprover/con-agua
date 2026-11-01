@@ -1,5 +1,6 @@
 module
 
+public import ConRon.Bridge.Checker.Basis
 public import ConRon.Bridge.Checker.Pins
 
 @[expose] public section

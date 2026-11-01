@@ -14,6 +14,20 @@ public import ConAgua.Census.Attr
 public import ConAgua.L.GrindAttr
 public import Std.Tactic.BVDecide.Normalize.Prop
 public import Std.WP.Tactic
+meta import ConAgua.Front.IdTable
+meta import ConAgua.Arena.ImaxStore
+meta import ConAgua.Arena.LevelStore
+meta import ConAgua.Arena.MaxStore
+meta import ConAgua.Arena.NAnonStore
+meta import ConAgua.Arena.NNumStore
+meta import ConAgua.Arena.NStrStore
+meta import ConAgua.Arena.ParamStore
+meta import ConAgua.Arena.ZeroStore
+meta import ConAgua.Arena.GrindAttr
+meta import ConAgua.Census.Attr
+meta import ConAgua.L.GrindAttr
+meta import Std.Tactic.BVDecide.Normalize.Prop
+meta import Std.WP.Tactic
 
 @[expose] public section
 

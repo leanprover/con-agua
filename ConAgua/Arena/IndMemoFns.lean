@@ -1,6 +1,7 @@
 module
 
 public import ConAgua.Arena.LeafFrame
+meta import ConAgua.Arena.LeafFrame
 
 @[expose] public section
 

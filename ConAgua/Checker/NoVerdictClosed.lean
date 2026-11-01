@@ -5,6 +5,11 @@ public import ConAgua.L.ErrSpec
 public import ConAgua.Checker.NoVerdictTree
 public import ConAgua.Arena.LevelIntern
 public import ConAgua.Arena.LevelSubstLP
+meta import ConAgua.Checker.Prog
+meta import ConAgua.L.ErrSpec
+meta import ConAgua.Checker.NoVerdictTree
+meta import ConAgua.Arena.LevelIntern
+meta import ConAgua.Arena.LevelSubstLP
 
 @[expose] public section
 

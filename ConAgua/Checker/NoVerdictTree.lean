@@ -2,6 +2,8 @@ module
 
 public import ConAgua.Checker.NoVerdictFns
 public import ConAgua.Compiler.WriteSetSplit
+meta import ConAgua.Checker.NoVerdictFns
+meta import ConAgua.Compiler.WriteSetSplit
 
 @[expose] public section
 

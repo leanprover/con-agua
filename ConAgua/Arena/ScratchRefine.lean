@@ -3,6 +3,9 @@ module
 public import ConAgua.Arena.Scratch
 public import ConAgua.Arena.Tiers
 public import Std.Tactic.BVDecide.Normalize.Prop
+meta import ConAgua.Arena.Scratch
+meta import ConAgua.Arena.Tiers
+meta import Std.Tactic.BVDecide.Normalize.Prop
 
 @[expose] public section
 

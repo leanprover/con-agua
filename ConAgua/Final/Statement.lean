@@ -2,6 +2,8 @@ module
 
 public import ConAgua.Compiler.Rel
 public import ConAgua.Layout
+meta import ConAgua.Compiler.Rel
+meta import ConAgua.Layout
 
 @[expose] public section
 

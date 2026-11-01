@@ -2,6 +2,8 @@ module
 
 public import ConAgua.Arena.IndIface
 public import ConAgua.Arena.Reasons
+meta import ConAgua.Arena.IndIface
+meta import ConAgua.Arena.Reasons
 
 @[expose] public section
 

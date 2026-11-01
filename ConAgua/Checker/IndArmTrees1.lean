@@ -2,6 +2,8 @@ module
 
 public import ConAgua.Checker.IndArmTests
 public import ConAgua.Checker.IndArmFns
+meta import ConAgua.Checker.IndArmTests
+meta import ConAgua.Checker.IndArmFns
 
 @[expose] public section
 

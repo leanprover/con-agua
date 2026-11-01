@@ -1,6 +1,7 @@
 module
 
 public import ConAgua.Checker.Prog
+meta import ConAgua.Checker.Prog
 
 @[expose] public section
 

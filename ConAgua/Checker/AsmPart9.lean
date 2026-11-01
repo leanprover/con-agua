@@ -4,6 +4,10 @@ public import ConAgua.Compiler.AsmLit
 public import ConAgua.Checker.ProgTab
 public import ConAgua.Checker.ProgNrt
 public import ConAgua.Checker.ProgSkt
+meta import ConAgua.Compiler.AsmLit
+meta import ConAgua.Checker.ProgTab
+meta import ConAgua.Checker.ProgNrt
+meta import ConAgua.Checker.ProgSkt
 
 @[expose] public section
 

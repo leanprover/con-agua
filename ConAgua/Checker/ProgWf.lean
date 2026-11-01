@@ -5,6 +5,11 @@ public import ConAgua.Checker.ProgWfPart1
 public import ConAgua.Checker.ProgWfPart2
 public import ConAgua.Checker.ProgWfPart3
 public import ConAgua.Compiler.WFSplit
+meta import ConAgua.Checker.ProgWfPart0
+meta import ConAgua.Checker.ProgWfPart1
+meta import ConAgua.Checker.ProgWfPart2
+meta import ConAgua.Checker.ProgWfPart3
+meta import ConAgua.Compiler.WFSplit
 
 @[expose] public section
 

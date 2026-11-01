@@ -11,6 +11,17 @@ public import ConAgua.Checker.RomProgB
 public import ConAgua.Rom.CIReadRefs
 public import ConAgua.Arena.LoopStart
 public import ConAgua.Checker.IndMemoClosed
+meta import ConAgua.Checker.LoopProgInd
+meta import ConAgua.Checker.LoopDeclArm
+meta import ConAgua.Checker.LoopDeclAgree
+meta import ConAgua.Checker.IndCore
+meta import ConAgua.Checker.CoreErec
+meta import ConAgua.Checker.LeafAll
+meta import ConAgua.Checker.LoopAll
+meta import ConAgua.Checker.RomProgB
+meta import ConAgua.Rom.CIReadRefs
+meta import ConAgua.Arena.LoopStart
+meta import ConAgua.Checker.IndMemoClosed
 
 @[expose] public section
 

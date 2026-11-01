@@ -1,6 +1,7 @@
 module
 
 public import ConAgua.Checker.PreLoopWSBase
+meta import ConAgua.Checker.PreLoopWSBase
 
 @[expose] public section
 

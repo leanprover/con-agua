@@ -2,6 +2,8 @@ module
 
 public import ConAgua.Checker.ProgTab
 public import ConAgua.Final.Abi
+meta import ConAgua.Checker.ProgTab
+meta import ConAgua.Final.Abi
 
 @[expose] public section
 

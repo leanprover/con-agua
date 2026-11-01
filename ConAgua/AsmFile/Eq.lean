@@ -4,6 +4,10 @@ public import ConAgua.AsmFile.Term
 public import ConAgua.Compiler.Compile
 public import Lean.Elab.Command
 public import Std.Do.Triple.SpecLemmas
+public meta import ConAgua.AsmFile.Term
+public meta import ConAgua.Compiler.Compile
+public meta import Lean.Elab.Command
+public meta import Std.Do.Triple.SpecLemmas
 
 @[expose] public section
 
@@ -35,12 +39,12 @@ namespace L.Compiler
 open Lean Elab Command Meta
 
 /-- The operands of `a ++ b` at `Program`, if `e` is one. -/
-def appendArgs? (e : Lean.Expr) : Option (Lean.Expr × Lean.Expr) :=
+meta def appendArgs? (e : Lean.Expr) : Option (Lean.Expr × Lean.Expr) :=
   if e.isAppOfArity ``HAppend.hAppend 6 then some (e.appFn!.appArg!, e.appArg!) else none
 
 /-- The segments of a right-nested `s₀ ++ (s₁ ++ … ++ [])`, each constant unfolded once, so that
 `asm_lit`'s `code.f<i>` and the file's literals compare as terms. -/
-partial def segmentsOf (e : Lean.Expr) (acc : Array Lean.Expr := #[]) : MetaM (Array Lean.Expr) := do
+meta partial def segmentsOf (e : Lean.Expr) (acc : Array Lean.Expr := #[]) : MetaM (Array Lean.Expr) := do
   let unfold (e : Lean.Expr) : MetaM Lean.Expr := do
     if e.isConst then return (← getConstInfo e.constName!).value?.getD e else return e
   match appendArgs? e with
@@ -51,7 +55,7 @@ partial def segmentsOf (e : Lean.Expr) (acc : Array Lean.Expr := #[]) : MetaM (A
     else throwError "asm_file_eq: not a list of segments: {e}"
 
 /-- The function a segment belongs to (its entry label `fnL g`), for messages. -/
-def segName (e : Lean.Expr) : String :=
+meta def segName (e : Lean.Expr) : String :=
   match e.find? fun x => x.isAppOfArity ``fnL 1 with
   | some x => match x.appArg! with | .lit (.strVal g) => g | _ => "?"
   | none => "the trampoline"
@@ -61,7 +65,7 @@ before the trampoline (`S`), as `asm_file_eq` does, in a module of its own: what
 the stub (`checkerStub_eq`) then does not wait for the compiled code (`checkerAsm`). -/
 syntax (name := asmStub) (docComment)? "asm_stub " ident " : " ident : command
 
-@[command_elab asmStub] def elabAsmStub : CommandElab := fun stx => do
+@[command_elab asmStub] meta def elabAsmStub : CommandElab := fun stx => do
   let `($[$doc?:docComment]? asm_stub $stubS:ident : $fileS:ident) := stx | throwUnsupportedSyntax
   let stubN := (← getCurrNamespace) ++ stubS.getId
   liftTermElabM do
@@ -74,7 +78,7 @@ syntax (name := asmStub) (docComment)? "asm_stub " ident " : " ident : command
 syntax (name := asmFileEq) (docComment)? "asm_file_eq " ident " : " ident " = " ident " ++ " ident
   " via " ident : command
 
-@[command_elab asmFileEq] def elabAsmFileEq : CommandElab := fun stx => do
+@[command_elab asmFileEq] meta def elabAsmFileEq : CommandElab := fun stx => do
   let `($[$doc?:docComment]? asm_file_eq $n:ident : $fileS:ident = $stubS:ident ++ $codeS:ident via $codeEqS:ident) := stx
     | throwUnsupportedSyntax
   let ns ← getCurrNamespace

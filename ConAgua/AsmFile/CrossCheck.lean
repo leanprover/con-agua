@@ -3,6 +3,9 @@ module
 public import ConAgua.AsmFile.Parse
 public import ConAgua.Compiler.Compile
 public import Kraken.X64.Parser.Basic
+meta import ConAgua.AsmFile.Parse
+meta import ConAgua.Compiler.Compile
+meta import Kraken.X64.Parser.Basic
 
 @[expose] public section
 

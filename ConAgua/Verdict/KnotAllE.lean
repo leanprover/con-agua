@@ -6,6 +6,12 @@ public import ConAgua.Verdict.WhnfKnotE
 public import ConAgua.Verdict.DefEqAllE
 public import ConAgua.Checker.LoopProg
 public import ConAgua.Checker.NoVerdictClosed
+meta import ConAgua.Verdict.InferKnotE
+meta import ConAgua.Verdict.InferLeavesE
+meta import ConAgua.Verdict.WhnfKnotE
+meta import ConAgua.Verdict.DefEqAllE
+meta import ConAgua.Checker.LoopProg
+meta import ConAgua.Checker.NoVerdictClosed
 
 @[expose] public section
 

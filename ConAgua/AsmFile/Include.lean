@@ -5,6 +5,11 @@ public import ConAgua.AsmFile.Term
 public import Kraken.X64.PrintATT
 public import Lean.Elab.Term.TermElabM
 public import Std.Do.Triple.SpecLemmas
+public meta import ConAgua.AsmFile.Parse
+public meta import ConAgua.AsmFile.Term
+public meta import Kraken.X64.PrintATT
+public meta import Lean.Elab.Term.TermElabM
+public meta import Std.Do.Triple.SpecLemmas
 
 @[expose] public section
 
@@ -40,7 +45,7 @@ open Lean Elab Term Meta ConAgua.AsmFile
 
 /-- Cut `p` before `ca_enter:` and before every `ca_f_g:`; each piece with the function name its
 labels use (`g`, or `""` before the first function). -/
-def segments (p : Program) : List (String × Program) := Id.run do
+meta def segments (p : Program) : List (String × Program) := Id.run do
   let mut out : Array (String × Program) := #[]
   let mut cur : Array Directive := #[]
   let mut f := ""
@@ -57,12 +62,12 @@ def segments (p : Program) : List (String × Program) := Id.run do
   return out.toList
 
 /-- The term for `p`: its segments joined (see the module doc). -/
-def programTerm (p : Program) : Lean.Expr :=
+meta def programTerm (p : Program) : Lean.Expr :=
   joinE ((segments p).map fun (f, v) => codeExpr f v)
 
 syntax (name := includeAsm) "include_asm " str : term
 
-@[term_elab includeAsm] def elabIncludeAsm : TermElab := fun stx _ => do
+@[term_elab includeAsm] meta def elabIncludeAsm : TermElab := fun stx _ => do
   let `(include_asm $path:str) := stx | throwUnsupportedSyntax
   let some dir := (System.FilePath.mk (← getFileName)).parent
     | throwError "include_asm: no directory for {← getFileName}"

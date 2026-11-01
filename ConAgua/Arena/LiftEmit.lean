@@ -3,6 +3,9 @@ module
 public import ConAgua.Compiler.Run
 public import ConAgua.Compiler.WF
 public import ConAgua.Arena.LiftBenchComp
+meta import ConAgua.Compiler.Run
+meta import ConAgua.Compiler.WF
+meta import ConAgua.Arena.LiftBenchComp
 
 @[expose] public section
 

@@ -3,6 +3,9 @@ module
 public import ConAgua.Checker.Prog
 public import ConAgua.Checker.IndArmTrees1
 public import ConAgua.Checker.IndArmTrees2
+meta import ConAgua.Checker.Prog
+meta import ConAgua.Checker.IndArmTrees1
+meta import ConAgua.Checker.IndArmTrees2
 
 @[expose] public section
 

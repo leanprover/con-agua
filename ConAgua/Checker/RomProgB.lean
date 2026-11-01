@@ -1,6 +1,7 @@
 module
 
 public import ConAgua.Checker.RomProgA
+meta import ConAgua.Checker.RomProgA
 
 @[expose] public section
 

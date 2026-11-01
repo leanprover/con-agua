@@ -1,5 +1,6 @@
 module
 
+public import ConRon.Bridge.Specs
 public import ConAgua.Arena.Refine
 public import ConRon.Bridge.Inductives.Decl
 public import ConRon.Bridge.Frontend.Capstone

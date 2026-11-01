@@ -3,6 +3,9 @@ module
 public import ConAgua.Checker.FrontProgAgree
 public import ConAgua.Arena.LevelIntern
 public import ConAgua.Arena.LevelSubstLP
+meta import ConAgua.Checker.FrontProgAgree
+meta import ConAgua.Arena.LevelIntern
+meta import ConAgua.Arena.LevelSubstLP
 
 @[expose] public section
 

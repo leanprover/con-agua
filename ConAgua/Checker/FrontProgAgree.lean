@@ -3,6 +3,9 @@ module
 public import ConAgua.Checker.Prog
 public import ConAgua.Checker.LoopProgTac
 public import ConAgua.Front.FrontRun
+public meta import ConAgua.Checker.Prog
+public meta import ConAgua.Checker.LoopProgTac
+public meta import ConAgua.Front.FrontRun
 
 @[expose] public section
 
@@ -42,7 +45,7 @@ theorem lkF_of_idx {i : Nat} {f : FnName} {fd : FunDecl}
 
 open Lean Meta Elab Tactic in
 /-- The positions of a program's names (first binding), by compiled code. -/
-unsafe def progPos (p : Lean.Expr) : MetaM (Std.HashMap String Nat) := do
+meta unsafe def progPos (p : Lean.Expr) : MetaM (Std.HashMap String Nat) := do
   let e := mkApp3 (mkConst ``List.map [0, 0]) (mkApp2 (mkConst ``Prod [0, 0]) (mkConst ``String)
     (mkConst ``FunDecl)) (mkConst ``String) (mkApp2 (mkConst ``Prod.fst [0, 0]) (mkConst ``String)
     (mkConst ``FunDecl))
@@ -54,7 +57,7 @@ unsafe def progPos (p : Lean.Expr) : MetaM (Std.HashMap String Nat) := do
 
 open Lean Meta Elab Tactic in
 /-- The element at position `n` of a program, by `whnf`. -/
-def progElem (p : Lean.Expr) (n : Nat) : MetaM Lean.Expr := do
+meta def progElem (p : Lean.Expr) (n : Nat) : MetaM Lean.Expr := do
   let mut l ← whnfD p
   for _ in [0:n] do l ← whnfD l.appArg!
   unless l.isAppOfArity ``List.cons 3 do throwError "front_lk: no element {n}"
@@ -63,7 +66,7 @@ def progElem (p : Lean.Expr) (n : Nat) : MetaM Lean.Expr := do
 open Lean Meta Elab Tactic in
 /-- Close `checkerProg.lookup "f" = frontAllProg.lookup "f"`: both sides by position (`lk_of_idx`,
 `lkF_of_idx`), the body taken from `checkerProg`'s element. -/
-def frontLk (pc pf : Std.HashMap String Nat) (g : MVarId) : MetaM Unit := do
+meta def frontLk (pc pf : Std.HashMap String Nat) (g : MVarId) : MetaM Unit := do
   let ty := (← instantiateMVars (← g.getType)).cleanupAnnotations.headBeta
   let some (_, lhs, rhs) := ty.eq? | throwError "front_agree: not an equation: {ty}"
   let fE := lhs.appFn!.appArg!

@@ -4,6 +4,10 @@ public import ConAgua.Checker.Prog
 public import ConAgua.Arena.DeclArmLoop
 public import ConAgua.Arena.DeclDivModSpec.RomPinSets
 public import ConAgua.Arena.DeclNatGateSpec
+meta import ConAgua.Checker.Prog
+meta import ConAgua.Arena.DeclArmLoop
+meta import ConAgua.Arena.DeclDivModSpec.RomPinSets
+meta import ConAgua.Arena.DeclNatGateSpec
 
 @[expose] public section
 

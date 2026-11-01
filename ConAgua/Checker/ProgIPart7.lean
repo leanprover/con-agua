@@ -1,6 +1,7 @@
 module
 
 public import ConAgua.Checker.ProgIdx
+meta import ConAgua.Checker.ProgIdx
 
 @[expose] public section
 

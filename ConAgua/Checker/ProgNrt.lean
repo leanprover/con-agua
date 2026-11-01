@@ -2,6 +2,8 @@ module
 
 public import ConAgua.Checker.ProgI
 public import ConAgua.Compiler.WFSplit
+meta import ConAgua.Checker.ProgI
+meta import ConAgua.Compiler.WFSplit
 
 @[expose] public section
 

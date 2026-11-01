@@ -2,6 +2,8 @@ module
 
 public import ConAgua.Compiler.Compile
 public import Lean.Util.ReplaceExpr
+meta import ConAgua.Compiler.Compile
+meta import Lean.Util.ReplaceExpr
 
 @[expose] public section
 

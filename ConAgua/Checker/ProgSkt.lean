@@ -7,6 +7,13 @@ public import ConAgua.Checker.ProgSktPart3
 public import ConAgua.Checker.ProgSktPart4
 public import ConAgua.Checker.ProgSktPart5
 public import ConAgua.Compiler.WFSplit
+meta import ConAgua.Checker.ProgSktPart0
+meta import ConAgua.Checker.ProgSktPart1
+meta import ConAgua.Checker.ProgSktPart2
+meta import ConAgua.Checker.ProgSktPart3
+meta import ConAgua.Checker.ProgSktPart4
+meta import ConAgua.Checker.ProgSktPart5
+meta import ConAgua.Compiler.WFSplit
 
 @[expose] public section
 

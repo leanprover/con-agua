@@ -7,6 +7,13 @@ public import ConAgua.Checker.LoopStage
 public import ConAgua.Checker.PipeFinal
 public import ConAgua.Checker.TwinShapeQuot
 public import ConAgua.Checker.PresizeStage
+meta import ConAgua.Checker.ParEntryA
+meta import ConAgua.Checker.IndArm
+meta import ConAgua.Arena.PhaseAEntry
+meta import ConAgua.Checker.LoopStage
+meta import ConAgua.Checker.PipeFinal
+meta import ConAgua.Checker.TwinShapeQuot
+meta import ConAgua.Checker.PresizeStage
 
 @[expose] public section
 

@@ -3,6 +3,9 @@ module
 public import ConAgua.Checker.Prog
 public import ConAgua.Compiler.WFSplit
 public import ConAgua.Layout
+meta import ConAgua.Checker.Prog
+meta import ConAgua.Compiler.WFSplit
+meta import ConAgua.Layout
 
 @[expose] public section
 

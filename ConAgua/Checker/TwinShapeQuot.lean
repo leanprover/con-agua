@@ -1,5 +1,7 @@
 module
 
+public import ConRon.Bridge.Frontend.Chunks
+public import ConRon.Bridge.Checker.Basis
 public import ConAgua.Checker.Pipeline
 public import ConRon.Bridge.Checker.Pins
 public import ConRon.Bridge.Frontend.Prepare

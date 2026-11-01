@@ -2,6 +2,8 @@ module
 
 public import ConAgua.Arena.LoopFns
 public import ConAgua.Compiler.WriteSetSplit
+meta import ConAgua.Arena.LoopFns
+meta import ConAgua.Compiler.WriteSetSplit
 
 @[expose] public section
 

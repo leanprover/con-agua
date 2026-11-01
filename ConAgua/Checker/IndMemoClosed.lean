@@ -4,6 +4,10 @@ public import ConAgua.Checker.Prog
 public import ConAgua.Arena.IndMemoFns
 public import ConAgua.Arena.LevelIntern
 public import ConAgua.Arena.LevelSubstLP
+meta import ConAgua.Checker.Prog
+meta import ConAgua.Arena.IndMemoFns
+meta import ConAgua.Arena.LevelIntern
+meta import ConAgua.Arena.LevelSubstLP
 
 @[expose] public section
 

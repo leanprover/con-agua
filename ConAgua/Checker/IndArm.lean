@@ -3,6 +3,9 @@ module
 public import ConAgua.Checker.LoopProg
 public import ConAgua.Checker.IndArmClosed
 public import ConAgua.Arena.IndArm
+meta import ConAgua.Checker.LoopProg
+meta import ConAgua.Checker.IndArmClosed
+meta import ConAgua.Arena.IndArm
 
 @[expose] public section
 

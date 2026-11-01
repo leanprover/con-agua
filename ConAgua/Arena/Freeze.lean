@@ -1,6 +1,7 @@
 module
 
 public import ConAgua.Arena.DeclBase
+meta import ConAgua.Arena.DeclBase
 
 @[expose] public section
 

@@ -1,6 +1,7 @@
 module
 
 public import ConAgua.Checker.LoopDeclArm1
+meta import ConAgua.Checker.LoopDeclArm1
 
 @[expose] public section
 

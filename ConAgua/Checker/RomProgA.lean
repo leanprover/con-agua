@@ -1,6 +1,7 @@
 module
 
 public import ConAgua.Checker.LoopProgTac
+meta import ConAgua.Checker.LoopProgTac
 
 @[expose] public section
 

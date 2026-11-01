@@ -1,6 +1,7 @@
 module
 
 public import ConAgua.AsmFile.Include
+meta import ConAgua.AsmFile.Include
 
 @[expose] public section
 

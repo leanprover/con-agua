@@ -3,6 +3,9 @@ module
 public import ConAgua.Checker.ProgI
 public import ConAgua.Compiler.InlineCorrect
 public import ConAgua.Compiler.MainRef
+meta import ConAgua.Checker.ProgI
+meta import ConAgua.Compiler.InlineCorrect
+meta import ConAgua.Compiler.MainRef
 
 @[expose] public section
 

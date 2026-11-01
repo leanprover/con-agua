@@ -2,6 +2,8 @@ module
 
 public import ConAgua.Arena.DeclArmsNat
 public import ConAgua.Arena.IndProg
+meta import ConAgua.Arena.DeclArmsNat
+meta import ConAgua.Arena.IndProg
 
 @[expose] public section
 

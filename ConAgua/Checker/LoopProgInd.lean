@@ -2,6 +2,8 @@ module
 
 public import ConAgua.Checker.LoopDecl
 public import ConAgua.Arena.CheckerT
+meta import ConAgua.Checker.LoopDecl
+meta import ConAgua.Arena.CheckerT
 
 @[expose] public section
 

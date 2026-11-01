@@ -6,6 +6,12 @@ public import ConAgua.Compiler.WFFast
 public import ConAgua.Compiler.WriteSetSplit
 public import ConAgua.Arena.LevelIntern
 public import ConAgua.Arena.LevelSubstLP
+meta import ConAgua.Checker.Prog
+meta import ConAgua.Rom.Stage
+meta import ConAgua.Compiler.WFFast
+meta import ConAgua.Compiler.WriteSetSplit
+meta import ConAgua.Arena.LevelIntern
+meta import ConAgua.Arena.LevelSubstLP
 
 @[expose] public section
 

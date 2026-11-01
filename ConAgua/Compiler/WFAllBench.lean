@@ -5,6 +5,11 @@ public import ConAgua.Arena.Inst1Bench
 public import ConAgua.Arena.Inst1BenchComp
 public import ConAgua.Arena.LiftBench
 public import ConAgua.Arena.LiftBenchComp
+meta import ConAgua.Compiler.WF
+meta import ConAgua.Arena.Inst1Bench
+meta import ConAgua.Arena.Inst1BenchComp
+meta import ConAgua.Arena.LiftBench
+meta import ConAgua.Arena.LiftBenchComp
 
 @[expose] public section
 

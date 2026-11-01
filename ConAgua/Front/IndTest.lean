@@ -1,6 +1,7 @@
 module
 
 public import ConAgua.Front.FrontRun
+meta import ConAgua.Front.FrontRun
 
 @[expose] public section
 

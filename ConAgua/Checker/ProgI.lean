@@ -12,6 +12,18 @@ public import ConAgua.Checker.ProgIPart8
 public import ConAgua.Checker.ProgIPart9
 public import ConAgua.Checker.ProgIPart10
 public import ConAgua.Checker.ProgIPart11
+meta import ConAgua.Checker.ProgIPart0
+meta import ConAgua.Checker.ProgIPart1
+meta import ConAgua.Checker.ProgIPart2
+meta import ConAgua.Checker.ProgIPart3
+meta import ConAgua.Checker.ProgIPart4
+meta import ConAgua.Checker.ProgIPart5
+meta import ConAgua.Checker.ProgIPart6
+meta import ConAgua.Checker.ProgIPart7
+meta import ConAgua.Checker.ProgIPart8
+meta import ConAgua.Checker.ProgIPart9
+meta import ConAgua.Checker.ProgIPart10
+meta import ConAgua.Checker.ProgIPart11
 
 @[expose] public section
 

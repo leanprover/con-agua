@@ -18,6 +18,24 @@ public import ConAgua.Checker.AsmPart14
 public import ConAgua.Checker.AsmPart15
 public import ConAgua.Checker.AsmPart16
 public import ConAgua.Checker.AsmPart17
+meta import ConAgua.Checker.AsmPart0
+meta import ConAgua.Checker.AsmPart1
+meta import ConAgua.Checker.AsmPart2
+meta import ConAgua.Checker.AsmPart3
+meta import ConAgua.Checker.AsmPart4
+meta import ConAgua.Checker.AsmPart5
+meta import ConAgua.Checker.AsmPart6
+meta import ConAgua.Checker.AsmPart7
+meta import ConAgua.Checker.AsmPart8
+meta import ConAgua.Checker.AsmPart9
+meta import ConAgua.Checker.AsmPart10
+meta import ConAgua.Checker.AsmPart11
+meta import ConAgua.Checker.AsmPart12
+meta import ConAgua.Checker.AsmPart13
+meta import ConAgua.Checker.AsmPart14
+meta import ConAgua.Checker.AsmPart15
+meta import ConAgua.Checker.AsmPart16
+meta import ConAgua.Checker.AsmPart17
 
 @[expose] public section
 

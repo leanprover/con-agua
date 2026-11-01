@@ -2,6 +2,8 @@ module
 
 public import ConAgua.Arena.DeclArmsCanon
 public import ConAgua.Arena.Pins
+meta import ConAgua.Arena.DeclArmsCanon
+meta import ConAgua.Arena.Pins
 
 @[expose] public section
 

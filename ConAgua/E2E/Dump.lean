@@ -1,9 +1,15 @@
 module
 
+public import Lean.Compiler.NoncomputableAttr
 public import ConAgua.E2E.Ser
 public import Lean.Elab.Command
 public import Lean.Meta.Eval
 public import Std.Do.Triple.SpecLemmas
+public meta import Lean.Compiler.NoncomputableAttr
+public meta import ConAgua.E2E.Ser
+public meta import Lean.Elab.Command
+public meta import Lean.Meta.Eval
+public meta import Std.Do.Triple.SpecLemmas
 
 @[expose] public section
 
@@ -28,14 +34,14 @@ namespace L.E2E
 
 open Lean Meta Elab Command
 
-def isAbortBody : L.Stmt → Bool
+meta def isAbortBody : L.Stmt → Bool
   | .abort _ => true
   | .seq .skip t => isAbortBody t
   | .seq t .skip => isAbortBody t
   | _ => false
 
 /-- The `(name, decl)` expressions of every `List.lookup "f" p = some d` in `e`. -/
-partial def lookupsIn (e : Lean.Expr) : Array (String × Lean.Expr) := Id.run do
+meta partial def lookupsIn (e : Lean.Expr) : Array (String × Lean.Expr) := Id.run do
   let mut out := #[]
   let mut todo := #[e]
   let mut seen : Std.HashSet UInt64 := {}
@@ -61,7 +67,7 @@ partial def lookupsIn (e : Lean.Expr) : Array (String × Lean.Expr) := Id.run do
   return out
 
 /-- `lookupsIn`, keeping the lookups whose FunDecl mentions free variables (no loose ones). -/
-partial def lookupsInF (e : Lean.Expr) : Array (String × Lean.Expr) := Id.run do
+meta partial def lookupsInF (e : Lean.Expr) : Array (String × Lean.Expr) := Id.run do
   let mut out := #[]
   let mut todo := #[e]
   while h : todo.size > 0 do
@@ -81,20 +87,20 @@ partial def lookupsInF (e : Lean.Expr) : Array (String × Lean.Expr) := Id.run d
   return out
 
 /-- The program's ROM (`ConAgua/Arena/Prelude.lean`). -/
-def romName : Name := `L.Rom.romData
-def romTy : Lean.Expr := mkApp (mkConst ``List [.zero]) (mkConst ``UInt8)
+meta def romName : Name := `L.Rom.romData
+meta def romTy : Lean.Expr := mkApp (mkConst ``List [.zero]) (mkConst ``UInt8)
 
-unsafe def evalFunDecl (e : Lean.Expr) : MetaM L.FunDecl :=
+meta unsafe def evalFunDecl (e : Lean.Expr) : MetaM L.FunDecl :=
   Lean.Meta.evalExpr L.FunDecl (mkConst ``L.FunDecl) e
 
-unsafe def evalProgConst (n : Name) : MetaM L.Prog := do
+meta unsafe def evalProgConst (n : Name) : MetaM L.Prog := do
   match (← getEnv).evalConst L.Prog (← getOptions) n with
   | .ok p => pure p
   | .error e => throwError "eval {n}: {e}"
 
 /-- The bindings one constant contributes (its own `Prog` value, the lookups its type states,
 those parametric in the ROM), and the errors evaluating them. -/
-unsafe def bindingsOf (n : Name) (ci : ConstantInfo) :
+meta unsafe def bindingsOf (n : Name) (ci : ConstantInfo) :
     MetaM (Array (String × String × L.FunDecl) × Array String) := do
   let env ← getEnv
   let mut binds : Array (String × String × L.FunDecl) := #[]
@@ -131,7 +137,7 @@ unsafe def bindingsOf (n : Name) (ci : ConstantInfo) :
       catch e => errs := errs.push s!"{n} {f}: {← e.toMessageData.toString}"
   return (binds, errs)
 
-unsafe def dumpBindingsImpl (out : System.FilePath) : CommandElabM Unit := liftTermElabM do
+meta unsafe def dumpBindingsImpl (out : System.FilePath) : CommandElabM Unit := liftTermElabM do
   let env ← getEnv
   let mut binds : Array (String × String × L.FunDecl) := #[]
   let mut errs : Array String := #[]
@@ -166,6 +172,6 @@ unsafe def dumpBindingsImpl (out : System.FilePath) : CommandElabM Unit := liftT
   IO.FS.writeFile out ("\n".intercalate (dataLines ++ fnLines.toList ++ bindLines.toList ++ errLines) ++ "\n")
 
 @[implemented_by dumpBindingsImpl]
-opaque dumpBindings (out : System.FilePath) : CommandElabM Unit
+meta opaque dumpBindings (out : System.FilePath) : CommandElabM Unit
 
 end L.E2E
