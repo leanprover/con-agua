@@ -60,11 +60,14 @@ def natGateT (feR fe2 : IFEnv) (c : NIdx) : AM Unit := do
     | _ => fail (.internal
         "structural Nat operation not stored")
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- The `Nat.div`-family pin gate (`checkDecl`'s lines 123-124). -/
 def divGateT (pins : List INatOpPinSet) (feR fe2 : IFEnv) (c : NIdx) : AM Unit := do
   if (← natDivModNames).contains c then
     checkDivModPin V pins feR fe2 c
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **The arm is the two checks, then the two gates** (the twin's `do` block, its join points
 distributed over the gates' branches). -/
 theorem checkDecl_defn_eq (pins : List INatOpPinSet) (fe : IFEnv) (cv : IConstantVal) (v : EIdx)
@@ -99,6 +102,7 @@ theorem checkDecl_defn_eq (pins : List INatOpPinSet) (fe : IFEnv) (cv : IConstan
   · simp only [pure_bind]
     congr 1; funext y
     split <;> simp
+-/
 
 /-! ## The gates' specs (hypotheses) -/
 

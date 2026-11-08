@@ -42,10 +42,12 @@ def RecAt (m : Mem) (q : Nat) (ci : IConstantInfo) : Prop :=
   ∀ P, AgreesFrom P m q → decCI (aread P) (fun _ => none) q = some ci
 -/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem RecAt.keep {m m' : Mem} {q : Nat} {ci : IConstantInfo} (h : RecAt m q ci)
     (ht : topN m DLP ≤ topN m' DLP) (hk : ∀ i, q ≤ i → i ≤ topN m DLP → wd m' DLP i = wd m DLP i) :
     RecAt m' q ci :=
   fun P hP => h P (fun i h1 h2 => by rw [hP i h1 (Nat.le_trans h2 ht), hk i h1 h2])
+-/
 
 theorem wd_set_ne (m : Mem) (A : ArrId) (i v : Word) (j : Nat) (h : i.toNat ≠ j) :
     wd (m.set64 A i v) A j = wd m A j := by
@@ -117,6 +119,7 @@ theorem rdW_wdI (m : Mem) (A : ArrId) (t w : Word) (h : t.toNat + w.toNat < 2 ^ 
     rdW (m.arr64 A) (t + w) = wd m A (t.toNat + w.toNat) := by
   simp only [rdW, wd, widx2 t w h]
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`ind_type` against the twin's type constant.** -/
 theorem typeW_twin {b : ByteArray} {m m' : Mem} {st : StateD} (a : AState) (hD : LkR m st)
     {t q : Word} {ty : IndTypeRec} (hF : CVF b m t.toNat ty.cv) (ht : t.toNat + 3 < 2 ^ 63)
@@ -124,7 +127,9 @@ theorem typeW_twin {b : ByteArray} {m m' : Mem} {st : StateD} (a : AState) (hD :
     (tyT st ty).run a = .ok (resOf (tyT st ty) a, a) ∧ PExt m m' ∧ q.toNat = topN m DLP + 1 ∧
       LkR m' st ∧ RecAt m' q.toNat (resOf (tyT st ty) a) := by
   sorry
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`ind_ctor` against the twin's constructor constant.** -/
 theorem ctorRW_twin {b : ByteArray} {m m' : Mem} {st : StateD} (a : AState) (hD : LkR m st)
     {c q : Word} {ct : IndCtorRec} (hF : CtF b m c.toNat ct) (hc : c.toNat + 6 < 2 ^ 63)
@@ -132,5 +137,6 @@ theorem ctorRW_twin {b : ByteArray} {m m' : Mem} {st : StateD} (a : AState) (hD 
     (ctT st ct).run a = .ok (resOf (ctT st ct) a, a) ∧ PExt m m' ∧ q.toNat = topN m DLP + 1 ∧
       LkR m' st ∧ RecAt m' q.toNat (resOf (ctT st ct) a) := by
   sorry
+-/
 
 end L.Front.Ind

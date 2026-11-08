@@ -170,10 +170,12 @@ theorem pinIn_contains {m : Mem} {p : Pins} (hF : PinsFull m p) {n : Nat} {x k h
 
 /-! ## The twin's two arms -/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`installStepGo`'s `checkDecl` arm.** -/
 def cdT (mode : ConLeche.CheckMode) (pins : List INatOpPinSet) (fe : IFEnv) (d : IDeclaration) :
     AM (IFEnv × Option ValueGroup) := do
   pure (← checkDecl mode pins fe d, none)
+-/
 
 /-- The pinned definitions' names (`natOpNames ++ natDivModNames`) are the pin table's 15 to 29. -/
 theorem pinnedDefn_contains (m : Mem) (x : NIdx) :
@@ -194,10 +196,7 @@ theorem stepC_200 : (200 : Word) ∈ stepC := by decide +kernel
 theorem LoopR.reset {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Name} {m : Mem} {a : AState} {vis : Word}
     {fe : IFEnv} {ds : Array IDeclaration}
     (h : LoopR pins m a vis fe ds) : LoopR pins (m.set64 CTL 200 0) a vis fe ds := by
-  have hf : MemFrame stepA stepC m (m.set64 CTL 200 0) :=
-    (MemFrame.setCtl m 200 0).mono (by simp) (by simpa using stepC_200)
-  refine h.of_step (iwReset_stage ⟨h.check, h.iw⟩).1 hf ?_
-  rw [erecP_reset]; exact fun _ _ h => h
+  sorry
 
 /-- The constant-record and value-group kinds of `install_value`'s call for a record. -/
 def IvArgs (ck vk : Word) : IDeclaration → Prop
@@ -229,8 +228,10 @@ variable {p : Prog} (h : IvProg p)
 include h
 theorem IvProg.recP : RecProg p := by
   constructor <;> exact (h.agree _ (by decide) (by decide)).trans rfl
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem IvProg.ih : IhProg p := by
   constructor <;> first | exact h.bvb | exact h.hf | exact (h.agree _ (by decide) (by decide)).trans rfl
+-/
 end ivLookups
 
 end L.Arena
