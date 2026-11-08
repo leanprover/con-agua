@@ -170,9 +170,11 @@ theorem decNL_frX {x : Nat} {m m' : Mem} (h : FrX x m m') {o l : Nat} (hb : o + 
     (hx : l = 0 ∨ x < o ∨ o + l ≤ x) : decNL m' o l = decNL m o l := by
   sorry
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem CnsRec.frame {mb : Mem} {S : Nat → Prop} {hi x : Nat} {m m' : Mem} {w : Nat} {M : TargetMajor}
     (h : CnsRec mb S hi m w M) (hF : FrX x m m') (hx : x < hi) : CnsRec mb S hi m' w M := by
   sorry
+-/
 
 theorem PtrsB.mapM {mb m : Mem} (hg : IWGrow mb m) :
     ∀ {ps : List Nat} {xs : List NestCtorNf}, PtrsB mb ps xs → ps.mapM (decNCN (truncM m)) = some xs
@@ -181,10 +183,12 @@ theorem PtrsB.mapM {mb m : Mem} (hg : IWGrow mb m) :
     simp only [List.mapM_cons, show decNCN (truncM m) v = some x from h1.grow (decNCN_mono _) hg,
       PtrsB.mapM hg h2]; rfl
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **A record written by the loop decodes below the tops.** -/
 theorem CnsRec.decB {mb : Mem} {S : Nat → Prop} {hi : Nat} {m : Mem} {w : Nat} {M : TargetMajor}
     (hg : IWGrow mb m) (h : CnsRec mb S hi m w M) : DecB (fun m => decTM m w) m M := by
   sorry
+-/
 
 /-! ## Small pieces -/
 
@@ -327,11 +331,13 @@ structure CnsProg (p : Prog) : Prop where
   ha : p.lookup "iw_alloc" = some iwAlloc
   cns : p.lookup "classes_nfs" = some classesNfsL
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem cnsRec_mapM {mb mF : Mem} {S : Nat → Prop} {hi : Nat} (hg : IWGrow mb mF) :
     ∀ {ws : List Nat} {xs : List TargetMajor}, FA2 (CnsRec mb S hi mF) ws xs → ws.mapM (decTM (truncM mF)) = some xs
   | [], [], .nil => rfl
   | _ :: _, _ :: _, .cons h1 h2 => by
     simp only [List.mapM_cons, show decTM (truncM mF) _ = some _ from h1.decB hg, cnsRec_mapM hg h2]; rfl
+-/
 
 end L.Ind
 

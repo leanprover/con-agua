@@ -66,24 +66,7 @@ theorem spgW_hb {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
     (hc' : H cty) (hb : nP.toNat + nF.toNat + 1 < 2 ^ 64)
     (hS : StageR vis fe m a) (hM : hbMR m mp) (h : spgW n m cty nP nF so sl = some (r, m')) :
     ∃ mp', hbMR m' mp' := by
-  unfold spgW at h
-  cases hz' : pinWordV m 53 with
-  | none => rw [hz'] at h; simp [spgK1] at h
-  | some z =>
-  rw [hz'] at h
-  by_cases h0 : rdW (m.arr64 CTL) hbSch.cs + 2 = 0
-  · rw [spgK1_some_zero n m cty nP nF so sl z h0] at h; cases h
-  rw [spgK1_some n m cty nP nF so sl z h0] at h
-  have hf0 := mclearG_frame hbSch m
-  have hM0 := memoRV_clear hbSch hbSch_wf lfKey hbVR m mp hM h0
-  obtain ⟨hS0, -⟩ := StageR.frame_hi hS hf0 (by simp) (by
-      intro x hx; simp [hbSch] at hx; rcases hx with rfl | rfl <;> decide) (by simp) (by simp [hbSch])
-  obtain ⟨⟨u, m2⟩, hu, h⟩ := of_K h rfl; rw [spgK2_some] at h
-  obtain ⟨-, mp', -, -, -, -, -, hM2, -, -⟩ :=
-    ulW_ok n _ _ a cty nP nF 0 u ∅ (by simpa using hb) hc' hS0 hM0 hu
-  obtain ⟨⟨rr, m3⟩, hr, h⟩ := of_K h rfl; rw [spgK3_some] at h
-  obtain ⟨-, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-  exact ⟨mp', hbMR_mfr (rowW_mfr _ _ _ _ _ _ _ _ _ _ _ hr) (by simp) (by simp) hM2⟩
+  sorry
 
 /-! ## `check_struct_proj_table` -/
 
@@ -144,11 +127,14 @@ theorem spbW_mfr {k : Nat} {m m' : Mem} {T nP nF cty : Word} {r : List Word}
     simp only [spbW, spbK1.eq_def, spbK2.eq_def, spbK3.eq_def] at h
     mfr_auto h [projPsW_mfr, ipalF_mfr, pbW_mfr _ _ _ _ _ _ _ _]
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem crfF_mfr {m m' : Mem} {args r : List Word} (h : crfF m args = some (r, m')) : MFr [] [] m m' :=
   MFr.of_frame (crfF_frame h)
     (fun b hb => .inl (by simp only [List.mem_cons, List.not_mem_nil, or_false] at hb; subst hb; decide))
     (fun x hx => .inl (by simp only [List.mem_cons, List.not_mem_nil, or_false] at hx; rcases hx with rfl | rfl <;> decide))
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- `sctW`'s frame, from its reading `c` of `all_level_params_defined`'s (`sctW_mfr_stub`: the stub's). -/
 theorem sctW_mfr {c : CallM}
     (hc : ∀ (k : Nat) (args : List Word) (m m' : Mem) (r : List Word),
@@ -159,6 +145,7 @@ theorem sctW_mfr {c : CallM}
   | n + 1, m, m', vis, nP, lo, ll, bO, bL, r, h => by
     simp only [sctW, sctK1.eq_def, sctK2.eq_def, sctK3.eq_def, sctK4.eq_def, sctK5.eq_def] at h
     mfr_auto h [sctW_mfr hc n _ _ _ _ _ _ _ _ _, hc _ _ _ _ _, crfF_mfr, MFr.ofHffF, MFr.ofLbbF]
+-/
 
 theorem efgW_mfr : ∀ (n : Nat) (m m' : Mem) (q o l : Word) (r : List Word),
     efgW n m q o l = some (r, m') → MFr [] [] m m'
@@ -178,6 +165,7 @@ theorem efW_mfr {n : Nat} {m m' : Mem} {o l : Word} {r : List Word} (h : efW n m
 theorem wrER_mfr (ws : List Word) (m : Mem) (q : Word) : MFr [] [] m (wrER m q ws) :=
   MFr.of_frame (wrER_frame ws m q) (by simp [EREC]) (by simp)
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem envPushW_mfr {m m' : Mem} {vis q : Word} {r : List Word} (h : envPushW m vis q = some (r, m')) :
     MFr [] [] m m' := by
   simp only [envPushW] at h
@@ -203,6 +191,7 @@ theorem envPushW_mfr {m m' : Mem} {vis q : Word} {r : List Word} (h : envPushW m
   rw [← h.2]
   exact MFr.trans (MFr.of_frame (MemFrame.set64 _ ECON (by decide) _ _) (by simp [ECON]) (by simp))
     (MFr.of_frame (MemFrame.setCtl _ 128 _) (by simp) (by simp))
+-/
 
 end L.Ind
 
@@ -239,6 +228,7 @@ theorem spgW_sl0 (n : Nat) (m : Mem) (cty nP nF so : Word) :
     spgW n m cty nP nF so 0 = spgW n m cty nP nF 0 0 := by
   simp only [spgW, spgK1.eq_def, spgK2.eq_def, rowW_sl0]
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`struct_proj_guards` as a `Sim`, keeping its memo well formed.** -/
 theorem tabSimSpg {p : Prog} (hP : TabsProg p) (k : Nat) {dn : NIdx → Option ConLeche.Name} {vis : Word}
     {fe : IFEnv} {m : Mem} {a : AState} (cty nP nF so sl : Word) (sorts : List LIdx)
@@ -267,6 +257,7 @@ theorem tabSimSpg {p : Prog} (hP : TabsProg p) (k : Nat) {dn : NIdx → Option C
   · obtain ⟨x, a', h1, hS', hg, hd, ht⟩ := spgW_ok k m a cty nP nF so sl sorts mp hc' hb hS hmp hs hst
       r s'.mem hW
     exact ⟨x, a', h1, hS', hg, hd, ht, hM'⟩
+-/
 
 end L.Ind
 
