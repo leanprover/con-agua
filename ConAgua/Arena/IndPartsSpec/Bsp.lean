@@ -239,11 +239,13 @@ def btK3 (_c : CallM) (n : Nat) (nPd cto ctl cso csl rso rsl no nl io lo ll s : 
   | some (r, m) => bgoK3 (bfW n m nPd cto ctl cso csl rso rsl no nl io lo ll s (if r.headD 0 = 2 then 1 else 0))
 -/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- After `pin_word(53)`. -/
 def btK2 (c : CallM) (n : Nat) (nPd cto ctl cso csl rso rsl no nl io lo ll s : Word) (m : Mem) :
     Option Word → Option (List Word × Mem)
   | none => none
   | some z => btK3 c n nPd cto ctl cso csl rso rsl no nl io lo ll s (c (n + 2) "lvl_eq_c" [s, z] m)
+-/
 
 /-- After `block_shape_result_sort`. -/
 def btK1 (c : CallM) (n : Nat) (nPd cto ctl cso csl rso rsl no nl io lo ll : Word) :
@@ -291,8 +293,10 @@ def bbH1 (c : CallM) (n : Nat) (nPd cto ctl cso csl rso rsl cvT0 : Word) :
 section arms
 variable (c : CallM) (n : Nat) (nPd cto ctl cso csl rso rsl cvT0 : Word) (m : Mem) (r : List Word)
   (no nl io il lo ll s z : Word)
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem btK2_some : btK2 c n nPd cto ctl cso csl rso rsl no nl io lo ll s m (some z) =
     btK3 c n nPd cto ctl cso csl rso rsl no nl io lo ll s (c (n + 2) "lvl_eq_c" [s, z] m) := rfl
+-/
 theorem bbH4_fail (h : r.headD 0 = 0) : bbH4 c n nPd cto ctl cso csl rso rsl no nl io il lo ll (some (r, m)) =
     some ([0, 0], m) := by simp only [bbH4]; exact ite_eq_left h
 theorem bbH4_ok (h : ¬ r.headD 0 = 0) : bbH4 c n nPd cto ctl cso csl rso rsl no nl io il lo ll (some (r, m)) =

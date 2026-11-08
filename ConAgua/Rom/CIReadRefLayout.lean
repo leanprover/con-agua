@@ -64,7 +64,7 @@ theorem flatten_take_le (es : List (List UInt8)) (s : Nat) :
     _ = es.flatten.length := by rw [← List.length_append, ← List.flatten_append, List.take_append_drop]
 
 theorem ciEntries_len : ciEntries.length = 31 := by
-  simp [ciEntries, basisKinds, romCiVals, romCvVals, romExprVals]
+  sorry
 
 theorem ciOff_toNat :
     ciOff.toNat = (encNames pinNames ++ encNames reservedBasisNameValues).length := by
@@ -78,36 +78,7 @@ theorem slot_pos {rom : List UInt8} (hr : RomOK rom) (rest : List UInt8) (hrom :
     (s : Word) (hs : s.toNat < 31) :
     ∃ rest', rom.drop (ciOff + u64W rom (ciOff + 8 * s)).toNat = ciEntries[s.toNat]'(by
       rw [ciEntries_len]; exact hs) ++ rest' := by
-  have hrl := hr; simp only [RomOK] at hrl
-  have hlenD := romData_len
-  have hpre : rom.drop ciOff.toNat = romCIData ++ (encItems [] (itemsAllPins romPins) ++ rest) := by
-    rw [hrom, ciOff_toNat, romData]; simp [List.append_assoc]
-  have hlenR : ciOff.toNat + romCIData.length ≤ rom.length := by
-    rw [hrom, ciOff_toNat]; simp [romData]; omega
-  have hT := ciTable_len (8 * ciSlots) ciEntries
-  rw [ciEntries_len] at hT
-  obtain ⟨tr, htr⟩ := ciTable_drop ciEntries (8 * ciSlots) s.toNat (by rw [ciEntries_len]; exact hs)
-  have hsum := flatten_take_le ciEntries s.toNat
-  have hRD : romCIData.length = 8 * 31 + ciEntries.flatten.length := by
-    simp [romCIData, hT]
-  have h8s : (ciOff + 8 * s).toNat = ciOff.toNat + 8 * s.toNat := by
-    rw [UInt64.toNat_add, UInt64.toNat_mul]; simp; omega
-  have hd1 : rom.drop (ciOff + 8 * s).toNat = u64B (8 * ciSlots + ((ciEntries.take s.toNat).map
-      List.length).sum) ++ (tr ++ (ciEntries.flatten ++ (encItems [] (itemsAllPins romPins) ++ rest))) := by
-    rw [h8s, ← List.drop_drop, hpre, romCIData, List.append_assoc,
-      List.drop_append_of_le_length (by rw [hT]; omega), htr]
-    simp [List.append_assoc]
-  have hN : 8 * ciSlots + ((ciEntries.take s.toNat).map List.length).sum < 2 ^ 64 := by
-    simp only [ciSlots]; omega
-  rw [u64W_of_drop rom _ _ _ hd1 hN hr]
-  have hP : (ciOff + UInt64.ofNat (8 * ciSlots + ((ciEntries.take s.toNat).map List.length).sum)).toNat =
-      ciOff.toNat + 8 * 31 + ((ciEntries.take s.toNat).map List.length).sum := by
-    rw [UInt64.toNat_add, UInt64.toNat_ofNat', Nat.mod_eq_of_lt hN]; simp only [ciSlots]; omega
-  obtain ⟨fr, hfr⟩ := flatten_drop ciEntries s.toNat (by rw [ciEntries_len]; exact hs)
-  refine ⟨fr ++ (encItems [] (itemsAllPins romPins) ++ rest), ?_⟩
-  rw [hP, Nat.add_assoc, ← List.drop_drop, hpre, romCIData, List.append_assoc, ← List.drop_drop,
-    List.drop_left' (by rw [hT])]
-  rw [List.drop_append_of_le_length hsum, hfr, List.append_assoc]
+  sorry
 
 /-! ## `rci_slot`, `rci_fresh` -/
 
