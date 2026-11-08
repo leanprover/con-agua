@@ -1465,7 +1465,7 @@ theorem installBasisDecls_bridge :
     obtain ⟨fe1, s₁, h1, hrest⟩ := AM.bind_ok hrun
     simp only [ConRon.Arena.installBasisDecl] at h1
     obtain ⟨hdup, r1⟩ := AM.dunless_ok AM.Never.fail_any h1
-    replace r1 := AM.pure_bind_ok r1
+    try replace r1 := AM.pure_bind_ok r1  -- con-agua patch: no `pure () >>=` left by the new `do` elaborator
     obtain ⟨rfl, rfl⟩ := AM.pure_ok r1
     have hfind : fe.find? a.name = none := by
       cases hf : fe.find? a.name with
@@ -1504,7 +1504,7 @@ theorem checkBasisBlock_bridge {pinsP : List NatOpPinSet} {env : Env}
   obtain ⟨hs2, hc⟩ := pinListOk_run hs1.ok hs1'.read
     (denoteCIList_mono hs1.ext _ _ hb) hP g2
   obtain ⟨hy, k3⟩ := AM.dunless_ok AM.Never.fail_any k2
-  replace k3 := AM.pure_bind_ok k3
+  try replace k3 := AM.pure_bind_ok k3  -- con-agua patch: no `pure () >>=` left by the new `do` elaborator
   have hpin : ConLeche.pinListOk b kind.decls = true := by rw [← hc]; simpa using hy
   obtain ⟨L, s₃, g3, k4⟩ := AM.bind_ok k3
   have hs12 := hs1'.trans hs2
@@ -1534,20 +1534,20 @@ theorem checkQuotRecord_bridge {env : Env} {fe fe' : IFEnv} {k : QuotKind}
   obtain ⟨c1, s₁, g1, k1⟩ := AM.bind_ok hrun
   obtain ⟨hs1, hc1⟩ := quotPinHit_run hst hr hv g1
   obtain ⟨hy1, k2⟩ := AM.dunless_ok AM.Never.fail_any k1
-  replace k2 := AM.pure_bind_ok k2
+  try replace k2 := AM.pure_bind_ok k2  -- con-agua patch: no `pure () >>=` left by the new `do` elaborator
   have hhit : ConLeche.quotPinHit k cv = true := by rw [← hc1]; simpa using hy1
   obtain ⟨c2, s₂, g2, k3⟩ := AM.bind_ok k2
   obtain ⟨rfl, hc2⟩ := quotPredsOk_run hs1.ok (hok.check.pins.mono hs1.ext hs1.pins)
     (hok.check.ienv.mono hs1.ext) g2
   obtain ⟨hy2, k4⟩ := AM.dunless_ok AM.Never.fail_any k3
-  replace k4 := AM.pure_bind_ok k4
+  try replace k4 := AM.pure_bind_ok k4  -- con-agua patch: no `pure () >>=` left by the new `do` elaborator
   have hpred : ConLeche.quotPredsOk env.find? k = true := by rw [← hc2]; simpa using hy2
   obtain ⟨ci, s₃, g3, k5⟩ := AM.bind_ok k4
   obtain ⟨hs3, hci⟩ := quotAt_run hs1.ok hs1.read (denoteCV_ext hv hs1.ext) g3
   have hs13 := hs1.trans hs3
   simp only [ConRon.Arena.installBasisDecl] at k5
   obtain ⟨hdup, k6⟩ := AM.dunless_ok AM.Never.fail_any k5
-  replace k6 := AM.pure_bind_ok k6
+  try replace k6 := AM.pure_bind_ok k6  -- con-agua patch: no `pure () >>=` left by the new `do` elaborator
   obtain ⟨rfl, rfl⟩ := AM.pure_ok k6
   have hfind : fe.find? ci.name = none := by
     cases hf : fe.find? ci.name with

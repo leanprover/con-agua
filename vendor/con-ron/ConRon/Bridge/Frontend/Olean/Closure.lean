@@ -731,32 +731,26 @@ theorem lazyEntry_run {pk : OleanPins} {r : Region} {st : DS} {i : Nat}
     rotate_left
     · cases (AM.pure_ok h).1
     rename_i hi
-    try (obtain ⟨u, s₁, h1, h⟩ := AM.bind_ok h; obtain ⟨-, rfl⟩ := AM.pure_ok h1)  -- con-agua patch: may be no `pure () >>=` left (new `do` elaborator)
+    -- con-agua patch: `split at h` cannot split the `let some x := e | return none` matches of the new `do` elaborator ("Failed to find match-expression discriminants"); case on each `e` instead (no `pure () >>=` left either)
+    rcases hg : r.loc v with _ | g
+    · simp only [hg] at h; cases (AM.pure_ok h).1
+    simp only [hg] at h
     split at h
     rotate_left
     · cases (AM.pure_ok h).1
-    rename_i g hg
-    split at h
-    rotate_left
-    · cases (AM.pure_ok h).1
-    try (obtain ⟨u, s₁, h1, h⟩ := AM.bind_ok h; obtain ⟨-, rfl⟩ := AM.pure_ok h1)  -- con-agua patch: may be no `pure () >>=` left (new `do` elaborator)
-    split at h
-    rotate_left
-    · cases (AM.pure_ok h).1
-    rename_i n hn
-    split at h
-    rotate_left
-    · cases (AM.pure_ok h).1
-    rename_i lps' hl
-    split at h
-    rotate_left
-    · cases (AM.pure_ok h).1
-    rename_i t ht
-    split at h
-    rotate_left
-    · cases (AM.pure_ok h).1
-    rename_i all' ha
-    simp only [pure_bind] at h
+    rcases hn : DS.nameOf pk r st name with _ | n
+    · simp only [hn] at h; cases (AM.pure_ok h).1
+    simp only [hn] at h
+    rcases hl : List.mapM (DS.nameOf pk r st) lps with _ | lps'
+    · simp only [hl] at h; cases (AM.pure_ok h).1
+    simp only [hl] at h
+    rcases ht : DS.exprOf r st type with _ | t
+    · simp only [ht] at h; cases (AM.pure_ok h).1
+    simp only [ht] at h
+    rcases ha : List.mapM (DS.nameOf pk r st) all with _ | all'
+    · simp only [ha] at h; cases (AM.pure_ok h).1
+    simp only [ha] at h
+    try simp only [pure_bind] at h  -- con-agua patch: no `pure () >>=` left (new `do` elaborator)
     obtain ⟨vh, s₂, hv, h⟩ := AM.bind_ok h
     obtain ⟨he, rfl⟩ := AM.pure_ok h
     cases he
