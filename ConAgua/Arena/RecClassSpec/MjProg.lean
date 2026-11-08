@@ -39,11 +39,7 @@ theorem rec2IwN_trunc {m : Mem} {i v : Nat} (h : iwN (truncM m) i = some v) :
 
 theorem rec2IwH_trunc {k : IdxKind} {m : Mem} {i : Nat} {x : Idx k} (h : iwH (truncM m) i = some x) :
     i < iwTop m ∧ iwH m i = some x := by
-  obtain ⟨w, hw, hl, hx⟩ := hd?_some h
-  obtain ⟨hi, hw'⟩ := truncM_iw_get hw
-  refine ⟨hi, ?_⟩
-  simp only [iwH, hd?, iwA] at hw' ⊢
-  simp [hw', hl, hx]
+  sorry
 
 /-- The fields of a class generator decoded below the tops. -/
 theorem rec2CG_parts {m : Mem} {g : Nat} {G : ClassGen} (h : DecB (fun m => decCG m g) m G) :

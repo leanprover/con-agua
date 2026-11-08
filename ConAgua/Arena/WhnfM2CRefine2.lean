@@ -140,6 +140,7 @@ theorem callW_mkAppN' (hp : SpineProg p) (n : Nat) (m : Mem) (a₀ : AState) (hD
     (mkAppNL_spec p hp.derb hp.appf hp.appp hp.appi hp.mkapp hp.mkn n _ f o k) h
   exact ⟨hok, hD', hres, hfr, mkAppNFromW_hw k.toNat m a₀ f o k 0 (by simp) hD hf _ _ hm.2.2⟩
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`env_find` as a run** (`IotaProg'`'s lookups). -/
 theorem callW_envFindI (hp : IotaProg' p) (n : Nat) (m : Mem) {dn : NIdx → Option ConLeche.Name}
     {fe : IFEnv} (vis w : Word) (hE : EnvR m vis fe) (hw : HW w) (r : List Word) (m' : Mem)
@@ -155,6 +156,7 @@ theorem callW_envFindI (hp : IotaProg' p) (n : Nat) (m : Mem) {dn : NIdx → Opt
   obtain ⟨ci, hci⟩ := hE.found_some w hw htag hrow
   rw [← hq] at hci
   exact ⟨ci, hci⟩
+-/
 
 end progs
 

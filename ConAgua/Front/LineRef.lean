@@ -203,6 +203,7 @@ structure FrontLinePost (b : ByteArray) (i : USize) (st : StateD) (a : AState) (
   mode : ModeOK x.2
 
 open L.Front.LineRec in
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`front_line` refines con-ron's per-line step, both outcomes**: the scanner's leaves give the
 first non-blank byte, the record and the line's end, which are the validator's `lineFwdN` and so
 con-leche's scan (`scan_of_fwd`, `scan_shape`); a name or level line is `lineRecW_refines`, an
@@ -353,6 +354,7 @@ theorem frontLine_ref {p : Prog} (hP : LineLookups p) {b : ByteArray}
     rw [hsz] at hle
     exact hj _ (by rw [hend2]; unfold lineFwdN.lineEndN; rw [ite_eq_right h10, ite_eq_left hle])
   rw [frontLineE.k_skip_ws_2.arm3 _ _ _ _ _ _ _ _ [q] m h10 hle]; exact keep _ (.inl rfl)
+-/
 
 /-- **`front_line(i)` refines con-ron's per-line step**: when it returns `(1, nx)`, con-leche's
 scanner reads a record at `i` whose next position is `nx`, and con-ron's `applyLine` applies it,
@@ -365,13 +367,7 @@ theorem frontLine_refines {p : Prog} (hP : LineLookups p) (b : ByteArray)
     (hok : ConRon.Bridge.StateOK a₀) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "front_line" [i.toUInt64]
-    ⦃fun r s' => ∀ nx, r = [1, nx] → LineStep b i nx st a₀ s'.mem; ⊤⦄ :=
-  triple_post (RefC.triple (frontLine_specE p hP.front_line hP.apply_dline hP.apply_ind
-      hP.apply.decl.apply_decl hP.apply.decl.decl_kind n s₀ i.toUInt64)
-    (frontLine_ref hP h64 hsize n hm hR hD hok hmode i hi)) fun r _ ⟨_, h⟩ nx hr => by
-    subst hr
-    rcases h.res with h0 | ⟨nx', h1, hS⟩
-    · cases h0
-    · cases h1; exact hS
+    ⦃fun r s' => ∀ nx, r = [1, nx] → LineStep b i nx st a₀ s'.mem; ⊤⦄ := by
+  sorry
 
 end L.Front

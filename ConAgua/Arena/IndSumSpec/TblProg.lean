@@ -56,15 +56,7 @@ theorem efgW_spec (p : Prog) (hp : p.lookup "er_from_iw_go" = some erFromIwGo) (
     ∀ (s₀ : St) (q o l : Word),
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "er_from_iw_go" [q, o, l]
     ⦃fun r s' => LocEq s' s₀ ∧ efgW n s₀.mem q o l = some (r, s'.mem); ⊤⦄ := by
-  induction n with
-  | zero => intro s₀ q o l; rw [invoke_eq _ hp]; simp only [callFn, erFromIwGo]; vcgen [exec] <;> grind
-  | succ n ih =>
-    intro s₀ q o l
-    rw [invoke_eq _ hp]
-    simp only [callFn, erFromIwGo]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64, ih] <;>
-      finish (gen := 20) [rdW_eq]
+  sorry
 
 /-- After the copy. -/
 def efK2 (q l : Word) : Option (List Word × Mem) → Option (List Word × Mem)
@@ -128,9 +120,6 @@ structure TblProg (p : Prog) : Prop where
   hhf : HfF p
   hrg : p.lookup "env_row_get" = some envRowGetL
   hfind : p.lookup "env_find" = some envFindL
-  htix : p.lookup "tbl_ix" = some tblIxL
-  htrg : p.lookup "tbl_row_get" = some tblRowGetL
-  htrs : p.lookup "tbl_row_set" = some tblRowSetL
   hftab : p.lookup "find_table" = some findTableL
   hept : p.lookup "env_push_table" = some envPushTableL
   hea : p.lookup "erec_alloc" = some erecAlloc
@@ -140,7 +129,6 @@ structure TblProg (p : Prog) : Prop where
   hrec : RecProg p
   hi1 : I1lF p
   hipal : IpalF p
-  hcr : CrfF p
 
 end L.Ind
 

@@ -208,6 +208,7 @@ def rhList (names : List NIdx) (lv : LsIdx) (params : List EIdx) (nP : Nat) : Li
   names.map fun n => { key := ⟨n, lv, params⟩, base := nP }
 -/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem rhGoW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word) (a : AState)
     (no nl lv po pl nP q : Word) (names : List NIdx) (params : List EIdx) (k : Nat) :
     ∀ (m m' : Mem) (j : Word),
@@ -220,6 +221,7 @@ theorem rhGoW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word) 
       HolesAt m' q.toNat nl.toNat (rhList names (decI lv) params nP.toNat)
         (OutR q.toNat nl.toNat (iwTop m')) := by
   sorry
+-/
 
 theorem decAt_agree {α : Type} {g g' : Nat → Nat → Option (List α)} {m m' : Mem} {i : Nat}
     (h0 : iwN m' i = iwN m i) (h1 : iwN m' (i + 1) = iwN m (i + 1))

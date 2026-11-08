@@ -25,11 +25,13 @@ open L.Arena
 /-! ## `nest_container(_ctors(_go))` refines `nestContainer`: word models -/
 
 mutual
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 def ncGoW : Nat → Mem → Word → Word → Word → Word → Word → Word → Word → Option (List Word × Mem)
   | 0, _, _, _, _, _, _, _, _ => none
   | k + 1, m, vis, C, co, cl, cs, ol, fp =>
     if cl = 0 then some ([ol, fp], m)
     else ncK1 k vis C co cl cs ol fp (envFindW m (rdW (m.arr64 EREC) co) vis)
+-/
 def ncK1 (k : Nat) (vis C co cl cs ol fp : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r, m1) =>
@@ -65,6 +67,7 @@ structure NtLook (p : Prog) : Prop where
 
 /-! ### `nest_container`: the relational side -/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem posRowPW_eq (m : Mem) (w : Word) (hw : w.toNat < 2 ^ 32) (ht : tagW w ≤ 2) :
     rowPW m w = rowP m w := by
   have h1 := tagW_toNat_row w
@@ -76,7 +79,9 @@ theorem posRowPW_eq (m : Mem) (w : Word) (hw : w.toNat < 2 ^ 32) (ht : tagW w �
   have h3 : (ixW w + 1).toNat = rowIx w + 1 := by rw [word_add_toNat (by rw [h2]; simp; omega), h2]; rfl
   simp only [rowPW, rowP, ht', ite_true, rdW, h3]
   simp [selArr_rowSelW w ht']
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **A hit of `env_find` is a `find?`** of the record it points to. -/
 theorem envFindW_hit {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m m1 : Mem}
     {w : Word} {r : List Word} (h : envFindW m w vis = some (r, m1)) (hE : EnvR m vis fe)
@@ -108,13 +113,16 @@ theorem envFindW_hit {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFE
     simp [hc, this]
   · rw [ite_eq_right hv] at h; simp only [Option.some.injEq, Prod.mk.injEq] at h
     rw [← h.1] at h0; simp at h0
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem envFindW_mem {m m1 : Mem} {w vis : Word} {r : List Word} (h : envFindW m w vis = some (r, m1)) :
     m1 = m := by
   unfold envFindW at h
   split at h; · simp at h
   split at h; · simp only [Option.some.injEq, Prod.mk.injEq] at h; exact h.2.symm
   split at h <;> (simp only [Option.some.injEq, Prod.mk.injEq] at h; exact h.2.symm)
+-/
 
 /-- A `[cv, nF]` record at `p` denoting `x`, its pool reads in `P`, its constant below `EREC`'s top. -/
 def CNOk (m : Mem) (p : Nat) (x : IConstantVal × Nat) (P : Nat → Prop) : Prop :=
@@ -124,14 +132,18 @@ def CNOk (m : Mem) (p : Nat) (x : IConstantVal × Nat) (P : Nat → Prop) : Prop
 def CsAt (m : Mem) (o : Nat) (xs : List (IConstantVal × Nat)) (P : Nat → Prop) : Prop :=
   ∀ i (hi : i < xs.length), ∃ w : Word, (m.arr64 IW)[o + i]? = some w ∧ CNOk m w.toNat xs[i] P
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem decCI_idx {a : Array Word} {dn : NIdx → Option ConLeche.Name} {p : Nat} {ci : IConstantInfo}
-    (h : decCI a p = some ci) : p < a.size := by
+    (h : decCI (aread a) p = some ci) : p < a.size := by
   simp only [decCI, Option.bind_eq_bind, Option.bind_eq_some_iff] at h
   obtain ⟨k, hk, -⟩ := h
   exact nat?_idx hk
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem erecP_size_le (m : Mem) : (erecP m).size ≤ erTop m := by
   simp only [erecP, Array.size_extract, erecTop, erTop]; omega
+-/
 
 /-- `nest_container`'s results: `(0, …)` or `(1, nPc, cs.off, cs.len)`, the records below the top. -/
 def NcOut (m : Mem) (r : List Word) : Option (Nat × List (IConstantVal × Nat)) → Prop
