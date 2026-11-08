@@ -465,7 +465,7 @@ def erecTop1 (m : Mem) : Nat := (rdW (m.arr64 CTL) 130).toNat
 read `EREC⦃a⦄` reads the word address `a < 2^64`: tier bit 40, offset the low 40 bits (so tier 1
 is at `2^40 + o`), each tier below its top. Every record the relations decode is decoded here, so
 a writer above a top (an allocation, `erec_alloc`) keeps them all (`ArrExt`), and a decoded word
-is the word L reads (`erecP_rd`). -/
+is the word L reads (`erecP_tagRead`). -/
 def erecP (m : Mem) : Nat → Option Word := fun i =>
   if i < 2 ^ 64 then
     (if i / 2 ^ 40 % 2 = 0 then (if i % 2 ^ 40 < erecTop m then (m.arr64 EREC)[i % 2 ^ 40]? else none)
@@ -499,7 +499,7 @@ theorem ErecGrow.ext {m m' : Mem} (h : ErecGrow m m') : ArrExt (erecP m) (erecP 
 
 /-- **A decoded word is the word L's tagged read `EREC⦃a⦄` reads** (`ld64t EREC (a >>> 40)
 (a &&& (2^40 - 1))`), in bounds. -/
-theorem erecP_rd {m : Mem} {a v : Word} (h : erecP m a.toNat = some v) :
+theorem erecP_tagRead {m : Mem} {a v : Word} (h : erecP m a.toNat = some v) :
     (a &&& 0xFFFFFFFFFF).toNat < (m.arr64 (tierA EREC (a >>> 40))).size ∧
       (m.arr64 (tierA EREC (a >>> 40)))[(a &&& 0xFFFFFFFFFF).toNat]? = some v := by
   have hmask : (a &&& 0xFFFFFFFFFF).toNat = a.toNat % 2 ^ 40 := by
