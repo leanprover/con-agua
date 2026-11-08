@@ -257,7 +257,6 @@ theorem resContW_miss {m : Mem} {a : AState} {n : Nat} {x : Word} (hx : x.toNat 
 
 /-- The lookups `install_header`'s spec needs (the stubs need none). -/
 structure IhProg (p : Prog) : Prop where
-  ih : p.lookup "install_header" = some installHeaderL
   ix : p.lookup "env_ix" = some envIxL
   rowGet : p.lookup "env_row_get" = some envRowGetL
   find : p.lookup "env_find" = some envFindL

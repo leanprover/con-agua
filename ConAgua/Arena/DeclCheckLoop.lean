@@ -51,8 +51,6 @@ structure CheckDeclProg (p : Prog) : Prop where
   /-- The definition arm's structural-`Nat` gate: its program (`DeclNatGateSpec.lean`'s
   `natGateSpec` proves `NatGateSpec` from these). -/
   natSub : NatSubProg' p
-  natGate : p.lookup "defn_nat_gate" = some defnNatGate
-  natCert : p.lookup "defn_nat_cert" = some defnNatCert
   natText : StepIn p natGateFns
   /-- The definition arm's `Nat.div`-family pin gate (helper `decls3-divmod`'s `divGateSpecD`
   proves `DivGateSpec` from these, with the walks' refinements `substC0_of`, `substCAll_of`): its

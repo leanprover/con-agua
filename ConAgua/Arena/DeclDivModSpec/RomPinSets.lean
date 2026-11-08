@@ -112,7 +112,6 @@ variable {dn : NIdx → Option ConLeche.Name} {p : Prog}
 
 structure DmProg10 (p : Prog) : Prop extends DmProg9 p where
   lRomPinSets : p.lookup "rom_pin_sets" = some L.Rom.romPinSetsL
-  lDefnDivGate : p.lookup "defn_div_gate" = some defnDivGate
 
 theorem romPinSets_spec' (hD : DmProg10 p) (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "rom_pin_sets" []
@@ -169,7 +168,7 @@ theorem romPinSets_ref (hD : DmProg10 p) {vis : Word} {fe : IFEnv} {ips : List I
 
 /-- The gate and its callees. -/
 def dgFns : List FnName :=
-  ["defn_div_gate", "nat_div_mod_names", "sl_contains", "rom_pin_sets", "check_div_mod_pin"]
+  ["nat_div_mod_names", "sl_contains", "rom_pin_sets", "check_div_mod_pin"]
 
 end divgate
 

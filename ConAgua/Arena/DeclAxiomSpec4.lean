@@ -155,18 +155,6 @@ theorem famW_ok {p : Prog} (h : StdProg p) {dn : NIdx → Option ConLeche.Name} 
   simp only [StateT.run_bind, hrun7, exc_ok_bind']
   exact hrun8
 
-theorem stdAxiomOk_fam (fe : IFEnv) (cv : IConstantVal) :
-    stdAxiomOk fe cv = (do
-      let pn ← pinAt (32 : Word).toNat
-      if cv.name == pn then do
-        let en ← pinAt (0 : Word).toNat
-        let ea ← eqA
-        if fe.find? en != some ea then pure false else famT fe cv 34 35 36 2 3 4 2 4 0
-      else do
-        let cn ← pinAt (33 : Word).toNat
-        if cv.name == cn then famT fe cv 37 38 39 5 6 7 1 3 1 else pure false) := by
-  rw [stdAxiomOk_eq]; rfl
-
 /-- A family call's run. -/
 theorem fam_call {p : Prog} (h : StdProg2 p) {dn : NIdx → Option ConLeche.Name} {vis : Word}
     {fe : IFEnv} {a : AState} {n : Nat} {m m' : Mem} {q s1 s2 s3 i1 i2 i3 c2 c3 cvid : Word}
@@ -180,92 +168,6 @@ theorem fam_call {p : Prog} (h : StdProg2 p) {dn : NIdx → Option ConLeche.Name
     (fam_specW p h n ⟨m, Locals.init []⟩ vis q s1 s2 s3 i1 i2 i3 c2 c3 cvid) hc
   rw [hs'] at hW
   exact famW_ok h.std hW hS hq h1 h2 h3 hcv
-
-/-- **`std_axiom_ok(vis, q)` refines `stdAxiomOk`** at the model level. -/
-theorem stdW_ok {p : Prog} (h : StdProg2 p) {dn : NIdx → Option ConLeche.Name} (hdn : DnInj dn)
-    {vis : Word} {fe : IFEnv} {a : AState} {n : Nat} {m m' : Mem} {q : Word} {r : List Word}
-    {cv : IConstantVal} (hW : stdW p n m vis q = some (r, m')) (hS : StageR vis fe m a)
-    (hq : decCV (erecP m) q.toNat = some cv) :
-    ∃ b a', (stdAxiomOk fe cv).run a = .ok (b, a') ∧ StageR vis fe m' a' ∧
-      IWGrow m m' ∧ decW0B m' r b := by
-  obtain ⟨⟨wn, hwn, hwnl, hname⟩, -, -⟩ := decCV_words hq
-  have ewn : rdW (m.arr64 EREC) q = wn := rdW_of_get? rfl (erecP_get hwn)
-  cases n with
-  | zero => simp [stdW] at hW
-  | succ n =>
-  rw [stdW.arm1] at hW
-  rw [stdAxiomOk_fam, hname]
-  rcases e1 : pinAtW m 32 with _ | ⟨r1, m1⟩ <;> simp only [e1, stdW.k_pin_at, reduceCtorEq] at hW
-  obtain ⟨hm1, hr1, hl1, hrun1⟩ := pinAtW_ok e1 hS.check.pins
-  rw [hm1, ewn] at hW
-  have ep : r1.headD 0 = pinW m (1 + (32 : Word).toNat) := by rw [hr1]; rfl
-  have hbeq : ((decI wn : NIdx) == decI (pinW m (1 + (32 : Word).toNat))) =
-      decide (wn = pinW m (1 + (32 : Word).toNat)) := decI_beq wn _ hwnl hl1
-  simp only [StateT.run_bind, hrun1, exc_ok_bind', hbeq]
-  by_cases ep1 : wn = r1.headD 0
-  · rw [ite_eq_left ep1] at hW
-    rw [ep] at ep1
-    simp only [ep1, decide_true, ite_true]
-    -- `propext`: the pinned `Eq`
-    rcases e2 : pinAtW m 0 with _ | ⟨r2, m2⟩ <;> simp only [e2, stdW.k_pin_at_2, reduceCtorEq] at hW
-    obtain ⟨hm2, hr2, hl2, hrun2⟩ := pinAtW_ok e2 hS.check.pins
-    rw [hm2, hr2] at hW
-    simp only [List.headD_cons] at hW
-    simp only [StateT.run_bind, hrun2, exc_ok_bind']
-    rcases e3 : callW p n "rom_ci" [0] m with _ | ⟨r3, m3⟩ <;> simp only [e3, stdW.k_rom_ci, reduceCtorEq] at hW
-    obtain ⟨ea, a3, hrun3, hS3, hg3, hea⟩ := h.std.red.rom.ci dn vis fe 0 (by decide) n m a r3 m3 hS e3
-    have hrun3' : eqA.run a = .ok (ea, a3) := hrun3
-    simp only [hrun3', exc_ok_bind']
-    rcases e4 : callW p n "find_is" [vis, pinW m (1 + (0 : Word).toNat), r3.headD 0] m3 with _ | ⟨r4, m4⟩ <;> simp only [e4, stdW.k_find_is, reduceCtorEq] at hW
-    obtain ⟨s4, hs4, -, hok4, hS4, hg4, hb4, -⟩ := triple_of_callW (s₀ := ⟨m3, Locals.init []⟩)
-      (findIs_spec p h.std.red.canon dn vis fe hdn _ _ ea n ⟨m3, Locals.init []⟩ a3
-        ⟨hS3, hl2, decRCI_get hea⟩) e4
-    subst hs4
-    simp only [AM.st_pure, AM.res_pure] at hS4 hb4
-    by_cases z4 : r4.headD 0 = 0
-    · rw [ite_eq_left z4] at hW
-      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
-      have hf : (fe.find? (decI (pinW m (1 + (0 : Word).toNat))) == some ea) = false := by
-        rw [← hb4]; simpa using z4
-      refine ⟨false, a3, ?_, hS4, hg3.trans hg4, by simp [decW0B]⟩
-      simp only [bne, hf, Bool.not_false, ite_true]
-      rfl
-    rw [ite_eq_right z4] at hW
-    have ht : (fe.find? (decI (pinW m (1 + (0 : Word).toNat))) == some ea) = true := by
-      rw [← hb4]; simpa using z4
-    simp only [bne, ht, Bool.not_true, Bool.false_eq_true, ite_false]
-    -- the `Iff` family
-    rcases e5 : callW p n "std_ax_family" [vis, q, 34, 35, 36, 2, 3, 4, 2, 4, 0] s4.mem with _ | ⟨r5, m5⟩ <;> simp only [e5, stdW.k_std_ax_family, reduceCtorEq] at hW
-    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
-    obtain ⟨b, a5, hrun5, hS5, hg5, hd5⟩ := fam_call h e5 hS4
-      (ArrExt.decCV (IWGrow.erecPExt (hg3.trans hg4)) hq) (by decide) (by decide) (by decide)
-      (by decide)
-    exact ⟨b, a5, hrun5, hS5, hg3.trans (hg4.trans hg5), hd5⟩
-  · rw [ite_eq_right ep1] at hW
-    rw [ep] at ep1
-    simp only [ep1, decide_false, Bool.false_eq_true, ite_false]
-    -- `choice`
-    rcases e2 : pinAtW m 33 with _ | ⟨r2, m2⟩ <;> simp only [e2, stdW.k_pin_at_3, reduceCtorEq] at hW
-    obtain ⟨hm2, hr2, hl2, hrun2⟩ := pinAtW_ok e2 hS.check.pins
-    rw [hm2] at hW
-    have ec : r2.headD 0 = pinW m (1 + (33 : Word).toNat) := by rw [hr2]; rfl
-    have hbeqc : ((decI wn : NIdx) == decI (pinW m (1 + (33 : Word).toNat))) =
-        decide (wn = pinW m (1 + (33 : Word).toNat)) := decI_beq wn _ hwnl hl2
-    simp only [StateT.run_bind, hrun2, exc_ok_bind', hbeqc]
-    by_cases ec1 : wn = r2.headD 0
-    · rw [ite_eq_left ec1] at hW
-      rw [ec] at ec1
-      simp only [ec1, decide_true, ite_true]
-      rcases e3 : callW p n "std_ax_family" [vis, q, 37, 38, 39, 5, 6, 7, 1, 3, 1] m with _ | ⟨r3, m3⟩ <;> simp only [e3, stdW.k_std_ax_family, reduceCtorEq] at hW
-      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
-      obtain ⟨b, a3, hrun3, hS3, hg3, hd3⟩ := fam_call h e3 hS hq (by decide) (by decide)
-        (by decide) (by decide)
-      exact ⟨b, a3, hrun3, hS3, hg3, hd3⟩
-    · rw [ite_eq_right ec1] at hW
-      rw [ec] at ec1
-      simp only [ec1, decide_false, Bool.false_eq_true, ite_false]
-      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
-      exact ⟨false, a, rfl, hS, IWGrow.refl _, by simp [decW0B]⟩
 
 /-- **`std_axiom_ok(vis, q)` refines `stdAxiomOk`** (through the ROM stubs). -/
 @[refines ConRon.Arena.stdAxiomOk]

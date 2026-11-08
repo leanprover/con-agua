@@ -52,7 +52,6 @@ three pinned `And` names, or an inductive block that declares none of them, or o
 is the pinned `And` block (two parameters, equal to the ROM's `andPin` up to the canonical form:
 the block copied into `EREC` and an `IW` slice, `canon_eq_list`). -/
 -- con-ron: ConRon/Arena/Basis.lean:289-307 ConRon.Arena.andPinOk
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.andPinOk` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.andPinOk]
 def andPinOkL : FunDecl := lfn (i) locals (x, k, bo, bl, nmd, np, o, l, io, il, po, pl, e) {
   if PINS.u64[0] == 0 { abort R_PIN_DATA };
