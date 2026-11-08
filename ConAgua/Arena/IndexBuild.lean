@@ -318,7 +318,75 @@ theorem idxAdd_ref {dn : NIdx → Option ConLeche.Name} {ds : Array IDeclaration
     (idxConsts_spec p hP.idx_consts hP.base_row_get hP.base_row_set n ⟨s3.mem, Locals.init []⟩
       _ _ hI3 hDL (by have := hS3.iw.ctl; simp only at this ⊢; omega) hS3.iw.iwSize) h4
   subst hs4
-  sorry
+  have hS4 : StageR 0 (bEnv (insC { I with firsts := I.firsts.push I.next } (AM.res (declConstants d) a)).base c r) s4.mem
+      (AM.st (declConstants d) a) :=
+    ⟨hS3.check.rebase hf4 (fun b hb => List.mem_append_left _ hb) (by simp) hI4,
+      IWOK.frame hf4 (by decide) (by decide) (by decide) (by decide) hS3.iw⟩
+  have hM4 : IndMemos s4.mem := hM3.frame hf4
+    (fun b hb => by simp [EixA] at hb; rcases hb with rfl | rfl | rfl <;> decide)
+    (fun x hx => by simp at hx; subst hx; decide)
+  have eA4 : ∀ b : TieredArray, b ∉ EixA → b ≠ CTL → s4.mem.arr64 b = s3.mem.arr64 b :=
+    fun b h1 h2 => hf4.arr b h1 h2
+  have eD4 : s4.mem.arr64 L.Front.DECL = m.arr64 L.Front.DECL := by
+    rw [eA4 _ (by decide) (by decide), hK3.arr _ (.inl rfl), eD2]
+  have eP4 : s4.mem.arr64 L.Front.DLP = m.arr64 L.Front.DLP := by
+    rw [eA4 _ (by decide) (by decide), hK3.arr _ (.inr (.inl rfl)), eP2]
+  have hden3 := ConRon.Bridge.denoteDecl_pext (ConRon.Bridge.PExt.of_ext hx3) hpd hden
+  -- `decl_tables`
+  cases h5 : callW p n "decl_tables" [k] s4.mem with
+  | none => rw [h5] at hw; simp [ntBW] at hw
+  | some q5 =>
+  obtain ⟨ρ5, m5⟩ := q5
+  rw [h5, bW_some] at hw
+  have hpre5 : L.Ind.DeclConstsPre dn 0 (bEnv (insC { I with firsts := I.firsts.push I.next } (AM.res (declConstants d) a)).base c r)
+      k d s4.mem (AM.st (declConstants d) a) :=
+    ⟨hS4, by rw [eD4, eP4, ← hdk]; exact hR.decls.recs _ hlt,
+      fun b nP e => hR.front _ hlt b nP (hdk.trans e), hdrv3.state, hR.quotDn.ext hx3, hM4,
+      by rw [eD4]; exact hR.decls.dsize, by rw [eP4]; exact hR.decls.psize⟩
+  obtain ⟨s5, hs5, -, hok5, ⟨hS5, hg5, hL5⟩, hM5, hK5⟩ := triple_of_callW
+    (L.Ind.declTables_refines hP.toDeclConstsProg dn 0 _ k d n ⟨s4.mem, Locals.init []⟩ _ hpre5) h5
+  subst hs5
+  have hrun5 := AM.run_of_ok _ _ hok5
+  obtain ⟨hdrv5, hx5, -, hoff5, -, -⟩ := ConRon.Bridge.tablesSpec hdrv3 hoff3 hpd hden3 hrun5
+  have hI5 : IndexR s5.mem (insC { I with firsts := I.firsts.push I.next } (AM.res (declConstants d) a)) :=
+    hI4.grow (fun b _ h => hK5.arr b (h.elim (fun h => .inr (.inr (.inr h)))
+      (fun h => .inr (.inr (.inl h))))) hK5.ctl128 hg5.ext
+  obtain ⟨hTL, -⟩ := hL5
+  rw [(getD_headD ρ5).1, (getD_headD ρ5).2] at hTL
+  -- `idx_tables`
+  cases h6 : callW p n "idx_tables" [ρ5.headD 0, ρ5.tail.headD 0, k] s5.mem with
+  | none => rw [h6] at hw; simp [ntBW] at hw
+  | some q6 =>
+  obtain ⟨ρ6, m6⟩ := q6
+  rw [h6, bW_some] at hw
+  obtain ⟨s6, hs6, -, -, hI6, hf6⟩ := triple_of_callW
+    (idxTables_spec p hP.idx_tables hP.tbl_base_get hP.tbl_base_set n ⟨s5.mem, Locals.init []⟩
+      _ _ k hI5 hTL hS5.iw.iwSize (by have := hR.fsize; omega)) h6
+  subst hs6
+  simp only [Option.some.injEq, Prod.mk.injEq] at hw
+  obtain ⟨-, rfl⟩ := hw
+  have eI : insT (insC { I with firsts := I.firsts.push I.next } (AM.res (declConstants d) a)) k.toNat
+      (AM.res (declTables d) (AM.st (declConstants d) a)) =
+      addRes I (AM.res (declConstants d) a) (AM.res (declTables d) (AM.st (declConstants d) a)) := by
+    rw [← hk]; rfl
+  rw [eI] at hI6
+  have eA6 : ∀ b : TieredArray, b ∉ TixA → b ≠ CTL → s6.mem.arr64 b = s5.mem.arr64 b :=
+    fun b h1 h2 => hf6.arr b h1 h2
+  have eD6 : s6.mem.arr64 L.Front.DECL = m.arr64 L.Front.DECL := by
+    rw [eA6 _ (by decide) (by decide), hK5.arr _ (.inl rfl), eD4]
+  have eP6 : s6.mem.arr64 L.Front.DLP = m.arr64 L.Front.DLP := by
+    rw [eA6 _ (by decide) (by decide), hK5.arr _ (.inr (.inl rfl)), eP4]
+  have eF6 : (s6.mem.arr64 FIRSTS).size = (m.arr64 FIRSTS).size := by
+    rw [eA6 _ (by decide) (by decide), hK5.arr _ (.inr (.inr (.inl rfl))),
+      eA4 _ (by decide) (by decide), hK3.arr _ (.inr (.inr (.inl rfl))), hf12.size, eF]
+  refine ⟨_, _, add_run hrun3 hrun5, ⟨⟨hS5.check.rebase hf6 (fun b hb => List.mem_append_right _ hb)
+      (by simp) hI6, IWOK.frame hf6 (by decide) (by decide) (by decide) (by decide) hS5.iw⟩,
+    hI6, by rw [eD6, eP6]; exact hR.decls, hR.front, hdrv5, hoff5, fun x hx => ?_,
+    (hR.quotDn.ext hx3).ext hx5, hM5.frame hf6
+      (fun b hb => by simp [TixA] at hb; rcases hb with rfl | rfl | rfl <;> decide) (by simp), by rw [eF6]; exact hR.fsize⟩,
+    by simp [addRes, hk]⟩
+  obtain ⟨hpx, dx, hdx⟩ := hR.recs x hx
+  exact ⟨hpx, dx, ConRon.Bridge.denoteDecl_pext (ConRon.Bridge.PExt.of_ext (hx3.trans hx5)) hpx hdx⟩
 
 end idx
 
