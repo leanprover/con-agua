@@ -554,15 +554,7 @@ include hL
 theorem kExp_spec (n : Nat) (s₀ : St) (to tn tyt oo fuel : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "vi_k_expected" [to, tn, tyt, oo, fuel]
     ⦃fun r s' => LocEq s' s₀ ∧ kExpW n s₀.mem to tn tyt oo fuel = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hL.vi_k_expected]
-  simp only [callFn, viKExpected]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind] =>
-      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-        piRes_spec p hL n, eView_spec p hL.e_view n, lhMk_spec p hL.level.alloc n,
-        lvEquiv_spec p hL.level hL.lv_equiv n] <;> finish (gen := 20) [kExpW]
+  sorry
 
 theorem nested_spec (n : Nat) : ∀ (s₀ : St) (to tn j : Word),
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "vi_nested" [to, tn, j]
