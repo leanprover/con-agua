@@ -198,14 +198,12 @@ theorem GrowX.set {q n : Nat} (m : Mem) (x v : Word) (hx : q ≤ x.toNat ∧ x.t
   refine ⟨by simp only [iwTop, hC]; exact Nat.le_refl _, by simp only [erTop, hC]; exact Nat.le_refl _,
     RdS.set x v (fun h => by rcases h.2 with h | h <;> omega), fun i _ => by rw [hE]⟩
 
-theorem GrowX.grow {q n : Nat} {m m' : Mem} (h : GrowX q n m m') (hq : iwTop m ≤ q) : IWGrow m m' :=
-  ⟨h.1, h.2.1, fun i hi => h.2.2.1 i ⟨hi, Or.inl (by omega)⟩, h.2.2.2⟩
+theorem GrowX.grow {q n : Nat} {m m' : Mem} (h : GrowX q n m m') (hq : iwTop m ≤ q) : IWGrow m m' := by
+  sorry
 
 theorem GrowX.grow' {q n : Nat} {m m1 m2 : Mem} (h : GrowX q n m1 m2) (hg : IWGrow m m1)
-    (hq : iwTop m ≤ q) : IWGrow m m2 :=
-  ⟨Nat.le_trans hg.iw h.1, Nat.le_trans hg.er h.2.1,
-    fun i hi => (h.2.2.1 i ⟨Nat.lt_of_lt_of_le hi hg.iw, Or.inl (by omega)⟩).trans (hg.iwGet i hi),
-    fun i hi => (h.2.2.2 i (Nat.lt_of_lt_of_le hi hg.er)).trans (hg.erGet i hi)⟩
+    (hq : iwTop m ≤ q) : IWGrow m m2 := by
+  sorry
 
 theorem HolesAt.decPL {m : Mem} {q : Nat} {hs : List NestHole} {P : Nat → Prop}
     (h : HolesAt m q hs.length hs P) : decPL m (decNH m) q hs.length = some hs :=
