@@ -197,9 +197,9 @@ theorem lamOK : ConsOK p lamCS where
   colA := by simp [lamCS]
   push_np := by decide
   arrs := by decide
-  qpure := fun h => by simp [lamCS] at h
+  qpure := fun _ _ _ _ => rfl
   mloc := fun h => by simp [lamCS] at h
-  exnk := fun _ => by decide
+  hrec := fun s => by simp [lamCS, rhsOf, L.Notation.blk, Expr.pval, BinOp.eval, rd64_rdWC, lahash, lamHashW]
 
 theorem lapushOK_eqC (m : Mem) (t : Word) : lapushOK m t = pushOKC lamCS m t := by
   simp only [lapushOK, pushOKC, lamCS, lacnt, cntC, ← decide_not, UInt64.not_le]; rfl

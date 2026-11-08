@@ -171,9 +171,9 @@ theorem nnumOK : ConsOK p nnumCS where
   colA := by simp [nnumCS]
   push_np := by decide
   arrs := by decide
-  qpure := fun _ _ _ _ _ => rfl
+  qpure := fun _ _ _ _ => rfl
   mloc := fun h => by simp [nnumCS] at h
-  exnk := fun h => by simp [nnumCS] at h
+  hrec := fun s => by simp [nnumCS, rhsOf, L.Notation.blk, Expr.pval, BinOp.eval, rd64_rdWC, nnhash, nnumHashW]
 
 theorem nnpushOK_eqC (m : Mem) (t : Word) : nnpushOK m t = pushOKC nnumCS m t := by
   simp only [nnpushOK, pushOKC, nncnt, cntC, nnumCS, ← decide_not, UInt64.not_le]; rfl

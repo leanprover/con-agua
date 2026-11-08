@@ -200,9 +200,9 @@ theorem forallOK : ConsOK p forallCS where
   colA := by simp [forallCS]
   push_np := by decide
   arrs := by decide
-  qpure := fun h => by simp [forallCS] at h
+  qpure := fun _ _ _ _ => rfl
   mloc := fun h => by simp [forallCS] at h
-  exnk := fun _ => by decide
+  hrec := fun s => by simp [forallCS, rhsOf, L.Notation.blk, Expr.pval, BinOp.eval, rd64_rdWC, fahash, forallHashW]
 
 theorem fapushOK_eqC (m : Mem) (t : Word) : fapushOK m t = pushOKC forallCS m t := by
   simp only [fapushOK, pushOKC, forallCS, facnt, cntC, ← decide_not, UInt64.not_le]; rfl

@@ -165,9 +165,9 @@ theorem paramOK : ConsOK p paramCS where
   colA := by simp [paramCS]
   push_np := by decide
   arrs := by decide
-  qpure := fun h => by simp [paramCS] at h
+  qpure := fun _ _ _ _ => rfl
   mloc := fun h => by simp [paramCS] at h
-  exnk := fun _ => by decide
+  hrec := fun s => by simp [paramCS, rhsOf, L.Notation.blk, Expr.pval, BinOp.eval, rd64_rdWC, phash, paramHashW]
 
 theorem ppushOK_eqC (m : Mem) (t : Word) : ppushOK m t = pushOKC paramCS m t := by
   simp only [ppushOK, pushOKC, pcnt, cntC, paramCS, ← decide_not, UInt64.not_le]; rfl

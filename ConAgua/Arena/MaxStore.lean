@@ -204,9 +204,9 @@ theorem maxOK : ConsOK p maxCS where
     simp [maxCS] at he
   push_np := by decide
   arrs := by decide
-  qpure := fun h => by simp [maxCS] at h
+  qpure := fun _ _ _ _ => rfl
   mloc := fun h => by simp [maxCS] at h
-  exnk := fun _ => by decide
+  hrec := fun s => by simp [maxCS, rhsOf, L.Notation.blk, Expr.pval, BinOp.eval, rd64_rdWC, mhash, maxHashW]
 
 theorem mpushOK_eqC (m : Mem) (t : Word) : mpushOK m t = pushOKC maxCS m t := by
   simp only [mpushOK, pushOKC, maxCS, Bool.not_or, ← decide_not, UInt64.not_le, Bool.and_assoc]

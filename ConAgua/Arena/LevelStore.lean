@@ -205,9 +205,9 @@ theorem succOK : ConsOK p succCS where
     simp [succCS] at he
   push_np := by decide
   arrs := by decide
-  qpure := fun h => by simp [succCS] at h
+  qpure := fun _ _ _ _ => rfl
   mloc := fun h => by simp [succCS] at h
-  exnk := fun _ => by decide
+  hrec := fun s => by simp [succCS, rhsOf, L.Notation.blk, Expr.pval, BinOp.eval, rd64_rdWC, shash, succHashW]
 
 theorem spushOK_eqC (m : Mem) (t : Word) : spushOK m t = pushOKC succCS m t := by
   simp only [spushOK, pushOKC, succCS, Bool.not_or, ← decide_not, UInt64.not_le, Bool.and_assoc]

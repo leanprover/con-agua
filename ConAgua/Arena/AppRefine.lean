@@ -168,20 +168,6 @@ theorem appCS_wf : appCS.WF where
   colRoom A h := by simp [appCS] at h
   room m t h := (apushOK_room m t ((apushOK_eqC m t).trans h)).2
   vs ks h hk := by simp [pushArgs, appCS, hk]
-  ex _ := {
-    nk := by decide
-    nkw := by decide
-    kpk := fun _ => rfl
-    mt := by
-      intro m ks h t i hl
-      obtain ⟨a, b, rfl⟩ := list_two ks (by simpa [appCS] using hl)
-      simp [appCS, amatchW, fieldsL, kfld, fld, Schema.ad, ConsSch.sch, List.range_succ]
-    hs := by intro m t i; simp [appCS, amatchW, ahash, fieldsL, kfld, fld, Schema.ad, ConsSch.sch, List.range_succ]
-    qh := fun _ _ _ => rfl
-    vs := by
-      intro ks h hl f hf
-      simp only [nkW, appCS, ↓reduceIte, Nat.lt_one_iff] at hf
-      subst hf; simp [pushArgs, appCS, recK, kwQ] }
 
 /-- The L skip test is the arena's. -/
 theorem askipW_eq (m : Mem) (a : AState) (f x : Word) (hf : f.toNat < 2 ^ 32)

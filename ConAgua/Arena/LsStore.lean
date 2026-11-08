@@ -209,9 +209,9 @@ theorem lsOK (hpm : p.lookup "ls_match" = some lsMatch) : ConsOK p lsCS where
       | (intro z hz; simp [St.setLoc_loc, hz])
       | exact ite_bneC _
   ihashG := fun h => by simp [lsCS] at h
-  qpure := fun _ h => by simp [lsCS] at h
+  qpure := fun h => by simp [lsCS] at h
   mloc := fun _ => by simp [lsCS]
-  exnk := fun h => by simp [lsCS] at h
+  hrec := fun s => by simp [lsCS, rhsOf, L.Notation.blk, Expr.pval, BinOp.eval, rd64_rdWC, lshash]
   ihash := by
     intro n s₀
     apply triple_pre_and

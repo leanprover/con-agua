@@ -198,9 +198,9 @@ theorem projOK : ConsOK p projCS where
   colA := by simp [projCS]
   push_np := by decide
   arrs := by decide
-  qpure := fun _ _ _ _ _ => rfl
+  qpure := fun _ _ _ _ => rfl
   mloc := fun h => by simp [projCS] at h
-  exnk := fun h => by simp [projCS] at h
+  hrec := fun s => by simp [projCS, rhsOf, L.Notation.blk, Expr.pval, BinOp.eval, rd64_rdWC, pjhash, projHashW]
 
 theorem pjpushOK_eqC (m : Mem) (t : Word) : pjpushOK m t = pushOKC projCS m t := by
   simp only [pjpushOK, pushOKC, projCS, pjcnt, cntC, ← decide_not, UInt64.not_lt]; rfl

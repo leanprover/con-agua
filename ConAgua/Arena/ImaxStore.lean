@@ -204,9 +204,9 @@ theorem imaxOK : ConsOK p imaxCS where
     simp [imaxCS] at he
   push_np := by decide
   arrs := by decide
-  qpure := fun h => by simp [imaxCS] at h
+  qpure := fun _ _ _ _ => rfl
   mloc := fun h => by simp [imaxCS] at h
-  exnk := fun _ => by decide
+  hrec := fun s => by simp [imaxCS, rhsOf, L.Notation.blk, Expr.pval, BinOp.eval, rd64_rdWC, imhash, imaxHashW]
 
 theorem impushOK_eqC (m : Mem) (t : Word) : impushOK m t = pushOKC imaxCS m t := by
   simp only [impushOK, pushOKC, imaxCS, Bool.not_or, ← decide_not, UInt64.not_le, Bool.and_assoc]

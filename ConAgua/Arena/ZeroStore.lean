@@ -166,9 +166,9 @@ theorem zeroOK : ConsOK p zeroCS where
   colA := by simp [zeroCS]
   push_np := by decide
   arrs := by decide
-  qpure := fun h => by simp [zeroCS] at h
+  qpure := fun _ _ _ _ => rfl
   mloc := fun h => by simp [zeroCS] at h
-  exnk := fun _ => by decide
+  hrec := fun s => by simp [zeroCS, rhsOf, L.Notation.blk, Expr.pval, BinOp.eval, rd64_rdWC, zhash]
 
 theorem zpushOK_eqC (m : Mem) (t : Word) : zpushOK m t = pushOKC zeroCS m t := by
   simp only [zpushOK, pushOKC, zcnt, cntC, zeroCS, ← decide_not, UInt64.not_le]; rfl

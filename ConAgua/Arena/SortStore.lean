@@ -216,9 +216,9 @@ theorem sortOK : ConsOK p sortCS where
     simp [sortCS, rhsOf, L.Notation.blk, Expr.pval, argsOf, BinOp.eval, List.range_succ]
   push_np := by decide
   arrs := by decide
-  qpure := fun h => by simp [sortCS] at h
+  qpure := fun _ _ _ _ => rfl
   mloc := fun h => by simp [sortCS] at h
-  exnk := fun _ => by decide
+  hrec := fun s => by simp [sortCS, rhsOf, L.Notation.blk, Expr.pval, BinOp.eval, rd64_rdWC, sohash, sortHashW]
 
 theorem sopushOK_eqC (m : Mem) (t : Word) : sopushOK m t = pushOKC sortCS m t := by
   simp only [sopushOK, pushOKC, sortCS, Bool.not_or, ← decide_not, UInt64.not_le, Bool.and_assoc]

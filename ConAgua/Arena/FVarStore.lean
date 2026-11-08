@@ -210,9 +210,9 @@ theorem fvarOK : ConsOK p fvarCS where
     simp [fvarCS, rhsOf, L.Notation.blk, Expr.pval, argsOf, BinOp.eval, List.range_succ]
   push_np := by decide
   arrs := by decide
-  qpure := fun h => by simp [fvarCS] at h
+  qpure := fun _ _ _ _ => rfl
   mloc := fun h => by simp [fvarCS] at h
-  exnk := fun _ => by decide
+  hrec := fun s => by simp [fvarCS, rhsOf, L.Notation.blk, Expr.pval, BinOp.eval, rd64_rdWC, fvhash, fvarHashW]
 
 theorem fvpushOK_eqC (m : Mem) (t : Word) : fvpushOK m t = pushOKC fvarCS m t := by
   simp only [fvpushOK, pushOKC, fvarCS, Bool.not_or, ← decide_not, UInt64.not_le, Bool.and_assoc]

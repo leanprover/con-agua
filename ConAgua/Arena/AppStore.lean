@@ -186,9 +186,9 @@ theorem appOK : ConsOK p appCS where
   colA := by simp [appCS]
   push_np := by decide
   arrs := by decide
-  qpure := fun h => by simp [appCS] at h
+  qpure := fun _ _ _ _ => rfl
   mloc := fun h => by simp [appCS] at h
-  exnk := fun _ => by decide
+  hrec := fun s => by simp [appCS, rhsOf, L.Notation.blk, Expr.pval, BinOp.eval, rd64_rdWC, ahash, appHashW]
 
 theorem dec_lt_not_le (x y : Word) : decide (x < y) = !decide (y ≤ x) := by
   by_cases h : y ≤ x

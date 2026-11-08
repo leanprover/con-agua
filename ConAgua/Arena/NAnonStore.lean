@@ -167,9 +167,9 @@ theorem nanonOK : ConsOK p nanonCS where
   colA := by simp [nanonCS]
   push_np := by decide
   arrs := by decide
-  qpure := fun h => by simp [nanonCS] at h
+  qpure := fun _ _ _ _ => rfl
   mloc := fun h => by simp [nanonCS] at h
-  exnk := fun _ => by decide
+  hrec := fun s => by simp [nanonCS, rhsOf, L.Notation.blk, Expr.pval, BinOp.eval, rd64_rdWC, nahash]
 
 theorem napushOK_eqC (m : Mem) (t : Word) : napushOK m t = pushOKC nanonCS m t := by
   simp only [napushOK, pushOKC, nacnt, cntC, nanonCS, ← decide_not, UInt64.not_le]; rfl

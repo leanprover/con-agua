@@ -167,9 +167,9 @@ theorem bvarOK : ConsOK p bvarCS where
   colA := by simp [bvarCS]
   push_np := by decide
   arrs := by decide
-  qpure := fun h => by simp [bvarCS] at h
+  qpure := fun _ _ _ _ => rfl
   mloc := fun h => by simp [bvarCS] at h
-  exnk := fun _ => by decide
+  hrec := fun s => by simp [bvarCS, rhsOf, L.Notation.blk, Expr.pval, BinOp.eval, rd64_rdWC, bhash, bvarHashW]
 
 theorem bpushOK_eqC (m : Mem) (t : Word) : bpushOK m t = pushOKC bvarCS m t := by
   simp only [bpushOK, pushOKC, bcnt, cntC, bvarCS, ← decide_not, UInt64.not_le]; rfl

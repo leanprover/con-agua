@@ -191,9 +191,9 @@ theorem letOK : ConsOK p letCS where
   colA := by simp [letCS]
   push_np := by decide
   arrs := by decide
-  qpure := fun _ _ _ _ _ => rfl
+  qpure := fun _ _ _ _ => rfl
   mloc := fun h => by simp [letCS] at h
-  exnk := fun h => by simp [letCS] at h
+  hrec := fun s => by simp [letCS, rhsOf, L.Notation.blk, Expr.pval, BinOp.eval, rd64_rdWC, lehash, letHashW]
 
 theorem lepushOK_eqC (m : Mem) (t : Word) : lepushOK m t = pushOKC letCS m t := by
   simp only [lepushOK, pushOKC, letCS, lecnt, cntC, ← decide_not, UInt64.not_lt]; rfl

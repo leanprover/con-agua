@@ -208,9 +208,9 @@ theorem constOK : ConsOK p constCS where
     simp [constCS, rhsOf, L.Notation.blk, Expr.pval, argsOf, BinOp.eval, List.range_succ]
   push_np := by decide
   arrs := by decide
-  qpure := fun h => by simp [constCS] at h
+  qpure := fun _ _ _ _ => rfl
   mloc := fun h => by simp [constCS] at h
-  exnk := fun _ => by decide
+  hrec := fun s => by simp [constCS, rhsOf, L.Notation.blk, Expr.pval, BinOp.eval, rd64_rdWC, cehash, constHashW]
 
 theorem cepushOK_eqC (m : Mem) (t : Word) : cepushOK m t = pushOKC constCS m t := by
   simp only [cepushOK, pushOKC, constCS, Bool.not_or, ← decide_not, UInt64.not_le, Bool.and_assoc]

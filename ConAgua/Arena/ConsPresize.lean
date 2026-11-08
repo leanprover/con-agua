@@ -103,7 +103,7 @@ in an array of at least `consMinWords` words): `n` slots if the test passed, els
 theorem psMem_lay (C : ConsSch) (n : Word) (m : Mem) (hz : rdW (m.arr64 (tierA C.sa 0)) 0 = 0)
     (hs : consMinWords ≤ (m.arr64 (tierA C.sa 0)).size) (hs' : (m.arr64 (tierA C.sa 0)).size < 2 ^ 61) :
     8 ≤ (knW C.sa (psMem C n m) 0).toNat ∧ (knW C.sa (psMem C n m) 0).toNat % 8 = 0 ∧
-      2 + 2 * (knW C.sa (psMem C n m) 0).toNat ≤ ((psMem C n m).arr64 (tierA C.sa 0)).size := by
+      2 + (knW C.sa (psMem C n m) 0).toNat ≤ ((psMem C n m).arr64 (tierA C.sa 0)).size := by
   rw [psMem_size]
   simp only [consMinWords] at hs
   unfold knW psMem
@@ -128,14 +128,13 @@ theorem psMem_lay (C : ConsSch) (n : Word) (m : Mem) (hz : rdW (m.arr64 (tierA C
       have e3 : n.toNat &&& 7 = n.toNat % 8 := Nat.and_two_pow_sub_one_eq_mod _ 3
       omega
     have hr' := UInt64.le_iff_toNat_le.mp hr
-    rw [UInt64.toNat_ofNat_of_lt' (by simp only [UInt64.size]; omega), UInt64.toNat_add,
-      UInt64.toNat_mul] at hr'
+    rw [UInt64.toNat_ofNat_of_lt' (by simp only [UInt64.size]; omega), UInt64.toNat_add] at hr'
     simp only [UInt64.reduceToNat] at hr'
     refine ⟨h8', h7', ?_⟩
     omega
   · rw [hz]
     refine ⟨by decide, by decide, ?_⟩
-    show 2 + 2 * 8 ≤ _
+    show 2 + 8 ≤ _
     omega
 
 /-- `X_presize(0)` changes nothing. -/
@@ -156,7 +155,7 @@ theorem consR_initN {m : Mem} (hzc : ∀ x, rdW (m.arr64 CTL) x = 0)
     (hz1 : ∀ x, rdW (m.arr64 (tierA C.sa 1)) x = 0)
     (hz0 : ∀ x, x ≠ 0 → rdW (m.arr64 (tierA C.sa 0)) x = 0)
     (hn : 8 ≤ (knW C.sa m 0).toNat ∧ (knW C.sa m 0).toNat % 8 = 0 ∧
-      2 + 2 * (knW C.sa m 0).toNat ≤ (m.arr64 (tierA C.sa 0)).size)
+      2 + (knW C.sa m 0).toNat ≤ (m.arr64 (tierA C.sa 0)).size)
     (hctl : C.ca.toNat + 2 ≤ (m.arr64 CTL).size)
     (hsa : ∀ t, consMinWords ≤ (m.arr64 (tierA C.sa t)).size ∧ (m.arr64 (tierA C.sa t)).size < 2 ^ 61) :
     ConsR C R m false (Tbl.empty : Tbl α (Idx k) δ) Tbl.empty := by
@@ -176,25 +175,24 @@ theorem consR_initN {m : Mem} (hzc : ∀ x, rdW (m.arr64 CTL) x = 0)
   obtain ⟨hn8, hnm, hnr⟩ := hn
   have hn8' : 8 ≤ (knW C.sch.sa m 0).toNat := hn8
   have hnm' : (knW C.sch.sa m 0).toNat % 8 = 0 := hnm
-  have hnr' : 2 + 2 * (knW C.sch.sa m 0).toNat ≤ (m.arr64 (tierA C.sch.sa 0)).size := hnr
+  have hnr' : 2 + (knW C.sch.sa m 0).toNat ≤ (m.arr64 (tierA C.sch.sa 0)).size := hnr
   have h0 : 18 ≤ (m.arr64 (tierA C.sch.sa 0)).size ∧ (m.arr64 (tierA C.sch.sa 0)).size < 2 ^ 61 :=
     hsa 0
   have h1 : 18 ≤ (m.arr64 (tierA C.sch.sa 1)).size ∧ (m.arr64 (tierA C.sch.sa 1)).size < 2 ^ 61 :=
     hsa 1
   have hs0 : ∀ j : Word, j < nSl C.sch m 0 → slotW C.sch m 0 j = 0 := fun j hj => by
     have hj' : j.toNat < (knW C.sa m 0).toNat := hj
-    have hne : krW C.sch.sa m 0 + j * 2 ≠ 0 := by
+    have hne : krW C.sch.sa m 0 + j ≠ 0 := by
       intro h
       have e := congrArg UInt64.toNat h
-      simp only [krW, ho0, UInt64.toNat_add, UInt64.toNat_mul, UInt64.toNat_zero,
-        UInt64.reduceToNat] at e
+      simp only [krW, ho0, UInt64.toNat_add, UInt64.toNat_zero, UInt64.reduceToNat] at e
       have : j.toNat < (knW C.sch.sa m 0).toNat := hj'
       omega
     simp only [slotW, slotV, slotRd]
-    rw [show rdW (m.arr64 (tierA C.sch.sa 0)) (krW C.sch.sa m 0 + j * 2) = 0 from hz0 _ hne]; simp
+    rw [show rdW (m.arr64 (tierA C.sch.sa 0)) (krW C.sch.sa m 0 + j) = 0 from hz0 _ hne]; simp
   have hs1 : ∀ j : Word, j < nSl C.sch m 1 → slotW C.sch m 1 j = 0 := fun j _ => by
     simp only [slotW, slotV, slotRd]
-    rw [show rdW (m.arr64 (tierA C.sch.sa 1)) (krW C.sch.sa m 1 + j * 2) = 0 from hz1 _]; simp
+    rw [show rdW (m.arr64 (tierA C.sch.sa 1)) (krW C.sch.sa m 1 + j) = 0 from hz1 _]; simp
   have hG : GrowR C.sch m := by
     refine ⟨⟨h0.2, ?_, ?_, ?_, fun _ => ho0⟩, ⟨h1.2, ?_, ?_, ?_, fun _ => ho1⟩⟩
     all_goals (try rw [hn1]); all_goals (try rw [ho0]); all_goals (try rw [ho1])
