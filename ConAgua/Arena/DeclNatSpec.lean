@@ -115,7 +115,7 @@ theorem decHL_words {k : IdxKind} (m : Mem) : ∀ (ws : List Word) (o : Nat),
     simp [hd?, h0, hw, ih]
 
 /-- A freshly written handle slice keeps the stage relation and decodes. -/
-theorem slice_keep {κ : IdxKind} {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m m' : Mem}
+theorem slice_keep {κ : IdxKind} {vis : Word} {fe : IFEnv} {m m' : Mem}
     {a : AState} {ws : List Word} {q k : Word} (hS : StageR vis fe m a)
     (hrec : RecPost m m' [q] ws) (hlt : ∀ w ∈ ws, w.toNat < 2 ^ 32) (hk : k.toNat = ws.length) :
     KeepPost vis fe (decRL (fun m => (decHL m : Nat → Nat → Option (List (Idx κ)))) 0) m m' a [q, k]
@@ -192,7 +192,7 @@ end names
 /-! ## `nat_op_deps` -/
 
 /-- A freshly written slice, from the allocation and the words written. -/
-theorem emit_keep {κ : IdxKind} {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {p : Prog}
+theorem emit_keep {κ : IdxKind} {vis : Word} {fe : IFEnv} {p : Prog}
     (hal : p.lookup "iw_alloc" = some iwAlloc) {k : Nat} {m mq m' : Mem} {a : AState}
     {rq r : List Word} {N : Word} {ws : List Word} (hS : StageR vis fe m a)
     (hN : N.toNat = ws.length) (hlt : ∀ w ∈ ws, w.toNat < 2 ^ 32)
@@ -401,7 +401,7 @@ end pins
 
 /-! ## `nat_op_deps` -/
 
-theorem KeepPost.of_grow {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {α : Type}
+theorem KeepPost.of_grow {vis : Word} {fe : IFEnv} {α : Type}
     {dec : Mem → List Word → α → Prop} {m1 m m' : Mem} {a : AState} {r : List Word} {x : α}
     (h : KeepPost vis fe dec m1 m' a r x) (hg : IWGrow m m1) : KeepPost vis fe dec m m' a r x :=
   ⟨h.1, hg.trans h.2.1, h.2.2⟩

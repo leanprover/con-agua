@@ -56,7 +56,7 @@ theorem decCV_type {a : Nat → Option Word} {q : Nat} {cv : IConstantVal} (h : 
 
 /-- The kind word of a decoded constant record says whether it is a constructor, and a
 constructor's type is the handle at `q + 4`. -/
-theorem decCI_ctor {a : Nat → Option Word} {b : Array Word} {dn : NIdx → Option ConLeche.Name} {q : Word}
+theorem decCI_ctor {a : Nat → Option Word} {b : Array Word} {q : Word}
     {ci : IConstantInfo} (h : decCI a q.toNat = some ci) (hab : ArrExt a (aread b))
     (hsz : b.size < 2 ^ 63) :
     (rdW b q = 4 → ∃ cv np nf, ci = .ctorInfo cv np nf ∧ cv.type = decI (rdW b (q + 4)) ∧

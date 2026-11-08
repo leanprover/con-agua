@@ -142,12 +142,14 @@ theorem callW_mkAppN' (hp : SpineProg p) (n : Nat) (m : Mem) (a₀ : AState) (hD
 
 -- RS2B ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`env_find` as a run** (`IotaProg'`'s lookups). -/
-theorem callW_envFindI (hp : IotaProg' p) (n : Nat) (m : Mem) {dn : NIdx → Option ConLeche.Name}
+theorem callW_envFindI (hp : IotaProg' p) (n : Nat) (m : Mem)
     {fe : IFEnv} (vis w : Word) (hE : EnvR m vis fe) (hw : HW w) (r : List Word) (m' : Mem)
     (h : callW p n "env_find" [w, vis] m = some (r, m')) :
     m' = m ∧ fe.find? (decI w) = envFound m (r.headD 0) (r.tail.headD 0) ∧
     (r.headD 0 ≠ 0 → ∃ ci, decCI (erecP m) (r.tail.headD 0).toNat = some ci) := by
-  sorry
+  obtain ⟨s', rfl, h1, -, h3⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (envFind_refines p hp.envrow hp.baserow hp.envfind n _ vis w hE hw) h
+  exact ⟨h1, h3⟩
 
 -- RS2E
 

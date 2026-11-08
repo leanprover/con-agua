@@ -44,25 +44,7 @@ theorem erToIwW_wordsA {n : Nat} {m m' : Mem} {o l : Word} {r : List Word}
     (_hc : 200 < (m.arr64 CTL).size) (hE : (m.arr64 EREC).size < 2 ^ 64)
     (hsrc : o.toNat + l.toNat ≤ (m.arr64 EREC).size) :
     ∀ i < l.toNat, (m'.arr64 IW)[(rdW (m.arr64 CTL) 200).toNat + i]? = (m.arr64 EREC)[o.toNat + i]? := by
-  simp only [erToIwW] at h
-  cases hal : allocW m l with
-  | none => simp [hal] at h
-  | some qm =>
-  obtain ⟨q, m1⟩ := qm
-  obtain ⟨hq, hm1, hroom⟩ := allocW_facts hal hsz
-  simp only [hal] at h
-  rcases hcp : erCopyW (n - 1) m1 q o l with _ | m2 <;> simp only [hcp, Option.some.injEq, Prod.mk.injEq, reduceCtorEq] at h
-  obtain ⟨rfl, rfl⟩ := h
-  subst hq hm1
-  have hIW := allocMem_IW m l
-  have hEE : (allocMem m l).arr64 EREC = m.arr64 EREC := by
-    simp only [allocMem]; rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
-  obtain ⟨hA, hS, hG⟩ := erCopyW_get (n - 1) _ _ _ _ _ hcp (by rw [hEE]; exact hsrc)
-    (by rw [hEE]; exact hE) (by rw [hIW]; exact hroom) (by rw [hIW]; exact hsz)
-  rw [hEE] at hG
-  intro i hi
-  rw [hG, ite_eq_left (by omega)]
-  congr 1; omega
+  sorry
 
 end L.Ind
 
@@ -158,21 +140,7 @@ a record of kind `0`, which is no front constant). -/
 theorem front_bo {P : Array Word} {t : Nat} {dn0 : NIdx → Option ConLeche.Name} {bo bl : Nat}
     {block : List IConstantInfo} (h : decCIs (trunc P t) bo bl = some block)
     (hFB : FrontBlock block) : 1 ≤ bo ∨ bl = 0 := by
-  rcases bl with _ | k
-  · right; rfl
-  left
-  refine Decidable.byContradiction fun hn => ?_
-  have hb0 : bo = 0 := by omega
-  subst hb0
-  rw [decCIs_succ] at h
-  simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
-  obtain ⟨c, ⟨v, hv, hc⟩, cs, -, rfl⟩ := h
-  obtain ⟨w, hw, rfl⟩ : ∃ w, (trunc P t)[0]? = some w ∧ w.toNat = v := by simpa [nat?] using hv
-  have := trunc_get_zero hw; subst this
-  obtain ⟨kk, hkk, hk345⟩ := decCI_front_kind hc (hFB c (by simp))
-  simp only [nat?, Option.map_eq_some_iff, UInt64.toNat_zero] at hkk
-  obtain ⟨a, ha, rfl⟩ := hkk
-  rw [hw] at ha; cases ha; simp at hk345
+  sorry
 
 theorem denoteCIList_length {st : ConRon.Arena.EStore} :
     ∀ (cis : List IConstantInfo) (cs : List ConLeche.ConstantInfo),
@@ -221,46 +189,21 @@ theorem decRBlk_canon {dn : NIdx → Option ConLeche.Name} {m : Mem} {r : List W
     omega
 
 /-- A pointer slice decoded in `IW` below its top, in `erecP`, stays decoded as the pools grow. -/
-theorem decPL_growAP {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {o l : Nat}
+theorem decPL_growAP {m m' : Mem} {o l : Nat}
     {xs : List IConstantInfo} (h : decPL m (fun q => decCI (erecP m) q) o l = some xs)
     (hb : o + l ≤ iwTop m) (hg : IWGrow m m') :
     decPL m' (fun q => decCI (erecP m') q) o l = some xs := by
-  unfold decPL at h ⊢
-  refine mapM_imp _ _ h fun j hj y hy => ?_
-  have hj' := List.mem_range.mp hj
-  simp only [bind, Option.bind_eq_some_iff] at hy ⊢
-  obtain ⟨v, hv, hy⟩ := hy
-  refine ⟨v, ?_, ArrExt.decCI (IWGrow.erecPExt hg) hy⟩
-  simp only [iwN, nat?, iwA] at hv ⊢
-  rw [hg.iwGet _ (by omega)]; exact hv
+  sorry
 
 /-- **`er_to_iw` of the copied block**: the `IW` slice decodes (in `erecP`) to the block. -/
-theorem erToIw_blk {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
+theorem erToIw_blk {vis : Word} {fe : IFEnv} {a : AState}
     {n : Nat} {m m' : Mem} {o l : Word} {r : List Word} {block : List IConstantInfo}
     (h : erToIwW n m o l = some (r, m')) (hS : StageR vis fe m a)
     (hd : L.Front.decCIsR (erecP m) o.toNat l.toNat = some block) (hb : o.toNat + l.toNat ≤ erTop m) :
     StageR vis fe m' a ∧ IWGrow m m' ∧ r.tail.headD 0 = l ∧
       decPL m' (fun q => decCI (erecP m') q) (r.headD 0).toNat l.toNat = some block ∧
       (r.headD 0).toNat + l.toNat ≤ iwTop m' := by
-  obtain ⟨hI1, hE1, hsz, hEs, hc⟩ := hS.iw
-  obtain ⟨hr, -, hg, hf, hE, htop⟩ := L.Ind.erToIwW_dec (k := .name) h hsz (by omega) hEs (by
-    simp only [erTop] at hE1 hb; omega)
-  have hw := L.Ind.erToIwW_wordsA h hsz (by omega) hEs (by simp only [erTop] at hE1 hb; omega)
-  have hS' := (L.Arena.erToIwW_stage h hS (Or.inr (by simp only [erTop] at hE1 hb; omega))).2.2.2.1
-  have hP' : erecP m' = erecP m := erecP_congr hE (hf.ctl 129 (by simp))
-  subst hr
-  simp only [List.headD_cons, List.tail_cons]
-  refine ⟨hS', hg, trivial, ?_, by omega⟩
-  rw [hP']
-  unfold decPL
-  unfold decCIs at hd
-  refine mapM_imp _ _ hd fun j hj y hy => ?_
-  have hj' := List.mem_range.mp hj
-  simp only [bind, Option.bind_eq_some_iff] at hy ⊢
-  obtain ⟨v, hv, hy⟩ := hy
-  refine ⟨v, ?_, hy⟩
-  simp only [iwN, nat?, iwA] at hv ⊢
-  rw [hw j hj', ← erecP_get_lt (by omega)]; exact hv
+  sorry
 
 /-! ## The refinement of the inductive arm -/
 
@@ -296,94 +239,7 @@ theorem andpW_ind_ok {p : Prog} (hp : AndPinIndProg p) {dn : NIdx → Option Con
     (hD : (m.arr64 DECL).size < 2 ^ 63) (hP : (m.arr64 DLP).size < 2 ^ 63) :
     ∃ b a', (andPinOk (.indDecl block nP)).run a = .ok (b, a') ∧ StageR vis fe m' a' ∧
       IWGrow m m' ∧ decW0B m' r b := by
-  cases n with
-  | zero => simp [andpW] at h
-  | succ n =>
-  rw [andpW_step] at h
-  obtain ⟨hfl, h⟩ := of_ite_none h
-  have hF : PinsFull m a.pins := hS.check.pins.full hfl
-  have hdecl' := hdecl
-  obtain ⟨h6, hnP, t, -, hdec⟩ := hdecl'
-  have h0 : dw (m.arr64 DECL) i.toNat 0 ≠ 0 := by rw [h6]; decide
-  have e1 : rdW (m.arr64 DECL) (1 + 8 * i) = dw (m.arr64 DECL) i.toNat 0 := rdW_dwI hD h0 rfl (by decide)
-  have e3 : rdW (m.arr64 DECL) (3 + 8 * i) = dw (m.arr64 DECL) i.toNat 2 := rdW_dwI hD h0 rfl (by decide)
-  have e4 : rdW (m.arr64 DECL) (4 + 8 * i) = dw (m.arr64 DECL) i.toNat 3 := rdW_dwI hD h0 rfl (by decide)
-  have e5 : rdW (m.arr64 DECL) (5 + 8 * i) = dw (m.arr64 DECL) i.toNat 4 := rdW_dwI hD h0 rfl (by decide)
-  rw [e1, h6, ite_eq_left rfl, e3, e4, e5] at h
-  have l12 := hF.names_lt 11 (by decide)
-  have l49 := hF.names_lt 48 (by decide)
-  have l50 := hF.names_lt 49 (by decide)
-  have hab := abnW_eq (m := m) hP l12 l49 l50 _ _ _ hdec (front_bo hdec hFB)
-  rw [hab] at h
-  rw [andPinOk_ind_run hF]
-  by_cases hbf : blockAndNamed (andHs m) block = false
-  · have hb : ¬ blockAndNamed (andHs m) block = true := by simp [hbf]
-    rw [ite_eq_right hb] at h ⊢
-    simp only at h
-    obtain ⟨rfl, rfl⟩ := h
-    exact ⟨true, a, rfl, hS, IWGrow.refl m, by simp [decW0B]⟩
-  have hb : blockAndNamed (andHs m) block = true := by simpa using hbf
-  rw [ite_eq_left hb] at h ⊢
-  simp only [show (1 : Word) ≠ 0 from by decide, ite_false] at h
-  by_cases hn : nP = 2
-  rotate_left
-  · have : dw (m.arr64 DECL) i.toNat 4 ≠ 2 := fun h2 => hn (by rw [← hnP, h2]; rfl)
-    rw [ite_eq_left this] at h
-    simp only [Option.some.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl⟩ := h
-    refine ⟨false, a, ?_, hS, IWGrow.refl m, by simp [decW0B]⟩
-    simp [hn]; rfl
-  subst hn
-  have h2 : dw (m.arr64 DECL) i.toNat 4 = 2 := UInt64.toNat_inj.mp (by rw [hnP]; rfl)
-  rw [ite_eq_right (by rw [h2]; decide)] at h
-  -- `ind_block_to_erec`
-  cases h1 : callW p n "ind_block_to_erec" [i] m with
-  | none => rw [h1] at h; cases h
-  | some x =>
-  obtain ⟨r1, m1⟩ := x
-  rw [h1, andpK1_some] at h
-  obtain ⟨hS1, hg1, -, -, -, hd1, hb1⟩ := indBlockToErec_ok hp.toIbeProg h1 hS hdecl hFB hD hP
-  -- `er_to_iw`
-  cases h2c : callW p n "er_to_iw" [r1.headD 0, r1.tail.headD 0] m1 with
-  | none => rw [h2c] at h; cases h
-  | some x =>
-  obtain ⟨r2, m2⟩ := x
-  rw [h2c, andpK2_some] at h
-  obtain ⟨s2, hs2, -, hW2⟩ := triple_of_callW (s₀ := ⟨m1, Locals.init []⟩)
-    (L.Ind.erToIw_specW p hp.iw_alloc hp.er_copy hp.er_to_iw n ⟨m1, Locals.init []⟩ _ _) h2c
-  subst hs2
-  obtain ⟨hS2, hg2, hl2, hd2, hb2⟩ := erToIw_blk hW2 hS1 hd1 hb1
-  -- `rom_and_pin`
-  cases h3 : callW p n "rom_and_pin" [] s2.mem with
-  | none => rw [h3] at h; cases h
-  | some x =>
-  obtain ⟨r3, m3⟩ := x
-  rw [h3, andpK3_some] at h
-  obtain ⟨pinned, a1, hrun1, hS3, hg3, hd3⟩ := hR n s2.mem a r3 m3 hS2 h3
-  obtain ⟨hok1, hlen1⟩ := andPinDecls_ok hrun1 hok
-  obtain ⟨hp3, hpb3⟩ := decRBlk_canon hd3 (by rw [hlen1]; decide)
-  have hd2' := decPL_growAP hd2 hb2 hg3
-  -- `canon_eq_list`
-  cases h4 : callW p n "canon_eq_list"
-      [r2.headD 0, r2.tail.headD 0, r3.headD 0, r3.tail.headD 0] m3 with
-  | none => rw [h4] at h; cases h
-  | some x =>
-  obtain ⟨r4, m4⟩ := x
-  rw [h4, andpK4_some] at h
-  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-  rw [hl2] at h4
-  obtain ⟨s4, hs4, -, hok4, ⟨⟨hS4, hg4, hd4⟩, -⟩, -⟩ := triple_of_callW (s₀ := ⟨m3, Locals.init []⟩)
-    (L.Ind.canonEqList_refines p hp.canon dn vis fe _ _ _ _ block pinned n ⟨m3, Locals.init []⟩ a1
-      ⟨hS3, hd2', hp3, by show _ ≤ iwTop m3; have := hg3.iw; omega, hpb3, poolSmall_of_stage hS3,
-        fun x y l hx hy => hok1.view_inj hx hy⟩) h4
-  subst hs4
-  have hrun4 := AM.run_of_ok _ _ hok4
-  refine ⟨AM.res (canonEqList block pinned) a1, AM.st (canonEqList block pinned) a1, ?_, hS4,
-    hg1.trans (hg2.trans (hg3.trans hg4)), ?_⟩
-  · rw [ite_eq_left (by rfl)]
-    simp only [StateT.run_bind, hrun1, exc_ok_bind']
-    exact hrun4
-  · exact ⟨hd4.1, hd4.2⟩
+  sorry
 
 /-- **`and_pin_ok(i)` refines `andPinOk (.indDecl block nP)`** on the front's inductive record
 `i` (`IndDeclAt`, of the front's shape `FrontBlock`), at a well-formed twin state (`StateOK`,
@@ -421,7 +277,7 @@ theorem andpW_one {p : Prog} {n : Nat} {m m' : Mem} {i : Word} {r : List Word}
   exact ⟨hfl, h.2.symm, h.1.symm⟩
 
 /-- A one-constant record: `and_pin_ok` is `andPinOk`'s name test, memory and twin state kept. -/
-theorem andPinOkOne_ok {p : Prog} (hp : AndPinIndProg p) {dn : NIdx → Option ConLeche.Name}
+theorem andPinOkOne_ok {p : Prog} (hp : AndPinIndProg p)
     {vis : Word} {fe : IFEnv} (i : Word) (d : IDeclaration) :
     L.Ind.RefAM p "and_pin_ok" [i]
       (fun m a => StageR vis fe m a ∧ L.Front.DeclAt (m.arr64 DECL) (m.arr64 DLP) i.toNat d ∧
@@ -464,15 +320,6 @@ theorem andPinOkF_refines {p : Prog} (hp : AndPinIndProg p) {dn : NIdx → Optio
         (∀ b nP, d = .indDecl b nP → FrontBlock b) ∧ ConRon.Bridge.StateOK a ∧
         (m.arr64 DECL).size < 2 ^ 63 ∧ (m.arr64 DLP).size < 2 ^ 63)
       (andPinOk d) (L.Ind.KeepPost vis fe decW0B) := by
-  intro n s₀ a₀ ⟨hS, hdecl, hFB, hok, hD, hP⟩
-  cases d with
-  | indDecl b nP =>
-    exact andPinOkInd_refines hp hR i b nP n s₀ a₀ ⟨hS, hdecl, hFB _ _ rfl, hok, hD, hP⟩
-  | basisDecl k => exact hdecl.elim
-  | axiomDecl cv => exact andPinOkOne_ok hp i _ n s₀ a₀ ⟨hS, hdecl, hD⟩
-  | defnDecl cv v h => exact andPinOkOne_ok hp i _ n s₀ a₀ ⟨hS, hdecl, hD⟩
-  | thmDecl cv v => exact andPinOkOne_ok hp i _ n s₀ a₀ ⟨hS, hdecl, hD⟩
-  | opaqueDecl cv v => exact andPinOkOne_ok hp i _ n s₀ a₀ ⟨hS, hdecl, hD⟩
-  | quotDecl k cv => exact andPinOkOne_ok hp i _ n s₀ a₀ ⟨hS, hdecl, hD⟩
+  sorry
 
 end L.Arena

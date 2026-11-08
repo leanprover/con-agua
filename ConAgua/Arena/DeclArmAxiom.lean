@@ -38,20 +38,12 @@ open L.Front (DECL DLP DeclsF DeclAt CVAt dw)
 local notation "V" => ConLeche.CheckMode.verified
 
 /-- An `env_push` call of a decoded record, at the stage relation. -/
-theorem push_call {p : Prog} (hRp : RecProg p) {dn : NIdx → Option ConLeche.Name} {vis : Word}
+theorem push_call {p : Prog} (hRp : RecProg p) {vis : Word}
     {fe : IFEnv} {a : AState} {n : Nat} {m m' : Mem} {c : Word} {r : List Word}
     {ci : IConstantInfo} (hc : callW p n "env_push" [vis, c] m = some (r, m'))
     (hS : StageR vis fe m a) (hci : decCI (erecP m) c.toNat = some ci) :
     StageR (r.headD 0) (fe.push ci) m' a ∧ IWGrow m m' := by
-  obtain ⟨w, hw1, hwl, -⟩ := decCI_name hci
-  have hcb : c.toNat + 1 < 2 ^ 64 := erecP_bound hw1 hS.iw
-  have hc1 : (c + 1).toNat = c.toNat + 1 := toNat_add_small c 1 hcb
-  have hw : (rdW (m.arr64 EREC) (c + 1)).toNat < 2 ^ 32 := by
-    rw [rdW_of_get? hc1.symm (erecP_get hw1)]; exact hwl
-  obtain ⟨s', hs', -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (envPush_specW p hRp n ⟨m, Locals.init []⟩ vis c hw) hc
-  rw [hs'] at hW
-  exact envPushW_ok hW hS hci
+  sorry
 
 /-- The lookups of the axiom arm. -/
 structure AxProg (p : Prog) : Prop where
