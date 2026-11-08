@@ -250,8 +250,8 @@ theorem divModTypePins_ref {vis : Word} {fe : IFEnv} {p : Prog}
 theorem divModTypePins_refines {vis : Word} {fe : IFEnv}
     {p : Prog} (hD : DmProg1 p) (ps c : Word) (ip : INatOpPinSet) :
     RefAM p "div_mod_type_pins" [ps, c] (fun m a => StageR vis fe m a ∧ H c ∧ PinSetR m ps ip)
-      (divModTypePins ip (decI c)) (KeepPost vis fe decTP) := by
-  sorry
+      (divModTypePins ip (decI c)) (KeepPost vis fe decTP) :=
+  (divModTypePins_ref hD ps c ip).refAM
 
 theorem sliceR_get {m : Mem} {o l : Word} {hs : List EIdx} (h : SliceR m o l hs)
     (hsz : erecTop m ≤ (m.arr64 EREC).size) (j : Nat) (hj : j < hs.length) :
@@ -289,14 +289,14 @@ theorem divModCertProofs_ref {vis : Word} {fe : IFEnv} {p : Prog}
 theorem divModDeclPin_refines {vis : Word} {fe : IFEnv} {p : Prog}
     (hD : DmProg1 p) (ps c : Word) (ip : INatOpPinSet) :
     RefAM p "div_mod_decl_pin" [ps, c] (fun m a => StageR vis fe m a ∧ H c ∧ PinSetR m ps ip)
-      (divModDeclPin ip (decI c)) (KeepPost vis fe decW0E) := by
-  sorry
+      (divModDeclPin ip (decI c)) (KeepPost vis fe decW0E) :=
+  (divModDeclPin_ref hD ps c ip).refAM
 
 @[refines ConRon.Arena.divModCertProofs]
 theorem divModCertProofs_refines {vis : Word} {fe : IFEnv}
     {p : Prog} (hD : DmProg1 p) (ps c : Word) (ip : INatOpPinSet) :
     RefAM p "div_mod_cert_proofs" [ps, c] (fun m a => StageR vis fe m a ∧ H c ∧ PinSetR m ps ip)
-      (divModCertProofs ip (decI c)) (KeepPost vis fe (decRL (fun m => decHL m) 0)) := by
-  sorry
+      (divModCertProofs ip (decI c)) (KeepPost vis fe (decRL (fun m => decHL m) 0)) :=
+  (divModCertProofs_ref hD ps c ip).refAM
 
 end L.Ind

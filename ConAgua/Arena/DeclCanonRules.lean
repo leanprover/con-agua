@@ -113,6 +113,14 @@ theorem canonRulesEq_refines (p : Prog) (hp : CanonProg p) (dn : NIdx → Option
         PoolSmall m ∧ decRules (erecP m) o1.toNat l1.toNat = some xs ∧
         decRules (erecP m) o2.toNat l2.toNat = some ys)
       (ConRon.Arena.canonRulesEq ps qs cs fuel.toNat xs ys) (CPostL dn vis fe decW0B) := by
-  sorry
+  intro n s₀ a₀ ⟨hS, hC, hL, hP, hxs, hys⟩
+  refine triple_post (canonRulesEq_spec p hp n s₀ po pl qo ql co cl fuel o1 l1 o2 l2) ?_
+  rintro x s' ⟨hl, hx⟩
+  obtain ⟨b, hb, hrb, hS', hg, hP'⟩ := cnCrW_ok n _ _ a₀ po pl qo ql co cl fuel o1 l1 o2 l2 _ ps qs cs xs ys
+    hx hS hC hL hP hxs hys
+  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hb
+  refine ⟨hl, hok, ?_⟩
+  rw [hst, hres]
+  exact ⟨⟨⟨hS', hg, decW0B_of' hrb⟩, hP'⟩, hL⟩
 
 end L.Ind

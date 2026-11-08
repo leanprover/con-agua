@@ -196,7 +196,10 @@ theorem stepC_200 : (200 : Word) ∈ stepC := by decide +kernel
 theorem LoopR.reset {pins : List INatOpPinSet} {m : Mem} {a : AState} {vis : Word}
     {fe : IFEnv} {ds : Array IDeclaration}
     (h : LoopR pins m a vis fe ds) : LoopR pins (m.set64 CTL 200 0) a vis fe ds := by
-  sorry
+  have hf : MemFrame stepA stepC m (m.set64 CTL 200 0) :=
+    (MemFrame.setCtl m 200 0).mono (by simp) (by simpa using stepC_200)
+  refine h.of_step (iwReset_stage ⟨h.check, h.iw⟩).1 hf ?_
+  rw [erecP_reset]; exact fun _ _ h => h
 
 /-- The constant-record and value-group kinds of `install_value`'s call for a record. -/
 def IvArgs (ck vk : Word) : IDeclaration → Prop

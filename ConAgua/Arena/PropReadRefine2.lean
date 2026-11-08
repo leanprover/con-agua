@@ -36,8 +36,8 @@ theorem decCI_defnV {a b : Array Word} {q : Word}
 /-- A decoded record whose kind word is not `1` is not a definition. -/
 theorem decCI_not_defn {a b : Array Word} {q : Word}
     {ci : IConstantInfo} (h : decCI (aread a) q.toNat = some ci) (hab : ArrExt (aread a) (aread b))
-    (hsz : b.size < 2 ^ 63) (h1 : rdW b q ≠ 1) : ∀ cv v hint, ci ≠ .defnInfo cv v hint := by
-  sorry
+    (hsz : b.size < 2 ^ 63) (h1 : rdW b q ≠ 1) : ∀ cv v hint, ci ≠ .defnInfo cv v hint :=
+  (decCI_defn h hab hsz).2 h1
 
 /-- A run of `env_find`: the memory unchanged, the twin's lookup decoded. -/
 theorem pr_envFind {p : Prog} (hp : PropReadProg p) {n : Nat}

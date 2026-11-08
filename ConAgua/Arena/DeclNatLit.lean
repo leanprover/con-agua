@@ -102,7 +102,66 @@ theorem natIndOk_ref (hN : NatLitProg p) (found q : Word) (o : Option IConstantI
     CallRef p "nat_ind_ok" [found, q]
       (fun m a => StageR vis fe m a ∧ pinW m 0 ≠ 0 ∧ FoundR dn m found q o)
       (natIndOk o) (KeepPost vis fe decW0B) := by
-  sorry
+  refine CallRef.of_succ fun k m a r m' ⟨hS, h0, hfd⟩ hc => ?_
+  have hw := callW_model (M := fun mm => natIndOkW p k mm found q) (natIndOk_specW p hN.lNatIndOk k · found q) hc
+  unfold natIndOkW at hw
+  have hF := hS.check.pins.full h0
+  have hsz := hS.iw.erSize
+  cases o with
+  | none =>
+    simp only [FoundR, decFd] at hfd
+    have hf : found = 0 := by simpa using hfd
+    rw [ite_eq_left hf] at hw
+    simp only [Option.some.injEq, Prod.mk.injEq] at hw
+    obtain ⟨rfl, rfl⟩ := hw
+    exact ⟨false, a, rfl, hS, IWGrow.refl _, by simp [decW0B]⟩
+  | some ci =>
+    obtain ⟨hf1, hci⟩ := hfd
+    simp only [List.headD_cons, List.tail_cons] at hf1 hci
+    rw [ite_eq_right (by rw [hf1]; decide)] at hw
+    have htag := tagWord hsz hci
+    by_cases h3 : rdW (m.arr64 EREC) q = 3
+    · have hci3 : ciTag ci = 3 := by rw [← htag, h3]; rfl
+      cases ci with
+      | indInfo cv caps =>
+        rw [ite_eq_right (by simpa using h3)] at hw
+        have hcvd := ciCv_decodes (cv := cv) hci rfl
+        obtain ⟨wt, hiff, hrd, hlt, hty, hstay⟩ := natCvWords hsz hcvd
+        by_cases hl : rdW (m.arr64 EREC) (q + 3) = 0
+        · rw [ite_eq_right (by simpa using hl)] at hw
+          replace hw := ntBW_some hw; obtain ⟨r1, m1, h1, hw⟩ := hw
+          obtain ⟨hm1, -, hr1⟩ := callW_pinWord' hN.lPinWord h1
+          rw [hm1, hr1] at hw
+          simp only [Option.some.injEq, Prod.mk.injEq] at hw
+          obtain ⟨rfl, rfl⟩ := hw
+          have hp54 : (pinW m 54).toNat < 2 ^ 32 := hF.lv_lt.2.2
+          have hisE : cv.levelParams.isEmpty = true := hiff.mp hl
+          have hrun : (natIndOk (some (.indInfo cv caps))).run a =
+              .ok (decide (rdW (m.arr64 EREC) (q + 4) = pinW m 54), a) := by
+            simp only [natIndOk, sortOne, StateT.run_bind, pinSortOne_run hF, exc_ok_bind', hisE,
+              Bool.true_and, hty, hrd, decI_beq _ _ hlt hp54, StateT.run_pure]
+            rfl
+          refine ⟨_, a, hrun, hS, IWGrow.refl _, ?_⟩
+          by_cases he : rdW (m.arr64 EREC) (q + 4) = pinW m 54
+          · simp [decW0B, he]
+          · simp [decW0B, he]
+        · rw [ite_eq_left (by simpa using hl)] at hw
+          simp only [Option.some.injEq, Prod.mk.injEq] at hw
+          obtain ⟨rfl, rfl⟩ := hw
+          have hisE : cv.levelParams.isEmpty = false := by
+            cases h : cv.levelParams.isEmpty
+            · rfl
+            · exact absurd (hiff.mpr h) hl
+          refine ⟨false, a, ?_, hS, IWGrow.refl _, by simp [decW0B]⟩
+          simp only [natIndOk, sortOne, StateT.run_bind, pinSortOne_run hF, exc_ok_bind', hisE,
+            Bool.false_and, StateT.run_pure]
+          rfl
+      | _ => simp [ciTag] at hci3
+    · rw [ite_eq_left h3] at hw
+      simp only [Option.some.injEq, Prod.mk.injEq] at hw
+      obtain ⟨rfl, rfl⟩ := hw
+      have hne : ciTag ci ≠ 3 := fun e => h3 (UInt64.toNat_inj.mp (by rw [htag, e]; rfl))
+      exact ⟨false, a, by rw [natIndOk_nonind hne]; rfl, hS, IWGrow.refl _, by simp [decW0B]⟩
 
 /-! ### `nat_zero_ok` -/
 

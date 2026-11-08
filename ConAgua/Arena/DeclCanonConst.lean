@@ -204,6 +204,13 @@ theorem cvCanonEq_refines (p : Prog) (hp : CanonProg p) (dn : NIdx → Option Co
       (fun m a => StageR vis fe m a ∧ decCV (erecP m) q.toNat = some cv ∧
         decCV (erecP m) r.toNat = some cv' ∧ PoolSmall m ∧ LitInj a)
       (cv.canonEq cv') (CPostL dn vis fe decW0B) := by
-  sorry
+  intro n s₀ a₀ ⟨hS, hcv, hcv', hP, hL⟩
+  refine triple_post (cvCanonEq_spec p hp n s₀ q r) ?_
+  rintro x s' ⟨hl, hx⟩
+  obtain ⟨b, a', hb, hrb, hS', hg, hP', hL'⟩ := cvceW_ok n hx hS hcv hcv' hP hL
+  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hb
+  refine ⟨hl, hok, ?_⟩
+  rw [hst, hres]
+  exact ⟨⟨⟨hS', hg, decW0B_of' hrb⟩, hP'⟩, hL'⟩
 
 end L.Ind

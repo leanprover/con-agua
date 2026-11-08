@@ -530,6 +530,9 @@ theorem indBlockToErec_ok {p : Prog} (hp : IbeProg p) {n : Nat} {m m' : Mem} {i 
       r = [r.headD 0, r.tail.headD 0] ∧ (r.tail.headD 0).toNat = block.length ∧
       L.Front.decCIsR (erecP m') (r.headD 0).toNat (r.tail.headD 0).toNat = some block ∧
       (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ erTop m' := by
-  sorry
+  obtain ⟨s', rfl, -, n', hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (indBlockToErec_specW p hp.erec_alloc hp.dind_copy hp.ind_rec_copy hp.ind_copy_go
+      hp.ind_block_to_erec n ⟨m, Locals.init []⟩ i) hc
+  exact ibeW_ok hW hS hdecl hFB hD hP
 
 end L.Arena

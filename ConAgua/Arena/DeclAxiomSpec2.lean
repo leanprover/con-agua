@@ -314,6 +314,11 @@ theorem trustCompilerOk_refines (p : Prog) (h : TcoProg p) (dn : NIdx → Option
     RefAM p "trust_compiler_ok" [vis, q]
       (fun m a => StageR vis fe m a ∧ decCV (erecP m) q.toNat = some cv)
       (trustCompilerOk fe cv) (KeepPost vis fe decW0B) := by
-  sorry
+  intro n s₀ a₀ ⟨hS, hq⟩
+  refine triple_post (tco_specW p h n s₀ vis q) ?_
+  rintro r s' ⟨hl, hm⟩
+  obtain ⟨b, a', hrun, hS', hg, hd⟩ := tcoW_ok h hm hS hq
+  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
+  exact ⟨hl, hok, by rw [hst, hres]; exact ⟨hS', hg, hd⟩⟩
 
 end L.Arena

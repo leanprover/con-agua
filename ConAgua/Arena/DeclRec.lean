@@ -361,7 +361,25 @@ theorem erecCiW_ok {vis : Word} {fe : IFEnv} {a : AState}
       decCV (erecP m') ((r.headD 0).toNat + 1) = some (stepCV ds[i.toNat]) ∧
       hd? (erecP m') ((r.headD 0).toNat + 5) = some (stepVal ds[i.toNat]) ∧
       (r.headD 0).toNat + 8 ≤ erTop m' := by
-  sorry
+  obtain ⟨hS', hG', hk, hcvG, hvM, hhint, htop⟩ := erecCiW_core h hS hD hi
+  have hdecl := hD.recs i.toNat hi
+  generalize (r.headD 0).toNat = p at hk hcvG hvM hhint htop ⊢
+  generalize ds[i.toNat] = d at hci hdecl ⊢
+  generalize ck.toNat = c at hci hk
+  refine ⟨hS', hG', ?_, ?_, ?_, htop⟩ <;>
+    cases d <;> rcases c with _ | _ | _ | c <;> simp [stepCI] at hci <;> subst hci
+  · obtain ⟨-, hcv, hv5, hh⟩ := hdecl
+    simp [decCI, hk, hcvG _ hcv, hvM, hv5, hhint, hh]
+  · obtain ⟨-, hcv, -⟩ := hdecl
+    simp [decCI, hk, hcvG _ hcv]
+  · obtain ⟨-, hcv, -⟩ := hdecl
+    simp [decCI, hk, hcvG _ hcv]
+  · exact hcvG _ hdecl.2.1
+  · exact hcvG _ hdecl.2.1
+  · exact hcvG _ hdecl.2.1
+  · rw [hvM, hdecl.2.2.1]; rfl
+  · rw [hvM, hdecl.2.2]; rfl
+  · rw [hvM, hdecl.2.2]; rfl
 
 /-- **`erec_ci(i, 0)` on an axiom or a quotient record** builds `axiomInfo cv` (the checkDecl
 arms' constant record of those kinds). -/
@@ -375,6 +393,11 @@ theorem erecCiW_okA {vis : Word} {fe : IFEnv} {a : AState}
       decCI (erecP m') (r.headD 0).toNat = some (.axiomInfo cv) ∧
       decCV (erecP m') ((r.headD 0).toNat + 1) = some cv ∧
       (r.headD 0).toNat + 8 ≤ erTop m' := by
-  sorry
+  obtain ⟨hS', hG', hk, hcvG, -, -, htop⟩ := erecCiW_core h hS hD hi
+  refine ⟨hS', hG', ?_, hcvG _ hcv, htop⟩
+  have hk0 : nat? (erecP m') (r.headD 0).toNat = some 0 := by simpa using hk
+  have hc1 := hcvG _ hcv
+  generalize (r.headD 0).toNat = q at hk0 hc1 ⊢
+  simp [decCI, hk0, hc1]
 
 end L.Arena
