@@ -28,7 +28,5 @@ structure NfsProg (p : Prog) : Prop where
   copy : p.lookup "iw_copy" = some iwCopy
   cons : p.lookup "sl_cons" = some slCons
   rec2 : p.lookup "rec2" = some rec2
-  mem : p.lookup "check_block_positivity_nfs_member" = some checkBlockPositivityNfsMember
-  nfs : p.lookup "check_block_positivity_nfs" = some checkBlockPositivityNfs
 
 end L.Ind
