@@ -39,7 +39,7 @@ def pipeline (b : ByteArray) (withPrelude : Bool) (pins : List NatOpPinSet) :
     let records := r.decls.size
     let ds ← if withPrelude then Frontend.preparePrelude pre r.decls else pure r.decls
     let ipins ← internAllPins pins
-    match ← installThenCheck .verified ipins ds with
+    match ← checkStream .verified ipins ds with
     | .error (e, n) => pure (.error (atDecl e n))
     | .ok _ => pure (.ok records)
 
@@ -61,4 +61,4 @@ def main (args : List String) : IO UInt32 := do
   | .ok n => IO.println s!"verdict 0 accepted {n} declarations"; return 0
   | .error e =>
     IO.println s!"verdict {e.exitCode} {(e.message.take 300).replace "\n" " "}"
-    return e.exitCode
+    return e.exitCode.toUInt32
