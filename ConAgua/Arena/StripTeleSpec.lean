@@ -214,13 +214,23 @@ theorem viewBind_run_s (h : EIdx) (a : AState) :
 
 theorem StageR.set_iw {vis : Word} {fe : IFEnv} {m : Mem} {a : AState}
     (hS : StageR vis fe m a) (p x : Word) : StageR vis fe (m.set64 IW p x) a := by
-  sorry
+  have hf : MemFrame [IW] [200] m (m.set64 IW p x) :=
+    (MemFrame.set64 m IW (by decide) p x).mono (by simp) (by simp)
+  have ht : iwTop (m.set64 IW p x) = iwTop m := by
+    simp only [iwTop]; rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
+  exact ⟨CheckR.frame_iw hf hS.check, IWOK.of_iw hf hS.iw (by rw [ht, hf.size IW]; exact hS.iw.iw)⟩
 
 /-- Putting the pool's top back to `o ≤` the top keeps the stage relation. -/
 theorem StageR.set_top {vis : Word} {fe : IFEnv} {m : Mem}
     {a : AState} (hS : StageR vis fe m a) (o : Word) (ho : o.toNat ≤ iwTop m) :
     StageR vis fe (m.set64 CTL 200 o) a ∧ iwTop (m.set64 CTL 200 o) = o.toNat := by
-  sorry
+  have hf : MemFrame [IW] [200] m (m.set64 CTL 200 o) :=
+    (MemFrame.setCtl m 200 o).mono (by simp) (by simp)
+  have hc := hS.iw.ctl
+  have ht : iwTop (m.set64 CTL 200 o) = o.toNat := by
+    simp only [iwTop, rdW_set64]; rw [ite_eq_left ⟨trivial, trivial, by simpa using hc⟩]
+  refine ⟨⟨CheckR.frame_iw hf hS.check, IWOK.of_iw hf hS.iw ?_⟩, ht⟩
+  rw [ht, hf.size IW]; exact Nat.le_trans ho hS.iw.iw
 
 /-- One step of the twin's strippers (`stripPis`/`stripLams` at `k + 1`, tag `T`, the rest `rec`). -/
 def stripStepT (T : UInt32) (rec : EIdx → AM (Option (List EIdx × EIdx))) (h : EIdx) :
