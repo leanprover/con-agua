@@ -54,6 +54,7 @@ theorem ntyT_eq {β : Type} (fe : IFEnv) (key : NestKey) (K : EIdx → AM β) :
         · funext s; rfl
         · simp
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`nest_inst_type_ty` refines `ntyT`, both outcomes**: the container (`env_find`), the level
 count (`view_ls_len`), `strip_pis`, `cv_lps`, `inst_lp_fast` (its contract `hI`), `inst_pis_with`. -/
 theorem nty_ref {p : Prog} (hl : NtyLook p) {dn : NIdx → Option ConLeche.Name} {vis : Word}
@@ -191,6 +192,7 @@ theorem nty_ref {p : Prog} (hl : NtyLook p) {dn : NIdx → Option ConLeche.Name}
     (AFr.iw (stripF_frame hst)).trans ((AFr.iw (erToIwW_iwFr hlp)).trans (hA5.trans (instW_afr _ _ _ _ _ _ _ hiw))),
     (((MFr.of_iw (stripF_frame hst)).trans (posmemo_cvLpsW_mfr hlp)).trans (MFr.of_frame hf5 hfA hfC)).trans
       (instW_mfr _ _ _ _ _ _ _ hiw)⟩
+-/
 
 
 end L.Ind

@@ -78,6 +78,7 @@ structure TmmPost (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
 section sims
 variable {p : Prog} {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`target_major_of_member` refines `targetMajorOf`'s member branch, both outcomes**: the
 member's and its constructors' reads, `block_shape_lps`, `paramLevels` (`plW_ok`), the parameter
 prefixes compared (`sl_eq`), the record (`mk_target_major`). -/
@@ -243,6 +244,7 @@ theorem tmm_ref (n : Nat) {m : Mem} {a : AState} {pp cao cal pfo pfl fvo fvl ao 
   rw [hnpe, UInt64.toNat_ofNat_of_lt' hnidb, ht1] at hdec
   exact RefE.ret rfl ⟨by simpa [decON] using hdec, hS4, hg04,
     ((hPm.fr (lpsW_mfrP hl1)).fr (plW_mfrP hl2)).fr (posRecW_mfr hpr), hafr⟩
+-/
 
 end sims
 

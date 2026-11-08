@@ -68,11 +68,13 @@ open L.Arena
 
 local notation "V" => ConLeche.CheckMode.verified
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **The pass's record at `q`**: decoded below the tops at `fe` (whose view `vis` is word 0), its
 slices and the shape's members below the top. -/
 def BPassR (vis : Word) (fe : IFEnv) (m : Mem) (q : Word) (bp : BlockPass) : Prop :=
   DecB (fun m => decBPass fe m q.toNat) m bp ∧ BPassB m q.toNat ∧ rdW (m.arr64 IW) q = vis ∧
     ShapeSrc m (rdW (m.arr64 IW) (q + 3))
+-/
 
 end L.Ind
 
@@ -244,12 +246,14 @@ theorem classesLp_of_decPL {m : Mem} {mo ml : Word} {ms : List TargetMajor}
 def AllVis (fe : IFEnv) : Prop := ∀ (n : NIdx) (e : Nat × IConstantInfo), fe.idx[n]? = some e → e.1 < fe.visibleBelow
 -/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem AllVis.push {fe : IFEnv} (hv : AllVis fe) (ci : IConstantInfo) : AllVis (fe.push ci) := by
   intro n e he
   simp only [IFEnv.push, Std.HashMap.getElem?_insert] at he ⊢
   split at he
   · cases he; simp
   · have := hv n e he; omega
+-/
 
 /-- The pass's callees without a walk-memo lemma (and positivity's `check_abs_ctor_sorts_all`). -/
 def passCallees : List FnName :=

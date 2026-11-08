@@ -69,6 +69,7 @@ theorem nckW_afr {n : Nat} {m m' : Mem} {p fo fl : Word} {r : List Word}
       obtain ⟨-, rfl⟩ := h
       exact (f123.trans (plW_afr h4)).trans (posRecW_afr hm.symm)
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem nhGoW_afr : ∀ (k : Nat) (m m' : Mem) (vis ctx mm off l oo ol : Word) (r : List Word),
     nhGoW k m vis ctx mm off l oo ol = some (r, m') → AFr m m'
   | 0, _, _, _, _, _, _, _, _, _, _, h => by simp [nhGoW] at h
@@ -120,9 +121,12 @@ theorem nhGoW_afr : ∀ (k : Nat) (m m' : Mem) (vis ctx mm off l oo ol : Word) (
     obtain ⟨r4, m4⟩ := x4
     rw [h4, nhK4_some] at h
     exact (f3.trans (snocW_afr h4)).trans (nhGoW_afr k _ _ _ _ _ _ _ _ _ _ h)
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem nhW_afr {k : Nat} {m m' : Mem} {vis ctx : Word} {r : List Word}
     (h : nhW k m vis ctx = some (r, m')) : AFr m m' :=
   nhGoW_afr k m m' vis ctx 0 _ _ 0 0 r h
+-/
 
 end L.Ind

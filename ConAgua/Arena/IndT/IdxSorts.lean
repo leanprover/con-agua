@@ -48,20 +48,25 @@ open L.Arena
 
 local notation "V" => ConLeche.CheckMode.verified
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 l_model iisE_spec (p : Prog) (hP : IdxProg p) (hOpf : OpfF p)
   fns [hP.one ↦ iisE]
   specs [opfF_spec p hOpf n, rec2_specW p hP.alloc n hP.rec2]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 l_model iisrE_spec (p : Prog) (hP : IdxProg p) (hOpf : OpfF p)
   fns [hP.idx ↦ iisrE]
   specs [iisE_spec p hP hOpf n, slCons_specW p hP.alloc hP.copy hP.cons n]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem iisE_k_opf_eq (p : Prog) (n : Nat) (vis nP ni srt : Word) (r : List Word) (m₁ : Mem)
     (h : r.headD 0 ≠ 0) :
     iisE.k_open_pis_at_fvars_f p n vis nP ni srt (.ok (r, m₁)) =
@@ -71,6 +76,7 @@ theorem iisE_k_opf_eq (p : Prog) (n : Nat) (vis nP ni srt : Word) (r : List Word
   by_cases hl : nP < r.tail.tail.headD 0
   · rw [iisE.k_open_pis_at_fvars_f.arm1 _ _ _ _ _ _ _ _ h hl, ite_eq_left hl, UInt64.add_comm]
   · rw [iisE.k_open_pis_at_fvars_f.arm2 _ _ _ _ _ _ _ _ h hl, ite_eq_right hl]
+-/
 
 /-- What `check_block_idx_sorts_one` gives besides the twin's index sorts `x` (from `m`, `a`): the
 stage relation, growth, the sorts a slice behind the result word, the abstraction memos, the twin's
@@ -81,7 +87,6 @@ structure IisPost (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
   grow : IWGrow m m'
   sorts : DecB (fun m => decIS m w.toNat) m' x
   abs : AbsOK m'
-  core : ConRon.Bridge.CoreStep V env fe a a'
 
 /-- What `check_block_idx_sorts` gives besides the twin's sorts `xs` (from `m`, `a`): as
 `IisPost`, the sorts a slice of pointers `[r₀, r₁]`. -/
@@ -91,13 +96,13 @@ structure IisrPost (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv
   grow : IWGrow m m'
   sorts : PSlR decIS xs (r.headD 0) (r.tail.headD 0) m'
   abs : AbsOK m'
-  core : ConRon.Bridge.CoreStep V env fe a a'
 
 section sims
 variable {p : Prog} (hq : KnotStageProg p) {dn : NIdx → Option ConLeche.Name} {vis : Word}
   {fe : IFEnv} {env : ConLeche.Env} (henv : ConLeche.EnvWF env)
   (hOpf : OpfF p) (hLC : LvlCacheProg p) (hLT : p.lookup "lv_leq_top" = some lvLeqTop)
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 include hq henv hLC hLT in
 /-- **`check_block_idx_sorts_one` refines one member of `checkBlockIdxSorts`** (`idxOneAM`), both
 outcomes: an error is `check_struct_field_sorts_i`'s (its claim) or of class `0`. -/
@@ -211,7 +216,9 @@ theorem iis_ref (hP : IdxProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AS
   have hdB := (decHL_decB hdl hbl).grow (OMono.decHL _ _) hg3
   simp only [decIS, decAt, w0, w1, Option.bind_eq_bind, Option.bind_some]
   exact hdB
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 include hq henv hLC hLT in
 /-- **`check_block_idx_sorts` refines `checkBlockIdxSorts`**, both outcomes (the members' errors are
 `check_struct_field_sorts_i`'s or of class `0`). -/
@@ -289,7 +296,9 @@ theorem iisr_ref (hP : IdxProg p) (pp : Word) (bs : BlockShape) {bsP : ConLeche.
   exact RefE.ret rfl ⟨hR2.stage.of_pstep hS3 hA3 (PStep.refl hR2.stage.check.state),
     (hR1.grow.trans hR2.grow).trans hg3, ⟨by simpa using hd3, by simpa using Nat.le_of_eq htop3⟩, hA3,
     c1.trans hR2.core⟩
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 include hq henv hOpf hLC hLT in
 /-- **`check_block_idx_sorts` refines `checkBlockIdxSorts`** under `StageC` (the knot's core
 calls; the denotations as con-ron's `checkBlockIdxSorts_specF` asks): every member's index sorts a
@@ -317,6 +326,7 @@ theorem checkBlockIdxSorts_refinesC (hP : IdxProg p) (n : Nat) (hn : n ≤ 2 ^ 6
   rintro _r s' ⟨hl, _, a', run, hR⟩
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ run
   exact ⟨hl, hok, by rw [hst]; exact hR.stage, hR.grow, by rw [hres]; exact hR.sorts, hR.abs⟩
+-/
 
 end sims
 

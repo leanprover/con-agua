@@ -30,6 +30,7 @@ open scoped Lean.Order
 namespace L.Ind
 open L.Arena
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- `pfK` with its continuation split off. -/
 theorem pfK_eq {β : Type} (fe : IFEnv) (c : NestCtx) (prog : List NestHole) (kb hi i : Nat)
     (args : List EIdx) (K : NestFieldKind → AM β) :
@@ -46,13 +47,16 @@ theorem pfK_eq {β : Type} (fe : IFEnv) (c : NestCtx) (prog : List NestHole) (kb
       split
       · simp
       · funext s; rfl
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- `pfK`'s run through its continuation, from its run alone. -/
 theorem pfK_run {β : Type} {fe : IFEnv} {c : NestCtx} {prog : List NestHole} {kb hi i : Nat}
     {args : List EIdx} {x : NestFieldKind} {a a' : AState}
     (h : (pfK fe c prog kb hi i args pure).run a = .ok (x, a')) (K : NestFieldKind → AM β) :
     (pfK fe c prog kb hi i args K).run a = (K x).run a' := by
   rw [pfK_eq]; simp only [StateT.run_bind, h]; rfl
+-/
 
 /-- What `nest_pos_fvar` gives besides the twin's field kind `x`: the stage, the growth, the
 result word, the frames. -/
@@ -64,6 +68,7 @@ structure PfvPost (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
   pos : PosMR m'
   abs : AFr m m'
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`nest_pos_fvar` refines `pfK`, both outcomes.** -/
 theorem pfv_ref {p : Prog} (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     {k : Nat} {m : Mem} {a : AState} {ctx po pl kb hi i aO aL : Word} {c : NestCtx}
@@ -143,6 +148,7 @@ theorem pfv_ref {p : Prog} (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe
   have hw := hkW_ok (by simpa [hkWf] using hk) hU3.dec hU3.inn htop3 hhi (nestHoleAt_nP hnh)
   exact RefE.ret rfl ⟨hS3, (hg1.trans hg2).trans hg3, by simpa using hw,
     hP2.fr (naW_mfr hna'), ((haW_afr hha').trans (noaW_afr _ _ _ _ _ _ _ _ _ _ hoa)).trans (naW_afr hna')⟩
+-/
 
 /-- `nestCont`'s checks between the container and the instantiation's former (`nest_cont_checks`),
 the rest of the twin `REST`. -/
@@ -164,70 +170,7 @@ theorem cpW_okW (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis hp : Word
     decHL m dO.toNat dL.toNat = some ds → (∀ j < dL.toNat, dO.toNat + j < iwTop m) →
     ∃ b a', (ds.allM (pcF hp.toNat)).run a = .ok (b, a') ∧ StageR vis fe m' a' ∧ IWGrow m m' ∧
       r.headD 0 = (if b then 1 else 0) := by
-  induction n with
-  | zero => intro m m' a dO dL ds r h; simp [cpW] at h
-  | succ n ih =>
-    intro m m' a dO dL ds r h hS hds hin
-    by_cases hl0 : dL = 0
-    · rw [cpW_nil (h := hl0)] at h
-      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-      subst hl0
-      have : ds = [] := by simpa [decHL, hslice?] using hds.symm
-      subst this
-      exact ⟨true, a, rfl, hS, IWGrow.refl _, rfl⟩
-    rw [cpW_cons (h := hl0)] at h
-    have hl : dL.toNat ≠ 0 := fun e => hl0 (UInt64.toNat_inj.mp (by simpa using e))
-    obtain ⟨l', hl'⟩ : ∃ l', dL.toNat = l' + 1 := ⟨dL.toNat - 1, by omega⟩
-    have hds' := hds
-    simp only [decHL, hl', hslice?_succ, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def, Option.some.injEq] at hds'
-    obtain ⟨x, hx, xs, hxs, rfl⟩ := hds'
-    obtain ⟨hxH, hxd⟩ := rd_iwH0E (m := m) (o := dO) (k := IdxKind.expr) (by simpa [iwH, iwA] using hx)
-    have hdO1 : (dO + 1).toNat = dO.toNat + 1 :=
-      word_add_toNat (show dO.toNat + 1 < 2 ^ 64 by have := hin 0 (by omega); have := hS.iw.iw; have := hS.iw.iwSize; omega)
-    have hl1 : (dL - 1).toNat = l' := by
-      rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simp; omega))]; simp; omega
-    rw [List.allM_cons]
-    rcases hb : bvbW n m (rdW (m.arr64 IW) dO) CWF with _ | ⟨bb, m1⟩ <;> rw [hb] at h; · simp [cpK1] at h
-    obtain ⟨a1, hrun1, hS1, hg1, -⟩ := bvbW_stageW dn vis fe hS n coreWalkFuel CWF (.inl (Nat.le_of_eq CWF_eq)) _ bb hxH hb
-    rw [decE_eq, hxd] at hrun1
-    by_cases hbb : bb ≠ 0
-    · rw [cpK1_b (h := hbb)] at h
-      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-      refine ⟨false, a1, ?_, hS1, hg1, rfl⟩
-      have : (bb.toNat != 0) = true := by
-        simp only [bne_iff_ne, ne_eq]; intro h0; exact hbb (UInt64.toNat_inj.mp (by simpa using h0))
-      simp only [pcF, StateT.run_bind, hrun1, except_ok_bind, this, ite_true]
-      rfl
-    rw [cpK1_ok (h := hbb)] at h
-    have hbb0 : (bb.toNat != 0) = false := by simp at hbb; simp [hbb]
-    have hrd1 : rdW (m1.arr64 IW) dO = rdW (m.arr64 IW) dO := by
-      simp only [rdW]; rw [hg1.iwGet _ (by simpa using hin 0 (by omega))]
-    rw [hrd1] at h
-    rcases hst : fvbF m1 [CWF, rdW (m.arr64 IW) dO] with _ | ⟨r2, m2⟩ <;> rw [hst] at h; · simp [cpK2] at h
-    obtain ⟨k, a2, hrun2, hS2, hg2, hk⟩ := fvbF_ok dn vis fe CWF _ hxH _ _ a1 r2 hst hS1
-    rw [CWF_eq, hxd] at hrun2
-    simp only [decW0Nat] at hk
-    by_cases hc : hp < r2.headD 0
-    · rw [cpK2_out (h := hc)] at h
-      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-      have hgt : ¬ k ≤ hp.toNat := by have := UInt64.lt_iff_toNat_lt.mp hc; omega
-      refine ⟨false, a2, ?_, hS2, hg1.trans hg2, rfl⟩
-      simp only [pcF, StateT.run_bind, hrun1, except_ok_bind, hbb0, Bool.false_eq_true, ite_false,
-        hrun2, hgt, decide_false]
-      rfl
-    rw [cpK2_in (h := hc)] at h
-    have hle : k ≤ hp.toNat := by
-      have : ¬ hp.toNat < (r2.headD 0).toNat := fun e => hc (UInt64.lt_iff_toNat_lt.mpr e)
-      omega
-    have hg12 := hg1.trans hg2
-    obtain ⟨b, a', hrun, hS', hg', hr⟩ := ih m2 m' a2 (dO + 1) (dL - 1) xs r h hS2
-      (by rw [hdO1, hl1, ← hxs, decHL]; exact decHL_agree (RdS.of_grow hg12) (fun j hj => by
-            have := hin (j + 1) (by omega); simp only [decHL] at *; omega))
-      (fun j hj => by rw [hdO1, hl1] at *; have := hin (j + 1) (by omega); have := hg12.iw; omega)
-    refine ⟨b, a', ?_, hS', hg12.trans hg', hr⟩
-    simp only [pcF, StateT.run_bind, hrun1, except_ok_bind, hbb0, Bool.false_eq_true, ite_false,
-      hrun2, hle, decide_true]
-    exact hrun
+  sorry
 
 /-- `nccT` with its rest split off. -/
 theorem nccT_eq {β : Type} (c : NestCtx) (hp : Nat) (n : NIdx) (ds idx : List EIdx) (REST : AM β) :

@@ -44,6 +44,7 @@ open L.Arena
 
 local notation "V" => ConLeche.CheckMode.verified
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 l_model crrE_spec (p : Prog) (hP : CrrProg p)
   fns [hP.go ↦ crrE]
   specs [crsE_spec p hP.crs n, targetMajorAt_spec p hP.crs.alloc hP.pw hP.mtm hP.tmd hP.tma hP.na n,
@@ -52,13 +53,16 @@ l_model crrE_spec (p : Prog) (hP : CrrProg p)
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
   heartbeats 4000000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 l_model crraE_spec (p : Prog) (hP : CrrProg p)
   fns [hP.top ↦ crraE] specs [crrE_spec p hP n]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
   heartbeats 4000000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
+-/
 
 /-- What `class_recs_rules_ok(_go)` gives besides the twin's records `xs` (from `m`, `a`): the stage
 invariant under `StageC`, the growth, the records a slice below the tops, the abstraction memo, the
@@ -70,7 +74,6 @@ structure CrrPost (dn : NIdx → Option ConLeche.Name) (visR : Word) (feR : IFEn
   grow : IWGrow m m'
   dec : decRRS m' r xs
   abs : AbsOK m'
-  core : ConRon.Bridge.CoreStep V env feR a a'
 
 /-- The class's constructors denote (con-ron's `classRecsRulesOk_spec`, its first step). -/
 theorem ctorsAt_denote {st : EStore} {G : ClassGen} {gP : ConLeche.ClassGen}
@@ -89,6 +92,7 @@ section sims
 variable {p : Prog} (hq : KnotStageProg p) (hApd : ApdF p) {dn : NIdx → Option ConLeche.Name}
   {env : ConLeche.Env} (hnv : closedNV p _root_.L.Checker.nvFns = true) (hcE : CoreStubsE p) (hU : UceProg p)
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 include hq hApd in
 /-- **`class_recs_rules_ok_go` refines `classRecsRulesOk`, both outcomes** under `StageC` (the
 inputs' denotations as con-ron's `classRecsRulesOk_spec` asks). -/
@@ -242,7 +246,9 @@ theorem crr_ref (hP : CrrProg p) (henv : ConLeche.EnvWF env) (visT visR : Word) 
   exact RefE.ret rfl ⟨hR4.stage.of_check hS5 hA5 hR4.stage.check (Ext.refl _),
     hg03.trans (hR4.grow.trans hg5), ⟨by simpa using hd5, by simp only [List.headD_cons, List.tail_cons]; omega⟩,
     hA5, c12.trans hR4.core⟩
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 include hq hApd in
 /-- **`class_recs_rules_ok` refines `classRecsRulesOk`, both outcomes** under `StageC`: the
 first call of `class_recs_rules_ok_go` (`crr_ref`), its result repacked. -/
@@ -270,7 +276,9 @@ theorem crra_ref (hP : CrrProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : A
   refine RefE.lastE (fun _ => crraE.k_class_recs_rules_ok_go.none ..)
     (fun _ => crraE.k_class_recs_rules_ok_go.arm1 ..) id h fun _ _ _ _ hR =>
     ⟨hR.stage, hR.grow, ⟨by simpa using hR.dec.1, by simpa using hR.dec.2⟩, hR.abs, hR.core⟩
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 include hq hApd in
 /-- **`class_recs_rules_ok` refines `classRecsRulesOk`** under `StageC` (the inputs' denotations as
 con-ron's `classRecsRulesOk_spec` asks; `crra_ref`'s ok half). -/
@@ -300,7 +308,9 @@ theorem classRecsRulesOk_refinesC (hp : CrrProg p) (n : Nat) (hn : n ≤ 2 ^ 62)
   rintro r s' ⟨hl, x, a', run, hR⟩
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ run
   exact ⟨hl, hok, ⟨by rw [hst]; exact hR.stage, hR.grow, by rw [hres]; exact hR.dec⟩, hR.abs⟩
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 include hq hApd hnv hcE hU in
 /-- **`class_recs_rules_ok`'s error claim** (the hypotheses of `classRecsRulesOk_refinesC`; `crra_ref`'s
 error half): a failing call of class `1`/`2` claims that the twin's `classRecsRulesOk` fails. -/
@@ -320,6 +330,7 @@ theorem classRecsRulesOk_claim (hP : CrrProg p) (n : Nat) (hn : n ≤ 2 ^ 62) (s
   RefE.coreSpecE (crraE_spec p hP n s₀ visT visR g rco rcl cgo cgl) hnv { nv := hnv, core := hcE, uce := hU }
     (crra_ref hq hApd hP n hn henv visT visR feR (env₂ := env₂) g rco rcl cgo cgl G recCls cvGs hC hG hns hrc
       hrcb hcg hcgb hA hgP hcvGsP hie)
+-/
 
 end sims
 

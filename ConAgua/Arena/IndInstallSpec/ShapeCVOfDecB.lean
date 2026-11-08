@@ -71,7 +71,6 @@ structure CidProg (p : Prog) : Prop where
   canon : CanonProg p
   rom : L.Rom.RomRefs p
   pa : p.lookup "pin_at" = some pinAtL
-  cbd : p.lookup "check_basis_decl" = some checkBasisDeclL
   ps : p.lookup "pi_sort_tele_len" = some L.Front.Ind.piSortTeleLen
   ev : p.lookup "e_view" = some eView
   ipo : p.lookup "ind_params_ok" = some L.Checker.indParamsOkL

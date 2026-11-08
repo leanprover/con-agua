@@ -29,6 +29,7 @@ open L.Arena
 
 noncomputable section
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 l_model nggE_spec (p : Prog) (hn : NitLook p) (h2 : p.lookup "rec2" = some rec2) (h4 : p.lookup "rec4" = some rec4)
     (hsn : p.lookup "sl_snoc" = some slSnoc) (hf : p.lookup "nest_grow_group" = some nestGrowGroupL)
   fns [hf ↦ nggE list]
@@ -37,7 +38,9 @@ l_model nggE_spec (p : Prog) (hn : NitLook p) (h2 : p.lookup "rec2" = some rec2)
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 l_model ngcE_spec (p : Prog) (hl : NtLook p) (hc : p.lookup "iw_copy" = some iwCopy)
     (hap : p.lookup "sl_append" = some slAppend) (hp : p.lookup "nest_group_ctors" = some nestGroupCtorsL)
   fns [hp ↦ ngcE list]
@@ -45,6 +48,7 @@ l_model ngcE_spec (p : Prog) (hl : NtLook p) (hc : p.lookup "iw_copy" = some iwC
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
+-/
 
 end
 

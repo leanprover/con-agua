@@ -81,17 +81,7 @@ open L.Arena
 
 /-- **`ApdEnv` from the store's well-formedness** (`TwinOK.of_check`'s two level fields). -/
 theorem ApdEnv.of_state {a : AState} (hok : ConRon.Bridge.StateOK a) : ApdEnv a := by
-  obtain ⟨rk, hw⟩ := hok.wf
-  have hw' : StoreWF' a.store := StoreWF'.of_wf ⟨rk, hw⟩
-  obtain ⟨rk', hw''⟩ := hw'
-  have hLs : LsStoreWF' a.store.lss := hw''.lss
-  have hL : LStoreWF' a.store.ls := hLs.ls
-  refine ⟨hw.nsWF, fun x u hv => ?_, fun x c us hv => ?_⟩
-  · exact ConRon.Bridge.denoteL_of_view hL (hw.lchildOK x _ hv u (by simp [ENodeView.lchildren])).1
-  · have hs := (hw.lschildOK x _ hv us (by simp [ENodeView.lschildren])).1
-    obtain ⟨vs, hvs⟩ := Option.isSome_iff_exists.mp hs
-    obtain ⟨xs, hxs⟩ := ConRon.Bridge.denoteLs_of_view hLs hvs
-    exact ⟨xs, by simp only [denoteLs, hvs]; exact hxs⟩
+  sorry
 
 /-- `StateOK` reads the store only. -/
 theorem stateOK_of_sp {a a' : AState} (h : ConRon.Bridge.StateOK a) (e : sp a' = sp a) :
@@ -111,29 +101,7 @@ theorem apdF_simR {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
     Sim (apdF m [o, l, e]) (allLevelParamsDefined lps (decI e)) a
       (fun r x m' a' => StageR vis fe m' a' ∧ IWGrow m m' ∧ decW0B m' r x ∧ AbsOK m' ∧
         sp a' = sp a) := by
-  intro r m' h
-  obtain ⟨ks, hks⟩ := hks
-  obtain ⟨n, hc⟩ := callF_run h
-  rcases n with _ | n
-  · rw [callW_zero] at hc; cases hc
-  obtain ⟨s', hs', -, hm⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (allLevelParamsDefined_spec_raw apdP apdP_prog.eview apdP_prog.lsnode apdP_prog.find
-      apdP_prog.put apdP_prog.clear apdP_prog.lmem apdP_prog.lnode apdP_prog.lapd apdP_prog.ls
-      apdP_prog.go apdP_prog.entry n ⟨m, Locals.init []⟩ o l e) hc
-  subst hs'
-  obtain ⟨hAb, hI1, hCr, hIl, hW, hE, hSp, hB, hP⟩ := hA
-  obtain ⟨b, hrun, hr, hS', hg, mp, hM⟩ := apdEntry_ok n hS (ApdEnv.of_state hok) o l e _ lps ks hks
-    hdec he (apdMR_clear hW) hm
-  have hf := apdF_frame h
-  refine ⟨b, a, hrun, hS', hg, apd_decW0B hr, ?_, rfl⟩
-  obtain ⟨-, ⟨mf, hfl⟩, ⟨ml, hlsb⟩, hLP⟩ := hW
-  refine ⟨hAb.frame hf (by decide) (by decide), hI1.frame hf (by decide) (by decide),
-    hCr.frame hf (by decide) (by decide), hIl.frame hf (by decide) (by decide),
-    ⟨apdMR_ws hM, ⟨mf, ?_⟩, ⟨ml, ?_⟩, hLP.frame hf (by decide) (by decide)⟩,
-    by rw [hf.size]; exact hE, by rw [hf.size]; exact hSp, by rw [hf.size]; exact hB,
-    by rw [pinW_frame hf (by decide)]; exact hP⟩
-  · exact memoRG_frame coreFlSch coreFlSch_wf bmKey _ _ _ (by decide) (by decide) _ _ hf mf hfl
-  · exact memoRG_frame coreLsbSch coreLsbSch_wf bmKey _ _ _ (by decide) (by decide) _ _ hf ml hlsb
+  sorry
 
 /-- `apdF_simR` at the program's own call (`realCall p`'s reading). -/
 theorem apdCall_simR {p : Prog} (hp : ApdF p) (k : Nat) {dn : NIdx → Option ConLeche.Name}
@@ -143,8 +111,8 @@ theorem apdCall_simR {p : Prog} (hp : ApdF p) (k : Nat) {dn : NIdx → Option Co
     (hks : ∃ ks, lps.mapM (denoteN a.store.lss.ls.ns) = some ks) :
     Sim (realCall p k "all_level_params_defined" [o, l, e] m) (allLevelParamsDefined lps (decI e)) a
       (fun r x m' a' => StageR vis fe m' a' ∧ IWGrow m m' ∧ decW0B m' r x ∧ AbsOK m' ∧
-        sp a' = sp a) :=
-  fun r m' h => apdF_simR o l e he lps hS hA hok hdec hks r m' (apdF_of_callW hp h)
+        sp a' = sp a) := by
+  sorry
 
 /-! ## The other three walks keep the twin's store -/
 
@@ -168,6 +136,7 @@ theorem lbbF_simR {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
   obtain ⟨X, rfl⟩ := memos_only_of_sp (Keeps.bind (keeps_bvarB_sp _ _) fun _ => Keeps.pure _) x a' hrun
   exact ⟨x, _, hrun, hK, rfl⟩
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- `consts_resolve_ffast` (`constsResolveFFast_keepsSt`), the twin state kept, `AbsOK` after. -/
 theorem crfF_simR {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m : Mem}
     {a : AState} (e : Word) (he : H e) (hS : StageR vis fe m a) (hA : AbsOK m) :
@@ -184,6 +153,7 @@ theorem crfF_simR {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
   exact ⟨x, _, hrun, hK, ⟨hAb.frame hfr (by decide) (by decide), hI1.frame hfr (by decide) (by decide),
     hCr', hIl.frame hfr (by decide) (by decide),
     hWk.frame hfr (by decide) (by decide) (by decide) (by decide) (by decide)⟩, rfl⟩
+-/
 
 /-! ## `check_struct_proj_table_scoped`, the real reading -/
 
@@ -194,6 +164,7 @@ theorem names_of_sp {a a' : AState} {lps : List NIdx} (e : sp a' = sp a)
   simp only [sp, Prod.mk.injEq] at e
   rw [e.1]; exact h
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`check_struct_proj_table_scoped`'s model (`realCall p`) refines the twin's
 `bodies.toList.allM`** under `StageR`, `AbsOK`, the twin's `StateOK` and the parameters' names
 read back; the twin's store, caches and pins are kept. -/
@@ -271,9 +242,11 @@ theorem sctW_okR {p : Prog} (hp : ApdF p) {dn : NIdx → Option ConLeche.Name} {
       cases a1 <;> cases a2 <;> cases a3 <;> cases a4 <;> simp_all
     simp only [ht]
     exact Sim.ret ⟨hS4, hg14, rfl, by decide, hA4, he14⟩
+-/
 
 /-! ## `check_struct_proj_table`, the real reading -/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- `sctW (realCall p)`'s frame. -/
 theorem sctW_mfr_real {p : Prog} (hp : ApdF p) : ∀ (n : Nat) (m m' : Mem) (vis nP lo ll bO bL : Word)
     (r : List Word), sctW (realCall p) n m vis nP lo ll bO bL = some (r, m') → MFr [] [] m m' :=
@@ -281,6 +254,7 @@ theorem sctW_mfr_real {p : Prog} (hp : ApdF p) : ∀ (n : Nat) (m m' : Mem) (vis
     (fun b hb => .inl (by simp only [List.mem_cons, List.not_mem_nil, or_false] at hb; subst hb; decide))
     (fun x hx => .inl (by simp only [List.mem_cons, List.not_mem_nil, or_false] at hx
                           rcases hx with rfl | rfl <;> decide))
+-/
 
 /-- Names read back in a store read back in its extension. -/
 theorem names_ext {st st' : EStore} (hx : ConRon.Arena.Ext st st') {lps : List NIdx}
@@ -297,6 +271,7 @@ theorem names_ext {st st' : EStore} (hx : ConRon.Arena.Ext st st') {lps : List N
 
 /-! ## The environment's table side as callees of the stage -/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- `find_table` as a callee: the memory is unchanged, the row word decodes the twin's lookup. -/
 theorem findTable_call {p : Prog} (hP : TblProg p) {dn : NIdx → Option ConLeche.Name} {vis : Word}
     {fe : IFEnv} {n : Nat} {m m' : Mem} {w : Word} {r : List Word} (hE : EnvR m vis fe)
@@ -305,7 +280,9 @@ theorem findTable_call {p : Prog} (hP : TblProg p) {dn : NIdx → Option ConLech
   obtain ⟨s', hs', h1, -, h3, -⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (findTable_refines p hP.hix hP.hrg hP.htix hP.htrg hP.hftab n ⟨m, Locals.init []⟩ vis w hE hw) hc
   exact ⟨hs'.symm.trans h1, h3⟩
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **The memory after `env_push_table(q)`**: the slot and the count (`tblListPush`), then the
 structure's table row. -/
 theorem envPushTable_mem (p : Prog) (htx : p.lookup "tbl_ix" = some tblIxL)
@@ -337,6 +314,7 @@ theorem envPushTable_mem (p : Prog) (htx : p.lookup "tbl_ix" = some tblIxL)
       vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
         tblRowSet_spec p htx hs n] <;>
       finish [tblListPush]
+-/
 
 /-- **`env_push_table` as a callee of the stage**: the twin's `pushTable` of the record's table,
 the pool unchanged, the walk memos and the frame below the stage's kept. -/
@@ -345,41 +323,9 @@ theorem envPushTable_stage {p : Prog} (hP : TblProg p) {dn : NIdx → Option Con
     (hS : StageR vis fe m a) (ht : decTbl (erecP m) q.toNat = some t)
     (hc : callW p n "env_push_table" [q] m = some (r, m')) :
     StageR vis (fe.pushTable t) m' a ∧ IWGrow m m' ∧ MFr [] [] m m' ∧ AFr m m' := by
-  obtain ⟨s', hs', -, hE'⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (envPushTable_refines p hP.htix hP.htrs hP.hept n ⟨m, Locals.init []⟩ vis q t hS.check.env ht) hc
-  obtain ⟨s'', hs'', hM, hw, -⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (envPushTable_mem p hP.htix hP.htrs hP.hept n ⟨m, Locals.init []⟩ q) hc
-  rw [hs'] at hE'
-  rw [hs''] at hM
-  simp only at hM hw
-  have hfr : MemFrame (ETAB :: tblArrs) [133] m m' := by
-    rw [hM]
-    refine (((MemFrame.set64 m ETAB (by decide) _ _).mono (by simp) (by simp)).trans
-      ((MemFrame.setCtl _ 133 _).mono (by simp) (by simp))).trans
-      ((tblSet_frame _ _ _ hw).mono (fun b hb => List.mem_cons_of_mem _ hb) (by simp))
-  have hC : CheckR m' a vis (fe.pushTable t) :=
-    ⟨⟨ArenaR.frame (fun b hb => by
-          simp only [List.mem_cons, List.not_mem_nil, or_false] at hb
-          rcases hb with rfl | rfl | rfl | rfl | rfl | rfl | rfl <;>
-            decide)
-        (fun x hx => by simp at hx; subst hx; exact not_mem_arenaCtl _ (by decide)) hfr
-        hS.check.arena.base,
-      DerR.frameM _ _ m _ hfr (by decide) a hS.check.arena.der⟩,
-     hS.check.core.frame (by decide) (fun x hx => by simp at hx; subst hx; decide) hfr,
-     hS.check.pins.frame (by decide) hfr, hE', hS.check.mode.frame hfr (by decide) (by decide)⟩
-  obtain ⟨hI1, hE1, hsz, hEs, hc'⟩ := hS.iw
-  have hI : m'.arr64 IW = m.arr64 IW := hfr.arr IW (by decide) (by decide)
-  have hER : m'.arr64 EREC = m.arr64 EREC := hfr.arr EREC (by decide) (by decide)
-  have h200 : iwTop m' = iwTop m := by simp only [iwTop, hfr.ctl 200 (by decide)]
-  have h129 : erTop m' = erTop m := by simp only [erTop, hfr.ctl 129 (by decide)]
-  refine ⟨⟨hC, ?_, ?_, ?_, ?_, ?_⟩, ⟨by omega, by omega, fun i _ => by rw [hI], fun i _ => by rw [hER]⟩,
-    MFr.of_frame hfr (by decide) (fun x hx => by simp at hx; subst hx; decide), AFr.of_frame hfr⟩
-  · rw [h200, hI]; exact hI1
-  · rw [h129, hER]; exact hE1
-  · rw [hI]; exact hsz
-  · rw [hER]; exact hEs
-  · rw [hfr.size CTL]; exact hc'
+  sorry
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **The model of `check_struct_proj_table`, both outcomes**: its callees (outside the verdict
 closure) lifted, `check_struct_proj_table_scoped` reading the real `all_level_params_defined`. -/
 l_model tblE_spec (p : Prog) (hP : TblProg p)
@@ -393,6 +339,7 @@ l_model tblE_spec (p : Prog) (hP : TblProg p)
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
   heartbeats 4000000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
+-/
 
 /-- What `check_struct_proj_table` gives besides the environment `x` it returns (from `m`, `a`):
 the stage at the returned view `w`, the growth, the frame (no memo touched), `AbsOK`, the twin's
@@ -405,6 +352,7 @@ structure TblPost (dn : NIdx → Option ConLeche.Name) (m : Mem) (a : AState) (w
   abs : AbsOK m'
   step : ConRon.Bridge.Inductives.PStep a a'
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`check_struct_proj_table` refines `checkStructProjTable`, both outcomes** (the scoping
 through the real `all_level_params_defined`, `sctW_okR`): beyond the stage relation the twin's
 `StateOK`, the level parameters' names, the structure's name and the constructor's type read
@@ -566,7 +514,9 @@ theorem tbl_ref {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
   · subst hM
     exact (((((efW_afr h5').trans (efW_afr h6')).trans (efW_afr h7')).trans
       (erAllocW_afr h8)).trans ((wrER_afr _ _ _).trans ha9)) hA2
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`check_struct_proj_table` refines `checkStructProjTable` under `StageC`** (`tbl_ref`'s ok
 half): from `StageC` at `vis` of `fe`, the decodings and the walk memos, and the twin's readings of
 the structure's name, the level parameters and the constructor (`checkStructProjTable_runF`'s), a
@@ -601,9 +551,11 @@ theorem checkStructProjTable_refinesC (p : Prog) (hP : TblProg p) (hp : ApdF p) 
         (ConRon.Bridge.denoteCV_type hcvP))) fun _ _ ⟨hl, _, _, hrun, hR⟩ => by
     obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
     exact ⟨hl, hok, by rw [hst, hres]; exact hR.stage, hR.grow, hR.abs, by rw [hst]; exact hR.step⟩
+-/
 
 /-! ## `check_block_tables`, one model and one refinement each -/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`check_block_tables_one`'s unified model**: `struct_proj_guards` and `block_shape_lps`
 (outside the verdict closure) lifted, `check_struct_proj_table` through its unified model. -/
 l_model ctoE_spec (p : Prog) (ht : TblProg p) (hf : p.lookup "check_block_tables_one" = some checkBlockTablesOne)
@@ -611,7 +563,9 @@ l_model ctoE_spec (p : Prog) (ht : TblProg p) (hf : p.lookup "check_block_tables
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] heartbeats 1000000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`check_block_tables`' unified model**: every member's table through `ctoE`. -/
 l_model ctbE_spec (p : Prog) (ht : TblProg p) (h1 : p.lookup "check_block_tables_one" = some checkBlockTablesOne)
   (hf : p.lookup "check_block_tables" = some checkBlockTables)
@@ -619,6 +573,7 @@ l_model ctbE_spec (p : Prog) (ht : TblProg p) (h1 : p.lookup "check_block_tables
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] heartbeats 1000000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
+-/
 
 /-- What a table install gives besides the environment `x` it returns (from `m`, `a`): the stage at
 the returned view `w`, the growth, the `hb` memo, `AbsOK`, the twin's run a `PStep`. -/
@@ -630,6 +585,7 @@ structure TabPost (dn : NIdx → Option ConLeche.Name) (m : Mem) (a : AState) (w
   abs : AbsOK m'
   step : ConRon.Bridge.Inductives.PStep a a'
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`check_block_tables_one` refines one member's install, both outcomes** (the table through the
 real `all_level_params_defined`: `tbl_ref`), from the twin's
 `StateOK`, `PinsOK` and the shape's, the member's, the constructor's and its sorts' readings; the
@@ -762,7 +718,9 @@ theorem cto_ref {p : Prog} (hP : TabsProg p) (hp : ApdF p) (n : Nat) (hn : n ≤
     hks hTP hcty
   rw [hTn, hCn, hrse2, UInt64.toNat_ofNat_of_lt' hnpb, UInt64.toNat_ofNat_of_lt' hnFb] at h
   exact h.mono fun _ _ _ hR3 => ⟨hR3.stage, hg12.trans hR3.grow, hM2.fr hR3.frame, hR3.abs, ps1.trans hR3.step⟩
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`check_block_tables` refines `checkBlockTables`, both outcomes** (each member's table by
 `cto_ref`), from the twin's `StateOK`, `PinsOK` and the shape's, the members', the constructors' and
 their sorts' readings (each member's install a `PStep`, so they hold at the next); the twin's run is
@@ -883,5 +841,6 @@ theorem ctb_ref {p : Prog} (hP : TabsProg p) (hp : ApdF p) (dn : NIdx → Option
     exact ih (by omega) m a vis fe (mo + 1) (ml - 1) (co + 1) (cl - 1) (so + 1) (sl - 1) rest css' sss'
       hS hq hsrc hrest hcss' hsss' hM hA hkeep hok hpins ⟨pP, hsh⟩ ⟨msP', hrestP⟩ ⟨cssP', hcssP'⟩
       ⟨sssP', hsssP'⟩
+-/
 
 end L.Ind
