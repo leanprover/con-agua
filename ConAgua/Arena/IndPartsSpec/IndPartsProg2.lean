@@ -70,7 +70,7 @@ theorem partsIwRd {m : Mem} {i v : Nat} (h : iwN (truncM m) i = some v) {w : Wor
   simp only [iwN, nat?, Option.map_eq_some_iff] at h
   obtain ⟨x, hx, rfl⟩ := h
   obtain ⟨hi, hx'⟩ := truncM_iw_get hx
-  simp only [iwA] at hx'
+  simp only [iwA, aread_apply, aread_apply] at hx'
   refine ⟨?_, x.toNat_lt, hi⟩
   rw [rdW_of_get? hw.symm hx']; simp
 

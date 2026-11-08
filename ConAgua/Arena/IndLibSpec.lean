@@ -210,7 +210,12 @@ theorem slNodup_refines (p : Prog) (hc : p.lookup "sl_contains" = some slContain
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "sl_nodup" [o, l]
     ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧
       (r.headD 0 != 0) = nameNodup (ws.map decI); ⊤⦄ := by
-  sorry
+  have h := slNodup_spec p hc hp n s₀ o l
+  refine triple_post h ?_
+  intro r s' ⟨h1, h2, h3⟩
+  refine ⟨h1, h2, ?_⟩
+  rw [nodupW_ok n _ _ _ _ _ hs h3, nameNodup_map ws hw]
+  by_cases hn : ws.Nodup <;> simp [hn]
 
 end L.Ind
 
@@ -238,7 +243,52 @@ theorem slR_of_decHL {k : IdxKind} (m : Mem) : ∀ (n off : Nat) (ns : List (Idx
     decHL m off n = some ns → off + n < 2 ^ 64 →
     ∃ ws, SlR m (UInt64.ofNat off) (UInt64.ofNat n) ws ∧ ns = ws.map decI ∧
       ∀ w ∈ ws, w.toNat < 2 ^ 32 := by
-  sorry
+  intro n
+  induction n with
+  | zero =>
+    intro off ns h _
+    simp [decHL, hslice?] at h
+    exact ⟨[], by simpa using (SlR.nil (m := m) (o := UInt64.ofNat off)), by simp [h], by simp⟩
+  | succ n ih =>
+    intro off ns h hb
+    simp only [decHL, hslice?_succ] at h
+    cases hx : (hd? (iwA m) off : Option (Idx k)) with
+    | none => simp [hx] at h
+    | some x =>
+      cases hxs : (hslice? (iwA m) (off + 1) n : Option (List (Idx k))) with
+      | none => simp [hx, hxs] at h
+      | some xs =>
+        simp [hx, hxs] at h
+        obtain ⟨ws, hws, rfl, hlt⟩ := ih (off + 1) xs hxs (by omega)
+        simp only [hd?, iwA, aread_apply] at hx
+        cases hw : (m.arr64 IW)[off]? with
+        | none => simp [hw] at hx
+        | some w =>
+          simp only [hw] at hx
+          by_cases hwl : w.toNat < 2 ^ 32
+          · simp [hwl] at hx
+            subst h
+            refine ⟨w :: ws, ?_, by simp [hx], ?_⟩
+            · have e1 : rdW (m.arr64 IW) (UInt64.ofNat off) = w := by
+                simp only [rdW] at hw ⊢
+                have : (UInt64.ofNat off).toNat = off := by simp; omega
+                rw [this, hw]; rfl
+              have e2 : UInt64.ofNat off + 1 = UInt64.ofNat (off + 1) := by
+                simp [UInt64.ofNat_add]
+              have e3 : UInt64.ofNat (n + 1) - 1 = UInt64.ofNat n := by
+                simp [UInt64.ofNat_add]
+              have hne : UInt64.ofNat (n + 1) ≠ 0 := by
+                intro h0
+                have := congrArg UInt64.toNat h0
+                simp at this; omega
+              rw [← e1]
+              exact SlR.cons hne (by rw [e2, e3]; exact hws)
+            · intro v hv
+              simp at hv
+              rcases hv with rfl | hv
+              · exact hwl
+              · exact hlt v hv
+          · simp [hwl] at hx
 
 end L.Ind
 
@@ -362,7 +412,7 @@ open L.Arena
 /-! ## Frames: the pool's writers keep the checker state -/
 
 /-- **A writer of `IW` and `CTL[200]` keeps `CheckR`.** -/
-theorem CheckR.frame_iw {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AState} {vis : Word}
+theorem CheckR.frame_iw {m m' : Mem} {a : AState} {vis : Word}
     {fe : IFEnv} (hf : MemFrame [IW] [200] m m') (h : CheckR m a vis fe) : CheckR m' a vis fe :=
   ⟨⟨ArenaR.frame (fun b hb => by simp at hb; subst hb; decide)
       (fun x hx => by simp at hx; subst hx; exact not_mem_arenaCtl _ (by decide)) hf h.arena.base,
@@ -387,26 +437,56 @@ open L.Arena
 
 -- `IWGrow.refl`, `IWGrow.trans`: `IndIface.lean` (with the tier-1 record pool).
 
+/-- `IWOK` across a writer of `IW` and its top alone, the new top within the array. -/
+theorem IWOK.of_iw {m m' : Mem} (hf : MemFrame [IW] [200] m m') (h : IWOK m)
+    (hroom : iwTop m' ≤ (m'.arr64 IW).size) : IWOK m' := by
+  have hE := hf.arr EREC (by decide) (by decide)
+  have hE1 := hf.arr (tier1 EREC) (by decide) (by decide)
+  have hc := hf.size CTL
+  have hI := hf.size IW
+  have h1 := (IWOK_iff m).1 h
+  simp only [IWOK_iff, erTop, erecTop1, hE, hE1, hc, hI, hf.ctl 129 (by decide),
+    hf.ctl 130 (by decide)] at h1 ⊢
+  exact ⟨by rw [← hI]; exact hroom, h1.2.1, h1.2.2.1, h1.2.2.2.1, h1.2.2.2.2.1, h1.2.2.2.2.2⟩
+
+/-- `IWOK` from a frame that keeps the pool arrays and the tops (`IW`, `EREC` in both tiers,
+`CTL[129]`, `CTL[130]`, `CTL[200]`). -/
+theorem IWOK.of_keep {A : List TieredArray} {C : List Word} {m m' : Mem} (hf : MemFrame A C m m')
+    (hA : (IW : TieredArray) ∉ A ∧ (EREC : TieredArray) ∉ A ∧ tier1 EREC ∉ A)
+    (hC : (129 : Word) ∉ C ∧ (130 : Word) ∉ C ∧ (200 : Word) ∉ C) (h : IWOK m) : IWOK m' := by
+  have hI := hf.arr IW hA.1 (by decide)
+  have hE := hf.arr EREC hA.2.1 (by decide)
+  have hE1 := hf.arr (tier1 EREC) hA.2.2 (by decide)
+  have hc := hf.size CTL
+  simp only [IWOK_iff, iwTop, erTop, erecTop1, hI, hE, hE1, hc, hf.ctl _ hC.1, hf.ctl _ hC.2.1,
+    hf.ctl _ hC.2.2]
+  exact (IWOK_iff m).1 h
+
+
 /-- A write to `IW` at or above the top keeps the growth. -/
 theorem IWGrow.set_iw {m m' : Mem} (h : IWGrow m m') (k v : Word) (hk : iwTop m ≤ k.toNat) :
     IWGrow m (m'.set64 IW k v) := by
-  refine ⟨?_, ?_, fun i hi => ?_, fun i hi => ?_⟩
+  refine ⟨?_, ?_, fun i hi => ?_, fun i hi => ?_, ?_, fun i hi => ?_⟩
   · simp only [iwTop, rdW_set64]; simp [show (CTL : TieredArray) ≠ IW by decide]; exact h.iw
   · simp only [erTop, rdW_set64]; simp [show (CTL : TieredArray) ≠ IW by decide]; exact h.er
   · rw [Mem.arr64_set64_same, Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds]
     have : ¬ (k.toNat = i) := by omega
     simp only [this, ite_false]; exact h.iwGet i hi
   · rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]; exact h.erGet i hi
+  · simp only [erecTop1, rdW_set64]; simp [show (CTL : TieredArray) ≠ IW by decide]; exact h.er1
+  · rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]; exact h.er1Get i hi
 
 /-- Raising the top keeps the growth. -/
 theorem IWGrow.set_top {m m' : Mem} (h : IWGrow m m') (t : Word) (ht : iwTop m' ≤ t.toNat)
     (hc : 200 < (m'.arr64 CTL).size) :
     IWGrow m (m'.set64 CTL 200 t) := by
-  refine ⟨?_, ?_, fun i hi => ?_, fun i hi => ?_⟩
+  refine ⟨?_, ?_, fun i hi => ?_, fun i hi => ?_, ?_, fun i hi => ?_⟩
   · simp only [iwTop, rdW_set64]; simp [hc]; have := h.iw; simp only [iwTop] at this ht; omega
   · simp only [erTop, rdW_set64]; simp; exact h.er
   · rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]; exact h.iwGet i hi
   · rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]; exact h.erGet i hi
+  · simp only [erecTop1, rdW_set64]; simp; exact h.er1
+  · rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]; exact h.er1Get i hi
 
 end L.Ind
 
@@ -433,11 +513,24 @@ variable {m : Mem}
 
 theorem iwN_rdW {i v : Nat} (h : iwN m i = some v) (hi : i < 2 ^ 64) :
     rdW (m.arr64 IW) (UInt64.ofNat i) = UInt64.ofNat v ∧ v < 2 ^ 64 := by
-  sorry
+  simp only [iwN, nat?, iwA, aread_apply, Option.map_eq_some_iff] at h
+  obtain ⟨w, hw, rfl⟩ := h
+  have : (UInt64.ofNat i).toNat = i := by simp; omega
+  simp only [rdW, this, hw, Option.getD_some]
+  exact ⟨by simp, w.toNat_lt⟩
 
 theorem iwH_rdW {k : IdxKind} {i : Nat} {x : Idx k} (h : iwH m i = some x) (hi : i < 2 ^ 64) :
     ∃ w, rdW (m.arr64 IW) (UInt64.ofNat i) = w ∧ w.toNat < 2 ^ 32 ∧ decI w = x := by
-  sorry
+  simp only [iwH, hd?, iwA, aread_apply, aread_apply] at h
+  cases hw : (m.arr64 IW)[i]? with
+  | none => simp [hw] at h
+  | some w =>
+    simp only [hw] at h
+    by_cases hl : w.toNat < 2 ^ 32
+    · simp [hl] at h
+      have : (UInt64.ofNat i).toNat = i := by simp; omega
+      exact ⟨w, by simp [rdW, this, hw], hl, h⟩
+    · simp [hl] at h
 
 theorem decAt_some {α : Type} {g : Nat → Nat → Option (List α)} {i : Nat} {xs : List α}
     (h : decAt m g i = some xs) : ∃ o l, iwN m i = some o ∧ iwN m (i + 1) = some l ∧ g o l = some xs := by
@@ -588,33 +681,46 @@ open L.Arena
 /-- **A writer below array 64 and `CTL[64]` (an interning, a `mk_*`, a walk) keeps the stage
 relation**, given its `ArenaD` after and the twin keeping caches and pins; the pool is
 untouched, so it only grew. -/
-theorem StageR.of_walkM {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
+theorem StageR.of_walkM {vis : Word} {fe : IFEnv}
     {m m' : Mem} {a a' : AState} {A : List TieredArray} {C : List Word}
     (hS : StageR vis fe m a) (hD : ArenaD m' a') (hf : MemFrame A C m m')
     (hA : ∀ b ∈ A, InStoreTier b) (hC : ∀ x ∈ C, x.toNat < 64) (hk : cp a' = cp a)
     (hmode : ModeOK m') :
     StageR vis fe m' a' ∧ IWGrow m m' := by
-  have hI : m'.arr64 IW = m.arr64 IW := hf.arr IW (fun h => by have := hA _ h; simp [IW] at this)
-    (by decide)
-  have hE : m'.arr64 EREC = m.arr64 EREC := hf.arr EREC (fun h => by have := hA _ h; simp [EREC] at this)
-    (by decide)
-  have h200 : rdW (m'.arr64 CTL) 200 = rdW (m.arr64 CTL) 200 :=
-    hf.ctl 200 (fun h => by have := hC _ h; simp at this)
-  have h129 : rdW (m'.arr64 CTL) 129 = rdW (m.arr64 CTL) 129 :=
-    hf.ctl 129 (fun h => by have := hC _ h; simp at this)
-  refine ⟨⟨CheckR.of_walkM hS.check hD hf hA hC hk hmode, ?_⟩, ?_⟩
-  · simp only [IWOK_iff, iwTop, erTop, hI, hE, h200, h129, hf.size CTL]; exact (IWOK_iff _).1 hS.iw
-  · refine ⟨?_, ?_, fun i _ => by rw [hI], fun i _ => by rw [hE]⟩
-    · simp only [iwTop, h200]; exact Nat.le_refl _
-    · simp only [erTop, h129]; exact Nat.le_refl _
+  have hA3 : (IW : TieredArray) ∉ A ∧ (EREC : TieredArray) ∉ A ∧ tier1 EREC ∉ A :=
+    ⟨fun h => by have := hA _ h; simp [IW] at this, fun h => by have := hA _ h; simp [EREC] at this,
+      fun h => by have := hA _ h; simp [EREC, tier1] at this⟩
+  have hC3 : (129 : Word) ∉ C ∧ (130 : Word) ∉ C ∧ (200 : Word) ∉ C :=
+    ⟨fun h => by have := hC _ h; simp at this, fun h => by have := hC _ h; simp at this,
+      fun h => by have := hC _ h; simp at this⟩
+  exact ⟨⟨CheckR.of_walkM hS.check hD hf hA hC hk hmode, IWOK.of_keep hf hA3 hC3 hS.iw⟩,
+    IWGrow.of_keep hf hA3 hC3⟩
 
 /-- `StageR.of_walkM` for a walk that keeps `CTL[0]` and `CTL[1]`. -/
-theorem StageR.of_walk {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
+theorem StageR.of_walk {vis : Word} {fe : IFEnv}
     {m m' : Mem} {a a' : AState} {A : List TieredArray} {C : List Word}
     (hS : StageR vis fe m a) (hD : ArenaD m' a') (hf : MemFrame A C m m')
     (hA : ∀ b ∈ A, InStoreTier b) (hC : ∀ x ∈ C, x.toNat < 64) (hk : cp a' = cp a)
     (h01 : (0 : Word) ∉ C ∧ (1 : Word) ∉ C := by decide) :
-    StageR vis fe m' a' ∧ IWGrow m m' := by
-  sorry
+    StageR vis fe m' a' ∧ IWGrow m m' :=
+  StageR.of_walkM hS hD hf hA hC hk (hS.check.mode.frame hf h01.1 h01.2)
+
+
+/-! ## The tagged record read
+
+`EREC⦃a⦄` reads word `a &&& (2^40 - 1)` of tier `a >>> 40` (`ld64t`): `erRd` is that read as the
+models write it, `erRd_of_erecP` what a decoding (`erA`, `erecP`) says about it. -/
+
+/-- L's tagged read `EREC⦃a⦄`, as a model reads it. -/
+def erRd (m : Mem) (a : Word) : Word := rdW (m.arr64 (tierA EREC (a >>> 40))) (a &&& 0xFFFFFFFFFF)
+
+/-- A word the record pool decodes is the word `EREC⦃a⦄` reads, in bounds. -/
+theorem erRd_of_erecP {m : Mem} {a v : Word} (h : erecP m a.toNat = some v) :
+    erRd m a = v ∧ (a &&& 0xFFFFFFFFFF).toNat < (m.arr64 (tierA EREC (a >>> 40))).size := by
+  obtain ⟨hlt, hget⟩ := erecP_tagRead h
+  exact ⟨by simp only [erRd, rdW, hget, Option.getD_some], hlt⟩
+
+theorem erRd_of_erA {m : Mem} {a v : Word} (h : erA m a.toNat = some v) : erRd m a = v :=
+  (erRd_of_erecP h).1
 
 end L.Ind

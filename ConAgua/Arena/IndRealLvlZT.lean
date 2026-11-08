@@ -41,7 +41,27 @@ theorem hslice_of_nmsR (ns : NStore) {m : Mem} {A : ArrId} {o k : Word} {ps : Li
     o.toNat + k.toNat < 2 ^ 64 → ∀ (arr : Nat → Option Word) (q : Nat),
       (∀ j < k.toNat, arr (q + j) = some ((m.arr64 A)[o.toNat + j]?.getD 0)) →
       ∃ lps : List NIdx, hslice? arr q k.toNat = some lps ∧ lps.mapM (denoteN ns) = some ps := by
-  sorry
+  induction h with
+  | nil => intro _ arr q _; exact ⟨[], by simp [hslice?], rfl⟩
+  | @cons o k x xs hk hx _ ih =>
+    intro hb arr q hget
+    have hk1 : 1 ≤ k.toNat := Nat.pos_of_ne_zero fun h0 => hk (UInt64.toNat_inj.mp (by simpa using h0))
+    have ho : (o + 1).toNat = o.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
+    have hk' : (k - 1).toNat = k.toNat - 1 := by
+      rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; simp; omega)]; simp
+    obtain ⟨lps, hs, hm⟩ := ih (by rw [ho, hk']; omega) arr (q + 1) (fun j hj => by
+      have := hget (j + 1) (by rw [hk'] at hj; omega)
+      rw [ho, show q + 1 + j = q + (j + 1) by omega, show o.toNat + 1 + j = o.toNat + (j + 1) by omega]
+      exact this)
+    have h0 := hget 0 (by omega)
+    simp only [Nat.add_zero] at h0
+    obtain ⟨hw, hd⟩ := hx
+    refine ⟨decI (rdW (m.arr64 A) o) :: lps, ?_, ?_⟩
+    · rw [show k.toNat = (k - 1).toNat + 1 by rw [hk']; omega, hslice?_succ]
+      simp only [hd?, h0, Option.bind_eq_bind, Option.bind_some]
+      rw [ite_eq_left (by simpa [rdW] using hw)]
+      simp [hs]; rfl
+    · simp only [List.mapM_cons, hd, hm]; rfl
 
 /-- `erec_alloc(k)` unpacked: the old top, the new top `k` further within the array. -/
 theorem lzc_alloc {m m2 : Mem} {k q : Word} (h : erAllocW m k = some (q, m2))

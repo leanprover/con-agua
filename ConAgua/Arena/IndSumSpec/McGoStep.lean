@@ -399,7 +399,28 @@ theorem bvbW_stageW {m m' : Mem} {a : AState} (hS : StageR vis fe m a) (n F : Na
     (hF : f.toNat ≤ F ∨ n ≤ F + 1) (h x : Word) (hh : H h) (hb : bvbW n m h f = some (x, m')) :
     ∃ a', (bvarB F (decE h)).run a = .ok (x.toNat, a') ∧ StageR vis fe m' a' ∧ IWGrow m m' ∧
       BbFrame m m' := by
-  sorry
+  obtain ⟨a', hrun, hD⟩ := bvbW_okF n F m m' a hS.check.arena h f x hh hF hb
+  have hfr : BbFrame m m' := by
+    match n, hb with
+    | n + 1, hb =>
+      by_cases hs : derBW m h = 32767
+      · rw [bvbW_sat (n := n) (m := m) (h := h) (f := f) hs] at hb
+        match n, hb with
+        | k + 1, hb => rw [bbN_succ] at hb; exact bbMemoW_frame k m m' h f x hb
+      · rw [bvbW_pk (n := n) (m := m) (h := h) (f := f) hs] at hb
+        simp only [Option.some.injEq, Prod.mk.injEq] at hb
+        obtain ⟨-, rfl⟩ := hb
+        exact MemFrame.refl _ _ _
+  have hk : sp a' = sp a := by
+    rw [bvarB_run] at hrun
+    split at hrun
+    · exact (keeps_bvarBoundMemo F (decE h)).run hrun
+    · simp only [Except.ok.injEq, Prod.mk.injEq] at hrun; rw [hrun.2]
+  have hcp : cp a' = cp a := by simp only [sp, Prod.mk.injEq] at hk; simp [cp, hk.2.1, hk.2.2]
+  obtain ⟨hS', hg⟩ := StageR.of_walk hS hD hfr (by simp [BMEMO]) (by
+    intro c hc; simp only [List.mem_cons, List.not_mem_nil, or_false] at hc
+    rcases hc with rfl | rfl <;> decide) hcp
+  exact ⟨a', hrun, hS', hg, hfr⟩
 
 end hbStubs
 
@@ -531,7 +552,10 @@ theorem hbIns_spec (hp : p.lookup "has_loose_b_var_b_ins" = some hasLooseBVarBIn
     (e i r : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "has_loose_b_var_b_ins" [e, i, r]
     ⦃fun rr s' => LocEq s' s₀ ∧ hbInsW s₀.mem e i r = some (rr.headD 0, s'.mem); ⊤⦄ := by
-  sorry
+  refine triple_post (hbIns_spec_raw p hf hput hp n s₀ e i r) ?_
+  rintro rr s' ⟨hl, hm, hr⟩
+  refine ⟨hl, ?_⟩
+  rw [hbInsW, hm, ← hr]; rfl
 
 def HbGoSpec (n : Nat) : Prop := ∀ (s₀ : St) (f i h : Word),
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "has_loose_b_var_b_go" [f, i, h]
@@ -782,7 +806,30 @@ theorem hbGo_nodeCase {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IF
     (hgl : ¬ (vl.headD 0 = 1 ∨ vl.headD 0 = 2 ∨ vl.headD 0 = 3 ∨ vl.headD 0 = 8))
     (hS : StageR vis fe m a) (hh : H h) (hM : hbMR m mp) :
     Sim (hbK2 j f m i h vl) (hbRestT mp i.toNat (f - 1).toNat (decE h)) a (HbQ dn vis fe m) := by
-  sorry
+  by_cases hi : 4294967296 ≤ i
+  · rw [hbK2_big j m f i h vl hvl hg0 hgl hi]; exact Sim.of_none
+  rw [hbK2_node j m f i h vl hvl hg0 hgl hi]
+  refine Sim.ofRun (hbTwin_node _ _ _ _ a v hv hnv) ?_
+  by_cases hfr : mfindG hbSch m h i = []
+  · rw [hbK3_abort j m f i h vl _ hfr]; exact Sim.of_none
+  have hk : lfKey.ok h i := hh
+  by_cases hhit : (mfindG hbSch m h i).headD 0 ≠ 0
+  · rw [hbK3_hit j m f i h vl _ hfr hhit]
+    obtain ⟨b, hb1, hb2⟩ := memoRV_hit hbSch lfKey hbVR m mp hM h i hfr hhit hk
+    change mp[(decE h, i.toNat)]? = _ at hb1
+    simp only [hb1]
+    exact Sim.ret ⟨hb2, hM, hS, IWGrow.refl _⟩
+  rw [hbK3_miss j m f i h vl _ hfr hhit]
+  have hmiss := memoRV_miss hbSch lfKey hbVR m mp hM h i hk hfr (by simpa using hhit)
+  change mp[(decE h, i.toNat)]? = _ at hmiss
+  simp only [hmiss]
+  refine Sim.bindM (by rw [hbK4]) (fun _ _ => rfl)
+    (hbNode_arm j ih vl v hvr hnv m a i (decE h) f mp hi hS hM) ?_
+  rintro rn _ m1 a1 ⟨⟨bb, mp1⟩, rfl, hbb, hM1, hS1, hg1⟩ r' m' hb
+  obtain ⟨hr', hM2, hfr2⟩ := hbIns_ok hh hbb hM1 (by rw [← hbK4_some]; exact hb)
+  obtain ⟨hS2, hg2⟩ := StageR.frame_hi hS1 hfr2 (by intro b hb; simp at hb; subst hb; decide)
+    (by intro x hx; simp at hx; subst hx; decide) (by decide) (by decide)
+  exact ⟨by rw [hr']; exact hbb, hM2, hS2, hg1.trans hg2⟩
 
 theorem hbGo_step_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (j : Nat)
     (ih : ∀ k, k < j + 1 → HbOK dn vis fe k) : HbOK dn vis fe (j + 1) := by
@@ -821,7 +868,7 @@ theorem hbFast_spec (p : Prog) (hv : p.lookup "e_view" = some eView)
   all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons, Nat.reduceEqDiff, reduceIte] at *)
   all_goals grind [lang_grind, arena_grind, ind_grind]
 
-theorem hbFastW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (n : Nat)
+theorem hbFastW_ok {vis : Word} {fe : IFEnv} (n : Nat)
     (m m' : Mem) (a : AState) (i e r : Word) (mp0 : Std.HashMap (EIdx × Nat) Bool)
     (hh : H e) (hS : StageR vis fe m a) (hM : hbMR m mp0)
     (hm : hbFastW n m i e = some (r, m')) :

@@ -70,7 +70,7 @@ grind_pattern [ind_grind] cftK4_some => cftK4 (some (r4, m4))
 
 /-! ## Relational lemma -/
 
-theorem decCI_ind_cv {a : Array Word} {dn : NIdx → Option ConLeche.Name} {q : Nat} {cv : IConstantVal}
+theorem decCI_ind_cv {a : Array Word} {q : Nat} {cv : IConstantVal}
     {caps : IIndCaps} (h : decCI (aread a) q = some (.indInfo cv caps)) : decCV (aread a) (q + 1) = some cv := by
   sorry
 

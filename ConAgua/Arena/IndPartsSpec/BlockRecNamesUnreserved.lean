@@ -370,8 +370,7 @@ theorem wsWrites_get : WsP m q p s f 9 (wsWrites m q p s f) := by
 end wsget
 
 theorem iwN_congr {m : Mem} {i j : Nat} (h : (m.arr64 IW)[i]? = (m.arr64 IW)[j]?) :
-    iwN m i = iwN m j := by
-  sorry
+    iwN m i = iwN m j := by simp only [iwN, nat?, iwA, aread_apply, h]
 
 theorem decAt_congr {m : Mem} {α : Type} (g : Nat → Nat → Option (List α)) {i j : Nat}
     (h0 : (m.arr64 IW)[i]? = (m.arr64 IW)[j]?) (h1 : (m.arr64 IW)[i + 1]? = (m.arr64 IW)[j + 1]?) :
@@ -387,7 +386,30 @@ theorem decBS_ws {m : Mem} {q p : Nat} {s f : Word} {bs : BlockShape}
     (c7 : (m.arr64 IW)[q + 7]? = (m.arr64 IW)[p + 7]?)
     (c6 : (m.arr64 IW)[q + 6]? = some s) (c8 : (m.arr64 IW)[q + 8]? = some f) :
     decBS m q = some { bs with resSort := decI s, isProp := f != 0 } := by
-  sorry
+  obtain ⟨h1, h2, h3, h4, -, h6, -⟩ := decBS_some hp
+  have e1 := decAt_congr (m := m) (decPL m (decMS m)) c0 c1
+  have e2 := decAt_congr (m := m) (decPL m (decRS m)) (i := q + 2) (j := p + 2) c2 c3
+  rw [decBS]
+  simp only [bind, pure]
+  rw [e1, h1]
+  simp only [Option.bind_some]
+  rw [e2, h2]
+  simp only [Option.bind_some]
+  rw [iwN_congr c4, h3]
+  simp only [Option.bind_some]
+  have e5 : iwH m (q + 5) = (iwH m (p + 5) : Option NIdx) := by simp only [iwH, hd?, iwA, aread_apply, c5]
+  rw [e5, h4]
+  simp only [Option.bind_some]
+  have e6 : iwH m (q + 6) = (some (decI s) : Option LIdx) := by
+    simp only [iwH, hd?, iwA, aread_apply, c6]; simp; omega
+  rw [e6]
+  simp only [Option.bind_some]
+  have e7 : iwB m (q + 7) = iwB m (p + 7) := by simp only [iwB, bool?, iwA, aread_apply, c7]
+  rw [e7, h6]
+  simp only [Option.bind_some]
+  have e8 : iwB m (q + 8) = some (f != 0) := by simp only [iwB, bool?, iwA, aread_apply, c8]; rfl
+  rw [e8]
+  rfl
 
 theorem wsWrites_frame (m : Mem) (q p s f : Word) : MemFrame [IW] [] m (wsWrites m q p s f) := by
   have fr : ∀ (m : Mem) (d x : Word), MemFrame [IW] [] m (m.set64 IW d x) :=
@@ -397,10 +419,17 @@ theorem wsWrites_frame (m : Mem) (q p s f : Word) : MemFrame [IW] [] m (wsWrites
     (fr _ _ _)).trans (fr _ _ _)).trans (fr _ _ _)).trans (fr _ _ _)
 
 /-- Writing a fresh record above the top (given the pool's sizes) keeps the stage relation. -/
-theorem stage_frame_iw {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m m' : Mem}
+theorem stage_frame_iw {vis : Word} {fe : IFEnv} {m m' : Mem}
     {a : AState} (hS : StageR vis fe m a) (hf : MemFrame [IW] [200] m m')
     (htop : iwTop m' ≤ (m.arr64 IW).size) : StageR vis fe m' a := by
-  sorry
+  obtain ⟨h1, h2, h3, h4, h5⟩ := hS.iw
+  have h129 : rdW (m'.arr64 CTL) 129 = rdW (m.arr64 CTL) 129 := hf.ctl 129 (by simp)
+  have hE : m'.arr64 EREC = m.arr64 EREC := hf.arr EREC (by simp [EREC, IW]) (by decide)
+  refine ⟨CheckR.frame_iw hf hS.check, by rw [hf.size IW]; exact htop, ?_, ?_, ?_, ?_⟩
+  · simp only [erTop, h129]; rw [hf.size EREC]; exact h2
+  · rw [hf.size IW]; exact h3
+  · rw [hf.size EREC]; exact h4
+  · rw [hf.size CTL]; exact h5
 
 /-- The flag `withSort` computes from the verdict. -/
 def isPropOf (x : Option Bool) : Bool :=
@@ -431,7 +460,119 @@ theorem wsC_ok (cR : CallM) (n : Nat) (dn : NIdx → Option ConLeche.Name) (fe :
       q.toNat + 9 ≤ iwTop m' ∧
       (∀ j, j < 9 → j ≠ 6 → j ≠ 8 → (m'.arr64 IW)[q.toNat + j]? = (m'.arr64 IW)[p.toNat + j]?) ∧
       (DecB (fun m => decBS m p.toNat) m bs → DecB (fun m => decBS m q.toNat) m' bs') := by
-  sorry
+  cases n with
+  | zero => simp [wsC] at h
+  | succ n =>
+  rw [wsC_step] at h
+  obtain ⟨z, hpz, h⟩ := ipK_inv1 h (by simp [wsK1C])
+  rw [wsK1C_some] at h
+  have hpne : rdW (m.arr64 PINS) 0 ≠ 0 := by
+    intro h0; simp [pinWordV, h0] at hpz
+  have hz : z = pinW m 53 := by
+    simp only [pinWordV, hpne, ite_false, Option.some.injEq] at hpz
+    rw [← hpz]; rfl
+  have hpin0 : pinW m 0 ≠ 0 := hpne
+  have hfull := hS.check.pins.full hpin0
+  have hzlt : z.toNat < 2 ^ 32 := by rw [hz]; exact hfull.lv_lt.2.1
+  have hrun1 : (zeroLevel).run a = .ok (decI z, a) := by rw [hz]; exact pinZeroLevel_run hfull
+  obtain ⟨r2, m2, hrb, h⟩ := ipK_inv h (by simp [wsK2])
+  rw [wsK2_some] at h
+  obtain ⟨x2, a2, hrun2, hS2, hg2, hdec2⟩ :=
+    hlvl n r2 m2 hpin0 (by rw [← hz]; exact hrb)
+  rw [← hz] at hrun2
+  rcases hal : allocW m2 9 with _ | ⟨q, m3⟩ <;> rw [hal] at h
+  · simp at h
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
+  have hg12 : IWGrow m m2 := hg2
+  obtain ⟨hI2, hE2, hIsz2, hEsz2, hCsz2⟩ := hS2.iw
+  obtain ⟨hq, hm3, hroom⟩ := allocW_facts hal hIsz2
+  subst hm3
+  have hIW3 : (allocMem m2 9).arr64 IW = m2.arr64 IW := allocMem_IW m2 9
+  have hqtop : q.toNat = iwTop m2 := by rw [hq]; rfl
+  have hpq : p.toNat + 9 ≤ q.toNat := by
+    have := hg12.iw; omega
+  have hqs : q.toNat + 9 ≤ ((allocMem m2 9).arr64 IW).size := by
+    rw [hIW3]; simpa using hroom
+  have hsz3 : ((allocMem m2 9).arr64 IW).size < 2 ^ 64 := by rw [hIW3]; exact hIsz2
+  generalize hf : (if r2.headD 0 = 2 then (1 : Word) else 0) = f
+  have hWs := wsWrites_get (allocMem m2 9) q p s f hpq hqs hsz3
+  have hfr : MemFrame [IW] [] (allocMem m2 9) (wsWrites (allocMem m2 9) q p s f) :=
+    wsWrites_frame _ _ _ _ _
+  generalize hm' : wsWrites (allocMem m2 9) q p s f = m' at hWs hfr
+  have hfr2 : MemFrame [IW] [200] m2 m' :=
+    ((allocMem_frame m2 9).trans (hfr.mono (by simp) (by simp)))
+  -- the pool grew
+  have htop : rdW (m'.arr64 CTL) 200 = rdW (m2.arr64 CTL) 200 + 9 := by
+    rw [hfr.ctl 200 (by simp), allocMem_top m2 9 hCsz2]
+  have hlow : ∀ i < iwTop m2, (m'.arr64 IW)[i]? = (m2.arr64 IW)[i]? := by
+    intro i hi
+    rw [hWs.2 i, ite_eq_right (by omega), hIW3]
+  have hg2' : IWGrow m2 m' := iwGrow_of_frame hfr2 (N := 9) htop (by have := hroom; simp at this; omega) hIsz2 hlow
+  have hgm : IWGrow m m' := hg12.trans hg2'
+  have hdecp := hstab m' hgm
+  have hcell : ∀ j, j < 9 → j ≠ 6 → j ≠ 8 → (m'.arr64 IW)[q.toNat + j]? = (m'.arr64 IW)[p.toNat + j]? := by
+    intro j hj h6 h8
+    rw [hWs.2, ite_eq_left (by omega)]
+    have e : q.toNat + j - q.toNat = j := by omega
+    rw [e]
+    have hpj : (m'.arr64 IW)[p.toNat + j]? = (m2.arr64 IW)[p.toNat + j]? := by
+      rw [hWs.2, ite_eq_right (by omega), hIW3]
+    rw [hpj]
+    simp only [wsWd, h6, h8, ite_false, rdW]
+    have hx : (p + UInt64.ofNat j).toNat = p.toNat + j := by
+      rw [UInt64.toNat_add, UInt64.toNat_ofNat_of_lt' (by rw [UInt64_size_eq]; omega)]
+      exact Nat.mod_eq_of_lt (by omega)
+    rw [hx, hIW3]
+    have hlt : p.toNat + j < (m2.arr64 IW).size := by have := hg12.iw; omega
+    rw [Array.getElem?_eq_getElem hlt]; rfl
+  have c6 : (m'.arr64 IW)[q.toNat + 6]? = some s := by
+    rw [hWs.2, ite_eq_left (by omega)]; simp [wsWd]
+  have c8 : (m'.arr64 IW)[q.toNat + 8]? = some f := by
+    rw [hWs.2, ite_eq_left (by omega)]; simp [wsWd]
+  have hdecq := decBS_ws hdecp hs (hcell 0 (by omega) (by omega) (by omega))
+    (hcell 1 (by omega) (by omega) (by omega)) (hcell 2 (by omega) (by omega) (by omega))
+    (hcell 3 (by omega) (by omega) (by omega)) (hcell 4 (by omega) (by omega) (by omega))
+    (hcell 5 (by omega) (by omega) (by omega)) (hcell 7 (by omega) (by omega) (by omega)) c6 c8
+  have hprop := lvlEq_prop (m := m2) hf hdec2
+  have htop' : iwTop m' ≤ (m'.arr64 IW).size := by
+    have e : iwTop m' = iwTop m2 + 9 := by
+      simp only [iwTop, htop]; rw [UInt64.toNat_add]; simp
+      have := hroom; simp at this; simp only [iwTop] at hqtop; omega
+    rw [hfr2.size IW, e]; have := hroom; simp at this; omega
+  have htopq : q.toNat + 9 ≤ iwTop m' := by
+    simp only [iwTop, htop]; rw [UInt64.toNat_add]; simp
+    have := hroom; simp at this; simp only [iwTop] at hqtop; omega
+  have hpT : ∀ j, j < 9 → p.toNat + j < iwTop m' := fun j hj => by have := hg12.iw; have := hg2'.iw; omega
+  have hDecB : DecB (fun m => decBS m p.toNat) m bs →
+      DecB (fun m => decBS m q.toNat) m' { bs with resSort := decI s, isProp := f != 0 } := by
+    intro hT
+    have hpd : decBS (truncM m') p.toNat = some bs := hT.grow (decBS_mono _) hgm
+    have cT : ∀ j, j < 9 → j ≠ 6 → j ≠ 8 →
+        ((truncM m').arr64 IW)[q.toNat + j]? = ((truncM m').arr64 IW)[p.toNat + j]? := by
+      intro j hj h6 h8
+      have e1 := truncM_iw_eq (m := m') (i := q.toNat + j) (by omega)
+      have e2 := truncM_iw_eq (m := m') (i := p.toNat + j) (hpT j hj)
+      simp only [iwA, aread_apply, aread_apply] at e1 e2
+      rw [e1, e2]; exact hcell j hj h6 h8
+    have c6T : ((truncM m').arr64 IW)[q.toNat + 6]? = some s := by
+      have e1 := truncM_iw_eq (m := m') (i := q.toNat + 6) (by omega); simp only [iwA, aread_apply, aread_apply] at e1
+      rw [e1]; exact c6
+    have c8T : ((truncM m').arr64 IW)[q.toNat + 8]? = some f := by
+      have e1 := truncM_iw_eq (m := m') (i := q.toNat + 8) (by omega); simp only [iwA, aread_apply, aread_apply] at e1
+      rw [e1]; exact c8
+    show decBS (truncM m') q.toNat = some _
+    have := decBS_ws hpd hs (by simpa using cT 0 (by omega) (by omega) (by omega))
+      (cT 1 (by omega) (by omega) (by omega)) (cT 2 (by omega) (by omega) (by omega))
+      (cT 3 (by omega) (by omega) (by omega)) (cT 4 (by omega) (by omega) (by omega))
+      (cT 5 (by omega) (by omega) (by omega)) (cT 7 (by omega) (by omega) (by omega)) c6T c8T
+    exact this
+  refine ⟨{ bs with resSort := decI s, isProp := f != 0 }, a2, q, ?_, rfl, hdecq,
+    stage_frame_iw hS2 hfr2 (by rw [← hfr2.size IW]; exact htop'), hgm, htopq, hcell, hDecB⟩
+  unfold BlockShape.withSort
+  simp only [StateT.run_bind, hrun1, except_ok_bind]
+  simp only [hrun2, except_ok_bind]
+  rw [hprop]
+  rfl
 
 end L.Ind
 

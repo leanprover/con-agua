@@ -32,7 +32,11 @@ theorem rec3SliceLast {k : IdxKind} {a : Array Word} {o l : Nat} {xs : List (Idx
 
 theorem rec3IwSlice {k : IdxKind} {m : Mem} {o l : Nat} {xs : List (Idx k)} (h : decHL (truncM m) o l = some xs) :
     o + l ≤ iwTop m ∨ l = 0 := by
-  sorry
+  rcases Nat.eq_zero_or_pos l with h0 | h0
+  · exact .inr h0
+  obtain ⟨w, hw⟩ := rec3SliceLast (show hslice? (iwA (truncM m)) o l = some xs from h) h0
+  have := (truncM_iw_get hw).1
+  exact .inl (by omega)
 
 end L.Ind
 

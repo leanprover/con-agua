@@ -44,7 +44,24 @@ variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m : Mem
 theorem rec2SimInstW (n : Nat) (hS : StageR vis fe m a) {ao al e : Word} (he : H e) {args : List EIdx}
     (hd : DecB (fun m => (decHL m ao.toNat al.toNat : Option (List EIdx))) m args) :
     RSim (instW n m ao al e) (ConRon.Arena.instPisWith args (decI e)) a (KP dn vis fe m decOE) := by
-  sorry
+  rintro ⟨r, m'⟩ h
+  have hd0 : decHL m ao.toNat al.toNat = some args := hd.get (OMono.decHL _ _)
+  by_cases hal : al = 0
+  · cases n with
+    | zero => simp [instW] at h
+    | succ n =>
+    rw [instW_nil n m ao al e hal] at h
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
+    have : args = [] := by
+      have h0 : al.toNat = 0 := by rw [hal]; rfl
+      rw [h0] at hd0; simpa [decHL, hslice?] using hd0.symm
+    subst this
+    exact ⟨some (decI e), a, rfl, hS, IWGrow.refl _, rfl, he, rfl⟩
+  · have hl : al.toNat ≠ 0 := fun h0 => hal (UInt64.toNat_inj.mp (by simpa using h0))
+    have ht := rec2DecB_HL_top hd hl
+    obtain ⟨x, a', hrun, hS', hg, hout⟩ := instW_ok n dn fe vis m m' a ao al e args r h hS he hd0
+      (hS.lt64 ht) ht
+    exact ⟨x, a', hrun, hS', hg, hout⟩
 
 end sims
 
@@ -64,7 +81,38 @@ theorem mjtW_sim (n : Nat) (m : Mem) (a : AState) (ind lvls ds0 dl0 fo fl : Word
     (hds : DecB (fun m => (decHL m ds0.toNat dl0.toNat : Option (List EIdx))) m ds)
     (hifs : decHL m fo.toNat fl.toNat = some ifs) (hfb : fo.toNat + fl.toNat ≤ iwTop m) :
     RSim (mjtW n m ind lvls ds0 dl0 fo fl) (rec2MajTail I U ds ifs) a (KP dn vis fe m decOLE) := by
-  sorry
+  rcases n with _ | n
+  · exact RSim.none
+  rw [mjtW.arm1]
+  obtain ⟨hI1, rfl⟩ := hI
+  obtain ⟨hU1, rfl⟩ := hU
+  refine RSim.bind (K := mjtW.k_intern_const n ds0 dl0 fo fl) rfl (Q1 := fun b a' x => StageR vis fe b.2 a' ∧
+    IWGrow m b.2 ∧ x = decE b.1) ?_ ?_
+  · rintro ⟨hd, m1⟩ h1
+    obtain ⟨a', hrun, hS', hg⟩ := internConst_stage hS ind lvls hI1 hU1 h1
+    exact ⟨decE hd, a', hrun, hS', hg, rfl⟩
+  rintro ⟨hd, m1⟩ x a1 - ⟨hS1, hg1, rfl⟩
+  by_cases hbig : 4294967296 ≤ hd
+  · rw [mjtW.k_intern_const.abort1 (hc1 := hbig)]; exact RSim.none
+  rw [mjtW.k_intern_const.arm1 (hc1 := hbig)]
+  have hH : H hd := by
+    have : ¬ (4294967296 : Word).toNat ≤ hd.toNat := fun x => hbig (UInt64.le_iff_toNat_le.mpr x)
+    simp at this; exact this
+  refine RSim.lstep (K := mjtW.k_sl_append fo fl hd) rfl fun ⟨r2, m2⟩ h2 => ?_
+  obtain ⟨hS2, hg2, hd2, hb2⟩ := rec2AppendW_dec h2 hS1 (hds.grow (OMono.decHL _ _) hg1)
+    (by rw [decHL_grow hg1 hfb]; exact hifs) (Nat.le_trans hfb hg1.iw)
+  rw [mjtW.k_sl_append.arm1]
+  refine RSim.bind (K := mjtW.k_mk_app_n_f fo fl) rfl
+    ((mknF_ok dn vis fe hd (r2.headD 0) (r2.tail.headD 0) hH (ds ++ ifs)).sim ⟨hS2, hd2⟩) ?_
+  rintro ⟨r3, m3⟩ maj a3 - ⟨hS3, hg3, hmaj⟩
+  rw [mjtW.k_mk_app_n_f.arm1]
+  have hg := hg1.trans (hg2.trans hg3)
+  refine RSim.pure_some ⟨hS3, hg, rfl, ⟨?_, ?_⟩, ?_⟩
+  · show decHL m3 fo.toNat fl.toNat = some ifs
+    rw [decHL_grow hg hfb]; exact hifs
+  · show fo.toNat + fl.toNat ≤ iwTop m3
+    exact Nat.le_trans hfb hg.iw
+  · exact hmaj
 
 theorem mjtW_afr {n : Nat} {m m' : Mem} {ind lvls ds0 dl0 fo fl : Word} {r : List Word}
     (h : mjtW n m ind lvls ds0 dl0 fo fl = some (r, m')) : AFr m m' := by
@@ -104,7 +152,68 @@ theorem motW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
     (hG : DecB (fun m => decCG m g.toNat) m G) (hA : AbsOK m) :
     RSim (motW n m g c d) (ConRon.Arena.ClassGen.motiveTy G c.toNat d.toNat) a
       (fun b a' x => KP dn vis fe m decOE b a' x ∧ AbsOK b.2) := by
-  sorry
+  rcases n with _ | n
+  · exact RSim.none
+  rw [motW.arm1]
+  unfold ConRon.Arena.ClassGen.motiveTy
+  refine RSim.bind (K := motW.k_class_gen_major n g d) rfl
+    (mjW_sim dn vis fe n m a g c d G hS hG hA) ?_
+  rintro ⟨r1, m1⟩ o1 a1 - ⟨⟨hS1, hg1, ho1⟩, hA1⟩
+  dsimp only at hS1 hg1 ho1
+  rcases o1 with _ | p1
+  · rw [motW.k_class_gen_major.arm1 (hc1 := ho1)]; exact RSim.pure_some ⟨⟨hS1, hg1, rfl⟩, hA1⟩
+  obtain ⟨ifs, maj⟩ := p1
+  obtain ⟨h11, ⟨hifs, hfb⟩, hmH, hmd⟩ := ho1
+  simp only [getD_one, getD_two, Nat.reduceAdd] at hifs hfb
+  simp only [drop3_headD] at hmH hmd
+  rw [motW.k_class_gen_major.arm2 (hc1 := by rw [h11]; decide)]
+  obtain ⟨-, hgt, -, -, hel, -⟩ := rec2CG_parts hG
+  obtain ⟨ve, eve, hve, dve⟩ := iwH_rdW_at (w := g) (k := 11) (by rw [iwH_grow hg1 (show g.toNat + 11 < iwTop m by omega)]; exact hel) hS1.iw.iwSize
+  simp only [show UInt64.ofNat 11 = (11 : Word) from rfl] at eve
+  rw [eve]
+  refine RSim.bind (K := motW.k_intern_sort n d _ _ _) rfl (Q1 := fun b a' x => StageR vis fe b.2 a' ∧
+    IWGrow m1 b.2 ∧ x = decE b.1 ∧ AbsOK b.2) ?_ ?_
+  · rintro ⟨srt, m2⟩ h2
+    obtain ⟨a', hrun, hS', hg⟩ := internSort_stage hS1 ve hve h2
+    rw [dve] at hrun
+    exact ⟨decE srt, a', hrun, hS', hg, rfl, sointernW_afr h2 hA1⟩
+  rintro ⟨srt, m2⟩ x a2 - ⟨hS2, hg2, rfl, hA2⟩
+  by_cases hbig : 4294967296 ≤ srt
+  · rw [motW.k_intern_sort.abort1 (hc1 := hbig)]; exact RSim.none
+  rw [motW.k_intern_sort.arm1 (hc1 := hbig)]
+  refine RSim.bind (K := motW.k_mk_forall n d _ _) rfl (Q1 := fun b a' x => StageR vis fe b.2 a' ∧
+    IWGrow m2 b.2 ∧ x = decE b.1 ∧ AbsOK b.2) ?_ ?_
+  · rintro ⟨b, m3⟩ h3
+    obtain ⟨a', hrun, hS', hg⟩ := mkForall_stage hS2 _ srt h3
+    exact ⟨decE b, a', by rw [← hmd]; exact hrun, hS', hg, rfl, mkForallW_afr h3 hA2⟩
+  rintro ⟨b, m3⟩ x a3 - ⟨hS3, hg3, rfl, hA3⟩
+  by_cases hbig3 : 4294967296 ≤ b
+  · rw [motW.k_mk_forall.abort1 (hc1 := hbig3)]; exact RSim.none
+  rw [motW.k_mk_forall.arm1 (hc1 := hbig3)]
+  have hbH : H b := by
+    have : ¬ (4294967296 : Word).toNat ≤ b.toNat := fun x => hbig3 (UInt64.le_iff_toNat_le.mpr x)
+    simp at this; exact this
+  have hg13 := hg1.trans (hg2.trans hg3)
+  rw [rec2MapM_classBinder]
+  refine RSim.bind (K := motW.k_fvar_type_ds n d b) rfl (RSim.withF ((ftdsF_ok dn vis fe _ _ ifs).sim
+      ⟨hS3, by rw [decHL_grow (hg2.trans hg3) hfb]; exact hifs, fun _ => Nat.le_trans hfb (hg2.trans hg3).iw⟩) (fun _ hb => ftdsF_afr hb)) ?_
+  rintro ⟨r4, m4⟩ bs a4 - ⟨⟨hS4, hg4, hbs, hbb⟩, hf4⟩
+  dsimp only at hS4 hg4 hbs hbb
+  simp only [getD_zero, Nat.zero_add, getD_one] at hbs hbb
+  by_cases hov : d + r4.tail.headD 0 < d
+  · rw [motW.k_fvar_type_ds.abort1 (hc1 := hov)]; exact RSim.none
+  rw [motW.k_fvar_type_ds.arm1 (hc1 := hov)]
+  have hdl : d.toNat + (r4.tail.headD 0).toNat < 2 ^ 64 := by
+    have := nctAddNowrap (a := r4.tail.headD 0) (b := d) (by rwa [UInt64.add_comm]); omega
+  refine RSim.bind (K := motW.k_close_telescope) rfl (Q1 := fun b a' x => StageR vis fe b.2 a' ∧ IWGrow m4 b.2 ∧
+    decW0E b.2 b.1 x ∧ AbsOK b.2) ?_ ?_
+  · rintro ⟨r5, m5⟩ h5
+    obtain ⟨x, a', hrun, hS', hg, hx, hA5⟩ := closeW_ok n dn fe vis m4 m5 a4 _ _ d b bs r5 h5 hS4 hbH hbs
+      (hS4.lt64 hbb) hbb hdl (hf4 hA3)
+    exact ⟨x, a', hrun, hS', hg, hx, hA5⟩
+  rintro ⟨r5, m5⟩ x a5 - ⟨hS5, hg5, hx, hA5⟩
+  rw [motW.k_close_telescope.arm1]
+  exact RSim.pure_some ⟨⟨hS5, hg13.trans (hg4.trans hg5), rfl, by simpa [decW0E] using hx⟩, hA5⟩
 
 end L.Ind
 

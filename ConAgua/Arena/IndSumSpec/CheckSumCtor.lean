@@ -44,11 +44,12 @@ theorem plSim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (k 
     (a : AState) (o l : Word) (lps : List NIdx) (hS : StageR vis fe m a)
     (hd : decHL m o.toNat l.toNat = some lps) (hb : o.toNat + l.toNat ≤ iwTop m) :
     Sim (plW k m o l) (paramLevels lps) a (fun r x m' a' => StageR vis fe m' a' ∧ IWGrow m m' ∧
-      H (r.headD 0) ∧ decI (r.headD 0) = x) := by
-  sorry
+      H (r.headD 0) ∧ decI (r.headD 0) = x) := fun r m' e => by
+  obtain ⟨x, a', h1, h2⟩ := plW_ok dn vis fe k m m' a o l lps r e hS hd (hS.lt64 hb) hb
+  exact ⟨x, a', h1, h2⟩
 
 /-- `intern_const` as a `Sim`. -/
-theorem ceSim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (m : Mem) (a : AState)
+theorem ceSim {vis : Word} {fe : IFEnv} (m : Mem) (a : AState)
     (f x : Word) (hS : StageR vis fe m a) (hf : H f) (hx : H x) :
     Sim (ceinternW m f x) (internE (.const (decI (k := .name) f) (decI (k := .levels) x))) a
       (fun r e m' a' => e = decI r ∧ StageR vis fe m' a' ∧ IWGrow m m') := fun r m' e => by
@@ -79,7 +80,7 @@ theorem iarSim {dn : NIdx → Option ConLeche.Name} {v : Word} {fe : IFEnv} (n :
 
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- A callee run at the pre-block view `vis0` (the restriction), back at `vis`. -/
-theorem sumKeep_restrict {dn : NIdx → Option ConLeche.Name} {vis vis0 : Word} {fe : IFEnv}
+theorem sumKeep_restrict {vis vis0 : Word} {fe : IFEnv}
     {m m' : Mem} {a' : AState} {r : List Word} {b : Bool} (hv : fe.visibleBelow = vis.toNat)
     (h : KeepPost vis0 (fe.restrictTo vis0.toNat) decW0B m m' a' r b) :
     StageR vis fe m' a' ∧ IWGrow m m' ∧ (r.headD 0 != 0) = b :=

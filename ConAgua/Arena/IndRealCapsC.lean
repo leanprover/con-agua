@@ -91,8 +91,10 @@ theorem StageR.withReadLC {m : Mem} {a : AState} (hS : StageR vis fe m a)
 
 /-- The stage relation across a level-heap writer. -/
 theorem StageR.of_lheap {m m' : Mem} {a : AState} (hS : StageR vis fe m a)
-    (hf : MemFrame [LH] [192] m m') : StageR vis fe m' a ∧ IWGrow m m' := by
-  sorry
+    (hf : MemFrame [LH] [192] m m') : StageR vis fe m' a ∧ IWGrow m m' :=
+  hS.frame_hi hf (fun b hb => by simp only [List.mem_singleton] at hb; subst hb; decide)
+    (fun x hx => by simp only [List.mem_singleton] at hx; subst hx; decide) (by simp [LH, IW])
+    (by simp)
 
 /-- **`lv_zero_caps` under `StageR` and the twin's read-back facts** (`lzcF_simT`'s proof, the
 environment free): the twin's `readLevelM l` (the store unchanged, the cache holding readbacks
@@ -103,7 +105,82 @@ theorem lzcF_simR {m : Mem} {a : AState} (hS : StageR vis fe m a) (hrl : ReadLCO
     Sim (lzcF m [l]) (readLevelM (decI l)) a
       (fun r x m' a' => StageR vis fe m' a' ∧ IWGrow m m' ∧
         decZC (denoteN a.store.lss.ls.ns) m' r x ∧ x = lv ∧ a'.store = a.store ∧ ReadLCOK a') := by
-  sorry
+  intro r m' h
+  obtain ⟨k, hw⟩ := lzcF_lzcW h
+  have hlv := denoteL_lvR hS.check.arena.base (decI l) lv hd
+  rw [word_decI _ _ hl |>.mpr rfl] at hlv
+  obtain ⟨X, hrun, hcX⟩ := readLevelM_run' a (decI l) lv hd hrl
+  have hSX := hS.withReadLC X
+  refine ⟨lv, _, hrun, ?_⟩
+  rcases k with _ | n
+  · simp [lzcW] at hw
+  simp only [lzcW] at hw
+  rcases hz : zeroW n m l with _ | ⟨z, m1⟩
+  · rw [hz] at hw; simp [lzcK1] at hw
+  rw [hz] at hw
+  obtain ⟨he, hZ⟩ := zeroW_ok n m m1 l z lv hlv hz
+  have hfH : ∀ v, MemFrame [LH] [192] m (m1.set64 CTL 192 v) := fun v =>
+    he.memFrame.trans ((MemFrame.setCtl m1 192 v).mono (by simp) (by simp))
+  rcases hZ with ⟨rfl, hpw⟩ | ⟨rfl, ps, hpw, hnm⟩
+  · -- `never`: the heap top restored
+    simp only [lzcK1, ne_eq, show (1 : Word) ≠ 0 by decide, not_false_eq_true, ↓reduceIte,
+      Option.some.injEq, Prod.mk.injEq] at hw
+    obtain ⟨rfl, rfl⟩ := hw
+    obtain ⟨hS', hg⟩ := hSX.of_lheap (hfH _)
+    refine ⟨hS', hg, fun arr _ => ?_, rfl, rfl, hcX⟩
+    rw [hpw]; rfl
+  -- `ifAllZero ps`: the names copied to a fresh record slice
+  simp only [lzcK1, ne_eq, not_true_eq_false, ↓reduceIte] at hw
+  obtain ⟨hS1, hg1⟩ := hSX.of_lheap he.memFrame
+  obtain ⟨hI1, hE1, hsz, hEs, hc⟩ := hS1.iw
+  generalize hkk : htop m1 - htop m = kk at hw hnm
+  have htop1 := he.top
+  have hkkN : kk.toNat = (htop m1).toNat - (htop m).toNat := by
+    rw [← hkk, UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; omega)]
+  rcases ha : erAllocW m1 kk with _ | ⟨q, m2⟩
+  · rw [ha] at hw; simp [lzcK2] at hw
+  rw [ha] at hw
+  obtain ⟨hq, rfl, hroom, htop2⟩ := lzc_alloc ha hEs (by omega)
+  simp only [lzcK2] at hw
+  cases hcp : lheCopyW n (erAllocMem m1 kk) q (htop m) kk with
+  | none => rw [hcp] at hw; simp [lzcK3] at hw
+  | some m3 =>
+  rw [hcp] at hw
+  simp only [lzcK3, Option.some.injEq, Prod.mk.injEq] at hw
+  obtain ⟨rfl, rfl⟩ := hw
+  have hE2 : (erAllocMem m1 kk).arr64 EREC = m1.arr64 EREC := by
+    simp only [erAllocMem]; rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
+  have hL2 : (erAllocMem m1 kk).arr64 LH = m1.arr64 LH := by
+    simp only [erAllocMem]; rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
+  obtain ⟨hA3, hS3, hG3⟩ := lheCopyW_get n _ _ _ _ _ hcp
+    (by have := (htop m1).toNat_lt; omega) (by rw [hE2]; exact hroom) (by rw [hE2]; exact hEs)
+  rw [hE2, hL2] at hG3
+  rw [hE2] at hS3
+  have hq1 : q.toNat = erTop m1 := by rw [hq]; rfl
+  -- the record pool writer: `m1 → m3`
+  have hf3 := erAllocCopy_frame hA3 hS3
+  have htop3 : erTop m3 = q.toNat + kk.toNat := by
+    rw [← htop2]; simp only [erTop]; rw [hA3 CTL (by decide)]
+  obtain ⟨hS3', hg3⟩ := StageR.erec hS1 hf3
+    (fun i hi => by rw [hG3, ite_eq_right (by omega)])
+    (by rw [htop3]; omega) (by rw [htop3, hS3]; omega)
+  obtain ⟨hS4, hg4⟩ := hS3'.of_lheap
+    ((MemFrame.setCtl m3 192 (htop m)).mono (by simp) (by simp))
+  refine ⟨hS4, hg1.trans (hg3.trans hg4), fun arr hagr => ?_, rfl, rfl, hcX⟩
+  have hE4 : (m3.set64 CTL 192 (htop m)).arr64 EREC = m3.arr64 EREC :=
+    Mem.arr64_set64_ne _ _ _ _ _ (by decide)
+  have htop4 : erTop (m3.set64 CTL 192 (htop m)) = erTop m3 := by
+    simp only [erTop]; rw [(MemFrame.setCtl m3 192 (htop m)).ctl 129 (by decide)]
+  obtain ⟨lps, hs, hm⟩ := hslice_of_nmsR _ hnm (by have := (htop m1).toNat_lt; omega) arr q.toNat
+    (fun j hj => by
+      rw [hagr _ (by rw [htop4, htop3]; omega)]
+      simp only [erA, hE4]
+      rw [hG3, ite_eq_left (by omega)]
+      congr 3; omega)
+  rw [hpw]
+  simp only [pwWords, List.headD_cons, List.tail_cons, show (1 : Word).toNat = 1 from rfl, hs,
+    Option.bind_eq_bind, Option.bind_some, hm]
+  rfl
 
 /-- **`lv_zero_caps` under `StageR` and the read-back facts, as a call** in a program with
 `lzcP`. -/

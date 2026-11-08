@@ -28,13 +28,13 @@ namespace L.Ind
 open L.Arena
 
 /-- `flush_caches()` under the stage relation. -/
-theorem flush_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m : Mem}
+theorem flush_stage {vis : Word} {fe : IFEnv} {m : Mem}
     {a : AState} (h : StageR vis fe m a) (hok : FlushOK m) :
     StageR vis fe (flushMem m) { a with caches := Caches.empty } ∧ IWGrow m (flushMem m) := by
   sorry
 
 /-- `cv_lps(q)` under the stage relation: the level parameters, a slice below the top. -/
-theorem cvLpsA_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
+theorem cvLpsA_stage {vis : Word} {fe : IFEnv} {a : AState}
     {n : Nat} {m m' : Mem} {q : Word} {r : List Word} {cv : IConstantVal}
     (h : L.Arena.cvLpsW n m q = some (r, m')) (hS : StageR vis fe m a)
     (hq : decCV (erA m) q.toNat = some cv) (hqb : q.toNat + 3 < 2 ^ 64) :

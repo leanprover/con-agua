@@ -271,7 +271,65 @@ theorem cnfW_ok (hnfs : DecB (fun m => decPL m (decNCN m) nfo.toNat nfl.toNat) m
       some ((nfs.take j.toNat).filter (fun e => e.ctor == decI nm)) →
     StageR vis fe m' a ∧ IWGrow m0 m' ∧ iwTop m' = iwTop m ∧ MFr [] [] m m' ∧ rp' ≤ nfl ∧
       decPL m' (decNCN (truncM m0)) q.toNat rp'.toNat = some (nfs.filter (fun e => e.ctor == decI nm)) := by
-  sorry
+  have hnfs0 : decPL (truncM m0) (decNCN (truncM m0)) nfo.toNat nfl.toNat = some nfs := hnfs
+  have hlen := decPL_length _ hnfs0
+  induction k with
+  | zero => intro m m' j rp rp' h; simp [cnfW] at h
+  | succ k ih =>
+  intro m m' j rp rp' h hS hg htop hjn hrj hacc
+  have hsz := hS.iw.iwSize
+  have hjn' : j.toNat ≤ nfl.toNat := UInt64.le_iff_toNat_le.mp hjn
+  have hrj' : rp.toNat ≤ j.toNat := UInt64.le_iff_toNat_le.mp hrj
+  by_cases hj : j < nfl
+  rotate_left
+  · rw [cnfW_exit (h := hj)] at h
+    simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨rfl, rfl⟩ := h
+    have h1 : nfl.toNat ≤ j.toNat := by simpa [UInt64.lt_iff_toNat_lt] using hj
+    refine ⟨hS, hg, rfl, MFr.refl _ _ _, UInt64.le_trans hrj hjn, ?_⟩
+    rw [hacc, List.take_of_length_le (by omega)]
+  have hjl : j.toNat < nfl.toNat := UInt64.lt_iff_toNat_lt.mp hj
+  have := nfl.toNat_lt
+  have hj1 : (j + 1).toNat = j.toNat + 1 := by rw [UInt64.toNat_add]; simp <;> omega
+  have hje1 : j + 1 ≤ nfl := UInt64.le_iff_toNat_le.mpr (by omega)
+  -- the entry
+  obtain ⟨v, hv, hdv⟩ := decPL_getH (truncM m0) hnfs0 j.toNat hjl
+  obtain ⟨hvt, hv0⟩ := rec2IwN_trunc hv
+  have hvm : iwN m (nfo.toNat + j.toNat) = some v := by
+    simp only [iwN, nat?, iwA, aread_apply, aread_apply] at hv0 ⊢; rw [hg.iwGet _ hvt]; exact hv0
+  have hrd := iwN_rdW_at (w := nfo) (k := j.toNat) hvm hsz
+  have hnj : nfo + UInt64.ofNat j.toNat = nfo + j := by simp
+  rw [hnj] at hrd
+  have hkf : rdW (m.arr64 IW) (nfo + j) = UInt64.ofNat v := hrd.1
+  have hvT : (UInt64.ofNat v : Word).toNat = v := UInt64.toNat_ofNat_of_lt' hrd.2
+  have hdvB : DecB (fun m => decNCN m (UInt64.ofNat v : Word).toNat) m nfs[j.toNat] := by
+    have : DecB (fun m => decNCN m v) m0 nfs[j.toNat] := by rw [← hlen] at hjl; exact hdv
+    rw [hvT]; exact this.grow (decNCN_mono _) hg
+  obtain ⟨hcH, hcD, -⟩ := decNCN_fields hdvB hsz
+  have hiff : (rdW (m.arr64 IW) (UInt64.ofNat v) = nm) ↔ (nfs[j.toNat].ctor == decI nm) = true := by
+    rw [← hcD, beq_iff_eq]
+    exact ⟨fun e => by rw [e], fun e => decI_inj hcH hnm e⟩
+  have hfil := filter_take_succ (fun e : NestCtorNf => e.ctor == decI nm) nfs j.toNat (by omega)
+  by_cases hhit : rdW (m.arr64 IW) (UInt64.ofNat v) = nm
+  · have hqr : (q + rp).toNat = q.toNat + rp.toNat := by
+      rw [UInt64.toNat_add]; have := hS.iw.iw; simp <;> omega
+    have hqb : (q + rp).toNat < (m.arr64 IW).size := by have := hS.iw.iw; omega
+    rw [cnfW_hit (h := hj) (h1 := by rw [hkf]; exact hhit) (h2 := hqb), hkf] at h
+    have hr1 : (rp + 1).toNat = rp.toNat + 1 := by rw [UInt64.toNat_add]; simp <;> omega
+    have hS1 := hS.set_iw (q + rp) (UInt64.ofNat v)
+    have hg1 : IWGrow m0 (m.set64 IW (q + rp) (UInt64.ofNat v)) := hg.set_iw _ _ (by omega)
+    have hacc1 : decPL (m.set64 IW (q + rp) (UInt64.ofNat v)) (decNCN (truncM m0)) q.toNat (rp + 1).toNat =
+        some ((nfs.take (j + 1).toNat).filter (fun e => e.ctor == decI nm)) := by
+      rw [hr1, hj1, hfil, ite_eq_left (hiff.mp hhit)]
+      exact sumDecPL_write m _ q.toNat rp.toNat (q + rp) (UInt64.ofNat v) _ _ hqr (by omega) hacc
+        (by rw [hvT]; rw [← hlen] at hjl; exact hdv)
+    obtain ⟨hS', hg', ht', hf', hr', hd'⟩ := ih _ m' (j + 1) (rp + 1) rp' h hS1 hg1
+      (by rw [iwTop_set_iw]; exact htop) hje1 (UInt64.le_iff_toNat_le.mpr (by omega)) hacc1
+    exact ⟨hS', hg', by rw [ht', iwTop_set_iw], (MFr.set_iw _ _ _).trans hf', hr', hd'⟩
+  · rw [cnfW_miss (h := hj) (h1 := by rw [hkf]; exact hhit)] at h
+    have hacc1 : decPL m (decNCN (truncM m0)) q.toNat rp.toNat =
+        some ((nfs.take (j + 1).toNat).filter (fun e => e.ctor == decI nm)) := by
+      rw [hj1, hfil, ite_eq_right (fun e => hhit (hiff.mpr e)), List.append_nil]; exact hacc
+    exact ih m m' (j + 1) rp rp' h hS hg htop hje1 (UInt64.le_iff_toNat_le.mpr (by omega)) hacc1
 
 /-- A pointer slice decoded with the decoder of an earlier memory is decoded below the tops. -/
 theorem pslr_of_decPL {m0 m : Mem} (hg : IWGrow m0 m) {o l : Word} {xs : List NestCtorNf}
@@ -294,7 +352,19 @@ theorem cnfF_ok (n : Nat) {m m' : Mem} {r : List Word} (h : cnfF n m nfo nfl nm 
     (hnm : H nm) :
     StageR vis fe m' a ∧ IWGrow m m' ∧ MFr [] [] m m' ∧
       PSlR decNCN (nfs.filter (fun e => e.ctor == decI nm)) (r.headD 0) (r.tail.headD 0) m' := by
-  sorry
+  simp only [cnfF] at h
+  obtain ⟨⟨q, m1⟩, hal, h⟩ := of_K h rfl
+  rw [cnfK1_some] at h
+  obtain ⟨⟨rp, m2⟩, hl, h⟩ := of_K h rfl
+  rw [cnfK2_some] at h
+  simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨rfl, rfl⟩ := h
+  obtain ⟨hS1, hg1, hq, ht1⟩ := allocW_stage hal hS
+  obtain ⟨hS2, hg2, ht2, hf2, hr2, hd2⟩ := cnfW_ok m nfo nfl nm q nfs hnfs hnm hq (n + 1) m1 m2 0 0 rp hl hS1
+    hg1 (by omega) UInt64.zero_le (UInt64.le_refl _) (by simp [decPL])
+  have hr2' : rp.toNat ≤ nfl.toNat := UInt64.le_iff_toNat_le.mp hr2
+  refine ⟨hS2, hg2, (allocW_mfr hal).trans hf2, ?_⟩
+  simp only [List.headD_cons, List.tail_cons]
+  exact pslr_of_decPL hg2 (by omega) hd2
 
 end cnf
 

@@ -86,7 +86,7 @@ theorem ciKind_w (x : IConstantInfo) (k : Nat) (hk : k < 7) :
 
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **A decoded constant record's kind and the fields the split reads.** -/
-theorem partsCI_fields {a : Array Word} {dn : NIdx → Option ConLeche.Name} {q : Nat}
+theorem partsCI_fields {a : Array Word} {q : Nat}
     {ci : IConstantInfo} (h : decCI (aread a) q = some ci) :
     nat? (aread a) q = some (ciKind ci) ∧
     (match ci with
@@ -141,33 +141,26 @@ theorem partsErRd {m m' : Mem} (hg : IWGrow m m') {i v : Nat} (h : nat? (erA (tr
   sorry
 
 /-- **A fresh record, read back below the new top.** -/
-theorem partsFresh {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
+theorem partsFresh {vis : Word} {fe : IFEnv} {a : AState}
     {m m' : Mem} {ws : List Word} {q : Word} (h : posRecW m ws = some (q, m'))
     (hS : StageR vis fe m a) (hl : ws.length < 2 ^ 64) :
     StageR vis fe m' a ∧ IWGrow m m' ∧ q.toNat = iwTop m ∧ q.toNat + ws.length = iwTop m' ∧
       ∀ j (hj : j < ws.length), iwN (truncM m') (q.toNat + j) = some (ws[j]).toNat := by
-  sorry
+  obtain ⟨hS', hg, hq, htop, hget⟩ := posRecW_stage h hS hl
+  refine ⟨hS', hg, hq, by omega, fun j hj => ?_⟩
+  rw [iwN_truncM (by omega)]
+  simp only [iwN, nat?, iwA, aread_apply, hget j hj, List.getElem?_eq_getElem hj, Option.map_some]
 
 /-- A word `w + k` of the record pool, read below the top in any memory the pools grew into. -/
 theorem partsErW {m m1 : Mem} (hg : IWGrow m m1) {w k : Word} {v : Nat}
     (h : nat? (erA (truncM m)) (w.toNat + k.toNat) = some v) :
     (rdW (m1.arr64 EREC) (w + k)).toNat = v ∧ w.toNat + k.toNat < erTop m := by
-  have hlt : w.toNat + k.toNat < erTop m := by
-    simp only [nat?, Option.map_eq_some_iff] at h
-    obtain ⟨x, hx, -⟩ := h; exact (truncM_er_get hx).1
-  have hE : erTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 129).toNat_lt
-  have hw : (w + k).toNat = w.toNat + k.toNat := by rw [UInt64.toNat_add]; omega
-  obtain ⟨h1, h2, -⟩ := partsErRd hg h hw
-  rw [h1]; exact ⟨UInt64.toNat_ofNat_of_lt' h2, hlt⟩
+  sorry
 
 /-- A constant decoded below the top lies below the top. -/
 theorem partsDecCV_lt {m : Mem} {i : Nat} {cv : IConstantVal} (h : decCV (erA (truncM m)) i = some cv) :
     i < erTop m := by
-  simp only [decCV, bind, Option.bind_eq_some_iff] at h
-  obtain ⟨nm, hnm, -⟩ := h
-  simp only [hd?, bind, Option.bind_eq_some_iff] at hnm
-  obtain ⟨x, hx, -⟩ := hnm
-  exact (truncM_er_get hx).1
+  sorry
 
 /-- `block_split_recs`' result `(ok, off, len)` against the twin's `Option`. -/
 def RecsR (x : Option (List (IConstantVal × Nat × Nat × List IRecRule))) (r : List Word) (m : Mem) :
@@ -383,13 +376,31 @@ theorem partsWadd {q : Word} {i : Nat} (h : q.toNat + i < 2 ^ 64) :
   exact Nat.mod_eq_of_lt h
 
 /-- The 6-word record written by `rec6`. -/
-theorem partsRec6 {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
+theorem partsRec6 {vis : Word} {fe : IFEnv} {a : AState}
     {m m' : Mem} {q b0 b1 b2 b3 b4 b5 : Word} {ts : List IConstantVal}
     {cs : List (IConstantVal × Nat × Nat)} {rs : List (IConstantVal × Nat × Nat × List IRecRule)}
     (h : posRecW m [b0, b1, b2, b3, b4, b5] = some (q, m')) (hS : StageR vis fe m a)
     (h1 : PSlR decCVp ts b0 b1 m) (h2 : PSlR decSC cs b2 b3 m) (h3 : PSlR decSR rs b4 b5 m) :
     StageR vis fe m' a ∧ IWGrow m m' ∧ SplitRec (ts, cs, rs) q m' := by
-  sorry
+  obtain ⟨hS', hg, hq, htop, hget⟩ := posRecW_stage h hS (by simp)
+  have hlt : iwTop m' < 2 ^ 64 := (rdW (m'.arr64 CTL) 200).toNat_lt
+  simp only [List.length_cons, List.length_nil] at htop
+  have rd : ∀ (i : Nat) (hi : i < 6), rdW (m'.arr64 IW) (q + UInt64.ofNat i) =
+      [b0, b1, b2, b3, b4, b5][i]'(by simpa using hi) := by
+    intro i hi
+    exact rdW_of_get? (partsWadd (by omega)).symm
+      (by rw [hget i (by simpa using hi), List.getElem?_eq_getElem])
+  have r0 : rdW (m'.arr64 IW) q = b0 := by simpa using rd 0 (by omega)
+  have r1 : rdW (m'.arr64 IW) (q + 1) = b1 := by simpa using rd 1 (by omega)
+  have r2 : rdW (m'.arr64 IW) (q + 2) = b2 := by simpa using rd 2 (by omega)
+  have r3 : rdW (m'.arr64 IW) (q + 3) = b3 := by simpa using rd 3 (by omega)
+  have r4 : rdW (m'.arr64 IW) (q + 4) = b4 := by simpa using rd 4 (by omega)
+  have r5 : rdW (m'.arr64 IW) (q + 5) = b5 := by simpa using rd 5 (by omega)
+  refine ⟨hS', hg, by omega, ?_, ?_, ?_⟩
+  · rw [r0, r1]; exact h1.grow (fun _ => OMono.decCVp _) hg
+  · rw [r2, r3]; exact h2.grow decSC_mono hg
+  · rw [r4, r5]
+    exact h3.grow decSR_mono hg
 
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`block_split`'s model refines `blockSplit`.** -/

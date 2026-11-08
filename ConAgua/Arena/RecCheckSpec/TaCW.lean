@@ -561,11 +561,72 @@ theorem taGo_nodeCase (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : W
     (hI : TaIn m no nl ho hl names holes) (hM : taMR m mp) :
     Sim (taG1 j m no nl lvls ho hl f h vl)
       (ConRon.Arena.targetAbsGo names (decI lvls) holes mp (F + 1) (decE h)) a (TaQ dn fe vis m) := by
-  sorry
+  have hnl : ¬ (vl.headD 0 = 0 ∨ vl.headD 0 = 1 ∨ vl.headD 0 = 2 ∨ vl.headD 0 = 8) := by
+    rcases hgs with e | e | e | e | e <;> rw [e] <;> decide
+  have hn3 : ¬ vl.headD 0 = 3 := by
+    rcases hgs with e | e | e | e | e <;> rw [e] <;> decide
+  rw [taG1_node j m no nl lvls ho hl f h vl hvl hnl hn3]
+  refine rcSim_ofRun (taTwin_node _ _ _ _ _ _ a v hv hnv) ?_
+  by_cases hfr : mfindG taSch m h 0 = []
+  · rw [taG3_abort j m no nl lvls ho hl f h vl _ hfr]; exact Sim.of_none
+  by_cases hhit : (mfindG taSch m h 0).headD 0 ≠ 0
+  · rw [taG3_hit j m no nl lvls ho hl f h vl _ hfr hhit]
+    have hmem := memoRG_hit taSch bmKey (fun w : Word => decE w) m mp hM h 0 hfr hhit ⟨hh, rfl⟩
+    change mp[decE h]? = _ at hmem
+    simp only [hmem]
+    exact Sim.ret ⟨rfl, hS, IWGrow.refl _, hM⟩
+  rw [taG3_miss j m no nl lvls ho hl f h vl _ hfr hhit]
+  have hmiss := memoRG_miss taSch bmKey (fun w : Word => decE w) m mp hM h 0 ⟨hh, rfl⟩ hfr (by simpa using hhit)
+  change mp[decE h]? = _ at hmiss
+  simp only [hmiss]
+  cases j with
+  | zero => simp only [taNodeW, taG4]; exact Sim.of_none
+  | succ k =>
+  have hF1 : (f - 1).toNat = F := by rw [toNat_sub_one' hf0, hF]; rfl
+  rw [← hF1]
+  refine Sim.bindK (by rw [taG4]) (fun _ _ => by rw [taG4]) (taNode_arm dn fe vis k (ih k (by omega)) vl v
+    hvr hnv m a no nl lvls ho hl (f - 1) h names holes mp hS hlv hI hM) ?_
+  rintro rn ⟨r1, mp1⟩ m1 a1 ⟨rfl, hS1, hg1, hM1⟩
+  rcases hset : msetG taSch m1 h 0 rn with _ | m2 <;> simp only [taG5]
+  · exact Sim.of_none
+  obtain ⟨hS2, hg2⟩ := StageR.frame_hi hS1 (msetG_frame taSch taSch_wf m1 m2 h 0 rn hset)
+    (by intro b hb; simp at hb; subst hb; decide)
+    (by intro x hx; simp [taSch] at hx; subst hx; decide) (by decide) (by simp [taSch])
+  exact Sim.ret ⟨rfl, hS2, hg1.trans hg2,
+    memoRG_set taSch taSch_wf bmKey (fun w : Word => decE w) m1 mp1 hM1 h 0 rn ⟨hh, rfl⟩ m2 hset⟩
 
 theorem taGo_step_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word) (j : Nat)
     (ih : ∀ k, k + 1 < j + 1 → TaGoOK dn fe vis k) : TaGoOK dn fe vis (j + 1) := by
-  sorry
+  intro m a no nl lvls ho hl f h names holes mp hS hh hlv hI hM
+  by_cases hf0 : f = 0
+  · rw [taGoW_abort j m no nl lvls ho hl f h hf0]; exact Sim.of_none
+  rw [taGoW_view j m no nl lvls ho hl f h hf0]
+  obtain ⟨F, hF⟩ : ∃ F, f.toNat = F + 1 := ⟨f.toNat - 1, by have := toNat_ne_zero' hf0; omega⟩
+  rw [hF]
+  cases hvl : eViewW m h with
+  | nil => simp [taG1]; exact Sim.of_none
+  | cons g vt =>
+    obtain ⟨v, hv, hvr⟩ := eViewW_ok m a hS.check.arena.base h (by rw [hvl]; simp)
+    rw [hvl] at hvr
+    cases v with
+    | bvar _ | sort _ | lit _ | fvar _ _ =>
+      rw [targetAbsGo_succ']
+      refine Sim.bind_twin (view_run _ a _ hv) ?_
+      simp only [ViewR] at hvr
+      rw [taG1_leaf j m no nl lvls ho hl f h _ (by simp) (by
+        first | exact Or.inl hvr.1 | exact Or.inr (Or.inl hvr.1) | exact Or.inr (Or.inr (Or.inl hvr.1)) | exact Or.inr (Or.inr (Or.inr hvr)))]
+      exact Sim.ret ⟨rfl, hS, IWGrow.refl _, hM⟩
+    | const nn' us' =>
+      simp only [ViewR, getD1_eq', getD2_eq] at hvr
+      obtain ⟨hg3, hx, hdx, hy, hdy⟩ := hvr
+      rw [taG1_const j m no nl lvls ho hl f h _ (by simp) (by rw [hg3]; decide) hg3, targetAbsGo_succ']
+      refine Sim.bind_twin (view_run _ a _ hv) ?_
+      intro r m' hb
+      obtain ⟨rfl, hr⟩ := taCW_ok j hb hlv hx hy hI.1 (hS.lt64 hI.2.1) hI.2.2.1 (hS.lt64 hI.2.2.2)
+      exact ⟨_, a, rfl, by rw [hr, ← hdx, ← hdy], hS, IWGrow.refl _, hM⟩
+    | app _ _ | lam _ _ | forallE _ _ | letE _ _ _ | proj _ _ _ =>
+      exact taGo_nodeCase dn fe vis j ih m a no nl lvls ho hl f h names holes mp F hF hf0 _ _ hvr trivial hv
+        (by simp) (by have := hvr.1; simp only [List.headD_cons] at this ⊢; simp [this]) hS hh hlv hI hM
 
 theorem taGoOK (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word) (n : Nat) : TaGoOK dn fe vis n := by
   induction n using Nat.strongRecOn with
@@ -582,7 +643,20 @@ theorem taAW_ok (n : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis
     (hho : decHL m ho.toNat hl.toNat = some holes) (hht : ho.toNat + hl.toNat ≤ iwTop m) (hM : taMR m mp0) :
     ∃ a' mp1, (ConRon.Arena.targetAbs names (decI lvls) holes (decE e)).run a = .ok (decE r, a') ∧
       taMR m' mp1 ∧ StageR vis fe m' a' ∧ IWGrow m m' := by
-  sorry
+  by_cases h0 : rdW (m.arr64 CTL) taSch.cs + 2 = 0
+  · simp [taAW, h0] at hb
+  rw [taAW_eq n m no nl lvls ho hl e h0] at hb
+  have hf0 := mclearG_frame taSch m
+  have hM0 := memoRG_clear taSch taSch_wf bmKey (fun w : Word => decE w) m mp0 hM h0
+  obtain ⟨hS0, hg0⟩ := StageR.frame_hi hS hf0 (by intro b hb; simp at hb)
+    (by intro x hx; simp [taSch] at hx; rcases hx with rfl | rfl <;> decide) (by simp) (by simp [taSch])
+  obtain ⟨⟨t, mp1⟩, a1, hrun, rfl, hS1, hg1, hM1⟩ := taGoOK dn fe vis n _ a no nl lvls ho hl CWF e names holes ∅
+    hS0 he hlv (TaIn.grow ⟨hdec, hit, hho, hht⟩ hg0) hM0 _ _ hb
+  rw [CWF_eq] at hrun
+  refine ⟨a1, mp1, ?_, hM1, hS1, hg0.trans hg1⟩
+  simp only [ConRon.Arena.targetAbs, StateT.run_bind]
+  rw [hrun]
+  rfl
 
 end L.Ind
 

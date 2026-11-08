@@ -591,7 +591,7 @@ theorem riMem_eq {m1 : Mem} {q cq mi rp3 reo rel : Word} (hlt : cq.toNat + 4 ≤
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`class_fe_r_rec` under the stage relation**: a fresh rule-less `.recInfo` record of the constant
 at `cq`. -/
-theorem riRec_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
+theorem riRec_stage {vis : Word} {fe : IFEnv} {a : AState}
     {m m' : Mem} {cq mi rp3 reo rel q : Word} {cv : IConstantVal} {rules : List IRecRule}
     (h : riW m cq mi rp3 reo rel = some ([q], m'))
     (hS : StageR vis fe m a) (hcv : decCV (erecP m) cq.toNat = some cv)

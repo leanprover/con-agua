@@ -72,13 +72,19 @@ theorem eraseFVarTys_spec (p : Prog) (L : RxLook p) (hp : p.lookup "erase_fvar_t
     finish (gen := 20) [eftW]
 
 /-- A fresh `FvMap` record of words `ws` (`recW`): what `replace_fvars` needs of it, and the frames. -/
-theorem rcFresh {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m m1 : Mem} {a : AState}
+theorem rcFresh {vis : Word} {fe : IFEnv} {m m1 : Mem} {a : AState}
     {k : Word} {ws r : List Word} (h : recW m k ws = some (r, m1)) (hS : StageR vis fe m a)
     (hk : k.toNat = ws.length) :
     r = [rdW (m.arr64 CTL) 200] ∧ (rdW (m.arr64 CTL) 200).toNat = iwTop m ∧
     (∀ j < ws.length, (m1.arr64 IW)[iwTop m + j]? = ws[j]?) ∧
     StageR vis fe m1 a ∧ IWGrow m m1 ∧ MemFrame [IW] [200] m m1 ∧ iwTop m1 = iwTop m + ws.length := by
-  sorry
+  obtain ⟨hr, hget, hg, hf, ht, -⟩ := recW_post h hS.iw.ctl hS.iw.iwSize hk
+  refine ⟨hr, rfl, hget, ?_, hg, hf, ht⟩
+  simp only [recW] at h
+  rcases hal : allocW m k with _ | ⟨q, m0⟩ <;> rw [hal] at h
+  · cases h
+  obtain ⟨-, rfl⟩ := Prod.mk.inj (Option.some.inj h)
+  exact StageR.wrIW (allocW_stage hal hS).1 q ws
 
 /-- `erase_fvar_tys` simulates `eraseFVarTys`. -/
 theorem eftW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word) (n : Nat) {m m' : Mem}

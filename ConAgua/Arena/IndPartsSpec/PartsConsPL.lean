@@ -28,7 +28,7 @@ open L.Arena
 
 /-- **`sl_cons` of a pointer onto a pointer slice decoded below the tops.** -/
 theorem partsConsPL {α : Type} {f : Mem → Nat → Option α} (hf : ∀ q, OMono (fun m => f m q))
-    {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
+    {vis : Word} {fe : IFEnv} {a : AState}
     {n : Nat} {m m' : Mem} {x o l : Word} {r : List Word} {xs : List α} {y : α}
     (h : consW n m x o l = some (r, m')) (hS : StageR vis fe m a)
     (hb : o.toNat + l.toNat ≤ iwTop m)
@@ -36,7 +36,22 @@ theorem partsConsPL {α : Type} {f : Mem → Nat → Option α} (hf : ∀ q, OMo
     StageR vis fe m' a ∧ IWGrow m m' ∧
       DecB (fun m => decPL m (f m) (r.headD 0).toNat (r.tail.headD 0).toNat) m' (y :: xs) ∧
       (r.headD 0).toNat + (r.tail.headD 0).toNat = iwTop m' := by
-  sorry
+  have hxs' : decPL (truncM m) (f (truncM m)) o.toNat l.toNat = some xs := hxs
+  rw [decPL_eq_bind] at hxs'
+  simp only [Option.bind_eq_some_iff] at hxs'
+  obtain ⟨ps, hps, hmap⟩ := hxs'
+  have hps' : decNL m o.toNat l.toNat = some ps :=
+    (OMono.decNL _ _).mono _ _ _ (IWGrow.refl m).truncExt hps
+  obtain ⟨hS', hg, hdn, htop⟩ := consW_stageN h hS hb hps'
+  refine ⟨hS', hg, ?_, htop⟩
+  show decPL (truncM m') (f (truncM m')) _ _ = some (y :: xs)
+  have hdn' : decNL (truncM m') (r.headD 0).toNat (r.tail.headD 0).toNat = some (x.toNat :: ps) :=
+    decNL_decB hdn (Nat.le_of_eq htop)
+  rw [decPL_eq_bind, hdn']
+  have hy' : f (truncM m') x.toNat = some y := hy.grow (hf _) hg
+  have hm' : ps.mapM (f (truncM m')) = some xs :=
+    (show DecB (fun m => ps.mapM (f m)) m xs from hmap).grow (OMono.mapM hf ps) hg
+  simp [hy', hm']
 
 /-- A slice result decoded below the tops (`(off, len)`, the slice below the top). -/
 structure PSlR {α : Type} (f : Mem → Nat → Option α) (xs : List α) (o l : Word) (m : Mem) : Prop where

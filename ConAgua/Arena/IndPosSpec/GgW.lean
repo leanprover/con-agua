@@ -28,7 +28,7 @@ open L.Arena
 
 /-- **`sl_snoc` keeps the stage relation**: the pool grew by the new slice, whose words are the
 source's and `x` (any words: pointers too). -/
-theorem snocW_words {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
+theorem snocW_words {vis : Word} {fe : IFEnv} {a : AState}
     {n : Nat} {m m' : Mem} {o l x : Word} {r : List Word}
     (h : snocW n m o l x = some (r, m')) (hS : StageR vis fe m a)
     (hsrc : o.toNat + l.toNat ≤ iwTop m) :
@@ -36,7 +36,11 @@ theorem snocW_words {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEn
       (r.tail.headD 0).toNat = l.toNat + 1 ∧ iwTop m' = iwTop m + l.toNat + 1 ∧
       (∀ i < l.toNat, (m'.arr64 IW)[iwTop m + i]? = (m.arr64 IW)[o.toNat + i]?) ∧
       (m'.arr64 IW)[iwTop m + l.toNat]? = some x := by
-  sorry
+  obtain ⟨hr, hl1, hqt, -, hg, htop, hget⟩ := snocW_core h hS.iw.iwSize hS.iw.ctl hsrc
+  subst hr
+  refine ⟨snocW_stage h hS, hg, by simp [hqt], by simp [hl1], by omega, fun i hi => ?_, ?_⟩
+  · rw [hget, ite_eq_right (by omega), ite_eq_left (by omega)]; congr 2; omega
+  · rw [hget, ite_eq_left rfl]
 
 end L.Ind
 

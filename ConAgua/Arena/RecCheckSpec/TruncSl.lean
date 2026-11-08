@@ -43,7 +43,14 @@ local notation "V" => ConLeche.CheckMode.verified
 theorem truncH {k : IdxKind} {m : Mem} {w : Word} {i : Nat} {x : Idx k}
     (h : iwH (truncM m) (w.toNat + i) = some x) (hsz : (m.arr64 IW).size < 2 ^ 64) :
     H (rdW (m.arr64 IW) (w + UInt64.ofNat i)) ∧ decI (rdW (m.arr64 IW) (w + UInt64.ofNat i)) = x := by
-  sorry
+  have hi : w.toNat + i < iwTop m := by
+    simp only [iwH, hd?] at h
+    cases hw : (iwA (truncM m))[w.toNat + i]? with
+    | none => simp [hw] at h
+    | some v => exact (truncM_iw_get hw).1
+  rw [iwH_truncM hi] at h
+  obtain ⟨v, e, hv, hd⟩ := iwH_rdW_at h hsz
+  rw [e]; exact ⟨hv, hd⟩
 
 /-- A slice field `(off, len)` of a record decoded in the cut pools, read at its word addresses. -/
 theorem truncSl {k : IdxKind} {m : Mem} {w : Word} {i o l : Nat} {xs : List (Idx k)}

@@ -39,7 +39,7 @@ theorem decPL_words {m : Mem} {α : Type} {f : Nat → Option α} :
     simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
     obtain ⟨v, hv, x, hx, ys, hys, rfl⟩ := h
     obtain ⟨ws, hlen, hcells, hmap⟩ := decPL_words l (o + 1) ys hys
-    simp only [iwN, nat?, iwA, Option.map_eq_some_iff] at hv
+    simp only [iwN, nat?, iwA, aread_apply, Option.map_eq_some_iff] at hv
     obtain ⟨w, hw, rfl⟩ := hv
     refine ⟨w :: ws, by simp [hlen], fun j hj => ?_, ?_⟩
     · cases j with
@@ -67,7 +67,7 @@ theorem decPL_of_words {m : Mem} {α : Type} {f : Nat → Option α} :
     rw [List.length_cons, decPL_succ]
     have hw : iwN m o = some w.toNat := by
       have := hc 0 (by simp)
-      simp only [iwN, nat?, iwA, Option.map_eq_some_iff]
+      simp only [iwN, nat?, iwA, aread_apply, Option.map_eq_some_iff]
       exact ⟨w, by simpa using this, rfl⟩
     rw [hw]
     simp only [bind, Option.bind_some, hx, ih, pure]
@@ -134,7 +134,8 @@ theorem iwGrow_of_copy {m0 m m1 : Mem} (hg : IWGrow m0 m) (hA : ∀ b : TieredAr
 
 theorem iwN_eq_agree {m m0 : Mem} {q i : Nat} (hag : ∀ j, j < q → (m.arr64 IW)[j]? = (m0.arr64 IW)[j]?)
     (hi : i < q) : iwN m i = iwN m0 i := by
-  sorry
+  simp only [iwN, nat?, iwA, aread_apply, aread_apply]
+  rw [hag i hi]
 
 /-- A read of the cut pool: below the top, and the pool's own. -/
 theorem acTr {m : Mem} {i v : Nat} (h : iwN (truncM m) i = some v) : i < iwTop m ∧ iwN m i = some v := by
@@ -185,7 +186,84 @@ theorem acW_ok (n : Nat) (m m2 : Mem) (p : Word) (r : List Word) (bs : BlockShap
     ∃ q tot, r = [q, tot] ∧ DecB (fun m => decPL m (decCN m) q.toNat tot.toNat) m2 bs.allCtors ∧
       IWGrow m m2 ∧ MemFrame [IW] [200] m m2 ∧ q.toNat + tot.toNat = iwTop m2 ∧
       q.toNat + tot.toNat ≤ (m.arr64 IW).size := by
-  sorry
+  cases n with
+  | zero => simp [acW] at h
+  | succ n =>
+  have h64 : iwTop m < 2 ^ 64 := UInt64.toNat_lt _
+  obtain ⟨hmem, -⟩ := decBS_some (show decBS (truncM m) p.toNat = some bs from hq)
+  obtain ⟨o, l, ho, hl, hg⟩ := decAt_some hmem
+  obtain ⟨hpt, ho⟩ := acTr ho
+  obtain ⟨hp1t, hl⟩ := acTr hl
+  have hgB : DecB (fun m => decPL m (decMS m) o l) m bs.members := hg
+  have hgm : decPL m (decMS m) o l = some bs.members := hgB.get (OMono.decPL (fun q => decMS_mono q) o l)
+  have hlen := decPL_length m hgm
+  have hol : o + l < 2 ^ 64 := by
+    rcases Nat.eq_zero_or_pos l with h0 | hp
+    · subst h0
+      simp only [iwN, nat?, Option.map_eq_some_iff] at ho
+      obtain ⟨w, -, rfl⟩ := ho; simpa using w.toNat_lt
+    · have := acPLb hg (l - 1) (by omega); omega
+  obtain ⟨ho', hob⟩ := iwN_rdW ho (by omega)
+  obtain ⟨hl', hlb⟩ := iwN_rdW hl (by omega)
+  have e1 : UInt64.ofNat (p.toNat + 1) = p + 1 := by
+    apply UInt64.toNat_inj.mp; rw [UInt64.toNat_add]; simp
+  rw [ofNat_toNat_word] at ho'
+  rw [e1] at hl'
+  have hoo : (UInt64.ofNat o).toNat = o := UInt64.toNat_ofNat_of_lt' (by rw [UInt64_size_eq]; exact hob)
+  have hll : (UInt64.ofNat l).toNat = l := UInt64.toNat_ofNat_of_lt' (by rw [UInt64_size_eq]; exact hlb)
+  rw [acW.arm1, ho', hl'] at h
+  rcases hn : numCtorsOfW n m (UInt64.ofNat o) (UInt64.ofNat l) with _ | tot <;> rw [hn] at h
+  · rw [acW.k_num_ctors_of.none] at h; cases h
+  rw [acW.k_num_ctors_of.arm1] at h
+  obtain ⟨htot, hnc⟩ := numCtorsOfW_ok n m (UInt64.ofNat o) (UInt64.ofNat l) tot bs.members hsz
+    (by rw [hoo, hll]; exact hol) (by rw [hoo, hll]; exact hgm) hn
+  rcases hal : allocW m tot with _ | ⟨q, m1⟩ <;> rw [hal] at h
+  · rw [acW.k_iw_alloc.none] at h; cases h
+  rw [acW.k_iw_alloc.arm1] at h
+  cases hgo : acGoW n m1 (UInt64.ofNat o) (UInt64.ofNat l) q 0 with
+  | none => rw [hgo, acW.k_block_shape_all_ctors_go.none] at h; cases h
+  | some m2' =>
+  rw [hgo, acW.k_block_shape_all_ctors_go.arm1] at h
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
+  obtain ⟨hqq, hm1, hroom⟩ := allocW_facts hal hsz
+  subst hm1
+  have hIW1 : (allocMem m tot).arr64 IW = m.arr64 IW := allocMem_IW m tot
+  have hqtop : q.toNat = iwTop m := by rw [hqq]; rfl
+  have hT : tot.toNat = (bs.members.map fun x => x.ctors.length).sum := by
+    rw [htot, UInt64.toNat_ofNat_of_lt' (by rw [UInt64_size_eq]; exact hnc), numCtorsOf_sum]
+  have hg1 : IWGrow m (allocMem m tot) := allocMem_grow m tot (by omega) hc
+  obtain ⟨ws, hwl, hwc, hwm, hwo, hwA, hwS⟩ := acGoW_ok n m (allocMem m tot) m2' (UInt64.ofNat o)
+    (UInt64.ofNat l) q 0 bs.members hgo hg1 (by rw [hIW1]; exact hsz)
+    (fun i hi => by rw [hIW1]) (by omega)
+    (by show decPL _ _ _ _ = _; rw [hoo, hll]; exact hg)
+    (by rw [hIW1, ← hT]; simp only [UInt64.toNat_zero]; omega)
+  have hf : MemFrame [IW] [200] m m2' :=
+    (allocMem_frame m tot).trans (copy_frame hwA hwS)
+  have htop : rdW (m2'.arr64 CTL) 200 = rdW (m.arr64 CTL) 200 + tot := by
+    rw [hwA CTL (by decide), allocMem_top m tot hc]
+  have hlow : ∀ i < iwTop m, (m2'.arr64 IW)[i]? = (m.arr64 IW)[i]? := by
+    intro i hi
+    rw [hwo i (by simp only [UInt64.toNat_zero]; omega), hIW1]
+  have hroom' : iwTop m + tot.toNat ≤ (m.arr64 IW).size := by omega
+  have hg2 : IWGrow m m2' := iwGrow_of_frame hf (N := tot) htop hroom' hsz hlow
+  have htop2 : q.toNat + tot.toNat = iwTop m2' := by
+    simp only [iwTop, htop]
+    rw [UInt64.toNat_add]
+    have : (rdW (m.arr64 CTL) 200).toNat = q.toNat := by rw [hqq]
+    omega
+  refine ⟨q, tot, rfl, ?_, hg2, hf, htop2, by omega⟩
+  have := decPL_of_words (m := truncM m2') (f := decCN (truncM m2')) ws q.toNat
+    (bs.members.map (·.ctors)).flatten
+    (fun j hj => by
+      have := hwc j hj
+      simp only [UInt64.toNat_zero, Nat.add_zero] at this
+      have hlt : q.toNat + j < iwTop m2' := by rw [← htop2, hT, ← hwl]; omega
+      have e := truncM_iw_eq (m := m2') hlt
+      simp only [iwA, aread_apply, aread_apply] at e
+      rw [e]; exact this)
+    (acMapGrow hg2 hwm)
+  rw [hwl, ← hT] at this
+  exact this
 
 /-- **`block_shape_all_ctors` refines `BlockShape.allCtors`**: a fresh `IW` slice of the members'
 constructor pointers, concatenated, decoded below the tops. The shape decoded below the tops; the
@@ -203,7 +281,12 @@ theorem blockShapeAllCtors_refines (p : Prog) (ha : p.lookup "iw_alloc" = some i
     ⦃fun r s' => LocEq s' s₀ ∧ StageR vis fe s'.mem a₀ ∧ IWGrow s₀.mem s'.mem ∧
       DecB (fun m => decPL m (decCN m) (r.headD 0).toNat (r.getD 1 0).toNat) s'.mem bs.allCtors ∧
       (r.headD 0).toNat + (r.getD 1 0).toNat ≤ iwTop s'.mem; ⊤⦄ := by
-  sorry
+  refine triple_post (blockShapeAllCtors_spec p ha hcp hnc hcc hg hp n s₀ q) ?_
+  rintro r s' ⟨hl, hm⟩
+  obtain ⟨-, -, hsz, -, hcl⟩ := hS.iw
+  obtain ⟨q', tot, hr, hdec, hgrow, hfr, htop, hroom⟩ := acW_ok n s₀.mem s'.mem q r bs hm hq hsz hcl
+  subst hr
+  exact ⟨hl, stage_frame_iw hS hfr (by omega), hgrow, by simpa using hdec, by simp; omega⟩
 
 end L.Ind
 

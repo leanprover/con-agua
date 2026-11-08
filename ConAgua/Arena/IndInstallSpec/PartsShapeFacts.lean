@@ -112,7 +112,11 @@ theorem partsShapeK {m : Mem} {q : Word} {bs : BlockShape} (hq : decBS m q.toNat
 theorem partsHsrc_grow {m m' : Mem} (hg : IWGrow m m') {q : Word} (hq9 : q.toNat + 9 ≤ iwTop m)
     (hsrc : ∀ o l, iwN m q.toNat = some o → iwN m (q.toNat + 1) = some l → o + l ≤ iwTop m) :
     ∀ o l, iwN m' q.toNat = some o → iwN m' (q.toNat + 1) = some l → o + l ≤ iwTop m' := by
-  sorry
+  intro o l h1 h2
+  have e1 : iwN m' q.toNat = iwN m q.toNat := by simp only [iwN, nat?, iwA, aread_apply, aread_apply]; rw [hg.iwGet _ (by omega)]
+  have e2 : iwN m' (q.toNat + 1) = iwN m (q.toNat + 1) := by simp only [iwN, nat?, iwA, aread_apply, aread_apply]; rw [hg.iwGet _ (by omega)]
+  rw [e1] at h1; rw [e2] at h2
+  exact Nat.le_trans (hsrc o l h1 h2) hg.iw
 
 /-- The record's words read off a decoded shape (`nP`, `resSort`), in a grown memory. -/
 theorem partsShapeWords {m m' : Mem} (hg : IWGrow m m') {q : Word} {bs : BlockShape}
@@ -129,7 +133,7 @@ theorem partsShapeWords {m m' : Mem} (hg : IWGrow m m') {q : Word} {bs : BlockSh
   refine ⟨hw4, hnb, ?_⟩
   obtain ⟨w, hw, hwl, hwe⟩ := hd?_some (show hd? (iwA (truncM m)) (q.toNat + 6) = some bs.resSort from hsort)
   obtain ⟨-, hw'⟩ := truncM_iw_get hw
-  simp only [iwA] at hw'
+  simp only [iwA, aread_apply, aread_apply] at hw'
   rw [partsRdIW_grow hg (by omega), rdW_of_get? h6.symm hw']
   exact ⟨hwl, hwe.symm⟩
 

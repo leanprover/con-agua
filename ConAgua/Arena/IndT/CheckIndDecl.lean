@@ -103,7 +103,39 @@ local macro "jp_fin " z:ident k:ident : tactic => `(tactic| (
 theorem blockShape?_members_mem {nPd : Nat} {block : List IConstantInfo} {s s' : AState}
     {bs : BlockShape} (h : ConRon.Arena.blockShape? nPd block s = .ok (some bs, s')) :
     ∀ ms ∈ bs.members, ∃ caps, IConstantInfo.indInfo ms.cvT caps ∈ block := by
-  sorry
+  unfold ConRon.Arena.blockShape? at h
+  cases hsp : ConRon.Arena.blockSplit block with
+  | none => rw [hsp] at h; cases (AM.pure_ok h).1
+  | some q =>
+  obtain ⟨cvTs, cs, rs⟩ := q
+  rw [hsp] at h
+  rcases cvTs with _ | ⟨cvT0, cvTs'⟩
+  · cases (AM.pure_ok h).1
+  rcases rs with _ | ⟨⟨cvR0, mI0, rP0, rules0⟩, rs'⟩
+  · cases (AM.pure_ok h).1
+  dsimp only at h
+  obtain ⟨cnt, s1, -, z1⟩ := AM.bind_ok h
+  cases cnt with
+  | none => cases (AM.pure_ok z1).1
+  | some nIdxs =>
+  dsimp only at z1
+  obtain ⟨reserved, s2, -, z2⟩ := AM.bind_ok z1
+  split at z2
+  case isFalse => cases (AM.pure_ok z2).1
+  have key : ∀ groups : List (List (IConstantVal × Nat)), ∀ ms ∈ (((cvT0 :: cvTs').zip nIdxs).zip groups).map
+      (fun a => (⟨a.1.1, a.1.2, a.2⟩ : MemberShape)), ∃ caps, IConstantInfo.indInfo ms.cvT caps ∈ block := by
+    intro groups ms hms
+    obtain ⟨⟨⟨c, n⟩, g⟩, hx, rfl⟩ := List.mem_map.1 hms
+    exact blockSplit_formers_mem block c hsp (List.of_mem_zip (List.of_mem_zip hx).1).1
+  obtain ⟨o, s3, -, z3⟩ := AM.bind_ok z2
+  split at z3
+  · obtain ⟨v, s4, -, z4⟩ := AM.bind_ok z3
+    split at z4
+    · jp_fin z4 key
+    · obtain ⟨_, s5, -, z5⟩ := AM.bind_ok z4
+      jp_fin z5 key
+  · obtain ⟨_, s5, -, z5⟩ := AM.bind_ok z3
+    jp_fin z5 key
 
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **The shape `blockParts?` recognises has the block's formers as its members' formers.** -/

@@ -208,11 +208,11 @@ theorem iis_ref (hP : IdxProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AS
   show decIS (truncM m3) _ = some isorts
   have w0 : iwN (truncM m3) (rdW (m2.arr64 CTL) 200).toNat = some (r2.headD 0).toNat := by
     rw [iwN_truncM hq0]; have := hget 0 (by simp); simp only [Nat.add_zero] at this
-    simp [iwN, nat?, iwA, this]
+    simp [iwN, nat?, iwA, aread_apply, this]
   have w1 : iwN (truncM m3) ((rdW (m2.arr64 CTL) 200).toNat + 1) = some (r2.tail.headD 0).toNat := by
     rw [iwN_truncM hq1]; have := hget 1 (by simp)
     simp only [List.getElem?_cons_succ, List.getElem?_cons_zero] at this
-    simp [iwN, nat?, iwA, this]
+    simp [iwN, nat?, iwA, aread_apply, this]
   have hdB := (decHL_decB hdl hbl).grow (OMono.decHL _ _) hg3
   simp only [decIS, decAt, w0, w1, Option.bind_eq_bind, Option.bind_some]
   exact hdB
