@@ -175,7 +175,113 @@ theorem acGoW_ok (n : Nat) : ∀ (m0 m mf : Mem) (off l q k : Word) (ms : List M
       (∀ i, ¬ (q.toNat + k.toNat ≤ i ∧ i < q.toNat + k.toNat + ws.length) →
         (mf.arr64 IW)[i]? = (m.arr64 IW)[i]?) ∧
       (∀ b : TieredArray, b ≠ ↑IW → mf.arr64 b = m.arr64 b) ∧ (mf.arr64 IW).size = (m.arr64 IW).size := by
-  sorry
+  induction n with
+  | zero => intro m0 m mf off l q k ms h; simp [acGoW] at h
+  | succ n ih =>
+    intro m0 m mf off l q k ms h hg0 hsz hag hq hmsB hroom
+    by_cases hl : l = 0
+    · rw [acGoW_nil n m off l q k hl] at h
+      simp only [Option.some.injEq] at h
+      subst h
+      have hmsn : ms = [] := by
+        have := decPL_length _ (show decPL _ _ _ _ = _ from hmsB)
+        rw [hl] at this; simpa using this
+      subst hmsn
+      exact ⟨[], rfl, fun i hi => absurd hi (by simp), rfl, fun i _ => rfl, fun _ _ => rfl, rfl⟩
+    · obtain ⟨j', hj'⟩ : ∃ j', l.toNat = j' + 1 := by
+        have : l.toNat ≠ 0 := fun h0 => hl (UInt64.toNat_inj.mp (by simpa using h0))
+        exact ⟨l.toNat - 1, by omega⟩
+      have hdB : decPL (truncM m0) (decMS (truncM m0)) off.toNat (j' + 1) = some ms := by
+        rw [← hj']; exact hmsB
+      have hlen := decPL_length _ hdB
+      cases hmsl : ms with
+      | nil => rw [hmsl] at hlen; simp at hlen
+      | cons ms0 rest =>
+      rw [hmsl] at hdB hroom
+      obtain ⟨v, hvB, hms0B⟩ := decPL_head hdB
+      obtain ⟨-, -, -, hctB⟩ := decMS_some hms0B
+      obtain ⟨co, cl', hcoB, hclB, hctorsB⟩ := decAt_some hctB
+      obtain ⟨hofft, hv0⟩ := acTr hvB
+      obtain ⟨-, hco0⟩ := acTr hcoB
+      obtain ⟨hcl3t, hcl0⟩ := acTr hclB
+      have hlenc : ms0.ctors.length = cl' := decPL_length _ hctorsB
+      obtain ⟨wsj, hlj, hcjB, hmj⟩ := decPL_words cl' co ms0.ctors hctorsB
+      have hcc : ∀ i < cl', co + i < iwTop m0 := acPLb hctorsB
+      have hoq : off.toNat < q.toNat := by omega
+      have hv : iwN m off.toNat = some v := by rw [iwN_eq_agree hag hoq]; exact hv0
+      have hco : iwN m (v + 2) = some co := by rw [iwN_eq_agree hag (by omega)]; exact hco0
+      have hcl3 : iwN m (v + 3) = some cl' := by rw [iwN_eq_agree hag (by omega)]; exact hcl0
+      -- the words the model reads
+      obtain ⟨hvw, hvb⟩ := iwN_rdW hv (by omega)
+      obtain ⟨hcow, hcob⟩ := iwN_rdW hco (by omega)
+      obtain ⟨hclw, hclb⟩ := iwN_rdW hcl3 (by omega)
+      rw [ofNat_toNat_word] at hvw
+      have e2 : UInt64.ofNat v + 2 = UInt64.ofNat (v + 2) := by
+        apply UInt64.toNat_inj.mp; rw [UInt64.toNat_add]; simp
+      have e3 : UInt64.ofNat v + 3 = UInt64.ofNat (v + 3) := by
+        apply UInt64.toNat_inj.mp; rw [UInt64.toNat_add]; simp
+      rw [acGoW_cons n m off l q k hl] at h
+      obtain ⟨cl, m1, hc1, h⟩ := ipK_inv h (by simp [acK1])
+      rw [acK1_some] at h
+      have hcoW : rdW (m.arr64 IW) (rdW (m.arr64 IW) off + 2) = UInt64.ofNat co := by
+        rw [hvw, e2]; exact hcow
+      have hclW : rdW (m.arr64 IW) (rdW (m.arr64 IW) off + 3) = UInt64.ofNat cl' := by
+        rw [hvw, e3]; exact hclw
+      have hTle : cl' ≤ (List.map (fun x => x.ctors.length) (ms0 :: rest)).sum := by
+        simp only [List.map_cons, List.sum_cons]; omega
+      have hqk : (q + k).toNat = q.toNat + k.toNat := by
+        rw [UInt64.toNat_add]; simp; omega
+      have hclv : cl.toNat = cl' := by
+        rw [ccW_len hc1, hclW]; exact UInt64.toNat_ofNat_of_lt' (by rw [UInt64_size_eq]; exact hclb)
+      have hcoV : (UInt64.ofNat co).toNat = co := UInt64.toNat_ofNat_of_lt' (by rw [UInt64_size_eq]; exact hcob)
+      obtain ⟨hcl_eq, hA, hS1, hcells⟩ := ccW_get hc1
+        (by
+          rcases Nat.eq_zero_or_pos cl' with h0 | hp
+          · left; rw [hclv]; exact h0
+          · right; have := hcc (cl' - 1) (by omega); rw [hcoW, hcoV, hclv, hqk]; omega)
+        (by rw [hqk, hclv]; omega) hsz
+      have hag1 : ∀ i, i < q.toNat → (m1.arr64 IW)[i]? = (m0.arr64 IW)[i]? := by
+        intro i hi
+        rw [hcells i, ite_eq_right (by rw [hqk]; omega)]; exact hag i hi
+      have hg1 : IWGrow m0 m1 := iwGrow_of_copy hg0 hA q.toNat hq (fun i hi => by
+        rw [hcells i, ite_eq_right (by rw [hqk]; omega)])
+      have hsz1 : (m1.arr64 IW).size < 2 ^ 64 := by rw [hS1]; exact hsz
+      have hl1 : (l - 1).toNat = j' := by
+        rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simp; omega))]; simp [hj']
+      have hoff1 : (off + 1).toNat = off.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
+      have hkc : (k + cl).toNat = k.toNat + cl' := by
+        rw [UInt64.toNat_add]; simp; rw [hclv]; omega
+      have hrestsum : (List.map (fun x => x.ctors.length) (ms0 :: rest)).sum =
+          cl' + (List.map (fun x => x.ctors.length) rest).sum := by
+        simp only [List.map_cons, List.sum_cons]; rw [hlenc]
+      obtain ⟨wsr, hlr, hcr, hmr, hor, hAr, hSr⟩ := ih m0 m1 mf (off + 1) (l - 1) q (k + cl)
+        rest h hg1 hsz1 hag1 hq
+        (by show decPL _ _ _ _ = _; rw [hoff1, hl1]; exact decPL_tail hdB)
+        (by rw [hkc, hS1]; omega)
+      refine ⟨wsj ++ wsr, by rw [List.length_append, hlj, hlr, hrestsum], fun i hi => ?_, ?_, fun i hi => ?_,
+        fun b hb => (hAr b hb).trans (hA b hb), hSr.trans hS1⟩
+      · by_cases hi1 : i < wsj.length
+        · rw [List.getElem_append_left hi1]
+          have e1 := hor (q.toNat + k.toNat + i) (by rw [hkc]; omega)
+          have e2 := hcells (q.toNat + k.toNat + i)
+          rw [ite_eq_left (by rw [hqk, hclv]; omega), hcoW, hcoV, hqk] at e2
+          have e3 : q.toNat + k.toNat + i - (q.toNat + k.toNat) = i := by omega
+          rw [e3] at e2
+          have hci := hcc i (by omega)
+          rw [e1, e2, hag (co + i) (by omega)]
+          have := hcjB i hi1
+          rw [← this]; exact (truncM_iw_eq hci).symm
+        · have hi2 : i - wsj.length < wsr.length := by rw [List.length_append] at hi; omega
+          have key := hcr (i - wsj.length) hi2
+          rw [List.getElem_append_right (by omega)]
+          have e : q.toNat + k.toNat + i = q.toNat + (k + cl).toNat + (i - wsj.length) := by
+            rw [hkc, hlj]; omega
+          rw [e]; exact key
+      · rw [List.mapM_append, hmj, hmr]
+        simp
+      · have hnot : ¬ (q.toNat + k.toNat ≤ i ∧ i < q.toNat + k.toNat + (wsj.length + wsr.length)) := by
+          rw [List.length_append] at hi; exact hi
+        rw [hor i (by rw [hkc]; omega), hcells i, ite_eq_right (by rw [hqk, hclv]; omega)]
 
 theorem numCtorsOf_sum (ms : List MemberShape) :
     ConRon.Arena.numCtorsOf ms = (ms.map fun x => x.ctors.length).sum := by
