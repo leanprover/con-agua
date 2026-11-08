@@ -190,11 +190,6 @@ theorem decCI_indInfo_bound {a : Array Word} {p : Nat}
     p + 16 < a.size := by
   sorry
 
-theorem EnvR.row_dec {m : Mem} {vis : Word} {fe : IFEnv}
-    (h : EnvR m vis fe) (w : Word) (hw : w.toNat < 2 ^ 32) :
-    rowTag w ≤ 2 → rowC m w ≠ 0 → ∃ ci, decCI (erecP m) (rowP m w).toNat = some ci := by
-  sorry
-
 /-! ## `nest_ctor_entry_strip`, `nest_ctor_entry` -/
 
 def stripK (ciq nPc nF : Word) : Option (List Word × Mem) → Option (List Word × Mem)
