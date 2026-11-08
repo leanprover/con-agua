@@ -57,6 +57,10 @@ theorem posRec2_eq (m : Mem) (a b : Word) :
     (match allocW m 2 with | none => none | some (q, _) => some (q, rec2Mem m a b)) =
       posRecW m [a, b] := by
   rw [posRecW_eq m [a, b] 2 rfl, rec2Mem_eq]
+theorem posRec3_eq (m : Mem) (a b c : Word) :
+    (match allocW m 3 with | none => none | some (q, _) => some (q, rec3Mem m a b c)) =
+      posRecW m [a, b, c] := by
+  rw [posRecW_eq m [a, b, c] 3 rfl, rec3Mem_eq]
 theorem posRec4_eq (m : Mem) (a b c d : Word) :
     (match allocW m 4 with | none => none | some (q, _) => some (q, rec4Mem m a b c d)) =
       posRecW m [a, b, c, d] := by
@@ -85,6 +89,18 @@ theorem posRec2_specW (h2 : p.lookup "rec2" = some rec2) (n : Nat) (s₀ : St) (
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
         iwAlloc_specW p ha n] <;>
       finish [rec2Mem, allocMem, allocW]
+
+theorem posRec3_specW (h3 : p.lookup "rec3" = some rec3) (n : Nat) (s₀ : St) (a b c : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "rec3" [a, b, c]
+    ⦃fun r s' => LocEq s' s₀ ∧ posRecW s₀.mem [a, b, c] = some (r.headD 0, s'.mem); ⊤⦄ := by
+  simp only [← posRec3_eq, invoke_eq _ h3, callFn, rec3]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind, arena_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
+        iwAlloc_specW p ha n] <;>
+      finish [rec3Mem, allocMem, allocW]
 
 theorem posRec4_specW (h4 : p.lookup "rec4" = some rec4) (n : Nat) (s₀ : St) (a b c d : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "rec4" [a, b, c, d]
@@ -161,17 +177,19 @@ theorem word_add_toNat {a b : Word} (h : a.toNat + b.toNat < 2 ^ 64) : (a + b).t
 /-! ## `nest_ctx_root_holes(_go)` refines `NestCtx.rootHoles` -/
 
 mutual
-def rhGoW : Nat → Mem → Word → Word → Word → Word → Word → Word → Word → Word → Option Mem
-  | 0, _, _, _, _, _, _, _, _, _ => none
-  | k + 1, m, no, nl, lv, po, pl, nP, q, j =>
+def rhGoW : Nat → Mem → Word → Word → Word → Word → Word → Word → Word → Word → Word → Word →
+    Option Mem
+  | 0, _, _, _, _, _, _, _, _, _, _, _ => none
+  | k + 1, m, no, nl, lv, po, pl, nP, nio, nil, q, j =>
     if nl ≤ j then some m
-    else rhK1 k no nl lv po pl nP q j (posRecW m [rdW (m.arr64 IW) (no + j), lv, po, pl])
-def rhK1 (k : Nat) (no nl lv po pl nP q j : Word) : Option (Word × Mem) → Option Mem
+    else rhK1 k no nl lv po pl nP nio nil q j (posRecW m [rdW (m.arr64 IW) (no + j), lv, po, pl])
+def rhK1 (k : Nat) (no nl lv po pl nP nio nil q j : Word) : Option (Word × Mem) → Option Mem
   | none => none
-  | some (key, m1) => rhK2 k no nl lv po pl nP q j (posRecW m1 [key, nP])
-def rhK2 (k : Nat) (no nl lv po pl nP q j : Word) : Option (Word × Mem) → Option Mem
+  | some (key, m1) =>
+    rhK2 k no nl lv po pl nP nio nil q j (posRecW m1 [key, nP, getDW m1 nio nil j 0])
+def rhK2 (k : Nat) (no nl lv po pl nP nio nil q j : Word) : Option (Word × Mem) → Option Mem
   | none => none
-  | some (h, m2) => rhGoW k (m2.set64 IW (q + j) h) no nl lv po pl nP q (j + 1)
+  | some (h, m2) => rhGoW k (m2.set64 IW (q + j) h) no nl lv po pl nP nio nil q (j + 1)
 end
 
 def rhB (q nl : Word) : Option Mem → Option (List Word × Mem)
@@ -193,7 +211,7 @@ theorem decNK_of_words {m : Mem} {k : Nat} {c u o l : Word} {ds : List EIdx}
 
 /-- The indices `decCtx m p` reads lie in `P`. -/
 def CtxIn (m : Mem) (p : Nat) (P : Nat → Prop) : Prop :=
-  (∀ j < 11, P (p + j)) ∧ ∀ i, (i = 0 ∨ i = 2 ∨ i = 5 ∨ i = 7) → ∀ o l, iwN m (p + i) = some o →
+  (∀ j < 13, P (p + j)) ∧ ∀ i, (i = 0 ∨ i = 2 ∨ i = 5 ∨ i = 7 ∨ i = 11) → ∀ o l, iwN m (p + i) = some o →
     iwN m (p + i + 1) = some l → ∀ j < l, P (o + j)
 
 /-- A `NestCtx` record decoded below the top: its fields as the words L reads. -/
