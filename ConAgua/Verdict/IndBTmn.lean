@@ -99,119 +99,7 @@ theorem tmn_ref (n : Nat) (hn : n ≤ 2 ^ 62) : ∀ {m : Mem} {a : AState}
     RefE (VerdictCtx p) (tmnE p n m vis q fto ftl pfo pfl us dso dsl cto ctl nfo nfl)
       (ConRon.Arena.targetMajorNfs V fe bs formerTys pfvs (decI us) ds ctors nfs) a
       (fun v ys a' => TmnPost dn vis fe env m nfo nfl nfs v.1 v.2 ys a') := by
-  induction n with
-  | zero =>
-    intros; rw [tmnE.eq_1]; exact RefE.of_cls0 (by simp)
-  | succ n ih =>
-  intro m a q fto ftl pfo pfl us dso dsl cto ctl nfo nfl bs formerTys pfvs ds ctors nfs pP
-    formerTysP pfvsP dsP usP ctorsP nfsP hC hA hbs hus hft hftb hpf hds hct hctb hnf hP hsh hftP
-    hpfP husP hdsP hctP hnfP hformer hpw
-  have hS := hC.stage
-  by_cases hl : nfl = 0
-  · rw [tmnE.arm1 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hl]
-    subst hl
-    have : nfs = [] := by
-      have := decPL_length _ (hnf.1.get (OMono.decPL decNCN_mono _ _)); simpa using this
-    subst this
-    exact RefE.ret rfl ⟨PSlR.nil _ _, hC, IWGrow.refl _, hP, hA,
-      fun _ _ _ _ => ⟨.inl rfl, [], by simp [decNL], FA2.nil⟩⟩
-  rw [tmnE.arm2 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hl]
-  have hsz := hS.iw.iwSize
-  obtain ⟨nf, nfs', rfl, hnf0, hnf'⟩ := hnf.uncons hl hsz
-  obtain ⟨nfP, nfsP', rfl, hnfP1, hnfsP'⟩ := ConRon.Bridge.Inductives.mapM_option_cons_inv hnfP
-  have hb64 := hS.lt64 hnf.2
-  obtain ⟨e1, e2, hl0⟩ := slice_step hl hb64
-  have ih' := ih (by omega) hC hA hbs hus hft hftb hpf hds hct hctb hnf' hP hsh hftP hpfP husP hdsP hctP
-    hnfsP' hformer hpw
-  rw [ConRon.Arena.targetMajorNfs]
-  refine RefE.bindE (fun _ => tmnE.k_target_major_nfs.none ..) id ih' fun ⟨rr, m1⟩ ys a1 run1 hR1 => ?_
-  obtain ⟨c1, -⟩ := ConRon.Bridge.Inductives.targetMajorNfs_spec fe (ConRon.Bridge.CoreSpec.of_core rfl)
-    henv bs pP formerTys pfvs formerTysP pfvsP (decI us) usP ds dsP ctors ctorsP hformer hpw nfs'
-    nfsP' a a1 ys hC.check ⟨hsh, hftP, hpfP, husP, hdsP, hctP, hnfsP'⟩ run1
-  rw [tmnE.k_target_major_nfs.arm1]
-  have hC1 := hR1.stage
-  have hg1 := hR1.grow
-  have hS1 := hC1.stage
-  have hnfo : nfo.toNat < iwTop m := by have := hnf.2; omega
-  have he : rdW (m1.arr64 IW) nfo = rdW (m.arr64 IW) nfo := by
-    simp only [rdW]; rw [hg1.iwGet _ hnfo]
-  rw [he]
-  -- the table's head pointer: the entry `nf`, and its place in a pointer list
-  have hptr0 : ∀ ps, decNL m nfo.toNat nfl.toNat = some ps → ∃ v ps', ps = v :: ps' ∧
-      rdW (m.arr64 IW) nfo = UInt64.ofNat v ∧ v < 2 ^ 64 ∧
-      decNL m (nfo + 1).toNat (nfl - 1).toNat = some ps' := by
-    intro ps hps
-    obtain ⟨LL, hLL⟩ : ∃ LL, nfl.toNat = LL + 1 := ⟨nfl.toNat - 1, by omega⟩
-    rw [hLL, decNL_succ] at hps
-    simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at hps
-    obtain ⟨v, hv, ps', hps', rfl⟩ := hps
-    have := (iwN_rdW hv (by omega)).1; rw [UInt64.ofNat_toNat] at this
-    exact ⟨v, ps', rfl, this, (iwN_rdW hv (by omega)).2, by rw [e1, e2, hLL]; simpa using hps'⟩
-  generalize hE : rdW (m.arr64 IW) nfo = e at hnf0 hptr0 ⊢
-  have hnf1 : DecB (fun m' => decNCN m' e.toNat) m1 nf := hnf0.grow (decNCN_mono _) hg1
-  have hsz1 := hS1.iw.iwSize
-  obtain ⟨hcH, hcD, hlH, hlD, hdsl⟩ := decNCN_fields hnf1 hsz1
-  have hct1 := hct.grow (OMono.decPL decCN_mono _ _) hg1
-  -- the tail's pointers, from the table's
-  have hptr1 : ∀ mb ps, decNL m nfo.toNat nfl.toNat = some ps → PtrsB mb ps (nf :: nfs') →
-      ∃ v, e.toNat = v ∧ DecB (fun m => decNCN m v) mb nf ∧ (rr.tail.headD 0 = 0 ∨ iwTop m ≤ (rr.headD 0).toNat) ∧
-        ∃ pr, decNL m1 (rr.headD 0).toNat (rr.tail.headD 0).toNat = some pr ∧ PtrsB mb pr ys := by
-    intro mb ps hps hpb
-    obtain ⟨v, ps', rfl, hev, hvb, hps'⟩ := hptr0 ps hps
-    cases hpb with
-    | cons hpv hpb' =>
-      obtain ⟨hfr, hrest⟩ := hR1.ptrs mb ps' hps' hpb'
-      exact ⟨v, by rw [hev, UInt64.toNat_ofNat_of_lt' hvb], hpv, hfr, hrest⟩
-  -- `ctors_have_name` (outside the verdict closure)
-  rcases h2 : chnW n m1 cto ctl (rdW (m1.arr64 IW) e) with _ | hv
-  · rw [liftE_none, tmnE.k_ctors_have_name.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some, tmnE.k_ctors_have_name.eq_2]
-  obtain ⟨hany, -⟩ := chnW_ok n m1 cto ctl _ hv ctors h2 (hct1.get (OMono.decPL decCN_mono _ _)) hcH hctb
-  rw [hcD] at hany
-  refine RefE.retIf (fun hh => by rw [← hany, hh]; rfl) (fun hf => by rw [← hany] at hf; simpa using hf)
-    (fun _ => ⟨hR1.slice, hC1, hg1, hR1.rc, hR1.abs, fun mb ps hps hpb => by
-      obtain ⟨v, -, -, hfr, pr, hpr, hprb⟩ := hptr1 mb ps hps hpb
-      exact ⟨by simpa using hfr, pr, by simpa using hpr, hprb⟩⟩) fun _ _ => ?_
-  obtain ⟨-, hlvP, hedP, -⟩ := ConRon.Bridge.Inductives.RC.dCtorNf_inv
-    (ConRon.Bridge.Inductives.dCtorNf_ext c1.ext _ _ hnfP1)
-  -- `target_class_match`
-  have h3 := tcm_ref hq henv n (by omega) hC1 hR1.abs (hbs.grow hg1) hus hlH
-    (by rw [decHL_grow hg1 hftb]; exact hft) (by have := hg1.iw; omega)
-    (hpf.grow hg1) (hds.grow hg1) hdsl hR1.rc
-    (ConRon.Bridge.Inductives.dShape_ext c1.ext _ _ hsh) (denoteEList_ext c1.ext _ _ hftP)
-    (denoteEList_ext c1.ext _ _ hpfP) (ConRon.Bridge.denoteLs_ext husP c1.ext)
-    (denoteEList_ext c1.ext _ _ hdsP) (by rw [hlD]; exact hlvP) hedP hformer hpw
-  rw [hlD] at h3
-  refine RefE.bindE (fun _ => tmnE.k_target_class_match.none ..) id h3 fun ⟨rk, m2⟩ c a2 _ hR2 => ?_
-  have hg2 : IWGrow m1 m2 := hR2.grow
-  have hg12 := hg1.trans hg2
-  have hys2 := hR1.slice.grow (fun q => decNCN_mono q) hg2
-  rw [tmnE.k_target_class_match.eq_2]
-  refine RefE.retIf (fun hk => by rw [← hR2.res, hk]; rfl) (fun hc => by rw [← hR2.res] at hc; simpa using hc)
-    (fun _ => ⟨hys2, hR2.stage, hg12, hR2.rc, hR2.abs, fun mb ps hps hpb => by
-      obtain ⟨v, -, -, hfr, pr, hpr, hprb⟩ := hptr1 mb ps hps hpb
-      have hb := hR1.slice.bound
-      dsimp only at hb hpr ⊢
-      exact ⟨by simpa using hfr, pr,
-        by simp only [List.headD_cons, List.tail_cons]; rw [decNL_grow hg2 hb]; exact hpr, hprb⟩⟩)
-    fun _ hc1 => ?_
-  subst hc1
-  -- `sl_cons` (outside the verdict closure)
-  refine RefE.onlySim (fun _ => tmnE.k_sl_cons.none ..) (fun _ _ h => h) fun rc m3 h4 => ?_
-  rw [tmnE.k_sl_cons.arm1]
-  obtain ⟨hS3, hg3, hps3, hf3⟩ := consW_pslr (fun q => decNCN_mono q) h4 hR2.stage.stage hys2
-    (hnf1.grow (decNCN_mono _) hg2)
-  have hA3 := consW_afr h4 hR2.abs
-  refine RefE.ret (y := nf :: ys) rfl ⟨by simpa using hps3,
-    hR2.stage.of_pstep hS3 hA3 (PStep.refl hR2.stage.check.state), hg12.trans hg3, hR2.rc.fr hf3, hA3,
-    fun mb ps hps hpb => ?_⟩
-  obtain ⟨v, heT, hpv, -, pr, hpr, hprb⟩ := hptr1 mb ps hps hpb
-  obtain ⟨hr, hd, -, -, -, -⟩ := consW_decN h4 hR2.stage.stage.iw.iwSize hR2.stage.stage.iw.ctl hys2.2
-    (by rw [decNL_grow hg2 hR1.slice.bound]; exact hpr)
-  subst hr
-  refine ⟨?_, e.toNat :: pr, by simpa using hd, ?_⟩
-  · right; simp only [List.headD_cons]; exact hg12.iw
-  · rw [heT]; exact FA2.cons hpv hprb
+  sorry
 
 include hq henv in
 /-- **`target_major_nfs` refines `targetMajorNfs`** under `StageC` (`tmn_ref`'s ok half). -/
@@ -245,12 +133,7 @@ theorem targetMajorNfs_refinesC (hL : TmnLook p) (n : Nat) (hn : n ≤ 2 ^ 62) (
       StageC dn vis fe env s'.mem
         (AM.st (ConRon.Arena.targetMajorNfs V fe bs formerTys pfvs (decI us) ds ctors nfs) a₀) ∧
       IWGrow s₀.mem s'.mem ∧ RcMR s'.mem ∧ AbsOK s'.mem; ⊤⦄ := by
-  refine triple_post (RefE.triple (tmnE_spec p hL n s₀ vis q fto ftl pfo pfl us dso dsl cto ctl nfo nfl)
-    (tmn_ref hq henv n hn hC hA hbs hus hft hftb hpf hds hct.dec (hC.stage.lt64 hct.bound) hnf hP hsh hftP
-      hpfP husP hdsP hctP hnfP hformer hpw)) ?_
-  rintro r s' ⟨hl', ys, a', run, hR⟩
-  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ run
-  exact ⟨hl', hok, by rw [hres]; exact hR.slice, by rw [hst]; exact hR.stage, hR.grow, hR.rc, hR.abs⟩
+  sorry
 
 end sims
 

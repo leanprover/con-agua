@@ -66,8 +66,8 @@ structure IacPost (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
   stage : StageC dn vis fe env m' a'
   grow : IWGrow m m'
   abs : AbsOK m'
-  core : ConRon.Bridge.CoreStep V env fe a a'
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 include hq henv hOpf hLC hLT in
 /-- **`check_abs_ctor_sorts_one` refines one constructor of `checkAbsCtorSorts`, both outcomes**
 (twin side: one constructor of con-ron's `checkAbsCtorSorts_specF`'s proof, after the level test;
@@ -124,7 +124,9 @@ theorem iao_ref (hsum : SumProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : 
     (fun i _ x hx => hfvsc i x hx) a1 a2 _ k1.stage.check
     ⟨ConRon.Bridge.denoteL_ext hsP p1.ext, hxs, rfl, ConRon.Bridge.denoteFEnv_mono p1.ext hfe⟩ hr2
   exact RefE.ret rfl ⟨hP2.stage, k1.grow.trans hP2.grow, hP2.abs, k1.core.trans c2⟩
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 include hq henv hOpf hLC hLT hApd in
 /-- **`check_abs_ctor_sorts` refines `checkAbsCtorSorts`, both outcomes** under `StageC` (twin
 side: con-ron's `checkAbsCtorSorts_specF`'s proof; induction on the fuel). -/
@@ -249,7 +251,9 @@ theorem iac_ref (hP : AbsProg p) (ctx isP : Word) (c : NestCtx) (b : Bool) (hb :
     (fun y hy => hws y (List.mem_cons_of_mem _ hy)) (ConRon.Bridge.denoteFEnv_mono k3.core.ext hfe)
   exact RefE.lastE (fun _ => iacE.k_check_abs_ctor_sorts.none ..)
     (fun _ => iacE.k_check_abs_ctor_sorts.arm1 ..) id ih' fun _ _ _ _ hR => ⟨hR.stage, k3.grow.trans hR.grow, hR.abs, k3.core.trans hR.core⟩
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 include hq henv hOpf hLC hLT hApd in
 /-- **`check_abs_ctor_sorts` refines `checkAbsCtorSorts`** under `StageC` (the denotations as
 con-ron's `checkAbsCtorSorts_specF` asks): the context decoded below the tops with its holes'
@@ -279,7 +283,9 @@ theorem checkAbsCtorSorts_refinesC (hP : AbsProg p) (n : Nat) (hn : n ≤ 2 ^ 62
   rintro r s' ⟨hl, u, a', hrun, hR⟩
   obtain ⟨hok, hst, -⟩ := AM.of_run_ok _ _ _ _ hrun
   exact ⟨hl, hok, by rw [hst]; exact hR.stage, hR.grow, hR.abs⟩
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 include hq henv hOpf hLC hLT hApd in
 /-- **`check_abs_ctor_sorts_all` refines `checkAbsCtorSortsAll`, both outcomes** under `StageC`
 (twin side: con-ron's `checkAbsCtorSortsAll_specF`'s proof; induction on the fuel): every member
@@ -347,7 +353,9 @@ theorem iaa_ref (hP : AbsProg p) (ctx isP : Word) (c : NestCtx) (b : Bool) (hb :
   exact RefE.lastE (fun _ => iaaE.k_check_abs_ctor_sorts_all.none ..)
     (fun _ => iaaE.k_check_abs_ctor_sorts_all.arm1 ..) id ih' fun _ _ _ _ hR =>
     ⟨hR.stage, hR1.grow.trans hR.grow, hR.abs, hR1.core.trans hR.core⟩
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 include hq henv hOpf hLC hLT hApd in
 /-- **`check_abs_ctor_sorts_all` refines `checkAbsCtorSortsAll`** under `StageC` (the denotations
 as con-ron's `checkAbsCtorSortsAll_specF` asks): every member's constructors and normal forms as
@@ -377,6 +385,7 @@ theorem checkAbsCtorSortsAll_refinesC (hP : AbsProg p) (n : Nat) (hn : n ≤ 2 ^
   rintro r s' ⟨hl, u, a', hrun, hR⟩
   obtain ⟨hok, hst, -⟩ := AM.of_run_ok _ _ _ _ hrun
   exact ⟨hl, hok, by rw [hst]; exact hR.stage, hR.grow, hR.abs⟩
+-/
 
 end sims
 

@@ -51,6 +51,7 @@ structure NitPost (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
   pos : PosMR m'
   abs : AbsOK m'
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`nest_inst_type` refines `nestInstType`, both outcomes**, under `StageC`: `nest_inst_type_ty`
 (`nty_ref`), `pi_binders`, `e_view` and `nest_occ_any` (lifted), the level comparison (`lef_ref`,
 under `StageC` with the context's and key's denotations). -/
@@ -154,5 +155,6 @@ theorem nit_ref {p : Prog} (L : NitLook p) (hcl : CoreStageClosed p) (hIlpf : Il
   obtain ⟨hC4, hA4, -⟩ := hRp.stageC env hC3 hA3
   exact RefE.ret rfl ⟨hC4.stage, (hg12.trans hg3).trans hRp.grow, (decHL_length _ hdecbs).symm, htyH, htyd,
     hP3.fr hRp.mfr, hA4⟩
+-/
 
 end L.Ind

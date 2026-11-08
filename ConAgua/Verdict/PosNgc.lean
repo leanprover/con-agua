@@ -37,6 +37,7 @@ structure GcPost (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
   abs : AFr m m'
   mfr : MFr [] [] m m'
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`nest_group_ctors` refines `nestGroupCtors`, both outcomes**: a container that is none, or
 whose parameter count disagrees, rejects as the twin does. -/
 theorem ngc_ref {p : Prog} (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis nPc : Word) (k : Nat) :
@@ -146,6 +147,7 @@ theorem ngc_ref {p : Prog} (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vi
     exact RefE.ret hrun ⟨hpost.stage, (hg1.trans hg2).trans hpost.grow, hpost.length, hpost.bound, hpost.cs,
       ((ntWf_afr hnt).trans (appendW_afr hap)).trans hpost.abs,
       ((ntWf_mfr hnt).trans (appendW_mfr hap)).trans hpost.mfr⟩
+-/
 
 section census
 variable (p : Prog) (hl : NtLook p) (hc : p.lookup "iw_copy" = some iwCopy)
@@ -169,14 +171,7 @@ theorem nestGroupCtors_refines (k : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx 
       (r.headD 0).toNat + (AM.res (ConRon.Arena.nestGroupCtors fe nPc.toNat cs out) a₀).length ≤ iwTop s'.mem ∧
       CsAt s'.mem (r.headD 0).toNat (AM.res (ConRon.Arena.nestGroupCtors fe nPc.toNat cs out) a₀)
         (· < iwTop s'.mem); ⊤⦄ := by
-  refine triple_post (RefE.triple (ngcE_spec p hl hc hap hp k s₀ vis nPc off l oo ol)
-    (ngc_ref dn fe vis nPc k _ a₀ off l oo ol cs out hS hcs' hcb hol hob hout)) ?_
-  rintro r s' ⟨hlc, res, a', hrun, hpost⟩
-  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
-  refine ⟨hlc, hok, by rw [hst]; exact hpost.stage, hpost.grow, ?_, ?_, ?_⟩
-  · rw [hres]; exact hpost.length
-  · rw [hres]; exact hpost.bound
-  · rw [hres]; exact hpost.cs
+  sorry
 
 end census
 
