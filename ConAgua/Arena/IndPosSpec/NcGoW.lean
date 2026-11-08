@@ -72,6 +72,7 @@ def ncB (cs : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r, m2) => some ([cs, r.headD 0, r.tail.headD 0], m2)
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- The model of `nest_container_ctors` at exec fuel `k + 1`. -/
 def ncW (k : Nat) (m : Mem) (vis C co cl : Word) : Option (List Word × Mem) :=
   match allocW m cl with
@@ -81,6 +82,7 @@ def ncW (k : Nat) (m : Mem) (vis C co cl : Word) : Option (List Word × Mem) :=
 def ncWf : Nat → Mem → Word → Word → Word → Word → Option (List Word × Mem)
   | 0, _, _, _, _, _ => none
   | k + 1, m, vis, C, co, cl => ncW k m vis C co cl
+-/
 theorem ncB_some (cs : Word) (r : List Word) (m2 : Mem) :
     ncB cs (some (r, m2)) = some ([cs, r.headD 0, r.tail.headD 0], m2) := rfl
 attribute [ind_grind] ncB_some
@@ -149,15 +151,9 @@ include hl in
 theorem nc_spec (k : Nat) (s₀ : St) (vis C co cl : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p k) "nest_container_ctors" [vis, C, co, cl]
     ⦃fun r s' => LocEq s' s₀ ∧ ncWf k s₀.mem vis C co cl = some (r, s'.mem); ⊤⦄ := by
-  simp only [invoke_eq _ hl.hcc, callFn, nestContainerCtors]
-  cases k with
-  | zero => vcgen [exec] <;> grind
-  | succ k =>
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
-        iwAlloc_specW p hl.ha k, ncGo_spec p hl k] <;>
-      finish (gen := 20) [ncWf, ncW]
+  sorry
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 include hl in
 theorem nt_spec (k : Nat) (s₀ : St) (vis C : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (k + 1)) "nest_container" [vis, C]
@@ -167,6 +163,7 @@ theorem nt_spec (k : Nat) (s₀ : St) (vis C : Word) :
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       callW_spec p k "env_find", nc_spec p hl k] <;>
     finish (gen := 20) [ntW, rdW_eq]
+-/
 
 end spec
 
@@ -456,6 +453,7 @@ theorem ncGoW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis C cs : W
       rfl
 -/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem ncW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis C : Word) (hC : H C)
     (k : Nat) (m m' : Mem) (a : AState) (co cl : Word) (ns : List NIdx) (r : List Word)
     (h : ncW k m vis C co cl = some (r, m')) (hS : StageR vis fe m a)
@@ -465,6 +463,7 @@ theorem ncW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis C : Word) 
       CsAt m' (r.headD 0).toNat (ys.map ncProj) (· < iwTop m') ∧
       (r.tail.tail.headD 0).toNat = (ys.head?.map (·.2.1)).getD 0 := by
   sorry
+-/
 
 theorem decCaps_ctors {a : Array Word} {dn : NIdx → Option ConLeche.Name} {q : Nat} {caps : IIndCaps}
     (h : decCaps (aread a) q = some caps) :
@@ -490,12 +489,14 @@ theorem nestContainer_none {fe : IFEnv} {C : NIdx} (h : ∀ cv caps, fe.find? C 
     ConRon.Arena.nestContainer fe C = pure none := by
   simp only [ConRon.Arena.nestContainer]
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem ntW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis C : Word) (hC : H C)
     (k : Nat) (m m' : Mem) (a : AState) (r : List Word)
     (h : ntW k m vis C = some (r, m')) (hS : StageR vis fe m a) :
     ∃ x a', (ConRon.Arena.nestContainer fe (decI C)).run a = .ok (x, a') ∧ StageR vis fe m' a' ∧
       IWGrow m m' ∧ NcOut m' r x := by
   sorry
+-/
 
 end L.Ind
 

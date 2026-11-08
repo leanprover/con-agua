@@ -39,21 +39,15 @@ structure TabsProg (p : Prog) : Prop where
   hgo : p.lookup "has_loose_b_var_b_go" = some hasLooseBVarBGoL
   hbp : BvbProg p
   hst : StripProg p
-  hsg : p.lookup "struct_used_later_go" = some structUsedLaterGoL
-  hul : p.lookup "struct_used_later_list" = some structUsedLaterListL
   hgd : p.lookup "sl_getd" = some slGetD
   hmf : p.lookup "max_find" = some maxFind
   hmp : p.lookup "max_push" = some maxPush
   him : p.lookup "intern_max" = some internMax
-  hcol : p.lookup "struct_proj_guards_col" = some structProjGuardsColL
-  hrow : p.lookup "struct_proj_guards_row" = some structProjGuardsRowL
   hpw : p.lookup "pin_word" = some pinWordL
   hcl : p.lookup "hb_clear" = some (memoClearG hbSch)
-  hspg : p.lookup "struct_proj_guards" = some structProjGuardsL
   erCopy : p.lookup "er_copy" = some erCopy
   erToIw : p.lookup "er_to_iw" = some erToIw
   lps : p.lookup "block_shape_lps" = some blockShapeLps
-  one : p.lookup "check_block_tables_one" = some checkBlockTablesOne
   tabs : p.lookup "check_block_tables" = some checkBlockTables
 
 end L.Ind

@@ -26,6 +26,7 @@ section census
 variable (p : Prog) (L : RxLook p) (hp : p.lookup "nest_ctor_nf" = some nestCtorNfL)
 include L hp
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`nest_ctor_nf` refines `nestCtorNf`** (through `mk_app_n`'s stub in the hole images). -/
 @[refines ConRon.Arena.nestCtorNf]
 theorem nestCtorNf_refines (k : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv)
@@ -48,6 +49,7 @@ theorem nestCtorNf_refines (k : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → 
     M G g hm hS hc hin hs hb hus hds hdsb hcl hcv hR
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
   exact ⟨hl, hok, by rw [hres]; exact hdec.get (decNCN_mono _), hb5, by rw [hst]; exact hpost⟩
+-/
 
 end census
 
