@@ -157,7 +157,7 @@ def natLitSupportedL : FunDecl :=
 
 /-- `nat_lit_stored(vis)`: `Nat`, `Nat.zero`, `Nat.succ` are all stored (presence only: what they are
 is the declarations' own check, `lit_shape_ok`); the three names pinned before the conjunction. -/
--- con-ron: ConRon/Arena/Core.lean:533-544 ConRon.Arena.natLitStored
+-- con-ron: ConRon/Arena/Core.lean:533-543 ConRon.Arena.natLitStored
 @[no_expose, l_impl ConRon.Arena.natLitStored]
 def natLitStoredL : FunDecl := lfn (vis) locals (nt, nz, ns, f, p, f2, p2, f3, p3) {
   nt := call pin_at(1);

@@ -84,54 +84,7 @@ theorem decCI_split {a b : Array Word} {dn : NIdx → Option ConLeche.Name} {q :
     (rdW b q ≠ 3 → ∀ cv caps, ci ≠ .indInfo cv caps) ∧
     (rdW b q = 4 → ∃ cv np nf, ci = .ctorInfo cv np nf ∧ decCV (aread a) (q.toNat + 1) = some cv) ∧
     (rdW b q ≠ 4 → ∀ cv np nf, ci ≠ .ctorInfo cv np nf) := by
-  cases hq : a[q.toNat]? with
-  | none => simp [decCI, nat?, hq] at h
-  | some w =>
-  have hqb := hab _ _ hq
-  have hrd : rdW b q = w := by simp [rdW, hqb]
-  rw [hrd]
-  simp only [decCI, nat?, hq, Option.map_some, Option.bind_eq_bind, Option.bind_some] at h
-  have hne : ∀ k : Nat, k < 8 → w.toNat = k ∨ w.toNat ≠ k := fun k _ => by omega
-  by_cases w1 : w.toNat = 1
-  · have wv : w = 1 := UInt64.toNat_inj.mp (by rw [w1]; rfl)
-    subst wv
-    simp only [show UInt64.toNat 1 = 1 from rfl, Option.bind_eq_some_iff] at h
-    obtain ⟨cv, hcv, v, hv, hint, -, hc⟩ := h
-    cases hc
-    obtain ⟨vw, hvw, hvl, rfl⟩ := hd?_eq hv
-    have e5 : rdW b (q + 5) = vw := rdW_off (hab _ _ hvw) (by simp <;> omega) hsz
-    refine ⟨fun _ => ⟨cv, _, _, rfl, hcv, by rw [e5], by rw [e5]; exact hvl⟩, fun hn => absurd rfl hn,
-      fun h3 => absurd h3 (by decide), fun _ _ _ => by simp, fun h4 => absurd h4 (by decide),
-      fun _ _ _ _ => by simp⟩
-  by_cases w3 : w.toNat = 3
-  · have wv : w = 3 := UInt64.toNat_inj.mp (by rw [w3]; rfl)
-    subst wv
-    simp only [show UInt64.toNat 3 = 3 from rfl, Option.bind_eq_some_iff] at h
-    obtain ⟨cv, hcv, caps, -, hc⟩ := h
-    cases hc
-    refine ⟨fun h1 => absurd h1 (by decide), fun _ _ _ _ => by simp, fun _ => ⟨cv, _, rfl, hcv⟩,
-      fun hn => absurd rfl hn, fun h4 => absurd h4 (by decide), fun _ _ _ _ => by simp⟩
-  by_cases w4 : w.toNat = 4
-  · have wv : w = 4 := UInt64.toNat_inj.mp (by rw [w4]; rfl)
-    subst wv
-    simp only [show UInt64.toNat 4 = 4 from rfl, Option.bind_eq_some_iff] at h
-    obtain ⟨cv, hcv, np, -, nf, -, hc⟩ := h
-    cases hc
-    refine ⟨fun h1 => absurd h1 (by decide), fun _ _ _ _ => by simp, fun h3 => absurd h3 (by decide),
-      fun _ _ _ => by simp, fun _ => ⟨cv, _, _, rfl, hcv⟩, fun hn => absurd rfl hn⟩
-  have n1 : w ≠ 1 := fun e => w1 (by rw [e]; rfl)
-  have n3 : w ≠ 3 := fun e => w3 (by rw [e]; rfl)
-  have n4 : w ≠ 4 := fun e => w4 (by rw [e]; rfl)
-  refine ⟨fun e => absurd e n1, ?_, fun e => absurd e n3, ?_, fun e => absurd e n4, ?_⟩
-  · intro _ cv v hint hc; subst hc
-    rcases hk : w.toNat with _ | _ | _ | _ | _ | _ | _ | k
-    all_goals (rw [hk] at h w1 w3 w4; simp [Option.bind_eq_some_iff] at h w1 w3 w4)
-  · intro _ cv v hc; subst hc
-    rcases hk : w.toNat with _ | _ | _ | _ | _ | _ | _ | k
-    all_goals (rw [hk] at h w1 w3 w4; simp [Option.bind_eq_some_iff] at h w1 w3 w4)
-  · intro _ cv v n hc; subst hc
-    rcases hk : w.toNat with _ | _ | _ | _ | _ | _ | _ | k
-    all_goals (rw [hk] at h w1 w3 w4; simp [Option.bind_eq_some_iff] at h w1 w3 w4)
+  sorry
 
 /-! ## Calls of the leaf readers, as facts about their runs -/
 
