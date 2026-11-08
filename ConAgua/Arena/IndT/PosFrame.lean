@@ -57,6 +57,7 @@ def nestFrameRest (mode : ConLeche.CheckMode) (fe : IFEnv) (ctx : NestCtx) (fuel
   pure ns2
 -/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem nestFrame_run {mode : ConLeche.CheckMode} {fe : IFEnv} {ctx : NestCtx} {fuel : Nat}
     {prog : List NestHole} {hi : Nat} {us : LsIdx} {ds : List EIdx} {nPc : Nat}
     {grp : List (NIdx × EIdx)} {ns : NestState} {hn : NIdx} {a a1 : AState}
@@ -64,6 +65,7 @@ theorem nestFrame_run {mode : ConLeche.CheckMode} {fe : IFEnv} {ctx : NestCtx} {
     (ConRon.Arena.nestFrame mode fe ctx fuel prog hi us ds nPc grp ns).run a =
       (nestFrameRest mode fe ctx fuel prog hi us ds nPc grp ns hn).run a1 := by
   sorry
+-/
 
 section steps
 variable {p : Prog} (hq : KnotStageProg p) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
