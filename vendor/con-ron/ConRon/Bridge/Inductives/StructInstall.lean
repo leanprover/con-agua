@@ -239,13 +239,13 @@ theorem checkStructProjTable_run (fe : IFEnv) (env : Env)
     bodies.toList bodiesP.toList s₁ s₃ sc (hread.mono p1.ok p1.ext p1.pins)
     (denoteNListE_ext p1.ext _ _ hlps) hbl k3
   obtain ⟨hg1, z4⟩ := AM.dunless_ok hnever z3
-  replace z4 := AM.pure_bind_ok z4
+  try replace z4 := AM.pure_bind_ok z4  -- con-agua patch: no `pure () >>=` left by the new `do` elaborator
   have hread₃ : ReadOK env fe s₃ := hread.mono p3.ok (p1.ext.trans p3.ext) (by rw [p3.pins, p1.pins])
   have x05 : Ext s₀.store s₃.store := p1.ext.trans p3.ext
   have hT₃ : denoteN s₃.store.ns T = some TP := denoteN_ext hT x05
   -- the structure is stored, and its table is not taken
   obtain ⟨hg2, z5⟩ := AM.dunless_ok hnever z4
-  replace z5 := AM.pure_bind_ok z5
+  try replace z5 := AM.pure_bind_ok z5  -- con-agua patch: no `pure () >>=` left by the new `do` elaborator
   obtain ⟨hg3, z6⟩ := AM.dunless_ok (AM.Never.fail _) z5
   obtain ⟨rfl, rfl⟩ := AM.pure_ok z6
   have hg2' : (env.find? TP).isSome = true := by

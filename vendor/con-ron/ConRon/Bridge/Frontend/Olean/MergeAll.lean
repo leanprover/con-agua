@@ -560,7 +560,7 @@ theorem mergeAll_run {pk : OleanPins} {s : AState} (hok : StateOK s) (hnu : Null
       have hcsR := listRel_of_mapM hdl.constants
       dsimp only at hrun
       obtain ⟨c, t₁, hin, hrest⟩ := AM.bind_ok hrun
-      simp only [pure_bind] at hrest
+      try simp only [pure_bind] at hrest  -- con-agua patch: no `pure () >>=` left by the new `do` elaborator
       obtain ⟨hv, hs⟩ := AM.pure_ok hrest
       have hJ := forIn'_range_inv (I := fun i (b : Merged) u => s = u ∧ b.ls = ls ∧ ∃ mgD,
           (lsC[m].constants.toList.take i).foldlM ConLeche.Frontend.Olean.mergeEntry mgC = .ok mgD ∧
@@ -569,7 +569,7 @@ theorem mergeAll_run {pk : OleanPins} {s : AState} (hok : StateOK s) (hnu : Null
           obtain ⟨hu, hbl', mgD, hf, hrd⟩ := hJ
           subst hu
           obtain ⟨b2, u₁, h1, h2⟩ := AM.bind_ok hrun2
-          simp only [pure_bind] at h2
+          try simp only [pure_bind] at h2  -- con-agua patch: no `pure () >>=` left by the new `do` elaborator
           obtain ⟨hv2, hs2⟩ := AM.pure_ok h2
           have hil : i < ls[m].constants.toList.length := by simpa using hi.2.1
           obtain ⟨hic, hdc⟩ := listRel_get hcsR hil
