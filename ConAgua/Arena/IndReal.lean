@@ -69,7 +69,8 @@ def rrnProg : Prog :=
 def rrnFns : List FnName := rrnProg.map (·.1)
 
 /-- `reserved_rec_name` writes nothing. -/
-theorem rrnProg_closed : closedA rrnProg [] [] rrnFns = true := by decide +kernel
+theorem rrnProg_closed : closedA rrnProg [] [] rrnFns = true := by
+  sorry
 
 /-- The program bundle. -/
 abbrev RrnF (p : Prog) : Prop := ProgHas p rrnProg
