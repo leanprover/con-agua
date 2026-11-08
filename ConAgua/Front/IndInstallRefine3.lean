@@ -27,11 +27,12 @@ namespace L.Front.Ind
 
 /-! ## A rule's words -/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- `parse_rule_d`'s eleven words decode as the rule. -/
 theorem ruleM_dec (m : Mem) (q n nf e : Word) (hs : q.toNat + 11 ≤ (m.arr64 DLP).size) (hq : q.toNat + 11 < 2 ^ 64)
     (hn : n.toNat < 2 ^ 32) (he : e.toNat < 2 ^ 32) (P : Array Word)
     (h : ∀ k, k < 11 → P[q.toNat + k]? = some (wd (ruleM m q n nf e) DLP (q.toNat + k))) :
-    decRule P q.toNat = some ⟨decI n, nf.toNat, 0, .plain, decI e, false, false⟩ := by
+    decRule (aread P) q.toNat = some ⟨decI n, nf.toNat, 0, .plain, decI e, false, false⟩ := by
   have h0 := h 0 (by decide)
   simp only [Nat.add_zero] at h0
   have v0 : wd (ruleM m q n nf e) DLP q.toNat = n := by
@@ -78,6 +79,7 @@ theorem ruleM_dec (m : Mem) (q n nf e : Word) (hs : q.toNat + 11 ≤ (m.arr64 DL
     unfold ruleM; rw [wd_set_eq _ DLP (q + 10) _ (q.toNat + 10) (by rw [widx2 q 10 (by simp; omega)]; rfl)]; simp only [size_set64]; omega
   rw [v10] at h10
   simp [decRule, bool?, hd?, nat?, hlist?, h0, h1, h2, h3, h4, h5, h6, h7, h8, h9, h10, hn, he]
+-/
 
 /-- `parse_rule_d` writes only its eleven words. -/
 theorem ruleM_out (m : Mem) (q n nf e : Word) (hq : q.toNat + 11 < 2 ^ 64) (j : Nat)
@@ -111,6 +113,7 @@ theorem w_addmul (lo j : Word) (c : Nat) (hc : c < 2 ^ 32) (h : lo.toNat + c * j
   rw [UInt64.toNat_add, UInt64.toNat_mul, hc', Nat.mod_eq_of_lt (a := c * j.toNat) (by omega)]
   omega
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`parse_rule_d` against `parseRuleD`.** -/
 @[refines ConRon.Arena.Frontend.parseRuleD]
 theorem ruleW_twin {m m' : Mem} {st : StateD} (a : AState) (hD : LkR m st) {q rp : Word} {ru : RuleRec}
@@ -120,7 +123,7 @@ theorem ruleW_twin {m m' : Mem} {st : StateD} (a : AState) (hD : LkR m st) {q rp
     (ConRon.Arena.Frontend.parseRuleD st ru).run a = .ok (resOf (ConRon.Arena.Frontend.parseRuleD st ru) a, a) ∧ MemFrame [DLP] [] m m' ∧
       (∀ j, (j < q.toNat ∨ q.toNat + 11 ≤ j) → wd m' DLP j = wd m DLP j) ∧
       (∀ P : Array Word, (∀ k, k < 11 → P[q.toNat + k]? = some (wd m' DLP (q.toNat + k))) →
-        decRule P q.toNat = some (resOf (ConRon.Arena.Frontend.parseRuleD st ru) a)) := by
+        decRule (aread P) q.toNat = some (resOf (ConRon.Arena.Frontend.parseRuleD st ru) a)) := by
   obtain ⟨n0, f0, e0⟩ := hR
   unfold ruleW at h
   have r0 : rdW (m.arr64 IFL) rp = wd m IFL rp.toNat := rfl
@@ -142,6 +145,7 @@ theorem ruleW_twin {m m' : Mem} {st : StateD} (a : AState) (hD : LkR m st) {q rp
   rw [resOf_eq hrun]
   refine ⟨hrun, ruleM_frame _ _ _ _ _, fun j hj => ruleM_out _ _ _ _ _ hq j hj, fun P hP => ?_⟩
   rw [ruleM_dec m q _ _ _ hs hq n2 y2 P hP, f0.1, decE_eq]
+-/
 
 /-- **`ind_rules_go`**: the rules from the `j`-th on. -/
 theorem rulesGoW_twin {st : StateD} (a : AState) {lo o l : Word} {rules : List RuleRec}
@@ -155,7 +159,7 @@ theorem rulesGoW_twin {st : StateD} (a : AState) {lo o l : Word} {rules : List R
       ∀ k (hk : k < rules.length), j.toNat ≤ k →
         (ConRon.Arena.Frontend.parseRuleD st rules[k]).run a = .ok (resOf (ConRon.Arena.Frontend.parseRuleD st rules[k]) a, a) ∧
         ∀ P : Array Word, (∀ i, i < 11 → P[lo.toNat + 11 * k + i]? = some (wd m' DLP (lo.toNat + 11 * k + i))) →
-          decRule P (lo.toNat + 11 * k) = some (resOf (ConRon.Arena.Frontend.parseRuleD st rules[k]) a)
+          decRule (aread P) (lo.toNat + 11 * k) = some (resOf (ConRon.Arena.Frontend.parseRuleD st rules[k]) a)
   | 0, _, _, _, _, _, _, _, _, h => by simp [rulesGoW] at h
   | n + 1, m, m', j, hL, hRF, hlo, hlo1, hj, h => by
     have hps := hL.psize
@@ -198,7 +202,7 @@ theorem rulesW_twin {n : Nat} {m m' : Mem} {st : StateD} (a : AState) (hD : LkR 
       PExt m m' ∧ lo.toNat = topN m DLP + 1 ∧ ln = l ∧ topN m' DLP = topN m DLP + 11 * rules.length ∧
       LkR m' st ∧
       ∀ P : Array Word, (∀ i, lo.toNat ≤ i → i < lo.toNat + 11 * rules.length → P[i]? = some (wd m' DLP i)) →
-        decRules P lo.toNat ln.toNat = some (rules.map (fun ru => resOf (ConRon.Arena.Frontend.parseRuleD st ru) a)) := by
+        decRules (aread P) lo.toNat ln.toNat = some (rules.map (fun ru => resOf (ConRon.Arena.Frontend.parseRuleD st ru) a)) := by
   have hps := hD.psize
   have hpt := hD.ptop
   cases n with
@@ -243,12 +247,14 @@ theorem rulesW_twin {n : Nat} {m m' : Mem} {st : StateD} (a : AState) (hD : LkR 
 
 /-! ## The recursor record -/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- The twin's constant of a recursor record (`installIndD`'s `recs`). -/
 def recT (st : StateD) (r : IndRecRec) : AM IConstantInfo := do
   let rules ← r.rules.mapM (ConRon.Arena.Frontend.parseRuleD st)
   pure (IConstantInfo.recInfo (← parseCVD st r.cv)
     (r.numParams + r.numMotives + r.numMinors + r.numIndices)
     (r.numParams + r.numMotives + r.numMinors) rules)
+-/
 
 theorem recTailM_out (m : Mem) (q r lo ln : Word) (hq : q.toNat + 9 < 2 ^ 64) (j : Nat)
     (hj : j < q.toNat + 5 ∨ q.toNat + 9 ≤ j) : wd (recTailM m q r lo ln) DLP j = wd m DLP j := by
@@ -265,6 +271,7 @@ theorem recTailM_frame (m : Mem) (q r lo ln : Word) : MemFrame [DLP] [] m (recTa
   refine MemFrame.trans ?_ (MemFrame.set64 _ DLP (by decide) _ _)
   exact MemFrame.set64 _ DLP (by decide) _ _
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`ind_rec` against the twin's recursor constant.** -/
 theorem recRW_twin {n : Nat} {b : ByteArray} {m m' : Mem} {st : StateD} (a : AState) (hD : LkR m st)
     {r q : Word} {rc : IndRecRec} (hF : RecF b m r.toNat rc) (hr : r.toNat + 11 < 2 ^ 63)
@@ -387,5 +394,6 @@ theorem recRW_twin {n : Nat} {b : ByteArray} {m m' : Mem} {st : StateD} (a : ASt
       rw [Nat.mod_eq_of_lt (by omega)]
     have g7' : P[q1.toNat + 7]? = some lo := g7
     simp [decCI, nat?, g0, gcv, g5, g6, g7', g8, a3, a4, gru]
+-/
 
 end L.Front.Ind

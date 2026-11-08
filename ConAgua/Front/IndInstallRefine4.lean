@@ -51,6 +51,7 @@ theorem instRecsW_eq (b : Array UInt8) (ro : Word) :
   | n + 1, m, bo, rn, j => by
     simp only [instRecsW, instGo, instRecsW_eq b ro n]
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **The install loop against the twin's `mapM`.** `R` at the `k`-th pointer is the twin's `f`
 on the `k`-th element (`hR`, for every memory that only differs from `m₀` in `DLP`). -/
 theorem instGo_twin {α : Type} [Inhabited α] {st : StateD} (a : AState) (xs : List α) (f : α → AM IConstantInfo)
@@ -113,5 +114,6 @@ theorem instGo_twin {α : Type} [Inhabited α] {st : StateD} (a : AState) (xs : 
         exact I4 i (by omega) (by omega) (.inr (by omega))
       · obtain ⟨T1, T2, T3⟩ := I5 k hk (by omega)
         exact ⟨T1, by omega, T3⟩
+-/
 
 end L.Front.Ind
