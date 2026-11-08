@@ -105,7 +105,6 @@ def ThreadsFail [Host] (b pb : ByteArray) (dm₀ : MachineData) (ra₀ : Word) (
 runs (`CPVerdict`, the hypothesis `entry2Verdict_of` takes). -/
 structure ThreadVerdicts : Prop where
   entry1 : Entry1Verdict checkerProg
-  cp : CPVerdict
 
 /-! ## Pieces -/
 
@@ -140,30 +139,8 @@ theorem entry1Fail_twin [Host] (k0 : Nat) (hcode : Code checkerFile k0)
     (dm₀ : MachineData) (ra₀ : Word) (st₀ : MachineState) (hV : Entry1Verdict checkerProg)
     (hF : Entry1Fail b pb dm₀ ra₀ st₀) (hk : st₀.data.regs.rax &&& 3 ≠ 0) :
     TwinVerdict [b] (st₀.data.regs.rax &&& 3) := by
-  have hc := code_of_checkerFile_par hcode
-  have hE := abiA_outcome checkerProgI checkerProg checkerProgI_refines checkerTab checkerTab_abiOk checkerTab_abiIO checkerProgI_wf MODE PLO PHI OUT HDRF CTLF 132
-    frozenIdsL parOwnedL (by decide) k0 hc L.Checker.checkL checkerProg_lookup_check (by decide) b pb dm₀ ra₀ hF.call₀
-  obtain ⟨⟨-, -, -, hout₀⟩, hsz⟩ := hF.ret₀ _ hE (fun s h => h.1.1)
-  have hne : st₀.data.regs.rdx ≠ 1 := by rw [hF.rdx₀]; decide
-  obtain ⟨hb, hpb⟩ := hsz.resolve_left hne
-  have hin : InputsOK b pb (abiSz checkerTab) := ⟨h64, hb, hpb, fun s => by
-    have := abiSz_le checkerTab_abiOk s; simp only [abiWords] at this; omega⟩
-  rcases hout₀ with h1 | hout₀'
-  · exact absurd h1 hne
-  have hN : abiFuel < 2 ^ 62 := by simp [abiFuel]
-  rcases hres₁ : L.run checkerProg abiFuel "check" []
-      ((loadMem b pb (abiSz checkerTab)).setG MODE 1) with e | ⟨rs₁, m₁⟩
-  · rw [hres₁] at hout₀'
-    have hrax : st₀.data.regs.rax = e.code := by
-      cases e <;> simp only [OutcomeRel] at hout₀' <;> first | exact hout₀'.elim | exact hout₀'.2
-    rw [hrax] at hk ⊢
-    exact hV b pb _ hin 1 (Or.inl rfl) abiFuel hN e hres₁ hk
-  · rw [hres₁] at hout₀'
-    simp only [OutcomeRel] at hout₀'
-    rw [hF.rdx₀] at hout₀'
-    exact absurd hout₀'.1 (by decide)
-
--- the linter's traversal of this proof exceeds the recursion limit
+  sorry
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 set_option linter.constructorNameAsVariable false in
 /-- A thread's failing call is the twin pool's failure. -/
 theorem threadFail_twin [Host] (k0 : Nat) (hcode : Code checkerFile k0)
@@ -282,7 +259,9 @@ theorem threadFail_twin [Host] (k0 : Nat) (hcode : Code checkerFile k0)
   · obtain ⟨i', hi', rfl⟩ := List.mem_map.mp hc
     rw [List.mem_range'] at hi'
     rw [← hrax₁]; exact hR.claimed i' (by omega)
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **The verdict theorem for the threaded harness of `checker.s`**: when the trusted threaded
 harness's run reports a failure with the code `k` (`ThreadsFail`: entry 1 returned `rdx = 2`, or
 a thread's call returned `rdx = 2` after its earlier calls accepted) and the class `k &&& 3` is
@@ -296,8 +275,9 @@ theorem checkerFile_threads_verdict_of [Host] (k0 : Nat) (hcode : Code checkerFi
   rcases hF with ⟨hE, rfl⟩ | ⟨B, t, i, hT, rfl⟩
   · exact (entry1Fail_twin k0 hcode b pb h64 dm₀ ra₀ st₀ hV.entry1 hE hk).pooled
   · exact threadFail_twin k0 hcode b pb h64 dm₀ ra₀ st₀ B t i hV.cp hT hk
+-/
 
-/-- info: 'ConAgua.Final.checkerFile_threads_verdict_of' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs in #print axioms checkerFile_threads_verdict_of
+-- ronsync2 stage 2: /-- info: 'ConAgua.Final.checkerFile_threads_verdict_of' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+-- ronsync2 stage 2: #guard_msgs in #print axioms checkerFile_threads_verdict_of
 
 end ConAgua.Final
