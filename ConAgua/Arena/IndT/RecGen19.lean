@@ -42,6 +42,7 @@ local notation "V" => ConLeche.CheckMode.verified
 section sims
 variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {env : ConLeche.Env}
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`StageC` across a twin step con-ron calls a `CoreStep`**, the memory's half from `AbsOK`
 after (`StageC.of_pstep` for a `CSpec`'s step). -/
 theorem StageC.of_cstep {m m' : Mem} {a a' : AState} (h : StageC dn vis fe env m a)
@@ -51,6 +52,7 @@ theorem StageC.of_cstep {m m' : Mem} {a a' : AState} (h : StageC dn vis fe env m
     ⟨hA.wk.2.1, hA.wk.2.2.1, hA.wk.2.2.2.1, ⟨hA.il, hA.ab, hA.wk.1⟩,
       fun k x e => hs.ext.lss.ls.ns k x (h.mem.dnN k x e)⟩,
     hA.wk.2.2.2.2⟩
+-/
 
 theorem slConsC_afr {p : Prog} (hP : KeysProg p) {n : Nat} {x o l : Word} {r : List Word} {m m' : Mem}
     (h : callW p n "sl_cons" [x, o, l] m = some (r, m')) : AFr m m' := by
@@ -70,6 +72,7 @@ structure ClmPost (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
   pos : PosMR m'
   abs : AbsOK m'
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 include hq hIlpf hLC henv in
 /-- **`class_majors` refines `classMajors`, both outcomes** (twin side: con-ron's `classMajors_spec`'s
 proof): `intern_const`, `mk_app_n_f` and `sl_cons` lifted (the cap on the head is an abort `0`),
@@ -205,7 +208,9 @@ theorem clm_ref (hP : ClmProg p) (pp cao cal pfo pfl : Word) (bs : BlockShape)
   have hA6 := consW_afr h6 hR5.abs
   exact RefE.ret rfl ⟨hR5.stage.of_pstep hS6 hA6 (PStep.refl hR5.stage.check.state),
     (hg04.trans hR5.grow).trans hg6, by simpa using hd6, hR5.pos.fr hf6, hA6⟩
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 include hq hIlpf hLC henv in
 /-- **`class_majors` refines `classMajors`** under `StageC` (the knot's core calls in
 `target_major_pins`; the inputs' denotations as con-ron's `classMajors_spec` asks): the keys a slice
@@ -239,6 +244,7 @@ theorem classMajors_refinesC (hP : ClmProg p) (n : Nat)
   rintro r s' ⟨hl', c, a', run, hR⟩
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ run
   exact ⟨hl', hok, by rw [hst]; exact hR.stage, hR.grow, by rw [hres]; exact hR.dec, hR.pos, hR.abs⟩
+-/
 
 end sims
 

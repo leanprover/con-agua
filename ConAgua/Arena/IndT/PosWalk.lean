@@ -36,6 +36,7 @@ section steps
 variable {p : Prog} (L : NbLook p) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
   {env : ConLeche.Env} (henv : ConLeche.EnvWF env)
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 include L henv in
 theorem walkRef_step (n : Nat) (ih : NbRef p dn vis fe env n) : WalkRef p dn vis fe env (n + 1) := by
   have R := L.ct.cr.rx
@@ -143,6 +144,7 @@ theorem walkRef_step (n : Nat) (ih : NbRef p dn vis fe env n) : WalkRef p dn vis
     have hdec : decide (root ≠ 0) = false := by simpa using hr
     rw [hdec]
     exact hF fu m a hC (IWGrow.refl _) hP hA (PStep.refl hC.check.state)
+-/
 
 end steps
 

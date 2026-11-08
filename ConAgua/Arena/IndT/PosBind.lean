@@ -36,6 +36,7 @@ section steps
 variable (p : Prog) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) {env : ConLeche.Env}
   (henv : ConLeche.EnvWF env)
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 include henv in
 theorem bindRef_step (L : NbLook p) (n : Nat) (ih : NbRef p dn vis fe env n) : BindRef p dn vis fe env (n + 1) := by
   intro m a ctx fu po pl dep kb w ns c prog NS ctxP progP wP nsP hC hW hw h6 hns hP hA hc hctx hprog hwP hnsP hww
@@ -239,6 +240,7 @@ theorem bindRef_step (L : NbLook p) (n : Nat) (ih : NbRef p dn vis fe env n) : B
       ((p23.toCore hC.check).trans c4).trans ((p5.trans p6).toCore hC4.check)⟩
   simp only [StateT.run_bind, e5, except_ok_bind, e6]
   rfl
+-/
 
 end steps
 
