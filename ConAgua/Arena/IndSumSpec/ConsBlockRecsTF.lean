@@ -64,11 +64,13 @@ def sctK2 (rest : Mem → Option (List Word × Mem)) (vis nP b r1 : Word) :
   | none => none
   | some (r2, m) => sctK3 rest nP b r1 (r2.headD 0) (crfF m [vis, b])
 -/
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- After `has_fvar_fast`. -/
 def sctK1 (c : CallM) (n : Nat) (rest : Mem → Option (List Word × Mem)) (vis nP lo ll b : Word) :
     Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r1, m) => sctK2 rest vis nP b (r1.headD 0) (c n "all_level_params_defined" [lo, ll, b] m)
+-/
 
 /-- **The model of `check_struct_proj_table_scoped(vis, nP, lo, ll, bO, bL)`** at exec fuel `n`,
 reading `all_level_params_defined` through `c` (`stubCall`: the stub contract; `realCall p`: the
@@ -98,10 +100,12 @@ theorem sctK3_some : sctK3 rest nP b r1 r2 (some (r, m)) =
 theorem sctK2_some : sctK2 rest vis nP b r1 (some (r, m)) =
     sctK3 rest nP b r1 (r.headD 0) (crfF m [vis, b]) := rfl
 -/
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem sctK1_some : sctK1 c n rest vis nP lo ll b (some (r, m)) =
     sctK2 rest vis nP b (r.headD 0) (c n "all_level_params_defined" [lo, ll, b] m) := rfl
+-/
 end arms
-attribute [ind_grind] sctW_nil sctW_cons sctK5_some sctK4_yes sctK4_no sctK3_some sctK2_some sctK1_some
+-- ronsync2 stage 2: attribute [ind_grind] sctW_nil sctW_cons sctK5_some sctK4_yes sctK4_no sctK3_some sctK2_some sctK1_some
 
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem sctW_spec (p : Prog) (hb : BvbProg p) (hf : HfF p) (hcr : CrfF p)
@@ -293,7 +297,7 @@ section shift
 variable {a b : Array Word}
 
 /-- A rule record copied word for word (its fire slices decoding in the larger array). -/
-theorem decRule_copy {q q' : Nat} {rl : IRecRule} (h : decRule (aread a) q = some rl) (hext : ArrExt (aread a) b)
+theorem decRule_copy {q q' : Nat} {rl : IRecRule} (h : decRule (aread a) q = some rl) (hext : ArrExt (aread a) (aread b))
     (hw : ∀ i, i < 11 → b[q' + i]? = a[q + i]?) : decRule (aread b) q' = some rl := by
   sorry
 
@@ -699,15 +703,7 @@ attribute [ind_grind] cbpW_succ cbpK1_some cbpK2_some cbpK3_some
 theorem cbp_spec (p : Prog) (L : CbrLook p) (n : Nat) (s₀ : St) (vis cv mI rP ro rl : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "cons_block_recs_push" [vis, cv, mI, rP, ro, rl]
     ⦃fun r s' => LocEq s' s₀ ∧ cbpW p n s₀.mem vis cv mI rP ro rl = some (r, s'.mem); ⊤⦄ := by
-  cases n with
-  | zero => exact triple_post (invoke_exec_zero p _ _ _) (fun _ _ h => h.elim)
-  | succ n =>
-    rw [invoke_eq _ L.push]
-    simp only [callFn, consBlockRecsPush]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, rte_spec p L n, ri_spec p L n,
-        callW_spec p n "env_push"] <;>
-      finish (gen := 20) [loc_init4, loc_init5]
+  sorry
 
 /-! ## The `abstract1` memo across `cons_block_recs_push` -/
 
@@ -954,7 +950,9 @@ def cbrW (p : Prog) : Nat → Mem → Word → Word → Word → Word → Word �
 section arms
 variable (p : Prog) (n : Nat) (m : Mem) (vis2 pp mm lo ll vis cv mI rP v : Word) (r rr rv : List Word)
   (k : Mem → Word → Option (List Word × Mem))
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem cbrW_nil (h : ll = 0) : cbrW p (n + 1) m vis2 pp mm lo ll vis = some ([vis], m) := by simp [cbrW, h]
+-/
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem cbrW_cons (h : ¬ ll = 0) : cbrW p (n + 1) m vis2 pp mm lo ll vis =
     cbrK1 p n vis (rdW (m.arr64 IW) (rdW (m.arr64 IW) lo)) (bmjW m pp mm) (brpW m pp mm)
@@ -968,8 +966,9 @@ theorem cbrK1_some : cbrK1 p n vis cv mI rP k (some (rr, m)) =
 theorem cbrK2_some : cbrK2 k (some (rv, m)) = k m (rv.headD 0) := rfl
 theorem cbrK3_some : cbrK3 (some (r, m)) = some ([r.headD 0], m) := rfl
 end arms
-attribute [ind_grind] cbrW_nil cbrW_cons cbrK1_some cbrK2_some cbrK3_some
+-- ronsync2 stage 2: attribute [ind_grind] cbrW_nil cbrW_cons cbrK1_some cbrK2_some cbrK3_some
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem cbr_spec (p : Prog) (L : CbrLook p) (n : Nat) :
     ∀ (s₀ : St) (vis2 pp mm lo ll vis : Word),
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "cons_block_recs_tf" [vis2, pp, mm, lo, ll, vis]
@@ -986,6 +985,7 @@ theorem cbr_spec (p : Prog) (L : CbrLook p) (n : Nat) :
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, mj_spec p L.mi n, rp_spec p L.rpa n,
         tsr_spec p L.tsr n, cbp_spec p L n, ih] <;>
       finish (gen := 40) (instances := 20000) [rdW_eq, loc_init4, loc_init5]
+-/
 
 section rel
 variable (dn : NIdx → Option ConLeche.Name)

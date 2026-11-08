@@ -80,6 +80,7 @@ def famT (fe : IFEnv) (cv : IConstantVal) (s1 s2 s3 i1 i2 i3 c2 c3 cvid : Word) 
       if !b3 then pure false else cv.matchesPin (← romCvT cvid.toNat)
 -/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`std_ax_family` refines a family of `stdAxiomOk`** at the model level. -/
 theorem famW_ok {p : Prog} (h : StdProg p) {dn : NIdx → Option ConLeche.Name} {vis : Word}
     {fe : IFEnv} {a : AState} {n : Nat} {m m' : Mem} {q s1 s2 s3 i1 i2 i3 c2 c3 cvid : Word}
@@ -158,7 +159,9 @@ theorem famW_ok {p : Prog} (h : StdProg p) {dn : NIdx → Option ConLeche.Name} 
   refine ⟨_, a7, ?_, hS7, hg, hd8⟩
   simp only [StateT.run_bind, hrun7, exc_ok_bind']
   exact hrun8
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- A family call's run. -/
 theorem fam_call {p : Prog} (h : StdProg2 p) {dn : NIdx → Option ConLeche.Name} {vis : Word}
     {fe : IFEnv} {a : AState} {n : Nat} {m m' : Mem} {q s1 s2 s3 i1 i2 i3 c2 c3 cvid : Word}
@@ -169,6 +172,7 @@ theorem fam_call {p : Prog} (h : StdProg2 p) {dn : NIdx → Option ConLeche.Name
     ∃ b a', (famT fe cv s1 s2 s3 i1 i2 i3 c2 c3 cvid).run a = .ok (b, a') ∧
       StageR vis fe m' a' ∧ IWGrow m m' ∧ decW0B m' r b := by
   sorry
+-/
 
 /-- **`std_axiom_ok(vis, q)` refines `stdAxiomOk`** (through the ROM stubs). -/
 @[refines ConRon.Arena.stdAxiomOk]

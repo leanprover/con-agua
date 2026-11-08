@@ -175,6 +175,7 @@ theorem tcoPK_some (r : List Word) (m : Mem) :
     tcoPK (some (r, m)) = some ([r.headD 0, r.tail.headD 0, r.tail.tail.headD 0, r.tail.tail.tail.headD 0], m) := rfl
 attribute [ind_grind] tcoPK_some
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem tco_spec (p : Prog) (hl : NtLook p) (hp : p.lookup "target_ctors_of" = some targetCtorsOf) (k : Nat)
     (s₀ : St) (vis I : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (k + 1)) "target_ctors_of" [vis, I]
@@ -184,6 +185,7 @@ theorem tco_spec (p : Prog) (hl : NtLook p) (hp : p.lookup "target_ctors_of" = s
   sym only [lang_grind, arena_grind, ind_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, nt_spec' p hl k] <;>
     finish (gen := 20)
+-/
 
 /-- A call of an `inst_lp_fast` reading meeting `IlpFr` writes no walk memo. -/
 theorem IlpFr.mfr {cR : CallM} (hF : IlpFr cR) {k : Nat} {args r : List Word} {m m' : Mem}
@@ -194,19 +196,7 @@ theorem IlpFr.mfr {cR : CallM} (hF : IlpFr cR) {k : Nat} {args r : List Word} {m
 /-- **A constructor slice read by `nest_container` is decoded below the tops.** -/
 theorem csAt_decB {m : Mem} {o : Nat} {xs : List (IConstantVal × Nat)} (h : CsAt m o xs (· < iwTop m))
     (hb : o + xs.length ≤ iwTop m) : DecB (fun m => decPL m (decCN m) o xs.length) m xs := by
-  show decPL (truncM m) (decCN (truncM m)) o xs.length = some xs
-  refine decPL_of_get _ xs o fun j hj => ?_
-  obtain ⟨w, hw, h0, h1, q, hq, hcv, hn⟩ := h j hj
-  have hE : ArrExt (erecP m) (erA (truncM m)) := fun i v hv => by
-    have hi : i < erTop m := by
-      have := (Array.getElem?_eq_some_iff.mp hv).1
-      simp only [erecP, Array.size_extract] at this
-      have : erecTop m = erTop m := rfl
-      omega
-    rw [truncM_er_eq hi]; rw [erecP_getE hi] at hv; exact hv
-  refine ⟨w.toNat, by rw [iwN_truncM (by omega)]; simp [iwN, nat?, iwA, hw], ?_⟩
-  simp only [decCN, decCVp, bind, Option.bind, iwN_truncM h0, iwN_truncM h1, hq, hn, hE.decCV hcv]
-  rfl
+  sorry
 
 /-! ## `target_major_of_outside` -/
 

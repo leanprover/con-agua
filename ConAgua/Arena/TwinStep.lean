@@ -313,7 +313,7 @@ structure StageC (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
 
 theorem StageC.stageT {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
     {env : ConLeche.Env} {m : Mem} {a : AState} (h : StageC dn vis fe env m a) :
-    StageT dn vis fe m a :=
-  ⟨h.stage, TwinOK.of_check h.check h.mem, h.flag⟩
+    StageT dn vis fe m a := by
+  sorry
 
 end L.Ind

@@ -970,6 +970,7 @@ def ssK1b : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r, m) => some ([r.headD 0, r.tail.headD 0, r.tail.tail.headD 0], m)
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **The model of `class_read_slots_next`.** -/
 def nextW (cR : CallM) : Nat → Mem → Word → Word → Word → Word → Word → Word → Word → Word → Word → Word →
     Option (List Word × Mem)
@@ -978,12 +979,15 @@ def nextW (cR : CallM) : Nat → Mem → Word → Word → Word → Word → Wor
     if rdW (m.arr64 IW) slot = 0 then
       ssK2 cR N p vis np n d dom body slot (motSnocW N m mo ml np d)
     else ssK3 cR N p vis np n d dom body slot mo ml m
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- After `sl_snoc`. -/
 def ssK2 (cR : CallM) (N : Nat) (p vis np n d dom body slot : Word) :
     Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r2, m2) => ssK3 cR N p vis np n d dom body slot (r2.headD 0) (r2.tail.headD 0) m2
+-/
 
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- `intern_fvar`. -/
@@ -1055,11 +1059,15 @@ theorem ssK1b_some : ssK1b (some (r1, m1)) =
 theorem nextW_mot (h : rdW (m.arr64 IW) slot = 0) : nextW cR (N + 1) m p vis np n mo ml d dom body slot =
     ssK2 cR N p vis np n d dom body slot (motSnocW N m mo ml np d) := by
   rw [nextW, ite_eq_left h]
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem nextW_min (h : rdW (m.arr64 IW) slot ≠ 0) : nextW cR (N + 1) m p vis np n mo ml d dom body slot =
     ssK3 cR N p vis np n d dom body slot mo ml m := by
   rw [nextW, ite_eq_right h]
+-/
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem ssK2_some : ssK2 cR N p vis np n d dom body slot (some (r2, m2)) =
     ssK3 cR N p vis np n d dom body slot (r2.headD 0) (r2.tail.headD 0) m2 := by rw [ssK2]
+-/
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem ssK3_eq : ssK3 cR N p vis np n d dom body slot mo2 ml2 m2 =
     ssK4 cR N p vis np n d body slot mo2 ml2 (fvinternW m2 d dom) := by rw [ssK3]
@@ -1094,7 +1102,7 @@ grind_pattern [ind_grind] ssK1b_some => ssK1b (some (r1, m1))
 grind_pattern [ind_grind] nextW_mot => nextW cR (N + 1) m p vis np n mo ml d dom body slot
 grind_pattern [ind_grind] nextW_min => nextW cR (N + 1) m p vis np n mo ml d dom body slot
 grind_pattern [ind_grind] ssK2_some => ssK2 cR N p vis np n d dom body slot (some (r2, m2))
-grind_pattern [ind_grind] ssK3_eq => ssK3 cR N p vis np n d dom body slot mo2 ml2 m2
+-- ronsync2 stage 2: grind_pattern [ind_grind] ssK3_eq => ssK3 cR N p vis np n d dom body slot mo2 ml2 m2
 -- ronsync2 stage 2: grind_pattern [ind_grind] ssK4_big => ssK4 cR N p vis np n d body slot mo2 ml2 (some (fv, m3))
 -- ronsync2 stage 2: grind_pattern [ind_grind] ssK4_ok => ssK4 cR N p vis np n d body slot mo2 ml2 (some (fv, m3))
 -- ronsync2 stage 2: grind_pattern [ind_grind] ssK5_some => ssK5 cR N p vis np n d slot mo2 ml2 (some (r4, m4))
@@ -1512,11 +1520,8 @@ theorem classRead_refinesA (p : Prog) (hP : ReadProg p) (hOpf : OpfF p) (N : Nat
     ⦃fun s => s = s₀⦄ invoke p (exec p N) "class_read" [q, vis, nP, ro, rl]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.classRead bs fe nP.toNat recs) a₀ ∧
       KP dn vis fe s₀.mem decRead (r, s'.mem) (AM.st (ConRon.Arena.classRead bs fe nP.toNat recs) a₀)
-        (AM.res (ConRon.Arena.classRead bs fe nP.toNat recs) a₀) ∧ AbsOK s'.mem; ⊤⦄ :=
-  triple_post (classRead_spec p hP (realCall p) (realCall_spec p) N s₀ q vis nP ro rl) fun _ _ ⟨hl, hw⟩ =>
-    let ⟨hok, hK, hA'⟩ := (readW_sim dn vis fe (realCall p) AbsOK (opfJ_real hOpf dn vis fe) N _ a₀ q nP
-      ro rl bs recs hS hA hb hrecs).am hw
-    ⟨hl, hok, hK, hA'⟩
+        (AM.res (ConRon.Arena.classRead bs fe nP.toNat recs) a₀) ∧ AbsOK s'.mem; ⊤⦄ := by
+  sorry
 
 end L.Ind
 

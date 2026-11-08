@@ -83,6 +83,7 @@ theorem tteW_afr {n : Nat} {m m' : Mem} {bso bsl teo tel : Word} {r : List Word}
   simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨-, rfl⟩ := h
   exact (eeW_afr n h1).trans (eeW_afr n h2)
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- The telescope check is a twin step con-ron calls a `CoreStep` (two `eraseAll_spec` runs). -/
 theorem tkTele_cstep {fe : IFEnv} {env : ConLeche.Env} {teleW tele : List EIdx}
     {twP tP : List ConLeche.Expr} {s₀ s' : AState}
@@ -100,6 +101,7 @@ theorem tkTele_cstep {fe : IFEnv} {env : ConLeche.Env} {teleW tele : List EIdx}
     ⟨trivial, denoteEList_ext q1.ext _ _ ht⟩ k2
   obtain ⟨-, rfl⟩ := ConRon.Bridge.AM.pure_ok z2
   exact q1.trans q2
+-/
 
 
 end L.Ind
