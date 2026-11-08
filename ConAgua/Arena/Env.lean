@@ -878,6 +878,55 @@ theorem tblOwnSet_spec (hp : p.lookup "tbl_own_set" = some tblOwnSetL) (n : Nat)
     all_goals simp_all [LocEq, Sig.retVal, Sig.retOr, tblSet, otxArrT_0, otxArrT_1, otxArrT_2,
       rowTag_of, ixW, Mem.arr64_set64_same, Array.size_set!]
 
+/-- What `env_find(w, vis)` returns. -/
+def findRes (m : Mem) (vis w : Word) : List Word :=
+  if ownHit m vis w then [1, (ownRaw m w).2] else if baseHit m w then [1, (baseRow m w).2] else [0, 0]
+
+/-- What `raw_table(t)` returns. -/
+def rawRes (m : Mem) (t : Word) : Word :=
+  if ownTbl m t ≠ 0 then ownTbl m t else if baseTblHit m t then (baseTbl m t).2 + 1 else 0
+
+/-- What `find_table(vis, t)` returns. -/
+def findTblRes (m : Mem) (vis t : Word) : Word :=
+  if (findRes m vis t).headD 0 = 0 then 0 else rawRes m t
+
+theorem envFind_spec (hg : p.lookup "env_row_get" = some envRowGetL)
+    (hb : p.lookup "base_row_get" = some baseRowGetL) (hp : p.lookup "env_find" = some envFindL)
+    (n : Nat) (s₀ : St) (vis w : Word) :
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p n) "env_find" [w, vis]
+    ⦃fun r s' => s'.mem = s₀.mem ∧ LocEq s' s₀ ∧ r = findRes s₀.mem vis w; ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, envFindL]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    vcgen [exec, step, L.evalC_spec, L.evalE_spec, evalArgs, setLoc, setLocs,
+      envRowGet_spec p hg n, baseRowGet_spec p hb n]
+    all_goals simp only [Cond.pval, Expr.pval, St.setLoc_loc, St.setLoc_mem, St.setLocs_cons,
+      St.setLocs_nil, Locals.init, List.getD_cons_zero, List.getD_cons_succ, List.getD_nil,
+      Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval, rd64_rdWC, beq_iff_eq,
+      bne_iff_ne, ne_eq] at *
+    all_goals subst_vars
+    all_goals (simp_all [LocEq, Sig.retVal, Sig.retOr, findRes, ownHit, baseHit, ctl_t0, Locals.init,
+      List.getD_cons_zero, List.getD_cons_succ, UInt64.lt_iff_toNat_lt, UInt64.le_iff_toNat_le] <;>
+      first | omega | (split <;> (try split) <;> first | omega | rfl))
+
+/-- `find?` from `env_find`'s result. -/
+theorem EnvR.find_res {m : Mem} {vis : Word} {fe : IFEnv} (hE : EnvR m vis fe) {w : Word}
+    (hw : w.toNat < 2 ^ 32) :
+    fe.find? (decI w) = envFound m ((findRes m vis w).headD 0) ((findRes m vis w).tail.headD 0) ∧
+      ((findRes m vis w).headD 0 ≠ 0 →
+        ∃ ci, decCI (erecP m) ((findRes m vis w).tail.headD 0).toNat = some ci) := by
+  have key := hE.find_eq hw
+  have kd := hE.hit_dec hw
+  unfold findRes
+  by_cases h1 : ownHit m vis w
+  · simp [h1, key, envFound, kd.1 h1]
+  · by_cases h2 : baseHit m w
+    · simp [h1, h2, key, envFound, kd.2 h2]
+    · simp [h1, h2, key, envFound]
+
 /-- **`env_find` refines `IFEnv.find?`**: the result decodes to the twin's lookup, and a found
 record decodes. -/
 @[refines ConRon.Arena.IFEnv.find?]
@@ -889,51 +938,16 @@ theorem envFind_refines (hg : p.lookup "env_row_get" = some envRowGetL)
     invoke p (exec p n) "env_find" [w, vis]
     ⦃fun r s' => s'.mem = s₀.mem ∧ LocEq s' s₀ ∧
       fe.find? (decI w) = envFound s₀.mem (r.headD 0) (r.tail.headD 0) ∧
-      (r.headD 0 ≠ 0 → ∃ ci, decCI (erecP s₀.mem) (r.tail.headD 0).toNat = some ci); ⊤⦄ := by
-  have key := hE.find_eq hw
-  have kd := hE.hit_dec hw
-  rw [invoke_eq _ hp]
-  simp only [callFn, envFindL]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    vcgen [exec, step, L.evalC_spec, L.evalE_spec, evalArgs, setLoc, setLocs,
-      envRowGet_spec p hg n, baseRowGet_spec p hb n]
-    all_goals simp only [Cond.pval, Expr.pval, St.setLoc_loc, St.setLoc_mem, St.setLocs_cons,
-      St.setLocs_nil, Locals.init, List.getD_cons_zero, List.getD_cons_succ, List.getD_nil,
-      Locals.init_cons_zero,
-      Locals.init_cons_succ, Cmp.eval, BinOp.eval, rd64_rdWC, beq_iff_eq, bne_iff_ne, ne_eq] at *
-    all_goals subst_vars
-    all_goals (simp_all [LocEq, Sig.retVal, Sig.retOr, envFound, ownHit, baseHit, ctl_t0, Locals.init,
-      List.getD_cons_zero, List.getD_cons_succ, UInt64.lt_iff_toNat_lt, UInt64.le_iff_toNat_le] <;>
-      first | omega | (split <;> (try split) <;> first | omega | rfl))
+      (r.headD 0 ≠ 0 → ∃ ci, decCI (erecP s₀.mem) (r.tail.headD 0).toNat = some ci); ⊤⦄ :=
+  triple_post (envFind_spec p hg hb hp n s₀ vis w) fun r s ⟨h1, h2, h3⟩ => by
+    subst h3; exact ⟨h1, h2, hE.find_res hw⟩
 
-/-- **`raw_table` refines `IFEnv.rawTable?`**: the result decodes to the twin's table. -/
-@[refines ConRon.Arena.IFEnv.rawTable?]
-theorem rawTable_refines (ho : p.lookup "tbl_own_get" = some tblOwnGetL)
+theorem rawTable_spec (ho : p.lookup "tbl_own_get" = some tblOwnGetL)
     (hb : p.lookup "tbl_base_get" = some tblBaseGetL) (hp : p.lookup "raw_table" = some rawTableL)
-    (n : Nat) (s₀ : St) {fe : IFEnv} (vis t : Word)
-    (hE : EnvR s₀.mem vis fe) (ht : t.toNat < 2 ^ 32) :
+    (n : Nat) (s₀ : St) (t : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "raw_table" [t]
-    ⦃fun r s' => s'.mem = s₀.mem ∧ LocEq s' s₀ ∧
-      fe.rawTable? (decI t) = tblFound s₀.mem (r.headD 0) ∧
-      (r.headD 0 ≠ 0 → ∃ tb, decTbl (erecP s₀.mem) ((r.headD 0).toNat - 1) = some tb); ⊤⦄ := by
-  have key := hE.rawTable_eq ht
-  have kd := hE.tblHit_dec ht
-  have kb : (baseTbl s₀.mem t).1 ≠ 0 → (baseTbl s₀.mem t).1 - 1 < rdW (s₀.mem.arr64 CTL) 135 →
-      tblFound s₀.mem ((baseTbl s₀.mem t).2 + 1) = decTbl (erecP s₀.mem) (baseTbl s₀.mem t).2.toNat ∧
-      (baseTbl s₀.mem t).2 + 1 ≠ 0 ∧
-      ∃ tb, decTbl (erecP s₀.mem) (((baseTbl s₀.mem t).2 + 1).toNat - 1) = some tb := fun h1 h2 => by
-    obtain ⟨tb, htb⟩ := kd.2 ⟨h1, h2⟩
-    obtain ⟨e1, e2⟩ := tblFound_succ htb
-    have := decTbl_lt htb
-    have e3 : ((baseTbl s₀.mem t).2 + 1).toNat - 1 = (baseTbl s₀.mem t).2.toNat := by
-      rw [UInt64.toNat_add]; simp; omega
-    exact ⟨e1, e2, tb, by rw [e3]; exact htb⟩
-  have kz : tblFound s₀.mem 0 = none := by simp [tblFound]
-  have kn : ownTbl s₀.mem t ≠ 0 → tblFound s₀.mem (ownTbl s₀.mem t) =
-      decTbl (erecP s₀.mem) ((ownTbl s₀.mem t).toNat - 1) := fun h => by simp [tblFound, h]
+    ⦃fun r s' => s'.mem = s₀.mem ∧ LocEq s' s₀ ∧ r = [rawRes s₀.mem t]; ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, rawTableL]
   cases n with
@@ -946,9 +960,98 @@ theorem rawTable_refines (ho : p.lookup "tbl_own_get" = some tblOwnGetL)
       Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval, rd64_rdWC, beq_iff_eq,
       bne_iff_ne, ne_eq] at *
     all_goals subst_vars
-    all_goals (simp_all [LocEq, Sig.retVal, Sig.retOr, baseTblHit, ctl_t0, Locals.init,
-      List.getD_cons_zero, List.getD_cons_succ] <;>
-      (intro h; simp only [UInt64.lt_iff_toNat_lt, UInt64.le_iff_toNat_le] at *; omega))
+    all_goals (simp_all [LocEq, Sig.retVal, Sig.retOr, rawRes, baseTblHit, ctl_t0, Locals.init,
+      List.getD_cons_zero, List.getD_cons_succ, UInt64.lt_iff_toNat_lt, UInt64.le_iff_toNat_le] <;>
+      first | omega | (split <;> (try split) <;> first | omega | rfl))
+
+/-- `rawTable?` from `raw_table`'s result. -/
+theorem EnvR.rawTable_res {m : Mem} {vis : Word} {fe : IFEnv} (hE : EnvR m vis fe) {t : Word}
+    (ht : t.toNat < 2 ^ 32) :
+    fe.rawTable? (decI t) = tblFound m (rawRes m t) ∧
+      (rawRes m t ≠ 0 → ∃ tb, decTbl (erecP m) ((rawRes m t).toNat - 1) = some tb) := by
+  have key := hE.rawTable_eq ht
+  have kd := hE.tblHit_dec ht
+  unfold rawRes
+  by_cases h1 : ownTbl m t ≠ 0
+  · simp only [h1, ne_eq, not_false_eq_true, ite_true] at key ⊢
+    exact ⟨by simp [key, tblFound, h1], fun _ => kd.1 h1⟩
+  · simp only [h1, ite_false] at key ⊢
+    by_cases h2 : baseTblHit m t
+    · obtain ⟨tb, htb⟩ := kd.2 h2
+      obtain ⟨e1, e2⟩ := tblFound_succ htb
+      have := decTbl_lt htb
+      have e3 : ((baseTbl m t).2 + 1).toNat - 1 = (baseTbl m t).2.toNat := by
+        rw [UInt64.toNat_add]; simp; omega
+      simp only [h2, ite_true] at key ⊢
+      exact ⟨by rw [key, e1], fun _ => ⟨tb, by rw [e3]; exact htb⟩⟩
+    · simp only [h2, ite_false] at key ⊢
+      exact ⟨by simp [key, tblFound], fun h => absurd rfl h⟩
+
+/-- **`raw_table` refines `IFEnv.rawTable?`**: the result decodes to the twin's table. -/
+@[refines ConRon.Arena.IFEnv.rawTable?]
+theorem rawTable_refines (ho : p.lookup "tbl_own_get" = some tblOwnGetL)
+    (hb : p.lookup "tbl_base_get" = some tblBaseGetL) (hp : p.lookup "raw_table" = some rawTableL)
+    (n : Nat) (s₀ : St) {fe : IFEnv} (vis t : Word)
+    (hE : EnvR s₀.mem vis fe) (ht : t.toNat < 2 ^ 32) :
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p n) "raw_table" [t]
+    ⦃fun r s' => s'.mem = s₀.mem ∧ LocEq s' s₀ ∧
+      fe.rawTable? (decI t) = tblFound s₀.mem (r.headD 0) ∧
+      (r.headD 0 ≠ 0 → ∃ tb, decTbl (erecP s₀.mem) ((r.headD 0).toNat - 1) = some tb); ⊤⦄ :=
+  triple_post (rawTable_spec p ho hb hp n s₀ t) fun r s ⟨h1, h2, h3⟩ => by
+    subst h3; exact ⟨h1, h2, hE.rawTable_res ht⟩
+
+/-- The `env_find`/`raw_table` lookups `find_table` makes. -/
+structure FindTableProg (p : Prog) : Prop where
+  rowGet : p.lookup "env_row_get" = some envRowGetL
+  baseGet : p.lookup "base_row_get" = some baseRowGetL
+  find : p.lookup "env_find" = some envFindL
+  tblOwn : p.lookup "tbl_own_get" = some tblOwnGetL
+  tblBase : p.lookup "tbl_base_get" = some tblBaseGetL
+  raw : p.lookup "raw_table" = some rawTableL
+  findTable : p.lookup "find_table" = some findTableL
+
+theorem findTable_spec (hP : FindTableProg p) (n : Nat) (s₀ : St) (vis t : Word) :
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p n) "find_table" [vis, t]
+    ⦃fun r s' => s'.mem = s₀.mem ∧ LocEq s' s₀ ∧ r = [findTblRes s₀.mem vis t]; ⊤⦄ := by
+  rw [invoke_eq _ hP.findTable]
+  simp only [callFn, findTableL]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    vcgen [exec, step, L.evalC_spec, L.evalE_spec, evalArgs, setLoc, setLocs,
+      envFind_spec p hP.rowGet hP.baseGet hP.find n, rawTable_spec p hP.tblOwn hP.tblBase hP.raw n]
+    all_goals simp only [Cond.pval, Expr.pval, St.setLoc_loc, St.setLoc_mem, St.setLocs_cons,
+      St.setLocs_nil, Locals.init, List.getD_cons_zero, List.getD_cons_succ, List.getD_nil,
+      Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval, rd64_rdWC, beq_iff_eq,
+      bne_iff_ne, ne_eq] at *
+    all_goals subst_vars
+    all_goals simp_all [LocEq, Sig.retVal, Sig.retOr, findTblRes, Locals.init,
+      List.getD_cons_zero, List.getD_cons_succ]
+
+/-- **`find_table` refines `IFEnv.findTable?`**: the result decodes to the twin's table. -/
+@[refines ConRon.Arena.IFEnv.findTable?]
+theorem findTable_refines (hP : FindTableProg p) (n : Nat) (s₀ : St) {fe : IFEnv} (vis t : Word)
+    (hE : EnvR s₀.mem vis fe) (ht : t.toNat < 2 ^ 32) :
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p n) "find_table" [vis, t]
+    ⦃fun r s' => s'.mem = s₀.mem ∧ LocEq s' s₀ ∧
+      fe.findTable? (decI t) = tblFound s₀.mem (r.headD 0) ∧
+      (r.headD 0 ≠ 0 → ∃ tb, decTbl (erecP s₀.mem) ((r.headD 0).toNat - 1) = some tb); ⊤⦄ :=
+  triple_post (findTable_spec p hP n s₀ vis t) fun r s ⟨h1, h2, h3⟩ => by
+    subst h3
+    refine ⟨h1, h2, ?_⟩
+    obtain ⟨f1, f2⟩ := hE.find_res ht
+    obtain ⟨r1, r2⟩ := hE.rawTable_res ht
+    simp only [List.headD_cons]
+    rw [IFEnv.findTable?, f1]
+    by_cases h0 : (findRes s₀.mem vis t).headD 0 = 0
+    · simp only [envFound, findTblRes, h0, ite_true, Option.isSome_none]
+      exact ⟨by simp [tblFound], fun h => absurd rfl h⟩
+    · obtain ⟨ci, hci⟩ := f2 h0
+      simp only [envFound, findTblRes, h0, ite_false, hci, Option.isSome_some, ite_true]
+      exact ⟨r1, r2⟩
 
 end specs
 
