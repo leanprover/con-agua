@@ -531,14 +531,6 @@ def keK1 (n : Nat) (m : Mem) (oo : Word) : Option Word → Option (Word × Mem)
       else if (eViewW m r).headD 0 ≠ 2 then some (0, m)
       else keK2 n (rdW (m.arr64 IFL) oo) ((eViewW m r).tail.headD 0) (lhMkW (m.set64 CTL 192 0) 0 0 0) := rfl
 
-/-- **The model of `vi_k_expected(to, tn, tyt, oo, fuel)`**: `kExpected?` and the memory. -/
-def kExpW : Nat → Mem → Word → Word → Word → Word → Word → Option (Word × Mem)
-  | 0, _, _, _, _, _, _ => none
-  | n + 1, m, to, tn, tyt, oo, fuel =>
-    if tn ≠ 1 then some (1, m)
-    else if rdW (m.arr64 IFR) (to + 4) ≠ 1 then some (1, m)
-    else keK1 n m oo (piResW n m fuel (rdW (m.arr64 IFL) tyt))
-
 /-- **The model of `vi_nested(to, tn, j)`.** -/
 def nestedW : Nat → Mem → Word → Word → Word → Option Word
   | 0, _, _, _, _ => none
@@ -550,11 +542,6 @@ def nestedW : Nat → Mem → Word → Word → Word → Option Word
 section specs4
 variable (p : Prog) (hL : IndApplyLookups p)
 include hL
-
-theorem kExp_spec (n : Nat) (s₀ : St) (to tn tyt oo fuel : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "vi_k_expected" [to, tn, tyt, oo, fuel]
-    ⦃fun r s' => LocEq s' s₀ ∧ kExpW n s₀.mem to tn tyt oo fuel = some (r.headD 0, s'.mem); ⊤⦄ := by
-  sorry
 
 theorem nested_spec (n : Nat) : ∀ (s₀ : St) (to tn j : Word),
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "vi_nested" [to, tn, j]

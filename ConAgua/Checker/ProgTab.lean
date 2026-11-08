@@ -30,11 +30,6 @@ def checkerTabOf (t : Tab) : Tab :=
   { l with mins := checkerArrays.mins, tbl := checkerArrays.tblArr.map fun x => (x.1, l.tblBase) }
 
 set_option maxRecDepth 100000 in
-/-- The checker's table (`checkerTabOf`), as a literal (`tab_lit%`: every per-chunk check of
-`checkerProg_wf` unfolds it). -/
-def checkerTab : Tab :=
-  tab_lit% (checkerTabOf (Prog.tab checkerProg))
-
 #guard checkerTab == checkerTabOf (Prog.tab checkerProg)
 
 end L.Checker
