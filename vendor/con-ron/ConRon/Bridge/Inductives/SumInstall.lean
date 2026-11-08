@@ -277,8 +277,7 @@ theorem checkStructFieldSortsI_spec {env : Env} (fe : IFEnv)
       | true =>
       obtain ⟨rfl, rfl⟩ := AM.pure_ok k7
       simp only [ite_true] at z7
-      obtain ⟨_, s8, k8, z8⟩ := AM.bind_ok z7
-      obtain ⟨-, rfl⟩ := AM.pure_ok k8
+      have z8 := z7  -- con-agua patch: no `pure () >>=` after the guard (new `do` elaborator)
       obtain ⟨c, F3, hF3⟩ := tail _ (c5.trans c6) z8
       refine ⟨c, max (max F1 F2) F3, ?_⟩
       have e1 := hF1' (max (max F1 F2) F3)
@@ -295,8 +294,7 @@ theorem checkStructFieldSortsI_spec {env : Env} (fe : IFEnv)
     cases large with
     | false =>
       simp only [Bool.not_true, Bool.false_eq_true, ite_false] at z4
-      obtain ⟨_, s5, k5, z5⟩ := AM.bind_ok z4
-      obtain ⟨-, rfl⟩ := AM.pure_ok k5
+      have z5 := z4  -- con-agua patch: no `pure () >>=` after the guard (new `do` elaborator)
       obtain ⟨c, F3, hF3⟩ := tail _ (CoreStep.refl hok4) z5
       refine ⟨c, max (max F1 F2) F3, ?_⟩
       have e1 := hF1' (max (max F1 F2) F3)
@@ -329,8 +327,7 @@ theorem checkStructFieldSortsI_spec {env : Env} (fe : IFEnv)
       case isFalse hn =>
         obtain ⟨_, _, k, _⟩ := AM.bind_ok z6; exact absurd k (fun h => AM.fail_ok h)
       case isTrue hy =>
-      obtain ⟨_, s8, k8, z8⟩ := AM.bind_ok z6
-      obtain ⟨-, rfl⟩ := AM.pure_ok k8
+      have z8 := z6  -- con-agua patch: no `pure () >>=` after the guard (new `do` elaborator)
       obtain ⟨c, F3, hF3⟩ := tail _ c6 z8
       refine ⟨c, max (max F1 F2) F3, ?_⟩
       have e1 := hF1' (max (max F1 F2) F3)

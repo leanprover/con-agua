@@ -821,6 +821,7 @@ theorem mtcEtaT_const {F d : Nat} {cvT : ConstantVal} {caps : IndCaps} {T : ConL
     | skip
   rename_i T' ust
   simp only [exprConstName, exprConstLevels]
+  dsimp +instances only [exprConstName, exprConstLevels]  -- con-agua patch (instance args)
   by_cases h1 : T' = T ∧ tmaj.getAppArgs.length = caps.etaParams ∧
       ust.length = cvT.levelParams.length ∧
       ConLeche.reservedBasisNames.contains T = false ∧
@@ -1336,6 +1337,7 @@ theorem majorToCtorFueled_one {F d : Nat} {cn : ConLeche.Name} {isK : Bool} {rl 
       generalize hg : cvj.type.piResult.getAppFn = g
       cases g with
       | const T us =>
+        dsimp +instances only [exprTag, exprConstName]  -- con-agua patch (instance args)
         simp only [exprTag, exprConstName, beq_self_eq_true, Bool.true_and]
         cases hT : env.find? T with
         | none =>

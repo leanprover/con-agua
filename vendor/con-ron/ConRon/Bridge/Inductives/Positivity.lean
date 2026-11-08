@@ -866,8 +866,7 @@ theorem checkSpineAt_specF (hk : CoreSpec Arena.checkFuel) (henv : EnvWF env) (d
         exact absurd k (fun h => AM.fail_ok h)
       | true =>
       simp only [↓reduceIte] at z3
-      obtain ⟨_, s₄, k4, z4⟩ := AM.bind_ok z3
-      obtain ⟨-, rfl⟩ := AM.pure_ok k4
+      have z4 := z3  -- con-agua patch: no `pure () >>=` after the guard (new `do` elaborator)
       obtain ⟨b, s₅, k5, z5⟩ := AM.bind_ok z4
       have hb4 := denote_ext hbody c13.ext
       obtain ⟨h1, h2, h4, h5, -, h7⟩ := ExprOps.instantiate1Fast_run c13.ok.state

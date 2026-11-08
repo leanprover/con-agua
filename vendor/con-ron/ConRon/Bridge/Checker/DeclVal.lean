@@ -1819,7 +1819,7 @@ theorem checkStructuralNatPin_bridge {env env2 : Env} {fe fe' : IFEnv}
   replace hstepC := hstepC.congr_find (fun n => (hsv.find n).symm) hsv.tbls.symm
     hsv.base.symm
   obtain ⟨hy4, r5⟩ := AM.dunless_ok AM.Never.fail_any r4
-  replace r5 := AM.pure_bind_ok r5
+  try replace r5 := AM.pure_bind_ok r5  -- con-agua patch: no `pure () >>=` left by the new `do` elaborator
   obtain ⟨rfl, rfl⟩ := AM.pure_ok r5
   obtain ⟨FC, hcert⟩ := hcertOf hy4
   exact ⟨⟨hstepC.ok, ((hx1.trans hx2).trans hx3).trans hstepC.ext,

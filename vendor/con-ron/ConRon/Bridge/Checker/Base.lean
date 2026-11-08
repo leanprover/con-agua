@@ -281,7 +281,7 @@ theorem checkConstantVal_bridge {env : Env}
     rfl gO (natOpName_run s1 cv.name c.name hck1 hnm1)
   obtain ⟨hop, rO2⟩ := AM.dguard_ok
     (AM.Never.bind fun _ => AM.Never.fail_any) rO
-  replace rO2 := AM.pure_bind_ok rO2
+  try replace rO2 := AM.pure_bind_ok rO2  -- con-agua patch: no `pure () >>=` left by the new `do` elaborator
   have hopP : (ConLeche.natOpName c.name && !allowOp) = false := by
     rw [← hbo]
     cases hb : (bo && !allowOp) with
@@ -296,7 +296,7 @@ theorem checkConstantVal_bridge {env : Env}
       t.pins = sO.pins ∧ r = ConLeche.litShapeOk (.axiomInfo c))
     rfl gL (litShapeOk_run sO (.axiomInfo cv) (.axiomInfo c) hck1 hciA)
   obtain ⟨hshape, r3⟩ := AM.dunless_ok AM.Never.fail_any rL
-  replace r3 := AM.pure_bind_ok r3
+  try replace r3 := AM.pure_bind_ok r3  -- con-agua patch: no `pure () >>=` left by the new `do` elaborator
   have hshapeP : ConLeche.litShapeOk (.axiomInfo c) = true := by rw [← hbl]; exact hshape
   have hx02 : Ext s.store s2.store := hp1.ext.trans hxL
   have hp02 : s2.pins = s.pins := by rw [hpL, hp1.pins]
