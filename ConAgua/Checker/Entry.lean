@@ -227,7 +227,7 @@ def entryProg : Prog :=
    ("fz_45", fzF 45), ("fz_46", fzF 46), ("fz_47", fzF 47), ("fz_48", fzF 48), ("fz_49", fzF 49),
    ("fz_50", fzF 50), ("fz_51", fzF 51), ("fz_52", fzF 52), ("fz_53", fzF 53), ("fz_54", fzF 54),
    ("fz_55", fzF 55), ("fz_56", fzF 56), ("fz_57", fzF 57), ("fz_58", fzF 58),
-   ("fz_59", fzF 59), ("fz_60", fzF 60),
+   ("fz_59", fzF 59), ("fz_60", fzF 60), ("fz_61", fzF 61), ("fz_62", fzF 62),
    ("cap_check", capCheckL),
    -- the parse's large cons tables sized from the input length (`Checker/Presize.lean`)
    ("presize_tables", presizeTablesL), ("pow2_at_least", pow2AtLeastL),
