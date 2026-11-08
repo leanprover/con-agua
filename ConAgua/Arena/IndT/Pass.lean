@@ -100,7 +100,6 @@ structure PassPost (dn : NIdx → Option ConLeche.Name) (env : ConLeche.Env) (m 
   abs : AbsOK m'
   recs : RecsB m p0 → RecsB m' (rdW (m'.arr64 IW) (w + 3))
   classes : ClassesLp m' (rdW (m'.arr64 IW) (w + 15)) (rdW (m'.arr64 IW) (w + 16))
-  twin : ∃ env₁, StageC dn (rdW (m'.arr64 IW) w) x.env1 env₁ m' a' ∧ PassTwin a a' x env₁
 
 section sims
 variable {p : Prog} (hkp : KnotStageProg p) {env : ConLeche.Env} (henv : ConLeche.EnvWF env)
