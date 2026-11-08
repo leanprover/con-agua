@@ -83,7 +83,7 @@ slice of the spine stack below its top. -/
 theorem ilwCore_ok (k : Nat) {m m' : Mem} {a : AState} {dn : NIdx → Option ConLeche.Name} {vis : Word}
     {fe : IFEnv} {M : ModeMaps} {eb ko kc us e : Word} {lps : List NIdx} {rs : List Word}
     (hS : CoreS dn m a vis fe M eb) (hh : HW e) (hus : HW us)
-    (hks : hslice? (m.arr64 SPN) ko.toNat kc.toNat = some lps) (hkt : ko.toNat + kc.toNat ≤ (spTop m).toNat)
+    (hks : hslice? (aread (m.arr64 SPN)) ko.toNat kc.toNat = some lps) (hkt : ko.toNat + kc.toNat ≤ (spTop m).toNat)
     (hc : callW p (k + 1) "inst_lp_core" [ko, kc, us, e] m = some (rs, m')) :
     CoreRef (instLPFast coreWalkFuel lps (decI us) (decE e)) a decH dn m vis fe M eb rs m' := by
   obtain ⟨s', hs', -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
@@ -229,7 +229,7 @@ below `d` nothing changes. -/
 theorem ekCopyW_slice : ∀ (lps : List NIdx) (n : Nat) (m m' : Mem) (s d l : Word),
     hslice? (erecP m) s.toNat l.toNat = some lps → d.toNat + l.toNat ≤ (m.arr64 SPN).size →
     (m.arr64 SPN).size < 2 ^ 63 → s.toNat + l.toNat < 2 ^ 64 → ekCopyW n m s d l = some m' →
-    hslice? (m'.arr64 SPN) d.toNat l.toNat = some lps ∧ MemFrame [SPN] [] m m' ∧
+    hslice? (aread (m'.arr64 SPN)) d.toNat l.toNat = some lps ∧ MemFrame [SPN] [] m m' ∧
       ∀ i : Word, i.toNat < d.toNat → rdW (m'.arr64 SPN) i = rdW (m.arr64 SPN) i := by
   intro lps
   induction lps with
@@ -287,7 +287,7 @@ theorem ekCopyW_slice : ∀ (lps : List NIdx) (n : Nat) (m m' : Mem) (s d l : Wo
     refine ⟨?_, (MemFrame.set64 _ _ (by decide) _ _).trans hf', ?_⟩
     · rw [lp_hslice_succ]
       have hsize : d.toNat < (m'.arr64 SPN).size := by rw [hf'.size SPN, hsz₁]; exact hdl
-      have hd' : (hd? (m'.arr64 SPN) d.toNat : Option NIdx) = some x' := by
+      have hd' : (hd? (aread (m'.arr64 SPN)) d.toNat : Option NIdx) = some x' := by
         rw [← e]; simp only [hd?]
         have h1 : (m'.arr64 SPN)[d.toNat]? = some (rdW (m'.arr64 SPN) d) := by simp [rdW, hsize]
         have h2 : (m.arr64 EREC)[s.toNat]? = some (rdW (m.arr64 EREC) s) := by

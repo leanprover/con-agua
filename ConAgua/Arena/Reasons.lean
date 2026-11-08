@@ -386,5 +386,13 @@ abbrev R_THE_TYPE_OF_THE_RECURSOR_IS : L.Word := 737
 abbrev R_TWO_MODULES_STORE : L.Word := 741
 /-- reject: undeclared universe parameter in the type of the recursor -/
 abbrev R_UNDECLARED_UNIVERSE_PARAMETER_IN_THE : L.Word := 745
+/-- decline: use of the sorryAx axiom in the type of the recursor -/
+abbrev R_USE_OF_THE_SORRYAX_IN_REC_TYPE : L.Word := 750
+/-- decline: use of the sorryAx axiom in the recursor's rule -/
+abbrev R_USE_OF_THE_SORRYAX_IN_REC_RULE : L.Word := 754
+/-- reject: unknown constant in the type of the recursor -/
+abbrev R_UNKNOWN_CONSTANT_IN_REC_TYPE : L.Word := 757
+/-- reject: unknown constant in the recursor's rule -/
+abbrev R_UNKNOWN_CONSTANT_IN_REC_RULE : L.Word := 761
 
 end L.Arena

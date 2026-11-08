@@ -196,7 +196,7 @@ theorem lazyFoldOk_refines (p : Prog) (hp : DefEqMidProg p) (hf : HasFvarOK p) (
     (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (M : ModeMaps) (eb mode a b : Word) (hS : CoreS dn s₀.mem a₀ vis fe M eb) (hm : mode < 4)
     (ha : HW a) (hb : HW b) :
-    CoreSpec p (n + 1) "lazy_fold_ok" [mode, a, b] (lazyFoldOk (decMode mode) (decE a) (decE b))
+    CoreSpec p (n + 1) "lazy_fold_ok" [mode, a, b] (lazyFoldOk (decEager mode) (decE a) (decE b))
       decBool s₀ a₀ dn vis fe M eb := by
   apply L.M.triple_of_run
   intro s r s' hs0 hrun

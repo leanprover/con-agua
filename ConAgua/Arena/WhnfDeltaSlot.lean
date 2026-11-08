@@ -14,7 +14,7 @@ public import ConAgua.Arena.WhnfBase
 /-!
 # The knot's `whnf` slot and the `whnf` loop
 
-`whnf(mode, vis, d, e)` (`WhnfDelta.lean`) refines the `whnf` slot of `coreKnot mode fe id (F + 1)`:
+`whnf(mode, vis, d, e)` (`WhnfDelta.lean`) refines the `whnf` slot of `coreKnot mode eager fe id (F + 1)`:
 a stuck tag (`sort`/`fvar`/`lam`/`forallE`/`lit`, `whnfStuckTag`) answers `e` without touching the
 memo or the store, a memo hit (`whnfC`, array 98, at the current generation) answers the entry, a
 miss runs `whnf_loop` (the body, `whnfBody … (coreKnot … F)`), records it and answers it.
@@ -142,21 +142,21 @@ theorem KeptAll.wh {M M' : ModeMaps} {eb : Word} (h : KeptAll M M' eb) (k : EIdx
 /-! ## The twin's `whnf` slot -/
 
 section twin
-variable (mode : ConLeche.CheckMode) (fe : IFEnv) (F : Nat) (d : Nat) (e : EIdx) (a : AState)
+variable (mode : ConLeche.CheckMode) (eager : Bool) (fe : IFEnv) (F : Nat) (d : Nat) (e : EIdx) (a : AState)
 
 theorem knot_whnf_stuck (h : whnfStuckTag e = true) :
-    ((coreKnot mode fe id (F + 1)).whnf d e).run a = .ok (e, a) := by
+    ((coreKnot mode eager fe id (F + 1)).whnf d e).run a = .ok (e, a) := by
   simp [coreKnot, h]; rfl
 
 theorem knot_whnf_hit (h : whnfStuckTag e = false) (x : EIdx)
     (hm : a.caches.whnfC[e]? = some x) :
-    ((coreKnot mode fe id (F + 1)).whnf d e).run a = .ok (x, a) := by
+    ((coreKnot mode eager fe id (F + 1)).whnf d e).run a = .ok (x, a) := by
   simp [coreKnot, h, hm]; rfl
 
 theorem knot_whnf_miss (h : whnfStuckTag e = false)
     (hm : a.caches.whnfC[e]? = none) (x : EIdx) (a₁ : AState)
-    (hb : (whnfBody (coreKnot mode fe id F) fe d e).run a = .ok (x, a₁)) :
-    ((coreKnot mode fe id (F + 1)).whnf d e).run a =
+    (hb : (whnfBody (coreKnot mode eager fe id F) fe d e).run a = .ok (x, a₁)) :
+    ((coreKnot mode eager fe id (F + 1)).whnf d e).run a =
       .ok (x, { a₁ with caches := { a₁.caches with
         whnfC := a₁.caches.whnfC.insert e x } }) := by
   simp [coreKnot, h, hm, StateT.run_bind, hb, whnfSet]; rfl

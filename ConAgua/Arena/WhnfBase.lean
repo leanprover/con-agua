@@ -743,7 +743,7 @@ theorem CoreSpec.of_callW {α : Type} [Inhabited α] {p : Prog} {n : Nat} {f : F
 
 /-! ## The knot's slots
 
-`coreKnot mode fe id F` is the twin's record; the L slot at fuel `n` refines it at every
+`coreKnot mode eager fe id F` is the twin's record; the L slot at fuel `n` refines it at every
 `F ≥ n`. The two `whnf` slots are this lane's (`WhnfCore.lean`, `WhnfDelta.lean`); `infer`,
 `infer_io` and `defeq` are phases 6–7, stubs here. -/
 

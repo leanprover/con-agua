@@ -188,4 +188,8 @@ static const char *const reasons[] = {
   "the type of the recursor is not the generated one: the domain of binder differs",
   "two modules store different constants named …",
   "undeclared universe parameter in the type of the recursor",
+  "use of the sorryAx axiom in the type of the recursor",
+  "use of the sorryAx axiom in the recursor's rule",
+  "unknown constant in the type of the recursor",
+  "unknown constant in the recursor's rule",
 };

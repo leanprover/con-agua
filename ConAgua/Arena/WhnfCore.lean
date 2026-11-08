@@ -391,7 +391,7 @@ structure CoreCallees (p : Prog) : Prop extends ProjCallees p where
 
 /-! ## The specs
 
-Each body at L fuel `n + 1` refines the twin's body at the knot `coreKnot mode fe id F`, `F ≥ n`,
+Each body at L fuel `n + 1` refines the twin's body at the knot `coreKnot mode eager fe id F`, `F ≥ n`,
 given the knot's slots at every fuel up to `n` (`KnotUpTo p n`). -/
 
 section specs
