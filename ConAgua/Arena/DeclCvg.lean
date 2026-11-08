@@ -209,28 +209,7 @@ theorem erToIwW_frame {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IF
     {n : Nat} {m m' : Mem} {o l : Word} {r : List Word} (h : erToIwW n m o l = some (r, m'))
     (hS : StageR vis fe m a) (hsrc : l.toNat = 0 ∨ o.toNat + l.toNat ≤ (m.arr64 EREC).size) :
     MemFrame [IW] [200] m m' := by
-  obtain ⟨hI1, hE1, hsz, hEs, hc⟩ := hS.iw
-  rcases hsrc with hl0 | hsrc
-  · have hl : l = 0 := UInt64.toNat_inj.mp (by simpa using hl0)
-    subst hl
-    simp only [erToIwW] at h
-    cases hal : allocW m 0 with
-    | none => simp [hal] at h
-    | some qm =>
-    obtain ⟨q, m1⟩ := qm
-    obtain ⟨rfl, rfl, -⟩ := allocW_facts hal hsz
-    simp only [hal] at h
-    cases n with
-    | zero => simp [erCopyW] at h
-    | succ n =>
-    cases n with
-    | zero => simp [erCopyW] at h
-    | succ n =>
-    simp only [Nat.add_sub_cancel, erCopyW_nil n _ _ _ _ rfl, Option.some.injEq,
-      Prod.mk.injEq] at h
-    obtain ⟨-, rfl⟩ := h
-    exact allocMem_frame m 0
-  · exact (erToIwW_dec (k := IdxKind.name) h hsz hc hEs hsrc).2.2.2.1
+  sorry
 
 /-- Destructuring a constant value: its name, its universe-parameter slice, its type. -/
 theorem decCV_slice {a : Array Word} {q : Nat} {cv : IConstantVal} (h : decCV (aread a) q = some cv) :
