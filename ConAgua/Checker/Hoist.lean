@@ -130,7 +130,6 @@ def hoistIndexGoL : FunDecl := lfn (ord, c, k) locals (z, r) {
 references the name `n`: the position `m` first declaring it, if it lies after `i`, is not `k` and
 has no target yet, gets target `i` and is pushed (`ws[sp] := m`); the new stack size. -/
 -- con-ron: ConRon/Arena/Frontend/NatOpGround.lean:162-205 ConRon.Arena.Frontend.hoistClosure.pushOne
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.Frontend.hoistClosure.pushOne` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.Frontend.hoistClosure.pushOne]
 def hoistNoteL : FunDecl := lfn (n, i, k, tg, ws, sp) locals (m) {
   m := call hoist_ix(n);
@@ -253,7 +252,6 @@ def hoistRulesGoL : FunDecl := lfn (k, i, tg, ws, sp, ro, rc, r) locals (x) {
 /-- `hoist_block_go(k, i, tg, ws, sp, o, c, q)`: the block members `DIND[o + q ‥ o + c)`: each
 member's type, a recursor's rules. -/
 -- con-ron: ConRon/Arena/Frontend/NatOpGround.lean:91-102 ConRon.Arena.Frontend.usedConstsBlock
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.Frontend.usedConstsBlock` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.Frontend.usedConstsBlock]
 def hoistBlockGoL : FunDecl := lfn (k, i, tg, ws, sp, o, c, q) locals (p, x) {
   if c <= q { return sp };
@@ -270,9 +268,7 @@ def hoistBlockGoL : FunDecl := lfn (k, i, tg, ws, sp, o, c, q) locals (p, x) {
 `k`), one visited set: the type and the value; an inductive block's members; a quotient none. The
 new stack size. -/
 -- con-ron: ConRon/Arena/Frontend/NatOpGround.lean:162-205 ConRon.Arena.Frontend.hoistClosure.pushDeps
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.Frontend.hoistClosure.pushDeps` changed; re-check the L code and its proofs, then delete this line
 -- con-ron: ConRon/Arena/Frontend/NatOpGround.lean:104-113 ConRon.Arena.Frontend.IDeclaration.usedConsts
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.Frontend.IDeclaration.usedConsts` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.Frontend.hoistClosure.pushDeps ConRon.Arena.Frontend.IDeclaration.usedConsts]
 def hoistDepsOfL : FunDecl := lfn (k, i, x, tg, ws, sp) locals (z, kd) {
   z := call hs_clear();
@@ -294,7 +290,6 @@ def hoistDepsOfL : FunDecl := lfn (k, i, x, tg, ws, sp) locals (z, kd) {
 /-- `hoist_close_go(i, ord, tg, ws, sp)`: the worklist `ws[0 ‥ sp)`: pop a position, push the
 positions its constants reach (`hoist_deps_of`), until empty. -/
 -- con-ron: ConRon/Arena/Frontend/NatOpGround.lean:162-205 ConRon.Arena.Frontend.hoistClosure
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.Frontend.hoistClosure` changed; re-check the L code and its proofs, then delete this line
 -- con-ron: ConRon/Arena/Frontend/NatOpGround.lean:147-152 ConRon.Arena.Frontend.hoistDone
 -- con-ron: ConRon/Arena/Frontend/NatOpGround.lean:154-160 ConRon.Arena.Frontend.hoistDropDone
 @[no_expose, l_impl ConRon.Arena.Frontend.hoistClosure ConRon.Arena.Frontend.hoistDone
@@ -310,7 +305,6 @@ def hoistCloseGoL : FunDecl := lfn (i, ord, tg, ws, sp) locals (k, r) {
 /-- `hoist_closure(i, j, ord, tg, ws)`: position `j` (after `i`) and every position it reaches
 through unmarked positions after `i` get target `i`. -/
 -- con-ron: ConRon/Arena/Frontend/NatOpGround.lean:162-205 ConRon.Arena.Frontend.hoistClosure
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.Frontend.hoistClosure` changed; re-check the L code and its proofs, then delete this line
 @[no_expose] def hoistClosureL : FunDecl := lfn (i, j, ord, tg, ws) locals (r) {
   if IW.u64[tg + j] != 0 { return 0 };
   IW.u64[tg + j] := i + 1;
@@ -345,7 +339,6 @@ def natOpRecordL : FunDecl := lfn (n) locals (o1, l1, o2, l2, a, b) {
 /-- `hoist_deps(i, o, l, q, ord, tg, ws)`: the grounds `IW[o + q ‥ o + l)` of the operation at
 `i`: each first declared after `i` pulls its closure ahead of `i`. -/
 -- con-ron: ConRon/Arena/Frontend/NatOpGround.lean:291-321 ConRon.Arena.Frontend.hoistTargetsGo.hoistDeps
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.Frontend.hoistTargetsGo.hoistDeps` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.Frontend.hoistTargetsGo.hoistDeps]
 def hoistDepsL : FunDecl := lfn (i, o, l, q, ord, tg, ws) locals (m, z, r) {
   if l <= q { return 0 };
@@ -358,7 +351,6 @@ def hoistDepsL : FunDecl := lfn (i, o, l, q, ord, tg, ws) locals (m, z, r) {
 /-- `hoist_targets_go(ord, c, tg, ws, i)`: positions `i ‥ c`: for every pinned `Nat` operation
 record (a definition named in `natDivModNames`/`natOpNames`), its grounds' closures. -/
 -- con-ron: ConRon/Arena/Frontend/NatOpGround.lean:291-321 ConRon.Arena.Frontend.hoistTargetsGo
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.Frontend.hoistTargetsGo` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.Frontend.hoistTargetsGo]
 def hoistTargetsGoL : FunDecl := lfn (ord, c, tg, ws, i) locals (x, n, op, o, l, z, r) {
   if c <= i { return 0 };
@@ -388,7 +380,6 @@ def hoistTargetsGoL : FunDecl := lfn (ord, c, tg, ws, i) locals (x, n, op, o, l,
 
 /-- `hoist_any(tg, c, k)`: `1` if some position `k ‥ c` has a target (the map is not empty). -/
 -- con-ron: ConRon/Arena/Frontend/NatOpGround.lean:377-384 ConRon.Arena.Frontend.hoistNatOpGround
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.Frontend.hoistNatOpGround` changed; re-check the L code and its proofs, then delete this line
 @[no_expose] def hoistAnyL : FunDecl := lfn (tg, c, k) locals (r) {
   if c <= k { return 0 };
   if IW.u64[tg + k] != 0 { return 1 };
@@ -461,9 +452,7 @@ def hoistApplyL : FunDecl := lfn (ord, c, tg) locals (hd, tl, nx, out, z) {
 
 /-- `hoist_nat_op_ground(ord, c)`: the order after the hoist (`ord` itself when nothing moves). -/
 -- con-ron: ConRon/Arena/Frontend/NatOpGround.lean:377-384 ConRon.Arena.Frontend.hoistNatOpGround
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.Frontend.hoistNatOpGround` changed; re-check the L code and its proofs, then delete this line
 -- con-ron: ConRon/Arena/Frontend/NatOpGround.lean:323-329 ConRon.Arena.Frontend.hoistTargets
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.Frontend.hoistTargets` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.Frontend.hoistNatOpGround ConRon.Arena.Frontend.hoistTargets]
 def hoistNatOpGroundL : FunDecl := lfn (ord, c) locals (z, tg, ws, a, r) {
   z := call hn_clear();

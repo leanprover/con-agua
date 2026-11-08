@@ -260,7 +260,6 @@ def prepFrontL : FunDecl := lfn (np, n, ord, mk, a) locals (key, f, r) {
 /-- `prep_rest(n, ord, mk, c, j)`: the unmarked stream records `j ‥ n`, in order, to
 `ord[c ..]`; the new `c` (`frontOf`'s rest of the stream, `front ++ rest`). -/
 -- con-ron: ConRon/Arena/Frontend/Prepare.lean:129-137 ConRon.Arena.Frontend.prepareD
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.Frontend.prepareD` changed; re-check the L code and its proofs, then delete this line
 @[no_expose] def prepRestL : FunDecl := lfn (n, ord, mk, c, j) locals (r) {
   if n <= j { return c };
   if IW.u64[mk + j] == 0 { IW.u64[ord + c] := j; c += 1 };
@@ -309,7 +308,6 @@ records, then the stream's: the front (`prep_front`), the rest
 (`prep_rest`), the ground hoist, then `DECL` rewritten in the prepared order. -/
 -- con-ron: ConRon/Arena/Frontend/Prepare.lean:139-146 ConRon.Arena.Frontend.preparePrelude
 -- con-ron: ConRon/Arena/Frontend/Prepare.lean:129-137 ConRon.Arena.Frontend.prepareD
--- con-ron: CHANGED since 97eead2d — `ConRon.Arena.Frontend.prepareD` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.Frontend.preparePrelude ConRon.Arena.Frontend.prepareD]
 def preparePreludeL : FunDecl := lfn () locals (np, n, ord, mk, z, c, t) {
   np := CTL.u64[240];
