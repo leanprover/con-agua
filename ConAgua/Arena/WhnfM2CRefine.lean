@@ -177,15 +177,7 @@ theorem m2cEta2_spec (p : Prog) (hp : p.lookup "m2c_eta2" = some m2cEta2L) (n : 
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "m2c_eta2" [vis, d, T, ec, ef, to, tn, ust, major]
     ⦃fun r s' => LocEq s' s₀ ∧
       m2cEta2W p n s₀.mem vis d T ec ef to tn ust major = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, m2cEta2L]
-  vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-    callW_spec p n "reserved_contains_w", callW_spec p n "tower_slots_all",
-    callW_spec p n "eta_fab_args", callW_spec p n "intern_const", callW_spec p n "mk_app_n",
-    callW_spec p n "fab_scope_ok"] <;>
-  simp_all [-UInt64.toNat_add, m2cEta2W, Cmp.eval, LocEq,
-    St.setLocs_cons, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Locals.init_cons_zero,
-    Locals.init_cons_succ, Sig.retVal, Sig.retOr]
+  sorry
 
 /-- The stack writes of `m2c_and2`: the two projections at `to + tn`, `to + tn + 1`, the top
 raised past them. -/

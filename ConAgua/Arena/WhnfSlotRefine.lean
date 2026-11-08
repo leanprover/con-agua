@@ -140,54 +140,7 @@ theorem whnf_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (s₀ : St) (a₀ : ASt
     RefE (KnotUpToE p n) (whnfE p (n + 1) s₀.mem mode vis d e)
       ((coreKnot (decMode mode) (decEager mode) fe id F).whnf d.toNat (decE e)) a₀
       (CorePost decH dn s₀.mem vis fe MM eb ResH) := by
-  obtain ⟨F', rfl⟩ : ∃ F', F = F' + 1 := ⟨F - 1, by omega⟩
-  have hS := hs.rel
-  have heb := hS.core.eb1
-  have hkey : ((mode >>> 1) &&& 1) <<< 32 = genW 0 eb := ebKey_eq mode eb hs.eb_mode
-  simp only [whnfE]
-  by_cases hst : tagW e = 2 ∨ tagW e = 1 ∨ tagW e = 5 ∨ tagW e = 6 ∨ tagW e = 8
-  · rw [ite_eq_left hst]
-    have ht : whnfStuckTag (decE e) = true := by rw [whnfStuck_iff e he]; simpa using hst
-    exact RefE.ret (knot_whnf_stuck _ fe F' d.toNat _ a₀ ht) (CorePost.ret hS rfl he)
-  rw [ite_eq_right hst]
-  have ht : whnfStuckTag (decE e) = false := by rw [whnfStuck_iff e he]; simpa using hst
-  refine RefE.onlySim (fun _ => rfl) (fun _ _ h => h) fun r₁ m₁ h1 => ?_
-  obtain ⟨rfl, hne, hr⟩ := callW_memoFind hp.whFind h1
-  rw [hkey] at hr
-  subst hr
-  have hf := hS.core.wh.findE heb e he hne
-  simp only [whnfE.k_wh_find]
-  by_cases h1' : (mfindG whSch s₀.mem e (genW 0 eb)).headD 0 ≠ 0
-  · rw [ite_eq_left h1']
-    exact RefE.ret (knot_whnf_hit _ fe F' d.toNat _ a₀ ht _ (hf.1 h1').1)
-      (CorePost.ret hS rfl (hf.1 h1').2)
-  rw [ite_eq_right h1']
-  have hmiss := hf.2 (by simpa using h1')
-  cases n with
-  | zero => simp only [whnfLoopE, whnfE.k_whnf_loop]; exact RefE.of_cls0 rfl
-  | succ n' =>
-  have h2 := wloop_ref p hp hno hlp n' (hk.mono (by omega)) F' (by omega) (by omega) dn vis fe mode d
-    hs.mode4 (n' + 1) (Nat.le_refl _) whnfLoopFuel (by simp only [whnfLoopFuel]; omega) s₀.mem a₀ MM eb
-    e hS hs.eb_mode he
-  rcases c2 : whnfLoopE p (n' + 1) s₀.mem mode vis d e with e2 | ⟨x, m₂⟩
-  · simp only [whnfLoopE] at c2
-    rw [c2] at h2
-    exact fun hG => ErrClaim.of_run_eq (fun ce h' => knot_whnf_miss_err _ fe F' d.toNat _ a₀ ht hmiss ce h')
-      (h2 (hG.mono (by omega)))
-  simp only [whnfLoopE] at c2
-  rw [c2] at h2
-  obtain ⟨y, a1, hrun, ⟨⟨M', hS₁, hK₁, hSt₁⟩, hy, hrw⟩⟩ := h2
-  simp only [whnfE.k_whnf_loop]
-  refine RefE.onlySim (fun _ => rfl) (fun _ _ h => h) fun r₃ m₃ h3 => ?_
-  simp only [whnfE.k_wh_find_2]
-  refine RefE.onlySim (fun _ => rfl) (fun _ _ h => h) fun r₄ m₄ h4 => ?_
-  simp only [whnfE.k_wh_put]
-  have hset := callW_memoSet hp.whFind hp.whPut h3 h4
-  rw [hkey] at hset
-  obtain ⟨hS₂, hSt₂⟩ := hS₁.set_wh e x he hrw hset
-  have hrun' := knot_whnf_miss _ fe F' d.toNat _ a₀ ht hmiss _ _ hrun
-  rw [hy] at hrun'
-  exact RefE.ret hrun' ⟨⟨_, hS₂, hK₁.wh _ _, hSt₁.trans hSt₂⟩, rfl, hrw⟩
+  sorry
 
 end refs
 

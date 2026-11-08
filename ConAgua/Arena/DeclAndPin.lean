@@ -147,7 +147,13 @@ theorem andPinOk_run {D P : Array Word} {i : Nat} {d : IDeclaration} (hd : DeclA
     {m : Mem} {a : AState} (hF : PinsFull m a.pins) :
     (andPinOk d).run a =
       .ok (!(lo32 (dw D i 1) = pinW m 12 ∨ lo32 (dw D i 1) = pinW m 49 ∨ lo32 (dw D i 1) = pinW m 50), a) := by
-  sorry
+  cases d with
+  | axiomDecl cv => simp only [andPinOk]; rw [← hd.2.1]; exact andPinNameFree_run hF _
+  | defnDecl cv v h => simp only [andPinOk]; rw [← hd.2.1.1]; exact andPinNameFree_run hF _
+  | thmDecl cv v => simp only [andPinOk]; rw [← hd.2.1.1]; exact andPinNameFree_run hF _
+  | opaqueDecl cv v => simp only [andPinOk]; rw [← hd.2.1.1]; exact andPinNameFree_run hF _
+  | quotDecl k cv => simp only [andPinOk]; rw [← hd.2.1.1]; exact andPinNameFree_run hF _
+  | indDecl b nP | basisDecl k => exact hd.elim
 
 /-- **`and_pin_ok` refines `andPinOk`** on record `i` of the loop's declarations. -/
 @[refines_part ConRon.Arena.andPinOk "one-constant records (the front's record kinds)"]
@@ -160,6 +166,42 @@ theorem andPinOk_refines {pins : List INatOpPinSet} (dn : NIdx → Option ConLec
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (andPinOk (dsAt ds i)) a₀ ∧
       LoopR pins s'.mem (AM.st (andPinOk (dsAt ds i)) a₀) vis fe ds ∧
       AM.res (andPinOk (dsAt ds i)) a₀ = (r.headD 0 != 0); ⊤⦄ := by
-  sorry
+  intro n s₀ a₀ vis fe pend i _hi hone hR
+  apply M.triple_of_run
+  intro s r s' hs hrun
+  obtain ⟨hloc, hk⟩ := M.of_run (P := fun s => s = s₀) hs hrun (andPinOk_specW p hp n s₀ i)
+  subst hs
+  have hdecl : DeclAt (s.mem.arr64 DECL) (s.mem.arr64 DLP) i.toNat (dsAt ds i) := by
+    have := hR.decls.recs i.toNat _hi
+    exact declAt_of_F (by simpa [dsAt, Array.getD, _hi] using this) hone
+  have hk6 : rdW (s.mem.arr64 DECL) (1 + 8 * i) ≠ 6 := by
+    have h1 := hR.decls.room
+    have h2 := hR.decls.dsize
+    have : rdW (s.mem.arr64 DECL) (1 + 8 * i) = dw (s.mem.arr64 DECL) i.toNat 0 := by
+      have : (1 + 8 * i).toNat = 1 + 8 * i.toNat + 0 := by
+        rw [UInt64.toNat_add, UInt64.toNat_mul]; simp; omega
+      simp [rdW, dw, this]
+    rw [this]
+    generalize dsAt ds i = d at hdecl
+    cases d <;> simp only [DeclAt] at hdecl <;> (try exact hdecl.elim) <;> rw [hdecl.1] <;> decide
+  obtain ⟨hm, hflag, hr⟩ := hk hk6
+  have hF := hR.check.pins.full (by have e0 : rdW (s.mem.arr64 PINS) 0 = pinW s.mem 0 := rfl; rw [← e0]; exact hflag)
+  have hrun' := andPinOk_run hdecl hF
+  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun'
+  have hw : rdW (s.mem.arr64 DECL) (2 + 8 * i) = dw (s.mem.arr64 DECL) i.toNat 1 := by
+    have h1 := hR.decls.room
+    have h2 := hR.decls.dsize
+    have : (2 + 8 * i).toNat = 1 + 8 * i.toNat + 1 := by
+      rw [UInt64.toNat_add, UInt64.toNat_mul]; simp; omega
+    simp [rdW, dw, this]
+  refine ⟨hloc, hok, by rw [hst, hm]; exact hR, ?_⟩
+  rw [hres, hr]
+  have e12 : rdW (s.mem.arr64 PINS) 12 = pinW s.mem 12 := rfl
+  have e49 : rdW (s.mem.arr64 PINS) 49 = pinW s.mem 49 := rfl
+  have e50 : rdW (s.mem.arr64 PINS) 50 = pinW s.mem 50 := rfl
+  simp only [andPinW, hw, e12, e49, e50, List.headD_cons]
+  generalize lo32 (dw (s.mem.arr64 DECL) i.toNat 1) = x
+  by_cases h1 : x = pinW s.mem 12 <;> by_cases h2 : x = pinW s.mem 49 <;>
+    by_cases h3 : x = pinW s.mem 50 <;> simp [h1, h2, h3]
 
 end L.Arena
