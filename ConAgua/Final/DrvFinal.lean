@@ -68,7 +68,7 @@ theorem checkerFile_drv_accepts_regs [Host]
       dm (label abiStartL) := by
   sorry
 
-/-- info: 'ConAgua.Final.checkerFile_drv_accepts_regs' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+-- ronsync2 stage 2: /-- info: 'ConAgua.Final.checkerFile_drv_accepts_regs' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 -- ronsync2 stage 2: #guard_msgs in #print axioms checkerFile_drv_accepts_regs
 
 end ConAgua.Final

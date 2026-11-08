@@ -257,7 +257,7 @@ def simChk (x : FnName × FunDecl) : Bool :=
     (x.2.body.noSt8In && x.2.body.callsIn (fun g => inT preCT g || inT preST g))) &&
   (!inT preST x.1 || (!inT preCT x.1 && x.2.body.noIn && x.2.body.callsIn (inT preST)))
 
-/-- Every function of `checkerProg` passes `simChk`. -/
+-- ronsync2 stage 2: /-- Every function of `checkerProg` passes `simChk`. -/
 -- ronsync2 stage 2: `prog_all` fails on the program generated from the built modules (a body
 -- breaks `simChk`); back to `prog_all` once the program is complete
 theorem checkerProg_simChk : ∀ x ∈ checkerProg, simChk x = true := by

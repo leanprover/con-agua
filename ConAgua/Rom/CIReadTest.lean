@@ -111,43 +111,43 @@ def twin {α : Type} (a : AState) (x : AM α) : Except String α :=
   | .error _ => throw "twin failed"
 
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
-/-- Run every check; the list of failures. -/
-def checks : Except String (List String) := do
-  let m ← startMem
-  let some a := startA | throw "twin startup failed"
-  let dn := denoteN a.store.lss.ls.ns
-  let mut bad : List String := []
-  for k in List.range 5 do
-    let (r, m') ← callL m "rom_basis_decls" (UInt64.ofNat k)
-    let v ← twin a (BasisKind.decls (L.Ind.basisOfW k))
-    if L.Arena.basisDec dn (r.headD 0).toNat (r.tail.headD 0).toNat m' != some v then
-      bad := bad ++ [s!"rom_basis_decls({k})"]
-    let (r, m') ← callL m "rom_basis_decls_a" (UInt64.ofNat k)
-    let v ← twin a (BasisKind.declsA (L.Ind.basisOfW k))
-    if L.Arena.basisDec dn (r.headD 0).toNat (r.tail.headD 0).toNat m' != some v then
-      bad := bad ++ [s!"rom_basis_decls_a({k})"]
-  for i in List.range 8 do
-    let (r, m') ← callL m "rom_ci" (UInt64.ofNat i)
-    let v ← twin a (L.Ind.romCiT i)
-    if decCI (L.Ind.erA m') (r.headD 0).toNat != some v then bad := bad ++ [s!"rom_ci({i})"]
-  for i in List.range 10 do
-    let (r, m') ← callL m "rom_cv" (UInt64.ofNat i)
-    let v ← twin a (L.Ind.romCvT i)
-    if decCV (L.Ind.erA m') (r.headD 0).toNat != some v then bad := bad ++ [s!"rom_cv({i})"]
-  for i in List.range 2 do
-    let (r, _) ← callL m "rom_expr_pin" (UInt64.ofNat i)
-    let v ← twin a (L.Ind.romExprT i)
-    if r.headD 0 != v.word.toUInt64 then bad := bad ++ [s!"rom_expr_pin({i})"]
-  match L.run prog.1 100000 "rom_and_pin" [] m with
-  | .ok (r, m') =>
-    let v ← twin a andPinDecls
-    if L.Arena.basisDec dn (r.headD 0).toNat (r.tail.headD 0).toNat m' != some v then
-      bad := bad ++ ["rom_and_pin()"]
-  | .error e => throw s!"rom_and_pin(): {repr e}"
-  pure bad
-
--- The checks pass.
--/
+-- ronsync2 stage 2: /-- Run every check; the list of failures. -/
+-- ronsync2 stage 2: def checks : Except String (List String) := do
+-- ronsync2 stage 2:   let m ← startMem
+-- ronsync2 stage 2:   let some a := startA | throw "twin startup failed"
+-- ronsync2 stage 2:   let dn := denoteN a.store.lss.ls.ns
+-- ronsync2 stage 2:   let mut bad : List String := []
+-- ronsync2 stage 2:   for k in List.range 5 do
+-- ronsync2 stage 2:     let (r, m') ← callL m "rom_basis_decls" (UInt64.ofNat k)
+-- ronsync2 stage 2:     let v ← twin a (BasisKind.decls (L.Ind.basisOfW k))
+-- ronsync2 stage 2:     if L.Arena.basisDec dn (r.headD 0).toNat (r.tail.headD 0).toNat m' != some v then
+-- ronsync2 stage 2:       bad := bad ++ [s!"rom_basis_decls({k})"]
+-- ronsync2 stage 2:     let (r, m') ← callL m "rom_basis_decls_a" (UInt64.ofNat k)
+-- ronsync2 stage 2:     let v ← twin a (BasisKind.declsA (L.Ind.basisOfW k))
+-- ronsync2 stage 2:     if L.Arena.basisDec dn (r.headD 0).toNat (r.tail.headD 0).toNat m' != some v then
+-- ronsync2 stage 2:       bad := bad ++ [s!"rom_basis_decls_a({k})"]
+-- ronsync2 stage 2:   for i in List.range 8 do
+-- ronsync2 stage 2:     let (r, m') ← callL m "rom_ci" (UInt64.ofNat i)
+-- ronsync2 stage 2:     let v ← twin a (L.Ind.romCiT i)
+-- ronsync2 stage 2:     if decCI (L.Ind.erA m') (r.headD 0).toNat != some v then bad := bad ++ [s!"rom_ci({i})"]
+-- ronsync2 stage 2:   for i in List.range 10 do
+-- ronsync2 stage 2:     let (r, m') ← callL m "rom_cv" (UInt64.ofNat i)
+-- ronsync2 stage 2:     let v ← twin a (L.Ind.romCvT i)
+-- ronsync2 stage 2:     if decCV (L.Ind.erA m') (r.headD 0).toNat != some v then bad := bad ++ [s!"rom_cv({i})"]
+-- ronsync2 stage 2:   for i in List.range 2 do
+-- ronsync2 stage 2:     let (r, _) ← callL m "rom_expr_pin" (UInt64.ofNat i)
+-- ronsync2 stage 2:     let v ← twin a (L.Ind.romExprT i)
+-- ronsync2 stage 2:     if r.headD 0 != v.word.toUInt64 then bad := bad ++ [s!"rom_expr_pin({i})"]
+-- ronsync2 stage 2:   match L.run prog.1 100000 "rom_and_pin" [] m with
+-- ronsync2 stage 2:   | .ok (r, m') =>
+-- ronsync2 stage 2:     let v ← twin a andPinDecls
+-- ronsync2 stage 2:     if L.Arena.basisDec dn (r.headD 0).toNat (r.tail.headD 0).toNat m' != some v then
+-- ronsync2 stage 2:       bad := bad ++ ["rom_and_pin()"]
+-- ronsync2 stage 2:   | .error e => throw s!"rom_and_pin(): {repr e}"
+-- ronsync2 stage 2:   pure bad
+-- ronsync2 stage 2: 
+-- ronsync2 stage 2: -- The checks pass.
+-- ronsync2 stage 2: -/
 -- ronsync2 stage 2: #eval show IO Unit from do
 -- ronsync2 stage 2:   match checks with
 -- ronsync2 stage 2:   | .ok [] => IO.println "romCIProg: every record decodes to the twin's value"

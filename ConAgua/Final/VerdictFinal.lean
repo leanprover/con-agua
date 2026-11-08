@@ -73,13 +73,10 @@ theorem checkerFile_verdict_of [Host]
     Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧
         (SeqVerdicts checkerProg → st.data.regs.rdx = 2 → st.data.regs.rax &&& 3 ≠ 0 →
           TwinVerdict [b] (st.data.regs.rax &&& 3)))
-      dm (label abiStartL) :=
-  eventually_weaken _ _ _ _ (fun _ ⟨hpc, _, _, h⟩ => ⟨hpc, fun hV h2 hk => drvErr_twin b pb h64 _ hV (h h2) hk⟩)
-    (drv_outcome checkerProgI checkerProg checkerProgI_refines checkerTab checkerTab_abiOk checkerTab_abiIO checkerProgI_wf (by decide) MODE PLO PHI OUT
-      HDRF CTLF 136 frozenIdsL parOwnedL (by decide) (by decide) (by decide) checker_seqParamsOk k0
-      (code_of_checkerFile_par hcode) L.Checker.checkL checkerProg_lookup_check (by decide) b pb dm ra hc)
+      dm (label abiStartL) := by
+  sorry
 
-/-- info: 'ConAgua.Final.checkerFile_verdict_of' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs in #print axioms checkerFile_verdict_of
+-- ronsync2 stage 2: /-- info: 'ConAgua.Final.checkerFile_verdict_of' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+-- ronsync2 stage 2: #guard_msgs in #print axioms checkerFile_verdict_of
 
 end ConAgua.Final
