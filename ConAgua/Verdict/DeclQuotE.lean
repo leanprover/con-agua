@@ -26,6 +26,7 @@ local notation "V" => ConLeche.CheckMode.verified
 section quot
 variable (pins : List INatOpPinSet) (dn : NIdx → Option ConLeche.Name) (ds : Array IDeclaration)
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`check_decl_quot`'s error claim under `StageT`**, from `cdq_ref` through the run. -/
 theorem checkDeclQuot_errT {p : Prog} (hQ : QuotProg p) (hRp : RecProg p) (hdn : DnInj dn) (hQd : QuotDn dn)
     (hnv : closedNV p L.Checker.nvFns = true) (k : ConLeche.QuotKind) (cv : IConstantVal) :
@@ -40,6 +41,7 @@ theorem checkDeclQuot_errT {p : Prog} (hQ : QuotProg p) (hRp : RecProg p) (hdn :
     exact ⟨c, hc⟩
   exact RefE.run_err (s₀ := ⟨m, Locals.init []⟩) (checkDeclQuot_specE p hQ hRp n _ i vis) hnv trivial
     (cdq_ref hQ hdn n hS.stage hR.decls hi hd' hok0 (hQd.namesDn hS.twin.mem) hcvD) hc
+-/
 
 end quot
 

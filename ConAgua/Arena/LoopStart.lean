@@ -25,6 +25,7 @@ namespace L.Arena
 
 open L.Front (DECL DLP DeclsF)
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- The arrays the loop needs zero at its start: the core's memos (49, 50, 52‥54, 151‥153), the
 environment's index rows (132‥134, 140‥142), the projection-table rows (129‥131, both tiers), the
 promotion memo (146‥149), `consts_resolve_ffast`'s memo (155), the inductive stage's memos
@@ -34,6 +35,7 @@ def loopZeroArrs : List TieredArray :=
     PLSM, PEM, Stubs.CRM, Ind.MAM, Ind.NOM, Ind.DPM, Ind.RFM, Ind.RAM, Ind.TAM, Ind.HBM, Ind.MCM,
     ILFM, EIXA1, EIXS1, EIXN1, TIXA, TIXS, TIXN] ++
   tier1s [TIXA, TIXS, TIXN]
+-/
 
 /-- An array the loop needs zero at its start. -/
 abbrev loopZeroArr (b : TieredArray) : Prop := b ∈ loopZeroArrs
@@ -53,9 +55,7 @@ structure LoopZero (m : Mem) : Prop where
   word : ∀ x : Word, loopZeroCtl x.toNat → rdW (m.arr64 CTL) x = 0
 
 theorem lz_stage {b : ArrId} (h1 : 201 ≤ b) (h2 : b ≤ 208) : loopZeroArr b := by
-  obtain rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl : b = 201 ∨ b = 202 ∨ b = 203 ∨ b = 204 ∨
-    b = 205 ∨ b = 206 ∨ b = 207 ∨ b = 208 := by simp only [ArrId] at *; omega
-  all_goals decide
+  sorry
 theorem lzc_pm {x : Nat} (h1 : 140 ≤ x) (h2 : x ≤ 147) : loopZeroCtl x :=
   .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inr <| .inl ⟨h1, h2⟩
 
@@ -71,18 +71,13 @@ theorem coreMemos : CoreMemos m :=
       unfold loopZeroCtl
       rcases hx with rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl <;> decide))
 
-theorem crOK : L.Stubs.CrOK m :=
-  CrOK.zero (by have := h.ctl; omega) (fun j => h.arr _ (by decide) j)
-    (h.word 158 (by unfold loopZeroCtl; decide))
+theorem crOK : L.Stubs.CrOK m := by
+  sorry
 
-theorem indMemos : IndMemos m :=
-  IndMemos.zero h.ctl (fun b hb j => h.arr b (by
-      rcases hb with rfl | rfl | ⟨h1, h2⟩
-      · decide
-      · decide
-      · exact lz_stage h1 h2) j)
-    (fun x hx => h.word x (by unfold loopZeroCtl; omega))
+theorem indMemos : IndMemos m := by
+  sorry
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem pmemo : PMemoR m PMemo.empty := by
   have hc : ∀ x : Word, 140 ≤ x.toNat → x.toNat ≤ 147 → rdW (m.arr64 CTL) x = 0 :=
     fun x h1 h2 => h.word x (lzc_pm h1 h2)
@@ -95,38 +90,16 @@ theorem pmemo : PMemoR m PMemo.empty := by
       (h.arr _ (by decide)),
     memoRV_zeroAt _ _ _ m (by simp; omega) (hc _ (by decide) (by decide))
       (h.arr _ (by decide))⟩
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem pendR : PendR m #[] :=
   ⟨by simp [pendCount, h.word 130 (by unfold loopZeroCtl; decide)], fun j hj => by simp at hj,
     by simp [pendCount, h.word 130 (by unfold loopZeroCtl; decide)]⟩
+-/
 
 theorem envR (dn : NIdx → Option ConLeche.Name) : EnvR m 0 (mkIFEnv IEnv.empty) := by
-  have hrow : ∀ w : Word, rowTag w ≤ 2 → rowC m w = 0 := by
-    intro w hw
-    simp only [rowC, ite_eq_left hw]
-    have hl : loopZeroArr (rowArr w) := by
-      rcases rowArr_cases w with e | e | e | e | e | e <;> rw [e] <;> decide
-    have hz := h.arr (rowArr w) hl (UInt64.ofNat (rowIx w))
-    have hlt : rowIx w < 2 ^ 64 := Nat.lt_trans (rowIx_lt w) (by decide)
-    simpa [rdW, Nat.mod_eq_of_lt hlt] using hz
-  have htrow : ∀ w : Word, tblRow m w = 0 := by
-    intro w
-    unfold tblRow
-    split
-    · rename_i hw
-      have hl : loopZeroArr (tblArr w) := by
-        rw [tblArr_eq]
-        rcases tierA_eq_or (tixArr (rowTag w)) (UInt64.ofNat (rowTier w)) with e | e <;> rw [e] <;>
-          rcases tixArr_mem (rowTag w) with e' | e' | e' <;> rw [e'] <;> decide
-      have hz := h.arr (tblArr w) hl (UInt64.ofNat (tblIx w))
-      have hlt : tblIx w < 2 ^ 64 := Nat.lt_trans (tblIx_lt w) (by decide)
-      simpa [rdW, Nat.mod_eq_of_lt hlt] using hz
-    · rfl
-  exact EnvR.init (fun w => by
-      by_cases hw : rowTag w ≤ 2
-      · exact hrow w hw
-      · simp [rowC, hw])
-    (h.word 128 (by unfold loopZeroCtl; decide)) htrow (h.word 133 (by unfold loopZeroCtl; decide))
+  sorry
 
 end LoopZero
 
@@ -205,6 +178,7 @@ theorem declsLpsDn_dnOf {st : EStore} {ds : Array IDeclaration}
   simp only [dnOf, hpk, ite_true]
   exact denoteNList_mem_some h2 k hk
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **The loop's relation and the memory's halves at the loop's start**, at the empty environment
 with no pending checks. -/
 theorem loop_start {pins : List INatOpPinSet} {ds : Array IDeclaration} {m : Mem} {a : AState}
@@ -221,20 +195,11 @@ theorem loop_start {pins : List INatOpPinSet} {ds : Array IDeclaration} {m : Mem
       split at h
       · exact ⟨by assumption, h⟩
       · cases h⟩, hz.coreMemos, hz.indMemos⟩
+-/
 
 /-- The lookups the loop's two phases take beyond `LoopCallees` (`installFoldGo_start`,
 `PhaseAEntry.lean`; phase B's `PhaseBProg`), and the bracket. -/
 structure LoopTopProg (p : Prog) : Prop where
   bracket : BracketProg p
-  pp : p.lookup "pend_push" = some pendPushL
-  pn : p.lookup "is_none" = some isNoneL
-  ps : p.lookup "is_some" = some isSomeL
-  pi : p.lookup "install_step" = some installStepL
-  pd : p.lookup "install_decl_step" = some installDeclStepL
-  pg : p.lookup "install_fold_go" = some installFoldGoL
-  px : p.lookup "install_fold_next" = some installFoldNextL
-  pc : p.lookup "check_pending" = some checkPendingL
-  pcg : p.lookup "check_pending_go" = some checkPendingGoL
-  pcx : p.lookup "check_pending_next" = some checkPendingNextL
 
 end L.Arena

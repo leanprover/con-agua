@@ -32,6 +32,7 @@ local notation "V" => ConLeche.CheckMode.verified
 section defn
 variable (pins : List INatOpPinSet) (dn : NIdx → Option ConLeche.Name) (ds : Array IDeclaration)
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`check_decl_defn`'s error claim under `StageT`** (`cdf_ref`'s error half). -/
 theorem checkDeclDefn_errT {p : Prog} (hA : ArmProg p) (hV : ValProg p)
     (hG : DefnProgT p pins) (hq : KnotStageProg p) (hcl : LeafClosed p)
@@ -54,6 +55,7 @@ theorem checkDeclDefn_errT {p : Prog} (hA : ArmProg p) (hV : ValProg p)
     ⟨⟨⟨hnv, hcE⟩, ⟨hUL, strLitStored_core p hq.knot.str⟩⟩, hivE, hDG⟩
     (cdf_ref hA hV hG hq hcl hlc hap hkp hdn n hn hS hR.pinsets hR.decls hi hd' hfold hcvd hvd hPD
       hCr) hc
+-/
 
 end defn
 

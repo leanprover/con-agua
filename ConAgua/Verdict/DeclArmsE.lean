@@ -32,6 +32,7 @@ local notation "V" => ConLeche.CheckMode.verified
 section arms
 variable (pins : List INatOpPinSet) (dn : NIdx → Option ConLeche.Name) (ds : Array IDeclaration)
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`check_decl_thm`'s error claim under `StageT`** (`cdt_ref`'s error half). -/
 theorem checkDeclThm_errT {p : Prog} (hV : ValProg p) (hq : KnotStageProg p) (hap : ApdF p)
     (hkp : CrKeep p) (hnv : closedNV p L.Checker.nvFns = true) (hcE : CoreStubsE p)
@@ -52,7 +53,9 @@ theorem checkDeclThm_errT {p : Prog} (hV : ValProg p) (hq : KnotStageProg p) (ha
   exact RefE.run_err (s₀ := ⟨m, Locals.init []⟩) (checkDeclThm_specE p hV hp n _ i vis) hnv
     ⟨⟨⟨hnv, hcE⟩, ⟨hUL, strLitStored_core p hq.knot.str⟩⟩, hivE⟩
     (cdt_ref (pins := pins) hV hq hap hkp hn hS hR.decls hi hd' hF hcd hCr) hc
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`check_decl_opaque`'s error claim under `StageT`** (`cdo_ref`'s error half). -/
 theorem checkDeclOpaque_errT {p : Prog} (hV : ValProg p) (hC : CrpProg p) (hq : KnotStageProg p)
     (hcl : LeafClosed p) (hlc : LoopClosed p) (hap : ApdF p) (hkp : CrKeep p)
@@ -73,6 +76,7 @@ theorem checkDeclOpaque_errT {p : Prog} (hV : ValProg p) (hC : CrpProg p) (hq : 
   exact RefE.run_err (s₀ := ⟨m, Locals.init []⟩) (checkDeclOpaque_specE p hp n _ i vis) trivial
     ⟨⟨⟨hnv, hcE⟩, ⟨hUL, strLitStored_core p hq.knot.str⟩⟩, hivE⟩
     (cdo_ref hV hC hq hcl hlc hap hkp hdn n hn hS hR.decls hi hd' hF hcd he hCr) hc
+-/
 
 end arms
 

@@ -28,6 +28,7 @@ local notation "V" => ConLeche.CheckMode.verified
 section ax
 variable (pins : List INatOpPinSet) (dn : NIdx → Option ConLeche.Name) (ds : Array IDeclaration)
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`check_decl_axiom`'s error claim under `StageT`**, from `cda_ref` through the run. -/
 theorem checkDeclAxiom_errT {p : Prog} (hX : AxProg p) (hq : KnotStageProg p) (hcl : LeafClosed p)
     (hap : ApdF p) (hkp : CrKeep p) (hnv : closedNV p L.Checker.nvFns = true) (hcE : CoreStubsE p)
@@ -42,6 +43,7 @@ theorem checkDeclAxiom_errT {p : Prog} (hX : AxProg p) (hq : KnotStageProg p) (h
   exact RefE.run_err (s₀ := ⟨m, Locals.init []⟩) (checkDeclAxiom_specE p hX n _ i vis) hnv
     ⟨⟨hnv, hcE⟩, ⟨hUL, strLitStored_core p hq.knot.str⟩⟩
     (cda_ref hX hq hcl hap hkp hdn hQd hn hS hR.decls hi hd' hok hcvd hF hCr) hc
+-/
 
 end ax
 

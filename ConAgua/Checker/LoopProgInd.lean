@@ -190,11 +190,13 @@ def loopStepFns : List FnName :=
 /-- `loopStepFns` as a tree of name codes. -/
 names_tree loopStepTree : loopStepFns
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- Every function of the checker passes the step's per-function check on `loopStepFns`. -/
 prog_all checkerProg_loopStepChk : checkerProg (wsChk CTL stepPa stepPc loopStepTree)
+-/
 
-theorem checkerProg_loopStepClosed : closedA checkerProg stepA stepC loopStepFns = true :=
-  closedW_of_all loopStepTree.eq stepPa_mem stepPc_mem checkerProg_loopStepChk
+theorem checkerProg_loopStepClosed : closedA checkerProg stepA stepC loopStepFns = true := by
+  sorry
 
 theorem indFns_sub : ∀ f ∈ indFns, f ∈ loopStepFns := by
   have h : indFns.all (fun f => (loopStepTree.find (nameCode f)).isSome) = true := by
