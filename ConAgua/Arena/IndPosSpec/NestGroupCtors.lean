@@ -60,7 +60,7 @@ theorem nestArity_spec (p : Prog) (hl : NaLook p) (n : Nat) (s₀ : St) (vis c :
   simp only [invoke_eq _ hl.hp, callFn, nestArityL]
   sym only [lang_grind, arena_grind, ind_grind] =>
     vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      envFind_specW p hl.hx hl.hg hl.hf n,
+      callW_spec p n "env_find",
       piBinders_spec p hl.ha hl.hc hl.hv hl.hs hl.hpb n] <;>
     finish (gen := 20) [naW, rdW_eq, List.getD_cons_zero, List.getD_cons_succ]
 
@@ -101,7 +101,7 @@ theorem naW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis C : Word) 
   rw [naK1_ind (h := hf0) (h3 := h3)] at h
   generalize r1.tail.headD 0 = ciq at h hfind hci h3 hciq
   have hk3 : nat? (erecP m) ciq.toNat = some 3 := by
-    have : (erecP m)[ciq.toNat]? = (m.arr64 EREC)[ciq.toNat]? := erecP_getE (by omega)
+    have : erecP m (ciq.toNat) = (m.arr64 EREC)[ciq.toNat]? := erecP_getE (by omega)
     simp only [nat?, this]
     have hb : ciq.toNat < (m.arr64 EREC).size := by have := hS.iw.er; omega
     have : rdW (m.arr64 EREC) ciq = 3 := by simpa using h3

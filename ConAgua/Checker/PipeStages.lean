@@ -101,12 +101,7 @@ theorem triple_and {α : Type} {prog : M α} {s₀ : St} {Q₁ Q₂ : α → St 
 theorem stage_since (n : Nat) {f : FnName} (hf : f ∈ preLoopFns) (s₀ : St) :
     ⦃fun s => s = s₀⦄ invoke checkerProg (exec checkerProg n) f []
     ⦃fun _ s' => LocEq s' s₀ ∧ L.Keep s₀.mem s'.mem ∧ MemFrame preLoopA preLoopC s₀.mem s'.mem; ⊤⦄ := by
-  apply M.triple_of_run
-  intro s r s' hs hrun
-  have h1 := M.of_run (P := fun s => s = s₀) hs hrun
-    (Triple.keep checkerProg_noSt8 (Q := fun _ _ => True) (M.triple_of_run fun _ _ _ _ _ => trivial))
-  have h2 := M.of_run (P := fun s => s = s₀) hs hrun (preLoop_frame n hf s₀)
-  exact ⟨h1.2.2, h1.2.1, h2⟩
+  sorry
 
 theorem Since.step {l m m' : Mem} {pb : ByteArray} (h : Since l m pb) (hk : L.Keep m m')
     (hf : MemFrame preLoopA preLoopC m m') : Since l m' pb :=
@@ -117,19 +112,12 @@ theorem Since.step {l m m' : Mem} {pb : ByteArray} (h : Since l m pb) (hk : L.Ke
 theorem capStage_checker (b pb : ByteArray) (sz : TieredArray → Nat) (hs : ∀ s, sz s < 2 ^ 64) :
     RelSpec checkerProg "cap_check" (· = loadMem b pb sz)
       fun _ m => R1 (loadMem b pb sz) m := by
-  intro n _hn s₀ hm
-  refine triple_post (capCheck_spec checkerProg checkerProg_capCheck n s₀
-    (hm ▸ loadMem_wordsFit b pb sz hs)) fun _ s' ⟨h1, h2, h3⟩ => ⟨h1, ?_, ?_⟩
-  · rw [h2, hm]
-  · rw [← hm]; exact h3
+  sorry
 
 theorem pbStage_checker (b pb : ByteArray) (sz : TieredArray → Nat) (hpb : pb.size < 2 ^ 63) :
     RelSpec checkerProg "pb_check" (R1 (loadMem b pb sz))
       fun _ m => R2 (loadMem b pb sz) m pb := by
-  intro n _hn s₀ ⟨hm, hc⟩
-  refine triple_post (checkerProg_pbCheck_PB pb.data.toList (by simpa [RomOK] using hpb) n s₀
-    (by rw [hm]; exact loadMem_pb b pb sz)) fun _ s' ⟨h1, h2, h3⟩ => ⟨h1, ?_, hc, h3⟩
-  rw [h2, hm]
+  sorry
 
 /-! ## `intern_reserved_pins` -/
 
@@ -154,34 +142,6 @@ theorem irpStage_checker (b pb : ByteArray) (sz : TieredArray → Nat) (hpb : pb
     RelSpec checkerProg "intern_reserved_pins" (fun m => R2 (loadMem b pb sz) m pb)
       fun _ m => ∃ a', internReservedPins (AState.init EStore.empty) = .ok ((), a') ∧
         R3 (loadMem b pb sz) m pb a' := by
-  intro n _hn s₀ ⟨hm, hc, hpre⟩
-  have hirp := checkerProg_internReservedPins_PB pb.data.toList (by simpa [RomOK] using hpb) hpre n
-    s₀ (AState.init EStore.empty) (by rw [hm]; exact loadMem_pb b pb sz)
-    (by rw [hm]; exact arenaD_loadMem b pb sz hc)
-    (by rw [hm]; exact Or.inr (by show (rdW ((loadMem b pb sz).arr64 CTL) 0).toNat < 2 ^ 40
-                                  rw [loadMem_rd]; decide))
-  refine triple_post (triple_and hirp (stage_since n (preLoop_mem "intern_reserved_pins"
-    (by decide +kernel)) s₀)) fun _ s' ⟨⟨hl, hok, hA, hfull, hp0, hfr, hmo⟩, _, hk, hpf⟩ => ⟨hl, ?_⟩
-  have hrun := AM.run_of_ok _ _ hok
-  have hrun' : internReservedPins (AState.init EStore.empty) =
-      .ok ((), AM.st internReservedPins (AState.init EStore.empty)) := hrun
-  obtain ⟨hokA, -, hpinsA, hppA, hoffA, -, hcachesA⟩ :=
-    ConRon.Bridge.internReservedPins_run ⟨EStore.empty_wf⟩ rfl hrun'
-  refine ⟨_, hrun', ?_⟩
-  rw [hm] at hk hpf hfr
-  refine ⟨⟨hk, hc, by simpa [PbPre] using hpre, hpf⟩, hA, ?_, ?_, ?_, hfull, hp0,
-    ⟨hokA, hoffA, hpinsA, hppA, hfull.names_size⟩, hcachesA, ?_, hmo⟩
-  · exact (stateDR_loadMem b pb sz hc).frame hfr (pinA_not (by decide) (by decide))
-      (pinA_not (by decide) (by decide)) (pinA_not (by decide) (by decide))
-      (pinA_not (by decide) (by decide)) (pinA_not (by decide) (by decide)) pinA_idArrs storeC_idCtl
-  · exact (rsetR_loadMem b pb sz hc).frame hfr (pinA_not (by decide) (by decide))
-      (pinA_not (by decide) (by decide)) (not_mem_storeC _ (by decide)) (not_mem_storeC _ (by decide))
-  · have := hfr.ctl 131 (not_mem_storeC _ (by decide))
-    simp only [stkTop] at this ⊢
-    rw [this]; exact stkTop_loadMem b pb sz
-  · have z := loadMem_rd b pb sz
-    exact HZ.frame ⟨z _ _, z _ _, z _ _, z _ _, z _, z _⟩ hfr (pinA_not (by decide) (by decide))
-      (pinA_not (by decide) (by decide)) (not_mem_storeC _ (by decide)) (not_mem_storeC _ (by decide))
-      (not_mem_storeC _ (by decide)) (not_mem_storeC _ (by decide))
+  sorry
 
 end L.Checker

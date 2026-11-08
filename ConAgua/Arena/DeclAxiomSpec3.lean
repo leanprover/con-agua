@@ -215,7 +215,7 @@ theorem fp_specW (h : StdProg p) (n : Nat) (s₀ : St) (vis nm k ca cb id : Word
   | succ n =>
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        envFind_specW p h.red.ih.ix h.red.ih.rowGet h.red.ih.find n, callW_spec p n "rom_ci",
+        callW_spec p n "env_find", callW_spec p n "rom_ci",
         callW_spec p n "ci_to_cv", mp_specW p h.red.canon h.red.mp n] <;>
       finish (gen := 20) [rdW_eq, mpW]
 

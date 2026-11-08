@@ -29,7 +29,7 @@ open L.Arena
 `ips`, in order. -/
 def PinsIW (m : Mem) (o l : Nat) (ips : List INatOpPinSet) : Prop :=
   o + l ≤ iwTop m ∧ l = ips.length ∧ ∀ (j : Nat) (hj : j < ips.length), ∃ ps : Word,
-    (iwA m)[o + j]? = some ps ∧ PinSetR m ps ips[j]
+    iwA m (o + j) = some ps ∧ PinSetR m ps ips[j]
 
 theorem PinsIW.grow {m m' : Mem} {o l : Nat} {ips : List INatOpPinSet} (h : PinsIW m o l ips)
     (hg : IWGrow m m') : PinsIW m' o l ips := by

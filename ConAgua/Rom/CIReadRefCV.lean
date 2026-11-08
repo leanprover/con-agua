@@ -26,7 +26,7 @@ open L.Arena L.Ind
 /-! ## One `EREC` word written -/
 
 theorem er_set_ne (m : Mem) (j w : Word) (i : Nat) (hi : i ≠ j.toNat) :
-    (erA (m.set64 EREC j w))[i]? = (erA m)[i]? := by
+    (erA (m.set64 EREC j w))[i]? = erA m i := by
   simp only [erA]
   rw [Mem.arr64_set64_same, Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds]
   simp [Ne.symm hi]
@@ -51,9 +51,9 @@ theorem Holds.setER {α : Type} {SE SI : Nat → Prop} {f : Mem → Option α} {
 
 /-- `decCV` from its three parts. -/
 theorem holds_decCV {m : Mem} {q : Nat} {SL SI : Nat → Prop} {n t : Word} {l : List NIdx}
-    (hn : (erA m)[q]? = some n) (hnl : n.toNat < 2 ^ 32)
+    (hn : erA m q = some n) (hnl : n.toNat < 2 ^ 32)
     (hl : Holds SL SI (fun m => (hlist? (erA m) (q + 1) : Option (List NIdx))) m l)
-    (ht : (erA m)[q + 3]? = some t) (htl : t.toNat < 2 ^ 32) :
+    (ht : erA m (q + 3) = some t) (htl : t.toNat < 2 ^ 32) :
     Holds (fun i => i = q ∨ SL i ∨ i = q + 3) SI (fun m => decCV (erA m) q) m ⟨decI n, l, decI t⟩ := by
   intro m' h1 h2
   have e1 := (h1 q (.inl rfl)).trans hn
@@ -138,7 +138,7 @@ theorem cv_rel {m₀ : Mem} {a₀ : AState} {T : Nat} (seen : List ConLeche.Expr
   · refine ⟨by omega, fun i hi hR => ?_⟩
     rw [er_set_ne _ _ _ _ (by omega)]
     simp only [erA, hE4]
-    rw [show (m3.arr64 EREC)[i]? = (erA m3)[i]? from rfl, hek3.2 i (by omega) (by omega),
+    rw [show (m3.arr64 EREC)[i]? = erA m3 i from rfl, hek3.2 i (by omega) (by omega),
       er_set_ne _ _ _ _ (by omega)]
     simp only [erA, hE1]
   · -- the record
@@ -147,7 +147,7 @@ theorem cv_rel {m₀ : Mem} {a₀ : AState} {T : Nat} (seen : List ConLeche.Expr
     have hw0' : (erA ((m4.set64 EREC (pp + 3) (r4.headD 0))))[pp.toNat]? = some (r1.headD 0) := by
       rw [er_set_ne _ _ _ _ (by omega)]
       simp only [erA, hE4]
-      rw [show (m3.arr64 EREC)[pp.toNat]? = (erA m3)[pp.toNat]? from rfl,
+      rw [show (m3.arr64 EREC)[pp.toNat]? = erA m3 (pp.toNat) from rfl,
         hek3.2 pp.toNat (by omega) (by omega)]
       exact hw0
     have hw3 : (erA (m4.set64 EREC (pp + 3) (r4.headD 0)))[pp.toNat + 3]? = some (r4.headD 0) := by

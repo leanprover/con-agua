@@ -87,7 +87,7 @@ theorem targets_ok {p : Prog} (hx : HoistExt p) {a : AState} {ds : Array IDeclar
     HEnv m a ds idx ord tg ws c → TgtR m tg c T → TgtV T c →
     (∀ (k t : Nat), T[k]? = some t → t < iw.toNat) → TLt T → iw.toNat ≤ c → PinsR m a.pins →
     hTargetsGoW p n m ord cw tg ws iw = some (r, m') →
-    ∃ T'', (hoistTargetsGo ds idx T iw.toNat).run a = .ok (T'', a) ∧
+    ∃ T'', (hoistTargetsGo IDeclaration.usedConsts ds idx T iw.toNat).run a = .ok (T'', a) ∧
       HEnv m' a ds idx ord tg ws c ∧ TgtR m' tg c T'' ∧ TgtV T'' c ∧ TLt T'' ∧ PinsR m' a.pins ∧
       LowFr tg m m' := by
   intro n
@@ -121,7 +121,7 @@ theorem targets_ok {p : Prog} (hx : HoistExt p) {a : AState} {ds : Array IDeclar
   have hnext : ∀ (m₁ : Mem) (T₁ : Std.HashMap Nat Nat), HEnv m₁ a ds idx ord tg ws c →
       TgtR m₁ tg c T₁ → TgtV T₁ c → (∀ (k t : Nat), T₁[k]? = some t → t < iw.toNat + 1) → TLt T₁ →
       PinsR m₁ a.pins → hTargetsGoW p n m₁ ord cw tg ws (iw + 1) = some (r, m') →
-      ∃ T'', (hoistTargetsGo ds idx T₁ (iw.toNat + 1)).run a = .ok (T'', a) ∧
+      ∃ T'', (hoistTargetsGo IDeclaration.usedConsts ds idx T₁ (iw.toNat + 1)).run a = .ok (T'', a) ∧
         HEnv m' a ds idx ord tg ws c ∧ TgtR m' tg c T'' ∧ TgtV T'' c ∧ TLt T'' ∧ PinsR m' a.pins ∧
         LowFr tg m₁ m' := by
     intro m₁ T₁ hE₁ hT₁ hTv₁ hTi₁ hlt₁ hP₁ h₁

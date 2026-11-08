@@ -94,7 +94,7 @@ theorem fpc_specW (h : TcoProg p) (n : Nat) (s₀ : St) (vis nm k id : Word) :
   | succ n =>
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        envFind_specW p h.red.ih.ix h.red.ih.rowGet h.red.ih.find n, callW_spec p n "rom_cv",
+        callW_spec p n "env_find", callW_spec p n "rom_cv",
         mp_specW p h.red.canon h.red.mp n] <;>
       finish (gen := 20) [rdW_eq, mpW]
 

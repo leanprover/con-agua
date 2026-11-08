@@ -32,7 +32,7 @@ the tops. -/
 theorem installCvDecB {m : Mem} {q : Nat} {cv : IConstantVal} (h : decCVp m q = some cv)
     (hx : CVExt m q) : DecB (fun m => decCVp m q) m cv := by
   obtain ⟨hq, hsl⟩ := hx
-  have e : ∀ i, i < erTop m → (erA (truncM m))[i]? = (erA m)[i]? := fun i hi => truncM_er_eq hi
+  have e : ∀ i, i < erTop m → (erA (truncM m))[i]? = erA m i := fun i hi => truncM_er_eq hi
   show decCVp (truncM m) q = some cv
   simp only [decCVp] at h ⊢
   simp only [decCV, bind, Option.bind, pure, hlist?] at h ⊢

@@ -180,7 +180,7 @@ variable (p : Prog)
 (outside the verdict closure) through their `Option` models. -/
 l_model installBasisDecl_specE (p : Prog) (hB : BasisProg p)
   fns [hB.ibd ↦ installBasisDeclE]
-  specs [envFind_specW p hB.ih.ix hB.ih.rowGet hB.ih.find n, callW_spec p n "env_push"]
+  specs [callW_spec p n "env_find", callW_spec p n "env_push"]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
   heartbeats 400000 unified
@@ -289,7 +289,7 @@ theorem ibds_ref {p : Prog} (hB : BasisProg p) (dn : NIdx → Option ConLeche.Na
   have hext := (IWGrow.refl m).truncExt
   have hvm : iwN m o.toNat = some v := hext.1.nat? hv
   have hci' : decCI (erecP m) v = some ci := ArrExt.decCI (truncM_erecP m) hci
-  obtain ⟨w0, hw0, rfl⟩ : ∃ w0, (iwA m)[o.toNat]? = some w0 ∧ w0.toNat = v := by
+  obtain ⟨w0, hw0, rfl⟩ : ∃ w0, iwA m (o.toNat) = some w0 ∧ w0.toNat = v := by
     simp only [iwN, nat?, Option.map_eq_some_iff] at hvm; exact hvm
   have ew : rdW (m.arr64 IW) o = w0 := by simp [rdW, iwA] at hw0 ⊢; simp [hw0]
   rw [ew]

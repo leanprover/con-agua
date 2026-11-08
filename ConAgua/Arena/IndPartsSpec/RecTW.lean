@@ -634,7 +634,7 @@ theorem decCVp_type {m : Mem} {q : Word} {cv : IConstantVal} (h : decCVp m q.toN
   simp only [decCVp, decCV, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
   obtain ⟨nm, -, lv, -, ty, hty, hcv⟩ := h
   have hty' : ty = cv.type := by rw [← hcv]
-  rcases hw : (erA m)[q.toNat + 3]? with _ | w
+  rcases hw : erA m (q.toNat + 3) with _ | w
   · simp [hd?, hw] at hty
   by_cases hl : w.toNat < 2 ^ 32
   · simp [hd?, hw, hl] at hty

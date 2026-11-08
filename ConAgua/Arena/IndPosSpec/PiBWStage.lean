@@ -88,7 +88,6 @@ structure NaLook (p : Prog) : Prop where
   hv : p.lookup "e_view" = some eView
   hs : p.lookup "sl_cons" = some slCons
   hpb : p.lookup "pi_binders" = some piBinders
-  hx : p.lookup "env_ix" = some envIxL
   hg : p.lookup "env_row_get" = some envRowGetL
   hf : p.lookup "env_find" = some envFindL
   hp : p.lookup "nest_arity" = some nestArityL

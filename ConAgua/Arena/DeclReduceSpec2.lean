@@ -193,7 +193,7 @@ theorem rso_specW (h : RedProg p) (n : Nat) (s₀ : St) (vis c : Word) :
   | succ n =>
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        envFind_specW p h.ih.ix h.ih.rowGet h.ih.find n, callW_spec p n "reduce_op_cv_a",
+        callW_spec p n "env_find", callW_spec p n "reduce_op_cv_a",
         mp_specW p h.canon h.mp n] <;>
       finish (gen := 20) [rdW_eq, mpW]
 
@@ -222,7 +222,7 @@ theorem rsoW_ok {p : Prog} (h : RedProg p) {dn : NIdx → Option ConLeche.Name} 
   rw [hptr] at hW
   generalize hq : rowP m1 c = q at hW hci hfind
   have hsz := hS.iw.erSize
-  obtain ⟨wk, hwk⟩ : ∃ wk, (erecP m1)[q.toNat]? = some wk := by
+  obtain ⟨wk, hwk⟩ : ∃ wk, erecP m1 (q.toNat) = some wk := by
     obtain ⟨wk, e, -⟩ := ciD hci; exact ⟨wk, e⟩
   have ek : rdW (m1.arr64 EREC) q = wk := rdW_of_get? rfl (erecP_get hwk)
   rw [ek] at hW
@@ -359,7 +359,7 @@ theorem reo_specW (h : RedProg p) (n : Nat) (s₀ : St) (vis c : Word) :
   | succ n =>
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, pinAt_specW p h.pa n,
-        envFind_specW p h.ih.ix h.ih.rowGet h.ih.find n, callW_spec p n "rom_ci",
+        callW_spec p n "env_find", callW_spec p n "rom_ci",
         callW_spec p n "rom_cv", ciEq_spec' p h.canon n, mp_specW p h.canon h.mp n] <;>
       finish (gen := 20) [rdW_eq, mpW]
 
@@ -447,7 +447,7 @@ theorem reoW_ok {p : Prog} {dn : NIdx → Option ConLeche.Name} (hdn : DnInj dn)
     obtain ⟨ci, hci⟩ := envR_row_dec hS.check.env _ hl2 htag hrc
     rw [hptr] at hW
     generalize hq : rowP m3 (pinW m3 (1 + (29 : Word).toNat)) = q at hW hci hfind
-    obtain ⟨wk, hwk⟩ : ∃ wk, (erecP m3)[q.toNat]? = some wk := by
+    obtain ⟨wk, hwk⟩ : ∃ wk, erecP m3 (q.toNat) = some wk := by
       obtain ⟨wk, e, -⟩ := ciD hci; exact ⟨wk, e⟩
     have ek : rdW (m3.arr64 EREC) q = wk := rdW_of_get? rfl (erecP_get hwk)
     rw [ek] at hW

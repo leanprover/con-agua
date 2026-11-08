@@ -325,7 +325,7 @@ theorem keeps_isNatOpRecord (d : IDeclaration) : Keeps (isNatOpRecord d) := by
 
 theorem keeps_hoistClosure (ds : Array IDeclaration) (idx : Std.HashMap NIdx Nat) (i : Nat) :
     ∀ (fuel : Nat) (target : Std.HashMap Nat Nat) (stack : List Nat),
-      Keeps (hoistClosure ds idx i fuel target stack)
+      Keeps (hoistClosure IDeclaration.usedConsts ds idx i fuel target stack)
   | 0, target, stack => by intro c p; unfold hoistClosure; repeat' keeps_step
   | fuel + 1, target, stack => by
     intro c p; unfold hoistClosure hoistClosure.pushDeps
@@ -333,19 +333,19 @@ theorem keeps_hoistClosure (ds : Array IDeclaration) (idx : Std.HashMap NIdx Nat
 
 theorem keeps_hoistDeps (ds : Array IDeclaration) (idx : Std.HashMap NIdx Nat) (i : Nat) :
     ∀ (target : Std.HashMap Nat Nat) (gs : List NIdx),
-      Keeps (hoistTargetsGo.hoistDeps ds idx target i gs)
+      Keeps (hoistTargetsGo.hoistDeps IDeclaration.usedConsts ds idx target i gs)
   | target, [] => by intro c p; unfold hoistTargetsGo.hoistDeps; repeat' keeps_step
   | target, g :: gs => by
     intro c p; unfold hoistTargetsGo.hoistDeps
     repeat' keeps_step [keeps_hoistClosure, keeps_hoistDeps ds idx i _ gs]
 
 theorem keeps_hoistTargetsGo (ds : Array IDeclaration) (idx : Std.HashMap NIdx Nat)
-    (target : Std.HashMap Nat Nat) (i : Nat) : Keeps (hoistTargetsGo ds idx target i) := by
-  fun_induction hoistTargetsGo ds idx target i <;> intro c p <;>
+    (target : Std.HashMap Nat Nat) (i : Nat) : Keeps (hoistTargetsGo IDeclaration.usedConsts ds idx target i) := by
+  fun_induction hoistTargetsGo IDeclaration.usedConsts ds idx target i <;> intro c p <;>
     repeat' keeps_step [keeps_isNatOpRecord, keeps_natOpDeps, keeps_hoistDeps,
       ‹∀ _, Keeps (hoistTargetsGo _ _ _ _)›, ‹Keeps (hoistTargetsGo _ _ _ _)›]
 
-theorem keeps_hoistNatOpGround (ds : Array IDeclaration) : Keeps (hoistNatOpGround ds) := by
+theorem keeps_hoistNatOpGround (ds : Array IDeclaration) : Keeps (hoistNatOpGround IDeclaration.usedConsts ds) := by
   intro c p; unfold hoistNatOpGround hoistTargets; repeat' keeps_step [keeps_hoistTargetsGo]
 
 theorem keeps_preparePrelude (pre : PreludeIx) (ds : Array IDeclaration) :

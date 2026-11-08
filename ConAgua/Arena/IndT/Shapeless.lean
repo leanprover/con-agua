@@ -108,7 +108,7 @@ theorem mapM_denoteN_of {dn : NIdx → Option ConLeche.Name} {ns : ConRon.Arena.
     obtain ⟨ks, hks⟩ := mapM_denoteN_of hd l (fun k' hk' => h k' (List.mem_cons_of_mem _ hk'))
     exact ⟨x :: ks, by simp [List.mapM_cons, hd k x hx, hks]⟩
 
-theorem erecP_get_lt {m : Mem} {i : Nat} {v : Word} (h : (erecP m)[i]? = some v) : i < erTop m := by
+theorem erecP_get_lt {m : Mem} {i : Nat} {v : Word} (h : erecP m i = some v) : i < erTop m := by
   rw [← erA_truncM_a5] at h
   exact (truncM_er_get h).1
 

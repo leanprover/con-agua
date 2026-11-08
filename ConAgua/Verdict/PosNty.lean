@@ -84,7 +84,7 @@ theorem nty_ref {p : Prog} (hl : NtyLook p) {dn : NIdx → Option ConLeche.Name}
   have hciq := decCI_idx hci
   have hszE := erecP_size_le m1
   have hk3 : nat? (erecP m1) q.toNat = some 3 := by
-    have : (erecP m1)[q.toNat]? = (m1.arr64 EREC)[q.toNat]? := erecP_getE (by omega)
+    have : erecP m1 (q.toNat) = (m1.arr64 EREC)[q.toNat]? := erecP_getE (by omega)
     simp only [nat?, this]
     have hb : q.toNat < (m1.arr64 EREC).size := by omega
     have : rdW (m1.arr64 EREC) q = 3 := by simpa using h3

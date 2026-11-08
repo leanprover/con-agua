@@ -49,7 +49,7 @@ local notation "V" => ConLeche.CheckMode.verified
 
 l_model toiE_spec (p : Prog) (P : ToiProg p)
   fns [P.toi ↦ toiE]
-  specs [envFind_specW p P.ix P.rowGet P.find n, erToIw_specW p P.alloc P.copy P.eti n,
+  specs [callW_spec p n "env_find", erToIw_specW p P.alloc P.copy P.eti n,
     callW_spec p n "inst_lp_fast", instPisWith_spec p P.v P.ipw P.hi1 n,
     piBinders_spec p P.alloc P.icopy P.v P.sc P.pb n]
   grind [arena_grind] fold [tierW, idxW]

@@ -238,7 +238,7 @@ theorem decPL_growAP {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {o l : Na
 theorem erToIw_blk {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
     {n : Nat} {m m' : Mem} {o l : Word} {r : List Word} {block : List IConstantInfo}
     (h : erToIwW n m o l = some (r, m')) (hS : StageR vis fe m a)
-    (hd : decCIsR (erecP m) o.toNat l.toNat = some block) (hb : o.toNat + l.toNat ≤ erTop m) :
+    (hd : L.Front.decCIsR (erecP m) o.toNat l.toNat = some block) (hb : o.toNat + l.toNat ≤ erTop m) :
     StageR vis fe m' a ∧ IWGrow m m' ∧ r.tail.headD 0 = l ∧
       decPL m' (fun q => decCI (erecP m') q) (r.headD 0).toNat l.toNat = some block ∧
       (r.headD 0).toNat + l.toNat ≤ iwTop m' := by

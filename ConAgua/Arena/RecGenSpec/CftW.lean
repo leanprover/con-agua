@@ -75,7 +75,7 @@ theorem classFormerTy_spec (p : Prog) (h : CftProg p) (cR : CallM) (hcR : CallSp
   | succ N =>
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        internBVar_spec p h.bf h.bp h.ib N, envFind_specW p h.ix h.rowGet h.find N,
+        internBVar_spec p h.bf h.bp h.ib N, callW_spec p N "env_find",
         erToIw_specW p h.alloc h.copy h.eti N, hcR N "inst_lp_fast"] <;>
       finish (gen := 20) [rdW_eq]
 

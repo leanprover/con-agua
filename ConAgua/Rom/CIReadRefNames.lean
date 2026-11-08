@@ -121,7 +121,7 @@ theorem namesTo_rel {m₀ : Mem} {a₀ : AState} {T : Nat} (seen : List ConLeche
       callW p k "rci_names_to" [q, o, kw] m = some (r, m') →
       ∃ (ws : List Word) (a' : AState), (Frontend.internNameList ns).run a = .ok (ws.map decI, a') ∧
         ws.length = ns.length ∧ (∀ w ∈ ws, w.toNat < 2 ^ 32) ∧
-        (∀ j (hj : j < ws.length), (erA m')[o.toNat + j]? = some ws[j]) ∧
+        (∀ j (hj : j < ws.length), erA m' (o.toNat + j) = some ws[j]) ∧
         RInv m₀ a₀ T m' a' ∧ MemoR m' seen memo ∧ stkTop m' = stkTop m ∧
         (r.headD 0).toNat = q.toNat + (encNames ns).length ∧
         EKeep (fun i => o.toNat ≤ i ∧ i < o.toNat + ns.length) m m' ∧ erTop m' = erTop m ∧
@@ -230,8 +230,8 @@ theorem hslice_of {k : IdxKind} (a : Array Word) (o : Nat) (ws : List Word)
 
 /-- **A name slice `(o, c)` at words `d`, `d + 1`** decodes to the handles, from the words read. -/
 theorem holds_hlist {k : IdxKind} (m : Mem) (d : Nat) (ow cw : Word) (ws : List Word)
-    (hd : (erA m)[d]? = some ow) (hc : (erA m)[d + 1]? = some cw) (hcw : cw.toNat = ws.length)
-    (hw : ∀ j (hj : j < ws.length), (erA m)[ow.toNat + j]? = some ws[j])
+    (hd : erA m d = some ow) (hc : erA m (d + 1) = some cw) (hcw : cw.toNat = ws.length)
+    (hw : ∀ j (hj : j < ws.length), erA m (ow.toNat + j) = some ws[j])
     (hlt : ∀ w ∈ ws, w.toNat < 2 ^ 32) :
     Holds (fun i => i = d ∨ i = d + 1 ∨ (ow.toNat ≤ i ∧ i < ow.toNat + ws.length)) (fun _ => False)
       (fun m => (hlist? (erA m) d : Option (List (Idx k)))) m (ws.map decI) := by
@@ -316,7 +316,7 @@ theorem nameSl_rel {m₀ : Mem} {a₀ : AState} {T : Nat} (seen : List ConLeche.
   have hsz1 : erTop m1 ≤ (m1.arr64 EREC).size := hI1.ok.er
   have hget2 : ∀ i, (erA ((m1.set64 EREC d (r1.headD 0)).set64 EREC (d + 1) (UInt64.ofNat ns.length)))[i]? =
       if i = d.toNat + 1 then some (UInt64.ofNat ns.length) else if i = d.toNat then some (r1.headD 0)
-      else (erA m1)[i]? := by
+      else erA m1 i := by
     intro i
     simp only [erA]
     rw [Mem.arr64_set64_same, Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds,
@@ -336,10 +336,10 @@ theorem nameSl_rel {m₀ : Mem} {a₀ : AState} {T : Nat} (seen : List ConLeche.
   obtain ⟨ws, a', hrun, hwl, hwlt, hwd, hI3, hM3, hs3, hq3, hek3, ht3, hiw3⟩ :=
     namesTo_rel hL hr seen memo ns hfit k _ a _ _ _ rest r2 m3 hI2 hM2 hdn hcN (by omega)
       (by omega) h2
-  have hkeep : ∀ i, i < erTop m → (erA m3)[i]? =
+  have hkeep : ∀ i, i < erTop m → erA m3 i =
       (erA ((m1.set64 EREC d (r1.headD 0)).set64 EREC (d + 1) (UInt64.ofNat ns.length)))[i]? :=
     fun i hi => hek3.2 i (by omega) (by omega)
-  have hE1' : ∀ i : Nat, (erA m1)[i]? = (erA m)[i]? := fun i => by unfold erA; rw [hE1]
+  have hE1' : ∀ i : Nat, erA m1 i = erA m i := fun i => by unfold erA; rw [hE1]
   refine ⟨ws, a', hrun, hwlt, hI3, hM3, by rw [hs3, hs2, hs1], ?_, ?_, by omega,
     by rw [hiw3, hIW2, hIW1], ?_⟩
   · simp only [List.headD_cons]; rw [hq3, hq8]; simp [encNameL, u64B]; omega

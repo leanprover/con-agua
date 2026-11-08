@@ -29,7 +29,7 @@ open L.Arena
 
 /-- The two-word record at `p` holds `a`, `b`, below the pool's top. -/
 def RecAt (m : Mem) (p a b : Word) : Prop :=
-  p.toNat + 2 ≤ iwTop m ∧ (iwA m)[p.toNat]? = some a ∧ (iwA m)[p.toNat + 1]? = some b
+  p.toNat + 2 ≤ iwTop m ∧ iwA m (p.toNat) = some a ∧ iwA m (p.toNat + 1) = some b
 
 theorem RecAt.grow {m m' : Mem} {p a b : Word} (h : RecAt m p a b) (hg : IWGrow m m') :
     RecAt m' p a b := by
@@ -41,7 +41,7 @@ theorem RecAt.grow {m m' : Mem} {p a b : Word} (h : RecAt m p a b) (hg : IWGrow 
 /-- `List (EIdx × EIdx)` as the slice `(o, l)` of pointers to equation records. -/
 def EqL (m : Mem) (o l : Nat) (ps : List (EIdx × EIdx)) : Prop :=
   o + l ≤ iwTop m ∧ l = ps.length ∧ ∀ (j : Nat) (hj : j < ps.length), ∃ p a b : Word,
-    (iwA m)[o + j]? = some p ∧ RecAt m p a b ∧ a.toNat < 2 ^ 32 ∧ b.toNat < 2 ^ 32 ∧
+    iwA m (o + j) = some p ∧ RecAt m p a b ∧ a.toNat < 2 ^ 32 ∧ b.toNat < 2 ^ 32 ∧
       ps[j] = (decE a, decE b)
 
 theorem EqL.grow {m m' : Mem} {o l : Nat} {ps : List (EIdx × EIdx)} (h : EqL m o l ps)
@@ -455,7 +455,7 @@ theorem natEqBl_ref (hN : NatEqProg p) (c x y z sx sy bT bF : Word) :
 
 theorem EqL.cons {m : Mem} {o l : Nat} {e : EIdx × EIdx} {es : List (EIdx × EIdx)}
     (h : EqL m o l (e :: es)) :
-    ∃ p a b : Word, l ≠ 0 ∧ (iwA m)[o]? = some p ∧ RecAt m p a b ∧ a.toNat < 2 ^ 32 ∧
+    ∃ p a b : Word, l ≠ 0 ∧ iwA m o = some p ∧ RecAt m p a b ∧ a.toNat < 2 ^ 32 ∧
       b.toNat < 2 ^ 32 ∧ e = (decE a, decE b) ∧ EqL m (o + 1) (l - 1) es := by
   obtain ⟨h1, h2, h3⟩ := h
   obtain ⟨p, a, b, hp, hr, ha, hb, he⟩ := h3 0 (by simp)

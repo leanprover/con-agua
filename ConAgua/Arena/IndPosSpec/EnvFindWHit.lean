@@ -52,7 +52,6 @@ end
 structure NtLook (p : Prog) : Prop where
   ha : p.lookup "iw_alloc" = some iwAlloc
   h2 : p.lookup "rec2" = some rec2
-  hx : p.lookup "env_ix" = some envIxL
   hg : p.lookup "env_row_get" = some envRowGetL
   hf : p.lookup "env_find" = some envFindL
   hs : p.lookup "nest_ctor_entry_strip" = some nestCtorEntryStrip

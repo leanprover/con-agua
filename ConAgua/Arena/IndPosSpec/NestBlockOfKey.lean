@@ -264,7 +264,7 @@ grind_pattern [ind_grind] stripK_ok => stripK ciq nPc nF (some (r, m1))
 
 /-! ### Reading `EREC` records at a word index -/
 
-theorem erec_rd {m : Mem} {w : Word} {c : Nat} {v : Word} (h : (erecP m)[w.toNat + c]? = some v)
+theorem erec_rd {m : Mem} {w : Word} {c : Nat} {v : Word} (h : erecP m (w.toNat + c) = some v)
     (hc : c < 2 ^ 64) : rdW (m.arr64 EREC) (w + UInt64.ofNat c) = v := by
   have hlt := (Array.getElem?_eq_some_iff.mp h).1
   have hsz := erecP_size_lt m

@@ -149,6 +149,13 @@ import all ConAgua.Scan.Records
 import all ConAgua.Scan.Str
 import all ConAgua.Scan.Utf8
 import all ConAgua.Scan.Values
+import all ConAgua.Arena.BasisL
+import all ConAgua.Arena.IndDeclConsts
+import all ConAgua.Arena.IndStream
+import all ConAgua.Arena.Prelude
+import all ConAgua.Arena.RomCI
+import all ConAgua.Rom.PinReadSpec
+import all ConAgua.Scan.Line
 
 @[expose] public section
 
@@ -165,14 +172,10 @@ namespace L.Checker
 open L L.Rom L.Arena L.Compiler
 
 /-- Every function of `checkerProg` is free of byte stores (one kernel check per chunk). -/
--- ronsync2 stage 2: `prog_all` fails on the regenerated program (bodies not visible here?)
-theorem checkerProg_noSt8_all : ∀ x ∈ checkerProg, (fun x : FnName × FunDecl => x.2.body.noSt8) x = true := by
-  sorry
+prog_all checkerProg_noSt8_all : checkerProg (fun x => x.2.body.noSt8)
 
 /-- No function of `checkerProg` stores to `PB` (one kernel check per chunk). -/
--- ronsync2 stage 2: `prog_all` fails on the regenerated program (bodies not visible here?)
-theorem checkerProg_noSt8PB_all : ∀ x ∈ checkerProg, (fun x : FnName × FunDecl => x.2.body.noSt8PB) x = true := by
-  sorry
+prog_all checkerProg_noSt8PB_all : checkerProg (fun x => x.2.body.noSt8PB)
 
 theorem checkerProg_noSt8 : Prog.noSt8 checkerProg = true := by
   unfold Prog.noSt8; exact List.all_eq_true.2 checkerProg_noSt8_all

@@ -56,7 +56,7 @@ theorem nhGo_spec (p : Prog) (hl : NhLook p) (k : Nat) :
     intro s₀ vis ctx mm off l oo ol
     simp only [invoke_eq _ hl.hgo, callFn, nestHolesGoL]
     vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rd_spec,
-      envFind_specW p hl.hx hl.hg hl.hf k, instPisWith_spec p hl.hv hl.hip hl.hi1 k,
+      callW_spec p k "env_find", instPisWith_spec p hl.hv hl.hip hl.hi1 k,
       internFVar_spec p hl.hff hl.hfp hl.hif k, slSnoc_specW p hl.ha hl.hc hl.hsn k, ih]
     all_goals subst_vars
     -- locals resolved by `simp` before `grind` (the `sym … finish` form: 6.5 s)
@@ -150,7 +150,7 @@ theorem nhGoW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis ctx : Wo
     rw [nhK1_ind (h := hf0) (h3 := h3)] at h
     generalize r1.tail.headD 0 = ciq at h hfind hci h3 hciq
     have hk3 : nat? (erecP m) ciq.toNat = some 3 := by
-      have : (erecP m)[ciq.toNat]? = (m.arr64 EREC)[ciq.toNat]? := erecP_getE (by omega)
+      have : erecP m (ciq.toNat) = (m.arr64 EREC)[ciq.toNat]? := erecP_getE (by omega)
       simp only [nat?, this]
       have hb : ciq.toNat < (m.arr64 EREC).size := by have := hS.iw.er; omega
       have : rdW (m.arr64 EREC) ciq = 3 := by simpa using h3

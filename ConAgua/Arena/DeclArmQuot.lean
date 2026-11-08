@@ -145,7 +145,7 @@ theorem qphW_ok {p : Prog} (hC : CanonProg p) (hR : L.Rom.RomRefs p)
   -- the pointer word
   have hvm : iwN m1 (o.toNat + k.slot) = some v :=
     (IWGrow.refl m1).truncExt.1.nat? hv
-  obtain ⟨w, hw, rfl⟩ : ∃ w, (iwA m1)[o.toNat + k.slot]? = some w ∧ w.toNat = v := by
+  obtain ⟨w, hw, rfl⟩ : ∃ w, iwA m1 (o.toNat + k.slot) = some w ∧ w.toNat = v := by
     simp only [iwN, nat?, Option.map_eq_some_iff] at hvm; exact hvm
   have hob : o.toNat + k.slot < 2 ^ 64 := by
     have := (Array.getElem?_eq_some_iff.mp hw).1; have := hS1.iw.iwSize; simp only [iwA] at *; omega

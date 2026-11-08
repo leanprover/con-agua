@@ -45,7 +45,7 @@ local notation "V" => ConLeche.CheckMode.verified
 `unresolved_consts_error` through their runs. -/
 l_model installHeader_specE (p : Prog) (hP : IhProg p)
   fns [hP.ih ↦ installHeaderE]
-  specs [envFind_specW p hP.ix hP.rowGet hP.find n, resCont_spec p hP.resF hP.resC n,
+  specs [callW_spec p n "env_find", resCont_spec p hP.resF hP.resC n,
     cvLps_specW p hP.alloc hP.copy hP.eti hP.lps n, slNodup_spec p hP.cont hP.nodup n,
     lbbF_spec p hP.bvb n, hffF_spec p hP.hf n]
   grind [arena_grind] fold [tierW, idxW]

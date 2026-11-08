@@ -192,7 +192,7 @@ theorem cda_ref {p : Prog} (hX : AxProg p) (hq : KnotStageProg p) (hcl : LeafClo
       have := UInt64.lt_iff_toNat_lt.mp (UInt64.not_le.mp hl); simpa using this
     obtain ⟨v, ci, hv, hci, hget⟩ := decPL_get _ _ _ hD3 4 hlt
     have hvm : iwN m3 (o3.toNat + 4) = some v := (IWGrow.refl m3).truncExt.1.nat? hv
-    obtain ⟨w, hw, rfl⟩ : ∃ w, (iwA m3)[o3.toNat + 4]? = some w ∧ w.toNat = v := by
+    obtain ⟨w, hw, rfl⟩ : ∃ w, iwA m3 (o3.toNat + 4) = some w ∧ w.toNat = v := by
       simp only [iwN, nat?, Option.map_eq_some_iff] at hvm; exact hvm
     have hob : o3.toNat + 4 < 2 ^ 64 := by
       have := (Array.getElem?_eq_some_iff.mp hw).1; have := hS3.iw.iwSize; simp only [iwA] at *; omega

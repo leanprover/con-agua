@@ -79,7 +79,7 @@ theorem decCVp_name {m : Mem} {q : Nat} {cv : IConstantVal} (h : decCVp m q = so
   simp only [decCVp, decCV, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
   obtain ⟨nm, hnm, -, -, -, -, -, rfl⟩ := h
   simp only [hd?] at hnm
-  cases hq : (erA m)[q]? with
+  cases hq : erA m q with
   | none => simp [hq] at hnm
   | some w =>
     simp only [hq] at hnm

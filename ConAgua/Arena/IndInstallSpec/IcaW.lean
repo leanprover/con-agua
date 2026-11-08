@@ -244,7 +244,7 @@ open L.Arena
 
 /-- Words `ws` at `IW[q‥]`, below the top. -/
 def CapsWords (m : Mem) (q : Nat) (ws : List Word) : Prop :=
-  q + ws.length ≤ iwTop m ∧ ∀ i < ws.length, (iwA m)[q + i]? = ws[i]?
+  q + ws.length ≤ iwTop m ∧ ∀ i < ws.length, iwA m (q + i) = ws[i]?
 
 /-- A handle slice of the record pool below its top. -/
 def ESl (m : Mem) (o l : Word) (xs : List NIdx) : Prop :=
@@ -499,7 +499,7 @@ theorem installCapsTail {p : Prog} (hP : CapsProg p) (n : Nat) {dn : NIdx → Op
   obtain ⟨hS2, hg2, aq, al, cq, cl, hcw, hEa, hEc⟩ :=
     icfW_ok hP hW hS1 (hq.grow (decBS_mono _) hg1) (partsHsrc_grow hg1 hq9 hsrc) hcs
   refine ⟨hS2, hg1.trans hg2, by have := hcw.1; simpa using this, fun a e ha he => ?_⟩
-  have hag : ∀ i < erTop m1, a[i]? = (erA m1)[i]? := fun i hi => by
+  have hag : ∀ i < erTop m1, a[i]? = erA m1 i := fun i hi => by
     rw [he i (Nat.lt_of_lt_of_le hi hg2.er)]; simp only [erA]; rw [hg2.erGet i hi]
   have hd := installDecCaps (dn := dn) (e := e) (a := a)
     (w0 := w0) (w1 := w1) (w2 := w2) (w3 := w3) (w4 := w4) (w5 := w2) (w6 := w6)
@@ -846,15 +846,15 @@ theorem iirW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv
   generalize hM : wrER m1 q1 (iirWs m cv caps) = M at hS' hg htop hget
   obtain ⟨-, hEtop, -, hEsz, -⟩ := hS.iw
   obtain ⟨-, hEtop', -, hEsz', -⟩ := hS'.iw
-  have hP : ∀ j, j < 20 → (erecP M)[q1.toNat + j]? = (iirWs m cv caps)[j]? := fun j hj => by
+  have hP : ∀ j, j < 20 → erecP M (q1.toNat + j) = (iirWs m cv caps)[j]? := fun j hj => by
     rw [erecP_getE (by omega)]; exact hget j hj
   -- the constant's words
   have hcvE : decCV (erecP m) cv.toNat = some cvv := decCVp_truncM hcv
-  have h3 : (erecP m)[cv.toNat + 3]? ≠ none := by
+  have h3 : erecP m (cv.toNat + 3) ≠ none := by
     have := decCV_type hcvE; intro e; simp [hd?, e] at this
   have hcq : cv.toNat + 4 ≤ erTop m := by
     obtain ⟨v, hv⟩ := Option.ne_none_iff_exists'.mp h3; have := erecP_lt hv; omega
-  have hw : ∀ i, i < 4 → (erecP M)[q1.toNat + 1 + i]? = (erecP M)[cv.toNat + i]? := by
+  have hw : ∀ i, i < 4 → erecP M (q1.toNat + 1 + i) = erecP M (cv.toNat + i) := by
     intro i hi
     rw [show q1.toNat + 1 + i = q1.toNat + (i + 1) by omega, hP (i + 1) (by omega),
       erecP_getE (by omega), hg.erGet _ (by omega)]
@@ -878,7 +878,7 @@ theorem iirW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv
       have hT : iwTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 200).toNat_lt
       have gen : ∀ w : Word, w.toNat = caps.toNat + i →
           (iirWs m cv caps)[5 + i]? = some (rdW (m.arr64 IW) w) →
-          (iirWs m cv caps)[5 + i]? = (iwA m)[caps.toNat + i]? := fun w hw h => by
+          (iirWs m cv caps)[5 + i]? = iwA m (caps.toNat + i) := fun w hw h => by
         rw [h, ← hw]; simp only [iwA, rdW]; rw [Array.getElem?_eq_getElem (by omega)]; simp
       rcases i with _ | _ | _ | _ | _ | _ | _ | _ | _ | _ | _ | _ | _ | _ | _ | i
       all_goals first

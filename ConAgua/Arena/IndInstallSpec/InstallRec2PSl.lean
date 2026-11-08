@@ -57,7 +57,7 @@ theorem decISS_mono (q : Nat) : OMono (fun m => decISS m q) :=
 theorem iwA_size_mono {m m' : Mem} (he : PoolExt m m') : (iwA m).size ≤ (iwA m').size := by
   rcases Nat.eq_zero_or_pos (iwA m).size with h0 | h0
   · omega
-  · have h1 : (iwA m)[(iwA m).size - 1]? = some ((iwA m)[(iwA m).size - 1]'(by omega)) :=
+  · have h1 : iwA m ((iwA m).size - 1) = some ((iwA m)[(iwA m).size - 1]'(by omega)) :=
       Array.getElem?_eq_getElem _
     have := (Array.getElem?_eq_some_iff.mp (he.1 _ _ h1)).1
     omega

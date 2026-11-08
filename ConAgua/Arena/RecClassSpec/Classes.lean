@@ -279,7 +279,7 @@ def CVExt (m : Mem) (q : Nat) : Prop :=
 
 theorem decCVp_grow_r {m m' : Mem} (hg : IWGrow m m') {q : Nat} (hq : CVExt m q) :
     decCVp m' q = decCVp m q := by
-  have hag : ∀ i, i < erTop m → (erA m')[i]? = (erA m)[i]? := fun i hi => by
+  have hag : ∀ i, i < erTop m → erA m' i = erA m i := fun i hi => by
     simp only [erA]; exact hg.erGet i hi
   have hn : ∀ i, i < erTop m → nat? (erA m') i = nat? (erA m) i := fun i hi => by
     simp only [nat?, hag i hi]

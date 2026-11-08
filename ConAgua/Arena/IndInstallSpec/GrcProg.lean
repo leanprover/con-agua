@@ -129,7 +129,6 @@ structure GrcProg (p : Prog) : Prop where
   cfr : CfrProg p
   flush : FlushProg p
   crr : CrrProg p
-  eix : p.lookup "env_ix" = some envIxL
   ers : p.lookup "env_row_set" = some envRowSetL
   ept : p.lookup "env_pop_temp" = some envPopTempL
   gpa : p.lookup "gen_rec_check_pop_all" = some genRecCheckPopAll

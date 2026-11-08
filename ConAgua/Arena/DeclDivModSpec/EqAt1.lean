@@ -221,7 +221,7 @@ def ctxWords (c : CertCtxA) : List Word :=
 
 /-- **The context record**: `IW[cx ‥ cx + 20]` holds the context's words, below the pool's top. -/
 def CertCtxR (m : Mem) (cx : Word) (c : CertCtxA) : Prop :=
-  cx.toNat + 21 ≤ iwTop m ∧ ∀ j < 21, (iwA m)[cx.toNat + j]? = (ctxWords c)[j]?
+  cx.toNat + 21 ≤ iwTop m ∧ ∀ j < 21, iwA m (cx.toNat + j) = (ctxWords c)[j]?
 
 theorem CertCtxR.grow {m m' : Mem} {cx : Word} {c : CertCtxA} (h : CertCtxR m cx c) (hg : IWGrow m m') :
     CertCtxR m' cx c := by

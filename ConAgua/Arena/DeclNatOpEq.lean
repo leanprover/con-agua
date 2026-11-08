@@ -63,7 +63,7 @@ theorem pw_fold (m : Mem) (pi j : Word) : rdW (m.arr64 IW) (pi + j) = pw m pi j 
 
 def PinRecAt (m : Mem) (pi : Word) : Prop :=
   pinW m 0 ≠ 0 ∧ pi.toNat + 21 ≤ iwTop m ∧
-    ∀ j (hj : j < 21), (iwA m)[pi.toNat + j]? = some ((pinRecW m)[j]'(by simp [pinRecW]; omega))
+    ∀ j (hj : j < 21), iwA m (pi.toNat + j) = some ((pinRecW m)[j]'(by simp [pinRecW]; omega))
 
 /-- The twin's prefix of `natOpEquations`: the terms the dispatch is over. -/
 def natEqCtxT (d : Nat) : AM (EIdx × EIdx × EIdx × NIdx × EIdx × EIdx × EIdx × EIdx) := do
@@ -92,7 +92,7 @@ def NatCtxR (m : Mem) (r : List Word) (c : EIdx × EIdx × EIdx × NIdx × EIdx 
   ∃ wx wy wz wn wsx wsy wt wf : Word, c = (decE wx, decE wy, decE wz, decI wn, decE wsx, decE wsy,
       decE wt, decE wf) ∧ H wx ∧ H wy ∧ H wz ∧ H wn ∧ H wsx ∧ H wsy ∧ H wt ∧ H wf ∧
     (r.headD 0).toNat + 8 ≤ iwTop m ∧ ∀ (j : Nat) (hj : j < 8),
-      (iwA m)[(r.headD 0).toNat + j]? = some ([wx, wy, wz, wn, wsx, wsy, wt, wf][j])
+      iwA m ((r.headD 0).toNat + j) = some ([wx, wy, wz, wn, wsx, wsy, wt, wf][j])
 
 theorem pw_of_rec {m m' : Mem} {pi : Word} (hP : PinRecAt m pi) (hI : IWOK m) (hg : IWGrow m m')
     (j : Nat) (hj : j < 21) : pw m' pi (UInt64.ofNat j) = (pinRecW m)[j]'(by simp [pinRecW]; omega) := by
@@ -374,7 +374,7 @@ theorem pinRecW_pins {m m1 : Mem} (h : m1.arr64 PINS = m.arr64 PINS) : pinRecW m
   simp only [pinRecW, pinW, h]
 
 theorem pw_of_get {m : Mem} {cx w : Word} {j : Nat} (hI : IWOK m) (hcx : cx.toNat + 8 ≤ iwTop m)
-    (hj : j < 8) (h : (iwA m)[cx.toNat + j]? = some w) : pw m cx (UInt64.ofNat j) = w := by
+    (hj : j < 8) (h : iwA m (cx.toNat + j) = some w) : pw m cx (UInt64.ofNat j) = w := by
   have hsz := hI.iwSize
   have hj64 : (UInt64.ofNat j).toNat = j := UInt64.toNat_ofNat_of_lt' (show j < UInt64.size by unfold UInt64.size; omega)
   have hadd : (cx + UInt64.ofNat j).toNat = cx.toNat + j := by

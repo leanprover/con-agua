@@ -387,7 +387,7 @@ l_model tblE_spec (p : Prog) (hP : TblProg p)
   specs [spbW_spec p hP.ha hP.hc hP.hsc hP.hv hP.hd hP.hpf hP.hpp hP.hib hP.hjf hP.hjp hP.hji hP.hmp hP.hap
       hP.hpg hP.hgo hP.hps hP.hpj hP.hspb hP.hi1 hP.hipal n,
     sctW_spec p hP.hbb hP.hhf hP.hcr hP.hsct (realCall p) (realCall_spec p) n,
-    envFind_specW p hP.hix hP.hrg hP.hfind n, callW_spec p n "find_table", callW_spec p n "er_from_iw",
+    callW_spec p n "env_find", callW_spec p n "find_table", callW_spec p n "er_from_iw",
     erecAlloc_specW p hP.hea n, callW_spec p n "env_push_table"]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
@@ -546,7 +546,7 @@ theorem tbl_ref {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
       tblMem m8 q T (rl.headD 0) (rl.tail.headD 0) nP C nF rs (rb2.headD 0) (rb2.tail.headD 0) (rg.headD 0)
         (rg.tail.headD 0) from rfl, tblMem_eq]
   generalize hM : wrER m8 q _ = M at hSM hgM htM hget hfM
-  have hPE : ∀ i < 13, (erecP M)[q.toNat + i]? = (M.arr64 EREC)[q.toNat + i]? :=
+  have hPE : ∀ i < 13, erecP M (q.toNat + i) = (M.arr64 EREC)[q.toNat + i]? :=
     fun i hi => erecP_getE (by simp at htM; omega)
   have he6 := IWGrow.erecPExtR (hg6.trans hg7 |>.trans hgM)
   have he7 := IWGrow.erecPExtR (hg7.trans hgM)

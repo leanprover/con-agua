@@ -84,7 +84,7 @@ theorem nestFrameMates_specW (p : Prog) (L : FmLook p) (n : Nat) (s₀ : St) (vi
   | succ n =>
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
-        nestBlockOf_specW p L.hx L.hg L.hf L.hbo n,
+        nestBlockOf_specW p L.hg L.hf L.hbo n,
         nestFrameMatesGo_spec p L.hc L.ha L.hcp L.hsn L.hgo n] <;>
       finish (gen := 20) [nfmW]
 

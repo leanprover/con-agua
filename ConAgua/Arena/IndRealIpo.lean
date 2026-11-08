@@ -277,7 +277,7 @@ theorem ipoW_ok (dn : NIdx → Option ConLeche.Name) {m : Mem} {a : AState} (hR 
     have hq4 : q + 1 + 3 = q + 4 := by omega
     rw [hq4] at hty
     have hq4b : q + 4 < 2 ^ 64 := by
-      cases hw4 : (erA m)[q + 4]? with
+      cases hw4 : erA m (q + 4) with
       | none => simp [hd?, hw4] at hty
       | some w => have := (Array.getElem?_eq_some_iff.mp hw4).1; simp only [erA] at this; omega
     obtain ⟨w, hwr, -, hwd⟩ := erH_rdW hty hq4b

@@ -219,7 +219,6 @@ attribute [ind_grind] ferMi_hit ferMi_miss ferRp_hit ferRp_miss ferW_nil1 ferW_n
 /-- The lookups of `class_fe_r`. -/
 structure CfrProg (p : Prog) : Prop where
   rp : RecProg p
-  ix : p.lookup "env_ix" = some envIxL
   rg : p.lookup "env_row_get" = some envRowGetL
   ia : p.lookup "iw_alloc" = some iwAlloc
   copy : p.lookup "iw_copy" = some iwCopy
@@ -284,7 +283,7 @@ theorem cfrRec_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFE
   split at h
   · cases h
   obtain ⟨rfl, rfl⟩ : q1 = q ∧ cfrMem m1 q1 cq mi rp3 = m' := by simpa using h
-  have h3 : (erecP m)[cq.toNat + 3]? ≠ none := by
+  have h3 : erecP m (cq.toNat + 3) ≠ none := by
     have := decCV_type hcv; intro e; simp [hd?, e] at this
   have hcq : cq.toNat + 4 ≤ erTop m := by
     obtain ⟨v, hv⟩ := Option.ne_none_iff_exists'.mp h3; have := erecP_lt hv; omega
@@ -302,12 +301,12 @@ theorem cfrRec_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFE
   rw [cfrMem_eq (by omega) hroom, hE1]
   refine ⟨hS', hg, ?_⟩
   generalize hM : wrER m1 q1 _ = M at hS' hg htop' hget
-  have hP : ∀ j, j < 9 → (erecP M)[q1.toNat + j]? = ((M.arr64 EREC))[q1.toNat + j]? :=
+  have hP : ∀ j, j < 9 → erecP M (q1.toNat + j) = ((M.arr64 EREC))[q1.toNat + j]? :=
     fun j hj => erecP_getE (by simp at htop'; omega)
   have c1 : (cq + 1).toNat = cq.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
   have c2 : (cq + 2).toNat = cq.toNat + 2 := by rw [UInt64.toNat_add]; simp; omega
   have c3 : (cq + 3).toNat = cq.toNat + 3 := by rw [UInt64.toNat_add]; simp; omega
-  have hw : ∀ i, i < 4 → (erecP M)[q1.toNat + 1 + i]? = (erecP M)[cq.toNat + i]? := by
+  have hw : ∀ i, i < 4 → erecP M (q1.toNat + 1 + i) = erecP M (cq.toNat + i) := by
     intro i hi
     rw [show q1.toNat + 1 + i = q1.toNat + (i + 1) by omega, hP (i + 1) (by omega),
       hget (i + 1) (by simp; omega), erecP_getE (by omega), hg.erGet _ (by omega)]
@@ -384,8 +383,8 @@ theorem rec3PrevD_grow {dn : NIdx → Option ConLeche.Name} {m m' : Mem} (hg : I
 def decPrev (dn : NIdx → Option ConLeche.Name) (m : Mem) (p : Nat) :
     Option (NIdx × Option (Nat × IConstantInfo)) := do
   let nm ← (iwH m p : Option NIdx)
-  let c ← (iwA m)[p + 1]?
-  let q ← (iwA m)[p + 2]?
+  let c ← iwA m (p + 1)
+  let q ← iwA m (p + 2)
   let pv ← prevD dn m c q
   pure (nm, pv)
 
@@ -393,7 +392,7 @@ theorem rec3DecPrev_stab {dn : NIdx → Option ConLeche.Name} {m : Mem} {p : Nat
     {x : NIdx × Option (Nat × IConstantInfo)} (h : decPrev dn m p = some x) (hp : p + 3 ≤ iwTop m) :
     StabD (fun m => decPrev dn m p) m x := by
   intro m' hg
-  have e : ∀ i, i < iwTop m → (iwA m')[i]? = (iwA m)[i]? := fun i hi => hg.iwGet i hi
+  have e : ∀ i, i < iwTop m → iwA m' i = iwA m i := fun i hi => hg.iwGet i hi
   simp only [decPrev, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h ⊢
   obtain ⟨nm, hnm, c, hc, q, hq, pv, hpv, rfl⟩ := h
   refine ⟨nm, ?_, c, by rw [e _ (by omega)]; exact hc, q, by rw [e _ (by omega)]; exact hq, pv,

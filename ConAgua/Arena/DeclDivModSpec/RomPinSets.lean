@@ -158,7 +158,7 @@ theorem romPinSets_ref (hD : DmProg10 p) {vis : Word} {fe : IFEnv} {ips : List I
     exact Nat.mod_eq_of_lt (by omega)
   have hlt : (rdW (m.arr64 CTL) 150).toNat + j < (m.arr64 EREC).size := by omega
   refine ⟨rdW (m.arr64 EREC) (rdW (m.arr64 CTL) 150 + UInt64.ofNat j), ?_, PinSetR.grow (hrec j hj) hg⟩
-  have e1 : (iwA s'.mem)[(rdW (m.arr64 CTL) 200).toNat + j]? = (m.arr64 EREC)[(rdW (m.arr64 CTL) 150).toNat + j]? := hw j hjl
+  have e1 : iwA s'.mem ((rdW (m.arr64 CTL) 200).toNat + j) = (m.arr64 EREC)[(rdW (m.arr64 CTL) 150).toNat + j]? := hw j hjl
   have e2 : rdW (m.arr64 EREC) (rdW (m.arr64 CTL) 150 + UInt64.ofNat j) = (m.arr64 EREC)[(rdW (m.arr64 CTL) 150).toNat + j] := by
     rw [rdW_eq _ _ ((rdW (m.arr64 CTL) 150).toNat + j) hoj.symm hlt]
   rw [e1, e2]

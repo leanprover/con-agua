@@ -44,16 +44,16 @@ theorem holds_mapM_range {α : Type} [Inhabited α] {SE SI : Nat → Prop} {g : 
 
 /-- `decRule` of a plain rule from its words. -/
 theorem holds_decRule {m : Mem} {q : Nat} (irl : IRecRule) (wc wnf wcp wf wrhs wk weta : Word)
-    (h0 : (erA m)[q]? = some wc) (h1 : (erA m)[q + 1]? = some wnf) (h2 : (erA m)[q + 2]? = some wcp)
-    (h3 : (erA m)[q + 3]? = some wf) (h8 : (erA m)[q + 8]? = some wrhs)
-    (h9 : (erA m)[q + 9]? = some wk) (h10 : (erA m)[q + 10]? = some weta)
+    (h0 : erA m q = some wc) (h1 : erA m (q + 1) = some wnf) (h2 : erA m (q + 2) = some wcp)
+    (h3 : erA m (q + 3) = some wf) (h8 : erA m (q + 8) = some wrhs)
+    (h9 : erA m (q + 9) = some wk) (h10 : erA m (q + 10) = some weta)
     (hc : wc.toNat < 2 ^ 32) (hr : wrhs.toNat < 2 ^ 32) (hf : wf.toNat = 0)
     (ec : irl.ctor = decI wc) (enf : irl.nfields = wnf.toNat) (ecp : irl.ctorParams = wcp.toNat)
     (efi : irl.fire = .plain) (er : irl.rhs = decI wrhs) (ek : irl.k = (wk != 0))
     (eeta : irl.eta = (weta != 0)) :
     Holds (fun i => q ≤ i ∧ i < q + 11) (fun _ => False) (fun m => decRule (erA m) q) m irl := by
   intro m' hE _
-  have g : ∀ i, i < 11 → (erA m')[q + i]? = (erA m)[q + i]? := fun i hi => hE _ ⟨by omega, by omega⟩
+  have g : ∀ i, i < 11 → erA m' (q + i) = erA m (q + i) := fun i hi => hE _ ⟨by omega, by omega⟩
   have e0 := (g 0 (by omega)).trans h0
   have e1 := (g 1 (by omega)).trans h1
   have e2 := (g 2 (by omega)).trans h2
@@ -179,8 +179,8 @@ theorem rule_rel {m₀ : Mem} {a₀ : AState} {T : Nat} (seen : List ConLeche.Ex
   obtain ⟨hI5, hM5, hs5, ht5, hIW5⟩ := setER_facts hI4 hM3 (rr + 8) (r3.headD 0)
     (by simp (disch := omega) only [off_toNat]; omega)
   have hsz : erTop m ≤ (m.arr64 EREC).size := hI.ok.er
-  have hE1' : ∀ i : Nat, (erA m1)[i]? = (erA m)[i]? := fun i => by unfold erA; rw [hE1]
-  have hE4' : ∀ i : Nat, (erA m3)[i]? = (erA (setERs m1 ws))[i]? := fun i => by unfold erA; rw [hE4]
+  have hE1' : ∀ i : Nat, erA m1 i = erA m i := fun i => by unfold erA; rw [hE1]
+  have hE4' : ∀ i : Nat, erA m3 i = (erA (setERs m1 ws))[i]? := fun i => by unfold erA; rw [hE4]
   have hword : ∀ (j w : Word) (i : Nat), (j, w) ∈ ws → j.toNat = rr.toNat + i → i < 11 → i ≠ 8 →
       (erA (m3.set64 EREC (rr + 8) (r3.headD 0)))[rr.toNat + i]? = some w := by
     intro j w i hjw hj h11 h8

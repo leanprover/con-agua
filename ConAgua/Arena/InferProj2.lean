@@ -141,8 +141,7 @@ theorem decCI_indNC {a b : Array Word} {dn : NIdx → Option ConLeche.Name} {q :
 
 /-- **An ok `env_find` run**: the memory unchanged, the twin's `find?` decoded, a found record
 decodes. -/
-theorem envFind_callE {p : Prog} (hx : p.lookup "env_ix" = some envIxL)
-    (hg : p.lookup "env_row_get" = some envRowGetL) (hp : p.lookup "env_find" = some envFindL)
+theorem envFind_callE {p : Prog}     (hg : p.lookup "env_row_get" = some envRowGetL) (hp : p.lookup "env_find" = some envFindL)
     {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {vis : Word} {fe : IFEnv} {w : Word}
     (hE : EnvR m vis fe) (hw : HW w) {r : List Word}
     (hc : callE p n "env_find" [w, vis] m = .ok (r, m')) :

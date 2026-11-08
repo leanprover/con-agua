@@ -23,10 +23,10 @@ open L.Arena L.Ind
 
 /-- `IW` below `m`'s top unchanged outside `R`, the top unchanged. -/
 def IKeep (R : Nat → Prop) (m m' : Mem) : Prop :=
-  iwTop m' = iwTop m ∧ ∀ i, i < iwTop m → ¬ R i → (iwA m')[i]? = (iwA m)[i]?
+  iwTop m' = iwTop m ∧ ∀ i, i < iwTop m → ¬ R i → iwA m' i = iwA m i
 
 theorem iw_set_ne (m : Mem) (j w : Word) (i : Nat) (hi : i ≠ j.toNat) :
-    (iwA (m.set64 IW j w))[i]? = (iwA m)[i]? := by
+    (iwA (m.set64 IW j w))[i]? = iwA m i := by
   simp only [iwA]
   rw [Mem.arr64_set64_same, Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds]
   simp [Ne.symm hi]
@@ -34,7 +34,7 @@ theorem iw_set_ne (m : Mem) (j w : Word) (i : Nat) (hi : i ≠ j.toNat) :
 /-- The block's pointer and record at index `j`. -/
 def BlkAt (dn : NIdx → Option ConLeche.Name) (SE : Nat → Prop) (m : Mem) (i : Nat)
     (ci : IConstantInfo) : Prop :=
-  ∃ w : Word, (iwA m)[i]? = some w ∧
+  ∃ w : Word, iwA m i = some w ∧
     Holds SE (fun _ => False) (fun m => decCI (erA m) w.toNat) m ci
 
 /-- The `sortZ` names of a block's constants. -/
@@ -128,9 +128,9 @@ theorem blockTo_rel {m₀ : Mem} {a₀ : AState} {T : Nat} (dn : NIdx → Option
           exact .inr ⟨st.ok, hmo1, (hn.ext st.ext).mono (fun x hx => List.mem_append_right _ hx)⟩)
         hI2 hM2 (by rw [hs2]; exact hs1)
         hd1 hk1' (by omega) (by omega) h2
-    have hE2' : ∀ i : Nat, (erA (m1.set64 IW o (r1.headD 0)))[i]? = (erA m1)[i]? := fun i => by
+    have hE2' : ∀ i : Nat, (erA (m1.set64 IW o (r1.headD 0)))[i]? = erA m1 i := fun i => by
       unfold erA; rw [hE2]
-    have hIW1' : ∀ i : Nat, (iwA m1)[i]? = (iwA m)[i]? := fun i => by unfold iwA; rw [hIW1]
+    have hIW1' : ∀ i : Nat, iwA m1 i = iwA m i := fun i => by unfold iwA; rw [hIW1]
     have hle1 := hek1.1
     have hle3 := hek3.1
     have hti3 := hik3.1

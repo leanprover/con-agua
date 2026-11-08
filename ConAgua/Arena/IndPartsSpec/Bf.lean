@@ -342,7 +342,7 @@ theorem bsh_spec (p : Prog) (hP : IndPartsProg5 p) (c : CallM) (hc : CallSpec p 
   simp only [callFn, blockShape]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      bs_spec p hP.alloc hP.copy hP.cons hP.rec5 hP.rec3 hP.rec6 hP.recs hP.ctors hP.split (n + 4),
+      bs_spec p hP.alloc hP.copy hP.cons hP.rec3 hP.rec6 hP.recs hP.ctors hP.split (n + 4),
       bb_spec p hP c hc n] <;>
     finish (gen := 20) [bshW, rdW_eq, bgoK3_some]
 

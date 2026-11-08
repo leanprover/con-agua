@@ -49,7 +49,7 @@ theorem viewR_shape {rv : List Word} {v : ENodeView} (h : ViewR rv v) :
     refine ⟨?_, ?_, fun _ _ => by simp, fun _ _ => by simp⟩ <;> simp_all
 
 theorem decNL_getW : ∀ (m : Mem) (l o : Nat) (xs : List Nat), decNL m o l = some xs →
-    xs.length = l ∧ ∀ (j : Nat) (hj : j < xs.length), ∃ w : Word, (iwA m)[o + j]? = some w ∧
+    xs.length = l ∧ ∀ (j : Nat) (hj : j < xs.length), ∃ w : Word, iwA m (o + j) = some w ∧
       w.toNat = xs[j]
   | m, 0, o, xs, h => by simp [decNL] at h; subst h; simp
   | m, l + 1, o, xs, h => by
@@ -70,7 +70,7 @@ theorem decNL_getW : ∀ (m : Mem) (l o : Nat) (xs : List Nat), decNL m o l = so
 theorem EqL.decNL {m : Mem} {o l : Nat} {ps : List (EIdx × EIdx)} (h : EqL m o l ps) :
     ∃ xs, decNL m o l = some xs := by
   obtain ⟨h1, h2, h3⟩ := h
-  have hget : ∀ j (hj : j < ps.length), ∃ p : Word, (iwA m)[o + j]? = some p := fun j hj => by
+  have hget : ∀ j (hj : j < ps.length), ∃ p : Word, iwA m (o + j) = some p := fun j hj => by
     obtain ⟨p, a, b, hp, -⟩ := h3 j hj
     exact ⟨p, hp⟩
   refine ⟨(List.range ps.length).map (fun j => ((iwN m (o + j)).getD 0)), ?_⟩

@@ -77,7 +77,7 @@ theorem setERs_facts {m₀ : Mem} {a₀ a : AState} {T : Nat} {seen : List ConLe
     · simp only [setERs]; rw [hz2]; exact size_set64 _ _ _ _ _
 
 theorem setERs_ne : ∀ (ws : List (Word × Word)) (m : Mem) (i : Nat), (∀ jw ∈ ws, i ≠ jw.1.toNat) →
-    (erA (setERs m ws))[i]? = (erA m)[i]?
+    (erA (setERs m ws))[i]? = erA m i
   | [], _, _, _ => rfl
   | (j, w) :: t, m, i, h => by
     simp only [setERs]
@@ -155,10 +155,10 @@ def szTag : ConLeche.PropWhen → Nat
 
 theorem holds_decCaps {dn : NIdx → Option ConLeche.Name} {m : Mem} {c : Nat} {SA SC SZ : Nat → Prop}
     (ic : IIndCaps) (ks : List NIdx) (we wct wep wef wul wup wrk wtag wnp : Word)
-    (h0 : (erA m)[c]? = some we) (h1 : (erA m)[c + 1]? = some wct) (h2 : (erA m)[c + 2]? = some wep)
-    (h3 : (erA m)[c + 3]? = some wef) (h4 : (erA m)[c + 4]? = some wul)
-    (h5 : (erA m)[c + 5]? = some wup) (h6 : (erA m)[c + 6]? = some wrk)
-    (h7 : (erA m)[c + 7]? = some wtag) (h12 : (erA m)[c + 12]? = some wnp)
+    (h0 : erA m c = some we) (h1 : erA m (c + 1) = some wct) (h2 : erA m (c + 2) = some wep)
+    (h3 : erA m (c + 3) = some wef) (h4 : erA m (c + 4) = some wul)
+    (h5 : erA m (c + 5) = some wup) (h6 : erA m (c + 6) = some wrk)
+    (h7 : erA m (c + 7) = some wtag) (h12 : erA m (c + 12) = some wnp)
     (hct : wct.toNat < 2 ^ 32)
     (he : ic.eta = (we != 0)) (hc : ic.etaCtor = decI wct) (hep : ic.etaParams = wep.toNat)
     (hef : ic.etaFields = wef.toNat) (hul : ic.unitlike = (wul != 0)) (hup : ic.unitParams = wup.toNat)
@@ -173,7 +173,7 @@ theorem holds_decCaps {dn : NIdx → Option ConLeche.Name} {m : Mem} {c : Nat} {
     Holds (fun i => (c ≤ i ∧ i < c + 8) ∨ i = c + 12 ∨ SA i ∨ SC i ∨ (wtag.toNat = 1 ∧ SZ i))
       (fun _ => False) (fun m => decCaps (erA m) c) m ic := by
   intro m' hE hI
-  have g : ∀ i, (c ≤ i ∧ i < c + 8) → (erA m')[i]? = (erA m)[i]? := fun i hi => hE i (.inl hi)
+  have g : ∀ i, (c ≤ i ∧ i < c + 8) → erA m' i = erA m i := fun i hi => hE i (.inl hi)
   have e0 := (g c (by omega)).trans h0
   have e1 := (g (c + 1) (by omega)).trans h1
   have e2 := (g (c + 2) (by omega)).trans h2
@@ -356,15 +356,15 @@ theorem caps_rel {m₀ : Mem} {a₀ : AState} {T : Nat} (dn : NIdx → Option Co
     exact ⟨hrun4.1.symm, hrun4.2.symm⟩
   obtain ⟨hzw, rfl⟩ := hz4
   -- the facts
-  have hE8' : ∀ i : Nat, (erA m8)[i]? = (erA (setERs m ws))[i]? := fun i => by unfold erA; rw [hE8]
+  have hE8' : ∀ i : Nat, erA m8 i = (erA (setERs m ws))[i]? := fun i => by unfold erA; rw [hE8]
   have hk12 : ∀ i, i < erTop m → ¬ (c.toNat + 8 ≤ i ∧ i < c.toNat + 12) →
       ¬ (c.toNat + 13 ≤ i ∧ i < c.toNat + 15) →
-      (erA m12)[i]? = (erA (m8.set64 EREC (c + 1) (r1.headD 0)))[i]? := by
+      erA m12 i = (erA (m8.set64 EREC (c + 1) (r1.headD 0)))[i]? := by
     intro i hi hn hn'
     rw [hek12.2 i (by off_omega) (by off_omega), hek11.2 i (by off_omega) (by off_omega),
       hek10.2 i (by off_omega) (by off_omega)]
   have hword : ∀ (j w : Word) (i : Nat), (j, w) ∈ ws → j.toNat = c.toNat + i → i < 15 → i ≠ 1 →
-      ¬ (8 ≤ i ∧ i < 12) → i < 13 → (erA m12)[c.toNat + i]? = some w := by
+      ¬ (8 ≤ i ∧ i < 12) → i < 13 → erA m12 (c.toNat + i) = some w := by
     intro j w i hjw hj h15 h1' h8 h13
     rw [hk12 _ (by off_omega) (by off_omega) (by off_omega), er_set_ne _ _ _ _ (by off_omega), hE8', ← hj]
     exact hget j w hjw
@@ -378,7 +378,7 @@ theorem caps_rel {m₀ : Mem} {a₀ : AState} {T : Nat} (dn : NIdx → Option Co
   have hW12 := hword (c + 12) (UInt64.ofNat caps.nparams) 12 (by rw [← hws]; simp) (off_toNat (by omega)) (by decide) (by decide) (by decide) (by decide)
   simp only [Nat.add_zero] at hW0
   have hsz9 : erTop m ≤ (m8.arr64 EREC).size := by rw [hE8, hsz1]; exact hsz
-  have hW1 : (erA m12)[c.toNat + 1]? = some (r1.headD 0) := by
+  have hW1 : erA m12 (c.toNat + 1) = some (r1.headD 0) := by
     rw [hk12 _ (by off_omega) (by off_omega) (by off_omega), ← off_toNat (by omega)]
     exact er_set_get m8 _ _ (by off_omega)
   simp (disch := omega) only [off_toNat] at hH12 hH10 hH11

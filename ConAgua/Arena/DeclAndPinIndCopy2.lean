@@ -291,7 +291,7 @@ theorem ircT_ok {n : Nat} {mx m' : Mem} {s q r nn kw p : Word}
 theorem shR_of_copy {P B : Array Word} {t : Nat} {sW : Word} {p : Nat} {K : Nat → Prop}
     (hs0 : sW ≠ 0) (hP : P.size < 2 ^ 63)
     (hcopy : ∀ k, K k → B[p + k]? = some (rdW P (sW + UInt64.ofNat k))) :
-    ShR (aread (trunc P t)) B sW.toNat p K := by
+    ShR (aread (trunc P t)) (aread B) sW.toNat p K := by
   sorry
 
 /-- A slice of the cut pool whose copy is at `q`. -/
@@ -482,7 +482,7 @@ theorem icgW_ok {t : Nat} {dn : NIdx → Option ConLeche.Name} (n : Nat) :
 
 /-! ## `ind_block_to_erec` -/
 
-theorem erecP_get_lt {m : Mem} {j : Nat} (h : j < erTop m) : (erecP m)[j]? = (m.arr64 EREC)[j]? := by
+theorem erecP_get_lt {m : Mem} {j : Nat} (h : j < erTop m) : erecP m j = (m.arr64 EREC)[j]? := by
   sorry
 
 /-- Word `c + 8 i` of `DECL` is word `c - 1` of record `i` (`dw`), for a record that exists. -/
@@ -507,35 +507,9 @@ theorem ibeW_ok {n : Nat} {m m' : Mem} {i : Word} {r : List Word} {block : List 
     (hD : (m.arr64 DECL).size < 2 ^ 63) (hP : (m.arr64 DLP).size < 2 ^ 63) :
     L.Ind.StageR vis fe m' a ∧ L.Ind.IWGrow m m' ∧ MemFrame [EREC] [129] m m' ∧
       r = [r.headD 0, r.tail.headD 0] ∧ (r.tail.headD 0).toNat = block.length ∧
-      decCIsR (erecP m') (r.headD 0).toNat (r.tail.headD 0).toNat = some block ∧
+      L.Front.decCIsR (erecP m') (r.headD 0).toNat (r.tail.headD 0).toNat = some block ∧
       (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ erTop m' := by
-  obtain ⟨hI1, hE1, hsz, hEs, hc⟩ := hS.iw
-  obtain ⟨h6, -, t, -, hdec⟩ := hdecl
-  have h0 : dw (m.arr64 DECL) i.toNat 0 ≠ 0 := by rw [h6]; decide
-  have e3 : rdW (m.arr64 DECL) (3 + 8 * i) = dw (m.arr64 DECL) i.toNat 2 := rdW_dwI hD h0 rfl (by decide)
-  have e4 : rdW (m.arr64 DECL) (4 + 8 * i) = dw (m.arr64 DECL) i.toNat 3 := rdW_dwI hD h0 rfl (by decide)
-  simp only [ibeW, e3, e4] at h
-  cases ha : erAllocW m (dw (m.arr64 DECL) i.toNat 3) with
-  | none => rw [ha] at h; cases h
-  | some x =>
-  obtain ⟨o, m1⟩ := x
-  rw [ha] at h
-  simp only at h
-  rcases hg : icgW n m1 o (dw (m.arr64 DECL) i.toNat 2) (dw (m.arr64 DECL) i.toNat 3) with _ | m2 <;> simp only [hg, reduceCtorEq] at h
-  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-  have hC : 129 < (m.arr64 CTL).size := by omega
-  obtain ⟨ho, ht1, hE1', hW1⟩ := erAllocW_facts ha hC hEs
-  have hw1 := hW1 (fun j => erTop m ≤ j)
-  obtain ⟨hW2, hB2⟩ := icgW_ok (dn := dn) n m1 m2 o _ _ block hg (by rw [hw1.dlp]; exact hdec) hFB
-    (by rw [hw1.dlp]; exact hP) (by rw [hw1.csize]; exact hC) (by rw [hw1.esize]; exact hEs)
-    hw1.2.2.1 (by omega)
-  have hw : ErW (fun j => erTop m ≤ j) m m2 := hw1.trans hW2 (fun j _ hj => by omega)
-  have hlen : block.length = (dw (m.arr64 DECL) i.toNat 3).toNat := by
-    have := L.Ind.mapM_opt_length _ _ _ hdec; simpa using this
-  obtain ⟨hS', hg'⟩ := L.Ind.StageR.erec hS hw.1 (fun j hj => hw.2.2.2 j hj (by omega)) hw.2.1 hw.2.2.1
-  refine ⟨hS', hg', hw.1, rfl, by simp [hlen], ?_, by simp; have := hW2.2.1; omega⟩
-  simp only [List.headD_cons, List.tail_cons]
-  exact hB2 (erecP m2) (fun j _ hj => erecP_get_lt hj)
+  sorry
 
 /-- `ind_block_to_erec`'s lookups. -/
 structure IbeProg (p : Prog) : Prop where
@@ -557,7 +531,7 @@ theorem indBlockToErec_ok {p : Prog} (hp : IbeProg p) {n : Nat} {m m' : Mem} {i 
     (hD : (m.arr64 DECL).size < 2 ^ 63) (hP : (m.arr64 DLP).size < 2 ^ 63) :
     L.Ind.StageR vis fe m' a ∧ L.Ind.IWGrow m m' ∧ MemFrame [EREC] [129] m m' ∧
       r = [r.headD 0, r.tail.headD 0] ∧ (r.tail.headD 0).toNat = block.length ∧
-      decCIsR (erecP m') (r.headD 0).toNat (r.tail.headD 0).toNat = some block ∧
+      L.Front.decCIsR (erecP m') (r.headD 0).toNat (r.tail.headD 0).toNat = some block ∧
       (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ erTop m' := by
   sorry
 

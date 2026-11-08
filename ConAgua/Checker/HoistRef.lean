@@ -69,7 +69,7 @@ theorem hNatOpGround_ok (p : Prog) (hx : HoistExt p) (n : Nat) (m m' : Mem) (a :
     (hc60 : cw.toNat < 2 ^ 60) (hI : IWOK m)
     (hord : ord.toNat + cw.toNat ≤ iwTop m) (hP : PinsR m a.pins)
     (h : hNatOpGroundW p n m ord cw = some (r, m')) :
-    ∃ res, (hoistNatOpGround ds).run a = .ok (res, a) ∧ res.1.size = cw.toNat ∧ OrdR m' r res.1 ∧
+    ∃ res, (hoistNatOpGround IDeclaration.usedConsts ds).run a = .ok (res, a) ∧ res.1.size = cw.toNat ∧ OrdR m' r res.1 ∧
       ArenaR m' a ∧ IWOK m' ∧ IWGrow m m' ∧ r.toNat + cw.toNat ≤ iwTop m' ∧ PinsR m' a.pins ∧
       MemFrame [IW, HSEEN, HNIX] [73, 74, 75, 76, 200] m m' := by
   have hsz := hI.iwSize
@@ -162,7 +162,7 @@ theorem hNatOpGround_ok (p : Prog) (hx : HoistExt p) (n : Nat) (m m' : Mem) (a :
     targets_ok hx cw rfl n m₄ m₅ ∅ 0 z₅ hE₄ hT₄ (fun _ _ h => by simp at h)
       (fun _ _ h => by simp at h) (fun _ _ h => by simp at h) (by simp) hP₄ ht
   simp only [UInt64.toNat_zero] at hrunT
-  have hrunH : (hoistTargets ds).run a = .ok (T, a) := hrunT
+  have hrunH : (hoistTargets IDeclaration.usedConsts ds).run a = .ok (T, a) := hrunT
   -- `hoist_any`
   rcases hy : hAnyW n m₅ tg cw 0 with _ | ⟨av, m₆⟩ <;> rw [hy] at h
   · simp [hNatOpGroundW.k_hoist_any.eq_1] at h
@@ -179,7 +179,7 @@ theorem hNatOpGround_ok (p : Prog) (hx : HoistExt p) (n : Nat) (m m' : Mem) (a :
       simp only [erTop]; rw [hlow₅.fr.ctl 129 (by decide), hfA.ctl 129 (by decide)]
     refine ⟨by have := hlow₅.top; omega, by rw [h129]; exact Nat.le_refl _, fun x hx => ?_, fun x _ => by rw [hER]⟩
     rw [hlow₅.low x (by omega), hlow x (by omega)]
-  have hrun0 : (hoistNatOpGround ds).run a =
+  have hrun0 : (hoistNatOpGround IDeclaration.usedConsts ds).run a =
       ((if T.isEmpty then pure (ds, #[]) else pure (applyHoist ds T) :
         AM (Array IDeclaration × Array NIdx)).run a) := by
     simp only [hoistNatOpGround]
@@ -243,7 +243,7 @@ theorem hoistNatOpGround_refines (p : Prog) (hp : HoistProg p) (hx : HoistExt p)
     (hc : ds.size = cw.toNat) (hc60 : cw.toNat < 2 ^ 60) (hI : IWOK s₀.mem)
     (hord : ord.toNat + cw.toNat ≤ iwTop s₀.mem) (hP : PinsR s₀.mem a.pins) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "hoist_nat_op_ground" [ord, cw]
-    ⦃fun r s' => ∃ res, (hoistNatOpGround ds).run a = .ok (res, a) ∧ res.1.size = cw.toNat ∧
+    ⦃fun r s' => ∃ res, (hoistNatOpGround IDeclaration.usedConsts ds).run a = .ok (res, a) ∧ res.1.size = cw.toNat ∧
       OrdR s'.mem (r.headD 0) res.1 ∧ ArenaR s'.mem a ∧ IWOK s'.mem ∧ IWGrow s₀.mem s'.mem ∧
       (r.headD 0).toNat + cw.toNat ≤ iwTop s'.mem ∧ PinsR s'.mem a.pins ∧
       MemFrame [IW, HSEEN, HNIX] [73, 74, 75, 76, 200] s₀.mem s'.mem; ⊤⦄ :=

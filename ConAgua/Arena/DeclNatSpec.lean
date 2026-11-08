@@ -109,12 +109,12 @@ theorem pinAt_pure (p : Prog) (hp : p.lookup "pin_at" = some pinAtL) (n : Nat) (
   exact ⟨hl, h0, hi, by simp [rdW, pinW, e1], hm.symm⟩
 
 theorem decHL_words {k : IdxKind} (m : Mem) : ∀ (ws : List Word) (o : Nat),
-    (∀ w ∈ ws, w.toNat < 2 ^ 32) → (∀ j < ws.length, (iwA m)[o + j]? = ws[j]?) →
+    (∀ w ∈ ws, w.toNat < 2 ^ 32) → (∀ j < ws.length, iwA m (o + j) = ws[j]?) →
     (decHL m o ws.length : Option (List (Idx k))) = some (ws.map decI)
   | [], o, _, _ => by simp [decHL, hslice?]
   | w :: ws, o, hlt, hget => by
     simp only [List.length_cons, decHL, hslice?_succ]
-    have h0 : (iwA m)[o]? = some w := by simpa using hget 0 (by simp)
+    have h0 : iwA m o = some w := by simpa using hget 0 (by simp)
     have hw : w.toNat < 2 ^ 32 := hlt w (by simp)
     have ih := decHL_words (k := k) m ws (o + 1) (fun x hx => hlt x (by simp [hx]))
       (fun j hj => by simpa [Nat.add_assoc, Nat.add_comm 1 j] using hget (j + 1) (by simpa using hj))

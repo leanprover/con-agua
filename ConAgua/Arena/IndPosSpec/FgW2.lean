@@ -33,11 +33,11 @@ open L.Arena
 /-! ## `nest_block_of`, `nest_frame_mates` -/
 
 /-- **`nest_block_of(vis, c)` is its model `nboW`** (generated). -/
-l_model nestBlockOf_specW (p : Prog) (hx : p.lookup "env_ix" = some envIxL)
+l_model nestBlockOf_specW (p : Prog)
     (hg : p.lookup "env_row_get" = some envRowGetL) (hf : p.lookup "env_find" = some envFindL)
     (hp : p.lookup "nest_block_of" = some nestBlockOfL)
   fns [hp ↦ nboW]
-  specs [envFind_specW p hx hg hf n]
+  specs [callW_spec p n "env_find"]
   grind [ind_grind] finish [rdW_eq] gen 20
 
 def nfmK (n : Nat) (c : Word) : Option (List Word × Mem) → Option (List Word × Mem)
@@ -60,7 +60,6 @@ structure FmLook (p : Prog) : Prop where
   hcp : p.lookup "iw_copy" = some iwCopy
   hsn : p.lookup "sl_snoc" = some slSnoc
   hgo : p.lookup "nest_frame_mates_go" = some nestFrameMatesGoL
-  hx : p.lookup "env_ix" = some envIxL
   hg : p.lookup "env_row_get" = some envRowGetL
   hf : p.lookup "env_find" = some envFindL
   hbo : p.lookup "nest_block_of" = some nestBlockOfL

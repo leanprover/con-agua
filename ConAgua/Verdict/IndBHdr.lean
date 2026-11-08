@@ -47,7 +47,7 @@ local notation "V" => ConLeche.CheckMode.verified
 l_model classConstOkHeaderE_spec (p : Prog) (hP : IhProg p)
     (hh : p.lookup "class_const_ok_header" = some classConstOkHeader)
   fns [hh ↦ classConstOkHeaderE]
-  specs [envFind_specW p hP.ix hP.rowGet hP.find n, resCont_spec p hP.resF hP.resC n,
+  specs [callW_spec p n "env_find", resCont_spec p hP.resF hP.resC n,
     cvLps_specW p hP.alloc hP.copy hP.eti hP.lps n, slNodup_spec p hP.cont hP.nodup n,
     lbbF_spec p hP.bvb n, hffF_spec p hP.hf n]
   grind [arena_grind] fold [tierW, idxW]

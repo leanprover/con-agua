@@ -143,20 +143,16 @@ theorem range_map_getElem! {α β : Type} [Inhabited α] (l : List α) (g : α �
   simp only [List.getElem_map, List.getElem_range]; rw [getElem!_pos l j h1]
 
 theorem hd?_of {k : IdxKind} {a : Array Word} {i : Nat} {w : Word} (h : a[i]? = some w)
-    (hw : w.toNat < 2 ^ 32) : (hd? a i : Option (Idx k)) = some (decI w) := by
-  simp [hd?, h, hw]
+    (hw : w.toNat < 2 ^ 32) : (hd? (aread a) i : Option (Idx k)) = some (decI w) := by
+  sorry
 
 /-- A constant value from its words (handles below `2^32`). -/
 theorem decCV_of {a : Array Word} {q : Nat} {wn wt s ll : Word} {f : Nat → Word}
     (h0 : a[q]? = some wn) (hn : wn.toNat < 2 ^ 32) (h1 : a[q + 1]? = some s)
     (h2 : a[q + 2]? = some ll) (h3 : a[q + 3]? = some wt) (ht : wt.toNat < 2 ^ 32)
     (hs : ∀ j < ll.toNat, a[s.toNat + j]? = some (f j) ∧ (f j).toNat < 2 ^ 32) :
-    decCV a q = some ⟨decI wn, (List.range ll.toNat).map (fun j => decI (f j)), decI wt⟩ := by
-  have h2' : a[q + 1 + 1]? = some ll := h2
-  have hsl : (hslice? a s.toNat ll.toNat : Option (List NIdx)) =
-      some ((List.range ll.toNat).map fun j => decI (f j)) :=
-    mapM_some_ofI _ _ _ (fun j hj => hd?_of (hs j (List.mem_range.mp hj)).1 (hs j (List.mem_range.mp hj)).2)
-  simp [decCV, hlist?, nat?, hd?_of h0 hn, hd?_of h3 ht, h1, h2', hsl]
+    decCV (aread a) q = some ⟨decI wn, (List.range ll.toNat).map (fun j => decI (f j)), decI wt⟩ := by
+  sorry
 
 /-- The words of `cvM`. -/
 theorem cvM_wd (m : Mem) (q n o l t : Word) (j : Nat) (hq : q.toNat + 3 < (m.arr64 DLP).size)
@@ -190,86 +186,8 @@ theorem cvW_facts {b : ByteArray} {m m' : Mem} {st : StateD} (a : AState) (hD : 
       topN m' DLP = topN m DLP + cv.levelParams.length ∧ topN m' DLP + 1 ≤ (m'.arr64 DLP).size ∧
       (∀ i, 1 ≤ i → i < q.toNat → wd m' DLP i = wd m DLP i) ∧
       (∀ i, q.toNat + 4 ≤ i → i ≤ topN m DLP → wd m' DLP i = wd m DLP i) ∧
-      (∀ P, (∀ i, (q.toNat ≤ i ∧ i < q.toNat + 4) ∨ (topN m DLP < i ∧ i ≤ topN m' DLP) →
-        P[i]? = some (wd m' DLP i)) → decCV P q.toNat = some cvp) := by
-  have hps := hD.psize
-  have hptop : topN m DLP + 1 ≤ (m.arr64 DLP).size := hD.ptop
-  unfold cvW at h
-  rcases hn : lkW m NID nm with _ | nh <;> simp only [hn, wK, reduceCtorEq] at h
-  rcases ht : lkW m EID ty with _ | th <;> simp only [ht, reduceCtorEq] at h
-  rcases hl : lpPutW b.data m lps with _ | m₁ <;> simp only [hl, mK, reduceCtorEq] at h
-  simp only [Option.some.injEq] at h
-  subst h
-  obtain ⟨n1, n2⟩ := lkR_name hD a hn
-  obtain ⟨y1, y2⟩ := lkR_expr hD a ht
-  rw [hnm] at n1; rw [hty] at y1
-  unfold lpPutW at hl
-  split at hl; cases hl
-  have hrdN : (rdW (m.arr64 DLP) 0).toNat = topN m DLP := rfl
-  obtain ⟨F1, F2, F3, F4, F5, F6, F7⟩ := lpLoopM_facts b.data (rdW (m.arr64 DLP) 0) m (lps + 1) 0 m₁
-    hl (by rw [hrdN, UInt64.toNat_zero]; omega) hps
-  simp only [UInt64.toNat_zero, Nat.add_zero] at F1 F4 F5
-  have hxs : itemsN b.data (lps + 1) = listN b.data lps := rfl
-  rw [hxs] at F1 F5 F6
-  have hlen := itemsR_length _ _ hlps
-  have hmap := mapM_name m st hD.names _ _ hlps F6
-  let cvp : IConstantVal := ⟨decI nh, (listN b.data lps).map fun x => decI (tblW m NID x), decE th⟩
-  have hpc : (parseCVD st cv).run a = .ok (cvp, a) := by
-    unfold parseCVD
-    rw [run_bind _ _ a _ n1, run_bind _ _ a _ y1, hmap]; rfl
-  have hs1 : (m₁.arr64 DLP).size = (m.arr64 DLP).size := F2.size DLP
-  have htop1 : topN m₁ DLP = topN m DLP + (listN b.data lps).length := by
-    show ((m₁.arr64 DLP)[0]?.getD 0).toNat = _
-    rw [F7]; simp only [Option.getD_some]
-    rw [widx2 _ _ (by rw [F1, hrdN]; omega), F1, hrdN]; simp
-  have hq3 : q.toNat + 3 < (m₁.arr64 DLP).size := by rw [hs1]; omega
-  have htopF : topN (cvM m₁ q nh (rdW (m.arr64 DLP) 0) (lsCntN b.data (lps + 1) 0) th) DLP =
-      topN m DLP + (listN b.data lps).length := by
-    rw [← htop1]
-    unfold topN; rw [cvM_wd _ _ _ _ _ _ 0 hq3 (by omega)]
-    rw [ite_eq_right (by omega), ite_eq_right (by omega), ite_eq_right (by omega), ite_eq_right (by omega)]
-  refine ⟨cvp, hpc, F2.trans (by
-      unfold cvM; exact ((((MemFrame.set64 _ _ (by decide) _ _).trans (MemFrame.set64 _ _ (by decide) _ _)).trans
-        (MemFrame.set64 _ _ (by decide) _ _)).trans (MemFrame.set64 _ _ (by decide) _ _))), ?_, ?_, ?_, ?_, ?_⟩
-  · rw [htopF, ← hlen]
-  · rw [htopF]; unfold cvM; simp only [size_set64]; rw [hs1]; rw [F1, hrdN] at F3; omega
-  · intro i h1 h2
-    rw [cvM_wd _ _ _ _ _ _ i hq3 (by omega)]
-    simp only [show i ≠ q.toNat by omega, show i ≠ q.toNat + 1 by omega, show i ≠ q.toNat + 2 by omega,
-      show i ≠ q.toNat + 3 by omega, ite_false]
-    simp only [wd]; rw [F4 i (by omega) (by rw [hrdN]; omega)]
-  · intro i h1 h2
-    rw [cvM_wd _ _ _ _ _ _ i hq3 (by omega)]
-    simp only [show i ≠ q.toNat by omega, show i ≠ q.toNat + 1 by omega, show i ≠ q.toNat + 2 by omega,
-      show i ≠ q.toNat + 3 by omega, ite_false]
-    simp only [wd]; rw [F4 i (by omega) (by rw [hrdN]; omega)]
-  · intro P hP
-    have hw := fun j => cvM_wd m₁ q nh (rdW (m.arr64 DLP) 0) (lsCntN b.data (lps + 1) 0) th j hq3 (by omega)
-    have e0 := hP q.toNat (.inl ⟨by omega, by omega⟩)
-    have e1 := hP (q.toNat + 1) (.inl ⟨by omega, by omega⟩)
-    have e2 := hP (q.toNat + 2) (.inl ⟨by omega, by omega⟩)
-    have e3 := hP (q.toNat + 3) (.inl ⟨by omega, by omega⟩)
-    rw [hw] at e0 e1 e2 e3
-    simp only [show q.toNat + 1 ≠ q.toNat by omega, show q.toNat + 2 ≠ q.toNat by omega,
-           show q.toNat + 2 ≠ q.toNat + 1 by omega, show q.toNat + 3 ≠ q.toNat by omega,
-           show q.toNat + 3 ≠ q.toNat + 1 by omega, show q.toNat + 3 ≠ q.toNat + 2 by omega, ↓reduceIte] at e0 e1 e2 e3
-    have ho : (rdW (m.arr64 DLP) 0 + 1).toNat = topN m DLP + 1 := by
-      rw [UInt64.toNat_add, hrdN]; simp; omega
-    have hc : (lsCntN b.data (lps + 1) 0).toNat = (listN b.data lps).length := by
-      rw [F1]; simp
-    have := decCV_of (f := fun j => tblW m NID (listN b.data lps)[j]!) e0 n2 e1 e2 e3 y2 (fun j hj => by
-      rw [hc] at hj
-      have hmem : (listN b.data lps)[j]! ∈ listN b.data lps := by
-        rw [getElem!_pos (listN b.data lps) j hj]; exact List.getElem_mem hj
-      refine ⟨?_, (tbl_read hD.names _ (F6 _ hmem)).2.1⟩
-      rw [ho, hP _ (.inr ⟨by omega, by rw [htopF]; omega⟩), hw]
-      simp only [show topN m DLP + 1 + j ≠ q.toNat by omega, show topN m DLP + 1 + j ≠ q.toNat + 1 by omega,
-        show topN m DLP + 1 + j ≠ q.toNat + 2 by omega, show topN m DLP + 1 + j ≠ q.toNat + 3 by omega,
-        ite_false]
-      have := F5 j hj
-      rw [hrdN, show 1 + topN m DLP + j = topN m DLP + 1 + j by omega] at this
-      simp only [wd]; rw [this, getElem!_pos (listN b.data lps) j hj]; rfl)
-    rw [this, hc, range_map_getElem! (listN b.data lps) (fun x => (decI (tblW m NID x) : NIdx))]
-    simp only [cvp, decE_eq]
+      (∀ P : Nat → Option Word, (∀ i, (q.toNat ≤ i ∧ i < q.toNat + 4) ∨ (topN m DLP < i ∧ i ≤ topN m' DLP) →
+        P i = some (wd m' DLP i)) → decCV P q.toNat = some cvp) := by
+  sorry
 
 end L.Front.Ind

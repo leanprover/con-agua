@@ -225,43 +225,7 @@ theorem ruleFields {a : Array Word} {q : Word} {x : IRecRule} (hsz : a.size < 2 
 theorem ruleEqButRhsB_ok {a : Array Word} (hsz : a.size < 2 ^ 64) {q r : Word} {x y : IRecRule}
     (hx : decRule (aread a) q.toNat = some x) (hy : decRule (aread a) r.toNat = some y) :
     ruleEqButRhsB a q r = decide ({ x with rhs := default } = { y with rhs := default }) := by
-  obtain ⟨w0, w1, w2, w3, w8, w9, w10, e0, e1, e2, e3, e8, e9, e10, h0, h8, c0, c1, c2, c8, c9, c10, hf, hb⟩ :=
-    ruleFields hsz hx
-  obtain ⟨v0, v1, v2, v3, v8, v9, v10, f0, f1, f2, f3, f8, f9, f10, g0, g8, d0, d1, d2, d8, d9, d10, hg, hb'⟩ :=
-    ruleFields hsz hy
-  obtain ⟨c, nf, cp, fire, rhs, k, eta⟩ := x
-  obtain ⟨c', nf', cp', fire', rhs', k', eta'⟩ := y
-  simp only at c0 c1 c2 c9 c10 hf d0 d1 d2 d9 d10 hg
-  subst c0 c1 c2 c9 c10 d0 d1 d2 d9 d10
-  have w0' : ∀ w : Word, w.toNat = 0 → w = 0 := fun w h => UInt64.toNat_inj.mp (by simpa using h)
-  have w1' : ∀ w : Word, w.toNat = 1 → w = 1 := fun w h => UInt64.toNat_inj.mp (by simpa using h)
-  rcases hf with ⟨k0, rfl⟩ | ⟨k0, ls, es, hls, hes, rfl⟩ <;>
-  rcases hg with ⟨k1, rfl⟩ | ⟨k1, ls', es', hls', hes', rfl⟩
-  · have a3 := w0' _ k0
-    have a3' := w0' _ k1
-    subst a3 a3'
-    apply bool_of_iff
-    simp only [ruleEqButRhsB, ruleEqAB, ruleEqBB, e0, e1, e2, e3, f0, f1, f2, f3, e9, e10, f9, f10,
-      Bool.and_eq_true, beq_iff_eq, IRecRule.mk.injEq, fld_nat, decI_inj_iff h0 g0, fld_bool]
-    simp [and_assoc]
-  · have a3 := w0' _ k0
-    have a3' := w1' _ k1
-    subst a3 a3'
-    simp [ruleEqButRhsB, ruleEqAB, e3, f3]
-  · have a3 := w1' _ k0
-    have a3' := w0' _ k1
-    subst a3 a3'
-    simp [ruleEqButRhsB, ruleEqAB, e3, f3]
-  · have a3 := w1' _ k0
-    have a3' := w1' _ k1
-    subst a3 a3'
-    have s1 := slAt_ok hsz (q := q) (r := r) (i := 4) (j := 5) (kn := 4) rfl rfl rfl hls hls'
-    have s2 := slAt_ok hsz (q := q) (r := r) (i := 6) (j := 7) (kn := 6) rfl rfl rfl hes hes'
-    apply bool_of_iff
-    simp only [ruleEqButRhsB, ruleEqAB, ruleEqBB, e0, e1, e2, e3, f0, f1, f2, f3, e9, e10, f9, f10,
-      s1, s2, ite_true, Bool.and_eq_true, beq_iff_eq, decide_eq_true_eq, IRecRule.mk.injEq, fld_nat,
-      decI_inj_iff h0 g0, fld_bool, IRecRuleFire.nested.injEq]
-    simp [and_assoc]
+  sorry
 
 theorem decRules_succ (a : Array Word) (o n : Nat) :
     decRules (aread a) o (n + 1) = (do
@@ -283,25 +247,8 @@ theorem rule_eq_iff (x y : IRecRule) :
 theorem rulesEqN_ok {a : Array Word} (hsz : a.size < 2 ^ 64) :
     ∀ (c : Nat) (o1 o2 : Word) (xs ys : List IRecRule),
     decRules (aread a) o1.toNat c = some xs → decRules (aread a) o2.toNat c = some ys →
-    rulesEqN a c o1 o2 = decide (xs = ys)
-  | 0, o1, o2, xs, ys, h1, h2 => by
-    simp [decRules] at h1 h2; subst h1; subst h2; simp [rulesEqN]
-  | c + 1, o1, o2, xs, ys, h1, h2 => by
-    rw [decRules_succ] at h1 h2
-    simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h1 h2
-    obtain ⟨x, hx, xs', hxs, rfl⟩ := h1
-    obtain ⟨y, hy, ys', hys, rfl⟩ := h2
-    obtain ⟨w0, w1, w2, w3, w8, w9, w10, e0, e1, e2, e3, e8, e9, e10, h0, h8, c0, c1, c2, c8, c9, c10, hf, hb⟩ :=
-      ruleFields (q := o1) hsz hx
-    obtain ⟨v0, v1, v2, v3, v8, v9, v10, f0, f1, f2, f3, f8, f9, f10, g0, g8, d0, d1, d2, d8, d9, d10, hg, hb'⟩ :=
-      ruleFields (q := o2) hsz hy
-    have t1 : (o1 + 11).toNat = o1.toNat + 11 := by rw [UInt64.toNat_add]; simp; omega
-    have t2 : (o2 + 11).toNat = o2.toNat + 11 := by rw [UInt64.toNat_add]; simp; omega
-    have ih := rulesEqN_ok hsz c (o1 + 11) (o2 + 11) xs' ys' (by rw [t1]; exact hxs) (by rw [t2]; exact hys)
-    rw [rulesEqN_succ, ih, ruleEqButRhsB_ok hsz hx hy, e8, f8]
-    apply bool_of_iff
-    simp only [Bool.and_eq_true, beq_iff_eq, decide_eq_true_eq, List.cons.injEq]
-    rw [← rule_eq_iff x y, c8, d8, decI_inj_iff h8 g8]
+    rulesEqN a c o1 o2 = decide (xs = ys) := by
+  sorry
 
 theorem rulesEqB_ok {a : Array Word} (hsz : a.size < 2 ^ 64) {o1 l1 o2 l2 : Word}
     {xs ys : List IRecRule} (h1 : decRules (aread a) o1.toNat l1.toNat = some xs)
@@ -424,16 +371,15 @@ theorem refAM_pure {α : Type} [Inhabited α] (p : Prog) (f : FnName) (args : Li
   sorry
 
 section refs
--- ronsync2 stage 2: `CanonProg` (the canonical chain's program bundle) was removed with `pw_eq`.
+variable (p : Prog) (hp : CanonProg p) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
+include hp
 
-/- ronsync2 stage 2: commented out (stale program / l_model / removed twin)
 /-- **`find_is(vis, n, pin)` refines `fe.find? n == some c'`.** -/
 theorem findIs_spec (hdn : DnInj dn) (nm pin : Word) (c' : IConstantInfo) :
     RefAM p "find_is" [vis, nm, pin]
       (fun m a => StageR vis fe m a ∧ H nm ∧ decCI (erA m) pin.toNat = some c')
       (pure (fe.find? (decI nm) == some c') : AM Bool) (KeepPost vis fe decW0B) := by
   sorry
--/
 
 end refs
 

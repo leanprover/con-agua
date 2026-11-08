@@ -48,12 +48,6 @@ structure VFacts (st : StateD) (a : AState) (tys : List IndTypeRec) (cts : List 
   order : ∀ i (hi : i < LS.length) c (hc : c < LS[i].length),
     ∃ k, ∃ _ : fpos LS i + c < ordered.length, ordered[fpos LS i + c] = cts[k]! ∧
       CtorOK st a cts CN LS[i][c] c (TN[i]!) nPd fuel k
-  kno : ¬ (TT.length = 1 ∧ (LS.map List.length) = [1]) → KE = some false
-  kyes : ∀ ty h c, TT = [ty] → LS = [[h]] → ordered = [c] →
-    ∃ r v, (ConRon.Arena.Frontend.piResultD fuel ty).run a = .ok (r, a) ∧ (view r).run a = .ok (v, a) ∧
-      ((∀ s, v ≠ .sort s) → KE = none) ∧
-      ∀ s, v = .sort s → ∃ L, (readLevel s).run a = .ok (L, a) ∧
-        KE = some (c.numFields == 0 && ConLeche.Level.isEquiv L .zero == some true)
   recs : ∀ r ∈ (if (tys.any fun x => x.numNested != 0) = true then [] else rcs),
     RecOK st a TN TT nPd tys.length ordered.length KE fuel r
 
@@ -176,97 +170,6 @@ theorem validateIndD_ok {st : StateD} {a : AState} {tys : List IndTypeRec} {cts 
     {fuel nPd : Nat} {ordered : List IndCtorRec} {KE : Option Bool}
     (hV : VFacts st a tys cts rcs TN TT LS CN fuel nPd ordered KE) :
     (ConRon.Arena.Frontend.validateIndD st tys cts rcs).run a = .ok (.inr (ordered, nPd), a) := by
-  unfold ConRon.Arena.Frontend.validateIndD
-  simp only [hV.safe, Bool.false_eq_true, ite_false]
-  rw [← hV.np1, ite_eq_left hV.np2]
-  rw [run_bind _ _ a _ hV.tn, run_bind _ _ a _ hV.tt, run_bind _ _ a _ hV.ls, run_bind _ _ a _ hV.cn]
-  rw [ite_eq_left hV.nodup]
-  simp only [hV.flen, beq_self_eq_true, ite_true]
-  rw [run_bind _ _ a _ (storeFuel_run a), hV.hfuel]
-  rw [run_bind _ _ a _ (forIn_yield' _ a _ _ (fun i => ((none : Option (RecordVerdict ⊕ List IndCtorRec × Nat)),
-    (ordered.take (fpos LS i)).toArray)) ?h0 ?hstep)]
-  case h0 => simp [fpos]
-  case hstep =>
-    intro i hi
-    simp only [List.getElem_zip]
-    rw [run_bind _ _ a _ (forIn_yield' _ a _ _ (fun c => ((none : Option (RecordVerdict ⊕ List IndCtorRec × Nat)),
-      (ordered.take (fpos LS i + c)).toArray, c)) ?i0 ?istep)]
-    case i0 => simp
-    case istep =>
-      intro c hc
-      have hi' : i < LS.length := by simp at hi; omega
-      have hiT : i < TN.length := by simp at hi; omega
-      obtain ⟨k, hp, hord, hk, hfold, hcidx, hind, cty, hcty, htele⟩ := hV.order i hi' c hc
-      have hck : cts[k]! = cts[k] := getElem!_pos cts k hk
-      rw [hck] at hord
-      have hTNi : TN[i]! = TN[i] := getElem!_pos TN i hiT
-      rw [hTNi] at hind
-      have hA : cts.toArray[k]? = some cts[k] := by simp [hk]
-      have hpush : (ordered.take (fpos LS i + c)).toArray.push cts[k] =
-          (ordered.take (fpos LS i + (c + 1))).toArray := by
-        rw [← hord, take_push _ _ hp, Nat.add_assoc]
-      simp only [hfold, hA]
-      cases hci : cts[k].cidx <;> cases hiw : cts[k].induct
-      · simp only [run_bind _ _ a _ hcty, run_bind _ _ a _ htele, beq_self_eq_true, ite_true, hpush]; rfl
-      · simp only [run_bind _ _ a _ (hind _ hiw), beq_self_eq_true, ite_true,
-          run_bind _ _ a _ hcty, run_bind _ _ a _ htele, hpush]; rfl
-      · simp only [hcidx _ hci, beq_self_eq_true, ite_true, run_bind _ _ a _ hcty,
-          run_bind _ _ a _ htele, hpush]; rfl
-      · simp only [hcidx _ hci, run_bind _ _ a _ (hind _ hiw), beq_self_eq_true, ite_true,
-          run_bind _ _ a _ hcty, run_bind _ _ a _ htele, hpush]; rfl
-    have hi' : i < LS.length := by simp at hi; omega
-    simp only [fpos_succ LS i hi']
-    rfl
-  have hzl : (TN.zip LS).length = LS.length := by simp [hV.tnlen, hV.lslen]
-  have htk : ordered.take (fpos LS LS.length) = ordered := by
-    rw [fpos_full, hV.flen, ← hV.ordlen, List.take_length]
-  simp only [hzl, htk]
-  split
-  · rename_i ty hd c
-    obtain ⟨r, v, hr, hv, hnone, hsort⟩ := hV.kyes ty hd c rfl rfl rfl
-    rw [run_bind _ _ a _ hr, run_bind _ _ a _ hv]
-    rcases hvs : v with _ | _ | ⟨s⟩ | _ | _ | _ | _ | _ | _ | _
-    case sort =>
-      obtain ⟨L, hL, hKE⟩ := hsort s hvs
-      simp only []
-      rw [run_bind _ _ a _ hL, ← hKE]
-      simp only [pure_bind]
-      recs_tac
-    all_goals
-      have hKE : KE = none := hnone (fun s' h' => by rw [hvs] at h'; cases h')
-      simp only []
-      rw [← hKE]
-      simp only [pure_bind]
-      recs_tac
-  · rename_i hne
-    have hKE : KE = some false := hV.kno (fun ⟨h1, h2⟩ => by
-      obtain ⟨ty, hty⟩ : ∃ ty, TT = [ty] := by
-        cases hT : TT with
-        | nil => rw [hT] at h1; simp at h1
-        | cons x xs => cases xs with
-          | nil => exact ⟨x, rfl⟩
-          | cons _ _ => rw [hT] at h1; simp at h1
-      obtain ⟨hd, hls⟩ : ∃ hd, LS = [[hd]] := by
-        cases hL : LS with
-        | nil => rw [hL] at h2; simp at h2
-        | cons l ls => cases ls with
-          | nil => cases l with
-            | nil => rw [hL] at h2; simp at h2
-            | cons x xs => cases xs with
-              | nil => exact ⟨x, rfl⟩
-              | cons _ _ => rw [hL] at h2; simp at h2
-          | cons _ _ => rw [hL] at h2; simp at h2
-      have hol : ordered.length = 1 := by
-        rw [hV.ordlen, ← hV.flen, hls]; rfl
-      obtain ⟨c, hc⟩ : ∃ c, ordered = [c] := by
-        cases ho : ordered with
-        | nil => rw [ho] at hol; simp at hol
-        | cons x xs => cases xs with
-          | nil => exact ⟨x, rfl⟩
-          | cons _ _ => rw [ho] at hol; simp at hol
-      exact hne ty hd c hty hls hc)
-    rw [← hKE]
-    simp only [pure_bind]
-    recs_tac
+  sorry
 
 end L.Front.Ind

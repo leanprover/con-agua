@@ -107,7 +107,7 @@ theorem decCVp_name_p {m : Mem} {q : Nat} {cv : IConstantVal} (h : decCVp m q = 
   simp only [decCVp, decCV, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
   obtain ⟨nm, hnm, lv, -, ty, -, hcv⟩ := h
   have hnm' : nm = cv.name := by rw [← hcv]
-  rcases hw : (erA m)[q]? with _ | w
+  rcases hw : erA m q with _ | w
   · simp [hd?, hw] at hnm
   by_cases hl : w.toNat < 2 ^ 32
   · simp [hd?, hw, hl] at hnm

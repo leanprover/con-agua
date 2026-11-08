@@ -37,7 +37,7 @@ structure NatCvProg (p : Prog) : Prop extends NatGateProg p where
   lCanon : CanonProg p
 
 theorem IWGrow.erec_get {m m' : Mem} (h : IWGrow m m') {i : Nat} {v : Word}
-    (hv : (erecP m)[i]? = some v) : (m'.arr64 EREC)[i]? = some v := by
+    (hv : erecP m i = some v) : (m'.arr64 EREC)[i]? = some v := by
   simp only [erecP, Array.getElem?_extract] at hv
   split at hv
   · rename_i hi
@@ -49,7 +49,7 @@ theorem erecP_size_le' (m : Mem) : (erecP m).size ≤ erTop m := by
   simp only [erecP, Array.size_extract, erecTop, erTop]; omega
 
 theorem rdW_erec_of {m : Mem} {q : Word} {w : Word} (_hsz : (m.arr64 EREC).size < 2 ^ 64)
-    (h : (erecP m)[q.toNat]? = some w) : rdW (m.arr64 EREC) q = w := by
+    (h : erecP m (q.toNat) = some w) : rdW (m.arr64 EREC) q = w := by
   simp [rdW, erecP_get h]
 
 theorem ciToCv_ref (hN : NatCvProg p) (q : Word) (ci : IConstantInfo) :

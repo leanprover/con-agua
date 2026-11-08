@@ -302,7 +302,7 @@ theorem rmRec_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEn
   have hE1 : m1.arr64 EREC = m.arr64 EREC := by rw [erAllocW_mem h]; exact erAllocMem_arr _ _ (by decide)
   have hc : ∀ k : Nat, k ≤ 10 → (old + UInt64.ofNat k).toNat = old.toNat + k := fun k hk => by
     rw [UInt64.toNat_add]; simp; omega
-  have hwi : ∀ k : Nat, k ≤ 10 → (erecP m)[old.toNat + k]? = some (rdW (m1.arr64 EREC) (old + UInt64.ofNat k)) :=
+  have hwi : ∀ k : Nat, k ≤ 10 → erecP m (old.toNat + k) = some (rdW (m1.arr64 EREC) (old + UInt64.ofNat k)) :=
     fun k hk => by
       rw [erecP_getE (by omega), hE1]; exact rdW_some (hc k hk) (by omega)
   generalize hws : [rdW (m1.arr64 EREC) old, rdW (m1.arr64 EREC) (old + 1),
@@ -316,9 +316,9 @@ theorem rmRec_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEn
   rw [rmMem_eq (by omega) hroom, hws]
   refine ⟨hS', hg, erRec_mfr h ws, ?_⟩
   generalize hM : wrER m1 q ws = M at hS' hg htop hget
-  have hP : ∀ j, j < 11 → (erecP M)[q.toNat + j]? = ws[j]? := fun j hj => by
+  have hP : ∀ j, j < 11 → erecP M (q.toNat + j) = ws[j]? := fun j hj => by
     rw [erecP_getE (by omega)]; exact hget j (by omega)
-  have hw : ∀ i, i < 3 ∨ (8 ≤ i ∧ i < 11) → (erecP M)[q.toNat + i]? = (erecP m)[old.toNat + i]? := by
+  have hw : ∀ i, i < 3 ∨ (8 ≤ i ∧ i < 11) → erecP M (q.toNat + i) = erecP m (old.toNat + i) := by
     intro i hi
     rw [hP i (by omega)]
     rcases hi with hi | ⟨hi1, hi2⟩

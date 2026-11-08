@@ -139,15 +139,14 @@ theorem StageR.of_envFrame {dn : NIdx → Option ConLeche.Name} {vis vis' : Word
 
 /-- `env_pop_temp` and its callees. -/
 def popProg : Prog :=
-  [("env_pop_temp", envPopTempL), ("env_row_set", envRowSetL), ("env_ix", envIxL)]
+  [("env_pop_temp", envPopTempL), ("env_row_set", envRowSetL)]
 
 def popFns : List FnName := popProg.map (·.1)
 
 theorem popProg_closed : closedA popProg [EIXA, EIXS, EIXN, EIXA1, EIXS1, EIXN1, ECON] [128] popFns = true := by
   decide +kernel
 
-theorem popTemp_frame {p : Prog} (hx : p.lookup "env_ix" = some envIxL)
-    (hs : p.lookup "env_row_set" = some envRowSetL) (hpt : p.lookup "env_pop_temp" = some envPopTempL)
+theorem popTemp_frame {p : Prog}     (hs : p.lookup "env_row_set" = some envRowSetL) (hpt : p.lookup "env_pop_temp" = some envPopTempL)
     {n : Nat} {vs : List Word} {m m' : Mem} {r : List Word}
     (h : callW p n "env_pop_temp" vs m = some (r, m')) :
     MemFrame [EIXA, EIXS, EIXN, EIXA1, EIXS1, EIXN1, ECON] [128] m m' := by
@@ -174,8 +173,7 @@ theorem FA2.getElem {α β : Type} {R : α → β → Prop} :
   | _, _, .cons h hs, 0, _, _ => h
   | _, _, .cons _ hs, i + 1, h1, h2 => FA2.getElem hs i (by simpa using h1) (by simpa using h2)
 
-theorem papW_ok {p : Prog} (hx : p.lookup "env_ix" = some envIxL)
-    (hs : p.lookup "env_row_set" = some envRowSetL) (hpt : p.lookup "env_pop_temp" = some envPopTempL)
+theorem papW_ok {p : Prog}     (hs : p.lookup "env_row_set" = some envRowSetL) (hpt : p.lookup "env_pop_temp" = some envPopTempL)
     (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (a : AState) (po pl : Word)
     (prevs : List (NIdx × Option (Nat × IConstantInfo))) (k : Nat) :
     ∀ (m m' : Mem) (vis v' j : Word), papW.loop1 p k m vis po j = some (v', m') →
@@ -255,8 +253,7 @@ theorem papW_ok {p : Prog} (hx : p.lookup "env_ix" = some envIxL)
 
 /-- **`gen_rec_check_pop_all(vis, prevs.off, prevs.len)` undoes the temporary pushes**, last first:
 the stage relation at the returned view of `prevs.foldr popTemp fe`, the pool unchanged. -/
-theorem genRecCheckPopAll_refines {p : Prog} (hx : p.lookup "env_ix" = some envIxL)
-    (hs : p.lookup "env_row_set" = some envRowSetL) (hpt : p.lookup "env_pop_temp" = some envPopTempL)
+theorem genRecCheckPopAll_refines {p : Prog}     (hs : p.lookup "env_row_set" = some envRowSetL) (hpt : p.lookup "env_pop_temp" = some envPopTempL)
     (hp : p.lookup "gen_rec_check_pop_all" = some genRecCheckPopAll) (n : Nat) (s₀ : St) (a : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (po pl : Word)
     (prevs : List (NIdx × Option (Nat × IConstantInfo))) (hS : StageR vis fe s₀.mem a)

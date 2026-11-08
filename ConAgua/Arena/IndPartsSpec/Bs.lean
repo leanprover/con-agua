@@ -103,32 +103,32 @@ attribute [ind_grind] bsK3_some
 /-- **`block_split_recs` is its model** `bsrW`. -/
 l_model bsr_spec (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
   (hc : p.lookup "iw_copy" = some iwCopy) (hs : p.lookup "sl_cons" = some slCons)
-  (h5 : p.lookup "rec5" = some rec5)
+  (h6 : p.lookup "rec6" = some rec6)
   (hp : p.lookup "block_split_recs" = some blockSplitRecs)
   fns [hp ↦ bsrW list]
-  specs [posRec5_specW p ha h5 n, slCons_specW p ha hc hs n]
+  specs [rec6_specW p ha h6 n, slCons_specW p ha hc hs n]
   grind [arena_grind, ind_grind] finish [rdW_eq] gen 20
 
 /-- **`block_split_ctors` is its model** `bscW`. -/
 l_model bsc_spec (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
   (hc : p.lookup "iw_copy" = some iwCopy) (hs : p.lookup "sl_cons" = some slCons)
-  (h5 : p.lookup "rec5" = some rec5) (h3 : p.lookup "rec3" = some rec3)
+  (h6 : p.lookup "rec6" = some rec6) (h3 : p.lookup "rec3" = some rec3)
   (hr : p.lookup "block_split_recs" = some blockSplitRecs)
   (hp : p.lookup "block_split_ctors" = some blockSplitCtors)
   fns [hp ↦ bscW list]
-  specs [partsRec3_specW p ha h3 n, slCons_specW p ha hc hs n, bsr_spec p ha hc hs h5 hr n]
+  specs [partsRec3_specW p ha h3 n, slCons_specW p ha hc hs n, bsr_spec p ha hc hs h6 hr n]
   grind [arena_grind, ind_grind] finish [rdW_eq] gen 20
 
 /-- **`block_split` is its model** `bsW`. -/
 l_model bs_spec (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
   (hc : p.lookup "iw_copy" = some iwCopy) (hs : p.lookup "sl_cons" = some slCons)
-  (h5 : p.lookup "rec5" = some rec5) (h3 : p.lookup "rec3" = some rec3)
+  (h3 : p.lookup "rec3" = some rec3)
   (h6 : p.lookup "rec6" = some rec6)
   (hr : p.lookup "block_split_recs" = some blockSplitRecs)
   (hct : p.lookup "block_split_ctors" = some blockSplitCtors)
   (hp : p.lookup "block_split" = some blockSplit)
   fns [hp ↦ bsW list]
-  specs [rec6_specW p ha h6 n, slCons_specW p ha hc hs n, bsc_spec p ha hc hs h5 h3 hr hct n]
+  specs [rec6_specW p ha h6 n, slCons_specW p ha hc hs n, bsc_spec p ha hc hs h6 h3 hr hct n]
   grind [arena_grind, ind_grind] finish [rdW_eq] gen 20
 
 end L.Ind

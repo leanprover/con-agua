@@ -467,7 +467,7 @@ theorem natOpStoredOk_ref (hN : NatTyProg p) (w : Word) :
     · rw [ite_eq_right (by simpa using hk1)] at hW
       -- the record is a definition
       obtain ⟨cv, v, hint, rfl, hk, hcv⟩ : ∃ cv v hint, ci = .defnInfo cv v hint ∧
-          (erecP m)[(rf.tail.headD 0).toNat]? = some 1 ∧ decCV (erecP m) ((rf.tail.headD 0).toNat + 1) = some cv := by
+          erecP m ((rf.tail.headD 0).toNat) = some 1 ∧ decCV (erecP m) ((rf.tail.headD 0).toNat + 1) = some cv := by
         rcases decCI_defn_cases hci with h | ⟨wk, hwk, hne, -⟩
         · exact h
         · exfalso; have := rdW_erec_of hsz hwk; rw [hk1] at this; exact hne this.symm

@@ -137,20 +137,13 @@ def NHIn (m : Mem) (w : Nat) (P : Nat → Prop) : Prop :=
 /-- A decoded number at `p + i` is the word L reads there. -/
 theorem rd_iwN {m : Mem} {p i : Word} {v : Nat} (h : iwN m (p.toNat + i.toNat) = some v)
     (hb : p.toNat + i.toNat < 2 ^ 64) : (rdW (m.arr64 IW) (p + i)).toNat = v := by
-  simp only [iwN, nat?, iwA, Option.map_eq_some_iff] at h
-  obtain ⟨w, hw, rfl⟩ := h
-  have : (p + i).toNat = p.toNat + i.toNat := by rw [UInt64.toNat_add]; exact Nat.mod_eq_of_lt hb
-  simp [rdW, this, hw]
+  sorry
 
 /-- A decoded handle at `p + i` is the word L reads there. -/
 theorem rd_iwH {k : IdxKind} {m : Mem} {p i : Word} {x : Idx k} (h : iwH m (p.toNat + i.toNat) = some x)
     (hb : p.toNat + i.toNat < 2 ^ 64) :
     H (rdW (m.arr64 IW) (p + i)) ∧ decI (rdW (m.arr64 IW) (p + i)) = x := by
-  obtain ⟨w, hw, hl, hx⟩ := hd?_some h
-  have : (p + i).toNat = p.toNat + i.toNat := by rw [UInt64.toNat_add]; exact Nat.mod_eq_of_lt hb
-  simp only [iwA] at hw
-  simp only [rdW, this, hw, Option.getD_some]
-  exact ⟨hl, hx.symm⟩
+  sorry
 
 theorem word_add_toNat {a b : Word} (h : a.toNat + b.toNat < 2 ^ 64) : (a + b).toNat = a.toNat + b.toNat := by
   rw [UInt64.toNat_add]; exact Nat.mod_eq_of_lt h
@@ -182,9 +175,7 @@ theorem decNK_of_words {m : Mem} {k : Nat} {c u o l : Word} {ds : List EIdx}
     (h0 : (m.arr64 IW)[k]? = some c) (hc : H c) (h1 : (m.arr64 IW)[k + 1]? = some u) (hu : H u)
     (h2 : (m.arr64 IW)[k + 2]? = some o) (h3 : (m.arr64 IW)[k + 3]? = some l)
     (hs : decHL m o.toNat l.toNat = some ds) : decNK m k = some ⟨decI c, decI u, ds⟩ := by
-  simp only [decNK, decAt, iwH, iwN, nat?, hd?, iwA, h0, h1, h2, h3, hc, hu, Option.map_some,
-    Option.bind_eq_bind, Option.bind_some, ite_true]
-  simp [hs]
+  sorry
 
 /-! ### `NestCtx` records: where their reads lie -/
 

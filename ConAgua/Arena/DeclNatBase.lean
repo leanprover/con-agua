@@ -480,7 +480,6 @@ proofs call (the real functions, not the stubs of `masterFns`). -/
 structure MasterProg (p : Prog) : Prop where
   lPinAt : p.lookup "pin_at" = some pinAtL
   lPinWord : p.lookup "pin_word" = some pinWordL
-  lEnvIx : p.lookup "env_ix" = some envIxL
   lEnvRowGet : p.lookup "env_row_get" = some envRowGetL
   lEnvFind : p.lookup "env_find" = some envFindL
   lConstFind : p.lookup "const_find" = some constFind

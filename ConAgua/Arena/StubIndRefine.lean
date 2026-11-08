@@ -298,7 +298,6 @@ end famRun
 
 /-- The lookups the refinements need. -/
 structure RrbProg (p : Prog) : Prop where
-  envix : p.lookup "env_ix" = some envIxL
   envrow : p.lookup "env_row_get" = some envRowGetL
   envfind : p.lookup "env_find" = some envFindL
   pires : p.lookup "pi_result" = some piResultL

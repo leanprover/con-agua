@@ -33,7 +33,6 @@ open L.Arena
 /-- The lookups `target_outside_inst` needs. -/
 structure ToiProg (p : Prog) : Prop where
   hi1 : I1Prog p
-  ix : p.lookup "env_ix" = some envIxL
   rowGet : p.lookup "env_row_get" = some envRowGetL
   find : p.lookup "env_find" = some envFindL
   alloc : p.lookup "iw_alloc" = some iwAlloc

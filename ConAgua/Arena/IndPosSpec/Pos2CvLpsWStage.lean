@@ -137,7 +137,6 @@ structure NhLook (p : Prog) : Prop where
   hsn : p.lookup "sl_snoc" = some slSnoc
   hv : p.lookup "e_view" = some eView
   hip : p.lookup "inst_pis_with" = some instPisWith
-  hx : p.lookup "env_ix" = some envIxL
   hg : p.lookup "env_row_get" = some envRowGetL
   hf : p.lookup "env_find" = some envFindL
   hff : p.lookup "fvar_find" = some fvarFind

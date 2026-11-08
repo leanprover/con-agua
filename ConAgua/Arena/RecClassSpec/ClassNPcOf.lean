@@ -227,8 +227,7 @@ grind_pattern [ind_grind] npcK3_other => npcK3 (some (r3, m3))
 theorem classNPcOf_spec (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
     (hmc : p.lookup "member_names_copy" = some memberNamesCopy)
     (hmn : p.lookup "block_shape_member_names" = some blockShapeMemberNames)
-    (hct : p.lookup "sl_contains" = some slContains) (hx : p.lookup "env_ix" = some envIxL)
-    (hg : p.lookup "env_row_get" = some envRowGetL) (hef : p.lookup "env_find" = some envFindL)
+    (hct : p.lookup "sl_contains" = some slContains)     (hg : p.lookup "env_row_get" = some envRowGetL) (hef : p.lookup "env_find" = some envFindL)
     (hp : p.lookup "class_n_pc_of" = some classNPcOf) (n : Nat) (s₀ : St) (q vis i : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "class_n_pc_of" [q, vis, i]
     ⦃fun r s' => LocEq s' s₀ ∧ npcW n s₀.mem q vis i = some (r, s'.mem); ⊤⦄ := by
@@ -238,7 +237,7 @@ theorem classNPcOf_spec (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
   sym only [lang_grind, arena_grind, ind_grind] =>
     vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       blockShapeMemberNames_spec p ha hmc hmn n, slContains_spec p hct n,
-      envFind_specW p hx hg hef n] <;>
+      callW_spec p n "env_find"] <;>
     finish (gen := 20) [rdW_eq]
 
 theorem npc_mem {bs : BlockShape} {fe : IFEnv} {i : NIdx} (h : bs.memberNames.contains i = true) :
@@ -343,8 +342,7 @@ theorem npcW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
 theorem classNPcOf_refines (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
     (hmc : p.lookup "member_names_copy" = some memberNamesCopy)
     (hmn : p.lookup "block_shape_member_names" = some blockShapeMemberNames)
-    (hct : p.lookup "sl_contains" = some slContains) (hx : p.lookup "env_ix" = some envIxL)
-    (hg : p.lookup "env_row_get" = some envRowGetL) (hef : p.lookup "env_find" = some envFindL)
+    (hct : p.lookup "sl_contains" = some slContains)     (hg : p.lookup "env_row_get" = some envRowGetL) (hef : p.lookup "env_find" = some envFindL)
     (hp : p.lookup "class_n_pc_of" = some classNPcOf) (n : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (q i : Word) (bs : BlockShape)
     (hS : StageR vis fe s₀.mem a₀) (hb : BSOK s₀.mem q.toNat bs) (hi : H i) :

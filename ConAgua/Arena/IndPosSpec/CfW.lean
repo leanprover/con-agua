@@ -250,7 +250,7 @@ namespace L.Ind
 open L.Arena
 
 theorem decKL_get {m : Mem} {o l : Nat} {ks : List NestFieldKind} (h : decKL m o l = some ks) :
-    ks.length = l ∧ ∀ j (_hj : j < l), ∃ w, (iwA m)[o + j]? = some w ∧ decNFK w = ks[j]? := by
+    ks.length = l ∧ ∀ j (_hj : j < l), ∃ w, iwA m (o + j) = some w ∧ decNFK w = ks[j]? := by
   induction l generalizing o ks with
   | zero => simp [decKL] at h; subst h; simp
   | succ l ih =>

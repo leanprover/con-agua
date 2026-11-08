@@ -68,7 +68,7 @@ noncomputable section
 
 l_model ntyE_spec (p : Prog) (hL : NtyLook p)
   fns [hL.hp ↦ ntyE]
-  specs [envFind_specW p hL.hx hL.hg hL.hf n, callW_spec p n "view_ls_len", stripPis_specF p hL.hst n,
+  specs [callW_spec p n "env_find", callW_spec p n "view_ls_len", stripPis_specF p hL.hst n,
     cvLps_spec p hL.ha hL.hc hL.he hL.hcv n, callW_spec p n "inst_lp_fast",
     instPisWith_spec p hL.hv hL.hip hL.hi1 n]
   grind [arena_grind] fold [tierW, idxW]

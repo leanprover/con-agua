@@ -253,7 +253,7 @@ theorem cp_ref (hD : DmProg8 p) (hq : KnotStageProg p) (hcl : LeafClosed p) (hkp
   replace hk1 := Classical.not_not.mp hk1
   rw [checkDivModPinE.k_env_find.arm1 _ _ _ _ _ _ _ _ (by rw [hr2]; decide) hk1]
   obtain ⟨cv, v, hint, rfl, -, -⟩ : ∃ cv v hint, ci = .defnInfo cv v hint ∧
-      (erecP m2)[(r2.tail.headD 0).toNat]? = some 1 ∧
+      erecP m2 ((r2.tail.headD 0).toNat) = some 1 ∧
       decCV (erecP m2) ((r2.tail.headD 0).toNat + 1) = some cv := by
     rcases decCI_defn_cases hci with h | ⟨w, hw', hne, hnd⟩
     · exact h
@@ -268,7 +268,7 @@ theorem cp_ref (hD : DmProg8 p) (hq : KnotStageProg p) (hcl : LeafClosed p) (hkp
     have h5 : (5 : Word).toNat = 5 := rfl
     rw [UInt64.toNat_add, h5]; exact Nat.mod_eq_of_lt (by omega)
   have hval : rdW (m2.arr64 EREC) (r2.tail.headD 0 + 5) = wv := by
-    have : (erecP m2)[(r2.tail.headD 0 + 5).toNat]? = some wv := by rw [hq5]; exact hwv
+    have : erecP m2 ((r2.tail.headD 0 + 5).toNat) = some wv := by rw [hq5]; exact hwv
     exact rdW_erec_of hsz this
   rw [hval]
   -- the twin's stored value: its denotation and its scope (con-ron's `checkDivModPin_bridge`)

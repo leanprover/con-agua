@@ -353,12 +353,12 @@ theorem rgoW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
   obtain ⟨hSM, hgM, hqt, htM, hget⟩ := erRec_stage hal hS1 [wn, w3, nP, 0, 0, 0, 0, 0, wr, kr.headD 0, kr.tail.headD 0] rfl
   generalize hM : wrER m2 q _ = M at hSM hgM htM hget
   -- the record decodes
-  have hP : ∀ i, i < 11 → (erecP M)[q.toNat + i]? = (M.arr64 EREC)[q.toNat + i]? :=
+  have hP : ∀ i, i < 11 → erecP M (q.toNat + i) = (M.arr64 EREC)[q.toNat + i]? :=
     fun i hi => erecP_getE (by simp at htM; omega)
   have hrec : rlDec M q.toNat = some
       { ctor := decI wn, nfields := w3.toNat, ctorParams := nP.toNat,
         fire := .plain, rhs := decI wr, k := kr.headD 0 != 0, eta := kr.tail.headD 0 != 0 } := by
-    have hw : ∀ i, i < 11 → (erecP M)[q.toNat + i]? =
+    have hw : ∀ i, i < 11 → erecP M (q.toNat + i) =
         [wn, w3, nP, 0, 0, 0, 0, 0, wr, kr.headD 0, kr.tail.headD 0][i]? :=
       fun i hi => by rw [hP i hi, hget i (by simpa using hi)]
     exact sumDecRule_words (by simpa using hw 0 (by decide)) (hw 1 (by decide)) (hw 2 (by decide))

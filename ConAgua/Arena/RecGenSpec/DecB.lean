@@ -245,20 +245,20 @@ theorem ptrsB_of_mapM {mb : Mem} : ∀ {ps : List Nat} {xs : List NestCtorNf},
     obtain ⟨x, hx, ys, hys, rfl⟩ := h
     exact .cons hx (ptrsB_of_mapM hys)
 
-theorem iwN_get {m : Mem} {i v : Nat} (h : iwN m i = some v) : ∃ w, (iwA m)[i]? = some w := by
+theorem iwN_get {m : Mem} {i v : Nat} (h : iwN m i = some v) : ∃ w, iwA m i = some w := by
   simp only [iwN, nat?, Option.map_eq_some_iff] at h
   obtain ⟨w, hw, -⟩ := h; exact ⟨w, hw⟩
 
 theorem iwH_get {kk : IdxKind} {m : Mem} {i : Nat} {x : Idx kk} (h : iwH m i = some x) :
-    ∃ w, (iwA m)[i]? = some w := by
+    ∃ w, iwA m i = some w := by
   simp only [iwH, hd?] at h
-  cases hw : (iwA m)[i]? with
+  cases hw : iwA m i with
   | none => rw [hw] at h; cases h
   | some w => exact ⟨w, rfl⟩
 
 /-- **Every word of a decoded class record is read.** -/
 theorem decTM_get {m : Mem} {q : Nat} {M : TargetMajor} (h : decTM m q = some M) :
-    ∀ k < 13, ∃ w, (iwA m)[q + k]? = some w := by
+    ∀ k < 13, ∃ w, iwA m (q + k) = some w := by
   simp only [decTM, decAt, bind, Option.bind_eq_some_iff] at h
   obtain ⟨ind, hind, lv, hlv, ds, ⟨o2, h2, l2, h3, -⟩, nPc, h4, nIdx, h5, ctors, ⟨o6, h6, l6, h7, -⟩, w8, h8,
     nfs0, ⟨o9, h9, l9, h10, -⟩, pfvs, ⟨o11, h11, l11, h12, -⟩, -⟩ := h

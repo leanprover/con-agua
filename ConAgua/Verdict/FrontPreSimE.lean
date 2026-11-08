@@ -149,6 +149,9 @@ import all ConAgua.Scan.Records
 import all ConAgua.Scan.Str
 import all ConAgua.Scan.Utf8
 import all ConAgua.Scan.Values
+import all ConAgua.Arena.BasisL
+import all ConAgua.Arena.IndDeclConsts
+import all ConAgua.Arena.IndStream
 
 @[expose] public section
 

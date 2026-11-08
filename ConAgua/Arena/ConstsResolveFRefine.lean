@@ -56,7 +56,6 @@ structure CrfProg (p : Prog) : Prop where
   isl : p.lookup "is_str_lit" = some isStrLitL
   ef : p.lookup "env_find" = some envFindL
   erg : p.lookup "env_row_get" = some envRowGetL
-  eix : p.lookup "env_ix" = some envIxL
   pin : p.lookup "pin_at" = some pinAtL
 
 /-! ## The models over the calls, and their specs -/

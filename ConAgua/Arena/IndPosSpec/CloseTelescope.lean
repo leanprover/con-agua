@@ -35,8 +35,7 @@ namespace L.Ind
 open L.Arena
 
 /-- `env_find`, with: a found row decodes. -/
-theorem envFind_refines' (p : Prog) (hx : p.lookup "env_ix" = some envIxL)
-    (hg : p.lookup "env_row_get" = some envRowGetL) (hp : p.lookup "env_find" = some envFindL)
+theorem envFind_refines' (p : Prog)     (hg : p.lookup "env_row_get" = some envRowGetL) (hp : p.lookup "env_find" = some envFindL)
     (n : Nat) (s₀ : St) {dn : NIdx → Option ConLeche.Name} {fe : IFEnv} (vis w : Word)
     (hE : EnvR s₀.mem vis fe) (hw : w.toNat < 2 ^ 32) :
     ⦃fun s => s = s₀⦄
@@ -70,10 +69,9 @@ theorem blk_k3' {dn : NIdx → Option ConLeche.Name} {fe : IFEnv} {c : Word} {m 
   rwa [rdW_eq _ _ _ rfl h15, rdW_eq _ _ _ rfl h16] at this
 
 section blockof
-variable (p : Prog) (hx : p.lookup "env_ix" = some envIxL)
-    (hg : p.lookup "env_row_get" = some envRowGetL) (hf : p.lookup "env_find" = some envFindL)
+variable (p : Prog)     (hg : p.lookup "env_row_get" = some envRowGetL) (hf : p.lookup "env_find" = some envFindL)
     (hp : p.lookup "nest_block_of" = some nestBlockOfL)
-include hx hg hf hp
+include hg hf hp
 
 /-- **`nest_block_of` refines `nestBlockOf`**: the result is the `IndCaps.all` slice of `EREC`. -/
 @[refines ConRon.Arena.nestBlockOf]
@@ -248,10 +246,10 @@ section census2
 variable (p : Prog) (hc : p.lookup "sl_contains" = some slContains) (ha : p.lookup "iw_alloc" = some iwAlloc)
   (hcp : p.lookup "iw_copy" = some iwCopy) (hsn : p.lookup "sl_snoc" = some slSnoc)
   (hgo : p.lookup "nest_frame_mates_go" = some nestFrameMatesGoL)
-  (hx : p.lookup "env_ix" = some envIxL) (hg : p.lookup "env_row_get" = some envRowGetL)
+  (hg : p.lookup "env_row_get" = some envRowGetL)
   (hf : p.lookup "env_find" = some envFindL) (hbo : p.lookup "nest_block_of" = some nestBlockOfL)
   (hp : p.lookup "nest_frame_mates" = some nestFrameMatesL)
-include hc ha hcp hsn hgo hx hg hf hbo hp
+include hc ha hcp hsn hgo hg hf hbo hp
 
 /-- **`nest_frame_mates` refines `nestFrameMates`**. -/
 @[refines ConRon.Arena.nestFrameMates]

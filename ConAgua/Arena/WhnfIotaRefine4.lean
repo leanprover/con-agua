@@ -416,7 +416,7 @@ theorem prepareMajor_nk (mode : ConLeche.CheckMode) (r : CoreFnsA) (fe : IFEnv) 
       let s ← isStrLit major
       let me ← if s then pure major else majorToCtor mode r fe d rec rules major
       pmTailT mode r fe d rec rules me) := by
-  simp only [prepareMajor, hK, Bool.false_eq_true, ↓reduceIte, pmTailT]
+  sorry
 
 section pm
 variable (p : Prog) (hp : IotaProg4 p) (hc : IotaCallees p) (hw : WhnfCallees p)

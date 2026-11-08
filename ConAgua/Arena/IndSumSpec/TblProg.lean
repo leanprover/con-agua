@@ -126,7 +126,6 @@ structure TblProg (p : Prog) : Prop where
   hsct : p.lookup "check_struct_proj_table_scoped" = some checkStructProjTableScopedL
   hbb : BvbProg p
   hhf : HfF p
-  hix : p.lookup "env_ix" = some envIxL
   hrg : p.lookup "env_row_get" = some envRowGetL
   hfind : p.lookup "env_find" = some envFindL
   htix : p.lookup "tbl_ix" = some tblIxL

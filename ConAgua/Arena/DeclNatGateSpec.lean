@@ -67,7 +67,7 @@ theorem decCI_defn_val {a : Array Word} {dn : NIdx → Option ConLeche.Name} {q 
     · exact h1 rfl
     all_goals simp [Option.bind_eq_some_iff] at h
 
-theorem erecP_get_rev {m : Mem} {i : Nat} {w : Word} (h : (erecP m)[i]? = some w) : (erecP m)[i]? = some w := h
+theorem erecP_get_rev {m : Mem} {i : Nat} {w : Word} (h : erecP m i = some w) : erecP m i = some w := h
 
 theorem decEqRL_headD {m : Mem} {r : List Word} {ps : List (EIdx × EIdx)} (h : decEqRL m r ps) :
     EqL m (r.headD 0).toNat (r.tail.headD 0).toNat ps := by

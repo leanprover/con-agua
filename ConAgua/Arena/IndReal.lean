@@ -97,7 +97,7 @@ def rrbProg : Prog :=
    ("rec_rule_eta_of", L.Stubs.recRuleEtaOfL), ("ctor_family", L.Stubs.ctorFamily),
    ("er_sl_eq", L.Ind.erSlEq), ("const_name_of", constNameOfL), ("get_app_fn_f", getAppFnFL),
    ("pi_result_f", piResultFL), ("get_app_fn", getAppFnL), ("pi_result", piResultL),
-   ("env_find", envFindL), ("env_row_get", envRowGetL), ("env_ix", envIxL)]
+   ("env_find", envFindL), ("env_row_get", envRowGetL)]
 
 def rrbFns : List FnName := rrbProg.map (·.1)
 

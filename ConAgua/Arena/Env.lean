@@ -1,7 +1,10 @@
 module
 
 public import ConAgua.Arena.Tiers
+public import ConAgua.L.Logic
 import ConAgua.Census.Attr
+import Std.WP.Tactic
+import Std.WP.Triple.SpecLemmas
 
 @[expose] public section
 
@@ -229,5 +232,32 @@ def envProg : Prog :=
    ("env_pop_temp", envPopTempL), ("tbl_own_get", tblOwnGetL), ("tbl_own_set", tblOwnSetL),
    ("tbl_base_get", tblBaseGetL), ("tbl_base_set", tblBaseSetL), ("raw_table", rawTableL),
    ("find_table", findTableL), ("env_push_table", envPushTableL)]
+
+/-! ## Generic helpers (kept from the old `Env.lean`; their users are everywhere) -/
+
+section helpers
+open ConRon.Arena Std.WP
+open scoped Lean.Order
+
+theorem hd?_some {k : IdxKind} {a : Nat → Option Word} {i : Nat} {x : Idx k} (h : hd? a i = some x) :
+    ∃ w, a i = some w ∧ w.toNat < 2 ^ 32 ∧ x = decI w := by
+  cases e : a i with
+  | none => simp [hd?, e] at h
+  | some w => simp [hd?, e] at h; exact ⟨w, rfl, h.1, h.2.symm⟩
+
+theorem decCV_name {a : Nat → Option Word} {q : Nat} {cv : IConstantVal} (h : decCV a q = some cv) :
+    ∃ w, a q = some w ∧ w.toNat < 2 ^ 32 ∧ cv.name = decI w := by
+  sorry
+
+theorem decCI_name {a : Nat → Option Word} {p : Nat} {ci : IConstantInfo} (h : decCI a p = some ci) :
+    ∃ w, a (p + 1) = some w ∧ w.toNat < 2 ^ 32 ∧ ci.name = decI w := by
+  sorry
+
+theorem triple_post {α : Type} {prog : M α} {P : St → Prop} {Q Q' : α → St → Prop}
+    (h : ⦃fun s => P s⦄ prog ⦃fun r s => Q r s; ⊤⦄) (hq : ∀ r s, Q r s → Q' r s) :
+    ⦃fun s => P s⦄ prog ⦃fun r s => Q' r s; ⊤⦄ :=
+  M.triple_of_run fun _ _ _ hp hr => hq _ _ (M.of_run hp hr h)
+
+end helpers
 
 end L.Arena

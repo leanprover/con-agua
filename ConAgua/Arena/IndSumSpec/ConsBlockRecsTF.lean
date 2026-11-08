@@ -645,7 +645,7 @@ theorem riRec_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEn
   obtain ⟨q1, m1⟩ := x
   simp only [riW, h1, Option.some.injEq, Prod.mk.injEq, List.cons.injEq, and_true] at h
   obtain ⟨rfl, rfl⟩ := h
-  have h3 : (erecP m)[cq.toNat + 3]? ≠ none := by
+  have h3 : erecP m (cq.toNat + 3) ≠ none := by
     have := decCV_type hcv; intro e; simp [hd?, e] at this
   have hcq : cq.toNat + 4 ≤ erTop m := by
     obtain ⟨v, hv⟩ := Option.ne_none_iff_exists'.mp h3; have := erecP_lt hv; omega
@@ -667,12 +667,12 @@ theorem riRec_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEn
   rw [riMem_eq (by omega) hroom, hE1]
   refine ⟨hS', hg, by rw [← hE1]; exact erRec_mfr h1 _, ?_⟩
   generalize hM : wrER m1 q1 _ = M at hS' hg htop' hget
-  have hP : ∀ j, j < 9 → (erecP M)[q1.toNat + j]? = ((M.arr64 EREC))[q1.toNat + j]? :=
+  have hP : ∀ j, j < 9 → erecP M (q1.toNat + j) = ((M.arr64 EREC))[q1.toNat + j]? :=
     fun j hj => erecP_getE (by simp at htop'; omega)
   have c1 : (cq + 1).toNat = cq.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
   have c2 : (cq + 2).toNat = cq.toNat + 2 := by rw [UInt64.toNat_add]; simp; omega
   have c3 : (cq + 3).toNat = cq.toNat + 3 := by rw [UInt64.toNat_add]; simp; omega
-  have hw : ∀ i, i < 4 → (erecP M)[q1.toNat + 1 + i]? = (erecP M)[cq.toNat + i]? := by
+  have hw : ∀ i, i < 4 → erecP M (q1.toNat + 1 + i) = erecP M (cq.toNat + i) := by
     intro i hi
     rw [show q1.toNat + 1 + i = q1.toNat + (i + 1) by omega, hP (i + 1) (by omega),
       hget (i + 1) (by simp; omega), erecP_getE (by omega), hg.erGet _ (by omega)]

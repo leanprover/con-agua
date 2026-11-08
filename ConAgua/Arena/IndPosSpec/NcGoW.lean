@@ -119,7 +119,7 @@ theorem ncGo_spec (k : Nat) : ∀ (s₀ : St) (vis C co cl cs ol fp : Word),
     simp only [invoke_eq _ hl.hgo, callFn, nestContainerCtorsGo]
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-        envFind_specW p hl.hx hl.hg hl.hf k, nestCtorEntry_spec p hl.hs hl.hv hl.he hl.hst hl.ad k,
+        callW_spec p k "env_find", nestCtorEntry_spec p hl.hs hl.hv hl.he hl.hst hl.ad k,
         posRec2_specW p hl.ha hl.h2 k, ih] <;>
       finish (gen := 20) [rdW_eq, St.setLocs_mem']
 
@@ -143,7 +143,7 @@ theorem nt_spec (k : Nat) (s₀ : St) (vis C : Word) :
   simp only [invoke_eq _ hl.hnt, callFn, nestContainer]
   sym only [lang_grind, arena_grind, ind_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      envFind_specW p hl.hx hl.hg hl.hf k, nc_spec p hl k] <;>
+      callW_spec p k "env_find", nc_spec p hl k] <;>
     finish (gen := 20) [ntW, rdW_eq]
 
 end spec
@@ -527,7 +527,7 @@ theorem ntW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis C : Word) 
   rw [ntK1_ind (h := hf0) (h3 := h3)] at h
   generalize r1.tail.headD 0 = ciq at h hfind hci h3 hciq
   have hk3 : nat? (erecP m) ciq.toNat = some 3 := by
-    have : (erecP m)[ciq.toNat]? = (m.arr64 EREC)[ciq.toNat]? := erecP_getE (by omega)
+    have : erecP m (ciq.toNat) = (m.arr64 EREC)[ciq.toNat]? := erecP_getE (by omega)
     simp only [nat?, this]
     have hb : ciq.toNat < (m.arr64 EREC).size := by have := hS.iw.er; omega
     have : rdW (m.arr64 EREC) ciq = 3 := by simpa using h3
@@ -571,7 +571,7 @@ theorem ntW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis C : Word) 
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     refine ⟨_, a', hrun', hS2, hg2, rfl, ?_, rfl, by simpa using h2, by simpa using h3'⟩
     have hnpI := nat?_idx hnp
-    have : (m2.arr64 EREC)[ciq.toNat + 5 + 12]? = (erecP m)[ciq.toNat + 5 + 12]? := by
+    have : (m2.arr64 EREC)[ciq.toNat + 5 + 12]? = erecP m (ciq.toNat + 5 + 12) := by
       rw [hg2.erGet _ (by omega), erecP_getE (by omega)]
     simp only [List.tail_cons, List.headD_cons]
     simp only [nat?, Option.map_eq_some_iff] at hnp

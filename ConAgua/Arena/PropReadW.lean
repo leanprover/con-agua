@@ -102,8 +102,7 @@ def propReadProgFns : Prog :=
    ("head_proof_proj", headProofProjL), ("head_proof_pw", headProofPWL), ("proof_pw", proofPWL),
    ("not_proof_fast", notProofFastL), ("is_proof_fast", isProofFastL),
    ("lv_lookup", lvLookupG EREC POOL), ("lv_spw", lvSpwG LH), ("lv_zero", lvZero),
-   ("lh_push", lhPush), ("lv_node", lvNode), ("ls_node", lsNode), ("e_view", L.Ind.eView),
-   ("env_ix", envIxL), ("env_row_get", envRowGetL), ("env_find", envFindL),
+   ("lh_push", lhPush), ("lv_node", lvNode), ("ls_node", lsNode), ("e_view", L.Ind.eView), ("env_row_get", envRowGetL), ("env_find", envFindL),
    ("get_app_args", getAppArgsL), ("app_count", appCountL), ("app_fill", appFillL)]
 
 /-- **What the readers need of a program**: their own functions and the callees they share. -/
