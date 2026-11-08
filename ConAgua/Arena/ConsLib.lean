@@ -543,12 +543,12 @@ table and frees the old one; here the table doubles where it is, so no old copy 
 the slot count doubles and the new upper half is zeroed. Then one top-down sweep over the old
 half re-inserts each live entry from its home in the doubled table with a probe that runs above
 the sweep (so it meets no unmoved entry) and does not wrap. The few entries it cannot place
-that way get the mark (`MARK` added to the value word): those whose home is below their slot,
+that way get the mark (`MARK` added to the value): those whose home is below their slot,
 and those whose probe meets a marked slot or the top one. They lie in two ranges, which absl's
 in-place re-insertion then scans (linear probing past the live unmarked slots; a marked slot
 met on the way is swapped and re-inserted next). Aborts if the array cannot hold the doubled
 table. Template variables `t n2 n H Q ob nb x e v q h j d bt` (`t` the push's tier, the others
-from `gO`), the `ihash` block, and the ranges `a0 a1 b0 b1`. -/
+from `gO`), the node of `khashB` at `15`, and the ranges `a0 a1 b0 b1`. -/
 def kgrowB (C : ConsSch) : Stmt := lblk (t, n2, n, H, Q, ob, nb, x, e, v, q, h, j, d, bt, y15, y16, y17, a0, a1, b0, b1) {
   ⟪kgrowH C⟫;
   ⟪kzeroL C⟫;

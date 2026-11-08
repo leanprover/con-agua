@@ -677,14 +677,14 @@ tier in its own word array, growth at load 3/4. A slot is one word, the node's
 value (`B + i + 1` for node `i`, below) and a 16-bit fragment of its key's hash;
 the key itself is read from the node's record, and only on a slot whose fragment
 is the query's
-([the layout](https://github.com/leanprover/con-agua/blob/master/ConAgua/Arena/ConsLib.lean#L221-L230),
-[the growth test](https://github.com/leanprover/con-agua/blob/master/ConAgua/Arena/ConsLib.lean#L583-L588)).
+([the layout](https://github.com/leanprover/con-agua/blob/master/ConAgua/Arena/ConsLib.lean#L221-L233),
+[the growth test](https://github.com/leanprover/con-agua/blob/master/ConAgua/Arena/ConsLib.lean#L570-L575)).
 Where con-ron allocates a table of twice the size and frees the old one, L
 doubles the table **in place**: it zeroes the upper half, then one top-down
 sweep re-inserts each live entry from its new home with a probe that stays
 above the sweep; the few entries that probe cannot place are marked and
 re-inserted by absl's in-place swap loop over the ranges that hold marks
-([`kgrowB`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Arena/ConsLib.lean#L554-L574)),
+([`kgrowB`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Arena/ConsLib.lean#L541-L561)),
 since L cannot free memory. The home slot is `mulhi(mix(h), n)` rather than
 con-ron's mask
 ([`homeW`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Arena/SlotGrow.lean#L41-L44)).
@@ -1137,9 +1137,9 @@ something else than the twin, beyond fuel and fixed capacities, in three
 sections:
 [Temporary](https://github.com/leanprover/con-agua/blob/master/docs/deviations.md#L24-L38)
 (to be fixed, or intent unclear),
-[Deliberate](https://github.com/leanprover/con-agua/blob/master/docs/deviations.md#L40-L61)
+[Deliberate](https://github.com/leanprover/con-agua/blob/master/docs/deviations.md#L40-L62)
 (by design, with the reason), and
-[Fixed](https://github.com/leanprover/con-agua/blob/master/docs/deviations.md#L63-L91).
+[Fixed](https://github.com/leanprover/con-agua/blob/master/docs/deviations.md#L64-L92).
 Each row says what the twin does, what L does, and the effect: completeness (L
 declines where the twin accepts), performance, or none. No deviation may lose
 soundness, and the theorem would not let one through: it is about the L code as
