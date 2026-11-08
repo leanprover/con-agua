@@ -3,6 +3,7 @@ module
 import ConAgua.Arena.DerRel
 public import ConAgua.Arena.Keeps
 public import ConAgua.Arena.EnvRec
+public import ConRon.Arena.CheckDecl
 public import ConAgua.Arena.MemoBank
 public import ConAgua.Arena.CoreCaches
 public import Std.Tactic.BVDecide.Normalize.Prop

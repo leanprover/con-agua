@@ -438,7 +438,7 @@ is unchanged and returned. -/
 @[no_expose, l_impl ConRon.Arena.checkStructProjTable]
 def checkStructProjTableL : FunDecl :=
   lfn (T, C, lpsOff, lpsLen, nP, nF, resSort, guardsOff, guardsLen, cvCa, vis)
-  locals (bOk, bOff, bLen, scopedOk, found, q, r, lo2, ll2, bo2, bl2, go2, gl2, rec, z) {
+  locals (bOk, bOff, bLen, scopedOk, found, q, r, lo2, ll2, bo2, bl2, go2, gl2, rec, z, ez) {
   (bOk, bOff, bLen) := call struct_proj_bodies(T, nP, nF, EREC⦃cvCa + 3⦄);
   if bOk == 0 { abort };
   scopedOk := call check_struct_proj_table_scoped(vis, nP, lpsOff, lpsLen, bOff, bLen);
