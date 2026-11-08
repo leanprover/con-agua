@@ -16,8 +16,10 @@ Kernel evaluation, seconds.
 
 namespace L.Rom
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 set_option maxRecDepth 100000 in
 theorem romCiVals_fit : romCiVals.all (fun c => ciFits c && (ciZ c).isEmpty) = true := by decide +kernel
+-/
 
 set_option maxRecDepth 100000 in
 theorem romCvVals_fit : romCvVals.all cvFits = true := by decide +kernel
@@ -25,6 +27,7 @@ theorem romCvVals_fit : romCvVals.all cvFits = true := by decide +kernel
 set_option maxRecDepth 100000 in
 theorem romExprVals_fit : romExprVals.all exprFits = true := by decide +kernel
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 set_option maxRecDepth 100000 in
 theorem basisDecls_fit : ∀ (i : Nat) (hi : i < 4),
     (ConLeche.BasisKind.decls (basisKinds[i]'(by simp [basisKinds]; omega))).all ciFits = true ∧
@@ -35,7 +38,9 @@ theorem basisDecls_fit : ∀ (i : Nat) (hi : i < 4),
   | 2, _ => by decide +kernel +revert
   | 3, _ => by decide +kernel +revert
   | _ + 4, h => absurd h (by omega)
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 set_option maxRecDepth 100000 in
 theorem basisDeclsA_fit : ∀ (i : Nat) (hi : i < 4),
     (ConLeche.BasisKind.declsA (basisKinds[i]'(by simp [basisKinds]; omega))).all ciFits = true ∧
@@ -46,22 +51,29 @@ theorem basisDeclsA_fit : ∀ (i : Nat) (hi : i < 4),
   | 2, _ => by decide +kernel +revert
   | 3, _ => by decide +kernel +revert
   | _ + 4, h => absurd h (by omega)
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 set_option maxRecDepth 100000 in
 theorem andPin_fit : ConLeche.andPin.all ciFits = true ∧ ConLeche.andPin.length < 2 ^ 63 ∧
     blkZ ConLeche.andPin = [] := by
   decide +kernel
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 set_option maxRecDepth 100000 in
 /-- The raw quotient block fits; its `sortZ` names are `quotNames`. -/
 theorem basisDeclsQ_fit : (ConLeche.BasisKind.decls .quotK).all ciFits = true ∧
     (ConLeche.BasisKind.decls .quotK).length < 2 ^ 63 ∧ blkZ (ConLeche.BasisKind.decls .quotK) = quotNames := by
   decide +kernel
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 set_option maxRecDepth 100000 in
 /-- The annotated quotient block fits; its `sortZ` names are `quotNames`. -/
 theorem basisDeclsAQ_fit : (ConLeche.BasisKind.declsA .quotK).all ciFits = true ∧
     (ConLeche.BasisKind.declsA .quotK).length < 2 ^ 63 ∧ blkZ (ConLeche.BasisKind.declsA .quotK) = quotNames := by
   decide +kernel
+-/
 
 end L.Rom

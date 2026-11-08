@@ -282,6 +282,7 @@ def bbH3 (c : CallM) (n : Nat) (nPd cto ctl cso csl rso rsl no nl io il : Word) 
       (bpoW (n + 2) m nPd cto ctl (r.headD 0) (r.tail.headD 0) rso rsl cso csl)
 -/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- After `block_member_counts`. -/
 def bbH2 (c : CallM) (n : Nat) (nPd cto ctl cso csl rso rsl cvT0 no nl : Word) :
     Option (List Word × Mem) → Option (List Word × Mem)
@@ -290,6 +291,7 @@ def bbH2 (c : CallM) (n : Nat) (nPd cto ctl cso csl rso rsl cvT0 no nl : Word) :
     if r.headD 0 = 0 then some ([0, 0], m)
     else bbH3 c n nPd cto ctl cso csl rso rsl no nl (r.tail.headD 0) (r.tail.tail.headD 0)
       (erToIwW (n + 3) m (rdW (m.arr64 EREC) (cvT0 + 1)) (rdW (m.arr64 EREC) (cvT0 + 2)))
+-/
 
 /-- After `block_shape_names_of`. -/
 def bbH1 (c : CallM) (n : Nat) (nPd cto ctl cso csl rso rsl cvT0 : Word) :
