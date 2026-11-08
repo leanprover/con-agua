@@ -381,12 +381,6 @@ theorem IWOK.of_er {m m' : Mem} (hf : MemFrame [EREC, tier1 EREC] [] m m') (h : 
     hf.ctl 129 (by simp), hf.ctl 130 (by simp), hf.ctl 200 (by simp)] at h1 ⊢
   exact h1
 
-/-- **CheckR across a growth of the record pool** (both tiers, the tops `CTL[129]`, `CTL[130]`):
-requested from the infrastructure (`Tiers.lean`, `CheckR.erGrow`); stated here until it lands. -/
-theorem CheckR.erGrowP {m m' : Mem} {a : AState} {vis : Word} {fe : IFEnv} (h : CheckR m a vis fe)
-    (hf : MemFrame [EREC, tier1 EREC] [129, 130] m m') (hg : ErecGrow m m') : CheckR m' a vis fe := by
-  sorry
-
 /-- **A record allocated in `EREC` and written**: `erec_alloc(ws.length)` then `ws` at the
 returned address keeps the stage relation and grows the pools; the words read back through
 `erecP`, the address in the flag's tier at its old top. -/
@@ -434,7 +428,7 @@ theorem erRec_stage {vis : Word} {fe : IFEnv} {a : AState}
   have hI : (wrER m1 q ws).arr64 IW = m.arr64 IW := by
     rw [hfw.arr IW (by decide) (by decide), hm1 _ (by decide)]
   have h200 : rdW ((wrER m1 q ws).arr64 CTL) 200 = rdW (m.arr64 CTL) 200 := hfr.ctl 200 (by simp)
-  refine ⟨⟨CheckR.erGrowP hS.check hfr hgrow, hW⟩, ⟨by simp only [iwTop, h200]; exact Nat.le_refl _,
+  refine ⟨⟨CheckR.erGrow hS.check hfr hgrow, hW⟩, ⟨by simp only [iwTop, h200]; exact Nat.le_refl _,
     hgrow.top, fun i _ => by rw [hI], hgrow.get, hgrow.top1, hgrow.get1⟩, hoff, ?_, hq41, htier,
     fun j hj => ?_⟩
   · rw [hT _ hcw, htop1, hk]
