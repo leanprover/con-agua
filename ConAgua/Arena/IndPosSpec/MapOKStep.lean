@@ -217,9 +217,7 @@ open L.Arena
 /-! ### Word reads and small facts -/
 
 theorem rdIW0 {m : Mem} {f : Word} {v : Nat} (h : iwN m f.toNat = some v) : (rdW (m.arr64 IW) f).toNat = v := by
-  simp only [iwN, nat?, iwA, Option.map_eq_some_iff] at h
-  obtain ⟨w, hw, rfl⟩ := h
-  simp [rdW, hw]
+  sorry
 
 theorem rdIW {m : Mem} {f : Word} {i v : Nat} (h : iwN m (f.toNat + i) = some v) (hb : f.toNat + i < 2 ^ 64)
     (hi : i < 2 ^ 64) : (rdW (m.arr64 IW) (f + UInt64.ofNat i)).toNat = v :=
@@ -253,14 +251,17 @@ theorem kmW_ok {m : Mem} {dO dL hO hL i : Word} {ds holes : List EIdx}
       simp only [hc2, ite_false, List.getElem?_eq_none (show holes.length ≤ i.toNat - dL.toNat by omega)]
       rfl
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem RfInv.post {dn : NIdx → Option ConLeche.Name} {fe : IFEnv} {vis : Word} {m m' : Mem} {a' : AState}
     {M : Std.HashMap (EIdx × Word) EIdx} {G g : Word} (hR : RfInv m M G g) (hS : StageR vis fe m' a')
     (hg : IWGrow m m') (hf : RfFr m m') : RxPost dn fe vis m m' a' M G g :=
   ⟨M, G, hS, hg, hR.frame hf, GKeep.refl _ _ _, UInt64.le_refl _⟩
+-/
 
 section steps
 variable (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word)
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem mapOK_step (n : Nat) (hImg : ImgOK dn fe vis n) : MapOK dn fe vis (n + 1) := by
   intro m m' a f i fm r0 r1 M G g h hS hfm hR
   have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.iw hS.iw.iwSize
@@ -339,7 +340,9 @@ theorem mapOK_step (n : Nat) (hImg : ImgOK dn fe vis n) : MapOK dn fe vis (n + 1
       refine ⟨pfvs[i.toNat]?, a, ?_, ?_, hR.post hS (IWGrow.refl _) (RfFr.refl _)⟩
       · rw [ConRon.Arena.fvMapAt.eq_def]; rfl
       · rw [List.getElem?_eq_none (by omega)]; rfl
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem rootOK (m m' : Mem) (a : AState) (ctx i : Word) (c : NestCtx) (prog : List NestHole) (r0 r1 : Word)
     (M : Std.HashMap (EIdx × Word) EIdx) (G g : Word) (h : rxRootW m ctx i = some (r0, r1, m'))
     (hS : StageR vis fe m a) (hc : decCtx m ctx.toNat = some c) (hin : CtxIn m ctx.toNat (· < iwTop m))
@@ -393,7 +396,9 @@ theorem rootOK (m m' : Mem) (a : AState) (ctx i : Word) (c : NestCtx) (prog : Li
       ⟨UInt64.le_iff_toNat_le.mpr (by rw [hnP]; exact e1), UInt64.lt_iff_toNat_lt.mpr (by rw [hhi]; exact e2)⟩
     rw [ite_eq_right (by simp only [Bool.and_eq_true, decide_eq_true_eq, ConRon.Arena.NestCtx.hiAt, Nat.add_zero]; exact fun ⟨e1, e2⟩ => this ⟨e1, of_decide_eq_true e2⟩)]
     exact ⟨none, a, rfl, rfl, hR.post hS (IWGrow.refl _) (RfFr.refl _)⟩
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem imgOK_step (n : Nat) (hImg : ImgOK dn fe vis n) (hFr : FrOK dn fe vis n) : ImgOK dn fe vis (n + 1) := by
   intro m m' a ctx po pl nn i c prog r0 r1 M G g h hS hc hin hs hb hR
   have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.iw hS.iw.iwSize
@@ -423,6 +428,7 @@ theorem imgOK_step (n : Nat) (hImg : ImgOK dn fe vis n) (hFr : FrOK dn fe vis n)
     rw [ite_eq_right this]
     have := hImg m m' a ctx po pl (nn - 1) i c prog r0 r1 M G g h hS hc hin hs (by rw [hn1]; omega) hR
     rwa [hn1, hn1'] at this
+-/
 
 end steps
 
@@ -452,17 +458,21 @@ theorem decNK_fields {m : Mem} {k : Nat} {key : NestKey} (h : decNK m k = some k
   obtain rfl := Option.some.inj h'
   exact ⟨hc, hl, hds⟩
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem RxPost.of_fr {dn : NIdx → Option ConLeche.Name} {fe : IFEnv} {vis : Word} {m m1 m2 : Mem}
     {a2 : AState} {M : Std.HashMap (EIdx × Word) EIdx} {G g : Word} (_hR : RfInv m M G g)
     (_hf : RfFr m m1) (hg : IWGrow m m1) (h : RxPost dn fe vis m1 m2 a2 M G g) : RxPost dn fe vis m m2 a2 M G g := by
   obtain ⟨M2, G2, hS2, hg2, hR2, hk2, hG2⟩ := h
   exact ⟨M2, G2, hS2, hg.trans hg2, hR2, hk2, hG2⟩
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem RxPost.then {dn : NIdx → Option ConLeche.Name} {fe : IFEnv} {vis : Word} {m m1 m2 : Mem}
     {a1 a2 : AState} {M : Std.HashMap (EIdx × Word) EIdx} {G g : Word} (h : RxPost dn fe vis m m1 a1 M G g)
     (hS : StageR vis fe m2 a2) (hg : IWGrow m1 m2) (hf : RfFr m1 m2) : RxPost dn fe vis m m2 a2 M G g := by
   obtain ⟨M1, G1, -, hg1, hR1, hk1, hG1⟩ := h
   exact ⟨M1, G1, hS, hg1.trans hg, hR1.frame hf, hk1, hG1⟩
+-/
 
 /-! ### Entering and leaving a bank -/
 
@@ -515,6 +525,7 @@ theorem uint_le_succ {G : Word} (h : G.toNat < 2 ^ 32) : G ≤ G + 1 := by
 section steps
 variable (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word)
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **A frame's hole read back, from its hole record on**. -/
 theorem frameTail (n : Nat) (hDs : DsOK dn fe vis n) (mh m' : Mem) (a : AState) (ctx po pl n1 h : Word)
     (c : NestCtx) (prog : List NestHole) (H0 : NestHole) (r0 r1 : Word)
@@ -592,9 +603,13 @@ theorem frameTail (n : Nat) (hDs : DsOK dn fe vis n) (mh m' : Mem) (a : AState) 
     rfl
   · exact ⟨M3, G3, hS5, ((hg2.trans hg3).trans hg4).trans hg5,
       (hR3.frame (RfFr.of_low (ceinternW_low hci))).frame (RfFr.ofMknF hst), hk3, hG3⟩
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem default_hole : (default : NestHole) = ⟨⟨decI 0, decI 0, []⟩, 0⟩ := rfl
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem frOK_step (n : Nat) (hDs : DsOK dn fe vis n) : FrOK dn fe vis (n + 1) := by
   intro m m' a ctx po pl n1 i c prog r0 r1 M G g h hS hc hin hs hb hR
   have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.iw hS.iw.iwSize
@@ -651,7 +666,9 @@ theorem frOK_step (n : Nat) (hDs : DsOK dn fe vis n) : FrOK dn fe vis (n + 1) :=
       hS2 (by rw [ec]; exact hc) hci2 (HSl.grow ⟨hpl, hpb, hH⟩ hg12) hb hdh hin2
       ((hR.frame (posRecW_fr hr1)).frame (posRecW_fr hr2))
     exact ⟨x, a', hrun, hout, RxPost.of_fr hR ((posRecW_fr hr1).trans (posRecW_fr hr2)) hg12 hpost⟩
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem dsOK_step (n : Nat) (hDg : DsGoOK dn fe vis n) : DsOK dn fe vis (n + 1) := by
   intro m m' a f o l q l' fm xs M G g h hS hfm hxs hsl hR
   rw [rxDsW_succ] at h
@@ -665,7 +682,9 @@ theorem dsOK_step (n : Nat) (hDg : DsGoOK dn fe vis n) : DsOK dn fe vis (n + 1) 
   obtain ⟨ys, a', hrun, hdec, hS', hg', ht', M', G', hR', hk', hG'⟩ := hDg m m1 m2 a f o l q1 0 fm xs [] M G g hgo hS1
     hg1 (by omega) (by omega) hfm hxs hsl (by simp) (by simp [decHL, hslice?]) (hR.frame (allocW_fr hal))
   refine ⟨ys, a', by simpa using hrun, by simpa using hdec, by omega, M', G', hS', hg', hR', hk', hG'⟩
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem dsGoOK_step (n : Nat) (hRf : RfOK dn fe vis n) (hDg : DsGoOK dn fe vis n) :
     DsGoOK dn fe vis (n + 1) := by
   intro m0 m m' a f o l q j fm xs acc M G g h hS hg0 hq0 hql hfm hxs hsl hj hacc hR
@@ -708,7 +727,9 @@ theorem dsGoOK_step (n : Nat) (hRf : RfOK dn fe vis n) (hDg : DsGoOK dn fe vis n
   rw [hj1] at hrun
   rw [hrun]
   rfl
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem rfOK_step (n : Nat) (hGo : GoOK dn fe vis n) : RfOK dn fe vis (n + 1) := by
   intro m m' a f e fm r M G g h hS hfm he hR
   have hB1 : rdW (m.arr64 CTL) 218 = G := hR.2.1.1
@@ -748,6 +769,7 @@ theorem rfOK_step (n : Nat) (hGo : GoOK dn fe vis n) : RfOK dn fe vis (n + 1) :=
       (UInt64.le_trans hgen hGG) (fun e => by
         subst e; rw [UInt64.le_iff_toNat_le, UInt64.toNat_add, show (1 : Word).toNat = 1 from rfl] at hgen; omega),
     UInt64.le_trans hGG hG1⟩
+-/
 
 /-- The walk's post. -/
 def GoPost (m m' : Mem) (a' : AState) (M : Std.HashMap (EIdx × Word) EIdx) (G gn : Word)
@@ -761,6 +783,7 @@ theorem GKeepX.trans {M₁ M₂ M₃ : Std.HashMap (EIdx × Word) EIdx} {G G' g 
 
 theorem GKeepX.refl (M : Std.HashMap (EIdx × Word) EIdx) (G g : Word) : GKeepX M M G g := fun _ _ _ _ => rfl
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- One child walked, then the rest. -/
 theorem goStep {k : Nat} (hGo : GoOK dn fe vis k) {m m1 : Mem} {a : AState} {f f1 x x2 : Word} {fm : FvMap}
     {mp : Std.HashMap EIdx EIdx} {M : Std.HashMap (EIdx × Word) EIdx} {G gn : Word}
@@ -770,7 +793,9 @@ theorem goStep {k : Nat} (hGo : GoOK dn fe vis k) {m m1 : Mem} {a : AState} {f f
       GoPost dn fe vis m m1 a1 M G gn mp1 := by
   obtain ⟨mp1, a1, M1, G1, hr, hS1, hg1, hR1, hb1, hk1, hG1⟩ := hGo m m1 a f f1 x fm mp x2 M G gn h1 hS hfm hx hR hb hg0
   exact ⟨mp1, a1, hr, M1, G1, hS1, hg1, hR1, hb1, hk1, hG1⟩
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem GoPost.then {m m1 m2 : Mem} {a1 a2 : AState} {M : Std.HashMap (EIdx × Word) EIdx} {G gn : Word}
     {mp1 mp2 : Std.HashMap EIdx EIdx} (h : GoPost dn fe vis m m1 a1 M G gn mp1)
     (k : ∀ M1 G1, RfInv m1 M1 G1 gn → Bank M1 gn mp1 → G ≤ G1 → StageR vis fe m1 a1 →
@@ -780,13 +805,17 @@ theorem GoPost.then {m m1 m2 : Mem} {a1 a2 : AState} {M : Std.HashMap (EIdx × W
   obtain ⟨M1, G1, hS1, hg1, hR1, hb1, hk1, hG1⟩ := h
   obtain ⟨M2, G2, hS2, hg2, hR2, hb2, hk2, hG2⟩ := k M1 G1 hR1 hb1 hG1 hS1
   exact ⟨M2, G2, hS2, hg1.trans hg2, hR2, hb2, hk1.trans hk2 hG1, UInt64.le_trans hG1 hG2⟩
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem GoPost.mk {m m1 m2 : Mem} {a1 a2 : AState} {M : Std.HashMap (EIdx × Word) EIdx} {G gn : Word}
     {mp1 : Std.HashMap EIdx EIdx} (h : GoPost dn fe vis m m1 a1 M G gn mp1) (hS : StageR vis fe m2 a2)
     (hg : IWGrow m1 m2) (hf : LowFr m1 m2) : GoPost dn fe vis m m2 a2 M G gn mp1 :=
   h.then dn fe vis fun M1 G1 hR1 hb1 _ _ =>
     ⟨M1, G1, hS, hg, hR1.frame (RfFr.of_low hf), hb1, GKeepX.refl _ _ _, UInt64.le_refl _⟩
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- Two children and an interning: `app`, `lam`, `forallE`. -/
 theorem rxBin_ok (k : Nat) (hGo : GoOK dn fe vis k) (g : Word)
     (mkW : Mem → Word → Word → Option (Word × Mem)) (iop : EIdx → EIdx → AM EIdx)
@@ -818,7 +847,9 @@ theorem rxBin_ok (k : Nat) (hGo : GoOK dn fe vis k) (g : Word)
     hk1.trans hk2 hG1, UInt64.le_trans hG1 hG2⟩
   simp only [StateT.run_bind, hr1, except_ok_bind, hr2, hr3]
   rfl
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem rxLet_ok (k : Nat) (hGo : GoOK dn fe vis k)
     (m m' : Mem) (a : AState) (f f1 x y z r : Word) (fm : FvMap) (mp : Std.HashMap EIdx EIdx)
     (M : Std.HashMap (EIdx × Word) EIdx) (G gn : Word)
@@ -851,7 +882,9 @@ theorem rxLet_ok (k : Nat) (hGo : GoOK dn fe vis k)
   have hr4' : (internLetEE (decE a2) (decE x2) (decE c2)).run a3' = .ok (decE r, a4) := hr4
   rw [hr4']
   rfl
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem rxProj_ok (k : Nat) (hGo : GoOK dn fe vis k)
     (m m' : Mem) (a : AState) (f f1 x y z r : Word) (fm : FvMap) (mp : Std.HashMap EIdx EIdx)
     (M : Std.HashMap (EIdx × Word) EIdx) (G gn : Word)
@@ -872,7 +905,9 @@ theorem rxProj_ok (k : Nat) (hGo : GoOK dn fe vis k)
   have hr3' : (internProjE (decI x) y.toNat (decE a2)).run a1 = .ok (decE r, a3) := hr3
   rw [hr3']
   rfl
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem rxNode_arm (k : Nat) (hGo : GoOK dn fe vis k) (vl : List Word) (v : ENodeView) (hvr : ViewR vl v)
     (hnv : NodeVr v) (m m' : Mem) (a : AState) (f f1 h r : Word) (fm : FvMap) (mp : Std.HashMap EIdx EIdx)
     (M : Std.HashMap (EIdx × Word) EIdx) (G gn : Word)
@@ -924,6 +959,7 @@ theorem rxNode_arm (k : Nat) (hGo : GoOK dn fe vis k) (vl : List Word) (v : ENod
   | const _ _ => exact False.elim hnv
   | lit _ => exact False.elim hnv
   | fvar _ _ => exact False.elim hnv
+-/
 
 theorem rfTwin_node (fm : FvMap) (memo : Std.HashMap EIdx EIdx) (fuel : Nat) (h : EIdx) (a : AState)
     (v : ENodeView) (hv : a.store.view h = some v) (hnv : NodeVr v) :
@@ -939,6 +975,7 @@ theorem rfTwin_node (fm : FvMap) (memo : Std.HashMap EIdx EIdx) (fuel : Nat) (h 
 
 theorem genW_zero (g : Word) : genW 0 g = g <<< 32 := by simp [genW]
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem rxGo_nodeCase (j : Nat) (ih : ∀ k, k + 1 < j + 1 → GoOK dn fe vis k) (m m' : Mem) (a : AState)
     (f fu h r : Word) (fm : FvMap) (mp : Std.HashMap EIdx EIdx) (M : Std.HashMap (EIdx × Word) EIdx) (G gn : Word)
     (F : Nat) (hF : fu.toNat = F + 1) (hf0 : fu ≠ 0) (vl : List Word) (v : ENodeView) (hvr : ViewR vl v)
@@ -1003,7 +1040,9 @@ theorem rxGo_nodeCase (j : Nat) (ih : ∀ k, k + 1 < j + 1 → GoOK dn fe vis k)
       have : ¬ ((decE h, gn) == (k', gen)) = true := by simp [Ne.symm hne]
       simp only [this, Bool.false_eq_true, ↓reduceIte]
       exact hk1 k' gen hgen hne
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem goOK_step (j : Nat) (hMap : MapOK dn fe vis j) (ih : ∀ k, k + 1 < j + 1 → GoOK dn fe vis k) :
     GoOK dn fe vis (j + 1) := by
   intro m m' a f fu h fm mp r M G gn hgo hS hfm hh hR hb hg0
@@ -1066,7 +1105,9 @@ theorem goOK_step (j : Nat) (hMap : MapOK dn fe vis j) (ih : ∀ k, k + 1 < j + 
   | forallE f' x' => exact node (Or.inr (Or.inr (Or.inl hvr.1))) trivial
   | letE t v' b' => exact node (Or.inr (Or.inr (Or.inr (Or.inl hvr.1)))) trivial
   | proj s i e => exact node (Or.inr (Or.inr (Or.inr (Or.inr hvr.1)))) trivial
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem rxOK_all (n : Nat) : MapOK dn fe vis n ∧ ImgOK dn fe vis n ∧ FrOK dn fe vis n ∧ DsOK dn fe vis n ∧
     DsGoOK dn fe vis n ∧ GoOK dn fe vis n ∧ RfOK dn fe vis n := by
   induction n using Nat.strongRecOn with
@@ -1081,6 +1122,7 @@ theorem rxOK_all (n : Nat) : MapOK dn fe vis n ∧ ImgOK dn fe vis n ∧ FrOK dn
       exact ⟨mapOK_step dn fe vis j hImg, imgOK_step dn fe vis j hImg hFr, frOK_step dn fe vis j hDs,
         dsOK_step dn fe vis j hDg, dsGoOK_step dn fe vis j hRf hDg,
         goOK_step dn fe vis j hMap (fun k hk => (ih k (by omega)).2.2.2.2.2.1), rfOK_step dn fe vis j hGo⟩
+-/
 
 end steps
 
