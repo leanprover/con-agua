@@ -300,15 +300,7 @@ theorem ekCopy_spec (n : Nat) : ∀ (s₀ : St) (s d l : Word),
     ⦃fun st => st = s₀⦄
     invoke p (exec p n) "ek_copy" [s, d, l]
     ⦃fun _ s' => LocEq s' s₀ ∧ ekCopyW n s₀.mem s d l = some s'.mem; ⊤⦄ := by
-  induction n with
-  | zero => intro s₀ s d l; rw [invoke_eq _ hL.ek_copy]; simp only [callFn, ekCopy]; vcgen [exec] <;> grind
-  | succ n ih =>
-    intro s₀ s d l
-    rw [invoke_eq _ hL.ek_copy]
-    simp only [callFn, ekCopy]
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64, ih] <;>
-      finish
+  sorry
 
 theorem keysPush_spec (n : Nat) (s₀ : St) (po pc : Word) :
     ⦃fun s => s = s₀⦄

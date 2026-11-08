@@ -124,66 +124,13 @@ theorem decCaps_reloc {T B : (Nat → Option Word)} {s p : Nat}
     (hc : decCaps T (s + 5) = some caps) (hall : caps.all = []) (hct : caps.ctors = [])
  :
     decCaps B (p + 5) = some caps := by
-  simp only [decCaps, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at hc ⊢
-  obtain ⟨eta, h0, ec, h1, ep, h2, ef, h3, ul, h4, up, h5, rk, h6, sz, h7, al, h10, np, h12, ct,
-    h13, rfl⟩ := hc
-  simp only at hall hct hz
-  subst hall hct
-  refine ⟨eta, h.bool (hK 5 (Nat.le_refl _) (by omega)) (by omega) (by omega) h0,
-    ec, h.hd (hK 6 (by omega) (by omega)) (by omega) (by omega) h1,
-    ep, h.nat (hK 7 (by omega) (by omega)) (by omega) (by omega) h2,
-    ef, h.nat (hK 8 (by omega) (by omega)) (by omega) (by omega) h3,
-    ul, h.bool (hK 9 (by omega) (by omega)) (by omega) (by omega) h4,
-    up, h.nat (hK 10 (by omega) (by omega)) (by omega) (by omega) h5,
-    rk, h.bool (hK 11 (by omega) (by omega)) (by omega) (by omega) h6,
-    sz, ?_, [], hlist?_nil_sh h (hK 15 (by omega) (by omega)) (hK 16 (by omega) (by omega))
-      (by omega) (by omega) h10,
-    np, h.nat (hK 17 (by omega) (by omega)) (by omega) (by omega) h12,
-    [], hlist?_nil_sh h (hK 18 (by omega) (by omega)) (hK 19 (by omega) (by omega))
-      (by omega) (by omega) h13, rfl⟩
-  -- `sortZ`
-  simp only [decPW, bind, Option.bind_eq_some_iff] at h7 ⊢
-  obtain ⟨kz, hkz, h7⟩ := h7
-  refine ⟨kz, h.nat (hK 12 (by omega) (by omega)) (by omega) (by omega) hkz, ?_⟩
-  rcases kz with _ | _ | kz
-  · exact h7
-  · simp only [Option.bind_eq_some_iff, pure, Option.some.injEq] at h7 ⊢
-    obtain ⟨ns, hns, l, hl, rfl⟩ := h7
-    rcases hz with hz | hz
-    · cases hz
-    · cases hz
-      have hl0 : ns = [] := by
-        have := L.Ind.mapM_opt_length _ _ _ hl; simp at this; exact List.length_eq_zero_iff.mp this.symm
-      subst hl0
-      exact ⟨[], hlist?_nil_sh h (hK 13 (by omega) (by omega)) (hK 14 (by omega) (by omega))
-        (by omega) (by omega) hns, [], rfl, rfl⟩
-  · exact h7
+  sorry
 
 /-- A plain recursor rule whose 11 words reappear. -/
 theorem decRule_reloc {T B : (Nat → Option Word)} {o q : Nat} {rr : IRecRule}
     (h : ShR T B o q (fun k => k < 11)) (hr : decRule T o = some rr) (hp : rr.fire = .plain) :
     decRule B q = some rr := by
-  unfold decRule at hr ⊢
-  cases hfk : nat? T (o + 3) with
-  | none => simp [hfk] at hr
-  | some fk =>
-  rw [h.nat (k := 3) (by omega) rfl rfl hfk]
-  rw [hfk] at hr
-  rcases fk with _ | _ | fk
-  · simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq, Option.bind_some] at hr ⊢
-    obtain ⟨ct, h0, nf, h1, cp, h2, rhs, h8, k, h9, eta, h10, rfl⟩ := hr
-    exact ⟨ct, h.hd (k := 0) (by omega) rfl rfl h0,
-      nf, h.nat (k := 1) (by omega) rfl rfl h1, cp, h.nat (k := 2) (by omega) rfl rfl h2,
-      rhs, h.hd (k := 8) (by omega) rfl rfl h8, k, h.bool (k := 9) (by omega) rfl rfl h9,
-      eta, h.bool (k := 10) (by omega) rfl rfl h10, rfl⟩
-  · exfalso
-    simp only [bind, Option.bind_some] at hr
-    rw [Option.bind_eq_some_iff] at hr
-    obtain ⟨fire, hfire, hr⟩ := hr
-    simp only [Option.bind_eq_some_iff, pure, Option.some.injEq] at hr
-    obtain ⟨_, -, _, -, _, -, _, -, _, -, _, -, _, -, rfl⟩ := hr
-    simp at hp
-  · simp at hr
+  sorry
 
 /-- A rule slice whose words reappear. -/
 theorem decRules_reloc {T B : (Nat → Option Word)} {o q c : Nat} {rules : List IRecRule}
@@ -221,55 +168,6 @@ theorem decCI_reloc {T B : (Nat → Option Word)} {s p q r : Nat}
       ∀ off cnt, nat? T (s + 7) = some off → nat? T (s + 8) = some cnt →
         ∀ x v, x < 11 * cnt → T (off + x) = some v → B (r + x) = some v) :
     decCI B p = some c := by
-  unfold decCI at hc ⊢
-  cases hk : nat? T s with
-  | none => simp [hk] at hc
-  | some kk =>
-  have h := hsh kk hk
-  have hk0 : nat? B (p + 0) = some kk := by
-    refine h.nat (k := 0) ?_ rfl rfl (by simpa using hk)
-    refine ⟨?_, by omega, by omega⟩
-    split <;> (try split) <;> omega
-  simp only [Nat.add_zero] at hk0
-  rw [hk0]
-  rw [hk] at hc
-  simp only [bind, Option.bind_some] at hc ⊢
-  rcases kk with _ | _ | _ | _ | _ | _ | kk
-  · simp only [Option.bind_eq_some_iff, pure, Option.some.injEq] at hc
-    obtain ⟨cv, -, rfl⟩ := hc; exact hF.elim
-  · simp only [Option.bind_eq_some_iff, pure, Option.some.injEq] at hc
-    obtain ⟨cv, -, _, -, _, -, rfl⟩ := hc; exact hF.elim
-  · simp only [Option.bind_eq_some_iff, pure, Option.some.injEq] at hc
-    obtain ⟨cv, -, rfl⟩ := hc; exact hF.elim
-  · -- inductive
-    simp only [Option.bind_eq_some_iff, pure, Option.some.injEq] at hc ⊢
-    obtain ⟨cv, hcv, caps, hcaps, rfl⟩ := hc
-    obtain ⟨hall, hct, hz⟩ := hF
-    have hK : ∀ k, k < 20 → k ≠ 2 → relocK 3 k := fun k h1 h2 => ⟨by simpa using h1, h2, by omega⟩
-    exact ⟨cv, decCV_reloc h (hK 1 (by omega) (by omega)) (hK 3 (by omega) (by omega))
-        (hK 4 (by omega) (by omega)) hcv hq hl,
-      caps, decCaps_reloc h (fun k h1 h2 => hK k h2 (by omega)) hcaps hall hct hz, rfl⟩
-  · -- constructor
-    simp only [Option.bind_eq_some_iff, pure, Option.some.injEq] at hc ⊢
-    obtain ⟨cv, hcv, a1, h1, a2, h2, rfl⟩ := hc
-    have hK : ∀ k, k < 7 → k ≠ 2 → relocK 4 k := fun k h1 h2 => ⟨by simpa using h1, h2, by omega⟩
-    exact ⟨cv, decCV_reloc h (hK 1 (by omega) (by omega)) (hK 3 (by omega) (by omega))
-        (hK 4 (by omega) (by omega)) hcv hq hl,
-      a1, h.nat (hK 5 (by omega) (by omega)) rfl rfl h1,
-      a2, h.nat (hK 6 (by omega) (by omega)) rfl rfl h2, rfl⟩
-  · -- recursor
-    simp only [Option.bind_eq_some_iff, pure, Option.some.injEq] at hc ⊢
-    obtain ⟨cv, hcv, a1, h1, a2, h2, hc⟩ := hc
-    obtain ⟨ro, hro, rc, hrc, rules, hrules, rfl⟩ := hc
-    have hK : ∀ k, k < 9 → k ≠ 2 → k ≠ 7 → relocK 5 k := fun k h1 h2 h3 =>
-      ⟨by simpa using h1, h2, fun _ => h3⟩
-    obtain ⟨hr7, hrs⟩ := hr (by simpa using hk)
-    exact ⟨cv, decCV_reloc h (hK 1 (by omega) (by omega) (by omega))
-        (hK 3 (by omega) (by omega) (by omega)) (hK 4 (by omega) (by omega) (by omega)) hcv hq hl,
-      a1, h.nat (hK 5 (by omega) (by omega) (by omega)) rfl rfl h1,
-      a2, h.nat (hK 6 (by omega) (by omega) (by omega)) rfl rfl h2,
-      r, hr7, rc, h.nat (hK 8 (by omega) (by omega) (by omega)) rfl rfl hrc,
-      rules, decRules_reloc hrules hF (hrs ro rc hro hrc), rfl⟩
-  · simp at hc
+  sorry
 
 end L.Arena

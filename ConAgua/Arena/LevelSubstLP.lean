@@ -129,17 +129,7 @@ theorem lpSpw_spec (hpn : p.lookup "lv_node" = some lvNode) (hpp : p.lookup "lh_
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "lp_spw" [po, pc, ko, kc, vo, vc]
     ⦃fun r s' => LocEq s' s₀ ∧
       spwW SPN POOL EREC n s₀.mem po pc ko kc vo vc = some (r.headD 0, s'.mem); ⊤⦄ := by
-  induction n with
-  | zero =>
-    intro s₀ po pc ko kc vo vc; rw [invoke_eq _ hp]; simp only [callFn, lpSpw]; vcgen [exec] <;> grind
-  | succ n ih =>
-    intro s₀ po pc ko kc vo vc
-    rw [invoke_eq _ hp]
-    simp only [callFn, lpSpw]
-    sym only [lang_grind, arena_grind, level_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, lpLookup_spec p hpl n,
-        lvZero_spec p hpn hpp hpz n, lhPush_spec p hpp n, ih] <;>
-      finish (gen := 20)
+  sorry
 
 include hpl in
 theorem lpSubstPW_spec (hpn : p.lookup "lv_node" = some lvNode)

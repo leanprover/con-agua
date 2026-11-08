@@ -20,12 +20,11 @@ open L.Ind
 
 local notation "V" => ConLeche.CheckMode.verified
 
--- RS2B ronsync2 stage 2: commented out (stale program / l_model / removed twin)
+/- ronsync2 stage 2: commented out (stale program / l_model / removed twin)
 /-- **`env_push` writes the index rows, `ECON` and its count** (`CTL[128]`). -/
 theorem envPushW_frame {m m' : Mem} {vis q : Word} {r : List Word}
     (h : envPushW m vis q = some (r, m')) :
     MemFrame [EIXA, EIXS, EIXN, ECON, EIXA1, EIXS1, EIXN1] [128] m m' := by
   sorry
--- RS2E
 
 end L.Arena

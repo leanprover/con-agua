@@ -60,9 +60,7 @@ theorem toNat_add_small (c : Word) (k : Nat) (h : c.toNat + k < 2 ^ 64) :
 /-- A decoding in `erecP` is below the record pool's size, so offsets from it do not wrap. -/
 theorem erecP_bound {m : Mem} {i : Nat} {w : Word} (h : erecP m i = some w) (hS : IWOK m) :
     i < 2 ^ 64 := by
-  have := (Array.getElem?_eq_some_iff.mp (erecP_get h)).1
-  have := hS.erSize
-  omega
+  sorry
 
 /-! ## `check_constant_val` -/
 

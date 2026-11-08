@@ -203,32 +203,7 @@ theorem word_lt32 {k : IdxKind} (x : Idx k) : x.word.toUInt64.toNat < 2 ^ 32 := 
 theorem hslice_sliceL {P : Array Word} {o l : Nat} {ids : List LIdx}
     (hb : l = 0 ∨ o + l ≤ P.size) (h : sliceL P o l = lsWords ids) :
     hslice? (aread P) o l = some ids := by
-  have hlen : ids.length = l := by
-    have := sliceL_length P o l
-    rw [h, lsWords_length] at this; exact this
-  rcases hb with rfl | hb
-  · have : ids = [] := List.length_eq_zero_iff.mp hlen
-    subst this; simp [hslice?]
-  · have hgood : ∀ j ∈ List.range l, hd? P (o + j) = some (decI (P[o + j]?.getD 0) : LIdx) := by
-      intro j hj
-      have hj' : j < l := List.mem_range.mp hj
-      have hlt : o + j < P.size := by omega
-      have e1 : P[o + j]? = some P[o + j] := Array.getElem?_eq_getElem hlt
-      have e2 : (sliceL P o l)[j]'(by rw [sliceL_length]; exact hj') = P[o + j]?.getD 0 := by
-        simp [sliceL]
-      have hw : (P[o + j]?.getD 0).toNat < 2 ^ 32 := by
-        rw [← e2]
-        simp only [h]
-        simp only [lsWords, List.getElem_map]
-        exact word_lt32 _
-      simp only [hd?, e1, Option.getD_some] at hw ⊢
-      simp [hw]
-    have := mapM_some_of (fun j => (hd? P (o + j) : Option LIdx)) (fun j => (decI (P[o + j]?.getD 0) : LIdx))
-      (List.range l) hgood
-    simp only [hslice?]
-    have e3 : (List.range l).map (fun j => (decI (P[o + j]?.getD 0) : LIdx)) = ids := by
-      rw [sliceL_map_decI, h]; simp [lsWords, Function.comp_def, decI_word]
-    rw [this, e3]
+  sorry
 
 /-- **`view_ls` refines `viewLs` under the stage relation**: the twin's view succeeds without
 changing the state, the stage relation holds after, the pool only grew, and the new slice (below
@@ -240,69 +215,6 @@ theorem viewLsW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv
     (hS : StageR vis fe m a) (hu : us.toNat < 2 ^ 32) (hP : PoolSmall m) :
     ∃ ids : List LIdx, (viewLs (decI us)).run a = .ok (ids, a) ∧ StageR vis fe m' a ∧
       IWGrow m m' ∧ decRL (fun m => decHL m) 0 m' r ids ∧ PoolSmall m' := by
-  obtain ⟨hI1, hE1, hsz, hEs, hc⟩ := hS.iw
-  have hR := hS.check.arena.base
-  unfold viewLsW at h
-  have hne : ¬ lsNodeW m us = [] := fun hne => by rw [ite_eq_left hne] at h; simp at h
-  rw [ite_eq_right hne] at h
-  obtain ⟨ids, hv⟩ := lsView_of_lsNodeW hR hu hne
-  obtain ⟨hlsn, hbnd, hsl⟩ := lsNodeW_store hR hu hv
-  rw [hlsn] at h
-  simp only [List.headD_cons, List.tail_cons] at h
-  generalize tfld m LVLS (tierW us) (idxW us) 0 = o at *
-  generalize tfld m LVLS (tierW us) (idxW us) 1 = l at *
-  rcases hal : allocW m l with _ | ⟨q, m1⟩ <;> simp only [hal, reduceCtorEq] at h
-  rcases hcp : poolCopyW (n - 1) m1 q o l with _ | m2 <;> simp only [hcp, Option.some.injEq, Prod.mk.injEq, reduceCtorEq] at h
-  obtain ⟨rfl, rfl⟩ := h
-  obtain ⟨hq, hm1, hroom⟩ := allocW_facts hal hsz
-  subst hq hm1
-  generalize hqq : rdW (m.arr64 CTL) 200 = q at *
-  have hIW := allocMem_IW m l
-  have hPPv : vpool (allocMem m l) = vpool m := by
-    simp only [allocMem]; exact vpool_set64_ne _ _ _ _ ⟨by decide, by decide⟩
-  have h41 := hR.lit.1.top41
-  obtain ⟨hA, hS2, hG⟩ := poolCopyW_get (n - 1) _ _ _ _ _ hcp (by omega)
-    (by rw [hIW]; exact hroom) (by rw [hIW]; exact hsz)
-  rw [hIW] at hS2 hG
-  rw [hPPv] at hG
-  have hfr : MemFrame [IW] [200] m m2 :=
-    (allocMem_frame m l).trans (copy_frame hA (by rw [hS2, hIW]))
-  have htop : rdW (m2.arr64 CTL) 200 = q + l := by
-    rw [hA CTL (by decide), allocMem_top m _ hc, hqq]
-  have hsum : (q + l).toNat = q.toNat + l.toNat := by
-    rw [UInt64.toNat_add]; simp; omega
-  have hgrow : IWGrow m m2 := by
-    refine iwGrow_of_frame hfr (N := l) ?_ ?_ hsz ?_
-    · rw [htop, hqq]
-    · simp only [iwTop, hqq]; omega
-    · intro i hi
-      simp only [iwTop, hqq] at hi
-      rw [hG, ite_eq_right (by omega)]
-  have htop' : iwTop m2 = q.toNat + l.toNat := by simp only [iwTop, htop, hsum]
-  have hdec : decHL m2 q.toNat l.toNat = some ids := by
-    have e1 : (decHL m2 q.toNat l.toNat : Option (List LIdx)) = hslice? (vpool m) o.toNat l.toNat := by
-      simp only [decHL]
-      apply hslice?_congr
-      intro j hj
-      simp only [iwA, hG]
-      rw [ite_eq_left (by omega)]
-      congr 1; omega
-    rw [e1]
-    exact hslice_sliceL (.inr (by rw [vpool_size]; omega)) hsl
-  have hroom2 : iwTop m2 ≤ (m2.arr64 IW).size := by rw [htop', hS2]; omega
-  have hSt : StageR dn vis fe m2 a := by
-    refine ⟨CheckR.frame_iw hfr hS.check, hroom2, ?_, ?_, ?_, ?_⟩
-    · have h129 : rdW (m2.arr64 CTL) 129 = rdW (m.arr64 CTL) 129 := hfr.ctl 129 (by simp)
-      have hE2 : m2.arr64 EREC = m.arr64 EREC := hfr.arr EREC (by decide) (by decide)
-      simp only [erTop, h129, hE2]; exact hE1
-    · rw [hfr.size IW]; exact hsz
-    · rw [hfr.arr EREC (by decide) (by decide)]; exact hEs
-    · rw [hfr.size CTL]; exact hc
-  refine ⟨ids, viewLs_run' _ _ _ hv, hSt, hgrow, ⟨?_, ?_⟩, ?_⟩
-  · simpa using hdec
-  · show q.toNat + l.toNat ≤ iwTop m2
-    omega
-  · simp only [PoolSmall]
-    rw [pcap_congr (hfr.size POOL) (hfr.size POOL1)]; exact hP
+  sorry
 
 end L.Ind

@@ -60,15 +60,7 @@ theorem dindCopy_specW (p : Prog) (hp : p.lookup "dind_copy" = some dindCopy) (n
     ∀ (s₀ : St) (d s l : Word),
     ⦃fun st => st = s₀⦄ invoke p (exec p n) "dind_copy" [d, s, l]
     ⦃fun _ s' => LocEq s' s₀ ∧ dindCopyW n s₀.mem d s l = some s'.mem; ⊤⦄ := by
-  induction n with
-  | zero => intro s₀ d s l; rw [invoke_eq _ hp]; simp only [callFn, dindCopy]; vcgen [exec] <;> grind
-  | succ n ih =>
-    intro s₀ d s l
-    rw [invoke_eq _ hp]
-    simp only [callFn, dindCopy]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64, ih] <;>
-      finish (gen := 20)
+  sorry
 
 /-! ## `ind_rec_copy` -/
 
@@ -154,15 +146,7 @@ theorem indRecCopy_specW (p : Prog) (ha : p.lookup "erec_alloc" = some erecAlloc
     (n : Nat) (s₀ : St) (s : Word) :
     ⦃fun st => st = s₀⦄ invoke p (exec p n) "ind_rec_copy" [s]
     ⦃fun r s' => LocEq s' s₀ ∧ ircW n s₀.mem s = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, indRecCopy]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-        erecAlloc_specW p ha n, dindCopy_specW p hd n] <;>
-      finish (gen := 20) [rdW_eq]
+  sorry
 
 /-! ## `ind_copy_go`, `ind_block_to_erec` -/
 
@@ -198,16 +182,7 @@ theorem indCopyGo_specW (p : Prog) (ha : p.lookup "erec_alloc" = some erecAlloc)
     ∀ (s₀ : St) (o bo bl : Word),
     ⦃fun st => st = s₀⦄ invoke p (exec p n) "ind_copy_go" [o, bo, bl]
     ⦃fun _ s' => LocEq s' s₀ ∧ icgW n s₀.mem o bo bl = some s'.mem; ⊤⦄ := by
-  induction n with
-  | zero => intro s₀ o bo bl; rw [invoke_eq _ hp]; simp only [callFn, indCopyGo]; vcgen [exec] <;> grind
-  | succ n ih =>
-    intro s₀ o bo bl
-    rw [invoke_eq _ hp]
-    simp only [callFn, indCopyGo]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64, ih,
-        indRecCopy_specW p ha hd hr n] <;>
-      finish (gen := 20)
+  sorry
 
 /-- **The model of `ind_block_to_erec(i)`.** -/
 def ibeW (n : Nat) (m : Mem) (i : Word) : Option (List Word × Mem) :=

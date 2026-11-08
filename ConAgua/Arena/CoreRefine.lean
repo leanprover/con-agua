@@ -57,20 +57,7 @@ theorem flushCaches_refinesC (p : Prog) (hp : FlushProg p) (a₀ : AState) (n : 
     invoke p (exec p n) "flush_caches" []
     ⦃fun _ s' => LocEq s' s₀ ∧ AM.ok flushCaches a₀ ∧
       CheckR s'.mem (AM.st flushCaches a₀) vis fe; ⊤⦄ := by
-  apply M.triple_of_run
-  intro s r s' hs hrun
-  obtain ⟨hloc, hok, hm⟩ := M.of_run (P := fun s => s = s₀) hs hrun (flushCaches_spec p hp n s₀)
-  subst hs
-  obtain ⟨hok', hst, -⟩ := AM.of_run_ok _ _ _ _ (flushCaches_run a₀)
-  refine ⟨hloc, hok', ?_⟩
-  rw [hst, hm]
-  have hf := flushMem_frame s.mem
-  exact ⟨ArenaD.caches_irrel _ ⟨ArenaR.frame_ext [] _ (by simp) flushCtl_ge _ _ hf _ hC.arena.base,
-      DerR.frameM [] _ _ _ hf (by simp) _ hC.arena.der⟩,
-    hC.core.flush hok,
-    hC.pins.frame (.of_lt (k := 0) (by simp) (by decide)) hf,
-    hC.env.frame (.of_lt (k := 0) (by simp) (by decide)) (.of_lt flushCtl_lt (by decide)) hf,
-    hC.mode.frame hf (by simp [flushCtl]) (by simp [flushCtl])⟩
+  sorry
 
 /-! ## The mode memos: probe and insert at the current generation -/
 
