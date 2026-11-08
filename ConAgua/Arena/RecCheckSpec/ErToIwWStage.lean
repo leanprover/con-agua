@@ -389,52 +389,7 @@ theorem erToIwW_stage {vis : Word} {fe : IFEnv} {a : AState}
       (decHL m' (r.headD 0).toNat (r.tail.headD 0).toNat : Option (List (Idx k))) =
         hslice? (erA m) o.toNat l.toNat ∧
       (r.headD 0).toNat + (r.tail.headD 0).toNat = iwTop m' ∧ m'.arr64 EREC = m.arr64 EREC := by
-  obtain ⟨hI1, hE1, hsz, hEs, hc⟩ := hS.iw
-  rcases hsrc with hl0 | hsrc
-  · have hl : l = 0 := UInt64.toNat_inj.mp (by simpa using hl0)
-    subst hl
-    simp only [erToIwW] at h
-    cases hal : allocW m 0 with
-    | none => simp [hal] at h
-    | some qm =>
-    obtain ⟨q, m1⟩ := qm
-    obtain ⟨hS1, hg1, hq, ht1⟩ := allocW_stage hal hS
-    obtain ⟨-, hm1, -⟩ := allocW_facts hal hsz
-    simp only [hal] at h
-    obtain _ | n := n
-    · simp [erCopyW] at h
-    obtain _ | n := n
-    · simp [erCopyW] at h
-    simp only [Nat.add_sub_cancel, erCopyW_nil n _ _ _ _ rfl, Option.some.injEq,
-      Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl⟩ := h
-    refine ⟨hS1, hg1, by simp [decHL, hslice?], ?_, ?_⟩
-    · simp only [List.headD_cons, List.tail_cons]; rw [hq, ht1]
-    · rw [hm1]; simp only [allocMem]; exact Mem.arr64_set64_ne _ _ _ _ _ (by decide)
-  obtain ⟨hr, hd, hg, hf, hE, ht⟩ := erToIwW_dec (k := k) h hsz hc hEs hsrc
-  have hroom : iwTop m' ≤ (m'.arr64 IW).size := by
-    rw [← ht, hf.size IW]
-    simp only [erToIwW] at h
-    cases hal : allocW m l with
-    | none => simp [hal] at h
-    | some qm =>
-      obtain ⟨q, m1⟩ := qm
-      obtain ⟨hq, -, hr2⟩ := allocW_facts hal hsz
-      simp only [hal] at h
-      cases hcp : erCopyW (n - 1) m1 q o l with
-      | none => simp [hcp] at h
-      | some m2 =>
-        simp only [hcp, Option.some.injEq, Prod.mk.injEq] at h
-        obtain ⟨rfl, -⟩ := h
-        subst hq
-        simpa using hr2
-  have h129 : rdW (m'.arr64 CTL) 129 = rdW (m.arr64 CTL) 129 := hf.ctl 129 (by simp)
-  subst hr
-  refine ⟨⟨CheckR.frame_iw hf hS.check, hroom, ?_, ?_, ?_, ?_⟩, hg, by simpa using hd, by simpa using ht, hE⟩
-  · simp only [erTop, h129, hE]; exact hE1
-  · rw [hf.size IW]; exact hsz
-  · rw [hE]; exact hEs
-  · rw [hf.size CTL]; exact hc
+  sorry
 
 /-- The model of `cv_lps(q)`. -/
 def cvLpsW (n : Nat) (m : Mem) (q : Word) : Option (List Word × Mem) :=

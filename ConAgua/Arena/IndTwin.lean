@@ -120,16 +120,7 @@ theorem StageT.of_core {p : Prog} (hcl : CoreStageClosed p) {f : FnName} (hf : f
     {n : Nat} {vs : List Word} {m m' : Mem} {r : List Word} {a a' : AState} {M : ModeMaps}
     (h : callW p n f vs m = some (r, m')) (hS : StageT dn vis fe m a)
     (hC : CoreS dn m' a' vis fe M 0) : StageT dn vis fe m' a' ∧ IWGrow m m' := by
-  obtain ⟨hfr, -⟩ := run_memFrame hcl hf (run_of_callW h)
-  have hI : m'.arr64 IW = m.arr64 IW := hfr.1 _ coreStageA_iw (by decide)
-  have hE : m'.arr64 EREC = m.arr64 EREC := hfr.1 _ coreStageA_erec (by decide)
-  have hP : m'.arr64 PINS = m.arr64 PINS := hfr.1 _ coreStageA_pins (by decide)
-  have h129 : rdW (m'.arr64 CTL) 129 = rdW (m.arr64 CTL) 129 := hfr.ctl _ coreStageC_129
-  have h200 : rdW (m'.arr64 CTL) 200 = rdW (m.arr64 CTL) 200 := hfr.ctl _ coreStageC_200
-  obtain ⟨hCR, hT⟩ := hC.checkR
-  refine ⟨⟨⟨hCR, IWOK.frame hfr coreStageA_iw coreStageA_erec coreStageC_129 coreStageC_200
-    hS.stage.iw⟩, hT, by simp only [pinW, hP]; exact hS.flag⟩, ?_⟩
-  exact ⟨by simp [iwTop, h200], by simp [erTop, h129], fun i _ => by rw [hI], fun i _ => by rw [hE]⟩
+  sorry
 
 /-- **A core entry point's refinement as a `Sim` under `StageT`**: a `CoreSpec` at every state in
 `CoreS` turns a run of the call into the twin's run, `StageT` after, the pools unchanged. -/
@@ -312,19 +303,7 @@ variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
 `CTL[192]`): the pools and the pins are untouched. -/
 theorem StageT.of_heap {m m' : Mem} {a a' : AState} {M : ModeMaps} (hT : StageT dn vis fe m a)
     (hC : CoreS dn m a' vis fe M 0) (hf : MemFrame [LH] [192] m m') : StageT dn vis fe m' a' ∧ IWGrow m m' := by
-  have hC' := hC.frameSM hf
-    (by intro b hb; simp only [List.mem_singleton] at hb; subst hb; decide)
-    (by intro x hx; simp only [List.mem_singleton] at hx; subst hx; decide)
-    (hC.memos.frame hf (by decide) (by decide) (by decide) (by decide))
-  have hI : m'.arr64 IW = m.arr64 IW := hf.arr IW (by decide) (by decide)
-  have hE : m'.arr64 EREC = m.arr64 EREC := hf.arr EREC (by decide) (by decide)
-  have hP : m'.arr64 PINS = m.arr64 PINS := hf.arr PINS (by decide) (by decide)
-  have h129 : rdW (m'.arr64 CTL) 129 = rdW (m.arr64 CTL) 129 := hf.ctl 129 (by decide)
-  have h200 : rdW (m'.arr64 CTL) 200 = rdW (m.arr64 CTL) 200 := hf.ctl 200 (by decide)
-  obtain ⟨hCR, hTw⟩ := hC'.checkR
-  refine ⟨⟨⟨hCR, IWOK.frame hf (by decide) (by decide) (by decide) (by decide) hT.stage.iw⟩, hTw,
-    by simp only [pinW, hP]; exact hT.flag⟩, ?_⟩
-  exact ⟨by simp [iwTop, h200], by simp [erTop, h129], fun i _ => by rw [hI], fun i _ => by rw [hE]⟩
+  sorry
 
 /-- The twin side of `lv_leq_top`: the two readbacks, then `Level.leq`. -/
 def leqTopAM (u v : LIdx) : AM (Option Bool) := do

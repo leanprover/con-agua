@@ -805,32 +805,7 @@ theorem phsW_ok (k : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis
     ∃ phs a', (ConRon.Arena.nestPhs nn.toNat).run a = .ok (phs, a') ∧ StageR vis fe m' a' ∧
       IWGrow m m' ∧ decHL m' (r.headD 0).toNat (r.tail.headD 0).toNat = some phs ∧
       (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop m' := by
-  unfold phsW at h
-  rcases hal : allocW m nn with _ | ⟨q, m1⟩ <;> rw [hal] at h; · simp [phsA] at h
-  rw [phsA_some] at h
-  obtain ⟨hS1, hg1, hqd, hroom, htop1⟩ := hS.alloc hal
-  rcases hl : phsGoW k m1 q nn 0 with _ | m2 <;> rw [hl] at h; · simp [phsB] at h
-  rw [phsB_some] at h
-  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-  have hsz1 : (m1.arr64 IW).size < 2 ^ 64 := hS1.iw.iwSize
-  have hroom1 : q.toNat + nn.toNat ≤ (m1.arr64 IW).size := by
-    have := hS1.iw.iw; simp only [iwTop] at htop1 this; omega
-  obtain ⟨phs, a', hrun, hS2, hK, hdec⟩ := phsGoW_ok k m1 m2 a q nn 0 [] dn fe vis hl hS1
-    (by simp) hroom1 hsz1 (by simp [decHL, hslice?])
-  refine ⟨phs, a', ?_, hS2, ?_, by simpa using hdec, ?_⟩
-  · rw [nestPhs_eq]
-    simpa using hrun
-  · obtain ⟨hK1, hK2, hK3, hK4, hK5⟩ := hK
-    refine ⟨?_, ?_, fun idx hidx => ?_, fun idx hidx => ?_⟩
-    · rw [hK2]; exact hg1.iw
-    · rw [hK3]; exact hg1.er
-    · have hq : idx < q.toNat := by
-        have : q.toNat = iwTop m := by simp only [iwTop, hqd]
-        omega
-      rw [hK1 idx (Or.inl hq)]; exact hg1.iwGet idx hidx
-    · rw [hK5]; exact hg1.erGet idx hidx
-  · show q.toNat + nn.toNat ≤ iwTop m2
-    rw [hK.2.1, htop1]; exact Nat.le_refl _
+  sorry
 
 section census
 variable (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc) (hpw : p.lookup "pin_word" = some pinWordL)

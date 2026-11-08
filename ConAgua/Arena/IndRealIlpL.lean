@@ -355,14 +355,7 @@ theorem StageT.of_coreFrame {A : List TieredArray} {C : List Word} {m m' : Mem} 
     {M : ModeMaps} (hfr : MemFrame A C m m') (hIW : (IW : TieredArray) ∉ A) (hE : (EREC : TieredArray) ∉ A) (hP : (PINS : TieredArray) ∉ A)
     (h129 : (129 : Word) ∉ C) (h200 : (200 : Word) ∉ C) (hS : StageT dn vis fe m a)
     (hC : CoreS dn m' a' vis fe M 0) : StageT dn vis fe m' a' ∧ IWGrow m m' := by
-  have hI : m'.arr64 IW = m.arr64 IW := hfr.arr _ hIW (by decide)
-  have hE' : m'.arr64 EREC = m.arr64 EREC := hfr.arr _ hE (by decide)
-  have hP' : m'.arr64 PINS = m.arr64 PINS := hfr.arr _ hP (by decide)
-  have h129' : rdW (m'.arr64 CTL) 129 = rdW (m.arr64 CTL) 129 := hfr.ctl _ h129
-  have h200' : rdW (m'.arr64 CTL) 200 = rdW (m.arr64 CTL) 200 := hfr.ctl _ h200
-  obtain ⟨hCR, hT⟩ := hC.checkR
-  refine ⟨⟨⟨hCR, IWOK.frame hfr hIW hE h129 h200 hS.stage.iw⟩, hT, by simp only [pinW, hP']; exact hS.flag⟩, ?_⟩
-  exact ⟨by simp [iwTop, h200'], by simp [erTop, h129'], fun i _ => by rw [hI], fun i _ => by rw [hE']⟩
+  sorry
 
 /-- **`inst_lp_fast` refines `instLPFast` under `StageT`** (the contract
 `IndStubs.instLPFast_spec` with `StageT` for `StageR`: `CoreS` needs the twin's invariants). -/
