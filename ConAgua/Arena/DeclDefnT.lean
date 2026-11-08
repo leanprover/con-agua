@@ -79,7 +79,7 @@ structure CdfPost (dn : NIdx → Option ConLeche.Name) (pins : List INatOpPinSet
   grow : IWGrow m w.2
   pins : PinSetsR w.2 pins
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
+-- RS2B ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **The definition arm refines `checkDecl`, both outcomes**, under `StageT` (con-ron's
 `checkDecl_bridge_defn`'s decomposition): from `StageT`, the fold invariant `FoldOK`, the
 declaration's constant and value denoting, the variant records in memory (`PinSetsR`) and in the
@@ -214,6 +214,6 @@ theorem cdf_ref {p : Prog} (hA : ArmProg p) (hV : ValProg p) {pins : List INatOp
     (hstepOK2.mono hP4.ext) hPS4 hPD4 (ConRon.Bridge.denoteN_ext hnm3 hP4.ext) hCr4
   exact RefE.bind_right hrun5 (RefE.ret rfl ⟨by simpa using hS5, hC5.mem.memos,
     hg1.trans (hP2.grow.trans (hg3.trans (hP4.grow.trans hg5))), hPS5⟩)
--/
+-- RS2E
 
 end L.Arena

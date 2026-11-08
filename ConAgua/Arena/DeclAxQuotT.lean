@@ -82,7 +82,7 @@ theorem leaf_memos {p : Prog} (hcl : LeafClosed p) {f : FnName} (hf : f ∈ leaf
     (hM : CoreMemos x) : CoreMemos y :=
   hM.frame (callW_leafFrame hcl hf hc) leafA_memo leafC_memo leafA_walk leafC_walk leafA_lp leafC_lp
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
+-- RS2B ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **The model of `check_decl_axiom(i, vis)`, both outcomes**: the leaves and pin reads
 (outside the verdict closure) lifted, `check_constant_val` by its unified model. -/
 l_model checkDeclAxiom_specE (p : Prog) (hX : AxProg p)
@@ -95,7 +95,7 @@ l_model checkDeclAxiom_specE (p : Prog) (hX : AxProg p)
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
   heartbeats 400000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
--/
+-- RS2E
 
 /-- What the axiom arm gives besides the twin's environment `fe'` (from `m`): the stage relation
 over the result word, the core's memos, the growth. -/
@@ -105,7 +105,7 @@ structure CdaPost (dn : NIdx → Option ConLeche.Name) (m : Mem) (r : Word) (m' 
   memos : CoreMemos m'
   grow : IWGrow m m'
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
+-- RS2B ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **The axiom arm refines `checkDecl`'s `.axiomDecl` arm, both outcomes** (con-ron's
 `checkDecl_bridge_axiom`'s decomposition), under `StageT`: `Quot.sound` against the pinned block
 (installing nothing), else the constant check (`ccv_ref`) and the five recognised axioms;
@@ -358,6 +358,6 @@ theorem cda_ref {p : Prog} (hX : AxProg p) (hq : KnotStageProg p) (hcl : LeafClo
     ConRon.Bridge.denoteN_ext (ConRon.Bridge.denoteN_ext hnmA hext1) hext4
   obtain ⟨X, hrunN, -⟩ := readNameM_run' a4 (decI wn) c.name hnm4 hrn4
   exact RefE.bind_right hrunN fun _ => ErrClaim.fail _ _ rfl
--/
+-- RS2E
 
 end L.Arena

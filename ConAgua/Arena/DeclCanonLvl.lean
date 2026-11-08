@@ -314,7 +314,7 @@ theorem clW_ok (n : Nat) : ∀ (m : Mem) (a : AState) (po pl qo ql co cl fuel u 
     all_goals first
       | (-- succ.succ
          obtain ⟨b, hb, hr⟩ := ih m a po pl qo ql co cl (fuel - 1) _ _ r ps qs cs h hR hC
-           (word_lt32 _) (word_lt32 _)
+           (nidx_word_lt32 _) (nidx_word_lt32 _)
          rw [decI_word, decI_word] at hb
          exact ⟨b, hb, hr⟩)
       | (-- max.max, imax.imax
@@ -324,12 +324,12 @@ theorem clW_ok (n : Nat) : ∀ (m : Mem) (a : AState) (po pl qo ql co cl fuel u 
          | some r1 =>
          rw [cnClK1_some] at h
          obtain ⟨b1, hb1, hr1⟩ := ih m a po pl qo ql co cl (fuel - 1) _ _ r1 ps qs cs hx1 hR hC
-           (word_lt32 _) (word_lt32 _)
+           (nidx_word_lt32 _) (nidx_word_lt32 _)
          rw [decI_word, decI_word] at hb1
          refine andThen_ok hb1 hr1 (fun hne => ?_) (fun h0 => ?_)
          · rw [ite_eq_right hne] at h
            obtain ⟨b2, hb2, hr2⟩ := ih m a po pl qo ql co cl (fuel - 1) _ _ r ps qs cs h hR hC
-             (word_lt32 _) (word_lt32 _)
+             (nidx_word_lt32 _) (nidx_word_lt32 _)
            rw [decI_word, decI_word] at hb2
            exact ⟨b2, hb2, hr2⟩
          · rw [ite_eq_left h0] at h; simp at h; simp [← h])
@@ -344,9 +344,9 @@ theorem clW_ok (n : Nat) : ∀ (m : Mem) (a : AState) (po pl qo ql co cl fuel u 
          rename_i y hy
          simp only [Option.some.injEq] at h
          obtain ⟨hx32, hxd⟩ := nmW_ok hx hC.p hC.c (by have := iwTop_lt m; have := hC.pt; omega)
-           (by have := iwTop_lt m; have := hC.ct; omega) (word_lt32 _)
+           (by have := iwTop_lt m; have := hC.ct; omega) (nidx_word_lt32 _)
          obtain ⟨hy32, hyd⟩ := nmW_ok hy hC.q hC.c (by have := iwTop_lt m; have := hC.qt; omega)
-           (by have := iwTop_lt m; have := hC.ct; omega) (word_lt32 _)
+           (by have := iwTop_lt m; have := hC.ct; omega) (nidx_word_lt32 _)
          rw [decI_word] at hxd hyd
          refine ⟨ConRon.Arena.canonNameMap ps cs _ == ConRon.Arena.canonNameMap qs cs _, rfl, ?_⟩
          rw [← hxd, ← hyd, ← h]
@@ -575,7 +575,44 @@ theorem lsEqW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
     (hP : PoolSmall m) :
     ∃ b, (ConRon.Arena.canonLevelsEq ps qs cs fuel.toNat (decI us) (decI vs)).run a = .ok (b, a) ∧
       r = (if b then 1 else 0) ∧ StageR vis fe m' a ∧ IWGrow m m' ∧ PoolSmall m' := by
-  sorry
+  cases n with
+  | zero => simp [lsEqW] at h
+  | succ n =>
+  rw [lsEqW] at h
+  cases h1 : viewLsW n m us with
+  | none => rw [h1] at h; simp at h
+  | some x1 =>
+  obtain ⟨r1, m1⟩ := x1
+  rw [h1] at h; dsimp only at h
+  cases h2 : viewLsW n m1 vs with
+  | none => rw [h2] at h; simp at h
+  | some x2 =>
+  obtain ⟨r2, m2⟩ := x2
+  rw [h2] at h; dsimp only at h
+  cases hll : llW n m2 po pl qo ql co cl fuel (r1.headD 0) (r1.tail.headD 0) (r2.headD 0)
+      (r2.tail.headD 0) with
+  | none => rw [hll] at h; simp at h
+  | some rr =>
+  rw [hll] at h; dsimp only at h
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
+  obtain ⟨ids1, hrun1, hS1, hg1, hd1, hP1⟩ := viewLsW_ok h1 hS hu hP
+  obtain ⟨ids2, hrun2, hS2, hg2, hd2, hP2⟩ := viewLsW_ok h2 hS1 hv hP1
+  have t := iwTop_lt m
+  have t2 := iwTop_lt m2
+  have hd1u := decRL_unpack hd1
+  have hd2u := decRL_unpack hd2
+  have hd1' : decHL m2 (r1.headD 0).toNat (r1.tail.headD 0).toNat = some ids1 := by
+    rw [decHL_grow hg2 hd1u.2]; exact hd1u.1
+  have hC2 := (hC.grow hg1).grow hg2
+  obtain ⟨ws1, hs1, rfl, hw1⟩ := slR_of_decHL m2 _ _ ids1 hd1' (by have := hd1u.2; have := hg2.iw; omega)
+  obtain ⟨ws2, hs2, rfl, hw2⟩ := slR_of_decHL m2 _ _ ids2 hd2u.1 (by have := hd2u.2; omega)
+  simp only [UInt64.ofNat_toNat] at hs1 hs2
+  obtain ⟨b, hb, hrb⟩ := llW_ok n m2 a po pl qo ql co cl fuel _ _ _ _ rr _ _ ps qs cs hll
+    hS2.check.arena.base hC2 hs1 hs2 hw1 hw2
+  refine ⟨b, ?_, hrb, hS2, hg1.trans hg2, hP2⟩
+  unfold ConRon.Arena.canonLevelsEq
+  rw [StateT.run_bind, hrun1, exc_ok_bind', StateT.run_bind, hrun2, exc_ok_bind']
+  exact hb
 
 /-- The post of a comparison that may grow the pool: the usual one, and the pool array stays
 addressable by a word (`PoolSmall`). -/
@@ -592,6 +629,13 @@ theorem canonLevelsEq_refines (p : Prog) (hp : CanonProg p) (dn : NIdx → Optio
         vs.toNat < 2 ^ 32 ∧ PoolSmall m)
       (ConRon.Arena.canonLevelsEq ps qs cs fuel.toNat (decI us) (decI vs))
       (CPost dn vis fe decW0B) := by
-  sorry
+  intro n s₀ a₀ ⟨hS, hC, hu, hv, hP⟩
+  refine triple_post (canonLevelsEq_spec p hp n s₀ po pl qo ql co cl fuel us vs) ?_
+  rintro r s' ⟨hl, hr⟩
+  obtain ⟨b, hb, hrb, hS', hg, hP'⟩ := lsEqW_ok n hr hS hC hu hv hP
+  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hb
+  refine ⟨hl, hok, ?_⟩
+  rw [hst, hres]
+  exact ⟨⟨hS', hg, decW0B_of' hrb⟩, hP'⟩
 
 end L.Ind

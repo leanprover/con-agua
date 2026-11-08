@@ -84,14 +84,19 @@ theorem erecCiW_okT {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEn
       decCV (erecP m') ((r.headD 0).toNat + 1) = some (stepCV ds[i.toNat]) ∧
       hd? (erecP m') ((r.headD 0).toNat + 5) = some (stepVal ds[i.toNat]) ∧
       (r.headD 0).toNat + 8 ≤ erTop m' := by
-  sorry
+  obtain ⟨hS', hg, h1, h2, h3, h4⟩ := erecCiW_ok h hS.stage hD hi hci
+  have hf := erecCiW_frame h
+  refine ⟨⟨hS', hS.twin.frame hf ⟨by decide, by decide⟩ ⟨by decide, by decide⟩
+      ⟨by decide, by decide, by decide⟩ ⟨by decide, by decide, by decide⟩
+      ⟨by decide, by decide, by decide⟩ ⟨by decide, by decide, by decide⟩,
+    by simp only [pinW, hf.arr PINS (by decide) (by decide)]; exact hS.flag⟩, hg, h1, h2, h3, h4⟩
 
 /-- `lvl_eq_c` at its text (`FireProg.lvlText`). -/
 theorem _root_.L.Ind.KnotStageProg.lvlEqC {p : Prog} (hq : KnotStageProg p) :
-    p.lookup "lvl_eq_c" = some lvlEqCL := by
-  sorry
+    p.lookup "lvl_eq_c" = some lvlEqCL :=
+  (hq.knot.fire.lvlText _ (by decide)).trans rfl
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
+-- RS2B ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`check_constant_val` refines `checkConstantVal .verified`** under `StageT`, at the call (the
 census link since lane `indstaget`). -/
 @[refines ConRon.Arena.checkConstantVal]
@@ -110,9 +115,9 @@ theorem checkConstantVal_refinesT (p : Prog) (hp : ValProg p) (hq : KnotStagePro
   rintro r s' ⟨hl, _, a', hrun, hP⟩
   obtain ⟨hok, hst, -⟩ := AM.of_run_ok _ _ _ _ hrun
   exact ⟨hl, hok, by rw [hst]; exact hP.stage, hP.grow, hP.crOK⟩
--/
+-- RS2E
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
+-- RS2B ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`check_thm_val` refines `checkThmVal .verified`** under `StageT`, at the call: the stage
 relation at the extended environment and the core's memos after it (the census link since lane
 `indstaget`). -/
@@ -135,9 +140,9 @@ theorem checkThmVal_refinesT (p : Prog) (hp : ValProg p) (hq : KnotStageProg p) 
   rintro r s' ⟨hl, fe', a', hrun, hP⟩
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
   exact ⟨hl, hok, by rw [hst, hres]; exact hP.stage, hP.memos, hP.grow⟩
--/
+-- RS2E
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
+-- RS2B ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`check_defn_val` refines `checkDefnVal .verified`** under `StageT`, at the arm's record
 (`dv_ref`, `ov_ref`). -/
 @[refines ConRon.Arena.checkDefnVal]
@@ -160,9 +165,9 @@ theorem checkDefnVal_refinesT (p : Prog) (hp : ValProg p) (hq : KnotStageProg p)
   rw [← checkDefnVal_dvT] at hrun
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
   exact ⟨hl, hok, by rw [hst, hres, hP.res]; exact hP.stage, hP.memos, hP.grow⟩
--/
+-- RS2E
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
+-- RS2B ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`check_opaque_val` refines `checkOpaqueVal .verified`** under `StageT`, at the arm's record
 (`dv_ref`, `ov_ref`). -/
 @[refines ConRon.Arena.checkOpaqueVal]
@@ -185,9 +190,9 @@ theorem checkOpaqueVal_refinesT (p : Prog) (hp : ValProg p) (hq : KnotStageProg 
   rw [← checkOpaqueVal_dvT] at hrun
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
   exact ⟨hl, hok, by rw [hst, hres, hP.res]; exact hP.stage, hP.memos, hP.grow⟩
--/
+-- RS2E
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
+-- RS2B ronsync2 stage 2: commented out (statement at the old twin/L)
 set_option experimental.vcgen true in
 /-- **The model of `check_decl_thm`, both outcomes**: `erec_ci` lifted, `check_constant_val` and
 `check_thm_val` by their unified models. -/
@@ -199,19 +204,19 @@ l_model checkDeclThm_specE (p : Prog) (hV : ValProg p)
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
   heartbeats 400000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
--/
+-- RS2E
 
 /-- What the theorem arm's error arms assume: `check_constant_val`'s (`VerdictCtxU`), and
 `install_value_guards`' claim for `check_thm_val`'s (`TvCtx`). -/
 structure CdtCtx (p : Prog) : Prop extends VerdictCtxU p where
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
+-- RS2B ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem CdtCtx.tv {p : Prog} (h : CdtCtx p) : TvCtx p :=
   ⟨h.core, h.ivg, fun _ _ _ _ he =>
     callE_nv h.nv (_root_.L.Checker.nv_mem (f := "lvl_eq_c") (by decide +kernel)) _ _ _ he⟩
--/
+-- RS2E
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
+-- RS2B ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **The theorem arm `check_decl_thm` refines `checkDecl` on a theorem under `StageT`, both
 outcomes** (`ccv_ref`, then `tv_ref`). -/
 theorem cdt_ref {p : Prog} (hV : ValProg p) (hq : KnotStageProg p) (hap : ApdF p) (hkp : CrKeep p)
@@ -258,7 +263,7 @@ theorem cdt_ref {p : Prog} (hV : ValProg p) (hq : KnotStageProg p) (hap : ApdF p
     (tv_ref hq hV hap hkp hn' hP2.stage (ArrExt.decCI hx2 hci1) (ArrExt.hd? hx2 hval1)
       ⟨env, c, hok1.envWF, hok1.check, hcA, hwsT⟩ hP2.crOK)
     fun _ _ _ _ hP3 => ⟨hP3.stage, hP3.memos, hg1.trans (hP2.grow.trans hP3.grow)⟩
--/
+-- RS2E
 
 /-- **`erec_vg` writes the record pool and its top.** -/
 theorem erecVgW_frame {m m' : Mem} {q vk : Word} {r : List Word} (h : erecVgW m q vk = some (r, m')) :
@@ -277,7 +282,7 @@ theorem erecVgW_frame {m m' : Mem} {q vk : Word} {r : List Word} (h : erecVgW m 
   exact (((((f1.trans f0).trans (fs _ 1)).trans (fs _ 2)).trans (fs _ 3)).trans (fs _ 4)).trans
     (fs _ 5)
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
+-- RS2B ronsync2 stage 2: commented out (statement at the old twin/L)
 set_option experimental.vcgen true in
 /-- **The model of `install_value`, both outcomes**: `erec_ci`, `erec_vg` lifted, `install_header`
 by its unified model, `install_value_guards` and `env_push` through their runs. -/
@@ -288,7 +293,7 @@ l_model installValue_specE (p : Prog) (hP : IvProg p)
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
   heartbeats 400000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
--/
+-- RS2E
 
 /-- What `install_value`'s error arms assume: `install_header`'s (`IhCtx`) and
 `install_value_guards`' claim. -/
@@ -296,7 +301,7 @@ structure IvCtx (p : Prog) : Prop where
   nv : closedNV p L.Checker.nvFns = true
   uce : UceProg p
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
+-- RS2B ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- What `install_value` gives besides the twin's run: the stage at the extended environment,
 the core's memos, the growth, the value group's record. -/
 structure IvPost (dn : NIdx → Option ConLeche.Name) (m : Mem) (v : List Word × Mem)
@@ -306,9 +311,9 @@ structure IvPost (dn : NIdx → Option ConLeche.Name) (m : Mem) (v : List Word �
   grow : IWGrow m v.2
   vg : y.2 = decVG (erecP v.2) (v.1.tail.headD 0).toNat
   some : y.2 ≠ none
--/
+-- RS2E
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
+-- RS2B ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`install_value` refines `ivCoreT`, both outcomes**, under `StageT`: `install_header` by
 `ih_ref`, the value's guards by `ivg_ref`; after the push the stage
 relation at the extended environment and `CoreMemos`. -/
@@ -402,9 +407,9 @@ theorem ivc_ref {p : Prog} (hRp : RecProg p) (hC : CvgProg p) (hap : ApdF p) (hk
     exact RefE.bind_right hrun3 (tail _ a3 hS3 (hP2.grow.trans hg3))
   · rw [installValueE.k_install_header.arm2 p _ _ _ _ _ _ (by simpa using hv1), ite_eq_right hv1]
     exact tail m2 a2 hP2.stage hP2.grow
--/
+-- RS2E
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
+-- RS2B ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`install_value` refines `ivT`, both outcomes** (`ivc_ref` at the record's kind). -/
 theorem iv_ref {p : Prog} (hRp : RecProg p) (hC : CvgProg p) (hap : ApdF p) (hkp : CrKeep p)
     {dn : NIdx → Option ConLeche.Name} {vis : Word}
@@ -442,6 +447,6 @@ theorem iv_ref {p : Prog} (hRp : RecProg p) (hC : CvgProg p) (hap : ApdF p) (hkp
   | quotDecl _ _ => rw [hdi] at hk; exact hk.elim
   | indDecl _ _ => rw [hdi] at hk; exact hk.elim
   | basisDecl _ => rw [hdi] at hk; exact hk.elim
--/
+-- RS2E
 
 end L.Arena

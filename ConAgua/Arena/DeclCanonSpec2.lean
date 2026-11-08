@@ -32,7 +32,13 @@ include hp
 theorem ciToCv_spec' (n : Nat) (s₀ : St) (x : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "ci_to_cv" [x]
     ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧ r.headD 0 = x + 1; ⊤⦄ := by
-  sorry
+  rw [invoke_eq _ (hp.get "ci_to_cv")]
+  simp only [callFn, ciToCv]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs] <;>
+      simp_all [LocEq, BinOp.eval, Sig.retVal, Sig.retOr, Locals.init]
 
 end specs
 
@@ -40,7 +46,10 @@ end specs
 
 theorem hslice_agree {kk : IdxKind} {a b : Array Word} {t : Nat} (h : ∀ i < t, b[i]? = a[i]?)
     {o c : Nat} (hc : o + c ≤ t) : (hslice? (aread b) o c : Option (List (Idx kk))) = hslice? (aread a) o c := by
-  sorry
+  simp only [hslice?]
+  exact mapM_congr_of _ _ _ fun j hj => by
+    simp only [List.mem_range] at hj
+    simp only [hd?, h (o + j) (by omega)]
 
 /-- **A fresh constant value** `⟨nm, lps, ty⟩` written at `q‥q+3` decodes to itself. -/
 theorem decCV_new {a a' : Array Word} {N q : Nat} {nm lo ll ty : Word} {lps : List NIdx}
@@ -49,9 +58,18 @@ theorem decCV_new {a a' : Array Word} {N q : Nat} {nm lo ll ty : Word} {lps : Li
     (hs : hslice? (aread a) lo.toNat ll.toNat = some lps) (hlow : ∀ i < N, a'[i]? = a[i]?)
     (hb : ll.toNat = 0 ∨ lo.toNat + ll.toNat ≤ N) :
     decCV (aread a') q = some ⟨decI nm, lps, decI ty⟩ := by
-  sorry
+  have hsl : hslice? a' lo.toNat ll.toNat = some lps := by
+    rcases hb with h | h
+    · rw [h] at hs ⊢; simpa [hslice?] using hs
+    · rw [hslice_agree hlow h]; exact hs
+  simp only [decCV, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def]
+  refine ⟨decI nm, ?_, lps, ?_, decI ty, ?_, rfl⟩
+  · simp [hd?, h0, hnm]
+  · simp only [hlist?, nat?, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.map_eq_some_iff]
+    exact ⟨lo.toNat, ⟨lo, h1, rfl⟩, ll.toNat, ⟨ll, h2, rfl⟩, hsl⟩
+  · simp [hd?, h3, hty]
 
-theorem erecP_rd {m : Mem} {j : Nat} {w : Word} (h : erecP m j = some w) :
+theorem erecP_tagRead {m : Mem} {j : Nat} {w : Word} (h : erecP m j = some w) :
     (m.arr64 EREC)[j]? = some w := by
   rw [← erecP_getE (erecP_lt h)]; exact h
 
@@ -59,7 +77,11 @@ theorem ctc_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m
     (hS : StageR vis fe m a) {x : Word} {ci : IConstantInfo}
     (hci : decCI (erecP m) x.toNat = some ci) :
     decCV (erecP m) (x + 1).toNat = some ci.toConstantVal := by
-  sorry
+  have hsz : (m.arr64 EREC).size < 2 ^ 64 := hS.iw.erSize
+  have hsz' : (erecP m).size < 2 ^ 64 := Nat.lt_of_le_of_lt (by simp [erecP]; exact Nat.min_le_right _ _) hsz
+  have hcv := ciD_cv hci
+  obtain ⟨w, hw, -⟩ := decCV_name hcv
+  rw [toNat_add_of_get hsz' (k := 1) (kn := 1) rfl hw]; exact hcv
 
 section refs
 variable (p : Prog) (hp : CanonProg p) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
@@ -73,7 +95,11 @@ theorem ciToCv_refines (q : Word) (ci : IConstantInfo) :
       (fun m a => StageR vis fe m a ∧ decCI (erecP m) q.toNat = some ci)
       (pure ci.toConstantVal)
       (KeepPost vis fe (fun m r (cv : IConstantVal) => decCV (erecP m) (r.headD 0).toNat = some cv)) := by
-  sorry
+  intro n s₀ a₀ ⟨hS, hci⟩
+  refine triple_post (ciToCv_spec' p hp n s₀ q) ?_
+  rintro r s' ⟨hl, hm, hr⟩
+  exact ⟨hl, trivial, by rw [hm]; exact hS, by rw [hm]; exact IWGrow.refl _,
+    by rw [hm]; show decCV _ (r.headD 0).toNat = some ci.toConstantVal; rw [hr]; exact ctc_ok hS hci⟩
 
 end refs
 

@@ -27,7 +27,7 @@ namespace L.Arena
 
 /-! ## Record words -/
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
+-- RS2B ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- A rule record's `ctor`, `k` and `eta` words. -/
 theorem decRule_words (a : Array Word) (q : Nat) (rl : IRecRule) (h : decRule (aread a) q = some rl) :
     (∃ w, a[q]? = some w ∧ w.toNat < 2 ^ 32 ∧ rl.ctor = decI w) ∧
@@ -41,7 +41,7 @@ theorem decRule_words (a : Array Word) (q : Nat) (rl : IRecRule) (h : decRule (a
   · simp only [Option.bind_eq_some_iff, Option.map_eq_some_iff, Option.some.injEq] at h
     grind
   · simp at h
--/
+-- RS2E
 
 /-- A constructor record's kind, level-parameter count, type and parameter count words. -/
 theorem decCI_ctor_words (b : Array Word) (dn : NIdx → Option ConLeche.Name) (q : Nat)
@@ -102,7 +102,7 @@ variable (p : Prog) (hp : M2CProg' p) (hc : IotaCallees p) (hpi : ProofIrrelOKM 
   (hE : ErecKeptKnot p) (hcc : ProjCallees p)
 include hp hc hpi hE hcc
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
+-- RS2B ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`m2c_arms` refines `m2cArmsT`, both outcomes** (the errors are the arm's). -/
 theorem m2cArms_ref (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤ 2 ^ 62)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
@@ -157,9 +157,9 @@ theorem m2cArms_ref (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N �
     (by simp only [m2cArmsT, hk', he', Bool.false_eq_true, ↓reduceIte, hctor, hlp, hnp]) hR
     (m2cAnd_ref p hp hc hpi hE hcc N' F (hk.mono (Nat.le_succ _)) (by omega) (by omega) dn vis fe eb
       mode d T major w0 w3 w5 hm4 hebm hT hmaj l0 m a M hS)
--/
+-- RS2E
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
+-- RS2B ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`m2c_ctor` refines `m2cCtorT`, both outcomes** (the errors are `m2c_arms`'). -/
 theorem m2cCtor_ref (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤ 2 ^ 62)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
@@ -222,13 +222,13 @@ theorem m2cCtor_ref (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N �
   have hview := view_run _ _ _ hvw
   by_cases g4 : r4.headD 0 = 0
   · rw [m2cCtorE.k_env_find.arm1 _ _ _ _ _ _ _ _ _ _ _ g4]
-    have hn : fe.find? (decI (r3.headD 0)) = none := by rw [hfind]; simp only [decFound, g4, ↓reduceIte]
+    have hn : fe.find? (decI (r3.headD 0)) = none := by rw [hfind]; simp only [envFound, g4, ↓reduceIte]
     exact RefE.ret (by
       simp only [m2cCtorT, StateT.run_bind, hpr', except_ok_bind, hga, ht, ↓reduceIte, hview, hn]; rfl) hA0
   obtain ⟨ci, hci⟩ := hfound g4
   have hciE := (erecP_ext m).decCI hci
   have hfind' : fe.find? (decI (r3.headD 0)) = some ci := by
-    rw [hfind]; simp only [decFound, g4, ↓reduceIte]; exact hci
+    rw [hfind]; simp only [envFound, g4, ↓reduceIte]; exact hci
   obtain ⟨wk, ewk, hind, -⟩ := decCI_kind34 _ dn _ ci hciE
   have rk : rdW (m.arr64 EREC) (r4.tail.headD 0) = wk := by simp only [rdW, ewk]; rfl
   by_cases g5 : wk ≠ 3
@@ -250,9 +250,9 @@ theorem m2cCtor_ref (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N �
     (m2cArms_ref p hp hc hpi hE hcc N' F (hk.mono (Nat.le_succ _)) (by omega) (by omega) dn vis fe eb
       mode d ro cvjP _ _ major hm4 hebm hn32 hmaj rl cvj cnP cnF cvT caps m a M hS hrl hcj hciE
       ⟨_, hfind'⟩)
--/
+-- RS2E
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
+-- RS2B ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`m2c_head` refines `m2cHeadT`, both outcomes** (the errors are `m2c_ctor`'s). -/
 theorem m2cHead_ref (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤ 2 ^ 62)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
@@ -317,12 +317,12 @@ theorem m2cHead_ref (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N �
   by_cases g3 : r2.headD 0 = 0
   · rw [m2cHeadE.k_env_find.arm1 _ _ _ _ _ _ _ _ _ g3]
     have hn : fe.find? rl.ctor = none := by
-      rw [hctor, hfind]; simp only [decFound, g3, ↓reduceIte]
+      rw [hctor, hfind]; simp only [envFound, g3, ↓reduceIte]
     exact RefE.ret (by rw [hstep]; simp only [hn]; rfl) hA1
   obtain ⟨ci, hci⟩ := hfound g3
   have hciE := (erecP_ext m1).decCI hci
   have hfind' : fe.find? rl.ctor = some ci := by
-    rw [hctor, hfind]; simp only [decFound, g3, ↓reduceIte]; exact hci
+    rw [hctor, hfind]; simp only [envFound, g3, ↓reduceIte]; exact hci
   obtain ⟨wk, ewk, -, hctr⟩ := decCI_kind34 _ dn _ ci hciE
   have rk : rdW (m1.arr64 EREC) (r2.tail.headD 0) = wk := by simp only [rdW, ewk]; rfl
   by_cases g4 : wk ≠ 4
@@ -339,9 +339,9 @@ theorem m2cHead_ref (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N �
     (GrowPost.of_tail hK1 hSt1.toGrew)
     (m2cCtor_ref p hp hc hpi hE hcc N' F (hk.mono (Nat.le_succ _)) (by omega) (by omega) dn vis fe eb
       mode d ro _ major hm4 hebm hmaj rl cvj cnP cnF m1 _ M1 hS1 (by rw [e1]; exact hrl) hciE)
--/
+-- RS2E
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
+-- RS2B ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`major_to_ctor` refines `majorToCtor`, both outcomes** (the top put back): `m2c_head`'s
 (`m2cHead_ref`). -/
 theorem mtc_ref (n F : Nat) (hk : KnotUpTo p n) (hnF : n ≤ F) (hn62 : n ≤ 2 ^ 62)
@@ -365,12 +365,15 @@ theorem mtc_ref (n F : Nat) (hk : KnotUpTo p n) (hnF : n ≤ F) (hn62 : n ≤ 2 
         StackKept.restoreG' hg⟩, h.res, h.valid⟩)
     (m2cHead_ref p hp hc hpi hE hcc N F (hk.mono (Nat.le_succ _)) (by omega) (by omega) dn vis fe eb
       mode d ro rc major hm4 hebm hmaj rules m a M hS hr)
--/
+-- RS2E
 
 /-- **`major_to_ctor` refines `majorToCtor`** (the callees' specs as hypotheses): `mtc_ref`'s ok
 half. -/
-theorem majorToCtor_refines' : MajorToCtorOK p := by
-  sorry
+theorem majorToCtor_refines' : MajorToCtorOK p :=
+  fun n hk F hnF s₀ a₀ dn vis fe MM eb mode d rec ro rc major rules hn62 hS hm4 hebm hmaj hr =>
+    RefE.coreSpec (mtcE_spec p hp.toM2CProg hp.majorToCtor (n + 1) s₀ mode vis d rec ro rc major)
+      (mtc_ref p hp hc hpi hE hcc n F hk hnF hn62 dn vis fe eb mode d rec ro rc major hm4 hebm hmaj
+        rules s₀.mem a₀ MM hS hr)
 
 end top
 

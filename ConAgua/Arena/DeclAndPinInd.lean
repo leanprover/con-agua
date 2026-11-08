@@ -120,8 +120,7 @@ theorem decCIs_succ (a : Array Word) (o k : Nat) :
   congr 1; funext j; congr 2; omega
 
 theorem decCIs_zero (a : Array Word) (o : Nat) :
-    decCIs a o 0 = some [] := by
-  sorry
+    decCIs a o 0 = some [] := rfl
 
 theorem lo32_of_lt {w : Word} (h : w.toNat < 2 ^ 32) : lo32 w = w := by
   apply UInt64.toNat_inj.mp
@@ -142,7 +141,46 @@ theorem abnW_eq {m : Mem} {t : Nat}
     ∀ (k : Nat) (bo : Word) (block : List IConstantInfo),
       decCIs (trunc (m.arr64 DLP) t) bo.toNat k = some block → (1 ≤ bo.toNat ∨ k = 0) →
       abnW m bo k = if blockAndNamed (andHs m) block then 1 else 0 := by
-  sorry
+  intro k
+  induction k with
+  | zero =>
+    intro bo block h _
+    rw [decCIs_zero] at h; cases h; rfl
+  | succ k ih =>
+    intro bo block h hbo
+    have hbo1 : 1 ≤ bo.toNat := by omega
+    rw [decCIs_succ] at h
+    simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
+    obtain ⟨c, ⟨v, hv, hc⟩, cs, hcs, rfl⟩ := h
+    obtain ⟨w, hw, rfl⟩ : ∃ w, (trunc (m.arr64 DLP) t)[bo.toNat]? = some w ∧ w.toNat = v := by
+      simp only [nat?, Option.map_eq_some_iff] at hv; exact hv
+    obtain ⟨hwP, -⟩ := trunc_getAP hw (by omega)
+    obtain ⟨x, hx, hxl, hname⟩ := decCI_name hc
+    obtain ⟨hxP, -⟩ := trunc_getAP hx (by omega)
+    have hbolt : bo.toNat < (m.arr64 DLP).size := (Array.getElem?_eq_some_iff.mp hwP).1
+    have hwlt : w.toNat + 1 < (m.arr64 DLP).size := (Array.getElem?_eq_some_iff.mp hxP).1
+    have e1 : rdW (m.arr64 DLP) bo = w := by simp [rdW, hwP]
+    have e2 : rdW (m.arr64 DLP) (w + 1) = x := by
+      have : (w + 1).toNat = w.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
+      simp [rdW, this, hxP]
+    have ebo : (bo + 1).toNat = bo.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
+    have ih' := ih (bo + 1) cs (by rw [ebo]; exact hcs) (Or.inl (by omega))
+    have hx32 := lo32_of_lt hxl
+    have k1 := decI_inj_iff (k := .name) hxl h12
+    have k2 := decI_inj_iff (k := .name) hxl h49
+    have k3 := decI_inj_iff (k := .name) hxl h50
+    have hcon : (andHs m).contains c.name = decide (x = rdW (m.arr64 PINS) 12 ∨
+        x = rdW (m.arr64 PINS) 49 ∨ x = rdW (m.arr64 PINS) 50) := by
+      simp only [hname, ← k1, ← k2, ← k3]
+      simp only [andHs, List.contains_cons, List.contains_nil, Bool.or_false]
+      by_cases g1 : (decI x : NIdx) = decI (rdW (m.arr64 PINS) 12) <;>
+        by_cases g2 : (decI x : NIdx) = decI (rdW (m.arr64 PINS) 49) <;>
+        by_cases g3 : (decI x : NIdx) = decI (rdW (m.arr64 PINS) 50) <;> simp [g1, g2, g3]
+    simp only [abnW, abnHit, e1, e2, hx32, blockAndNamed, hcon]
+    rw [ih']
+    by_cases g : x = rdW (m.arr64 PINS) 12 ∨ x = rdW (m.arr64 PINS) 49 ∨ x = rdW (m.arr64 PINS) 50
+    · rw [ite_eq_left g, decide_eq_true g]; rfl
+    · rw [ite_eq_right g, decide_eq_false g]; rfl
 
 /-- The twin's `andPinNameHs` at a filled pin table: `andHs`, the state unchanged. -/
 theorem andPinNameHs_runW {m : Mem} {a : AState} (hF : PinsFull m a.pins) :

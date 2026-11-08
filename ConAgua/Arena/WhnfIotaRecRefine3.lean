@@ -64,7 +64,7 @@ section cRun
 variable (mode : ConLeche.CheckMode) (r : CoreFnsA) (fe : IFEnv) (depth : Nat) (c : NIdx)
   (us : LsIdx) (sargs : Array EIdx) (n : Nat)
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
+-- RS2B ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem cT_run_find (a : AState) (hf : ∀ cv mI rP rules, fe.find? c ≠ some (.recInfo cv mI rP rules)) :
     (iotaRecCT mode r fe depth c us sargs n).run a = .ok (none, a) := by
   unfold iotaRecCT
@@ -74,16 +74,16 @@ theorem cT_run_find (a : AState) (hf : ∀ cv mI rP rules, fe.find? c ≠ some (
     cases ci with
     | recInfo cv mI rP rules => exact absurd h (hf cv mI rP rules)
     | _ => rfl
--/
+-- RS2E
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
+-- RS2B ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem cT_run_arity (a : AState) (cv : IConstantVal) (mI rP : Nat) (rules : List IRecRule)
     (hf : fe.find? c = some (.recInfo cv mI rP rules)) (hn : n ≠ mI + 1) :
     (iotaRecCT mode r fe depth c us sargs n).run a = .ok (none, a) := by
   simp only [iotaRecCT, hf, hn, ne_eq, not_false_eq_true, ↓reduceIte]; rfl
--/
+-- RS2E
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
+-- RS2B ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem cT_run_check (a : AState) (cv : IConstantVal) (mI rP : Nat) (rules : List IRecRule)
     (usl : Nat) (pe : Option EIdx)
     (hf : fe.find? c = some (.recInfo cv mI rP rules)) (hn : n = mI + 1)
@@ -95,9 +95,9 @@ theorem cT_run_check (a : AState) (cv : IConstantVal) (mI rP : Nat) (rules : Lis
   simp only [iotaRecCT, hf, ne_eq, not_true_eq_false, ↓reduceIte, StateT.run_bind,
     viewLsLen_run, hl, except_ok_bind, hp]
   rw [ite_eq_right hc]; rfl
--/
+-- RS2E
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
+-- RS2B ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem cT_eq_major (a : AState) (cv : IConstantVal) (mI rP : Nat) (rules : List IRecRule)
     (usl : Nat) (pe : Option EIdx)
     (hf : fe.find? c = some (.recInfo cv mI rP rules)) (hn : n = mI + 1)
@@ -110,11 +110,11 @@ theorem cT_eq_major (a : AState) (cv : IConstantVal) (mI rP : Nat) (rules : List
   simp only [iotaRecCT, hf, ne_eq, not_true_eq_false, ↓reduceIte, StateT.run_bind,
     viewLsLen_run, hl, except_ok_bind, hp]
   rw [ite_eq_left hc]
--/
+-- RS2E
 
 end cRun
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
+-- RS2B ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`iota_rec_c` refines the recursor's block, both outcomes**: the errors are
 `iota_rec_major`'s. -/
 theorem c_ref (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
@@ -236,9 +236,9 @@ theorem c_ref (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
   exact RefE.tail_eq (k := irCE.k_iota_rec_major p) (G' := MajorG p N)
     (fun _ => rfl) (fun _ => rfl) (fun hG => ⟨hG.knot.mono (Nat.le_succ N), hG.nv, hG.pm, hG.fire⟩) hT
     (fun _ _ _ h => ⟨h.after, h.res, h.valid⟩) hM
--/
+-- RS2E
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
+-- RS2B ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`iota_rec_c` refines the recursor's block** (`c_ref`'s ok half). -/
 theorem iotaRecC_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
     (hw : WhnfCallees p) (hsup : ∀ fe : IFEnv, SupKeep fe) (hmtc : MajorToCtorOK p)
@@ -255,7 +255,7 @@ theorem iotaRecC_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
     RefE.coreSpec (irCE_spec p hp.recC hp.major (n + 1) s₀ mode vis d c us so sn)
       (c_ref p hp hc hw hsup hmtc hEI hER hEK n hk F hnF hn62 s₀ a₀ dn vis fe MM eb mode d c us so sn xs
         hS hm4 hebm hcw hus hsa hsat)
--/
+-- RS2E
 
 /-! ## `iota_rec_at(mode, vis, d, hd, so, sn)` -/
 
@@ -265,9 +265,10 @@ variable (mode : ConLeche.CheckMode) (r : CoreFnsA) (fe : IFEnv) (depth : Nat) (
 
 theorem at_run_tag (a : AState) (ht : hd.tag ≠ ETag.const) :
     (iotaRecAt mode r fe depth hd sargs n).run a = .ok (none, a) := by
-  sorry
+  have : (hd.tag == ETag.const) = false := by simpa using ht
+  rw [iotaRecAt_eq]; simp only [this, Bool.false_eq_true, ↓reduceIte]; rfl
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
+-- RS2B ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem at_eq_c (a : AState) (c : NIdx) (us : LsIdx)
     (ht : hd.tag = ETag.const) (hv : a.store.viewConst hd = some (c, us)) :
     (iotaRecAt mode r fe depth hd sargs n).run a = (iotaRecCT mode r fe depth c us sargs n).run a := by
@@ -275,7 +276,7 @@ theorem at_eq_c (a : AState) (c : NIdx) (us : LsIdx)
     show Except.ok (a.store.viewConst hd, a) = _; rw [hv]
   rw [iotaRecAt_eq]
   simp only [ht, beq_self_eq_true, ↓reduceIte, StateT.run_bind, hvr, except_ok_bind]
--/
+-- RS2E
 
 end atRun
 
@@ -291,7 +292,29 @@ theorem at_ref (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
     RefE (MajorG p n) (irAtE p (n + 1) s₀.mem mode vis d hd so sn)
       (iotaRecAt (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE hd) xs xs.size) a₀
       (CorePost decOptR dn s₀.mem vis fe M eb ResW) := by
-  sorry
+  have hS := hpre.rel
+  simp only [irAtE]
+  refine RefE.onlySim (fun _ => irAtE.k_iota_rec_head.none ..) (fun _ _ h => h) fun rv m1 c1 => ?_
+  obtain ⟨hm1, hnot, hyes⟩ := irCallW_head p hp.head n s₀.mem a₀ hS.arena.base hd hhd rv m1 c1
+  subst m1
+  simp only [irAtE.k_iota_rec_head]
+  by_cases v0 : rv.headD 0 = 0
+  · rw [ite_eq_left v0]
+    exact RefE.ret (at_run_tag (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decE hd) xs
+      xs.size a₀ (hnot v0)) (CorePost.ret hS rfl
+        ⟨by show HW (0 : Word); unfold HW; decide, by show HW (0 : Word); unfold HW; decide⟩)
+  rw [ite_eq_right v0]
+  obtain ⟨htag, hview, hcw, husw⟩ := hyes v0
+  have hvc := L.Ind.EStore.viewConst_of_view _ _ htag _ _ hview
+  cases n with
+  | zero => exact RefE.of_cls0 (e := .outOfFuel) rfl
+  | succ N =>
+  exact RefE.tail_eq (k := irAtE.k_iota_rec_c p) (G' := MajorG p N)
+    (fun _ => rfl) (fun _ => rfl) (fun hG => ⟨hG.knot.mono (Nat.le_succ N), hG.nv, hG.pm, hG.fire⟩)
+    (at_eq_c (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decE hd) xs xs.size a₀ _ _
+      htag hvc) (fun _ _ _ h => ⟨h.after, h.res, h.valid⟩)
+    (c_ref p hp hc hw hsup hmtc hEI hER hEK N (hk.mono (by omega)) F (by omega) (by omega) s₀ a₀ dn vis
+      fe M eb mode d _ _ so sn xs hS hpre.mode4 hpre.eb_mode hcw husw hsa hsat)
 
 /-- **`iota_rec_at` refines `iotaRecAt`** (`IotaRecAtOK`, what `whnf_app` assumes; `at_ref`'s ok
 half), from the callees' specs and the stub assumption `ErecKeptRec` (the callees the pieces read

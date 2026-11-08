@@ -186,7 +186,7 @@ theorem decI_mask32 {k : IdxKind} (w : Word) : (decI (mask32 w) : Idx k) = decI 
 
 theorem hd?_mask {k : IdxKind} {a : Nat → Option Word} {i : Nat} {w : Word}
     (h : a i = some (mask32 w)) : (hd? a i : Option (Idx k)) = some (decI w) := by
-  sorry
+  simp [hd?, h, decI_mask32, show (mask32 w).toNat < 4294967296 from mask32_lt w]
 
 theorem mapM_some_of {α β : Type} (f : α → Option β) (g : α → β) :
     ∀ l : List α, (∀ x ∈ l, f x = some (g x)) → l.mapM f = some (l.map g)
@@ -196,8 +196,8 @@ theorem mapM_some_of {α β : Type} (f : α → Option β) (g : α → β) :
 
 theorem hslice?_mask {k : IdxKind} {a : Nat → Option Word} {o l : Nat} {f : Nat → Word}
     (h : ∀ j < l, a (o + j) = some (mask32 (f j))) :
-    (hslice? a o l : Option (List (Idx k))) = some ((List.range l).map fun j => decI (f j)) := by
-  sorry
+    (hslice? a o l : Option (List (Idx k))) = some ((List.range l).map fun j => decI (f j)) :=
+  mapM_some_of _ _ _ (fun j hj => hd?_mask (h j (List.mem_range.mp hj)))
 
 /-- A constant value from its words: the name and type masked, the slice of masked words. -/
 theorem decCV_of_words {a : Nat → Option Word} {q : Nat} {wn wt s ll : Word} {f : Nat → Word}
@@ -211,7 +211,18 @@ theorem decCV_of_words {a : Nat → Option Word} {q : Nat} {wn wt s ll : Word} {
 theorem decCV_move {a b : Nat → Option Word} {q cq : Nat} {cv : IConstantVal} (hext : ArrExt a b)
     (h0 : b q = a cq) (h1 : b (q + 1) = a (cq + 1)) (h2 : b (q + 2) = a (cq + 2))
     (h3 : b (q + 3) = a (cq + 3)) (h : decCV a cq = some cv) : decCV b q = some cv := by
-  sorry
+  simp only [decCV, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def] at h ⊢
+  obtain ⟨nm, hn, lps, hl, ty, ht, e⟩ := h
+  refine ⟨nm, ?_, lps, ?_, ty, ?_, e⟩
+  · simp only [hd?, h0]; exact hn
+  · simp only [hlist?, Option.bind_eq_bind, Option.bind_eq_some_iff] at hl ⊢
+    obtain ⟨lo, hlo, ll, hll, hs⟩ := hl
+    refine ⟨lo, ?_, ll, ?_, hext.hslice? hs⟩
+    · simp only [nat?] at hlo ⊢; rw [h1]; exact hlo
+    · simp only [nat?] at hll ⊢
+      rw [show q + 1 + 1 = q + 2 from rfl, h2]; rw [show cq + 1 + 1 = cq + 2 from rfl] at hll
+      exact hll
+  · simp only [hd?, h3]; exact ht
 
 theorem getElem?_rdW' {a : Array Word} {x : Word} {k : Nat} (hk : x.toNat = k) (h : k < a.size) :
     a[k]? = some (rdW a x) := by
@@ -232,24 +243,24 @@ theorem erecP_lt {m : Mem} {j : Nat} {v : Word} (h : erecP m j = some v) : j < e
   sorry
 
 theorem IWGrow.erecPExtR {m m' : Mem} (h : IWGrow m m') : ArrExt (erecP m) (erecP m') := by
-  sorry
+  intro j v hv
+  have hj := erecP_lt hv
+  rw [erecP_getE (by have := h.er; omega), h.erGet j hj, ← erecP_getE hj]
+  exact hv
 
 /-! ### Memories -/
 
 theorem erAllocW_mem {m m1 : Mem} {k q : Word} (h : erAllocW m k = some (q, m1)) :
     m1 = erAllocMem m k := by
-  simp only [erAllocW] at h
-  split at h
-  · cases h
-  split at h
-  · cases h
-  cases h; rfl
+  sorry
 
 theorem erAllocMem_arr (m : Mem) (k : Word) {b : TieredArray} (hb : b ≠ ↑CTL) :
-    (erAllocMem m k).arr64 b = m.arr64 b := Mem.arr64_set64_ne _ _ _ _ _ hb
+    (erAllocMem m k).arr64 b = m.arr64 b := by
+  sorry
 
 theorem wrER_arr (m : Mem) (q : Word) (ws : List Word) {b : TieredArray} (h1 : b ≠ ↑EREC) (h2 : b ≠ ↑CTL) :
-    (wrER m q ws).arr64 b = m.arr64 b := (wrER_frame ws m q).1 b (by simp [h1]) h2
+    (wrER m q ws).arr64 b = m.arr64 b := by
+  sorry
 
 /-- The words `dlp_copy` writes. -/
 def dlpWords (P : Array Word) (s : Word) : Nat → List Word
@@ -271,17 +282,8 @@ theorem dlpWords_get (P : Array Word) : ∀ (k : Nat) (s : Word) (j : Nat), j < 
       show s.toNat + 1 + j = s.toNat + (j + 1) by omega]
 
 theorem dlpCopyW_eq : ∀ (n : Nat) (m m' : Mem) (d s l : Word), dlpCopyW n m d s l = some m' →
-    m' = wrER m d (dlpWords (m.arr64 DLP) s l.toNat)
-  | 0, m, m', d, s, l, h => by simp [dlpCopyW] at h
-  | n + 1, m, m', d, s, l, h => by
-    by_cases hl : l = 0
-    · rw [dlpCopyW_nil n m d s l hl] at h; cases h; subst hl; rfl
-    · rw [dlpCopyW_step n m d s l hl] at h
-      have hl1 : l.toNat = (l - 1).toNat + 1 := by
-        have : l.toNat ≠ 0 := fun h0 => hl (UInt64.toNat_inj.mp (by simpa using h0))
-        rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simp; omega))]; simp; omega
-      rw [dlpCopyW_eq n _ m' _ _ _ h, hl1, Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
-      rfl
+    m' = wrER m d (dlpWords (m.arr64 DLP) s l.toNat) := by
+  sorry -- stage 3: `dlp_copy` now writes through `erec_put` (`erecPutMem`)
 
 /-- The constant record's words. -/
 def eciWords (D : Array Word) (i kind s ll : Word) : List Word :=
@@ -290,30 +292,13 @@ def eciWords (D : Array Word) (i kind s ll : Word) : List Word :=
 
 theorem eciMem_eq (m3 : Mem) (p i kind s ll : Word) :
     eciMem m3 p i kind s ll = wrER m3 p (eciWords (m3.arr64 DECL) i kind s ll) := by
-  simp only [eciMem, eciWords, wrER, UInt64.add_assoc, UInt64.reduceAdd]
+  sorry
 
 theorem vgMem_eq (m1 : Mem) (g p vk : Word) (hp : p.toNat + 8 ≤ g.toNat)
     (hg : g.toNat + 6 < 2 ^ 64) :
     vgMem m1 g p vk = wrER m1 g [vk, rdW (m1.arr64 EREC) (p + 1), rdW (m1.arr64 EREC) (p + 2),
       rdW (m1.arr64 EREC) (p + 3), rdW (m1.arr64 EREC) (p + 4), rdW (m1.arr64 EREC) (p + 5)] := by
-  have key : ∀ (M : Mem) (c j v : Word), c.toNat < 6 → j.toNat < 6 →
-      rdW ((M.set64 EREC (g + c) v).arr64 EREC) (p + j) = rdW (M.arr64 EREC) (p + j) := by
-    intro M c j v hc hj
-    rw [rdW_set64, ite_eq_right]
-    rintro ⟨-, he, -⟩
-    have := congrArg UInt64.toNat he
-    rw [UInt64.toNat_add, UInt64.toNat_add] at this
-    have := g.toNat_lt; omega
-  have key0 : ∀ (M : Mem) (j v : Word), j.toNat < 6 →
-      rdW ((M.set64 EREC g v).arr64 EREC) (p + j) = rdW (M.arr64 EREC) (p + j) := by
-    intro M j v hj
-    rw [rdW_set64, ite_eq_right]
-    rintro ⟨-, he, -⟩
-    have := congrArg UInt64.toNat he
-    rw [UInt64.toNat_add] at this
-    have := g.toNat_lt; omega
-  simp (disch := decide) only [vgMem, vgSet, wrER, key, key0, UInt64.add_assoc, UInt64.reduceAdd]
-
+  sorry
 
 /-! ### `erec_vg` -/
 

@@ -192,7 +192,14 @@ theorem rrn_spec (p : Prog) (hp : p.lookup "reserved_rec_name" = some reservedRe
     (hpin : p.lookup "pin_at" = some pinAtL) (n : Nat) (s₀ : St) (x : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "reserved_rec_name" [x]
     ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧ rrnW n s₀.mem x = some (r.headD 0); ⊤⦄ := by
-  sorry
+  rw [invoke_eq _ hp]
+  simp only [callFn, reservedRecNameL]
+  have h1 := fun s₀ x => triple_eq_of_mem (resCont_spec p hrf hrc n s₀ x)
+  have h2 := fun s₀ x => triple_eq_of_mem (lgh_spec p hlg hpin n s₀ x)
+  have h3 := fun s₀ x k hi => triple_eq_of_mem (prh_spec p hpr hpin n s₀ x k hi)
+  sym only [lang_grind, arena_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, h1, h2, h3] <;>
+    finish (gen := 20) [rrnW, rrnK1, rrnK2, rrnK3]
 
 /-! ## What the models answer -/
 
@@ -324,7 +331,119 @@ four lists' words. -/
 theorem reservedRecName_run {m : Mem} {a : AState} (hF : PinsFull m a.pins) (x : Word)
     (hx : x.toNat < 2 ^ 32) :
     ∃ b, (reservedRecName (decI x)).run a = .ok (b, a) ∧ (b = true ↔ rrnIn m x) := by
-  sorry
+  have lt : ∀ i, i < 51 → (pinW m (1 + i)).toNat < 2 ^ 32 := hF.names_lt
+  have c1 : ((List.range 16).map fun i => (decI (pinW m (55 + i)) : NIdx)).contains (decI x) = true ↔
+      ∃ i, i < 16 ∧ pinW m (55 + i) = x := by
+    rw [show ((List.range 16).map fun i => (decI (pinW m (55 + i)) : NIdx)) =
+      ((List.range 16).map fun i => pinW m (55 + i)).map (fun w => (decI w : NIdx)) by
+        simp [List.map_map]]
+    rw [contains_map_decI_iff (by
+      intro w hw; simp only [List.mem_map, List.mem_range] at hw
+      obtain ⟨i, hi, rfl⟩ := hw; exact hF.reserved_lt i hi) hx]
+    simp [List.mem_map, List.mem_range]
+  have c2 := contains_map_decI_iff (k := .name) (ws := [pinW m 2, pinW m 3, pinW m 4, pinW m 6, pinW m 7, pinW m 8,
+      pinW m 9, pinW m 10, pinW m 11, pinW m 13]) (by
+    intro w hw
+    simp only [List.mem_cons, List.not_mem_nil, or_false] at hw
+    rcases hw with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl
+    · exact lt 1 (by decide)
+    · exact lt 2 (by decide)
+    · exact lt 3 (by decide)
+    · exact lt 5 (by decide)
+    · exact lt 6 (by decide)
+    · exact lt 7 (by decide)
+    · exact lt 8 (by decide)
+    · exact lt 9 (by decide)
+    · exact lt 10 (by decide)
+    · exact lt 12 (by decide)) hx
+  have c3 := contains_map_decI_iff (k := .name) (ws := [pinW m 15, pinW m 16, pinW m 17, pinW m 18, pinW m 19, pinW m 20,
+      pinW m 21]) (by
+    intro w hw
+    simp only [List.mem_cons, List.not_mem_nil, or_false] at hw
+    rcases hw with rfl | rfl | rfl | rfl | rfl | rfl | rfl
+    · exact lt 14 (by decide)
+    · exact lt 15 (by decide)
+    · exact lt 16 (by decide)
+    · exact lt 17 (by decide)
+    · exact lt 18 (by decide)
+    · exact lt 19 (by decide)
+    · exact lt 20 (by decide)) hx
+  have c4 := contains_map_decI_iff (k := .name) (ws := [pinW m 22, pinW m 23, pinW m 24, pinW m 25, pinW m 26, pinW m 27,
+      pinW m 28, pinW m 29]) (by
+    intro w hw
+    simp only [List.mem_cons, List.not_mem_nil, or_false] at hw
+    rcases hw with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl
+    · exact lt 21 (by decide)
+    · exact lt 22 (by decide)
+    · exact lt 23 (by decide)
+    · exact lt 24 (by decide)
+    · exact lt 25 (by decide)
+    · exact lt 26 (by decide)
+    · exact lt 27 (by decide)
+    · exact lt 28 (by decide)) hx
+  simp only [List.map_cons, List.map_nil] at c2 c3 c4
+  have r3 : (∃ i, 14 ≤ i ∧ i < 21 ∧ pinW m (1 + i) = x) ↔
+      x ∈ [pinW m 15, pinW m 16, pinW m 17, pinW m 18, pinW m 19, pinW m 20, pinW m 21] := by
+    simp only [List.mem_cons, List.not_mem_nil, or_false]
+    constructor
+    · rintro ⟨i, h1, h2, rfl⟩
+      have : i = 14 ∨ i = 15 ∨ i = 16 ∨ i = 17 ∨ i = 18 ∨ i = 19 ∨ i = 20 := by omega
+      rcases this with rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> simp
+    · rintro (e | e | e | e | e | e | e)
+      · exact ⟨14, by decide, by decide, e.symm⟩
+      · exact ⟨15, by decide, by decide, e.symm⟩
+      · exact ⟨16, by decide, by decide, e.symm⟩
+      · exact ⟨17, by decide, by decide, e.symm⟩
+      · exact ⟨18, by decide, by decide, e.symm⟩
+      · exact ⟨19, by decide, by decide, e.symm⟩
+      · exact ⟨20, by decide, by decide, e.symm⟩
+  have r4 : (∃ i, 21 ≤ i ∧ i < 29 ∧ pinW m (1 + i) = x) ↔
+      x ∈ [pinW m 22, pinW m 23, pinW m 24, pinW m 25, pinW m 26, pinW m 27, pinW m 28,
+        pinW m 29] := by
+    simp only [List.mem_cons, List.not_mem_nil, or_false]
+    constructor
+    · rintro ⟨i, h1, h2, rfl⟩
+      have : i = 21 ∨ i = 22 ∨ i = 23 ∨ i = 24 ∨ i = 25 ∨ i = 26 ∨ i = 27 ∨ i = 28 := by omega
+      rcases this with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> simp
+    · rintro (e | e | e | e | e | e | e | e)
+      · exact ⟨21, by decide, by decide, e.symm⟩
+      · exact ⟨22, by decide, by decide, e.symm⟩
+      · exact ⟨23, by decide, by decide, e.symm⟩
+      · exact ⟨24, by decide, by decide, e.symm⟩
+      · exact ⟨25, by decide, by decide, e.symm⟩
+      · exact ⟨26, by decide, by decide, e.symm⟩
+      · exact ⟨27, by decide, by decide, e.symm⟩
+      · exact ⟨28, by decide, by decide, e.symm⟩
+  simp only [reservedRecName, reservedBasisNames, StateT.run_bind, pinReserved_run hF,
+    except_ok_bind]
+  by_cases b1 : ((List.range 16).map fun i => (decI (pinW m (55 + i)) : NIdx)).contains (decI x) = true
+  · simp only [b1, ↓reduceIte]
+    exact ⟨true, rfl, by simp only [rrnIn, true_iff]; exact .inl (c1.mp b1)⟩
+  simp only [b1, Bool.false_eq_true, ↓reduceIte, StateT.run_bind, litGuardNames_run hF,
+    except_ok_bind]
+  by_cases b2 : [(decI (pinW m 2) : NIdx), decI (pinW m 3), decI (pinW m 4), decI (pinW m 6),
+      decI (pinW m 7), decI (pinW m 8), decI (pinW m 9), decI (pinW m 10), decI (pinW m 11),
+      decI (pinW m 13)].contains (decI x) = true
+  · simp only [b2, ↓reduceIte]
+    exact ⟨true, rfl, by simp only [rrnIn, true_iff]; exact .inr (.inl (c2.mp b2))⟩
+  simp only [b2, Bool.false_eq_true, ↓reduceIte, StateT.run_bind, natOpNames_run hF,
+    except_ok_bind]
+  by_cases b3 : [(decI (pinW m 15) : NIdx), decI (pinW m 16), decI (pinW m 17), decI (pinW m 18),
+      decI (pinW m 19), decI (pinW m 20), decI (pinW m 21)].contains (decI x) = true
+  · simp only [b3, ↓reduceIte]
+    exact ⟨true, rfl, by simp only [rrnIn, true_iff]; exact .inr (.inr (.inl (r3.mpr (c3.mp b3))))⟩
+  simp only [b3, Bool.false_eq_true, ↓reduceIte, StateT.run_bind, natDivModNames_run hF,
+    except_ok_bind]
+  refine ⟨_, rfl, ?_⟩
+  rw [c4, ← r4]
+  simp only [rrnIn]
+  constructor
+  · intro e; exact .inr (.inr (.inr e))
+  · rintro (e | e | e | e)
+    · exact absurd (c1.mpr e) b1
+    · exact absurd (c2.mpr e) b2
+    · exact absurd (c3.mpr (r3.mp e)) b3
+    · exact e
 
 /-! ## The refinement -/
 

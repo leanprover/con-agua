@@ -451,6 +451,7 @@ theorem decCI_rec_rd {b : Array Word} {dn : NIdx → Option ConLeche.Name} {q : 
       decRules (aread b) (rdW b (q + 7)).toNat (rdW b (q + 8)).toNat = some rules) ∧
     (rdW b q ≠ 5 → ∀ cv mI rP rules, ci ≠ .recInfo cv mI rP rules) := by
   sorry
+
 -/
 
 /-- A constructor record by its kind word `4`. -/
@@ -459,30 +460,85 @@ theorem decCI_ctor_rd {b : Array Word} {dn : NIdx → Option ConLeche.Name} {q :
     ∃ cv np nf, ci = .ctorInfo cv np nf ∧ decCV (aread b) (q.toNat + 1) = some cv := by
   sorry
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- The common fields of a decoded rule record. -/
 theorem decRule_tail {b : Array Word} {q : Nat} {fire : IRecRuleFire} {rl : IRecRule}
-    (h : ((hd? (aread b) q).bind fun c => (nat? (aread b) (q + 1)).bind fun nf => (nat? (aread b) (q + 2)).bind fun cp =>
-      (hd? (aread b) (q + 8)).bind fun rhs => (bool? (aread b) (q + 9)).bind fun k => (bool? (aread b) (q + 10)).bind
-        fun eta => pure (IRecRule.mk c nf cp fire rhs k eta)) = some rl) :
+    (h : ((hd? (aread b) q).bind fun c => (nat? (aread b) (q + 1)).bind fun nf =>
+      (hd? (aread b) (q + 8)).bind fun rhs => pure (IRecRule.mk c nf fire rhs)) = some rl) :
     rl.fire = fire ∧ hd? (aread b) q = some rl.ctor ∧ nat? (aread b) (q + 1) = some rl.nfields ∧
-      nat? (aread b) (q + 2) = some rl.ctorParams ∧ hd? (aread b) (q + 8) = some rl.rhs ∧
-      bool? (aread b) (q + 9) = some rl.k := by
-  sorry
--/
+      hd? (aread b) (q + 8) = some rl.rhs := by
+  simp only [Option.bind_eq_some_iff, Option.pure_def, Option.some.injEq] at h
+  obtain ⟨c, hc, nf, hnf, rhs, hrhs, rfl⟩ := h
+  exact ⟨rfl, hc, hnf, hrhs⟩
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
-/-- The words of a rule record. -/
+/-- The words of a rule record (`EnvRec.lean`'s layout: fire kind `q + 3`, `0` plain, `1` nested
+with its pins at `q + 6`, `2` levels). -/
 theorem decRule_rd {b : Array Word} {q : Word} {rl : IRecRule} (hsz : b.size < 2 ^ 63)
     (h : decRule (aread b) q.toNat = some rl) :
     HW (rdW b q) ∧ rl.ctor = decI (rdW b q) ∧ rl.nfields = (rdW b (q + 1)).toNat ∧
-      rl.ctorParams = (rdW b (q + 2)).toNat ∧
-      (rdW b (q + 3) ≠ 1 → rl.fire = .plain) ∧
+      (rdW b (q + 3) = 0 → rl.fire = .plain) ∧
       (rdW b (q + 3) = 1 → ∃ lv pins, rl.fire = .nested lv pins ∧
         hslice? (aread b) (rdW b (q + 6)).toNat (rdW b (q + 7)).toNat = some pins) ∧
-      HW (rdW b (q + 8)) ∧ rl.rhs = decI (rdW b (q + 8)) ∧ rl.k = (rdW b (q + 9) != 0) := by
-  sorry
--/
+      (rdW b (q + 3) = 2 → ∃ lv, rl.fire = .levels lv) ∧
+      HW (rdW b (q + 8)) ∧ rl.rhs = decI (rdW b (q + 8)) := by
+  simp only [decRule, Option.bind_eq_bind, Option.bind_eq_some_iff] at h
+  obtain ⟨kd, hkd, h⟩ := h
+  simp only [nat?, Option.map_eq_some_iff] at hkd
+  obtain ⟨w3, hw3, rfl⟩ := hkd
+  have e3 : rdW b (q + 3) = w3 := irRdW hsz 3 rfl hw3
+  have common : ∀ fire, ((hd? (aread b) q.toNat).bind fun c => (nat? (aread b) (q.toNat + 1)).bind
+      fun nf => (hd? (aread b) (q.toNat + 8)).bind fun rhs => pure (IRecRule.mk c nf fire rhs)) =
+      some rl →
+      HW (rdW b q) ∧ rl.ctor = decI (rdW b q) ∧ rl.nfields = (rdW b (q + 1)).toNat ∧
+      HW (rdW b (q + 8)) ∧ rl.rhs = decI (rdW b (q + 8)) := by
+    intro fire hf
+    obtain ⟨-, hc, hnf, hrhs⟩ := decRule_tail hf
+    obtain ⟨w0, hw0, hl0, e0⟩ := hd?_some hc
+    obtain ⟨w8, hw8, hl8, e8⟩ := hd?_some hrhs
+    simp only [nat?, Option.map_eq_some_iff] at hnf
+    obtain ⟨w1, hw1, e1⟩ := hnf
+    rw [irRdW0 hw0, irRdW hsz 1 rfl hw1, irRdW hsz 8 rfl hw8]
+    exact ⟨hl0, e0, e1.symm, hl8, e8⟩
+  rcases hk : w3.toNat with _ | _ | _ | k
+  · rw [hk] at h
+    simp only [Option.bind_some] at h
+    obtain ⟨c1, c2, c3, c5, c6⟩ := common _ h
+    have hf := (decRule_tail h).1
+    have h30 : rdW b (q + 3) = 0 := by rw [e3]; exact UInt64.toNat_inj.mp (by rw [hk]; rfl)
+    refine ⟨c1, c2, c3, fun _ => hf, fun h3 => ?_, fun h3 => ?_, c5, c6⟩ <;>
+      rw [h30] at h3 <;> exact absurd h3 (by decide)
+  · rw [hk] at h
+    cases hlv : hlist? (k := .level) (aread b) (q.toNat + 4) with
+    | none => rw [hlv] at h; simp at h
+    | some lv =>
+    cases hp : hlist? (k := .expr) (aread b) (q.toNat + 6) with
+    | none => rw [hlv, hp] at h; simp at h
+    | some pins =>
+    rw [hlv, hp] at h
+    simp only [Option.bind_some] at h
+    obtain ⟨c1, c2, c3, c5, c6⟩ := common _ h
+    have hf := (decRule_tail h).1
+    have h31 : rdW b (q + 3) = 1 := by rw [e3]; exact UInt64.toNat_inj.mp (by rw [hk]; rfl)
+    refine ⟨c1, c2, c3, fun h3 => ?_, fun _ => ⟨lv, pins, hf, ?_⟩, fun h3 => ?_, c5, c6⟩
+    · rw [h31] at h3; exact absurd h3 (by decide)
+    · simp only [hlist?, nat?, Option.bind_eq_bind, Option.bind_eq_some_iff,
+        Option.map_eq_some_iff] at hp
+      obtain ⟨o, ⟨w6, hw6, rfl⟩, c, ⟨w7, hw7, rfl⟩, hs⟩ := hp
+      rw [irRdW hsz 6 rfl hw6, irRdW hsz 7 rfl (by rw [← hw7]; congr 1)]
+      exact hs
+    · rw [h31] at h3; exact absurd h3 (by decide)
+  · rw [hk] at h
+    cases hlv : hlist? (k := .level) (aread b) (q.toNat + 4) with
+    | none => rw [hlv] at h; simp at h
+    | some lv =>
+    rw [hlv] at h
+    simp only [Option.bind_some] at h
+    obtain ⟨c1, c2, c3, c5, c6⟩ := common _ h
+    have hf := (decRule_tail h).1
+    have h32 : rdW b (q + 3) = 2 := by rw [e3]; exact UInt64.toNat_inj.mp (by rw [hk]; rfl)
+    refine ⟨c1, c2, c3, fun h3 => ?_, fun h3 => ?_, fun _ => ⟨lv, hf⟩, c5, c6⟩ <;>
+      rw [h32] at h3 <;> exact absurd h3 (by decide)
+  · rw [hk] at h
+    simp at h
 
 theorem callW_erecPush_no (p : Prog) (hp : p.lookup "erec_push" = some erecPushL) (n : Nat) (m : Mem)
     (o c kd : Word) (hk : kd ≠ 1) (r : List Word) (m' : Mem)

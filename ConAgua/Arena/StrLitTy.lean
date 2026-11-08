@@ -140,7 +140,7 @@ theorem sTy_call (f : FnName) (hf : p.lookup f = some stringTyOkL)
     (hS : CoreS dn m a vis fe M eb) {found q : Word}
     (hdec : found ≠ 0 → ∃ ci, decCI (erecP m) q.toNat = some ci)
     (h : callW p n f [found, q] m = some (r, m')) :
-    CoreRef (stringTyOk (decFound dn m found q)) a decBool dn m vis fe M eb r m' := by
+    CoreRef (stringTyOk (envFound m found q)) a decBool dn m vis fe M eb r m' := by
   cases n with
   | zero => rw [callW_zero] at h; cases h
   | succ n =>
@@ -151,12 +151,12 @@ theorem sTy_call (f : FnName) (hf : p.lookup f = some stringTyOkL)
     simp only [Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨hr, hm⟩ := hW
     rw [← hm]
-    simp only [decFound, hf0, ↓reduceIte]
+    simp only [envFound, hf0, ↓reduceIte]
     exact cref_run (v := false) rfl (coreAfter_refl hS) (by rw [decBool, ← hr]; rfl)
       (by unfold ResH HW; rw [← hr]; decide)
   rw [ite_eq_right hf0] at hW
   obtain ⟨ci, hci⟩ := hdec hf0
-  have hdf : decFound dn m found q = some ci := by simp only [decFound, hf0, ↓reduceIte, hci]
+  have hdf : envFound m found q = some ci := by simp only [envFound, hf0, ↓reduceIte, hci]
   rw [hdf]
   cases h1 : callW p n "str_cv" [q] m with
   | none => rw [h1] at hW; cases hW
@@ -203,7 +203,7 @@ theorem sTy_call (f : FnName) (hf : p.lookup f = some stringTyOkL)
 theorem stringTyOk_call (hS : CoreS dn m a vis fe M eb) {found q : Word}
     (hdec : found ≠ 0 → ∃ ci, decCI (erecP m) q.toNat = some ci)
     (h : callW p n "string_ty_ok" [found, q] m = some (r, m')) :
-    CoreRef (stringTyOk (decFound dn m found q)) a decBool dn m vis fe M eb r m' :=
+    CoreRef (stringTyOk (envFound m found q)) a decBool dn m vis fe M eb r m' :=
   sTy_call p hp "string_ty_ok" hp.stringTyOk hS hdec h
 
 /-- **`char_ty_ok` refines `charTyOk`.** -/
@@ -211,7 +211,7 @@ theorem stringTyOk_call (hS : CoreS dn m a vis fe M eb) {found q : Word}
 theorem charTyOk_call (hS : CoreS dn m a vis fe M eb) {found q : Word}
     (hdec : found ≠ 0 → ∃ ci, decCI (erecP m) q.toNat = some ci)
     (h : callW p n "char_ty_ok" [found, q] m = some (r, m')) :
-    CoreRef (charTyOk (decFound dn m found q)) a decBool dn m vis fe M eb r m' := by
+    CoreRef (charTyOk (envFound m found q)) a decBool dn m vis fe M eb r m' := by
   rw [charTyOk_eq]; exact sTy_call p hp "char_ty_ok" hp.charTyOk hS hdec h
 
 end calls

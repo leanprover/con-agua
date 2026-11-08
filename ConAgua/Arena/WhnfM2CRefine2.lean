@@ -140,12 +140,12 @@ theorem callW_mkAppN' (hp : SpineProg p) (n : Nat) (m : Mem) (a₀ : AState) (hD
     (mkAppNL_spec p hp.derb hp.appf hp.appp hp.appi hp.mkapp hp.mkn n _ f o k) h
   exact ⟨hok, hD', hres, hfr, mkAppNFromW_hw k.toNat m a₀ f o k 0 (by simp) hD hf _ _ hm.2.2⟩
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
+-- RS2B ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`env_find` as a run** (`IotaProg'`'s lookups). -/
 theorem callW_envFindI (hp : IotaProg' p) (n : Nat) (m : Mem) {dn : NIdx → Option ConLeche.Name}
     {fe : IFEnv} (vis w : Word) (hE : EnvR m vis fe) (hw : HW w) (r : List Word) (m' : Mem)
     (h : callW p n "env_find" [w, vis] m = some (r, m')) :
-    m' = m ∧ fe.find? (decI w) = decFound dn m (r.headD 0) (r.tail.headD 0) ∧
+    m' = m ∧ fe.find? (decI w) = envFound m (r.headD 0) (r.tail.headD 0) ∧
     (r.headD 0 ≠ 0 → ∃ ci, decCI (erecP m) (r.tail.headD 0).toNat = some ci) := by
   obtain ⟨t₁, ht₁, hm₁, -, hfind⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (envFind_refines p hp.envix hp.envrow hp.envfind n _ vis w hE hw) h
@@ -156,7 +156,7 @@ theorem callW_envFindI (hp : IotaProg' p) (n : Nat) (m : Mem) {dn : NIdx → Opt
   obtain ⟨ci, hci⟩ := hE.found_some w hw htag hrow
   rw [← hq] at hci
   exact ⟨ci, hci⟩
--/
+-- RS2E
 
 end progs
 

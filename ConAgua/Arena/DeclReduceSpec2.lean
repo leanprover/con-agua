@@ -63,7 +63,11 @@ theorem mpW_ok {m m' : Mem} {a : AState} {q pin : Word} {r : List Word} {cv cv' 
     (h1 : decCV (erA m) q.toNat = some cv) (h2 : decCV (erA m) pin.toNat = some cv') :
     m' = m ∧ (cv.matchesPin cv').run a = .ok (decide (cv = cv'), a) ∧
       decW0B m' r (decide (cv = cv')) := by
-  sorry
+  simp only [mpW, Option.some.injEq, Prod.mk.injEq] at h
+  obtain ⟨rfl, rfl⟩ := h
+  rw [cvEqB_ok hsz h1 h2, matchesPin_eq]
+  refine ⟨rfl, rfl, ?_⟩
+  by_cases e : cv = cv' <;> simp [e, decW0B]
 
 /-- **`matches_pin(q, pin)` refines `IConstantVal.matchesPin`** (sorry-free). -/
 @[refines ConRon.Arena.IConstantVal.matchesPin]
@@ -90,14 +94,46 @@ theorem decCI_kind0 {a : Array Word} {dn : NIdx → Option ConLeche.Name} {p : N
     {ci : IConstantInfo} {w : Word} (h : decCI (aread a) p = some ci) (hw : a[p]? = some w) :
     (w = 0 → ∃ cv, decCV (aread a) (p + 1) = some cv ∧ ci = .axiomInfo cv) ∧
       (w ≠ 0 → ∀ cv, ci ≠ .axiomInfo cv) := by
-  sorry
+  obtain ⟨wk, e, hk⟩ := ciD h
+  rw [hw] at e; cases e
+  constructor
+  · intro h0
+    subst h0
+    rcases hk with ⟨-, cv, hcv, rfl⟩ | ⟨h1, -⟩ | ⟨h1, -⟩ | ⟨h1, -⟩ | ⟨h1, -⟩ | ⟨h1, -⟩
+    · exact ⟨cv, hcv, rfl⟩
+    all_goals simp at h1
+  · intro h0 cv hc
+    subst hc
+    rcases hk with ⟨h1, -⟩ | ⟨-, _, _, _, -, -, -, h2⟩ | ⟨-, _, -, h2⟩ | ⟨-, _, _, -, -, h2⟩ |
+      ⟨-, _, _, _, -, -, -, h2⟩ | ⟨-, _, _, _, _, _, _, -, -, -, -, -, -, h2⟩
+    · exact h0 (UInt64.toNat_inj.mp (by simpa using h1))
+    all_goals cases h2
 
 /-- A record of kind word `3` is an `indInfo`, any other kind word is not. -/
 theorem decCI_kind3 {a : Array Word} {dn : NIdx → Option ConLeche.Name} {p : Nat}
     {ci : IConstantInfo} {w : Word} (h : decCI (aread a) p = some ci) (hw : a[p]? = some w) :
     (w = 3 → ∃ cv caps, decCV (aread a) (p + 1) = some cv ∧ ci = .indInfo cv caps) ∧
       (w ≠ 3 → ∀ cv caps, ci ≠ .indInfo cv caps) := by
-  sorry
+  obtain ⟨wk, e, hk⟩ := ciD h
+  rw [hw] at e; cases e
+  constructor
+  · intro h0
+    subst h0
+    rcases hk with ⟨h1, -⟩ | ⟨h1, -⟩ | ⟨h1, -⟩ | ⟨-, cv, caps, hcv, -, rfl⟩ | ⟨h1, -⟩ | ⟨h1, -⟩
+    · simp at h1
+    · simp at h1
+    · simp at h1
+    · exact ⟨cv, caps, hcv, rfl⟩
+    all_goals simp at h1
+  · intro h0 cv caps hc
+    subst hc
+    rcases hk with ⟨-, _, -, h2⟩ | ⟨-, _, _, _, -, -, -, h2⟩ | ⟨-, _, -, h2⟩ | ⟨h1, -⟩ |
+      ⟨-, _, _, _, -, -, -, h2⟩ | ⟨-, _, _, _, _, _, _, -, -, -, -, -, -, h2⟩
+    · cases h2
+    · cases h2
+    · cases h2
+    · exact h0 (UInt64.toNat_inj.mp (by simpa using h1))
+    all_goals cases h2
 
 /-! ## `reduce_stored_ok(vis, c)` -/
 
@@ -117,18 +153,18 @@ def rsoK1 (n : Nat) (c : Word) : Option (List Word × Mem) → Option (List Word
     else if rdW (m1.arr64 EREC) (r1.tail.headD 0) ≠ 0 then some ([0], m1)
     else rsoK2 (r1.tail.headD 0) (callW p n "reduce_op_cv_a" [c] m1)
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
+-- RS2B ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **The model of `reduce_stored_ok(vis, c)`.** -/
 def rsoW : Nat → Mem → Word → Word → Option (List Word × Mem)
   | 0, _, _, _ => none
   | n + 1, m, vis, c => rsoK1 p n c (envFindW m c vis)
--/
+-- RS2E
 
 section arms
 variable (n : Nat) (m m1 m2 : Mem) (vis c q : Word) (r1 r2 : List Word)
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
+-- RS2B ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem rsoW_step : rsoW p (n + 1) m vis c = rsoK1 p n c (envFindW m c vis) := rfl
--/
+-- RS2E
 theorem rsoK1_some : rsoK1 p n c (some (r1, m1)) =
     if r1.headD 0 = 0 then some ([0], m1)
     else if rdW (m1.arr64 EREC) (r1.tail.headD 0) ≠ 0 then some ([0], m1)
@@ -150,7 +186,7 @@ structure RedProg (p : Prog) : Prop where
   pa : p.lookup "pin_at" = some pinAtL
   rom : L.Rom.RomRefs p
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
+-- RS2B ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem rso_specW (h : RedProg p) (n : Nat) (s₀ : St) (vis c : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "reduce_stored_ok" [vis, c]
     ⦃fun r s' => LocEq s' s₀ ∧ rsoW p n s₀.mem vis c = some (r, s'.mem); ⊤⦄ := by
@@ -164,11 +200,11 @@ theorem rso_specW (h : RedProg p) (n : Nat) (s₀ : St) (vis c : Word) :
         callW_spec p n "env_find", callW_spec p n "reduce_op_cv_a",
         mp_specW p h.canon h.mp n] <;>
       finish (gen := 20) [rdW_eq, mpW]
--/
+-- RS2E
 
 end rso
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
+-- RS2B ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`reduce_stored_ok(vis, c)` refines `reduceStoredOk`** at the model level. -/
 theorem rsoW_ok {p : Prog} (h : RedProg p) {dn : NIdx → Option ConLeche.Name} {vis : Word}
     {fe : IFEnv} {a : AState} {n : Nat} {m m' : Mem} {c : Word} {r : List Word}
@@ -227,9 +263,9 @@ theorem rsoW_ok {p : Prog} (h : RedProg p) {dn : NIdx → Option ConLeche.Name} 
   refine ⟨_, _, ?_, hS2, hg2, hd3⟩
   simp only [reduceStoredOk, hfind, hci, StateT.run_bind, hrun2, exc_ok_bind']
   exact hrun3
--/
+-- RS2E
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
+-- RS2B ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`reduce_stored_ok(vis, c)` refines `reduceStoredOk`** (through `rom_cv`'s stub). -/
 @[refines ConRon.Arena.reduceStoredOk]
 theorem reduceStoredOk_refines (p : Prog) (h : RedProg p) (dn : NIdx → Option ConLeche.Name)
@@ -242,7 +278,7 @@ theorem reduceStoredOk_refines (p : Prog) (h : RedProg p) (dn : NIdx → Option 
   obtain ⟨b, a', hrun, hS', hg, hd⟩ := rsoW_ok h hm hS hc
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
   exact ⟨hl, hok, by rw [hst, hres]; exact ⟨hS', hg, hd⟩⟩
--/
+-- RS2E
 
 /-! ## `reduce_elem_ok(vis, c)` -/
 
@@ -262,12 +298,12 @@ def reoB2 (n : Nat) : Option (List Word × Mem) → Option (List Word × Mem)
     else if rdW (m3.arr64 EREC) (r3.tail.headD 0) ≠ 3 then some ([0], m3)
     else reoB3 (r3.tail.headD 0) (callW p n "rom_cv" [5] m3)
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
+-- RS2B ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- `Bool`: after the pin. -/
 def reoB1 (n : Nat) (vis : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r2, m2) => reoB2 p n (envFindW m2 (r2.headD 0) vis)
--/
+-- RS2E
 
 /-- `Nat`: after `rom_ci(1)`, the comparison (a miss answers `0`). -/
 def reoN3 (r3 : List Word) : Option (List Word × Mem) → Option (List Word × Mem)
@@ -281,46 +317,46 @@ def reoN2 (n : Nat) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r3, m3) => reoN3 r3 (callW p n "rom_ci" [1] m3)
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
+-- RS2B ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- `Nat`: after the pin. -/
 def reoN1 (n : Nat) (vis : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r2, m2) => reoN2 p n (envFindW m2 (r2.headD 0) vis)
--/
+-- RS2E
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
+-- RS2B ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- After the `reduceNat` pin. -/
 def reoK1 (n : Nat) (vis c : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r1, m1) => if c = r1.headD 0 then reoN1 p n vis (pinAtW m1 1) else reoB1 p n vis (pinAtW m1 29)
--/
+-- RS2E
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
+-- RS2B ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **The model of `reduce_elem_ok(vis, c)`.** -/
 def reoW : Nat → Mem → Word → Word → Option (List Word × Mem)
   | 0, _, _, _ => none
   | n + 1, m, vis, c => reoK1 p n vis c (pinAtW m 43)
--/
+-- RS2E
 
 section arms
 variable (n : Nat) (m m1 m2 m3 m4 : Mem) (vis c q : Word) (r1 r2 r3 r4 : List Word)
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
+-- RS2B ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem reoW_step : reoW p (n + 1) m vis c = reoK1 p n vis c (pinAtW m 43) := rfl
--/
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
+-- RS2E
+-- RS2B ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem reoK1_some : reoK1 p n vis c (some (r1, m1)) =
     if c = r1.headD 0 then reoN1 p n vis (pinAtW m1 1) else reoB1 p n vis (pinAtW m1 29) := rfl
--/
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
+-- RS2E
+-- RS2B ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem reoN1_some : reoN1 p n vis (some (r2, m2)) = reoN2 p n (envFindW m2 (r2.headD 0) vis) := rfl
--/
+-- RS2E
 theorem reoN2_some : reoN2 p n (some (r3, m3)) = reoN3 r3 (callW p n "rom_ci" [1] m3) := rfl
 theorem reoN3_some : reoN3 r3 (some (r4, m4)) =
     if r3.headD 0 = 0 then some ([0], m4)
     else some ([if ciEqB (m4.arr64 EREC) (r3.tail.headD 0) (r4.headD 0) then 1 else 0], m4) := rfl
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
+-- RS2B ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem reoB1_some : reoB1 p n vis (some (r2, m2)) = reoB2 p n (envFindW m2 (r2.headD 0) vis) := rfl
--/
+-- RS2E
 theorem reoB2_some : reoB2 p n (some (r3, m3)) =
     if r3.headD 0 = 0 then some ([0], m3)
     else if rdW (m3.arr64 EREC) (r3.tail.headD 0) ≠ 3 then some ([0], m3)
@@ -337,7 +373,7 @@ grind_pattern [ind_grind] reoN3_some => reoN3 r3 (some (r4, m4))
 grind_pattern [ind_grind] reoB2_some => reoB2 p n (some (r3, m3))
 grind_pattern [ind_grind] reoB3_some => reoB3 q (some (r4, m4))
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
+-- RS2B ronsync2 stage 2: commented out (statement at the old twin/L)
 set_option maxHeartbeats 1600000 in
 theorem reo_specW (h : RedProg p) (n : Nat) (s₀ : St) (vis c : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "reduce_elem_ok" [vis, c]
@@ -352,11 +388,11 @@ theorem reo_specW (h : RedProg p) (n : Nat) (s₀ : St) (vis c : Word) :
         callW_spec p n "env_find", callW_spec p n "rom_ci",
         callW_spec p n "rom_cv", ciEq_spec' p h.canon n, mp_specW p h.canon h.mp n] <;>
       finish (gen := 20) [rdW_eq, mpW]
--/
+-- RS2E
 
 end reo
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
+-- RS2B ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`reduce_elem_ok(vis, c)` refines `reduceElemOk`** at the model level. -/
 theorem reoW_ok {p : Prog} {dn : NIdx → Option ConLeche.Name} (hdn : DnInj dn) (hR : L.Rom.RomRefs p) {vis : Word}
     {fe : IFEnv} {a : AState} {n : Nat} {m m' : Mem} {c : Word} {r : List Word}
@@ -471,9 +507,9 @@ theorem reoW_ok {p : Prog} {dn : NIdx → Option ConLeche.Name} (hdn : DnInj dn)
     rw [hpre, hfind, hci]
     simp only [StateT.run_bind, hrun4', exc_ok_bind']
     exact hrun5
--/
+-- RS2E
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
+-- RS2B ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`reduce_elem_ok(vis, c)` refines `reduceElemOk`** (through the ROM stubs). -/
 @[refines ConRon.Arena.reduceElemOk]
 theorem reduceElemOk_refines (p : Prog) (h : RedProg p) (dn : NIdx → Option ConLeche.Name)
@@ -486,6 +522,6 @@ theorem reduceElemOk_refines (p : Prog) (h : RedProg p) (dn : NIdx → Option Co
   obtain ⟨b, a', hrun, hS', hg, hd⟩ := reoW_ok hdn h.rom hm hS hc
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
   exact ⟨hl, hok, by rw [hst, hres]; exact ⟨hS', hg, hd⟩⟩
--/
+-- RS2E
 
 end L.Arena

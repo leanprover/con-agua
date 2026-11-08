@@ -197,7 +197,7 @@ theorem viewLs_run' (h : LsIdx) (a : AState) (ids : List LIdx) (hv : a.store.lss
 
 theorem lsWords_length (ids : List LIdx) : (lsWords ids).length = ids.length := by simp [lsWords]
 
-theorem word_lt32 {k : IdxKind} (x : Idx k) : x.word.toUInt64.toNat < 2 ^ 32 := by
+theorem nidx_word_lt32 {k : IdxKind} (x : Idx k) : x.word.toUInt64.toNat < 2 ^ 32 := by
   simp only [UInt32.toNat_toUInt64]; exact x.word.toNat_lt
 
 theorem hslice_sliceL {P : Array Word} {o l : Nat} {ids : List LIdx}

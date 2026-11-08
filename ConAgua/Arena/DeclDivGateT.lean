@@ -40,7 +40,7 @@ open ConRon.Bridge (CheckOK StepOK PinsDenote CoreStep)
 
 local notation "V" => ConLeche.CheckMode.verified
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
+-- RS2B ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`defn_div_gate(vis, w, n)` under `StageC`**: from the stage relation at the pushed view `w`
 (extended index `fe2`), `StageC` at the pre-insertion view `vis` (con-ron's `CheckOK` at the
 environment `env` before the push), `env`'s well-formedness, the pushed index's `StepOK` (at
@@ -59,9 +59,9 @@ def DivGateSpecC (p : Prog) (pins : List INatOpPinSet) : Prop :=
     ∃ a', (divGateT pins (fe2.restrictTo vis.toNat) fe2 (decI n)).run a = .ok ((), a') ∧
       StageR w fe2 m' a' ∧ StageC dn vis (fe2.restrictTo vis.toNat) env m' a' ∧
       Ext a.store a'.store ∧ IWGrow m m' ∧ PinSetsR m' pins ∧ MemFrame stepA stepC m m'
--/
+-- RS2E
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
+-- RS2B ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`defn_div_gate`'s error claim under `StageC`** (the error half of `DivGateSpecC`). -/
 def DivGateSpecE (p : Prog) (pins : List INatOpPinSet) : Prop :=
   ∀ (dn : NIdx → Option ConLeche.Name), DnInj dn → ∀ (vis w : Word) (fe2 : IFEnv)
@@ -73,9 +73,9 @@ def DivGateSpecE (p : Prog) (pins : List INatOpPinSet) : Prop :=
     denoteN a.store.ns (decI n) = some nm → L.Stubs.CrOK m →
     ∀ e, callE p k "defn_div_gate" [vis, w, n] m = .error e →
     ErrClaim (divGateT pins (fe2.restrictTo vis.toNat) fe2 (decI n)) a e
--/
+-- RS2E
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
+-- RS2B ronsync2 stage 2: commented out (statement at the old twin/L)
 set_option experimental.vcgen true in
 /-- **The model of `defn_div_gate`, both outcomes**: the family's names, the membership and the
 variant records (outside the verdict closure) lifted, `check_div_mod_pin` by its model. -/
@@ -85,7 +85,7 @@ l_model defnDivGate_specE (p : Prog) (hD : DmProg10 p)
     callW_spec p n "rom_pin_sets", checkDivModPin_specE p hD.toDmProg8 n]
   grind [arena_grind] extra [ld64_rdW_specE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
--/
+-- RS2E
 
 /-- What the pin gate gives besides the twin's run (from `m`, `a`): the stage relation at the
 pushed view `w`, `StageC` at the pre-insertion view `vis`, `Ext` of the twin's store, the growth.
@@ -96,7 +96,7 @@ structure DgPost (dn : NIdx → Option ConLeche.Name) (vis w : Word) (fe2 : IFEn
   ext : Ext a.store a'.store
   grow : IWGrow m m'
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
+-- RS2B ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`defn_div_gate(vis, w, n)` refines `divGateT` under `StageC`, both outcomes**: from the stage
 relation at the pushed view `w` (extended index `fe2`), `StageC` at the pre-insertion view `vis`
 (con-ron's `CheckOK` at the environment `env` before the push), `env`'s well-formedness, the pushed
@@ -171,9 +171,9 @@ theorem dg_ref {p : Prog} (hD : DmProg10 p) (hq : KnotStageProg p) (hcl : LeafCl
     (cp_ref hD.toDmProg8 hq hcl hkp hdn (hs0 dn vis _) (hsA dn vis _) henv hk' hS3 hC3 hok2
       (by exact_mod_cast hn) hI3 hpd hnm (hkp.call (im_mem _ rfl) h3 hCr2))
     fun _ _ _ _ hR4 => ⟨hR4.stageW, hR4.stage, hR4.core.ext, hG2.trans (hg3.trans hR4.grow)⟩
--/
+-- RS2E
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
+-- RS2B ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`defn_div_gate` under `StageC`** from the call's run (`dg_ref`'s ok half; the variant records
 after and the frame from the gate's write set). -/
 theorem divGateSpecC {p : Prog} (hD : DmProg10 p) (hq : KnotStageProg p) (hcl : LeafClosed p)
@@ -189,9 +189,9 @@ theorem divGateSpecC {p : Prog} (hD : DmProg10 p) (hq : KnotStageProg p) (hcl : 
     (hCl.memFrame k (f := "defn_div_gate") (by simp [dgFns]) [vis, w, n] ⟨m, Locals.init []⟩) hcall
   rw [hs''] at hfr
   exact ⟨a', hrun, hR.stageW, hR.stage, hR.ext, hR.grow, PinSetsR.step hP hR.grow hfr, hfr⟩
--/
+-- RS2E
 
-/- ronsync2 stage 2: commented out (statement at the old twin/L)
+-- RS2B ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`defn_div_gate`'s error claim under `StageC`** (`dg_ref`'s error half). -/
 theorem divGateSpecE_of {p : Prog} (hD : DmProg10 p) (hq : KnotStageProg p) (hcl : LeafClosed p)
     (hCl : StepIn p dgFns) (hs0 : ∀ dn vis fe, SubstC0 p dn vis fe)
@@ -201,6 +201,6 @@ theorem divGateSpecE_of {p : Prog} (hD : DmProg10 p) (hq : KnotStageProg p) (hcl
   fun _ hdn vis w _ _ _ n _ k hk m _ hn hS hC henv hok2 hP hpd hnm hCr _ hce =>
     RefE.run_err (s₀ := ⟨m, Locals.init []⟩) (defnDivGate_specE p hD k _ vis w n) hnv hcE
       (dg_ref hD hq hcl hCl hs0 hsA hkp hdn hk hn hS hC henv hok2 hP hpd hnm hCr) hce
--/
+-- RS2E
 
 end L.Ind

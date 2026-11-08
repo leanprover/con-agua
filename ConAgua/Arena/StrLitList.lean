@@ -129,7 +129,19 @@ theorem faGuard_ok {p : Prog} (hp : p.lookup "e_view" = some L.Ind.eView) {n : N
 theorem lp_one {e : Array Word} {c : List Word} {lps : List NIdx}
     (hsl : hslice? (aread e) (c.headD 0).toNat (c.tail.headD 0).toNat = some lps) (h1 : c.tail.headD 0 = 1) :
     lps = [decI (rdW e (c.headD 0))] ∧ HW (rdW e (c.headD 0)) := by
-  sorry
+  rw [h1] at hsl
+  simp only [hslice?, hd?, show (1 : Word).toNat = 1 from rfl, List.range_one, List.mapM_cons,
+    List.mapM_nil, Nat.add_zero] at hsl
+  cases hw : e[(c.headD 0).toNat]? with
+  | none => rw [hw] at hsl; simp at hsl
+  | some w =>
+  rw [hw] at hsl
+  have hr : rdW e (c.headD 0) = w := strRdW hw
+  rw [hr]
+  by_cases hlt : w.toNat < 2 ^ 32
+  · simp [hlt] at hsl
+    exact ⟨by subst hsl; rfl, hlt⟩
+  · simp [hlt] at hsl
 
 theorem lp_ne {c : List Word} {lps : List NIdx} (hlen : lps.length = (c.tail.headD 0).toNat)
     (h1 : c.tail.headD 0 ≠ 1) (x : NIdx) : lps ≠ [x] := by
@@ -395,21 +407,46 @@ theorem listTy_spec (p : Prog) (hp : p.lookup "list_ty_ok" = some listTyOkL) (n 
     (found q : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "list_ty_ok" [found, q]
     ⦃fun r s' => LocEq s' s₀ ∧ listK0 p n s₀.mem found q = some (r.headD 0, s'.mem); ⊤⦄ := by
-  sorry
+  rw [invoke_eq _ hp]
+  simp only [callFn, listTyOkL]
+  sym only [lang_grind, arena_grind] =>
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+      callW_spec p n "str_cv", callW_spec p n "str_param_sort", callW_spec p n "e_view"] <;>
+    finish (gen := 20) [listK0_f, listK0_t, listK1_f, listK1_t, listK2_s, faEqA_f, faEqA_t, faEqK_s,
+      rdW_eq,
+      St.setLocs_mem']
 
 set_option maxHeartbeats 1000000 in
 theorem listNil_spec (p : Prog) (hp : p.lookup "list_nil_ty_ok" = some listNilTyOkL) (n : Nat)
     (s₀ : St) (found q : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "list_nil_ty_ok" [found, q]
     ⦃fun r s' => LocEq s' s₀ ∧ nilK0 p n s₀.mem found q = some (r.headD 0, s'.mem); ⊤⦄ := by
-  sorry
+  rw [invoke_eq _ hp]
+  simp only [callFn, listNilTyOkL]
+  vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+    callW_spec p n "str_cv", callW_spec p n "str_param_sort", callW_spec p n "str_ls1",
+    callW_spec p n "pin_at", callW_spec p n "e_view"] <;>
+  simp_all [-UInt64.toNat_add, nilK0, nilK1, nilK2, nilK3, nilK4, nilA, nilAK, nilB, nilBK, nilC,
+      nilCK, nilD, nilDK, EREC, getElem_rdW', Cmp.eval, LocEq,
+      St.setLocs_cons, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Locals.init_cons_zero,
+      Locals.init_cons_succ, Sig.retVal, Sig.retOr]
 
 set_option maxHeartbeats 1000000 in
 theorem listCons_spec (p : Prog) (hp : p.lookup "list_cons_ty_ok" = some listConsTyOkL) (n : Nat)
     (s₀ : St) (found q : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "list_cons_ty_ok" [found, q]
     ⦃fun r s' => LocEq s' s₀ ∧ consK0 p n s₀.mem found q = some (r.headD 0, s'.mem); ⊤⦄ := by
-  sorry
+  rw [invoke_eq _ hp]
+  simp only [callFn, listConsTyOkL]
+  vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+    callW_spec p n "str_cv", callW_spec p n "str_param_sort", callW_spec p n "str_ls1",
+    callW_spec p n "pin_at", callW_spec p n "intern_bvar", callW_spec p n "intern_const",
+    callW_spec p n "mk_app", callW_spec p n "e_view"] <;>
+  simp_all [-UInt64.toNat_add, consK0, consK1, consK2, consK3, consK4, consK5, consK6, consK7,
+      consK8, consK9, consK10, consA, consAK, consB, consBK, faEqA, faEqK, EREC,
+      getElem_rdW', Cmp.eval, LocEq,
+      St.setLocs_cons, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Locals.init_cons_zero,
+      Locals.init_cons_succ, Sig.retVal, Sig.retOr]
 
 /-! ## The tails' refinements -/
 
@@ -719,7 +756,7 @@ theorem paramSort_run (hS : CoreS dn m a vis fe M eb) {pn : Word} (hpn : HW pn)
 sort on. -/
 theorem listPre_call (hS : CoreS dn m a vis fe M eb) {found q : Word}
     (hdec : found ≠ 0 → ∃ ci, decCI (erecP m) q.toNat = some ci)
-    (hfe : ∀ ci, decFound dn m found q = some ci → ∃ x, fe.find? x = some ci)
+    (hfe : ∀ ci, envFound m found q = some ci → ∃ x, fe.find? x = some ci)
     {K2 : Word → Option (List Word × Mem) → Option (Word × Mem)}
     {k : IConstantVal → LIdx → EIdx → AM Bool}
     (hn : ∀ ty, K2 ty none = none) (hW : listPreW p n K2 m found q = some (r.headD 0, m'))
@@ -728,16 +765,49 @@ theorem listPre_call (hS : CoreS dn m a vis fe M eb) {found q : Word}
       (∃ l, denoteL a₂.store.ls (decI (s.headD 0)) = some l) → CoreS dn m₂ a₂ vis fe M₂ eb →
       K2 ty (some (s, m₂)) = some (r.headD 0, m') →
       CoreRef (k cv (decI (s.headD 0)) (decE (s.tail.headD 0))) a₂ decBool dn m₂ vis fe M₂ eb r m') :
-    CoreRef (listPreT k (decFound dn m found q)) a decBool dn m vis fe M eb r m' := by
-  sorry
+    CoreRef (listPreT k (envFound m found q)) a decBool dn m vis fe M eb r m' := by
+  by_cases hf0 : found = 0
+  · simp only [listPreW, hf0, ↓reduceIte, Option.some.injEq, Prod.mk.injEq] at hW
+    obtain ⟨hr, hm⟩ := hW
+    rw [← hm]
+    simp only [decFound, hf0, ↓reduceIte]
+    exact cref_run (v := false) rfl (coreAfter_refl hS) (by rw [decBool, ← hr]; rfl)
+      (by unfold ResH HW; rw [← hr]; decide)
+  simp only [listPreW, hf0, ↓reduceIte] at hW
+  obtain ⟨ci, hci⟩ := hdec hf0
+  rw [show decFound dn m found q = some ci by simp only [decFound, hf0, ↓reduceIte, hci]]
+  rcases h1 : callW p n "str_cv" [q] m with _ | ⟨c, m₁⟩ <;> simp only [h1, reduceCtorEq] at hW
+  obtain ⟨hm₁, hsl, hlen, hty, hhw⟩ := cv_call p hp hS hci h1
+  subst m₁
+  have hfe' := hfe ci (by simp only [decFound, hf0, ↓reduceIte, hci])
+  have hden := fun pn (hlp : ci.toConstantVal.levelParams = [decI pn]) => lp_den hS hfe' hlp
+  dsimp only [listPreT]
+  generalize ci.toConstantVal = cv at hsl hlen hty hden
+  by_cases hl : c.tail.headD 0 ≠ 1
+  · simp only [hl, ne_eq, not_false_eq_true, ↓reduceIte, Option.some.injEq, Prod.mk.injEq] at hW
+    obtain ⟨hr, hm⟩ := hW
+    rw [← hm]
+    split
+    · rename_i x hx; exact absurd hx (lp_ne hlen hl x)
+    · exact coreRef_ret hS (by rw [decBool, ← hr]; rfl) (by unfold ResH HW; rw [← hr]; decide)
+  have hl' : c.tail.headD 0 = 1 := by simpa using hl
+  simp only [hl', ne_eq, not_true_eq_false, ↓reduceIte] at hW
+  obtain ⟨hlp, hw⟩ := lp_one hsl hl'
+  rw [hlp]
+  dsimp only
+  rcases h2 : callW p n "str_param_sort" [rdW (m.arr64 EREC) (c.headD 0)] m with _ | ⟨s, m₂⟩
+  · rw [h2, hn] at hW; cases hW
+  rw [h2] at hW
+  refine paramSort_run p hp hS hw (hden _ hlp) h2
+    (fun M₂ a₂ hpl hso hpd₂ hS₂ => hk cv _ s m₂ M₂ a₂ hty hhw hpl hso hpd₂ hS₂ hW)
 
 /-- **`list_ty_ok` refines `listTyOk`.** -/
 @[refines ConRon.Arena.listTyOk]
 theorem listTyOk_call (hS : CoreS dn m a vis fe M eb) {found q : Word}
     (hdec : found ≠ 0 → ∃ ci, decCI (erecP m) q.toNat = some ci)
-    (hfe : ∀ ci, decFound dn m found q = some ci → ∃ x, fe.find? x = some ci)
+    (hfe : ∀ ci, envFound m found q = some ci → ∃ x, fe.find? x = some ci)
     (h : callW p n "list_ty_ok" [found, q] m = some (r, m')) :
-    CoreRef (listTyOk (decFound dn m found q)) a decBool dn m vis fe M eb r m' := by
+    CoreRef (listTyOk (envFound m found q)) a decBool dn m vis fe M eb r m' := by
   cases n with
   | zero => rw [callW_zero] at h; cases h
   | succ n =>
@@ -762,9 +832,9 @@ theorem listTyOk_call (hS : CoreS dn m a vis fe M eb) {found q : Word}
 @[refines ConRon.Arena.listNilTyOk]
 theorem listNilTyOk_call (hS : CoreS dn m a vis fe M eb) {found q : Word}
     (hdec : found ≠ 0 → ∃ ci, decCI (erecP m) q.toNat = some ci)
-    (hfe : ∀ ci, decFound dn m found q = some ci → ∃ x, fe.find? x = some ci)
+    (hfe : ∀ ci, envFound m found q = some ci → ∃ x, fe.find? x = some ci)
     (h : callW p n "list_nil_ty_ok" [found, q] m = some (r, m')) :
-    CoreRef (listNilTyOk (decFound dn m found q)) a decBool dn m vis fe M eb r m' := by
+    CoreRef (listNilTyOk (envFound m found q)) a decBool dn m vis fe M eb r m' := by
   cases n with
   | zero => rw [callW_zero] at h; cases h
   | succ n =>
@@ -825,9 +895,9 @@ theorem listNilTyOk_call (hS : CoreS dn m a vis fe M eb) {found q : Word}
 @[refines ConRon.Arena.listConsTyOk]
 theorem listConsTyOk_call (hS : CoreS dn m a vis fe M eb) {found q : Word}
     (hdec : found ≠ 0 → ∃ ci, decCI (erecP m) q.toNat = some ci)
-    (hfe : ∀ ci, decFound dn m found q = some ci → ∃ x, fe.find? x = some ci)
+    (hfe : ∀ ci, envFound m found q = some ci → ∃ x, fe.find? x = some ci)
     (h : callW p n "list_cons_ty_ok" [found, q] m = some (r, m')) :
-    CoreRef (listConsTyOk (decFound dn m found q)) a decBool dn m vis fe M eb r m' := by
+    CoreRef (listConsTyOk (envFound m found q)) a decBool dn m vis fe M eb r m' := by
   cases n with
   | zero => rw [callW_zero] at h; cases h
   | succ n =>

@@ -94,7 +94,9 @@ theorem projLitToCtor_run_unsupported (r : CoreFnsA) (fe : IFEnv) (depth : Nat) 
     (hv : a.store.view (decE h) = some (.lit (.strVal s)))
     (hsup : (strLitStored fe).run a = .ok (false, a')) :
     (projLitToCtor r fe depth (decE h)).run a = .ok (decE h, a') := by
-  sorry
+  have ht : ((decE h).tag == ETag.lit) = true := by rw [decE_lit_tag h hh]; simp [hg]
+  simp [projLitToCtor, ht, StateT.run_bind, view_run _ _ _ hv, except_ok_bind, hsup]
+  rfl
 
 theorem projLitToCtor_run_ctor (r : CoreFnsA) (fe : IFEnv) (depth : Nat) (h : Word) (hh : HW h)
     (hg : tagW h = 8) (a a' a₁ a₂ : AState) (s : String)
@@ -103,7 +105,8 @@ theorem projLitToCtor_run_ctor (r : CoreFnsA) (fe : IFEnv) (depth : Nat) (h : Wo
     (hc : (strLitToConstructor s).run a' = .ok (c, a₁)) (res : EIdx)
     (hres : (r.whnf depth c).run a₁ = .ok (res, a₂)) :
     (projLitToCtor r fe depth (decE h)).run a = .ok (res, a₂) := by
-  sorry
+  have ht : ((decE h).tag == ETag.lit) = true := by rw [decE_lit_tag h hh]; simp [hg]
+  simp [projLitToCtor, ht, StateT.run_bind, view_run _ _ _ hv, except_ok_bind, hsup, hc, hres]
 
 theorem projLitToCtor_err_ctor (r : CoreFnsA) (fe : IFEnv) (depth : Nat) (h : Word) (hh : HW h)
     (hg : tagW h = 8) (a a' a₁ : AState) (s : String)
@@ -112,7 +115,8 @@ theorem projLitToCtor_err_ctor (r : CoreFnsA) (fe : IFEnv) (depth : Nat) (h : Wo
     (hc : (strLitToConstructor s).run a' = .ok (c, a₁)) (ce : CheckError)
     (hres : (r.whnf depth c).run a₁ = .error ce) :
     (projLitToCtor r fe depth (decE h)).run a = .error ce := by
-  sorry
+  have ht : ((decE h).tag == ETag.lit) = true := by rw [decE_lit_tag h hh]; simp [hg]
+  simp [projLitToCtor, ht, StateT.run_bind, view_run _ _ _ hv, except_ok_bind, hsup, hc, hres]
 
 /-- **`proj_lit_to_ctor` refines `projLitToCtor`, both outcomes**: the errors are the `whnf` slot's
 (on a supported string literal). `SupKeep`: the support query keeps the store's views. -/
@@ -153,7 +157,8 @@ theorem mapM_option_length {α β : Type} (f : α → Option β) :
 
 theorem hslice?_length {k : IdxKind} {a : Array Word} {off cnt : Nat} {l : List (Idx k)}
     (h : hslice? (aread a) off cnt = some l) : l.length = cnt := by
-  sorry
+  have := mapM_option_length _ _ _ h
+  simpa using this
 
 theorem add_toNat_of_lt (q : Word) (c : Nat) (hc : c < 2 ^ 63) (h : q.toNat + c < 2 ^ 63) :
     (q + c.toUInt64).toNat = q.toNat + c := by
@@ -748,8 +753,7 @@ def rpCoreT (mode : ConLeche.CheckMode) (r : CoreFnsA) (fe : IFEnv) (depth : Nat
 
 theorem reduceProjCore_eq (mode : ConLeche.CheckMode) (r : CoreFnsA) (fe : IFEnv) (depth : Nat)
     (sn : NIdx) (i : Nat) (c : EIdx) :
-    reduceProjCore mode r fe depth sn i c = rpCoreT mode r fe depth sn i c := by
-  sorry
+    reduceProjCore mode r fe depth sn i c = rpCoreT mode r fe depth sn i c := by rfl
 
 /-! ## `reduce_proj_core` -/
 
