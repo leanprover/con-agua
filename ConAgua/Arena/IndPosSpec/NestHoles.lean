@@ -38,11 +38,14 @@ open L.Arena
 
 section arms
 variable (k : Nat) (m m1 m2 m3 m4 : Mem) (vis ctx mm off l oo ol v : Word) (r r2 r4 : List Word)
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem nhK3_big (h : 4294967296 ≤ v) : nhK3 k vis ctx mm off l oo ol (some (v, m3)) = none := by
   rw [nhK3, ite_eq_left h]
+-/
 end arms
-attribute [ind_grind] nhK3_big
+-- ronsync2 stage 2: attribute [ind_grind] nhK3_big
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem nhGo_spec (p : Prog) (hl : NhLook p) (k : Nat) :
     ∀ (s₀ : St) (vis ctx mm off l oo ol : Word),
     ⦃fun s => s = s₀⦄ invoke p (exec p k) "nest_holes_go" [vis, ctx, mm, off, l, oo, ol]
@@ -65,7 +68,9 @@ theorem nhGo_spec (p : Prog) (hl : NhLook p) (k : Nat) :
       Locals.init_nil, Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval, Nat.reduceEqDiff,
       reduceIte, beq_iff_eq, decide_eq_true_eq] at *)
     all_goals grind (gen := 20) [lang_grind, arena_grind, ind_grind, rdW_eq]
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem nestHoles_spec (p : Prog) (hl : NhLook p) (k : Nat) (s₀ : St) (vis ctx : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (k + 1)) "nest_holes" [vis, ctx]
     ⦃fun r s' => LocEq s' s₀ ∧
@@ -74,6 +79,7 @@ theorem nestHoles_spec (p : Prog) (hl : NhLook p) (k : Nat) (s₀ : St) (vis ctx
   sym only [lang_grind, arena_grind, ind_grind] =>
     vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, nhGo_spec p hl k] <;>
     finish (gen := 20) [nhW, rdW_eq]
+-/
 
 /-- The params slice's end, as the words L reads. -/
 theorem ctx_params_end {m : Mem} {p : Word} {c : NestCtx} (hc : decCtx m p.toNat = some c)
@@ -86,6 +92,7 @@ theorem ctx_params_end {m : Mem} {p : Word} {c : NestCtx} (hc : decCtx m p.toNat
   have r8 : (rdW (m.arr64 IW) (p + 8)).toNat = l7 := rd_iwN (by simpa using hl7) (by simp; omega)
   rw [r7, r8]; exact hsl 7 (by omega) o7 l7 ho7 hl7
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem nhGoW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis ctx : Word) (c : NestCtx) (k : Nat) :
     ∀ (m m' : Mem) (a : AState) (mm off l oo ol : Word) (ns : List NIdx) (out : List EIdx) (r : List Word),
     nhGoW k m vis ctx mm off l oo ol = some (r, m') → StageR vis fe m a →
@@ -224,11 +231,13 @@ theorem nhGoW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis ctx : Wo
     simp only [except_ok_bind]
     rw [hmm1] at hrun
     exact hrun
+-/
 
 section census
 variable (p : Prog) (hl : NhLook p)
 include hl
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`nest_holes` refines `nestHoles`** (through `inst_pis_with`'s stub; the ctx's slices end below
 the top and `nP + |names| < 2^64`). -/
 @[refines ConRon.Arena.nestHoles]
@@ -255,7 +264,9 @@ theorem nestHoles_refines (k : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → O
   cases x with
   | none => exact hout
   | some l => obtain ⟨h1, h2, h3⟩ := hout; exact ⟨h1, h2, h3⟩
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`nest_holes_go` refines `nestHoles.go`**: from member `mm` on, the names `ns` (a slice of the
 context's names below the top) appended to the holes so far (`out`, below the top). Its one caller,
 `nestHoles` (`nestHoles_refines` above), discharges every hypothesis from its own pre: the context
@@ -282,6 +293,7 @@ theorem nestHolesGo_refines (k : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx →
   cases x with
   | none => exact hNh
   | some l => obtain ⟨h1, h2, h3⟩ := hNh; exact ⟨h1, h2, h3⟩
+-/
 
 end census
 

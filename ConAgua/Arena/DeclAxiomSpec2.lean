@@ -77,7 +77,7 @@ theorem fpcK1_some : fpcK1 p n k id (some (r1, m1)) =
 theorem fpcK2_some : fpcK2 q (some (r2, m2)) = mpW m2 (q + 1) (r2.headD 0) := rfl
 end arms
 
-grind_pattern [ind_grind] fpcW_step => fpcW p (n + 1) m vis nm k id
+-- ronsync2 stage 2: grind_pattern [ind_grind] fpcW_step => fpcW p (n + 1) m vis nm k id
 grind_pattern [ind_grind] fpcK1_some => fpcK1 p n k id (some (r1, m1))
 grind_pattern [ind_grind] fpcK2_some => fpcK2 q (some (r2, m2))
 
@@ -87,6 +87,7 @@ structure TcoProg (p : Prog) : Prop where
   fpc : p.lookup "find_pinned_cv" = some findPinnedCv
   tco : p.lookup "trust_compiler_ok" = some trustCompilerOkL
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 set_option maxHeartbeats 1600000 in
 theorem fpc_specW (h : TcoProg p) (n : Nat) (s₀ : St) (vis nm k id : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "find_pinned_cv" [vis, nm, k, id]
@@ -101,6 +102,7 @@ theorem fpc_specW (h : TcoProg p) (n : Nat) (s₀ : St) (vis nm k id : Word) :
         callW_spec p n "env_find", callW_spec p n "rom_cv",
         mp_specW p h.red.canon h.red.mp n] <;>
       finish (gen := 20) [rdW_eq, mpW]
+-/
 
 end model
 
@@ -139,6 +141,7 @@ def FpcT (fe : IFEnv) (nm : NIdx) (k : Word) (T : AM IConstantVal) (a : AState) 
   ((fe.find? nm).bind (fpcShape k)).elim (b = false ∧ a' = a)
     (fun cvT => (do let pin ← T; pure (decide (cvT = pin)) : AM Bool).run a = .ok (b, a'))
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`find_pinned_cv` against the twin's clause**, at the model level. -/
 theorem fpcW_ok {p : Prog} (hR : L.Rom.RomRefs p) {dn : NIdx → Option ConLeche.Name} {vis : Word}
     {fe : IFEnv} {a : AState} {n : Nat} {m m' : Mem} {nm k id : Word} {r : List Word}
@@ -147,6 +150,7 @@ theorem fpcW_ok {p : Prog} (hR : L.Rom.RomRefs p) {dn : NIdx → Option ConLeche
     ∃ b a', StageR vis fe m' a' ∧ IWGrow m m' ∧ decW0B m' r b ∧
       FpcT fe (decI nm) k (romCvT id.toNat) a b a' := by
   sorry
+-/
 
 /-! ## `trust_compiler_ok(vis, q)` -/
 

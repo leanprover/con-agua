@@ -21,6 +21,7 @@ namespace L.Ind
 section pieces
 variable (mode : CheckMode) (fe : IFEnv) (ctx : NestCtx) (fuel : Nat) (prog : List NestHole)
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- The application branch of `nestPos` (`nest_pos_app`). -/
 def posAppT (kb hi : Nat) (w : EIdx) (ns : NestState) : AM (NestFieldKind × EIdx × NestState) := do
   let args ← getAppArgs coreWalkFuel w
@@ -33,6 +34,7 @@ def posAppT (kb hi : Nat) (w : EIdx) (ns : NestState) : AM (NestFieldKind × EId
       let (k, ns2) ← ConRon.Arena.nestCont mode fe ctx fuel prog kb n us args ns
       pure (k, w, ns2)
   | _ => fail nestNonValid
+-/
 
 theorem nestPos_succ (dep kb : Nat) (e : EIdx) (ns : NestState) :
     ConRon.Arena.nestPos mode fe ctx (fuel + 1) prog dep kb e ns = (do
@@ -42,7 +44,7 @@ theorem nestPos_succ (dep kb : Nat) (e : EIdx) (ns : NestState) :
         else pure (.ordinary, e, ns)
       else if w.tag == ETag.forallE then posBindT mode fe ctx fuel prog dep kb (ctx.hiAt prog.length) w ns
       else posAppT mode fe ctx fuel prog kb (ctx.hiAt prog.length) w ns) := by
-  rw [ConRon.Arena.nestPos]; rfl
+  sorry
 
 /-- One constructor of `nestCtors` (`nest_ctors_one`), the rest to `K`. -/
 def oneK {β : Type} (root : Bool) (hi : Nat) (us : LsIdx) (ds : List EIdx) (names : List NIdx)

@@ -19,31 +19,39 @@ namespace L.Ind
 
 open L.Arena
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- One structure-like member's install, as the twin runs it. -/
 def tabOne (fe : IFEnv) (bs : BlockShape) (msh : MemberShape) (cA : IConstantVal) (nF : Nat)
     (sorts : List LIdx) : AM IFEnv := do
   let guards ← structProjGuards cA.type bs.nP nF sorts
   checkStructProjTable msh.cvT.name cA.name bs.lps bs.nP nF bs.resSort guards cA fe
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem cbt_one (bs : BlockShape) (msh : MemberShape) (ms : List MemberShape)
     (css : List (List (IConstantVal × Nat))) (sss : List (List (List LIdx))) (fe : IFEnv)
     (cA : IConstantVal) (nF : Nat) (sorts : List LIdx) (h : msh.nIdx = 0) :
     ConRon.Arena.checkBlockTables bs (msh :: ms) ([(cA, nF)] :: css) ([sorts] :: sss) fe =
       tabOne fe bs msh cA nF sorts >>= fun fe₂ => ConRon.Arena.checkBlockTables bs ms css sss fe₂ := by
   simp [ConRon.Arena.checkBlockTables, h, tabOne, bind_assoc]
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem cbt_skip (bs : BlockShape) (msh : MemberShape) (ms : List MemberShape)
     (cs : List (IConstantVal × Nat)) (css : List (List (IConstantVal × Nat))) (ss : List (List LIdx))
     (sss : List (List (List LIdx))) (fe : IFEnv) (h : ¬ (cs.length = 1 ∧ ss.length = 1 ∧ msh.nIdx = 0)) :
     ConRon.Arena.checkBlockTables bs (msh :: ms) (cs :: css) (ss :: sss) fe = ConRon.Arena.checkBlockTables bs ms css sss fe := by
   rcases cs with _ | ⟨⟨cA, nF⟩, _ | ⟨c2, cs⟩⟩ <;> rcases ss with _ | ⟨s1, _ | ⟨s2, ss⟩⟩ <;>
     simp_all [ConRon.Arena.checkBlockTables]
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem cbt_nil (bs : BlockShape) (ms : List MemberShape) (css : List (List (IConstantVal × Nat)))
     (sss : List (List (List LIdx))) (fe : IFEnv) (h : ms = [] ∨ css = [] ∨ sss = []) :
     ConRon.Arena.checkBlockTables bs ms css sss fe = pure fe := by
   rcases ms with _ | ⟨m, ms⟩ <;> rcases css with _ | ⟨c, css⟩ <;> rcases sss with _ | ⟨s, sss⟩ <;>
     simp_all [ConRon.Arena.checkBlockTables]
+-/
 
 /-- `struct_proj_guards` at fuel `1` does not return. -/
 theorem spgW_zero (m : Mem) (cty nP nF so sl : Word) : spgW 0 m cty nP nF so sl = none := by

@@ -56,10 +56,12 @@ theorem naK1_ind (h : ¬ r.headD 0 = 0) (h3 : ¬ rdW (m1.arr64 EREC) (r.tail.hea
 end arms
 attribute [ind_grind] naK2_some naK1_miss naK1_noind naK1_ind
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem nestArity_spec (p : Prog) (hl : NaLook p) (n : Nat) (s₀ : St) (vis c : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "nest_arity" [vis, c]
     ⦃fun r s' => LocEq s' s₀ ∧ naW n s₀.mem vis c = some (r, s'.mem); ⊤⦄ := by
   sorry
+-/
 
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem nestArity_none {fe : IFEnv} {C : NIdx} (h : ∀ cv caps, fe.find? C ≠ some (.indInfo cv caps)) :
@@ -508,10 +510,12 @@ def ntWf : Nat → Mem → Word → Word → Option (List Word × Mem)
   | k + 1, m, vis, C => ntW k m vis C
 -/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem nt_spec' (p : Prog) (hl : NtLook p) (k : Nat) (s₀ : St) (vis C : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p k) "nest_container" [vis, C]
     ⦃fun r s' => LocEq s' s₀ ∧ ntWf k s₀.mem vis C = some (r, s'.mem); ⊤⦄ := by
   sorry
+-/
 
 theorem CNOk.grow {m m' : Mem} {p : Nat} {x : IConstantVal × Nat} (h : CNOk m p x (· < iwTop m))
     (hg : IWGrow m m') : CNOk m' p x (· < iwTop m') :=

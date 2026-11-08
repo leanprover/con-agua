@@ -51,13 +51,17 @@ def cftW (cR : CallM) : Nat → Mem → Word → Word → Word → Word → Opti
 
 section arms
 variable (cR : CallM) (N : Nat) (m m1 m2 m3 m4 : Mem) (vis o l mp q e : Word) (r2 r3 r4 : List Word)
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem cftW_mem (h : rdW (m.arr64 IW) (mp + 8) ≠ 0) (h2 : rdW (m.arr64 IW) (mp + 8) - 1 < l) :
     cftW cR (N + 1) m vis o l mp =
       some ([rdW (m.arr64 EREC) (rdW (m.arr64 IW) (o + (rdW (m.arr64 IW) (mp + 8) - 1)) + 3)], m) := by
   simp only [cftW]; rw [ite_eq_left h, ite_eq_left h2]
+-/
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem cftW_out (h : rdW (m.arr64 IW) (mp + 8) ≠ 0) (h2 : ¬ rdW (m.arr64 IW) (mp + 8) - 1 < l) :
     cftW cR (N + 1) m vis o l mp = cftK1 (binternW m 0) := by
   simp only [cftW]; rw [ite_eq_left h, ite_eq_right h2]
+-/
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem cftW_ext (h : ¬ rdW (m.arr64 IW) (mp + 8) ≠ 0) :
     cftW cR (N + 1) m vis o l mp = cftK2 cR N mp (envFindW m (rdW (m.arr64 IW) mp) vis) := by
@@ -65,9 +69,9 @@ theorem cftW_ext (h : ¬ rdW (m.arr64 IW) (mp + 8) ≠ 0) :
 -/
 end arms
 
-grind_pattern [ind_grind] cftW_mem => cftW cR (N + 1) m vis o l mp
-grind_pattern [ind_grind] cftW_out => cftW cR (N + 1) m vis o l mp
-grind_pattern [ind_grind] cftW_ext => cftW cR (N + 1) m vis o l mp
+-- ronsync2 stage 2: grind_pattern [ind_grind] cftW_mem => cftW cR (N + 1) m vis o l mp
+-- ronsync2 stage 2: grind_pattern [ind_grind] cftW_out => cftW cR (N + 1) m vis o l mp
+-- ronsync2 stage 2: grind_pattern [ind_grind] cftW_ext => cftW cR (N + 1) m vis o l mp
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem classFormerTy_spec (p : Prog) (h : CftProg p) (cR : CallM) (hcR : CallSpec p cR) (N : Nat) (s₀ : St)
     (vis o l mp : Word) :

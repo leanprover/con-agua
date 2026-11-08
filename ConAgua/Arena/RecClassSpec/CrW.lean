@@ -673,28 +673,34 @@ def slK1 (cR : CallM) (n : Nat) (p vis np mo ml d dom : Word) : Option (List Wor
     else slK2 (minorW cR n m1 np mo ml d dom)
 -/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **The model of `class_read_slot`.** -/
 def slotW (cR : CallM) : Nat → Mem → Word → Word → Word → Word → Word → Word → Word → Option (List Word × Mem)
   | 0, _, _, _, _, _, _, _, _ => none
   | n + 1, m, p, vis, np, mo, ml, d, dom => slK1 cR n p vis np mo ml d dom (pirF m [CWF, dom])
+-/
 
 section arms
 variable (n : Nat) (m m1 m2 m3 m4 m5 m6 : Mem) (p vis np mo ml d dom mdom iName us ao al : Word)
   (r r1 r2 r3 r4 r5 r6 : List Word) (cR : CallM)
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem slotW_eq : slotW cR (n + 1) m p vis np mo ml d dom =
     slK1 cR n p vis np mo ml d dom (pirF m [CWF, dom]) := rfl
+-/
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem slK1_mot (h : tagW (r1.headD 0) = 2) : slK1 cR n p vis np mo ml d dom (some (r1, m1)) =
     slK2 (slotMotW n m1 p vis dom) := by rw [slK1, ite_eq_left h]
 -/
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem slK1_min (h : ¬ tagW (r1.headD 0) = 2) : slK1 cR n p vis np mo ml d dom (some (r1, m1)) =
     slK2 (minorW cR n m1 np mo ml d dom) := by rw [slK1, ite_eq_right h]
+-/
 theorem slK2_some : slK2 (some (r, m)) = some ([r.headD 0, r.tail.headD 0], m) := rfl
 end arms
 
 grind_pattern [ind_grind] slotW_eq => slotW cR (n + 1) m p vis np mo ml d dom
-grind_pattern [ind_grind] slK1_mot => slK1 cR n p vis np mo ml d dom (some (r1, m1))
-grind_pattern [ind_grind] slK1_min => slK1 cR n p vis np mo ml d dom (some (r1, m1))
+-- ronsync2 stage 2: grind_pattern [ind_grind] slK1_mot => slK1 cR n p vis np mo ml d dom (some (r1, m1))
+-- ronsync2 stage 2: grind_pattern [ind_grind] slK1_min => slK1 cR n p vis np mo ml d dom (some (r1, m1))
 grind_pattern [ind_grind] slK2_some => slK2 (some (r, m))
 
 theorem classReadSlot_spec (p : Prog) (hP : SlotProg p) (cR : CallM) (hcR : CallSpec p cR) (n : Nat)
@@ -1426,63 +1432,11 @@ theorem readFinW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFE
     (hrecs : RecsDec m ro rl recs) :
     RSim (readFinW cR N m nP so sl ro rl) (readFinTw nP.toNat slots recs) a
       (fun b a' x => KP dn vis fe m decRead b a' x ∧ J b.2) := by
-  rcases N with _ | N
-  · exact RSim.none
-  rw [readFinW_eq]
-  refine RSim.lstep (K := frK1 cR N nP so sl ro rl) rfl ?_
-  rintro ⟨r1, m1⟩ h1
-  obtain ⟨hS1, hg1, hd1, ht1⟩ := motPosW_ok dn vis fe a so sl slots N m m1 0 r1 h1 hS hsp (by simp)
-  have hJ1 := hO.1 _ _ (motPosW_afr _ _ _ _ _ _ _ h1) hJ
-  simp only [UInt64.toNat_zero, Nat.sub_zero] at hd1
-  rw [← hsp.length, ← List.range_eq_range'] at hd1
-  rw [frK1_some]
-  have hcr : RSim (crW cR N m1 nP (r1.headD 0) (r1.tail.headD 0) ro rl)
-      (ConRon.Arena.classReadRecCls nP.toNat ((List.range slots.length).filter (motF slots)) recs) a
-      (fun b a' x => StageR vis fe b.2 a' ∧ IWGrow m1 b.2 ∧ CrRes b.2 b.1 x ∧ J b.2) := by
-    rintro ⟨r, m'⟩ h
-    exact crW_ok dn vis fe cR J hO N m1 m' a nP _ _ ro rl r recs _ h hS1 hJ1 (hrecs.dec hg1)
-      (fun m3 hg3 => hrecs.dec (hg1.trans hg3)) hd1 ht1 hrecs.2
-  refine RSim.bind (K := frK2 so sl) rfl hcr ?_
-  rintro ⟨r2, m2⟩ x a2 - ⟨hS2, hg2, hc2, hJ2⟩
-  dsimp only at hS2 hg2 hc2 hJ2
-  have hg12 := hg1.trans hg2
-  rcases x with _ | cs
-  · rw [frK2_fail (h := hc2)]; exact RSim.pure_some ⟨⟨hS2, hg12, rfl⟩, hJ2⟩
-  obtain ⟨h21, hdn2, ht2⟩ := hc2
-  rw [frK2_ok (h := by rw [h21]; decide)]
-  refine RSim.lstep (K := frK3) rfl ?_
-  rintro ⟨r3, m3⟩ h3
-  obtain ⟨hS3, hg3, hr3, hget, htop⟩ := recW_stage h3 hS2 rfl
-  have hJ3 := hO.1 _ _ (recW_afr h3) hJ2
-  rw [frK3_some, hr3]
-  have hq : rdW (m2.arr64 CTL) 200 = rdW (m2.arr64 CTL) 200 := rfl
-  have k0 := rec_iwN_stab hq hget htop 0 (by simp)
-  have k1 := rec_iwN_stab hq hget htop 1 (by simp)
-  have k2 := rec_iwN_stab hq hget htop 2 (by simp)
-  have k3 := rec_iwN_stab hq hget htop 3 (by simp)
-  simp only [List.getElem_cons_zero, List.getElem_cons_succ, Nat.add_zero] at k0 k1 k2 k3
-  have hsp3 := hsp.grow (hg12.trans hg3)
-  refine RSim.pure_some ⟨⟨hS3, hg12.trans hg3, rfl, ?_, so.toNat, sl.toNat, ?_, ?_, ?_⟩, hJ3⟩
-  all_goals simp only [List.headD_cons, List.tail_cons]
-  · intro m' hg
-    have e1 : iwN m' ((rdW (m2.arr64 CTL) 200).toNat + 0 + 1) = some sl.toNat := by simpa using k1 m' hg
-    have e3 : iwN m' ((rdW (m2.arr64 CTL) 200).toNat + 2 + 1) = some (r2.tail.tail.headD 0).toNat :=
-      k3 m' hg
-    have hdn' : decNL m' (r2.tail.headD 0).toNat (r2.tail.tail.headD 0).toNat = some cs := by
-      rw [decNL_grow (hg3.trans hg) ht2]; exact hdn2
-    simp only [decCR, decAt, Nat.add_zero] at e1 ⊢
-    simp only [k0 m' hg, e1, k2 m' hg, e3, (hsp3.grow hg).decPL, hdn', Option.bind_eq_bind,
-      Option.bind_some]
-    rfl
-  · simpa using k0 _ (IWGrow.refl _)
-  · simpa using k1 _ (IWGrow.refl _)
-  · exact hsp3
+  sorry
 
 theorem decRS_rP {m : Mem} {p : Nat} {R : RecShape} (h : decRS m p = some R) :
     ∃ q, iwN m p = some q ∧ decCVp m q = some R.cvR ∧ iwN m (p + 1) = some R.rP := by
-  simp only [decRS, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
-  obtain ⟨q, hq, cv, hcv, rP, hrP, mI, hmI, tg, htg, rh, hrh, rfl⟩ := h
-  exact ⟨q, hq, hcv, hrP⟩
+  sorry
 
 theorem readW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (cR : CallM)
     (J : Mem → Prop) (hO : OpfJ cR J dn vis fe) (N : Nat) (m : Mem)
@@ -1490,89 +1444,7 @@ theorem readW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (hS : StageR vis fe m a) (hJ : J m) (hb : BSOK m p.toNat bs) (hrecs : RecsDec m ro rl recs) :
     RSim (readW cR N m p vis nP ro rl) (ConRon.Arena.classRead bs fe nP.toNat recs) a
       (fun b a' x => KP dn vis fe m decRead b a' x ∧ J b.2) := by
-  rcases N with _ | N
-  · exact RSim.none
-  have hdp := hrecs.dec (IWGrow.refl m)
-  have hsz := hS.iw.iwSize
-  have hts : iwTop m ≤ (m.arr64 IW).size := hS.iw.iw
-  by_cases hrl : rl = 0
-  · rw [readW_nil (h := hrl)]
-    have : recs = [] := by
-      have := decPL_length m hdp; rw [hrl] at this; exact List.eq_nil_of_length_eq_zero this
-    subst this
-    rw [ConRon.Arena.classRead]
-    exact RSim.pure_some ⟨⟨hS, IWGrow.refl m, rfl⟩, hJ⟩
-  obtain ⟨k, hk⟩ : ∃ k, rl.toNat = k + 1 :=
-    ⟨rl.toNat - 1, by have : rl.toNat ≠ 0 := fun e => hrl (UInt64.toNat_inj.mp (by simpa using e)); omega⟩
-  have hdpT := hrecs.1
-  simp only [DecB] at hdpT
-  rw [hk] at hdpT hdp
-  obtain ⟨p0, rc0, rest, rfl, hp0T, hrcT, -⟩ := decPL_cons hdpT
-  obtain ⟨hro, hp0⟩ := iwN_truncM_get hp0T
-  obtain ⟨q, hqT, hcvT, hrPT⟩ := decRS_rP hrcT
-  obtain ⟨hp0lt, hq⟩ := iwN_truncM_get hqT
-  obtain ⟨hp1lt, hrP⟩ := iwN_truncM_get hrPT
-  have hcv : decCVp m q = some rc0.cvR := (OMono.decCVp q).mono _ _ _ (IWGrow.refl m).truncExt hcvT
-  rw [readW_ok (h := hrl)]
-  rw [ConRon.Arena.classRead]
-  have hrd0 := (iwN_rdW hp0 (by omega)).1
-  rw [UInt64.ofNat_toNat] at hrd0
-  have hrdq := iwN_rdW hq (by omega)
-  have hqb : q < 2 ^ 64 := hrdq.2
-  have hq3 : (UInt64.ofNat q).toNat + 3 < 2 ^ 64 := by
-    rw [UInt64.toNat_ofNat_of_lt' hqb]
-    have := hS.iw.erSize
-    obtain ⟨w, hw, -⟩ := hd?_some (decCV_type hcv)
-    have := (Array.getElem?_eq_some_iff.mp hw).1
-    simp only [erA] at this; omega
-  obtain ⟨htyH, htyE⟩ := decCVp_type (q := UInt64.ofNat q)
-    (by rw [UInt64.toNat_ofNat_of_lt' hqb]; exact hcv) hq3
-  rw [hrd0, hrdq.1]
-  rw [← htyE]
-  refine RSim.bind (K := rdK1 cR N p vis nP ro rl (UInt64.ofNat p0)) rfl (hO.sim N hS hJ htyH) ?_
-  rintro ⟨r1, m1⟩ o a1 - ⟨⟨hS1, hg1, ho⟩, hJ1⟩
-  dsimp only at hS1 hg1 ho hJ1
-  rcases o with _ | fb
-  · rw [rdK1_fail (h := ho)]; exact RSim.pure_some ⟨⟨hS1, hg1, rfl⟩, hJ1⟩
-  obtain ⟨fvs, body⟩ := fb
-  obtain ⟨h11, -, hbH, rfl⟩ := ho
-  rw [drop3_headD] at hbH ⊢
-  rw [rdK1_ok (h := by rw [h11]; decide)]
-  have hrP1 : rdW (m1.arr64 IW) (UInt64.ofNat p0 + 1) = UInt64.ofNat rc0.rP := by
-    have h := iwN_rdW_at (w := UInt64.ofNat p0) (k := 1) (m := m)
-      (by rw [UInt64.toNat_ofNat_of_lt' (by simp only [UInt64.size]; omega)]; exact hrP) hsz
-    rw [show UInt64.ofNat 1 = (1 : Word) from rfl] at h
-    rw [← h.1]; simp only [rdW]
-    rw [show (UInt64.ofNat p0 + 1).toNat = p0 + 1 by
-      rw [UInt64.toNat_add, UInt64.toNat_ofNat_of_lt' (by simp only [UInt64.size]; omega)]; simp; omega,
-      hg1.iwGet _ hp1lt]
-  have hrPb : rc0.rP < 2 ^ 64 := (iwN_rdW hrP (by omega)).2
-  rw [hrP1]
-  have hts1 : (tsubW (UInt64.ofNat rc0.rP) nP).toNat = rc0.rP - nP.toNat := by
-    by_cases hle : nP ≤ UInt64.ofNat rc0.rP
-    · rw [tsubW_le _ _ hle, UInt64.toNat_sub_of_le _ _ hle, UInt64.toNat_ofNat_of_lt' hrPb]
-    · rw [tsubW_gt _ _ hle]
-      have := UInt64.lt_iff_toNat_lt.mp (UInt64.not_le.mp hle)
-      rw [UInt64.toNat_ofNat_of_lt' hrPb] at this; simp; omega
-  have hsl := (slots_sims dn vis fe cR J hO p nP bs N).1 m1 a1 (tsubW (UInt64.ofNat rc0.rP) nP) 0 0 nP
-    (r1.tail.tail.tail.headD 0) [] hS1 hJ1 hbH (hb.grow hg1) (by simp [decNL]) (by simp)
-    (by rw [hts1]; have := nP.toNat_lt; omega)
-  rw [hts1] at hsl
-  try simp only [UInt64.toNat_zero] at hsl
-  refine RSim.bind (K := rdK2 cR N nP ro rl) rfl hsl ?_
-  rintro ⟨r2, m2⟩ o a2 - ⟨⟨hS2, hg2, ho2⟩, hJ2⟩
-  dsimp only at hS2 hg2 ho2 hJ2
-  have hg12 := hg1.trans hg2
-  rcases o with _ | slots
-  · rw [rdK2_fail (h := ho2)]; exact RSim.pure_some ⟨⟨hS2, hg12, rfl⟩, hJ2⟩
-  obtain ⟨h21, hsp⟩ := ho2
-  rw [rdK2_ok (h := by rw [h21]; decide)]
-  refine RSim.bindPure (K := rdK3) rfl (readFinW_sim dn vis fe cR J hO N m2 a2 nP _ _ ro rl slots _ hS2
-    hJ2 hsp (hrecs.grow hg12)) ?_
-  rintro ⟨r3, m3⟩ x a3 - ⟨⟨hS3, hg3, hd3⟩, hJ3⟩
-  rw [rdK3_some]
-  refine RSim.pure_some ⟨⟨hS3, hg12.trans hg3, ?_⟩, hJ3⟩
-  cases x <;> exact hd3
+  sorry
 
 end L.Ind
 

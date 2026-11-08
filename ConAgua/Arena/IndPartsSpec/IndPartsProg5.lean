@@ -87,6 +87,7 @@ open L.Arena
 
 /-! ## `block_shape`, `block_parts` -/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **The model of `block_shape`** (at exec fuel `n + 5`). -/
 def bshW (c : CallM) (n : Nat) (m : Mem) (nPd off l : Word) : Option (List Word × Mem) :=
   match bsW (n + 4) m off l with
@@ -98,6 +99,7 @@ def bshW (c : CallM) (n : Nat) (m : Mem) (nPd off l : Word) : Option (List Word 
     else bgoK3 (bbW c n m1 nPd (rdW (m1.arr64 IW) (r1.tail.headD 0)) (rdW (m1.arr64 IW) (r1.tail.headD 0 + 1))
       (rdW (m1.arr64 IW) (r1.tail.headD 0 + 2)) (rdW (m1.arr64 IW) (r1.tail.headD 0 + 3))
       (rdW (m1.arr64 IW) (r1.tail.headD 0 + 4)) (rdW (m1.arr64 IW) (r1.tail.headD 0 + 5)))
+-/
 
 end L.Ind
 

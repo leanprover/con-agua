@@ -164,10 +164,12 @@ def ferK2 (p : Prog) (n : Nat) (cvo cvl rcl ro rl M nm c q : Word) :
     Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (rv, m2) => ferK3 p n cvo cvl rcl ro rl M (rv.headD 0) (recW m2 3 [nm, c, q])
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 def ferK3 (p : Prog) (n : Nat) (cvo cvl rcl ro rl M v : Word) :
     Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (re, m3) => ferK4 n (re.headD 0) (ferW p n m3 (cvo + 1) (cvl - 1) (rcl - 1) ro rl v (M + 1))
+-/
 end
 
 section arms
@@ -179,14 +181,20 @@ theorem ferMi_miss (h : ¬ M < rl) : ferMi m ro rl M = 0 := by simp [ferMi, h]
 theorem ferRp_hit (h : M < rl) : ferRp m ro rl M = rdW (m.arr64 IW) (rdW (m.arr64 IW) (ro + M) + 1) := by
   simp [ferRp, h]
 theorem ferRp_miss (h : ¬ M < rl) : ferRp m ro rl M = 0 := by simp [ferRp, h]
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem ferW_nil1 (h : cvl = 0) : ferW p (n + 1) m cvo cvl rcl ro rl vis M = some ([vis, 0, 0], m) := by
   simp [ferW, h]
+-/
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem ferW_nil2 (h1 : ¬ cvl = 0) (h : rcl = 0) :
     ferW p (n + 1) m cvo cvl rcl ro rl vis M = some ([vis, 0, 0], m) := by
   simp only [ferW]; rw [ite_eq_right h1, ite_eq_left h]
+-/
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem ferW_tag (h1 : ¬ cvl = 0) (h2 : ¬ rcl = 0) (h : 2 < tagW (rdW (m.arr64 EREC) (rdW (m.arr64 IW) cvo))) :
     ferW p (n + 1) m cvo cvl rcl ro rl vis M = none := by
   simp only [ferW]; rw [ite_eq_right h1, ite_eq_right h2, ite_eq_left h]
+-/
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem ferW_cons (h1 : ¬ cvl = 0) (h2 : ¬ rcl = 0) (h : ¬ 2 < tagW (rdW (m.arr64 EREC) (rdW (m.arr64 IW) cvo))) :
     ferW p (n + 1) m cvo cvl rcl ro rl vis M =
@@ -199,14 +207,16 @@ theorem ferK1_some : ferK1 p n cvo cvl rcl ro rl M nm c q vis (some (kq, m1)) =
     ferK2 p n cvo cvl rcl ro rl M nm c q (callW p n "env_push" [vis, kq] m1) := by rw [ferK1]
 theorem ferK2_some : ferK2 p n cvo cvl rcl ro rl M nm c q (some (r2, m2)) =
     ferK3 p n cvo cvl rcl ro rl M (r2.headD 0) (recW m2 3 [nm, c, q]) := by rw [ferK2]
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem ferK3_some : ferK3 p n cvo cvl rcl ro rl M v (some (r3, m3)) =
     ferK4 n (r3.headD 0) (ferW p n m3 (cvo + 1) (cvl - 1) (rcl - 1) ro rl v (M + 1)) := by rw [ferK3]
+-/
 theorem ferK4_some : ferK4 n y (some (r4, m4)) =
     ferK5 (r4.headD 0) (consW n m4 y (r4.tail.headD 0) (r4.tail.tail.headD 0)) := rfl
 theorem ferK5_some : ferK5 v (some (r5, m5)) = some ([v, r5.headD 0, r5.tail.headD 0], m5) := rfl
 end arms
-attribute [ind_grind] ferMi_hit ferMi_miss ferRp_hit ferRp_miss ferW_nil1 ferW_nil2 ferW_tag ferW_cons
-  ferK1_some ferK2_some ferK3_some ferK4_some ferK5_some
+-- ronsync2 stage 2: attribute [ind_grind] ferMi_hit ferMi_miss ferRp_hit ferRp_miss ferW_nil1 ferW_nil2 ferW_tag ferW_cons
+-- ronsync2 stage 2:   ferK1_some ferK2_some ferK3_some ferK4_some ferK5_some
 
 /-- The lookups of `class_fe_r`. -/
 structure CfrProg (p : Prog) : Prop where
@@ -220,17 +230,21 @@ structure CfrProg (p : Prog) : Prop where
   go : p.lookup "class_fe_r_go" = some classFeRGo
   top : p.lookup "class_fe_r" = some classFeRL
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 set_option maxHeartbeats 1000000 in
 theorem classFeRGo_spec (p : Prog) (h : CfrProg p) (n : Nat) :
     ∀ (s₀ : St) (cvo cvl rcl ro rl vis M : Word),
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "class_fe_r_go" [cvo, cvl, rcl, ro, rl, vis, M]
     ⦃fun r s' => LocEq s' s₀ ∧ ferW p n s₀.mem cvo cvl rcl ro rl vis M = some (r, s'.mem); ⊤⦄ := by
   sorry
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 l_model classFeR_spec (p : Prog) (h : CfrProg p)
   fns [h.top ↦ ferAW]
   specs [classFeRGo_spec p h n]
   grind [arena_grind]
+-/
 
 /-! ## `class_fe_r_rec` under the stage relation -/
 
@@ -373,10 +387,12 @@ def decPrev (dn : NIdx → Option ConLeche.Name) (m : Mem) (p : Nat) :
   pure (nm, pv)
 -/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem rec3DecPrev_stab {dn : NIdx → Option ConLeche.Name} {m : Mem} {p : Nat}
     {x : NIdx × Option (Nat × IConstantInfo)} (h : decPrev dn m p = some x) (hp : p + 3 ≤ iwTop m) :
     StabD (fun m => decPrev dn m p) m x := by
   sorry
+-/
 
 /-! ## `class_fe_r_go`: the relation to the twin -/
 
