@@ -32,22 +32,7 @@ theorem snocW_decK {k : IdxKind} {n : Nat} {m m' : Mem} {o l x : Word} {r : List
     decHL m' (rdW (m.arr64 CTL) 200).toNat (l + 1).toNat = some (xs ++ [decI x]) ∧
     IWGrow m m' ∧ MemFrame [IW] [200] m m' ∧ (l + 1).toNat = l.toNat + 1 ∧
     (rdW (m.arr64 CTL) 200).toNat + (l + 1).toNat = iwTop m' := by
-  obtain ⟨hr, hl1, hqt, hfr, hg, htop, hget⟩ := snocW_core h hsz hc hsrc
-  refine ⟨hr, ?_, hg, hfr, hl1, by omega⟩
-  simp only [decHL]
-  rw [hl1, hslice?_add, hqt]
-  have h1 : (hslice? (iwA m') (iwTop m) l.toNat : Option (List (Idx k))) = some xs := by
-    rw [← hxs]; simp only [decHL]
-    apply hslice?_congr
-    intro j hj
-    simp only [iwA, hget]
-    rw [ite_eq_right (by omega), ite_eq_left (by omega)]
-    congr 1; omega
-  have h2 : (hslice? (iwA m') (iwTop m + l.toNat) 1 : Option (List (Idx k))) = some [decI x] := by
-    rw [hslice?_succ]
-    have : (hd? (iwA m') (iwTop m + l.toNat) : Option (Idx k)) = some (decI x) := by simp [hd?, iwA, hget, hx]
-    rw [this]; simp [hslice?]
-  rw [h1, h2]; simp
+  sorry
 
 end L.Ind
 

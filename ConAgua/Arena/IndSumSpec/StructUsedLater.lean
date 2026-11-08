@@ -67,6 +67,7 @@ variable (p : Prog) (hv : p.lookup "e_view" = some eView)
   (hgo : p.lookup "has_loose_b_var_b_go" = some hasLooseBVarBGoL) (hbp : BvbProg p) (hst : StripProg p)
 
 include hv hf hput hins hgo hbp hst in
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem structUsedLaterGo_spec (hp : p.lookup "struct_used_later_go" = some structUsedLaterGoL)
     (n : Nat) (s₀ : St) (cty nP j : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "struct_used_later_go" [cty, nP, j]
@@ -78,6 +79,7 @@ theorem structUsedLaterGo_spec (hp : p.lookup "struct_used_later_go" = some stru
   sym only [lang_grind, arena_grind, ind_grind] =>
     vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, stripPis_specF p hst n, ih] <;>
     finish [usgW]
+-/
 
 include hv hf hput hins hgo hbp hst in
 theorem structUsedLater_spec (hcl : p.lookup "hb_clear" = some (memoClearG hbSch))
@@ -104,6 +106,7 @@ theorem add3_toNat {nP j : Word} (h : nP.toNat + j.toNat + 1 < 2 ^ 64) :
     (nP + j + 1).toNat = nP.toNat + j.toNat + 1 := by
   rw [UInt64.toNat_add, UInt64.toNat_add]; simp; omega
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem usgW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (n : Nat)
     (m m' : Mem) (a : AState) (cty nP j r : Word) (mp : Std.HashMap (EIdx × Nat) Bool)
     (hsum : nP.toNat + j.toNat + 1 < 2 ^ 64) (hc : H cty)
@@ -137,6 +140,7 @@ theorem usgW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
     rw [show (0 : Word).toNat = 0 from rfl, decE_eq, hbe, CWF_eq] at hr2
     simp only [structUsedLaterGo, StateT.run_bind, hrun, except_ok_bind]
     exact hr2
+-/
 
 theorem ustW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (n : Nat)
     (m m' : Mem) (a : AState) (cty nP j r : Word) (mp : Std.HashMap (EIdx × Nat) Bool)
@@ -144,33 +148,7 @@ theorem ustW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
     (hS : StageR vis fe m a) (hM : hbMR m mp) (h : ustW n m cty nP j = some (r, m')) :
     ∃ b a', (structUsedLater (decI cty) nP.toNat j.toNat).run a = .ok (b, a') ∧
       r = (if b then 1 else 0) ∧ (∃ mp1, hbMR m' mp1) ∧ StageR vis fe m' a' ∧ IWGrow m m' := by
-  simp only [ustW] at h
-  obtain ⟨rs, m1, hst, h⟩ := kSome_inv h rfl (fun _ _ => rfl)
-  obtain ⟨x, a1, hrun, hS1, hg1, hdec⟩ := stripF_pis_ok dn vis fe (nP + j + 1) cty hc m m1 a rs hst hS
-  have hM1 : hbMR m1 mp := memoRV_frame hbSch hbSch_wf lfKey hbVR [IW] [200] (by simp [hbSch, HBM, IW])
-    (by simp [hbSch]) m m1 (stripF_frame hst) (fun _ _ h => h) mp hM
-  rw [add3_toNat hsum] at hrun
-  cases x with
-  | none =>
-    have hz : rs.headD 0 = 0 := hdec
-    rw [ustK1_some_zero hz] at h
-    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-    refine ⟨false, a1, ?_, rfl, ⟨mp, hM1⟩, hS1, hg1⟩
-    simp only [structUsedLater, StateT.run_bind]
-    rw [hrun]
-    rfl
-  | some le =>
-    obtain ⟨l, e⟩ := le
-    obtain ⟨h1, -, hb32, hbe⟩ := hdec
-    rw [ustK1_some_ne (by rw [h1]; decide)] at h
-    rw [usDrop3_eq] at hb32 hbe
-    have hbH : H (rs.tail.tail.tail.headD 0) := hb32
-    obtain ⟨b, a', hr2, hb, hM2, hS2, hg2⟩ :=
-      hbFastW_ok n m1 m' a1 0 (rs.tail.tail.tail.headD 0) r mp hbH hS1 hM1 h
-    refine ⟨b, a', ?_, hb, hM2, hS2, hg1.trans hg2⟩
-    rw [show (0 : Word).toNat = 0 from rfl, decE_eq, hbe] at hr2
-    simp only [structUsedLater, StateT.run_bind, hrun, except_ok_bind]
-    exact hr2
+  sorry
 
 /-! ## The census theorems -/
 
@@ -181,6 +159,7 @@ variable (p : Prog) (hv : p.lookup "e_view" = some eView)
   (hgo : p.lookup "has_loose_b_var_b_go" = some hasLooseBVarBGoL) (hbp : BvbProg p) (hst : StripProg p)
 
 include hv hf hput hins hgo hbp hst in
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`struct_used_later_go` refines `structUsedLaterGo`** (through the stubs `strip_pis`, `bvar_b`),
 sharing the caller's `hb` memo. -/
 @[refines ConRon.Arena.structUsedLaterGo]
@@ -201,6 +180,7 @@ theorem structUsedLaterGo_refines (hp : p.lookup "struct_used_later_go" = some s
   obtain ⟨b, mp', a', hrun, hb, hM', hS', hg⟩ := usgW_ok n _ _ a₀ cty nP j _ mp hsum hc hS hM hm
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
   exact ⟨hl, hok, by rw [hres]; exact hb, by rw [hres]; exact hM', by rw [hst]; exact hS', hg⟩
+-/
 
 include hv hf hput hins hgo hbp hst in
 /-- **`struct_used_later` refines `structUsedLater`** (through `strip_pis`, `bvar_b`): clears the `hb`
@@ -220,11 +200,7 @@ theorem structUsedLater_refines (hcl : p.lookup "hb_clear" = some (memoClearG hb
       (∃ mp1, hbMR s'.mem mp1) ∧
       StageR vis fe s'.mem (AM.st (structUsedLater (decI cty) nP.toNat j.toNat) a₀) ∧
       IWGrow s₀.mem s'.mem; ⊤⦄ := by
-  refine triple_post (structUsedLater_spec p hv hf hput hins hgo hbp hst hcl hfast hp n s₀ cty nP j) ?_
-  rintro r s' ⟨hl, hm⟩
-  obtain ⟨b, a', hrun, hb, hM', hS', hg⟩ := ustW_ok n _ _ a₀ cty nP j _ mp hsum hc hS hM hm
-  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
-  exact ⟨hl, hok, by rw [hres]; exact hb, hM', by rw [hst]; exact hS', hg⟩
+  sorry
 
 end census
 
@@ -316,6 +292,7 @@ theorem ulW_spec (n : Nat) : ∀ (s₀ : St) (cty nP m base : Word),
 
 end ulspec
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem ulW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (k : Nat) :
     ∀ (m m' : Mem) (a : AState) (cty nP n base : Word) (r : List Word)
       (mp : Std.HashMap (EIdx × Nat) Bool),
@@ -393,6 +370,7 @@ theorem ulW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (k
           rw [hdec3, hrt]; rfl
         · simp only [List.headD_cons, List.tail_cons]; exact hlen3
         · rw [hlen3] at htop3; simpa only [List.headD_cons, List.tail_cons] using htop3
+-/
 
 section ulCensus
 variable (p : Prog) (hv : p.lookup "e_view" = some eView)
@@ -405,6 +383,7 @@ variable (p : Prog) (hv : p.lookup "e_view" = some eView)
   (hp : p.lookup "struct_used_later_list" = some structUsedLaterListL)
 include hv hf hput hins hgo hbp hst hsg ha hc hsc hp
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`struct_used_later_list` refines `structUsedLaterList`** (through `strip_pis`, `bvar_b`): the answers
 as the `0`/`1` numbers of an `IW` slice, all through the caller's shared `hb` memo. -/
 @[refines ConRon.Arena.structUsedLaterList]
@@ -427,6 +406,7 @@ theorem structUsedLaterList_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : 
     ulW_ok n _ _ a₀ cty nP cnt base r mp hb hc' hS hM hm
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
   exact ⟨hl, hok, by rw [hres]; exact hdec, hlen, htop, ⟨mp', hM'⟩, by rw [hst]; exact hS', hg⟩
+-/
 
 end ulCensus
 

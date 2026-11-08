@@ -261,6 +261,7 @@ theorem eRec_val {m : Mem} {k v : Word} (h : eRecGetW m k = some v) :
   · simp only [Option.some.injEq] at h; exact h
   · cases h
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem inpTail_short (cvT : IConstantVal) (caps : IIndCaps) (us : LsIdx) (a : AState) (usl : Nat)
     (hv : a.store.lss.viewLen us = some usl) (hne : cvT.levelParams.length ≠ usl) :
     (inpTail cvT caps us).run a = .ok (false, a) := by
@@ -268,6 +269,7 @@ theorem inpTail_short (cvT : IConstantVal) (caps : IIndCaps) (us : LsIdx) (a : A
   simp only [inpTail, StateT.run_bind, hv', except_ok_bind]
   have : (cvT.levelParams.length == usl) = false := by simpa using hne
   simp [this]; rfl
+-/
 
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem inpTail_full (cvT : IConstantVal) (caps : IIndCaps) (us : LsIdx) (a a' : AState) (usl : Nat)

@@ -28,7 +28,6 @@ local notation "V" => ConLeche.CheckMode.verified
 /-- The lookups `class_rules_ok` needs. -/
 structure CrsProg (p : Prog) : Prop where
   ru : RuProg p
-  cr : CruleProg p
   alloc : p.lookup "iw_alloc" = some iwAlloc
   copy : p.lookup "iw_copy" = some iwCopy
   cons : p.lookup "sl_cons" = some slCons

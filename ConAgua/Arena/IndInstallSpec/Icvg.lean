@@ -31,11 +31,13 @@ local notation "V" => ConLeche.CheckMode.verified
 
 /-! ## `check_block_inds_cv_tas` -/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`check_block_inds_cv_tas_go` is its model `icvgW`** (generated). -/
 l_model icvg_spec (p : Prog) (hp : p.lookup "check_block_inds_cv_tas_go" = some checkBlockIndsCvTasGo)
   fns [hp ↦ icvgW]
   specs [callW_spec p n "sl_cons"]
   grind [ind_grind] finish [rdW_eq] gen 20
+-/
 
 /-- The recursor shapes' slice of the shape at `pp` lies below the top. -/
 def RecsB (m : Mem) (pp : Word) : Prop :=

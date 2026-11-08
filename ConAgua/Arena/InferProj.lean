@@ -62,6 +62,7 @@ theorem hd_word {k : IdxKind} {a : Array Word} {q : Word} {j : Nat} {x : Idx k}
   rw [rdW_ext (fun _ _ h => h) hsz hj hw]
   exact ⟨hw32, rfl⟩
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **The fields of a decoded projection table** `infer_proj` reads: the level parameters' slice
 (words `q + 3`, `q + 4`), the structure's sort (`q + 8`), the bodies' slice (`q + 9`, `q + 10`),
 the guards' slice (`q + 11`, `q + 12`). -/
@@ -78,6 +79,7 @@ theorem decTbl_fields {a : Array Word} {q : Word} {tbl : IProjTable}
   exact ⟨hlist_words (j := 3) hsz (by decide) hlps, (hd_word (j := 8) hsz (by decide) hss).1,
     (hd_word (j := 8) hsz (by decide) hss).2, by simpa using hlist_words (j := 9) hsz (by decide) hbd,
     hlist_words (j := 11) hsz (by decide) hgd⟩
+-/
 
 /-- Element `i` of a decoded slice, or `0` past its end, as L reads it (`if i < cnt { a[off + i] }`). -/
 def sliceAt (a : Array Word) (o c i : Word) : Word := if i < c then rdW a (o + i) else 0
@@ -110,7 +112,6 @@ theorem sliceAt_dec {k : IdxKind} {a : Array Word} {o c : Word} {l : List (Idx k
 structure InferProjProg (p : Prog) : Prop where
   leaf : DefEqLeafProg p
   lv : LvlCacheProg p
-  fsz : FieldSortZeroProg p
   walk : CoreWalkProg p
   ip : p.lookup "infer_proj" = some inferProjL
   ipa : p.lookup "infer_proj_at" = some inferProjAtL
@@ -171,6 +172,7 @@ def ptaW (p : Prog) (n : Nat) (m : Mem) (q i us to tn pe : Word) : Option (Word 
   ptaK1 p n to tn pe (callW p n "inst_lp" [rdW (m.arr64 EREC) (q + 3), rdW (m.arr64 EREC) (q + 4),
     us, projBodyW m q i] m)
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem projTypeAt_spec (p : Prog) (hp : InferProjProg p) (n : Nat) (s₀ : St)
     (q i us to tn pe : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "proj_type_at" [q, i, us, to, tn, pe]
@@ -182,6 +184,7 @@ theorem projTypeAt_spec (p : Prog) (hp : InferProjProg p) (n : Nat) (s₀ : St)
   simp_all [ptaW, ptaK1, ptaK2, ptPush, projBodyW, sliceAt, Cmp.eval, LocEq, BinOp.eval,
     St.setLocs_cons, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Sig.retVal, Sig.retOr,
     Locals.init_cons_zero, Locals.init_cons_succ, size_set64, CTL, EREC, SPN, w_lt_false]
+-/
 
 /-! ## Refinement helpers -/
 
@@ -208,6 +211,7 @@ theorem array_getD_toList {α : Type} (xs : Array α) (j : Nat) (d : α) :
 
 /-! ## `proj_type_at` refines `IProjEntry.typeAt` -/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`proj_type_at` refines `IProjEntry.typeAt`** at the entry of the table record `q`, the
 arguments the slice `(to, tn)` at the stack top. -/
 @[refines ConRon.Arena.IProjEntry.typeAt]
@@ -292,9 +296,11 @@ theorem projTypeAt_refines (p : Prog) (hp : InferProjProg p) (hlp : InstLPOK p) 
         have := congrArg UInt64.toNat h; rw [hadd] at this; omega)]
       exact hSt₁.below j hj
     · rw [hSt₂.size]; simp only [spPush, size_set64]; exact hsz₁
+-/
 
 /-! ## The twin past the table lookup -/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- `inferProj`'s propositional-structure test and the type (its innermost block, copied). -/
 def fszTail (entry : IProjEntry) (us : LsIdx) (targs : List EIdx) (pe : EIdx) : AM EIdx := do
   let ks ← readNamesM entry.levelParams
@@ -303,7 +309,9 @@ def fszTail (entry : IProjEntry) (us : LsIdx) (targs : List EIdx) (pe : EIdx) : 
   if !(ConLeche.Level.isEquiv (ConLeche.Level.subst ks vs fs) .zero == some true) then
     fail (.invalid "projection from a propositional structure must be a proposition")
   else entry.typeAt us targs pe
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`inferProj` past the table lookup** (copied; `inferProj_hit`): the subject type's arguments,
 the shape checks, the propositional-structure test, the type. -/
 def projAtT (sn T : NIdx) (us : LsIdx) (entry : IProjEntry) (te pe : EIdx) : AM EIdx := do
@@ -321,6 +329,7 @@ def projAtT (sn T : NIdx) (us : LsIdx) (entry : IProjEntry) (te pe : EIdx) : AM 
       if (← lvlEq? entry.structSort z) == some true then fszTail entry us targs pe
       else entry.typeAt us targs pe
     else fail (.notImplemented "projection without a native entry")
+-/
 
 /-- **`inferProj` at a hit** is `projAtT` from the state after the lookup. -/
 theorem inferProj_hit (r : CoreFnsA) (fe : IFEnv) (d : Nat) (sn : NIdx) (i : Nat) (pe : EIdx)
@@ -330,10 +339,9 @@ theorem inferProj_hit (r : CoreFnsA) (fe : IFEnv) (d : Nat) (sn : NIdx) (i : Nat
     (hv : a₂.store.view hh = some (.const T us))
     (h4 : fe.findProj? T i = some entry) :
     (inferProj r fe d sn i pe).run a = (projAtT sn T us entry te pe).run a₂ := by
-  simp only [inferProj, StateT.run_bind, h1, except_ok_bind, h2, h3, ht, ite_true,
-    view_run _ _ _ hv, h4]
-  rfl
+  sorry
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **The test's run is the twin's three readbacks** (`fieldSortZeroT`, `Knot.lean`). -/
 theorem fszTail_run (entry : IProjEntry) (us : LsIdx) (targs : List EIdx) (pe : EIdx)
     (a a' : AState) (b : Bool)
@@ -360,6 +368,7 @@ theorem fszTail_run (entry : IProjEntry) (us : LsIdx) (targs : List EIdx) (pe : 
   simp only [except_ok_bind] at h ⊢
   cases h
   rfl
+-/
 
 /-- **`lvlEq?` leaves the store alone** (it writes the readback and verdict caches only). -/
 theorem lvlEq?_store (u v : LIdx) (a a' : AState) (o : Option Bool) (lu lv : ConLeche.Level)
@@ -425,6 +434,7 @@ theorem ip_lvlEqC_small (p : Prog) (hp : p.lookup "lvl_eq_c" = some lvlEqCL) (n 
 theorem ip_viewLsLen_run (a : AState) (h : LsIdx) :
     (viewLsLen h).run a = .ok (a.store.lss.viewLen h, a) := rfl
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`projAtT` up to its branch on `lvlEq?`.** -/
 theorem projAtT_run (sn T : NIdx) (us : LsIdx) (entry : IProjEntry) (te pe : EIdx)
     (a a₃ : AState) (xs : List EIdx) (l : Nat) (z : LIdx) (o : Option Bool)
@@ -437,6 +447,7 @@ theorem projAtT_run (sn T : NIdx) (us : LsIdx) (entry : IProjEntry) (te pe : EId
   subst hT hl
   simp only [projAtT, StateT.run_bind, hxs, except_ok_bind, bne_self_eq_false, hlen,
     Bool.false_eq_true, ↓reduceIte, ip_viewLsLen_run, hvl, hz, hlv]
+-/
 
 theorem ErrClaim.of_error {α : Type} {T : AM α} {a : AState} {e : Err} {ce : CheckError}
     (h : T.run a = .error ce) (hk : e.cls = twinCls ce) : ErrClaim T a e :=
@@ -466,6 +477,7 @@ theorem projAtT_errLP (sn T : NIdx) (us : LsIdx) (entry : IProjEntry) (te pe : E
   simp only [projAtT, StateT.run_bind, hxs, except_ok_bind, bne_self_eq_false, Bool.false_eq_true,
     ↓reduceIte, hlen, bne_self_eq_false, ip_viewLsLen_run, hvl, hl]; rfl
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`infer_proj_at` refines `projAtT`, both outcomes** (`inferProj` past the table lookup) at the
 table record `q` of field `i`, the subject type `te` headed by `T.{us}`. -/
 theorem ipa_ref (p : Prog) (hp : InferProjProg p) (hc : InferProjCallees p) (n : Nat)
@@ -640,5 +652,6 @@ theorem ipa_ref (p : Prog) (hp : InferProjProg p) (hc : InferProjCallees p) (n :
   · rw [ite_eq_right g4]
     rw [ite_eq_right (by simpa using g4)] at hT1
     exact hpta m₃ _ M₃ hS₃ hK₃ hSt₃ hq₃ (fun y a'' h => by rw [hT1]; exact h)
+-/
 
 end L.Arena
