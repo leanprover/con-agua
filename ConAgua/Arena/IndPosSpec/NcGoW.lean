@@ -92,6 +92,7 @@ def ntK2 (q : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | some (r2, m2) =>
     if r2.tail.headD 0 = 0 then some ([1, rdW (m2.arr64 EREC) (q + 5 + 12), r2.headD 0, 0], m2)
     else some ([1, r2.tail.tail.headD 0, r2.headD 0, r2.tail.headD 0], m2)
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 def ntK1 (k : Nat) (vis C : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r, m1) =>
@@ -99,6 +100,7 @@ def ntK1 (k : Nat) (vis C : Word) : Option (List Word × Mem) → Option (List W
     else if rdW (m1.arr64 EREC) (r.tail.headD 0) ≠ 3 then some ([0, 0, 0, 0], m1)
     else ntK2 (r.tail.headD 0) (ncWf k m1 vis C (rdW (m1.arr64 EREC) (r.tail.headD 0 + 5 + 13))
       (rdW (m1.arr64 EREC) (r.tail.headD 0 + 5 + 14)))
+-/
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- The model of `nest_container(vis, C)` at exec fuel `k + 1`. -/
 def ntW (k : Nat) (m : Mem) (vis C : Word) : Option (List Word × Mem) := ntK1 k vis C (envFindW m C vis)
@@ -116,10 +118,12 @@ theorem ntK1_miss (h : r.headD 0 = 0) : ntK1 k vis C (some (r, m1)) = some ([0, 
   rw [ntK1, ite_eq_left h]
 theorem ntK1_noind (h : ¬ r.headD 0 = 0) (h3 : rdW (m1.arr64 EREC) (r.tail.headD 0) ≠ 3) :
     ntK1 k vis C (some (r, m1)) = some ([0, 0, 0, 0], m1) := by rw [ntK1, ite_eq_right h, ite_eq_left h3]
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem ntK1_ind (h : ¬ r.headD 0 = 0) (h3 : ¬ rdW (m1.arr64 EREC) (r.tail.headD 0) ≠ 3) :
     ntK1 k vis C (some (r, m1)) = ntK2 (r.tail.headD 0) (ncWf k m1 vis C
       (rdW (m1.arr64 EREC) (r.tail.headD 0 + 5 + 13)) (rdW (m1.arr64 EREC) (r.tail.headD 0 + 5 + 14))) := by
   rw [ntK1, ite_eq_right h, ite_eq_right h3]
+-/
 end arms
 attribute [ind_grind] ntK2_empty ntK2_cons ntK1_miss ntK1_noind ntK1_ind
 
@@ -147,11 +151,13 @@ theorem ncGo_spec (k : Nat) : ∀ (s₀ : St) (vis C co cl cs ol fp : Word),
       finish (gen := 20) [rdW_eq, St.setLocs_mem']
 -/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 include hl in
 theorem nc_spec (k : Nat) (s₀ : St) (vis C co cl : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p k) "nest_container_ctors" [vis, C, co, cl]
     ⦃fun r s' => LocEq s' s₀ ∧ ncWf k s₀.mem vis C co cl = some (r, s'.mem); ⊤⦄ := by
   sorry
+-/
 
 /- ronsync2 stage 2: commented out (statement at the old twin/L)
 include hl in

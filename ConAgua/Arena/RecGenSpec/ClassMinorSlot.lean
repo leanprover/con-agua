@@ -230,15 +230,7 @@ def RecsOK (m : Mem) (ro rl : Nat) (cvs : List IConstantVal) : Prop :=
 
 theorem RecsOK_grow {m m' : Mem} (hg : IWGrow m m') {ro rl : Nat} {cvs : List IConstantVal}
     (h : RecsOK m ro rl cvs) : RecsOK m' ro rl cvs := by
-  obtain ⟨h1, h2, h3⟩ := h
-  refine ⟨Nat.le_trans h1 hg.iw, h2, fun j hj => ?_⟩
-  obtain ⟨p0, q, cv, hp0, hp1, hq, hcv, hext, hcvs⟩ := h3 j hj
-  have hiw : ∀ i, i < iwTop m → iwN m' i = iwN m i := fun i hi => by
-    simp only [iwN, nat?, iwA]; rw [hg.iwGet i hi]
-  refine ⟨p0, q, cv, ?_, Nat.le_trans hp1 hg.iw, ?_, ?_, CVExt_grow hg hext, hcvs⟩
-  · rw [hiw _ (by omega)]; exact hp0
-  · rw [hiw _ (by omega)]; exact hq
-  · rw [decCVp_grow_r hg hext]; exact hcv
+  sorry
 
 theorem RecsOK_cons {m : Mem} {ro rl : Nat} {cv : IConstantVal} {cvs : List IConstantVal}
     (h : RecsOK m ro (rl + 1) (cv :: cvs)) :

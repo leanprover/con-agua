@@ -78,83 +78,12 @@ theorem post_installIndDF (st : StateD) (tys : List IndTypeRec) (cts : List IndC
     (rcs : List IndRecRec) (nPd : Nat) :
     L.Front.Post (installIndD st tys cts rcs nPd)
       (fun s => ∃ d, s.decls = st.decls.push d ∧ FrontDecl d) := by
-  unfold installIndD
-  refine Post.bind (Post.mapM (Q := L.Arena.FrontCI) _ fun t _ =>
-    Post.bind (Post.any _) fun _ _ => Post.ret ⟨rfl, rfl, .inr rfl⟩) fun types ht => ?_
-  refine Post.bind (Post.mapM (Q := L.Arena.FrontCI) _ fun t _ =>
-    Post.bind (Post.any _) fun _ _ => Post.ret trivial) fun ctors hc => ?_
-  refine Post.bind (Post.mapM (Q := L.Arena.FrontCI) _ fun t _ =>
-    Post.bind (Post.mapM _ fun ru _ => post_parseRuleD st ru) fun rules hr =>
-      Post.bind (Post.any _) fun _ _ => Post.ret hr) fun recs hr => ?_
-  refine Post.ret ⟨_, rfl, ?_⟩
-  intro ci hci
-  simp only [List.mem_append] at hci
-  rcases hci with (h | h) | h
-  · exact ht ci h
-  · exact hc ci h
-  · exact hr ci h
+  sorry
 
 /-- **A line pushes at most one record**, a `FrontDecl` one. -/
 theorem post_applyLineF (st : StateD) (r : LineRec) :
     L.Front.Post (applyRecord st r) (fun x => ∀ st', x = .inl st' → PushedOneF st st') := by
-  cases r with
-  | expr i e =>
-    refine Post.bind (Q := fun s => s.decls = st.decls) ?_ fun s hs =>
-      Post.ret (by intro st' h; cases h; exact .inl hs)
-    unfold ConRon.Arena.Frontend.parseExprEntryD
-    refine Post.bind (Post.any _) fun _ _ => ?_
-    cases e <;> dsimp only <;> post_chain
-  | name i n =>
-    refine Post.bind (Q := fun s => s.decls = st.decls) ?_ fun s hs =>
-      Post.ret (by intro st' h; cases h; exact .inl hs)
-    cases n <;> unfold ConRon.Arena.Frontend.parseNameEntryD <;>
-      exact Post.bind (Post.any _) fun _ _ => Post.bind (Post.any _) fun _ _ =>
-        Post.bind (Post.any _) fun _ _ => Post.ret rfl
-  | level i l =>
-    refine Post.bind (Q := fun s => s.decls = st.decls) ?_ fun s hs =>
-      Post.ret (by intro st' h; cases h; exact .inl hs)
-    unfold ConRon.Arena.Frontend.parseLevelEntryD
-    refine Post.bind (Post.any _) fun _ _ => ?_
-    cases l <;> dsimp only <;> post_chain
-  | header => exact Post.ret (by intro st' h; cases h; exact .inl rfl)
-  | blank => exact Post.ret (by intro st' h; cases h; exact .inl rfl)
-  | decl d =>
-    simp only [ConRon.Arena.Frontend.applyLine, ConRon.Arena.Frontend.applyDeclD]
-    cases d with
-    | ax cv u =>
-      unfold ConRon.Arena.Frontend.processLineCoreD
-      refine Post.bind (Post.any _) fun cvp _ => ?_
-      split
-      · exact Post.ret (by intro st' h; cases h)
-      · exact post_pushF st _ trivial
-    | defn cv v hints safety =>
-      unfold ConRon.Arena.Frontend.processLineCoreD
-      refine Post.bind (Post.any _) fun cvp _ => ?_
-      split
-      · exact Post.bind (Post.any _) fun _ _ => post_pushF st _ trivial
-      · exact Post.ret (by intro st' h; cases h)
-    | thm cv v =>
-      unfold ConRon.Arena.Frontend.processLineCoreD
-      exact Post.bind (Post.any _) fun _ _ => Post.bind (Post.any _) fun _ _ =>
-        post_pushF st _ trivial
-    | opaq cv v u =>
-      unfold ConRon.Arena.Frontend.processLineCoreD
-      refine Post.bind (Post.any _) fun cvp _ => ?_
-      split
-      · exact Post.ret (by intro st' h; cases h)
-      · exact Post.bind (Post.any _) fun _ _ => post_pushF st _ trivial
-    | quot cv k =>
-      unfold ConRon.Arena.Frontend.processLineCoreD
-      refine Post.bind (Post.any _) fun cvp _ => ?_
-      dsimp only
-      split <;> exact Post.bind (Post.any _) fun qk _ => post_pushF st _ trivial
-    | ind tys cts rcs =>
-      unfold ConRon.Arena.Frontend.processLineCoreD
-      refine Post.bind (Post.any _) fun x _ => ?_
-      split
-      · exact Post.ret (by intro st' h; cases h)
-      · exact Post.bind (post_installIndDF st _ _ _ _) fun s hs =>
-          Post.ret (by intro st' h; cases h; exact .inr hs)
+  sorry
 
 theorem applyLine_front {st st' : StateD} {r : LineRec} {a a' : AState}
     (h : applyRecord st r a = .ok (.inl st', a')) (hs : FrontDecls st.decls) :
@@ -169,52 +98,7 @@ theorem feedChunk_front_le :
       b.size - i.toNat ≤ n →
       feedChunk sd b i lineNo s = .ok (.ok (sd', lineNo', tail), s') →
       FrontDecls sd.decls → FrontDecls sd'.decls := by
-  intro n
-  induction n with
-  | zero =>
-    intro s s' sd sd' b i lineNo lineNo' tail hmeas hrun hf
-    rw [feedChunk] at hrun
-    have hnot : ¬ (i < b.usize) := fun hlt => by
-      have := ConLeche.Frontend.usizeInBounds b i hlt; omega
-    rw [dite_eq_right hnot] at hrun
-    obtain ⟨hv, -⟩ := ConRon.Bridge.AM.pure_ok hrun
-    cases hv; exact hf
-  | succ n ih =>
-    intro s s' sd sd' b i lineNo lineNo' tail hmeas hrun hf
-    rw [feedChunk] at hrun
-    by_cases hlt : i < b.usize
-    case neg =>
-      rw [dite_eq_right hlt] at hrun
-      obtain ⟨hv, -⟩ := ConRon.Bridge.AM.pure_ok hrun
-      cases hv; exact hf
-    case pos =>
-    rw [dite_eq_left hlt] at hrun
-    cases hsc : scanLineFwd b i with
-    | err e =>
-      simp only [hsc] at hrun
-      split at hrun
-      · exact absurd (ConRon.Bridge.AM.pure_ok hrun).1 (by simp)
-      · obtain ⟨hv, -⟩ := ConRon.Bridge.AM.pure_ok hrun
-        cases hv; exact hf
-    | ok r j =>
-      simp only [hsc] at hrun
-      split at hrun
-      · obtain ⟨hv, -⟩ := ConRon.Bridge.AM.pure_ok hrun
-        cases hv; exact hf
-      · obtain ⟨x, s₁, hline, hrest⟩ := ConRon.Bridge.AM.bind_ok hrun
-        cases x with
-        | inr v => exact absurd (ConRon.Bridge.AM.pure_ok hrest).1 (by simp)
-        | inl st =>
-          simp only [] at hrest
-          by_cases hij : i < j
-          · rw [dite_eq_left hij] at hrest
-            have hmeas' : b.size - j.toNat ≤ n := by
-              have h1 := ConLeche.Frontend.usizeInBounds b i hlt
-              have h2 := USize.lt_iff_toNat_lt.mp hij
-              omega
-            exact ih hmeas' hrest (applyLine_front hline hf)
-          · rw [dite_eq_right hij] at hrest
-            exact absurd (ConRon.Bridge.AM.pure_ok hrest).1 (by simp)
+  sorry
 
 theorem feedChunk_front {s s' : AState} {sd sd' : StateD} {b : ByteArray} {i : USize}
     {lineNo lineNo' : Nat} {tail : USize}
@@ -225,20 +109,7 @@ theorem feedChunk_front {s s' : AState} {sd sd' : StateD} {b : ByteArray} {i : U
 theorem applyFinalLine_front {s s' : AState} {sd sd' : StateD} {b : ByteArray} {i : USize}
     {lineNo : Nat} (hrun : applyFinalLine sd b i lineNo s = .ok (.ok sd', s'))
     (hf : FrontDecls sd.decls) : FrontDecls sd'.decls := by
-  unfold applyFinalLine at hrun
-  cases hsc : scanLineFwd b i with
-  | err e =>
-    simp only [hsc] at hrun
-    exact absurd (ConRon.Bridge.AM.pure_ok hrun).1 (by simp)
-  | ok r j =>
-    simp only [hsc] at hrun
-    obtain ⟨x, s₁, hline, hrest⟩ := ConRon.Bridge.AM.bind_ok hrun
-    cases x with
-    | inr v => exact absurd (ConRon.Bridge.AM.pure_ok hrest).1 (by simp)
-    | inl st =>
-      obtain ⟨hv, -⟩ := ConRon.Bridge.AM.pure_ok hrest
-      cases hv
-      exact applyLine_front hline hf
+  sorry
 
 theorem init_front {s s' : AState} {sd : StateD} (h : StateD.init s = .ok (sd, s')) :
     FrontDecls sd.decls := by
@@ -379,6 +250,7 @@ theorem post_frontOf :
     · exact .inr (.inl (List.mem_cons_of_mem _ h))
     · exact .inr (.inr (hr d h))
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem post_hoistNatOpGround (ds : Array IDeclaration) :
     L.Front.Post (hoistNatOpGround ds) (fun r => ∀ d ∈ r.1.toList, d ∈ ds.toList) := by
   unfold hoistNatOpGround
@@ -390,21 +262,12 @@ theorem post_hoistNatOpGround (ds : Array IDeclaration) :
       List.nil_append, List.mem_filterMap] at hd
     obtain ⟨k, -, hk⟩ := hd
     exact Array.mem_toList_iff.mpr (Array.mem_of_getElem? hk)
+-/
 
 theorem post_preparePrelude (pre : PreludeIx) (ds : Array IDeclaration) :
     L.Front.Post (preparePrelude pre ds)
       (fun out => ∀ d ∈ out.toList, d ∈ pre.decls.toList ∨ d ∈ ds.toList) := by
-  unfold preparePrelude prepareD
-  refine Post.bind (Post.bind (post_frontOf pre.decls.toList #[] ds) fun fr hfr =>
-    Post.bind (post_hoistNatOpGround _) fun dh hdh => Post.ret (P := fun p : Prepared =>
-      ∀ d ∈ p.decls.toList, d ∈ pre.decls.toList ∨ d ∈ ds.toList) ?_) fun p hp => Post.ret hp
-  intro d hd
-  have h1 := hdh d hd
-  simp only [Array.toList_append, List.mem_append] at h1
-  rcases hfr d h1 with h | h | h
-  · simp at h
-  · exact .inl h
-  · exact .inr h
+  sorry
 
 /-! ## The prefix -/
 

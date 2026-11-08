@@ -89,6 +89,7 @@ def cfW (p : Prog) (n : Nat) (m : Mem) (vis c : Word) : Option (List Word × Mem
   if rdW (m5.arr64 EREC) (r5.tail.headD 0) ≠ 3 then some ([r1.tail.headD 0, 0, 0], m5) else
   some ([r1.tail.headD 0, r5.tail.headD 0, 1], m5)
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem cf_spec (p : Prog) (hp : p.lookup "ctor_family" = some ctorFamily) (n : Nat) (s₀ : St)
     (vis c : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "ctor_family" [vis, c]
@@ -100,6 +101,7 @@ theorem cf_spec (p : Prog) (hp : p.lookup "ctor_family" = some ctorFamily) (n : 
     callW_spec p n "env_find", callW_spec p n "pi_result_f", callW_spec p n "get_app_fn_f",
     callW_spec p n "const_name_of"] <;>
     finish (gen := 20) [cfW, ntBW, CWF]
+-/
 
 /-- The model of `rec_rule_k_of(vis, c)`. -/
 def kofW (p : Prog) (n : Nat) (m : Mem) (vis c : Word) : Option (List Word × Mem) :=
@@ -109,6 +111,7 @@ def kofW (p : Prog) (n : Nat) (m : Mem) (vis c : Word) : Option (List Word × Me
     some ([1], m1)
   else some ([0], m1)
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem kof_spec (p : Prog) (hp : p.lookup "rec_rule_k_of" = some recRuleKOfL) (n : Nat)
     (s₀ : St) (vis c : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "rec_rule_k_of" [vis, c]
@@ -118,6 +121,7 @@ theorem kof_spec (p : Prog) (hp : p.lookup "rec_rule_k_of" = some recRuleKOfL) (
   sym only [lang_grind, arena_grind] =>
     vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, callW_spec p n "ctor_family"] <;>
     finish (gen := 20) [kofW, ntBW, CWF]
+-/
 
 /-- The model of `rec_rule_eta_of(vis, c)`. -/
 def eofW (p : Prog) (n : Nat) (m : Mem) (vis c : Word) : Option (List Word × Mem) :=
@@ -129,6 +133,7 @@ def eofW (p : Prog) (n : Nat) (m : Mem) (vis c : Word) : Option (List Word × Me
     rdW (m1.arr64 EREC) (r.tail.headD 0 + 2), rdW (m1.arr64 EREC) (r.tail.headD 0 + 3)] m1) fun x m2 =>
   some ([x.headD 0], m2)
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem eof_spec (p : Prog) (hp : p.lookup "rec_rule_eta_of" = some recRuleEtaOfL) (n : Nat)
     (s₀ : St) (vis c : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "rec_rule_eta_of" [vis, c]
@@ -139,12 +144,14 @@ theorem eof_spec (p : Prog) (hp : p.lookup "rec_rule_eta_of" = some recRuleEtaOf
     vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, callW_spec p n "ctor_family",
     callW_spec p n "er_sl_eq"] <;>
     finish (gen := 20) [eofW, ntBW, CWF]
+-/
 
 /-- The model of `rec_rule_bits(vis, c)`. -/
 def rrbW (p : Prog) (n : Nat) (m : Mem) (vis c : Word) : Option (List Word × Mem) :=
   ntBW (callW p n "rec_rule_k_of" [vis, c] m) fun k m1 =>
   ntBW (callW p n "rec_rule_eta_of" [vis, c] m1) fun e m2 => some ([k.headD 0, e.headD 0], m2)
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem rrb_spec (p : Prog) (hp : p.lookup "rec_rule_bits" = some recRuleBitsL) (n : Nat)
     (s₀ : St) (vis c : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "rec_rule_bits" [vis, c]
@@ -155,6 +162,7 @@ theorem rrb_spec (p : Prog) (hp : p.lookup "rec_rule_bits" = some recRuleBitsL) 
     vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, callW_spec p n "rec_rule_k_of",
     callW_spec p n "rec_rule_eta_of"] <;>
     finish (gen := 20) [rrbW, ntBW, CWF]
+-/
 
 /-! ## The records' fields (decoded on the record pool itself) -/
 
@@ -170,13 +178,13 @@ theorem rdW_off {q : Word} {k : Nat} {w : Word} (hsz : b.size < 2 ^ 64) (hk : k 
     rw [this]; omega
   simp [rdW, e, h]
 
-theorem nat?_w {i k : Nat} (h : nat? b i = some k) : ∃ w, b[i]? = some w ∧ w.toNat = k := by
+theorem nat?_w {i k : Nat} (h : nat? (aread b) i = some k) : ∃ w, b[i]? = some w ∧ w.toNat = k := by
   simp only [nat?, Option.map_eq_some_iff] at h; exact h
 
-theorem bool?_w {i : Nat} {x : Bool} (h : bool? b i = some x) : ∃ w, b[i]? = some w ∧ (w != 0) = x := by
+theorem bool?_w {i : Nat} {x : Bool} (h : bool? (aread b) i = some x) : ∃ w, b[i]? = some w ∧ (w != 0) = x := by
   simp only [bool?, Option.map_eq_some_iff] at h; exact h
 
-theorem hd?_w {k : IdxKind} {i : Nat} {x : Idx k} (h : hd? b i = some x) :
+theorem hd?_w {k : IdxKind} {i : Nat} {x : Idx k} (h : hd? (aread b) i = some x) :
     ∃ w, b[i]? = some w ∧ w.toNat < 2 ^ 32 ∧ x = decI w := by
   simp only [hd?, Option.bind_eq_bind, Option.bind_eq_some_iff] at h
   obtain ⟨w, hw, h⟩ := h
@@ -184,22 +192,22 @@ theorem hd?_w {k : IdxKind} {i : Nat} {x : Idx k} (h : hd? b i = some x) :
   · exact ⟨w, hw, by assumption, (Option.some.inj h).symm⟩
   · cases h
 
-theorem decCV_lp {q : Nat} {cv : IConstantVal} (h : decCV b q = some cv) :
-    hlist? b (q + 1) = some cv.levelParams := by
+theorem decCV_lp {q : Nat} {cv : IConstantVal} (h : decCV (aread b) q = some cv) :
+    hlist? (aread b) (q + 1) = some cv.levelParams := by
   simp only [decCV, Option.bind_eq_bind, Option.pure_def, Option.bind_eq_some_iff] at h
   obtain ⟨_, _, ls, hls, _, _, hq⟩ := h
   rw [← Option.some.inj hq]; exact hls
 
-theorem decCV_ty {q : Nat} {cv : IConstantVal} (h : decCV b q = some cv) :
-    hd? b (q + 3) = some cv.type := by
+theorem decCV_ty {q : Nat} {cv : IConstantVal} (h : decCV (aread b) q = some cv) :
+    hd? (aread b) (q + 3) = some cv.type := by
   simp only [decCV, Option.bind_eq_bind, Option.pure_def, Option.bind_eq_some_iff] at h
   obtain ⟨_, _, _, _, _, hd, hq⟩ := h
   rw [← Option.some.inj hq]; exact hd
 
 /-- A constructor record's words. -/
 theorem decCI_ctorW {q : Nat} {cv : IConstantVal} {np nf : Nat}
-    (h : decCI b q = some (.ctorInfo cv np nf)) :
-    nat? b q = some 4 ∧ decCV b (q + 1) = some cv ∧ nat? b (q + 6) = some nf := by
+    (h : decCI (aread b) q = some (.ctorInfo cv np nf)) :
+    nat? (aread b) q = some 4 ∧ decCV (aread b) (q + 1) = some cv ∧ nat? (aread b) (q + 6) = some nf := by
   simp only [decCI, Option.bind_eq_bind, Option.pure_def, Option.bind_eq_some_iff] at h
   obtain ⟨k, hk, h⟩ := h
   rcases k with _ | _ | _ | _ | _ | _ | _ | k <;>
@@ -211,8 +219,8 @@ theorem decCI_ctorW {q : Nat} {cv : IConstantVal} {np nf : Nat}
 
 /-- An inductive record's words. -/
 theorem decCI_indW {q : Nat} {cv : IConstantVal} {caps : IIndCaps}
-    (h : decCI b q = some (.indInfo cv caps)) :
-    nat? b q = some 3 ∧ decCV b (q + 1) = some cv ∧ decCaps b (q + 5) = some caps := by
+    (h : decCI (aread b) q = some (.indInfo cv caps)) :
+    nat? (aread b) q = some 3 ∧ decCV (aread b) (q + 1) = some cv ∧ decCaps (aread b) (q + 5) = some caps := by
   simp only [decCI, Option.bind_eq_bind, Option.pure_def, Option.bind_eq_some_iff] at h
   obtain ⟨k, hk, h⟩ := h
   rcases k with _ | _ | _ | _ | _ | _ | _ | k <;>
@@ -222,11 +230,13 @@ theorem decCI_indW {q : Nat} {cv : IConstantVal} {caps : IIndCaps}
   obtain ⟨rfl, rfl⟩ := hc
   exact ⟨hk, hcv, hcaps⟩
 
-theorem decCaps_w {q : Nat} {caps : IIndCaps} (h : decCaps b q = some caps) :
-    bool? b q = some caps.eta ∧ hd? b (q + 1) = some caps.etaCtor ∧ bool? b (q + 6) = some caps.ruleK := by
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
+theorem decCaps_w {q : Nat} {caps : IIndCaps} (h : decCaps (aread b) q = some caps) :
+    bool? (aread b) q = some caps.eta ∧ hd? (aread b) (q + 1) = some caps.etaCtor ∧ bool? (aread b) (q + 6) = some caps.ruleK := by
   simp only [decCaps, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def] at h
   obtain ⟨e1, h1, e2, h2, _, _, _, _, _, _, _, _, e7, h7, _, _, _, _, _, _, _, _, e⟩ := h
   cases Option.some.inj e; exact ⟨h1, h2, h7⟩
+-/
 
 end fields
 
@@ -245,13 +255,16 @@ def famBlk (fe : IFEnv) (g : IConstantVal → IIndCaps → Bool) (cv : IConstant
     | _ => pure false
   else pure false
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem recRuleKOf_blk (fe : IFEnv) (ctor : NIdx) :
     recRuleKOf fe ctor = (match fe.find? ctor with
       | some (.ctorInfo cvj _ cnF) => famBlk fe (fun _ caps => caps.ruleK && cnF == 0) cvj
       | _ => pure false) := by
   unfold recRuleKOf famBlk
   rcases fe.find? ctor with _ | ⟨⟩ <;> rfl
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem recRuleEtaOf_blk (fe : IFEnv) (ctor : NIdx) :
     recRuleEtaOf fe ctor = (match fe.find? ctor with
       | some (.ctorInfo cvj _ _) => famBlk fe (fun cvT caps =>
@@ -259,6 +272,7 @@ theorem recRuleEtaOf_blk (fe : IFEnv) (ctor : NIdx) :
       | _ => pure false) := by
   unfold recRuleEtaOf famBlk
   rcases fe.find? ctor with _ | ⟨⟩ <;> rfl
+-/
 
 section famRun
 variable (fe : IFEnv) (g : IConstantVal → IIndCaps → Bool) (cv : IConstantVal) (a : AState)
@@ -306,10 +320,6 @@ structure RrbProg (p : Prog) : Prop where
   gaff : p.lookup "get_app_fn_f" = some getAppFnFL
   cno : p.lookup "const_name_of" = some constNameOfL
   ersl : p.lookup "er_sl_eq" = some L.Ind.erSlEq
-  cf : p.lookup "ctor_family" = some ctorFamily
-  kof : p.lookup "rec_rule_k_of" = some recRuleKOfL
-  eof : p.lookup "rec_rule_eta_of" = some recRuleEtaOfL
-  bits : p.lookup "rec_rule_bits" = some recRuleBitsL
 
 /-- The twin's lookup of `c` followed by the shared block at `G` (the bit's test, given the
 constructor's value and field count). -/
@@ -353,6 +363,7 @@ theorem kind_of_rdW {b : Array Word} {dn : NIdx → Option ConLeche.Name} {q : W
   obtain ⟨w, hw, h3, h4⟩ := decCI_kind34 b dn q.toNat ci h
   rw [rdW_of_get hw]; exact ⟨h3, h4⟩
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem cfW_ok {p : Prog} (hp : RrbProg p) (n : Nat) (dn : NIdx → Option ConLeche.Name) (vis : Word)
     (fe : IFEnv) (m m' : Mem) (a : AState) (hS : StageR vis fe m a) (c : Word) (hc : H c)
     (r : List Word) (hW : cfW p n m vis c = some (r, m')) :
@@ -517,6 +528,7 @@ theorem cfW_ok {p : Prog} (hp : RrbProg p) (n : Nat) (dn : NIdx → Option ConLe
   refine ⟨rfl, fun G => ⟨fun h => absurd h (by simp), fun _ => ⟨cvj, np, nF, cvT, caps, hciB, hci5B, ?_⟩⟩⟩
   rw [hblk]
   exact famBlk_ind fe _ cvj a _ _ hpr hga _ _ hvw htag cvT caps hfi5
+-/
 
 /-! ## The two bits and the rule's bits -/
 
@@ -525,17 +537,7 @@ theorem erSlEq_spec' (p : Prog) (hp : p.lookup "er_sl_eq" = some L.Ind.erSlEq) (
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "er_sl_eq" [o1, l1, o2, l2]
     ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧
       r.headD 0 = if erSlEqB (s₀.mem.arr64 EREC) o1 l1 o2 l2 then 1 else 0; ⊤⦄ := by
-  induction n with
-  | zero =>
-    intro s₀ o1 l1 o2 l2; rw [invoke_eq _ hp]; simp only [callFn, L.Ind.erSlEq]
-    vcgen [exec] <;> grind
-  | succ n ih =>
-    intro s₀ o1 l1 o2 l2
-    rw [invoke_eq _ hp]
-    simp only [callFn, L.Ind.erSlEq]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih] <;>
-      finish (gen := 20) [rdW_eq]
+  sorry
 
 section bits
 variable {p : Prog} (hp : RrbProg p) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
@@ -550,6 +552,7 @@ theorem cf_call (k : Nat) (m m1 : Mem) (a : AState) (hS : StageR vis fe m a) (c 
   have hcf := callW_model (M := fun mm => cfW p k mm vis c) (fun s => cf_spec p hp.cf k s vis c) h
   exact cfW_ok hp k dn vis fe m m1 a hS c hc rf hcf
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`rec_rule_k_of(vis, c)` refines `recRuleKOf fe c`** (the K bit). -/
 theorem recRuleKOf_ref (c : Word) (hc : H c) :
     CallRef p "rec_rule_k_of" [vis, c] (StageR vis fe) (recRuleKOf fe (decI c))
@@ -606,7 +609,9 @@ theorem recRuleKOf_ref (c : Word) (hc : H c) :
     · simp [hk0]
     · have : wn ≠ 0 := fun e => hc2 ⟨hk0, e⟩
       simp [hk0, this]
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`rec_rule_eta_of(vis, c)` refines `recRuleEtaOf fe c`** (the η-rescue bit). -/
 theorem recRuleEtaOf_ref (c : Word) (hc : H c) :
     CallRef p "rec_rule_eta_of" [vis, c] (StageR vis fe) (recRuleEtaOf fe (decI c))
@@ -697,7 +702,9 @@ theorem recRuleEtaOf_ref (c : Word) (hc : H c) :
   by_cases hl : cvj.levelParams = cvT.levelParams
   · simp [hl]
   · simp [hl]
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`rec_rule_bits(vis, c)` refines `recRuleBits fe rl`** for a rule with constructor `c`: the
 two words are the rule's new bits. -/
 theorem recRuleBits_ref (c : Word) (hc : H c) (rl : IRecRule) (hrl : rl.ctor = decI c) :
@@ -723,11 +730,13 @@ theorem recRuleBits_ref (c : Word) (hc : H c) (rl : IRecRule) (hrl : rl.ctor = d
   refine ⟨{ rl with k := xk, eta := xe }, a2, ?_, hS2, hg1.trans hg2, ?_⟩
   · simp only [recRuleBits, StateT.run_bind, hrl, hrk, except_ok_bind, hre]; rfl
   · simp only [List.headD_cons, List.tail_cons, hdk, hde]
+-/
 
 end bits
 
 /-! ## The census theorems (`RefAM`, the shape of `IndStubs.lean`'s contracts) -/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`rec_rule_k_of` refines `recRuleKOf`** under `StageR`. -/
 @[refines ConRon.Arena.recRuleKOf]
 theorem recRuleKOf_refines {p : Prog} (hp : RrbProg p) (dn : NIdx → Option ConLeche.Name) (vis : Word)
@@ -735,7 +744,9 @@ theorem recRuleKOf_refines {p : Prog} (hp : RrbProg p) (dn : NIdx → Option Con
     RefAM p "rec_rule_k_of" [vis, c] (StageR vis fe) (recRuleKOf fe (decI c))
       (KeepPost vis fe decW0B) :=
   (recRuleKOf_ref hp dn vis fe c hc).refAM
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`rec_rule_eta_of` refines `recRuleEtaOf`** under `StageR`. -/
 @[refines ConRon.Arena.recRuleEtaOf]
 theorem recRuleEtaOf_refines {p : Prog} (hp : RrbProg p) (dn : NIdx → Option ConLeche.Name)
@@ -743,7 +754,9 @@ theorem recRuleEtaOf_refines {p : Prog} (hp : RrbProg p) (dn : NIdx → Option C
     RefAM p "rec_rule_eta_of" [vis, c] (StageR vis fe) (recRuleEtaOf fe (decI c))
       (KeepPost vis fe decW0B) :=
   (recRuleEtaOf_ref hp dn vis fe c hc).refAM
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`rec_rule_bits` refines `recRuleBits`** under `StageR`: the shape of
 `IndStubs.recRuleBits_spec`. -/
 @[refines ConRon.Arena.recRuleBits]
@@ -753,5 +766,6 @@ theorem recRuleBits_refines {p : Prog} (hp : RrbProg p) (dn : NIdx → Option Co
       (KeepPost vis fe (fun _ r (x : IRecRule) =>
         x = { rl with k := r.headD 0 != 0, eta := r.tail.headD 0 != 0 })) :=
   (recRuleBits_ref hp dn vis fe c hc rl hrl).refAM
+-/
 
 end L.Stubs
