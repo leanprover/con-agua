@@ -90,6 +90,7 @@ section rule
 variable {rom : List UInt8} {p : Prog} (hL : RomCIProg rom p) (hr : RomOK rom)
 include hL hr
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`rci_rule` refines `Frontend.internRule`** for a plain rule, into the 11 words at `rr`. -/
 @[refines_part ConRon.Arena.Frontend.internRule "plain rules"]
 theorem rule_rel {m₀ : Mem} {a₀ : AState} {T : Nat} (seen : List ConLeche.Expr) (memo : EMemo)
@@ -107,6 +108,7 @@ theorem rule_rel {m₀ : Mem} {a₀ : AState} {T : Nat} (seen : List ConLeche.Ex
       Holds (fun i => rr.toNat ≤ i ∧ i < rr.toNat + 11) (fun _ => False)
         (fun m => decRule (erA m) rr.toNat) m' irl := by
   sorry
+-/
 
 end rule
 
@@ -114,6 +116,7 @@ section rules
 variable {rom : List UInt8} {p : Prog} (hL : RomCIProg rom p) (hr : RomOK rom)
 include hL hr
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`rci_rules_to` refines `Frontend.internRules`**, into the 11-word records at `o`, `o + 11`, …. -/
 @[refines_part ConRon.Arena.Frontend.internRules "plain rules"]
 theorem rulesTo_rel {m₀ : Mem} {a₀ : AState} {T : Nat} :
@@ -196,6 +199,7 @@ theorem rulesTo_rel {m₀ : Mem} {a₀ : AState} {T : Nat} :
         have e : o.toNat + 11 + 11 * j = o.toNat + 11 * (j + 1) := by omega
         rw [e] at this
         exact this
+-/
 
 end rules
 
