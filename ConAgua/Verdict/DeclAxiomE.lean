@@ -40,7 +40,7 @@ theorem checkDeclAxiom_errT {p : Prog} (hX : AxProg p) (hq : KnotStageProg p) (h
   simp only [Frontend.denoteDecl, Option.map_eq_some_iff] at hx
   obtain ⟨c, hcvd, -⟩ := hx
   exact RefE.run_err (s₀ := ⟨m, Locals.init []⟩) (checkDeclAxiom_specE p hX n _ i vis) hnv
-    ⟨⟨hnv, hcE⟩, ⟨hUL, strLitSupported_core p hq.knot.str⟩⟩
+    ⟨⟨hnv, hcE⟩, ⟨hUL, strLitStored_core p hq.knot.str⟩⟩
     (cda_ref hX hq hcl hap hkp hdn hQd hn hS hR.decls hi hd' hok hcvd hF hCr) hc
 
 end ax

@@ -778,7 +778,7 @@ structure UceLookups (p : Prog) : Prop where
   pin : p.lookup "pin_at" = some pinAtL
 
 /-- `unresolved_consts_error`'s program: the lookups and `str_lit_supported`'s refinement
-(`strLitSupported_core`, from a `StrLitProg`). -/
+(`strLitStored_core`, from a `StrLitProg`). -/
 structure UceProg (p : Prog) : Prop extends UceLookups p where
   sup : StrLitSupportedOK p
 

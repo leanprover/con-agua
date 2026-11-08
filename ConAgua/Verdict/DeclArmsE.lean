@@ -50,7 +50,7 @@ theorem checkDeclThm_errT {p : Prog} (hV : ValProg p) (hq : KnotStageProg p) (ha
   · cases hx
   rename_i c e' hcd he
   exact RefE.run_err (s₀ := ⟨m, Locals.init []⟩) (checkDeclThm_specE p hV hp n _ i vis) hnv
-    ⟨⟨⟨hnv, hcE⟩, ⟨hUL, strLitSupported_core p hq.knot.str⟩⟩, hivE⟩
+    ⟨⟨⟨hnv, hcE⟩, ⟨hUL, strLitStored_core p hq.knot.str⟩⟩, hivE⟩
     (cdt_ref (pins := pins) hV hq hap hkp hn hS hR.decls hi hd' hF hcd hCr) hc
 
 /-- **`check_decl_opaque`'s error claim under `StageT`** (`cdo_ref`'s error half). -/
@@ -71,7 +71,7 @@ theorem checkDeclOpaque_errT {p : Prog} (hV : ValProg p) (hC : CrpProg p) (hq : 
   · cases hx
   rename_i c e' hcd he
   exact RefE.run_err (s₀ := ⟨m, Locals.init []⟩) (checkDeclOpaque_specE p hp n _ i vis) trivial
-    ⟨⟨⟨hnv, hcE⟩, ⟨hUL, strLitSupported_core p hq.knot.str⟩⟩, hivE⟩
+    ⟨⟨⟨hnv, hcE⟩, ⟨hUL, strLitStored_core p hq.knot.str⟩⟩, hivE⟩
     (cdo_ref hV hC hq hcl hlc hap hkp hdn n hn hS hR.decls hi hd' hF hcd he hCr) hc
 
 end arms

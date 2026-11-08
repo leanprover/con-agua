@@ -51,7 +51,7 @@ theorem checkDeclDefn_errT {p : Prog} (hA : ArmProg p) (hV : ValProg p)
   · cases hx
   rename_i c e' hcvd hvd
   exact RefE.run_err (s₀ := ⟨m, Locals.init []⟩) (checkDeclDefn_specE p hG.df n _ i vis) trivial
-    ⟨⟨⟨hnv, hcE⟩, ⟨hUL, strLitSupported_core p hq.knot.str⟩⟩, hivE, hDG⟩
+    ⟨⟨⟨hnv, hcE⟩, ⟨hUL, strLitStored_core p hq.knot.str⟩⟩, hivE, hDG⟩
     (cdf_ref hA hV hG hq hcl hlc hap hkp hdn n hn hS hR.pinsets hR.decls hi hd' hfold hcvd hvd hPD
       hCr) hc
 

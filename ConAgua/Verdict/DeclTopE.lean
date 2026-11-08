@@ -42,7 +42,7 @@ theorem armsE_of (hdc : LoopCallees dn p) (hcE : CoreStubsE p) (hDG : DivGateSpe
     (hnv : closedNV p L.Checker.nvFns = true) (hUL : UceLookups p) : ArmsE pins dn ds p := by
   have hkp : CrKeep p := ⟨hdc.indMemo, hdc.crf⟩
   have hap := hdc.cd.crp.apd
-  have hU : UceProg p := ⟨hUL, strLitSupported_core p hdc.knot.knot.str⟩
+  have hU : UceProg p := ⟨hUL, strLitStored_core p hdc.knot.knot.str⟩
   have hivE : IvgE p := ivgE_okT hdc.cvg hap hkp hnv hU
   refine ⟨?_, ?_, ?_, ?_, ?_⟩
   · exact fun cv => checkDeclAxiom_errT pins dn ds hdc.cd.axp hdc.knot hdc.leaf hap hkp hnv hcE hUL hdc.dninj hdc.quotDn cv
@@ -62,7 +62,7 @@ claims, `install_value`'s), from the leaves' error claims: the whole declaration
 theorem istgG_of (hdc : LoopCallees dn p) (hcE : CoreStubsE p) (hia : IndArmSpecE p dn)
     (hDG : DivGateSpecE p pins) (hnv : closedNV p L.Checker.nvFns = true) (hUL : UceLookups p) :
     IstgG pins dn ds p := by
-  have hU : UceProg p := ⟨hUL, strLitSupported_core p hdc.knot.knot.str⟩
+  have hU : UceProg p := ⟨hUL, strLitStored_core p hdc.knot.knot.str⟩
   exact ⟨⟨armsE_of pins dn ds p hdc hcE hDG hnv hUL, hia⟩,
     ⟨hnv, hU, ivgE_okT hdc.cvg hdc.cd.crp.apd ⟨hdc.indMemo, hdc.crf⟩ hnv hU⟩⟩
 

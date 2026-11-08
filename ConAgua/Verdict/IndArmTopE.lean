@@ -83,7 +83,7 @@ theorem indArmVerdict_proved : IndArmVerdict := by
   have hk := indArmKeep_checker bs
   have hnv := checkerProg_nvPB bs
   have hU : UceProg (Prog.subPB bs checkerProg) :=
-    ⟨checkerProg_uceLookupsPB bs, strLitSupported_core _ hkp.knot.str⟩
+    ⟨checkerProg_uceLookupsPB bs, strLitStored_core _ hkp.knot.str⟩
   have hWt : WhnfTopE (Prog.subPB bs checkerProg) :=
     whnfTop_stageE hkp.whnfTop hkp.knotOK (fun n => L.Arena.KnotAllProg.knotE_all hkp.knot hnv n)
   exact indArmSpecE_of hkp H.v H.opf H.lc H.lt H.apd H.crk H.ilpf H.lz H.cid

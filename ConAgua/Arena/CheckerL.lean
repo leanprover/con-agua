@@ -107,6 +107,7 @@ def buildIndexL : FunDecl := lfn (cnt) locals (k, z) {
 def recordJobL : FunDecl := lfn (k) locals (z, st, ok, v) {
   z := call scratch_enter();
   CTL.u64[130] := 0;
+  z := call iw_reset();
   st := CTL.u64[133];
   if 4294967294 <= st { abort };
   CTL.u64[133] := st + 1;

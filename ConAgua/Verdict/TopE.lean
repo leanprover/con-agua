@@ -278,7 +278,7 @@ theorem cpG_proved (bs : List UInt8) (hP : PhaseBProg (Prog.subPB bs checkerProg
     CpG (Prog.subPB bs checkerProg) := by
   have hnv := checkerProg_nvPB bs
   have hU : UceProg (Prog.subPB bs checkerProg) :=
-    ⟨checkerProg_uceLookupsPB bs, strLitSupported_core _ hP.knot.knot.str⟩
+    ⟨checkerProg_uceLookupsPB bs, strLitStored_core _ hP.knot.knot.str⟩
   exact ⟨hnv, checkerProg_coreStubsEPB bs, ivgE_okT hP.cvg hP.apd hP.crk hnv hU⟩
 
 /-- **`check_pending`'s error claim at the programs phase B runs** (`CPVerdict`). -/
