@@ -654,17 +654,15 @@ theorem not_mem_envCtl {x : Word}
 
 /-- **`EnvR` across a growth of the record pool** (allocations and writes above the tops):
 the rows are untouched and every decoding they name decodes in the bigger pool too. -/
-theorem EnvR.grow {m m' : Mem} {vis : Word} {fe : IFEnv}
-    (hf : MemFrame [EREC, tier1 EREC] [129, 130] m m') (hg : ErecGrow m m') (h : EnvR m vis fe) :
-    EnvR m' vis fe := by
+theorem EnvR.growC {m m' : Mem} {vis : Word} {fe : IFEnv}
+    (he : ∀ b : TieredArray, b.arr ≠ 136 → b.arr ≠ 1 → b ∈ envArrs → m'.arr64 b = m.arr64 b)
+    (hc : ∀ x ∈ envCtl, x ≠ 129 → x ≠ 130 → rdW (m'.arr64 CTL) x = rdW (m.arr64 CTL) x)
+    (hg : ErecGrow m m') (h : EnvR m vis fe) : EnvR m' vis fe := by
   have hx := hg.ext
-  have he : ∀ b : TieredArray, b.arr ≠ 136 → b.arr ≠ 1 → m'.arr64 b = m.arr64 b :=
-    fun b h1 h2 => hf.arr b (by
-      simp only [List.mem_cons, List.not_mem_nil, or_false]
-      rintro (e | e) <;> subst e <;> exact h1 rfl) (fun e => by subst e; exact h2 rfl)
-  have hc : ∀ x, x ≠ 129 → x ≠ 130 → rdW (m'.arr64 CTL) x = rdW (m.arr64 CTL) x :=
-    fun x h1 h2 => hf.ctl x (by simp [h1, h2])
-  have hs : stampW m' = stampW m := hc 133 (by decide) (by decide)
+  have he : ∀ b : TieredArray, b.arr ≠ 136 → b.arr ≠ 1 → b ∈ envArrs → m'.arr64 b = m.arr64 b := he
+  have hc : ∀ x, x ≠ 129 → x ≠ 130 → x ∈ envCtl → rdW (m'.arr64 CTL) x = rdW (m.arr64 CTL) x :=
+    fun x h1 h2 hm => hc x hm h1 h2
+  have hs : stampW m' = stampW m := hc 133 (by decide) (by decide) (by decide)
   have o1 : ∀ g t, (tierA (oixArr g) t).arr ≠ 136 ∧ (tierA (oixArr g) t).arr ≠ 1 := fun g t => by
     unfold tierA oixArr; split <;> (try split) <;> simp [OIXA, OIXS, OIXN]
   have o2 : ∀ g t, (tierA (otxArr g) t).arr ≠ 136 ∧ (tierA (otxArr g) t).arr ≠ 1 := fun g t => by
@@ -674,16 +672,16 @@ theorem EnvR.grow {m m' : Mem} {vis : Word} {fe : IFEnv}
   have o4 : ∀ g, (tixArr g : TieredArray).arr ≠ 136 ∧ (tixArr g : TieredArray).arr ≠ 1 := fun g => by
     unfold tixArr; split <;> (try split) <;> decide
   have hor : ∀ w, ownRow m' w = ownRow m w := fun w => by
-    simp only [ownRow, he _ (o1 _ _).1 (o1 _ _).2]
+    simp only [ownRow, he _ (o1 _ _).1 (o1 _ _).2 (tierA_oix_mem _ _)]
   have hraw : ∀ w, ownRaw m' w = ownRaw m w := fun w => by simp only [ownRaw, hor, hs]
   have hot : ∀ w, ownTbl m' w = ownTbl m w := fun w => by
-    simp only [ownTbl, he _ (o2 _ _).1 (o2 _ _).2, hs]
+    simp only [ownTbl, he _ (o2 _ _).1 (o2 _ _).2 (tierA_otx_mem _ _), hs]
   have hb : ∀ w, baseRow m' w = baseRow m w := fun w => by
-    simp only [baseRow, he _ (o3 _).1 (o3 _).2]
+    simp only [baseRow, he _ (o3 _).1 (o3 _).2 (eix_mem _)]
   have hbt : ∀ w, baseTbl m' w = baseTbl m w := fun w => by
-    simp only [baseTbl, he _ (o4 _).1 (o4 _).2]
+    simp only [baseTbl, he _ (o4 _).1 (o4 _).2 (tix_mem _)]
   refine ⟨fun n => ?_, fun n hn => ?_, fun n hn => ?_, fun n n' hn hq => ?_, fun n => ?_, fun n hn => ?_,
-    by rw [hc 134 (by decide) (by decide)]; exact h.below, by rw [hc 135 (by decide) (by decide)]; exact h.belowRec,
+    by rw [hc 134 (by decide) (by decide) (by decide)]; exact h.below, by rw [hc 135 (by decide) (by decide) (by decide)]; exact h.belowRec,
     fun n => ?_, fun n => ?_, by rw [hs]; exact h.stamp⟩
   · rw [h.own n]; simp only [ownFind, hraw]
     split
@@ -719,6 +717,30 @@ theorem EnvR.grow {m m' : Mem} {vis : Word} {fe : IFEnv}
         rw [← this.2, hx.decTbl this.2.symm]
 
 /-! ## The whole relation -/
+
+theorem EnvR.grow {m m' : Mem} {vis : Word} {fe : IFEnv}
+    (hf : MemFrame [EREC, tier1 EREC] [129, 130] m m') (hg : ErecGrow m m') (h : EnvR m vis fe) :
+    EnvR m' vis fe :=
+  h.growC (fun b h1 h2 _ => hf.arr b (by
+      simp only [List.mem_cons, List.not_mem_nil, or_false]
+      rintro (e | e) <;> subst e <;> exact h1 rfl) (fun e => by subst e; exact h2 rfl))
+    (fun x _ h1 h2 => hf.ctl x (by simp [h1, h2])) hg
+
+/-- **`EnvR` across a frame that grows the record pool**: every array the frame names is a record
+tier or not `EnvR`'s, every control word `129`, `130` or not `EnvR`'s. -/
+theorem EnvR.growF {A : List TieredArray} {C : List Word} {m m' : Mem} {vis : Word} {fe : IFEnv}
+    (hf : MemFrame A C m m') (hA : ∀ b ∈ A, b.arr = 136 ∨ b ∉ envArrs)
+    (hC : ∀ x ∈ C, x = 129 ∨ x = 130 ∨ x ∉ envCtl) (hg : ErecGrow m m') (h : EnvR m vis fe) :
+    EnvR m' vis fe :=
+  h.growC (fun b h1 _ hb => hf.arr b (fun hm => by
+      rcases hA b hm with e | e
+      · exact h1 e
+      · exact e hb) (fun e => by subst e; revert hb; decide))
+    (fun x hx h1 h2 => hf.ctl x (fun hm => by
+      rcases hC x hm with e | e | e
+      · exact h1 e
+      · exact h2 e
+      · exact e hx)) hg
 
 theorem MemFrame.top_eq {m m' : Mem} {A : List TieredArray} {C : List Word} (hf : MemFrame A C m m')
     (hC : (0 : Word) ∉ C) : m'.top = m.top := by
