@@ -53,7 +53,40 @@ def vwd (sl : Array Word) (x : Word) : Word := rdW sl x &&& VMASK
 def kwd (sl : Array Word) (x : Word) : Word := rdW sl x >>> 48
 
 /-- A slot word: the value `v` (below `2^48`) and the fragment `q` (below `2^16`). -/
-def pk (v q : Word) : Word := v ||| q <<< 48
+def pk (v q : Word) : Word := v + (q <<< 48)
+
+theorem and_vmask_toNat (x : Word) : (x &&& VMASK).toNat = x.toNat % 2 ^ 48 := by
+  rw [UInt64.toNat_and, show VMASK.toNat = 2 ^ 48 - 1 from rfl, Nat.and_two_pow_sub_one_eq_mod]
+
+theorem shr48_toNat (x : Word) : (x >>> 48).toNat = x.toNat / 2 ^ 48 := by
+  rw [UInt64.toNat_shiftRight, show (48 : Word).toNat % 64 = 48 from rfl, Nat.shiftRight_eq_div_pow]
+
+theorem pk_toNat (v q : Word) (hv : v.toNat < 2 ^ 48) (hq : q.toNat < 2 ^ 16) :
+    (pk v q).toNat = v.toNat + q.toNat * 2 ^ 48 := by
+  have e : (q <<< 48).toNat = q.toNat * 2 ^ 48 := by
+    rw [UInt64.toNat_shiftLeft, show (48 : Word).toNat % 64 = 48 from rfl, Nat.shiftLeft_eq]
+    exact Nat.mod_eq_of_lt (by omega)
+  rw [pk, UInt64.toNat_add, e]; omega
+
+/-- A slot word's value is the packed value. -/
+theorem pk_vmask (v q : Word) (hv : v.toNat < 2 ^ 48) (hq : q.toNat < 2 ^ 16) :
+    pk v q &&& VMASK = v :=
+  UInt64.toNat_inj.mp (by rw [and_vmask_toNat, pk_toNat v q hv hq]; omega)
+
+/-- A slot word's fragment is the packed fragment. -/
+theorem pk_shr (v q : Word) (hv : v.toNat < 2 ^ 48) (hq : q.toNat < 2 ^ 16) :
+    pk v q >>> 48 = q :=
+  UInt64.toNat_inj.mp (by rw [shr48_toNat, pk_toNat v q hv hq]; omega)
+
+theorem fragW_lt (h : Word) : (fragW h).toNat < 2 ^ 16 := by
+  simp only [fragW, UInt64.toNat_and]
+  exact Nat.lt_of_le_of_lt Nat.and_le_right (by decide)
+
+theorem vmask_lt (x : Word) : (x &&& VMASK).toNat < 2 ^ 48 := by
+  rw [and_vmask_toNat]; omega
+
+theorem shr48_lt (x : Word) : (x >>> 48).toNat < 2 ^ 16 := by
+  rw [shr48_toNat]; have := x.toNat_lt; omega
 
 /-! ## The growth's loops -/
 

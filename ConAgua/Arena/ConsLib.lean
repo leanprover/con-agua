@@ -323,7 +323,7 @@ def cpSlot (C : ConsSch) : Stmt :=
   mapS (fun x => if x < 4 then (lvF C.np x) else gO C + (x - 3))
     (lblk (t, j, c, k, g, q, r) {
       r := C.sa⟨t⟩[1] + 2;
-      C.sa⟨t⟩[r + j] := (CTL.u64[62] * t + c + 1) | (q << 48) })
+      C.sa⟨t⟩[r + j] := CTL.u64[62] * t + c + 1 + (q << 48) })
 
 def cpCnt (C : ConsSch) : Stmt :=
   mapS (lvF C.np) (lblk (t, j, c, k) { CTL.u64[⟪C.ca⟫ + (t & 1)] := c + 1 })
@@ -430,11 +430,11 @@ def ktopP (C : ConsSch) : Stmt := lblk (t, n2, n, H, Q, ob, nb, x, e, v, q, h, j
 the mark and joins a range. -/
 def ktopQ (C : ConsSch) : Stmt := lblk (t, n2, n, H, Q, ob, nb, x, e, v, q, h, j, d, bt, y15, y16, y17, a0, a1, b0, b1) {
   if x <= bt {
-    C.sa⟨t⟩[ob + j] := v | (q << 48);
+    C.sa⟨t⟩[ob + j] := v + (q << 48);
     C.sa⟨t⟩[ob + H] := 0
   } else {
     if j != H {
-      C.sa⟨t⟩[ob + H] := (v + ⟪MARK⟫) | (q << 48);
+      C.sa⟨t⟩[ob + H] := v + ⟪MARK⟫ + (q << 48);
       ⟪kdefB⟫
     }
   }
@@ -497,11 +497,11 @@ def kprobeL (C : ConsSch) : Stmt := lblk (t, n2, n, H, Q, ob, nb, x, e, v, q, h,
 becomes free; at a marked slot the two swap, and the displaced marked entry is next (`v`). -/
 def kplaceB (C : ConsSch) : Stmt := lblk (t, n2, n, H, Q, ob, nb, x, e, v, q, h, j, d, bt) {
   if j == H {
-    C.sa⟨t⟩[ob + H] := v | (q << 48);
+    C.sa⟨t⟩[ob + H] := v + (q << 48);
     v := 0
   } else {
     nb := C.sa⟨t⟩[ob + j];
-    C.sa⟨t⟩[ob + j] := v | (q << 48);
+    C.sa⟨t⟩[ob + j] := v + (q << 48);
     if ⟪MARK⟫ <= (nb & ⟪VMASK⟫) {
       C.sa⟨t⟩[ob + H] := nb;
       v := nb & ⟪VMASK⟫
@@ -628,9 +628,10 @@ def ciScr (C : ConsSch) : Stmt :=
 def ciEnd (C : ConsSch) : Stmt :=
   .seq (ciPush C 0) (.ret [.bin .add (.const C.P) (.var (3 + C.nk))])
 
-/-- A packed record's key: abort unless both words are below `2^32` (record word `0` packs them). -/
+/-- A packed record's two-word key: abort unless both words are below `2^32` (record word `0`
+packs them). -/
 def ciChk (C : ConsSch) : List Stmt :=
-  if C.kpk then
+  if C.kpk ∧ C.nk = 2 then
 
     [.ite (.cmp .ne (.bin .shr (.bin .or (.var 0) (.var 1)) (.const 32)) (.const 0)) (.abort (.const R_CAP_KEY)) .skip]
   else []

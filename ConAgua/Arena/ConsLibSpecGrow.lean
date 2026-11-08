@@ -184,6 +184,12 @@ theorem pval_mapE (f : Var → Var) (s : St) :
   | .ld32t a t i => by simp only [mapE, Expr.pval, pval_mapE f s t, pval_mapE f s i]
   | .ld32h a t i _ => by simp only [mapE, Expr.pval, pval_mapE f s t, pval_mapE f s i]
 
+/-- The growth's `hrec`, renamed into the push: the hash of node `gO + 14` of tier `0`. -/
+theorem pval_hrecG (C : ConsSch) (hH : HRecOK C) (s : St) :
+    Expr.pval s (mapE (gmap C) (mapE hrm C.hrec)) = C.hsM s.mem (s.loc 0) (s.loc (gO C + 14)) := by
+  rw [pval_mapE, pval_mapE, hH]
+  rfl
+
 /-- **The growth's hash** (`khashB`, renamed): `h` (`gO + 10`) becomes `ghC` of the node of the
 value `v` (`gO + 8`) against the base `bt` (`gO + 13`); the variables below `gO + 14` but `h` are
 kept. -/
@@ -195,12 +201,12 @@ theorem khash_spec (p : Prog) (C : ConsSch) (hO : ConsOK p C) (n : Nat) (s₀ : 
       (∀ z, gO C + 17 ≤ z → s'.loc z = s₀.loc z) ∧
       s'.loc (gO C + 10) =
         ghC C (s₀.loc 0) s₀.mem (s₀.loc (gO C + 8) - s₀.loc (gO C + 13) - 1); ⊤⦄ := by
-  have hH := hO.hrec
+  have hH := pval_hrecG C hO.hrec
   unfold khashB
-  simp (disch := decide) only [mapS, mapE, gmap_lit, Nat.reduceSub]
+  simp only [mapS]
   vcgen [step, evalE_spec, setLoc]
-  all_goals (simp (disch := decide) only [St.setLoc_loc, St.setLoc_mem, Expr.pval, BinOp.eval,
-    pval_mapE, hH, hrm, gmap_lit, gmap_zero, Nat.reduceSub, ↓reduceIte] at *)
+  all_goals (simp (disch := decide) only [St.setLoc_loc, St.setLoc_mem, hH, mapE, Expr.pval,
+    BinOp.eval, gmap_lit, Nat.reduceSub, ↓reduceIte] at *)
   all_goals grind [ghC]
 
 theorem homeW_eq (h n : Word) :
