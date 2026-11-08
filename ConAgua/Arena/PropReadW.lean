@@ -101,7 +101,7 @@ def propReadProgFns : Prog :=
    ("type_sort_pw", typeSortPWL), ("head_proof_const", headProofConstL),
    ("head_proof_proj", headProofProjL), ("head_proof_pw", headProofPWL), ("proof_pw", proofPWL),
    ("not_proof_fast", notProofFastL), ("is_proof_fast", isProofFastL),
-   ("lv_lookup", lvLookupG EREC POOL), ("lv_spw", lvSpwG LH), ("lv_zero", lvZero),
+   ("lv_lookup", lvLookupTG EREC POOL), ("lv_spw", lvSpwG LH), ("lv_zero", lvZero),
    ("lh_push", lhPush), ("lv_node", lvNode), ("ls_node", lsNode), ("e_view", L.Ind.eView), ("env_row_get", envRowGetL), ("env_find", envFindL),
    ("get_app_args", getAppArgsL), ("app_count", appCountL), ("app_fill", appFillL)]
 

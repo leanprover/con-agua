@@ -68,6 +68,16 @@ theorem lookupW_next (n : Nat) (m : Mem) (ko kc vo vc w : Word) (h : ¬ (kc = 0 
   return (f, v)
 }
 
+/-- `lv_lookup` with its keys in a tiered array read at tagged addresses (`KA⦃ko⦄`: the keys
+are an `EREC` slice, a job's records in tier 1). -/
+-- con-leche: ConLeche/Kernel/Level.lean:31-42 ConLeche.Level.subst
+@[no_expose] def lvLookupTG : FunDecl := lfn (ko, kc, vo, vc, w) locals (f, v) {
+  if kc == 0 || vc == 0 { return (0, 0) };
+  if KA⦃ko⦄ == w { return (1, VA⦃vo⦄) };
+  (f, v) := call lv_lookup(ko + 1, kc - 1, vo + 1, vc - 1, w);
+  return (f, v)
+}
+
 /-- After the lookup at a `param`: its value, or the level unchanged. -/
 def lkK (l : Word) (m : Mem) : Option (Word × Word) → Option (Word × Mem)
   | none => none
