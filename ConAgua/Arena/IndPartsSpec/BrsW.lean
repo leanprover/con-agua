@@ -112,7 +112,7 @@ theorem partsResCont {m : Mem} {a : AState} {n : Nat} {x b : Word} (hx : x.toNat
 /-- **A constant's level parameters compared with `lps`** (`er_to_iw`, then `sl_eq`). -/
 theorem partsLpsEq {vis : Word} {fe : IFEnv} {a : AState} {n : Nat}
     {m m1 : Mem} {q : Nat} {cv : IConstantVal} {rp : List Word} {lo ll e : Word} {lps : List NIdx}
-    (h : erToIwW n m (rdW (m.arr64 EREC) (UInt64.ofNat q + 1)) (rdW (m.arr64 EREC) (UInt64.ofNat q + 2)) =
+    (h : erToIwW n m (erRd m (UInt64.ofNat q + 1)) (erRd m (UInt64.ofNat q + 2)) =
       some (rp, m1))
     (he : eqW n m1 (rp.headD 0) (rp.tail.headD 0) lo ll = some e)
     (hS : StageR vis fe m a) (hcv : DecB (fun m => decCVp m q) m cv) (hq : q < 2 ^ 64)
@@ -212,7 +212,7 @@ theorem bprW_ok {vis : Word} {fe : IFEnv} {a : AState}
     obtain ⟨hcw, hcvb, -⟩ := partsIwRd hcvp (UInt64.toNat_ofNat_of_lt' hpb)
     rw [hw, hcw] at h
     obtain ⟨hnl, hne⟩ := partsCVName (IWGrow.refl m) (show DecB (fun m => decCVp m cvp) m cv from hcv) hcvb
-    rcases hb : resContW n m (rdW (m.arr64 EREC) (UInt64.ofNat cvp)) with _ | b <;> rw [hb] at h
+    rcases hb : resContW n m (erRd m (UInt64.ofNat cvp)) with _ | b <;> rw [hb] at h
     · cases h
     simp only at h
     obtain ⟨R', hR', hbv⟩ := partsResCont hnl hb hS.check.pins
@@ -424,7 +424,7 @@ theorem bsnW_ok {vis : Word} {fe : IFEnv} (n : Nat) :
     have hctolt : cto.toNat < iwTop m := by have := hts.2; have : ctl.toNat ≠ 0 := fun e => hl (UInt64.toNat_inj.mp (by simpa using e)); omega
     rw [partsRdIW_grow hg1 hctolt, hw] at h
     obtain ⟨hnl, hne⟩ := partsCVName hg1 hcv0 hpb
-    rcases h2 : consW n m1 (rdW (m1.arr64 EREC) (UInt64.ofNat pc)) (r1.headD 0) (r1.tail.headD 0) with _ | ⟨r2, m2⟩ <;> rw [h2] at h
+    rcases h2 : consW n m1 (erRd m1 (UInt64.ofNat pc)) (r1.headD 0) (r1.tail.headD 0) with _ | ⟨r2, m2⟩ <;> rw [h2] at h
     · cases h
     rw [bgoK3_some] at h
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
@@ -501,7 +501,7 @@ theorem brhW_ok {vis : Word} {fe : IFEnv} (n : Nat) :
     obtain ⟨r1, m1, h1, h⟩ := ipK_inv h (brhW.k_block_shape_rhss_of.none ..)
     rw [brhW.k_block_shape_rhss_of.arm1] at h
     obtain ⟨hS1, hg1, hd1, hb1⟩ := ih m m1 a (ro + 11) (rl - 1) rs' r1 h1 hS hrest
-    have hrd : rdW (m1.arr64 EREC) (ro + 8) = w := by
+    have hrd : erRd m1 (ro + 8) = w := by
       refine rdW_of_get? hro8.symm ?_
       rw [hg1.erGet _ hwlt]; exact hw'
     rw [hrd] at h
@@ -1224,8 +1224,8 @@ theorem btW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
   refine Sim.bindK rfl (fun _ _ => by rw [btK1])
     (Q := fun r s m' a' => ((H (r.headD 0) ∧ decI (r.headD 0) = s ∧ StageR vis fe m' a' ∧ IWGrow m m') ∧
       (bsoTwin nPd.toNat nIdxs cvT0.type).run a = .ok (s, a')) ∧
-      bsoW m nPd io ctl (rdW (m.arr64 EREC) (UInt64.ofNat p0 + 3)) = some (r, m')) ?_ ?_
-  · have := bsoW_sim (nP := nPd) (ty := rdW (m.arr64 EREC) (UInt64.ofNat p0 + 3)) hS hns hnsb htyl
+      bsoW m nPd io ctl (erRd m (UInt64.ofNat p0 + 3)) = some (r, m')) ?_ ?_
+  · have := bsoW_sim (nP := nPd) (ty := erRd m (UInt64.ofNat p0 + 3)) hS hns hnsb htyl
     rw [htye] at this
     exact this.withRun.withEq
   rintro r1 sv m1 a1 ⟨⟨⟨hs, hsv, hS1, hg1⟩, hrun1⟩, he1⟩
@@ -1320,7 +1320,7 @@ theorem bpoW_ready {n : Nat} {m m' : Mem} {nP cto ctl lo ll ro rl cso csl : Word
   | zero => simp [bpfW] at h1
   | succ n =>
   rw [bpfW_cons n m cto ctl lo ll hc] at h1
-  rcases h2 : resContW n m (rdW (m.arr64 EREC) (rdW (m.arr64 IW) cto)) with _ | b
+  rcases h2 : resContW n m (erRd m (rdW (m.arr64 IW) cto)) with _ | b
   · rw [h2] at h1; simp [bpfK1] at h1
   cases n with
   | zero => simp [resContW] at h2
@@ -1372,7 +1372,7 @@ theorem bbW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
   simp only [h21, show (1 : Word) ≠ 0 by decide, ite_false]
   -- level parameters (model only)
   intro r m' e
-  rcases h3 : erToIwW (n + 3) m2 (rdW (m2.arr64 EREC) (UInt64.ofNat p0 + 1)) (rdW (m2.arr64 EREC) (UInt64.ofNat p0 + 2)) with _ | ⟨r3, m3⟩ <;> rw [h3] at e
+  rcases h3 : erToIwW (n + 3) m2 (erRd m2 (UInt64.ofNat p0 + 1)) (erRd m2 (UInt64.ofNat p0 + 2)) with _ | ⟨r3, m3⟩ <;> rw [h3] at e
   · cases e
   rw [bbH3_some] at e
   obtain ⟨hS3, hg3, hd3, ht3⟩ := partsLpsCopy h3 hS2 (hcv0.grow (OMono.decCVp _) hg02) hpb

@@ -82,7 +82,7 @@ theorem partsIwLt {m : Mem} {i v : Nat} (h : iwN (truncM m) i = some v) : i < iw
 /-- The type handle of a constant decoded below the top. -/
 theorem partsCVType {m : Mem} {q : Nat} {cv : IConstantVal} (h : decCVp (truncM m) q = some cv)
     {w : Word} (hw : w.toNat = q) :
-    (rdW (m.arr64 EREC) (w + 3)).toNat < 2 ^ 32 ∧ decI (rdW (m.arr64 EREC) (w + 3)) = cv.type := by
+    (erRd m (w + 3)).toNat < 2 ^ 32 ∧ decI (erRd m (w + 3)) = cv.type := by
   sorry
 
 /-- A word sum that does not wrap. -/

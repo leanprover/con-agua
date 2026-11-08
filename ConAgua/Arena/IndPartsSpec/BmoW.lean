@@ -35,7 +35,7 @@ where
   /-- After the recursive call. -/
   bsnK (n : Nat) (cto : Word) : Option (List Word × Mem) → Option (List Word × Mem)
     | none => none
-    | some (r, m1) => bgoK3 (consW n m1 (rdW (m1.arr64 EREC) (rdW (m1.arr64 IW) cto)) (r.headD 0)
+    | some (r, m1) => bgoK3 (consW n m1 (erRd m1 (rdW (m1.arr64 IW) cto)) (r.headD 0)
         (r.tail.headD 0))
 
 /-- **The model of `block_shape_ctors_of`.** -/
@@ -75,7 +75,7 @@ theorem bsnW_nil (h : ctl = 0) : bsnW (n + 1) m cto ctl = some ([0, 0], m) := by
 theorem bsnW_cons (h : ctl ≠ 0) : bsnW (n + 1) m cto ctl = bsnW.bsnK n cto (bsnW n m (cto + 1) (ctl - 1)) := by
   simp [bsnW, h]
 theorem bsnK_some : bsnW.bsnK n cto (some (r, m1)) = bgoK3 (consW n m1
-    (rdW (m1.arr64 EREC) (rdW (m1.arr64 IW) cto)) (r.headD 0) (r.tail.headD 0)) := rfl
+    (erRd m1 (rdW (m1.arr64 IW) cto)) (r.headD 0) (r.tail.headD 0)) := rfl
 theorem bctW_nil (h : csl = 0) : bctW (n + 1) m cso csl = some ([0, 0], m) := by simp [bctW, h]
 theorem bctW_cons (h : csl ≠ 0) : bctW (n + 1) m cso csl =
     bctW.bctK n (rdW (m.arr64 IW) cso) (bctW n m (cso + 1) (csl - 1)) := by simp [bctW, h]

@@ -109,7 +109,7 @@ theorem bcW_ptop {n : Nat} {m m' : Mem} {nPd k nC nR cvT rOk rMI rRP : Word} {r 
   | zero => simp [bchW, bcK] at h
   | succ n =>
   rw [bchW_step] at h
-  rcases hp : piBW n m CWF (rdW (m.arr64 EREC) (cvT + 3)) with _ | ⟨rs, m1⟩ <;> rw [hp] at h
+  rcases hp : piBW n m CWF (erRd m (cvT + 3)) with _ | ⟨rs, m1⟩ <;> rw [hp] at h
   · simp [bchW.bchK1, bcK] at h
   rw [bchK1_some] at h
   by_cases hr : eViewW m1 (rs.getD 2 0) = []
