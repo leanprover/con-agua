@@ -536,9 +536,156 @@ theorem ownRaw_ownSet_other {m : Mem} {w c p w' : Word} (hw : w.toNat < 2 ^ 32)
     simp only [ownRaw, stampW_ownSet, hr]
   · simp [ownRaw, ht']
 
+theorem ownArr_tag {w : Word} (A : ArrId) (g : Word) (hg : tagW w = g) (hA : oixArr g.toNat = A) :
+    ownArr w = tierA A (tierW w) := by rw [ownArr, rowTag, hg, hA]
+theorem ownArr_0 {w : Word} (hg : tagW w = 0) : ownArr w = tierA OIXA (tierW w) := ownArr_tag _ 0 hg rfl
+theorem ownArr_1 {w : Word} (hg : tagW w = 1) : ownArr w = tierA OIXS (tierW w) := ownArr_tag _ 1 hg rfl
+theorem ownArr_2 {w : Word} (hg : tagW w = 2) : ownArr w = tierA OIXN (tierW w) := ownArr_tag _ 2 hg rfl
+theorem otxArrT_tag {w : Word} (A : ArrId) (g : Word) (hg : tagW w = g) (hA : otxArr g.toNat = A) :
+    otxArrT w = tierA A (tierW w) := by rw [otxArrT, rowTag, hg, hA]
+theorem otxArrT_0 {w : Word} (hg : tagW w = 0) : otxArrT w = tierA OTXA (tierW w) := otxArrT_tag _ 0 hg rfl
+theorem otxArrT_1 {w : Word} (hg : tagW w = 1) : otxArrT w = tierA OTXS (tierW w) := otxArrT_tag _ 1 hg rfl
+theorem otxArrT_2 {w : Word} (hg : tagW w = 2) : otxArrT w = tierA OTXN (tierW w) := otxArrT_tag _ 2 hg rfl
+
+theorem rowTag_of {w g : Word} (hg : tagW w = g) : rowTag w = g.toNat := by rw [rowTag, hg]
+
+theorem baseRow_t1 {m : Mem} {w : Word} (ht : tierW w ≠ 0) : baseRow m w = (0, 0) := by
+  have h1 : rowTier w ≠ 0 := fun e => ht (UInt64.toNat_inj.mp (by rw [tierW_toNat_row, e]; rfl))
+  simp [baseRow, h1]
+theorem baseTbl_t1 {m : Mem} {w : Word} (ht : tierW w ≠ 0) : baseTbl m w = (0, 0) := by
+  have h1 : rowTier w ≠ 0 := fun e => ht (UInt64.toNat_inj.mp (by rw [tierW_toNat_row, e]; rfl))
+  simp [baseTbl, h1]
+theorem baseRow_0 {m : Mem} {w : Word} (ht : tierW w = 0) (hg : tagW w = 0) :
+    baseRow m w = (rdW (m.arr64 EIXA) (idxW w <<< 1), rdW (m.arr64 EIXA) ((idxW w <<< 1) + 1)) := by
+  have h1 : rowTier w = 0 := by rw [← tierW_toNat_row, ht]; rfl
+  simp only [baseRow, rowTag_of hg, h1, rdN_ixW, rdN_ixW1]; rfl
+theorem baseTbl_0 {m : Mem} {w : Word} (ht : tierW w = 0) (hg : tagW w = 0) :
+    baseTbl m w = (rdW (m.arr64 TIXA) (idxW w <<< 1), rdW (m.arr64 TIXA) ((idxW w <<< 1) + 1)) := by
+  have h1 : rowTier w = 0 := by rw [← tierW_toNat_row, ht]; rfl
+  simp only [baseTbl, rowTag_of hg, h1, rdN_ixW, rdN_ixW1]; rfl
+theorem ownTbl_0 {m : Mem} {w : Word} (hg : tagW w = 0) :
+    ownTbl m w = if rdW (m.arr64 (tierA OTXA (tierW w))) (idxW w <<< 1) = rdW (m.arr64 CTL) 133 then
+      rdW (m.arr64 (tierA OTXA (tierW w))) ((idxW w <<< 1) + 1) else 0 := by
+  simp [ownTbl, rowTag_of hg, rdN_ixW, rdN_ixW1, stampW, otxArr]
+theorem baseRow_1 {m : Mem} {w : Word} (ht : tierW w = 0) (hg : tagW w = 1) :
+    baseRow m w = (rdW (m.arr64 EIXS) (idxW w <<< 1), rdW (m.arr64 EIXS) ((idxW w <<< 1) + 1)) := by
+  have h1 : rowTier w = 0 := by rw [← tierW_toNat_row, ht]; rfl
+  simp only [baseRow, rowTag_of hg, h1, rdN_ixW, rdN_ixW1]; rfl
+theorem baseTbl_1 {m : Mem} {w : Word} (ht : tierW w = 0) (hg : tagW w = 1) :
+    baseTbl m w = (rdW (m.arr64 TIXS) (idxW w <<< 1), rdW (m.arr64 TIXS) ((idxW w <<< 1) + 1)) := by
+  have h1 : rowTier w = 0 := by rw [← tierW_toNat_row, ht]; rfl
+  simp only [baseTbl, rowTag_of hg, h1, rdN_ixW, rdN_ixW1]; rfl
+theorem ownTbl_1 {m : Mem} {w : Word} (hg : tagW w = 1) :
+    ownTbl m w = if rdW (m.arr64 (tierA OTXS (tierW w))) (idxW w <<< 1) = rdW (m.arr64 CTL) 133 then
+      rdW (m.arr64 (tierA OTXS (tierW w))) ((idxW w <<< 1) + 1) else 0 := by
+  simp [ownTbl, rowTag_of hg, rdN_ixW, rdN_ixW1, stampW, otxArr]
+theorem baseRow_2 {m : Mem} {w : Word} (ht : tierW w = 0) (hg : tagW w = 2) :
+    baseRow m w = (rdW (m.arr64 EIXN) (idxW w <<< 1), rdW (m.arr64 EIXN) ((idxW w <<< 1) + 1)) := by
+  have h1 : rowTier w = 0 := by rw [← tierW_toNat_row, ht]; rfl
+  simp only [baseRow, rowTag_of hg, h1, rdN_ixW, rdN_ixW1]; rfl
+theorem baseTbl_2 {m : Mem} {w : Word} (ht : tierW w = 0) (hg : tagW w = 2) :
+    baseTbl m w = (rdW (m.arr64 TIXN) (idxW w <<< 1), rdW (m.arr64 TIXN) ((idxW w <<< 1) + 1)) := by
+  have h1 : rowTier w = 0 := by rw [← tierW_toNat_row, ht]; rfl
+  simp only [baseTbl, rowTag_of hg, h1, rdN_ixW, rdN_ixW1]; rfl
+theorem ownTbl_2 {m : Mem} {w : Word} (hg : tagW w = 2) :
+    ownTbl m w = if rdW (m.arr64 (tierA OTXN (tierW w))) (idxW w <<< 1) = rdW (m.arr64 CTL) 133 then
+      rdW (m.arr64 (tierA OTXN (tierW w))) ((idxW w <<< 1) + 1) else 0 := by
+  simp [ownTbl, rowTag_of hg, rdN_ixW, rdN_ixW1, stampW, otxArr]
+
 end rows
 
+/-! ## The relation's facts -/
+
+section rel
+open ConRon.Arena
+
+/-- What a found pair decodes to: `(0, _)` is `none`, `(f, q)` the record at `q`. -/
+def envFound (m : Mem) (f q : Word) : Option IConstantInfo :=
+  if f = 0 then none else decCI (erecP m) q.toNat
+
+theorem ctl_t0 : TieredArray.t0 1 = (CTL : TieredArray) := rfl
+
+theorem sub1_lt_iff {c v : Word} (hc : c ≠ 0) : c - 1 < v ↔ c.toNat - 1 < v.toNat := by
+  have : c.toNat ≠ 0 := fun e => hc (UInt64.toNat_inj.mp (by simpa using e))
+  rw [UInt64.lt_iff_toNat_lt, UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simp; omega))]
+  simp
+
+theorem IFEnv.find?_eq_match (fe : IFEnv) (n : NIdx) :
+    fe.find? n = match fe.idx[n]? with
+      | some ci => some ci
+      | none => fe.base.find? n := by
+  simp only [IFEnv.find?, IFEnv.lookup]
+  split
+  · rename_i he
+    rw [Std.HashMap.getElem?_of_isEmpty he]
+  · rfl
+
+variable {m : Mem} {vis : Word} {fe : IFEnv}
+
+/-- The own row of `w` is in the view (the condition `env_find` tests). -/
+def ownHit (m : Mem) (vis w : Word) : Prop := (ownRaw m w).1 ≠ 0 ∧ (ownRaw m w).1 - 1 < vis
+
+/-- The base row of `w` is in the view `CTL[134]`. -/
+def baseHit (m : Mem) (w : Word) : Prop :=
+  (baseRow m w).1 ≠ 0 ∧ (baseRow m w).1 - 1 < rdW (m.arr64 CTL) 134
+
+instance (m : Mem) (vis w : Word) : Decidable (ownHit m vis w) := by unfold ownHit; infer_instance
+instance (m : Mem) (w : Word) : Decidable (baseHit m w) := by unfold baseHit; infer_instance
+
+/-- **`find?` through the rows.** -/
+theorem EnvR.find_eq (h : EnvR m vis fe) {w : Word} (hw : w.toNat < 2 ^ 32) :
+    fe.find? (decI w) =
+      if ownHit m vis w then decCI (erecP m) (ownRaw m w).2.toNat
+      else if baseHit m w then decCI (erecP m) (baseRow m w).2.toNat else none := by
+  have hn := decI_word_self (k := .name) w hw
+  have ho := h.own (decI w); rw [hn] at ho
+  have hd := h.own_dec (decI w); rw [hn] at hd
+  have hb := h.base (decI w); rw [hn] at hb
+  rw [IFEnv.find?_eq_match, ho]
+  simp only [ownFind, ownHit, baseHit]
+  by_cases c1 : (ownRaw m w).1 ≠ 0 ∧ (ownRaw m w).1.toNat - 1 < vis.toNat
+  · obtain ⟨ci, hci⟩ := hd c1.1
+    rw [if_pos c1, if_pos ⟨c1.1, (sub1_lt_iff c1.1).mpr c1.2⟩, hci]
+  · rw [if_neg c1, if_neg (fun e => c1 ⟨e.1, (sub1_lt_iff e.1).mp e.2⟩)]
+    simp only [IFBase.find?, h.below]
+    cases e : fe.base.idx[(decI w : NIdx)]? with
+    | none =>
+      rw [e] at hb
+      by_cases b0 : (baseRow m w).1 = 0
+      · simp [b0]
+      · simp [b0] at hb
+    | some x =>
+      obtain ⟨c, ci⟩ := x
+      rw [e] at hb
+      by_cases b0 : (baseRow m w).1 = 0
+      · simp [b0] at hb
+      · simp only [b0, ite_false, Option.map_some, Option.some.injEq, Prod.mk.injEq] at hb
+        obtain ⟨hc, hci⟩ := hb
+        subst hc
+        rw [← hci]
+        dsimp only
+        by_cases l : UInt64.toNat (baseRow m w).fst - 1 < UInt64.toNat (rdW (m.arr64 CTL) 134)
+        · rw [if_pos l, if_pos ⟨b0, (sub1_lt_iff b0).mpr l⟩]
+        · rw [if_neg l, if_neg (fun e => l ((sub1_lt_iff b0).mp e.2))]
+
+/-- A hit decodes. -/
+theorem EnvR.hit_dec (h : EnvR m vis fe) {w : Word} (hw : w.toNat < 2 ^ 32) :
+    (ownHit m vis w → ∃ ci, decCI (erecP m) (ownRaw m w).2.toNat = some ci) ∧
+    (baseHit m w → ∃ ci, decCI (erecP m) (baseRow m w).2.toNat = some ci) := by
+  have hn := decI_word_self (k := .name) w hw
+  have hd := h.own_dec (decI w); rw [hn] at hd
+  have hb := h.base (decI w); rw [hn] at hb
+  refine ⟨fun e => hd e.1, fun e => ?_⟩
+  cases x : fe.base.idx[(decI w : NIdx)]? with
+  | none => rw [x] at hb; simp [e.1] at hb
+  | some y =>
+    rw [x] at hb; simp only [e.1, ite_false, Option.map_some, Option.some.injEq, Prod.mk.injEq] at hb
+    exact ⟨y.2, hb.2.symm⟩
+
+end rel
+
 section specs
+set_option linter.unusedSimpArgs false
 open ConRon.Arena Std.WP
 open scoped Lean.Order
 set_option experimental.vcgen true
@@ -548,8 +695,7 @@ theorem envRowGet_spec (hp : p.lookup "env_row_get" = some envRowGetL) (n : Nat)
     (w : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "env_row_get" [w]
-    ⦃fun r s' => s'.mem = s₀.mem ∧ LocEq s' s₀ ∧ r.headD 0 = (ownRaw s₀.mem w).1 ∧
-      r.tail.headD 0 = (ownRaw s₀.mem w).2; ⊤⦄ := by
+    ⦃fun r s' => s'.mem = s₀.mem ∧ LocEq s' s₀ ∧ r = [(ownRaw s₀.mem w).1, (ownRaw s₀.mem w).2]; ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, envRowGetL]
   cases n with
@@ -561,6 +707,127 @@ theorem envRowGet_spec (hp : p.lookup "env_row_get" = some envRowGetL) (n : Nat)
       beq_iff_eq, bne_iff_ne, ne_eq, decide_eq_true_eq] at *
     all_goals subst_vars
     all_goals simp_all [LocEq, Sig.retVal, Sig.retOr, ownRaw_0, ownRaw_1, ownRaw_2]
+
+theorem envRowSet_spec (hp : p.lookup "env_row_set" = some envRowSetL) (n : Nat) (s₀ : St)
+    (w c q : Word) :
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p n) "env_row_set" [w, c, q]
+    ⦃fun _ s' => s'.mem = ownSet s₀.mem w c q ∧ LocEq s' s₀ ∧ rowTag w ≤ 2 ∧
+      rowIx w + 1 < (s₀.mem.arr64 (ownArr w)).size; ⊤⦄ := by
+  have h1 := ixW_succ w
+  rw [invoke_eq _ hp]
+  simp only [callFn, envRowSetL]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    vcgen [exec, step, L.evalC_spec, L.evalE_spec, evalArgs, setLoc, setLocs, st64]
+    all_goals simp only [Cond.pval, Expr.pval, Expr.pval_tagE, Expr.pval_tierE, Expr.pval_idxE,
+      St.setLoc_loc, St.setLoc_mem, Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval,
+      rd64_rdWC, beq_iff_eq, bne_iff_ne, ne_eq] at *
+    all_goals subst_vars
+    all_goals simp_all [LocEq, Sig.retVal, Sig.retOr, ownSet, ownArr_0, ownArr_1, ownArr_2, rowWord,
+      rowTag_of, ixW, Mem.arr64_set64_same, Array.size_set!]
+
+theorem baseRowGet_spec (hp : p.lookup "base_row_get" = some baseRowGetL) (n : Nat) (s₀ : St)
+    (w : Word) :
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p n) "base_row_get" [w]
+    ⦃fun r s' => s'.mem = s₀.mem ∧ LocEq s' s₀ ∧ r = [(baseRow s₀.mem w).1, (baseRow s₀.mem w).2]; ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, baseRowGetL]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    vcgen [exec, step, L.evalC_spec, L.evalE_spec, evalArgs, setLoc, setLocs]
+    all_goals simp only [Cond.pval, Expr.pval, Expr.pval_tagE, Expr.pval_tierE, Expr.pval_idxE,
+      St.setLoc_loc, St.setLoc_mem, Locals.init_cons_zero, Cmp.eval, BinOp.eval, rd64_rdWC,
+      beq_iff_eq, bne_iff_ne, ne_eq] at *
+    all_goals subst_vars
+    all_goals simp_all [LocEq, Sig.retVal, Sig.retOr, baseRow_t1, baseRow_0, baseRow_1, baseRow_2]
+
+theorem tblBaseGet_spec (hp : p.lookup "tbl_base_get" = some tblBaseGetL) (n : Nat) (s₀ : St)
+    (w : Word) :
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p n) "tbl_base_get" [w]
+    ⦃fun r s' => s'.mem = s₀.mem ∧ LocEq s' s₀ ∧ r = [(baseTbl s₀.mem w).1, (baseTbl s₀.mem w).2]; ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, tblBaseGetL]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    vcgen [exec, step, L.evalC_spec, L.evalE_spec, evalArgs, setLoc, setLocs]
+    all_goals simp only [Cond.pval, Expr.pval, Expr.pval_tagE, Expr.pval_tierE, Expr.pval_idxE,
+      St.setLoc_loc, St.setLoc_mem, Locals.init_cons_zero, Cmp.eval, BinOp.eval, rd64_rdWC,
+      beq_iff_eq, bne_iff_ne, ne_eq] at *
+    all_goals subst_vars
+    all_goals simp_all [LocEq, Sig.retVal, Sig.retOr, baseTbl_t1, baseTbl_0, baseTbl_1, baseTbl_2]
+
+theorem tblOwnGet_spec (hp : p.lookup "tbl_own_get" = some tblOwnGetL) (n : Nat) (s₀ : St)
+    (w : Word) :
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p n) "tbl_own_get" [w]
+    ⦃fun r s' => s'.mem = s₀.mem ∧ LocEq s' s₀ ∧ r = [ownTbl s₀.mem w]; ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, tblOwnGetL]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    vcgen [exec, step, L.evalC_spec, L.evalE_spec, evalArgs, setLoc, setLocs]
+    all_goals simp only [Cond.pval, Expr.pval, Expr.pval_tagE, Expr.pval_tierE, Expr.pval_idxE,
+      St.setLoc_loc, St.setLoc_mem, Locals.init_cons_zero, Cmp.eval, BinOp.eval, rd64_rdWC,
+      beq_iff_eq, bne_iff_ne, ne_eq] at *
+    all_goals subst_vars
+    all_goals simp_all [LocEq, Sig.retVal, Sig.retOr, ownTbl_0, ownTbl_1, ownTbl_2]
+
+theorem tblOwnSet_spec (hp : p.lookup "tbl_own_set" = some tblOwnSetL) (n : Nat) (s₀ : St)
+    (w v : Word) :
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p n) "tbl_own_set" [w, v]
+    ⦃fun _ s' => s'.mem = tblSet s₀.mem w v ∧ LocEq s' s₀ ∧ rowTag w ≤ 2 ∧
+      rowIx w + 1 < (s₀.mem.arr64 (otxArrT w)).size; ⊤⦄ := by
+  have h1 := ixW_succ w
+  rw [invoke_eq _ hp]
+  simp only [callFn, tblOwnSetL]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    vcgen [exec, step, L.evalC_spec, L.evalE_spec, evalArgs, setLoc, setLocs, st64]
+    all_goals simp only [Cond.pval, Expr.pval, Expr.pval_tagE, Expr.pval_tierE, Expr.pval_idxE,
+      St.setLoc_loc, St.setLoc_mem, Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval,
+      rd64_rdWC, beq_iff_eq, bne_iff_ne, ne_eq] at *
+    all_goals subst_vars
+    all_goals simp_all [LocEq, Sig.retVal, Sig.retOr, tblSet, otxArrT_0, otxArrT_1, otxArrT_2,
+      rowTag_of, ixW, Mem.arr64_set64_same, Array.size_set!]
+
+/-- **`env_find` refines `IFEnv.find?`**: the result decodes to the twin's lookup, and a found
+record decodes. -/
+@[refines ConRon.Arena.IFEnv.find?]
+theorem envFind_refines (hg : p.lookup "env_row_get" = some envRowGetL)
+    (hb : p.lookup "base_row_get" = some baseRowGetL) (hp : p.lookup "env_find" = some envFindL)
+    (n : Nat) (s₀ : St) {fe : IFEnv} (vis w : Word)
+    (hE : EnvR s₀.mem vis fe) (hw : w.toNat < 2 ^ 32) :
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p n) "env_find" [w, vis]
+    ⦃fun r s' => s'.mem = s₀.mem ∧ LocEq s' s₀ ∧
+      fe.find? (decI w) = envFound s₀.mem (r.headD 0) (r.tail.headD 0) ∧
+      (r.headD 0 ≠ 0 → ∃ ci, decCI (erecP s₀.mem) (r.tail.headD 0).toNat = some ci); ⊤⦄ := by
+  have key := hE.find_eq hw
+  have kd := hE.hit_dec hw
+  rw [invoke_eq _ hp]
+  simp only [callFn, envFindL]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    vcgen [exec, step, L.evalC_spec, L.evalE_spec, evalArgs, setLoc, setLocs,
+      envRowGet_spec p hg n, baseRowGet_spec p hb n]
+    all_goals simp only [Cond.pval, Expr.pval, St.setLoc_loc, St.setLoc_mem, St.setLocs_cons,
+      St.setLocs_nil, Locals.init, List.getD_cons_zero, List.getD_cons_succ, List.getD_nil,
+      Locals.init_cons_zero,
+      Locals.init_cons_succ, Cmp.eval, BinOp.eval, rd64_rdWC, beq_iff_eq, bne_iff_ne, ne_eq] at *
+    all_goals subst_vars
+    all_goals (simp_all [LocEq, Sig.retVal, Sig.retOr, envFound, ownHit, baseHit, ctl_t0, Locals.init,
+      List.getD_cons_zero, List.getD_cons_succ, UInt64.lt_iff_toNat_lt, UInt64.le_iff_toNat_le] <;>
+      first | omega | (split <;> (try split) <;> first | omega | rfl))
 
 end specs
 
