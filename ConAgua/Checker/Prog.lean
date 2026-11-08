@@ -151,7 +151,7 @@ to the `FunDecl` of the lanes' modules: the one body every non-stub binding of t
 (`L.Checker.entryProg` first). `checkerStubs` are the called functions with no L code yet: they
 abort (the checker declines). DESIGN.md, "The checker as one program (lane `integrate`)".
 
-1764 functions, 1 of them stubs.
+1764 functions, 0 of them stubs.
 -/
 
 namespace L.Checker
@@ -159,7 +159,7 @@ namespace L.Checker
 open L L.Compiler
 
 /-- The called functions with no L code yet (each aborts). -/
-def checkerStubs : List String := ["lh_contains"]
+def checkerStubs : List String := []
 
 /-- The frontend functions `builtin_prelude` runs on the prelude's bytes (96; `preFn`,
 `ConAgua/Checker/Prelude.lean`), each bound as `pre_<name>`. -/
@@ -1331,6 +1331,7 @@ def checkerProg : Prog := [
   ("lf_clear", L.Arena.memoClearG L.Arena.lfSch),
   ("lf_find", L.Arena.memoFindG L.Arena.lfSch),
   ("lf_put", L.Arena.memoPutG L.Arena.lfSch),
+  ("lh_contains", L.Arena.lhContains),
   ("lh_mk", L.Arena.lhMk),
   ("lh_push", L.Arena.lhPush),
   ("lid_sp_clear", L.Checker.lidSpClear),
@@ -2170,7 +2171,6 @@ def checkerProg : Prog := [
   ("pre_unescape", preFn preTree (L.Scan.Str.unescape)),
   ("pre_utf8_char", preFn preTree (L.Scan.Utf8.utf8Char)),
   ("pre_utf8_valid", preFn preTree (L.Scan.Str.utf8Valid)),
-  ("pre_value_at", preFn preTree (L.Scan.Key.valueAt)),
-  ("lh_contains", abortStub 3)]
+  ("pre_value_at", preFn preTree (L.Scan.Key.valueAt))]
 
 end L.Checker
