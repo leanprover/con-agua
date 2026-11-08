@@ -55,7 +55,8 @@ open L.Arena
 (`IndPosSpec/MatesW`'s `StageR.frame_hi`, which sits above this file). -/
 theorem stageR_hi {vis : Word} {fe : IFEnv} {m m' : Mem}
     {a : AState} {A : List TieredArray} {C : List Word} (hS : StageR vis fe m a) (hf : MemFrame A C m m')
-    (hA : ∀ b ∈ A, b.hi = false ∧ 137 ≤ b.arr ∧ (b.arr < 140 ∨ 144 ≤ b.arr)) (hC : ∀ x ∈ C, 130 ≤ x.toNat ∧ x.toNat ≠ 133) (hA2 : (IW : TieredArray) ∉ A) (hC2 : (200 : Word) ∉ C) :
+    (hA : ∀ b ∈ A, b.hi = false ∧ 137 ≤ b.arr ∧ (b.arr < 140 ∨ 144 ≤ b.arr) ∧ (b.arr < 146 ∨ 149 ≤ b.arr))
+    (hC : ∀ x ∈ C, 131 ≤ x.toNat ∧ x.toNat ≠ 133 ∧ x.toNat ≠ 134 ∧ x.toNat ≠ 135) (hA2 : (IW : TieredArray) ∉ A) (hC2 : (200 : Word) ∉ C) :
     StageR vis fe m' a ∧ IWGrow m m' := by
   have hI : m'.arr64 IW = m.arr64 IW := hf.arr IW hA2 (by decide)
   have hE : m'.arr64 EREC = m.arr64 EREC := hf.arr EREC (fun h => by have := hA _ h; simp [EREC] at this)
