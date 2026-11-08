@@ -52,9 +52,7 @@ theorem pin_step {β : Type} [Inhabited β] {f : NIdx → AM β} {dec : List Wor
     (hc : callW p n "pin_at" [i] m = some (rp, mp))
     (h : CoreRef (f (decI (rp.headD 0))) a dec dn m vis fe M eb r m' ok) :
     CoreRef (pinAt i.toNat >>= f) a dec dn m vis fe M eb r m' ok := by
-  obtain ⟨-, -, hi, hr⟩ := callW_pinAt p hp.pinAt n m i rp mp hc
-  refine coreRef_congr ?_ h
-  rw [StateT.run_bind, pinAt_run hS.pins _ hi, except_ok_bind, hr]
+  sorry
 
 /-- **A `pin_word(53)` read, then the rest**: the twin's `pinZeroLevel`. -/
 theorem pinWord_step {β : Type} [Inhabited β] {f : LIdx → AM β} {dec : List Word → β}

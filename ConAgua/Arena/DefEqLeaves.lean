@@ -487,7 +487,7 @@ theorem rdW_ext {a b : Array Word} (hab : ArrExt (aread a) (aread b)) (hsz : b.s
 
 /-- The kind word of a decoded constant record says whether it is a definition; a definition's
 level-parameter count is word `q + 3`, its hint words `q + 6`, `q + 7`. -/
-theorem decCI_defn {a b : Array Word} {dn : NIdx → Option ConLeche.Name} {q : Word}
+theorem decCI_defn {a b : Array Word} {q : Word}
     {ci : IConstantInfo} (h : decCI (aread a) q.toNat = some ci) (hab : ArrExt (aread a) (aread b))
     (hsz : b.size < 2 ^ 63) :
     (rdW b q = 1 → ∃ cv v, ci = .defnInfo cv v (decHintW (rdW b (q + 6)) (rdW b (q + 7))) ∧

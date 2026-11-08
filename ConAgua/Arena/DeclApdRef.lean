@@ -606,7 +606,7 @@ end step2
 
 /-! ## The entry -/
 
-theorem apdEntry_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m m' : Mem}
+theorem apdEntry_ok {vis : Word} {fe : IFEnv} {m m' : Mem}
     {a : AState} (n : Nat) (hS : StageR vis fe m a) (env : ApdEnv a) (o l e r : Word)
     (lps : List NIdx) (ks : List ConLeche.Name) (hks : lps.mapM (denoteN a.store.lss.ls.ns) = some ks)
     (hdec : decHL m o.toNat l.toNat = some lps) (he : H e)

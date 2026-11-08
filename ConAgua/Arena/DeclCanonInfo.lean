@@ -99,7 +99,7 @@ theorem ciCanonDefn_spec (pr : Prog) (hp : CanonProg pr) (n : Nat) (s₀ : St) (
     ⦃fun x s' => LocEq s' s₀ ∧ cdW n s₀.mem p q = some (x.headD 0, s'.mem); ⊤⦄ := by
   sorry
 
-theorem ciD_defn {a : Array Word} {dn : NIdx → Option ConLeche.Name} {p : Nat} {cv : IConstantVal}
+theorem ciD_defn {a : Array Word} {p : Nat} {cv : IConstantVal}
     {v : EIdx} {hi : ConLeche.ReducibilityHint} (h : decCI (aread a) p = some (.defnInfo cv v hi)) :
     decCV (aread a) (p + 1) = some cv ∧ hd? (aread a) (p + 5) = some v ∧ decHint (aread a) (p + 6) = some hi := by
   sorry
@@ -166,7 +166,7 @@ theorem ciCanonRec_spec (pr : Prog) (hp : CanonProg pr) (n : Nat) (s₀ : St) (p
     ⦃fun x s' => LocEq s' s₀ ∧ cwW n s₀.mem p q = some (x.headD 0, s'.mem); ⊤⦄ := by
   sorry
 
-theorem ciD_rec {a : Array Word} {dn : NIdx → Option ConLeche.Name} {p : Nat} {cv : IConstantVal}
+theorem ciD_rec {a : Array Word} {p : Nat} {cv : IConstantVal}
     {mi rp : Nat} {isK : Bool} {rules : List IRecRule}
     (h : decCI (aread a) p = some (.recInfo cv mi rp isK rules)) :
     decCV (aread a) (p + 1) = some cv ∧ nat? (aread a) (p + 5) = some mi ∧ nat? (aread a) (p + 6) = some rp ∧

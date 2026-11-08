@@ -393,7 +393,7 @@ theorem rowPW_eq (m : Mem) (w : Word) (hw : w.toNat < 2 ^ 32) (ht : tagW w ≤ 2
 /- ronsync2 stage 2: commented out (stale program / l_model / removed twin)
 /-- **A hit of `env_find` is a hit of `find?`**: the record pointer is the row's, and the lookup
 decodes there. -/
-theorem envFindW_hit {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m m1 : Mem}
+theorem envFindW_hit {vis : Word} {fe : IFEnv} {m m1 : Mem}
     {w : Word} {r : List Word} (h : envFindW m w vis = some (r, m1)) (hE : EnvR m vis fe)
     (hw : w.toNat < 2 ^ 32) (h0 : r.headD 0 ≠ 0) :
     m1 = m ∧ r.tail.headD 0 = rowP m w ∧ fe.find? (decI w) = decCI (erecP m) (rowP m w).toNat ∧
@@ -409,7 +409,7 @@ namespace L.Ind
 open L.Arena
 
 /- ronsync2 stage 2: commented out (stale program / l_model / removed twin)
-theorem envR_row_dec {dn : NIdx → Option ConLeche.Name} {m : Mem} {vis : Word} {fe : IFEnv}
+theorem envR_row_dec {m : Mem} {vis : Word} {fe : IFEnv}
     (h : EnvR m vis fe) (w : Word) (hw : w.toNat < 2 ^ 32) :
     rowTag w ≤ 2 → rowC m w ≠ 0 → ∃ ci, decCI (erecP m) (rowP m w).toNat = some ci := by
   sorry

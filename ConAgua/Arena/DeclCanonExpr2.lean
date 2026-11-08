@@ -44,7 +44,7 @@ def LitInj (a : AState) : Prop :=
   ∀ (x y : EIdx) (l : ConLeche.Literal), a.store.view x = some (.lit l) →
     a.store.view y = some (.lit l) → x = y
 
-theorem ceW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (n : Nat) :
+theorem ceW_ok {vis : Word} {fe : IFEnv} (n : Nat) :
     ∀ (m m' : Mem) (a : AState) (po pl qo ql co cl fuel x y r : Word) (ps qs cs : List NIdx),
     ceW n m po pl qo ql co cl fuel x y = some (r, m') → StageR vis fe m a →
     CtxR m po pl qo ql co cl ps qs cs → LitInj a → PoolSmall m → x.toNat < 2 ^ 32 →
@@ -68,6 +68,13 @@ theorem canonExprEq_refines (p : Prog) (hp : CanonProg p) (dn : NIdx → Option 
         PoolSmall m ∧ x.toNat < 2 ^ 32 ∧ y.toNat < 2 ^ 32)
       (ConRon.Arena.canonExprEq ps qs cs fuel.toNat (decE x) (decE y))
       (CPostL dn vis fe decW0B) := by
-  sorry
+  intro n s₀ a₀ ⟨hS, hC, hL, hP, hx, hy⟩
+  refine triple_post (canonExprEq_spec p hp n s₀ po pl qo ql co cl fuel x y) ?_
+  rintro r s' ⟨hl, hr⟩
+  obtain ⟨b, hb, hrb, hS', hg, hP'⟩ := ceW_ok n _ _ a₀ po pl qo ql co cl fuel x y _ ps qs cs hr hS hC hL hP hx hy
+  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hb
+  refine ⟨hl, hok, ?_⟩
+  rw [hst, hres]
+  exact ⟨⟨⟨hS', hg, decW0B_of' hrb⟩, hP'⟩, hL⟩
 
 end L.Ind

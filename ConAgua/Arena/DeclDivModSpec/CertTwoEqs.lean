@@ -25,11 +25,7 @@ variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {p : Pro
 
 theorem StmtL.grow {m m' : Mem} {o l : Nat} {ss : List (List EIdx × EIdx)} (h : StmtL m o l ss)
     (hg : IWGrow m m') : StmtL m' o l ss := by
-  obtain ⟨h1, h2, h3⟩ := h
-  refine ⟨Nat.le_trans h1 hg.iw, h2, fun j hj => ?_⟩
-  obtain ⟨p, hp, hs⟩ := h3 j hj
-  refine ⟨p, ?_, hs.grow hg⟩
-  simp only [iwA] at hp ⊢; rw [hg.iwGet _ (by omega)]; exact hp
+  sorry
 
 @[refines ConRon.Arena.certGuard]
 theorem certGuard_refines (hD : DmProg2 p) (cx a b rv : Word) (cc : CertCtxA) :

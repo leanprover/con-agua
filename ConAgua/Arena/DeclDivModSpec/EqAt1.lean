@@ -95,7 +95,7 @@ structure DmProg2 (p : Prog) : Prop extends DmProg1 p where
   lDivModCertApplied : p.lookup "div_mod_cert_applied" = some divModCertAppliedL
 
 section nat
-variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {p : Prog}
+variable {vis : Word} {fe : IFEnv} {p : Prog}
 
 /-! ### `Sim` steps for the certificate builders -/
 
@@ -106,19 +106,19 @@ theorem DW.of {κ : IdxKind} {w : Word} {x : Idx κ} (e : w = x.word.toUInt64) :
   e ▸ ⟨dmWord_lt32 x, decI_word x⟩
 
 /-- The post of a `KeepPost` callee, its growth counted from `m0`. -/
-abbrev KG {α : Type} (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (m0 : Mem)
+abbrev KG {α : Type} (vis : Word) (fe : IFEnv) (m0 : Mem)
     (dec : Mem → List Word → α → Prop) : List Word → α → Mem → AState → Prop :=
   fun r x m' a' => StageR vis fe m' a' ∧ IWGrow m0 m' ∧ dec m' r x
 
 theorem CallRef.simG {α : Type} {f : FnName} {args : List Word} {pre : Mem → AState → Prop}
     {op : AM α} {dec : Mem → List Word → α → Prop} (h : CallRef p f args pre op (KeepPost vis fe dec))
     {n : Nat} {m m0 : Mem} {a : AState} (hp : pre m a) (hG : IWGrow m0 m) :
-    Sim (callW p n f args m) op a (KG dn vis fe m0 dec) :=
+    Sim (callW p n f args m) op a (KG vis fe m0 dec) :=
   (h.sim hp).mono fun _ _ _ _ ⟨hS', hg, hd⟩ => ⟨hS', hG.trans hg, hd⟩
 
 theorem natAp2_dw (hN : NatEqProg p) {n : Nat} {m m0 : Mem} {a : AState} {c x y : Word} {c' : NIdx}
     {x' y' : EIdx} (hS : StageR vis fe m a) (hG : IWGrow m0 m) (h1 : DW c c') (h2 : DW x x')
-    (h3 : DW y y') : Sim (callW p n "nat_ap2" [c, x, y] m) (natAp2 c' x' y') a (KG dn vis fe m0 decW0E) := by
+    (h3 : DW y y') : Sim (callW p n "nat_ap2" [c, x, y] m) (natAp2 c' x' y') a (KG vis fe m0 decW0E) := by
   obtain ⟨h1, rfl⟩ := h1; obtain ⟨h2, rfl⟩ := h2; obtain ⟨h3, rfl⟩ := h3
   exact (natAp2_ref hN c x y).simG ⟨hS, h1, h2, h3⟩ hG
 
@@ -198,7 +198,7 @@ theorem eqAt1_ref (hD : DmProg2 p) (ty a b : Word) :
   refine Sim.ntB ((internSucc_ref hD.toMasterProg (r1.headD 0) hl1).simG hS1 hg1)
     fun r2 _ m2 a2 ⟨hS2, hg2, hl2, rfl⟩ => ?_
   refine (slNew1_fref p hD.lIwAlloc hD.lSlNew1 (r2.headD 0)).simB hS2.iw fun r3 m3 ⟨hrec, hr3⟩ => ?_
-  refine Sim.ntB ((ilF_ok dn vis fe (r3.headD 0) (r3.tail.headD 0) [decI (r2.headD 0)]).simS
+  refine Sim.ntB ((ilF_ok (fun _ => none) vis fe (r3.headD 0) (r3.tail.headD 0) [decI (r2.headD 0)]).simS
     ⟨hrec.2.1.stage hS2, slNew1_dec hrec hl2 hr3⟩) fun r4 _ m4 a4 ⟨hS4, hg4, hl4, rfl⟩ => ?_
   refine Sim.ntB ((pinSlot_ref p hD.lPinAt 0 pinEq rfl).simG hS4 (hg2.trans (hrec.2.1.1.trans hg4)))
     fun r5 _ m5 a5 ⟨hS5, hg5, hl5, rfl⟩ => ?_
@@ -226,7 +226,7 @@ def CertCtxR (m : Mem) (cx : Word) (c : CertCtxA) : Prop :=
 theorem CertCtxR.grow {m m' : Mem} {cx : Word} {c : CertCtxA} (h : CertCtxR m cx c) (hg : IWGrow m m') :
     CertCtxR m' cx c := by
   refine ⟨Nat.le_trans h.1 hg.iw, fun j hj => ?_⟩
-  simp only [iwA]
+  simp only [iwA, aread_apply]
   rw [hg.iwGet _ (by have := h.1; omega)]
   exact h.2 j hj
 
@@ -238,7 +238,7 @@ theorem CertCtxR.rd {m : Mem} {cx : Word} {c : CertCtxA} (h : CertCtxR m cx c) (
   have hx : (cx + k).toNat = cx.toNat + k.toNat := by
     rw [UInt64.toNat_add]; exact Nat.mod_eq_of_lt (by omega)
   have := h.2 k.toNat hk
-  simp only [iwA] at this
+  simp only [iwA, aread_apply] at this
   simp only [rdW, hx, this]
   have hl : (ctxWords c).length = 21 := rfl
   simp [List.getD_eq_getElem?_getD, List.getElem?_eq_getElem (show k.toNat < (ctxWords c).length by omega)]
@@ -433,7 +433,11 @@ theorem recPost_wr2 (m : Mem) (ws1 ws2 : List Word) (k : Word)
     (hroom : iwTop m + (ws1.length + ws2.length) ≤ (m.arr64 IW).size) :
     RecPost m (wrIW (wrIW (allocMem m k) (rdW (m.arr64 CTL) 200 + UInt64.ofNat ws1.length) ws2)
       (rdW (m.arr64 CTL) 200) ws1) [rdW (m.arr64 CTL) 200] (ws1 ++ ws2) := by
-  obtain ⟨hI1, hE1, hsz, hEs, hct⟩ := hI
+  have hI1 := hI.iw
+  have hE1 := hI.er
+  have hsz := hI.iwSize
+  have hEs := hI.erSize
+  have hct := hI.ctl
   have hIW : (allocMem m k).arr64 IW = m.arr64 IW := by
     simp only [allocMem]; rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
   have hq : (rdW (m.arr64 CTL) 200).toNat = iwTop m := rfl
@@ -474,7 +478,7 @@ theorem recPost_wr2 (m : Mem) (ws1 ws2 : List Word) (k : Word)
     refine iwGrow_of_frame (N := k) hf htop (by simp only [iwTop] at hroom ⊢; omega) hsz ?_
     intro i hi
     rw [hget i, ite_eq_right (by omega), ite_eq_right (by omega)]
-  refine ⟨rfl, stkeep_of_frame hf hgrow ⟨hI1, hE1, hsz, hEs, hct⟩ (by rw [hit, hsz']; simpa using hroom),
+  refine ⟨rfl, stkeep_of_frame hf hgrow hI (by rw [hit, hsz']; simpa using hroom),
     by simpa [List.length_append] using hroom, hit, fun j hj => ?_⟩
   rw [hget (iwTop m + j)]
   by_cases c1 : j < ws1.length
@@ -789,12 +793,12 @@ namespace L.Ind
 open L.Arena
 
 section nat
-variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {p : Prog}
+variable {vis : Word} {fe : IFEnv} {p : Prog}
 
 theorem Rec3At.grow {m m' : Mem} {p a b c : Word} (h : Rec3At m p a b c) (hg : IWGrow m m') :
     Rec3At m' p a b c := by
   obtain ⟨h1, h2, h3, h4⟩ := h
-  refine ⟨Nat.le_trans h1 hg.iw, ?_, ?_, ?_⟩ <;> simp only [iwA] at * <;>
+  refine ⟨Nat.le_trans h1 hg.iw, ?_, ?_, ?_⟩ <;> simp only [iwA, aread_apply] at * <;>
     first | (rw [hg.iwGet _ (by omega)]; assumption)
 
 theorem rec3At_of_post {m m1 : Mem} {r : List Word} {a b c : Word} (h : RecPost m m1 r [a, b, c])
@@ -899,10 +903,10 @@ theorem stmtL_of_rec2 {m m1 : Mem} {r : List Word} {s1 s2 : Word} {st1 st2 : Lis
   match j, hj with
   | 0, _ =>
     refine ⟨s1, ?_, h1.grow hg⟩
-    have := hget 0 (by simp); simp only [iwA]; simpa using this
+    have := hget 0 (by simp); simp only [iwA, aread_apply]; simpa using this
   | 1, _ =>
     refine ⟨s2, ?_, h2.grow hg⟩
-    have := hget 1 (by simp); simp only [iwA]; simpa using this
+    have := hget 1 (by simp); simp only [iwA, aread_apply]; simpa using this
 
 theorem stmtL_of_rec3 {m m1 : Mem} {r : List Word} {s1 s2 s3 : Word} {st1 st2 st3 : List EIdx × EIdx}
     (hR : RecPost m m1 r [s1, s2, s3]) (h1 : StmtAt m s1 st1) (h2 : StmtAt m s2 st2)
@@ -917,13 +921,13 @@ theorem stmtL_of_rec3 {m m1 : Mem} {r : List Word} {s1 s2 s3 : Word} {st1 st2 st
   match j, hj with
   | 0, _ =>
     refine ⟨s1, ?_, h1.grow hg⟩
-    have := hget 0 (by simp); simp only [iwA]; simpa using this
+    have := hget 0 (by simp); simp only [iwA, aread_apply]; simpa using this
   | 1, _ =>
     refine ⟨s2, ?_, h2.grow hg⟩
-    have := hget 1 (by simp); simp only [iwA]; simpa using this
+    have := hget 1 (by simp); simp only [iwA, aread_apply]; simpa using this
   | 2, _ =>
     refine ⟨s3, ?_, h3.grow hg⟩
-    have := hget 2 (by simp); simp only [iwA]; simpa using this
+    have := hget 2 (by simp); simp only [iwA, aread_apply]; simpa using this
 
 theorem decStmtL_pair {m : Mem} {r : List Word} {ss : List (List EIdx × EIdx)} (h : decStmtL m r ss) :
     decStmtL m [r.headD 0, r.tail.headD 0] ss := by
@@ -985,7 +989,7 @@ theorem certTwoEqs_ref (hD : DmProg2 p) (cx c h1 h2 r1 r2 : Word) (cc : CertCtxA
 theorem certGuard_dw (hD : DmProg2 p) {n : Nat} {m m0 : Mem} {s : AState} {cx a b rv : Word}
     {cc : CertCtxA} {a' b' rv' : EIdx} (hS : StageR vis fe m s) (hC : CertCtxR m0 cx cc)
     (hG : IWGrow m0 m) (ha : DW a a') (hb : DW b b') (hr : DW rv rv') :
-    Sim (callW p n "cert_guard" [cx, a, b, rv] m) (certGuard cc a' b' rv') s (KG dn vis fe m0 decW0E) := by
+    Sim (callW p n "cert_guard" [cx, a, b, rv] m) (certGuard cc a' b' rv') s (KG vis fe m0 decW0E) := by
   obtain ⟨ha, rfl⟩ := ha; obtain ⟨hb, rfl⟩ := hb; obtain ⟨hr, rfl⟩ := hr
   exact (certGuard_ref hD cx a b rv cc).simG ⟨hS, hC.grow hG, ha, hb, hr⟩ hG
 
@@ -994,7 +998,7 @@ theorem certTwoEqs_dw (hD : DmProg2 p) {n : Nat} {m m0 : Mem} {s : AState} {cx c
     {cc : CertCtxA} {h1' h2' r1' r2' : EIdx} (hS : StageR vis fe m s) (hC : CertCtxR m0 cx cc)
     (hG : IWGrow m0 m) (hc : H c) (d1 : DW h1 h1') (d2 : DW h2 h2') (d3 : DW r1 r1') (d4 : DW r2 r2') :
     Sim (callW p n "cert_two_eqs" [cx, c, h1, h2, r1, r2] m) (certTwoEqs cc (decI c) h1' h2' r1' r2') s
-      (KG dn vis fe m0 decStmtL) := by
+      (KG vis fe m0 decStmtL) := by
   obtain ⟨d1, rfl⟩ := d1; obtain ⟨d2, rfl⟩ := d2; obtain ⟨d3, rfl⟩ := d3; obtain ⟨d4, rfl⟩ := d4
   exact (certTwoEqs_ref hD cx c h1 h2 r1 r2 cc).simG ⟨hS, hC.grow hG, hc, d1, d2, d3, d4⟩ hG
 
@@ -1017,7 +1021,7 @@ namespace L.Ind
 open L.Arena
 
 section nat
-variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {p : Prog}
+variable {vis : Word} {fe : IFEnv} {p : Prog}
 
 /-- The model's `if c = w` against the twin's `if decI c == N`, `w` the word of `N`. -/
 theorem Sim.iteW {β α : Type} {N : NIdx} {c w : Word} {e1 e2 : Option (β × Mem)} {o1 o2 : AM α}

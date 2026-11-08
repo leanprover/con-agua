@@ -294,7 +294,7 @@ theorem hdr_of_trunc {P : Array Word} {t : Nat} {sW : Word} {k x : Nat} (hP : P.
   rw [rdW_of_trunc hw (by omega) (toNat_add_ofNat (by omega))]
 
 /-- **The relocation, from the copy's words.** -/
-theorem decCI_of_copy {P B : Array Word} {t : Nat} {dn : NIdx → Option ConLeche.Name}
+theorem decCI_of_copy {P B : Array Word} {t : Nat}
     {sW qW rW : Word} {p : Nat} {c : IConstantInfo}
     (hc : decCI (aread (trunc P t)) sW.toNat = some c) (hF : FrontCI c) (hP : P.size < 2 ^ 63)
     (hs0 : sW ≠ 0)
@@ -466,7 +466,7 @@ theorem ircW_ok {n : Nat} {m m' : Mem} {t : Nat} {dn : NIdx → Option ConLeche.
 /-- **`ind_copy_go(o, bo, bl)` copies a front block**: the slots `[o, o + bl)` and fresh records
 above the old top written, and in every array agreeing with the result from `o` to the new top
 the slots decode (`decCIs`) to the block. -/
-theorem icgW_ok {t : Nat} {dn : NIdx → Option ConLeche.Name} (n : Nat) :
+theorem icgW_ok {t : Nat} (n : Nat) :
     ∀ (m m' : Mem) (o bo bl : Word) (block : List IConstantInfo), icgW n m o bo bl = some m' →
       decCIs (trunc (m.arr64 DLP) t) bo.toNat bl.toNat = some block → FrontBlock block →
       (m.arr64 DLP).size < 2 ^ 63 → 129 < (m.arr64 CTL).size →
@@ -498,7 +498,7 @@ theorem rdW_dwI {D : Array Word} {i c : Word} {k : Nat} (hD : D.size < 2 ^ 63)
 relation kept, the pool grown, and the result an `EREC` slice below the top decoding to the
 block. -/
 theorem ibeW_ok {n : Nat} {m m' : Mem} {i : Word} {r : List Word} {block : List IConstantInfo}
-    {nP : Nat} {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
+    {nP : Nat} {vis : Word} {fe : IFEnv} {a : AState}
     (h : ibeW n m i = some (r, m')) (hS : L.Ind.StageR vis fe m a)
     (hdecl : IndDeclAt (m.arr64 DECL) (m.arr64 DLP) i.toNat block nP) (hFB : FrontBlock block)
     (hD : (m.arr64 DECL).size < 2 ^ 63) (hP : (m.arr64 DLP).size < 2 ^ 63) :
@@ -521,7 +521,7 @@ a block of the front's shape `FrontBlock`): the stage relation kept at the same 
 pools grown, only `EREC` and its top written, and the result `[o, l]` an `EREC` slice of record
 pointers below the top that decodes (`decCIs`, in `erecP`) to the block. -/
 theorem indBlockToErec_ok {p : Prog} (hp : IbeProg p) {n : Nat} {m m' : Mem} {i : Word}
-    {r : List Word} {block : List IConstantInfo} {nP : Nat} {dn : NIdx → Option ConLeche.Name}
+    {r : List Word} {block : List IConstantInfo} {nP : Nat}
     {vis : Word} {fe : IFEnv} {a : AState}
     (hc : callW p n "ind_block_to_erec" [i] m = some (r, m')) (hS : L.Ind.StageR vis fe m a)
     (hdecl : IndDeclAt (m.arr64 DECL) (m.arr64 DLP) i.toNat block nP) (hFB : FrontBlock block)
@@ -530,6 +530,9 @@ theorem indBlockToErec_ok {p : Prog} (hp : IbeProg p) {n : Nat} {m m' : Mem} {i 
       r = [r.headD 0, r.tail.headD 0] ∧ (r.tail.headD 0).toNat = block.length ∧
       L.Front.decCIsR (erecP m') (r.headD 0).toNat (r.tail.headD 0).toNat = some block ∧
       (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ erTop m' := by
-  sorry
+  obtain ⟨s', rfl, -, n', hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (indBlockToErec_specW p hp.erec_alloc hp.dind_copy hp.ind_rec_copy hp.ind_copy_go
+      hp.ind_block_to_erec n ⟨m, Locals.init []⟩ i) hc
+  exact ibeW_ok hW hS hdecl hFB hD hP
 
 end L.Arena

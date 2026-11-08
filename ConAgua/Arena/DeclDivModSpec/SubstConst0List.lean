@@ -47,7 +47,7 @@ theorem divModCertApplied_refines (hD : DmProg5 p) (pr ho hl : Word) (hyps : Lis
       (divModCertApplied (decE pr) hyps) (KeepPost vis fe decW0E) :=
   (applied_ref hD pr ho hl hyps).refAM
 
--- RS2B ronsync2 stage 2: commented out (statement at the old twin/L)
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 @[refines ConRon.Arena.substConst0List]
 theorem substConst0List_refines (hD : DmProg5 p) (hs0 : SubstC0 p dn vis fe) (nm r o l : Word)
     (hn : H nm) (hr : H r) (hyps : List EIdx) :
@@ -55,10 +55,10 @@ theorem substConst0List_refines (hD : DmProg5 p) (hs0 : SubstC0 p dn vis fe) (nm
       (fun m s => StageR vis fe m s ∧ decHL m o.toNat l.toNat = some hyps ∧
         o.toNat + l.toNat ≤ iwTop m)
       (substConst0List (decI nm) (decE r) hyps)
-      (KeepPost vis fe (decRL (fun m => decHL m) 0)) :=
-  CallRef.refAM (fun k m a res m' ⟨hS, hd, hb⟩ hc =>
-    sc0List_ref hD hs0 nm r hn hr hyps o l k m a res m' hS hd hb hc)
--- RS2E
+      (KeepPost vis fe (decRL (fun m => decHL m) 0)) := by
+  sorry
+
+-/
 
 set_option maxHeartbeats 1600000 in
 theorem cra_specW (p : Prog) (hp : p.lookup "consts_resolve_all" = some constsResolveAllL)

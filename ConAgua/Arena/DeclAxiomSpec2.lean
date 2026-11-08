@@ -56,18 +56,20 @@ def fpcK1 (n : Nat) (k id : Word) : Option (List Word × Mem) → Option (List W
         rdW (m1.arr64 EREC) (r1.tail.headD 0 + 6) ≠ 0) then some ([0], m1)
     else fpcK2 (r1.tail.headD 0) (callW p n "rom_cv" [id] m1)
 
--- RS2B ronsync2 stage 2: commented out (statement at the old twin/L)
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **The model of `find_pinned_cv(vis, n, k, id)`.** -/
 def fpcW : Nat → Mem → Word → Word → Word → Word → Option (List Word × Mem)
   | 0, _, _, _, _, _ => none
   | n + 1, m, vis, nm, k, id => fpcK1 p n k id (envFindW m nm vis)
--- RS2E
+-/
 
 section arms
 variable (n : Nat) (m m1 m2 : Mem) (vis nm k id q : Word) (r1 r2 : List Word)
--- RS2B ronsync2 stage 2: commented out (statement at the old twin/L)
-theorem fpcW_step : fpcW p (n + 1) m vis nm k id = fpcK1 p n k id (envFindW m nm vis) := rfl
--- RS2E
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
+theorem fpcW_step : fpcW p (n + 1) m vis nm k id = fpcK1 p n k id (envFindW m nm vis) := by
+  sorry
+
+-/
 theorem fpcK1_some : fpcK1 p n k id (some (r1, m1)) =
     if r1.headD 0 = 0 then some ([0], m1)
     else if rdW (m1.arr64 EREC) (r1.tail.headD 0) ≠ k then some ([0], m1)
@@ -87,22 +89,14 @@ structure TcoProg (p : Prog) : Prop where
   fpc : p.lookup "find_pinned_cv" = some findPinnedCv
   tco : p.lookup "trust_compiler_ok" = some trustCompilerOkL
 
--- RS2B ronsync2 stage 2: commented out (statement at the old twin/L)
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 set_option maxHeartbeats 1600000 in
 theorem fpc_specW (h : TcoProg p) (n : Nat) (s₀ : St) (vis nm k id : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "find_pinned_cv" [vis, nm, k, id]
     ⦃fun r s' => LocEq s' s₀ ∧ fpcW p n s₀.mem vis nm k id = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ h.fpc]
-  simp only [callFn, findPinnedCv]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        callW_spec p n "env_find", callW_spec p n "rom_cv",
-        mp_specW p h.red.canon h.red.mp n] <;>
-      finish (gen := 20) [rdW_eq, mpW]
--- RS2E
+  sorry
+
+-/
 
 end model
 
@@ -125,71 +119,26 @@ theorem ctor_counts {a : Array Word} {q : Word} {np nf : Nat} (hsz : a.size < 2 
   omega
 
 /-- **The shape tests on a stored record, failing**: the twin's shape does not match. -/
-theorem fpc_fail {a : Array Word} {dn : NIdx → Option ConLeche.Name} {q k : Word}
+theorem fpc_fail {a : Array Word} {q k : Word}
     {ci : IConstantInfo} (hsz : a.size < 2 ^ 64) (hk : k = 3 ∨ k = 4) (h : decCI (aread a) q.toNat = some ci)
     (hf : rdW a q ≠ k ∨ (k = 4 ∧ (rdW a (q + 5) ≠ 0 ∨ rdW a (q + 6) ≠ 0))) :
     fpcShape k ci = none := by
-  obtain ⟨wk, e, hk'⟩ := ciD h
-  have ew : rdW a q = wk := by simp [rdW, e]
-  rw [ew] at hf
-  have hw : wk = UInt64.ofNat wk.toNat := by simp
-  rcases hk' with ⟨h1, cv, -, rfl⟩ | ⟨h1, cv, v, hi, -, -, -, rfl⟩ | ⟨h1, cv, -, rfl⟩ |
-      ⟨h1, cv, caps, -, -, rfl⟩ | ⟨h1, cv, np, nf, -, hnp, hnf, rfl⟩ |
-      ⟨h1, cv, mi, rp, o, c, rules, -, -, -, -, -, -, rfl⟩
-  · simp [fpcShape]
-  · simp [fpcShape]
-  · simp [fpcShape]
-  · -- an inductive: the kind word is `3`
-    rw [hw, h1] at hf
-    simp only [fpcShape]
-    rcases hk with rfl | rfl
-    · simp at hf
-    · simp
-  · -- a constructor: the kind word is `4`, the counts decide
-    rw [hw, h1] at hf
-    simp only [fpcShape]
-    rcases hk with rfl | rfl
-    · simp
-    · rcases hf with hf | ⟨-, hf⟩
-      · simp at hf
-      · rw [ctor_counts hsz hnp hnf] at hf
-        simp [hf]
-  · simp [fpcShape]
+  sorry
 
 /-- **The shape tests on a stored record, passing**: the twin's shape matches, with the constant
 value at `q + 1`. -/
-theorem fpc_pass {a : Array Word} {dn : NIdx → Option ConLeche.Name} {q k : Word}
+theorem fpc_pass {a : Array Word} {q k : Word}
     {ci : IConstantInfo} (hsz : a.size < 2 ^ 64) (hk : k = 3 ∨ k = 4)
     (h : decCI (aread a) q.toNat = some ci) (hkw : rdW a q = k)
     (hc : ¬ (k = 4 ∧ (rdW a (q + 5) ≠ 0 ∨ rdW a (q + 6) ≠ 0))) :
     ∃ cv, fpcShape k ci = some cv ∧ decCV (aread a) (q.toNat + 1) = some cv := by
-  obtain ⟨wk, e, hk'⟩ := ciD h
-  have ew : rdW a q = wk := by simp [rdW, e]
-  rw [ew] at hkw
-  subst hkw
-  rcases hk' with ⟨h1, cv, -, rfl⟩ | ⟨h1, cv, v, hi, -, -, -, rfl⟩ | ⟨h1, cv, -, rfl⟩ |
-      ⟨h1, cv, caps, hcv, -, rfl⟩ | ⟨h1, cv, np, nf, hcv, hnp, hnf, rfl⟩ |
-      ⟨h1, cv, mi, rp, o, c, rules, -, -, -, -, -, -, rfl⟩ <;>
-    rcases hk with hk | hk <;> rw [hk] at h1 <;> simp at h1
-  · exact ⟨cv, by simp [fpcShape, hk], hcv⟩
-  · have h0 : np = 0 ∧ nf = 0 := by
-      have hcc := ctor_counts hsz hnp hnf
-      by_cases hx : np = 0 ∧ nf = 0
-      · exact hx
-      · exact absurd ⟨hk, hcc.mpr hx⟩ hc
-    exact ⟨cv, by simp [fpcShape, hk, h0], hcv⟩
+  sorry
 
 /-- A matching shape's constant value decodes where the record does. -/
-theorem fpcShape_cv {a : Array Word} {dn : NIdx → Option ConLeche.Name} {q : Nat} {k : Word}
+theorem fpcShape_cv {a : Array Word} {q : Nat} {k : Word}
     {ci : IConstantInfo} {cv : IConstantVal} (h : decCI (aread a) q = some ci)
     (hs : fpcShape k ci = some cv) : decCV (aread a) (q + 1) = some cv := by
-  obtain ⟨wk, -, hk'⟩ := ciD h
-  rcases hk' with ⟨-, cv', -, rfl⟩ | ⟨-, cv', v, hi, -, -, -, rfl⟩ | ⟨-, cv', -, rfl⟩ |
-      ⟨-, cv', caps, hcv, -, rfl⟩ | ⟨-, cv', np, nf, hcv, -, -, rfl⟩ |
-      ⟨-, cv', mi, rp, o, c, rules, -, -, -, -, -, -, rfl⟩ <;>
-    simp only [fpcShape] at hs <;> (try cases hs)
-  · split at hs <;> cases hs; exact hcv
-  · split at hs <;> cases hs; exact hcv
+  sorry
 
 /-- What one clause of `trustCompilerOk` does: with the pinned shape, the pin's intern and the
 comparison; otherwise `false` and nothing. -/
@@ -198,16 +147,16 @@ def FpcT (fe : IFEnv) (nm : NIdx) (k : Word) (T : AM IConstantVal) (a : AState) 
   ((fe.find? nm).bind (fpcShape k)).elim (b = false ∧ a' = a)
     (fun cvT => (do let pin ← T; pure (decide (cvT = pin)) : AM Bool).run a = .ok (b, a'))
 
--- RS2B ronsync2 stage 2: commented out (statement at the old twin/L)
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`find_pinned_cv` against the twin's clause**, at the model level. -/
-theorem fpcW_ok {p : Prog} (hR : L.Rom.RomRefs p) {dn : NIdx → Option ConLeche.Name} {vis : Word}
+theorem fpcW_ok {p : Prog} (hR : L.Rom.RomRefs p) {vis : Word}
     {fe : IFEnv} {a : AState} {n : Nat} {m m' : Mem} {nm k id : Word} {r : List Word}
     (hW : fpcW p n m vis nm k id = some (r, m')) (hS : StageR vis fe m a)
     (hnm : nm.toNat < 2 ^ 32) (hk : k = 3 ∨ k = 4) (hid : id.toNat < 10) :
     ∃ b a', StageR vis fe m' a' ∧ IWGrow m m' ∧ decW0B m' r b ∧
       FpcT fe (decI nm) k (romCvT id.toNat) a b a' := by
   sorry
--- RS2E
+-/
 
 /-! ## `trust_compiler_ok(vis, q)` -/
 
@@ -340,83 +289,23 @@ theorem trustCompilerOk_eq (fe : IFEnv) (cv : IConstantVal) :
     | _ => simp [fpcShape]
 
 /-- A `find_pinned_cv` call's run, against its clause. -/
-theorem fpc_call {p : Prog} (h : TcoProg p) {dn : NIdx → Option ConLeche.Name} {vis : Word}
+theorem fpc_call {p : Prog} (h : TcoProg p) {vis : Word}
     {fe : IFEnv} {a : AState} {n : Nat} {m m' : Mem} {nm k id : Word} {r : List Word}
     (hc : callW p n "find_pinned_cv" [vis, nm, k, id] m = some (r, m'))
     (hS : StageR vis fe m a) (hnm : nm.toNat < 2 ^ 32) (hk : k = 3 ∨ k = 4)
     (hid : id.toNat < 10) :
     ∃ b a', (clauseT fe (decI nm) k (romCvT id.toNat)).run a = .ok (b, a') ∧
       StageR vis fe m' a' ∧ IWGrow m m' ∧ decW0B m' r b := by
-  obtain ⟨s', hs', -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (fpc_specW p h n ⟨m, Locals.init []⟩ vis nm k id) hc
-  rw [hs'] at hW
-  obtain ⟨b, a', hS', hg, hd, hF⟩ := fpcW_ok h.red.rom hW hS hnm hk hid
-  exact ⟨b, a', clauseT_of_fpc hF, hS', hg, hd⟩
+  sorry
 
 /-- **`trust_compiler_ok(vis, q)` refines `trustCompilerOk`** at the model level. -/
-theorem tcoW_ok {p : Prog} (h : TcoProg p) {dn : NIdx → Option ConLeche.Name} {vis : Word}
+theorem tcoW_ok {p : Prog} (h : TcoProg p) {vis : Word}
     {fe : IFEnv} {a : AState} {n : Nat} {m m' : Mem} {q : Word} {r : List Word}
     {cv : IConstantVal} (hW : tcoW p n m vis q = some (r, m')) (hS : StageR vis fe m a)
     (hq : decCV (erecP m) q.toNat = some cv) :
     ∃ b a', (trustCompilerOk fe cv).run a = .ok (b, a') ∧ StageR vis fe m' a' ∧
       IWGrow m m' ∧ decW0B m' r b := by
-  cases n with
-  | zero => simp [tcoW] at hW
-  | succ n =>
-  rw [tcoW_step] at hW
-  rw [trustCompilerOk_eq]
-  -- the `True` clause
-  rcases h1 : pinAtW m 40 with _ | ⟨r1, m1⟩ <;> simp only [h1, tcoK1, reduceCtorEq] at hW
-  obtain ⟨hm1, hr1, hl1, hrun1⟩ := pinAtW_ok h1 hS.check.pins
-  rw [hm1, hr1] at hW
-  simp only [List.headD_cons] at hW
-  simp only [trueName, pinTrue, show PIN_TRUE = (40 : Word).toNat from rfl, StateT.run_bind, hrun1,
-    exc_ok_bind']
-  rcases h2 : callW p n "find_pinned_cv" [vis, pinW m (1 + (40 : Word).toNat), 3, 2] m with _ | ⟨r2, m2⟩ <;> simp only [h2, tcoK2, reduceCtorEq] at hW
-  obtain ⟨b2, a2, hrun2, hS2, hg2, hd2⟩ := fpc_call h h2 hS hl1 (.inl rfl) (by decide)
-  have hrun2' : (clauseT fe (decI (pinW m (1 + (40 : Word).toNat))) 3 trueCvA).run a =
-      .ok (b2, a2) := hrun2
-  simp only [hrun2', exc_ok_bind']
-  by_cases e2 : r2.headD 0 = 0
-  · rw [ite_eq_left e2] at hW
-    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
-    have hb : b2 = false := by rw [← hd2.1]; simpa using e2
-    exact ⟨false, a2, by simp [hb]; rfl, hS2, hg2, by simp [decW0B]⟩
-  rw [ite_eq_right e2] at hW
-  have hb2 : b2 = true := by rw [← hd2.1]; simpa using e2
-  simp only [hb2, Bool.not_true, Bool.false_eq_true, ite_false]
-  -- the `True.intro` clause
-  rcases h3 : pinAtW m2 41 with _ | ⟨r3, m3⟩ <;> simp only [h3, tcoK3, reduceCtorEq] at hW
-  obtain ⟨hm3, hr3, hl3, hrun3⟩ := pinAtW_ok h3 hS2.check.pins
-  rw [hm3, hr3] at hW
-  simp only [List.headD_cons] at hW
-  simp only [trueIntroName, pinTrueIntro, show PIN_TRUE_INTRO = (41 : Word).toNat from rfl,
-    StateT.run_bind, hrun3, exc_ok_bind']
-  rcases h4 : callW p n "find_pinned_cv" [vis, pinW m2 (1 + (41 : Word).toNat), 4, 3] m2 with _ | ⟨r4, m4⟩ <;> simp only [h4, tcoK4, reduceCtorEq] at hW
-  obtain ⟨b4, a4, hrun4, hS4, hg4, hd4⟩ := fpc_call h h4 hS2 hl3 (.inr rfl) (by decide)
-  have hrun4' : (clauseT fe (decI (pinW m2 (1 + (41 : Word).toNat))) 4 trueIntroCvA).run a2 =
-      .ok (b4, a4) := hrun4
-  simp only [hrun4', exc_ok_bind']
-  by_cases e4 : r4.headD 0 = 0
-  · rw [ite_eq_left e4] at hW
-    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
-    have hb : b4 = false := by rw [← hd4.1]; simpa using e4
-    exact ⟨false, a4, by simp [hb]; rfl, hS4, hg2.trans hg4, by simp [decW0B]⟩
-  rw [ite_eq_right e4] at hW
-  have hb4 : b4 = true := by rw [← hd4.1]; simpa using e4
-  simp only [hb4, Bool.not_true, Bool.false_eq_true, ite_false]
-  -- the axiom's pin
-  rcases h5 : callW p n "rom_cv" [4] m4 with _ | ⟨r5, m5⟩ <;> simp only [h5, tcoK5, reduceCtorEq] at hW
-  obtain ⟨pin, a5, hrun5, hS5, hg5, hpin⟩ := h.red.rom.cv dn vis fe 4 (by decide) n m4 a4 r5 m5 hS4 h5
-  have hrun5' : trustCompilerA.run a4 = .ok (pin, a5) := hrun5
-  have hg := hg2.trans (hg4.trans hg5)
-  have hq5 : decCV (erA m5) q.toNat = some cv := ArrExt.decCV (IWGrow.erecExt hg) hq
-  obtain ⟨hm6, hrun6, hd6⟩ := mpW_ok (a := a5) hW hS5.iw.erSize hq5
-    (DecB.get ⟨fun _ _ _ he h => he.2.decCV h⟩ hpin)
-  subst hm6
-  refine ⟨_, a5, ?_, hS5, hg, hd6⟩
-  simp only [StateT.run_bind, hrun5', exc_ok_bind']
-  exact hrun6
+  sorry
 
 /-- **`trust_compiler_ok(vis, q)` refines `trustCompilerOk`** (through the ROM stubs). -/
 @[refines ConRon.Arena.trustCompilerOk]

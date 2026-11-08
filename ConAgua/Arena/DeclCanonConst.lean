@@ -68,7 +68,7 @@ theorem erToIwW_size {n : Nat} {m m' : Mem} {o l : Word} {r : List Word}
   exact (allocMem_frame m l).size b
 
 /-- `cv_lps` under the stage relation: the level parameters as a fresh `IW` slice. -/
-theorem cvLpsW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
+theorem cvLpsW_ok {vis : Word} {fe : IFEnv} {a : AState}
     {n : Nat} {m m' : Mem} {q : Word} {r : List Word} {cv : IConstantVal}
     (h : L.Arena.cvLpsW n m q = some (r, m')) (hS : StageR vis fe m a)
     (hq : decCV (erecP m) q.toNat = some cv) :
@@ -126,7 +126,7 @@ theorem canonCtx_spec (p : Prog) (hp : CanonProg p) (n : Nat) (s₀ : St) (cp cq
     ⦃fun r s' => LocEq s' s₀ ∧ ctxW n s₀.mem cp cq = some (r, s'.mem); ⊤⦄ := by
   sorry
 
-theorem ctxW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState} (k : Nat)
+theorem ctxW_ok {vis : Word} {fe : IFEnv} {a : AState} (k : Nat)
     {m m' : Mem} {cp cq : Word} {r : List Word} {cv cv' : IConstantVal}
     (h : ctxW k m cp cq = some (r, m')) (hS : StageR vis fe m a)
     (hcv : decCV (erecP m) cp.toNat = some cv) (hcv' : decCV (erecP m) cq.toNat = some cv')
@@ -187,7 +187,7 @@ theorem cvWords {m : Mem} {q : Word} {cv : IConstantVal} (hsz : (m.arr64 EREC).s
   sorry
 
 set_option maxRecDepth 100000 in
-theorem cvceW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState} (k : Nat)
+theorem cvceW_ok {vis : Word} {fe : IFEnv} {a : AState} (k : Nat)
     {m m' : Mem} {q r : Word} {x : Word} {cv cv' : IConstantVal}
     (h : cvceW k m q r = some (x, m')) (hS : StageR vis fe m a)
     (hcv : decCV (erecP m) q.toNat = some cv) (hcv' : decCV (erecP m) r.toNat = some cv')
@@ -204,6 +204,13 @@ theorem cvCanonEq_refines (p : Prog) (hp : CanonProg p) (dn : NIdx → Option Co
       (fun m a => StageR vis fe m a ∧ decCV (erecP m) q.toNat = some cv ∧
         decCV (erecP m) r.toNat = some cv' ∧ PoolSmall m ∧ LitInj a)
       (cv.canonEq cv') (CPostL dn vis fe decW0B) := by
-  sorry
+  intro n s₀ a₀ ⟨hS, hcv, hcv', hP, hL⟩
+  refine triple_post (cvCanonEq_spec p hp n s₀ q r) ?_
+  rintro x s' ⟨hl, hx⟩
+  obtain ⟨b, a', hb, hrb, hS', hg, hP', hL'⟩ := cvceW_ok n hx hS hcv hcv' hP hL
+  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hb
+  refine ⟨hl, hok, ?_⟩
+  rw [hst, hres]
+  exact ⟨⟨⟨hS', hg, decW0B_of' hrb⟩, hP'⟩, hL'⟩
 
 end L.Ind

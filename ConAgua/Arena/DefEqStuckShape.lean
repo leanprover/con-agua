@@ -32,7 +32,7 @@ namespace L.Arena
 
 -- RS2B ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **A run of `env_find`**: the memory unchanged, the twin's `find?` decoded, a hit decodes. -/
-theorem envFind_callW {p : Prog} (hp : WhnfCoreProg p) {n : Nat} {dn : NIdx → Option ConLeche.Name}
+theorem envFind_callW {p : Prog} (hp : WhnfCoreProg p) {n : Nat}
     {m m' : Mem} {vis : Word} {fe : IFEnv} (hE : EnvR m vis fe) {k : Word} (hk : HW k)
     {r : List Word} (hc : callW p n "env_find" [k, vis] m = some (r, m')) :
     m' = m ∧ fe.find? (decI k) = envFound m (r.headD 0) (r.tail.headD 0) ∧
@@ -43,7 +43,7 @@ theorem envFind_callW {p : Prog} (hp : WhnfCoreProg p) {n : Nat} {dn : NIdx → 
 
 -- RS2B ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- A found record decodes to the twin's constant. -/
-theorem find_of_found {dn : NIdx → Option ConLeche.Name} {m : Mem} {fe : IFEnv} {k : Word}
+theorem find_of_found {m : Mem} {fe : IFEnv} {k : Word}
     {r : List Word} (hfind : fe.find? (decI k) = envFound m (r.headD 0) (r.tail.headD 0))
     (h0 : r.headD 0 ≠ 0) {ci : IConstantInfo}
     (hci : decCI (erecP m) (r.tail.headD 0).toNat = some ci) : fe.find? (decI k) = some ci := by
@@ -51,7 +51,7 @@ theorem find_of_found {dn : NIdx → Option ConLeche.Name} {m : Mem} {fe : IFEnv
 -- RS2E
 
 /-- **A constructor record's counts**: kind word `4`, parameters at `q + 5`, fields at `q + 6`. -/
-theorem decCI_ctorF {a b : Array Word} {dn : NIdx → Option ConLeche.Name} {q : Word}
+theorem decCI_ctorF {a b : Array Word} {q : Word}
     {ci : IConstantInfo} (h : decCI (aread a) q.toNat = some ci) (hab : ArrExt (aread a) (aread b))
     (hsz : b.size < 2 ^ 63) :
     (rdW b q = 4 → ∃ cv, ci = .ctorInfo cv (rdW b (q + 5)).toNat (rdW b (q + 6)).toNat) ∧

@@ -210,7 +210,7 @@ changing the state, the stage relation holds after, the pool only grew, and the 
 the top) holds the list's handles. -/
 def PoolSmall (m : Mem) : Prop := pcap m < 2 ^ 64
 
-theorem viewLsW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
+theorem viewLsW_ok {vis : Word} {fe : IFEnv} {a : AState}
     {n : Nat} {m m' : Mem} {us : Word} {r : List Word} (h : viewLsW n m us = some (r, m'))
     (hS : StageR vis fe m a) (hu : us.toNat < 2 ^ 32) (hP : PoolSmall m) :
     ∃ ids : List LIdx, (viewLs (decI us)).run a = .ok (ids, a) ∧ StageR vis fe m' a ∧
