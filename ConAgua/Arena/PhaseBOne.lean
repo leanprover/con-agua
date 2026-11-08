@@ -27,6 +27,7 @@ section one
 variable (mode : ConLeche.CheckMode) (pins : List INatOpPinSet) (dn : NIdx → Option ConLeche.Name)
   (ds : Array IDeclaration) (p : Prog)
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- `check_pending_go(j + 1, j + 1, v)` returns at once, memory and locals unchanged. -/
 theorem checkPendingGo_empty (hP : PhaseBProg p) (n : Nat) (s₀ : St) (j k v : Word) (hjk : j = k) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "check_pending_go" [j, k, v]
@@ -38,7 +39,9 @@ theorem checkPendingGo_empty (hP : PhaseBProg p) (n : Nat) (s₀ : St) (j k v : 
   | succ n =>
     vcgen [L.exec, L.step, evalE, evalC, evalArgs, setLoc, setLocs,
       (L.invoke_loc p (exec p n) "check_pending_next" · ·)] <;> simp_all [Cmp.eval, Locals.init]
+-/
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **One group through phase B's loop**: `check_pending_go(j, j + 1, v)` from `PhaseBStart`
 (`j` below the count) refines `checkPending` on group `j` and ends in `PhaseBStart` at the twin's
 state after it. -/
@@ -80,6 +83,7 @@ theorem PhaseBStart.one (hm : mode = .verified) (hP : PhaseBProg p) (n : Nat) (h
       | (simp_all [Locals.init, St.setLocs, St.setLoc]; done)
       | (grind [lang_grind]; done)
       | (trace_state; sorry)
+-/
 
 end one
 

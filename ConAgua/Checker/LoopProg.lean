@@ -269,9 +269,11 @@ def pbReadFns : List FnName :=
 
 names_tree pbReadTree : pbReadFns
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- Every function of `checkerProg` but the readers reads no pin data. -/
 prog_all checkerProg_pbFree : checkerProg
   (fun x => (pbReadTree.find (nameCode x.1)).isSome || x.2.body.noPB)
+-/
 
 /-- **Off the readers the substituted program is `checkerProg`.** -/
 theorem checkerProg_subPB_lookup (bs : List UInt8) {f : FnName}
