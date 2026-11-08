@@ -48,6 +48,7 @@ open L.Arena
 
 local notation "V" => ConLeche.CheckMode.verified
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 set_option experimental.vcgen true in
 /-- **`check_block_classes`' unified model**: `class_read`, `class_read_classes` and the
 one-class-per-member test (outside the verdict closure) lifted, `class_majors` by its unified model,
@@ -59,6 +60,7 @@ l_model cbcE_spec (p : Prog) (hP : CbcProg p)
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] heartbeats 1000000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
+-/
 
 /-- What `check_block_classes` gives besides the class reading and the majors `x` it returns (from
 `m`, `a`). -/
@@ -70,12 +72,12 @@ structure CbcPost (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
   majors : PSlR decTM x.2 (r.tail.headD 0) (r.tail.tail.headD 0) m'
   pos : PosMR m'
   abs : AbsOK m'
-  core : ConRon.Bridge.CoreStep V env fe a a'
 
 section sims
 variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {env : ConLeche.Env}
 variable {p : Prog} (hq : KnotStageProg p) (hIlpf : IlpfF p) (hLC : LvlCacheProg p) (henv : ConLeche.EnvWF env)
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 include hq hIlpf hLC henv in
 /-- **`check_block_classes` refines `checkBlockClasses`, both outcomes** under `StageC` (twin side:
 con-ron's `checkBlockClasses_spec`'s proof; the keys by `ckk_ref` through the run, the majors by
@@ -215,8 +217,10 @@ theorem cbc_ref (hP : CbcProg p) {fs : List FnName}
   rw [show s5.mem = m4 from hm5]
   refine RefE.ret (y := (rd, ms)) (a' := a4) rfl ⟨hC4, hg04, ?_, by simpa using hms, hP4, hA4, c12.trans c3'⟩
   exact stab_decCR_decB (by simpa using hrdS.grow (hg2.trans (hg3.trans hg4))) hS4.iw.iwSize
+-/
 
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 include hq hIlpf hLC henv in
 /-- **`check_block_classes` refines `checkBlockClasses`** under `StageC` (the inputs' denotations
 as con-ron's `checkBlockClasses_spec` asks; the walk memos across the callees by `AbsKeep`). -/
@@ -257,6 +261,7 @@ theorem checkBlockClasses_refinesC (hP : CbcProg p) {fs : List FnName}
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ run
   exact ⟨hl, hok, by rw [hst]; exact hR.stage, hR.grow, by rw [hres]; exact hR.cr, by rw [hres]; exact hR.majors,
     hR.pos, hR.abs, by rw [hst]; exact hR.core⟩
+-/
 
 end sims
 

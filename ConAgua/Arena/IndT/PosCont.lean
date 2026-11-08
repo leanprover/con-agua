@@ -38,6 +38,7 @@ local notation "V" => ConLeche.CheckMode.verified
 section steps
 variable (p : Prog) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) {env : ConLeche.Env}
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 theorem contRef_step (L : NbLook p) (hq : KnotStageProg p) (hIlpf : IlpfF p) (hLC : LvlCacheProg p) (n : Nat)
     (ih : NbRef p dn vis fe env n) : ContRef p dn vis fe env (n + 1) := by
   intro m a ctx fu po pl kb nn us aO aL ns c prog args NS ctxP progP nP usP argsP nsP dep hC hW hnn hus
@@ -232,6 +233,7 @@ theorem contRef_step (L : NbLook p) (hq : KnotStageProg p) (hIlpf : IlpfF p) (hL
   rw [hs6'] at hQ5
   obtain ⟨hC5, hg5, hk5, hns5, hP5, hA5, c5⟩ := hQ5
   exact RefE.ret hrun5 ⟨hC5, hg14.trans hg5, by simpa using hk5, by simpa using hns5, hP5, hA5, c24.trans c5⟩
+-/
 
 end steps
 

@@ -60,6 +60,7 @@ structure NggPost (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
   abs : AbsOK m'
   ext : ConRon.Arena.Ext a0.store a'.store
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 /-- **`nest_grow_group` refines `nestGrowGroup`, both outcomes** (under `StageC ∧ AbsOK`, the twin's
 store an extension of `a0`'s): only `nest_inst_type` claims (`nit_ref`). -/
 theorem ngg_ref {p : Prog} (L : NbLook p) (hIlpf : IlpfF p) (hcl : CoreStageClosed p) (hLC : LvlCacheProg p)
@@ -198,5 +199,6 @@ theorem ngg_ref {p : Prog} (L : NbLook p) (hIlpf : IlpfF p) (hcl : CoreStageClos
       (fun j hj => by rw [hcO1, hcL1] at *; have := hcb (j + 1) (by omega); have := hg14.iw; omega)
       (by rw [hr41]; simp [hgl]) (by rw [hr40]; simp; omega) hgrp4 ((hP2.fr (posRecW_mfr hpr)).fr (snocW_mfr hsn)))
       fun _ _ _ _ hR => ⟨hR.stage, hg14.trans hR.grow, hR.length, hR.bound, hR.grp, hR.pos, hR.abs, hR.ext⟩
+-/
 
 end L.Ind

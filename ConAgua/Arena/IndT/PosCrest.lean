@@ -105,13 +105,13 @@ structure CrestPost (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEn
   dec : decI w = crest
   pos : PosMR m'
   abs : AbsOK m'
-  core : ConRon.Bridge.CoreStep V env fe a a'
   den : ∃ crestP, denoteE a'.store crest = some crestP ∧ ConLeche.Expr.WScoped hi.toNat crestP
 
 section crest
 variable {p : Prog} (hq : KnotStageProg p) (hIlpf : IlpfF p) (dn : NIdx → Option ConLeche.Name) (vis : Word)
   (fe : IFEnv) {env : ConLeche.Env} (henv : ConLeche.EnvWF env)
 
+/- ronsync2 stage 2: commented out (statement at the old twin/L)
 include hq hIlpf henv in
 /-- **`nest_ctors_crest` refines `crestT` (the head of `oneK`), both outcomes**, under `StageC`
 and con-ron's preconditions of the constructor's head (`nestCtors_spec`'s): the level parameters
@@ -240,6 +240,7 @@ theorem crest_ref {k : Nat} (hn : k ≤ 2 ^ 62) {m : Mem} {a : AState}
     hP4.fr (coreF_mfr hq (by decide) (callW_of_callE c6)), hA5,
     ((c1.trans (p2.toCore hC2.check)).trans c4).trans c5',
     crestP, ConRon.Bridge.denote_ext hcrest (c4.ext.trans c5'.ext), hwc⟩
+-/
 
 end crest
 
